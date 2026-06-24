@@ -1,0 +1,227 @@
+{
+  "version": 1,
+  "skills": {
+    "breach-encapsulation-naming": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/breach-encapsulation-naming/SKILL.md",
+      "computedHash": "055239f0e8ba801615073ef0e7f242826de68fec9bc492f2b67eab83deb2aa37"
+    },
+    "clean-architecture": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/clean-architecture/SKILL.md",
+      "computedHash": "084ce499caf6ff50cb967712d1ad17d4561279bca38636357717a829eb6a0627"
+    },
+    "cqrs-aggregate-modeling": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/cqrs-aggregate-modeling/SKILL.md",
+      "computedHash": "5bb7864ac0046dc4a916a24fa080efc2bce72f7da3c7b315eb1cbe7d1d17e4ae"
+    },
+    "cqrs-to-event-sourcing": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/cqrs-to-event-sourcing/SKILL.md",
+      "computedHash": "af59bc93657c0ccec32d564b7c7a527682108bd2cbaa589aa89665d5185a4dc9"
+    },
+    "cqrs-tradeoffs": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/cqrs-tradeoffs/SKILL.md",
+      "computedHash": "e646896bb505ee11299a04a9c9b9593c25e5eab9deefba8969389d8c425ace9d"
+    },
+    "custom-linter-creator": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/custom-linter-creator/SKILL.md",
+      "computedHash": "2fa8d7ac4909a7e98710bcde765261d38b5ba0b67cb405874b915d6e518e1641"
+    },
+    "ddd-aggregate-design": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/ddd-aggregate-design/SKILL.md",
+      "computedHash": "477a212e1de7f8bea7e59af1698357cad504ebbd06a279c851df0c911696a574"
+    },
+    "ddd-aggregate-transaction-boundary": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/ddd-aggregate-transaction-boundary/SKILL.md",
+      "computedHash": "b91802f9eb603d0da916812689fb6adde688952d709473ba6c50ae736a6ebd83"
+    },
+    "ddd-cross-aggregate-constraints": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/ddd-cross-aggregate-constraints/SKILL.md",
+      "computedHash": "8a4a9e7fda73f39bee02086be0cf07d9184d0ac51acc210f3840fb253f53b446"
+    },
+    "ddd-domain-building-blocks": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/ddd-domain-building-blocks/SKILL.md",
+      "computedHash": "d2f035b139fbd221f3453d4962460570927f00044d45c0d49ad0677956010d75"
+    },
+    "ddd-domain-model-extractor": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/ddd-domain-model-extractor/SKILL.md",
+      "computedHash": "598ea9baaea7d029984b3ccc89fe83c7cbe68716d172f11bc2fbfe453eb619fe"
+    },
+    "ddd-domain-model-first": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/ddd-domain-model-first/SKILL.md",
+      "computedHash": "05817df1abb5b49d91b2e9110fa26da5dee22ff7185ddd73ebbb5a93a396f7c8"
+    },
+    "ddd-domain-primitives-and-always-valid": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/ddd-domain-primitives-and-always-valid/SKILL.md",
+      "computedHash": "d47f1a47bf48adfa719b7575d8b67a0f854d5326e6f4decbf7072d705a3d4134"
+    },
+    "ddd-module-pattern": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/ddd-module-pattern/SKILL.md",
+      "computedHash": "997a0dc3c13eacff66aa0a17d70a6bfc80d8ec6dbff74dc8c2f7df79f96d5ac8"
+    },
+    "ddd-repository-design": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/ddd-repository-design/SKILL.md",
+      "computedHash": "103f3fef2138809b6ee45ee3d0eef1092c7f0dbe464da04d92f93cb5f36fb24f"
+    },
+    "ddd-repository-placement": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/ddd-repository-placement/SKILL.md",
+      "computedHash": "594217252a962f6ac8390db65817ea49099b2c50fb7757f05ecc3e6b92123354"
+    },
+    "ddd-when-to-wrap-primitives": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/ddd-when-to-wrap-primitives/SKILL.md",
+      "computedHash": "ae215d34fdb890b8db2338c75702a863d28cce6a15e5e5bda46bb4e3db67508a"
+    },
+    "deepresearch-readme": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/deepresearch-readme/SKILL.md",
+      "computedHash": "01387e9fdde0e5b8ca44479697873e856e6c1a528a051c1640de211fb2942d47"
+    },
+    "error-classification": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/error-classification/SKILL.md",
+      "computedHash": "88ef374be5460211f9ba8b4e4b002b4922b806dd6b8dcda375d6eb675f53c539"
+    },
+    "error-handling": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/error-handling/SKILL.md",
+      "computedHash": "8297fc7c44942bd50a9eae080b3331c9f2016cd39c42d84607566b869a383600"
+    },
+    "first-class-collection": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/first-class-collection/SKILL.md",
+      "computedHash": "bd5c6abac5d9940cbb10701522b874c649bff3930c4d466a1a478ccc594f6253"
+    },
+    "intent-based-dedup": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/intent-based-dedup/SKILL.md",
+      "computedHash": "12e6751e487f028ccfff5ff9cabfa85204f756f97dd6197333f7f7fb2392111b"
+    },
+    "law-of-demeter": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/law-of-demeter/SKILL.md",
+      "computedHash": "6b2d1c6ee44df3c2240ba92817cb611559740e5d7b24abd0ef55dec9829243c1"
+    },
+    "migrate-skill-to-agent": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/migrate-skill-to-agent/SKILL.md",
+      "computedHash": "a110ae74bb33f435a3fecf293a5e42fd1b23f49d6d8aefcc3e27a394335e03fb"
+    },
+    "package-design": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/package-design/SKILL.md",
+      "computedHash": "d93d5c7c35eeb37978edea45a32f3cbb2f9eec0e8e8155d894b637b5d68a473b"
+    },
+    "parse-dont-validate": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/parse-dont-validate/SKILL.md",
+      "computedHash": "3302a298db838f7394143606ff833b9eec0257cd028e0f7fc6d0852d66d53562"
+    },
+    "pekko-cqrs-es-implementation": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/pekko-cqrs-es-implementation/SKILL.md",
+      "computedHash": "81f0d58d7069c952a1dfd61f13706c5e40718006ab047946e15c82a74922f51c"
+    },
+    "refactoring-packages": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/refactoring-packages/SKILL.md",
+      "computedHash": "03e070ad176bb4ca112d351fde52a9ebca4e6a363a7f082fdb1dbfb4bd459e76"
+    },
+    "reviewing-skills": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/reviewing-skills/SKILL.md",
+      "computedHash": "e95552c38835eb514b93c78e14fd161d8ee97d29b3bf427a21e5dc92573b756d"
+    },
+    "skill-forge": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/agent-skills/skills/skill-forge/SKILL.md",
+      "computedHash": "6952ae52a11e093a7b447ebe4ab32551aacb4f7fd0597de0fd1d947df0a574f2"
+    },
+    "takt-analyzer": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/takt/skills/takt-analyzer/SKILL.md",
+      "computedHash": "9cc16825efa51d7ef4f99ff3daba46996db9e2a4693020368bcfedbf8bb2c7f7"
+    },
+    "takt-facet-builder": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/takt/skills/takt-facet-builder/SKILL.md",
+      "computedHash": "01b106af10bef3d2deda60a8ac1bf836641e41df4b06df11a54f6397f5d4b432"
+    },
+    "takt-optimizer": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/takt/skills/takt-optimizer/SKILL.md",
+      "computedHash": "81fbced7240d65bc70aa043ee0acba0ed819384f1b26f992cf526c0540541e84"
+    },
+    "takt-skill-updater": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/takt/skills/takt-skill-updater/SKILL.md",
+      "computedHash": "4339b9fca39e38e3bffe959b0146b47814a79c1d7600292db516e89d9e93813f"
+    },
+    "takt-task-builder": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/takt/skills/takt-task-builder/SKILL.md",
+      "computedHash": "25a19fff8637d750c71ff80a441e140234127d15da20dc0f805117fffcba694d"
+    },
+    "takt-workflow-builder": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/takt/skills/takt-workflow-builder/SKILL.md",
+      "computedHash": "109ffa3e66c0613b92b07af59f31b90c0a1cc0e057ded0cd243d5d89039ba56a"
+    },
+    "tell-dont-ask": {
+      "source": "j5ik2o/ai-tools",
+      "sourceType": "github",
+      "skillPath": "plugins/software-design/skills/tell-dont-ask/SKILL.md",
+      "computedHash": "396308e424f41a83f6803864f5ceb733cc859d2cc4c8b1deefdc6fe4707dbd0f"
+    }
+  }
+}

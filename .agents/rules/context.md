@@ -1,0 +1,62 @@
+# Context Glossary Rules
+
+`CONTEXT.md` は、このリポジトリで使うドメイン語彙の正本である。
+
+## 基本原則
+
+**設計議論、docs、コード説明では `CONTEXT.md` に定義された用語を優先して使う。**
+
+AI は同じ概念に対して別名や曖昧な言い換えを作りがちである。このルールは、会話・仕様・ドキュメント・実装方針の語彙を揃え、概念境界のズレを防ぐ。
+
+## ルール
+
+### MUST（必須）
+
+- 既存の `CONTEXT.md` に該当用語がある場合、その用語を使う
+- 初出では `English Term (日本語名)` の形式を優先する
+- 同じ概念には同じ用語を使い、別名を作らない
+- `CONTEXT.md` の `_Avoid_` にある語は、その概念を指す用語として使わない
+- `CONTEXT.md` に未定義のドメイン用語を見つけた場合は、glossary gap として扱い、`/domain-modeling` または `/grill-with-docs` 経由で用語を確定する
+- 新しい重要概念を議論で確定した場合は、実装や Kiro / SDD に進む前に `CONTEXT.md` へ反映する
+- Kiro / SDD の requirements / design / tasks / review を生成または更新した後は、次の phase、design validation、implementation、PR 化へ進む前に、spec 内のドメイン用語・契約名・境界名を `CONTEXT.md` と照合する
+- spec 側で同じ概念を `CONTEXT.md` と異なる表記で書いている場合は、spec を `CONTEXT.md` の canonical term に合わせて修正する
+
+### MUST NOT（禁止）
+
+- `CONTEXT.md` にある用語を、別の日本語訳や略称に言い換えない
+- 曖昧な一般語で `CONTEXT.md` の用語を置き換えない
+- `CONTEXT.md` を実装仕様、設計メモ、タスクリストとして使わない
+- 未確定の用語を確定語彙のように扱わない
+- `/domain-modeling` または `/grill-with-docs` を通さずに、未定義語を `CONTEXT.md` へ直接追加しない
+
+## 例
+
+```
+# 良い例
+Join Compatibility (参加互換性) に Failure Detector Configuration (故障検出器設定) を含める
+
+# 悪い例
+参加チェックに FD 設定を入れる
+
+# 悪い例
+join 時の設定 drift を best effort で見る
+```
+
+## 用語追加時の判断
+
+`CONTEXT.md` に追加するのは、このプロジェクト固有のドメイン概念だけにする。
+
+- 一般的なプログラミング用語は追加しない
+- 実装詳細の型名一覧は追加しない
+- 1つの概念につき、英語の canonical name と日本語名を1つずつ選ぶ
+- 説明は「何であるか」を1〜2文で書く
+- 既存プロジェクトに後からこの運用を導入した場合は、docs、spec、コード説明で見つけた未定義語を glossary gap として扱い、必要に応じて `/domain-modeling` または `/grill-with-docs` に切り替える
+- `/domain-modeling` で用語が解決した時点で、canonical name、日本語名、避ける語を揃えて `CONTEXT.md` に反映する
+- 未確定の用語は `CONTEXT.md` に確定語彙として追加しない
+- spec に出てきた語でも、一般的な技術語、ファイル名、関数名、単発の実装詳細、一次的な作業ラベルは `CONTEXT.md` に追加しない
+
+## 理由
+
+- **一貫性**: 会話、仕様、docs、コード説明の語彙を揃える
+- **境界の明確化**: 似た概念の混同を防ぐ
+- **レビュー容易性**: `CONTEXT.md` と異なる語彙が出た時点でズレを検出できる
