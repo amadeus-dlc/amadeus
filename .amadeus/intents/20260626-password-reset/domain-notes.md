@@ -12,4 +12,4 @@
 ## 反映済み
 
 - 再設定トークンはアカウントに紐づく単回利用の概念である。
-  - 反映先: [domain/bounded-contexts/BC001-authentication-access/model.md](domain/bounded-contexts/BC001-authentication-access/model.md), [domain/bounded-contexts/BC001-authentication-access/contracts.md](domain/bounded-contexts/BC001-authentication-access/contracts.md)
+  - 反映先: [domain/bounded-contexts/BC001-authentication-access/models/account/model.md](domain/bounded-contexts/BC001-authentication-access/models/account/model.md), [domain/bounded-contexts/BC001-authentication-access/contracts.md](domain/bounded-contexts/BC001-authentication-access/contracts.md)

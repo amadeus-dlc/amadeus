@@ -2,11 +2,11 @@
 
 ## 範囲
 
-このモデルは、`20260626-password-reset` インテントで扱う概念関係を定義する。
+このモデルは、`20260626-password-reset` インテントで扱う account モジュールの概念関係を定義する。
 
-全体の境界づけられたコンテキストと共通概念は、[../../../../../domain/bounded-contexts.md](../../../../../domain/bounded-contexts.md) と [../../../../../domain/bounded-contexts/BC001-authentication-access/model.md](../../../../../domain/bounded-contexts/BC001-authentication-access/model.md) を参照する。
+全体の境界づけられたコンテキストと共通概念は、[../../../../../../../domain/bounded-contexts.md](../../../../../../../domain/bounded-contexts.md) と [../../../../../../../domain/bounded-contexts/BC001-authentication-access/models/account/model.md](../../../../../../../domain/bounded-contexts/BC001-authentication-access/models/account/model.md) を参照する。
 
-このインテントの境界づけられたコンテキスト、外部境界、Unit 分割の判断基準は、[../../bounded-contexts.md](../../bounded-contexts.md) を参照する。
+このインテントの境界づけられたコンテキスト、外部境界、Unit 分割の判断基準は、[../../../../bounded-contexts.md](../../../../bounded-contexts.md) を参照する。
 
 ## 概念
 

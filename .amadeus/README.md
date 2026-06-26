@@ -208,7 +208,8 @@
 
 `domain/subdomains.md` には、サブドメインと分類理由を書く。
 `domain/bounded-contexts.md` には、Unit を切る時に参照する境界づけられたコンテキスト、責務、外部境界、Unit 分割の判断基準を書く。
-`domain/bounded-contexts/<bounded-context-id>/model.md` には、そのコンテキストで使う概念、関係、ライフサイクル、集約候補を書く。
+`domain/bounded-contexts/<bounded-context-id>/models.md` には、そのコンテキストに属する DDD モジュール単位のモデル一覧を書く。
+`domain/bounded-contexts/<bounded-context-id>/models/<ddd-module-id>/model.md` には、その DDD モジュールで使う概念、関係、ライフサイクル、集約候補を書く。
 `domain/bounded-contexts/<bounded-context-id>/contracts.md` には、そのコンテキストで守る事前条件、不変条件、事後条件と根拠を書く。
 未確定事項や昇格候補は `domain-notes.md` に残す。
 
@@ -235,7 +236,8 @@
 | `glossary.md` | 必須 | `.amadeus/` 初期化時 | 用語定義、避ける語、禁止ワードを扱う | 未作成不可 |
 | `domain/subdomains.md` | 必須 | `.amadeus/` 初期化時 | サブドメインと分類理由を扱う | 未確認なら状態を書く |
 | `domain/bounded-contexts.md` | 必須 | `.amadeus/` 初期化時 | 境界づけられたコンテキストと Intent 固有モデルへの索引を扱う | 未確認なら状態を書く |
-| `domain/bounded-contexts/<bounded-context-id>/model.md` | 任意 | 境界づけられたコンテキストのモデルを固定する時 | コンテキスト別の概念関係、ライフサイクル、集約候補を扱う | 未確認なら作らない |
+| `domain/bounded-contexts/<bounded-context-id>/models.md` | 任意 | 境界づけられたコンテキストのモデルを固定する時 | DDD モジュール単位のモデル一覧を扱う | 未確認なら作らない |
+| `domain/bounded-contexts/<bounded-context-id>/models/<ddd-module-id>/model.md` | 任意 | DDD モジュール単位のモデルを固定する時 | モジュール別の概念関係、ライフサイクル、集約候補を扱う | 未確認なら作らない |
 | `domain/bounded-contexts/<bounded-context-id>/contracts.md` | 任意 | 境界づけられたコンテキストの契約を固定する時 | コンテキスト別の事前条件、不変条件、事後条件を扱う | 契約がなければ作らない |
 | `intents.md` | 必須 | 最初のインテントを作る時 | インテント一覧とインテント間の依存関係を扱う | インテントがなければ作らない |
 | `decisions/` | 任意 | 判断を残す必要がある時 | 全体構造に関わる判断を記録する | 判断がなければ作らない |
@@ -250,7 +252,8 @@
 | `traceability.md` | 必須 | 最初の要求を作る時 | 目的、アクター、外部システム、要求、ドメインモデル、ストーリー、ユースケース、ユニット、ボルト、タスクの対応と依存の横断追跡を扱う | 要求がなければ作らない |
 | `domain/subdomains.md` | 任意 | Intent 固有のサブドメイン分類を固定する時 | インテント内で参照するサブドメインと分類理由を扱う | 全体モデルで十分なら作らない |
 | `domain/bounded-contexts.md` | 任意 | Unit 分割の境界を固定する時 | インテント内で参照する境界づけられたコンテキスト、責務、外部境界、Unit 分割の判断基準を扱う | 全体モデルで十分なら作らない |
-| `domain/bounded-contexts/<bounded-context-id>/model.md` | 任意 | インテント固有の概念関係を固定する時 | インテント内で使う概念、関係、ライフサイクル、集約候補を扱う | 全体モデルで十分なら作らない |
+| `domain/bounded-contexts/<bounded-context-id>/models.md` | 任意 | インテント固有のモデル一覧を固定する時 | インテント内で使う DDD モジュール単位のモデル一覧を扱う | 全体モデルで十分なら作らない |
+| `domain/bounded-contexts/<bounded-context-id>/models/<ddd-module-id>/model.md` | 任意 | インテント固有の概念関係を固定する時 | インテント内で使う DDD モジュール別の概念、関係、ライフサイクル、集約候補を扱う | 全体モデルで十分なら作らない |
 | `domain/bounded-contexts/<bounded-context-id>/contracts.md` | 任意 | インテント固有の契約を固定する時 | インテント内で守る事前条件、不変条件、事後条件と根拠を扱う | 契約がなければ作らない |
 | `requirements/<requirement-id>.md` | 任意 | 要求単位の説明、受け入れ条件、背景参照が必要な時 | 個別要求を扱う | 一覧で十分なら作らない |
 | `user-stories.md` | 任意 | ストーリーが必要な時 | アクターを明示したユーザーストーリー一覧を扱う | 不要なら `traceability.md` に `なし` と書く |

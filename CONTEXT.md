@@ -129,8 +129,11 @@ Intent 配下には置かない。
 **Domain Model**：Amadeus DLC 全体の概念間の関係、不変条件、ライフサイクル、集約候補を扱うモデルである。
 全体モデルは `.amadeus/domain/` に置き、サブドメイン、境界づけられたコンテキスト、コンテキスト別モデル、契約に分ける。
 
+**DDD Module**：境界づけられたコンテキスト内で、概念関係、ライフサイクル、集約候補をまとめるモデル単位である。
+Amadeus DLC では、DDD Module ごとのモデルを `domain/bounded-contexts/<bounded-context-id>/models/<ddd-module-id>/model.md` に置く。
+
 **Intent Domain Model**：特定の Intent で使う概念、関係、ライフサイクル、集約候補を扱うモデルである。
-Intent 配下の `domain/bounded-contexts/BC001-authentication-access/model.md` に置く。
+Intent 配下の `domain/bounded-contexts/BC001-authentication-access/models/account/model.md` に置く。
 
 **Intent Bounded Context**：特定の Intent で Unit を切る時に参照する境界づけられたコンテキスト、責務、外部境界である。
 Intent 配下の `domain/bounded-contexts.md` に置く。
@@ -143,4 +146,4 @@ Intent 配下の `domain/bounded-contexts/BC001-authentication-access/contracts.
 Intent 配下に置く場合は `terminology-notes.md` とする。
 
 **Domain Notes**：Intent 固有のモデル上の発見や未確定事項を扱う文書である。
-正式化された内容は、対象範囲に応じて Intent 配下の `domain/bounded-contexts.md`、`domain/bounded-contexts/BC001-authentication-access/model.md`、`domain/bounded-contexts/BC001-authentication-access/contracts.md`、または `.amadeus/domain/` に昇格する。
+正式化された内容は、対象範囲に応じて Intent 配下の `domain/bounded-contexts.md`、`domain/bounded-contexts/BC001-authentication-access/models/account/model.md`、`domain/bounded-contexts/BC001-authentication-access/contracts.md`、または `.amadeus/domain/` に昇格する。

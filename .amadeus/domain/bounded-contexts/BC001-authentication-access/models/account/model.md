@@ -2,9 +2,9 @@
 
 ## 範囲
 
-このモデルは、BC001 認証アクセスの全体概念関係を扱う。
+このモデルは、BC001 認証アクセスの account モジュールにおける全体概念関係を扱う。
 
-サブドメインと境界づけられたコンテキストの一覧は、[../../subdomains.md](../../subdomains.md) と [../../bounded-contexts.md](../../bounded-contexts.md) を参照する。
+サブドメインと境界づけられたコンテキストの一覧は、[../../../../subdomains.md](../../../../subdomains.md) と [../../../../bounded-contexts.md](../../../../bounded-contexts.md) を参照する。
 
 ## 概念間の関係
 
@@ -16,7 +16,7 @@
 
 ## 契約
 
-不変条件は、[contracts.md](contracts.md) を参照する。
+不変条件は、[../../contracts.md](../../contracts.md) を参照する。
 
 ## ライフサイクル
 
