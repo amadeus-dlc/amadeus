@@ -18,6 +18,12 @@
       "prompt": "Bolt 配下の tasks.md を補修して。タスクの依存が別 Bolt の T002 を参照しているけど、今は `T002` とだけ書かれている。",
       "expected_output": "repair として扱い、別 Bolt の Task 依存を `B001/T002` 形式に直す方針を示す。Task の作業、要求、ユースケース、証拠欄を保ち、同じ Bolt の design.md を入力として確認する。ドメインモデルや Spec は作らない。",
       "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "B001 の design.md から tasks.md を生成して。足りないものがあれば書く前に止めて。",
+      "expected_output": "tasks.md を書く前に Task 生成 Review Gate を通し、requirements、use-cases、bolt.md、design.md の coverage、依存、観測できる完了状態を確認する。gap があれば tasks.md を書かず、上流成果物の不足として返す。",
+      "files": []
     }
   ]
 }
