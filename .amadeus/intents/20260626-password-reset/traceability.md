@@ -28,6 +28,13 @@
 | B001 | [design.md](bolts/B001-password-reset-request-flow/design.md) | R001 | UC001 | B001/T001, B001/T002, B001/T003 |
 | B002 | [design.md](bolts/B002-credential-update-flow/design.md) | R002 | UC002 | B002/T004, B002/T005, B002/T006 |
 
+## 既存コード分析からの追跡
+
+| 分析 | 要求 | ユースケース | ユニット | ボルト | 設計 | 入力 |
+|---|---|---|---|---|---|---|
+| [codebase-analysis.md](codebase-analysis.md) | R001 | UC001 | U001 | B001 | [design.md](bolts/B001-password-reset-request-flow/design.md) | 既存実装なし。成果物上の再設定要求受付、再設定トークン発行、送信依頼、存在有無を推測できない応答を設計入力にする。 |
+| [codebase-analysis.md](codebase-analysis.md) | R002 | UC002 | U002 | B002 | [design.md](bolts/B002-credential-update-flow/design.md) | 既存実装なし。成果物上の再設定トークン検証、認証情報更新、トークン消費、再利用不可を設計入力にする。 |
+
 ## ユニットからの追跡
 
 | ユニット | コンテキスト | 要求 | ユースケース | ボルト |
