@@ -1,0 +1,29 @@
+{
+  "skill_name": "amadeus-domain-modeling",
+  "evals": [
+    {
+      "id": 1,
+      "name": "capture-unresolved-term",
+      "prompt": "20260626-password-reset の作業中に「再設定セッション」という語が出た。意味がまだ曖昧なので、Amadeus のどこに記録すべきか判断して反映して。",
+      "expected_output": "対象 Intent の domain-notes.md に候補として記録し、.amadeus/glossary.md、CONTEXT.md、docs/adr は更新しない。"
+    },
+    {
+      "id": 2,
+      "name": "promote-shared-glossary-term",
+      "prompt": "「アカウント所有者」は全 Intent で使う確定用語にしたい。既存用語との衝突を見て、必要なら .amadeus/glossary.md に追加して。",
+      "expected_output": "既存 glossary を確認し、確定用語として .amadeus/glossary.md を更新する。対象 Intent の domain-notes.md があれば反映済みに記録する。CONTEXT.md は更新しない。"
+    },
+    {
+      "id": 3,
+      "name": "promote-intent-model-element",
+      "prompt": "20260626-password-reset の再設定トークンを値オブジェクトとしてモデルに反映したい。根拠は R002 と UC002。Intent 側の domain model を更新して。",
+      "expected_output": "対象 Intent の domain/** に DVOnnn の値オブジェクトとして反映し、必要なら traceability.md も整合させる。必要が明示されない限り .amadeus/domain/** には昇格しない。"
+    },
+    {
+      "id": 4,
+      "name": "missing-amadeus-root",
+      "prompt": ".amadeus がない repo で、見つかった用語を glossary に追加して。",
+      "expected_output": "作業を止め、amadeus-steering を案内する。CONTEXT.md や docs/adr に代替記録しない。"
+    }
+  ]
+}

@@ -4,13 +4,14 @@ Amadeus DLC は、Amadeus の設計、仕様、実装の流れを扱うための
 
 ## 使い方
 
-現時点で確定している入口は、次の5つです。
+現時点で確定している入口は、次の6つです。
 
 1. `amadeus-steering`
 2. `amadeus-intent-init`
 3. `amadeus-intent-ideation`
 4. `amadeus-grilling`
-5. `amadeus-execution-validator`
+5. `amadeus-domain-modeling`
+6. `amadeus-execution-validator`
 
 Inception 以降の要求、ユースケース、Unit、Bolt、Spec を作る skill は、まだ確定していません。
 
@@ -84,7 +85,17 @@ guided で不足論点を確認する場合は、`amadeus-grilling` を使いま
 質問には推奨回答と理由を添え、ユーザーの回答を待ってから次へ進みます。
 既存成果物を読めば分かることは質問せず、先に確認します。
 
-### 5. 成果物を検証する
+### 5. 用語とドメインモデルを整理する
+
+用語、概念、ドメインモデル、契約を整理する場合は、`amadeus-domain-modeling` を使います。
+
+`amadeus-domain-modeling` は、Ideation 固定ではなく、全フェーズで使う横断支援 skill です。
+未確定語は Intent の `domain-notes.md` に記録し、確定した共有用語は `.amadeus/glossary.md` に追加します。
+Intent 固有のモデルや契約は `.amadeus/intents/<intent-id>/domain/**` に反映し、全体モデルへ昇格する判断がある場合だけ `.amadeus/domain/**` を更新します。
+
+`CONTEXT.md` や `docs/adr/**` は更新しません。
+
+### 6. 成果物を検証する
 
 `.amadeus/` の構造を検証する場合は、`amadeus-execution-validator` を使います。
 
@@ -106,15 +117,16 @@ repo root の開発用 `scripts/` や `pnpm test` を実行時検証の入口に
 `pass` は、実行時に参照できる最低限の構造条件を満たすという意味です。
 内容妥当性の承認や gate 通過そのものではありません。
 
-## フェーズと成果物
+## Skill 分類
 
-| フェーズ | 使う skill | 作るもの | 作らないもの |
+| 分類 | 使う skill | 役割 | 作らないもの |
 |---|---|---|---|
-| Steering | `amadeus-steering` | `.amadeus/` の共有土台 | 個別 Intent |
-| Initialized | `amadeus-intent-init` | Intent 登録、`intent.md`、`state.json` | Ideation 以降の成果物 |
-| Ideation | `amadeus-intent-ideation` | `scope.md`、`ideation.md`、判断、追跡、初期モック | 要求、ユースケース、Unit、Bolt、ドメインモデル |
-| Grilling | `amadeus-grilling` | 一問ずつの質問、推奨回答、回答待ち | 成果物の作成や変更 |
-| Validation | `amadeus-execution-validator` | 検証結果 | 成果物の作成や変更 |
+| ライフサイクル進行 | `amadeus-steering` | `.amadeus/` の共有土台を作る | 個別 Intent |
+| ライフサイクル進行 | `amadeus-intent-init` | Intent 登録、`intent.md`、`state.json` を作る | Ideation 以降の成果物 |
+| ライフサイクル進行 | `amadeus-intent-ideation` | `scope.md`、`ideation.md`、判断、追跡、初期モックを作る | 要求、ユースケース、Unit、Bolt、ドメインモデル |
+| 横断支援 | `amadeus-grilling` | 全フェーズで論点を一問ずつ確認する | 成果物の作成や変更 |
+| 横断支援 | `amadeus-domain-modeling` | 全フェーズで用語、概念、モデル、契約を整理する | `CONTEXT.md`、`docs/adr/**` |
+| 横断検証 | `amadeus-execution-validator` | 全フェーズで成果物構造を検証する | 成果物の作成や変更 |
 
 ## 注意事項
 
