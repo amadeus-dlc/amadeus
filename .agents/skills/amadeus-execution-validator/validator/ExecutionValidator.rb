@@ -883,11 +883,7 @@ class ExecutionValidator
     lines << ""
     lines << "## 確認対象"
     lines << ""
-    if @checked_files.empty?
-      lines << "- なし"
-    else
-      @checked_files.to_a.sort.each { |file| lines << "- `#{file}`" }
-    end
+    lines.concat(checked_files_report)
     lines << ""
     lines << "## 満たしている条件"
     lines << ""
@@ -930,6 +926,58 @@ class ExecutionValidator
       lines << "| #{category} | #{counts.fetch("pass", []).length} | #{counts.fetch("fail", []).length} | #{counts.fetch("blocked", []).length} |"
     end
     lines
+  end
+
+  def checked_files_report
+    return ["- なし"] if @checked_files.empty?
+
+    grouped = @checked_files.to_a.sort.group_by { |file| checked_file_category(file) }
+    lines = []
+    lines << "| 対象カテゴリ | 件数 |"
+    lines << "|---|---:|"
+    grouped.sort_by { |category, _| checked_file_category_order(category) }.each do |category, files|
+      lines << "| #{category} | #{files.length} |"
+    end
+    grouped.sort_by { |category, _| checked_file_category_order(category) }.each do |category, files|
+      lines << ""
+      lines << "### #{category}"
+      lines << ""
+      files.each { |file| lines << "- `#{file}`" }
+    end
+    lines
+  end
+
+  def checked_file_category(file)
+    return "Amadeus ルート" if file == ".amadeus"
+    return "全体成果物" if file.match?(%r{\A\.amadeus/[^/]+\.md\z})
+    return "全体ドメイン" if file.start_with?(".amadeus/domain/")
+    return "Intent 基本成果物" if file.match?(%r{\A\.amadeus/intents/[^/]+/[^/]+\.md\z})
+    return "Intent ドメイン" if file.match?(%r{\A\.amadeus/intents/[^/]+/domain/})
+    return "Bolt / Task" if file.match?(%r{\A\.amadeus/intents/[^/]+/bolts/})
+    return "Requirement 詳細" if file.match?(%r{\A\.amadeus/intents/[^/]+/requirements/})
+    return "Story 詳細" if file.match?(%r{\A\.amadeus/intents/[^/]+/user-stories/})
+    return "Use Case 詳細" if file.match?(%r{\A\.amadeus/intents/[^/]+/use-cases/})
+    return "Unit 詳細" if file.match?(%r{\A\.amadeus/intents/[^/]+/units/})
+    return "Decision 詳細" if file.match?(%r{\A\.amadeus/intents/[^/]+/decisions/})
+
+    "その他"
+  end
+
+  def checked_file_category_order(category)
+    [
+      "Amadeus ルート",
+      "全体成果物",
+      "全体ドメイン",
+      "Intent 基本成果物",
+      "Intent ドメイン",
+      "Requirement 詳細",
+      "Story 詳細",
+      "Use Case 詳細",
+      "Unit 詳細",
+      "Bolt / Task",
+      "Decision 詳細",
+      "その他"
+    ].index(category) || 99
   end
 
   def category_for(row)
