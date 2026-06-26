@@ -4,9 +4,9 @@
 
 `amadeus-domain-modeling` は、次を満たした場合だけ `.agents/skills/amadeus-domain-modeling/` へコピー昇格できる。
 
-- 未確定語は `.amadeus/intents/<intent-id>/domain-notes.md` に候補として記録する。
+- 未確定語は `.amadeus/intents/<intent-id>-<slug>/domain-notes.md` に候補として記録する。
 - 確定した共有用語だけを `.amadeus/glossary.md` に追加する。
-- Intent 固有のモデルと契約は `.amadeus/intents/<intent-id>/domain/**` に反映する。
+- Intent 固有のモデルと契約は `.amadeus/intents/<intent-id>-<slug>/domain/**` に反映する。
 - モデル要素や契約 ID が変わる場合は、対象 Intent の `traceability.md` も整合させる。
 - 全体モデルへの昇格が明示された場合だけ `.amadeus/domain/**` を更新する。
 - 曖昧語や衝突語は、この skill 自体が既存の Amadeus 成果物と照合し、必要な確認を行う。

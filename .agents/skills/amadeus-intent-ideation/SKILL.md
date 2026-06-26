@@ -18,13 +18,13 @@ description: >-
 
 ## 前提
 
-対象 Intent が `.amadeus/intents/<intent-id>/` に存在することを前提にする。
+対象 Intent が `.amadeus/intents/<intent-id>-<slug>/` に存在することを前提にする。
 
 少なくとも次が存在しない場合は、作業を止めて `amadeus-intent-init` を案内する。
 
 - `.amadeus/intents.md`
-- `.amadeus/intents/<intent-id>/intent.md`
-- `.amadeus/intents/<intent-id>/state.json`
+- `.amadeus/intents/<intent-id>-<slug>/intent.md`
+- `.amadeus/intents/<intent-id>-<slug>/state.json`
 
 `state.json` が存在しないが `intent.md` は存在する場合は、Intent 登録状態を確認し、`amadeus-intent-init` で補修するよう案内する。
 この skill は、Intent の入れ物を新規作成しない。
@@ -53,8 +53,8 @@ description: >-
 判定では、少なくとも次を読む。
 
 - `.amadeus/intents.md`
-- `.amadeus/intents/<intent-id>/intent.md`
-- `.amadeus/intents/<intent-id>/state.json`
+- `.amadeus/intents/<intent-id>-<slug>/intent.md`
+- `.amadeus/intents/<intent-id>-<slug>/state.json`
 - 既存の `scope.md`
 - 既存の `ideation.md`
 - 既存の `traceability.md`
@@ -150,13 +150,13 @@ description: >-
 
 作成または更新するものは次だけである。
 
-- `.amadeus/intents/<intent-id>/scope.md`
-- `.amadeus/intents/<intent-id>/ideation.md`
-- `.amadeus/intents/<intent-id>/traceability.md`
-- `.amadeus/intents/<intent-id>/decisions.md`
-- `.amadeus/intents/<intent-id>/decisions/<decision-id>.md`
-- `.amadeus/intents/<intent-id>/mocks/*.puml`
-- `.amadeus/intents/<intent-id>/state.json`
+- `.amadeus/intents/<intent-id>-<slug>/scope.md`
+- `.amadeus/intents/<intent-id>-<slug>/ideation.md`
+- `.amadeus/intents/<intent-id>-<slug>/traceability.md`
+- `.amadeus/intents/<intent-id>-<slug>/decisions.md`
+- `.amadeus/intents/<intent-id>-<slug>/decisions/<decision-id>.md`
+- `.amadeus/intents/<intent-id>-<slug>/mocks/*.puml`
+- `.amadeus/intents/<intent-id>-<slug>/state.json`
 
 `intent.md` は原則として既存内容を尊重する。
 ただし、Ideation の回答により目的、成功条件、範囲の明らかな `未確認` を埋める必要がある場合だけ、該当箇所を最小限更新する。
@@ -167,7 +167,7 @@ Ideation 完了時の `state.json` は次の形にする。
 
 ```json
 {
-  "intent": "<intent-id>",
+  "intent": "<intent-id>-<slug>",
   "phase": "ideation",
   "status": "completed",
   "ideation": {
@@ -276,7 +276,7 @@ Ideation が未完了の場合は、`D001` を採用済みにしない。
 1. `state.json` が JSON として解釈できる。
 2. `state.json.ideation.requiredArtifacts` の相対パスが存在する。
 3. `state.json.ideation.requiredMocks` の相対パスが存在する `.puml` ファイルである。
-4. 昇格済みの `amadeus-execution-validator` が使える場合は、対象 Intent ID を指定して検証する。
+4. 昇格済みの `amadeus-intent-validator` が使える場合は、対象 Intent ID を指定して検証する。
 
 ## 禁止事項
 
@@ -293,4 +293,4 @@ Ideation が未完了の場合は、`D001` を採用済みにしない。
 
 - Intent の入れ物がない場合: `amadeus-intent-init`
 - Inception 成果物へ進む場合: `amadeus-intent-inception`
-- 成果物の構造を検証する場合: `amadeus-execution-validator`
+- 成果物の構造を検証する場合: `amadeus-intent-validator`

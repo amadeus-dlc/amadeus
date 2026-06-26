@@ -2,7 +2,7 @@
 name: amadeus-domain-modeling
 description: >-
   Amadeus 成果物内の対象ドメインモデルを能動的に磨く。用語、ユビキタス言語、概念境界、具体シナリオ、ドメインモデル、契約、ドメイン判断を詰め、
-  確定した内容を `.amadeus/glossary.md`、`.amadeus/intents/<intent-id>/domain-notes.md`、`.amadeus/intents/<intent-id>/domain/**`、
+  確定した内容を `.amadeus/glossary.md`、`.amadeus/intents/<intent-id>-<slug>/domain-notes.md`、`.amadeus/intents/<intent-id>-<slug>/domain/**`、
   `.amadeus/domain/**`、必要最小限の decision へ記録したい場面では必ず使う。repo 開発用の `CONTEXT.md` や `docs/adr`
   を更新するための skill ではない。
 ---
@@ -37,7 +37,7 @@ Amadeus workspace は、全体のドメイン知識と Intent 固有のドメイ
 │               └── <ddd-module-id>/
 │                   └── model.md
 └── intents/
-    └── <intent-id>/
+    └── <intent-id>-<slug>/
         ├── domain-notes.md
         ├── decisions.md
         ├── decisions/
@@ -58,8 +58,8 @@ Amadeus workspace は、全体のドメイン知識と Intent 固有のドメイ
 `.amadeus/glossary.md` は、全 Intent で共有する確定用語を扱う。
 `.amadeus/domain/**` は、全体として採用済みの最新ドメインモデルを扱う。
 
-`.amadeus/intents/<intent-id>/domain-notes.md` は、Intent 内で見つかった未確定語、候補、問い、反映履歴を扱う。
-`.amadeus/intents/<intent-id>/domain/**` は、その Intent で使うサブドメイン、境界づけられたコンテキスト、モデル、契約を扱う。
+`.amadeus/intents/<intent-id>-<slug>/domain-notes.md` は、Intent 内で見つかった未確定語、候補、問い、反映履歴を扱う。
+`.amadeus/intents/<intent-id>-<slug>/domain/**` は、その Intent で使うサブドメイン、境界づけられたコンテキスト、モデル、契約を扱う。
 
 ファイルは必要になった時だけ作る。
 未確定の語や概念を見つけた時は、まず対象 Intent の `domain-notes.md` に記録する。
@@ -133,13 +133,13 @@ Intent 固有の候補が `domain-notes.md` にある場合も同じように照
 確認対象の例:
 
 - `.amadeus/glossary.md`
-- `.amadeus/intents/<intent-id>/domain-notes.md`
-- `.amadeus/intents/<intent-id>/requirements.md`
-- `.amadeus/intents/<intent-id>/use-cases.md`
-- `.amadeus/intents/<intent-id>/units.md`
-- `.amadeus/intents/<intent-id>/bolts.md`
-- `.amadeus/intents/<intent-id>/traceability.md`
-- `.amadeus/intents/<intent-id>/domain/**`
+- `.amadeus/intents/<intent-id>-<slug>/domain-notes.md`
+- `.amadeus/intents/<intent-id>-<slug>/requirements.md`
+- `.amadeus/intents/<intent-id>-<slug>/use-cases.md`
+- `.amadeus/intents/<intent-id>-<slug>/units.md`
+- `.amadeus/intents/<intent-id>-<slug>/bolts.md`
+- `.amadeus/intents/<intent-id>-<slug>/traceability.md`
+- `.amadeus/intents/<intent-id>-<slug>/domain/**`
 - `.amadeus/domain/**`
 
 実装コードがある workspace では、必要に応じてコードも確認する。
@@ -162,12 +162,12 @@ use-cases では再設定トークンが使用状態を持つ前提ですが、
 
 | 確定したもの | 更新先 |
 |---|---|
-| Intent 内の未確定語、候補、問い | `.amadeus/intents/<intent-id>/domain-notes.md` |
+| Intent 内の未確定語、候補、問い | `.amadeus/intents/<intent-id>-<slug>/domain-notes.md` |
 | 全 Intent で共有する確定用語 | `.amadeus/glossary.md` |
-| Intent 固有のサブドメイン、BC、モデル、契約 | `.amadeus/intents/<intent-id>/domain/**` |
-| モデル要素や契約 ID の追跡 | `.amadeus/intents/<intent-id>/traceability.md` |
+| Intent 固有のサブドメイン、BC、モデル、契約 | `.amadeus/intents/<intent-id>-<slug>/domain/**` |
+| モデル要素や契約 ID の追跡 | `.amadeus/intents/<intent-id>-<slug>/traceability.md` |
 | 全体として採用済みのドメインモデル | `.amadeus/domain/**` |
-| 戻しにくいドメイン判断 | `.amadeus/intents/<intent-id>/decisions.md` と `decisions/<decision-id>.md` |
+| 戻しにくいドメイン判断 | `.amadeus/intents/<intent-id>-<slug>/decisions.md` と `decisions/<decision-id>.md` |
 
 `.amadeus/glossary.md` は glossary であり、仕様書、検討メモ、実装判断の置き場ではない。
 実装詳細や一時的なメモは入れない。

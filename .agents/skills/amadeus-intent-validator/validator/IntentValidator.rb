@@ -4,7 +4,7 @@ require "json"
 require "pathname"
 require "set"
 
-class ExecutionValidator
+class IntentValidator
   Row = Struct.new(:target, :condition, :result, :evidence, keyword_init: true)
 
   ORGANIZATION_PATTERNS = [
@@ -37,6 +37,8 @@ class ExecutionValidator
     "passed",
     "failed"
   ].freeze
+
+  INTENT_DIRECTORY_PATTERN = /\A\d{8}-[a-z0-9]+(?:-[a-z0-9]+)*\z/
 
   DDD_ELEMENT_SPECS = {
     "集約" => { heading: "集約", pattern: /\ADA\d{3}\z/, prefix: "DA" },
@@ -151,6 +153,7 @@ class ExecutionValidator
     check_headings("#{base}/intent.md", ["目的", "成功条件", "範囲"])
 
     state = intent_state(base)
+    check_file("#{base}/state.json", "Intent 状態ファイルが存在する")
     if state && state["phase"] == "initialized"
       check_initialized_intent(base, state)
       return
@@ -160,6 +163,8 @@ class ExecutionValidator
       check_ideation_intent(base, state)
       return
     end
+
+    check_inception_state_json("#{base}/state.json", state) if state && state["phase"] == "inception"
 
     check_requirements("#{base}/requirements.md")
     check_acceptance("#{base}/acceptance.md", "#{base}/requirements.md")
@@ -208,7 +213,7 @@ class ExecutionValidator
 
     pass(path, "`initialized` がオブジェクトである", "オブジェクトを確認")
     check_allowed(path, "initialized.status", initialized["status"], STATUS_VALUES)
-    check_state_paths(path, initialized, "createdArtifacts", "Initialized 作成済み成果物が存在する", puml: false)
+    check_state_paths(path, initialized, "createdArtifacts", "Initialized 作成済み成果物が存在する", puml: false, label: "initialized")
     check_json_value(path, "initialized.next", initialized["next"], "ideation")
   end
 
@@ -243,8 +248,8 @@ class ExecutionValidator
     pass(path, "`ideation` がオブジェクトである", "オブジェクトを確認")
     check_allowed(path, "ideation.status", ideation["status"], STATUS_VALUES)
     check_allowed(path, "ideation.gate", ideation["gate"], IDEATION_GATE_VALUES)
-    check_state_paths(path, ideation, "requiredArtifacts", "Ideation 必須成果物が存在する", puml: false)
-    check_state_paths(path, ideation, "requiredMocks", "Ideation 必須モックが存在する", puml: true)
+    check_state_paths(path, ideation, "requiredArtifacts", "Ideation 必須成果物が存在する", puml: false, label: "ideation")
+    check_state_paths(path, ideation, "requiredMocks", "Ideation 必須モックが存在する", puml: true, label: "ideation")
 
     return unless state["status"].to_s.strip == "completed"
 
@@ -260,14 +265,47 @@ class ExecutionValidator
     end
   end
 
-  def check_state_paths(path, ideation, key, condition, puml:)
-    values = ideation[key]
-    unless values.is_a?(Array)
-      fail_row(path, "`ideation.#{key}` が配列である", values.class.to_s)
+  def check_inception_state_json(path, state)
+    check_json_value(path, "intent", state["intent"], @intent_id)
+    check_json_value(path, "phase", state["phase"], "inception")
+    check_allowed(path, "status", state["status"], STATUS_VALUES)
+
+    ideation = state["ideation"]
+    unless ideation.is_a?(Hash)
+      fail_row(path, "`ideation` がオブジェクトである", ideation.class.to_s)
       return
     end
 
-    pass(path, "`ideation.#{key}` が配列である", "#{values.length}件")
+    pass(path, "`ideation` がオブジェクトである", "オブジェクトを確認")
+    check_json_value(path, "ideation.status", ideation["status"], "completed")
+    check_json_value(path, "ideation.gate", ideation["gate"], "passed")
+
+    inception = state["inception"]
+    unless inception.is_a?(Hash)
+      fail_row(path, "`inception` がオブジェクトである", inception.class.to_s)
+      return
+    end
+
+    pass(path, "`inception` がオブジェクトである", "オブジェクトを確認")
+    check_allowed(path, "inception.status", inception["status"], STATUS_VALUES)
+    check_allowed(path, "inception.gate", inception["gate"], IDEATION_GATE_VALUES)
+    check_state_paths(path, inception, "requiredArtifacts", "Inception 必須成果物が存在する", puml: false, label: "inception")
+    check_state_paths(path, inception, "requiredBoltArtifacts", "Inception 必須 Bolt 成果物が存在する", puml: false, label: "inception")
+
+    return unless state["status"].to_s.strip == "completed"
+
+    check_json_value(path, "inception.status", inception["status"], "completed")
+    check_json_value(path, "inception.gate", inception["gate"], "passed")
+  end
+
+  def check_state_paths(path, state_section, key, condition, puml:, label:)
+    values = state_section[key]
+    unless values.is_a?(Array)
+      fail_row(path, "`#{label}.#{key}` が配列である", values.class.to_s)
+      return
+    end
+
+    pass(path, "`#{label}.#{key}` が配列である", "#{values.length}件")
     values.each do |value|
       check_state_relative_path(path, value, condition, puml: puml)
     end
@@ -309,9 +347,9 @@ class ExecutionValidator
     table = check_table(path, "一覧", ["識別子", "概要", "依存", "詳細"])
     return unless table
 
-    ids = collect_ids(path, table, "識別子")
+    ids = collect_ids(path, table, "識別子", INTENT_DIRECTORY_PATTERN)
     check_dependency_values(path, table, "依存", ids)
-    check_detail_links(path, table, "詳細")
+    check_intent_detail_links(path, table, ids)
 
     dep_table = check_table(path, "依存関係", ["インテント", "依存", "理由"])
     return unless dep_table
@@ -635,6 +673,8 @@ class ExecutionValidator
 
     task_ids = Set.new
     dependencies = []
+    requirement_ids = ids_for("#{base}/requirements.md")
+    use_case_ids = ids_for("#{base}/use-cases.md")
     table[:rows].each do |row|
       bolt_id = row["識別子"].to_s.strip
       next unless bolt_id.match?(/\AB\d{3}\z/)
@@ -660,6 +700,8 @@ class ExecutionValidator
         next
       end
 
+      check_task_contract(tasks_path, requirement_ids, use_case_ids)
+
       current_task = nil
       read(tasks_path).each_line do |line|
         if (match = line.match(/^- \[[ xX]\]\s+(T\d{3}):/))
@@ -682,6 +724,61 @@ class ExecutionValidator
     end
 
     task_ids
+  end
+
+  def check_task_contract(path, requirement_ids, use_case_ids)
+    task_blocks(path).each do |task_id, lines|
+      work_index = lines.index { |line| line.match?(/^\s+-\s+作業:\s*$/) }
+      if work_index
+        pass(path, "`#{task_id}` に作業がある", "作業を確認")
+        work_lines = lines[(work_index + 1)..] || []
+        if work_lines.any? { |line| line.match?(/^\s{4,}-\s+\S/) }
+          pass(path, "`#{task_id}` に具体的な作業がある", "作業項目を確認")
+        else
+          fail_row(path, "`#{task_id}` に具体的な作業がある", "作業項目がない")
+        end
+      else
+        fail_row(path, "`#{task_id}` に作業がある", "作業がない")
+      end
+
+      labels = task_labels(lines)
+      check_task_label(path, task_id, labels, "要求", requirement_ids)
+      check_task_label(path, task_id, labels, "ユースケース", use_case_ids)
+      check_task_label(path, task_id, labels, "依存", nil)
+      check_task_label(path, task_id, labels, "証拠", nil)
+    end
+  end
+
+  def task_blocks(path)
+    blocks = []
+    read(path).each_line do |line|
+      if (match = line.match(/^- \[[ xX]\]\s+(T\d{3}):/))
+        blocks << [match[1], []]
+      end
+      blocks.last[1] << line if blocks.any?
+    end
+    blocks
+  end
+
+  def task_labels(lines)
+    labels = {}
+    lines.each do |line|
+      next unless (match = line.match(/^\s+-\s+(要求|ユースケース|依存|証拠):\s*(.*)$/))
+
+      labels[match[1]] = match[2].to_s.strip
+    end
+    labels
+  end
+
+  def check_task_label(path, task_id, labels, label, ids)
+    value = labels[label]
+    if blank?(value)
+      fail_row(path, "`#{task_id}` の#{label}が空欄でない", value.to_s)
+      return
+    end
+
+    pass(path, "`#{task_id}` の#{label}が空欄でない", value)
+    check_values_exist(path, label, value, ids, allow_none: false) if ids
   end
 
   def check_values_exist(path, column, value, ids, allow_none:)
@@ -1258,6 +1355,42 @@ class ExecutionValidator
     end
   end
 
+  def check_intent_detail_links(path, table, ids)
+    return unless table[:headers].include?("詳細")
+
+    table[:rows].each do |row|
+      id = row["識別子"].to_s.strip
+      links = markdown_links(row["詳細"].to_s)
+      if links.empty?
+        fail_row(path, "`詳細` が相対リンクを持つ", row["詳細"].to_s)
+        next
+      end
+
+      links.each do |target|
+        check_link(path, target)
+        clean = target.split("#", 2).first.to_s.split(/\s+/, 2).first.to_s
+        match = clean.match(/\Aintents\/([^\/]+)\/intent\.md\z/)
+        unless match
+          fail_row(path, "`詳細` が intents/<intent-id>-<slug>/intent.md を指す", target)
+          next
+        end
+
+        directory = match[1]
+        if directory == id
+          pass(path, "`詳細` の Intent ディレクトリ名が識別子と一致する", directory)
+        else
+          fail_row(path, "`詳細` の Intent ディレクトリ名が識別子と一致する", "#{directory} != #{id}")
+        end
+
+        if ids.include?(directory)
+          pass(path, "`詳細` の Intent ディレクトリ名が一覧内に存在する", directory)
+        else
+          fail_row(path, "`詳細` の Intent ディレクトリ名が一覧内に存在する", directory)
+        end
+      end
+    end
+  end
+
   def check_relative_links(path)
     return unless absolute(path).file?
 
@@ -1402,7 +1535,7 @@ class ExecutionValidator
     skipped_rows = @rows.select { |row| row.result == "skipped" }
 
     lines = []
-    lines << "# Execution Validator 結果"
+    lines << "# Intent Validator 結果"
     lines << ""
     lines << "## 判定"
     lines << ""
@@ -1540,6 +1673,7 @@ class ExecutionValidator
     return "識別子" if condition.include?("識別子")
     return "リンク参照" if condition.include?("相対リンク") || condition.include?("を指す")
     return "Traceability ID" if traceability_id_condition?(condition)
+    return "Bolt / Task" if task_condition?(condition)
     return "ドメインモデル" if domain_model_condition?(condition)
     return "依存関係" if condition.include?("依存")
     return "Index ID参照" if condition.include?("一覧内の既存 ID")
@@ -1555,6 +1689,14 @@ class ExecutionValidator
       condition.include?("契約ファイル") ||
       condition.include?("Bnnn/Tnnn") ||
       condition.include?("なしを許可")
+  end
+
+  def task_condition?(condition)
+    condition.include?("Task") ||
+      condition.include?("作業") ||
+      condition.include?("要求が空欄") ||
+      condition.include?("ユースケースが空欄") ||
+      condition.include?("証拠が空欄")
   end
 
   def domain_model_condition?(condition)
@@ -1613,7 +1755,7 @@ end
 if $PROGRAM_NAME == __FILE__
   root = ARGV[0] || Dir.pwd
   intent_id = ARGV[1]
-  result = ExecutionValidator.new(root, intent_id).run
+  result = IntentValidator.new(root, intent_id).run
   puts result
 
   case result[/^pass$|^fail$|^blocked$/, 0]

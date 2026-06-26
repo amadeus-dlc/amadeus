@@ -2,7 +2,7 @@
 name: amadeus-intent-init
 description: >-
   Amadeus steering layer が存在する workspace で、新しい Intent の入れ物だけを初期化する。`.amadeus/intents.md` への登録、
-  `.amadeus/intents/<intent-id>/intent.md`、`state.json` の作成が必要な場面では必ず使う。Ideation、requirements、use-cases、
+  `.amadeus/intents/<intent-id>-<slug>/intent.md`、`state.json` の作成が必要な場面では必ず使う。Ideation、requirements、use-cases、
   units、bolts、domain model を作るための skill ではない。
 ---
 
@@ -87,14 +87,14 @@ Intent ID なしで `未確認` のディレクトリ名を作らない。
 作成または更新するものは次だけである。
 
 - `.amadeus/intents.md`
-- `.amadeus/intents/<intent-id>/intent.md`
-- `.amadeus/intents/<intent-id>/state.json`
+- `.amadeus/intents/<intent-id>-<slug>/intent.md`
+- `.amadeus/intents/<intent-id>-<slug>/state.json`
 
 `state.json` は次の形にする。
 
 ```json
 {
-  "intent": "<intent-id>",
+  "intent": "<intent-id>-<slug>",
   "phase": "initialized",
   "status": "in_progress",
   "initialized": {
@@ -141,16 +141,16 @@ Intent ID なしで `未確認` のディレクトリ名を作らない。
 
 | 列 | 書き方 |
 |---|---|
-| `識別子` | `<intent-id>` |
+| `識別子` | `<intent-id>-<slug>` |
 | `概要` | Intent の目的を短く書く。未確認なら `未確認` と書く。 |
 | `依存` | 依存する Intent ID、または `なし`。 |
-| `詳細` | `[<intent-id>/intent.md](intents/<intent-id>/intent.md)` |
+| `詳細` | `[<intent-id>-<slug>/intent.md](intents/<intent-id>-<slug>/intent.md)` |
 
 `依存関係` に、対象 Intent の依存行を1つ追加する。
 
 | 列 | 書き方 |
 |---|---|
-| `インテント` | `<intent-id>` |
+| `インテント` | `<intent-id>-<slug>` |
 | `依存` | 依存する Intent ID、または `なし`。 |
 | `理由` | 依存理由。依存がなければ単独で成立する理由を書く。未確認なら `未確認` と書く。 |
 
@@ -163,8 +163,8 @@ Intent ID なしで `未確認` のディレクトリ名を作らない。
 
 1. `state.json` が JSON として解釈できる。
 2. `.amadeus/intents.md` に追加した詳細リンクが存在する。
-3. 昇格済みの `amadeus-execution-validator` が使える場合は、全体成果物を検証する。
-4. 昇格済みの `amadeus-execution-validator` が `initialized` phase に対応している場合は、対象 Intent ID を指定して検証する。
+3. 昇格済みの `amadeus-intent-validator` が使える場合は、全体成果物を検証する。
+4. 昇格済みの `amadeus-intent-validator` が `initialized` phase に対応している場合は、対象 Intent ID を指定して検証する。
 
 ## 禁止事項
 
@@ -181,4 +181,4 @@ Intent ID なしで `未確認` のディレクトリ名を作らない。
 
 - Intent の Ideation 成果物を作る場合: `amadeus-intent-ideation`
 - steering layer が不足している場合: `amadeus-steering`
-- 成果物の構造を検証する場合: `amadeus-execution-validator`
+- 成果物の構造を検証する場合: `amadeus-intent-validator`

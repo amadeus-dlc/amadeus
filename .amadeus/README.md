@@ -113,7 +113,7 @@ Ideation 段階では、少なくとも次を置く。
 
 ```json
 {
-  "intent": "<intent-id>",
+  "intent": "<intent-id>-<slug>",
   "phase": "ideation",
   "status": "completed",
   "ideation": {
@@ -436,7 +436,7 @@ greenfield で `codebase-analysis.md` を作らない場合は、この見出し
 
 | 成果物 | 必須度 | 作成タイミング | 役割 | 未作成時の扱い |
 |---|---|---|---|---|
-| `intents/<intent-id>/intent.md` | 必須 | インテント作成時 | インテントの目的、成功条件、範囲を扱う | 未作成不可 |
+| `intents/<intent-id>-<slug>/intent.md` | 必須 | インテント作成時 | インテントの目的、成功条件、範囲を扱う | 未作成不可 |
 | `requirements.md` | 必須 | 最初の要求を作る時 | 要求一覧と受け入れ状態を扱う | 要求がなければ作らない |
 | `acceptance.md` | 必須 | 最初の要求を作る時 | 要求の受け入れ状態と証拠を扱う | 要求がなければ作らない |
 | `traceability.md` | 必須 | 最初の要求を作る時 | 目的、アクター、外部システム、要求、既存コード分析、ドメインモデル、ストーリー、ユースケース、ユニット、ボルト、設計、タスクの対応と依存の横断追跡を扱う | 要求がなければ作らない |

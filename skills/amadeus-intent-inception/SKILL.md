@@ -21,17 +21,17 @@ Spec、実装、CI、運用手順は作らない。
 
 ## 前提
 
-対象 Intent が `.amadeus/intents/<intent-id>/` に存在し、Ideation を完了していることを前提にする。
+対象 Intent が `.amadeus/intents/<intent-id>-<slug>/` に存在し、Ideation を完了していることを前提にする。
 
 少なくとも次が存在しない場合は、作業を止めて `amadeus-intent-init` または `amadeus-intent-ideation` を案内する。
 
 - `.amadeus/intents.md`
-- `.amadeus/intents/<intent-id>/intent.md`
-- `.amadeus/intents/<intent-id>/state.json`
-- `.amadeus/intents/<intent-id>/scope.md`
-- `.amadeus/intents/<intent-id>/ideation.md`
-- `.amadeus/intents/<intent-id>/traceability.md`
-- `.amadeus/intents/<intent-id>/decisions.md`
+- `.amadeus/intents/<intent-id>-<slug>/intent.md`
+- `.amadeus/intents/<intent-id>-<slug>/state.json`
+- `.amadeus/intents/<intent-id>-<slug>/scope.md`
+- `.amadeus/intents/<intent-id>-<slug>/ideation.md`
+- `.amadeus/intents/<intent-id>-<slug>/traceability.md`
+- `.amadeus/intents/<intent-id>-<slug>/decisions.md`
 
 `state.json.phase` が `ideation` でない場合は、現在の phase と不足成果物を確認してから止める。
 `state.json.ideation.gate` が `passed` でない場合は、Inception へ進めず `amadeus-intent-ideation` の `refine` を案内する。
@@ -190,24 +190,24 @@ Spec、実装、CI、運用手順は作らない。
 
 作成または更新するものは次だけである。
 
-- `.amadeus/intents/<intent-id>/requirements.md`
-- `.amadeus/intents/<intent-id>/requirements/<requirement-id>-<slug>.md`
-- `.amadeus/intents/<intent-id>/acceptance.md`
-- `.amadeus/intents/<intent-id>/user-stories.md`
-- `.amadeus/intents/<intent-id>/user-stories/<story-id>-<slug>.md`
-- `.amadeus/intents/<intent-id>/use-cases.md`
-- `.amadeus/intents/<intent-id>/use-cases/<use-case-id>-<slug>.md`
-- `.amadeus/intents/<intent-id>/codebase-analysis.md`
-- `.amadeus/intents/<intent-id>/units.md`
-- `.amadeus/intents/<intent-id>/units/<unit-id>-<slug>.md`
-- `.amadeus/intents/<intent-id>/bolts.md`
-- `.amadeus/intents/<intent-id>/bolts/<bolt-id>-<slug>/bolt.md`
-- `.amadeus/intents/<intent-id>/bolts/<bolt-id>-<slug>/design.md`
-- `.amadeus/intents/<intent-id>/bolts/<bolt-id>-<slug>/tasks.md`
-- `.amadeus/intents/<intent-id>/traceability.md`
-- `.amadeus/intents/<intent-id>/decisions.md`
-- `.amadeus/intents/<intent-id>/decisions/<decision-id>.md`
-- `.amadeus/intents/<intent-id>/state.json`
+- `.amadeus/intents/<intent-id>-<slug>/requirements.md`
+- `.amadeus/intents/<intent-id>-<slug>/requirements/<requirement-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>-<slug>/acceptance.md`
+- `.amadeus/intents/<intent-id>-<slug>/user-stories.md`
+- `.amadeus/intents/<intent-id>-<slug>/user-stories/<story-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>-<slug>/use-cases.md`
+- `.amadeus/intents/<intent-id>-<slug>/use-cases/<use-case-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>-<slug>/codebase-analysis.md`
+- `.amadeus/intents/<intent-id>-<slug>/units.md`
+- `.amadeus/intents/<intent-id>-<slug>/units/<unit-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>-<slug>/bolts.md`
+- `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/bolt.md`
+- `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/design.md`
+- `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/tasks.md`
+- `.amadeus/intents/<intent-id>-<slug>/traceability.md`
+- `.amadeus/intents/<intent-id>-<slug>/decisions.md`
+- `.amadeus/intents/<intent-id>-<slug>/decisions/<decision-id>.md`
+- `.amadeus/intents/<intent-id>-<slug>/state.json`
 
 `intent.md`、`scope.md`、`ideation.md` は原則として既存内容を尊重する。
 Inception の回答により明らかな `未確認` を埋める必要がある場合だけ、該当箇所を最小限更新する。
@@ -548,7 +548,8 @@ Inception 段階の必須見出しは次である。
 
 `分析` と `設計` は相対リンクにする。
 `入力` には、既存コード分析から後続成果物へ渡す判断材料を書く。
-greenfield で `codebase-analysis.md` を作らない場合は、この見出しに対象外理由を残す。
+greenfield で `codebase-analysis.md` を作らない場合も、この見出しには必須列を持つ空表を置き、対象外理由を本文に残す。
+空表は、見出しと区切り行だけを置き、データ行を書かない。
 
 `依存関係からの追跡` では、Intent、要求、ユーザーストーリー、ユースケース、ユニット、ボルト、タスク、判断の依存を同じ表で追跡する。
 
@@ -559,7 +560,7 @@ Inception 完了時の `state.json` は次の形にする。
 
 ```json
 {
-  "intent": "<intent-id>",
+  "intent": "<intent-id>-<slug>",
   "phase": "inception",
   "status": "completed",
   "ideation": {
@@ -613,5 +614,5 @@ greenfield の場合は含めず、`traceability.md` に対象外理由を残す
 
 - Intent の Ideation 成果物が不足している場合: `amadeus-intent-ideation`
 - 用語、概念、ドメインモデル、契約が不足している場合: `amadeus-domain-grilling` または `amadeus-domain-modeling`
-- 成果物の構造を検証する場合: `amadeus-execution-validator`
+- 成果物の構造を検証する場合: `amadeus-intent-validator`
 - Spec へ進める場合: 未確定

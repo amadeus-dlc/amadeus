@@ -79,7 +79,7 @@ Amadeus の対象ドメインについて、質問で曖昧さを解きながら
 
 - 未確定語、候補、問いは、対象 Intent の `domain-notes.md` に記録する。
 - 全 Intent で共有する確定用語は `.amadeus/glossary.md` に記録する。
-- Intent 固有のサブドメイン、BC、モデル、契約は `.amadeus/intents/<intent-id>/domain/**` に記録する。
+- Intent 固有のサブドメイン、BC、モデル、契約は `.amadeus/intents/<intent-id>-<slug>/domain/**` に記録する。
 - モデル要素や契約 ID に影響する場合は、対象 Intent の `traceability.md` も整合させる。
 - 全体として採用する判断がある場合だけ `.amadeus/domain/**` に昇格する。
 - 戻しにくく、背景なしでは意図が分かりにくく、実際の trade-off がある判断だけ decision にする。

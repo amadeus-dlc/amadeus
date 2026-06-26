@@ -98,15 +98,15 @@ review-output/
 
 開発用検証を実行時依存として扱わない。
 
-## Execution Validator の検査責務
+## Intent Validator の検査責務
 
-Execution Validator は、配布先ユーザー環境で動く実行時 validator として扱う。
+Intent Validator は、配布先ユーザー環境で動く実行時 validator として扱う。
 
-Execution Validator をスキルに同梱する場合は、対象スキルの `scripts/` または `references/` に置く。
+Intent Validator をスキルに同梱する場合は、対象スキルの `scripts/` または `references/` に置く。
 
 repo root の開発用 `scripts/**` を、配布先ユーザー環境の検証入口にしない。
 
-`domain/bounded-contexts.md` を検査する Execution Validator は、少なくとも次を確認する。
+`domain/bounded-contexts.md` を検査する Intent Validator は、少なくとも次を確認する。
 
 - `一覧`、`コンテキスト間の依存`、`パターン分類` の見出しがある。
 - `一覧` の表に `識別子`、`名前`、`サブドメイン`、`役割`、`モデル`、`契約` がある。
