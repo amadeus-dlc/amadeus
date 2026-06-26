@@ -20,6 +20,11 @@
       "id": 4,
       "prompt": "まだ intent.md も state.json もないけど、amadeus-intent-ideation で Ideation を作って。",
       "expected_output": "Intent の入れ物が不足しているため作業を止め、amadeus-intent-init を先に使うよう案内する。Ideation 成果物は作らない。"
+    },
+    {
+      "id": 5,
+      "prompt": "20260627-risk-aware-reset-support はもう Ideation 成果物があります。スコープと初期モックの未確定事項を煮詰めたい。",
+      "expected_output": "auto mode で既存 state.json と Ideation 成果物を確認し、refine を自動選択する。読めば分かることは質問せず、Ideation 論点を一問だけ質問し、推奨回答と理由を添える。質問したターンでは成果物を更新しない。"
     }
   ]
 }

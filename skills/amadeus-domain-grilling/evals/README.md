@@ -21,9 +21,9 @@
 
 | ケース | 状態 | 確認内容 | 証拠 |
 |---|---|---|---|
-| `ask-one-domain-question` | 未実施 | 一問だけ出し、推奨回答と理由、回答後の更新候補を示す。 | 未登録 |
-| `do-not-update-before-answer` | 未実施 | 質問が必要なターンでは成果物を更新しない。 | 未登録 |
-| `update-after-answer` | 未実施 | 回答後は domain-modeling の更新先規則に従う。 | 未登録 |
+| `ask-one-domain-question` | 完了 | 一問だけ出し、推奨回答と理由、回答後の更新候補を示す。 | `/var/folders/3s/p2xl_vd524b4lk78cb6fz5nh0000gn/T/amadeus-domain-grilling-eval.20260627-73956-n06har/ask-one-domain-question/checks.md` |
+| `do-not-update-before-answer` | 完了 | 質問が必要なターンでは成果物を更新しない。 | `/var/folders/3s/p2xl_vd524b4lk78cb6fz5nh0000gn/T/amadeus-domain-grilling-eval.20260627-73956-n06har/do-not-update-before-answer/checks.md` |
+| `update-after-answer` | 完了 | 回答後は domain-modeling の更新先規則に従う。 | `/var/folders/3s/p2xl_vd524b4lk78cb6fz5nh0000gn/T/amadeus-domain-grilling-eval.20260627-73956-n06har/update-after-answer/checks.md` |
 
 ## 再実行コマンド
 

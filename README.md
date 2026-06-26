@@ -76,6 +76,10 @@ Inception 以降の要求、ユースケース、Unit、Bolt、Spec を作る sk
 
 `repair` は、既存 Ideation 成果物の見出し、リンク、`state.json`、必須成果物の対応だけを補修する場合に使います。
 
+既に Ideation 段階にある Intent を煮詰める場合は、`amadeus-intent-ideation` が `refine` を自動選択します。
+`refine` は、既存の `scope.md`、`ideation.md`、`decisions.md`、`traceability.md`、`mocks/*.puml`、`state.json` を読み、必要な Ideation 論点を一問ずつ確認します。
+質問が必要なターンでは成果物を更新せず、回答後に Ideation 成果物だけを更新します。
+
 この段階では、要求、ユースケース、Unit、Bolt、Task、ドメインモデルは作りません。
 
 ### 4. 論点を一問ずつ確認する
