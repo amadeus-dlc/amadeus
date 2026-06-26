@@ -110,6 +110,12 @@ ruby <skill-dir>/validator/ExecutionValidator.rb <workdir> <intent-id>
 
 pass | fail | blocked
 
+## 検査サマリ
+
+| 検査カテゴリ | pass | fail | blocked |
+|---|---:|---:|---:|
+| <カテゴリ> | <件数> | <件数> | <件数> |
+
 ## 確認対象
 
 - <確認したファイル>

@@ -877,6 +877,10 @@ class ExecutionValidator
     lines << ""
     lines << overall_result
     lines << ""
+    lines << "## 検査サマリ"
+    lines << ""
+    lines.concat(summary_table)
+    lines << ""
     lines << "## 確認対象"
     lines << ""
     if @checked_files.empty?
@@ -909,7 +913,60 @@ class ExecutionValidator
   end
 
   def summarize(rows)
-    rows.map { |row| "#{row.target}: #{row.condition}" }.uniq.first(30)
+    grouped = rows.group_by { |row| category_for(row) }
+    grouped.sort_by { |category, _| category }.map do |category, category_rows|
+      targets = category_rows.map(&:target).uniq.length
+      "#{category}: #{category_rows.length}件 pass、対象 #{targets}件"
+    end
+  end
+
+  def summary_table
+    grouped = @rows.group_by { |row| category_for(row) }
+    lines = []
+    lines << "| 検査カテゴリ | pass | fail | blocked |"
+    lines << "|---|---:|---:|---:|"
+    grouped.sort_by { |category, _| category }.each do |category, rows|
+      counts = rows.group_by(&:result)
+      lines << "| #{category} | #{counts.fetch("pass", []).length} | #{counts.fetch("fail", []).length} | #{counts.fetch("blocked", []).length} |"
+    end
+    lines
+  end
+
+  def category_for(row)
+    condition = row.condition
+    target = row.target
+
+    return "実行環境" if condition.include?("作業ディレクトリ") || condition.include?("成果物ルート")
+    return "ファイル存在" if condition.include?("存在する") && !condition.include?("参照先")
+    return "見出し" if condition.include?("見出し")
+    return "表列" if condition.include?("表列") || condition.include?("表がある")
+    return "識別子" if condition.include?("識別子")
+    return "リンク参照" if condition.include?("相対リンク")
+    return "Traceability ID" if traceability_id_condition?(condition)
+    return "Traceability 対象外" if condition.include?("ID 実在チェック対象外")
+    return "依存関係" if condition.include?("依存")
+    return "Index ID参照" if condition.include?("一覧内の既存 ID")
+    return "空欄" if condition.include?("空欄")
+    return "ドメイン境界" if domain_boundary_condition?(condition, target)
+
+    "その他"
+  end
+
+  def traceability_id_condition?(condition)
+    condition.include?("実在 ID") ||
+      condition.include?("実在 Task ID") ||
+      condition.include?("契約ファイル") ||
+      condition.include?("Bnnn/Tnnn") ||
+      condition.include?("なしを許可")
+  end
+
+  def domain_boundary_condition?(condition, target)
+    target.include?("bounded-contexts.md") ||
+      target.include?("subdomains.md") ||
+      condition.include?("組織パターン") ||
+      condition.include?("統合パターン") ||
+      condition.include?("コンテキスト") ||
+      condition.include?("許可値")
   end
 
   def blank?(value)
