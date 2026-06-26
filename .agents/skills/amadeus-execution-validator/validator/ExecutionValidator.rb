@@ -1247,6 +1247,7 @@ class ExecutionValidator
     target = row.target
 
     return "実行環境" if condition.include?("作業ディレクトリ") || condition.include?("成果物ルート")
+    return "検証範囲" if condition.include?("対象 Intent ID")
     return "ファイル存在" if condition.include?("存在する") && !condition.include?("参照先")
     return "見出し" if condition.include?("見出し")
     return "表列" if condition.include?("表列") || condition.include?("表がある")
@@ -1272,6 +1273,7 @@ class ExecutionValidator
 
   def domain_model_condition?(condition)
     condition.include?("DDD") ||
+      condition.include?("BC ID") ||
       condition.include?("model.md") ||
       condition.include?("外部境界表")
   end
