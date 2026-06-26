@@ -1,0 +1,506 @@
+---
+name: amadeus-intent-inception
+description: >-
+  Amadeus の Ideation 完了済み Intent を Inception 段階へ進め、要求、受け入れ状態、ユーザーストーリー、ユースケース、
+  Unit、Bolt、Design、Task、追跡、判断を作成、点検、補修、または煮詰める。`state.json.phase` が `ideation` で gate passed の
+  Intent を Inception へ進める場面、または既に Inception 成果物を持つ Intent の requirements、user-stories、use-cases、
+  units、bolts、design、tasks、traceability、decisions を refine したい場面では必ず使う。domain model、Spec、実装を作るための skill
+  ではない。
+---
+
+# amadeus-intent-inception
+
+## 目的
+
+Ideation 完了済みの Intent を Inception 段階へ進める。または、既に Inception 段階にある Intent を煮詰める。
+
+この skill は、Intent から要求、ユーザーストーリー、ユースケース、ユニット、ボルト、設計、タスクへの分解と追跡を固定する。
+ここで扱う設計は、タスクを具体化するための Bolt 内設計である。
+Spec、実装、CI、運用手順は作らない。
+
+この skill は開発中スキルとして扱う。
+eval と手動レビューを通るまで、昇格済み skill として扱わない。
+
+## 前提
+
+対象 Intent が `.amadeus/intents/<intent-id>/` に存在し、Ideation を完了していることを前提にする。
+
+少なくとも次が存在しない場合は、作業を止めて `amadeus-intent-init` または `amadeus-intent-ideation` を案内する。
+
+- `.amadeus/intents.md`
+- `.amadeus/intents/<intent-id>/intent.md`
+- `.amadeus/intents/<intent-id>/state.json`
+- `.amadeus/intents/<intent-id>/scope.md`
+- `.amadeus/intents/<intent-id>/ideation.md`
+- `.amadeus/intents/<intent-id>/traceability.md`
+- `.amadeus/intents/<intent-id>/decisions.md`
+
+`state.json.phase` が `ideation` でない場合は、現在の phase と不足成果物を確認してから止める。
+`state.json.ideation.gate` が `passed` でない場合は、Inception へ進めず `amadeus-intent-ideation` の `refine` を案内する。
+
+既存のドメイン用語、境界づけられたコンテキスト、契約が不足している場合は、Inception 成果物の中で推測して確定しない。
+必要なら `amadeus-domain-grilling` または `amadeus-domain-modeling` を案内する。
+
+## 入力
+
+- 検証対象の作業ディレクトリ。
+- 対象 Intent ID。
+- Inception の進め方。
+  - `auto`: 既存状態から `guided`、`refine`、`repair` を判定する。
+  - `guided`: 質問してから作る。
+  - `scaffold-only`: 質問せず、分かる情報だけで作る。
+  - `refine`: 既存 Inception 成果物を質問で煮詰める。
+  - `repair`: 既存 Inception 成果物の構造だけを補修する。
+- 分かっている場合は、要求、利用者価値、相互作用、ユニット境界、ボルト境界、設計候補、タスク候補。
+
+実行モードの指定がなければ `auto` にする。
+
+## 実行モード
+
+### `auto`
+
+既定モード。
+対象 Intent の状態を読み、実行モードを自動判定する。
+
+判定では、少なくとも次を読む。
+
+- `.amadeus/intents.md`
+- `intent.md`
+- `state.json`
+- `scope.md`
+- `ideation.md`
+- `traceability.md`
+- `decisions.md`
+- 既存の `requirements.md`
+- 既存の `acceptance.md`
+- 既存の `user-stories.md`
+- 既存の `use-cases.md`
+- 既存の `units.md`
+- 既存の `bolts.md`
+- 既存の `bolts/*/design.md`
+- 既存の `bolts/*/tasks.md`
+- 既存の `domain/**`
+- steering layer
+
+判定規則は次である。
+
+| 状態 | 自動選択 | 理由 |
+|---|---|---|
+| `intent.md` または `state.json` がない | 停止 | Intent の入れ物が不足しているため |
+| Ideation 必須成果物がない | 停止 | Inception の前提が不足しているため |
+| `state.json.phase` が `ideation` で gate が `passed`、Inception 成果物が不足している | `guided` | Inception へ進める前段だから |
+| `state.json.phase` が `inception` で必須成果物が存在し、内容を煮詰める依頼である | `refine` | 既存 Inception を深める段階だから |
+| `state.json.phase` が `inception` で必須見出し、相対リンク、依存表記、`requiredArtifacts` だけが壊れている | `repair` | 構造補修が目的だから |
+| `state.json.phase` が `inception` だが、構造補修と内容判断の両方が必要である | まず `repair` | 壊れた構造の上で内容判断をしないため |
+| ユーザーが `scaffold-only` を明示した | `scaffold-only` | 質問しない作成を明示しているため |
+
+`auto` で `guided`、`refine`、`repair` を選んだ場合は、選択理由を短く示してから該当モードの手順に従う。
+
+### `guided`
+
+作成前に、Inception 成果物に必要な不足だけを質問する。
+
+質問は `/amadeus-grilling` を使って行う。
+複数の論点が残っている場合でも、一度に並べず一問ずつ質問する。
+質問総数は最大6つにする。
+既存の `intent.md`、`scope.md`、`ideation.md`、`traceability.md`、`decisions.md`、steering layer、domain layer から分かることは質問しない。
+
+質問候補は次である。
+
+- 要求として採用する利用者価値と制約は何か。
+- ユーザーストーリーが必要なアクター価値は何か。
+- ユースケースとして叙述すべきシステムとの相互作用は何か。
+- Unit を切る価値境界と、境界づけられたコンテキストは何か。
+- Bolt を切る実施境界と、Unit との対応は何か。
+- Task 生成の入力になる Bolt 内設計には、どの責務境界、構成、データ、検証観点が必要か。
+- Task に落とす作業、依存、証拠の粒度は何か。
+- Intent、Requirement、Story、Use Case、Unit、Bolt、Task のピラミッド構造が崩れる場合、その理由は何か。
+
+質問した場合は、その場で成果物を作らず、ユーザーの回答を待つ。
+回答を受け取ってから Inception 成果物を作る。
+
+### `scaffold-only`
+
+ユーザーが明示した場合だけ使う。
+質問せず、既存 Ideation 成果物と domain layer から分かる範囲で Inception 成果物を作る。
+
+不明な項目は空欄にせず、`未確認` と書く。
+未確認事項には、後で人間が答えるべき問いを残す。
+
+### `repair`
+
+ユーザーが明示した場合だけ使う。
+既存の Inception 成果物を点検し、欠けている必須見出し、`state.json` の不整合、相対リンク欠落、依存表記の欠落、識別子の重複だけを補修する。
+
+`repair` では、新しい要求、ユースケース、ユニット、ボルト、設計、タスクを根拠なく追加しない。
+ドメインモデル、Spec、実装は作らない。
+
+### `refine`
+
+既に Inception 段階にある Intent を、質問で煮詰める。
+
+`refine` は、Inception 成果物の所有範囲だけを扱う。
+ドメインモデル、Spec、実装へ進めない。
+
+開始時に、少なくとも次を読む。
+
+- `intent.md`
+- `scope.md`
+- `ideation.md`
+- `requirements.md`
+- `acceptance.md`
+- `user-stories.md`
+- `use-cases.md`
+- `units.md`
+- `bolts.md`
+- `bolts/*/bolt.md`
+- `bolts/*/design.md`
+- `bolts/*/tasks.md`
+- `traceability.md`
+- `decisions.md`
+- `state.json`
+- `domain/**`
+- steering layer
+
+読めば分かることは質問しない。
+まだ人間の判断が必要な Inception 論点を1つだけ選び、`amadeus-grilling` の質問作法に従って一問だけ質問する。
+
+質問候補は次である。
+
+- 要求の採用、分割、依存、受け入れ状態の曖昧さ。
+- ユーザーストーリーが要求の言い換えになっている箇所。
+- ユースケースが相互作用ではなく要求の箇条書きになっている箇所。
+- Unit が価値単位として大きすぎる、または細かすぎる箇所。
+- Bolt が Unit と 1:1 になっており、分解不足か自然な粒度かを判断すべき箇所。
+- Bolt 内設計が不足しており、Task が要求やユースケースから直接作られている箇所。
+- Task の作業、依存、証拠が欠けている箇所。
+- ピラミッド構造が崩れており、grill 不足を疑うべき箇所。
+
+質問した場合は、そのターンでは成果物を更新しない。
+ユーザーの回答を受け取ってから、必要最小限の Inception 成果物だけを更新する。
+
+## 成果物
+
+作成または更新するものは次だけである。
+
+- `.amadeus/intents/<intent-id>/requirements.md`
+- `.amadeus/intents/<intent-id>/requirements/<requirement-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>/acceptance.md`
+- `.amadeus/intents/<intent-id>/user-stories.md`
+- `.amadeus/intents/<intent-id>/user-stories/<story-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>/use-cases.md`
+- `.amadeus/intents/<intent-id>/use-cases/<use-case-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>/units.md`
+- `.amadeus/intents/<intent-id>/units/<unit-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>/bolts.md`
+- `.amadeus/intents/<intent-id>/bolts/<bolt-id>-<slug>/bolt.md`
+- `.amadeus/intents/<intent-id>/bolts/<bolt-id>-<slug>/design.md`
+- `.amadeus/intents/<intent-id>/bolts/<bolt-id>-<slug>/tasks.md`
+- `.amadeus/intents/<intent-id>/traceability.md`
+- `.amadeus/intents/<intent-id>/decisions.md`
+- `.amadeus/intents/<intent-id>/decisions/<decision-id>.md`
+- `.amadeus/intents/<intent-id>/state.json`
+
+`intent.md`、`scope.md`、`ideation.md` は原則として既存内容を尊重する。
+Inception の回答により明らかな `未確認` を埋める必要がある場合だけ、該当箇所を最小限更新する。
+
+## 識別子
+
+Inception 成果物の識別子は次を使う。
+
+| 成果物 | 識別子 |
+|---|---|
+| 要求 | `Rnnn` |
+| ユーザーストーリー | `Snnn` |
+| ユースケース | `UCnnn` |
+| ユニット | `Unnn` |
+| ボルト | `Bnnn` |
+| タスク | `Tnnn` |
+| 判断 | `Dnnn` |
+
+`nnn` は3桁の連番にする。
+既存 ID がある場合は欠番を再利用せず、次の番号を使う。
+
+Task ID は Bolt 内で連番にする。
+別 Bolt の Task を参照する場合は、`B001/T002` のように `<bolt-id>/<task-id>` で書く。
+
+## 依存関係
+
+全ての一覧ファイルは `依存` 列を持つ。
+全ての一覧ファイルは `依存関係` 見出しを持つ。
+
+依存がない場合は `なし` と書く。
+依存がある場合は、同じ成果物種別の ID を書く。
+Task が別 Bolt の Task に依存する場合だけ、`B001/T002` のように Bolt ID を付ける。
+
+依存は、何を作るかの説明の代わりにしない。
+Task には必ず `作業` を書く。
+
+## ピラミッド構造
+
+基本形は次である。
+
+```text
+Intent
+  -> Requirement
+    -> User Story
+      -> Use Case
+        -> Unit
+          -> Bolt
+            -> Design
+            -> Task
+```
+
+下位成果物が上位成果物と常に 1:1 になる場合は、分割不足を疑う。
+まず `amadeus-grilling` で、要求、相互作用、価値単位、実施境界を十分に分けたか確認する。
+
+それでも 1:1 が自然な場合は、例外として認める。
+ただし、`traceability.md` または `decisions.md` に理由を残す。
+
+例外理由には、少なくとも次を書く。
+
+- どの階層が 1:1 になっているか。
+- grill 不足ではないと判断した理由。
+- 後で分割を見直す条件。
+
+## `requirements.md`
+
+必須見出しは次である。
+
+- `一覧`
+- `依存関係`
+- `受け入れ状態`
+
+`一覧` の表は、次の列を持つ。
+
+- `識別子`
+- `概要`
+- `状態`
+- `依存`
+- `詳細`
+
+要求状態は、次の順に進める。
+
+```text
+提案 -> 採用済み -> 充足済み -> 検証済み
+```
+
+Inception で新しく作る要求は、原則として `提案` または `採用済み` にする。
+実装証拠なしに `充足済み` や `検証済み` にしない。
+
+## `acceptance.md`
+
+必須見出しは次である。
+
+- `要求状態`
+- `状態ルール`
+
+`要求状態` の表は、次の列を持つ。
+
+- `要求`
+- `状態`
+- `証拠`
+
+証拠がない場合は `未登録` と書く。
+
+## `user-stories.md`
+
+必須見出しは次である。
+
+- `一覧`
+- `依存関係`
+
+`一覧` の表は、次の列を持つ。
+
+- `識別子`
+- `アクター`
+- `概要`
+- `要求`
+- `依存`
+- `詳細`
+
+ユーザーストーリーは、要求のユーザー価値表現である。
+必要な場合だけ作る。
+作る場合は必ずアクターを参照する。
+
+## `use-cases.md`
+
+必須見出しは次である。
+
+- `一覧`
+- `依存関係`
+
+`一覧` の表は、次の列を持つ。
+
+- `識別子`
+- `アクター`
+- `外部システム`
+- `ストーリー`
+- `要求`
+- `依存`
+- `詳細`
+
+ユースケースは、要求の言い換えではなく、システムとの相互作用に含まれる手順を叙述的に示す。
+
+## `units.md`
+
+必須見出しは次である。
+
+- `一覧`
+- `依存関係`
+
+`一覧` の表は、次の列を持つ。
+
+- `識別子`
+- `概要`
+- `要求`
+- `コンテキスト`
+- `依存`
+- `詳細`
+
+ユニットは Intent 配下の価値単位である。
+Unit を切るときは、対象 Intent の domain layer と steering layer の境界づけられたコンテキストを参照する。
+
+## `bolts.md`
+
+必須見出しは次である。
+
+- `一覧`
+- `依存関係`
+
+`一覧` の表は、次の列を持つ。
+
+- `識別子`
+- `概要`
+- `ユニット`
+- `依存`
+- `詳細`
+
+ボルトは Intent 配下に置く。
+ボルトは Unit の子ディレクトリに固定しない。
+ボルト側から対象 Unit を参照する。
+
+横断的に見える Bolt であっても、Intent なしでは作らない。
+横断的 Bolt は、対象 Intent の中で、複数 Unit または複数関心をまたぐ Bolt として定義する。
+
+## `bolts/<bolt-id>-<slug>/design.md`
+
+必須見出しは次である。
+
+- `概要`
+- `責務境界`
+- `構成`
+- `データと契約`
+- `検証方針`
+- `Task への入力`
+
+Bolt 内設計は、`tasks.md` の入力である。
+要求やユースケースから直接 Task を作らず、少なくとも Bolt の責務境界、構成、データと契約、検証方針を固定してから Task を作る。
+
+`責務境界` では、この Bolt が所有するもの、所有しないもの、依存してよいもの、後続で再確認が必要になる条件を書く。
+
+`構成` では、コンポーネント、処理の流れ、外部接点、ファイル構造候補を必要な範囲で書く。
+実装ファイルを確定できない場合は、推測でパスを作らず、責務単位の候補として書く。
+
+`データと契約` では、参照する要求、ユースケース、ドメイン契約、入出力、状態変化を記録する。
+ドメインモデルや契約が未定義の場合は、この skill で推測せず、`amadeus-domain-grilling` または `amadeus-domain-modeling` に渡す。
+
+`検証方針` では、受け入れ条件と具体的な検証観点を結び付ける。
+一般論だけを書かず、どの振る舞いをなぜ確認するかを書く。
+
+`Task への入力` では、`tasks.md` に落とす作業単位、依存、証拠候補を箇条書きで示す。
+この見出しは Task の下書きではなく、Task を作る根拠である。
+
+## `bolts/<bolt-id>-<slug>/tasks.md`
+
+`tasks.md` は、同じ Bolt の `bolt.md` と `design.md` を入力にして作る。
+
+必須形式は次である。
+
+```md
+- [ ] T001: タスク名
+  - 作業:
+    - 具体的な作業を書く。
+  - 要求: R001
+  - ユースケース: UC001
+  - 依存: なし
+  - 証拠: 未登録
+```
+
+`作業` は省略しない。
+Task の依存関係は `依存` に書く。
+同じ Bolt 内の Task に依存する場合は `T001` と書く。
+別 Bolt の Task に依存する場合は `B001/T002` と書く。
+
+## `traceability.md`
+
+Inception 段階の必須見出しは次である。
+
+- `要求からの追跡`
+- `背景からの追跡`
+- `ボルトからの追跡`
+- `設計からの追跡`
+- `ユニットからの追跡`
+- `ドメインモデルからの追跡`
+- `依存関係からの追跡`
+
+`依存関係からの追跡` では、Intent、要求、ユーザーストーリー、ユースケース、ユニット、ボルト、タスク、判断の依存を同じ表で追跡する。
+
+## `state.json`
+
+Inception 完了時の `state.json` は次の形にする。
+既存の `initialized` や `ideation` の状態ブロックは削除せず、Inception の状態を追加する。
+
+```json
+{
+  "intent": "<intent-id>",
+  "phase": "inception",
+  "status": "completed",
+  "ideation": {
+    "status": "completed",
+    "gate": "passed"
+  },
+  "inception": {
+    "status": "completed",
+    "requiredArtifacts": [
+      "requirements.md",
+      "acceptance.md",
+      "user-stories.md",
+      "use-cases.md",
+      "units.md",
+      "bolts.md",
+      "traceability.md",
+      "decisions.md"
+    ],
+    "requiredBoltArtifacts": [
+      "bolts/<bolt-id>-<slug>/bolt.md",
+      "bolts/<bolt-id>-<slug>/design.md",
+      "bolts/<bolt-id>-<slug>/tasks.md"
+    ],
+    "gate": "passed"
+  }
+}
+```
+
+Inception がまだ完了していない場合は、`status` または `inception.status` を `in_progress`、`waiting_approval`、`needs_changes` のいずれかにする。
+`gate` は `not_ready`、`waiting_approval`、`passed`、`failed` のいずれかにする。
+
+## 禁止事項
+
+- `state.json.ideation.gate` が `passed` でない Intent を Inception へ進めない。
+- domain model、bounded context、contract を推測で作らない。
+- Spec、実装詳細、実装、CI、運用手順を作らない。
+- Bolt を Intent なしに作らない。
+- Bolt を Unit 配下のディレクトリに作らない。
+- `design.md` なしで `tasks.md` を作らない。
+- Task の `作業` を省略しない。
+- 依存関係だけを書いて、具体的な作業や理由を書かない。
+- ピラミッド構造が崩れた理由を残さずに 1:1 の分解を確定しない。
+- repo の開発用文書や開発用スクリプトを実行時参照として書かない。
+
+## 次の skill
+
+- Intent の Ideation 成果物が不足している場合: `amadeus-intent-ideation`
+- 用語、概念、ドメインモデル、契約が不足している場合: `amadeus-domain-grilling` または `amadeus-domain-modeling`
+- 成果物の構造を検証する場合: `amadeus-execution-validator`
+- Spec へ進める場合: 未確定

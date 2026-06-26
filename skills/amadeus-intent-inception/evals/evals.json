@@ -1,0 +1,23 @@
+{
+  "skill_name": "amadeus-intent-inception",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "既存の Ideation 完了済み Intent `20260627-risk-aware-reset-support` を Inception に進めたい。必要なら質問してから、要求、ユーザーストーリー、ユースケース、Unit、Bolt、Design、Task の境界を作って。",
+      "expected_output": "Ideation gate を確認し、不足論点があれば一問だけ質問する。成果物を作る場合は requirements、user-stories、use-cases、units、bolts、bolt design、tasks、traceability、decisions、state.json の Inception 範囲に限定する。",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Inception 済みの Intent を refine したい。Bolt と Unit が全部 1:1 に見えるので、分解不足か自然な粒度かを確認してほしい。",
+      "expected_output": "既存 Inception 成果物を読んだ前提で、ピラミッド構造が崩れる箇所を特定し、grill 不足を疑う観点から一問だけ質問する。Spec や実装には進めない。",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Bolt 配下の tasks.md を補修して。タスクの依存が別 Bolt の T002 を参照しているけど、今は `T002` とだけ書かれている。",
+      "expected_output": "repair として扱い、別 Bolt の Task 依存を `B001/T002` 形式に直す方針を示す。Task の作業、要求、ユースケース、証拠欄を保ち、同じ Bolt の design.md を入力として確認する。ドメインモデルや Spec は作らない。",
+      "files": []
+    }
+  ]
+}

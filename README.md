@@ -16,6 +16,13 @@ Amadeus DLC は、Amadeus の設計、仕様、実装の流れを扱うための
 
 Inception 以降の要求、ユースケース、Unit、Bolt、Spec を作る skill は、まだ確定していません。
 
+開発中の入口として、次があります。
+
+- `amadeus-intent-inception`
+
+`amadeus-intent-inception` は、Ideation 完了済み Intent を Inception 段階へ進めるための候補です。
+eval と手動レビューを通るまでは、確定済み入口として扱いません。
+
 ## 基本の流れ
 
 ### 1. Workspace の土台を作る
@@ -134,6 +141,42 @@ repo root の開発用 `scripts/` や `pnpm test` を実行時検証の入口に
 `pass` は、実行時に参照できる最低限の構造条件を満たすという意味です。
 内容妥当性の承認や gate 通過そのものではありません。
 
+### 開発中: Intent を Inception へ進める
+
+Ideation を完了した Intent から、要求、ユーザーストーリー、ユースケース、Unit、Bolt、Design、Task へ進める候補 skill は `amadeus-intent-inception` です。
+
+`amadeus-intent-inception` は、次を作成または更新する想定です。
+
+- `.amadeus/intents/<intent-id>/requirements.md`
+- `.amadeus/intents/<intent-id>/requirements/<requirement-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>/acceptance.md`
+- `.amadeus/intents/<intent-id>/user-stories.md`
+- `.amadeus/intents/<intent-id>/user-stories/<story-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>/use-cases.md`
+- `.amadeus/intents/<intent-id>/use-cases/<use-case-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>/units.md`
+- `.amadeus/intents/<intent-id>/units/<unit-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>/bolts.md`
+- `.amadeus/intents/<intent-id>/bolts/<bolt-id>-<slug>/bolt.md`
+- `.amadeus/intents/<intent-id>/bolts/<bolt-id>-<slug>/design.md`
+- `.amadeus/intents/<intent-id>/bolts/<bolt-id>-<slug>/tasks.md`
+- `.amadeus/intents/<intent-id>/traceability.md`
+- `.amadeus/intents/<intent-id>/decisions.md`
+- `.amadeus/intents/<intent-id>/state.json`
+
+この候補 skill は、domain model、Spec、実装を作りません。
+domain model や契約が不足している場合は、`amadeus-domain-grilling` または `amadeus-domain-modeling` に渡します。
+
+Bolt は Intent 直下に置きます。
+Bolt が複数 Unit をまたぐ場合でも、Intent なしの横断 Bolt にはしません。
+
+Task の依存は、同じ Bolt 内なら `T001`、別 Bolt の Task なら `B001/T002` のように書きます。
+Task は同じ Bolt の `bolt.md` と `design.md` を入力にして作ります。
+依存だけでは作業内容を表せないため、Task には必ず `作業` を書きます。
+
+Intent、Requirement、Story、Use Case、Unit、Bolt、Design、Task が常に 1:1 になる場合は、まず grill 不足を疑います。
+それでも自然な粒度であれば、例外理由を `traceability.md` または `decisions.md` に残します。
+
 ## Skill 分類
 
 | 分類 | 使う skill | 役割 | 作らないもの |
@@ -141,6 +184,7 @@ repo root の開発用 `scripts/` や `pnpm test` を実行時検証の入口に
 | ライフサイクル進行 | `amadeus-steering` | `.amadeus/` の共有土台を作る | 個別 Intent |
 | ライフサイクル進行 | `amadeus-intent-init` | Intent 登録、`intent.md`、`state.json` を作る | Ideation 以降の成果物 |
 | ライフサイクル進行 | `amadeus-intent-ideation` | `scope.md`、`ideation.md`、判断、追跡、初期モックを作る | 要求、ユースケース、Unit、Bolt、ドメインモデル |
+| ライフサイクル進行 | `amadeus-intent-inception`（開発中） | 要求、受け入れ状態、ユーザーストーリー、ユースケース、Unit、Bolt、Design、Task、追跡、判断を作る | domain model、Spec、実装 |
 | 横断支援 | `amadeus-grilling` | 全フェーズで論点を一問ずつ確認する | 成果物の作成や変更 |
 | 横断支援 | `amadeus-domain-modeling` | 全フェーズで用語、概念、モデル、契約を整理する | `CONTEXT.md`、`docs/adr/**` |
 | 横断支援 | `amadeus-domain-grilling` | 用語、概念、モデル、契約を一問ずつ詰め、回答後に Amadeus 成果物へ記録する | 独自の成果物構造や識別子規則 |

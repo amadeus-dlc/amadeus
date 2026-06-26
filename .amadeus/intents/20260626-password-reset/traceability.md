@@ -21,6 +21,13 @@
 | B001 | U001 | R001 |
 | B002 | U002 | R002 |
 
+## 設計からの追跡
+
+| ボルト | 設計 | 要求 | ユースケース | タスク |
+|---|---|---|---|---|
+| B001 | [design.md](bolts/B001-password-reset-request-flow/design.md) | R001 | UC001 | B001/T001, B001/T002, B001/T003 |
+| B002 | [design.md](bolts/B002-credential-update-flow/design.md) | R002 | UC002 | B002/T004, B002/T005, B002/T006 |
+
 ## ユニットからの追跡
 
 | ユニット | コンテキスト | 要求 | ユースケース | ボルト |
