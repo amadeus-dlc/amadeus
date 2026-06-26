@@ -38,11 +38,12 @@ Ruby が使えない場合は `blocked` として報告する。
 4. `.amadeus/domain/subdomains.md`
 5. `.amadeus/domain/bounded-contexts.md`
 6. `.amadeus/intents/<intent-id>/intent.md`。対象 Intent ID が指定された場合だけ読む。
-7. `.amadeus/intents/<intent-id>/requirements.md`。対象 Intent ID が指定された場合だけ読む。
-8. `.amadeus/intents/<intent-id>/acceptance.md`。対象 Intent ID が指定された場合だけ読む。
-9. `.amadeus/intents/<intent-id>/traceability.md`。対象 Intent ID が指定された場合だけ読む。
-10. `.amadeus/intents/<intent-id>/domain/subdomains.md`。対象 Intent ID が指定された場合だけ読む。
-11. `.amadeus/intents/<intent-id>/domain/bounded-contexts.md`。対象 Intent ID が指定された場合だけ読む。
+7. `.amadeus/intents/<intent-id>/state.json`。対象 Intent ID が指定された場合だけ読む。
+8. `.amadeus/intents/<intent-id>/requirements.md`。対象 Intent ID が指定され、Initialized または Ideation 段階ではない場合だけ読む。
+9. `.amadeus/intents/<intent-id>/acceptance.md`。対象 Intent ID が指定され、Initialized または Ideation 段階ではない場合だけ読む。
+10. `.amadeus/intents/<intent-id>/traceability.md`。対象 Intent ID が指定された場合だけ読む。
+11. `.amadeus/intents/<intent-id>/domain/subdomains.md`。対象 Intent ID が指定され、Initialized または Ideation 段階ではない場合だけ読む。
+12. `.amadeus/intents/<intent-id>/domain/bounded-contexts.md`。対象 Intent ID が指定され、Initialized または Ideation 段階ではない場合だけ読む。
 
 存在しない参照元がある場合は、存在しない事実を結果に含める。
 存在しない参照元を推測で補完しない。
@@ -58,6 +59,10 @@ Ruby が使えない場合は `blocked` として報告する。
 - `.amadeus/domain/bounded-contexts.md` が存在する。
 - `.amadeus` の index 系成果物が、[artifacts validation](references/artifacts.md) の条件を満たす。
 - 対象 Intent ID が指定された場合、`.amadeus/intents/<intent-id>/domain/bounded-contexts.md` が存在する。
+- 対象 Intent ID が指定され、`.amadeus/intents/<intent-id>/state.json` の `phase` が `initialized` の場合、Initialized 段階の成果物契約として検証する。
+- Initialized 段階の Intent では、`scope.md`、`ideation.md`、`traceability.md`、`decisions.md`、`mocks/`、`requirements.md`、`acceptance.md`、`use-cases.md`、`units.md`、`bolts.md`、`domain/**` は後続段階で作る成果物として扱い、欠落を不足にしない。
+- 対象 Intent ID が指定され、`.amadeus/intents/<intent-id>/state.json` の `phase` が `ideation` の場合、Ideation 段階の成果物契約として検証する。
+- Ideation 段階の Intent では、`requirements.md`、`acceptance.md`、`use-cases.md`、`units.md`、`bolts.md`、`domain/**` は Inception 以降で作る成果物として扱い、欠落を不足にしない。
 - 対象 Intent ID が指定された場合、対象 Intent の index 系成果物が、[artifacts validation](references/artifacts.md) の条件を満たす。
 - 対象 Intent ID が指定された場合、対象 Intent の `traceability.md` に出る ID が対応する index または定義元に存在する。
 - 対象 Intent ID が指定された場合、対象 Intent の `traceability.md` に出る DDD 要素 ID が、`BCnnn/DMnnn/<ddd-element-id>` の正規形で定義元に存在する。

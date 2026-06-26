@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "json"
 require "pathname"
 require "set"
 
@@ -19,6 +20,22 @@ class ExecutionValidator
     "公開ホストサービス（OHS）",
     "公表された言語（PL）",
     "腐敗防止層（ACL）"
+  ].freeze
+
+  STATUS_VALUES = Set[
+    "not_started",
+    "in_progress",
+    "waiting_approval",
+    "needs_changes",
+    "completed",
+    "skipped"
+  ].freeze
+
+  IDEATION_GATE_VALUES = Set[
+    "not_ready",
+    "waiting_approval",
+    "passed",
+    "failed"
   ].freeze
 
   DDD_ELEMENT_SPECS = {
@@ -124,6 +141,17 @@ class ExecutionValidator
     check_file("#{base}/intent.md", "Intent 基本ファイルが存在する")
     check_headings("#{base}/intent.md", ["目的", "成功条件", "範囲"])
 
+    state = intent_state(base)
+    if state && state["phase"] == "initialized"
+      check_initialized_intent(base, state)
+      return
+    end
+
+    if state && state["phase"] == "ideation"
+      check_ideation_intent(base, state)
+      return
+    end
+
     check_requirements("#{base}/requirements.md")
     check_acceptance("#{base}/acceptance.md", "#{base}/requirements.md")
     check_subdomains("#{base}/domain/subdomains.md", "#{base}/domain/bounded-contexts.md")
@@ -137,6 +165,131 @@ class ExecutionValidator
     end
 
     check_traceability("#{base}/traceability.md")
+  end
+
+  def intent_state(base)
+    path = "#{base}/state.json"
+    return nil unless absolute(path).file?
+
+    JSON.parse(read(path)).tap do
+      pass(path, "state.json が JSON として解釈できる", "JSON を確認")
+    end
+  rescue JSON::ParserError => e
+    fail_row(path, "state.json が JSON として解釈できる", e.message)
+    nil
+  end
+
+  def check_initialized_intent(base, state)
+    state_path = "#{base}/state.json"
+    check_file(state_path, "Initialized 状態ファイルが存在する")
+    check_initialized_state_json(state_path, state)
+  end
+
+  def check_initialized_state_json(path, state)
+    check_json_value(path, "intent", state["intent"], @intent_id)
+    check_json_value(path, "phase", state["phase"], "initialized")
+    check_allowed(path, "status", state["status"], STATUS_VALUES)
+
+    initialized = state["initialized"]
+    unless initialized.is_a?(Hash)
+      fail_row(path, "`initialized` がオブジェクトである", initialized.class.to_s)
+      return
+    end
+
+    pass(path, "`initialized` がオブジェクトである", "オブジェクトを確認")
+    check_allowed(path, "initialized.status", initialized["status"], STATUS_VALUES)
+    check_state_paths(path, initialized, "createdArtifacts", "Initialized 作成済み成果物が存在する", puml: false)
+    check_json_value(path, "initialized.next", initialized["next"], "ideation")
+  end
+
+  def check_ideation_intent(base, state)
+    state_path = "#{base}/state.json"
+    check_file(state_path, "Ideation 状態ファイルが存在する")
+    check_state_json(state_path, state)
+
+    check_file("#{base}/scope.md", "Ideation scope が存在する")
+    check_headings("#{base}/scope.md", ["対象", "対象外", "詳細度", "検証深度", "Inception への引き継ぎ"])
+
+    check_file("#{base}/ideation.md", "Ideation 分析が存在する")
+    check_headings("#{base}/ideation.md", ["実現可能性", "体制", "初期モック", "未確定事項", "学習候補"])
+
+    check_ideation_traceability("#{base}/traceability.md")
+
+    check_file("#{base}/decisions.md", "Ideation 判断一覧が存在する")
+    check_optional_index("#{base}/decisions.md", INDEX_SPECS.fetch("decisions.md"))
+  end
+
+  def check_state_json(path, state)
+    check_json_value(path, "intent", state["intent"], @intent_id)
+    check_json_value(path, "phase", state["phase"], "ideation")
+    check_allowed(path, "status", state["status"], STATUS_VALUES)
+
+    ideation = state["ideation"]
+    unless ideation.is_a?(Hash)
+      fail_row(path, "`ideation` がオブジェクトである", ideation.class.to_s)
+      return
+    end
+
+    pass(path, "`ideation` がオブジェクトである", "オブジェクトを確認")
+    check_allowed(path, "ideation.status", ideation["status"], STATUS_VALUES)
+    check_allowed(path, "ideation.gate", ideation["gate"], IDEATION_GATE_VALUES)
+    check_state_paths(path, ideation, "requiredArtifacts", "Ideation 必須成果物が存在する", puml: false)
+    check_state_paths(path, ideation, "requiredMocks", "Ideation 必須モックが存在する", puml: true)
+
+    return unless state["status"].to_s.strip == "completed"
+
+    check_json_value(path, "ideation.status", ideation["status"], "completed")
+    check_json_value(path, "ideation.gate", ideation["gate"], "passed")
+  end
+
+  def check_json_value(path, key, actual, expected)
+    if actual.to_s.strip == expected
+      pass(path, "`#{key}` が #{expected} である", actual.to_s.strip)
+    else
+      fail_row(path, "`#{key}` が #{expected} である", actual.to_s.strip)
+    end
+  end
+
+  def check_state_paths(path, ideation, key, condition, puml:)
+    values = ideation[key]
+    unless values.is_a?(Array)
+      fail_row(path, "`ideation.#{key}` が配列である", values.class.to_s)
+      return
+    end
+
+    pass(path, "`ideation.#{key}` が配列である", "#{values.length}件")
+    values.each do |value|
+      check_state_relative_path(path, value, condition, puml: puml)
+    end
+  end
+
+  def check_state_relative_path(path, value, condition, puml:)
+    item = value.to_s.strip
+    if item.empty? || item.start_with?("/") || item.split("/").include?("..")
+      fail_row(path, "#{condition}", "#{item} は Intent ディレクトリ内の相対パスではない")
+      return
+    end
+
+    if puml && !item.end_with?(".puml")
+      fail_row(path, "#{condition}", "#{item} は .puml ではない")
+      return
+    end
+
+    target = absolute(File.join(File.dirname(path), item))
+    if target.file?
+      @checked_files << relative(target)
+      pass(path, condition, item)
+    else
+      fail_row(path, condition, "#{item} が存在しない")
+    end
+  end
+
+  def check_ideation_traceability(path)
+    check_file(path, "Ideation 追跡ファイルが存在する")
+    check_headings(path, ["Ideation からの追跡", "依存関係からの追跡"])
+    check_table(path, "Ideation からの追跡", ["Ideation 要素", "対象", "定義元", "後続への渡し方"])
+    check_table(path, "依存関係からの追跡", ["種別", "対象", "依存", "理由", "定義元"])
+    check_relative_links(path)
   end
 
   def check_intents
@@ -1213,6 +1366,8 @@ class ExecutionValidator
     return "Amadeus ルート" if file == ".amadeus"
     return "全体成果物" if file.match?(%r{\A\.amadeus/[^/]+\.md\z})
     return "全体ドメイン" if file.start_with?(".amadeus/domain/")
+    return "Intent 状態" if file.match?(%r{\A\.amadeus/intents/[^/]+/state\.json\z})
+    return "Intent モック" if file.match?(%r{\A\.amadeus/intents/[^/]+/mocks/})
     return "Intent 基本成果物" if file.match?(%r{\A\.amadeus/intents/[^/]+/[^/]+\.md\z})
     return "Intent ドメイン" if file.match?(%r{\A\.amadeus/intents/[^/]+/domain/})
     return "Bolt / Task" if file.match?(%r{\A\.amadeus/intents/[^/]+/bolts/})
@@ -1230,7 +1385,9 @@ class ExecutionValidator
       "Amadeus ルート",
       "全体成果物",
       "全体ドメイン",
+      "Intent 状態",
       "Intent 基本成果物",
+      "Intent モック",
       "Intent ドメイン",
       "Requirement 詳細",
       "Story 詳細",
@@ -1248,6 +1405,10 @@ class ExecutionValidator
 
     return "実行環境" if condition.include?("作業ディレクトリ") || condition.include?("成果物ルート")
     return "検証範囲" if condition.include?("対象 Intent ID")
+    return "Initialized" if initialized_condition?(condition, target)
+    return "Ideation" if ideation_condition?(condition, target)
+    return "状態" if state_condition?(condition, target)
+    return "モック" if mock_condition?(condition, target)
     return "ファイル存在" if condition.include?("存在する") && !condition.include?("参照先")
     return "見出し" if condition.include?("見出し")
     return "表列" if condition.include?("表列") || condition.include?("表がある")
@@ -1286,6 +1447,37 @@ class ExecutionValidator
       condition.include?("外部境界") ||
       condition.include?("コンテキスト") ||
       condition.include?("許可値")
+  end
+
+  def state_condition?(condition, target)
+    target.end_with?("state.json") ||
+      condition.include?("state.json") ||
+      condition.include?("`phase`") ||
+      condition.include?("`status`") ||
+      condition.include?("`ideation.status`") ||
+      condition.include?("`ideation.gate`") ||
+      condition.include?("`ideation.requiredArtifacts`") ||
+      condition.include?("`ideation.requiredMocks`")
+  end
+
+  def ideation_condition?(condition, target)
+    target.include?("/ideation.md") ||
+      target.include?("/scope.md") ||
+      condition.include?("Ideation") ||
+      condition.include?("Inception")
+  end
+
+  def initialized_condition?(condition, target)
+    condition.include?("Initialized") ||
+      condition.include?("`initialized`") ||
+      condition.include?("`initialized.status`") ||
+      condition.include?("`initialized.next`")
+  end
+
+  def mock_condition?(condition, target)
+    target.include?("/mocks/") ||
+      condition.include?("モック") ||
+      condition.include?(".puml")
   end
 
   def blank?(value)

@@ -1,0 +1,20 @@
+{
+  "skill_name": "amadeus-steering",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "新規プロジェクトに Amadeus を入れたい。まだ .amadeus はないので、greenfield として steering だけ作って。個別 Intent はまだ作らないで。",
+      "expected_output": "guided mode として最大5問の必要最低限の質問を行い、そのターンでは成果物を作らず回答を待つ。個別 Intent ディレクトリや requirements/use-cases/units/bolts を作らない。"
+    },
+    {
+      "id": 2,
+      "prompt": "既存プロジェクトに Amadeus を載せたい。README と既存ドメイン資料はある。discovery mode で不足している steering 成果物だけ補って。",
+      "expected_output": "既存資料から draft できた項目と根拠ファイルを提示し、矛盾または不足だけを最大5問で質問する。質問したターンでは成果物を追加せず回答を待つ。既存の用語や識別子を根拠なく置き換えない。"
+    },
+    {
+      "id": 3,
+      "prompt": "質問なしで最小の .amadeus steering だけ作って。scaffold-only で。Intent はまだいらない。",
+      "expected_output": "質問せず、空欄ではなく未確認を使って最小の steering layer 成果物を作る。Intent の中身は作らず、次に amadeus-intent-init へ渡す判断を出す。"
+    }
+  ]
+}

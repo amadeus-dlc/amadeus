@@ -94,6 +94,97 @@
 判断間依存は判断の前提関係を示す。
 どの依存も、何を作るか、何を確認するかの説明の代わりにはならない。
 
+## Ideation 段階のインテント
+
+Ideation 段階のインテントは、意図、実現可能性、スコープ、体制、初期モック、後続への引き継ぎを固定する。
+Inception 以降で作る要求、ユースケース、ユニット、ボルト、ドメインモデルを先に空ファイルとして作らない。
+
+Ideation 段階では、少なくとも次を置く。
+
+- `intent.md`
+- `state.json`
+- `scope.md`
+- `ideation.md`
+- `traceability.md`
+- `decisions.md`
+- `mocks/*.puml`
+
+`state.json` は、Intent の現在フェーズと Ideation gate を機械的に読める形で記録する。
+
+```json
+{
+  "intent": "<intent-id>",
+  "phase": "ideation",
+  "status": "completed",
+  "ideation": {
+    "status": "completed",
+    "requiredArtifacts": [
+      "intent.md",
+      "scope.md",
+      "ideation.md",
+      "decisions.md",
+      "traceability.md"
+    ],
+    "requiredMocks": [
+      "mocks/<mock-name>.puml"
+    ],
+    "gate": "passed"
+  }
+}
+```
+
+`status` と `ideation.status` は、次のいずれかにする。
+
+- `not_started`
+- `in_progress`
+- `waiting_approval`
+- `needs_changes`
+- `completed`
+- `skipped`
+
+`ideation.gate` は、次のいずれかにする。
+
+- `not_ready`
+- `waiting_approval`
+- `passed`
+- `failed`
+
+`scope.md` は、次の見出しを持つ。
+
+- `対象`
+- `対象外`
+- `詳細度`
+- `検証深度`
+- `Inception への引き継ぎ`
+
+`ideation.md` は、次の見出しを持つ。
+
+- `実現可能性`
+- `体制`
+- `初期モック`
+- `未確定事項`
+- `学習候補`
+
+Ideation 段階の `traceability.md` は、次の見出しを持つ。
+
+- `Ideation からの追跡`
+- `依存関係からの追跡`
+
+`Ideation からの追跡` では、Intent、Scope、実現可能性、体制、初期モック、状態、判断が、どのファイルに定義され、Inception へどう渡されるかを書く。
+`依存関係からの追跡` では、先行 Intent と判断の依存を追跡する。
+
+Ideation 段階では、次を未作成でも不足にしない。
+
+- `requirements.md`
+- `acceptance.md`
+- `user-stories.md`
+- `use-cases.md`
+- `units.md`
+- `bolts.md`
+- `domain/**`
+
+これらは Inception 以降で必要になった時点で作る。
+
 ## 要求間の依存
 
 `requirements.md` には、要求間の依存関係を書く。
