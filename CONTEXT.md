@@ -24,6 +24,9 @@ _Avoid_: 正本
 **Intent**：達成したい目的を表す出発点である。
 ビジネス目標、機能目標、技術的成果を含む。
 
+**Intents**：Amadeus DLC 全体で扱う Intent 群である。
+Intent が別の Intent の成果を前提にする場合は、依存関係を記録する。
+
 **Requirement**：Intent を検証可能な要求へ落とした中間契約である。
 Story がない作業でも、Unit、Bolt、Task は Requirement を参照して進める。
 
@@ -63,6 +66,12 @@ Task は Story とは直接の親子関係を持たない。
 **Tasks**：Bolt 配下の Task 群である。
 初期状態では `bolts/<bolt-id>/tasks.md` に ID 付きチェックリストとして置く。
 Task 単位の設計、検証、履歴が必要になった時点で `bolts/<bolt-id>/tasks/<task-id>.md` を導入する。
+
+**Decision**：Intent 内の構造、境界、進め方に影響する判断である。
+Decision が別の Decision の採用や前提を必要とする場合は、依存関係を記録する。
+
+**Decisions**：Intent 配下の Decision 群である。
+一覧と依存関係は `decisions.md` に置き、個別判断は `decisions/<decision-id>.md` に置く。
 
 **Deployment Unit**：検証済みで、運用へ渡せる成果物である。
 

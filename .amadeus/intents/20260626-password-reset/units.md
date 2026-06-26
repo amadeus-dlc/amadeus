@@ -2,11 +2,18 @@
 
 ## 一覧
 
-| 識別子 | 概要 | 要求 | 詳細 |
-|---|---|---|---|
-| U001 | システムがパスワード再設定要求を受け付ける | R001 | [U001-password-reset-request.md](units/U001-password-reset-request.md) |
-| U002 | システムが再設定トークンで認証情報を更新する | R002 | [U002-credential-update-with-reset-token.md](units/U002-credential-update-with-reset-token.md) |
+| 識別子 | 概要 | 要求 | 依存 | 詳細 |
+|---|---|---|---|---|
+| U001 | システムがパスワード再設定要求を受け付ける | R001 | なし | [U001-password-reset-request.md](units/U001-password-reset-request.md) |
+| U002 | システムが再設定トークンで認証情報を更新する | R002 | U001 | [U002-credential-update-with-reset-token.md](units/U002-credential-update-with-reset-token.md) |
 
 ユニットはインテント配下の価値単位である。
 
 ボルトはユニットの子に固定せず、ボルト側から対象ユニットを参照する。
+
+## 依存関係
+
+| ユニット | 依存 | 理由 |
+|---|---|---|
+| U001 | なし | パスワード再設定要求の入口であり、先行ユニットの価値を前提にしない。 |
+| U002 | U001 | 認証情報更新は、U001 が成立させる再設定トークン発行を前提にする。 |
