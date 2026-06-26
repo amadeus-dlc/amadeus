@@ -14,11 +14,13 @@
 
 ## 手動 eval 状態
 
+検証日: 2026-06-27
+
 | ケース | 状態 | 確認内容 | 証拠 |
 |---|---|---|---|
-| `one-question-with-recommendation` | 未実施 | 一問だけ出し、推奨回答と理由を添える。 | 未登録 |
-| `inspect-before-asking` | 未実施 | 読めば分かることを質問しない。 | 未登録 |
-| `do-not-update-before-answer` | 未実施 | 質問が必要なターンでは成果物を更新しない。 | 未登録 |
+| `one-question-with-recommendation` | 完了 | 一問だけ出し、推奨回答と理由を添える。 | `/var/folders/3s/p2xl_vd524b4lk78cb6fz5nh0000gn/T/amadeus-grilling-eval.20260627-T2yNAn/one-question-with-recommendation/checks.md` |
+| `inspect-before-asking` | 完了 | 読めば分かることを質問しない。 | `/var/folders/3s/p2xl_vd524b4lk78cb6fz5nh0000gn/T/amadeus-grilling-eval.20260627-T2yNAn/inspect-before-asking/checks.md` |
+| `do-not-update-before-answer` | 完了 | 質問が必要なターンでは成果物を更新しない。 | `/var/folders/3s/p2xl_vd524b4lk78cb6fz5nh0000gn/T/amadeus-grilling-eval.20260627-T2yNAn/do-not-update-before-answer/checks.md` |
 
 ## 再実行コマンド
 
