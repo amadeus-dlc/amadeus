@@ -9,9 +9,11 @@
 - Intent 固有のモデルと契約は `.amadeus/intents/<intent-id>/domain/**` に反映する。
 - モデル要素や契約 ID が変わる場合は、対象 Intent の `traceability.md` も整合させる。
 - 全体モデルへの昇格が明示された場合だけ `.amadeus/domain/**` を更新する。
+- 曖昧語や衝突語は、この skill 自体が既存の Amadeus 成果物と照合し、必要な確認を行う。
+- 確定した用語、モデル、契約、ドメイン判断は、その場で該当する Amadeus 成果物へ記録する。
 - `CONTEXT.md` と `docs/adr/**` を更新しない。
 - `requirements.md`、`acceptance.md`、`user-stories.md`、`use-cases.md`、`units.md`、`bolts.md` を作らない。
-- `guided` では `/amadeus-grilling` を使い、一問ずつ質問する。
+- `/amadeus-grilling` を内部で呼び出す前提にしない。
 - `evals.json` が JSON として解釈できる。
 - `git diff --check` が成功する。
 
