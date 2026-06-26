@@ -14,6 +14,7 @@
 - Inception 段階で Bolt 配下に `tasks.md` がある場合、同じ Bolt 配下の `design.md` を検証する。
 - `codebase-analysis.md` が存在する場合、または `state.json.inception.requiredArtifacts` に含まれる場合、必須見出しを検証する。
 - `codebase-analysis.md` が存在せず、`state.json.inception.requiredArtifacts` にも含まれない場合は不足にしない。
+- `traceability.md` の `既存コード分析からの追跡` が、`分析`、`要求`、`ユースケース`、`ユニット`、`ボルト`、`設計`、`入力` の列を持つことを検証する。
 - `evals.json` が JSON として解釈できる。
 - `git diff --check` が成功する。
 
@@ -26,6 +27,7 @@
 | `runtime-only-dependency` | 未実施 | Ruby 標準ライブラリだけで検証する。 | 未登録 |
 | `bolt-design-before-task` | 未実施 | Bolt 配下の `design.md` が `tasks.md` の入力として存在する。 | 未登録 |
 | `codebase-analysis-headings` | 未実施 | `codebase-analysis.md` が条件付き成果物として必須見出しを持つ。 | 未登録 |
+| `codebase-analysis-traceability-columns` | 未実施 | `既存コード分析からの追跡` が必須列を持つ。 | 未登録 |
 
 ## 再実行コマンド
 

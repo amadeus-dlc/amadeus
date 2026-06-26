@@ -30,6 +30,12 @@
       "prompt": "brownfield Intent の codebase-analysis.md がある場合に、必要な見出しが揃っているか Execution Validator で確認して。",
       "expected_output": "codebase-analysis.md が存在する場合、または state.json の inception.requiredArtifacts に含まれる場合だけ検証する。対象コード、既存能力、統合点、ギャップ、リスク、Inception への入力の見出しを確認し、存在しない greenfield の場合は不足にしない。",
       "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "Inception 済み Intent の traceability.md で `既存コード分析からの追跡` の表列が揃っているか確認して。",
+      "expected_output": "`既存コード分析からの追跡` の表が、分析、要求、ユースケース、ユニット、ボルト、設計、入力の列を持つことを確認する。既存コード分析の意味的妥当性や対応の完全性までは Execution Validator では扱わない。",
+      "files": []
     }
   ]
 }

@@ -70,6 +70,7 @@ Ruby が使えない場合は `blocked` として報告する。
 - 対象 Intent ID が指定され、`.amadeus/intents/<intent-id>/state.json` の `inception.requiredArtifacts` に `codebase-analysis.md` が含まれる場合、存在と必須見出しを検証する。
 - `codebase-analysis.md` は条件付き成果物であるため、存在せず、`inception.requiredArtifacts` にも含まれない場合は不足にしない。
 - 対象 Intent ID が指定された場合、対象 Intent の index 系成果物が、[artifacts validation](references/artifacts.md) の条件を満たす。
+- 対象 Intent ID が指定された場合、対象 Intent の `traceability.md` にある `既存コード分析からの追跡` の表列を検証する。
 - 対象 Intent ID が指定された場合、対象 Intent の `traceability.md` に出る ID が対応する index または定義元に存在する。
 - 対象 Intent ID が指定された場合、対象 Intent の `traceability.md` に出る DDD 要素 ID が、`BCnnn/DMnnn/<ddd-element-id>` の正規形で定義元に存在する。
 - `traceability.md` の `境界` は ID 化せず、`domain/bounded-contexts.md` の `外部境界` 表にある名前として存在する。
