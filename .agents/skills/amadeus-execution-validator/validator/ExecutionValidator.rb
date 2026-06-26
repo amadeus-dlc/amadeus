@@ -1,0 +1,639 @@
+# frozen_string_literal: true
+
+require "pathname"
+require "set"
+
+class ExecutionValidator
+  Row = Struct.new(:target, :condition, :result, :evidence, keyword_init: true)
+
+  ORGANIZATION_PATTERNS = [
+    "パートナーシップ",
+    "別々の道",
+    "順応者",
+    "顧客／供給者"
+  ].freeze
+
+  INTEGRATION_PATTERNS = [
+    "共有カーネル",
+    "巨大な泥団子",
+    "公開ホストサービス（OHS）",
+    "公表された言語（PL）",
+    "腐敗防止層（ACL）"
+  ].freeze
+
+  INDEX_SPECS = {
+    "user-stories.md" => {
+      headings: ["一覧", "依存関係"],
+      list_heading: "一覧",
+      columns: ["識別子", "アクター", "概要", "要求", "依存", "詳細"],
+      id_pattern: /\AS\d{3}\z/,
+      target_column: "ユーザーストーリー"
+    },
+    "use-cases.md" => {
+      headings: ["一覧", "依存関係"],
+      list_heading: "一覧",
+      columns: ["識別子", "アクター", "外部システム", "ストーリー", "要求", "依存", "詳細"],
+      id_pattern: /\AUC\d{3}\z/,
+      target_column: "ユースケース"
+    },
+    "units.md" => {
+      headings: ["一覧", "依存関係"],
+      list_heading: "一覧",
+      columns: ["識別子", "概要", "要求", "コンテキスト", "依存", "詳細"],
+      id_pattern: /\AU\d{3}\z/,
+      target_column: "ユニット"
+    },
+    "bolts.md" => {
+      headings: ["一覧", "依存関係"],
+      list_heading: "一覧",
+      columns: ["識別子", "概要", "ユニット", "依存", "詳細"],
+      id_pattern: /\AB\d{3}\z/,
+      target_column: "ボルト"
+    },
+    "decisions.md" => {
+      headings: ["一覧", "依存関係"],
+      list_heading: "一覧",
+      columns: ["識別子", "概要", "状態", "依存", "詳細"],
+      id_pattern: /\AD\d{3}\z/,
+      target_column: "判断"
+    }
+  }.freeze
+
+  def initialize(root, intent_id = nil)
+    @root = Pathname.new(root).expand_path
+    @intent_id = blank?(intent_id) ? nil : intent_id
+    @rows = []
+    @checked_files = Set.new
+    @known_ids = {}
+  end
+
+  def run
+    check_workspace
+    return report if failed?
+
+    check_file(".amadeus/README.md", "必須ファイルが存在する")
+    check_global_indexes
+
+    if @intent_id
+      check_intent_indexes(@intent_id)
+    else
+      pass(".amadeus/intents.md", "対象 Intent ID", "指定なし。全体成果物だけを検証")
+    end
+
+    report
+  rescue Errno::EACCES => e
+    blocked("実行環境", "検証対象を読める", e.message)
+    report
+  end
+
+  private
+
+  def check_workspace
+    if @root.directory?
+      pass(@root.to_s, "検証対象の作業ディレクトリが存在する", "存在を確認")
+    else
+      fail_row(@root.to_s, "検証対象の作業ディレクトリが存在する", "存在しない")
+      return
+    end
+
+    check_file(".amadeus", "Amadeus の成果物ルートが存在する", directory: true)
+  end
+
+  def check_global_indexes
+    check_intents
+    check_subdomains(".amadeus/domain/subdomains.md", ".amadeus/domain/bounded-contexts.md")
+    check_bounded_contexts(".amadeus/domain/bounded-contexts.md", global: true)
+  end
+
+  def check_intent_indexes(intent_id)
+    base = ".amadeus/intents/#{intent_id}"
+    check_file("#{base}/intent.md", "Intent 基本ファイルが存在する")
+    check_headings("#{base}/intent.md", ["目的", "成功条件", "範囲"])
+
+    check_requirements("#{base}/requirements.md")
+    check_acceptance("#{base}/acceptance.md", "#{base}/requirements.md")
+    check_traceability("#{base}/traceability.md")
+    check_subdomains("#{base}/domain/subdomains.md", "#{base}/domain/bounded-contexts.md")
+    check_bounded_contexts("#{base}/domain/bounded-contexts.md", global: false)
+
+    INDEX_SPECS.each do |filename, spec|
+      path = "#{base}/#{filename}"
+      next unless absolute(path).file?
+
+      check_optional_index(path, spec)
+    end
+  end
+
+  def check_intents
+    path = ".amadeus/intents.md"
+    check_file(path, "インテント一覧が存在する")
+    check_headings(path, ["一覧", "依存関係"])
+    table = check_table(path, "一覧", ["識別子", "概要", "依存", "詳細"])
+    return unless table
+
+    ids = collect_ids(path, table, "識別子")
+    check_dependency_values(path, table, "依存", ids)
+    check_detail_links(path, table, "詳細")
+
+    dep_table = check_table(path, "依存関係", ["インテント", "依存", "理由"])
+    return unless dep_table
+
+    check_table_targets(path, dep_table, "インテント", ids, allow_none: false)
+    check_dependency_values(path, dep_table, "依存", ids)
+    check_not_blank(path, dep_table, "理由")
+  end
+
+  def check_requirements(path)
+    check_file(path, "要求一覧が存在する")
+    check_headings(path, ["一覧", "依存関係", "受け入れ状態"])
+    table = check_table(path, "一覧", ["識別子", "概要", "状態", "依存", "詳細"])
+    return unless table
+
+    ids = collect_ids(path, table, "識別子", /\AR\d{3}\z/)
+    check_dependency_values(path, table, "依存", ids)
+    check_detail_links(path, table, "詳細")
+
+    dep_table = check_table(path, "依存関係", ["要求", "依存", "理由"])
+    return unless dep_table
+
+    check_table_targets(path, dep_table, "要求", ids, allow_none: false)
+    check_dependency_values(path, dep_table, "依存", ids)
+    check_not_blank(path, dep_table, "理由")
+  end
+
+  def check_acceptance(path, requirements_path)
+    check_file(path, "受け入れ状態が存在する")
+    check_headings(path, ["要求状態", "状態ルール"])
+    table = check_table(path, "要求状態", ["要求", "状態", "証拠"])
+    return unless table
+
+    requirement_ids = ids_for(requirements_path)
+    check_table_targets(path, table, "要求", requirement_ids, allow_none: false)
+    check_not_blank(path, table, "状態")
+    check_not_blank(path, table, "証拠")
+  end
+
+  def check_traceability(path)
+    check_file(path, "追跡ファイルが存在する")
+    check_headings(
+      path,
+      [
+        "要求からの追跡",
+        "背景からの追跡",
+        "ボルトからの追跡",
+        "ユニットからの追跡",
+        "ドメインモデルからの追跡",
+        "依存関係からの追跡"
+      ]
+    )
+    check_table(path, "要求からの追跡", ["要求", "アクター", "ストーリー", "ユースケース", "ユニット", "ボルト", "タスク"])
+    check_table(path, "背景からの追跡", ["目的", "アクター", "外部システム", "要求"])
+    check_table(path, "ボルトからの追跡", ["ボルト", "ユニット", "要求"])
+    check_table(path, "ユニットからの追跡", ["ユニット", "コンテキスト", "要求", "ユースケース", "ボルト"])
+    check_table(path, "ドメインモデルからの追跡", ["種別", "対象", "要求", "ユースケース", "定義元"])
+    check_table(path, "依存関係からの追跡", ["種別", "対象", "依存", "理由", "定義元"])
+    check_relative_links(path)
+  end
+
+  def check_optional_index(path, spec)
+    check_headings(path, spec[:headings])
+    table = check_table(path, spec[:list_heading], spec[:columns])
+    return unless table
+
+    ids = collect_ids(path, table, "識別子", spec[:id_pattern])
+    check_dependency_values(path, table, "依存", ids)
+    check_detail_links(path, table, "詳細")
+
+    dep_table = check_table(path, "依存関係", [spec[:target_column], "依存", "理由"])
+    return unless dep_table
+
+    check_table_targets(path, dep_table, spec[:target_column], ids, allow_none: false)
+    check_dependency_values(path, dep_table, "依存", ids)
+    check_not_blank(path, dep_table, "理由")
+  end
+
+  def check_subdomains(path, bounded_contexts_path)
+    check_file(path, "サブドメイン一覧が存在する")
+    check_headings(path, ["一覧"])
+    table = check_table(path, "一覧", ["識別子", "名前", "種別", "役割", "コンテキスト"])
+    return unless table
+
+    collect_ids(path, table, "識別子", /\ASD\d{3}\z/)
+    allowed_types = Set["コア", "支援", "汎用", "未分類"]
+    table[:rows].each do |row|
+      type = row["種別"].to_s.strip
+      if allowed_types.include?(type)
+        pass(path, "サブドメイン種別が許可値である", "#{row["識別子"]}: #{type}")
+      else
+        fail_row(path, "サブドメイン種別が許可値である", "#{row["識別子"]}: #{type}")
+      end
+    end
+
+    bc_ids = ids_for(bounded_contexts_path)
+    table[:rows].each do |row|
+      split_values(row["コンテキスト"]).each do |context_id|
+        if context_id == "なし" || bc_ids.include?(context_id)
+          pass(path, "コンテキストが同じ階層の bounded-contexts.md に存在する", "#{row["識別子"]}: #{context_id}")
+        else
+          fail_row(path, "コンテキストが同じ階層の bounded-contexts.md に存在する", "#{row["識別子"]}: #{context_id}")
+        end
+      end
+    end
+  end
+
+  def check_bounded_contexts(path, global:)
+    check_file(path, "境界づけられたコンテキスト一覧が存在する")
+    headings = global ? ["一覧", "コンテキスト間の依存", "パターン分類"] : ["コンテキスト", "コンテキスト間の依存"]
+    list_heading = global ? "一覧" : "コンテキスト"
+    check_headings(path, headings)
+
+    table = check_table(path, list_heading, ["識別子", "名前", "サブドメイン", "役割", "モデル", "契約"])
+    ids = table ? collect_ids(path, table, "識別子", /\ABC\d{3}\z/) : Set.new
+    check_detail_links(path, table, "モデル") if table
+    check_detail_links(path, table, "契約") if table
+
+    dep_table = check_table(path, "コンテキスト間の依存", ["Downstream", "Upstream", "依存内容", "組織パターン", "統合パターン", "状態"])
+    check_context_dependencies(path, dep_table, ids) if dep_table
+    check_pattern_classification(path) if global
+  end
+
+  def check_context_dependencies(path, table, ids)
+    table[:rows].each do |row|
+      downstream = row["Downstream"].to_s.strip
+      upstream = row["Upstream"].to_s.strip
+      check_context_ref(path, "Downstream", downstream, ids)
+      check_context_ref(path, "Upstream", upstream, ids)
+      check_not_blank_value(path, "依存内容", row["依存内容"])
+      check_not_blank_value(path, "状態", row["状態"])
+
+      if upstream == "なし"
+        check_exact(path, "組織パターン", row["組織パターン"], "該当なし")
+        check_exact(path, "統合パターン", row["統合パターン"], "該当なし")
+      else
+        check_allowed(path, "組織パターン", row["組織パターン"], ORGANIZATION_PATTERNS)
+        check_allowed(path, "統合パターン", row["統合パターン"], INTEGRATION_PATTERNS)
+      end
+    end
+  end
+
+  def check_pattern_classification(path)
+    text = read(path)
+    ORGANIZATION_PATTERNS.each do |pattern|
+      if text.include?(pattern)
+        pass(path, "組織パターンを列挙する", pattern)
+      else
+        fail_row(path, "組織パターンを列挙する", pattern)
+      end
+    end
+    INTEGRATION_PATTERNS.each do |pattern|
+      if text.include?(pattern)
+        pass(path, "統合パターンを列挙する", pattern)
+      else
+        fail_row(path, "統合パターンを列挙する", pattern)
+      end
+    end
+  end
+
+  def check_context_ref(path, column, value, ids)
+    if value == "なし" || ids.include?(value)
+      pass(path, "#{column} が既存 BC またはなしである", value)
+    else
+      fail_row(path, "#{column} が既存 BC またはなしである", value)
+    end
+  end
+
+  def check_file(path, condition, directory: false)
+    target = absolute(path)
+    ok = directory ? target.directory? : target.file?
+    if ok
+      @checked_files << relative(target)
+      pass(path, condition, "存在を確認")
+    else
+      fail_row(path, condition, "存在しない")
+    end
+  end
+
+  def check_headings(path, headings)
+    return unless absolute(path).file?
+
+    text = read(path)
+    headings.each do |heading|
+      if text.match?(/^##\s+#{Regexp.escape(heading)}\s*$/)
+        pass(path, "`#{heading}` 見出しがある", "見出しを確認")
+      else
+        fail_row(path, "`#{heading}` 見出しがある", "見出しがない")
+      end
+    end
+  end
+
+  def check_table(path, heading, required_columns)
+    return nil unless absolute(path).file?
+
+    table = table_after_heading(path, heading)
+    unless table
+      fail_row(path, "`#{heading}` の表がある", "表がない")
+      return nil
+    end
+
+    missing = required_columns - table[:headers]
+    if missing.empty?
+      pass(path, "`#{heading}` の必須表列が揃っている", required_columns.join(", "))
+    else
+      fail_row(path, "`#{heading}` の必須表列が揃っている", "不足: #{missing.join(", ")}")
+    end
+    table
+  end
+
+  def collect_ids(path, table, column, pattern = nil)
+    ids = Set.new
+    table[:rows].each do |row|
+      id = row[column].to_s.strip
+      if id.empty?
+        fail_row(path, "#{column} が空欄でない", "空欄")
+        next
+      end
+
+      if pattern && !id.match?(pattern)
+        fail_row(path, "#{column} が識別子形式に合う", id)
+      else
+        pass(path, "#{column} が識別子形式に合う", id)
+      end
+
+      if ids.include?(id)
+        fail_row(path, "#{column} が重複しない", id)
+      else
+        pass(path, "#{column} が重複しない", id)
+        ids << id
+      end
+    end
+    @known_ids[path] = ids
+    ids
+  end
+
+  def ids_for(path)
+    return @known_ids[path] if @known_ids.key?(path)
+    return Set.new unless absolute(path).file?
+
+    heading = path.end_with?("/domain/bounded-contexts.md") || path == ".amadeus/domain/bounded-contexts.md" ? bounded_context_list_heading(path) : "一覧"
+    table = table_after_heading(path, heading)
+    return Set.new unless table && table[:headers].include?("識別子")
+
+    @known_ids[path] = Set.new(table[:rows].map { |row| row["識別子"].to_s.strip }.reject(&:empty?))
+  end
+
+  def bounded_context_list_heading(path)
+    path.start_with?(".amadeus/intents/") ? "コンテキスト" : "一覧"
+  end
+
+  def check_dependency_values(path, table, column, ids)
+    return unless table[:headers].include?(column)
+
+    table[:rows].each do |row|
+      split_values(row[column]).each do |dependency|
+        if dependency == "なし" || ids.include?(dependency)
+          pass(path, "`#{column}` がなしまたは同じ一覧内の既存 ID である", dependency)
+        else
+          fail_row(path, "`#{column}` がなしまたは同じ一覧内の既存 ID である", dependency)
+        end
+      end
+    end
+  end
+
+  def check_table_targets(path, table, column, ids, allow_none:)
+    return unless table[:headers].include?(column)
+
+    table[:rows].each do |row|
+      split_values(row[column]).each do |target|
+        if (allow_none && target == "なし") || ids.include?(target)
+          pass(path, "`#{column}` が一覧内の既存 ID である", target)
+        else
+          fail_row(path, "`#{column}` が一覧内の既存 ID である", target)
+        end
+      end
+    end
+  end
+
+  def check_not_blank(path, table, column)
+    return unless table[:headers].include?(column)
+
+    table[:rows].each do |row|
+      check_not_blank_value(path, column, row[column])
+    end
+  end
+
+  def check_not_blank_value(path, column, value)
+    if blank?(value)
+      fail_row(path, "`#{column}` が空欄でない", "空欄")
+    else
+      pass(path, "`#{column}` が空欄でない", value.to_s.strip)
+    end
+  end
+
+  def check_detail_links(path, table, column)
+    return unless table[:headers].include?(column)
+
+    table[:rows].each do |row|
+      links = markdown_links(row[column].to_s)
+      if links.empty?
+        fail_row(path, "`#{column}` が相対リンクを持つ", row[column].to_s)
+        next
+      end
+      links.each { |target| check_link(path, target) }
+    end
+  end
+
+  def check_relative_links(path)
+    return unless absolute(path).file?
+
+    markdown_links(read(path)).each do |target|
+      check_link(path, target)
+    end
+  end
+
+  def check_link(path, target)
+    return if external_link?(target)
+
+    clean = target.split("#", 2).first.to_s.split(/\s+/, 2).first.to_s
+    return if clean.empty?
+
+    resolved = absolute(File.join(File.dirname(path), clean))
+    if resolved.exist?
+      @checked_files << relative(resolved)
+      pass(path, "相対リンクの参照先が存在する", target)
+    else
+      fail_row(path, "相対リンクの参照先が存在する", "#{target} -> #{relative(resolved)}")
+    end
+  end
+
+  def table_after_heading(path, heading)
+    lines = read(path).lines.map(&:chomp)
+    heading_index = lines.index { |line| line.match?(/^##\s+#{Regexp.escape(heading)}\s*$/) }
+    return nil unless heading_index
+
+    index = heading_index + 1
+    index += 1 while index < lines.length && !lines[index].start_with?("|") && !lines[index].start_with?("## ")
+    return nil if index >= lines.length || !lines[index].start_with?("|")
+
+    table_lines = []
+    while index < lines.length && lines[index].start_with?("|")
+      table_lines << lines[index]
+      index += 1
+    end
+    return nil if table_lines.length < 2
+
+    headers = split_table_line(table_lines[0])
+    rows = table_lines.drop(2).map do |line|
+      values = split_table_line(line)
+      headers.zip(values).to_h
+    end
+    { headers: headers, rows: rows }
+  end
+
+  def split_table_line(line)
+    line.strip.sub(/\A\|/, "").sub(/\|\z/, "").split("|").map(&:strip)
+  end
+
+  def split_values(value)
+    text = value.to_s.strip
+    return [""] if text.empty?
+
+    text.split(",").map(&:strip).reject(&:empty?)
+  end
+
+  def markdown_links(text)
+    text.scan(/(?<!!)\[[^\]]+\]\(([^)]+)\)/).flatten
+  end
+
+  def external_link?(target)
+    target.start_with?("#") || target.start_with?("mailto:") || target.match?(/\Ahttps?:\/\//)
+  end
+
+  def check_exact(path, column, actual, expected)
+    if actual.to_s.strip == expected
+      pass(path, "`#{column}` が #{expected} である", actual.to_s.strip)
+    else
+      fail_row(path, "`#{column}` が #{expected} である", actual.to_s.strip)
+    end
+  end
+
+  def check_allowed(path, column, actual, allowed)
+    value = actual.to_s.strip
+    if allowed.include?(value)
+      pass(path, "`#{column}` が許可値である", value)
+    else
+      fail_row(path, "`#{column}` が許可値である", value)
+    end
+  end
+
+  def read(path)
+    target = absolute(path)
+    @checked_files << relative(target)
+    target.read
+  end
+
+  def absolute(path)
+    target = Pathname.new(path.to_s)
+    target.absolute? ? target : @root.join(target)
+  end
+
+  def relative(pathname)
+    absolute_path = Pathname.new(pathname).expand_path
+    absolute_path.relative_path_from(@root).to_s
+  rescue ArgumentError
+    absolute_path.to_s
+  end
+
+  def pass(target, condition, evidence)
+    @rows << Row.new(target: target, condition: condition, result: "pass", evidence: evidence)
+  end
+
+  def fail_row(target, condition, evidence)
+    @rows << Row.new(target: target, condition: condition, result: "fail", evidence: evidence)
+  end
+
+  def blocked(target, condition, evidence)
+    @rows << Row.new(target: target, condition: condition, result: "blocked", evidence: evidence)
+  end
+
+  def failed?
+    @rows.any? { |row| row.result == "fail" }
+  end
+
+  def blocked?
+    @rows.any? { |row| row.result == "blocked" }
+  end
+
+  def overall_result
+    return "fail" if failed?
+    return "blocked" if blocked?
+
+    "pass"
+  end
+
+  def report
+    failing = @rows.select { |row| row.result == "fail" }
+    blocking = @rows.select { |row| row.result == "blocked" }
+    passed = @rows.select { |row| row.result == "pass" }
+
+    lines = []
+    lines << "# Execution Validator 結果"
+    lines << ""
+    lines << "## 判定"
+    lines << ""
+    lines << overall_result
+    lines << ""
+    lines << "## 確認対象"
+    lines << ""
+    if @checked_files.empty?
+      lines << "- なし"
+    else
+      @checked_files.to_a.sort.each { |file| lines << "- `#{file}`" }
+    end
+    lines << ""
+    lines << "## 満たしている条件"
+    lines << ""
+    summarize(passed).each { |item| lines << "- #{item}" }
+    lines << "- なし" if passed.empty?
+    lines << ""
+    lines << "## 不足または矛盾"
+    lines << ""
+    if failing.empty? && blocking.empty?
+      lines << "- なし"
+    else
+      (failing + blocking).each do |row|
+        lines << "- `#{row.target}`: #{row.condition}。根拠: #{row.evidence}"
+      end
+    end
+    lines << ""
+    lines << "## 次に使う Amadeus skill"
+    lines << ""
+    lines << "- なし"
+    lines << ""
+    lines << "補足: `pass` は実行時参照に必要な最低限の構造条件を満たすという意味で、gate 通過や内容妥当性の承認ではない。"
+    lines.join("\n")
+  end
+
+  def summarize(rows)
+    rows.map { |row| "#{row.target}: #{row.condition}" }.uniq.first(30)
+  end
+
+  def blank?(value)
+    value.nil? || value.to_s.strip.empty?
+  end
+end
+
+if $PROGRAM_NAME == __FILE__
+  root = ARGV[0] || Dir.pwd
+  intent_id = ARGV[1]
+  result = ExecutionValidator.new(root, intent_id).run
+  puts result
+
+  case result[/^pass$|^fail$|^blocked$/, 0]
+  when "pass"
+    exit 0
+  when "blocked"
+    exit 2
+  else
+    exit 1
+  end
+end
