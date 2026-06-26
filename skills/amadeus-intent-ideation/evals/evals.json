@@ -25,6 +25,11 @@
       "id": 5,
       "prompt": "20260627-risk-aware-reset-support はもう Ideation 成果物があります。スコープと初期モックの未確定事項を煮詰めたい。",
       "expected_output": "auto mode で既存 state.json と Ideation 成果物を確認し、refine を自動選択する。読めば分かることは質問せず、Ideation 論点を一問だけ質問し、推奨回答と理由を添える。質問したターンでは成果物を更新しない。"
+    },
+    {
+      "id": 6,
+      "prompt": "さっきの refine への回答: 最初に利用者向けリスク通知の文言抽象度を固定する。利用者向け通知では「通常と異なる操作が検出されたため確認が必要です」までに留め、IP、端末、地理的異常、検知ルール、詳細なリスク理由は出さない。Inception へ渡してください。",
+      "expected_output": "auto-refine の回答後更新として、scope.md、ideation.md、traceability.md、必要な decision だけを更新する。requirements/use-cases/units/bolts/domain は作らない。"
     }
   ]
 }
