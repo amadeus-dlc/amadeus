@@ -2,7 +2,7 @@
 name: amadeus-execution-validator
 description: >-
   配布先ユーザー環境で Amadeus の実行時構造を検証する。`.amadeus/` 成果物、Intent、domain/bounded-contexts.md、
-  Upstream/Downstream、組織パターン、統合パターンを、repo root の開発用 scripts に依存せず確認したいときに使う。
+  Upstream/Downstream、組織パターン、統合パターン、codebase-analysis.md を、repo root の開発用 scripts に依存せず確認したいときに使う。
 ---
 
 # amadeus-execution-validator
@@ -46,6 +46,7 @@ Ruby が使えない場合は `blocked` として報告する。
 10. `.amadeus/intents/<intent-id>/traceability.md`。対象 Intent ID が指定された場合だけ読む。
 11. `.amadeus/intents/<intent-id>/domain/subdomains.md`。対象 Intent ID が指定され、Initialized または Ideation 段階ではない場合だけ読む。
 12. `.amadeus/intents/<intent-id>/domain/bounded-contexts.md`。対象 Intent ID が指定され、Initialized または Ideation 段階ではない場合だけ読む。
+13. `.amadeus/intents/<intent-id>/codebase-analysis.md`。対象 Intent ID が指定され、Initialized または Ideation 段階ではなく、ファイルが存在する場合、または `state.json.inception.requiredArtifacts` に含まれる場合だけ読む。
 
 存在しない参照元がある場合は、存在しない事実を結果に含める。
 存在しない参照元を推測で補完しない。
@@ -65,6 +66,9 @@ Ruby が使えない場合は `blocked` として報告する。
 - Initialized 段階の Intent では、`scope.md`、`ideation.md`、`traceability.md`、`decisions.md`、`mocks/`、`requirements.md`、`acceptance.md`、`use-cases.md`、`units.md`、`bolts.md`、`domain/**` は後続段階で作る成果物として扱い、欠落を不足にしない。
 - 対象 Intent ID が指定され、`.amadeus/intents/<intent-id>/state.json` の `phase` が `ideation` の場合、Ideation 段階の成果物契約として検証する。
 - Ideation 段階の Intent では、`requirements.md`、`acceptance.md`、`use-cases.md`、`units.md`、`bolts.md`、`domain/**` は Inception 以降で作る成果物として扱い、欠落を不足にしない。
+- 対象 Intent ID が指定され、`.amadeus/intents/<intent-id>/codebase-analysis.md` が存在する場合、必須見出しを検証する。
+- 対象 Intent ID が指定され、`.amadeus/intents/<intent-id>/state.json` の `inception.requiredArtifacts` に `codebase-analysis.md` が含まれる場合、存在と必須見出しを検証する。
+- `codebase-analysis.md` は条件付き成果物であるため、存在せず、`inception.requiredArtifacts` にも含まれない場合は不足にしない。
 - 対象 Intent ID が指定された場合、対象 Intent の index 系成果物が、[artifacts validation](references/artifacts.md) の条件を満たす。
 - 対象 Intent ID が指定された場合、対象 Intent の `traceability.md` に出る ID が対応する index または定義元に存在する。
 - 対象 Intent ID が指定された場合、対象 Intent の `traceability.md` に出る DDD 要素 ID が、`BCnnn/DMnnn/<ddd-element-id>` の正規形で定義元に存在する。

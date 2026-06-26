@@ -22,6 +22,7 @@
 
 - `.amadeus/intents/<intent-id>/user-stories.md`
 - `.amadeus/intents/<intent-id>/use-cases.md`
+- `.amadeus/intents/<intent-id>/codebase-analysis.md`
 - `.amadeus/intents/<intent-id>/units.md`
 - `.amadeus/intents/<intent-id>/bolts.md`
 - `.amadeus/intents/<intent-id>/decisions.md`
@@ -42,6 +43,7 @@ Ideation 段階の Intent では、次のファイルやディレクトリは In
 - `.amadeus/intents/<intent-id>/acceptance.md`
 - `.amadeus/intents/<intent-id>/user-stories.md`
 - `.amadeus/intents/<intent-id>/use-cases.md`
+- `.amadeus/intents/<intent-id>/codebase-analysis.md`
 - `.amadeus/intents/<intent-id>/units.md`
 - `.amadeus/intents/<intent-id>/bolts.md`
 - `.amadeus/intents/<intent-id>/domain/**`
@@ -62,6 +64,7 @@ Initialized 段階の Intent では、次のファイルやディレクトリは
 - `.amadeus/intents/<intent-id>/acceptance.md`
 - `.amadeus/intents/<intent-id>/user-stories.md`
 - `.amadeus/intents/<intent-id>/use-cases.md`
+- `.amadeus/intents/<intent-id>/codebase-analysis.md`
 - `.amadeus/intents/<intent-id>/units.md`
 - `.amadeus/intents/<intent-id>/bolts.md`
 - `.amadeus/intents/<intent-id>/domain/**`
@@ -368,6 +371,27 @@ Task ID は `Bnnn/Tnnn` を正規形にする。
 | ドメインイベント | `DEV` |
 | リポジトリ | `DR` |
 | ファクトリ | `DF` |
+
+## `codebase-analysis.md`
+
+対象は次である。
+
+- `.amadeus/intents/<intent-id>/codebase-analysis.md`
+
+`codebase-analysis.md` は条件付き成果物である。
+存在する場合、または `.amadeus/intents/<intent-id>/state.json` の `inception.requiredArtifacts` に `codebase-analysis.md` が含まれる場合だけ検証する。
+存在せず、`inception.requiredArtifacts` にも含まれない場合は不足にしない。
+
+必須見出しは次である。
+
+- `対象コード`
+- `既存能力`
+- `統合点`
+- `ギャップ`
+- `リスク`
+- `Inception への入力`
+
+この検証では、各見出しの内容妥当性、既存コード分析の網羅性、greenfield か brownfield かの判断妥当性は扱わない。
 
 ## `domain/bounded-contexts/<bounded-context-id>/models.md`
 

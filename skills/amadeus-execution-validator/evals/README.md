@@ -12,6 +12,8 @@
 - 対象 Intent ID が指定された場合、全体成果物に加えて対象 Intent を検証する。
 - Initialized または Ideation 段階では、後続段階の成果物欠落を不足にしない。
 - Inception 段階で Bolt 配下に `tasks.md` がある場合、同じ Bolt 配下の `design.md` を検証する。
+- `codebase-analysis.md` が存在する場合、または `state.json.inception.requiredArtifacts` に含まれる場合、必須見出しを検証する。
+- `codebase-analysis.md` が存在せず、`state.json.inception.requiredArtifacts` にも含まれない場合は不足にしない。
 - `evals.json` が JSON として解釈できる。
 - `git diff --check` が成功する。
 
@@ -23,6 +25,7 @@
 | `ideation-intent-validation` | 未実施 | Ideation 段階では Inception 以降の欠落を不足にしない。 | 未登録 |
 | `runtime-only-dependency` | 未実施 | Ruby 標準ライブラリだけで検証する。 | 未登録 |
 | `bolt-design-before-task` | 未実施 | Bolt 配下の `design.md` が `tasks.md` の入力として存在する。 | 未登録 |
+| `codebase-analysis-headings` | 未実施 | `codebase-analysis.md` が条件付き成果物として必須見出しを持つ。 | 未登録 |
 
 ## 再実行コマンド
 

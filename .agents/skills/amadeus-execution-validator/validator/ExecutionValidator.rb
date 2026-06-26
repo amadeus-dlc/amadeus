@@ -48,6 +48,15 @@ class ExecutionValidator
     "ファクトリ" => { heading: "ファクトリ", pattern: /\ADF\d{3}\z/, prefix: "DF" }
   }.freeze
 
+  CODEBASE_ANALYSIS_HEADINGS = [
+    "対象コード",
+    "既存能力",
+    "統合点",
+    "ギャップ",
+    "リスク",
+    "Inception への入力"
+  ].freeze
+
   INDEX_SPECS = {
     "user-stories.md" => {
       headings: ["一覧", "依存関係"],
@@ -154,6 +163,7 @@ class ExecutionValidator
 
     check_requirements("#{base}/requirements.md")
     check_acceptance("#{base}/acceptance.md", "#{base}/requirements.md")
+    check_codebase_analysis(base, state)
     check_subdomains("#{base}/domain/subdomains.md", "#{base}/domain/bounded-contexts.md")
     check_bounded_contexts("#{base}/domain/bounded-contexts.md", global: false)
 
@@ -339,6 +349,31 @@ class ExecutionValidator
     check_table_targets(path, table, "要求", requirement_ids, allow_none: false)
     check_not_blank(path, table, "状態")
     check_not_blank(path, table, "証拠")
+  end
+
+  def check_codebase_analysis(base, state)
+    path = "#{base}/codebase-analysis.md"
+    required = inception_required_artifacts(state).include?("codebase-analysis.md")
+
+    if required
+      check_file(path, "既存コード分析が必須成果物として存在する")
+      check_headings(path, CODEBASE_ANALYSIS_HEADINGS)
+    elsif absolute(path).file?
+      pass(path, "既存コード分析が存在する場合は検証対象である", "存在を確認")
+      check_headings(path, CODEBASE_ANALYSIS_HEADINGS)
+    else
+      skipped(path, "既存コード分析は条件付き成果物である", "requiredArtifacts に未指定で、ファイルも存在しない")
+    end
+  end
+
+  def inception_required_artifacts(state)
+    inception = state.is_a?(Hash) ? state["inception"] : nil
+    return Set.new unless inception.is_a?(Hash)
+
+    values = inception["requiredArtifacts"]
+    return Set.new unless values.is_a?(Array)
+
+    Set.new(values.map { |value| value.to_s.strip })
   end
 
   def check_traceability(path)
