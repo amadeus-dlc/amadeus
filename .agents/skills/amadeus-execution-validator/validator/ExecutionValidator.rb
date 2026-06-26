@@ -21,6 +21,16 @@ class ExecutionValidator
     "腐敗防止層（ACL）"
   ].freeze
 
+  DDD_ELEMENT_SPECS = {
+    "集約" => { heading: "集約", pattern: /\ADA\d{3}\z/, prefix: "DA" },
+    "エンティティ" => { heading: "エンティティ", pattern: /\ADE\d{3}\z/, prefix: "DE" },
+    "値オブジェクト" => { heading: "値オブジェクト", pattern: /\ADVO\d{3}\z/, prefix: "DVO" },
+    "ドメインサービス" => { heading: "ドメインサービス", pattern: /\ADS\d{3}\z/, prefix: "DS" },
+    "ドメインイベント" => { heading: "ドメインイベント", pattern: /\ADEV\d{3}\z/, prefix: "DEV" },
+    "リポジトリ" => { heading: "リポジトリ", pattern: /\ADR\d{3}\z/, prefix: "DR" },
+    "ファクトリ" => { heading: "ファクトリ", pattern: /\ADF\d{3}\z/, prefix: "DF" }
+  }.freeze
+
   INDEX_SPECS = {
     "user-stories.md" => {
       headings: ["一覧", "依存関係"],
@@ -66,6 +76,9 @@ class ExecutionValidator
     @checked_files = Set.new
     @known_ids = {}
     @known_contract_ids = {}
+    @known_external_boundaries = {}
+    @known_domain_model_modules = {}
+    @known_ddd_element_ids = {}
   end
 
   def run
@@ -294,8 +307,12 @@ class ExecutionValidator
       case type
       when "境界づけられたコンテキスト"
         check_values_exist(path, "対象", target, ids[:contexts], allow_none: false)
+      when "境界"
+        check_external_boundary_exists(path, target)
       when "事前条件", "不変条件", "事後条件"
         check_contract_id_exists(path, type, target, row["定義元"])
+      when *DDD_ELEMENT_SPECS.keys
+        check_ddd_element_exists(path, type, target, row["定義元"], ids[:contexts])
       else
         skipped(path, "`#{type}` の対象は ID 実在チェック対象外である", target)
       end
@@ -466,6 +483,141 @@ class ExecutionValidator
     end
   end
 
+  def check_external_boundary_exists(path, target)
+    bounded_contexts_path = File.join(File.dirname(path), "domain/bounded-contexts.md")
+    names = external_boundary_names_for(bounded_contexts_path)
+    if names.include?(target)
+      pass(path, "`境界` が外部境界表の名前に存在する", target)
+    else
+      fail_row(path, "`境界` が外部境界表の名前に存在する", target)
+    end
+  end
+
+  def external_boundary_names_for(path)
+    return @known_external_boundaries[path] if @known_external_boundaries.key?(path)
+    return Set.new unless absolute(path).file?
+
+    table = table_after_heading(path, "外部境界")
+    names = if table && table[:headers].include?("名前")
+              Set.new(table[:rows].map { |row| row["名前"].to_s.strip }.reject(&:empty?))
+            else
+              Set.new
+            end
+    @known_external_boundaries[path] = names
+  end
+
+  def check_ddd_element_exists(path, type, target, source, context_ids)
+    parts = target.split("/")
+    unless parts.length == 3
+      fail_row(path, "`#{type}` が BCnnn/DMnnn/<DDD要素ID> 形式である", target)
+      return
+    end
+
+    context_id, module_id, element_id = parts
+    spec = DDD_ELEMENT_SPECS.fetch(type)
+    check_ddd_context_id(path, type, context_id, context_ids)
+    check_ddd_module_id(path, type, module_id)
+    check_ddd_element_id_format(path, type, element_id, spec)
+
+    source_path = source_model_path(path, type, source, target)
+    return unless source_path
+
+    check_module_exists_for_source(path, type, context_id, module_id, source_path)
+    element_ids = ddd_element_ids_for(source_path, type)
+    if element_ids.include?(element_id)
+      pass(path, "`#{type}` が定義元の model.md に存在する", "#{target} in #{source_path}")
+    else
+      fail_row(path, "`#{type}` が定義元の model.md に存在する", "#{target} in #{source_path}")
+    end
+  end
+
+  def check_ddd_context_id(path, type, context_id, context_ids)
+    if context_id.match?(/\ABC\d{3}\z/) && context_ids.include?(context_id)
+      pass(path, "`#{type}` の BC ID が実在する", context_id)
+    else
+      fail_row(path, "`#{type}` の BC ID が実在する", context_id)
+    end
+  end
+
+  def check_ddd_module_id(path, type, module_id)
+    if module_id.match?(/\ADM\d{3}\z/)
+      pass(path, "`#{type}` の DDD モジュール ID が形式に合う", module_id)
+    else
+      fail_row(path, "`#{type}` の DDD モジュール ID が形式に合う", module_id)
+    end
+  end
+
+  def check_ddd_element_id_format(path, type, element_id, spec)
+    if element_id.match?(spec[:pattern])
+      pass(path, "`#{type}` の DDD 要素 ID が種別に合う", element_id)
+    else
+      fail_row(path, "`#{type}` の DDD 要素 ID が種別に合う", element_id)
+    end
+  end
+
+  def source_model_path(path, type, source, target)
+    source_link = markdown_links(source.to_s).first
+    unless source_link
+      fail_row(path, "`#{type}` の定義元が相対リンクである", target)
+      return nil
+    end
+
+    source_path = relative(link_path(path, source_link))
+    unless source_path.end_with?("/model.md")
+      fail_row(path, "`#{type}` の定義元が model.md である", source_path)
+      return nil
+    end
+
+    source_path
+  end
+
+  def check_module_exists_for_source(path, type, context_id, module_id, source_path)
+    models_path = relative(absolute(source_path).dirname.dirname.dirname.join("models.md"))
+    modules = domain_model_modules_for(models_path)
+    expected_source = modules[module_id]
+
+    if expected_source && expected_source == source_path
+      pass(path, "`#{type}` の DDD モジュール ID が models.md に存在する", "#{context_id}/#{module_id}")
+    elsif expected_source
+      fail_row(path, "`#{type}` の DDD モジュール ID が定義元 model.md と一致する", "#{module_id}: #{expected_source} != #{source_path}")
+    else
+      fail_row(path, "`#{type}` の DDD モジュール ID が models.md に存在する", "#{context_id}/#{module_id}")
+    end
+  end
+
+  def domain_model_modules_for(path)
+    return @known_domain_model_modules[path] if @known_domain_model_modules.key?(path)
+    return {} unless absolute(path).file?
+
+    table = table_after_heading(path, "一覧")
+    modules = {}
+    if table && table[:headers].include?("識別子") && table[:headers].include?("詳細")
+      table[:rows].each do |row|
+        id = row["識別子"].to_s.strip
+        link = markdown_links(row["詳細"].to_s).first
+        next if id.empty? || link.to_s.empty?
+
+        modules[id] = relative(link_path(path, link))
+      end
+    end
+    @known_domain_model_modules[path] = modules
+  end
+
+  def ddd_element_ids_for(path, type)
+    cache_key = [path, type]
+    return @known_ddd_element_ids[cache_key] if @known_ddd_element_ids.key?(cache_key)
+    return Set.new unless absolute(path).file?
+
+    spec = DDD_ELEMENT_SPECS.fetch(type)
+    table = table_after_heading(path, spec[:heading])
+    ids = if table && table[:headers].include?("識別子")
+            Set.new(table[:rows].map { |row| row["識別子"].to_s.strip }.reject(&:empty?))
+          else
+            Set.new
+          end
+    @known_ddd_element_ids[cache_key] = ids
+  end
+
   def contract_ids_for(path, type)
     cache_key = [path, type]
     return @known_contract_ids[cache_key] if @known_contract_ids.key?(cache_key)
@@ -533,18 +685,114 @@ class ExecutionValidator
 
   def check_bounded_contexts(path, global:)
     check_file(path, "境界づけられたコンテキスト一覧が存在する")
-    headings = global ? ["一覧", "コンテキスト間の依存", "パターン分類"] : ["コンテキスト", "コンテキスト間の依存"]
+    headings = global ? ["一覧", "外部境界", "コンテキスト間の依存", "パターン分類"] : ["コンテキスト", "外部境界", "コンテキスト間の依存"]
     list_heading = global ? "一覧" : "コンテキスト"
     check_headings(path, headings)
 
     table = check_table(path, list_heading, ["識別子", "名前", "サブドメイン", "役割", "モデル", "契約"])
     ids = table ? collect_ids(path, table, "識別子", /\ABC\d{3}\z/) : Set.new
-    check_detail_links(path, table, "モデル") if table
-    check_detail_links(path, table, "契約") if table
+    if table
+      check_detail_links(path, table, "モデル")
+      check_detail_links(path, table, "契約")
+      check_domain_model_indexes_from_bounded_contexts(path, table)
+    end
+
+    boundary_table = check_table(path, "外部境界", ["コンテキスト", "名前", "役割", "根拠"])
+    check_external_boundaries(path, boundary_table, ids) if boundary_table
 
     dep_table = check_table(path, "コンテキスト間の依存", ["Downstream", "Upstream", "依存内容", "組織パターン", "統合パターン", "状態"])
     check_context_dependencies(path, dep_table, ids) if dep_table
     check_pattern_classification(path) if global
+  end
+
+  def check_external_boundaries(path, table, ids)
+    table[:rows].each do |row|
+      context_id = row["コンテキスト"].to_s.strip
+      if ids.include?(context_id)
+        pass(path, "外部境界のコンテキストが既存 BC である", context_id)
+      else
+        fail_row(path, "外部境界のコンテキストが既存 BC である", context_id)
+      end
+      check_not_blank_value(path, "名前", row["名前"])
+      check_not_blank_value(path, "役割", row["役割"])
+      check_not_blank_value(path, "根拠", row["根拠"])
+    end
+  end
+
+  def check_domain_model_indexes_from_bounded_contexts(path, table)
+    table[:rows].each do |row|
+      markdown_links(row["モデル"].to_s).each do |target|
+        model_index_path = relative(link_path(path, target))
+        check_domain_model_index(model_index_path)
+      end
+    end
+  end
+
+  def check_domain_model_index(path)
+    return unless absolute(path).file?
+
+    check_headings(path, ["一覧"])
+    table = check_table(path, "一覧", ["識別子", "名前", "役割", "詳細"])
+    return unless table
+
+    collect_ids(path, table, "識別子", /\ADM\d{3}\z/)
+    check_not_blank(path, table, "名前")
+    check_not_blank(path, table, "役割")
+    check_detail_links(path, table, "詳細")
+    table[:rows].each do |row|
+      check_domain_model_detail_path(path, row)
+      markdown_links(row["詳細"].to_s).each do |target|
+        check_domain_model_file(relative(link_path(path, target)))
+      end
+    end
+  end
+
+  def check_domain_model_detail_path(path, row)
+    module_id = row["識別子"].to_s.strip
+    link = markdown_links(row["詳細"].to_s).first
+    unless link
+      fail_row(path, "DDD モジュール詳細が相対リンクを持つ", module_id)
+      return
+    end
+
+    detail_path = relative(link_path(path, link))
+    dirname = File.basename(File.dirname(detail_path))
+    if dirname.match?(/\A#{Regexp.escape(module_id)}-.+/)
+      pass(path, "DDD モジュール詳細ディレクトリが DMnnn-<slug> 形式である", "#{module_id}: #{dirname}")
+    else
+      fail_row(path, "DDD モジュール詳細ディレクトリが DMnnn-<slug> 形式である", "#{module_id}: #{dirname}")
+    end
+  end
+
+  def check_domain_model_file(path)
+    return unless absolute(path).file?
+
+    seen_ids = Set.new
+    DDD_ELEMENT_SPECS.each do |type, spec|
+      table = table_after_heading(path, spec[:heading])
+      next unless table
+
+      check_table(path, spec[:heading], ["識別子", "名前", "役割", "根拠"])
+      table[:rows].each do |row|
+        id = row["識別子"].to_s.strip
+        if id.match?(spec[:pattern])
+          pass(path, "`#{type}` の識別子が形式に合う", id)
+        else
+          fail_row(path, "`#{type}` の識別子が形式に合う", id)
+        end
+
+        if seen_ids.include?(id)
+          fail_row(path, "DDD 要素 ID が同じ model.md 内で重複しない", id)
+        else
+          pass(path, "DDD 要素 ID が同じ model.md 内で重複しない", id)
+          seen_ids << id
+        end
+
+        check_not_blank_value(path, "名前", row["名前"])
+        check_not_blank_value(path, "役割", row["役割"])
+        check_not_blank_value(path, "根拠", row["根拠"])
+      end
+    end
   end
 
   def check_context_dependencies(path, table, ids)
@@ -1005,6 +1253,7 @@ class ExecutionValidator
     return "識別子" if condition.include?("識別子")
     return "リンク参照" if condition.include?("相対リンク")
     return "Traceability ID" if traceability_id_condition?(condition)
+    return "ドメインモデル" if domain_model_condition?(condition)
     return "依存関係" if condition.include?("依存")
     return "Index ID参照" if condition.include?("一覧内の既存 ID")
     return "空欄" if condition.include?("空欄")
@@ -1021,11 +1270,18 @@ class ExecutionValidator
       condition.include?("なしを許可")
   end
 
+  def domain_model_condition?(condition)
+    condition.include?("DDD") ||
+      condition.include?("model.md") ||
+      condition.include?("外部境界表")
+  end
+
   def domain_boundary_condition?(condition, target)
     target.include?("bounded-contexts.md") ||
       target.include?("subdomains.md") ||
       condition.include?("組織パターン") ||
       condition.include?("統合パターン") ||
+      condition.include?("外部境界") ||
       condition.include?("コンテキスト") ||
       condition.include?("許可値")
   end

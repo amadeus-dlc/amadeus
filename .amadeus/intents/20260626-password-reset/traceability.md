@@ -36,11 +36,11 @@
 | 境界 | パスワード再設定要求 | R001 | UC001 | [domain/bounded-contexts.md](domain/bounded-contexts.md) |
 | 境界 | 再設定手段送信依頼 | R001 | UC001 | [domain/bounded-contexts.md](domain/bounded-contexts.md) |
 | 境界 | 認証情報更新要求 | R002 | UC002 | [domain/bounded-contexts.md](domain/bounded-contexts.md) |
-| 概念 | アカウント | R001, R002 | UC001, UC002 | [domain/bounded-contexts/BC001-authentication-access/models/account/model.md](domain/bounded-contexts/BC001-authentication-access/models/account/model.md) |
-| 概念 | アカウント識別子 | R001 | UC001 | [domain/bounded-contexts/BC001-authentication-access/models/account/model.md](domain/bounded-contexts/BC001-authentication-access/models/account/model.md) |
-| 概念 | 認証情報 | R002 | UC002 | [domain/bounded-contexts/BC001-authentication-access/models/account/model.md](domain/bounded-contexts/BC001-authentication-access/models/account/model.md) |
-| 概念 | 再設定トークン | R001, R002 | UC001, UC002 | [domain/bounded-contexts/BC001-authentication-access/models/account/model.md](domain/bounded-contexts/BC001-authentication-access/models/account/model.md) |
-| 概念 | 再設定手段 | R001 | UC001 | [domain/bounded-contexts/BC001-authentication-access/models/account/model.md](domain/bounded-contexts/BC001-authentication-access/models/account/model.md) |
+| 集約 | BC001/DM001/DA001 | R001, R002 | UC001, UC002 | [domain/bounded-contexts/BC001-authentication-access/models/DM001-account/model.md](domain/bounded-contexts/BC001-authentication-access/models/DM001-account/model.md) |
+| エンティティ | BC001/DM001/DE001 | R001, R002 | UC001, UC002 | [domain/bounded-contexts/BC001-authentication-access/models/DM001-account/model.md](domain/bounded-contexts/BC001-authentication-access/models/DM001-account/model.md) |
+| 値オブジェクト | BC001/DM001/DVO001 | R001 | UC001 | [domain/bounded-contexts/BC001-authentication-access/models/DM001-account/model.md](domain/bounded-contexts/BC001-authentication-access/models/DM001-account/model.md) |
+| 値オブジェクト | BC001/DM001/DVO002 | R002 | UC002 | [domain/bounded-contexts/BC001-authentication-access/models/DM001-account/model.md](domain/bounded-contexts/BC001-authentication-access/models/DM001-account/model.md) |
+| 値オブジェクト | BC001/DM001/DVO003 | R001 | UC001 | [domain/bounded-contexts/BC001-authentication-access/models/DM001-account/model.md](domain/bounded-contexts/BC001-authentication-access/models/DM001-account/model.md) |
 | 事前条件 | PRE001 | R001 | UC001 | [domain/bounded-contexts/BC001-authentication-access/contracts.md](domain/bounded-contexts/BC001-authentication-access/contracts.md) |
 | 事前条件 | PRE002 | R001 | UC001 | [domain/bounded-contexts/BC001-authentication-access/contracts.md](domain/bounded-contexts/BC001-authentication-access/contracts.md) |
 | 事前条件 | PRE003 | R002 | UC002 | [domain/bounded-contexts/BC001-authentication-access/contracts.md](domain/bounded-contexts/BC001-authentication-access/contracts.md) |

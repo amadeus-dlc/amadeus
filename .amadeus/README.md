@@ -204,12 +204,12 @@
 
 `.amadeus/domain/` は、Amadeus DLC 全体のサブドメイン、境界づけられたコンテキスト、コンテキスト別モデル、契約を扱う。
 全体モデルには、各インテント固有モデルへの索引を置く。
-インテント固有の概念関係や契約が必要な場合は、インテント配下の `domain/` に置く。
+インテント固有のドメインモデル要素や契約が必要な場合は、インテント配下の `domain/` に置く。
 
 `domain/subdomains.md` には、サブドメインと分類理由を書く。
 `domain/bounded-contexts.md` には、Unit を切る時に参照する境界づけられたコンテキスト、責務、外部境界、コンテキスト間の Upstream/Downstream、組織パターン、統合パターン、Unit 分割の判断基準を書く。
 `domain/bounded-contexts/<bounded-context-id>/models.md` には、そのコンテキストに属する DDD モジュール単位のモデル一覧を書く。
-`domain/bounded-contexts/<bounded-context-id>/models/<ddd-module-id>/model.md` には、その DDD モジュールで使う概念、関係、ライフサイクル、集約候補を書く。
+`domain/bounded-contexts/<bounded-context-id>/models/<ddd-module-id>-<slug>/model.md` には、その DDD モジュールで使う集約、エンティティ、値オブジェクト、ドメインサービス、ドメインイベント、リポジトリ、ファクトリを書く。
 `domain/bounded-contexts/<bounded-context-id>/contracts.md` には、そのコンテキストで守る事前条件、不変条件、事後条件と根拠を書く。
 未確定事項や昇格候補は `domain-notes.md` に残す。
 
@@ -220,6 +220,10 @@
 - `識別子` には `BCnnn` を使い、同一ファイル内で重複させない。
 - `モデル` は `bounded-contexts/<bounded-context-id>/models.md` を参照する。
 - `契約` は `bounded-contexts/<bounded-context-id>/contracts.md` を参照する。
+- `外部境界` の表は、`コンテキスト`、`名前`、`役割`、`根拠` の4列を持つ。
+- `外部境界` の `コンテキスト` には、`一覧` に存在する境界づけられたコンテキスト ID を書く。
+- `外部境界` の `名前` は ID 化せず、`traceability.md` の `境界` から参照できる自然言語名として扱う。
+- `外部境界` の `役割` と `根拠` は空欄にしない。
 - `コンテキスト間の依存` の表は、`Downstream`、`Upstream`、`依存内容`、`組織パターン`、`統合パターン`、`状態` の6列を持つ。
 - `Downstream` と `Upstream` には、`一覧` に存在する境界づけられたコンテキスト ID、または `なし` を書く。
 - `Upstream` が `なし` の場合、`組織パターン` と `統合パターン` は `該当なし` とし、`状態` に理由を書く。
@@ -227,6 +231,25 @@
 - `Upstream` が `なし` でない場合、`統合パターン` は `共有カーネル`、`巨大な泥団子`、`公開ホストサービス（OHS）`、`公表された言語（PL）`、`腐敗防止層（ACL）` のいずれかにする。
 - `依存内容` と `状態` は空欄にしない。
 - `パターン分類` には、組織パターン4種類と統合パターン5種類をすべて列挙する。
+
+`domain/bounded-contexts/<bounded-context-id>/models.md` は、validator が検査できるように次の形式を保つ。
+
+- 必須見出しとして、`一覧` を置く。
+- `一覧` の表は、`識別子`、`名前`、`役割`、`詳細` の4列を持つ。
+- `識別子` には DDD モジュール ID として `DMnnn` を使い、同一ファイル内で重複させない。
+- `詳細` は `models/<ddd-module-id>-<slug>/model.md` を指す相対リンクにする。
+- DDD モジュールのディレクトリ名は `DMnnn-<slug>` にする。
+
+`domain/bounded-contexts/<bounded-context-id>/models/<ddd-module-id>-<slug>/model.md` は、validator が検査できるように次の形式を保つ。
+
+- DDD 要素は種別ごとに表を分ける。
+- `集約`、`エンティティ`、`値オブジェクト`、`ドメインサービス`、`ドメインイベント`、`リポジトリ`、`ファクトリ` の表を置ける。
+- 各表は、存在する場合だけ検査対象にする。空の表を作らない。
+- 各表は、`識別子`、`名前`、`役割`、`根拠` の4列を持つ。
+- `集約` の識別子は `DAnnn`、`エンティティ` の識別子は `DEnnn`、`値オブジェクト` の識別子は `DVOnnn`、`ドメインサービス` の識別子は `DSnnn`、`ドメインイベント` の識別子は `DEVnnn`、`リポジトリ` の識別子は `DRnnn`、`ファクトリ` の識別子は `DFnnn` を使う。
+- 識別子は同一 `model.md` 内で重複させない。
+- `名前`、`役割`、`根拠` は空欄にしない。
+- `traceability.md` から参照する場合は、`BC001/DM001/DE001` のように、境界づけられたコンテキスト ID、DDD モジュール ID、DDD 要素 ID を `/` で連結する。
 
 `domain/bounded-contexts/<bounded-context-id>/contracts.md` は、validator が検査できるように次の形式を保つ。
 
@@ -252,7 +275,7 @@
 | `domain/subdomains.md` | 必須 | `.amadeus/` 初期化時 | サブドメインと分類理由を扱う | 未確認なら状態を書く |
 | `domain/bounded-contexts.md` | 必須 | `.amadeus/` 初期化時 | 境界づけられたコンテキスト、Intent 固有モデルへの索引、コンテキスト間の Upstream/Downstream、組織パターン、統合パターンを扱う | 未確認なら状態を書く |
 | `domain/bounded-contexts/<bounded-context-id>/models.md` | 任意 | 境界づけられたコンテキストのモデルを固定する時 | DDD モジュール単位のモデル一覧を扱う | 未確認なら作らない |
-| `domain/bounded-contexts/<bounded-context-id>/models/<ddd-module-id>/model.md` | 任意 | DDD モジュール単位のモデルを固定する時 | モジュール別の概念関係、ライフサイクル、集約候補を扱う | 未確認なら作らない |
+| `domain/bounded-contexts/<bounded-context-id>/models/<ddd-module-id>-<slug>/model.md` | 任意 | DDD モジュール単位のモデルを固定する時 | モジュール別の集約、エンティティ、値オブジェクト、ドメインサービス、ドメインイベント、リポジトリ、ファクトリを扱う | 未確認なら作らない |
 | `domain/bounded-contexts/<bounded-context-id>/contracts.md` | 任意 | 境界づけられたコンテキストの契約を固定する時 | コンテキスト別の事前条件、不変条件、事後条件を扱う | 契約がなければ作らない |
 | `intents.md` | 必須 | 最初のインテントを作る時 | インテント一覧とインテント間の依存関係を扱う | インテントがなければ作らない |
 | `decisions/` | 任意 | 判断を残す必要がある時 | 全体構造に関わる判断を記録する | 判断がなければ作らない |
@@ -268,7 +291,7 @@
 | `domain/subdomains.md` | 任意 | Intent 固有のサブドメイン分類を固定する時 | インテント内で参照するサブドメインと分類理由を扱う | 全体モデルで十分なら作らない |
 | `domain/bounded-contexts.md` | 任意 | Unit 分割の境界を固定する時 | インテント内で参照する境界づけられたコンテキスト、責務、外部境界、コンテキスト間の Upstream/Downstream、組織パターン、統合パターン、Unit 分割の判断基準を扱う | 全体モデルで十分なら作らない |
 | `domain/bounded-contexts/<bounded-context-id>/models.md` | 任意 | インテント固有のモデル一覧を固定する時 | インテント内で使う DDD モジュール単位のモデル一覧を扱う | 全体モデルで十分なら作らない |
-| `domain/bounded-contexts/<bounded-context-id>/models/<ddd-module-id>/model.md` | 任意 | インテント固有の概念関係を固定する時 | インテント内で使う DDD モジュール別の概念、関係、ライフサイクル、集約候補を扱う | 全体モデルで十分なら作らない |
+| `domain/bounded-contexts/<bounded-context-id>/models/<ddd-module-id>-<slug>/model.md` | 任意 | インテント固有のドメインモデル要素を固定する時 | インテント内で使う DDD モジュール別の集約、エンティティ、値オブジェクト、ドメインサービス、ドメインイベント、リポジトリ、ファクトリを扱う | 全体モデルで十分なら作らない |
 | `domain/bounded-contexts/<bounded-context-id>/contracts.md` | 任意 | インテント固有の契約を固定する時 | インテント内で守る事前条件、不変条件、事後条件と根拠を扱う | 契約がなければ作らない |
 | `requirements/<requirement-id>.md` | 任意 | 要求単位の説明、受け入れ条件、背景参照が必要な時 | 個別要求を扱う | 一覧で十分なら作らない |
 | `user-stories.md` | 任意 | ストーリーが必要な時 | アクターを明示したユーザーストーリー一覧を扱う | 不要なら `traceability.md` に `なし` と書く |
@@ -302,9 +325,21 @@
 | ユニット | `Unnn` | `U001` |
 | ボルト | `Bnnn` | `B001` |
 | タスク | `Tnnn` | `T001` |
+| DDD モジュール | `DMnnn` | `DM001` |
+| 集約 | `DAnnn` | `DA001` |
+| エンティティ | `DEnnn` | `DE001` |
+| 値オブジェクト | `DVOnnn` | `DVO001` |
+| ドメインサービス | `DSnnn` | `DS001` |
+| ドメインイベント | `DEVnnn` | `DEV001` |
+| リポジトリ | `DRnnn` | `DR001` |
+| ファクトリ | `DFnnn` | `DF001` |
 | 事前条件 | `PREnnn` | `PRE001` |
 | 不変条件 | `INVnnn` | `INV001` |
 | 事後条件 | `POSTnnn` | `POST001` |
+
+DDD モジュール識別子は、`domain/bounded-contexts/<bounded-context-id>/models.md` 内でだけ採番する。
+DDD 要素識別子は、`domain/bounded-contexts/<bounded-context-id>/models/<ddd-module-id>-<slug>/model.md` 内でだけ採番する。
+DDD 要素を `traceability.md` から参照する時は、`BC001/DM001/DE001` のように親 ID を含める。
 
 契約識別子は、`domain/bounded-contexts/<bounded-context-id>/contracts.md` 内でだけ採番する。
 `PREnnn` は事前条件、`INVnnn` は不変条件、`POSTnnn` は事後条件を表す。

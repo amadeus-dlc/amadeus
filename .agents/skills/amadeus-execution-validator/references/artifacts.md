@@ -232,6 +232,94 @@ Task ID は `Bnnn/Tnnn` を正規形にする。
 
 `ドメインモデルからの追跡` の `PREnnn`、`INVnnn`、`POSTnnn` は、同じ行の `定義元` が指す `contracts.md` 内に存在する必要がある。
 
+`ドメインモデルからの追跡` の DDD 要素は、`BCnnn/DMnnn/<ddd-element-id>` を正規形にする。
+`<ddd-element-id>` は、`DAnnn`、`DEnnn`、`DVOnnn`、`DSnnn`、`DEVnnn`、`DRnnn`、`DFnnn` のいずれかである。
+`BCnnn` は同じ階層の `domain/bounded-contexts.md` に存在する必要がある。
+`DMnnn` は、その境界づけられたコンテキストの `models.md` に存在する必要がある。
+`<ddd-element-id>` は、同じ行の `定義元` が指す `model.md` 内の対応する種別表に存在する必要がある。
+
+`ドメインモデルからの追跡` の `種別` が `境界` の場合、`対象` は ID 化しない。
+この場合の `対象` は、同じ階層の `domain/bounded-contexts.md` にある `外部境界` 表の `名前` に存在する必要がある。
+
+`ドメインモデルからの追跡` の `種別` が DDD 要素を表す場合、`種別` と ID 接頭辞は一致する必要がある。
+
+| 種別 | ID 接頭辞 |
+|---|---|
+| 集約 | `DA` |
+| エンティティ | `DE` |
+| 値オブジェクト | `DVO` |
+| ドメインサービス | `DS` |
+| ドメインイベント | `DEV` |
+| リポジトリ | `DR` |
+| ファクトリ | `DF` |
+
+## `domain/bounded-contexts/<bounded-context-id>/models.md`
+
+対象は次である。
+
+- `.amadeus/domain/bounded-contexts/<bounded-context-id>/models.md`
+- `.amadeus/intents/<intent-id>/domain/bounded-contexts/<bounded-context-id>/models.md`
+
+存在する場合だけ検証する。
+
+必須見出しは次である。
+
+- `一覧`
+
+`一覧` の表は、次の列を持つ。
+
+- `識別子`
+- `名前`
+- `役割`
+- `詳細`
+
+`識別子` は `DMnnn` の形式にする。
+同じ表の中で `識別子` を重複させない。
+`詳細` は `models/<ddd-module-id>-<slug>/model.md` を指す相対リンクにする。
+`詳細` のリンク先ディレクトリ名は `DMnnn-<slug>` の形式にする。
+
+## `domain/bounded-contexts/<bounded-context-id>/models/<ddd-module-id>-<slug>/model.md`
+
+対象は次である。
+
+- `.amadeus/domain/bounded-contexts/<bounded-context-id>/models/<ddd-module-id>-<slug>/model.md`
+- `.amadeus/intents/<intent-id>/domain/bounded-contexts/<bounded-context-id>/models/<ddd-module-id>-<slug>/model.md`
+
+存在する場合だけ検証する。
+
+DDD 要素は種別ごとに表を分ける。
+次の表は、存在する場合だけ検証する。
+
+- `集約`
+- `エンティティ`
+- `値オブジェクト`
+- `ドメインサービス`
+- `ドメインイベント`
+- `リポジトリ`
+- `ファクトリ`
+
+各表は、次の列を持つ。
+
+- `識別子`
+- `名前`
+- `役割`
+- `根拠`
+
+`名前`、`役割`、`根拠` は空欄にしない。
+識別子は同じ `model.md` 内で重複させない。
+
+各表の `識別子` は次の形式にする。
+
+| 表 | 識別子 |
+|---|---|
+| 集約 | `DAnnn` |
+| エンティティ | `DEnnn` |
+| 値オブジェクト | `DVOnnn` |
+| ドメインサービス | `DSnnn` |
+| ドメインイベント | `DEVnnn` |
+| リポジトリ | `DRnnn` |
+| ファクトリ | `DFnnn` |
+
 ## 存在する場合だけ検証する Intent index
 
 `user-stories.md` の必須見出しは次である。

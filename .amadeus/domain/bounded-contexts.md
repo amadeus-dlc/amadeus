@@ -6,6 +6,14 @@
 |---|---|---|---|---|---|
 | BC001 | 認証アクセス | SD001 | 利用者が本人であることを確認し、アカウントに紐づく認証情報と再設定トークンの整合性を守る。 | [models.md](bounded-contexts/BC001-authentication-access/models.md) | [contracts.md](bounded-contexts/BC001-authentication-access/contracts.md) |
 
+## 外部境界
+
+| コンテキスト | 名前 | 役割 | 根拠 |
+|---|---|---|---|
+| BC001 | パスワード再設定要求 | 利用者からパスワード再設定要求を受け付ける。 | 20260626-password-reset UC001 |
+| BC001 | 再設定手段送信依頼 | メール配信サービスへ再設定手段の送信を依頼する。 | 20260626-password-reset UC001 |
+| BC001 | 認証情報更新要求 | 利用者から再設定トークン付きの認証情報更新要求を受け付ける。 | 20260626-password-reset UC002 |
+
 ## コンテキスト間の依存
 
 Upstream は、下流コンテキストが参照、利用、または順応する側の境界づけられたコンテキストである。
