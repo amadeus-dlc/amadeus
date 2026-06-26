@@ -7,4 +7,9 @@
 
 ## ドメインモデルへの昇格候補
 
+- なし。
+
+## 反映済み
+
 - 再設定トークンはアカウントに紐づく単回利用の概念である。
+  - 反映先: [domain/model.md](domain/model.md), [domain/contracts.md](domain/contracts.md)
