@@ -1,0 +1,16 @@
+.idea/
+result
+
+.tmp/
+
+/.serena/cache/
+
+/.kiro/
+/openspec/
+
+# API Keys and Tokens (security)
+*_api_key.sh
+*.env
+.anthropic_api_key.sh
+.glm_api_key.sh
+
