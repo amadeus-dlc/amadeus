@@ -41,6 +41,13 @@ Unit は Requirement を参照し、Requirement は Unit を所有しない。
 **Stories**：Intent 配下の Story 群である。
 Story は Requirement のユーザー価値表現であり、任意である。
 
+**Use Case**：アクターまたは外部システムとシステムの相互作用手順を叙述する成果物である。
+Use Case は Requirement を参照し、Story がある場合は Story を任意で参照できる。
+Use Case は Task の親ではなく、Task が何を満たすかを示す参照先である。
+
+**Use Cases**：Intent 配下の Use Case 群である。
+Task がアクターまたは外部システムとの相互作用を実現する場合は、Task が参照する Use Case を作る。
+
 **Bolt**：Unit を実装、検証する短い反復単位である。
 Bolt は Intent 配下に置き、1つの Unit、または依存関係で結び付いた少数の Units を実装する。
 Bolt は Unit の子に固定しない。
@@ -48,7 +55,10 @@ Bolt は Unit の子に固定しない。
 **Bolts**：Intent 配下の Bolt 群である。
 
 **Task**：Bolt 内で実行する具体作業である。
-Task は Requirement を参照し、Story とは直接の親子関係を持たない。
+Task は Requirement を必ず参照する。
+Task がアクターまたは外部システムとの相互作用を実現する場合は Use Case も参照する。
+相互作用がない内部作業では、Use Case を参照しない理由を Acceptance / Traceability に残す。
+Task は Story とは直接の親子関係を持たない。
 
 **Tasks**：Bolt 配下の Task 群である。
 初期状態では `bolts/<bolt-id>/tasks.md` に ID 付きチェックリストとして置く。
@@ -64,6 +74,7 @@ Task 単位の設計、検証、履歴が必要になった時点で `bolts/<bol
 Intent
   ├─ Requirements
   │   └─ Stories optional
+  ├─ Use Cases optional
   ├─ Units
   ├─ Bolts
   │   └─ Tasks
@@ -77,16 +88,19 @@ Unit -> Requirement
 Bolt -> Requirement
 Bolt -> Unit
 Task -> Requirement
+Use Case -> Requirement
+Use Case -> Story optional
+Task -> Use Case optional
 ```
 
 Unit を Story から切り出す場合、Unit は Story を入力参照してよい。
 ただし Story は Unit を所有せず、Unit も Story を所有しない。
 
-Requirement から Unit、Bolt、Task を見る場合は、所有ではなく逆引きの projection として扱う。
+Requirement から Use Case、Unit、Bolt、Task を見る場合は、所有ではなく逆引きの projection として扱う。
 
-**Acceptance / Traceability**：Intent 配下で、Requirement、Story、Unit、Bolt、Task、Deployment Unit の対応と受け入れ状態を扱う横断成果物である。
+**Acceptance / Traceability**：Intent 配下で、Requirement、Story、Use Case、Unit、Bolt、Task、Deployment Unit の対応と受け入れ状態を扱う横断成果物である。
 Requirement や Unit を所有せず、参照関係と検証状態を記録する。
-Requirement、Story、Unit、Bolt、Task を ID で接続する。
+Requirement、Story、Use Case、Unit、Bolt、Task を ID で接続する。
 
 Acceptance / Traceability は、最初は対応関係と受け入れ状態を同じ成果物で扱う。
 受け入れ状態の主語は Requirement である。
