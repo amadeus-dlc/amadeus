@@ -25,19 +25,21 @@
 
 ## 手動 eval 状態
 
+検証日: 2026-06-27
+
 | ケース | 状態 | 確認内容 | 証拠 |
 |---|---|---|---|
-| `workspace-only-validation` | 未実施 | Intent ID 未指定時は全体成果物だけを検証する。 | 未登録 |
-| `ideation-intent-validation` | 未実施 | Ideation 段階では Inception 以降の欠落を不足にしない。 | 未登録 |
-| `inception-state-validation` | 未実施 | Inception 段階の `state.json` が状態契約を満たす。 | 未登録 |
-| `runtime-only-dependency` | 未実施 | Ruby 標準ライブラリだけで検証する。 | 未登録 |
-| `bolt-design-before-task` | 未実施 | Bolt 配下の `design.md` が `tasks.md` の入力として存在する。 | 未登録 |
-| `codebase-analysis-headings` | 未実施 | `codebase-analysis.md` が条件付き成果物として必須見出しを持つ。 | 未登録 |
-| `codebase-analysis-traceability-columns` | 未実施 | `既存コード分析からの追跡` が必須列を持つ。 | 未登録 |
-| `codebase-analysis-traceability-ids` | 未実施 | `既存コード分析からの追跡` の ID が対応する index に存在する。 | 未登録 |
-| `codebase-analysis-traceability-links` | 未実施 | `既存コード分析からの追跡` のリンクが所定の成果物を指す。 | 未登録 |
-| `task-contract-validation` | 未実施 | Bolt 配下 `tasks.md` の Task が必須項目を持つ。 | 未登録 |
-| `intent-directory-name-validation` | 未実施 | Intent 識別子、詳細リンク、ディレクトリ名が `YYYYMMDD-<slug>` 形式で一致する。 | 未登録 |
+| `workspace-only-validation` | 完了 | Intent ID 未指定時は全体成果物だけを検証する。 | `ruby skills/amadeus-intent-validator/validator/IntentValidator.rb .` が `pass`。 |
+| `ideation-intent-validation` | 完了 | Ideation 段階では Inception 以降の欠落を不足にしない。 | `ruby skills/amadeus-intent-validator/validator/IntentValidator.rb . 20260627-risk-aware-reset-support` が `pass`。 |
+| `inception-state-validation` | 完了 | Inception 段階の `state.json` が状態契約を満たす。 | `ruby skills/amadeus-intent-validator/validator/IntentValidator.rb . 20260626-password-reset` が `pass`。一時コピーで `inception.requiredBoltArtifacts` を削除すると `fail`。 |
+| `runtime-only-dependency` | 完了 | Ruby 標準ライブラリだけで検証する。 | `ruby -c` が成功。`require` は `json`、`pathname`、`set` のみ。 |
+| `bolt-design-before-task` | 完了 | Bolt 配下の `design.md` が `tasks.md` の入力として存在する。 | 一時コピーで `bolts/B001-password-reset-request-flow/design.md` を削除すると `fail`。 |
+| `codebase-analysis-headings` | 完了 | `codebase-analysis.md` が条件付き成果物として必須見出しを持つ。 | 通常検証が `pass`。一時コピーで `## 対象コード` を変更すると `fail`。 |
+| `codebase-analysis-traceability-columns` | 完了 | `既存コード分析からの追跡` が必須列を持つ。 | 一時コピーで `分析` 列名を変更すると `fail`。 |
+| `codebase-analysis-traceability-ids` | 完了 | `既存コード分析からの追跡` の ID が対応する index に存在する。 | 一時コピーで `要求` を `R999` に変更すると `fail`。 |
+| `codebase-analysis-traceability-links` | 完了 | `既存コード分析からの追跡` のリンクが所定の成果物を指す。 | 一時コピーで `分析` を `wrong.md` に変更すると `fail`。 |
+| `task-contract-validation` | 完了 | Bolt 配下 `tasks.md` の Task が必須項目を持つ。 | 一時コピーで `T001` の `作業` を削除すると `fail`。 |
+| `intent-directory-name-validation` | 完了 | Intent 識別子、詳細リンク、ディレクトリ名が `YYYYMMDD-<slug>` 形式で一致する。 | 一時コピーで詳細リンクを `intents/20260626-password/intent.md` に変更すると `fail`。 |
 
 ## 再実行コマンド
 
@@ -46,5 +48,7 @@ ruby -rjson -e 'JSON.parse(File.read("skills/amadeus-intent-validator/evals/eval
 cmp -s skills/amadeus-intent-validator/SKILL.md .agents/skills/amadeus-intent-validator/SKILL.md && echo "SKILL.md: identical"
 cmp -s skills/amadeus-intent-validator/validator/IntentValidator.rb .agents/skills/amadeus-intent-validator/validator/IntentValidator.rb && echo "IntentValidator.rb: identical"
 ruby skills/amadeus-intent-validator/validator/IntentValidator.rb .
+ruby skills/amadeus-intent-validator/validator/IntentValidator.rb . 20260626-password-reset
+ruby skills/amadeus-intent-validator/validator/IntentValidator.rb . 20260627-risk-aware-reset-support
 git diff --check
 ```
