@@ -59,6 +59,7 @@ Ruby が使えない場合は `blocked` として報告する。
 - `.amadeus` の index 系成果物が、[artifacts validation](references/artifacts.md) の条件を満たす。
 - 対象 Intent ID が指定された場合、`.amadeus/intents/<intent-id>/domain/bounded-contexts.md` が存在する。
 - 対象 Intent ID が指定された場合、対象 Intent の index 系成果物が、[artifacts validation](references/artifacts.md) の条件を満たす。
+- 対象 Intent ID が指定された場合、対象 Intent の `traceability.md` に出る ID が対応する index または定義元に存在する。
 - `domain/bounded-contexts.md` が、[bounded-contexts validation](references/bounded-contexts.md) の条件を満たす。
 
 ## 検証手順

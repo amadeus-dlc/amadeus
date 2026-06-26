@@ -65,6 +65,7 @@ class ExecutionValidator
     @rows = []
     @checked_files = Set.new
     @known_ids = {}
+    @known_contract_ids = {}
   end
 
   def run
@@ -112,7 +113,6 @@ class ExecutionValidator
 
     check_requirements("#{base}/requirements.md")
     check_acceptance("#{base}/acceptance.md", "#{base}/requirements.md")
-    check_traceability("#{base}/traceability.md")
     check_subdomains("#{base}/domain/subdomains.md", "#{base}/domain/bounded-contexts.md")
     check_bounded_contexts("#{base}/domain/bounded-contexts.md", global: false)
 
@@ -122,6 +122,8 @@ class ExecutionValidator
 
       check_optional_index(path, spec)
     end
+
+    check_traceability("#{base}/traceability.md")
   end
 
   def check_intents
@@ -193,6 +195,294 @@ class ExecutionValidator
     check_table(path, "ドメインモデルからの追跡", ["種別", "対象", "要求", "ユースケース", "定義元"])
     check_table(path, "依存関係からの追跡", ["種別", "対象", "依存", "理由", "定義元"])
     check_relative_links(path)
+    check_traceability_ids(path)
+  end
+
+  def check_traceability_ids(path)
+    return unless absolute(path).file?
+
+    base = File.dirname(path)
+    ids = traceability_id_sets(base)
+    tasks = task_ids_for(base)
+
+    check_requirement_trace_ids(path, ids, tasks)
+    check_background_trace_ids(path, ids)
+    check_bolt_trace_ids(path, ids)
+    check_unit_trace_ids(path, ids)
+    check_domain_model_trace_ids(path, ids)
+    check_dependency_trace_ids(path, ids, tasks)
+  end
+
+  def traceability_id_sets(base)
+    {
+      intents: ids_for(".amadeus/intents.md"),
+      objectives: ids_for(".amadeus/objective.md"),
+      actors: ids_for(".amadeus/actors.md"),
+      external_systems: ids_for(".amadeus/external-systems.md"),
+      requirements: ids_for("#{base}/requirements.md"),
+      stories: ids_for("#{base}/user-stories.md"),
+      use_cases: ids_for("#{base}/use-cases.md"),
+      units: ids_for("#{base}/units.md"),
+      bolts: ids_for("#{base}/bolts.md"),
+      decisions: ids_for("#{base}/decisions.md"),
+      contexts: ids_for("#{base}/domain/bounded-contexts.md")
+    }
+  end
+
+  def check_requirement_trace_ids(path, ids, tasks)
+    table = table_after_heading(path, "要求からの追跡")
+    return unless table
+
+    table[:rows].each do |row|
+      check_values_exist(path, "要求", row["要求"], ids[:requirements], allow_none: false)
+      check_values_exist(path, "アクター", row["アクター"], ids[:actors], allow_none: false)
+      check_values_exist(path, "ストーリー", row["ストーリー"], ids[:stories], allow_none: true)
+      check_values_exist(path, "ユースケース", row["ユースケース"], ids[:use_cases], allow_none: false)
+      check_values_exist(path, "ユニット", row["ユニット"], ids[:units], allow_none: false)
+      bolt_values = split_values(row["ボルト"])
+      check_values_exist(path, "ボルト", row["ボルト"], ids[:bolts], allow_none: false)
+      check_task_values_exist(path, row["タスク"], tasks, row_bolts: bolt_values, require_qualified: false)
+    end
+  end
+
+  def check_background_trace_ids(path, ids)
+    table = table_after_heading(path, "背景からの追跡")
+    return unless table
+
+    table[:rows].each do |row|
+      check_values_exist(path, "目的", row["目的"], ids[:objectives], allow_none: false)
+      check_values_exist(path, "アクター", row["アクター"], ids[:actors], allow_none: false)
+      check_values_exist(path, "外部システム", row["外部システム"], ids[:external_systems], allow_none: true)
+      check_values_exist(path, "要求", row["要求"], ids[:requirements], allow_none: false)
+    end
+  end
+
+  def check_bolt_trace_ids(path, ids)
+    table = table_after_heading(path, "ボルトからの追跡")
+    return unless table
+
+    table[:rows].each do |row|
+      check_values_exist(path, "ボルト", row["ボルト"], ids[:bolts], allow_none: false)
+      check_values_exist(path, "ユニット", row["ユニット"], ids[:units], allow_none: false)
+      check_values_exist(path, "要求", row["要求"], ids[:requirements], allow_none: false)
+    end
+  end
+
+  def check_unit_trace_ids(path, ids)
+    table = table_after_heading(path, "ユニットからの追跡")
+    return unless table
+
+    table[:rows].each do |row|
+      check_values_exist(path, "ユニット", row["ユニット"], ids[:units], allow_none: false)
+      check_values_exist(path, "コンテキスト", row["コンテキスト"], ids[:contexts], allow_none: false)
+      check_values_exist(path, "要求", row["要求"], ids[:requirements], allow_none: false)
+      check_values_exist(path, "ユースケース", row["ユースケース"], ids[:use_cases], allow_none: false)
+      check_values_exist(path, "ボルト", row["ボルト"], ids[:bolts], allow_none: false)
+    end
+  end
+
+  def check_domain_model_trace_ids(path, ids)
+    table = table_after_heading(path, "ドメインモデルからの追跡")
+    return unless table
+
+    table[:rows].each do |row|
+      type = row["種別"].to_s.strip
+      target = row["対象"].to_s.strip
+      check_values_exist(path, "要求", row["要求"], ids[:requirements], allow_none: false)
+      check_values_exist(path, "ユースケース", row["ユースケース"], ids[:use_cases], allow_none: false)
+
+      case type
+      when "境界づけられたコンテキスト"
+        check_values_exist(path, "対象", target, ids[:contexts], allow_none: false)
+      when "事前条件", "不変条件", "事後条件"
+        check_contract_id_exists(path, type, target, row["定義元"])
+      else
+        pass(path, "`#{type}` の対象は ID 実在チェック対象外である", target)
+      end
+    end
+  end
+
+  def check_dependency_trace_ids(path, ids, tasks)
+    table = table_after_heading(path, "依存関係からの追跡")
+    return unless table
+
+    table[:rows].each do |row|
+      type = row["種別"].to_s.strip
+      target = row["対象"].to_s.strip
+      dependency = row["依存"]
+      case type
+      when "インテント"
+        check_values_exist(path, "対象", target, ids[:intents], allow_none: false)
+        check_values_exist(path, "依存", dependency, ids[:intents], allow_none: true)
+      when "要求"
+        check_values_exist(path, "対象", target, ids[:requirements], allow_none: false)
+        check_values_exist(path, "依存", dependency, ids[:requirements], allow_none: true)
+      when "ユーザーストーリー"
+        check_values_exist(path, "対象", target, ids[:stories], allow_none: false)
+        check_values_exist(path, "依存", dependency, ids[:stories], allow_none: true)
+      when "ユースケース"
+        check_values_exist(path, "対象", target, ids[:use_cases], allow_none: false)
+        check_values_exist(path, "依存", dependency, ids[:use_cases], allow_none: true)
+      when "ユニット"
+        check_values_exist(path, "対象", target, ids[:units], allow_none: false)
+        check_values_exist(path, "依存", dependency, ids[:units], allow_none: true)
+      when "ボルト"
+        check_values_exist(path, "対象", target, ids[:bolts], allow_none: false)
+        check_values_exist(path, "依存", dependency, ids[:bolts], allow_none: true)
+      when "タスク"
+        check_task_values_exist(path, target, tasks, row_bolts: [], require_qualified: true, column: "対象")
+        check_task_values_exist(path, dependency, tasks, row_bolts: [], require_qualified: true, allow_none: true, column: "依存")
+      when "判断"
+        check_values_exist(path, "対象", target, ids[:decisions], allow_none: false)
+        check_values_exist(path, "依存", dependency, ids[:decisions], allow_none: true)
+      else
+        fail_row(path, "`依存関係からの追跡` の種別が既知である", type)
+      end
+    end
+  end
+
+  def task_ids_for(base)
+    bolts_path = "#{base}/bolts.md"
+    table = table_after_heading(bolts_path, "一覧")
+    return Set.new unless table
+
+    task_ids = Set.new
+    dependencies = []
+    table[:rows].each do |row|
+      bolt_id = row["識別子"].to_s.strip
+      next unless bolt_id.match?(/\AB\d{3}\z/)
+
+      detail_link = markdown_links(row["詳細"].to_s).first
+      unless detail_link
+        fail_row(bolts_path, "ボルト詳細リンクから tasks.md を特定できる", bolt_id)
+        next
+      end
+
+      bolt_file = link_path(bolts_path, detail_link)
+      tasks_path = relative(bolt_file.dirname.join("tasks.md"))
+      unless absolute(tasks_path).file?
+        fail_row(tasks_path, "Bolt 配下の tasks.md が存在する", "存在しない")
+        next
+      end
+
+      current_task = nil
+      read(tasks_path).each_line do |line|
+        if (match = line.match(/^- \[[ xX]\]\s+(T\d{3}):/))
+          current_task = match[1]
+          qualified = "#{bolt_id}/#{current_task}"
+          if task_ids.include?(qualified)
+            fail_row(tasks_path, "Task ID が重複しない", qualified)
+          else
+            pass(tasks_path, "Task ID を Bnnn/Tnnn として登録できる", qualified)
+            task_ids << qualified
+          end
+        elsif current_task && (match = line.match(/^\s+-\s+依存:\s*(.+)$/))
+          dependencies << [tasks_path, bolt_id, match[1]]
+        end
+      end
+    end
+
+    dependencies.each do |tasks_path, bolt_id, dependency|
+      check_task_values_exist(tasks_path, dependency, task_ids, row_bolts: [bolt_id], require_qualified: false, allow_none: true, column: "依存")
+    end
+
+    task_ids
+  end
+
+  def check_values_exist(path, column, value, ids, allow_none:)
+    split_values(value).each do |item|
+      if item == "なし"
+        if allow_none
+          pass(path, "`#{column}` がなしまたは実在 ID である", item)
+        else
+          fail_row(path, "`#{column}` はなしを許可しない", item)
+        end
+      elsif ids.include?(item)
+        pass(path, "`#{column}` が実在 ID である", item)
+      else
+        fail_row(path, "`#{column}` が実在 ID である", item)
+      end
+    end
+  end
+
+  def check_task_values_exist(path, value, task_ids, row_bolts:, require_qualified:, allow_none: false, column: "タスク")
+    split_values(value).each do |item|
+      if item == "なし"
+        if allow_none
+          pass(path, "`#{column}` がなしまたは実在 Task ID である", item)
+        else
+          fail_row(path, "`#{column}` はなしを許可しない", item)
+        end
+        next
+      end
+
+      normalized = normalize_task_id(path, item, row_bolts, require_qualified)
+      next unless normalized
+
+      if task_ids.include?(normalized)
+        pass(path, "`#{column}` が実在 Task ID である", normalized)
+      else
+        fail_row(path, "`#{column}` が実在 Task ID である", normalized)
+      end
+    end
+  end
+
+  def normalize_task_id(path, value, row_bolts, require_qualified)
+    item = value.to_s.strip
+    return item if item.match?(/\AB\d{3}\/T\d{3}\z/)
+
+    if item.match?(/\AT\d{3}\z/)
+      if require_qualified
+        fail_row(path, "Task ID が Bnnn/Tnnn 形式である", item)
+        return nil
+      end
+
+      bolt_ids = row_bolts.reject { |bolt_id| bolt_id == "なし" }
+      if bolt_ids.length == 1
+        return "#{bolt_ids.first}/#{item}"
+      end
+
+      fail_row(path, "Task ID を同じ行の Bolt から Bnnn/Tnnn に正規化できる", item)
+      return nil
+    end
+
+    fail_row(path, "Task ID が Tnnn または Bnnn/Tnnn 形式である", item)
+    nil
+  end
+
+  def check_contract_id_exists(path, type, target, source)
+    source_link = markdown_links(source.to_s).first
+    unless source_link
+      fail_row(path, "`#{type}` の定義元が相対リンクである", target)
+      return
+    end
+
+    source_path = relative(link_path(path, source_link))
+    contract_ids = contract_ids_for(source_path, type)
+    if contract_ids.include?(target)
+      pass(path, "`#{type}` が定義元の契約ファイルに存在する", "#{target} in #{source_path}")
+    else
+      fail_row(path, "`#{type}` が定義元の契約ファイルに存在する", "#{target} in #{source_path}")
+    end
+  end
+
+  def contract_ids_for(path, type)
+    cache_key = [path, type]
+    return @known_contract_ids[cache_key] if @known_contract_ids.key?(cache_key)
+    return Set.new unless absolute(path).file?
+
+    heading = case type
+              when "事前条件" then "事前条件"
+              when "不変条件" then "不変条件"
+              when "事後条件" then "事後条件"
+              end
+    table = table_after_heading(path, heading)
+    ids = if table && table[:headers].include?("識別子")
+            Set.new(table[:rows].map { |row| row["識別子"].to_s.strip }.reject(&:empty?))
+          else
+            Set.new
+          end
+    @known_contract_ids[cache_key] = ids
   end
 
   def check_optional_index(path, spec)
@@ -456,13 +746,18 @@ class ExecutionValidator
     clean = target.split("#", 2).first.to_s.split(/\s+/, 2).first.to_s
     return if clean.empty?
 
-    resolved = absolute(File.join(File.dirname(path), clean))
+    resolved = link_path(path, target)
     if resolved.exist?
       @checked_files << relative(resolved)
       pass(path, "相対リンクの参照先が存在する", target)
     else
       fail_row(path, "相対リンクの参照先が存在する", "#{target} -> #{relative(resolved)}")
     end
+  end
+
+  def link_path(path, target)
+    clean = target.split("#", 2).first.to_s.split(/\s+/, 2).first.to_s
+    absolute(File.join(File.dirname(path), clean))
   end
 
   def table_after_heading(path, heading)
