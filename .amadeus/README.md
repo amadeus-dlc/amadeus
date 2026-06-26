@@ -213,6 +213,21 @@
 `domain/bounded-contexts/<bounded-context-id>/contracts.md` には、そのコンテキストで守る事前条件、不変条件、事後条件と根拠を書く。
 未確定事項や昇格候補は `domain-notes.md` に残す。
 
+`domain/bounded-contexts.md` は、validator が検査できるように次の形式を保つ。
+
+- 必須見出しとして、`一覧`、`コンテキスト間の依存`、`パターン分類` を置く。
+- `一覧` の表は、`識別子`、`名前`、`サブドメイン`、`役割`、`モデル`、`契約` の6列を持つ。
+- `識別子` には `BCnnn` を使い、同一ファイル内で重複させない。
+- `モデル` は `bounded-contexts/<bounded-context-id>/models.md` を参照する。
+- `契約` は `bounded-contexts/<bounded-context-id>/contracts.md` を参照する。
+- `コンテキスト間の依存` の表は、`Downstream`、`Upstream`、`依存内容`、`組織パターン`、`統合パターン`、`状態` の6列を持つ。
+- `Downstream` と `Upstream` には、`一覧` に存在する境界づけられたコンテキスト ID、または `なし` を書く。
+- `Upstream` が `なし` の場合、`組織パターン` と `統合パターン` は `該当なし` とし、`状態` に理由を書く。
+- `Upstream` が `なし` でない場合、`組織パターン` は `パートナーシップ`、`別々の道`、`順応者`、`顧客／供給者` のいずれかにする。
+- `Upstream` が `なし` でない場合、`統合パターン` は `共有カーネル`、`巨大な泥団子`、`公開ホストサービス（OHS）`、`公表された言語（PL）`、`腐敗防止層（ACL）` のいずれかにする。
+- `依存内容` と `状態` は空欄にしない。
+- `パターン分類` には、組織パターン4種類と統合パターン5種類をすべて列挙する。
+
 `domain/bounded-contexts/<bounded-context-id>/contracts.md` は、validator が検査できるように次の形式を保つ。
 
 - `事前条件`、`不変条件`、`事後条件` の3つの表を置く。
