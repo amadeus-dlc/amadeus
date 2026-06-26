@@ -16,6 +16,7 @@
 - `codebase-analysis.md` が存在せず、`state.json.inception.requiredArtifacts` にも含まれない場合は不足にしない。
 - `traceability.md` の `既存コード分析からの追跡` が、`分析`、`要求`、`ユースケース`、`ユニット`、`ボルト`、`設計`、`入力` の列を持つことを検証する。
 - `traceability.md` の `既存コード分析からの追跡` にある `要求`、`ユースケース`、`ユニット`、`ボルト` が対応する index に存在することを検証する。
+- `traceability.md` の `既存コード分析からの追跡` にある `分析` が `codebase-analysis.md`、`設計` が同じ行の Bolt 配下 `design.md` を指すことを検証する。
 - `evals.json` が JSON として解釈できる。
 - `git diff --check` が成功する。
 
@@ -30,6 +31,7 @@
 | `codebase-analysis-headings` | 未実施 | `codebase-analysis.md` が条件付き成果物として必須見出しを持つ。 | 未登録 |
 | `codebase-analysis-traceability-columns` | 未実施 | `既存コード分析からの追跡` が必須列を持つ。 | 未登録 |
 | `codebase-analysis-traceability-ids` | 未実施 | `既存コード分析からの追跡` の ID が対応する index に存在する。 | 未登録 |
+| `codebase-analysis-traceability-links` | 未実施 | `既存コード分析からの追跡` のリンクが所定の成果物を指す。 | 未登録 |
 
 ## 再実行コマンド
 

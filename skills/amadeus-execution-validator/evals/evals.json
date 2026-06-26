@@ -42,6 +42,12 @@
       "prompt": "Inception 済み Intent の traceability.md で `既存コード分析からの追跡` の要求、ユースケース、ユニット、ボルトが実在するか確認して。",
       "expected_output": "`既存コード分析からの追跡` の要求、ユースケース、ユニット、ボルトを対応する index に照合する。分析と設計は相対リンク存在として確認し、入力の内容妥当性や対応の完全性までは Execution Validator では扱わない。",
       "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "Inception 済み Intent の traceability.md で `既存コード分析からの追跡` の分析リンクと設計リンクが正しい成果物を指すか確認して。",
+      "expected_output": "`分析` が対象 Intent 直下の codebase-analysis.md を指し、`設計` が同じ行の Bolt に対応する bolts/<bolt-id>-<slug>/design.md を指すことを確認する。入力の内容妥当性や対応の完全性までは Execution Validator では扱わない。",
+      "files": []
     }
   ]
 }

@@ -497,7 +497,58 @@ class ExecutionValidator
       check_values_exist(path, "ユースケース", row["ユースケース"], ids[:use_cases], allow_none: false)
       check_values_exist(path, "ユニット", row["ユニット"], ids[:units], allow_none: false)
       check_values_exist(path, "ボルト", row["ボルト"], ids[:bolts], allow_none: false)
+      check_codebase_analysis_trace_links(path, row)
     end
+  end
+
+  def check_codebase_analysis_trace_links(path, row)
+    check_codebase_analysis_source_link(path, row["分析"])
+    check_codebase_analysis_design_link(path, row["設計"], split_values(row["ボルト"]))
+  end
+
+  def check_codebase_analysis_source_link(path, value)
+    links = markdown_links(value.to_s)
+    if links.empty?
+      fail_row(path, "`分析` が codebase-analysis.md を指す", value.to_s)
+      return
+    end
+
+    expected = "#{File.dirname(path)}/codebase-analysis.md"
+    links.each do |target|
+      resolved = relative(link_path(path, target))
+      if !external_link?(target) && resolved == expected
+        pass(path, "`分析` が codebase-analysis.md を指す", target)
+      else
+        fail_row(path, "`分析` が codebase-analysis.md を指す", "#{target} -> #{resolved}")
+      end
+    end
+  end
+
+  def check_codebase_analysis_design_link(path, value, bolt_ids)
+    links = markdown_links(value.to_s)
+    if links.empty?
+      fail_row(path, "`設計` が同じ行の Bolt 配下 design.md を指す", value.to_s)
+      return
+    end
+
+    links.each do |target|
+      resolved = relative(link_path(path, target))
+      if !external_link?(target) && bolt_design_path?(path, resolved, bolt_ids)
+        pass(path, "`設計` が同じ行の Bolt 配下 design.md を指す", target)
+      else
+        fail_row(path, "`設計` が同じ行の Bolt 配下 design.md を指す", "#{target} -> #{resolved}")
+      end
+    end
+  end
+
+  def bolt_design_path?(path, resolved, bolt_ids)
+    return false unless File.basename(resolved) == "design.md"
+
+    bolt_dir = File.dirname(resolved)
+    return false unless File.dirname(bolt_dir) == "#{File.dirname(path)}/bolts"
+
+    bolt_id = File.basename(bolt_dir).split("-", 2).first
+    bolt_ids.include?(bolt_id)
   end
 
   def check_unit_trace_ids(path, ids)
@@ -1487,7 +1538,7 @@ class ExecutionValidator
     return "見出し" if condition.include?("見出し")
     return "表列" if condition.include?("表列") || condition.include?("表がある")
     return "識別子" if condition.include?("識別子")
-    return "リンク参照" if condition.include?("相対リンク")
+    return "リンク参照" if condition.include?("相対リンク") || condition.include?("を指す")
     return "Traceability ID" if traceability_id_condition?(condition)
     return "ドメインモデル" if domain_model_condition?(condition)
     return "依存関係" if condition.include?("依存")

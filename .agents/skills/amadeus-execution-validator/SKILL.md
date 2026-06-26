@@ -72,6 +72,7 @@ Ruby が使えない場合は `blocked` として報告する。
 - 対象 Intent ID が指定された場合、対象 Intent の index 系成果物が、[artifacts validation](references/artifacts.md) の条件を満たす。
 - 対象 Intent ID が指定された場合、対象 Intent の `traceability.md` にある `既存コード分析からの追跡` の表列を検証する。
 - 対象 Intent ID が指定された場合、対象 Intent の `traceability.md` にある `既存コード分析からの追跡` の ID が対応する index に存在する。
+- 対象 Intent ID が指定された場合、対象 Intent の `traceability.md` にある `既存コード分析からの追跡` の `分析` と `設計` が所定の成果物を指す。
 - 対象 Intent ID が指定された場合、対象 Intent の `traceability.md` に出る ID が対応する index または定義元に存在する。
 - 対象 Intent ID が指定された場合、対象 Intent の `traceability.md` に出る DDD 要素 ID が、`BCnnn/DMnnn/<ddd-element-id>` の正規形で定義元に存在する。
 - `traceability.md` の `境界` は ID 化せず、`domain/bounded-contexts.md` の `外部境界` 表にある名前として存在する。
