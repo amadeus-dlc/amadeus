@@ -16,7 +16,7 @@ validator は、次の形式を前提に検査する。
 - 事前条件の識別子は `PREnnn` とする。
 - 不変条件の識別子は `INVnnn` とする。
 - 事後条件の識別子は `POSTnnn` とする。
-- 識別子は `domain/contracts.md` 内で重複させない。
+- 識別子は `domain/bounded-contexts/<bounded-context-id>/contracts.md` 内で重複させない。
 - 契約本文は空欄にしない。
 - 根拠は、少なくとも1つの要求 ID またはユースケース ID を含める。
 

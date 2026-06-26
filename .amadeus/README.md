@@ -142,9 +142,21 @@
 | ボルト | 必須 | ユニットを実装、検証する Bolt ID を示す |
 | メモ | 任意 | ユニット固有の注意点を示す |
 
-`コンテキスト` には、`domain/bounded-context.md` に定義された境界づけられたコンテキスト ID を書く。
-`境界` には、`domain/bounded-context.md` の外部境界にある名称を書く。
+`コンテキスト` には、`domain/bounded-contexts.md` に定義された境界づけられたコンテキスト ID を書く。
+`境界` には、`domain/bounded-contexts.md` の外部境界にある名称を書く。
 ユニットがストーリーを持たない場合は、`ストーリー` を作らず、理由を `traceability.md` に残す。
+
+`units/<unit-id>.md` は、validator が検査できるように次の形式を保つ。
+
+- 見出しは `# <unit-id>：<概要>` の形式にする。
+- 必須見出しとして、`目標`、`要求`、`コンテキスト`、`境界`、`ボルト` を置く。
+- 任意見出しとして、`ストーリー`、`メモ` を置ける。
+- `要求` には、少なくとも1つの Requirement ID を箇条書きで書く。
+- `コンテキスト` には、少なくとも1つの境界づけられたコンテキスト ID を箇条書きで書く。
+- `境界` には、少なくとも1つの外部境界名を箇条書きで書く。
+- `ボルト` には、少なくとも1つの Bolt ID を箇条書きで書く。
+- `ストーリー` を置く場合は、少なくとも1つの Story ID を箇条書きで書く。
+- 必須見出しの本文は空欄にしない。
 
 ## タスク内の項目
 
@@ -190,21 +202,22 @@
 
 ## インテント固有ドメインモデル
 
-`.amadeus/domain-model.md` は、Amadeus DLC 全体のドメインモデルを扱う。
+`.amadeus/domain/` は、Amadeus DLC 全体のサブドメイン、境界づけられたコンテキスト、コンテキスト別モデル、契約を扱う。
 全体モデルには、各インテント固有モデルへの索引を置く。
 インテント固有の概念関係や契約が必要な場合は、インテント配下の `domain/` に置く。
 
-`domain/bounded-context.md` には、そのインテントで Unit を切る時に参照する境界づけられたコンテキスト、責務、外部境界、Unit 分割の判断基準を書く。
-`domain/model.md` には、そのインテントで使う概念、関係、ライフサイクル、集約候補を書く。
-`domain/contracts.md` には、そのインテントで守る事前条件、不変条件、事後条件と根拠を書く。
+`domain/subdomains.md` には、サブドメインと分類理由を書く。
+`domain/bounded-contexts.md` には、Unit を切る時に参照する境界づけられたコンテキスト、責務、外部境界、Unit 分割の判断基準を書く。
+`domain/bounded-contexts/<bounded-context-id>/model.md` には、そのコンテキストで使う概念、関係、ライフサイクル、集約候補を書く。
+`domain/bounded-contexts/<bounded-context-id>/contracts.md` には、そのコンテキストで守る事前条件、不変条件、事後条件と根拠を書く。
 未確定事項や昇格候補は `domain-notes.md` に残す。
 
-`domain/contracts.md` は、validator が検査できるように次の形式を保つ。
+`domain/bounded-contexts/<bounded-context-id>/contracts.md` は、validator が検査できるように次の形式を保つ。
 
 - `事前条件`、`不変条件`、`事後条件` の3つの表を置く。
 - 各表は `識別子`、契約本文、`根拠` の3列を持つ。
 - 事前条件は `PREnnn`、不変条件は `INVnnn`、事後条件は `POSTnnn` の識別子を使う。
-- 識別子は同一 `domain/contracts.md` 内で重複させない。
+- 識別子は同一 `domain/bounded-contexts/<bounded-context-id>/contracts.md` 内で重複させない。
 - 契約本文と根拠は空欄にしない。
 - 根拠には、少なくとも1つの要求 ID またはユースケース ID を書く。
 
@@ -220,7 +233,10 @@
 | `actors.md` | 必須 | `.amadeus/` 初期化時 | 要求の根拠やシステムとの相互作用に登場する人の役割を扱う | 未確認なら状態を書く |
 | `external-systems.md` | 任意 | 外部システムとの連携が出た時 | システム外部の連携先と接点を扱う | 外部連携がなければ作らない |
 | `glossary.md` | 必須 | `.amadeus/` 初期化時 | 用語定義、避ける語、禁止ワードを扱う | 未作成不可 |
-| `domain-model.md` | 必須 | `.amadeus/` 初期化時 | 概念間の関係、不変条件、ライフサイクル、集約候補を扱う | 未確認なら状態を書く |
+| `domain/subdomains.md` | 必須 | `.amadeus/` 初期化時 | サブドメインと分類理由を扱う | 未確認なら状態を書く |
+| `domain/bounded-contexts.md` | 必須 | `.amadeus/` 初期化時 | 境界づけられたコンテキストと Intent 固有モデルへの索引を扱う | 未確認なら状態を書く |
+| `domain/bounded-contexts/<bounded-context-id>/model.md` | 任意 | 境界づけられたコンテキストのモデルを固定する時 | コンテキスト別の概念関係、ライフサイクル、集約候補を扱う | 未確認なら作らない |
+| `domain/bounded-contexts/<bounded-context-id>/contracts.md` | 任意 | 境界づけられたコンテキストの契約を固定する時 | コンテキスト別の事前条件、不変条件、事後条件を扱う | 契約がなければ作らない |
 | `intents.md` | 必須 | 最初のインテントを作る時 | インテント一覧とインテント間の依存関係を扱う | インテントがなければ作らない |
 | `decisions/` | 任意 | 判断を残す必要がある時 | 全体構造に関わる判断を記録する | 判断がなければ作らない |
 
@@ -232,9 +248,10 @@
 | `requirements.md` | 必須 | 最初の要求を作る時 | 要求一覧と受け入れ状態を扱う | 要求がなければ作らない |
 | `acceptance.md` | 必須 | 最初の要求を作る時 | 要求の受け入れ状態と証拠を扱う | 要求がなければ作らない |
 | `traceability.md` | 必須 | 最初の要求を作る時 | 目的、アクター、外部システム、要求、ドメインモデル、ストーリー、ユースケース、ユニット、ボルト、タスクの対応と依存の横断追跡を扱う | 要求がなければ作らない |
-| `domain/bounded-context.md` | 任意 | Unit 分割の境界を固定する時 | インテント内で参照する境界づけられたコンテキスト、責務、外部境界、Unit 分割の判断基準を扱う | 全体モデルで十分なら作らない |
-| `domain/model.md` | 任意 | インテント固有の概念関係を固定する時 | インテント内で使う概念、関係、ライフサイクル、集約候補を扱う | 全体モデルで十分なら作らない |
-| `domain/contracts.md` | 任意 | インテント固有の契約を固定する時 | インテント内で守る事前条件、不変条件、事後条件と根拠を扱う | 契約がなければ作らない |
+| `domain/subdomains.md` | 任意 | Intent 固有のサブドメイン分類を固定する時 | インテント内で参照するサブドメインと分類理由を扱う | 全体モデルで十分なら作らない |
+| `domain/bounded-contexts.md` | 任意 | Unit 分割の境界を固定する時 | インテント内で参照する境界づけられたコンテキスト、責務、外部境界、Unit 分割の判断基準を扱う | 全体モデルで十分なら作らない |
+| `domain/bounded-contexts/<bounded-context-id>/model.md` | 任意 | インテント固有の概念関係を固定する時 | インテント内で使う概念、関係、ライフサイクル、集約候補を扱う | 全体モデルで十分なら作らない |
+| `domain/bounded-contexts/<bounded-context-id>/contracts.md` | 任意 | インテント固有の契約を固定する時 | インテント内で守る事前条件、不変条件、事後条件と根拠を扱う | 契約がなければ作らない |
 | `requirements/<requirement-id>.md` | 任意 | 要求単位の説明、受け入れ条件、背景参照が必要な時 | 個別要求を扱う | 一覧で十分なら作らない |
 | `user-stories.md` | 任意 | ストーリーが必要な時 | アクターを明示したユーザーストーリー一覧を扱う | 不要なら `traceability.md` に `なし` と書く |
 | `user-stories/<story-id>.md` | 任意 | ストーリー単位の説明が必要な時 | アクター、価値、受け入れ条件を持つ個別ユーザーストーリーを扱う | 一覧で十分なら作らない |
@@ -271,7 +288,7 @@
 | 不変条件 | `INVnnn` | `INV001` |
 | 事後条件 | `POSTnnn` | `POST001` |
 
-契約識別子は、`domain/contracts.md` 内でだけ採番する。
+契約識別子は、`domain/bounded-contexts/<bounded-context-id>/contracts.md` 内でだけ採番する。
 `PREnnn` は事前条件、`INVnnn` は不変条件、`POSTnnn` は事後条件を表す。
 
 ## 初期化チェック

@@ -4,13 +4,13 @@
 
 この文書は、`20260626-password-reset` インテントで Unit を切る時に参照する境界づけられたコンテキストを扱う。
 
-全体の境界づけられたコンテキストは、[../../../domain-model.md](../../../domain-model.md) を参照する。
+全体の境界づけられたコンテキストは、[../../../domain/bounded-contexts.md](../../../domain/bounded-contexts.md) を参照する。
 
 ## コンテキスト
 
-| 識別子 | 名前 | 役割 |
-|---|---|---|
-| BC001 | 認証アクセス | 利用者が本人であることを確認し、アカウントに紐づく認証情報と再設定トークンの整合性を守る。 |
+| 識別子 | 名前 | サブドメイン | 役割 | モデル | 契約 |
+|---|---|---|---|---|---|
+| BC001 | 認証アクセス | SD001 | 利用者が本人であることを確認し、アカウントに紐づく認証情報と再設定トークンの整合性を守る。 | [model.md](bounded-contexts/BC001-authentication-access/model.md) | [contracts.md](bounded-contexts/BC001-authentication-access/contracts.md) |
 
 ## 責務
 
