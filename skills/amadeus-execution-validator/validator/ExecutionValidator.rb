@@ -414,6 +414,7 @@ class ExecutionValidator
     check_background_trace_ids(path, ids)
     check_bolt_trace_ids(path, ids)
     check_design_trace_ids(path, ids, tasks)
+    check_codebase_analysis_trace_ids(path, ids)
     check_unit_trace_ids(path, ids)
     check_domain_model_trace_ids(path, ids)
     check_dependency_trace_ids(path, ids, tasks)
@@ -484,6 +485,18 @@ class ExecutionValidator
       check_values_exist(path, "要求", row["要求"], ids[:requirements], allow_none: false)
       check_values_exist(path, "ユースケース", row["ユースケース"], ids[:use_cases], allow_none: false)
       check_task_values_exist(path, row["タスク"], tasks, row_bolts: bolt_values, require_qualified: true)
+    end
+  end
+
+  def check_codebase_analysis_trace_ids(path, ids)
+    table = table_after_heading(path, "既存コード分析からの追跡")
+    return unless table
+
+    table[:rows].each do |row|
+      check_values_exist(path, "要求", row["要求"], ids[:requirements], allow_none: false)
+      check_values_exist(path, "ユースケース", row["ユースケース"], ids[:use_cases], allow_none: false)
+      check_values_exist(path, "ユニット", row["ユニット"], ids[:units], allow_none: false)
+      check_values_exist(path, "ボルト", row["ボルト"], ids[:bolts], allow_none: false)
     end
   end
 
