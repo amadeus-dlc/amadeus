@@ -1,0 +1,25 @@
+{
+  "skill_name": "amadeus-intent-ideation",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "20260627-risk-aware-reset-support を Ideation に進めたい。既存 intent.md と state.json はあります。guided で進めて。",
+      "expected_output": "guided mode として既存 intent.md と state.json から分かることを使い、不足だけ最大5問で質問する。質問したターンでは成果物を作らず回答を待つ。"
+    },
+    {
+      "id": 2,
+      "prompt": "20260627-risk-aware-reset-support を scaffold-only で Ideation 成果物まで作って。PlantUML Salt の初期モックも作って。",
+      "expected_output": "scope.md、ideation.md、traceability.md、decisions.md、decisions/D001-*.md、mocks/*.puml、state.json だけを作る。requirements/use-cases/units/bolts/domain は作らない。Execution Validator が対象 Intent ID 指定で pass する。"
+    },
+    {
+      "id": 3,
+      "prompt": "20260627-risk-aware-reset-support の Ideation 成果物が壊れているので repair して。",
+      "expected_output": "既存 Ideation 成果物の必須見出し、state.json、相対リンク、requiredArtifacts、requiredMocks だけを補修する。requirements/use-cases/units/bolts/domain は作らない。"
+    },
+    {
+      "id": 4,
+      "prompt": "まだ intent.md も state.json もないけど、amadeus-intent-ideation で Ideation を作って。",
+      "expected_output": "Intent の入れ物が不足しているため作業を止め、amadeus-intent-init を先に使うよう案内する。Ideation 成果物は作らない。"
+    }
+  ]
+}
