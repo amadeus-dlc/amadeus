@@ -6,13 +6,19 @@ import { dirname, join, relative, resolve } from "node:path";
 import { createLlmProvider, isLlmProviderMode, shellQuote, type LlmProvider, type LlmProviderMode, type LlmRequest, type MockLlmCases } from "../llm-support/provider";
 
 type SkillMode = "steering" | "intent-init" | "intent-ideation" | "intent-inception";
+type IdeationInternalProcess =
+  "scope-framing" |
+  "feasibility-shaping" |
+  "mock-framing" |
+  "traceability-finalization";
+type IdeationInternalMode = `intent-ideation-internal-${IdeationInternalProcess}`;
 type InceptionInternalProcess =
   "requirements-definition" |
   "interaction-modeling" |
   "execution-design" |
   "traceability-finalization";
 type InceptionInternalMode = `intent-inception-internal-${InceptionInternalProcess}`;
-type InitialE2eMode = SkillMode | InceptionInternalMode;
+type InitialE2eMode = SkillMode | IdeationInternalMode | InceptionInternalMode;
 type E2eMode = InitialE2eMode | `${InitialE2eMode}-rerun`;
 type Mode = "ping" | E2eMode | "all";
 
@@ -56,7 +62,11 @@ const validator = ".agents/skills/amadeus-intent-validator/validator/IntentValid
 const requiredSkills = [
   "amadeus-steering",
   "amadeus-intent-init",
-  "amadeus-intent-ideation",
+  "amadeus-ideation",
+  "amadeus-ideation-scope-framing",
+  "amadeus-ideation-feasibility-shaping",
+  "amadeus-ideation-mock-framing",
+  "amadeus-ideation-traceability-finalization",
   "amadeus-intent-inception",
   "amadeus-inception-requirements-definition",
   "amadeus-inception-interaction-modeling",
@@ -67,6 +77,13 @@ const requiredSkills = [
 ];
 const fixtureIntent = "20260627-loan-self-service";
 const returnReminderIntent = "20260627-return-reminder";
+const ideationInternalProcesses = [
+  "scope-framing",
+  "feasibility-shaping",
+  "mock-framing",
+  "traceability-finalization",
+] as const;
+const ideationInternalModes = ideationInternalProcesses.map((process) => `intent-ideation-internal-${process}` as const);
 const inceptionInternalProcesses = [
   "requirements-definition",
   "interaction-modeling",
@@ -74,7 +91,14 @@ const inceptionInternalProcesses = [
   "traceability-finalization",
 ] as const;
 const inceptionInternalModes = inceptionInternalProcesses.map((process) => `intent-inception-internal-${process}` as const);
-const initialE2eModes = ["steering", "intent-init", "intent-ideation", "intent-inception", ...inceptionInternalModes] as const;
+const initialE2eModes = [
+  "steering",
+  "intent-init",
+  "intent-ideation",
+  ...ideationInternalModes,
+  "intent-inception",
+  ...inceptionInternalModes,
+] as const;
 const rerunE2eModes = initialE2eModes.map((mode) => `${mode}-rerun` as const);
 const e2eModes = [...initialE2eModes, ...rerunE2eModes] as const;
 const forbiddenSpecArtifacts = [
@@ -343,14 +367,81 @@ function prepareIdeationIntentFixture(workspace: string): void {
 }
 
 function applyIdeationIntentArtifacts(workspace: string): void {
-  const source = join(root, ".agents/skills/amadeus-intent-ideation/templates/intents/ideation");
-  const target = join(workspace, ".amadeus/intents", fixtureIntent);
-  ensureFile(join(source, "scope.md"));
-  cpSync(source, target, { recursive: true });
-  replaceInFiles(copiedTargetFiles(source, target), {
+  applyIdeationScopeFramingArtifacts(workspace);
+  applyIdeationFeasibilityShapingArtifacts(workspace);
+  applyIdeationMockFramingArtifacts(workspace);
+  applyIdeationTraceabilityFinalizationArtifacts(workspace);
+}
+
+function prepareIdeationFeasibilityShapingFixture(workspace: string): void {
+  prepareInitializedIntentFixture(workspace);
+  applyIdeationScopeFramingArtifacts(workspace);
+}
+
+function prepareIdeationMockFramingFixture(workspace: string): void {
+  prepareIdeationFeasibilityShapingFixture(workspace);
+  applyIdeationFeasibilityShapingArtifacts(workspace);
+}
+
+function prepareIdeationTraceabilityFinalizationFixture(workspace: string): void {
+  prepareIdeationMockFramingFixture(workspace);
+  applyIdeationMockFramingArtifacts(workspace);
+}
+
+function applyIdeationScopeFramingArtifacts(workspace: string): void {
+  copyIdeationTemplateEntries(workspace, ["scope.md"]);
+}
+
+function applyIdeationFeasibilityShapingArtifacts(workspace: string): void {
+  copyIdeationTemplateEntries(workspace, ["ideation.md"]);
+}
+
+function applyIdeationMockFramingArtifacts(workspace: string): void {
+  copyIdeationTemplateEntries(workspace, ["mocks"]);
+}
+
+function applyIdeationTraceabilityFinalizationArtifacts(workspace: string): void {
+  copyIdeationTemplateEntries(workspace, ["traceability.md", "decisions.md", "decisions", "state.json"]);
+  writeIdeationState(ideationTarget(workspace));
+}
+
+function copyIdeationTemplateEntries(workspace: string, entries: string[]): void {
+  const source = ideationTemplateSource();
+  const target = ideationTarget(workspace);
+  for (const entry of entries) {
+    const sourcePath = join(source, entry);
+    const targetPath = join(target, entry);
+    ensureFileOrDir(sourcePath);
+    ensureDir(dirname(targetPath));
+    cpSync(sourcePath, targetPath, { recursive: true });
+  }
+  replaceInFiles(copiedIdeationTargetFiles(source, target, entries), ideationReplacements());
+}
+
+function ideationTemplateSource(): string {
+  return join(root, ".agents/skills/amadeus-ideation/templates/intents/ideation");
+}
+
+function ideationTarget(workspace: string): string {
+  return join(workspace, ".amadeus/intents", fixtureIntent);
+}
+
+function copiedIdeationTargetFiles(source: string, target: string, entries: string[]): string[] {
+  return entries.flatMap((entry) => {
+    const sourcePath = join(source, entry);
+    const files = statSync(sourcePath).isDirectory() ? listFiles(sourcePath) : [sourcePath];
+    return files.map((file) => join(target, relative(source, file)));
+  });
+}
+
+function ideationReplacements(): Record<string, string> {
+  return {
     "<intent-id>-<slug>": fixtureIntent,
     "<dependency-or-none>": "なし",
-  });
+  };
+}
+
+function writeIdeationState(target: string): void {
   writeFileSync(
     join(target, "state.json"),
     JSON.stringify({
@@ -689,7 +780,7 @@ function intentInitPrompt(): string {
 
 function intentIdeationPrompt(): string {
   return [
-    "amadeus-intent-ideation を使ってください。",
+    "amadeus-ideation を使ってください。",
     "",
     "既存の initialized Intent `20260627-loan-self-service` を Ideation へ進めてください。",
     "",
@@ -711,6 +802,72 @@ function intentIdeationPrompt(): string {
     "- 質問せずに続行してください。",
     "- 同梱テンプレートのファイル名を維持し、初期モックは必ず `mocks/initial-confirmation.puml` として作成してください。",
     "- 対象 Intent 配下の Ideation 成果物だけを作成または更新してください。",
+    "- requirements、use-cases、units、bolts、domain 成果物は作らないでください。",
+    "- git commit はしないでください。",
+    "- 作成後に `ruby .agents/skills/amadeus-intent-validator/validator/IntentValidator.rb . 20260627-loan-self-service` を実行し、結果を要約してください。",
+  ].join("\n");
+}
+
+function intentIdeationInternalPrompt(process: IdeationInternalProcess): string {
+  const processDetails: Record<IdeationInternalProcess, { skill: string; lines: string[] }> = {
+    "scope-framing": {
+      skill: "amadeus-ideation-scope-framing",
+      lines: [
+        "内部skill: amadeus-ideation-scope-framing。",
+        "スコープ整理だけを進めてください。",
+        "作成対象:",
+        "- `scope.md`",
+      ],
+    },
+    "feasibility-shaping": {
+      skill: "amadeus-ideation-feasibility-shaping",
+      lines: [
+        "内部skill: amadeus-ideation-feasibility-shaping。",
+        "実現可能性と体制整理だけを進めてください。",
+        "作成対象:",
+        "- `ideation.md`",
+      ],
+    },
+    "mock-framing": {
+      skill: "amadeus-ideation-mock-framing",
+      lines: [
+        "内部skill: amadeus-ideation-mock-framing。",
+        "初期モック具体化だけを進めてください。",
+        "作成対象:",
+        "- `mocks/initial-confirmation.puml`",
+      ],
+    },
+    "traceability-finalization": {
+      skill: "amadeus-ideation-traceability-finalization",
+      lines: [
+        "内部skill: amadeus-ideation-traceability-finalization。",
+        "追跡と状態確定だけを進めてください。",
+        "作成または更新対象:",
+        "- `traceability.md`",
+        "- `decisions.md` と `decisions/D001-complete-ideation.md`",
+        "- `state.json`",
+      ],
+    },
+  };
+  const detail = processDetails[process];
+
+  return [
+    `${detail.skill} を使ってください。`,
+    "",
+    "既存 Intent `20260627-loan-self-service` に対して、Ideation の内部skillを1つだけ実行してください。",
+    "",
+    "Ideation で分かっていること:",
+    "- 対象: 利用者が貸出開始前に図書と利用者状態を確認する体験",
+    "- 対象外: 決済、配送、職員向け蔵書管理",
+    "- 初期モック: 貸出開始確認カード",
+    "- Inception への引き継ぎ: 貸出可否、返却期限、通知要否を要求候補にする",
+    "",
+    ...detail.lines,
+    "",
+    "制約:",
+    "- 質問せずに続行してください。",
+    "- 同梱テンプレートのファイル名を維持し、初期モックは必ず `mocks/initial-confirmation.puml` として作成してください。",
+    "- 対象 Intent 配下の、指定された内部プロセスの成果物だけを作成または更新してください。",
     "- requirements、use-cases、units、bolts、domain 成果物は作らないでください。",
     "- git commit はしないでください。",
     "- 作成後に `ruby .agents/skills/amadeus-intent-validator/validator/IntentValidator.rb . 20260627-loan-self-service` を実行し、結果を要約してください。",
@@ -895,6 +1052,60 @@ function ideationIntentMarkdownArtifacts(intent: string): string[] {
   return [
     `.amadeus/intents/${intent}/scope.md`,
     `.amadeus/intents/${intent}/ideation.md`,
+    `.amadeus/intents/${intent}/traceability.md`,
+    `.amadeus/intents/${intent}/decisions.md`,
+    `.amadeus/intents/${intent}/decisions/D001-complete-ideation.md`,
+  ];
+}
+
+function ideationScopeFramingArtifacts(intent: string): string[] {
+  return [
+    ...initializedIntentArtifacts(intent),
+    `.amadeus/intents/${intent}/scope.md`,
+  ];
+}
+
+function ideationScopeFramingMarkdownArtifacts(intent: string): string[] {
+  return [
+    `.amadeus/intents/${intent}/scope.md`,
+  ];
+}
+
+function ideationFeasibilityShapingArtifacts(intent: string): string[] {
+  return [
+    ...ideationScopeFramingArtifacts(intent),
+    `.amadeus/intents/${intent}/ideation.md`,
+  ];
+}
+
+function ideationFeasibilityShapingMarkdownArtifacts(intent: string): string[] {
+  return [
+    `.amadeus/intents/${intent}/ideation.md`,
+  ];
+}
+
+function ideationMockFramingArtifacts(intent: string): string[] {
+  return [
+    ...ideationFeasibilityShapingArtifacts(intent),
+    `.amadeus/intents/${intent}/mocks/initial-confirmation.puml`,
+  ];
+}
+
+function ideationMockFramingMarkdownArtifacts(_intent: string): string[] {
+  return [];
+}
+
+function ideationTraceabilityFinalizationArtifacts(intent: string): string[] {
+  return [
+    ...ideationMockFramingArtifacts(intent),
+    `.amadeus/intents/${intent}/traceability.md`,
+    `.amadeus/intents/${intent}/decisions.md`,
+    `.amadeus/intents/${intent}/decisions/D001-complete-ideation.md`,
+  ];
+}
+
+function ideationTraceabilityFinalizationMarkdownArtifacts(intent: string): string[] {
+  return [
     `.amadeus/intents/${intent}/traceability.md`,
     `.amadeus/intents/${intent}/decisions.md`,
     `.amadeus/intents/${intent}/decisions/D001-complete-ideation.md`,
@@ -1091,6 +1302,54 @@ function e2eCase(mode: E2eMode): E2eCase {
       applyMock: applyIdeationIntentArtifacts,
       expectedArtifacts: expectedArtifacts(ideationIntentArtifacts(fixtureIntent), [fixtureIntent]),
       expectedMarkdownChanges: expectedMarkdownChanges(ideationIntentMarkdownArtifacts(fixtureIntent), []),
+    },
+    "intent-ideation-internal-scope-framing": {
+      id: "intent-ideation-internal-scope-framing",
+      prompt: intentIdeationInternalPrompt("scope-framing"),
+      prepareGiven: prepareInitializedIntentFixture,
+      givenMustRemainValid: [fixtureIntent],
+      applyMock: applyIdeationScopeFramingArtifacts,
+      expectedArtifacts: expectedArtifacts(ideationScopeFramingArtifacts(fixtureIntent), [fixtureIntent]),
+      expectedMarkdownChanges: expectedMarkdownChanges(
+        ideationScopeFramingMarkdownArtifacts(fixtureIntent),
+        [],
+      ),
+    },
+    "intent-ideation-internal-feasibility-shaping": {
+      id: "intent-ideation-internal-feasibility-shaping",
+      prompt: intentIdeationInternalPrompt("feasibility-shaping"),
+      prepareGiven: prepareIdeationFeasibilityShapingFixture,
+      givenMustRemainValid: [fixtureIntent],
+      applyMock: applyIdeationFeasibilityShapingArtifacts,
+      expectedArtifacts: expectedArtifacts(ideationFeasibilityShapingArtifacts(fixtureIntent), [fixtureIntent]),
+      expectedMarkdownChanges: expectedMarkdownChanges(
+        ideationFeasibilityShapingMarkdownArtifacts(fixtureIntent),
+        [],
+      ),
+    },
+    "intent-ideation-internal-mock-framing": {
+      id: "intent-ideation-internal-mock-framing",
+      prompt: intentIdeationInternalPrompt("mock-framing"),
+      prepareGiven: prepareIdeationMockFramingFixture,
+      givenMustRemainValid: [fixtureIntent],
+      applyMock: applyIdeationMockFramingArtifacts,
+      expectedArtifacts: expectedArtifacts(ideationMockFramingArtifacts(fixtureIntent), [fixtureIntent]),
+      expectedMarkdownChanges: expectedMarkdownChanges(
+        ideationMockFramingMarkdownArtifacts(fixtureIntent),
+        [],
+      ),
+    },
+    "intent-ideation-internal-traceability-finalization": {
+      id: "intent-ideation-internal-traceability-finalization",
+      prompt: intentIdeationInternalPrompt("traceability-finalization"),
+      prepareGiven: prepareIdeationTraceabilityFinalizationFixture,
+      givenMustRemainValid: [fixtureIntent],
+      applyMock: applyIdeationTraceabilityFinalizationArtifacts,
+      expectedArtifacts: expectedArtifacts(ideationTraceabilityFinalizationArtifacts(fixtureIntent), [fixtureIntent]),
+      expectedMarkdownChanges: expectedMarkdownChanges(
+        ideationTraceabilityFinalizationMarkdownArtifacts(fixtureIntent),
+        [],
+      ),
     },
     "intent-inception": {
       id: "intent-inception",

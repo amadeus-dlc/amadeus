@@ -23,7 +23,7 @@ Spec、実装、CI、運用手順は作らない。
 
 対象 Intent が `.amadeus/intents/<intent-id>-<slug>/` に存在し、Ideation を完了していることを前提にする。
 
-少なくとも次が存在しない場合は、作業を止めて `amadeus-intent-init` または `amadeus-intent-ideation` を案内する。
+少なくとも次が存在しない場合は、作業を止めて `amadeus-intent-init` または `amadeus-ideation` を案内する。
 
 - `.amadeus/intents.md`
 - `.amadeus/intents/<intent-id>-<slug>/intent.md`
@@ -34,7 +34,7 @@ Spec、実装、CI、運用手順は作らない。
 - `.amadeus/intents/<intent-id>-<slug>/decisions.md`
 
 `state.json.phase` が `ideation` でない場合は、現在の phase と不足成果物を確認してから止める。
-`state.json.ideation.gate` が `passed` でない場合は、Inception へ進めず `amadeus-intent-ideation` の `refine` を案内する。
+`state.json.ideation.gate` が `passed` でない場合は、Inception へ進めず `amadeus-ideation` の `refine` を案内する。
 
 既存のドメイン用語、境界づけられたコンテキスト、契約が不足している場合は、Inception 成果物の中で推測して確定しない。
 必要なら `amadeus-domain-grilling` または `amadeus-domain-modeling` を案内する。
@@ -676,7 +676,7 @@ greenfield の場合は含めず、`traceability.md` に対象外理由を残す
 
 ## 次の skill
 
-- Intent の Ideation 成果物が不足している場合: `amadeus-intent-ideation`
+- Intent の Ideation 成果物が不足している場合: `amadeus-ideation`
 - 用語、概念、ドメインモデル、契約が不足している場合: `amadeus-domain-grilling` または `amadeus-domain-modeling`
 - 成果物の構造を検証する場合: `amadeus-intent-validator`
 - Spec へ進める場合: 未確定

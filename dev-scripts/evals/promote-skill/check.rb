@@ -43,13 +43,21 @@ def amadeus_skills
   Dir.glob(ROOT.join("skills/amadeus-*")).map { |path| File.basename(path) }.sort
 end
 
-def required_internal_skills
-  %w[
-    amadeus-inception-requirements-definition
-    amadeus-inception-interaction-modeling
-    amadeus-inception-execution-design
-    amadeus-inception-traceability-finalization
-  ]
+def required_internal_skill_groups
+  {
+    "amadeus-ideation" => %w[
+      amadeus-ideation-scope-framing
+      amadeus-ideation-feasibility-shaping
+      amadeus-ideation-mock-framing
+      amadeus-ideation-traceability-finalization
+    ],
+    "amadeus-intent-inception" => %w[
+      amadeus-inception-requirements-definition
+      amadeus-inception-interaction-modeling
+      amadeus-inception-execution-design
+      amadeus-inception-traceability-finalization
+    ],
+  }
 end
 
 run!("ruby", "-c", "dev-scripts/promote-skill.rb")
@@ -58,16 +66,18 @@ run!("ruby", "dev-scripts/promote-skill.rb", "amadeus-steering", "--dry-run")
 run!("ruby", "dev-scripts/promote-skill.rb", "amadeus-intent-validator", "--dry-run")
 run_expect_failure!("ruby", "dev-scripts/promote-skill.rb", "amadeus-grilling")
 
-missing_internal_skills = required_internal_skills.reject do |skill|
-  ROOT.join("skills", skill, "SKILL.md").file? && ROOT.join(".agents/skills", skill, "SKILL.md").file?
-end
-fail_with("missing internal skills: #{missing_internal_skills.join(", ")}") unless missing_internal_skills.empty?
+required_internal_skill_groups.each do |parent_skill, internal_skills|
+  missing_internal_skills = internal_skills.reject do |skill|
+    ROOT.join("skills", skill, "SKILL.md").file? && ROOT.join(".agents/skills", skill, "SKILL.md").file?
+  end
+  fail_with("missing internal skills for #{parent_skill}: #{missing_internal_skills.join(", ")}") unless missing_internal_skills.empty?
 
-parent_inception_skill = ROOT.join("skills/amadeus-intent-inception/SKILL.md").read
-missing_internal_orchestration = required_internal_skills.reject do |skill|
-  parent_inception_skill.include?("必ず `#{skill}` を使う")
+  parent_skill_body = ROOT.join("skills", parent_skill, "SKILL.md").read
+  missing_internal_orchestration = internal_skills.reject do |skill|
+    parent_skill_body.include?("必ず `#{skill}` を使う")
+  end
+  fail_with("missing internal skill orchestration for #{parent_skill}: #{missing_internal_orchestration.join(", ")}") unless missing_internal_orchestration.empty?
 end
-fail_with("missing internal skill orchestration: #{missing_internal_orchestration.join(", ")}") unless missing_internal_orchestration.empty?
 
 Dir.mktmpdir("amadeus-promote-all") do |tmp|
   agents_root = Pathname.new(tmp).join(".agents/skills")

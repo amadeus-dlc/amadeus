@@ -8,7 +8,7 @@
 
 - `amadeus-steering`
 - `amadeus-intent-init`
-- `amadeus-intent-ideation`
+- `amadeus-ideation`
 - `amadeus-intent-inception`
 
 ## 検証条件

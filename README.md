@@ -8,7 +8,7 @@ Amadeus DLC は、Amadeus の設計、仕様、実装の流れを扱うための
 
 1. `amadeus-steering`
 2. `amadeus-intent-init`
-3. `amadeus-intent-ideation`
+3. `amadeus-ideation`
 4. `amadeus-intent-inception`
 5. `amadeus-grilling`
 6. `amadeus-domain-modeling`
@@ -56,9 +56,9 @@ Spec 以降の成果物を作る skill は、まだ確定していません。
 
 ### 3. Intent を Ideation へ進める
 
-既存 Intent を Ideation へ進める場合は、`amadeus-intent-ideation` を使います。
+既存 Intent を Ideation へ進める場合は、`amadeus-ideation` を使います。
 
-`amadeus-intent-ideation` は、次だけを作成または更新します。
+`amadeus-ideation` は、次だけを作成または更新します。
 
 - `.amadeus/intents/<intent-id>-<slug>/scope.md`
 - `.amadeus/intents/<intent-id>-<slug>/ideation.md`
@@ -77,7 +77,7 @@ Spec 以降の成果物を作る skill は、まだ確定していません。
 
 `repair` は、既存 Ideation 成果物の見出し、リンク、`state.json`、必須成果物の対応だけを補修する場合に使います。
 
-既に Ideation 段階にある Intent を煮詰める場合は、`amadeus-intent-ideation` が `refine` を自動選択します。
+既に Ideation 段階にある Intent を煮詰める場合は、`amadeus-ideation` が `refine` を自動選択します。
 `refine` は、既存の `scope.md`、`ideation.md`、`decisions.md`、`traceability.md`、`mocks/*.puml`、`state.json` を読み、必要な Ideation 論点を一問ずつ確認します。
 質問が必要なターンでは成果物を更新せず、回答後に Ideation 成果物だけを更新します。
 
@@ -178,7 +178,7 @@ repo root の開発用 `scripts/` や `pnpm test` を実行時検証の入口に
 |---|---|---|---|
 | ライフサイクル進行 | `amadeus-steering` | `.amadeus/` の共有土台を作る | 個別 Intent |
 | ライフサイクル進行 | `amadeus-intent-init` | Intent 登録、`intent.md`、`state.json` を作る | Ideation 以降の成果物 |
-| ライフサイクル進行 | `amadeus-intent-ideation` | `scope.md`、`ideation.md`、判断、追跡、初期モックを作る | 要求、ユースケース、Unit、Bolt、ドメインモデル |
+| ライフサイクル進行 | `amadeus-ideation` | `scope.md`、`ideation.md`、判断、追跡、初期モックを作る | 要求、ユースケース、Unit、Bolt、ドメインモデル |
 | ライフサイクル進行 | `amadeus-intent-inception` | 要求、受け入れ状態、ユーザーストーリー、ユースケース、Unit、Bolt、Design、Task、追跡、判断を作る | domain model、Spec、実装 |
 | 横断支援 | `amadeus-grilling` | 全フェーズで論点を一問ずつ確認する | 成果物の作成や変更 |
 | 横断支援 | `amadeus-domain-modeling` | 全フェーズで用語、概念、モデル、契約を整理する | `CONTEXT.md`、`docs/adr/**` |

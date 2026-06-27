@@ -195,6 +195,6 @@ Intent ディレクトリ名なしで `未確認` のディレクトリ名を作
 
 ## 次の skill
 
-- Intent の Ideation 成果物を作る場合: `amadeus-intent-ideation`
+- Intent の Ideation 成果物を作る場合: `amadeus-ideation`
 - steering layer が不足している場合: `amadeus-steering`
 - 成果物の構造を検証する場合: `amadeus-intent-validator`

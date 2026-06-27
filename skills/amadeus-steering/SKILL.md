@@ -303,5 +303,5 @@ Intent がまだない場合は、表に行を作らない。
 ## 次の skill
 
 - 新しい Intent の入れ物だけを作る場合: `amadeus-intent-init`
-- 既存 Intent の Ideation 成果物を作る場合: `amadeus-intent-ideation`
+- 既存 Intent の Ideation 成果物を作る場合: `amadeus-ideation`
 - 成果物の構造を検証する場合: `amadeus-intent-validator`

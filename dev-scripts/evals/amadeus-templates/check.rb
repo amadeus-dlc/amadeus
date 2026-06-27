@@ -39,7 +39,7 @@ TARGET_SKILLS = {
       "templates/intents/initialized/state.json" => []
     }
   },
-  "amadeus-intent-ideation" => {
+  "amadeus-ideation" => {
     skill_text: [
       ".amadeus/settings/templates",
       "templates/intents/ideation"
