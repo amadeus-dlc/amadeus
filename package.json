@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "test": "npm run test:ci:mock",
-    "test:ci:mock": "npm run test:it:all && npm run test:e2e:ci:mock && npm run validate:all && npm run diff:check",
+    "test:ci:mock": "npm run typecheck && npm run test:it:all && npm run test:e2e:ci:mock && npm run validate:all && npm run diff:check",
+    "typecheck": "tsc --noEmit",
     "test:it:all": "npm run test:it:amadeus-templates && npm run test:it:promote-skill && npm run test:it:llm-runner-options:real-command && npm run test:it:llm-provider-options:mock-real",
     "test:it:amadeus-templates": "bun run dev-scripts/evals/amadeus-templates/check.ts",
     "test:it:promote-skill": "bun run dev-scripts/evals/promote-skill/check.ts",
@@ -75,5 +76,9 @@
     "validate:intents": "for state in .amadeus/intents/*/state.json; do intent_dir=${state%/state.json}; intent=${intent_dir##*/}; bun run .agents/skills/amadeus-intent-validator/validator/IntentValidator.ts . \"$intent\"; done",
     "validate:all": "npm run validate && npm run validate:intents",
     "diff:check": "git diff --check"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.14",
+    "typescript": "^6.0.3"
   }
 }
