@@ -33,7 +33,7 @@
 ## 再実行コマンド
 
 ```sh
-npm run test:promote
+npm run test:it:promote-skill
 ```
 
 個別に確認する場合は次を実行する。
