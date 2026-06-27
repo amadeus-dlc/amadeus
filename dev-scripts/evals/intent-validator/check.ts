@@ -67,6 +67,126 @@ function replaceDesignTraceDesignLink(workspace: string): void {
   writeFileSync(path, text.replace(from, to));
 }
 
+function writeConstructionTestResults(workspace: string): void {
+  writeFileSync(
+    join(workspace, ".amadeus/intents", intent, "bolts/B001-password-reset-request-flow/test-results.md"),
+    [
+      "# テスト結果",
+      "",
+      "## 検証結果",
+      "",
+      "| テスト | コマンド | 結果 | 根拠 |",
+      "|---|---|---|---|",
+      "| 単体 | npm test | pass | ローカル実行 |",
+      "",
+      "## 安全性確認",
+      "",
+      "- 未確認",
+      "",
+      "## CI確認",
+      "",
+      "- 未確認",
+      "",
+      "## 受け入れ証拠",
+      "",
+      "| 要求 | タスク | 証拠 | 要約 |",
+      "|---|---|---|---|",
+      "| R001 | B001/T001 | npm test | パスワード再設定要求の入口を確認した。 |",
+      "",
+    ].join("\n"),
+  );
+}
+
+function writeConstructionNotes(workspace: string): void {
+  writeFileSync(
+    join(workspace, ".amadeus/intents", intent, "bolts/B001-password-reset-request-flow/notes.md"),
+    [
+      "# Construction ノート",
+      "",
+      "## 実行方針",
+      "",
+      "- B001 の最小実装と検証を対象にする。",
+      "",
+      "## 対象タスク",
+      "",
+      "| タスク | 状態 | 方針 | 証拠 |",
+      "|---|---|---|---|",
+      "| T001 | 実装済み | 入力定義を確認する。 | test-results.md |",
+      "",
+      "## 未確認事項",
+      "",
+      "- なし",
+      "",
+    ].join("\n"),
+  );
+}
+
+function writeConstructionState(workspace: string, overrides: Record<string, any> = {}): void {
+  const path = join(workspace, ".amadeus/intents", intent, "state.json");
+  const state = JSON.parse(readFileSync(path, "utf8"));
+  state.phase = "construction";
+  state.status = overrides.status ?? "in_progress";
+  state.ideation = { status: "completed", gate: "passed" };
+  state.inception = overrides.inception ?? { status: "completed", gate: "passed" };
+  state.construction = {
+    status: overrides.constructionStatus ?? "in_progress",
+    targetBolts: ["B001"],
+    requiredArtifacts: [
+      "requirements.md",
+      "acceptance.md",
+      "units.md",
+      "bolts.md",
+      "traceability.md",
+      "decisions.md",
+      "state.json",
+    ],
+    requiredBoltArtifacts: overrides.requiredBoltArtifacts ?? [
+      "bolts/B001-password-reset-request-flow/bolt.md",
+      "bolts/B001-password-reset-request-flow/tasks.md",
+      "bolts/B001-password-reset-request-flow/notes.md",
+      "bolts/B001-password-reset-request-flow/test-results.md",
+    ],
+    gate: overrides.constructionGate ?? "not_ready",
+  };
+  writeFileSync(path, JSON.stringify(state, null, 2));
+}
+
+function replaceUnitDetailWithOldPath(workspace: string): void {
+  const path = join(workspace, ".amadeus/intents", intent, "units.md");
+  const text = readFileSync(path, "utf8");
+  const from = "[unit.md](units/U001-password-reset-request/unit.md)";
+  const to = "[unit.md](units/U001-password-reset-request.md)";
+  if (!text.includes(from)) fail("units fixture does not contain expected U001 unit link");
+  writeFileSync(path, text.replace(from, to));
+}
+
+function writePrWithoutUrl(workspace: string): void {
+  writeFileSync(
+    join(workspace, ".amadeus/intents", intent, "bolts/B001-password-reset-request-flow/pr.md"),
+    [
+      "# PR 記録",
+      "",
+      "## Pull Request",
+      "",
+      "- URL: 未確認",
+      "- 状態: 未確認",
+      "",
+      "## 対象",
+      "",
+      "| ボルト | タスク | 要求 |",
+      "|---|---|---|",
+      "| B001 | T001 | R001 |",
+      "",
+      "## 確認状況",
+      "",
+      "| 観点 | 状態 | 根拠 |",
+      "|---|---|---|",
+      "| CI | 未確認 | 未登録 |",
+      "",
+    ].join("\n"),
+  );
+}
+
 run(["bun", "run", validator, ".", intent]);
 
 const wrongDesignWorkspace = workspaceCopy();
@@ -88,6 +208,64 @@ rmSync(join(missingBoltsIndexWorkspace, ".amadeus/intents", intent, "bolts.md"))
 runExpectFailure(
   ["bun", "run", validator, missingBoltsIndexWorkspace, intent],
   "bolts.md が存在する",
+);
+
+const constructionWithoutInceptionRequiredWorkspace = workspaceCopy();
+writeConstructionNotes(constructionWithoutInceptionRequiredWorkspace);
+writeConstructionTestResults(constructionWithoutInceptionRequiredWorkspace);
+writeConstructionState(constructionWithoutInceptionRequiredWorkspace);
+run(["bun", "run", validator, constructionWithoutInceptionRequiredWorkspace, intent]);
+
+const missingTargetBoltArtifactsWorkspace = workspaceCopy();
+writeConstructionNotes(missingTargetBoltArtifactsWorkspace);
+writeConstructionTestResults(missingTargetBoltArtifactsWorkspace);
+writeConstructionState(missingTargetBoltArtifactsWorkspace, {
+  requiredBoltArtifacts: [
+    "bolts/B001-password-reset-request-flow/bolt.md",
+    "bolts/B001-password-reset-request-flow/tasks.md",
+  ],
+});
+runExpectFailure(
+  ["bun", "run", validator, missingTargetBoltArtifactsWorkspace, intent],
+  "Construction 必須 Bolt 成果物が targetBolt の証拠成果物を含む",
+);
+
+const oldUnitDetailWorkspace = workspaceCopy();
+replaceUnitDetailWithOldPath(oldUnitDetailWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, oldUnitDetailWorkspace, intent],
+  "`詳細` が units/<unit-id>-<slug>/unit.md を指す",
+);
+
+const missingConstructionTraceWorkspace = workspaceCopy();
+writeConstructionNotes(missingConstructionTraceWorkspace);
+writeConstructionTestResults(missingConstructionTraceWorkspace);
+writeConstructionState(missingConstructionTraceWorkspace, {
+  status: "completed",
+  constructionStatus: "completed",
+  constructionGate: "passed",
+});
+runExpectFailure(
+  ["bun", "run", validator, missingConstructionTraceWorkspace, intent],
+  "`Construction からの追跡` の表がある",
+);
+
+const prWithoutUrlWorkspace = workspaceCopy();
+writeConstructionNotes(prWithoutUrlWorkspace);
+writeConstructionTestResults(prWithoutUrlWorkspace);
+writePrWithoutUrl(prWithoutUrlWorkspace);
+writeConstructionState(prWithoutUrlWorkspace, {
+  requiredBoltArtifacts: [
+    "bolts/B001-password-reset-request-flow/bolt.md",
+    "bolts/B001-password-reset-request-flow/tasks.md",
+    "bolts/B001-password-reset-request-flow/notes.md",
+    "bolts/B001-password-reset-request-flow/test-results.md",
+    "bolts/B001-password-reset-request-flow/pr.md",
+  ],
+});
+runExpectFailure(
+  ["bun", "run", validator, prWithoutUrlWorkspace, intent],
+  "PR 記録が URL を持つ",
 );
 
 console.log("intent validator eval: ok");
