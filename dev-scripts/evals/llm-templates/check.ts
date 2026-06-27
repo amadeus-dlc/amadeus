@@ -5,19 +5,19 @@ import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { createLlmProvider, isLlmProviderMode, shellQuote, type LlmProvider, type LlmProviderMode, type LlmRequest, type MockLlmCases } from "../llm-support/provider";
 
-type SkillMode = "steering" | "intent-init" | "intent-ideation" | "intent-inception";
+type SkillMode = "steering" | "intent-init" | "ideation" | "inception";
 type IdeationInternalProcess =
   "scope-framing" |
   "feasibility-shaping" |
   "mock-framing" |
   "traceability-finalization";
-type IdeationInternalMode = `intent-ideation-internal-${IdeationInternalProcess}`;
+type IdeationInternalMode = `ideation-internal-${IdeationInternalProcess}`;
 type InceptionInternalProcess =
   "requirements-definition" |
   "interaction-modeling" |
   "execution-design" |
   "traceability-finalization";
-type InceptionInternalMode = `intent-inception-internal-${InceptionInternalProcess}`;
+type InceptionInternalMode = `inception-internal-${InceptionInternalProcess}`;
 type InitialE2eMode = SkillMode | IdeationInternalMode | InceptionInternalMode;
 type E2eMode = InitialE2eMode | `${InitialE2eMode}-rerun`;
 type Mode = "ping" | E2eMode | "all";
@@ -67,7 +67,7 @@ const requiredSkills = [
   "amadeus-ideation-feasibility-shaping",
   "amadeus-ideation-mock-framing",
   "amadeus-ideation-traceability-finalization",
-  "amadeus-intent-inception",
+  "amadeus-inception",
   "amadeus-inception-requirements-definition",
   "amadeus-inception-interaction-modeling",
   "amadeus-inception-execution-design",
@@ -83,20 +83,20 @@ const ideationInternalProcesses = [
   "mock-framing",
   "traceability-finalization",
 ] as const;
-const ideationInternalModes = ideationInternalProcesses.map((process) => `intent-ideation-internal-${process}` as const);
+const ideationInternalModes = ideationInternalProcesses.map((process) => `ideation-internal-${process}` as const);
 const inceptionInternalProcesses = [
   "requirements-definition",
   "interaction-modeling",
   "execution-design",
   "traceability-finalization",
 ] as const;
-const inceptionInternalModes = inceptionInternalProcesses.map((process) => `intent-inception-internal-${process}` as const);
+const inceptionInternalModes = inceptionInternalProcesses.map((process) => `inception-internal-${process}` as const);
 const initialE2eModes = [
   "steering",
   "intent-init",
-  "intent-ideation",
+  "ideation",
   ...ideationInternalModes,
-  "intent-inception",
+  "inception",
   ...inceptionInternalModes,
 ] as const;
 const rerunE2eModes = initialE2eModes.map((mode) => `${mode}-rerun` as const);
@@ -528,7 +528,7 @@ function applyInceptionExecutionDesignArtifacts(workspace: string): void {
 }
 
 function applyInceptionTraceabilityFinalizationArtifacts(workspace: string): void {
-  const source = join(root, ".agents/skills/amadeus-intent-inception/templates/intents/inception");
+  const source = join(root, ".agents/skills/amadeus-inception/templates/intents/inception");
   const target = join(workspace, ".amadeus/intents", fixtureIntent);
   const entries = ["traceability.md", "decisions.md", "decisions", "state.json"];
   copyInceptionTemplateEntries(source, target, entries);
@@ -548,7 +548,7 @@ function applyInceptionTraceabilityFinalizationArtifacts(workspace: string): voi
 }
 
 function inceptionTemplateSource(): string {
-  return join(root, ".agents/skills/amadeus-intent-inception/templates/intents/inception");
+  return join(root, ".agents/skills/amadeus-inception/templates/intents/inception");
 }
 
 function inceptionTarget(workspace: string): string {
@@ -876,7 +876,7 @@ function intentIdeationInternalPrompt(process: IdeationInternalProcess): string 
 
 function intentInceptionPrompt(): string {
   return [
-    "amadeus-intent-inception を使ってください。",
+    "amadeus-inception を使ってください。",
     "",
     "Ideation gate passed の Intent `20260627-loan-self-service` を Inception へ進めてください。",
     "",
@@ -1294,8 +1294,8 @@ function e2eCase(mode: E2eMode): E2eCase {
         [".amadeus/intents.md"],
       ),
     },
-    "intent-ideation": {
-      id: "intent-ideation",
+    "ideation": {
+      id: "ideation",
       prompt: intentIdeationPrompt(),
       prepareGiven: prepareInitializedIntentFixture,
       givenMustRemainValid: [fixtureIntent],
@@ -1303,8 +1303,8 @@ function e2eCase(mode: E2eMode): E2eCase {
       expectedArtifacts: expectedArtifacts(ideationIntentArtifacts(fixtureIntent), [fixtureIntent]),
       expectedMarkdownChanges: expectedMarkdownChanges(ideationIntentMarkdownArtifacts(fixtureIntent), []),
     },
-    "intent-ideation-internal-scope-framing": {
-      id: "intent-ideation-internal-scope-framing",
+    "ideation-internal-scope-framing": {
+      id: "ideation-internal-scope-framing",
       prompt: intentIdeationInternalPrompt("scope-framing"),
       prepareGiven: prepareInitializedIntentFixture,
       givenMustRemainValid: [fixtureIntent],
@@ -1315,8 +1315,8 @@ function e2eCase(mode: E2eMode): E2eCase {
         [],
       ),
     },
-    "intent-ideation-internal-feasibility-shaping": {
-      id: "intent-ideation-internal-feasibility-shaping",
+    "ideation-internal-feasibility-shaping": {
+      id: "ideation-internal-feasibility-shaping",
       prompt: intentIdeationInternalPrompt("feasibility-shaping"),
       prepareGiven: prepareIdeationFeasibilityShapingFixture,
       givenMustRemainValid: [fixtureIntent],
@@ -1327,8 +1327,8 @@ function e2eCase(mode: E2eMode): E2eCase {
         [],
       ),
     },
-    "intent-ideation-internal-mock-framing": {
-      id: "intent-ideation-internal-mock-framing",
+    "ideation-internal-mock-framing": {
+      id: "ideation-internal-mock-framing",
       prompt: intentIdeationInternalPrompt("mock-framing"),
       prepareGiven: prepareIdeationMockFramingFixture,
       givenMustRemainValid: [fixtureIntent],
@@ -1339,8 +1339,8 @@ function e2eCase(mode: E2eMode): E2eCase {
         [],
       ),
     },
-    "intent-ideation-internal-traceability-finalization": {
-      id: "intent-ideation-internal-traceability-finalization",
+    "ideation-internal-traceability-finalization": {
+      id: "ideation-internal-traceability-finalization",
       prompt: intentIdeationInternalPrompt("traceability-finalization"),
       prepareGiven: prepareIdeationTraceabilityFinalizationFixture,
       givenMustRemainValid: [fixtureIntent],
@@ -1351,8 +1351,8 @@ function e2eCase(mode: E2eMode): E2eCase {
         [],
       ),
     },
-    "intent-inception": {
-      id: "intent-inception",
+    "inception": {
+      id: "inception",
       prompt: intentInceptionPrompt(),
       prepareGiven: prepareIdeationIntentFixture,
       givenMustRemainValid: [fixtureIntent],
@@ -1366,8 +1366,8 @@ function e2eCase(mode: E2eMode): E2eCase {
         ],
       ),
     },
-    "intent-inception-internal-requirements-definition": {
-      id: "intent-inception-internal-requirements-definition",
+    "inception-internal-requirements-definition": {
+      id: "inception-internal-requirements-definition",
       prompt: intentInceptionInternalPrompt("requirements-definition"),
       prepareGiven: prepareIdeationIntentFixture,
       givenMustRemainValid: [fixtureIntent],
@@ -1378,8 +1378,8 @@ function e2eCase(mode: E2eMode): E2eCase {
         [],
       ),
     },
-    "intent-inception-internal-interaction-modeling": {
-      id: "intent-inception-internal-interaction-modeling",
+    "inception-internal-interaction-modeling": {
+      id: "inception-internal-interaction-modeling",
       prompt: intentInceptionInternalPrompt("interaction-modeling"),
       prepareGiven: prepareInceptionInteractionModelingFixture,
       givenMustRemainValid: [fixtureIntent],
@@ -1390,8 +1390,8 @@ function e2eCase(mode: E2eMode): E2eCase {
         [],
       ),
     },
-    "intent-inception-internal-execution-design": {
-      id: "intent-inception-internal-execution-design",
+    "inception-internal-execution-design": {
+      id: "inception-internal-execution-design",
       prompt: intentInceptionInternalPrompt("execution-design"),
       prepareGiven: prepareInceptionExecutionDesignFixture,
       givenMustRemainValid: [fixtureIntent],
@@ -1402,8 +1402,8 @@ function e2eCase(mode: E2eMode): E2eCase {
         [],
       ),
     },
-    "intent-inception-internal-traceability-finalization": {
-      id: "intent-inception-internal-traceability-finalization",
+    "inception-internal-traceability-finalization": {
+      id: "inception-internal-traceability-finalization",
       prompt: intentInceptionInternalPrompt("traceability-finalization"),
       prepareGiven: prepareInceptionTraceabilityFinalizationFixture,
       givenMustRemainValid: [fixtureIntent],

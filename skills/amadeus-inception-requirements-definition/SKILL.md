@@ -12,8 +12,8 @@ description: >-
 
 Inception phase の要件定義だけを進める。
 
-この skill は `amadeus-intent-inception` の内部 skill である。
-公開入口としての `amadeus-intent-inception` から呼び出されることを主な用途にする。
+この skill は `amadeus-inception` の内部 skill である。
+公開入口としての `amadeus-inception` から呼び出されることを主な用途にする。
 
 ## 前提
 
@@ -35,7 +35,7 @@ Inception phase の要件定義だけを進める。
 
 ## テンプレート
 
-新規作成または構造補修では、`amadeus-intent-inception/templates/intents/inception/` のテンプレートを使う。
+新規作成または構造補修では、`amadeus-inception/templates/intents/inception/` のテンプレートを使う。
 
 プロジェクト固有テンプレートが `.amadeus/settings/templates/intents/inception/` にある場合は、そちらを優先する。
 
@@ -70,4 +70,4 @@ Inception phase の要件定義だけを進める。
 ## 次の skill
 
 - 相互作用整理へ進む場合: `amadeus-inception-interaction-modeling`
-- Inception 全体を進める場合: `amadeus-intent-inception`
+- Inception 全体を進める場合: `amadeus-inception`

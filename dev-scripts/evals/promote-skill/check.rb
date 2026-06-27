@@ -51,7 +51,7 @@ def required_internal_skill_groups
       amadeus-ideation-mock-framing
       amadeus-ideation-traceability-finalization
     ],
-    "amadeus-intent-inception" => %w[
+    "amadeus-inception" => %w[
       amadeus-inception-requirements-definition
       amadeus-inception-interaction-modeling
       amadeus-inception-execution-design

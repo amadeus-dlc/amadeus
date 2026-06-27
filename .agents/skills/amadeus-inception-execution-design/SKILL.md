@@ -13,7 +13,7 @@ description: >-
 
 Inception phase の実施設計だけを進める。
 
-この skill は `amadeus-intent-inception` の内部 skill である。
+この skill は `amadeus-inception` の内部 skill である。
 要求、ユーザーストーリー、ユースケースから Unit と Bolt を切り、Bolt 内設計と Task を作る。
 
 ## 前提
@@ -38,7 +38,7 @@ Inception phase の実施設計だけを進める。
 
 ## テンプレート
 
-新規作成または構造補修では、`amadeus-intent-inception/templates/intents/inception/` のテンプレートを使う。
+新規作成または構造補修では、`amadeus-inception/templates/intents/inception/` のテンプレートを使う。
 
 プロジェクト固有テンプレートが `.amadeus/settings/templates/intents/inception/` にある場合は、そちらを優先する。
 
@@ -77,4 +77,4 @@ Inception phase の実施設計だけを進める。
 ## 次の skill
 
 - 追跡と状態確定へ進む場合: `amadeus-inception-traceability-finalization`
-- Inception 全体を進める場合: `amadeus-intent-inception`
+- Inception 全体を進める場合: `amadeus-inception`

@@ -221,5 +221,5 @@ Ideation 全体で作成または更新できるものは次だけである。
 ## 次の skill
 
 - Intent の入れ物がない場合: `amadeus-intent-init`
-- Inception 成果物へ進む場合: `amadeus-intent-inception`
+- Inception 成果物へ進む場合: `amadeus-inception`
 - 成果物の構造を検証する場合: `amadeus-intent-validator`

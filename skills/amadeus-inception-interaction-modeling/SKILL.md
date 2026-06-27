@@ -12,7 +12,7 @@ description: >-
 
 Inception phase の相互作用整理だけを進める。
 
-この skill は `amadeus-intent-inception` の内部 skill である。
+この skill は `amadeus-inception` の内部 skill である。
 要件定義の成果物から、ユーザーストーリーとユースケースを作る。
 
 ## 前提
@@ -35,7 +35,7 @@ Inception phase の相互作用整理だけを進める。
 
 ## テンプレート
 
-新規作成または構造補修では、`amadeus-intent-inception/templates/intents/inception/` のテンプレートを使う。
+新規作成または構造補修では、`amadeus-inception/templates/intents/inception/` のテンプレートを使う。
 
 プロジェクト固有テンプレートが `.amadeus/settings/templates/intents/inception/` にある場合は、そちらを優先する。
 
@@ -70,4 +70,4 @@ Inception phase の相互作用整理だけを進める。
 ## 次の skill
 
 - 実施設計へ進む場合: `amadeus-inception-execution-design`
-- Inception 全体を進める場合: `amadeus-intent-inception`
+- Inception 全体を進める場合: `amadeus-inception`

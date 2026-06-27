@@ -76,5 +76,5 @@ Ideation が完了している場合は、`state.json.ideation.gate` を `passed
 
 ## 次の skill
 
-- Inception 成果物へ進む場合: `amadeus-intent-inception`
+- Inception 成果物へ進む場合: `amadeus-inception`
 - Ideation 全体を進める場合: `amadeus-ideation`

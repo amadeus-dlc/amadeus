@@ -12,7 +12,7 @@ description: >-
 
 Inception phase の追跡と状態確定だけを進める。
 
-この skill は `amadeus-intent-inception` の内部 skill である。
+この skill は `amadeus-inception` の内部 skill である。
 前段の成果物を追跡表、判断、`state.json` に反映する。
 
 ## 前提
@@ -43,7 +43,7 @@ Inception phase の追跡と状態確定だけを進める。
 
 ## テンプレート
 
-新規作成または構造補修では、`amadeus-intent-inception/templates/intents/inception/` のテンプレートを使う。
+新規作成または構造補修では、`amadeus-inception/templates/intents/inception/` のテンプレートを使う。
 
 プロジェクト固有テンプレートが `.amadeus/settings/templates/intents/inception/` にある場合は、そちらを優先する。
 
@@ -76,5 +76,5 @@ Inception phase の追跡と状態確定だけを進める。
 
 ## 次の skill
 
-- Inception 全体を進める場合: `amadeus-intent-inception`
+- Inception 全体を進める場合: `amadeus-inception`
 - 成果物構造を検証する場合: `amadeus-intent-validator`

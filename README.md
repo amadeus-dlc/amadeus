@@ -9,7 +9,7 @@ Amadeus DLC は、Amadeus の設計、仕様、実装の流れを扱うための
 1. `amadeus-steering`
 2. `amadeus-intent-init`
 3. `amadeus-ideation`
-4. `amadeus-intent-inception`
+4. `amadeus-inception`
 5. `amadeus-grilling`
 6. `amadeus-domain-modeling`
 7. `amadeus-domain-grilling`
@@ -85,9 +85,9 @@ Spec 以降の成果物を作る skill は、まだ確定していません。
 
 ### 4. Intent を Inception へ進める
 
-Ideation を完了した Intent から、要求、ユーザーストーリー、ユースケース、Unit、Bolt、Design、Task へ進める場合は `amadeus-intent-inception` を使います。
+Ideation を完了した Intent から、要求、ユーザーストーリー、ユースケース、Unit、Bolt、Design、Task へ進める場合は `amadeus-inception` を使います。
 
-`amadeus-intent-inception` は、次を作成または更新します。
+`amadeus-inception` は、次を作成または更新します。
 
 - `.amadeus/intents/<intent-id>-<slug>/requirements.md`
 - `.amadeus/intents/<intent-id>-<slug>/requirements/<requirement-id>-<slug>.md`
@@ -179,7 +179,7 @@ repo root の開発用 `scripts/` や `pnpm test` を実行時検証の入口に
 | ライフサイクル進行 | `amadeus-steering` | `.amadeus/` の共有土台を作る | 個別 Intent |
 | ライフサイクル進行 | `amadeus-intent-init` | Intent 登録、`intent.md`、`state.json` を作る | Ideation 以降の成果物 |
 | ライフサイクル進行 | `amadeus-ideation` | `scope.md`、`ideation.md`、判断、追跡、初期モックを作る | 要求、ユースケース、Unit、Bolt、ドメインモデル |
-| ライフサイクル進行 | `amadeus-intent-inception` | 要求、受け入れ状態、ユーザーストーリー、ユースケース、Unit、Bolt、Design、Task、追跡、判断を作る | domain model、Spec、実装 |
+| ライフサイクル進行 | `amadeus-inception` | 要求、受け入れ状態、ユーザーストーリー、ユースケース、Unit、Bolt、Design、Task、追跡、判断を作る | domain model、Spec、実装 |
 | 横断支援 | `amadeus-grilling` | 全フェーズで論点を一問ずつ確認する | 成果物の作成や変更 |
 | 横断支援 | `amadeus-domain-modeling` | 全フェーズで用語、概念、モデル、契約を整理する | `CONTEXT.md`、`docs/adr/**` |
 | 横断支援 | `amadeus-domain-grilling` | 用語、概念、モデル、契約を一問ずつ詰め、回答後に Amadeus 成果物へ記録する | 独自の成果物構造や識別子規則 |
