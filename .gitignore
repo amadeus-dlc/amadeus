@@ -14,3 +14,7 @@ result
 .anthropic_api_key.sh
 .glm_api_key.sh
 
+# LLM eval outputs
+/codex-events.jsonl
+/codex-stderr.log
+/last-message.md
