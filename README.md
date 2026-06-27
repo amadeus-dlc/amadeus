@@ -100,10 +100,10 @@ Ideation を完了した Intent から、要求、ユーザーストーリー、
 - `.amadeus/intents/<intent-id>-<slug>/use-cases/<use-case-id>-<slug>.md`
 - `.amadeus/intents/<intent-id>-<slug>/codebase-analysis.md`
 - `.amadeus/intents/<intent-id>-<slug>/units.md`
-- `.amadeus/intents/<intent-id>-<slug>/units/<unit-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>-<slug>/units/<unit-id>-<slug>/unit.md`
+- `.amadeus/intents/<intent-id>-<slug>/units/<unit-id>-<slug>/design.md`
 - `.amadeus/intents/<intent-id>-<slug>/bolts.md`
 - `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/bolt.md`
-- `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/design.md`
 - `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/tasks.md`
 - `.amadeus/intents/<intent-id>-<slug>/traceability.md`
 - `.amadeus/intents/<intent-id>-<slug>/decisions.md`
@@ -116,7 +116,7 @@ Bolt は Intent 直下に置きます。
 Bolt が複数 Unit をまたぐ場合でも、Intent なしの横断 Bolt にはしません。
 
 Task の依存は、同じ Bolt 内なら `T001`、別 Bolt の Task なら `B001/T002` のように書きます。
-Task は同じ Bolt の `bolt.md` と `design.md` を入力にして作ります。
+Task は同じ Bolt の `bolt.md` と参照先 Unit `design.md` を入力にして作ります。
 依存だけでは作業内容を表せないため、Task には必ず `作業` を書きます。
 
 Intent、Requirement、Story、Use Case、Unit、Bolt、Design、Task が常に 1:1 になる場合は、まず grill 不足を疑います。

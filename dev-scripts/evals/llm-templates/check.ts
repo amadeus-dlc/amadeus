@@ -540,7 +540,7 @@ function applyInceptionExecutionDesignArtifacts(workspace: string): void {
   copyInceptionTemplateEntries(source, target, entries);
 
   const copiedFiles = copiedInceptionTargetFiles(source, target, entries, inceptionPathReplacements());
-  movePath(join(target, "units/U001-unit.md"), join(target, "units/U001-loan-eligibility-check.md"));
+  movePath(join(target, "units/U001-unit"), join(target, "units/U001-loan-eligibility-check"));
   movePath(join(target, "bolts/B001-bolt"), join(target, "bolts/B001-loan-eligibility-flow"));
   replaceInFiles(copiedFiles, inceptionReplacements());
 
@@ -720,7 +720,7 @@ function inceptionPathReplacements(): Record<string, string> {
     "R001-requirement.md": "R001-loan-eligibility-check.md",
     "S001-story.md": "S001-know-loan-eligibility.md",
     "UC001-use-case.md": "UC001-check-loan-eligibility.md",
-    "U001-unit.md": "U001-loan-eligibility-check.md",
+    "U001-unit": "U001-loan-eligibility-check",
     "B001-bolt": "B001-loan-eligibility-flow",
     "D001-inception-boundary.md": "D002-inception-boundary.md",
   };
@@ -733,7 +733,7 @@ function inceptionReplacements(): Record<string, string> {
     "R001-requirement.md": "R001-loan-eligibility-check.md",
     "S001-story.md": "S001-know-loan-eligibility.md",
     "UC001-use-case.md": "UC001-check-loan-eligibility.md",
-    "U001-unit.md": "U001-loan-eligibility-check.md",
+    "U001-unit": "U001-loan-eligibility-check",
     "B001-bolt": "B001-loan-eligibility-flow",
     "D001-inception-boundary.md": "D002-inception-boundary.md",
     "D001": "D002",
@@ -864,7 +864,8 @@ function writeInceptionState(target: string): void {
           "use-cases.md",
           "use-cases/UC001-check-loan-eligibility.md",
           "units.md",
-          "units/U001-loan-eligibility-check.md",
+          "units/U001-loan-eligibility-check/unit.md",
+          "units/U001-loan-eligibility-check/design.md",
           "bolts.md",
           "domain/subdomains.md",
           "domain/bounded-contexts.md",
@@ -875,7 +876,6 @@ function writeInceptionState(target: string): void {
         ],
         requiredBoltArtifacts: [
           "bolts/B001-loan-eligibility-flow/bolt.md",
-          "bolts/B001-loan-eligibility-flow/design.md",
           "bolts/B001-loan-eligibility-flow/tasks.md",
         ],
         gate: "not_ready",
@@ -913,7 +913,8 @@ function writeConstructionState(target: string): void {
           "use-cases.md",
           "use-cases/UC001-check-loan-eligibility.md",
           "units.md",
-          "units/U001-loan-eligibility-check.md",
+          "units/U001-loan-eligibility-check/unit.md",
+          "units/U001-loan-eligibility-check/design.md",
           "bolts.md",
           "domain/subdomains.md",
           "domain/bounded-contexts.md",
@@ -924,7 +925,6 @@ function writeConstructionState(target: string): void {
         ],
         requiredBoltArtifacts: [
           "bolts/B001-loan-eligibility-flow/bolt.md",
-          "bolts/B001-loan-eligibility-flow/design.md",
           "bolts/B001-loan-eligibility-flow/tasks.md",
         ],
         gate: "passed",
@@ -944,7 +944,6 @@ function writeConstructionState(target: string): void {
         ],
         requiredBoltArtifacts: [
           "bolts/B001-loan-eligibility-flow/bolt.md",
-          "bolts/B001-loan-eligibility-flow/design.md",
           "bolts/B001-loan-eligibility-flow/tasks.md",
           "bolts/B001-loan-eligibility-flow/notes.md",
           "bolts/B001-loan-eligibility-flow/test-results.md",
@@ -1125,8 +1124,8 @@ function intentInceptionPrompt(): string {
     "- `acceptance.md`",
     "- `user-stories.md` と `user-stories/S001-know-loan-eligibility.md`",
     "- `use-cases.md` と `use-cases/UC001-check-loan-eligibility.md`",
-    "- `units.md` と `units/U001-loan-eligibility-check.md`",
-    "- `bolts.md` と `bolts/B001-loan-eligibility-flow/bolt.md`、`design.md`、`tasks.md`",
+    "- `units.md` と `units/U001-loan-eligibility-check/unit.md`、`units/U001-loan-eligibility-check/design.md`",
+    "- `bolts.md` と `bolts/B001-loan-eligibility-flow/bolt.md`、`tasks.md`",
     "- `domain/subdomains.md` と `domain/bounded-contexts.md`",
     "- `traceability.md`、`decisions.md`、`decisions/D002-inception-boundary.md`、`state.json`",
     "",
@@ -1171,8 +1170,8 @@ function intentInceptionInternalPrompt(process: InceptionInternalProcess): strin
         "内部skill: amadeus-inception-execution-design。",
         "実施設計だけを進めてください。",
         "作成対象:",
-        "- `units.md` と `units/U001-loan-eligibility-check.md`",
-        "- `bolts.md` と `bolts/B001-loan-eligibility-flow/bolt.md`、`design.md`、`tasks.md`",
+        "- `units.md` と `units/U001-loan-eligibility-check/unit.md`、`units/U001-loan-eligibility-check/design.md`",
+        "- `bolts.md` と `bolts/B001-loan-eligibility-flow/bolt.md`、`tasks.md`",
         "- `domain/subdomains.md` と `domain/bounded-contexts.md`",
       ],
     },
@@ -1444,10 +1443,10 @@ function inceptionIntentArtifacts(intent: string): string[] {
     `.amadeus/intents/${intent}/use-cases.md`,
     `.amadeus/intents/${intent}/use-cases/UC001-check-loan-eligibility.md`,
     `.amadeus/intents/${intent}/units.md`,
-    `.amadeus/intents/${intent}/units/U001-loan-eligibility-check.md`,
+    `.amadeus/intents/${intent}/units/U001-loan-eligibility-check/unit.md`,
+    `.amadeus/intents/${intent}/units/U001-loan-eligibility-check/design.md`,
     `.amadeus/intents/${intent}/bolts.md`,
     `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/bolt.md`,
-    `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/design.md`,
     `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/tasks.md`,
     `.amadeus/intents/${intent}/domain/subdomains.md`,
     `.amadeus/intents/${intent}/domain/bounded-contexts.md`,
@@ -1465,10 +1464,10 @@ function inceptionIntentMarkdownArtifacts(intent: string): string[] {
     `.amadeus/intents/${intent}/use-cases.md`,
     `.amadeus/intents/${intent}/use-cases/UC001-check-loan-eligibility.md`,
     `.amadeus/intents/${intent}/units.md`,
-    `.amadeus/intents/${intent}/units/U001-loan-eligibility-check.md`,
+    `.amadeus/intents/${intent}/units/U001-loan-eligibility-check/unit.md`,
+    `.amadeus/intents/${intent}/units/U001-loan-eligibility-check/design.md`,
     `.amadeus/intents/${intent}/bolts.md`,
     `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/bolt.md`,
-    `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/design.md`,
     `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/tasks.md`,
     `.amadeus/intents/${intent}/domain/subdomains.md`,
     `.amadeus/intents/${intent}/domain/bounded-contexts.md`,
@@ -1516,10 +1515,10 @@ function inceptionExecutionDesignArtifacts(intent: string): string[] {
   return [
     ...inceptionInteractionModelingArtifacts(intent),
     `.amadeus/intents/${intent}/units.md`,
-    `.amadeus/intents/${intent}/units/U001-loan-eligibility-check.md`,
+    `.amadeus/intents/${intent}/units/U001-loan-eligibility-check/unit.md`,
+    `.amadeus/intents/${intent}/units/U001-loan-eligibility-check/design.md`,
     `.amadeus/intents/${intent}/bolts.md`,
     `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/bolt.md`,
-    `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/design.md`,
     `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/tasks.md`,
     `.amadeus/intents/${intent}/domain/subdomains.md`,
     `.amadeus/intents/${intent}/domain/bounded-contexts.md`,
@@ -1529,10 +1528,10 @@ function inceptionExecutionDesignArtifacts(intent: string): string[] {
 function inceptionExecutionDesignMarkdownArtifacts(intent: string): string[] {
   return [
     `.amadeus/intents/${intent}/units.md`,
-    `.amadeus/intents/${intent}/units/U001-loan-eligibility-check.md`,
+    `.amadeus/intents/${intent}/units/U001-loan-eligibility-check/unit.md`,
+    `.amadeus/intents/${intent}/units/U001-loan-eligibility-check/design.md`,
     `.amadeus/intents/${intent}/bolts.md`,
     `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/bolt.md`,
-    `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/design.md`,
     `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/tasks.md`,
     `.amadeus/intents/${intent}/domain/subdomains.md`,
     `.amadeus/intents/${intent}/domain/bounded-contexts.md`,

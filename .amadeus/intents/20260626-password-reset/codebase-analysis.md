@@ -11,9 +11,9 @@
 - `.amadeus/intents/20260626-password-reset/requirements.md`
 - `.amadeus/intents/20260626-password-reset/use-cases.md`
 - `.amadeus/intents/20260626-password-reset/units.md`
+- `.amadeus/intents/20260626-password-reset/units/U001-password-reset-request/design.md`
+- `.amadeus/intents/20260626-password-reset/units/U002-credential-update-with-reset-token/design.md`
 - `.amadeus/intents/20260626-password-reset/bolts.md`
-- `.amadeus/intents/20260626-password-reset/bolts/B001-password-reset-request-flow/design.md`
-- `.amadeus/intents/20260626-password-reset/bolts/B002-credential-update-flow/design.md`
 - `.amadeus/intents/20260626-password-reset/domain/bounded-contexts.md`
 - `.amadeus/intents/20260626-password-reset/domain/bounded-contexts/BC001-authentication-access/models/DM001-account/model.md`
 - `.amadeus/intents/20260626-password-reset/domain/bounded-contexts/BC001-authentication-access/contracts.md`
@@ -38,7 +38,7 @@
 - UC002 は、利用者が再設定トークンを使って認証情報を更新する相互作用を扱う。
 - U001 は、再設定要求受付、再設定トークン発行、再設定手段送信依頼を一つの価値単位として扱う。
 - U002 は、再設定トークン検証、認証情報更新、再設定トークン消費を一つの価値単位として扱う。
-- B001 と B002 の `design.md` は、Task へ渡す責務境界、構成、データと契約、検証方針を定義している。
+- U001 と U002 の `design.md` は、課題解決の設計戦略、責務境界、構成候補、データと契約候補、検証観点、Bolt 分割方針を定義している。
 
 ## 統合点
 
@@ -99,13 +99,13 @@ Bolt への入力:
 - B002 は、R002 と UC002 を満たすため、再設定トークン検証、認証情報更新、消費後の再利用不可を扱う。
 - B002 は B001 の再設定トークン発行に依存する。
 
-`design.md` への入力:
+Unit Design Brief への入力:
 
 - 実装ファイルは未確定のまま、責務境界、入出力、契約、検証方針を先に固定する。
-- 実装先が決まった後、既存認証基盤と永続化方式を再分析して `design.md` を更新する。
+- 実装先が決まった後、既存認証基盤と永続化方式を再分析して Unit `design.md` を更新する。
 
 `tasks.md` への入力:
 
-- Task は要求、ユースケース、Bolt の設計を参照する。
+- Task は要求、ユースケース、Bolt、参照先 Unit Design Brief を参照する。
 - 実装証拠がないため、証拠は未登録のままにする。
 - 既存コードに接続する具体作業は、実装先の既存コード分析が終わるまで追加しない。

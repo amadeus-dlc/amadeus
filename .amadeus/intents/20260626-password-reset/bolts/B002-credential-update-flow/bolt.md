@@ -1,6 +1,6 @@
 # B002：システムが認証情報更新の流れを提供する
 
-## ユニット
+## 対象ユニット
 
 - U002
 
@@ -22,7 +22,7 @@
 
 ## 設計
 
-- [design.md](design.md)
+- [U002 Unit Design](../../units/U002-credential-update-with-reset-token/design.md)
 
 ## 完了条件
 

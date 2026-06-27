@@ -28,8 +28,8 @@ Construction phase の Bolt 実行準備だけを進める。
 - `.amadeus/intents/<intent-id>-<slug>/acceptance.md`
 - `.amadeus/intents/<intent-id>-<slug>/units.md`
 - `.amadeus/intents/<intent-id>-<slug>/bolts.md`
+- `.amadeus/intents/<intent-id>-<slug>/units/<unit-id>-<slug>/design.md`
 - `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/bolt.md`
-- `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/design.md`
 - `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/tasks.md`
 - `.amadeus/intents/<intent-id>-<slug>/traceability.md`
 - 作業ツリーの関連コード、テスト、設定
@@ -55,7 +55,7 @@ Construction phase の Bolt 実行準備だけを進める。
 ## 手順
 
 1. 対象 Bolt の完了条件、対象 Unit、Task、依存を確認する。
-2. `design.md` の責務境界、構成、データと契約、検証方針、Task への入力を確認する。
+2. 対象 Bolt が参照する Unit Design Brief の設計戦略、責務境界、検証観点、Construction への引き継ぎを確認する。
 3. 作業ツリーから実装対象候補、既存テスト、検証コマンドを確認する。
 4. `notes.md` に実行方針、対象 Task、未確認事項を記録する。
 5. 実装やテスト実行は行わない。

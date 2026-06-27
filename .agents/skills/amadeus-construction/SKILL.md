@@ -36,8 +36,8 @@ Spec、`.kiro/specs/**`、`openspec/**`、Operation 成果物は作らない。
 - `.amadeus/intents/<intent-id>-<slug>/acceptance.md`
 - `.amadeus/intents/<intent-id>-<slug>/units.md`
 - `.amadeus/intents/<intent-id>-<slug>/bolts.md`
+- `.amadeus/intents/<intent-id>-<slug>/units/<unit-id>-<slug>/design.md`
 - `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/bolt.md`
-- `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/design.md`
 - `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/tasks.md`
 - `.amadeus/intents/<intent-id>-<slug>/traceability.md`
 - `.amadeus/intents/<intent-id>-<slug>/decisions.md`
@@ -115,7 +115,7 @@ Construction 成果物を新規作成または構造補修する内部 skill は
 - `units.md`
 - `bolts.md`
 - `bolts/*/bolt.md`
-- `bolts/*/design.md`
+- `units/*/design.md`
 - `bolts/*/tasks.md`
 - 既存の `bolts/*/notes.md`
 - 既存の `bolts/*/test-results.md`

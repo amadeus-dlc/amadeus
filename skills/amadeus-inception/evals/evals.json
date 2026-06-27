@@ -16,13 +16,13 @@
     {
       "id": 3,
       "prompt": "Bolt 配下の tasks.md を補修して。タスクの依存が別 Bolt の T002 を参照しているけど、今は `T002` とだけ書かれている。",
-      "expected_output": "repair として扱い、別 Bolt の Task 依存を `B001/T002` 形式に直す方針を示す。Task の作業、要求、ユースケース、証拠欄を保ち、同じ Bolt の design.md を入力として確認する。ドメインモデルや Spec は作らない。",
+      "expected_output": "repair として扱い、別 Bolt の Task 依存を `B001/T002` 形式に直す方針を示す。Task の作業、要求、ユースケース、証拠欄を保ち、同じ Bolt の bolt.md と参照先 Unit design.md を入力として確認する。ドメインモデルや Spec は作らない。",
       "files": []
     },
     {
       "id": 4,
-      "prompt": "B001 の design.md から tasks.md を生成して。足りないものがあれば書く前に止めて。",
-      "expected_output": "tasks.md を書く前に Task 生成 Review Gate を通し、requirements、use-cases、bolt.md、design.md の coverage、依存、観測できる完了状態を確認する。gap があれば tasks.md を書かず、上流成果物の不足として返す。",
+      "prompt": "B001 の参照先 Unit design.md から tasks.md を生成して。足りないものがあれば書く前に止めて。",
+      "expected_output": "tasks.md を書く前に Task 生成 Review Gate を通し、requirements、use-cases、bolt.md、参照先 Unit design.md の coverage、依存、観測できる完了状態を確認する。gap があれば tasks.md を書かず、上流成果物の不足として返す。",
       "files": []
     },
     {
@@ -34,7 +34,7 @@
     {
       "id": 6,
       "prompt": "既存アプリに載せる Intent を Inception に進めたい。Unit と Bolt を切る前に、既存コードとのギャップも見てほしい。",
-      "expected_output": "brownfield Intent として扱い、Unit、Bolt、design.md を作る前に Codebase Analysis Gate を通す。codebase-analysis.md には対象コード、既存能力、統合点、ギャップ、リスク、Inception への入力を分けて記録する。traceability.md には既存コード分析からの追跡を作り、分析がどの要求、ユースケース、Unit、Bolt、設計の入力になったかを残す。実装手順や Spec は先取りせず、既存コード分析で解けない矛盾があれば上流成果物の refine に戻す。",
+      "expected_output": "brownfield Intent として扱い、Unit、Unit design.md、Bolt を作る前に Codebase Analysis Gate を通す。codebase-analysis.md には対象コード、既存能力、統合点、ギャップ、リスク、Inception への入力を分けて記録する。traceability.md には既存コード分析からの追跡を作り、分析がどの要求、ユースケース、Unit、Bolt、設計の入力になったかを残す。実装手順や Spec は先取りせず、既存コード分析で解けない矛盾があれば上流成果物の refine に戻す。",
       "files": []
     },
     {

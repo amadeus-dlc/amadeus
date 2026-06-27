@@ -25,7 +25,6 @@
     ],
     "requiredBoltArtifacts": [
       "bolts/B001-bolt/bolt.md",
-      "bolts/B001-bolt/design.md",
       "bolts/B001-bolt/tasks.md",
       "bolts/B001-bolt/notes.md",
       "bolts/B001-bolt/test-results.md"

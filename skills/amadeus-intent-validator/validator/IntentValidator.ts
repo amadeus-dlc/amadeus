@@ -20,6 +20,16 @@ type Table = {
 const statusValues = new Set(["not_started", "in_progress", "waiting_approval", "needs_changes", "completed", "skipped"]);
 const gateValues = new Set(["not_ready", "waiting_approval", "passed", "failed"]);
 const intentDirectoryPattern = /^\d{8}-[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const unitDesignHeadings = [
+  "概要",
+  "設計戦略",
+  "責務境界",
+  "構成候補",
+  "データと契約候補",
+  "検証観点",
+  "Bolt 分割方針",
+  "Construction への引き継ぎ",
+];
 
 const indexSpecs: Record<string, { headings: string[]; listHeading: string; columns: string[]; idPattern: RegExp; targetColumn: string }> = {
   "user-stories.md": {
@@ -222,6 +232,9 @@ class IntentValidator {
       if (this.isFile(this.absolute(path))) this.checkOptionalIndex(path, spec);
     }
 
+    this.checkUnitDesignArtifacts(base, state);
+    this.checkBoltDesignReferences(base);
+    this.checkNoBoltDesignArtifacts(base, state);
     this.checkTraceability(`${base}/traceability.md`);
   }
 
@@ -271,6 +284,9 @@ class IntentValidator {
       if (this.isFile(this.absolute(path))) this.checkOptionalIndex(path, spec);
     }
 
+    this.checkUnitDesignArtifacts(base, state);
+    this.checkBoltDesignReferences(base);
+    this.checkNoBoltDesignArtifacts(base, state);
     this.checkTraceability(`${base}/traceability.md`);
     this.checkConstructionBoltArtifacts(base, state);
   }
@@ -483,8 +499,128 @@ class IntentValidator {
       "依存関係からの追跡",
     ]);
     this.checkTable(path, "要求からの追跡", ["要求", "アクター", "ストーリー", "ユースケース", "ユニット", "ボルト", "タスク"]);
+    this.checkTable(path, "設計からの追跡", ["設計", "ユニット", "要求", "ユースケース", "ボルト", "タスク"]);
+    this.checkTable(path, "既存コード分析からの追跡", ["分析", "要求", "ユースケース", "ユニット", "ボルト", "設計", "入力"]);
     this.checkTable(path, "依存関係からの追跡", ["種別", "対象", "依存", "理由", "定義元"]);
     this.checkRelativeLinks(path);
+  }
+
+  private checkUnitDesignArtifacts(base: string, state: Record<string, any>): void {
+    const required = new Set((state.inception?.requiredArtifacts ?? []).map((value: unknown) => String(value).trim()));
+    const unitsPath = `${base}/units.md`;
+    const unitIds = this.idsFor(unitsPath);
+    const unitDirectories = this.unitDirectories(base, unitIds);
+
+    for (const [unitId, unitDir] of unitDirectories.entries()) {
+      const unitPath = `${unitDir}/unit.md`;
+      const designPath = `${unitDir}/design.md`;
+      this.checkFile(unitPath, "Unit 詳細が unit.md として存在する");
+      this.checkHeadings(unitPath, ["関連成果物"]);
+      this.checkUnitRelatedDesignLink(unitPath, designPath);
+      this.checkFile(designPath, "Unit Design Brief が存在する");
+      this.checkHeadings(designPath, unitDesignHeadings);
+      this.checkHeadingBodies(designPath, unitDesignHeadings);
+
+      const relativeUnitPath = this.relativeToIntent(base, unitPath);
+      const relativeDesignPath = this.relativeToIntent(base, designPath);
+      if (required.has(relativeUnitPath)) this.pass(`${base}/state.json`, "Inception 必須成果物に Unit 詳細が含まれる", relativeUnitPath);
+      else this.failRow(`${base}/state.json`, "Inception 必須成果物に Unit 詳細が含まれる", relativeUnitPath);
+      if (required.has(relativeDesignPath)) this.pass(`${base}/state.json`, "Inception 必須成果物に Unit Design Brief が含まれる", relativeDesignPath);
+      else this.failRow(`${base}/state.json`, "Inception 必須成果物に Unit Design Brief が含まれる", relativeDesignPath);
+    }
+  }
+
+  private checkUnitRelatedDesignLink(unitPath: string, designPath: string): void {
+    if (!this.isFile(this.absolute(unitPath))) return;
+    const tableOrText = this.sectionBody(unitPath, "関連成果物");
+    if (!tableOrText) {
+      this.failRow(unitPath, "`関連成果物` が design.md へのリンクを持つ", "本文がない");
+      return;
+    }
+    const expected = this.relativeLink(unitPath, designPath);
+    const links = this.markdownLinks(tableOrText);
+    if (links.some((link) => this.cleanLinkTarget(link) === expected)) {
+      this.pass(unitPath, "`関連成果物` が design.md へのリンクを持つ", expected);
+    } else {
+      this.failRow(unitPath, "`関連成果物` が design.md へのリンクを持つ", links.join(", ") || "リンクなし");
+    }
+  }
+
+  private checkBoltDesignReferences(base: string): void {
+    const unitsPath = `${base}/units.md`;
+    const unitIds = this.idsFor(unitsPath);
+    const unitDirectories = this.unitDirectories(base, unitIds);
+    const designByUnit = new Map([...unitDirectories.entries()].map(([unitId, unitDir]) => [unitId, `${unitDir}/design.md`]));
+
+    const boltsPath = `${base}/bolts.md`;
+    const table = this.tableAfterHeading(boltsPath, "一覧");
+    if (!table) return;
+    if (!table.headers.includes("設計")) {
+      this.failRow(boltsPath, "`一覧` の必須表列が揃っている", "不足: 設計");
+      return;
+    }
+
+    for (const row of table.rows) {
+      const boltId = String(row["識別子"] ?? "").trim();
+      const unitValues = this.splitValues(row["ユニット"]);
+      this.checkDesignLinksForUnits(boltsPath, row["設計"], unitValues, designByUnit);
+
+      const detailLinks = this.markdownLinks(String(row["詳細"] ?? ""));
+      for (const target of detailLinks) {
+        const boltPath = this.cleanLinkTarget(target);
+        if (boltPath.endsWith("/bolt.md")) {
+          this.checkBoltDetailDesignReference(join(dirname(boltsPath), boltPath), boltId, unitValues, designByUnit);
+        }
+      }
+    }
+  }
+
+  private checkBoltDetailDesignReference(path: string, boltId: string, unitValues: string[], designByUnit: Map<string, string>): void {
+    this.checkHeadings(path, ["対象ユニット", "設計"]);
+    const targetUnits = this.bulletsAfterHeading(path, "対象ユニット");
+    const designBody = this.sectionBody(path, "設計") ?? "";
+    const units = targetUnits.length > 0 ? targetUnits.map((item) => item.split(/[：:]/, 1)[0].trim()) : unitValues;
+    for (const unitId of unitValues) {
+      if (units.includes(unitId)) this.pass(path, "`対象ユニット` が bolts.md のユニットを含む", `${boltId}: ${unitId}`);
+      else this.failRow(path, "`対象ユニット` が bolts.md のユニットを含む", `${boltId}: ${unitId}`);
+    }
+    this.checkDesignLinksForUnits(path, designBody, unitValues, designByUnit);
+  }
+
+  private checkDesignLinksForUnits(path: string, value: unknown, unitValues: string[], designByUnit: Map<string, string>): void {
+    const links = this.markdownLinks(String(value ?? ""));
+    for (const unitId of unitValues) {
+      const designPath = designByUnit.get(unitId);
+      if (!designPath) {
+        this.failRow(path, "`設計` が対象 Unit の Unit Design Brief を指す", `${unitId}: Unit 詳細ディレクトリがない`);
+        continue;
+      }
+      const expected = this.relativeLink(path, designPath);
+      if (links.some((link) => this.cleanLinkTarget(link) === expected)) {
+        this.pass(path, "`設計` が対象 Unit の Unit Design Brief を指す", `${unitId}: ${expected}`);
+      } else {
+        this.failRow(path, "`設計` が対象 Unit の Unit Design Brief を指す", `${unitId}: ${links.join(", ") || "リンクなし"}`);
+      }
+    }
+  }
+
+  private checkNoBoltDesignArtifacts(base: string, state: Record<string, any>): void {
+    const boltArtifacts = [
+      ...(state.inception?.requiredBoltArtifacts ?? []),
+      ...(state.construction?.requiredBoltArtifacts ?? []),
+    ].map((value: unknown) => String(value).trim());
+    for (const artifact of boltArtifacts) {
+      if (artifact.match(/^bolts\/[^/]+\/design\.md$/)) {
+        this.failRow(`${base}/state.json`, "Bolt 配下の design.md を必須成果物にしない", artifact);
+      }
+    }
+
+    const boltsRoot = this.absolute(`${base}/bolts`);
+    if (!this.isDirectory(boltsRoot)) return;
+    const glob = new Bun.Glob("*/design.md");
+    for (const design of glob.scanSync({ cwd: boltsRoot })) {
+      this.failRow(`${base}/bolts/${design}`, "Bolt 配下に design.md が存在しない", "廃止済み成果物");
+    }
   }
 
   private checkOptionalIndex(path: string, spec: typeof indexSpecs[string]): void {
@@ -564,6 +700,15 @@ class IntentValidator {
       } else {
         this.failRow(path, `\`${heading}\` 見出しがある`, "見出しがない");
       }
+    }
+  }
+
+  private checkHeadingBodies(path: string, headings: string[]): void {
+    if (!this.isFile(this.absolute(path))) return;
+    for (const heading of headings) {
+      const body = this.sectionBody(path, heading);
+      if (body && body.trim().length > 0) this.pass(path, `\`${heading}\` 見出しに本文がある`, "本文を確認");
+      else this.failRow(path, `\`${heading}\` 見出しに本文がある`, "本文がない");
     }
   }
 
@@ -738,6 +883,27 @@ class IntentValidator {
     return text.split(",").map((item) => item.trim()).filter(Boolean);
   }
 
+  private bulletsAfterHeading(path: string, heading: string): string[] {
+    const body = this.sectionBody(path, heading);
+    if (!body) return [];
+    return body.split(/\r?\n/)
+      .map((line) => line.match(/^\s*-\s+(.+?)\s*$/)?.[1]?.trim())
+      .filter((value): value is string => Boolean(value));
+  }
+
+  private sectionBody(path: string, heading: string): string | undefined {
+    if (!this.isFile(this.absolute(path))) return undefined;
+    const lines = this.read(path).split(/\r?\n/);
+    const headingIndex = lines.findIndex((line) => new RegExp(`^##\\s+${this.escapeRegExp(heading)}\\s*$`).test(line));
+    if (headingIndex < 0) return undefined;
+    const bodyLines: string[] = [];
+    for (let index = headingIndex + 1; index < lines.length; index += 1) {
+      if (/^##\s+/.test(lines[index])) break;
+      bodyLines.push(lines[index]);
+    }
+    return bodyLines.join("\n");
+  }
+
   private markdownLinks(text: string): string[] {
     return [...text.matchAll(/(?<!!)\[[^\]]+\]\(([^)]+)\)/g)].map((match) => match[1]);
   }
@@ -778,6 +944,30 @@ class IntentValidator {
 
   private cleanLinkTarget(target: string): string {
     return target.split("#", 2)[0].split(/\s+/, 2)[0] ?? "";
+  }
+
+  private relativeLink(fromPath: string, toPath: string): string {
+    return relative(dirname(fromPath), toPath).replaceAll("\\", "/");
+  }
+
+  private relativeToIntent(base: string, path: string): string {
+    return relative(base, path).replaceAll("\\", "/");
+  }
+
+  private unitDirectories(base: string, unitIds: Set<string>): Map<string, string> {
+    const results = new Map<string, string>();
+    const unitsRoot = this.absolute(`${base}/units`);
+    if (!this.isDirectory(unitsRoot)) return results;
+    const glob = new Bun.Glob("*/unit.md");
+    for (const unit of glob.scanSync({ cwd: unitsRoot })) {
+      const directory = unit.split("/", 1)[0];
+      const unitId = directory.split("-", 1)[0];
+      if (unitIds.has(unitId)) results.set(unitId, `${base}/units/${directory}`);
+    }
+    for (const unitId of unitIds) {
+      if (!results.has(unitId)) this.failRow(`${base}/units.md`, "`詳細` が units/<unit-id>-<slug>/unit.md を指す", unitId);
+    }
+    return results;
   }
 
   private isFile(path: string): boolean {
