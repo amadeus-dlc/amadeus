@@ -569,6 +569,9 @@ function applyInceptionTraceabilityFinalizationArtifacts(workspace: string): voi
 
 function prepareConstructionIntentFixture(workspace: string): void {
   prepareInceptionIntentFixture(workspace);
+  markInceptionReadyForConstruction(workspace);
+  writeConstructionReadyTasks(workspace);
+  ensureConstructionReadyFixture(workspace);
 }
 
 function prepareConstructionImplementationExecutionFixture(workspace: string): void {
@@ -591,6 +594,60 @@ function applyConstructionIntentArtifacts(workspace: string): void {
   applyConstructionImplementationExecutionArtifacts(workspace);
   applyConstructionVerificationHardeningArtifacts(workspace);
   applyConstructionTraceabilityFinalizationArtifacts(workspace);
+}
+
+function markInceptionReadyForConstruction(workspace: string): void {
+  const statePath = join(constructionTarget(workspace), "state.json");
+  const state = JSON.parse(readFileSync(statePath, "utf8"));
+  state.status = "completed";
+  state.inception.status = "completed";
+  state.inception.gate = "passed";
+  writeFileSync(statePath, JSON.stringify(state, null, 2));
+}
+
+function writeConstructionReadyTasks(workspace: string): void {
+  writeFileSync(
+    join(constructionBoltTarget(workspace), "tasks.md"),
+    [
+      "# タスク",
+      "",
+      "- [ ] T001: 貸出可否確認の入力を受け取る",
+      "  - 作業:",
+      "    - 図書情報と利用者状態を受け取る。",
+      "  - 要求: R001",
+      "  - ユースケース: UC001",
+      "  - 依存: なし",
+      "  - 証拠: 未登録",
+      "- [ ] T002: 貸出可否と返却期限を判定する",
+      "  - 作業:",
+      "    - 入力された状態から貸出可否と返却期限を決める。",
+      "  - 要求: R001",
+      "  - ユースケース: UC001",
+      "  - 依存: T001",
+      "  - 証拠: 未登録",
+      "- [ ] T003: 判定結果を利用者に返す",
+      "  - 作業:",
+      "    - 貸出可否と返却期限を利用者向けの結果として返す。",
+      "  - 要求: R001",
+      "  - ユースケース: UC001",
+      "  - 依存: T002",
+      "  - 証拠: 未登録",
+      "",
+    ].join("\n"),
+  );
+}
+
+function ensureConstructionReadyFixture(workspace: string): void {
+  const statePath = join(constructionTarget(workspace), "state.json");
+  const state = JSON.parse(readFileSync(statePath, "utf8"));
+  if (state.phase !== "inception" || state.inception?.gate !== "passed") {
+    fail("construction fixture must start from an Inception gate passed Intent");
+  }
+
+  const tasks = readFileSync(join(constructionBoltTarget(workspace), "tasks.md"), "utf8");
+  for (const taskId of ["T001", "T002", "T003"]) {
+    if (!tasks.includes(`${taskId}:`)) fail(`construction fixture is missing ${taskId}`);
+  }
 }
 
 function applyConstructionBoltPreparationArtifacts(workspace: string): void {
@@ -617,7 +674,7 @@ function applyConstructionVerificationHardeningArtifacts(workspace: string): voi
 
 function applyConstructionTraceabilityFinalizationArtifacts(workspace: string): void {
   const target = constructionTarget(workspace);
-  copyConstructionTemplateEntries(workspace, ["decisions/D001-construction-boundary.md", "state.json"]);
+  copyConstructionTemplateEntries(workspace, ["decisions/D003-construction-boundary.md", "state.json"]);
   writeConstructionState(target);
 
   const tasksPath = join(constructionBoltTarget(workspace), "tasks.md");
@@ -653,12 +710,12 @@ function applyConstructionTraceabilityFinalizationArtifacts(workspace: string): 
 
   const decisionsPath = join(target, "decisions.md");
   const decisions = readFileSync(decisionsPath, "utf8");
-  if (!decisions.includes("D001-construction-boundary.md")) {
+  if (!decisions.includes("D003-construction-boundary.md")) {
     writeFileSync(
       decisionsPath,
       decisions
-        .replace("| D002 | Inception の境界を固定する | 未採用 | なし | [D002-inception-boundary.md](decisions/D002-inception-boundary.md) |", "| D002 | Inception の境界を固定する | 未採用 | なし | [D002-inception-boundary.md](decisions/D002-inception-boundary.md) |\n| D001 | Construction の境界を固定する | 採用 | D002 | [D001-construction-boundary.md](decisions/D001-construction-boundary.md) |")
-        .replace("| D002 | なし | Inception 成果物の境界判断であり、未確認事項が残る間は採用しない。 |", "| D002 | なし | Inception 成果物の境界判断であり、未確認事項が残る間は採用しない。 |\n| D001 | D002 | Construction の実行境界を Inception 成果物に接続する。 |"),
+        .replace("| D002 | Inception の境界を固定する | 未採用 | なし | [D002-inception-boundary.md](decisions/D002-inception-boundary.md) |", "| D002 | Inception の境界を固定する | 未採用 | なし | [D002-inception-boundary.md](decisions/D002-inception-boundary.md) |\n| D003 | Construction の境界を固定する | 採用 | D002 | [D003-construction-boundary.md](decisions/D003-construction-boundary.md) |")
+        .replace("| D002 | なし | Inception 成果物の境界判断であり、未確認事項が残る間は採用しない。 |", "| D002 | なし | Inception 成果物の境界判断であり、未確認事項が残る間は採用しない。 |\n| D003 | D002 | Construction の実行境界を Inception 成果物に接続する。 |"),
     );
   }
 }
@@ -939,7 +996,7 @@ function writeConstructionState(target: string): void {
           "bolts.md",
           "traceability.md",
           "decisions.md",
-          "decisions/D001-construction-boundary.md",
+          "decisions/D003-construction-boundary.md",
           "state.json",
         ],
         requiredBoltArtifacts: [
@@ -1276,7 +1333,7 @@ function intentConstructionInternalPrompt(process: ConstructionInternalProcess):
         "- `tasks.md`",
         "- `acceptance.md`",
         "- `traceability.md`",
-        "- `decisions.md` と `decisions/D001-construction-boundary.md`",
+        "- `decisions.md` と `decisions/D003-construction-boundary.md`",
         "- `state.json`",
       ],
     },
@@ -1556,7 +1613,7 @@ function constructionIntentArtifacts(intent: string): string[] {
     ...inceptionIntentArtifacts(intent),
     `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/notes.md`,
     `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/test-results.md`,
-    `.amadeus/intents/${intent}/decisions/D001-construction-boundary.md`,
+    `.amadeus/intents/${intent}/decisions/D003-construction-boundary.md`,
   ];
 }
 
@@ -1564,7 +1621,7 @@ function constructionIntentMarkdownArtifacts(intent: string): string[] {
   return [
     `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/notes.md`,
     `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/test-results.md`,
-    `.amadeus/intents/${intent}/decisions/D001-construction-boundary.md`,
+    `.amadeus/intents/${intent}/decisions/D003-construction-boundary.md`,
   ];
 }
 
@@ -1607,13 +1664,13 @@ function constructionVerificationHardeningMarkdownArtifacts(intent: string): str
 function constructionTraceabilityFinalizationArtifacts(intent: string): string[] {
   return [
     ...constructionVerificationHardeningArtifacts(intent),
-    `.amadeus/intents/${intent}/decisions/D001-construction-boundary.md`,
+    `.amadeus/intents/${intent}/decisions/D003-construction-boundary.md`,
   ];
 }
 
 function constructionTraceabilityFinalizationMarkdownArtifacts(intent: string): string[] {
   return [
-    `.amadeus/intents/${intent}/decisions/D001-construction-boundary.md`,
+    `.amadeus/intents/${intent}/decisions/D003-construction-boundary.md`,
   ];
 }
 
