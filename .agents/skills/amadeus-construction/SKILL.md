@@ -42,8 +42,9 @@ Spec、`.kiro/specs/**`、`openspec/**`、Operation 成果物は作らない。
 - `.amadeus/intents/<intent-id>-<slug>/traceability.md`
 - `.amadeus/intents/<intent-id>-<slug>/decisions.md`
 
-`state.json.phase` が `inception` でない場合は、現在の phase と不足成果物を確認してから止める。
-`state.json.inception.gate` が `passed` でない場合は、Construction へ進めず `amadeus-inception` の `refine` を案内する。
+`state.json.phase` が `inception` または `construction` でない場合は、現在の phase と不足成果物を確認してから止める。
+`state.json.phase` が `inception` で、かつ `state.json.inception.gate` が `passed` でない場合は、Construction へ進めず `amadeus-inception` の `refine` を案内する。
+`state.json.phase` が `construction` の場合は、既存の Construction 成果物を読み、`auto`、`refine`、`repair` のいずれで続けるかを判定する。
 
 ## 入力
 

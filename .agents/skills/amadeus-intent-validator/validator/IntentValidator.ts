@@ -56,7 +56,7 @@ const indexSpecs: Record<string, { headings: string[]; listHeading: string; colu
   "bolts.md": {
     headings: ["一覧", "依存関係"],
     listHeading: "一覧",
-    columns: ["識別子", "概要", "ユニット", "依存", "詳細"],
+    columns: ["識別子", "概要", "ユニット", "設計", "依存", "詳細"],
     idPattern: /^B\d{3}$/,
     targetColumn: "ボルト",
   },
