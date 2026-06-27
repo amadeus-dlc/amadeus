@@ -20,6 +20,16 @@ type Table = {
 const statusValues = new Set(["not_started", "in_progress", "waiting_approval", "needs_changes", "completed", "skipped"]);
 const gateValues = new Set(["not_ready", "waiting_approval", "passed", "failed"]);
 const intentDirectoryPattern = /^\d{8}-[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const unitDesignHeadings = [
+  "概要",
+  "設計戦略",
+  "責務境界",
+  "構成候補",
+  "データと契約候補",
+  "検証観点",
+  "Bolt 分割方針",
+  "Construction への引き継ぎ",
+];
 
 const indexSpecs: Record<string, { headings: string[]; listHeading: string; columns: string[]; idPattern: RegExp; targetColumn: string }> = {
   "user-stories.md": {
@@ -46,7 +56,7 @@ const indexSpecs: Record<string, { headings: string[]; listHeading: string; colu
   "bolts.md": {
     headings: ["一覧", "依存関係"],
     listHeading: "一覧",
-    columns: ["識別子", "概要", "ユニット", "依存", "詳細"],
+    columns: ["識別子", "概要", "ユニット", "設計", "依存", "詳細"],
     idPattern: /^B\d{3}$/,
     targetColumn: "ボルト",
   },
@@ -129,6 +139,11 @@ class IntentValidator {
 
     if (state.phase === "inception") {
       this.checkInceptionIntent(base, state);
+      return;
+    }
+
+    if (state.phase === "construction") {
+      this.checkConstructionIntent(base, state);
       return;
     }
 
@@ -217,6 +232,10 @@ class IntentValidator {
       if (this.isFile(this.absolute(path))) this.checkOptionalIndex(path, spec);
     }
 
+    this.checkUnitDesignArtifacts(base, state);
+    this.checkBoltDesignReferences(base);
+    this.checkNoBoltDesignArtifacts(base, state);
+    this.checkInceptionBoltArtifacts(base, state);
     this.checkTraceability(`${base}/traceability.md`);
   }
 
@@ -248,6 +267,228 @@ class IntentValidator {
     if (String(state.status ?? "").trim() === "completed") {
       this.checkJsonValue(path, "inception.status", inception.status, "completed");
       this.checkJsonValue(path, "inception.gate", inception.gate, "passed");
+    }
+  }
+
+  private checkConstructionIntent(base: string, state: Record<string, any>): void {
+    const statePath = `${base}/state.json`;
+    this.checkConstructionStateJson(statePath, state);
+
+    this.checkRequirements(`${base}/requirements.md`);
+    this.checkAcceptance(`${base}/acceptance.md`, `${base}/requirements.md`);
+    this.checkCodebaseAnalysis(base, state);
+    this.checkSubdomains(`${base}/domain/subdomains.md`, `${base}/domain/bounded-contexts.md`);
+    this.checkBoundedContexts(`${base}/domain/bounded-contexts.md`, false);
+
+    for (const [filename, spec] of Object.entries(indexSpecs)) {
+      const path = `${base}/${filename}`;
+      if (this.isFile(this.absolute(path))) this.checkOptionalIndex(path, spec);
+    }
+
+    this.checkUnitDesignArtifacts(base, state);
+    this.checkBoltDesignReferences(base);
+    this.checkNoBoltDesignArtifacts(base, state);
+    this.checkTraceability(`${base}/traceability.md`);
+    this.checkConstructionTraceability(`${base}/traceability.md`, state);
+    this.checkConstructionBoltArtifacts(base, state);
+  }
+
+  private checkConstructionStateJson(path: string, state: Record<string, any>): void {
+    this.checkJsonValue(path, "intent", state.intent, this.intentId ?? "");
+    this.checkJsonValue(path, "phase", state.phase, "construction");
+    this.checkAllowed(path, "status", state.status, statusValues);
+
+    const ideation = state.ideation;
+    if (!this.isObject(ideation)) {
+      this.failRow(path, "`ideation` がオブジェクトである", this.typeName(ideation));
+      return;
+    }
+    this.pass(path, "`ideation` がオブジェクトである", "オブジェクトを確認");
+    this.checkJsonValue(path, "ideation.status", ideation.status, "completed");
+    this.checkJsonValue(path, "ideation.gate", ideation.gate, "passed");
+
+    const inception = state.inception;
+    if (!this.isObject(inception)) {
+      this.failRow(path, "`inception` がオブジェクトである", this.typeName(inception));
+      return;
+    }
+    this.pass(path, "`inception` がオブジェクトである", "オブジェクトを確認");
+    this.checkJsonValue(path, "inception.status", inception.status, "completed");
+    this.checkJsonValue(path, "inception.gate", inception.gate, "passed");
+
+    const construction = state.construction;
+    if (!this.isObject(construction)) {
+      this.failRow(path, "`construction` がオブジェクトである", this.typeName(construction));
+      return;
+    }
+    this.pass(path, "`construction` がオブジェクトである", "オブジェクトを確認");
+    this.checkAllowed(path, "construction.status", construction.status, statusValues);
+    this.checkAllowed(path, "construction.gate", construction.gate, gateValues);
+    this.checkStatePaths(path, construction, "requiredArtifacts", "Construction 必須成果物が存在する", false, "construction");
+    this.checkStatePaths(path, construction, "requiredBoltArtifacts", "Construction 必須 Bolt 成果物が存在する", false, "construction");
+    this.checkTargetBolts(path, construction);
+    this.checkTargetBoltRequiredArtifacts(path, construction);
+
+    if (String(state.status ?? "").trim() === "completed") {
+      this.checkJsonValue(path, "construction.status", construction.status, "completed");
+      this.checkJsonValue(path, "construction.gate", construction.gate, "passed");
+    }
+  }
+
+  private checkTargetBolts(path: string, construction: Record<string, any>): void {
+    const values = construction.targetBolts;
+    if (!Array.isArray(values)) {
+      this.failRow(path, "`construction.targetBolts` が配列である", this.typeName(values));
+      return;
+    }
+
+    this.pass(path, "`construction.targetBolts` が配列である", `${values.length}件`);
+    const base = dirname(path);
+    const boltIds = this.idsFor(`${base}/bolts.md`);
+    for (const value of values) {
+      const boltId = String(value ?? "").trim();
+      if (boltIds.has(boltId)) this.pass(path, "`construction.targetBolts` が既存 Bolt を参照する", boltId);
+      else this.failRow(path, "`construction.targetBolts` が既存 Bolt を参照する", boltId);
+    }
+  }
+
+  private checkTargetBoltRequiredArtifacts(path: string, construction: Record<string, any>): void {
+    const targetBolts = construction.targetBolts;
+    const requiredBoltArtifacts = construction.requiredBoltArtifacts;
+    if (!Array.isArray(targetBolts) || !Array.isArray(requiredBoltArtifacts)) return;
+
+    const base = dirname(path);
+    const required = new Set(requiredBoltArtifacts.map((value: unknown) => String(value ?? "").trim()));
+    const boltDirectories = this.boltDirectories(base);
+    for (const value of targetBolts) {
+      const boltId = String(value ?? "").trim();
+      const boltDir = boltDirectories.get(boltId);
+      if (!boltDir) continue;
+      for (const artifactPath of [`${boltDir}/bolt.md`, `${boltDir}/tasks.md`, `${boltDir}/notes.md`, `${boltDir}/test-results.md`]) {
+        const relativePath = this.relativeToIntent(base, artifactPath);
+        if (required.has(relativePath)) this.pass(path, "Construction 必須 Bolt 成果物が targetBolt の証拠成果物を含む", `${boltId}: ${relativePath}`);
+        else this.failRow(path, "Construction 必須 Bolt 成果物が targetBolt の証拠成果物を含む", `${boltId}: ${relativePath}`);
+      }
+    }
+  }
+
+  private checkInceptionBoltArtifacts(base: string, state: Record<string, any>): void {
+    const values = state.inception?.requiredBoltArtifacts;
+    if (!Array.isArray(values)) return;
+
+    for (const value of values) {
+      const relativePath = String(value ?? "").trim();
+      if (relativePath.endsWith("/tasks.md")) this.checkTasks(`${base}/${relativePath}`);
+    }
+  }
+
+  private checkConstructionBoltArtifacts(base: string, state: Record<string, any>): void {
+    const values = state.construction?.requiredBoltArtifacts;
+    const requiredBoltArtifacts = Array.isArray(values) ? values : [];
+    const checkedPrPaths = new Set<string>();
+
+    for (const value of requiredBoltArtifacts) {
+      const relativePath = String(value ?? "").trim();
+      const path = `${base}/${relativePath}`;
+      if (relativePath.endsWith("/notes.md")) {
+        this.checkFile(path, "Construction ノートが存在する");
+        this.checkHeadings(path, ["実行方針", "対象タスク", "未確認事項"]);
+      } else if (relativePath.endsWith("/test-results.md")) {
+        this.checkFile(path, "Construction テスト結果が存在する");
+        this.checkHeadings(path, ["検証結果", "安全性確認", "CI確認", "受け入れ証拠"]);
+        this.checkTable(path, "受け入れ証拠", ["要求", "タスク", "証拠", "要約"]);
+      } else if (relativePath.endsWith("/tasks.md")) {
+        this.checkTasks(path);
+      } else if (relativePath.endsWith("/pr.md")) {
+        this.checkPrRecord(path);
+        checkedPrPaths.add(path);
+      }
+    }
+
+    this.checkExistingPrRecords(base, checkedPrPaths);
+  }
+
+  private checkPrRecord(path: string): void {
+    this.checkFile(path, "PR 記録が存在する");
+    this.checkHeadings(path, ["Pull Request", "対象", "確認状況"]);
+    this.checkPrUrl(path);
+  }
+
+  private checkExistingPrRecords(base: string, checkedPrPaths: Set<string>): void {
+    const boltsRoot = this.absolute(`${base}/bolts`);
+    if (!this.isDirectory(boltsRoot)) return;
+    const glob = new Bun.Glob("*/pr.md");
+    for (const pr of glob.scanSync({ cwd: boltsRoot })) {
+      const path = `${base}/bolts/${pr}`;
+      if (checkedPrPaths.has(path)) continue;
+      this.checkPrRecord(path);
+    }
+  }
+
+  private checkPrUrl(path: string): void {
+    if (!this.isFile(this.absolute(path))) return;
+    const body = this.sectionBody(path, "Pull Request") ?? "";
+    const match = body.match(/https?:\/\/\S+/);
+    if (match) this.pass(path, "PR 記録が URL を持つ", match[0]);
+    else this.failRow(path, "PR 記録が URL を持つ", "URL なし");
+  }
+
+  private checkTasks(path: string): void {
+    this.checkFile(path, "Task 一覧が存在する");
+    if (!this.isFile(this.absolute(path))) return;
+    const text = this.read(path);
+    const taskMatches = [...text.matchAll(/^- \[[ xX]\] (T\d{3}):[\s\S]*?(?=^- \[[ xX]\] T\d{3}:|(?![\s\S]))/gm)];
+    if (taskMatches.length === 0) {
+      this.failRow(path, "Task が識別子付きチェックリストである", "Task がない");
+      return;
+    }
+    const base = dirname(dirname(dirname(path)));
+    const taskIds = new Set(taskMatches.map((match) => match[1]));
+    for (const match of taskMatches) {
+      const taskId = match[1];
+      const block = match[0];
+      this.pass(path, "Task が識別子付きチェックリストである", taskId);
+      for (const label of ["作業", "要求", "ユースケース", "依存", "証拠"]) {
+        if (new RegExp(`^\\s+- ${label}:`, "m").test(block)) this.pass(path, `Task が \`${label}\` を持つ`, taskId);
+        else this.failRow(path, `Task が \`${label}\` を持つ`, taskId);
+      }
+      this.checkTaskLabelReferences(path, block, taskId, "要求", this.idsFor(`${base}/requirements.md`), false);
+      this.checkTaskLabelReferences(path, block, taskId, "ユースケース", this.idsFor(`${base}/use-cases.md`), false);
+      this.checkTaskDependencies(path, block, taskId, taskIds, this.idsFor(`${base}/bolts.md`), this.boltDirectories(base));
+    }
+  }
+
+  private checkTaskLabelReferences(path: string, block: string, taskId: string, label: string, ids: Set<string>, allowNone: boolean): void {
+    for (const value of this.taskLabelValues(block, label)) {
+      if (allowNone && value === "なし") {
+        this.pass(path, `Task の \`${label}\` が既存 ID またはなしである`, `${taskId}: ${value}`);
+      } else if (ids.has(value)) {
+        this.pass(path, `Task の \`${label}\` が既存 ID またはなしである`, `${taskId}: ${value}`);
+      } else {
+        this.failRow(path, `Task の \`${label}\` が既存 ID またはなしである`, `${taskId}: ${value}`);
+      }
+    }
+  }
+
+  private checkTaskDependencies(path: string, block: string, taskId: string, taskIds: Set<string>, boltIds: Set<string>, boltDirectories: Map<string, string>): void {
+    const condition = "Task の `依存` が既存 ID またはなしである";
+    for (const value of this.taskLabelValues(block, "依存")) {
+      if (value === "なし" || taskIds.has(value)) {
+        this.pass(path, condition, `${taskId}: ${value}`);
+        continue;
+      }
+      const match = value.match(/^(B\d{3})\/(T\d{3})$/);
+      if (!match) {
+        this.failRow(path, condition, `${taskId}: ${value}`);
+        continue;
+      }
+      const [, boltId, dependencyTaskId] = match;
+      const boltDir = boltDirectories.get(boltId);
+      if (boltIds.has(boltId) && boltDir && this.taskIdsFor(`${boltDir}/tasks.md`).has(dependencyTaskId)) {
+        this.pass(path, condition, `${taskId}: ${value}`);
+      } else {
+        this.failRow(path, condition, `${taskId}: ${value}`);
+      }
     }
   }
 
@@ -358,8 +599,225 @@ class IntentValidator {
       "依存関係からの追跡",
     ]);
     this.checkTable(path, "要求からの追跡", ["要求", "アクター", "ストーリー", "ユースケース", "ユニット", "ボルト", "タスク"]);
+    const designTraceTable = this.checkTable(path, "設計からの追跡", ["設計", "ユニット", "要求", "ユースケース", "ボルト", "タスク"]);
+    if (designTraceTable) this.checkDesignTraceability(path, designTraceTable);
+    const codebaseTraceTable = this.checkTable(path, "既存コード分析からの追跡", ["分析", "要求", "ユースケース", "ユニット", "ボルト", "設計", "入力"]);
+    if (codebaseTraceTable) this.checkCodebaseAnalysisTraceability(path, codebaseTraceTable);
     this.checkTable(path, "依存関係からの追跡", ["種別", "対象", "依存", "理由", "定義元"]);
     this.checkRelativeLinks(path);
+  }
+
+  private checkDesignTraceability(path: string, table: Table): void {
+    const base = dirname(path);
+    this.checkTableTargets(path, table, "要求", this.idsFor(`${base}/requirements.md`), false);
+    this.checkTableTargets(path, table, "ユースケース", this.idsFor(`${base}/use-cases.md`), false);
+    const unitIds = this.idsFor(`${base}/units.md`);
+    this.checkTableTargets(path, table, "ユニット", unitIds, false);
+    const boltIds = this.idsFor(`${base}/bolts.md`);
+    this.checkTableTargets(path, table, "ボルト", boltIds, false);
+    const boltDirectories = this.boltDirectories(base);
+    this.checkTaskReferences(path, table, "タスク", boltIds, boltDirectories, "設計追跡");
+
+    const unitDirectories = this.unitDirectories(base, unitIds);
+    const designByUnit = new Map([...unitDirectories.entries()].map(([unitId, unitDir]) => [unitId, `${unitDir}/design.md`]));
+    for (const row of table.rows) {
+      this.checkDesignLinksForUnits(path, row["設計"], this.splitValues(row["ユニット"]), designByUnit);
+    }
+  }
+
+  private checkCodebaseAnalysisTraceability(path: string, table: Table): void {
+    const base = dirname(path);
+    this.checkTableTargets(path, table, "要求", this.idsFor(`${base}/requirements.md`), false);
+    this.checkTableTargets(path, table, "ユースケース", this.idsFor(`${base}/use-cases.md`), false);
+    const unitIds = this.idsFor(`${base}/units.md`);
+    this.checkTableTargets(path, table, "ユニット", unitIds, false);
+    this.checkTableTargets(path, table, "ボルト", this.idsFor(`${base}/bolts.md`), false);
+
+    const unitDirectories = this.unitDirectories(base, unitIds);
+    const designByUnit = new Map([...unitDirectories.entries()].map(([unitId, unitDir]) => [unitId, `${unitDir}/design.md`]));
+    for (const row of table.rows) {
+      this.checkCodebaseAnalysisLink(path, row["分析"]);
+      this.checkDesignLinksForUnits(path, row["設計"], this.splitValues(row["ユニット"]), designByUnit);
+    }
+  }
+
+  private checkCodebaseAnalysisLink(path: string, value: unknown): void {
+    const expected = "codebase-analysis.md";
+    const links = this.markdownLinks(String(value ?? ""));
+    if (links.some((link) => this.cleanLinkTarget(link) === expected)) {
+      this.pass(path, "`分析` が対象 Intent の codebase-analysis.md を指す", expected);
+    } else {
+      this.failRow(path, "`分析` が対象 Intent の codebase-analysis.md を指す", links.join(", ") || "リンクなし");
+    }
+  }
+
+  private checkConstructionTraceability(path: string, state: Record<string, any>): void {
+    const construction = state.construction;
+    const status = String(construction?.status ?? "").trim();
+    const gate = String(construction?.gate ?? "").trim();
+    if (status !== "completed" && gate !== "passed") return;
+
+    const table = this.checkTable(path, "Construction からの追跡", ["ボルト", "タスク", "証拠", "状態"]);
+    if (!table) return;
+    const base = dirname(path);
+    const boltIds = this.idsFor(`${base}/bolts.md`);
+    this.checkTableTargets(path, table, "ボルト", boltIds, false);
+    this.checkTaskReferences(path, table, "タスク", boltIds, this.boltDirectories(base), "Construction 追跡");
+    this.checkNotBlank(path, table, "状態");
+    this.checkDetailLinks(path, table, "証拠");
+  }
+
+  private checkTaskReferences(path: string, table: Table, column: string, boltIds: Set<string>, boltDirectories: Map<string, string>, context: string): void {
+    if (!table.headers.includes(column)) return;
+    for (const row of table.rows) {
+      for (const reference of this.splitValues(row[column])) {
+        const match = reference.match(/^(B\d{3})\/(T\d{3})$/);
+        if (!match) {
+          this.failRow(path, `${context}の \`${column}\` が Bolt/Task 参照である`, reference);
+          continue;
+        }
+        const [, boltId, taskId] = match;
+        if (boltIds.has(boltId)) this.pass(path, `${context}の \`${column}\` が既存 Bolt を指す`, reference);
+        else this.failRow(path, `${context}の \`${column}\` が既存 Bolt を指す`, reference);
+
+        const boltDir = boltDirectories.get(boltId);
+        if (!boltDir) {
+          this.failRow(path, `${context}の \`${column}\` が既存 Task を指す`, reference);
+          continue;
+        }
+        const taskIds = this.taskIdsFor(`${boltDir}/tasks.md`);
+        if (taskIds.has(taskId)) this.pass(path, `${context}の \`${column}\` が既存 Task を指す`, reference);
+        else this.failRow(path, `${context}の \`${column}\` が既存 Task を指す`, reference);
+      }
+    }
+  }
+
+  private checkUnitDesignArtifacts(base: string, state: Record<string, any>): void {
+    const checkInceptionRequiredArtifacts = String(state.phase ?? "").trim() === "inception";
+    const required = new Set((state.inception?.requiredArtifacts ?? []).map((value: unknown) => String(value).trim()));
+    const unitsPath = `${base}/units.md`;
+    const unitIds = this.idsFor(unitsPath);
+    const unitDirectories = this.unitDirectories(base, unitIds);
+
+    for (const [unitId, unitDir] of unitDirectories.entries()) {
+      const unitPath = `${unitDir}/unit.md`;
+      const designPath = `${unitDir}/design.md`;
+      this.checkFile(unitPath, "Unit 詳細が unit.md として存在する");
+      this.checkHeadings(unitPath, ["関連成果物"]);
+      this.checkUnitRelatedDesignLink(unitPath, designPath);
+      this.checkFile(designPath, "Unit Design Brief が存在する");
+      this.checkHeadings(designPath, unitDesignHeadings);
+      this.checkHeadingBodies(designPath, unitDesignHeadings);
+
+      if (checkInceptionRequiredArtifacts) {
+        const relativeUnitPath = this.relativeToIntent(base, unitPath);
+        const relativeDesignPath = this.relativeToIntent(base, designPath);
+        if (required.has(relativeUnitPath)) this.pass(`${base}/state.json`, "Inception 必須成果物に Unit 詳細が含まれる", relativeUnitPath);
+        else this.failRow(`${base}/state.json`, "Inception 必須成果物に Unit 詳細が含まれる", relativeUnitPath);
+        if (required.has(relativeDesignPath)) this.pass(`${base}/state.json`, "Inception 必須成果物に Unit Design Brief が含まれる", relativeDesignPath);
+        else this.failRow(`${base}/state.json`, "Inception 必須成果物に Unit Design Brief が含まれる", relativeDesignPath);
+      }
+    }
+  }
+
+  private checkUnitRelatedDesignLink(unitPath: string, designPath: string): void {
+    if (!this.isFile(this.absolute(unitPath))) return;
+    const tableOrText = this.sectionBody(unitPath, "関連成果物");
+    if (!tableOrText) {
+      this.failRow(unitPath, "`関連成果物` が design.md へのリンクを持つ", "本文がない");
+      return;
+    }
+    const expected = this.relativeLink(unitPath, designPath);
+    const links = this.markdownLinks(tableOrText);
+    if (links.some((link) => this.cleanLinkTarget(link) === expected)) {
+      this.pass(unitPath, "`関連成果物` が design.md へのリンクを持つ", expected);
+    } else {
+      this.failRow(unitPath, "`関連成果物` が design.md へのリンクを持つ", links.join(", ") || "リンクなし");
+    }
+  }
+
+  private checkBoltDesignReferences(base: string): void {
+    const unitsPath = `${base}/units.md`;
+    const unitIds = this.idsFor(unitsPath);
+    const unitDirectories = this.unitDirectories(base, unitIds);
+    const designByUnit = new Map([...unitDirectories.entries()].map(([unitId, unitDir]) => [unitId, `${unitDir}/design.md`]));
+
+    const boltsPath = `${base}/bolts.md`;
+    if (!this.isFile(this.absolute(boltsPath))) {
+      this.failRow(boltsPath, "bolts.md が存在する", "存在しない");
+      return;
+    }
+    const table = this.tableAfterHeading(boltsPath, "一覧");
+    if (!table) return;
+    if (!table.headers.includes("設計")) {
+      this.failRow(boltsPath, "`一覧` の必須表列が揃っている", "不足: 設計");
+      return;
+    }
+
+    for (const row of table.rows) {
+      const boltId = String(row["識別子"] ?? "").trim();
+      const unitValues = this.splitValues(row["ユニット"]);
+      this.checkDesignLinksForUnits(boltsPath, row["設計"], unitValues, designByUnit);
+
+      const detailLinks = this.markdownLinks(String(row["詳細"] ?? ""));
+      for (const target of detailLinks) {
+        const boltPath = this.cleanLinkTarget(target);
+        if (boltPath.endsWith("/bolt.md")) {
+          this.checkBoltDetailDesignReference(join(dirname(boltsPath), boltPath), boltId, unitValues, designByUnit);
+        }
+      }
+    }
+  }
+
+  private checkBoltDetailDesignReference(path: string, boltId: string, unitValues: string[], designByUnit: Map<string, string>): void {
+    this.checkHeadings(path, ["対象ユニット", "設計"]);
+    const targetUnits = this.bulletsAfterHeading(path, "対象ユニット");
+    const designBody = this.sectionBody(path, "設計") ?? "";
+    if (targetUnits.length === 0) {
+      this.failRow(path, "`対象ユニット` が空でない", `${boltId}: 箇条書きなし`);
+    }
+    const units = targetUnits.map((item) => item.split(/[：:]/, 1)[0].trim());
+    for (const unitId of unitValues) {
+      if (units.includes(unitId)) this.pass(path, "`対象ユニット` が bolts.md のユニットを含む", `${boltId}: ${unitId}`);
+      else this.failRow(path, "`対象ユニット` が bolts.md のユニットを含む", `${boltId}: ${unitId}`);
+    }
+    this.checkDesignLinksForUnits(path, designBody, unitValues, designByUnit);
+  }
+
+  private checkDesignLinksForUnits(path: string, value: unknown, unitValues: string[], designByUnit: Map<string, string>): void {
+    const links = this.markdownLinks(String(value ?? ""));
+    for (const unitId of unitValues) {
+      const designPath = designByUnit.get(unitId);
+      if (!designPath) {
+        this.failRow(path, "`設計` が対象 Unit の Unit Design Brief を指す", `${unitId}: Unit 詳細ディレクトリがない`);
+        continue;
+      }
+      const expected = this.relativeLink(path, designPath);
+      if (links.some((link) => this.cleanLinkTarget(link) === expected)) {
+        this.pass(path, "`設計` が対象 Unit の Unit Design Brief を指す", `${unitId}: ${expected}`);
+      } else {
+        this.failRow(path, "`設計` が対象 Unit の Unit Design Brief を指す", `${unitId}: ${links.join(", ") || "リンクなし"}`);
+      }
+    }
+  }
+
+  private checkNoBoltDesignArtifacts(base: string, state: Record<string, any>): void {
+    const boltArtifacts = [
+      ...(state.inception?.requiredBoltArtifacts ?? []),
+      ...(state.construction?.requiredBoltArtifacts ?? []),
+    ].map((value: unknown) => String(value).trim());
+    for (const artifact of boltArtifacts) {
+      if (artifact.match(/^bolts\/[^/]+\/design\.md$/)) {
+        this.failRow(`${base}/state.json`, "Bolt 配下の design.md を必須成果物にしない", artifact);
+      }
+    }
+
+    const boltsRoot = this.absolute(`${base}/bolts`);
+    if (!this.isDirectory(boltsRoot)) return;
+    const glob = new Bun.Glob("*/design.md");
+    for (const design of glob.scanSync({ cwd: boltsRoot })) {
+      this.failRow(`${base}/bolts/${design}`, "Bolt 配下に design.md が存在しない", "廃止済み成果物");
+    }
   }
 
   private checkOptionalIndex(path: string, spec: typeof indexSpecs[string]): void {
@@ -439,6 +897,15 @@ class IntentValidator {
       } else {
         this.failRow(path, `\`${heading}\` 見出しがある`, "見出しがない");
       }
+    }
+  }
+
+  private checkHeadingBodies(path: string, headings: string[]): void {
+    if (!this.isFile(this.absolute(path))) return;
+    for (const heading of headings) {
+      const body = this.sectionBody(path, heading);
+      if (body && body.trim().length > 0) this.pass(path, `\`${heading}\` 見出しに本文がある`, "本文を確認");
+      else this.failRow(path, `\`${heading}\` 見出しに本文がある`, "本文がない");
     }
   }
 
@@ -613,6 +1080,39 @@ class IntentValidator {
     return text.split(",").map((item) => item.trim()).filter(Boolean);
   }
 
+  private taskIdsFor(path: string): Set<string> {
+    if (!this.isFile(this.absolute(path))) return new Set();
+    const text = this.read(path);
+    return new Set([...text.matchAll(/^- \[[ xX]\] (T\d{3}):/gm)].map((match) => match[1]));
+  }
+
+  private taskLabelValues(block: string, label: string): string[] {
+    const match = block.match(new RegExp(`^\\s+- ${this.escapeRegExp(label)}:\\s*(.*?)\\s*$`, "m"));
+    if (!match) return [];
+    return this.splitValues(match[1]);
+  }
+
+  private bulletsAfterHeading(path: string, heading: string): string[] {
+    const body = this.sectionBody(path, heading);
+    if (!body) return [];
+    return body.split(/\r?\n/)
+      .map((line) => line.match(/^\s*-\s+(.+?)\s*$/)?.[1]?.trim())
+      .filter((value): value is string => Boolean(value));
+  }
+
+  private sectionBody(path: string, heading: string): string | undefined {
+    if (!this.isFile(this.absolute(path))) return undefined;
+    const lines = this.read(path).split(/\r?\n/);
+    const headingIndex = lines.findIndex((line) => new RegExp(`^##\\s+${this.escapeRegExp(heading)}\\s*$`).test(line));
+    if (headingIndex < 0) return undefined;
+    const bodyLines: string[] = [];
+    for (let index = headingIndex + 1; index < lines.length; index += 1) {
+      if (/^##\s+/.test(lines[index])) break;
+      bodyLines.push(lines[index]);
+    }
+    return bodyLines.join("\n");
+  }
+
   private markdownLinks(text: string): string[] {
     return [...text.matchAll(/(?<!!)\[[^\]]+\]\(([^)]+)\)/g)].map((match) => match[1]);
   }
@@ -653,6 +1153,63 @@ class IntentValidator {
 
   private cleanLinkTarget(target: string): string {
     return target.split("#", 2)[0].split(/\s+/, 2)[0] ?? "";
+  }
+
+  private relativeLink(fromPath: string, toPath: string): string {
+    return relative(dirname(fromPath), toPath).replaceAll("\\", "/");
+  }
+
+  private relativeToIntent(base: string, path: string): string {
+    return relative(base, path).replaceAll("\\", "/");
+  }
+
+  private unitDirectories(base: string, unitIds: Set<string>): Map<string, string> {
+    const results = new Map<string, string>();
+    const unitsPath = `${base}/units.md`;
+    if (!this.isFile(this.absolute(unitsPath))) return results;
+    const table = this.tableAfterHeading(unitsPath, "一覧");
+    if (!table) return results;
+    if (!table.headers.includes("詳細")) return results;
+
+    for (const row of table.rows) {
+      const unitId = String(row["識別子"] ?? "").trim();
+      if (!unitIds.has(unitId)) continue;
+      const links = this.markdownLinks(String(row["詳細"] ?? "")).map((link) => this.cleanLinkTarget(link));
+      const unitLink = links.find((link) => link.endsWith("/unit.md"));
+      const match = unitLink?.match(/^units\/([^/]+)\/unit\.md$/);
+      if (match && match[1].startsWith(`${unitId}-`)) {
+        this.pass(unitsPath, "`詳細` が units/<unit-id>-<slug>/unit.md を指す", `${unitId}: ${unitLink}`);
+        results.set(unitId, `${base}/units/${match[1]}`);
+      } else {
+        this.failRow(unitsPath, "`詳細` が units/<unit-id>-<slug>/unit.md を指す", `${unitId}: ${links.join(", ") || "リンクなし"}`);
+      }
+    }
+    for (const unitId of unitIds) {
+      if (!results.has(unitId)) this.failRow(`${base}/units.md`, "`詳細` が units/<unit-id>-<slug>/unit.md を指す", unitId);
+    }
+    return results;
+  }
+
+  private boltDirectories(base: string): Map<string, string> {
+    const results = new Map<string, string>();
+    const boltsPath = `${base}/bolts.md`;
+    if (!this.isFile(this.absolute(boltsPath))) return results;
+    const table = this.tableAfterHeading(boltsPath, "一覧");
+    if (!table || !table.headers.includes("詳細")) return results;
+
+    for (const row of table.rows) {
+      const boltId = String(row["識別子"] ?? "").trim();
+      const links = this.markdownLinks(String(row["詳細"] ?? "")).map((link) => this.cleanLinkTarget(link));
+      const boltLink = links.find((link) => link.endsWith("/bolt.md"));
+      const match = boltLink?.match(/^bolts\/([^/]+)\/bolt\.md$/);
+      if (match && match[1].startsWith(`${boltId}-`)) {
+        this.pass(boltsPath, "`詳細` が bolts/<bolt-id>-<slug>/bolt.md を指す", `${boltId}: ${boltLink}`);
+        results.set(boltId, `${base}/bolts/${match[1]}`);
+      } else {
+        this.failRow(boltsPath, "`詳細` が bolts/<bolt-id>-<slug>/bolt.md を指す", `${boltId}: ${links.join(", ") || "リンクなし"}`);
+      }
+    }
+    return results;
   }
 
   private isFile(path: string): boolean {

@@ -31,9 +31,10 @@ Inception phase の追跡と状態確定だけを進める。
 - `.amadeus/intents/<intent-id>-<slug>/user-stories.md`
 - `.amadeus/intents/<intent-id>-<slug>/use-cases.md`
 - `.amadeus/intents/<intent-id>-<slug>/units.md`
+- `.amadeus/intents/<intent-id>-<slug>/units/*/unit.md`
+- `.amadeus/intents/<intent-id>-<slug>/units/*/design.md`
 - `.amadeus/intents/<intent-id>-<slug>/bolts.md`
 - `.amadeus/intents/<intent-id>-<slug>/bolts/*/bolt.md`
-- `.amadeus/intents/<intent-id>-<slug>/bolts/*/design.md`
 - `.amadeus/intents/<intent-id>-<slug>/bolts/*/tasks.md`
 - `.amadeus/intents/<intent-id>-<slug>/domain/**`
 - `.amadeus/intents/<intent-id>-<slug>/traceability.md`

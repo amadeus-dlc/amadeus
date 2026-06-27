@@ -21,8 +21,8 @@
     },
     {
       "id": 4,
-      "prompt": "Inception 済み Intent の Bolt 配下に tasks.md はあるが design.md がない状態を検出して。",
-      "expected_output": "Bolt 配下の tasks.md を検査する前提として、同じ Bolt 配下の design.md が存在し、概要、責務境界、構成、データと契約、検証方針、Task への入力を持つことを確認する。",
+      "prompt": "Inception 済み Intent の Unit 配下に unit.md と design.md があるか確認して。",
+      "expected_output": "Unit 配下の unit.md と design.md が存在し、design.md が概要、設計戦略、責務境界、構成候補、データと契約候補、検証観点、Bolt 分割方針、Construction への引き継ぎを持ち、各見出しに本文があることを確認する。",
       "files": []
     },
     {
@@ -46,7 +46,7 @@
     {
       "id": 8,
       "prompt": "Inception 済み Intent の traceability.md で `既存コード分析からの追跡` の分析リンクと設計リンクが正しい成果物を指すか確認して。",
-      "expected_output": "`分析` が対象 Intent 直下の codebase-analysis.md を指し、`設計` が同じ行の Bolt に対応する bolts/<bolt-id>-<slug>/design.md を指すことを確認する。入力の内容妥当性や対応の完全性までは Intent Validator では扱わない。",
+      "expected_output": "`分析` が対象 Intent 直下の codebase-analysis.md を指し、`設計` が同じ行の Unit に対応する units/<unit-id>-<slug>/design.md を指すことを確認する。入力の内容妥当性や対応の完全性までは Intent Validator では扱わない。",
       "files": []
     },
     {

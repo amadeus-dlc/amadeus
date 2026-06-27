@@ -1,6 +1,6 @@
 # B001：システムがパスワード再設定要求の流れを提供する
 
-## ユニット
+## 対象ユニット
 
 - U001
 
@@ -22,7 +22,7 @@
 
 ## 設計
 
-- [design.md](design.md)
+- [U001 Unit Design](../../units/U001-password-reset-request/design.md)
 
 ## 完了条件
 
