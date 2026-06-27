@@ -699,8 +699,17 @@ function intentIdeationPrompt(): string {
     "- 初期モック: 貸出開始確認カード",
     "- Inception への引き継ぎ: 貸出可否、返却期限、通知要否を要求候補にする",
     "",
+    "作成対象:",
+    "- `scope.md`",
+    "- `ideation.md`",
+    "- `traceability.md`",
+    "- `decisions.md` と `decisions/D001-complete-ideation.md`",
+    "- `mocks/initial-confirmation.puml`",
+    "- `state.json`",
+    "",
     "制約:",
     "- 質問せずに続行してください。",
+    "- 同梱テンプレートのファイル名を維持し、初期モックは必ず `mocks/initial-confirmation.puml` として作成してください。",
     "- 対象 Intent 配下の Ideation 成果物だけを作成または更新してください。",
     "- requirements、use-cases、units、bolts、domain 成果物は作らないでください。",
     "- git commit はしないでください。",
@@ -1041,6 +1050,16 @@ function expectedMarkdownChanges(created: string[], updated: string[], mayUpdate
   };
 }
 
+function assertPromptContracts(): void {
+  const prompt = intentIdeationPrompt();
+  if (!prompt.includes("`mocks/initial-confirmation.puml`")) {
+    fail("intent ideation prompt must pin mocks/initial-confirmation.puml");
+  }
+  if (!prompt.includes("同梱テンプレートのファイル名を維持")) {
+    fail("intent ideation prompt must preserve template filenames");
+  }
+}
+
 function e2eCase(mode: E2eMode): E2eCase {
   const baseCases: Record<InitialE2eMode, E2eCase> = {
     steering: {
@@ -1298,6 +1317,8 @@ async function runE2e(provider: LlmProvider, workspace: string, testCase: E2eCas
 }
 
 async function main(): Promise<void> {
+  assertPromptContracts();
+
   const options = parseArgs(Bun.argv.slice(2));
   const runner = resolveRunner(options.runner);
   if (options.provider === "real") ensureFile(runner);
