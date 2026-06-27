@@ -510,11 +510,24 @@ class IntentValidator {
       "依存関係からの追跡",
     ]);
     this.checkTable(path, "要求からの追跡", ["要求", "アクター", "ストーリー", "ユースケース", "ユニット", "ボルト", "タスク"]);
-    this.checkTable(path, "設計からの追跡", ["設計", "ユニット", "要求", "ユースケース", "ボルト", "タスク"]);
+    const designTraceTable = this.checkTable(path, "設計からの追跡", ["設計", "ユニット", "要求", "ユースケース", "ボルト", "タスク"]);
+    if (designTraceTable) this.checkDesignTraceability(path, designTraceTable);
     const codebaseTraceTable = this.checkTable(path, "既存コード分析からの追跡", ["分析", "要求", "ユースケース", "ユニット", "ボルト", "設計", "入力"]);
     if (codebaseTraceTable) this.checkCodebaseAnalysisTraceability(path, codebaseTraceTable);
     this.checkTable(path, "依存関係からの追跡", ["種別", "対象", "依存", "理由", "定義元"]);
     this.checkRelativeLinks(path);
+  }
+
+  private checkDesignTraceability(path: string, table: Table): void {
+    const base = dirname(path);
+    const unitIds = this.idsFor(`${base}/units.md`);
+    this.checkTableTargets(path, table, "ユニット", unitIds, false);
+
+    const unitDirectories = this.unitDirectories(base, unitIds);
+    const designByUnit = new Map([...unitDirectories.entries()].map(([unitId, unitDir]) => [unitId, `${unitDir}/design.md`]));
+    for (const row of table.rows) {
+      this.checkDesignLinksForUnits(path, row["設計"], this.splitValues(row["ユニット"]), designByUnit);
+    }
   }
 
   private checkCodebaseAnalysisTraceability(path: string, table: Table): void {

@@ -18,6 +18,7 @@
 - `codebase-analysis.md` が存在する場合、または `state.json.inception.requiredArtifacts` に含まれる場合、必須見出しを検証する。
 - `codebase-analysis.md` が存在せず、`state.json.inception.requiredArtifacts` にも含まれない場合は不足にしない。
 - `traceability.md` の `既存コード分析からの追跡` が、`分析`、`要求`、`ユースケース`、`ユニット`、`ボルト`、`設計`、`入力` の列を持つことを検証する。
+- `traceability.md` の `設計からの追跡` にある `設計` が同じ行の Unit 配下 `design.md` を指すことを検証する。
 - `traceability.md` の `既存コード分析からの追跡` にある `要求`、`ユースケース`、`ユニット`、`ボルト` が対応する index に存在することを検証する。
 - `traceability.md` の `既存コード分析からの追跡` にある `分析` が `codebase-analysis.md`、`設計` が同じ行の Unit 配下 `design.md` を指すことを検証する。
 - Bolt 配下の `tasks.md` では、各 Task が `作業`、`要求`、`ユースケース`、`依存`、`証拠` を持つことを検証する。
@@ -38,6 +39,7 @@
 | `bolt-design-forbidden` | 完了 | Bolt 配下に `design.md` を置かない。 | 一時コピーで `bolts/B001-password-reset-request-flow/design.md` を作ると `fail`。 |
 | `codebase-analysis-headings` | 完了 | `codebase-analysis.md` が条件付き成果物として必須見出しを持つ。 | 通常検証が `pass`。一時コピーで `## 対象コード` を変更すると `fail`。 |
 | `codebase-analysis-traceability-columns` | 完了 | `既存コード分析からの追跡` が必須列を持つ。 | 一時コピーで `分析` 列名を変更すると `fail`。 |
+| `design-traceability-links` | 完了 | `設計からの追跡` の `設計` が同じ行の Unit Design Brief を指す。 | 一時コピーで `設計` を別 Unit の `design.md` に変更すると `fail`。 |
 | `codebase-analysis-traceability-ids` | 完了 | `既存コード分析からの追跡` の ID が対応する index に存在する。 | 一時コピーで `要求` を `R999` に変更すると `fail`。 |
 | `codebase-analysis-traceability-links` | 完了 | `既存コード分析からの追跡` のリンクが所定の成果物を指す。 | 一時コピーで `分析` を `wrong.md`、または `設計` を別 Unit の `design.md` に変更すると `fail`。 |
 | `task-contract-validation` | 完了 | Bolt 配下 `tasks.md` の Task が必須項目を持つ。 | 一時コピーで `T001` の `作業` を削除すると `fail`。 |

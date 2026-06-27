@@ -58,12 +58,28 @@ function replaceTraceabilityDesignLink(workspace: string): void {
   writeFileSync(path, text.replace(from, to));
 }
 
+function replaceDesignTraceDesignLink(workspace: string): void {
+  const path = join(workspace, ".amadeus/intents", intent, "traceability.md");
+  const text = readFileSync(path, "utf8");
+  const from = "| [design.md](units/U001-password-reset-request/design.md) | U001 | R001 | UC001 | B001 | B001/T001, B001/T002, B001/T003 |";
+  const to = "| [design.md](units/U002-credential-update-with-reset-token/design.md) | U001 | R001 | UC001 | B001 | B001/T001, B001/T002, B001/T003 |";
+  if (!text.includes(from)) fail("traceability fixture does not contain expected design trace row");
+  writeFileSync(path, text.replace(from, to));
+}
+
 run(["bun", "run", validator, ".", intent]);
 
 const wrongDesignWorkspace = workspaceCopy();
 replaceTraceabilityDesignLink(wrongDesignWorkspace);
 runExpectFailure(
   ["bun", "run", validator, wrongDesignWorkspace, intent],
+  "`設計` が対象 Unit の Unit Design Brief を指す",
+);
+
+const wrongDesignTraceWorkspace = workspaceCopy();
+replaceDesignTraceDesignLink(wrongDesignTraceWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, wrongDesignTraceWorkspace, intent],
   "`設計` が対象 Unit の Unit Design Brief を指す",
 );
 
