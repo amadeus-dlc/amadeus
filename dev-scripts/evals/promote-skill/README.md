@@ -9,7 +9,7 @@
 - `--dry-run` では既存の昇格先があってもコピー対象と skipped を確認できる。
 - 通常の Amadeus skill は `SKILL.md` を昇格し、同梱 `templates/` がある場合は `templates/` も昇格する。
 - `evals/` は skipped にする。
-- `amadeus-intent-validator` は `SKILL.md`、`references/`、`validator/` を昇格し、`evals/` を skipped にする。
+- `amadeus-validator` は `SKILL.md`、`references/`、`validator/` を昇格し、`evals/` を skipped にする。
 - 全 Amadeus skill を一時ディレクトリへ昇格できる。
 - 一時昇格結果に `evals/`、`tests/`、`.venv/`、`scripts/ci/`、`justfile` などの開発用ファイルが混ざらない。
 - 一時昇格結果と現行 `.agents/skills/amadeus-*` に差分がない。
@@ -25,7 +25,7 @@
 | `bun-runtime` | 完了 | スクリプトが Bun で実行できる。 | `bun run dev-scripts/promote-skill.ts amadeus-grilling --dry-run` が `dry-run: ok`。 |
 | `dry-run-existing-promoted-skill` | 完了 | 既存昇格先がある `amadeus-grilling` でも `--dry-run` は成功し、`evals` を skipped にする。 | `bun run dev-scripts/promote-skill.ts amadeus-grilling --dry-run` が `dry-run: ok`。 |
 | `template-runtime-files` | 完了 | テンプレートを持つ skill は `SKILL.md` と `templates/` をコピー対象にする。 | `bun run dev-scripts/promote-skill.ts amadeus-steering --dry-run` が `entries: SKILL.md, templates`。 |
-| `validator-runtime-files` | 完了 | `amadeus-intent-validator` は `SKILL.md`、`references/`、`validator/` をコピー対象にする。 | `bun run dev-scripts/promote-skill.ts amadeus-intent-validator --dry-run` が `entries: SKILL.md, references, validator`。 |
+| `validator-runtime-files` | 完了 | `amadeus-validator` は `SKILL.md`、`references/`、`validator/` をコピー対象にする。 | `bun run dev-scripts/promote-skill.ts amadeus-validator --dry-run` が `entries: SKILL.md, references, validator`。 |
 | `existing-destination-requires-replace` | 完了 | 既存昇格先がある実コピーは `--replace` なしで失敗する。 | `bun run dev-scripts/promote-skill.ts amadeus-grilling` が `promoted skill already exists` で失敗。 |
 | `all-amadeus-temp-promotion` | 完了 | 全 Amadeus skill を一時ディレクトリへ昇格し、開発用ファイル混入と現行 `.agents` 差分がない。 | 一時ディレクトリ昇格検証が `all amadeus promotion: ok`。 |
 | `disallowed-file-detection` | 完了 | 昇格先に `evals/` が残っている場合は失敗する。 | 一時昇格先に `evals/` を置いた `--dry-run` が `disallowed promoted files remain` で失敗。 |
@@ -41,7 +41,7 @@ npm run test:it:promote-skill
 ```sh
 bun run dev-scripts/promote-skill.ts amadeus-grilling --dry-run
 bun run dev-scripts/promote-skill.ts amadeus-steering --dry-run
-bun run dev-scripts/promote-skill.ts amadeus-intent-validator --dry-run
+bun run dev-scripts/promote-skill.ts amadeus-validator --dry-run
 
 bun run dev-scripts/promote-skill.ts amadeus-grilling >/tmp/promote-existing.out 2>/tmp/promote-existing.err
 test "$?" -ne 0

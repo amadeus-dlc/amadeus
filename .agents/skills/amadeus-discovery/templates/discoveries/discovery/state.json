@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "phase": "discovery",
+  "status": "in_progress",
+  "decision": "undecided",
+  "gate": "not_ready"
+}

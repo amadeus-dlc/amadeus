@@ -78,4 +78,4 @@ PR を言及する場合は、必ず URL を記録する。
 ## 次の skill
 
 - Construction 全体を進める場合: `amadeus-construction`
-- 成果物構造を検証する場合: `amadeus-intent-validator`
+- 成果物構造を検証する場合: `amadeus-validator`

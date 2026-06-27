@@ -78,4 +78,4 @@ Inception phase の追跡と状態確定だけを進める。
 ## 次の skill
 
 - Inception 全体を進める場合: `amadeus-inception`
-- 成果物構造を検証する場合: `amadeus-intent-validator`
+- 成果物構造を検証する場合: `amadeus-validator`

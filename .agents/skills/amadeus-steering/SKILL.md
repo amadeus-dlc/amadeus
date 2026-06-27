@@ -2,7 +2,7 @@
 name: amadeus-steering
 description: >-
   Amadeus workspace の steering layer を greenfield または brownfield で初期化、点検、補修する。`.amadeus/` がない新規プロジェクト、
-  既存プロジェクトに Amadeus を載せる場面、Intent 作成前に objective、actors、glossary、domain、policies、knowledge、intents.md
+  既存プロジェクトに Amadeus を載せる場面、Intent 作成前に objective、actors、glossary、domain、policies、knowledge、discoveries.md、intents.md
   の土台を揃えたい場面では必ず使う。個別 Intent の ideation、requirements、use-cases、units、bolts を作るための skill ではない。
 ---
 
@@ -12,7 +12,7 @@ description: >-
 
 Amadeus DLC の steering layer を作る。
 
-Steering layer は、複数 Intent で共有する目的、方針、知識、用語、アクター、外部システム、ドメイン境界、Intent 一覧を扱う。
+Steering layer は、複数 Intent で共有する目的、方針、知識、用語、アクター、外部システム、ドメイン境界、Discovery 一覧、Intent 一覧を扱う。
 個別 Intent の要求、ユースケース、ユニット、ボルト、タスクは扱わない。
 
 この skill は開発中スキルとして扱う。
@@ -132,6 +132,7 @@ greenfield では、少なくとも次を作る。
 - `.amadeus/glossary.md`
 - `.amadeus/domain/subdomains.md`
 - `.amadeus/domain/bounded-contexts.md`
+- `.amadeus/discoveries.md`
 - `.amadeus/intents.md`
 
 brownfield では、既存成果物を読み、欠けている成果物だけを追加する。
@@ -149,7 +150,7 @@ brownfield では、既存成果物を読み、欠けている成果物だけを
 7. steering layer の必須成果物を作る。
 8. 未確認の情報は `未確認` と書き、空欄にしない。
 9. Intent は作らない。個別 Intent が必要になったら `amadeus-intent-init` へ渡す。
-10. 昇格済みの `amadeus-intent-validator` が使える場合は、全体成果物だけを検証する。
+10. 昇格済みの `amadeus-validator` が使える場合は、全体成果物だけを検証する。
 
 ## ファイル別の最低構造
 
@@ -270,6 +271,21 @@ brownfield では、既存成果物を読み、欠けている成果物だけを
 
 `パターン分類` には、組織パターン4種類と統合パターン5種類を列挙する。
 
+### `discoveries.md`
+
+- `一覧`
+
+`一覧` の表の列:
+
+- `識別子`
+- `テーマ`
+- `状態`
+- `判定`
+- `推奨次アクション`
+- `詳細`
+
+Discovery がまだない場合は、表に行を作らない。
+
 ### `intents.md`
 
 - `一覧`
@@ -304,4 +320,4 @@ Intent がまだない場合は、表に行を作らない。
 
 - 新しい Intent の入れ物だけを作る場合: `amadeus-intent-init`
 - 既存 Intent の Ideation 成果物を作る場合: `amadeus-ideation`
-- 成果物の構造を検証する場合: `amadeus-intent-validator`
+- 成果物の構造を検証する場合: `amadeus-validator`

@@ -204,7 +204,7 @@ Ideation 全体で作成または更新できるものは次だけである。
 1. `state.json` が JSON として解釈できる。
 2. `state.json.ideation.requiredArtifacts` の相対パスが存在する。
 3. `state.json.ideation.requiredMocks` の相対パスが存在する `.puml` ファイルである。
-4. 昇格済みの `amadeus-intent-validator` が使える場合は、対象 Intent ディレクトリ名を指定して検証する。
+4. 昇格済みの `amadeus-validator` が使える場合は、対象 Intent ディレクトリ名を指定して検証する。
 
 ## 禁止事項
 
@@ -222,4 +222,4 @@ Ideation 全体で作成または更新できるものは次だけである。
 
 - Intent の入れ物がない場合: `amadeus-intent-init`
 - Inception 成果物へ進む場合: `amadeus-inception`
-- 成果物の構造を検証する場合: `amadeus-intent-validator`
+- 成果物の構造を検証する場合: `amadeus-validator`

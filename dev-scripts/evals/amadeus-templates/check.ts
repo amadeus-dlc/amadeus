@@ -25,7 +25,25 @@ const targetSkills: Record<string, Contract> = {
       "templates/steering/glossary.md": ["用語", "避ける語", "禁止ワード"],
       "templates/steering/domain/subdomains.md": ["一覧"],
       "templates/steering/domain/bounded-contexts.md": ["一覧", "外部境界", "コンテキスト間の依存", "パターン分類"],
+      "templates/steering/discoveries.md": ["一覧"],
       "templates/steering/intents.md": ["一覧", "依存関係"],
+    },
+  },
+  "amadeus-discovery": {
+    skillText: [".amadeus/settings/templates", "templates/discoveries/discovery"],
+    files: {
+      "templates/discoveries/discovery/brief.md": [
+        "入力テーマ",
+        "確認した前提",
+        "判定",
+        "判定理由",
+        "Intent Draft",
+        "Intent 候補",
+        "候補判断",
+        "既存 Intent との関係",
+        "推奨次アクション",
+      ],
+      "templates/discoveries/discovery/state.json": [],
     },
   },
   "amadeus-intent-init": {
@@ -165,11 +183,11 @@ for (const skill of Object.keys(targetSkills)) {
   run(["diff", "-qr", `skills/${skill}/templates`, join(agentsRoot, skill, "templates")]);
 }
 
-run(["bun", "run", ".agents/skills/amadeus-intent-validator/validator/IntentValidator.ts", "."]);
+run(["bun", "run", ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts", "."]);
 const glob = new Bun.Glob(".amadeus/intents/*/state.json");
 for (const statePath of [...glob.scanSync({ cwd: root })].sort()) {
   const intent = statePath.split("/").at(-2);
-  if (intent) run(["bun", "run", ".agents/skills/amadeus-intent-validator/validator/IntentValidator.ts", ".", intent]);
+  if (intent) run(["bun", "run", ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts", ".", intent]);
 }
 
 console.log("amadeus template eval: ok");
