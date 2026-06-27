@@ -203,7 +203,7 @@ PR を言及する場合は、必ず URL を記録する。
 3. `state.json.construction.requiredBoltArtifacts` の相対パスが存在する。
 4. 対象 Bolt の `tasks.md` に作業、要求、ユースケース、依存、証拠がある。
 5. `test-results.md` に、実行した検証と失敗時の扱いが記録されている。
-6. 昇格済みの `amadeus-intent-validator` が使える場合は、対象 Intent ディレクトリ名を指定して検証する。
+6. 昇格済みの `amadeus-validator` が使える場合は、対象 Intent ディレクトリ名を指定して検証する。
 
 ## 禁止事項
 
@@ -218,4 +218,4 @@ PR を言及する場合は、必ず URL を記録する。
 ## 次の skill
 
 - Inception 成果物へ戻る場合: `amadeus-inception`
-- Construction 成果物の構造を検証する場合: `amadeus-intent-validator`
+- Construction 成果物の構造を検証する場合: `amadeus-validator`

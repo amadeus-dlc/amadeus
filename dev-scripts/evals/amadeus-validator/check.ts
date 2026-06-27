@@ -6,7 +6,7 @@ import { join, resolve } from "node:path";
 
 const root = resolve(import.meta.dir, "../../..");
 const intent = "20260626-password-reset";
-const validator = ".agents/skills/amadeus-intent-validator/validator/IntentValidator.ts";
+const validator = ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts";
 
 function fail(message: string): never {
   console.error(message);
@@ -44,7 +44,7 @@ function runExpectFailure(command: string[], expected: string, cwd = root): void
 }
 
 function workspaceCopy(): string {
-  const workspace = mkdtempSync(join(tmpdir(), "amadeus-intent-validator"));
+  const workspace = mkdtempSync(join(tmpdir(), "amadeus-validator"));
   cpSync(join(root, ".amadeus"), join(workspace, ".amadeus"), { recursive: true });
   return workspace;
 }
@@ -574,4 +574,4 @@ runExpectFailure(
   "PR 記録が URL を持つ",
 );
 
-console.log("intent validator eval: ok");
+console.log("amadeus validator eval: ok");

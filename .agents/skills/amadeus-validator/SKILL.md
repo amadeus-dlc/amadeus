@@ -1,18 +1,18 @@
 ---
-name: amadeus-intent-validator
+name: amadeus-validator
 description: >-
   配布先ユーザー環境で Amadeus の実行時構造を検証する。`.amadeus/` 成果物、Discovery、Intent、
   domain/bounded-contexts.md、Upstream/Downstream、組織パターン、統合パターン、codebase-analysis.md、Construction 成果物を、
   repo root の開発用 scripts に依存せず確認したいときに使う。
 ---
 
-# amadeus-intent-validator
+# amadeus-validator
 
 ## 目的
 
 配布先ユーザー環境で、Amadeus 成果物が実行時に参照できる最低限の構造条件を満たしているか確認する。
 
-この skill は Intent Validator の入口である。
+この skill は Amadeus Validator の入口である。
 Development Validator としての repo root の package scripts や `scripts/**` ではない。
 
 ## 実行時依存
@@ -107,21 +107,21 @@ Bun が使えない場合は `blocked` として報告する。
    - ユーザーが Intent ディレクトリ名を指定した場合は、そのディレクトリ名だけを対象 Intent にする。
    - Intent ディレクトリ名が指定されていない場合は、全体成果物だけを検証する。
    - `.amadeus/intents.md` から勝手に全 Intent を検証対象に増やさない。
-3. skill 同梱の `validator/IntentValidator.ts` を実行する。
+3. skill 同梱の `validator/AmadeusValidator.ts` を実行する。
 
 全体成果物だけを検証する場合:
 
 ```sh
-bun run <skill-dir>/validator/IntentValidator.ts <workdir>
+bun run <skill-dir>/validator/AmadeusValidator.ts <workdir>
 ```
 
 対象 Intent ディレクトリ名も検証する場合:
 
 ```sh
-bun run <skill-dir>/validator/IntentValidator.ts <workdir> <intent-id>-<slug>
+bun run <skill-dir>/validator/AmadeusValidator.ts <workdir> <intent-id>-<slug>
 ```
 
-`IntentValidator.ts` は、内部で検査台帳を作り、`pass`、`fail`、`blocked` の判定と不足内容を日本語 Markdown で出力する。
+`AmadeusValidator.ts` は、内部で検査台帳を作り、`pass`、`fail`、`blocked` の判定と不足内容を日本語 Markdown で出力する。
 この出力を最終報告の基準にする。
 
 ## 判定
@@ -140,7 +140,7 @@ bun run <skill-dir>/validator/IntentValidator.ts <workdir> <intent-id>-<slug>
 日本語で次の形にまとめる。
 
 ```md
-# Intent Validator 結果
+# Amadeus Validator 結果
 
 ## 判定
 
@@ -181,9 +181,9 @@ pass | fail | blocked
 
 ## 禁止事項
 
-- repo root の `scripts/**` を Intent Validator の格納先や実行入口として扱わない。
+- repo root の `scripts/**` を Amadeus Validator の格納先や実行入口として扱わない。
 - repo root の package scripts を配布先ユーザー環境の検証入口として扱わない。
-- skill 同梱の `validator/IntentValidator.ts` 以外を実行時検証入口にしない。
+- skill 同梱の `validator/AmadeusValidator.ts` 以外を実行時検証入口にしない。
 - 検証のために依存パッケージをインストールしない。
 - Installer の接続、配布単位、インストール後の実行順序を決めない。
 - Intent 状態や成果物状態を変更しない。

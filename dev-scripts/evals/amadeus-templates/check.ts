@@ -183,11 +183,11 @@ for (const skill of Object.keys(targetSkills)) {
   run(["diff", "-qr", `skills/${skill}/templates`, join(agentsRoot, skill, "templates")]);
 }
 
-run(["bun", "run", ".agents/skills/amadeus-intent-validator/validator/IntentValidator.ts", "."]);
+run(["bun", "run", ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts", "."]);
 const glob = new Bun.Glob(".amadeus/intents/*/state.json");
 for (const statePath of [...glob.scanSync({ cwd: root })].sort()) {
   const intent = statePath.split("/").at(-2);
-  if (intent) run(["bun", "run", ".agents/skills/amadeus-intent-validator/validator/IntentValidator.ts", ".", intent]);
+  if (intent) run(["bun", "run", ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts", ".", intent]);
 }
 
 console.log("amadeus template eval: ok");

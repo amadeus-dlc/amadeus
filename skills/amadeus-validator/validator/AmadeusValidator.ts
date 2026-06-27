@@ -82,7 +82,7 @@ const indexSpecs: Record<string, { headings: string[]; listHeading: string; colu
   },
 };
 
-class IntentValidator {
+class AmadeusValidator {
   private readonly root: string;
   private readonly intentId?: string;
   private readonly rows: Row[] = [];
@@ -1491,7 +1491,7 @@ class IntentValidator {
     const skippedRows = this.rows.filter((row) => row.result === "skipped");
 
     const lines: string[] = [];
-    lines.push("# Intent Validator 結果", "", "## 判定", "", this.overallResult(), "", "## 検査サマリ", "");
+    lines.push("# Amadeus Validator 結果", "", "## 判定", "", this.overallResult(), "", "## 検査サマリ", "");
     lines.push(...this.summaryTable(), "", "## 確認対象", "", ...this.checkedFilesReport(), "", "## 満たしている条件", "");
     const passedSummary = this.summarize(passed);
     lines.push(...(passedSummary.length > 0 ? passedSummary.map((item) => `- ${item}`) : ["- なし"]));
@@ -1632,7 +1632,7 @@ class IntentValidator {
 
 const root = process.argv[2] ?? process.cwd();
 const intentId = process.argv[3];
-const result = new IntentValidator(root, intentId).run();
+const result = new AmadeusValidator(root, intentId).run();
 console.log(result);
 
 const status = result.match(/^pass$|^fail$|^blocked$/m)?.[0];

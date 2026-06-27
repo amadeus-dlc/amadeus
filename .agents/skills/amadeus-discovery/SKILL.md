@@ -242,10 +242,10 @@ Discovery が `gate: passed` になるには、次を満たす必要がある。
 
 1. `state.json` が JSON として解釈できる。
 2. `.amadeus/discoveries.md` に追加した詳細リンクが存在する。
-3. 昇格済みの `amadeus-intent-validator` が使える場合は、全体成果物を検証する。
+3. 昇格済みの `amadeus-validator` が使える場合は、全体成果物を検証する。
 
 ## 次の skill
 
 - Discovery から Intent を作る場合: `amadeus-intent-init`
 - Discovery の不足論点を確認する場合: `amadeus-grilling`
-- 成果物の構造を検証する場合: `amadeus-intent-validator`
+- 成果物の構造を検証する場合: `amadeus-validator`

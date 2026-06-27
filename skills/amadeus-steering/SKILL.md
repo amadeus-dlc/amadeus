@@ -150,7 +150,7 @@ brownfield では、既存成果物を読み、欠けている成果物だけを
 7. steering layer の必須成果物を作る。
 8. 未確認の情報は `未確認` と書き、空欄にしない。
 9. Intent は作らない。個別 Intent が必要になったら `amadeus-intent-init` へ渡す。
-10. 昇格済みの `amadeus-intent-validator` が使える場合は、全体成果物だけを検証する。
+10. 昇格済みの `amadeus-validator` が使える場合は、全体成果物だけを検証する。
 
 ## ファイル別の最低構造
 
@@ -320,4 +320,4 @@ Intent がまだない場合は、表に行を作らない。
 
 - 新しい Intent の入れ物だけを作る場合: `amadeus-intent-init`
 - 既存 Intent の Ideation 成果物を作る場合: `amadeus-ideation`
-- 成果物の構造を検証する場合: `amadeus-intent-validator`
+- 成果物の構造を検証する場合: `amadeus-validator`

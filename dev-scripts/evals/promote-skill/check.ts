@@ -78,7 +78,7 @@ function listPaths(rootPath: string): string[] {
 
 run(["bun", "run", "dev-scripts/promote-skill.ts", "amadeus-grilling", "--dry-run"]);
 run(["bun", "run", "dev-scripts/promote-skill.ts", "amadeus-steering", "--dry-run"]);
-run(["bun", "run", "dev-scripts/promote-skill.ts", "amadeus-intent-validator", "--dry-run"]);
+run(["bun", "run", "dev-scripts/promote-skill.ts", "amadeus-validator", "--dry-run"]);
 runExpectFailure(["bun", "run", "dev-scripts/promote-skill.ts", "amadeus-grilling"]);
 
 for (const [parentSkill, internalSkills] of Object.entries(requiredInternalSkillGroups())) {

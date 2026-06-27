@@ -733,5 +733,5 @@ greenfield の場合は含めず、`traceability.md` に対象外理由を残す
 
 - Intent の Ideation 成果物が不足している場合: `amadeus-ideation`
 - 用語、概念、ドメインモデル、契約が不足している場合: `amadeus-domain-grilling` または `amadeus-domain-modeling`
-- 成果物の構造を検証する場合: `amadeus-intent-validator`
+- 成果物の構造を検証する場合: `amadeus-validator`
 - Spec へ進める場合: 未確定

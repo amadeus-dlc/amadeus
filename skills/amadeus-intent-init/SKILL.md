@@ -190,8 +190,8 @@ Intent ディレクトリ名なしで `未確認` のディレクトリ名を作
 
 1. `state.json` が JSON として解釈できる。
 2. `.amadeus/intents.md` に追加した詳細リンクが存在する。
-3. 昇格済みの `amadeus-intent-validator` が使える場合は、全体成果物を検証する。
-4. 昇格済みの `amadeus-intent-validator` が `initialized` phase に対応している場合は、対象 Intent ディレクトリ名を指定して検証する。
+3. 昇格済みの `amadeus-validator` が使える場合は、全体成果物を検証する。
+4. 昇格済みの `amadeus-validator` が `initialized` phase に対応している場合は、対象 Intent ディレクトリ名を指定して検証する。
 5. Discovery Brief から作成した場合は、対象 Discovery の更新後に全体成果物を検証する。
 
 ## 禁止事項
@@ -212,4 +212,4 @@ Intent ディレクトリ名なしで `未確認` のディレクトリ名を作
 - Intent の Ideation 成果物を作る場合: `amadeus-ideation`
 - 入力テーマの粒度が曖昧な場合: `amadeus-discovery`
 - steering layer が不足している場合: `amadeus-steering`
-- 成果物の構造を検証する場合: `amadeus-intent-validator`
+- 成果物の構造を検証する場合: `amadeus-validator`

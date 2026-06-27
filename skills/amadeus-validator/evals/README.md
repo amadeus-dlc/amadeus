@@ -1,12 +1,12 @@
-# amadeus-intent-validator evals
+# amadeus-validator evals
 
 ## 昇格条件
 
-`amadeus-intent-validator` は、次を満たすことを確認する。
+`amadeus-validator` は、次を満たすことを確認する。
 
 - 配布先ユーザー環境で動く実行時 validator として扱う。
 - repo root の `scripts/**` や package scripts を実行時検証入口にしない。
-- skill 同梱の `validator/IntentValidator.ts` を実行入口にする。
+- skill 同梱の `validator/AmadeusValidator.ts` を実行入口にする。
 - Bun と TypeScript だけで検証する。
 - 対象 Intent ディレクトリ名が未指定の場合、全体成果物だけを検証する。
 - 対象 Intent ディレクトリ名が指定された場合、全体成果物に加えて対象 Intent を検証する。
@@ -34,9 +34,9 @@
 
 | ケース | 状態 | 確認内容 | 証拠 |
 |---|---|---|---|
-| `workspace-only-validation` | 完了 | Intent ディレクトリ名未指定時は全体成果物だけを検証する。 | `bun run skills/amadeus-intent-validator/validator/IntentValidator.ts .` が `pass`。 |
-| `ideation-intent-validation` | 完了 | Ideation 段階では Inception 以降の欠落を不足にしない。 | `bun run skills/amadeus-intent-validator/validator/IntentValidator.ts . 20260627-risk-aware-reset-support` が `pass`。 |
-| `inception-state-validation` | 完了 | Inception 段階の `state.json` が状態契約を満たす。 | `bun run skills/amadeus-intent-validator/validator/IntentValidator.ts . 20260626-password-reset` が `pass`。一時コピーで `inception.requiredBoltArtifacts` を削除すると `fail`。 |
+| `workspace-only-validation` | 完了 | Intent ディレクトリ名未指定時は全体成果物だけを検証する。 | `bun run skills/amadeus-validator/validator/AmadeusValidator.ts .` が `pass`。 |
+| `ideation-intent-validation` | 完了 | Ideation 段階では Inception 以降の欠落を不足にしない。 | `bun run skills/amadeus-validator/validator/AmadeusValidator.ts . 20260627-risk-aware-reset-support` が `pass`。 |
+| `inception-state-validation` | 完了 | Inception 段階の `state.json` が状態契約を満たす。 | `bun run skills/amadeus-validator/validator/AmadeusValidator.ts . 20260626-password-reset` が `pass`。一時コピーで `inception.requiredBoltArtifacts` を削除すると `fail`。 |
 | `runtime-only-dependency` | 完了 | Bun と TypeScript だけで検証する。 | `bun --version` が成功。 |
 | `unit-design-required` | 完了 | Unit 配下の `unit.md` と `design.md` が存在し、必須見出しに本文がある。 | 一時コピーで `units/U001-password-reset-request/design.md` を削除すると `fail`。 |
 | `bolt-design-forbidden` | 完了 | Bolt 配下に `design.md` を置かない。 | 一時コピーで `bolts/B001-password-reset-request-flow/design.md` を作ると `fail`。 |
@@ -52,12 +52,12 @@
 ## 再実行コマンド
 
 ```sh
-bun -e 'JSON.parse(await Bun.file("skills/amadeus-intent-validator/evals/evals.json").text()); console.log("evals.json: ok")'
-cmp -s skills/amadeus-intent-validator/SKILL.md .agents/skills/amadeus-intent-validator/SKILL.md && echo "SKILL.md: identical"
-cmp -s skills/amadeus-intent-validator/validator/IntentValidator.ts .agents/skills/amadeus-intent-validator/validator/IntentValidator.ts && echo "IntentValidator.ts: identical"
-bun run skills/amadeus-intent-validator/validator/IntentValidator.ts .
-bun run skills/amadeus-intent-validator/validator/IntentValidator.ts . 20260626-password-reset
-bun run skills/amadeus-intent-validator/validator/IntentValidator.ts . 20260627-risk-aware-reset-support
-bun run dev-scripts/evals/intent-validator/check.ts
+bun -e 'JSON.parse(await Bun.file("skills/amadeus-validator/evals/evals.json").text()); console.log("evals.json: ok")'
+cmp -s skills/amadeus-validator/SKILL.md .agents/skills/amadeus-validator/SKILL.md && echo "SKILL.md: identical"
+cmp -s skills/amadeus-validator/validator/AmadeusValidator.ts .agents/skills/amadeus-validator/validator/AmadeusValidator.ts && echo "AmadeusValidator.ts: identical"
+bun run skills/amadeus-validator/validator/AmadeusValidator.ts .
+bun run skills/amadeus-validator/validator/AmadeusValidator.ts . 20260626-password-reset
+bun run skills/amadeus-validator/validator/AmadeusValidator.ts . 20260627-risk-aware-reset-support
+bun run dev-scripts/evals/amadeus-validator/check.ts
 git diff --check
 ```
