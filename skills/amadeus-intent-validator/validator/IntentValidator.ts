@@ -604,6 +604,10 @@ class IntentValidator {
     const designByUnit = new Map([...unitDirectories.entries()].map(([unitId, unitDir]) => [unitId, `${unitDir}/design.md`]));
 
     const boltsPath = `${base}/bolts.md`;
+    if (!this.isFile(this.absolute(boltsPath))) {
+      this.failRow(boltsPath, "bolts.md が存在する", "存在しない");
+      return;
+    }
     const table = this.tableAfterHeading(boltsPath, "一覧");
     if (!table) return;
     if (!table.headers.includes("設計")) {

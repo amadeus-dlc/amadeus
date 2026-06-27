@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { cpSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -81,6 +81,13 @@ replaceDesignTraceDesignLink(wrongDesignTraceWorkspace);
 runExpectFailure(
   ["bun", "run", validator, wrongDesignTraceWorkspace, intent],
   "`設計` が対象 Unit の Unit Design Brief を指す",
+);
+
+const missingBoltsIndexWorkspace = workspaceCopy();
+rmSync(join(missingBoltsIndexWorkspace, ".amadeus/intents", intent, "bolts.md"));
+runExpectFailure(
+  ["bun", "run", validator, missingBoltsIndexWorkspace, intent],
+  "bolts.md が存在する",
 );
 
 console.log("intent validator eval: ok");
