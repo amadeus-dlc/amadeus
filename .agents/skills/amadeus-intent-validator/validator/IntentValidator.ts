@@ -235,6 +235,7 @@ class IntentValidator {
     this.checkUnitDesignArtifacts(base, state);
     this.checkBoltDesignReferences(base);
     this.checkNoBoltDesignArtifacts(base, state);
+    this.checkInceptionBoltArtifacts(base, state);
     this.checkTraceability(`${base}/traceability.md`);
   }
 
@@ -346,6 +347,16 @@ class IntentValidator {
       const boltId = String(value ?? "").trim();
       if (boltIds.has(boltId)) this.pass(path, "`construction.targetBolts` が既存 Bolt を参照する", boltId);
       else this.failRow(path, "`construction.targetBolts` が既存 Bolt を参照する", boltId);
+    }
+  }
+
+  private checkInceptionBoltArtifacts(base: string, state: Record<string, any>): void {
+    const values = state.inception?.requiredBoltArtifacts;
+    if (!Array.isArray(values)) return;
+
+    for (const value of values) {
+      const relativePath = String(value ?? "").trim();
+      if (relativePath.endsWith("/tasks.md")) this.checkTasks(`${base}/${relativePath}`);
     }
   }
 
