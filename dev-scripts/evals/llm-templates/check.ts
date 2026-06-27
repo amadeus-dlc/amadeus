@@ -655,12 +655,68 @@ function applyConstructionBoltPreparationArtifacts(workspace: string): void {
 }
 
 function applyConstructionImplementationExecutionArtifacts(workspace: string): void {
+  writeLoanEligibilityImplementation(workspace);
+
   const notesPath = join(constructionBoltTarget(workspace), "notes.md");
   ensureFile(notesPath);
   const notes = readFileSync(notesPath, "utf8")
     .replace("未確認", "貸出可否確認フローの最小実装を対象にする。")
     .replace("| T001 | 未着手 | 未確認 | 未登録 |", "| T001 | 実装済み | 貸出可否確認の入力と判定を実装する。 | 未登録 |");
   writeFileSync(notesPath, notes);
+}
+
+function writeLoanEligibilityImplementation(workspace: string): void {
+  ensureDir(join(workspace, "src"));
+  ensureDir(join(workspace, "test"));
+  writeFileSync(
+    join(workspace, "package.json"),
+    [
+      "{",
+      "  \"scripts\": {",
+      "    \"test\": \"node --test\"",
+      "  }",
+      "}",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(workspace, "src/loan-eligibility.js"),
+    [
+      "function decideLoanEligibility(input) {",
+      "  const availableCopies = Number(input.availableCopies ?? 0);",
+      "  const hasOverdueLoans = Boolean(input.hasOverdueLoans);",
+      "  if (availableCopies <= 0) return { eligible: false, dueDays: 0 };",
+      "  if (hasOverdueLoans) return { eligible: false, dueDays: 0 };",
+      "  return { eligible: true, dueDays: 14 };",
+      "}",
+      "",
+      "module.exports = { decideLoanEligibility };",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(workspace, "test/loan-eligibility.test.js"),
+    [
+      "const assert = require(\"node:assert/strict\");",
+      "const test = require(\"node:test\");",
+      "const { decideLoanEligibility } = require(\"../src/loan-eligibility.js\");",
+      "",
+      "test(\"available book can be loaned\", () => {",
+      "  assert.deepEqual(decideLoanEligibility({ availableCopies: 1, hasOverdueLoans: false }), {",
+      "    eligible: true,",
+      "    dueDays: 14,",
+      "  });",
+      "});",
+      "",
+      "test(\"overdue loans block loan eligibility\", () => {",
+      "  assert.deepEqual(decideLoanEligibility({ availableCopies: 1, hasOverdueLoans: true }), {",
+      "    eligible: false,",
+      "    dueDays: 0,",
+      "  });",
+      "});",
+      "",
+    ].join("\n"),
+  );
 }
 
 function applyConstructionVerificationHardeningArtifacts(workspace: string): void {
@@ -1912,6 +1968,9 @@ function e2eCase(mode: E2eMode): E2eCase {
       expectedMarkdownChanges: expectedMarkdownChanges(
         constructionVerificationHardeningMarkdownArtifacts(fixtureIntent),
         [],
+        [
+          `.amadeus/intents/${fixtureIntent}/bolts/B001-loan-eligibility-flow/notes.md`,
+        ],
       ),
     },
     "construction-internal-traceability-finalization": {

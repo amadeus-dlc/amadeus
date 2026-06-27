@@ -384,9 +384,10 @@ class IntentValidator {
 
   private checkConstructionBoltArtifacts(base: string, state: Record<string, any>): void {
     const values = state.construction?.requiredBoltArtifacts;
-    if (!Array.isArray(values)) return;
+    const requiredBoltArtifacts = Array.isArray(values) ? values : [];
+    const checkedPrPaths = new Set<string>();
 
-    for (const value of values) {
+    for (const value of requiredBoltArtifacts) {
       const relativePath = String(value ?? "").trim();
       const path = `${base}/${relativePath}`;
       if (relativePath.endsWith("/notes.md")) {
@@ -399,10 +400,28 @@ class IntentValidator {
       } else if (relativePath.endsWith("/tasks.md")) {
         this.checkTasks(path);
       } else if (relativePath.endsWith("/pr.md")) {
-        this.checkFile(path, "PR 記録が存在する");
-        this.checkHeadings(path, ["Pull Request", "対象", "確認状況"]);
-        this.checkPrUrl(path);
+        this.checkPrRecord(path);
+        checkedPrPaths.add(path);
       }
+    }
+
+    this.checkExistingPrRecords(base, checkedPrPaths);
+  }
+
+  private checkPrRecord(path: string): void {
+    this.checkFile(path, "PR 記録が存在する");
+    this.checkHeadings(path, ["Pull Request", "対象", "確認状況"]);
+    this.checkPrUrl(path);
+  }
+
+  private checkExistingPrRecords(base: string, checkedPrPaths: Set<string>): void {
+    const boltsRoot = this.absolute(`${base}/bolts`);
+    if (!this.isDirectory(boltsRoot)) return;
+    const glob = new Bun.Glob("*/pr.md");
+    for (const pr of glob.scanSync({ cwd: boltsRoot })) {
+      const path = `${base}/bolts/${pr}`;
+      if (checkedPrPaths.has(path)) continue;
+      this.checkPrRecord(path);
     }
   }
 
@@ -423,6 +442,8 @@ class IntentValidator {
       this.failRow(path, "Task が識別子付きチェックリストである", "Task がない");
       return;
     }
+    const base = dirname(dirname(dirname(path)));
+    const taskIds = new Set(taskMatches.map((match) => match[1]));
     for (const match of taskMatches) {
       const taskId = match[1];
       const block = match[0];
@@ -430,6 +451,43 @@ class IntentValidator {
       for (const label of ["作業", "要求", "ユースケース", "依存", "証拠"]) {
         if (new RegExp(`^\\s+- ${label}:`, "m").test(block)) this.pass(path, `Task が \`${label}\` を持つ`, taskId);
         else this.failRow(path, `Task が \`${label}\` を持つ`, taskId);
+      }
+      this.checkTaskLabelReferences(path, block, taskId, "要求", this.idsFor(`${base}/requirements.md`), false);
+      this.checkTaskLabelReferences(path, block, taskId, "ユースケース", this.idsFor(`${base}/use-cases.md`), false);
+      this.checkTaskDependencies(path, block, taskId, taskIds, this.idsFor(`${base}/bolts.md`), this.boltDirectories(base));
+    }
+  }
+
+  private checkTaskLabelReferences(path: string, block: string, taskId: string, label: string, ids: Set<string>, allowNone: boolean): void {
+    for (const value of this.taskLabelValues(block, label)) {
+      if (allowNone && value === "なし") {
+        this.pass(path, `Task の \`${label}\` が既存 ID またはなしである`, `${taskId}: ${value}`);
+      } else if (ids.has(value)) {
+        this.pass(path, `Task の \`${label}\` が既存 ID またはなしである`, `${taskId}: ${value}`);
+      } else {
+        this.failRow(path, `Task の \`${label}\` が既存 ID またはなしである`, `${taskId}: ${value}`);
+      }
+    }
+  }
+
+  private checkTaskDependencies(path: string, block: string, taskId: string, taskIds: Set<string>, boltIds: Set<string>, boltDirectories: Map<string, string>): void {
+    const condition = "Task の `依存` が既存 ID またはなしである";
+    for (const value of this.taskLabelValues(block, "依存")) {
+      if (value === "なし" || taskIds.has(value)) {
+        this.pass(path, condition, `${taskId}: ${value}`);
+        continue;
+      }
+      const match = value.match(/^(B\d{3})\/(T\d{3})$/);
+      if (!match) {
+        this.failRow(path, condition, `${taskId}: ${value}`);
+        continue;
+      }
+      const [, boltId, dependencyTaskId] = match;
+      const boltDir = boltDirectories.get(boltId);
+      if (boltIds.has(boltId) && boltDir && this.taskIdsFor(`${boltDir}/tasks.md`).has(dependencyTaskId)) {
+        this.pass(path, condition, `${taskId}: ${value}`);
+      } else {
+        this.failRow(path, condition, `${taskId}: ${value}`);
       }
     }
   }
@@ -551,8 +609,14 @@ class IntentValidator {
 
   private checkDesignTraceability(path: string, table: Table): void {
     const base = dirname(path);
+    this.checkTableTargets(path, table, "要求", this.idsFor(`${base}/requirements.md`), false);
+    this.checkTableTargets(path, table, "ユースケース", this.idsFor(`${base}/use-cases.md`), false);
     const unitIds = this.idsFor(`${base}/units.md`);
     this.checkTableTargets(path, table, "ユニット", unitIds, false);
+    const boltIds = this.idsFor(`${base}/bolts.md`);
+    this.checkTableTargets(path, table, "ボルト", boltIds, false);
+    const boltDirectories = this.boltDirectories(base);
+    this.checkTaskReferences(path, table, "タスク", boltIds, boltDirectories, "設計追跡");
 
     const unitDirectories = this.unitDirectories(base, unitIds);
     const designByUnit = new Map([...unitDirectories.entries()].map(([unitId, unitDir]) => [unitId, `${unitDir}/design.md`]));
@@ -596,10 +660,36 @@ class IntentValidator {
     const table = this.checkTable(path, "Construction からの追跡", ["ボルト", "タスク", "証拠", "状態"]);
     if (!table) return;
     const base = dirname(path);
-    this.checkTableTargets(path, table, "ボルト", this.idsFor(`${base}/bolts.md`), false);
-    this.checkNotBlank(path, table, "タスク");
+    const boltIds = this.idsFor(`${base}/bolts.md`);
+    this.checkTableTargets(path, table, "ボルト", boltIds, false);
+    this.checkTaskReferences(path, table, "タスク", boltIds, this.boltDirectories(base), "Construction 追跡");
     this.checkNotBlank(path, table, "状態");
     this.checkDetailLinks(path, table, "証拠");
+  }
+
+  private checkTaskReferences(path: string, table: Table, column: string, boltIds: Set<string>, boltDirectories: Map<string, string>, context: string): void {
+    if (!table.headers.includes(column)) return;
+    for (const row of table.rows) {
+      for (const reference of this.splitValues(row[column])) {
+        const match = reference.match(/^(B\d{3})\/(T\d{3})$/);
+        if (!match) {
+          this.failRow(path, `${context}の \`${column}\` が Bolt/Task 参照である`, reference);
+          continue;
+        }
+        const [, boltId, taskId] = match;
+        if (boltIds.has(boltId)) this.pass(path, `${context}の \`${column}\` が既存 Bolt を指す`, reference);
+        else this.failRow(path, `${context}の \`${column}\` が既存 Bolt を指す`, reference);
+
+        const boltDir = boltDirectories.get(boltId);
+        if (!boltDir) {
+          this.failRow(path, `${context}の \`${column}\` が既存 Task を指す`, reference);
+          continue;
+        }
+        const taskIds = this.taskIdsFor(`${boltDir}/tasks.md`);
+        if (taskIds.has(taskId)) this.pass(path, `${context}の \`${column}\` が既存 Task を指す`, reference);
+        else this.failRow(path, `${context}の \`${column}\` が既存 Task を指す`, reference);
+      }
+    }
   }
 
   private checkUnitDesignArtifacts(base: string, state: Record<string, any>): void {
@@ -988,6 +1078,18 @@ class IntentValidator {
     const text = String(value ?? "").trim();
     if (text.length === 0) return [""];
     return text.split(",").map((item) => item.trim()).filter(Boolean);
+  }
+
+  private taskIdsFor(path: string): Set<string> {
+    if (!this.isFile(this.absolute(path))) return new Set();
+    const text = this.read(path);
+    return new Set([...text.matchAll(/^- \[[ xX]\] (T\d{3}):/gm)].map((match) => match[1]));
+  }
+
+  private taskLabelValues(block: string, label: string): string[] {
+    const match = block.match(new RegExp(`^\\s+- ${this.escapeRegExp(label)}:\\s*(.+?)\\s*$`, "m"));
+    if (!match) return [];
+    return this.splitValues(match[1]);
   }
 
   private bulletsAfterHeading(path: string, heading: string): string[] {

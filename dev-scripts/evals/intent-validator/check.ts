@@ -67,6 +67,24 @@ function replaceDesignTraceDesignLink(workspace: string): void {
   writeFileSync(path, text.replace(from, to));
 }
 
+function replaceDesignTraceReferencesWithMissingIds(workspace: string): void {
+  const path = join(workspace, ".amadeus/intents", intent, "traceability.md");
+  const text = readFileSync(path, "utf8");
+  const from = "| [design.md](units/U001-password-reset-request/design.md) | U001 | R001 | UC001 | B001 | B001/T001, B001/T002, B001/T003 |";
+  const to = "| [design.md](units/U001-password-reset-request/design.md) | U001 | R999 | UC999 | B999 | B999/T999 |";
+  if (!text.includes(from)) fail("traceability fixture does not contain expected design trace row");
+  writeFileSync(path, text.replace(from, to));
+}
+
+function replaceTaskReferencesWithMissingIds(workspace: string): void {
+  const path = join(workspace, ".amadeus/intents", intent, "bolts/B001-password-reset-request-flow/tasks.md");
+  const text = readFileSync(path, "utf8");
+  const from = "  - 要求: R001\n  - ユースケース: UC001\n  - 依存: なし";
+  const to = "  - 要求: R999\n  - ユースケース: UC999\n  - 依存: T999";
+  if (!text.includes(from)) fail("tasks fixture does not contain expected task references");
+  writeFileSync(path, text.replace(from, to));
+}
+
 function writeConstructionTestResults(workspace: string): void {
   writeFileSync(
     join(workspace, ".amadeus/intents", intent, "bolts/B001-password-reset-request-flow/test-results.md"),
@@ -203,6 +221,20 @@ runExpectFailure(
   "`設計` が対象 Unit の Unit Design Brief を指す",
 );
 
+const wrongDesignTraceReferencesWorkspace = workspaceCopy();
+replaceDesignTraceReferencesWithMissingIds(wrongDesignTraceReferencesWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, wrongDesignTraceReferencesWorkspace, intent],
+  "設計追跡の `タスク` が既存 Task を指す",
+);
+
+const wrongTaskReferencesWorkspace = workspaceCopy();
+replaceTaskReferencesWithMissingIds(wrongTaskReferencesWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, wrongTaskReferencesWorkspace, intent],
+  "Task の `要求` が既存 ID またはなしである",
+);
+
 const missingBoltsIndexWorkspace = workspaceCopy();
 rmSync(join(missingBoltsIndexWorkspace, ".amadeus/intents", intent, "bolts.md"));
 runExpectFailure(
@@ -265,6 +297,16 @@ writeConstructionState(prWithoutUrlWorkspace, {
 });
 runExpectFailure(
   ["bun", "run", validator, prWithoutUrlWorkspace, intent],
+  "PR 記録が URL を持つ",
+);
+
+const existingPrWithoutUrlWorkspace = workspaceCopy();
+writeConstructionNotes(existingPrWithoutUrlWorkspace);
+writeConstructionTestResults(existingPrWithoutUrlWorkspace);
+writePrWithoutUrl(existingPrWithoutUrlWorkspace);
+writeConstructionState(existingPrWithoutUrlWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, existingPrWithoutUrlWorkspace, intent],
   "PR 記録が URL を持つ",
 );
 
