@@ -264,6 +264,21 @@ writeConstructionTestResults(constructionWithoutInceptionRequiredWorkspace);
 writeConstructionState(constructionWithoutInceptionRequiredWorkspace);
 run(["bun", "run", validator, constructionWithoutInceptionRequiredWorkspace, intent]);
 
+const constructionWithStaleInceptionRequiredWorkspace = workspaceCopy();
+writeConstructionNotes(constructionWithStaleInceptionRequiredWorkspace);
+writeConstructionTestResults(constructionWithStaleInceptionRequiredWorkspace);
+writeConstructionState(constructionWithStaleInceptionRequiredWorkspace, {
+  inception: {
+    status: "completed",
+    gate: "passed",
+    requiredArtifacts: [
+      "requirements.md",
+      "acceptance.md",
+    ],
+  },
+});
+run(["bun", "run", validator, constructionWithStaleInceptionRequiredWorkspace, intent]);
+
 const missingTargetBoltArtifactsWorkspace = workspaceCopy();
 writeConstructionNotes(missingTargetBoltArtifactsWorkspace);
 writeConstructionTestResults(missingTargetBoltArtifactsWorkspace);

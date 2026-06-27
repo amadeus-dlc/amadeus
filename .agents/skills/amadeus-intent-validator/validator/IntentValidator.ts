@@ -693,7 +693,7 @@ class IntentValidator {
   }
 
   private checkUnitDesignArtifacts(base: string, state: Record<string, any>): void {
-    const checkInceptionRequiredArtifacts = String(state.phase ?? "").trim() === "inception" || Array.isArray(state.inception?.requiredArtifacts);
+    const checkInceptionRequiredArtifacts = String(state.phase ?? "").trim() === "inception";
     const required = new Set((state.inception?.requiredArtifacts ?? []).map((value: unknown) => String(value).trim()));
     const unitsPath = `${base}/units.md`;
     const unitIds = this.idsFor(unitsPath);
