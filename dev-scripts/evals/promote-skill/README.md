@@ -7,7 +7,8 @@
 - Ruby の構文として解釈できる。
 - 既存の昇格先がある場合、`--replace` なしの実コピーでは失敗する。
 - `--dry-run` では既存の昇格先があってもコピー対象と skipped を確認できる。
-- 通常の Amadeus skill は `SKILL.md` だけを昇格し、`evals/` を skipped にする。
+- 通常の Amadeus skill は `SKILL.md` を昇格し、同梱 `templates/` がある場合は `templates/` も昇格する。
+- `evals/` は skipped にする。
 - `amadeus-intent-validator` は `SKILL.md`、`references/`、`validator/` を昇格し、`evals/` を skipped にする。
 - 全 Amadeus skill を一時ディレクトリへ昇格できる。
 - 一時昇格結果に `evals/`、`tests/`、`.venv/`、`scripts/ci/`、`justfile` などの開発用ファイルが混ざらない。
@@ -23,6 +24,7 @@
 |---|---|---|---|
 | `ruby-syntax` | 完了 | スクリプトが Ruby として解釈できる。 | `ruby -c dev-scripts/promote-skill.rb` が `Syntax OK`。 |
 | `dry-run-existing-promoted-skill` | 完了 | 既存昇格先がある `amadeus-grilling` でも `--dry-run` は成功し、`evals` を skipped にする。 | `ruby dev-scripts/promote-skill.rb amadeus-grilling --dry-run` が `dry-run: ok`。 |
+| `template-runtime-files` | 完了 | テンプレートを持つ skill は `SKILL.md` と `templates/` をコピー対象にする。 | `ruby dev-scripts/promote-skill.rb amadeus-steering --dry-run` が `entries: SKILL.md, templates`。 |
 | `validator-runtime-files` | 完了 | `amadeus-intent-validator` は `SKILL.md`、`references/`、`validator/` をコピー対象にする。 | `ruby dev-scripts/promote-skill.rb amadeus-intent-validator --dry-run` が `entries: SKILL.md, references, validator`。 |
 | `existing-destination-requires-replace` | 完了 | 既存昇格先がある実コピーは `--replace` なしで失敗する。 | `ruby dev-scripts/promote-skill.rb amadeus-grilling` が `promoted skill already exists` で失敗。 |
 | `all-amadeus-temp-promotion` | 完了 | 全 Amadeus skill を一時ディレクトリへ昇格し、開発用ファイル混入と現行 `.agents` 差分がない。 | 一時ディレクトリ昇格検証が `all amadeus promotion: ok`。 |
@@ -31,8 +33,15 @@
 ## 再実行コマンド
 
 ```sh
+npm run test:promote
+```
+
+個別に確認する場合は次を実行する。
+
+```sh
 ruby -c dev-scripts/promote-skill.rb
 ruby dev-scripts/promote-skill.rb amadeus-grilling --dry-run
+ruby dev-scripts/promote-skill.rb amadeus-steering --dry-run
 ruby dev-scripts/promote-skill.rb amadeus-intent-validator --dry-run
 
 ruby dev-scripts/promote-skill.rb amadeus-grilling >/tmp/promote-existing.out 2>/tmp/promote-existing.err

@@ -1,0 +1,28 @@
+{
+  "intent": "<intent-id>-<slug>",
+  "phase": "inception",
+  "status": "in_progress",
+  "ideation": {
+    "status": "completed",
+    "gate": "passed"
+  },
+  "inception": {
+    "status": "in_progress",
+    "requiredArtifacts": [
+      "requirements.md",
+      "acceptance.md",
+      "user-stories.md",
+      "use-cases.md",
+      "units.md",
+      "bolts.md",
+      "traceability.md",
+      "decisions.md"
+    ],
+    "requiredBoltArtifacts": [
+      "bolts/B001-bolt/bolt.md",
+      "bolts/B001-bolt/design.md",
+      "bolts/B001-bolt/tasks.md"
+    ],
+    "gate": "not_ready"
+  }
+}

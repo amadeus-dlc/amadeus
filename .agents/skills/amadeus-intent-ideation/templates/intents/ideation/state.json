@@ -1,0 +1,27 @@
+{
+  "intent": "<intent-id>-<slug>",
+  "phase": "ideation",
+  "status": "in_progress",
+  "initialized": {
+    "status": "completed",
+    "createdArtifacts": [
+      "intent.md",
+      "state.json"
+    ],
+    "next": "ideation"
+  },
+  "ideation": {
+    "status": "in_progress",
+    "requiredArtifacts": [
+      "intent.md",
+      "scope.md",
+      "ideation.md",
+      "decisions.md",
+      "traceability.md"
+    ],
+    "requiredMocks": [
+      "mocks/initial-confirmation.puml"
+    ],
+    "gate": "not_ready"
+  }
+}

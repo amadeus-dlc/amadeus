@@ -43,6 +43,22 @@ description: >-
 
 実行モードの指定がなければ `auto` にする。
 
+## テンプレート
+
+Ideation 成果物を新規作成または構造補修する場合は、テンプレートを使う。
+
+優先順位は次である。
+
+1. `.amadeus/settings/templates/intents/ideation/`
+2. この skill に同梱された `templates/intents/ideation/`
+
+`.amadeus/settings/templates/intents/ideation/` は、プロジェクト固有の上書きとして扱う。
+存在しない場合は、`templates/intents/ideation/` の標準テンプレートを使う。
+どちらもない場合は、作成前にテンプレート不足として止める。
+
+テンプレートの `<...>` は、既存 `intent.md`、`state.json`、steering layer、回答内容から分かる値に置き換える。
+分からない項目は空欄にせず、本文と未確定事項に `未確認` として残す。
+
 ## 実行モード
 
 ### `auto`
