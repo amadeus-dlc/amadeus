@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -47,6 +47,117 @@ function workspaceCopy(): string {
   const workspace = mkdtempSync(join(tmpdir(), "amadeus-intent-validator"));
   cpSync(join(root, ".amadeus"), join(workspace, ".amadeus"), { recursive: true });
   return workspace;
+}
+
+function writeDiscovery(
+  workspace: string,
+  overrides: {
+    decision?: string;
+    status?: string;
+    gate?: string;
+    briefDecision?: string;
+    intentCandidateRows?: string[];
+    existingIntentRelation?: string;
+  } = {},
+): void {
+  const discoveryId = "20260628-ec-site";
+  const discoveryDir = join(workspace, ".amadeus/discoveries", discoveryId);
+  const decision = overrides.decision ?? "multi_intent";
+  const briefDecision = overrides.briefDecision ?? decision;
+  mkdirSync(discoveryDir, { recursive: true });
+  writeFileSync(
+    join(workspace, ".amadeus/discoveries.md"),
+    [
+      "# Discovery 一覧",
+      "",
+      "## 一覧",
+      "",
+      "| 識別子 | テーマ | 状態 | 判定 | 推奨次アクション | 詳細 |",
+      "|---|---|---|---|---|---|",
+      `| ${discoveryId} | ECサイト | ${overrides.status ?? "completed"} | ${decision} | recommended の Intent 候補を amadeus-intent-init に渡す | [brief.md](discoveries/${discoveryId}/brief.md) |`,
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(discoveryDir, "state.json"),
+    JSON.stringify(
+      {
+        schemaVersion: 1,
+        phase: "discovery",
+        status: overrides.status ?? "completed",
+        decision,
+        gate: overrides.gate ?? "passed",
+      },
+      null,
+      2,
+    ),
+  );
+  writeFileSync(
+    join(discoveryDir, "brief.md"),
+    [
+      "# ECサイト Discovery Brief",
+      "",
+      "## 入力テーマ",
+      "",
+      "- ECサイトを作りたい。",
+      "",
+      "## 確認した前提",
+      "",
+      "- 利用者向けの商品閲覧を先に確認する。",
+      "",
+      "## 判定",
+      "",
+      briefDecision,
+      "",
+      "## 判定理由",
+      "",
+      "- 商品閲覧、カート、決済、管理者登録は独立した Intent 候補として扱えるため。",
+      "",
+      "## Intent Draft",
+      "",
+      "該当なし",
+      "",
+      "## Intent 候補",
+      "",
+      "| 候補 | 状態 | Intent | 課題 | 成功状態 | 除外範囲 | 依存 |",
+      "|---|---|---|---|---|---|---|",
+      ...(overrides.intentCandidateRows ?? [
+        "| 商品を閲覧できる | recommended | 未作成 | 利用者が商品を探せない | 商品一覧と商品詳細を見られる | カート、決済、注文管理 | なし |",
+        "| カートに商品を入れられる | waiting | 未作成 | 利用者が購入候補を保持できない | 商品をカートへ追加できる | 決済、注文管理 | 商品を閲覧できる |",
+      ]),
+      "",
+      "## 候補判断",
+      "",
+      "| 候補 | 判断 | 理由 |",
+      "|---|---|---|",
+      "| 商品を閲覧できる | recommended | 利用者価値の入口であり、後続候補の前提になるため。 |",
+      "| カートに商品を入れられる | waiting | 商品閲覧の後に扱うため。 |",
+      "",
+      "## 既存 Intent との関係",
+      "",
+      overrides.existingIntentRelation ?? "関係する既存 Intent は確認されていない。",
+      "",
+      "## 推奨次アクション",
+      "",
+      "- recommended の Intent 候補を `amadeus-intent-init` に渡す。",
+      "",
+    ].join("\n"),
+  );
+}
+
+function writeDiscoveryIndexOnly(workspace: string): void {
+  writeFileSync(
+    join(workspace, ".amadeus/discoveries.md"),
+    [
+      "# Discovery 一覧",
+      "",
+      "## 一覧",
+      "",
+      "| 識別子 | テーマ | 状態 | 判定 | 推奨次アクション | 詳細 |",
+      "|---|---|---|---|---|---|",
+      "",
+    ].join("\n"),
+  );
 }
 
 function replaceTraceabilityDesignLink(workspace: string): void {
@@ -276,6 +387,28 @@ function appendEmptyConstructionTrace(workspace: string): void {
 }
 
 run(["bun", "run", validator, ".", intent]);
+
+const discoveryWorkspace = workspaceCopy();
+writeDiscovery(discoveryWorkspace);
+run(["bun", "run", validator, discoveryWorkspace]);
+
+const discoveryDecisionMismatchWorkspace = workspaceCopy();
+writeDiscovery(discoveryDecisionMismatchWorkspace, { briefDecision: "single_intent" });
+runExpectFailure(
+  ["bun", "run", validator, discoveryDecisionMismatchWorkspace],
+  "state.json.decision と brief.md の判定が一致する",
+);
+
+const discoveryMultiIntentTooSmallWorkspace = workspaceCopy();
+writeDiscovery(discoveryMultiIntentTooSmallWorkspace, {
+  intentCandidateRows: [
+    "| 商品を閲覧できる | recommended | 未作成 | 利用者が商品を探せない | 商品一覧と商品詳細を見られる | カート、決済、注文管理 | なし |",
+  ],
+});
+runExpectFailure(
+  ["bun", "run", validator, discoveryMultiIntentTooSmallWorkspace],
+  "multi_intent の Intent 候補が2件以上ある",
+);
 
 const wrongDesignWorkspace = workspaceCopy();
 replaceTraceabilityDesignLink(wrongDesignWorkspace);

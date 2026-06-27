@@ -36,6 +36,16 @@
 - 相互作用がない内部作業では、ユースケースを参照しない理由を `traceability.md` に書く。
 - タスクはストーリーを直接参照しない。
 
+## Discovery layer
+
+Discovery layer は、Intent を作る前に入力テーマの課題粒度、既存 Intent との関係、Intent 化方針を整理する。
+
+Discovery 一覧は `discoveries.md` に置く。
+個別 Discovery は `discoveries/<discovery-id>/brief.md` と `discoveries/<discovery-id>/state.json` に置く。
+
+Discovery は Requirement、Use Case、Unit、Bolt、Task を定義しない。
+Discovery が完了しても、Intent 作成には人間の明示指示を必要とする。
+
 ## ストーリー、ユースケース、タスクの追跡
 
 タスクの親は常にボルトである。

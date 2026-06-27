@@ -20,6 +20,18 @@ type Table = {
 const statusValues = new Set(["not_started", "in_progress", "waiting_approval", "needs_changes", "completed", "skipped"]);
 const gateValues = new Set(["not_ready", "waiting_approval", "passed", "failed"]);
 const intentDirectoryPattern = /^\d{8}-[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const discoveryDirectoryPattern = /^\d{8}-[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const discoveryStatusValues = new Set(["in_progress", "completed"]);
+const discoveryGateValues = new Set(["not_ready", "passed"]);
+const discoveryDecisionValues = new Set([
+  "single_intent",
+  "multi_intent",
+  "existing_intent_update",
+  "research_only",
+  "no_intent",
+  "undecided",
+]);
+const discoveryCandidateStatusValues = new Set(["recommended", "waiting", "initialized", "discarded"]);
 const unitDesignHeadings = [
   "概要",
   "設計戦略",
@@ -113,9 +125,204 @@ class IntentValidator {
   }
 
   private checkGlobalIndexes(): void {
+    this.checkDiscoveries();
     this.checkIntents();
     this.checkSubdomains(".amadeus/domain/subdomains.md", ".amadeus/domain/bounded-contexts.md");
     this.checkBoundedContexts(".amadeus/domain/bounded-contexts.md", true);
+  }
+
+  private checkDiscoveries(): void {
+    const path = ".amadeus/discoveries.md";
+    this.checkFile(path, "Discovery 一覧が存在する");
+    this.checkHeadings(path, ["一覧"]);
+    const table = this.checkTable(path, "一覧", ["識別子", "テーマ", "状態", "判定", "推奨次アクション", "詳細"]);
+    if (!table) return;
+
+    const ids = this.collectIds(path, table, "識別子", discoveryDirectoryPattern);
+    this.checkNotBlank(path, table, "テーマ");
+    this.checkNotBlank(path, table, "推奨次アクション");
+    this.checkDetailLinks(path, table, "詳細");
+    this.checkDiscoveryDetailLinks(path, table, ids);
+
+    for (const row of table.rows) {
+      const id = String(row["識別子"] ?? "").trim();
+      if (!ids.has(id)) continue;
+      this.checkDiscovery(id, row);
+    }
+
+    const discoveriesRoot = this.absolute(".amadeus/discoveries");
+    if (!this.isDirectory(discoveriesRoot)) return;
+    const glob = new Bun.Glob("*/state.json");
+    const indexed = new Set(ids);
+    for (const statePath of glob.scanSync({ cwd: discoveriesRoot })) {
+      const id = statePath.split("/", 1)[0];
+      if (indexed.has(id)) this.pass(path, "Discovery ディレクトリが一覧に登録されている", id);
+      else this.failRow(path, "Discovery ディレクトリが一覧に登録されている", id);
+    }
+  }
+
+  private checkDiscoveryDetailLinks(path: string, table: Table, ids: Set<string>): void {
+    if (!table.headers.includes("詳細")) return;
+    for (const row of table.rows) {
+      const id = String(row["識別子"] ?? "").trim();
+      const links = this.markdownLinks(String(row["詳細"] ?? ""));
+      if (links.length === 0) continue;
+      for (const target of links) {
+        const clean = this.cleanLinkTarget(target);
+        const match = clean.match(/^discoveries\/([^/]+)\/brief\.md$/);
+        if (!match) {
+          this.failRow(path, "`詳細` が discoveries/<discovery-id>/brief.md を指す", target);
+          continue;
+        }
+        const directory = match[1];
+        if (directory === id) this.pass(path, "`詳細` の Discovery ディレクトリ名が識別子と一致する", directory);
+        else this.failRow(path, "`詳細` の Discovery ディレクトリ名が識別子と一致する", `${directory} != ${id}`);
+        if (ids.has(directory)) this.pass(path, "`詳細` の Discovery ディレクトリ名が一覧内に存在する", directory);
+        else this.failRow(path, "`詳細` の Discovery ディレクトリ名が一覧内に存在する", directory);
+      }
+    }
+  }
+
+  private checkDiscovery(id: string, row: Record<string, string>): void {
+    const base = `.amadeus/discoveries/${id}`;
+    const briefPath = `${base}/brief.md`;
+    const statePath = `${base}/state.json`;
+    this.checkFile(briefPath, "Discovery Brief が存在する");
+    this.checkHeadings(briefPath, [
+      "入力テーマ",
+      "確認した前提",
+      "判定",
+      "判定理由",
+      "Intent Draft",
+      "Intent 候補",
+      "候補判断",
+      "既存 Intent との関係",
+      "推奨次アクション",
+    ]);
+
+    this.checkFile(statePath, "Discovery 状態ファイルが存在する");
+    const state = this.intentState(statePath);
+    if (!state) return;
+
+    this.checkJsonValue(statePath, "schemaVersion", state.schemaVersion, "1");
+    this.checkJsonValue(statePath, "phase", state.phase, "discovery");
+    this.checkAllowed(statePath, "status", state.status, discoveryStatusValues);
+    this.checkAllowed(statePath, "gate", state.gate, discoveryGateValues);
+    this.checkAllowed(statePath, "decision", state.decision, discoveryDecisionValues);
+    this.checkJsonValue(".amadeus/discoveries.md", "Discovery 行の状態", row["状態"], String(state.status ?? ""));
+    this.checkJsonValue(".amadeus/discoveries.md", "Discovery 行の判定", row["判定"], String(state.decision ?? ""));
+
+    const briefDecision = this.discoveryBriefDecision(briefPath);
+    if (briefDecision === String(state.decision ?? "").trim()) {
+      this.pass(briefPath, "state.json.decision と brief.md の判定が一致する", briefDecision);
+    } else {
+      this.failRow(briefPath, "state.json.decision と brief.md の判定が一致する", `${briefDecision} != ${String(state.decision ?? "").trim()}`);
+    }
+
+    if (String(state.gate ?? "").trim() === "passed") this.checkDiscoveryPassedGate(briefPath, state);
+  }
+
+  private discoveryBriefDecision(path: string): string {
+    const body = this.sectionBody(path, "判定") ?? "";
+    return body.split(/\r?\n/).map((line) => line.trim()).find((line) => line.length > 0) ?? "";
+  }
+
+  private checkDiscoveryPassedGate(path: string, state: Record<string, any>): void {
+    for (const heading of ["入力テーマ", "確認した前提", "判定理由", "推奨次アクション"]) {
+      const body = this.sectionBody(path, heading);
+      if (body && body.trim().length > 0) this.pass(path, `Discovery gate passed で \`${heading}\` が空欄でない`, "本文を確認");
+      else this.failRow(path, `Discovery gate passed で \`${heading}\` が空欄でない`, "本文がない");
+    }
+
+    const decision = String(state.decision ?? "").trim();
+    if (decision === "undecided") {
+      this.failRow(path, "Discovery gate passed では decision が undecided ではない", decision);
+      return;
+    }
+    this.pass(path, "Discovery gate passed では decision が undecided ではない", decision);
+
+    if (decision === "single_intent") {
+      const table = this.checkTable(path, "Intent Draft", ["項目", "内容"]);
+      if (table && table.rows.length > 0) this.pass(path, "single_intent の Intent Draft がある", `${table.rows.length}件`);
+      else this.failRow(path, "single_intent の Intent Draft がある", "行がない");
+      return;
+    }
+
+    if (decision === "multi_intent") {
+      this.checkMultiIntentDiscovery(path);
+      return;
+    }
+
+    if (decision === "existing_intent_update") {
+      this.checkExistingIntentUpdateDiscovery(path);
+      return;
+    }
+
+    if (decision === "research_only") {
+      const body = this.sectionBody(path, "確認した前提") ?? "";
+      if (body.trim().length > 0) this.pass(path, "research_only の調査論点が記録されている", "確認した前提を確認");
+      else this.failRow(path, "research_only の調査論点が記録されている", "記録なし");
+      return;
+    }
+
+    if (decision === "no_intent") {
+      const body = this.sectionBody(path, "判定理由") ?? "";
+      if (body.trim().length > 0) this.pass(path, "no_intent の Intent にしない理由が記録されている", "判定理由を確認");
+      else this.failRow(path, "no_intent の Intent にしない理由が記録されている", "記録なし");
+    }
+  }
+
+  private checkMultiIntentDiscovery(path: string): void {
+    const table = this.checkTable(path, "Intent 候補", ["候補", "状態", "Intent", "課題", "成功状態", "除外範囲", "依存"]);
+    if (!table) return;
+    if (table.rows.length >= 2) this.pass(path, "multi_intent の Intent 候補が2件以上ある", `${table.rows.length}件`);
+    else this.failRow(path, "multi_intent の Intent 候補が2件以上ある", `${table.rows.length}件`);
+
+    let initialized = 0;
+    let recommended = 0;
+    for (const row of table.rows) {
+      this.checkAllowed(path, "Intent 候補の状態", row["状態"], discoveryCandidateStatusValues);
+      if (String(row["状態"] ?? "").trim() === "initialized") {
+        initialized += 1;
+        this.checkInitializedDiscoveryCandidate(path, row["Intent"]);
+      }
+      if (String(row["状態"] ?? "").trim() === "recommended") recommended += 1;
+      for (const column of ["候補", "課題", "成功状態", "除外範囲", "依存"]) this.checkNotBlankValue(path, column, row[column]);
+    }
+
+    if (initialized === 0 && recommended === 1) {
+      this.pass(path, "未初期化の multi_intent は recommended が1件だけである", `${recommended}件`);
+    } else if (initialized === 0) {
+      this.failRow(path, "未初期化の multi_intent は recommended が1件だけである", `${recommended}件`);
+    } else if (recommended === 0 || recommended === 1) {
+      this.pass(path, "初期化済み候補がある multi_intent は recommended が0件または1件である", `${recommended}件`);
+    } else {
+      this.failRow(path, "初期化済み候補がある multi_intent は recommended が0件または1件である", `${recommended}件`);
+    }
+  }
+
+  private checkInitializedDiscoveryCandidate(path: string, value: unknown): void {
+    const links = this.markdownLinks(String(value ?? ""));
+    if (links.length === 0) {
+      this.failRow(path, "initialized の Intent 候補が存在する Intent へリンクしている", String(value ?? ""));
+      return;
+    }
+    for (const target of links) {
+      const clean = this.cleanLinkTarget(target);
+      if (clean.match(/^\.\.\/\.\.\/intents\/[^/]+\/intent\.md$/)) this.checkLink(path, target);
+      else this.failRow(path, "initialized の Intent 候補が存在する Intent へリンクしている", target);
+    }
+  }
+
+  private checkExistingIntentUpdateDiscovery(path: string): void {
+    const body = this.sectionBody(path, "既存 Intent との関係") ?? "";
+    const intentLinks = this.markdownLinks(body).filter((link) => this.cleanLinkTarget(link).match(/^\.\.\/\.\.\/intents\/[^/]+\/intent\.md$/));
+    if (intentLinks.length === 1) {
+      this.pass(path, "existing_intent_update の対象既存 Intent が1件だけある", intentLinks[0]);
+      this.checkLink(path, intentLinks[0]);
+    } else {
+      this.failRow(path, "existing_intent_update の対象既存 Intent が1件だけある", `${intentLinks.length}件`);
+    }
   }
 
   private checkIntentIndexes(intentId: string): void {
@@ -1346,6 +1553,7 @@ class IntentValidator {
 
   private checkedFileCategory(file: string): string {
     if (file === ".amadeus") return "Amadeus ルート";
+    if (file.startsWith(".amadeus/discoveries/")) return "Discovery";
     if (/^\.amadeus\/[^/]+\.md$/.test(file)) return "全体成果物";
     if (file.startsWith(".amadeus/domain/")) return "全体ドメイン";
     if (/^\.amadeus\/intents\/[^/]+\/state\.json$/.test(file)) return "Intent 状態";
@@ -1365,6 +1573,7 @@ class IntentValidator {
     return [
       "Amadeus ルート",
       "全体成果物",
+      "Discovery",
       "全体ドメイン",
       "Intent 状態",
       "Intent 基本成果物",
@@ -1384,6 +1593,7 @@ class IntentValidator {
     const condition = row.condition;
     const target = row.target;
     if (condition.includes("作業ディレクトリ") || condition.includes("成果物ルート")) return "実行環境";
+    if (target.includes(".amadeus/discoveries") || condition.includes("Discovery") || condition.includes("Intent 候補")) return "Discovery";
     if (condition.includes("対象 Intent ディレクトリ名")) return "検証範囲";
     if (condition.includes("Initialized") || condition.includes("`initialized`")) return "Initialized";
     if (target.includes("/ideation.md") || target.includes("/scope.md") || condition.includes("Ideation") || condition.includes("Inception")) return "Ideation";

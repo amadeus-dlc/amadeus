@@ -1,8 +1,8 @@
 ---
 name: amadeus-intent-validator
 description: >-
-  配布先ユーザー環境で Amadeus の実行時構造を検証する。`.amadeus/` 成果物、Intent、domain/bounded-contexts.md、
-  Upstream/Downstream、組織パターン、統合パターン、codebase-analysis.md、Construction 成果物を、
+  配布先ユーザー環境で Amadeus の実行時構造を検証する。`.amadeus/` 成果物、Discovery、Intent、
+  domain/bounded-contexts.md、Upstream/Downstream、組織パターン、統合パターン、codebase-analysis.md、Construction 成果物を、
   repo root の開発用 scripts に依存せず確認したいときに使う。
 ---
 
@@ -38,19 +38,22 @@ Bun が使えない場合は `blocked` として報告する。
 1. `CONTEXT.md`
 2. `.amadeus/README.md`
 3. `.amadeus/intents.md`
-4. `.amadeus/domain/subdomains.md`
-5. `.amadeus/domain/bounded-contexts.md`
-6. `.amadeus/intents/<intent-id>-<slug>/intent.md`。対象 Intent ディレクトリ名が指定された場合だけ読む。
-7. `.amadeus/intents/<intent-id>-<slug>/state.json`。対象 Intent ディレクトリ名が指定された場合だけ読む。
-8. `.amadeus/intents/<intent-id>-<slug>/requirements.md`。対象 Intent ディレクトリ名が指定され、Initialized または Ideation 段階ではない場合だけ読む。
-9. `.amadeus/intents/<intent-id>-<slug>/acceptance.md`。対象 Intent ディレクトリ名が指定され、Initialized または Ideation 段階ではない場合だけ読む。
-10. `.amadeus/intents/<intent-id>-<slug>/traceability.md`。対象 Intent ディレクトリ名が指定された場合だけ読む。
-11. `.amadeus/intents/<intent-id>-<slug>/domain/subdomains.md`。対象 Intent ディレクトリ名が指定され、Initialized または Ideation 段階ではない場合だけ読む。
-12. `.amadeus/intents/<intent-id>-<slug>/domain/bounded-contexts.md`。対象 Intent ディレクトリ名が指定され、Initialized または Ideation 段階ではない場合だけ読む。
-13. `.amadeus/intents/<intent-id>-<slug>/codebase-analysis.md`。対象 Intent ディレクトリ名が指定され、Initialized または Ideation 段階ではなく、ファイルが存在する場合、または `state.json.inception.requiredArtifacts` に含まれる場合だけ読む。
-14. `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/notes.md`。対象 Intent が Construction 段階で、`state.json.construction.requiredBoltArtifacts` に含まれる場合だけ読む。
-15. `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/test-results.md`。対象 Intent が Construction 段階で、`state.json.construction.requiredBoltArtifacts` に含まれる場合だけ読む。
-16. `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/pr.md`。対象 Intent が Construction 段階で、ファイルが存在する場合、または `state.json.construction.requiredBoltArtifacts` に含まれる場合だけ読む。
+4. `.amadeus/discoveries.md`
+5. `.amadeus/discoveries/*/brief.md`
+6. `.amadeus/discoveries/*/state.json`
+7. `.amadeus/domain/subdomains.md`
+8. `.amadeus/domain/bounded-contexts.md`
+9. `.amadeus/intents/<intent-id>-<slug>/intent.md`。対象 Intent ディレクトリ名が指定された場合だけ読む。
+10. `.amadeus/intents/<intent-id>-<slug>/state.json`。対象 Intent ディレクトリ名が指定された場合だけ読む。
+11. `.amadeus/intents/<intent-id>-<slug>/requirements.md`。対象 Intent ディレクトリ名が指定され、Initialized または Ideation 段階ではない場合だけ読む。
+12. `.amadeus/intents/<intent-id>-<slug>/acceptance.md`。対象 Intent ディレクトリ名が指定され、Initialized または Ideation 段階ではない場合だけ読む。
+13. `.amadeus/intents/<intent-id>-<slug>/traceability.md`。対象 Intent ディレクトリ名が指定された場合だけ読む。
+14. `.amadeus/intents/<intent-id>-<slug>/domain/subdomains.md`。対象 Intent ディレクトリ名が指定され、Initialized または Ideation 段階ではない場合だけ読む。
+15. `.amadeus/intents/<intent-id>-<slug>/domain/bounded-contexts.md`。対象 Intent ディレクトリ名が指定され、Initialized または Ideation 段階ではない場合だけ読む。
+16. `.amadeus/intents/<intent-id>-<slug>/codebase-analysis.md`。対象 Intent ディレクトリ名が指定され、Initialized または Ideation 段階ではなく、ファイルが存在する場合、または `state.json.inception.requiredArtifacts` に含まれる場合だけ読む。
+17. `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/notes.md`。対象 Intent が Construction 段階で、`state.json.construction.requiredBoltArtifacts` に含まれる場合だけ読む。
+18. `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/test-results.md`。対象 Intent が Construction 段階で、`state.json.construction.requiredBoltArtifacts` に含まれる場合だけ読む。
+19. `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/pr.md`。対象 Intent が Construction 段階で、ファイルが存在する場合、または `state.json.construction.requiredBoltArtifacts` に含まれる場合だけ読む。
 
 存在しない参照元がある場合は、存在しない事実を結果に含める。
 存在しない参照元を推測で補完しない。
@@ -61,6 +64,11 @@ Bun が使えない場合は `blocked` として報告する。
 
 - Amadeus の成果物ルートが `.amadeus/` である。
 - `.amadeus/README.md` が存在する。
+- `.amadeus/discoveries.md` が存在する。
+- `.amadeus/discoveries.md` の一覧と各 Discovery の `brief.md`、`state.json` が対応している。
+- Discovery の `state.json.phase`、`status`、`gate`、`decision` が許可値である。
+- Discovery の `state.json.decision` と `brief.md` の `判定` が一致する。
+- Discovery が `gate: passed` の場合、判定別の構造条件を満たす。
 - `.amadeus/intents.md` が存在する。
 - `.amadeus/domain/subdomains.md` が存在する。
 - `.amadeus/domain/bounded-contexts.md` が存在する。

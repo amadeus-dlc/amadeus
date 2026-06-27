@@ -22,4 +22,5 @@
 | `policies.md` | 方針、禁止事項、判断基準を扱う。 |
 | `domain/subdomains.md` | サブドメインを扱う。 |
 | `domain/bounded-contexts.md` | 境界づけられたコンテキストを扱う。 |
+| `discoveries.md` | Discovery 一覧と判定記録への入口を扱う。 |
 | `intents.md` | Intent 一覧と依存関係を扱う。 |

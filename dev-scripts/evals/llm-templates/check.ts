@@ -67,6 +67,7 @@ const defaultCodexRunner = "dev-scripts/run-codex-corporate.sh";
 const validator = ".agents/skills/amadeus-intent-validator/validator/IntentValidator.ts";
 const requiredSkills = [
   "amadeus-steering",
+  "amadeus-discovery",
   "amadeus-intent-init",
   "amadeus-ideation",
   "amadeus-ideation-scope-framing",
@@ -1447,6 +1448,7 @@ function steeringArtifacts(): string[] {
     ".amadeus/policies.md",
     ".amadeus/domain/subdomains.md",
     ".amadeus/domain/bounded-contexts.md",
+    ".amadeus/discoveries.md",
     ".amadeus/intents.md",
   ];
 }

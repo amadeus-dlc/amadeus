@@ -17,7 +17,7 @@
 
 ## Amadeus DLC の基準
 
-- 現時点の確定入口は `README.md` に書かれた 9 skill だけである。
+- 現時点の確定入口は `README.md` に書かれた skill だけである。
 - Construction は、Inception で定義した Bolt と Task を実装、検証、証拠化する phase として扱う。
 - Spec、`.kiro/specs/**`、`openspec/**`、Operation 成果物は、対応が確定するまで固定しない。
 - 新しい成果物を作る前に、既存の `.amadeus/README.md`、`.amadeus/steering.md`、対象 Intent の `state.json` を読む。

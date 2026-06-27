@@ -15,6 +15,7 @@
 - `policies.md`
 - `domain/subdomains.md`
 - `domain/bounded-contexts.md`
+- `discoveries.md`
 - `intents.md`
 
 ## 読む順序
@@ -26,7 +27,8 @@
 5. `glossary.md`
 6. `domain/subdomains.md`
 7. `domain/bounded-contexts.md`
-8. `intents.md`
+8. `discoveries.md`
+9. `intents.md`
 
 ## Intent Layer へ進む基準
 

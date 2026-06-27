@@ -11,6 +11,9 @@
 - 対象 Intent ディレクトリ名が未指定の場合、全体成果物だけを検証する。
 - 対象 Intent ディレクトリ名が指定された場合、全体成果物に加えて対象 Intent を検証する。
 - `.amadeus/intents.md` の Intent 識別子が `YYYYMMDD-<slug>` 形式で、詳細リンクのディレクトリ名と一致することを検証する。
+- `.amadeus/discoveries.md` と各 Discovery の `brief.md`、`state.json` の対応を検証する。
+- Discovery の `state.json.decision` と `brief.md` の `判定` が一致することを検証する。
+- Discovery が `gate: passed` の場合、判定別の構造条件を検証する。
 - Initialized または Ideation 段階では、後続段階の成果物欠落を不足にしない。
 - Inception 段階では、`state.json` の `ideation` と `inception` の状態契約を検証する。
 - Inception 段階では Unit 配下の `unit.md` と `design.md` を検証する。
@@ -44,6 +47,7 @@
 | `codebase-analysis-traceability-links` | 完了 | `既存コード分析からの追跡` のリンクが所定の成果物を指す。 | 一時コピーで `分析` を `wrong.md`、または `設計` を別 Unit の `design.md` に変更すると `fail`。 |
 | `task-contract-validation` | 完了 | Bolt 配下 `tasks.md` の Task が必須項目を持つ。 | 一時コピーで `T001` の `作業` を削除すると `fail`。 |
 | `intent-directory-name-validation` | 完了 | Intent 識別子、詳細リンク、ディレクトリ名が `YYYYMMDD-<slug>` 形式で一致する。 | 一時コピーで詳細リンクを `intents/20260626-password/intent.md` に変更すると `fail`。 |
+| `discovery-layer-validation` | 完了 | Discovery 一覧、`brief.md`、`state.json` の対応と gate 条件を検証する。 | 一時コピーで `state.json.decision` と `brief.md` の `判定` を不一致にすると `fail`。 |
 
 ## 再実行コマンド
 
