@@ -56,7 +56,6 @@ const targetSkills: Record<string, Contract> = {
         "Related Intent",
         "Level Status",
         "Next Skill",
-        "Handoff To Domain Modeling",
         "Supersession",
       ],
       "templates/event-storming/session/events.md": ["一覧"],

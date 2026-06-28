@@ -463,6 +463,41 @@ function markEventStormingCurrentLevelBigPictureWithProcessComplete(workspace: s
   );
 }
 
+function markEventStormingSystemDesignDraft(workspace: string): void {
+  const statePath = join(workspace, ".amadeus/event-storming/ES001-loan-flow/state.json");
+  replaceInFile(
+    statePath,
+    '"status": "ready",\n  "currentLevel": "system-design",\n  "completedLevels": [\n    "big-picture",\n    "process-modeling",\n    "system-design"\n  ]',
+    '"status": "draft",\n  "currentLevel": "system-design",\n  "completedLevels": [\n    "big-picture",\n    "process-modeling"\n  ]',
+    "event storming fixture does not contain expected ready state",
+  );
+  const summaryPath = join(workspace, ".amadeus/event-storming/ES001-loan-flow/summary.md");
+  replaceInFile(
+    summaryPath,
+    "| system-design | ready | aggregate-candidates.md, bounded-context-candidates.md |",
+    "| system-design | draft | aggregate-candidates.md, bounded-context-candidates.md |",
+    "event storming fixture does not contain expected system-design status",
+  );
+}
+
+function removeEventStormingSummaryHandoff(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/summary.md");
+  replaceInFile(
+    path,
+    [
+      "## Handoff To Domain Modeling",
+      "",
+      "| Candidate | Kind | Evidence | Open Questions |",
+      "|---|---|---|---|",
+      "| AGC001 貸出 | Aggregate Candidate | DEV001, DEV002 | 返却期限を同じ集約で守るか |",
+      "| BCC001 貸出管理 | Bounded Context Candidate | AGC001, DEV001, DEV002 | 利用者管理と分けるか |",
+      "",
+    ].join("\n"),
+    "",
+    "event storming fixture does not contain expected handoff section",
+  );
+}
+
 function replaceEventStormingBoardRelatedWithMissingId(workspace: string): void {
   const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/board.md");
   replaceInFile(
@@ -691,6 +726,12 @@ run(["bun", "run", validator, "examples/04-inception-completed", intent]);
 const eventStormingWorkspace = workspaceCopy();
 writeEventStormingSession(eventStormingWorkspace);
 run(["bun", "run", validator, eventStormingWorkspace]);
+
+const draftSystemDesignEventStormingWorkspace = workspaceCopy();
+writeEventStormingSession(draftSystemDesignEventStormingWorkspace);
+markEventStormingSystemDesignDraft(draftSystemDesignEventStormingWorkspace);
+removeEventStormingSummaryHandoff(draftSystemDesignEventStormingWorkspace);
+run(["bun", "run", validator, draftSystemDesignEventStormingWorkspace]);
 
 const missingEventStormingBoardCandidateWorkspace = workspaceCopy();
 writeEventStormingSession(missingEventStormingBoardCandidateWorkspace);

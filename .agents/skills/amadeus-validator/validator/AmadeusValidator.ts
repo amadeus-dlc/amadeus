@@ -273,7 +273,8 @@ class AmadeusValidator {
     const level = String(state.currentLevel ?? "").trim();
     const requiresProcessModeling = this.eventStormingRequiresProcessModeling(level, state);
     const requiresSystemDesign = this.eventStormingRequiresSystemDesign(level, state);
-    this.checkEventStormingSummary(`${base}/summary.md`, level);
+    const systemDesignReady = this.eventStormingCompletedLevels(state).includes("system-design");
+    this.checkEventStormingSummary(`${base}/summary.md`, systemDesignReady);
     const eventIds = this.checkEventStormingEvents(`${base}/events.md`);
     this.checkEventStormingBoard(`${base}/board.md`, requiresProcessModeling, eventIds);
     this.checkEventStormingHotspots(`${base}/hotspots.md`);
@@ -285,7 +286,7 @@ class AmadeusValidator {
       const aggregateIds = this.checkEventStormingAggregateCandidates(`${base}/aggregate-candidates.md`, eventIds);
       const boundedContextIds = this.checkEventStormingBoundedContextCandidates(`${base}/bounded-context-candidates.md`, eventIds, aggregateIds);
       this.checkEventStormingSystemDesignBoard(`${base}/board.md`, aggregateIds, boundedContextIds);
-      this.checkEventStormingSystemDesignHandoff(`${base}/summary.md`);
+      if (systemDesignReady) this.checkEventStormingSystemDesignHandoff(`${base}/summary.md`);
     }
   }
 
@@ -353,13 +354,13 @@ class AmadeusValidator {
     return Array.isArray(state.completedLevels) ? state.completedLevels.map((value: unknown) => String(value ?? "").trim()) : [];
   }
 
-  private checkEventStormingSummary(path: string, level: string): void {
+  private checkEventStormingSummary(path: string, systemDesignReady: boolean): void {
     this.checkFile(path, "Event Storming summary.md が存在する");
     const headings = ["Purpose", "Scope", "Related Discovery", "Related Intent", "Level Status", "Next Skill", "Supersession"];
     this.checkHeadings(path, headings);
     this.checkHeadingBodies(path, headings);
     this.checkTable(path, "Level Status", ["Level", "Status", "Evidence"]);
-    if (level === "system-design") this.checkHeadings(path, ["Handoff To Domain Modeling"]);
+    if (systemDesignReady) this.checkHeadings(path, ["Handoff To Domain Modeling"]);
   }
 
   private checkEventStormingEvents(path: string): Set<string> {

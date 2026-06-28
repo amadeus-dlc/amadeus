@@ -28,12 +28,6 @@
 
 - <next-recommended-skill>
 
-## Handoff To Domain Modeling
-
-| Candidate | Kind | Evidence | Open Questions |
-|---|---|---|---|
-| 未確認 | Aggregate Candidate | 未確認 | 未確認 |
-
 ## Supersession
 
 | Field | Value |
