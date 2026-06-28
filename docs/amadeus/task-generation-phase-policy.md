@@ -11,6 +11,10 @@ AI-DLC では、Inception で Intent を Unit of Work や Suggested Bolts へ分
 この形では、Construction Design より先に実装 Task が固定される。
 その結果、AI-DLC のフェーズ境界と、設計から Task を導く流れが曖昧になる。
 
+この文書は、後続変更の計画を固定するための方針文書である。
+この文書だけでは、現行の `CONTEXT.md`、skill、validator、example の成果物契約を変更しない。
+後続 PR では、最初に `CONTEXT.md` と関連 docs を更新してから、skill、validator、example を変更する。
+
 ## 参照アンカー
 
 この方針は、AI-DLC の「Inception で Unit of Work と Suggested Bolts を扱い、Construction で Bolt Execution を行う」境界を基準にする。
@@ -82,7 +86,8 @@ Construction Design は次を必須参照にする。
 - 対象 Bolt
 - 対象 Unit
 - 対象 Requirement
-- 対象 Use Case
+- 対象 Use Case。
+  これは、アクターまたは外部システムとの相互作用がある場合だけ必須にする。
 
 ## Task 生成 Review Gate
 
@@ -90,7 +95,8 @@ Construction Design は次を必須参照にする。
 
 Review Gate では次を確認する。
 
-- Construction Design が対象 Bolt、Unit、Requirement、Use Case を参照している。
+- Construction Design が対象 Bolt、Unit、Requirement を参照している。
+- アクターまたは外部システムとの相互作用がある場合、Construction Design が対象 Use Case を参照している。
 - 各 Task が Construction Design のどの設計判断に対応するか説明できる。
 - 各 Task が Requirement を参照している。
 - アクターまたは外部システムとの相互作用を実現する Task は Use Case を参照している。
@@ -119,6 +125,20 @@ Review Gate では次を確認する。
   - 証拠: 未登録
 ```
 
+Use Case を参照しない Task では、`ユースケース` に `なし` を書く。
+その場合は、Use Case を参照しない理由を Traceability に残す。
+
+```md
+- [ ] T002: 内部構造を整理する
+  - 作業:
+    - Construction Design の実装設計に従い、内部構造を整理する。
+  - 要求: R001
+  - ユースケース: なし
+  - 依存: T001
+  - 設計根拠: bolts/B001-example/design.md#実装設計
+  - 証拠: 未登録
+```
+
 実装と検証後は、完了状態と証拠を更新する。
 
 ```md
@@ -134,12 +154,15 @@ Review Gate では次を確認する。
 
 ## `state.json` の状態表現
 
-Construction の Bolt 状態では、Design Gate と Task Plan を分ける。
+Construction の Bolt 状態では、Design Gate と Task 生成状態を分ける。
+`taskPlan` は `state.json` 上の状態プロパティであり、新しいドメイン概念として扱わない。
 
 ```json
 {
   "designGate": {
     "status": "ready",
+    "reviewedBy": "ai",
+    "updatedAt": "2026-06-28",
     "evidence": "bolts/B001-example/design.md"
   },
   "taskPlan": {
@@ -151,6 +174,7 @@ Construction の Bolt 状態では、Design Gate と Task Plan を分ける。
 
 `designGate.status: ready` は、Construction Design が実装作業へ分解できる粒度になった状態を表す。
 `taskPlan.status: generated` は、Design Gate ready 後に実装作業リストが生成された状態を表す。
+Design Gate ready 後、Task 生成 Review Gate で不足が見つかった場合は、`taskPlan.status` を `not_generated` または `blocked` として扱い、`tasks.md` が存在しない途中状態を許可する。
 
 ## Validator 変更方針
 
@@ -165,11 +189,15 @@ Inception validator は次を確認する。
 Construction validator は次を確認する。
 
 - 対象 Bolt の `design.md` が存在する。
-- 対象 Bolt の `tasks.md` が存在する。
-- `tasks.md` の各 Task が、作業、要求、ユースケース、依存、設計根拠、証拠を持つ。
-- `state.json.construction.requiredBoltArtifacts` に `design.md` と `tasks.md` が含まれる。
+- `state.json.construction.bolts[].designGate.reviewedBy` が空でない。
+- `state.json.construction.bolts[].designGate.updatedAt` が空でない。
 - `state.json.construction.bolts[].designGate.evidence` が `design.md` を指す。
-- `state.json.construction.bolts[].taskPlan.evidence` が `tasks.md` を指す。
+- `state.json.construction.bolts[].taskPlan.status` が `generated` の場合、対象 Bolt の `tasks.md` が存在する。
+- `state.json.construction.bolts[].taskPlan.status` が `generated` の場合、`tasks.md` の各 Task が、作業、要求、ユースケース、依存、設計根拠、証拠を持つ。
+- `state.json.construction.bolts[].taskPlan.status` が `generated` の場合、`state.json.construction.requiredBoltArtifacts` に `tasks.md` が含まれる。
+- `state.json.construction.bolts[].taskPlan.status` が `generated` の場合、`state.json.construction.bolts[].taskPlan.evidence` が `tasks.md` を指す。
+- Task の `ユースケース` は、Use Case ID または `なし` を許可する。
+- Task の `ユースケース` が `なし` の場合、Traceability に Use Case を参照しない理由がある。
 
 旧構造は失敗にする。
 
@@ -212,6 +240,10 @@ Inception traceability は Requirement、Story、Use Case、Unit、Bolt、Unit D
 4. examples の再生成と検証。
 
 ただし、validator と examples が強く結合している場合は、3 と 4 を統合してよい。
+
+この PR は計画文書だけを追加する。
+そのため、`CONTEXT.md`、skill、validator、example の契約はこの PR では変更しない。
+後続 PR 1 が merge されるまでは、既存の `CONTEXT.md` を実行時の語彙定義元として扱う。
 
 ## 検証方針
 
