@@ -2022,9 +2022,15 @@ class AmadeusValidator {
     const text = String(value ?? "").trim();
     const links = this.markdownLinks(text);
     const targets = links.length > 0 ? links : this.splitValues(text);
+    let inspected = false;
     for (const target of targets) {
       const clean = this.cleanLinkTarget(target);
-      if (clean.length === 0 || this.externalLink(clean)) continue;
+      if (clean.length === 0) continue;
+      inspected = true;
+      if (this.externalLink(clean)) {
+        this.failRow(path, condition, `${detail}: ${target} は workspace 内の成果物ではない`);
+        continue;
+      }
       const resolved = this.absolute(join(base, clean));
       if (existsSync(resolved)) {
         this.checkedFiles.add(this.relativePath(resolved));
@@ -2033,6 +2039,7 @@ class AmadeusValidator {
         this.failRow(path, condition, `${detail}: ${target} -> ${this.relativePath(resolved)}`);
       }
     }
+    if (!inspected) this.failRow(path, condition, `${detail}: 参照先なし`);
   }
 
   private grillingDecisionReferences(value: unknown): string[] {

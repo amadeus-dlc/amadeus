@@ -1258,6 +1258,13 @@ runExpectFailure(
   "grilling 索引の `反映先` が存在する",
 );
 
+const grillingsIndexWithExternalTargetWorkspace = workspaceCopy();
+writeGrillings(intentPath(grillingsIndexWithExternalTargetWorkspace, ""), { indexTarget: "https://example.com/scope.md" });
+runExpectFailure(
+  ["bun", "run", validator, grillingsIndexWithExternalTargetWorkspace, intent],
+  "grilling 索引の `反映先` が存在する",
+);
+
 const grillingsSessionWithMissingTargetWorkspace = workspaceCopy();
 writeGrillings(intentPath(grillingsSessionWithMissingTargetWorkspace, ""), { sessionTarget: "missing.md" });
 runExpectFailure(
@@ -1276,6 +1283,13 @@ const grillingsDecisionWithMissingTargetWorkspace = workspaceCopy();
 writeGrillings(intentPath(grillingsDecisionWithMissingTargetWorkspace, ""), { decisionTarget: "missing.md" });
 runExpectFailure(
   ["bun", "run", validator, grillingsDecisionWithMissingTargetWorkspace, intent],
+  "grilling 判断の `反映先` が存在する",
+);
+
+const grillingsDecisionWithoutParseableTargetWorkspace = workspaceCopy();
+writeGrillings(intentPath(grillingsDecisionWithoutParseableTargetWorkspace, ""), { decisionTarget: "," });
+runExpectFailure(
+  ["bun", "run", validator, grillingsDecisionWithoutParseableTargetWorkspace, intent],
   "grilling 判断の `反映先` が存在する",
 );
 
