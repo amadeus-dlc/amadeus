@@ -22,8 +22,9 @@ _Avoid_: runtime dependency
 _Avoid_: 正本
 
 **ADR**：Amadeus DLC の構造、境界、長期的な判断を記録する Architecture Decision Record である。
-採用済み ADR が新しいドメイン語彙を導入した場合は、`CONTEXT.md` に語彙定義として反映する。
+採用済み ADR、現在の実装、merge 済みの差分履歴が新しいドメイン語彙を導入した場合は、`CONTEXT.md` に語彙定義として反映する。
 `CONTEXT.md` は語彙の定義元であり、ADR は判断の根拠と履歴を扱う。
+実装と差分履歴は、現行挙動と判断経緯を確認するための入力として扱う。
 
 **AI-DLC Core**：DLC を領域に依存せず扱うための抽象モデルである。
 AI-DLC Core は phase、state、decision、traceability、gate を扱う。
