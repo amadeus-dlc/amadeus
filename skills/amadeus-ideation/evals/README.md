@@ -5,7 +5,8 @@
 `amadeus-ideation` は、次を満たした場合だけ `.agents/skills/amadeus-ideation/` へコピー昇格できる。
 
 - `auto` は、既存状態から `guided`、`refine`、`repair` を判定する。
-- `guided` は、最大5問の質問を出し、質問したターンでは成果物を作らず回答待ちにする。
+- `guided` は、目安5問で不足だけを質問し、必要な判断が未確定であれば目安を超えても質問を続ける。
+- 質問したターンでは成果物を作らず回答待ちにする。
 - `scaffold-only` は、Ideation 成果物だけを作る。
 - `repair` は、既存 Ideation 成果物の構造だけを補修する。
 - `refine` は、既存 Ideation 成果物を一問ずつ煮詰め、質問したターンでは成果物を更新しない。
@@ -26,7 +27,7 @@
 
 | ケース | 状態 | 確認内容 | 証拠 |
 |---|---|---|---|
-| `guided` | 完了 | 既存成果物から分かることと不足を示し、質問5件で回答待ちにする。成果物は作らない。 | `/tmp/amadeus-ideation-guided.TvUXLH/guided-eval-output.md` |
+| `guided` | 完了 | 既存成果物から分かることと不足を示し、目安5問で回答待ちにする。成果物は作らない。 | `/tmp/amadeus-ideation-guided.TvUXLH/guided-eval-output.md` |
 | `scaffold-only` | 完了 | Ideation 成果物だけを作り、Amadeus Validator が対象 Intent ディレクトリ名指定で pass する。要求、ユースケース、Unit、Bolt、domain は作らない。 | `/tmp/amadeus-ideation-scaffold-only.4xHUf4` |
 | `repair` | 完了 | 既存 Ideation 成果物の構造だけを補修し、Amadeus Validator が対象 Intent ディレクトリ名指定で pass する。要求、ユースケース、Unit、Bolt、domain は作らない。 | `/tmp/amadeus-ideation-repair.Nj7jRc` |
 | init 不足 | 完了 | Intent の入れ物が不足している場合は成果物を作らず、`amadeus-intent-init` を案内して止める。 | `/tmp/amadeus-ideation-init-missing.mErktj/init-missing-eval-output.md` |
