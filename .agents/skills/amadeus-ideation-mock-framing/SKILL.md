@@ -22,7 +22,7 @@ Ideation phase の初期モック具体化だけを進める。
 少なくとも次を読む。
 
 - `.amadeus/intents.md`
-- `.amadeus/intents/<intent-id>-<slug>/intent.md`
+- `.amadeus/intents/<intent-id>-<slug>.md`
 - `.amadeus/intents/<intent-id>-<slug>/state.json`
 - `.amadeus/intents/<intent-id>-<slug>/scope.md`
 - `.amadeus/intents/<intent-id>-<slug>/ideation.md`

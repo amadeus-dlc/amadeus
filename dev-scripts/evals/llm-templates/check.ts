@@ -342,11 +342,12 @@ function prepareSteeringFixture(workspace: string): void {
 
 function applyEventStormingArtifacts(workspace: string): void {
   const source = join(root, ".agents/skills/amadeus-event-storming/templates/event-storming/session");
+  const summarySource = join(root, ".agents/skills/amadeus-event-storming/templates/event-storming/session.md");
   const target = join(workspace, ".amadeus/event-storming/ES001-loan-flow");
-  ensureFile(join(source, "summary.md"));
+  ensureFile(summarySource);
   cpSync(source, target, { recursive: true });
   writeFileSync(
-    join(target, "summary.md"),
+    join(workspace, ".amadeus/event-storming/ES001-loan-flow.md"),
     [
       "# Event Storming Summary",
       "",
@@ -513,7 +514,7 @@ function writeIntentIndex(workspace: string, intent: string): void {
       "",
       "| 識別子 | 概要 | 依存 | 詳細 |",
       "|---|---|---|---|",
-      `| ${intent} | 利用者が図書貸出をセルフサービスで開始できるようにする。 | なし | [${intent}/intent.md](intents/${intent}/intent.md) |`,
+      `| ${intent} | 利用者が図書貸出をセルフサービスで開始できるようにする。 | なし | [${intent}.md](intents/${intent}.md) |`,
       "",
       "## 依存関係",
       "",
@@ -532,10 +533,17 @@ function prepareInitializedIntentFixture(workspace: string): void {
 
 function applyInitializedIntentArtifacts(workspace: string, intent: string, name: string, purpose: string): void {
   const source = join(root, ".agents/skills/amadeus-intent-init/templates/intents/initialized");
+  const intentSource = join(root, ".agents/skills/amadeus-intent-init/templates/intents/initialized.md");
   const target = join(workspace, ".amadeus/intents", intent);
-  ensureFile(join(source, "intent.md"));
+  ensureFile(intentSource);
   cpSync(source, target, { recursive: true });
+  writeFileSync(join(workspace, ".amadeus/intents", `${intent}.md`), readFileSync(intentSource, "utf8"));
   replaceInTree(target, {
+    "<intent-id>-<slug>": intent,
+    "<intent-name>": name,
+    "<intent-purpose>": purpose,
+  });
+  replaceInFile(join(workspace, ".amadeus/intents", `${intent}.md`), {
     "<intent-id>-<slug>": intent,
     "<intent-name>": name,
     "<intent-purpose>": purpose,
@@ -636,12 +644,12 @@ function writeIdeationState(target: string): void {
       status: "completed",
       initialized: {
         status: "completed",
-        createdArtifacts: ["intent.md", "state.json"],
+        createdArtifacts: [`../${fixtureIntent}.md`, "state.json"],
         next: "ideation",
       },
       ideation: {
         status: "completed",
-        requiredArtifacts: ["intent.md", "scope.md", "ideation.md", "decisions.md", "traceability.md"],
+        requiredArtifacts: [`../${fixtureIntent}.md`, "scope.md", "ideation.md", "decisions.md", "traceability.md"],
         requiredMocks: ["mocks/initial-confirmation.puml"],
         gate: "passed",
       },
@@ -1185,12 +1193,12 @@ function writeInceptionState(target: string): void {
       status: "in_progress",
       initialized: {
         status: "completed",
-        createdArtifacts: ["intent.md", "state.json"],
+        createdArtifacts: [`../${fixtureIntent}.md`, "state.json"],
         next: "ideation",
       },
       ideation: {
         status: "completed",
-        requiredArtifacts: ["intent.md", "scope.md", "ideation.md", "decisions.md", "traceability.md"],
+        requiredArtifacts: [`../${fixtureIntent}.md`, "scope.md", "ideation.md", "decisions.md", "traceability.md"],
         requiredMocks: ["mocks/initial-confirmation.puml"],
         gate: "passed",
       },
@@ -1233,12 +1241,12 @@ function writeConstructionState(target: string): void {
       status: "in_progress",
       initialized: {
         status: "completed",
-        createdArtifacts: ["intent.md", "state.json"],
+        createdArtifacts: [`../${fixtureIntent}.md`, "state.json"],
         next: "ideation",
       },
       ideation: {
         status: "completed",
-        requiredArtifacts: ["intent.md", "scope.md", "ideation.md", "decisions.md", "traceability.md"],
+        requiredArtifacts: [`../${fixtureIntent}.md`, "scope.md", "ideation.md", "decisions.md", "traceability.md"],
         requiredMocks: ["mocks/initial-confirmation.puml"],
         gate: "passed",
       },
@@ -1404,7 +1412,7 @@ function intentInitPrompt(): string {
     "",
     "制約:",
     "- 質問せずに続行してください。",
-    "- `.amadeus/intents.md`、対象 Intent の `intent.md`、`state.json` だけを作成または更新してください。",
+    "- `.amadeus/intents.md`、対象 Intent の `.amadeus/intents/<intent-id>.md`、`state.json` だけを作成または更新してください。",
     "- Ideation 成果物、Inception 成果物、domain 成果物は作らないでください。",
     "- git commit はしないでください。",
     "- 作成後に `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . 20260627-return-reminder` を実行し、結果を要約してください。",
@@ -1429,7 +1437,7 @@ function eventStormingPrompt(): string {
     "- Hotspot: HOT001 返却期限変更の扱いが未確定。",
     "",
     "作成対象:",
-    "- `.amadeus/event-storming/ES001-loan-flow/summary.md`",
+    "- `.amadeus/event-storming/ES001-loan-flow.md`",
     "- `.amadeus/event-storming/ES001-loan-flow/events.md`",
     "- `.amadeus/event-storming/ES001-loan-flow/flow.md`",
     "- `.amadeus/event-storming/ES001-loan-flow/board.md`",
@@ -1799,7 +1807,7 @@ function steeringMarkdownArtifacts(): string[] {
 function eventStormingArtifacts(): string[] {
   return [
     ...steeringArtifacts(),
-    ".amadeus/event-storming/ES001-loan-flow/summary.md",
+    ".amadeus/event-storming/ES001-loan-flow.md",
     ".amadeus/event-storming/ES001-loan-flow/events.md",
     ".amadeus/event-storming/ES001-loan-flow/flow.md",
     ".amadeus/event-storming/ES001-loan-flow/board.md",
@@ -1812,7 +1820,7 @@ function eventStormingArtifacts(): string[] {
 
 function eventStormingMarkdownArtifacts(): string[] {
   return [
-    ".amadeus/event-storming/ES001-loan-flow/summary.md",
+    ".amadeus/event-storming/ES001-loan-flow.md",
     ".amadeus/event-storming/ES001-loan-flow/events.md",
     ".amadeus/event-storming/ES001-loan-flow/flow.md",
     ".amadeus/event-storming/ES001-loan-flow/board.md",
@@ -1825,14 +1833,14 @@ function eventStormingMarkdownArtifacts(): string[] {
 function initializedIntentArtifacts(intent: string): string[] {
   return [
     ...steeringArtifacts(),
-    `.amadeus/intents/${intent}/intent.md`,
+    `.amadeus/intents/${intent}.md`,
     `.amadeus/intents/${intent}/state.json`,
   ];
 }
 
 function initializedIntentMarkdownArtifacts(intent: string): string[] {
   return [
-    `.amadeus/intents/${intent}/intent.md`,
+    `.amadeus/intents/${intent}.md`,
   ];
 }
 

@@ -32,7 +32,7 @@ Spec、`.kiro/specs/**`、`openspec/**`、Operation 成果物は作らない。
 少なくとも次が存在しない場合は、作業を止めて `amadeus-inception` を案内する。
 
 - `.amadeus/intents.md`
-- `.amadeus/intents/<intent-id>-<slug>/intent.md`
+- `.amadeus/intents/<intent-id>-<slug>.md`
 - `.amadeus/intents/<intent-id>-<slug>/state.json`
 - `.amadeus/intents/<intent-id>-<slug>/requirements.md`
 - `.amadeus/intents/<intent-id>-<slug>/acceptance.md`
@@ -110,7 +110,7 @@ Construction 成果物を新規作成または構造補修する内部 skill は
 判定では、少なくとも次を読む。
 
 - `.amadeus/intents.md`
-- `intent.md`
+- `Intent 正本ファイル`
 - `state.json`
 - `requirements.md`
 - `acceptance.md`

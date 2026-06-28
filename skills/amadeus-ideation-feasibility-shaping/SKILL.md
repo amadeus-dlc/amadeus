@@ -22,7 +22,7 @@ Ideation phase の実現可能性と体制整理だけを進める。
 少なくとも次を読む。
 
 - `.amadeus/intents.md`
-- `.amadeus/intents/<intent-id>-<slug>/intent.md`
+- `.amadeus/intents/<intent-id>-<slug>.md`
 - `.amadeus/intents/<intent-id>-<slug>/state.json`
 - `.amadeus/intents/<intent-id>-<slug>/scope.md`
 - steering layer

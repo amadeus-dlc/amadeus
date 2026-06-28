@@ -87,14 +87,14 @@ Intent 配下の Event Storming は次に置く。
 ```
 
 Intent 前の Event Storming は、Discovery から参照できる補助成果物として扱う。
-Discovery の `brief.md` には、関連 Event Storming への参照を置く。
+Discovery の `Discovery 正本ファイル` には、関連 Event Storming への参照を置く。
 
 ```md
 ## 関連 Event Storming
 
 | ID | 目的 | パス |
 |---|---|---|
-| ES001-order-flow | ECサイト構築テーマの Domain Event 整理 | ../../event-storming/ES001-order-flow/summary.md |
+| ES001-order-flow | ECサイト構築テーマの Domain Event 整理 | ../event-storming/ES001-order-flow.md |
 ```
 
 ## ID
@@ -175,8 +175,8 @@ level ごとに別ディレクトリを作らない。
 最終的な構造は次である。
 
 ```text
+.amadeus/event-storming/ES001-order-flow.md
 .amadeus/event-storming/ES001-order-flow/
-  summary.md
   events.md
   flow.md
   board.md
@@ -189,8 +189,8 @@ level ごとに別ディレクトリを作らない。
 Intent 配下の場合も同じ構造にする。
 
 ```text
+.amadeus/intents/<intent-id>-<slug>/event-storming/ES001-order-flow.md
 .amadeus/intents/<intent-id>-<slug>/event-storming/ES001-order-flow/
-  summary.md
   events.md
   flow.md
   board.md
@@ -200,7 +200,7 @@ Intent 配下の場合も同じ構造にする。
   state.json
 ```
 
-`big-picture` では `summary.md`、`events.md`、`board.md`、`hotspots.md`、`state.json` を使う。
+`big-picture` では `Event Storming 正本ファイル`、`events.md`、`board.md`、`hotspots.md`、`state.json` を使う。
 
 `process-modeling` では `flow.md` を追加する。
 
@@ -208,7 +208,7 @@ Intent 配下の場合も同じ構造にする。
 
 ## 成果物の役割
 
-`summary.md` は、目的、対象範囲、関連 Discovery、関連 Intent、実施状態、次に使う skill をまとめる。
+`Event Storming 正本ファイル` は、目的、対象範囲、関連 Discovery、関連 Intent、実施状態、次に使う skill をまとめる。
 
 `events.md` は、Domain Event の詳細を扱う。
 採用理由、根拠、除外した類似イベントを持つ。
@@ -474,7 +474,7 @@ intent-scoped
 ## Handoff To Domain Modeling
 
 `system-design ready` の場合だけ、Domain Modeling への Handoff を作る。
-Handoff は `summary.md` の `Handoff To Domain Modeling` 見出しに保存する。
+Handoff は `Event Storming 正本ファイル` の `Handoff To Domain Modeling` 見出しに保存する。
 
 Handoff は変換判断ではない。
 Handoff は、Domain Modeling が判断するための入力リストである。
@@ -510,7 +510,7 @@ ES002-order-flow-revised/
   supersedes: ES001-order-flow
 ```
 
-`summary.md` にも関係を残す。
+`Event Storming 正本ファイル` にも関係を残す。
 
 ```md
 ## Supersession

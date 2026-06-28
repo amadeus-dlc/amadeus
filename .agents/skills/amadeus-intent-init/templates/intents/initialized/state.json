@@ -5,7 +5,7 @@
   "initialized": {
     "status": "completed",
     "createdArtifacts": [
-      "intent.md",
+      "../<intent-id>-<slug>.md",
       "state.json"
     ],
     "next": "ideation"

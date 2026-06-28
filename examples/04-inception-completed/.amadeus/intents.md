@@ -4,7 +4,7 @@
 
 | 識別子 | 概要 | 依存 | 詳細 |
 |---|---|---|---|
-| 20260628-discovery-brief-creation | 入力テーマを Discovery Brief に整理できる | なし | [20260628-discovery-brief-creation/intent.md](intents/20260628-discovery-brief-creation/intent.md) |
+| 20260628-discovery-brief-creation | 入力テーマを Discovery Brief に整理できる | なし | [20260628-discovery-brief-creation.md](intents/20260628-discovery-brief-creation.md) |
 
 ## 依存関係
 

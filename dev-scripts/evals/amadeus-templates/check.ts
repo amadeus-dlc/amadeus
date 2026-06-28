@@ -39,7 +39,7 @@ const targetSkills: Record<string, Contract> = {
   "amadeus-discovery": {
     skillText: [".amadeus/settings/templates", "templates/discoveries/discovery"],
     files: {
-      "templates/discoveries/discovery/brief.md": [
+      "templates/discoveries/discovery.md": [
         "入力テーマ",
         "確認した前提",
         "判定",
@@ -56,7 +56,7 @@ const targetSkills: Record<string, Contract> = {
   "amadeus-event-storming": {
     skillText: [".amadeus/settings/templates", "templates/event-storming/session"],
     files: {
-      "templates/event-storming/session/summary.md": [
+      "templates/event-storming/session.md": [
         "Purpose",
         "Scope",
         "Related Discovery",
@@ -77,7 +77,7 @@ const targetSkills: Record<string, Contract> = {
   "amadeus-intent-init": {
     skillText: [".amadeus/settings/templates", "templates/intents/initialized"],
     files: {
-      "templates/intents/initialized/intent.md": ["目的", "成功条件", "範囲"],
+      "templates/intents/initialized.md": ["目的", "成功条件", "範囲"],
       "templates/intents/initialized/state.json": [],
     },
   },

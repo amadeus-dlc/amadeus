@@ -75,7 +75,7 @@ function replaceInFile(path: string, from: string, to: string, message: string):
 
 function replaceDiscoveryDecision(workspace: string): void {
   replaceInFile(
-    join(workspace, ".amadeus/discoveries/20260628-amadeus-theme-decomposition/brief.md"),
+    join(workspace, ".amadeus/discoveries/20260628-amadeus-theme-decomposition.md"),
     "## 判定\n\nmulti_intent",
     "## 判定\n\nsingle_intent",
     "discovery fixture does not contain expected decision",
@@ -83,7 +83,7 @@ function replaceDiscoveryDecision(workspace: string): void {
 }
 
 function removeDiscoveryCandidate(workspace: string): void {
-  const path = join(workspace, ".amadeus/discoveries/20260628-amadeus-theme-decomposition/brief.md");
+  const path = join(workspace, ".amadeus/discoveries/20260628-amadeus-theme-decomposition.md");
   const text = readFileSync(path, "utf8");
   const rows = [
     "| Discovery から Intent 初期化へ引き継げる | waiting | 未作成 | Discovery の候補を Intent の入れ物へ渡す手順が曖昧になる | recommended または initialized の候補から Intent を初期化できる | Ideation 以降の成果物 | 入力テーマを Discovery Brief に整理できる |\n",
@@ -378,7 +378,7 @@ function writeConstructionDesign(workspace: string, overrides: Record<string, st
       "",
       "## Logical Design",
       "",
-      overrides.logical ?? "- 対象 Task: B001/T001, B001/T002。brief.md と state.json の整合を維持する。",
+      overrides.logical ?? "- 対象 Task: B001/T001, B001/T002。Discovery 正本と state.json の整合を維持する。",
       "",
       "## 実装設計",
       "",
@@ -400,7 +400,7 @@ function writeEventStormingSession(workspace: string): void {
   const base = join(workspace, ".amadeus/event-storming/ES001-loan-flow");
   mkdirSync(base, { recursive: true });
   writeFileSync(
-    join(base, "summary.md"),
+    join(workspace, ".amadeus/event-storming/ES001-loan-flow.md"),
     [
       "# Event Storming Summary",
       "",
@@ -769,7 +769,7 @@ function markEventStormingSystemDesignDraft(workspace: string): void {
     '"status": "draft",\n  "currentLevel": "system-design",\n  "completedLevels": [\n    "big-picture",\n    "process-modeling"\n  ]',
     "event storming fixture does not contain expected ready state",
   );
-  const summaryPath = join(workspace, ".amadeus/event-storming/ES001-loan-flow/summary.md");
+  const summaryPath = join(workspace, ".amadeus/event-storming/ES001-loan-flow.md");
   replaceInFile(
     summaryPath,
     "| system-design | ready | aggregate-candidates.md, bounded-context-candidates.md |",
@@ -779,7 +779,7 @@ function markEventStormingSystemDesignDraft(workspace: string): void {
 }
 
 function removeEventStormingSummaryHandoff(workspace: string): void {
-  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/summary.md");
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow.md");
   replaceInFile(
     path,
     [
@@ -797,7 +797,7 @@ function removeEventStormingSummaryHandoff(workspace: string): void {
 }
 
 function removeEventStormingSummaryHandoffRows(workspace: string): void {
-  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/summary.md");
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow.md");
   replaceInFile(
     path,
     [
@@ -811,7 +811,7 @@ function removeEventStormingSummaryHandoffRows(workspace: string): void {
 }
 
 function replaceEventStormingSummaryHandoffCandidateWithMissingId(workspace: string): void {
-  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/summary.md");
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow.md");
   replaceInFile(
     path,
     "| AGC001 | Aggregate Candidate | DEV001, DEV002 | 返却期限を同じ集約で守るか |",
@@ -1217,7 +1217,9 @@ writeGrillings(intentPath(supersededWithSessionDecisionReferenceWorkspace, ""), 
 run(["bun", "run", validator, supersededWithSessionDecisionReferenceWorkspace, intent]);
 
 const discoveryGrillingsWorkspace = workspaceCopy();
-writeGrillings(join(discoveryGrillingsWorkspace, ".amadeus/discoveries/20260628-amadeus-theme-decomposition"), { target: "brief.md" });
+writeGrillings(join(discoveryGrillingsWorkspace, ".amadeus/discoveries/20260628-amadeus-theme-decomposition"), {
+  target: "../20260628-amadeus-theme-decomposition.md",
+});
 run(["bun", "run", validator, discoveryGrillingsWorkspace]);
 
 const domainGrillingsWorkspace = workspaceCopy();
@@ -1230,7 +1232,7 @@ run(["bun", "run", validator, eventStormingWorkspace]);
 
 const eventStormingGrillingsWorkspace = workspaceCopy();
 writeEventStormingSession(eventStormingGrillingsWorkspace);
-writeGrillings(join(eventStormingGrillingsWorkspace, ".amadeus/event-storming/ES001-loan-flow"), { target: "summary.md" });
+writeGrillings(join(eventStormingGrillingsWorkspace, ".amadeus/event-storming/ES001-loan-flow"), { target: "../ES001-loan-flow.md" });
 run(["bun", "run", validator, eventStormingGrillingsWorkspace]);
 
 const grillingsIndexWithoutDirectoryWorkspace = workspaceCopy();
@@ -1551,7 +1553,7 @@ const discoveryDecisionMismatchWorkspace = workspaceCopy();
 replaceDiscoveryDecision(discoveryDecisionMismatchWorkspace);
 runExpectFailure(
   ["bun", "run", validator, discoveryDecisionMismatchWorkspace],
-  "state.json.decision と brief.md の判定が一致する",
+  "state.json.decision と Discovery 正本の判定が一致する",
 );
 
 const discoveryMultiIntentTooSmallWorkspace = workspaceCopy();

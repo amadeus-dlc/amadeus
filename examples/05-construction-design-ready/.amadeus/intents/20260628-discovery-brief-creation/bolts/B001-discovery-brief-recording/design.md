@@ -35,7 +35,7 @@
 - T003 では、Discovery Brief の責務境界を固定し、Requirement、Use Case、Unit、Bolt、Task を Discovery Brief 内で定義しないことを確認可能にする。
 - T004 では、記録済み、確認待ちの確認状態と、B002 へ渡す参照項目を整理する。
 - 保存操作、UI 表現、具体的なファイル更新処理は、この Bolt の設計準備では実装しない。
-- 実装時は、既存の `.amadeus/discoveries/*/brief.md` の見出し粒度と、R001、UC001、U001 の責務境界を合わせる。
+- 実装時は、既存の `.amadeus/discoveries/*.md` の見出し粒度と、R001、UC001、U001 の責務境界を合わせる。
 
 ## 検証設計
 

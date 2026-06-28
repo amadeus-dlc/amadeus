@@ -54,7 +54,7 @@
 
 | Ideation 要素 | 対象 | 定義元 | Inception での扱い |
 |---|---|---|---|
-| Intent | 20260628-discovery-brief-creation | [intent.md](intent.md) | R001 と R002 の上位目的として扱う。 |
+| Intent | 20260628-discovery-brief-creation | [20260628\-discovery\-brief\-creation.md](../20260628-discovery-brief-creation.md) | R001 と R002 の上位目的として扱う。 |
 | Scope | Discovery Brief 記録と Intent 候補提示 | [scope.md](scope.md) | Requirement、Story、Use Case、Unit、Bolt の対象範囲にする。 |
 | 実現可能性 | Discovery Brief の既存例示を前提に成立する | [ideation.md](ideation.md) | 要求と受け入れ状態の根拠にする。 |
 | 初期モック | Discovery Brief 確認カード | [mocks/initial-confirmation.puml](mocks/initial-confirmation.puml) | R002 と UC002 の確認観点にする。 |
@@ -65,7 +65,7 @@
 | 種別 | 対象 | 依存 | 理由 | 定義元 |
 |---|---|---|---|---|
 | インテント | 20260628-discovery-brief-creation | なし | Discovery Brief の最初の候補として単独で成立するため。 | [../../intents.md](../../intents.md) |
-| Discovery | 20260628-amadeus-theme-decomposition | なし | この Intent は Discovery Brief の最初の Intent 候補として作成済みであるため。 | [../../discoveries/20260628-amadeus-theme-decomposition/brief.md](../../discoveries/20260628-amadeus-theme-decomposition/brief.md) |
+| Discovery | 20260628-amadeus-theme-decomposition | なし | この Intent は Discovery Brief の最初の Intent 候補として作成済みであるため。 | [../../discoveries/20260628-amadeus-theme-decomposition.md](../../discoveries/20260628-amadeus-theme-decomposition.md) |
 | 要求 | R001 | なし | Discovery Brief の記録が候補提示の前提になるため。 | [requirements.md](requirements.md) |
 | 要求 | R002 | R001 | Intent 候補は Discovery Brief に記録された判断を根拠に提示するため。 | [requirements.md](requirements.md) |
 | ユーザーストーリー | S001 | なし | Discovery Brief 確認から最初の候補選択までを一続きの価値として扱うため。 | [user-stories.md](user-stories.md) |

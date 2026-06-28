@@ -16,7 +16,7 @@
 
 ## 根拠
 
-- [intent.md](../intent.md) の成功条件で、入力テーマ、確認した前提、判定、判定理由、推奨次アクションの記録が求められている。
+- [20260628-discovery-brief-creation.md](../../20260628-discovery-brief-creation.md) の成功条件で、入力テーマ、確認した前提、判定、判定理由、推奨次アクションの記録が求められている。
 - [scope.md](../scope.md) の対象に、Discovery Brief へ記録項目を残すことが含まれている。
 - [ideation.md](../ideation.md) の実現可能性で、既存の Discovery Brief 例示を前提に成立すると整理されている。
 

@@ -5,7 +5,7 @@
 - B001 は Discovery Brief 記録を実装可能な Task 集合へ分解する。
 - 実装前に、Discovery Brief の必須項目、判定と理由の対応、責務境界、B002 への参照項目を順に固める。
 - 対象 workspace は例示成果物中心であり、実装コードは存在しない。
-- そのため、後続の実装では `.amadeus/discoveries/*/brief.md` の構造と Amadeus 成果物の契約を基準にする。
+- そのため、後続の実装では `.amadeus/discoveries/*.md` の構造と Amadeus 成果物の契約を基準にする。
 - この段階では、実装コード、テストコード、`test-results.md`、PR 記録を作らない。
 
 ## 対象タスク

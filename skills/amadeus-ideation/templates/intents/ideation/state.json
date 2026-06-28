@@ -5,7 +5,7 @@
   "initialized": {
     "status": "completed",
     "createdArtifacts": [
-      "intent.md",
+      "../<intent-id>-<slug>.md",
       "state.json"
     ],
     "next": "ideation"
@@ -13,7 +13,7 @@
   "ideation": {
     "status": "in_progress",
     "requiredArtifacts": [
-      "intent.md",
+      "../<intent-id>-<slug>.md",
       "scope.md",
       "ideation.md",
       "decisions.md",

@@ -247,16 +247,16 @@ class AmadeusValidator {
       if (links.length === 0) continue;
       for (const target of links) {
         const clean = this.cleanLinkTarget(target);
-        const match = clean.match(/^discoveries\/([^/]+)\/brief\.md$/);
+        const match = clean.match(/^discoveries\/([^/]+)\.md$/);
         if (!match) {
-          this.failRow(path, "`詳細` が discoveries/<discovery-id>/brief.md を指す", target);
+          this.failRow(path, "`詳細` が discoveries/<discovery-id>.md を指す", target);
           continue;
         }
-        const directory = match[1];
-        if (directory === id) this.pass(path, "`詳細` の Discovery ディレクトリ名が識別子と一致する", directory);
-        else this.failRow(path, "`詳細` の Discovery ディレクトリ名が識別子と一致する", `${directory} != ${id}`);
-        if (ids.has(directory)) this.pass(path, "`詳細` の Discovery ディレクトリ名が一覧内に存在する", directory);
-        else this.failRow(path, "`詳細` の Discovery ディレクトリ名が一覧内に存在する", directory);
+        const discoveryId = match[1];
+        if (discoveryId === id) this.pass(path, "`詳細` の Discovery ID が識別子と一致する", discoveryId);
+        else this.failRow(path, "`詳細` の Discovery ID が識別子と一致する", `${discoveryId} != ${id}`);
+        if (ids.has(discoveryId)) this.pass(path, "`詳細` の Discovery ID が一覧内に存在する", discoveryId);
+        else this.failRow(path, "`詳細` の Discovery ID が一覧内に存在する", discoveryId);
       }
     }
   }
@@ -317,7 +317,8 @@ class AmadeusValidator {
     const bigPictureReady = this.eventStormingLevelReady(state, "big-picture");
     const processModelingReady = this.eventStormingLevelReady(state, "process-modeling");
     const systemDesignReady = this.eventStormingLevelReady(state, "system-design");
-    this.checkEventStormingSummary(`${base}/summary.md`, systemDesignReady);
+    const summaryPath = `${dirname(base)}/${id}.md`;
+    this.checkEventStormingSummary(summaryPath, systemDesignReady);
     const eventIds = this.checkEventStormingEvents(`${base}/events.md`, bigPictureReady);
     const boardIds = this.checkEventStormingBoard(`${base}/board.md`, eventIds, allowUnknownReferences);
 
@@ -337,7 +338,7 @@ class AmadeusValidator {
         allowUnknownReferences,
       );
       this.checkEventStormingSystemDesignBoard(`${base}/board.md`, aggregateIds, boundedContextIds);
-      if (systemDesignReady) this.checkEventStormingSystemDesignHandoff(`${base}/summary.md`, aggregateIds, boundedContextIds);
+      if (systemDesignReady) this.checkEventStormingSystemDesignHandoff(summaryPath, aggregateIds, boundedContextIds);
     }
   }
 
@@ -419,7 +420,7 @@ class AmadeusValidator {
   }
 
   private checkEventStormingSummary(path: string, systemDesignReady: boolean): void {
-    this.checkFile(path, "Event Storming summary.md が存在する");
+    this.checkFile(path, "Event Storming 正本ファイルが存在する");
     const headings = ["Purpose", "Scope", "Related Discovery", "Related Intent", "Level Status", "Next Skill", "Supersession"];
     this.checkHeadings(path, headings);
     this.checkHeadingBodies(path, headings);
@@ -692,9 +693,9 @@ class AmadeusValidator {
     const base = `.amadeus/discoveries/${id}`;
     this.checkGrillings(base);
 
-    const briefPath = `${base}/brief.md`;
+    const briefPath = `.amadeus/discoveries/${id}.md`;
     const statePath = `${base}/state.json`;
-    this.checkFile(briefPath, "Discovery Brief が存在する");
+    this.checkFile(briefPath, "Discovery 正本ファイルが存在する");
     this.checkHeadings(briefPath, [
       "入力テーマ",
       "確認した前提",
@@ -721,9 +722,9 @@ class AmadeusValidator {
 
     const briefDecision = this.discoveryBriefDecision(briefPath);
     if (briefDecision === String(state.decision ?? "").trim()) {
-      this.pass(briefPath, "state.json.decision と brief.md の判定が一致する", briefDecision);
+      this.pass(briefPath, "state.json.decision と Discovery 正本の判定が一致する", briefDecision);
     } else {
-      this.failRow(briefPath, "state.json.decision と brief.md の判定が一致する", `${briefDecision} != ${String(state.decision ?? "").trim()}`);
+      this.failRow(briefPath, "state.json.decision と Discovery 正本の判定が一致する", `${briefDecision} != ${String(state.decision ?? "").trim()}`);
     }
 
     if (String(state.gate ?? "").trim() === "passed") this.checkDiscoveryPassedGate(briefPath, state);
@@ -816,14 +817,14 @@ class AmadeusValidator {
     }
     for (const target of links) {
       const clean = this.cleanLinkTarget(target);
-      if (clean.match(/^\.\.\/\.\.\/intents\/[^/]+\/intent\.md$/)) this.checkLink(path, target);
+      if (clean.match(/^\.\.\/intents\/[^/]+\.md$/)) this.checkLink(path, target);
       else this.failRow(path, "initialized の Intent 候補が存在する Intent へリンクしている", target);
     }
   }
 
   private checkExistingIntentUpdateDiscovery(path: string): void {
     const body = this.sectionBody(path, "既存 Intent との関係") ?? "";
-    const intentLinks = this.markdownLinks(body).filter((link) => this.cleanLinkTarget(link).match(/^\.\.\/\.\.\/intents\/[^/]+\/intent\.md$/));
+    const intentLinks = this.markdownLinks(body).filter((link) => this.cleanLinkTarget(link).match(/^\.\.\/intents\/[^/]+\.md$/));
     if (intentLinks.length === 1) {
       this.pass(path, "existing_intent_update の対象既存 Intent が1件だけある", intentLinks[0]);
       this.checkLink(path, intentLinks[0]);
@@ -836,8 +837,8 @@ class AmadeusValidator {
     const base = `.amadeus/intents/${intentId}`;
     this.checkGrillings(base);
 
-    this.checkFile(`${base}/intent.md`, "Intent 基本ファイルが存在する");
-    this.checkHeadings(`${base}/intent.md`, ["目的", "成功条件", "範囲"]);
+    this.checkFile(`.amadeus/intents/${intentId}.md`, "Intent 正本ファイルが存在する");
+    this.checkHeadings(`.amadeus/intents/${intentId}.md`, ["目的", "成功条件", "範囲"]);
     this.checkEventStormingSessions(`${base}/event-storming`, "intent-scoped", intentId);
 
     const statePath = `${base}/state.json`;
@@ -1391,8 +1392,10 @@ class AmadeusValidator {
 
   private checkStateRelativePath(path: string, value: unknown, condition: string, puml: boolean): void {
     const item = String(value ?? "").trim();
-    if (item.length === 0 || item.startsWith("/") || item.split("/").includes("..")) {
-      this.failRow(path, condition, `${item} は Intent ディレクトリ内の相対パスではない`);
+    const intentRootFile = `../${basename(dirname(path))}.md`;
+    const allowedIntentRootFile = item === intentRootFile && !puml;
+    if (item.length === 0 || item.startsWith("/") || (item.split("/").includes("..") && !allowedIntentRootFile)) {
+      this.failRow(path, condition, `${item} は Intent ディレクトリ内の相対パスまたは ${intentRootFile} ではない`);
       return;
     }
     if (puml && !item.endsWith(".puml")) {
@@ -2268,16 +2271,16 @@ class AmadeusValidator {
       for (const target of links) {
         this.checkLink(path, target);
         const clean = this.cleanLinkTarget(target);
-        const match = clean.match(/^intents\/([^/]+)\/intent\.md$/);
+        const match = clean.match(/^intents\/([^/]+)\.md$/);
         if (!match) {
-          this.failRow(path, "`詳細` が intents/<intent-id>-<slug>/intent.md を指す", target);
+          this.failRow(path, "`詳細` が intents/<intent-id>-<slug>.md を指す", target);
           continue;
         }
-        const directory = match[1];
-        if (directory === id) this.pass(path, "`詳細` の Intent ディレクトリ名が識別子と一致する", directory);
-        else this.failRow(path, "`詳細` の Intent ディレクトリ名が識別子と一致する", `${directory} != ${id}`);
-        if (ids.has(directory)) this.pass(path, "`詳細` の Intent ディレクトリ名が一覧内に存在する", directory);
-        else this.failRow(path, "`詳細` の Intent ディレクトリ名が一覧内に存在する", directory);
+        const intentId = match[1];
+        if (intentId === id) this.pass(path, "`詳細` の Intent ID が識別子と一致する", intentId);
+        else this.failRow(path, "`詳細` の Intent ID が識別子と一致する", `${intentId} != ${id}`);
+        if (ids.has(intentId)) this.pass(path, "`詳細` の Intent ID が一覧内に存在する", intentId);
+        else this.failRow(path, "`詳細` の Intent ID が一覧内に存在する", intentId);
       }
     }
   }

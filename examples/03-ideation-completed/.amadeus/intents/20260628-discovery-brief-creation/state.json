@@ -5,7 +5,7 @@
   "initialized": {
     "status": "completed",
     "createdArtifacts": [
-      "intent.md",
+      "../20260628-discovery-brief-creation.md",
       "state.json"
     ],
     "next": "ideation"
@@ -13,7 +13,7 @@
   "ideation": {
     "status": "completed",
     "requiredArtifacts": [
-      "intent.md",
+      "../20260628-discovery-brief-creation.md",
       "scope.md",
       "ideation.md",
       "decisions.md",
