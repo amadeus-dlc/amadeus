@@ -353,6 +353,7 @@ function writeEventStormingSession(workspace: string): void {
       "| CMD001 | Command | 貸出を開始する | ACT001 | DEV001 |  | UI event は Command の契機として扱う |",
       "| DEV001 | Domain Event | 貸出が開始された | CMD001 | POL001 |  |  |",
       "| POL001 | Policy | 貸出開始時に返却期限を決める | DEV001 | DEV002 |  |  |",
+      "| DEV002 | Domain Event | 返却期限が決まった | POL001 | RM001 |  |  |",
       "| RM001 | Read Model | 貸出状況 | DEV001, DEV002 |  | ACT001 | 利用者が参照する |",
       "",
     ].join("\n"),
@@ -469,6 +470,60 @@ function replaceEventStormingBoardRelatedWithMissingId(workspace: string): void 
     "| 2 | Command | CMD001 | 貸出を開始する | DEV001 | 利用者が実行する |",
     "| 2 | Command | CMD001 | 貸出を開始する | DEV999 | 利用者が実行する |",
     "event storming fixture does not contain expected board row",
+  );
+}
+
+function removeEventStormingState(workspace: string): void {
+  rmSync(join(workspace, ".amadeus/event-storming/ES001-loan-flow/state.json"));
+}
+
+function replaceEventStormingCompletedLevelsWithMissingPrerequisite(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/state.json");
+  replaceInFile(
+    path,
+    '"completedLevels": [\n    "big-picture",\n    "process-modeling",\n    "system-design"\n  ]',
+    '"completedLevels": [\n    "system-design"\n  ]',
+    "event storming fixture does not contain expected completedLevels",
+  );
+}
+
+function replaceEventStormingNextRecommendedSkillWithWrongValue(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/state.json");
+  replaceInFile(
+    path,
+    '"nextRecommendedSkill": "amadeus-domain-modeling"',
+    '"nextRecommendedSkill": "amadeus-inception"',
+    "event storming fixture does not contain expected nextRecommendedSkill",
+  );
+}
+
+function replaceEventStormingFlowTypeWithMismatchedIdPrefix(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/flow.md");
+  replaceInFile(
+    path,
+    "| ACT001 | Actor | 利用者 |  | CMD001 |  | 図書を借りる |",
+    "| ACT001 | External System | 利用者 |  | CMD001 |  | 図書を借りる |",
+    "event storming fixture does not contain expected flow row",
+  );
+}
+
+function removeEventStormingFlowDomainEvent(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/flow.md");
+  replaceInFile(
+    path,
+    "| DEV002 | Domain Event | 返却期限が決まった | POL001 | RM001 |  |  |\n",
+    "",
+    "event storming fixture does not contain expected DEV002 flow row",
+  );
+}
+
+function replaceEventStormingBoardOrderWithInvalidValue(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/board.md");
+  replaceInFile(
+    path,
+    "| 2 | Command | CMD001 | 貸出を開始する | DEV001 | 利用者が実行する |",
+    "| x | Command | CMD001 | 貸出を開始する | DEV001 | 利用者が実行する |",
+    "event storming fixture does not contain expected board order",
   );
 }
 
@@ -660,6 +715,54 @@ replaceEventStormingBoardRelatedWithMissingId(completedProcessEventStormingWithB
 runExpectFailure(
   ["bun", "run", validator, completedProcessEventStormingWithBadBoardRefWorkspace],
   "`Related` が Event Storming 要素 ID またはなしである",
+);
+
+const eventStormingWithoutStateWorkspace = workspaceCopy();
+writeEventStormingSession(eventStormingWithoutStateWorkspace);
+removeEventStormingState(eventStormingWithoutStateWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, eventStormingWithoutStateWorkspace],
+  "Event Storming 状態ファイルが存在する",
+);
+
+const eventStormingMissingCompletedLevelPrerequisiteWorkspace = workspaceCopy();
+writeEventStormingSession(eventStormingMissingCompletedLevelPrerequisiteWorkspace);
+replaceEventStormingCompletedLevelsWithMissingPrerequisite(eventStormingMissingCompletedLevelPrerequisiteWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, eventStormingMissingCompletedLevelPrerequisiteWorkspace],
+  "`system-design` 完了は `process-modeling` 完了を前提にする",
+);
+
+const eventStormingWrongNextRecommendedSkillWorkspace = workspaceCopy();
+writeEventStormingSession(eventStormingWrongNextRecommendedSkillWorkspace);
+replaceEventStormingNextRecommendedSkillWithWrongValue(eventStormingWrongNextRecommendedSkillWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, eventStormingWrongNextRecommendedSkillWorkspace],
+  "`nextRecommendedSkill` が scope と level に対応する",
+);
+
+const eventStormingMismatchedTypeIdPrefixWorkspace = workspaceCopy();
+writeEventStormingSession(eventStormingMismatchedTypeIdPrefixWorkspace);
+replaceEventStormingFlowTypeWithMismatchedIdPrefix(eventStormingMismatchedTypeIdPrefixWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, eventStormingMismatchedTypeIdPrefixWorkspace],
+  "`Type` と `ID` 接頭辞が対応する",
+);
+
+const eventStormingMissingFlowDomainEventWorkspace = workspaceCopy();
+writeEventStormingSession(eventStormingMissingFlowDomainEventWorkspace);
+removeEventStormingFlowDomainEvent(eventStormingMissingFlowDomainEventWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, eventStormingMissingFlowDomainEventWorkspace],
+  "`flow.md` が Domain Event を含む",
+);
+
+const eventStormingInvalidBoardOrderWorkspace = workspaceCopy();
+writeEventStormingSession(eventStormingInvalidBoardOrderWorkspace);
+replaceEventStormingBoardOrderWithInvalidValue(eventStormingInvalidBoardOrderWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, eventStormingInvalidBoardOrderWorkspace],
+  "`Order` が正の整数である",
 );
 
 const discoveryDecisionMismatchWorkspace = workspaceCopy();

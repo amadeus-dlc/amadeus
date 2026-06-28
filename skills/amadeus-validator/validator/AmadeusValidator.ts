@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 
 type Result = "pass" | "fail" | "blocked" | "skipped";
@@ -41,6 +41,16 @@ const eventStormingNextSkillValues = new Set([
   "amadeus-intent-init",
   "amadeus-inception",
   "amadeus-domain-modeling",
+]);
+const eventStormingTypeIdPrefixes = new Map([
+  ["Actor", "ACT"],
+  ["Command", "CMD"],
+  ["Domain Event", "DEV"],
+  ["Policy", "POL"],
+  ["External System", "EXT"],
+  ["Read Model", "RM"],
+  ["Aggregate Candidate", "AGC"],
+  ["Bounded Context Candidate", "BCC"],
 ]);
 const eventStormingFlowTypes = new Set(["Actor", "Command", "Domain Event", "Policy", "External System", "Read Model"]);
 const eventStormingBoardTypes = new Set([
@@ -222,11 +232,10 @@ class AmadeusValidator {
       return;
     }
 
-    const glob = new Bun.Glob("*/state.json");
-    let count = 0;
-    for (const stateFile of glob.scanSync({ cwd: root })) {
-      count += 1;
-      const id = stateFile.split("/", 1)[0];
+    const directories = readdirSync(root)
+      .filter((entry) => this.isDirectory(join(root, entry)))
+      .sort();
+    for (const id of directories) {
       const base = `${rootPath}/${id}`;
       if (eventStormingDirectoryPattern.test(id)) {
         this.pass(base, "Event Storming ディレクトリ名が ESnnn-<slug> 形式である", id);
@@ -236,8 +245,8 @@ class AmadeusValidator {
       this.checkEventStormingSession(base, id, expectedScope, intentId);
     }
 
-    if (count > 0) this.pass(rootPath, "Event Storming セッションが検証対象である", `${count}件`);
-    else this.skipped(rootPath, "Event Storming 成果物は任意である", "state.json なし");
+    if (directories.length > 0) this.pass(rootPath, "Event Storming セッションが検証対象である", `${directories.length}件`);
+    else this.skipped(rootPath, "Event Storming 成果物は任意である", "セッションディレクトリなし");
   }
 
   private checkEventStormingSession(base: string, id: string, expectedScope: "pre-intent" | "intent-scoped", intentId?: string): void {
@@ -255,6 +264,7 @@ class AmadeusValidator {
     this.checkJsonValue(statePath, "scope", state.scope, expectedScope);
     this.checkAllowed(statePath, "nextRecommendedSkill", state.nextRecommendedSkill, eventStormingNextSkillValues);
     this.checkEventStormingCompletedLevels(statePath, state);
+    this.checkEventStormingNextRecommendedSkill(statePath, state);
 
     if (expectedScope === "intent-scoped") {
       this.checkJsonValue(statePath, "relatedIntent", state.relatedIntent, intentId ?? "");
@@ -286,7 +296,47 @@ class AmadeusValidator {
       return;
     }
     this.pass(path, "`completedLevels` が配列である", `${values.length}件`);
-    for (const value of values) this.checkAllowed(path, "completedLevels", value, eventStormingLevelValues);
+    const levels = values.map((value: unknown) => String(value ?? "").trim());
+    const seen = new Set<string>();
+    for (const level of levels) {
+      this.checkAllowed(path, "completedLevels", level, eventStormingLevelValues);
+      if (seen.has(level)) this.failRow(path, "`completedLevels` が重複しない", level);
+      else {
+        this.pass(path, "`completedLevels` が重複しない", level);
+        seen.add(level);
+      }
+    }
+    if (seen.has("process-modeling") && seen.has("big-picture")) {
+      this.pass(path, "`process-modeling` 完了は `big-picture` 完了を前提にする", "big-picture");
+    } else if (seen.has("process-modeling")) {
+      this.failRow(path, "`process-modeling` 完了は `big-picture` 完了を前提にする", "big-picture がない");
+    }
+    if (seen.has("system-design") && seen.has("process-modeling")) {
+      this.pass(path, "`system-design` 完了は `process-modeling` 完了を前提にする", "process-modeling");
+    } else if (seen.has("system-design")) {
+      this.failRow(path, "`system-design` 完了は `process-modeling` 完了を前提にする", "process-modeling がない");
+    }
+  }
+
+  private checkEventStormingNextRecommendedSkill(path: string, state: Record<string, any>): void {
+    const scope = String(state.scope ?? "").trim();
+    const level = String(state.currentLevel ?? "").trim();
+    const next = String(state.nextRecommendedSkill ?? "").trim();
+    const allowed = this.eventStormingNextSkillsFor(scope, level);
+    if (allowed.has(next)) {
+      this.pass(path, "`nextRecommendedSkill` が scope と level に対応する", `${scope}/${level}: ${next}`);
+    } else {
+      this.failRow(path, "`nextRecommendedSkill` が scope と level に対応する", `${scope}/${level}: ${next}`);
+    }
+  }
+
+  private eventStormingNextSkillsFor(scope: string, level: string): Set<string> {
+    if (scope === "pre-intent" && level === "big-picture") return new Set(["amadeus-discovery"]);
+    if (scope === "pre-intent" && level === "process-modeling") return new Set(["amadeus-discovery", "amadeus-intent-init"]);
+    if (scope === "pre-intent" && level === "system-design") return new Set(["amadeus-domain-modeling"]);
+    if (scope === "intent-scoped" && (level === "big-picture" || level === "process-modeling")) return new Set(["amadeus-inception"]);
+    if (scope === "intent-scoped" && level === "system-design") return new Set(["amadeus-domain-modeling"]);
+    return new Set();
   }
 
   private eventStormingRequiresProcessModeling(level: string, state: Record<string, any>): boolean {
@@ -333,7 +383,9 @@ class AmadeusValidator {
     if (!table) return;
     this.checkEventStormingElementIds(path, table, "ID");
     this.checkEventStormingTypes(path, table, "Type", eventStormingFlowTypes);
+    this.checkEventStormingTypeIdPrefixes(path, table);
     this.checkNotBlank(path, table, "Label");
+    this.checkEventStormingFlowContainsEvents(path, table, eventIds);
     this.checkEventStormingReferences(path, table, ["Trigger", "Produces", "Related"], eventIds);
   }
 
@@ -345,6 +397,8 @@ class AmadeusValidator {
     if (!table) return;
     this.checkEventStormingElementIds(path, table, "ID");
     this.checkEventStormingTypes(path, table, "Type", eventStormingBoardTypes);
+    this.checkEventStormingTypeIdPrefixes(path, table);
+    this.checkEventStormingBoardOrder(path, table);
     this.checkNotBlank(path, table, "Label");
     const boardEventIds = new Set(table.rows.filter((row) => String(row["Type"] ?? "").trim() === "Domain Event").map((row) => String(row["ID"] ?? "").trim()));
     for (const eventId of eventIds) {
@@ -451,6 +505,48 @@ class AmadeusValidator {
 
   private checkEventStormingTypes(path: string, table: Table, column: string, allowed: Set<string>): void {
     for (const row of table.rows) this.checkAllowed(path, column, row[column], allowed);
+  }
+
+  private checkEventStormingTypeIdPrefixes(path: string, table: Table): void {
+    if (!table.headers.includes("Type") || !table.headers.includes("ID")) return;
+    for (const row of table.rows) {
+      const type = String(row["Type"] ?? "").trim();
+      const id = String(row["ID"] ?? "").trim();
+      const prefix = eventStormingTypeIdPrefixes.get(type);
+      if (!prefix) continue;
+      if (id.startsWith(prefix)) this.pass(path, "`Type` と `ID` 接頭辞が対応する", `${type}: ${id}`);
+      else this.failRow(path, "`Type` と `ID` 接頭辞が対応する", `${type}: ${id}`);
+    }
+  }
+
+  private checkEventStormingFlowContainsEvents(path: string, table: Table, eventIds: Set<string>): void {
+    const flowEventIds = new Set(
+      table.rows.filter((row) => String(row["Type"] ?? "").trim() === "Domain Event").map((row) => String(row["ID"] ?? "").trim()),
+    );
+    for (const eventId of eventIds) {
+      if (flowEventIds.has(eventId)) this.pass(path, "`flow.md` が Domain Event を含む", eventId);
+      else this.failRow(path, "`flow.md` が Domain Event を含む", eventId);
+    }
+  }
+
+  private checkEventStormingBoardOrder(path: string, table: Table): void {
+    if (!table.headers.includes("Order")) return;
+    const orders = new Set<number>();
+    for (const row of table.rows) {
+      const value = String(row["Order"] ?? "").trim();
+      const order = Number(value);
+      if (Number.isInteger(order) && order > 0) {
+        this.pass(path, "`Order` が正の整数である", value);
+      } else {
+        this.failRow(path, "`Order` が正の整数である", value);
+        continue;
+      }
+      if (orders.has(order)) this.failRow(path, "`Order` が重複しない", value);
+      else {
+        this.pass(path, "`Order` が重複しない", value);
+        orders.add(order);
+      }
+    }
   }
 
   private checkEventStormingReferences(path: string, table: Table, columns: string[], eventIds: Set<string>): void {
