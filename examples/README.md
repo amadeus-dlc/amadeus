@@ -11,6 +11,7 @@ root `.amadeus/` は実運用状態と例示成果物を混ぜるため置いて
 | [02-intent-initialized](02-intent-initialized/.amadeus/README.md) | Intent 初期化完了 | Intent の入れ物と Discovery からのリンク |
 | [03-ideation-completed](03-ideation-completed/.amadeus/README.md) | Ideation 完了 | scope、ideation、mock、traceability、decision |
 | [04-inception-completed](04-inception-completed/.amadeus/README.md) | Inception 完了 | Requirement、Story、Use Case、Unit、Bolt、Task |
+| [05-construction-design-ready](05-construction-design-ready/.amadeus/README.md) | Construction Design ready | Bolt ごとの Construction Design、Design Gate、実装前の追跡 |
 
 ## 検証
 
@@ -21,4 +22,5 @@ bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts examples/
 bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts examples/02-intent-initialized 20260628-discovery-brief-creation
 bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts examples/03-ideation-completed 20260628-discovery-brief-creation
 bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts examples/04-inception-completed 20260628-discovery-brief-creation
+bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts examples/05-construction-design-ready 20260628-discovery-brief-creation
 ~~~

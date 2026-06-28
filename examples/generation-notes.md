@@ -19,6 +19,7 @@ root `.amadeus/` に古い例示成果物を置くと、リポジトリ自身の
 | Intent 初期化 | amadeus-intent-init | `intents.md`, `intents/20260628-discovery-brief-creation/intent.md`, `state.json` |
 | Ideation | amadeus-ideation と内部 skill | `scope.md`, `ideation.md`, `mocks/initial-confirmation.puml`, `traceability.md`, `decisions.md` |
 | Inception | amadeus-inception と内部 skill | Requirement、Story、Use Case、Unit、Bolt、Task、追跡、判断 |
+| Construction Preparation | amadeus-construction-bolt-preparation | `design.md`, `notes.md`, Design Gate ready、Construction Design 追跡 |
 
 ## 生成ログ
 
@@ -33,6 +34,7 @@ root `.amadeus/` に古い例示成果物を置くと、リポジトリ自身の
 | `02-intent-initialized` | Discovery 候補が initialized になり、Intent の入れ物ができた状態を示す |
 | `03-ideation-completed` | Inception に進める最小の Ideation 成果物を示す |
 | `04-inception-completed` | Requirement 2件、Story 2件、Use Case 2件、Unit 2件、Bolt 2件、各 Bolt 2 Task の粒度を示す |
+| `05-construction-design-ready` | B001 の Construction Design が ready になり、実装前の追跡ができた状態を示す |
 
 ## root .amadeus を削除する理由
 

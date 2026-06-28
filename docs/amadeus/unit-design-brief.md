@@ -4,6 +4,8 @@
 
 Amadeus Inception では、要求、ユースケース、Unit、Bolt、Task をつなぐ。
 従来は Bolt 配下の `design.md` が、Bolt を Task 化するための設計入力を担っていた。
+この文書で廃止対象にするのは、Inception で Bolt を Task 化するために使っていた旧 Bolt Design Brief である。
+`bolts/<bolt-id>-<slug>/design.md` というファイル名そのものは、Construction Design の成果物名として使う。
 
 しかし Bolt は実行単位である。
 Bolt 単位に設計を置くと、実行都合で責務境界や設計戦略を切りやすい。
@@ -12,7 +14,7 @@ Bolt 単位に設計を置くと、実行都合で責務境界や設計戦略を
 ## 判断
 
 設計ブリーフは Unit 単位に置く。
-Bolt 配下の `design.md` は廃止する。
+Inception の旧 Bolt Design Brief としての Bolt 配下 `design.md` は廃止する。
 
 Unit Design Brief は、Unit の課題解決方針を定める設計成果物である。
 Bolt は Unit Design Brief に従って実行可能な作業単位へ分割する。
@@ -79,6 +81,23 @@ Task の都合ではなく、要求、ユースケース、価値境界から導
 
 `Construction への引き継ぎ` では、Domain Design、Logical Design、実装、検証で確定する未決定事項を書く。
 
+## 旧 Bolt Design Brief と Construction Design の区別
+
+旧 Bolt Design Brief は、Inception で Bolt を Task 化するための設計入力である。
+これは廃止済みであり、Unit Design Brief に統合する。
+
+Construction Design は、Construction で Bolt を実行可能にするための設計成果物である。
+Construction Design は、Domain Design、Logical Design、実装設計、検証設計を確定する。
+
+この2つは責務が違う。
+旧 Bolt Design Brief を廃止する判断は、`design.md` というファイル名を永久欠番にする判断ではない。
+
+Construction Design は、Bolt ごとの `bolts/<bolt-id>-<slug>/design.md` として扱う。
+これは旧 Bolt Design Brief とは別の成果物であり、Construction の Design Gate evidence になる。
+
+validator、state.json、Design Gate evidence、examples、skills、docs は、Construction Design のパスを `bolts/<bolt-id>-<slug>/design.md` に統一する。
+旧 Bolt Design Brief の禁止は、Inception で Bolt を Task 化するための設計入力を Bolt 配下に戻さないための禁止である。
+
 ## Construction 入力
 
 Construction の最小必須入力は次である。
@@ -89,6 +108,10 @@ Construction の最小必須入力は次である。
 
 `unit.md`、`requirements.md`、`use-cases.md` は、追跡や疑義解消のために参照できる。
 ただし、Bolt 実行の最小入力には含めない。
+
+Construction に入った後は、Bolt ごとの `bolts/<bolt-id>-<slug>/design.md` を作る。
+`design.md` は、Domain Design、Logical Design、実装設計、検証設計を確定する第一級成果物である。
+Unit Design Brief は Construction の入力であり、Construction で上書きしない。
 
 ## 追跡
 
@@ -103,6 +126,9 @@ Construction の最小必須入力は次である。
 `codebase-analysis.md` と `traceability.md` の `既存コード分析からの追跡` にある `設計` も、Unit Design Brief を指す。
 既存コード分析の結果は Bolt の作業都合ではなく、Unit の設計戦略へ渡す。
 
+Construction の `Construction Design からの追跡` は、Bolt ごとの `design.md` から Task、実装、検証、PR への追跡を扱う。
+Design Gate ready の時点では、実装、検証、PR は `未実施` として記録する。
+
 ## Validator 方針
 
 validator は次を検査する。
@@ -116,8 +142,14 @@ validator は次を検査する。
 - `bolts.md` の `ユニット` と `設計` リンク先の Unit ID が対応する。
 - `bolt.md` に `設計` 見出しがある。
 - `bolt.md` の `対象ユニット` と `設計` リンク先の Unit ID が対応する。
-- Bolt 配下に `design.md` が存在しない。
+- Inception 段階では、Bolt 配下に旧 Bolt Design Brief としての `design.md` が存在しない。
 - `state.json.inception.requiredBoltArtifacts` に `bolts/*/design.md` が含まれない。
+- Construction 段階では、`state.json.construction.requiredBoltArtifacts` に Bolt ごとの `design.md` が含まれる。
+- Construction 段階では、存在する Bolt ごとの `design.md` が `state.json.construction.requiredBoltArtifacts` に含まれる。
+- Construction 段階では、`construction.bolts[].designGate.evidence` が Bolt ごとの `design.md` を指す。
+- Construction Design の主要セクションは、対象 Bolt の全 Task を参照する。
+- 対象 Bolt の Design Gate ready 以降では、`Construction Design からの追跡` が Design Gate evidence と同じ `design.md` と対象 Bolt の全 Task を結ぶ。
+- Construction 完了時は、対象 Bolt の `test-results.md` が必須成果物に含まれ、`Construction Design からの追跡` の `実装` と `検証` に `未実施` を残さない。
 - `state.json.inception.requiredArtifacts` に Unit `unit.md` と Unit `design.md` が含まれる。
 
 validator は構造検査に留める。
@@ -126,7 +158,7 @@ validator は構造検査に留める。
 ## 非採用
 
 後方互換は残さない。
-旧構造の `units/<unit-id>-<slug>.md` と `bolts/<bolt-id>-<slug>/design.md` は許容しない。
+旧構造の `units/<unit-id>-<slug>.md` と Inception 旧 Bolt Design Brief としての `bolts/<bolt-id>-<slug>/design.md` は許容しない。
 
 `design_brief.md` は導入しない。
 Unit の設計ブリーフは `units/<unit-id>-<slug>/design.md` として扱う。

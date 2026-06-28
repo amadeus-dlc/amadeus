@@ -26,6 +26,7 @@ Construction phase の検証と堅牢化だけを進める。
 - `.amadeus/intents/<intent-id>-<slug>/units/<unit-id>-<slug>/design.md`
 - `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/bolt.md`
 - `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/tasks.md`
+- `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/design.md`
 - `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/notes.md`
 - 関連する実装コード、テスト、CI 設定
 
@@ -46,7 +47,7 @@ Construction phase の検証と堅牢化だけを進める。
 
 ## 手順
 
-1. Task、要求、Unit Design Brief の検証観点から必要な検証を決める。
+1. Task、要求、Unit Design Brief、Construction Design の検証設計から必要な検証を決める。
 2. 必要なテストが不足していれば、対象 Task に対応する範囲で追加する。
 3. 関連テスト、型検査、lint、CI 相当の入口を実行する。
 4. セキュリティ、権限、入力、ログ、秘密情報、破壊的変更の観点を確認する。
