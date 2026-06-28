@@ -129,7 +129,7 @@ Review Gate では次を確認する。
 ```
 
 Use Case を参照しない Task では、`ユースケース` に `なし` を書く。
-その場合は、Use Case を参照しない理由を Traceability に残す。
+その場合は、Traceability finalization で Use Case を参照しない理由を残す。
 
 ```md
 - [ ] T002: 内部構造を整理する
@@ -208,9 +208,11 @@ Construction validator は次を確認する。
 - `state.json.construction.bolts[].taskPlan.status` が `not_generated` または `blocked` の場合、`state.json.construction.requiredBoltArtifacts` に `tasks.md` が含まれない。
 - Construction Design が対象 Bolt、Unit、Requirement を参照している。
 - アクターまたは外部システムとの相互作用がある場合、Construction Design が対象 Use Case を参照している。
-- `state.json.construction.bolts[].taskPlan.status` が `generated` の場合、`Construction Design からの追跡` が Construction Design と Task を接続している。
-- `state.json.construction.bolts[].taskPlan.status` が `not_generated` または `blocked` の場合、`Construction Design からの追跡` は Construction Design と対象 Bolt までを接続できればよい。
 - Task の `ユースケース` は、Use Case ID または `なし` を許可する。
+
+Traceability finalization 後の Construction validator は、追加で次を確認する。
+
+- `Construction Design からの追跡` が Construction Design と Task を接続している。
 - Task の `ユースケース` が `なし` の場合、Traceability に Use Case を参照しない理由がある。
 
 旧構造は失敗にする。
