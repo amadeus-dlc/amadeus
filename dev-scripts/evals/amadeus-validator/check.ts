@@ -515,6 +515,20 @@ function removeEventStormingSummaryHandoff(workspace: string): void {
   );
 }
 
+function removeEventStormingSummaryHandoffRows(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/summary.md");
+  replaceInFile(
+    path,
+    [
+      "| AGC001 貸出 | Aggregate Candidate | DEV001, DEV002 | 返却期限を同じ集約で守るか |",
+      "| BCC001 貸出管理 | Bounded Context Candidate | AGC001, DEV001, DEV002 | 利用者管理と分けるか |",
+      "",
+    ].join("\n"),
+    "",
+    "event storming fixture does not contain expected handoff rows",
+  );
+}
+
 function markEventStormingSystemDesignReadyWithoutCompletedLevel(workspace: string): void {
   const statePath = join(workspace, ".amadeus/event-storming/ES001-loan-flow/state.json");
   replaceInFile(
@@ -868,6 +882,14 @@ removeEventStormingSummaryHandoff(eventStormingReadyWithoutCompletedSystemDesign
 runExpectFailure(
   ["bun", "run", validator, eventStormingReadyWithoutCompletedSystemDesignWorkspace],
   "Handoff To Domain Modeling",
+);
+
+const eventStormingWithoutHandoffRowsWorkspace = workspaceCopy();
+writeEventStormingSession(eventStormingWithoutHandoffRowsWorkspace);
+removeEventStormingSummaryHandoffRows(eventStormingWithoutHandoffRowsWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, eventStormingWithoutHandoffRowsWorkspace],
+  "system-design ready の Handoff が1件以上ある",
 );
 
 const eventStormingMissingCompletedLevelPrerequisiteWorkspace = workspaceCopy();

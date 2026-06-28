@@ -493,7 +493,8 @@ class AmadeusValidator {
   private checkEventStormingSystemDesignHandoff(path: string): void {
     this.checkHeadings(path, ["Handoff To Domain Modeling"]);
     this.checkHeadingBodies(path, ["Handoff To Domain Modeling"]);
-    this.checkTable(path, "Handoff To Domain Modeling", ["Candidate", "Kind", "Evidence", "Open Questions"]);
+    const table = this.checkTable(path, "Handoff To Domain Modeling", ["Candidate", "Kind", "Evidence", "Open Questions"]);
+    if (table) this.checkTableHasRows(path, table, "system-design ready の Handoff が1件以上ある");
   }
 
   private checkEventStormingHotspots(path: string, elementIds: Set<string>): void {
