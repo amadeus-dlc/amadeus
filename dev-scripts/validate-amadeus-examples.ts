@@ -7,6 +7,7 @@ type ExampleSnapshot = {
   name: string;
   workdir: string;
   intent?: string;
+  expectedState?: Record<string, string>;
 };
 
 type SkillProvenanceManifest = {
@@ -36,21 +37,47 @@ const snapshots: ExampleSnapshot[] = [
     name: "Intent initialized",
     workdir: "examples/02-intent-initialized",
     intent: "20260628-discovery-brief-creation",
+    expectedState: {
+      phase: "initialized",
+      status: "in_progress",
+      "initialized.status": "completed",
+    },
   },
   {
     name: "Ideation completed",
     workdir: "examples/03-ideation-completed",
     intent: "20260628-discovery-brief-creation",
+    expectedState: {
+      phase: "ideation",
+      status: "completed",
+      "ideation.status": "completed",
+      "ideation.gate": "passed",
+    },
   },
   {
     name: "Inception completed",
     workdir: "examples/04-inception-completed",
     intent: "20260628-discovery-brief-creation",
+    expectedState: {
+      phase: "inception",
+      status: "completed",
+      "inception.status": "completed",
+      "inception.gate": "passed",
+    },
   },
   {
     name: "Construction design ready",
     workdir: "examples/05-construction-design-ready",
     intent: "20260628-discovery-brief-creation",
+    expectedState: {
+      phase: "construction",
+      status: "in_progress",
+      "inception.status": "completed",
+      "inception.gate": "passed",
+      "construction.status": "in_progress",
+      "construction.bolts.0.designGate.status": "ready",
+      "construction.bolts.0.tasks.status": "generated",
+    },
   },
 ];
 
@@ -61,6 +88,8 @@ let failed = false;
 if (mode === "--workspaces-only" || mode === "--all") {
   failed = !validateSkillProvenance() || failed;
 }
+
+failed = !validateSnapshotStates(stateValidationTargets(targets)) || failed;
 
 for (const target of targets) {
   const args = ["run", validator, target.workdir, ...(target.intent ? [target.intent] : [])];
@@ -81,6 +110,55 @@ for (const target of targets) {
   if (!result.success || /## 判定\s*\n\s*(fail|blocked)/.test(stdout)) {
     failed = true;
   }
+}
+
+function stateValidationTargets(targets: ExampleSnapshot[]): ExampleSnapshot[] {
+  const targetWorkdirs = new Set(targets.map((target) => target.workdir));
+  return snapshots.filter((snapshot) => targetWorkdirs.has(snapshot.workdir));
+}
+
+function validateSnapshotStates(targets: ExampleSnapshot[]): boolean {
+  const errors: string[] = [];
+  for (const target of targets) {
+    if (!target.intent || !target.expectedState) continue;
+    const statePath = `${target.workdir}/.amadeus/intents/${target.intent}/state.json`;
+    if (!existsSync(statePath)) {
+      errors.push(`${target.workdir}: missing intent state: ${statePath}`);
+      continue;
+    }
+    let state: unknown;
+    try {
+      state = JSON.parse(readFileSync(statePath, "utf8"));
+    } catch (error) {
+      errors.push(`${target.workdir}: invalid state JSON: ${error instanceof Error ? error.message : String(error)}`);
+      continue;
+    }
+    for (const [path, expected] of Object.entries(target.expectedState)) {
+      const actual = stateValue(state, path);
+      if (actual !== expected) {
+        errors.push(`${target.workdir}: expected state.${path} to be ${JSON.stringify(expected)}, actual ${JSON.stringify(actual)}`);
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    console.error("## Example snapshot states");
+    for (const error of errors) console.error(`- ${error}`);
+    return false;
+  }
+
+  console.log("## Example snapshot states");
+  console.log("snapshot states: ok");
+  return true;
+}
+
+function stateValue(state: unknown, path: string): unknown {
+  return path.split(".").reduce<unknown>((current, key) => {
+    if (current && typeof current === "object" && key in current) {
+      return (current as Record<string, unknown>)[key];
+    }
+    return undefined;
+  }, state);
 }
 
 if (failed) {

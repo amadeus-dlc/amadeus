@@ -106,6 +106,7 @@
     "validate:intents": "bun run dev-scripts/validate-amadeus-examples.ts --intents-only",
     "validate:all": "npm run validate && npm run validate:intents",
     "test:examples": "npm run validate:all",
+    "examples:generate:real": "bun run dev-scripts/generate-amadeus-examples.ts --provider real",
     "diff:check": "git diff --check"
   },
   "devDependencies": {

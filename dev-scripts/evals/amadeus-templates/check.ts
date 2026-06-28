@@ -239,4 +239,20 @@ for (const skill of Object.keys(targetSkills)) {
 
 run(["bun", "run", "dev-scripts/validate-amadeus-examples.ts", "--all"]);
 
+const packageJson = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+if (packageJson.scripts?.["examples:generate:real"] !== "bun run dev-scripts/generate-amadeus-examples.ts --provider real") {
+  fail("package.json must expose examples:generate:real");
+}
+assertFile(join(root, "dev-scripts/generate-amadeus-examples.ts"));
+const dryRun = run(["bun", "run", "dev-scripts/generate-amadeus-examples.ts", "--provider", "real", "--dry-run"]);
+for (const expected of [
+  "examples/03-ideation-completed",
+  "examples/04-inception-completed",
+  "examples/05-construction-design-ready",
+  "provider: real",
+  "dryRun: true",
+]) {
+  if (!dryRun.includes(expected)) fail(`example generation dry-run missing ${JSON.stringify(expected)}`);
+}
+
 console.log("amadeus template eval: ok");

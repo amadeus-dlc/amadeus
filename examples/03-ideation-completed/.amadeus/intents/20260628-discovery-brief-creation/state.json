@@ -13,11 +13,11 @@
   "ideation": {
     "status": "completed",
     "requiredArtifacts": [
+      "intent.md",
       "scope.md",
       "ideation.md",
-      "traceability.md",
       "decisions.md",
-      "decisions/D001-complete-ideation.md"
+      "traceability.md"
     ],
     "requiredMocks": [
       "mocks/initial-confirmation.puml"

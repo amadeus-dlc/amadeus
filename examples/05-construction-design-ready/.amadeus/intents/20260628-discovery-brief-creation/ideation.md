@@ -2,27 +2,33 @@
 
 ## 実現可能性
 
-Discovery Brief は既存の Steering layer と Intent layer の間に置けます。
-成果物は Markdown と state.json で表せるため、既存の Amadeus 成果物構造と整合します。
+| 観点 | 状態 | メモ |
+|---|---|---|
+| 技術 | 確認済み | 既存の Discovery Brief 例示に、入力テーマ、判定、Intent 候補、候補判断、推奨次アクションが記録されている。 |
+| 運用 | 確認済み | Amadeus 利用者が大きな開発テーマを渡した後、Intent 化前に内容を確認できる流れとして扱う。 |
+| セキュリティ | 確認済み | この Intent は成果物の記録粒度を扱い、外部連携、認証、権限変更を含めない。 |
+| 依存 | 確認済み | Discovery Brief の形式と、Intent 一覧への参照を前提にする。 |
 
 ## 体制
 
-| 役割 | 対象 | 責務 |
+| 役割 | 種別 | 関心 |
 |---|---|---|
-| 判断者 | Amadeus メンテナー | Discovery の責務境界と Intent 候補の粒度を判断する |
-| 参照者 | Amadeus 利用者 | 大きなテーマを投げた後の進め方を読む |
-| 検証対象 | Amadeus Validator | Discovery と Intent の構造を確認する |
-| 後続担当 | Amadeus skill | Intent 初期化、Ideation、Inception を進める |
+| Amadeus 利用者 | 判断者 | 入力テーマを無理に1つの Intent にせず、最初に進める候補を確認したい。 |
+| Amadeus メンテナー | 参照者 | Discovery で生成される例示が、後続 phase の責務境界とずれないことを確認したい。 |
+| Inception 担当 | 後続担当 | Discovery Brief 記録と Intent 候補提示を要求候補として受け取りたい。 |
 
 ## 初期モック
 
-初期モックでは、大きな入力テーマを受け取り、Discovery Brief に候補と推奨次アクションが表示される流れを確認します。
+| モック | 目的 | ファイル |
+|---|---|---|
+| Discovery Brief 確認カード | 入力テーマ、判定、Intent 候補、最初に進める候補を、Intent 化前に確認できることを示す。 | [initial-confirmation.puml](mocks/initial-confirmation.puml) |
 
 ## 未確定事項
 
-- 実プロジェクトで複数候補の優先順位をどこまで自動提案するかは未確認です。
+- Discovery Brief の具体的な保存操作や UI 実装は Inception 以降で扱う。
+- Intent 初期化をどの操作で開始するかは、この Intent では固定しない。
 
 ## 学習候補
 
-- Discovery Brief から Intent 初期化へ渡す最小情報。
-- candidate 状態が recommended から initialized へ変わる時の表示。
+- 既存 Discovery Brief の項目が、Inception の要求候補へ過不足なく渡せるかを確認する。
+- `multi_intent` 判定時に、候補の依存順序と最初の候補が読み取りやすいかを確認する。

@@ -10,9 +10,9 @@ const intent = "20260628-discovery-brief-creation";
 const validator = ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts";
 
 const unit1 = "U001-discovery-brief-recording";
-const unit2 = "U002-intent-candidate-guidance";
+const unit2 = "U002-intent-candidate-presentation";
 const bolt1 = "B001-discovery-brief-recording";
-const bolt2 = "B002-intent-candidate-guidance";
+const bolt2 = "B002-intent-candidate-presentation";
 
 function fail(message: string): never {
   console.error(message);
@@ -93,8 +93,8 @@ function removeDiscoveryCandidate(workspace: string): void {
 function replaceDesignTraceDesignLink(workspace: string): void {
   replaceInFile(
     intentPath(workspace, "traceability.md"),
-    `| [U001 design](units/${unit1}/design.md) | U001 | R001 | UC001 | B001 |`,
-    `| [U002 design](units/${unit2}/design.md) | U001 | R001 | UC001 | B001 |`,
+    `| [design.md](units/${unit1}/design.md) | U001 | R001 | UC001 | B001 |`,
+    `| [design.md](units/${unit2}/design.md) | U001 | R001 | UC001 | B001 |`,
     "traceability fixture does not contain expected design trace row",
   );
 }
@@ -102,8 +102,8 @@ function replaceDesignTraceDesignLink(workspace: string): void {
 function replaceDesignTraceReferencesWithMissingIds(workspace: string): void {
   replaceInFile(
     intentPath(workspace, "traceability.md"),
-    `| [U001 design](units/${unit1}/design.md) | U001 | R001 | UC001 | B001 |`,
-    `| [U001 design](units/${unit1}/design.md) | U001 | R999 | UC999 | B999 |`,
+    `| [design.md](units/${unit1}/design.md) | U001 | R001 | UC001 | B001 |`,
+    `| [design.md](units/${unit1}/design.md) | U001 | R999 | UC999 | B999 |`,
     "traceability fixture does not contain expected design trace row",
   );
 }
@@ -123,8 +123,8 @@ function addTaskColumnToRequirementTrace(workspace: string): void {
   );
   replaceInFile(
     intentPath(workspace, "traceability.md"),
-    "| R001 | ACT001 | S001 | UC001 | U001 | B001 |",
-    "| R001 | ACT001 | S001 | UC001 | U001 | B001 | B001/T001 |",
+    "| R001 | Amadeus 利用者 | S001 | UC001 | U001 | B001 |",
+    "| R001 | Amadeus 利用者 | S001 | UC001 | U001 | B001 | B001/T001 |",
     "traceability fixture does not contain expected requirement trace row",
   );
 }
@@ -214,22 +214,22 @@ function makeBoltReferenceMultipleUnits(workspace: string, withReason: boolean):
   const boltsPath = intentPath(workspace, "bolts.md");
   replaceInFile(
     boltsPath,
-    `| B001 | Discovery Brief の基本記録を整える | U001 | [U001 design](units/${unit1}/design.md) | なし | [${bolt1}/bolt.md](bolts/${bolt1}/bolt.md) |`,
-    `| B001 | Discovery Brief の基本記録を整える | U001, U002 | [U001 design](units/${unit1}/design.md), [U002 design](units/${unit2}/design.md) | なし | [${bolt1}/bolt.md](bolts/${bolt1}/bolt.md) |`,
+    `| B001 | Discovery Brief 記録 | U001 | [design.md](units/${unit1}/design.md) | なし | [bolt.md](bolts/${bolt1}/bolt.md) |`,
+    `| B001 | Discovery Brief 記録 | U001, U002 | [design.md](units/${unit1}/design.md), [design.md](units/${unit2}/design.md) | なし | [bolt.md](bolts/${bolt1}/bolt.md) |`,
     "bolts fixture does not contain expected B001 row",
   );
 
   const boltPath = intentPath(workspace, `bolts/${bolt1}/bolt.md`);
   replaceInFile(
     boltPath,
-    "## 対象ユニット\n\n- U001: Discovery Brief の基本記録",
-    "## 対象ユニット\n\n- U001: Discovery Brief の基本記録\n- U002: Intent 候補と推奨次アクションの整理",
+    "## 対象ユニット\n\n- U001",
+    "## 対象ユニット\n\n- U001\n- U002",
     "bolt fixture does not contain expected target unit section",
   );
   replaceInFile(
     boltPath,
-    `## 設計\n\n- [U001 Unit Design Brief](../../units/${unit1}/design.md)`,
-    `## 設計\n\n- [U001 Unit Design Brief](../../units/${unit1}/design.md)\n- [U002 Unit Design Brief](../../units/${unit2}/design.md)`,
+    `## 設計\n\n- [U001 Unit Design](../../units/${unit1}/design.md)`,
+    `## 設計\n\n- [U001 Unit Design](../../units/${unit1}/design.md)\n- [U002 Unit Design](../../units/${unit2}/design.md)`,
     "bolt fixture does not contain expected design section",
   );
   if (withReason) {
@@ -245,8 +245,8 @@ function makeBoltReferenceMultipleUnits(workspace: string, withReason: boolean):
 function replaceBoltUnitWithMissingId(workspace: string): void {
   replaceInFile(
     intentPath(workspace, "bolts.md"),
-    `| B001 | Discovery Brief の基本記録を整える | U001 | [U001 design](units/${unit1}/design.md) | なし | [${bolt1}/bolt.md](bolts/${bolt1}/bolt.md) |`,
-    `| B001 | Discovery Brief の基本記録を整える | U999 | [U001 design](units/${unit1}/design.md) | なし | [${bolt1}/bolt.md](bolts/${bolt1}/bolt.md) |`,
+    `| B001 | Discovery Brief 記録 | U001 | [design.md](units/${unit1}/design.md) | なし | [bolt.md](bolts/${bolt1}/bolt.md) |`,
+    `| B001 | Discovery Brief 記録 | U999 | [design.md](units/${unit1}/design.md) | なし | [bolt.md](bolts/${bolt1}/bolt.md) |`,
     "bolts fixture does not contain expected B001 row",
   );
 }
@@ -254,8 +254,8 @@ function replaceBoltUnitWithMissingId(workspace: string): void {
 function replaceBoltUnitWithDuplicateId(workspace: string): void {
   replaceInFile(
     intentPath(workspace, "bolts.md"),
-    `| B001 | Discovery Brief の基本記録を整える | U001 | [U001 design](units/${unit1}/design.md) | なし | [${bolt1}/bolt.md](bolts/${bolt1}/bolt.md) |`,
-    `| B001 | Discovery Brief の基本記録を整える | U001, U001 | [U001 design](units/${unit1}/design.md) | なし | [${bolt1}/bolt.md](bolts/${bolt1}/bolt.md) |`,
+    `| B001 | Discovery Brief 記録 | U001 | [design.md](units/${unit1}/design.md) | なし | [bolt.md](bolts/${bolt1}/bolt.md) |`,
+    `| B001 | Discovery Brief 記録 | U001, U001 | [design.md](units/${unit1}/design.md) | なし | [bolt.md](bolts/${bolt1}/bolt.md) |`,
     "bolts fixture does not contain expected B001 row",
   );
 }
@@ -263,7 +263,7 @@ function replaceBoltUnitWithDuplicateId(workspace: string): void {
 function replaceUnitDetailWithOldPath(workspace: string): void {
   replaceInFile(
     intentPath(workspace, "units.md"),
-    `[${unit1}/unit.md](units/${unit1}/unit.md)`,
+    `[unit.md](units/${unit1}/unit.md)`,
     `[${unit1}.md](units/${unit1}.md)`,
     "units fixture does not contain expected U001 unit link",
   );

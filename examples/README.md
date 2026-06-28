@@ -16,6 +16,17 @@ root `.amadeus/` は実運用状態と例示成果物を混ぜるため置いて
 注: Task 生成は Construction Design 後の Construction phase に移行済みです。
 `04-inception-completed` は `tasks.md` を含まず、`05-construction-design-ready` は Construction の Bolt preparation 後の `tasks.md` を含みます。
 
+## 再生成
+
+段階別 snapshot を real provider で再生成する場合は、repo root で次を実行します。
+
+~~~sh
+npm run examples:generate:real
+~~~
+
+この task は `examples/02-intent-initialized` を seed にし、`03-ideation-completed`、`04-inception-completed`、`05-construction-design-ready` を順に real provider で生成します。
+生成後に [skill-provenance.json](skill-provenance.json) の md5 を更新し、`staleReason` を削除します。
+
 ## 検証
 
 各 snapshot は、次のように Amadeus Validator で検証できます。

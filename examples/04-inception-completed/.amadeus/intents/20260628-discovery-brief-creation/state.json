@@ -13,11 +13,11 @@
   "ideation": {
     "status": "completed",
     "requiredArtifacts": [
+      "intent.md",
       "scope.md",
       "ideation.md",
-      "traceability.md",
       "decisions.md",
-      "decisions/D001-complete-ideation.md"
+      "traceability.md"
     ],
     "requiredMocks": [
       "mocks/initial-confirmation.puml"
@@ -28,28 +28,34 @@
     "status": "completed",
     "requiredArtifacts": [
       "requirements.md",
-      "requirements/R001-record-discovery-brief.md",
-      "requirements/R002-show-intent-candidates.md",
       "acceptance.md",
       "user-stories.md",
-      "user-stories/S001-read-discovery-brief.md",
-      "user-stories/S002-select-first-intent-candidate.md",
       "use-cases.md",
-      "use-cases/UC001-record-theme-and-decision.md",
-      "use-cases/UC002-review-intent-candidates.md",
       "units.md",
       "units/U001-discovery-brief-recording/unit.md",
       "units/U001-discovery-brief-recording/design.md",
-      "units/U002-intent-candidate-guidance/unit.md",
-      "units/U002-intent-candidate-guidance/design.md",
+      "units/U002-intent-candidate-presentation/unit.md",
+      "units/U002-intent-candidate-presentation/design.md",
       "bolts.md",
+      "domain/subdomains.md",
+      "domain/bounded-contexts.md",
       "traceability.md",
-      "decisions.md",
-      "decisions/D001-inception-boundary.md"
+      "decisions.md"
+    ],
+    "requiredRequirementArtifacts": [
+      "requirements/R001-discovery-brief-recording.md",
+      "requirements/R002-intent-candidate-presentation.md"
+    ],
+    "requiredStoryArtifacts": [
+      "user-stories/S001-select-first-intent-candidate.md"
+    ],
+    "requiredUseCaseArtifacts": [
+      "use-cases/UC001-record-input-theme-and-judgement.md",
+      "use-cases/UC002-confirm-intent-candidates.md"
     ],
     "requiredBoltArtifacts": [
       "bolts/B001-discovery-brief-recording/bolt.md",
-      "bolts/B002-intent-candidate-guidance/bolt.md"
+      "bolts/B002-intent-candidate-presentation/bolt.md"
     ],
     "gate": "passed"
   }
