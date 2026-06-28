@@ -127,6 +127,7 @@ Discovery ディレクトリ名だけは `未確認` にせず、作成前に確
 ### `repair`
 
 既存 Discovery 成果物の見出し、リンク、`state.json`、`.amadeus/discoveries.md` の対応だけを補修する。
+既存の `grillings.md` または `grillings/Gxxx-*.md` が存在し、構造だけが壊れている場合は、Grilling Decision Trail の索引、session ファイル名、必須見出し、表列、相対リンク、状態、反映先、判断 ID、置き換え先、質問記録の参照だけを補修してよい。
 
 判定内容を推測で変更しない。
 

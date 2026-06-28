@@ -167,6 +167,7 @@ Grilling Decision Trail の実ファイル更新は、該当する Construction 
 
 ユーザーが明示した場合だけ使う。
 既存の Construction 成果物を点検し、欠けている必須見出し、`state.json` の不整合、相対リンク欠落、証拠欄の欠落だけを補修する。
+既存の `grillings.md` または `grillings/Gxxx-*.md` が存在し、構造だけが壊れている場合は、Grilling Decision Trail の索引、session ファイル名、必須見出し、表列、相対リンク、状態、反映先、判断 ID、置き換え先、質問記録の参照だけを補修してよい。
 
 `repair` では、新しい実装、テスト、PR 記録を根拠なく追加しない。
 
