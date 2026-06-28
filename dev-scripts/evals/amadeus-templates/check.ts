@@ -46,6 +46,28 @@ const targetSkills: Record<string, Contract> = {
       "templates/discoveries/discovery/state.json": [],
     },
   },
+  "amadeus-event-storming": {
+    skillText: [".amadeus/settings/templates", "templates/event-storming/session"],
+    files: {
+      "templates/event-storming/session/summary.md": [
+        "Purpose",
+        "Scope",
+        "Related Discovery",
+        "Related Intent",
+        "Level Status",
+        "Next Skill",
+        "Handoff To Domain Modeling",
+        "Supersession",
+      ],
+      "templates/event-storming/session/events.md": ["一覧"],
+      "templates/event-storming/session/flow.md": ["Flow"],
+      "templates/event-storming/session/board.md": ["Board"],
+      "templates/event-storming/session/aggregate-candidates.md": ["一覧"],
+      "templates/event-storming/session/bounded-context-candidates.md": ["一覧"],
+      "templates/event-storming/session/hotspots.md": ["一覧"],
+      "templates/event-storming/session/state.json": [],
+    },
+  },
   "amadeus-intent-init": {
     skillText: [".amadeus/settings/templates", "templates/intents/initialized"],
     files: {

@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { createLlmProvider, isLlmProviderMode, shellQuote, type LlmProvider, type LlmProviderMode, type LlmRequest, type MockLlmCases } from "../llm-support/provider";
 
-type SkillMode = "steering" | "intent-init" | "ideation" | "inception" | "construction";
+type SkillMode = "steering" | "event-storming" | "intent-init" | "ideation" | "inception" | "construction";
 type IdeationInternalProcess =
   "scope-framing" |
   "feasibility-shaping" |
@@ -68,6 +68,7 @@ const validator = ".agents/skills/amadeus-validator/validator/AmadeusValidator.t
 const requiredSkills = [
   "amadeus-steering",
   "amadeus-discovery",
+  "amadeus-event-storming",
   "amadeus-intent-init",
   "amadeus-ideation",
   "amadeus-ideation-scope-framing",
@@ -112,6 +113,7 @@ const constructionInternalProcesses = [
 const constructionInternalModes = constructionInternalProcesses.map((process) => `construction-internal-${process}` as const);
 const initialE2eModes = [
   "steering",
+  "event-storming",
   "intent-init",
   "ideation",
   ...ideationInternalModes,
@@ -336,6 +338,169 @@ function prepareSteeringFixture(workspace: string): void {
   replaceInTree(target, {
     "<product-name>": "図書貸出セルフサービス",
   });
+}
+
+function applyEventStormingArtifacts(workspace: string): void {
+  const source = join(root, ".agents/skills/amadeus-event-storming/templates/event-storming/session");
+  const target = join(workspace, ".amadeus/event-storming/ES001-loan-flow");
+  ensureFile(join(source, "summary.md"));
+  cpSync(source, target, { recursive: true });
+  writeFileSync(
+    join(target, "summary.md"),
+    [
+      "# Event Storming Summary",
+      "",
+      "## Purpose",
+      "",
+      "- 利用者が図書貸出をセルフサービスで開始し、返却期限を確認する流れを整理する。",
+      "",
+      "## Scope",
+      "",
+      "- pre-intent",
+      "",
+      "## Related Discovery",
+      "",
+      "- なし",
+      "",
+      "## Related Intent",
+      "",
+      "- なし",
+      "",
+      "## Level Status",
+      "",
+      "| Level | Status | Evidence |",
+      "|---|---|---|",
+      "| big-picture | ready | events.md, board.md, hotspots.md |",
+      "| process-modeling | ready | flow.md |",
+      "| system-design | ready | aggregate-candidates.md, bounded-context-candidates.md |",
+      "",
+      "## Next Skill",
+      "",
+      "- amadeus-domain-modeling",
+      "",
+      "## Handoff To Domain Modeling",
+      "",
+      "| Candidate | Kind | Evidence | Open Questions |",
+      "|---|---|---|---|",
+      "| AGC001 貸出 | Aggregate Candidate | DEV001, DEV002 | 返却期限変更を同じ集約で扱うか |",
+      "| BCC001 貸出管理 | Bounded Context Candidate | AGC001, DEV001, DEV002 | 利用者管理と境界を分けるか |",
+      "",
+      "## Supersession",
+      "",
+      "| Field | Value |",
+      "|---|---|",
+      "| Supersedes | なし |",
+      "| Superseded By | なし |",
+      "| Reason | なし |",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(target, "events.md"),
+    [
+      "# Domain Events",
+      "",
+      "## 一覧",
+      "",
+      "| ID | Domain Event | Description | Source | Excluded Similar Events |",
+      "|---|---|---|---|---|",
+      "| DEV001 | 貸出が開始された | 利用者が図書の貸出を開始した | ヒアリング | 貸出ボタンがクリックされた |",
+      "| DEV002 | 返却期限が決まった | 貸出に対する返却期限が決まった | ヒアリング | 返却期限計算 API が呼ばれた |",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(target, "flow.md"),
+    [
+      "# Event Storming Flow",
+      "",
+      "## Flow",
+      "",
+      "| ID | Type | Label | Trigger | Produces | Related | Note |",
+      "|---|---|---|---|---|---|---|",
+      "| ACT001 | Actor | 利用者 |  | CMD001 |  | 図書を借りる |",
+      "| CMD001 | Command | 貸出を開始する | ACT001 | DEV001 |  | UI event は Command の契機として扱う |",
+      "| DEV001 | Domain Event | 貸出が開始された | CMD001 | POL001 |  |  |",
+      "| POL001 | Policy | 貸出開始時に返却期限を決める | DEV001 | DEV002 |  |  |",
+      "| DEV002 | Domain Event | 返却期限が決まった | POL001 | RM001 |  |  |",
+      "| RM001 | Read Model | 貸出状況 | DEV001, DEV002 |  | ACT001 | 利用者が参照する |",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(target, "board.md"),
+    [
+      "# Event Storming Board",
+      "",
+      "## Board",
+      "",
+      "| Order | Type | ID | Label | Related | Note |",
+      "|---:|---|---|---|---|---|",
+      "| 1 | Actor | ACT001 | 利用者 | CMD001 | 図書を借りる |",
+      "| 2 | Command | CMD001 | 貸出を開始する | DEV001 | 利用者が実行する |",
+      "| 3 | Domain Event | DEV001 | 貸出が開始された | POL001 | 貸出事実 |",
+      "| 4 | Policy | POL001 | 貸出開始時に返却期限を決める | DEV002 | 期限決定へ進む |",
+      "| 5 | Domain Event | DEV002 | 返却期限が決まった | AGC001 | 期限事実 |",
+      "| 6 | Read Model | RM001 | 貸出状況 | DEV001, DEV002 | 利用者が参照する |",
+      "| 7 | Aggregate Candidate | AGC001 | 貸出 | DEV001, DEV002 | 貸出と返却期限の一貫性境界候補 |",
+      "| 8 | Bounded Context Candidate | BCC001 | 貸出管理 | AGC001 | 貸出関連ルールの境界候補 |",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(target, "aggregate-candidates.md"),
+    [
+      "# Aggregate Candidates",
+      "",
+      "## 一覧",
+      "",
+      "| ID | Candidate | Rationale | Related Domain Events | Consistency Clues | Open Questions |",
+      "|---|---|---|---|---|---|",
+      "| AGC001 | 貸出 | 貸出開始と返却期限の一貫性が密に見える | DEV001, DEV002 | 貸出開始後に返却期限が必要 | 返却期限変更を含めるか |",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(target, "bounded-context-candidates.md"),
+    [
+      "# Bounded Context Candidates",
+      "",
+      "## 一覧",
+      "",
+      "| ID | Candidate | Rationale | Related Domain Events | Related Aggregate Candidates | Open Questions |",
+      "|---|---|---|---|---|---|",
+      "| BCC001 | 貸出管理 | 貸出開始と返却期限のルールが密に関係する | DEV001, DEV002 | AGC001 | 利用者管理と同じ境界かは未確認 |",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(target, "hotspots.md"),
+    [
+      "# Hotspots",
+      "",
+      "## 一覧",
+      "",
+      "| ID | Type | Summary | Source | Status | Related | Next Action |",
+      "|---|---|---|---|---|---|---|",
+      "| HOT001 | Open Question | 返却期限変更の扱いが未確定 | ヒアリング | open | DEV002 | Domain Modeling で確認する |",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(target, "state.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      id: "ES001-loan-flow",
+      phase: "event-storming",
+      status: "ready",
+      currentLevel: "system-design",
+      completedLevels: ["big-picture", "process-modeling", "system-design"],
+      scope: "pre-intent",
+      relatedDiscovery: null,
+      relatedIntent: null,
+      nextRecommendedSkill: "amadeus-domain-modeling",
+    }, null, 2),
+  );
 }
 
 function writeIntentIndex(workspace: string, intent: string): void {
@@ -1199,6 +1364,44 @@ function intentInitPrompt(): string {
   ].join("\n");
 }
 
+function eventStormingPrompt(): string {
+  return [
+    "amadeus-event-storming を使ってください。",
+    "",
+    "pre-intent の Event Storming `ES001-loan-flow` を system-design level まで整理してください。",
+    "",
+    "Event Storming で分かっていること:",
+    "- 対象シナリオ: 利用者が図書貸出をセルフサービスで開始し、返却期限を確認する。",
+    "- Domain Event: DEV001 貸出が開始された。DEV002 返却期限が決まった。",
+    "- Actor: ACT001 利用者。",
+    "- Command: CMD001 貸出を開始する。",
+    "- Policy: POL001 貸出開始時に返却期限を決める。",
+    "- Read Model: RM001 貸出状況。",
+    "- Aggregate Candidate: AGC001 貸出。",
+    "- Bounded Context Candidate: BCC001 貸出管理。",
+    "- Hotspot: HOT001 返却期限変更の扱いが未確定。",
+    "",
+    "作成対象:",
+    "- `.amadeus/event-storming/ES001-loan-flow/summary.md`",
+    "- `.amadeus/event-storming/ES001-loan-flow/events.md`",
+    "- `.amadeus/event-storming/ES001-loan-flow/flow.md`",
+    "- `.amadeus/event-storming/ES001-loan-flow/board.md`",
+    "- `.amadeus/event-storming/ES001-loan-flow/aggregate-candidates.md`",
+    "- `.amadeus/event-storming/ES001-loan-flow/bounded-context-candidates.md`",
+    "- `.amadeus/event-storming/ES001-loan-flow/hotspots.md`",
+    "- `.amadeus/event-storming/ES001-loan-flow/state.json`",
+    "",
+    "制約:",
+    "- 質問せずに続行してください。",
+    "- 同梱テンプレートを使い、上の ID とファイル名で最小成果物を作成してください。",
+    "- Event は Domain Event だけとして扱い、UI event、technical event、integration event、log event は Domain Event にしないでください。",
+    "- Requirement、Use Case、Unit、Bolt、Task、domain model、実装、CI は作らないでください。",
+    "- `amadeus-discovery`、`amadeus-intent-init`、`amadeus-inception`、`amadeus-domain-modeling` は自動実行しないでください。",
+    "- git commit はしないでください。",
+    "- 作成後に `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts .` を実行し、結果を要約してください。",
+  ].join("\n");
+}
+
 function intentIdeationPrompt(): string {
   return [
     "amadeus-ideation を使ってください。",
@@ -1538,6 +1741,32 @@ function steeringMarkdownArtifacts(): string[] {
   return markdownOnly(steeringArtifacts());
 }
 
+function eventStormingArtifacts(): string[] {
+  return [
+    ...steeringArtifacts(),
+    ".amadeus/event-storming/ES001-loan-flow/summary.md",
+    ".amadeus/event-storming/ES001-loan-flow/events.md",
+    ".amadeus/event-storming/ES001-loan-flow/flow.md",
+    ".amadeus/event-storming/ES001-loan-flow/board.md",
+    ".amadeus/event-storming/ES001-loan-flow/aggregate-candidates.md",
+    ".amadeus/event-storming/ES001-loan-flow/bounded-context-candidates.md",
+    ".amadeus/event-storming/ES001-loan-flow/hotspots.md",
+    ".amadeus/event-storming/ES001-loan-flow/state.json",
+  ];
+}
+
+function eventStormingMarkdownArtifacts(): string[] {
+  return [
+    ".amadeus/event-storming/ES001-loan-flow/summary.md",
+    ".amadeus/event-storming/ES001-loan-flow/events.md",
+    ".amadeus/event-storming/ES001-loan-flow/flow.md",
+    ".amadeus/event-storming/ES001-loan-flow/board.md",
+    ".amadeus/event-storming/ES001-loan-flow/aggregate-candidates.md",
+    ".amadeus/event-storming/ES001-loan-flow/bounded-context-candidates.md",
+    ".amadeus/event-storming/ES001-loan-flow/hotspots.md",
+  ];
+}
+
 function initializedIntentArtifacts(intent: string): string[] {
   return [
     ...steeringArtifacts(),
@@ -1868,6 +2097,15 @@ function e2eCase(mode: E2eMode): E2eCase {
       applyMock: prepareSteeringFixture,
       expectedArtifacts: expectedArtifacts(steeringArtifacts(), ["."]),
       expectedMarkdownChanges: expectedMarkdownChanges(steeringMarkdownArtifacts(), []),
+    },
+    "event-storming": {
+      id: "event-storming",
+      prompt: eventStormingPrompt(),
+      prepareGiven: prepareSteeringFixture,
+      givenMustRemainValid: ["."],
+      applyMock: applyEventStormingArtifacts,
+      expectedArtifacts: expectedArtifacts(eventStormingArtifacts(), ["."]),
+      expectedMarkdownChanges: expectedMarkdownChanges(eventStormingMarkdownArtifacts(), []),
     },
     "intent-init": {
       id: "intent-init",

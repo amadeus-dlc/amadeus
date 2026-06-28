@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "<event-storming-id>",
+  "phase": "event-storming",
+  "status": "draft",
+  "currentLevel": "big-picture",
+  "completedLevels": [],
+  "scope": "<scope>",
+  "relatedDiscovery": null,
+  "relatedIntent": null,
+  "nextRecommendedSkill": "<next-recommended-skill>"
+}

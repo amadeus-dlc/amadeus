@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -273,6 +273,175 @@ function writeConstructionDesign(workspace: string, overrides: Record<string, st
   );
 }
 
+function writeEventStormingSession(workspace: string): void {
+  const base = join(workspace, ".amadeus/event-storming/ES001-loan-flow");
+  mkdirSync(base, { recursive: true });
+  writeFileSync(
+    join(base, "summary.md"),
+    [
+      "# Event Storming Summary",
+      "",
+      "## Purpose",
+      "",
+      "- 図書貸出セルフサービスの Domain Event と設計候補を整理する。",
+      "",
+      "## Scope",
+      "",
+      "- pre-intent",
+      "",
+      "## Related Discovery",
+      "",
+      "- なし",
+      "",
+      "## Related Intent",
+      "",
+      "- なし",
+      "",
+      "## Level Status",
+      "",
+      "| Level | Status | Evidence |",
+      "|---|---|---|",
+      "| big-picture | ready | events.md, board.md |",
+      "| process-modeling | ready | flow.md |",
+      "| system-design | ready | aggregate-candidates.md, bounded-context-candidates.md |",
+      "",
+      "## Next Skill",
+      "",
+      "- amadeus-domain-modeling",
+      "",
+      "## Handoff To Domain Modeling",
+      "",
+      "| Candidate | Kind | Evidence | Open Questions |",
+      "|---|---|---|---|",
+      "| AGC001 貸出 | Aggregate Candidate | DEV001, DEV002 | 返却期限を同じ集約で守るか |",
+      "| BCC001 貸出管理 | Bounded Context Candidate | AGC001, DEV001, DEV002 | 利用者管理と分けるか |",
+      "",
+      "## Supersession",
+      "",
+      "| Field | Value |",
+      "|---|---|",
+      "| Supersedes | なし |",
+      "| Superseded By | なし |",
+      "| Reason | なし |",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(base, "events.md"),
+    [
+      "# Domain Events",
+      "",
+      "## 一覧",
+      "",
+      "| ID | Domain Event | Description | Source | Excluded Similar Events |",
+      "|---|---|---|---|---|",
+      "| DEV001 | 貸出が開始された | 利用者が図書の貸出を開始した | ヒアリング | 貸出ボタンがクリックされた |",
+      "| DEV002 | 返却期限が決まった | 貸出に対する返却期限が決まった | ヒアリング | 返却期限計算 API が呼ばれた |",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(base, "flow.md"),
+    [
+      "# Event Storming Flow",
+      "",
+      "## Flow",
+      "",
+      "| ID | Type | Label | Trigger | Produces | Related | Note |",
+      "|---|---|---|---|---|---|---|",
+      "| ACT001 | Actor | 利用者 |  | CMD001 |  | 図書を借りる |",
+      "| CMD001 | Command | 貸出を開始する | ACT001 | DEV001 |  | UI event は Command の契機として扱う |",
+      "| DEV001 | Domain Event | 貸出が開始された | CMD001 | POL001 |  |  |",
+      "| POL001 | Policy | 貸出開始時に返却期限を決める | DEV001 | DEV002 |  |  |",
+      "| RM001 | Read Model | 貸出状況 | DEV001, DEV002 |  | ACT001 | 利用者が参照する |",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(base, "board.md"),
+    [
+      "# Event Storming Board",
+      "",
+      "## Board",
+      "",
+      "| Order | Type | ID | Label | Related | Note |",
+      "|---:|---|---|---|---|---|",
+      "| 1 | Actor | ACT001 | 利用者 | CMD001 | 図書を借りる |",
+      "| 2 | Command | CMD001 | 貸出を開始する | DEV001 | 利用者が実行する |",
+      "| 3 | Domain Event | DEV001 | 貸出が開始された | POL001 | 貸出事実 |",
+      "| 4 | Policy | POL001 | 貸出開始時に返却期限を決める | DEV002 | 期限決定へ進む |",
+      "| 5 | Domain Event | DEV002 | 返却期限が決まった | AGC001 | 期限事実 |",
+      "| 6 | Aggregate Candidate | AGC001 | 貸出 | DEV001, DEV002 | 貸出と返却期限の一貫性境界候補 |",
+      "| 7 | Bounded Context Candidate | BCC001 | 貸出管理 | AGC001 | 貸出関連ルールの境界候補 |",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(base, "aggregate-candidates.md"),
+    [
+      "# Aggregate Candidates",
+      "",
+      "## 一覧",
+      "",
+      "| ID | Candidate | Rationale | Related Domain Events | Consistency Clues | Open Questions |",
+      "|---|---|---|---|---|---|",
+      "| AGC001 | 貸出 | 貸出開始と返却期限の一貫性が密に見える | DEV001, DEV002 | 貸出開始後に返却期限が必要 | 返却期限変更を含めるか |",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(base, "bounded-context-candidates.md"),
+    [
+      "# Bounded Context Candidates",
+      "",
+      "## 一覧",
+      "",
+      "| ID | Candidate | Rationale | Related Domain Events | Related Aggregate Candidates | Open Questions |",
+      "|---|---|---|---|---|---|",
+      "| BCC001 | 貸出管理 | 貸出開始と返却期限のルールが密に関係する | DEV001, DEV002 | AGC001 | 利用者管理と同じ境界かは未確認 |",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(base, "hotspots.md"),
+    [
+      "# Hotspots",
+      "",
+      "## 一覧",
+      "",
+      "| ID | Type | Summary | Source | Status | Related | Next Action |",
+      "|---|---|---|---|---|---|---|",
+      "| HOT001 | Open Question | 返却期限変更の扱いが未確定 | ヒアリング | open | DEV002 | Domain Modeling で確認する |",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(base, "state.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      id: "ES001-loan-flow",
+      phase: "event-storming",
+      status: "ready",
+      currentLevel: "system-design",
+      completedLevels: ["big-picture", "process-modeling", "system-design"],
+      scope: "pre-intent",
+      relatedDiscovery: null,
+      relatedIntent: null,
+      nextRecommendedSkill: "amadeus-domain-modeling",
+    }, null, 2),
+  );
+}
+
+function removeEventStormingBoardCandidate(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/board.md");
+  replaceInFile(
+    path,
+    "| 6 | Aggregate Candidate | AGC001 | 貸出 | DEV001, DEV002 | 貸出と返却期限の一貫性境界候補 |\n",
+    "",
+    "event storming fixture does not contain expected aggregate candidate row",
+  );
+}
+
 function writeConstructionDesignForSecondBolt(workspace: string): void {
   writeFileSync(
     intentPath(workspace, `bolts/${bolt2}/design.md`),
@@ -433,6 +602,18 @@ function appendConstructionDesignTrace(
 }
 
 run(["bun", "run", validator, "examples/04-inception-completed", intent]);
+
+const eventStormingWorkspace = workspaceCopy();
+writeEventStormingSession(eventStormingWorkspace);
+run(["bun", "run", validator, eventStormingWorkspace]);
+
+const missingEventStormingBoardCandidateWorkspace = workspaceCopy();
+writeEventStormingSession(missingEventStormingBoardCandidateWorkspace);
+removeEventStormingBoardCandidate(missingEventStormingBoardCandidateWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, missingEventStormingBoardCandidateWorkspace],
+  "`board.md` が system-design の Aggregate Candidate を含む",
+);
 
 const discoveryDecisionMismatchWorkspace = workspaceCopy();
 replaceDiscoveryDecision(discoveryDecisionMismatchWorkspace);
