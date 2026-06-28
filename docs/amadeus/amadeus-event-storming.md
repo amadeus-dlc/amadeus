@@ -272,6 +272,31 @@ Order、Type、ID、Label、Related、Note を持つ。
 | 9 | Bounded Context Candidate | BCC001 | 注文管理 | AGC001 | 注文関連ルールが密な候補 |
 ```
 
+## flow.md
+
+`flow.md` は、Process Modeling level の関係を機械的に参照できる形で扱う。
+
+標準形式は次である。
+
+```md
+# Event Storming Flow
+
+## Flow
+
+| ID | Type | Label | Trigger | Produces | Related | Note |
+|---|---|---|---|---|---|---|
+| ACT001 | Actor | 購入者 |  | CMD001 |  | 注文を開始する |
+| CMD001 | Command | 注文を確定する | ACT001 | DEV001 |  | UI event はこの Command の発火契機として扱う |
+| DEV001 | Domain Event | 注文が確定した | CMD001 | POL001 |  |  |
+| POL001 | Policy | 注文確定時に支払い確認を開始する | DEV001 | CMD002 |  |  |
+| EXT001 | External System | 決済サービス | CMD002 | DEV002 |  | Integration event はこの外部システム関係として扱う |
+| RM001 | Read Model | 注文状況 | DEV001 |  | ACT001 | 購入者が参照する |
+```
+
+`Type` は `Actor`、`Command`、`Domain Event`、`Policy`、`External System`、`Read Model` のいずれかにする。
+UI event は `Command` の発火契機として `Note` に残す。
+Integration event は `External System` の入出力関係として `Note` に残す。
+
 ## events.md
 
 `events.md` は Domain Event だけを扱う。
@@ -320,13 +345,36 @@ Aggregate Candidate は正式な Aggregate ではない。
 
 ## 一覧
 
-| ID | Candidate | Rationale | Related Domain Events | Related Aggregates | Open Questions |
+| ID | Candidate | Rationale | Related Domain Events | Related Aggregate Candidates | Open Questions |
 |---|---|---|---|---|---|
 | BCC001 | 注文管理 | 注文確定、支払い承認、在庫引当のルールが密に関係する | DEV001, DEV002, DEV003 | AGC001 | 在庫管理と同じ境界かは未確認 |
 ```
 
 Bounded Context Candidate は正式な Bounded Context ではない。
 正式化は `amadeus-domain-modeling` で判断する。
+
+## hotspots.md
+
+`hotspots.md` は、未確認事項と Domain Event ではない候補を安定して退避する。
+
+標準形式は次である。
+
+```md
+# Hotspots
+
+## 一覧
+
+| ID | Type | Summary | Source | Status | Related | Next Action |
+|---|---|---|---|---|---|---|
+| HOT001 | Open Question | 支払い承認と在庫引当の順序が未確定 | ヒアリング | open | DEV002, DEV003 | 追加確認する |
+| HOT002 | Technical Event | 注文 API が呼ばれた | 技術メモ | open | CMD001 | Domain Event として扱わず実装懸念に残す |
+| HOT003 | Log Event | 監査ログが出力された | 運用メモ | open | DEV001 | 未確定事項として残す |
+```
+
+`Status` は `open`、`resolved`、`accepted` のいずれかにする。
+`open` は未確認で後続判断が必要な状態である。
+`resolved` は確認済みで、本文の成果物へ反映済みの状態である。
+`accepted` は未解決のままリスクや前提として受け入れた状態である。
 
 ## state.json
 
@@ -392,6 +440,7 @@ intent-scoped
 - Domain Event の前後にある Command、Actor、Policy が `flow.md` にある。
 - 関係する External System と Read Model が必要に応じて `flow.md` にある。
 - `board.md` に Domain Event、Command、Actor、Policy の関係がある。
+- External System と Read Model がある場合は、`board.md` にもそれらの関係がある。
 - 未確認事項が `hotspots.md` に分離されている。
 
 `system-design ready` の条件は次である。
@@ -417,6 +466,7 @@ intent-scoped
 |---|---|---|---|
 | `pre-intent` | `big-picture` | `amadeus-discovery` | Intent 分割や入力テーマ整理に使うため |
 | `pre-intent` | `process-modeling` | `amadeus-discovery` または `amadeus-intent-init` | Intent 候補または最初の Intent を決めるため |
+| `pre-intent` | `system-design` | `amadeus-domain-modeling` | Intent 化前の Candidate を Domain Model へ磨くため |
 | `intent-scoped` | `big-picture` | `amadeus-inception` | Intent 内の Requirement、Use Case、Unit、Bolt の根拠に使うため |
 | `intent-scoped` | `process-modeling` | `amadeus-inception` | Requirement、Use Case、Unit、Bolt の根拠に使うため |
 | `intent-scoped` | `system-design` | `amadeus-domain-modeling` | Candidate を Domain Model へ磨くため |
