@@ -81,6 +81,9 @@ Construction は次の順序で進める。
 Construction Design は Task 生成の根拠である。
 そのため、Construction Design 作成時点では `B001/T001` のような Task ID を必須参照にしない。
 
+Task 生成 Review Gate で不足が見つかった場合は、`designGate.status` を `draft` または `failed` に戻す。
+この場合、`designGate.status: ready` のまま `taskPlan.status: blocked` にしない。
+
 Construction Design は次を必須参照にする。
 
 - 対象 Bolt
@@ -202,6 +205,7 @@ Construction validator は次を確認する。
 - `state.json.construction.bolts[].taskPlan.status` が `generated` の場合、`tasks.md` の各 Task が、作業、要求、ユースケース、依存、設計根拠、証拠を持つ。
 - `state.json.construction.bolts[].taskPlan.status` が `generated` の場合、`state.json.construction.requiredBoltArtifacts` に `tasks.md` が含まれる。
 - `state.json.construction.bolts[].taskPlan.status` が `generated` の場合、`state.json.construction.bolts[].taskPlan.evidence` が `tasks.md` を指す。
+- `state.json.construction.bolts[].taskPlan.status` が `not_generated` または `blocked` の場合、`state.json.construction.requiredBoltArtifacts` に `tasks.md` が含まれない。
 - Construction Design が対象 Bolt、Unit、Requirement を参照している。
 - アクターまたは外部システムとの相互作用がある場合、Construction Design が対象 Use Case を参照している。
 - `state.json.construction.bolts[].taskPlan.status` が `generated` の場合、`Construction Design からの追跡` が Construction Design と Task を接続している。
