@@ -1893,6 +1893,7 @@ class AmadeusValidator {
       }
     }
 
+    const seenSessionIds = new Set<string>();
     for (const entry of sessionFiles) {
       const path = `${sessionsPath}/${entry}`;
       const sessionId = entry.match(/^(G\d{3})-/)?.[1];
@@ -1900,6 +1901,14 @@ class AmadeusValidator {
         this.pass(path, "grilling session ファイル名が Gnnn-<topic>.md 形式である", entry);
       } else {
         this.failRow(path, "grilling session ファイル名が Gnnn-<topic>.md 形式である", entry);
+      }
+      if (sessionId) {
+        if (seenSessionIds.has(sessionId)) {
+          this.failRow(path, "grilling session ID が対象 root 内で重複しない", sessionId);
+        } else {
+          this.pass(path, "grilling session ID が対象 root 内で重複しない", sessionId);
+          seenSessionIds.add(sessionId);
+        }
       }
       if (sessionId && indexedSessionIds.has(sessionId)) {
         this.pass(path, "grilling session が `grillings.md` に登録されている", sessionId);

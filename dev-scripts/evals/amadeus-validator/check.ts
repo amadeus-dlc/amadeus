@@ -1233,6 +1233,14 @@ runExpectFailure(
   "grilling session が `grillings.md` に登録されている",
 );
 
+const grillingsDuplicateSessionIdWorkspace = workspaceCopy();
+writeGrillings(intentPath(grillingsDuplicateSessionIdWorkspace, ""));
+writeExtraGrillingSession(intentPath(grillingsDuplicateSessionIdWorkspace, ""), "G001-duplicate.md", "GD002");
+runExpectFailure(
+  ["bun", "run", validator, grillingsDuplicateSessionIdWorkspace, intent],
+  "grilling session ID が対象 root 内で重複しない",
+);
+
 const grillingsMismatchedSessionStateWorkspace = workspaceCopy();
 writeGrillings(intentPath(grillingsMismatchedSessionStateWorkspace, ""), {
   indexSessionState: "completed",
