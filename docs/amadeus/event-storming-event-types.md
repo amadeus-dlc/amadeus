@@ -1,13 +1,14 @@
 # Event Storming Event Types
 
 このメモは、Amadeus で Event Storming を扱うときのイベント種別を整理する。
+このメモは設計メモであり、現時点で `amadeus-event-storming` skill が実装済みであることを意味しない。
 
 ## 原則
 
 Event Storming で扱う **Event** は、**Domain Event（ドメインイベント）** だけである。
 
 Event は複数のレイヤーに存在する。
-しかし、`amadeus-event-storming` の `events.md` に載せる対象は Domain Event に限定する。
+しかし、提案中の補助 skill `amadeus-event-storming` で `events.md` を作る場合、そこに載せる対象は Domain Event に限定する。
 
 UI event、technical event、integration event、log event は、Event Storming の Event として扱わない。
 これらを Domain Event と混ぜると、Event Storming が UI フロー図、処理シーケンス図、監視ログ設計に寄ってしまう。
@@ -54,9 +55,9 @@ Log event は、Operation または Observability の関心として別の phase
 | EVT001 | 注文が確定した | 購入者の注文意思が確定した | ヒアリング | 注文ボタンがクリックされた、注文 API が呼ばれた |
 ```
 
-## `amadeus-event-storming` への含意
+## Event Storming 補助 skill への含意
 
-`amadeus-event-storming` は、Domain Event を中心に人間へヒアリングする。
+提案中の補助 skill `amadeus-event-storming` は、Domain Event を中心に人間へヒアリングする。
 
 最初に UI 操作、API、DB、ログから聞き始めない。
 対象シナリオを絞ったうえで、ドメイン上で起きた重要な事実を過去形で聞く。
