@@ -25,7 +25,7 @@
 - `traceability.md` の `既存コード分析からの追跡` にある `要求`、`ユースケース`、`ユニット`、`ボルト` が対応する index に存在することを検証する。
 - `traceability.md` の `既存コード分析からの追跡` にある `分析` が `codebase-analysis.md`、`設計` が同じ行の Unit 配下 `design.md` を指すことを検証する。
 - Bolt 配下の `tasks.md` では、各 Task が `作業`、`要求`、`ユースケース`、`依存`、`証拠` を持つことを検証する。
-- Construction 段階では、対象 Bolt の `construction-design.md`、`state.json.construction.bolts[].designGate`、`Construction Design からの追跡` を検証する。
+- Construction 段階では、対象 Bolt の `design.md`、`state.json.construction.bolts[].designGate`、`Construction Design からの追跡` を検証する。
 - `evals.json` が JSON として解釈できる。
 - `git diff --check` が成功する。
 
@@ -45,7 +45,7 @@
 | `codebase-analysis-traceability-columns` | 完了 | `既存コード分析からの追跡` が必須列を持つ。 | `examples/04-inception-completed` の空表が `pass`。 |
 | `design-traceability-links` | 完了 | `設計からの追跡` の `設計` が同じ行の Unit Design Brief を指す。 | 一時コピーで `設計` を別 Unit の `design.md` に変更すると `fail`。 |
 | `design-traceability-ids` | 完了 | `設計からの追跡` の ID が対応する index に存在する。 | 一時コピーで `要求` を `R999` に変更すると `fail`。 |
-| `construction-design-ready` | 完了 | Design Gate ready 時点で `construction-design.md`、Bolt 単位 gate、`Construction Design からの追跡` がある。 | `examples/05-construction-design-ready` が `pass`。一時コピーで `Logical Design` 本文、Bolt gate、設計追跡を壊すと `fail`。 |
+| `construction-design-ready` | 完了 | Design Gate ready 時点で `design.md`、Bolt 単位 gate、`Construction Design からの追跡` がある。 | `examples/05-construction-design-ready` が `pass`。一時コピーで `Logical Design` 本文、Bolt gate、設計追跡を壊すと `fail`。 |
 | `construction-traceability` | 完了 | Construction 完了時は `Construction からの追跡` が証拠追跡行を持つ。 | 一時コピーで空表にすると `fail`。 |
 | `task-contract-validation` | 完了 | Bolt 配下 `tasks.md` の Task が必須項目を持つ。 | 一時コピーで `T001` の `要求`、`ユースケース`、`依存` を壊すと `fail`。 |
 | `intent-directory-name-validation` | 完了 | Intent 識別子、詳細リンク、ディレクトリ名が `YYYYMMDD-<slug>` 形式で一致する。 | `examples/02-intent-initialized` 以降の snapshot が `pass`。 |

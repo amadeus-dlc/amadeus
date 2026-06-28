@@ -74,7 +74,7 @@
     "requiredBoltArtifacts": [
       "bolts/B001-discovery-brief-recording/bolt.md",
       "bolts/B001-discovery-brief-recording/tasks.md",
-      "bolts/B001-discovery-brief-recording/construction-design.md",
+      "bolts/B001-discovery-brief-recording/design.md",
       "bolts/B001-discovery-brief-recording/notes.md"
     ],
     "bolts": [
@@ -84,7 +84,7 @@
           "status": "ready",
           "reviewedBy": "ai",
           "updatedAt": "2026-06-28",
-          "evidence": "bolts/B001-discovery-brief-recording/construction-design.md"
+          "evidence": "bolts/B001-discovery-brief-recording/design.md"
         }
       }
     ],

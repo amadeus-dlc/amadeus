@@ -26,7 +26,7 @@
     "requiredBoltArtifacts": [
       "bolts/B001-bolt/bolt.md",
       "bolts/B001-bolt/tasks.md",
-      "bolts/B001-bolt/construction-design.md",
+      "bolts/B001-bolt/design.md",
       "bolts/B001-bolt/notes.md",
       "bolts/B001-bolt/test-results.md"
     ],
@@ -37,7 +37,7 @@
           "status": "ready",
           "reviewedBy": "ai",
           "updatedAt": "未確認",
-          "evidence": "bolts/B001-bolt/construction-design.md"
+          "evidence": "bolts/B001-bolt/design.md"
         }
       }
     ],

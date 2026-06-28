@@ -27,7 +27,7 @@ Construction phase の追跡と状態確定だけを進める。
 - `.amadeus/intents/<intent-id>-<slug>/bolts.md`
 - `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/bolt.md`
 - `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/tasks.md`
-- `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/construction-design.md`
+- `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/design.md`
 - `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/notes.md`
 - `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/test-results.md`
 - `.amadeus/intents/<intent-id>-<slug>/traceability.md`

@@ -3,14 +3,14 @@
 ## 実行方針
 
 - B001 は Discovery Brief の基本見出しと Discovery 状態の整合を実装対象にします。
-- 実装前に `construction-design.md` を Design Gate evidence として確定しました。
+- 実装前に `design.md` を Design Gate evidence として確定しました。
 
 ## 対象タスク
 
 | タスク | 状態 | 方針 | 証拠 |
 |---|---|---|---|
-| B001/T001 | 未着手 | Discovery Brief の基本見出しを作る | [construction-design.md](construction-design.md) |
-| B001/T002 | 未着手 | Discovery 状態と一覧を整合させる | [construction-design.md](construction-design.md) |
+| B001/T001 | 未着手 | Discovery Brief の基本見出しを作る | [design.md](design.md) |
+| B001/T002 | 未着手 | Discovery 状態と一覧を整合させる | [design.md](design.md) |
 
 ## 実装判断
 

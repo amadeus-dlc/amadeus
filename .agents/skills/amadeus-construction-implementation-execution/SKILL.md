@@ -28,12 +28,12 @@ Construction phase の実装実行だけを進める。
 - `.amadeus/intents/<intent-id>-<slug>/units/<unit-id>-<slug>/design.md`
 - `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/bolt.md`
 - `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/tasks.md`
-- `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/construction-design.md`
+- `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/design.md`
 - `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/notes.md`
 - 関連する既存コード、テスト、設定
 
 `notes.md` がない場合は、`amadeus-construction-bolt-preparation` を案内して停止する。
-`construction-design.md` がない場合は、`amadeus-construction-bolt-preparation` を案内して停止する。
+`design.md` がない場合は、`amadeus-construction-bolt-preparation` を案内して停止する。
 `state.json.construction.bolts[]` の対象 Bolt の `designGate.status` が `ready` または `passed` でない場合は、実装せずに停止する。
 
 ## 成果物
@@ -42,10 +42,10 @@ Construction phase の実装実行だけを進める。
 
 - 対象 Task に直接対応する実装コード。
 - 対象 Task の検証に必要なテストコード。
-- `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/construction-design.md`
+- `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/design.md`
 - `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/notes.md`
 
-`construction-design.md` は実装中に本文を更新してよい。
+`design.md` は実装中に本文を更新してよい。
 ただし、本文を更新した場合は `設計変更記録` に変更理由、影響する Task、検証影響を必ず書く。
 
 `notes.md` には、実装中に確定した判断、調査詳細、未確認事項、後続検証で確認すべき観点だけを書く。
@@ -65,7 +65,7 @@ Construction phase の実装実行だけを進める。
 - 対象 Task に対応しない speculative な実装をしない。
 - Inception 成果物の要求、ユースケース、Unit、Bolt、Design を書き換えない。
 - `test-results.md`、`pr.md`、`traceability.md`、`acceptance.md`、`state.json` を更新しない。
-- `construction-design.md` を実装後の都合で無根拠に書き換えない。
+- `design.md` を実装後の都合で無根拠に書き換えない。
 - テスト未実行の結果を証拠として記録しない。
 - Spec、`.kiro/specs/**`、`openspec/**` を作らない。
 

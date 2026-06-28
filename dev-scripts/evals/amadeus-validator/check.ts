@@ -241,7 +241,7 @@ function writeConstructionNotes(workspace: string): void {
 
 function writeConstructionDesign(workspace: string, overrides: Record<string, string> = {}): void {
   writeFileSync(
-    intentPath(workspace, `bolts/${bolt1}/construction-design.md`),
+    intentPath(workspace, `bolts/${bolt1}/design.md`),
     [
       "# Construction Design",
       "",
@@ -295,7 +295,7 @@ function writeConstructionState(workspace: string, overrides: Record<string, any
     requiredBoltArtifacts: overrides.requiredBoltArtifacts ?? [
       `bolts/${bolt1}/bolt.md`,
       `bolts/${bolt1}/tasks.md`,
-      `bolts/${bolt1}/construction-design.md`,
+      `bolts/${bolt1}/design.md`,
       `bolts/${bolt1}/notes.md`,
       `bolts/${bolt1}/test-results.md`,
     ],
@@ -307,7 +307,7 @@ function writeConstructionState(workspace: string, overrides: Record<string, any
           status: "ready",
           reviewedBy: "ai",
           updatedAt: "2026-06-28",
-          evidence: `bolts/${bolt1}/construction-design.md`,
+          evidence: `bolts/${bolt1}/design.md`,
         },
       },
     ],
@@ -371,7 +371,7 @@ function appendConstructionDesignTrace(workspace: string): void {
       "",
       "| Construction Design | Task | 実装 | 検証 | PR | 状態 |",
       "|---|---|---|---|---|---|",
-      `| [B001 Construction Design](bolts/${bolt1}/construction-design.md) | B001/T001, B001/T002 | 未実施 | 未実施 | 未実施 | ready |`,
+      `| [B001 Construction Design](bolts/${bolt1}/design.md) | B001/T001, B001/T002 | 未実施 | 未実施 | 未実施 | ready |`,
       "",
     ].join("\n"),
   );
@@ -487,12 +487,24 @@ writeConstructionState(missingTargetBoltArtifactsWorkspace, {
   requiredBoltArtifacts: [
     `bolts/${bolt1}/bolt.md`,
     `bolts/${bolt1}/tasks.md`,
-    `bolts/${bolt1}/construction-design.md`,
+    `bolts/${bolt1}/design.md`,
   ],
 });
 runExpectFailure(
   ["bun", "run", validator, missingTargetBoltArtifactsWorkspace, intent],
   "Construction 必須 Bolt 成果物が targetBolt の証拠成果物を含む",
+);
+
+const untrackedConstructionDesignWorkspace = workspaceCopy();
+writeConstructionDesign(untrackedConstructionDesignWorkspace);
+writeConstructionNotes(untrackedConstructionDesignWorkspace);
+writeConstructionTestResults(untrackedConstructionDesignWorkspace);
+appendConstructionDesignTrace(untrackedConstructionDesignWorkspace);
+writeConstructionState(untrackedConstructionDesignWorkspace);
+writeFileSync(intentPath(untrackedConstructionDesignWorkspace, `bolts/${bolt2}/design.md`), "# Construction Design\n");
+runExpectFailure(
+  ["bun", "run", validator, untrackedConstructionDesignWorkspace, intent],
+  "Construction Design は requiredBoltArtifacts に含まれる",
 );
 
 const oldUnitDetailWorkspace = workspaceCopy();
@@ -542,7 +554,7 @@ writeConstructionState(prWithoutUrlWorkspace, {
   requiredBoltArtifacts: [
     `bolts/${bolt1}/bolt.md`,
     `bolts/${bolt1}/tasks.md`,
-    `bolts/${bolt1}/construction-design.md`,
+    `bolts/${bolt1}/design.md`,
     `bolts/${bolt1}/notes.md`,
     `bolts/${bolt1}/test-results.md`,
     `bolts/${bolt1}/pr.md`,

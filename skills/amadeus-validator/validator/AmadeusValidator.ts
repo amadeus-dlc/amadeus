@@ -451,7 +451,7 @@ class AmadeusValidator {
 
     this.checkUnitDesignArtifacts(base, state);
     this.checkBoltDesignReferences(base);
-    this.checkNoBoltDesignArtifacts(base, state);
+    this.checkNoInceptionBoltDesignBriefArtifacts(base, state);
     this.checkInceptionBoltArtifacts(base, state);
     this.checkTraceability(`${base}/traceability.md`);
   }
@@ -504,7 +504,7 @@ class AmadeusValidator {
 
     this.checkUnitDesignArtifacts(base, state);
     this.checkBoltDesignReferences(base);
-    this.checkNoBoltDesignArtifacts(base, state);
+    this.checkNoInceptionBoltDesignBriefArtifacts(base, state);
     this.checkTraceability(`${base}/traceability.md`);
     this.checkConstructionDesignTraceability(`${base}/traceability.md`, state);
     this.checkConstructionTraceability(`${base}/traceability.md`, state);
@@ -583,7 +583,7 @@ class AmadeusValidator {
       const boltId = String(value ?? "").trim();
       const boltDir = boltDirectories.get(boltId);
       if (!boltDir) continue;
-      for (const artifactPath of [`${boltDir}/bolt.md`, `${boltDir}/tasks.md`, `${boltDir}/construction-design.md`, `${boltDir}/notes.md`]) {
+      for (const artifactPath of [`${boltDir}/bolt.md`, `${boltDir}/tasks.md`, `${boltDir}/design.md`, `${boltDir}/notes.md`]) {
         const relativePath = this.relativeToIntent(base, artifactPath);
         if (required.has(relativePath)) this.pass(path, "Construction 必須 Bolt 成果物が targetBolt の証拠成果物を含む", `${boltId}: ${relativePath}`);
         else this.failRow(path, "Construction 必須 Bolt 成果物が targetBolt の証拠成果物を含む", `${boltId}: ${relativePath}`);
@@ -638,7 +638,7 @@ class AmadeusValidator {
       this.checkNotBlankValue(path, "construction.bolts[].designGate.updatedAt", designGate.updatedAt);
 
       const boltDir = boltDirectories.get(boltId);
-      const expectedEvidence = boltDir ? this.relativeToIntent(base, `${boltDir}/construction-design.md`) : "";
+      const expectedEvidence = boltDir ? this.relativeToIntent(base, `${boltDir}/design.md`) : "";
       const evidence = String(designGate.evidence ?? "").trim();
       if (expectedEvidence.length > 0 && evidence === expectedEvidence) {
         this.pass(path, "`construction.bolts[].designGate.evidence` が Construction Design を指す", `${boltId}: ${evidence}`);
@@ -662,6 +662,9 @@ class AmadeusValidator {
   private checkConstructionBoltArtifacts(base: string, state: Record<string, any>): void {
     const values = state.construction?.requiredBoltArtifacts;
     const requiredBoltArtifacts = Array.isArray(values) ? values : [];
+    const requiredConstructionDesigns = new Set(
+      requiredBoltArtifacts.map((value: unknown) => String(value ?? "").trim()).filter((value: string) => value.endsWith("/design.md")),
+    );
     const checkedPrPaths = new Set<string>();
 
     for (const value of requiredBoltArtifacts) {
@@ -670,7 +673,7 @@ class AmadeusValidator {
       if (relativePath.endsWith("/notes.md")) {
         this.checkFile(path, "Construction ノートが存在する");
         this.checkHeadings(path, ["実行方針", "対象タスク", "未確認事項"]);
-      } else if (relativePath.endsWith("/construction-design.md")) {
+      } else if (relativePath.endsWith("/design.md")) {
         this.checkConstructionDesign(path);
       } else if (relativePath.endsWith("/test-results.md")) {
         this.checkFile(path, "Construction テスト結果が存在する");
@@ -681,6 +684,16 @@ class AmadeusValidator {
       } else if (relativePath.endsWith("/pr.md")) {
         this.checkPrRecord(path);
         checkedPrPaths.add(path);
+      }
+    }
+
+    const boltsRoot = this.absolute(`${base}/bolts`);
+    if (this.isDirectory(boltsRoot)) {
+      const glob = new Bun.Glob("*/design.md");
+      for (const design of glob.scanSync({ cwd: boltsRoot })) {
+        const relativePath = `bolts/${design}`;
+        if (requiredConstructionDesigns.has(relativePath)) continue;
+        this.failRow(`${base}/${relativePath}`, "Construction Design は requiredBoltArtifacts に含まれる", relativePath);
       }
     }
 
@@ -1160,22 +1173,21 @@ class AmadeusValidator {
     }
   }
 
-  private checkNoBoltDesignArtifacts(base: string, state: Record<string, any>): void {
-    const boltArtifacts = [
-      ...(state.inception?.requiredBoltArtifacts ?? []),
-      ...(state.construction?.requiredBoltArtifacts ?? []),
-    ].map((value: unknown) => String(value).trim());
-    for (const artifact of boltArtifacts) {
+  private checkNoInceptionBoltDesignBriefArtifacts(base: string, state: Record<string, any>): void {
+    const inceptionBoltArtifacts = (state.inception?.requiredBoltArtifacts ?? []).map((value: unknown) => String(value).trim());
+    for (const artifact of inceptionBoltArtifacts) {
       if (artifact.match(/^bolts\/[^/]+\/design\.md$/)) {
-        this.failRow(`${base}/state.json`, "Bolt 配下の design.md を必須成果物にしない", artifact);
+        this.failRow(`${base}/state.json`, "Inception 必須 Bolt 成果物に旧 Bolt Design Brief を含めない", artifact);
       }
     }
+
+    if (String(state.phase ?? "").trim() === "construction") return;
 
     const boltsRoot = this.absolute(`${base}/bolts`);
     if (!this.isDirectory(boltsRoot)) return;
     const glob = new Bun.Glob("*/design.md");
     for (const design of glob.scanSync({ cwd: boltsRoot })) {
-      this.failRow(`${base}/bolts/${design}`, "Bolt 配下に design.md が存在しない", "廃止済み成果物");
+      this.failRow(`${base}/bolts/${design}`, "Inception 段階では Bolt 配下に旧 Bolt Design Brief を置かない", "旧 Bolt Design Brief");
     }
   }
 
@@ -1444,7 +1456,7 @@ class AmadeusValidator {
   }
 
   private boltIdFromConstructionDesignPath(path: string): string | undefined {
-    return path.match(/\/bolts\/(B\d{3})[^/]*\/construction-design\.md$/)?.[1];
+    return path.match(/\/bolts\/(B\d{3})[^/]*\/design\.md$/)?.[1];
   }
 
   private taskIdsFor(path: string): Set<string> {

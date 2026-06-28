@@ -69,4 +69,4 @@ Intent 配下の domain 成果物は、Unit と境界参照を確認するため
 
 | Construction Design | Task | 実装 | 検証 | PR | 状態 |
 |---|---|---|---|---|---|
-| [B001 Construction Design](bolts/B001-discovery-brief-recording/construction-design.md) | B001/T001, B001/T002 | 未実施 | 未実施 | 未実施 | ready |
+| [B001 Construction Design](bolts/B001-discovery-brief-recording/design.md) | B001/T001, B001/T002 | 未実施 | 未実施 | 未実施 | ready |

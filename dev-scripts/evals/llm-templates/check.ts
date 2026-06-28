@@ -652,7 +652,7 @@ function ensureConstructionReadyFixture(workspace: string): void {
 }
 
 function applyConstructionBoltPreparationArtifacts(workspace: string): void {
-  copyConstructionTemplateEntries(workspace, ["bolts/B001-bolt/construction-design.md", "bolts/B001-bolt/notes.md"]);
+  copyConstructionTemplateEntries(workspace, ["bolts/B001-bolt/design.md", "bolts/B001-bolt/notes.md"]);
   writeConstructionDesignReadyState(constructionTarget(workspace));
   appendConstructionDesignTrace(workspace);
 }
@@ -792,7 +792,7 @@ function appendConstructionDesignTrace(workspace: string): void {
       "",
       "| Construction Design | Task | 実装 | 検証 | PR | 状態 |",
       "|---|---|---|---|---|---|",
-      "| [B001 Construction Design](bolts/B001-loan-eligibility-flow/construction-design.md) | B001/T001, B001/T002, B001/T003 | 未実施 | 未実施 | 未実施 | ready |",
+      "| [B001 Construction Design](bolts/B001-loan-eligibility-flow/design.md) | B001/T001, B001/T002, B001/T003 | 未実施 | 未実施 | 未実施 | ready |",
       "",
     ].join("\n"),
   );
@@ -1080,7 +1080,7 @@ function writeConstructionState(target: string): void {
         requiredBoltArtifacts: [
           "bolts/B001-loan-eligibility-flow/bolt.md",
           "bolts/B001-loan-eligibility-flow/tasks.md",
-          "bolts/B001-loan-eligibility-flow/construction-design.md",
+          "bolts/B001-loan-eligibility-flow/design.md",
           "bolts/B001-loan-eligibility-flow/notes.md",
           "bolts/B001-loan-eligibility-flow/test-results.md",
         ],
@@ -1091,7 +1091,7 @@ function writeConstructionState(target: string): void {
               status: "ready",
               reviewedBy: "ai",
               updatedAt: "2026-06-28",
-              evidence: "bolts/B001-loan-eligibility-flow/construction-design.md",
+              evidence: "bolts/B001-loan-eligibility-flow/design.md",
             },
           },
         ],
@@ -1122,7 +1122,7 @@ function writeConstructionDesignReadyState(target: string): void {
     requiredBoltArtifacts: [
       "bolts/B001-loan-eligibility-flow/bolt.md",
       "bolts/B001-loan-eligibility-flow/tasks.md",
-      "bolts/B001-loan-eligibility-flow/construction-design.md",
+      "bolts/B001-loan-eligibility-flow/design.md",
       "bolts/B001-loan-eligibility-flow/notes.md",
     ],
     bolts: [
@@ -1132,7 +1132,7 @@ function writeConstructionDesignReadyState(target: string): void {
           status: "ready",
           reviewedBy: "ai",
           updatedAt: "2026-06-28",
-          evidence: "bolts/B001-loan-eligibility-flow/construction-design.md",
+          evidence: "bolts/B001-loan-eligibility-flow/design.md",
         },
       },
     ],
@@ -1417,7 +1417,7 @@ function intentConstructionPrompt(): string {
     "制約:",
     "- `amadeus-construction` は成果物や実装を直接作らず、内部 skill を順に呼び出してください。",
     "- 内部 skill は `amadeus-construction-bolt-preparation`、`amadeus-construction-implementation-execution`、`amadeus-construction-verification-hardening`、`amadeus-construction-traceability-finalization` の順に使ってください。",
-    "- 対象 Bolt 配下の `construction-design.md`、`notes.md`、`test-results.md` を作成し、`tasks.md`、`acceptance.md`、`traceability.md`、`decisions.md`、`state.json` を必要最小限更新してください。",
+    "- 対象 Bolt 配下の `design.md`、`notes.md`、`test-results.md` を作成し、`tasks.md`、`acceptance.md`、`traceability.md`、`decisions.md`、`state.json` を必要最小限更新してください。",
     "- PR URL がないので `pr.md` は作成しないでください。",
     "- Spec、`.kiro/specs`、`openspec`、Operation 成果物は作らないでください。",
     "- git commit はしないでください。",
@@ -1433,7 +1433,7 @@ function intentConstructionInternalPrompt(process: ConstructionInternalProcess):
         "内部skill: amadeus-construction-bolt-preparation。",
         "Bolt 実行準備だけを進めてください。",
         "作成対象:",
-        "- `bolts/B001-loan-eligibility-flow/construction-design.md`",
+        "- `bolts/B001-loan-eligibility-flow/design.md`",
         "- `bolts/B001-loan-eligibility-flow/notes.md`",
         "- `traceability.md` の `Construction Design からの追跡`",
         "- `state.json` の対象 Bolt Design Gate",
@@ -1445,7 +1445,7 @@ function intentConstructionInternalPrompt(process: ConstructionInternalProcess):
         "内部skill: amadeus-construction-implementation-execution。",
         "実装実行だけを進めてください。",
         "更新対象:",
-        "- `bolts/B001-loan-eligibility-flow/construction-design.md`",
+        "- `bolts/B001-loan-eligibility-flow/design.md`",
         "- `bolts/B001-loan-eligibility-flow/notes.md`",
       ],
     },
@@ -1746,7 +1746,7 @@ function inceptionTraceabilityFinalizationMarkdownArtifacts(intent: string): str
 function constructionIntentArtifacts(intent: string): string[] {
   return [
     ...inceptionIntentArtifacts(intent),
-    `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/construction-design.md`,
+    `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/design.md`,
     `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/notes.md`,
     `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/test-results.md`,
     `.amadeus/intents/${intent}/decisions/D003-construction-boundary.md`,
@@ -1755,7 +1755,7 @@ function constructionIntentArtifacts(intent: string): string[] {
 
 function constructionIntentMarkdownArtifacts(intent: string): string[] {
   return [
-    `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/construction-design.md`,
+    `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/design.md`,
     `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/notes.md`,
     `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/test-results.md`,
     `.amadeus/intents/${intent}/decisions/D003-construction-boundary.md`,
@@ -1765,14 +1765,14 @@ function constructionIntentMarkdownArtifacts(intent: string): string[] {
 function constructionBoltPreparationArtifacts(intent: string): string[] {
   return [
     ...inceptionIntentArtifacts(intent),
-    `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/construction-design.md`,
+    `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/design.md`,
     `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/notes.md`,
   ];
 }
 
 function constructionBoltPreparationMarkdownArtifacts(intent: string): string[] {
   return [
-    `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/construction-design.md`,
+    `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/design.md`,
     `.amadeus/intents/${intent}/bolts/B001-loan-eligibility-flow/notes.md`,
   ];
 }

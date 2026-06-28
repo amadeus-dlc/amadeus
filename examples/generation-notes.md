@@ -19,7 +19,7 @@ root `.amadeus/` に古い例示成果物を置くと、リポジトリ自身の
 | Intent 初期化 | amadeus-intent-init | `intents.md`, `intents/20260628-discovery-brief-creation/intent.md`, `state.json` |
 | Ideation | amadeus-ideation と内部 skill | `scope.md`, `ideation.md`, `mocks/initial-confirmation.puml`, `traceability.md`, `decisions.md` |
 | Inception | amadeus-inception と内部 skill | Requirement、Story、Use Case、Unit、Bolt、Task、追跡、判断 |
-| Construction Preparation | amadeus-construction-bolt-preparation | `construction-design.md`, `notes.md`, Design Gate ready、Construction Design 追跡 |
+| Construction Preparation | amadeus-construction-bolt-preparation | `design.md`, `notes.md`, Design Gate ready、Construction Design 追跡 |
 
 ## 生成ログ
 
