@@ -2,7 +2,7 @@
 
 import { createHash } from "node:crypto";
 import { createWriteStream, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 
 type Provider = "real";
 
@@ -215,21 +215,27 @@ function ensurePromotedSkillMatchesSource(skillFile: string): void {
 
 function replaceDir(source: string, target: string): void {
   const parent = dirname(target);
-  const name = target.split("/").at(-1) ?? "snapshot";
+  const name = basename(target) || "snapshot";
   const temp = join(parent, `.${name}.tmp-${process.pid}`);
   const backup = join(parent, `.${name}.backup-${process.pid}`);
+  let targetMoved = false;
   rmSync(temp, { recursive: true, force: true });
   rmSync(backup, { recursive: true, force: true });
   ensureDir(parent);
   cpSync(source, temp, { recursive: true });
 
   try {
-    if (existsSync(target)) renameSync(target, backup);
+    if (existsSync(target)) {
+      renameSync(target, backup);
+      targetMoved = true;
+    }
     renameSync(temp, target);
     rmSync(backup, { recursive: true, force: true });
   } catch (error) {
-    rmSync(target, { recursive: true, force: true });
-    if (existsSync(backup)) renameSync(backup, target);
+    if (targetMoved) {
+      rmSync(target, { recursive: true, force: true });
+      if (existsSync(backup)) renameSync(backup, target);
+    }
     throw error;
   } finally {
     rmSync(temp, { recursive: true, force: true });
@@ -279,6 +285,7 @@ function applyStagedSnapshotsAndProvenance(provenanceText: string): void {
   ];
   const backups = targets.map((target, index) => backupTarget(target, transaction, index));
   let failure: unknown;
+  let preserveTransaction = false;
 
   try {
     applyStagedSnapshots();
@@ -292,11 +299,15 @@ function applyStagedSnapshotsAndProvenance(provenanceText: string): void {
         error instanceof Error ? error.message : String(error),
         "rollback failed:",
         restoreError instanceof Error ? restoreError.message : String(restoreError),
+        `rollback backups preserved at: ${transaction}`,
       ].join("\n"));
+      preserveTransaction = true;
     }
     failure ??= error;
   } finally {
-    rmSync(transaction, { recursive: true, force: true });
+    if (!preserveTransaction) {
+      rmSync(transaction, { recursive: true, force: true });
+    }
   }
 
   if (failure) {
