@@ -27,6 +27,11 @@ const snapshots: ExampleSnapshot[] = [
     workdir: "examples/04-inception-completed",
     intent: "20260628-discovery-brief-creation",
   },
+  {
+    name: "Construction design ready",
+    workdir: "examples/05-construction-design-ready",
+    intent: "20260628-discovery-brief-creation",
+  },
 ];
 
 const mode = Bun.argv[2] ?? "--all";

@@ -109,6 +109,7 @@ const targetSkills: Record<string, Contract> = {
   "amadeus-construction": {
     skillText: [".amadeus/settings/templates", "templates/intents/construction"],
     files: {
+      "templates/intents/construction/bolts/B001-bolt/construction-design.md": ["概要", "Domain Design", "Logical Design", "実装設計", "検証設計", "設計変更記録"],
       "templates/intents/construction/bolts/B001-bolt/notes.md": ["実行方針", "対象タスク", "未確認事項"],
       "templates/intents/construction/bolts/B001-bolt/test-results.md": ["検証結果", "安全性確認", "CI確認", "受け入れ証拠"],
       "templates/intents/construction/bolts/B001-bolt/pr.md": ["Pull Request", "対象", "確認状況"],

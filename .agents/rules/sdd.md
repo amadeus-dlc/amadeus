@@ -9,6 +9,23 @@
 - Skill sources: `skills/amadeus-*/`
 - Promoted skills: `.agents/skills/amadeus-*/`
 
+## Skill 昇格
+
+`skills/amadeus-*/` を `.agents/skills/amadeus-*/` へ反映する場合は、必ず `dev-scripts/promote-skill.ts` を使う。
+手動の `cp`、`rsync`、エディタ操作で昇格先を直接同期しない。
+
+既存の昇格先を更新する場合は、次を使う。
+
+```sh
+bun run dev-scripts/promote-skill.ts <skill-name> --replace
+```
+
+昇格後は、少なくとも次を実行する。
+
+```sh
+npm run test:it:promote-skill
+```
+
 ## 言語
 
 - `.amadeus/**/*.md`、`skills/**/*.md`、`.agents/skills/**/*.md` は日本語で書く。

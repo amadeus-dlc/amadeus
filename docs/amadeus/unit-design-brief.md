@@ -90,6 +90,10 @@ Construction の最小必須入力は次である。
 `unit.md`、`requirements.md`、`use-cases.md` は、追跡や疑義解消のために参照できる。
 ただし、Bolt 実行の最小入力には含めない。
 
+Construction に入った後は、Bolt ごとの `bolts/<bolt-id>-<slug>/construction-design.md` を作る。
+`construction-design.md` は、Domain Design、Logical Design、実装設計、検証設計を確定する第一級成果物である。
+Unit Design Brief は Construction の入力であり、Construction で上書きしない。
+
 ## 追跡
 
 `traceability.md` の `設計からの追跡` は、Unit Design Brief から Bolt と Task への追跡を扱う。
@@ -102,6 +106,9 @@ Construction の最小必須入力は次である。
 
 `codebase-analysis.md` と `traceability.md` の `既存コード分析からの追跡` にある `設計` も、Unit Design Brief を指す。
 既存コード分析の結果は Bolt の作業都合ではなく、Unit の設計戦略へ渡す。
+
+Construction の `Construction Design からの追跡` は、Bolt ごとの `construction-design.md` から Task、実装、検証、PR への追跡を扱う。
+Design Gate ready の時点では、実装、検証、PR は `未実施` として記録する。
 
 ## Validator 方針
 
