@@ -77,7 +77,8 @@ Bun が使えない場合は `blocked` として報告する。
 - Amadeus の成果物ルートが `.amadeus/` である。
 - `.amadeus/README.md` が存在する。
 - `.amadeus/steering.md` が存在する。
-- `.amadeus/steering/objective.md`、`.amadeus/steering/actors.md`、`.amadeus/steering/external-systems.md` が存在する。
+- `.amadeus/steering/objective.md`、`.amadeus/steering/product.md`、`.amadeus/steering/tech.md`、`.amadeus/steering/structure.md` が存在する。
+- `.amadeus/steering/actors.md`、`.amadeus/steering/external-systems.md` が存在する。
 - `.amadeus/steering/knowledge.md` と `.amadeus/steering/knowledge/README.md` が存在する。
 - `.amadeus/steering/policies.md` と `.amadeus/steering/policies/README.md` が存在する。
 - `.amadeus/discoveries.md` が存在する。

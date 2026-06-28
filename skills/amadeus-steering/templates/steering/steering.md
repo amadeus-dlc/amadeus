@@ -8,6 +8,9 @@
 
 - `README.md`
 - `steering/objective.md`
+- `steering/product.md`
+- `steering/tech.md`
+- `steering/structure.md`
 - `steering/actors.md`
 - `steering/external-systems.md`
 - `glossary.md`
@@ -24,13 +27,16 @@
 
 1. `README.md`
 2. `steering/objective.md`
-3. `steering/actors.md`
-4. `steering/external-systems.md`
-5. `glossary.md`
-6. `domain/subdomains.md`
-7. `domain/bounded-contexts.md`
-8. `discoveries.md`
-9. `intents.md`
+3. `steering/product.md`
+4. `steering/tech.md`
+5. `steering/structure.md`
+6. `steering/actors.md`
+7. `steering/external-systems.md`
+8. `glossary.md`
+9. `domain/subdomains.md`
+10. `domain/bounded-contexts.md`
+11. `discoveries.md`
+12. `intents.md`
 
 ## Intent Layer へ進む基準
 

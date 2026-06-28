@@ -178,6 +178,12 @@ class AmadeusValidator {
     this.checkFile(".amadeus/steering", "steering 詳細ディレクトリが存在する", true);
     this.checkFile(".amadeus/steering/objective.md", "steering の目的一覧が存在する");
     this.checkHeadings(".amadeus/steering/objective.md", ["一覧"]);
+    this.checkFile(".amadeus/steering/product.md", "steering のプロダクト概要が存在する");
+    this.checkHeadings(".amadeus/steering/product.md", ["コア能力", "主要ユースケース", "価値仮説"]);
+    this.checkFile(".amadeus/steering/tech.md", "steering の技術スタックが存在する");
+    this.checkHeadings(".amadeus/steering/tech.md", ["アーキテクチャ", "主要技術", "開発標準", "開発環境", "主要技術判断"]);
+    this.checkFile(".amadeus/steering/structure.md", "steering のプロジェクト構造が存在する");
+    this.checkHeadings(".amadeus/steering/structure.md", ["編成方針", "ディレクトリパターン", "命名規約", "依存関係の整理", "コード構成原則"]);
     this.checkFile(".amadeus/steering/actors.md", "steering のアクター一覧が存在する");
     this.checkHeadings(".amadeus/steering/actors.md", ["一覧"]);
     this.checkFile(".amadeus/steering/external-systems.md", "steering の外部システム一覧が存在する");

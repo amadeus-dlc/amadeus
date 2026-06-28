@@ -14,6 +14,7 @@ Amadeus DLC の steering layer を作る。
 
 Steering layer は、複数 Intent で共有する目的、方針、知識、用語、アクター、外部システム、ドメイン境界、Discovery 一覧、Intent 一覧を扱う。
 個別 Intent の要求、ユースケース、ユニット、ボルト、タスクは扱わない。
+プロダクト、技術、構造の判断パターンは `steering/product.md`、`steering/tech.md`、`steering/structure.md` に置く。
 
 この skill は開発中スキルとして扱う。
 eval と手動レビューを通るまで、昇格済み skill として扱わない。
@@ -131,6 +132,9 @@ greenfield では、少なくとも次を作る。
 - `.amadeus/steering/policies.md`
 - `.amadeus/steering/policies/README.md`
 - `.amadeus/steering/objective.md`
+- `.amadeus/steering/product.md`
+- `.amadeus/steering/tech.md`
+- `.amadeus/steering/structure.md`
 - `.amadeus/steering/actors.md`
 - `.amadeus/steering/external-systems.md`
 - `.amadeus/glossary.md`
@@ -177,6 +181,34 @@ brownfield では、既存成果物を読み、欠けている成果物だけを
 - `期待価値`
 - `成功指標`
 - `状態`
+
+### `steering/product.md`
+
+- `コア能力`
+- `主要ユースケース`
+- `価値仮説`
+
+プロダクトの能力、利用場面、価値仮説は、網羅的な機能一覧ではなく後続の判断に使うパターンとして書く。
+
+### `steering/tech.md`
+
+- `アーキテクチャ`
+- `主要技術`
+- `開発標準`
+- `開発環境`
+- `主要技術判断`
+
+技術スタックは、依存ライブラリの網羅ではなく開発判断に影響する技術と標準として書く。
+
+### `steering/structure.md`
+
+- `編成方針`
+- `ディレクトリパターン`
+- `命名規約`
+- `依存関係の整理`
+- `コード構成原則`
+
+プロジェクト構造は、ファイルツリーの網羅ではなく新しいファイルを置く判断に使うパターンとして書く。
 
 ### `steering/actors.md`
 
