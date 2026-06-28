@@ -359,7 +359,28 @@ function appendEmptyConstructionTrace(workspace: string): void {
   );
 }
 
-function appendConstructionDesignTrace(workspace: string): void {
+function appendConstructionTrace(workspace: string): void {
+  const path = intentPath(workspace, "traceability.md");
+  const text = readFileSync(path, "utf8");
+  writeFileSync(
+    path,
+    [
+      text.trimEnd(),
+      "",
+      "## Construction からの追跡",
+      "",
+      "| ボルト | タスク | 証拠 | 状態 |",
+      "|---|---|---|---|",
+      `| B001 | B001/T001, B001/T002 | [test-results.md](bolts/${bolt1}/test-results.md) | completed |`,
+      "",
+    ].join("\n"),
+  );
+}
+
+function appendConstructionDesignTrace(
+  workspace: string,
+  overrides: { task?: string; implementation?: string; verification?: string; pr?: string; status?: string } = {},
+): void {
   const path = intentPath(workspace, "traceability.md");
   const text = readFileSync(path, "utf8");
   writeFileSync(
@@ -371,7 +392,7 @@ function appendConstructionDesignTrace(workspace: string): void {
       "",
       "| Construction Design | Task | 実装 | 検証 | PR | 状態 |",
       "|---|---|---|---|---|---|",
-      `| [B001 Construction Design](bolts/${bolt1}/design.md) | B001/T001, B001/T002 | 未実施 | 未実施 | 未実施 | ready |`,
+      `| [B001 Construction Design](bolts/${bolt1}/design.md) | ${overrides.task ?? "B001/T001, B001/T002"} | ${overrides.implementation ?? "未実施"} | ${overrides.verification ?? "未実施"} | ${overrides.pr ?? "未実施"} | ${overrides.status ?? "ready"} |`,
       "",
     ].join("\n"),
   );
@@ -478,6 +499,31 @@ writeConstructionState(constructionWithStaleInceptionRequiredWorkspace, {
 });
 run(["bun", "run", validator, constructionWithStaleInceptionRequiredWorkspace, intent]);
 
+const completedConstructionWithoutTestResultsWorkspace = workspaceCopy();
+writeConstructionDesign(completedConstructionWithoutTestResultsWorkspace);
+writeConstructionNotes(completedConstructionWithoutTestResultsWorkspace);
+appendConstructionDesignTrace(completedConstructionWithoutTestResultsWorkspace, {
+  implementation: "実装済み",
+  verification: "検証済み",
+  status: "passed",
+});
+appendConstructionTrace(completedConstructionWithoutTestResultsWorkspace);
+writeConstructionState(completedConstructionWithoutTestResultsWorkspace, {
+  status: "completed",
+  constructionStatus: "completed",
+  constructionGate: "passed",
+  requiredBoltArtifacts: [
+    `bolts/${bolt1}/bolt.md`,
+    `bolts/${bolt1}/tasks.md`,
+    `bolts/${bolt1}/design.md`,
+    `bolts/${bolt1}/notes.md`,
+  ],
+});
+runExpectFailure(
+  ["bun", "run", validator, completedConstructionWithoutTestResultsWorkspace, intent],
+  "Construction 完了時の必須 Bolt 成果物が test-results.md を含む",
+);
+
 const missingTargetBoltArtifactsWorkspace = workspaceCopy();
 writeConstructionDesign(missingTargetBoltArtifactsWorkspace);
 writeConstructionNotes(missingTargetBoltArtifactsWorkspace);
@@ -493,6 +539,30 @@ writeConstructionState(missingTargetBoltArtifactsWorkspace, {
 runExpectFailure(
   ["bun", "run", validator, missingTargetBoltArtifactsWorkspace, intent],
   "Construction 必須 Bolt 成果物が targetBolt の証拠成果物を含む",
+);
+
+const constructionDesignMissingTaskWorkspace = workspaceCopy();
+writeConstructionDesign(constructionDesignMissingTaskWorkspace, {
+  domain: "- 対象 Task: B001/T001。Discovery Brief の入力、判定、候補を一貫した成果物として扱う。",
+});
+writeConstructionNotes(constructionDesignMissingTaskWorkspace);
+writeConstructionTestResults(constructionDesignMissingTaskWorkspace);
+appendConstructionDesignTrace(constructionDesignMissingTaskWorkspace);
+writeConstructionState(constructionDesignMissingTaskWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, constructionDesignMissingTaskWorkspace, intent],
+  "`Domain Design` が対象 Task をすべて明示する",
+);
+
+const constructionDesignTraceWrongBoltWorkspace = workspaceCopy();
+writeConstructionDesign(constructionDesignTraceWrongBoltWorkspace);
+writeConstructionNotes(constructionDesignTraceWrongBoltWorkspace);
+writeConstructionTestResults(constructionDesignTraceWrongBoltWorkspace);
+appendConstructionDesignTrace(constructionDesignTraceWrongBoltWorkspace, { task: "B002/T001" });
+writeConstructionState(constructionDesignTraceWrongBoltWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, constructionDesignTraceWrongBoltWorkspace, intent],
+  "`Construction Design からの追跡` が対象 Bolt の Task を指す",
 );
 
 const untrackedConstructionDesignWorkspace = workspaceCopy();
@@ -542,6 +612,22 @@ writeConstructionState(emptyConstructionTraceWorkspace, {
 runExpectFailure(
   ["bun", "run", validator, emptyConstructionTraceWorkspace, intent],
   "`Construction からの追跡` が証拠追跡行を持つ",
+);
+
+const completedConstructionWithUnimplementedDesignTraceWorkspace = workspaceCopy();
+writeConstructionDesign(completedConstructionWithUnimplementedDesignTraceWorkspace);
+writeConstructionNotes(completedConstructionWithUnimplementedDesignTraceWorkspace);
+writeConstructionTestResults(completedConstructionWithUnimplementedDesignTraceWorkspace);
+appendConstructionDesignTrace(completedConstructionWithUnimplementedDesignTraceWorkspace);
+appendConstructionTrace(completedConstructionWithUnimplementedDesignTraceWorkspace);
+writeConstructionState(completedConstructionWithUnimplementedDesignTraceWorkspace, {
+  status: "completed",
+  constructionStatus: "completed",
+  constructionGate: "passed",
+});
+runExpectFailure(
+  ["bun", "run", validator, completedConstructionWithUnimplementedDesignTraceWorkspace, intent],
+  "Construction 完了時の設計追跡が未実施を残さない",
 );
 
 const prWithoutUrlWorkspace = workspaceCopy();

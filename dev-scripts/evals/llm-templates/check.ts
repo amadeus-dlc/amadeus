@@ -653,6 +653,10 @@ function ensureConstructionReadyFixture(workspace: string): void {
 
 function applyConstructionBoltPreparationArtifacts(workspace: string): void {
   copyConstructionTemplateEntries(workspace, ["bolts/B001-bolt/design.md", "bolts/B001-bolt/notes.md"]);
+  const designPath = join(constructionBoltTarget(workspace), "design.md");
+  const design = readFileSync(designPath, "utf8")
+    .replaceAll("対象 Task: B001/T001。", "対象 Task: B001/T001, B001/T002, B001/T003。");
+  writeFileSync(designPath, design);
   writeConstructionDesignReadyState(constructionTarget(workspace));
   appendConstructionDesignTrace(workspace);
 }
@@ -2039,6 +2043,7 @@ function e2eCase(mode: E2eMode): E2eCase {
       expectedMarkdownChanges: expectedMarkdownChanges(
         [],
         constructionImplementationExecutionMarkdownArtifacts(fixtureIntent),
+        [`.amadeus/intents/${fixtureIntent}/bolts/B001-loan-eligibility-flow/design.md`],
       ),
     },
     "construction-internal-verification-hardening": {
