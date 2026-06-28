@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -273,6 +273,458 @@ function writeConstructionDesign(workspace: string, overrides: Record<string, st
   );
 }
 
+function writeEventStormingSession(workspace: string): void {
+  const base = join(workspace, ".amadeus/event-storming/ES001-loan-flow");
+  mkdirSync(base, { recursive: true });
+  writeFileSync(
+    join(base, "summary.md"),
+    [
+      "# Event Storming Summary",
+      "",
+      "## Purpose",
+      "",
+      "- 図書貸出セルフサービスの Domain Event と設計候補を整理する。",
+      "",
+      "## Scope",
+      "",
+      "- pre-intent",
+      "",
+      "## Related Discovery",
+      "",
+      "- なし",
+      "",
+      "## Related Intent",
+      "",
+      "- なし",
+      "",
+      "## Level Status",
+      "",
+      "| Level | Status | Evidence |",
+      "|---|---|---|",
+      "| big-picture | ready | events.md, board.md |",
+      "| process-modeling | ready | flow.md |",
+      "| system-design | ready | aggregate-candidates.md, bounded-context-candidates.md |",
+      "",
+      "## Next Skill",
+      "",
+      "- amadeus-domain-modeling",
+      "",
+      "## Handoff To Domain Modeling",
+      "",
+      "| Candidate | Kind | Evidence | Open Questions |",
+      "|---|---|---|---|",
+      "| AGC001 貸出 | Aggregate Candidate | DEV001, DEV002 | 返却期限を同じ集約で守るか |",
+      "| BCC001 貸出管理 | Bounded Context Candidate | AGC001, DEV001, DEV002 | 利用者管理と分けるか |",
+      "",
+      "## Supersession",
+      "",
+      "| Field | Value |",
+      "|---|---|",
+      "| Supersedes | なし |",
+      "| Superseded By | なし |",
+      "| Reason | なし |",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(base, "events.md"),
+    [
+      "# Domain Events",
+      "",
+      "## 一覧",
+      "",
+      "| ID | Domain Event | Description | Source | Excluded Similar Events |",
+      "|---|---|---|---|---|",
+      "| DEV001 | 貸出が開始された | 利用者が図書の貸出を開始した | ヒアリング | 貸出ボタンがクリックされた |",
+      "| DEV002 | 返却期限が決まった | 貸出に対する返却期限が決まった | ヒアリング | 返却期限計算 API が呼ばれた |",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(base, "flow.md"),
+    [
+      "# Event Storming Flow",
+      "",
+      "## Flow",
+      "",
+      "| ID | Type | Label | Trigger | Produces | Related | Note |",
+      "|---|---|---|---|---|---|---|",
+      "| ACT001 | Actor | 利用者 |  | CMD001 |  | 図書を借りる |",
+      "| CMD001 | Command | 貸出を開始する | ACT001 | DEV001 |  | UI event は Command の契機として扱う |",
+      "| DEV001 | Domain Event | 貸出が開始された | CMD001 | POL001 |  |  |",
+      "| POL001 | Policy | 貸出開始時に返却期限を決める | DEV001 | DEV002 |  |  |",
+      "| DEV002 | Domain Event | 返却期限が決まった | POL001 | RM001 |  |  |",
+      "| RM001 | Read Model | 貸出状況 | DEV001, DEV002 |  | ACT001 | 利用者が参照する |",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(base, "board.md"),
+    [
+      "# Event Storming Board",
+      "",
+      "## Board",
+      "",
+      "| Order | Type | ID | Label | Related | Note |",
+      "|---:|---|---|---|---|---|",
+      "| 1 | Actor | ACT001 | 利用者 | CMD001 | 図書を借りる |",
+      "| 2 | Command | CMD001 | 貸出を開始する | DEV001 | 利用者が実行する |",
+      "| 3 | Domain Event | DEV001 | 貸出が開始された | POL001 | 貸出事実 |",
+      "| 4 | Policy | POL001 | 貸出開始時に返却期限を決める | DEV002 | 期限決定へ進む |",
+      "| 5 | Domain Event | DEV002 | 返却期限が決まった | AGC001 | 期限事実 |",
+      "| 6 | Aggregate Candidate | AGC001 | 貸出 | DEV001, DEV002 | 貸出と返却期限の一貫性境界候補 |",
+      "| 7 | Bounded Context Candidate | BCC001 | 貸出管理 | AGC001 | 貸出関連ルールの境界候補 |",
+      "| 8 | Read Model | RM001 | 貸出状況 | DEV001, DEV002 | 貸出状況の参照モデル |",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(base, "aggregate-candidates.md"),
+    [
+      "# Aggregate Candidates",
+      "",
+      "## 一覧",
+      "",
+      "| ID | Candidate | Rationale | Related Domain Events | Consistency Clues | Open Questions |",
+      "|---|---|---|---|---|---|",
+      "| AGC001 | 貸出 | 貸出開始と返却期限の一貫性が密に見える | DEV001, DEV002 | 貸出開始後に返却期限が必要 | 返却期限変更を含めるか |",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(base, "bounded-context-candidates.md"),
+    [
+      "# Bounded Context Candidates",
+      "",
+      "## 一覧",
+      "",
+      "| ID | Candidate | Rationale | Related Domain Events | Related Aggregate Candidates | Open Questions |",
+      "|---|---|---|---|---|---|",
+      "| BCC001 | 貸出管理 | 貸出開始と返却期限のルールが密に関係する | DEV001, DEV002 | AGC001 | 利用者管理と同じ境界かは未確認 |",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(base, "hotspots.md"),
+    [
+      "# Hotspots",
+      "",
+      "## 一覧",
+      "",
+      "| ID | Type | Summary | Source | Status | Related | Next Action |",
+      "|---|---|---|---|---|---|---|",
+      "| HOT001 | Open Question | 返却期限変更の扱いが未確定 | ヒアリング | open | DEV002 | Domain Modeling で確認する |",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(base, "state.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      id: "ES001-loan-flow",
+      phase: "event-storming",
+      status: "ready",
+      currentLevel: "system-design",
+      completedLevels: ["big-picture", "process-modeling", "system-design"],
+      scope: "pre-intent",
+      relatedDiscovery: null,
+      relatedIntent: null,
+      nextRecommendedSkill: "amadeus-domain-modeling",
+    }, null, 2),
+  );
+}
+
+function removeEventStormingBoardCandidate(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/board.md");
+  replaceInFile(
+    path,
+    "| 6 | Aggregate Candidate | AGC001 | 貸出 | DEV001, DEV002 | 貸出と返却期限の一貫性境界候補 |\n",
+    "",
+    "event storming fixture does not contain expected aggregate candidate row",
+  );
+}
+
+function removeEventStormingBoardBoundedContextCandidate(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/board.md");
+  replaceInFile(
+    path,
+    "| 7 | Bounded Context Candidate | BCC001 | 貸出管理 | AGC001 | 貸出関連ルールの境界候補 |\n",
+    "",
+    "event storming fixture does not contain expected bounded context candidate row",
+  );
+}
+
+function removeEventStormingBoardProcessElement(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/board.md");
+  replaceInFile(
+    path,
+    "| 4 | Policy | POL001 | 貸出開始時に返却期限を決める | DEV002 | 期限決定へ進む |\n",
+    "",
+    "event storming fixture does not contain expected policy row",
+  );
+  replaceInFile(
+    path,
+    "| 3 | Domain Event | DEV001 | 貸出が開始された | POL001 | 貸出事実 |",
+    "| 3 | Domain Event | DEV001 | 貸出が開始された | DEV002 | 貸出事実 |",
+    "event storming fixture does not contain expected DEV001 board row",
+  );
+}
+
+function removeEventStormingBoardReadModel(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/board.md");
+  replaceInFile(
+    path,
+    "| 8 | Read Model | RM001 | 貸出状況 | DEV001, DEV002 | 貸出状況の参照モデル |\n",
+    "",
+    "event storming fixture does not contain expected read model row",
+  );
+}
+
+function markEventStormingCurrentLevelBigPictureWithProcessComplete(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/state.json");
+  replaceInFile(
+    path,
+    '"currentLevel": "system-design",\n  "completedLevels": [\n    "big-picture",\n    "process-modeling",\n    "system-design"\n  ]',
+    '"currentLevel": "big-picture",\n  "completedLevels": [\n    "big-picture",\n    "process-modeling"\n  ]',
+    "event storming fixture does not contain expected level state",
+  );
+}
+
+function markEventStormingProcessModelingReady(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/state.json");
+  replaceInFile(
+    path,
+    '"currentLevel": "system-design",\n  "completedLevels": [\n    "big-picture",\n    "process-modeling",\n    "system-design"\n  ]',
+    '"currentLevel": "process-modeling",\n  "completedLevels": [\n    "big-picture",\n    "process-modeling"\n  ]',
+    "event storming fixture does not contain expected level state",
+  );
+  replaceInFile(
+    path,
+    '"nextRecommendedSkill": "amadeus-domain-modeling"',
+    '"nextRecommendedSkill": "amadeus-discovery"',
+    "event storming fixture does not contain expected nextRecommendedSkill",
+  );
+}
+
+function markEventStormingSystemDesignDraft(workspace: string): void {
+  const statePath = join(workspace, ".amadeus/event-storming/ES001-loan-flow/state.json");
+  replaceInFile(
+    statePath,
+    '"status": "ready",\n  "currentLevel": "system-design",\n  "completedLevels": [\n    "big-picture",\n    "process-modeling",\n    "system-design"\n  ]',
+    '"status": "draft",\n  "currentLevel": "system-design",\n  "completedLevels": [\n    "big-picture",\n    "process-modeling"\n  ]',
+    "event storming fixture does not contain expected ready state",
+  );
+  const summaryPath = join(workspace, ".amadeus/event-storming/ES001-loan-flow/summary.md");
+  replaceInFile(
+    summaryPath,
+    "| system-design | ready | aggregate-candidates.md, bounded-context-candidates.md |",
+    "| system-design | draft | aggregate-candidates.md, bounded-context-candidates.md |",
+    "event storming fixture does not contain expected system-design status",
+  );
+}
+
+function removeEventStormingSummaryHandoff(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/summary.md");
+  replaceInFile(
+    path,
+    [
+      "## Handoff To Domain Modeling",
+      "",
+      "| Candidate | Kind | Evidence | Open Questions |",
+      "|---|---|---|---|",
+      "| AGC001 貸出 | Aggregate Candidate | DEV001, DEV002 | 返却期限を同じ集約で守るか |",
+      "| BCC001 貸出管理 | Bounded Context Candidate | AGC001, DEV001, DEV002 | 利用者管理と分けるか |",
+      "",
+    ].join("\n"),
+    "",
+    "event storming fixture does not contain expected handoff section",
+  );
+}
+
+function removeEventStormingSummaryHandoffRows(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/summary.md");
+  replaceInFile(
+    path,
+    [
+      "| AGC001 貸出 | Aggregate Candidate | DEV001, DEV002 | 返却期限を同じ集約で守るか |",
+      "| BCC001 貸出管理 | Bounded Context Candidate | AGC001, DEV001, DEV002 | 利用者管理と分けるか |",
+      "",
+    ].join("\n"),
+    "",
+    "event storming fixture does not contain expected handoff rows",
+  );
+}
+
+function markEventStormingSystemDesignReadyWithoutCompletedLevel(workspace: string): void {
+  const statePath = join(workspace, ".amadeus/event-storming/ES001-loan-flow/state.json");
+  replaceInFile(
+    statePath,
+    '"completedLevels": [\n    "big-picture",\n    "process-modeling",\n    "system-design"\n  ]',
+    '"completedLevels": [\n    "big-picture",\n    "process-modeling"\n  ]',
+    "event storming fixture does not contain expected completedLevels",
+  );
+}
+
+function replaceEventStormingBoardRelatedWithMissingId(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/board.md");
+  replaceInFile(
+    path,
+    "| 2 | Command | CMD001 | 貸出を開始する | DEV001 | 利用者が実行する |",
+    "| 2 | Command | CMD001 | 貸出を開始する | DEV999 | 利用者が実行する |",
+    "event storming fixture does not contain expected board row",
+  );
+}
+
+function markEventStormingBigPictureReady(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/state.json");
+  replaceInFile(
+    path,
+    '"currentLevel": "system-design",\n  "completedLevels": [\n    "big-picture",\n    "process-modeling",\n    "system-design"\n  ]',
+    '"currentLevel": "big-picture",\n  "completedLevels": [\n    "big-picture"\n  ]',
+    "event storming fixture does not contain expected level state",
+  );
+  replaceInFile(
+    path,
+    '"nextRecommendedSkill": "amadeus-domain-modeling"',
+    '"nextRecommendedSkill": "amadeus-discovery"',
+    "event storming fixture does not contain expected nextRecommendedSkill",
+  );
+}
+
+function replaceEventStormingRelatedIntentWithValue(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/state.json");
+  replaceInFile(
+    path,
+    '"relatedIntent": null',
+    '"relatedIntent": "20260628-discovery-brief-creation"',
+    "event storming fixture does not contain expected relatedIntent",
+  );
+}
+
+function removeEventStormingState(workspace: string): void {
+  rmSync(join(workspace, ".amadeus/event-storming/ES001-loan-flow/state.json"));
+}
+
+function replaceEventStormingCompletedLevelsWithMissingPrerequisite(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/state.json");
+  replaceInFile(
+    path,
+    '"completedLevels": [\n    "big-picture",\n    "process-modeling",\n    "system-design"\n  ]',
+    '"completedLevels": [\n    "system-design"\n  ]',
+    "event storming fixture does not contain expected completedLevels",
+  );
+}
+
+function replaceEventStormingNextRecommendedSkillWithWrongValue(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/state.json");
+  replaceInFile(
+    path,
+    '"nextRecommendedSkill": "amadeus-domain-modeling"',
+    '"nextRecommendedSkill": "amadeus-inception"',
+    "event storming fixture does not contain expected nextRecommendedSkill",
+  );
+}
+
+function replaceEventStormingNextRecommendedSkillIgnoringCompletedLevels(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/state.json");
+  replaceInFile(
+    path,
+    '"currentLevel": "system-design"',
+    '"currentLevel": "big-picture"',
+    "event storming fixture does not contain expected currentLevel",
+  );
+  replaceInFile(
+    path,
+    '"nextRecommendedSkill": "amadeus-domain-modeling"',
+    '"nextRecommendedSkill": "amadeus-discovery"',
+    "event storming fixture does not contain expected nextRecommendedSkill",
+  );
+}
+
+function replaceEventStormingFlowTypeWithMismatchedIdPrefix(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/flow.md");
+  replaceInFile(
+    path,
+    "| ACT001 | Actor | 利用者 |  | CMD001 |  | 図書を借りる |",
+    "| ACT001 | External System | 利用者 |  | CMD001 |  | 図書を借りる |",
+    "event storming fixture does not contain expected flow row",
+  );
+}
+
+function removeEventStormingFlowDomainEvent(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/flow.md");
+  replaceInFile(
+    path,
+    "| DEV002 | Domain Event | 返却期限が決まった | POL001 | RM001 |  |  |\n",
+    "",
+    "event storming fixture does not contain expected DEV002 flow row",
+  );
+}
+
+function replaceEventStormingBoardOrderWithInvalidValue(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/board.md");
+  replaceInFile(
+    path,
+    "| 2 | Command | CMD001 | 貸出を開始する | DEV001 | 利用者が実行する |",
+    "| x | Command | CMD001 | 貸出を開始する | DEV001 | 利用者が実行する |",
+    "event storming fixture does not contain expected board order",
+  );
+}
+
+function replaceEventStormingHotspotRelatedWithMissingId(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/hotspots.md");
+  replaceInFile(
+    path,
+    "| HOT001 | Open Question | 返却期限変更の扱いが未確定 | ヒアリング | open | DEV002 | Domain Modeling で確認する |",
+    "| HOT001 | Open Question | 返却期限変更の扱いが未確定 | ヒアリング | open | DEV999 | Domain Modeling で確認する |",
+    "event storming fixture does not contain expected hotspot row",
+  );
+}
+
+function replaceEventStormingHotspotRelatedWithFlowOnlyId(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/hotspots.md");
+  replaceInFile(
+    path,
+    "| HOT001 | Open Question | 返却期限変更の扱いが未確定 | ヒアリング | open | DEV002 | Domain Modeling で確認する |",
+    "| HOT001 | Open Question | 返却期限変更の扱いが未確定 | ヒアリング | open | RM001 | Domain Modeling で確認する |",
+    "event storming fixture does not contain expected hotspot row",
+  );
+}
+
+function removeEventStormingEventRows(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/events.md");
+  replaceInFile(
+    path,
+    [
+      "| DEV001 | 貸出が開始された | 利用者が図書の貸出を開始した | ヒアリング | 貸出ボタンがクリックされた |",
+      "| DEV002 | 返却期限が決まった | 貸出に対する返却期限が決まった | ヒアリング | 返却期限計算 API が呼ばれた |",
+      "",
+    ].join("\n"),
+    "",
+    "event storming fixture does not contain expected event rows",
+  );
+}
+
+function removeEventStormingAggregateCandidateRows(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/aggregate-candidates.md");
+  replaceInFile(
+    path,
+    "| AGC001 | 貸出 | 貸出開始と返却期限の一貫性が密に見える | DEV001, DEV002 | 貸出開始後に返却期限が必要 | 返却期限変更を含めるか |\n",
+    "",
+    "event storming fixture does not contain expected aggregate candidate row",
+  );
+}
+
+function removeEventStormingBoundedContextCandidateRows(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/bounded-context-candidates.md");
+  replaceInFile(
+    path,
+    "| BCC001 | 貸出管理 | 貸出開始と返却期限のルールが密に関係する | DEV001, DEV002 | AGC001 | 利用者管理と同じ境界かは未確認 |\n",
+    "",
+    "event storming fixture does not contain expected bounded context candidate row",
+  );
+}
+
 function writeConstructionDesignForSecondBolt(workspace: string): void {
   writeFileSync(
     intentPath(workspace, `bolts/${bolt2}/design.md`),
@@ -433,6 +885,187 @@ function appendConstructionDesignTrace(
 }
 
 run(["bun", "run", validator, "examples/04-inception-completed", intent]);
+
+const eventStormingWorkspace = workspaceCopy();
+writeEventStormingSession(eventStormingWorkspace);
+run(["bun", "run", validator, eventStormingWorkspace]);
+
+const draftSystemDesignEventStormingWorkspace = workspaceCopy();
+writeEventStormingSession(draftSystemDesignEventStormingWorkspace);
+markEventStormingSystemDesignDraft(draftSystemDesignEventStormingWorkspace);
+removeEventStormingSummaryHandoff(draftSystemDesignEventStormingWorkspace);
+run(["bun", "run", validator, draftSystemDesignEventStormingWorkspace]);
+
+const draftEventStormingWithFlowOnlyHotspotWorkspace = workspaceCopy();
+writeEventStormingSession(draftEventStormingWithFlowOnlyHotspotWorkspace);
+markEventStormingSystemDesignDraft(draftEventStormingWithFlowOnlyHotspotWorkspace);
+removeEventStormingBoardReadModel(draftEventStormingWithFlowOnlyHotspotWorkspace);
+replaceEventStormingHotspotRelatedWithFlowOnlyId(draftEventStormingWithFlowOnlyHotspotWorkspace);
+run(["bun", "run", validator, draftEventStormingWithFlowOnlyHotspotWorkspace]);
+
+const missingEventStormingBoardCandidateWorkspace = workspaceCopy();
+writeEventStormingSession(missingEventStormingBoardCandidateWorkspace);
+removeEventStormingBoardCandidate(missingEventStormingBoardCandidateWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, missingEventStormingBoardCandidateWorkspace],
+  "`board.md` が system-design の Aggregate Candidate を含む",
+);
+
+const missingEventStormingBoardBoundedContextCandidateWorkspace = workspaceCopy();
+writeEventStormingSession(missingEventStormingBoardBoundedContextCandidateWorkspace);
+removeEventStormingBoardBoundedContextCandidate(missingEventStormingBoardBoundedContextCandidateWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, missingEventStormingBoardBoundedContextCandidateWorkspace],
+  "`board.md` が system-design の Bounded Context Candidate を含む",
+);
+
+const missingEventStormingBoardProcessElementWorkspace = workspaceCopy();
+writeEventStormingSession(missingEventStormingBoardProcessElementWorkspace);
+removeEventStormingBoardProcessElement(missingEventStormingBoardProcessElementWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, missingEventStormingBoardProcessElementWorkspace],
+  "`board.md` が process-modeling の要素を含む",
+);
+
+const missingEventStormingProcessReadyBoardElementWorkspace = workspaceCopy();
+writeEventStormingSession(missingEventStormingProcessReadyBoardElementWorkspace);
+markEventStormingProcessModelingReady(missingEventStormingProcessReadyBoardElementWorkspace);
+removeEventStormingBoardProcessElement(missingEventStormingProcessReadyBoardElementWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, missingEventStormingProcessReadyBoardElementWorkspace],
+  "`board.md` が process-modeling の要素を含む",
+);
+
+const completedProcessEventStormingWithBadBoardRefWorkspace = workspaceCopy();
+writeEventStormingSession(completedProcessEventStormingWithBadBoardRefWorkspace);
+markEventStormingCurrentLevelBigPictureWithProcessComplete(completedProcessEventStormingWithBadBoardRefWorkspace);
+replaceEventStormingBoardRelatedWithMissingId(completedProcessEventStormingWithBadBoardRefWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, completedProcessEventStormingWithBadBoardRefWorkspace],
+  "`Related` が Event Storming 要素 ID またはなしである",
+);
+
+const bigPictureEventStormingWithBadBoardRefWorkspace = workspaceCopy();
+writeEventStormingSession(bigPictureEventStormingWithBadBoardRefWorkspace);
+markEventStormingBigPictureReady(bigPictureEventStormingWithBadBoardRefWorkspace);
+replaceEventStormingBoardRelatedWithMissingId(bigPictureEventStormingWithBadBoardRefWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, bigPictureEventStormingWithBadBoardRefWorkspace],
+  "`Related` が Event Storming 要素 ID またはなしである",
+);
+
+const eventStormingWithoutStateWorkspace = workspaceCopy();
+writeEventStormingSession(eventStormingWithoutStateWorkspace);
+removeEventStormingState(eventStormingWithoutStateWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, eventStormingWithoutStateWorkspace],
+  "Event Storming 状態ファイルが存在する",
+);
+
+const eventStormingPreIntentWithRelatedIntentWorkspace = workspaceCopy();
+writeEventStormingSession(eventStormingPreIntentWithRelatedIntentWorkspace);
+replaceEventStormingRelatedIntentWithValue(eventStormingPreIntentWithRelatedIntentWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, eventStormingPreIntentWithRelatedIntentWorkspace],
+  "`relatedIntent` が",
+);
+
+const eventStormingReadyWithoutCompletedSystemDesignWorkspace = workspaceCopy();
+writeEventStormingSession(eventStormingReadyWithoutCompletedSystemDesignWorkspace);
+markEventStormingSystemDesignReadyWithoutCompletedLevel(eventStormingReadyWithoutCompletedSystemDesignWorkspace);
+removeEventStormingSummaryHandoff(eventStormingReadyWithoutCompletedSystemDesignWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, eventStormingReadyWithoutCompletedSystemDesignWorkspace],
+  "Handoff To Domain Modeling",
+);
+
+const eventStormingWithoutHandoffRowsWorkspace = workspaceCopy();
+writeEventStormingSession(eventStormingWithoutHandoffRowsWorkspace);
+removeEventStormingSummaryHandoffRows(eventStormingWithoutHandoffRowsWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, eventStormingWithoutHandoffRowsWorkspace],
+  "system-design ready の Handoff が1件以上ある",
+);
+
+const eventStormingMissingCompletedLevelPrerequisiteWorkspace = workspaceCopy();
+writeEventStormingSession(eventStormingMissingCompletedLevelPrerequisiteWorkspace);
+replaceEventStormingCompletedLevelsWithMissingPrerequisite(eventStormingMissingCompletedLevelPrerequisiteWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, eventStormingMissingCompletedLevelPrerequisiteWorkspace],
+  "`system-design` 完了は `process-modeling` 完了を前提にする",
+);
+
+const eventStormingWrongNextRecommendedSkillWorkspace = workspaceCopy();
+writeEventStormingSession(eventStormingWrongNextRecommendedSkillWorkspace);
+replaceEventStormingNextRecommendedSkillWithWrongValue(eventStormingWrongNextRecommendedSkillWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, eventStormingWrongNextRecommendedSkillWorkspace],
+  "`nextRecommendedSkill` が scope と level に対応する",
+);
+
+const eventStormingNextRecommendedSkillIgnoringCompletedLevelsWorkspace = workspaceCopy();
+writeEventStormingSession(eventStormingNextRecommendedSkillIgnoringCompletedLevelsWorkspace);
+replaceEventStormingNextRecommendedSkillIgnoringCompletedLevels(eventStormingNextRecommendedSkillIgnoringCompletedLevelsWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, eventStormingNextRecommendedSkillIgnoringCompletedLevelsWorkspace],
+  "`nextRecommendedSkill` が scope と level に対応する",
+);
+
+const eventStormingMismatchedTypeIdPrefixWorkspace = workspaceCopy();
+writeEventStormingSession(eventStormingMismatchedTypeIdPrefixWorkspace);
+replaceEventStormingFlowTypeWithMismatchedIdPrefix(eventStormingMismatchedTypeIdPrefixWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, eventStormingMismatchedTypeIdPrefixWorkspace],
+  "`Type` と `ID` 接頭辞が対応する",
+);
+
+const eventStormingMissingFlowDomainEventWorkspace = workspaceCopy();
+writeEventStormingSession(eventStormingMissingFlowDomainEventWorkspace);
+removeEventStormingFlowDomainEvent(eventStormingMissingFlowDomainEventWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, eventStormingMissingFlowDomainEventWorkspace],
+  "`flow.md` が Domain Event を含む",
+);
+
+const eventStormingInvalidBoardOrderWorkspace = workspaceCopy();
+writeEventStormingSession(eventStormingInvalidBoardOrderWorkspace);
+replaceEventStormingBoardOrderWithInvalidValue(eventStormingInvalidBoardOrderWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, eventStormingInvalidBoardOrderWorkspace],
+  "`Order` が正の整数である",
+);
+
+const eventStormingMissingHotspotReferenceWorkspace = workspaceCopy();
+writeEventStormingSession(eventStormingMissingHotspotReferenceWorkspace);
+replaceEventStormingHotspotRelatedWithMissingId(eventStormingMissingHotspotReferenceWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, eventStormingMissingHotspotReferenceWorkspace],
+  "`Related` が Event Storming 要素 ID またはなしである",
+);
+
+const eventStormingWithoutEventsWorkspace = workspaceCopy();
+writeEventStormingSession(eventStormingWithoutEventsWorkspace);
+removeEventStormingEventRows(eventStormingWithoutEventsWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, eventStormingWithoutEventsWorkspace],
+  "big-picture ready の Domain Event が1件以上ある",
+);
+
+const eventStormingWithoutAggregateCandidatesWorkspace = workspaceCopy();
+writeEventStormingSession(eventStormingWithoutAggregateCandidatesWorkspace);
+removeEventStormingAggregateCandidateRows(eventStormingWithoutAggregateCandidatesWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, eventStormingWithoutAggregateCandidatesWorkspace],
+  "system-design ready の Aggregate Candidate が1件以上ある",
+);
+
+const eventStormingWithoutBoundedContextCandidatesWorkspace = workspaceCopy();
+writeEventStormingSession(eventStormingWithoutBoundedContextCandidatesWorkspace);
+removeEventStormingBoundedContextCandidateRows(eventStormingWithoutBoundedContextCandidatesWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, eventStormingWithoutBoundedContextCandidatesWorkspace],
+  "system-design ready の Bounded Context Candidate が1件以上ある",
+);
 
 const discoveryDecisionMismatchWorkspace = workspaceCopy();
 replaceDiscoveryDecision(discoveryDecisionMismatchWorkspace);
