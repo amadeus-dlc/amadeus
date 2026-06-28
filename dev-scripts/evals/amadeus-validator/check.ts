@@ -553,6 +553,8 @@ function writeGrillings(targetRoot: string, overrides: Record<string, string> = 
   const sessionFile = overrides.sessionFile ?? "G001-ideation-scope.md";
   const extraSession = overrides.extraSession === "true";
   const extraSessionDecisionId = overrides.extraSessionDecisionId ?? "GD002";
+  const questionUserAnswer = overrides.questionUserAnswer ?? "それでよい。";
+  const target = overrides.target ?? "scope.md";
   mkdirSync(join(targetRoot, "grillings"), { recursive: true });
   writeFileSync(
     join(targetRoot, "grillings.md"),
@@ -563,7 +565,7 @@ function writeGrillings(targetRoot: string, overrides: Record<string, string> = 
       "",
       "| ID | 主題 | 対象 | 状態 | 主な確定判断 | 反映先 | 詳細 |",
       "|---|---|---|---|---|---|---|",
-      `| G001 | Ideation Scope | Intent | ${overrides.sessionState ?? "completed"} | 対象範囲を管理画面に限定する | [scope.md](scope.md) | [G001](grillings/${sessionFile}) |`,
+      `| G001 | Ideation Scope | Intent | ${overrides.indexSessionState ?? overrides.sessionState ?? "completed"} | 対象範囲を管理画面に限定する | ${overrides.indexTarget ?? `[${target}](${target})`} | [G001](grillings/${sessionFile}) |`,
       ...(extraSession
         ? [
             `| G002 | Ideation Follow-up | Intent | completed | 追加境界を対象外にする | [scope.md](scope.md) | [G002](grillings/G002-ideation-follow-up.md) |`,
@@ -584,13 +586,13 @@ function writeGrillings(targetRoot: string, overrides: Record<string, string> = 
       `- 状態: ${overrides.sessionState ?? "completed"}`,
       "- 開始日: 2026-06-28",
       "- 終了日: 2026-06-28",
-      "- 反映先: scope.md",
+      `- 反映先: ${overrides.sessionTarget ?? target}`,
       "",
       "## 確定判断",
       "",
       "| ID | 判断 | 状態 | 反映先 | 置き換え先 |",
       "|---|---|---|---|---|",
-      `| GD001 | 対象範囲は管理画面に限定する。 | ${overrides.decisionState ?? "active"} | ${overrides.decisionTarget ?? "scope.md"} | ${overrides.replacedBy ?? "該当なし"} |`,
+      `| GD001 | 対象範囲は管理画面に限定する。 | ${overrides.decisionState ?? "active"} | ${overrides.decisionTarget ?? target} | ${overrides.replacedBy ?? "該当なし"} |`,
       "",
       "## 質問記録",
       "",
@@ -600,7 +602,7 @@ function writeGrillings(targetRoot: string, overrides: Record<string, string> = 
       "- 確認が必要な理由: 要求と初期モックの境界が変わるため。",
       "- 推奨回答: 管理画面に限定する。",
       "- 推奨理由: 最初の Intent として検証可能な粒度に収まるため。",
-      "- ユーザー回答: それでよい。",
+      ...(overrides.omitQuestionUserAnswer === "true" ? [] : [`- ユーザー回答: ${questionUserAnswer}`]),
       `- 確定判断: ${overrides.questionDecision ?? "GD001"}`,
       ...(overrides.extraQuestionWithoutDecision === "true"
         ? [
@@ -1193,11 +1195,11 @@ writeGrillings(intentPath(supersededWithSessionDecisionReferenceWorkspace, ""), 
 run(["bun", "run", validator, supersededWithSessionDecisionReferenceWorkspace, intent]);
 
 const discoveryGrillingsWorkspace = workspaceCopy();
-writeGrillings(join(discoveryGrillingsWorkspace, ".amadeus/discoveries/20260628-amadeus-theme-decomposition"));
+writeGrillings(join(discoveryGrillingsWorkspace, ".amadeus/discoveries/20260628-amadeus-theme-decomposition"), { target: "brief.md" });
 run(["bun", "run", validator, discoveryGrillingsWorkspace]);
 
 const domainGrillingsWorkspace = workspaceCopy();
-writeGrillings(join(domainGrillingsWorkspace, ".amadeus/domain"), { decisionTarget: "../glossary.md" });
+writeGrillings(join(domainGrillingsWorkspace, ".amadeus/domain"), { target: "../glossary.md" });
 run(["bun", "run", validator, domainGrillingsWorkspace]);
 
 const eventStormingWorkspace = workspaceCopy();
@@ -1206,7 +1208,7 @@ run(["bun", "run", validator, eventStormingWorkspace]);
 
 const eventStormingGrillingsWorkspace = workspaceCopy();
 writeEventStormingSession(eventStormingGrillingsWorkspace);
-writeGrillings(join(eventStormingGrillingsWorkspace, ".amadeus/event-storming/ES001-loan-flow"));
+writeGrillings(join(eventStormingGrillingsWorkspace, ".amadeus/event-storming/ES001-loan-flow"), { target: "summary.md" });
 run(["bun", "run", validator, eventStormingGrillingsWorkspace]);
 
 const grillingsIndexWithoutDirectoryWorkspace = workspaceCopy();
@@ -1231,6 +1233,30 @@ runExpectFailure(
   "grilling session が `grillings.md` に登録されている",
 );
 
+const grillingsMismatchedSessionStateWorkspace = workspaceCopy();
+writeGrillings(intentPath(grillingsMismatchedSessionStateWorkspace, ""), {
+  indexSessionState: "completed",
+  sessionState: "active",
+});
+runExpectFailure(
+  ["bun", "run", validator, grillingsMismatchedSessionStateWorkspace, intent],
+  "grilling 索引と session の `状態` が一致する",
+);
+
+const grillingsIndexWithMissingTargetWorkspace = workspaceCopy();
+writeGrillings(intentPath(grillingsIndexWithMissingTargetWorkspace, ""), { indexTarget: "[missing](missing.md)" });
+runExpectFailure(
+  ["bun", "run", validator, grillingsIndexWithMissingTargetWorkspace, intent],
+  "grilling 索引の `反映先` が存在する",
+);
+
+const grillingsSessionWithMissingTargetWorkspace = workspaceCopy();
+writeGrillings(intentPath(grillingsSessionWithMissingTargetWorkspace, ""), { sessionTarget: "missing.md" });
+runExpectFailure(
+  ["bun", "run", validator, grillingsSessionWithMissingTargetWorkspace, intent],
+  "grilling session の `反映先` が存在する",
+);
+
 const grillingsDecisionWithoutTargetWorkspace = workspaceCopy();
 writeGrillings(intentPath(grillingsDecisionWithoutTargetWorkspace, ""), { decisionTarget: "" });
 runExpectFailure(
@@ -1238,11 +1264,25 @@ runExpectFailure(
   "grilling 判断の `反映先` が空欄でない",
 );
 
+const grillingsDecisionWithMissingTargetWorkspace = workspaceCopy();
+writeGrillings(intentPath(grillingsDecisionWithMissingTargetWorkspace, ""), { decisionTarget: "missing.md" });
+runExpectFailure(
+  ["bun", "run", validator, grillingsDecisionWithMissingTargetWorkspace, intent],
+  "grilling 判断の `反映先` が存在する",
+);
+
 const grillingsQuestionWithoutDecisionWorkspace = workspaceCopy();
 writeGrillings(intentPath(grillingsQuestionWithoutDecisionWorkspace, ""), { extraQuestionWithoutDecision: "true" });
 runExpectFailure(
   ["bun", "run", validator, grillingsQuestionWithoutDecisionWorkspace, intent],
   "質問記録が確定判断 ID を参照する",
+);
+
+const grillingsQuestionWithoutUserAnswerWorkspace = workspaceCopy();
+writeGrillings(intentPath(grillingsQuestionWithoutUserAnswerWorkspace, ""), { omitQuestionUserAnswer: "true" });
+runExpectFailure(
+  ["bun", "run", validator, grillingsQuestionWithoutUserAnswerWorkspace, intent],
+  "質問記録がユーザー回答を持つ",
 );
 
 const grillingsSupersededWithoutReplacementWorkspace = workspaceCopy();

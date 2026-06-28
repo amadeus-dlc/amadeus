@@ -1845,6 +1845,7 @@ class AmadeusValidator {
     this.checkHeadings(indexPath, ["一覧"]);
     const table = this.checkTable(indexPath, "一覧", ["ID", "主題", "対象", "状態", "主な確定判断", "反映先", "詳細"]);
     let indexedSessionIds = new Set<string>();
+    const indexedSessionStates = new Map<string, string>();
     if (table) {
       const ids = this.collectIds(indexPath, table, "ID", /^G\d{3}$/);
       indexedSessionIds = ids;
@@ -1856,6 +1857,9 @@ class AmadeusValidator {
       for (const row of table.rows) {
         this.checkAllowed(indexPath, "状態", row["状態"], grillingSessionStatusValues);
         const id = String(row["ID"] ?? "").trim();
+        const state = String(row["状態"] ?? "").trim();
+        if (id.length > 0) indexedSessionStates.set(id, state);
+        this.checkGrillingTarget(indexPath, base, "grilling 索引の `反映先` が存在する", row["反映先"], id);
         const detailLinks = this.markdownLinks(String(row["詳細"] ?? "")).map((link) => this.cleanLinkTarget(link));
         const expectedPrefix = `grillings/${id}-`;
         if (id.length > 0 && ids.has(id) && detailLinks.some((link) => link.startsWith(expectedPrefix) && link.endsWith(".md"))) {
@@ -1902,11 +1906,11 @@ class AmadeusValidator {
       } else {
         this.failRow(path, "grilling session が `grillings.md` に登録されている", sessionId ?? entry);
       }
-      this.checkGrillingSession(path, allDecisionIds);
+      this.checkGrillingSession(base, path, allDecisionIds, sessionId ? indexedSessionStates.get(sessionId) : undefined);
     }
   }
 
-  private checkGrillingSession(path: string, allDecisionIds: Set<string>): void {
+  private checkGrillingSession(base: string, path: string, allDecisionIds: Set<string>, indexedState: string | undefined): void {
     this.checkHeadings(path, ["概要", "確定判断", "質問記録"]);
 
     const expectedId = basename(path).match(/^(G\d{3})-/)?.[1];
@@ -1917,10 +1921,18 @@ class AmadeusValidator {
     const sessionState = this.labeledBulletValue(path, "概要", "状態");
     if (sessionState) this.checkAllowed(path, "状態", sessionState, grillingSessionStatusValues);
     else this.failRow(path, "grilling session の `状態` が空欄でない", "空欄");
+    if (indexedState && sessionState && indexedState === sessionState) {
+      this.pass(path, "grilling 索引と session の `状態` が一致する", String(sessionState).trim());
+    } else if (indexedState && sessionState) {
+      this.failRow(path, "grilling 索引と session の `状態` が一致する", `${indexedState} != ${sessionState}`);
+    }
 
     const sessionTarget = this.labeledBulletValue(path, "概要", "反映先");
     if (this.blank(sessionTarget)) this.failRow(path, "grilling session の `反映先` が空欄でない", "空欄");
-    else this.pass(path, "grilling session の `反映先` が空欄でない", String(sessionTarget).trim());
+    else {
+      this.pass(path, "grilling session の `反映先` が空欄でない", String(sessionTarget).trim());
+      this.checkGrillingTarget(path, base, "grilling session の `反映先` が存在する", sessionTarget, expectedId ?? basename(path));
+    }
 
     const table = this.checkTable(path, "確定判断", ["ID", "判断", "状態", "反映先", "置き換え先"]);
     const decisionIds = table ? this.collectIds(path, table, "ID", /^GD\d{3}$/) : new Set<string>();
@@ -1929,8 +1941,12 @@ class AmadeusValidator {
       for (const row of table.rows) {
         const decisionId = String(row["ID"] ?? "").trim();
         const target = String(row["反映先"] ?? "").trim();
-        if (target.length > 0) this.pass(path, "grilling 判断の `反映先` が空欄でない", `${decisionId}: ${target}`);
-        else this.failRow(path, "grilling 判断の `反映先` が空欄でない", decisionId);
+        if (target.length > 0) {
+          this.pass(path, "grilling 判断の `反映先` が空欄でない", `${decisionId}: ${target}`);
+          this.checkGrillingTarget(path, base, "grilling 判断の `反映先` が存在する", target, decisionId);
+        } else {
+          this.failRow(path, "grilling 判断の `反映先` が空欄でない", decisionId);
+        }
 
         const state = String(row["状態"] ?? "").trim();
         this.checkAllowed(path, "状態", state, grillingDecisionStatusValues);
@@ -1972,6 +1988,12 @@ class AmadeusValidator {
       const start = match.index ?? 0;
       const end = questionMatches[index + 1]?.index ?? body.length;
       const block = body.slice(start, end);
+      const userAnswer = block.match(/^\s*-\s+ユーザー回答:\s*(.*?)\s*$/m)?.[1]?.trim() ?? "";
+      if (userAnswer.length > 0) {
+        this.pass(path, "質問記録がユーザー回答を持つ", `${questionId}: ${userAnswer}`);
+      } else {
+        this.failRow(path, "質問記録がユーザー回答を持つ", questionId);
+      }
       const references = [...block.matchAll(/^\s*-\s+確定判断:\s*(.*?)\s*$/gm)]
         .flatMap((referenceMatch) => this.grillingDecisionReferences(referenceMatch[1]));
       if (references.length > 0) {
@@ -1983,6 +2005,23 @@ class AmadeusValidator {
       for (const reference of references) {
         if (decisionIds.has(reference)) this.pass(path, "質問記録の確定判断 ID が確定判断に存在する", `${questionId}: ${reference}`);
         else this.failRow(path, "質問記録の確定判断 ID が確定判断に存在する", `${questionId}: ${reference}`);
+      }
+    }
+  }
+
+  private checkGrillingTarget(path: string, base: string, condition: string, value: unknown, detail: string): void {
+    const text = String(value ?? "").trim();
+    const links = this.markdownLinks(text);
+    const targets = links.length > 0 ? links : this.splitValues(text);
+    for (const target of targets) {
+      const clean = this.cleanLinkTarget(target);
+      if (clean.length === 0 || this.externalLink(clean)) continue;
+      const resolved = this.absolute(join(base, clean));
+      if (existsSync(resolved)) {
+        this.checkedFiles.add(this.relativePath(resolved));
+        this.pass(path, condition, `${detail}: ${target}`);
+      } else {
+        this.failRow(path, condition, `${detail}: ${target} -> ${this.relativePath(resolved)}`);
       }
     }
   }
