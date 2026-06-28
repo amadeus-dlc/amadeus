@@ -94,6 +94,7 @@ level は次のいずれかにする。
 
 テンプレートの `<...>` は、確認済みの値または `未確認` に置き換える。
 Event Storming セッション ID と scope だけは `未確認` にせず、作成前に確定する。
+intent-scoped の場合、`state.json.relatedIntent` は対象 Intent ディレクトリ名に置き換える。
 
 ## 実行モード
 
@@ -153,6 +154,8 @@ intent-scoped の作成先は次だけである。
 ```text
 .amadeus/intents/<intent-id>-<slug>/event-storming/<event-storming-id>/
 ```
+
+intent-scoped の場合、`state.json.scope` は `intent-scoped`、`state.json.relatedIntent` は `<intent-id>-<slug>` にする。
 
 作成または更新するものは次だけである。
 

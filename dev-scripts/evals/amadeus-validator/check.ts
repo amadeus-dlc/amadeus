@@ -452,6 +452,26 @@ function removeEventStormingBoardBoundedContextCandidate(workspace: string): voi
   );
 }
 
+function markEventStormingCurrentLevelBigPictureWithProcessComplete(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/state.json");
+  replaceInFile(
+    path,
+    '"currentLevel": "system-design",\n  "completedLevels": [\n    "big-picture",\n    "process-modeling",\n    "system-design"\n  ]',
+    '"currentLevel": "big-picture",\n  "completedLevels": [\n    "big-picture",\n    "process-modeling"\n  ]',
+    "event storming fixture does not contain expected level state",
+  );
+}
+
+function replaceEventStormingBoardRelatedWithMissingId(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/board.md");
+  replaceInFile(
+    path,
+    "| 2 | Command | CMD001 | 貸出を開始する | DEV001 | 利用者が実行する |",
+    "| 2 | Command | CMD001 | 貸出を開始する | DEV999 | 利用者が実行する |",
+    "event storming fixture does not contain expected board row",
+  );
+}
+
 function writeConstructionDesignForSecondBolt(workspace: string): void {
   writeFileSync(
     intentPath(workspace, `bolts/${bolt2}/design.md`),
@@ -631,6 +651,15 @@ removeEventStormingBoardBoundedContextCandidate(missingEventStormingBoardBounded
 runExpectFailure(
   ["bun", "run", validator, missingEventStormingBoardBoundedContextCandidateWorkspace],
   "`board.md` が system-design の Bounded Context Candidate を含む",
+);
+
+const completedProcessEventStormingWithBadBoardRefWorkspace = workspaceCopy();
+writeEventStormingSession(completedProcessEventStormingWithBadBoardRefWorkspace);
+markEventStormingCurrentLevelBigPictureWithProcessComplete(completedProcessEventStormingWithBadBoardRefWorkspace);
+replaceEventStormingBoardRelatedWithMissingId(completedProcessEventStormingWithBadBoardRefWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, completedProcessEventStormingWithBadBoardRefWorkspace],
+  "`Related` が Event Storming 要素 ID またはなしである",
 );
 
 const discoveryDecisionMismatchWorkspace = workspaceCopy();

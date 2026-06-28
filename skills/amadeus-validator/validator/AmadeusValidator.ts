@@ -261,15 +261,17 @@ class AmadeusValidator {
     }
 
     const level = String(state.currentLevel ?? "").trim();
+    const requiresProcessModeling = this.eventStormingRequiresProcessModeling(level, state);
+    const requiresSystemDesign = this.eventStormingRequiresSystemDesign(level, state);
     this.checkEventStormingSummary(`${base}/summary.md`, level);
     const eventIds = this.checkEventStormingEvents(`${base}/events.md`);
-    this.checkEventStormingBoard(`${base}/board.md`, level, eventIds);
+    this.checkEventStormingBoard(`${base}/board.md`, requiresProcessModeling, eventIds);
     this.checkEventStormingHotspots(`${base}/hotspots.md`);
 
-    if (this.eventStormingRequiresProcessModeling(level, state)) {
+    if (requiresProcessModeling) {
       this.checkEventStormingFlow(`${base}/flow.md`, eventIds);
     }
-    if (this.eventStormingRequiresSystemDesign(level, state)) {
+    if (requiresSystemDesign) {
       const aggregateIds = this.checkEventStormingAggregateCandidates(`${base}/aggregate-candidates.md`, eventIds);
       const boundedContextIds = this.checkEventStormingBoundedContextCandidates(`${base}/bounded-context-candidates.md`, eventIds, aggregateIds);
       this.checkEventStormingSystemDesignBoard(`${base}/board.md`, aggregateIds, boundedContextIds);
@@ -335,7 +337,7 @@ class AmadeusValidator {
     this.checkEventStormingReferences(path, table, ["Trigger", "Produces", "Related"], eventIds);
   }
 
-  private checkEventStormingBoard(path: string, level: string, eventIds: Set<string>): void {
+  private checkEventStormingBoard(path: string, checkReferences: boolean, eventIds: Set<string>): void {
     this.checkFile(path, "Event Storming board.md が存在する");
     this.checkHeadings(path, ["Board"]);
     this.checkHeadingBodies(path, ["Board"]);
@@ -349,7 +351,7 @@ class AmadeusValidator {
       if (boardEventIds.has(eventId)) this.pass(path, "`board.md` が Domain Event を含む", eventId);
       else this.failRow(path, "`board.md` が Domain Event を含む", eventId);
     }
-    if (level !== "big-picture") this.checkEventStormingReferences(path, table, ["Related"], eventIds);
+    if (checkReferences) this.checkEventStormingReferences(path, table, ["Related"], eventIds);
   }
 
   private checkEventStormingAggregateCandidates(path: string, eventIds: Set<string>): Set<string> {
