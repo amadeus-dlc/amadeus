@@ -618,11 +618,16 @@ function writeGrillings(targetRoot: string, overrides: Record<string, string> = 
     ].join("\n"),
   );
   if (extraSession) {
-    writeExtraGrillingSession(targetRoot, "G002-ideation-follow-up.md", extraSessionDecisionId);
+    writeExtraGrillingSession(
+      targetRoot,
+      "G002-ideation-follow-up.md",
+      extraSessionDecisionId,
+      overrides.extraSessionQuestionDecision ?? extraSessionDecisionId,
+    );
   }
 }
 
-function writeExtraGrillingSession(targetRoot: string, sessionFile: string, decisionId: string): void {
+function writeExtraGrillingSession(targetRoot: string, sessionFile: string, decisionId: string, questionDecision = decisionId): void {
   writeFileSync(
     join(targetRoot, "grillings", sessionFile),
     [
@@ -652,7 +657,7 @@ function writeExtraGrillingSession(targetRoot: string, sessionFile: string, deci
       "- 推奨回答: 含めない。",
       "- 推奨理由: 初期範囲を保つため。",
       "- ユーザー回答: 含めない。",
-      `- 確定判断: ${decisionId}`,
+      `- 確定判断: ${questionDecision}`,
       "",
     ].join("\n"),
   );
@@ -1169,6 +1174,23 @@ run(["bun", "run", validator, "examples/04-inception-completed", intent]);
 const intentGrillingsWorkspace = workspaceCopy();
 writeGrillings(intentPath(intentGrillingsWorkspace, ""));
 run(["bun", "run", validator, intentGrillingsWorkspace, intent]);
+
+const crossSessionQuestionReferenceWorkspace = workspaceCopy();
+writeGrillings(intentPath(crossSessionQuestionReferenceWorkspace, ""), {
+  extraSession: "true",
+  extraSessionDecisionId: "GD002",
+  extraSessionQuestionDecision: "GD001",
+});
+run(["bun", "run", validator, crossSessionQuestionReferenceWorkspace, intent]);
+
+const supersededWithSessionDecisionReferenceWorkspace = workspaceCopy();
+writeGrillings(intentPath(supersededWithSessionDecisionReferenceWorkspace, ""), {
+  decisionState: "superseded",
+  replacedBy: "G002 GD002",
+  extraSession: "true",
+  extraSessionDecisionId: "GD002",
+});
+run(["bun", "run", validator, supersededWithSessionDecisionReferenceWorkspace, intent]);
 
 const discoveryGrillingsWorkspace = workspaceCopy();
 writeGrillings(join(discoveryGrillingsWorkspace, ".amadeus/discoveries/20260628-amadeus-theme-decomposition"));

@@ -1936,7 +1936,7 @@ class AmadeusValidator {
         this.checkAllowed(path, "状態", state, grillingDecisionStatusValues);
         const replacedBy = String(row["置き換え先"] ?? "").trim();
         if (state === "superseded") {
-          const replacementIds = this.splitValues(replacedBy).filter((replacementId) => replacementId !== "該当なし");
+          const replacementIds = this.grillingDecisionReferences(replacedBy);
           if (replacementIds.length > 0) {
             this.pass(path, "superseded の grilling 判断が置き換え先を持つ", `${decisionId}: ${replacementIds.join(", ")}`);
           } else {
@@ -1953,7 +1953,7 @@ class AmadeusValidator {
       }
     }
 
-    this.checkGrillingQuestions(path, decisionIds);
+    this.checkGrillingQuestions(path, allDecisionIds);
   }
 
   private checkGrillingQuestions(path: string, decisionIds: Set<string>): void {
@@ -1972,7 +1972,8 @@ class AmadeusValidator {
       const start = match.index ?? 0;
       const end = questionMatches[index + 1]?.index ?? body.length;
       const block = body.slice(start, end);
-      const references = [...block.matchAll(/^\s*-\s+確定判断:\s*(.*?)\s*$/gm)].flatMap((referenceMatch) => this.splitValues(referenceMatch[1]));
+      const references = [...block.matchAll(/^\s*-\s+確定判断:\s*(.*?)\s*$/gm)]
+        .flatMap((referenceMatch) => this.grillingDecisionReferences(referenceMatch[1]));
       if (references.length > 0) {
         this.pass(path, "質問記録が確定判断 ID を参照する", `${questionId}: ${references.join(", ")}`);
       } else {
@@ -1984,6 +1985,12 @@ class AmadeusValidator {
         else this.failRow(path, "質問記録の確定判断 ID が確定判断に存在する", `${questionId}: ${reference}`);
       }
     }
+  }
+
+  private grillingDecisionReferences(value: unknown): string[] {
+    const text = String(value ?? "").trim();
+    if (text.length === 0 || text === "該当なし") return [];
+    return [...new Set([...text.matchAll(/\bGD\d{3}\b/g)].map((match) => match[0]))];
   }
 
   private checkSubdomains(path: string, boundedContextsPath: string, requireContext = false): void {
