@@ -268,6 +268,8 @@ class AmadeusValidator {
 
     if (expectedScope === "intent-scoped") {
       this.checkJsonValue(statePath, "relatedIntent", state.relatedIntent, intentId ?? "");
+    } else {
+      this.checkJsonValue(statePath, "relatedIntent", state.relatedIntent, "");
     }
 
     const level = String(state.currentLevel ?? "").trim();
@@ -277,7 +279,7 @@ class AmadeusValidator {
     const systemDesignReady = this.eventStormingLevelReady(state, "system-design");
     this.checkEventStormingSummary(`${base}/summary.md`, systemDesignReady);
     const eventIds = this.checkEventStormingEvents(`${base}/events.md`, bigPictureReady);
-    const boardIds = this.checkEventStormingBoard(`${base}/board.md`, requiresProcessModeling, eventIds);
+    const boardIds = this.checkEventStormingBoard(`${base}/board.md`, eventIds);
     this.checkEventStormingHotspots(`${base}/hotspots.md`, boardIds);
 
     let flowIds = new Set<string>();
@@ -407,7 +409,7 @@ class AmadeusValidator {
     return this.idsFor(path);
   }
 
-  private checkEventStormingBoard(path: string, checkReferences: boolean, eventIds: Set<string>): Set<string> {
+  private checkEventStormingBoard(path: string, eventIds: Set<string>): Set<string> {
     this.checkFile(path, "Event Storming board.md が存在する");
     this.checkHeadings(path, ["Board"]);
     this.checkHeadingBodies(path, ["Board"]);
@@ -423,7 +425,7 @@ class AmadeusValidator {
       if (boardEventIds.has(eventId)) this.pass(path, "`board.md` が Domain Event を含む", eventId);
       else this.failRow(path, "`board.md` が Domain Event を含む", eventId);
     }
-    if (checkReferences) this.checkEventStormingReferences(path, table, ["Related"], eventIds);
+    this.checkEventStormingReferences(path, table, ["Related"], eventIds);
     return this.idsFor(path);
   }
 

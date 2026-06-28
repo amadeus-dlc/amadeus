@@ -549,6 +549,32 @@ function replaceEventStormingBoardRelatedWithMissingId(workspace: string): void 
   );
 }
 
+function markEventStormingBigPictureReady(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/state.json");
+  replaceInFile(
+    path,
+    '"currentLevel": "system-design",\n  "completedLevels": [\n    "big-picture",\n    "process-modeling",\n    "system-design"\n  ]',
+    '"currentLevel": "big-picture",\n  "completedLevels": [\n    "big-picture"\n  ]',
+    "event storming fixture does not contain expected level state",
+  );
+  replaceInFile(
+    path,
+    '"nextRecommendedSkill": "amadeus-domain-modeling"',
+    '"nextRecommendedSkill": "amadeus-discovery"',
+    "event storming fixture does not contain expected nextRecommendedSkill",
+  );
+}
+
+function replaceEventStormingRelatedIntentWithValue(workspace: string): void {
+  const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/state.json");
+  replaceInFile(
+    path,
+    '"relatedIntent": null',
+    '"relatedIntent": "20260628-discovery-brief-creation"',
+    "event storming fixture does not contain expected relatedIntent",
+  );
+}
+
 function removeEventStormingState(workspace: string): void {
   rmSync(join(workspace, ".amadeus/event-storming/ES001-loan-flow/state.json"));
 }
@@ -867,12 +893,29 @@ runExpectFailure(
   "`Related` が Event Storming 要素 ID またはなしである",
 );
 
+const bigPictureEventStormingWithBadBoardRefWorkspace = workspaceCopy();
+writeEventStormingSession(bigPictureEventStormingWithBadBoardRefWorkspace);
+markEventStormingBigPictureReady(bigPictureEventStormingWithBadBoardRefWorkspace);
+replaceEventStormingBoardRelatedWithMissingId(bigPictureEventStormingWithBadBoardRefWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, bigPictureEventStormingWithBadBoardRefWorkspace],
+  "`Related` が Event Storming 要素 ID またはなしである",
+);
+
 const eventStormingWithoutStateWorkspace = workspaceCopy();
 writeEventStormingSession(eventStormingWithoutStateWorkspace);
 removeEventStormingState(eventStormingWithoutStateWorkspace);
 runExpectFailure(
   ["bun", "run", validator, eventStormingWithoutStateWorkspace],
   "Event Storming 状態ファイルが存在する",
+);
+
+const eventStormingPreIntentWithRelatedIntentWorkspace = workspaceCopy();
+writeEventStormingSession(eventStormingPreIntentWithRelatedIntentWorkspace);
+replaceEventStormingRelatedIntentWithValue(eventStormingPreIntentWithRelatedIntentWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, eventStormingPreIntentWithRelatedIntentWorkspace],
+  "`relatedIntent` が",
 );
 
 const eventStormingReadyWithoutCompletedSystemDesignWorkspace = workspaceCopy();
