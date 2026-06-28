@@ -127,11 +127,13 @@
         },
         {
           "path": "skills/amadeus-inception-requirements-definition/SKILL.md",
-          "md5": "be3a9e401bce2b72561b0c155e2534c3"
+          "md5": "be3a9e401bce2b72561b0c155e2534c3",
+          "staleReason": "Grilling Decision Trail の内部 skill 成果物境界だけを更新し、既存 example は migration 対象外のため。"
         },
         {
           "path": "skills/amadeus-inception-interaction-modeling/SKILL.md",
-          "md5": "e70e73356b807758036d40f55ab2ee55"
+          "md5": "e70e73356b807758036d40f55ab2ee55",
+          "staleReason": "Grilling Decision Trail の内部 skill 成果物境界だけを更新し、既存 example は migration 対象外のため。"
         },
         {
           "path": "skills/amadeus-inception-execution-design/SKILL.md",
@@ -194,11 +196,13 @@
         },
         {
           "path": "skills/amadeus-inception-requirements-definition/SKILL.md",
-          "md5": "be3a9e401bce2b72561b0c155e2534c3"
+          "md5": "be3a9e401bce2b72561b0c155e2534c3",
+          "staleReason": "Grilling Decision Trail の内部 skill 成果物境界だけを更新し、既存 example は migration 対象外のため。"
         },
         {
           "path": "skills/amadeus-inception-interaction-modeling/SKILL.md",
-          "md5": "e70e73356b807758036d40f55ab2ee55"
+          "md5": "e70e73356b807758036d40f55ab2ee55",
+          "staleReason": "Grilling Decision Trail の内部 skill 成果物境界だけを更新し、既存 example は migration 対象外のため。"
         },
         {
           "path": "skills/amadeus-inception-execution-design/SKILL.md",
@@ -212,7 +216,8 @@
         },
         {
           "path": "skills/amadeus-construction-bolt-preparation/SKILL.md",
-          "md5": "30ead3041e1517b133da249588290564"
+          "md5": "30ead3041e1517b133da249588290564",
+          "staleReason": "Grilling Decision Trail の内部 skill 成果物境界だけを更新し、既存 example は migration 対象外のため。"
         }
       ]
     }

@@ -151,6 +151,8 @@ Construction 成果物を新規作成または構造補修する内部 skill は
 
 質問した場合は、その場で成果物作成、実装、テスト実行をせず、ユーザーの回答を待つ。
 回答に記録対象の判断が含まれる場合は、Construction 成果物への反映と同じ変更で `grillings.md` と `grillings/Gxxx-*.md` を対象 Intent 配下に更新する。
+この場合、親 skill は記録対象の質問、確認理由、推奨回答、推奨理由、ユーザー回答、確定判断、反映先を、委譲先の内部 skill へ明示的に渡す。
+Grilling Decision Trail の実ファイル更新は、該当する Construction 成果物を更新する内部 skill が同じ変更で行う。
 
 ### `scaffold-only`
 
@@ -179,6 +181,8 @@ Construction 成果物を新規作成または構造補修する内部 skill は
 質問した場合は、そのターンでは成果物更新、実装、テスト実行をしない。
 ユーザーの回答を受け取ってから、必要最小限の内部 skill だけを使う。
 回答に記録対象の判断が含まれる場合は、Construction 成果物への反映と同じ変更で `grillings.md` と `grillings/Gxxx-*.md` を対象 Intent 配下に更新する。
+この場合、親 skill は記録対象の質問、確認理由、推奨回答、推奨理由、ユーザー回答、確定判断、反映先を、委譲先の内部 skill へ明示的に渡す。
+Grilling Decision Trail の実ファイル更新は、該当する Construction 成果物を更新する内部 skill が同じ変更で行う。
 
 ## 成果物境界
 
