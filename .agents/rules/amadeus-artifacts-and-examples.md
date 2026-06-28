@@ -36,7 +36,7 @@ npm run test:it:promote-skill
 ## Amadeus DLC の基準
 
 - 現時点の確定入口は `README.md` に書かれた skill だけである。
-- Construction は、Inception で定義した Bolt と Task を実装、検証、証拠化する phase として扱う。
+- Construction は、Inception で定義した Bolt を Task に分解し、実装、検証、証拠化する phase として扱う。
 - Spec、`.kiro/specs/**`、`openspec/**`、Operation 成果物は、対応が確定するまで固定しない。
 - 新しい成果物を作る前に、対象 workspace の `.amadeus/README.md`、`.amadeus/steering.md`、対象 Intent の `state.json` を読む。
 - 不明な値は空欄にせず、`未確認` と書く。
