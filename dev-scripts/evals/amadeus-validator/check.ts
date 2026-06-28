@@ -551,6 +551,8 @@ function writeEventStormingSession(workspace: string): void {
 
 function writeGrillings(targetRoot: string, overrides: Record<string, string> = {}): void {
   const sessionFile = overrides.sessionFile ?? "G001-ideation-scope.md";
+  const extraSession = overrides.extraSession === "true";
+  const extraSessionDecisionId = overrides.extraSessionDecisionId ?? "GD002";
   mkdirSync(join(targetRoot, "grillings"), { recursive: true });
   writeFileSync(
     join(targetRoot, "grillings.md"),
@@ -562,6 +564,11 @@ function writeGrillings(targetRoot: string, overrides: Record<string, string> = 
       "| ID | 主題 | 対象 | 状態 | 主な確定判断 | 反映先 | 詳細 |",
       "|---|---|---|---|---|---|---|",
       `| G001 | Ideation Scope | Intent | ${overrides.sessionState ?? "completed"} | 対象範囲を管理画面に限定する | [scope.md](scope.md) | [G001](grillings/${sessionFile}) |`,
+      ...(extraSession
+        ? [
+            `| G002 | Ideation Follow-up | Intent | completed | 追加境界を対象外にする | [scope.md](scope.md) | [G002](grillings/G002-ideation-follow-up.md) |`,
+          ]
+        : []),
       "",
     ].join("\n"),
   );
@@ -607,6 +614,45 @@ function writeGrillings(targetRoot: string, overrides: Record<string, string> = 
             "- ユーザー回答: 含めない。",
           ]
         : []),
+      "",
+    ].join("\n"),
+  );
+  if (extraSession) {
+    writeExtraGrillingSession(targetRoot, "G002-ideation-follow-up.md", extraSessionDecisionId);
+  }
+}
+
+function writeExtraGrillingSession(targetRoot: string, sessionFile: string, decisionId: string): void {
+  writeFileSync(
+    join(targetRoot, "grillings", sessionFile),
+    [
+      "# G002 Ideation Follow-up",
+      "",
+      "## 概要",
+      "",
+      "- 対象: 20260628-discovery-brief-creation",
+      "- 目的: Ideation の追加境界を確定する。",
+      "- 状態: completed",
+      "- 開始日: 2026-06-28",
+      "- 終了日: 2026-06-28",
+      "- 反映先: scope.md",
+      "",
+      "## 確定判断",
+      "",
+      "| ID | 判断 | 状態 | 反映先 | 置き換え先 |",
+      "|---|---|---|---|---|",
+      `| ${decisionId} | 追加境界は対象外にする。 | active | scope.md | 該当なし |`,
+      "",
+      "## 質問記録",
+      "",
+      "### Q001",
+      "",
+      "- 確認したいこと: 追加境界を含めるか。",
+      "- 確認が必要な理由: Ideation の対象範囲に影響するため。",
+      "- 推奨回答: 含めない。",
+      "- 推奨理由: 初期範囲を保つため。",
+      "- ユーザー回答: 含めない。",
+      `- 確定判断: ${decisionId}`,
       "",
     ].join("\n"),
   );
@@ -1155,6 +1201,14 @@ runExpectFailure(
   "grilling session ファイル名が Gnnn-<topic>.md 形式である",
 );
 
+const grillingsUnindexedSessionWorkspace = workspaceCopy();
+writeGrillings(intentPath(grillingsUnindexedSessionWorkspace, ""));
+writeExtraGrillingSession(intentPath(grillingsUnindexedSessionWorkspace, ""), "G002-unindexed.md", "GD002");
+runExpectFailure(
+  ["bun", "run", validator, grillingsUnindexedSessionWorkspace, intent],
+  "grilling session が `grillings.md` に登録されている",
+);
+
 const grillingsDecisionWithoutTargetWorkspace = workspaceCopy();
 writeGrillings(intentPath(grillingsDecisionWithoutTargetWorkspace, ""), { decisionTarget: "" });
 runExpectFailure(
@@ -1174,6 +1228,26 @@ writeGrillings(intentPath(grillingsSupersededWithoutReplacementWorkspace, ""), {
 runExpectFailure(
   ["bun", "run", validator, grillingsSupersededWithoutReplacementWorkspace, intent],
   "superseded の grilling 判断が置き換え先を持つ",
+);
+
+const grillingsSupersededWithUnknownReplacementWorkspace = workspaceCopy();
+writeGrillings(intentPath(grillingsSupersededWithUnknownReplacementWorkspace, ""), {
+  decisionState: "superseded",
+  replacedBy: "GD999",
+});
+runExpectFailure(
+  ["bun", "run", validator, grillingsSupersededWithUnknownReplacementWorkspace, intent],
+  "superseded の grilling 判断が実在する置き換え先を参照する",
+);
+
+const grillingsDuplicateDecisionIdWorkspace = workspaceCopy();
+writeGrillings(intentPath(grillingsDuplicateDecisionIdWorkspace, ""), {
+  extraSession: "true",
+  extraSessionDecisionId: "GD001",
+});
+runExpectFailure(
+  ["bun", "run", validator, grillingsDuplicateDecisionIdWorkspace, intent],
+  "grilling 判断 ID が対象 root 内で重複しない",
 );
 
 const draftSystemDesignEventStormingWorkspace = workspaceCopy();

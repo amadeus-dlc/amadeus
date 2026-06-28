@@ -1844,8 +1844,10 @@ class AmadeusValidator {
     this.checkFile(sessionsPath, "grilling session ディレクトリが存在する", true);
     this.checkHeadings(indexPath, ["一覧"]);
     const table = this.checkTable(indexPath, "一覧", ["ID", "主題", "対象", "状態", "主な確定判断", "反映先", "詳細"]);
+    let indexedSessionIds = new Set<string>();
     if (table) {
       const ids = this.collectIds(indexPath, table, "ID", /^G\d{3}$/);
+      indexedSessionIds = ids;
       this.checkNotBlank(indexPath, table, "主題");
       this.checkNotBlank(indexPath, table, "対象");
       this.checkNotBlank(indexPath, table, "主な確定判断");
@@ -1869,18 +1871,42 @@ class AmadeusValidator {
     if (sessionFiles.length > 0) this.pass(sessionsPath, "grilling session ファイルが1件以上ある", `${sessionFiles.length}件`);
     else this.failRow(sessionsPath, "grilling session ファイルが1件以上ある", "0件");
 
+    const allDecisionIds = new Set<string>();
     for (const entry of sessionFiles) {
       const path = `${sessionsPath}/${entry}`;
+      const table = this.tableAfterHeading(path, "確定判断");
+      if (!table) continue;
+
+      for (const row of table.rows) {
+        const decisionId = String(row["ID"] ?? "").trim();
+        if (!/^GD\d{3}$/.test(decisionId)) continue;
+        if (allDecisionIds.has(decisionId)) {
+          this.failRow(path, "grilling 判断 ID が対象 root 内で重複しない", decisionId);
+        } else {
+          this.pass(path, "grilling 判断 ID が対象 root 内で重複しない", decisionId);
+          allDecisionIds.add(decisionId);
+        }
+      }
+    }
+
+    for (const entry of sessionFiles) {
+      const path = `${sessionsPath}/${entry}`;
+      const sessionId = entry.match(/^(G\d{3})-/)?.[1];
       if (grillingSessionFilePattern.test(entry)) {
         this.pass(path, "grilling session ファイル名が Gnnn-<topic>.md 形式である", entry);
       } else {
         this.failRow(path, "grilling session ファイル名が Gnnn-<topic>.md 形式である", entry);
       }
-      this.checkGrillingSession(path);
+      if (sessionId && indexedSessionIds.has(sessionId)) {
+        this.pass(path, "grilling session が `grillings.md` に登録されている", sessionId);
+      } else {
+        this.failRow(path, "grilling session が `grillings.md` に登録されている", sessionId ?? entry);
+      }
+      this.checkGrillingSession(path, allDecisionIds);
     }
   }
 
-  private checkGrillingSession(path: string): void {
+  private checkGrillingSession(path: string, allDecisionIds: Set<string>): void {
     this.checkHeadings(path, ["概要", "確定判断", "質問記録"]);
 
     const expectedId = basename(path).match(/^(G\d{3})-/)?.[1];
@@ -1910,10 +1936,18 @@ class AmadeusValidator {
         this.checkAllowed(path, "状態", state, grillingDecisionStatusValues);
         const replacedBy = String(row["置き換え先"] ?? "").trim();
         if (state === "superseded") {
-          if (replacedBy.length > 0 && replacedBy !== "該当なし") {
-            this.pass(path, "superseded の grilling 判断が置き換え先を持つ", `${decisionId}: ${replacedBy}`);
+          const replacementIds = this.splitValues(replacedBy).filter((replacementId) => replacementId !== "該当なし");
+          if (replacementIds.length > 0) {
+            this.pass(path, "superseded の grilling 判断が置き換え先を持つ", `${decisionId}: ${replacementIds.join(", ")}`);
           } else {
             this.failRow(path, "superseded の grilling 判断が置き換え先を持つ", decisionId);
+          }
+          for (const replacementId of replacementIds) {
+            if (allDecisionIds.has(replacementId) && replacementId !== decisionId) {
+              this.pass(path, "superseded の grilling 判断が実在する置き換え先を参照する", `${decisionId}: ${replacementId}`);
+            } else {
+              this.failRow(path, "superseded の grilling 判断が実在する置き換え先を参照する", `${decisionId}: ${replacementId}`);
+            }
           }
         }
       }
