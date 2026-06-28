@@ -595,6 +595,18 @@ function writeGrillings(targetRoot: string, overrides: Record<string, string> = 
       "- 推奨理由: 最初の Intent として検証可能な粒度に収まるため。",
       "- ユーザー回答: それでよい。",
       `- 確定判断: ${overrides.questionDecision ?? "GD001"}`,
+      ...(overrides.extraQuestionWithoutDecision === "true"
+        ? [
+            "",
+            "### Q002",
+            "",
+            "- 確認したいこと: 追加の境界を含めるか。",
+            "- 確認が必要な理由: 後続判断に影響するため。",
+            "- 推奨回答: 含めない。",
+            "- 推奨理由: 初期範囲を保つため。",
+            "- ユーザー回答: 含めない。",
+          ]
+        : []),
       "",
     ].join("\n"),
   );
@@ -1148,6 +1160,13 @@ writeGrillings(intentPath(grillingsDecisionWithoutTargetWorkspace, ""), { decisi
 runExpectFailure(
   ["bun", "run", validator, grillingsDecisionWithoutTargetWorkspace, intent],
   "grilling 判断の `反映先` が空欄でない",
+);
+
+const grillingsQuestionWithoutDecisionWorkspace = workspaceCopy();
+writeGrillings(intentPath(grillingsQuestionWithoutDecisionWorkspace, ""), { extraQuestionWithoutDecision: "true" });
+runExpectFailure(
+  ["bun", "run", validator, grillingsQuestionWithoutDecisionWorkspace, intent],
+  "質問記録が確定判断 ID を参照する",
 );
 
 const grillingsSupersededWithoutReplacementWorkspace = workspaceCopy();
