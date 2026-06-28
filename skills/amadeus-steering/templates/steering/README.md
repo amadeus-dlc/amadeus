@@ -15,6 +15,9 @@
 |---|---|
 | `steering.md` | steering layer の責務境界を扱う。 |
 | `steering/objective.md` | システム化の目的を扱う。 |
+| `steering/product.md` | プロダクトの能力、利用場面、価値仮説を扱う。 |
+| `steering/tech.md` | 技術判断、開発標準、実行環境を扱う。 |
+| `steering/structure.md` | ディレクトリ編成、命名、依存関係、コード構成の原則を扱う。 |
 | `steering/actors.md` | 要求の根拠や相互作用に登場する人の役割を扱う。 |
 | `steering/external-systems.md` | システム外部の連携先を扱う。 |
 | `glossary.md` | 確定済み用語と避ける語を扱う。 |
