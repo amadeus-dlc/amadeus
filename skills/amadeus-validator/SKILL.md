@@ -44,15 +44,15 @@ Bun が使えない場合は `blocked` として報告する。
 6. `.amadeus/steering/policies/README.md`
 7. `.amadeus/intents.md`
 8. `.amadeus/discoveries.md`
-9. `.amadeus/discoveries/*/brief.md`
+9. `.amadeus/discoveries/*.md`
 10. `.amadeus/discoveries/*/state.json`
 11. `.amadeus/discoveries/*/grillings.md` と `.amadeus/discoveries/*/grillings/*.md`。存在する場合だけ読む。
-12. `.amadeus/event-storming/*/state.json`。存在する場合だけ読む。
+12. `.amadeus/event-storming/*.md` と `.amadeus/event-storming/*/state.json`。存在する場合だけ読む。
 13. `.amadeus/event-storming/*/grillings.md` と `.amadeus/event-storming/*/grillings/*.md`。存在する場合だけ読む。
 14. `.amadeus/domain/subdomains.md`
 15. `.amadeus/domain/bounded-contexts.md`
 16. `.amadeus/domain/grillings.md` と `.amadeus/domain/grillings/*.md`。存在する場合だけ読む。
-17. `.amadeus/intents/<intent-id>-<slug>/intent.md`。対象 Intent ディレクトリ名が指定された場合だけ読む。
+17. `.amadeus/intents/<intent-id>-<slug>.md`。対象 Intent ディレクトリ名が指定された場合だけ読む。
 18. `.amadeus/intents/<intent-id>-<slug>/state.json`。対象 Intent ディレクトリ名が指定された場合だけ読む。
 19. `.amadeus/intents/<intent-id>-<slug>/grillings.md` と `.amadeus/intents/<intent-id>-<slug>/grillings/*.md`。存在する場合だけ読む。
 20. `.amadeus/intents/<intent-id>-<slug>/event-storming/*/grillings.md` と `.amadeus/intents/<intent-id>-<slug>/event-storming/*/grillings/*.md`。存在する場合だけ読む。
@@ -82,9 +82,9 @@ Bun が使えない場合は `blocked` として報告する。
 - `.amadeus/steering/knowledge.md` と `.amadeus/steering/knowledge/README.md` が存在する。
 - `.amadeus/steering/policies.md` と `.amadeus/steering/policies/README.md` が存在する。
 - `.amadeus/discoveries.md` が存在する。
-- `.amadeus/discoveries.md` の一覧と各 Discovery の `brief.md`、`state.json` が対応している。
+- `.amadeus/discoveries.md` の一覧と各 Discovery の `Discovery 正本ファイル`、`state.json` が対応している。
 - Discovery の `state.json.phase`、`status`、`gate`、`decision` が許可値である。
-- Discovery の `state.json.decision` と `brief.md` の `判定` が一致する。
+- Discovery の `state.json.decision` と `Discovery 正本ファイル` の `判定` が一致する。
 - Discovery が `gate: passed` の場合、判定別の構造条件を満たす。
 - `.amadeus/intents.md` が存在する。
 - `.amadeus/domain/subdomains.md` が存在する。

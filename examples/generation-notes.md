@@ -18,8 +18,8 @@ repo root で `npm run examples:generate:real` を実行し、1つの workspace 
 | 段階 | skill | 主な出力 |
 |---|---|---|
 | Steering | amadeus-steering | `.amadeus/` の共有土台 |
-| Discovery | amadeus-discovery | `discoveries.md`, `discoveries/20260628-amadeus-theme-decomposition/brief.md`, `state.json` |
-| Intent 初期化 | amadeus-intent-init | `intents.md`, `intents/20260628-discovery-brief-creation/intent.md`, `state.json` |
+| Discovery | amadeus-discovery | `discoveries.md`, `discoveries/20260628-amadeus-theme-decomposition.md`, `state.json` |
+| Intent 初期化 | amadeus-intent-init | `intents.md`, `intents/20260628-discovery-brief-creation.md`, `state.json` |
 | Ideation | amadeus-ideation と内部 skill | `scope.md`, `ideation.md`, `mocks/initial-confirmation.puml`, `traceability.md`, `decisions.md` |
 | Inception | amadeus-inception と内部 skill | Requirement、Story、Use Case、Unit、Bolt、追跡、判断 |
 | Construction Preparation | amadeus-construction-bolt-preparation | `design.md`, `tasks.md`, `notes.md`, Design Gate ready、Tasks generated、Construction Design 追跡 |

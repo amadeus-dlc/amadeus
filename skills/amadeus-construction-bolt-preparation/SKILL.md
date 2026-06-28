@@ -24,7 +24,7 @@ Construction phase の Bolt 実行準備だけを進める。
 少なくとも次を読む。
 
 - `.amadeus/intents.md`
-- `.amadeus/intents/<intent-id>-<slug>/intent.md`
+- `.amadeus/intents/<intent-id>-<slug>.md`
 - `.amadeus/intents/<intent-id>-<slug>/state.json`
 - `.amadeus/intents/<intent-id>-<slug>/requirements.md`
 - `.amadeus/intents/<intent-id>-<slug>/acceptance.md`

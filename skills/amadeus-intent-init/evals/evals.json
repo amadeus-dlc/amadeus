@@ -9,7 +9,7 @@
     {
       "id": 2,
       "prompt": "scaffold-only で 20260627-risk-aware-reset-support の Intent 入れ物だけ作って。依存は 20260626-password-reset。scope や ideation はまだ作らない。",
-      "expected_output": ".amadeus/intents.md に Intent 行と依存行を追加し、.amadeus/intents/20260627-risk-aware-reset-support/intent.md と state.json だけを作る。scope.md、ideation.md、traceability.md、requirements.md、use-cases.md、units.md、bolts.md、domain/** は作らない。"
+      "expected_output": ".amadeus/intents.md に Intent 行と依存行を追加し、.amadeus/intents/20260627-risk-aware-reset-support.md と state.json だけを作る。scope.md、ideation.md、traceability.md、requirements.md、use-cases.md、units.md、bolts.md、domain/** は作らない。"
     },
     {
       "id": 3,

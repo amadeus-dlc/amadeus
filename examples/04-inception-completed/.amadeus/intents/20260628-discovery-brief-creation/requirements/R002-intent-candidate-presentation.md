@@ -16,7 +16,7 @@
 
 ## 根拠
 
-- [intent.md](../intent.md) の成功条件で、Intent 候補、候補判断、最初に Intent 化する候補が求められている。
+- [20260628-discovery-brief-creation.md](../../20260628-discovery-brief-creation.md) の成功条件で、Intent 候補、候補判断、最初に Intent 化する候補が求められている。
 - [scope.md](../scope.md) の Inception への引き継ぎで、Intent 候補提示が要求候補とされている。
 - [mocks/initial-confirmation.puml](../mocks/initial-confirmation.puml) は、Intent 候補と最初に進める候補を確認する例を示している。
 

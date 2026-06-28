@@ -22,11 +22,11 @@ Ideation phase のスコープ整理だけを進める。
 少なくとも次を読む。
 
 - `.amadeus/intents.md`
-- `.amadeus/intents/<intent-id>-<slug>/intent.md`
+- `.amadeus/intents/<intent-id>-<slug>.md`
 - `.amadeus/intents/<intent-id>-<slug>/state.json`
 - steering layer
 
-`intent.md` または `state.json` がない場合は停止する。
+`Intent 正本ファイル` または `state.json` がない場合は停止する。
 その場合は `amadeus-intent-init` で Intent の入れ物を補修するよう案内する。
 
 ## テンプレート
@@ -35,7 +35,7 @@ Ideation phase のスコープ整理だけを進める。
 
 プロジェクト固有テンプレートが `.amadeus/settings/templates/intents/ideation/scope.md` にある場合は、そちらを優先する。
 
-テンプレートの `<...>` は、既存 `intent.md`、`state.json`、steering layer、ユーザー回答から分かる値に置き換える。
+テンプレートの `<...>` は、既存 `Intent 正本ファイル`、`state.json`、steering layer、ユーザー回答から分かる値に置き換える。
 分からない項目は空欄にせず、`未確認` と書く。
 
 ## 成果物
