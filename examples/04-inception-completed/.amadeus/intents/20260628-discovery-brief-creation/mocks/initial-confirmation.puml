@@ -1,10 +1,14 @@
 @startsalt
+title Discovery Brief 確認カード
 {
-{T
-+ 入力テーマ | Amadeus を使う人が大きな開発テーマを投げても適切な粒度の Intent に分けたい
-+ 判定 | multi_intent
-+ 推奨候補 | 入力テーマを Discovery Brief に整理できる
-+ 次アクション | amadeus-intent-init に渡す
-}
+  {T
+    + 入力テーマ | 大きな開発テーマを適切な粒度の Intent に分けたい
+    + 判定 | multi_intent
+    + 判定理由 | 入力整理、Intent 初期化への引き継ぎ、成果物検証、例示参照に関心が分かれる
+    + Intent 候補 | 入力テーマを Discovery Brief に整理できる
+    + 最初に進める候補 | 20260628-discovery-brief-creation
+    + 対象外 | Requirement、Use Case、Unit、Bolt、Task、Construction 証拠
+    + 推奨次アクション | 作成済み Intent を Ideation へ進める
+  }
 }
 @endsalt

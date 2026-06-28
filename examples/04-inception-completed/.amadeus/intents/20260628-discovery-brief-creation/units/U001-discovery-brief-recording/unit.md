@@ -1,8 +1,9 @@
-# U001 Discovery Brief の基本記録
+# U001: Discovery Brief 記録
 
 ## ユニット
 
-入力テーマ、確認した前提、判定、判定理由を Discovery Brief に記録する価値単位です。
+- Discovery Brief 記録。
+- 入力テーマ、確認した前提、判定、判定理由、推奨次アクションを Intent 化前の判断記録としてまとめる。
 
 ## 対象要求
 
@@ -10,17 +11,20 @@
 
 ## 価値境界
 
-この Unit は Discovery Brief の基本記録を扱います。
-Intent 候補の状態遷移は U002 に委譲します。
+- Amadeus 利用者が大きな入力テーマを確認可能な Discovery Brief として読める状態にする。
+- Intent 候補の生成や選択は U002 が扱う。
+- Requirement、Use Case、Unit、Bolt、Task の定義は扱わない。
 
 ## 検証観点
 
-- 必須見出しが存在する。
-- 判定と state.json.decision が一致する。
+- Discovery Brief に必要な記録項目が揃っている。
+- 後続 phase の成果物を Discovery Brief 内で先取りしていない。
+- 推奨次アクションが後続の Intent 候補確認へつながる。
 
 ## 未確認事項
 
-- 実プロジェクトで追加する前提項目の拡張範囲は未確認です。
+- 具体的な保存操作、UI 表現、保存形式は Construction 以降で確定する。
+- 境界づけられたコンテキストは未確認である。
 
 ## 関連成果物
 

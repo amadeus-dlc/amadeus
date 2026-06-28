@@ -1,26 +1,30 @@
-# B001 Discovery Brief の基本記録を整える
+# B001: Discovery Brief 記録
 
 ## 概要
 
-入力テーマ、確認した前提、判定、判定理由、state.json の整合を扱います。
+- Discovery Brief に入力テーマ、確認した前提、判定、判定理由、推奨次アクションを記録できる状態にする。
+- Discovery の責務境界として、Requirement、Use Case、Unit、Bolt、Task の定義を記録対象から外す。
 
 ## 対象ユニット
 
-- U001: Discovery Brief の基本記録
+- U001
 
 ## 設計
 
-- [U001 Unit Design Brief](../../units/U001-discovery-brief-recording/design.md)
+- [U001 Unit Design](../../units/U001-discovery-brief-recording/design.md)
 
 ## 完了条件
 
-- Brief の必須見出しが存在する。
-- state.json.decision と Brief の判定が一致する。
+- 入力テーマが Discovery Brief に記録される。
+- 確認した前提が Discovery Brief に記録される。
+- 判定と判定理由が Discovery Brief に記録される。
+- 推奨次アクションが Discovery Brief に記録される。
+- Discovery Brief 内で Requirement、Use Case、Unit、Bolt、Task を定義しない。
 
 ## 依存
 
-なし
+- なし
 
 ## 未確認事項
 
-- 自動補完する前提項目の範囲は未確認です。
+- 保存操作、表示形式、保持構造は Construction で確定する。

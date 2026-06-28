@@ -1,18 +1,18 @@
-# Requirements
+# 要求
 
 ## 一覧
 
 | 識別子 | 概要 | 状態 | 依存 | 詳細 |
 |---|---|---|---|---|
-| R001 | 入力テーマを Discovery Brief に記録できる | 採用済み | なし | [R001-record-discovery-brief.md](requirements/R001-record-discovery-brief.md) |
-| R002 | multi_intent の候補と推奨次アクションを示せる | 採用済み | R001 | [R002-show-intent-candidates.md](requirements/R002-show-intent-candidates.md) |
+| R001 | Discovery Brief を記録できる | 採用済み | なし | [R001-discovery-brief-recording.md](requirements/R001-discovery-brief-recording.md) |
+| R002 | Intent 候補を提示できる | 採用済み | R001 | [R002-intent-candidate-presentation.md](requirements/R002-intent-candidate-presentation.md) |
 
 ## 依存関係
 
 | 要求 | 依存 | 理由 |
 |---|---|---|
-| R001 | なし | 入力テーマの記録は他の候補判断の前提になるため |
-| R002 | R001 | 候補判断は記録済みの入力テーマを前提にするため |
+| R001 | なし | 入力テーマ、前提、判定、判定理由を記録する基礎要求であるため。 |
+| R002 | R001 | Intent 候補は Discovery Brief に記録された入力テーマと判定を根拠に提示するため。 |
 
 ## 受け入れ状態
 

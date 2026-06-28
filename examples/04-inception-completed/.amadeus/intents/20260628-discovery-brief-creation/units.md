@@ -1,15 +1,15 @@
-# Units
+# ユニット
 
 ## 一覧
 
 | 識別子 | 概要 | 要求 | コンテキスト | 依存 | 詳細 |
 |---|---|---|---|---|---|
-| U001 | Discovery Brief の基本記録 | R001 | なし | なし | [U001-discovery-brief-recording/unit.md](units/U001-discovery-brief-recording/unit.md) |
-| U002 | Intent 候補と推奨次アクションの整理 | R002 | なし | U001 | [U002-intent-candidate-guidance/unit.md](units/U002-intent-candidate-guidance/unit.md) |
+| U001 | Discovery Brief 記録 | R001 | 未確認 | なし | [unit.md](units/U001-discovery-brief-recording/unit.md) |
+| U002 | Intent 候補提示 | R002 | 未確認 | U001 | [unit.md](units/U002-intent-candidate-presentation/unit.md) |
 
 ## 依存関係
 
 | ユニット | 依存 | 理由 |
 |---|---|---|
-| U001 | なし | Brief の基本記録は候補整理の前提になるため |
-| U002 | U001 | 候補整理は記録済み Brief を前提にするため |
+| U001 | なし | Discovery Brief の記録は候補提示の前提であり、単独で価値を持つため。 |
+| U002 | U001 | Intent 候補提示は、記録済みの入力テーマ、判定、判定理由を根拠に成立するため。 |

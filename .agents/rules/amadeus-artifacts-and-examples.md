@@ -55,6 +55,8 @@ npm run test:it:promote-skill
 
 新しい example を追加または更新する場合は、対象 phase の skill を実際に使って成果物を生成する。
 実際の skill では生成できない Markdown ファイル群を、手作業の理想形として `examples/` に置かない。
+既存の段階別 example を real provider で再生成する場合は、repo root で `npm run examples:generate:real` を使う。
+手順を手作業で再現しない。
 
 example を補修する場合も、skill の成果物境界、見出し、state.json、traceability、validator 契約に合わせる。
 skill が生成できない構造が必要になった場合は、example だけを直さず、先に skill、template、validator、eval の契約を直す。
