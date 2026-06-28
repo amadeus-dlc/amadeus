@@ -7,12 +7,14 @@
 ## 対象成果物
 
 - `README.md`
-- `objective.md`
-- `actors.md`
-- `external-systems.md`
+- `steering/objective.md`
+- `steering/actors.md`
+- `steering/external-systems.md`
 - `glossary.md`
-- `knowledge.md`
-- `policies.md`
+- `steering/knowledge.md`
+- `steering/knowledge/`
+- `steering/policies.md`
+- `steering/policies/`
 - `domain/subdomains.md`
 - `domain/bounded-contexts.md`
 - `discoveries.md`
@@ -21,9 +23,9 @@
 ## 読む順序
 
 1. `README.md`
-2. `objective.md`
-3. `actors.md`
-4. `external-systems.md`
+2. `steering/objective.md`
+3. `steering/actors.md`
+4. `steering/external-systems.md`
 5. `glossary.md`
 6. `domain/subdomains.md`
 7. `domain/bounded-contexts.md`

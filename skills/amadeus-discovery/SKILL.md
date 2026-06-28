@@ -27,8 +27,8 @@ Intent 化前の入力テーマを Discovery として整理する。
 
 - `.amadeus/README.md`
 - `.amadeus/steering.md`
-- `.amadeus/objective.md`
-- `.amadeus/actors.md`
+- `.amadeus/steering/objective.md`
+- `.amadeus/steering/actors.md`
 - `.amadeus/glossary.md`
 - `.amadeus/domain/subdomains.md`
 - `.amadeus/domain/bounded-contexts.md`

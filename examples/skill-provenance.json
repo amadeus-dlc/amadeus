@@ -6,7 +6,8 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "b05111b434618fc9f361e907760d6976"
+          "md5": "b05111b434618fc9f361e907760d6976",
+          "staleReason": "Steering 詳細成果物を steering/ 配下へ移す構造契約を反映したため。後続 PR で real provider による再生成を実施する。"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
@@ -20,7 +21,8 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "b05111b434618fc9f361e907760d6976"
+          "md5": "b05111b434618fc9f361e907760d6976",
+          "staleReason": "Steering 詳細成果物を steering/ 配下へ移す構造契約を反映したため。後続 PR で real provider による再生成を実施する。"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
@@ -39,7 +41,8 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "b05111b434618fc9f361e907760d6976"
+          "md5": "b05111b434618fc9f361e907760d6976",
+          "staleReason": "Steering 詳細成果物を steering/ 配下へ移す構造契約を反映したため。後続 PR で real provider による再生成を実施する。"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
@@ -83,7 +86,8 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "b05111b434618fc9f361e907760d6976"
+          "md5": "b05111b434618fc9f361e907760d6976",
+          "staleReason": "Steering 詳細成果物を steering/ 配下へ移す構造契約を反映したため。後続 PR で real provider による再生成を実施する。"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
@@ -152,7 +156,8 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "b05111b434618fc9f361e907760d6976"
+          "md5": "b05111b434618fc9f361e907760d6976",
+          "staleReason": "Steering 詳細成果物を steering/ 配下へ移す構造契約を反映したため。後続 PR で real provider による再生成を実施する。"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",

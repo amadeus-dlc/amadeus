@@ -11,8 +11,8 @@
 ## 読む順序
 
 1. [steering.md](steering.md)
-2. [objective.md](objective.md)
-3. [actors.md](actors.md)
+2. [objective.md](steering/objective.md)
+3. [actors.md](steering/actors.md)
 4. [domain/subdomains.md](domain/subdomains.md)
 5. [discoveries.md](discoveries.md)
 6. [intents.md](intents.md)

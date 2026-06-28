@@ -59,6 +59,10 @@ function intentPath(workspace: string, path: string): string {
   return join(workspace, ".amadeus/intents", intent, path);
 }
 
+function removeSteeringObjective(workspace: string): void {
+  rmSync(join(workspace, ".amadeus/steering/objective.md"), { force: true });
+}
+
 function replaceInFile(path: string, from: string, to: string, message: string): void {
   const text = readFileSync(path, "utf8");
   if (!text.includes(from)) fail(message);
@@ -1172,6 +1176,13 @@ function appendConstructionDesignTrace(
 }
 
 run(["bun", "run", validator, "examples/04-inception-completed", intent]);
+
+const missingSteeringObjectiveWorkspace = workspaceCopy();
+removeSteeringObjective(missingSteeringObjectiveWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, missingSteeringObjectiveWorkspace],
+  "steering の目的一覧が存在する",
+);
 
 const intentGrillingsWorkspace = workspaceCopy();
 writeGrillings(intentPath(intentGrillingsWorkspace, ""));

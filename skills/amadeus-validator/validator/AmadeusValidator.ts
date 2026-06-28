@@ -145,6 +145,7 @@ class AmadeusValidator {
       this.checkWorkspace();
       if (!this.failed()) {
         this.checkFile(".amadeus/README.md", "必須ファイルが存在する");
+        this.checkSteeringLayer();
         this.checkGlobalIndexes();
         if (this.intentId) {
           this.checkIntentIndexes(this.intentId);
@@ -168,6 +169,29 @@ class AmadeusValidator {
     }
 
     this.checkFile(".amadeus", "Amadeus の成果物ルートが存在する", true);
+  }
+
+  private checkSteeringLayer(): void {
+    this.checkFile(".amadeus/steering.md", "steering 入口が存在する");
+    this.checkHeadings(".amadeus/steering.md", ["役割", "対象成果物", "読む順序", "Intent Layer へ進む基準", "責務境界"]);
+
+    this.checkFile(".amadeus/steering", "steering 詳細ディレクトリが存在する", true);
+    this.checkFile(".amadeus/steering/objective.md", "steering の目的一覧が存在する");
+    this.checkHeadings(".amadeus/steering/objective.md", ["一覧"]);
+    this.checkFile(".amadeus/steering/actors.md", "steering のアクター一覧が存在する");
+    this.checkHeadings(".amadeus/steering/actors.md", ["一覧"]);
+    this.checkFile(".amadeus/steering/external-systems.md", "steering の外部システム一覧が存在する");
+    this.checkHeadings(".amadeus/steering/external-systems.md", ["一覧"]);
+    this.checkFile(".amadeus/steering/knowledge.md", "steering のナレッジ索引が存在する");
+    this.checkHeadings(".amadeus/steering/knowledge.md", ["背景", "前提", "未確認事項"]);
+    this.checkFile(".amadeus/steering/knowledge", "steering のナレッジ詳細ディレクトリが存在する", true);
+    this.checkFile(".amadeus/steering/knowledge/README.md", "steering のナレッジ詳細入口が存在する");
+    this.checkHeadings(".amadeus/steering/knowledge/README.md", ["役割", "記録方針"]);
+    this.checkFile(".amadeus/steering/policies.md", "steering のポリシー索引が存在する");
+    this.checkHeadings(".amadeus/steering/policies.md", ["方針", "禁止事項", "判断基準"]);
+    this.checkFile(".amadeus/steering/policies", "steering のポリシー詳細ディレクトリが存在する", true);
+    this.checkFile(".amadeus/steering/policies/README.md", "steering のポリシー詳細入口が存在する");
+    this.checkHeadings(".amadeus/steering/policies/README.md", ["役割", "記録方針"]);
   }
 
   private checkGlobalIndexes(): void {
@@ -2557,6 +2581,7 @@ class AmadeusValidator {
     if (file.includes("/grillings/") || file.endsWith("/grillings.md")) return "Grilling Decision Trail";
     if (file.startsWith(".amadeus/discoveries/")) return "Discovery";
     if (file.startsWith(".amadeus/event-storming/")) return "Event Storming";
+    if (file.startsWith(".amadeus/steering/") || file === ".amadeus/steering" || file === ".amadeus/steering.md") return "Steering";
     if (/^\.amadeus\/[^/]+\.md$/.test(file)) return "全体成果物";
     if (file.startsWith(".amadeus/domain/")) return "全体ドメイン";
     if (/^\.amadeus\/intents\/[^/]+\/state\.json$/.test(file)) return "Intent 状態";

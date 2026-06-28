@@ -28,8 +28,8 @@ UI event、technical event、integration event、log event は Domain Event と�
 
 - `.amadeus/README.md`
 - `.amadeus/steering.md`
-- `.amadeus/objective.md`
-- `.amadeus/actors.md`
+- `.amadeus/steering/objective.md`
+- `.amadeus/steering/actors.md`
 - `.amadeus/glossary.md`
 - `.amadeus/domain/subdomains.md`
 - `.amadeus/domain/bounded-contexts.md`

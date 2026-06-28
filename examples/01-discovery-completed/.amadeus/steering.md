@@ -6,12 +6,14 @@
 
 ## 対象成果物
 
-- [objective.md](objective.md)
-- [actors.md](actors.md)
-- [external-systems.md](external-systems.md)
+- [objective.md](steering/objective.md)
+- [actors.md](steering/actors.md)
+- [external-systems.md](steering/external-systems.md)
 - [glossary.md](glossary.md)
-- [knowledge.md](knowledge.md)
-- [policies.md](policies.md)
+- [knowledge.md](steering/knowledge.md)
+- [knowledge/](steering/knowledge/)
+- [policies.md](steering/policies.md)
+- [policies/](steering/policies/)
 - [domain/subdomains.md](domain/subdomains.md)
 - [domain/bounded-contexts.md](domain/bounded-contexts.md)
 - [discoveries.md](discoveries.md)

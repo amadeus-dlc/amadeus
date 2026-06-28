@@ -14,12 +14,14 @@
 | 成果物 | 役割 |
 |---|---|
 | `steering.md` | steering layer の責務境界を扱う。 |
-| `objective.md` | システム化の目的を扱う。 |
-| `actors.md` | 要求の根拠や相互作用に登場する人の役割を扱う。 |
-| `external-systems.md` | システム外部の連携先を扱う。 |
+| `steering/objective.md` | システム化の目的を扱う。 |
+| `steering/actors.md` | 要求の根拠や相互作用に登場する人の役割を扱う。 |
+| `steering/external-systems.md` | システム外部の連携先を扱う。 |
 | `glossary.md` | 確定済み用語と避ける語を扱う。 |
-| `knowledge.md` | 背景、前提、未確認事項を扱う。 |
-| `policies.md` | 方針、禁止事項、判断基準を扱う。 |
+| `steering/knowledge.md` | 背景、前提、未確認事項を扱う。 |
+| `steering/knowledge/` | 詳細な知識記録を扱う。 |
+| `steering/policies.md` | 方針、禁止事項、判断基準を扱う。 |
+| `steering/policies/` | 詳細な方針記録を扱う。 |
 | `domain/subdomains.md` | サブドメインを扱う。 |
 | `domain/bounded-contexts.md` | 境界づけられたコンテキストを扱う。 |
 | `discoveries.md` | Discovery 一覧と判定記録への入口を扱う。 |

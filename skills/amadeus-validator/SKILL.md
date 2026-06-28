@@ -38,30 +38,34 @@ Bun が使えない場合は `blocked` として報告する。
 
 1. `CONTEXT.md`
 2. `.amadeus/README.md`
-3. `.amadeus/intents.md`
-4. `.amadeus/discoveries.md`
-5. `.amadeus/discoveries/*/brief.md`
-6. `.amadeus/discoveries/*/state.json`
-7. `.amadeus/discoveries/*/grillings.md` と `.amadeus/discoveries/*/grillings/*.md`。存在する場合だけ読む。
-8. `.amadeus/event-storming/*/state.json`。存在する場合だけ読む。
-9. `.amadeus/event-storming/*/grillings.md` と `.amadeus/event-storming/*/grillings/*.md`。存在する場合だけ読む。
-10. `.amadeus/domain/subdomains.md`
-11. `.amadeus/domain/bounded-contexts.md`
-12. `.amadeus/domain/grillings.md` と `.amadeus/domain/grillings/*.md`。存在する場合だけ読む。
-13. `.amadeus/intents/<intent-id>-<slug>/intent.md`。対象 Intent ディレクトリ名が指定された場合だけ読む。
-14. `.amadeus/intents/<intent-id>-<slug>/state.json`。対象 Intent ディレクトリ名が指定された場合だけ読む。
-15. `.amadeus/intents/<intent-id>-<slug>/grillings.md` と `.amadeus/intents/<intent-id>-<slug>/grillings/*.md`。存在する場合だけ読む。
-16. `.amadeus/intents/<intent-id>-<slug>/event-storming/*/grillings.md` と `.amadeus/intents/<intent-id>-<slug>/event-storming/*/grillings/*.md`。存在する場合だけ読む。
-17. `.amadeus/intents/<intent-id>-<slug>/requirements.md`。対象 Intent ディレクトリ名が指定され、Initialized または Ideation 段階ではない場合だけ読む。
-18. `.amadeus/intents/<intent-id>-<slug>/acceptance.md`。対象 Intent ディレクトリ名が指定され、Initialized または Ideation 段階ではない場合だけ読む。
-19. `.amadeus/intents/<intent-id>-<slug>/traceability.md`。対象 Intent ディレクトリ名が指定された場合だけ読む。
-20. `.amadeus/intents/<intent-id>-<slug>/domain/subdomains.md`。対象 Intent ディレクトリ名が指定され、Initialized または Ideation 段階ではない場合だけ読む。
-21. `.amadeus/intents/<intent-id>-<slug>/domain/bounded-contexts.md`。対象 Intent ディレクトリ名が指定され、Initialized または Ideation 段階ではない場合だけ読む。
-22. `.amadeus/intents/<intent-id>-<slug>/codebase-analysis.md`。対象 Intent ディレクトリ名が指定され、Initialized または Ideation 段階ではなく、ファイルが存在する場合、または `state.json.inception.requiredArtifacts` に含まれる場合だけ読む。
-23. `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/design.md`。対象 Intent が Construction 段階で、`state.json.construction.requiredBoltArtifacts` に含まれる場合だけ読む。
-24. `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/notes.md`。対象 Intent が Construction 段階で、`state.json.construction.requiredBoltArtifacts` に含まれる場合だけ読む。
-25. `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/test-results.md`。対象 Intent が Construction 段階で、`state.json.construction.requiredBoltArtifacts` に含まれる場合だけ読む。
-26. `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/pr.md`。対象 Intent が Construction 段階で、ファイルが存在する場合、または `state.json.construction.requiredBoltArtifacts` に含まれる場合だけ読む。
+3. `.amadeus/steering.md`
+4. `.amadeus/steering/*.md`
+5. `.amadeus/steering/knowledge/README.md`
+6. `.amadeus/steering/policies/README.md`
+7. `.amadeus/intents.md`
+8. `.amadeus/discoveries.md`
+9. `.amadeus/discoveries/*/brief.md`
+10. `.amadeus/discoveries/*/state.json`
+11. `.amadeus/discoveries/*/grillings.md` と `.amadeus/discoveries/*/grillings/*.md`。存在する場合だけ読む。
+12. `.amadeus/event-storming/*/state.json`。存在する場合だけ読む。
+13. `.amadeus/event-storming/*/grillings.md` と `.amadeus/event-storming/*/grillings/*.md`。存在する場合だけ読む。
+14. `.amadeus/domain/subdomains.md`
+15. `.amadeus/domain/bounded-contexts.md`
+16. `.amadeus/domain/grillings.md` と `.amadeus/domain/grillings/*.md`。存在する場合だけ読む。
+17. `.amadeus/intents/<intent-id>-<slug>/intent.md`。対象 Intent ディレクトリ名が指定された場合だけ読む。
+18. `.amadeus/intents/<intent-id>-<slug>/state.json`。対象 Intent ディレクトリ名が指定された場合だけ読む。
+19. `.amadeus/intents/<intent-id>-<slug>/grillings.md` と `.amadeus/intents/<intent-id>-<slug>/grillings/*.md`。存在する場合だけ読む。
+20. `.amadeus/intents/<intent-id>-<slug>/event-storming/*/grillings.md` と `.amadeus/intents/<intent-id>-<slug>/event-storming/*/grillings/*.md`。存在する場合だけ読む。
+21. `.amadeus/intents/<intent-id>-<slug>/requirements.md`。対象 Intent ディレクトリ名が指定され、Initialized または Ideation 段階ではない場合だけ読む。
+22. `.amadeus/intents/<intent-id>-<slug>/acceptance.md`。対象 Intent ディレクトリ名が指定され、Initialized または Ideation 段階ではない場合だけ読む。
+23. `.amadeus/intents/<intent-id>-<slug>/traceability.md`。対象 Intent ディレクトリ名が指定された場合だけ読む。
+24. `.amadeus/intents/<intent-id>-<slug>/domain/subdomains.md`。対象 Intent ディレクトリ名が指定され、Initialized または Ideation 段階ではない場合だけ読む。
+25. `.amadeus/intents/<intent-id>-<slug>/domain/bounded-contexts.md`。対象 Intent ディレクトリ名が指定され、Initialized または Ideation 段階ではない場合だけ読む。
+26. `.amadeus/intents/<intent-id>-<slug>/codebase-analysis.md`。対象 Intent ディレクトリ名が指定され、Initialized または Ideation 段階ではなく、ファイルが存在する場合、または `state.json.inception.requiredArtifacts` に含まれる場合だけ読む。
+27. `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/design.md`。対象 Intent が Construction 段階で、`state.json.construction.requiredBoltArtifacts` に含まれる場合だけ読む。
+28. `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/notes.md`。対象 Intent が Construction 段階で、`state.json.construction.requiredBoltArtifacts` に含まれる場合だけ読む。
+29. `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/test-results.md`。対象 Intent が Construction 段階で、`state.json.construction.requiredBoltArtifacts` に含まれる場合だけ読む。
+30. `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/pr.md`。対象 Intent が Construction 段階で、ファイルが存在する場合、または `state.json.construction.requiredBoltArtifacts` に含まれる場合だけ読む。
 
 存在しない参照元がある場合は、存在しない事実を結果に含める。
 存在しない参照元を推測で補完しない。
@@ -72,6 +76,10 @@ Bun が使えない場合は `blocked` として報告する。
 
 - Amadeus の成果物ルートが `.amadeus/` である。
 - `.amadeus/README.md` が存在する。
+- `.amadeus/steering.md` が存在する。
+- `.amadeus/steering/objective.md`、`.amadeus/steering/actors.md`、`.amadeus/steering/external-systems.md` が存在する。
+- `.amadeus/steering/knowledge.md` と `.amadeus/steering/knowledge/README.md` が存在する。
+- `.amadeus/steering/policies.md` と `.amadeus/steering/policies/README.md` が存在する。
 - `.amadeus/discoveries.md` が存在する。
 - `.amadeus/discoveries.md` の一覧と各 Discovery の `brief.md`、`state.json` が対応している。
 - Discovery の `state.json.phase`、`status`、`gate`、`decision` が許可値である。

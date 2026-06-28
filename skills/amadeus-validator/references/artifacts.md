@@ -5,6 +5,14 @@
 全体成果物では、少なくとも次を対象にする。
 
 - `.amadeus/README.md`
+- `.amadeus/steering.md`
+- `.amadeus/steering/objective.md`
+- `.amadeus/steering/actors.md`
+- `.amadeus/steering/external-systems.md`
+- `.amadeus/steering/knowledge.md`
+- `.amadeus/steering/knowledge/README.md`
+- `.amadeus/steering/policies.md`
+- `.amadeus/steering/policies/README.md`
 - `.amadeus/discoveries.md`
 - `.amadeus/intents.md`
 - `.amadeus/domain/subdomains.md`

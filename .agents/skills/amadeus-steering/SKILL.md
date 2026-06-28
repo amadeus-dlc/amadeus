@@ -126,11 +126,13 @@ greenfield では、少なくとも次を作る。
 
 - `.amadeus/README.md`
 - `.amadeus/steering.md`
-- `.amadeus/knowledge.md`
-- `.amadeus/policies.md`
-- `.amadeus/objective.md`
-- `.amadeus/actors.md`
-- `.amadeus/external-systems.md`
+- `.amadeus/steering/knowledge.md`
+- `.amadeus/steering/knowledge/README.md`
+- `.amadeus/steering/policies.md`
+- `.amadeus/steering/policies/README.md`
+- `.amadeus/steering/objective.md`
+- `.amadeus/steering/actors.md`
+- `.amadeus/steering/external-systems.md`
 - `.amadeus/glossary.md`
 - `.amadeus/domain/subdomains.md`
 - `.amadeus/domain/bounded-contexts.md`
@@ -164,7 +166,7 @@ brownfield では、既存成果物を読み、欠けている成果物だけを
 - `Intent Layer へ進む基準`
 - `責務境界`
 
-### `objective.md`
+### `steering/objective.md`
 
 - `一覧`
 
@@ -176,7 +178,7 @@ brownfield では、既存成果物を読み、欠けている成果物だけを
 - `成功指標`
 - `状態`
 
-### `actors.md`
+### `steering/actors.md`
 
 - `一覧`
 
@@ -188,7 +190,7 @@ brownfield では、既存成果物を読み、欠けている成果物だけを
 - `関心`
 - `状態`
 
-### `external-systems.md`
+### `steering/external-systems.md`
 
 - `一覧`
 
@@ -212,13 +214,13 @@ brownfield では、既存成果物を読み、欠けている成果物だけを
 未確定語は確定用語に混ぜない。
 確定していない場合は、用語表に `未確認` として根拠を書く。
 
-### `knowledge.md`
+### `steering/knowledge.md`
 
 - `背景`
 - `前提`
 - `未確認事項`
 
-### `policies.md`
+### `steering/policies.md`
 
 - `方針`
 - `禁止事項`
