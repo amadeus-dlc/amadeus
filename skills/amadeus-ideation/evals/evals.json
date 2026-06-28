@@ -4,7 +4,7 @@
     {
       "id": 1,
       "prompt": "20260627-risk-aware-reset-support を Ideation に進めたい。既存 intent.md と state.json はあります。guided で進めて。",
-      "expected_output": "guided mode として既存 intent.md と state.json から分かることを使い、不足だけ最大5問で質問する。質問したターンでは成果物を作らず回答を待つ。"
+      "expected_output": "guided mode として既存 intent.md と state.json から分かることを使い、不足だけ目安5問で質問する。目安を超えても必要な判断が未確定であれば質問を続け、質問したターンでは成果物を作らず回答を待つ。"
     },
     {
       "id": 2,

@@ -4,7 +4,8 @@
 
 `amadeus-intent-init` は、次を満たした場合だけ `.agents/skills/amadeus-intent-init/` へコピー昇格できる。
 
-- `guided` は、最大4問の質問を出し、質問したターンでは成果物を作らず回答待ちにする。
+- `guided` は、目安3問で不足だけを質問し、必要な判断が未確定であれば目安を超えても質問を続ける。
+- 質問したターンでは成果物を作らず回答待ちにする。
 - `scaffold-only` は、Intent ディレクトリ名が決まっている場合だけ成果物を作る。
 - `scaffold-only` は、`.amadeus/intents.md`、`intent.md`、`state.json` だけを作る。
 - `scaffold-only` は、`scope.md`、`ideation.md`、`traceability.md`、`decisions.md`、`mocks/`、`requirements.md`、`use-cases.md`、`units.md`、`bolts.md`、`domain/**` を作らない。
@@ -26,7 +27,7 @@
 
 | ケース | 状態 | 確認内容 | 証拠 |
 |---|---|---|---|
-| `guided` | 完了 | 提案ディレクトリ名と理由を示し、質問3件で回答待ちにする。成果物は作らない。 | `/tmp/amadeus-intent-init-guided.skY5Wn/guided-eval-output.md` |
+| `guided` | 完了 | 提案ディレクトリ名と理由を示し、目安3問で回答待ちにする。成果物は作らない。 | `/tmp/amadeus-intent-init-guided.skY5Wn/guided-eval-output.md` |
 | `scaffold-only` | 完了 | Intent 入れ物だけを作り、Ideation 以降の成果物を作らない。全体成果物の Amadeus Validator が pass する。 | `/tmp/amadeus-intent-init-scaffold-only.ko6gBx` |
 | steering 不足 | 完了 | `.amadeus/` がない場合は `amadeus-steering` を案内して止める。Intent ディレクトリは作らない。 | `/tmp/amadeus-intent-init-missing-steering.ajmIow/missing-steering-eval-output.md` |
 | 重複 Intent ディレクトリ名 | 完了 | 既存成果物を変更せず止める。`intents.md` は未変更で、新しい重複ディレクトリも作らない。 | `/tmp/amadeus-intent-init-duplicate.TPOTQW/duplicate-eval-output.md` |
