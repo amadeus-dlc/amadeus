@@ -21,6 +21,34 @@ _Avoid_: runtime dependency
 必要な場合は「参照元」「基準」「定義元」「管理元」のように、文脈に合う語へ置き換える。
 _Avoid_: 正本
 
+**ADR**：Amadeus DLC の構造、境界、長期的な判断を記録する Architecture Decision Record である。
+採用済み ADR、現在の実装、merge 済みの差分履歴が新しいドメイン語彙を導入した場合は、`CONTEXT.md` に語彙定義として反映する。
+`CONTEXT.md` は語彙の定義元であり、ADR は判断の根拠と履歴を扱う。
+実装と差分履歴は、現行挙動と判断経緯を確認するための入力として扱う。
+
+**AI-DLC Core**：DLC を領域に依存せず扱うための抽象モデルである。
+AI-DLC Core は phase、state、decision、traceability、gate を扱う。
+AI-DLC Core は Unit、Bolt、Construction Design、Event Storming、Aggregate、Bounded Context のような software-development 固有概念を所有しない。
+
+**Lifecycle Binding**：DLC の phase ごとに skill、artifact、gate、validator を接続する概念である。
+Lifecycle Binding は成果物ファイル名ではなく、Profile が phase と実行能力と検証条件をどう束ねるかを表す。
+
+**Profile**：特定領域に向けた Lifecycle Binding の具体的な束である。
+Profile は、AI-DLC Core の抽象モデルに対して、領域別の成果物契約、phase ごとの skill 接続、gate 条件、validator を具体化する。
+software-development profile、ddd profile、writing profile、amadeus profile は Profile の例である。
+
+**Skill**：個別能力の単位である。
+Skill は `SKILL.md` を入口にし、必要に応じて `scripts/`、`references/`、`assets/` を持つ。
+Skill は DLC の phase 契約そのものではなく、Profile から呼び出される実行能力として扱う。
+
+**Agent Plugin**：skill、agent、hook、MCP server などを同梱できる配布とインストールの単位である。
+Agent Plugin は Profile を配布する候補になり得る。
+ただし、Agent Plugin は Profile の概念と同一視しない。
+
+**MCP**：外部能力や文脈を接続する層である。
+MCP は tools、resources、prompts などを公開する。
+MCP は DLC の phase、gate、artifact、validator の契約そのものではない。
+
 **Discovery**：Intent を作る前に、入力テーマの課題粒度、既存 Intent との関係、Intent 化方針を整理する判断単位である。
 Discovery は Steering と Intent の間に置く。
 Discovery は Requirement、Use Case、Unit、Bolt、Task を定義しない。

@@ -116,6 +116,8 @@ Core と Profile を分けることで、software-development 以外の領域に
 
 後続設計で Amadeus DLC を再整理する場合は、AI-DLC Core 上の software-development 系 Profile として扱う。
 
+このADRで採用した語彙は、`CONTEXT.md` に同期して使う。
+
 ## 却下した案
 
 Skill を phase 単位の束として扱う案は採用しない。
