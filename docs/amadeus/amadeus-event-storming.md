@@ -83,7 +83,7 @@ Intent 前の Event Storming は次に置く。
 Intent 配下の Event Storming は次に置く。
 
 ```text
-.amadeus/intents/<intent-id>/event-storming/<event-storming-id>/
+.amadeus/intents/<intent-id>-<slug>/event-storming/<event-storming-id>/
 ```
 
 Intent 前の Event Storming は、Discovery から参照できる補助成果物として扱う。
@@ -189,7 +189,7 @@ level ごとに別ディレクトリを作らない。
 Intent 配下の場合も同じ構造にする。
 
 ```text
-.amadeus/intents/<intent-id>/event-storming/ES001-order-flow/
+.amadeus/intents/<intent-id>-<slug>/event-storming/ES001-order-flow/
   summary.md
   events.md
   flow.md
@@ -217,7 +217,7 @@ Intent 配下の場合も同じ構造にする。
 分岐、前提、後続アクションを持つ。
 
 `board.md` は、Event Storming board の全体ビューである。
-Type、ID、Label、Related、Note だけを持つ。
+Order、Type、ID、Label、Related、Note を持つ。
 人間と AI が全体の流れを追うための索引として使う。
 
 `aggregate-candidates.md` は、Aggregate Candidate の根拠を扱う。
@@ -417,12 +417,14 @@ intent-scoped
 |---|---|---|---|
 | `pre-intent` | `big-picture` | `amadeus-discovery` | Intent 分割や入力テーマ整理に使うため |
 | `pre-intent` | `process-modeling` | `amadeus-discovery` または `amadeus-intent-init` | Intent 候補または最初の Intent を決めるため |
+| `intent-scoped` | `big-picture` | `amadeus-inception` | Intent 内の Requirement、Use Case、Unit、Bolt の根拠に使うため |
 | `intent-scoped` | `process-modeling` | `amadeus-inception` | Requirement、Use Case、Unit、Bolt の根拠に使うため |
 | `intent-scoped` | `system-design` | `amadeus-domain-modeling` | Candidate を Domain Model へ磨くため |
 
 ## Handoff To Domain Modeling
 
 `system-design ready` の場合だけ、Domain Modeling への Handoff を作る。
+Handoff は `summary.md` の `Handoff To Domain Modeling` 見出しに保存する。
 
 Handoff は変換判断ではない。
 Handoff は、Domain Modeling が判断するための入力リストである。

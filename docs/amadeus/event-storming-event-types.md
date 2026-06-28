@@ -21,7 +21,7 @@ UI event、technical event、integration event、log event は、Event Storming 
 | UI event | Event として扱わない | ボタンがクリックされた、フォームが送信された | `flow.md` の Command 発火契機、または `hotspots.md` |
 | Technical event | Event として扱わない | API が呼ばれた、DB に保存された、ジョブが起動した | `hotspots.md` |
 | Integration event | Event として扱わない | 外部決済から通知を受けた、外部在庫システムへ通知した | `flow.md` の External System 関係、または `hotspots.md` |
-| Log event | Event として扱わない | 監査ログが出力された、メトリクスが記録された | Operation または Observability の関心として別扱い |
+| Log event | Event として扱わない | 監査ログが出力された、メトリクスが記録された | 未確認事項として `hotspots.md` に残す |
 
 ## Domain Event の基準
 
@@ -45,14 +45,15 @@ Event Storming 中に出てきたが Domain Event ではないものは、捨て
 UI event は、どの Command を起動する契機かを `flow.md` に残せる。
 Technical event は、実装上の懸念や未確認事項として `hotspots.md` に残せる。
 Integration event は、External System との入出力関係として `flow.md` に残せる。
-Log event は、Operation または Observability の関心として別の phase へ送る。
+Log event は、未確認事項として `hotspots.md` に残す。
+未確定の Operation 系 phase へは送らない。
 
 `events.md` には、採用した Domain Event の根拠と、似ているが除外したイベントを残す。
 
 ```md
 | ID | Domain Event | Description | Source | Excluded Similar Events |
 |---|---|---|---|---|
-| EVT001 | 注文が確定した | 購入者の注文意思が確定した | ヒアリング | 注文ボタンがクリックされた、注文 API が呼ばれた |
+| DEV001 | 注文が確定した | 購入者の注文意思が確定した | ヒアリング | 注文ボタンがクリックされた、注文 API が呼ばれた |
 ```
 
 ## Event Storming 補助 skill への含意
