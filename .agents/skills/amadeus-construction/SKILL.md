@@ -34,14 +34,14 @@ Spec、`.kiro/specs/**`、`openspec/**`、Operation 成果物は作らない。
 - `.amadeus/intents.md`
 - `.amadeus/intents/<intent-id>-<slug>.md`
 - `.amadeus/intents/<intent-id>-<slug>/state.json`
-- `.amadeus/intents/<intent-id>-<slug>/requirements.md`
-- `.amadeus/intents/<intent-id>-<slug>/acceptance.md`
-- `.amadeus/intents/<intent-id>-<slug>/units.md`
-- `.amadeus/intents/<intent-id>-<slug>/bolts.md`
-- `.amadeus/intents/<intent-id>-<slug>/units/<unit-id>-<slug>/design.md`
-- `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>.md`
-- `.amadeus/intents/<intent-id>-<slug>/traceability.md`
-- `.amadeus/intents/<intent-id>-<slug>/decisions.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/requirements.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/acceptance.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/units.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/bolts.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/units/<unit-id>-<slug>/design.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/bolts/<bolt-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>-<slug>/construction/traceability.md`
+- `.amadeus/intents/<intent-id>-<slug>/construction/decisions.md`
 
 `state.json.phase` が `inception` または `construction` でない場合は、現在の phase と不足成果物を確認してから止める。
 `state.json.phase` が `inception` で、かつ `state.json.inception.gate` が `passed` でない場合は、Construction へ進めず `amadeus-inception` の `refine` を案内する。
@@ -150,7 +150,7 @@ Construction 成果物を新規作成または構造補修する内部 skill は
 既存の Inception 成果物、Bolt、Construction Design、Task、作業ツリー、テスト入口から分かることは質問しない。
 
 質問した場合は、その場で成果物作成、実装、テスト実行をせず、ユーザーの回答を待つ。
-回答に記録対象の判断が含まれる場合は、Construction 成果物への反映と同じ変更で `grillings.md` と `grillings/Gxxx-*.md` を対象 Intent 配下に更新する。
+回答に記録対象の判断が含まれる場合は、Construction 成果物への反映と同じ変更で `construction/grillings.md` と `construction/grillings/Gxxx-*.md` を対象 Intent 配下に更新する。
 この場合、親 skill は記録対象の質問、確認理由、推奨回答、推奨理由、ユーザー回答、確定判断、反映先を、委譲先の内部 skill へ明示的に渡す。
 Grilling Decision Trail の実ファイル更新は、該当する Construction 成果物を更新する内部 skill が同じ変更で行う。
 
@@ -167,7 +167,7 @@ Grilling Decision Trail の実ファイル更新は、該当する Construction 
 
 ユーザーが明示した場合だけ使う。
 既存の Construction 成果物を点検し、欠けている必須見出し、`state.json` の不整合、相対リンク欠落、証拠欄の欠落だけを補修する。
-既存の `grillings.md` または `grillings/Gxxx-*.md` が存在し、構造だけが壊れている場合は、Grilling Decision Trail の索引、session ファイル名、必須見出し、表列、相対リンク、状態、反映先、判断 ID、置き換え先、質問記録の参照だけを補修してよい。
+既存の `construction/grillings.md` または `construction/grillings/Gxxx-*.md` が存在し、構造だけが壊れている場合は、Grilling Decision Trail の索引、session ファイル名、必須見出し、表列、相対リンク、状態、反映先、判断 ID、置き換え先、質問記録の参照だけを補修してよい。
 
 `repair` では、新しい実装、テスト、PR 記録を根拠なく追加しない。
 
@@ -181,7 +181,7 @@ Grilling Decision Trail の実ファイル更新は、該当する Construction 
 
 質問した場合は、そのターンでは成果物更新、実装、テスト実行をしない。
 ユーザーの回答を受け取ってから、必要最小限の内部 skill だけを使う。
-回答に記録対象の判断が含まれる場合は、Construction 成果物への反映と同じ変更で `grillings.md` と `grillings/Gxxx-*.md` を対象 Intent 配下に更新する。
+回答に記録対象の判断が含まれる場合は、Construction 成果物への反映と同じ変更で `construction/grillings.md` と `construction/grillings/Gxxx-*.md` を対象 Intent 配下に更新する。
 この場合、親 skill は記録対象の質問、確認理由、推奨回答、推奨理由、ユーザー回答、確定判断、反映先を、委譲先の内部 skill へ明示的に渡す。
 Grilling Decision Trail の実ファイル更新は、該当する Construction 成果物を更新する内部 skill が同じ変更で行う。
 
@@ -189,18 +189,18 @@ Grilling Decision Trail の実ファイル更新は、該当する Construction 
 
 Construction 全体で作成または更新できる Amadeus 成果物は次だけである。
 
-- `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/design.md`
-- `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/notes.md`
-- `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/test-results.md`
-- `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/pr.md`
-- `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>/tasks.md`
-- `.amadeus/intents/<intent-id>-<slug>/acceptance.md`
-- `.amadeus/intents/<intent-id>-<slug>/traceability.md`
-- `.amadeus/intents/<intent-id>-<slug>/decisions.md`
-- `.amadeus/intents/<intent-id>-<slug>/decisions/<decision-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>-<slug>/construction/bolts/<bolt-id>-<slug>/design.md`
+- `.amadeus/intents/<intent-id>-<slug>/construction/bolts/<bolt-id>-<slug>/notes.md`
+- `.amadeus/intents/<intent-id>-<slug>/construction/bolts/<bolt-id>-<slug>/test-results.md`
+- `.amadeus/intents/<intent-id>-<slug>/construction/bolts/<bolt-id>-<slug>/pr.md`
+- `.amadeus/intents/<intent-id>-<slug>/construction/bolts/<bolt-id>-<slug>/tasks.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/acceptance.md`
+- `.amadeus/intents/<intent-id>-<slug>/construction/traceability.md`
+- `.amadeus/intents/<intent-id>-<slug>/construction/decisions.md`
+- `.amadeus/intents/<intent-id>-<slug>/construction/decisions/<decision-id>-<slug>.md`
 - `.amadeus/intents/<intent-id>-<slug>/state.json`
-- 記録対象の質問と回答が発生した場合だけ、`.amadeus/intents/<intent-id>-<slug>/grillings.md`
-- 記録対象の質問と回答が発生した場合だけ、`.amadeus/intents/<intent-id>-<slug>/grillings/Gxxx-*.md`
+- 記録対象の質問と回答が発生した場合だけ、`.amadeus/intents/<intent-id>-<slug>/construction/grillings.md`
+- 記録対象の質問と回答が発生した場合だけ、`.amadeus/intents/<intent-id>-<slug>/construction/grillings/Gxxx-*.md`
 
 実装コードやテストコードは、対象 Bolt の Task と作業ツリーから必要最小限だけ変更する。
 Task に対応しない speculative な実装はしない。

@@ -9,19 +9,19 @@
   "inception": {
     "status": "in_progress",
     "requiredArtifacts": [
-      "requirements.md",
-      "acceptance.md",
-      "user-stories.md",
-      "use-cases.md",
-      "units.md",
-      "units/U001-unit.md",
-      "units/U001-unit/design.md",
-      "bolts.md",
-      "traceability.md",
-      "decisions.md"
+      "inception/requirements.md",
+      "inception/acceptance.md",
+      "inception/user-stories.md",
+      "inception/use-cases.md",
+      "inception/units.md",
+      "inception/units/U001-unit.md",
+      "inception/units/U001-unit/design.md",
+      "inception/bolts.md",
+      "inception/traceability.md",
+      "inception/decisions.md"
     ],
     "requiredBoltArtifacts": [
-      "bolts/B001-bolt.md"
+      "inception/bolts/B001-bolt.md"
     ],
     "gate": "not_ready"
   }

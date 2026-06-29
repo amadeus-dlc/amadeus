@@ -14,13 +14,13 @@
     "status": "completed",
     "requiredArtifacts": [
       "../20260629-minimum-purchase-flow.md",
-      "scope.md",
-      "ideation.md",
-      "decisions.md",
-      "traceability.md"
+      "ideation/scope.md",
+      "ideation/ideation.md",
+      "ideation/decisions.md",
+      "ideation/traceability.md"
     ],
     "requiredMocks": [
-      "mocks/initial-confirmation.puml"
+      "ideation/mocks/initial-confirmation.puml"
     ],
     "gate": "passed"
   }

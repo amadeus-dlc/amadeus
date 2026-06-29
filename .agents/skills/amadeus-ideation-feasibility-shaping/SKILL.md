@@ -24,7 +24,7 @@ Ideation phase の実現可能性と体制整理だけを進める。
 - `.amadeus/intents.md`
 - `.amadeus/intents/<intent-id>-<slug>.md`
 - `.amadeus/intents/<intent-id>-<slug>/state.json`
-- `.amadeus/intents/<intent-id>-<slug>/scope.md`
+- `.amadeus/intents/<intent-id>-<slug>/ideation/scope.md`
 - steering layer
 
 `scope.md` がない場合は停止し、先に `amadeus-ideation-scope-framing` を使う。
@@ -42,9 +42,9 @@ Ideation phase の実現可能性と体制整理だけを進める。
 
 作成または更新するものは次だけである。
 
-- `.amadeus/intents/<intent-id>-<slug>/ideation.md`
-- 記録対象の質問と回答が親 skill から渡された場合だけ、`.amadeus/intents/<intent-id>-<slug>/grillings.md`
-- 記録対象の質問と回答が親 skill から渡された場合だけ、`.amadeus/intents/<intent-id>-<slug>/grillings/Gxxx-*.md`
+- `.amadeus/intents/<intent-id>-<slug>/ideation/ideation.md`
+- 記録対象の質問と回答が親 skill から渡された場合だけ、`.amadeus/intents/<intent-id>-<slug>/ideation/grillings.md`
+- 記録対象の質問と回答が親 skill から渡された場合だけ、`.amadeus/intents/<intent-id>-<slug>/ideation/grillings/Gxxx-*.md`
 
 `ideation.md` の必須見出しは次である。
 

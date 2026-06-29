@@ -24,8 +24,8 @@ Ideation phase の初期モック具体化だけを進める。
 - `.amadeus/intents.md`
 - `.amadeus/intents/<intent-id>-<slug>.md`
 - `.amadeus/intents/<intent-id>-<slug>/state.json`
-- `.amadeus/intents/<intent-id>-<slug>/scope.md`
-- `.amadeus/intents/<intent-id>-<slug>/ideation.md`
+- `.amadeus/intents/<intent-id>-<slug>/ideation/scope.md`
+- `.amadeus/intents/<intent-id>-<slug>/ideation/ideation.md`
 
 `scope.md` がない場合は停止し、先に `amadeus-ideation-scope-framing` を使う。
 `ideation.md` がない場合は停止し、先に `amadeus-ideation-feasibility-shaping` を使う。
@@ -43,9 +43,9 @@ Ideation phase の初期モック具体化だけを進める。
 
 作成または更新するものは次だけである。
 
-- `.amadeus/intents/<intent-id>-<slug>/mocks/*.puml`
-- 記録対象の質問と回答が親 skill から渡された場合だけ、`.amadeus/intents/<intent-id>-<slug>/grillings.md`
-- 記録対象の質問と回答が親 skill から渡された場合だけ、`.amadeus/intents/<intent-id>-<slug>/grillings/Gxxx-*.md`
+- `.amadeus/intents/<intent-id>-<slug>/ideation/mocks/*.puml`
+- 記録対象の質問と回答が親 skill から渡された場合だけ、`.amadeus/intents/<intent-id>-<slug>/ideation/grillings.md`
+- 記録対象の質問と回答が親 skill から渡された場合だけ、`.amadeus/intents/<intent-id>-<slug>/ideation/grillings/Gxxx-*.md`
 
 初期モックは PlantUML Salt で作る。
 高忠実度 UI ではなく、後続の要求とユースケースの具体例として確認できる粒度にする。
