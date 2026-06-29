@@ -229,8 +229,6 @@ Inception は Intent 固有の `domain/**` を作らない。
 
 ## Stage 2.5: Traceability Finalization
 
-## Stage 2.4: Traceability Finalization
-
 ### Metadata
 
 | Property | Value |

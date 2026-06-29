@@ -282,6 +282,32 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function assertInceptionStageReference(): void {
+  const path = join(root, "docs/amadeus/stages/inception.md");
+  const text = readFileSync(path, "utf8");
+  const stageHeadings = Array.from(text.matchAll(/^## Stage (2\.\d): (.+)$/gm)).map((match) => `${match[1]}: ${match[2]}`);
+  const expected = [
+    "2.1: Requirements Definition",
+    "2.2: User Stories",
+    "2.3: Use Cases",
+    "2.4: Units Generation",
+    "2.5: Traceability Finalization",
+  ];
+  if (stageHeadings.join("\n") !== expected.join("\n")) {
+    fail(`docs/amadeus/stages/inception.md has unexpected stage headings:\n${stageHeadings.join("\n")}`);
+  }
+  for (const legacy of [
+    "Interaction Modeling",
+    "Execution Design",
+    "amadeus-inception-interaction-modeling",
+    "amadeus-inception-execution-design",
+  ]) {
+    assertTextExcludes(path, legacy);
+  }
+}
+
+assertInceptionStageReference();
+
 for (const [skill, contract] of Object.entries(targetSkills)) {
   const skillMd = join(root, "skills", skill, "SKILL.md");
   assertFile(skillMd);
