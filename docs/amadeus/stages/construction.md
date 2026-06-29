@@ -1,5 +1,9 @@
 # Construction Phase Stage Reference
 
+## AI-DLC v2 Reference
+
+- [AI-DLC v2 Construction Stage](https://github.com/awslabs/aidlc-workflows/blob/v2/docs/reference/04-stages/construction.md)
+
 ## Phase Overview
 
 Construction phase は、Inception で定義した Bolt を Construction Design で具体化し、Task に分解してから実装、検証、証拠化する phase である。

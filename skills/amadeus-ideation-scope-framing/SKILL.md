@@ -1,7 +1,7 @@
 ---
 name: amadeus-ideation-scope-framing
 description: >-
-  Amadeus Ideation の内部 skill。Initialized Intent に対して、スコープ整理だけを実行し、
+  Amadeus Ideation の内部 skill。Intent Record 作成済みの Ideation Intent に対して、スコープ整理だけを実行し、
   scope.md を作成または補修する必要がある場面では必ず使う。ideation、mocks、traceability、decisions、
   Inception 成果物、Spec、実装は作らない。
 ---
@@ -17,7 +17,7 @@ Ideation phase のスコープ整理だけを進める。
 
 ## 前提
 
-対象 Intent が初期化済みであることを前提にする。
+対象 Intent の Intent Record が作成済みであることを前提にする。
 
 少なくとも次を読む。
 
@@ -27,7 +27,7 @@ Ideation phase のスコープ整理だけを進める。
 - steering layer
 
 `Intent のモジュールファイル` または `state.json` がない場合は停止する。
-その場合は `amadeus-intent-init` で Intent の入れ物を補修するよう案内する。
+その場合は `amadeus-ideation-intent-capture` で Intent Record を補修するよう案内する。
 
 ## テンプレート
 
@@ -65,7 +65,7 @@ Ideation phase のスコープ整理だけを進める。
 
 ## 禁止事項
 
-- Intent の入れ物を新規作成しない。
+- Intent Record を新規作成しない。
 - `ideation.md`、`mocks/**`、`traceability.md`、`decisions/**`、`state.json` を更新しない。
 - `requirements.md`、`acceptance.md`、`user-stories.md`、`use-cases.md`、`units.md`、`bolts.md` を作らない。
 - `domain/**`、Spec、実装、CI を作らない。

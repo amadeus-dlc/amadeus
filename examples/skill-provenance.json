@@ -6,53 +6,37 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "5bd6ecbf5a125452b99986836a3e2b48"
+          "md5": "06a13276fcd215d8167fe01b5704e73e"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
-          "md5": "127f6fb77029ff036321ae77980e2fe8"
+          "md5": "6c6e44e2d7f39171147a8f290c2a16cb"
         }
       ]
     },
     {
-      "snapshot": "examples/02-intent-initialized",
+      "snapshot": "examples/02-ideation-completed",
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "5bd6ecbf5a125452b99986836a3e2b48"
+          "md5": "06a13276fcd215d8167fe01b5704e73e"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
-          "md5": "127f6fb77029ff036321ae77980e2fe8"
-        },
-        {
-          "path": "skills/amadeus-intent-init/SKILL.md",
-          "md5": "63bb20e76f2d95a9acaa6eb418e2ef83"
-        }
-      ]
-    },
-    {
-      "snapshot": "examples/03-ideation-completed",
-      "skillFiles": [
-        {
-          "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "5bd6ecbf5a125452b99986836a3e2b48"
-        },
-        {
-          "path": "skills/amadeus-discovery/SKILL.md",
-          "md5": "127f6fb77029ff036321ae77980e2fe8"
-        },
-        {
-          "path": "skills/amadeus-intent-init/SKILL.md",
-          "md5": "63bb20e76f2d95a9acaa6eb418e2ef83"
+          "md5": "6c6e44e2d7f39171147a8f290c2a16cb"
         },
         {
           "path": "skills/amadeus-ideation/SKILL.md",
-          "md5": "135ea84c858fcb5b14fdd247cba8cbd6"
+          "md5": "650b24e8c9646bbc180b81e2a19f55dc",
+          "staleReason": "Bugbot 対応で auto 判定表だけを補足した。example 成果物は変わらないため、後続 PR で real provider により再生成して更新する。"
+        },
+        {
+          "path": "skills/amadeus-ideation-intent-capture/SKILL.md",
+          "md5": "543068c4f350961499b0948b80cb3bff"
         },
         {
           "path": "skills/amadeus-ideation-scope-framing/SKILL.md",
-          "md5": "4cc42843db6eb1d298fcf6291a27fccd"
+          "md5": "3c326d21a8c40f0eaeb82e0a0094d3e2"
         },
         {
           "path": "skills/amadeus-ideation-feasibility-shaping/SKILL.md",
@@ -69,27 +53,28 @@
       ]
     },
     {
-      "snapshot": "examples/04-inception-completed",
+      "snapshot": "examples/03-inception-completed",
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "5bd6ecbf5a125452b99986836a3e2b48"
+          "md5": "06a13276fcd215d8167fe01b5704e73e"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
-          "md5": "127f6fb77029ff036321ae77980e2fe8"
-        },
-        {
-          "path": "skills/amadeus-intent-init/SKILL.md",
-          "md5": "63bb20e76f2d95a9acaa6eb418e2ef83"
+          "md5": "6c6e44e2d7f39171147a8f290c2a16cb"
         },
         {
           "path": "skills/amadeus-ideation/SKILL.md",
-          "md5": "135ea84c858fcb5b14fdd247cba8cbd6"
+          "md5": "650b24e8c9646bbc180b81e2a19f55dc",
+          "staleReason": "Bugbot 対応で auto 判定表だけを補足した。example 成果物は変わらないため、後続 PR で real provider により再生成して更新する。"
+        },
+        {
+          "path": "skills/amadeus-ideation-intent-capture/SKILL.md",
+          "md5": "543068c4f350961499b0948b80cb3bff"
         },
         {
           "path": "skills/amadeus-ideation-scope-framing/SKILL.md",
-          "md5": "4cc42843db6eb1d298fcf6291a27fccd"
+          "md5": "3c326d21a8c40f0eaeb82e0a0094d3e2"
         },
         {
           "path": "skills/amadeus-ideation-feasibility-shaping/SKILL.md",
@@ -105,7 +90,7 @@
         },
         {
           "path": "skills/amadeus-inception/SKILL.md",
-          "md5": "d1d1690b3773ffe445802967c62d06d9"
+          "md5": "ab1be9864ab57a992ff299c2f4189b96"
         },
         {
           "path": "skills/amadeus-inception-requirements-definition/SKILL.md",
@@ -126,27 +111,28 @@
       ]
     },
     {
-      "snapshot": "examples/05-construction-design-ready",
+      "snapshot": "examples/04-construction-design-ready",
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "5bd6ecbf5a125452b99986836a3e2b48"
+          "md5": "06a13276fcd215d8167fe01b5704e73e"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
-          "md5": "127f6fb77029ff036321ae77980e2fe8"
-        },
-        {
-          "path": "skills/amadeus-intent-init/SKILL.md",
-          "md5": "63bb20e76f2d95a9acaa6eb418e2ef83"
+          "md5": "6c6e44e2d7f39171147a8f290c2a16cb"
         },
         {
           "path": "skills/amadeus-ideation/SKILL.md",
-          "md5": "135ea84c858fcb5b14fdd247cba8cbd6"
+          "md5": "650b24e8c9646bbc180b81e2a19f55dc",
+          "staleReason": "Bugbot 対応で auto 判定表だけを補足した。example 成果物は変わらないため、後続 PR で real provider により再生成して更新する。"
+        },
+        {
+          "path": "skills/amadeus-ideation-intent-capture/SKILL.md",
+          "md5": "543068c4f350961499b0948b80cb3bff"
         },
         {
           "path": "skills/amadeus-ideation-scope-framing/SKILL.md",
-          "md5": "4cc42843db6eb1d298fcf6291a27fccd"
+          "md5": "3c326d21a8c40f0eaeb82e0a0094d3e2"
         },
         {
           "path": "skills/amadeus-ideation-feasibility-shaping/SKILL.md",
@@ -162,7 +148,7 @@
         },
         {
           "path": "skills/amadeus-inception/SKILL.md",
-          "md5": "d1d1690b3773ffe445802967c62d06d9"
+          "md5": "ab1be9864ab57a992ff299c2f4189b96"
         },
         {
           "path": "skills/amadeus-inception-requirements-definition/SKILL.md",

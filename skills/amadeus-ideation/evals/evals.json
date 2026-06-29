@@ -19,7 +19,7 @@
     {
       "id": 4,
       "prompt": "まだ Intent のモジュールファイルも state.json もないけど、amadeus-ideation で Ideation を作って。",
-      "expected_output": "Intent の入れ物が不足しているため作業を止め、amadeus-intent-init を先に使うよう案内する。Ideation 成果物は作らない。"
+      "expected_output": "Intent Recordが不足しているため作業を止め、amadeus-ideation を先に使うよう案内する。Ideation 成果物は作らない。"
     },
     {
       "id": 5,

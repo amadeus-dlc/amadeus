@@ -51,4 +51,4 @@ multi_intent
 
 ## 推奨次アクション
 
-- `recommended` の Intent 候補である「販売管理の最小購入フロー」を `amadeus-intent-init` に渡す。
+- `recommended` の Intent 候補である「販売管理の最小購入フロー」を `amadeus-ideation` に渡す。

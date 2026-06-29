@@ -8,7 +8,7 @@
 
 - `amadeus-steering`
 - `amadeus-discovery`
-- `amadeus-intent-init`
+- `amadeus-ideation-intent-capture`
 - `amadeus-ideation`
 - `amadeus-inception`
 - `amadeus-construction`

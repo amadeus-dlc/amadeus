@@ -6,7 +6,7 @@
 
 **Amadeus DLC**：Amadeus Development Life Cycle の略である。
 Amadeus DLC は、AI と人間が協調してソフトウェア開発を進めるための lifecycle 契約である。
-Amadeus DLC は Discovery、Ideation、Inception、Construction などの phase、成果物、gate、validator、traceability を扱う。
+Amadeus DLC は Ideation、Inception、Construction などの phase、補助分析、成果物、gate、validator、traceability を扱う。
 Amadeus DLC は AI-DLC v2 の adaptive workflow、承認 gate、状態管理、監査可能性に影響を受けている。
 ただし、Amadeus DLC は AI-DLC v2 の写しではなく、このリポジトリで定義する Profile と成果物契約である。
 
@@ -28,7 +28,7 @@ Amadeus DLC は、Intent 作成前の入力テーマ整理についても、cc-s
 
 **kiro-discovery**：cc-sdd で、仕様化前の入力テーマを整理する discovery の流れである。
 Amadeus DLC は kiro-discovery を参考にし、amadeus-discovery で課題粒度、既存 Intent との関係、Intent 化方針を整理する。
-ただし、amadeus-discovery は kiro-discovery の写しではなく、Amadeus DLC の Discovery layer と成果物契約として扱う。
+ただし、amadeus-discovery は kiro-discovery の写しではなく、Amadeus DLC の Ideation に入る前の任意補助分析と成果物契約として扱う。
 
 ## Naming Rules
 
@@ -86,10 +86,11 @@ Agent Plugin は Profile を配布する候補になり得る。
 MCP は tools、resources、prompts などを公開する。
 MCP は DLC の phase、gate、artifact、validator の契約そのものではない。
 
-**Discovery**：Intent を作る前に、入力テーマの課題粒度、既存 Intent との関係、Intent 化方針を整理する判断単位である。
+**Discovery**：Ideation で Intent Record を作る前に、入力テーマの課題粒度、既存 Intent との関係、Intent 化方針を整理する任意の補助分析である。
 Discovery の詳細は `.amadeus/discoveries/<discovery-id>.md` に置く。
 Discovery の状態は `.amadeus/discoveries/<discovery-id>/state.json` に置く。
-Discovery は Steering と Intent の間に置く。
+Discovery は top-level phase ではない。
+Discovery は Ideation の前処理として参照できる。
 Discovery は Requirement、Use Case、Unit、Bolt、Task を定義しない。
 
 **Discoveries**：Amadeus DLC 全体で扱う Discovery 群である。
@@ -132,24 +133,31 @@ Intent の状態と phase ごとの成果物は `.amadeus/intents/<intent-id>-<s
 Intent は、単一の境界づけられたコンテキストに閉じるとは限らない。
 複数の境界づけられたコンテキストをまたぐ Intent は、Unit に分解して開発と検証へ進める。
 
-**Intent Phase Directory Layout（Intent phase ディレクトリ配置）**：Intent のモジュールディレクトリ配下で、phase ごとの成果物を `initialization/`、`ideation/`、`inception/`、`construction/` に分ける成果物配置である。
+**Intent Record**：Intent が Amadeus DLC 上で存在していることを示す最小構造である。
+Intent Record は、Intent のモジュールファイル、モジュールディレクトリ、`.amadeus/intents.md` の行、`state.json` で構成する。
+Intent Record は Ideation の Intent Capture & Framing で作る。
+Intent Record 作成直後の `state.json.phase` は `ideation` である。
+`initialized` は `state.json.phase` として使わない。
+
+**Intent Capture & Framing**：Ideation の最初に、入力テーマ、Discovery、または既存情報から Intent Record を作り、目的、成功条件、範囲、依存関係を初期整理する責務である。
+Intent Capture & Framing は Requirement、Story、Use Case、Unit、Bolt、Task を定義しない。
+Intent Capture & Framing は `amadeus-ideation` から内部的に実行される。
+`amadeus-ideation` は Intent Capture & Framing だけで停止せず、同じ実行で Ideation の完了に必要な後続責務へ進む。
+
+**Intent Phase Directory Layout（Intent phase ディレクトリ配置）**：Intent のモジュールディレクトリ配下で、phase ごとの成果物を `ideation/`、`inception/`、`construction/` に分ける成果物配置である。
 Intent Phase Directory Layout では、Intent のモジュールファイルは `.amadeus/intents/<intent-id>-<slug>.md` に置き、`state.json` は `.amadeus/intents/<intent-id>-<slug>/state.json` に置く。
 `operation/` は将来 phase 名として予約するが、Operation 成果物は対応 skill が確定するまで固定しない。
 旧 Intent 直下配置との後方互換は、`docs/backward-compatibility.md` に記録された対象がない限り維持しない。
-
-**Initialization（初期化 phase）**：Intent 登録層の補助成果物を扱う phase ディレクトリである。
-Initialization の成果物は `.amadeus/intents/<intent-id>-<slug>/initialization/` に置く。
-Intent のモジュールファイルと `state.json` は Initialization 配下へ移さない。
-`initialized/` は phase ディレクトリとして使わない。
 
 **Intents**：Amadeus DLC 全体で扱う Intent 群である。
 Intents の一覧は `.amadeus/intents.md` に置く。
 Intent が別の Intent の成果を前提にする場合は、依存関係を記録する。
 
 **登録層**：Intent が Amadeus DLC 上で存在していることを管理する範囲である。
+登録層は Intent Record と同じ構造を指す。
+登録層は Ideation の Intent Capture & Framing が扱う。
 登録層は、Intent のモジュールファイル、モジュールディレクトリ、`.amadeus/intents.md`、`state.json`、目的、成功条件、範囲、依存関係を扱う。
 登録層は、Ideation 成果物、Requirement、Story、Use Case、Unit、Bolt、Acceptance / Traceability、Construction 成果物、実装方針を扱わない。
-登録層の補助成果物は Initialization に置く。
 
 **Requirement**：Intent を検証可能な要求へ落とした中間契約である。
 Requirement の詳細は `inception/requirements/<requirement-id>-<slug>.md` に置く。

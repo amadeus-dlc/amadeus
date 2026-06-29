@@ -186,7 +186,7 @@ intent-scoped の場合、`state.json.scope` は `intent-scoped`、`state.json.r
 Requirement、Use Case、Unit、Bolt、Task は作らない。
 Aggregate、Bounded Context、Contract、不変条件は確定しない。
 実装、テスト、CI、PR は作らない。
-`amadeus-discovery`、`amadeus-intent-init`、`amadeus-inception`、`amadeus-domain-modeling` は自動実行しない。
+`amadeus-discovery`、`amadeus-ideation`、`amadeus-inception`、`amadeus-domain-modeling` は自動実行しない。
 
 ## `state.json`
 
@@ -307,7 +307,7 @@ Event Storming セッション ID は `ESnnn-<slug>` にする。
 | scope | level | nextRecommendedSkill |
 |---|---|---|
 | `pre-intent` | `big-picture` | `amadeus-discovery` |
-| `pre-intent` | `process-modeling` | `amadeus-discovery` または `amadeus-intent-init` |
+| `pre-intent` | `process-modeling` | `amadeus-discovery` または `amadeus-ideation` |
 | `pre-intent` | `system-design` | `amadeus-domain-modeling` |
 | `intent-scoped` | `big-picture` | `amadeus-inception` |
 | `intent-scoped` | `process-modeling` | `amadeus-inception` |
@@ -341,4 +341,4 @@ bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . <intent
 - Aggregate、Bounded Context、Contract、不変条件を確定しない。
 - 実装、テスト、CI、PR を作らない。
 - `.kiro/specs`、`openspec`、Spec 成果物を作らない。
-- `amadeus-discovery`、`amadeus-intent-init`、`amadeus-inception`、`amadeus-domain-modeling` を自動実行しない。
+- `amadeus-discovery`、`amadeus-ideation`、`amadeus-inception`、`amadeus-domain-modeling` を自動実行しない。
