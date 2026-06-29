@@ -75,6 +75,7 @@ const snapshots: ExampleSnapshot[] = [
     intent: "20260629-minimum-purchase-flow",
     expectedState: {
       phase: "inception",
+      status: "completed",
       "inception.status": "completed",
       "inception.gate": "passed",
     },

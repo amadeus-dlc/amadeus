@@ -475,7 +475,12 @@ function normalizeSnapshotNarrative(stepId: string): void {
   ]);
   const discoveryPath = join(workspace, `.amadeus/discoveries/${discoveryId}.md`);
   ensureFile(discoveryPath);
-  const discoveryText = readFileSync(discoveryPath, "utf8");
+  let discoveryText = readFileSync(discoveryPath, "utf8");
+  if (stepId !== "01-discovery") {
+    discoveryText = discoveryText
+      .replace(`| 販売管理の最小購入フロー | recommended | ${intentId} |`, `| 販売管理の最小購入フロー | initialized | [${intentId}](../intents/${intentId}.md) |`)
+      .replace("`20260629-minimum-purchase-flow` は、recommended 候補「販売管理の最小購入フロー」から初期化済みである。", "`20260629-minimum-purchase-flow` は、initialized 候補「販売管理の最小購入フロー」から初期化済みである。");
+  }
   const nextActionIndex = discoveryText.indexOf("## 推奨次アクション");
   if (nextActionIndex >= 0) {
     const beforeNextAction = discoveryText.slice(0, nextActionIndex).trimEnd();
@@ -530,9 +535,27 @@ function readProvenanceManifest(): Record<string, unknown> & { entries?: Array<{
   return JSON.parse(readFileSync(provenanceManifestPath, "utf8"));
 }
 
-function updatedProvenanceText(targetSteps: GenerationStep[]): string {
+function regeneratedSkillFilesForSnapshot(step: GenerationStep, fromIndex: number): Set<string> {
+  const stepIndex = steps.findIndex((candidate) => candidate.id === step.id);
+  const skillFiles = new Set<string>();
+  for (let index = fromIndex; index <= stepIndex; index += 1) {
+    const current = steps[index];
+    const previous = steps[index - 1];
+    for (const skillFile of current.provenanceSkillFiles) {
+      if (!previous || !previous.provenanceSkillFiles.includes(skillFile)) {
+        skillFiles.add(skillFile);
+      }
+    }
+  }
+  return skillFiles;
+}
+
+function updatedProvenanceText(plan: GenerationPlan): string {
   const manifest = readProvenanceManifest();
-  const regeneratedSkillFilesBySnapshot = new Map(targetSteps.map((step) => [step.snapshot, new Set(step.provenanceSkillFiles)]));
+  const regeneratedSkillFilesBySnapshot = new Map(plan.targetSteps.map((step) => [
+    step.snapshot,
+    regeneratedSkillFilesForSnapshot(step, plan.fromIndex),
+  ]));
   for (const entry of manifest.entries ?? []) {
     const regeneratedSkillFiles = regeneratedSkillFilesBySnapshot.get(entry.snapshot);
     if (!regeneratedSkillFiles) continue;
@@ -827,6 +850,7 @@ const steps: GenerationStep[] = [
     validationIntent: intentId,
     expectedState: {
       phase: "inception",
+      status: "completed",
       "inception.status": "completed",
       "inception.gate": "passed",
     },
@@ -899,7 +923,7 @@ if (!options.dryRun) {
     await runCodexStep(options, step);
     console.log(`snapshot staged: ${step.snapshot}`);
   }
-  const provenanceText = updatedProvenanceText(plan.targetSteps);
+  const provenanceText = updatedProvenanceText(plan);
   applyStagedSnapshotsAndProvenance(provenanceText, plan.targetSteps);
   console.log("example generation: ok");
 }
