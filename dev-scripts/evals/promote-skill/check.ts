@@ -55,8 +55,9 @@ function requiredInternalSkillGroups(): Record<string, string[]> {
     ],
     "amadeus-inception": [
       "amadeus-inception-requirements-definition",
-      "amadeus-inception-interaction-modeling",
-      "amadeus-inception-execution-design",
+      "amadeus-inception-user-stories",
+      "amadeus-inception-use-cases",
+      "amadeus-inception-units-generation",
       "amadeus-inception-traceability-finalization",
     ],
   };

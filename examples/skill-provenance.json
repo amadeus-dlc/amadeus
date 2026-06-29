@@ -90,23 +90,28 @@
         },
         {
           "path": "skills/amadeus-inception/SKILL.md",
-          "md5": "ab1be9864ab57a992ff299c2f4189b96"
+          "md5": "68a837c3ff0cdb3d5da51be17692bc96",
+          "staleReason": "Inception の stage 再編と inception/domain 廃止に合わせて example を手動補修した。後続 PR で real provider により再生成して更新する。"
         },
         {
           "path": "skills/amadeus-inception-requirements-definition/SKILL.md",
-          "md5": "66a3e01d10400e3c6432202ac631436d"
+          "md5": "2a997101a1c34bcae56d45f06c1ccd14"
         },
         {
-          "path": "skills/amadeus-inception-interaction-modeling/SKILL.md",
-          "md5": "018db7c87df718667b5daf262356c5c1"
+          "path": "skills/amadeus-inception-user-stories/SKILL.md",
+          "md5": "9e1ec5144f6014396ae3b7ca95885148"
         },
         {
-          "path": "skills/amadeus-inception-execution-design/SKILL.md",
-          "md5": "0035effd252574f3fc8017c7c15a98d1"
+          "path": "skills/amadeus-inception-use-cases/SKILL.md",
+          "md5": "e5c148b1999fb016fc5aabe7cb351237"
+        },
+        {
+          "path": "skills/amadeus-inception-units-generation/SKILL.md",
+          "md5": "81e5bb6740aae8ece94905cdf2ce475a"
         },
         {
           "path": "skills/amadeus-inception-traceability-finalization/SKILL.md",
-          "md5": "18094f0f451b61165d859a9d17a25795"
+          "md5": "c9f78e2360afb27cb7dbb3d850fa636e"
         }
       ]
     },
@@ -148,27 +153,36 @@
         },
         {
           "path": "skills/amadeus-inception/SKILL.md",
-          "md5": "ab1be9864ab57a992ff299c2f4189b96"
+          "md5": "68a837c3ff0cdb3d5da51be17692bc96",
+          "staleReason": "Inception の stage 再編と inception/domain 廃止に合わせて example を手動補修した。後続 PR で real provider により再生成して更新する。"
         },
         {
           "path": "skills/amadeus-inception-requirements-definition/SKILL.md",
-          "md5": "66a3e01d10400e3c6432202ac631436d"
+          "md5": "2a997101a1c34bcae56d45f06c1ccd14"
         },
         {
-          "path": "skills/amadeus-inception-interaction-modeling/SKILL.md",
-          "md5": "018db7c87df718667b5daf262356c5c1"
+          "path": "skills/amadeus-inception-user-stories/SKILL.md",
+          "md5": "9e1ec5144f6014396ae3b7ca95885148"
         },
         {
-          "path": "skills/amadeus-inception-execution-design/SKILL.md",
-          "md5": "0035effd252574f3fc8017c7c15a98d1"
+          "path": "skills/amadeus-inception-use-cases/SKILL.md",
+          "md5": "e5c148b1999fb016fc5aabe7cb351237"
+        },
+        {
+          "path": "skills/amadeus-inception-units-generation/SKILL.md",
+          "md5": "81e5bb6740aae8ece94905cdf2ce475a"
         },
         {
           "path": "skills/amadeus-inception-traceability-finalization/SKILL.md",
-          "md5": "18094f0f451b61165d859a9d17a25795"
+          "md5": "c9f78e2360afb27cb7dbb3d850fa636e"
+        },
+        {
+          "path": "skills/amadeus-construction-functional-design/SKILL.md",
+          "md5": "701e3b83350fc2b38b3680a9f8ed83f7"
         },
         {
           "path": "skills/amadeus-construction-bolt-preparation/SKILL.md",
-          "md5": "7b70541a5c3e11b3e0fdfc992d5eb009"
+          "md5": "3db7689b7f0f7c6c9b0882bfb0653fab"
         }
       ]
     }

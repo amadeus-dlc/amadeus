@@ -11,13 +11,13 @@
       "id": 2,
       "name": "do-not-update-before-answer",
       "prompt": "再設定トークンをエンティティか値オブジェクトか質問しながら、domain model も直して。",
-      "expected_output": "質問が必要な場合は、回答を待つ前に inception/domain/** や glossary.md を更新しない。"
+      "expected_output": "質問が必要な場合は、回答を待つ前に .amadeus/domain/**、Construction Functional Design、glossary.md を更新しない。"
     },
     {
       "id": 3,
       "name": "update-after-answer",
       "prompt": "さっきの質問への回答: 再設定トークンは値オブジェクトでよい。根拠は R002 と UC002。Amadeus に反映して。",
-      "expected_output": "amadeus-domain-modeling の規則に従い、Intent 側 inception/domain/** と必要な inception/traceability.md を更新する。全体モデルへの昇格は明示がある場合に限る。"
+      "expected_output": "amadeus-domain-modeling の規則に従い、Construction Functional Design 候補、domain-notes.md、必要な inception/traceability.md を更新する。全体モデルへ反映する判断がある場合だけ .amadeus/domain/** を更新する。"
     },
     {
       "id": 4,

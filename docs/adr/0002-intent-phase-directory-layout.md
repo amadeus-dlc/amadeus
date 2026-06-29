@@ -83,7 +83,7 @@ Intent Record 作成後の `state.json.phase` は `ideation` にする。
 
 Construction は `inception/acceptance.md` の受け入れ状態と証拠を更新する。
 
-Intent 固有の Domain Model と Intent Contracts は、Inception の設計根拠として `inception/domain/` に置く。
+Intent 固有の Domain Model と Intent Contracts は、Inception では作らず、全体 Domain Model または Construction の Functional Design で扱う。
 
 Grilling Decision Trail は、反映先と同じ成果物境界に置く。
 

@@ -148,8 +148,6 @@ Ideation を完了した Intent から、要求、ユーザーストーリー、
 - `.amadeus/intents/<intent-id>-<slug>/inception/units/<unit-id>-<slug>/design.md`
 - `.amadeus/intents/<intent-id>-<slug>/inception/bolts.md`
 - `.amadeus/intents/<intent-id>-<slug>/inception/bolts/<bolt-id>-<slug>.md`
-- `.amadeus/intents/<intent-id>-<slug>/inception/domain/subdomains.md`
-- `.amadeus/intents/<intent-id>-<slug>/inception/domain/bounded-contexts.md`
 - `.amadeus/intents/<intent-id>-<slug>/inception/traceability.md`
 - `.amadeus/intents/<intent-id>-<slug>/inception/decisions.md`
 - `.amadeus/intents/<intent-id>-<slug>/inception/decisions/<decision-id>-<slug>.md`
@@ -162,7 +160,7 @@ Bolt は `inception/bolts/` に置きます。
 Bolt が複数 Unit をまたぐ場合でも、Intent なしの横断 Bolt にはしません。
 
 Inception では Task ID と `tasks.md` を作りません。
-Task は Construction で、対象 Bolt のモジュールファイル、参照先 Unit `design.md`、Construction Design を入力にして作ります。
+Task は Construction で、対象 Bolt のモジュールファイル、参照先 Unit Design Brief、Functional Design を入力にして作ります。
 
 Intent、Requirement、Story、Use Case、Unit、Bolt、Design が常に 1:1 になる場合は、まず grill 不足を疑います。
 それでも自然な粒度であれば、例外理由を `inception/traceability.md` または `inception/decisions.md` に残します。
@@ -176,17 +174,18 @@ Inception を完了した Intent から、Bolt を Task に分解し、実装、
 
 | 内部 skill | プロセス | 主な結果 |
 |---|---|---|
-| `amadeus-construction-bolt-preparation` | Bolt 実行準備 | 対象 Bolt、Construction Design、Task 生成 Review Gate、`tasks.md`、`notes.md`、Design Gate ready |
-| `amadeus-construction-implementation-execution` | 実装実行 | Construction Design に基づく対象 Task の実装、実装判断、`design.md`、`notes.md` |
+| `amadeus-construction-functional-design` | Functional Design | Unit ごとの `functional-design/**`、Functional Design state |
+| `amadeus-construction-bolt-preparation` | Bolt 実行準備 | 対象 Bolt、Task Generation Gate、`tasks.md`、`notes.md` |
+| `amadeus-construction-implementation-execution` | 実装実行 | Task Generation 済み Task の実装、実装判断、`notes.md` |
 | `amadeus-construction-verification-hardening` | 検証と堅牢化 | テスト実装、テスト実行、安全性確認、CI 確認、`test-results.md` |
 | `amadeus-construction-traceability-finalization` | 追跡と状態確定 | `tasks.md`、`acceptance.md`、`traceability.md`、`decisions.md`、`state.json`、任意の `pr.md` |
 
-Construction では、Bolt ごとの `design.md` に Domain Design、Logical Design、実装設計、検証設計を確定します。
-Bolt preparation では、`design.md` を根拠に `tasks.md` を生成します。
+Construction では、Unit ごとの Functional Design に業務ロジック、業務ルール、Domain Entity、必要な UI 構成を記録します。
+Bolt preparation では、Functional Design、Unit Design Brief、対象 Bolt のモジュールファイルを根拠に `tasks.md` を生成します。
 Task の依存は、同じ Bolt 内なら `T001`、別 Bolt の Task なら `B001/T002` のように書きます。
 依存だけでは作業内容を表せないため、Task には必ず `作業` を書きます。
-Bolt と Task が常に 1:1 になる場合は、まず Construction Design の分解不足を疑います。
-Implementation Execution は、対象 Bolt の Design Gate が `ready` または `passed` でない場合は進めません。
+Bolt と Task が常に 1:1 になる場合は、まず Functional Design と Bolt scope の分解不足を疑います。
+Implementation Execution は、対象 Bolt の `taskGeneration.status` が `ready_for_approval` または `passed` でない場合は進めません。
 
 `pr.md` は PR URL が存在する場合だけ作ります。
 PR を記録する場合は、必ず URL を書きます。
@@ -207,7 +206,8 @@ guided で不足論点を確認する場合は、`amadeus-grilling` を使いま
 
 `amadeus-domain-modeling` は、Ideation 固定ではなく、全 phase で使う横断支援 skill です。
 未確定語は Intent の `domain-notes.md` に記録し、確定した共有用語は `.amadeus/glossary.md` に追加します。
-Intent 固有のモデルや契約は `.amadeus/intents/<intent-id>-<slug>/inception/domain/**` に反映し、全体モデルへ昇格する判断がある場合だけ `.amadeus/domain/**` を更新します。
+全体として採用するモデルや契約は `.amadeus/domain/**` に反映します。
+特定 Unit の実装設計に閉じるモデルや契約は、Construction の Functional Design で扱います。
 
 `CONTEXT.md` や `docs/adr/**` は更新しません。
 
@@ -219,7 +219,7 @@ Intent 固有のモデルや契約は `.amadeus/intents/<intent-id>-<slug>/incep
 質問進行は `amadeus-grilling` に従い、回答後の記録先は `amadeus-domain-modeling` に従います。
 
 質問が必要なターンでは成果物を更新せず、ユーザーの回答を待ちます。
-回答で確定した内容だけを `.amadeus/glossary.md`、対象 Intent の `domain-notes.md`、`inception/domain/**`、`inception/traceability.md`、必要最小限の decision に反映します。
+回答で確定した内容だけを `.amadeus/glossary.md`、対象 Intent の `domain-notes.md`、`.amadeus/domain/**`、`inception/traceability.md`、Construction の Functional Design、必要最小限の decision に反映します。
 
 一般的な設計質問だけなら `amadeus-grilling`、記録済み内容の補修だけなら `amadeus-domain-modeling` を使います。
 
