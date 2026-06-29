@@ -87,6 +87,16 @@ const constructionDesignHeadings = [
   "検証設計",
   "設計変更記録",
 ];
+const dddModuleHeadings = ["目的", "責務", "概念関係", "ライフサイクル", "集約候補", "モデル要素", "関連成果物"];
+const dddElementTableSpecs = [
+  { heading: "集約", idPattern: /^DA\d{3}$/ },
+  { heading: "エンティティ", idPattern: /^DE\d{3}$/ },
+  { heading: "値オブジェクト", idPattern: /^DVO\d{3}$/ },
+  { heading: "ドメインサービス", idPattern: /^DS\d{3}$/ },
+  { heading: "ドメインイベント", idPattern: /^DEV\d{3}$/ },
+  { heading: "リポジトリ", idPattern: /^DR\d{3}$/ },
+  { heading: "ファクトリ", idPattern: /^DF\d{3}$/ },
+];
 const constructionDesignGateValues = new Set(["not_started", "draft", "ready", "passed", "failed"]);
 const multiUnitBoltReasonHeading = "複数 Unit を扱う理由";
 
@@ -2211,6 +2221,7 @@ class AmadeusValidator {
       this.checkDetailLinks(path, table, "モデル");
       this.checkDetailLinks(path, table, "契約");
       this.checkBoundedContextModuleFiles(path, table);
+      this.checkDddModuleIndexes(path, table);
     }
 
     const boundaryTable = this.checkTable(path, "外部境界", ["コンテキスト", "名前", "役割", "根拠"]);
@@ -2245,6 +2256,76 @@ class AmadeusValidator {
       this.checkFile(modulePath, "境界づけられたコンテキストのモジュールファイルが存在する");
       this.checkHeadings(modulePath, ["目的", "責務", "外部境界", "関連成果物"]);
       this.checkHeadingBodies(modulePath, ["目的", "責務", "外部境界", "関連成果物"]);
+    }
+  }
+
+  private checkDddModuleIndexes(path: string, table: Table): void {
+    const base = dirname(path);
+    for (const row of table.rows) {
+      const contextId = String(row["識別子"] ?? "").trim();
+      const links = this.markdownLinks(String(row["モデル"] ?? "")).map((link) => this.cleanLinkTarget(link));
+      const detailLink = links.find((link) => link.match(/^bounded-contexts\/[^/]+\/models\.md$/));
+      const match = detailLink?.match(/^bounded-contexts\/([^/]+)\/models\.md$/);
+      if (!match || !match[1].startsWith(`${contextId}-`)) continue;
+      this.checkDddModules(`${base}/bounded-contexts/${match[1]}/models.md`);
+    }
+  }
+
+  private checkDddModules(path: string): void {
+    if (!this.isFile(this.absolute(path))) return;
+    this.checkHeadings(path, ["一覧"]);
+    const table = this.checkTable(path, "一覧", ["識別子", "名前", "役割", "詳細"]);
+    if (!table) return;
+
+    const ids = this.collectIds(path, table, "識別子", /^DM\d{3}$/);
+    this.checkNotBlank(path, table, "名前");
+    this.checkNotBlank(path, table, "役割");
+
+    for (const row of table.rows) {
+      const moduleId = String(row["識別子"] ?? "").trim();
+      if (!ids.has(moduleId)) continue;
+      const links = this.markdownLinks(String(row["詳細"] ?? "")).map((link) => this.cleanLinkTarget(link));
+      const moduleLink = links.find((link) => link.match(/^models\/[^/]+\.md$/));
+      const match = moduleLink?.match(/^models\/([^/]+)\.md$/);
+      if (!match || !match[1].startsWith(`${moduleId}-`)) {
+        this.failRow(path, "DDD Module の `詳細` が models/<ddd-module-id>-<slug>.md を指す", `${moduleId}: ${links.join(", ") || "リンクなし"}`);
+        continue;
+      }
+
+      this.pass(path, "DDD Module の `詳細` が models/<ddd-module-id>-<slug>.md を指す", `${moduleId}: ${moduleLink}`);
+      const modulePath = `${dirname(path)}/models/${match[1]}.md`;
+      this.checkFile(modulePath, "DDD Module のモジュールファイルが存在する");
+      this.checkHeadings(modulePath, dddModuleHeadings);
+      this.checkHeadingBodies(modulePath, dddModuleHeadings);
+      this.checkDddElementTables(modulePath);
+    }
+  }
+
+  private checkDddElementTables(path: string): void {
+    const elementIds = new Set<string>();
+    for (const spec of dddElementTableSpecs) {
+      if (this.sectionBody(path, spec.heading) === undefined) continue;
+      const table = this.checkTable(path, spec.heading, ["識別子", "名前", "役割", "根拠"]);
+      if (!table) continue;
+      this.checkNotBlank(path, table, "名前");
+      this.checkNotBlank(path, table, "役割");
+      this.checkNotBlank(path, table, "根拠");
+
+      for (const row of table.rows) {
+        const id = String(row["識別子"] ?? "").trim();
+        if (id.length === 0) {
+          this.failRow(path, `DDD Module の \`${spec.heading}\` 識別子が空欄でない`, "空欄");
+          continue;
+        }
+        if (spec.idPattern.test(id)) this.pass(path, `DDD Module の \`${spec.heading}\` 識別子が形式に合う`, id);
+        else this.failRow(path, `DDD Module の \`${spec.heading}\` 識別子が形式に合う`, id);
+
+        if (elementIds.has(id)) this.failRow(path, "DDD Module のモデル要素識別子が重複しない", id);
+        else {
+          this.pass(path, "DDD Module のモデル要素識別子が重複しない", id);
+          elementIds.add(id);
+        }
+      }
     }
   }
 

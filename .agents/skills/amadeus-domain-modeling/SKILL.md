@@ -30,12 +30,11 @@ Amadeus workspace は、全体のドメイン知識と Intent 固有のドメイ
 │   ├── subdomains.md
 │   ├── bounded-contexts.md
 │   └── bounded-contexts/
-│       └── <bounded-context-id>/
+│       └── <bounded-context-id>-<slug>/
 │           ├── models.md
 │           ├── contracts.md
 │           └── models/
-│               └── <ddd-module-id>/
-│                   └── model.md
+│               └── <ddd-module-id>-<slug>.md
 └── intents/
     └── <intent-id>-<slug>/
         ├── domain-notes.md
@@ -47,12 +46,11 @@ Amadeus workspace は、全体のドメイン知識と Intent 固有のドメイ
             ├── subdomains.md
             ├── bounded-contexts.md
             └── bounded-contexts/
-                └── <bounded-context-id>/
+                └── <bounded-context-id>-<slug>/
                     ├── models.md
                     ├── contracts.md
                     └── models/
-                        └── <ddd-module-id>/
-                            └── model.md
+                        └── <ddd-module-id>-<slug>.md
 ```
 
 `.amadeus/glossary.md` は、全 Intent で共有する確定用語を扱う。
