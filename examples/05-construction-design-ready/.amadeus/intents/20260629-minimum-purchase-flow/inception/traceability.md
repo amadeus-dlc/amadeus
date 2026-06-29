@@ -5,15 +5,17 @@
 | 要求 | アクター | ストーリー | ユースケース | ユニット | ボルト |
 |---|---|---|---|---|---|
 | R001 | 顧客 | S001 | UC001 | U001 | B003 |
-| R002 | 顧客 | S001 | UC001, UC002 | U001 | B002, B003 |
+| R002 | 顧客 | S001 | UC002 | U001 | B002 |
 | R003 | 顧客 | S001 | UC002 | U001 | B002 |
-| R004 | 顧客 | S001 | UC002, UC003 | U001, U002 | B001, B002 |
+| R004 | 顧客 | S001 | UC002, UC003 | U002 | B001 |
 
 ## 背景からの追跡
 
 | 目的 | アクター | 外部システム | 要求 |
 |---|---|---|---|
-| 顧客が商品を選び、販売可能在庫を確認し、購入者情報と注文内容をもとに注文を作成できるようにする。 | 顧客 | なし | R001, R002, R003, R004 |
+| 販売管理の最小購入フローを扱う。 | 顧客 | なし | R001, R003, R004 |
+| 販売可能在庫を注文作成前に確認する。 | 顧客 | 在庫管理 | R002 |
+| 会員登録、ログイン、顧客台帳、購入履歴管理、決済詳細、売上確定、在庫引当、入荷、棚卸し、出荷を対象外にする。 | 顧客 | なし | R001, R002, R003, R004 |
 
 ## ボルトからの追跡
 
@@ -21,18 +23,19 @@
 |---|---|---|
 | B001 | U002 | R004 |
 | B002 | U001 | R002, R003, R004 |
-| B003 | U001 | R001, R002 |
+| B003 | U001 | R001 |
 
 ## 設計からの追跡
 
 | 設計 | ユニット | 要求 | ユースケース | ボルト |
 |---|---|---|---|---|
-| [design.md](units/U001-minimum-purchase-flow/design.md) | U001 | R001, R002, R003, R004 | UC001, UC002 | B002, B003 |
+| [design.md](units/U001-minimum-purchase-flow/design.md) | U001 | R001, R002, R003 | UC001, UC002 | B002, B003 |
 | [design.md](units/U002-order-creation/design.md) | U002 | R004 | UC003 | B001 |
 
 ## 既存コード分析からの追跡
 
-greenfield であり、既存コードへ載せる前提が未確認のため、`codebase-analysis.md` は作成しない。
+この workspace は Amadeus 成果物の例示であり、実装コードに載せる brownfield Intent ではない。
+そのため、`codebase-analysis.md` は作成しない。
 
 | 分析 | 要求 | ユースケース | ユニット | ボルト | 設計 | 入力 |
 |---|---|---|---|---|---|---|
@@ -41,7 +44,7 @@ greenfield であり、既存コードへ載せる前提が未確認のため、
 
 | ユニット | コンテキスト | 要求 | ユースケース | ボルト |
 |---|---|---|---|---|
-| U001 | BC001 | R001, R002, R003, R004 | UC001, UC002 | B002, B003 |
+| U001 | BC001 | R001, R002, R003 | UC001, UC002 | B002, B003 |
 | U002 | BC001 | R004 | UC003 | B001 |
 
 ## ドメインモデルからの追跡
@@ -50,31 +53,25 @@ greenfield であり、既存コードへ載せる前提が未確認のため、
 |---|---|---|---|---|
 | サブドメイン | SD004 販売管理 | R001, R002, R003, R004 | UC001, UC002, UC003 | [subdomains.md](domain/subdomains.md) |
 | 境界づけられたコンテキスト | BC001 販売管理 | R001, R002, R003, R004 | UC001, UC002, UC003 | [bounded-contexts.md](domain/bounded-contexts.md) |
-| 外部境界 | 商品管理 | R001 | UC001 | [bounded-contexts.md](domain/bounded-contexts.md) |
-| 外部境界 | 在庫管理 | R002 | UC002 | [bounded-contexts.md](domain/bounded-contexts.md) |
-| 外部境界 | 顧客管理 | R003 | UC002 | [bounded-contexts.md](domain/bounded-contexts.md) |
+| 依存サブドメイン | SD006 在庫管理 | R002 | UC002 | [subdomains.md](domain/subdomains.md) |
 
 ## 依存関係からの追跡
 
 | 種別 | 対象 | 依存 | 理由 | 定義元 |
 |---|---|---|---|---|
 | インテント | 20260629-minimum-purchase-flow | なし | 商品選択から注文作成までの最小購入フローとして単独で成立するため。 | [intents.md](../../../intents.md) |
-| 要求 | R001 | なし | 最小購入フローの入口であるため。 | [requirements.md](requirements.md) |
-| 要求 | R002 | R001 | 選択した商品の販売可能在庫を確認するため。 | [requirements.md](requirements.md) |
-| 要求 | R003 | R001 | 選択した商品を注文する文脈で購入者情報を記録するため。 | [requirements.md](requirements.md) |
-| 要求 | R004 | R001, R002, R003 | 注文作成には商品、販売可能在庫、購入者情報、注文内容の確認が必要なため。 | [requirements.md](requirements.md) |
-| ユーザーストーリー | S001 | なし | 最小購入フローとして単独で成立する顧客価値であるため。 | [user-stories.md](user-stories.md) |
-| ユースケース | UC001 | なし | 商品選択は最小購入フローの入口であるため。 | [use-cases.md](use-cases.md) |
-| ユースケース | UC002 | UC001 | 注文内容確認は商品選択後に成立するため。 | [use-cases.md](use-cases.md) |
-| ユースケース | UC003 | UC002 | 注文作成は注文内容確認後に成立するため。 | [use-cases.md](use-cases.md) |
-| ユニット | U001 | なし | 商品選択から注文内容確認までをまとめるため。 | [units.md](units.md) |
-| ユニット | U002 | U001 | 注文作成は確認済み注文内容を前提にするため。 | [units.md](units.md) |
-| ボルト | B001 | B002 | 注文作成は注文内容確認後に成立するため。 | [bolts.md](bolts.md) |
-| ボルト | B002 | B003 | 注文内容確認は商品選択後に成立するため。 | [bolts.md](bolts.md) |
+| 要求 | R001 | なし | 商品選択は最小購入フローの入口であるため。 | [requirements.md](requirements.md) |
+| 要求 | R002 | R001 | 販売可能在庫は、選択された商品に対して確認するため。 | [requirements.md](requirements.md) |
+| 要求 | R003 | なし | 購入者情報の記録は注文作成の前提になるため。 | [requirements.md](requirements.md) |
+| 要求 | R004 | R001, R002, R003 | 注文作成には商品、販売可能在庫、購入者情報が必要であるため。 | [requirements.md](requirements.md) |
+| ユーザーストーリー | S001 | なし | 顧客価値を表す単一のストーリーであるため。 | [user-stories.md](user-stories.md) |
+| ユースケース | UC001 | なし | 商品選択は顧客操作の入口であるため。 | [use-cases.md](use-cases.md) |
+| ユースケース | UC002 | UC001 | 注文内容確認は選択商品を前提にするため。 | [use-cases.md](use-cases.md) |
+| ユースケース | UC003 | UC002 | 注文作成は確認済み注文内容を前提にするため。 | [use-cases.md](use-cases.md) |
+| ユニット | U001 | なし | 注文作成前の顧客操作として成立するため。 | [units.md](units.md) |
+| ユニット | U002 | U001 | 確認済み注文内容を前提にするため。 | [units.md](units.md) |
+| ボルト | B001 | B002 | 注文作成は確認済み注文内容を前提にするため。 | [bolts.md](bolts.md) |
+| ボルト | B002 | B003 | 注文内容確認は選択商品を前提にするため。 | [bolts.md](bolts.md) |
 | ボルト | B003 | なし | 商品選択は最小購入フローの入口であるため。 | [bolts.md](bolts.md) |
-
-## 1:1 例外
-
-- Story は S001 の 1 件であるが、要求、ユースケース、Unit、Bolt は分割されているため、全階層が 1:1 にはなっていない。
-- U002 と B001 は 1:1 であるが、注文作成は確認済み注文内容から注文を作成する完了点として自然な実施境界である。
-- 後で決済、在庫引当、出荷を同じ Unit に含める判断が出た場合は、U002 と B001 の分割を見直す。
+| 判断 | D001 | なし | Inception の所有境界を固定する判断であるため。 | [decisions.md](decisions.md) |
+| 判断 | D002 | D001 | Unit と Bolt の粒度を固定する判断であるため。 | [decisions.md](decisions.md) |
