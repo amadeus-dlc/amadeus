@@ -297,6 +297,45 @@ function removeConstructionDecisionsFromRequiredArtifacts(workspace: string): vo
   writeFileSync(path, JSON.stringify(state, null, 2));
 }
 
+function assertValidatorModuleSplit(): void {
+  const validatorRoot = join(root, "skills/amadeus-validator/validator");
+  const requiredModules = [
+    "phases/inception.ts",
+    "phases/construction.ts",
+    "phases/types.ts",
+    "stages/inception/requirements-definition.ts",
+    "stages/inception/user-stories.ts",
+    "stages/inception/use-cases.ts",
+    "stages/inception/units-generation.ts",
+    "stages/construction/functional-design.ts",
+    "stages/construction/bolt-preparation.ts",
+  ];
+  for (const modulePath of requiredModules) {
+    if (!existsSync(join(validatorRoot, modulePath))) fail(`validator module missing: ${modulePath}`);
+  }
+
+  const main = readFileSync(join(validatorRoot, "AmadeusValidator.ts"), "utf8");
+  for (const pattern of [
+    "private checkInceptionIntent(",
+    "private checkConstructionIntent(",
+    "private checkInceptionStateJson(",
+    "private checkConstructionStateJson(",
+    "private checkTargetBolts(",
+    "private checkConstructionFunctionalDesignState(",
+    "private checkConstructionBoltTaskGeneration(",
+    "private checkTargetBoltRequiredArtifacts(",
+    "taskGenerationContract",
+  ]) {
+    if (main.includes(pattern)) fail(`AmadeusValidator.ts still owns phase/stage detail: ${pattern}`);
+  }
+
+  if (existsSync(join(validatorRoot, "contracts/stages")) || existsSync(join(validatorRoot, "contracts/phases"))) {
+    fail("validator module must not define contracts/stages or contracts/phases");
+  }
+}
+
+assertValidatorModuleSplit();
+
 const legacyIntentRootLayoutWorkspace = legacyIntentRootLayoutWorkspaceCopy();
 runExpectFailure(
   ["bun", "run", validator, legacyIntentRootLayoutWorkspace, intent],

@@ -3,8 +3,9 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { type CheckResult } from "./domain/results";
-import { taskGenerationContract } from "./generated/task-generation-contract";
-import { checkConstructionFunctionalDesignStage } from "./stages/construction/functional-design";
+import { checkConstructionPhase } from "./phases/construction";
+import { checkInceptionPhase } from "./phases/inception";
+import { type PhaseValidationContext } from "./phases/types";
 
 type Result = "pass" | "fail" | "blocked" | "skipped";
 
@@ -71,9 +72,6 @@ const eventStormingHandoffKinds = new Set(["Aggregate Candidate", "Bounded Conte
 const grillingSessionFilePattern = /^G\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/;
 const grillingSessionStatusValues = new Set(["active", "completed", "superseded"]);
 const grillingDecisionStatusValues = new Set(["active", "superseded"]);
-const taskGenerationStatusValues = new Set<string>(taskGenerationContract.statuses);
-const taskGenerationBlockedReasonValues = new Set<string>(taskGenerationContract.blockedReasons);
-const taskGenerationEvidenceKindValues = new Set<string>(taskGenerationContract.evidenceKinds);
 const unitDesignHeadings = [
   "概要",
   "設計戦略",
@@ -859,16 +857,62 @@ class AmadeusValidator {
     }
 
     if (state.phase === "inception") {
-      this.checkInceptionIntent(base, state);
+      checkInceptionPhase(this.phaseValidationContext(), { base, state });
       return;
     }
 
     if (state.phase === "construction") {
-      this.checkConstructionIntent(base, state);
+      checkConstructionPhase(this.phaseValidationContext(), { base, state });
       return;
     }
 
     this.failRow(statePath, "`phase` が既知である", String(state.phase ?? ""));
+  }
+
+  private phaseValidationContext(): PhaseValidationContext {
+    return {
+      statusValues,
+      gateValues,
+      indexSpecs,
+      intentId: this.intentId,
+      pass: (target, condition, evidence) => this.pass(target, condition, evidence),
+      failRow: (target, condition, evidence) => this.failRow(target, condition, evidence),
+      checkJsonValue: (path, key, actual, expected) => this.checkJsonValue(path, key, actual, expected),
+      checkAllowed: (path, key, actual, allowed) => this.checkAllowed(path, key, actual, allowed),
+      checkStatePaths: (path, section, key, condition, puml, label) => this.checkStatePaths(path, section, key, condition, puml, label),
+      checkRequiredStatePath: (path, section, key, requiredPath, condition) => this.checkRequiredStatePath(path, section, key, requiredPath, condition),
+      checkIntentCaptureState: (path, value) => this.checkIntentCaptureState(path, value),
+      checkGrillings: (base) => this.checkGrillings(base),
+      checkRequirements: (path) => this.checkRequirements(path),
+      checkAcceptance: (path, requirementsPath) => this.checkAcceptance(path, requirementsPath),
+      checkCodebaseAnalysis: (base, state) => this.checkCodebaseAnalysis(base, state),
+      checkNoInceptionDomainArtifacts: (base) => this.checkNoInceptionDomainArtifacts(base),
+      checkOptionalIndex: (path, spec) => this.checkOptionalIndex(path, spec),
+      checkUnitContextReferences: (base, required, contextsPath, condition) => this.checkUnitContextReferences(base, required, contextsPath, condition),
+      checkUnitDesignArtifacts: (base, state) => this.checkUnitDesignArtifacts(base, state),
+      checkBoltDesignReferences: (base) => this.checkBoltDesignReferences(base),
+      checkNoInceptionBoltDesignBriefArtifacts: (base, state) => this.checkNoInceptionBoltDesignBriefArtifacts(base, state),
+      checkNoInceptionConstructionArtifacts: (base) => this.checkNoInceptionConstructionArtifacts(base),
+      checkInceptionBoltArtifacts: (base, state) => this.checkInceptionBoltArtifacts(base, state),
+      checkTraceability: (path) => this.checkTraceability(path),
+      checkFile: (path, condition, directory) => this.checkFile(path, condition, directory),
+      checkTaskGenerationTraceability: (path, state) => this.checkTaskGenerationTraceability(path, state),
+      checkConstructionTraceability: (path, state) => this.checkConstructionTraceability(path, state),
+      checkConstructionBoltArtifacts: (inceptionBase, constructionBase, state) => this.checkConstructionBoltArtifacts(inceptionBase, constructionBase, state),
+      recordCheckResults: (results) => this.recordCheckResults(results),
+      recordCheckedFiles: (paths) => {
+        for (const path of paths) this.checkedFiles.add(this.relativePath(this.absolute(path)));
+      },
+      isFile: (path) => this.isFile(this.absolute(path)),
+      isObject: (value): value is Record<string, any> => this.isObject(value),
+      typeName: (value) => this.typeName(value),
+      idsFor: (path) => this.idsFor(path),
+      unitDirectories: (base, unitIds) => this.unitDirectories(base, unitIds),
+      inceptionBaseForStatePath: (path) => this.inceptionBaseForStatePath(path),
+      constructionBaseForStatePath: (path) => this.constructionBaseForStatePath(path),
+      constructionBoltDirectories: (inceptionBase, constructionBase) => this.constructionBoltDirectories(inceptionBase, constructionBase),
+      relativeToIntent: (intentBase, artifactPath) => this.relativeToIntent(intentBase, artifactPath),
+    };
   }
 
   private checkNoLegacyIntentRootArtifacts(base: string): void {
@@ -1008,379 +1052,6 @@ class AmadeusValidator {
       String(ideation.intentCapture.status ?? "").trim() === "completed" &&
       (ideation.requiredArtifacts?.length ?? 0) === 0 && (ideation.requiredMocks?.length ?? 0) === 0
     );
-  }
-
-  private checkInceptionIntent(base: string, state: Record<string, any>): void {
-    const statePath = `${base}/state.json`;
-    const inceptionBase = `${base}/inception`;
-    this.checkInceptionStateJson(statePath, state);
-    this.checkGrillings(inceptionBase);
-
-    this.checkRequirements(`${inceptionBase}/requirements.md`);
-    this.checkAcceptance(`${inceptionBase}/acceptance.md`, `${inceptionBase}/requirements.md`);
-    this.checkCodebaseAnalysis(inceptionBase, state);
-    const requireDomainBoundary = String(state.inception?.gate ?? "").trim() === "passed";
-    this.checkNoInceptionDomainArtifacts(inceptionBase);
-
-    for (const [filename, spec] of Object.entries(indexSpecs)) {
-      const path = `${inceptionBase}/${filename}`;
-      if (this.isFile(this.absolute(path))) this.checkOptionalIndex(path, spec);
-    }
-    this.checkUnitContextReferences(
-      inceptionBase,
-      requireDomainBoundary,
-      ".amadeus/domain/bounded-contexts.md",
-      "Unit のコンテキストが全体 Domain Model の BC を参照する",
-    );
-
-    this.checkUnitDesignArtifacts(inceptionBase, state);
-    this.checkBoltDesignReferences(inceptionBase);
-    this.checkNoInceptionBoltDesignBriefArtifacts(inceptionBase, state);
-    this.checkNoInceptionConstructionArtifacts(base);
-    this.checkInceptionBoltArtifacts(inceptionBase, state);
-    this.checkTraceability(`${inceptionBase}/traceability.md`);
-  }
-
-  private checkInceptionStateJson(path: string, state: Record<string, any>): void {
-    this.checkJsonValue(path, "intent", state.intent, this.intentId ?? "");
-    this.checkJsonValue(path, "phase", state.phase, "inception");
-    this.checkAllowed(path, "status", state.status, statusValues);
-
-    const ideation = state.ideation;
-    if (!this.isObject(ideation)) {
-      this.failRow(path, "`ideation` がオブジェクトである", this.typeName(ideation));
-      return;
-    }
-    this.pass(path, "`ideation` がオブジェクトである", "オブジェクトを確認");
-    this.checkJsonValue(path, "ideation.status", ideation.status, "completed");
-    this.checkJsonValue(path, "ideation.gate", ideation.gate, "passed");
-    this.checkIntentCaptureState(path, ideation.intentCapture);
-
-    const inception = state.inception;
-    if (!this.isObject(inception)) {
-      this.failRow(path, "`inception` がオブジェクトである", this.typeName(inception));
-      return;
-    }
-    this.pass(path, "`inception` がオブジェクトである", "オブジェクトを確認");
-    this.checkAllowed(path, "inception.status", inception.status, statusValues);
-    this.checkAllowed(path, "inception.gate", inception.gate, gateValues);
-    this.checkStatePaths(path, inception, "requiredArtifacts", "Inception 必須成果物が存在する", false, "inception");
-    this.checkStatePaths(path, inception, "requiredRequirementArtifacts", "Inception 必須 Requirement 成果物が存在する", false, "inception");
-    this.checkStatePaths(path, inception, "requiredStoryArtifacts", "Inception 必須 Story 成果物が存在する", false, "inception");
-    this.checkStatePaths(path, inception, "requiredUseCaseArtifacts", "Inception 必須 Use Case 成果物が存在する", false, "inception");
-    this.checkStatePaths(path, inception, "requiredDecisionArtifacts", "Inception 必須 Decision 成果物が存在する", false, "inception");
-    this.checkStatePaths(path, inception, "requiredBoltArtifacts", "Inception 必須 Bolt 成果物が存在する", false, "inception");
-
-    if (String(state.status ?? "").trim() === "completed") {
-      this.checkJsonValue(path, "inception.status", inception.status, "completed");
-      this.checkJsonValue(path, "inception.gate", inception.gate, "passed");
-    }
-  }
-
-  private checkConstructionIntent(base: string, state: Record<string, any>): void {
-    const statePath = `${base}/state.json`;
-    const inceptionBase = `${base}/inception`;
-    const constructionBase = `${base}/construction`;
-    this.checkConstructionStateJson(statePath, state);
-    this.checkGrillings(constructionBase);
-
-    this.checkRequirements(`${inceptionBase}/requirements.md`);
-    this.checkAcceptance(`${inceptionBase}/acceptance.md`, `${inceptionBase}/requirements.md`);
-    this.checkCodebaseAnalysis(inceptionBase, state);
-    this.checkNoInceptionDomainArtifacts(inceptionBase);
-
-    for (const [filename, spec] of Object.entries(indexSpecs)) {
-      const path = `${inceptionBase}/${filename}`;
-      if (this.isFile(this.absolute(path))) this.checkOptionalIndex(path, spec);
-    }
-    this.checkUnitContextReferences(
-      inceptionBase,
-      true,
-      ".amadeus/domain/bounded-contexts.md",
-      "Unit のコンテキストが全体 Domain Model の BC を参照する",
-    );
-
-    this.checkUnitDesignArtifacts(inceptionBase, state);
-    this.checkBoltDesignReferences(inceptionBase);
-    this.checkNoInceptionBoltDesignBriefArtifacts(inceptionBase, state);
-    this.checkTraceability(`${inceptionBase}/traceability.md`);
-    this.checkFile(`${constructionBase}/traceability.md`, "Construction 追跡ファイルが存在する");
-    this.checkOptionalIndex(`${constructionBase}/decisions.md`, indexSpecs["decisions.md"]);
-    this.checkTaskGenerationTraceability(`${constructionBase}/traceability.md`, state);
-    this.checkConstructionTraceability(`${constructionBase}/traceability.md`, state);
-    this.checkConstructionBoltArtifacts(inceptionBase, constructionBase, state);
-  }
-
-  private checkConstructionStateJson(path: string, state: Record<string, any>): void {
-    this.checkJsonValue(path, "intent", state.intent, this.intentId ?? "");
-    this.checkJsonValue(path, "phase", state.phase, "construction");
-    this.checkAllowed(path, "status", state.status, statusValues);
-
-    const ideation = state.ideation;
-    if (!this.isObject(ideation)) {
-      this.failRow(path, "`ideation` がオブジェクトである", this.typeName(ideation));
-      return;
-    }
-    this.pass(path, "`ideation` がオブジェクトである", "オブジェクトを確認");
-    this.checkJsonValue(path, "ideation.status", ideation.status, "completed");
-    this.checkJsonValue(path, "ideation.gate", ideation.gate, "passed");
-    this.checkIntentCaptureState(path, ideation.intentCapture);
-
-    const inception = state.inception;
-    if (!this.isObject(inception)) {
-      this.failRow(path, "`inception` がオブジェクトである", this.typeName(inception));
-      return;
-    }
-    this.pass(path, "`inception` がオブジェクトである", "オブジェクトを確認");
-    this.checkJsonValue(path, "inception.status", inception.status, "completed");
-    this.checkJsonValue(path, "inception.gate", inception.gate, "passed");
-
-    const construction = state.construction;
-    if (!this.isObject(construction)) {
-      this.failRow(path, "`construction` がオブジェクトである", this.typeName(construction));
-      return;
-    }
-    this.pass(path, "`construction` がオブジェクトである", "オブジェクトを確認");
-    this.checkAllowed(path, "construction.status", construction.status, statusValues);
-    this.checkAllowed(path, "construction.gate", construction.gate, gateValues);
-    this.checkStatePaths(path, construction, "requiredArtifacts", "Construction 必須成果物が存在する", false, "construction");
-    this.checkRequiredStatePath(path, construction, "requiredArtifacts", "construction/decisions.md", "Construction 必須成果物に判断一覧が含まれる");
-    this.checkStatePaths(path, construction, "requiredBoltArtifacts", "Construction 必須 Bolt 成果物が存在する", false, "construction");
-    this.checkTargetBolts(path, construction);
-    this.checkConstructionFunctionalDesignState(path, construction);
-    this.checkConstructionBoltTaskGeneration(path, construction);
-    this.checkTargetBoltRequiredArtifacts(path, construction);
-
-    if (String(state.status ?? "").trim() === "completed") {
-      this.checkJsonValue(path, "construction.status", construction.status, "completed");
-      this.checkJsonValue(path, "construction.gate", construction.gate, "passed");
-    }
-  }
-
-  private checkTargetBolts(path: string, construction: Record<string, any>): void {
-    const values = construction.targetBolts;
-    if (!Array.isArray(values)) {
-      this.failRow(path, "`construction.targetBolts` が配列である", this.typeName(values));
-      return;
-    }
-
-    this.pass(path, "`construction.targetBolts` が配列である", `${values.length}件`);
-    const inceptionBase = this.inceptionBaseForStatePath(path);
-    const boltIds = this.idsFor(`${inceptionBase}/bolts.md`);
-    let existingBoltCount = 0;
-    for (const value of values) {
-      const boltId = String(value ?? "").trim();
-      if (boltIds.has(boltId)) {
-        existingBoltCount += 1;
-        this.pass(path, "`construction.targetBolts` が既存 Bolt を参照する", boltId);
-      } else {
-        this.failRow(path, "`construction.targetBolts` が既存 Bolt を参照する", boltId);
-      }
-    }
-    if (existingBoltCount > 0) this.pass(path, "`construction.targetBolts` が1件以上の既存 Bolt を持つ", `${existingBoltCount}件`);
-    else this.failRow(path, "`construction.targetBolts` が1件以上の既存 Bolt を持つ", `${values.length}件`);
-  }
-
-  private checkTargetBoltRequiredArtifacts(path: string, construction: Record<string, any>): void {
-    const targetBolts = construction.targetBolts;
-    const requiredBoltArtifacts = construction.requiredBoltArtifacts;
-    if (!Array.isArray(targetBolts) || !Array.isArray(requiredBoltArtifacts)) return;
-
-    const intentBase = dirname(path);
-    const inceptionBase = this.inceptionBaseForStatePath(path);
-    const constructionBase = this.constructionBaseForStatePath(path);
-    const required = new Set(requiredBoltArtifacts.map((value: unknown) => String(value ?? "").trim()));
-    const boltDirectories = this.constructionBoltDirectories(inceptionBase, constructionBase);
-    const taskGenerationStatuses = new Map<string, string>();
-    if (Array.isArray(construction.bolts)) {
-      for (const item of construction.bolts) {
-        if (!this.isObject(item) || !this.isObject(item.taskGeneration)) continue;
-        const id = String(item.id ?? "").trim();
-        if (id.length === 0) continue;
-        taskGenerationStatuses.set(id, String(item.taskGeneration.status ?? "").trim());
-      }
-    }
-    const requiresTestResults =
-      String(construction.status ?? "").trim() === "completed" || String(construction.gate ?? "").trim() === "passed";
-    for (const value of targetBolts) {
-      const boltId = String(value ?? "").trim();
-      const boltDir = boltDirectories.get(boltId);
-      if (!boltDir) continue;
-      const artifactPaths = [`${boltDir}/notes.md`];
-      const taskPath = this.relativeToIntent(intentBase, `${boltDir}/tasks.md`);
-      const taskGenerationStatus = taskGenerationStatuses.get(boltId);
-      if (taskGenerationStatus === "ready_for_approval" || taskGenerationStatus === "passed" || taskGenerationStatus === "failed") {
-        artifactPaths.push(`${boltDir}/tasks.md`);
-      } else if (taskGenerationStatus === "not_started" || taskGenerationStatus === "in_progress" || taskGenerationStatus === "blocked") {
-        if (required.has(taskPath)) {
-          this.failRow(path, "`taskGeneration.status` 未生成時は requiredBoltArtifacts に tasks.md を含めない", `${boltId}: ${taskPath}`);
-        } else {
-          this.pass(path, "`taskGeneration.status` 未生成時は requiredBoltArtifacts に tasks.md を含めない", `${boltId}: ${taskPath}`);
-        }
-      }
-      if (requiresTestResults) artifactPaths.push(`${boltDir}/test-results.md`);
-      for (const artifactPath of artifactPaths) {
-        const relativePath = this.relativeToIntent(intentBase, artifactPath);
-        const condition = artifactPath.endsWith("/test-results.md")
-          ? "Construction 完了時の必須 Bolt 成果物が test-results.md を含む"
-          : "Construction 必須 Bolt 成果物が targetBolt の証拠成果物を含む";
-        if (required.has(relativePath)) this.pass(path, condition, `${boltId}: ${relativePath}`);
-        else this.failRow(path, condition, `${boltId}: ${relativePath}`);
-      }
-    }
-  }
-
-  private checkConstructionFunctionalDesignState(path: string, construction: Record<string, any>): void {
-    const inceptionBase = this.inceptionBaseForStatePath(path);
-    const constructionBase = this.constructionBaseForStatePath(path);
-    const existingUnitIds = this.idsFor(`${inceptionBase}/units.md`);
-    const result = checkConstructionFunctionalDesignStage({
-      statePath: path,
-      value: construction.functionalDesign,
-      existingUnitIds,
-      unitDirectories: this.unitDirectories(inceptionBase, existingUnitIds),
-      constructionBase,
-      intentBase: dirname(path),
-      fileExists: (artifactPath) => this.isFile(this.absolute(artifactPath)),
-      relativeToIntent: (base, artifactPath) => this.relativeToIntent(base, artifactPath),
-    });
-    this.recordCheckResults(result.results);
-    for (const checkedFile of result.checkedFiles) {
-      this.checkedFiles.add(this.relativePath(this.absolute(checkedFile)));
-    }
-  }
-
-  private checkConstructionBoltTaskGeneration(path: string, construction: Record<string, any>): void {
-    const targetBolts = construction.targetBolts;
-    if (!Array.isArray(targetBolts)) return;
-
-    const values = construction.bolts;
-    if (!Array.isArray(values)) {
-      this.failRow(path, "`construction.bolts` が配列である", this.typeName(values));
-      return;
-    }
-    this.pass(path, "`construction.bolts` が配列である", `${values.length}件`);
-
-    const intentBase = dirname(path);
-    const inceptionBase = this.inceptionBaseForStatePath(path);
-    const constructionBase = this.constructionBaseForStatePath(path);
-    const boltDirectories = this.constructionBoltDirectories(inceptionBase, constructionBase);
-    const byId = new Map<string, Record<string, any>>();
-    for (const item of values) {
-      if (!this.isObject(item)) {
-        this.failRow(path, "`construction.bolts[]` がオブジェクトである", this.typeName(item));
-        continue;
-      }
-      const id = String(item.id ?? "").trim();
-      if (id.length === 0) {
-        this.failRow(path, "`construction.bolts[].id` が空欄でない", "空欄");
-        continue;
-      }
-      byId.set(id, item);
-    }
-
-    for (const value of targetBolts) {
-      const boltId = String(value ?? "").trim();
-      const item = byId.get(boltId);
-      if (!item) {
-        this.failRow(path, "`construction.bolts` が targetBolt の taskGeneration を持つ", boltId);
-        continue;
-      }
-      this.pass(path, "`construction.bolts` が targetBolt の taskGeneration を持つ", boltId);
-
-      if (this.isObject(item.designGate)) {
-        this.failRow(path, "`construction.bolts[].designGate` を残さない", boltId);
-      } else {
-        this.pass(path, "`construction.bolts[].designGate` を残さない", boltId);
-      }
-      if (this.isObject(item.tasks)) {
-        this.failRow(path, "`construction.bolts[].tasks` を状態契約に残さない", boltId);
-      } else {
-        this.pass(path, "`construction.bolts[].tasks` を状態契約に残さない", boltId);
-      }
-
-      const taskGeneration = item.taskGeneration;
-      if (!this.isObject(taskGeneration)) {
-        this.failRow(path, "`construction.bolts[].taskGeneration` がオブジェクトである", `${boltId}: ${this.typeName(taskGeneration)}`);
-        continue;
-      }
-      this.pass(path, "`construction.bolts[].taskGeneration` がオブジェクトである", boltId);
-      const status = String(taskGeneration.status ?? "").trim();
-      this.checkAllowed(path, "construction.bolts[].taskGeneration.status", status, taskGenerationStatusValues);
-
-      const blockedReason = String(taskGeneration.blockedReason ?? "").trim();
-      if (blockedReason.length > 0) this.checkAllowed(path, "construction.bolts[].taskGeneration.blockedReason", blockedReason, taskGenerationBlockedReasonValues);
-
-      const evidenceValues = Array.isArray(taskGeneration.evidence) ? taskGeneration.evidence : [];
-      if (Array.isArray(taskGeneration.evidence)) {
-        this.pass(path, "`construction.bolts[].taskGeneration.evidence` が配列である", `${boltId}: ${evidenceValues.length}件`);
-      } else {
-        this.failRow(path, "`construction.bolts[].taskGeneration.evidence` が配列である", `${boltId}: ${this.typeName(taskGeneration.evidence)}`);
-      }
-
-      const evidenceByKind = new Map<string, string[]>();
-      for (const evidence of evidenceValues) {
-        if (!this.isObject(evidence)) {
-          this.failRow(path, "Task Generation evidence がオブジェクトである", `${boltId}: ${this.typeName(evidence)}`);
-          continue;
-        }
-        const kind = String(evidence.kind ?? "").trim();
-        const targetPath = String(evidence.path ?? "").trim();
-        this.checkAllowed(path, "Task Generation evidence kind", kind, taskGenerationEvidenceKindValues);
-        if (targetPath.endsWith("/design.md") && targetPath.includes("construction/bolts/")) {
-          this.failRow(path, "Task Generation evidence は Bolt 側 design.md を指さない", `${boltId}: ${targetPath}`);
-        } else {
-          this.pass(path, "Task Generation evidence は Bolt 側 design.md を指さない", `${boltId}: ${targetPath || "path 未確認"}`);
-        }
-        if (targetPath.length > 0) this.checkStateRelativePath(path, targetPath, "Task Generation evidence が存在する", false);
-        const valuesForKind = evidenceByKind.get(kind) ?? [];
-        valuesForKind.push(targetPath);
-        evidenceByKind.set(kind, valuesForKind);
-      }
-
-      const hasKind = (kind: string) => (evidenceByKind.get(kind)?.length ?? 0) > 0;
-      const requireKind = (kind: string) => {
-        if (hasKind(kind)) this.pass(path, `Task Generation ${status} は ${kind} evidence を持つ`, boltId);
-        else this.failRow(path, `Task Generation ${status} は ${kind} evidence を持つ`, boltId);
-      };
-
-      if ((status === "not_started" || status === "in_progress" || status === "ready_for_approval" || status === "passed") && blockedReason.length > 0) {
-        this.failRow(path, `Task Generation ${status} は blockedReason を持たない`, `${boltId}: ${blockedReason}`);
-      } else if (status === "not_started" || status === "in_progress" || status === "ready_for_approval" || status === "passed") {
-        this.pass(path, `Task Generation ${status} は blockedReason を持たない`, boltId);
-      }
-
-      if (status === "not_started" && evidenceValues.length > 0) {
-        this.failRow(path, "Task Generation not_started は evidence を持たない", `${boltId}: ${evidenceValues.length}件`);
-      } else if (status === "not_started") {
-        this.pass(path, "Task Generation not_started は evidence を持たない", boltId);
-      } else if (status === "in_progress") {
-        requireKind("bolt_module");
-      } else if (status === "ready_for_approval") {
-        for (const kind of ["functional_design", "unit_design_brief", "bolt_module", "tasks"]) requireKind(kind);
-      } else if (status === "passed") {
-        for (const kind of ["functional_design", "unit_design_brief", "bolt_module", "tasks", "approval"]) requireKind(kind);
-      } else if (status === "blocked") {
-        if (blockedReason.length > 0) this.pass(path, "Task Generation blocked は blockedReason を持つ", `${boltId}: ${blockedReason}`);
-        else this.failRow(path, "Task Generation blocked は blockedReason を持つ", boltId);
-        if (evidenceValues.length > 0) this.pass(path, "Task Generation blocked は evidence を持つ", `${boltId}: ${evidenceValues.length}件`);
-        else this.failRow(path, "Task Generation blocked は evidence を持つ", boltId);
-      } else if (status === "failed") {
-        if (evidenceValues.length > 0) this.pass(path, "Task Generation failed は失敗対象 evidence を持つ", `${boltId}: ${evidenceValues.length}件`);
-        else this.failRow(path, "Task Generation failed は失敗対象 evidence を持つ", boltId);
-      }
-
-      const boltDir = boltDirectories.get(boltId);
-      const expectedTaskEvidence = boltDir ? this.relativeToIntent(intentBase, `${boltDir}/tasks.md`) : "";
-      if ((status === "ready_for_approval" || status === "passed") && expectedTaskEvidence.length > 0) {
-        const taskEvidence = evidenceByKind.get("tasks") ?? [];
-        if (taskEvidence.includes(expectedTaskEvidence)) {
-          this.pass(path, "Task Generation tasks evidence が対象 tasks.md を指す", `${boltId}: ${expectedTaskEvidence}`);
-        } else {
-          this.failRow(path, "Task Generation tasks evidence が対象 tasks.md を指す", `${boltId}: ${taskEvidence.join(", ") || "空欄"}`);
-        }
-      }
-    }
   }
 
   private checkInceptionBoltArtifacts(base: string, state: Record<string, any>): void {
