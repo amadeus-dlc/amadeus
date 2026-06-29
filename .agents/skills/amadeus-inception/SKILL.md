@@ -670,6 +670,18 @@ Inception 完了時の `state.json` は次の形にする。
       "inception/traceability.md",
       "inception/decisions.md"
     ],
+    "requiredRequirementArtifacts": [
+      "inception/requirements/<requirement-id>-<slug>.md"
+    ],
+    "requiredStoryArtifacts": [
+      "inception/user-stories/<story-id>-<slug>.md"
+    ],
+    "requiredUseCaseArtifacts": [
+      "inception/use-cases/<use-case-id>-<slug>.md"
+    ],
+    "requiredDecisionArtifacts": [
+      "inception/decisions/<decision-id>-<slug>.md"
+    ],
     "requiredBoltArtifacts": [
       "inception/bolts/<bolt-id>-<slug>.md"
     ],
@@ -682,6 +694,7 @@ Inception がまだ完了していない場合は、`status` または `inceptio
 `gate` は `not_ready`、`waiting_approval`、`passed`、`failed` のいずれかにする。
 `codebase-analysis.md` は、既存コードに載せる brownfield Intent の場合だけ `requiredArtifacts` に含める。
 greenfield の場合は含めず、`traceability.md` に対象外理由を残す。
+Requirement、Story、Use Case、Decision、Bolt の詳細成果物は、それぞれ `requiredRequirementArtifacts`、`requiredStoryArtifacts`、`requiredUseCaseArtifacts`、`requiredDecisionArtifacts`、`requiredBoltArtifacts` に含め、`requiredArtifacts` に重複して含めない。
 `domain/subdomains.md` と `domain/bounded-contexts.md` は構造検証用 index なので、`requiredArtifacts` に含めなくてもよい。
 ただし Inception 成果物を作るときは必ず作る。
 `inception.gate` を `passed` にする場合は、対象 Intent の `domain/bounded-contexts.md` に少なくとも1件の BC があり、`units.md` の `コンテキスト` がその BC を参照している必要がある。

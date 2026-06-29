@@ -4,7 +4,7 @@
 
 | 要求 | アクター | ストーリー | ユースケース | ユニット | ボルト |
 |---|---|---|---|---|---|
-| R001 | 顧客 | S001 | UC001, UC002 | U001 | B003, B002 |
+| R001 | 顧客 | S001 | UC001 | U001 | B003 |
 | R002 | 顧客 | S001 | UC002 | U001 | B002 |
 | R003 | 顧客 | S001 | UC002 | U001 | B002 |
 | R004 | 顧客 | S001 | UC003 | U002 | B001 |
@@ -13,27 +13,28 @@
 
 | 目的 | アクター | 外部システム | 要求 |
 |---|---|---|---|
-| 顧客が商品を選び、販売可能在庫を確認し、購入者情報と注文内容をもとに注文を作成できるようにする。 | 顧客 | 商品管理, 在庫管理 | R001, R002, R003, R004 |
+| 顧客が商品を選び、販売可能在庫を確認し、購入者情報と注文内容をもとに注文を作成できるようにする。 | 顧客 | なし | R001, R002, R003, R004 |
+| 商品管理、顧客管理、入荷管理、出荷管理、在庫管理を Intent 配下の境界づけられたコンテキストとして展開しない。 | 事業担当者 | なし | R001, R002, R003, R004 |
 
 ## ボルトからの追跡
 
 | ボルト | ユニット | 要求 |
 |---|---|---|
 | B001 | U002 | R004 |
-| B002 | U001 | R001, R002, R003 |
+| B002 | U001 | R002, R003 |
 | B003 | U001 | R001 |
 
 ## 設計からの追跡
 
 | 設計 | ユニット | 要求 | ユースケース | ボルト |
 |---|---|---|---|---|
-| [design.md](units/U001-minimum-purchase-flow/design.md) | U001 | R001, R002, R003 | UC001, UC002 | B003, B002 |
+| [design.md](units/U001-minimum-purchase-flow/design.md) | U001 | R001, R002, R003 | UC001, UC002 | B002, B003 |
 | [design.md](units/U002-order-creation/design.md) | U002 | R004 | UC003 | B001 |
 
 ## 既存コード分析からの追跡
 
-この workspace には対象実装がないため、`codebase-analysis.md` は作らない。
-Inception は greenfield の成果物として、要求、相互作用、Unit、Bolt の構造を固定する。
+この workspace は Inception 成果物上では greenfield として扱う。
+既存コードに載せる分析対象がないため、`codebase-analysis.md` は作らない。
 
 | 分析 | 要求 | ユースケース | ユニット | ボルト | 設計 | 入力 |
 |---|---|---|---|---|---|---|
@@ -42,7 +43,7 @@ Inception は greenfield の成果物として、要求、相互作用、Unit、
 
 | ユニット | コンテキスト | 要求 | ユースケース | ボルト |
 |---|---|---|---|---|
-| U001 | BC004 | R001, R002, R003 | UC001, UC002 | B003, B002 |
+| U001 | BC004 | R001, R002, R003 | UC001, UC002 | B002, B003 |
 | U002 | BC004 | R004 | UC003 | B001 |
 
 ## ドメインモデルからの追跡
@@ -50,8 +51,8 @@ Inception は greenfield の成果物として、要求、相互作用、Unit、
 | 種別 | 対象 | 要求 | ユースケース | 定義元 |
 |---|---|---|---|---|
 | サブドメイン | SD004 販売管理 | R001, R002, R003, R004 | UC001, UC002, UC003 | [subdomains.md](domain/subdomains.md) |
-| サブドメイン | SD006 在庫管理 | R002 | UC002 | [subdomains.md](domain/subdomains.md) |
 | 境界づけられたコンテキスト | BC004 販売管理 | R001, R002, R003, R004 | UC001, UC002, UC003 | [bounded-contexts.md](domain/bounded-contexts.md) |
+| 依存候補 | SD006 在庫管理 | R002 | UC002 | [subdomains.md](domain/subdomains.md) |
 
 ## 依存関係からの追跡
 
@@ -59,21 +60,18 @@ Inception は greenfield の成果物として、要求、相互作用、Unit、
 |---|---|---|---|---|
 | インテント | 20260629-minimum-purchase-flow | なし | 商品選択から注文作成までの最小購入フローとして単独で成立するため。 | [intents.md](../../../intents.md) |
 | 要求 | R001 | なし | 商品選択は最小購入フローの入口であるため。 | [requirements.md](requirements.md) |
-| 要求 | R002 | R001 | 販売可能在庫の確認対象は、顧客が選んだ商品であるため。 | [requirements.md](requirements.md) |
-| 要求 | R003 | R001 | 購入者情報は、選択した商品を購入する注文内容と結び付けて扱うため。 | [requirements.md](requirements.md) |
-| 要求 | R004 | R001, R002, R003 | 注文作成は、商品、販売可能在庫、購入者情報が確認できていることを前提にするため。 | [requirements.md](requirements.md) |
-| ユーザーストーリー | S001 | なし | 顧客の一連の購入目的として単独で成立するため。 | [user-stories.md](user-stories.md) |
-| ユースケース | UC001 | なし | 商品選択は最小購入フローの入口であるため。 | [use-cases.md](use-cases.md) |
-| ユースケース | UC002 | UC001 | 注文内容確認は、選択済みの商品を前提にするため。 | [use-cases.md](use-cases.md) |
-| ユースケース | UC003 | UC002 | 注文作成は、顧客が確認した注文内容を前提にするため。 | [use-cases.md](use-cases.md) |
-| ユニット | U001 | なし | 商品選択から注文内容確認までを一つの価値単位として扱うため。 | [units.md](units.md) |
-| ユニット | U002 | U001 | 注文作成は、確認済みの注文内容を前提にするため。 | [units.md](units.md) |
-| ボルト | B001 | B002 | 注文作成は、顧客が確認した注文内容を前提にするため。 | [bolts.md](bolts.md) |
-| ボルト | B002 | B003 | 注文内容確認は、選択済みの商品を前提にするため。 | [bolts.md](bolts.md) |
+| 要求 | R002 | R001 | 販売可能在庫は選択された商品に対して確認するため。 | [requirements.md](requirements.md) |
+| 要求 | R003 | R001 | 購入者情報は選択された商品を含む注文内容へ記録するため。 | [requirements.md](requirements.md) |
+| 要求 | R004 | R001, R002, R003 | 注文作成は、商品、販売可能在庫の確認結果、購入者情報を前提にするため。 | [requirements.md](requirements.md) |
+| ユーザーストーリー | S001 | なし | 最小購入フローの利用者価値を一続きの体験として扱うため。 | [user-stories.md](user-stories.md) |
+| ユースケース | UC001 | なし | 商品選択は後続の入口であるため。 | [use-cases.md](use-cases.md) |
+| ユースケース | UC002 | UC001 | 注文内容確認は選択済み商品を前提にするため。 | [use-cases.md](use-cases.md) |
+| ユースケース | UC003 | UC002 | 注文作成は確認済み注文内容を前提にするため。 | [use-cases.md](use-cases.md) |
+| ユニット | U001 | なし | 商品選択から注文内容確認までを最小購入フローの入口として扱うため。 | [units.md](units.md) |
+| ユニット | U002 | U001 | 注文作成は確認済み注文内容を前提にするため。 | [units.md](units.md) |
+| ボルト | B001 | B002 | 注文作成は確認済み注文内容を前提にするため。 | [bolts.md](bolts.md) |
+| ボルト | B002 | B003 | 注文内容確認は選択済み商品を前提にするため。 | [bolts.md](bolts.md) |
 | ボルト | B003 | なし | 商品選択は最小購入フローの入口であるため。 | [bolts.md](bolts.md) |
-
-## 粒度判断
-
-- 要求は 4 件、ユースケースは 3 件、Unit は 2 件、Bolt は 3 件に分かれている。
-- B002 注文内容確認は R001、R002、R003 を扱い、R004 注文作成を含めない。
-- R004 注文作成は B001 注文作成だけで扱う。
+| 判断 | D001 | なし | Inception の所有境界を固定するため。 | [decisions.md](decisions.md) |
+| 判断 | D002 | D001 | BC004 を中心コンテキストとして固定するため。 | [decisions.md](decisions.md) |
+| 判断 | D003 | D001, D002 | Unit と Bolt の粒度を固定するため。 | [decisions.md](decisions.md) |

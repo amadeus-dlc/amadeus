@@ -177,6 +177,10 @@ function rewriteStateForPhaseLayout(workspace: string): void {
   }
   if (state.inception) {
     state.inception.requiredArtifacts = (state.inception.requiredArtifacts ?? []).map((value: string) => phaseStatePath(value, "inception"));
+    state.inception.requiredRequirementArtifacts = (state.inception.requiredRequirementArtifacts ?? []).map((value: string) => phaseStatePath(value, "inception"));
+    state.inception.requiredStoryArtifacts = (state.inception.requiredStoryArtifacts ?? []).map((value: string) => phaseStatePath(value, "inception"));
+    state.inception.requiredUseCaseArtifacts = (state.inception.requiredUseCaseArtifacts ?? []).map((value: string) => phaseStatePath(value, "inception"));
+    state.inception.requiredDecisionArtifacts = (state.inception.requiredDecisionArtifacts ?? []).map((value: string) => phaseStatePath(value, "inception"));
     state.inception.requiredBoltArtifacts = (state.inception.requiredBoltArtifacts ?? []).map((value: string) => phaseStatePath(value, "inception"));
   }
   if (state.construction) {
@@ -199,6 +203,16 @@ function constructionStatePath(value: string): string {
   if (value === "state.json" || value.startsWith("../") || value.startsWith("inception/") || value.startsWith("construction/")) return value;
   if (value === "traceability.md" || value === "decisions.md" || value.startsWith("decisions/")) return `construction/${value}`;
   return `inception/${value}`;
+}
+
+function replaceRequiredRequirementArtifactWithMissingPath(workspace: string): void {
+  const path = intentPath(workspace, "state.json");
+  const state = JSON.parse(readFileSync(path, "utf8"));
+  state.inception.requiredRequirementArtifacts = [
+    ...(state.inception.requiredRequirementArtifacts ?? []),
+    "inception/requirements/R999-missing.md",
+  ];
+  writeFileSync(path, JSON.stringify(state, null, 2));
 }
 
 const legacyIntentRootLayoutWorkspace = legacyIntentRootLayoutWorkspaceCopy();
@@ -402,8 +416,8 @@ function makeBoltReferenceMultipleUnits(workspace: string, withReason: boolean):
   const boltsPath = intentPath(workspace, "bolts.md");
   replaceInFile(
     boltsPath,
-    `| B001 | 注文を作成する。 | U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
-    `| B001 | 注文を作成する。 | U001, U002 | [design.md](units/${unit1}/design.md), [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
+    `| B001 | 確認済み注文内容をもとに注文を作成する。 | U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
+    `| B001 | 確認済み注文内容をもとに注文を作成する。 | U001, U002 | [design.md](units/${unit1}/design.md), [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
     "bolts fixture does not contain expected B001 row",
   );
 
@@ -433,8 +447,8 @@ function makeBoltReferenceMultipleUnits(workspace: string, withReason: boolean):
 function replaceBoltUnitWithMissingId(workspace: string): void {
   replaceInFile(
     intentPath(workspace, "bolts.md"),
-    `| B001 | 注文を作成する。 | U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
-    `| B001 | 注文を作成する。 | U999 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
+    `| B001 | 確認済み注文内容をもとに注文を作成する。 | U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
+    `| B001 | 確認済み注文内容をもとに注文を作成する。 | U999 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
     "bolts fixture does not contain expected B001 row",
   );
 }
@@ -442,8 +456,8 @@ function replaceBoltUnitWithMissingId(workspace: string): void {
 function replaceBoltUnitWithDuplicateId(workspace: string): void {
   replaceInFile(
     intentPath(workspace, "bolts.md"),
-    `| B001 | 注文を作成する。 | U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
-    `| B001 | 注文を作成する。 | U002, U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
+    `| B001 | 確認済み注文内容をもとに注文を作成する。 | U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
+    `| B001 | 確認済み注文内容をもとに注文を作成する。 | U002, U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
     "bolts fixture does not contain expected B001 row",
   );
 }
@@ -1557,6 +1571,13 @@ function appendConstructionDesignTrace(
 
 const phaseInceptionWorkspace = phaseWorkspaceCopy();
 run(["bun", "run", validator, phaseInceptionWorkspace, intent]);
+
+const missingRequiredRequirementArtifactWorkspace = phaseWorkspaceCopy();
+replaceRequiredRequirementArtifactWithMissingPath(missingRequiredRequirementArtifactWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, missingRequiredRequirementArtifactWorkspace, intent],
+  "Inception 必須 Requirement 成果物が存在する",
+);
 
 const missingSteeringObjectiveWorkspace = phaseWorkspaceCopy();
 removeSteeringObjective(missingSteeringObjectiveWorkspace);

@@ -1052,6 +1052,10 @@ class AmadeusValidator {
     this.checkAllowed(path, "inception.status", inception.status, statusValues);
     this.checkAllowed(path, "inception.gate", inception.gate, gateValues);
     this.checkStatePaths(path, inception, "requiredArtifacts", "Inception 必須成果物が存在する", false, "inception");
+    this.checkStatePaths(path, inception, "requiredRequirementArtifacts", "Inception 必須 Requirement 成果物が存在する", false, "inception");
+    this.checkStatePaths(path, inception, "requiredStoryArtifacts", "Inception 必須 Story 成果物が存在する", false, "inception");
+    this.checkStatePaths(path, inception, "requiredUseCaseArtifacts", "Inception 必須 Use Case 成果物が存在する", false, "inception");
+    this.checkStatePaths(path, inception, "requiredDecisionArtifacts", "Inception 必須 Decision 成果物が存在する", false, "inception");
     this.checkStatePaths(path, inception, "requiredBoltArtifacts", "Inception 必須 Bolt 成果物が存在する", false, "inception");
 
     if (String(state.status ?? "").trim() === "completed") {
