@@ -1212,6 +1212,15 @@ function replacePrTargetWithMissingReferences(workspace: string): void {
   );
 }
 
+function replacePrTargetWithEmptyBolt(workspace: string): void {
+  replaceInFile(
+    intentPath(workspace, `bolts/${bolt1}/pr.md`),
+    "| B001 | T001 | R001 |",
+    "|  | T001 | R001 |",
+    "pr fixture does not contain expected target row",
+  );
+}
+
 function appendEmptyConstructionTrace(workspace: string): void {
   const path = intentPath(workspace, "traceability.md");
   const text = readFileSync(path, "utf8");
@@ -2129,6 +2138,20 @@ replacePrTargetWithMissingReferences(prWithMissingTargetReferencesWorkspace);
 runExpectFailure(
   ["bun", "run", validator, prWithMissingTargetReferencesWorkspace, intent],
   "PR 対象の `ボルト` が一覧内の既存 ID である",
+);
+
+const prWithEmptyBoltTargetWorkspace = workspaceCopy();
+writeConstructionDesign(prWithEmptyBoltTargetWorkspace);
+writeConstructionTasks(prWithEmptyBoltTargetWorkspace);
+writeConstructionNotes(prWithEmptyBoltTargetWorkspace);
+writeConstructionTestResults(prWithEmptyBoltTargetWorkspace);
+appendConstructionDesignTrace(prWithEmptyBoltTargetWorkspace);
+writePrWithUrl(prWithEmptyBoltTargetWorkspace);
+writeConstructionState(prWithEmptyBoltTargetWorkspace);
+replacePrTargetWithEmptyBolt(prWithEmptyBoltTargetWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, prWithEmptyBoltTargetWorkspace, intent],
+  "PR 対象の `タスク` が既存 Task を指す",
 );
 
 const missingConstructionDesignHeadingWorkspace = workspaceCopy();

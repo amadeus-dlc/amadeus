@@ -1429,12 +1429,12 @@ class AmadeusValidator {
   private checkPrTaskTargets(path: string, table: Table, boltIds: Set<string>, boltDirectories: Map<string, string>): void {
     if (!table.headers.includes("タスク")) return;
     for (const row of table.rows) {
-      const rowBoltIds = this.splitValues(row["ボルト"]);
+      const rowBoltIds = this.splitValues(row["ボルト"]).filter((value) => value.length > 0);
       for (const value of this.splitValues(row["タスク"])) {
         const qualified = value.match(/^(B\d{3})\/(T\d{3})$/);
         if (qualified) {
           const [, boltId, taskId] = qualified;
-          this.checkExistingTask(path, "PR 対象", value, boltId, taskId, boltIds, boltDirectories);
+          this.checkExistingTask(path, "PR 対象", "タスク", value, boltId, taskId, boltIds, boltDirectories);
           continue;
         }
 
@@ -1449,7 +1449,7 @@ class AmadeusValidator {
           continue;
         }
         for (const boltId of rowBoltIds) {
-          this.checkExistingTask(path, "PR 対象", `${boltId}/${value}`, boltId, value, boltIds, boltDirectories);
+          this.checkExistingTask(path, "PR 対象", "タスク", `${boltId}/${value}`, boltId, value, boltIds, boltDirectories);
         }
       }
     }
@@ -1738,7 +1738,7 @@ class AmadeusValidator {
           continue;
         }
         const [, boltId, taskId] = match;
-        this.checkExistingTask(path, context, reference, boltId, taskId, boltIds, boltDirectories);
+        this.checkExistingTask(path, context, column, reference, boltId, taskId, boltIds, boltDirectories);
       }
     }
   }
@@ -1746,23 +1746,24 @@ class AmadeusValidator {
   private checkExistingTask(
     path: string,
     context: string,
+    column: string,
     reference: string,
     boltId: string,
     taskId: string,
     boltIds: Set<string>,
     boltDirectories: Map<string, string>,
   ): void {
-    if (boltIds.has(boltId)) this.pass(path, `${context}の \`タスク\` が既存 Bolt を指す`, reference);
-    else this.failRow(path, `${context}の \`タスク\` が既存 Bolt を指す`, reference);
+    if (boltIds.has(boltId)) this.pass(path, `${context}の \`${column}\` が既存 Bolt を指す`, reference);
+    else this.failRow(path, `${context}の \`${column}\` が既存 Bolt を指す`, reference);
 
     const boltDir = boltDirectories.get(boltId);
     if (!boltDir) {
-      this.failRow(path, `${context}の \`タスク\` が既存 Task を指す`, reference);
+      this.failRow(path, `${context}の \`${column}\` が既存 Task を指す`, reference);
       return;
     }
     const taskIds = this.taskIdsFor(`${boltDir}/tasks.md`);
-    if (taskIds.has(taskId)) this.pass(path, `${context}の \`タスク\` が既存 Task を指す`, reference);
-    else this.failRow(path, `${context}の \`タスク\` が既存 Task を指す`, reference);
+    if (taskIds.has(taskId)) this.pass(path, `${context}の \`${column}\` が既存 Task を指す`, reference);
+    else this.failRow(path, `${context}の \`${column}\` が既存 Task を指す`, reference);
   }
 
   private checkUnitDesignArtifacts(base: string, state: Record<string, any>): void {
