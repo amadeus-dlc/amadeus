@@ -72,5 +72,5 @@ Inception phase の要件定義だけを進める。
 
 ## 次の skill
 
-- 相互作用整理へ進む場合: `amadeus-inception-interaction-modeling`
+- User Stories へ進む場合: `amadeus-inception-user-stories`
 - Inception 全体を進める場合: `amadeus-inception`

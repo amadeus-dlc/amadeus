@@ -89,7 +89,7 @@ Amadeus の対象ドメインについて、質問で曖昧さを解きながら
 ## 手順
 
 1. `amadeus-grilling` と `amadeus-domain-modeling` の SKILL.md を読む。
-2. `.amadeus/`、`.amadeus/glossary.md`、`.amadeus/domain/**`、必要なら対象 Intent の `domain-notes.md`、`inception/domain/**`、`inception/requirements.md`、`inception/use-cases.md`、`inception/units.md`、`inception/bolts.md`、`inception/traceability.md`、`inception/decisions.md` を確認する。
+2. `.amadeus/`、`.amadeus/glossary.md`、`.amadeus/domain/**`、必要なら対象 Intent の `domain-notes.md`、`inception/requirements.md`、`inception/use-cases.md`、`inception/units.md`、`inception/bolts.md`、`inception/traceability.md`、`inception/decisions.md`、Construction の Functional Design を確認する。
 3. 読めば分かることは質問しない。
 4. まだ人間の判断が必要な最初のドメイン論点を1つだけ選ぶ。
 5. `amadeus-grilling` の形式で、一問だけ質問する。
@@ -109,7 +109,7 @@ Amadeus の対象ドメインについて、質問で曖昧さを解きながら
 質問: <一問だけ>
 推奨回答: <推奨する判断>
 理由: <推奨理由>
-回答後に更新する候補: <domain-notes.md / glossary.md / inception/domain/** / inception/traceability.md / inception/decisions.md など>
+回答後に更新する候補: <domain-notes.md / glossary.md / .amadeus/domain/** / Construction Functional Design / inception/traceability.md / inception/decisions.md など>
 ```
 
 複数の質問を一度に並べない。
@@ -121,9 +121,9 @@ Amadeus の対象ドメインについて、質問で曖昧さを解きながら
 
 - 未確定語、候補、問いは、対象 Intent の `domain-notes.md` に記録する。
 - 全 Intent で共有する確定用語は `.amadeus/glossary.md` に記録する。
-- Intent 固有のサブドメイン、BC、モデル、契約は `.amadeus/intents/<intent-id>-<slug>/inception/domain/**` に記録する。
+- 全体として採用済みのサブドメイン、BC、モデル、契約は `.amadeus/domain/**` に記録する。
+- 特定 Unit の実装設計に閉じるモデル、契約、設計判断は Construction の Functional Design に記録する。
 - モデル要素や契約 ID に影響する場合は、対象 Intent の `inception/traceability.md` も整合させる。
-- 全体として採用する判断がある場合だけ `.amadeus/domain/**` に昇格する。
 - 戻しにくく、背景なしでは意図が分かりにくく、実際の trade-off がある判断だけ decision にする。
 
 Grilling Decision Trail は、対象成果物セットの root 直下に記録する。

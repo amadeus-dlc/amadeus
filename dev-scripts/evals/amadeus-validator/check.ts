@@ -78,6 +78,10 @@ function intentPath(workspace: string, path: string): string {
   return join(intentRoot(workspace), phaseRelativePath(path));
 }
 
+function domainPath(workspace: string, path: string): string {
+  return join(workspace, ".amadeus/domain", path);
+}
+
 function constructionIntentPath(workspace: string, path: string): string {
   return join(intentRoot(workspace), "construction", path);
 }
@@ -119,7 +123,6 @@ function migrateIntentToPhaseLayout(workspace: string): void {
     "units.md",
     "units",
     "bolts.md",
-    "domain",
     "traceability.md",
     "decisions.md",
     "decisions",
@@ -575,14 +578,14 @@ function replaceBoltDetailWithNonModulePath(workspace: string): void {
 }
 
 function removeBoundedContextModuleFile(workspace: string): void {
-  rmSync(intentPath(workspace, `domain/bounded-contexts/${boundedContext1}.md`));
+  rmSync(domainPath(workspace, `bounded-contexts/${boundedContext1}.md`));
 }
 
 function writeDddModuleWithOldModelPath(workspace: string): void {
-  const moduleDirectory = intentPath(workspace, `domain/bounded-contexts/${boundedContext1}/models/DM001-discovery-brief`);
+  const moduleDirectory = domainPath(workspace, `bounded-contexts/${boundedContext1}/models/DM001-discovery-brief`);
   mkdirSync(moduleDirectory, { recursive: true });
   writeFileSync(
-    intentPath(workspace, `domain/bounded-contexts/${boundedContext1}/models.md`),
+    domainPath(workspace, `bounded-contexts/${boundedContext1}/models.md`),
     [
       "# モデル",
       "",
@@ -616,10 +619,10 @@ function writeDddModuleWithOldModelPath(workspace: string): void {
 }
 
 function writeDddModuleWithModuleFile(workspace: string): void {
-  const modulePath = intentPath(workspace, `domain/bounded-contexts/${boundedContext1}/models/DM001-discovery-brief.md`);
-  mkdirSync(intentPath(workspace, `domain/bounded-contexts/${boundedContext1}/models`), { recursive: true });
+  const modulePath = domainPath(workspace, `bounded-contexts/${boundedContext1}/models/DM001-discovery-brief.md`);
+  mkdirSync(domainPath(workspace, `bounded-contexts/${boundedContext1}/models`), { recursive: true });
   writeFileSync(
-    intentPath(workspace, `domain/bounded-contexts/${boundedContext1}/models.md`),
+    domainPath(workspace, `bounded-contexts/${boundedContext1}/models.md`),
     [
       "# モデル",
       "",
@@ -677,16 +680,16 @@ function writeDddModuleWithModuleFile(workspace: string): void {
 function writeDddModuleWithInvalidElementTable(workspace: string): void {
   writeDddModuleWithModuleFile(workspace);
   replaceInFile(
-    intentPath(workspace, `domain/bounded-contexts/${boundedContext1}/models/DM001-discovery-brief.md`),
+    domainPath(workspace, `bounded-contexts/${boundedContext1}/models/DM001-discovery-brief.md`),
     "| DA001 | Discovery Brief | 入力テーマと判定を保持する。 | R001 |",
     "| DE001 | Discovery Brief | 入力テーマと判定を保持する。 | R001 |",
     "DDD Module fixture does not contain expected model element body",
   );
 }
 
-function writeEmptyIntentBoundedContexts(workspace: string): void {
+function writeEmptyGlobalBoundedContexts(workspace: string): void {
   writeFileSync(
-    intentPath(workspace, "domain/bounded-contexts.md"),
+    domainPath(workspace, "bounded-contexts.md"),
     [
       "# 境界づけられたコンテキスト",
       "",
@@ -2198,11 +2201,11 @@ runExpectFailure(
   "Bolt の `ユニット` が重複しない",
 );
 
-const emptyIntentBoundedContextsWorkspace = phaseWorkspaceCopy();
-writeEmptyIntentBoundedContexts(emptyIntentBoundedContextsWorkspace);
+const emptyGlobalBoundedContextsWorkspace = phaseWorkspaceCopy();
+writeEmptyGlobalBoundedContexts(emptyGlobalBoundedContextsWorkspace);
 runExpectFailure(
-  ["bun", "run", validator, emptyIntentBoundedContextsWorkspace, intent],
-  "境界づけられたコンテキストが1件以上存在する",
+  ["bun", "run", validator, emptyGlobalBoundedContextsWorkspace, intent],
+  "Unit のコンテキストが全体 Domain Model の BC を参照する",
 );
 
 const constructionWithoutInceptionRequiredWorkspace = phaseWorkspaceCopy();

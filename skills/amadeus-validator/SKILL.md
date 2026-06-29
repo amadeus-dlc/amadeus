@@ -67,13 +67,11 @@ Bun が使えない場合は `blocked` として報告する。
 21. `.amadeus/intents/<intent-id>-<slug>/inception/requirements.md`。対象 Intent ディレクトリ名が指定され、Ideation 段階ではない場合だけ読む。
 22. `.amadeus/intents/<intent-id>-<slug>/inception/acceptance.md`。対象 Intent ディレクトリ名が指定され、Ideation 段階ではない場合だけ読む。
 23. `.amadeus/intents/<intent-id>-<slug>/ideation/traceability.md`、`.amadeus/intents/<intent-id>-<slug>/inception/traceability.md`、`.amadeus/intents/<intent-id>-<slug>/construction/traceability.md`。対象 Intent ディレクトリ名と phase に応じて読む。
-24. `.amadeus/intents/<intent-id>-<slug>/inception/domain/subdomains.md`。対象 Intent ディレクトリ名が指定され、Ideation 段階ではない場合だけ読む。
-25. `.amadeus/intents/<intent-id>-<slug>/inception/domain/bounded-contexts.md`。対象 Intent ディレクトリ名が指定され、Ideation 段階ではない場合だけ読む。
-26. `.amadeus/intents/<intent-id>-<slug>/inception/codebase-analysis.md`。対象 Intent ディレクトリ名が指定され、Ideation 段階ではなく、ファイルが存在する場合、または `state.json.inception.requiredArtifacts` に含まれる場合だけ読む。
-27. `.amadeus/intents/<intent-id>-<slug>/construction/bolts/<bolt-id>-<slug>/design.md`。対象 Intent が Construction 段階で、`state.json.construction.requiredBoltArtifacts` に含まれる場合だけ読む。
-28. `.amadeus/intents/<intent-id>-<slug>/construction/bolts/<bolt-id>-<slug>/notes.md`。対象 Intent が Construction 段階で、`state.json.construction.requiredBoltArtifacts` に含まれる場合だけ読む。
-29. `.amadeus/intents/<intent-id>-<slug>/construction/bolts/<bolt-id>-<slug>/test-results.md`。対象 Intent が Construction 段階で、`state.json.construction.requiredBoltArtifacts` に含まれる場合だけ読む。
-30. `.amadeus/intents/<intent-id>-<slug>/construction/bolts/<bolt-id>-<slug>/pr.md`。対象 Intent が Construction 段階で、ファイルが存在する場合、または `state.json.construction.requiredBoltArtifacts` に含まれる場合だけ読む。
+24. `.amadeus/intents/<intent-id>-<slug>/inception/codebase-analysis.md`。対象 Intent ディレクトリ名が指定され、Ideation 段階ではなく、ファイルが存在する場合、または `state.json.inception.requiredArtifacts` に含まれる場合だけ読む。
+25. `.amadeus/intents/<intent-id>-<slug>/construction/bolts/<bolt-id>-<slug>/design.md`。対象 Intent が Construction 段階で、`state.json.construction.requiredBoltArtifacts` に含まれる場合だけ読む。
+26. `.amadeus/intents/<intent-id>-<slug>/construction/bolts/<bolt-id>-<slug>/notes.md`。対象 Intent が Construction 段階で、`state.json.construction.requiredBoltArtifacts` に含まれる場合だけ読む。
+27. `.amadeus/intents/<intent-id>-<slug>/construction/bolts/<bolt-id>-<slug>/test-results.md`。対象 Intent が Construction 段階で、`state.json.construction.requiredBoltArtifacts` に含まれる場合だけ読む。
+28. `.amadeus/intents/<intent-id>-<slug>/construction/bolts/<bolt-id>-<slug>/pr.md`。対象 Intent が Construction 段階で、ファイルが存在する場合、または `state.json.construction.requiredBoltArtifacts` に含まれる場合だけ読む。
 
 存在しない参照元がある場合は、存在しない事実を結果に含める。
 存在しない参照元を推測で補完しない。
@@ -98,7 +96,7 @@ Bun が使えない場合は `blocked` として報告する。
 - `.amadeus/domain/subdomains.md` が存在する。
 - `.amadeus/domain/bounded-contexts.md` が存在する。
 - `.amadeus` の index 系成果物が、[artifacts validation](references/artifacts.md) の条件を満たす。
-- 対象 Intent ディレクトリ名が指定され、Inception 以降の場合、`.amadeus/intents/<intent-id>-<slug>/inception/domain/bounded-contexts.md` が存在する。
+- 対象 Intent ディレクトリ名が指定され、Inception 以降の場合、`inception/domain/**` が存在しない。
 - 対象 Intent ディレクトリ名が指定され、`.amadeus/intents/<intent-id>-<slug>/state.json` の `phase` が `ideation` の場合、Ideation 段階の成果物契約として検証する。
 - Ideation 段階の Intent では、`inception/**`、`construction/**` は Inception 以降で作る成果物として扱い、欠落を不足にしない。
 - 対象 Intent ディレクトリ名が指定され、`.amadeus/intents/<intent-id>-<slug>/state.json` の `phase` が `inception` の場合、Inception 段階の状態契約として検証する。
@@ -123,7 +121,7 @@ Bun が使えない場合は `blocked` として報告する。
 - 対象 Intent ディレクトリ名が指定された場合、複数 Unit を参照する Bolt のモジュールファイルに `複数 Unit を扱う理由` 見出しと本文が存在する。
 - 対象 Intent ディレクトリ名が指定され、Construction Bolt 配下の `tasks.md` が存在する場合、Task が `作業`、`要求`、`ユースケース`、`依存`、`設計根拠`、`証拠` を持つ。
 - Inception phase の Intent では、`construction/bolts/**/tasks.md` が存在しない。
-- `inception/traceability.md` の `境界` は ID 化せず、`inception/domain/bounded-contexts.md` の `外部境界` 表にある名前として存在する。
+- `inception/traceability.md` の `境界` は ID 化せず、`.amadeus/domain/bounded-contexts.md` の `外部境界` 表にある名前として存在する。
 - `domain/bounded-contexts.md` が、[bounded-contexts validation](references/bounded-contexts.md) の条件を満たす。
 - Discovery、Event Storming、Intent の phase ディレクトリ、全体ドメイン配下に `grillings.md` または `grillings/` が存在する場合、両方が揃っている。
 - Discovery、Event Storming、Intent の phase ディレクトリ、全体ドメイン配下に Grilling Decision Trail が存在する場合、`grillings.md` の一覧、session ファイル名、session の質問記録、確定判断、反映先、superseded の置き換え先を検証する。

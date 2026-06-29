@@ -1,7 +1,7 @@
 ---
 name: amadeus-inception-traceability-finalization
 description: >-
-  Amadeus Inception の内部 skill。実施設計済み Intent に対して、追跡と状態確定だけを実行し、
+  Amadeus Inception の内部 skill。Units Generation 済み Intent に対して、追跡と状態確定だけを実行し、
   traceability.md、decisions.md、decisions/<decision-id>-<slug>.md、state.json を更新または作成する必要がある場面では必ず使う。
   requirements、user-stories、use-cases、units、bolts、domain、Spec、実装は作らない。
 ---
@@ -17,7 +17,7 @@ Inception phase の追跡と状態確定だけを進める。
 
 ## 前提
 
-対象 Intent が Ideation、要件定義、相互作用整理、実施設計の成果物を持っていることを前提にする。
+対象 Intent が Ideation、要件定義、User Stories、Use Cases、Units Generation の成果物を持っていることを前提にする。
 
 少なくとも次を読む。
 
@@ -35,11 +35,10 @@ Inception phase の追跡と状態確定だけを進める。
 - `.amadeus/intents/<intent-id>-<slug>/inception/units/*/design.md`
 - `.amadeus/intents/<intent-id>-<slug>/inception/bolts.md`
 - `.amadeus/intents/<intent-id>-<slug>/inception/bolts/*.md`
-- `.amadeus/intents/<intent-id>-<slug>/inception/domain/**`
 - `.amadeus/intents/<intent-id>-<slug>/inception/traceability.md`
 - `.amadeus/intents/<intent-id>-<slug>/inception/decisions.md`
 
-実施設計の成果物が不足している場合は、`amadeus-inception-execution-design` を案内して停止する。
+Units Generation の成果物が不足している場合は、`amadeus-inception-units-generation` を案内して停止する。
 
 ## テンプレート
 

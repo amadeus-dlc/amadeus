@@ -1026,14 +1026,18 @@ class AmadeusValidator {
     this.checkAcceptance(`${inceptionBase}/acceptance.md`, `${inceptionBase}/requirements.md`);
     this.checkCodebaseAnalysis(inceptionBase, state);
     const requireDomainBoundary = String(state.inception?.gate ?? "").trim() === "passed";
-    this.checkSubdomains(`${inceptionBase}/domain/subdomains.md`, `${inceptionBase}/domain/bounded-contexts.md`, requireDomainBoundary);
-    this.checkBoundedContexts(`${inceptionBase}/domain/bounded-contexts.md`, false, requireDomainBoundary);
+    this.checkNoInceptionDomainArtifacts(inceptionBase);
 
     for (const [filename, spec] of Object.entries(indexSpecs)) {
       const path = `${inceptionBase}/${filename}`;
       if (this.isFile(this.absolute(path))) this.checkOptionalIndex(path, spec);
     }
-    this.checkUnitContextReferences(inceptionBase, requireDomainBoundary);
+    this.checkUnitContextReferences(
+      inceptionBase,
+      requireDomainBoundary,
+      ".amadeus/domain/bounded-contexts.md",
+      "Unit のコンテキストが全体 Domain Model の BC を参照する",
+    );
 
     this.checkUnitDesignArtifacts(inceptionBase, state);
     this.checkBoltDesignReferences(inceptionBase);
@@ -1089,14 +1093,18 @@ class AmadeusValidator {
     this.checkRequirements(`${inceptionBase}/requirements.md`);
     this.checkAcceptance(`${inceptionBase}/acceptance.md`, `${inceptionBase}/requirements.md`);
     this.checkCodebaseAnalysis(inceptionBase, state);
-    this.checkSubdomains(`${inceptionBase}/domain/subdomains.md`, `${inceptionBase}/domain/bounded-contexts.md`, true);
-    this.checkBoundedContexts(`${inceptionBase}/domain/bounded-contexts.md`, false, true);
+    this.checkNoInceptionDomainArtifacts(inceptionBase);
 
     for (const [filename, spec] of Object.entries(indexSpecs)) {
       const path = `${inceptionBase}/${filename}`;
       if (this.isFile(this.absolute(path))) this.checkOptionalIndex(path, spec);
     }
-    this.checkUnitContextReferences(inceptionBase, true);
+    this.checkUnitContextReferences(
+      inceptionBase,
+      true,
+      ".amadeus/domain/bounded-contexts.md",
+      "Unit のコンテキストが全体 Domain Model の BC を参照する",
+    );
 
     this.checkUnitDesignArtifacts(inceptionBase, state);
     this.checkBoltDesignReferences(inceptionBase);
@@ -2075,6 +2083,12 @@ class AmadeusValidator {
     }
   }
 
+  private checkNoInceptionDomainArtifacts(base: string): void {
+    const domainRoot = this.absolute(`${base}/domain`);
+    if (!this.isDirectory(domainRoot)) return;
+    this.failRow(`${base}/domain`, "Inception は Intent 固有 Domain Model 成果物を持たない", "Domain Model は全体 Domain Model または Construction Functional Design で扱う");
+  }
+
   private checkOptionalIndex(path: string, spec: typeof indexSpecs[string]): void {
     this.checkHeadings(path, spec.headings);
     const table = this.checkTable(path, spec.listHeading, spec.columns);
@@ -2087,21 +2101,21 @@ class AmadeusValidator {
     this.checkDetailLinks(path, table, "詳細");
   }
 
-  private checkUnitContextReferences(base: string, requireContext: boolean): void {
+  private checkUnitContextReferences(base: string, requireContext: boolean, contextIndexPath: string, condition: string): void {
     const unitsPath = `${base}/units.md`;
     const table = this.tableAfterHeading(unitsPath, "一覧");
     if (!table || !table.headers.includes("コンテキスト")) return;
 
-    const contextIds = this.idsFor(`${base}/domain/bounded-contexts.md`);
+    const contextIds = this.idsFor(contextIndexPath);
     for (const row of table.rows) {
       const unitId = String(row["識別子"] ?? "").trim();
       for (const contextId of this.splitValues(row["コンテキスト"])) {
         if (contextId === "未確認" && !requireContext) {
-          this.pass(unitsPath, "Unit のコンテキストが同じ Intent の BC を参照する", `${unitId}: ${contextId}`);
+          this.pass(unitsPath, condition, `${unitId}: ${contextId}`);
         } else if (contextIds.has(contextId)) {
-          this.pass(unitsPath, "Unit のコンテキストが同じ Intent の BC を参照する", `${unitId}: ${contextId}`);
+          this.pass(unitsPath, condition, `${unitId}: ${contextId}`);
         } else {
-          this.failRow(unitsPath, "Unit のコンテキストが同じ Intent の BC を参照する", `${unitId}: ${contextId}`);
+          this.failRow(unitsPath, condition, `${unitId}: ${contextId}`);
         }
       }
     }

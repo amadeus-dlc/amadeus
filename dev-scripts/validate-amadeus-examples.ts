@@ -9,7 +9,6 @@ type ExampleSnapshot = {
   intent?: string;
   statePath?: string;
   expectedState?: Record<string, string>;
-  allowedDomainFiles?: string[];
 };
 
 type SkillProvenanceManifest = {
@@ -69,13 +68,6 @@ const snapshots: ExampleSnapshot[] = [
       "inception.status": "completed",
       "inception.gate": "passed",
     },
-    allowedDomainFiles: [
-      "bounded-contexts.md",
-      "bounded-contexts/BC004-sales-management.md",
-      "bounded-contexts/BC004-sales-management/contracts.md",
-      "bounded-contexts/BC004-sales-management/models.md",
-      "subdomains.md",
-    ],
   },
   {
     name: "Construction design ready",
@@ -92,13 +84,6 @@ const snapshots: ExampleSnapshot[] = [
       "construction.bolts.0.designGate.status": "ready",
       "construction.bolts.0.tasks.status": "generated",
     },
-    allowedDomainFiles: [
-      "bounded-contexts.md",
-      "bounded-contexts/BC004-sales-management.md",
-      "bounded-contexts/BC004-sales-management/contracts.md",
-      "bounded-contexts/BC004-sales-management/models.md",
-      "subdomains.md",
-    ],
   },
 ];
 
@@ -115,7 +100,7 @@ if (mode === "--workspaces-only" || mode === "--all") {
 }
 
 failed = !validateSnapshotStates(stateValidationTargets(targets)) || failed;
-failed = !validateDomainFileSets(stateValidationTargets(targets)) || failed;
+failed = !validateNoInceptionDomainFileSets(stateValidationTargets(targets)) || failed;
 
 for (const target of targets) {
   const args = ["run", validator, target.workdir, ...(target.intent ? [target.intent] : [])];
@@ -178,29 +163,22 @@ function validateSnapshotStates(targets: ExampleSnapshot[]): boolean {
   return true;
 }
 
-function validateDomainFileSets(targets: ExampleSnapshot[]): boolean {
+function validateNoInceptionDomainFileSets(targets: ExampleSnapshot[]): boolean {
   const errors: string[] = [];
   for (const target of targets) {
-    if (!target.intent || !target.allowedDomainFiles) continue;
+    if (!target.intent) continue;
     const domainRoot = `${target.workdir}/.amadeus/intents/${target.intent}/inception/domain`;
-    if (!existsSync(domainRoot)) continue;
-
-    const allowed = new Set(target.allowedDomainFiles);
-    for (const actualFile of listFiles(domainRoot)) {
-      if (!allowed.has(actualFile)) {
-        errors.push(`${target.workdir}: unexpected domain file: ${actualFile}`);
-      }
-    }
+    if (existsSync(domainRoot)) errors.push(`${target.workdir}: inception/domain must not exist`);
   }
 
   if (errors.length > 0) {
-    console.error("## Example domain files");
+    console.error("## Example inception domain files");
     for (const error of errors) console.error(`- ${error}`);
     return false;
   }
 
-  console.log("## Example domain files");
-  console.log("domain files: ok");
+  console.log("## Example inception domain files");
+  console.log("inception domain files: ok");
   return true;
 }
 

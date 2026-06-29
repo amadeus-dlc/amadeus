@@ -148,8 +148,6 @@ Ideation を完了した Intent から、要求、ユーザーストーリー、
 - `.amadeus/intents/<intent-id>-<slug>/inception/units/<unit-id>-<slug>/design.md`
 - `.amadeus/intents/<intent-id>-<slug>/inception/bolts.md`
 - `.amadeus/intents/<intent-id>-<slug>/inception/bolts/<bolt-id>-<slug>.md`
-- `.amadeus/intents/<intent-id>-<slug>/inception/domain/subdomains.md`
-- `.amadeus/intents/<intent-id>-<slug>/inception/domain/bounded-contexts.md`
 - `.amadeus/intents/<intent-id>-<slug>/inception/traceability.md`
 - `.amadeus/intents/<intent-id>-<slug>/inception/decisions.md`
 - `.amadeus/intents/<intent-id>-<slug>/inception/decisions/<decision-id>-<slug>.md`
@@ -207,7 +205,8 @@ guided で不足論点を確認する場合は、`amadeus-grilling` を使いま
 
 `amadeus-domain-modeling` は、Ideation 固定ではなく、全 phase で使う横断支援 skill です。
 未確定語は Intent の `domain-notes.md` に記録し、確定した共有用語は `.amadeus/glossary.md` に追加します。
-Intent 固有のモデルや契約は `.amadeus/intents/<intent-id>-<slug>/inception/domain/**` に反映し、全体モデルへ昇格する判断がある場合だけ `.amadeus/domain/**` を更新します。
+全体として採用するモデルや契約は `.amadeus/domain/**` に反映します。
+特定 Unit の実装設計に閉じるモデルや契約は、Construction の Functional Design で扱います。
 
 `CONTEXT.md` や `docs/adr/**` は更新しません。
 
@@ -219,7 +218,7 @@ Intent 固有のモデルや契約は `.amadeus/intents/<intent-id>-<slug>/incep
 質問進行は `amadeus-grilling` に従い、回答後の記録先は `amadeus-domain-modeling` に従います。
 
 質問が必要なターンでは成果物を更新せず、ユーザーの回答を待ちます。
-回答で確定した内容だけを `.amadeus/glossary.md`、対象 Intent の `domain-notes.md`、`inception/domain/**`、`inception/traceability.md`、必要最小限の decision に反映します。
+回答で確定した内容だけを `.amadeus/glossary.md`、対象 Intent の `domain-notes.md`、`.amadeus/domain/**`、`inception/traceability.md`、Construction の Functional Design、必要最小限の decision に反映します。
 
 一般的な設計質問だけなら `amadeus-grilling`、記録済み内容の補修だけなら `amadeus-domain-modeling` を使います。
 

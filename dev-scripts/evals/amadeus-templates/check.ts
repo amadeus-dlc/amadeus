@@ -163,10 +163,11 @@ const textContracts: TextContract[] = [
   {
     path: "README.md",
     includes: [
-      "対象 Intent の `domain-notes.md`、`inception/domain/**`、`inception/traceability.md`",
+      "対象 Intent の `domain-notes.md`、`.amadeus/domain/**`、`inception/traceability.md`、Construction の Functional Design",
     ],
     excludes: [
       "対象 Intent の `domain-notes.md`、`domain/**`、`traceability.md`",
+      "対象 Intent の `domain-notes.md`、`inception/domain/**`",
     ],
   },
   {
@@ -183,12 +184,14 @@ const textContracts: TextContract[] = [
     path: "skills/amadeus-domain-modeling/SKILL.md",
     promotedPath: ".agents/skills/amadeus-domain-modeling/SKILL.md",
     includes: [
-      ".amadeus/intents/<intent-id>-<slug>/inception/domain/**",
+      ".amadeus/domain/**",
+      "Construction の Functional Design",
       ".amadeus/intents/<intent-id>-<slug>/inception/traceability.md",
       ".amadeus/intents/<intent-id>-<slug>/inception/decisions.md",
     ],
     excludes: [
       ".amadeus/intents/<intent-id>-<slug>/domain/**",
+      ".amadeus/intents/<intent-id>-<slug>/inception/domain/**",
       ".amadeus/intents/<intent-id>-<slug>/traceability.md",
       ".amadeus/intents/<intent-id>-<slug>/decisions.md",
     ],
@@ -197,11 +200,13 @@ const textContracts: TextContract[] = [
     path: "skills/amadeus-domain-grilling/SKILL.md",
     promotedPath: ".agents/skills/amadeus-domain-grilling/SKILL.md",
     includes: [
-      ".amadeus/intents/<intent-id>-<slug>/inception/domain/**",
+      ".amadeus/domain/**",
+      "Construction の Functional Design",
       "対象 Intent の `inception/traceability.md`",
     ],
     excludes: [
       ".amadeus/intents/<intent-id>-<slug>/domain/**",
+      ".amadeus/intents/<intent-id>-<slug>/inception/domain/**",
       "対象 Intent の `traceability.md`",
     ],
   },
@@ -209,16 +214,15 @@ const textContracts: TextContract[] = [
     path: "skills/amadeus-inception/SKILL.md",
     promotedPath: ".agents/skills/amadeus-inception/SKILL.md",
     includes: [
-      "`inception/domain/subdomains.md` と `inception/domain/bounded-contexts.md`",
+      "Inception は `inception/domain/**` を作らない。",
       "`inception/units.md` の `コンテキスト`",
-      "対象 Intent の `inception/domain/bounded-contexts.md`",
-      "既存の `inception/domain/**`",
+      "既存のドメイン用語、境界づけられたコンテキスト、契約が不足している場合は、Inception 成果物の中で推測して確定しない。",
     ],
     excludes: [
       "`domain/subdomains.md` と `domain/bounded-contexts.md`",
       "`units.md` の `コンテキスト`",
       "対象 Intent の `domain/bounded-contexts.md`",
-      "既存の `domain/**`",
+      "`inception/domain/subdomains.md` と `inception/domain/bounded-contexts.md`",
     ],
   },
 ];
