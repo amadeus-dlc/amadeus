@@ -1,13 +1,13 @@
 ---
 name: gh-issue-organizer
 description: >
-  GitHub Issue の棚卸し・整理を体系的に実行するスキル。オープンイシューの分類、
-  グルーピング、クローズ判定、優先度付け、バッチ化を行う。
-  CodeRabbit 自動生成イシューと手動報告イシューの区別、根本原因別グルーピング、
-  完了済みイシューの特定とクローズ提案を含む。
-  トリガー：「イシューを整理して」「issue を棚卸し」「GitHub issue をトリアージ」
-  「stale issue をクローズ」「issue の優先度付け」
-  といった GitHub Issue 整理関連リクエストで起動。
+   GitHub Issue の棚卸し・整理を体系的に実行するスキル。オープンイシューの分類、
+   グルーピング、クローズ判定、優先度付け、バッチ化を行う。
+   CodeRabbit 自動生成イシューと手動報告イシューの区別、根本原因別グルーピング、
+   完了済みイシューの特定とクローズ提案を含む。
+   トリガー：「イシューを整理して」「issue を棚卸し」「GitHub issue をトリアージ」
+   「stale issue をクローズ」「issue の優先度付け」
+   といった GitHub Issue 整理関連リクエストで起動。
 ---
 
 # GitHub Issue 整理スキル
@@ -22,12 +22,16 @@ description: >
 
 `gh` CLI でオープンイシューを全件取得し、現状を把握する。
 
+> **全件取得の保証**: `gh issue list` の `--limit` は取得件数の上限（省略時の既定は30件）であり、これを超えるオープンIssueは黙って欠落する。件数確認・全件取得のいずれも上限で頭打ちにしないこと。
+> - 件数確認: `gh issue list --state open --limit 100000 --json number --jq 'length'`（`--limit` を十分大きく取り実件数を得る。省略すると既定30件で頭打ちになり、上限超えの判定を誤る）
+> - 全件取得: `--limit` を実件数以上に設定する。大規模リポジトリでは `gh api --paginate "repos/{owner}/{repo}/issues?state=open&per_page=100" | jq -s 'add | [.[] | select(.pull_request | not)]'` でページング取得する。`--paginate` はページごとに JSON 配列を出力するため、`--jq` をページ単位で適用すると配列が分断される。`jq -s 'add'` で全ページを1つの配列に集約してから、Issues エンドポイントが返す PR（`.pull_request` を持つ要素）を除外すること。
+
 ```bash
-# 全オープンイシューを取得（ラベル・作成者・作成日付き）
-gh issue list --state open --limit 500 --json number,title,labels,author,createdAt,updatedAt,body
+# 全オープンイシューを取得（ラベル・作成者・作成日付き。--limit はオープンIssue数以上に設定する）
+gh issue list --state open --limit 1000 --json number,title,labels,author,createdAt,updatedAt,body
 
 # ラベル別の件数を確認
-gh issue list --state open --limit 500 --json labels --jq '[.[].labels[].name] | group_by(.) | map({label: .[0], count: length}) | sort_by(-.count)'
+gh issue list --state open --limit 1000 --json labels --jq '[.[].labels[].name] | group_by(.) | map({label: .[0], count: length}) | sort_by(-.count)'
 ```
 
 結果をサマリーテーブルとして整理する:
@@ -36,8 +40,9 @@ gh issue list --state open --limit 500 --json labels --jq '[.[].labels[].name] |
 |------|------|
 | オープンイシュー合計 | N件 |
 | CodeRabbit 自動生成 | N件 |
-| 手動報告 | N件 |
-| Epic / リファクタリング | N件 |
+| 手動報告（＝合計 − CodeRabbit 自動生成） | N件 |
+
+> ここでは「自動生成 / 手動報告」の2区分のみで概況を把握する（合計 ＝ CodeRabbit 自動生成 ＋ 手動報告）。CodeRabbit 自動生成と手動報告の判定基準（author `coderabbitai` または `coderabbit` ラベル。`github-actions[bot]` 等の他ボットは CodeRabbit に含めない）と抽出コマンドはステップ2で定義する。ステップ1の件数はその基準に基づく概算とし、確定値・カテゴリ内訳（バグ・機能要求・Epic / リファクタリング・その他）はステップ2で分類してステップ5で集計する。
 
 ### ステップ 2: 分類
 
@@ -47,20 +52,22 @@ gh issue list --state open --limit 500 --json labels --jq '[.[].labels[].name] |
 
 | カテゴリ | 判定条件 |
 |----------|----------|
-| **CodeRabbit 自動生成** | author が `coderabbitai` または `github-actions[bot]`、またはラベルに `coderabbit` を含む |
-| **手動報告（バグ）** | ラベルに `bug` を含む、または人間が作成 |
+| **CodeRabbit 自動生成** | author が `coderabbitai`、またはラベルに `coderabbit` を含む（`github-actions[bot]` 等の他の自動化ボットは含めない。該当しないボット生成イシューは「その他」へ） |
+| **手動報告（バグ）** | `bug` ラベルが付いている、またはタイトルに「バグ」「不具合」を含む |
 | **手動報告（機能要求）** | ラベルに `enhancement` / `feature` を含む |
 | **Epic / リファクタリング** | ラベルに `refactoring` / `epic` を含む、またはタイトルに「Phase」「リファクタリング」を含む |
-| **その他** | 上記に該当しないもの |
+| **その他** | 上記4カテゴリのいずれにも該当しないすべてのイシュー（バグ・機能要求・Epic の手掛かりがない人間作成イシューに加え、CodeRabbit 以外のボット生成イシュー（Dependabot 等）も含む真の包括カテゴリ） |
+
+> 分類は上から順に判定し、最初に一致したカテゴリを採用する（先勝ち）。**CodeRabbit 自動生成** 以外を、バグ → 機能要求 → Epic / リファクタリング の順で判定し、いずれにも該当しないものをすべて **その他** とする（その他は非 CodeRabbit のボット生成イシューも含む包括カテゴリ。これにより全イシューが必ずいずれか1カテゴリに入り、ステップ5の合計と整合する）。バグ判定の確実な根拠はラベル `bug` であり、タイトル語句（「バグ」「不具合」）は言語依存のベストエフォートな補助に過ぎない。ラベルが無く機械判定が難しいイシュー（英語タイトルのバグ報告等）は無理にバグへ寄せず **その他** に置き、必要に応じて手動で確認して `bug` ラベルを付与する。
 
 #### 判定用コマンド
 
 ```bash
-# CodeRabbit 生成イシューを抽出
-gh issue list --state open --limit 500 --json number,title,author --jq '[.[] | select(.author.login == "coderabbitai" or .author.login == "github-actions[bot]")]'
+# CodeRabbit 生成イシューを抽出（author または `coderabbit` ラベル。分類表と一致させる）
+gh issue list --state open --limit 1000 --json number,title,author,labels --jq '[.[] | select(.author.login == "coderabbitai" or (.labels | any(.name | ascii_downcase | contains("coderabbit"))))]'
 
-# 手動報告イシューを抽出
-gh issue list --state open --limit 500 --json number,title,author --jq '[.[] | select(.author.login != "coderabbitai" and .author.login != "github-actions[bot]")]'
+# 手動報告イシューを抽出（上記 CodeRabbit 条件の否定）
+gh issue list --state open --limit 1000 --json number,title,author,labels --jq '[.[] | select((.author.login == "coderabbitai" or (.labels | any(.name | ascii_downcase | contains("coderabbit")))) | not)]'
 ```
 
 ### ステップ 3: グルーピング
@@ -103,10 +110,25 @@ PR履歴やコミットログだけで判断してはならない。必ず現在
    # Serena の find_symbol / get_symbols_overview を使う
    # または Glob / Grep で対象ファイルを検索
    ```
-   - ファイルが存在しない → **クローズ可能**（理由: 対象コード削除済み）
-   - シンボルが存在しない → **クローズ可能**（理由: 対象シンボル削除済み）
+   現在のパス・名前で見つかった場合は手順3へ進む。
 
-3. **コードの実読**: 対象シンボルが存在する場合、**実際にコードを読んで**指摘内容が解消されているか判定する
+   **見つからない場合でも、即「対象消失」と判断してはならない**。リネーム・移動・分割で別の場所へ動いた可能性があるため、必ず git 履歴で追跡する（リネームを見落とすと、まだ有効な指摘を誤ってクローズしてしまう）:
+   ```bash
+   # ファイルのリネーム/移動を追跡（-M でリネーム検出、--follow で履歴を辿る）
+   git log --follow -M --oneline -- <ファイルパス>
+   git log -p -M --follow -- <ファイルパス>        # 移動先・変更内容まで確認
+
+   # シンボル（関数・型名等）が移動した先を特定する
+   git log -S'<シンボル名>' --oneline --all        # その文字列の出現数が変化したコミット
+   git log -G'<シンボル名>' --oneline --all        # その文字列を含む差分があるコミット
+   # 現在のコードベース全体でも改名後の名前を Grep/rg で広めに検索する
+   ```
+   - リネーム・移動先が見つかった → その新しいパス/名前のコードを手順3で読んで判定する（**対象消失にしない**）
+   - git 履歴上も削除されており移動先が無い → **対象消失**（理由: 対象コード削除済み）
+
+   ※ git 履歴はあくまで「コードが現在どこにあるか」を特定するために使う。解決済みかどうかの判定は、移動先の**現在のコードを実際に読んで**行う（手順3）。
+
+3. **コードの実読**: 対象シンボル（リネーム・移動後を含む）が見つかった場合、**実際にコードを読んで**指摘内容が解消されているか判定する
    ```
    # Serena の find_symbol with include_body=True でシンボル本体を読む
    # または Read ツールで該当ファイルの該当箇所を読む
@@ -121,7 +143,7 @@ PR履歴やコミットログだけで判断してはならない。必ず現在
 | ステータス | 基準 | 根拠の記載方法 |
 |-----------|------|---------------|
 | **クローズ可能** | コードを読んだ結果、指摘が解消されている | 「`<ファイル>` の `<シンボル>` を確認。指摘内容の `<問題>` は `<現在の実装>` により解消済み」 |
-| **対象消失** | 指摘対象のファイル・シンボルが存在しない | 「`<ファイル>` は削除済み」または「`<シンボル>` は存在しない」 |
+| **対象消失** | 指摘対象のファイル・シンボルが存在せず、git 履歴でもリネーム・移動先が無い（削除済み） | 「`<ファイル>` は削除済み（`git log --follow` で移動先なしを確認）」または「`<シンボル>` は存在しない」 |
 | **未解決** | コードを読んだ結果、指摘内容がまだ該当する | 「`<ファイル>` の `<シンボル>` を確認。指摘の `<問題>` は依然として存在」 |
 | **要確認** | コードだけでは判断できない（設計意図に依存等） | 判断できない理由を明記 |
 | **重複** | 別イシューと同一の指摘 | 重複先の Issue 番号を明記 |
@@ -129,6 +151,7 @@ PR履歴やコミットログだけで判断してはならない。必ず現在
 #### 判定の原則
 
 - **コードを読まずにクローズ判定してはならない**。PR タイトルやコミットメッセージだけで「修正済み」と判断しない。
+- **ファイル・シンボルが見つからない＝削除、と即断しない**。対象消失と判定する前に、必ず git 履歴（`git log --follow -M` / `git log -S` / `git log -G`）でリネーム・移動を追跡し、移動先があればそのコードで判定する。
 - イシュー1件ごとに、対象コードの該当箇所を実際に読んで確認する。
 - CodeRabbit イシューは指摘箇所が具体的（ファイルパス・行番号付き）なので、その箇所を直接読む。
 - 大量のイシューを処理する場合は Agent ツールで並列に検証してもよい。
@@ -164,6 +187,7 @@ PR履歴やコミットログだけで判断してはならない。必ず現在
 | 手動報告（バグ） | N | N | N |
 | 手動報告（機能要求） | N | N | N |
 | Epic / リファクタリング | N | N | N |
+| その他 | N | N | N |
 | 合計 | N | N | N |
 ```
 
@@ -198,10 +222,10 @@ PR履歴やコミットログだけで判断してはならない。必ず現在
 
 ```bash
 # イシュー一覧（詳細）
-gh issue list --state open --limit 500 --json number,title,labels,author,createdAt,updatedAt,body,comments
+gh issue list --state open --limit 1000 --json number,title,labels,author,createdAt,updatedAt,body,comments
 
 # 特定ラベルのイシュー
-gh issue list --state open --label "bug" --json number,title
+gh issue list --state open --limit 1000 --label "bug" --json number,title
 
 # イシュー詳細の確認
 gh issue view <number> --json number,title,body,labels,author,comments
