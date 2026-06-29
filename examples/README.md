@@ -39,5 +39,6 @@ bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts examples/
 
 repo 全体の examples 検証では、[skill-provenance.json](skill-provenance.json) も確認します。
 この manifest は、各 snapshot を生成した source skill の `skills/**/SKILL.md` と md5 を記録します。
-`npm run validate` は、現在の skill file md5 と manifest の md5 が一致することを検証します。
-再生成予定の snapshot だけ、`staleReason` に理由を記録して一時的な md5 不一致を明示できます。
+`npm run test:it:amadeus-examples` は、現在の skill file md5 と manifest の md5 が一致することを検証します。
+再生成作業中のローカル確認では、再生成予定の snapshot だけ `staleReason` に理由を記録できます。
+コミットする examples には `staleReason` を残しません。
