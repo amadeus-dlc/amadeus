@@ -24,20 +24,20 @@ Inception phase の追跡と状態確定だけを進める。
 - `.amadeus/intents.md`
 - `.amadeus/intents/<intent-id>-<slug>.md`
 - `.amadeus/intents/<intent-id>-<slug>/state.json`
-- `.amadeus/intents/<intent-id>-<slug>/scope.md`
-- `.amadeus/intents/<intent-id>-<slug>/ideation.md`
-- `.amadeus/intents/<intent-id>-<slug>/requirements.md`
-- `.amadeus/intents/<intent-id>-<slug>/acceptance.md`
-- `.amadeus/intents/<intent-id>-<slug>/user-stories.md`
-- `.amadeus/intents/<intent-id>-<slug>/use-cases.md`
-- `.amadeus/intents/<intent-id>-<slug>/units.md`
-- `.amadeus/intents/<intent-id>-<slug>/units/*.md`
-- `.amadeus/intents/<intent-id>-<slug>/units/*/design.md`
-- `.amadeus/intents/<intent-id>-<slug>/bolts.md`
-- `.amadeus/intents/<intent-id>-<slug>/bolts/*.md`
-- `.amadeus/intents/<intent-id>-<slug>/domain/**`
-- `.amadeus/intents/<intent-id>-<slug>/traceability.md`
-- `.amadeus/intents/<intent-id>-<slug>/decisions.md`
+- `.amadeus/intents/<intent-id>-<slug>/ideation/scope.md`
+- `.amadeus/intents/<intent-id>-<slug>/ideation/ideation.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/requirements.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/acceptance.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/user-stories.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/use-cases.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/units.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/units/*.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/units/*/design.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/bolts.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/bolts/*.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/domain/**`
+- `.amadeus/intents/<intent-id>-<slug>/inception/traceability.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/decisions.md`
 
 実施設計の成果物が不足している場合は、`amadeus-inception-execution-design` を案内して停止する。
 
@@ -51,9 +51,9 @@ Inception phase の追跡と状態確定だけを進める。
 
 作成または更新するものは次だけである。
 
-- `.amadeus/intents/<intent-id>-<slug>/traceability.md`
-- `.amadeus/intents/<intent-id>-<slug>/decisions.md`
-- `.amadeus/intents/<intent-id>-<slug>/decisions/<decision-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/traceability.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/decisions.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/decisions/<decision-id>-<slug>.md`
 - `.amadeus/intents/<intent-id>-<slug>/state.json`
 - 記録対象の質問と回答が親 skill から渡された場合だけ、`.amadeus/intents/<intent-id>-<slug>/grillings.md`
 - 記録対象の質問と回答が親 skill から渡された場合だけ、`.amadeus/intents/<intent-id>-<slug>/grillings/Gxxx-*.md`

@@ -3,7 +3,7 @@
 ## 対象
 
 - `.amadeus/domain/bounded-contexts.md`
-- `.amadeus/intents/<intent-id>-<slug>/domain/bounded-contexts.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/domain/bounded-contexts.md`
 
 ## 必須見出し
 

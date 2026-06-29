@@ -191,7 +191,7 @@ function validateDomainFileSets(targets: ExampleSnapshot[]): boolean {
   const errors: string[] = [];
   for (const target of targets) {
     if (!target.intent || !target.allowedDomainFiles) continue;
-    const domainRoot = `${target.workdir}/.amadeus/intents/${target.intent}/domain`;
+    const domainRoot = `${target.workdir}/.amadeus/intents/${target.intent}/inception/domain`;
     if (!existsSync(domainRoot)) continue;
 
     const allowed = new Set(target.allowedDomainFiles);

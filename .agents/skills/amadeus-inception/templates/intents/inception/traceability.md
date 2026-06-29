@@ -47,7 +47,7 @@ greenfield で `codebase-analysis.md` を作らない場合は、この見出し
 
 | 種別 | 対象 | 依存 | 理由 | 定義元 |
 |---|---|---|---|---|
-| インテント | <intent-id>-<slug> | <dependency-or-none> | 未確認 | [intents.md](../../intents.md) |
+| インテント | <intent-id>-<slug> | <dependency-or-none> | 未確認 | [intents.md](../../../intents.md) |
 | 要求 | R001 | なし | 未確認 | [requirements.md](requirements.md) |
 | ユーザーストーリー | S001 | なし | 未確認 | [user-stories.md](user-stories.md) |
 | ユースケース | UC001 | なし | 未確認 | [use-cases.md](use-cases.md) |

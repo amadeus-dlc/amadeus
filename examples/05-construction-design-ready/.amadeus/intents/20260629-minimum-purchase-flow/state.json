@@ -14,53 +14,53 @@
     "status": "completed",
     "requiredArtifacts": [
       "../20260629-minimum-purchase-flow.md",
-      "scope.md",
-      "ideation.md",
-      "decisions.md",
-      "traceability.md"
+      "ideation/scope.md",
+      "ideation/ideation.md",
+      "ideation/decisions.md",
+      "ideation/traceability.md"
     ],
     "requiredMocks": [
-      "mocks/initial-confirmation.puml"
+      "ideation/mocks/initial-confirmation.puml"
     ],
     "gate": "passed"
   },
   "inception": {
     "status": "completed",
     "requiredArtifacts": [
-      "requirements.md",
-      "requirements/R001-select-product.md",
-      "requirements/R002-check-sellable-stock.md",
-      "requirements/R003-record-buyer-information.md",
-      "requirements/R004-create-order.md",
-      "acceptance.md",
-      "user-stories.md",
-      "user-stories/S001-customer-creates-order.md",
-      "use-cases.md",
-      "use-cases/UC001-select-product.md",
-      "use-cases/UC002-confirm-order.md",
-      "use-cases/UC003-create-order.md",
-      "units.md",
-      "units/U001-minimum-purchase-flow.md",
-      "units/U001-minimum-purchase-flow/design.md",
-      "units/U002-order-creation.md",
-      "units/U002-order-creation/design.md",
-      "bolts.md",
-      "domain/subdomains.md",
-      "domain/bounded-contexts.md",
-      "domain/bounded-contexts/BC001-sales-management.md",
-      "domain/bounded-contexts/BC001-sales-management/models.md",
-      "domain/bounded-contexts/BC001-sales-management/contracts.md",
-      "traceability.md",
-      "decisions.md",
-      "decisions/D001-complete-ideation.md",
-      "decisions/D002-inception-boundary.md",
-      "decisions/D003-unit-split.md",
-      "decisions/D004-bolt-split.md"
+      "inception/requirements.md",
+      "inception/requirements/R001-select-product.md",
+      "inception/requirements/R002-check-sellable-stock.md",
+      "inception/requirements/R003-record-buyer-information.md",
+      "inception/requirements/R004-create-order.md",
+      "inception/acceptance.md",
+      "inception/user-stories.md",
+      "inception/user-stories/S001-customer-creates-order.md",
+      "inception/use-cases.md",
+      "inception/use-cases/UC001-select-product.md",
+      "inception/use-cases/UC002-confirm-order.md",
+      "inception/use-cases/UC003-create-order.md",
+      "inception/units.md",
+      "inception/units/U001-minimum-purchase-flow.md",
+      "inception/units/U001-minimum-purchase-flow/design.md",
+      "inception/units/U002-order-creation.md",
+      "inception/units/U002-order-creation/design.md",
+      "inception/bolts.md",
+      "inception/domain/subdomains.md",
+      "inception/domain/bounded-contexts.md",
+      "inception/domain/bounded-contexts/BC001-sales-management.md",
+      "inception/domain/bounded-contexts/BC001-sales-management/models.md",
+      "inception/domain/bounded-contexts/BC001-sales-management/contracts.md",
+      "inception/traceability.md",
+      "inception/decisions.md",
+      "inception/decisions/D001-complete-ideation.md",
+      "inception/decisions/D002-inception-boundary.md",
+      "inception/decisions/D003-unit-split.md",
+      "inception/decisions/D004-bolt-split.md"
     ],
     "requiredBoltArtifacts": [
-      "bolts/B001-order-creation.md",
-      "bolts/B002-order-confirmation.md",
-      "bolts/B003-product-selection.md"
+      "inception/bolts/B001-order-creation.md",
+      "inception/bolts/B002-order-confirmation.md",
+      "inception/bolts/B003-product-selection.md"
     ],
     "gate": "passed"
   },
@@ -70,18 +70,17 @@
       "B001"
     ],
     "requiredArtifacts": [
-      "requirements.md",
-      "acceptance.md",
-      "units.md",
-      "bolts.md",
-      "traceability.md",
-      "decisions.md"
+      "inception/requirements.md",
+      "inception/acceptance.md",
+      "inception/units.md",
+      "inception/bolts.md",
+      "construction/traceability.md",
+      "construction/decisions.md"
     ],
     "requiredBoltArtifacts": [
-      "bolts/B001-order-creation.md",
-      "bolts/B001-order-creation/design.md",
-      "bolts/B001-order-creation/tasks.md",
-      "bolts/B001-order-creation/notes.md"
+      "construction/bolts/B001-order-creation/design.md",
+      "construction/bolts/B001-order-creation/tasks.md",
+      "construction/bolts/B001-order-creation/notes.md"
     ],
     "bolts": [
       {
@@ -90,13 +89,13 @@
           "status": "ready",
           "reviewedBy": "ai",
           "updatedAt": "2026-06-29",
-          "evidence": "bolts/B001-order-creation/design.md"
+          "evidence": "construction/bolts/B001-order-creation/design.md"
         },
         "tasks": {
           "status": "generated",
           "reviewedBy": "ai",
           "updatedAt": "2026-06-29",
-          "evidence": "bolts/B001-order-creation/tasks.md"
+          "evidence": "construction/bolts/B001-order-creation/tasks.md"
         }
       }
     ],

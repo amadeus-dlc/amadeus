@@ -24,10 +24,10 @@ Inception phase の要件定義だけを進める。
 - `.amadeus/intents.md`
 - `.amadeus/intents/<intent-id>-<slug>.md`
 - `.amadeus/intents/<intent-id>-<slug>/state.json`
-- `.amadeus/intents/<intent-id>-<slug>/scope.md`
-- `.amadeus/intents/<intent-id>-<slug>/ideation.md`
-- `.amadeus/intents/<intent-id>-<slug>/traceability.md`
-- `.amadeus/intents/<intent-id>-<slug>/decisions.md`
+- `.amadeus/intents/<intent-id>-<slug>/ideation/scope.md`
+- `.amadeus/intents/<intent-id>-<slug>/ideation/ideation.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/traceability.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/decisions.md`
 - steering layer
 
 `state.json.phase` が `ideation` でなく、既存の Inception 成果物もない場合は停止する。
@@ -43,9 +43,9 @@ Inception phase の要件定義だけを進める。
 
 作成または更新するものは次だけである。
 
-- `.amadeus/intents/<intent-id>-<slug>/requirements.md`
-- `.amadeus/intents/<intent-id>-<slug>/requirements/<requirement-id>-<slug>.md`
-- `.amadeus/intents/<intent-id>-<slug>/acceptance.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/requirements.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/requirements/<requirement-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/acceptance.md`
 - 記録対象の質問と回答が親 skill から渡された場合だけ、`.amadeus/intents/<intent-id>-<slug>/grillings.md`
 - 記録対象の質問と回答が親 skill から渡された場合だけ、`.amadeus/intents/<intent-id>-<slug>/grillings/Gxxx-*.md`
 

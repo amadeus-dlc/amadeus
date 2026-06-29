@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 const root = resolve(import.meta.dir, "../../..");
 const fixture = join(root, "examples/04-inception-completed/.amadeus");
@@ -57,9 +57,155 @@ function workspaceCopy(): string {
   return workspace;
 }
 
-function intentPath(workspace: string, path: string): string {
-  return join(workspace, ".amadeus/intents", intent, path);
+function phaseWorkspaceCopy(): string {
+  const workspace = workspaceCopy();
+  ensureConstructionPhaseScaffold(workspace);
+  return workspace;
 }
+
+function legacyIntentRootLayoutWorkspaceCopy(): string {
+  const workspace = workspaceCopy();
+  moveIntentPath(workspace, "inception/requirements.md", "requirements.md");
+  return workspace;
+}
+
+function intentRoot(workspace: string): string {
+  return join(workspace, ".amadeus/intents", intent);
+}
+
+function intentPath(workspace: string, path: string): string {
+  return join(intentRoot(workspace), phaseRelativePath(path));
+}
+
+function constructionIntentPath(workspace: string, path: string): string {
+  return join(intentRoot(workspace), "construction", path);
+}
+
+function phaseRelativePath(path: string): string {
+  if (path === "") return "ideation";
+  if (path === "state.json") return path;
+  if (
+    path === "scope.md" ||
+    path === "ideation.md" ||
+    path.startsWith("mocks/")
+  ) {
+    return `ideation/${path}`;
+  }
+  if (path.startsWith("bolts/") && !path.match(/^bolts\/[^/]+\.md$/)) {
+    return `construction/${path}`;
+  }
+  return `inception/${path}`;
+}
+
+function moveIntentPath(workspace: string, from: string, to: string): void {
+  const source = join(intentRoot(workspace), from);
+  if (!existsSync(source)) return;
+  const target = join(intentRoot(workspace), to);
+  mkdirSync(dirname(target), { recursive: true });
+  renameSync(source, target);
+}
+
+function migrateIntentToPhaseLayout(workspace: string): void {
+  for (const path of ["scope.md", "ideation.md", "mocks"]) moveIntentPath(workspace, path, `ideation/${path}`);
+  for (const path of [
+    "requirements.md",
+    "requirements",
+    "acceptance.md",
+    "user-stories.md",
+    "user-stories",
+    "use-cases.md",
+    "use-cases",
+    "units.md",
+    "units",
+    "bolts.md",
+    "domain",
+    "traceability.md",
+    "decisions.md",
+    "decisions",
+  ]) {
+    moveIntentPath(workspace, path, `inception/${path}`);
+  }
+
+  const legacyBoltsRoot = join(intentRoot(workspace), "bolts");
+  if (existsSync(legacyBoltsRoot)) {
+    for (const entry of ["B001-order-creation.md", "B002-order-confirmation.md", "B003-product-selection.md"]) {
+      moveIntentPath(workspace, `bolts/${entry}`, `inception/bolts/${entry}`);
+    }
+    rmSync(legacyBoltsRoot, { recursive: true, force: true });
+  }
+
+  mkdirSync(constructionIntentPath(workspace, "bolts"), { recursive: true });
+  writeFileSync(
+    constructionIntentPath(workspace, "traceability.md"),
+    ["# Construction Traceability", ""].join("\n"),
+  );
+  writeFileSync(
+    constructionIntentPath(workspace, "decisions.md"),
+    ["# Construction Decisions", "", "## 一覧", "", "| 識別子 | 概要 | 状態 | 依存 | 詳細 |", "|---|---|---|---|---|", "", "## 依存関係", "", "| 判断 | 依存 | 理由 |", "|---|---|---|", ""].join("\n"),
+  );
+  replaceInFile(
+    intentPath(workspace, "traceability.md"),
+    "../../intents.md",
+    "../../../intents.md",
+    "traceability fixture does not contain expected intents link",
+  );
+  rewriteStateForPhaseLayout(workspace);
+}
+
+function ensureConstructionPhaseScaffold(workspace: string): void {
+  mkdirSync(constructionIntentPath(workspace, "bolts"), { recursive: true });
+  if (!existsSync(constructionIntentPath(workspace, "traceability.md"))) {
+    writeFileSync(
+      constructionIntentPath(workspace, "traceability.md"),
+      ["# Construction Traceability", ""].join("\n"),
+    );
+  }
+  if (!existsSync(constructionIntentPath(workspace, "decisions.md"))) {
+    writeFileSync(
+      constructionIntentPath(workspace, "decisions.md"),
+      ["# Construction Decisions", "", "## 一覧", "", "| 識別子 | 概要 | 状態 | 依存 | 詳細 |", "|---|---|---|---|---|", "", "## 依存関係", "", "| 判断 | 依存 | 理由 |", "|---|---|---|", ""].join("\n"),
+    );
+  }
+}
+
+function rewriteStateForPhaseLayout(workspace: string): void {
+  const path = intentPath(workspace, "state.json");
+  const state = JSON.parse(readFileSync(path, "utf8"));
+  if (state.ideation) {
+    state.ideation.requiredArtifacts = (state.ideation.requiredArtifacts ?? []).map((value: string) => phaseStatePath(value, "ideation"));
+    state.ideation.requiredMocks = (state.ideation.requiredMocks ?? []).map((value: string) => phaseStatePath(value, "ideation"));
+  }
+  if (state.inception) {
+    state.inception.requiredArtifacts = (state.inception.requiredArtifacts ?? []).map((value: string) => phaseStatePath(value, "inception"));
+    state.inception.requiredBoltArtifacts = (state.inception.requiredBoltArtifacts ?? []).map((value: string) => phaseStatePath(value, "inception"));
+  }
+  if (state.construction) {
+    state.construction.requiredArtifacts = (state.construction.requiredArtifacts ?? []).map((value: string) => constructionStatePath(value));
+    state.construction.requiredBoltArtifacts = (state.construction.requiredBoltArtifacts ?? []).map((value: string) => phaseStatePath(value, "construction"));
+    for (const bolt of state.construction.bolts ?? []) {
+      if (bolt.designGate?.evidence) bolt.designGate.evidence = phaseStatePath(bolt.designGate.evidence, "construction");
+      if (bolt.tasks?.evidence) bolt.tasks.evidence = phaseStatePath(bolt.tasks.evidence, "construction");
+    }
+  }
+  writeFileSync(path, JSON.stringify(state, null, 2));
+}
+
+function phaseStatePath(value: string, phase: "ideation" | "inception" | "construction"): string {
+  if (value.startsWith("../") || value === "state.json" || value.startsWith(`${phase}/`)) return value;
+  return `${phase}/${value}`;
+}
+
+function constructionStatePath(value: string): string {
+  if (value === "state.json" || value.startsWith("../") || value.startsWith("inception/") || value.startsWith("construction/")) return value;
+  if (value === "traceability.md" || value === "decisions.md" || value.startsWith("decisions/")) return `construction/${value}`;
+  return `inception/${value}`;
+}
+
+const legacyIntentRootLayoutWorkspace = legacyIntentRootLayoutWorkspaceCopy();
+runExpectFailure(
+  ["bun", "run", validator, legacyIntentRootLayoutWorkspace, intent],
+  "Intent 直下の旧配置成果物を使わない",
+);
 
 function ensureBoltDirectory(workspace: string, bolt: string): void {
   mkdirSync(intentPath(workspace, `bolts/${bolt}`), { recursive: true });
@@ -1226,20 +1372,19 @@ function writeConstructionState(workspace: string, overrides: Record<string, any
     status: overrides.constructionStatus ?? "in_progress",
     targetBolts: overrides.targetBolts ?? ["B001"],
     requiredArtifacts: [
-      "requirements.md",
-      "acceptance.md",
-      "units.md",
-      "bolts.md",
-      "traceability.md",
-      "decisions.md",
+      "inception/requirements.md",
+      "inception/acceptance.md",
+      "inception/units.md",
+      "inception/bolts.md",
+      "construction/traceability.md",
+      "construction/decisions.md",
       "state.json",
     ],
     requiredBoltArtifacts: overrides.requiredBoltArtifacts ?? [
-      `bolts/${bolt1}.md`,
-      `bolts/${bolt1}/tasks.md`,
-      `bolts/${bolt1}/design.md`,
-      `bolts/${bolt1}/notes.md`,
-      `bolts/${bolt1}/test-results.md`,
+      `construction/bolts/${bolt1}/tasks.md`,
+      `construction/bolts/${bolt1}/design.md`,
+      `construction/bolts/${bolt1}/notes.md`,
+      `construction/bolts/${bolt1}/test-results.md`,
     ],
     gate: overrides.constructionGate ?? "not_ready",
     bolts: overrides.bolts ?? [
@@ -1249,13 +1394,13 @@ function writeConstructionState(workspace: string, overrides: Record<string, any
           status: "ready",
           reviewedBy: "ai",
           updatedAt: "2026-06-28",
-          evidence: `bolts/${bolt1}/design.md`,
+          evidence: `construction/bolts/${bolt1}/design.md`,
         },
         tasks: {
           status: "generated",
           reviewedBy: "ai",
           updatedAt: "2026-06-28",
-          evidence: `bolts/${bolt1}/tasks.md`,
+          evidence: `construction/bolts/${bolt1}/tasks.md`,
         },
       },
     ],
@@ -1338,7 +1483,7 @@ function replacePrTargetWithEmptyBolt(workspace: string): void {
 }
 
 function appendEmptyConstructionTrace(workspace: string): void {
-  const path = intentPath(workspace, "traceability.md");
+  const path = constructionIntentPath(workspace, "traceability.md");
   const text = readFileSync(path, "utf8");
   writeFileSync(
     path,
@@ -1355,7 +1500,7 @@ function appendEmptyConstructionTrace(workspace: string): void {
 }
 
 function appendConstructionTrace(workspace: string): void {
-  const path = intentPath(workspace, "traceability.md");
+  const path = constructionIntentPath(workspace, "traceability.md");
   const text = readFileSync(path, "utf8");
   writeFileSync(
     path,
@@ -1376,7 +1521,7 @@ function appendConstructionDesignTrace(
   workspace: string,
   overrides: { task?: string; implementation?: string; verification?: string; pr?: string; status?: string } = {},
 ): void {
-  const path = intentPath(workspace, "traceability.md");
+  const path = constructionIntentPath(workspace, "traceability.md");
   const text = readFileSync(path, "utf8");
   writeFileSync(
     path,
@@ -1393,27 +1538,28 @@ function appendConstructionDesignTrace(
   );
 }
 
-run(["bun", "run", validator, "examples/04-inception-completed", intent]);
+const phaseInceptionWorkspace = phaseWorkspaceCopy();
+run(["bun", "run", validator, phaseInceptionWorkspace, intent]);
 
-const missingSteeringObjectiveWorkspace = workspaceCopy();
+const missingSteeringObjectiveWorkspace = phaseWorkspaceCopy();
 removeSteeringObjective(missingSteeringObjectiveWorkspace);
 runExpectFailure(
   ["bun", "run", validator, missingSteeringObjectiveWorkspace],
   "steering の目的一覧が存在する",
 );
 
-const missingSteeringProductWorkspace = workspaceCopy();
+const missingSteeringProductWorkspace = phaseWorkspaceCopy();
 removeSteeringProduct(missingSteeringProductWorkspace);
 runExpectFailure(
   ["bun", "run", validator, missingSteeringProductWorkspace],
   "steering のプロダクト概要が存在する",
 );
 
-const intentGrillingsWorkspace = workspaceCopy();
+const intentGrillingsWorkspace = phaseWorkspaceCopy();
 writeGrillings(intentPath(intentGrillingsWorkspace, ""));
 run(["bun", "run", validator, intentGrillingsWorkspace, intent]);
 
-const crossSessionQuestionReferenceWorkspace = workspaceCopy();
+const crossSessionQuestionReferenceWorkspace = phaseWorkspaceCopy();
 writeGrillings(intentPath(crossSessionQuestionReferenceWorkspace, ""), {
   extraSession: "true",
   extraSessionDecisionId: "GD002",
@@ -1421,7 +1567,7 @@ writeGrillings(intentPath(crossSessionQuestionReferenceWorkspace, ""), {
 });
 run(["bun", "run", validator, crossSessionQuestionReferenceWorkspace, intent]);
 
-const supersededWithSessionDecisionReferenceWorkspace = workspaceCopy();
+const supersededWithSessionDecisionReferenceWorkspace = phaseWorkspaceCopy();
 writeGrillings(intentPath(supersededWithSessionDecisionReferenceWorkspace, ""), {
   decisionState: "superseded",
   replacedBy: "G002 GD002",
@@ -1430,40 +1576,40 @@ writeGrillings(intentPath(supersededWithSessionDecisionReferenceWorkspace, ""), 
 });
 run(["bun", "run", validator, supersededWithSessionDecisionReferenceWorkspace, intent]);
 
-const discoveryGrillingsWorkspace = workspaceCopy();
+const discoveryGrillingsWorkspace = phaseWorkspaceCopy();
 writeGrillings(join(discoveryGrillingsWorkspace, `.amadeus/discoveries/${discovery}`), {
   target: `../${discovery}.md`,
 });
 run(["bun", "run", validator, discoveryGrillingsWorkspace]);
 
-const domainGrillingsWorkspace = workspaceCopy();
+const domainGrillingsWorkspace = phaseWorkspaceCopy();
 writeGrillings(join(domainGrillingsWorkspace, ".amadeus/domain"), { target: "../glossary.md" });
 run(["bun", "run", validator, domainGrillingsWorkspace]);
 
-const eventStormingWorkspace = workspaceCopy();
+const eventStormingWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(eventStormingWorkspace);
 run(["bun", "run", validator, eventStormingWorkspace]);
 
-const eventStormingGrillingsWorkspace = workspaceCopy();
+const eventStormingGrillingsWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(eventStormingGrillingsWorkspace);
 writeGrillings(join(eventStormingGrillingsWorkspace, ".amadeus/event-storming/ES001-loan-flow"), { target: "../ES001-loan-flow.md" });
 run(["bun", "run", validator, eventStormingGrillingsWorkspace]);
 
-const grillingsIndexWithoutDirectoryWorkspace = workspaceCopy();
+const grillingsIndexWithoutDirectoryWorkspace = phaseWorkspaceCopy();
 writeOnlyGrillingsIndex(intentPath(grillingsIndexWithoutDirectoryWorkspace, ""));
 runExpectFailure(
   ["bun", "run", validator, grillingsIndexWithoutDirectoryWorkspace, intent],
   "`grillings.md` と `grillings/` が揃っている",
 );
 
-const grillingsBadSessionNameWorkspace = workspaceCopy();
+const grillingsBadSessionNameWorkspace = phaseWorkspaceCopy();
 writeGrillings(intentPath(grillingsBadSessionNameWorkspace, ""), { sessionFile: "G1-bad.md" });
 runExpectFailure(
   ["bun", "run", validator, grillingsBadSessionNameWorkspace, intent],
   "grilling session ファイル名が Gnnn-<topic>.md 形式である",
 );
 
-const grillingsUnindexedSessionWorkspace = workspaceCopy();
+const grillingsUnindexedSessionWorkspace = phaseWorkspaceCopy();
 writeGrillings(intentPath(grillingsUnindexedSessionWorkspace, ""));
 writeExtraGrillingSession(intentPath(grillingsUnindexedSessionWorkspace, ""), "G002-unindexed.md", "GD002");
 runExpectFailure(
@@ -1471,7 +1617,7 @@ runExpectFailure(
   "grilling session が `grillings.md` に登録されている",
 );
 
-const grillingsDuplicateSessionIdWorkspace = workspaceCopy();
+const grillingsDuplicateSessionIdWorkspace = phaseWorkspaceCopy();
 writeGrillings(intentPath(grillingsDuplicateSessionIdWorkspace, ""));
 writeExtraGrillingSession(intentPath(grillingsDuplicateSessionIdWorkspace, ""), "G001-duplicate.md", "GD002");
 runExpectFailure(
@@ -1479,7 +1625,7 @@ runExpectFailure(
   "grilling session ID が対象 root 内で重複しない",
 );
 
-const grillingsMismatchedSessionStateWorkspace = workspaceCopy();
+const grillingsMismatchedSessionStateWorkspace = phaseWorkspaceCopy();
 writeGrillings(intentPath(grillingsMismatchedSessionStateWorkspace, ""), {
   indexSessionState: "completed",
   sessionState: "active",
@@ -1489,70 +1635,70 @@ runExpectFailure(
   "grilling 索引と session の `状態` が一致する",
 );
 
-const grillingsIndexWithMissingTargetWorkspace = workspaceCopy();
+const grillingsIndexWithMissingTargetWorkspace = phaseWorkspaceCopy();
 writeGrillings(intentPath(grillingsIndexWithMissingTargetWorkspace, ""), { indexTarget: "[missing](missing.md)" });
 runExpectFailure(
   ["bun", "run", validator, grillingsIndexWithMissingTargetWorkspace, intent],
   "grilling 索引の `反映先` が存在する",
 );
 
-const grillingsIndexWithExternalTargetWorkspace = workspaceCopy();
+const grillingsIndexWithExternalTargetWorkspace = phaseWorkspaceCopy();
 writeGrillings(intentPath(grillingsIndexWithExternalTargetWorkspace, ""), { indexTarget: "https://example.com/scope.md" });
 runExpectFailure(
   ["bun", "run", validator, grillingsIndexWithExternalTargetWorkspace, intent],
   "grilling 索引の `反映先` が存在する",
 );
 
-const grillingsSessionWithMissingTargetWorkspace = workspaceCopy();
+const grillingsSessionWithMissingTargetWorkspace = phaseWorkspaceCopy();
 writeGrillings(intentPath(grillingsSessionWithMissingTargetWorkspace, ""), { sessionTarget: "missing.md" });
 runExpectFailure(
   ["bun", "run", validator, grillingsSessionWithMissingTargetWorkspace, intent],
   "grilling session の `反映先` が存在する",
 );
 
-const grillingsDecisionWithoutTargetWorkspace = workspaceCopy();
+const grillingsDecisionWithoutTargetWorkspace = phaseWorkspaceCopy();
 writeGrillings(intentPath(grillingsDecisionWithoutTargetWorkspace, ""), { decisionTarget: "" });
 runExpectFailure(
   ["bun", "run", validator, grillingsDecisionWithoutTargetWorkspace, intent],
   "grilling 判断の `反映先` が空欄でない",
 );
 
-const grillingsDecisionWithMissingTargetWorkspace = workspaceCopy();
+const grillingsDecisionWithMissingTargetWorkspace = phaseWorkspaceCopy();
 writeGrillings(intentPath(grillingsDecisionWithMissingTargetWorkspace, ""), { decisionTarget: "missing.md" });
 runExpectFailure(
   ["bun", "run", validator, grillingsDecisionWithMissingTargetWorkspace, intent],
   "grilling 判断の `反映先` が存在する",
 );
 
-const grillingsDecisionWithoutParseableTargetWorkspace = workspaceCopy();
+const grillingsDecisionWithoutParseableTargetWorkspace = phaseWorkspaceCopy();
 writeGrillings(intentPath(grillingsDecisionWithoutParseableTargetWorkspace, ""), { decisionTarget: "," });
 runExpectFailure(
   ["bun", "run", validator, grillingsDecisionWithoutParseableTargetWorkspace, intent],
   "grilling 判断の `反映先` が存在する",
 );
 
-const grillingsQuestionWithoutDecisionWorkspace = workspaceCopy();
+const grillingsQuestionWithoutDecisionWorkspace = phaseWorkspaceCopy();
 writeGrillings(intentPath(grillingsQuestionWithoutDecisionWorkspace, ""), { extraQuestionWithoutDecision: "true" });
 runExpectFailure(
   ["bun", "run", validator, grillingsQuestionWithoutDecisionWorkspace, intent],
   "質問記録が確定判断 ID を参照する",
 );
 
-const grillingsQuestionWithoutUserAnswerWorkspace = workspaceCopy();
+const grillingsQuestionWithoutUserAnswerWorkspace = phaseWorkspaceCopy();
 writeGrillings(intentPath(grillingsQuestionWithoutUserAnswerWorkspace, ""), { omitQuestionUserAnswer: "true" });
 runExpectFailure(
   ["bun", "run", validator, grillingsQuestionWithoutUserAnswerWorkspace, intent],
   "質問記録がユーザー回答を持つ",
 );
 
-const grillingsSupersededWithoutReplacementWorkspace = workspaceCopy();
+const grillingsSupersededWithoutReplacementWorkspace = phaseWorkspaceCopy();
 writeGrillings(intentPath(grillingsSupersededWithoutReplacementWorkspace, ""), { decisionState: "superseded" });
 runExpectFailure(
   ["bun", "run", validator, grillingsSupersededWithoutReplacementWorkspace, intent],
   "superseded の grilling 判断が置き換え先を持つ",
 );
 
-const grillingsSupersededWithUnknownReplacementWorkspace = workspaceCopy();
+const grillingsSupersededWithUnknownReplacementWorkspace = phaseWorkspaceCopy();
 writeGrillings(intentPath(grillingsSupersededWithUnknownReplacementWorkspace, ""), {
   decisionState: "superseded",
   replacedBy: "GD999",
@@ -1562,7 +1708,7 @@ runExpectFailure(
   "superseded の grilling 判断が実在する置き換え先を参照する",
 );
 
-const grillingsDuplicateDecisionIdWorkspace = workspaceCopy();
+const grillingsDuplicateDecisionIdWorkspace = phaseWorkspaceCopy();
 writeGrillings(intentPath(grillingsDuplicateDecisionIdWorkspace, ""), {
   extraSession: "true",
   extraSessionDecisionId: "GD001",
@@ -1572,26 +1718,26 @@ runExpectFailure(
   "grilling 判断 ID が対象 root 内で重複しない",
 );
 
-const draftSystemDesignEventStormingWorkspace = workspaceCopy();
+const draftSystemDesignEventStormingWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(draftSystemDesignEventStormingWorkspace);
 markEventStormingSystemDesignDraft(draftSystemDesignEventStormingWorkspace);
 removeEventStormingSummaryHandoff(draftSystemDesignEventStormingWorkspace);
 run(["bun", "run", validator, draftSystemDesignEventStormingWorkspace]);
 
-const draftEventStormingWithFlowOnlyHotspotWorkspace = workspaceCopy();
+const draftEventStormingWithFlowOnlyHotspotWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(draftEventStormingWithFlowOnlyHotspotWorkspace);
 markEventStormingSystemDesignDraft(draftEventStormingWithFlowOnlyHotspotWorkspace);
 removeEventStormingBoardReadModel(draftEventStormingWithFlowOnlyHotspotWorkspace);
 replaceEventStormingHotspotRelatedWithFlowOnlyId(draftEventStormingWithFlowOnlyHotspotWorkspace);
 run(["bun", "run", validator, draftEventStormingWithFlowOnlyHotspotWorkspace]);
 
-const draftEventStormingWithUnknownReferenceWorkspace = workspaceCopy();
+const draftEventStormingWithUnknownReferenceWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(draftEventStormingWithUnknownReferenceWorkspace);
 markEventStormingSystemDesignDraft(draftEventStormingWithUnknownReferenceWorkspace);
 replaceEventStormingDraftReferencesWithUnknown(draftEventStormingWithUnknownReferenceWorkspace);
 run(["bun", "run", validator, draftEventStormingWithUnknownReferenceWorkspace]);
 
-const missingEventStormingBoardCandidateWorkspace = workspaceCopy();
+const missingEventStormingBoardCandidateWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(missingEventStormingBoardCandidateWorkspace);
 removeEventStormingBoardCandidate(missingEventStormingBoardCandidateWorkspace);
 runExpectFailure(
@@ -1599,7 +1745,7 @@ runExpectFailure(
   "`board.md` が system-design の Aggregate Candidate を含む",
 );
 
-const missingEventStormingBoardBoundedContextCandidateWorkspace = workspaceCopy();
+const missingEventStormingBoardBoundedContextCandidateWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(missingEventStormingBoardBoundedContextCandidateWorkspace);
 removeEventStormingBoardBoundedContextCandidate(missingEventStormingBoardBoundedContextCandidateWorkspace);
 runExpectFailure(
@@ -1607,7 +1753,7 @@ runExpectFailure(
   "`board.md` が system-design の Bounded Context Candidate を含む",
 );
 
-const missingEventStormingBoardProcessElementWorkspace = workspaceCopy();
+const missingEventStormingBoardProcessElementWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(missingEventStormingBoardProcessElementWorkspace);
 removeEventStormingBoardProcessElement(missingEventStormingBoardProcessElementWorkspace);
 runExpectFailure(
@@ -1615,7 +1761,7 @@ runExpectFailure(
   "`board.md` が process-modeling の要素を含む",
 );
 
-const missingEventStormingProcessReadyBoardElementWorkspace = workspaceCopy();
+const missingEventStormingProcessReadyBoardElementWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(missingEventStormingProcessReadyBoardElementWorkspace);
 markEventStormingProcessModelingReady(missingEventStormingProcessReadyBoardElementWorkspace);
 removeEventStormingBoardProcessElement(missingEventStormingProcessReadyBoardElementWorkspace);
@@ -1624,7 +1770,7 @@ runExpectFailure(
   "`board.md` が process-modeling の要素を含む",
 );
 
-const completedProcessEventStormingWithBadBoardRefWorkspace = workspaceCopy();
+const completedProcessEventStormingWithBadBoardRefWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(completedProcessEventStormingWithBadBoardRefWorkspace);
 markEventStormingCurrentLevelBigPictureWithProcessComplete(completedProcessEventStormingWithBadBoardRefWorkspace);
 replaceEventStormingBoardRelatedWithMissingId(completedProcessEventStormingWithBadBoardRefWorkspace);
@@ -1633,7 +1779,7 @@ runExpectFailure(
   "`Related` が Event Storming 要素 ID またはなしである",
 );
 
-const bigPictureEventStormingWithBadBoardRefWorkspace = workspaceCopy();
+const bigPictureEventStormingWithBadBoardRefWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(bigPictureEventStormingWithBadBoardRefWorkspace);
 markEventStormingBigPictureReady(bigPictureEventStormingWithBadBoardRefWorkspace);
 replaceEventStormingBoardRelatedWithMissingId(bigPictureEventStormingWithBadBoardRefWorkspace);
@@ -1642,7 +1788,7 @@ runExpectFailure(
   "`Related` が Event Storming 要素 ID またはなしである",
 );
 
-const eventStormingWithoutStateWorkspace = workspaceCopy();
+const eventStormingWithoutStateWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(eventStormingWithoutStateWorkspace);
 removeEventStormingState(eventStormingWithoutStateWorkspace);
 runExpectFailure(
@@ -1650,7 +1796,7 @@ runExpectFailure(
   "Event Storming 状態ファイルが存在する",
 );
 
-const eventStormingPreIntentWithRelatedIntentWorkspace = workspaceCopy();
+const eventStormingPreIntentWithRelatedIntentWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(eventStormingPreIntentWithRelatedIntentWorkspace);
 replaceEventStormingRelatedIntentWithValue(eventStormingPreIntentWithRelatedIntentWorkspace);
 runExpectFailure(
@@ -1658,7 +1804,7 @@ runExpectFailure(
   "`relatedIntent` が",
 );
 
-const eventStormingReadyWithoutCompletedSystemDesignWorkspace = workspaceCopy();
+const eventStormingReadyWithoutCompletedSystemDesignWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(eventStormingReadyWithoutCompletedSystemDesignWorkspace);
 markEventStormingSystemDesignReadyWithoutCompletedLevel(eventStormingReadyWithoutCompletedSystemDesignWorkspace);
 removeEventStormingSummaryHandoff(eventStormingReadyWithoutCompletedSystemDesignWorkspace);
@@ -1667,7 +1813,7 @@ runExpectFailure(
   "Handoff To Domain Modeling",
 );
 
-const eventStormingWithoutHandoffRowsWorkspace = workspaceCopy();
+const eventStormingWithoutHandoffRowsWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(eventStormingWithoutHandoffRowsWorkspace);
 removeEventStormingSummaryHandoffRows(eventStormingWithoutHandoffRowsWorkspace);
 runExpectFailure(
@@ -1675,7 +1821,7 @@ runExpectFailure(
   "system-design ready の Handoff が1件以上ある",
 );
 
-const eventStormingWithBadHandoffCandidateWorkspace = workspaceCopy();
+const eventStormingWithBadHandoffCandidateWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(eventStormingWithBadHandoffCandidateWorkspace);
 replaceEventStormingSummaryHandoffCandidateWithMissingId(eventStormingWithBadHandoffCandidateWorkspace);
 runExpectFailure(
@@ -1683,7 +1829,7 @@ runExpectFailure(
   "`Candidate` が system-design 候補 ID である",
 );
 
-const eventStormingMissingCompletedLevelPrerequisiteWorkspace = workspaceCopy();
+const eventStormingMissingCompletedLevelPrerequisiteWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(eventStormingMissingCompletedLevelPrerequisiteWorkspace);
 replaceEventStormingCompletedLevelsWithMissingPrerequisite(eventStormingMissingCompletedLevelPrerequisiteWorkspace);
 runExpectFailure(
@@ -1691,7 +1837,7 @@ runExpectFailure(
   "`system-design` 完了は `process-modeling` 完了を前提にする",
 );
 
-const eventStormingWrongNextRecommendedSkillWorkspace = workspaceCopy();
+const eventStormingWrongNextRecommendedSkillWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(eventStormingWrongNextRecommendedSkillWorkspace);
 replaceEventStormingNextRecommendedSkillWithWrongValue(eventStormingWrongNextRecommendedSkillWorkspace);
 runExpectFailure(
@@ -1699,7 +1845,7 @@ runExpectFailure(
   "`nextRecommendedSkill` が scope と level に対応する",
 );
 
-const eventStormingNextRecommendedSkillIgnoringCompletedLevelsWorkspace = workspaceCopy();
+const eventStormingNextRecommendedSkillIgnoringCompletedLevelsWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(eventStormingNextRecommendedSkillIgnoringCompletedLevelsWorkspace);
 replaceEventStormingNextRecommendedSkillIgnoringCompletedLevels(eventStormingNextRecommendedSkillIgnoringCompletedLevelsWorkspace);
 runExpectFailure(
@@ -1707,7 +1853,7 @@ runExpectFailure(
   "`nextRecommendedSkill` が scope と level に対応する",
 );
 
-const eventStormingMismatchedTypeIdPrefixWorkspace = workspaceCopy();
+const eventStormingMismatchedTypeIdPrefixWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(eventStormingMismatchedTypeIdPrefixWorkspace);
 replaceEventStormingFlowTypeWithMismatchedIdPrefix(eventStormingMismatchedTypeIdPrefixWorkspace);
 runExpectFailure(
@@ -1715,7 +1861,7 @@ runExpectFailure(
   "`Type` と `ID` 接頭辞が対応する",
 );
 
-const eventStormingMissingFlowDomainEventWorkspace = workspaceCopy();
+const eventStormingMissingFlowDomainEventWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(eventStormingMissingFlowDomainEventWorkspace);
 removeEventStormingFlowDomainEvent(eventStormingMissingFlowDomainEventWorkspace);
 runExpectFailure(
@@ -1723,7 +1869,7 @@ runExpectFailure(
   "`flow.md` が Domain Event を含む",
 );
 
-const eventStormingInvalidBoardOrderWorkspace = workspaceCopy();
+const eventStormingInvalidBoardOrderWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(eventStormingInvalidBoardOrderWorkspace);
 replaceEventStormingBoardOrderWithInvalidValue(eventStormingInvalidBoardOrderWorkspace);
 runExpectFailure(
@@ -1731,7 +1877,7 @@ runExpectFailure(
   "`Order` が正の整数である",
 );
 
-const eventStormingMissingHotspotReferenceWorkspace = workspaceCopy();
+const eventStormingMissingHotspotReferenceWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(eventStormingMissingHotspotReferenceWorkspace);
 replaceEventStormingHotspotRelatedWithMissingId(eventStormingMissingHotspotReferenceWorkspace);
 runExpectFailure(
@@ -1739,7 +1885,7 @@ runExpectFailure(
   "`Related` が Event Storming 要素 ID またはなしである",
 );
 
-const eventStormingWithoutEventsWorkspace = workspaceCopy();
+const eventStormingWithoutEventsWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(eventStormingWithoutEventsWorkspace);
 removeEventStormingEventRows(eventStormingWithoutEventsWorkspace);
 runExpectFailure(
@@ -1747,7 +1893,7 @@ runExpectFailure(
   "big-picture ready の Domain Event が1件以上ある",
 );
 
-const eventStormingWithoutAggregateCandidatesWorkspace = workspaceCopy();
+const eventStormingWithoutAggregateCandidatesWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(eventStormingWithoutAggregateCandidatesWorkspace);
 removeEventStormingAggregateCandidateRows(eventStormingWithoutAggregateCandidatesWorkspace);
 runExpectFailure(
@@ -1755,7 +1901,7 @@ runExpectFailure(
   "system-design ready の Aggregate Candidate が1件以上ある",
 );
 
-const eventStormingWithoutBoundedContextCandidatesWorkspace = workspaceCopy();
+const eventStormingWithoutBoundedContextCandidatesWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(eventStormingWithoutBoundedContextCandidatesWorkspace);
 removeEventStormingBoundedContextCandidateRows(eventStormingWithoutBoundedContextCandidatesWorkspace);
 runExpectFailure(
@@ -1763,49 +1909,49 @@ runExpectFailure(
   "system-design ready の Bounded Context Candidate が1件以上ある",
 );
 
-const discoveryDecisionMismatchWorkspace = workspaceCopy();
+const discoveryDecisionMismatchWorkspace = phaseWorkspaceCopy();
 replaceDiscoveryDecision(discoveryDecisionMismatchWorkspace);
 runExpectFailure(
   ["bun", "run", validator, discoveryDecisionMismatchWorkspace],
   "state.json.decision と Discovery のモジュールファイルの判定が一致する",
 );
 
-const discoveryMultiIntentTooSmallWorkspace = workspaceCopy();
+const discoveryMultiIntentTooSmallWorkspace = phaseWorkspaceCopy();
 removeDiscoveryCandidate(discoveryMultiIntentTooSmallWorkspace);
 runExpectFailure(
   ["bun", "run", validator, discoveryMultiIntentTooSmallWorkspace],
   "multi_intent の Intent 候補が2件以上ある",
 );
 
-const wrongDesignTraceWorkspace = workspaceCopy();
+const wrongDesignTraceWorkspace = phaseWorkspaceCopy();
 replaceDesignTraceDesignLink(wrongDesignTraceWorkspace);
 runExpectFailure(
   ["bun", "run", validator, wrongDesignTraceWorkspace, intent],
   "`設計` が対象 Unit の Unit Design Brief を指す",
 );
 
-const wrongDesignTraceReferencesWorkspace = workspaceCopy();
+const wrongDesignTraceReferencesWorkspace = phaseWorkspaceCopy();
 replaceDesignTraceReferencesWithMissingIds(wrongDesignTraceReferencesWorkspace);
 runExpectFailure(
   ["bun", "run", validator, wrongDesignTraceReferencesWorkspace, intent],
   "`要求` が一覧内の既存 ID である",
 );
 
-const requirementTraceWithTaskColumnWorkspace = workspaceCopy();
+const requirementTraceWithTaskColumnWorkspace = phaseWorkspaceCopy();
 addTaskColumnToRequirementTrace(requirementTraceWithTaskColumnWorkspace);
 runExpectFailure(
   ["bun", "run", validator, requirementTraceWithTaskColumnWorkspace, intent],
   "Inception の `要求からの追跡` は `タスク` 列を持たない",
 );
 
-const inceptionWithTaskFileWorkspace = workspaceCopy();
+const inceptionWithTaskFileWorkspace = phaseWorkspaceCopy();
 writeConstructionTasks(inceptionWithTaskFileWorkspace);
 runExpectFailure(
   ["bun", "run", validator, inceptionWithTaskFileWorkspace, intent],
   "Inception は Bolt 配下の tasks.md を持たない",
 );
 
-const missingTaskDesignReasonWorkspace = workspaceCopy();
+const missingTaskDesignReasonWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(missingTaskDesignReasonWorkspace);
 writeConstructionTasks(missingTaskDesignReasonWorkspace);
 writeConstructionNotes(missingTaskDesignReasonWorkspace);
@@ -1817,7 +1963,7 @@ runExpectFailure(
   "Task が `設計根拠` を持つ",
 );
 
-const wrongTaskReferencesWorkspace = workspaceCopy();
+const wrongTaskReferencesWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(wrongTaskReferencesWorkspace);
 writeConstructionTasks(wrongTaskReferencesWorkspace);
 writeConstructionNotes(wrongTaskReferencesWorkspace);
@@ -1829,7 +1975,7 @@ runExpectFailure(
   "Task の `要求` が既存 ID またはなしである",
 );
 
-const emptyTaskReferencesWorkspace = workspaceCopy();
+const emptyTaskReferencesWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(emptyTaskReferencesWorkspace);
 writeConstructionTasks(emptyTaskReferencesWorkspace);
 writeConstructionNotes(emptyTaskReferencesWorkspace);
@@ -1841,7 +1987,7 @@ runExpectFailure(
   "Task の `要求` が既存 ID またはなしである",
 );
 
-const duplicateTaskIdWorkspace = workspaceCopy();
+const duplicateTaskIdWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(duplicateTaskIdWorkspace, {
   overview: "- B001/T001 を実装へ進められる粒度で設計した。",
   domain: "- 対象 Task: B001/T001。注文内容、購入者情報、販売可能在庫の参照結果を注文作成の入力として扱う。",
@@ -1860,46 +2006,46 @@ runExpectFailure(
   "Task ID が重複しない",
 );
 
-const missingBoltsIndexWorkspace = workspaceCopy();
+const missingBoltsIndexWorkspace = phaseWorkspaceCopy();
 rmSync(intentPath(missingBoltsIndexWorkspace, "bolts.md"));
 runExpectFailure(
   ["bun", "run", validator, missingBoltsIndexWorkspace, intent],
   "bolts.md が存在する",
 );
 
-const multiUnitBoltWithReasonWorkspace = workspaceCopy();
+const multiUnitBoltWithReasonWorkspace = phaseWorkspaceCopy();
 makeBoltReferenceMultipleUnits(multiUnitBoltWithReasonWorkspace, true);
 run(["bun", "run", validator, multiUnitBoltWithReasonWorkspace, intent]);
 
-const multiUnitBoltWithoutReasonWorkspace = workspaceCopy();
+const multiUnitBoltWithoutReasonWorkspace = phaseWorkspaceCopy();
 makeBoltReferenceMultipleUnits(multiUnitBoltWithoutReasonWorkspace, false);
 runExpectFailure(
   ["bun", "run", validator, multiUnitBoltWithoutReasonWorkspace, intent],
   "複数 Unit を同じ Bolt で扱う理由を記録する",
 );
 
-const missingBoltUnitReferenceWorkspace = workspaceCopy();
+const missingBoltUnitReferenceWorkspace = phaseWorkspaceCopy();
 replaceBoltUnitWithMissingId(missingBoltUnitReferenceWorkspace);
 runExpectFailure(
   ["bun", "run", validator, missingBoltUnitReferenceWorkspace, intent],
   "Bolt の `ユニット` が既存 Unit を参照する",
 );
 
-const duplicateBoltUnitReferenceWorkspace = workspaceCopy();
+const duplicateBoltUnitReferenceWorkspace = phaseWorkspaceCopy();
 replaceBoltUnitWithDuplicateId(duplicateBoltUnitReferenceWorkspace);
 runExpectFailure(
   ["bun", "run", validator, duplicateBoltUnitReferenceWorkspace, intent],
   "Bolt の `ユニット` が重複しない",
 );
 
-const emptyIntentBoundedContextsWorkspace = workspaceCopy();
+const emptyIntentBoundedContextsWorkspace = phaseWorkspaceCopy();
 writeEmptyIntentBoundedContexts(emptyIntentBoundedContextsWorkspace);
 runExpectFailure(
   ["bun", "run", validator, emptyIntentBoundedContextsWorkspace, intent],
   "境界づけられたコンテキストが1件以上存在する",
 );
 
-const constructionWithoutInceptionRequiredWorkspace = workspaceCopy();
+const constructionWithoutInceptionRequiredWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(constructionWithoutInceptionRequiredWorkspace);
 writeConstructionTasks(constructionWithoutInceptionRequiredWorkspace);
 writeConstructionNotes(constructionWithoutInceptionRequiredWorkspace);
@@ -1908,7 +2054,7 @@ appendConstructionDesignTrace(constructionWithoutInceptionRequiredWorkspace);
 writeConstructionState(constructionWithoutInceptionRequiredWorkspace);
 run(["bun", "run", validator, constructionWithoutInceptionRequiredWorkspace, intent]);
 
-const testResultsWithMissingRequirementWorkspace = workspaceCopy();
+const testResultsWithMissingRequirementWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(testResultsWithMissingRequirementWorkspace);
 writeConstructionTasks(testResultsWithMissingRequirementWorkspace);
 writeConstructionNotes(testResultsWithMissingRequirementWorkspace);
@@ -1921,7 +2067,7 @@ runExpectFailure(
   "受け入れ証拠の `要求` が一覧内の既存 ID である",
 );
 
-const testResultsWithMissingTaskWorkspace = workspaceCopy();
+const testResultsWithMissingTaskWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(testResultsWithMissingTaskWorkspace);
 writeConstructionTasks(testResultsWithMissingTaskWorkspace);
 writeConstructionNotes(testResultsWithMissingTaskWorkspace);
@@ -1934,7 +2080,7 @@ runExpectFailure(
   "受け入れ証拠の `タスク` が既存 Task を指す",
 );
 
-const constructionWithStaleInceptionRequiredWorkspace = workspaceCopy();
+const constructionWithStaleInceptionRequiredWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(constructionWithStaleInceptionRequiredWorkspace);
 writeConstructionTasks(constructionWithStaleInceptionRequiredWorkspace);
 writeConstructionNotes(constructionWithStaleInceptionRequiredWorkspace);
@@ -1952,7 +2098,7 @@ writeConstructionState(constructionWithStaleInceptionRequiredWorkspace, {
 });
 run(["bun", "run", validator, constructionWithStaleInceptionRequiredWorkspace, intent]);
 
-const readyNonTargetBoltWorkspace = workspaceCopy();
+const readyNonTargetBoltWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(readyNonTargetBoltWorkspace);
 writeConstructionTasks(readyNonTargetBoltWorkspace);
 writeConstructionDesignForSecondBolt(readyNonTargetBoltWorkspace);
@@ -1961,12 +2107,11 @@ writeConstructionNotes(readyNonTargetBoltWorkspace);
 writeConstructionTestResults(readyNonTargetBoltWorkspace);
 writeConstructionState(readyNonTargetBoltWorkspace, {
   requiredBoltArtifacts: [
-    `bolts/${bolt1}.md`,
-    `bolts/${bolt1}/tasks.md`,
-    `bolts/${bolt1}/design.md`,
-    `bolts/${bolt1}/notes.md`,
-    `bolts/${bolt1}/test-results.md`,
-    `bolts/${bolt2}/design.md`,
+    `construction/bolts/${bolt1}/tasks.md`,
+    `construction/bolts/${bolt1}/design.md`,
+    `construction/bolts/${bolt1}/notes.md`,
+    `construction/bolts/${bolt1}/test-results.md`,
+    `construction/bolts/${bolt2}/design.md`,
   ],
   bolts: [
     {
@@ -1975,13 +2120,13 @@ writeConstructionState(readyNonTargetBoltWorkspace, {
         status: "draft",
         reviewedBy: "ai",
         updatedAt: "2026-06-28",
-        evidence: `bolts/${bolt1}/design.md`,
+        evidence: `construction/bolts/${bolt1}/design.md`,
       },
       tasks: {
         status: "generated",
         reviewedBy: "ai",
         updatedAt: "2026-06-28",
-        evidence: `bolts/${bolt1}/tasks.md`,
+        evidence: `construction/bolts/${bolt1}/tasks.md`,
       },
     },
     {
@@ -1990,20 +2135,20 @@ writeConstructionState(readyNonTargetBoltWorkspace, {
         status: "ready",
         reviewedBy: "ai",
         updatedAt: "2026-06-28",
-        evidence: `bolts/${bolt2}/design.md`,
+        evidence: `construction/bolts/${bolt2}/design.md`,
       },
       tasks: {
         status: "generated",
         reviewedBy: "ai",
         updatedAt: "2026-06-28",
-        evidence: `bolts/${bolt2}/tasks.md`,
+        evidence: `construction/bolts/${bolt2}/tasks.md`,
       },
     },
   ],
 });
 run(["bun", "run", validator, readyNonTargetBoltWorkspace, intent]);
 
-const completedConstructionWithoutTestResultsWorkspace = workspaceCopy();
+const completedConstructionWithoutTestResultsWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(completedConstructionWithoutTestResultsWorkspace);
 writeConstructionTasks(completedConstructionWithoutTestResultsWorkspace);
 writeConstructionNotes(completedConstructionWithoutTestResultsWorkspace);
@@ -2018,10 +2163,9 @@ writeConstructionState(completedConstructionWithoutTestResultsWorkspace, {
   constructionStatus: "completed",
   constructionGate: "passed",
   requiredBoltArtifacts: [
-    `bolts/${bolt1}.md`,
-    `bolts/${bolt1}/tasks.md`,
-    `bolts/${bolt1}/design.md`,
-    `bolts/${bolt1}/notes.md`,
+    `construction/bolts/${bolt1}/tasks.md`,
+    `construction/bolts/${bolt1}/design.md`,
+    `construction/bolts/${bolt1}/notes.md`,
   ],
 });
 runExpectFailure(
@@ -2029,7 +2173,7 @@ runExpectFailure(
   "Construction 完了時の必須 Bolt 成果物が test-results.md を含む",
 );
 
-const missingTargetBoltArtifactsWorkspace = workspaceCopy();
+const missingTargetBoltArtifactsWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(missingTargetBoltArtifactsWorkspace);
 writeConstructionTasks(missingTargetBoltArtifactsWorkspace);
 writeConstructionNotes(missingTargetBoltArtifactsWorkspace);
@@ -2037,9 +2181,8 @@ writeConstructionTestResults(missingTargetBoltArtifactsWorkspace);
 appendConstructionDesignTrace(missingTargetBoltArtifactsWorkspace);
 writeConstructionState(missingTargetBoltArtifactsWorkspace, {
   requiredBoltArtifacts: [
-    `bolts/${bolt1}.md`,
-    `bolts/${bolt1}/tasks.md`,
-    `bolts/${bolt1}/design.md`,
+    `construction/bolts/${bolt1}/tasks.md`,
+    `construction/bolts/${bolt1}/design.md`,
   ],
 });
 runExpectFailure(
@@ -2047,7 +2190,7 @@ runExpectFailure(
   "Construction 必須 Bolt 成果物が targetBolt の証拠成果物を含む",
 );
 
-const generatedTasksWithoutRequiredTasksWorkspace = workspaceCopy();
+const generatedTasksWithoutRequiredTasksWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(generatedTasksWithoutRequiredTasksWorkspace);
 writeConstructionTasks(generatedTasksWithoutRequiredTasksWorkspace);
 writeConstructionNotes(generatedTasksWithoutRequiredTasksWorkspace);
@@ -2055,9 +2198,8 @@ writeConstructionTestResults(generatedTasksWithoutRequiredTasksWorkspace);
 appendConstructionDesignTrace(generatedTasksWithoutRequiredTasksWorkspace);
 writeConstructionState(generatedTasksWithoutRequiredTasksWorkspace, {
   requiredBoltArtifacts: [
-    `bolts/${bolt1}.md`,
-    `bolts/${bolt1}/design.md`,
-    `bolts/${bolt1}/notes.md`,
+    `construction/bolts/${bolt1}/design.md`,
+    `construction/bolts/${bolt1}/notes.md`,
   ],
 });
 runExpectFailure(
@@ -2065,7 +2207,7 @@ runExpectFailure(
   "Construction 必須 Bolt 成果物が targetBolt の証拠成果物を含む",
 );
 
-const notGeneratedTasksWorkspace = workspaceCopy();
+const notGeneratedTasksWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(notGeneratedTasksWorkspace, {
   overview: "- Construction Design は作成中で、Task への分解は未完了。",
   domain: "- Task 化前のため、対象成果物の関心だけを整理する。",
@@ -2076,9 +2218,8 @@ writeConstructionDesign(notGeneratedTasksWorkspace, {
 writeConstructionNotes(notGeneratedTasksWorkspace);
 writeConstructionState(notGeneratedTasksWorkspace, {
   requiredBoltArtifacts: [
-    `bolts/${bolt1}.md`,
-    `bolts/${bolt1}/design.md`,
-    `bolts/${bolt1}/notes.md`,
+    `construction/bolts/${bolt1}/design.md`,
+    `construction/bolts/${bolt1}/notes.md`,
   ],
   bolts: [
     {
@@ -2087,7 +2228,7 @@ writeConstructionState(notGeneratedTasksWorkspace, {
         status: "draft",
         reviewedBy: "ai",
         updatedAt: "2026-06-28",
-        evidence: `bolts/${bolt1}/design.md`,
+        evidence: `construction/bolts/${bolt1}/design.md`,
       },
       tasks: {
         status: "not_generated",
@@ -2100,7 +2241,7 @@ writeConstructionState(notGeneratedTasksWorkspace, {
 });
 run(["bun", "run", validator, notGeneratedTasksWorkspace, intent]);
 
-const emptyTargetBoltsWorkspace = workspaceCopy();
+const emptyTargetBoltsWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(emptyTargetBoltsWorkspace);
 writeConstructionTasks(emptyTargetBoltsWorkspace);
 writeConstructionNotes(emptyTargetBoltsWorkspace);
@@ -2111,7 +2252,7 @@ runExpectFailure(
   "`construction.targetBolts` が1件以上の既存 Bolt を持つ",
 );
 
-const constructionDesignTraceWrongBoltWorkspace = workspaceCopy();
+const constructionDesignTraceWrongBoltWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(constructionDesignTraceWrongBoltWorkspace);
 writeConstructionTasks(constructionDesignTraceWrongBoltWorkspace);
 writeConstructionNotes(constructionDesignTraceWrongBoltWorkspace);
@@ -2123,7 +2264,7 @@ runExpectFailure(
   "`Construction Design からの追跡` が対象 Bolt の Task を指す",
 );
 
-const untrackedConstructionDesignWorkspace = workspaceCopy();
+const untrackedConstructionDesignWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(untrackedConstructionDesignWorkspace);
 writeConstructionTasks(untrackedConstructionDesignWorkspace);
 writeConstructionNotes(untrackedConstructionDesignWorkspace);
@@ -2137,46 +2278,46 @@ runExpectFailure(
   "Construction Design は requiredBoltArtifacts に含まれる",
 );
 
-const nonModuleUnitDetailWorkspace = workspaceCopy();
+const nonModuleUnitDetailWorkspace = phaseWorkspaceCopy();
 replaceUnitDetailWithNonModulePath(nonModuleUnitDetailWorkspace);
 runExpectFailure(
   ["bun", "run", validator, nonModuleUnitDetailWorkspace, intent],
   "`詳細` が units/<unit-id>-<slug>.md を指す",
 );
 
-const nonModuleBoltDetailWorkspace = workspaceCopy();
+const nonModuleBoltDetailWorkspace = phaseWorkspaceCopy();
 replaceBoltDetailWithNonModulePath(nonModuleBoltDetailWorkspace);
 runExpectFailure(
   ["bun", "run", validator, nonModuleBoltDetailWorkspace, intent],
   "`詳細` が bolts/<bolt-id>-<slug>.md を指す",
 );
 
-const missingBoundedContextModuleWorkspace = workspaceCopy();
+const missingBoundedContextModuleWorkspace = phaseWorkspaceCopy();
 removeBoundedContextModuleFile(missingBoundedContextModuleWorkspace);
 runExpectFailure(
   ["bun", "run", validator, missingBoundedContextModuleWorkspace, intent],
   "境界づけられたコンテキストのモジュールファイルが存在する",
 );
 
-const oldDddModuleModelPathWorkspace = workspaceCopy();
+const oldDddModuleModelPathWorkspace = phaseWorkspaceCopy();
 writeDddModuleWithOldModelPath(oldDddModuleModelPathWorkspace);
 runExpectFailure(
   ["bun", "run", validator, oldDddModuleModelPathWorkspace, intent],
   "DDD Module の `詳細` が models/<ddd-module-id>-<slug>.md を指す",
 );
 
-const dddModuleFileWorkspace = workspaceCopy();
+const dddModuleFileWorkspace = phaseWorkspaceCopy();
 writeDddModuleWithModuleFile(dddModuleFileWorkspace);
 run(["bun", "run", validator, dddModuleFileWorkspace, intent]);
 
-const invalidDddElementTableWorkspace = workspaceCopy();
+const invalidDddElementTableWorkspace = phaseWorkspaceCopy();
 writeDddModuleWithInvalidElementTable(invalidDddElementTableWorkspace);
 runExpectFailure(
   ["bun", "run", validator, invalidDddElementTableWorkspace, intent],
   "DDD Module の `集約` 識別子が形式に合う",
 );
 
-const missingConstructionTraceWorkspace = workspaceCopy();
+const missingConstructionTraceWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(missingConstructionTraceWorkspace);
 writeConstructionTasks(missingConstructionTraceWorkspace);
 writeConstructionNotes(missingConstructionTraceWorkspace);
@@ -2191,7 +2332,7 @@ runExpectFailure(
   "`Construction からの追跡` の表がある",
 );
 
-const emptyConstructionTraceWorkspace = workspaceCopy();
+const emptyConstructionTraceWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(emptyConstructionTraceWorkspace);
 writeConstructionTasks(emptyConstructionTraceWorkspace);
 writeConstructionNotes(emptyConstructionTraceWorkspace);
@@ -2208,7 +2349,7 @@ runExpectFailure(
   "`Construction からの追跡` が証拠追跡行を持つ",
 );
 
-const completedConstructionWithUnimplementedDesignTraceWorkspace = workspaceCopy();
+const completedConstructionWithUnimplementedDesignTraceWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(completedConstructionWithUnimplementedDesignTraceWorkspace);
 writeConstructionTasks(completedConstructionWithUnimplementedDesignTraceWorkspace);
 writeConstructionNotes(completedConstructionWithUnimplementedDesignTraceWorkspace);
@@ -2225,7 +2366,7 @@ runExpectFailure(
   "Construction 完了時の設計追跡が未実施を残さない",
 );
 
-const prWithoutUrlWorkspace = workspaceCopy();
+const prWithoutUrlWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(prWithoutUrlWorkspace);
 writeConstructionTasks(prWithoutUrlWorkspace);
 writeConstructionNotes(prWithoutUrlWorkspace);
@@ -2234,12 +2375,11 @@ appendConstructionDesignTrace(prWithoutUrlWorkspace);
 writePrWithoutUrl(prWithoutUrlWorkspace);
 writeConstructionState(prWithoutUrlWorkspace, {
   requiredBoltArtifacts: [
-    `bolts/${bolt1}.md`,
-    `bolts/${bolt1}/tasks.md`,
-    `bolts/${bolt1}/design.md`,
-    `bolts/${bolt1}/notes.md`,
-    `bolts/${bolt1}/test-results.md`,
-    `bolts/${bolt1}/pr.md`,
+    `construction/bolts/${bolt1}/tasks.md`,
+    `construction/bolts/${bolt1}/design.md`,
+    `construction/bolts/${bolt1}/notes.md`,
+    `construction/bolts/${bolt1}/test-results.md`,
+    `construction/bolts/${bolt1}/pr.md`,
   ],
 });
 runExpectFailure(
@@ -2247,7 +2387,7 @@ runExpectFailure(
   "PR 記録が URL を持つ",
 );
 
-const existingPrWithoutUrlWorkspace = workspaceCopy();
+const existingPrWithoutUrlWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(existingPrWithoutUrlWorkspace);
 writeConstructionTasks(existingPrWithoutUrlWorkspace);
 writeConstructionNotes(existingPrWithoutUrlWorkspace);
@@ -2260,7 +2400,7 @@ runExpectFailure(
   "PR 記録が URL を持つ",
 );
 
-const prWithMissingTargetReferencesWorkspace = workspaceCopy();
+const prWithMissingTargetReferencesWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(prWithMissingTargetReferencesWorkspace);
 writeConstructionTasks(prWithMissingTargetReferencesWorkspace);
 writeConstructionNotes(prWithMissingTargetReferencesWorkspace);
@@ -2274,7 +2414,7 @@ runExpectFailure(
   "PR 対象の `ボルト` が一覧内の既存 ID である",
 );
 
-const prWithEmptyBoltTargetWorkspace = workspaceCopy();
+const prWithEmptyBoltTargetWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(prWithEmptyBoltTargetWorkspace);
 writeConstructionTasks(prWithEmptyBoltTargetWorkspace);
 writeConstructionNotes(prWithEmptyBoltTargetWorkspace);
@@ -2288,7 +2428,7 @@ runExpectFailure(
   "PR 対象の `タスク` が既存 Task を指す",
 );
 
-const missingConstructionDesignHeadingWorkspace = workspaceCopy();
+const missingConstructionDesignHeadingWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(missingConstructionDesignHeadingWorkspace, { logical: "" });
 writeConstructionTasks(missingConstructionDesignHeadingWorkspace);
 writeConstructionNotes(missingConstructionDesignHeadingWorkspace);
@@ -2300,7 +2440,7 @@ runExpectFailure(
   "`Logical Design` 見出しに本文がある",
 );
 
-const constructionWithoutBoltGateWorkspace = workspaceCopy();
+const constructionWithoutBoltGateWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(constructionWithoutBoltGateWorkspace);
 writeConstructionTasks(constructionWithoutBoltGateWorkspace);
 writeConstructionNotes(constructionWithoutBoltGateWorkspace);
@@ -2312,7 +2452,7 @@ writeConstructionState(constructionWithoutBoltGateWorkspace, { bolts: [] });
     "`construction.bolts` が targetBolt の designGate を持つ",
   );
 
-  const constructionWithoutTasksWorkspace = workspaceCopy();
+  const constructionWithoutTasksWorkspace = phaseWorkspaceCopy();
   writeConstructionDesign(constructionWithoutTasksWorkspace);
   writeConstructionTasks(constructionWithoutTasksWorkspace);
   writeConstructionNotes(constructionWithoutTasksWorkspace);
@@ -2326,7 +2466,7 @@ writeConstructionState(constructionWithoutBoltGateWorkspace, { bolts: [] });
           status: "ready",
           reviewedBy: "ai",
           updatedAt: "2026-06-28",
-          evidence: `bolts/${bolt1}/design.md`,
+          evidence: `construction/bolts/${bolt1}/design.md`,
         },
       },
     ],
@@ -2336,7 +2476,7 @@ writeConstructionState(constructionWithoutBoltGateWorkspace, { bolts: [] });
     "`construction.bolts[].tasks` がオブジェクトである",
   );
 
-  const constructionReadyWithoutDesignTraceWorkspace = workspaceCopy();
+  const constructionReadyWithoutDesignTraceWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(constructionReadyWithoutDesignTraceWorkspace);
 writeConstructionTasks(constructionReadyWithoutDesignTraceWorkspace);
 writeConstructionNotes(constructionReadyWithoutDesignTraceWorkspace);

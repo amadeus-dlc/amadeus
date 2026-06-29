@@ -30,10 +30,10 @@ Spec、実装、CI、運用手順は作らない。
 - `.amadeus/intents.md`
 - `.amadeus/intents/<intent-id>-<slug>.md`
 - `.amadeus/intents/<intent-id>-<slug>/state.json`
-- `.amadeus/intents/<intent-id>-<slug>/scope.md`
-- `.amadeus/intents/<intent-id>-<slug>/ideation.md`
-- `.amadeus/intents/<intent-id>-<slug>/traceability.md`
-- `.amadeus/intents/<intent-id>-<slug>/decisions.md`
+- `.amadeus/intents/<intent-id>-<slug>/ideation/scope.md`
+- `.amadeus/intents/<intent-id>-<slug>/ideation/ideation.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/traceability.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/decisions.md`
 
 `state.json.phase` が `ideation` でない場合は、現在の phase と不足成果物を確認してから止める。
 `state.json.ideation.gate` が `passed` でない場合は、Inception へ進めず `amadeus-ideation` の `refine` を案内する。
@@ -258,24 +258,24 @@ Grilling Decision Trail の実ファイル更新は、該当する Inception 成
 
 作成または更新するものは次だけである。
 
-- `.amadeus/intents/<intent-id>-<slug>/requirements.md`
-- `.amadeus/intents/<intent-id>-<slug>/requirements/<requirement-id>-<slug>.md`
-- `.amadeus/intents/<intent-id>-<slug>/acceptance.md`
-- `.amadeus/intents/<intent-id>-<slug>/user-stories.md`
-- `.amadeus/intents/<intent-id>-<slug>/user-stories/<story-id>-<slug>.md`
-- `.amadeus/intents/<intent-id>-<slug>/use-cases.md`
-- `.amadeus/intents/<intent-id>-<slug>/use-cases/<use-case-id>-<slug>.md`
-- `.amadeus/intents/<intent-id>-<slug>/codebase-analysis.md`
-- `.amadeus/intents/<intent-id>-<slug>/units.md`
-- `.amadeus/intents/<intent-id>-<slug>/units/<unit-id>-<slug>.md`
-- `.amadeus/intents/<intent-id>-<slug>/units/<unit-id>-<slug>/design.md`
-- `.amadeus/intents/<intent-id>-<slug>/bolts.md`
-- `.amadeus/intents/<intent-id>-<slug>/bolts/<bolt-id>-<slug>.md`
-- `.amadeus/intents/<intent-id>-<slug>/domain/subdomains.md`
-- `.amadeus/intents/<intent-id>-<slug>/domain/bounded-contexts.md`
-- `.amadeus/intents/<intent-id>-<slug>/traceability.md`
-- `.amadeus/intents/<intent-id>-<slug>/decisions.md`
-- `.amadeus/intents/<intent-id>-<slug>/decisions/<decision-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/requirements.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/requirements/<requirement-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/acceptance.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/user-stories.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/user-stories/<story-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/use-cases.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/use-cases/<use-case-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/codebase-analysis.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/units.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/units/<unit-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/units/<unit-id>-<slug>/design.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/bolts.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/bolts/<bolt-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/domain/subdomains.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/domain/bounded-contexts.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/traceability.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/decisions.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/decisions/<decision-id>-<slug>.md`
 - `.amadeus/intents/<intent-id>-<slug>/state.json`
 - 記録対象の質問と回答が発生した場合だけ、`.amadeus/intents/<intent-id>-<slug>/grillings.md`
 - 記録対象の質問と回答が発生した場合だけ、`.amadeus/intents/<intent-id>-<slug>/grillings/Gxxx-*.md`
@@ -655,19 +655,19 @@ Inception 完了時の `state.json` は次の形にする。
   "inception": {
     "status": "completed",
     "requiredArtifacts": [
-      "requirements.md",
-      "acceptance.md",
-      "user-stories.md",
-      "use-cases.md",
-      "units.md",
-      "units/<unit-id>-<slug>.md",
-      "units/<unit-id>-<slug>/design.md",
-      "bolts.md",
-      "traceability.md",
-      "decisions.md"
+      "inception/requirements.md",
+      "inception/acceptance.md",
+      "inception/user-stories.md",
+      "inception/use-cases.md",
+      "inception/units.md",
+      "inception/units/<unit-id>-<slug>.md",
+      "inception/units/<unit-id>-<slug>/design.md",
+      "inception/bolts.md",
+      "inception/traceability.md",
+      "inception/decisions.md"
     ],
     "requiredBoltArtifacts": [
-      "bolts/<bolt-id>-<slug>.md"
+      "inception/bolts/<bolt-id>-<slug>.md"
     ],
     "gate": "passed"
   }

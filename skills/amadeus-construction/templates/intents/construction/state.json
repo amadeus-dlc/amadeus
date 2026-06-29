@@ -16,19 +16,18 @@
       "B001"
     ],
     "requiredArtifacts": [
-      "requirements.md",
-      "acceptance.md",
-      "units.md",
-      "bolts.md",
-      "traceability.md",
-      "decisions.md"
+      "inception/requirements.md",
+      "inception/acceptance.md",
+      "inception/units.md",
+      "inception/bolts.md",
+      "construction/traceability.md",
+      "construction/decisions.md"
     ],
     "requiredBoltArtifacts": [
-      "bolts/B001-bolt.md",
-      "bolts/B001-bolt/tasks.md",
-      "bolts/B001-bolt/design.md",
-      "bolts/B001-bolt/notes.md",
-      "bolts/B001-bolt/test-results.md"
+      "construction/bolts/B001-bolt/tasks.md",
+      "construction/bolts/B001-bolt/design.md",
+      "construction/bolts/B001-bolt/notes.md",
+      "construction/bolts/B001-bolt/test-results.md"
     ],
     "bolts": [
       {
@@ -37,13 +36,13 @@
           "status": "ready",
           "reviewedBy": "ai",
           "updatedAt": "未確認",
-          "evidence": "bolts/B001-bolt/design.md"
+          "evidence": "construction/bolts/B001-bolt/design.md"
         },
         "tasks": {
           "status": "generated",
           "reviewedBy": "ai",
           "updatedAt": "未確認",
-          "evidence": "bolts/B001-bolt/tasks.md"
+          "evidence": "construction/bolts/B001-bolt/tasks.md"
         }
       }
     ],

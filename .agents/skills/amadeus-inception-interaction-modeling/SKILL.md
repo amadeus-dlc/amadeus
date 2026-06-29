@@ -24,11 +24,11 @@ Inception phase の相互作用整理だけを進める。
 - `.amadeus/intents.md`
 - `.amadeus/intents/<intent-id>-<slug>.md`
 - `.amadeus/intents/<intent-id>-<slug>/state.json`
-- `.amadeus/intents/<intent-id>-<slug>/scope.md`
-- `.amadeus/intents/<intent-id>-<slug>/ideation.md`
-- `.amadeus/intents/<intent-id>-<slug>/requirements.md`
-- `.amadeus/intents/<intent-id>-<slug>/requirements/**`
-- `.amadeus/intents/<intent-id>-<slug>/acceptance.md`
+- `.amadeus/intents/<intent-id>-<slug>/ideation/scope.md`
+- `.amadeus/intents/<intent-id>-<slug>/ideation/ideation.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/requirements.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/requirements/**`
+- `.amadeus/intents/<intent-id>-<slug>/inception/acceptance.md`
 - steering layer
 
 要件定義の成果物が不足している場合は、`amadeus-inception-requirements-definition` を案内して停止する。
@@ -43,10 +43,10 @@ Inception phase の相互作用整理だけを進める。
 
 作成または更新するものは次だけである。
 
-- `.amadeus/intents/<intent-id>-<slug>/user-stories.md`
-- `.amadeus/intents/<intent-id>-<slug>/user-stories/<story-id>-<slug>.md`
-- `.amadeus/intents/<intent-id>-<slug>/use-cases.md`
-- `.amadeus/intents/<intent-id>-<slug>/use-cases/<use-case-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/user-stories.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/user-stories/<story-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/use-cases.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/use-cases/<use-case-id>-<slug>.md`
 - 記録対象の質問と回答が親 skill から渡された場合だけ、`.amadeus/intents/<intent-id>-<slug>/grillings.md`
 - 記録対象の質問と回答が親 skill から渡された場合だけ、`.amadeus/intents/<intent-id>-<slug>/grillings/Gxxx-*.md`
 
