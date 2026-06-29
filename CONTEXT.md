@@ -4,6 +4,32 @@
 
 ## AI-DLC Concept Model
 
+**Amadeus DLC**：Amadeus Development Life Cycle の略である。
+Amadeus DLC は、AI と人間が協調してソフトウェア開発を進めるための lifecycle 契約である。
+Amadeus DLC は Discovery、Ideation、Inception、Construction などの phase、成果物、gate、validator、traceability を扱う。
+Amadeus DLC は AI-DLC v2 の adaptive workflow、承認 gate、状態管理、監査可能性に影響を受けている。
+ただし、Amadeus DLC は AI-DLC v2 の写しではなく、このリポジトリで定義する Profile と成果物契約である。
+
+**Amadeus**：Amadeus DLC を実行、検証、配布するための実装プロジェクトである。
+Amadeus は `skills/amadeus-*`、`.agents/skills/amadeus-*`、validator、template、example、docs、`.amadeus/` 成果物を扱う。
+Amadeus は lifecycle 契約そのものではなく、Amadeus DLC を実際の workspace と agent skill で運用するための体系である。
+文書で phase、成果物、gate、traceability の契約を指す場合は Amadeus DLC と書く。
+文書で skill 群、validator、配布物、workspace 成果物の体系を指す場合は Amadeus と書く。
+
+**AI-DLC v2**：Amadeus DLC が参照する AI 駆動開発 lifecycle の影響元である。
+AI-DLC v2 は adaptive workflow、人間の承認点、状態管理、監査ログ、センサー結果を重視する。
+Amadeus DLC はこれらの考え方を取り込みつつ、Intent、Unit、Bolt、Construction Design、Task、Acceptance / Traceability の成果物契約として具体化する。
+
+**cc-sdd**：Amadeus DLC が Task 生成順序の参考にする仕様駆動開発の成果物構造である。
+cc-sdd は `requirements.md` と `design.md` を入力にして `tasks.md` を生成する流れを持つ。
+Amadeus DLC はこの流れを参考にし、Construction Design を根拠に `tasks.md` を生成する。
+Amadeus DLC は、Intent 作成前の入力テーマ整理についても、cc-sdd の kiro-discovery を参考にする。
+ただし、cc-sdd は Amadeus DLC の lifecycle 契約そのものではなく、Task 生成の参照アンカーとして扱う。
+
+**kiro-discovery**：cc-sdd で、仕様化前の入力テーマを整理する discovery の流れである。
+Amadeus DLC は kiro-discovery を参考にし、amadeus-discovery で課題粒度、既存 Intent との関係、Intent 化方針を整理する。
+ただし、amadeus-discovery は kiro-discovery の写しではなく、Amadeus DLC の Discovery layer と成果物契約として扱う。
+
 ## Naming Rules
 
 **実行時**：スキルが実際に使われる時点、またはスクリプトが実行される時点を表す。
