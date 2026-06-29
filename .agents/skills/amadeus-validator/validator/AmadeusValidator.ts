@@ -244,8 +244,8 @@ class AmadeusValidator {
     const indexed = new Set(ids);
     for (const statePath of glob.scanSync({ cwd: discoveriesRoot })) {
       const id = statePath.split("/", 1)[0];
-      if (indexed.has(id)) this.pass(path, "Discovery ディレクトリが一覧に登録されている", id);
-      else this.failRow(path, "Discovery ディレクトリが一覧に登録されている", id);
+      if (indexed.has(id)) this.pass(path, "Discovery のモジュールディレクトリが一覧に登録されている", id);
+      else this.failRow(path, "Discovery のモジュールディレクトリが一覧に登録されている", id);
     }
   }
 
@@ -430,7 +430,7 @@ class AmadeusValidator {
   }
 
   private checkEventStormingSummary(path: string, systemDesignReady: boolean): void {
-    this.checkFile(path, "Event Storming 正本ファイルが存在する");
+    this.checkFile(path, "Event Storming のモジュールファイルが存在する");
     const headings = ["Purpose", "Scope", "Related Discovery", "Related Intent", "Level Status", "Next Skill", "Supersession"];
     this.checkHeadings(path, headings);
     this.checkHeadingBodies(path, headings);
@@ -705,7 +705,7 @@ class AmadeusValidator {
 
     const briefPath = `.amadeus/discoveries/${id}.md`;
     const statePath = `${base}/state.json`;
-    this.checkFile(briefPath, "Discovery 正本ファイルが存在する");
+    this.checkFile(briefPath, "Discovery のモジュールファイルが存在する");
     this.checkHeadings(briefPath, [
       "入力テーマ",
       "確認した前提",
@@ -732,9 +732,9 @@ class AmadeusValidator {
 
     const briefDecision = this.discoveryBriefDecision(briefPath);
     if (briefDecision === String(state.decision ?? "").trim()) {
-      this.pass(briefPath, "state.json.decision と Discovery 正本の判定が一致する", briefDecision);
+      this.pass(briefPath, "state.json.decision と Discovery のモジュールファイルの判定が一致する", briefDecision);
     } else {
-      this.failRow(briefPath, "state.json.decision と Discovery 正本の判定が一致する", `${briefDecision} != ${String(state.decision ?? "").trim()}`);
+      this.failRow(briefPath, "state.json.decision と Discovery のモジュールファイルの判定が一致する", `${briefDecision} != ${String(state.decision ?? "").trim()}`);
     }
 
     if (String(state.gate ?? "").trim() === "passed") this.checkDiscoveryPassedGate(briefPath, state);
@@ -847,7 +847,7 @@ class AmadeusValidator {
     const base = `.amadeus/intents/${intentId}`;
     this.checkGrillings(base);
 
-    this.checkFile(`.amadeus/intents/${intentId}.md`, "Intent 正本ファイルが存在する");
+    this.checkFile(`.amadeus/intents/${intentId}.md`, "Intent のモジュールファイルが存在する");
     this.checkHeadings(`.amadeus/intents/${intentId}.md`, ["目的", "成功条件", "範囲"]);
     this.checkEventStormingSessions(`${base}/event-storming`, "intent-scoped", intentId);
 

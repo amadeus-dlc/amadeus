@@ -3,8 +3,8 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "20260627-risk-aware-reset-support を Ideation に進めたい。既存 Intent 正本ファイル と state.json はあります。guided で進めて。",
-      "expected_output": "guided mode として既存 Intent 正本ファイル と state.json から分かることを使い、不足だけ目安5問で質問する。目安を超えても必要な判断が未確定であれば質問を続け、質問したターンでは成果物を作らず回答を待つ。"
+      "prompt": "20260627-risk-aware-reset-support を Ideation に進めたい。既存の Intent のモジュールファイルと state.json はあります。guided で進めて。",
+      "expected_output": "guided mode として既存の Intent のモジュールファイルと state.json から分かることを使い、不足だけ目安5問で質問する。目安を超えても必要な判断が未確定であれば質問を続け、質問したターンでは成果物を作らず回答を待つ。"
     },
     {
       "id": 2,
@@ -18,7 +18,7 @@
     },
     {
       "id": 4,
-      "prompt": "まだ Intent 正本ファイル も state.json もないけど、amadeus-ideation で Ideation を作って。",
+      "prompt": "まだ Intent のモジュールファイルも state.json もないけど、amadeus-ideation で Ideation を作って。",
       "expected_output": "Intent の入れ物が不足しているため作業を止め、amadeus-intent-init を先に使うよう案内する。Ideation 成果物は作らない。"
     },
     {

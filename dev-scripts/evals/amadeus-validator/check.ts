@@ -534,7 +534,7 @@ function writeConstructionDesign(workspace: string, overrides: Record<string, st
       "",
       "## Logical Design",
       "",
-      overrides.logical ?? "- 対象 Task: B001/T001, B001/T002。Discovery 正本と state.json の整合を維持する。",
+      overrides.logical ?? "- 対象 Task: B001/T001, B001/T002。Discovery のモジュールファイルと state.json の整合を維持する。",
       "",
       "## 実装設計",
       "",
@@ -1757,7 +1757,7 @@ const discoveryDecisionMismatchWorkspace = workspaceCopy();
 replaceDiscoveryDecision(discoveryDecisionMismatchWorkspace);
 runExpectFailure(
   ["bun", "run", validator, discoveryDecisionMismatchWorkspace],
-  "state.json.decision と Discovery 正本の判定が一致する",
+  "state.json.decision と Discovery のモジュールファイルの判定が一致する",
 );
 
 const discoveryMultiIntentTooSmallWorkspace = workspaceCopy();
@@ -1835,7 +1835,7 @@ const duplicateTaskIdWorkspace = workspaceCopy();
 writeConstructionDesign(duplicateTaskIdWorkspace, {
   overview: "- B001/T001 を実装へ進められる粒度で設計した。",
   domain: "- 対象 Task: B001/T001。Discovery Brief の入力、判定、候補を一貫した成果物として扱う。",
-  logical: "- 対象 Task: B001/T001。Discovery 正本と state.json の整合を維持する。",
+  logical: "- 対象 Task: B001/T001。Discovery のモジュールファイルと state.json の整合を維持する。",
   implementation: "- 対象 Task: B001/T001。既存 Markdown 構造を壊さず、必要な見出しと表を更新する。",
   verification: "- 対象 Task: B001/T001。validator で Discovery Brief と Intent 成果物を確認する。",
 });

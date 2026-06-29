@@ -7,7 +7,7 @@
 - `guided` は、目安3問で不足だけを質問し、必要な判断が未確定であれば目安を超えても質問を続ける。
 - 質問したターンでは成果物を作らず回答待ちにする。
 - `scaffold-only` は、Intent ディレクトリ名が決まっている場合だけ成果物を作る。
-- `scaffold-only` は、`.amadeus/intents.md`、`Intent 正本ファイル`、`state.json` だけを作る。
+- `scaffold-only` は、`.amadeus/intents.md`、`Intent のモジュールファイル`、`state.json` だけを作る。
 - `scaffold-only` は、`scope.md`、`ideation.md`、`traceability.md`、`decisions.md`、`mocks/`、`requirements.md`、`use-cases.md`、`units.md`、`bolts.md`、`domain/**` を作らない。
 - steering layer が不足している場合は作業を止め、`amadeus-steering` を案内する。
 - Intent ディレクトリ名が重複している場合は作業を止め、既存成果物を変更しない。

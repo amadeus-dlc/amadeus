@@ -40,11 +40,11 @@ Intent 化前の入力テーマを Discovery として整理する。
 
 - 検証対象の作業ディレクトリ。
 - 入力テーマ。
-- Discovery ディレクトリ名。未指定なら、現在日付と入力テーマから `YYYYMMDD-<slug>` を提案する。
+- Discovery のモジュールディレクトリ名。未指定なら、現在日付と入力テーマから `YYYYMMDD-<slug>` を提案する。
 - 実行モード。指定がなければ `guided` にする。
 
-Discovery ディレクトリ名は、`.amadeus/discoveries.md` の `識別子` と同じ値にする。
-既存 Discovery ディレクトリ名と重複してはいけない。
+Discovery のモジュールディレクトリ名は、`.amadeus/discoveries.md` の `識別子` と同じ値にする。
+既存 Discovery のモジュールディレクトリ名と重複してはいけない。
 
 ## 既存成果物の確認
 
@@ -75,7 +75,7 @@ Discovery は Ideation や Inception の代替ではない。
 2. この skill に同梱された `templates/discoveries/discovery.md` と `templates/discoveries/discovery/`
 
 テンプレートの `<...>` は、確認済みの値または `未確認` に置き換える。
-Discovery ディレクトリ名だけは `未確認` にせず、作成前に確定する。
+Discovery のモジュールディレクトリ名だけは `未確認` にせず、作成前に確定する。
 
 ## 実行モード
 
@@ -177,9 +177,9 @@ Requirement、Use Case、Unit、Bolt、Task は作らない。
 
 `state.json` に Intent へのリンクや Intent 候補の状態は持たせない。
 
-## `Discovery 正本ファイル`
+## `Discovery のモジュールファイル`
 
-`Discovery 正本ファイル` は次の見出しを持つ。
+`Discovery のモジュールファイル` は次の見出しを持つ。
 
 - `入力テーマ`
 - `確認した前提`
@@ -194,7 +194,7 @@ Requirement、Use Case、Unit、Bolt、Task は作らない。
 対象外の見出しには `該当なし` と書く。
 空欄にはしない。
 
-`state.json.decision` と `Discovery 正本ファイル` の `判定` は一致させる。
+`state.json.decision` と `Discovery のモジュールファイル` の `判定` は一致させる。
 
 ## `discoveries.md`
 
@@ -207,7 +207,7 @@ Requirement、Use Case、Unit、Bolt、Task は作らない。
 | `状態` | `in_progress` または `completed`。 |
 | `判定` | `state.json.decision` と同じ値を書く。 |
 | `推奨次アクション` | 次に使う skill、または no-action 理由を書く。 |
-| `詳細` | `[Discovery 正本ファイル](discoveries/<discovery-id>.md)` |
+| `詳細` | `[Discovery のモジュールファイル](discoveries/<discovery-id>.md)` |
 
 既存行は並べ替えない。
 

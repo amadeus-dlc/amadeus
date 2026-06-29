@@ -110,7 +110,7 @@ Construction 成果物を新規作成または構造補修する内部 skill は
 判定では、少なくとも次を読む。
 
 - `.amadeus/intents.md`
-- `Intent 正本ファイル`
+- `Intent のモジュールファイル`
 - `state.json`
 - `requirements.md`
 - `acceptance.md`
