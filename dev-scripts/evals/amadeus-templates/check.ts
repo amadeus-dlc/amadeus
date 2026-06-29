@@ -209,10 +209,14 @@ const textContracts: TextContract[] = [
     path: "skills/amadeus-inception/SKILL.md",
     promotedPath: ".agents/skills/amadeus-inception/SKILL.md",
     includes: [
+      "`inception/domain/subdomains.md` と `inception/domain/bounded-contexts.md`",
+      "`inception/units.md` の `コンテキスト`",
       "対象 Intent の `inception/domain/bounded-contexts.md`",
       "既存の `inception/domain/**`",
     ],
     excludes: [
+      "`domain/subdomains.md` と `domain/bounded-contexts.md`",
+      "`units.md` の `コンテキスト`",
       "対象 Intent の `domain/bounded-contexts.md`",
       "既存の `domain/**`",
     ],

@@ -68,34 +68,30 @@
   },
   "construction": {
     "status": "in_progress",
-    "targetBolts": [
-      "B001"
-    ],
     "requiredArtifacts": [
-      "inception/requirements.md",
-      "inception/acceptance.md",
-      "inception/units.md",
-      "inception/bolts.md",
-      "construction/traceability.md",
-      "construction/decisions.md"
+      "construction/decisions.md",
+      "construction/traceability.md"
     ],
     "requiredBoltArtifacts": [
       "construction/bolts/B001-order-creation/design.md",
       "construction/bolts/B001-order-creation/tasks.md",
       "construction/bolts/B001-order-creation/notes.md"
     ],
+    "targetBolts": [
+      "B001"
+    ],
     "bolts": [
       {
         "id": "B001",
         "designGate": {
           "status": "ready",
-          "reviewedBy": "ai",
+          "reviewedBy": "Codex",
           "updatedAt": "2026-06-30",
           "evidence": "construction/bolts/B001-order-creation/design.md"
         },
         "tasks": {
           "status": "generated",
-          "reviewedBy": "ai",
+          "reviewedBy": "Codex",
           "updatedAt": "2026-06-30",
           "evidence": "construction/bolts/B001-order-creation/tasks.md"
         }
