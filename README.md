@@ -222,7 +222,7 @@ Intent 固有のモデルや契約は `.amadeus/intents/<intent-id>-<slug>/incep
 質問進行は `amadeus-grilling` に従い、回答後の記録先は `amadeus-domain-modeling` に従います。
 
 質問が必要なターンでは成果物を更新せず、ユーザーの回答を待ちます。
-回答で確定した内容だけを `.amadeus/glossary.md`、対象 Intent の `domain-notes.md`、`domain/**`、`traceability.md`、必要最小限の decision に反映します。
+回答で確定した内容だけを `.amadeus/glossary.md`、対象 Intent の `domain-notes.md`、`inception/domain/**`、`inception/traceability.md`、必要最小限の decision に反映します。
 
 一般的な設計質問だけなら `amadeus-grilling`、記録済み内容の補修だけなら `amadeus-domain-modeling` を使います。
 

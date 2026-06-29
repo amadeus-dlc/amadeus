@@ -90,13 +90,13 @@
         "designGate": {
           "status": "ready",
           "reviewedBy": "ai",
-          "updatedAt": "2026-06-29",
+          "updatedAt": "2026-06-30",
           "evidence": "construction/bolts/B001-order-creation/design.md"
         },
         "tasks": {
           "status": "generated",
           "reviewedBy": "ai",
-          "updatedAt": "2026-06-29",
+          "updatedAt": "2026-06-30",
           "evidence": "construction/bolts/B001-order-creation/tasks.md"
         }
       }

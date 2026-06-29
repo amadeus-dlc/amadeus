@@ -13,6 +13,13 @@ type Contract = {
   textExcludes?: Record<string, string[]>;
 };
 
+type TextContract = {
+  path: string;
+  includes: string[];
+  excludes: string[];
+  promotedPath?: string;
+};
+
 const targetSkills: Record<string, Contract> = {
   "amadeus-steering": {
     skillText: [".amadeus/settings/templates", "templates/steering"],
@@ -152,6 +159,66 @@ const targetSkills: Record<string, Contract> = {
   },
 };
 
+const textContracts: TextContract[] = [
+  {
+    path: "README.md",
+    includes: [
+      "対象 Intent の `domain-notes.md`、`inception/domain/**`、`inception/traceability.md`",
+    ],
+    excludes: [
+      "対象 Intent の `domain-notes.md`、`domain/**`、`traceability.md`",
+    ],
+  },
+  {
+    path: "skills/amadeus-discovery/SKILL.md",
+    promotedPath: ".agents/skills/amadeus-discovery/SKILL.md",
+    includes: [
+      "関連しそうな既存 Intent の `ideation/scope.md`、`inception/requirements.md`、`inception/traceability.md`",
+    ],
+    excludes: [
+      "関連しそうな既存 Intent の `scope.md`、`requirements.md`、`traceability.md`",
+    ],
+  },
+  {
+    path: "skills/amadeus-domain-modeling/SKILL.md",
+    promotedPath: ".agents/skills/amadeus-domain-modeling/SKILL.md",
+    includes: [
+      ".amadeus/intents/<intent-id>-<slug>/inception/domain/**",
+      ".amadeus/intents/<intent-id>-<slug>/inception/traceability.md",
+      ".amadeus/intents/<intent-id>-<slug>/inception/decisions.md",
+    ],
+    excludes: [
+      ".amadeus/intents/<intent-id>-<slug>/domain/**",
+      ".amadeus/intents/<intent-id>-<slug>/traceability.md",
+      ".amadeus/intents/<intent-id>-<slug>/decisions.md",
+    ],
+  },
+  {
+    path: "skills/amadeus-domain-grilling/SKILL.md",
+    promotedPath: ".agents/skills/amadeus-domain-grilling/SKILL.md",
+    includes: [
+      ".amadeus/intents/<intent-id>-<slug>/inception/domain/**",
+      "対象 Intent の `inception/traceability.md`",
+    ],
+    excludes: [
+      ".amadeus/intents/<intent-id>-<slug>/domain/**",
+      "対象 Intent の `traceability.md`",
+    ],
+  },
+  {
+    path: "skills/amadeus-inception/SKILL.md",
+    promotedPath: ".agents/skills/amadeus-inception/SKILL.md",
+    includes: [
+      "対象 Intent の `inception/domain/bounded-contexts.md`",
+      "既存の `inception/domain/**`",
+    ],
+    excludes: [
+      "対象 Intent の `domain/bounded-contexts.md`",
+      "既存の `domain/**`",
+    ],
+  },
+];
+
 function fail(message: string): never {
   console.error(message);
   process.exit(1);
@@ -232,6 +299,20 @@ for (const [skill, contract] of Object.entries(targetSkills)) {
       assertTextExcludes(source, needle);
       assertTextExcludes(promoted, needle);
     }
+  }
+}
+
+for (const contract of textContracts) {
+  const source = join(root, contract.path);
+  assertFile(source);
+  for (const needle of contract.includes) assertTextIncludes(source, needle);
+  for (const needle of contract.excludes) assertTextExcludes(source, needle);
+
+  if (contract.promotedPath) {
+    const promoted = join(root, contract.promotedPath);
+    assertFile(promoted);
+    for (const needle of contract.includes) assertTextIncludes(promoted, needle);
+    for (const needle of contract.excludes) assertTextExcludes(promoted, needle);
   }
 }
 

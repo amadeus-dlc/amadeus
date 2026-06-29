@@ -4,7 +4,7 @@
 
 この文書は、`20260629-minimum-purchase-flow` インテントで Unit を切る時に参照する境界づけられたコンテキストを扱う。
 
-全体の境界づけられたコンテキストは、[../../../domain/bounded-contexts.md](../../../domain/bounded-contexts.md) を参照する。
+全体の境界づけられたコンテキストは、[../../../../domain/bounded-contexts.md](../../../../domain/bounded-contexts.md) を参照する。
 
 ## コンテキスト
 
