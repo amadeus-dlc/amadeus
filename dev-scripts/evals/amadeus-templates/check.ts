@@ -90,8 +90,8 @@ const targetSkills: Record<string, Contract> = {
       "templates/intents/ideation/decisions.md": ["一覧", "依存関係"],
       "templates/intents/ideation/decisions/D001-complete-ideation.md": ["背景", "判断", "理由", "影響"],
       "templates/intents/ideation/mocks/initial-confirmation.puml": [],
-      "templates/intents/ideation/state.json": [],
     },
+    absentFiles: ["templates/intents/ideation/state.json"],
   },
   "amadeus-inception": {
     skillText: [".amadeus/settings/templates", "templates/intents/inception"],
@@ -130,11 +130,9 @@ const targetSkills: Record<string, Contract> = {
       ],
       "templates/intents/inception/decisions.md": ["一覧", "依存関係"],
       "templates/intents/inception/decisions/D001-inception-boundary.md": ["背景", "判断", "理由", "影響"],
-      "templates/intents/inception/state.json": [],
     },
-    absentFiles: ["templates/intents/inception/bolts/B001-bolt/tasks.md"],
+    absentFiles: ["templates/intents/inception/bolts/B001-bolt/tasks.md", "templates/intents/inception/state.json"],
     textExcludes: {
-      "templates/intents/inception/state.json": ["tasks.md"],
       "templates/intents/inception/traceability.md": ["タスク", "T001"],
     },
   },
@@ -146,9 +144,11 @@ const targetSkills: Record<string, Contract> = {
       "templates/intents/construction/bolts/B001-bolt/notes.md": ["実行方針", "対象タスク", "未確認事項"],
       "templates/intents/construction/bolts/B001-bolt/test-results.md": ["検証結果", "安全性確認", "CI確認", "受け入れ証拠"],
       "templates/intents/construction/bolts/B001-bolt/pr.md": ["Pull Request", "対象", "確認状況"],
+      "templates/intents/construction/traceability.md": ["Construction Design からの追跡", "Deployment Unit からの追跡"],
+      "templates/intents/construction/decisions.md": ["一覧", "依存関係"],
       "templates/intents/construction/decisions/D003-construction-boundary.md": ["背景", "判断", "理由", "影響"],
-      "templates/intents/construction/state.json": [],
     },
+    absentFiles: ["templates/intents/construction/state.json"],
   },
 };
 

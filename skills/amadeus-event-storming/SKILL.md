@@ -80,9 +80,9 @@ level は次のいずれかにする。
 
 - `.amadeus/discoveries/<discovery-id>.md`
 - `.amadeus/intents/<intent-id>-<slug>.md`
-- `.amadeus/intents/<intent-id>-<slug>/scope.md`
-- `.amadeus/intents/<intent-id>-<slug>/requirements.md`
-- `.amadeus/intents/<intent-id>-<slug>/traceability.md`
+- `.amadeus/intents/<intent-id>-<slug>/ideation/scope.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/requirements.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/traceability.md`
 
 ## テンプレート
 
