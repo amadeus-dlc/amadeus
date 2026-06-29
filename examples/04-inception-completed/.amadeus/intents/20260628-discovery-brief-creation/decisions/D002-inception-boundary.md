@@ -25,4 +25,4 @@
 
 - Inception では `tasks.md` を作らない。
 - Construction では B001 と B002 を根拠に Task 化する。
-- 詳細なモデルと契約条件は BC001 の `models.md` と `contracts.md` に未確認事項として残す。
+- DM001 Discovery Brief は BC001 の `models.md` と `models/DM001-discovery-brief.md` に定義し、契約条件は BC001 の `contracts.md` に未確認事項として残す。

@@ -17,10 +17,11 @@
 
 - BC001 が Intent 配下の `domain/bounded-contexts.md` に存在する。
 - `units.md` の `コンテキスト` は U001 と U002 の両方で BC001 を参照している。
-- 詳細なモデルと契約条件は未確認だが、BC001 の `models.md` と `contracts.md` に未確認事項として記録している。
+- DM001 Discovery Brief は BC001 の `models.md` と `models/DM001-discovery-brief.md` に記録している。
+- 契約条件は BC001 の `contracts.md` に未確認事項として記録している。
 - `codebase-analysis.md` は、既存コードへ統合する brownfield 作業ではないため条件付き成果物として作らない。
 
 ## 影響
 
 - Construction へ進む場合は、B001 と B002 を対象 Bolt として設計準備する。
-- モデル詳細と契約条件は、Construction へ進む前に確認する。
+- 契約条件は、Construction へ進む前に確認する。
