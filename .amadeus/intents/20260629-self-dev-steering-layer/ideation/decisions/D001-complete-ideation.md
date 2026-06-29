@@ -8,7 +8,8 @@
 
 ## 判断
 
-- Ideation を完了し、Inception へ進める。
+- Ideation gate passed として初回導入 Intent を完了する。
+- Inception 以降の詳細化は、後続 Issue と後続 Intent に渡す。
 
 ## 理由
 
@@ -18,5 +19,5 @@
 
 ## 影響
 
-- Inception では、初回導入の Requirement、Acceptance、Traceability、Decision を詳細化できる。
+- 後続 Intent では、初回導入の Requirement、Acceptance、Traceability、Decision を詳細化できる。
 - ハーネス設計、validator 連携、provenance 自動収集は後続 Intent として扱う。

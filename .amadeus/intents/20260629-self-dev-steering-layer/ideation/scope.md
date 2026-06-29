@@ -18,6 +18,12 @@
 - `git submodule` 構成。
 - `CONTEXT.md` への stage0、stage1、stage2 の追加。
 
+## 変更種別ごとの完了条件
+
+- 初期版の完了条件は [steering/policies.md](../../../steering/policies.md) に記録する。
+- 変更種別は、skill 変更、validator 変更、example 更新、語彙追加、docs 更新の5分類だけを固定する。
+- 個別 Intent では、対象の変更種別に対応する必須条件を PR 準備の最低条件として扱う。
+
 ## 詳細度
 
 - 初回導入は Ideation gate passed までを詳細化する。

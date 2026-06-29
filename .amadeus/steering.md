@@ -35,10 +35,12 @@
 6. `steering/actors.md`
 7. `steering/external-systems.md`
 8. `glossary.md`
-9. `domain/subdomains.md`
-10. `domain/bounded-contexts.md`
-11. `discoveries.md`
-12. `intents.md`
+9. `steering/knowledge.md`
+10. `steering/policies.md`
+11. `domain/subdomains.md`
+12. `domain/bounded-contexts.md`
+13. `discoveries.md`
+14. `intents.md`
 
 ## Intent Layer へ進む基準
 

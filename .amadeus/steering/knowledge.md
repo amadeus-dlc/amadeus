@@ -9,6 +9,7 @@
 ## 前提
 
 - build workspace と target workspace は分ける方針を推奨する。
+- target workspace は、Amadeus 本体リポジトリから切った別 `git worktree` を推奨する。
 - target workspace の root `.amadeus/` を自己開発用 steering layer として扱う。
 - GitHub Issue を先に作り、Intent 側に Issue URL を記録する。
 - 初回導入 Intent の完了条件は Ideation gate passed である。
