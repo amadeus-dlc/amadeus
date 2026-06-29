@@ -21,6 +21,17 @@ _Avoid_: runtime dependency
 必要な場合は「参照元」「基準」「定義元」「管理元」のように、文脈に合う語へ置き換える。
 _Avoid_: 正本
 
+**モジュールファイル**：同じ階層にある同じ stem のディレクトリと対になる Markdown ファイルである。
+たとえば `.amadeus/intents/<intent-id>-<slug>.md` は、`.amadeus/intents/<intent-id>-<slug>/` と対になるモジュールファイルである。
+モジュールファイルは、対象成果物そのものの目的、責務、範囲、関連成果物を扱う。
+
+**モジュールディレクトリ**：同じ階層にある同じ stem のモジュールファイルと対になるディレクトリである。
+たとえば `.amadeus/intents/<intent-id>-<slug>/` は、`.amadeus/intents/<intent-id>-<slug>.md` と対になるモジュールディレクトリである。
+モジュールディレクトリは、対象成果物の状態、設計、追跡、補助成果物を扱う。
+
+**モジュール構造**：モジュールファイルとモジュールディレクトリを同じ階層に並べる成果物配置である。
+モジュール構造は Rust 2018 の `foo.rs` と `foo/` の配置に近い形で、対象成果物そのものと詳細成果物を分ける。
+
 **ADR**：Amadeus DLC の構造、境界、長期的な判断を記録する Architecture Decision Record である。
 採用済み ADR、現在の実装、merge 済みの差分履歴が新しいドメイン語彙を導入した場合は、`CONTEXT.md` に語彙定義として反映する。
 `CONTEXT.md` は語彙の定義元であり、ADR は判断の根拠と履歴を扱う。
@@ -50,7 +61,8 @@ MCP は tools、resources、prompts などを公開する。
 MCP は DLC の phase、gate、artifact、validator の契約そのものではない。
 
 **Discovery**：Intent を作る前に、入力テーマの課題粒度、既存 Intent との関係、Intent 化方針を整理する判断単位である。
-Discovery の詳細は `.amadeus/discoveries/<discovery-id>/brief.md` に置く。
+Discovery の詳細は `.amadeus/discoveries/<discovery-id>.md` に置く。
+Discovery の状態は `.amadeus/discoveries/<discovery-id>/state.json` に置く。
 Discovery は Steering と Intent の間に置く。
 Discovery は Requirement、Use Case、Unit、Bolt、Task を定義しない。
 
@@ -59,7 +71,8 @@ Discoveries の一覧は `.amadeus/discoveries.md` に置く。
 Discovery が Intent 化された場合でも、Intent 化前の判断記録として残す。
 
 **Event Storming**：Domain Event を起点に、ドメイン上の事実、順序、原因、判断待ちを整理する補助分析である。
-Event Storming の概要は `.amadeus/event-storming/<event-storming-id>/summary.md`、または `.amadeus/intents/<intent-id>-<slug>/event-storming/<event-storming-id>/summary.md` に置く。
+Event Storming の概要は `.amadeus/event-storming/<event-storming-id>.md`、または `.amadeus/intents/<intent-id>-<slug>/event-storming/<event-storming-id>.md` に置く。
+Event Storming の状態と分析成果物は、同じ stem のモジュールディレクトリに置く。
 Event Storming は phase を進めず、後続 phase や Domain Model 整理が参照できる分析成果物を作る。
 Event Storming は Requirement、Use Case、Unit、Bolt、Task、Aggregate、Bounded Context、Contract を確定しない。
 
@@ -87,7 +100,8 @@ Hotspot は Event Storming の `hotspots.md` に置く。
 Hotspot は Domain Event ではない候補や補足情報の退避先としても扱う。
 
 **Intent**：達成したい目的を表す出発点である。
-Intent の詳細は `.amadeus/intents/<intent-id>-<slug>/intent.md` に置く。
+Intent の詳細は `.amadeus/intents/<intent-id>-<slug>.md` に置く。
+Intent の状態と phase ごとの成果物は `.amadeus/intents/<intent-id>-<slug>/` に置く。
 ビジネス目標、機能目標、技術的成果を含む。
 Intent は、単一の境界づけられたコンテキストに閉じるとは限らない。
 複数の境界づけられたコンテキストをまたぐ Intent は、Unit に分解して開発と検証へ進める。
