@@ -17,8 +17,11 @@
 | Steering layer | `.amadeus/` | 自己開発の共有前提を置く。 | `.amadeus/steering.md` | 採用 |
 | Intent layer | `.amadeus/intents/<intent-id>-<slug>/` | 個別変更の成果物を置く。 | `.amadeus/intents/20260629-self-dev-steering-layer/` | 採用 |
 | Source skill | `skills/amadeus-*` | 作業中の skill source を置く。 | `skills/amadeus-validator/` | 採用 |
+| Source skill assets | `skills/amadeus-*/assets` | source skill に属する素材を置く。 | `skills/amadeus-validator/assets/` | 採用 |
 | 昇格先 skill | `.agents/skills/amadeus-*` | 実行側が読む skill を置く。 | `.agents/skills/amadeus-validator/` | 採用 |
+| 昇格先 skill assets | `.agents/skills/amadeus-*/assets` | 昇格先成果物に属する素材を置く。 | `.agents/skills/amadeus-validator/assets/` | 採用 |
 | Example snapshot | `examples/**/.amadeus` | skill 生成結果の snapshot を置く。 | `examples/05-construction-design-ready/.amadeus` | 採用 |
+| 参照元 | `CONTEXT.md`、`AMADEUS.md`、`.agents/rules/**/*.md` | 判断、語彙、作業規則の基準を置く。 | `CONTEXT.md` | 採用 |
 
 ## 命名規約
 
@@ -38,5 +41,7 @@
 ## コード構成原則
 
 - skill、validator、example、docs の変更は成果物境界を分ける。
+- host environment 側の参照元や assets を target artifacts として更新する場合は、対象 Intent に理由を記録する。
+- source skill の assets と昇格先 skill の assets は、所有者と更新手段を分けて扱う。
 - repo の開発用スクリプトを、skill の実行時参照として書かない。
 - 既存の昇格手段を経由せずに `.agents/skills/amadeus-*` を同期しない。

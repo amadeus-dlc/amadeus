@@ -2,8 +2,8 @@
 
 ## 目的
 
-root `.amadeus/` に古い例示成果物を置くと、リポジトリ自身の実運用状態と混ざります。
-そのため root `.amadeus/` は削除し、例示は `examples/<snapshot>/.amadeus/` に置きます。
+root `.amadeus/` は Amadeus 本体開発用の steering layer として扱います。
+そのため例示成果物は、自己開発用 steering layer と混ざらないように `examples/<snapshot>/.amadeus/` に置きます。
 
 ## 生成方針
 
@@ -43,8 +43,8 @@ repo root で `npm run examples:generate:real` を実行し、1つの workspace 
 | `04-inception-completed` | 商品選択、販売可能在庫の確認、購入者情報の記録、注文作成を Requirement、Story、Use Case、Unit、Bolt に分ける粒度を示す |
 | `05-construction-design-ready` | 注文作成 Bolt の Construction Design が ready、Tasks が generated になり、実装前の追跡ができた状態を示す |
 
-## root .amadeus を削除する理由
+## 例示成果物を root .amadeus に置かない理由
 
-root `.amadeus/` は、このリポジトリ自身の作業状態として読まれやすい場所です。
-例示を root に置くと、読者は古い作業状態なのか、配布用の例示なのかを区別できません。
+root `.amadeus/` は、このリポジトリ自身の自己開発用 steering layer として読まれる場所です。
+例示を root に置くと、読者は自己開発用 steering layer なのか、配布用の例示なのかを区別できません。
 そのため、例示成果物は `examples/` に隔離します。
