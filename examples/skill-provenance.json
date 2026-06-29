@@ -27,8 +27,7 @@
         },
         {
           "path": "skills/amadeus-ideation/SKILL.md",
-          "md5": "650b24e8c9646bbc180b81e2a19f55dc",
-          "staleReason": "Bugbot 対応で auto 判定表だけを補足した。example 成果物は変わらないため、後続 PR で real provider により再生成して更新する。"
+          "md5": "525d79f69ac91b45afaac53834b3f96f"
         },
         {
           "path": "skills/amadeus-ideation-intent-capture/SKILL.md",
@@ -65,8 +64,7 @@
         },
         {
           "path": "skills/amadeus-ideation/SKILL.md",
-          "md5": "650b24e8c9646bbc180b81e2a19f55dc",
-          "staleReason": "Bugbot 対応で auto 判定表だけを補足した。example 成果物は変わらないため、後続 PR で real provider により再生成して更新する。"
+          "md5": "525d79f69ac91b45afaac53834b3f96f"
         },
         {
           "path": "skills/amadeus-ideation-intent-capture/SKILL.md",
@@ -90,8 +88,7 @@
         },
         {
           "path": "skills/amadeus-inception/SKILL.md",
-          "md5": "68a837c3ff0cdb3d5da51be17692bc96",
-          "staleReason": "Inception の stage 再編と inception/domain 廃止に合わせて example を手動補修した。後続 PR で real provider により再生成して更新する。"
+          "md5": "a037a8012e2a62b523b9f3f1ec65a6e0"
         },
         {
           "path": "skills/amadeus-inception-requirements-definition/SKILL.md",
@@ -128,8 +125,7 @@
         },
         {
           "path": "skills/amadeus-ideation/SKILL.md",
-          "md5": "650b24e8c9646bbc180b81e2a19f55dc",
-          "staleReason": "Bugbot 対応で auto 判定表だけを補足した。example 成果物は変わらないため、後続 PR で real provider により再生成して更新する。"
+          "md5": "525d79f69ac91b45afaac53834b3f96f"
         },
         {
           "path": "skills/amadeus-ideation-intent-capture/SKILL.md",
@@ -153,8 +149,7 @@
         },
         {
           "path": "skills/amadeus-inception/SKILL.md",
-          "md5": "68a837c3ff0cdb3d5da51be17692bc96",
-          "staleReason": "Inception の stage 再編と inception/domain 廃止に合わせて example を手動補修した。後続 PR で real provider により再生成して更新する。"
+          "md5": "a037a8012e2a62b523b9f3f1ec65a6e0"
         },
         {
           "path": "skills/amadeus-inception-requirements-definition/SKILL.md",
