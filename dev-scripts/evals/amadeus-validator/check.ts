@@ -12,8 +12,8 @@ const validator = ".agents/skills/amadeus-validator/validator/AmadeusValidator.t
 
 const unit1 = "U001-minimum-purchase-flow";
 const unit2 = "U002-order-creation";
-const bolt1 = "B001-create-order";
-const bolt2 = "B002-confirm-order";
+const bolt1 = "B001-order-creation";
+const bolt2 = "B002-order-content-confirmation";
 const boundedContext1 = "BC001-sales-management";
 
 function fail(message: string): never {
@@ -128,7 +128,7 @@ function migrateIntentToPhaseLayout(workspace: string): void {
 
   const legacyBoltsRoot = join(intentRoot(workspace), "bolts");
   if (existsSync(legacyBoltsRoot)) {
-    for (const entry of ["B001-create-order.md", "B002-confirm-order.md", "B003-select-product.md"]) {
+    for (const entry of ["B001-order-creation.md", "B002-order-content-confirmation.md", "B003-product-selection.md"]) {
       moveIntentPath(workspace, `bolts/${entry}`, `inception/bolts/${entry}`);
     }
     rmSync(legacyBoltsRoot, { recursive: true, force: true });
@@ -303,8 +303,8 @@ function addTaskColumnToRequirementTrace(workspace: string): void {
   );
   replaceInFile(
     intentPath(workspace, "traceability.md"),
-    "| R004 | 顧客 | S001 | UC002, UC003 | U002 | B001 |",
-    "| R004 | 顧客 | S001 | UC002, UC003 | U002 | B001 | B001/T001 |",
+    "| R004 | 顧客 | S001 | UC003 | U002 | B001 |",
+    "| R004 | 顧客 | S001 | UC003 | U002 | B001 | B001/T001 |",
     "traceability fixture does not contain expected requirement trace row",
   );
 }
@@ -402,8 +402,8 @@ function makeBoltReferenceMultipleUnits(workspace: string, withReason: boolean):
   const boltsPath = intentPath(workspace, "bolts.md");
   replaceInFile(
     boltsPath,
-    `| B001 | 注文作成を扱う。 | U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-create-order.md](bolts/B001-create-order.md) |`,
-    `| B001 | 注文作成を扱う。 | U001, U002 | [design.md](units/${unit1}/design.md), [design.md](units/${unit2}/design.md) | B002 | [B001-create-order.md](bolts/B001-create-order.md) |`,
+    `| B001 | 確認済みの注文内容から注文を作成する。 | U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
+    `| B001 | 確認済みの注文内容から注文を作成する。 | U001, U002 | [design.md](units/${unit1}/design.md), [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
     "bolts fixture does not contain expected B001 row",
   );
 
@@ -433,8 +433,8 @@ function makeBoltReferenceMultipleUnits(workspace: string, withReason: boolean):
 function replaceBoltUnitWithMissingId(workspace: string): void {
   replaceInFile(
     intentPath(workspace, "bolts.md"),
-    `| B001 | 注文作成を扱う。 | U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-create-order.md](bolts/B001-create-order.md) |`,
-    `| B001 | 注文作成を扱う。 | U999 | [design.md](units/${unit2}/design.md) | B002 | [B001-create-order.md](bolts/B001-create-order.md) |`,
+    `| B001 | 確認済みの注文内容から注文を作成する。 | U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
+    `| B001 | 確認済みの注文内容から注文を作成する。 | U999 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
     "bolts fixture does not contain expected B001 row",
   );
 }
@@ -442,8 +442,8 @@ function replaceBoltUnitWithMissingId(workspace: string): void {
 function replaceBoltUnitWithDuplicateId(workspace: string): void {
   replaceInFile(
     intentPath(workspace, "bolts.md"),
-    `| B001 | 注文作成を扱う。 | U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-create-order.md](bolts/B001-create-order.md) |`,
-    `| B001 | 注文作成を扱う。 | U002, U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-create-order.md](bolts/B001-create-order.md) |`,
+    `| B001 | 確認済みの注文内容から注文を作成する。 | U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
+    `| B001 | 確認済みの注文内容から注文を作成する。 | U002, U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
     "bolts fixture does not contain expected B001 row",
   );
 }
