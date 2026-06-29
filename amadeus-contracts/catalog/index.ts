@@ -1,4 +1,5 @@
 export { artifactContracts } from "./artifacts";
+export { domainPlacementContract } from "./domain-placement";
 export {
   functionalDesignArtifacts,
   functionalDesignContract,
