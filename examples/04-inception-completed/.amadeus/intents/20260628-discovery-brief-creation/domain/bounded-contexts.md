@@ -40,5 +40,6 @@
 
 ## 未確認事項
 
-- BC001 の詳細なモデルは [models.md](bounded-contexts/BC001-discovery-support/models.md) に未確認事項として残す。
+- DM001 Discovery Brief は [models.md](bounded-contexts/BC001-discovery-support/models.md) と [DM001-discovery-brief.md](bounded-contexts/BC001-discovery-support/models/DM001-discovery-brief.md) に定義済みである。
+- Intent 候補の並び順や推奨理由の詳細な評価基準は [R002-intent-candidate-presentation.md](../requirements/R002-intent-candidate-presentation.md) に未確認事項として残す。
 - BC001 の詳細な契約条件は [contracts.md](bounded-contexts/BC001-discovery-support/contracts.md) に未確認事項として残す。

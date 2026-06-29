@@ -444,6 +444,7 @@ function inceptionPrompt(): string {
     "- `集約` 表には `DA001 Discovery Brief` を置いてください。",
     "- `models/DM001-discovery-brief.md` の `関連成果物` では、`models.md` は `../models.md`、`contracts.md` は `../contracts.md`、Intent 配下の `domain/bounded-contexts.md` は `../../../bounded-contexts.md`、Intent 直下の `use-cases` と `units` は `../../../../use-cases/...` と `../../../../units/...` でリンクしてください。",
     "- 契約条件が未確認の場合は、BC001 の `contracts.md` に未確認事項として残してください。",
+    "- `domain/bounded-contexts.md` の未確認事項では、BC001 の詳細なモデルが未確認であるとは書かず、DM001 以外の候補評価基準や契約条件が未確認であることに限定してください。",
     "- D002 と D003 の判断文では、DM001 が `models.md` と `models/DM001-discovery-brief.md` に定義済みであることを書き、詳細なモデルが未確認であるとは書かないでください。",
     "- R002 の根拠は、実際に存在する `scope.md`、`mocks/initial-confirmation.puml`、または R002 自身の未確認事項に基づけ、`ideation.md` に存在しない未確定事項を根拠にしないでください。",
     "- Inception traceability finalization まで完了し、Inception gate passed の状態にしてください。",
