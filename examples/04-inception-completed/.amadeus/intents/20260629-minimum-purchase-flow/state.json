@@ -34,7 +34,7 @@
       "inception/requirements/R004-create-order.md",
       "inception/acceptance.md",
       "inception/user-stories.md",
-      "inception/user-stories/S001-customer-creates-order.md",
+      "inception/user-stories/S001-minimum-purchase-flow.md",
       "inception/use-cases.md",
       "inception/use-cases/UC001-select-product.md",
       "inception/use-cases/UC002-confirm-order.md",
@@ -52,10 +52,9 @@
       "inception/domain/bounded-contexts/BC001-sales-management/contracts.md",
       "inception/traceability.md",
       "inception/decisions.md",
-      "inception/decisions/D001-complete-ideation.md",
-      "inception/decisions/D002-inception-boundary.md",
-      "inception/decisions/D003-unit-split.md",
-      "inception/decisions/D004-bolt-split.md"
+      "inception/decisions/D001-inception-boundary.md",
+      "inception/decisions/D002-unit-split.md",
+      "inception/decisions/D003-bolt-split.md"
     ],
     "requiredBoltArtifacts": [
       "inception/bolts/B001-order-creation.md",

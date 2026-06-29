@@ -249,20 +249,25 @@ function replaceDiscoveryDecision(workspace: string): void {
 function removeDiscoveryCandidate(workspace: string): void {
   const path = join(workspace, `.amadeus/discoveries/${discovery}.md`);
   const text = readFileSync(path, "utf8");
-  const rows = [
-    "| 商品情報公開 | waiting | 未初期化 | 購入者が商品を選べるように商品情報を公開する。 | 商品一覧、商品詳細、販売対象商品の表示範囲が Intent 化されている。 | 商品登録の詳細運用、価格改定の承認、在庫引当。 | 販売管理の最小購入フローから必要性を確認する。 |\n",
-    "| 顧客管理 | waiting | 未初期化 | 顧客情報を管理する。 | 会員登録、ログイン、顧客台帳、購入履歴管理の扱いが Intent 化されている。 | 注文作成、決済詳細、出荷。 | 販売管理の最小購入フローから購入者情報の扱いを確認する。 |\n",
-    "| 入荷管理 | waiting | 未初期化 | 商品の入荷を扱う。 | 入荷予定、入荷実績、入荷後の在庫反映の扱いが Intent 化されている。 | 販売可能在庫の購入時確認、棚卸し、出荷。 | 在庫管理との境界を後続 Discovery または Intent で確認する。 |\n",
-    "| 在庫管理 | waiting | 未初期化 | 販売可能在庫や在庫引当を扱う。 | 販売可能在庫、在庫引当、棚卸しの扱いが Intent 化されている。 | 入荷、注文作成、出荷。 | 販売管理の最小購入フローと入荷管理との境界を確認する。 |\n",
-    "| 支払い管理 | waiting | 未初期化 | 支払いに関する業務を扱う。 | 決済詳細、売上確定、決済代行連携の扱いが Intent 化されている。 | 注文作成、配送事業者連携。 | 決済代行連携の有無を確認する。 |\n",
-    "| 出荷管理 | waiting | 未初期化 | 注文後の商品出荷を扱う。 | 出荷指示、配送事業者連携の検討、出荷状態の管理が Intent 化されている。 | 商品選択、注文作成、決済詳細。 | 配送事業者連携の有無を確認する。 |\n",
-  ];
-  let updated = text;
-  for (const row of rows) {
-    if (!updated.includes(row)) fail("discovery fixture does not contain expected candidate row");
-    updated = updated.replace(row, "");
-  }
-  writeFileSync(path, updated);
+  const lines = text.split("\n");
+  let inCandidates = false;
+  let removed = 0;
+  const updated = lines.filter((line) => {
+    if (line === "## Intent 候補") {
+      inCandidates = true;
+      return true;
+    }
+    if (inCandidates && line.startsWith("## ") && line !== "## Intent 候補") {
+      inCandidates = false;
+    }
+    if (inCandidates && line.startsWith("|") && line.includes("| waiting |")) {
+      removed += 1;
+      return false;
+    }
+    return true;
+  });
+  if (removed === 0) fail("discovery fixture does not contain waiting candidate rows");
+  writeFileSync(path, updated.join("\n"));
 }
 
 function replaceDesignTraceDesignLink(workspace: string): void {
