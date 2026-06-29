@@ -82,9 +82,9 @@ Bun が使えない場合は `blocked` として報告する。
 - `.amadeus/steering/knowledge.md` と `.amadeus/steering/knowledge/README.md` が存在する。
 - `.amadeus/steering/policies.md` と `.amadeus/steering/policies/README.md` が存在する。
 - `.amadeus/discoveries.md` が存在する。
-- `.amadeus/discoveries.md` の一覧と各 Discovery の `Discovery 正本ファイル`、`state.json` が対応している。
+- `.amadeus/discoveries.md` の一覧と各 Discovery のモジュールファイル、`state.json` が対応している。
 - Discovery の `state.json.phase`、`status`、`gate`、`decision` が許可値である。
-- Discovery の `state.json.decision` と `Discovery 正本ファイル` の `判定` が一致する。
+- Discovery の `state.json.decision` と `Discovery のモジュールファイル` の `判定` が一致する。
 - Discovery が `gate: passed` の場合、判定別の構造条件を満たす。
 - `.amadeus/intents.md` が存在する。
 - `.amadeus/domain/subdomains.md` が存在する。

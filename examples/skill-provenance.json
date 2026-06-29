@@ -56,11 +56,13 @@
         },
         {
           "path": "skills/amadeus-ideation/SKILL.md",
-          "md5": "f5b26b6fa308736ae29518b4745ef89a"
+          "md5": "f5b26b6fa308736ae29518b4745ef89a",
+          "staleReason": "モジュールファイル用語だけを更新し、生成済み example の構造と内容は変わらないため。"
         },
         {
           "path": "skills/amadeus-ideation-scope-framing/SKILL.md",
-          "md5": "f45a03df7d62a7c4d4413601d7abe813"
+          "md5": "f45a03df7d62a7c4d4413601d7abe813",
+          "staleReason": "モジュールファイル用語だけを更新し、生成済み example の構造と内容は変わらないため。"
         },
         {
           "path": "skills/amadeus-ideation-feasibility-shaping/SKILL.md",
@@ -96,11 +98,13 @@
         },
         {
           "path": "skills/amadeus-ideation/SKILL.md",
-          "md5": "f5b26b6fa308736ae29518b4745ef89a"
+          "md5": "f5b26b6fa308736ae29518b4745ef89a",
+          "staleReason": "モジュールファイル用語だけを更新し、生成済み example の構造と内容は変わらないため。"
         },
         {
           "path": "skills/amadeus-ideation-scope-framing/SKILL.md",
-          "md5": "f45a03df7d62a7c4d4413601d7abe813"
+          "md5": "f45a03df7d62a7c4d4413601d7abe813",
+          "staleReason": "モジュールファイル用語だけを更新し、生成済み example の構造と内容は変わらないため。"
         },
         {
           "path": "skills/amadeus-ideation-feasibility-shaping/SKILL.md",
@@ -116,7 +120,8 @@
         },
         {
           "path": "skills/amadeus-inception/SKILL.md",
-          "md5": "a945f2cac547a8260750fcd9f2c1fe50"
+          "md5": "a945f2cac547a8260750fcd9f2c1fe50",
+          "staleReason": "モジュールファイル用語だけを更新し、生成済み example の構造と内容は変わらないため。"
         },
         {
           "path": "skills/amadeus-inception-requirements-definition/SKILL.md",
@@ -156,11 +161,13 @@
         },
         {
           "path": "skills/amadeus-ideation/SKILL.md",
-          "md5": "f5b26b6fa308736ae29518b4745ef89a"
+          "md5": "f5b26b6fa308736ae29518b4745ef89a",
+          "staleReason": "モジュールファイル用語だけを更新し、生成済み example の構造と内容は変わらないため。"
         },
         {
           "path": "skills/amadeus-ideation-scope-framing/SKILL.md",
-          "md5": "f45a03df7d62a7c4d4413601d7abe813"
+          "md5": "f45a03df7d62a7c4d4413601d7abe813",
+          "staleReason": "モジュールファイル用語だけを更新し、生成済み example の構造と内容は変わらないため。"
         },
         {
           "path": "skills/amadeus-ideation-feasibility-shaping/SKILL.md",
@@ -176,7 +183,8 @@
         },
         {
           "path": "skills/amadeus-inception/SKILL.md",
-          "md5": "a945f2cac547a8260750fcd9f2c1fe50"
+          "md5": "a945f2cac547a8260750fcd9f2c1fe50",
+          "staleReason": "モジュールファイル用語だけを更新し、生成済み example の構造と内容は変わらないため。"
         },
         {
           "path": "skills/amadeus-inception-requirements-definition/SKILL.md",

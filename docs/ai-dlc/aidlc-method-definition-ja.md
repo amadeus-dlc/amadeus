@@ -16,7 +16,7 @@ AI は計画、分解、設計候補、実装候補を提示する。
 
 人間は目的、リスク、設計品質、最終判断を承認する。
 
-この関係は、amadeus では Intent Contract を正本にし、Unit Traceability を通じて Unit、Bolt、Spec へ進める構造に対応する。
+この関係は、amadeus では Intent Contract を基準にし、Unit Traceability を通じて Unit、Bolt、Spec へ進める構造に対応する。
 
 ## 中心構造
 

@@ -69,8 +69,8 @@
     },
     {
       "id": 12,
-      "prompt": "`.amadeus/discoveries.md` と Discovery の `Discovery 正本ファイル`、`state.json` が対応しているか Amadeus Validator で確認して。",
-      "expected_output": "Discovery 一覧の必須列、詳細リンク、各 Discovery の `Discovery 正本ファイル` と `state.json`、`state.json.phase/status/gate/decision` の許可値、`state.json.decision` と `Discovery 正本ファイル` の判定一致、`gate: passed` の判定別構造条件を確認する。",
+      "prompt": "`.amadeus/discoveries.md` と Discovery のモジュールファイル、`state.json` が対応しているか Amadeus Validator で確認して。",
+      "expected_output": "Discovery 一覧の必須列、詳細リンク、各 Discovery のモジュールファイルと `state.json`、`state.json.phase/status/gate/decision` の許可値、`state.json.decision` と Discovery のモジュールファイルの判定一致、`gate: passed` の判定別構造条件を確認する。",
       "files": []
     }
   ]
