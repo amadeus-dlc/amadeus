@@ -5,18 +5,18 @@
 | 識別子 | 概要 | 状態 | 依存 | 詳細 |
 |---|---|---|---|---|
 | R001 | 顧客が購入対象の商品を選べる。 | 採用済み | なし | [R001-product-selection.md](requirements/R001-product-selection.md) |
-| R002 | 選択した商品の販売可能在庫を確認できる。 | 採用済み | R001 | [R002-saleable-inventory-check.md](requirements/R002-saleable-inventory-check.md) |
-| R003 | 注文作成に必要な購入者情報を記録できる。 | 採用済み | R001 | [R003-buyer-information-recording.md](requirements/R003-buyer-information-recording.md) |
-| R004 | 選択商品、販売可能在庫の確認結果、購入者情報、注文内容をもとに注文を作成できる。 | 採用済み | R001, R002, R003 | [R004-order-creation.md](requirements/R004-order-creation.md) |
+| R002 | 顧客が選んだ商品の販売可能在庫を確認できる。 | 採用済み | R001 | [R002-sellable-stock-check.md](requirements/R002-sellable-stock-check.md) |
+| R003 | 顧客の購入者情報を注文作成に使える形で記録できる。 | 採用済み | R001 | [R003-buyer-information-recording.md](requirements/R003-buyer-information-recording.md) |
+| R004 | 顧客が確認した注文内容をもとに注文を作成できる。 | 採用済み | R001, R002, R003 | [R004-order-creation.md](requirements/R004-order-creation.md) |
 
 ## 依存関係
 
 | 要求 | 依存 | 理由 |
 |---|---|---|
-| R001 | なし | 商品選択は最小購入フローの入口であり、他の要求の前提になるため。 |
-| R002 | R001 | 販売可能在庫は、顧客が選択した商品に対して確認するため。 |
-| R003 | R001 | 購入者情報は、選択商品を含む注文内容と合わせて記録するため。 |
-| R004 | R001, R002, R003 | 注文作成は、選択商品、販売可能在庫の確認結果、購入者情報を前提に成立するため。 |
+| R001 | なし | 商品選択は、最小購入フローの入口として単独で観測できるため。 |
+| R002 | R001 | 販売可能在庫の確認対象は、顧客が選んだ商品であるため。 |
+| R003 | R001 | 購入者情報は、選択した商品を購入する注文内容と結び付けて扱うため。 |
+| R004 | R001, R002, R003 | 注文作成は、商品、販売可能在庫、購入者情報が確認できていることを前提にするため。 |
 
 ## 受け入れ状態
 

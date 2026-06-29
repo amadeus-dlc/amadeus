@@ -14,7 +14,7 @@ const unit1 = "U001-minimum-purchase-flow";
 const unit2 = "U002-order-creation";
 const bolt1 = "B001-order-creation";
 const bolt2 = "B002-order-content-confirmation";
-const boundedContext1 = "BC001-sales-management";
+const boundedContext1 = "BC004-sales-management";
 
 function fail(message: string): never {
   console.error(message);
@@ -402,8 +402,8 @@ function makeBoltReferenceMultipleUnits(workspace: string, withReason: boolean):
   const boltsPath = intentPath(workspace, "bolts.md");
   replaceInFile(
     boltsPath,
-    `| B001 | 確認済みの注文内容から注文を作成する。 | U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
-    `| B001 | 確認済みの注文内容から注文を作成する。 | U001, U002 | [design.md](units/${unit1}/design.md), [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
+    `| B001 | 注文を作成する。 | U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
+    `| B001 | 注文を作成する。 | U001, U002 | [design.md](units/${unit1}/design.md), [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
     "bolts fixture does not contain expected B001 row",
   );
 
@@ -433,8 +433,8 @@ function makeBoltReferenceMultipleUnits(workspace: string, withReason: boolean):
 function replaceBoltUnitWithMissingId(workspace: string): void {
   replaceInFile(
     intentPath(workspace, "bolts.md"),
-    `| B001 | 確認済みの注文内容から注文を作成する。 | U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
-    `| B001 | 確認済みの注文内容から注文を作成する。 | U999 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
+    `| B001 | 注文を作成する。 | U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
+    `| B001 | 注文を作成する。 | U999 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
     "bolts fixture does not contain expected B001 row",
   );
 }
@@ -442,8 +442,8 @@ function replaceBoltUnitWithMissingId(workspace: string): void {
 function replaceBoltUnitWithDuplicateId(workspace: string): void {
   replaceInFile(
     intentPath(workspace, "bolts.md"),
-    `| B001 | 確認済みの注文内容から注文を作成する。 | U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
-    `| B001 | 確認済みの注文内容から注文を作成する。 | U002, U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
+    `| B001 | 注文を作成する。 | U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
+    `| B001 | 注文を作成する。 | U002, U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
     "bolts fixture does not contain expected B001 row",
   );
 }
