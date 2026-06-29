@@ -97,7 +97,7 @@ Bun が使えない場合は `blocked` として報告する。
 - `.amadeus/domain/subdomains.md` が存在する。
 - `.amadeus/domain/bounded-contexts.md` が存在する。
 - `.amadeus` の index 系成果物が、[artifacts validation](references/artifacts.md) の条件を満たす。
-- 対象 Intent ディレクトリ名が指定され、Inception 以降の場合、`inception/domain/**` が存在しない。
+- 対象 Intent ディレクトリ名が指定され、Inception 以降の場合、Intent 固有の正式な Domain Model や Contracts が Inception 配下に存在しない。
 - 対象 Intent ディレクトリ名が指定され、`.amadeus/intents/<intent-id>-<slug>/state.json` の `phase` が `ideation` の場合、Ideation 段階の成果物契約として検証する。
 - Ideation 段階の Intent では、`inception/**`、`construction/**` は Inception 以降で作る成果物として扱い、欠落を不足にしない。
 - 対象 Intent ディレクトリ名が指定され、`.amadeus/intents/<intent-id>-<slug>/state.json` の `phase` が `inception` の場合、Inception 段階の状態契約として検証する。

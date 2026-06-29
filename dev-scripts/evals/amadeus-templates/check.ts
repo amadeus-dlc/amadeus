@@ -4,7 +4,10 @@ import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
+import { domainPlacementContract } from "../../../amadeus-contracts/catalog";
+
 const root = resolve(import.meta.dir, "../../..");
+const legacyIntentDomainPattern = `${domainPlacementContract.legacyIntentDomainSegments.join("/")}/**`;
 
 type Contract = {
   skillText: string[];
@@ -170,7 +173,7 @@ const textContracts: TextContract[] = [
     ],
     excludes: [
       "対象 Intent の `domain-notes.md`、`domain/**`、`traceability.md`",
-      "対象 Intent の `domain-notes.md`、`inception/domain/**`",
+      `対象 Intent の \`domain-notes.md\`、\`${legacyIntentDomainPattern}\``,
     ],
   },
   {
@@ -194,7 +197,7 @@ const textContracts: TextContract[] = [
     ],
     excludes: [
       ".amadeus/intents/<intent-id>-<slug>/domain/**",
-      ".amadeus/intents/<intent-id>-<slug>/inception/domain/**",
+      `.amadeus/intents/<intent-id>-<slug>/${legacyIntentDomainPattern}`,
       ".amadeus/intents/<intent-id>-<slug>/traceability.md",
       ".amadeus/intents/<intent-id>-<slug>/decisions.md",
     ],
@@ -209,7 +212,7 @@ const textContracts: TextContract[] = [
     ],
     excludes: [
       ".amadeus/intents/<intent-id>-<slug>/domain/**",
-      ".amadeus/intents/<intent-id>-<slug>/inception/domain/**",
+      `.amadeus/intents/<intent-id>-<slug>/${legacyIntentDomainPattern}`,
       "対象 Intent の `traceability.md`",
     ],
   },
@@ -217,7 +220,7 @@ const textContracts: TextContract[] = [
     path: "skills/amadeus-inception/SKILL.md",
     promotedPath: ".agents/skills/amadeus-inception/SKILL.md",
     includes: [
-      "Inception は `inception/domain/**` を作らない。",
+      "Inception は Intent 固有の正式な Domain Model や Contracts を作らない。",
       "`inception/units.md` の `コンテキスト`",
       "既存のドメイン用語、境界づけられたコンテキスト、契約が不足している場合は、Inception 成果物の中で推測して確定しない。",
     ],
@@ -225,7 +228,7 @@ const textContracts: TextContract[] = [
       "`domain/subdomains.md` と `domain/bounded-contexts.md`",
       "`units.md` の `コンテキスト`",
       "対象 Intent の `domain/bounded-contexts.md`",
-      "`inception/domain/subdomains.md` と `inception/domain/bounded-contexts.md`",
+      `\`${domainPlacementContract.legacyIntentDomainSegments.join("/")}/subdomains.md\` と \`${domainPlacementContract.legacyIntentDomainSegments.join("/")}/bounded-contexts.md\``,
     ],
   },
 ];

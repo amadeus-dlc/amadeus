@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
 
-import { functionalDesignContract, taskGenerationContract } from "../../../amadeus-contracts/catalog";
+import { domainPlacementContract, functionalDesignContract, taskGenerationContract } from "../../../amadeus-contracts/catalog";
 
 type SkillFile = {
   path?: unknown;
@@ -69,9 +69,12 @@ for (const entry of entries) {
 }
 
 const constructionExample = `${root}/examples/04-construction-design-ready/.amadeus/intents/20260629-minimum-purchase-flow`;
-assert(!existsSync(`${constructionExample}/inception/domain`), "construction example must not include inception/domain");
 assert(
-  !existsSync(`${constructionExample}/construction/bolts/B001-order-creation/design.md`),
+  !existsSync([constructionExample, ...domainPlacementContract.legacyIntentDomainSegments].join("/")),
+  "construction example must not include the legacy Intent domain directory",
+);
+assert(
+  !existsSync([constructionExample, "construction", "bolts", "B001-order-creation", "design.md"].join("/")),
   "construction example must not include bolt design.md",
 );
 

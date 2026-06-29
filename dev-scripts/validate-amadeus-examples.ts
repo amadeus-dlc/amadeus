@@ -3,6 +3,8 @@
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 
+import { domainPlacementContract } from "../amadeus-contracts/catalog";
+
 type ExampleSnapshot = {
   name: string;
   workdir: string;
@@ -166,8 +168,14 @@ function validateNoInceptionDomainFileSets(targets: ExampleSnapshot[]): boolean 
   const errors: string[] = [];
   for (const target of targets) {
     if (!target.intent) continue;
-    const domainRoot = `${target.workdir}/.amadeus/intents/${target.intent}/inception/domain`;
-    if (existsSync(domainRoot)) errors.push(`${target.workdir}: inception/domain must not exist`);
+    const domainRoot = [
+      target.workdir,
+      ".amadeus",
+      "intents",
+      target.intent,
+      ...domainPlacementContract.legacyIntentDomainSegments,
+    ].join("/");
+    if (existsSync(domainRoot)) errors.push(`${target.workdir}: legacy Intent domain directory must not exist`);
   }
 
   if (errors.length > 0) {
