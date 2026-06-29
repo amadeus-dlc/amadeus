@@ -485,8 +485,11 @@ function normalizeSnapshotNarrative(stepId: string): void {
   const nextActionIndex = discoveryText.indexOf("## 推奨次アクション");
   if (nextActionIndex >= 0) {
     const beforeNextAction = discoveryText.slice(0, nextActionIndex).trimEnd();
-    writeFileSync(discoveryPath, `${beforeNextAction}\n\n## 推奨次アクション\n\n${state.discoveryDetailActions.join("\n")}\n`);
+    discoveryText = `${beforeNextAction}\n\n## 推奨次アクション\n\n${state.discoveryDetailActions.join("\n")}\n`;
+  } else {
+    discoveryText = `${discoveryText.trimEnd()}\n\n## 推奨次アクション\n\n${state.discoveryDetailActions.join("\n")}\n`;
   }
+  writeFileSync(discoveryPath, discoveryText);
 }
 
 async function runCodexStep(options: Options, step: GenerationStep): Promise<void> {
