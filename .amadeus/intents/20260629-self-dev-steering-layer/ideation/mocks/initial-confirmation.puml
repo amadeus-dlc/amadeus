@@ -1,0 +1,15 @@
+@startsalt
+{
+  {^"Amadeus 自己開発 PR 準備"
+    [Issue #108]
+    [Intent: 20260629-self-dev-steering-layer]
+    {#
+      . | stage0 | stage1 | stage2
+      build workspace | 昇格済み skill | source skill 変更 | 検証済み成果物
+      target workspace | root .amadeus | Intent 成果物 | PR 準備
+      target artifacts | 未変更 | 作業中 | 昇格先と example
+    }
+    [Ideation gate passed]
+  }
+}
+@endsalt

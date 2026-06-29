@@ -2,7 +2,7 @@
 
 Amadeus DLC は、Amadeus の設計、仕様、実装の流れを扱うための作業領域です。
 
-このリポジトリでは、root `.amadeus/` を実運用状態として置きません。
+このリポジトリでは、root `.amadeus/` を Amadeus 本体開発用の steering layer として扱います。
 生成例は [examples/](examples/) 配下の段階別 snapshot として管理します。
 
 ## 使い方

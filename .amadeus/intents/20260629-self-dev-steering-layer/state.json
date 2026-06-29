@@ -1,0 +1,27 @@
+{
+  "intent": "20260629-self-dev-steering-layer",
+  "phase": "ideation",
+  "status": "completed",
+  "initialized": {
+    "status": "completed",
+    "createdArtifacts": [
+      "../20260629-self-dev-steering-layer.md",
+      "state.json"
+    ],
+    "next": "ideation"
+  },
+  "ideation": {
+    "status": "completed",
+    "requiredArtifacts": [
+      "../20260629-self-dev-steering-layer.md",
+      "ideation/scope.md",
+      "ideation/ideation.md",
+      "ideation/decisions.md",
+      "ideation/traceability.md"
+    ],
+    "requiredMocks": [
+      "ideation/mocks/initial-confirmation.puml"
+    ],
+    "gate": "passed"
+  }
+}
