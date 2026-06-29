@@ -1,5 +1,9 @@
 # Inception Phase Stage Reference
 
+## AI-DLC v2 Reference
+
+- [AI-DLC v2 Inception Stage](https://github.com/awslabs/aidlc-workflows/blob/v2/docs/reference/04-stages/inception.md)
+
 ## Phase Overview
 
 Inception phase は、Ideation 完了済み Intent を、Requirement、Story、Use Case、Unit、Unit Design Brief、Bolt へ分解する phase である。

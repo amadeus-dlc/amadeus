@@ -1,27 +1,63 @@
 # Ideation Phase Stage Reference
 
+## AI-DLC v2 Reference
+
+- [AI-DLC v2 Ideation Stage](https://github.com/awslabs/aidlc-workflows/blob/v2/docs/reference/04-stages/ideation.md)
+
 ## Phase Overview
 
-Ideation phase は、初期化済み Intent のスコープ、実現可能性、初期モック、追跡、判断を整理する phase である。
+Ideation phase は、Intent Capture & Framing、スコープ、実現可能性、初期モック、追跡、判断を整理する phase である。
 
-Ideation phase は、新しい Intent の登録を扱わない。
-
-登録済み Intent の範囲、詳細度、検証深度を Scope Framing で整理する。
+Ideation phase は、新しい Intent Record の作成を扱う。
+作成済み Intent Record の範囲、詳細度、検証深度を Scope Framing で整理する。
 
 この phase では、要求、ユースケース、Unit、Bolt、Task、Domain Model、Spec、実装を作らない。
 
 Ideation の公開入口は `amadeus-ideation` である。
 
 公開入口は成果物を直接作らず、内部 skill を順に呼び出す。
+入力テーマまたは Discovery Brief から開始した場合でも、公開入口は Stage 1.0 だけで止めない。
+Stage 1.0 から Stage 1.4 までを同じ実行で進める。
 
 ## Stage Summary Table
 
 | Stage | Name | Execution | Condition | Lead Skill | Outputs |
 |---|---|---|---|---|---|
-| 1.1 | Scope Framing | ALWAYS | Intent の入れ物があり、Ideation 成果物を作る場合 | `amadeus-ideation-scope-framing` | `ideation/scope.md` |
+| 1.0 | Intent Capture & Framing | ALWAYS | Intent Record がない、または構造補修が必要な場合 | `amadeus-ideation-intent-capture` | `intents.md`、`intents/<intent-id>-<slug>.md`、`state.json` |
+| 1.1 | Scope Framing | ALWAYS | Intent Record があり、Ideation 成果物を作る場合 | `amadeus-ideation-scope-framing` | `ideation/scope.md` |
 | 1.2 | Feasibility Shaping | ALWAYS | `scope.md` が存在する場合 | `amadeus-ideation-feasibility-shaping` | `ideation/ideation.md` |
 | 1.3 | Mock Framing | CONDITIONAL | 初期モックで確認すべき判断点がある場合 | `amadeus-ideation-mock-framing` | `ideation/mocks/*.puml` |
 | 1.4 | Traceability Finalization | ALWAYS | `scope.md`、`ideation.md`、初期モックが存在する場合 | `amadeus-ideation-traceability-finalization` | `traceability.md`、`decisions.md`、`state.json` |
+
+## Stage 1.0: Intent Capture & Framing
+
+### Metadata
+
+| Property | Value |
+|---|---|
+| Stage | 1.0 |
+| Phase | Ideation |
+| Execution | ALWAYS |
+| Condition | Intent Record がない、または構造補修が必要な場合 |
+| Lead Skill | `amadeus-ideation-intent-capture` |
+| Mode | internal |
+
+### Purpose
+
+Intent Capture & Framing は、入力テーマ、Discovery Brief、または既存情報から Intent Record を作る。
+
+### Outputs
+
+| Artifact | Description |
+|---|---|
+| `.amadeus/intents.md` | Intent 一覧と依存関係 |
+| `.amadeus/intents/<intent-id>-<slug>.md` | Intent の目的、成功条件、範囲 |
+| `.amadeus/intents/<intent-id>-<slug>/state.json` | `phase: ideation` と Intent Capture 状態 |
+
+### Notes
+
+この stage は公開入口の途中段階である。
+`amadeus-ideation` は、この stage だけで終了しない。
 
 ## Stage 1.1: Scope Framing
 
@@ -201,6 +237,8 @@ Ideation が完了しても、Inception 成果物はこの phase では作らな
 
 ### Key Outputs
 
+- `.amadeus/intents.md`
+- `.amadeus/intents/<intent-id>-<slug>.md`
 - `ideation/scope.md`
 - `ideation/ideation.md`
 - `ideation/mocks/*.puml`
@@ -214,5 +252,4 @@ Inception へ進むには、Ideation の必須成果物が存在し、`state.jso
 
 ## Cross-References
 
-- [Initialization Phase Stages](initialization.md)
 - [Inception Phase Stages](inception.md)

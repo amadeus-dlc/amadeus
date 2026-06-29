@@ -30,10 +30,9 @@ type SkillFileDigest = {
 
 const expectedGenerationSnapshots = [
   "examples/01-discovery-completed",
-  "examples/02-intent-initialized",
-  "examples/03-ideation-completed",
-  "examples/04-inception-completed",
-  "examples/05-construction-design-ready",
+  "examples/02-ideation-completed",
+  "examples/03-inception-completed",
+  "examples/04-construction-design-ready",
 ];
 const validator = ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts";
 const provenanceManifestPath = "examples/skill-provenance.json";
@@ -50,18 +49,8 @@ const snapshots: ExampleSnapshot[] = [
     },
   },
   {
-    name: "Intent initialized",
-    workdir: "examples/02-intent-initialized",
-    intent: "20260629-minimum-purchase-flow",
-    expectedState: {
-      phase: "initialized",
-      status: "in_progress",
-      "initialized.status": "completed",
-    },
-  },
-  {
     name: "Ideation completed",
-    workdir: "examples/03-ideation-completed",
+    workdir: "examples/02-ideation-completed",
     intent: "20260629-minimum-purchase-flow",
     expectedState: {
       phase: "ideation",
@@ -72,7 +61,7 @@ const snapshots: ExampleSnapshot[] = [
   },
   {
     name: "Inception completed",
-    workdir: "examples/04-inception-completed",
+    workdir: "examples/03-inception-completed",
     intent: "20260629-minimum-purchase-flow",
     expectedState: {
       phase: "inception",
@@ -90,7 +79,7 @@ const snapshots: ExampleSnapshot[] = [
   },
   {
     name: "Construction design ready",
-    workdir: "examples/05-construction-design-ready",
+    workdir: "examples/04-construction-design-ready",
     intent: "20260629-minimum-purchase-flow",
     expectedState: {
       phase: "construction",
@@ -262,21 +251,21 @@ function validateGenerationPlan(): boolean {
   let ok = true;
   ok = validateGenerationPlanCase([], expectedGenerationSnapshots, "01-discovery", "none") && ok;
   ok = validateGenerationPlanCase(
-    ["--from", "04-inception"],
+    ["--from", "03-inception"],
     [
-      "examples/04-inception-completed",
-      "examples/05-construction-design-ready",
+      "examples/03-inception-completed",
+      "examples/04-construction-design-ready",
     ],
-    "04-inception",
-    "examples/03-ideation-completed",
+    "03-inception",
+    "examples/02-ideation-completed",
   ) && ok;
   ok = validateGenerationPlanCase(
-    ["--from", "05-construction-design-ready"],
+    ["--from", "04-construction-design-ready"],
     [
-      "examples/05-construction-design-ready",
+      "examples/04-construction-design-ready",
     ],
-    "05-construction-design-ready",
-    "examples/04-inception-completed",
+    "04-construction-design-ready",
+    "examples/03-inception-completed",
   ) && ok;
   if (ok) console.log("generation plan: ok");
   return ok;

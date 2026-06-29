@@ -31,14 +31,14 @@ const discoveryDecisionValues = new Set([
   "no_intent",
   "undecided",
 ]);
-const discoveryCandidateStatusValues = new Set(["recommended", "waiting", "initialized", "discarded"]);
+const discoveryCandidateStatusValues = new Set(["recommended", "waiting", "intent_record_created", "discarded"]);
 const eventStormingDirectoryPattern = /^ES\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const eventStormingStatusValues = new Set(["draft", "reviewing", "ready", "superseded"]);
 const eventStormingLevelValues = new Set(["big-picture", "process-modeling", "system-design"]);
 const eventStormingScopeValues = new Set(["pre-intent", "intent-scoped"]);
 const eventStormingNextSkillValues = new Set([
   "amadeus-discovery",
-  "amadeus-intent-init",
+  "amadeus-ideation",
   "amadeus-inception",
   "amadeus-domain-modeling",
 ]);
@@ -395,7 +395,7 @@ class AmadeusValidator {
 
   private eventStormingNextSkillsFor(scope: string, level: string): Set<string> {
     if (scope === "pre-intent" && level === "big-picture") return new Set(["amadeus-discovery"]);
-    if (scope === "pre-intent" && level === "process-modeling") return new Set(["amadeus-discovery", "amadeus-intent-init"]);
+    if (scope === "pre-intent" && level === "process-modeling") return new Set(["amadeus-discovery", "amadeus-ideation"]);
     if (scope === "pre-intent" && level === "system-design") return new Set(["amadeus-domain-modeling"]);
     if (scope === "intent-scoped" && (level === "big-picture" || level === "process-modeling")) return new Set(["amadeus-inception"]);
     if (scope === "intent-scoped" && level === "system-design") return new Set(["amadeus-domain-modeling"]);
@@ -796,39 +796,38 @@ class AmadeusValidator {
     if (table.rows.length >= 2) this.pass(path, "multi_intent の Intent 候補が2件以上ある", `${table.rows.length}件`);
     else this.failRow(path, "multi_intent の Intent 候補が2件以上ある", `${table.rows.length}件`);
 
-    let initialized = 0;
-    let recommended = 0;
+    let intentRecordCreated = 0, recommended = 0;
     for (const row of table.rows) {
       this.checkAllowed(path, "Intent 候補の状態", row["状態"], discoveryCandidateStatusValues);
-      if (String(row["状態"] ?? "").trim() === "initialized") {
-        initialized += 1;
-        this.checkInitializedDiscoveryCandidate(path, row["Intent"]);
+      if (String(row["状態"] ?? "").trim() === "intent_record_created") {
+        intentRecordCreated += 1;
+        this.checkIntentRecordCreatedDiscoveryCandidate(path, row["Intent"]);
       }
       if (String(row["状態"] ?? "").trim() === "recommended") recommended += 1;
       for (const column of ["候補", "課題", "成功状態", "除外範囲", "依存"]) this.checkNotBlankValue(path, column, row[column]);
     }
 
-    if (initialized === 0 && recommended === 1) {
-      this.pass(path, "未初期化の multi_intent は recommended が1件だけである", `${recommended}件`);
-    } else if (initialized === 0) {
-      this.failRow(path, "未初期化の multi_intent は recommended が1件だけである", `${recommended}件`);
+    if (intentRecordCreated === 0 && recommended === 1) {
+      this.pass(path, "Intent Record 作成前の multi_intent は recommended が1件だけである", `${recommended}件`);
+    } else if (intentRecordCreated === 0) {
+      this.failRow(path, "Intent Record 作成前の multi_intent は recommended が1件だけである", `${recommended}件`);
     } else if (recommended === 0 || recommended === 1) {
-      this.pass(path, "初期化済み候補がある multi_intent は recommended が0件または1件である", `${recommended}件`);
+      this.pass(path, "Intent Record 作成済み候補がある multi_intent は recommended が0件または1件である", `${recommended}件`);
     } else {
-      this.failRow(path, "初期化済み候補がある multi_intent は recommended が0件または1件である", `${recommended}件`);
+      this.failRow(path, "Intent Record 作成済み候補がある multi_intent は recommended が0件または1件である", `${recommended}件`);
     }
   }
 
-  private checkInitializedDiscoveryCandidate(path: string, value: unknown): void {
+  private checkIntentRecordCreatedDiscoveryCandidate(path: string, value: unknown): void {
     const links = this.markdownLinks(String(value ?? ""));
     if (links.length === 0) {
-      this.failRow(path, "initialized の Intent 候補が存在する Intent へリンクしている", String(value ?? ""));
+      this.failRow(path, "intent_record_created の Intent 候補が存在する Intent へリンクしている", String(value ?? ""));
       return;
     }
     for (const target of links) {
       const clean = this.cleanLinkTarget(target);
       if (clean.match(/^\.\.\/intents\/[^/]+\.md$/)) this.checkLink(path, target);
-      else this.failRow(path, "initialized の Intent 候補が存在する Intent へリンクしている", target);
+      else this.failRow(path, "intent_record_created の Intent 候補が存在する Intent へリンクしている", target);
     }
   }
 
@@ -857,11 +856,6 @@ class AmadeusValidator {
 
     this.checkNoLegacyIntentRootArtifacts(base);
     this.checkExistingPhaseGrillings(base);
-
-    if (state.phase === "initialized") {
-      this.checkInitializedStateJson(statePath, state);
-      return;
-    }
 
     if (state.phase === "ideation") {
       this.checkIdeationIntent(base, state);
@@ -923,7 +917,7 @@ class AmadeusValidator {
   }
 
   private checkExistingPhaseGrillings(base: string): void {
-    for (const phase of ["initialization", "ideation", "inception", "construction"]) {
+    for (const phase of ["ideation", "inception", "construction"]) {
       const phaseBase = `${base}/${phase}`;
       const indexPath = `${phaseBase}/grillings.md`;
       const sessionsPath = `${phaseBase}/grillings`;
@@ -945,27 +939,16 @@ class AmadeusValidator {
     }
   }
 
-  private checkInitializedStateJson(path: string, state: Record<string, any>): void {
-    this.checkJsonValue(path, "intent", state.intent, this.intentId ?? "");
-    this.checkJsonValue(path, "phase", state.phase, "initialized");
-    this.checkAllowed(path, "status", state.status, statusValues);
-
-    const initialized = state.initialized;
-    if (!this.isObject(initialized)) {
-      this.failRow(path, "`initialized` がオブジェクトである", this.typeName(initialized));
-      return;
-    }
-    this.pass(path, "`initialized` がオブジェクトである", "オブジェクトを確認");
-    this.checkAllowed(path, "initialized.status", initialized.status, statusValues);
-    this.checkStatePaths(path, initialized, "createdArtifacts", "Initialized 作成済み成果物が存在する", false, "initialized");
-    this.checkJsonValue(path, "initialized.next", initialized.next, "ideation");
-  }
-
   private checkIdeationIntent(base: string, state: Record<string, any>): void {
     const statePath = `${base}/state.json`;
     const ideationBase = `${base}/ideation`;
     this.checkStateJson(statePath, state);
     this.checkGrillings(ideationBase);
+
+    if (this.isIdeationStartedOnly(state)) {
+      this.checkNoIdeationDownstreamArtifacts(statePath, base);
+      return;
+    }
 
     this.checkFile(`${ideationBase}/scope.md`, "Ideation scope が存在する");
     this.checkHeadings(`${ideationBase}/scope.md`, ["対象", "対象外", "詳細度", "検証深度", "Inception への引き継ぎ"]);
@@ -977,6 +960,15 @@ class AmadeusValidator {
 
     this.checkFile(`${ideationBase}/decisions.md`, "Ideation 判断一覧が存在する");
     this.checkOptionalIndex(`${ideationBase}/decisions.md`, indexSpecs["decisions.md"]);
+  }
+
+  private checkNoIdeationDownstreamArtifacts(path: string, base: string): void {
+    const existing = ["inception", "construction"].filter((phase) => this.isDirectory(this.absolute(`${base}/${phase}`)));
+    if (existing.length === 0) {
+      this.pass(path, "Ideation phase では後続 stage 成果物が存在しない", "後続 stage なし");
+      return;
+    }
+    this.failRow(path, "Ideation phase では後続 stage 成果物が存在しない", existing.map((phase) => `${phase}/**`).join(", "));
   }
 
   private checkStateJson(path: string, state: Record<string, any>): void {
@@ -993,6 +985,7 @@ class AmadeusValidator {
     this.pass(path, "`ideation` がオブジェクトである", "オブジェクトを確認");
     this.checkAllowed(path, "ideation.status", ideation.status, statusValues);
     this.checkAllowed(path, "ideation.gate", ideation.gate, gateValues);
+    this.checkIntentCaptureState(path, ideation.intentCapture);
     this.checkStatePaths(path, ideation, "requiredArtifacts", "Ideation 必須成果物が存在する", false, "ideation");
     this.checkStatePaths(path, ideation, "requiredMocks", "Ideation 必須モックが存在する", true, "ideation");
 
@@ -1000,6 +993,25 @@ class AmadeusValidator {
       this.checkJsonValue(path, "ideation.status", ideation.status, "completed");
       this.checkJsonValue(path, "ideation.gate", ideation.gate, "passed");
     }
+  }
+
+  private checkIntentCaptureState(path: string, intentCapture: unknown): void {
+    if (!this.isObject(intentCapture)) return this.failRow(path, "`ideation.intentCapture` がオブジェクトである", this.typeName(intentCapture));
+    this.pass(path, "`ideation.intentCapture` がオブジェクトである", "オブジェクトを確認");
+    this.checkAllowed(path, "ideation.intentCapture.status", intentCapture.status, statusValues);
+    this.checkStatePaths(path, intentCapture, "createdArtifacts", "Ideation Intent Record 作成済み成果物が存在する", false, "ideation.intentCapture");
+    this.checkJsonValue(path, "ideation.intentCapture.next", intentCapture.next, "ideation/scope-framing");
+  }
+
+  private isIdeationStartedOnly(state: Record<string, any>): boolean {
+    const ideation = state.ideation;
+    if (!this.isObject(ideation) || !this.isObject(ideation.intentCapture)) return false;
+    return (
+      String(state.status ?? "").trim() === "in_progress" && String(ideation.status ?? "").trim() === "in_progress" &&
+      String(ideation.gate ?? "").trim() === "not_ready" &&
+      String(ideation.intentCapture.status ?? "").trim() === "completed" &&
+      (ideation.requiredArtifacts?.length ?? 0) === 0 && (ideation.requiredMocks?.length ?? 0) === 0
+    );
   }
 
   private checkInceptionIntent(base: string, state: Record<string, any>): void {
@@ -1042,6 +1054,7 @@ class AmadeusValidator {
     this.pass(path, "`ideation` がオブジェクトである", "オブジェクトを確認");
     this.checkJsonValue(path, "ideation.status", ideation.status, "completed");
     this.checkJsonValue(path, "ideation.gate", ideation.gate, "passed");
+    this.checkIntentCaptureState(path, ideation.intentCapture);
 
     const inception = state.inception;
     if (!this.isObject(inception)) {
@@ -1107,6 +1120,7 @@ class AmadeusValidator {
     this.pass(path, "`ideation` がオブジェクトである", "オブジェクトを確認");
     this.checkJsonValue(path, "ideation.status", ideation.status, "completed");
     this.checkJsonValue(path, "ideation.gate", ideation.gate, "passed");
+    this.checkIntentCaptureState(path, ideation.intentCapture);
 
     const inception = state.inception;
     if (!this.isObject(inception)) {
@@ -2742,7 +2756,7 @@ class AmadeusValidator {
 
   private intentBaseForPhaseBase(base: string): string {
     const phase = basename(base);
-    if (phase === "ideation" || phase === "inception" || phase === "construction" || phase === "initialization") {
+    if (phase === "ideation" || phase === "inception" || phase === "construction") {
       return dirname(base);
     }
     return base;
@@ -2971,7 +2985,7 @@ class AmadeusValidator {
     if (target.includes("/event-storming/") || condition.includes("Event Storming") || condition.includes("Domain Event")) return "Event Storming";
     if (target.includes(".amadeus/discoveries") || condition.includes("Discovery") || condition.includes("Intent 候補")) return "Discovery";
     if (condition.includes("対象 Intent ディレクトリ名")) return "検証範囲";
-    if (condition.includes("Initialized") || condition.includes("`initialized`")) return "Initialized";
+    if (condition.includes("`initialized`")) return "状態";
     if (target.includes("/ideation.md") || target.includes("/scope.md") || condition.includes("Ideation") || condition.includes("Inception")) return "Ideation";
     if (target.endsWith("state.json") || condition.includes("state.json") || condition.includes("`phase`") || condition.includes("`status`")) return "状態";
     if (target.includes("/mocks/") || condition.includes("モック") || condition.includes(".puml")) return "モック";

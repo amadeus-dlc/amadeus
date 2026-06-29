@@ -1,5 +1,9 @@
 # Operation Phase Stage Reference
 
+## AI-DLC v2 Reference
+
+- [AI-DLC v2 Operation Stage](https://github.com/awslabs/aidlc-workflows/blob/v2/docs/reference/04-stages/operation.md)
+
 ## Phase Overview
 
 Operation phase は、将来 phase 名として予約している。

@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { createLlmProvider, isLlmProviderMode, shellQuote, type LlmProvider, type LlmProviderMode, type LlmRequest, type MockLlmCases } from "../llm-support/provider";
 
-type SkillMode = "steering" | "event-storming" | "intent-init" | "ideation" | "inception" | "construction";
+type SkillMode = "steering" | "event-storming" | "ideation" | "inception" | "construction";
 type IdeationInternalProcess =
   "scope-framing" |
   "feasibility-shaping" |
@@ -69,8 +69,8 @@ const requiredSkills = [
   "amadeus-steering",
   "amadeus-discovery",
   "amadeus-event-storming",
-  "amadeus-intent-init",
   "amadeus-ideation",
+  "amadeus-ideation-intent-capture",
   "amadeus-ideation-scope-framing",
   "amadeus-ideation-feasibility-shaping",
   "amadeus-ideation-mock-framing",
@@ -89,7 +89,6 @@ const requiredSkills = [
   "japanese-tech-writing",
 ];
 const fixtureIntent = "20260627-loan-self-service";
-const returnReminderIntent = "20260627-return-reminder";
 const ideationInternalProcesses = [
   "scope-framing",
   "feasibility-shaping",
@@ -114,7 +113,6 @@ const constructionInternalModes = constructionInternalProcesses.map((process) =>
 const initialE2eModes = [
   "steering",
   "event-storming",
-  "intent-init",
   "ideation",
   ...ideationInternalModes,
   "inception",
@@ -526,14 +524,14 @@ function writeIntentIndex(workspace: string, intent: string): void {
   );
 }
 
-function prepareInitializedIntentFixture(workspace: string): void {
+function prepareIntentRecordFixture(workspace: string): void {
   prepareSteeringFixture(workspace);
-  applyInitializedIntentArtifacts(workspace, fixtureIntent, "貸出セルフサービス開始", "利用者が図書貸出をセルフサービスで開始できるようにする。");
+  applyIntentRecordArtifacts(workspace, fixtureIntent, "貸出セルフサービス開始", "利用者が図書貸出をセルフサービスで開始できるようにする。");
 }
 
-function applyInitializedIntentArtifacts(workspace: string, intent: string, name: string, purpose: string): void {
-  const source = join(root, ".agents/skills/amadeus-intent-init/templates/intents/initialized");
-  const intentSource = join(root, ".agents/skills/amadeus-intent-init/templates/intents/initialized.md");
+function applyIntentRecordArtifacts(workspace: string, intent: string, name: string, purpose: string): void {
+  const source = join(root, ".agents/skills/amadeus-ideation-intent-capture/templates/intents/intent-record");
+  const intentSource = join(root, ".agents/skills/amadeus-ideation-intent-capture/templates/intents/intent-record.md");
   const target = join(workspace, ".amadeus/intents", intent);
   ensureFile(intentSource);
   cpSync(source, target, { recursive: true });
@@ -542,21 +540,28 @@ function applyInitializedIntentArtifacts(workspace: string, intent: string, name
     "<intent-id>-<slug>": intent,
     "<intent-name>": name,
     "<intent-purpose>": purpose,
+    "<success-condition>": "未確認",
+    "<in-scope>": "未確認",
+    "<out-of-scope>": "未確認",
   });
   replaceInFile(join(workspace, ".amadeus/intents", `${intent}.md`), {
     "<intent-id>-<slug>": intent,
     "<intent-name>": name,
     "<intent-purpose>": purpose,
+    "<success-condition>": "未確認",
+    "<in-scope>": "未確認",
+    "<out-of-scope>": "未確認",
   });
   writeIntentIndex(workspace, intent);
 }
 
-function prepareReturnReminderIntentFixture(workspace: string): void {
-  applyInitializedIntentArtifacts(workspace, returnReminderIntent, "返却期限通知", "利用者に返却期限の接近を通知し、延滞を減らす。");
+function prepareIdeationIntentFixture(workspace: string): void {
+  prepareIntentRecordFixture(workspace);
+  applyIdeationIntentArtifacts(workspace);
 }
 
-function prepareIdeationIntentFixture(workspace: string): void {
-  prepareInitializedIntentFixture(workspace);
+function applyIdeationIntentFromSteeringArtifacts(workspace: string): void {
+  applyIntentRecordArtifacts(workspace, fixtureIntent, "貸出セルフサービス開始", "利用者が図書貸出をセルフサービスで開始できるようにする。");
   applyIdeationIntentArtifacts(workspace);
 }
 
@@ -568,7 +573,7 @@ function applyIdeationIntentArtifacts(workspace: string): void {
 }
 
 function prepareIdeationFeasibilityShapingFixture(workspace: string): void {
-  prepareInitializedIntentFixture(workspace);
+  prepareIntentRecordFixture(workspace);
   applyIdeationScopeFramingArtifacts(workspace);
 }
 
@@ -646,13 +651,13 @@ function writeIdeationState(target: string): void {
       intent: fixtureIntent,
       phase: "ideation",
       status: "completed",
-      initialized: {
-        status: "completed",
-        createdArtifacts: [`../${fixtureIntent}.md`, "state.json"],
-        next: "ideation",
-      },
       ideation: {
         status: "completed",
+        intentCapture: {
+          status: "completed",
+          createdArtifacts: [`../${fixtureIntent}.md`, "state.json"],
+          next: "ideation/scope-framing",
+        },
         requiredArtifacts: [`../${fixtureIntent}.md`, "ideation/scope.md", "ideation/ideation.md", "ideation/decisions.md", "ideation/traceability.md"],
         requiredMocks: ["ideation/mocks/initial-confirmation.puml"],
         gate: "passed",
@@ -1245,13 +1250,13 @@ function writeInceptionState(target: string): void {
       intent: fixtureIntent,
       phase: "inception",
       status: "in_progress",
-      initialized: {
-        status: "completed",
-        createdArtifacts: [`../${fixtureIntent}.md`, "state.json"],
-        next: "ideation",
-      },
       ideation: {
         status: "completed",
+        intentCapture: {
+          status: "completed",
+          createdArtifacts: [`../${fixtureIntent}.md`, "state.json"],
+          next: "ideation/scope-framing",
+        },
         requiredArtifacts: [`../${fixtureIntent}.md`, "ideation/scope.md", "ideation/ideation.md", "ideation/decisions.md", "ideation/traceability.md"],
         requiredMocks: ["ideation/mocks/initial-confirmation.puml"],
         gate: "passed",
@@ -1302,13 +1307,13 @@ function writeConstructionState(target: string): void {
       intent: fixtureIntent,
       phase: "construction",
       status: "in_progress",
-      initialized: {
-        status: "completed",
-        createdArtifacts: [`../${fixtureIntent}.md`, "state.json"],
-        next: "ideation",
-      },
       ideation: {
         status: "completed",
+        intentCapture: {
+          status: "completed",
+          createdArtifacts: [`../${fixtureIntent}.md`, "state.json"],
+          next: "ideation/scope-framing",
+        },
         requiredArtifacts: [`../${fixtureIntent}.md`, "ideation/scope.md", "ideation/ideation.md", "ideation/decisions.md", "ideation/traceability.md"],
         requiredMocks: ["ideation/mocks/initial-confirmation.puml"],
         gate: "passed",
@@ -1474,26 +1479,6 @@ function pingPrompt(): string {
   ].join("\n");
 }
 
-function intentInitPrompt(): string {
-  return [
-    "amadeus-intent-init を使ってください。",
-    "",
-    "既存の Amadeus steering layer に、新しい Intent の入れ物だけを作成または更新してください。",
-    "",
-    "Intent:",
-    "- ディレクトリ名: 20260627-return-reminder",
-    "- 目的: 利用者に返却期限の接近を通知し、延滞を減らす",
-    "- 依存する既存 Intent: なし",
-    "",
-    "制約:",
-    "- 質問せずに続行してください。",
-    "- `.amadeus/intents.md`、対象 Intent の `.amadeus/intents/<intent-id>.md`、`state.json` だけを作成または更新してください。",
-    "- Ideation 成果物、Inception 成果物、domain 成果物は作らないでください。",
-    "- git commit はしないでください。",
-    "- 作成後に `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . 20260627-return-reminder` を実行し、結果を要約してください。",
-  ].join("\n");
-}
-
 function eventStormingPrompt(): string {
   return [
     "amadeus-event-storming を使ってください。",
@@ -1526,7 +1511,7 @@ function eventStormingPrompt(): string {
     "- 同梱テンプレートを使い、上の ID とファイル名で最小成果物を作成してください。",
     "- Event は Domain Event だけとして扱い、UI event、technical event、integration event、log event は Domain Event にしないでください。",
     "- Requirement、Use Case、Unit、Bolt、Task、domain model、実装、CI は作らないでください。",
-    "- `amadeus-discovery`、`amadeus-intent-init`、`amadeus-inception`、`amadeus-domain-modeling` は自動実行しないでください。",
+    "- `amadeus-discovery`、`amadeus-ideation`、`amadeus-inception`、`amadeus-domain-modeling` は自動実行しないでください。",
     "- git commit はしないでください。",
     "- 作成後に `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts .` を実行し、結果を要約してください。",
   ].join("\n");
@@ -1536,7 +1521,12 @@ function intentIdeationPrompt(): string {
   return [
     "amadeus-ideation を使ってください。",
     "",
-    "既存の initialized Intent `20260627-loan-self-service` を Ideation へ進めてください。",
+    "入力テーマから Intent Record を作り、`20260627-loan-self-service` を Ideation へ進めてください。",
+    "",
+    "Intent:",
+    "- ディレクトリ名: 20260627-loan-self-service",
+    "- 目的: 利用者が図書貸出をセルフサービスで開始できるようにする",
+    "- 依存する既存 Intent: なし",
     "",
     "Ideation で分かっていること:",
     "- 対象: 利用者が貸出開始前に図書と利用者状態を確認する体験",
@@ -1545,6 +1535,8 @@ function intentIdeationPrompt(): string {
     "- Inception への引き継ぎ: 貸出可否、返却期限、通知要否を要求候補にする",
     "",
     "作成対象:",
+    "- `.amadeus/intents.md`",
+    "- `.amadeus/intents/20260627-loan-self-service.md`",
     "- `scope.md`",
     "- `ideation.md`",
     "- `traceability.md`",
@@ -1555,7 +1547,7 @@ function intentIdeationPrompt(): string {
     "制約:",
     "- 質問せずに続行してください。",
     "- 同梱テンプレートのファイル名を維持し、初期モックは必ず `mocks/initial-confirmation.puml` として作成してください。",
-    "- 対象 Intent 配下の Ideation 成果物だけを作成または更新してください。",
+    "- Intent Record と対象 Intent 配下の Ideation 成果物だけを作成または更新してください。",
     "- requirements、use-cases、units、bolts、domain 成果物は作らないでください。",
     "- git commit はしないでください。",
     "- 作成後に `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . 20260627-loan-self-service` を実行し、結果を要約してください。",
@@ -1905,7 +1897,7 @@ function eventStormingMarkdownArtifacts(): string[] {
   ];
 }
 
-function initializedIntentArtifacts(intent: string): string[] {
+function intentRecordArtifacts(intent: string): string[] {
   return [
     ...steeringArtifacts(),
     `.amadeus/intents/${intent}.md`,
@@ -1913,7 +1905,7 @@ function initializedIntentArtifacts(intent: string): string[] {
   ];
 }
 
-function initializedIntentMarkdownArtifacts(intent: string): string[] {
+function intentRecordMarkdownArtifacts(intent: string): string[] {
   return [
     `.amadeus/intents/${intent}.md`,
   ];
@@ -1921,7 +1913,7 @@ function initializedIntentMarkdownArtifacts(intent: string): string[] {
 
 function ideationIntentArtifacts(intent: string): string[] {
   return [
-    ...initializedIntentArtifacts(intent),
+    ...intentRecordArtifacts(intent),
     `.amadeus/intents/${intent}/ideation/scope.md`,
     `.amadeus/intents/${intent}/ideation/ideation.md`,
     `.amadeus/intents/${intent}/ideation/traceability.md`,
@@ -1943,7 +1935,7 @@ function ideationIntentMarkdownArtifacts(intent: string): string[] {
 
 function ideationScopeFramingArtifacts(intent: string): string[] {
   return [
-    ...initializedIntentArtifacts(intent),
+    ...intentRecordArtifacts(intent),
     `.amadeus/intents/${intent}/ideation/scope.md`,
   ];
 }
@@ -2272,31 +2264,22 @@ function e2eCase(mode: E2eMode): E2eCase {
       expectedArtifacts: expectedArtifacts(eventStormingArtifacts(), ["."]),
       expectedMarkdownChanges: expectedMarkdownChanges(eventStormingMarkdownArtifacts(), []),
     },
-    "intent-init": {
-      id: "intent-init",
-      prompt: intentInitPrompt(),
-      prepareGiven: prepareSteeringFixture,
-      givenMustRemainValid: ["."],
-      applyMock: prepareReturnReminderIntentFixture,
-      expectedArtifacts: expectedArtifacts(initializedIntentArtifacts(returnReminderIntent), [returnReminderIntent]),
-      expectedMarkdownChanges: expectedMarkdownChanges(
-        initializedIntentMarkdownArtifacts(returnReminderIntent),
-        [".amadeus/intents.md"],
-      ),
-    },
     "ideation": {
       id: "ideation",
       prompt: intentIdeationPrompt(),
-      prepareGiven: prepareInitializedIntentFixture,
-      givenMustRemainValid: [fixtureIntent],
-      applyMock: applyIdeationIntentArtifacts,
+      prepareGiven: prepareSteeringFixture,
+      givenMustRemainValid: ["."],
+      applyMock: applyIdeationIntentFromSteeringArtifacts,
       expectedArtifacts: expectedArtifacts(ideationIntentArtifacts(fixtureIntent), [fixtureIntent]),
-      expectedMarkdownChanges: expectedMarkdownChanges(ideationIntentMarkdownArtifacts(fixtureIntent), []),
+      expectedMarkdownChanges: expectedMarkdownChanges(
+        [...intentRecordMarkdownArtifacts(fixtureIntent), ...ideationIntentMarkdownArtifacts(fixtureIntent)],
+        [".amadeus/intents.md"],
+      ),
     },
     "ideation-internal-scope-framing": {
       id: "ideation-internal-scope-framing",
       prompt: intentIdeationInternalPrompt("scope-framing"),
-      prepareGiven: prepareInitializedIntentFixture,
+      prepareGiven: prepareIntentRecordFixture,
       givenMustRemainValid: [fixtureIntent],
       applyMock: applyIdeationScopeFramingArtifacts,
       expectedArtifacts: expectedArtifacts(ideationScopeFramingArtifacts(fixtureIntent), [fixtureIntent]),

@@ -8,13 +8,12 @@ root `.amadeus/` は実運用状態と例示成果物を混ぜるため置いて
 | ディレクトリ | 状態 | 見るもの |
 |---|---|---|
 | [01-discovery-completed](01-discovery-completed/.amadeus/README.md) | Discovery 完了 | ECサイト構築テーマの Discovery と Intent 候補 |
-| [02-intent-initialized](02-intent-initialized/.amadeus/README.md) | Intent 初期化完了 | 販売管理の最小購入フロー Intent の入れ物 |
-| [03-ideation-completed](03-ideation-completed/.amadeus/README.md) | Ideation 完了 | scope、ideation、mock、traceability、decision |
-| [04-inception-completed](04-inception-completed/.amadeus/README.md) | Inception 完了 | Requirement、Story、Use Case、Unit、Bolt |
-| [05-construction-design-ready](05-construction-design-ready/.amadeus/README.md) | Construction Design ready | Bolt ごとの Construction Design、`tasks.md`、Design Gate、実装前の追跡 |
+| [02-ideation-completed](02-ideation-completed/.amadeus/README.md) | Ideation 完了 | Intent Record、scope、ideation、mock、traceability、decision |
+| [03-inception-completed](03-inception-completed/.amadeus/README.md) | Inception 完了 | Requirement、Story、Use Case、Unit、Bolt |
+| [04-construction-design-ready](04-construction-design-ready/.amadeus/README.md) | Construction Design ready | Bolt ごとの Construction Design、`tasks.md`、Design Gate、実装前の追跡 |
 
 注: Task 生成は Construction Design 後の Construction phase に移行済みです。
-`04-inception-completed` は `tasks.md` を含まず、`05-construction-design-ready` は Construction の Bolt preparation 後の `tasks.md` を含みます。
+`03-inception-completed` は `tasks.md` を含まず、`04-construction-design-ready` は Construction の Bolt preparation 後の `tasks.md` を含みます。
 
 ## 再生成
 
@@ -24,7 +23,7 @@ root `.amadeus/` は実運用状態と例示成果物を混ぜるため置いて
 npm run examples:generate:real
 ~~~
 
-この task は空の一時 workspace から始め、`01-discovery-completed`、`02-intent-initialized`、`03-ideation-completed`、`04-inception-completed`、`05-construction-design-ready` を順に real provider で生成します。
+この task は空の一時 workspace から始め、`01-discovery-completed`、`02-ideation-completed`、`03-inception-completed`、`04-construction-design-ready` を順に real provider で生成します。
 生成後に [skill-provenance.json](skill-provenance.json) の md5 を更新し、`staleReason` を削除します。
 
 ## 検証
@@ -33,10 +32,9 @@ npm run examples:generate:real
 
 ~~~sh
 bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts examples/01-discovery-completed
-bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts examples/02-intent-initialized 20260629-minimum-purchase-flow
-bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts examples/03-ideation-completed 20260629-minimum-purchase-flow
-bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts examples/04-inception-completed 20260629-minimum-purchase-flow
-bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts examples/05-construction-design-ready 20260629-minimum-purchase-flow
+bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts examples/02-ideation-completed 20260629-minimum-purchase-flow
+bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts examples/03-inception-completed 20260629-minimum-purchase-flow
+bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts examples/04-construction-design-ready 20260629-minimum-purchase-flow
 ~~~
 
 repo 全体の examples 検証では、[skill-provenance.json](skill-provenance.json) も確認します。

@@ -81,11 +81,11 @@ const targetSkills: Record<string, Contract> = {
       "templates/event-storming/session/state.json": [],
     },
   },
-  "amadeus-intent-init": {
-    skillText: [".amadeus/settings/templates", "templates/intents/initialized"],
+  "amadeus-ideation-intent-capture": {
+    skillText: [".amadeus/settings/templates", "templates/intents/intent-record"],
     files: {
-      "templates/intents/initialized.md": ["目的", "成功条件", "範囲"],
-      "templates/intents/initialized/state.json": [],
+      "templates/intents/intent-record.md": ["目的", "成功条件", "範囲"],
+      "templates/intents/intent-record/state.json": [],
     },
   },
   "amadeus-ideation": {
@@ -336,9 +336,9 @@ if (packageJson.scripts?.["examples:generate:real"] !== "bun run dev-scripts/gen
 assertFile(join(root, "dev-scripts/generate-amadeus-examples.ts"));
 const dryRun = run(["bun", "run", "dev-scripts/generate-amadeus-examples.ts", "--provider", "real", "--dry-run"]);
 for (const expected of [
-  "examples/03-ideation-completed",
-  "examples/04-inception-completed",
-  "examples/05-construction-design-ready",
+  "examples/02-ideation-completed",
+  "examples/03-inception-completed",
+  "examples/04-construction-design-ready",
   "provider: real",
   "dryRun: true",
 ]) {

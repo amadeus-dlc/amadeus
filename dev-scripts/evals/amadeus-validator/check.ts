@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
 const root = resolve(import.meta.dir, "../../..");
-const fixture = join(root, "examples/04-inception-completed/.amadeus");
+const fixture = join(root, "examples/03-inception-completed/.amadeus");
 const discovery = "20260629-ec-site-construction";
 const intent = "20260629-minimum-purchase-flow";
 const validator = ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts";
@@ -54,6 +54,7 @@ function runExpectFailure(command: string[], expected: string, cwd = root): void
 function workspaceCopy(): string {
   const workspace = mkdtempSync(join(tmpdir(), "amadeus-validator"));
   cpSync(fixture, join(workspace, ".amadeus"), { recursive: true });
+  updateDiscoveryCandidateStatus(workspace, "intent_record_created");
   return workspace;
 }
 
@@ -194,6 +195,72 @@ function rewriteStateForPhaseLayout(workspace: string): void {
   writeFileSync(path, JSON.stringify(state, null, 2));
 }
 
+function updateDiscoveryCandidateStatus(workspace: string, status: string): void {
+  const path = join(workspace, `.amadeus/discoveries/${discovery}.md`);
+  const text = readFileSync(path, "utf8");
+  if (!text.match(/\| 販売管理の最小購入フロー \| (initialized|intent_record_created|recommended) \|/)) {
+    fail("discovery fixture does not contain expected candidate row");
+  }
+  const updated = text
+    .replace(/\| 販売管理の最小購入フロー \| (initialized|intent_record_created|recommended) \|/, `| 販売管理の最小購入フロー | ${status} |`)
+    .replace("`initialized` は「販売管理の最小購入フロー」だけである。", `\`${status}\` は「販売管理の最小購入フロー」だけである。`)
+    .replace("`intent_record_created` は「販売管理の最小購入フロー」だけである。", `\`${status}\` は「販売管理の最小購入フロー」だけである。`)
+    .replace("初期化済みである。", "Intent Record 作成済みである。");
+  writeFileSync(path, updated);
+}
+
+function initializedPhaseWorkspaceCopy(): string {
+  const workspace = workspaceCopy();
+  updateDiscoveryCandidateStatus(workspace, "initialized");
+  writeFileSync(
+    intentPath(workspace, "state.json"),
+    JSON.stringify({
+      intent,
+      phase: "initialized",
+      status: "in_progress",
+      initialized: {
+        status: "completed",
+        createdArtifacts: [
+          `../${intent}.md`,
+          "state.json",
+        ],
+        next: "ideation",
+      },
+    }, null, 2),
+  );
+  return workspace;
+}
+
+function ideationStartedWorkspaceCopy(): string {
+  const workspace = workspaceCopy();
+  rmSync(intentPath(workspace, ""), { recursive: true, force: true });
+  rmSync(join(intentRoot(workspace), "inception"), { recursive: true, force: true });
+  rmSync(join(intentRoot(workspace), "construction"), { recursive: true, force: true });
+  writeFileSync(
+    intentPath(workspace, "state.json"),
+    JSON.stringify({
+      intent,
+      phase: "ideation",
+      status: "in_progress",
+      ideation: {
+        status: "in_progress",
+        intentCapture: {
+          status: "completed",
+          createdArtifacts: [
+            `../${intent}.md`,
+            "state.json",
+          ],
+          next: "ideation/scope-framing",
+        },
+        requiredArtifacts: [],
+        requiredMocks: [],
+        gate: "not_ready",
+      },
+    }, null, 2),
+  );
+  return workspace;
+}
+
 function phaseStatePath(value: string, phase: "ideation" | "inception" | "construction"): string {
   if (value.startsWith("../") || value === "state.json" || value.startsWith(`${phase}/`)) return value;
   return `${phase}/${value}`;
@@ -228,6 +295,24 @@ const legacyIntentRootLayoutWorkspace = legacyIntentRootLayoutWorkspaceCopy();
 runExpectFailure(
   ["bun", "run", validator, legacyIntentRootLayoutWorkspace, intent],
   "Intent 直下の旧配置成果物を使わない",
+);
+
+const initializedPhaseWorkspace = initializedPhaseWorkspaceCopy();
+runExpectFailure(
+  ["bun", "run", validator, initializedPhaseWorkspace, intent],
+  "`phase` が既知である",
+);
+
+const ideationStartedWorkspace = ideationStartedWorkspaceCopy();
+run(["bun", "run", validator, ideationStartedWorkspace, intent]);
+
+const ideationStartedWithDownstreamWorkspace = ideationStartedWorkspaceCopy();
+const downstreamArtifact = intentPath(ideationStartedWithDownstreamWorkspace, "requirements.md");
+mkdirSync(dirname(downstreamArtifact), { recursive: true });
+writeFileSync(downstreamArtifact, "# Requirements\n");
+runExpectFailure(
+  ["bun", "run", validator, ideationStartedWithDownstreamWorkspace, intent],
+  "Ideation phase では後続 stage 成果物が存在しない",
 );
 
 const legacyIntentRootGrillingsWorkspace = phaseWorkspaceCopy();
@@ -1404,9 +1489,10 @@ function writeConstructionDesignForSecondBolt(workspace: string): void {
 function writeConstructionState(workspace: string, overrides: Record<string, any> = {}): void {
   const path = intentPath(workspace, "state.json");
   const state = JSON.parse(readFileSync(path, "utf8"));
+  const intentCapture = state.ideation?.intentCapture;
   state.phase = "construction";
   state.status = overrides.status ?? "in_progress";
-  state.ideation = { status: "completed", gate: "passed" };
+  state.ideation = { status: "completed", gate: "passed", intentCapture };
   state.inception = overrides.inception ?? { status: "completed", gate: "passed" };
   state.construction = {
     status: overrides.constructionStatus ?? "in_progress",
