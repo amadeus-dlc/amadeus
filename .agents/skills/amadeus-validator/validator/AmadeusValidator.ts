@@ -1126,6 +1126,7 @@ class AmadeusValidator {
     this.checkAllowed(path, "construction.status", construction.status, statusValues);
     this.checkAllowed(path, "construction.gate", construction.gate, gateValues);
     this.checkStatePaths(path, construction, "requiredArtifacts", "Construction 必須成果物が存在する", false, "construction");
+    this.checkRequiredStatePath(path, construction, "requiredArtifacts", "construction/decisions.md", "Construction 必須成果物に判断一覧が含まれる");
     this.checkStatePaths(path, construction, "requiredBoltArtifacts", "Construction 必須 Bolt 成果物が存在する", false, "construction");
     this.checkTargetBolts(path, construction);
     this.checkConstructionBoltDesignGates(path, construction);
@@ -1555,6 +1556,14 @@ class AmadeusValidator {
 
     this.pass(path, `\`${label}.${key}\` が配列である`, `${values.length}件`);
     for (const value of values) this.checkStateRelativePath(path, value, condition, puml);
+  }
+
+  private checkRequiredStatePath(path: string, section: Record<string, any>, key: string, requiredPath: string, condition: string): void {
+    const values = section[key];
+    if (!Array.isArray(values)) return;
+    const required = new Set(values.map((value: unknown) => String(value ?? "").trim()));
+    if (required.has(requiredPath)) this.pass(path, condition, requiredPath);
+    else this.failRow(path, condition, requiredPath);
   }
 
   private checkStateRelativePath(path: string, value: unknown, condition: string, puml: boolean): void {

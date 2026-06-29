@@ -15,5 +15,5 @@
 
 ## 関連成果物
 
-- [モデル](bounded-contexts/BC001-product-management/models.md)
-- [契約](bounded-contexts/BC001-product-management/contracts.md)
+- [モデル](BC001-product-management/models.md)
+- [契約](BC001-product-management/contracts.md)

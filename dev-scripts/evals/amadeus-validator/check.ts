@@ -215,6 +215,15 @@ function replaceRequiredRequirementArtifactWithMissingPath(workspace: string): v
   writeFileSync(path, JSON.stringify(state, null, 2));
 }
 
+function removeConstructionDecisionsFromRequiredArtifacts(workspace: string): void {
+  const path = intentPath(workspace, "state.json");
+  const state = JSON.parse(readFileSync(path, "utf8"));
+  state.construction.requiredArtifacts = (state.construction.requiredArtifacts ?? []).filter(
+    (value: string) => value !== "construction/decisions.md",
+  );
+  writeFileSync(path, JSON.stringify(state, null, 2));
+}
+
 const legacyIntentRootLayoutWorkspace = legacyIntentRootLayoutWorkspaceCopy();
 runExpectFailure(
   ["bun", "run", validator, legacyIntentRootLayoutWorkspace, intent],
@@ -2091,6 +2100,19 @@ writeConstructionTestResults(constructionWithoutInceptionRequiredWorkspace);
 appendConstructionDesignTrace(constructionWithoutInceptionRequiredWorkspace);
 writeConstructionState(constructionWithoutInceptionRequiredWorkspace);
 run(["bun", "run", validator, constructionWithoutInceptionRequiredWorkspace, intent]);
+
+const missingConstructionDecisionsWorkspace = phaseWorkspaceCopy();
+writeConstructionDesign(missingConstructionDecisionsWorkspace);
+writeConstructionTasks(missingConstructionDecisionsWorkspace);
+writeConstructionNotes(missingConstructionDecisionsWorkspace);
+writeConstructionTestResults(missingConstructionDecisionsWorkspace);
+appendConstructionDesignTrace(missingConstructionDecisionsWorkspace);
+writeConstructionState(missingConstructionDecisionsWorkspace);
+removeConstructionDecisionsFromRequiredArtifacts(missingConstructionDecisionsWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, missingConstructionDecisionsWorkspace, intent],
+  "Construction 必須成果物に判断一覧が含まれる",
+);
 
 const testResultsWithMissingRequirementWorkspace = phaseWorkspaceCopy();
 writeConstructionDesign(testResultsWithMissingRequirementWorkspace);

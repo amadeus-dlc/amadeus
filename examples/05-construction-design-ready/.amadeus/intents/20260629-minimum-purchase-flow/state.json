@@ -76,7 +76,8 @@
       "inception/acceptance.md",
       "inception/units.md",
       "inception/bolts.md",
-      "construction/traceability.md"
+      "construction/traceability.md",
+      "construction/decisions.md"
     ],
     "requiredBoltArtifacts": [
       "construction/bolts/B001-order-creation/design.md",

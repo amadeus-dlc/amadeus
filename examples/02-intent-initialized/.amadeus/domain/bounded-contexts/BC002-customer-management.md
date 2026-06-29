@@ -15,5 +15,5 @@
 
 ## 関連成果物
 
-- [モデル](bounded-contexts/BC002-customer-management/models.md)
-- [契約](bounded-contexts/BC002-customer-management/contracts.md)
+- [モデル](BC002-customer-management/models.md)
+- [契約](BC002-customer-management/contracts.md)

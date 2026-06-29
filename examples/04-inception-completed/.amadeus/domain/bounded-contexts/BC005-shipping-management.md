@@ -15,5 +15,5 @@
 
 ## 関連成果物
 
-- [モデル](bounded-contexts/BC005-shipping-management/models.md)
-- [契約](bounded-contexts/BC005-shipping-management/contracts.md)
+- [モデル](BC005-shipping-management/models.md)
+- [契約](BC005-shipping-management/contracts.md)

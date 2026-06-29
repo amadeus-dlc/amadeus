@@ -15,5 +15,5 @@
 
 ## 関連成果物
 
-- [モデル](bounded-contexts/BC004-sales-management/models.md)
-- [契約](bounded-contexts/BC004-sales-management/contracts.md)
+- [モデル](BC004-sales-management/models.md)
+- [契約](BC004-sales-management/contracts.md)

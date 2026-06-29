@@ -15,5 +15,5 @@
 
 ## 関連成果物
 
-- [モデル](bounded-contexts/BC003-receiving-management/models.md)
-- [契約](bounded-contexts/BC003-receiving-management/contracts.md)
+- [モデル](BC003-receiving-management/models.md)
+- [契約](BC003-receiving-management/contracts.md)
