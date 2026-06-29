@@ -480,6 +480,7 @@ function normalizeSnapshotNarrative(stepId: string): void {
     const initializedIntentLink = `[${intentId}](../intents/${intentId}.md)`;
     discoveryText = discoveryText
       .replace(/^(\| 販売管理の最小購入フロー \| )[^|]+( \| )[^|]+( \| .*)$/m, `$1initialized$2${initializedIntentLink}$3`)
+      .replace("- `recommended` は「販売管理の最小購入フロー」だけである。", "- `initialized` は「販売管理の最小購入フロー」だけである。")
       .replace("`20260629-minimum-purchase-flow` は、recommended 候補「販売管理の最小購入フロー」から初期化済みである。", "`20260629-minimum-purchase-flow` は、initialized 候補「販売管理の最小購入フロー」から初期化済みである。");
   }
   const nextActionIndex = discoveryText.indexOf("## 推奨次アクション");
@@ -833,6 +834,7 @@ const steps: GenerationStep[] = [
     validationIntent: intentId,
     expectedState: {
       phase: "ideation",
+      status: "completed",
       "ideation.status": "completed",
       "ideation.gate": "passed",
     },
