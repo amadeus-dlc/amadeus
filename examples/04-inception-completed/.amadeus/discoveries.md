@@ -4,4 +4,4 @@
 
 | 識別子 | テーマ | 状態 | 判定 | 推奨次アクション | 詳細 |
 |---|---|---|---|---|---|
-| 20260628-amadeus-theme-decomposition | 大きな開発テーマを適切な Intent に分ける | completed | multi_intent | 初期化済み Intent を amadeus-ideation に進める | [20260628-amadeus-theme-decomposition.md](discoveries/20260628-amadeus-theme-decomposition.md) |
+| 20260629-ec-site-construction | ECサイトを構築したい | completed | multi_intent | Inception 完了済み Intent `20260629-minimum-purchase-flow` の B001 を `amadeus-construction-bolt-preparation` に進める。 | [Discovery のモジュールファイル](discoveries/20260629-ec-site-construction.md) |

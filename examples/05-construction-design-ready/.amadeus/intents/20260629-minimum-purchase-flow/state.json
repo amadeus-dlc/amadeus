@@ -1,0 +1,105 @@
+{
+  "intent": "20260629-minimum-purchase-flow",
+  "phase": "construction",
+  "status": "in_progress",
+  "initialized": {
+    "status": "completed",
+    "createdArtifacts": [
+      "../20260629-minimum-purchase-flow.md",
+      "state.json"
+    ],
+    "next": "ideation"
+  },
+  "ideation": {
+    "status": "completed",
+    "requiredArtifacts": [
+      "../20260629-minimum-purchase-flow.md",
+      "scope.md",
+      "ideation.md",
+      "decisions.md",
+      "traceability.md"
+    ],
+    "requiredMocks": [
+      "mocks/initial-confirmation.puml"
+    ],
+    "gate": "passed"
+  },
+  "inception": {
+    "status": "completed",
+    "requiredArtifacts": [
+      "requirements.md",
+      "requirements/R001-select-product.md",
+      "requirements/R002-check-sellable-stock.md",
+      "requirements/R003-record-buyer-information.md",
+      "requirements/R004-create-order.md",
+      "acceptance.md",
+      "user-stories.md",
+      "user-stories/S001-customer-creates-order.md",
+      "use-cases.md",
+      "use-cases/UC001-select-product.md",
+      "use-cases/UC002-confirm-order.md",
+      "use-cases/UC003-create-order.md",
+      "units.md",
+      "units/U001-minimum-purchase-flow.md",
+      "units/U001-minimum-purchase-flow/design.md",
+      "units/U002-order-creation.md",
+      "units/U002-order-creation/design.md",
+      "bolts.md",
+      "domain/subdomains.md",
+      "domain/bounded-contexts.md",
+      "domain/bounded-contexts/BC001-sales-management.md",
+      "domain/bounded-contexts/BC001-sales-management/models.md",
+      "domain/bounded-contexts/BC001-sales-management/contracts.md",
+      "traceability.md",
+      "decisions.md",
+      "decisions/D001-complete-ideation.md",
+      "decisions/D002-inception-boundary.md",
+      "decisions/D003-unit-split.md",
+      "decisions/D004-bolt-split.md"
+    ],
+    "requiredBoltArtifacts": [
+      "bolts/B001-order-creation.md",
+      "bolts/B002-order-confirmation.md",
+      "bolts/B003-product-selection.md"
+    ],
+    "gate": "passed"
+  },
+  "construction": {
+    "status": "in_progress",
+    "targetBolts": [
+      "B001"
+    ],
+    "requiredArtifacts": [
+      "requirements.md",
+      "acceptance.md",
+      "units.md",
+      "bolts.md",
+      "traceability.md",
+      "decisions.md"
+    ],
+    "requiredBoltArtifacts": [
+      "bolts/B001-order-creation.md",
+      "bolts/B001-order-creation/design.md",
+      "bolts/B001-order-creation/tasks.md",
+      "bolts/B001-order-creation/notes.md"
+    ],
+    "bolts": [
+      {
+        "id": "B001",
+        "designGate": {
+          "status": "ready",
+          "reviewedBy": "ai",
+          "updatedAt": "2026-06-29",
+          "evidence": "bolts/B001-order-creation/design.md"
+        },
+        "tasks": {
+          "status": "generated",
+          "reviewedBy": "ai",
+          "updatedAt": "2026-06-29",
+          "evidence": "bolts/B001-order-creation/tasks.md"
+        }
+      }
+    ],
+    "gate": "not_ready"
+  }
+}

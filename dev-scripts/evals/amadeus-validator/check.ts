@@ -6,14 +6,15 @@ import { join, resolve } from "node:path";
 
 const root = resolve(import.meta.dir, "../../..");
 const fixture = join(root, "examples/04-inception-completed/.amadeus");
-const intent = "20260628-discovery-brief-creation";
+const discovery = "20260629-ec-site-construction";
+const intent = "20260629-minimum-purchase-flow";
 const validator = ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts";
 
-const unit1 = "U001-discovery-brief-recording";
-const unit2 = "U002-intent-candidate-presentation";
-const bolt1 = "B001-discovery-brief-recording";
-const bolt2 = "B002-intent-candidate-presentation";
-const boundedContext1 = "BC001-discovery-support";
+const unit1 = "U001-minimum-purchase-flow";
+const unit2 = "U002-order-creation";
+const bolt1 = "B001-order-creation";
+const bolt2 = "B002-order-confirmation";
+const boundedContext1 = "BC001-sales-management";
 
 function fail(message: string): never {
   console.error(message);
@@ -80,7 +81,7 @@ function replaceInFile(path: string, from: string, to: string, message: string):
 
 function replaceDiscoveryDecision(workspace: string): void {
   replaceInFile(
-    join(workspace, ".amadeus/discoveries/20260628-amadeus-theme-decomposition.md"),
+    join(workspace, `.amadeus/discoveries/${discovery}.md`),
     "## 判定\n\nmulti_intent",
     "## 判定\n\nsingle_intent",
     "discovery fixture does not contain expected decision",
@@ -88,12 +89,15 @@ function replaceDiscoveryDecision(workspace: string): void {
 }
 
 function removeDiscoveryCandidate(workspace: string): void {
-  const path = join(workspace, ".amadeus/discoveries/20260628-amadeus-theme-decomposition.md");
+  const path = join(workspace, `.amadeus/discoveries/${discovery}.md`);
   const text = readFileSync(path, "utf8");
   const rows = [
-    "| Discovery から Intent 初期化へ引き継げる | waiting | 未作成 | Discovery の候補を Intent の入れ物へ渡す手順が曖昧になる | recommended または initialized の候補から Intent を初期化できる | Ideation 以降の成果物 | 入力テーマを Discovery Brief に整理できる |\n",
-    "| Discovery を含む成果物構造を検証できる | waiting | 未作成 | Discovery が成果物構造として壊れても検出しにくい | Validator が Discovery、Intent、phase 別成果物を検証できる | 内容妥当性の承認 | 入力テーマを Discovery Brief に整理できる |\n",
-    "| Discovery の例示スナップショットを参照できる | waiting | 未作成 | root .amadeus と例示が混ざり、読者が実運用状態と誤解する | examples 配下で段階別 snapshot を参照できる | Construction の実装証拠 | 入力テーマを Discovery Brief に整理できる |\n",
+    "| 商品情報公開 | waiting | 未初期化 | 購入者が商品を選べるように商品情報を公開する。 | 商品一覧、商品詳細、販売対象商品の表示範囲が Intent 化されている。 | 商品登録の詳細運用、価格改定の承認、在庫引当。 | 販売管理の最小購入フローから必要性を確認する。 |\n",
+    "| 顧客管理 | waiting | 未初期化 | 顧客情報を管理する。 | 会員登録、ログイン、顧客台帳、購入履歴管理の扱いが Intent 化されている。 | 注文作成、決済詳細、出荷。 | 販売管理の最小購入フローから購入者情報の扱いを確認する。 |\n",
+    "| 入荷管理 | waiting | 未初期化 | 商品の入荷を扱う。 | 入荷予定、入荷実績、入荷後の在庫反映の扱いが Intent 化されている。 | 販売可能在庫の購入時確認、棚卸し、出荷。 | 在庫管理との境界を後続 Discovery または Intent で確認する。 |\n",
+    "| 在庫管理 | waiting | 未初期化 | 販売可能在庫や在庫引当を扱う。 | 販売可能在庫、在庫引当、棚卸しの扱いが Intent 化されている。 | 入荷、注文作成、出荷。 | 販売管理の最小購入フローと入荷管理との境界を確認する。 |\n",
+    "| 支払い管理 | waiting | 未初期化 | 支払いに関する業務を扱う。 | 決済詳細、売上確定、決済代行連携の扱いが Intent 化されている。 | 注文作成、配送事業者連携。 | 決済代行連携の有無を確認する。 |\n",
+    "| 出荷管理 | waiting | 未初期化 | 注文後の商品出荷を扱う。 | 出荷指示、配送事業者連携の検討、出荷状態の管理が Intent 化されている。 | 商品選択、注文作成、決済詳細。 | 配送事業者連携の有無を確認する。 |\n",
   ];
   let updated = text;
   for (const row of rows) {
@@ -106,8 +110,8 @@ function removeDiscoveryCandidate(workspace: string): void {
 function replaceDesignTraceDesignLink(workspace: string): void {
   replaceInFile(
     intentPath(workspace, "traceability.md"),
-    `| [design.md](units/${unit1}/design.md) | U001 | R001 | UC001 | B001 |`,
-    `| [design.md](units/${unit2}/design.md) | U001 | R001 | UC001 | B001 |`,
+    `| [design.md](units/${unit2}/design.md) | U002 | R004 | UC003 | B001 |`,
+    `| [design.md](units/${unit1}/design.md) | U002 | R004 | UC003 | B001 |`,
     "traceability fixture does not contain expected design trace row",
   );
 }
@@ -115,8 +119,8 @@ function replaceDesignTraceDesignLink(workspace: string): void {
 function replaceDesignTraceReferencesWithMissingIds(workspace: string): void {
   replaceInFile(
     intentPath(workspace, "traceability.md"),
-    `| [design.md](units/${unit1}/design.md) | U001 | R001 | UC001 | B001 |`,
-    `| [design.md](units/${unit1}/design.md) | U001 | R999 | UC999 | B999 |`,
+    `| [design.md](units/${unit2}/design.md) | U002 | R004 | UC003 | B001 |`,
+    `| [design.md](units/${unit2}/design.md) | U002 | R999 | UC999 | B999 |`,
     "traceability fixture does not contain expected design trace row",
   );
 }
@@ -136,8 +140,8 @@ function addTaskColumnToRequirementTrace(workspace: string): void {
   );
   replaceInFile(
     intentPath(workspace, "traceability.md"),
-    "| R001 | ACT001 | S001 | UC001 | U001 | B001 |",
-    "| R001 | ACT001 | S001 | UC001 | U001 | B001 | B001/T001 |",
+    "| R004 | 顧客 | S001 | UC002, UC003 | U001, U002 | B001, B002 |",
+    "| R004 | 顧客 | S001 | UC002, UC003 | U001, U002 | B001, B002 | B001/T001 |",
     "traceability fixture does not contain expected requirement trace row",
   );
 }
@@ -156,23 +160,28 @@ function writeConstructionTasks(workspace: string): void {
   writeFileSync(
     intentPath(workspace, `bolts/${bolt1}/tasks.md`),
     [
-      "# Tasks",
+      "# Construction Tasks",
       "",
-      "- [ ] T001: Discovery Brief の基本見出しを作る",
+      "- [ ] T001: 注文作成入力の契約を定義する",
       "  - 作業:",
-      "    - 入力テーマ、確認した前提、判定、判定理由、推奨次アクションの見出しを作る。",
-      "  - 要求: R001",
-      "  - ユースケース: UC001",
+      "    - 注文内容、購入者情報、販売可能在庫の参照結果を注文作成の必須入力として扱う。",
+      "    - B002 が確認済みにした注文内容を受け取る前提を明示する。",
+      "    - 入力不足を注文作成失敗として扱える確認観点を残す。",
+      "  - 要求: R004",
+      "  - ユースケース: UC003",
       "  - 依存: なし",
       "  - 設計根拠: design.md#実装設計",
       "  - 証拠: 未登録",
-      "- [ ] T002: Discovery 状態と一覧を整合させる",
+      "",
+      "- [ ] T002: 注文モデルと不変条件を定義する",
       "  - 作業:",
-      "    - state.json と discoveries.md の状態、判定、詳細リンクを一致させる。",
-      "  - 要求: R001",
-      "  - ユースケース: UC001",
+      "    - 注文内容、購入者情報、販売可能在庫の参照結果を記録する注文を作成できるようにする。",
+      "    - 注文状態を作成済みとして扱う。",
+      "    - 決済、売上確定、在庫引当、出荷を実行しないことを不変条件として確認できるようにする。",
+      "  - 要求: R004",
+      "  - ユースケース: UC003",
       "  - 依存: T001",
-      "  - 設計根拠: design.md#実装設計",
+      "  - 設計根拠: design.md#Domain Design",
       "  - 証拠: 未登録",
       "",
     ].join("\n"),
@@ -184,20 +193,21 @@ function writeConstructionTasksForSecondBolt(workspace: string): void {
   writeFileSync(
     intentPath(workspace, `bolts/${bolt2}/tasks.md`),
     [
-      "# Tasks",
+      "# Construction Tasks",
       "",
-      "- [ ] T001: Intent 候補表を作る",
+      "- [ ] T001: 注文内容確認の入力をそろえる",
       "  - 作業:",
-      "    - 候補、状態、Intent、課題、成功状態、除外範囲、依存を持つ候補表を作る。",
-      "  - 要求: R002",
+      "    - 選択された商品、販売可能在庫の参照結果、購入者情報を注文内容確認の入力として扱う。",
+      "  - 要求: R002, R003",
       "  - ユースケース: UC002",
-      "  - 依存: B001/T002",
+      "  - 依存: B003/T001",
       "  - 設計根拠: design.md#実装設計",
       "  - 証拠: 未登録",
-      "- [ ] T002: 推奨次アクションを候補状態に合わせる",
+      "",
+      "- [ ] T002: 注文内容を確認済みにする",
       "  - 作業:",
-      "    - recommended または initialized の候補から、次に使う skill を示す。",
-      "  - 要求: R002",
+      "    - 購入者が確認した商品、数量、購入者情報を注文作成へ渡せる形にする。",
+      "  - 要求: R002, R003",
       "  - ユースケース: UC002",
       "  - 依存: T001",
       "  - 設計根拠: design.md#実装設計",
@@ -210,7 +220,7 @@ function writeConstructionTasksForSecondBolt(workspace: string): void {
 function replaceTaskReferencesWithMissingIds(workspace: string): void {
   replaceInFile(
     intentPath(workspace, `bolts/${bolt1}/tasks.md`),
-    "  - 要求: R001\n  - ユースケース: UC001\n  - 依存: なし",
+    "  - 要求: R004\n  - ユースケース: UC003\n  - 依存: なし",
     "  - 要求: R999\n  - ユースケース: UC999\n  - 依存: T999",
     "tasks fixture does not contain expected task references",
   );
@@ -219,7 +229,7 @@ function replaceTaskReferencesWithMissingIds(workspace: string): void {
 function replaceTaskReferencesWithEmptyIds(workspace: string): void {
   replaceInFile(
     intentPath(workspace, `bolts/${bolt1}/tasks.md`),
-    "  - 要求: R001\n  - ユースケース: UC001\n  - 依存: なし",
+    "  - 要求: R004\n  - ユースケース: UC003\n  - 依存: なし",
     "  - 要求:\n  - ユースケース:\n  - 依存:",
     "tasks fixture does not contain expected task references",
   );
@@ -229,29 +239,29 @@ function makeBoltReferenceMultipleUnits(workspace: string, withReason: boolean):
   const boltsPath = intentPath(workspace, "bolts.md");
   replaceInFile(
     boltsPath,
-    `| B001 | Discovery Brief 記録 | U001 | [design.md](units/${unit1}/design.md) | なし | [${bolt1}.md](bolts/${bolt1}.md) |`,
-    `| B001 | Discovery Brief 記録 | U001, U002 | [design.md](units/${unit1}/design.md), [design.md](units/${unit2}/design.md) | なし | [${bolt1}.md](bolts/${bolt1}.md) |`,
+    `| B001 | 注文作成を扱う。 | U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
+    `| B001 | 注文作成を扱う。 | U001, U002 | [design.md](units/${unit1}/design.md), [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
     "bolts fixture does not contain expected B001 row",
   );
 
   const boltPath = intentPath(workspace, `bolts/${bolt1}.md`);
   replaceInFile(
     boltPath,
-    "## 対象ユニット\n\n- U001: Discovery Brief 記録",
-    "## 対象ユニット\n\n- U001: Discovery Brief 記録\n- U002",
+    "## 対象ユニット\n\n- U002",
+    "## 対象ユニット\n\n- U001\n- U002",
     "bolt fixture does not contain expected target unit section",
   );
   replaceInFile(
     boltPath,
-    `## 設計\n\n- [U001 Unit Design Brief](../units/${unit1}/design.md)`,
-    `## 設計\n\n- [U001 Unit Design Brief](../units/${unit1}/design.md)\n- [U002 Unit Design Brief](../units/${unit2}/design.md)`,
+    `## 設計\n\n- [U002 Unit Design](../units/${unit2}/design.md)`,
+    `## 設計\n\n- [U001 Unit Design](../units/${unit1}/design.md)\n- [U002 Unit Design](../units/${unit2}/design.md)`,
     "bolt fixture does not contain expected design section",
   );
   if (withReason) {
     replaceInFile(
       boltPath,
       "## 完了条件",
-      "## 複数 Unit を扱う理由\n\n- U001 と U002 を同じ実施で扱うと、Brief 記録と候補状態の整合をまとめて確認できるため。\n\n## 完了条件",
+      "## 複数 Unit を扱う理由\n\n- U001 と U002 を同じ実施で扱うと、注文内容確認と注文作成の整合をまとめて確認できるため。\n\n## 完了条件",
       "bolt fixture does not contain expected completion heading",
     );
   }
@@ -260,8 +270,8 @@ function makeBoltReferenceMultipleUnits(workspace: string, withReason: boolean):
 function replaceBoltUnitWithMissingId(workspace: string): void {
   replaceInFile(
     intentPath(workspace, "bolts.md"),
-    `| B001 | Discovery Brief 記録 | U001 | [design.md](units/${unit1}/design.md) | なし | [${bolt1}.md](bolts/${bolt1}.md) |`,
-    `| B001 | Discovery Brief 記録 | U999 | [design.md](units/${unit1}/design.md) | なし | [${bolt1}.md](bolts/${bolt1}.md) |`,
+    `| B001 | 注文作成を扱う。 | U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
+    `| B001 | 注文作成を扱う。 | U999 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
     "bolts fixture does not contain expected B001 row",
   );
 }
@@ -269,8 +279,8 @@ function replaceBoltUnitWithMissingId(workspace: string): void {
 function replaceBoltUnitWithDuplicateId(workspace: string): void {
   replaceInFile(
     intentPath(workspace, "bolts.md"),
-    `| B001 | Discovery Brief 記録 | U001 | [design.md](units/${unit1}/design.md) | なし | [${bolt1}.md](bolts/${bolt1}.md) |`,
-    `| B001 | Discovery Brief 記録 | U001, U001 | [design.md](units/${unit1}/design.md) | なし | [${bolt1}.md](bolts/${bolt1}.md) |`,
+    `| B001 | 注文作成を扱う。 | U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
+    `| B001 | 注文作成を扱う。 | U002, U002 | [design.md](units/${unit2}/design.md) | B002 | [B001-order-creation.md](bolts/B001-order-creation.md) |`,
     "bolts fixture does not contain expected B001 row",
   );
 }
@@ -459,7 +469,7 @@ function writeConstructionTestResults(workspace: string): void {
       "",
       "| 要求 | タスク | 証拠 | 要約 |",
       "|---|---|---|---|",
-      "| R001 | B001/T001 | npm test | Discovery Brief の基本見出しを確認した。 |",
+      "| R004 | B001/T001 | npm test | 注文作成入力の契約を確認した。 |",
       "",
     ].join("\n"),
   );
@@ -468,8 +478,8 @@ function writeConstructionTestResults(workspace: string): void {
 function replaceAcceptanceEvidenceRequirementWithMissingId(workspace: string): void {
   replaceInFile(
     intentPath(workspace, `bolts/${bolt1}/test-results.md`),
-    "| R001 | B001/T001 | npm test | Discovery Brief の基本見出しを確認した。 |",
-    "| R999 | B001/T001 | npm test | Discovery Brief の基本見出しを確認した。 |",
+    "| R004 | B001/T001 | npm test | 注文作成入力の契約を確認した。 |",
+    "| R999 | B001/T001 | npm test | 注文作成入力の契約を確認した。 |",
     "test-results fixture does not contain expected acceptance evidence row",
   );
 }
@@ -477,8 +487,8 @@ function replaceAcceptanceEvidenceRequirementWithMissingId(workspace: string): v
 function replaceAcceptanceEvidenceTaskWithMissingId(workspace: string): void {
   replaceInFile(
     intentPath(workspace, `bolts/${bolt1}/test-results.md`),
-    "| R001 | B001/T001 | npm test | Discovery Brief の基本見出しを確認した。 |",
-    "| R001 | B001/T999 | npm test | Discovery Brief の基本見出しを確認した。 |",
+    "| R004 | B001/T001 | npm test | 注文作成入力の契約を確認した。 |",
+    "| R004 | B001/T999 | npm test | 注文作成入力の契約を確認した。 |",
     "test-results fixture does not contain expected acceptance evidence row",
   );
 }
@@ -486,8 +496,8 @@ function replaceAcceptanceEvidenceTaskWithMissingId(workspace: string): void {
 function replaceTaskIdWithDuplicate(workspace: string): void {
   replaceInFile(
     intentPath(workspace, `bolts/${bolt1}/tasks.md`),
-    "- [ ] T002: Discovery 状態と一覧を整合させる",
-    "- [ ] T001: Discovery 状態と一覧を整合させる",
+    "- [ ] T002: 注文モデルと不変条件を定義する",
+    "- [ ] T001: 注文モデルと不変条件を定義する",
     "tasks fixture does not contain expected T002 row",
   );
 }
@@ -530,19 +540,19 @@ function writeConstructionDesign(workspace: string, overrides: Record<string, st
       "",
       "## Domain Design",
       "",
-      overrides.domain ?? "- 対象 Task: B001/T001, B001/T002。Discovery Brief の入力、判定、候補を一貫した成果物として扱う。",
+      overrides.domain ?? "- 対象 Task: B001/T001, B001/T002。注文内容、購入者情報、販売可能在庫の参照結果を注文作成の入力として扱う。",
       "",
       "## Logical Design",
       "",
-      overrides.logical ?? "- 対象 Task: B001/T001, B001/T002。Discovery のモジュールファイルと state.json の整合を維持する。",
+      overrides.logical ?? "- 対象 Task: B001/T001, B001/T002。確認済み注文内容から注文を作成し、決済、売上確定、在庫引当、出荷は実行しない。",
       "",
       "## 実装設計",
       "",
-      overrides.implementation ?? "- 対象 Task: B001/T001, B001/T002。既存 Markdown 構造を壊さず、必要な見出しと表を更新する。",
+      overrides.implementation ?? "- 対象 Task: B001/T001, B001/T002。注文作成入力の契約と注文モデルの不変条件を定義する。",
       "",
       "## 検証設計",
       "",
-      overrides.verification ?? "- 対象 Task: B001/T001, B001/T002。validator で Discovery Brief と Intent 成果物を確認する。",
+      overrides.verification ?? "- 対象 Task: B001/T001, B001/T002。validator で注文作成の要求、ユースケース、Task の追跡を確認する。",
       "",
       "## 設計変更記録",
       "",
@@ -745,7 +755,7 @@ function writeGrillings(targetRoot: string, overrides: Record<string, string> = 
       "",
       "## 概要",
       "",
-      "- 対象: 20260628-discovery-brief-creation",
+      `- 対象: ${intent}`,
       "- 目的: Ideation の対象範囲を確定する。",
       `- 状態: ${overrides.sessionState ?? "completed"}`,
       "- 開始日: 2026-06-28",
@@ -801,7 +811,7 @@ function writeExtraGrillingSession(targetRoot: string, sessionFile: string, deci
       "",
       "## 概要",
       "",
-      "- 対象: 20260628-discovery-brief-creation",
+      `- 対象: ${intent}`,
       "- 目的: Ideation の追加境界を確定する。",
       "- 状態: completed",
       "- 開始日: 2026-06-28",
@@ -1041,7 +1051,7 @@ function replaceEventStormingRelatedIntentWithValue(workspace: string): void {
   replaceInFile(
     path,
     '"relatedIntent": null',
-    '"relatedIntent": "20260628-discovery-brief-creation"',
+    `"relatedIntent": "${intent}"`,
     "event storming fixture does not contain expected relatedIntent",
   );
 }
@@ -1183,19 +1193,19 @@ function writeConstructionDesignForSecondBolt(workspace: string): void {
       "",
       "## Domain Design",
       "",
-      "- 対象 Task: B002/T001, B002/T002。Intent 候補と推奨次アクションを一貫した判断記録として扱う。",
+      "- 対象 Task: B002/T001, B002/T002。商品、販売可能在庫の参照結果、購入者情報を注文内容確認として扱う。",
       "",
       "## Logical Design",
       "",
-      "- 対象 Task: B002/T001, B002/T002。候補状態と推奨次アクションを対応させる。",
+      "- 対象 Task: B002/T001, B002/T002。確認済み注文内容を注文作成へ渡せる状態にする。",
       "",
       "## 実装設計",
       "",
-      "- 対象 Task: B002/T001, B002/T002。候補表と次アクション表示を更新する。",
+      "- 対象 Task: B002/T001, B002/T002。注文内容確認の入力と確認済み状態を定義する。",
       "",
       "## 検証設計",
       "",
-      "- 対象 Task: B002/T001, B002/T002。validator で候補表と推奨次アクションを確認する。",
+      "- 対象 Task: B002/T001, B002/T002。validator で注文内容確認の要求、ユースケース、Task の追跡を確認する。",
       "",
       "## 設計変更記録",
       "",
@@ -1421,8 +1431,8 @@ writeGrillings(intentPath(supersededWithSessionDecisionReferenceWorkspace, ""), 
 run(["bun", "run", validator, supersededWithSessionDecisionReferenceWorkspace, intent]);
 
 const discoveryGrillingsWorkspace = workspaceCopy();
-writeGrillings(join(discoveryGrillingsWorkspace, ".amadeus/discoveries/20260628-amadeus-theme-decomposition"), {
-  target: "../20260628-amadeus-theme-decomposition.md",
+writeGrillings(join(discoveryGrillingsWorkspace, `.amadeus/discoveries/${discovery}`), {
+  target: `../${discovery}.md`,
 });
 run(["bun", "run", validator, discoveryGrillingsWorkspace]);
 
@@ -1834,10 +1844,10 @@ runExpectFailure(
 const duplicateTaskIdWorkspace = workspaceCopy();
 writeConstructionDesign(duplicateTaskIdWorkspace, {
   overview: "- B001/T001 を実装へ進められる粒度で設計した。",
-  domain: "- 対象 Task: B001/T001。Discovery Brief の入力、判定、候補を一貫した成果物として扱う。",
-  logical: "- 対象 Task: B001/T001。Discovery のモジュールファイルと state.json の整合を維持する。",
-  implementation: "- 対象 Task: B001/T001。既存 Markdown 構造を壊さず、必要な見出しと表を更新する。",
-  verification: "- 対象 Task: B001/T001。validator で Discovery Brief と Intent 成果物を確認する。",
+  domain: "- 対象 Task: B001/T001。注文内容、購入者情報、販売可能在庫の参照結果を注文作成の入力として扱う。",
+  logical: "- 対象 Task: B001/T001。確認済み注文内容から注文を作成し、決済、売上確定、在庫引当、出荷は実行しない。",
+  implementation: "- 対象 Task: B001/T001。注文作成入力の契約を定義する。",
+  verification: "- 対象 Task: B001/T001。validator で注文作成の要求、ユースケース、Task の追跡を確認する。",
 });
 writeConstructionTasks(duplicateTaskIdWorkspace);
 writeConstructionNotes(duplicateTaskIdWorkspace);

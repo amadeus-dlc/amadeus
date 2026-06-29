@@ -10,13 +10,16 @@ type Options = {
   dryRun: boolean;
   provider: Provider;
   runner: string;
+  from?: string;
 };
 
 type GenerationStep = {
   id: string;
   snapshot: string;
   prompt: string;
-  expectedState: Record<string, string>;
+  expectedState?: Record<string, string>;
+  expectedStatePath?: string;
+  validationIntent?: string;
   provenanceSkillFiles: string[];
   runtimeSkillFiles?: string[];
 };
@@ -27,11 +30,19 @@ type BackupEntry = {
   existed: boolean;
 };
 
+type GenerationPlan = {
+  fromIndex: number;
+  fromStep: GenerationStep;
+  inputStep?: GenerationStep;
+  targetSteps: GenerationStep[];
+};
+
 const root = resolve(import.meta.dir, "..");
 const workspace = join(root, ".tmp/amadeus-example-generation/workspace");
 const logs = join(root, ".tmp/amadeus-example-generation/logs");
 const stagedSnapshots = join(root, ".tmp/amadeus-example-generation/snapshots");
-const intentId = "20260628-discovery-brief-creation";
+const discoveryId = "20260629-ec-site-construction";
+const intentId = "20260629-minimum-purchase-flow";
 const defaultRunner = "dev-scripts/run-codex-corporate.sh";
 const provenanceManifestPath = join(root, "examples/skill-provenance.json");
 
@@ -55,6 +66,11 @@ function parseArgs(args: string[]): Options {
       const value = args[index + 1];
       if (!value) fail("--runner requires a path");
       options.runner = value;
+      index += 1;
+    } else if (arg === "--from") {
+      const value = args[index + 1];
+      if (!value) fail("--from requires a step id");
+      options.from = value;
       index += 1;
     } else {
       fail(`unknown argument: ${arg}`);
@@ -143,12 +159,11 @@ async function runLogged(command: string[], cwd: string, stdoutPath: string, std
   }
 }
 
-function prepareWorkspace(): void {
+function prepareWorkspace(inputStep?: GenerationStep): void {
   resetDir(workspace);
   resetDir(logs);
   resetDir(stagedSnapshots);
 
-  cpSync(join(root, "examples/02-intent-initialized/.amadeus"), join(workspace, ".amadeus"), { recursive: true });
   ensureDir(join(workspace, ".agents"));
   cpSync(join(root, ".agents/skills"), join(workspace, ".agents/skills"), { recursive: true });
   cpSync(join(root, ".agents/rules"), join(workspace, ".agents/rules"), { recursive: true });
@@ -165,6 +180,9 @@ function prepareWorkspace(): void {
       "",
     ].join("\n"),
   );
+  if (inputStep) {
+    cpSync(join(root, inputStep.snapshot, ".amadeus"), join(workspace, ".amadeus"), { recursive: true });
+  }
 }
 
 function listFiles(path: string): string[] {
@@ -250,8 +268,8 @@ function stageSnapshot(snapshot: string): void {
   cpSync(join(workspace, ".amadeus"), target, { recursive: true });
 }
 
-function applyStagedSnapshots(): void {
-  for (const step of steps) {
+function applyStagedSnapshots(targetSteps: GenerationStep[]): void {
+  for (const step of targetSteps) {
     replaceDir(join(stagedSnapshots, step.snapshot, ".amadeus"), join(root, step.snapshot, ".amadeus"));
   }
 }
@@ -276,11 +294,11 @@ function restoreBackups(backups: BackupEntry[]): void {
   }
 }
 
-function applyStagedSnapshotsAndProvenance(provenanceText: string): void {
+function applyStagedSnapshotsAndProvenance(provenanceText: string, targetSteps: GenerationStep[]): void {
   const transaction = join(root, ".tmp/amadeus-example-generation/apply-transaction");
   resetDir(transaction);
   const targets = [
-    ...steps.map((step) => join(root, step.snapshot, ".amadeus")),
+    ...targetSteps.map((step) => join(root, step.snapshot, ".amadeus")),
     provenanceManifestPath,
   ];
   const backups = targets.map((target, index) => backupTarget(target, transaction, index));
@@ -288,7 +306,7 @@ function applyStagedSnapshotsAndProvenance(provenanceText: string): void {
   let preserveTransaction = false;
 
   try {
-    applyStagedSnapshots();
+    applyStagedSnapshots(targetSteps);
     writeFileSync(provenanceManifestPath, provenanceText);
     runOrThrow(["bun", "run", "dev-scripts/validate-amadeus-examples.ts", "--all"], root);
   } catch (error) {
@@ -315,8 +333,164 @@ function applyStagedSnapshotsAndProvenance(provenanceText: string): void {
   }
 }
 
-function validateWorkspace(): void {
-  run(["bun", "run", ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts", ".", intentId], workspace);
+function validateWorkspace(intent?: string): void {
+  run(["bun", "run", ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts", ".", ...(intent ? [intent] : [])], workspace);
+}
+
+function writeWorkspaceFile(relativePath: string, lines: string[]): void {
+  writeFileSync(join(workspace, relativePath), `${lines.join("\n")}\n`);
+}
+
+function snapshotStateText(stepId: string): {
+  readmeStatus: string;
+  structureIntentPolicy: string;
+  discoveryNextAction: string;
+  discoveryDetailActions: string[];
+} {
+  if (stepId === "01-discovery") {
+    return {
+      readmeStatus: "- Intent は未作成である。",
+      structureIntentPolicy: "- Intent は、この Discovery では作成しない。",
+      discoveryNextAction: "`recommended` の Intent 候補を `amadeus-intent-init` に渡す。",
+      discoveryDetailActions: [
+        "- `recommended` の Intent 候補である「販売管理の最小購入フロー」を `amadeus-intent-init` に渡す。",
+      ],
+    };
+  }
+  if (stepId === "02-intent-initialized") {
+    return {
+      readmeStatus: `- Intent \`${intentId}\` は initialized であり、次に Ideation へ進める。`,
+      structureIntentPolicy: `- Intent は \`.amadeus/intents/\` 配下に置く。例: \`.amadeus/intents/${intentId}/\`。`,
+      discoveryNextAction: `初期化済み Intent \`${intentId}\` を \`amadeus-ideation\` に進める。`,
+      discoveryDetailActions: [
+        `- 初期化済み Intent \`${intentId}\` を \`amadeus-ideation\` に進める。`,
+        "- Ideation では、商品選択、販売可能在庫の確認、購入者情報の記録、注文内容確認、注文作成を範囲として具体化する。",
+        "- Ideation では、会員登録、ログイン、顧客台帳、購入履歴管理、決済詳細、売上確定、在庫引当、入荷、棚卸し、出荷を対象外として保持する。",
+      ],
+    };
+  }
+  if (stepId === "03-ideation") {
+    return {
+      readmeStatus: `- Intent \`${intentId}\` は Ideation completed であり、次に Inception へ進める。`,
+      structureIntentPolicy: `- Intent は \`.amadeus/intents/\` 配下に置く。例: \`.amadeus/intents/${intentId}/\`。`,
+      discoveryNextAction: `Ideation 完了済み Intent \`${intentId}\` を \`amadeus-inception\` に進める。`,
+      discoveryDetailActions: [
+        `- Ideation 完了済み Intent \`${intentId}\` を \`amadeus-inception\` に進める。`,
+        "- Inception では、要求、ユースケース、Unit、Bolt、境界づけられたコンテキストを整理する。",
+      ],
+    };
+  }
+  if (stepId === "04-inception") {
+    return {
+      readmeStatus: `- Intent \`${intentId}\` は Inception completed であり、次に B001 の Construction Design ready へ進める。`,
+      structureIntentPolicy: `- Intent は \`.amadeus/intents/\` 配下に置く。例: \`.amadeus/intents/${intentId}/\`。`,
+      discoveryNextAction: `Inception 完了済み Intent \`${intentId}\` の B001 を \`amadeus-construction-bolt-preparation\` に進める。`,
+      discoveryDetailActions: [
+        `- Inception 完了済み Intent \`${intentId}\` の B001 を \`amadeus-construction-bolt-preparation\` に進める。`,
+        "- Construction では、注文作成 Bolt の design.md、tasks.md、notes.md を実装前の粒度に整える。",
+      ],
+    };
+  }
+  return {
+    readmeStatus: `- Intent \`${intentId}\` は B001 の Construction Design ready であり、次に実装へ進める。`,
+    structureIntentPolicy: `- Intent は \`.amadeus/intents/\` 配下に置く。例: \`.amadeus/intents/${intentId}/\`。`,
+    discoveryNextAction: `Construction Design ready の B001 を \`amadeus-construction-implementation-execution\` に進める。`,
+    discoveryDetailActions: [
+      "- Construction Design ready の B001 を `amadeus-construction-implementation-execution` に進める。",
+      "- 実装では、B001 の tasks.md に沿って注文作成入力と注文作成モデルを実装する。",
+    ],
+  };
+}
+
+function normalizeSnapshotNarrative(stepId: string): void {
+  const state = snapshotStateText(stepId);
+  writeWorkspaceFile(".amadeus/README.md", [
+    "# ECサイト構築例示 workspace",
+    "",
+    "## 役割",
+    "",
+    "この workspace は、ECサイト構築という大きな入力テーマを Amadeus DLC で段階的に扱うための例示成果物を置く。",
+    "",
+    "## 読む順序",
+    "",
+    "1. `steering.md`",
+    "2. `steering/objective.md`",
+    "3. `steering/actors.md`",
+    "4. `domain/subdomains.md`",
+    "5. `discoveries.md`",
+    "6. `intents.md`",
+    "",
+    "## 現在の状態",
+    "",
+    "- Steering layer は、ECサイト構築を複数の Intent 候補へ分けるための共有前提を扱う。",
+    "- Discovery layer は、入力テーマ「ECサイトを構築したい」を `multi_intent` として整理する。",
+    state.readmeStatus,
+  ]);
+  writeWorkspaceFile(".amadeus/steering/structure.md", [
+    "# プロジェクト構造",
+    "",
+    "この文書は、複数 Intent で共有するディレクトリ編成、命名、依存関係、コード構成の原則を扱う。",
+    "",
+    "ファイルツリーの網羅ではなく、新しいファイルを置く判断に使うパターンだけを記録する。",
+    "",
+    "## 編成方針",
+    "",
+    "- Amadeus 成果物は `.amadeus/` 配下に置く。",
+    "- Discovery は `.amadeus/discoveries/` 配下に置く。",
+    state.structureIntentPolicy,
+    "",
+    "## ディレクトリパターン",
+    "",
+    "| パターン | 場所 | 役割 | 例 | 状態 |",
+    "|---|---|---|---|---|",
+    "| Steering layer | `.amadeus/steering/` | 複数 Intent で共有する目的、方針、知識を扱う。 | `.amadeus/steering/objective.md` | 確認済み |",
+    "| Discovery layer | `.amadeus/discoveries/` | Intent 化前の入力テーマを整理する。 | `.amadeus/discoveries/20260629-ec-site-construction.md` | 確認済み |",
+    "| Intent layer | `.amadeus/intents/` | Intent ごとの状態、要求、設計、実施単位を扱う。 | `.amadeus/intents/20260629-minimum-purchase-flow/` | 段階に応じて利用 |",
+    "",
+    "## 命名規約",
+    "",
+    "| 対象 | 規約 | 例 | 状態 |",
+    "|---|---|---|---|",
+    "| Discovery ディレクトリ名 | `YYYYMMDD-<slug>` | `20260629-ec-site-construction` | 確認済み |",
+    "| Intent ディレクトリ名 | `YYYYMMDD-<slug>` | `20260629-minimum-purchase-flow` | 確認済み |",
+    "",
+    "## 依存関係の整理",
+    "",
+    "- Discovery は steering layer を参照する。",
+    "- Intent は Discovery の recommended 候補から初期化する。",
+    "- この例では、最初の Intent として販売管理の最小購入フローを扱う。",
+    "",
+    "## コード構成原則",
+    "",
+    "- 未確認",
+  ]);
+  writeWorkspaceFile(".amadeus/discoveries.md", [
+    "# Discovery 一覧",
+    "",
+    "## 一覧",
+    "",
+    "| 識別子 | テーマ | 状態 | 判定 | 推奨次アクション | 詳細 |",
+    "|---|---|---|---|---|---|",
+    `| ${discoveryId} | ECサイトを構築したい | completed | multi_intent | ${state.discoveryNextAction} | [Discovery のモジュールファイル](discoveries/${discoveryId}.md) |`,
+  ]);
+  const discoveryPath = join(workspace, `.amadeus/discoveries/${discoveryId}.md`);
+  ensureFile(discoveryPath);
+  let discoveryText = readFileSync(discoveryPath, "utf8");
+  if (stepId !== "01-discovery") {
+    const initializedIntentLink = `[${intentId}](../intents/${intentId}.md)`;
+    discoveryText = discoveryText
+      .replace(/^(\| 販売管理の最小購入フロー \| )[^|]+( \| )[^|]+( \| .*)$/m, `$1initialized$2${initializedIntentLink}$3`)
+      .replace("- `recommended` は「販売管理の最小購入フロー」だけである。", "- `initialized` は「販売管理の最小購入フロー」だけである。")
+      .replace("`20260629-minimum-purchase-flow` は、recommended 候補「販売管理の最小購入フロー」から初期化済みである。", "`20260629-minimum-purchase-flow` は、initialized 候補「販売管理の最小購入フロー」から初期化済みである。");
+  }
+  const nextActionIndex = discoveryText.indexOf("## 推奨次アクション");
+  if (nextActionIndex >= 0) {
+    const beforeNextAction = discoveryText.slice(0, nextActionIndex).trimEnd();
+    discoveryText = `${beforeNextAction}\n\n## 推奨次アクション\n\n${state.discoveryDetailActions.join("\n")}\n`;
+  } else {
+    discoveryText = `${discoveryText.trimEnd()}\n\n## 推奨次アクション\n\n${state.discoveryDetailActions.join("\n")}\n`;
+  }
+  writeFileSync(discoveryPath, discoveryText);
 }
 
 async function runCodexStep(options: Options, step: GenerationStep): Promise<void> {
@@ -339,12 +513,15 @@ async function runCodexStep(options: Options, step: GenerationStep): Promise<voi
   ];
   await runLogged(command, workspace, stdout, stderr);
   ensureFile(output);
-  validateWorkspace();
-  assertIntentState(join(workspace, ".amadeus/intents", intentId, "state.json"), step.expectedState);
+  normalizeSnapshotNarrative(step.id);
+  validateWorkspace(step.validationIntent);
+  if (step.expectedState) {
+    assertState(join(workspace, step.expectedStatePath ?? `.amadeus/intents/${intentId}/state.json`), step.expectedState);
+  }
   stageSnapshot(step.snapshot);
 }
 
-function assertIntentState(statePath: string, expectedState: Record<string, string>): void {
+function assertState(statePath: string, expectedState: Record<string, string>): void {
   const state = JSON.parse(readFileSync(statePath, "utf8"));
   for (const [path, expected] of Object.entries(expectedState)) {
     const actual = path.split(".").reduce<unknown>((current, key) => {
@@ -359,9 +536,31 @@ function assertIntentState(statePath: string, expectedState: Record<string, stri
   }
 }
 
-function updatedProvenanceText(): string {
-  const manifest = JSON.parse(readFileSync(provenanceManifestPath, "utf8"));
-  const regeneratedSkillFilesBySnapshot = new Map(steps.map((step) => [step.snapshot, new Set(step.provenanceSkillFiles)]));
+function readProvenanceManifest(): Record<string, unknown> & { entries?: Array<{ snapshot: string; skillFiles?: Array<{ path: string; md5?: string; staleReason?: string }> }> } {
+  return JSON.parse(readFileSync(provenanceManifestPath, "utf8"));
+}
+
+function regeneratedSkillFilesForSnapshot(step: GenerationStep, fromIndex: number): Set<string> {
+  const stepIndex = steps.findIndex((candidate) => candidate.id === step.id);
+  const skillFiles = new Set<string>();
+  for (let index = fromIndex; index <= stepIndex; index += 1) {
+    const current = steps[index];
+    const previous = steps[index - 1];
+    for (const skillFile of current.provenanceSkillFiles) {
+      if (!previous || !previous.provenanceSkillFiles.includes(skillFile)) {
+        skillFiles.add(skillFile);
+      }
+    }
+  }
+  return skillFiles;
+}
+
+function updatedProvenanceText(plan: GenerationPlan): string {
+  const manifest = readProvenanceManifest();
+  const regeneratedSkillFilesBySnapshot = new Map(plan.targetSteps.map((step) => [
+    step.snapshot,
+    regeneratedSkillFilesForSnapshot(step, plan.fromIndex),
+  ]));
   for (const entry of manifest.entries ?? []) {
     const regeneratedSkillFiles = regeneratedSkillFilesBySnapshot.get(entry.snapshot);
     if (!regeneratedSkillFiles) continue;
@@ -376,13 +575,147 @@ function updatedProvenanceText(): string {
   return `${JSON.stringify(manifest, null, 2)}\n`;
 }
 
-function printPlan(options: Options): void {
+function buildGenerationPlan(options: Options): GenerationPlan {
+  const requestedFrom = options.from ?? steps[0].id;
+  const fromIndex = steps.findIndex((step) => step.id === requestedFrom);
+  if (fromIndex < 0) {
+    fail(`unknown --from step id: ${requestedFrom}; available step ids: ${steps.map((step) => step.id).join(", ")}`);
+  }
+  return {
+    fromIndex,
+    fromStep: steps[fromIndex],
+    inputStep: fromIndex > 0 ? steps[fromIndex - 1] : undefined,
+    targetSteps: steps.slice(fromIndex),
+  };
+}
+
+function statePathForStep(step: GenerationStep): string {
+  return join(root, step.snapshot, step.expectedStatePath ?? `.amadeus/intents/${intentId}/state.json`);
+}
+
+function assertPrerequisiteState(plan: GenerationPlan): void {
+  const inputStep = plan.inputStep;
+  if (!inputStep) return;
+
+  const snapshotRoot = join(root, inputStep.snapshot);
+  const amadeusRoot = join(snapshotRoot, ".amadeus");
+  if (!existsSync(snapshotRoot)) {
+    fail(`resume prerequisite failed: missing input snapshot for ${plan.fromStep.id}: ${inputStep.snapshot}`);
+  }
+  if (!existsSync(amadeusRoot) || !statSync(amadeusRoot).isDirectory()) {
+    fail(`resume prerequisite failed: missing input snapshot .amadeus for ${plan.fromStep.id}: ${inputStep.snapshot}/.amadeus`);
+  }
+  if (!inputStep.expectedState) return;
+
+  const statePath = statePathForStep(inputStep);
+  if (!existsSync(statePath)) {
+    fail(`resume prerequisite failed: ${inputStep.snapshot}: missing state file: ${statePath}`);
+  }
+  let state: unknown;
+  try {
+    state = JSON.parse(readFileSync(statePath, "utf8"));
+  } catch (error) {
+    fail(`resume prerequisite failed: ${inputStep.snapshot}: invalid state JSON: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  const errors: string[] = [];
+  for (const [path, expected] of Object.entries(inputStep.expectedState)) {
+    const actual = stateValue(state, path);
+    if (actual !== expected) {
+      errors.push(`${inputStep.snapshot}: state.${path} expected ${JSON.stringify(expected)}, actual ${JSON.stringify(actual)}`);
+    }
+  }
+  if (errors.length > 0) {
+    fail([
+      `resume prerequisite failed for --from ${plan.fromStep.id}`,
+      ...errors.map((error) => `- ${error}`),
+    ].join("\n"));
+  }
+}
+
+function stateValue(state: unknown, path: string): unknown {
+  return path.split(".").reduce<unknown>((current, key) => {
+    if (current && typeof current === "object" && key in current) {
+      return (current as Record<string, unknown>)[key];
+    }
+    return undefined;
+  }, state);
+}
+
+function printPlan(options: Options, plan: GenerationPlan): void {
   console.log(`provider: ${options.provider}`);
   console.log(`dryRun: ${String(options.dryRun)}`);
   console.log(`workspace: ${workspace}`);
   console.log(`runner: ${options.runner}`);
+  console.log(`from: ${plan.fromStep.id}`);
+  console.log(`inputSnapshot: ${plan.inputStep?.snapshot ?? "none"}`);
   console.log("snapshots:");
-  for (const step of steps) console.log(`- ${step.snapshot}`);
+  for (const step of plan.targetSteps) console.log(`- ${step.snapshot}`);
+}
+
+function steeringDiscoveryPrompt(): string {
+  return [
+    "amadeus-steering と amadeus-discovery を順に使ってください。",
+    "",
+    "新規 workspace に、ECサイト構築の例示用 steering layer を作成してください。",
+    "その後、入力テーマを Discovery として整理してください。",
+    "",
+    "入力テーマ:",
+    "- ECサイトを構築したい",
+    "",
+    "Discovery ディレクトリ名:",
+    `- ${discoveryId}`,
+    "",
+    "steering layer で分かっていること:",
+    "- 目的: ECサイトを構築する大きな入力テーマを、複数の Intent 候補へ分けて段階的に進められるようにする。",
+    "- 主な利用者: ECサイト構築を依頼する事業担当者、ECサイトを設計または実装する開発者。",
+    "- 主要領域: 商品管理、顧客管理、入荷管理、販売管理、出荷管理。",
+    "- 外部システム連携: 決済代行と配送事業者は存在し得るが、この Discovery では未確定として扱う。",
+    "",
+    "Discovery で確定している判断:",
+    "- 判定は multi_intent にしてください。",
+    "- recommended の Intent 候補は「販売管理の最小購入フロー」にしてください。",
+    "- recommended 候補の範囲は、商品選択、販売可能在庫の確認、購入者情報の記録、注文内容確認、注文作成です。",
+    "- recommended 候補の除外範囲は、会員登録、ログイン、顧客台帳、購入履歴管理、決済詳細、売上確定、在庫引当、入荷、棚卸し、出荷です。",
+    "- その他の候補として、商品情報公開、顧客管理、入荷管理、在庫管理、支払い管理、出荷管理を記録してください。",
+    "",
+    "実行条件:",
+    "- 質問せずに続行してください。",
+    "- amadeus-discovery の成果物契約に従い、Discovery を完了してください。",
+    "- Discovery completed snapshot として保存できる状態まで進めてください。",
+    "- git commit はしないでください。",
+    "- 作成後に `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts .` を実行し、結果を要約してください。",
+  ].join("\n");
+}
+
+function intentInitPrompt(): string {
+  return [
+    "amadeus-intent-init を使ってください。",
+    "",
+    `Discovery \`${discoveryId}\` の recommended 候補から、新しい Intent の入れ物だけを初期化してください。`,
+    "",
+    "Intent ディレクトリ名:",
+    `- ${intentId}`,
+    "",
+    "Intent の目的:",
+    "- 顧客が商品を選び、販売可能在庫を確認し、購入者情報と注文内容をもとに注文を作成できるようにする。",
+    "",
+    "成功条件:",
+    "- 商品選択、販売可能在庫の確認、購入者情報の記録、注文内容確認、注文作成が Intent の範囲として記録されている。",
+    "- 会員登録、ログイン、顧客台帳、購入履歴管理、決済詳細、売上確定、在庫引当、入荷、棚卸し、出荷が対象外として記録されている。",
+    "- `.amadeus/intents.md` に Intent が登録されている。",
+    `- Discovery の recommended 候補「販売管理の最小購入フロー」の Intent 欄を \`${intentId}\` に更新してください。`,
+    `- Discovery の \`既存 Intent との関係\` には \`${intentId}\` が登録済みであることを書いてください。`,
+    "- `.amadeus/discoveries.md` の推奨次アクションは、Intent 初期化済みで次に Ideation へ進める内容に更新してください。",
+    "",
+    "実行条件:",
+    "- 質問せずに続行してください。",
+    "- 対象 Discovery の gate passed を確認してから進めてください。",
+    "- amadeus-intent-init の成果物契約に従い、Intent を初期化してください。",
+    "- Intent initialized snapshot として保存できる状態まで進めてください。",
+    "- git commit はしないでください。",
+    `- 作成後に \`bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . ${intentId}\` を実行し、結果を要約してください。`,
+  ].join("\n");
 }
 
 function ideationPrompt(): string {
@@ -392,23 +725,18 @@ function ideationPrompt(): string {
     `既存の initialized Intent \`${intentId}\` を Ideation へ進めてください。`,
     "",
     "Intent の目的:",
-    "- 大きな入力テーマを、Intent 化前に Discovery Brief として整理できるようにする。",
-    "- multi_intent の場合に、最初に Intent 化する候補を1件に絞れるようにする。",
-    "- 後続の Ideation と Inception が参照できる粒度で、Discovery の責務境界を保つ。",
+    "- 顧客が商品を選び、販売可能在庫を確認し、購入者情報と注文内容をもとに注文を作成できるようにする。",
     "",
     "Ideation で分かっていること:",
-    "- 対象: ユーザーが大きな開発テーマを渡したとき、AI が Discovery Brief と Intent 候補を記録できる体験。",
-    "- 対象外: Intent 初期化の自動実行、Requirement、Use Case、Unit、Bolt、Task の定義、実装方針や Construction の証拠化。",
-    "- 初期モック: Discovery Brief 確認カード。",
-    "- Inception への引き継ぎ: Discovery Brief 記録と Intent 候補提示を要求候補にする。",
+    "- 対象: 商品選択、販売可能在庫の確認、購入者情報の記録、注文内容確認、注文作成。",
+    "- 対象外: 会員登録、ログイン、顧客台帳、購入履歴管理、決済詳細、売上確定、在庫引当、入荷、棚卸し、出荷。",
+    "- 初期モック: 注文内容確認画面。",
+    "- Inception への引き継ぎ: 最小購入フローを要求候補にする。",
     "",
-    "制約:",
+    "実行条件:",
     "- 質問せずに続行してください。",
-    "- 対象 Intent 配下の Ideation 成果物だけを作成または更新してください。",
-    "- Inception 成果物、Construction 成果物、domain 成果物、実装コードは作らないでください。",
-    "- Task ID は導入しないでください。",
-    "- Ideation traceability finalization まで完了し、Ideation gate passed の状態にしてください。",
-    '- `state.json` は `phase: "ideation"`、`status: "completed"`、`ideation.status: "completed"`、`ideation.gate: "passed"` にしてください。',
+    "- amadeus-ideation の成果物契約に従い、Ideation を完了してください。",
+    "- Ideation completed snapshot として保存できる状態まで進めてください。",
     "- git commit はしないでください。",
     `- 作成後に \`bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . ${intentId}\` を実行し、結果を要約してください。`,
   ].join("\n");
@@ -421,34 +749,25 @@ function inceptionPrompt(): string {
     `Ideation 完了済み Intent \`${intentId}\` を Inception へ進めてください。`,
     "",
     "Inception で分かっていること:",
-    "- Requirement 候補は、Discovery Brief を記録できることと、Intent 候補を提示できることの2つです。",
-    "- Story 候補は、利用者が Discovery Brief を読み、最初の Intent 候補を選べることです。",
-    "- Use Case 候補は、入力テーマと判断を記録すること、Intent 候補を確認することです。",
-    "- サブドメインは SD001 Amadeus 利用支援です。",
-    "- 境界づけられたコンテキストは BC001 Discovery 支援です。",
-    "- U001 と U002 は BC001 を参照します。",
-    "- Unit 候補は、Discovery Brief 記録と Intent 候補提示です。",
-    "- Bolt 候補は、B001 Discovery Brief 記録と B002 Intent 候補提示です。",
+    "- Requirement 候補は、商品を選べること、販売可能在庫を確認できること、購入者情報を記録できること、注文を作成できることです。",
+    "- Story 候補は、顧客が商品を選び、注文内容を確認して注文を作成できることです。",
+    "- Use Case 候補は、商品を選択すること、注文内容を確認すること、注文を作成することです。",
+    "- steering layer のサブドメイン ID を維持してください。SD001 は商品管理、SD002 は顧客管理、SD003 は入荷管理、SD004 は販売管理、SD005 は出荷管理です。",
+    "- Intent の中心サブドメインは SD004 販売管理です。",
+    "- 在庫管理を Intent 内で明示する場合は、既存 ID と衝突させず SD006 在庫管理として追加してください。",
+    "- 境界づけられたコンテキストは BC001 販売管理を中心にしてください。",
+    "- BC001 販売管理は SD004 販売管理に対応させてください。",
+    "- この Intent が所有する境界づけられたコンテキストは BC001 販売管理だけにしてください。",
+    "- 商品管理、顧客管理、入荷管理、出荷管理、在庫管理は、Intent 配下の境界づけられたコンテキストとして展開せず、必要な依存は BC001 の契約または未確認事項で扱ってください。",
+    "- BC001 は、販売可能在庫の参照では在庫管理に依存しますが、在庫引当は今回の範囲外にしてください。",
+    "- BC001 は、購入者情報を注文に記録しますが、会員登録、ログイン、顧客台帳、購入履歴管理は今回の範囲外にしてください。",
+    "- Unit 候補は、最小購入フローと注文作成です。",
+    "- Bolt 候補は、B001 注文作成、B002 注文内容確認、B003 商品選択です。",
     "",
-    "制約:",
+    "実行条件:",
     "- 質問せずに続行してください。",
-    "- 対象 Intent 配下の Inception 成果物だけを作成または更新してください。",
-    "- `tasks.md` は作らないでください。",
-    "- Construction 成果物、実装コード、CI は作らないでください。",
-    "- `domain/bounded-contexts.md` に BC001 を記録し、`units.md` の `コンテキスト` は BC001 にしてください。",
-    "- BC001 の `models.md` に DDD Module `DM001 Discovery Brief` を記録し、`models/DM001-discovery-brief.md` を作成してください。",
-    "- `models/DM001-discovery-brief.md` には `目的`、`責務`、`概念関係`、`ライフサイクル`、`集約候補`、`モデル要素`、`関連成果物` を置いてください。",
-    "- `DM001 Discovery Brief` は、入力テーマ、確認した前提、判定、判定理由、推奨次アクションの関係を扱う DDD Module としてください。",
-    "- `モデル要素` 見出しには本文を書き、その後に `## 集約`、`## 値オブジェクト`、`## ドメインサービス` のような level 2 見出しで DDD 要素表を分けてください。",
-    "- DDD 要素表の列は、必ず `識別子`、`名前`、`役割`、`根拠` にしてください。",
-    "- `集約` 表には `DA001 Discovery Brief` を置いてください。",
-    "- `models/DM001-discovery-brief.md` の `関連成果物` では、`models.md` は `../models.md`、`contracts.md` は `../contracts.md`、Intent 配下の `domain/bounded-contexts.md` は `../../../bounded-contexts.md`、Intent 直下の `use-cases` と `units` は `../../../../use-cases/...` と `../../../../units/...` でリンクしてください。",
-    "- 契約条件が未確認の場合は、BC001 の `contracts.md` に未確認事項として残してください。",
-    "- `domain/bounded-contexts.md` の未確認事項では、BC001 の詳細なモデルが未確認であるとは書かず、DM001 以外の候補評価基準や契約条件が未確認であることに限定してください。",
-    "- D002 と D003 の判断文では、DM001 が `models.md` と `models/DM001-discovery-brief.md` に定義済みであることを書き、詳細なモデルが未確認であるとは書かないでください。",
-    "- R002 の根拠は、実際に存在する `scope.md`、`mocks/initial-confirmation.puml`、または R002 自身の未確認事項に基づけ、`ideation.md` に存在しない未確定事項を根拠にしないでください。",
-    "- Inception traceability finalization まで完了し、Inception gate passed の状態にしてください。",
-    '- `state.json` は `phase: "inception"`、`status: "completed"`、`inception.status: "completed"`、`inception.gate: "passed"` にしてください。',
+    "- amadeus-inception の成果物契約に従い、Inception を完了してください。",
+    "- Inception completed snapshot として保存できる状態まで進めてください。",
     "- git commit はしないでください。",
     `- 作成後に \`bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . ${intentId}\` を実行し、結果を要約してください。`,
   ].join("\n");
@@ -462,21 +781,14 @@ function constructionPrompt(): string {
     "",
     "対象:",
     "- 対象 Bolt: B001",
-    "- 目的: Discovery Brief 記録を実装可能な Task 集合へ分解する。",
+    "- 目的: 注文作成を実装可能な Task 集合へ分解する。",
+    "- 注文作成は、注文内容、購入者情報、販売可能在庫の参照結果をもとに注文を作成する Bolt としてください。",
     "- Construction Design は Task 生成の根拠になる粒度にしてください。",
     "",
-    "作成または更新対象:",
-    "- B001 の `design.md`",
-    "- B001 の `tasks.md`",
-    "- B001 の `notes.md`",
-    "- `traceability.md` の Construction Design からの追跡",
-    "- `state.json` の Construction 状態",
-    "",
-    "制約:",
+    "実行条件:",
     "- 質問せずに続行してください。",
-    "- 実装コード、テストコード、test-results.md、PR 記録は作らないでください。",
-    "- `designGate.status` は実装へ進める粒度になった場合だけ `ready` にしてください。",
-    "- `tasks.status` は Task 集合を生成した場合だけ `generated` にしてください。",
+    "- amadeus-construction-bolt-preparation の成果物契約に従い、Bolt 実行準備を完了してください。",
+    "- Construction design ready snapshot として保存できる状態まで進めてください。",
     "- git commit はしないでください。",
     `- 作成後に \`bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . ${intentId}\` を実行し、結果を要約してください。`,
   ].join("\n");
@@ -484,9 +796,42 @@ function constructionPrompt(): string {
 
 const steps: GenerationStep[] = [
   {
+    id: "01-discovery",
+    snapshot: "examples/01-discovery-completed",
+    prompt: steeringDiscoveryPrompt(),
+    expectedStatePath: `.amadeus/discoveries/${discoveryId}/state.json`,
+    expectedState: {
+      phase: "discovery",
+      status: "completed",
+      decision: "multi_intent",
+      gate: "passed",
+    },
+    provenanceSkillFiles: [
+      "skills/amadeus-steering/SKILL.md",
+      "skills/amadeus-discovery/SKILL.md",
+    ],
+  },
+  {
+    id: "02-intent-initialized",
+    snapshot: "examples/02-intent-initialized",
+    prompt: intentInitPrompt(),
+    validationIntent: intentId,
+    expectedState: {
+      phase: "initialized",
+      status: "in_progress",
+      "initialized.status": "completed",
+    },
+    provenanceSkillFiles: [
+      "skills/amadeus-steering/SKILL.md",
+      "skills/amadeus-discovery/SKILL.md",
+      "skills/amadeus-intent-init/SKILL.md",
+    ],
+  },
+  {
     id: "03-ideation",
     snapshot: "examples/03-ideation-completed",
     prompt: ideationPrompt(),
+    validationIntent: intentId,
     expectedState: {
       phase: "ideation",
       status: "completed",
@@ -494,6 +839,9 @@ const steps: GenerationStep[] = [
       "ideation.gate": "passed",
     },
     provenanceSkillFiles: [
+      "skills/amadeus-steering/SKILL.md",
+      "skills/amadeus-discovery/SKILL.md",
+      "skills/amadeus-intent-init/SKILL.md",
       "skills/amadeus-ideation/SKILL.md",
       "skills/amadeus-ideation-scope-framing/SKILL.md",
       "skills/amadeus-ideation-feasibility-shaping/SKILL.md",
@@ -505,6 +853,7 @@ const steps: GenerationStep[] = [
     id: "04-inception",
     snapshot: "examples/04-inception-completed",
     prompt: inceptionPrompt(),
+    validationIntent: intentId,
     expectedState: {
       phase: "inception",
       status: "completed",
@@ -512,6 +861,9 @@ const steps: GenerationStep[] = [
       "inception.gate": "passed",
     },
     provenanceSkillFiles: [
+      "skills/amadeus-steering/SKILL.md",
+      "skills/amadeus-discovery/SKILL.md",
+      "skills/amadeus-intent-init/SKILL.md",
       "skills/amadeus-ideation/SKILL.md",
       "skills/amadeus-ideation-scope-framing/SKILL.md",
       "skills/amadeus-ideation-feasibility-shaping/SKILL.md",
@@ -528,6 +880,7 @@ const steps: GenerationStep[] = [
     id: "05-construction-design-ready",
     snapshot: "examples/05-construction-design-ready",
     prompt: constructionPrompt(),
+    validationIntent: intentId,
     expectedState: {
       phase: "construction",
       status: "in_progress",
@@ -538,6 +891,9 @@ const steps: GenerationStep[] = [
       "construction.bolts.0.tasks.status": "generated",
     },
     provenanceSkillFiles: [
+      "skills/amadeus-steering/SKILL.md",
+      "skills/amadeus-discovery/SKILL.md",
+      "skills/amadeus-intent-init/SKILL.md",
       "skills/amadeus-ideation/SKILL.md",
       "skills/amadeus-ideation-scope-framing/SKILL.md",
       "skills/amadeus-ideation-feasibility-shaping/SKILL.md",
@@ -557,21 +913,23 @@ const steps: GenerationStep[] = [
 ];
 
 const options = parseArgs(Bun.argv.slice(2));
-printPlan(options);
-for (const skillFile of new Set(steps.flatMap((step) => [
+const plan = buildGenerationPlan(options);
+assertPrerequisiteState(plan);
+printPlan(options, plan);
+for (const skillFile of new Set(plan.targetSteps.flatMap((step) => [
   ...step.provenanceSkillFiles,
   ...(step.runtimeSkillFiles ?? []),
 ]))) {
   ensurePromotedSkillMatchesSource(skillFile);
 }
 if (!options.dryRun) {
-  prepareWorkspace();
-  for (const step of steps) {
+  prepareWorkspace(plan.inputStep);
+  for (const step of plan.targetSteps) {
     console.log(`running: ${step.id}`);
     await runCodexStep(options, step);
     console.log(`snapshot staged: ${step.snapshot}`);
   }
-  const provenanceText = updatedProvenanceText();
-  applyStagedSnapshotsAndProvenance(provenanceText);
+  const provenanceText = updatedProvenanceText(plan);
+  applyStagedSnapshotsAndProvenance(provenanceText, plan.targetSteps);
   console.log("example generation: ok");
 }

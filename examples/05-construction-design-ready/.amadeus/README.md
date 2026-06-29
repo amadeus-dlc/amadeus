@@ -1,18 +1,20 @@
-# Amadeus Example Workspace
-
-この `.amadeus/` は、Amadeus の Discovery から Inception までの段階を示す例示成果物です。
+# ECサイト構築例示 workspace
 
 ## 役割
 
-- Steering layer は、複数 Intent に共通する目的、アクター、制約、用語、ドメイン境界を扱います。
-- Discovery layer は、入力テーマを Intent 化する前に課題粒度を整理します。
-- Intent layer は、個別 Intent の目的、Ideation、Inception 成果物を扱います。
+この workspace は、ECサイト構築という大きな入力テーマを Amadeus DLC で段階的に扱うための例示成果物を置く。
 
 ## 読む順序
 
-1. [steering.md](steering.md)
-2. [objective.md](steering/objective.md)
-3. [actors.md](steering/actors.md)
-4. [domain/subdomains.md](domain/subdomains.md)
-5. [discoveries.md](discoveries.md)
-6. [intents.md](intents.md)
+1. `steering.md`
+2. `steering/objective.md`
+3. `steering/actors.md`
+4. `domain/subdomains.md`
+5. `discoveries.md`
+6. `intents.md`
+
+## 現在の状態
+
+- Steering layer は、ECサイト構築を複数の Intent 候補へ分けるための共有前提を扱う。
+- Discovery layer は、入力テーマ「ECサイトを構築したい」を `multi_intent` として整理する。
+- Intent `20260629-minimum-purchase-flow` は B001 の Construction Design ready であり、次に実装へ進める。
