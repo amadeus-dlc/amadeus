@@ -6,13 +6,11 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "b05111b434618fc9f361e907760d6976",
-          "staleReason": "Steering 詳細成果物を steering/ 配下へ移す構造契約を反映したため。後続 PR で real provider による再生成を実施する。"
+          "md5": "3421cc297f9b25b7af50aa094188e38a"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
-          "md5": "143ade919ecaf01fe05de22f7597949e",
-          "staleReason": "Grilling Decision Trail の skill 規約だけを更新し、既存 example は migration 対象外のため。"
+          "md5": "e9a332d320be8b0645b30272ae1a5c81"
         }
       ]
     },
@@ -21,18 +19,15 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "b05111b434618fc9f361e907760d6976",
-          "staleReason": "Steering 詳細成果物を steering/ 配下へ移す構造契約を反映したため。後続 PR で real provider による再生成を実施する。"
+          "md5": "3421cc297f9b25b7af50aa094188e38a"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
-          "md5": "143ade919ecaf01fe05de22f7597949e",
-          "staleReason": "Grilling Decision Trail の skill 規約だけを更新し、既存 example は migration 対象外のため。"
+          "md5": "e9a332d320be8b0645b30272ae1a5c81"
         },
         {
           "path": "skills/amadeus-intent-init/SKILL.md",
-          "md5": "0a7e5c285c49edfd126fa53e9911cac9",
-          "staleReason": "Grilling Decision Trail の skill 規約だけを更新し、既存 example は migration 対象外のため。"
+          "md5": "5132e93a975c713d07689dd127fc9832"
         }
       ]
     },
@@ -41,28 +36,23 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "b05111b434618fc9f361e907760d6976",
-          "staleReason": "Steering 詳細成果物を steering/ 配下へ移す構造契約を反映したため。後続 PR で real provider による再生成を実施する。"
+          "md5": "3421cc297f9b25b7af50aa094188e38a"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
-          "md5": "143ade919ecaf01fe05de22f7597949e",
-          "staleReason": "Grilling Decision Trail の skill 規約だけを更新し、既存 example は migration 対象外のため。"
+          "md5": "e9a332d320be8b0645b30272ae1a5c81"
         },
         {
           "path": "skills/amadeus-intent-init/SKILL.md",
-          "md5": "0a7e5c285c49edfd126fa53e9911cac9",
-          "staleReason": "Grilling Decision Trail の skill 規約だけを更新し、既存 example は migration 対象外のため。"
+          "md5": "5132e93a975c713d07689dd127fc9832"
         },
         {
           "path": "skills/amadeus-ideation/SKILL.md",
-          "md5": "f5b26b6fa308736ae29518b4745ef89a",
-          "staleReason": "モジュールファイル用語だけを更新し、生成済み example の構造と内容は変わらないため。"
+          "md5": "15f0467c271813ee767f2cf094a77e91"
         },
         {
           "path": "skills/amadeus-ideation-scope-framing/SKILL.md",
-          "md5": "f45a03df7d62a7c4d4413601d7abe813",
-          "staleReason": "モジュールファイル用語だけを更新し、生成済み example の構造と内容は変わらないため。"
+          "md5": "401d14388c4fa5e1831d4867df24c476"
         },
         {
           "path": "skills/amadeus-ideation-feasibility-shaping/SKILL.md",
@@ -83,28 +73,23 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "b05111b434618fc9f361e907760d6976",
-          "staleReason": "Steering 詳細成果物を steering/ 配下へ移す構造契約を反映したため。後続 PR で real provider による再生成を実施する。"
+          "md5": "3421cc297f9b25b7af50aa094188e38a"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
-          "md5": "143ade919ecaf01fe05de22f7597949e",
-          "staleReason": "Grilling Decision Trail の skill 規約だけを更新し、既存 example は migration 対象外のため。"
+          "md5": "e9a332d320be8b0645b30272ae1a5c81"
         },
         {
           "path": "skills/amadeus-intent-init/SKILL.md",
-          "md5": "0a7e5c285c49edfd126fa53e9911cac9",
-          "staleReason": "Grilling Decision Trail の skill 規約だけを更新し、既存 example は migration 対象外のため。"
+          "md5": "5132e93a975c713d07689dd127fc9832"
         },
         {
           "path": "skills/amadeus-ideation/SKILL.md",
-          "md5": "f5b26b6fa308736ae29518b4745ef89a",
-          "staleReason": "モジュールファイル用語だけを更新し、生成済み example の構造と内容は変わらないため。"
+          "md5": "15f0467c271813ee767f2cf094a77e91"
         },
         {
           "path": "skills/amadeus-ideation-scope-framing/SKILL.md",
-          "md5": "f45a03df7d62a7c4d4413601d7abe813",
-          "staleReason": "モジュールファイル用語だけを更新し、生成済み example の構造と内容は変わらないため。"
+          "md5": "401d14388c4fa5e1831d4867df24c476"
         },
         {
           "path": "skills/amadeus-ideation-feasibility-shaping/SKILL.md",
@@ -120,8 +105,7 @@
         },
         {
           "path": "skills/amadeus-inception/SKILL.md",
-          "md5": "a945f2cac547a8260750fcd9f2c1fe50",
-          "staleReason": "モジュールファイル用語だけを更新し、生成済み example の構造と内容は変わらないため。"
+          "md5": "109a64f9a314d8afe8c0db3afe023d75"
         },
         {
           "path": "skills/amadeus-inception-requirements-definition/SKILL.md",
@@ -146,28 +130,23 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "b05111b434618fc9f361e907760d6976",
-          "staleReason": "Steering 詳細成果物を steering/ 配下へ移す構造契約を反映したため。後続 PR で real provider による再生成を実施する。"
+          "md5": "3421cc297f9b25b7af50aa094188e38a"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
-          "md5": "143ade919ecaf01fe05de22f7597949e",
-          "staleReason": "Grilling Decision Trail の skill 規約だけを更新し、既存 example は migration 対象外のため。"
+          "md5": "e9a332d320be8b0645b30272ae1a5c81"
         },
         {
           "path": "skills/amadeus-intent-init/SKILL.md",
-          "md5": "0a7e5c285c49edfd126fa53e9911cac9",
-          "staleReason": "Grilling Decision Trail の skill 規約だけを更新し、既存 example は migration 対象外のため。"
+          "md5": "5132e93a975c713d07689dd127fc9832"
         },
         {
           "path": "skills/amadeus-ideation/SKILL.md",
-          "md5": "f5b26b6fa308736ae29518b4745ef89a",
-          "staleReason": "モジュールファイル用語だけを更新し、生成済み example の構造と内容は変わらないため。"
+          "md5": "15f0467c271813ee767f2cf094a77e91"
         },
         {
           "path": "skills/amadeus-ideation-scope-framing/SKILL.md",
-          "md5": "f45a03df7d62a7c4d4413601d7abe813",
-          "staleReason": "モジュールファイル用語だけを更新し、生成済み example の構造と内容は変わらないため。"
+          "md5": "401d14388c4fa5e1831d4867df24c476"
         },
         {
           "path": "skills/amadeus-ideation-feasibility-shaping/SKILL.md",
@@ -183,8 +162,7 @@
         },
         {
           "path": "skills/amadeus-inception/SKILL.md",
-          "md5": "a945f2cac547a8260750fcd9f2c1fe50",
-          "staleReason": "モジュールファイル用語だけを更新し、生成済み example の構造と内容は変わらないため。"
+          "md5": "109a64f9a314d8afe8c0db3afe023d75"
         },
         {
           "path": "skills/amadeus-inception-requirements-definition/SKILL.md",

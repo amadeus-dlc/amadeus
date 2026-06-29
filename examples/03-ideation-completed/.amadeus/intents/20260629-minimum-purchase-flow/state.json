@@ -1,0 +1,27 @@
+{
+  "intent": "20260629-minimum-purchase-flow",
+  "phase": "ideation",
+  "status": "completed",
+  "initialized": {
+    "status": "completed",
+    "createdArtifacts": [
+      "../20260629-minimum-purchase-flow.md",
+      "state.json"
+    ],
+    "next": "ideation"
+  },
+  "ideation": {
+    "status": "completed",
+    "requiredArtifacts": [
+      "../20260629-minimum-purchase-flow.md",
+      "scope.md",
+      "ideation.md",
+      "decisions.md",
+      "traceability.md"
+    ],
+    "requiredMocks": [
+      "mocks/initial-confirmation.puml"
+    ],
+    "gate": "passed"
+  }
+}

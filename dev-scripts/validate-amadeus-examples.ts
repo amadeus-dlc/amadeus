@@ -1,13 +1,15 @@
 #!/usr/bin/env bun
 
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 
 type ExampleSnapshot = {
   name: string;
   workdir: string;
   intent?: string;
+  statePath?: string;
   expectedState?: Record<string, string>;
+  allowedDomainFiles?: string[];
 };
 
 type SkillProvenanceManifest = {
@@ -26,17 +28,31 @@ type SkillFileDigest = {
   staleReason?: string;
 };
 
+const expectedGenerationSnapshots = [
+  "examples/01-discovery-completed",
+  "examples/02-intent-initialized",
+  "examples/03-ideation-completed",
+  "examples/04-inception-completed",
+  "examples/05-construction-design-ready",
+];
 const validator = ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts";
 const provenanceManifestPath = "examples/skill-provenance.json";
 const snapshots: ExampleSnapshot[] = [
   {
     name: "Discovery completed",
     workdir: "examples/01-discovery-completed",
+    statePath: "examples/01-discovery-completed/.amadeus/discoveries/20260629-ec-site-construction/state.json",
+    expectedState: {
+      phase: "discovery",
+      status: "completed",
+      decision: "multi_intent",
+      gate: "passed",
+    },
   },
   {
     name: "Intent initialized",
     workdir: "examples/02-intent-initialized",
-    intent: "20260628-discovery-brief-creation",
+    intent: "20260629-minimum-purchase-flow",
     expectedState: {
       phase: "initialized",
       status: "in_progress",
@@ -46,10 +62,9 @@ const snapshots: ExampleSnapshot[] = [
   {
     name: "Ideation completed",
     workdir: "examples/03-ideation-completed",
-    intent: "20260628-discovery-brief-creation",
+    intent: "20260629-minimum-purchase-flow",
     expectedState: {
       phase: "ideation",
-      status: "completed",
       "ideation.status": "completed",
       "ideation.gate": "passed",
     },
@@ -57,18 +72,24 @@ const snapshots: ExampleSnapshot[] = [
   {
     name: "Inception completed",
     workdir: "examples/04-inception-completed",
-    intent: "20260628-discovery-brief-creation",
+    intent: "20260629-minimum-purchase-flow",
     expectedState: {
       phase: "inception",
-      status: "completed",
       "inception.status": "completed",
       "inception.gate": "passed",
     },
+    allowedDomainFiles: [
+      "bounded-contexts.md",
+      "bounded-contexts/BC001-sales-management.md",
+      "bounded-contexts/BC001-sales-management/contracts.md",
+      "bounded-contexts/BC001-sales-management/models.md",
+      "subdomains.md",
+    ],
   },
   {
     name: "Construction design ready",
     workdir: "examples/05-construction-design-ready",
-    intent: "20260628-discovery-brief-creation",
+    intent: "20260629-minimum-purchase-flow",
     expectedState: {
       phase: "construction",
       status: "in_progress",
@@ -78,10 +99,21 @@ const snapshots: ExampleSnapshot[] = [
       "construction.bolts.0.designGate.status": "ready",
       "construction.bolts.0.tasks.status": "generated",
     },
+    allowedDomainFiles: [
+      "bounded-contexts.md",
+      "bounded-contexts/BC001-sales-management.md",
+      "bounded-contexts/BC001-sales-management/contracts.md",
+      "bounded-contexts/BC001-sales-management/models.md",
+      "subdomains.md",
+    ],
   },
 ];
 
 const mode = Bun.argv[2] ?? "--all";
+if (mode === "--generation-plan") {
+  process.exitCode = validateGenerationPlan() ? 0 : 1;
+  process.exit();
+}
 const targets = selectTargets(mode);
 let failed = false;
 
@@ -90,6 +122,7 @@ if (mode === "--workspaces-only" || mode === "--all") {
 }
 
 failed = !validateSnapshotStates(stateValidationTargets(targets)) || failed;
+failed = !validateDomainFileSets(stateValidationTargets(targets)) || failed;
 
 for (const target of targets) {
   const args = ["run", validator, target.workdir, ...(target.intent ? [target.intent] : [])];
@@ -120,10 +153,10 @@ function stateValidationTargets(targets: ExampleSnapshot[]): ExampleSnapshot[] {
 function validateSnapshotStates(targets: ExampleSnapshot[]): boolean {
   const errors: string[] = [];
   for (const target of targets) {
-    if (!target.intent || !target.expectedState) continue;
-    const statePath = `${target.workdir}/.amadeus/intents/${target.intent}/state.json`;
+    if (!target.expectedState) continue;
+    const statePath = target.statePath ?? `${target.workdir}/.amadeus/intents/${target.intent}/state.json`;
     if (!existsSync(statePath)) {
-      errors.push(`${target.workdir}: missing intent state: ${statePath}`);
+      errors.push(`${target.workdir}: missing state file: ${statePath}`);
       continue;
     }
     let state: unknown;
@@ -150,6 +183,46 @@ function validateSnapshotStates(targets: ExampleSnapshot[]): boolean {
   console.log("## Example snapshot states");
   console.log("snapshot states: ok");
   return true;
+}
+
+function validateDomainFileSets(targets: ExampleSnapshot[]): boolean {
+  const errors: string[] = [];
+  for (const target of targets) {
+    if (!target.intent || !target.allowedDomainFiles) continue;
+    const domainRoot = `${target.workdir}/.amadeus/intents/${target.intent}/domain`;
+    if (!existsSync(domainRoot)) continue;
+
+    const allowed = new Set(target.allowedDomainFiles);
+    for (const actualFile of listFiles(domainRoot)) {
+      if (!allowed.has(actualFile)) {
+        errors.push(`${target.workdir}: unexpected domain file: ${actualFile}`);
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    console.error("## Example domain files");
+    for (const error of errors) console.error(`- ${error}`);
+    return false;
+  }
+
+  console.log("## Example domain files");
+  console.log("domain files: ok");
+  return true;
+}
+
+function listFiles(root: string, prefix = ""): string[] {
+  const files: string[] = [];
+  for (const entry of readdirSync(prefix ? `${root}/${prefix}` : root)) {
+    const relativePath = prefix ? `${prefix}/${entry}` : entry;
+    const absolutePath = `${root}/${relativePath}`;
+    if (statSync(absolutePath).isDirectory()) {
+      files.push(...listFiles(root, relativePath));
+    } else {
+      files.push(relativePath);
+    }
+  }
+  return files.sort();
 }
 
 function stateValue(state: unknown, path: string): unknown {
@@ -180,6 +253,40 @@ function selectTargets(mode: string): ExampleSnapshot[] {
   }
   console.error(`unknown mode: ${mode}`);
   process.exit(1);
+}
+
+function validateGenerationPlan(): boolean {
+  console.log("## Example generation plan");
+  const result = Bun.spawnSync({
+    cmd: ["bun", "run", "dev-scripts/generate-amadeus-examples.ts", "--dry-run"],
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const stdout = new TextDecoder().decode(result.stdout);
+  const stderr = new TextDecoder().decode(result.stderr);
+  if (stdout.trim().length > 0) console.log(stdout.trimEnd());
+  if (stderr.trim().length > 0) console.error(stderr.trimEnd());
+  if (!result.success) return false;
+
+  const actualSnapshots = stdout
+    .split("\n")
+    .filter((line) => line.startsWith("- "))
+    .map((line) => line.slice(2).trim());
+  const errors: string[] = [];
+  if (actualSnapshots.length !== expectedGenerationSnapshots.length) {
+    errors.push(`expected ${expectedGenerationSnapshots.length} snapshots, actual ${actualSnapshots.length}`);
+  }
+  for (const [index, expectedSnapshot] of expectedGenerationSnapshots.entries()) {
+    if (actualSnapshots[index] !== expectedSnapshot) {
+      errors.push(`snapshot[${index}] expected ${expectedSnapshot}, actual ${actualSnapshots[index] ?? "missing"}`);
+    }
+  }
+  if (errors.length > 0) {
+    for (const error of errors) console.error(`- ${error}`);
+    return false;
+  }
+  console.log("generation plan: ok");
+  return true;
 }
 
 function validateSkillProvenance(): boolean {

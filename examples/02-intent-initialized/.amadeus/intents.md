@@ -1,13 +1,17 @@
-# Intent 一覧
+# インテント
 
 ## 一覧
 
 | 識別子 | 概要 | 依存 | 詳細 |
 |---|---|---|---|
-| 20260628-discovery-brief-creation | 入力テーマを Discovery Brief に整理できる | なし | [20260628-discovery-brief-creation.md](intents/20260628-discovery-brief-creation.md) |
+| 20260629-minimum-purchase-flow | 顧客が商品を選び、販売可能在庫を確認し、購入者情報と注文内容をもとに注文を作成できるようにする。 | なし | [20260629-minimum-purchase-flow.md](intents/20260629-minimum-purchase-flow.md) |
+
+Intent は1件登録済みである。
 
 ## 依存関係
 
 | インテント | 依存 | 理由 |
 |---|---|---|
-| 20260628-discovery-brief-creation | なし | Discovery Brief の最初の候補として単独で成立するため |
+| 20260629-minimum-purchase-flow | なし | 商品選択から注文作成までの最小購入フローとして単独で成立するため。 |
+
+Intent 間の依存関係は1件登録済みである。
