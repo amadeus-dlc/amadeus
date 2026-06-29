@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "root=$(git rev-parse --show-toplevel) && bun \"$root/.codex/hooks/read-context.ts\" SessionStart \"$root\"",
+            "timeout": 30,
+            "statusMessage": "CONTEXT.md の語彙定義と Avoid を読み込み中"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "root=$(git rev-parse --show-toplevel) && bun \"$root/.codex/hooks/read-context.ts\" UserPromptSubmit \"$root\"",
+            "timeout": 30,
+            "statusMessage": "CONTEXT.md の語彙定義と Avoid を読み込み中"
+          }
+        ]
+      }
+    ]
+  }
+}
