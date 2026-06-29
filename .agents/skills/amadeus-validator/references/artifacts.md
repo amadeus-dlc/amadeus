@@ -506,7 +506,7 @@ Task ID は Construction 以降の追跡で `Bnnn/Tnnn` を正規形にする。
 `<ddd-element-id>` は、`DAnnn`、`DEnnn`、`DVOnnn`、`DSnnn`、`DEVnnn`、`DRnnn`、`DFnnn` のいずれかである。
 `BCnnn` は同じ階層の `domain/bounded-contexts.md` に存在する必要がある。
 `DMnnn` は、その境界づけられたコンテキストの `models.md` に存在する必要がある。
-`<ddd-element-id>` は、同じ行の `定義元` が指す `model.md` 内の対応する種別表に存在する必要がある。
+`<ddd-element-id>` は、同じ行の `定義元` が指す DDD Module のモジュールファイル内の対応する種別表に存在する必要がある。
 
 `ドメインモデルからの追跡` の `種別` が `境界` の場合、`対象` は ID 化しない。
 この場合の `対象` は、同じ階層の `domain/bounded-contexts.md` にある `外部境界` 表の `名前` に存在する必要がある。
@@ -584,17 +584,30 @@ Task ID は Construction 以降の追跡で `Bnnn/Tnnn` を正規形にする。
 
 `識別子` は `DMnnn` の形式にする。
 同じ表の中で `識別子` を重複させない。
-`詳細` は `models/<ddd-module-id>-<slug>/model.md` を指す相対リンクにする。
-`詳細` のリンク先ディレクトリ名は `DMnnn-<slug>` の形式にする。
+`詳細` は `models/<ddd-module-id>-<slug>.md` を指す相対リンクにする。
+`詳細` のリンク先ファイル名は `DMnnn-<slug>.md` の形式にする。
 
-## `domain/bounded-contexts/<bounded-context-id>/models/<ddd-module-id>-<slug>/model.md`
+## `domain/bounded-contexts/<bounded-context-id>-<slug>/models/<ddd-module-id>-<slug>.md`
 
 対象は次である。
 
-- `.amadeus/domain/bounded-contexts/<bounded-context-id>/models/<ddd-module-id>-<slug>/model.md`
-- `.amadeus/intents/<intent-id>-<slug>/domain/bounded-contexts/<bounded-context-id>/models/<ddd-module-id>-<slug>/model.md`
+- `.amadeus/domain/bounded-contexts/<bounded-context-id>-<slug>/models/<ddd-module-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>-<slug>/domain/bounded-contexts/<bounded-context-id>-<slug>/models/<ddd-module-id>-<slug>.md`
 
-存在する場合だけ検証する。
+`models.md` の `詳細` が指す場合は存在が必要である。
+DDD Module のモジュールディレクトリは、追加の子成果物が必要になるまで要求しない。
+
+必須見出しは次である。
+
+- `目的`
+- `責務`
+- `概念関係`
+- `ライフサイクル`
+- `集約候補`
+- `モデル要素`
+- `関連成果物`
+
+各見出しには本文が必要である。
 
 DDD 要素は種別ごとに表を分ける。
 次の表は、存在する場合だけ検証する。
@@ -615,7 +628,7 @@ DDD 要素は種別ごとに表を分ける。
 - `根拠`
 
 `名前`、`役割`、`根拠` は空欄にしない。
-識別子は同じ `model.md` 内で重複させない。
+識別子は同じ DDD Module のモジュールファイル内で重複させない。
 
 各表の `識別子` は次の形式にする。
 

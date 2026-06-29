@@ -297,6 +297,112 @@ function removeBoundedContextModuleFile(workspace: string): void {
   rmSync(intentPath(workspace, `domain/bounded-contexts/${boundedContext1}.md`));
 }
 
+function writeDddModuleWithOldModelPath(workspace: string): void {
+  const moduleDirectory = intentPath(workspace, `domain/bounded-contexts/${boundedContext1}/models/DM001-discovery-brief`);
+  mkdirSync(moduleDirectory, { recursive: true });
+  writeFileSync(
+    intentPath(workspace, `domain/bounded-contexts/${boundedContext1}/models.md`),
+    [
+      "# モデル",
+      "",
+      "## 一覧",
+      "",
+      "| 識別子 | 名前 | 役割 | 詳細 |",
+      "|---|---|---|---|",
+      "| DM001 | Discovery Brief | 入力テーマと判定の概念関係を扱う。 | [model.md](models/DM001-discovery-brief/model.md) |",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(moduleDirectory, "model.md"),
+    [
+      "# DM001: Discovery Brief",
+      "",
+      "## 概念関係",
+      "",
+      "入力テーマ、確認した前提、判定、推奨次アクションの関係を扱う。",
+      "",
+      "## ライフサイクル",
+      "",
+      "作成から Intent 候補確認までを扱う。",
+      "",
+      "## 集約候補",
+      "",
+      "Discovery Brief を集約候補として扱う。",
+      "",
+    ].join("\n"),
+  );
+}
+
+function writeDddModuleWithModuleFile(workspace: string): void {
+  const modulePath = intentPath(workspace, `domain/bounded-contexts/${boundedContext1}/models/DM001-discovery-brief.md`);
+  mkdirSync(intentPath(workspace, `domain/bounded-contexts/${boundedContext1}/models`), { recursive: true });
+  writeFileSync(
+    intentPath(workspace, `domain/bounded-contexts/${boundedContext1}/models.md`),
+    [
+      "# モデル",
+      "",
+      "## 一覧",
+      "",
+      "| 識別子 | 名前 | 役割 | 詳細 |",
+      "|---|---|---|---|",
+      "| DM001 | Discovery Brief | 入力テーマと判定の概念関係を扱う。 | [DM001-discovery-brief.md](models/DM001-discovery-brief.md) |",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    modulePath,
+    [
+      "# DM001: Discovery Brief",
+      "",
+      "## 目的",
+      "",
+      "Discovery Brief の概念関係を整理する。",
+      "",
+      "## 責務",
+      "",
+      "入力テーマ、確認した前提、判定、推奨次アクションを一貫したモデルとして扱う。",
+      "",
+      "## 概念関係",
+      "",
+      "入力テーマ、確認した前提、判定、推奨次アクションの関係を扱う。",
+      "",
+      "## ライフサイクル",
+      "",
+      "作成から Intent 候補確認までを扱う。",
+      "",
+      "## 集約候補",
+      "",
+      "Discovery Brief を集約候補として扱う。",
+      "",
+      "## モデル要素",
+      "",
+      "モデル要素を次に示す。",
+      "",
+      "## 集約",
+      "",
+      "| 識別子 | 名前 | 役割 | 根拠 |",
+      "|---|---|---|---|",
+      "| DA001 | Discovery Brief | 入力テーマと判定を保持する。 | R001 |",
+      "",
+      "## 関連成果物",
+      "",
+      "- [models.md](../models.md)",
+      "",
+    ].join("\n"),
+  );
+}
+
+function writeDddModuleWithInvalidElementTable(workspace: string): void {
+  writeDddModuleWithModuleFile(workspace);
+  replaceInFile(
+    intentPath(workspace, `domain/bounded-contexts/${boundedContext1}/models/DM001-discovery-brief.md`),
+    "| DA001 | Discovery Brief | 入力テーマと判定を保持する。 | R001 |",
+    "| DE001 | Discovery Brief | 入力テーマと判定を保持する。 | R001 |",
+    "DDD Module fixture does not contain expected model element body",
+  );
+}
+
 function writeEmptyIntentBoundedContexts(workspace: string): void {
   writeFileSync(
     intentPath(workspace, "domain/bounded-contexts.md"),
@@ -2040,6 +2146,24 @@ removeBoundedContextModuleFile(missingBoundedContextModuleWorkspace);
 runExpectFailure(
   ["bun", "run", validator, missingBoundedContextModuleWorkspace, intent],
   "境界づけられたコンテキストのモジュールファイルが存在する",
+);
+
+const oldDddModuleModelPathWorkspace = workspaceCopy();
+writeDddModuleWithOldModelPath(oldDddModuleModelPathWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, oldDddModuleModelPathWorkspace, intent],
+  "DDD Module の `詳細` が models/<ddd-module-id>-<slug>.md を指す",
+);
+
+const dddModuleFileWorkspace = workspaceCopy();
+writeDddModuleWithModuleFile(dddModuleFileWorkspace);
+run(["bun", "run", validator, dddModuleFileWorkspace, intent]);
+
+const invalidDddElementTableWorkspace = workspaceCopy();
+writeDddModuleWithInvalidElementTable(invalidDddElementTableWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, invalidDddElementTableWorkspace, intent],
+  "DDD Module の `集約` 識別子が形式に合う",
 );
 
 const missingConstructionTraceWorkspace = workspaceCopy();
