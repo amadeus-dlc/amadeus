@@ -77,21 +77,23 @@ export function generatedContractFiles(): GeneratedFile[] {
     { path: "amadeus-contracts/generated/references.md", content: references },
     { path: "skills/amadeus-validator/validator/generated/functional-design-contract.ts", content: validatorCopy },
     { path: "skills/amadeus-validator/validator/generated/task-generation-contract.ts", content: taskGenerationValidatorCopy },
+    { path: ".agents/skills/amadeus-validator/validator/generated/functional-design-contract.ts", content: validatorCopy },
+    { path: ".agents/skills/amadeus-validator/validator/generated/task-generation-contract.ts", content: taskGenerationValidatorCopy },
   ];
 }
 
-export function writeGeneratedContractFiles(): void {
+export function writeGeneratedContractFiles(baseRoot = root): void {
   for (const file of generatedContractFiles()) {
-    const target = join(root, file.path);
+    const target = join(baseRoot, file.path);
     mkdirSync(dirname(target), { recursive: true });
     writeFileSync(target, file.content);
   }
 }
 
-export function staleGeneratedContractFiles(): string[] {
+export function staleGeneratedContractFiles(baseRoot = root): string[] {
   const stale: string[] = [];
   for (const file of generatedContractFiles()) {
-    const target = join(root, file.path);
+    const target = join(baseRoot, file.path);
     let current = "";
     try {
       current = readFileSync(target, "utf8");
