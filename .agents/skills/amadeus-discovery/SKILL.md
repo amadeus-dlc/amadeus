@@ -62,7 +62,7 @@ Discovery のモジュールディレクトリ名は、`.amadeus/discoveries.md`
 - `.amadeus/intents/*.md`
 - `.amadeus/intents/*/state.json`
 
-必要な場合だけ、関連しそうな既存 Intent の `scope.md`、`requirements.md`、`traceability.md` を読む。
+必要な場合だけ、関連しそうな既存 Intent の `ideation/scope.md`、`inception/requirements.md`、`inception/traceability.md` を読む。
 Discovery は Ideation や Inception の代替ではない。
 
 ## テンプレート

@@ -46,7 +46,7 @@
     {
       "id": 8,
       "prompt": "Inception 済み Intent の traceability.md で `既存コード分析からの追跡` の分析リンクと設計リンクが正しい成果物を指すか確認して。",
-      "expected_output": "`分析` が対象 Intent 直下の codebase-analysis.md を指し、`設計` が同じ行の Unit に対応する units/<unit-id>-<slug>/design.md を指すことを確認する。入力の内容妥当性や対応の完全性までは Amadeus Validator では扱わない。",
+      "expected_output": "`分析` が対象 Intent の inception/codebase-analysis.md を指し、`設計` が同じ行の Unit に対応する inception/units/<unit-id>-<slug>/design.md を指すことを確認する。入力の内容妥当性や対応の完全性までは Amadeus Validator では扱わない。",
       "files": []
     },
     {

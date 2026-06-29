@@ -17,5 +17,4 @@
 
 ## 未確認事項
 
-- 顧客のアクター ID は steering layer に未登録である。
-- 顧客を steering layer のアクターとして追加するかは未確認である。
+- 顧客は steering layer の ACT003 購入者に対応する。
