@@ -1,7 +1,8 @@
 # Amadeus examples
 
 このディレクトリは、Amadeus skill を使って生成した `.amadeus/` の段階別 snapshot です。
-root `.amadeus/` は実運用状態と例示成果物を混ぜるため置いていません。
+root `.amadeus/` は Amadeus 本体開発用の steering layer として扱います。
+例示成果物は、自己開発用 steering layer と混ざらないように `examples/<snapshot>/.amadeus/` に置きます。
 
 ## Snapshot
 

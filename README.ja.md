@@ -56,7 +56,7 @@ Amadeus は agent skill を通じて使います。
 9. `amadeus-domain-grilling`
 10. `amadeus-validator`
 
-このリポジトリでは、root `.amadeus/` を作業中の状態として置きません。
+このリポジトリでは、root `.amadeus/` を Amadeus 本体開発用の steering layer として扱います。
 リポジトリ内の生成例は [examples/](examples/) 配下の段階別 snapshot として管理します。
 
 ### Typical Flow
@@ -122,7 +122,8 @@ bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspac
 
 ## Boundaries
 
-- `.amadeus/` は対象 workspace の成果物ルートであり、このリポジトリ root の作業状態ではありません。
+- `.amadeus/` は対象 workspace の成果物ルートです。
+  このリポジトリ root では、Amadeus 本体開発用の steering layer に限定して扱います。
 - Intent ディレクトリ名は `.amadeus/intents.md` と `.amadeus/intents/<intent-id>-<slug>/` で一致させます。
 - ドメイン上の発見は範囲に応じて置き分けます。
   対象 Intent の `domain-notes.md`、`.amadeus/domain/**`、`inception/traceability.md`、Construction の Functional Design を使い分けます。

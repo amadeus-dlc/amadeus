@@ -47,6 +47,22 @@ _Avoid_: runtime dependency
 必要な場合は「参照元」「基準」「定義元」「管理元」のように、文脈に合う語へ置き換える。
 _Avoid_: 正本
 
+**build workspace**：エージェント、skill、validator、開発用スクリプトを動かす作業場所である。
+Amadeus 自己開発では、安定して使う skill、validator、開発用スクリプトを扱う場所として使う。
+build workspace は、変更対象の成果物を置く target workspace と分ける。
+
+**host environment**：昇格済み skill または生成された skill が動作する環境である。
+`host` は workspace 名ではなく、skill が実際に動作する環境を示す属性として扱う。
+既存 skill の供給元を表す場合は、build workspace と stage0 の組み合わせで表す。
+
+**target workspace**：変更差分、自己開発用 `.amadeus/`、作業中の成果物を置く作業場所である。
+Amadeus 自己開発では、Amadeus 本体リポジトリから切った別 `git worktree` を推奨する。
+target workspace は、target artifacts の更新場所であり、host environment と混同しない。
+
+**target artifacts**：skill が生成、更新、検証する成果物集合である。
+例として、source skill、昇格先 skill、example snapshot、target workspace の `.amadeus/` 成果物を含む。
+target artifacts は、skill の実行能力そのものではなく、変更対象または検証対象として扱う。
+
 **モジュールファイル**：同じ階層にある同じ stem のディレクトリと対になる Markdown ファイルである。
 たとえば `.amadeus/intents/<intent-id>-<slug>.md` は、`.amadeus/intents/<intent-id>-<slug>/` と対になるモジュールファイルである。
 モジュールファイルは、対象成果物そのものの目的、責務、範囲、関連成果物を扱う。

@@ -56,7 +56,7 @@ The currently supported public entrypoints are:
 9. `amadeus-domain-grilling`
 10. `amadeus-validator`
 
-The repository root does not keep a working `.amadeus/` state.
+The repository root keeps `.amadeus/` as the steering layer for Amadeus's own development.
 Repository examples are stored as phase-by-phase snapshots under [examples/](examples/).
 
 ### Typical Flow
@@ -122,7 +122,8 @@ bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspac
 
 ## Boundaries
 
-- `.amadeus/` is the artifact root in a target workspace, not in this repository root.
+- `.amadeus/` is the artifact root in a target workspace.
+  In this repository root, it is limited to the steering layer for Amadeus's own development.
 - Intent directory names must match `.amadeus/intents.md` and `.amadeus/intents/<intent-id>-<slug>/`.
 - Domain findings are placed according to scope: Intent-specific notes go to `domain-notes.md`, shared models go to `.amadeus/domain/**`, Inception relationships go to `inception/traceability.md`, and implementation design details go to Construction Functional Design.
 - Unknown values are recorded as `未確認` instead of being left blank.
