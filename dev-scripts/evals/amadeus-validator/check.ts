@@ -1325,10 +1325,10 @@ function writeGrillings(targetRoot: string, overrides: Record<string, string> = 
       "",
       "### Q001",
       "",
-      "- 確認したいこと: 対象範囲をどこまで含めるか。",
-      "- 確認が必要な理由: 要求と初期モックの境界が変わるため。",
-      "- 推奨回答: 管理画面に限定する。",
-      "- 推奨理由: 最初の Intent として検証可能な粒度に収まるため。",
+      ...(overrides.omitQuestionPrompt === "true" ? [] : ["- 確認したいこと: 対象範囲をどこまで含めるか。"]),
+      ...(overrides.omitQuestionReason === "true" ? [] : ["- 確認が必要な理由: 要求と初期モックの境界が変わるため。"]),
+      ...(overrides.omitRecommendedAnswer === "true" ? [] : ["- 推奨回答: 管理画面に限定する。"]),
+      ...(overrides.omitRecommendedReason === "true" ? [] : ["- 推奨理由: 最初の Intent として検証可能な粒度に収まるため。"]),
       ...(overrides.omitQuestionUserAnswer === "true" ? [] : [`- ユーザー回答: ${questionUserAnswer}`]),
       `- 確定判断: ${overrides.questionDecision ?? "GD001"}`,
       ...(overrides.extraQuestionWithoutDecision === "true"
@@ -2091,6 +2091,34 @@ writeGrillings(intentPath(grillingsQuestionWithoutUserAnswerWorkspace, ""), { om
 runExpectFailure(
   ["bun", "run", validator, grillingsQuestionWithoutUserAnswerWorkspace, intent],
   "質問記録がユーザー回答を持つ",
+);
+
+const grillingsQuestionWithoutPromptWorkspace = phaseWorkspaceCopy();
+writeGrillings(intentPath(grillingsQuestionWithoutPromptWorkspace, ""), { omitQuestionPrompt: "true" });
+runExpectFailure(
+  ["bun", "run", validator, grillingsQuestionWithoutPromptWorkspace, intent],
+  "質問記録が確認したいことを持つ",
+);
+
+const grillingsQuestionWithoutReasonWorkspace = phaseWorkspaceCopy();
+writeGrillings(intentPath(grillingsQuestionWithoutReasonWorkspace, ""), { omitQuestionReason: "true" });
+runExpectFailure(
+  ["bun", "run", validator, grillingsQuestionWithoutReasonWorkspace, intent],
+  "質問記録が確認が必要な理由を持つ",
+);
+
+const grillingsQuestionWithoutRecommendedAnswerWorkspace = phaseWorkspaceCopy();
+writeGrillings(intentPath(grillingsQuestionWithoutRecommendedAnswerWorkspace, ""), { omitRecommendedAnswer: "true" });
+runExpectFailure(
+  ["bun", "run", validator, grillingsQuestionWithoutRecommendedAnswerWorkspace, intent],
+  "質問記録が推奨回答を持つ",
+);
+
+const grillingsQuestionWithoutRecommendedReasonWorkspace = phaseWorkspaceCopy();
+writeGrillings(intentPath(grillingsQuestionWithoutRecommendedReasonWorkspace, ""), { omitRecommendedReason: "true" });
+runExpectFailure(
+  ["bun", "run", validator, grillingsQuestionWithoutRecommendedReasonWorkspace, intent],
+  "質問記録が推奨理由を持つ",
 );
 
 const grillingsSupersededWithoutReplacementWorkspace = phaseWorkspaceCopy();
