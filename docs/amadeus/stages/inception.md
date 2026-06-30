@@ -273,6 +273,7 @@ Traceability Finalization は、Requirement、Story、Use Case、Unit、Unit Des
 ### Steps
 
 1. Requirement、Story、Use Case、Unit、Unit Design Brief、Bolt の追跡関係を `traceability.md` に反映する。
+   `対象境界からの追跡` では、`ideation/scope.md` の採用済み `SC-IN-*` を Requirement、Story、Use Case、Unit、Bolt へ接続する。
 2. Inception の境界、粒度、対象外、greenfield または brownfield の判断を `decisions.md` と `decisions/**` に残す。
 3. `state.json.phase` を `inception` にし、Inception の必須成果物を反映する。
 4. Unit から参照する Bounded Context が未確認なら `state.json.inception.gate` は `not_ready` にする。

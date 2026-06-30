@@ -51,6 +51,13 @@ function runExpectFailure(command: string[], expected: string, cwd = root): void
   }
 }
 
+function runExpectSuccessIncludes(command: string[], expected: string, cwd = root): void {
+  const stdout = run(command, cwd);
+  if (!stdout.includes(expected)) {
+    fail(["command succeeded without expected evidence: " + expected, "stdout:", stdout].join("\n"));
+  }
+}
+
 function workspaceCopy(): string {
   const workspace = mkdtempSync(join(tmpdir(), "amadeus-validator"));
   cpSync(fixture, join(workspace, ".amadeus"), { recursive: true });
@@ -421,6 +428,27 @@ runExpectFailure(
   "Ideation 追跡が `実行制御` を含む",
 );
 
+const gatePassedWithUnconfirmedScopeControlWorkspace = phaseWorkspaceCopy();
+replaceScopeExecutionScopeWithUnconfirmedValue(gatePassedWithUnconfirmedScopeControlWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, gatePassedWithUnconfirmedScopeControlWorkspace, intent],
+  "Ideation gate passed では `実行スコープ` が未確認ではない",
+);
+
+const inceptionTraceWithoutScopeWorkspace = phaseWorkspaceCopy();
+removeInceptionScopeTraceabilityRow(inceptionTraceWithoutScopeWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, inceptionTraceWithoutScopeWorkspace, intent],
+  "対象境界からの追跡が採用済み SC-IN を含む",
+);
+
+const inceptionWithExcludedScopeWarningWorkspace = phaseWorkspaceCopy();
+addExcludedScopeConflict(inceptionWithExcludedScopeWarningWorkspace);
+runExpectSuccessIncludes(
+  ["bun", "run", validator, inceptionWithExcludedScopeWarningWorkspace, intent],
+  "Inception 成果物に SC-OUT に反する可能性がある項目がない",
+);
+
 function ensureBoltDirectory(workspace: string, bolt: string): void {
   mkdirSync(intentPath(workspace, `bolts/${bolt}`), { recursive: true });
 }
@@ -444,6 +472,15 @@ function replaceScopeExecutionScopeWithInvalidValue(workspace: string): void {
     intentPath(workspace, "scope.md"),
     "| 実行スコープ | mvp | 販売管理の最小購入フローに集中する。 |",
     "| 実行スコープ | enterprise-plus | 販売管理の最小購入フローに集中する。 |",
+    "scope fixture does not contain expected execution scope",
+  );
+}
+
+function replaceScopeExecutionScopeWithUnconfirmedValue(workspace: string): void {
+  replaceInFile(
+    intentPath(workspace, "scope.md"),
+    "| 実行スコープ | mvp | 販売管理の最小購入フローに集中する。 |",
+    "| 実行スコープ | 未確認 | 販売管理の最小購入フローに集中する。 |",
     "scope fixture does not contain expected execution scope",
   );
 }
@@ -497,6 +534,24 @@ function removeScopeControlTraceabilityRow(workspace: string): void {
     "| 実行制御 | mvp | [scope.md](scope.md) | 後続 stage の実行範囲を決める入力にする。 |\n",
     "",
     "traceability fixture does not contain expected execution control row",
+  );
+}
+
+function removeInceptionScopeTraceabilityRow(workspace: string): void {
+  replaceInFile(
+    intentPath(workspace, "traceability.md"),
+    "| SC-IN-005 | R004 | S001 | UC003 | U002 | B001 | 注文作成を Inception の対象として扱う。 |\n",
+    "",
+    "traceability fixture does not contain expected SC-IN row",
+  );
+}
+
+function addExcludedScopeConflict(workspace: string): void {
+  replaceInFile(
+    intentPath(workspace, "requirements/R003-buyer-information-recording.md"),
+    "- 会員登録、ログイン、顧客台帳、購入履歴管理は対象外である。",
+    "- 会員登録を扱う。",
+    "requirement fixture does not contain expected excluded scope constraint",
   );
 }
 
