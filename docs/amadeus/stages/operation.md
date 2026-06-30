@@ -12,6 +12,16 @@ Operation phase は、将来 phase 名として予約している。
 
 そのため、この文書は予約状態と非目標だけを記録する。
 
+## Execution 判定基準
+
+現時点の Operation phase には、実行対象の stage がない。
+
+Stage Summary Table の `未定` は未確定を示す値であり、実行可能な `Execution` 値ではない。
+
+将来 Operation 成果物契約を採用する場合は、`Execution`、`Condition`、Lead Skill、Outputs、gate、validator 条件を同じ変更で定義する。
+
+その時点の `Execution` は、対象 stage を Operation の通常進行に含めるかを示す値として扱う。
+
 ## Stage Summary Table
 
 | Stage | Name | Execution | Condition | Lead Skill | Outputs |

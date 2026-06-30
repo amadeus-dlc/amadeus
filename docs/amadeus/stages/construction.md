@@ -15,6 +15,26 @@ Bolt 側の設計ファイルは作らない。
 
 Spec、`.kiro/specs/**`、`openspec/**`、Operation 成果物は作らない。
 
+## Execution 判定基準
+
+`Execution` は、対象 stage を Construction の通常進行に含めるかを示す。
+
+実行可否そのものは `Condition`、対象 Unit、対象 Bolt、Functional Design の必要性、Task 生成状態、実装差分、検証結果で判定する。
+
+`CONDITIONAL per Unit` は、対象 Unit ごとに `Condition` を満たす場合だけ実行する stage である。
+
+`ALWAYS per Bolt` は、対象 Bolt ごとに `Condition` を満たす場合に必ず実行する stage である。
+
+`ALWAYS per ready Bolt` は、対象 Bolt の Task 生成状態が実装可能な場合に必ず実行する stage である。
+
+`ALWAYS after implementation` は、対象 Bolt の実装差分がある場合に必ず実行する stage である。
+
+`ALWAYS after verification` は、検証結果を記録済みの場合に必ず実行する stage である。
+
+既存成果物がある場合は、再作成ではなく点検または補修で充足してよい。
+
+対象 Bolt が複数ある場合は、Bolt ごとにこの判定を独立して行い、他 Bolt の未完了を対象 Bolt の完了証拠として扱わない。
+
 ## Stage Summary Table
 
 | Stage | Name | Execution | Condition | Lead Skill | Outputs |
