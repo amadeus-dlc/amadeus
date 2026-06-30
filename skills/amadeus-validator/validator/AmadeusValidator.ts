@@ -2390,12 +2390,11 @@ class AmadeusValidator {
       const start = match.index ?? 0;
       const end = questionMatches[index + 1]?.index ?? body.length;
       const block = body.slice(start, end);
-      const userAnswer = block.match(/^\s*-\s+ユーザー回答:\s*(.*?)\s*$/m)?.[1]?.trim() ?? "";
-      if (userAnswer.length > 0) {
-        this.pass(path, "質問記録がユーザー回答を持つ", `${questionId}: ${userAnswer}`);
-      } else {
-        this.failRow(path, "質問記録がユーザー回答を持つ", questionId);
-      }
+      this.checkGrillingQuestionBullet(path, block, questionId, "確認したいこと", "質問記録が確認したいことを持つ");
+      this.checkGrillingQuestionBullet(path, block, questionId, "確認が必要な理由", "質問記録が確認が必要な理由を持つ");
+      this.checkGrillingQuestionBullet(path, block, questionId, "推奨回答", "質問記録が推奨回答を持つ");
+      this.checkGrillingQuestionBullet(path, block, questionId, "推奨理由", "質問記録が推奨理由を持つ");
+      this.checkGrillingQuestionBullet(path, block, questionId, "ユーザー回答", "質問記録がユーザー回答を持つ");
       const references = [...block.matchAll(/^\s*-\s+確定判断:\s*(.*?)\s*$/gm)]
         .flatMap((referenceMatch) => this.grillingDecisionReferences(referenceMatch[1]));
       if (references.length > 0) {
@@ -2408,6 +2407,15 @@ class AmadeusValidator {
         if (decisionIds.has(reference)) this.pass(path, "質問記録の確定判断 ID が確定判断に存在する", `${questionId}: ${reference}`);
         else this.failRow(path, "質問記録の確定判断 ID が確定判断に存在する", `${questionId}: ${reference}`);
       }
+    }
+  }
+
+  private checkGrillingQuestionBullet(path: string, block: string, questionId: string, label: string, condition: string): void {
+    const value = block.match(new RegExp(`^\\s*-\\s+${this.escapeRegExp(label)}:\\s*(.*?)\\s*$`, "m"))?.[1]?.trim() ?? "";
+    if (value.length > 0) {
+      this.pass(path, condition, `${questionId}: ${value}`);
+    } else {
+      this.failRow(path, condition, questionId);
     }
   }
 
