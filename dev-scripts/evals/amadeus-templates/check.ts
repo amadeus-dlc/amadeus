@@ -94,7 +94,7 @@ const targetSkills: Record<string, Contract> = {
   "amadeus-ideation": {
     skillText: [".amadeus/settings/templates", "templates/intents/ideation"],
     files: {
-      "templates/intents/ideation/scope.md": ["対象", "対象外", "詳細度", "検証深度", "Inception への引き継ぎ"],
+      "templates/intents/ideation/scope.md": ["対象境界", "実行制御", "成果物深度", "検証戦略", "Inception への引き継ぎ"],
       "templates/intents/ideation/ideation.md": ["実現可能性", "体制", "初期モック", "未確定事項", "学習候補"],
       "templates/intents/ideation/traceability.md": ["Ideation からの追跡", "依存関係からの追跡"],
       "templates/intents/ideation/decisions.md": ["一覧", "依存関係"],
@@ -223,6 +223,7 @@ const textContracts: TextContract[] = [
       "Inception は Intent 固有の正式な Domain Model や Contracts を作らない。",
       "`inception/units.md` の `コンテキスト`",
       "既存のドメイン用語、境界づけられたコンテキスト、契約が不足している場合は、Inception 成果物の中で推測して確定しない。",
+      "`scope.md` の対象境界、実行制御、成果物深度、検証戦略",
     ],
     excludes: [
       "`domain/subdomains.md` と `domain/bounded-contexts.md`",
@@ -230,6 +231,43 @@ const textContracts: TextContract[] = [
       "対象 Intent の `domain/bounded-contexts.md`",
       `\`${domainPlacementContract.legacyIntentDomainSegments.join("/")}/subdomains.md\` と \`${domainPlacementContract.legacyIntentDomainSegments.join("/")}/bounded-contexts.md\``,
     ],
+  },
+  {
+    path: "skills/amadeus-ideation-scope-framing/SKILL.md",
+    promotedPath: ".agents/skills/amadeus-ideation-scope-framing/SKILL.md",
+    includes: [
+      "`対象境界`",
+      "`実行制御`",
+      "`成果物深度`",
+      "`検証戦略`",
+      "AI-DLC v2 の Scope ではない。",
+      "成果物深度と検証戦略は独立して判断する。",
+    ],
+    excludes: ["`詳細度`", "`検証深度`"],
+  },
+  {
+    path: "skills/amadeus-ideation-feasibility-shaping/SKILL.md",
+    promotedPath: ".agents/skills/amadeus-ideation-feasibility-shaping/SKILL.md",
+    includes: ["対象境界、実行スコープ、成果物深度、検証戦略"],
+    excludes: ["対象、対象外、検証深度"],
+  },
+  {
+    path: "skills/amadeus-ideation-mock-framing/SKILL.md",
+    promotedPath: ".agents/skills/amadeus-ideation-mock-framing/SKILL.md",
+    includes: ["`scope.md` の対象境界、成果物深度、検証戦略を読む。"],
+    excludes: [],
+  },
+  {
+    path: "skills/amadeus-ideation-traceability-finalization/SKILL.md",
+    promotedPath: ".agents/skills/amadeus-ideation-traceability-finalization/SKILL.md",
+    includes: ["`scope.md` の対象境界、実行制御、成果物深度、検証戦略"],
+    excludes: [],
+  },
+  {
+    path: "skills/amadeus-inception-requirements-definition/SKILL.md",
+    promotedPath: ".agents/skills/amadeus-inception-requirements-definition/SKILL.md",
+    includes: ["要求候補、対象境界、実行制御、成果物深度、検証戦略、制約"],
+    excludes: ["要求候補、対象外、制約"],
   },
 ];
 

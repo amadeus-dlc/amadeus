@@ -49,7 +49,7 @@ Intent Capture & Framing 後の `state.json.phase` は `ideation` にする。
   - `scaffold-only`: 質問せず、分かる情報だけで Intent Record から Ideation 完了成果物まで作る。
   - `refine`: 既存 Ideation 成果物を質問で煮詰める。
   - `repair`: 既存 Ideation 成果物の構造だけを補修する。
-- 分かっている場合は、対象、対象外、実現可能性、体制、初期モック、引き継ぎの観点。
+- 分かっている場合は、対象境界、実行スコープ、成果物深度、検証戦略、実現可能性、体制、初期モック、引き継ぎの観点。
 
 実行モードの指定がなければ `auto` にする。
 

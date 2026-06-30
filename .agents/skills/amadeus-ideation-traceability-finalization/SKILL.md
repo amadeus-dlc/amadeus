@@ -62,7 +62,7 @@ Ideation が完了している場合は、`state.json.ideation.gate` を `passed
 
 ## 手順
 
-1. `scope.md`、`ideation.md`、`mocks/*.puml` から Ideation 要素と依存を拾う。
+1. `scope.md` の対象境界、実行制御、成果物深度、検証戦略と、`ideation.md`、`mocks/*.puml` から Ideation 要素と依存を拾う。
 2. `traceability.md` に Ideation 要素と依存関係の追跡を書く。
 3. Ideation を完了して Inception へ進める場合は、判断 `D001` を作る。
 4. `decisions.md` に判断一覧と依存関係を書く。
