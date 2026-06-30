@@ -8,6 +8,14 @@ import {
   tableColumnName,
   unitId,
 } from "../../../skills/amadeus-validator/validator/domain/primitives";
+import {
+  boltIdRef,
+  parseIdRefList,
+  requirementIdRef,
+  storyIdRef,
+  unitIdRef,
+  useCaseIdRef,
+} from "../../../skills/amadeus-validator/validator/domain/id-ref";
 import { parseMarkdownDocument } from "../../../skills/amadeus-validator/validator/domain/markdown";
 import {
   parseBusinessRules,
@@ -40,6 +48,60 @@ assert(boundedContextId("BC001").value === "BC001", "BoundedContextId keeps vali
 assertThrows(() => artifactPath("/tmp/state.json"), "ArtifactPath rejects absolute path");
 assert(documentTitle("用語集").value === "用語集", "DocumentTitle keeps non blank title");
 assert(tableColumnName("識別子").value === "識別子", "TableColumnName keeps non blank column");
+
+const unitRef = unitIdRef("[U001](inception/units/U001-unit.md)", artifactPath("traceability.md"));
+assert(unitRef.id.value === "U001", "UnitIdRef keeps typed UnitId");
+assert(unitRef.rawLinkTarget === "inception/units/U001-unit.md", "UnitIdRef keeps raw link target");
+assert(unitRef.path.value === "inception/units/U001-unit.md", "UnitIdRef keeps artifact-root relative path");
+
+const relativeUnitRef = unitIdRef("[U001](../inception/units/U001-unit.md)", artifactPath("construction/traceability.md"));
+assert(relativeUnitRef.path.value === "inception/units/U001-unit.md", "UnitIdRef normalizes source-relative path");
+assert(requirementIdRef("[R001](inception/requirements/R001-requirement.md)", artifactPath("traceability.md")).id.value === "R001", "RequirementIdRef parses valid link");
+assert(storyIdRef("[S001](inception/user-stories/S001-story.md)", artifactPath("traceability.md")).id.value === "S001", "StoryIdRef parses valid link");
+assert(useCaseIdRef("[UC001](inception/use-cases/UC001-use-case.md)", artifactPath("traceability.md")).id.value === "UC001", "UseCaseIdRef parses valid link");
+assert(boltIdRef("[B001](inception/bolts/B001-bolt.md)", artifactPath("traceability.md")).id.value === "B001", "BoltIdRef parses valid link");
+assertThrows(() => unitIdRef("[購入 Unit](inception/units/U001-unit.md)", artifactPath("traceability.md")), "IdRef rejects display text that is not an ID");
+assertThrows(() => unitIdRef("[U001](inception/requirements/U001-unit.md)", artifactPath("traceability.md")), "IdRef rejects mismatched artifact directory");
+assertThrows(() => unitIdRef("[U001](inception/units/U002-unit.md)", artifactPath("traceability.md")), "IdRef rejects stem that does not start with the ID");
+assertThrows(() => unitIdRef("[U001](inception/units/U001-unit.md#overview)", artifactPath("traceability.md")), "IdRef rejects anchor link");
+assertThrows(() => unitIdRef("[U001](https://example.com/U001-unit.md)", artifactPath("traceability.md")), "IdRef rejects external link");
+assertThrows(() => unitIdRef("[U001](/inception/units/U001-unit.md)", artifactPath("traceability.md")), "IdRef rejects absolute path");
+assertThrows(() => unitIdRef("[U001](../inception/units/U001-unit.md)", artifactPath("traceability.md")), "IdRef rejects path outside artifact root");
+assertThrows(() => unitIdRef("[U001](inception/units/U001-unit.md) and [U002](inception/units/U002-unit.md)", artifactPath("traceability.md")), "IdRef rejects multiple links as single ref");
+assertThrows(() => unitIdRef("U001", artifactPath("traceability.md")), "IdRef rejects plain ID as link ref");
+assertThrows(() => unitIdRef("なし", artifactPath("traceability.md")), "IdRef rejects none marker as single ref");
+assertThrows(() => unitIdRef("", artifactPath("traceability.md")), "IdRef rejects blank single ref");
+
+const idRefList = parseIdRefList(
+  "[U001](inception/units/U001-unit.md), [U002](inception/units/U002-order.md)",
+  artifactPath("traceability.md"),
+  unitIdRef,
+  { target: "traceability.md", condition: "unit.idRefs" },
+);
+assert(idRefList.refs.length === 2, "parseIdRefList parses comma-separated ID links");
+assert(idRefList.refs[1]?.id.value === "U002", "parseIdRefList keeps second ID link");
+assert(idRefList.results.every((result) => result.result === "pass"), "parseIdRefList records pass results");
+
+const noneIdRefList = parseIdRefList("なし", artifactPath("traceability.md"), unitIdRef, {
+  target: "traceability.md",
+  condition: "unit.idRefs",
+  allowNone: true,
+});
+assert(noneIdRefList.refs.length === 0, "parseIdRefList treats allowed none as empty list");
+assert(noneIdRefList.results.some((result) => result.result === "pass" && result.evidence === "なし"), "parseIdRefList records allowed none");
+
+const rejectedNoneIdRefList = parseIdRefList("なし", artifactPath("traceability.md"), unitIdRef, {
+  target: "traceability.md",
+  condition: "unit.idRefs",
+});
+assert(rejectedNoneIdRefList.results.some((result) => result.result === "fail"), "parseIdRefList rejects none unless allowed");
+
+const invalidIdRefList = parseIdRefList("[U001](inception/requirements/U001-unit.md)", artifactPath("traceability.md"), unitIdRef, {
+  target: "traceability.md",
+  condition: "unit.idRefs",
+});
+assert(invalidIdRefList.refs.length === 0, "parseIdRefList omits invalid refs");
+assert(invalidIdRefList.results.some((result) => result.result === "fail"), "parseIdRefList records failed refs");
 
 const markdown = parseMarkdownDocument(
   [
