@@ -69,6 +69,9 @@ const eventStormingBoardTypes = new Set([
 ]);
 const eventStormingHotspotStatusValues = new Set(["open", "resolved", "accepted"]);
 const eventStormingHandoffKinds = new Set(["Aggregate Candidate", "Bounded Context Candidate"]);
+const ideationExecutionScopeValues = new Set(["enterprise", "feature", "mvp", "poc", "bugfix", "refactor", "infra", "security-patch", "workshop", "未確認"]);
+const ideationDepthValues = new Set(["minimal", "standard", "comprehensive", "未確認"]);
+const ideationVerificationStrategyValues = new Set(["minimal", "standard", "comprehensive", "未確認"]);
 const grillingSessionFilePattern = /^G\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/;
 const grillingSessionStatusValues = new Set(["active", "completed", "superseded"]);
 const grillingDecisionStatusValues = new Set(["active", "superseded"]);
@@ -857,11 +860,13 @@ class AmadeusValidator {
     }
 
     if (state.phase === "inception") {
+      this.checkIdeationArtifacts(base);
       checkInceptionPhase(this.phaseValidationContext(), { base, state });
       return;
     }
 
     if (state.phase === "construction") {
+      this.checkIdeationArtifacts(base);
       checkConstructionPhase(this.phaseValidationContext(), { base, state });
       return;
     }
@@ -981,17 +986,22 @@ class AmadeusValidator {
 
   private checkIdeationIntent(base: string, state: Record<string, any>): void {
     const statePath = `${base}/state.json`;
-    const ideationBase = `${base}/ideation`;
     this.checkStateJson(statePath, state);
-    this.checkGrillings(ideationBase);
+    this.checkGrillings(`${base}/ideation`);
 
     if (this.isIdeationStartedOnly(state)) {
       this.checkNoIdeationDownstreamArtifacts(statePath, base);
       return;
     }
 
+    this.checkIdeationArtifacts(base);
+  }
+
+  private checkIdeationArtifacts(base: string): void {
+    const ideationBase = `${base}/ideation`;
+
     this.checkFile(`${ideationBase}/scope.md`, "Ideation scope が存在する");
-    this.checkHeadings(`${ideationBase}/scope.md`, ["対象境界", "実行制御", "成果物深度", "検証戦略", "Inception への引き継ぎ"]);
+    this.checkIdeationScope(`${ideationBase}/scope.md`);
 
     this.checkFile(`${ideationBase}/ideation.md`, "Ideation 分析が存在する");
     this.checkHeadings(`${ideationBase}/ideation.md`, ["実現可能性", "体制", "初期モック", "未確定事項", "学習候補"]);
@@ -1000,6 +1010,85 @@ class AmadeusValidator {
 
     this.checkFile(`${ideationBase}/decisions.md`, "Ideation 判断一覧が存在する");
     this.checkOptionalIndex(`${ideationBase}/decisions.md`, indexSpecs["decisions.md"]);
+  }
+
+  private checkIdeationScope(path: string): void {
+    this.checkHeadings(path, ["対象境界", "実行制御", "成果物深度", "検証戦略", "Inception への引き継ぎ"]);
+
+    const includedTable = this.checkSubheadingTable(path, "対象境界", "対象", ["識別子", "境界", "根拠", "状態"]);
+    const excludedTable = this.checkSubheadingTable(path, "対象境界", "対象外", ["識別子", "境界", "根拠", "状態"]);
+    this.checkScopeIds(path, includedTable, "SC-IN", /^SC-IN-\d{3}$/);
+    this.checkScopeIds(path, excludedTable, "SC-OUT", /^SC-OUT-\d{3}$/);
+    this.checkScopeIdUniqueness(path, [includedTable, excludedTable]);
+
+    const executionTable = this.checkTable(path, "実行制御", ["項目", "値", "理由"]);
+    this.checkControlValue(path, executionTable, "実行スコープ", ideationExecutionScopeValues);
+    this.checkOmittedStageReason(path, executionTable);
+
+    const depthTable = this.checkTable(path, "成果物深度", ["項目", "値", "理由"]);
+    this.checkControlValue(path, depthTable, "深度", ideationDepthValues);
+
+    const verificationTable = this.checkTable(path, "検証戦略", ["項目", "値", "理由"]);
+    this.checkControlValue(path, verificationTable, "戦略", ideationVerificationStrategyValues);
+  }
+
+  private checkScopeIds(path: string, table: Table | undefined, prefix: string, pattern: RegExp): void {
+    if (!table || !table.headers.includes("識別子")) return;
+    for (const row of table.rows) {
+      const id = String(row["識別子"] ?? "").trim();
+      if (pattern.test(id)) this.pass(path, `${prefix} ID が識別子形式に合う`, id);
+      else this.failRow(path, `${prefix} ID が識別子形式に合う`, id);
+    }
+  }
+
+  private checkScopeIdUniqueness(path: string, tables: Array<Table | undefined>): void {
+    const ids = new Set<string>();
+    for (const table of tables) {
+      if (!table || !table.headers.includes("識別子")) continue;
+      for (const row of table.rows) {
+        const id = String(row["識別子"] ?? "").trim();
+        if (id.length === 0) continue;
+        if (ids.has(id)) this.failRow(path, "Scope ID が重複しない", id);
+        else {
+          this.pass(path, "Scope ID が重複しない", id);
+          ids.add(id);
+        }
+      }
+    }
+  }
+
+  private checkControlValue(path: string, table: Table | undefined, item: string, allowed: Set<string>): void {
+    const row = this.controlRow(table, item);
+    if (!row) {
+      this.failRow(path, `\`${item}\` が定義されている`, "行がない");
+      return;
+    }
+    this.pass(path, `\`${item}\` が定義されている`, item);
+    this.checkAllowed(path, item, row["値"], allowed);
+  }
+
+  private checkOmittedStageReason(path: string, table: Table | undefined): void {
+    const row = this.controlRow(table, "省略 stage");
+    if (!row) {
+      this.failRow(path, "`省略 stage` が定義されている", "行がない");
+      return;
+    }
+    this.pass(path, "`省略 stage` が定義されている", "省略 stage");
+    const omittedStage = String(row["値"] ?? "").trim();
+    const reason = String(row["理由"] ?? "").trim();
+    if (omittedStage === "なし" || omittedStage === "未確認") {
+      this.pass(path, "`省略 stage` の理由がある", reason || "該当なし");
+      return;
+    }
+    if (reason.length > 0 && reason !== "未確認" && reason !== "該当なし") {
+      this.pass(path, "`省略 stage` の理由がある", reason);
+    } else {
+      this.failRow(path, "`省略 stage` の理由がある", `${omittedStage}: ${reason || "空欄"}`);
+    }
+  }
+
+  private controlRow(table: Table | undefined, item: string): Record<string, string> | undefined {
+    return table?.rows.find((row) => String(row["項目"] ?? "").trim() === item);
   }
 
   private checkNoIdeationDownstreamArtifacts(path: string, base: string): void {
@@ -2232,6 +2321,23 @@ class AmadeusValidator {
     return table;
   }
 
+  private checkSubheadingTable(path: string, heading: string, subheading: string, requiredColumns: string[]): Table | undefined {
+    if (!this.isFile(this.absolute(path))) return undefined;
+    const table = this.tableAfterSubheading(path, heading, subheading);
+    if (!table) {
+      this.failRow(path, `\`${heading}\` の \`${subheading}\` の表がある`, "表がない");
+      return undefined;
+    }
+
+    const missing = requiredColumns.filter((column) => !table.headers.includes(column));
+    if (missing.length === 0) {
+      this.pass(path, `\`${heading}\` の \`${subheading}\` の必須表列が揃っている`, requiredColumns.join(", "));
+    } else {
+      this.failRow(path, `\`${heading}\` の \`${subheading}\` の必須表列が揃っている`, `不足: ${missing.join(", ")}`);
+    }
+    return table;
+  }
+
   private collectIds(path: string, table: Table, column: string, pattern?: RegExp): Set<string> {
     const ids = new Set<string>();
     for (const row of table.rows) {
@@ -2359,6 +2465,40 @@ class AmadeusValidator {
 
     let index = headingIndex + 1;
     while (index < lines.length && !lines[index].startsWith("|") && !lines[index].startsWith("## ")) index += 1;
+    if (index >= lines.length || !lines[index].startsWith("|")) return undefined;
+
+    const tableLines: string[] = [];
+    while (index < lines.length && lines[index].startsWith("|")) {
+      tableLines.push(lines[index]);
+      index += 1;
+    }
+    if (tableLines.length < 2) return undefined;
+
+    const headers = this.splitTableLine(tableLines[0]);
+    const rows = tableLines.slice(2).map((line) => {
+      const values = this.splitTableLine(line);
+      return Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ""]));
+    });
+    return { headers, rows };
+  }
+
+  private tableAfterSubheading(path: string, heading: string, subheading: string): Table | undefined {
+    const lines = this.read(path).split(/\r?\n/);
+    const headingIndex = lines.findIndex((line) => new RegExp(`^##\\s+${this.escapeRegExp(heading)}\\s*$`).test(line));
+    if (headingIndex < 0) return undefined;
+
+    let subheadingIndex = -1;
+    for (let index = headingIndex + 1; index < lines.length; index += 1) {
+      if (/^##\s+/.test(lines[index])) break;
+      if (new RegExp(`^###\\s+${this.escapeRegExp(subheading)}\\s*$`).test(lines[index])) {
+        subheadingIndex = index;
+        break;
+      }
+    }
+    if (subheadingIndex < 0) return undefined;
+
+    let index = subheadingIndex + 1;
+    while (index < lines.length && !lines[index].startsWith("|") && !/^#{2,3}\s+/.test(lines[index])) index += 1;
     if (index >= lines.length || !lines[index].startsWith("|")) return undefined;
 
     const tableLines: string[] = [];
