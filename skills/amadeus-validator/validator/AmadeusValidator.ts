@@ -299,20 +299,28 @@ class AmadeusValidator {
       return;
     }
 
-    const directories = readdirSync(root)
-      .filter((entry) => this.isDirectory(join(root, entry)))
-      .sort();
-    for (const id of directories) {
+    const entries = readdirSync(root).sort();
+    const directories = new Set(entries.filter((entry) => this.isDirectory(join(root, entry))));
+    const summaryFiles = new Set(
+      entries
+        .filter((entry) => entry.endsWith(".md"))
+        .map((entry) => entry.slice(0, -3))
+        .filter((id) => eventStormingDirectoryPattern.test(id)),
+    );
+    const ids = [...new Set([...directories, ...summaryFiles])].sort();
+    for (const id of ids) {
       const base = `${rootPath}/${id}`;
       if (eventStormingDirectoryPattern.test(id)) {
         this.pass(base, "Event Storming ディレクトリ名が ESnnn-<slug> 形式である", id);
       } else {
         this.failRow(base, "Event Storming ディレクトリ名が ESnnn-<slug> 形式である", id);
       }
+      this.checkFile(base, "Event Storming セッションディレクトリが存在する", true);
+      if (!directories.has(id)) continue;
       this.checkEventStormingSession(base, id, expectedScope, intentId);
     }
 
-    if (directories.length > 0) this.pass(rootPath, "Event Storming セッションが検証対象である", `${directories.length}件`);
+    if (ids.length > 0) this.pass(rootPath, "Event Storming セッションが検証対象である", `${ids.length}件`);
     else this.skipped(rootPath, "Event Storming 成果物は任意である", "セッションディレクトリなし");
   }
 
