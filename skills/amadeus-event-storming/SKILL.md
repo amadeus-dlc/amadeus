@@ -16,7 +16,7 @@ description: >-
 Domain Event を起点に、人間からドメイン上の事実、順序、原因、判断待ちを引き出す。
 
 この skill は lifecycle phase を進めない。
-Discovery、Intent Init、Inception、Domain Modeling が参照できる Event Storming 分析成果物を作る。
+Discovery、Ideation、Inception、Domain Modeling が参照できる Event Storming 分析成果物を作る。
 
 Event Storming で扱う Event は Domain Event だけである。
 UI event、technical event、integration event、log event は Domain Event として扱わず、必要なら `hotspots.md` または `flow.md` の補足に残す。
