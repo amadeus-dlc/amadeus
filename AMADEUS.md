@@ -1,7 +1,8 @@
 # Amadeus DLC
 
 この文書は、エージェントがこのリポジトリで Amadeus を扱うときの共通入口である。
-詳細な成果物規則は [README.md](README.md) と [examples/README.md](examples/README.md) を参照する。
+概要は [README.md](README.md) を参照する。
+詳細な成果物規則は [docs/amadeus/stages/](docs/amadeus/stages/) と [examples/README.md](examples/README.md) を参照する。
 
 ## 作業言語
 

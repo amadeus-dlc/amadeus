@@ -168,7 +168,7 @@ const targetSkills: Record<string, Contract> = {
 
 const textContracts: TextContract[] = [
   {
-    path: "README.md",
+    path: "README.ja.md",
     includes: [
       "対象 Intent の `domain-notes.md`、`.amadeus/domain/**`、`inception/traceability.md`、Construction の Functional Design",
     ],
