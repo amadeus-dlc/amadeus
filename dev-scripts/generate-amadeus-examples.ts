@@ -31,6 +31,21 @@ type BackupEntry = {
   existed: boolean;
 };
 
+type ProvenanceSkillFile = {
+  path: string;
+  md5: string;
+  staleReason?: string;
+};
+
+type ProvenanceEntry = {
+  snapshot: string;
+  skillFiles?: ProvenanceSkillFile[];
+};
+
+type ProvenanceManifest = Record<string, unknown> & {
+  entries?: ProvenanceEntry[];
+};
+
 type GenerationPlan = {
   fromIndex: number;
   fromStep: GenerationStep;
@@ -45,7 +60,7 @@ const stagedSnapshots = join(root, ".tmp/amadeus-example-generation/snapshots");
 const discoveryId = "20260629-ec-site-construction";
 const intentId = "20260629-minimum-purchase-flow";
 const defaultRunner = "dev-scripts/run-codex-corporate.sh";
-const provenanceManifestPath = join(root, "examples/skill-provenance.json");
+const provenanceManifestPath = Bun.env.AMADEUS_EXAMPLES_PROVENANCE_MANIFEST ?? join(root, "examples/skill-provenance.json");
 
 function parseArgs(args: string[]): Options {
   const options: Options = {
@@ -599,17 +614,39 @@ function assertState(statePath: string, expectedState: Record<string, string>): 
   }
 }
 
-function readProvenanceManifest(): Record<string, unknown> & { entries?: Array<{ snapshot: string; skillFiles?: Array<{ path: string; md5?: string; staleReason?: string }> }> } {
-  return JSON.parse(readFileSync(provenanceManifestPath, "utf8"));
+function readProvenanceManifest(): ProvenanceManifest {
+  return JSON.parse(readFileSync(provenanceManifestPath, "utf8")) as ProvenanceManifest;
 }
 
-function provenanceSkillFileDigests(paths: string[]): Array<{ path: string; md5: string }> {
+function currentProvenanceSkillFile(path: string): ProvenanceSkillFile {
+  const sourcePath = join(root, path);
+  ensureFile(sourcePath);
+  return {
+    path,
+    md5: md5File(sourcePath),
+  };
+}
+
+function preservedSkillPaths(plan: GenerationPlan): Set<string> {
+  return new Set(steps.slice(0, plan.fromIndex).flatMap((step) => step.provenanceSkillFiles));
+}
+
+function provenanceSkillFileDigests(
+  paths: string[],
+  existingEntry: ProvenanceEntry | undefined,
+  pathsToPreserve: Set<string>,
+): ProvenanceSkillFile[] {
   return paths.map((path) => {
-    const sourcePath = join(root, path);
-    ensureFile(sourcePath);
+    if (!pathsToPreserve.has(path)) return currentProvenanceSkillFile(path);
+
+    const existingSkillFile = existingEntry?.skillFiles?.find((skillFile) => skillFile.path === path);
+    if (!existingSkillFile || typeof existingSkillFile.md5 !== "string") {
+      fail(`${existingEntry?.snapshot ?? "missing entry"}: cannot preserve upstream provenance digest for ${path}; regenerate from an earlier step`);
+    }
     return {
       path,
-      md5: md5File(sourcePath),
+      md5: existingSkillFile.md5,
+      ...(existingSkillFile.staleReason ? { staleReason: existingSkillFile.staleReason } : {}),
     };
   });
 }
@@ -620,16 +657,20 @@ function updatedProvenanceText(plan: GenerationPlan): string {
   manifest.entries = entries;
   const entriesBySnapshot = new Map(entries.map((entry) => [entry.snapshot, entry]));
   const targetStepsBySnapshot = new Map(plan.targetSteps.map((step) => [step.snapshot, step]));
+  const pathsToPreserve = preservedSkillPaths(plan);
   for (const entry of manifest.entries ?? []) {
     const step = targetStepsBySnapshot.get(entry.snapshot);
     if (!step) continue;
-    entry.skillFiles = provenanceSkillFileDigests(step.provenanceSkillFiles);
+    entry.skillFiles = provenanceSkillFileDigests(step.provenanceSkillFiles, entry, pathsToPreserve);
   }
   for (const step of plan.targetSteps) {
     if (entriesBySnapshot.has(step.snapshot)) continue;
+    if (step.provenanceSkillFiles.some((path) => pathsToPreserve.has(path))) {
+      fail(`${step.snapshot}: cannot preserve upstream provenance digests because the manifest entry is missing; regenerate from an earlier step`);
+    }
     manifest.entries.push({
       snapshot: step.snapshot,
-      skillFiles: provenanceSkillFileDigests(step.provenanceSkillFiles),
+      skillFiles: provenanceSkillFileDigests(step.provenanceSkillFiles, undefined, pathsToPreserve),
     });
   }
   return `${JSON.stringify(manifest, null, 2)}\n`;
