@@ -181,11 +181,24 @@ const textContracts: TextContract[] = [
     path: "skills/amadeus-discovery/SKILL.md",
     promotedPath: ".agents/skills/amadeus-discovery/SKILL.md",
     includes: [
+      "- `.amadeus/steering/product.md`",
+      "- `.amadeus/steering/tech.md`",
+      "- `.amadeus/steering/structure.md`",
       "関連しそうな既存 Intent の `ideation/scope.md`、`inception/requirements.md`、`inception/traceability.md`",
     ],
     excludes: [
       "関連しそうな既存 Intent の `scope.md`、`requirements.md`、`traceability.md`",
     ],
+  },
+  {
+    path: "skills/amadeus-event-storming/SKILL.md",
+    promotedPath: ".agents/skills/amadeus-event-storming/SKILL.md",
+    includes: [
+      "- `.amadeus/steering/product.md`",
+      "- `.amadeus/steering/tech.md`",
+      "- `.amadeus/steering/structure.md`",
+    ],
+    excludes: [],
   },
   {
     path: "skills/amadeus-domain-modeling/SKILL.md",

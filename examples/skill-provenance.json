@@ -10,7 +10,8 @@
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
-          "md5": "6c6e44e2d7f39171147a8f290c2a16cb"
+          "md5": "6c6e44e2d7f39171147a8f290c2a16cb",
+          "staleReason": "Issue #77 の下流 skill 前提契約を補修した。後続 PR で real provider による example 再生成を行う。"
         }
       ]
     },
@@ -23,7 +24,8 @@
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
-          "md5": "6c6e44e2d7f39171147a8f290c2a16cb"
+          "md5": "6c6e44e2d7f39171147a8f290c2a16cb",
+          "staleReason": "Issue #77 の下流 skill 前提契約を補修した。後続 PR で real provider による example 再生成を行う。"
         },
         {
           "path": "skills/amadeus-ideation/SKILL.md",
@@ -60,7 +62,8 @@
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
-          "md5": "6c6e44e2d7f39171147a8f290c2a16cb"
+          "md5": "6c6e44e2d7f39171147a8f290c2a16cb",
+          "staleReason": "Issue #77 の下流 skill 前提契約を補修した。後続 PR で real provider による example 再生成を行う。"
         },
         {
           "path": "skills/amadeus-ideation/SKILL.md",
@@ -123,7 +126,8 @@
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
-          "md5": "6c6e44e2d7f39171147a8f290c2a16cb"
+          "md5": "6c6e44e2d7f39171147a8f290c2a16cb",
+          "staleReason": "Issue #77 の下流 skill 前提契約を補修した。後続 PR で real provider による example 再生成を行う。"
         },
         {
           "path": "skills/amadeus-ideation/SKILL.md",
