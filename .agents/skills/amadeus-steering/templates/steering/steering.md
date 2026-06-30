@@ -18,6 +18,8 @@
 - `steering/knowledge/`
 - `steering/policies.md`
 - `steering/policies/`
+- `domain-map.md`
+- `context-map.md`
 - `discoveries.md`
 - `intents.md`
 
@@ -31,8 +33,10 @@
 6. `steering/actors.md`
 7. `steering/external-systems.md`
 8. `glossary.md`
-9. `discoveries.md`
-10. `intents.md`
+9. `domain-map.md`
+10. `context-map.md`
+11. `discoveries.md`
+12. `intents.md`
 
 ## Intent Layer へ進む基準
 
@@ -43,4 +47,5 @@
 
 - Steering layer は複数 Intent で共有する前提を扱う。
 - 個別 Intent の要求、ユースケース、Unit、Bolt、Task は Intent layer で扱う。
-- Domain Map、Context Map、Subdomain、Bounded Context、コンテキスト間依存、詳細な Domain Model、契約は対象 stage の承認済み成果物から扱う。
+- Domain Map と Context Map は、採用済み情報がない空の表として作る。
+- Subdomain、Bounded Context、コンテキスト間依存、詳細な Domain Model、契約の採用判断は対象 stage の承認済み成果物から扱う。

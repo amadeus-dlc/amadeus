@@ -17,7 +17,8 @@ Steering layer は、複数 Intent で共有する目的、方針、知識、用
 プロダクト、技術、構造の判断パターンは `steering/product.md`、`steering/tech.md`、`steering/structure.md` に置く。
 
 Domain Map と Context Map は、Inception と Construction の承認済み stage 成果物から更新する root 成果物である。
-この skill では、Domain Map、Context Map、Subdomain、Bounded Context、コンテキスト間依存、詳細な Domain Model、契約を作らない。
+この skill では、空の Domain Map と Context Map を作る。
+ただし、Subdomain、Bounded Context、コンテキスト間依存、詳細な Domain Model、契約は作らない。
 
 この skill は開発中スキルとして扱う。
 eval と手動レビューを通るまで、昇格済み skill として扱わない。
@@ -137,6 +138,8 @@ greenfield では、少なくとも次を作る。
 - `.amadeus/steering/actors.md`
 - `.amadeus/steering/external-systems.md`
 - `.amadeus/glossary.md`
+- `.amadeus/domain-map.md`
+- `.amadeus/context-map.md`
 - `.amadeus/discoveries.md`
 - `.amadeus/intents.md`
 
@@ -153,9 +156,10 @@ brownfield では、既存成果物を読み、欠けている成果物だけを
    質問した場合は、回答を待ってから次へ進む。
 6. `.amadeus/` がなければ作る。
 7. steering layer の必須成果物を作る。
-8. 未確認の情報は `未確認` と書き、空欄にしない。
-9. Intent は作らない。個別 Intent が必要になったら `amadeus-ideation` へ渡す。
-10. 昇格済みの `amadeus-validator` が使える場合は、全体成果物だけを検証する。
+8. Domain Map と Context Map は、採用済み情報がない空の表として作る。
+9. 未確認の情報は `未確認` と書き、空欄にしない。
+10. Intent は作らない。個別 Intent が必要になったら `amadeus-ideation` へ渡す。
+11. 昇格済みの `amadeus-validator` が使える場合は、全体成果物だけを検証する。
 
 ## ファイル別の最低構造
 
