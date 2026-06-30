@@ -253,6 +253,7 @@ const textContracts: TextContract[] = [
       "`inception/units.md` の `コンテキスト`",
       "Domain Map の `adopted` Bounded Context",
       "Domain Map 未登録の Bounded Context",
+      "新規 Boundary を採用する場合は、Finalization で Domain Map へ `adopted` Bounded Context として反映し、`根拠` に Inception の判断を置く。",
       "`scope.md` の対象境界、実行制御、成果物深度、検証戦略",
     ],
     excludes: [
@@ -268,8 +269,8 @@ const textContracts: TextContract[] = [
     path: "skills/amadeus-inception-units-generation/SKILL.md",
     promotedPath: ".agents/skills/amadeus-inception-units-generation/SKILL.md",
     includes: [
-      "Unit の `コンテキスト` は Domain Map の `adopted` Bounded Context、または未採用の境界候補として扱う。",
-      "Domain Map 未登録の Bounded Context を仮参照する場合は、`state.json.inception.gate` を `passed` にしない前提で未確認事項として残す。",
+      "Unit の `コンテキスト` は Domain Map の `adopted` Bounded Context、または Inception で採用判断する境界候補として扱う。",
+      "Domain Map 未登録の Bounded Context を仮参照する場合は、Finalization で Domain Map へ反映する必要がある未確認事項として残す。",
     ],
     excludes: [".amadeus/domain/**", "domain layer"],
   },
@@ -277,6 +278,8 @@ const textContracts: TextContract[] = [
     path: "skills/amadeus-inception-traceability-finalization/SKILL.md",
     promotedPath: ".agents/skills/amadeus-inception-traceability-finalization/SKILL.md",
     includes: [
+      "既存 Boundary を参照する場合、Unit から参照する Bounded Context が Domain Map で `adopted` であることを確認する。",
+      "新規 Boundary を採用する場合、Domain Map へ `adopted` Bounded Context として反映し、`根拠` に Inception の判断を置く。",
       "Unit から参照する Bounded Context が Domain Map で `adopted` ではない場合、`state.json.inception.gate` は `not_ready` にする。",
       "Bounded Context と Unit 参照が採用済み Boundary として確定している場合は `passed` にしてよい。",
     ],

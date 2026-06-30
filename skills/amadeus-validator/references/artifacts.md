@@ -511,6 +511,8 @@ Task は Construction で生成する。
 Task ID は Construction 以降の追跡で `Bnnn/Tnnn` を正規形にする。
 
 Inception 以降の Unit の `コンテキスト` は、Domain Map の `adopted` Bounded Context を参照する必要がある。
+既存 Boundary を参照する場合、Domain Map の既存 `adopted` Bounded Context を参照する。
+現在の Intent で新規 Boundary を採用する場合、Domain Map の Bounded Context 行の `根拠` は Inception の判断を指す。
 
 詳細な Domain Model と Intent Contracts は、Construction の Functional Design で検証する。
 

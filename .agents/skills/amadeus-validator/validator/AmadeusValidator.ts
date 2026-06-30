@@ -2221,10 +2221,37 @@ class AmadeusValidator {
           this.pass(unitsPath, condition, `${unitId}: ${contextId}`);
         } else if (contextIds.has(contextId)) {
           this.pass(unitsPath, condition, `${unitId}: ${contextId}`);
+          this.checkUnitContextDomainMapEvidence(unitsPath, unitId, contextId);
         } else {
           this.failRow(unitsPath, condition, `${unitId}: ${contextId}`);
         }
       }
+    }
+  }
+
+  private checkUnitContextDomainMapEvidence(unitsPath: string, unitId: string, contextId: string): void {
+    if (!this.intentId) return;
+    const path = ".amadeus/domain-map.md";
+    const table = this.tableAfterHeading(path, "Bounded Contexts");
+    const row = table?.rows.find((candidate) => String(candidate["識別子"] ?? "").trim() === contextId);
+    if (!row) return;
+
+    const currentIntentRoot = `intents/${this.intentId}`;
+    const currentIntentTargets = this.markdownLinks(String(row["根拠"] ?? ""))
+      .map((target) => this.cleanLinkTarget(target))
+      .filter((target) => target === `${currentIntentRoot}.md` || target.startsWith(`${currentIntentRoot}/`));
+
+    if (currentIntentTargets.length === 0) {
+      this.pass(unitsPath, "Unit のコンテキストが既存 adopted Bounded Context を参照する", `${unitId}: ${contextId}`);
+      return;
+    }
+
+    const decisionPattern = new RegExp(`^${this.escapeRegExp(currentIntentRoot)}/inception/decisions/D\\d{3}-[^/]+\\.md$`);
+    const decisionTarget = currentIntentTargets.find((target) => decisionPattern.test(target));
+    if (decisionTarget) {
+      this.pass(path, "現在の Intent で採用した Bounded Context の Domain Map 根拠が Inception 判断を指す", `${unitId}: ${contextId}: ${decisionTarget}`);
+    } else {
+      this.failRow(path, "現在の Intent で採用した Bounded Context の Domain Map 根拠が Inception 判断を指す", `${unitId}: ${contextId}: ${currentIntentTargets.join(", ")}`);
     }
   }
 

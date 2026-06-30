@@ -42,6 +42,10 @@
 
 対象 Intent の `inception.gate` が `passed` の場合、Inception 以降の Unit は、`units.md` の `コンテキスト` から Domain Map の `adopted` Bounded Context を参照する。
 
+既存 Boundary を参照する場合、Unit の `コンテキスト` は既存の `adopted` Bounded Context を参照する。
+
+現在の Intent で新規 Boundary を採用する場合、Domain Map の Bounded Context 行は `adopted` にし、`根拠` は Inception の判断を指す。
+
 ## Context Map
 
 `context-map.md` は、次の見出しを持つ。

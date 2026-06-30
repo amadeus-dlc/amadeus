@@ -68,8 +68,8 @@ Use Cases の成果物が不足している場合は、`amadeus-inception-use-ca
 5. 既存コードに載せる brownfield の場合は、既存能力、統合点、ギャップを読んでから Unit Design Brief を作る。
 6. Unit と Bolt のモジュールファイルに `実装対象` を作り、repository、path、branch、PR、CI を分かる範囲で記録する。
 7. 実装対象の `repository` と `path` が未確定の場合は `未確認` と書き、`branch`、`PR`、`CI` が該当しない場合は `なし` と書く。
-8. Unit の `コンテキスト` は Domain Map の `adopted` Bounded Context、または未採用の境界候補として扱う。
-9. Domain Map 未登録の Bounded Context を仮参照する場合は、`state.json.inception.gate` を `passed` にしない前提で未確認事項として残す。
+8. Unit の `コンテキスト` は Domain Map の `adopted` Bounded Context、または Inception で採用判断する境界候補として扱う。
+9. Domain Map 未登録の Bounded Context を仮参照する場合は、Finalization で Domain Map へ反映する必要がある未確認事項として残す。
 10. 対応する Bounded Context が未確認の場合は、推測で Intent 固有の Domain Model 成果物を作らず、未確認事項として残す。
 11. 親 skill から記録対象の質問と回答が渡された場合だけ、`amadeus-grilling` の構造に従って Grilling Decision Trail を同じ変更で更新する。
 12. 作成後に validator が使える場合は、対象 Intent を検証する。
