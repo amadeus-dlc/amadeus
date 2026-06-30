@@ -117,7 +117,7 @@ Bun が使えない場合は `blocked` として報告する。
 - 対象 Intent ディレクトリ名が指定された場合、対象 Intent の `inception/traceability.md` にある `既存コード分析からの追跡` の ID が対応する index に存在する。
 - 対象 Intent ディレクトリ名が指定された場合、対象 Intent の `inception/traceability.md` にある `既存コード分析からの追跡` の `分析` と `設計` が所定の成果物を指す。
 - 対象 Intent ディレクトリ名が指定された場合、対象 Intent の phase 別 `traceability.md` に出る ID が対応する index または定義元に存在する。
-- 対象 Intent ディレクトリ名が指定された場合、対象 Intent の `inception/traceability.md` に出る DDD 要素 ID が、`BCnnn/DMnnn/<ddd-element-id>` の正規形で定義元に存在する。
+- Context Map の `Downstream` と `Upstream` は、Domain Map の Bounded Context を参照する。
 - 対象 Intent ディレクトリ名が指定された場合、`inception/bolts.md` の `ユニット` が既存 Unit を参照する。
 - 対象 Intent ディレクトリ名が指定された場合、複数 Unit を参照する Bolt のモジュールファイルに `複数 Unit を扱う理由` 見出しと本文が存在する。
 - 対象 Intent ディレクトリ名が指定され、Construction Bolt 配下の `tasks.md` が存在する場合、Task が `作業`、`要求`、`ユースケース`、`依存`、`設計根拠`、`証拠` を持つ。
