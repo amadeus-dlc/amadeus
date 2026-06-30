@@ -54,7 +54,7 @@ Inception phase の要件定義だけを進める。
 
 ## 手順
 
-1. Ideation 成果物から、要求候補、対象外、制約、受け入れ状態の根拠を拾う。
+1. Ideation 成果物から、要求候補、対象境界、実行制御、成果物深度、検証戦略、制約、受け入れ状態の根拠を拾う。
 2. 要求 ID は既存 ID の次番号を使う。
 3. `requirements.md` に要求一覧を作る。
 4. `requirements/<requirement-id>-<slug>.md` に要求詳細を作る。

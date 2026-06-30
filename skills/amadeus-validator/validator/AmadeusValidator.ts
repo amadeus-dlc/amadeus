@@ -991,7 +991,7 @@ class AmadeusValidator {
     }
 
     this.checkFile(`${ideationBase}/scope.md`, "Ideation scope が存在する");
-    this.checkHeadings(`${ideationBase}/scope.md`, ["対象", "対象外", "詳細度", "検証深度", "Inception への引き継ぎ"]);
+    this.checkHeadings(`${ideationBase}/scope.md`, ["対象境界", "実行制御", "成果物深度", "検証戦略", "Inception への引き継ぎ"]);
 
     this.checkFile(`${ideationBase}/ideation.md`, "Ideation 分析が存在する");
     this.checkHeadings(`${ideationBase}/ideation.md`, ["実現可能性", "体制", "初期モック", "未確定事項", "学習候補"]);
