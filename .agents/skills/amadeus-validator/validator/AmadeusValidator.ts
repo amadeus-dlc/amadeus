@@ -1473,6 +1473,7 @@ class AmadeusValidator {
     const ids = this.collectIds(path, table, "識別子", intentDirectoryPattern);
     this.checkDependencyValues(path, table, "依存", ids);
     this.checkIntentDetailLinks(path, table, ids);
+    this.checkIntentStateDirectories(table, ids);
 
     const depTable = this.checkTable(path, "依存関係", ["インテント", "依存", "理由"]);
     if (!depTable) return;
@@ -2738,6 +2739,15 @@ class AmadeusValidator {
         if (ids.has(intentId)) this.pass(path, "`詳細` の Intent ID が一覧内に存在する", intentId);
         else this.failRow(path, "`詳細` の Intent ID が一覧内に存在する", intentId);
       }
+    }
+  }
+
+  private checkIntentStateDirectories(table: Table, ids: Set<string>): void {
+    for (const row of table.rows) {
+      const id = String(row["識別子"] ?? "").trim();
+      if (!ids.has(id)) continue;
+      this.checkFile(`.amadeus/intents/${id}`, "Intent モジュールディレクトリが存在する", true);
+      this.checkFile(`.amadeus/intents/${id}/state.json`, "Intent 状態ファイルが存在する");
     }
   }
 
