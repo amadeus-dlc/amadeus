@@ -6,7 +6,8 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "06a13276fcd215d8167fe01b5704e73e"
+          "md5": "06a13276fcd215d8167fe01b5704e73e",
+          "staleReason": "Issue #160 の Steering 旧 domain 配置廃止を反映した。後続 PR で real provider による example 再生成を行う。"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
@@ -20,7 +21,8 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "06a13276fcd215d8167fe01b5704e73e"
+          "md5": "06a13276fcd215d8167fe01b5704e73e",
+          "staleReason": "Issue #160 の Steering 旧 domain 配置廃止を反映した。後続 PR で real provider による example 再生成を行う。"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
@@ -58,7 +60,8 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "06a13276fcd215d8167fe01b5704e73e"
+          "md5": "06a13276fcd215d8167fe01b5704e73e",
+          "staleReason": "Issue #160 の Steering 旧 domain 配置廃止を反映した。後続 PR で real provider による example 再生成を行う。"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
@@ -122,7 +125,8 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "06a13276fcd215d8167fe01b5704e73e"
+          "md5": "06a13276fcd215d8167fe01b5704e73e",
+          "staleReason": "Issue #160 の Steering 旧 domain 配置廃止を反映した。後続 PR で real provider による example 再生成を行う。"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",

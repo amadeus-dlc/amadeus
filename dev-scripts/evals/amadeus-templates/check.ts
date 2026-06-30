@@ -40,10 +40,19 @@ const targetSkills: Record<string, Contract> = {
       "templates/steering/steering/actors.md": ["一覧"],
       "templates/steering/steering/external-systems.md": ["一覧"],
       "templates/steering/glossary.md": ["用語", "避ける語", "禁止ワード"],
-      "templates/steering/domain/subdomains.md": ["一覧"],
-      "templates/steering/domain/bounded-contexts.md": ["一覧", "外部境界", "コンテキスト間の依存", "パターン分類"],
       "templates/steering/discoveries.md": ["一覧"],
       "templates/steering/intents.md": ["一覧", "依存関係"],
+    },
+    absentFiles: ["templates/steering/domain/subdomains.md", "templates/steering/domain/bounded-contexts.md"],
+    textExcludes: {
+      "SKILL.md": [
+        "domain/subdomains.md",
+        "domain/bounded-contexts.md",
+        ".amadeus/domain/subdomains.md",
+        ".amadeus/domain/bounded-contexts.md",
+      ],
+      "templates/steering/README.md": ["domain/subdomains.md", "domain/bounded-contexts.md"],
+      "templates/steering/steering.md": ["domain/subdomains.md", "domain/bounded-contexts.md"],
     },
   },
   "amadeus-discovery": {

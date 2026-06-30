@@ -235,9 +235,11 @@ class AmadeusValidator {
     this.checkDiscoveries();
     this.checkEventStormingSessions(".amadeus/event-storming", "pre-intent");
     this.checkIntents();
-    this.checkSubdomains(".amadeus/domain/subdomains.md", ".amadeus/domain/bounded-contexts.md");
-    this.checkBoundedContexts(".amadeus/domain/bounded-contexts.md", true);
-    this.checkGrillings(".amadeus/domain");
+    if (this.isDirectory(this.absolute(".amadeus/domain"))) {
+      this.checkSubdomains(".amadeus/domain/subdomains.md", ".amadeus/domain/bounded-contexts.md");
+      this.checkBoundedContexts(".amadeus/domain/bounded-contexts.md", true);
+      this.checkGrillings(".amadeus/domain");
+    }
   }
 
   private checkDiscoveries(): void {

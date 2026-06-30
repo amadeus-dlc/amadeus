@@ -343,20 +343,66 @@ function prepareSteeringFixture(workspace: string): void {
 
 function applyLoanDomainBoundaryFixture(workspace: string): void {
   const domain = join(workspace, ".amadeus/domain");
-  replaceInFile(
+  ensureDir(domain);
+  writeFileSync(
     join(domain, "subdomains.md"),
-    {
-      "| SD001 | 未分類 | 未分類 | 主要な領域が未確認である。 | なし |":
-        "| SD001 | 貸出管理 | コア | 利用者の貸出可否確認を扱う。 | BC001 |",
-    },
+    [
+      "# サブドメイン",
+      "",
+      "## 一覧",
+      "",
+      "| 識別子 | 名前 | 種別 | 役割 | コンテキスト |",
+      "|---|---|---|---|---|",
+      "| SD001 | 貸出管理 | コア | 利用者の貸出可否確認を扱う。 | BC001 |",
+      "",
+    ].join("\n"),
   );
-  replaceInFile(
+
+  writeFileSync(
     join(domain, "bounded-contexts.md"),
-    {
-      "|---|---|---|---|---|---|\n\n境界づけられたコンテキストは未確認である。":
-        "|---|---|---|---|---|---|\n| BC001 | 貸出可否確認 | SD001 | 利用者の貸出可否と返却期限を判断する。 | [models.md](bounded-contexts/BC001-loan-eligibility/models.md) | [contracts.md](bounded-contexts/BC001-loan-eligibility/contracts.md) |",
-    },
+    [
+      "# 境界づけられたコンテキスト",
+      "",
+      "## 一覧",
+      "",
+      "| 識別子 | 名前 | サブドメイン | 役割 | モデル | 契約 |",
+      "|---|---|---|---|---|---|",
+      "| BC001 | 貸出可否確認 | SD001 | 利用者の貸出可否と返却期限を判断する。 | [models.md](bounded-contexts/BC001-loan-eligibility/models.md) | [contracts.md](bounded-contexts/BC001-loan-eligibility/contracts.md) |",
+      "",
+      "## 外部境界",
+      "",
+      "| コンテキスト | 名前 | 役割 | 根拠 |",
+      "|---|---|---|---|",
+      "",
+      "外部境界は未確認である。",
+      "",
+      "## コンテキスト間の依存",
+      "",
+      "| Downstream | Upstream | 依存内容 | 組織パターン | 統合パターン | 状態 |",
+      "|---|---|---|---|---|---|",
+      "",
+      "コンテキスト間の依存は未確認である。",
+      "",
+      "## パターン分類",
+      "",
+      "組織パターン:",
+      "",
+      "- パートナーシップ",
+      "- 別々の道",
+      "- 順応者",
+      "- 顧客／供給者",
+      "",
+      "統合パターン:",
+      "",
+      "- 共有カーネル",
+      "- 巨大な泥団子",
+      "- 公開ホストサービス（OHS）",
+      "- 公表された言語（PL）",
+      "- 腐敗防止層（ACL）",
+      "",
+    ].join("\n"),
   );
+
   const contextDir = join(domain, "bounded-contexts/BC001-loan-eligibility");
   ensureDir(contextDir);
   writeFileSync(
@@ -1877,8 +1923,6 @@ function steeringArtifacts(): string[] {
     ".amadeus/steering/knowledge/README.md",
     ".amadeus/steering/policies.md",
     ".amadeus/steering/policies/README.md",
-    ".amadeus/domain/subdomains.md",
-    ".amadeus/domain/bounded-contexts.md",
     ".amadeus/discoveries.md",
     ".amadeus/intents.md",
   ];
@@ -2006,6 +2050,8 @@ function ideationTraceabilityFinalizationMarkdownArtifacts(intent: string): stri
 
 function loanDomainBoundaryArtifacts(): string[] {
   return [
+    ".amadeus/domain/subdomains.md",
+    ".amadeus/domain/bounded-contexts.md",
     ".amadeus/domain/bounded-contexts/BC001-loan-eligibility.md",
     ".amadeus/domain/bounded-contexts/BC001-loan-eligibility/models.md",
     ".amadeus/domain/bounded-contexts/BC001-loan-eligibility/contracts.md",
