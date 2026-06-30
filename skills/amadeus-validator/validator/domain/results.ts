@@ -1,4 +1,4 @@
-export type CheckResultKind = "pass" | "fail" | "blocked" | "skipped";
+export type CheckResultKind = "pass" | "warning" | "fail" | "blocked" | "skipped";
 
 export type CheckResult = {
   result: CheckResultKind;
@@ -14,6 +14,10 @@ export type ParseResult<TDocument> = {
 
 export function pass(target: string, condition: string, evidence: string): CheckResult {
   return { result: "pass", target, condition, evidence };
+}
+
+export function warning(target: string, condition: string, evidence: string): CheckResult {
+  return { result: "warning", target, condition, evidence };
 }
 
 export function fail(target: string, condition: string, evidence: string): CheckResult {

@@ -661,6 +661,7 @@ function prepareIdeationTraceabilityFinalizationFixture(workspace: string): void
 
 function applyIdeationScopeFramingArtifacts(workspace: string): void {
   copyIdeationTemplateEntries(workspace, ["scope.md"]);
+  writeMockIdeationScopeControlValues(workspace);
 }
 
 function applyIdeationFeasibilityShapingArtifacts(workspace: string): void {
@@ -714,6 +715,14 @@ function ideationReplacements(): Record<string, string> {
     "<intent-id>-<slug>": fixtureIntent,
     "<dependency-or-none>": "なし",
   };
+}
+
+function writeMockIdeationScopeControlValues(workspace: string): void {
+  replaceInFile(join(ideationTarget(workspace), "scope.md"), {
+    "| 実行スコープ | 未確認 | 未確認 |": "| 実行スコープ | mvp | mock fixture では貸出セルフサービス開始に集中する。 |",
+    "| 深度 | 未確認 | 未確認 |": "| 深度 | standard | mock fixture では Inception へ進められる粒度で整理する。 |",
+    "| 戦略 | 未確認 | 未確認 |": "| 戦略 | standard | mock fixture では初期モックで確認点を検証する。 |",
+  });
 }
 
 function writeIdeationState(target: string): void {

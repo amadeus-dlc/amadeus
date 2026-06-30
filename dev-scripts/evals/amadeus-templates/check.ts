@@ -130,6 +130,7 @@ const targetSkills: Record<string, Contract> = {
       "templates/intents/inception/bolts/B001-bolt.md": ["概要", "対象ユニット", "設計", "完了条件", "依存", "未確認事項"],
       "templates/intents/inception/traceability.md": [
         "要求からの追跡",
+        "対象境界からの追跡",
         "背景からの追跡",
         "ボルトからの追跡",
         "設計からの追跡",

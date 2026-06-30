@@ -7,7 +7,7 @@ import { checkConstructionPhase } from "./phases/construction";
 import { checkInceptionPhase } from "./phases/inception";
 import { type PhaseValidationContext } from "./phases/types";
 
-type Result = "pass" | "fail" | "blocked" | "skipped";
+type Result = "pass" | "warning" | "fail" | "blocked" | "skipped";
 
 type Row = {
   target: string;
@@ -83,6 +83,9 @@ const ideationStateScopeControlKeys = new Set([
   "scopeControlValues",
 ]);
 const ideationTraceabilityScopeControlRows = ["対象境界", "実行制御", "成果物深度", "検証戦略"];
+const inceptionTraceabilityScopeHeading = "対象境界からの追跡";
+const inceptionTraceabilityScopeColumns = ["対象境界", "要求", "ユーザーストーリー", "ユースケース", "ユニット", "ボルト", "扱い"];
+const excludedScopeAllowedContext = ["対象外", "扱わない", "行わない", "しない", "広げない", "未確認", "別境界", "制約", "除外"];
 const grillingSessionFilePattern = /^G\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/;
 const grillingSessionStatusValues = new Set(["active", "completed", "superseded"]);
 const grillingDecisionStatusValues = new Set(["active", "superseded"]);
@@ -872,14 +875,16 @@ class AmadeusValidator {
     }
 
     if (state.phase === "inception") {
-      this.checkIdeationArtifacts(base);
+      this.checkIdeationArtifacts(base, state);
       checkInceptionPhase(this.phaseValidationContext(), { base, state });
+      this.checkScopeInceptionConsistency(base);
       return;
     }
 
     if (state.phase === "construction") {
-      this.checkIdeationArtifacts(base);
+      this.checkIdeationArtifacts(base, state);
       checkConstructionPhase(this.phaseValidationContext(), { base, state });
+      this.checkScopeInceptionConsistency(base);
       return;
     }
 
@@ -1006,14 +1011,15 @@ class AmadeusValidator {
       return;
     }
 
-    this.checkIdeationArtifacts(base);
+    this.checkIdeationArtifacts(base, state);
   }
 
-  private checkIdeationArtifacts(base: string): void {
+  private checkIdeationArtifacts(base: string, state?: Record<string, any>): void {
     const ideationBase = `${base}/ideation`;
+    const ideationGatePassed = String(state?.ideation?.gate ?? "").trim() === "passed";
 
     this.checkFile(`${ideationBase}/scope.md`, "Ideation scope が存在する");
-    this.checkIdeationScope(`${ideationBase}/scope.md`);
+    this.checkIdeationScope(`${ideationBase}/scope.md`, ideationGatePassed);
 
     this.checkFile(`${ideationBase}/ideation.md`, "Ideation 分析が存在する");
     this.checkHeadings(`${ideationBase}/ideation.md`, ["実現可能性", "体制", "初期モック", "未確定事項", "学習候補"]);
@@ -1024,7 +1030,7 @@ class AmadeusValidator {
     this.checkOptionalIndex(`${ideationBase}/decisions.md`, indexSpecs["decisions.md"]);
   }
 
-  private checkIdeationScope(path: string): void {
+  private checkIdeationScope(path: string, ideationGatePassed = false): void {
     this.checkHeadings(path, ["対象境界", "実行制御", "成果物深度", "検証戦略", "Inception への引き継ぎ"]);
 
     const includedTable = this.checkSubheadingTable(path, "対象境界", "対象", ["識別子", "境界", "根拠", "状態"]);
@@ -1035,13 +1041,16 @@ class AmadeusValidator {
 
     const executionTable = this.checkTable(path, "実行制御", ["項目", "値", "理由"]);
     this.checkControlValue(path, executionTable, "実行スコープ", ideationExecutionScopeValues);
+    if (ideationGatePassed) this.checkControlValueConfirmed(path, executionTable, "実行スコープ");
     this.checkOmittedStageReason(path, executionTable);
 
     const depthTable = this.checkTable(path, "成果物深度", ["項目", "値", "理由"]);
     this.checkControlValue(path, depthTable, "深度", ideationDepthValues);
+    if (ideationGatePassed) this.checkControlValueConfirmed(path, depthTable, "深度");
 
     const verificationTable = this.checkTable(path, "検証戦略", ["項目", "値", "理由"]);
     this.checkControlValue(path, verificationTable, "戦略", ideationVerificationStrategyValues);
+    if (ideationGatePassed) this.checkControlValueConfirmed(path, verificationTable, "戦略");
   }
 
   private checkScopeIds(path: string, table: Table | undefined, prefix: string, pattern: RegExp): void {
@@ -1077,6 +1086,14 @@ class AmadeusValidator {
     }
     this.pass(path, `\`${item}\` が定義されている`, item);
     this.checkAllowed(path, item, row["値"], allowed);
+  }
+
+  private checkControlValueConfirmed(path: string, table: Table | undefined, item: string): void {
+    const row = this.controlRow(table, item);
+    if (!row) return;
+    const value = String(row["値"] ?? "").trim();
+    if (value.length > 0 && value !== "未確認") this.pass(path, `Ideation gate passed では \`${item}\` が未確認ではない`, value);
+    else this.failRow(path, `Ideation gate passed では \`${item}\` が未確認ではない`, value || "空欄");
   }
 
   private checkOmittedStageReason(path: string, table: Table | undefined): void {
@@ -1511,10 +1528,146 @@ class AmadeusValidator {
     }
   }
 
+  private checkScopeInceptionConsistency(base: string): void {
+    const scopePath = `${base}/ideation/scope.md`;
+    const inceptionBase = `${base}/inception`;
+    const tracePath = `${inceptionBase}/traceability.md`;
+    if (!this.isFile(this.absolute(scopePath)) || !this.isFile(this.absolute(tracePath))) return;
+
+    const included = this.scopeBoundaryRows(scopePath, "対象", /^SC-IN-\d{3}$/);
+    const excluded = this.scopeBoundaryRows(scopePath, "対象外", /^SC-OUT-\d{3}$/);
+    this.checkInceptionScopeTraceability(tracePath, included, excluded);
+    this.checkExcludedScopeBoundaryWarnings(inceptionBase, excluded);
+  }
+
+  private scopeBoundaryRows(path: string, subheading: string, pattern: RegExp): Array<{ id: string; boundary: string; status: string }> {
+    const table = this.tableAfterSubheading(path, "対象境界", subheading);
+    if (!table) return [];
+    return table.rows
+      .map((row) => ({
+        id: String(row["識別子"] ?? "").trim(),
+        boundary: String(row["境界"] ?? "").trim(),
+        status: String(row["状態"] ?? "").trim(),
+      }))
+      .filter((row) => pattern.test(row.id));
+  }
+
+  private checkInceptionScopeTraceability(
+    path: string,
+    included: Array<{ id: string; boundary: string; status: string }>,
+    excluded: Array<{ id: string; boundary: string; status: string }>,
+  ): void {
+    const table = this.checkTable(path, inceptionTraceabilityScopeHeading, inceptionTraceabilityScopeColumns);
+    if (!table) return;
+
+    const scopeIds = new Set([...included, ...excluded].map((row) => row.id));
+    const tracedScopeIds = new Set<string>();
+    for (const row of table.rows) {
+      const rowScopeIds = this.splitValues(row["対象境界"]);
+      for (const scopeId of rowScopeIds) {
+        if (scopeIds.has(scopeId)) {
+          this.pass(path, "`対象境界` が scope.md の既存 Scope ID である", scopeId);
+          tracedScopeIds.add(scopeId);
+        } else {
+          this.failRow(path, "`対象境界` が scope.md の既存 Scope ID である", scopeId);
+        }
+      }
+      if (rowScopeIds.some((scopeId) => scopeId.startsWith("SC-IN-"))) {
+        this.checkInScopeTraceHasDownstream(path, row);
+      }
+    }
+
+    for (const row of included.filter((candidate) => candidate.status !== "却下")) {
+      if (tracedScopeIds.has(row.id)) this.pass(path, "対象境界からの追跡が採用済み SC-IN を含む", row.id);
+      else this.failRow(path, "対象境界からの追跡が採用済み SC-IN を含む", row.id);
+    }
+
+    this.checkTableTargets(path, table, "要求", this.idsFor(`${dirname(path)}/requirements.md`), true);
+    this.checkTableTargets(path, table, "ユーザーストーリー", this.idsFor(`${dirname(path)}/user-stories.md`), true);
+    this.checkTableTargets(path, table, "ユースケース", this.idsFor(`${dirname(path)}/use-cases.md`), true);
+    this.checkTableTargets(path, table, "ユニット", this.idsFor(`${dirname(path)}/units.md`), true);
+    this.checkTableTargets(path, table, "ボルト", this.idsFor(`${dirname(path)}/bolts.md`), true);
+    this.checkNotBlank(path, table, "扱い");
+  }
+
+  private checkInScopeTraceHasDownstream(path: string, row: Record<string, string>): void {
+    const downstream = ["要求", "ユーザーストーリー", "ユースケース", "ユニット", "ボルト"]
+      .flatMap((column) => this.splitValues(row[column]))
+      .filter((value) => value !== "なし" && value !== "未確認");
+    const scopeIds = this.splitValues(row["対象境界"]).join(", ");
+    if (downstream.length > 0) this.pass(path, "SC-IN が Inception 成果物を参照する", `${scopeIds}: ${downstream.join(", ")}`);
+    else this.failRow(path, "SC-IN が Inception 成果物を参照する", `${scopeIds}: 参照なし`);
+  }
+
+  private checkExcludedScopeBoundaryWarnings(inceptionBase: string, excluded: Array<{ id: string; boundary: string; status: string }>): void {
+    const files = this.inceptionContentFiles(inceptionBase);
+    let warningCount = 0;
+    for (const row of excluded) {
+      for (const term of this.excludedScopeTerms(row.boundary)) {
+        for (const file of files) {
+          const lines = this.read(file).split("\n");
+          lines.forEach((line, index) => {
+            if (!line.includes(term) || this.hasExcludedScopeAllowedContext(line)) return;
+            warningCount += 1;
+            this.warningRow(file, "Inception 成果物に SC-OUT に反する可能性がある項目がない", `${row.id}: ${term}: ${index + 1}行目`);
+          });
+        }
+      }
+    }
+    if (warningCount === 0) {
+      this.pass(inceptionBase, "Inception 成果物に SC-OUT に反する可能性がある項目がない", "警告なし");
+    }
+  }
+
+  private inceptionContentFiles(inceptionBase: string): string[] {
+    const root = this.absolute(inceptionBase);
+    if (!this.isDirectory(root)) return [];
+    const patterns = [
+      "requirements.md",
+      "requirements/*.md",
+      "user-stories.md",
+      "user-stories/*.md",
+      "use-cases.md",
+      "use-cases/*.md",
+      "units.md",
+      "units/**/*.md",
+      "bolts.md",
+      "bolts/*.md",
+    ];
+    const entries = new Set<string>();
+    for (const pattern of patterns) {
+      for (const entry of new Bun.Glob(pattern).scanSync({ cwd: root })) {
+        if (entry.endsWith(".md")) entries.add(entry);
+      }
+    }
+    return [...entries].sort().map((entry) => `${inceptionBase}/${entry}`);
+  }
+
+  private excludedScopeTerms(boundary: string): string[] {
+    const normalized = boundary
+      .replace(/[。．.]/g, "")
+      .replace(/は扱わない.*$/, "")
+      .replace(/は行わない.*$/, "")
+      .replace(/は対象外.*$/, "")
+      .replace(/を扱わない.*$/, "")
+      .replace(/を行わない.*$/, "")
+      .replace(/を対象外.*$/, "")
+      .trim();
+    return normalized
+      .split(/、|と/)
+      .map((term) => term.trim())
+      .filter((term) => term.length >= 2);
+  }
+
+  private hasExcludedScopeAllowedContext(line: string): boolean {
+    return excludedScopeAllowedContext.some((marker) => line.includes(marker));
+  }
+
   private checkTraceability(path: string): void {
     this.checkFile(path, "追跡ファイルが存在する");
     this.checkHeadings(path, [
       "要求からの追跡",
+      inceptionTraceabilityScopeHeading,
       "背景からの追跡",
       "ボルトからの追跡",
       "設計からの追跡",
@@ -1525,6 +1678,8 @@ class AmadeusValidator {
     ]);
     const requirementTraceTable = this.checkTable(path, "要求からの追跡", ["要求", "アクター", "ストーリー", "ユースケース", "ユニット", "ボルト"]);
     if (requirementTraceTable) this.checkNoInceptionTaskColumn(path, "要求からの追跡", requirementTraceTable);
+    const scopeTraceTable = this.checkTable(path, inceptionTraceabilityScopeHeading, inceptionTraceabilityScopeColumns);
+    if (scopeTraceTable) this.checkNoInceptionTaskColumn(path, inceptionTraceabilityScopeHeading, scopeTraceTable);
     const designTraceTable = this.checkTable(path, "設計からの追跡", ["設計", "ユニット", "要求", "ユースケース", "ボルト"]);
     if (designTraceTable) this.checkDesignTraceability(path, designTraceTable);
     const codebaseTraceTable = this.checkTable(path, "既存コード分析からの追跡", ["分析", "要求", "ユースケース", "ユニット", "ボルト", "設計", "入力"]);
@@ -2753,6 +2908,10 @@ class AmadeusValidator {
     this.rows.push({ target, condition, result: "fail", evidence });
   }
 
+  private warningRow(target: string, condition: string, evidence: string): void {
+    this.rows.push({ target, condition, result: "warning", evidence });
+  }
+
   private blocked(target: string, condition: string, evidence: string): void {
     this.rows.push({ target, condition, result: "blocked", evidence });
   }
@@ -2778,6 +2937,7 @@ class AmadeusValidator {
   private report(): string {
     const failing = this.rows.filter((row) => row.result === "fail");
     const blocking = this.rows.filter((row) => row.result === "blocked");
+    const warnings = this.rows.filter((row) => row.result === "warning");
     const passed = this.rows.filter((row) => row.result === "pass");
     const skippedRows = this.rows.filter((row) => row.result === "skipped");
 
@@ -2789,6 +2949,12 @@ class AmadeusValidator {
     lines.push("", "## 検査対象外", "");
     const skippedSummary = [...new Set(skippedRows.map((row) => `${row.target}: ${row.condition}。対象: ${row.evidence}`))];
     lines.push(...(skippedSummary.length > 0 ? skippedSummary.map((item) => `- ${item}`) : ["- なし"]));
+    lines.push("", "## 警告", "");
+    if (warnings.length === 0) {
+      lines.push("- なし");
+    } else {
+      for (const row of warnings) lines.push(`- \`${row.target}\`: ${row.condition}。根拠: ${row.evidence}`);
+    }
     lines.push("", "## 不足または矛盾", "");
     if (failing.length === 0 && blocking.length === 0) {
       lines.push("- なし");
@@ -2806,9 +2972,9 @@ class AmadeusValidator {
       const category = this.categoryFor(row);
       categories.set(category, [...(categories.get(category) ?? []), row]);
     }
-    const lines = ["| 検査カテゴリ | pass | fail | blocked |", "|---|---:|---:|---:|"];
+    const lines = ["| 検査カテゴリ | pass | warning | fail | blocked |", "|---|---:|---:|---:|---:|"];
     for (const [category, rows] of [...categories.entries()].sort(([a], [b]) => a.localeCompare(b, "ja"))) {
-      lines.push(`| ${category} | ${rows.filter((row) => row.result === "pass").length} | ${rows.filter((row) => row.result === "fail").length} | ${rows.filter((row) => row.result === "blocked").length} |`);
+      lines.push(`| ${category} | ${rows.filter((row) => row.result === "pass").length} | ${rows.filter((row) => row.result === "warning").length} | ${rows.filter((row) => row.result === "fail").length} | ${rows.filter((row) => row.result === "blocked").length} |`);
     }
     return lines;
   }

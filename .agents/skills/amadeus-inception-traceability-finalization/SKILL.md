@@ -63,6 +63,8 @@ Units Generation の成果物が不足している場合は、`amadeus-inception
 ## 手順
 
 1. Requirement、Story、Use Case、Unit、Unit Design Brief、Bolt の追跡関係を `traceability.md` に反映する。
+   - `対象境界からの追跡` で、`ideation/scope.md` の採用済み `SC-IN-*` を Requirement、Story、Use Case、Unit、Bolt へ接続する。
+   - `SC-OUT-*` は Inception 成果物へ混入させず、必要な場合は対象外制約として判断に残す。
    - `要求からの追跡` の `ボルト` 列と `ボルトからの追跡` の `要求` 列は双方向に一致させる。
    - `要求からの追跡` である要求が参照していない Bolt には、`ボルトからの追跡` でその要求を含めない。
 2. Inception の境界、粒度、対象外、greenfield または brownfield の判断を `decisions.md` と `decisions/**` に残す。
