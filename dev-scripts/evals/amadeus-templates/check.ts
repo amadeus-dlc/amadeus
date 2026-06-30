@@ -286,6 +286,63 @@ const textContracts: TextContract[] = [
     excludes: [".amadeus/domain/**", "domain layer"],
   },
   {
+    path: "skills/amadeus-construction/SKILL.md",
+    promotedPath: ".agents/skills/amadeus-construction/SKILL.md",
+    includes: [
+      "Functional Design は詳細な Domain Model と Intent Contracts の管理元である。",
+      "Functional Design 承認後に、共有境界として採用する内容は Domain Map、コンテキスト間依存として採用する内容は Context Map へ反映できる。",
+      "Domain Map と Context Map は候補を扱わず、`adopted` と `retired` の現在の索引だけを扱う。",
+    ],
+    excludes: [".amadeus/domain/**", "domain layer"],
+  },
+  {
+    path: "skills/amadeus-construction-functional-design/SKILL.md",
+    promotedPath: ".agents/skills/amadeus-construction-functional-design/SKILL.md",
+    includes: [
+      "Functional Design は詳細な Domain Model と Intent Contracts の管理元である。",
+      "Functional Design の承認後に Domain Map と Context Map へ昇格する候補を、`domain-entities.md` の `Domain Map と Context Map への反映候補` に記録する。",
+      "Functional Design が `passed` で、共有境界として採用する判断がある場合は Domain Map、コンテキスト間依存として採用する判断がある場合は Context Map へ反映できる。",
+      "Functional Design が `passed` で、共有境界として採用する判断がある場合は Domain Map、コンテキスト間依存として採用する判断がある場合は Context Map を、`adopted` または `retired` の現在の索引として更新する。",
+      "template に Catalog 外の補助見出しがある場合は、その見出しも保持する。",
+      "Domain Map と Context Map には候補を載せない。",
+    ],
+    excludes: [".amadeus/domain/**", "domain layer"],
+  },
+  {
+    path: "skills/amadeus-construction-bolt-preparation/SKILL.md",
+    promotedPath: ".agents/skills/amadeus-construction-bolt-preparation/SKILL.md",
+    includes: [
+      "Functional Design の業務ロジック、業務ルール、Intent Contracts、Domain Entity、必要な UI 構成が Task に反映されている。",
+    ],
+    excludes: [".amadeus/domain/**", "domain layer"],
+  },
+  {
+    path: "skills/amadeus-construction-traceability-finalization/SKILL.md",
+    promotedPath: ".agents/skills/amadeus-construction-traceability-finalization/SKILL.md",
+    includes: [
+      "Functional Design 承認後に共有境界として採用する内容が未反映の場合は Domain Map、コンテキスト間依存として採用する内容が未反映の場合は Context Map を、`adopted` または `retired` の現在の索引として更新する。",
+      "Domain Map と Context Map の更新判断と根拠を `decisions.md` に残す。",
+    ],
+    excludes: [".amadeus/domain/**", "domain layer"],
+  },
+  {
+    path: "skills/amadeus-construction/templates/intents/construction/U001-unit/functional-design/domain-entities.md",
+    promotedPath:
+      ".agents/skills/amadeus-construction/templates/intents/construction/U001-unit/functional-design/domain-entities.md",
+    includes: [
+      "Functional Design は詳細な Domain Model と Intent Contracts の管理元である。",
+      "Domain Map と Context Map への反映候補",
+    ],
+    excludes: [".amadeus/domain/**", "domain layer"],
+  },
+  {
+    path: "skills/amadeus-construction/templates/intents/construction/U001-unit/functional-design/business-rules.md",
+    promotedPath:
+      ".agents/skills/amadeus-construction/templates/intents/construction/U001-unit/functional-design/business-rules.md",
+    includes: ["Intent Contracts", "| 識別子 | 種別 | 条件 | 根拠 | 状態 |"],
+    excludes: [".amadeus/domain/**", "domain layer"],
+  },
+  {
     path: "skills/amadeus-ideation-scope-framing/SKILL.md",
     promotedPath: ".agents/skills/amadeus-ideation-scope-framing/SKILL.md",
     includes: [
