@@ -342,6 +342,11 @@ function prepareSteeringFixture(workspace: string): void {
 }
 
 function applyLoanDomainBoundaryFixture(workspace: string): void {
+  mkdirSync(join(workspace, ".amadeus/intents"), { recursive: true });
+  writeFileSync(
+    join(workspace, ".amadeus/intents/20260626-loan-boundaries.md"),
+    ["# 既存貸出境界", "", "## 目的", "", "貸出管理の既存 adopted Boundary を表す mock eval 用 Intent Record である。"].join("\n"),
+  );
   writeFileSync(
     join(workspace, ".amadeus/domain-map.md"),
     [
@@ -351,13 +356,13 @@ function applyLoanDomainBoundaryFixture(workspace: string): void {
       "",
       "| 識別子 | 名前 | 種別 | 役割 | 状態 | 根拠 |",
       "|---|---|---|---|---|---|",
-      "| SD001 | 貸出管理 | コア | 利用者の貸出可否確認を扱う。 | adopted | [D001](intents/20260627-loan-self-service/ideation/decisions/D001-complete-ideation.md) |",
+      "| SD001 | 貸出管理 | コア | 利用者の貸出可否確認を扱う。 | adopted | [D000](intents/20260626-loan-boundaries.md) |",
       "",
       "## Bounded Contexts",
       "",
       "| 識別子 | 名前 | サブドメイン | 役割 | 状態 | 根拠 |",
       "|---|---|---|---|---|---|",
-      "| BC001 | 貸出可否確認 | SD001 | 利用者の貸出可否と返却期限を判断する。 | adopted | [D001](intents/20260627-loan-self-service/ideation/decisions/D001-complete-ideation.md) |",
+      "| BC001 | 貸出可否確認 | SD001 | 利用者の貸出可否と返却期限を判断する。 | adopted | [D000](intents/20260626-loan-boundaries.md) |",
       "",
     ].join("\n"),
   );
@@ -1714,6 +1719,7 @@ function loanDomainBoundaryPromptLines(): string[] {
   return [
     "- 既存 Domain Map: `.amadeus/domain-map.md`。BC001 loan-eligibility は adopted である。",
     "- 既存 Context Map: `.amadeus/context-map.md`。",
+    "- 既存 Boundary の根拠: `.amadeus/intents/20260626-loan-boundaries.md`。",
     "- units.md の `コンテキスト` は BC001 を参照する。",
   ];
 }
@@ -1974,6 +1980,7 @@ function loanDomainBoundaryArtifacts(): string[] {
   return [
     ".amadeus/domain-map.md",
     ".amadeus/context-map.md",
+    ".amadeus/intents/20260626-loan-boundaries.md",
   ];
 }
 

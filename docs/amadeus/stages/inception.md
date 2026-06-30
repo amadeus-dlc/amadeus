@@ -247,9 +247,11 @@ Task は Construction の Task Generation で生成する。
 4. Unit Design Brief の `Bolt 分割方針` に従って Bolt を切る。
 5. Bolt ごとにモジュールファイルを作り、Construction で Task 化するための完了条件、依存、実装対象、未確認事項を残す。
 6. brownfield の場合は、既存能力、統合点、ギャップを読んでから Unit Design Brief を作る。
-7. Unit の `コンテキスト` は Domain Map の adopted Bounded Context、または未採用の境界候補として扱う。
-8. Domain Map 未登録の Bounded Context を仮参照してよいが、採用済みでなければ `state.json.inception.gate` を `passed` にしない。
-9. 対応する Bounded Context が未確認の場合は、推測で Intent 固有の Domain Model 成果物を作らず、未確認事項として残す。
+7. Unit の `コンテキスト` は Domain Map の adopted Bounded Context、または Inception で採用判断する境界候補として扱う。
+8. 既存 Boundary を参照する場合、Unit の `コンテキスト` は Domain Map の adopted Bounded Context を参照する。
+9. 新規 Boundary を採用する場合、Traceability Finalization で Domain Map へ adopted Bounded Context として反映し、`根拠` は Inception の判断を指す。
+10. Domain Map に adopted Bounded Context として反映できない場合は、`state.json.inception.gate` を `passed` にしない。
+11. 対応する Bounded Context が未確認の場合は、推測で Intent 固有の Domain Model 成果物を作らず、未確認事項として残す。
 
 ### Outputs
 
@@ -303,6 +305,7 @@ Traceability Finalization は、Requirement、存在する場合の Story、Use 
 - `inception/bolts.md`
 - `inception/bolts/**`
 - `state.json`
+- Domain Map と Context Map、存在する場合
 
 ### Steps
 
@@ -311,9 +314,11 @@ Traceability Finalization は、Requirement、存在する場合の Story、Use 
 2. Inception の境界、粒度、対象外、greenfield または brownfield の判断を `decisions.md` と `decisions/**` に残す。
 3. `state.json.phase` を `inception` にし、Inception の必須成果物を反映する。
 4. Story が不要な場合は、`state.json.inception.requiredStoryArtifacts` を空配列にする。
-5. Unit から参照する Bounded Context が Domain Map で adopted ではない場合、`state.json.inception.gate` は `not_ready` にする。
-6. Bounded Context と Unit 参照が採用済み Boundary として確定している場合は `passed` にしてよい。
-7. validator で対象 Intent を検証する。
+5. 既存 Boundary を参照する場合、Unit から参照する Bounded Context が Domain Map で adopted であることを確認する。
+6. 新規 Boundary を採用する場合、Domain Map へ adopted Bounded Context として反映し、`根拠` に Inception の判断を置く。
+7. Unit から参照する Bounded Context が Domain Map で adopted ではない場合、`state.json.inception.gate` は `not_ready` にする。
+8. Bounded Context と Unit 参照が採用済み Boundary として確定している場合は `passed` にしてよい。
+9. validator で対象 Intent を検証する。
 
 ### Outputs
 
@@ -323,6 +328,8 @@ Traceability Finalization は、Requirement、存在する場合の Story、Use 
 | `inception/decisions.md` | Inception の判断一覧 |
 | `inception/decisions/<decision-id>-<slug>.md` | 個別判断 |
 | `state.json` | `phase: inception` と Inception gate 状態 |
+| `.amadeus/domain-map.md` | 新規 Boundary を採用する場合の Domain Map 反映 |
+| `.amadeus/context-map.md` | 新規 Boundary の依存を採用する場合の Context Map 反映 |
 
 ### Approval Gate
 

@@ -835,6 +835,10 @@ function replaceDecisionDetailWithLegacyPath(workspace: string): void {
 
 function writeRootDomainMaps(workspace: string): void {
   writeFileSync(
+    rootArtifactPath(workspace, "intents/20260628-existing-boundaries.md"),
+    ["# 既存 Boundary 採用", "", "## 目的", "", "Domain Map の既存 adopted Bounded Context を表す eval 用 Intent Record である。"].join("\n"),
+  );
+  writeFileSync(
     rootArtifactPath(workspace, "domain-map.md"),
     [
       "# Domain Map",
@@ -843,21 +847,21 @@ function writeRootDomainMaps(workspace: string): void {
       "",
       "| 識別子 | 名前 | 種別 | 役割 | 状態 | 根拠 |",
       "|---|---|---|---|---|---|",
-      "| SD001 | 商品管理 | 支援 | 商品情報を管理し、販売管理から参照できる状態にする。 | adopted | [D002](intents/20260629-minimum-purchase-flow.md) |",
-      "| SD002 | 顧客管理 | 支援 | 購入者または顧客に関する情報を管理する。 | adopted | [D002](intents/20260629-minimum-purchase-flow.md) |",
-      "| SD003 | 入荷管理 | 支援 | 商品が販売可能になる前の入荷を管理する。 | adopted | [D002](intents/20260629-minimum-purchase-flow.md) |",
-      "| SD004 | 販売管理 | コア | 商品選択から注文作成までの販売活動を扱う。 | adopted | [D002](intents/20260629-minimum-purchase-flow.md) |",
-      "| SD005 | 出荷管理 | 支援 | 注文後の商品発送を管理する。 | adopted | [D002](intents/20260629-minimum-purchase-flow.md) |",
+      "| SD001 | 商品管理 | 支援 | 商品情報を管理し、販売管理から参照できる状態にする。 | adopted | [D000](intents/20260628-existing-boundaries.md) |",
+      "| SD002 | 顧客管理 | 支援 | 購入者または顧客に関する情報を管理する。 | adopted | [D000](intents/20260628-existing-boundaries.md) |",
+      "| SD003 | 入荷管理 | 支援 | 商品が販売可能になる前の入荷を管理する。 | adopted | [D000](intents/20260628-existing-boundaries.md) |",
+      "| SD004 | 販売管理 | コア | 商品選択から注文作成までの販売活動を扱う。 | adopted | [D000](intents/20260628-existing-boundaries.md) |",
+      "| SD005 | 出荷管理 | 支援 | 注文後の商品発送を管理する。 | adopted | [D000](intents/20260628-existing-boundaries.md) |",
       "",
       "## Bounded Contexts",
       "",
       "| 識別子 | 名前 | サブドメイン | 役割 | 状態 | 根拠 |",
       "|---|---|---|---|---|---|",
-      "| BC001 | 商品管理 | SD001 | 商品情報を管理し、販売管理から参照できる状態にする。 | adopted | [D002](intents/20260629-minimum-purchase-flow.md) |",
-      "| BC002 | 顧客管理 | SD002 | 購入者または顧客に関する情報を管理する。 | adopted | [D002](intents/20260629-minimum-purchase-flow.md) |",
-      "| BC003 | 入荷管理 | SD003 | 商品が販売可能になる前の入荷を管理する。 | adopted | [D002](intents/20260629-minimum-purchase-flow.md) |",
-      "| BC004 | 販売管理 | SD004 | 商品選択から注文作成までの販売活動を扱う。 | adopted | [D002](intents/20260629-minimum-purchase-flow.md) |",
-      "| BC005 | 出荷管理 | SD005 | 注文後の商品発送を管理する。 | adopted | [D002](intents/20260629-minimum-purchase-flow.md) |",
+      "| BC001 | 商品管理 | SD001 | 商品情報を管理し、販売管理から参照できる状態にする。 | adopted | [D000](intents/20260628-existing-boundaries.md) |",
+      "| BC002 | 顧客管理 | SD002 | 購入者または顧客に関する情報を管理する。 | adopted | [D000](intents/20260628-existing-boundaries.md) |",
+      "| BC003 | 入荷管理 | SD003 | 商品が販売可能になる前の入荷を管理する。 | adopted | [D000](intents/20260628-existing-boundaries.md) |",
+      "| BC004 | 販売管理 | SD004 | 商品選択から注文作成までの販売活動を扱う。 | adopted | [D000](intents/20260628-existing-boundaries.md) |",
+      "| BC005 | 出荷管理 | SD005 | 注文後の商品発送を管理する。 | adopted | [D000](intents/20260628-existing-boundaries.md) |",
       "",
     ].join("\n"),
   );
@@ -873,6 +877,24 @@ function writeRootDomainMaps(workspace: string): void {
       "| BC004 | BC001 | 販売管理は商品情報を参照する。 | 顧客／供給者 | 公開ホストサービス（OHS） | adopted | [D002](intents/20260629-minimum-purchase-flow.md) |",
       "",
     ].join("\n"),
+  );
+}
+
+function replaceCurrentIntentDomainMapEvidenceWithDecision(workspace: string): void {
+  replaceInFile(
+    rootArtifactPath(workspace, "domain-map.md"),
+    "| BC004 | 販売管理 | SD004 | 商品選択から注文作成までの販売活動を扱う。 | adopted | [D000](intents/20260628-existing-boundaries.md) |",
+    "| BC004 | 販売管理 | SD004 | 商品選択から注文作成までの販売活動を扱う。 | adopted | [D002](intents/20260629-minimum-purchase-flow/inception/decisions/D002-bc004-ownership.md) |",
+    "domain-map fixture does not contain expected BC004 existing intent evidence",
+  );
+}
+
+function replaceCurrentIntentDomainMapEvidenceWithIntentRecord(workspace: string): void {
+  replaceInFile(
+    rootArtifactPath(workspace, "domain-map.md"),
+    "| BC004 | 販売管理 | SD004 | 商品選択から注文作成までの販売活動を扱う。 | adopted | [D000](intents/20260628-existing-boundaries.md) |",
+    "| BC004 | 販売管理 | SD004 | 商品選択から注文作成までの販売活動を扱う。 | adopted | [D002](intents/20260629-minimum-purchase-flow.md) |",
+    "domain-map fixture does not contain expected BC004 existing intent evidence",
   );
 }
 
@@ -1919,11 +1941,19 @@ function appendTaskGenerationTrace(
 }
 
 const phaseInceptionWorkspace = phaseWorkspaceCopy();
+replaceCurrentIntentDomainMapEvidenceWithDecision(phaseInceptionWorkspace);
 run(["bun", "run", validator, phaseInceptionWorkspace, intent]);
 
 const domainMapWithoutLegacyDomainWorkspace = phaseWorkspaceCopy();
 removeLegacyDomainDirectory(domainMapWithoutLegacyDomainWorkspace);
 run(["bun", "run", validator, domainMapWithoutLegacyDomainWorkspace, intent]);
+
+const currentIntentDomainMapEvidenceWithoutDecisionWorkspace = phaseWorkspaceCopy();
+replaceCurrentIntentDomainMapEvidenceWithIntentRecord(currentIntentDomainMapEvidenceWithoutDecisionWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, currentIntentDomainMapEvidenceWithoutDecisionWorkspace, intent],
+  "現在の Intent で採用した Bounded Context の Domain Map 根拠が Inception 判断を指す",
+);
 
 const domainMapCandidateStatusWorkspace = phaseWorkspaceCopy();
 replaceDomainMapStatusWithCandidate(domainMapCandidateStatusWorkspace);
