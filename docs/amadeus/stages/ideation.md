@@ -19,6 +19,26 @@ Ideation の公開入口は `amadeus-ideation` である。
 入力テーマまたは Discovery Brief から開始した場合でも、公開入口は Stage 1.0 だけで止めない。
 Stage 1.0 から Stage 1.4 までを同じ実行で進める。
 
+## Execution 判定基準
+
+`Execution` は、対象 stage を Ideation の通常進行に含めるかを示す。
+
+実行可否そのものは `Condition` と前段成果物の存在で判定する。
+
+`ALWAYS` は、`Condition` を満たす場合に必ず実行する stage である。
+
+既存成果物がある場合は、再作成ではなく点検または補修で充足してよい。
+
+`CONDITIONAL` は、`Condition` が真の場合だけ実行する stage である。
+
+`CONDITIONAL` の stage を実行しない場合は、後続 stage がその出力を必須入力にしてはならず、`state.json` の必須成果物にも含めない。
+
+現行の Ideation 成果物契約では、Ideation を完了状態へ進める場合に初期モックを作る。
+
+そのため、Mock Framing は Ideation 完了時の必須 stage として扱う。
+
+将来、初期モックなしの Ideation 完了を許可する場合は、`amadeus-ideation-traceability-finalization`、`amadeus-validator`、eval、example の契約を同じ変更で更新する。
+
 ## Stage Summary Table
 
 | Stage | Name | Execution | Condition | Lead Skill | Outputs |
@@ -26,7 +46,7 @@ Stage 1.0 から Stage 1.4 までを同じ実行で進める。
 | 1.0 | Intent Capture & Framing | ALWAYS | Intent Record がない、または構造補修が必要な場合 | `amadeus-ideation-intent-capture` | `intents.md`、`intents/<intent-id>-<slug>.md`、`state.json` |
 | 1.1 | Scope Framing | ALWAYS | Intent Record があり、Ideation 成果物を作る場合 | `amadeus-ideation-scope-framing` | `ideation/scope.md` |
 | 1.2 | Feasibility Shaping | ALWAYS | `scope.md` が存在する場合 | `amadeus-ideation-feasibility-shaping` | `ideation/ideation.md` |
-| 1.3 | Mock Framing | CONDITIONAL | 初期モックで確認すべき判断点がある場合 | `amadeus-ideation-mock-framing` | `ideation/mocks/*.puml` |
+| 1.3 | Mock Framing | ALWAYS | `scope.md` と `ideation.md` が存在し、Ideation を完了状態へ進める場合 | `amadeus-ideation-mock-framing` | `ideation/mocks/*.puml` |
 | 1.4 | Traceability Finalization | ALWAYS | `scope.md`、`ideation.md`、初期モックが存在する場合 | `amadeus-ideation-traceability-finalization` | `traceability.md`、`decisions.md`、`state.json` |
 
 ## Stage 1.0: Intent Capture & Framing
@@ -151,8 +171,8 @@ Feasibility Shaping は、実現可能性、体制、未確定事項、学習候
 |---|---|
 | Stage | 1.3 |
 | Phase | Ideation |
-| Execution | CONDITIONAL |
-| Condition | `scope.md` と `ideation.md` が存在し、初期モックで確認すべき判断点がある |
+| Execution | ALWAYS |
+| Condition | `scope.md` と `ideation.md` が存在し、Ideation を完了状態へ進める場合 |
 | Lead Skill | `amadeus-ideation-mock-framing` |
 | Mode | internal |
 

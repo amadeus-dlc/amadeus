@@ -14,6 +14,20 @@ Task、Spec、実装、CI、Operation 成果物は作らない。
 
 Domain Model や契約が不足している場合は、Inception 成果物の中で推測して確定せず、`amadeus-domain-grilling` または `amadeus-domain-modeling` に渡す。
 
+## Execution 判定基準
+
+`Execution` は、対象 stage を Inception の通常進行に含めるかを示す。
+
+実行可否そのものは `Condition` と前段成果物の存在で判定する。
+
+`ALWAYS` は、`Condition` を満たす場合に必ず実行する stage である。
+
+既存成果物がある場合は、再作成ではなく点検または補修で充足してよい。
+
+Inception を完了状態へ進め、Construction へ引き継ぐ場合は、Requirements Definition、User Stories、Use Cases、Units Generation、Traceability Finalization をすべて充足する。
+
+いずれかの stage を充足できない場合は、`state.json.inception.gate` を `passed` にしない。
+
 ## Stage Summary Table
 
 | Stage | Name | Execution | Condition | Lead Skill | Outputs |
