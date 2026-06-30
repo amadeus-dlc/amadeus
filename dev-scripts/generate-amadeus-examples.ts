@@ -60,7 +60,7 @@ const stagedSnapshots = join(root, ".tmp/amadeus-example-generation/snapshots");
 const discoveryId = "20260629-ec-site-construction";
 const intentId = "20260629-minimum-purchase-flow";
 const defaultRunner = "dev-scripts/run-codex-corporate.sh";
-const provenanceManifestPath = join(root, "examples/skill-provenance.json");
+const provenanceManifestPath = Bun.env.AMADEUS_EXAMPLES_PROVENANCE_MANIFEST ?? join(root, "examples/skill-provenance.json");
 
 function parseArgs(args: string[]): Options {
   const options: Options = {

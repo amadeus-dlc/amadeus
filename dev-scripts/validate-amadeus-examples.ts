@@ -1,7 +1,9 @@
 #!/usr/bin/env bun
 
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { domainPlacementContract } from "../amadeus-contracts/catalog";
 
@@ -314,6 +316,112 @@ function validateGenerationPlan(): boolean {
   return ok;
 }
 
+function validatePartialProvenancePreservesUpstreamDigests(): boolean {
+  const ideationAndEarlierPaths = [
+    "skills/amadeus-steering/SKILL.md",
+    "skills/amadeus-discovery/SKILL.md",
+    "skills/amadeus-ideation/SKILL.md",
+    "skills/amadeus-ideation-intent-capture/SKILL.md",
+    "skills/amadeus-ideation-scope-framing/SKILL.md",
+    "skills/amadeus-ideation-feasibility-shaping/SKILL.md",
+    "skills/amadeus-ideation-mock-framing/SKILL.md",
+    "skills/amadeus-ideation-traceability-finalization/SKILL.md",
+  ];
+  const inceptionPaths = [
+    "skills/amadeus-inception/SKILL.md",
+    "skills/amadeus-inception-requirements-definition/SKILL.md",
+    "skills/amadeus-inception-user-stories/SKILL.md",
+    "skills/amadeus-inception-use-cases/SKILL.md",
+    "skills/amadeus-inception-units-generation/SKILL.md",
+    "skills/amadeus-inception-traceability-finalization/SKILL.md",
+  ];
+
+  let ok = true;
+  ok = validatePartialProvenanceCase(
+    "03-inception",
+    ["examples/03-inception-completed", "examples/04-construction-design-ready"],
+    ideationAndEarlierPaths,
+  ) && ok;
+  ok = validatePartialProvenanceCase(
+    "04-construction-design-ready",
+    ["examples/04-construction-design-ready"],
+    [...ideationAndEarlierPaths, ...inceptionPaths],
+  ) && ok;
+  return ok;
+}
+
+function validatePartialProvenanceCase(from: string, snapshotsToMutate: string[], upstreamPathsToPreserve: string[]): boolean {
+  const tempDir = mkdtempSync(join(tmpdir(), "amadeus-provenance-"));
+  const tempManifestPath = join(tempDir, "skill-provenance.json");
+  try {
+    const manifest = JSON.parse(readFileSync(provenanceManifestPath, "utf8")) as SkillProvenanceManifest;
+    const sentinelMd5 = "00000000000000000000000000000176";
+    const sentinelReason = "fixture stale digest from earlier snapshot";
+    const upstreamPaths = new Set(upstreamPathsToPreserve);
+
+    for (const entry of manifest.entries) {
+      if (!snapshotsToMutate.includes(entry.snapshot)) continue;
+      for (const skillFile of entry.skillFiles) {
+        if (upstreamPaths.has(skillFile.path)) {
+          skillFile.md5 = sentinelMd5;
+          skillFile.staleReason = sentinelReason;
+        }
+      }
+    }
+    writeFileSync(tempManifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+    const result = Bun.spawnSync({
+      cmd: ["bun", "run", "dev-scripts/generate-amadeus-examples.ts", "--dry-run", "--print-provenance", "--from", from],
+      env: {
+        ...Bun.env,
+        AMADEUS_EXAMPLES_PROVENANCE_MANIFEST: tempManifestPath,
+      },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const stdout = new TextDecoder().decode(result.stdout);
+    const stderr = new TextDecoder().decode(result.stderr);
+    if (!result.success) {
+      if (stdout.trim().length > 0) console.log(stdout.trimEnd());
+      if (stderr.trim().length > 0) console.error(stderr.trimEnd());
+      return false;
+    }
+
+    const provenanceMarker = "provenance:\n";
+    const provenanceIndex = stdout.indexOf(provenanceMarker);
+    if (provenanceIndex < 0) {
+      console.error("- missing provenance output");
+      return false;
+    }
+    const printedManifest = JSON.parse(stdout.slice(provenanceIndex + provenanceMarker.length)) as SkillProvenanceManifest;
+    const errors: string[] = [];
+    for (const snapshot of snapshotsToMutate) {
+      const entry = printedManifest.entries.find((item) => item.snapshot === snapshot);
+      if (!entry) {
+        errors.push(`${snapshot}: missing provenance entry`);
+        continue;
+      }
+      for (const path of upstreamPaths) {
+        const skillFile = entry.skillFiles.find((item) => item.path === path);
+        if (!skillFile) {
+          errors.push(`${snapshot}: missing upstream skill file: ${path}`);
+        } else if (skillFile.md5 !== sentinelMd5) {
+          errors.push(`${snapshot}: upstream digest was not preserved for ${path}`);
+        } else if (skillFile.staleReason !== sentinelReason) {
+          errors.push(`${snapshot}: upstream staleReason was not preserved for ${path}`);
+        }
+      }
+    }
+    if (errors.length > 0) {
+      for (const error of errors) console.error(`- ${error}`);
+      return false;
+    }
+    return true;
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+}
+
 function validateGenerationPlanCase(args: string[], expectedSnapshots: string[], expectedFrom: string, expectedInputSnapshot: string): boolean {
   const result = Bun.spawnSync({
     cmd: ["bun", "run", "dev-scripts/generate-amadeus-examples.ts", "--dry-run", ...args],
@@ -351,82 +459,6 @@ function validateGenerationPlanCase(args: string[], expectedSnapshots: string[],
     for (const error of errors) console.error(`- ${error}`);
     return false;
   }
-  return true;
-}
-
-function validatePartialProvenancePreservesUpstreamDigests(): boolean {
-  const originalText = readFileSync(provenanceManifestPath, "utf8");
-  const preservedDigest = "00000000000000000000000000000001";
-  const preservedReason = "fixture stale digest from earlier snapshot";
-  let manifest: SkillProvenanceManifest;
-  try {
-    manifest = JSON.parse(originalText) as SkillProvenanceManifest;
-  } catch (error) {
-    console.error(`invalid provenance manifest JSON: ${provenanceManifestPath}`);
-    console.error(error instanceof Error ? error.message : String(error));
-    return false;
-  }
-
-  const mutated = structuredClone(manifest);
-  for (const snapshot of ["examples/03-inception-completed", "examples/04-construction-design-ready"]) {
-    const skillFile = findProvenanceSkillFile(mutated, snapshot, "skills/amadeus-ideation/SKILL.md");
-    if (!skillFile) {
-      console.error(`missing provenance fixture target: ${snapshot}: skills/amadeus-ideation/SKILL.md`);
-      return false;
-    }
-    skillFile.md5 = preservedDigest;
-    skillFile.staleReason = preservedReason;
-  }
-
-  try {
-    writeFileSync(provenanceManifestPath, `${JSON.stringify(mutated, null, 2)}\n`);
-    const result = Bun.spawnSync({
-      cmd: ["bun", "run", "dev-scripts/generate-amadeus-examples.ts", "--dry-run", "--from", "03-inception", "--print-provenance"],
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    const stdout = new TextDecoder().decode(result.stdout);
-    const stderr = new TextDecoder().decode(result.stderr);
-    if (stdout.trim().length > 0) console.log(stdout.trimEnd());
-    if (stderr.trim().length > 0) console.error(stderr.trimEnd());
-    if (!result.success) return false;
-
-    const marker = "provenance:\n";
-    const jsonStart = stdout.indexOf(marker);
-    if (jsonStart < 0) {
-      console.error("missing provenance output");
-      return false;
-    }
-    const output = JSON.parse(stdout.slice(jsonStart + marker.length)) as SkillProvenanceManifest;
-    const errors: string[] = [];
-    for (const snapshot of ["examples/03-inception-completed", "examples/04-construction-design-ready"]) {
-      const skillFile = findProvenanceSkillFile(output, snapshot, "skills/amadeus-ideation/SKILL.md");
-      if (!skillFile) {
-        errors.push(`${snapshot}: missing preserved upstream skill provenance`);
-        continue;
-      }
-      if (skillFile.md5 !== preservedDigest) {
-        errors.push(`${snapshot}: upstream skill digest was rewritten: ${skillFile.md5}`);
-      }
-      if (skillFile.staleReason !== preservedReason) {
-        errors.push(`${snapshot}: upstream skill staleReason was not preserved`);
-      }
-    }
-    const regeneratedSkill = findProvenanceSkillFile(output, "examples/03-inception-completed", "skills/amadeus-inception/SKILL.md");
-    if (!regeneratedSkill) {
-      errors.push("examples/03-inception-completed: missing regenerated inception skill provenance");
-    } else if (regeneratedSkill.md5 !== md5File("skills/amadeus-inception/SKILL.md")) {
-      errors.push("examples/03-inception-completed: regenerated inception skill digest was not refreshed");
-    }
-
-    if (errors.length > 0) {
-      for (const error of errors) console.error(`- ${error}`);
-      return false;
-    }
-  } finally {
-    writeFileSync(provenanceManifestPath, originalText);
-  }
-
   return true;
 }
 
