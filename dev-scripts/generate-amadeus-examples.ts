@@ -9,6 +9,7 @@ type Provider = "real";
 type Options = {
   dryRun: boolean;
   provider: Provider;
+  printProvenance: boolean;
   runner: string;
   from?: string;
 };
@@ -49,6 +50,7 @@ const provenanceManifestPath = join(root, "examples/skill-provenance.json");
 function parseArgs(args: string[]): Options {
   const options: Options = {
     dryRun: false,
+    printProvenance: false,
     provider: "real",
     runner: defaultRunner,
   };
@@ -57,6 +59,8 @@ function parseArgs(args: string[]): Options {
     const arg = args[index];
     if (arg === "--dry-run") {
       options.dryRun = true;
+    } else if (arg === "--print-provenance") {
+      options.printProvenance = true;
     } else if (arg === "--provider") {
       const value = args[index + 1];
       if (value !== "real") fail("--provider currently supports only real");
@@ -599,37 +603,34 @@ function readProvenanceManifest(): Record<string, unknown> & { entries?: Array<{
   return JSON.parse(readFileSync(provenanceManifestPath, "utf8"));
 }
 
-function regeneratedSkillFilesForSnapshot(step: GenerationStep, fromIndex: number): Set<string> {
-  const stepIndex = steps.findIndex((candidate) => candidate.id === step.id);
-  const skillFiles = new Set<string>();
-  for (let index = fromIndex; index <= stepIndex; index += 1) {
-    const current = steps[index];
-    const previous = steps[index - 1];
-    for (const skillFile of current.provenanceSkillFiles) {
-      if (!previous || !previous.provenanceSkillFiles.includes(skillFile)) {
-        skillFiles.add(skillFile);
-      }
-    }
-  }
-  return skillFiles;
+function provenanceSkillFileDigests(paths: string[]): Array<{ path: string; md5: string }> {
+  return paths.map((path) => {
+    const sourcePath = join(root, path);
+    ensureFile(sourcePath);
+    return {
+      path,
+      md5: md5File(sourcePath),
+    };
+  });
 }
 
 function updatedProvenanceText(plan: GenerationPlan): string {
   const manifest = readProvenanceManifest();
-  const regeneratedSkillFilesBySnapshot = new Map(plan.targetSteps.map((step) => [
-    step.snapshot,
-    regeneratedSkillFilesForSnapshot(step, plan.fromIndex),
-  ]));
+  const entries = Array.isArray(manifest.entries) ? manifest.entries : [];
+  manifest.entries = entries;
+  const entriesBySnapshot = new Map(entries.map((entry) => [entry.snapshot, entry]));
+  const targetStepsBySnapshot = new Map(plan.targetSteps.map((step) => [step.snapshot, step]));
   for (const entry of manifest.entries ?? []) {
-    const regeneratedSkillFiles = regeneratedSkillFilesBySnapshot.get(entry.snapshot);
-    if (!regeneratedSkillFiles) continue;
-    for (const skillFile of entry.skillFiles ?? []) {
-      if (!regeneratedSkillFiles.has(skillFile.path)) continue;
-      const sourcePath = join(root, skillFile.path);
-      ensureFile(sourcePath);
-      skillFile.md5 = md5File(sourcePath);
-      delete skillFile.staleReason;
-    }
+    const step = targetStepsBySnapshot.get(entry.snapshot);
+    if (!step) continue;
+    entry.skillFiles = provenanceSkillFileDigests(step.provenanceSkillFiles);
+  }
+  for (const step of plan.targetSteps) {
+    if (entriesBySnapshot.has(step.snapshot)) continue;
+    manifest.entries.push({
+      snapshot: step.snapshot,
+      skillFiles: provenanceSkillFileDigests(step.provenanceSkillFiles),
+    });
   }
   return `${JSON.stringify(manifest, null, 2)}\n`;
 }
@@ -947,6 +948,11 @@ for (const skillFile of new Set(plan.targetSteps.flatMap((step) => [
   ensurePromotedSkillMatchesSource(skillFile);
 }
 ensurePromotedDirectoryMatchesSource("skills/amadeus-validator/validator", "source validator and .agents validator");
+if (options.printProvenance) {
+  if (!options.dryRun) fail("--print-provenance requires --dry-run");
+  console.log("provenance:");
+  console.log(updatedProvenanceText(plan).trimEnd());
+}
 if (!options.dryRun) {
   prepareWorkspace(plan.inputStep);
   for (const step of plan.targetSteps) {

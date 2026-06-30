@@ -591,4 +591,32 @@ runExpectFailure(
   "source validator and .agents validator differ",
 );
 
+const provenanceRepo = mkdtempSync(join(tmpdir(), "amadeus-provenance-rebuild"));
+mkdirSync(join(provenanceRepo, "dev-scripts"), { recursive: true });
+cpSync(join(root, "dev-scripts/generate-amadeus-examples.ts"), join(provenanceRepo, "dev-scripts/generate-amadeus-examples.ts"));
+cpSync(join(root, "skills"), join(provenanceRepo, "skills"), { recursive: true });
+mkdirSync(join(provenanceRepo, ".agents"), { recursive: true });
+cpSync(join(root, ".agents/skills"), join(provenanceRepo, ".agents/skills"), { recursive: true });
+mkdirSync(join(provenanceRepo, "examples"), { recursive: true });
+const provenanceManifest = JSON.parse(readFileSync(join(root, "examples/skill-provenance.json"), "utf8")) as {
+  entries: Array<{ snapshot: string; skillFiles: Array<{ path: string; md5: string }> }>;
+};
+const constructionEntry = provenanceManifest.entries.find((entry) => entry.snapshot === "examples/04-construction-design-ready");
+if (!constructionEntry) fail("missing construction provenance entry");
+constructionEntry.skillFiles = [
+  ...constructionEntry.skillFiles.filter((skillFile) => skillFile.path !== "skills/amadeus-construction-bolt-preparation/SKILL.md"),
+  { path: "skills/amadeus-obsolete/SKILL.md", md5: "00000000000000000000000000000000" },
+];
+writeFileSync(join(provenanceRepo, "examples/skill-provenance.json"), `${JSON.stringify(provenanceManifest, null, 2)}\n`);
+const rebuiltProvenanceOutput = runInCwd(
+  ["bun", "run", "dev-scripts/generate-amadeus-examples.ts", "--provider", "real", "--dry-run", "--print-provenance"],
+  provenanceRepo,
+);
+if (!rebuiltProvenanceOutput.includes('"path": "skills/amadeus-construction-bolt-preparation/SKILL.md"')) {
+  fail("rebuilt provenance must include skill files from step definitions");
+}
+if (rebuiltProvenanceOutput.includes("skills/amadeus-obsolete/SKILL.md")) {
+  fail("rebuilt provenance must remove skill files absent from step definitions");
+}
+
 console.log("amadeus template eval: ok");
