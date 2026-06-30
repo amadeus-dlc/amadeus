@@ -72,6 +72,17 @@ const eventStormingHandoffKinds = new Set(["Aggregate Candidate", "Bounded Conte
 const ideationExecutionScopeValues = new Set(["enterprise", "feature", "mvp", "poc", "bugfix", "refactor", "infra", "security-patch", "workshop", "未確認"]);
 const ideationDepthValues = new Set(["minimal", "standard", "comprehensive", "未確認"]);
 const ideationVerificationStrategyValues = new Set(["minimal", "standard", "comprehensive", "未確認"]);
+const ideationStateScopeControlKeys = new Set([
+  "scope",
+  "executionScope",
+  "artifactDepth",
+  "depth",
+  "verificationStrategy",
+  "testStrategy",
+  "scopeControls",
+  "scopeControlValues",
+]);
+const ideationTraceabilityScopeControlRows = ["対象境界", "実行制御", "成果物深度", "検証戦略"];
 const grillingSessionFilePattern = /^G\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/;
 const grillingSessionStatusValues = new Set(["active", "completed", "superseded"]);
 const grillingDecisionStatusValues = new Set(["active", "superseded"]);
@@ -853,6 +864,7 @@ class AmadeusValidator {
 
     this.checkNoLegacyIntentRootArtifacts(base);
     this.checkExistingPhaseGrillings(base);
+    this.checkNoIdeationScopeControlValuesInState(statePath, state);
 
     if (state.phase === "ideation") {
       this.checkIdeationIntent(base, state);
@@ -1122,6 +1134,23 @@ class AmadeusValidator {
       this.checkJsonValue(path, "ideation.status", ideation.status, "completed");
       this.checkJsonValue(path, "ideation.gate", ideation.gate, "passed");
     }
+  }
+
+  private checkNoIdeationScopeControlValuesInState(path: string, state: Record<string, any>): void {
+    const targets: Array<[string, unknown]> = [
+      ["root", state],
+      ["ideation", state.ideation],
+    ];
+    let found = false;
+    for (const [label, value] of targets) {
+      if (!this.isObject(value)) continue;
+      const keys = Object.keys(value).filter((key) => ideationStateScopeControlKeys.has(key));
+      for (const key of keys) {
+        found = true;
+        this.failRow(path, "state.json に scope 制御値を保存しない", `${label}.${key}`);
+      }
+    }
+    if (!found) this.pass(path, "state.json に scope 制御値を保存しない", "未保存");
   }
 
   private checkIntentCaptureState(path: string, intentCapture: unknown): void {
@@ -1467,9 +1496,19 @@ class AmadeusValidator {
   private checkIdeationTraceability(path: string): void {
     this.checkFile(path, "Ideation 追跡ファイルが存在する");
     this.checkHeadings(path, ["Ideation からの追跡", "依存関係からの追跡"]);
-    this.checkTable(path, "Ideation からの追跡", ["Ideation 要素", "対象", "定義元", "後続への渡し方"]);
+    const ideationTraceTable = this.checkTable(path, "Ideation からの追跡", ["Ideation 要素", "対象", "定義元", "後続への渡し方"]);
+    this.checkIdeationTraceabilityScopeControlRows(path, ideationTraceTable);
     this.checkTable(path, "依存関係からの追跡", ["種別", "対象", "依存", "理由", "定義元"]);
     this.checkRelativeLinks(path);
+  }
+
+  private checkIdeationTraceabilityScopeControlRows(path: string, table: Table | undefined): void {
+    if (!table || !table.headers.includes("Ideation 要素")) return;
+    const elements = new Set(table.rows.map((row) => String(row["Ideation 要素"] ?? "").trim()));
+    for (const element of ideationTraceabilityScopeControlRows) {
+      if (elements.has(element)) this.pass(path, `Ideation 追跡が \`${element}\` を含む`, element);
+      else this.failRow(path, `Ideation 追跡が \`${element}\` を含む`, "行がない");
+    }
   }
 
   private checkTraceability(path: string): void {

@@ -407,6 +407,20 @@ runExpectFailure(
   "`省略 stage` の理由がある",
 );
 
+const stateWithScopeControlWorkspace = phaseWorkspaceCopy();
+addScopeControlToState(stateWithScopeControlWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, stateWithScopeControlWorkspace, intent],
+  "state.json に scope 制御値を保存しない",
+);
+
+const traceabilityWithoutScopeControlWorkspace = phaseWorkspaceCopy();
+removeScopeControlTraceabilityRow(traceabilityWithoutScopeControlWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, traceabilityWithoutScopeControlWorkspace, intent],
+  "Ideation 追跡が `実行制御` を含む",
+);
+
 function ensureBoltDirectory(workspace: string, bolt: string): void {
   mkdirSync(intentPath(workspace, `bolts/${bolt}`), { recursive: true });
 }
@@ -467,6 +481,22 @@ function removeOmittedStageReason(workspace: string): void {
     "| 省略 stage | 運用後半の stage | 決済、配送、出荷、運用改善は対象外である。 |",
     "| 省略 stage | 運用後半の stage |  |",
     "scope fixture does not contain expected omitted stage row",
+  );
+}
+
+function addScopeControlToState(workspace: string): void {
+  const path = intentPath(workspace, "state.json");
+  const state = JSON.parse(readFileSync(path, "utf8"));
+  state.ideation.executionScope = "mvp";
+  writeFileSync(path, JSON.stringify(state, null, 2));
+}
+
+function removeScopeControlTraceabilityRow(workspace: string): void {
+  replaceInFile(
+    join(intentRoot(workspace), "ideation/traceability.md"),
+    "| 実行制御 | mvp | [scope.md](scope.md) | 後続 stage の実行範囲を決める入力にする。 |\n",
+    "",
+    "traceability fixture does not contain expected execution control row",
   );
 }
 

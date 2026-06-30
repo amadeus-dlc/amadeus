@@ -212,10 +212,11 @@ Traceability Finalization は、Ideation の追跡、判断、状態を確定す
 ### Steps
 
 1. `scope.md` の対象境界、実行制御、成果物深度、検証戦略と、`ideation.md`、`mocks/*.puml` から Ideation 要素と依存を拾う。
-2. `traceability.md` に Ideation 要素と依存関係の追跡を書く。
-3. Ideation を完了して Inception へ進める場合は、判断 `D001` を作る。
+2. `traceability.md` に、対象境界、実行制御、成果物深度、検証戦略が後続成果物へどう渡るかを書く。
+3. Ideation を完了して Inception へ進める場合は、対象境界、実行スコープ、成果物深度、検証戦略を採用する判断 `D001` を作る。
 4. `decisions.md` に判断一覧と依存関係を書く。
-5. `state.json` の `requiredArtifacts` と `requiredMocks` に存在する相対パスだけを書く。
+5. Inception 以降に `scope.md` を変更する場合は、影響を受ける Requirement、Story、Use Case、Unit、Bolt を確認する判断を追加または置き換える。
+6. `state.json` の `requiredArtifacts` と `requiredMocks` に存在する相対パスだけを書く。
 
 ### Outputs
 
@@ -231,6 +232,8 @@ Traceability Finalization は、Ideation の追跡、判断、状態を確定す
 Ideation gate は `state.json.ideation.gate` で表す。
 
 完了している場合は `passed`、未完了の場合は `not_ready`、`waiting_approval`、`failed` のいずれかにする。
+`state.json` には、実行スコープ、成果物深度、検証戦略を保存しない。
+これらの定義元は `ideation/scope.md` であり、採用または変更理由は `ideation/decisions.md` と `ideation/decisions/**` に残す。
 
 ### Notes
 

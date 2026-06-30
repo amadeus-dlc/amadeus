@@ -4,10 +4,10 @@
 
 | 識別子 | 概要 | 状態 | 依存 | 詳細 |
 |---|---|---|---|---|
-| D001 | Ideation を完了し Inception へ進める | 未採用 | なし | [D001-complete-ideation.md](decisions/D001-complete-ideation.md) |
+| D001 | 対象境界、実行スコープ、成果物深度、検証戦略を採用し Ideation を完了する | 未採用 | なし | [D001-complete-ideation.md](decisions/D001-complete-ideation.md) |
 
 ## 依存関係
 
 | 判断 | 依存 | 理由 |
 |---|---|---|
-| D001 | なし | Ideation gate を通す判断であり、未確認事項が残る間は採用しない。 |
+| D001 | なし | Ideation gate を通す判断であり、対象境界と scope 制御値が未確認の間は採用しない。 |

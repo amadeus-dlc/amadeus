@@ -260,7 +260,25 @@ const textContracts: TextContract[] = [
   {
     path: "skills/amadeus-ideation-traceability-finalization/SKILL.md",
     promotedPath: ".agents/skills/amadeus-ideation-traceability-finalization/SKILL.md",
-    includes: ["`scope.md` の対象境界、実行制御、成果物深度、検証戦略"],
+    includes: [
+      "`scope.md` の対象境界、実行制御、成果物深度、検証戦略",
+      "`state.json` には、`scope.md` の実行スコープ、成果物深度、検証戦略を保存しない。",
+    ],
+    excludes: [],
+  },
+  {
+    path: "skills/amadeus-ideation/templates/intents/ideation/traceability.md",
+    promotedPath: ".agents/skills/amadeus-ideation/templates/intents/ideation/traceability.md",
+    includes: ["対象境界", "実行制御", "成果物深度", "検証戦略"],
+    excludes: ["| Scope |", "| 対象外 |"],
+  },
+  {
+    path: "skills/amadeus-ideation/templates/intents/ideation/decisions/D001-complete-ideation.md",
+    promotedPath: ".agents/skills/amadeus-ideation/templates/intents/ideation/decisions/D001-complete-ideation.md",
+    includes: [
+      "Inception へ進める前に、対象境界、実行スコープ、成果物深度、検証戦略、実現可能性、体制、初期モックを確認する。",
+      "`state.json` には、実行スコープ、成果物深度、検証戦略を保存しない。",
+    ],
     excludes: [],
   },
   {
