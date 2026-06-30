@@ -103,13 +103,12 @@ Grilling Decision Trail は生ログではない。
 .amadeus/event-storming/<event-storming-id>/
 .amadeus/intents/<intent-id>-<slug>/
 .amadeus/intents/<intent-id>-<slug>/event-storming/<event-storming-id>/
-.amadeus/domain/
 ```
 
 Steering layer は、現行の `.amadeus/` 直下構造が混在しているため、この記録対象から外す。
 
-`.amadeus/domain/` は、全体ドメインまたは共有用語だけに反映する判断過程を扱う。
-共有用語だけを更新する場合は、session の反映先に `../glossary.md` を書く。
+全体ドメインまたは共有用語だけに反映する判断は、現行構造では専用の Grilling Decision Trail を新設しない。
+必要なら `.amadeus/domain-map.md`、`.amadeus/context-map.md`、`.amadeus/glossary.md` の根拠または対象 Intent の decision に残す。
 
 `grillings.md` は索引だけを扱う。
 session 詳細は `grillings/Gxxx-*.md` に置く。

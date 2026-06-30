@@ -8,6 +8,12 @@ import { domainPlacementContract } from "../../../amadeus-contracts/catalog";
 const root = resolve(import.meta.dir, "../../..");
 const legacyIntentDomainRoot = domainPlacementContract.legacyIntentDomainSegments.join("/");
 const legacyIntentDomainPattern = `${legacyIntentDomainRoot}/**`;
+const legacySharedDomainArtifacts = [
+  `${domainPlacementContract.legacySharedDomainRoot}/`,
+  `${domainPlacementContract.legacySharedDomainRoot}/**`,
+  "domain/subdomains.md",
+  "domain/bounded-contexts.md",
+];
 
 const humanFacingFiles = [
   "CONTEXT.md",
@@ -56,6 +62,9 @@ for (const file of humanFacingFiles) {
   const text = readFileSync(path, "utf8");
   assert(!text.includes(legacyIntentDomainRoot), `${file} must not mention ${legacyIntentDomainRoot}`);
   assert(!text.includes(legacyIntentDomainPattern), `${file} must not mention ${legacyIntentDomainPattern}`);
+  for (const artifact of legacySharedDomainArtifacts) {
+    assert(!text.includes(artifact), `${file} must not mention ${artifact}`);
+  }
 }
 
 for (const snapshot of [
@@ -76,7 +85,17 @@ assert(
   existsSync(join(root, constructionExample, "construction/U002-order-creation/functional-design")),
   "construction example must keep Unit Functional Design",
 );
-assert(existsSync(join(root, "examples/01-discovery-completed/.amadeus/domain")), "examples must keep shared Domain Model");
+for (const snapshot of [
+  "examples/01-discovery-completed",
+  "examples/02-ideation-completed",
+  "examples/03-inception-completed",
+  "examples/04-construction-design-ready",
+]) {
+  assert(!existsSync(join(root, snapshot, domainPlacementContract.legacySharedDomainRoot)), `${snapshot} must not include the legacy shared domain directory`);
+  for (const artifact of domainPlacementContract.sharedDomainArtifacts) {
+    assert(existsSync(join(root, snapshot, artifact)), `${snapshot} must include ${artifact}`);
+  }
+}
 assert(existsSync(join(root, "examples/01-discovery-completed/.amadeus/glossary.md")), "examples must keep Glossary");
 
 console.log("amadeus domain placement eval: ok");

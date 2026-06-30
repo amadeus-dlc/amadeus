@@ -418,7 +418,7 @@ PR URL がない場合は `pr.md` を作らない。
 Domain Map と Context Map を更新する場合は、候補を載せない。
 採用済みの現在像は `adopted` とし、後続判断で使わなくなったものは `retired` とする。
 
-旧 `.amadeus/domain/**` は使わない。
+旧共有 domain ディレクトリは使わない。
 後方互換は残さない。
 
 ### Follow-up Issues

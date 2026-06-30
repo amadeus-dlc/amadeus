@@ -26,7 +26,7 @@ Domain Map と Context Map は Steering の一部ではなく、Inception と Co
 `amadeus-steering` は、Domain Map、Context Map、Subdomain、Bounded Context、コンテキスト間依存、詳細な Domain Model、契約を作らない。
 これらは対象 stage の成果物、判断、追跡、承認に基づいて後続 stage で扱う。
 
-旧 `.amadeus/domain/**` は廃止対象である。
+旧共有 domain ディレクトリは廃止対象である。
 後方互換は残さず、現在の成果物契約へ寄せる。
 
 ## Execution 判定基準
@@ -91,7 +91,7 @@ Steering Layer Preparation は、次の成果物を作らない。
 
 | Artifact | Reason |
 |---|---|
-| `.amadeus/domain/**` | 旧成果物配置であり、後方互換を残さない。 |
+| 旧共有 domain ディレクトリ | 旧成果物配置であり、後方互換を残さない。 |
 | `.amadeus/domain-map.md` | Inception と Construction の承認済み stage 成果物から更新する root 成果物である。 |
 | `.amadeus/context-map.md` | Inception と Construction の承認済み stage 成果物から更新する root 成果物である。 |
 

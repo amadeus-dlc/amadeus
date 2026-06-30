@@ -269,7 +269,7 @@ brownfield で Unit Design Brief を作る場合は、Codebase Analysis Gate を
 
 Inception は Intent 固有の `domain/**` を作らない。
 
-旧 `.amadeus/domain/**` は使わない。
+旧共有 domain ディレクトリは使わない。
 後方互換は残さない。
 
 Inception で採用した Boundary は、Domain Map と Context Map へ反映できる。

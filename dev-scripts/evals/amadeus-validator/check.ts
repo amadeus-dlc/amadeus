@@ -857,12 +857,13 @@ function writeRootDomainMaps(workspace: string): void {
 function removeLegacyDomainDirectory(workspace: string): void {
   const traceabilityPath = intentPath(workspace, "traceability.md");
   const text = readFileSync(traceabilityPath, "utf8");
-  if (!text.includes("../../../domain/subdomains.md") || !text.includes("../../../domain/bounded-contexts.md")) {
-    fail("traceability fixture does not contain expected legacy domain links");
-  }
+  const legacyText = text
+    .replaceAll("../../../domain-map.md", "../../../domain/subdomains.md")
+    .replaceAll("../../../context-map.md", "../../../domain/bounded-contexts.md");
+  mkdirSync(join(workspace, ".amadeus/domain"), { recursive: true });
   writeFileSync(
     traceabilityPath,
-    text
+    legacyText
       .replaceAll("../../../domain/subdomains.md", "../../../domain-map.md")
       .replaceAll("../../../domain/bounded-contexts.md", "../../../domain-map.md"),
   );

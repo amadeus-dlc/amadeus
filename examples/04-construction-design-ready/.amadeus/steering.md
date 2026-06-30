@@ -18,8 +18,8 @@
 - `steering/knowledge/`
 - `steering/policies.md`
 - `steering/policies/`
-- `domain/subdomains.md`
-- `domain/bounded-contexts.md`
+- `domain-map.md`
+- `context-map.md`
 - `discoveries.md`
 - `intents.md`
 
@@ -33,8 +33,8 @@
 6. `steering/actors.md`
 7. `steering/external-systems.md`
 8. `glossary.md`
-9. `domain/subdomains.md`
-10. `domain/bounded-contexts.md`
+9. `domain-map.md`
+10. `context-map.md`
 11. `discoveries.md`
 12. `intents.md`
 

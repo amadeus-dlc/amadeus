@@ -33,8 +33,8 @@ Ideation で Intent Record を作る前の入力テーマを Discovery として
 - `.amadeus/steering/structure.md`
 - `.amadeus/steering/actors.md`
 - `.amadeus/glossary.md`
-- `.amadeus/domain/subdomains.md`
-- `.amadeus/domain/bounded-contexts.md`
+- `.amadeus/domain-map.md`
+- `.amadeus/context-map.md`
 - `.amadeus/intents.md`
 
 `.amadeus/discoveries.md` が存在しない場合は、この skill が作成してよい。

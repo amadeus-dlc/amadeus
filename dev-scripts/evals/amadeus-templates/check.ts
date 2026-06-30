@@ -179,7 +179,7 @@ const textContracts: TextContract[] = [
   {
     path: "README.ja.md",
     includes: [
-      "対象 Intent の `domain-notes.md`、`.amadeus/domain/**`、`inception/traceability.md`、Construction の Functional Design",
+      "対象 Intent の `domain-notes.md`、`.amadeus/domain-map.md`、`.amadeus/context-map.md`、`inception/traceability.md`、Construction の Functional Design",
     ],
     excludes: [
       "対象 Intent の `domain-notes.md`、`domain/**`、`traceability.md`",
@@ -213,12 +213,15 @@ const textContracts: TextContract[] = [
     path: "skills/amadeus-domain-modeling/SKILL.md",
     promotedPath: ".agents/skills/amadeus-domain-modeling/SKILL.md",
     includes: [
-      ".amadeus/domain/**",
+      ".amadeus/domain-map.md",
+      ".amadeus/context-map.md",
       "Construction の Functional Design",
       ".amadeus/intents/<intent-id>-<slug>/inception/traceability.md",
       ".amadeus/intents/<intent-id>-<slug>/inception/decisions.md",
     ],
     excludes: [
+      ".amadeus/domain/",
+      ".amadeus/domain/**",
       ".amadeus/intents/<intent-id>-<slug>/domain/**",
       `.amadeus/intents/<intent-id>-<slug>/${legacyIntentDomainPattern}`,
       ".amadeus/intents/<intent-id>-<slug>/traceability.md",
@@ -229,11 +232,14 @@ const textContracts: TextContract[] = [
     path: "skills/amadeus-domain-grilling/SKILL.md",
     promotedPath: ".agents/skills/amadeus-domain-grilling/SKILL.md",
     includes: [
-      ".amadeus/domain/**",
+      ".amadeus/domain-map.md",
+      ".amadeus/context-map.md",
       "Construction の Functional Design",
       "対象 Intent の `inception/traceability.md`",
     ],
     excludes: [
+      ".amadeus/domain/",
+      ".amadeus/domain/**",
       ".amadeus/intents/<intent-id>-<slug>/domain/**",
       `.amadeus/intents/<intent-id>-<slug>/${legacyIntentDomainPattern}`,
       "対象 Intent の `traceability.md`",

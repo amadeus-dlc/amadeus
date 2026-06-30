@@ -125,7 +125,7 @@ bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspac
 - `.amadeus/` is the artifact root in a target workspace.
   In this repository root, it is limited to the steering layer for Amadeus's own development.
 - Intent directory names must match `.amadeus/intents.md` and `.amadeus/intents/<intent-id>-<slug>/`.
-- Domain findings are placed according to scope: Intent-specific notes go to `domain-notes.md`, shared models go to `.amadeus/domain/**`, Inception relationships go to `inception/traceability.md`, and implementation design details go to Construction Functional Design.
+- Domain findings are placed according to scope: Intent-specific notes go to `domain-notes.md`, adopted boundaries go to `.amadeus/domain-map.md`, adopted context dependencies go to `.amadeus/context-map.md`, Inception relationships go to `inception/traceability.md`, and detailed models and contracts go to Construction Functional Design.
 - Unknown values are recorded as `未確認` instead of being left blank.
 - External systems, Bounded Contexts, Intents, and dependencies are not invented from guesses.
 - Spec, `.kiro/specs/**`, `openspec/**`, and Operation artifacts are not fixed as procedures until their corresponding skills are confirmed.

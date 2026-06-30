@@ -2,8 +2,8 @@
 name: amadeus-domain-modeling
 description: >-
   Amadeus 成果物内の対象ドメインモデルを能動的に磨く。用語、ユビキタス言語、概念境界、具体シナリオ、ドメインモデル、契約、ドメイン判断を詰め、
-  確定した内容を `.amadeus/glossary.md`、`.amadeus/intents/<intent-id>-<slug>/domain-notes.md`、`.amadeus/domain/**`、
-  Construction の Functional Design、必要最小限の decision へ記録したい場面では必ず使う。repo 開発用の `CONTEXT.md` や `docs/adr`
+  確定した内容を `.amadeus/glossary.md`、`.amadeus/domain-map.md`、`.amadeus/context-map.md`、
+  `.amadeus/intents/<intent-id>-<slug>/domain-notes.md`、Construction の Functional Design、必要最小限の decision へ記録したい場面では必ず使う。repo 開発用の `CONTEXT.md` や `docs/adr`
   を更新するための skill ではない。
 ---
 
@@ -13,7 +13,7 @@ description: >-
 
 Amadeus 成果物が扱う対象ドメインのモデルを、設計しながら能動的に磨く。
 
-この skill は、単に `.amadeus/glossary.md` や `domain/**` を読むためのものではない。
+この skill は、単に `.amadeus/glossary.md`、`domain-map.md`、`context-map.md` を読むためのものではない。
 用語の衝突を指摘し、曖昧な言葉を精密化し、具体シナリオで概念関係を試し、確定した内容をその場で Amadeus 成果物へ記録するための skill である。
 
 扱うのは `.amadeus/` 配下に記録する対象プロダクトのドメイン知識である。
@@ -26,18 +26,14 @@ Amadeus workspace は、全体のドメイン知識と Intent 固有のドメイ
 ```text
 .amadeus/
 ├── glossary.md
-├── domain/
-│   ├── subdomains.md
-│   ├── bounded-contexts.md
-│   └── bounded-contexts/
-│       └── <bounded-context-id>-<slug>/
-│           ├── models.md
-│           ├── contracts.md
-│           └── models/
-│               └── <ddd-module-id>-<slug>.md
+├── domain-map.md
+├── context-map.md
 └── intents/
     └── <intent-id>-<slug>/
         ├── domain-notes.md
+        ├── construction/
+        │   └── <unit-id>-<slug>/
+        │       └── functional-design/
         └── inception/
             ├── decisions.md
             ├── decisions/
@@ -46,10 +42,11 @@ Amadeus workspace は、全体のドメイン知識と Intent 固有のドメイ
 ```
 
 `.amadeus/glossary.md` は、全 Intent で共有する確定用語を扱う。
-`.amadeus/domain/**` は、全体として採用済みの最新ドメインモデルを扱う。
+`.amadeus/domain-map.md` は、全体として採用済みのサブドメインと境界づけられたコンテキストを扱う。
+`.amadeus/context-map.md` は、採用済みの境界づけられたコンテキスト間の依存と連携関係を扱う。
 
 `.amadeus/intents/<intent-id>-<slug>/domain-notes.md` は、Intent 内で見つかった未確定語、候補、問い、反映履歴を扱う。
-特定 Unit の実装設計に閉じるモデルや契約は、Construction の Functional Design で扱う。
+詳細なドメインモデル、契約、特定 Unit の実装設計に閉じるモデルや契約は、Construction の Functional Design で扱う。
 
 ファイルは必要になった時だけ作る。
 未確定の語や概念を見つけた時は、まず対象 Intent の `domain-notes.md` に記録する。
@@ -63,8 +60,8 @@ Amadeus workspace は、全体のドメイン知識と Intent 固有のドメイ
 少なくとも次が存在しない場合は、steering layer が未整備である。
 
 - `.amadeus/glossary.md`
-- `.amadeus/domain/subdomains.md`
-- `.amadeus/domain/bounded-contexts.md`
+- `.amadeus/domain-map.md`
+- `.amadeus/context-map.md`
 - `.amadeus/intents.md`
 
 Intent 固有の用語、モデル、契約、判断を扱う場合は、対象 Intent ディレクトリ名を確定する。
@@ -129,7 +126,9 @@ Intent 固有の候補が `domain-notes.md` にある場合も同じように照
 - `.amadeus/intents/<intent-id>-<slug>/inception/units.md`
 - `.amadeus/intents/<intent-id>-<slug>/inception/bolts.md`
 - `.amadeus/intents/<intent-id>-<slug>/inception/traceability.md`
-- `.amadeus/domain/**`
+- `.amadeus/domain-map.md`
+- `.amadeus/context-map.md`
+- `.amadeus/intents/<intent-id>-<slug>/construction/<unit-id>-<slug>/functional-design/`
 
 実装コードがある workspace では、必要に応じてコードも確認する。
 成果物やコードと発言が矛盾する場合は、どちらを採用するかを確認する。
@@ -153,8 +152,9 @@ use-cases では再設定トークンが使用状態を持つ前提ですが、
 |---|---|
 | Intent 内の未確定語、候補、問い | `.amadeus/intents/<intent-id>-<slug>/domain-notes.md` |
 | 全 Intent で共有する確定用語 | `.amadeus/glossary.md` |
-| 全体として採用済みのサブドメイン、BC、モデル、契約 | `.amadeus/domain/**` |
-| 特定 Unit の実装設計に閉じるモデル、契約、設計判断 | Construction の Functional Design |
+| 全体として採用済みのサブドメイン、BC | `.amadeus/domain-map.md` |
+| 採用済みの BC 間依存、連携関係 | `.amadeus/context-map.md` |
+| 詳細なモデル、契約、特定 Unit の実装設計に閉じる設計判断 | Construction の Functional Design |
 | モデル要素や契約 ID の追跡 | `.amadeus/intents/<intent-id>-<slug>/inception/traceability.md` |
 | 戻しにくいドメイン判断 | `.amadeus/intents/<intent-id>-<slug>/inception/decisions.md` と `inception/decisions/<decision-id>-<slug>.md` |
 
@@ -170,7 +170,7 @@ decision はむやみに作らない。
 2. 背景なしに読むと、なぜそうしたか疑問が残る。
 3. 複数の選択肢があり、実際に trade-off を選んだ。
 
-この条件を満たさない場合は、`domain-notes.md`、`glossary.md`、`domain/**` の更新で足りる。
+この条件を満たさない場合は、`domain-notes.md`、`glossary.md`、`domain-map.md`、`context-map.md`、Construction の Functional Design の更新で足りる。
 
 ## DDD モデル要素
 
