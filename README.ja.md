@@ -126,7 +126,7 @@ bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspac
   このリポジトリ root では、Amadeus 本体開発用の steering layer に限定して扱います。
 - Intent ディレクトリ名は `.amadeus/intents.md` と `.amadeus/intents/<intent-id>-<slug>/` で一致させます。
 - ドメイン上の発見は範囲に応じて置き分けます。
-  対象 Intent の `domain-notes.md`、`.amadeus/domain/**`、`inception/traceability.md`、Construction の Functional Design を使い分けます。
+  対象 Intent の `domain-notes.md`、`.amadeus/domain-map.md`、`.amadeus/context-map.md`、`inception/traceability.md`、Construction の Functional Design を使い分けます。
 - 不明な値は空欄にせず、`未確認` と記録します。
 - 外部システム、Bounded Context、Intent、依存関係を推測で作りません。
 - Spec、`.kiro/specs/**`、`openspec/**`、Operation 成果物は、対応 skill が確定するまで手順として固定しません。
