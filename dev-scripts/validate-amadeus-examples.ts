@@ -103,6 +103,7 @@ if (mode === "--workspaces-only" || mode === "--all") {
 failed = !validateSnapshotStates(stateValidationTargets(targets)) || failed;
 failed = !validateSharedDomainMaps(stateValidationTargets(targets)) || failed;
 failed = !validateNoInceptionDomainFileSets(stateValidationTargets(targets)) || failed;
+failed = !validateNoLegacySharedDomainReferences(stateValidationTargets(targets)) || failed;
 
 for (const target of targets) {
   const args = ["run", validator, target.workdir, ...(target.intent ? [target.intent] : [])];
@@ -211,6 +212,35 @@ function validateSharedDomainMaps(targets: ExampleSnapshot[]): boolean {
 
   console.log("## Example shared domain maps");
   console.log("shared domain maps: ok");
+  return true;
+}
+
+function validateNoLegacySharedDomainReferences(targets: ExampleSnapshot[]): boolean {
+  const errors: string[] = [];
+  const legacyFragments = [
+    "domain/subdomains.md",
+    "domain/bounded-contexts.md",
+    ".amadeus/domain/",
+  ];
+  for (const target of targets) {
+    const root = `${target.workdir}/.amadeus`;
+    for (const file of listFiles(root)) {
+      const path = `${root}/${file}`;
+      const text = readFileSync(path, "utf8");
+      for (const fragment of legacyFragments) {
+        if (text.includes(fragment)) errors.push(`${path}: legacy shared domain reference remains: ${fragment}`);
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    console.error("## Example legacy shared domain references");
+    for (const error of errors) console.error(`- ${error}`);
+    return false;
+  }
+
+  console.log("## Example legacy shared domain references");
+  console.log("legacy shared domain references: ok");
   return true;
 }
 
