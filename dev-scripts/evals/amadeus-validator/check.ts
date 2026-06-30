@@ -1613,6 +1613,10 @@ function removeEventStormingState(workspace: string): void {
   rmSync(join(workspace, ".amadeus/event-storming/ES001-loan-flow/state.json"));
 }
 
+function removeEventStormingSessionDirectory(workspace: string): void {
+  rmSync(join(workspace, ".amadeus/event-storming/ES001-loan-flow"), { recursive: true, force: true });
+}
+
 function replaceEventStormingCompletedLevelsWithMissingPrerequisite(workspace: string): void {
   const path = join(workspace, ".amadeus/event-storming/ES001-loan-flow/state.json");
   replaceInFile(
@@ -2192,6 +2196,14 @@ removeEventStormingState(eventStormingWithoutStateWorkspace);
 runExpectFailure(
   ["bun", "run", validator, eventStormingWithoutStateWorkspace],
   "Event Storming 状態ファイルが存在する",
+);
+
+const eventStormingWithoutDirectoryWorkspace = phaseWorkspaceCopy();
+writeEventStormingSession(eventStormingWithoutDirectoryWorkspace);
+removeEventStormingSessionDirectory(eventStormingWithoutDirectoryWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, eventStormingWithoutDirectoryWorkspace],
+  "Event Storming セッションディレクトリが存在する",
 );
 
 const eventStormingPreIntentWithRelatedIntentWorkspace = phaseWorkspaceCopy();
