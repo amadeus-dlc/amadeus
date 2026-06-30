@@ -372,6 +372,41 @@ runExpectFailure(
   "Intent 直下の旧配置成果物を使わない",
 );
 
+const invalidExecutionScopeWorkspace = phaseWorkspaceCopy();
+replaceScopeExecutionScopeWithInvalidValue(invalidExecutionScopeWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, invalidExecutionScopeWorkspace, intent],
+  "`実行スコープ` が許可値である",
+);
+
+const invalidScopeDepthWorkspace = phaseWorkspaceCopy();
+replaceScopeDepthWithInvalidValue(invalidScopeDepthWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, invalidScopeDepthWorkspace, intent],
+  "`深度` が許可値である",
+);
+
+const invalidScopeVerificationStrategyWorkspace = phaseWorkspaceCopy();
+replaceScopeVerificationStrategyWithInvalidValue(invalidScopeVerificationStrategyWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, invalidScopeVerificationStrategyWorkspace, intent],
+  "`戦略` が許可値である",
+);
+
+const duplicateScopeIdWorkspace = phaseWorkspaceCopy();
+duplicateScopeId(duplicateScopeIdWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, duplicateScopeIdWorkspace, intent],
+  "Scope ID が重複しない",
+);
+
+const omittedStageWithoutReasonWorkspace = phaseWorkspaceCopy();
+removeOmittedStageReason(omittedStageWithoutReasonWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, omittedStageWithoutReasonWorkspace, intent],
+  "`省略 stage` の理由がある",
+);
+
 function ensureBoltDirectory(workspace: string, bolt: string): void {
   mkdirSync(intentPath(workspace, `bolts/${bolt}`), { recursive: true });
 }
@@ -388,6 +423,51 @@ function replaceInFile(path: string, from: string, to: string, message: string):
   const text = readFileSync(path, "utf8");
   if (!text.includes(from)) fail(message);
   writeFileSync(path, text.replace(from, to));
+}
+
+function replaceScopeExecutionScopeWithInvalidValue(workspace: string): void {
+  replaceInFile(
+    intentPath(workspace, "scope.md"),
+    "| 実行スコープ | mvp | 販売管理の最小購入フローに集中する。 |",
+    "| 実行スコープ | enterprise-plus | 販売管理の最小購入フローに集中する。 |",
+    "scope fixture does not contain expected execution scope",
+  );
+}
+
+function replaceScopeDepthWithInvalidValue(workspace: string): void {
+  replaceInFile(
+    intentPath(workspace, "scope.md"),
+    "| 深度 | standard | 販売管理の最小購入フローを、Inception で要求候補にできる粒度で整理する。 |",
+    "| 深度 | exhaustive | 販売管理の最小購入フローを、Inception で要求候補にできる粒度で整理する。 |",
+    "scope fixture does not contain expected artifact depth",
+  );
+}
+
+function replaceScopeVerificationStrategyWithInvalidValue(workspace: string): void {
+  replaceInFile(
+    intentPath(workspace, "scope.md"),
+    "| 戦略 | standard | 注文内容確認画面の初期モックで、注文作成前の確認点を検証する。 |",
+    "| 戦略 | exhaustive | 注文内容確認画面の初期モックで、注文作成前の確認点を検証する。 |",
+    "scope fixture does not contain expected verification strategy",
+  );
+}
+
+function duplicateScopeId(workspace: string): void {
+  replaceInFile(
+    intentPath(workspace, "scope.md"),
+    "| SC-IN-005 | 注文作成を扱う。 | 最小購入フローの完了条件である。 | 採用済み |",
+    "| SC-IN-004 | 注文作成を扱う。 | 最小購入フローの完了条件である。 | 採用済み |",
+    "scope fixture does not contain expected SC-IN row",
+  );
+}
+
+function removeOmittedStageReason(workspace: string): void {
+  replaceInFile(
+    intentPath(workspace, "scope.md"),
+    "| 省略 stage | 運用後半の stage | 決済、配送、出荷、運用改善は対象外である。 |",
+    "| 省略 stage | 運用後半の stage |  |",
+    "scope fixture does not contain expected omitted stage row",
+  );
 }
 
 function replaceDiscoveryDecision(workspace: string): void {
