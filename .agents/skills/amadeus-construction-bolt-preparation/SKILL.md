@@ -109,7 +109,7 @@ Task の依存関係は `依存` に書く。
 
 - 対象 Bolt の完了条件が、少なくとも1つの Task に対応している。
 - 対象 Bolt の `実装対象` が、Task の実施範囲を判断できる粒度で読める。
-- Functional Design の業務ロジック、業務ルール、Domain Entity、必要な UI 構成が Task に反映されている。
+- Functional Design の業務ロジック、業務ルール、Intent Contracts、Domain Entity、必要な UI 構成が Task に反映されている。
 - 各 Task に、具体的な `作業` がある。
 - 各 Task に、要求 ID とユースケース ID がある。ユースケースを参照しない場合は、理由を `traceability.md` に残す。
 - 各 Task に、`依存` がある。依存がなければ `なし` と書く。

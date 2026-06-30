@@ -187,12 +187,13 @@
         },
         {
           "path": "skills/amadeus-construction-functional-design/SKILL.md",
-          "md5": "701e3b83350fc2b38b3680a9f8ed83f7"
+          "md5": "701e3b83350fc2b38b3680a9f8ed83f7",
+          "staleReason": "Issue #162 の Construction Domain Map と Context Map 更新契約を反映した。後続 PR で real provider による example 再生成を行う。"
         },
         {
           "path": "skills/amadeus-construction-bolt-preparation/SKILL.md",
           "md5": "3db7689b7f0f7c6c9b0882bfb0653fab",
-          "staleReason": "Issue #96 の実装対象契約を構造補修で反映した。後続 PR で real provider による example 再生成を行う。"
+          "staleReason": "Issue #96 の実装対象契約と Issue #162 の Intent Contracts 反映契約を反映した。後続 PR で real provider による example 再生成を行う。"
         }
       ]
     }
