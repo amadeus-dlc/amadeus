@@ -319,6 +319,8 @@ const textContracts: TextContract[] = [
     promotedPath: ".agents/skills/amadeus-construction-bolt-preparation/SKILL.md",
     includes: [
       "Functional Design の業務ロジック、業務ルール、Intent Contracts、Domain Entity、必要な UI 構成が Task に反映されている。",
+      "ユースケースは Use Case ID または `なし` にする。",
+      "`なし` は、相互作用がない内部作業の場合だけ使う。",
     ],
     excludes: [".amadeus/domain/**", "domain layer"],
   },

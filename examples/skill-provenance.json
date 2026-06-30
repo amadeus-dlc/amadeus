@@ -177,7 +177,8 @@
         },
         {
           "path": "skills/amadeus-construction-bolt-preparation/SKILL.md",
-          "md5": "1a19b21ad81fa96a51194354dcff9b92"
+          "md5": "1a19b21ad81fa96a51194354dcff9b92",
+          "staleReason": "Issue #64 で Task のユースケースに `なし` を許可する入口 skill 契約を更新した。real provider による example 再生成は後続 PR で実施する。"
         }
       ]
     }
