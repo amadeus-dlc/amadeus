@@ -336,15 +336,18 @@ function validatePartialProvenancePreservesUpstreamDigests(): boolean {
     "skills/amadeus-inception-traceability-finalization/SKILL.md",
   ];
 
-  return validatePartialProvenanceCase(
+  let ok = true;
+  ok = validatePartialProvenanceCase(
     "03-inception",
     ["examples/03-inception-completed", "examples/04-construction-design-ready"],
     ideationAndEarlierPaths,
-  ) && validatePartialProvenanceCase(
+  ) && ok;
+  ok = validatePartialProvenanceCase(
     "04-construction-design-ready",
     ["examples/04-construction-design-ready"],
     [...ideationAndEarlierPaths, ...inceptionPaths],
-  );
+  ) && ok;
+  return ok;
 }
 
 function validatePartialProvenanceCase(from: string, snapshotsToMutate: string[], upstreamPathsToPreserve: string[]): boolean {
