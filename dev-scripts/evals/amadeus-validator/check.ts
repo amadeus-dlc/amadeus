@@ -349,6 +349,13 @@ runExpectFailure(
   "Intent 直下の旧配置成果物を使わない",
 );
 
+const missingIntentDirectoryWorkspace = workspaceCopy();
+removeIntentModuleDirectory(missingIntentDirectoryWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, missingIntentDirectoryWorkspace],
+  "Intent 状態ファイルが存在する",
+);
+
 const initializedPhaseWorkspace = initializedPhaseWorkspaceCopy();
 runExpectFailure(
   ["bun", "run", validator, initializedPhaseWorkspace, intent],
@@ -466,6 +473,10 @@ function removeSteeringObjective(workspace: string): void {
 
 function removeSteeringProduct(workspace: string): void {
   rmSync(join(workspace, ".amadeus/steering/product.md"), { force: true });
+}
+
+function removeIntentModuleDirectory(workspace: string): void {
+  rmSync(intentRoot(workspace), { recursive: true, force: true });
 }
 
 function replaceInFile(path: string, from: string, to: string, message: string): void {
