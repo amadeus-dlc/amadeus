@@ -2,8 +2,20 @@
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
+import {
+  ciName,
+  implementationBranch,
+  implementationPath,
+  implementationRepository,
+  implementationTargetId,
+  pullRequestUrl,
+} from "./domain/primitives";
+import { type CheckResult } from "./domain/results";
+import { checkConstructionPhase } from "./phases/construction";
+import { checkInceptionPhase } from "./phases/inception";
+import { type PhaseValidationContext } from "./phases/types";
 
-type Result = "pass" | "fail" | "blocked" | "skipped";
+type Result = "pass" | "warning" | "fail" | "blocked" | "skipped";
 
 type Row = {
   target: string;
@@ -31,14 +43,14 @@ const discoveryDecisionValues = new Set([
   "no_intent",
   "undecided",
 ]);
-const discoveryCandidateStatusValues = new Set(["recommended", "waiting", "initialized", "discarded"]);
+const discoveryCandidateStatusValues = new Set(["recommended", "waiting", "intent_record_created", "discarded"]);
 const eventStormingDirectoryPattern = /^ES\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const eventStormingStatusValues = new Set(["draft", "reviewing", "ready", "superseded"]);
 const eventStormingLevelValues = new Set(["big-picture", "process-modeling", "system-design"]);
 const eventStormingScopeValues = new Set(["pre-intent", "intent-scoped"]);
 const eventStormingNextSkillValues = new Set([
   "amadeus-discovery",
-  "amadeus-intent-init",
+  "amadeus-ideation",
   "amadeus-inception",
   "amadeus-domain-modeling",
 ]);
@@ -65,10 +77,28 @@ const eventStormingBoardTypes = new Set([
 ]);
 const eventStormingHotspotStatusValues = new Set(["open", "resolved", "accepted"]);
 const eventStormingHandoffKinds = new Set(["Aggregate Candidate", "Bounded Context Candidate"]);
+const ideationExecutionScopeValues = new Set(["enterprise", "feature", "mvp", "poc", "bugfix", "refactor", "infra", "security-patch", "workshop", "未確認"]);
+const ideationDepthValues = new Set(["minimal", "standard", "comprehensive", "未確認"]);
+const ideationVerificationStrategyValues = new Set(["minimal", "standard", "comprehensive", "未確認"]);
+const ideationStateScopeControlKeys = new Set([
+  "scope",
+  "executionScope",
+  "artifactDepth",
+  "depth",
+  "verificationStrategy",
+  "testStrategy",
+  "scopeControls",
+  "scopeControlValues",
+]);
+const ideationTraceabilityScopeControlRows = ["対象境界", "実行制御", "成果物深度", "検証戦略"];
+const inceptionTraceabilityScopeHeading = "対象境界からの追跡";
+const inceptionTraceabilityScopeColumns = ["対象境界", "要求", "ユーザーストーリー", "ユースケース", "ユニット", "ボルト", "扱い"];
+const implementationTargetColumns = ["識別子", "repository", "path", "branch", "PR", "CI"];
+const implementationTargetUnavailableValues = new Set(["なし", "未確認"]);
+const excludedScopeAllowedContext = ["対象外", "扱わない", "行わない", "しない", "広げない", "未確認", "別境界", "制約", "除外"];
 const grillingSessionFilePattern = /^G\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*\.md$/;
 const grillingSessionStatusValues = new Set(["active", "completed", "superseded"]);
 const grillingDecisionStatusValues = new Set(["active", "superseded"]);
-const constructionTasksValues = new Set(["not_generated", "generated", "blocked"]);
 const unitDesignHeadings = [
   "概要",
   "設計戦略",
@@ -78,14 +108,6 @@ const unitDesignHeadings = [
   "検証観点",
   "Bolt 分割方針",
   "Construction への引き継ぎ",
-];
-const constructionDesignHeadings = [
-  "概要",
-  "Domain Design",
-  "Logical Design",
-  "実装設計",
-  "検証設計",
-  "設計変更記録",
 ];
 const dddModuleHeadings = ["目的", "責務", "概念関係", "ライフサイクル", "集約候補", "モデル要素", "関連成果物"];
 const dddElementTableSpecs = [
@@ -97,7 +119,6 @@ const dddElementTableSpecs = [
   { heading: "リポジトリ", idPattern: /^DR\d{3}$/ },
   { heading: "ファクトリ", idPattern: /^DF\d{3}$/ },
 ];
-const constructionDesignGateValues = new Set(["not_started", "draft", "ready", "passed", "failed"]);
 const multiUnitBoltReasonHeading = "複数 Unit を扱う理由";
 
 const indexSpecs: Record<string, { headings: string[]; listHeading: string; columns: string[]; idPattern: RegExp; targetColumn: string }> = {
@@ -395,7 +416,7 @@ class AmadeusValidator {
 
   private eventStormingNextSkillsFor(scope: string, level: string): Set<string> {
     if (scope === "pre-intent" && level === "big-picture") return new Set(["amadeus-discovery"]);
-    if (scope === "pre-intent" && level === "process-modeling") return new Set(["amadeus-discovery", "amadeus-intent-init"]);
+    if (scope === "pre-intent" && level === "process-modeling") return new Set(["amadeus-discovery", "amadeus-ideation"]);
     if (scope === "pre-intent" && level === "system-design") return new Set(["amadeus-domain-modeling"]);
     if (scope === "intent-scoped" && (level === "big-picture" || level === "process-modeling")) return new Set(["amadeus-inception"]);
     if (scope === "intent-scoped" && level === "system-design") return new Set(["amadeus-domain-modeling"]);
@@ -796,39 +817,38 @@ class AmadeusValidator {
     if (table.rows.length >= 2) this.pass(path, "multi_intent の Intent 候補が2件以上ある", `${table.rows.length}件`);
     else this.failRow(path, "multi_intent の Intent 候補が2件以上ある", `${table.rows.length}件`);
 
-    let initialized = 0;
-    let recommended = 0;
+    let intentRecordCreated = 0, recommended = 0;
     for (const row of table.rows) {
       this.checkAllowed(path, "Intent 候補の状態", row["状態"], discoveryCandidateStatusValues);
-      if (String(row["状態"] ?? "").trim() === "initialized") {
-        initialized += 1;
-        this.checkInitializedDiscoveryCandidate(path, row["Intent"]);
+      if (String(row["状態"] ?? "").trim() === "intent_record_created") {
+        intentRecordCreated += 1;
+        this.checkIntentRecordCreatedDiscoveryCandidate(path, row["Intent"]);
       }
       if (String(row["状態"] ?? "").trim() === "recommended") recommended += 1;
       for (const column of ["候補", "課題", "成功状態", "除外範囲", "依存"]) this.checkNotBlankValue(path, column, row[column]);
     }
 
-    if (initialized === 0 && recommended === 1) {
-      this.pass(path, "未初期化の multi_intent は recommended が1件だけである", `${recommended}件`);
-    } else if (initialized === 0) {
-      this.failRow(path, "未初期化の multi_intent は recommended が1件だけである", `${recommended}件`);
+    if (intentRecordCreated === 0 && recommended === 1) {
+      this.pass(path, "Intent Record 作成前の multi_intent は recommended が1件だけである", `${recommended}件`);
+    } else if (intentRecordCreated === 0) {
+      this.failRow(path, "Intent Record 作成前の multi_intent は recommended が1件だけである", `${recommended}件`);
     } else if (recommended === 0 || recommended === 1) {
-      this.pass(path, "初期化済み候補がある multi_intent は recommended が0件または1件である", `${recommended}件`);
+      this.pass(path, "Intent Record 作成済み候補がある multi_intent は recommended が0件または1件である", `${recommended}件`);
     } else {
-      this.failRow(path, "初期化済み候補がある multi_intent は recommended が0件または1件である", `${recommended}件`);
+      this.failRow(path, "Intent Record 作成済み候補がある multi_intent は recommended が0件または1件である", `${recommended}件`);
     }
   }
 
-  private checkInitializedDiscoveryCandidate(path: string, value: unknown): void {
+  private checkIntentRecordCreatedDiscoveryCandidate(path: string, value: unknown): void {
     const links = this.markdownLinks(String(value ?? ""));
     if (links.length === 0) {
-      this.failRow(path, "initialized の Intent 候補が存在する Intent へリンクしている", String(value ?? ""));
+      this.failRow(path, "intent_record_created の Intent 候補が存在する Intent へリンクしている", String(value ?? ""));
       return;
     }
     for (const target of links) {
       const clean = this.cleanLinkTarget(target);
       if (clean.match(/^\.\.\/intents\/[^/]+\.md$/)) this.checkLink(path, target);
-      else this.failRow(path, "initialized の Intent 候補が存在する Intent へリンクしている", target);
+      else this.failRow(path, "intent_record_created の Intent 候補が存在する Intent へリンクしている", target);
     }
   }
 
@@ -857,11 +877,7 @@ class AmadeusValidator {
 
     this.checkNoLegacyIntentRootArtifacts(base);
     this.checkExistingPhaseGrillings(base);
-
-    if (state.phase === "initialized") {
-      this.checkInitializedStateJson(statePath, state);
-      return;
-    }
+    this.checkNoIdeationScopeControlValuesInState(statePath, state);
 
     if (state.phase === "ideation") {
       this.checkIdeationIntent(base, state);
@@ -869,16 +885,66 @@ class AmadeusValidator {
     }
 
     if (state.phase === "inception") {
-      this.checkInceptionIntent(base, state);
+      this.checkIdeationArtifacts(base, state);
+      checkInceptionPhase(this.phaseValidationContext(), { base, state });
+      this.checkScopeInceptionConsistency(base);
       return;
     }
 
     if (state.phase === "construction") {
-      this.checkConstructionIntent(base, state);
+      this.checkIdeationArtifacts(base, state);
+      checkConstructionPhase(this.phaseValidationContext(), { base, state });
+      this.checkScopeInceptionConsistency(base);
       return;
     }
 
     this.failRow(statePath, "`phase` が既知である", String(state.phase ?? ""));
+  }
+
+  private phaseValidationContext(): PhaseValidationContext {
+    return {
+      statusValues,
+      gateValues,
+      indexSpecs,
+      intentId: this.intentId,
+      pass: (target, condition, evidence) => this.pass(target, condition, evidence),
+      failRow: (target, condition, evidence) => this.failRow(target, condition, evidence),
+      checkJsonValue: (path, key, actual, expected) => this.checkJsonValue(path, key, actual, expected),
+      checkAllowed: (path, key, actual, allowed) => this.checkAllowed(path, key, actual, allowed),
+      checkStatePaths: (path, section, key, condition, puml, label) => this.checkStatePaths(path, section, key, condition, puml, label),
+      checkRequiredStatePath: (path, section, key, requiredPath, condition) => this.checkRequiredStatePath(path, section, key, requiredPath, condition),
+      checkIntentCaptureState: (path, value) => this.checkIntentCaptureState(path, value),
+      checkGrillings: (base) => this.checkGrillings(base),
+      checkRequirements: (path) => this.checkRequirements(path),
+      checkAcceptance: (path, requirementsPath) => this.checkAcceptance(path, requirementsPath),
+      checkCodebaseAnalysis: (base, state) => this.checkCodebaseAnalysis(base, state),
+      checkNoInceptionDomainArtifacts: (base) => this.checkNoInceptionDomainArtifacts(base),
+      checkOptionalIndex: (path, spec) => this.checkOptionalIndex(path, spec),
+      checkUnitContextReferences: (base, required, contextsPath, condition) => this.checkUnitContextReferences(base, required, contextsPath, condition),
+      checkUnitDesignArtifacts: (base, state) => this.checkUnitDesignArtifacts(base, state),
+      checkBoltDesignReferences: (base) => this.checkBoltDesignReferences(base),
+      checkNoInceptionBoltDesignBriefArtifacts: (base, state) => this.checkNoInceptionBoltDesignBriefArtifacts(base, state),
+      checkNoInceptionConstructionArtifacts: (base) => this.checkNoInceptionConstructionArtifacts(base),
+      checkInceptionBoltArtifacts: (base, state) => this.checkInceptionBoltArtifacts(base, state),
+      checkTraceability: (path) => this.checkTraceability(path),
+      checkFile: (path, condition, directory) => this.checkFile(path, condition, directory),
+      checkTaskGenerationTraceability: (path, state) => this.checkTaskGenerationTraceability(path, state),
+      checkConstructionTraceability: (path, state) => this.checkConstructionTraceability(path, state),
+      checkConstructionBoltArtifacts: (inceptionBase, constructionBase, state) => this.checkConstructionBoltArtifacts(inceptionBase, constructionBase, state),
+      recordCheckResults: (results) => this.recordCheckResults(results),
+      recordCheckedFiles: (paths) => {
+        for (const path of paths) this.checkedFiles.add(this.relativePath(this.absolute(path)));
+      },
+      isFile: (path) => this.isFile(this.absolute(path)),
+      isObject: (value): value is Record<string, any> => this.isObject(value),
+      typeName: (value) => this.typeName(value),
+      idsFor: (path) => this.idsFor(path),
+      unitDirectories: (base, unitIds) => this.unitDirectories(base, unitIds),
+      inceptionBaseForStatePath: (path) => this.inceptionBaseForStatePath(path),
+      constructionBaseForStatePath: (path) => this.constructionBaseForStatePath(path),
+      constructionBoltDirectories: (inceptionBase, constructionBase) => this.constructionBoltDirectories(inceptionBase, constructionBase),
+      relativeToIntent: (intentBase, artifactPath) => this.relativeToIntent(intentBase, artifactPath),
+    };
   }
 
   private checkNoLegacyIntentRootArtifacts(base: string): void {
@@ -923,7 +989,7 @@ class AmadeusValidator {
   }
 
   private checkExistingPhaseGrillings(base: string): void {
-    for (const phase of ["initialization", "ideation", "inception", "construction"]) {
+    for (const phase of ["ideation", "inception", "construction"]) {
       const phaseBase = `${base}/${phase}`;
       const indexPath = `${phaseBase}/grillings.md`;
       const sessionsPath = `${phaseBase}/grillings`;
@@ -945,30 +1011,25 @@ class AmadeusValidator {
     }
   }
 
-  private checkInitializedStateJson(path: string, state: Record<string, any>): void {
-    this.checkJsonValue(path, "intent", state.intent, this.intentId ?? "");
-    this.checkJsonValue(path, "phase", state.phase, "initialized");
-    this.checkAllowed(path, "status", state.status, statusValues);
-
-    const initialized = state.initialized;
-    if (!this.isObject(initialized)) {
-      this.failRow(path, "`initialized` がオブジェクトである", this.typeName(initialized));
-      return;
-    }
-    this.pass(path, "`initialized` がオブジェクトである", "オブジェクトを確認");
-    this.checkAllowed(path, "initialized.status", initialized.status, statusValues);
-    this.checkStatePaths(path, initialized, "createdArtifacts", "Initialized 作成済み成果物が存在する", false, "initialized");
-    this.checkJsonValue(path, "initialized.next", initialized.next, "ideation");
-  }
-
   private checkIdeationIntent(base: string, state: Record<string, any>): void {
     const statePath = `${base}/state.json`;
-    const ideationBase = `${base}/ideation`;
     this.checkStateJson(statePath, state);
-    this.checkGrillings(ideationBase);
+    this.checkGrillings(`${base}/ideation`);
+
+    if (this.isIdeationStartedOnly(state)) {
+      this.checkNoIdeationDownstreamArtifacts(statePath, base);
+      return;
+    }
+
+    this.checkIdeationArtifacts(base, state);
+  }
+
+  private checkIdeationArtifacts(base: string, state?: Record<string, any>): void {
+    const ideationBase = `${base}/ideation`;
+    const ideationGatePassed = String(state?.ideation?.gate ?? "").trim() === "passed";
 
     this.checkFile(`${ideationBase}/scope.md`, "Ideation scope が存在する");
-    this.checkHeadings(`${ideationBase}/scope.md`, ["対象", "対象外", "詳細度", "検証深度", "Inception への引き継ぎ"]);
+    this.checkIdeationScope(`${ideationBase}/scope.md`, ideationGatePassed);
 
     this.checkFile(`${ideationBase}/ideation.md`, "Ideation 分析が存在する");
     this.checkHeadings(`${ideationBase}/ideation.md`, ["実現可能性", "体制", "初期モック", "未確定事項", "学習候補"]);
@@ -977,6 +1038,105 @@ class AmadeusValidator {
 
     this.checkFile(`${ideationBase}/decisions.md`, "Ideation 判断一覧が存在する");
     this.checkOptionalIndex(`${ideationBase}/decisions.md`, indexSpecs["decisions.md"]);
+  }
+
+  private checkIdeationScope(path: string, ideationGatePassed = false): void {
+    this.checkHeadings(path, ["対象境界", "実行制御", "成果物深度", "検証戦略", "Inception への引き継ぎ"]);
+
+    const includedTable = this.checkSubheadingTable(path, "対象境界", "対象", ["識別子", "境界", "根拠", "状態"]);
+    const excludedTable = this.checkSubheadingTable(path, "対象境界", "対象外", ["識別子", "境界", "根拠", "状態"]);
+    this.checkScopeIds(path, includedTable, "SC-IN", /^SC-IN-\d{3}$/);
+    this.checkScopeIds(path, excludedTable, "SC-OUT", /^SC-OUT-\d{3}$/);
+    this.checkScopeIdUniqueness(path, [includedTable, excludedTable]);
+
+    const executionTable = this.checkTable(path, "実行制御", ["項目", "値", "理由"]);
+    this.checkControlValue(path, executionTable, "実行スコープ", ideationExecutionScopeValues);
+    if (ideationGatePassed) this.checkControlValueConfirmed(path, executionTable, "実行スコープ");
+    this.checkOmittedStageReason(path, executionTable);
+
+    const depthTable = this.checkTable(path, "成果物深度", ["項目", "値", "理由"]);
+    this.checkControlValue(path, depthTable, "深度", ideationDepthValues);
+    if (ideationGatePassed) this.checkControlValueConfirmed(path, depthTable, "深度");
+
+    const verificationTable = this.checkTable(path, "検証戦略", ["項目", "値", "理由"]);
+    this.checkControlValue(path, verificationTable, "戦略", ideationVerificationStrategyValues);
+    if (ideationGatePassed) this.checkControlValueConfirmed(path, verificationTable, "戦略");
+  }
+
+  private checkScopeIds(path: string, table: Table | undefined, prefix: string, pattern: RegExp): void {
+    if (!table || !table.headers.includes("識別子")) return;
+    for (const row of table.rows) {
+      const id = String(row["識別子"] ?? "").trim();
+      if (pattern.test(id)) this.pass(path, `${prefix} ID が識別子形式に合う`, id);
+      else this.failRow(path, `${prefix} ID が識別子形式に合う`, id);
+    }
+  }
+
+  private checkScopeIdUniqueness(path: string, tables: Array<Table | undefined>): void {
+    const ids = new Set<string>();
+    for (const table of tables) {
+      if (!table || !table.headers.includes("識別子")) continue;
+      for (const row of table.rows) {
+        const id = String(row["識別子"] ?? "").trim();
+        if (id.length === 0) continue;
+        if (ids.has(id)) this.failRow(path, "Scope ID が重複しない", id);
+        else {
+          this.pass(path, "Scope ID が重複しない", id);
+          ids.add(id);
+        }
+      }
+    }
+  }
+
+  private checkControlValue(path: string, table: Table | undefined, item: string, allowed: Set<string>): void {
+    const row = this.controlRow(table, item);
+    if (!row) {
+      this.failRow(path, `\`${item}\` が定義されている`, "行がない");
+      return;
+    }
+    this.pass(path, `\`${item}\` が定義されている`, item);
+    this.checkAllowed(path, item, row["値"], allowed);
+  }
+
+  private checkControlValueConfirmed(path: string, table: Table | undefined, item: string): void {
+    const row = this.controlRow(table, item);
+    if (!row) return;
+    const value = String(row["値"] ?? "").trim();
+    if (value.length > 0 && value !== "未確認") this.pass(path, `Ideation gate passed では \`${item}\` が未確認ではない`, value);
+    else this.failRow(path, `Ideation gate passed では \`${item}\` が未確認ではない`, value || "空欄");
+  }
+
+  private checkOmittedStageReason(path: string, table: Table | undefined): void {
+    const row = this.controlRow(table, "省略 stage");
+    if (!row) {
+      this.failRow(path, "`省略 stage` が定義されている", "行がない");
+      return;
+    }
+    this.pass(path, "`省略 stage` が定義されている", "省略 stage");
+    const omittedStage = String(row["値"] ?? "").trim();
+    const reason = String(row["理由"] ?? "").trim();
+    if (omittedStage === "なし" || omittedStage === "未確認") {
+      this.pass(path, "`省略 stage` の理由がある", reason || "該当なし");
+      return;
+    }
+    if (reason.length > 0 && reason !== "未確認" && reason !== "該当なし") {
+      this.pass(path, "`省略 stage` の理由がある", reason);
+    } else {
+      this.failRow(path, "`省略 stage` の理由がある", `${omittedStage}: ${reason || "空欄"}`);
+    }
+  }
+
+  private controlRow(table: Table | undefined, item: string): Record<string, string> | undefined {
+    return table?.rows.find((row) => String(row["項目"] ?? "").trim() === item);
+  }
+
+  private checkNoIdeationDownstreamArtifacts(path: string, base: string): void {
+    const existing = ["inception", "construction"].filter((phase) => this.isDirectory(this.absolute(`${base}/${phase}`)));
+    if (existing.length === 0) {
+      this.pass(path, "Ideation phase では後続 stage 成果物が存在しない", "後続 stage なし");
+      return;
+    }
+    this.failRow(path, "Ideation phase では後続 stage 成果物が存在しない", existing.map((phase) => `${phase}/**`).join(", "));
   }
 
   private checkStateJson(path: string, state: Record<string, any>): void {
@@ -993,6 +1153,7 @@ class AmadeusValidator {
     this.pass(path, "`ideation` がオブジェクトである", "オブジェクトを確認");
     this.checkAllowed(path, "ideation.status", ideation.status, statusValues);
     this.checkAllowed(path, "ideation.gate", ideation.gate, gateValues);
+    this.checkIntentCaptureState(path, ideation.intentCapture);
     this.checkStatePaths(path, ideation, "requiredArtifacts", "Ideation 必須成果物が存在する", false, "ideation");
     this.checkStatePaths(path, ideation, "requiredMocks", "Ideation 必須モックが存在する", true, "ideation");
 
@@ -1002,299 +1163,40 @@ class AmadeusValidator {
     }
   }
 
-  private checkInceptionIntent(base: string, state: Record<string, any>): void {
-    const statePath = `${base}/state.json`;
-    const inceptionBase = `${base}/inception`;
-    this.checkInceptionStateJson(statePath, state);
-    this.checkGrillings(inceptionBase);
-
-    this.checkRequirements(`${inceptionBase}/requirements.md`);
-    this.checkAcceptance(`${inceptionBase}/acceptance.md`, `${inceptionBase}/requirements.md`);
-    this.checkCodebaseAnalysis(inceptionBase, state);
-    const requireDomainBoundary = String(state.inception?.gate ?? "").trim() === "passed";
-    this.checkSubdomains(`${inceptionBase}/domain/subdomains.md`, `${inceptionBase}/domain/bounded-contexts.md`, requireDomainBoundary);
-    this.checkBoundedContexts(`${inceptionBase}/domain/bounded-contexts.md`, false, requireDomainBoundary);
-
-    for (const [filename, spec] of Object.entries(indexSpecs)) {
-      const path = `${inceptionBase}/${filename}`;
-      if (this.isFile(this.absolute(path))) this.checkOptionalIndex(path, spec);
+  private checkNoIdeationScopeControlValuesInState(path: string, state: Record<string, any>): void {
+    const targets: Array<[string, unknown]> = [
+      ["root", state],
+      ["ideation", state.ideation],
+    ];
+    let found = false;
+    for (const [label, value] of targets) {
+      if (!this.isObject(value)) continue;
+      const keys = Object.keys(value).filter((key) => ideationStateScopeControlKeys.has(key));
+      for (const key of keys) {
+        found = true;
+        this.failRow(path, "state.json に scope 制御値を保存しない", `${label}.${key}`);
+      }
     }
-    this.checkUnitContextReferences(inceptionBase, requireDomainBoundary);
-
-    this.checkUnitDesignArtifacts(inceptionBase, state);
-    this.checkBoltDesignReferences(inceptionBase);
-    this.checkNoInceptionBoltDesignBriefArtifacts(inceptionBase, state);
-    this.checkNoInceptionConstructionArtifacts(base);
-    this.checkInceptionBoltArtifacts(inceptionBase, state);
-    this.checkTraceability(`${inceptionBase}/traceability.md`);
+    if (!found) this.pass(path, "state.json に scope 制御値を保存しない", "未保存");
   }
 
-  private checkInceptionStateJson(path: string, state: Record<string, any>): void {
-    this.checkJsonValue(path, "intent", state.intent, this.intentId ?? "");
-    this.checkJsonValue(path, "phase", state.phase, "inception");
-    this.checkAllowed(path, "status", state.status, statusValues);
+  private checkIntentCaptureState(path: string, intentCapture: unknown): void {
+    if (!this.isObject(intentCapture)) return this.failRow(path, "`ideation.intentCapture` がオブジェクトである", this.typeName(intentCapture));
+    this.pass(path, "`ideation.intentCapture` がオブジェクトである", "オブジェクトを確認");
+    this.checkAllowed(path, "ideation.intentCapture.status", intentCapture.status, statusValues);
+    this.checkStatePaths(path, intentCapture, "createdArtifacts", "Ideation Intent Record 作成済み成果物が存在する", false, "ideation.intentCapture");
+    this.checkJsonValue(path, "ideation.intentCapture.next", intentCapture.next, "ideation/scope-framing");
+  }
 
+  private isIdeationStartedOnly(state: Record<string, any>): boolean {
     const ideation = state.ideation;
-    if (!this.isObject(ideation)) {
-      this.failRow(path, "`ideation` がオブジェクトである", this.typeName(ideation));
-      return;
-    }
-    this.pass(path, "`ideation` がオブジェクトである", "オブジェクトを確認");
-    this.checkJsonValue(path, "ideation.status", ideation.status, "completed");
-    this.checkJsonValue(path, "ideation.gate", ideation.gate, "passed");
-
-    const inception = state.inception;
-    if (!this.isObject(inception)) {
-      this.failRow(path, "`inception` がオブジェクトである", this.typeName(inception));
-      return;
-    }
-    this.pass(path, "`inception` がオブジェクトである", "オブジェクトを確認");
-    this.checkAllowed(path, "inception.status", inception.status, statusValues);
-    this.checkAllowed(path, "inception.gate", inception.gate, gateValues);
-    this.checkStatePaths(path, inception, "requiredArtifacts", "Inception 必須成果物が存在する", false, "inception");
-    this.checkStatePaths(path, inception, "requiredRequirementArtifacts", "Inception 必須 Requirement 成果物が存在する", false, "inception");
-    this.checkStatePaths(path, inception, "requiredStoryArtifacts", "Inception 必須 Story 成果物が存在する", false, "inception");
-    this.checkStatePaths(path, inception, "requiredUseCaseArtifacts", "Inception 必須 Use Case 成果物が存在する", false, "inception");
-    this.checkStatePaths(path, inception, "requiredDecisionArtifacts", "Inception 必須 Decision 成果物が存在する", false, "inception");
-    this.checkStatePaths(path, inception, "requiredBoltArtifacts", "Inception 必須 Bolt 成果物が存在する", false, "inception");
-
-    if (String(state.status ?? "").trim() === "completed") {
-      this.checkJsonValue(path, "inception.status", inception.status, "completed");
-      this.checkJsonValue(path, "inception.gate", inception.gate, "passed");
-    }
-  }
-
-  private checkConstructionIntent(base: string, state: Record<string, any>): void {
-    const statePath = `${base}/state.json`;
-    const inceptionBase = `${base}/inception`;
-    const constructionBase = `${base}/construction`;
-    this.checkConstructionStateJson(statePath, state);
-    this.checkGrillings(constructionBase);
-
-    this.checkRequirements(`${inceptionBase}/requirements.md`);
-    this.checkAcceptance(`${inceptionBase}/acceptance.md`, `${inceptionBase}/requirements.md`);
-    this.checkCodebaseAnalysis(inceptionBase, state);
-    this.checkSubdomains(`${inceptionBase}/domain/subdomains.md`, `${inceptionBase}/domain/bounded-contexts.md`, true);
-    this.checkBoundedContexts(`${inceptionBase}/domain/bounded-contexts.md`, false, true);
-
-    for (const [filename, spec] of Object.entries(indexSpecs)) {
-      const path = `${inceptionBase}/${filename}`;
-      if (this.isFile(this.absolute(path))) this.checkOptionalIndex(path, spec);
-    }
-    this.checkUnitContextReferences(inceptionBase, true);
-
-    this.checkUnitDesignArtifacts(inceptionBase, state);
-    this.checkBoltDesignReferences(inceptionBase);
-    this.checkNoInceptionBoltDesignBriefArtifacts(inceptionBase, state);
-    this.checkTraceability(`${inceptionBase}/traceability.md`);
-    this.checkFile(`${constructionBase}/traceability.md`, "Construction 追跡ファイルが存在する");
-    this.checkOptionalIndex(`${constructionBase}/decisions.md`, indexSpecs["decisions.md"]);
-    this.checkConstructionDesignTraceability(`${constructionBase}/traceability.md`, state);
-    this.checkConstructionTraceability(`${constructionBase}/traceability.md`, state);
-    this.checkConstructionBoltArtifacts(inceptionBase, constructionBase, state);
-  }
-
-  private checkConstructionStateJson(path: string, state: Record<string, any>): void {
-    this.checkJsonValue(path, "intent", state.intent, this.intentId ?? "");
-    this.checkJsonValue(path, "phase", state.phase, "construction");
-    this.checkAllowed(path, "status", state.status, statusValues);
-
-    const ideation = state.ideation;
-    if (!this.isObject(ideation)) {
-      this.failRow(path, "`ideation` がオブジェクトである", this.typeName(ideation));
-      return;
-    }
-    this.pass(path, "`ideation` がオブジェクトである", "オブジェクトを確認");
-    this.checkJsonValue(path, "ideation.status", ideation.status, "completed");
-    this.checkJsonValue(path, "ideation.gate", ideation.gate, "passed");
-
-    const inception = state.inception;
-    if (!this.isObject(inception)) {
-      this.failRow(path, "`inception` がオブジェクトである", this.typeName(inception));
-      return;
-    }
-    this.pass(path, "`inception` がオブジェクトである", "オブジェクトを確認");
-    this.checkJsonValue(path, "inception.status", inception.status, "completed");
-    this.checkJsonValue(path, "inception.gate", inception.gate, "passed");
-
-    const construction = state.construction;
-    if (!this.isObject(construction)) {
-      this.failRow(path, "`construction` がオブジェクトである", this.typeName(construction));
-      return;
-    }
-    this.pass(path, "`construction` がオブジェクトである", "オブジェクトを確認");
-    this.checkAllowed(path, "construction.status", construction.status, statusValues);
-    this.checkAllowed(path, "construction.gate", construction.gate, gateValues);
-    this.checkStatePaths(path, construction, "requiredArtifacts", "Construction 必須成果物が存在する", false, "construction");
-    this.checkRequiredStatePath(path, construction, "requiredArtifacts", "construction/decisions.md", "Construction 必須成果物に判断一覧が含まれる");
-    this.checkStatePaths(path, construction, "requiredBoltArtifacts", "Construction 必須 Bolt 成果物が存在する", false, "construction");
-    this.checkTargetBolts(path, construction);
-    this.checkConstructionBoltDesignGates(path, construction);
-    this.checkTargetBoltRequiredArtifacts(path, construction);
-
-    if (String(state.status ?? "").trim() === "completed") {
-      this.checkJsonValue(path, "construction.status", construction.status, "completed");
-      this.checkJsonValue(path, "construction.gate", construction.gate, "passed");
-    }
-  }
-
-  private checkTargetBolts(path: string, construction: Record<string, any>): void {
-    const values = construction.targetBolts;
-    if (!Array.isArray(values)) {
-      this.failRow(path, "`construction.targetBolts` が配列である", this.typeName(values));
-      return;
-    }
-
-    this.pass(path, "`construction.targetBolts` が配列である", `${values.length}件`);
-    const inceptionBase = this.inceptionBaseForStatePath(path);
-    const boltIds = this.idsFor(`${inceptionBase}/bolts.md`);
-    let existingBoltCount = 0;
-    for (const value of values) {
-      const boltId = String(value ?? "").trim();
-      if (boltIds.has(boltId)) {
-        existingBoltCount += 1;
-        this.pass(path, "`construction.targetBolts` が既存 Bolt を参照する", boltId);
-      } else {
-        this.failRow(path, "`construction.targetBolts` が既存 Bolt を参照する", boltId);
-      }
-    }
-    if (existingBoltCount > 0) this.pass(path, "`construction.targetBolts` が1件以上の既存 Bolt を持つ", `${existingBoltCount}件`);
-    else this.failRow(path, "`construction.targetBolts` が1件以上の既存 Bolt を持つ", `${values.length}件`);
-  }
-
-  private checkTargetBoltRequiredArtifacts(path: string, construction: Record<string, any>): void {
-    const targetBolts = construction.targetBolts;
-    const requiredBoltArtifacts = construction.requiredBoltArtifacts;
-    if (!Array.isArray(targetBolts) || !Array.isArray(requiredBoltArtifacts)) return;
-
-    const intentBase = dirname(path);
-    const inceptionBase = this.inceptionBaseForStatePath(path);
-    const constructionBase = this.constructionBaseForStatePath(path);
-    const required = new Set(requiredBoltArtifacts.map((value: unknown) => String(value ?? "").trim()));
-    const boltDirectories = this.constructionBoltDirectories(inceptionBase, constructionBase);
-    const tasksStatuses = new Map<string, string>();
-    if (Array.isArray(construction.bolts)) {
-      for (const item of construction.bolts) {
-        if (!this.isObject(item) || !this.isObject(item.tasks)) continue;
-        const id = String(item.id ?? "").trim();
-        if (id.length === 0) continue;
-        tasksStatuses.set(id, String(item.tasks.status ?? "").trim());
-      }
-    }
-    const requiresTestResults =
-      String(construction.status ?? "").trim() === "completed" || String(construction.gate ?? "").trim() === "passed";
-    for (const value of targetBolts) {
-      const boltId = String(value ?? "").trim();
-      const boltDir = boltDirectories.get(boltId);
-      if (!boltDir) continue;
-      const artifactPaths = [`${boltDir}/design.md`, `${boltDir}/notes.md`];
-      const taskPath = this.relativeToIntent(intentBase, `${boltDir}/tasks.md`);
-      const tasksStatus = tasksStatuses.get(boltId);
-      if (tasksStatus === "generated") artifactPaths.push(`${boltDir}/tasks.md`);
-      else if (tasksStatus === "not_generated" || tasksStatus === "blocked") {
-        if (required.has(taskPath)) {
-          this.failRow(path, "`tasks.status` 未生成時は requiredBoltArtifacts に tasks.md を含めない", `${boltId}: ${taskPath}`);
-        } else {
-          this.pass(path, "`tasks.status` 未生成時は requiredBoltArtifacts に tasks.md を含めない", `${boltId}: ${taskPath}`);
-        }
-      }
-      if (requiresTestResults) artifactPaths.push(`${boltDir}/test-results.md`);
-      for (const artifactPath of artifactPaths) {
-        const relativePath = this.relativeToIntent(intentBase, artifactPath);
-        const condition = artifactPath.endsWith("/test-results.md")
-          ? "Construction 完了時の必須 Bolt 成果物が test-results.md を含む"
-          : "Construction 必須 Bolt 成果物が targetBolt の証拠成果物を含む";
-        if (required.has(relativePath)) this.pass(path, condition, `${boltId}: ${relativePath}`);
-        else this.failRow(path, condition, `${boltId}: ${relativePath}`);
-      }
-    }
-  }
-
-  private checkConstructionBoltDesignGates(path: string, construction: Record<string, any>): void {
-    const targetBolts = construction.targetBolts;
-    if (!Array.isArray(targetBolts)) return;
-
-    const values = construction.bolts;
-    if (!Array.isArray(values)) {
-      this.failRow(path, "`construction.bolts` が配列である", this.typeName(values));
-      return;
-    }
-    this.pass(path, "`construction.bolts` が配列である", `${values.length}件`);
-
-    const intentBase = dirname(path);
-    const inceptionBase = this.inceptionBaseForStatePath(path);
-    const constructionBase = this.constructionBaseForStatePath(path);
-    const boltDirectories = this.constructionBoltDirectories(inceptionBase, constructionBase);
-    const byId = new Map<string, Record<string, any>>();
-    for (const item of values) {
-      if (!this.isObject(item)) {
-        this.failRow(path, "`construction.bolts[]` がオブジェクトである", this.typeName(item));
-        continue;
-      }
-      const id = String(item.id ?? "").trim();
-      if (id.length === 0) {
-        this.failRow(path, "`construction.bolts[].id` が空欄でない", "空欄");
-        continue;
-      }
-      byId.set(id, item);
-    }
-
-    for (const value of targetBolts) {
-      const boltId = String(value ?? "").trim();
-      const item = byId.get(boltId);
-      if (!item) {
-        this.failRow(path, "`construction.bolts` が targetBolt の designGate を持つ", boltId);
-        continue;
-      }
-      this.pass(path, "`construction.bolts` が targetBolt の designGate を持つ", boltId);
-
-      const designGate = item.designGate;
-      if (!this.isObject(designGate)) {
-        this.failRow(path, "`construction.bolts[].designGate` がオブジェクトである", `${boltId}: ${this.typeName(designGate)}`);
-        continue;
-      }
-      this.pass(path, "`construction.bolts[].designGate` がオブジェクトである", boltId);
-      this.checkAllowed(path, "construction.bolts[].designGate.status", designGate.status, constructionDesignGateValues);
-      this.checkNotBlankValue(path, "construction.bolts[].designGate.reviewedBy", designGate.reviewedBy);
-      this.checkNotBlankValue(path, "construction.bolts[].designGate.updatedAt", designGate.updatedAt);
-
-      const boltDir = boltDirectories.get(boltId);
-      const expectedEvidence = boltDir ? this.relativeToIntent(intentBase, `${boltDir}/design.md`) : "";
-      const evidence = String(designGate.evidence ?? "").trim();
-      if (expectedEvidence.length > 0 && evidence === expectedEvidence) {
-        this.pass(path, "`construction.bolts[].designGate.evidence` が Construction Design を指す", `${boltId}: ${evidence}`);
-      } else {
-        this.failRow(path, "`construction.bolts[].designGate.evidence` が Construction Design を指す", `${boltId}: ${evidence || "空欄"}`);
-      }
-      if (evidence.length > 0) this.checkStateRelativePath(path, evidence, "Design Gate evidence が存在する", false);
-
-      const tasks = item.tasks;
-      if (!this.isObject(tasks)) {
-        this.failRow(path, "`construction.bolts[].tasks` がオブジェクトである", `${boltId}: ${this.typeName(tasks)}`);
-        continue;
-      }
-      this.pass(path, "`construction.bolts[].tasks` がオブジェクトである", boltId);
-      const tasksStatus = String(tasks.status ?? "").trim();
-      this.checkAllowed(path, "construction.bolts[].tasks.status", tasksStatus, constructionTasksValues);
-      this.checkNotBlankValue(path, "construction.bolts[].tasks.reviewedBy", tasks.reviewedBy);
-      this.checkNotBlankValue(path, "construction.bolts[].tasks.updatedAt", tasks.updatedAt);
-
-      const expectedTaskEvidence = boltDir ? this.relativeToIntent(intentBase, `${boltDir}/tasks.md`) : "";
-      const taskEvidence = String(tasks.evidence ?? "").trim();
-      if (tasksStatus === "generated" && expectedTaskEvidence.length > 0 && taskEvidence === expectedTaskEvidence) {
-        this.pass(path, "`construction.bolts[].tasks.evidence` が tasks.md を指す", `${boltId}: ${taskEvidence}`);
-        this.checkStateRelativePath(path, taskEvidence, "Tasks evidence が存在する", false);
-      } else if (tasksStatus === "generated") {
-        this.failRow(path, "`construction.bolts[].tasks.evidence` が tasks.md を指す", `${boltId}: ${taskEvidence || "空欄"}`);
-      } else if (taskEvidence.length === 0) {
-        this.pass(path, "`tasks.status` 未生成時の evidence が空欄である", boltId);
-      } else {
-        this.failRow(path, "`tasks.status` 未生成時の evidence が空欄である", `${boltId}: ${taskEvidence}`);
-      }
-      if (tasksStatus === "blocked" && String(designGate.status ?? "").trim() === "ready") {
-        this.failRow(path, "`tasks.status: blocked` は designGate.status: ready と併用しない", boltId);
-      }
-    }
+    if (!this.isObject(ideation) || !this.isObject(ideation.intentCapture)) return false;
+    return (
+      String(state.status ?? "").trim() === "in_progress" && String(ideation.status ?? "").trim() === "in_progress" &&
+      String(ideation.gate ?? "").trim() === "not_ready" &&
+      String(ideation.intentCapture.status ?? "").trim() === "completed" &&
+      (ideation.requiredArtifacts?.length ?? 0) === 0 && (ideation.requiredMocks?.length ?? 0) === 0
+    );
   }
 
   private checkInceptionBoltArtifacts(base: string, state: Record<string, any>): void {
@@ -1326,9 +1228,6 @@ class AmadeusValidator {
   private checkConstructionBoltArtifacts(inceptionBase: string, constructionBase: string, state: Record<string, any>): void {
     const values = state.construction?.requiredBoltArtifacts;
     const requiredBoltArtifacts = Array.isArray(values) ? values : [];
-    const requiredConstructionDesigns = new Set(
-      requiredBoltArtifacts.map((value: unknown) => String(value ?? "").trim()).filter((value: string) => value.endsWith("/design.md")),
-    );
     const checkedPrPaths = new Set<string>();
     const intentBase = dirname(constructionBase);
 
@@ -1339,7 +1238,7 @@ class AmadeusValidator {
         this.checkFile(path, "Construction ノートが存在する");
         this.checkHeadings(path, ["実行方針", "対象タスク", "未確認事項"]);
       } else if (relativePath.endsWith("/design.md")) {
-        this.checkConstructionDesign(path);
+        this.failRow(path, "Bolt 側 design.md は requiredBoltArtifacts に含めない", relativePath);
       } else if (relativePath.endsWith("/test-results.md")) {
         this.checkFile(path, "Construction テスト結果が存在する");
         this.checkHeadings(path, ["検証結果", "安全性確認", "CI確認", "受け入れ証拠"]);
@@ -1358,35 +1257,11 @@ class AmadeusValidator {
       const glob = new Bun.Glob("*/design.md");
       for (const design of glob.scanSync({ cwd: boltsRoot })) {
         const relativePath = this.relativeToIntent(intentBase, `${constructionBase}/bolts/${design}`);
-        if (requiredConstructionDesigns.has(relativePath)) continue;
-        this.failRow(`${constructionBase}/bolts/${design}`, "Construction Design は requiredBoltArtifacts に含まれる", relativePath);
+        this.failRow(`${constructionBase}/bolts/${design}`, "Bolt 側 design.md は存在しない", relativePath);
       }
     }
 
     this.checkExistingPrRecords(constructionBase, checkedPrPaths);
-  }
-
-  private checkConstructionDesign(path: string): void {
-    this.checkFile(path, "Construction Design が存在する");
-    this.checkHeadings(path, constructionDesignHeadings);
-    this.checkHeadingBodies(path, constructionDesignHeadings);
-    if (!this.isFile(this.absolute(path))) return;
-
-    const intentBase = this.intentBaseForConstructionBoltArtifact(path);
-    const inceptionBase = `${intentBase}/inception`;
-    const constructionBase = `${intentBase}/construction`;
-    const boltIds = this.idsFor(`${inceptionBase}/bolts.md`);
-    const boltDirectories = this.constructionBoltDirectories(inceptionBase, constructionBase);
-    for (const heading of ["Domain Design", "Logical Design", "実装設計", "検証設計"]) {
-      const body = this.sectionBody(path, heading) ?? "";
-      const references = this.taskReferencesInText(body);
-      if (references.length === 0) {
-        this.pass(path, `\`${heading}\` の Task 参照は任意である`, "参照なし");
-      } else {
-        const table: Table = { headers: ["Task"], rows: references.map((reference) => ({ Task: reference })) };
-        this.checkTaskReferences(path, table, "Task", boltIds, boltDirectories, "Construction Design");
-      }
-    }
   }
 
   private checkPrRecord(path: string): void {
@@ -1648,15 +1523,161 @@ class AmadeusValidator {
   private checkIdeationTraceability(path: string): void {
     this.checkFile(path, "Ideation 追跡ファイルが存在する");
     this.checkHeadings(path, ["Ideation からの追跡", "依存関係からの追跡"]);
-    this.checkTable(path, "Ideation からの追跡", ["Ideation 要素", "対象", "定義元", "後続への渡し方"]);
+    const ideationTraceTable = this.checkTable(path, "Ideation からの追跡", ["Ideation 要素", "対象", "定義元", "後続への渡し方"]);
+    this.checkIdeationTraceabilityScopeControlRows(path, ideationTraceTable);
     this.checkTable(path, "依存関係からの追跡", ["種別", "対象", "依存", "理由", "定義元"]);
     this.checkRelativeLinks(path);
+  }
+
+  private checkIdeationTraceabilityScopeControlRows(path: string, table: Table | undefined): void {
+    if (!table || !table.headers.includes("Ideation 要素")) return;
+    const elements = new Set(table.rows.map((row) => String(row["Ideation 要素"] ?? "").trim()));
+    for (const element of ideationTraceabilityScopeControlRows) {
+      if (elements.has(element)) this.pass(path, `Ideation 追跡が \`${element}\` を含む`, element);
+      else this.failRow(path, `Ideation 追跡が \`${element}\` を含む`, "行がない");
+    }
+  }
+
+  private checkScopeInceptionConsistency(base: string): void {
+    const scopePath = `${base}/ideation/scope.md`;
+    const inceptionBase = `${base}/inception`;
+    const tracePath = `${inceptionBase}/traceability.md`;
+    if (!this.isFile(this.absolute(scopePath)) || !this.isFile(this.absolute(tracePath))) return;
+
+    const included = this.scopeBoundaryRows(scopePath, "対象", /^SC-IN-\d{3}$/);
+    const excluded = this.scopeBoundaryRows(scopePath, "対象外", /^SC-OUT-\d{3}$/);
+    this.checkInceptionScopeTraceability(tracePath, included, excluded);
+    this.checkExcludedScopeBoundaryWarnings(inceptionBase, excluded);
+  }
+
+  private scopeBoundaryRows(path: string, subheading: string, pattern: RegExp): Array<{ id: string; boundary: string; status: string }> {
+    const table = this.tableAfterSubheading(path, "対象境界", subheading);
+    if (!table) return [];
+    return table.rows
+      .map((row) => ({
+        id: String(row["識別子"] ?? "").trim(),
+        boundary: String(row["境界"] ?? "").trim(),
+        status: String(row["状態"] ?? "").trim(),
+      }))
+      .filter((row) => pattern.test(row.id));
+  }
+
+  private checkInceptionScopeTraceability(
+    path: string,
+    included: Array<{ id: string; boundary: string; status: string }>,
+    excluded: Array<{ id: string; boundary: string; status: string }>,
+  ): void {
+    const table = this.checkTable(path, inceptionTraceabilityScopeHeading, inceptionTraceabilityScopeColumns);
+    if (!table) return;
+
+    const scopeIds = new Set([...included, ...excluded].map((row) => row.id));
+    const tracedScopeIds = new Set<string>();
+    for (const row of table.rows) {
+      const rowScopeIds = this.splitValues(row["対象境界"]);
+      for (const scopeId of rowScopeIds) {
+        if (scopeIds.has(scopeId)) {
+          this.pass(path, "`対象境界` が scope.md の既存 Scope ID である", scopeId);
+          tracedScopeIds.add(scopeId);
+        } else {
+          this.failRow(path, "`対象境界` が scope.md の既存 Scope ID である", scopeId);
+        }
+      }
+      if (rowScopeIds.some((scopeId) => scopeId.startsWith("SC-IN-"))) {
+        this.checkInScopeTraceHasDownstream(path, row);
+      }
+    }
+
+    for (const row of included.filter((candidate) => candidate.status !== "却下")) {
+      if (tracedScopeIds.has(row.id)) this.pass(path, "対象境界からの追跡が採用済み SC-IN を含む", row.id);
+      else this.failRow(path, "対象境界からの追跡が採用済み SC-IN を含む", row.id);
+    }
+
+    this.checkTableTargets(path, table, "要求", this.idsFor(`${dirname(path)}/requirements.md`), true);
+    this.checkTableTargets(path, table, "ユーザーストーリー", this.idsFor(`${dirname(path)}/user-stories.md`), true);
+    this.checkTableTargets(path, table, "ユースケース", this.idsFor(`${dirname(path)}/use-cases.md`), true);
+    this.checkTableTargets(path, table, "ユニット", this.idsFor(`${dirname(path)}/units.md`), true);
+    this.checkTableTargets(path, table, "ボルト", this.idsFor(`${dirname(path)}/bolts.md`), true);
+    this.checkNotBlank(path, table, "扱い");
+  }
+
+  private checkInScopeTraceHasDownstream(path: string, row: Record<string, string>): void {
+    const downstream = ["要求", "ユーザーストーリー", "ユースケース", "ユニット", "ボルト"]
+      .flatMap((column) => this.splitValues(row[column]))
+      .filter((value) => value !== "なし" && value !== "未確認");
+    const scopeIds = this.splitValues(row["対象境界"]).join(", ");
+    if (downstream.length > 0) this.pass(path, "SC-IN が Inception 成果物を参照する", `${scopeIds}: ${downstream.join(", ")}`);
+    else this.failRow(path, "SC-IN が Inception 成果物を参照する", `${scopeIds}: 参照なし`);
+  }
+
+  private checkExcludedScopeBoundaryWarnings(inceptionBase: string, excluded: Array<{ id: string; boundary: string; status: string }>): void {
+    const files = this.inceptionContentFiles(inceptionBase);
+    let warningCount = 0;
+    for (const row of excluded) {
+      for (const term of this.excludedScopeTerms(row.boundary)) {
+        for (const file of files) {
+          const lines = this.read(file).split("\n");
+          lines.forEach((line, index) => {
+            if (!line.includes(term) || this.hasExcludedScopeAllowedContext(line)) return;
+            warningCount += 1;
+            this.warningRow(file, "Inception 成果物に SC-OUT に反する可能性がある項目がない", `${row.id}: ${term}: ${index + 1}行目`);
+          });
+        }
+      }
+    }
+    if (warningCount === 0) {
+      this.pass(inceptionBase, "Inception 成果物に SC-OUT に反する可能性がある項目がない", "警告なし");
+    }
+  }
+
+  private inceptionContentFiles(inceptionBase: string): string[] {
+    const root = this.absolute(inceptionBase);
+    if (!this.isDirectory(root)) return [];
+    const patterns = [
+      "requirements.md",
+      "requirements/*.md",
+      "user-stories.md",
+      "user-stories/*.md",
+      "use-cases.md",
+      "use-cases/*.md",
+      "units.md",
+      "units/**/*.md",
+      "bolts.md",
+      "bolts/*.md",
+    ];
+    const entries = new Set<string>();
+    for (const pattern of patterns) {
+      for (const entry of new Bun.Glob(pattern).scanSync({ cwd: root })) {
+        if (entry.endsWith(".md")) entries.add(entry);
+      }
+    }
+    return [...entries].sort().map((entry) => `${inceptionBase}/${entry}`);
+  }
+
+  private excludedScopeTerms(boundary: string): string[] {
+    const normalized = boundary
+      .replace(/[。．.]/g, "")
+      .replace(/は扱わない.*$/, "")
+      .replace(/は行わない.*$/, "")
+      .replace(/は対象外.*$/, "")
+      .replace(/を扱わない.*$/, "")
+      .replace(/を行わない.*$/, "")
+      .replace(/を対象外.*$/, "")
+      .trim();
+    return normalized
+      .split(/、|と/)
+      .map((term) => term.trim())
+      .filter((term) => term.length >= 2);
+  }
+
+  private hasExcludedScopeAllowedContext(line: string): boolean {
+    return excludedScopeAllowedContext.some((marker) => line.includes(marker));
   }
 
   private checkTraceability(path: string): void {
     this.checkFile(path, "追跡ファイルが存在する");
     this.checkHeadings(path, [
       "要求からの追跡",
+      inceptionTraceabilityScopeHeading,
       "背景からの追跡",
       "ボルトからの追跡",
       "設計からの追跡",
@@ -1667,6 +1688,8 @@ class AmadeusValidator {
     ]);
     const requirementTraceTable = this.checkTable(path, "要求からの追跡", ["要求", "アクター", "ストーリー", "ユースケース", "ユニット", "ボルト"]);
     if (requirementTraceTable) this.checkNoInceptionTaskColumn(path, "要求からの追跡", requirementTraceTable);
+    const scopeTraceTable = this.checkTable(path, inceptionTraceabilityScopeHeading, inceptionTraceabilityScopeColumns);
+    if (scopeTraceTable) this.checkNoInceptionTaskColumn(path, inceptionTraceabilityScopeHeading, scopeTraceTable);
     const designTraceTable = this.checkTable(path, "設計からの追跡", ["設計", "ユニット", "要求", "ユースケース", "ボルト"]);
     if (designTraceTable) this.checkDesignTraceability(path, designTraceTable);
     const codebaseTraceTable = this.checkTable(path, "既存コード分析からの追跡", ["分析", "要求", "ユースケース", "ユニット", "ボルト", "設計", "入力"]);
@@ -1745,25 +1768,25 @@ class AmadeusValidator {
     this.checkDetailLinks(path, table, "証拠");
   }
 
-  private checkConstructionDesignTraceability(path: string, state: Record<string, any>): void {
+  private checkTaskGenerationTraceability(path: string, state: Record<string, any>): void {
     const construction = state.construction;
-    if (!this.hasReadyConstructionDesignGate(construction)) return;
+    if (!this.hasReadyTaskGeneration(construction)) return;
 
-    const table = this.checkTable(path, "Construction Design からの追跡", ["Construction Design", "Task", "実装", "検証", "PR", "状態"]);
+    const table = this.checkTable(path, "Task Generation からの追跡", ["Evidence", "Task", "実装", "検証", "PR", "状態"]);
     if (!table) return;
     if (table.rows.length === 0) {
-      this.failRow(path, "`Construction Design からの追跡` が設計追跡行を持つ", "行がない");
+      this.failRow(path, "`Task Generation からの追跡` が Task 生成追跡行を持つ", "行がない");
       return;
     }
-    this.pass(path, "`Construction Design からの追跡` が設計追跡行を持つ", `${table.rows.length}件`);
+    this.pass(path, "`Task Generation からの追跡` が Task 生成追跡行を持つ", `${table.rows.length}件`);
 
     const constructionBase = dirname(path);
     const intentBase = dirname(constructionBase);
     const inceptionBase = `${intentBase}/inception`;
     const boltIds = this.idsFor(`${inceptionBase}/bolts.md`);
     const boltDirectories = this.constructionBoltDirectories(inceptionBase, constructionBase);
-    this.checkTaskReferences(path, table, "Task", boltIds, boltDirectories, "Construction Design 追跡");
-    this.checkDetailLinks(path, table, "Construction Design");
+    this.checkTaskReferences(path, table, "Task", boltIds, boltDirectories, "Task Generation 追跡");
+    this.checkDetailLinks(path, table, "Evidence");
     this.checkNotBlank(path, table, "実装");
     this.checkNotBlank(path, table, "検証");
     this.checkNotBlank(path, table, "PR");
@@ -1774,32 +1797,36 @@ class AmadeusValidator {
         Array.isArray(construction.targetBolts) ? construction.targetBolts.map((value: unknown) => String(value ?? "").trim()) : [],
       );
       for (const item of construction.bolts) {
-        if (!this.isObject(item) || !this.isObject(item.designGate)) continue;
+        if (!this.isObject(item) || !this.isObject(item.taskGeneration)) continue;
         const boltId = String(item.id ?? "").trim();
         if (!targetBolts.has(boltId)) continue;
-        const status = String(item.designGate.status ?? "").trim();
-        if (status !== "ready" && status !== "passed") continue;
+        const status = String(item.taskGeneration.status ?? "").trim();
+        if (status !== "ready_for_approval" && status !== "passed") continue;
 
-        const evidence = String(item.designGate.evidence ?? "").trim();
-        const evidenceLink = evidence.length > 0 ? this.relativeLink(path, `${intentBase}/${evidence}`) : "";
-        const row = table.rows.find((candidate) =>
-          this.markdownLinks(String(candidate["Construction Design"] ?? "")).some((link) => {
-            const clean = this.cleanLinkTarget(link);
-            return clean === evidence || clean === evidenceLink;
-          }),
-        );
+        const taskEvidence = Array.isArray(item.taskGeneration.evidence)
+          ? item.taskGeneration.evidence
+            .filter((value: unknown) => this.isObject(value) && String(value.kind ?? "").trim() === "tasks")
+            .map((value: any) => String(value.path ?? "").trim())
+          : [];
+        const row = table.rows.find((candidate) => {
+          const links = this.markdownLinks(String(candidate["Evidence"] ?? "")).map((link) => this.cleanLinkTarget(link));
+          return taskEvidence.some((evidence) => {
+            const evidenceLink = evidence.length > 0 ? this.relativeLink(path, `${intentBase}/${evidence}`) : "";
+            return links.includes(evidence) || links.includes(evidenceLink);
+          });
+        });
         if (!row) {
-          this.failRow(path, "`Construction Design からの追跡` が Design Gate evidence を持つ", `${boltId}: ${evidence || "空欄"}`);
+          this.failRow(path, "`Task Generation からの追跡` が tasks evidence を持つ", `${boltId}: ${taskEvidence.join(", ") || "空欄"}`);
           continue;
         }
-        this.pass(path, "`Construction Design からの追跡` が Design Gate evidence を持つ", `${boltId}: ${evidence}`);
+        this.pass(path, "`Task Generation からの追跡` が tasks evidence を持つ", `${boltId}: ${taskEvidence.join(", ")}`);
 
         const taskReferences = this.splitValues(row["Task"]);
         const wrongBoltReferences = taskReferences.filter((reference) => !reference.startsWith(`${boltId}/`));
         if (wrongBoltReferences.length === 0) {
-          this.pass(path, "`Construction Design からの追跡` が対象 Bolt の Task を指す", boltId);
+          this.pass(path, "`Task Generation からの追跡` が対象 Bolt の Task を指す", boltId);
         } else {
-          this.failRow(path, "`Construction Design からの追跡` が対象 Bolt の Task を指す", wrongBoltReferences.join(", "));
+          this.failRow(path, "`Task Generation からの追跡` が対象 Bolt の Task を指す", wrongBoltReferences.join(", "));
         }
 
         const boltDir = boltDirectories.get(boltId);
@@ -1807,8 +1834,8 @@ class AmadeusValidator {
           ? [...this.taskIdsFor(`${boltDir}/tasks.md`)].map((taskId) => `${boltId}/${taskId}`)
           : [];
         const missing = expectedTaskReferences.filter((reference) => !taskReferences.includes(reference));
-        if (missing.length === 0) this.pass(path, "`Construction Design からの追跡` が対象 Bolt の全 Task を指す", boltId);
-        else this.failRow(path, "`Construction Design からの追跡` が対象 Bolt の全 Task を指す", missing.join(", "));
+        if (missing.length === 0) this.pass(path, "`Task Generation からの追跡` が対象 Bolt の全 Task を指す", boltId);
+        else this.failRow(path, "`Task Generation からの追跡` が対象 Bolt の全 Task を指す", missing.join(", "));
       }
     }
 
@@ -1818,23 +1845,23 @@ class AmadeusValidator {
       for (const row of table.rows) {
         for (const column of ["実装", "検証"]) {
           if (String(row[column] ?? "").trim() === "未実施") {
-            this.failRow(path, "Construction 完了時の設計追跡が未実施を残さない", `${column}: 未実施`);
+            this.failRow(path, "Construction 完了時の Task Generation 追跡が未実施を残さない", `${column}: 未実施`);
           }
         }
       }
     }
   }
 
-  private hasReadyConstructionDesignGate(construction: unknown): boolean {
+  private hasReadyTaskGeneration(construction: unknown): boolean {
     if (!this.isObject(construction) || !Array.isArray(construction.bolts)) return false;
     const targetBolts = new Set(
       Array.isArray(construction.targetBolts) ? construction.targetBolts.map((value: unknown) => String(value ?? "").trim()) : [],
     );
     return construction.bolts.some((item: unknown) => {
-      if (!this.isObject(item) || !this.isObject(item.designGate)) return false;
+      if (!this.isObject(item) || !this.isObject(item.taskGeneration)) return false;
       if (!targetBolts.has(String(item.id ?? "").trim())) return false;
-      const status = String(item.designGate.status ?? "").trim();
-      return status === "ready" || status === "passed";
+      const status = String(item.taskGeneration.status ?? "").trim();
+      return status === "ready_for_approval" || status === "passed";
     });
   }
 
@@ -1888,7 +1915,8 @@ class AmadeusValidator {
       const unitPath = `${unitDir}.md`;
       const designPath = `${unitDir}/design.md`;
       this.checkFile(unitPath, "Unit のモジュールファイルが存在する");
-      this.checkHeadings(unitPath, ["関連成果物"]);
+      this.checkHeadings(unitPath, ["実装対象", "関連成果物"]);
+      this.checkImplementationTargets(unitPath, unitId);
       this.checkUnitRelatedDesignLink(unitPath, designPath);
       this.checkFile(designPath, "Unit Design Brief が存在する");
       this.checkHeadings(designPath, unitDesignHeadings);
@@ -1965,7 +1993,7 @@ class AmadeusValidator {
   }
 
   private checkBoltDetailDesignReference(path: string, boltId: string, unitValues: string[], designByUnit: Map<string, string>): void {
-    this.checkHeadings(path, ["対象ユニット", "設計"]);
+    this.checkHeadings(path, ["対象ユニット", "設計", "実装対象"]);
     const targetUnits = this.bulletsAfterHeading(path, "対象ユニット");
     const designBody = this.sectionBody(path, "設計") ?? "";
     if (targetUnits.length === 0) {
@@ -1977,7 +2005,103 @@ class AmadeusValidator {
       else this.failRow(path, "`対象ユニット` が bolts.md のユニットを含む", `${boltId}: ${unitId}`);
     }
     this.checkDesignLinksForUnits(path, designBody, unitValues, designByUnit);
+    this.checkImplementationTargets(path, boltId);
     this.checkMultiUnitBoltReason(path, boltId, unitValues);
+  }
+
+  private checkImplementationTargets(path: string, ownerId: string): void {
+    const table = this.checkTable(path, "実装対象", implementationTargetColumns);
+    if (!table) return;
+
+    if (table.rows.length > 0) {
+      this.pass(path, "`実装対象` が実装対象行を持つ", `${ownerId}: ${table.rows.length}件`);
+    } else {
+      this.failRow(path, "`実装対象` が実装対象行を持つ", `${ownerId}: 行がない`);
+      return;
+    }
+
+    const ids = new Set<string>();
+    for (const row of table.rows) {
+      const targetId = String(row["識別子"] ?? "").trim();
+      this.checkImplementationTargetPrimitive(path, "実装対象 ID が識別子形式に合う", `${ownerId}: ${targetId || "空欄"}`, () => implementationTargetId(targetId));
+
+      if (ids.has(targetId)) this.failRow(path, "実装対象 ID が重複しない", `${ownerId}: ${targetId}`);
+      else {
+        this.pass(path, "実装対象 ID が重複しない", `${ownerId}: ${targetId}`);
+        ids.add(targetId);
+      }
+
+      this.checkImplementationTargetValue(path, targetId, "repository", row["repository"], false);
+      this.checkImplementationTargetValue(path, targetId, "path", row["path"], false);
+      this.checkImplementationTargetValue(path, targetId, "branch", row["branch"], true);
+      this.checkImplementationTargetPr(path, targetId, row["PR"]);
+      this.checkImplementationTargetCi(path, targetId, row["CI"]);
+    }
+  }
+
+  private checkImplementationTargetValue(path: string, targetId: string, column: string, value: unknown, allowNone: boolean): void {
+    const text = String(value ?? "").trim();
+    if (text.length === 0) {
+      this.failRow(path, `実装対象の \`${column}\` が空欄でない`, `${targetId}: 空欄`);
+      return;
+    }
+    if (text === "未確認" || (allowNone && text === "なし")) {
+      this.pass(path, `実装対象の \`${column}\` が記録可能な値である`, `${targetId}: ${text}`);
+      return;
+    }
+    if (!allowNone && text === "なし") {
+      this.failRow(path, `実装対象の \`${column}\` が記録可能な値である`, `${targetId}: ${text}`);
+      return;
+    }
+    const condition = `実装対象の \`${column}\` が記録可能な値である`;
+    const evidence = `${targetId}: ${text}`;
+    if (column === "repository") {
+      this.checkImplementationTargetPrimitive(path, condition, evidence, () => implementationRepository(text));
+      return;
+    }
+    if (column === "path") {
+      this.checkImplementationTargetPrimitive(path, condition, evidence, () => implementationPath(text));
+      return;
+    }
+    if (column === "branch") {
+      this.checkImplementationTargetPrimitive(path, condition, evidence, () => implementationBranch(text));
+      return;
+    }
+    this.pass(path, condition, evidence);
+  }
+
+  private checkImplementationTargetPr(path: string, targetId: string, value: unknown): void {
+    for (const target of this.splitValues(value)) {
+      if (implementationTargetUnavailableValues.has(target)) {
+        this.pass(path, "実装対象の `PR` が任意値または GitHub PR URL である", `${targetId}: ${target}`);
+      } else {
+        this.checkImplementationTargetPrimitive(
+          path,
+          "実装対象の `PR` が任意値または GitHub PR URL である",
+          `${targetId}: ${target || "空欄"}`,
+          () => pullRequestUrl(target),
+        );
+      }
+    }
+  }
+
+  private checkImplementationTargetCi(path: string, targetId: string, value: unknown): void {
+    for (const target of this.splitValues(value)) {
+      if (implementationTargetUnavailableValues.has(target)) {
+        this.pass(path, "実装対象の `CI` が任意値または CI 名である", `${targetId}: ${target}`);
+      } else {
+        this.checkImplementationTargetPrimitive(path, "実装対象の `CI` が任意値または CI 名である", `${targetId}: ${target || "空欄"}`, () => ciName(target));
+      }
+    }
+  }
+
+  private checkImplementationTargetPrimitive(path: string, condition: string, evidence: string, parse: () => unknown): void {
+    try {
+      parse();
+      this.pass(path, condition, evidence);
+    } catch {
+      this.failRow(path, condition, evidence);
+    }
   }
 
   private checkMultiUnitBoltReason(path: string, boltId: string, unitValues: string[]): void {
@@ -2038,6 +2162,12 @@ class AmadeusValidator {
     }
   }
 
+  private checkNoInceptionDomainArtifacts(base: string): void {
+    const domainRoot = this.absolute(`${base}/domain`);
+    if (!this.isDirectory(domainRoot)) return;
+    this.failRow(`${base}/domain`, "Inception は Intent 固有 Domain Model 成果物を持たない", "Domain Model は全体 Domain Model または Construction Functional Design で扱う");
+  }
+
   private checkOptionalIndex(path: string, spec: typeof indexSpecs[string]): void {
     this.checkHeadings(path, spec.headings);
     const table = this.checkTable(path, spec.listHeading, spec.columns);
@@ -2050,21 +2180,21 @@ class AmadeusValidator {
     this.checkDetailLinks(path, table, "詳細");
   }
 
-  private checkUnitContextReferences(base: string, requireContext: boolean): void {
+  private checkUnitContextReferences(base: string, requireContext: boolean, contextIndexPath: string, condition: string): void {
     const unitsPath = `${base}/units.md`;
     const table = this.tableAfterHeading(unitsPath, "一覧");
     if (!table || !table.headers.includes("コンテキスト")) return;
 
-    const contextIds = this.idsFor(`${base}/domain/bounded-contexts.md`);
+    const contextIds = this.idsFor(contextIndexPath);
     for (const row of table.rows) {
       const unitId = String(row["識別子"] ?? "").trim();
       for (const contextId of this.splitValues(row["コンテキスト"])) {
         if (contextId === "未確認" && !requireContext) {
-          this.pass(unitsPath, "Unit のコンテキストが同じ Intent の BC を参照する", `${unitId}: ${contextId}`);
+          this.pass(unitsPath, condition, `${unitId}: ${contextId}`);
         } else if (contextIds.has(contextId)) {
-          this.pass(unitsPath, "Unit のコンテキストが同じ Intent の BC を参照する", `${unitId}: ${contextId}`);
+          this.pass(unitsPath, condition, `${unitId}: ${contextId}`);
         } else {
-          this.failRow(unitsPath, "Unit のコンテキストが同じ Intent の BC を参照する", `${unitId}: ${contextId}`);
+          this.failRow(unitsPath, condition, `${unitId}: ${contextId}`);
         }
       }
     }
@@ -2492,6 +2622,23 @@ class AmadeusValidator {
     return table;
   }
 
+  private checkSubheadingTable(path: string, heading: string, subheading: string, requiredColumns: string[]): Table | undefined {
+    if (!this.isFile(this.absolute(path))) return undefined;
+    const table = this.tableAfterSubheading(path, heading, subheading);
+    if (!table) {
+      this.failRow(path, `\`${heading}\` の \`${subheading}\` の表がある`, "表がない");
+      return undefined;
+    }
+
+    const missing = requiredColumns.filter((column) => !table.headers.includes(column));
+    if (missing.length === 0) {
+      this.pass(path, `\`${heading}\` の \`${subheading}\` の必須表列が揃っている`, requiredColumns.join(", "));
+    } else {
+      this.failRow(path, `\`${heading}\` の \`${subheading}\` の必須表列が揃っている`, `不足: ${missing.join(", ")}`);
+    }
+    return table;
+  }
+
   private collectIds(path: string, table: Table, column: string, pattern?: RegExp): Set<string> {
     const ids = new Set<string>();
     for (const row of table.rows) {
@@ -2636,6 +2783,40 @@ class AmadeusValidator {
     return { headers, rows };
   }
 
+  private tableAfterSubheading(path: string, heading: string, subheading: string): Table | undefined {
+    const lines = this.read(path).split(/\r?\n/);
+    const headingIndex = lines.findIndex((line) => new RegExp(`^##\\s+${this.escapeRegExp(heading)}\\s*$`).test(line));
+    if (headingIndex < 0) return undefined;
+
+    let subheadingIndex = -1;
+    for (let index = headingIndex + 1; index < lines.length; index += 1) {
+      if (/^##\s+/.test(lines[index])) break;
+      if (new RegExp(`^###\\s+${this.escapeRegExp(subheading)}\\s*$`).test(lines[index])) {
+        subheadingIndex = index;
+        break;
+      }
+    }
+    if (subheadingIndex < 0) return undefined;
+
+    let index = subheadingIndex + 1;
+    while (index < lines.length && !lines[index].startsWith("|") && !/^#{2,3}\s+/.test(lines[index])) index += 1;
+    if (index >= lines.length || !lines[index].startsWith("|")) return undefined;
+
+    const tableLines: string[] = [];
+    while (index < lines.length && lines[index].startsWith("|")) {
+      tableLines.push(lines[index]);
+      index += 1;
+    }
+    if (tableLines.length < 2) return undefined;
+
+    const headers = this.splitTableLine(tableLines[0]);
+    const rows = tableLines.slice(2).map((line) => {
+      const values = this.splitTableLine(line);
+      return Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ""]));
+    });
+    return { headers, rows };
+  }
+
   private splitTableLine(line: string): string[] {
     return line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((value) => value.trim());
   }
@@ -2742,7 +2923,7 @@ class AmadeusValidator {
 
   private intentBaseForPhaseBase(base: string): string {
     const phase = basename(base);
-    if (phase === "ideation" || phase === "inception" || phase === "construction" || phase === "initialization") {
+    if (phase === "ideation" || phase === "inception" || phase === "construction") {
       return dirname(base);
     }
     return base;
@@ -2826,8 +3007,16 @@ class AmadeusValidator {
     this.rows.push({ target, condition, result: "pass", evidence });
   }
 
+  private recordCheckResults(results: CheckResult[]): void {
+    this.rows.push(...results);
+  }
+
   private failRow(target: string, condition: string, evidence: string): void {
     this.rows.push({ target, condition, result: "fail", evidence });
+  }
+
+  private warningRow(target: string, condition: string, evidence: string): void {
+    this.rows.push({ target, condition, result: "warning", evidence });
   }
 
   private blocked(target: string, condition: string, evidence: string): void {
@@ -2855,6 +3044,7 @@ class AmadeusValidator {
   private report(): string {
     const failing = this.rows.filter((row) => row.result === "fail");
     const blocking = this.rows.filter((row) => row.result === "blocked");
+    const warnings = this.rows.filter((row) => row.result === "warning");
     const passed = this.rows.filter((row) => row.result === "pass");
     const skippedRows = this.rows.filter((row) => row.result === "skipped");
 
@@ -2866,6 +3056,12 @@ class AmadeusValidator {
     lines.push("", "## 検査対象外", "");
     const skippedSummary = [...new Set(skippedRows.map((row) => `${row.target}: ${row.condition}。対象: ${row.evidence}`))];
     lines.push(...(skippedSummary.length > 0 ? skippedSummary.map((item) => `- ${item}`) : ["- なし"]));
+    lines.push("", "## 警告", "");
+    if (warnings.length === 0) {
+      lines.push("- なし");
+    } else {
+      for (const row of warnings) lines.push(`- \`${row.target}\`: ${row.condition}。根拠: ${row.evidence}`);
+    }
     lines.push("", "## 不足または矛盾", "");
     if (failing.length === 0 && blocking.length === 0) {
       lines.push("- なし");
@@ -2883,9 +3079,9 @@ class AmadeusValidator {
       const category = this.categoryFor(row);
       categories.set(category, [...(categories.get(category) ?? []), row]);
     }
-    const lines = ["| 検査カテゴリ | pass | fail | blocked |", "|---|---:|---:|---:|"];
+    const lines = ["| 検査カテゴリ | pass | warning | fail | blocked |", "|---|---:|---:|---:|---:|"];
     for (const [category, rows] of [...categories.entries()].sort(([a], [b]) => a.localeCompare(b, "ja"))) {
-      lines.push(`| ${category} | ${rows.filter((row) => row.result === "pass").length} | ${rows.filter((row) => row.result === "fail").length} | ${rows.filter((row) => row.result === "blocked").length} |`);
+      lines.push(`| ${category} | ${rows.filter((row) => row.result === "pass").length} | ${rows.filter((row) => row.result === "warning").length} | ${rows.filter((row) => row.result === "fail").length} | ${rows.filter((row) => row.result === "blocked").length} |`);
     }
     return lines;
   }
@@ -2971,7 +3167,7 @@ class AmadeusValidator {
     if (target.includes("/event-storming/") || condition.includes("Event Storming") || condition.includes("Domain Event")) return "Event Storming";
     if (target.includes(".amadeus/discoveries") || condition.includes("Discovery") || condition.includes("Intent 候補")) return "Discovery";
     if (condition.includes("対象 Intent ディレクトリ名")) return "検証範囲";
-    if (condition.includes("Initialized") || condition.includes("`initialized`")) return "Initialized";
+    if (condition.includes("`initialized`")) return "状態";
     if (target.includes("/ideation.md") || target.includes("/scope.md") || condition.includes("Ideation") || condition.includes("Inception")) return "Ideation";
     if (target.endsWith("state.json") || condition.includes("state.json") || condition.includes("`phase`") || condition.includes("`status`")) return "状態";
     if (target.includes("/mocks/") || condition.includes("モック") || condition.includes(".puml")) return "モック";

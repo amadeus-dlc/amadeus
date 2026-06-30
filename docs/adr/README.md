@@ -30,3 +30,4 @@ ADR と `CONTEXT.md` がずれた場合は、採用済み ADR の判断を読み
 |---|---|---|
 | [0001](0001-lifecycle-binding-profile.md) | 採用 | Lifecycle Binding と Profile で Agent Skills を DLC に束ねる。 |
 | [0002](0002-intent-phase-directory-layout.md) | 採用 | Intent Phase Directory Layout を採用する。 |
+| [0003](0003-scope-control-values-source.md) | 採用 | scope 制御値の定義元を `scope.md` に限定する。 |

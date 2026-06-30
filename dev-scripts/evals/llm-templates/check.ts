@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { createLlmProvider, isLlmProviderMode, shellQuote, type LlmProvider, type LlmProviderMode, type LlmRequest, type MockLlmCases } from "../llm-support/provider";
 
-type SkillMode = "steering" | "event-storming" | "intent-init" | "ideation" | "inception" | "construction";
+type SkillMode = "steering" | "event-storming" | "ideation" | "inception" | "construction";
 type IdeationInternalProcess =
   "scope-framing" |
   "feasibility-shaping" |
@@ -14,8 +14,9 @@ type IdeationInternalProcess =
 type IdeationInternalMode = `ideation-internal-${IdeationInternalProcess}`;
 type InceptionInternalProcess =
   "requirements-definition" |
-  "interaction-modeling" |
-  "execution-design" |
+  "user-stories" |
+  "use-cases" |
+  "units-generation" |
   "traceability-finalization";
 type InceptionInternalMode = `inception-internal-${InceptionInternalProcess}`;
 type ConstructionInternalProcess =
@@ -69,16 +70,17 @@ const requiredSkills = [
   "amadeus-steering",
   "amadeus-discovery",
   "amadeus-event-storming",
-  "amadeus-intent-init",
   "amadeus-ideation",
+  "amadeus-ideation-intent-capture",
   "amadeus-ideation-scope-framing",
   "amadeus-ideation-feasibility-shaping",
   "amadeus-ideation-mock-framing",
   "amadeus-ideation-traceability-finalization",
   "amadeus-inception",
   "amadeus-inception-requirements-definition",
-  "amadeus-inception-interaction-modeling",
-  "amadeus-inception-execution-design",
+  "amadeus-inception-user-stories",
+  "amadeus-inception-use-cases",
+  "amadeus-inception-units-generation",
   "amadeus-inception-traceability-finalization",
   "amadeus-construction",
   "amadeus-construction-bolt-preparation",
@@ -89,7 +91,6 @@ const requiredSkills = [
   "japanese-tech-writing",
 ];
 const fixtureIntent = "20260627-loan-self-service";
-const returnReminderIntent = "20260627-return-reminder";
 const ideationInternalProcesses = [
   "scope-framing",
   "feasibility-shaping",
@@ -99,8 +100,9 @@ const ideationInternalProcesses = [
 const ideationInternalModes = ideationInternalProcesses.map((process) => `ideation-internal-${process}` as const);
 const inceptionInternalProcesses = [
   "requirements-definition",
-  "interaction-modeling",
-  "execution-design",
+  "user-stories",
+  "use-cases",
+  "units-generation",
   "traceability-finalization",
 ] as const;
 const inceptionInternalModes = inceptionInternalProcesses.map((process) => `inception-internal-${process}` as const);
@@ -114,7 +116,6 @@ const constructionInternalModes = constructionInternalProcesses.map((process) =>
 const initialE2eModes = [
   "steering",
   "event-storming",
-  "intent-init",
   "ideation",
   ...ideationInternalModes,
   "inception",
@@ -340,6 +341,75 @@ function prepareSteeringFixture(workspace: string): void {
   });
 }
 
+function applyLoanDomainBoundaryFixture(workspace: string): void {
+  const domain = join(workspace, ".amadeus/domain");
+  replaceInFile(
+    join(domain, "subdomains.md"),
+    {
+      "| SD001 | 未分類 | 未分類 | 主要な領域が未確認である。 | なし |":
+        "| SD001 | 貸出管理 | コア | 利用者の貸出可否確認を扱う。 | BC001 |",
+    },
+  );
+  replaceInFile(
+    join(domain, "bounded-contexts.md"),
+    {
+      "|---|---|---|---|---|---|\n\n境界づけられたコンテキストは未確認である。":
+        "|---|---|---|---|---|---|\n| BC001 | 貸出可否確認 | SD001 | 利用者の貸出可否と返却期限を判断する。 | [models.md](bounded-contexts/BC001-loan-eligibility/models.md) | [contracts.md](bounded-contexts/BC001-loan-eligibility/contracts.md) |",
+    },
+  );
+  const contextDir = join(domain, "bounded-contexts/BC001-loan-eligibility");
+  ensureDir(contextDir);
+  writeFileSync(
+    join(domain, "bounded-contexts/BC001-loan-eligibility.md"),
+    [
+      "# 貸出可否確認",
+      "",
+      "## 目的",
+      "",
+      "利用者の貸出可否と返却期限を判断する。",
+      "",
+      "## 責務",
+      "",
+      "貸出条件を確認し、貸出可否を返す。",
+      "",
+      "## 外部境界",
+      "",
+      "外部境界は未確認である。",
+      "",
+      "## 関連成果物",
+      "",
+      "- [models.md](BC001-loan-eligibility/models.md)",
+      "- [contracts.md](BC001-loan-eligibility/contracts.md)",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(contextDir, "models.md"),
+    [
+      "# モデル",
+      "",
+      "## 一覧",
+      "",
+      "| 識別子 | 名前 | 役割 | 詳細 |",
+      "|---|---|---|---|",
+      "",
+      "モデルは未確認である。",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(contextDir, "contracts.md"),
+    [
+      "# 契約",
+      "",
+      "## 一覧",
+      "",
+      "契約は未確認である。",
+      "",
+    ].join("\n"),
+  );
+}
+
 function applyEventStormingArtifacts(workspace: string): void {
   const source = join(root, ".agents/skills/amadeus-event-storming/templates/event-storming/session");
   const summarySource = join(root, ".agents/skills/amadeus-event-storming/templates/event-storming/session.md");
@@ -526,14 +596,14 @@ function writeIntentIndex(workspace: string, intent: string): void {
   );
 }
 
-function prepareInitializedIntentFixture(workspace: string): void {
+function prepareIntentRecordFixture(workspace: string): void {
   prepareSteeringFixture(workspace);
-  applyInitializedIntentArtifacts(workspace, fixtureIntent, "貸出セルフサービス開始", "利用者が図書貸出をセルフサービスで開始できるようにする。");
+  applyIntentRecordArtifacts(workspace, fixtureIntent, "貸出セルフサービス開始", "利用者が図書貸出をセルフサービスで開始できるようにする。");
 }
 
-function applyInitializedIntentArtifacts(workspace: string, intent: string, name: string, purpose: string): void {
-  const source = join(root, ".agents/skills/amadeus-intent-init/templates/intents/initialized");
-  const intentSource = join(root, ".agents/skills/amadeus-intent-init/templates/intents/initialized.md");
+function applyIntentRecordArtifacts(workspace: string, intent: string, name: string, purpose: string): void {
+  const source = join(root, ".agents/skills/amadeus-ideation-intent-capture/templates/intents/intent-record");
+  const intentSource = join(root, ".agents/skills/amadeus-ideation-intent-capture/templates/intents/intent-record.md");
   const target = join(workspace, ".amadeus/intents", intent);
   ensureFile(intentSource);
   cpSync(source, target, { recursive: true });
@@ -542,21 +612,28 @@ function applyInitializedIntentArtifacts(workspace: string, intent: string, name
     "<intent-id>-<slug>": intent,
     "<intent-name>": name,
     "<intent-purpose>": purpose,
+    "<success-condition>": "未確認",
+    "<in-scope>": "未確認",
+    "<out-of-scope>": "未確認",
   });
   replaceInFile(join(workspace, ".amadeus/intents", `${intent}.md`), {
     "<intent-id>-<slug>": intent,
     "<intent-name>": name,
     "<intent-purpose>": purpose,
+    "<success-condition>": "未確認",
+    "<in-scope>": "未確認",
+    "<out-of-scope>": "未確認",
   });
   writeIntentIndex(workspace, intent);
 }
 
-function prepareReturnReminderIntentFixture(workspace: string): void {
-  applyInitializedIntentArtifacts(workspace, returnReminderIntent, "返却期限通知", "利用者に返却期限の接近を通知し、延滞を減らす。");
+function prepareIdeationIntentFixture(workspace: string): void {
+  prepareIntentRecordFixture(workspace);
+  applyIdeationIntentArtifacts(workspace);
 }
 
-function prepareIdeationIntentFixture(workspace: string): void {
-  prepareInitializedIntentFixture(workspace);
+function applyIdeationIntentFromSteeringArtifacts(workspace: string): void {
+  applyIntentRecordArtifacts(workspace, fixtureIntent, "貸出セルフサービス開始", "利用者が図書貸出をセルフサービスで開始できるようにする。");
   applyIdeationIntentArtifacts(workspace);
 }
 
@@ -568,7 +645,7 @@ function applyIdeationIntentArtifacts(workspace: string): void {
 }
 
 function prepareIdeationFeasibilityShapingFixture(workspace: string): void {
-  prepareInitializedIntentFixture(workspace);
+  prepareIntentRecordFixture(workspace);
   applyIdeationScopeFramingArtifacts(workspace);
 }
 
@@ -584,6 +661,7 @@ function prepareIdeationTraceabilityFinalizationFixture(workspace: string): void
 
 function applyIdeationScopeFramingArtifacts(workspace: string): void {
   copyIdeationTemplateEntries(workspace, ["scope.md"]);
+  writeMockIdeationScopeControlValues(workspace);
 }
 
 function applyIdeationFeasibilityShapingArtifacts(workspace: string): void {
@@ -639,6 +717,14 @@ function ideationReplacements(): Record<string, string> {
   };
 }
 
+function writeMockIdeationScopeControlValues(workspace: string): void {
+  replaceInFile(join(ideationTarget(workspace), "scope.md"), {
+    "| 実行スコープ | 未確認 | 未確認 |": "| 実行スコープ | mvp | mock fixture では貸出セルフサービス開始に集中する。 |",
+    "| 深度 | 未確認 | 未確認 |": "| 深度 | standard | mock fixture では Inception へ進められる粒度で整理する。 |",
+    "| 戦略 | 未確認 | 未確認 |": "| 戦略 | standard | mock fixture では初期モックで確認点を検証する。 |",
+  });
+}
+
 function writeIdeationState(target: string): void {
   writeFileSync(
     join(target, "state.json"),
@@ -646,13 +732,13 @@ function writeIdeationState(target: string): void {
       intent: fixtureIntent,
       phase: "ideation",
       status: "completed",
-      initialized: {
-        status: "completed",
-        createdArtifacts: [`../${fixtureIntent}.md`, "state.json"],
-        next: "ideation",
-      },
       ideation: {
         status: "completed",
+        intentCapture: {
+          status: "completed",
+          createdArtifacts: [`../${fixtureIntent}.md`, "state.json"],
+          next: "ideation/scope-framing",
+        },
         requiredArtifacts: [`../${fixtureIntent}.md`, "ideation/scope.md", "ideation/ideation.md", "ideation/decisions.md", "ideation/traceability.md"],
         requiredMocks: ["ideation/mocks/initial-confirmation.puml"],
         gate: "passed",
@@ -663,28 +749,41 @@ function writeIdeationState(target: string): void {
 
 function prepareInceptionIntentFixture(workspace: string): void {
   prepareIdeationIntentFixture(workspace);
+  applyLoanDomainBoundaryFixture(workspace);
   applyInceptionIntentArtifacts(workspace);
 }
 
-function prepareInceptionInteractionModelingFixture(workspace: string): void {
+function prepareIdeationIntentWithDomainFixture(workspace: string): void {
+  prepareIdeationIntentFixture(workspace);
+  applyLoanDomainBoundaryFixture(workspace);
+}
+
+function prepareInceptionUserStoriesFixture(workspace: string): void {
   prepareIdeationIntentFixture(workspace);
   applyInceptionRequirementsDefinitionArtifacts(workspace);
 }
 
-function prepareInceptionExecutionDesignFixture(workspace: string): void {
-  prepareInceptionInteractionModelingFixture(workspace);
-  applyInceptionInteractionModelingArtifacts(workspace);
+function prepareInceptionUseCasesFixture(workspace: string): void {
+  prepareInceptionUserStoriesFixture(workspace);
+  applyInceptionUserStoriesArtifacts(workspace);
+}
+
+function prepareInceptionUnitsGenerationFixture(workspace: string): void {
+  prepareInceptionUseCasesFixture(workspace);
+  applyInceptionUseCasesArtifacts(workspace);
+  applyLoanDomainBoundaryFixture(workspace);
 }
 
 function prepareInceptionTraceabilityFinalizationFixture(workspace: string): void {
-  prepareInceptionExecutionDesignFixture(workspace);
-  applyInceptionExecutionDesignArtifacts(workspace);
+  prepareInceptionUnitsGenerationFixture(workspace);
+  applyInceptionUnitsGenerationArtifacts(workspace);
 }
 
 function applyInceptionIntentArtifacts(workspace: string): void {
   applyInceptionRequirementsDefinitionArtifacts(workspace);
-  applyInceptionInteractionModelingArtifacts(workspace);
-  applyInceptionExecutionDesignArtifacts(workspace);
+  applyInceptionUserStoriesArtifacts(workspace);
+  applyInceptionUseCasesArtifacts(workspace);
+  applyInceptionUnitsGenerationArtifacts(workspace);
   applyInceptionTraceabilityFinalizationArtifacts(workspace);
 }
 
@@ -699,22 +798,32 @@ function applyInceptionRequirementsDefinitionArtifacts(workspace: string): void 
   replaceInFiles(copiedFiles, inceptionReplacements());
 }
 
-function applyInceptionInteractionModelingArtifacts(workspace: string): void {
+function applyInceptionUserStoriesArtifacts(workspace: string): void {
   const source = inceptionTemplateSource();
   const target = inceptionTarget(workspace);
-  const entries = ["user-stories.md", "user-stories", "use-cases.md", "use-cases"];
+  const entries = ["user-stories.md", "user-stories"];
   copyInceptionTemplateEntries(source, target, entries);
 
   const copiedFiles = copiedInceptionTargetFiles(source, target, entries, inceptionPathReplacements());
   movePath(join(target, "user-stories/S001-story.md"), join(target, "user-stories/S001-know-loan-eligibility.md"));
+  replaceInFiles(copiedFiles, inceptionReplacements());
+}
+
+function applyInceptionUseCasesArtifacts(workspace: string): void {
+  const source = inceptionTemplateSource();
+  const target = inceptionTarget(workspace);
+  const entries = ["use-cases.md", "use-cases"];
+  copyInceptionTemplateEntries(source, target, entries);
+
+  const copiedFiles = copiedInceptionTargetFiles(source, target, entries, inceptionPathReplacements());
   movePath(join(target, "use-cases/UC001-use-case.md"), join(target, "use-cases/UC001-check-loan-eligibility.md"));
   replaceInFiles(copiedFiles, inceptionReplacements());
 }
 
-function applyInceptionExecutionDesignArtifacts(workspace: string): void {
+function applyInceptionUnitsGenerationArtifacts(workspace: string): void {
   const source = inceptionTemplateSource();
   const target = inceptionTarget(workspace);
-  const entries = ["units.md", "units", "bolts.md", "bolts", "domain"];
+  const entries = ["units.md", "units", "bolts.md", "bolts"];
   copyInceptionTemplateEntries(source, target, entries);
 
   const copiedFiles = copiedInceptionTargetFiles(source, target, entries, inceptionPathReplacements());
@@ -724,7 +833,6 @@ function applyInceptionExecutionDesignArtifacts(workspace: string): void {
   movePathIfExists(join(target, "bolts/B001-bolt"), join(target, "bolts/B001-loan-eligibility-flow"));
   replaceInFiles(copiedFiles, inceptionReplacements());
 
-  writeInceptionDomainIndexes(target);
   replaceInFile(
     join(target, "units.md"),
     {
@@ -803,7 +911,7 @@ function writeConstructionReadyTasks(workspace: string): void {
       "  - 要求: R001",
       "  - ユースケース: UC001",
       "  - 依存: なし",
-      "  - 設計根拠: design.md#実装設計",
+      "  - 設計根拠: ../../U001-loan-eligibility-check/functional-design/business-logic-model.md#入力",
       "  - 証拠: 未登録",
       "- [ ] T002: 貸出可否と返却期限を判定する",
       "  - 作業:",
@@ -811,7 +919,7 @@ function writeConstructionReadyTasks(workspace: string): void {
       "  - 要求: R001",
       "  - ユースケース: UC001",
       "  - 依存: T001",
-      "  - 設計根拠: design.md#実装設計",
+      "  - 設計根拠: ../../U001-loan-eligibility-check/functional-design/business-rules.md#ルール",
       "  - 証拠: 未登録",
       "- [ ] T003: 判定結果を利用者に返す",
       "  - 作業:",
@@ -819,7 +927,7 @@ function writeConstructionReadyTasks(workspace: string): void {
       "  - 要求: R001",
       "  - ユースケース: UC001",
       "  - 依存: T002",
-      "  - 設計根拠: design.md#実装設計",
+      "  - 設計根拠: ../../U001-loan-eligibility-check/functional-design/domain-entities.md#エンティティ",
       "  - 証拠: 未登録",
       "",
     ].join("\n"),
@@ -836,11 +944,17 @@ function ensureConstructionReadyFixture(workspace: string): void {
 }
 
 function applyConstructionBoltPreparationArtifacts(workspace: string): void {
-  copyConstructionTemplateEntries(workspace, ["traceability.md", "decisions.md", "bolts/B001-bolt/design.md", "bolts/B001-bolt/tasks.md", "bolts/B001-bolt/notes.md"]);
+  copyConstructionTemplateEntries(workspace, [
+    "traceability.md",
+    "decisions.md",
+    "U001-unit/functional-design",
+    "bolts/B001-bolt/tasks.md",
+    "bolts/B001-bolt/notes.md",
+  ]);
   writeEmptyConstructionDecisions(workspace);
   writeConstructionReadyTasks(workspace);
   writeConstructionDesignReadyState(intentTarget(workspace));
-  appendConstructionDesignTrace(workspace);
+  appendTaskGenerationTrace(workspace);
 }
 
 function writeEmptyConstructionDecisions(workspace: string): void {
@@ -985,10 +1099,23 @@ function applyConstructionTraceabilityFinalizationArtifacts(workspace: string): 
   }
 }
 
-function appendConstructionDesignTrace(workspace: string): void {
+function taskGenerationEvidence(): Array<{ kind: string; path: string }> {
+  return [
+    { kind: "functional_design", path: "construction/U001-loan-eligibility-check/functional-design/business-logic-model.md" },
+    { kind: "functional_design", path: "construction/U001-loan-eligibility-check/functional-design/business-rules.md" },
+    { kind: "functional_design", path: "construction/U001-loan-eligibility-check/functional-design/domain-entities.md" },
+    { kind: "functional_design", path: "construction/U001-loan-eligibility-check/functional-design/frontend-components.md" },
+    { kind: "unit_design_brief", path: "inception/units/U001-loan-eligibility-check/design.md" },
+    { kind: "bolt_module", path: "inception/bolts/B001-loan-eligibility-flow.md" },
+    { kind: "tasks", path: "construction/bolts/B001-loan-eligibility-flow/tasks.md" },
+    { kind: "notes", path: "construction/bolts/B001-loan-eligibility-flow/notes.md" },
+  ];
+}
+
+function appendTaskGenerationTrace(workspace: string): void {
   const traceabilityPath = join(constructionTarget(workspace), "traceability.md");
   const traceability = readFileSync(traceabilityPath, "utf8");
-  if (traceability.includes("## Construction Design からの追跡")) {
+  if (traceability.includes("## Task Generation からの追跡")) {
     writeFileSync(traceabilityPath, traceability.replace(" | B001/T001 | ", " | B001/T001, B001/T002, B001/T003 | "));
     return;
   }
@@ -997,11 +1124,11 @@ function appendConstructionDesignTrace(workspace: string): void {
     [
       traceability.trimEnd(),
       "",
-      "## Construction Design からの追跡",
+      "## Task Generation からの追跡",
       "",
-      "| Construction Design | Task | 実装 | 検証 | PR | 状態 |",
+      "| Evidence | Task | 実装 | 検証 | PR | 状態 |",
       "|---|---|---|---|---|---|",
-      "| [B001 Construction Design](bolts/B001-loan-eligibility-flow/design.md) | B001/T001, B001/T002, B001/T003 | 未実施 | 未実施 | 未実施 | ready |",
+      "| [tasks.md](bolts/B001-loan-eligibility-flow/tasks.md) | B001/T001, B001/T002, B001/T003 | 未実施 | 未実施 | 未実施 | ready_for_approval |",
       "",
     ].join("\n"),
   );
@@ -1029,6 +1156,7 @@ function constructionTemplateSource(): string {
 
 function constructionPathReplacements(): Record<string, string> {
   return {
+    "U001-unit": "U001-loan-eligibility-check",
     "B001-bolt": "B001-loan-eligibility-flow",
   };
 }
@@ -1036,6 +1164,7 @@ function constructionPathReplacements(): Record<string, string> {
 function constructionReplacements(): Record<string, string> {
   return {
     "<intent-id>-<slug>": fixtureIntent,
+    "U001-unit": "U001-loan-eligibility-check",
     "B001-bolt": "B001-loan-eligibility-flow",
   };
 }
@@ -1112,132 +1241,6 @@ function copiedInceptionTargetFiles(source: string, target: string, entries: str
   });
 }
 
-function writeInceptionDomainIndexes(target: string): void {
-  writeFileSync(
-    join(target, "domain/subdomains.md"),
-    [
-      "# サブドメイン",
-      "",
-      "## 一覧",
-      "",
-      "| 識別子 | 名前 | 種別 | 役割 | コンテキスト |",
-      "|---|---|---|---|---|",
-      "| SD001 | 貸出確認 | コア | 貸出可否確認を扱う。 | BC001 |",
-      "",
-      "## 未確認事項",
-      "",
-      "- 詳細なモデルと契約条件は Construction 以降で確認する。",
-    ].join("\n"),
-  );
-  writeFileSync(
-    join(target, "domain/bounded-contexts.md"),
-    [
-      "# 境界づけられたコンテキスト",
-      "",
-      "## 範囲",
-      "",
-      `この文書は、\`${fixtureIntent}\` インテントで Unit を切る時に参照する境界づけられたコンテキストを扱う。`,
-      "",
-      "全体の境界づけられたコンテキストは、[../../../domain/bounded-contexts.md](../../../domain/bounded-contexts.md) を参照する。",
-      "",
-      "## コンテキスト",
-      "",
-      "| 識別子 | 名前 | サブドメイン | 役割 | モデル | 契約 |",
-      "|---|---|---|---|---|---|",
-      "| BC001 | 貸出確認 | SD001 | 貸出可否確認を解決するモデル境界を扱う。 | [models.md](bounded-contexts/BC001-loan-check/models.md) | [contracts.md](bounded-contexts/BC001-loan-check/contracts.md) |",
-      "",
-      "## コンテキスト間の依存",
-      "",
-      "| Downstream | Upstream | 依存内容 | 組織パターン | 統合パターン | 状態 |",
-      "|---|---|---|---|---|---|",
-      "",
-      "コンテキスト間の依存は未確認である。",
-      "",
-      "## 外部境界",
-      "",
-      "| コンテキスト | 名前 | 役割 | 根拠 |",
-      "|---|---|---|---|",
-      "",
-      "外部境界は未確認である。",
-      "",
-      "## Unit 分割への入力",
-      "",
-      "| Unit | コンテキスト | 境界 | 分割理由 |",
-      "|---|---|---|---|",
-      "| U001 | BC001 | 貸出可否確認 | 貸出可否確認を単独の解決モデルとして扱うため。 |",
-      "",
-      "## 境界外",
-      "",
-      "- 未確認",
-      "",
-      "## 未確認事項",
-      "",
-      "- 詳細なモデルと契約条件は Construction 以降で確認する。",
-    ].join("\n"),
-  );
-  mkdirSync(join(target, "domain/bounded-contexts/BC001-loan-check"), { recursive: true });
-  writeFileSync(
-    join(target, "domain/bounded-contexts/BC001-loan-check.md"),
-    [
-      "# BC001: 貸出確認",
-      "",
-      "## 目的",
-      "",
-      "貸出確認は、利用者が貸出可否を確認するための判断境界を扱う。",
-      "",
-      "## 責務",
-      "",
-      "- 貸出可否確認の入力と判断結果を扱う。",
-      "- 貸出確認に必要なモデルと契約を管理する。",
-      "",
-      "## 外部境界",
-      "",
-      "- 実際の予約登録や貸出実行は境界外である。",
-      "",
-      "## 関連成果物",
-      "",
-      "- [models.md](BC001-loan-check/models.md)",
-      "- [contracts.md](BC001-loan-check/contracts.md)",
-    ].join("\n"),
-  );
-  writeFileSync(
-    join(target, "domain/bounded-contexts/BC001-loan-check/models.md"),
-    [
-      "# モデル",
-      "",
-      "## 一覧",
-      "",
-      "| 識別子 | 名前 | 種別 | 役割 | 詳細 |",
-      "|---|---|---|---|---|",
-      "",
-      "詳細な DDD Module は未確認である。",
-    ].join("\n"),
-  );
-  writeFileSync(
-    join(target, "domain/bounded-contexts/BC001-loan-check/contracts.md"),
-    [
-      "# 契約",
-      "",
-      "## 事前条件",
-      "",
-      "| 識別子 | 条件 | 根拠 |",
-      "|---|---|---|",
-      "",
-      "## 不変条件",
-      "",
-      "| 識別子 | 条件 | 根拠 |",
-      "|---|---|---|",
-      "",
-      "## 事後条件",
-      "",
-      "| 識別子 | 条件 | 根拠 |",
-      "|---|---|---|",
-      "",
-      "詳細な契約条件は未確認である。",
-    ].join("\n"),
-  );
-}
-
 function writeInceptionState(target: string): void {
   writeFileSync(
     join(target, "state.json"),
@@ -1245,13 +1248,13 @@ function writeInceptionState(target: string): void {
       intent: fixtureIntent,
       phase: "inception",
       status: "in_progress",
-      initialized: {
-        status: "completed",
-        createdArtifacts: [`../${fixtureIntent}.md`, "state.json"],
-        next: "ideation",
-      },
       ideation: {
         status: "completed",
+        intentCapture: {
+          status: "completed",
+          createdArtifacts: [`../${fixtureIntent}.md`, "state.json"],
+          next: "ideation/scope-framing",
+        },
         requiredArtifacts: [`../${fixtureIntent}.md`, "ideation/scope.md", "ideation/ideation.md", "ideation/decisions.md", "ideation/traceability.md"],
         requiredMocks: ["ideation/mocks/initial-confirmation.puml"],
         gate: "passed",
@@ -1267,9 +1270,6 @@ function writeInceptionState(target: string): void {
           "inception/units/U001-loan-eligibility-check.md",
           "inception/units/U001-loan-eligibility-check/design.md",
           "inception/bolts.md",
-          "inception/domain/subdomains.md",
-          "inception/domain/bounded-contexts.md",
-          "inception/domain/bounded-contexts/BC001-loan-check.md",
           "inception/traceability.md",
           "inception/decisions.md",
           "state.json",
@@ -1302,13 +1302,13 @@ function writeConstructionState(target: string): void {
       intent: fixtureIntent,
       phase: "construction",
       status: "in_progress",
-      initialized: {
-        status: "completed",
-        createdArtifacts: [`../${fixtureIntent}.md`, "state.json"],
-        next: "ideation",
-      },
       ideation: {
         status: "completed",
+        intentCapture: {
+          status: "completed",
+          createdArtifacts: [`../${fixtureIntent}.md`, "state.json"],
+          next: "ideation/scope-framing",
+        },
         requiredArtifacts: [`../${fixtureIntent}.md`, "ideation/scope.md", "ideation/ideation.md", "ideation/decisions.md", "ideation/traceability.md"],
         requiredMocks: ["ideation/mocks/initial-confirmation.puml"],
         gate: "passed",
@@ -1324,9 +1324,6 @@ function writeConstructionState(target: string): void {
           "inception/units/U001-loan-eligibility-check.md",
           "inception/units/U001-loan-eligibility-check/design.md",
           "inception/bolts.md",
-          "inception/domain/subdomains.md",
-          "inception/domain/bounded-contexts.md",
-          "inception/domain/bounded-contexts/BC001-loan-check.md",
           "inception/traceability.md",
           "inception/decisions.md",
           "state.json",
@@ -1351,6 +1348,19 @@ function writeConstructionState(target: string): void {
       construction: {
         status: "in_progress",
         targetBolts: ["B001"],
+        functionalDesign: {
+          targetUnits: ["U001"],
+          units: [
+            {
+              unitId: "U001",
+              requirement: "required",
+              status: "not_started",
+              frontendSurface: "present",
+              targetSource: "construction_target_bolts",
+              runMode: "initial",
+            },
+          ],
+        },
         requiredArtifacts: [
           "inception/requirements.md",
           "inception/acceptance.md",
@@ -1363,24 +1373,15 @@ function writeConstructionState(target: string): void {
         ],
         requiredBoltArtifacts: [
           "construction/bolts/B001-loan-eligibility-flow/tasks.md",
-          "construction/bolts/B001-loan-eligibility-flow/design.md",
           "construction/bolts/B001-loan-eligibility-flow/notes.md",
           "construction/bolts/B001-loan-eligibility-flow/test-results.md",
         ],
         bolts: [
           {
             id: "B001",
-            designGate: {
-              status: "ready",
-              reviewedBy: "ai",
-              updatedAt: "2026-06-28",
-              evidence: "construction/bolts/B001-loan-eligibility-flow/design.md",
-            },
-            tasks: {
-              status: "generated",
-              reviewedBy: "ai",
-              updatedAt: "2026-06-28",
-              evidence: "construction/bolts/B001-loan-eligibility-flow/tasks.md",
+            taskGeneration: {
+              status: "ready_for_approval",
+              evidence: taskGenerationEvidence(),
             },
           },
         ],
@@ -1399,6 +1400,19 @@ function writeConstructionDesignReadyState(target: string): void {
   state.construction = {
     status: "in_progress",
     targetBolts: ["B001"],
+    functionalDesign: {
+      targetUnits: ["U001"],
+      units: [
+        {
+          unitId: "U001",
+          requirement: "required",
+          status: "not_started",
+          frontendSurface: "present",
+          targetSource: "construction_target_bolts",
+          runMode: "initial",
+        },
+      ],
+    },
     requiredArtifacts: [
       "inception/requirements.md",
       "inception/acceptance.md",
@@ -1410,23 +1424,14 @@ function writeConstructionDesignReadyState(target: string): void {
     ],
     requiredBoltArtifacts: [
       "construction/bolts/B001-loan-eligibility-flow/tasks.md",
-      "construction/bolts/B001-loan-eligibility-flow/design.md",
       "construction/bolts/B001-loan-eligibility-flow/notes.md",
     ],
     bolts: [
       {
         id: "B001",
-        designGate: {
-          status: "ready",
-          reviewedBy: "ai",
-          updatedAt: "2026-06-28",
-          evidence: "construction/bolts/B001-loan-eligibility-flow/design.md",
-        },
-        tasks: {
-          status: "generated",
-          reviewedBy: "ai",
-          updatedAt: "2026-06-28",
-          evidence: "construction/bolts/B001-loan-eligibility-flow/tasks.md",
+        taskGeneration: {
+          status: "ready_for_approval",
+          evidence: taskGenerationEvidence(),
         },
       },
     ],
@@ -1474,26 +1479,6 @@ function pingPrompt(): string {
   ].join("\n");
 }
 
-function intentInitPrompt(): string {
-  return [
-    "amadeus-intent-init を使ってください。",
-    "",
-    "既存の Amadeus steering layer に、新しい Intent の入れ物だけを作成または更新してください。",
-    "",
-    "Intent:",
-    "- ディレクトリ名: 20260627-return-reminder",
-    "- 目的: 利用者に返却期限の接近を通知し、延滞を減らす",
-    "- 依存する既存 Intent: なし",
-    "",
-    "制約:",
-    "- 質問せずに続行してください。",
-    "- `.amadeus/intents.md`、対象 Intent の `.amadeus/intents/<intent-id>.md`、`state.json` だけを作成または更新してください。",
-    "- Ideation 成果物、Inception 成果物、domain 成果物は作らないでください。",
-    "- git commit はしないでください。",
-    "- 作成後に `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . 20260627-return-reminder` を実行し、結果を要約してください。",
-  ].join("\n");
-}
-
 function eventStormingPrompt(): string {
   return [
     "amadeus-event-storming を使ってください。",
@@ -1526,7 +1511,7 @@ function eventStormingPrompt(): string {
     "- 同梱テンプレートを使い、上の ID とファイル名で最小成果物を作成してください。",
     "- Event は Domain Event だけとして扱い、UI event、technical event、integration event、log event は Domain Event にしないでください。",
     "- Requirement、Use Case、Unit、Bolt、Task、domain model、実装、CI は作らないでください。",
-    "- `amadeus-discovery`、`amadeus-intent-init`、`amadeus-inception`、`amadeus-domain-modeling` は自動実行しないでください。",
+    "- `amadeus-discovery`、`amadeus-ideation`、`amadeus-inception`、`amadeus-domain-modeling` は自動実行しないでください。",
     "- git commit はしないでください。",
     "- 作成後に `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts .` を実行し、結果を要約してください。",
   ].join("\n");
@@ -1536,7 +1521,12 @@ function intentIdeationPrompt(): string {
   return [
     "amadeus-ideation を使ってください。",
     "",
-    "既存の initialized Intent `20260627-loan-self-service` を Ideation へ進めてください。",
+    "入力テーマから Intent Record を作り、`20260627-loan-self-service` を Ideation へ進めてください。",
+    "",
+    "Intent:",
+    "- ディレクトリ名: 20260627-loan-self-service",
+    "- 目的: 利用者が図書貸出をセルフサービスで開始できるようにする",
+    "- 依存する既存 Intent: なし",
     "",
     "Ideation で分かっていること:",
     "- 対象: 利用者が貸出開始前に図書と利用者状態を確認する体験",
@@ -1545,6 +1535,8 @@ function intentIdeationPrompt(): string {
     "- Inception への引き継ぎ: 貸出可否、返却期限、通知要否を要求候補にする",
     "",
     "作成対象:",
+    "- `.amadeus/intents.md`",
+    "- `.amadeus/intents/20260627-loan-self-service.md`",
     "- `scope.md`",
     "- `ideation.md`",
     "- `traceability.md`",
@@ -1555,7 +1547,7 @@ function intentIdeationPrompt(): string {
     "制約:",
     "- 質問せずに続行してください。",
     "- 同梱テンプレートのファイル名を維持し、初期モックは必ず `mocks/initial-confirmation.puml` として作成してください。",
-    "- 対象 Intent 配下の Ideation 成果物だけを作成または更新してください。",
+    "- Intent Record と対象 Intent 配下の Ideation 成果物だけを作成または更新してください。",
     "- requirements、use-cases、units、bolts、domain 成果物は作らないでください。",
     "- git commit はしないでください。",
     "- 作成後に `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . 20260627-loan-self-service` を実行し、結果を要約してください。",
@@ -1650,7 +1642,6 @@ function intentInceptionPrompt(): string {
     "- `use-cases.md` と `use-cases/UC001-check-loan-eligibility.md`",
     "- `units.md` と `units/U001-loan-eligibility-check.md`、`units/U001-loan-eligibility-check/design.md`",
     "- `bolts.md` と `bolts/B001-loan-eligibility-flow.md`",
-    "- `domain/subdomains.md` と `domain/bounded-contexts.md`",
     "- `traceability.md`、`decisions.md`、`decisions/D002-inception-boundary.md`、`state.json`",
     "",
     "制約:",
@@ -1659,9 +1650,9 @@ function intentInceptionPrompt(): string {
     "- 対象 Intent 配下の Inception 成果物だけを作成または更新してください。",
     "- domain model、実装、CI は作らないでください。",
     "- greenfield なので `codebase-analysis.md` は必須成果物に含めず、対象外理由を traceability に残してください。",
-    "- `inception.gate` を `passed` にする場合は、`domain/bounded-contexts.md` に少なくとも1件の BC を作成し、`units.md` の `コンテキスト` から参照してください。",
+    "- `inception.gate` を `passed` にする場合は、既存の domain layer にある BC、または人間が確定した BC を `units.md` の `コンテキスト` から参照してください。",
     "- BC が未確認なら `inception.gate` は `not_ready` にしてください。",
-    "- Task は Construction Design を根拠に Construction phase で生成するため、Inception では `tasks.md` を作らないでください。",
+    "- Task は Construction の Task Generation で生成するため、Inception では `tasks.md` を作らないでください。",
     "- 初回作成時の各 Review Gate は自己点検として扱い、矛盾がない限り質問で止まらず `gate: not_ready` の成果物を作ってください。",
     "- git commit はしないでください。",
     "- 作成後に `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . 20260627-loan-self-service` を実行し、結果を要約してください。",
@@ -1680,25 +1671,32 @@ function intentInceptionInternalPrompt(process: InceptionInternalProcess): strin
         "- `acceptance.md`",
       ],
     },
-    "interaction-modeling": {
-      skill: "amadeus-inception-interaction-modeling",
+    "user-stories": {
+      skill: "amadeus-inception-user-stories",
       lines: [
-        "内部skill: amadeus-inception-interaction-modeling。",
-        "相互作用整理だけを進めてください。",
+        "内部skill: amadeus-inception-user-stories。",
+        "User Stories だけを進めてください。",
         "作成対象:",
         "- `user-stories.md` と `user-stories/S001-know-loan-eligibility.md`",
+      ],
+    },
+    "use-cases": {
+      skill: "amadeus-inception-use-cases",
+      lines: [
+        "内部skill: amadeus-inception-use-cases。",
+        "Use Cases だけを進めてください。",
+        "作成対象:",
         "- `use-cases.md` と `use-cases/UC001-check-loan-eligibility.md`",
       ],
     },
-    "execution-design": {
-      skill: "amadeus-inception-execution-design",
+    "units-generation": {
+      skill: "amadeus-inception-units-generation",
       lines: [
-        "内部skill: amadeus-inception-execution-design。",
-        "実施設計だけを進めてください。",
+        "内部skill: amadeus-inception-units-generation。",
+        "Units Generation だけを進めてください。",
         "作成対象:",
         "- `units.md` と `units/U001-loan-eligibility-check.md`、`units/U001-loan-eligibility-check/design.md`",
         "- `bolts.md` と `bolts/B001-loan-eligibility-flow.md`",
-        "- `domain/subdomains.md` と `domain/bounded-contexts.md`",
       ],
     },
     "traceability-finalization": {
@@ -1756,7 +1754,7 @@ function intentConstructionPrompt(): string {
     "制約:",
     "- `amadeus-construction` は成果物や実装を直接作らず、内部 skill を順に呼び出してください。",
     "- 内部 skill は `amadeus-construction-bolt-preparation`、`amadeus-construction-implementation-execution`、`amadeus-construction-verification-hardening`、`amadeus-construction-traceability-finalization` の順に使ってください。",
-    "- 対象 Bolt 配下の `design.md`、`notes.md`、`test-results.md` を作成し、`tasks.md`、`acceptance.md`、`traceability.md`、`decisions.md`、`state.json` を必要最小限更新してください。",
+    "- Unit 配下の Functional Design、対象 Bolt 配下の `tasks.md`、`notes.md`、`test-results.md` を作成し、`acceptance.md`、`traceability.md`、`decisions.md`、`state.json` を必要最小限更新してください。",
     "- PR URL がないので `pr.md` は作成しないでください。",
     "- Spec、`.kiro/specs`、`openspec`、Operation 成果物は作らないでください。",
     "- git commit はしないでください。",
@@ -1772,11 +1770,10 @@ function intentConstructionInternalPrompt(process: ConstructionInternalProcess):
         "内部skill: amadeus-construction-bolt-preparation。",
         "Bolt 実行準備だけを進めてください。",
         "作成対象:",
-        "- `bolts/B001-loan-eligibility-flow/design.md`",
         "- `bolts/B001-loan-eligibility-flow/tasks.md`",
         "- `bolts/B001-loan-eligibility-flow/notes.md`",
-        "- `traceability.md` の `Construction Design からの追跡`",
-        "- `state.json` の対象 Bolt Design Gate と tasks",
+        "- `traceability.md` の `Task Generation からの追跡`",
+        "- `state.json` の対象 Bolt Task Generation 状態",
       ],
     },
     "implementation-execution": {
@@ -1785,7 +1782,6 @@ function intentConstructionInternalPrompt(process: ConstructionInternalProcess):
         "内部skill: amadeus-construction-implementation-execution。",
         "実装実行だけを進めてください。",
         "更新対象:",
-        "- `bolts/B001-loan-eligibility-flow/design.md`",
         "- `bolts/B001-loan-eligibility-flow/notes.md`",
       ],
     },
@@ -1905,7 +1901,7 @@ function eventStormingMarkdownArtifacts(): string[] {
   ];
 }
 
-function initializedIntentArtifacts(intent: string): string[] {
+function intentRecordArtifacts(intent: string): string[] {
   return [
     ...steeringArtifacts(),
     `.amadeus/intents/${intent}.md`,
@@ -1913,7 +1909,7 @@ function initializedIntentArtifacts(intent: string): string[] {
   ];
 }
 
-function initializedIntentMarkdownArtifacts(intent: string): string[] {
+function intentRecordMarkdownArtifacts(intent: string): string[] {
   return [
     `.amadeus/intents/${intent}.md`,
   ];
@@ -1921,7 +1917,7 @@ function initializedIntentMarkdownArtifacts(intent: string): string[] {
 
 function ideationIntentArtifacts(intent: string): string[] {
   return [
-    ...initializedIntentArtifacts(intent),
+    ...intentRecordArtifacts(intent),
     `.amadeus/intents/${intent}/ideation/scope.md`,
     `.amadeus/intents/${intent}/ideation/ideation.md`,
     `.amadeus/intents/${intent}/ideation/traceability.md`,
@@ -1943,7 +1939,7 @@ function ideationIntentMarkdownArtifacts(intent: string): string[] {
 
 function ideationScopeFramingArtifacts(intent: string): string[] {
   return [
-    ...initializedIntentArtifacts(intent),
+    ...intentRecordArtifacts(intent),
     `.amadeus/intents/${intent}/ideation/scope.md`,
   ];
 }
@@ -1995,9 +1991,18 @@ function ideationTraceabilityFinalizationMarkdownArtifacts(intent: string): stri
   ];
 }
 
+function loanDomainBoundaryArtifacts(): string[] {
+  return [
+    ".amadeus/domain/bounded-contexts/BC001-loan-eligibility.md",
+    ".amadeus/domain/bounded-contexts/BC001-loan-eligibility/models.md",
+    ".amadeus/domain/bounded-contexts/BC001-loan-eligibility/contracts.md",
+  ];
+}
+
 function inceptionIntentArtifacts(intent: string): string[] {
   return [
     ...ideationIntentArtifacts(intent),
+    ...loanDomainBoundaryArtifacts(),
     `.amadeus/intents/${intent}/inception/requirements.md`,
     `.amadeus/intents/${intent}/inception/requirements/R001-loan-eligibility-check.md`,
     `.amadeus/intents/${intent}/inception/acceptance.md`,
@@ -2010,11 +2015,6 @@ function inceptionIntentArtifacts(intent: string): string[] {
     `.amadeus/intents/${intent}/inception/units/U001-loan-eligibility-check/design.md`,
     `.amadeus/intents/${intent}/inception/bolts.md`,
     `.amadeus/intents/${intent}/inception/bolts/B001-loan-eligibility-flow.md`,
-    `.amadeus/intents/${intent}/inception/domain/subdomains.md`,
-    `.amadeus/intents/${intent}/inception/domain/bounded-contexts.md`,
-    `.amadeus/intents/${intent}/inception/domain/bounded-contexts/BC001-loan-check.md`,
-    `.amadeus/intents/${intent}/inception/domain/bounded-contexts/BC001-loan-check/models.md`,
-    `.amadeus/intents/${intent}/inception/domain/bounded-contexts/BC001-loan-check/contracts.md`,
     `.amadeus/intents/${intent}/inception/traceability.md`,
     `.amadeus/intents/${intent}/inception/decisions.md`,
     `.amadeus/intents/${intent}/inception/decisions/D002-inception-boundary.md`,
@@ -2035,11 +2035,6 @@ function inceptionIntentMarkdownArtifacts(intent: string): string[] {
     `.amadeus/intents/${intent}/inception/units/U001-loan-eligibility-check/design.md`,
     `.amadeus/intents/${intent}/inception/bolts.md`,
     `.amadeus/intents/${intent}/inception/bolts/B001-loan-eligibility-flow.md`,
-    `.amadeus/intents/${intent}/inception/domain/subdomains.md`,
-    `.amadeus/intents/${intent}/inception/domain/bounded-contexts.md`,
-    `.amadeus/intents/${intent}/inception/domain/bounded-contexts/BC001-loan-check.md`,
-    `.amadeus/intents/${intent}/inception/domain/bounded-contexts/BC001-loan-check/models.md`,
-    `.amadeus/intents/${intent}/inception/domain/bounded-contexts/BC001-loan-check/contracts.md`,
     `.amadeus/intents/${intent}/inception/traceability.md`,
     `.amadeus/intents/${intent}/inception/decisions.md`,
     `.amadeus/intents/${intent}/inception/decisions/D002-inception-boundary.md`,
@@ -2063,59 +2058,61 @@ function inceptionRequirementsDefinitionMarkdownArtifacts(intent: string): strin
   ];
 }
 
-function inceptionInteractionModelingArtifacts(intent: string): string[] {
+function inceptionUserStoriesArtifacts(intent: string): string[] {
   return [
     ...inceptionRequirementsDefinitionArtifacts(intent),
     `.amadeus/intents/${intent}/inception/user-stories.md`,
     `.amadeus/intents/${intent}/inception/user-stories/S001-know-loan-eligibility.md`,
-    `.amadeus/intents/${intent}/inception/use-cases.md`,
-    `.amadeus/intents/${intent}/inception/use-cases/UC001-check-loan-eligibility.md`,
   ];
 }
 
-function inceptionInteractionModelingMarkdownArtifacts(intent: string): string[] {
+function inceptionUserStoriesMarkdownArtifacts(intent: string): string[] {
   return [
     `.amadeus/intents/${intent}/inception/user-stories.md`,
     `.amadeus/intents/${intent}/inception/user-stories/S001-know-loan-eligibility.md`,
+  ];
+}
+
+function inceptionUseCasesArtifacts(intent: string): string[] {
+  return [
+    ...inceptionUserStoriesArtifacts(intent),
     `.amadeus/intents/${intent}/inception/use-cases.md`,
     `.amadeus/intents/${intent}/inception/use-cases/UC001-check-loan-eligibility.md`,
   ];
 }
 
-function inceptionExecutionDesignArtifacts(intent: string): string[] {
+function inceptionUseCasesMarkdownArtifacts(intent: string): string[] {
   return [
-    ...inceptionInteractionModelingArtifacts(intent),
-    `.amadeus/intents/${intent}/inception/units.md`,
-    `.amadeus/intents/${intent}/inception/units/U001-loan-eligibility-check.md`,
-    `.amadeus/intents/${intent}/inception/units/U001-loan-eligibility-check/design.md`,
-    `.amadeus/intents/${intent}/inception/bolts.md`,
-    `.amadeus/intents/${intent}/inception/bolts/B001-loan-eligibility-flow.md`,
-    `.amadeus/intents/${intent}/inception/domain/subdomains.md`,
-    `.amadeus/intents/${intent}/inception/domain/bounded-contexts.md`,
-    `.amadeus/intents/${intent}/inception/domain/bounded-contexts/BC001-loan-check.md`,
-    `.amadeus/intents/${intent}/inception/domain/bounded-contexts/BC001-loan-check/models.md`,
-    `.amadeus/intents/${intent}/inception/domain/bounded-contexts/BC001-loan-check/contracts.md`,
+    `.amadeus/intents/${intent}/inception/use-cases.md`,
+    `.amadeus/intents/${intent}/inception/use-cases/UC001-check-loan-eligibility.md`,
   ];
 }
 
-function inceptionExecutionDesignMarkdownArtifacts(intent: string): string[] {
+function inceptionUnitsGenerationArtifacts(intent: string): string[] {
+  return [
+    ...inceptionUseCasesArtifacts(intent),
+    ...loanDomainBoundaryArtifacts(),
+    `.amadeus/intents/${intent}/inception/units.md`,
+    `.amadeus/intents/${intent}/inception/units/U001-loan-eligibility-check.md`,
+    `.amadeus/intents/${intent}/inception/units/U001-loan-eligibility-check/design.md`,
+    `.amadeus/intents/${intent}/inception/bolts.md`,
+    `.amadeus/intents/${intent}/inception/bolts/B001-loan-eligibility-flow.md`,
+  ];
+}
+
+function inceptionUnitsGenerationMarkdownArtifacts(intent: string): string[] {
   return [
     `.amadeus/intents/${intent}/inception/units.md`,
     `.amadeus/intents/${intent}/inception/units/U001-loan-eligibility-check.md`,
     `.amadeus/intents/${intent}/inception/units/U001-loan-eligibility-check/design.md`,
     `.amadeus/intents/${intent}/inception/bolts.md`,
     `.amadeus/intents/${intent}/inception/bolts/B001-loan-eligibility-flow.md`,
-    `.amadeus/intents/${intent}/inception/domain/subdomains.md`,
-    `.amadeus/intents/${intent}/inception/domain/bounded-contexts.md`,
-    `.amadeus/intents/${intent}/inception/domain/bounded-contexts/BC001-loan-check.md`,
-    `.amadeus/intents/${intent}/inception/domain/bounded-contexts/BC001-loan-check/models.md`,
-    `.amadeus/intents/${intent}/inception/domain/bounded-contexts/BC001-loan-check/contracts.md`,
   ];
 }
 
 function inceptionTraceabilityFinalizationArtifacts(intent: string): string[] {
   return [
-    ...inceptionExecutionDesignArtifacts(intent),
+    ...inceptionUnitsGenerationArtifacts(intent),
     `.amadeus/intents/${intent}/inception/traceability.md`,
     `.amadeus/intents/${intent}/inception/decisions.md`,
     `.amadeus/intents/${intent}/inception/decisions/D002-inception-boundary.md`,
@@ -2135,7 +2132,10 @@ function constructionIntentArtifacts(intent: string): string[] {
     ...inceptionIntentArtifacts(intent),
     `.amadeus/intents/${intent}/construction/traceability.md`,
     `.amadeus/intents/${intent}/construction/decisions.md`,
-    `.amadeus/intents/${intent}/construction/bolts/B001-loan-eligibility-flow/design.md`,
+    `.amadeus/intents/${intent}/construction/U001-loan-eligibility-check/functional-design/business-logic-model.md`,
+    `.amadeus/intents/${intent}/construction/U001-loan-eligibility-check/functional-design/business-rules.md`,
+    `.amadeus/intents/${intent}/construction/U001-loan-eligibility-check/functional-design/domain-entities.md`,
+    `.amadeus/intents/${intent}/construction/U001-loan-eligibility-check/functional-design/frontend-components.md`,
     `.amadeus/intents/${intent}/construction/bolts/B001-loan-eligibility-flow/tasks.md`,
     `.amadeus/intents/${intent}/construction/bolts/B001-loan-eligibility-flow/notes.md`,
     `.amadeus/intents/${intent}/construction/bolts/B001-loan-eligibility-flow/test-results.md`,
@@ -2147,7 +2147,10 @@ function constructionIntentMarkdownArtifacts(intent: string): string[] {
   return [
     `.amadeus/intents/${intent}/construction/traceability.md`,
     `.amadeus/intents/${intent}/construction/decisions.md`,
-    `.amadeus/intents/${intent}/construction/bolts/B001-loan-eligibility-flow/design.md`,
+    `.amadeus/intents/${intent}/construction/U001-loan-eligibility-check/functional-design/business-logic-model.md`,
+    `.amadeus/intents/${intent}/construction/U001-loan-eligibility-check/functional-design/business-rules.md`,
+    `.amadeus/intents/${intent}/construction/U001-loan-eligibility-check/functional-design/domain-entities.md`,
+    `.amadeus/intents/${intent}/construction/U001-loan-eligibility-check/functional-design/frontend-components.md`,
     `.amadeus/intents/${intent}/construction/bolts/B001-loan-eligibility-flow/tasks.md`,
     `.amadeus/intents/${intent}/construction/bolts/B001-loan-eligibility-flow/notes.md`,
     `.amadeus/intents/${intent}/construction/bolts/B001-loan-eligibility-flow/test-results.md`,
@@ -2160,7 +2163,10 @@ function constructionBoltPreparationArtifacts(intent: string): string[] {
     ...inceptionIntentArtifacts(intent),
     `.amadeus/intents/${intent}/construction/traceability.md`,
     `.amadeus/intents/${intent}/construction/decisions.md`,
-    `.amadeus/intents/${intent}/construction/bolts/B001-loan-eligibility-flow/design.md`,
+    `.amadeus/intents/${intent}/construction/U001-loan-eligibility-check/functional-design/business-logic-model.md`,
+    `.amadeus/intents/${intent}/construction/U001-loan-eligibility-check/functional-design/business-rules.md`,
+    `.amadeus/intents/${intent}/construction/U001-loan-eligibility-check/functional-design/domain-entities.md`,
+    `.amadeus/intents/${intent}/construction/U001-loan-eligibility-check/functional-design/frontend-components.md`,
     `.amadeus/intents/${intent}/construction/bolts/B001-loan-eligibility-flow/tasks.md`,
     `.amadeus/intents/${intent}/construction/bolts/B001-loan-eligibility-flow/notes.md`,
   ];
@@ -2170,7 +2176,10 @@ function constructionBoltPreparationMarkdownArtifacts(intent: string): string[] 
   return [
     `.amadeus/intents/${intent}/construction/traceability.md`,
     `.amadeus/intents/${intent}/construction/decisions.md`,
-    `.amadeus/intents/${intent}/construction/bolts/B001-loan-eligibility-flow/design.md`,
+    `.amadeus/intents/${intent}/construction/U001-loan-eligibility-check/functional-design/business-logic-model.md`,
+    `.amadeus/intents/${intent}/construction/U001-loan-eligibility-check/functional-design/business-rules.md`,
+    `.amadeus/intents/${intent}/construction/U001-loan-eligibility-check/functional-design/domain-entities.md`,
+    `.amadeus/intents/${intent}/construction/U001-loan-eligibility-check/functional-design/frontend-components.md`,
     `.amadeus/intents/${intent}/construction/bolts/B001-loan-eligibility-flow/tasks.md`,
     `.amadeus/intents/${intent}/construction/bolts/B001-loan-eligibility-flow/notes.md`,
   ];
@@ -2272,31 +2281,22 @@ function e2eCase(mode: E2eMode): E2eCase {
       expectedArtifacts: expectedArtifacts(eventStormingArtifacts(), ["."]),
       expectedMarkdownChanges: expectedMarkdownChanges(eventStormingMarkdownArtifacts(), []),
     },
-    "intent-init": {
-      id: "intent-init",
-      prompt: intentInitPrompt(),
-      prepareGiven: prepareSteeringFixture,
-      givenMustRemainValid: ["."],
-      applyMock: prepareReturnReminderIntentFixture,
-      expectedArtifacts: expectedArtifacts(initializedIntentArtifacts(returnReminderIntent), [returnReminderIntent]),
-      expectedMarkdownChanges: expectedMarkdownChanges(
-        initializedIntentMarkdownArtifacts(returnReminderIntent),
-        [".amadeus/intents.md"],
-      ),
-    },
     "ideation": {
       id: "ideation",
       prompt: intentIdeationPrompt(),
-      prepareGiven: prepareInitializedIntentFixture,
-      givenMustRemainValid: [fixtureIntent],
-      applyMock: applyIdeationIntentArtifacts,
+      prepareGiven: prepareSteeringFixture,
+      givenMustRemainValid: ["."],
+      applyMock: applyIdeationIntentFromSteeringArtifacts,
       expectedArtifacts: expectedArtifacts(ideationIntentArtifacts(fixtureIntent), [fixtureIntent]),
-      expectedMarkdownChanges: expectedMarkdownChanges(ideationIntentMarkdownArtifacts(fixtureIntent), []),
+      expectedMarkdownChanges: expectedMarkdownChanges(
+        [...intentRecordMarkdownArtifacts(fixtureIntent), ...ideationIntentMarkdownArtifacts(fixtureIntent)],
+        [".amadeus/intents.md"],
+      ),
     },
     "ideation-internal-scope-framing": {
       id: "ideation-internal-scope-framing",
       prompt: intentIdeationInternalPrompt("scope-framing"),
-      prepareGiven: prepareInitializedIntentFixture,
+      prepareGiven: prepareIntentRecordFixture,
       givenMustRemainValid: [fixtureIntent],
       applyMock: applyIdeationScopeFramingArtifacts,
       expectedArtifacts: expectedArtifacts(ideationScopeFramingArtifacts(fixtureIntent), [fixtureIntent]),
@@ -2344,7 +2344,7 @@ function e2eCase(mode: E2eMode): E2eCase {
     "inception": {
       id: "inception",
       prompt: intentInceptionPrompt(),
-      prepareGiven: prepareIdeationIntentFixture,
+      prepareGiven: prepareIdeationIntentWithDomainFixture,
       givenMustRemainValid: [fixtureIntent],
       applyMock: applyInceptionIntentArtifacts,
       expectedArtifacts: expectedArtifacts(inceptionIntentArtifacts(fixtureIntent), [fixtureIntent]),
@@ -2365,27 +2365,39 @@ function e2eCase(mode: E2eMode): E2eCase {
         [],
       ),
     },
-    "inception-internal-interaction-modeling": {
-      id: "inception-internal-interaction-modeling",
-      prompt: intentInceptionInternalPrompt("interaction-modeling"),
-      prepareGiven: prepareInceptionInteractionModelingFixture,
+    "inception-internal-user-stories": {
+      id: "inception-internal-user-stories",
+      prompt: intentInceptionInternalPrompt("user-stories"),
+      prepareGiven: prepareInceptionUserStoriesFixture,
       givenMustRemainValid: [fixtureIntent],
-      applyMock: applyInceptionInteractionModelingArtifacts,
-      expectedArtifacts: expectedArtifacts(inceptionInteractionModelingArtifacts(fixtureIntent), [fixtureIntent]),
+      applyMock: applyInceptionUserStoriesArtifacts,
+      expectedArtifacts: expectedArtifacts(inceptionUserStoriesArtifacts(fixtureIntent), [fixtureIntent]),
       expectedMarkdownChanges: expectedMarkdownChanges(
-        inceptionInteractionModelingMarkdownArtifacts(fixtureIntent),
+        inceptionUserStoriesMarkdownArtifacts(fixtureIntent),
         [],
       ),
     },
-    "inception-internal-execution-design": {
-      id: "inception-internal-execution-design",
-      prompt: intentInceptionInternalPrompt("execution-design"),
-      prepareGiven: prepareInceptionExecutionDesignFixture,
+    "inception-internal-use-cases": {
+      id: "inception-internal-use-cases",
+      prompt: intentInceptionInternalPrompt("use-cases"),
+      prepareGiven: prepareInceptionUseCasesFixture,
       givenMustRemainValid: [fixtureIntent],
-      applyMock: applyInceptionExecutionDesignArtifacts,
-      expectedArtifacts: expectedArtifacts(inceptionExecutionDesignArtifacts(fixtureIntent), [fixtureIntent]),
+      applyMock: applyInceptionUseCasesArtifacts,
+      expectedArtifacts: expectedArtifacts(inceptionUseCasesArtifacts(fixtureIntent), [fixtureIntent]),
       expectedMarkdownChanges: expectedMarkdownChanges(
-        inceptionExecutionDesignMarkdownArtifacts(fixtureIntent),
+        inceptionUseCasesMarkdownArtifacts(fixtureIntent),
+        [],
+      ),
+    },
+    "inception-internal-units-generation": {
+      id: "inception-internal-units-generation",
+      prompt: intentInceptionInternalPrompt("units-generation"),
+      prepareGiven: prepareInceptionUnitsGenerationFixture,
+      givenMustRemainValid: [fixtureIntent],
+      applyMock: applyInceptionUnitsGenerationArtifacts,
+      expectedArtifacts: expectedArtifacts(inceptionUnitsGenerationArtifacts(fixtureIntent), [fixtureIntent]),
+      expectedMarkdownChanges: expectedMarkdownChanges(
+        inceptionUnitsGenerationMarkdownArtifacts(fixtureIntent),
         [],
       ),
     },
@@ -2437,7 +2449,6 @@ function e2eCase(mode: E2eMode): E2eCase {
       expectedMarkdownChanges: expectedMarkdownChanges(
         [],
         constructionImplementationExecutionMarkdownArtifacts(fixtureIntent),
-        [`.amadeus/intents/${fixtureIntent}/construction/bolts/B001-loan-eligibility-flow/design.md`],
       ),
     },
     "construction-internal-verification-hardening": {

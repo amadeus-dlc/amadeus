@@ -351,25 +351,13 @@ function snapshotStateText(stepId: string): {
     return {
       readmeStatus: "- Intent は未作成である。",
       structureIntentPolicy: "- Intent は、この Discovery では作成しない。",
-      discoveryNextAction: "`recommended` の Intent 候補を `amadeus-intent-init` に渡す。",
+      discoveryNextAction: "`recommended` の Intent 候補を `amadeus-ideation` に渡す。",
       discoveryDetailActions: [
-        "- `recommended` の Intent 候補である「販売管理の最小購入フロー」を `amadeus-intent-init` に渡す。",
+        "- `recommended` の Intent 候補である「販売管理の最小購入フロー」を `amadeus-ideation` に渡す。",
       ],
     };
   }
-  if (stepId === "02-intent-initialized") {
-    return {
-      readmeStatus: `- Intent \`${intentId}\` は initialized であり、次に Ideation へ進める。`,
-      structureIntentPolicy: `- Intent は \`.amadeus/intents/\` 配下に置く。例: \`.amadeus/intents/${intentId}/\`。`,
-      discoveryNextAction: `初期化済み Intent \`${intentId}\` を \`amadeus-ideation\` に進める。`,
-      discoveryDetailActions: [
-        `- 初期化済み Intent \`${intentId}\` を \`amadeus-ideation\` に進める。`,
-        "- Ideation では、商品選択、販売可能在庫の確認、購入者情報の記録、注文内容確認、注文作成を範囲として具体化する。",
-        "- Ideation では、会員登録、ログイン、顧客台帳、購入履歴管理、決済詳細、売上確定、在庫引当、入荷、棚卸し、出荷を対象外として保持する。",
-      ],
-    };
-  }
-  if (stepId === "03-ideation") {
+  if (stepId === "02-ideation") {
     return {
       readmeStatus: `- Intent \`${intentId}\` は Ideation completed であり、次に Inception へ進める。`,
       structureIntentPolicy: `- Intent は \`.amadeus/intents/\` 配下に置く。例: \`.amadeus/intents/${intentId}/\`。`,
@@ -380,23 +368,23 @@ function snapshotStateText(stepId: string): {
       ],
     };
   }
-  if (stepId === "04-inception") {
+  if (stepId === "03-inception") {
     return {
-      readmeStatus: `- Intent \`${intentId}\` は Inception completed であり、次に B001 の Construction Design ready へ進める。`,
+      readmeStatus: `- Intent \`${intentId}\` は Inception completed であり、次に U002 の Functional Design と B001 の Task Generation ready へ進める。`,
       structureIntentPolicy: `- Intent は \`.amadeus/intents/\` 配下に置く。例: \`.amadeus/intents/${intentId}/\`。`,
       discoveryNextAction: `Inception 完了済み Intent \`${intentId}\` の B001 を \`amadeus-construction-bolt-preparation\` に進める。`,
       discoveryDetailActions: [
         `- Inception 完了済み Intent \`${intentId}\` の B001 を \`amadeus-construction-bolt-preparation\` に進める。`,
-        "- Construction では、注文作成 Bolt の design.md、tasks.md、notes.md を実装前の粒度に整える。",
+        "- Construction では、注文作成 Unit の Functional Design と B001 の tasks.md、notes.md を実装前の粒度に整える。",
       ],
     };
   }
   return {
-    readmeStatus: `- Intent \`${intentId}\` は B001 の Construction Design ready であり、次に実装へ進める。`,
+    readmeStatus: `- Intent \`${intentId}\` は B001 の Task Generation ready であり、次に実装へ進める。`,
     structureIntentPolicy: `- Intent は \`.amadeus/intents/\` 配下に置く。例: \`.amadeus/intents/${intentId}/\`。`,
-    discoveryNextAction: `Construction Design ready の B001 を \`amadeus-construction-implementation-execution\` に進める。`,
+    discoveryNextAction: `Task Generation ready の B001 を \`amadeus-construction-implementation-execution\` に進める。`,
     discoveryDetailActions: [
-      "- Construction Design ready の B001 を `amadeus-construction-implementation-execution` に進める。",
+      "- Task Generation ready の B001 を `amadeus-construction-implementation-execution` に進める。",
       "- 実装では、B001 の tasks.md に沿って注文作成入力と注文作成モデルを実装する。",
     ],
   };
@@ -457,7 +445,7 @@ function normalizeSnapshotNarrative(stepId: string): void {
     "## 依存関係の整理",
     "",
     "- Discovery は steering layer を参照する。",
-    "- Intent は Discovery の recommended 候補から初期化する。",
+    "- Intent は Discovery の recommended 候補から Intent Record を作る。",
     "- この例では、最初の Intent として販売管理の最小購入フローを扱う。",
     "",
     "## コード構成原則",
@@ -477,11 +465,11 @@ function normalizeSnapshotNarrative(stepId: string): void {
   ensureFile(discoveryPath);
   let discoveryText = readFileSync(discoveryPath, "utf8");
   if (stepId !== "01-discovery") {
-    const initializedIntentLink = `[${intentId}](../intents/${intentId}.md)`;
+    const intentRecordLink = `[${intentId}](../intents/${intentId}.md)`;
     discoveryText = discoveryText
-      .replace(/^(\| 販売管理の最小購入フロー \| )[^|]+( \| )[^|]+( \| .*)$/m, `$1initialized$2${initializedIntentLink}$3`)
-      .replace("- `recommended` は「販売管理の最小購入フロー」だけである。", "- `initialized` は「販売管理の最小購入フロー」だけである。")
-      .replace("`20260629-minimum-purchase-flow` は、recommended 候補「販売管理の最小購入フロー」から初期化済みである。", "`20260629-minimum-purchase-flow` は、initialized 候補「販売管理の最小購入フロー」から初期化済みである。");
+      .replace(/^(\| 販売管理の最小購入フロー \| )[^|]+( \| )[^|]+( \| .*)$/m, `$1intent_record_created$2${intentRecordLink}$3`)
+      .replace("- `recommended` は「販売管理の最小購入フロー」だけである。", "- `intent_record_created` は「販売管理の最小購入フロー」だけである。")
+      .replace("`20260629-minimum-purchase-flow` は、recommended 候補「販売管理の最小購入フロー」から Intent Record 作成済みである。", "`20260629-minimum-purchase-flow` は、intent_record_created 候補「販売管理の最小購入フロー」から Intent Record 作成済みである。");
   }
   const nextActionIndex = discoveryText.indexOf("## 推奨次アクション");
   if (nextActionIndex >= 0) {
@@ -688,41 +676,14 @@ function steeringDiscoveryPrompt(): string {
   ].join("\n");
 }
 
-function intentInitPrompt(): string {
-  return [
-    "amadeus-intent-init を使ってください。",
-    "",
-    `Discovery \`${discoveryId}\` の recommended 候補から、新しい Intent の入れ物だけを初期化してください。`,
-    "",
-    "Intent ディレクトリ名:",
-    `- ${intentId}`,
-    "",
-    "Intent の目的:",
-    "- 顧客が商品を選び、販売可能在庫を確認し、購入者情報と注文内容をもとに注文を作成できるようにする。",
-    "",
-    "成功条件:",
-    "- 商品選択、販売可能在庫の確認、購入者情報の記録、注文内容確認、注文作成が Intent の範囲として記録されている。",
-    "- 会員登録、ログイン、顧客台帳、購入履歴管理、決済詳細、売上確定、在庫引当、入荷、棚卸し、出荷が対象外として記録されている。",
-    "- `.amadeus/intents.md` に Intent が登録されている。",
-    `- Discovery の recommended 候補「販売管理の最小購入フロー」の Intent 欄を \`${intentId}\` に更新してください。`,
-    `- Discovery の \`既存 Intent との関係\` には \`${intentId}\` が登録済みであることを書いてください。`,
-    "- `.amadeus/discoveries.md` の推奨次アクションは、Intent 初期化済みで次に Ideation へ進める内容に更新してください。",
-    "",
-    "実行条件:",
-    "- 質問せずに続行してください。",
-    "- 対象 Discovery の gate passed を確認してから進めてください。",
-    "- amadeus-intent-init の成果物契約に従い、Intent を初期化してください。",
-    "- Intent initialized snapshot として保存できる状態まで進めてください。",
-    "- git commit はしないでください。",
-    `- 作成後に \`bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . ${intentId}\` を実行し、結果を要約してください。`,
-  ].join("\n");
-}
-
 function ideationPrompt(): string {
   return [
     "amadeus-ideation を使ってください。",
     "",
-    `既存の initialized Intent \`${intentId}\` を Ideation へ進めてください。`,
+    `Discovery \`${discoveryId}\` の recommended 候補から Intent Record を作り、そのまま Ideation completed まで進めてください。`,
+    "",
+    "Intent ディレクトリ名:",
+    `- ${intentId}`,
     "",
     "Intent の目的:",
     "- 顧客が商品を選び、販売可能在庫を確認し、購入者情報と注文内容をもとに注文を作成できるようにする。",
@@ -735,7 +696,10 @@ function ideationPrompt(): string {
     "",
     "実行条件:",
     "- 質問せずに続行してください。",
-    "- amadeus-ideation の成果物契約に従い、Ideation を完了してください。",
+    "- 対象 Discovery の gate passed を確認してから進めてください。",
+    "- Intent Capture & Framing から Traceability Finalization までを1回の amadeus-ideation 実行で進めてください。",
+    `- Discovery の recommended 候補「販売管理の最小購入フロー」の Intent 欄を \`${intentId}\` に更新してください。`,
+    `- Discovery の \`既存 Intent との関係\` には \`${intentId}\` が登録済みであることを書いてください。`,
     "- Ideation completed snapshot として保存できる状態まで進めてください。",
     "- git commit はしないでください。",
     `- 作成後に \`bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . ${intentId}\` を実行し、結果を要約してください。`,
@@ -776,20 +740,20 @@ function inceptionPrompt(): string {
 
 function constructionPrompt(): string {
   return [
-    "amadeus-construction-bolt-preparation を使ってください。",
+    "amadeus-construction-functional-design と amadeus-construction-bolt-preparation を順に使ってください。",
     "",
-    `Inception gate passed の Intent \`${intentId}\` について、B001 の Construction Design ready まで進めてください。`,
+    `Inception gate passed の Intent \`${intentId}\` について、U002 の Functional Design と B001 の Task Generation ready まで進めてください。`,
     "",
     "対象:",
     "- 対象 Bolt: B001",
     "- 目的: 注文作成を実装可能な Task 集合へ分解する。",
     "- 注文作成は、注文内容、購入者情報、販売可能在庫の参照結果をもとに注文を作成する Bolt としてください。",
-    "- Construction Design は Task 生成の根拠になる粒度にしてください。",
+    "- Functional Design は Task 生成の根拠になる粒度にしてください。",
     "",
     "実行条件:",
     "- 質問せずに続行してください。",
-    "- amadeus-construction-bolt-preparation の成果物契約に従い、Bolt 実行準備を完了してください。",
-    "- Construction design ready snapshot として保存できる状態まで進めてください。",
+    "- amadeus-construction-functional-design と amadeus-construction-bolt-preparation の成果物契約に従い、Bolt 実行準備を完了してください。",
+    "- Task Generation ready snapshot として保存できる状態まで進めてください。",
     "- git commit はしないでください。",
     `- 作成後に \`bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . ${intentId}\` を実行し、結果を要約してください。`,
   ].join("\n");
@@ -813,24 +777,8 @@ const steps: GenerationStep[] = [
     ],
   },
   {
-    id: "02-intent-initialized",
-    snapshot: "examples/02-intent-initialized",
-    prompt: intentInitPrompt(),
-    validationIntent: intentId,
-    expectedState: {
-      phase: "initialized",
-      status: "in_progress",
-      "initialized.status": "completed",
-    },
-    provenanceSkillFiles: [
-      "skills/amadeus-steering/SKILL.md",
-      "skills/amadeus-discovery/SKILL.md",
-      "skills/amadeus-intent-init/SKILL.md",
-    ],
-  },
-  {
-    id: "03-ideation",
-    snapshot: "examples/03-ideation-completed",
+    id: "02-ideation",
+    snapshot: "examples/02-ideation-completed",
     prompt: ideationPrompt(),
     validationIntent: intentId,
     expectedState: {
@@ -842,8 +790,8 @@ const steps: GenerationStep[] = [
     provenanceSkillFiles: [
       "skills/amadeus-steering/SKILL.md",
       "skills/amadeus-discovery/SKILL.md",
-      "skills/amadeus-intent-init/SKILL.md",
       "skills/amadeus-ideation/SKILL.md",
+      "skills/amadeus-ideation-intent-capture/SKILL.md",
       "skills/amadeus-ideation-scope-framing/SKILL.md",
       "skills/amadeus-ideation-feasibility-shaping/SKILL.md",
       "skills/amadeus-ideation-mock-framing/SKILL.md",
@@ -851,8 +799,8 @@ const steps: GenerationStep[] = [
     ],
   },
   {
-    id: "04-inception",
-    snapshot: "examples/04-inception-completed",
+    id: "03-inception",
+    snapshot: "examples/03-inception-completed",
     prompt: inceptionPrompt(),
     validationIntent: intentId,
     expectedState: {
@@ -864,22 +812,23 @@ const steps: GenerationStep[] = [
     provenanceSkillFiles: [
       "skills/amadeus-steering/SKILL.md",
       "skills/amadeus-discovery/SKILL.md",
-      "skills/amadeus-intent-init/SKILL.md",
       "skills/amadeus-ideation/SKILL.md",
+      "skills/amadeus-ideation-intent-capture/SKILL.md",
       "skills/amadeus-ideation-scope-framing/SKILL.md",
       "skills/amadeus-ideation-feasibility-shaping/SKILL.md",
       "skills/amadeus-ideation-mock-framing/SKILL.md",
       "skills/amadeus-ideation-traceability-finalization/SKILL.md",
       "skills/amadeus-inception/SKILL.md",
       "skills/amadeus-inception-requirements-definition/SKILL.md",
-      "skills/amadeus-inception-interaction-modeling/SKILL.md",
-      "skills/amadeus-inception-execution-design/SKILL.md",
+      "skills/amadeus-inception-user-stories/SKILL.md",
+      "skills/amadeus-inception-use-cases/SKILL.md",
+      "skills/amadeus-inception-units-generation/SKILL.md",
       "skills/amadeus-inception-traceability-finalization/SKILL.md",
     ],
   },
   {
-    id: "05-construction-design-ready",
-    snapshot: "examples/05-construction-design-ready",
+    id: "04-construction-design-ready",
+    snapshot: "examples/04-construction-design-ready",
     prompt: constructionPrompt(),
     validationIntent: intentId,
     expectedState: {
@@ -888,23 +837,26 @@ const steps: GenerationStep[] = [
       "inception.status": "completed",
       "inception.gate": "passed",
       "construction.status": "in_progress",
-      "construction.bolts.0.designGate.status": "ready",
-      "construction.bolts.0.tasks.status": "generated",
+      "construction.functionalDesign.units.1.requirement": "required",
+      "construction.functionalDesign.units.1.status": "ready_for_approval",
+      "construction.bolts.0.taskGeneration.status": "ready_for_approval",
     },
     provenanceSkillFiles: [
       "skills/amadeus-steering/SKILL.md",
       "skills/amadeus-discovery/SKILL.md",
-      "skills/amadeus-intent-init/SKILL.md",
       "skills/amadeus-ideation/SKILL.md",
+      "skills/amadeus-ideation-intent-capture/SKILL.md",
       "skills/amadeus-ideation-scope-framing/SKILL.md",
       "skills/amadeus-ideation-feasibility-shaping/SKILL.md",
       "skills/amadeus-ideation-mock-framing/SKILL.md",
       "skills/amadeus-ideation-traceability-finalization/SKILL.md",
       "skills/amadeus-inception/SKILL.md",
       "skills/amadeus-inception-requirements-definition/SKILL.md",
-      "skills/amadeus-inception-interaction-modeling/SKILL.md",
-      "skills/amadeus-inception-execution-design/SKILL.md",
+      "skills/amadeus-inception-user-stories/SKILL.md",
+      "skills/amadeus-inception-use-cases/SKILL.md",
+      "skills/amadeus-inception-units-generation/SKILL.md",
       "skills/amadeus-inception-traceability-finalization/SKILL.md",
+      "skills/amadeus-construction-functional-design/SKILL.md",
       "skills/amadeus-construction-bolt-preparation/SKILL.md",
     ],
     runtimeSkillFiles: [

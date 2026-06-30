@@ -4,13 +4,23 @@ import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
+import { domainPlacementContract } from "../../../amadeus-contracts/catalog";
+
 const root = resolve(import.meta.dir, "../../..");
+const legacyIntentDomainPattern = `${domainPlacementContract.legacyIntentDomainSegments.join("/")}/**`;
 
 type Contract = {
   skillText: string[];
   files: Record<string, string[]>;
   absentFiles?: string[];
   textExcludes?: Record<string, string[]>;
+};
+
+type TextContract = {
+  path: string;
+  includes: string[];
+  excludes: string[];
+  promotedPath?: string;
 };
 
 const targetSkills: Record<string, Contract> = {
@@ -74,24 +84,24 @@ const targetSkills: Record<string, Contract> = {
       "templates/event-storming/session/state.json": [],
     },
   },
-  "amadeus-intent-init": {
-    skillText: [".amadeus/settings/templates", "templates/intents/initialized"],
+  "amadeus-ideation-intent-capture": {
+    skillText: [".amadeus/settings/templates", "templates/intents/intent-record"],
     files: {
-      "templates/intents/initialized.md": ["目的", "成功条件", "範囲"],
-      "templates/intents/initialized/state.json": [],
+      "templates/intents/intent-record.md": ["目的", "成功条件", "範囲"],
+      "templates/intents/intent-record/state.json": [],
     },
   },
   "amadeus-ideation": {
     skillText: [".amadeus/settings/templates", "templates/intents/ideation"],
     files: {
-      "templates/intents/ideation/scope.md": ["対象", "対象外", "詳細度", "検証深度", "Inception への引き継ぎ"],
+      "templates/intents/ideation/scope.md": ["対象境界", "実行制御", "成果物深度", "検証戦略", "Inception への引き継ぎ"],
       "templates/intents/ideation/ideation.md": ["実現可能性", "体制", "初期モック", "未確定事項", "学習候補"],
       "templates/intents/ideation/traceability.md": ["Ideation からの追跡", "依存関係からの追跡"],
       "templates/intents/ideation/decisions.md": ["一覧", "依存関係"],
       "templates/intents/ideation/decisions/D001-complete-ideation.md": ["背景", "判断", "理由", "影響"],
       "templates/intents/ideation/mocks/initial-confirmation.puml": [],
-      "templates/intents/ideation/state.json": [],
     },
+    absentFiles: ["templates/intents/ideation/state.json"],
   },
   "amadeus-inception": {
     skillText: [".amadeus/settings/templates", "templates/intents/inception"],
@@ -120,6 +130,7 @@ const targetSkills: Record<string, Contract> = {
       "templates/intents/inception/bolts/B001-bolt.md": ["概要", "対象ユニット", "設計", "完了条件", "依存", "未確認事項"],
       "templates/intents/inception/traceability.md": [
         "要求からの追跡",
+        "対象境界からの追跡",
         "背景からの追跡",
         "ボルトからの追跡",
         "設計からの追跡",
@@ -130,27 +141,154 @@ const targetSkills: Record<string, Contract> = {
       ],
       "templates/intents/inception/decisions.md": ["一覧", "依存関係"],
       "templates/intents/inception/decisions/D001-inception-boundary.md": ["背景", "判断", "理由", "影響"],
-      "templates/intents/inception/state.json": [],
     },
-    absentFiles: ["templates/intents/inception/bolts/B001-bolt/tasks.md"],
+    absentFiles: ["templates/intents/inception/bolts/B001-bolt/tasks.md", "templates/intents/inception/state.json"],
     textExcludes: {
-      "templates/intents/inception/state.json": ["tasks.md"],
       "templates/intents/inception/traceability.md": ["タスク", "T001"],
     },
   },
   "amadeus-construction": {
     skillText: [".amadeus/settings/templates", "templates/intents/construction"],
     files: {
-      "templates/intents/construction/bolts/B001-bolt/design.md": ["概要", "Domain Design", "Logical Design", "実装設計", "検証設計", "設計変更記録"],
+      "templates/intents/construction/U001-unit/functional-design/business-logic-model.md": ["目的", "対象 Unit", "業務ロジック", "入力", "出力", "未確認事項"],
+      "templates/intents/construction/U001-unit/functional-design/business-rules.md": ["目的", "業務ルール", "例外", "未確認事項"],
+      "templates/intents/construction/U001-unit/functional-design/domain-entities.md": ["目的", "Domain Entity", "関係", "未確認事項"],
+      "templates/intents/construction/U001-unit/functional-design/frontend-components.md": ["目的", "UI 構成", "状態", "未確認事項"],
       "templates/intents/construction/bolts/B001-bolt/tasks.md": [],
       "templates/intents/construction/bolts/B001-bolt/notes.md": ["実行方針", "対象タスク", "未確認事項"],
       "templates/intents/construction/bolts/B001-bolt/test-results.md": ["検証結果", "安全性確認", "CI確認", "受け入れ証拠"],
       "templates/intents/construction/bolts/B001-bolt/pr.md": ["Pull Request", "対象", "確認状況"],
+      "templates/intents/construction/traceability.md": ["Task Generation からの追跡", "Deployment Unit からの追跡"],
+      "templates/intents/construction/decisions.md": ["一覧", "依存関係"],
       "templates/intents/construction/decisions/D003-construction-boundary.md": ["背景", "判断", "理由", "影響"],
-      "templates/intents/construction/state.json": [],
     },
+    absentFiles: ["templates/intents/construction/state.json", ["templates/intents/construction/bolts/B001-bolt", "design.md"].join("/")],
   },
 };
+
+const textContracts: TextContract[] = [
+  {
+    path: "README.ja.md",
+    includes: [
+      "対象 Intent の `domain-notes.md`、`.amadeus/domain/**`、`inception/traceability.md`、Construction の Functional Design",
+    ],
+    excludes: [
+      "対象 Intent の `domain-notes.md`、`domain/**`、`traceability.md`",
+      `対象 Intent の \`domain-notes.md\`、\`${legacyIntentDomainPattern}\``,
+    ],
+  },
+  {
+    path: "skills/amadeus-discovery/SKILL.md",
+    promotedPath: ".agents/skills/amadeus-discovery/SKILL.md",
+    includes: [
+      "関連しそうな既存 Intent の `ideation/scope.md`、`inception/requirements.md`、`inception/traceability.md`",
+    ],
+    excludes: [
+      "関連しそうな既存 Intent の `scope.md`、`requirements.md`、`traceability.md`",
+    ],
+  },
+  {
+    path: "skills/amadeus-domain-modeling/SKILL.md",
+    promotedPath: ".agents/skills/amadeus-domain-modeling/SKILL.md",
+    includes: [
+      ".amadeus/domain/**",
+      "Construction の Functional Design",
+      ".amadeus/intents/<intent-id>-<slug>/inception/traceability.md",
+      ".amadeus/intents/<intent-id>-<slug>/inception/decisions.md",
+    ],
+    excludes: [
+      ".amadeus/intents/<intent-id>-<slug>/domain/**",
+      `.amadeus/intents/<intent-id>-<slug>/${legacyIntentDomainPattern}`,
+      ".amadeus/intents/<intent-id>-<slug>/traceability.md",
+      ".amadeus/intents/<intent-id>-<slug>/decisions.md",
+    ],
+  },
+  {
+    path: "skills/amadeus-domain-grilling/SKILL.md",
+    promotedPath: ".agents/skills/amadeus-domain-grilling/SKILL.md",
+    includes: [
+      ".amadeus/domain/**",
+      "Construction の Functional Design",
+      "対象 Intent の `inception/traceability.md`",
+    ],
+    excludes: [
+      ".amadeus/intents/<intent-id>-<slug>/domain/**",
+      `.amadeus/intents/<intent-id>-<slug>/${legacyIntentDomainPattern}`,
+      "対象 Intent の `traceability.md`",
+    ],
+  },
+  {
+    path: "skills/amadeus-inception/SKILL.md",
+    promotedPath: ".agents/skills/amadeus-inception/SKILL.md",
+    includes: [
+      "Inception は Intent 固有の正式な Domain Model や Contracts を作らない。",
+      "`inception/units.md` の `コンテキスト`",
+      "既存のドメイン用語、境界づけられたコンテキスト、契約が不足している場合は、Inception 成果物の中で推測して確定しない。",
+      "`scope.md` の対象境界、実行制御、成果物深度、検証戦略",
+    ],
+    excludes: [
+      "`domain/subdomains.md` と `domain/bounded-contexts.md`",
+      "`units.md` の `コンテキスト`",
+      "対象 Intent の `domain/bounded-contexts.md`",
+      `\`${domainPlacementContract.legacyIntentDomainSegments.join("/")}/subdomains.md\` と \`${domainPlacementContract.legacyIntentDomainSegments.join("/")}/bounded-contexts.md\``,
+    ],
+  },
+  {
+    path: "skills/amadeus-ideation-scope-framing/SKILL.md",
+    promotedPath: ".agents/skills/amadeus-ideation-scope-framing/SKILL.md",
+    includes: [
+      "`対象境界`",
+      "`実行制御`",
+      "`成果物深度`",
+      "`検証戦略`",
+      "AI-DLC v2 の Scope ではない。",
+      "成果物深度と検証戦略は独立して判断する。",
+    ],
+    excludes: ["`詳細度`", "`検証深度`"],
+  },
+  {
+    path: "skills/amadeus-ideation-feasibility-shaping/SKILL.md",
+    promotedPath: ".agents/skills/amadeus-ideation-feasibility-shaping/SKILL.md",
+    includes: ["対象境界、実行スコープ、成果物深度、検証戦略"],
+    excludes: ["対象、対象外、検証深度"],
+  },
+  {
+    path: "skills/amadeus-ideation-mock-framing/SKILL.md",
+    promotedPath: ".agents/skills/amadeus-ideation-mock-framing/SKILL.md",
+    includes: ["`scope.md` の対象境界、成果物深度、検証戦略を読む。"],
+    excludes: [],
+  },
+  {
+    path: "skills/amadeus-ideation-traceability-finalization/SKILL.md",
+    promotedPath: ".agents/skills/amadeus-ideation-traceability-finalization/SKILL.md",
+    includes: [
+      "`scope.md` の対象境界、実行制御、成果物深度、検証戦略",
+      "`state.json` には、`scope.md` の実行スコープ、成果物深度、検証戦略を保存しない。",
+    ],
+    excludes: [],
+  },
+  {
+    path: "skills/amadeus-ideation/templates/intents/ideation/traceability.md",
+    promotedPath: ".agents/skills/amadeus-ideation/templates/intents/ideation/traceability.md",
+    includes: ["対象境界", "実行制御", "成果物深度", "検証戦略"],
+    excludes: ["| Scope |", "| 対象外 |"],
+  },
+  {
+    path: "skills/amadeus-ideation/templates/intents/ideation/decisions/D001-complete-ideation.md",
+    promotedPath: ".agents/skills/amadeus-ideation/templates/intents/ideation/decisions/D001-complete-ideation.md",
+    includes: [
+      "Inception へ進める前に、対象境界、実行スコープ、成果物深度、検証戦略、実現可能性、体制、初期モックを確認する。",
+      "`state.json` には、実行スコープ、成果物深度、検証戦略を保存しない。",
+    ],
+    excludes: [],
+  },
+  {
+    path: "skills/amadeus-inception-requirements-definition/SKILL.md",
+    promotedPath: ".agents/skills/amadeus-inception-requirements-definition/SKILL.md",
+    includes: ["要求候補、対象境界、実行制御、成果物深度、検証戦略、制約"],
+    excludes: ["要求候補、対象外、制約"],
+  },
+];
 
 function fail(message: string): never {
   console.error(message);
@@ -204,6 +342,32 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function assertInceptionStageReference(): void {
+  const path = join(root, "docs/amadeus/stages/inception.md");
+  const text = readFileSync(path, "utf8");
+  const stageHeadings = Array.from(text.matchAll(/^## Stage (2\.\d): (.+)$/gm)).map((match) => `${match[1]}: ${match[2]}`);
+  const expected = [
+    "2.1: Requirements Definition",
+    "2.2: User Stories",
+    "2.3: Use Cases",
+    "2.4: Units Generation",
+    "2.5: Traceability Finalization",
+  ];
+  if (stageHeadings.join("\n") !== expected.join("\n")) {
+    fail(`docs/amadeus/stages/inception.md has unexpected stage headings:\n${stageHeadings.join("\n")}`);
+  }
+  for (const legacy of [
+    "Interaction Modeling",
+    "Execution Design",
+    "amadeus-inception-interaction-modeling",
+    "amadeus-inception-execution-design",
+  ]) {
+    assertTextExcludes(path, legacy);
+  }
+}
+
+assertInceptionStageReference();
+
 for (const [skill, contract] of Object.entries(targetSkills)) {
   const skillMd = join(root, "skills", skill, "SKILL.md");
   assertFile(skillMd);
@@ -235,6 +399,20 @@ for (const [skill, contract] of Object.entries(targetSkills)) {
   }
 }
 
+for (const contract of textContracts) {
+  const source = join(root, contract.path);
+  assertFile(source);
+  for (const needle of contract.includes) assertTextIncludes(source, needle);
+  for (const needle of contract.excludes) assertTextExcludes(source, needle);
+
+  if (contract.promotedPath) {
+    const promoted = join(root, contract.promotedPath);
+    assertFile(promoted);
+    for (const needle of contract.includes) assertTextIncludes(promoted, needle);
+    for (const needle of contract.excludes) assertTextExcludes(promoted, needle);
+  }
+}
+
 const tmp = mkdtempSync(join(tmpdir(), "amadeus-template-promotion"));
 const agentsRoot = join(tmp, ".agents/skills");
 for (const skill of Object.keys(targetSkills)) {
@@ -251,9 +429,9 @@ if (packageJson.scripts?.["examples:generate:real"] !== "bun run dev-scripts/gen
 assertFile(join(root, "dev-scripts/generate-amadeus-examples.ts"));
 const dryRun = run(["bun", "run", "dev-scripts/generate-amadeus-examples.ts", "--provider", "real", "--dry-run"]);
 for (const expected of [
-  "examples/03-ideation-completed",
-  "examples/04-inception-completed",
-  "examples/05-construction-design-ready",
+  "examples/02-ideation-completed",
+  "examples/03-inception-completed",
+  "examples/04-construction-design-ready",
   "provider: real",
   "dryRun: true",
 ]) {

@@ -1,7 +1,7 @@
 ---
 name: amadeus-discovery
 description: >-
-  Amadeus steering layer が存在する workspace で、Intent 作成前の入力テーマを Discovery として整理する。
+  Amadeus steering layer が存在する workspace で、Ideation の前に入力テーマを Discovery として整理する。
   課題サイズが曖昧、大きい、または既存 Intent との関係が不明な場合に、`.amadeus/discoveries.md`、
   `.amadeus/discoveries/<discovery-id>.md`、`state.json` を作成または補修する場面では必ず使う。
   Requirement、Use Case、Unit、Bolt、Task、実装方針を作るための skill ではない。
@@ -11,13 +11,13 @@ description: >-
 
 ## 目的
 
-Intent 化前の入力テーマを Discovery として整理する。
+Ideation で Intent Record を作る前の入力テーマを Discovery として整理する。
 
-この skill は、入力テーマをそのまま Intent 化しない。
+この skill は、入力テーマをそのまま Intent Record 化しない。
 課題粒度、既存 Discovery との重複、既存 Intent との関係、Intent 化方針を確認し、次に使う入口を判定する。
 
-この skill は `amadeus-intent-init` の置き換えではない。
-課題サイズが明確な場合は `amadeus-intent-init` を使う。
+この skill は Ideation の任意前処理である。
+課題サイズが明確な場合は `amadeus-ideation` を使う。
 
 ## 前提
 
@@ -62,7 +62,7 @@ Discovery のモジュールディレクトリ名は、`.amadeus/discoveries.md`
 - `.amadeus/intents/*.md`
 - `.amadeus/intents/*/state.json`
 
-必要な場合だけ、関連しそうな既存 Intent の `scope.md`、`requirements.md`、`traceability.md` を読む。
+必要な場合だけ、関連しそうな既存 Intent の `ideation/scope.md`、`inception/requirements.md`、`inception/traceability.md` を読む。
 Discovery は Ideation や Inception の代替ではない。
 
 ## テンプレート
@@ -142,7 +142,7 @@ Discovery のモジュールディレクトリ名だけは `未確認` にせず
 - 記録対象の質問と回答が発生した場合だけ、`.amadeus/discoveries/<discovery-id>/grillings/Gxxx-*.md`
 
 Requirement、Use Case、Unit、Bolt、Task は作らない。
-`amadeus-intent-init` は自動実行しない。
+`amadeus-ideation` は自動実行しない。
 
 `state.json` は次の形にする。
 
@@ -225,8 +225,8 @@ Discovery が `gate: passed` になるには、次を満たす必要がある。
 
 | decision | 追加条件 | 推奨次アクション |
 |---|---|---|
-| `single_intent` | `Intent Draft` がある。 | `amadeus-intent-init` に Intent Draft を渡す。 |
-| `multi_intent` | Intent 候補が2件以上あり、未初期化なら `recommended` が1件だけある。 | `recommended` の Intent 候補を `amadeus-intent-init` に渡す。 |
+| `single_intent` | `Intent Draft` がある。 | `amadeus-ideation` に Intent Draft を渡す。 |
+| `multi_intent` | Intent 候補が2件以上あり、Intent Record 作成前なら `recommended` が1件だけある。 | `recommended` の Intent 候補を `amadeus-ideation` に渡す。 |
 | `existing_intent_update` | 対象既存 Intent が1件だけある。 | 対象 Intent の該当 phase skill を使う。 |
 | `research_only` | 調査論点が記録されている。 | `amadeus-grilling` 継続または none。 |
 | `no_intent` | Intent にしない理由が記録されている。 | none。 |
@@ -240,7 +240,7 @@ Discovery が `gate: passed` になるには、次を満たす必要がある。
 - Bolt を分割しない。
 - Task を分解しない。
 - 実装方針を決めない。
-- `amadeus-intent-init` を自動実行しない。
+- `amadeus-ideation` を自動実行しない。
 - `.amadeus/intents/**` 配下に Discovery を置かない。
 - `docs/**` に Discovery 成果物を置かない。
 
@@ -254,6 +254,6 @@ Discovery が `gate: passed` になるには、次を満たす必要がある。
 
 ## 次の skill
 
-- Discovery から Intent を作る場合: `amadeus-intent-init`
+- Discovery から Intent Record を作る場合: `amadeus-ideation`
 - Discovery の不足論点を確認する場合: `amadeus-grilling`
 - 成果物の構造を検証する場合: `amadeus-validator`

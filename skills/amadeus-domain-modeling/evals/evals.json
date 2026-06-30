@@ -17,7 +17,7 @@
       "id": 3,
       "name": "promote-intent-model-element",
       "prompt": "20260626-password-reset の再設定トークンを値オブジェクトとしてモデルに反映したい。根拠は R002 と UC002。Intent 側の domain model を更新して。",
-      "expected_output": "対象 Intent の domain/** に DVOnnn の値オブジェクトとして反映し、必要なら traceability.md も整合させる。必要が明示されない限り .amadeus/domain/** には昇格しない。"
+      "expected_output": "特定 Unit の実装設計に閉じる値オブジェクトは Construction Functional Design 候補として扱い、必要なら domain-notes.md と inception/traceability.md を整合させる。全体として採用済みのモデルにする判断がある場合だけ .amadeus/domain/** に反映する。"
     },
     {
       "id": 4,

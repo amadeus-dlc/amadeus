@@ -3,13 +3,14 @@
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 
+import { domainPlacementContract } from "../amadeus-contracts/catalog";
+
 type ExampleSnapshot = {
   name: string;
   workdir: string;
   intent?: string;
   statePath?: string;
   expectedState?: Record<string, string>;
-  allowedDomainFiles?: string[];
 };
 
 type SkillProvenanceManifest = {
@@ -30,10 +31,9 @@ type SkillFileDigest = {
 
 const expectedGenerationSnapshots = [
   "examples/01-discovery-completed",
-  "examples/02-intent-initialized",
-  "examples/03-ideation-completed",
-  "examples/04-inception-completed",
-  "examples/05-construction-design-ready",
+  "examples/02-ideation-completed",
+  "examples/03-inception-completed",
+  "examples/04-construction-design-ready",
 ];
 const validator = ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts";
 const provenanceManifestPath = "examples/skill-provenance.json";
@@ -50,18 +50,8 @@ const snapshots: ExampleSnapshot[] = [
     },
   },
   {
-    name: "Intent initialized",
-    workdir: "examples/02-intent-initialized",
-    intent: "20260629-minimum-purchase-flow",
-    expectedState: {
-      phase: "initialized",
-      status: "in_progress",
-      "initialized.status": "completed",
-    },
-  },
-  {
     name: "Ideation completed",
-    workdir: "examples/03-ideation-completed",
+    workdir: "examples/02-ideation-completed",
     intent: "20260629-minimum-purchase-flow",
     expectedState: {
       phase: "ideation",
@@ -72,7 +62,7 @@ const snapshots: ExampleSnapshot[] = [
   },
   {
     name: "Inception completed",
-    workdir: "examples/04-inception-completed",
+    workdir: "examples/03-inception-completed",
     intent: "20260629-minimum-purchase-flow",
     expectedState: {
       phase: "inception",
@@ -80,17 +70,10 @@ const snapshots: ExampleSnapshot[] = [
       "inception.status": "completed",
       "inception.gate": "passed",
     },
-    allowedDomainFiles: [
-      "bounded-contexts.md",
-      "bounded-contexts/BC004-sales-management.md",
-      "bounded-contexts/BC004-sales-management/contracts.md",
-      "bounded-contexts/BC004-sales-management/models.md",
-      "subdomains.md",
-    ],
   },
   {
-    name: "Construction design ready",
-    workdir: "examples/05-construction-design-ready",
+    name: "Construction task generation ready",
+    workdir: "examples/04-construction-design-ready",
     intent: "20260629-minimum-purchase-flow",
     expectedState: {
       phase: "construction",
@@ -98,16 +81,10 @@ const snapshots: ExampleSnapshot[] = [
       "inception.status": "completed",
       "inception.gate": "passed",
       "construction.status": "in_progress",
-      "construction.bolts.0.designGate.status": "ready",
-      "construction.bolts.0.tasks.status": "generated",
+      "construction.functionalDesign.units.1.requirement": "required",
+      "construction.functionalDesign.units.1.status": "ready_for_approval",
+      "construction.bolts.0.taskGeneration.status": "ready_for_approval",
     },
-    allowedDomainFiles: [
-      "bounded-contexts.md",
-      "bounded-contexts/BC004-sales-management.md",
-      "bounded-contexts/BC004-sales-management/contracts.md",
-      "bounded-contexts/BC004-sales-management/models.md",
-      "subdomains.md",
-    ],
   },
 ];
 
@@ -124,7 +101,7 @@ if (mode === "--workspaces-only" || mode === "--all") {
 }
 
 failed = !validateSnapshotStates(stateValidationTargets(targets)) || failed;
-failed = !validateDomainFileSets(stateValidationTargets(targets)) || failed;
+failed = !validateNoInceptionDomainFileSets(stateValidationTargets(targets)) || failed;
 
 for (const target of targets) {
   const args = ["run", validator, target.workdir, ...(target.intent ? [target.intent] : [])];
@@ -187,29 +164,28 @@ function validateSnapshotStates(targets: ExampleSnapshot[]): boolean {
   return true;
 }
 
-function validateDomainFileSets(targets: ExampleSnapshot[]): boolean {
+function validateNoInceptionDomainFileSets(targets: ExampleSnapshot[]): boolean {
   const errors: string[] = [];
   for (const target of targets) {
-    if (!target.intent || !target.allowedDomainFiles) continue;
-    const domainRoot = `${target.workdir}/.amadeus/intents/${target.intent}/inception/domain`;
-    if (!existsSync(domainRoot)) continue;
-
-    const allowed = new Set(target.allowedDomainFiles);
-    for (const actualFile of listFiles(domainRoot)) {
-      if (!allowed.has(actualFile)) {
-        errors.push(`${target.workdir}: unexpected domain file: ${actualFile}`);
-      }
-    }
+    if (!target.intent) continue;
+    const domainRoot = [
+      target.workdir,
+      ".amadeus",
+      "intents",
+      target.intent,
+      ...domainPlacementContract.legacyIntentDomainSegments,
+    ].join("/");
+    if (existsSync(domainRoot)) errors.push(`${target.workdir}: legacy Intent domain directory must not exist`);
   }
 
   if (errors.length > 0) {
-    console.error("## Example domain files");
+    console.error("## Example inception domain files");
     for (const error of errors) console.error(`- ${error}`);
     return false;
   }
 
-  console.log("## Example domain files");
-  console.log("domain files: ok");
+  console.log("## Example inception domain files");
+  console.log("inception domain files: ok");
   return true;
 }
 
@@ -262,21 +238,21 @@ function validateGenerationPlan(): boolean {
   let ok = true;
   ok = validateGenerationPlanCase([], expectedGenerationSnapshots, "01-discovery", "none") && ok;
   ok = validateGenerationPlanCase(
-    ["--from", "04-inception"],
+    ["--from", "03-inception"],
     [
-      "examples/04-inception-completed",
-      "examples/05-construction-design-ready",
+      "examples/03-inception-completed",
+      "examples/04-construction-design-ready",
     ],
-    "04-inception",
-    "examples/03-ideation-completed",
+    "03-inception",
+    "examples/02-ideation-completed",
   ) && ok;
   ok = validateGenerationPlanCase(
-    ["--from", "05-construction-design-ready"],
+    ["--from", "04-construction-design-ready"],
     [
-      "examples/05-construction-design-ready",
+      "examples/04-construction-design-ready",
     ],
-    "05-construction-design-ready",
-    "examples/04-inception-completed",
+    "04-construction-design-ready",
+    "examples/03-inception-completed",
   ) && ok;
   if (ok) console.log("generation plan: ok");
   return ok;

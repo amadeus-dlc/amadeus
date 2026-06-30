@@ -63,15 +63,15 @@ npm run test:it:promote-skill
 
 ```sh
 bun run dev-scripts/generate-amadeus-examples.ts --dry-run
-bun run dev-scripts/generate-amadeus-examples.ts --dry-run --from 04-inception
-bun run dev-scripts/generate-amadeus-examples.ts --dry-run --from 05-construction-design-ready
+bun run dev-scripts/generate-amadeus-examples.ts --dry-run --from 03-inception
+bun run dev-scripts/generate-amadeus-examples.ts --dry-run --from 04-construction-design-ready
 bun run dev-scripts/generate-amadeus-examples.ts --dry-run --from invalid-step
 ```
 
-利用できる step id は、`01-discovery`、`02-intent-initialized`、`03-ideation`、`04-inception`、`05-construction-design-ready` である。
+利用できる step id は、`01-discovery`、`02-ideation`、`03-inception`、`04-construction-design-ready` である。
 `--from` を省略した場合と `--from 01-discovery` は、先頭 step から全 snapshot を再生成する。
-`--from 04-inception` は `examples/03-ideation-completed/.amadeus` を入力として、04 と 05 だけを実行対象にする。
-`--from 05-construction-design-ready` は `examples/04-inception-completed/.amadeus` を入力として、05 だけを実行対象にする。
+`--from 03-inception` は `examples/02-ideation-completed/.amadeus` を入力として、03 と 04 だけを実行対象にする。
+`--from 04-construction-design-ready` は `examples/03-inception-completed/.amadeus` を入力として、04 だけを実行対象にする。
 `--from` に存在しない step id を指定した場合は、生成を開始せずに利用可能な step id を表示して失敗する。
 
 example を補修する場合も、skill の成果物境界、見出し、state.json、traceability、validator 契約に合わせる。

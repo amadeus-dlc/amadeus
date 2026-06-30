@@ -56,7 +56,7 @@ Ideation phase の実現可能性と体制整理だけを進める。
 
 ## 手順
 
-1. `scope.md` から対象、対象外、検証深度を読む。
+1. `scope.md` から対象境界、実行スコープ、成果物深度、検証戦略を読む。
 2. 実現可能性を技術、運用、セキュリティ、依存の観点で整理する。
 3. 判断者、参照者、検証対象、後続担当を整理する。
 4. 初期モックで確認したい内容を、後続の `amadeus-ideation-mock-framing` へ渡せる粒度で書く。
@@ -66,7 +66,7 @@ Ideation phase の実現可能性と体制整理だけを進める。
 
 ## 禁止事項
 
-- `scope.md` の境界を大きく変えない。
+- `scope.md` の対象境界、実行制御、成果物深度、検証戦略を大きく変えない。
 - `mocks/**`、`traceability.md`、`decisions/**`、`state.json` を更新しない。
 - `requirements.md`、`acceptance.md`、`user-stories.md`、`use-cases.md`、`units.md`、`bolts.md` を作らない。
 - `domain/**`、Spec、実装、CI を作らない。

@@ -59,16 +59,19 @@ Ideation phase の追跡と状態確定だけを進める。
 `state.json.phase` は `ideation` にする。
 Ideation が完了している場合は、`state.json.ideation.gate` を `passed` にする。
 未完了の場合は、`not_ready`、`waiting_approval`、`failed` のいずれかを使う。
+`state.json` には、`scope.md` の実行スコープ、成果物深度、検証戦略を保存しない。
+これらの定義元は `scope.md` に限定し、採用または変更理由は `decisions.md` と `decisions/**` に残す。
 
 ## 手順
 
-1. `scope.md`、`ideation.md`、`mocks/*.puml` から Ideation 要素と依存を拾う。
-2. `traceability.md` に Ideation 要素と依存関係の追跡を書く。
-3. Ideation を完了して Inception へ進める場合は、判断 `D001` を作る。
+1. `scope.md` の対象境界、実行制御、成果物深度、検証戦略と、`ideation.md`、`mocks/*.puml` から Ideation 要素と依存を拾う。
+2. `traceability.md` に、対象境界、実行制御、成果物深度、検証戦略が後続成果物へどう渡るかを書く。
+3. Ideation を完了して Inception へ進める場合は、対象境界、実行スコープ、成果物深度、検証戦略を採用する判断 `D001` を作る。
 4. `decisions.md` に判断一覧と依存関係を書く。
-5. `state.json` の `requiredArtifacts` と `requiredMocks` に、存在する相対パスだけを書く。
-6. 親 skill から記録対象の質問と回答が渡された場合だけ、`amadeus-grilling` の構造に従って Grilling Decision Trail を同じ変更で更新する。
-7. 作成後に validator が使える場合は、対象 Intent を検証する。
+5. Inception 以降に `scope.md` を変更する場合は、影響を受ける Requirement、Story、Use Case、Unit、Bolt を確認する判断を追加または置き換える。
+6. `state.json` の `requiredArtifacts` と `requiredMocks` に、存在する相対パスだけを書く。
+7. 親 skill から記録対象の質問と回答が渡された場合だけ、`amadeus-grilling` の構造に従って Grilling Decision Trail を同じ変更で更新する。
+8. 作成後に validator が使える場合は、対象 Intent を検証する。
 
 ## 禁止事項
 
@@ -76,6 +79,7 @@ Ideation が完了している場合は、`state.json.ideation.gate` を `passed
 - `requirements.md`、`acceptance.md`、`user-stories.md`、`use-cases.md`、`units.md`、`bolts.md` を作らない。
 - `domain/**`、Spec、実装、CI を作らない。
 - `state.json` の `phase` を `ideation` 以外にしない。
+- `state.json` に実行スコープ、成果物深度、検証戦略を複製しない。
 
 ## 次の skill
 

@@ -52,12 +52,14 @@ Ideation phase の初期モック具体化だけを進める。
 
 ## 手順
 
-1. `ideation.md` の `初期モック` と `未確定事項` を読む。
-2. 初期モックで確認する判断点を1つに絞る。
-3. 既存 `mocks/*.puml` がある場合は、重複ファイルを作らず既存ファイルを補修する。
-4. 新規作成で初期モックを1つだけ作る場合は、`mocks/initial-confirmation.puml` を使う。
-5. 親 skill から記録対象の質問と回答が渡された場合だけ、`amadeus-grilling` の構造に従って Grilling Decision Trail を同じ変更で更新する。
-6. 作成後に validator が使える場合は、対象 Intent を検証する。
+1. `scope.md` の対象境界、成果物深度、検証戦略を読む。
+2. `ideation.md` の `初期モック` と `未確定事項` を読む。
+3. 初期モックで確認する判断点を1つに絞る。
+4. 対象境界と成果物深度から外れる高忠実度 UI や過剰な分岐は作らない。
+5. 既存 `mocks/*.puml` がある場合は、重複ファイルを作らず既存ファイルを補修する。
+6. 新規作成で初期モックを1つだけ作る場合は、`mocks/initial-confirmation.puml` を使う。
+7. 親 skill から記録対象の質問と回答が渡された場合だけ、`amadeus-grilling` の構造に従って Grilling Decision Trail を同じ変更で更新する。
+8. 作成後に validator が使える場合は、対象 Intent を検証する。
 
 ## 禁止事項
 

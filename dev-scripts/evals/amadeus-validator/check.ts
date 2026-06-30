@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
 const root = resolve(import.meta.dir, "../../..");
-const fixture = join(root, "examples/04-inception-completed/.amadeus");
+const fixture = join(root, "examples/03-inception-completed/.amadeus");
 const discovery = "20260629-ec-site-construction";
 const intent = "20260629-minimum-purchase-flow";
 const validator = ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts";
@@ -51,9 +51,17 @@ function runExpectFailure(command: string[], expected: string, cwd = root): void
   }
 }
 
+function runExpectSuccessIncludes(command: string[], expected: string, cwd = root): void {
+  const stdout = run(command, cwd);
+  if (!stdout.includes(expected)) {
+    fail(["command succeeded without expected evidence: " + expected, "stdout:", stdout].join("\n"));
+  }
+}
+
 function workspaceCopy(): string {
   const workspace = mkdtempSync(join(tmpdir(), "amadeus-validator"));
   cpSync(fixture, join(workspace, ".amadeus"), { recursive: true });
+  updateDiscoveryCandidateStatus(workspace, "intent_record_created");
   return workspace;
 }
 
@@ -75,6 +83,10 @@ function intentRoot(workspace: string): string {
 
 function intentPath(workspace: string, path: string): string {
   return join(intentRoot(workspace), phaseRelativePath(path));
+}
+
+function domainPath(workspace: string, path: string): string {
+  return join(workspace, ".amadeus/domain", path);
 }
 
 function constructionIntentPath(workspace: string, path: string): string {
@@ -118,7 +130,6 @@ function migrateIntentToPhaseLayout(workspace: string): void {
     "units.md",
     "units",
     "bolts.md",
-    "domain",
     "traceability.md",
     "decisions.md",
     "decisions",
@@ -187,11 +198,80 @@ function rewriteStateForPhaseLayout(workspace: string): void {
     state.construction.requiredArtifacts = (state.construction.requiredArtifacts ?? []).map((value: string) => constructionStatePath(value));
     state.construction.requiredBoltArtifacts = (state.construction.requiredBoltArtifacts ?? []).map((value: string) => phaseStatePath(value, "construction"));
     for (const bolt of state.construction.bolts ?? []) {
-      if (bolt.designGate?.evidence) bolt.designGate.evidence = phaseStatePath(bolt.designGate.evidence, "construction");
-      if (bolt.tasks?.evidence) bolt.tasks.evidence = phaseStatePath(bolt.tasks.evidence, "construction");
+      if (Array.isArray(bolt.taskGeneration?.evidence)) {
+        for (const evidence of bolt.taskGeneration.evidence) {
+          if (evidence?.path) evidence.path = phaseStatePath(evidence.path, "construction");
+        }
+      }
     }
   }
   writeFileSync(path, JSON.stringify(state, null, 2));
+}
+
+function updateDiscoveryCandidateStatus(workspace: string, status: string): void {
+  const path = join(workspace, `.amadeus/discoveries/${discovery}.md`);
+  const text = readFileSync(path, "utf8");
+  if (!text.match(/\| 販売管理の最小購入フロー \| (initialized|intent_record_created|recommended) \|/)) {
+    fail("discovery fixture does not contain expected candidate row");
+  }
+  const updated = text
+    .replace(/\| 販売管理の最小購入フロー \| (initialized|intent_record_created|recommended) \|/, `| 販売管理の最小購入フロー | ${status} |`)
+    .replace("`initialized` は「販売管理の最小購入フロー」だけである。", `\`${status}\` は「販売管理の最小購入フロー」だけである。`)
+    .replace("`intent_record_created` は「販売管理の最小購入フロー」だけである。", `\`${status}\` は「販売管理の最小購入フロー」だけである。`)
+    .replace("初期化済みである。", "Intent Record 作成済みである。");
+  writeFileSync(path, updated);
+}
+
+function initializedPhaseWorkspaceCopy(): string {
+  const workspace = workspaceCopy();
+  updateDiscoveryCandidateStatus(workspace, "initialized");
+  writeFileSync(
+    intentPath(workspace, "state.json"),
+    JSON.stringify({
+      intent,
+      phase: "initialized",
+      status: "in_progress",
+      initialized: {
+        status: "completed",
+        createdArtifacts: [
+          `../${intent}.md`,
+          "state.json",
+        ],
+        next: "ideation",
+      },
+    }, null, 2),
+  );
+  return workspace;
+}
+
+function ideationStartedWorkspaceCopy(): string {
+  const workspace = workspaceCopy();
+  rmSync(intentPath(workspace, ""), { recursive: true, force: true });
+  rmSync(join(intentRoot(workspace), "inception"), { recursive: true, force: true });
+  rmSync(join(intentRoot(workspace), "construction"), { recursive: true, force: true });
+  writeFileSync(
+    intentPath(workspace, "state.json"),
+    JSON.stringify({
+      intent,
+      phase: "ideation",
+      status: "in_progress",
+      ideation: {
+        status: "in_progress",
+        intentCapture: {
+          status: "completed",
+          createdArtifacts: [
+            `../${intent}.md`,
+            "state.json",
+          ],
+          next: "ideation/scope-framing",
+        },
+        requiredArtifacts: [],
+        requiredMocks: [],
+        gate: "not_ready",
+      },
+    }, null, 2),
+  );
+  return workspace;
 }
 
 function phaseStatePath(value: string, phase: "ideation" | "inception" | "construction"): string {
@@ -224,10 +304,67 @@ function removeConstructionDecisionsFromRequiredArtifacts(workspace: string): vo
   writeFileSync(path, JSON.stringify(state, null, 2));
 }
 
+function assertValidatorModuleSplit(): void {
+  const validatorRoot = join(root, "skills/amadeus-validator/validator");
+  const requiredModules = [
+    "phases/inception.ts",
+    "phases/construction.ts",
+    "phases/types.ts",
+    "stages/inception/requirements-definition.ts",
+    "stages/inception/user-stories.ts",
+    "stages/inception/use-cases.ts",
+    "stages/inception/units-generation.ts",
+    "stages/construction/functional-design.ts",
+    "stages/construction/bolt-preparation.ts",
+  ];
+  for (const modulePath of requiredModules) {
+    if (!existsSync(join(validatorRoot, modulePath))) fail(`validator module missing: ${modulePath}`);
+  }
+
+  const main = readFileSync(join(validatorRoot, "AmadeusValidator.ts"), "utf8");
+  for (const pattern of [
+    "private checkInceptionIntent(",
+    "private checkConstructionIntent(",
+    "private checkInceptionStateJson(",
+    "private checkConstructionStateJson(",
+    "private checkTargetBolts(",
+    "private checkConstructionFunctionalDesignState(",
+    "private checkConstructionBoltTaskGeneration(",
+    "private checkTargetBoltRequiredArtifacts(",
+    "taskGenerationContract",
+  ]) {
+    if (main.includes(pattern)) fail(`AmadeusValidator.ts still owns phase/stage detail: ${pattern}`);
+  }
+
+  if (existsSync(join(validatorRoot, "contracts/stages")) || existsSync(join(validatorRoot, "contracts/phases"))) {
+    fail("validator module must not define contracts/stages or contracts/phases");
+  }
+}
+
+assertValidatorModuleSplit();
+
 const legacyIntentRootLayoutWorkspace = legacyIntentRootLayoutWorkspaceCopy();
 runExpectFailure(
   ["bun", "run", validator, legacyIntentRootLayoutWorkspace, intent],
   "Intent 直下の旧配置成果物を使わない",
+);
+
+const initializedPhaseWorkspace = initializedPhaseWorkspaceCopy();
+runExpectFailure(
+  ["bun", "run", validator, initializedPhaseWorkspace, intent],
+  "`phase` が既知である",
+);
+
+const ideationStartedWorkspace = ideationStartedWorkspaceCopy();
+run(["bun", "run", validator, ideationStartedWorkspace, intent]);
+
+const ideationStartedWithDownstreamWorkspace = ideationStartedWorkspaceCopy();
+const downstreamArtifact = intentPath(ideationStartedWithDownstreamWorkspace, "requirements.md");
+mkdirSync(dirname(downstreamArtifact), { recursive: true });
+writeFileSync(downstreamArtifact, "# Requirements\n");
+runExpectFailure(
+  ["bun", "run", validator, ideationStartedWithDownstreamWorkspace, intent],
+  "Ideation phase では後続 stage 成果物が存在しない",
 );
 
 const legacyIntentRootGrillingsWorkspace = phaseWorkspaceCopy();
@@ -240,6 +377,83 @@ writeGrillings(intentRoot(legacyIntentRootGrillingsWorkspace), {
 runExpectFailure(
   ["bun", "run", validator, legacyIntentRootGrillingsWorkspace, intent],
   "Intent 直下の旧配置成果物を使わない",
+);
+
+const invalidExecutionScopeWorkspace = phaseWorkspaceCopy();
+replaceScopeExecutionScopeWithInvalidValue(invalidExecutionScopeWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, invalidExecutionScopeWorkspace, intent],
+  "`実行スコープ` が許可値である",
+);
+
+const invalidScopeDepthWorkspace = phaseWorkspaceCopy();
+replaceScopeDepthWithInvalidValue(invalidScopeDepthWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, invalidScopeDepthWorkspace, intent],
+  "`深度` が許可値である",
+);
+
+const invalidScopeVerificationStrategyWorkspace = phaseWorkspaceCopy();
+replaceScopeVerificationStrategyWithInvalidValue(invalidScopeVerificationStrategyWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, invalidScopeVerificationStrategyWorkspace, intent],
+  "`戦略` が許可値である",
+);
+
+const duplicateScopeIdWorkspace = phaseWorkspaceCopy();
+duplicateScopeId(duplicateScopeIdWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, duplicateScopeIdWorkspace, intent],
+  "Scope ID が重複しない",
+);
+
+const omittedStageWithoutReasonWorkspace = phaseWorkspaceCopy();
+removeOmittedStageReason(omittedStageWithoutReasonWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, omittedStageWithoutReasonWorkspace, intent],
+  "`省略 stage` の理由がある",
+);
+
+const stateWithScopeControlWorkspace = phaseWorkspaceCopy();
+addScopeControlToState(stateWithScopeControlWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, stateWithScopeControlWorkspace, intent],
+  "state.json に scope 制御値を保存しない",
+);
+
+const traceabilityWithoutScopeControlWorkspace = phaseWorkspaceCopy();
+removeScopeControlTraceabilityRow(traceabilityWithoutScopeControlWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, traceabilityWithoutScopeControlWorkspace, intent],
+  "Ideation 追跡が `実行制御` を含む",
+);
+
+const gatePassedWithUnconfirmedScopeControlWorkspace = phaseWorkspaceCopy();
+replaceScopeExecutionScopeWithUnconfirmedValue(gatePassedWithUnconfirmedScopeControlWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, gatePassedWithUnconfirmedScopeControlWorkspace, intent],
+  "Ideation gate passed では `実行スコープ` が未確認ではない",
+);
+
+const inceptionTraceWithoutScopeWorkspace = phaseWorkspaceCopy();
+removeInceptionScopeTraceabilityRow(inceptionTraceWithoutScopeWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, inceptionTraceWithoutScopeWorkspace, intent],
+  "対象境界からの追跡が採用済み SC-IN を含む",
+);
+
+const inceptionWithExcludedScopeWarningWorkspace = phaseWorkspaceCopy();
+addExcludedScopeConflict(inceptionWithExcludedScopeWarningWorkspace);
+runExpectSuccessIncludes(
+  ["bun", "run", validator, inceptionWithExcludedScopeWarningWorkspace, intent],
+  "Inception 成果物に SC-OUT に反する可能性がある項目がない",
+);
+
+const inceptionWithoutImplementationTargetWorkspace = phaseWorkspaceCopy();
+removeImplementationTargetSection(inceptionWithoutImplementationTargetWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, inceptionWithoutImplementationTargetWorkspace, intent],
+  "`実装対象` 見出しがある",
 );
 
 function ensureBoltDirectory(workspace: string, bolt: string): void {
@@ -258,6 +472,102 @@ function replaceInFile(path: string, from: string, to: string, message: string):
   const text = readFileSync(path, "utf8");
   if (!text.includes(from)) fail(message);
   writeFileSync(path, text.replace(from, to));
+}
+
+function replaceScopeExecutionScopeWithInvalidValue(workspace: string): void {
+  replaceInFile(
+    intentPath(workspace, "scope.md"),
+    "| 実行スコープ | mvp | 販売管理の最小購入フローに集中する。 |",
+    "| 実行スコープ | enterprise-plus | 販売管理の最小購入フローに集中する。 |",
+    "scope fixture does not contain expected execution scope",
+  );
+}
+
+function replaceScopeExecutionScopeWithUnconfirmedValue(workspace: string): void {
+  replaceInFile(
+    intentPath(workspace, "scope.md"),
+    "| 実行スコープ | mvp | 販売管理の最小購入フローに集中する。 |",
+    "| 実行スコープ | 未確認 | 販売管理の最小購入フローに集中する。 |",
+    "scope fixture does not contain expected execution scope",
+  );
+}
+
+function replaceScopeDepthWithInvalidValue(workspace: string): void {
+  replaceInFile(
+    intentPath(workspace, "scope.md"),
+    "| 深度 | standard | 販売管理の最小購入フローを、Inception で要求候補にできる粒度で整理する。 |",
+    "| 深度 | exhaustive | 販売管理の最小購入フローを、Inception で要求候補にできる粒度で整理する。 |",
+    "scope fixture does not contain expected artifact depth",
+  );
+}
+
+function replaceScopeVerificationStrategyWithInvalidValue(workspace: string): void {
+  replaceInFile(
+    intentPath(workspace, "scope.md"),
+    "| 戦略 | standard | 注文内容確認画面の初期モックで、注文作成前の確認点を検証する。 |",
+    "| 戦略 | exhaustive | 注文内容確認画面の初期モックで、注文作成前の確認点を検証する。 |",
+    "scope fixture does not contain expected verification strategy",
+  );
+}
+
+function duplicateScopeId(workspace: string): void {
+  replaceInFile(
+    intentPath(workspace, "scope.md"),
+    "| SC-IN-005 | 注文作成を扱う。 | 最小購入フローの完了条件である。 | 採用済み |",
+    "| SC-IN-004 | 注文作成を扱う。 | 最小購入フローの完了条件である。 | 採用済み |",
+    "scope fixture does not contain expected SC-IN row",
+  );
+}
+
+function removeOmittedStageReason(workspace: string): void {
+  replaceInFile(
+    intentPath(workspace, "scope.md"),
+    "| 省略 stage | 運用後半の stage | 決済、配送、出荷、運用改善は対象外である。 |",
+    "| 省略 stage | 運用後半の stage |  |",
+    "scope fixture does not contain expected omitted stage row",
+  );
+}
+
+function addScopeControlToState(workspace: string): void {
+  const path = intentPath(workspace, "state.json");
+  const state = JSON.parse(readFileSync(path, "utf8"));
+  state.ideation.executionScope = "mvp";
+  writeFileSync(path, JSON.stringify(state, null, 2));
+}
+
+function removeScopeControlTraceabilityRow(workspace: string): void {
+  replaceInFile(
+    join(intentRoot(workspace), "ideation/traceability.md"),
+    "| 実行制御 | mvp | [scope.md](scope.md) | 後続 stage の実行範囲を決める入力にする。 |\n",
+    "",
+    "traceability fixture does not contain expected execution control row",
+  );
+}
+
+function removeInceptionScopeTraceabilityRow(workspace: string): void {
+  replaceInFile(
+    intentPath(workspace, "traceability.md"),
+    "| SC-IN-005 | R004 | S001 | UC003 | U002 | B001 | 注文作成を Inception の対象として扱う。 |\n",
+    "",
+    "traceability fixture does not contain expected SC-IN row",
+  );
+}
+
+function addExcludedScopeConflict(workspace: string): void {
+  replaceInFile(
+    intentPath(workspace, "requirements/R003-buyer-information-recording.md"),
+    "- 会員登録、ログイン、顧客台帳、購入履歴管理は対象外である。",
+    "- 会員登録を扱う。",
+    "requirement fixture does not contain expected excluded scope constraint",
+  );
+}
+
+function removeImplementationTargetSection(workspace: string): void {
+  const path = intentPath(workspace, `units/${unit1}.md`);
+  const text = readFileSync(path, "utf8");
+  const updated = text.replace(/\n## 実装対象\n\n\| 識別子 \| repository \| path \| branch \| PR \| CI \|\n\|---\|---\|---\|---\|---\|---\|\n\| IT001 \| 未確認 \| 未確認 \| 未確認 \| なし \| 未確認 \|\n/, "");
+  if (updated === text) fail("unit fixture does not contain implementation target section");
+  writeFileSync(path, updated);
 }
 
 function replaceDiscoveryDecision(workspace: string): void {
@@ -335,7 +645,7 @@ function addTaskColumnToRequirementTrace(workspace: string): void {
 function removeTaskDesignReason(workspace: string): void {
   replaceInFile(
     intentPath(workspace, `bolts/${bolt1}/tasks.md`),
-    "  - 設計根拠: design.md#実装設計\n",
+    "  - 設計根拠: ../../U002-order-creation/functional-design/business-logic-model.md#入力\n",
     "",
     "tasks fixture does not contain expected design reason",
   );
@@ -356,7 +666,7 @@ function writeConstructionTasks(workspace: string): void {
       "  - 要求: R004",
       "  - ユースケース: UC003",
       "  - 依存: なし",
-      "  - 設計根拠: design.md#実装設計",
+      "  - 設計根拠: ../../U002-order-creation/functional-design/business-logic-model.md#入力",
       "  - 証拠: 未登録",
       "",
       "- [ ] T002: 注文モデルと不変条件を定義する",
@@ -367,7 +677,7 @@ function writeConstructionTasks(workspace: string): void {
       "  - 要求: R004",
       "  - ユースケース: UC003",
       "  - 依存: T001",
-      "  - 設計根拠: design.md#Domain Design",
+      "  - 設計根拠: ../../U002-order-creation/functional-design/domain-entities.md#エンティティ",
       "  - 証拠: 未登録",
       "",
     ].join("\n"),
@@ -386,8 +696,8 @@ function writeConstructionTasksForSecondBolt(workspace: string): void {
       "    - 選択された商品、販売可能在庫の参照結果、購入者情報を注文内容確認の入力として扱う。",
       "  - 要求: R002, R003",
       "  - ユースケース: UC002",
-      "  - 依存: B003/T001",
-      "  - 設計根拠: design.md#実装設計",
+      "  - 依存: なし",
+      "  - 設計根拠: ../../U002-order-creation/functional-design/business-logic-model.md#入力",
       "  - 証拠: 未登録",
       "",
       "- [ ] T002: 注文内容を確認済みにする",
@@ -396,7 +706,7 @@ function writeConstructionTasksForSecondBolt(workspace: string): void {
       "  - 要求: R002, R003",
       "  - ユースケース: UC002",
       "  - 依存: T001",
-      "  - 設計根拠: design.md#実装設計",
+      "  - 設計根拠: ../../U002-order-creation/functional-design/business-rules.md#ルール",
       "  - 証拠: 未登録",
       "",
     ].join("\n"),
@@ -490,14 +800,14 @@ function replaceBoltDetailWithNonModulePath(workspace: string): void {
 }
 
 function removeBoundedContextModuleFile(workspace: string): void {
-  rmSync(intentPath(workspace, `domain/bounded-contexts/${boundedContext1}.md`));
+  rmSync(domainPath(workspace, `bounded-contexts/${boundedContext1}.md`));
 }
 
 function writeDddModuleWithOldModelPath(workspace: string): void {
-  const moduleDirectory = intentPath(workspace, `domain/bounded-contexts/${boundedContext1}/models/DM001-discovery-brief`);
+  const moduleDirectory = domainPath(workspace, `bounded-contexts/${boundedContext1}/models/DM001-discovery-brief`);
   mkdirSync(moduleDirectory, { recursive: true });
   writeFileSync(
-    intentPath(workspace, `domain/bounded-contexts/${boundedContext1}/models.md`),
+    domainPath(workspace, `bounded-contexts/${boundedContext1}/models.md`),
     [
       "# モデル",
       "",
@@ -531,10 +841,10 @@ function writeDddModuleWithOldModelPath(workspace: string): void {
 }
 
 function writeDddModuleWithModuleFile(workspace: string): void {
-  const modulePath = intentPath(workspace, `domain/bounded-contexts/${boundedContext1}/models/DM001-discovery-brief.md`);
-  mkdirSync(intentPath(workspace, `domain/bounded-contexts/${boundedContext1}/models`), { recursive: true });
+  const modulePath = domainPath(workspace, `bounded-contexts/${boundedContext1}/models/DM001-discovery-brief.md`);
+  mkdirSync(domainPath(workspace, `bounded-contexts/${boundedContext1}/models`), { recursive: true });
   writeFileSync(
-    intentPath(workspace, `domain/bounded-contexts/${boundedContext1}/models.md`),
+    domainPath(workspace, `bounded-contexts/${boundedContext1}/models.md`),
     [
       "# モデル",
       "",
@@ -592,16 +902,16 @@ function writeDddModuleWithModuleFile(workspace: string): void {
 function writeDddModuleWithInvalidElementTable(workspace: string): void {
   writeDddModuleWithModuleFile(workspace);
   replaceInFile(
-    intentPath(workspace, `domain/bounded-contexts/${boundedContext1}/models/DM001-discovery-brief.md`),
+    domainPath(workspace, `bounded-contexts/${boundedContext1}/models/DM001-discovery-brief.md`),
     "| DA001 | Discovery Brief | 入力テーマと判定を保持する。 | R001 |",
     "| DE001 | Discovery Brief | 入力テーマと判定を保持する。 | R001 |",
     "DDD Module fixture does not contain expected model element body",
   );
 }
 
-function writeEmptyIntentBoundedContexts(workspace: string): void {
+function writeEmptyGlobalBoundedContexts(workspace: string): void {
   writeFileSync(
-    intentPath(workspace, "domain/bounded-contexts.md"),
+    domainPath(workspace, "bounded-contexts.md"),
     [
       "# 境界づけられたコンテキスト",
       "",
@@ -713,39 +1023,85 @@ function writeConstructionNotes(workspace: string): void {
   );
 }
 
-function writeConstructionDesign(workspace: string, overrides: Record<string, string> = {}): void {
-  ensureBoltDirectory(workspace, bolt1);
+function functionalDesignPaths(): string[] {
+  return [
+    `construction/${unit2}/functional-design/business-logic-model.md`,
+    `construction/${unit2}/functional-design/business-rules.md`,
+    `construction/${unit2}/functional-design/domain-entities.md`,
+    `construction/${unit2}/functional-design/frontend-components.md`,
+  ];
+}
+
+function taskGenerationEvidence(bolt = bolt1): Array<{ kind: string; path: string }> {
+  return [
+    ...functionalDesignPaths().map((path) => ({ kind: "functional_design", path })),
+    { kind: "unit_design_brief", path: `inception/units/${unit2}/design.md` },
+    { kind: "bolt_module", path: `inception/bolts/${bolt}.md` },
+    { kind: "tasks", path: `construction/bolts/${bolt}/tasks.md` },
+    { kind: "notes", path: `construction/bolts/${bolt}/notes.md` },
+  ];
+}
+
+function writeFunctionalDesign(workspace: string, overrides: Record<string, string> = {}): void {
+  const base = constructionIntentPath(workspace, `${unit2}/functional-design`);
+  mkdirSync(base, { recursive: true });
   writeFileSync(
-    intentPath(workspace, `bolts/${bolt1}/design.md`),
+    join(base, "business-logic-model.md"),
     [
-      "# Construction Design",
+      "# Business Logic Model",
       "",
       "## 概要",
       "",
-      overrides.overview ?? "- B001/T001 と B001/T002 を実装へ進められる粒度で設計した。",
+      overrides.overview ?? "- U002 は確認済み注文内容を受け取り、注文を作成済みにする。",
       "",
-      "## Domain Design",
+      "## 入力",
       "",
-      overrides.domain ?? "- 対象 Task: B001/T001, B001/T002。注文内容、購入者情報、販売可能在庫の参照結果を注文作成の入力として扱う。",
+      overrides.input ?? "- 注文内容、購入者情報、販売可能在庫の参照結果を扱う。",
       "",
-      "## Logical Design",
+      "## 出力",
       "",
-      overrides.logical ?? "- 対象 Task: B001/T001, B001/T002。確認済み注文内容から注文を作成し、決済、売上確定、在庫引当、出荷は実行しない。",
-      "",
-      "## 実装設計",
-      "",
-      overrides.implementation ?? "- 対象 Task: B001/T001, B001/T002。注文作成入力の契約と注文モデルの不変条件を定義する。",
-      "",
-      "## 検証設計",
-      "",
-      overrides.verification ?? "- 対象 Task: B001/T001, B001/T002。validator で注文作成の要求、ユースケース、Task の追跡を確認する。",
-      "",
-      "## 設計変更記録",
-      "",
-      overrides.changes ?? "- なし。",
+      overrides.output ?? "- 作成済み注文を返す。",
       "",
     ].join("\n"),
   );
+  writeFileSync(
+    join(base, "business-rules.md"),
+    [
+      "# Business Rules",
+      "",
+      "## ルール",
+      "",
+      overrides.rules ?? "- 決済、売上確定、在庫引当、出荷は行わない。",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(base, "domain-entities.md"),
+    [
+      "# Domain Entities",
+      "",
+      "## エンティティ",
+      "",
+      overrides.entities ?? "- 注文は注文内容、購入者情報、作成済み状態を持つ。",
+      "",
+    ].join("\n"),
+  );
+  writeFileSync(
+    join(base, "frontend-components.md"),
+    [
+      "# Frontend Components",
+      "",
+      "## コンポーネント",
+      "",
+      overrides.frontend ?? "- 注文作成結果を表示する最小の表面を扱う。",
+      "",
+    ].join("\n"),
+  );
+}
+
+function writeBoltSideDesign(workspace: string, bolt = bolt1): void {
+  ensureBoltDirectory(workspace, bolt);
+  writeFileSync(intentPath(workspace, `bolts/${bolt}/design.md`), "# Bolt Design\n");
 }
 
 function writeEventStormingSession(workspace: string): void {
@@ -1366,47 +1722,13 @@ function removeEventStormingBoundedContextCandidateRows(workspace: string): void
   );
 }
 
-function writeConstructionDesignForSecondBolt(workspace: string): void {
-  ensureBoltDirectory(workspace, bolt2);
-  writeFileSync(
-    intentPath(workspace, `bolts/${bolt2}/design.md`),
-    [
-      "# Construction Design",
-      "",
-      "## 概要",
-      "",
-      "- B002/T001 と B002/T002 を実装へ進められる粒度で設計した。",
-      "",
-      "## Domain Design",
-      "",
-      "- 対象 Task: B002/T001, B002/T002。商品、販売可能在庫の参照結果、購入者情報を注文内容確認として扱う。",
-      "",
-      "## Logical Design",
-      "",
-      "- 対象 Task: B002/T001, B002/T002。確認済み注文内容を注文作成へ渡せる状態にする。",
-      "",
-      "## 実装設計",
-      "",
-      "- 対象 Task: B002/T001, B002/T002。注文内容確認の入力と確認済み状態を定義する。",
-      "",
-      "## 検証設計",
-      "",
-      "- 対象 Task: B002/T001, B002/T002。validator で注文内容確認の要求、ユースケース、Task の追跡を確認する。",
-      "",
-      "## 設計変更記録",
-      "",
-      "- なし。",
-      "",
-    ].join("\n"),
-  );
-}
-
 function writeConstructionState(workspace: string, overrides: Record<string, any> = {}): void {
   const path = intentPath(workspace, "state.json");
   const state = JSON.parse(readFileSync(path, "utf8"));
+  const intentCapture = state.ideation?.intentCapture;
   state.phase = "construction";
   state.status = overrides.status ?? "in_progress";
-  state.ideation = { status: "completed", gate: "passed" };
+  state.ideation = { status: "completed", gate: "passed", intentCapture };
   state.inception = overrides.inception ?? { status: "completed", gate: "passed" };
   state.construction = {
     status: overrides.constructionStatus ?? "in_progress",
@@ -1422,7 +1744,6 @@ function writeConstructionState(workspace: string, overrides: Record<string, any
     ],
     requiredBoltArtifacts: overrides.requiredBoltArtifacts ?? [
       `construction/bolts/${bolt1}/tasks.md`,
-      `construction/bolts/${bolt1}/design.md`,
       `construction/bolts/${bolt1}/notes.md`,
       `construction/bolts/${bolt1}/test-results.md`,
     ],
@@ -1430,21 +1751,40 @@ function writeConstructionState(workspace: string, overrides: Record<string, any
     bolts: overrides.bolts ?? [
       {
         id: "B001",
-        designGate: {
-          status: "ready",
-          reviewedBy: "ai",
-          updatedAt: "2026-06-28",
-          evidence: `construction/bolts/${bolt1}/design.md`,
-        },
-        tasks: {
-          status: "generated",
-          reviewedBy: "ai",
-          updatedAt: "2026-06-28",
-          evidence: `construction/bolts/${bolt1}/tasks.md`,
+        taskGeneration: {
+          status: "ready_for_approval",
+          evidence: taskGenerationEvidence(bolt1),
         },
       },
     ],
   };
+  const defaultFunctionalDesign = {
+    targetUnits: ["U002"],
+    units: [
+      {
+        unitId: "U001",
+        requirement: "not_required",
+        status: "skipped",
+        frontendSurface: "present",
+        targetSource: "construction_target_bolts",
+        runMode: "initial",
+        skipReason: "unit_not_in_construction_scope",
+      },
+      {
+        unitId: "U002",
+        requirement: "required",
+        status: "ready_for_approval",
+        frontendSurface: "present",
+        targetSource: "construction_target_bolts",
+        runMode: "initial",
+      },
+    ],
+  };
+  if ("functionalDesign" in overrides) {
+    if (overrides.functionalDesign !== undefined) state.construction.functionalDesign = overrides.functionalDesign;
+  } else {
+    state.construction.functionalDesign = defaultFunctionalDesign;
+  }
   writeFileSync(path, JSON.stringify(state, null, 2));
 }
 
@@ -1557,7 +1897,7 @@ function appendConstructionTrace(workspace: string): void {
   );
 }
 
-function appendConstructionDesignTrace(
+function appendTaskGenerationTrace(
   workspace: string,
   overrides: { task?: string; implementation?: string; verification?: string; pr?: string; status?: string } = {},
 ): void {
@@ -1568,11 +1908,11 @@ function appendConstructionDesignTrace(
     [
       text.trimEnd(),
       "",
-      "## Construction Design からの追跡",
+      "## Task Generation からの追跡",
       "",
-      "| Construction Design | Task | 実装 | 検証 | PR | 状態 |",
+      "| Evidence | Task | 実装 | 検証 | PR | 状態 |",
       "|---|---|---|---|---|---|",
-      `| [B001 Construction Design](bolts/${bolt1}/design.md) | ${overrides.task ?? "B001/T001, B001/T002"} | ${overrides.implementation ?? "未実施"} | ${overrides.verification ?? "未実施"} | ${overrides.pr ?? "未実施"} | ${overrides.status ?? "ready"} |`,
+      `| [tasks.md](bolts/${bolt1}/tasks.md) | ${overrides.task ?? "B001/T001, B001/T002"} | ${overrides.implementation ?? "未実施"} | ${overrides.verification ?? "未実施"} | ${overrides.pr ?? "未実施"} | ${overrides.status ?? "ready_for_approval"} |`,
       "",
     ].join("\n"),
   );
@@ -1999,10 +2339,10 @@ runExpectFailure(
 );
 
 const missingTaskDesignReasonWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(missingTaskDesignReasonWorkspace);
+writeFunctionalDesign(missingTaskDesignReasonWorkspace);
 writeConstructionTasks(missingTaskDesignReasonWorkspace);
 writeConstructionNotes(missingTaskDesignReasonWorkspace);
-appendConstructionDesignTrace(missingTaskDesignReasonWorkspace);
+appendTaskGenerationTrace(missingTaskDesignReasonWorkspace);
 writeConstructionState(missingTaskDesignReasonWorkspace);
 removeTaskDesignReason(missingTaskDesignReasonWorkspace);
 runExpectFailure(
@@ -2011,10 +2351,10 @@ runExpectFailure(
 );
 
 const wrongTaskReferencesWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(wrongTaskReferencesWorkspace);
+writeFunctionalDesign(wrongTaskReferencesWorkspace);
 writeConstructionTasks(wrongTaskReferencesWorkspace);
 writeConstructionNotes(wrongTaskReferencesWorkspace);
-appendConstructionDesignTrace(wrongTaskReferencesWorkspace);
+appendTaskGenerationTrace(wrongTaskReferencesWorkspace);
 writeConstructionState(wrongTaskReferencesWorkspace);
 replaceTaskReferencesWithMissingIds(wrongTaskReferencesWorkspace);
 runExpectFailure(
@@ -2023,10 +2363,10 @@ runExpectFailure(
 );
 
 const emptyTaskReferencesWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(emptyTaskReferencesWorkspace);
+writeFunctionalDesign(emptyTaskReferencesWorkspace);
 writeConstructionTasks(emptyTaskReferencesWorkspace);
 writeConstructionNotes(emptyTaskReferencesWorkspace);
-appendConstructionDesignTrace(emptyTaskReferencesWorkspace);
+appendTaskGenerationTrace(emptyTaskReferencesWorkspace);
 writeConstructionState(emptyTaskReferencesWorkspace);
 replaceTaskReferencesWithEmptyIds(emptyTaskReferencesWorkspace);
 runExpectFailure(
@@ -2035,7 +2375,7 @@ runExpectFailure(
 );
 
 const duplicateTaskIdWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(duplicateTaskIdWorkspace, {
+writeFunctionalDesign(duplicateTaskIdWorkspace, {
   overview: "- B001/T001 を実装へ進められる粒度で設計した。",
   domain: "- 対象 Task: B001/T001。注文内容、購入者情報、販売可能在庫の参照結果を注文作成の入力として扱う。",
   logical: "- 対象 Task: B001/T001。確認済み注文内容から注文を作成し、決済、売上確定、在庫引当、出荷は実行しない。",
@@ -2045,7 +2385,7 @@ writeConstructionDesign(duplicateTaskIdWorkspace, {
 writeConstructionTasks(duplicateTaskIdWorkspace);
 writeConstructionNotes(duplicateTaskIdWorkspace);
 writeConstructionTestResults(duplicateTaskIdWorkspace);
-appendConstructionDesignTrace(duplicateTaskIdWorkspace, { task: "B001/T001" });
+appendTaskGenerationTrace(duplicateTaskIdWorkspace, { task: "B001/T001" });
 writeConstructionState(duplicateTaskIdWorkspace);
 replaceTaskIdWithDuplicate(duplicateTaskIdWorkspace);
 runExpectFailure(
@@ -2085,28 +2425,28 @@ runExpectFailure(
   "Bolt の `ユニット` が重複しない",
 );
 
-const emptyIntentBoundedContextsWorkspace = phaseWorkspaceCopy();
-writeEmptyIntentBoundedContexts(emptyIntentBoundedContextsWorkspace);
+const emptyGlobalBoundedContextsWorkspace = phaseWorkspaceCopy();
+writeEmptyGlobalBoundedContexts(emptyGlobalBoundedContextsWorkspace);
 runExpectFailure(
-  ["bun", "run", validator, emptyIntentBoundedContextsWorkspace, intent],
-  "境界づけられたコンテキストが1件以上存在する",
+  ["bun", "run", validator, emptyGlobalBoundedContextsWorkspace, intent],
+  "Unit のコンテキストが全体 Domain Model の BC を参照する",
 );
 
 const constructionWithoutInceptionRequiredWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(constructionWithoutInceptionRequiredWorkspace);
+writeFunctionalDesign(constructionWithoutInceptionRequiredWorkspace);
 writeConstructionTasks(constructionWithoutInceptionRequiredWorkspace);
 writeConstructionNotes(constructionWithoutInceptionRequiredWorkspace);
 writeConstructionTestResults(constructionWithoutInceptionRequiredWorkspace);
-appendConstructionDesignTrace(constructionWithoutInceptionRequiredWorkspace);
+appendTaskGenerationTrace(constructionWithoutInceptionRequiredWorkspace);
 writeConstructionState(constructionWithoutInceptionRequiredWorkspace);
 run(["bun", "run", validator, constructionWithoutInceptionRequiredWorkspace, intent]);
 
 const missingConstructionDecisionsWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(missingConstructionDecisionsWorkspace);
+writeFunctionalDesign(missingConstructionDecisionsWorkspace);
 writeConstructionTasks(missingConstructionDecisionsWorkspace);
 writeConstructionNotes(missingConstructionDecisionsWorkspace);
 writeConstructionTestResults(missingConstructionDecisionsWorkspace);
-appendConstructionDesignTrace(missingConstructionDecisionsWorkspace);
+appendTaskGenerationTrace(missingConstructionDecisionsWorkspace);
 writeConstructionState(missingConstructionDecisionsWorkspace);
 removeConstructionDecisionsFromRequiredArtifacts(missingConstructionDecisionsWorkspace);
 runExpectFailure(
@@ -2115,11 +2455,11 @@ runExpectFailure(
 );
 
 const testResultsWithMissingRequirementWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(testResultsWithMissingRequirementWorkspace);
+writeFunctionalDesign(testResultsWithMissingRequirementWorkspace);
 writeConstructionTasks(testResultsWithMissingRequirementWorkspace);
 writeConstructionNotes(testResultsWithMissingRequirementWorkspace);
 writeConstructionTestResults(testResultsWithMissingRequirementWorkspace);
-appendConstructionDesignTrace(testResultsWithMissingRequirementWorkspace);
+appendTaskGenerationTrace(testResultsWithMissingRequirementWorkspace);
 writeConstructionState(testResultsWithMissingRequirementWorkspace);
 replaceAcceptanceEvidenceRequirementWithMissingId(testResultsWithMissingRequirementWorkspace);
 runExpectFailure(
@@ -2128,11 +2468,11 @@ runExpectFailure(
 );
 
 const testResultsWithMissingTaskWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(testResultsWithMissingTaskWorkspace);
+writeFunctionalDesign(testResultsWithMissingTaskWorkspace);
 writeConstructionTasks(testResultsWithMissingTaskWorkspace);
 writeConstructionNotes(testResultsWithMissingTaskWorkspace);
 writeConstructionTestResults(testResultsWithMissingTaskWorkspace);
-appendConstructionDesignTrace(testResultsWithMissingTaskWorkspace);
+appendTaskGenerationTrace(testResultsWithMissingTaskWorkspace);
 writeConstructionState(testResultsWithMissingTaskWorkspace);
 replaceAcceptanceEvidenceTaskWithMissingId(testResultsWithMissingTaskWorkspace);
 runExpectFailure(
@@ -2141,11 +2481,11 @@ runExpectFailure(
 );
 
 const constructionWithStaleInceptionRequiredWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(constructionWithStaleInceptionRequiredWorkspace);
+writeFunctionalDesign(constructionWithStaleInceptionRequiredWorkspace);
 writeConstructionTasks(constructionWithStaleInceptionRequiredWorkspace);
 writeConstructionNotes(constructionWithStaleInceptionRequiredWorkspace);
 writeConstructionTestResults(constructionWithStaleInceptionRequiredWorkspace);
-appendConstructionDesignTrace(constructionWithStaleInceptionRequiredWorkspace);
+appendTaskGenerationTrace(constructionWithStaleInceptionRequiredWorkspace);
 writeConstructionState(constructionWithStaleInceptionRequiredWorkspace, {
   inception: {
     status: "completed",
@@ -2159,49 +2499,32 @@ writeConstructionState(constructionWithStaleInceptionRequiredWorkspace, {
 run(["bun", "run", validator, constructionWithStaleInceptionRequiredWorkspace, intent]);
 
 const readyNonTargetBoltWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(readyNonTargetBoltWorkspace);
+writeFunctionalDesign(readyNonTargetBoltWorkspace);
 writeConstructionTasks(readyNonTargetBoltWorkspace);
-writeConstructionDesignForSecondBolt(readyNonTargetBoltWorkspace);
 writeConstructionTasksForSecondBolt(readyNonTargetBoltWorkspace);
 writeConstructionNotes(readyNonTargetBoltWorkspace);
 writeConstructionTestResults(readyNonTargetBoltWorkspace);
+appendTaskGenerationTrace(readyNonTargetBoltWorkspace);
 writeConstructionState(readyNonTargetBoltWorkspace, {
   requiredBoltArtifacts: [
     `construction/bolts/${bolt1}/tasks.md`,
-    `construction/bolts/${bolt1}/design.md`,
     `construction/bolts/${bolt1}/notes.md`,
     `construction/bolts/${bolt1}/test-results.md`,
-    `construction/bolts/${bolt2}/design.md`,
+    `construction/bolts/${bolt2}/tasks.md`,
   ],
   bolts: [
     {
       id: "B001",
-      designGate: {
-        status: "draft",
-        reviewedBy: "ai",
-        updatedAt: "2026-06-28",
-        evidence: `construction/bolts/${bolt1}/design.md`,
-      },
-      tasks: {
-        status: "generated",
-        reviewedBy: "ai",
-        updatedAt: "2026-06-28",
-        evidence: `construction/bolts/${bolt1}/tasks.md`,
+      taskGeneration: {
+        status: "ready_for_approval",
+        evidence: taskGenerationEvidence(bolt1),
       },
     },
     {
       id: "B002",
-      designGate: {
-        status: "ready",
-        reviewedBy: "ai",
-        updatedAt: "2026-06-28",
-        evidence: `construction/bolts/${bolt2}/design.md`,
-      },
-      tasks: {
-        status: "generated",
-        reviewedBy: "ai",
-        updatedAt: "2026-06-28",
-        evidence: `construction/bolts/${bolt2}/tasks.md`,
+      taskGeneration: {
+        status: "ready_for_approval",
+        evidence: taskGenerationEvidence(bolt2).filter((item) => item.kind !== "notes"),
       },
     },
   ],
@@ -2209,10 +2532,10 @@ writeConstructionState(readyNonTargetBoltWorkspace, {
 run(["bun", "run", validator, readyNonTargetBoltWorkspace, intent]);
 
 const completedConstructionWithoutTestResultsWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(completedConstructionWithoutTestResultsWorkspace);
+writeFunctionalDesign(completedConstructionWithoutTestResultsWorkspace);
 writeConstructionTasks(completedConstructionWithoutTestResultsWorkspace);
 writeConstructionNotes(completedConstructionWithoutTestResultsWorkspace);
-appendConstructionDesignTrace(completedConstructionWithoutTestResultsWorkspace, {
+appendTaskGenerationTrace(completedConstructionWithoutTestResultsWorkspace, {
   implementation: "実装済み",
   verification: "検証済み",
   status: "passed",
@@ -2224,7 +2547,6 @@ writeConstructionState(completedConstructionWithoutTestResultsWorkspace, {
   constructionGate: "passed",
   requiredBoltArtifacts: [
     `construction/bolts/${bolt1}/tasks.md`,
-    `construction/bolts/${bolt1}/design.md`,
     `construction/bolts/${bolt1}/notes.md`,
   ],
 });
@@ -2234,15 +2556,14 @@ runExpectFailure(
 );
 
 const missingTargetBoltArtifactsWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(missingTargetBoltArtifactsWorkspace);
+writeFunctionalDesign(missingTargetBoltArtifactsWorkspace);
 writeConstructionTasks(missingTargetBoltArtifactsWorkspace);
 writeConstructionNotes(missingTargetBoltArtifactsWorkspace);
 writeConstructionTestResults(missingTargetBoltArtifactsWorkspace);
-appendConstructionDesignTrace(missingTargetBoltArtifactsWorkspace);
+appendTaskGenerationTrace(missingTargetBoltArtifactsWorkspace);
 writeConstructionState(missingTargetBoltArtifactsWorkspace, {
   requiredBoltArtifacts: [
     `construction/bolts/${bolt1}/tasks.md`,
-    `construction/bolts/${bolt1}/design.md`,
   ],
 });
 runExpectFailure(
@@ -2251,14 +2572,13 @@ runExpectFailure(
 );
 
 const generatedTasksWithoutRequiredTasksWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(generatedTasksWithoutRequiredTasksWorkspace);
+writeFunctionalDesign(generatedTasksWithoutRequiredTasksWorkspace);
 writeConstructionTasks(generatedTasksWithoutRequiredTasksWorkspace);
 writeConstructionNotes(generatedTasksWithoutRequiredTasksWorkspace);
 writeConstructionTestResults(generatedTasksWithoutRequiredTasksWorkspace);
-appendConstructionDesignTrace(generatedTasksWithoutRequiredTasksWorkspace);
+appendTaskGenerationTrace(generatedTasksWithoutRequiredTasksWorkspace);
 writeConstructionState(generatedTasksWithoutRequiredTasksWorkspace, {
   requiredBoltArtifacts: [
-    `construction/bolts/${bolt1}/design.md`,
     `construction/bolts/${bolt1}/notes.md`,
   ],
 });
@@ -2268,33 +2588,20 @@ runExpectFailure(
 );
 
 const notGeneratedTasksWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(notGeneratedTasksWorkspace, {
-  overview: "- Construction Design は作成中で、Task への分解は未完了。",
-  domain: "- Task 化前のため、対象成果物の関心だけを整理する。",
-  logical: "- Task 化前のため、処理順序は未確定。",
-  implementation: "- Task 化前のため、実装対象は未確定。",
-  verification: "- Task 化前のため、検証対象は未確定。",
+writeFunctionalDesign(notGeneratedTasksWorkspace, {
+  overview: "- Functional Design は作成済みで、Task への分解は未着手である。",
 });
 writeConstructionNotes(notGeneratedTasksWorkspace);
 writeConstructionState(notGeneratedTasksWorkspace, {
   requiredBoltArtifacts: [
-    `construction/bolts/${bolt1}/design.md`,
     `construction/bolts/${bolt1}/notes.md`,
   ],
   bolts: [
     {
       id: "B001",
-      designGate: {
-        status: "draft",
-        reviewedBy: "ai",
-        updatedAt: "2026-06-28",
-        evidence: `construction/bolts/${bolt1}/design.md`,
-      },
-      tasks: {
-        status: "not_generated",
-        reviewedBy: "ai",
-        updatedAt: "2026-06-28",
-        evidence: "",
+      taskGeneration: {
+        status: "not_started",
+        evidence: [],
       },
     },
   ],
@@ -2302,7 +2609,7 @@ writeConstructionState(notGeneratedTasksWorkspace, {
 run(["bun", "run", validator, notGeneratedTasksWorkspace, intent]);
 
 const emptyTargetBoltsWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(emptyTargetBoltsWorkspace);
+writeFunctionalDesign(emptyTargetBoltsWorkspace);
 writeConstructionTasks(emptyTargetBoltsWorkspace);
 writeConstructionNotes(emptyTargetBoltsWorkspace);
 writeConstructionTestResults(emptyTargetBoltsWorkspace);
@@ -2312,30 +2619,120 @@ runExpectFailure(
   "`construction.targetBolts` が1件以上の既存 Bolt を持つ",
 );
 
+const constructionWithoutFunctionalDesignWorkspace = phaseWorkspaceCopy();
+writeFunctionalDesign(constructionWithoutFunctionalDesignWorkspace);
+writeConstructionTasks(constructionWithoutFunctionalDesignWorkspace);
+writeConstructionNotes(constructionWithoutFunctionalDesignWorkspace);
+writeConstructionTestResults(constructionWithoutFunctionalDesignWorkspace);
+appendTaskGenerationTrace(constructionWithoutFunctionalDesignWorkspace);
+writeConstructionState(constructionWithoutFunctionalDesignWorkspace, { functionalDesign: undefined });
+runExpectFailure(
+  ["bun", "run", validator, constructionWithoutFunctionalDesignWorkspace, intent],
+  "`construction.functionalDesign` がオブジェクトである",
+);
+
+const invalidFunctionalDesignStatusWorkspace = phaseWorkspaceCopy();
+writeFunctionalDesign(invalidFunctionalDesignStatusWorkspace);
+writeConstructionTasks(invalidFunctionalDesignStatusWorkspace);
+writeConstructionNotes(invalidFunctionalDesignStatusWorkspace);
+writeConstructionTestResults(invalidFunctionalDesignStatusWorkspace);
+appendTaskGenerationTrace(invalidFunctionalDesignStatusWorkspace);
+writeConstructionState(invalidFunctionalDesignStatusWorkspace, {
+  functionalDesign: {
+    targetUnits: ["U001"],
+    units: [
+      {
+        unitId: "U001",
+        requirement: "required",
+        status: "skipped",
+        frontendSurface: "present",
+        targetSource: "construction_target_bolts",
+        runMode: "initial",
+      },
+    ],
+  },
+});
+runExpectFailure(
+  ["bun", "run", validator, invalidFunctionalDesignStatusWorkspace, intent],
+  "`construction.functionalDesign.units[]` の requirement と status の組み合わせが有効である",
+);
+
+const functionalDesignWithPersistedGateWorkspace = phaseWorkspaceCopy();
+writeFunctionalDesign(functionalDesignWithPersistedGateWorkspace);
+writeConstructionTasks(functionalDesignWithPersistedGateWorkspace);
+writeConstructionNotes(functionalDesignWithPersistedGateWorkspace);
+writeConstructionTestResults(functionalDesignWithPersistedGateWorkspace);
+appendTaskGenerationTrace(functionalDesignWithPersistedGateWorkspace);
+writeConstructionState(functionalDesignWithPersistedGateWorkspace, {
+  functionalDesign: {
+    targetUnits: ["U001"],
+    gate: "waiting_approval",
+    units: [
+      {
+        unitId: "U001",
+        requirement: "required",
+        status: "ready_for_approval",
+        frontendSurface: "present",
+        targetSource: "construction_target_bolts",
+        runMode: "initial",
+      },
+    ],
+  },
+});
+runExpectFailure(
+  ["bun", "run", validator, functionalDesignWithPersistedGateWorkspace, intent],
+  "`construction.functionalDesign.gate` を保存しない",
+);
+
+const functionalDesignReadyWithoutArtifactsWorkspace = phaseWorkspaceCopy();
+writeFunctionalDesign(functionalDesignReadyWithoutArtifactsWorkspace);
+writeConstructionTasks(functionalDesignReadyWithoutArtifactsWorkspace);
+writeConstructionNotes(functionalDesignReadyWithoutArtifactsWorkspace);
+writeConstructionTestResults(functionalDesignReadyWithoutArtifactsWorkspace);
+appendTaskGenerationTrace(functionalDesignReadyWithoutArtifactsWorkspace);
+writeConstructionState(functionalDesignReadyWithoutArtifactsWorkspace, {
+  functionalDesign: {
+    targetUnits: ["U001"],
+    units: [
+      {
+        unitId: "U001",
+        requirement: "required",
+        status: "ready_for_approval",
+        frontendSurface: "present",
+        targetSource: "construction_target_bolts",
+        runMode: "initial",
+      },
+    ],
+  },
+});
+runExpectFailure(
+  ["bun", "run", validator, functionalDesignReadyWithoutArtifactsWorkspace, intent],
+  "Functional Design ready は Catalog 必須成果物を満たす",
+);
+
 const constructionDesignTraceWrongBoltWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(constructionDesignTraceWrongBoltWorkspace);
+writeFunctionalDesign(constructionDesignTraceWrongBoltWorkspace);
 writeConstructionTasks(constructionDesignTraceWrongBoltWorkspace);
 writeConstructionNotes(constructionDesignTraceWrongBoltWorkspace);
 writeConstructionTestResults(constructionDesignTraceWrongBoltWorkspace);
-appendConstructionDesignTrace(constructionDesignTraceWrongBoltWorkspace, { task: "B002/T001" });
+appendTaskGenerationTrace(constructionDesignTraceWrongBoltWorkspace, { task: "B002/T001" });
 writeConstructionState(constructionDesignTraceWrongBoltWorkspace);
 runExpectFailure(
   ["bun", "run", validator, constructionDesignTraceWrongBoltWorkspace, intent],
-  "`Construction Design からの追跡` が対象 Bolt の Task を指す",
+  "`Task Generation からの追跡` が対象 Bolt の Task を指す",
 );
 
 const untrackedConstructionDesignWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(untrackedConstructionDesignWorkspace);
+writeFunctionalDesign(untrackedConstructionDesignWorkspace);
 writeConstructionTasks(untrackedConstructionDesignWorkspace);
 writeConstructionNotes(untrackedConstructionDesignWorkspace);
 writeConstructionTestResults(untrackedConstructionDesignWorkspace);
-appendConstructionDesignTrace(untrackedConstructionDesignWorkspace);
+appendTaskGenerationTrace(untrackedConstructionDesignWorkspace);
 writeConstructionState(untrackedConstructionDesignWorkspace);
-ensureBoltDirectory(untrackedConstructionDesignWorkspace, bolt2);
-writeFileSync(intentPath(untrackedConstructionDesignWorkspace, `bolts/${bolt2}/design.md`), "# Construction Design\n");
+writeBoltSideDesign(untrackedConstructionDesignWorkspace, bolt2);
 runExpectFailure(
   ["bun", "run", validator, untrackedConstructionDesignWorkspace, intent],
-  "Construction Design は requiredBoltArtifacts に含まれる",
+  "Bolt 側 design.md は存在しない",
 );
 
 const nonModuleUnitDetailWorkspace = phaseWorkspaceCopy();
@@ -2378,7 +2775,7 @@ runExpectFailure(
 );
 
 const missingConstructionTraceWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(missingConstructionTraceWorkspace);
+writeFunctionalDesign(missingConstructionTraceWorkspace);
 writeConstructionTasks(missingConstructionTraceWorkspace);
 writeConstructionNotes(missingConstructionTraceWorkspace);
 writeConstructionTestResults(missingConstructionTraceWorkspace);
@@ -2393,11 +2790,11 @@ runExpectFailure(
 );
 
 const emptyConstructionTraceWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(emptyConstructionTraceWorkspace);
+writeFunctionalDesign(emptyConstructionTraceWorkspace);
 writeConstructionTasks(emptyConstructionTraceWorkspace);
 writeConstructionNotes(emptyConstructionTraceWorkspace);
 writeConstructionTestResults(emptyConstructionTraceWorkspace);
-appendConstructionDesignTrace(emptyConstructionTraceWorkspace);
+appendTaskGenerationTrace(emptyConstructionTraceWorkspace);
 appendEmptyConstructionTrace(emptyConstructionTraceWorkspace);
 writeConstructionState(emptyConstructionTraceWorkspace, {
   status: "completed",
@@ -2410,11 +2807,11 @@ runExpectFailure(
 );
 
 const completedConstructionWithUnimplementedDesignTraceWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(completedConstructionWithUnimplementedDesignTraceWorkspace);
+writeFunctionalDesign(completedConstructionWithUnimplementedDesignTraceWorkspace);
 writeConstructionTasks(completedConstructionWithUnimplementedDesignTraceWorkspace);
 writeConstructionNotes(completedConstructionWithUnimplementedDesignTraceWorkspace);
 writeConstructionTestResults(completedConstructionWithUnimplementedDesignTraceWorkspace);
-appendConstructionDesignTrace(completedConstructionWithUnimplementedDesignTraceWorkspace);
+appendTaskGenerationTrace(completedConstructionWithUnimplementedDesignTraceWorkspace);
 appendConstructionTrace(completedConstructionWithUnimplementedDesignTraceWorkspace);
 writeConstructionState(completedConstructionWithUnimplementedDesignTraceWorkspace, {
   status: "completed",
@@ -2423,20 +2820,19 @@ writeConstructionState(completedConstructionWithUnimplementedDesignTraceWorkspac
 });
 runExpectFailure(
   ["bun", "run", validator, completedConstructionWithUnimplementedDesignTraceWorkspace, intent],
-  "Construction 完了時の設計追跡が未実施を残さない",
+  "Construction 完了時の Task Generation 追跡が未実施を残さない",
 );
 
 const prWithoutUrlWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(prWithoutUrlWorkspace);
+writeFunctionalDesign(prWithoutUrlWorkspace);
 writeConstructionTasks(prWithoutUrlWorkspace);
 writeConstructionNotes(prWithoutUrlWorkspace);
 writeConstructionTestResults(prWithoutUrlWorkspace);
-appendConstructionDesignTrace(prWithoutUrlWorkspace);
+appendTaskGenerationTrace(prWithoutUrlWorkspace);
 writePrWithoutUrl(prWithoutUrlWorkspace);
 writeConstructionState(prWithoutUrlWorkspace, {
   requiredBoltArtifacts: [
     `construction/bolts/${bolt1}/tasks.md`,
-    `construction/bolts/${bolt1}/design.md`,
     `construction/bolts/${bolt1}/notes.md`,
     `construction/bolts/${bolt1}/test-results.md`,
     `construction/bolts/${bolt1}/pr.md`,
@@ -2448,11 +2844,11 @@ runExpectFailure(
 );
 
 const existingPrWithoutUrlWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(existingPrWithoutUrlWorkspace);
+writeFunctionalDesign(existingPrWithoutUrlWorkspace);
 writeConstructionTasks(existingPrWithoutUrlWorkspace);
 writeConstructionNotes(existingPrWithoutUrlWorkspace);
 writeConstructionTestResults(existingPrWithoutUrlWorkspace);
-appendConstructionDesignTrace(existingPrWithoutUrlWorkspace);
+appendTaskGenerationTrace(existingPrWithoutUrlWorkspace);
 writePrWithoutUrl(existingPrWithoutUrlWorkspace);
 writeConstructionState(existingPrWithoutUrlWorkspace);
 runExpectFailure(
@@ -2461,11 +2857,11 @@ runExpectFailure(
 );
 
 const prWithMissingTargetReferencesWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(prWithMissingTargetReferencesWorkspace);
+writeFunctionalDesign(prWithMissingTargetReferencesWorkspace);
 writeConstructionTasks(prWithMissingTargetReferencesWorkspace);
 writeConstructionNotes(prWithMissingTargetReferencesWorkspace);
 writeConstructionTestResults(prWithMissingTargetReferencesWorkspace);
-appendConstructionDesignTrace(prWithMissingTargetReferencesWorkspace);
+appendTaskGenerationTrace(prWithMissingTargetReferencesWorkspace);
 writePrWithUrl(prWithMissingTargetReferencesWorkspace);
 writeConstructionState(prWithMissingTargetReferencesWorkspace);
 replacePrTargetWithMissingReferences(prWithMissingTargetReferencesWorkspace);
@@ -2475,11 +2871,11 @@ runExpectFailure(
 );
 
 const prWithEmptyBoltTargetWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(prWithEmptyBoltTargetWorkspace);
+writeFunctionalDesign(prWithEmptyBoltTargetWorkspace);
 writeConstructionTasks(prWithEmptyBoltTargetWorkspace);
 writeConstructionNotes(prWithEmptyBoltTargetWorkspace);
 writeConstructionTestResults(prWithEmptyBoltTargetWorkspace);
-appendConstructionDesignTrace(prWithEmptyBoltTargetWorkspace);
+appendTaskGenerationTrace(prWithEmptyBoltTargetWorkspace);
 writePrWithUrl(prWithEmptyBoltTargetWorkspace);
 writeConstructionState(prWithEmptyBoltTargetWorkspace);
 replacePrTargetWithEmptyBolt(prWithEmptyBoltTargetWorkspace);
@@ -2488,63 +2884,96 @@ runExpectFailure(
   "PR 対象の `タスク` が既存 Task を指す",
 );
 
-const missingConstructionDesignHeadingWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(missingConstructionDesignHeadingWorkspace, { logical: "" });
-writeConstructionTasks(missingConstructionDesignHeadingWorkspace);
-writeConstructionNotes(missingConstructionDesignHeadingWorkspace);
-writeConstructionTestResults(missingConstructionDesignHeadingWorkspace);
-appendConstructionDesignTrace(missingConstructionDesignHeadingWorkspace);
-writeConstructionState(missingConstructionDesignHeadingWorkspace);
+const taskGenerationWithoutFunctionalDesignEvidenceWorkspace = phaseWorkspaceCopy();
+writeFunctionalDesign(taskGenerationWithoutFunctionalDesignEvidenceWorkspace);
+writeConstructionTasks(taskGenerationWithoutFunctionalDesignEvidenceWorkspace);
+writeConstructionNotes(taskGenerationWithoutFunctionalDesignEvidenceWorkspace);
+writeConstructionTestResults(taskGenerationWithoutFunctionalDesignEvidenceWorkspace);
+appendTaskGenerationTrace(taskGenerationWithoutFunctionalDesignEvidenceWorkspace);
+writeConstructionState(taskGenerationWithoutFunctionalDesignEvidenceWorkspace, {
+  bolts: [
+    {
+      id: "B001",
+      taskGeneration: {
+        status: "ready_for_approval",
+        evidence: taskGenerationEvidence(bolt1).filter((item) => item.kind !== "functional_design"),
+      },
+    },
+  ],
+});
 runExpectFailure(
-  ["bun", "run", validator, missingConstructionDesignHeadingWorkspace, intent],
-  "`Logical Design` 見出しに本文がある",
+  ["bun", "run", validator, taskGenerationWithoutFunctionalDesignEvidenceWorkspace, intent],
+  "Task Generation ready_for_approval は functional_design evidence を持つ",
 );
 
-const constructionWithoutBoltGateWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(constructionWithoutBoltGateWorkspace);
-writeConstructionTasks(constructionWithoutBoltGateWorkspace);
-writeConstructionNotes(constructionWithoutBoltGateWorkspace);
-writeConstructionTestResults(constructionWithoutBoltGateWorkspace);
-appendConstructionDesignTrace(constructionWithoutBoltGateWorkspace);
-writeConstructionState(constructionWithoutBoltGateWorkspace, { bolts: [] });
+const taskGenerationReadyWithBlockedReasonWorkspace = phaseWorkspaceCopy();
+writeFunctionalDesign(taskGenerationReadyWithBlockedReasonWorkspace);
+writeConstructionTasks(taskGenerationReadyWithBlockedReasonWorkspace);
+writeConstructionNotes(taskGenerationReadyWithBlockedReasonWorkspace);
+writeConstructionTestResults(taskGenerationReadyWithBlockedReasonWorkspace);
+appendTaskGenerationTrace(taskGenerationReadyWithBlockedReasonWorkspace);
+writeConstructionState(taskGenerationReadyWithBlockedReasonWorkspace, {
+  bolts: [
+    {
+      id: "B001",
+      taskGeneration: {
+        status: "ready_for_approval",
+        blockedReason: "required_input_missing",
+        evidence: taskGenerationEvidence(bolt1),
+      },
+    },
+  ],
+});
+runExpectFailure(
+  ["bun", "run", validator, taskGenerationReadyWithBlockedReasonWorkspace, intent],
+  "Task Generation ready_for_approval は blockedReason を持たない",
+);
+
+const constructionWithoutTaskGenerationWorkspace = phaseWorkspaceCopy();
+writeFunctionalDesign(constructionWithoutTaskGenerationWorkspace);
+writeConstructionTasks(constructionWithoutTaskGenerationWorkspace);
+writeConstructionNotes(constructionWithoutTaskGenerationWorkspace);
+writeConstructionTestResults(constructionWithoutTaskGenerationWorkspace);
+appendTaskGenerationTrace(constructionWithoutTaskGenerationWorkspace);
+writeConstructionState(constructionWithoutTaskGenerationWorkspace, { bolts: [] });
   runExpectFailure(
-    ["bun", "run", validator, constructionWithoutBoltGateWorkspace, intent],
-    "`construction.bolts` が targetBolt の designGate を持つ",
+    ["bun", "run", validator, constructionWithoutTaskGenerationWorkspace, intent],
+    "`construction.bolts` が targetBolt の taskGeneration を持つ",
   );
 
-  const constructionWithoutTasksWorkspace = phaseWorkspaceCopy();
-  writeConstructionDesign(constructionWithoutTasksWorkspace);
-  writeConstructionTasks(constructionWithoutTasksWorkspace);
-  writeConstructionNotes(constructionWithoutTasksWorkspace);
-  writeConstructionTestResults(constructionWithoutTasksWorkspace);
-  appendConstructionDesignTrace(constructionWithoutTasksWorkspace);
-  writeConstructionState(constructionWithoutTasksWorkspace, {
+  const constructionWithoutTaskGenerationEvidenceWorkspace = phaseWorkspaceCopy();
+  writeFunctionalDesign(constructionWithoutTaskGenerationEvidenceWorkspace);
+  writeConstructionTasks(constructionWithoutTaskGenerationEvidenceWorkspace);
+  writeConstructionNotes(constructionWithoutTaskGenerationEvidenceWorkspace);
+  writeConstructionTestResults(constructionWithoutTaskGenerationEvidenceWorkspace);
+  appendTaskGenerationTrace(constructionWithoutTaskGenerationEvidenceWorkspace);
+  writeConstructionState(constructionWithoutTaskGenerationEvidenceWorkspace, {
     bolts: [
       {
         id: "B001",
-        designGate: {
-          status: "ready",
-          reviewedBy: "ai",
-          updatedAt: "2026-06-28",
-          evidence: `construction/bolts/${bolt1}/design.md`,
+        taskGeneration: {
+          status: "ready_for_approval",
+          evidence: [
+            { kind: "bolt_module", path: `inception/bolts/${bolt1}.md` },
+          ],
         },
       },
     ],
   });
   runExpectFailure(
-    ["bun", "run", validator, constructionWithoutTasksWorkspace, intent],
-    "`construction.bolts[].tasks` がオブジェクトである",
+    ["bun", "run", validator, constructionWithoutTaskGenerationEvidenceWorkspace, intent],
+    "Task Generation ready_for_approval は functional_design evidence を持つ",
   );
 
   const constructionReadyWithoutDesignTraceWorkspace = phaseWorkspaceCopy();
-writeConstructionDesign(constructionReadyWithoutDesignTraceWorkspace);
+writeFunctionalDesign(constructionReadyWithoutDesignTraceWorkspace);
 writeConstructionTasks(constructionReadyWithoutDesignTraceWorkspace);
 writeConstructionNotes(constructionReadyWithoutDesignTraceWorkspace);
 writeConstructionTestResults(constructionReadyWithoutDesignTraceWorkspace);
 writeConstructionState(constructionReadyWithoutDesignTraceWorkspace);
 runExpectFailure(
   ["bun", "run", validator, constructionReadyWithoutDesignTraceWorkspace, intent],
-  "`Construction Design からの追跡` の表がある",
+  "`Task Generation からの追跡` の表がある",
 );
 
 console.log("amadeus validator eval: ok");

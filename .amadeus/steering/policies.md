@@ -17,7 +17,7 @@
 
 ## 判断基準
 
-- stage2 を次回 stage0 として扱うには、対象 PR が現在の基準 branch に merge 済みであり、人間が採用を承認している必要がある。
+- stage2 を次回 stage0 として扱うには、対象 PR が現在の基準 branch に merge 済みであり、build workspace が merge 後の基準 commit を参照し、人間が採用を承認している必要がある。
 - provenance は、実際に使った build workspace、target workspace、skill、validator、開発用スクリプト、stage 判定、人間の stage0 採用判断から追跡できる形で記録する。
 - 初回導入では、skill、validator、example snapshot、ハーネスの実装変更を後続 Intent に分ける。
 

@@ -6,183 +6,183 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "5bd6ecbf5a125452b99986836a3e2b48"
+          "md5": "06a13276fcd215d8167fe01b5704e73e"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
-          "md5": "e9a332d320be8b0645b30272ae1a5c81"
+          "md5": "6c6e44e2d7f39171147a8f290c2a16cb"
         }
       ]
     },
     {
-      "snapshot": "examples/02-intent-initialized",
+      "snapshot": "examples/02-ideation-completed",
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "5bd6ecbf5a125452b99986836a3e2b48"
+          "md5": "06a13276fcd215d8167fe01b5704e73e"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
-          "md5": "e9a332d320be8b0645b30272ae1a5c81"
-        },
-        {
-          "path": "skills/amadeus-intent-init/SKILL.md",
-          "md5": "63bb20e76f2d95a9acaa6eb418e2ef83"
-        }
-      ]
-    },
-    {
-      "snapshot": "examples/03-ideation-completed",
-      "skillFiles": [
-        {
-          "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "5bd6ecbf5a125452b99986836a3e2b48"
-        },
-        {
-          "path": "skills/amadeus-discovery/SKILL.md",
-          "md5": "e9a332d320be8b0645b30272ae1a5c81"
-        },
-        {
-          "path": "skills/amadeus-intent-init/SKILL.md",
-          "md5": "63bb20e76f2d95a9acaa6eb418e2ef83"
+          "md5": "6c6e44e2d7f39171147a8f290c2a16cb"
         },
         {
           "path": "skills/amadeus-ideation/SKILL.md",
-          "md5": "135ea84c858fcb5b14fdd247cba8cbd6"
+          "md5": "e2271dc2bfe046c8d2d71e6f02f56583"
+        },
+        {
+          "path": "skills/amadeus-ideation-intent-capture/SKILL.md",
+          "md5": "543068c4f350961499b0948b80cb3bff"
         },
         {
           "path": "skills/amadeus-ideation-scope-framing/SKILL.md",
-          "md5": "4cc42843db6eb1d298fcf6291a27fccd"
+          "md5": "7681f3bf50809f1a4f40b6ddbf19fc7d"
         },
         {
           "path": "skills/amadeus-ideation-feasibility-shaping/SKILL.md",
-          "md5": "a9cb92403ad1e3491c742cae41845f6f"
+          "md5": "e2af6c92af6c9b68cd31c78e8082c1bb"
         },
         {
           "path": "skills/amadeus-ideation-mock-framing/SKILL.md",
-          "md5": "c1080746974c4f6dc0b705afce72a85e"
+          "md5": "64561c9377dd03ed0fbed25ac7137c75"
         },
         {
           "path": "skills/amadeus-ideation-traceability-finalization/SKILL.md",
-          "md5": "3b42a3ab0d6d3e690d8c6eb689d4a597"
+          "md5": "cccdc9c86c4388d6c08de060826ebb8f"
         }
       ]
     },
     {
-      "snapshot": "examples/04-inception-completed",
+      "snapshot": "examples/03-inception-completed",
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "5bd6ecbf5a125452b99986836a3e2b48"
+          "md5": "06a13276fcd215d8167fe01b5704e73e"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
-          "md5": "e9a332d320be8b0645b30272ae1a5c81"
-        },
-        {
-          "path": "skills/amadeus-intent-init/SKILL.md",
-          "md5": "63bb20e76f2d95a9acaa6eb418e2ef83"
+          "md5": "6c6e44e2d7f39171147a8f290c2a16cb"
         },
         {
           "path": "skills/amadeus-ideation/SKILL.md",
-          "md5": "135ea84c858fcb5b14fdd247cba8cbd6"
+          "md5": "e2271dc2bfe046c8d2d71e6f02f56583"
+        },
+        {
+          "path": "skills/amadeus-ideation-intent-capture/SKILL.md",
+          "md5": "543068c4f350961499b0948b80cb3bff"
         },
         {
           "path": "skills/amadeus-ideation-scope-framing/SKILL.md",
-          "md5": "4cc42843db6eb1d298fcf6291a27fccd"
+          "md5": "7681f3bf50809f1a4f40b6ddbf19fc7d"
         },
         {
           "path": "skills/amadeus-ideation-feasibility-shaping/SKILL.md",
-          "md5": "a9cb92403ad1e3491c742cae41845f6f"
+          "md5": "e2af6c92af6c9b68cd31c78e8082c1bb"
         },
         {
           "path": "skills/amadeus-ideation-mock-framing/SKILL.md",
-          "md5": "c1080746974c4f6dc0b705afce72a85e"
+          "md5": "64561c9377dd03ed0fbed25ac7137c75"
         },
         {
           "path": "skills/amadeus-ideation-traceability-finalization/SKILL.md",
-          "md5": "3b42a3ab0d6d3e690d8c6eb689d4a597"
+          "md5": "cccdc9c86c4388d6c08de060826ebb8f"
         },
         {
           "path": "skills/amadeus-inception/SKILL.md",
-          "md5": "207574050743de2fd146fed08e4655a6"
+          "md5": "30f2ec6a6a5231a6369f99035a95e4cb",
+          "staleReason": "Issue #96 の実装対象契約を構造補修で反映した。後続 PR で real provider による example 再生成を行う。"
         },
         {
           "path": "skills/amadeus-inception-requirements-definition/SKILL.md",
-          "md5": "66a3e01d10400e3c6432202ac631436d"
+          "md5": "e39bae941a318652374b76381cdc0bba"
         },
         {
-          "path": "skills/amadeus-inception-interaction-modeling/SKILL.md",
-          "md5": "018db7c87df718667b5daf262356c5c1"
+          "path": "skills/amadeus-inception-user-stories/SKILL.md",
+          "md5": "9478d2828c835aad5fefd3f5e9492674"
         },
         {
-          "path": "skills/amadeus-inception-execution-design/SKILL.md",
-          "md5": "0035effd252574f3fc8017c7c15a98d1"
+          "path": "skills/amadeus-inception-use-cases/SKILL.md",
+          "md5": "20b31e46e3cd95477f3241461e28a9f9"
+        },
+        {
+          "path": "skills/amadeus-inception-units-generation/SKILL.md",
+          "md5": "f0233fae58fb5b7085393d362b9d1fe5",
+          "staleReason": "Issue #96 の実装対象契約を構造補修で反映した。後続 PR で real provider による example 再生成を行う。"
         },
         {
           "path": "skills/amadeus-inception-traceability-finalization/SKILL.md",
-          "md5": "18094f0f451b61165d859a9d17a25795"
+          "md5": "1975adee8c8e7967125ffcd2ad9eaae6"
         }
       ]
     },
     {
-      "snapshot": "examples/05-construction-design-ready",
+      "snapshot": "examples/04-construction-design-ready",
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "5bd6ecbf5a125452b99986836a3e2b48"
+          "md5": "06a13276fcd215d8167fe01b5704e73e"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
-          "md5": "e9a332d320be8b0645b30272ae1a5c81"
-        },
-        {
-          "path": "skills/amadeus-intent-init/SKILL.md",
-          "md5": "63bb20e76f2d95a9acaa6eb418e2ef83"
+          "md5": "6c6e44e2d7f39171147a8f290c2a16cb"
         },
         {
           "path": "skills/amadeus-ideation/SKILL.md",
-          "md5": "135ea84c858fcb5b14fdd247cba8cbd6"
+          "md5": "e2271dc2bfe046c8d2d71e6f02f56583"
+        },
+        {
+          "path": "skills/amadeus-ideation-intent-capture/SKILL.md",
+          "md5": "543068c4f350961499b0948b80cb3bff"
         },
         {
           "path": "skills/amadeus-ideation-scope-framing/SKILL.md",
-          "md5": "4cc42843db6eb1d298fcf6291a27fccd"
+          "md5": "7681f3bf50809f1a4f40b6ddbf19fc7d"
         },
         {
           "path": "skills/amadeus-ideation-feasibility-shaping/SKILL.md",
-          "md5": "a9cb92403ad1e3491c742cae41845f6f"
+          "md5": "e2af6c92af6c9b68cd31c78e8082c1bb"
         },
         {
           "path": "skills/amadeus-ideation-mock-framing/SKILL.md",
-          "md5": "c1080746974c4f6dc0b705afce72a85e"
+          "md5": "64561c9377dd03ed0fbed25ac7137c75"
         },
         {
           "path": "skills/amadeus-ideation-traceability-finalization/SKILL.md",
-          "md5": "3b42a3ab0d6d3e690d8c6eb689d4a597"
+          "md5": "cccdc9c86c4388d6c08de060826ebb8f"
         },
         {
           "path": "skills/amadeus-inception/SKILL.md",
-          "md5": "207574050743de2fd146fed08e4655a6"
+          "md5": "30f2ec6a6a5231a6369f99035a95e4cb",
+          "staleReason": "Issue #96 の実装対象契約を構造補修で反映した。後続 PR で real provider による example 再生成を行う。"
         },
         {
           "path": "skills/amadeus-inception-requirements-definition/SKILL.md",
-          "md5": "66a3e01d10400e3c6432202ac631436d"
+          "md5": "e39bae941a318652374b76381cdc0bba"
         },
         {
-          "path": "skills/amadeus-inception-interaction-modeling/SKILL.md",
-          "md5": "018db7c87df718667b5daf262356c5c1"
+          "path": "skills/amadeus-inception-user-stories/SKILL.md",
+          "md5": "9478d2828c835aad5fefd3f5e9492674"
         },
         {
-          "path": "skills/amadeus-inception-execution-design/SKILL.md",
-          "md5": "0035effd252574f3fc8017c7c15a98d1"
+          "path": "skills/amadeus-inception-use-cases/SKILL.md",
+          "md5": "20b31e46e3cd95477f3241461e28a9f9"
+        },
+        {
+          "path": "skills/amadeus-inception-units-generation/SKILL.md",
+          "md5": "f0233fae58fb5b7085393d362b9d1fe5",
+          "staleReason": "Issue #96 の実装対象契約を構造補修で反映した。後続 PR で real provider による example 再生成を行う。"
         },
         {
           "path": "skills/amadeus-inception-traceability-finalization/SKILL.md",
-          "md5": "18094f0f451b61165d859a9d17a25795"
+          "md5": "1975adee8c8e7967125ffcd2ad9eaae6"
+        },
+        {
+          "path": "skills/amadeus-construction-functional-design/SKILL.md",
+          "md5": "701e3b83350fc2b38b3680a9f8ed83f7"
         },
         {
           "path": "skills/amadeus-construction-bolt-preparation/SKILL.md",
-          "md5": "7b70541a5c3e11b3e0fdfc992d5eb009"
+          "md5": "3db7689b7f0f7c6c9b0882bfb0653fab",
+          "staleReason": "Issue #96 の実装対象契約を構造補修で反映した。後続 PR で real provider による example 再生成を行う。"
         }
       ]
     }

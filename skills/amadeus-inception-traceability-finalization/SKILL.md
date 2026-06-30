@@ -1,7 +1,7 @@
 ---
 name: amadeus-inception-traceability-finalization
 description: >-
-  Amadeus Inception の内部 skill。実施設計済み Intent に対して、追跡と状態確定だけを実行し、
+  Amadeus Inception の内部 skill。Units Generation 済み Intent に対して、追跡と状態確定だけを実行し、
   traceability.md、decisions.md、decisions/<decision-id>-<slug>.md、state.json を更新または作成する必要がある場面では必ず使う。
   requirements、user-stories、use-cases、units、bolts、domain、Spec、実装は作らない。
 ---
@@ -17,7 +17,9 @@ Inception phase の追跡と状態確定だけを進める。
 
 ## 前提
 
-対象 Intent が Ideation、要件定義、相互作用整理、実施設計の成果物を持っていることを前提にする。
+対象 Intent が Ideation、要件定義、Use Cases、Units Generation の成果物を持っていることを前提にする。
+
+User Stories は、人間アクターのユーザー価値表現が必要な場合だけ成果物を持っていることを前提にする。
 
 少なくとも次を読む。
 
@@ -28,18 +30,17 @@ Inception phase の追跡と状態確定だけを進める。
 - `.amadeus/intents/<intent-id>-<slug>/ideation/ideation.md`
 - `.amadeus/intents/<intent-id>-<slug>/inception/requirements.md`
 - `.amadeus/intents/<intent-id>-<slug>/inception/acceptance.md`
-- `.amadeus/intents/<intent-id>-<slug>/inception/user-stories.md`
+- `.amadeus/intents/<intent-id>-<slug>/inception/user-stories.md`、存在する場合
 - `.amadeus/intents/<intent-id>-<slug>/inception/use-cases.md`
 - `.amadeus/intents/<intent-id>-<slug>/inception/units.md`
 - `.amadeus/intents/<intent-id>-<slug>/inception/units/*.md`
 - `.amadeus/intents/<intent-id>-<slug>/inception/units/*/design.md`
 - `.amadeus/intents/<intent-id>-<slug>/inception/bolts.md`
 - `.amadeus/intents/<intent-id>-<slug>/inception/bolts/*.md`
-- `.amadeus/intents/<intent-id>-<slug>/inception/domain/**`
 - `.amadeus/intents/<intent-id>-<slug>/inception/traceability.md`
 - `.amadeus/intents/<intent-id>-<slug>/inception/decisions.md`
 
-実施設計の成果物が不足している場合は、`amadeus-inception-execution-design` を案内して停止する。
+Units Generation の成果物が不足している場合は、`amadeus-inception-units-generation` を案内して停止する。
 
 ## テンプレート
 
@@ -63,15 +64,18 @@ Inception phase の追跡と状態確定だけを進める。
 
 ## 手順
 
-1. Requirement、Story、Use Case、Unit、Unit Design Brief、Bolt の追跡関係を `traceability.md` に反映する。
+1. Requirement、存在する場合の Story、Use Case、Unit、Unit Design Brief、Bolt の追跡関係を `traceability.md` に反映する。
+   - `対象境界からの追跡` で、`ideation/scope.md` の採用済み `SC-IN-*` を Requirement、存在する場合の Story、Use Case、Unit、Bolt へ接続する。
+   - `SC-OUT-*` は Inception 成果物へ混入させず、必要な場合は対象外制約として判断に残す。
    - `要求からの追跡` の `ボルト` 列と `ボルトからの追跡` の `要求` 列は双方向に一致させる。
    - `要求からの追跡` である要求が参照していない Bolt には、`ボルトからの追跡` でその要求を含めない。
 2. Inception の境界、粒度、対象外、greenfield または brownfield の判断を `decisions.md` と `decisions/**` に残す。
 3. `state.json.phase` を `inception` にし、Inception の必須成果物を反映する。
-4. 対象 Intent の境界づけられたコンテキスト、または Unit から BC への参照が未確認なら `state.json.inception.gate` は `not_ready` にする。
-5. 詳細なモデルや契約条件だけが未確認で、BC と Unit 参照が確定している場合は `passed` にしてよい。
-6. 親 skill から記録対象の質問と回答が渡された場合だけ、`amadeus-grilling` の構造に従って Grilling Decision Trail を同じ変更で更新する。
-7. 構造矛盾がないか validator で対象 Intent を検証する。
+4. Story が不要な場合は、`state.json.inception.requiredStoryArtifacts` を空配列にする。
+5. 対象 Intent の境界づけられたコンテキスト、または Unit から BC への参照が未確認なら `state.json.inception.gate` は `not_ready` にする。
+6. 詳細なモデルや契約条件だけが未確認で、BC と Unit 参照が確定している場合は `passed` にしてよい。
+7. 親 skill から記録対象の質問と回答が渡された場合だけ、`amadeus-grilling` の構造に従って Grilling Decision Trail を同じ変更で更新する。
+8. 構造矛盾がないか validator で対象 Intent を検証する。
 
 ## 禁止事項
 
