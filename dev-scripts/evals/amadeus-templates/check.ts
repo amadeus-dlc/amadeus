@@ -289,8 +289,8 @@ const textContracts: TextContract[] = [
     path: "skills/amadeus-inception/templates/intents/inception/units.md",
     promotedPath: ".agents/skills/amadeus-inception/templates/intents/inception/units.md",
     includes: [
-      "Unit の `コンテキスト` は Domain Map の `adopted` Bounded Context、または未採用の境界候補を記録する。",
-      "未採用の境界候補を記録する場合、`state.json.inception.gate` は `passed` にしない。",
+      "Unit の `コンテキスト` は Domain Map の `adopted` Bounded Context、または Inception で採用判断する境界候補を記録する。",
+      "Domain Map 未登録の Bounded Context を仮参照する場合は、Finalization で Domain Map へ反映する必要がある未確認事項として残す。",
     ],
     excludes: [".amadeus/domain/**", "domain layer"],
   },
