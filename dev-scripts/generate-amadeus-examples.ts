@@ -38,6 +38,21 @@ type GenerationPlan = {
   targetSteps: GenerationStep[];
 };
 
+type SkillFileDigest = {
+  path: string;
+  md5?: string;
+  staleReason?: string;
+};
+
+type SkillProvenanceEntry = {
+  snapshot: string;
+  skillFiles?: SkillFileDigest[];
+};
+
+type SkillProvenanceManifest = Record<string, unknown> & {
+  entries?: SkillProvenanceEntry[];
+};
+
 const root = resolve(import.meta.dir, "..");
 const workspace = join(root, ".tmp/amadeus-example-generation/workspace");
 const logs = join(root, ".tmp/amadeus-example-generation/logs");
@@ -599,18 +614,48 @@ function assertState(statePath: string, expectedState: Record<string, string>): 
   }
 }
 
-function readProvenanceManifest(): Record<string, unknown> & { entries?: Array<{ snapshot: string; skillFiles?: Array<{ path: string; md5?: string; staleReason?: string }> }> } {
+function readProvenanceManifest(): SkillProvenanceManifest {
   return JSON.parse(readFileSync(provenanceManifestPath, "utf8"));
 }
 
-function provenanceSkillFileDigests(paths: string[]): Array<{ path: string; md5: string }> {
-  return paths.map((path) => {
-    const sourcePath = join(root, path);
-    ensureFile(sourcePath);
-    return {
-      path,
-      md5: md5File(sourcePath),
-    };
+function regeneratedSkillFilesForSnapshot(step: GenerationStep, fromIndex: number): Set<string> {
+  const stepIndex = steps.findIndex((candidate) => candidate.id === step.id);
+  const skillFiles = new Set<string>();
+  for (let index = fromIndex; index <= stepIndex; index += 1) {
+    const current = steps[index];
+    const previous = steps[index - 1];
+    for (const skillFile of current.provenanceSkillFiles) {
+      if (!previous || !previous.provenanceSkillFiles.includes(skillFile)) {
+        skillFiles.add(skillFile);
+      }
+    }
+  }
+  return skillFiles;
+}
+
+function currentSkillFileDigest(path: string): SkillFileDigest {
+  const sourcePath = join(root, path);
+  ensureFile(sourcePath);
+  return {
+    path,
+    md5: md5File(sourcePath),
+  };
+}
+
+function provenanceSkillFileDigests(paths: string[]): SkillFileDigest[] {
+  return paths.map((path) => currentSkillFileDigest(path));
+}
+
+function updatedSkillFileDigests(step: GenerationStep, fromIndex: number, existingSkillFiles: SkillFileDigest[]): SkillFileDigest[] {
+  const regeneratedSkillFiles = regeneratedSkillFilesForSnapshot(step, fromIndex);
+  const existingByPath = new Map(existingSkillFiles.map((skillFile) => [skillFile.path, skillFile]));
+  return step.provenanceSkillFiles.map((path) => {
+    if (regeneratedSkillFiles.has(path)) return currentSkillFileDigest(path);
+    const existing = existingByPath.get(path);
+    if (!existing) {
+      fail(`${step.snapshot}: missing existing provenance digest for upstream skill file ${path}; regenerate from an earlier step`);
+    }
+    return { ...existing };
   });
 }
 
@@ -623,7 +668,7 @@ function updatedProvenanceText(plan: GenerationPlan): string {
   for (const entry of manifest.entries ?? []) {
     const step = targetStepsBySnapshot.get(entry.snapshot);
     if (!step) continue;
-    entry.skillFiles = provenanceSkillFileDigests(step.provenanceSkillFiles);
+    entry.skillFiles = updatedSkillFileDigests(step, plan.fromIndex, entry.skillFiles ?? []);
   }
   for (const step of plan.targetSteps) {
     if (entriesBySnapshot.has(step.snapshot)) continue;
