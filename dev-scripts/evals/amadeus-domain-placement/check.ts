@@ -76,7 +76,17 @@ assert(
   existsSync(join(root, constructionExample, "construction/U002-order-creation/functional-design")),
   "construction example must keep Unit Functional Design",
 );
-assert(existsSync(join(root, "examples/01-discovery-completed/.amadeus/domain")), "examples must keep shared Domain Model");
+for (const snapshot of [
+  "examples/01-discovery-completed",
+  "examples/02-ideation-completed",
+  "examples/03-inception-completed",
+  "examples/04-construction-design-ready",
+]) {
+  assert(!existsSync(join(root, snapshot, domainPlacementContract.legacySharedDomainRoot)), `${snapshot} must not include the legacy shared domain directory`);
+  for (const artifact of domainPlacementContract.sharedDomainArtifacts) {
+    assert(existsSync(join(root, snapshot, artifact)), `${snapshot} must include ${artifact}`);
+  }
+}
 assert(existsSync(join(root, "examples/01-discovery-completed/.amadeus/glossary.md")), "examples must keep Glossary");
 
 console.log("amadeus domain placement eval: ok");

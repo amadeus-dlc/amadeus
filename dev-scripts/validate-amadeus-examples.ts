@@ -101,6 +101,7 @@ if (mode === "--workspaces-only" || mode === "--all") {
 }
 
 failed = !validateSnapshotStates(stateValidationTargets(targets)) || failed;
+failed = !validateSharedDomainMaps(stateValidationTargets(targets)) || failed;
 failed = !validateNoInceptionDomainFileSets(stateValidationTargets(targets)) || failed;
 
 for (const target of targets) {
@@ -167,6 +168,10 @@ function validateSnapshotStates(targets: ExampleSnapshot[]): boolean {
 function validateNoInceptionDomainFileSets(targets: ExampleSnapshot[]): boolean {
   const errors: string[] = [];
   for (const target of targets) {
+    const legacySharedDomainRoot = `${target.workdir}/${domainPlacementContract.legacySharedDomainRoot}`;
+    if (existsSync(legacySharedDomainRoot)) {
+      errors.push(`${target.workdir}: legacy shared domain directory must not exist`);
+    }
     if (!target.intent) continue;
     const domainRoot = [
       target.workdir,
@@ -186,6 +191,26 @@ function validateNoInceptionDomainFileSets(targets: ExampleSnapshot[]): boolean 
 
   console.log("## Example inception domain files");
   console.log("inception domain files: ok");
+  return true;
+}
+
+function validateSharedDomainMaps(targets: ExampleSnapshot[]): boolean {
+  const errors: string[] = [];
+  for (const target of targets) {
+    for (const artifact of domainPlacementContract.sharedDomainArtifacts) {
+      const path = `${target.workdir}/${artifact}`;
+      if (!existsSync(path)) errors.push(`${target.workdir}: missing shared domain artifact: ${artifact}`);
+    }
+  }
+
+  if (errors.length > 0) {
+    console.error("## Example shared domain maps");
+    for (const error of errors) console.error(`- ${error}`);
+    return false;
+  }
+
+  console.log("## Example shared domain maps");
+  console.log("shared domain maps: ok");
   return true;
 }
 

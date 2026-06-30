@@ -35,8 +35,8 @@ UI event、technical event、integration event、log event は Domain Event と�
 - `.amadeus/steering/structure.md`
 - `.amadeus/steering/actors.md`
 - `.amadeus/glossary.md`
-- `.amadeus/domain/subdomains.md`
-- `.amadeus/domain/bounded-contexts.md`
+- `.amadeus/domain-map.md`
+- `.amadeus/context-map.md`
 - `.amadeus/discoveries.md`
 - `.amadeus/intents.md`
 

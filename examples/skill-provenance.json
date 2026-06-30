@@ -6,13 +6,11 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "06a13276fcd215d8167fe01b5704e73e",
-          "staleReason": "Issue #160 の Steering 旧 domain 配置廃止を反映した。後続 PR で real provider による example 再生成を行う。"
+          "md5": "a3b2b5723e47be51b6c4e3db80d984ec"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
-          "md5": "6c6e44e2d7f39171147a8f290c2a16cb",
-          "staleReason": "Issue #77 の下流 skill 前提契約を補修した。後続 PR で real provider による example 再生成を行う。"
+          "md5": "cc0c722e9bb95f6988b82adbfab85e72"
         }
       ]
     },
@@ -21,13 +19,11 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "06a13276fcd215d8167fe01b5704e73e",
-          "staleReason": "Issue #160 の Steering 旧 domain 配置廃止を反映した。後続 PR で real provider による example 再生成を行う。"
+          "md5": "a3b2b5723e47be51b6c4e3db80d984ec"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
-          "md5": "6c6e44e2d7f39171147a8f290c2a16cb",
-          "staleReason": "Issue #77 の下流 skill 前提契約を補修した。後続 PR で real provider による example 再生成を行う。"
+          "md5": "cc0c722e9bb95f6988b82adbfab85e72"
         },
         {
           "path": "skills/amadeus-ideation/SKILL.md",
@@ -60,13 +56,11 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "06a13276fcd215d8167fe01b5704e73e",
-          "staleReason": "Issue #160 の Steering 旧 domain 配置廃止を反映した。後続 PR で real provider による example 再生成を行う。"
+          "md5": "a3b2b5723e47be51b6c4e3db80d984ec"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
-          "md5": "6c6e44e2d7f39171147a8f290c2a16cb",
-          "staleReason": "Issue #77 の下流 skill 前提契約を補修した。後続 PR で real provider による example 再生成を行う。"
+          "md5": "cc0c722e9bb95f6988b82adbfab85e72"
         },
         {
           "path": "skills/amadeus-ideation/SKILL.md",
@@ -94,8 +88,7 @@
         },
         {
           "path": "skills/amadeus-inception/SKILL.md",
-          "md5": "30f2ec6a6a5231a6369f99035a95e4cb",
-          "staleReason": "Issue #96 の実装対象契約と Issue #161 の Domain Map 参照契約を反映した。後続 PR で real provider による example 再生成を行う。"
+          "md5": "b83cded3307cb1a6d5d553189aa33cdd"
         },
         {
           "path": "skills/amadeus-inception-requirements-definition/SKILL.md",
@@ -111,13 +104,11 @@
         },
         {
           "path": "skills/amadeus-inception-units-generation/SKILL.md",
-          "md5": "f0233fae58fb5b7085393d362b9d1fe5",
-          "staleReason": "Issue #96 の実装対象契約と Issue #161 の Domain Map 参照契約を反映した。後続 PR で real provider による example 再生成を行う。"
+          "md5": "22a3c9fb154becd67b157eccc502fa0f"
         },
         {
           "path": "skills/amadeus-inception-traceability-finalization/SKILL.md",
-          "md5": "1975adee8c8e7967125ffcd2ad9eaae6",
-          "staleReason": "Issue #161 の Inception Bounded Context 参照契約を Domain Map 前提へ移行した。後続 PR で real provider による example 再生成を行う。"
+          "md5": "ff560c12206b299314dd81eeb990e868"
         }
       ]
     },
@@ -126,13 +117,11 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "06a13276fcd215d8167fe01b5704e73e",
-          "staleReason": "Issue #160 の Steering 旧 domain 配置廃止を反映した。後続 PR で real provider による example 再生成を行う。"
+          "md5": "a3b2b5723e47be51b6c4e3db80d984ec"
         },
         {
           "path": "skills/amadeus-discovery/SKILL.md",
-          "md5": "6c6e44e2d7f39171147a8f290c2a16cb",
-          "staleReason": "Issue #77 の下流 skill 前提契約を補修した。後続 PR で real provider による example 再生成を行う。"
+          "md5": "cc0c722e9bb95f6988b82adbfab85e72"
         },
         {
           "path": "skills/amadeus-ideation/SKILL.md",
@@ -160,8 +149,7 @@
         },
         {
           "path": "skills/amadeus-inception/SKILL.md",
-          "md5": "30f2ec6a6a5231a6369f99035a95e4cb",
-          "staleReason": "Issue #96 の実装対象契約と Issue #161 の Domain Map 参照契約を反映した。後続 PR で real provider による example 再生成を行う。"
+          "md5": "b83cded3307cb1a6d5d553189aa33cdd"
         },
         {
           "path": "skills/amadeus-inception-requirements-definition/SKILL.md",
@@ -177,23 +165,19 @@
         },
         {
           "path": "skills/amadeus-inception-units-generation/SKILL.md",
-          "md5": "f0233fae58fb5b7085393d362b9d1fe5",
-          "staleReason": "Issue #96 の実装対象契約と Issue #161 の Domain Map 参照契約を反映した。後続 PR で real provider による example 再生成を行う。"
+          "md5": "22a3c9fb154becd67b157eccc502fa0f"
         },
         {
           "path": "skills/amadeus-inception-traceability-finalization/SKILL.md",
-          "md5": "1975adee8c8e7967125ffcd2ad9eaae6",
-          "staleReason": "Issue #161 の Inception Bounded Context 参照契約を Domain Map 前提へ移行した。後続 PR で real provider による example 再生成を行う。"
+          "md5": "ff560c12206b299314dd81eeb990e868"
         },
         {
           "path": "skills/amadeus-construction-functional-design/SKILL.md",
-          "md5": "701e3b83350fc2b38b3680a9f8ed83f7",
-          "staleReason": "Issue #162 の Construction Domain Map と Context Map 更新契約を反映した。後続 PR で real provider による example 再生成を行う。"
+          "md5": "107ae940d12beb943d6129714c69b20a"
         },
         {
           "path": "skills/amadeus-construction-bolt-preparation/SKILL.md",
-          "md5": "3db7689b7f0f7c6c9b0882bfb0653fab",
-          "staleReason": "Issue #96 の実装対象契約と Issue #162 の Intent Contracts 反映契約を反映した。後続 PR で real provider による example 再生成を行う。"
+          "md5": "1a19b21ad81fa96a51194354dcff9b92"
         }
       ]
     }

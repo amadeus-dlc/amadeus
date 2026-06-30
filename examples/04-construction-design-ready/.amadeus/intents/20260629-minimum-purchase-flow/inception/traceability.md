@@ -60,9 +60,9 @@
 
 | 種別 | 対象 | 要求 | ユースケース | 定義元 |
 |---|---|---|---|---|
-| サブドメイン | SD004 販売管理 | R001, R002, R003, R004 | UC001, UC002, UC003 | [subdomains.md](../../../domain/subdomains.md) |
-| 境界づけられたコンテキスト | BC004 販売管理 | R001, R002, R003, R004 | UC001, UC002, UC003 | [bounded-contexts.md](../../../domain/bounded-contexts.md) |
-| 依存候補 | SD006 在庫管理 | R002 | UC002 | [subdomains.md](../../../domain/subdomains.md) |
+| サブドメイン | SD004 販売管理 | R001, R002, R003, R004 | UC001, UC002, UC003 | [domain-map.md](../../../domain-map.md) |
+| 境界づけられたコンテキスト | BC004 販売管理 | R001, R002, R003, R004 | UC001, UC002, UC003 | [domain-map.md](../../../domain-map.md) |
+| 依存候補 | SD006 在庫管理 | R002 | UC002 | [D002-bc004-ownership.md](decisions/D002-bc004-ownership.md) |
 
 ## 依存関係からの追跡
 
