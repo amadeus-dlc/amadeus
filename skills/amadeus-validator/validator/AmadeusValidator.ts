@@ -109,17 +109,11 @@ const unitDesignHeadings = [
   "Bolt 分割方針",
   "Construction への引き継ぎ",
 ];
-const dddModuleHeadings = ["目的", "責務", "概念関係", "ライフサイクル", "集約候補", "モデル要素", "関連成果物"];
-const dddElementTableSpecs = [
-  { heading: "集約", idPattern: /^DA\d{3}$/ },
-  { heading: "エンティティ", idPattern: /^DE\d{3}$/ },
-  { heading: "値オブジェクト", idPattern: /^DVO\d{3}$/ },
-  { heading: "ドメインサービス", idPattern: /^DS\d{3}$/ },
-  { heading: "ドメインイベント", idPattern: /^DEV\d{3}$/ },
-  { heading: "リポジトリ", idPattern: /^DR\d{3}$/ },
-  { heading: "ファクトリ", idPattern: /^DF\d{3}$/ },
-];
 const multiUnitBoltReasonHeading = "複数 Unit を扱う理由";
+const domainMapStatusValues = new Set(["adopted", "retired"]);
+const subdomainTypeValues = new Set(["コア", "支援", "汎用", "未分類"]);
+const organizationPatternValues = new Set(["パートナーシップ", "別々の道", "順応者", "顧客／供給者"]);
+const integrationPatternValues = new Set(["共有カーネル", "巨大な泥団子", "公開ホストサービス（OHS）", "公表された言語（PL）", "腐敗防止層（ACL）"]);
 
 const indexSpecs: Record<string, { headings: string[]; listHeading: string; columns: string[]; idPattern: RegExp; targetColumn: string }> = {
   "user-stories.md": {
@@ -235,11 +229,8 @@ class AmadeusValidator {
     this.checkDiscoveries();
     this.checkEventStormingSessions(".amadeus/event-storming", "pre-intent");
     this.checkIntents();
-    if (this.isDirectory(this.absolute(".amadeus/domain"))) {
-      this.checkSubdomains(".amadeus/domain/subdomains.md", ".amadeus/domain/bounded-contexts.md");
-      this.checkBoundedContexts(".amadeus/domain/bounded-contexts.md", true);
-      this.checkGrillings(".amadeus/domain");
-    }
+    this.checkDomainMap(".amadeus/domain-map.md");
+    this.checkContextMap(".amadeus/context-map.md");
   }
 
   private checkDiscoveries(): void {
@@ -2176,7 +2167,7 @@ class AmadeusValidator {
   private checkNoInceptionDomainArtifacts(base: string): void {
     const domainRoot = this.absolute(`${base}/domain`);
     if (!this.isDirectory(domainRoot)) return;
-    this.failRow(`${base}/domain`, "Inception は Intent 固有 Domain Model 成果物を持たない", "Domain Model は全体 Domain Model または Construction Functional Design で扱う");
+    this.failRow(`${base}/domain`, "Inception は Intent 固有 Domain Model 成果物を持たない", "Domain Model は Domain Map または Construction Functional Design で扱う");
   }
 
   private checkOptionalIndex(path: string, spec: typeof indexSpecs[string]): void {
@@ -2196,7 +2187,7 @@ class AmadeusValidator {
     const table = this.tableAfterHeading(unitsPath, "一覧");
     if (!table || !table.headers.includes("コンテキスト")) return;
 
-    const contextIds = this.idsFor(contextIndexPath);
+    const contextIds = contextIndexPath === ".amadeus/domain-map.md" ? this.domainMapBoundedContextIds("adopted") : this.idsFor(contextIndexPath);
     for (const row of table.rows) {
       const unitId = String(row["識別子"] ?? "").trim();
       for (const contextId of this.splitValues(row["コンテキスト"])) {
@@ -2452,9 +2443,6 @@ class AmadeusValidator {
   }
 
   private grillingTargetInsideBase(base: string, cleanTarget: string, resolved: string): boolean {
-    if (base === ".amadeus/domain" && cleanTarget === "../glossary.md" && resolved === resolve(this.absolute(".amadeus/glossary.md"))) {
-      return true;
-    }
     if (this.grillingCompanionTargetAllowed(base, cleanTarget, resolved)) {
       return true;
     }
@@ -2476,150 +2464,58 @@ class AmadeusValidator {
     return [...new Set([...text.matchAll(/\bGD\d{3}\b/g)].map((match) => match[0]))];
   }
 
-  private checkSubdomains(path: string, boundedContextsPath: string, requireContext = false): void {
-    this.checkFile(path, "サブドメイン一覧が存在する");
-    this.checkHeadings(path, ["一覧"]);
-    const table = this.checkTable(path, "一覧", ["識別子", "名前", "種別", "役割", "コンテキスト"]);
+  private checkDomainMap(path: string): void {
+    this.checkFile(path, "Domain Map が存在する");
+    this.checkHeadings(path, ["Subdomains", "Bounded Contexts"]);
+
+    const subdomainTable = this.checkTable(path, "Subdomains", ["識別子", "名前", "種別", "役割", "状態", "根拠"]);
+    const subdomainIds = subdomainTable ? this.collectIds(path, subdomainTable, "識別子", /^SD\d{3}$/) : new Set<string>();
+    if (subdomainTable) {
+      this.checkNotBlank(path, subdomainTable, "名前");
+      this.checkNotBlank(path, subdomainTable, "役割");
+      this.checkDetailLinks(path, subdomainTable, "根拠");
+      for (const row of subdomainTable.rows) {
+        this.checkAllowed(path, "種別", row["種別"], subdomainTypeValues);
+        this.checkAllowed(path, "状態", row["状態"], domainMapStatusValues);
+      }
+    }
+
+    const contextTable = this.checkTable(path, "Bounded Contexts", ["識別子", "名前", "サブドメイン", "役割", "状態", "根拠"]);
+    if (!contextTable) return;
+
+    this.collectIds(path, contextTable, "識別子", /^BC\d{3}$/);
+    this.checkNotBlank(path, contextTable, "名前");
+    this.checkNotBlank(path, contextTable, "役割");
+    this.checkDetailLinks(path, contextTable, "根拠");
+    for (const row of contextTable.rows) {
+      const contextId = String(row["識別子"] ?? "").trim();
+      for (const subdomainId of this.splitValues(row["サブドメイン"])) {
+        if (subdomainIds.has(subdomainId)) this.pass(path, "`サブドメイン` が Domain Map の Subdomain に存在する", `${contextId}: ${subdomainId}`);
+        else this.failRow(path, "`サブドメイン` が Domain Map の Subdomain に存在する", `${contextId}: ${subdomainId}`);
+      }
+      this.checkAllowed(path, "状態", row["状態"], domainMapStatusValues);
+    }
+  }
+
+  private checkContextMap(path: string): void {
+    this.checkFile(path, "Context Map が存在する");
+    this.checkHeadings(path, ["Dependencies"]);
+    const table = this.checkTable(path, "Dependencies", ["Downstream", "Upstream", "依存内容", "組織パターン", "統合パターン", "状態", "根拠"]);
     if (!table) return;
 
-    this.collectIds(path, table, "識別子", /^SD\d{3}$/);
-    const allowedTypes = new Set(["コア", "支援", "汎用", "未分類"]);
-    const bcIds = this.idsFor(boundedContextsPath);
+    const contextIds = this.idsFor(".amadeus/domain-map.md");
+    this.checkNotBlank(path, table, "依存内容");
+    this.checkDetailLinks(path, table, "根拠");
     for (const row of table.rows) {
-      this.checkAllowed(path, "サブドメイン種別", row["種別"], allowedTypes);
-      for (const contextId of this.splitValues(row["コンテキスト"])) {
-        if (contextId === "なし" && !requireContext) {
-          this.pass(path, "コンテキストが同じ階層の bounded-contexts.md に存在する", `${row["識別子"]}: ${contextId}`);
-        } else if (bcIds.has(contextId)) {
-          this.pass(path, "サブドメインのコンテキストが解決領域の BC を参照する", `${row["識別子"]}: ${contextId}`);
-        } else {
-          this.failRow(path, "サブドメインのコンテキストが解決領域の BC を参照する", `${row["識別子"]}: ${contextId}`);
-        }
-      }
-    }
-  }
-
-  private checkBoundedContexts(path: string, global: boolean, requireRows = false): void {
-    this.checkFile(path, "境界づけられたコンテキスト一覧が存在する");
-    const headings = global ? ["一覧", "外部境界", "コンテキスト間の依存", "パターン分類"] : ["コンテキスト", "外部境界", "コンテキスト間の依存"];
-    const listHeading = global ? "一覧" : "コンテキスト";
-    this.checkHeadings(path, headings);
-
-    const table = this.checkTable(path, listHeading, ["識別子", "名前", "サブドメイン", "役割", "モデル", "契約"]);
-    const ids = table ? this.collectIds(path, table, "識別子", /^BC\d{3}$/) : new Set<string>();
-    if (table) {
-      if (requireRows) {
-        if (table.rows.length > 0) this.pass(path, "境界づけられたコンテキストが1件以上存在する", `${table.rows.length}件`);
-        else this.failRow(path, "境界づけられたコンテキストが1件以上存在する", "行がない");
-      }
-      this.checkDetailLinks(path, table, "モデル");
-      this.checkDetailLinks(path, table, "契約");
-      this.checkBoundedContextModuleFiles(path, table);
-      this.checkDddModuleIndexes(path, table);
-    }
-
-    const boundaryTable = this.checkTable(path, "外部境界", ["コンテキスト", "名前", "役割", "根拠"]);
-    if (boundaryTable) {
-      for (const row of boundaryTable.rows) {
-        const contextId = String(row["コンテキスト"] ?? "").trim();
-        if (ids.has(contextId)) this.pass(path, "外部境界のコンテキストが既存 BC である", contextId);
-        else this.failRow(path, "外部境界のコンテキストが既存 BC である", contextId);
-        this.checkNotBlankValue(path, "名前", row["名前"]);
-        this.checkNotBlankValue(path, "役割", row["役割"]);
-        this.checkNotBlankValue(path, "根拠", row["根拠"]);
-      }
-    }
-  }
-
-  private checkBoundedContextModuleFiles(path: string, table: Table): void {
-    const base = dirname(path);
-    for (const row of table.rows) {
-      const contextId = String(row["識別子"] ?? "").trim();
-      const links = [
-        ...this.markdownLinks(String(row["モデル"] ?? "")),
-        ...this.markdownLinks(String(row["契約"] ?? "")),
-      ].map((link) => this.cleanLinkTarget(link));
-      const detailLink = links.find((link) => link.match(/^bounded-contexts\/[^/]+\/(models|contracts)\.md$/));
-      const match = detailLink?.match(/^bounded-contexts\/([^/]+)\/(?:models|contracts)\.md$/);
-      if (!match || !match[1].startsWith(`${contextId}-`)) {
-        this.failRow(path, "境界づけられたコンテキストのモジュールディレクトリを導出できる", `${contextId}: ${links.join(", ") || "リンクなし"}`);
-        continue;
-      }
-
-      const modulePath = `${base}/bounded-contexts/${match[1]}.md`;
-      this.checkFile(modulePath, "境界づけられたコンテキストのモジュールファイルが存在する");
-      this.checkHeadings(modulePath, ["目的", "責務", "外部境界", "関連成果物"]);
-      this.checkHeadingBodies(modulePath, ["目的", "責務", "外部境界", "関連成果物"]);
-    }
-  }
-
-  private checkDddModuleIndexes(path: string, table: Table): void {
-    const base = dirname(path);
-    for (const row of table.rows) {
-      const contextId = String(row["識別子"] ?? "").trim();
-      const links = this.markdownLinks(String(row["モデル"] ?? "")).map((link) => this.cleanLinkTarget(link));
-      const detailLink = links.find((link) => link.match(/^bounded-contexts\/[^/]+\/models\.md$/));
-      const match = detailLink?.match(/^bounded-contexts\/([^/]+)\/models\.md$/);
-      if (!match || !match[1].startsWith(`${contextId}-`)) continue;
-      this.checkDddModules(`${base}/bounded-contexts/${match[1]}/models.md`);
-    }
-  }
-
-  private checkDddModules(path: string): void {
-    if (!this.isFile(this.absolute(path))) return;
-    this.checkHeadings(path, ["一覧"]);
-    const table = this.checkTable(path, "一覧", ["識別子", "名前", "役割", "詳細"]);
-    if (!table) return;
-
-    const ids = this.collectIds(path, table, "識別子", /^DM\d{3}$/);
-    this.checkNotBlank(path, table, "名前");
-    this.checkNotBlank(path, table, "役割");
-
-    for (const row of table.rows) {
-      const moduleId = String(row["識別子"] ?? "").trim();
-      if (!ids.has(moduleId)) continue;
-      const links = this.markdownLinks(String(row["詳細"] ?? "")).map((link) => this.cleanLinkTarget(link));
-      const moduleLink = links.find((link) => link.match(/^models\/[^/]+\.md$/));
-      const match = moduleLink?.match(/^models\/([^/]+)\.md$/);
-      if (!match || !match[1].startsWith(`${moduleId}-`)) {
-        this.failRow(path, "DDD Module の `詳細` が models/<ddd-module-id>-<slug>.md を指す", `${moduleId}: ${links.join(", ") || "リンクなし"}`);
-        continue;
-      }
-
-      this.pass(path, "DDD Module の `詳細` が models/<ddd-module-id>-<slug>.md を指す", `${moduleId}: ${moduleLink}`);
-      const modulePath = `${dirname(path)}/models/${match[1]}.md`;
-      this.checkFile(modulePath, "DDD Module のモジュールファイルが存在する");
-      this.checkHeadings(modulePath, dddModuleHeadings);
-      this.checkHeadingBodies(modulePath, dddModuleHeadings);
-      this.checkDddElementTables(modulePath);
-    }
-  }
-
-  private checkDddElementTables(path: string): void {
-    const elementIds = new Set<string>();
-    for (const spec of dddElementTableSpecs) {
-      if (this.sectionBody(path, spec.heading) === undefined) continue;
-      const table = this.checkTable(path, spec.heading, ["識別子", "名前", "役割", "根拠"]);
-      if (!table) continue;
-      this.checkNotBlank(path, table, "名前");
-      this.checkNotBlank(path, table, "役割");
-      this.checkNotBlank(path, table, "根拠");
-
-      for (const row of table.rows) {
-        const id = String(row["識別子"] ?? "").trim();
-        if (id.length === 0) {
-          this.failRow(path, `DDD Module の \`${spec.heading}\` 識別子が空欄でない`, "空欄");
-          continue;
-        }
-        if (spec.idPattern.test(id)) this.pass(path, `DDD Module の \`${spec.heading}\` 識別子が形式に合う`, id);
-        else this.failRow(path, `DDD Module の \`${spec.heading}\` 識別子が形式に合う`, id);
-
-        if (elementIds.has(id)) this.failRow(path, "DDD Module のモデル要素識別子が重複しない", id);
-        else {
-          this.pass(path, "DDD Module のモデル要素識別子が重複しない", id);
-          elementIds.add(id);
-        }
-      }
+      const downstream = String(row["Downstream"] ?? "").trim();
+      const upstream = String(row["Upstream"] ?? "").trim();
+      if (contextIds.has(downstream)) this.pass(path, "`Downstream` が Domain Map の Bounded Context に存在する", downstream);
+      else this.failRow(path, "`Downstream` が Domain Map の Bounded Context に存在する", downstream);
+      if (contextIds.has(upstream)) this.pass(path, "`Upstream` が Domain Map の Bounded Context に存在する", upstream);
+      else this.failRow(path, "`Upstream` が Domain Map の Bounded Context に存在する", upstream);
+      this.checkAllowed(path, "組織パターン", row["組織パターン"], organizationPatternValues);
+      this.checkAllowed(path, "統合パターン", row["統合パターン"], integrationPatternValues);
+      this.checkAllowed(path, "状態", row["状態"], domainMapStatusValues);
     }
   }
 
@@ -2713,14 +2609,25 @@ class AmadeusValidator {
     const known = this.knownIds.get(path);
     if (known) return known;
     if (!this.isFile(this.absolute(path))) return new Set();
-    const heading = path.endsWith("/domain/bounded-contexts.md") || path === ".amadeus/domain/bounded-contexts.md"
-      ? (path.startsWith(".amadeus/intents/") ? "コンテキスト" : "一覧")
-      : "一覧";
+    const heading = path === ".amadeus/domain-map.md" || path.endsWith("/domain-map.md") ? "Bounded Contexts" : "一覧";
     const table = this.tableAfterHeading(path, heading);
     if (!table || !table.headers.includes("識別子")) return new Set();
     const ids = new Set(table.rows.map((row) => String(row["識別子"] ?? "").trim()).filter(Boolean));
     this.knownIds.set(path, ids);
     return ids;
+  }
+
+  private domainMapBoundedContextIds(status?: "adopted" | "retired"): Set<string> {
+    const path = ".amadeus/domain-map.md";
+    if (!this.isFile(this.absolute(path))) return new Set();
+    const table = this.tableAfterHeading(path, "Bounded Contexts");
+    if (!table || !table.headers.includes("識別子")) return new Set();
+    return new Set(
+      table.rows
+        .filter((row) => !status || String(row["状態"] ?? "").trim() === status)
+        .map((row) => String(row["識別子"] ?? "").trim())
+        .filter(Boolean),
+    );
   }
 
   private checkDependencyValues(path: string, table: Table, column: string, ids: Set<string>): void {
@@ -3180,8 +3087,8 @@ class AmadeusValidator {
     if (file.startsWith(".amadeus/discoveries/")) return "Discovery";
     if (file.startsWith(".amadeus/event-storming/")) return "Event Storming";
     if (file.startsWith(".amadeus/steering/") || file === ".amadeus/steering" || file === ".amadeus/steering.md") return "Steering";
+    if (file === ".amadeus/domain-map.md" || file === ".amadeus/context-map.md") return "全体ドメイン";
     if (/^\.amadeus\/[^/]+\.md$/.test(file)) return "全体成果物";
-    if (file.startsWith(".amadeus/domain/")) return "全体ドメイン";
     if (/^\.amadeus\/intents\/[^/]+\/state\.json$/.test(file)) return "Intent 状態";
     if (/^\.amadeus\/intents\/[^/]+\/event-storming\//.test(file)) return "Event Storming";
     if (/^\.amadeus\/intents\/[^/]+\/mocks\//.test(file)) return "Intent モック";
@@ -3238,7 +3145,14 @@ class AmadeusValidator {
     if (condition.includes("依存")) return "依存関係";
     if (condition.includes("一覧内の既存 ID")) return "Index ID参照";
     if (condition.includes("空欄")) return "空欄";
-    if (target.includes("bounded-contexts.md") || target.includes("subdomains.md") || condition.includes("コンテキスト") || condition.includes("許可値")) return "ドメイン境界";
+    if (
+      target.includes("domain-map.md") ||
+      target.includes("context-map.md") ||
+      condition.includes("コンテキスト") ||
+      condition.includes("Domain Map") ||
+      condition.includes("Context Map") ||
+      condition.includes("許可値")
+    ) return "ドメイン境界";
     return "その他";
   }
 

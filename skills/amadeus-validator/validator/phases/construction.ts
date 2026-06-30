@@ -27,8 +27,8 @@ export function checkConstructionPhase(
   context.checkUnitContextReferences(
     inceptionBase,
     true,
-    ".amadeus/domain/bounded-contexts.md",
-    "Unit のコンテキストが全体 Domain Model の BC を参照する",
+    ".amadeus/domain-map.md",
+    "Unit のコンテキストが Domain Map の adopted Bounded Context を参照する",
   );
 
   context.checkUnitDesignArtifacts(inceptionBase, input.state);

@@ -62,6 +62,7 @@ function workspaceCopy(): string {
   const workspace = mkdtempSync(join(tmpdir(), "amadeus-validator"));
   cpSync(fixture, join(workspace, ".amadeus"), { recursive: true });
   updateDiscoveryCandidateStatus(workspace, "intent_record_created");
+  writeRootDomainMaps(workspace);
   return workspace;
 }
 
@@ -85,8 +86,8 @@ function intentPath(workspace: string, path: string): string {
   return join(intentRoot(workspace), phaseRelativePath(path));
 }
 
-function domainPath(workspace: string, path: string): string {
-  return join(workspace, ".amadeus/domain", path);
+function rootArtifactPath(workspace: string, path: string): string {
+  return join(workspace, ".amadeus", path);
 }
 
 function constructionIntentPath(workspace: string, path: string): string {
@@ -810,144 +811,96 @@ function replaceBoltDetailWithNonModulePath(workspace: string): void {
   );
 }
 
-function removeBoundedContextModuleFile(workspace: string): void {
-  rmSync(domainPath(workspace, `bounded-contexts/${boundedContext1}.md`));
-}
-
-function writeDddModuleWithOldModelPath(workspace: string): void {
-  const moduleDirectory = domainPath(workspace, `bounded-contexts/${boundedContext1}/models/DM001-discovery-brief`);
-  mkdirSync(moduleDirectory, { recursive: true });
+function writeRootDomainMaps(workspace: string): void {
   writeFileSync(
-    domainPath(workspace, `bounded-contexts/${boundedContext1}/models.md`),
+    rootArtifactPath(workspace, "domain-map.md"),
     [
-      "# モデル",
+      "# Domain Map",
       "",
-      "## 一覧",
+      "## Subdomains",
       "",
-      "| 識別子 | 名前 | 役割 | 詳細 |",
-      "|---|---|---|---|",
-      "| DM001 | Discovery Brief | 入力テーマと判定の概念関係を扱う。 | [model.md](models/DM001-discovery-brief/model.md) |",
+      "| 識別子 | 名前 | 種別 | 役割 | 状態 | 根拠 |",
+      "|---|---|---|---|---|---|",
+      "| SD001 | 商品管理 | 支援 | 商品情報を管理し、販売管理から参照できる状態にする。 | adopted | [D002](intents/20260629-minimum-purchase-flow.md) |",
+      "| SD002 | 顧客管理 | 支援 | 購入者または顧客に関する情報を管理する。 | adopted | [D002](intents/20260629-minimum-purchase-flow.md) |",
+      "| SD003 | 入荷管理 | 支援 | 商品が販売可能になる前の入荷を管理する。 | adopted | [D002](intents/20260629-minimum-purchase-flow.md) |",
+      "| SD004 | 販売管理 | コア | 商品選択から注文作成までの販売活動を扱う。 | adopted | [D002](intents/20260629-minimum-purchase-flow.md) |",
+      "| SD005 | 出荷管理 | 支援 | 注文後の商品発送を管理する。 | adopted | [D002](intents/20260629-minimum-purchase-flow.md) |",
+      "",
+      "## Bounded Contexts",
+      "",
+      "| 識別子 | 名前 | サブドメイン | 役割 | 状態 | 根拠 |",
+      "|---|---|---|---|---|---|",
+      "| BC001 | 商品管理 | SD001 | 商品情報を管理し、販売管理から参照できる状態にする。 | adopted | [D002](intents/20260629-minimum-purchase-flow.md) |",
+      "| BC002 | 顧客管理 | SD002 | 購入者または顧客に関する情報を管理する。 | adopted | [D002](intents/20260629-minimum-purchase-flow.md) |",
+      "| BC003 | 入荷管理 | SD003 | 商品が販売可能になる前の入荷を管理する。 | adopted | [D002](intents/20260629-minimum-purchase-flow.md) |",
+      "| BC004 | 販売管理 | SD004 | 商品選択から注文作成までの販売活動を扱う。 | adopted | [D002](intents/20260629-minimum-purchase-flow.md) |",
+      "| BC005 | 出荷管理 | SD005 | 注文後の商品発送を管理する。 | adopted | [D002](intents/20260629-minimum-purchase-flow.md) |",
       "",
     ].join("\n"),
   );
   writeFileSync(
-    join(moduleDirectory, "model.md"),
+    rootArtifactPath(workspace, "context-map.md"),
     [
-      "# DM001: Discovery Brief",
+      "# Context Map",
       "",
-      "## 概念関係",
+      "## Dependencies",
       "",
-      "入力テーマ、確認した前提、判定、推奨次アクションの関係を扱う。",
-      "",
-      "## ライフサイクル",
-      "",
-      "作成から Intent 候補確認までを扱う。",
-      "",
-      "## 集約候補",
-      "",
-      "Discovery Brief を集約候補として扱う。",
-      "",
-    ].join("\n"),
-  );
-}
-
-function writeDddModuleWithModuleFile(workspace: string): void {
-  const modulePath = domainPath(workspace, `bounded-contexts/${boundedContext1}/models/DM001-discovery-brief.md`);
-  mkdirSync(domainPath(workspace, `bounded-contexts/${boundedContext1}/models`), { recursive: true });
-  writeFileSync(
-    domainPath(workspace, `bounded-contexts/${boundedContext1}/models.md`),
-    [
-      "# モデル",
-      "",
-      "## 一覧",
-      "",
-      "| 識別子 | 名前 | 役割 | 詳細 |",
-      "|---|---|---|---|",
-      "| DM001 | Discovery Brief | 入力テーマと判定の概念関係を扱う。 | [DM001-discovery-brief.md](models/DM001-discovery-brief.md) |",
-      "",
-    ].join("\n"),
-  );
-  writeFileSync(
-    modulePath,
-    [
-      "# DM001: Discovery Brief",
-      "",
-      "## 目的",
-      "",
-      "Discovery Brief の概念関係を整理する。",
-      "",
-      "## 責務",
-      "",
-      "入力テーマ、確認した前提、判定、推奨次アクションを一貫したモデルとして扱う。",
-      "",
-      "## 概念関係",
-      "",
-      "入力テーマ、確認した前提、判定、推奨次アクションの関係を扱う。",
-      "",
-      "## ライフサイクル",
-      "",
-      "作成から Intent 候補確認までを扱う。",
-      "",
-      "## 集約候補",
-      "",
-      "Discovery Brief を集約候補として扱う。",
-      "",
-      "## モデル要素",
-      "",
-      "モデル要素を次に示す。",
-      "",
-      "## 集約",
-      "",
-      "| 識別子 | 名前 | 役割 | 根拠 |",
-      "|---|---|---|---|",
-      "| DA001 | Discovery Brief | 入力テーマと判定を保持する。 | R001 |",
-      "",
-      "## 関連成果物",
-      "",
-      "- [models.md](../models.md)",
+      "| Downstream | Upstream | 依存内容 | 組織パターン | 統合パターン | 状態 | 根拠 |",
+      "|---|---|---|---|---|---|---|",
+      "| BC004 | BC001 | 販売管理は商品情報を参照する。 | 顧客／供給者 | 公開ホストサービス（OHS） | adopted | [D002](intents/20260629-minimum-purchase-flow.md) |",
       "",
     ].join("\n"),
   );
 }
 
-function writeDddModuleWithInvalidElementTable(workspace: string): void {
-  writeDddModuleWithModuleFile(workspace);
+function removeLegacyDomainDirectory(workspace: string): void {
+  const traceabilityPath = intentPath(workspace, "traceability.md");
+  const text = readFileSync(traceabilityPath, "utf8");
+  if (!text.includes("../../../domain/subdomains.md") || !text.includes("../../../domain/bounded-contexts.md")) {
+    fail("traceability fixture does not contain expected legacy domain links");
+  }
+  writeFileSync(
+    traceabilityPath,
+    text
+      .replaceAll("../../../domain/subdomains.md", "../../../domain-map.md")
+      .replaceAll("../../../domain/bounded-contexts.md", "../../../domain-map.md"),
+  );
+  rmSync(join(workspace, ".amadeus/domain"), { recursive: true, force: true });
+}
+
+function markDomainMapContextRetired(workspace: string, contextId: string): void {
   replaceInFile(
-    domainPath(workspace, `bounded-contexts/${boundedContext1}/models/DM001-discovery-brief.md`),
-    "| DA001 | Discovery Brief | 入力テーマと判定を保持する。 | R001 |",
-    "| DE001 | Discovery Brief | 入力テーマと判定を保持する。 | R001 |",
-    "DDD Module fixture does not contain expected model element body",
+    rootArtifactPath(workspace, "domain-map.md"),
+    `| ${contextId} |`,
+    `| ${contextId} |`,
+    "domain-map fixture does not contain expected context row",
+  );
+  const path = rootArtifactPath(workspace, "domain-map.md");
+  const text = readFileSync(path, "utf8");
+  const updated = text.replace(
+    new RegExp(`(\\| ${contextId} \\|[^\\n]+\\| )adopted( \\| \\[[^\\n]+)`),
+    "$1retired$2",
+  );
+  if (updated === text) fail(`domain-map fixture does not contain adopted ${contextId} row`);
+  writeFileSync(path, updated);
+}
+
+function replaceDomainMapStatusWithCandidate(workspace: string): void {
+  replaceInFile(
+    rootArtifactPath(workspace, "domain-map.md"),
+    "| BC004 | 販売管理 | SD004 | 商品選択から注文作成までの販売活動を扱う。 | adopted |",
+    "| BC004 | 販売管理 | SD004 | 商品選択から注文作成までの販売活動を扱う。 | candidate |",
+    "domain-map fixture does not contain expected BC004 row",
   );
 }
 
-function writeEmptyGlobalBoundedContexts(workspace: string): void {
-  writeFileSync(
-    domainPath(workspace, "bounded-contexts.md"),
-    [
-      "# 境界づけられたコンテキスト",
-      "",
-      "## 範囲",
-      "",
-      "この文書は、対象 Intent で Unit を切る時に参照する境界づけられたコンテキストを扱う。",
-      "",
-      "## コンテキスト",
-      "",
-      "| 識別子 | 名前 | サブドメイン | 役割 | モデル | 契約 |",
-      "|---|---|---|---|---|---|",
-      "",
-      "境界づけられたコンテキストは未確認である。",
-      "",
-      "## コンテキスト間の依存",
-      "",
-      "| Downstream | Upstream | 依存内容 | 組織パターン | 統合パターン | 状態 |",
-      "|---|---|---|---|---|---|",
-      "",
-      "## 外部境界",
-      "",
-      "| コンテキスト | 名前 | 役割 | 根拠 |",
-      "|---|---|---|---|",
-      "",
-    ].join("\n"),
+function replaceContextMapUpstreamWithMissingId(workspace: string): void {
+  replaceInFile(
+    rootArtifactPath(workspace, "context-map.md"),
+    "| BC004 | BC001 | 販売管理は商品情報を参照する。 |",
+    "| BC004 | BC999 | 販売管理は商品情報を参照する。 |",
+    "context-map fixture does not contain expected dependency row",
   );
 }
 
@@ -1936,6 +1889,31 @@ function appendTaskGenerationTrace(
 const phaseInceptionWorkspace = phaseWorkspaceCopy();
 run(["bun", "run", validator, phaseInceptionWorkspace, intent]);
 
+const domainMapWithoutLegacyDomainWorkspace = phaseWorkspaceCopy();
+removeLegacyDomainDirectory(domainMapWithoutLegacyDomainWorkspace);
+run(["bun", "run", validator, domainMapWithoutLegacyDomainWorkspace, intent]);
+
+const domainMapCandidateStatusWorkspace = phaseWorkspaceCopy();
+replaceDomainMapStatusWithCandidate(domainMapCandidateStatusWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, domainMapCandidateStatusWorkspace, intent],
+  "`状態` が許可値である",
+);
+
+const unitContextReferencesRetiredDomainMapWorkspace = phaseWorkspaceCopy();
+markDomainMapContextRetired(unitContextReferencesRetiredDomainMapWorkspace, "BC004");
+runExpectFailure(
+  ["bun", "run", validator, unitContextReferencesRetiredDomainMapWorkspace, intent],
+  "Unit のコンテキストが Domain Map の adopted Bounded Context を参照する",
+);
+
+const contextMapWithMissingUpstreamWorkspace = phaseWorkspaceCopy();
+replaceContextMapUpstreamWithMissingId(contextMapWithMissingUpstreamWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, contextMapWithMissingUpstreamWorkspace, intent],
+  "`Upstream` が Domain Map の Bounded Context に存在する",
+);
+
 const missingRequiredRequirementArtifactWorkspace = phaseWorkspaceCopy();
 replaceRequiredRequirementArtifactWithMissingPath(missingRequiredRequirementArtifactWorkspace);
 runExpectFailure(
@@ -1983,10 +1961,6 @@ writeGrillings(join(discoveryGrillingsWorkspace, `.amadeus/discoveries/${discove
   target: `../${discovery}.md`,
 });
 run(["bun", "run", validator, discoveryGrillingsWorkspace]);
-
-const domainGrillingsWorkspace = phaseWorkspaceCopy();
-writeGrillings(join(domainGrillingsWorkspace, ".amadeus/domain"), { target: "../glossary.md" });
-run(["bun", "run", validator, domainGrillingsWorkspace]);
 
 const eventStormingWorkspace = phaseWorkspaceCopy();
 writeEventStormingSession(eventStormingWorkspace);
@@ -2507,13 +2481,6 @@ runExpectFailure(
   "Bolt の `ユニット` が重複しない",
 );
 
-const emptyGlobalBoundedContextsWorkspace = phaseWorkspaceCopy();
-writeEmptyGlobalBoundedContexts(emptyGlobalBoundedContextsWorkspace);
-runExpectFailure(
-  ["bun", "run", validator, emptyGlobalBoundedContextsWorkspace, intent],
-  "Unit のコンテキストが全体 Domain Model の BC を参照する",
-);
-
 const constructionWithoutInceptionRequiredWorkspace = phaseWorkspaceCopy();
 writeFunctionalDesign(constructionWithoutInceptionRequiredWorkspace);
 writeConstructionTasks(constructionWithoutInceptionRequiredWorkspace);
@@ -2829,31 +2796,6 @@ replaceBoltDetailWithNonModulePath(nonModuleBoltDetailWorkspace);
 runExpectFailure(
   ["bun", "run", validator, nonModuleBoltDetailWorkspace, intent],
   "`詳細` が bolts/<bolt-id>-<slug>.md を指す",
-);
-
-const missingBoundedContextModuleWorkspace = phaseWorkspaceCopy();
-removeBoundedContextModuleFile(missingBoundedContextModuleWorkspace);
-runExpectFailure(
-  ["bun", "run", validator, missingBoundedContextModuleWorkspace, intent],
-  "境界づけられたコンテキストのモジュールファイルが存在する",
-);
-
-const oldDddModuleModelPathWorkspace = phaseWorkspaceCopy();
-writeDddModuleWithOldModelPath(oldDddModuleModelPathWorkspace);
-runExpectFailure(
-  ["bun", "run", validator, oldDddModuleModelPathWorkspace, intent],
-  "DDD Module の `詳細` が models/<ddd-module-id>-<slug>.md を指す",
-);
-
-const dddModuleFileWorkspace = phaseWorkspaceCopy();
-writeDddModuleWithModuleFile(dddModuleFileWorkspace);
-run(["bun", "run", validator, dddModuleFileWorkspace, intent]);
-
-const invalidDddElementTableWorkspace = phaseWorkspaceCopy();
-writeDddModuleWithInvalidElementTable(invalidDddElementTableWorkspace);
-runExpectFailure(
-  ["bun", "run", validator, invalidDddElementTableWorkspace, intent],
-  "DDD Module の `集約` 識別子が形式に合う",
 );
 
 const missingConstructionTraceWorkspace = phaseWorkspaceCopy();

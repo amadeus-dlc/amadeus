@@ -342,115 +342,34 @@ function prepareSteeringFixture(workspace: string): void {
 }
 
 function applyLoanDomainBoundaryFixture(workspace: string): void {
-  const domain = join(workspace, ".amadeus/domain");
-  ensureDir(domain);
   writeFileSync(
-    join(domain, "subdomains.md"),
+    join(workspace, ".amadeus/domain-map.md"),
     [
-      "# サブドメイン",
+      "# Domain Map",
       "",
-      "## 一覧",
+      "## Subdomains",
       "",
-      "| 識別子 | 名前 | 種別 | 役割 | コンテキスト |",
-      "|---|---|---|---|---|",
-      "| SD001 | 貸出管理 | コア | 利用者の貸出可否確認を扱う。 | BC001 |",
-      "",
-    ].join("\n"),
-  );
-
-  writeFileSync(
-    join(domain, "bounded-contexts.md"),
-    [
-      "# 境界づけられたコンテキスト",
-      "",
-      "## 一覧",
-      "",
-      "| 識別子 | 名前 | サブドメイン | 役割 | モデル | 契約 |",
+      "| 識別子 | 名前 | 種別 | 役割 | 状態 | 根拠 |",
       "|---|---|---|---|---|---|",
-      "| BC001 | 貸出可否確認 | SD001 | 利用者の貸出可否と返却期限を判断する。 | [models.md](bounded-contexts/BC001-loan-eligibility/models.md) | [contracts.md](bounded-contexts/BC001-loan-eligibility/contracts.md) |",
+      "| SD001 | 貸出管理 | コア | 利用者の貸出可否確認を扱う。 | adopted | [D001](intents/20260627-loan-self-service/ideation/decisions/D001-complete-ideation.md) |",
       "",
-      "## 外部境界",
+      "## Bounded Contexts",
       "",
-      "| コンテキスト | 名前 | 役割 | 根拠 |",
-      "|---|---|---|---|",
-      "",
-      "外部境界は未確認である。",
-      "",
-      "## コンテキスト間の依存",
-      "",
-      "| Downstream | Upstream | 依存内容 | 組織パターン | 統合パターン | 状態 |",
+      "| 識別子 | 名前 | サブドメイン | 役割 | 状態 | 根拠 |",
       "|---|---|---|---|---|---|",
-      "",
-      "コンテキスト間の依存は未確認である。",
-      "",
-      "## パターン分類",
-      "",
-      "組織パターン:",
-      "",
-      "- パートナーシップ",
-      "- 別々の道",
-      "- 順応者",
-      "- 顧客／供給者",
-      "",
-      "統合パターン:",
-      "",
-      "- 共有カーネル",
-      "- 巨大な泥団子",
-      "- 公開ホストサービス（OHS）",
-      "- 公表された言語（PL）",
-      "- 腐敗防止層（ACL）",
-      "",
-    ].join("\n"),
-  );
-
-  const contextDir = join(domain, "bounded-contexts/BC001-loan-eligibility");
-  ensureDir(contextDir);
-  writeFileSync(
-    join(domain, "bounded-contexts/BC001-loan-eligibility.md"),
-    [
-      "# 貸出可否確認",
-      "",
-      "## 目的",
-      "",
-      "利用者の貸出可否と返却期限を判断する。",
-      "",
-      "## 責務",
-      "",
-      "貸出条件を確認し、貸出可否を返す。",
-      "",
-      "## 外部境界",
-      "",
-      "外部境界は未確認である。",
-      "",
-      "## 関連成果物",
-      "",
-      "- [models.md](BC001-loan-eligibility/models.md)",
-      "- [contracts.md](BC001-loan-eligibility/contracts.md)",
+      "| BC001 | 貸出可否確認 | SD001 | 利用者の貸出可否と返却期限を判断する。 | adopted | [D001](intents/20260627-loan-self-service/ideation/decisions/D001-complete-ideation.md) |",
       "",
     ].join("\n"),
   );
   writeFileSync(
-    join(contextDir, "models.md"),
+    join(workspace, ".amadeus/context-map.md"),
     [
-      "# モデル",
+      "# Context Map",
       "",
-      "## 一覧",
+      "## Dependencies",
       "",
-      "| 識別子 | 名前 | 役割 | 詳細 |",
-      "|---|---|---|---|",
-      "",
-      "モデルは未確認である。",
-      "",
-    ].join("\n"),
-  );
-  writeFileSync(
-    join(contextDir, "contracts.md"),
-    [
-      "# 契約",
-      "",
-      "## 一覧",
-      "",
-      "契約は未確認である。",
+      "| Downstream | Upstream | 依存内容 | 組織パターン | 統合パターン | 状態 | 根拠 |",
+      "|---|---|---|---|---|---|---|",
       "",
     ].join("\n"),
   );
@@ -1594,7 +1513,7 @@ function intentIdeationPrompt(): string {
     "- 質問せずに続行してください。",
     "- 同梱テンプレートのファイル名を維持し、初期モックは必ず `mocks/initial-confirmation.puml` として作成してください。",
     "- Intent Record と対象 Intent 配下の Ideation 成果物だけを作成または更新してください。",
-    "- requirements、use-cases、units、bolts、domain 成果物は作らないでください。",
+    "- requirements、use-cases、units、bolts、Domain Map、Context Map は作らないでください。",
     "- git commit はしないでください。",
     "- 作成後に `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . 20260627-loan-self-service` を実行し、結果を要約してください。",
   ].join("\n");
@@ -1660,7 +1579,7 @@ function intentIdeationInternalPrompt(process: IdeationInternalProcess): string 
     "- 質問せずに続行してください。",
     "- 同梱テンプレートのファイル名を維持し、初期モックは必ず `mocks/initial-confirmation.puml` として作成してください。",
     "- 対象 Intent 配下の、指定された内部プロセスの成果物だけを作成または更新してください。",
-    "- requirements、use-cases、units、bolts、domain 成果物は作らないでください。",
+    "- requirements、use-cases、units、bolts、Domain Map、Context Map は作らないでください。",
     "- git commit はしないでください。",
     "- 作成後に `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . 20260627-loan-self-service` を実行し、結果を要約してください。",
   ].join("\n");
@@ -1695,10 +1614,10 @@ function intentInceptionPrompt(): string {
     "- 質問せずに続行してください。",
     "- できるだけ同梱テンプレートを使い、上の ID とファイル名で最小成果物を作成してください。",
     "- 対象 Intent 配下の Inception 成果物だけを作成または更新してください。",
-    "- domain layer は既存成果物を参照するだけにし、新規作成や更新はしないでください。",
+    "- Domain Map と Context Map は既存成果物を参照するだけにし、新規作成や更新はしないでください。",
     "- 実装、CI は作らないでください。",
     "- greenfield なので `codebase-analysis.md` は必須成果物に含めず、対象外理由を traceability に残してください。",
-    "- `inception.gate` を `passed` にする場合は、既存の domain layer にある BC、または人間が確定した BC を `units.md` の `コンテキスト` から参照してください。",
+    "- `inception.gate` を `passed` にする場合は、既存の Domain Map にある adopted BC、または人間が確定した BC を `units.md` の `コンテキスト` から参照してください。",
     "- BC が未確認なら `inception.gate` は `not_ready` にしてください。",
     "- Task は Construction の Task Generation で生成するため、Inception では `tasks.md` を作らないでください。",
     "- 初回作成時の各 Review Gate は自己点検として扱い、矛盾がない限り質問で止まらず `gate: not_ready` の成果物を作ってください。",
@@ -1783,8 +1702,8 @@ function intentInceptionInternalPrompt(process: InceptionInternalProcess): strin
     "- できるだけ同梱テンプレートを使い、上の ID とファイル名で最小成果物を作成してください。",
     "- 対象 Intent 配下の、指定された内部プロセスの成果物だけを作成または更新してください。",
     ...(process === "units-generation" || process === "traceability-finalization"
-      ? ["- domain layer は既存成果物を参照するだけにし、新規作成や更新はしないでください。"]
-      : ["- domain layer、実装、CI は作らないでください。"]),
+      ? ["- Domain Map と Context Map は既存成果物を参照するだけにし、新規作成や更新はしないでください。"]
+      : ["- Domain Map、Context Map、実装、CI は作らないでください。"]),
     ...(process === "units-generation" || process === "traceability-finalization" ? ["- 実装、CI は作らないでください。"] : []),
     "- git commit はしないでください。",
     "- 作成後に `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . 20260627-loan-self-service` を実行し、結果を要約してください。",
@@ -1793,8 +1712,9 @@ function intentInceptionInternalPrompt(process: InceptionInternalProcess): strin
 
 function loanDomainBoundaryPromptLines(): string[] {
   return [
-    "- 既存 domain layer: `.amadeus/domain/subdomains.md`、`.amadeus/domain/bounded-contexts.md`、`.amadeus/domain/bounded-contexts/BC001-loan-eligibility.md`、`.amadeus/domain/bounded-contexts/BC001-loan-eligibility/models.md`、`.amadeus/domain/bounded-contexts/BC001-loan-eligibility/contracts.md`。",
-    "- 既存 BC: BC001 loan-eligibility。units.md の `コンテキスト` は BC001 を参照する。",
+    "- 既存 Domain Map: `.amadeus/domain-map.md`。BC001 loan-eligibility は adopted である。",
+    "- 既存 Context Map: `.amadeus/context-map.md`。",
+    "- units.md の `コンテキスト` は BC001 を参照する。",
   ];
 }
 
@@ -1923,6 +1843,8 @@ function steeringArtifacts(): string[] {
     ".amadeus/steering/knowledge/README.md",
     ".amadeus/steering/policies.md",
     ".amadeus/steering/policies/README.md",
+    ".amadeus/domain-map.md",
+    ".amadeus/context-map.md",
     ".amadeus/discoveries.md",
     ".amadeus/intents.md",
   ];
@@ -2050,11 +1972,8 @@ function ideationTraceabilityFinalizationMarkdownArtifacts(intent: string): stri
 
 function loanDomainBoundaryArtifacts(): string[] {
   return [
-    ".amadeus/domain/subdomains.md",
-    ".amadeus/domain/bounded-contexts.md",
-    ".amadeus/domain/bounded-contexts/BC001-loan-eligibility.md",
-    ".amadeus/domain/bounded-contexts/BC001-loan-eligibility/models.md",
-    ".amadeus/domain/bounded-contexts/BC001-loan-eligibility/contracts.md",
+    ".amadeus/domain-map.md",
+    ".amadeus/context-map.md",
   ];
 }
 
