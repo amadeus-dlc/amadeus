@@ -468,88 +468,110 @@ function findProvenanceSkillFile(manifest: SkillProvenanceManifest, snapshot: st
 
 function validateSkillProvenance(): boolean {
   console.log("## Example skill provenance");
+  const manifest = readSkillProvenanceManifest();
+  if (!manifest) return false;
+
+  const errors = validateSkillProvenanceManifest(manifest);
+  if (errors.length > 0) return reportProvenanceErrors(errors);
+
+  console.log("skill provenance: ok");
+  return true;
+}
+
+function readSkillProvenanceManifest(): SkillProvenanceManifest | undefined {
   if (!existsSync(provenanceManifestPath)) {
     console.error(`missing provenance manifest: ${provenanceManifestPath}`);
-    return false;
+    return undefined;
   }
 
-  let manifest: SkillProvenanceManifest;
   try {
-    manifest = JSON.parse(readFileSync(provenanceManifestPath, "utf8")) as SkillProvenanceManifest;
+    return JSON.parse(readFileSync(provenanceManifestPath, "utf8")) as SkillProvenanceManifest;
   } catch (error) {
     console.error(`invalid provenance manifest JSON: ${provenanceManifestPath}`);
     console.error(error instanceof Error ? error.message : String(error));
-    return false;
+    return undefined;
   }
+}
 
+function validateSkillProvenanceManifest(manifest: SkillProvenanceManifest): string[] {
   const errors: string[] = [];
-  if (manifest.version !== 1) {
-    errors.push("version must be 1");
-  }
-  if (!Array.isArray(manifest.entries)) {
-    errors.push("entries must be an array");
-  }
-  if (errors.length > 0 || !Array.isArray(manifest.entries)) {
-    return reportProvenanceErrors(errors);
-  }
+  errors.push(...skillProvenanceManifestShapeErrors(manifest));
+  if (errors.length > 0 || !Array.isArray(manifest.entries)) return errors;
 
   const expectedSnapshots = new Set(snapshots.map((snapshot) => snapshot.workdir));
   const seenSnapshots = new Set<string>();
 
   for (const entry of manifest.entries) {
-    if (!expectedSnapshots.has(entry.snapshot)) {
-      errors.push(`unknown snapshot: ${entry.snapshot}`);
-      continue;
-    }
-    if (seenSnapshots.has(entry.snapshot)) {
-      errors.push(`duplicate snapshot: ${entry.snapshot}`);
-    }
-    seenSnapshots.add(entry.snapshot);
-
-    if (!Array.isArray(entry.skillFiles) || entry.skillFiles.length === 0) {
-      errors.push(`${entry.snapshot}: skillFiles must be a non-empty array`);
-      continue;
-    }
-
-    for (const skillFile of entry.skillFiles) {
-      if (!skillFile.path.startsWith("skills/") || !skillFile.path.endsWith("/SKILL.md")) {
-        errors.push(`${entry.snapshot}: skill file path must be skills/**/SKILL.md: ${skillFile.path}`);
-        continue;
-      }
-      if (!/^[a-f0-9]{32}$/.test(skillFile.md5)) {
-        errors.push(`${entry.snapshot}: invalid md5 for ${skillFile.path}: ${skillFile.md5}`);
-        continue;
-      }
-      if (!existsSync(skillFile.path)) {
-        errors.push(`${entry.snapshot}: missing skill file: ${skillFile.path}`);
-        continue;
-      }
-
-      const actualMd5 = md5File(skillFile.path);
-      if (actualMd5 !== skillFile.md5) {
-        if (typeof skillFile.staleReason === "string" && skillFile.staleReason.trim().length > 0) {
-          console.warn(`${entry.snapshot}: stale skill provenance for ${skillFile.path}: ${skillFile.staleReason}`);
-        } else {
-          errors.push(`${entry.snapshot}: md5 mismatch for ${skillFile.path}: expected ${skillFile.md5}, actual ${actualMd5}`);
-        }
-      } else if (skillFile.staleReason !== undefined) {
-        errors.push(`${entry.snapshot}: staleReason must be removed when md5 is current for ${skillFile.path}`);
-      }
-    }
+    validateSkillProvenanceEntry(entry, expectedSnapshots, seenSnapshots, errors);
   }
 
+  appendMissingSnapshotProvenanceErrors(expectedSnapshots, seenSnapshots, errors);
+  return errors;
+}
+
+function skillProvenanceManifestShapeErrors(manifest: SkillProvenanceManifest): string[] {
+  const errors: string[] = [];
+  if (manifest.version !== 1) errors.push("version must be 1");
+  if (!Array.isArray(manifest.entries)) errors.push("entries must be an array");
+  return errors;
+}
+
+function validateSkillProvenanceEntry(
+  entry: SkillProvenanceEntry,
+  expectedSnapshots: Set<string>,
+  seenSnapshots: Set<string>,
+  errors: string[],
+): void {
+  if (!expectedSnapshots.has(entry.snapshot)) {
+    errors.push(`unknown snapshot: ${entry.snapshot}`);
+    return;
+  }
+  if (seenSnapshots.has(entry.snapshot)) errors.push(`duplicate snapshot: ${entry.snapshot}`);
+  seenSnapshots.add(entry.snapshot);
+
+  if (!Array.isArray(entry.skillFiles) || entry.skillFiles.length === 0) {
+    errors.push(`${entry.snapshot}: skillFiles must be a non-empty array`);
+    return;
+  }
+
+  for (const skillFile of entry.skillFiles) {
+    validateSkillFileDigest(entry.snapshot, skillFile, errors);
+  }
+}
+
+function validateSkillFileDigest(snapshot: string, skillFile: SkillFileDigest, errors: string[]): void {
+  if (!skillFile.path.startsWith("skills/") || !skillFile.path.endsWith("/SKILL.md")) {
+    errors.push(`${snapshot}: skill file path must be skills/**/SKILL.md: ${skillFile.path}`);
+    return;
+  }
+  if (!/^[a-f0-9]{32}$/.test(skillFile.md5)) {
+    errors.push(`${snapshot}: invalid md5 for ${skillFile.path}: ${skillFile.md5}`);
+    return;
+  }
+  if (!existsSync(skillFile.path)) {
+    errors.push(`${snapshot}: missing skill file: ${skillFile.path}`);
+    return;
+  }
+
+  validateSkillFileDigestFreshness(snapshot, skillFile, md5File(skillFile.path), errors);
+}
+
+function validateSkillFileDigestFreshness(snapshot: string, skillFile: SkillFileDigest, actualMd5: string, errors: string[]): void {
+  if (actualMd5 !== skillFile.md5) {
+    if (typeof skillFile.staleReason === "string" && skillFile.staleReason.trim().length > 0) {
+      console.warn(`${snapshot}: stale skill provenance for ${skillFile.path}: ${skillFile.staleReason}`);
+    } else {
+      errors.push(`${snapshot}: md5 mismatch for ${skillFile.path}: expected ${skillFile.md5}, actual ${actualMd5}`);
+    }
+  } else if (skillFile.staleReason !== undefined) {
+    errors.push(`${snapshot}: staleReason must be removed when md5 is current for ${skillFile.path}`);
+  }
+}
+
+function appendMissingSnapshotProvenanceErrors(expectedSnapshots: Set<string>, seenSnapshots: Set<string>, errors: string[]): void {
   for (const snapshot of expectedSnapshots) {
-    if (!seenSnapshots.has(snapshot)) {
-      errors.push(`missing snapshot provenance: ${snapshot}`);
-    }
+    if (!seenSnapshots.has(snapshot)) errors.push(`missing snapshot provenance: ${snapshot}`);
   }
-
-  if (errors.length > 0) {
-    return reportProvenanceErrors(errors);
-  }
-
-  console.log("skill provenance: ok");
-  return true;
 }
 
 function md5File(path: string): string {
