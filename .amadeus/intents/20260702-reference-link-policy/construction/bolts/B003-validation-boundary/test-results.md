@@ -20,7 +20,7 @@
 
 ## CI確認
 
-- [PR #285](https://github.com/amadeus-dlc/amadeus/pull/285) のCIは、push後に再確認する。
+- [PR #285](https://github.com/amadeus-dlc/amadeus/pull/285) の `mock` check は SUCCESS である。
 
 ## 受け入れ証拠
 

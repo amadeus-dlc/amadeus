@@ -20,7 +20,7 @@
 
 | 観点 | 状態 | 根拠 |
 |---|---|---|
-| CI | 監視中 | [PR #285](https://github.com/amadeus-dlc/amadeus/pull/285) は push 後に再確認する。 |
+| CI | 成功 | [PR #285](https://github.com/amadeus-dlc/amadeus/pull/285) の `mock` check が SUCCESS。 |
 | レビュー | レビューなし | [PR #285](https://github.com/amadeus-dlc/amadeus/pull/285) に review はまだない。 |
 | コメント | コメントなし | [PR #285](https://github.com/amadeus-dlc/amadeus/pull/285) にトップレベルコメント、レビュー、インラインコメントなし。 |
 | マージ | 未実施 | [PR #285](https://github.com/amadeus-dlc/amadeus/pull/285) は open である。 |
