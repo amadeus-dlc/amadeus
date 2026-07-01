@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
-import { checkPublicTypeFile, writePublicTypeFileBaseline } from "./check";
+import { checkPublicTypeFile } from "./check";
 
 const root = resolve(import.meta.dir, "../..");
 
@@ -25,6 +25,19 @@ function writeProject(files: Record<string, string>): string {
     writeFileSync(absolutePath, text);
   }
   return projectRoot;
+}
+
+function runCheck(args: string[]): { success: boolean; output: string } {
+  const result = Bun.spawnSync({
+    cmd: ["bun", "run", "lints/public-type-file/check.ts", ...args],
+    cwd: root,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  return {
+    success: result.success,
+    output: `${result.stdout.toString()}${result.stderr.toString()}`,
+  };
 }
 
 const sampleRoot = writeProject({
@@ -94,9 +107,8 @@ process.once("exit", () => {
 const failedCheck = checkPublicTypeFile({
   root: sampleRoot,
   include: ["src"],
-  baselinePath: join(sampleRoot, "public-type-file-baseline.json"),
 });
-assert(!failedCheck.ok, "file with multiple public types must fail without baseline");
+assert(!failedCheck.ok, "file with multiple public types must fail");
 assert(failedCheck.violations.length === 3, `three files must violate: ${failedCheck.violations.length}`);
 assert(
   failedCheck.violations.some((violation) => violation.file === "src/listed.ts" && violation.publicTypeCount === 3),
@@ -107,69 +119,17 @@ assert(
   "default export assignment of local type must count as a public type",
 );
 assert(
-  failedCheck.messages.some((message) => message.includes("new public type file violation")),
-  "new violation must be reported",
+  failedCheck.messages.some((message) => message.includes("public type file violation")),
+  "violation must be reported",
 );
 
-const baseline = writePublicTypeFileBaseline({
-  root: sampleRoot,
-  include: ["src"],
-  baselinePath: join(sampleRoot, "public-type-file-baseline.json"),
-});
-assert(baseline.entries.length === 3, `baseline must capture three violations: ${baseline.entries.length}`);
+const baselineArgCheck = runCheck(["--check", "--baseline", join(sampleRoot, "public-type-file-baseline.json")]);
+assert(!baselineArgCheck.success, "public-type-file lint must not accept --baseline");
+assert(baselineArgCheck.output.includes("unknown argument: --baseline"), "public-type-file lint must reject --baseline");
 
-const baselineCheck = checkPublicTypeFile({
-  root: sampleRoot,
-  include: ["src"],
-  baselinePath: join(sampleRoot, "public-type-file-baseline.json"),
-});
-assert(baselineCheck.ok, "baseline violation must pass when public type count is unchanged");
-
-writeFileSync(
-  join(sampleRoot, "src/bad.ts"),
-  `
-export type First = {
-  value: string;
-};
-
-export interface Second {
-  value: string;
-}
-
-export type Third = {
-  value: string;
-};
-`,
-);
-const increasedCheck = checkPublicTypeFile({
-  root: sampleRoot,
-  include: ["src"],
-  baselinePath: join(sampleRoot, "public-type-file-baseline.json"),
-});
-assert(!increasedCheck.ok, "baseline violation must fail when public type count increases");
-assert(
-  increasedCheck.messages.some((message) => message.includes("public type count increased")),
-  "public type count increase must be reported",
-);
-
-writeFileSync(
-  join(sampleRoot, "src/bad.ts"),
-  `
-export type First = {
-  value: string;
-};
-`,
-);
-const decreasedCheck = checkPublicTypeFile({
-  root: sampleRoot,
-  include: ["src"],
-  baselinePath: join(sampleRoot, "public-type-file-baseline.json"),
-});
-assert(!decreasedCheck.ok, "baseline violation must fail when public type count decreases");
-assert(
-  decreasedCheck.messages.some((message) => message.includes("stale public type file baseline")),
-  "public type count decrease must request baseline update",
-);
+const updateBaselineCheck = runCheck(["--update-baseline"]);
+assert(!updateBaselineCheck.success, "public-type-file lint must not accept --update-baseline");
+assert(updateBaselineCheck.output.includes("unknown argument: --update-baseline"), "public-type-file lint must reject --update-baseline");
 
 const packageJson = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
   scripts?: Record<string, string>;
@@ -190,10 +150,5 @@ assert(
   packageJson.scripts?.["test:it:all"]?.includes("npm run test:it:public-type-file"),
   "test:it:all must run public-type-file eval",
 );
-
-const repoBaseline = JSON.parse(readFileSync(join(root, "lints/public-type-file/baseline.json"), "utf8")) as {
-  entries?: unknown[];
-};
-assert(repoBaseline.entries?.length === 0, "public-type-file baseline must stay empty");
 
 console.log("public type file eval: ok");

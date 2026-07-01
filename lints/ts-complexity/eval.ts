@@ -27,6 +27,19 @@ function writeProject(files: Record<string, string>): string {
   return projectRoot;
 }
 
+function runCheck(args: string[]): { success: boolean; output: string } {
+  const result = Bun.spawnSync({
+    cmd: ["bun", "run", "lints/ts-complexity/check.ts", ...args],
+    cwd: root,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  return {
+    success: result.success,
+    output: `${result.stdout.toString()}${result.stderr.toString()}`,
+  };
+}
+
 const sampleSource = `
 export function simple(value: string): string {
   return value;
@@ -169,49 +182,20 @@ const failedCheck = checkTsComplexity({
   root: sampleRoot,
   include: ["src"],
   maxComplexity: 4,
-  baselinePath: join(sampleRoot, "complexity-baseline.json"),
 });
 assert(!failedCheck.ok, "new complexity violation must fail");
 assert(
-  failedCheck.messages.some((message) => message.includes("new complexity violation")),
-  "new complexity violation must be reported",
+  failedCheck.messages.some((message) => message.includes("complexity violation")),
+  "complexity violation must be reported",
 );
 
-writeFileSync(
-  join(sampleRoot, "complexity-baseline.json"),
-  JSON.stringify(
-    {
-      maxComplexity: 4,
-      entries: [
-        {
-          id: "src/sample.ts#function:complex",
-          complexity: 8,
-          file: "src/sample.ts",
-          name: "complex",
-          line: 6,
-        },
-      ],
-    },
-    null,
-    2,
-  ) + "\n",
-);
-const baselineCheck = checkTsComplexity({
-  root: sampleRoot,
-  include: ["src"],
-  maxComplexity: 4,
-  baselinePath: join(sampleRoot, "complexity-baseline.json"),
-});
-assert(baselineCheck.ok, "baseline violation must pass when complexity is unchanged");
+const baselineArgCheck = runCheck(["--check", "--baseline", join(sampleRoot, "complexity-baseline.json")]);
+assert(!baselineArgCheck.success, "ts-complexity lint must not accept --baseline");
+assert(baselineArgCheck.output.includes("unknown argument: --baseline"), "ts-complexity lint must reject --baseline");
 
-writeFileSync(join(sampleRoot, "src/sample.ts"), `\n${sampleSource}`);
-const shiftedLineCheck = checkTsComplexity({
-  root: sampleRoot,
-  include: ["src"],
-  maxComplexity: 4,
-  baselinePath: join(sampleRoot, "complexity-baseline.json"),
-});
-assert(shiftedLineCheck.ok, "baseline ID must not change when unrelated lines are inserted");
+const updateBaselineCheck = runCheck(["--update-baseline"]);
+assert(!updateBaselineCheck.success, "ts-complexity lint must not accept --update-baseline");
+assert(updateBaselineCheck.output.includes("unknown argument: --update-baseline"), "ts-complexity lint must reject --update-baseline");
 
 writeFileSync(
   join(sampleRoot, "src/sample.ts"),
@@ -242,12 +226,11 @@ const decreasedCheck = checkTsComplexity({
   root: sampleRoot,
   include: ["src"],
   maxComplexity: 4,
-  baselinePath: join(sampleRoot, "complexity-baseline.json"),
 });
-assert(!decreasedCheck.ok, "baseline violation must fail when complexity decreases but remains over the limit");
+assert(!decreasedCheck.ok, "complexity violation must fail when complexity remains over the limit");
 assert(
-  decreasedCheck.messages.some((message) => message.includes("complexity baseline is stale")),
-  "complexity decrease must request baseline update",
+  decreasedCheck.messages.some((message) => message.includes("complexity violation")),
+  "complexity violation after decrease must be reported",
 );
 
 writeFileSync(
@@ -272,12 +255,11 @@ const increasedCheck = checkTsComplexity({
   root: sampleRoot,
   include: ["src"],
   maxComplexity: 4,
-  baselinePath: join(sampleRoot, "complexity-baseline.json"),
 });
-assert(!increasedCheck.ok, "baseline violation must fail when complexity increases");
+assert(!increasedCheck.ok, "complexity violation must fail when complexity increases");
 assert(
-  increasedCheck.messages.some((message) => message.includes("complexity increased")),
-  "complexity increase must be reported",
+  increasedCheck.messages.some((message) => message.includes("complexity violation")),
+  "complexity violation after increase must be reported",
 );
 
 const packageJson = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
