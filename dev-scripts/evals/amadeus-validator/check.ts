@@ -752,6 +752,15 @@ function replaceTaskUseCaseWithNone(workspace: string): void {
   );
 }
 
+function replaceSecondBoltTaskUseCaseWithNone(workspace: string): void {
+  replaceInFile(
+    intentPath(workspace, `bolts/${bolt2}/tasks.md`),
+    "  - 要求: R002, R003\n  - ユースケース: UC002\n  - 依存: なし",
+    "  - 要求: R002, R003\n  - ユースケース: なし\n  - 依存: なし",
+    "tasks fixture does not contain expected second bolt task use case",
+  );
+}
+
 function makeBoltReferenceMultipleUnits(workspace: string, withReason: boolean): void {
   const boltsPath = intentPath(workspace, "bolts.md");
   replaceInFile(
@@ -1976,6 +1985,25 @@ function appendTaskGenerationTrace(
   );
 }
 
+function appendTaskGenerationTraceWithSecondBoltRow(workspace: string): void {
+  const path = constructionIntentPath(workspace, "traceability.md");
+  const text = readFileSync(path, "utf8");
+  writeFileSync(
+    path,
+    [
+      text.trimEnd(),
+      "",
+      "## Task Generation からの追跡",
+      "",
+      "| Evidence | Task | 実装 | 検証 | PR | 状態 |",
+      "|---|---|---|---|---|---|",
+      `| [tasks.md](bolts/${bolt1}/tasks.md) | B001/T001, B001/T002 | 未実施 | 未実施 | 未実施 | ready_for_approval |`,
+      `| [tasks.md](bolts/${bolt2}/tasks.md) | B002/T001, B002/T002 | 未実施 | 未実施 | 未実施 | planned |`,
+      "",
+    ].join("\n"),
+  );
+}
+
 const phaseInceptionWorkspace = phaseWorkspaceCopy();
 replaceCurrentIntentDomainMapEvidenceWithDecision(phaseInceptionWorkspace);
 replaceCurrentIntentContextMapEvidenceWithDecision(phaseInceptionWorkspace);
@@ -2912,6 +2940,17 @@ runExpectFailure(
   ["bun", "run", validator, constructionDesignTraceWrongBoltWorkspace, intent],
   "`Task Generation からの追跡` が対象 Bolt の Task を指す",
 );
+
+const taskGenerationTraceWithOutOfScopeNoneUseCaseWorkspace = phaseWorkspaceCopy();
+writeFunctionalDesign(taskGenerationTraceWithOutOfScopeNoneUseCaseWorkspace);
+writeConstructionTasks(taskGenerationTraceWithOutOfScopeNoneUseCaseWorkspace);
+writeConstructionTasksForSecondBolt(taskGenerationTraceWithOutOfScopeNoneUseCaseWorkspace);
+replaceSecondBoltTaskUseCaseWithNone(taskGenerationTraceWithOutOfScopeNoneUseCaseWorkspace);
+writeConstructionNotes(taskGenerationTraceWithOutOfScopeNoneUseCaseWorkspace);
+writeConstructionTestResults(taskGenerationTraceWithOutOfScopeNoneUseCaseWorkspace);
+appendTaskGenerationTraceWithSecondBoltRow(taskGenerationTraceWithOutOfScopeNoneUseCaseWorkspace);
+writeConstructionState(taskGenerationTraceWithOutOfScopeNoneUseCaseWorkspace);
+run(["bun", "run", validator, taskGenerationTraceWithOutOfScopeNoneUseCaseWorkspace, intent]);
 
 const untrackedConstructionDesignWorkspace = phaseWorkspaceCopy();
 writeFunctionalDesign(untrackedConstructionDesignWorkspace);
