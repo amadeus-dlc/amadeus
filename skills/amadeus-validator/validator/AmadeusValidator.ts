@@ -2658,68 +2658,126 @@ class AmadeusValidator {
     this.checkHeadings(path, ["概要", "確定判断", "質問記録"]);
 
     const expectedId = basename(path).match(/^(G\d{3})-/)?.[1];
-    const title = this.read(path).split(/\r?\n/, 1)[0] ?? "";
-    if (!expectedId || title.includes(expectedId)) this.pass(path, "grilling session 見出しがファイル ID を含む", title || "見出しなし");
-    else this.failRow(path, "grilling session 見出しがファイル ID を含む", title);
+    this.checkGrillingSessionTitle(path, expectedId);
+    this.checkGrillingSessionState(path, indexedState);
+    this.checkGrillingSessionTarget(base, path, expectedId);
+    this.checkGrillingDecisions(base, path, allDecisionIds);
+    this.checkGrillingQuestions(path, allDecisionIds);
+  }
 
+  private checkGrillingSessionTitle(path: string, expectedId: string | undefined): void {
+    const title = this.read(path).split(/\r?\n/, 1)[0] ?? "";
+    if (!expectedId || title.includes(expectedId)) {
+      this.pass(path, "grilling session 見出しがファイル ID を含む", title || "見出しなし");
+    } else {
+      this.failRow(path, "grilling session 見出しがファイル ID を含む", title);
+    }
+  }
+
+  private checkGrillingSessionState(path: string, indexedState: string | undefined): void {
     const sessionState = this.labeledBulletValue(path, "概要", "状態");
     if (sessionState) this.checkAllowed(path, "状態", sessionState, grillingSessionStatusValues);
     else this.failRow(path, "grilling session の `状態` が空欄でない", "空欄");
+    this.checkGrillingSessionStateMatchesIndex(path, indexedState, sessionState);
+  }
+
+  private checkGrillingSessionStateMatchesIndex(
+    path: string,
+    indexedState: string | undefined,
+    sessionState: string | undefined,
+  ): void {
     if (indexedState && sessionState && indexedState === sessionState) {
       this.pass(path, "grilling 索引と session の `状態` が一致する", String(sessionState).trim());
     } else if (indexedState && sessionState) {
       this.failRow(path, "grilling 索引と session の `状態` が一致する", `${indexedState} != ${sessionState}`);
     }
+  }
 
+  private checkGrillingSessionTarget(base: string, path: string, expectedId: string | undefined): void {
     const sessionTarget = this.labeledBulletValue(path, "概要", "反映先");
     if (this.blank(sessionTarget)) this.failRow(path, "grilling session の `反映先` が空欄でない", "空欄");
     else {
       this.pass(path, "grilling session の `反映先` が空欄でない", String(sessionTarget).trim());
       this.checkGrillingTarget(path, base, "grilling session の `反映先` が存在する", sessionTarget, expectedId ?? basename(path));
     }
+  }
 
+  private checkGrillingDecisions(base: string, path: string, allDecisionIds: Set<string>): void {
     const table = this.checkTable(path, "確定判断", ["ID", "判断", "状態", "反映先", "置き換え先"]);
-    const decisionIds = table ? this.collectIds(path, table, "ID", /^GD\d{3}$/) : new Set<string>();
-    if (table) {
-      this.checkNotBlank(path, table, "判断");
-      for (const row of table.rows) {
-        const decisionId = String(row["ID"] ?? "").trim();
-        const target = String(row["反映先"] ?? "").trim();
-        if (target.length > 0) {
-          this.pass(path, "grilling 判断の `反映先` が空欄でない", `${decisionId}: ${target}`);
-          this.checkGrillingTarget(path, base, "grilling 判断の `反映先` が存在する", target, decisionId);
-        } else {
-          this.failRow(path, "grilling 判断の `反映先` が空欄でない", decisionId);
-        }
+    if (!table) return;
 
-        const state = String(row["状態"] ?? "").trim();
-        this.checkAllowed(path, "状態", state, grillingDecisionStatusValues);
-        const replacedBy = String(row["置き換え先"] ?? "").trim();
-        const replacementIds = this.grillingDecisionReferences(replacedBy);
-        if (state === "active") {
-          if (replacementIds.length === 0) {
-            this.pass(path, "active の grilling 判断が置き換え先を持たない", decisionId);
-          } else {
-            this.failRow(path, "active の grilling 判断が置き換え先を持たない", `${decisionId}: ${replacementIds.join(", ")}`);
-          }
-        } else if (state === "superseded") {
-          if (replacementIds.length > 0) {
-            this.pass(path, "superseded の grilling 判断が置き換え先を持つ", `${decisionId}: ${replacementIds.join(", ")}`);
-          } else {
-            this.failRow(path, "superseded の grilling 判断が置き換え先を持つ", decisionId);
-          }
-          for (const replacementId of replacementIds) {
-            if (allDecisionIds.has(replacementId) && replacementId !== decisionId) {
-              this.pass(path, "superseded の grilling 判断が実在する置き換え先を参照する", `${decisionId}: ${replacementId}`);
-            } else {
-              this.failRow(path, "superseded の grilling 判断が実在する置き換え先を参照する", `${decisionId}: ${replacementId}`);
-            }
-          }
-        }
+    this.collectIds(path, table, "ID", /^GD\d{3}$/);
+    this.checkNotBlank(path, table, "判断");
+    for (const row of table.rows) {
+      this.checkGrillingDecisionRow(base, path, row, allDecisionIds);
+    }
+  }
+
+  private checkGrillingDecisionRow(
+    base: string,
+    path: string,
+    row: Record<string, string>,
+    allDecisionIds: Set<string>,
+  ): void {
+    const decisionId = String(row["ID"] ?? "").trim();
+    this.checkGrillingDecisionTarget(base, path, decisionId, row["反映先"]);
+
+    const state = String(row["状態"] ?? "").trim();
+    this.checkAllowed(path, "状態", state, grillingDecisionStatusValues);
+    const replacedBy = String(row["置き換え先"] ?? "").trim();
+    const replacementIds = this.grillingDecisionReferences(replacedBy);
+    if (state === "active") {
+      this.checkActiveGrillingDecisionReplacement(path, decisionId, replacementIds);
+    } else if (state === "superseded") {
+      this.checkSupersededGrillingDecisionReplacement(path, decisionId, replacementIds, allDecisionIds);
+    }
+  }
+
+  private checkGrillingDecisionTarget(base: string, path: string, decisionId: string, value: unknown): void {
+    const target = String(value ?? "").trim();
+    if (target.length > 0) {
+      this.pass(path, "grilling 判断の `反映先` が空欄でない", `${decisionId}: ${target}`);
+      this.checkGrillingTarget(path, base, "grilling 判断の `反映先` が存在する", target, decisionId);
+    } else {
+      this.failRow(path, "grilling 判断の `反映先` が空欄でない", decisionId);
+    }
+  }
+
+  private checkActiveGrillingDecisionReplacement(path: string, decisionId: string, replacementIds: string[]): void {
+    if (replacementIds.length === 0) {
+      this.pass(path, "active の grilling 判断が置き換え先を持たない", decisionId);
+    } else {
+      this.failRow(path, "active の grilling 判断が置き換え先を持たない", `${decisionId}: ${replacementIds.join(", ")}`);
+    }
+  }
+
+  private checkSupersededGrillingDecisionReplacement(
+    path: string,
+    decisionId: string,
+    replacementIds: string[],
+    allDecisionIds: Set<string>,
+  ): void {
+    if (replacementIds.length > 0) {
+      this.pass(path, "superseded の grilling 判断が置き換え先を持つ", `${decisionId}: ${replacementIds.join(", ")}`);
+    } else {
+      this.failRow(path, "superseded の grilling 判断が置き換え先を持つ", decisionId);
+    }
+    this.checkExistingGrillingDecisionReplacements(path, decisionId, replacementIds, allDecisionIds);
+  }
+
+  private checkExistingGrillingDecisionReplacements(
+    path: string,
+    decisionId: string,
+    replacementIds: string[],
+    allDecisionIds: Set<string>,
+  ): void {
+    for (const replacementId of replacementIds) {
+      if (allDecisionIds.has(replacementId) && replacementId !== decisionId) {
+        this.pass(path, "superseded の grilling 判断が実在する置き換え先を参照する", `${decisionId}: ${replacementId}`);
+      } else {
+        this.failRow(path, "superseded の grilling 判断が実在する置き換え先を参照する", `${decisionId}: ${replacementId}`);
       }
     }
-
-    this.checkGrillingQuestions(path, allDecisionIds);
   }
 
   private checkGrillingQuestions(path: string, decisionIds: Set<string>): void {
