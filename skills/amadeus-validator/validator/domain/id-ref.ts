@@ -12,6 +12,7 @@ import {
   unitId,
   useCaseId,
 } from "./primitives";
+import { resolveArtifactLinkTarget } from "./artifact-links";
 import { type CheckResult, fail, pass } from "./results";
 
 type IdRefKind =
@@ -109,7 +110,7 @@ export function parseIdRef<TId extends TypedId>(
   return {
     id,
     rawLinkTarget,
-    path: resolveArtifactPath(sourcePath, rawLinkTarget),
+    path: resolveArtifactLinkTarget(sourcePath, rawLinkTarget),
   };
 }
 
@@ -223,41 +224,8 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function resolveArtifactPath(sourcePath: ArtifactPath | string, rawLinkTarget: string): ArtifactPath {
-  const source = asArtifactPath(sourcePath);
-  const sourceDir = dirname(source.value);
-  const path = normalizeInsideArtifactRoot([...splitPath(sourceDir), ...splitPath(rawLinkTarget)], rawLinkTarget);
-  return artifactPath(path);
-}
-
 function asArtifactPath(value: ArtifactPath | string): ArtifactPath {
   return typeof value === "string" ? artifactPath(value) : value;
-}
-
-function dirname(path: string): string {
-  const index = path.lastIndexOf("/");
-  if (index === -1) return "";
-  return path.slice(0, index);
-}
-
-function splitPath(path: string): string[] {
-  if (path.length === 0) return [];
-  return path.replaceAll("\\", "/").split("/");
-}
-
-function normalizeInsideArtifactRoot(segments: string[], rawLinkTarget: string): string {
-  const stack: string[] = [];
-  for (const segment of segments) {
-    if (segment === "" || segment === ".") continue;
-    if (segment === "..") {
-      if (stack.length === 0) throw new Error(`IdRef target must stay inside artifact root: ${rawLinkTarget}`);
-      stack.pop();
-    } else {
-      stack.push(segment);
-    }
-  }
-  if (stack.length === 0) throw new Error(`IdRef target must not point to artifact root: ${rawLinkTarget}`);
-  return stack.join("/");
 }
 
 function splitList(value: string): string[] {

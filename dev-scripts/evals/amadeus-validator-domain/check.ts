@@ -1,5 +1,8 @@
 #!/usr/bin/env bun
 
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   artifactPath,
   boundedContextId,
@@ -16,6 +19,7 @@ import {
   unitIdRef,
   useCaseIdRef,
 } from "../../../skills/amadeus-validator/validator/domain/id-ref";
+import { resolveArtifactLinkTarget } from "../../../skills/amadeus-validator/validator/domain/artifact-links";
 import { parseMarkdownDocument } from "../../../skills/amadeus-validator/validator/domain/markdown";
 import {
   parseBusinessRules,
@@ -40,6 +44,42 @@ function assertThrows(fn: () => unknown, message: string): void {
   assert(false, message);
 }
 
+function runValidator(workspace: string, intentId: string): { status: number; output: string } {
+  const result = Bun.spawnSync([
+    "bun",
+    "run",
+    "skills/amadeus-validator/validator/AmadeusValidator.ts",
+    workspace,
+    intentId,
+  ]);
+  return {
+    status: result.exitCode,
+    output: `${result.stdout.toString()}\n${result.stderr.toString()}`,
+  };
+}
+
+function withExampleWorkspace(fn: (workspace: string) => void): void {
+  const tempRoot = mkdtempSync(join(tmpdir(), "amadeus-validator-domain-"));
+  const workspace = join(tempRoot, "workspace");
+  try {
+    cpSync("examples/03-inception-completed", workspace, { recursive: true });
+    fn(workspace);
+  } finally {
+    rmSync(tempRoot, { recursive: true, force: true });
+  }
+}
+
+function replaceDomainMapEvidence(workspace: string, evidence: string): void {
+  const path = join(workspace, ".amadeus/domain-map.md");
+  const original = readFileSync(path, "utf8");
+  const updated = original.replace(
+    "| BC004 | 販売管理 | SD004 | 商品選択から注文作成までの販売活動を扱う。 | adopted | [D002](intents/20260629-minimum-purchase-flow/inception/decisions/D002-bc004-ownership.md) |",
+    `| BC004 | 販売管理 | SD004 | 商品選択から注文作成までの販売活動を扱う。 | adopted | ${evidence} |`,
+  );
+  assert(updated !== original, "Domain Map fixture row is replaced");
+  writeFileSync(path, updated);
+}
+
 const validUnitId = unitId("U001");
 assert(validUnitId.value === "U001", "UnitId keeps valid value");
 assertThrows(() => unitId("B001"), "UnitId rejects non Unit prefix");
@@ -60,6 +100,9 @@ const intentUnitRef = unitIdRef("[U001](units/U001-unit.md)", artifactPath("inte
 assert(intentUnitRef.path.value === "intents/20260629-minimum-purchase-flow/inception/units/U001-unit.md", "UnitIdRef allows Intent-rooted artifact path");
 const dotAmadeusIntentUnitRef = unitIdRef("[U001](units/U001-unit.md)", artifactPath(".amadeus/intents/20260629-minimum-purchase-flow/inception/units.md"));
 assert(dotAmadeusIntentUnitRef.path.value === ".amadeus/intents/20260629-minimum-purchase-flow/inception/units/U001-unit.md", "UnitIdRef allows .amadeus-rooted artifact path");
+assert(resolveArtifactLinkTarget(".amadeus/domain-map.md", "./intents/20260629-minimum-purchase-flow.md").value === ".amadeus/intents/20260629-minimum-purchase-flow.md", "Artifact link resolves dot-relative Domain Map evidence");
+assert(resolveArtifactLinkTarget(".amadeus/domain-map.md", "intents/20260629-minimum-purchase-flow.md").value === ".amadeus/intents/20260629-minimum-purchase-flow.md", "Artifact link resolves plain Domain Map evidence");
+assertThrows(() => resolveArtifactLinkTarget(".amadeus/domain-map.md", "https://example.com/intent.md"), "Artifact link rejects external target");
 assert(requirementIdRef("[R001](inception/requirements/R001-requirement.md)", artifactPath("traceability.md")).id.value === "R001", "RequirementIdRef parses valid link");
 assert(storyIdRef("[S001](inception/user-stories/S001-story.md)", artifactPath("traceability.md")).id.value === "S001", "StoryIdRef parses valid link");
 assert(useCaseIdRef("[UC001](inception/use-cases/UC001-use-case.md)", artifactPath("traceability.md")).id.value === "UC001", "UseCaseIdRef parses valid link");
@@ -215,5 +258,18 @@ const functionalDesignStage = checkConstructionFunctionalDesignStage({
   relativeToIntent: (_base, path) => path,
 });
 assert(functionalDesignStage.results.some((result) => result.result === "fail" && result.condition.includes("requirement と status")), "Functional Design stage module validates state matrix");
+
+withExampleWorkspace((workspace) => {
+  replaceDomainMapEvidence(workspace, "[Intent](./intents/20260629-minimum-purchase-flow.md)");
+  const result = runValidator(workspace, "20260629-minimum-purchase-flow");
+  assert(result.status === 1, "Domain Map evidence with ./ current Intent record is rejected");
+  assert(result.output.includes("現在の Intent で採用した Bounded Context の Domain Map 根拠が Inception 判断を指す"), "Domain Map evidence rejection explains expected Inception decision evidence");
+});
+
+withExampleWorkspace((workspace) => {
+  replaceDomainMapEvidence(workspace, "[D002](./intents/20260629-minimum-purchase-flow/inception/decisions/D002-bc004-ownership.md)");
+  const result = runValidator(workspace, "20260629-minimum-purchase-flow");
+  assert(result.status === 0, "Domain Map evidence with ./ Inception decision is accepted");
+});
 
 console.log("amadeus validator domain eval: ok");

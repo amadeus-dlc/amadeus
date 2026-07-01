@@ -10,6 +10,7 @@ import {
   implementationTargetId,
   pullRequestUrl,
 } from "./domain/primitives";
+import { cleanMarkdownLinkTarget, tryResolveArtifactLinkTarget } from "./domain/artifact-links";
 import { type CheckResult } from "./domain/results";
 import { checkConstructionPhase } from "./phases/construction";
 import { checkInceptionPhase } from "./phases/inception";
@@ -2236,9 +2237,10 @@ class AmadeusValidator {
     const row = table?.rows.find((candidate) => String(candidate["識別子"] ?? "").trim() === contextId);
     if (!row) return;
 
-    const currentIntentRoot = `intents/${this.intentId}`;
+    const currentIntentRoot = `.amadeus/intents/${this.intentId}`;
     const currentIntentTargets = this.markdownLinks(String(row["根拠"] ?? ""))
-      .map((target) => this.cleanLinkTarget(target))
+      .map((target) => tryResolveArtifactLinkTarget(path, target)?.value)
+      .filter((target): target is string => target !== undefined)
       .filter((target) => target === `${currentIntentRoot}.md` || target.startsWith(`${currentIntentRoot}/`));
 
     if (currentIntentTargets.length === 0) {
@@ -2952,7 +2954,7 @@ class AmadeusValidator {
   }
 
   private cleanLinkTarget(target: string): string {
-    return target.split("#", 2)[0].split(/\s+/, 2)[0] ?? "";
+    return cleanMarkdownLinkTarget(target);
   }
 
   private relativeLink(fromPath: string, toPath: string): string {
