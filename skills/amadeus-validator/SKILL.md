@@ -4,7 +4,7 @@ description: >-
   配布先ユーザー環境で Amadeus の実行時構造を検証する。`.amadeus/` 成果物、Discovery、Intent、
   Event Storming、任意の Grilling Decision Trail、Domain Map、Context Map、Upstream/Downstream、組織パターン、
   統合パターン、codebase-analysis.md、Construction 成果物を、
-  repo root の開発用 scripts に依存せず確認したいときに使う。
+  repo root の開発用 scripts に依存せず確認したいとき、または `.amadeus/` 成果物を作成、更新した後に使う。
 ---
 
 # amadeus-validator
@@ -15,6 +15,14 @@ description: >-
 
 この skill は Amadeus Validator の入口である。
 Development Validator としての repo root の package scripts や `scripts/**` ではない。
+
+## 起動契約
+
+この skill は、`.amadeus/` 配下のファイル更新を検知して自動起動する仕組みを持たない。
+ファイル監視、Git hook、エディタ拡張、外部 automation などを前提にしない。
+
+エージェントが `.amadeus/` 配下の成果物を作成または更新した場合は、作業後にこの skill を明示的に使って検証する。
+対象 Intent ディレクトリ名が分かる場合は、対象 Intent も指定して検証する。
 
 ## 内部参照
 

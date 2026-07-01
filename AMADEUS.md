@@ -58,6 +58,10 @@ Event Storming は phase を進めず、Requirement、Use Case、Unit、Bolt、T
 
 ## Validation
 
+`amadeus-validator` は、`.amadeus/` 配下のファイル更新を検知して自動起動しない。
+`.amadeus/` 配下の成果物を作成または更新した場合は、作業後に明示的に実行する。
+対象 Intent ディレクトリ名が分かる場合は、対象 Intent も指定して検証する。
+
 構造検証は次で行う。
 
 ```sh
