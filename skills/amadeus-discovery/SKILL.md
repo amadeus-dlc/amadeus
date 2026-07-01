@@ -48,7 +48,7 @@ Amadeus 自身の変更要望を扱う場合も、この skill の `self-develop
 - 検証対象の作業ディレクトリ。
 - 入力テーマ。
 - Discovery のモジュールディレクトリ名。未指定なら、現在日付と入力テーマから `YYYYMMDD-<slug>` を提案する。
-- 実行モード。指定がなければ `guided` にする。
+- 実行モード。指定できる値は `guided`、`self-development`、`dry-run`、`scaffold-only`、`repair` である。指定がなければ `guided` にする。
 
 Discovery のモジュールディレクトリ名は、`.amadeus/discoveries.md` の `識別子` と同じ値にする。
 既存 Discovery のモジュールディレクトリ名と重複してはいけない。
@@ -86,6 +86,10 @@ Discovery は Ideation や Inception の代替ではない。
 
 `dry-run` は `.amadeus/` 成果物を更新せず、GitHub Issue を作成せず、`amadeus-ideation` を自動実行しない。
 候補表示から成果物作成へ進む場合は、人間が次の skill を明示する。
+
+`dry-run` と `scaffold-only` は副作用の有無が違う。
+`dry-run` は読み取り専用で候補を表示するだけである。
+`scaffold-only` は質問せず、与えられた情報だけで Discovery 成果物を作る。
 
 ## テンプレート
 
@@ -176,6 +180,40 @@ GitHub Issue、会話、docs 点検、validator 結果、example 検証、CI 結
 - `multi_intent` の場合は、最初に進める `recommended` 候補が1件だけ選ばれているか。
 
 `multi_intent` で複数候補を記録する場合、最初に進める候補だけを `recommended` とし、他の候補は依存順、待機理由、または分離理由を `候補判断` に書く。
+
+### `dry-run`
+
+Discovery 成果物を作る前に、読み取り専用で Intent 化の候補を表示する。
+入力テーマが大きい場合、既存 Discovery との関係が不明な場合、既存 Intent 更新か新規 Intent かを確認したい場合に使う。
+
+この mode は、次の入力を読む。
+
+- 入力テーマまたは探索対象。
+- `.amadeus/discoveries.md` と関連しそうな既存 Discovery。
+- `.amadeus/intents.md` と関連しそうな既存 Intent。
+- 必要に応じた steering layer。
+- 必要に応じた `amadeus-history-review` の過去分析結果。
+- 必要に応じた `amadeus-learning-review` の学習分類結果。
+
+この mode は、次を表示する。
+
+- 入力テーマまたは探索対象。
+- 既存 Discovery との関係。
+- 既存 Intent との関係。
+- Intent 候補。
+- 候補ごとの分類。
+- 候補ごとの根拠。
+- 候補ごとの未確認事項。
+- `single_intent`、`multi_intent`、`existing_intent_update`、`research_only`、`no_intent`、`undecided` のいずれかの判定案。
+- `recommended` 候補。
+- 推奨次アクション。
+
+候補ごとの分類は、`state.json.decision` と同じ語彙を使う。
+`multi_intent` の場合は、最初に進める候補だけを `recommended` 候補にする。
+判断できない候補は `undecided` とし、未確認事項に判断を止めている理由を書く。
+
+この mode は、`.amadeus/` 成果物を更新せず、GitHub Issue を作成せず、`amadeus-ideation` を自動実行しない。
+候補表示から成果物作成へ進む場合は、人間が `amadeus-discovery scaffold-only`、`amadeus-discovery guided`、または `amadeus-ideation` を明示する。
 
 ### `scaffold-only`
 
