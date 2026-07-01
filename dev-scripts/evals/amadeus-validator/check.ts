@@ -1299,6 +1299,32 @@ function writeGrillings(targetRoot: string, overrides: Record<string, string> = 
   const questionUserAnswer = overrides.questionUserAnswer ?? "それでよい。";
   const target = overrides.target ?? "scope.md";
   mkdirSync(join(targetRoot, "grillings"), { recursive: true });
+  writeGrillingsIndex(targetRoot, overrides, { extraSession, sessionFile, target });
+  writePrimaryGrillingSession(targetRoot, overrides, { questionUserAnswer, sessionFile, target });
+  if (extraSession) {
+    writeExtraGrillingSession(
+      targetRoot,
+      "G002-ideation-follow-up.md",
+      extraSessionDecisionId,
+      overrides.extraSessionQuestionDecision ?? extraSessionDecisionId,
+    );
+  }
+}
+
+type GrillingIndexOptions = {
+  extraSession: boolean;
+  sessionFile: string;
+  target: string;
+};
+
+function writeGrillingsIndex(targetRoot: string, overrides: Record<string, string>, options: GrillingIndexOptions): void {
+  const { extraSession, sessionFile, target } = options;
+  const rows = [
+    `| G001 | Ideation Scope | Intent | ${overrides.indexSessionState ?? overrides.sessionState ?? "completed"} | 対象範囲を管理画面に限定する | ${overrides.indexTarget ?? `[${target}](${target})`} | [G001](grillings/${sessionFile}) |`,
+  ];
+  if (extraSession) {
+    rows.push("| G002 | Ideation Follow-up | Intent | completed | 追加境界を対象外にする | [scope.md](scope.md) | [G002](grillings/G002-ideation-follow-up.md) |");
+  }
   writeFileSync(
     join(targetRoot, "grillings.md"),
     [
@@ -1308,15 +1334,24 @@ function writeGrillings(targetRoot: string, overrides: Record<string, string> = 
       "",
       "| ID | 主題 | 対象 | 状態 | 主な確定判断 | 反映先 | 詳細 |",
       "|---|---|---|---|---|---|---|",
-      `| G001 | Ideation Scope | Intent | ${overrides.indexSessionState ?? overrides.sessionState ?? "completed"} | 対象範囲を管理画面に限定する | ${overrides.indexTarget ?? `[${target}](${target})`} | [G001](grillings/${sessionFile}) |`,
-      ...(extraSession
-        ? [
-            `| G002 | Ideation Follow-up | Intent | completed | 追加境界を対象外にする | [scope.md](scope.md) | [G002](grillings/G002-ideation-follow-up.md) |`,
-          ]
-        : []),
+      ...rows,
       "",
     ].join("\n"),
   );
+}
+
+type PrimaryGrillingSessionOptions = {
+  questionUserAnswer: string;
+  sessionFile: string;
+  target: string;
+};
+
+function writePrimaryGrillingSession(
+  targetRoot: string,
+  overrides: Record<string, string>,
+  options: PrimaryGrillingSessionOptions,
+): void {
+  const { questionUserAnswer, sessionFile, target } = options;
   writeFileSync(
     join(targetRoot, "grillings", sessionFile),
     [
@@ -1362,14 +1397,6 @@ function writeGrillings(targetRoot: string, overrides: Record<string, string> = 
       "",
     ].join("\n"),
   );
-  if (extraSession) {
-    writeExtraGrillingSession(
-      targetRoot,
-      "G002-ideation-follow-up.md",
-      extraSessionDecisionId,
-      overrides.extraSessionQuestionDecision ?? extraSessionDecisionId,
-    );
-  }
 }
 
 function writeExtraGrillingSession(targetRoot: string, sessionFile: string, decisionId: string, questionDecision = decisionId): void {
