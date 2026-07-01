@@ -5,14 +5,14 @@
       "id": ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts#class:AmadeusValidator>method:categoryFor",
       "file": ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts",
       "name": "categoryFor",
-      "line": 3206,
+      "line": 3350,
       "complexity": 41
     },
     {
       "id": "skills/amadeus-validator/validator/AmadeusValidator.ts#class:AmadeusValidator>method:categoryFor",
       "file": "skills/amadeus-validator/validator/AmadeusValidator.ts",
       "name": "categoryFor",
-      "line": 3206,
+      "line": 3350,
       "complexity": 41
     },
     {
@@ -47,42 +47,42 @@
       "id": ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts#class:AmadeusValidator>method:checkGrillings",
       "file": ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts",
       "name": "checkGrillings",
-      "line": 2260,
+      "line": 2404,
       "complexity": 31
     },
     {
       "id": "skills/amadeus-validator/validator/AmadeusValidator.ts#class:AmadeusValidator>method:checkGrillings",
       "file": "skills/amadeus-validator/validator/AmadeusValidator.ts",
       "name": "checkGrillings",
-      "line": 2260,
+      "line": 2404,
       "complexity": 31
     },
     {
       "id": ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts#class:AmadeusValidator>method:checkTaskGenerationTraceability",
       "file": ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts",
       "name": "checkTaskGenerationTraceability",
-      "line": 1774,
+      "line": 1775,
       "complexity": 29
     },
     {
       "id": "skills/amadeus-validator/validator/AmadeusValidator.ts#class:AmadeusValidator>method:checkTaskGenerationTraceability",
       "file": "skills/amadeus-validator/validator/AmadeusValidator.ts",
       "name": "checkTaskGenerationTraceability",
-      "line": 1774,
+      "line": 1775,
       "complexity": 29
     },
     {
       "id": ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts#class:AmadeusValidator>method:checkGrillingSession",
       "file": ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts",
       "name": "checkGrillingSession",
-      "line": 2357,
+      "line": 2501,
       "complexity": 28
     },
     {
       "id": "skills/amadeus-validator/validator/AmadeusValidator.ts#class:AmadeusValidator>method:checkGrillingSession",
       "file": "skills/amadeus-validator/validator/AmadeusValidator.ts",
       "name": "checkGrillingSession",
-      "line": 2357,
+      "line": 2501,
       "complexity": 28
     },
     {
@@ -110,36 +110,22 @@
       "id": ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts#class:AmadeusValidator>method:checkedFileCategory",
       "file": ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts",
       "name": "checkedFileCategory",
-      "line": 3162,
+      "line": 3306,
       "complexity": 23
     },
     {
       "id": "dev-scripts/evals/amadeus-validator/check.ts#function:writeGrillings",
       "file": "dev-scripts/evals/amadeus-validator/check.ts",
       "name": "writeGrillings",
-      "line": 1286,
+      "line": 1295,
       "complexity": 23
     },
     {
       "id": "skills/amadeus-validator/validator/AmadeusValidator.ts#class:AmadeusValidator>method:checkedFileCategory",
       "file": "skills/amadeus-validator/validator/AmadeusValidator.ts",
       "name": "checkedFileCategory",
-      "line": 3162,
+      "line": 3306,
       "complexity": 23
-    },
-    {
-      "id": ".agents/skills/amadeus-validator/validator/domain/functional-design-state.ts#function:functionalDesignUnitStateCombinationIsValid",
-      "file": ".agents/skills/amadeus-validator/validator/domain/functional-design-state.ts",
-      "name": "functionalDesignUnitStateCombinationIsValid",
-      "line": 76,
-      "complexity": 22
-    },
-    {
-      "id": "skills/amadeus-validator/validator/domain/functional-design-state.ts#function:functionalDesignUnitStateCombinationIsValid",
-      "file": "skills/amadeus-validator/validator/domain/functional-design-state.ts",
-      "name": "functionalDesignUnitStateCombinationIsValid",
-      "line": 76,
-      "complexity": 22
     }
   ]
 }

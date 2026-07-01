@@ -4,7 +4,7 @@ import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "
 import { join, relative, resolve } from "node:path";
 import ts from "typescript";
 
-export type ComplexityMeasurement = {
+type ComplexityMeasurement = {
   id: string;
   file: string;
   name: string;
@@ -25,7 +25,7 @@ type ComplexityBaseline = {
   entries: BaselineEntry[];
 };
 
-export type ComplexityCheckResult = {
+type ComplexityCheckResult = {
   ok: boolean;
   messages: string[];
   measurements: ComplexityMeasurement[];

@@ -35,6 +35,14 @@ type UnitStateLike = {
   blockedReason?: unknown;
 };
 
+type NormalizedUnitState = {
+  requirement: string;
+  status: string;
+  frontendSurface: string;
+  skipReason: string;
+  blockedReason: string;
+};
+
 const requirementValues = new Set<string>(functionalDesignContract.requirements);
 const statusValues = new Set<string>(functionalDesignContract.statuses);
 const frontendSurfaceValues = new Set<string>(functionalDesignContract.frontendSurfaces);
@@ -74,30 +82,46 @@ export function deriveFunctionalDesignGateResult(status: FunctionalDesignStatus)
 }
 
 export function functionalDesignUnitStateCombinationIsValid(item: UnitStateLike): boolean {
-  const requirement = String(item.requirement ?? "").trim();
-  const status = String(item.status ?? "").trim();
-  const frontendSurface = String(item.frontendSurface ?? "").trim();
-  const skipReason = String(item.skipReason ?? "").trim();
-  const blockedReason = String(item.blockedReason ?? "").trim();
+  const normalized = normalizeUnitState(item);
+  const { requirement, status, frontendSurface } = normalized;
 
   if (!requirementValues.has(requirement)) return false;
   if (!statusValues.has(status)) return false;
   if (!frontendSurfaceValues.has(frontendSurface)) return false;
 
-  if (requirement === "required") {
-    if (skipReason.length > 0) return false;
-    if (status === "skipped") return false;
-    if (blockedReason === "target_unit_unresolved") return false;
-    if (frontendSurface === "unresolved") return status === "blocked" && blockedReason === "frontend_surface_unresolved";
-    if (status === "blocked") return requiredBlockedReasonValues.has(blockedReason);
-    return ["not_started", "in_progress", "ready_for_approval", "passed", "failed"].includes(status) && blockedReason.length === 0;
-  }
+  if (requirement === "required") return requiredUnitStateCombinationIsValid(normalized);
 
-  if (requirement === "not_required") {
-    return status === "skipped" && skipReason === "unit_not_in_construction_scope" && blockedReason.length === 0;
-  }
+  if (requirement === "not_required") return notRequiredUnitStateCombinationIsValid(normalized);
 
-  return status === "blocked" && blockedReason === "target_unit_unresolved" && skipReason.length === 0;
+  return unresolvedUnitStateCombinationIsValid(normalized);
+}
+
+function normalizeUnitState(item: UnitStateLike): NormalizedUnitState {
+  return {
+    requirement: String(item.requirement ?? "").trim(),
+    status: String(item.status ?? "").trim(),
+    frontendSurface: String(item.frontendSurface ?? "").trim(),
+    skipReason: String(item.skipReason ?? "").trim(),
+    blockedReason: String(item.blockedReason ?? "").trim(),
+  };
+}
+
+function requiredUnitStateCombinationIsValid(item: NormalizedUnitState): boolean {
+  const { status, frontendSurface, skipReason, blockedReason } = item;
+  if (skipReason.length > 0) return false;
+  if (status === "skipped") return false;
+  if (blockedReason === "target_unit_unresolved") return false;
+  if (frontendSurface === "unresolved") return status === "blocked" && blockedReason === "frontend_surface_unresolved";
+  if (status === "blocked") return requiredBlockedReasonValues.has(blockedReason);
+  return ["not_started", "in_progress", "ready_for_approval", "passed", "failed"].includes(status) && blockedReason.length === 0;
+}
+
+function notRequiredUnitStateCombinationIsValid(item: NormalizedUnitState): boolean {
+  return item.status === "skipped" && item.skipReason === "unit_not_in_construction_scope" && item.blockedReason.length === 0;
+}
+
+function unresolvedUnitStateCombinationIsValid(item: NormalizedUnitState): boolean {
+  return item.status === "blocked" && item.blockedReason === "target_unit_unresolved" && item.skipReason.length === 0;
 }
 
 function parseFunctionalDesignUnitState(
