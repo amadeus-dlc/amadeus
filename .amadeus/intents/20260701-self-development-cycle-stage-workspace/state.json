@@ -1,7 +1,7 @@
 {
   "intent": "20260701-self-development-cycle-stage-workspace",
   "phase": "construction",
-  "status": "in_progress",
+  "status": "completed",
   "ideation": {
     "intentCapture": {
       "status": "completed",
@@ -98,7 +98,7 @@
     "gate": "passed"
   },
   "construction": {
-    "status": "in_progress",
+    "status": "completed",
     "requiredArtifacts": [
       "construction/decisions.md",
       "construction/traceability.md"
@@ -107,9 +107,11 @@
       "construction/bolts/B001-stage-policy-record/tasks.md",
       "construction/bolts/B001-stage-policy-record/notes.md",
       "construction/bolts/B001-stage-policy-record/test-results.md",
+      "construction/bolts/B001-stage-policy-record/pr.md",
       "construction/bolts/B002-workspace-provenance-record/tasks.md",
       "construction/bolts/B002-workspace-provenance-record/notes.md",
-      "construction/bolts/B002-workspace-provenance-record/test-results.md"
+      "construction/bolts/B002-workspace-provenance-record/test-results.md",
+      "construction/bolts/B002-workspace-provenance-record/pr.md"
     ],
     "targetBolts": [
       "B001",
@@ -124,7 +126,7 @@
         {
           "unitId": "U001",
           "requirement": "required",
-          "status": "ready_for_approval",
+          "status": "passed",
           "frontendSurface": "absent",
           "targetSource": "construction_target_bolts",
           "runMode": "initial"
@@ -132,7 +134,7 @@
         {
           "unitId": "U002",
           "requirement": "required",
-          "status": "ready_for_approval",
+          "status": "passed",
           "frontendSurface": "absent",
           "targetSource": "construction_target_bolts",
           "runMode": "initial"
@@ -143,7 +145,7 @@
       {
         "id": "B001",
         "taskGeneration": {
-          "status": "ready_for_approval",
+          "status": "passed",
           "evidence": [
             {
               "kind": "functional_design",
@@ -172,6 +174,10 @@
             {
               "kind": "notes",
               "path": "construction/bolts/B001-stage-policy-record/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/bolts/B001-stage-policy-record/pr.md"
             }
           ]
         }
@@ -179,7 +185,7 @@
       {
         "id": "B002",
         "taskGeneration": {
-          "status": "ready_for_approval",
+          "status": "passed",
           "evidence": [
             {
               "kind": "functional_design",
@@ -208,11 +214,15 @@
             {
               "kind": "notes",
               "path": "construction/bolts/B002-workspace-provenance-record/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/bolts/B002-workspace-provenance-record/pr.md"
             }
           ]
         }
       }
     ],
-    "gate": "not_ready"
+    "gate": "passed"
   }
 }

@@ -4,10 +4,10 @@
 
 | 要求 | 状態 | 証拠 |
 |---|---|---|
-| R001 | 充足済み | [B001 test-results](../construction/bolts/B001-stage-policy-record/test-results.md) |
-| R002 | 充足済み | [B001 test-results](../construction/bolts/B001-stage-policy-record/test-results.md) |
-| R003 | 充足済み | [B002 test-results](../construction/bolts/B002-workspace-provenance-record/test-results.md) |
-| R004 | 充足済み | [B002 test-results](../construction/bolts/B002-workspace-provenance-record/test-results.md) |
+| R001 | 検証済み | [B001 test-results](../construction/bolts/B001-stage-policy-record/test-results.md)、[PR #241](../construction/bolts/B001-stage-policy-record/pr.md) |
+| R002 | 検証済み | [B001 test-results](../construction/bolts/B001-stage-policy-record/test-results.md)、[PR #241](../construction/bolts/B001-stage-policy-record/pr.md) |
+| R003 | 検証済み | [B002 test-results](../construction/bolts/B002-workspace-provenance-record/test-results.md)、[PR #241](../construction/bolts/B002-workspace-provenance-record/pr.md) |
+| R004 | 検証済み | [B002 test-results](../construction/bolts/B002-workspace-provenance-record/test-results.md)、[PR #241](../construction/bolts/B002-workspace-provenance-record/pr.md) |
 
 ## 状態ルール
 
