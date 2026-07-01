@@ -9,24 +9,10 @@
       "complexity": 38
     },
     {
-      "id": ".agents/skills/amadeus-validator/validator/stages/construction/functional-design.ts#function:checkConstructionFunctionalDesignStage",
-      "file": ".agents/skills/amadeus-validator/validator/stages/construction/functional-design.ts",
-      "name": "checkConstructionFunctionalDesignStage",
-      "line": 34,
-      "complexity": 38
-    },
-    {
       "id": "skills/amadeus-validator/validator/stages/construction/bolt-preparation.ts#function:checkConstructionBoltTaskGeneration",
       "file": "skills/amadeus-validator/validator/stages/construction/bolt-preparation.ts",
       "name": "checkConstructionBoltTaskGeneration",
       "line": 42,
-      "complexity": 38
-    },
-    {
-      "id": "skills/amadeus-validator/validator/stages/construction/functional-design.ts#function:checkConstructionFunctionalDesignStage",
-      "file": "skills/amadeus-validator/validator/stages/construction/functional-design.ts",
-      "name": "checkConstructionFunctionalDesignStage",
-      "line": 34,
       "complexity": 38
     },
     {
