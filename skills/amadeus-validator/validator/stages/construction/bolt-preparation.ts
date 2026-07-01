@@ -371,7 +371,10 @@ function targetBoltRequiredArtifactPaths(
   } else if (taskGenerationHasNoGeneratedTasks(taskGenerationStatus)) {
     results.push(checkTasksNotRequiredBeforeGeneration(context, boltId, taskPath));
   }
-  if (context.requiresTestResults) artifactPaths.push(`${boltDir}/test-results.md`);
+  if (context.requiresTestResults) {
+    artifactPaths.push(`${boltDir}/test-results.md`);
+    artifactPaths.push(`${boltDir}/pr.md`);
+  }
   return artifactPaths;
 }
 
@@ -397,11 +400,19 @@ function checkRequiredBoltArtifact(
   artifactPath: string,
 ): CheckResult {
   const relativePath = input.relativeToIntent(context.intentBase, artifactPath);
-  const condition = artifactPath.endsWith("/test-results.md")
-    ? "Construction 完了時の必須 Bolt 成果物が test-results.md を含む"
-    : "Construction 必須 Bolt 成果物が targetBolt の証拠成果物を含む";
+  const condition = requiredBoltArtifactCondition(artifactPath);
   if (context.required.has(relativePath)) return pass(context.path, condition, `${boltId}: ${relativePath}`);
   return fail(context.path, condition, `${boltId}: ${relativePath}`);
+}
+
+function requiredBoltArtifactCondition(artifactPath: string): string {
+  if (artifactPath.endsWith("/test-results.md")) {
+    return "Construction 完了時の必須 Bolt 成果物が test-results.md を含む";
+  }
+  if (artifactPath.endsWith("/pr.md")) {
+    return "Construction 完了時の必須 Bolt 成果物が pr.md を含む";
+  }
+  return "Construction 必須 Bolt 成果物が targetBolt の証拠成果物を含む";
 }
 
 function checkTaskGenerationStateMatrix(

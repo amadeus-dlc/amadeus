@@ -2238,7 +2238,7 @@ function writePrWithUrl(workspace: string): void {
       "",
       "## Pull Request",
       "",
-      "- URL: https://github.com/j5ik2o/amadeus/pull/999",
+      "- Pull Request: [PR #999](https://github.com/j5ik2o/amadeus/pull/999)",
       "- 状態: open",
       "",
       "## 対象",
@@ -3247,6 +3247,7 @@ writeConstructionNotes(completedConstructionWithoutTestResultsWorkspace);
 appendTaskGenerationTrace(completedConstructionWithoutTestResultsWorkspace, {
   implementation: "実装済み",
   verification: "検証済み",
+  pr: "[PR #999](https://github.com/j5ik2o/amadeus/pull/999)",
   status: "passed",
 });
 appendConstructionTrace(completedConstructionWithoutTestResultsWorkspace);
@@ -3264,6 +3265,57 @@ runExpectFailure(
   "Construction 完了時の必須 Bolt 成果物が test-results.md を含む",
 );
 
+const completedConstructionWithoutPrWorkspace = phaseWorkspaceCopy();
+writeFunctionalDesign(completedConstructionWithoutPrWorkspace);
+writeConstructionTasks(completedConstructionWithoutPrWorkspace);
+writeConstructionNotes(completedConstructionWithoutPrWorkspace);
+writeConstructionTestResults(completedConstructionWithoutPrWorkspace);
+appendTaskGenerationTrace(completedConstructionWithoutPrWorkspace, {
+  implementation: "実装済み",
+  verification: "検証済み",
+  pr: "[PR #999](https://github.com/j5ik2o/amadeus/pull/999)",
+  status: "passed",
+});
+appendConstructionTrace(completedConstructionWithoutPrWorkspace);
+writeConstructionState(completedConstructionWithoutPrWorkspace, {
+  status: "completed",
+  constructionStatus: "completed",
+  constructionGate: "passed",
+});
+runExpectFailure(
+  ["bun", "run", validator, completedConstructionWithoutPrWorkspace, intent],
+  "Construction 完了時の必須 Bolt 成果物が pr.md を含む",
+);
+
+const completedConstructionWithoutPrTraceLinkWorkspace = phaseWorkspaceCopy();
+writeFunctionalDesign(completedConstructionWithoutPrTraceLinkWorkspace);
+writeConstructionTasks(completedConstructionWithoutPrTraceLinkWorkspace);
+writeConstructionNotes(completedConstructionWithoutPrTraceLinkWorkspace);
+writeConstructionTestResults(completedConstructionWithoutPrTraceLinkWorkspace);
+writePrWithUrl(completedConstructionWithoutPrTraceLinkWorkspace);
+appendTaskGenerationTrace(completedConstructionWithoutPrTraceLinkWorkspace, {
+  implementation: "実装済み",
+  verification: "検証済み",
+  pr: "PR #999",
+  status: "passed",
+});
+appendConstructionTrace(completedConstructionWithoutPrTraceLinkWorkspace);
+writeConstructionState(completedConstructionWithoutPrTraceLinkWorkspace, {
+  status: "completed",
+  constructionStatus: "completed",
+  constructionGate: "passed",
+  requiredBoltArtifacts: [
+    `construction/bolts/${bolt1}/tasks.md`,
+    `construction/bolts/${bolt1}/notes.md`,
+    `construction/bolts/${bolt1}/test-results.md`,
+    `construction/bolts/${bolt1}/pr.md`,
+  ],
+});
+runExpectFailure(
+  ["bun", "run", validator, completedConstructionWithoutPrTraceLinkWorkspace, intent],
+  "Construction 完了時の PR 欄が GitHub Pull Request リンクである",
+);
+
 const completedConstructionWithLegacyDesignGateWorkspace = phaseWorkspaceCopy();
 writeFunctionalDesign(completedConstructionWithLegacyDesignGateWorkspace);
 writeConstructionTasks(completedConstructionWithLegacyDesignGateWorkspace);
@@ -3272,6 +3324,7 @@ writeConstructionTestResults(completedConstructionWithLegacyDesignGateWorkspace)
 appendTaskGenerationTrace(completedConstructionWithLegacyDesignGateWorkspace, {
   implementation: "実装済み",
   verification: "検証済み",
+  pr: "[PR #999](https://github.com/j5ik2o/amadeus/pull/999)",
   status: "passed",
 });
 appendConstructionTrace(completedConstructionWithLegacyDesignGateWorkspace);
@@ -3564,7 +3617,7 @@ writeConstructionState(prWithoutUrlWorkspace, {
 });
 runExpectFailure(
   ["bun", "run", validator, prWithoutUrlWorkspace, intent],
-  "PR 記録が URL を持つ",
+  "PR 記録が GitHub Pull Request リンクを持つ",
 );
 
 const existingPrWithoutUrlWorkspace = phaseWorkspaceCopy();
@@ -3577,7 +3630,7 @@ writePrWithoutUrl(existingPrWithoutUrlWorkspace);
 writeConstructionState(existingPrWithoutUrlWorkspace);
 runExpectFailure(
   ["bun", "run", validator, existingPrWithoutUrlWorkspace, intent],
-  "PR 記録が URL を持つ",
+  "PR 記録が GitHub Pull Request リンクを持つ",
 );
 
 const prWithMissingTargetReferencesWorkspace = phaseWorkspaceCopy();

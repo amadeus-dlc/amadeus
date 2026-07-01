@@ -115,7 +115,8 @@ Bun が使えない場合は `blocked` として報告する。
 - `requiredStoryArtifacts` は配列として検証し、Story が不要な Intent では空配列を許可する。
 - Construction 段階の Intent では、`state.json.construction.requiredArtifacts` と `state.json.construction.requiredBoltArtifacts` の相対パスが存在する。
 - Construction 段階の Intent では、`state.json.construction.requiredArtifacts` に `construction/decisions.md` が含まれる。
-- Construction 段階の Intent では、`tasks.md`、`notes.md`、`test-results.md`、任意の `pr.md` の必須見出しを検証する。
+- Construction 段階の Intent では、`tasks.md`、`notes.md`、`test-results.md`、完了済み Bolt の `pr.md` の必須見出しを検証する。
+- Construction 完了時は、対象 Bolt の `pr.md` が `requiredBoltArtifacts` に含まれ、`traceability.md` の PR 欄が GitHub Pull Request リンクであることを検証する。
 - Construction 段階の Intent では、Task Generation が `ready_for_approval` または `passed` の場合に `construction/traceability.md` の `Task Generation からの追跡` を検証する。
 - 対象 Intent ディレクトリ名が指定され、`.amadeus/intents/<intent-id>-<slug>/state.json` の `inception.codebaseAnalysis` が存在する場合、requirement、status、evidence、targetScope、skipReason、blockedReason、freshness を検証する。
 - 対象 Intent ディレクトリ名が指定され、`.amadeus/intents/<intent-id>-<slug>/inception/codebase-analysis.md` が存在する場合、必須見出しを検証する。
