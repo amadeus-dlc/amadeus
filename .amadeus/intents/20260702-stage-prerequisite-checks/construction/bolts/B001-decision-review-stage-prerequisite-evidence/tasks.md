@@ -8,7 +8,7 @@
   - ユースケース: UC001
   - 依存: なし
   - 設計根拠: ../../U001-stage-prerequisite-evidence/functional-design/business-logic-model.md
-  - 証拠: [test-results.md](test-results.md)
+  - 証拠: [test-results.md](test-results.md), [PR #280](pr.md)
 
 - [x] T002: `amadeus-decision-review` の判断ノードと outcome を stage 前提確認へ拡張する。
   - 作業:
@@ -19,4 +19,4 @@
   - ユースケース: UC001, UC002
   - 依存: T001
   - 設計根拠: ../../U001-stage-prerequisite-evidence/functional-design/business-rules.md
-  - 証拠: [test-results.md](test-results.md)
+  - 証拠: [test-results.md](test-results.md), [PR #280](pr.md)

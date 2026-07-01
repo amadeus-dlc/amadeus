@@ -8,7 +8,7 @@
   - ユースケース: UC002
   - 依存: B001/T002, B002/T003
   - 設計根拠: ../../U002-prerequisite-failure-routing/functional-design/business-logic-model.md
-  - 証拠: [test-results.md](test-results.md)
+  - 証拠: [test-results.md](test-results.md), [PR #280](pr.md)
 
 - [x] T002: 配布対象 skill に repo 内 Issue 番号前提が混入しないことを確認する。
   - 作業:
@@ -18,7 +18,7 @@
   - ユースケース: UC003
   - 依存: T001
   - 設計根拠: ../../U002-prerequisite-failure-routing/functional-design/business-rules.md
-  - 証拠: [test-results.md](test-results.md)
+  - 証拠: [test-results.md](test-results.md), [PR #280](pr.md)
 
 - [x] T003: stage 前提確認の検証入口を実行する。
   - 作業:
@@ -29,4 +29,4 @@
   - ユースケース: UC002, UC003
   - 依存: T001, T002
   - 設計根拠: ../../U002-prerequisite-failure-routing/functional-design/domain-entities.md
-  - 証拠: [test-results.md](test-results.md)
+  - 証拠: [test-results.md](test-results.md), [PR #280](pr.md)

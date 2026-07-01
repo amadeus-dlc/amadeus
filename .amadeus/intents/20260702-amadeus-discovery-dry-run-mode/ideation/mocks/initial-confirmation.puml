@@ -1,0 +1,17 @@
+@startsalt
+{
+  {^"`amadeus-discovery dry-run` の初期確認"
+    {#
+      入力 | 読み取り対象 | 表示内容 | 次の利用先
+      入力テーマ | `.amadeus/discoveries.md` と既存 Discovery | 既存 Discovery との関係 | Discovery 継続判断
+      Issue または PR | `.amadeus/intents.md` と既存 Intent | 既存 Intent との関係 | `existing_intent_update` 判定
+      過去分析結果 | `amadeus-history-review` の結果 | 再利用できる判断、未確認事項、繰り返し問題 | Intent 候補抽出
+      学習分類結果 | `amadeus-learning-review` の結果 | 後続 Issue 候補、後続 Intent 候補、推奨候補 | `amadeus-ideation`
+      検証結果 | validator、evaluator、CI 結果 | 根拠、分類、未確認事項 | 推奨次アクション
+    }
+    [候補を表示]
+    [`.amadeus/` は更新しない]
+    [Issue 作成と Ideation 自動実行は行わない]
+  }
+}
+@endsalt
