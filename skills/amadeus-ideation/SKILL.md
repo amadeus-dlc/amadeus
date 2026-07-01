@@ -63,6 +63,11 @@ Intent Capture & Framing 後の `state.json.phase` は `ideation` にする。
 `amadeus-decision-review` は、既存成果物、Issue、PR、作業ツリー、validator 結果、Skill Contract、信頼できる参照元を入力証拠として扱う。
 decision review の outcome は `grill_required`、`no_grill`、`repair_only`、`follow_up_issue_candidate` に分ける。
 
+phase skill 起動時は、skill 供給元と実行環境の stage 前提も確認する。
+source skill、昇格先成果物、host environment での利用可否を分けて扱う。
+stage0、stage1、stage2、stage0 採用判断を確認し、stage2 を stage0 として扱う場合は人間による stage0 採用判断を証拠に含める。
+stage 前提が前段 phase または前段 stage の不足を示し、現在 Intent の成功条件を妨げる場合は `upstream_feedback_required` として戻す。
+
 `grill_required` の場合だけ、`amadeus-grilling` に一問、確認理由、推奨回答、推奨理由、反映先候補を渡す。
 `amadeus-decision-review` 自体は質問を実行しない。
 

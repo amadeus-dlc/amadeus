@@ -1,0 +1,18 @@
+@startuml
+salt
+{
+  {#
+    . | Phase skill startup prerequisite check
+    Input | phase skill, target Intent, requested skill, Skill Contract
+    Evidence | source skill, promoted artifact, host environment, stage evidence
+    Check 1 | Is the expected skill present in the required supply source?
+    Check 2 | Is the skill available in the expected host environment?
+    Check 3 | Does the current stage match stage0, stage1, or stage2 assumptions?
+    Check 4 | Is a stage0 adoption judgment required?
+    Outcome | no_grill / repair_only / upstream_feedback_required / follow_up_issue_candidate
+  }
+  {
+    [Proceed without question] | [Repair structure] | [Return upstream] | [Report follow-up candidate]
+  }
+}
+@enduml
