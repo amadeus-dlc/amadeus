@@ -123,12 +123,15 @@
       "construction/bolts/B001-implementation-next-skill-guidance/tasks.md",
       "construction/bolts/B001-implementation-next-skill-guidance/notes.md",
       "construction/bolts/B001-implementation-next-skill-guidance/test-results.md",
+      "construction/bolts/B001-implementation-next-skill-guidance/pr.md",
       "construction/bolts/B002-verification-next-skill-guidance/tasks.md",
       "construction/bolts/B002-verification-next-skill-guidance/notes.md",
       "construction/bolts/B002-verification-next-skill-guidance/test-results.md",
+      "construction/bolts/B002-verification-next-skill-guidance/pr.md",
       "construction/bolts/B003-routing-alignment-check/tasks.md",
       "construction/bolts/B003-routing-alignment-check/notes.md",
-      "construction/bolts/B003-routing-alignment-check/test-results.md"
+      "construction/bolts/B003-routing-alignment-check/test-results.md",
+      "construction/bolts/B003-routing-alignment-check/pr.md"
     ],
     "targetBolts": [
       "B001",
