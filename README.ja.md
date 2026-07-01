@@ -68,28 +68,18 @@ skill は Amadeus DLC への関わり方で分類します。
 
 内部スキルは、必要に応じて Amadeus の workflow から使う実装補助です。
 明示的に内部スキルが必要な作業でない場合は、フェーズスキルまたは横断的補助スキルを公開入口として使います。
+README では workflow family ごとに整理し、すべての内部 step を公開入口として扱わないようにします。
 
-- `amadeus-decision-review`
-- `amadeus-grilling`
-- `amadeus-domain-modeling`
-- `amadeus-history-review`
-- `amadeus-learning-review`
-- `amadeus-ideation-intent-capture`
-- `amadeus-ideation-scope-framing`
-- `amadeus-ideation-feasibility-shaping`
-- `amadeus-ideation-mock-framing`
-- `amadeus-ideation-traceability-finalization`
-- `amadeus-inception-codebase-analysis`
-- `amadeus-inception-requirements-definition`
-- `amadeus-inception-user-stories`
-- `amadeus-inception-use-cases`
-- `amadeus-inception-units-generation`
-- `amadeus-inception-traceability-finalization`
-- `amadeus-construction-functional-design`
-- `amadeus-construction-bolt-preparation`
-- `amadeus-construction-implementation-execution`
-- `amadeus-construction-verification-hardening`
-- `amadeus-construction-traceability-finalization`
+| family | 内部 skill |
+|---|---|
+| 判断と学習支援 | `amadeus-decision-review`、`amadeus-grilling`、`amadeus-history-review`、`amadeus-learning-review` |
+| ドメイン支援 | `amadeus-domain-modeling` |
+| Ideation 内部 | `amadeus-ideation-intent-capture`、`amadeus-ideation-scope-framing`、`amadeus-ideation-feasibility-shaping`、`amadeus-ideation-mock-framing`、`amadeus-ideation-traceability-finalization` |
+| Inception 内部 | `amadeus-inception-codebase-analysis`、`amadeus-inception-requirements-definition`、`amadeus-inception-user-stories`、`amadeus-inception-use-cases`、`amadeus-inception-units-generation`、`amadeus-inception-traceability-finalization` |
+| Construction 内部 | `amadeus-construction-functional-design`、`amadeus-construction-bolt-preparation`、`amadeus-construction-implementation-execution`、`amadeus-construction-verification-hardening`、`amadeus-construction-traceability-finalization` |
+
+Amadeus skill を確認または変更するときは、`skill-forge` で skill 境界、trigger description、本文指示、eval coverage、存在する場合は Codex metadata を確認します。
+Amadeus の source を変更する場合は、`skills/amadeus-*` と `.agents/skills/amadeus-*` の両方を確認し、昇格先成果物はリポジトリの昇格手順でそろえます。
 
 このリポジトリでは、root `.amadeus/` を Amadeus 本体開発用の steering layer として扱います。
 リポジトリ内の生成例は [examples/](examples/) 配下の段階別 snapshot として管理します。
