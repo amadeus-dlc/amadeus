@@ -249,7 +249,7 @@ const textContracts: TextContract[] = [
       "- `.amadeus/steering/tech.md`",
       "- `.amadeus/steering/structure.md`",
       "関連しそうな既存 Intent の `ideation/scope.md`、`inception/requirements.md`、`inception/traceability.md`",
-      "## Issue #272 の dry-run 境界",
+      "## dry-run の入力境界",
       "`amadeus-history-review` の過去分析結果と `amadeus-learning-review` の学習分類結果を入力にできる。",
       "`amadeus-discovery` は過去分析と学習分類を所有しない。",
     ],
