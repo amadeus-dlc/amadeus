@@ -12,6 +12,7 @@
 
 - `PRE001`: 対象 phase skill、対象 Intent または成果物セット、実行モードを解決できる。
 - `PRE002`: 既存成果物と現在参照できる証拠の範囲を説明できる。
+- `PRE003`: skill 供給元と実行環境の stage 前提を、source skill、昇格先成果物、host environment、stage0、stage1、stage2、stage0 採用判断として区別できる。
 
 ## Invariants
 
@@ -20,7 +21,7 @@
 
 ## Postconditions
 
-- `POST001`: grill_required、no_grill、repair_only、follow_up_issue_candidate のいずれかに分類できる。
+- `POST001`: grill_required、no_grill、repair_only、upstream_feedback_required、follow_up_issue_candidate のいずれかに分類できる。
 - `POST002`: grill_required の場合は amadeus-grilling への handoff 項目を返せる。
 
 ## Read Boundary
@@ -74,6 +75,7 @@
 ## Feedback Conditions
 
 - `FB001`: 現在 Intent の成功条件外の小さな課題は follow_up_issue_candidate として扱う。
+- `FB002`: 前段 phase または前段 stage の成果物不足、矛盾、粒度誤りが現在 Intent の成功条件を妨げる場合は upstream_feedback_required として扱う。
 
 ## Consumer References
 

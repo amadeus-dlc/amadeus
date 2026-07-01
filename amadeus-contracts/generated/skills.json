@@ -737,6 +737,10 @@
         {
           "id": "PRE002",
           "description": "既存成果物と現在参照できる証拠の範囲を説明できる。"
+        },
+        {
+          "id": "PRE003",
+          "description": "skill 供給元と実行環境の stage 前提を、source skill、昇格先成果物、host environment、stage0、stage1、stage2、stage0 採用判断として区別できる。"
         }
       ],
       "invariants": [
@@ -752,7 +756,7 @@
       "postconditions": [
         {
           "id": "POST001",
-          "description": "grill_required、no_grill、repair_only、follow_up_issue_candidate のいずれかに分類できる。"
+          "description": "grill_required、no_grill、repair_only、upstream_feedback_required、follow_up_issue_candidate のいずれかに分類できる。"
         },
         {
           "id": "POST002",
@@ -807,6 +811,10 @@
         {
           "id": "FB001",
           "description": "現在 Intent の成功条件外の小さな課題は follow_up_issue_candidate として扱う。"
+        },
+        {
+          "id": "FB002",
+          "description": "前段 phase または前段 stage の成果物不足、矛盾、粒度誤りが現在 Intent の成功条件を妨げる場合は upstream_feedback_required として扱う。"
         }
       ],
       "consumerReferences": [

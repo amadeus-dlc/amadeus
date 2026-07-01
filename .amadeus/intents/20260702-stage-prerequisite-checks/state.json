@@ -1,0 +1,289 @@
+{
+  "intent": "20260702-stage-prerequisite-checks",
+  "phase": "construction",
+  "status": "completed",
+  "ideation": {
+    "intentCapture": {
+      "status": "completed",
+      "createdArtifacts": [
+        "../20260702-stage-prerequisite-checks.md",
+        "state.json"
+      ],
+      "next": "ideation/scope-framing"
+    },
+    "status": "completed",
+    "requiredArtifacts": [
+      "../20260702-stage-prerequisite-checks.md",
+      "ideation/scope.md",
+      "ideation/ideation.md",
+      "ideation/decisions.md",
+      "ideation/traceability.md"
+    ],
+    "requiredMocks": [
+      "ideation/mocks/initial-confirmation.puml"
+    ],
+    "gate": "passed"
+  },
+  "inception": {
+    "status": "completed",
+    "codebaseAnalysis": {
+      "requirement": "required",
+      "status": "passed",
+      "evidence": [
+        {
+          "kind": "file",
+          "path": "skills/amadeus-decision-review/SKILL.md"
+        },
+        {
+          "kind": "file",
+          "path": ".agents/skills/amadeus-decision-review/SKILL.md"
+        },
+        {
+          "kind": "file",
+          "path": "skills/amadeus-decision-review/references/skill-contract.md"
+        },
+        {
+          "kind": "file",
+          "path": "dev-scripts/amadeus-contracts.ts"
+        },
+        {
+          "kind": "file",
+          "path": "dev-scripts/evals/amadeus-contracts/check.ts"
+        },
+        {
+          "kind": "file",
+          "path": "dev-scripts/evals/amadeus-templates/check.ts"
+        },
+        {
+          "kind": "file",
+          "path": ".amadeus/steering/policies.md"
+        },
+        {
+          "kind": "file",
+          "path": ".amadeus/domain-map.md"
+        }
+      ],
+      "targetScope": [
+        "skills/amadeus-decision-review/SKILL.md",
+        ".agents/skills/amadeus-decision-review/SKILL.md",
+        "skills/amadeus-decision-review/references/skill-contract.md",
+        ".agents/skills/amadeus-decision-review/references/skill-contract.md",
+        "skills/amadeus-ideation/SKILL.md",
+        "skills/amadeus-inception/SKILL.md",
+        "skills/amadeus-construction/SKILL.md",
+        ".agents/skills/amadeus-ideation/SKILL.md",
+        ".agents/skills/amadeus-inception/SKILL.md",
+        ".agents/skills/amadeus-construction/SKILL.md",
+        "dev-scripts/amadeus-contracts.ts",
+        "dev-scripts/evals/amadeus-contracts/check.ts",
+        "dev-scripts/evals/amadeus-templates/check.ts"
+      ],
+      "analyzedCommit": "9698f0c584e12cc6eabc4d7ced0290fe0c16b257",
+      "analyzedAt": "2026-07-01T15:14:57Z",
+      "freshness": "current"
+    },
+    "requiredArtifacts": [
+      "inception/codebase-analysis.md",
+      "inception/requirements.md",
+      "inception/acceptance.md",
+      "inception/use-cases.md",
+      "inception/units.md",
+      "inception/units/U001-stage-prerequisite-evidence.md",
+      "inception/units/U001-stage-prerequisite-evidence/design.md",
+      "inception/units/U002-prerequisite-failure-routing.md",
+      "inception/units/U002-prerequisite-failure-routing/design.md",
+      "inception/bolts.md",
+      "inception/traceability.md",
+      "inception/decisions.md"
+    ],
+    "requiredRequirementArtifacts": [
+      "inception/requirements/R001-skill-supply-evidence.md",
+      "inception/requirements/R002-stage-prerequisite-check.md",
+      "inception/requirements/R003-decision-review-and-contract-placement.md",
+      "inception/requirements/R004-prerequisite-failure-classification.md",
+      "inception/requirements/R005-representative-example-boundary.md"
+    ],
+    "requiredStoryArtifacts": [],
+    "requiredUseCaseArtifacts": [
+      "inception/use-cases/UC001-review-phase-startup-prerequisites.md",
+      "inception/use-cases/UC002-route-prerequisite-failure.md",
+      "inception/use-cases/UC003-separate-repo-example-from-distribution.md"
+    ],
+    "requiredDecisionArtifacts": [
+      "inception/decisions/D001-inception-boundary.md",
+      "inception/decisions/D002-bc001-self-development-governance.md",
+      "inception/decisions/D003-user-stories-not-required.md",
+      "inception/decisions/D004-unit-bolt-granularity.md"
+    ],
+    "requiredBoltArtifacts": [
+      "inception/bolts/B001-decision-review-stage-prerequisite-evidence.md",
+      "inception/bolts/B002-skill-contract-prerequisite-alignment.md",
+      "inception/bolts/B003-failure-routing-and-example-boundary.md"
+    ],
+    "gate": "passed"
+  },
+  "construction": {
+    "status": "completed",
+    "functionalDesign": {
+      "targetUnits": [
+        "U001",
+        "U002"
+      ],
+      "units": [
+        {
+          "unitId": "U001",
+          "requirement": "required",
+          "status": "passed",
+          "frontendSurface": "absent",
+          "targetSource": "construction_target_bolts",
+          "runMode": "initial"
+        },
+        {
+          "unitId": "U002",
+          "requirement": "required",
+          "status": "passed",
+          "frontendSurface": "absent",
+          "targetSource": "construction_target_bolts",
+          "runMode": "initial"
+        }
+      ]
+    },
+    "requiredArtifacts": [
+      "construction/U001-stage-prerequisite-evidence/functional-design/business-logic-model.md",
+      "construction/U001-stage-prerequisite-evidence/functional-design/business-rules.md",
+      "construction/U001-stage-prerequisite-evidence/functional-design/domain-entities.md",
+      "construction/U002-prerequisite-failure-routing/functional-design/business-logic-model.md",
+      "construction/U002-prerequisite-failure-routing/functional-design/business-rules.md",
+      "construction/U002-prerequisite-failure-routing/functional-design/domain-entities.md",
+      "construction/traceability.md",
+      "construction/decisions.md"
+    ],
+    "requiredBoltArtifacts": [
+      "construction/bolts/B001-decision-review-stage-prerequisite-evidence/tasks.md",
+      "construction/bolts/B001-decision-review-stage-prerequisite-evidence/notes.md",
+      "construction/bolts/B001-decision-review-stage-prerequisite-evidence/test-results.md",
+      "construction/bolts/B002-skill-contract-prerequisite-alignment/tasks.md",
+      "construction/bolts/B002-skill-contract-prerequisite-alignment/notes.md",
+      "construction/bolts/B002-skill-contract-prerequisite-alignment/test-results.md",
+      "construction/bolts/B003-failure-routing-and-example-boundary/tasks.md",
+      "construction/bolts/B003-failure-routing-and-example-boundary/notes.md",
+      "construction/bolts/B003-failure-routing-and-example-boundary/test-results.md"
+    ],
+    "targetBolts": [
+      "B001",
+      "B002",
+      "B003"
+    ],
+    "bolts": [
+      {
+        "id": "B001",
+        "taskGeneration": {
+          "status": "passed",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-stage-prerequisite-evidence/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-stage-prerequisite-evidence/functional-design/business-rules.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U001-stage-prerequisite-evidence/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B001-decision-review-stage-prerequisite-evidence.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B001-decision-review-stage-prerequisite-evidence/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B001-decision-review-stage-prerequisite-evidence/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/decisions/D002-decision-review-stage-prerequisite.md"
+            }
+          ]
+        }
+      },
+      {
+        "id": "B002",
+        "taskGeneration": {
+          "status": "passed",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-stage-prerequisite-evidence/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-stage-prerequisite-evidence/functional-design/business-rules.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U001-stage-prerequisite-evidence/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B002-skill-contract-prerequisite-alignment.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B002-skill-contract-prerequisite-alignment/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B002-skill-contract-prerequisite-alignment/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/decisions/D003-skill-contract-alignment.md"
+            }
+          ]
+        }
+      },
+      {
+        "id": "B003",
+        "taskGeneration": {
+          "status": "passed",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U002-prerequisite-failure-routing/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U002-prerequisite-failure-routing/functional-design/business-rules.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U002-prerequisite-failure-routing/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B003-failure-routing-and-example-boundary.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B003-failure-routing-and-example-boundary/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B003-failure-routing-and-example-boundary/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/decisions/D004-distribution-example-boundary.md"
+            }
+          ]
+        }
+      }
+    ],
+    "gate": "passed"
+  }
+}

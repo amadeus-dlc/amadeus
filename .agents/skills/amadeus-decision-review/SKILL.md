@@ -14,6 +14,10 @@ phase skill 起動時の意思決定を再確認する。
 
 既存成果物、Issue、PR、作業ツリー、validator 結果、Skill Contract、信頼できる参照元を入力証拠として読み、判断ノードごとに次の処理分岐を選ぶ。
 
+phase skill 起動時は、skill 供給元と実行環境の stage 前提も入力証拠として扱う。
+source skill、昇格先成果物、host environment での利用可否を分けて確認する。
+stage0、stage1、stage2、stage0 採用判断を確認し、stage2 を stage0 として扱う場合は人間による stage0 採用判断を証拠に含める。
+
 この skill は判断ゲートである。
 質問実行は `amadeus-grilling` に委譲する。
 
@@ -28,6 +32,9 @@ phase skill 起動時の意思決定を再確認する。
 - validator 結果。
 - Skill Contract。
 - 信頼できる参照元。
+- skill 供給元と実行環境の stage 前提。
+- source skill、昇格先成果物、host environment での利用可否。
+- stage0、stage1、stage2、stage0 採用判断。
 
 ## 判断ノード
 
@@ -35,9 +42,11 @@ phase skill 起動時の意思決定を再確認する。
 |---|---|---|
 | DN001 | 対象 Intent または成果物セットを解決できるか。 | ユーザー入力、`.amadeus/`、Issue |
 | DN002 | phase gate または前段成果物が実行条件を満たすか。 | `state.json`、traceability、decisions |
-| DN003 | 既存成果物と現在参照できる証拠だけで判断できるか。 | 既存成果物、作業ツリー、Skill Contract |
-| DN004 | 構造補修だけで解ける問題か。 | validator 結果、必須見出し、リンク、state |
-| DN005 | 現在 Intent の成功条件外の小さな課題か。 | scope、requirements、acceptance、Bolt |
+| DN003 | skill 供給元と実行環境の stage 前提が成立しているか。 | source skill、昇格先成果物、host environment、stage0、stage1、stage2、stage0 採用判断 |
+| DN004 | 既存成果物と現在参照できる証拠だけで判断できるか。 | 既存成果物、作業ツリー、Skill Contract |
+| DN005 | 構造補修だけで解ける問題か。 | validator 結果、必須見出し、リンク、state |
+| DN006 | 前段 phase または前段 stage の成果物不足が現在の成功条件を妨げているか。 | scope、requirements、acceptance、Bolt、Skill Contract、stage 前提 |
+| DN007 | 現在 Intent の成功条件外の小さな課題か。 | scope、requirements、acceptance、Bolt |
 
 ## Outcome
 
@@ -46,6 +55,7 @@ phase skill 起動時の意思決定を再確認する。
 | `grill_required` | 人間判断が必要で、既存成果物や作業ツリーだけでは解消できない。 | `amadeus-grilling` へ handoff する。 |
 | `no_grill` | 既存成果物と現在参照できる証拠から判断できる。 | 通常処理へ進む。 |
 | `repair_only` | 成果物構造の補修だけで解ける。 | 対象 phase skill の `repair` へ進む。 |
+| `upstream_feedback_required` | 前段 phase または前段 stage の成果物不足、矛盾、粒度誤りが現在 Intent の成功条件を妨げている。 | 該当する phase skill または内部 stage skill へ戻す。 |
 | `follow_up_issue_candidate` | 現在 Intent の成功条件外だが、後続 Issue 候補として扱える。 | 人間承認後に Issue 化する。 |
 
 ## Grilling Handoff
@@ -71,6 +81,7 @@ phase skill 起動時の意思決定を再確認する。
 - 判断ノードの再評価。
 - outcome の分類。
 - `amadeus-grilling` へ渡す handoff 項目の選定。
+- skill 供給元と実行環境の stage 前提確認。
 
 所有しないもの:
 
@@ -79,6 +90,27 @@ phase skill 起動時の意思決定を再確認する。
 - validator による内容承認。
 - evaluator の品質評価。
 - 既存 Intent 成果物の一括移行。
+- host environment の自動検出。
+- stage0 採用判断の自動化。
+- GitHub Issue の自動作成。
+
+## stage 前提確認
+
+phase skill 起動時は、次の証拠を分けて確認する。
+
+| 証拠 | 確認内容 | 不成立時の主な分類 |
+|---|---|---|
+| source skill | `skills/amadeus-*` に対象 skill または内部 skill が存在するか。 | `upstream_feedback_required` |
+| 昇格先成果物 | `.agents/skills/amadeus-*` に source skill の内容が反映されているか。 | `repair_only` または `upstream_feedback_required` |
+| host environment | 現在の実行環境で対象 skill を利用できるか。 | `upstream_feedback_required` |
+| stage0 | 作業開始時点で build workspace から利用可能な skill、validator、開発用スクリプトか。 | `no_grill` または `upstream_feedback_required` |
+| stage1 | target workspace にある作業中の source skill と検証結果か。 | `no_grill` または `repair_only` |
+| stage2 | target workspace の昇格先成果物、example、validator がそろって通った状態か。 | `follow_up_issue_candidate` または `upstream_feedback_required` |
+| stage0 採用判断 | stage2 を次回 stage0 として扱う人間判断があるか。 | `upstream_feedback_required` |
+
+stage2 は stage0 採用判断なしに次回 stage0 として扱わない。
+validator や CI の成功は stage0 採用判断の証拠候補であり、判断そのものではない。
+配布対象 skill では、特定リポジトリの Issue 番号を前提にした説明ではなく、source skill、昇格先成果物、host environment、stage 前提の一般説明として扱う。
 
 ## 検証境界
 
