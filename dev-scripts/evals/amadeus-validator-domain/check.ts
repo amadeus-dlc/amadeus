@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -90,6 +90,23 @@ function addContextMapDependency(workspace: string, evidence: string): void {
   );
   assert(updated !== original, "Context Map dependency row is added");
   writeFileSync(path, updated);
+}
+
+function updateFunctionalDesignStatus(workspace: string, unitId: string, status: string): void {
+  const path = join(workspace, ".amadeus/intents/20260629-minimum-purchase-flow/state.json");
+  const state = JSON.parse(readFileSync(path, "utf8"));
+  const unit = state.construction?.functionalDesign?.units?.find((item: { unitId?: string }) => item.unitId === unitId);
+  assert(unit, "Functional Design unit state exists");
+  unit.status = status;
+  writeFileSync(path, JSON.stringify(state, null, 2));
+}
+
+function writeFunctionalDesignEvidenceWithoutUnitId(workspace: string): string {
+  const relativePath = ".amadeus/intents/20260629-minimum-purchase-flow/construction/order-creation/functional-design/business-logic-model.md";
+  const path = join(workspace, relativePath);
+  mkdirSync(join(workspace, ".amadeus/intents/20260629-minimum-purchase-flow/construction/order-creation/functional-design"), { recursive: true });
+  writeFileSync(path, "# Business Logic Model\n");
+  return "./intents/20260629-minimum-purchase-flow/construction/order-creation/functional-design/business-logic-model.md";
 }
 
 const validUnitId = unitId("U001");
@@ -291,16 +308,46 @@ withExampleWorkspace((workspace) => {
 }, "examples/04-construction-design-ready");
 
 withExampleWorkspace((workspace) => {
+  replaceDomainMapEvidence(workspace, "[Functional Design](./intents/20260629-minimum-purchase-flow/construction/U002-order-creation/functional-design/business-logic-model.md), [D001](./intents/20260629-minimum-purchase-flow/construction/decisions/D001-b001-task-generation-ready.md)");
+  const result = runValidator(workspace, "20260629-minimum-purchase-flow");
+  assert(result.status === 0, "Domain Map evidence accepts a later valid decision when earlier Functional Design is not passed");
+}, "examples/04-construction-design-ready");
+
+withExampleWorkspace((workspace) => {
+  replaceDomainMapEvidence(workspace, "[Functional Design](./intents/20260629-minimum-purchase-flow/construction/U002-order-creation/functional-design/business-logic-model.md)");
+  const result = runValidator(workspace, "20260629-minimum-purchase-flow");
+  assert(result.status === 1, "Domain Map evidence with ready_for_approval Functional Design is rejected");
+  assert(result.output.includes("Domain Map の Functional Design 採用根拠が passed である"), "Domain Map Functional Design rejection explains expected status");
+}, "examples/04-construction-design-ready");
+
+withExampleWorkspace((workspace) => {
+  updateFunctionalDesignStatus(workspace, "U002", "passed");
   replaceDomainMapEvidence(workspace, "[Functional Design](./intents/20260629-minimum-purchase-flow/construction/U002-order-creation/functional-design/business-logic-model.md)");
   const result = runValidator(workspace, "20260629-minimum-purchase-flow");
   assert(result.status === 0, "Domain Map evidence with Functional Design is accepted in Construction phase");
 }, "examples/04-construction-design-ready");
 
 withExampleWorkspace((workspace) => {
+  rmSync(join(workspace, ".amadeus/context-map.md"), { force: true });
+  const result = runValidator(workspace, "20260629-minimum-purchase-flow");
+  assert(result.status === 1, "Missing Context Map is reported as validation failure");
+  assert(result.output.includes("Context Map が存在する"), "Missing Context Map reports the structure condition");
+  assert(!result.output.includes("検証対象を読める"), "Missing Context Map does not abort later validation as unreadable target");
+});
+
+withExampleWorkspace((workspace) => {
   addContextMapDependency(workspace, "[Intent](./intents/20260629-minimum-purchase-flow.md)");
   const result = runValidator(workspace, "20260629-minimum-purchase-flow");
   assert(result.status === 1, "Context Map dependency evidence with current Intent record is rejected");
   assert(result.output.includes("現在の Intent で採用した Context Map 依存の根拠が Inception 判断または Inception 追跡を指す"), "Context Map evidence rejection explains expected Inception evidence");
+});
+
+withExampleWorkspace((workspace) => {
+  writeFileSync(join(workspace, ".amadeus/intents/20260628-existing-boundaries.md"), "# Existing Boundaries\n");
+  addContextMapDependency(workspace, "[D000](./intents/20260628-existing-boundaries.md)");
+  const result = runValidator(workspace, "20260629-minimum-purchase-flow");
+  assert(result.status === 1, "Context Map dependency involving current Intent Bounded Context rejects other Intent-only evidence");
+  assert(result.output.includes("現在の Intent で採用した Context Map 依存の根拠が Inception 判断または Inception 追跡を指す"), "Context Map dependency rejection explains expected current Intent evidence");
 });
 
 withExampleWorkspace((workspace) => {
@@ -322,6 +369,28 @@ withExampleWorkspace((workspace) => {
 }, "examples/04-construction-design-ready");
 
 withExampleWorkspace((workspace) => {
+  addContextMapDependency(workspace, "[Functional Design](./intents/20260629-minimum-purchase-flow/construction/U002-order-creation/functional-design/business-logic-model.md), [D001](./intents/20260629-minimum-purchase-flow/construction/decisions/D001-b001-task-generation-ready.md)");
+  const result = runValidator(workspace, "20260629-minimum-purchase-flow");
+  assert(result.status === 0, "Context Map dependency evidence accepts a later valid decision when earlier Functional Design is not passed");
+}, "examples/04-construction-design-ready");
+
+withExampleWorkspace((workspace) => {
+  addContextMapDependency(workspace, "[Functional Design](./intents/20260629-minimum-purchase-flow/construction/U002-order-creation/functional-design/business-logic-model.md)");
+  const result = runValidator(workspace, "20260629-minimum-purchase-flow");
+  assert(result.status === 1, "Context Map dependency evidence with ready_for_approval Functional Design is rejected");
+  assert(result.output.includes("Context Map の Functional Design 採用根拠が passed である"), "Context Map Functional Design rejection explains expected status");
+}, "examples/04-construction-design-ready");
+
+withExampleWorkspace((workspace) => {
+  const evidence = writeFunctionalDesignEvidenceWithoutUnitId(workspace);
+  addContextMapDependency(workspace, `[Functional Design](${evidence})`);
+  const result = runValidator(workspace, "20260629-minimum-purchase-flow");
+  assert(result.status === 1, "Context Map dependency evidence with Functional Design path without Unit ID is rejected");
+  assert(result.output.includes("Context Map の Functional Design 採用根拠が passed である"), "Context Map Functional Design rejection covers missing Unit ID");
+}, "examples/04-construction-design-ready");
+
+withExampleWorkspace((workspace) => {
+  updateFunctionalDesignStatus(workspace, "U002", "passed");
   addContextMapDependency(workspace, "[Functional Design](./intents/20260629-minimum-purchase-flow/construction/U002-order-creation/functional-design/business-logic-model.md)");
   const result = runValidator(workspace, "20260629-minimum-purchase-flow");
   assert(result.status === 0, "Context Map dependency evidence with Functional Design is accepted in Construction phase");
