@@ -167,7 +167,7 @@ const targetSkills: Record<string, Contract> = {
       "templates/intents/construction/bolts/B001-bolt/notes.md": ["実行方針", "対象タスク", "未確認事項"],
       "templates/intents/construction/bolts/B001-bolt/test-results.md": ["検証結果", "安全性確認", "CI確認", "受け入れ証拠"],
       "templates/intents/construction/bolts/B001-bolt/pr.md": ["Pull Request", "対象", "確認状況"],
-      "templates/intents/construction/traceability.md": ["Task Generation からの追跡", "Deployment Unit からの追跡"],
+      "templates/intents/construction/traceability.md": ["Task Generation からの追跡", "Construction からの追跡", "Deployment Unit からの追跡"],
       "templates/intents/construction/decisions.md": ["一覧", "依存関係"],
       "templates/intents/construction/decisions/D003-construction-boundary.md": ["背景", "判断", "理由", "影響"],
     },

@@ -244,8 +244,10 @@ PR を言及する場合は、必ず URL を記録する。
 6. 対象 Bolt の `tasks.md` に作業、要求、ユースケース、依存、設計根拠、証拠がある。
 7. `state.json.construction.bolts[]` が対象 Bolt の `taskGeneration` と evidence を持つ。
 8. `traceability.md` に `Task Generation からの追跡` があり、Task Generation から Task まで追跡できる。
-9. `test-results.md` が存在する段階では、実行した検証と失敗時の扱いが記録されている。
-10. 昇格済みの `amadeus-validator` が使える場合は、対象 Intent ディレクトリ名を指定して検証する。
+9. 完了済み Construction では `traceability.md` に `Construction からの追跡` があり、`ボルト`、`タスク`、`証拠`、`状態` の列で実装と検証の証拠まで追跡できる。
+10. `Task Generation からの追跡` だけでは完了済み Construction の traceability 条件を満たさない。
+11. `test-results.md` が存在する段階では、実行した検証と失敗時の扱いが記録されている。
+12. 昇格済みの `amadeus-validator` が使える場合は、対象 Intent ディレクトリ名を指定して検証する。
 
 ## 禁止事項
 
