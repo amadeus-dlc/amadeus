@@ -114,13 +114,6 @@
       "complexity": 23
     },
     {
-      "id": "dev-scripts/evals/amadeus-validator/check.ts#function:writeGrillings",
-      "file": "dev-scripts/evals/amadeus-validator/check.ts",
-      "name": "writeGrillings",
-      "line": 1295,
-      "complexity": 23
-    },
-    {
       "id": "skills/amadeus-validator/validator/AmadeusValidator.ts#class:AmadeusValidator>method:checkedFileCategory",
       "file": "skills/amadeus-validator/validator/AmadeusValidator.ts",
       "name": "checkedFileCategory",
