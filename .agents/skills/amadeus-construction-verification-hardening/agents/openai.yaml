@@ -1,0 +1,7 @@
+# skill-forge-source-sha256: 378a5c17e3c9a3be48356b05b8db1ccb60fbcd5dccb2d20dd1768b492e6b3fee
+interface:
+  display_name: "Amadeus Construction Verification Hardening"
+  short_description: "Verify Amadeus Construction tasks"
+  default_prompt: "Use $amadeus-construction-verification-hardening to verify Amadeus Construction tasks."
+policy:
+  allow_implicit_invocation: false

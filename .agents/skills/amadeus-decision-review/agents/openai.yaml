@@ -1,0 +1,7 @@
+# skill-forge-source-sha256: ee98b6bdefbd226854d0b7e55189c6244b13869b97225e17d2cd04a85225a300
+interface:
+  display_name: "Amadeus Decision Review"
+  short_description: "Review Amadeus phase decisions"
+  default_prompt: "Use $amadeus-decision-review to review Amadeus phase decisions."
+policy:
+  allow_implicit_invocation: false

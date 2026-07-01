@@ -1,0 +1,7 @@
+# skill-forge-source-sha256: da3f3e959417fa8e27a2663cc7464834102c3d8a8a1b29fd1194084388609e8a
+interface:
+  display_name: "Amadeus Inception Codebase Analysis"
+  short_description: "Analyze codebase inputs for Inception"
+  default_prompt: "Use $amadeus-inception-codebase-analysis to analyze codebase inputs for Inception."
+policy:
+  allow_implicit_invocation: false

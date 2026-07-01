@@ -1,0 +1,7 @@
+# skill-forge-source-sha256: 5d04bd2c690b287a4d637fa0da57b780f38e7852359ae65acfe49242b4ca36b3
+interface:
+  display_name: "Amadeus Ideation Mock Framing"
+  short_description: "Frame Amadeus initial mocks"
+  default_prompt: "Use $amadeus-ideation-mock-framing to frame Amadeus initial mocks."
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+# skill-forge-source-sha256: 50957377754f31352d43a72a39e759437956c3457bcb16c63c3953eeb030ac59
+interface:
+  display_name: "Amadeus Ideation Intent Capture"
+  short_description: "Capture Amadeus Intent records"
+  default_prompt: "Use $amadeus-ideation-intent-capture to capture an Amadeus Intent record."
+policy:
+  allow_implicit_invocation: false

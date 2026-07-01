@@ -1,0 +1,7 @@
+# skill-forge-source-sha256: 930c67db07f0263c21c708758820c81cbbd579a8336d58547a4a5b1c7190a31d
+interface:
+  display_name: "Amadeus Learning Review"
+  short_description: "Route Amadeus execution learnings"
+  default_prompt: "Use $amadeus-learning-review to route Amadeus execution learnings."
+policy:
+  allow_implicit_invocation: false

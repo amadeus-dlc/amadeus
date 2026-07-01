@@ -1,0 +1,12 @@
+@startsalt
+title 初期確認
+{
+  {T
+    + 確認対象 | README*.md の Internal Skills 一覧
+    + 確認対象 | 内部 skill の暗黙起動ポリシー設定
+    + 対象外 | skill-forge 内容監査
+    + 対象外 | SKILL.md 英語化
+    + 次に確認すること | Codex と Claude Code の設定配置
+  }
+}
+@endsalt
