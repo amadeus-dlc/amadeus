@@ -2357,17 +2357,18 @@ class AmadeusValidator {
   }
 
   private functionalDesignEvidenceHasPassedStatus(target: string): boolean {
-    const unitId = this.functionalDesignEvidenceUnitId(target);
-    if (!unitId) return true;
+    const unitName = this.functionalDesignEvidenceUnitName(target);
+    if (!unitName) return true;
+    const unitId = unitName.match(/^(U\d{3})(?:-|$)/)?.[1];
+    if (!unitId) return false;
     return this.constructionFunctionalDesignUnitStatus(unitId) === "passed";
   }
 
-  private functionalDesignEvidenceUnitId(target: string): string | undefined {
+  private functionalDesignEvidenceUnitName(target: string): string | undefined {
     if (!this.intentId) return undefined;
     const currentIntentRoot = `.amadeus/intents/${this.intentId}`;
     const match = target.match(new RegExp(`^${this.escapeRegExp(currentIntentRoot)}/construction/([^/]+)/functional-design/[^/]+\\.md$`));
-    const unitName = match?.[1];
-    return unitName?.match(/^(U\d{3})(?:-|$)/)?.[1];
+    return match?.[1];
   }
 
   private constructionFunctionalDesignUnitStatus(unitId: string): string | undefined {

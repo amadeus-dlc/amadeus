@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -99,6 +99,14 @@ function updateFunctionalDesignStatus(workspace: string, unitId: string, status:
   assert(unit, "Functional Design unit state exists");
   unit.status = status;
   writeFileSync(path, JSON.stringify(state, null, 2));
+}
+
+function writeFunctionalDesignEvidenceWithoutUnitId(workspace: string): string {
+  const relativePath = ".amadeus/intents/20260629-minimum-purchase-flow/construction/order-creation/functional-design/business-logic-model.md";
+  const path = join(workspace, relativePath);
+  mkdirSync(join(workspace, ".amadeus/intents/20260629-minimum-purchase-flow/construction/order-creation/functional-design"), { recursive: true });
+  writeFileSync(path, "# Business Logic Model\n");
+  return "./intents/20260629-minimum-purchase-flow/construction/order-creation/functional-design/business-logic-model.md";
 }
 
 const validUnitId = unitId("U001");
@@ -359,6 +367,14 @@ withExampleWorkspace((workspace) => {
   const result = runValidator(workspace, "20260629-minimum-purchase-flow");
   assert(result.status === 1, "Context Map dependency evidence with ready_for_approval Functional Design is rejected");
   assert(result.output.includes("Context Map の Functional Design 採用根拠が passed である"), "Context Map Functional Design rejection explains expected status");
+}, "examples/04-construction-design-ready");
+
+withExampleWorkspace((workspace) => {
+  const evidence = writeFunctionalDesignEvidenceWithoutUnitId(workspace);
+  addContextMapDependency(workspace, `[Functional Design](${evidence})`);
+  const result = runValidator(workspace, "20260629-minimum-purchase-flow");
+  assert(result.status === 1, "Context Map dependency evidence with Functional Design path without Unit ID is rejected");
+  assert(result.output.includes("Context Map の Functional Design 採用根拠が passed である"), "Context Map Functional Design rejection covers missing Unit ID");
 }, "examples/04-construction-design-ready");
 
 withExampleWorkspace((workspace) => {
