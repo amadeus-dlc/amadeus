@@ -1,0 +1,12 @@
+@startsalt
+title 初期確認
+{
+  {T
+    + 確認項目 | 記録先候補 | Inception で決めること
+    + stage0、stage1、stage2 の意味 | glossary / policies | 要求と受け入れ状態
+    + stage2 から次回 stage0 への採用判断 | policies / decisions | 人間判断の証拠
+    + build workspace と target workspace の対応 | traceability / decisions | 後続 Intent の参照先
+    + target artifacts と host environment | traceability / acceptance | 混同しない記録粒度
+  }
+}
+@endsalt

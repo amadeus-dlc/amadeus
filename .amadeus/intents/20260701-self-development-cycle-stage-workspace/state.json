@@ -1,0 +1,100 @@
+{
+  "intent": "20260701-self-development-cycle-stage-workspace",
+  "phase": "inception",
+  "status": "completed",
+  "ideation": {
+    "intentCapture": {
+      "status": "completed",
+      "createdArtifacts": [
+        "../20260701-self-development-cycle-stage-workspace.md",
+        "state.json"
+      ],
+      "next": "ideation/scope-framing"
+    },
+    "status": "completed",
+    "requiredArtifacts": [
+      "../20260701-self-development-cycle-stage-workspace.md",
+      "ideation/scope.md",
+      "ideation/ideation.md",
+      "ideation/decisions.md",
+      "ideation/traceability.md"
+    ],
+    "requiredMocks": [
+      "ideation/mocks/initial-confirmation.puml"
+    ],
+    "gate": "passed"
+  },
+  "inception": {
+    "status": "completed",
+    "codebaseAnalysis": {
+      "requirement": "required",
+      "status": "passed",
+      "evidence": [
+        {
+          "kind": "file",
+          "path": ".amadeus/glossary.md"
+        },
+        {
+          "kind": "file",
+          "path": ".amadeus/steering/policies.md"
+        },
+        {
+          "kind": "file",
+          "path": ".amadeus/development.md"
+        },
+        {
+          "kind": "file",
+          "path": ".amadeus/intents/20260629-self-dev-steering-layer/ideation/decisions/D002-issue-233-handoff-scope.md"
+        }
+      ],
+      "targetScope": [
+        ".amadeus/glossary.md",
+        ".amadeus/steering/policies.md",
+        ".amadeus/development.md",
+        ".amadeus/intents/20260701-self-development-cycle-stage-workspace/**"
+      ],
+      "analyzedCommit": "553b248a25eef44ff2a02585d3105835d30d94e4",
+      "analyzedAt": "2026-07-01T08:29:54Z",
+      "freshness": "current"
+    },
+    "requiredArtifacts": [
+      "inception/codebase-analysis.md",
+      "inception/requirements.md",
+      "inception/acceptance.md",
+      "inception/user-stories.md",
+      "inception/use-cases.md",
+      "inception/units.md",
+      "inception/units/U001-stage-adoption.md",
+      "inception/units/U001-stage-adoption/design.md",
+      "inception/units/U002-workspace-provenance.md",
+      "inception/units/U002-workspace-provenance/design.md",
+      "inception/bolts.md",
+      "inception/traceability.md",
+      "inception/decisions.md"
+    ],
+    "requiredRequirementArtifacts": [
+      "inception/requirements/R001-stage-meaning.md",
+      "inception/requirements/R002-stage0-adoption-decision.md",
+      "inception/requirements/R003-workspace-correspondence-record.md",
+      "inception/requirements/R004-validation-evidence.md"
+    ],
+    "requiredStoryArtifacts": [
+      "inception/user-stories/S001-stage0-adoption-decision.md"
+    ],
+    "requiredUseCaseArtifacts": [
+      "inception/use-cases/UC001-define-stage-policy.md",
+      "inception/use-cases/UC002-record-workspace-correspondence.md",
+      "inception/use-cases/UC003-review-stage0-adoption.md"
+    ],
+    "requiredDecisionArtifacts": [
+      "inception/decisions/D001-inception-boundary.md",
+      "inception/decisions/D002-bc001-self-development-governance.md",
+      "inception/decisions/D003-unit-bolt-granularity.md"
+    ],
+    "requiredBoltArtifacts": [
+      "inception/bolts/B001-stage-policy-record.md",
+      "inception/bolts/B002-workspace-provenance-record.md"
+    ],
+    "gate": "passed"
+  }
+}
