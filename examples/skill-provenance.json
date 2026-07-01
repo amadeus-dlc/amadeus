@@ -104,6 +104,10 @@
           "staleReason": "Issue #177 で Inception による新規 Boundary 初回採用時の gate 条件と Domain Map 反映方針を更新した。real provider による example 再生成は後続 PR で実施する。"
         },
         {
+          "path": "skills/amadeus-inception-codebase-analysis/SKILL.md",
+          "md5": "02829793d4c4822f583321178c79f558"
+        },
+        {
           "path": "skills/amadeus-inception-requirements-definition/SKILL.md",
           "md5": "e39bae941a318652374b76381cdc0bba"
         },
@@ -171,6 +175,10 @@
           "path": "skills/amadeus-inception/SKILL.md",
           "md5": "b83cded3307cb1a6d5d553189aa33cdd",
           "staleReason": "Issue #177 で Inception による新規 Boundary 初回採用時の gate 条件と Domain Map 反映方針を更新した。real provider による example 再生成は後続 PR で実施する。"
+        },
+        {
+          "path": "skills/amadeus-inception-codebase-analysis/SKILL.md",
+          "md5": "02829793d4c4822f583321178c79f558"
         },
         {
           "path": "skills/amadeus-inception-requirements-definition/SKILL.md",

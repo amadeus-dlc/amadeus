@@ -1,3 +1,4 @@
+import { checkInceptionCodebaseAnalysisStage } from "../stages/inception/codebase-analysis";
 import { checkInceptionRequirementsDefinitionStage } from "../stages/inception/requirements-definition";
 import { checkInceptionUserStoriesStage } from "../stages/inception/user-stories";
 import { checkInceptionUseCasesStage } from "../stages/inception/use-cases";
@@ -13,7 +14,8 @@ export function checkInceptionPhase(
   checkInceptionStateJson(context, statePath, input.state);
   context.checkGrillings(inceptionBase);
 
-  checkInceptionRequirementsDefinitionStage(context, { inceptionBase, state: input.state });
+  checkInceptionCodebaseAnalysisStage(context, { inceptionBase, state: input.state });
+  checkInceptionRequirementsDefinitionStage(context, { inceptionBase });
   const requireDomainBoundary = String(input.state.inception?.gate ?? "").trim() === "passed";
   context.checkNoInceptionDomainArtifacts(inceptionBase);
   checkInceptionUserStoriesStage(context, { inceptionBase });

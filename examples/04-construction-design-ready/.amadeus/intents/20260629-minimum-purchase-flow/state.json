@@ -26,6 +26,14 @@
   },
   "inception": {
     "status": "completed",
+    "codebaseAnalysis": {
+      "requirement": "not_required",
+      "status": "skipped",
+      "evidence": [],
+      "targetScope": [],
+      "skipReason": "greenfield",
+      "freshness": "unknown"
+    },
     "requiredArtifacts": [
       "inception/requirements.md",
       "inception/acceptance.md",

@@ -535,8 +535,8 @@ Inception 以降の Unit の `コンテキスト` は、Domain Map の `adopted`
 - `.amadeus/intents/<intent-id>-<slug>/inception/codebase-analysis.md`
 
 `codebase-analysis.md` は条件付き成果物である。
-存在する場合、または `.amadeus/intents/<intent-id>-<slug>/state.json` の `inception.requiredArtifacts` に `inception/codebase-analysis.md` が含まれる場合だけ検証する。
-存在せず、`inception.requiredArtifacts` にも含まれない場合は不足にしない。
+存在する場合、`.amadeus/intents/<intent-id>-<slug>/state.json` の `inception.codebaseAnalysis.requirement` が `required` の場合、または `inception.requiredArtifacts` に `inception/codebase-analysis.md` が含まれる場合だけ検証する。
+存在せず、`inception.codebaseAnalysis.requirement` が `required` でもなく、`inception.requiredArtifacts` にも含まれない場合は不足にしない。
 
 必須見出しは次である。
 
@@ -546,6 +546,9 @@ Inception 以降の Unit の `コンテキスト` は、Domain Map の `adopted`
 - `ギャップ`
 - `リスク`
 - `Inception への入力`
+- `証拠`
+- `鮮度`
+- `未確認事項`
 
 この検証では、各見出しの内容妥当性、既存コード分析の網羅性、greenfield か brownfield かの判断妥当性は扱わない。
 

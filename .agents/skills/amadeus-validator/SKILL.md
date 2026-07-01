@@ -117,9 +117,11 @@ Bun が使えない場合は `blocked` として報告する。
 - Construction 段階の Intent では、`state.json.construction.requiredArtifacts` に `construction/decisions.md` が含まれる。
 - Construction 段階の Intent では、`tasks.md`、`notes.md`、`test-results.md`、任意の `pr.md` の必須見出しを検証する。
 - Construction 段階の Intent では、Task Generation が `ready_for_approval` または `passed` の場合に `construction/traceability.md` の `Task Generation からの追跡` を検証する。
+- 対象 Intent ディレクトリ名が指定され、`.amadeus/intents/<intent-id>-<slug>/state.json` の `inception.codebaseAnalysis` が存在する場合、requirement、status、evidence、targetScope、skipReason、blockedReason、freshness を検証する。
 - 対象 Intent ディレクトリ名が指定され、`.amadeus/intents/<intent-id>-<slug>/inception/codebase-analysis.md` が存在する場合、必須見出しを検証する。
-- 対象 Intent ディレクトリ名が指定され、`.amadeus/intents/<intent-id>-<slug>/state.json` の `inception.requiredArtifacts` に `inception/codebase-analysis.md` が含まれる場合、存在と必須見出しを検証する。
-- `codebase-analysis.md` は条件付き成果物であるため、存在せず、`inception.requiredArtifacts` にも含まれない場合は不足にしない。
+- 対象 Intent ディレクトリ名が指定され、`.amadeus/intents/<intent-id>-<slug>/state.json` の `inception.codebaseAnalysis.requirement` が `required` の場合、`codebase-analysis.md` の存在と必須見出しを検証する。
+- 対象 Intent ディレクトリ名が指定され、`.amadeus/intents/<intent-id>-<slug>/state.json` の `inception.requiredArtifacts` に `inception/codebase-analysis.md` が含まれる場合も、存在と必須見出しを検証する。
+- `codebase-analysis.md` は条件付き成果物であるため、存在せず、`inception.codebaseAnalysis.requirement` が `required` でもなく、`inception.requiredArtifacts` にも含まれない場合は不足にしない。
 - 対象 Intent ディレクトリ名が指定された場合、対象 Intent の index 系成果物が、[artifacts validation](references/artifacts.md) の条件を満たす。
 - 対象 Intent ディレクトリ名が指定された場合、対象 Intent の `inception/traceability.md` にある `既存コード分析からの追跡` の表列を検証する。
 - 対象 Intent ディレクトリ名が指定された場合、対象 Intent の `inception/traceability.md` にある `既存コード分析からの追跡` の ID が対応する index に存在する。

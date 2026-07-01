@@ -122,7 +122,7 @@ const targetSkills: Record<string, Contract> = {
       "templates/intents/inception/user-stories/S001-story.md": ["ストーリー", "受け入れ条件", "根拠", "未確認事項"],
       "templates/intents/inception/use-cases.md": ["一覧", "依存関係"],
       "templates/intents/inception/use-cases/UC001-use-case.md": ["システム境界", "事前条件", "基本フロー", "代替フロー", "事後条件", "BCE候補", "責務候補"],
-      "templates/intents/inception/codebase-analysis.md": ["対象コード", "既存能力", "統合点", "ギャップ", "リスク", "Inception への入力"],
+      "templates/intents/inception/codebase-analysis.md": ["対象コード", "既存能力", "統合点", "ギャップ", "リスク", "Inception への入力", "証拠", "鮮度", "未確認事項"],
       "templates/intents/inception/units.md": ["一覧", "依存関係"],
       "templates/intents/inception/units/U001-unit.md": ["ユニット", "対象要求", "価値境界", "検証観点", "未確認事項", "関連成果物"],
       "templates/intents/inception/units/U001-unit/design.md": [
@@ -264,6 +264,17 @@ const textContracts: TextContract[] = [
       "対象 Intent の `domain/bounded-contexts.md`",
       `\`${domainPlacementContract.legacyIntentDomainSegments.join("/")}/subdomains.md\` と \`${domainPlacementContract.legacyIntentDomainSegments.join("/")}/bounded-contexts.md\``,
     ],
+  },
+  {
+    path: "skills/amadeus-inception-codebase-analysis/SKILL.md",
+    promotedPath: ".agents/skills/amadeus-inception-codebase-analysis/SKILL.md",
+    includes: [
+      "`state.json.inception.codebaseAnalysis`",
+      "既存コードに載せる場合は、`requirement` を `required` にする。",
+      "greenfield の Intent では `codebase-analysis.md` を作らず",
+      "Impact Mapping を独立 stage として作らない。",
+    ],
+    excludes: ["Spec、実装、CI を作る"],
   },
   {
     path: "skills/amadeus-inception-units-generation/SKILL.md",
@@ -491,6 +502,7 @@ function assertInceptionStageReference(): void {
   const text = readFileSync(path, "utf8");
   const stageHeadings = Array.from(text.matchAll(/^## Stage (2\.\d): (.+)$/gm)).map((match) => `${match[1]}: ${match[2]}`);
   const expected = [
+    "2.0: Codebase Analysis",
     "2.1: Requirements Definition",
     "2.2: User Stories",
     "2.3: Use Cases",

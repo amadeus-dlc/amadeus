@@ -1755,13 +1755,15 @@ class AmadeusValidator {
     const path = `${base}/codebase-analysis.md`;
     const intentBase = this.intentBaseForPhaseBase(base);
     const requiredPath = this.relativeToIntent(intentBase, path);
-    const required = new Set((state.inception?.requiredArtifacts ?? []).map((value: unknown) => String(value).trim())).has(requiredPath);
+    const requiredByArtifacts = new Set((state.inception?.requiredArtifacts ?? []).map((value: unknown) => String(value).trim())).has(requiredPath);
+    const requiredByState = String(state.inception?.codebaseAnalysis?.requirement ?? "").trim() === "required";
+    const required = requiredByArtifacts || requiredByState;
     if (required) {
       this.checkFile(path, "既存コード分析が必須成果物として存在する");
-      this.checkHeadings(path, ["対象コード", "既存能力", "統合点", "ギャップ", "リスク", "Inception への入力"]);
+      this.checkHeadings(path, ["対象コード", "既存能力", "統合点", "ギャップ", "リスク", "Inception への入力", "証拠", "鮮度", "未確認事項"]);
     } else if (this.isFile(this.absolute(path))) {
       this.pass(path, "既存コード分析が存在する場合は検証対象である", "存在を確認");
-      this.checkHeadings(path, ["対象コード", "既存能力", "統合点", "ギャップ", "リスク", "Inception への入力"]);
+      this.checkHeadings(path, ["対象コード", "既存能力", "統合点", "ギャップ", "リスク", "Inception への入力", "証拠", "鮮度", "未確認事項"]);
     } else {
       this.skipped(path, "既存コード分析は条件付き成果物である", "requiredArtifacts に未指定で、ファイルも存在しない");
     }
