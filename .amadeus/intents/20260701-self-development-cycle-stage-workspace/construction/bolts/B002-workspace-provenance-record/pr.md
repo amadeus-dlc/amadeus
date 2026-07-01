@@ -3,7 +3,9 @@
 ## Pull Request
 
 - URL: https://github.com/amadeus-dlc/amadeus/pull/241
-- 状態: open
+- 状態: merged
+- merge commit: `dd6d86cd4edb7edeb87ecffab9feb485e1dc1afb`
+- mergedAt: 2026-07-01T09:01:43Z
 
 ## 対象
 
@@ -16,6 +18,6 @@
 
 | 観点 | 状態 | 根拠 |
 |---|---|---|
-| CI | 未確認 | PR 作成後の監視で確認する。 |
-| レビュー | 未確認 | PR 作成後の監視で確認する。 |
-| マージ | 未実施 | マージ操作は人間が行う。 |
+| CI | pass | GitHub Actions `mock` が SUCCESS。 |
+| レビュー | コメントなし | PR #241 にトップレベルコメント、レビュー、インラインコメントなし。 |
+| マージ | 完了 | PR #241 は 2026-07-01T09:01:43Z に merge 済み。 |
