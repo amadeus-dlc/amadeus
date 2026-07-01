@@ -68,14 +68,16 @@ PR を言及する場合は、必ず URL を記録する。
 2. 完了した Task の `証拠` を更新する。
 3. `acceptance.md` の要求状態と証拠を更新する。
 4. `traceability.md` の `Task Generation からの追跡` に実装、検証、PR の証拠を反映する。
-5. `traceability.md` に Deployment Unit または証拠への追跡を反映する。
-6. Construction の境界や重要判断を `decisions.md` と `decisions/**` に残す。
-7. Functional Design 承認後に共有境界として採用する内容が未反映の場合は Domain Map、コンテキスト間依存として採用する内容が未反映の場合は Context Map を、`adopted` または `retired` の現在の索引として更新する。
-8. Domain Map と Context Map の更新判断と根拠を `decisions.md` に残す。
-9. `state.json.phase` を `construction` にし、Construction の必須成果物を反映する。
-10. PR URL がある場合だけ `pr.md` を作る。
-11. 親 skill から記録対象の質問と回答が渡された場合だけ、`amadeus-grilling` の構造に従って Grilling Decision Trail を同じ変更で更新する。
-12. validator が使える場合は、対象 Intent を検証する。
+5. 完了済み Construction では `traceability.md` に `Construction からの追跡` を作成または補修し、`ボルト`、`タスク`、`証拠`、`状態` の列で実装と検証の証拠まで追跡する。
+6. `Task Generation からの追跡` は Task 生成から Task までの追跡であり、これだけでは完了済み Construction の traceability 条件を満たさないことを確認する。
+7. `traceability.md` に Deployment Unit または証拠への追跡を反映する。
+8. Construction の境界や重要判断を `decisions.md` と `decisions/**` に残す。
+9. Functional Design 承認後に共有境界として採用する内容が未反映の場合は Domain Map、コンテキスト間依存として採用する内容が未反映の場合は Context Map を、`adopted` または `retired` の現在の索引として更新する。
+10. Domain Map と Context Map の更新判断と根拠を `decisions.md` に残す。
+11. `state.json.phase` を `construction` にし、Construction の必須成果物を反映する。
+12. PR URL がある場合だけ `pr.md` を作る。
+13. 親 skill から記録対象の質問と回答が渡された場合だけ、`amadeus-grilling` の構造に従って Grilling Decision Trail を同じ変更で更新する。
+14. validator が使える場合は、対象 Intent を検証する。
 
 ## 禁止事項
 

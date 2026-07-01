@@ -1,7 +1,7 @@
 {
   "intent": "20260701-construction-finalization-traceability-skill",
-  "phase": "inception",
-  "status": "completed",
+  "phase": "construction",
+  "status": "in_progress",
   "ideation": {
     "intentCapture": {
       "status": "completed",
@@ -104,5 +104,123 @@
       "inception/bolts/B002-template-and-example-alignment.md"
     ],
     "gate": "passed"
+  },
+  "construction": {
+    "status": "in_progress",
+    "requiredArtifacts": [
+      "construction/decisions.md",
+      "construction/traceability.md"
+    ],
+    "requiredBoltArtifacts": [
+      "construction/bolts/B001-finalization-skill-guidance/tasks.md",
+      "construction/bolts/B001-finalization-skill-guidance/notes.md",
+      "construction/bolts/B001-finalization-skill-guidance/test-results.md",
+      "construction/bolts/B002-template-and-example-alignment/tasks.md",
+      "construction/bolts/B002-template-and-example-alignment/notes.md",
+      "construction/bolts/B002-template-and-example-alignment/test-results.md"
+    ],
+    "targetBolts": [
+      "B001",
+      "B002"
+    ],
+    "functionalDesign": {
+      "targetUnits": [
+        "U001",
+        "U002"
+      ],
+      "units": [
+        {
+          "unitId": "U001",
+          "requirement": "required",
+          "status": "ready_for_approval",
+          "frontendSurface": "absent",
+          "targetSource": "construction_target_bolts",
+          "runMode": "initial"
+        },
+        {
+          "unitId": "U002",
+          "requirement": "required",
+          "status": "ready_for_approval",
+          "frontendSurface": "absent",
+          "targetSource": "construction_target_bolts",
+          "runMode": "initial"
+        }
+      ]
+    },
+    "bolts": [
+      {
+        "id": "B001",
+        "taskGeneration": {
+          "status": "ready_for_approval",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-finalization-skill-guidance/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-finalization-skill-guidance/functional-design/business-rules.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-finalization-skill-guidance/functional-design/domain-entities.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U001-finalization-skill-guidance/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B001-finalization-skill-guidance.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B001-finalization-skill-guidance/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B001-finalization-skill-guidance/notes.md"
+            }
+          ]
+        }
+      },
+      {
+        "id": "B002",
+        "taskGeneration": {
+          "status": "ready_for_approval",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U002-traceability-template-alignment/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U002-traceability-template-alignment/functional-design/business-rules.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U002-traceability-template-alignment/functional-design/domain-entities.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U002-traceability-template-alignment/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B002-template-and-example-alignment.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B002-template-and-example-alignment/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B002-template-and-example-alignment/notes.md"
+            }
+          ]
+        }
+      }
+    ],
+    "gate": "not_ready"
   }
 }

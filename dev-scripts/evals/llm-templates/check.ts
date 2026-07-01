@@ -1084,7 +1084,15 @@ function applyConstructionTraceabilityFinalizationArtifacts(workspace: string): 
 
   const traceabilityPath = join(target, "traceability.md");
   const traceability = readFileSync(traceabilityPath, "utf8");
-  if (!traceability.includes("## Construction からの追跡")) {
+  if (traceability.includes("| B001 | B001/T001 | 未登録 | 未確認 |")) {
+    writeFileSync(
+      traceabilityPath,
+      traceability.replace(
+        "| B001 | B001/T001 | 未登録 | 未確認 |",
+        "| B001 | B001/T001 | [test-results.md](bolts/B001-loan-eligibility-flow/test-results.md) | 充足済み |",
+      ),
+    );
+  } else if (!traceability.includes("## Construction からの追跡")) {
     writeFileSync(
       traceabilityPath,
       [
