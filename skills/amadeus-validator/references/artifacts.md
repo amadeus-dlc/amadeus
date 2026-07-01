@@ -141,14 +141,6 @@ Downstream Context、Upstream Context、Organization Pattern、Integration Patte
 
 `.amadeus/intents/<intent-id>-<slug>.md` の必須見出しは次である。
 
-- `目的`
-- `成功条件`
-- `範囲`
-
-## Ideation 段階の Intent
-
-`.amadeus/intents/<intent-id>-<slug>.md` の必須見出しは次である。
-
 - `目標プロファイル`
 - `目的`
 - `成功条件`
@@ -164,6 +156,8 @@ Downstream Context、Upstream Context、Organization Pattern、Integration Patte
 
 `labels` の値は空欄にしない。
 未判断の場合は `未確認` と書く。
+
+## Ideation 段階の Intent
 
 `.amadeus/intents/<intent-id>-<slug>/state.json` の `phase` が `ideation` の場合、`state.json` は次を満たす。
 
