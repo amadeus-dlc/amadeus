@@ -1961,8 +1961,8 @@ class AmadeusValidator {
     this.checkNotBlank(path, table, "PR");
     this.checkNotBlank(path, table, "状態");
 
-    this.checkReadyTaskGenerationTraceabilityRows(path, table, construction, intentBase, boltDirectories);
-    this.checkNoneUseCaseTaskGenerationReasons(path, table, boltDirectories);
+    const readyRows = this.checkReadyTaskGenerationTraceabilityRows(path, table, construction, intentBase, boltDirectories);
+    this.checkNoneUseCaseTaskGenerationReasons(path, readyRows, boltDirectories, table.headers.includes("理由"));
     this.checkCompletedConstructionTaskGenerationTraceability(path, table, construction, boltDirectories);
   }
 
@@ -1972,8 +1972,9 @@ class AmadeusValidator {
     construction: unknown,
     intentBase: string,
     boltDirectories: Map<string, string>,
-  ): void {
-    if (!this.isObject(construction) || !Array.isArray(construction.bolts)) return;
+  ): Array<Record<string, string>> {
+    if (!this.isObject(construction) || !Array.isArray(construction.bolts)) return [];
+    const rows: Array<Record<string, string>> = [];
     const targetBolts = new Set(
       Array.isArray(construction.targetBolts) ? construction.targetBolts.map((value: unknown) => String(value ?? "").trim()) : [],
     );
@@ -1983,8 +1984,10 @@ class AmadeusValidator {
       if (!targetBolts.has(boltId)) continue;
       const status = String(item.taskGeneration.status ?? "").trim();
       if (status !== "ready_for_approval" && status !== "passed") continue;
-      this.checkReadyTaskGenerationTraceabilityRow(path, table, intentBase, boltDirectories, boltId, item.taskGeneration);
+      const row = this.checkReadyTaskGenerationTraceabilityRow(path, table, intentBase, boltDirectories, boltId, item.taskGeneration);
+      if (row) rows.push(row);
     }
+    return rows;
   }
 
   private checkReadyTaskGenerationTraceabilityRow(
@@ -1994,15 +1997,16 @@ class AmadeusValidator {
     boltDirectories: Map<string, string>,
     boltId: string,
     taskGeneration: Record<string, any>,
-  ): void {
+  ): Record<string, string> | undefined {
     const taskEvidence = this.taskGenerationEvidencePaths(taskGeneration);
     const row = table.rows.find((candidate) => this.taskGenerationEvidenceRowMatches(path, intentBase, candidate, taskEvidence));
     if (!row) {
       this.failRow(path, "`Task Generation からの追跡` が tasks evidence を持つ", `${boltId}: ${taskEvidence.join(", ") || "空欄"}`);
-      return;
+      return undefined;
     }
     this.pass(path, "`Task Generation からの追跡` が tasks evidence を持つ", `${boltId}: ${taskEvidence.join(", ")}`);
     this.checkTaskGenerationTaskReferences(path, row, boltId, boltDirectories);
+    return row;
   }
 
   private taskGenerationEvidencePaths(taskGeneration: Record<string, any>): string[] {
@@ -2056,8 +2060,13 @@ class AmadeusValidator {
     }
   }
 
-  private checkNoneUseCaseTaskGenerationReasons(path: string, table: Table, boltDirectories: Map<string, string>): void {
-    for (const row of table.rows) {
+  private checkNoneUseCaseTaskGenerationReasons(
+    path: string,
+    rows: Array<Record<string, string>>,
+    boltDirectories: Map<string, string>,
+    hasReasonColumn: boolean,
+  ): void {
+    for (const row of rows) {
       const taskReferences = this.splitValues(row["Task"]);
       for (const reference of taskReferences) {
         const match = reference.match(/^(B\d{3})\/(T\d{3})$/);
@@ -2073,7 +2082,7 @@ class AmadeusValidator {
         if (reason.length > 0 && reason !== "なし" && reason !== "未確認" && reason !== "該当なし") {
           this.pass(path, "Use Case を参照しない Task の理由がある", `${reference}: ${reason}`);
         } else {
-          const evidence = table.headers.includes("理由") ? `${reference}: ${reason || "空欄"}` : `${reference}: 理由列なし`;
+          const evidence = hasReasonColumn ? `${reference}: ${reason || "空欄"}` : `${reference}: 理由列なし`;
           this.failRow(path, "Use Case を参照しない Task の理由がある", evidence);
         }
       }
