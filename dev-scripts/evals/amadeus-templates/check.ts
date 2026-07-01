@@ -177,6 +177,21 @@ const targetSkills: Record<string, Contract> = {
 
 const textContracts: TextContract[] = [
   {
+    path: "skills/amadeus-decision-review/SKILL.md",
+    promotedPath: ".agents/skills/amadeus-decision-review/SKILL.md",
+    includes: [
+      "## 判断ノード",
+      "## Outcome",
+      "## Grilling Handoff",
+      "`grill_required`",
+      "`no_grill`",
+      "`repair_only`",
+      "`follow_up_issue_candidate`",
+      "validator の `pass` は、実行時に参照できる最低限の構造条件を満たすという意味であり、内容承認ではない。",
+    ],
+    excludes: [],
+  },
+  {
     path: "README.ja.md",
     includes: [
       "対象 Intent の `domain-notes.md`、`.amadeus/domain-map.md`、`.amadeus/context-map.md`、`inception/traceability.md`、Construction の Functional Design",
@@ -249,6 +264,10 @@ const textContracts: TextContract[] = [
     path: "skills/amadeus-ideation/SKILL.md",
     promotedPath: ".agents/skills/amadeus-ideation/SKILL.md",
     includes: [
+      "## Decision Review",
+      "`amadeus-decision-review`",
+      "`grill_required`",
+      "`repair_only`",
       "## 実行時問題報告",
       "`upstream_feedback_required`",
       "`current_phase_update_required`",
@@ -267,6 +286,10 @@ const textContracts: TextContract[] = [
     path: "skills/amadeus-inception/SKILL.md",
     promotedPath: ".agents/skills/amadeus-inception/SKILL.md",
     includes: [
+      "## Decision Review",
+      "`amadeus-decision-review`",
+      "`grill_required`",
+      "`repair_only`",
       "Inception は Intent 固有の正式な Domain Model や Contracts を作らない。",
       "`inception/units.md` の `コンテキスト`",
       "Domain Map の `adopted` Bounded Context",
@@ -338,6 +361,10 @@ const textContracts: TextContract[] = [
     path: "skills/amadeus-construction/SKILL.md",
     promotedPath: ".agents/skills/amadeus-construction/SKILL.md",
     includes: [
+      "## Decision Review",
+      "`amadeus-decision-review`",
+      "`grill_required`",
+      "`repair_only`",
       "Functional Design は詳細な Domain Model と Intent Contracts の管理元である。",
       "Functional Design 承認後に、共有境界として採用する内容は Domain Map、コンテキスト間依存として採用する内容は Context Map へ反映できる。",
       "Domain Map と Context Map は候補を扱わず、`adopted` と `retired` の現在の索引だけを扱う。",
@@ -362,6 +389,7 @@ const textContracts: TextContract[] = [
       "## 検証結果と学習候補",
       "validator の結果は構造検出である。",
       "validator の `pass` は内容承認ではない。",
+      "decision review の質問要否や採用判断は、validator の結果だけで決めない。",
       "evaluator の結果は品質評価であり、validator の判定とは分ける。",
       "`current_phase_update_required`",
       "`upstream_feedback_required`",

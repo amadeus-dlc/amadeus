@@ -1,6 +1,6 @@
 {
   "intent": "20260701-decision-review-grilling-gate",
-  "phase": "inception",
+  "phase": "construction",
   "status": "completed",
   "ideation": {
     "intentCapture": {
@@ -146,10 +146,180 @@
     "gate": "passed"
   },
   "construction": {
-    "status": "not_started",
-    "requiredArtifacts": [],
-    "requiredBoltArtifacts": [],
-    "targetBolts": [],
-    "gate": "not_ready"
+    "status": "completed",
+    "functionalDesign": {
+      "targetUnits": [
+        "U001",
+        "U002"
+      ],
+      "units": [
+        {
+          "unitId": "U001",
+          "requirement": "required",
+          "status": "passed",
+          "frontendSurface": "absent",
+          "targetSource": "construction_target_bolts",
+          "runMode": "initial"
+        },
+        {
+          "unitId": "U002",
+          "requirement": "required",
+          "status": "passed",
+          "frontendSurface": "absent",
+          "targetSource": "construction_target_bolts",
+          "runMode": "initial"
+        }
+      ]
+    },
+    "requiredArtifacts": [
+      "construction/U001-decision-review-gate-contract/functional-design/business-logic-model.md",
+      "construction/U001-decision-review-gate-contract/functional-design/business-rules.md",
+      "construction/U001-decision-review-gate-contract/functional-design/domain-entities.md",
+      "construction/U002-phase-skill-adoption-verification/functional-design/business-logic-model.md",
+      "construction/U002-phase-skill-adoption-verification/functional-design/business-rules.md",
+      "construction/U002-phase-skill-adoption-verification/functional-design/domain-entities.md",
+      "construction/traceability.md",
+      "construction/decisions.md"
+    ],
+    "requiredBoltArtifacts": [
+      "construction/bolts/B001-decision-review-internal-contract/tasks.md",
+      "construction/bolts/B001-decision-review-internal-contract/notes.md",
+      "construction/bolts/B001-decision-review-internal-contract/test-results.md",
+      "construction/bolts/B002-phase-skill-entry-integration/tasks.md",
+      "construction/bolts/B002-phase-skill-entry-integration/notes.md",
+      "construction/bolts/B002-phase-skill-entry-integration/test-results.md",
+      "construction/bolts/B003-verification-contract-alignment/tasks.md",
+      "construction/bolts/B003-verification-contract-alignment/notes.md"
+      ,
+      "construction/bolts/B003-verification-contract-alignment/test-results.md"
+    ],
+    "targetBolts": [
+      "B001",
+      "B002",
+      "B003"
+    ],
+    "bolts": [
+      {
+        "id": "B001",
+        "taskGeneration": {
+          "status": "passed",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-decision-review-gate-contract/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-decision-review-gate-contract/functional-design/business-rules.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-decision-review-gate-contract/functional-design/domain-entities.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U001-decision-review-gate-contract/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B001-decision-review-internal-contract.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B001-decision-review-internal-contract/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B001-decision-review-internal-contract/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/bolts/B001-decision-review-internal-contract/tasks.md"
+            }
+          ]
+        }
+      },
+      {
+        "id": "B002",
+        "taskGeneration": {
+          "status": "passed",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U002-phase-skill-adoption-verification/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U002-phase-skill-adoption-verification/functional-design/business-rules.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U002-phase-skill-adoption-verification/functional-design/domain-entities.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U002-phase-skill-adoption-verification/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B002-phase-skill-entry-integration.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B002-phase-skill-entry-integration/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B002-phase-skill-entry-integration/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/bolts/B002-phase-skill-entry-integration/tasks.md"
+            }
+          ]
+        }
+      },
+      {
+        "id": "B003",
+        "taskGeneration": {
+          "status": "passed",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-decision-review-gate-contract/functional-design/business-rules.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U002-phase-skill-adoption-verification/functional-design/business-rules.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U001-decision-review-gate-contract/design.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U002-phase-skill-adoption-verification/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B003-verification-contract-alignment.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B003-verification-contract-alignment/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B003-verification-contract-alignment/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/bolts/B003-verification-contract-alignment/tasks.md"
+            }
+          ]
+        }
+      }
+    ],
+    "gate": "passed"
   }
 }

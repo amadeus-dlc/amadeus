@@ -178,6 +178,7 @@ bun run <skill-dir>/validator/AmadeusValidator.ts <workdir> <intent-id>-<slug>
 validator の結果は構造検出である。
 `pass`、`fail`、`blocked` は、実行時に参照できる成果物構造、必須項目、不足、矛盾を検出した結果として扱う。
 validator の `pass` は内容承認ではない。
+decision review の質問要否や採用判断は、validator の結果だけで決めない。
 
 evaluator の結果は品質評価であり、validator の判定とは分ける。
 validator または evaluator の結果が複数 Intent で再利用できる知見を示す場合でも、自動的に Steering knowledge、Domain Map、Context Map へ昇格しない。

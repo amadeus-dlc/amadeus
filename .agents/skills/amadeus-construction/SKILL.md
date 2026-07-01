@@ -70,6 +70,20 @@ Spec、`.kiro/specs/**`、`openspec/**`、Operation 成果物は作らない。
 Functional Design の対象 Unit は、`state.json.construction.functionalDesign.targetUnits`、`state.json.construction.targetUnits`、`state.json.construction.targetBolts`、ユーザー指定の順に解決する。
 対象 Unit が解決できない場合は、`state.json.construction.functionalDesign.units[]` に `requirement: unresolved`、`status: blocked`、`blockedReason: target_unit_unresolved` を記録する。
 
+## Decision Review
+
+起動時に判断材料が揃っているかを確認する場合は、`amadeus-decision-review` の規則を参照する。
+
+`amadeus-decision-review` は、既存成果物、Issue、PR、作業ツリー、validator 結果、Skill Contract、信頼できる参照元を入力証拠として扱う。
+decision review の outcome は `grill_required`、`no_grill`、`repair_only`、`follow_up_issue_candidate` に分ける。
+
+`grill_required` の場合だけ、`amadeus-grilling` に一問、確認理由、推奨回答、推奨理由、反映先候補を渡す。
+`amadeus-decision-review` 自体は質問を実行しない。
+
+`repair_only` は成果物構造の補修だけで解ける場合に使い、`repair` へ進む。
+`follow_up_issue_candidate` は現在 Intent の成功条件外の小さな課題に限定し、人間承認なしに GitHub Issue を作成しない。
+validator の `pass` は、実行時に参照できる最低限の構造条件を満たすという意味であり、内容承認として扱わない。
+
 ## 内部プロセス
 
 `amadeus-construction` は公開入口である。
