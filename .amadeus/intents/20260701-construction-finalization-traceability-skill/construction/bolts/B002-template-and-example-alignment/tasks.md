@@ -8,7 +8,7 @@
   - ユースケース: UC003
   - 依存: なし
   - 設計根拠: ../../U002-traceability-template-alignment/functional-design/business-logic-model.md
-  - 証拠: `skills/amadeus-construction/templates/intents/construction/traceability.md`, `.agents/skills/amadeus-construction/templates/intents/construction/traceability.md`
+  - 証拠: [test-results.md](test-results.md), [pr.md](pr.md)
 
 - [x] T002: template eval の期待見出しを更新する。
   - 作業:
@@ -17,7 +17,7 @@
   - ユースケース: UC003
   - 依存: T001
   - 設計根拠: ../../U002-traceability-template-alignment/functional-design/business-rules.md
-  - 証拠: `dev-scripts/evals/amadeus-templates/check.ts`
+  - 証拠: [test-results.md](test-results.md), [pr.md](pr.md)
 
 - [x] T003: example 更新要否を判断する。
   - 作業:
@@ -27,4 +27,4 @@
   - ユースケース: UC003
   - 依存: T001
   - 設計根拠: ../../U002-traceability-template-alignment/functional-design/domain-entities.md
-  - 証拠: construction/decisions.md
+  - 証拠: [test-results.md](test-results.md), [pr.md](pr.md), ../../decisions.md
