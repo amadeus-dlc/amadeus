@@ -1,0 +1,250 @@
+{
+  "intent": "20260702-amadeus-discovery-dry-run-mode",
+  "phase": "construction",
+  "status": "completed",
+  "ideation": {
+    "intentCapture": {
+      "status": "completed",
+      "createdArtifacts": [
+        "../20260702-amadeus-discovery-dry-run-mode.md",
+        "state.json"
+      ],
+      "next": "ideation/scope-framing"
+    },
+    "status": "completed",
+    "requiredArtifacts": [
+      "../20260702-amadeus-discovery-dry-run-mode.md",
+      "ideation/scope.md",
+      "ideation/ideation.md",
+      "ideation/decisions.md",
+      "ideation/traceability.md"
+    ],
+    "requiredMocks": [
+      "ideation/mocks/initial-confirmation.puml"
+    ],
+    "gate": "passed"
+  },
+  "inception": {
+    "status": "completed",
+    "codebaseAnalysis": {
+      "requirement": "required",
+      "status": "passed",
+      "evidence": [
+        {
+          "kind": "file",
+          "path": "skills/amadeus-discovery/SKILL.md"
+        },
+        {
+          "kind": "file",
+          "path": ".agents/skills/amadeus-discovery/SKILL.md"
+        },
+        {
+          "kind": "file",
+          "path": "skills/amadeus-history-review/SKILL.md"
+        },
+        {
+          "kind": "file",
+          "path": "skills/amadeus-learning-review/SKILL.md"
+        },
+        {
+          "kind": "file",
+          "path": "dev-scripts/evals/amadeus-templates/check.ts"
+        },
+        {
+          "kind": "file",
+          "path": "dev-scripts/promote-skill.ts"
+        },
+        {
+          "kind": "file",
+          "path": ".amadeus/domain-map.md"
+        }
+      ],
+      "targetScope": [
+        "skills/amadeus-discovery/SKILL.md",
+        ".agents/skills/amadeus-discovery/SKILL.md",
+        "dev-scripts/evals/amadeus-templates/check.ts",
+        "dev-scripts/promote-skill.ts"
+      ],
+      "analyzedCommit": "cd5a09337d7d2410e3fb81fc7e20fc9c90ba73df",
+      "analyzedAt": "2026-07-01T16:53:37Z",
+      "freshness": "current"
+    },
+    "requiredArtifacts": [
+      "inception/codebase-analysis.md",
+      "inception/requirements.md",
+      "inception/acceptance.md",
+      "inception/user-stories.md",
+      "inception/use-cases.md",
+      "inception/units.md",
+      "inception/units/U001-discovery-dry-run-contract.md",
+      "inception/units/U001-discovery-dry-run-contract/design.md",
+      "inception/units/U002-dry-run-sync-verification.md",
+      "inception/units/U002-dry-run-sync-verification/design.md",
+      "inception/bolts.md",
+      "inception/traceability.md",
+      "inception/decisions.md"
+    ],
+    "requiredRequirementArtifacts": [
+      "inception/requirements/R001-dry-run-readonly-mode.md",
+      "inception/requirements/R002-dry-run-input-output.md",
+      "inception/requirements/R003-dry-run-side-effect-boundary.md",
+      "inception/requirements/R004-history-learning-consumer-boundary.md",
+      "inception/requirements/R005-skill-sync-verification.md"
+    ],
+    "requiredStoryArtifacts": [
+      "inception/user-stories/S001-review-intent-candidates-without-writing.md"
+    ],
+    "requiredUseCaseArtifacts": [
+      "inception/use-cases/UC001-preview-intent-candidates.md",
+      "inception/use-cases/UC002-consume-history-learning-results.md",
+      "inception/use-cases/UC003-verify-dry-run-contract.md"
+    ],
+    "requiredDecisionArtifacts": [
+      "inception/decisions/D001-inception-boundary.md",
+      "inception/decisions/D002-bc001-self-development-governance.md",
+      "inception/decisions/D003-unit-bolt-granularity.md"
+    ],
+    "requiredBoltArtifacts": [
+      "inception/bolts/B001-discovery-dry-run-mode-contract.md",
+      "inception/bolts/B002-dry-run-sync-verification.md"
+    ],
+    "gate": "passed"
+  },
+  "construction": {
+    "status": "completed",
+    "targetBolts": [
+      "B001",
+      "B002"
+    ],
+    "functionalDesign": {
+      "targetUnits": [
+        "U001",
+        "U002"
+      ],
+      "units": [
+        {
+          "unitId": "U001",
+          "requirement": "required",
+          "status": "passed",
+          "frontendSurface": "absent",
+          "targetSource": "construction_target_bolts",
+          "runMode": "initial"
+        },
+        {
+          "unitId": "U002",
+          "requirement": "required",
+          "status": "passed",
+          "frontendSurface": "absent",
+          "targetSource": "construction_target_bolts",
+          "runMode": "initial"
+        }
+      ]
+    },
+    "requiredArtifacts": [
+      "construction/decisions.md",
+      "construction/traceability.md",
+      "construction/U001-discovery-dry-run-contract/functional-design/business-logic-model.md",
+      "construction/U001-discovery-dry-run-contract/functional-design/business-rules.md",
+      "construction/U001-discovery-dry-run-contract/functional-design/domain-entities.md",
+      "construction/U002-dry-run-sync-verification/functional-design/business-logic-model.md",
+      "construction/U002-dry-run-sync-verification/functional-design/business-rules.md",
+      "construction/U002-dry-run-sync-verification/functional-design/domain-entities.md"
+    ],
+    "requiredDecisionArtifacts": [
+      "construction/decisions/D001-functional-design-scope.md",
+      "construction/decisions/D002-dry-run-mode-boundary.md",
+      "construction/decisions/D003-sync-verification-boundary.md"
+    ],
+    "requiredBoltArtifacts": [
+      "construction/bolts/B001-discovery-dry-run-mode-contract/tasks.md",
+      "construction/bolts/B001-discovery-dry-run-mode-contract/notes.md",
+      "construction/bolts/B001-discovery-dry-run-mode-contract/test-results.md",
+      "construction/bolts/B002-dry-run-sync-verification/tasks.md",
+      "construction/bolts/B002-dry-run-sync-verification/notes.md",
+      "construction/bolts/B002-dry-run-sync-verification/test-results.md"
+    ],
+    "bolts": [
+      {
+        "id": "B001",
+        "taskGeneration": {
+          "status": "passed",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-discovery-dry-run-contract/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-discovery-dry-run-contract/functional-design/business-rules.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-discovery-dry-run-contract/functional-design/domain-entities.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U001-discovery-dry-run-contract/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B001-discovery-dry-run-mode-contract.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B001-discovery-dry-run-mode-contract/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B001-discovery-dry-run-mode-contract/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/bolts/B001-discovery-dry-run-mode-contract/test-results.md"
+            }
+          ]
+        }
+      },
+      {
+        "id": "B002",
+        "taskGeneration": {
+          "status": "passed",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U002-dry-run-sync-verification/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U002-dry-run-sync-verification/functional-design/business-rules.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U002-dry-run-sync-verification/functional-design/domain-entities.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U002-dry-run-sync-verification/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B002-dry-run-sync-verification.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B002-dry-run-sync-verification/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B002-dry-run-sync-verification/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/bolts/B002-dry-run-sync-verification/test-results.md"
+            }
+          ]
+        }
+      }
+    ],
+    "gate": "passed"
+  }
+}
