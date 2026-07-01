@@ -115,16 +115,6 @@ brownfield 向けのモード。
 質問した場合は、その場で成果物を追加しない。
 回答を受け取ってから、不足している steering layer 成果物だけを追加する。
 
-Amadeus 自身を brownfield として扱う場合は、初回 `.amadeus/` が bootstrap 用になり得る。
-昇格済み skill で `.amadeus/` を作り直す場合は、作り直し前の `.amadeus/` を `.amadeus-snapshots/previous/` に退避し、退避版は git 管理外で直近1世代だけ保持する。
-再生成前に既存の `.amadeus-snapshots/previous/` がある場合は、古い退避版を削除してから現在の `.amadeus/` を退避する。
-
-退避版そのものを永続的な成果物にしない。
-差分確認の採用判断だけを、採用対象 `.amadeus/` の既存成果物に要約する。
-自己開発 cycle 全体の判断なら `.amadeus/steering/knowledge.md`、特定 Discovery のやり直しなら `.amadeus/discoveries/<discovery-id>.md` の `判定理由`、特定 Intent の再生成なら対象 phase の `decisions.md` または `decisions/**` に記録する。
-
-差分確認の要約には、比較元、比較先、比較理由、主な差分、採用判断、必要な未確認事項を含める。
-
 ### `scaffold-only`
 
 ユーザーが明示した場合だけ使う。
@@ -159,20 +149,34 @@ greenfield では、少なくとも次を作る。
 brownfield では、既存成果物を読み、欠けている成果物だけを追加する。
 既存の本文、判断、用語、識別子を上書きしない。
 
+## 自己開発 bootstrap と再生成比較
+
+Amadeus 自身を brownfield として扱う場合は、実行モードに関係なく、初回 `.amadeus/` が bootstrap 用になり得ることを前提にする。
+
+昇格済み skill で `.amadeus/` を作り直す場合は、作り直し前の `.amadeus/` を `.amadeus-snapshots/previous/` に退避し、退避版は git 管理外で直近1世代だけ保持する。
+再生成前に既存の `.amadeus-snapshots/previous/` がある場合は、古い退避版を削除してから現在の `.amadeus/` を退避する。
+
+退避版そのものを永続的な成果物にしない。
+差分確認の採用判断だけを、採用対象 `.amadeus/` の既存成果物に要約する。
+自己開発 cycle 全体の判断なら `.amadeus/steering/knowledge.md`、特定 Discovery のやり直しなら `.amadeus/discoveries/<discovery-id>.md` の `判定理由`、特定 Intent の再生成なら対象 phase の `decisions.md` または `decisions/**` に記録する。
+
+差分確認の要約には、比較元、比較先、比較理由、主な差分、採用判断、必要な未確認事項を含める。
+
 ## 手順
 
 1. 作業ディレクトリを確認する。
 2. `.amadeus/` の有無を確認する。
 3. 実行モードを決める。指定がなければ `guided` にする。
 4. brownfield または `discovery` の場合は、既存の README、設計資料、業務資料、`.amadeus/` を読み、既存の参照元を尊重する。
-5. `guided` または `discovery` の場合は、足りない情報だけを目安5問で質問する。
+5. Amadeus 自身を対象 workspace にし、昇格済み skill で `.amadeus/` を作り直す場合は、再生成前に自己開発 bootstrap と再生成比較の手順を適用する。
+6. `guided` または `discovery` の場合は、足りない情報だけを目安5問で質問する。
    質問した場合は、回答を待ってから次へ進む。
-6. `.amadeus/` がなければ作る。
-7. steering layer の必須成果物を作る。
-8. Domain Map と Context Map は、採用済み情報がない空の表として作る。
-9. 未確認の情報は `未確認` と書き、空欄にしない。
-10. Intent は作らない。個別 Intent が必要になったら `amadeus-ideation` へ渡す。
-11. 昇格済みの `amadeus-validator` が使える場合は、全体成果物だけを検証する。
+7. `.amadeus/` がなければ作る。
+8. steering layer の必須成果物を作る。
+9. Domain Map と Context Map は、採用済み情報がない空の表として作る。
+10. 未確認の情報は `未確認` と書き、空欄にしない。
+11. Intent は作らない。個別 Intent が必要になったら `amadeus-ideation` へ渡す。
+12. 昇格済みの `amadeus-validator` が使える場合は、全体成果物だけを検証する。
 
 ## ファイル別の最低構造
 
