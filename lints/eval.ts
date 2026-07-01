@@ -28,10 +28,12 @@ function run(args: string[]): string {
 }
 
 const reportOutput = run(["--report"]);
+assert(reportOutput.includes("public type file:"), "lint report must include public-type-file output");
 assert(reportOutput.includes("ts complexity:"), "lint report must include ts-complexity output");
 assert(reportOutput.includes("lints: ok"), "lint report must print aggregate success");
 
 const checkOutput = run(["--check"]);
+assert(checkOutput.includes("public type file: ok"), "lint check must include public-type-file check");
 assert(checkOutput.includes("ts complexity: ok"), "lint check must include ts-complexity check");
 assert(checkOutput.includes("lints: ok"), "lint check must print aggregate success");
 
