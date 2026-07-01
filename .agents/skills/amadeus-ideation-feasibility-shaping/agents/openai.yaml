@@ -1,0 +1,7 @@
+# skill-forge-source-sha256: 2fcfc068c3ad1050d2c5069023b4d2f3c7ee118b71dde3d4e2127c5199e67c12
+interface:
+  display_name: "Amadeus Ideation Feasibility Shaping"
+  short_description: "Shape Amadeus feasibility notes"
+  default_prompt: "Use $amadeus-ideation-feasibility-shaping to shape Amadeus feasibility notes."
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+# skill-forge-source-sha256: 0b42fef4081a87f0f2d71882ac8eb8e7e7e70e22ace16168dba161d42039d6df
+interface:
+  display_name: "Amadeus Construction Traceability Finalization"
+  short_description: "Finalize Amadeus Construction traceability"
+  default_prompt: "Use $amadeus-construction-traceability-finalization to finalize Amadeus Construction traceability."
+policy:
+  allow_implicit_invocation: false

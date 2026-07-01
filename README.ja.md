@@ -66,11 +66,30 @@ skill は Amadeus DLC への関わり方で分類します。
 
 ### 内部スキル
 
-内部スキルは、必要に応じて Amadeus の workflow から使います。
+内部スキルは、必要に応じて Amadeus の workflow から使う実装補助です。
 明示的に内部スキルが必要な作業でない場合は、フェーズスキルまたは横断的補助スキルを公開入口として使います。
 
+- `amadeus-decision-review`
 - `amadeus-grilling`
 - `amadeus-domain-modeling`
+- `amadeus-history-review`
+- `amadeus-learning-review`
+- `amadeus-ideation-intent-capture`
+- `amadeus-ideation-scope-framing`
+- `amadeus-ideation-feasibility-shaping`
+- `amadeus-ideation-mock-framing`
+- `amadeus-ideation-traceability-finalization`
+- `amadeus-inception-codebase-analysis`
+- `amadeus-inception-requirements-definition`
+- `amadeus-inception-user-stories`
+- `amadeus-inception-use-cases`
+- `amadeus-inception-units-generation`
+- `amadeus-inception-traceability-finalization`
+- `amadeus-construction-functional-design`
+- `amadeus-construction-bolt-preparation`
+- `amadeus-construction-implementation-execution`
+- `amadeus-construction-verification-hardening`
+- `amadeus-construction-traceability-finalization`
 
 このリポジトリでは、root `.amadeus/` を Amadeus 本体開発用の steering layer として扱います。
 リポジトリ内の生成例は [examples/](examples/) 配下の段階別 snapshot として管理します。

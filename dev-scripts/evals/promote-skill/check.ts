@@ -48,6 +48,7 @@ function amadeusSkills(): string[] {
 function requiredInternalSkillGroups(): Record<string, string[]> {
   return {
     "amadeus-ideation": [
+      "amadeus-ideation-intent-capture",
       "amadeus-ideation-scope-framing",
       "amadeus-ideation-feasibility-shaping",
       "amadeus-ideation-mock-framing",
@@ -61,7 +62,25 @@ function requiredInternalSkillGroups(): Record<string, string[]> {
       "amadeus-inception-units-generation",
       "amadeus-inception-traceability-finalization",
     ],
+    "amadeus-construction": [
+      "amadeus-construction-functional-design",
+      "amadeus-construction-bolt-preparation",
+      "amadeus-construction-implementation-execution",
+      "amadeus-construction-verification-hardening",
+      "amadeus-construction-traceability-finalization",
+    ],
   };
+}
+
+function policyManagedInternalSkills(): string[] {
+  return [
+    "amadeus-decision-review",
+    "amadeus-domain-modeling",
+    "amadeus-grilling",
+    "amadeus-history-review",
+    "amadeus-learning-review",
+    ...Object.values(requiredInternalSkillGroups()).flat(),
+  ].sort();
 }
 
 function listPaths(rootPath: string): string[] {
@@ -78,6 +97,26 @@ function listPaths(rootPath: string): string[] {
   return results.sort();
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseCodexMetadata(path: string, text: string): unknown {
+  try {
+    return Bun.YAML.parse(text);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail(`invalid Codex metadata YAML for internal skill: ${relative(root, path)}: ${detail}`);
+  }
+}
+
+function disablesImplicitInvocation(metadata: unknown): boolean {
+  if (!isRecord(metadata)) return false;
+  const policy = metadata.policy;
+  if (!isRecord(policy)) return false;
+  return policy.allow_implicit_invocation === false;
+}
+
 run(["bun", "run", "dev-scripts/promote-skill.ts", "amadeus-grilling", "--dry-run"]);
 run(["bun", "run", "dev-scripts/promote-skill.ts", "amadeus-steering", "--dry-run"]);
 run(["bun", "run", "dev-scripts/promote-skill.ts", "amadeus-validator", "--dry-run"]);
@@ -92,9 +131,20 @@ for (const [parentSkill, internalSkills] of Object.entries(requiredInternalSkill
   }
 
   const parentSkillBody = await Bun.file(join(root, "skills", parentSkill, "SKILL.md")).text();
-  const missingInternalOrchestration = internalSkills.filter((skill) => !parentSkillBody.includes(`必ず \`${skill}\` を使う`));
+  const missingInternalOrchestration = internalSkills.filter((skill) => !parentSkillBody.includes(`\`${skill}\``));
   if (missingInternalOrchestration.length > 0) {
     fail(`missing internal skill orchestration for ${parentSkill}: ${missingInternalOrchestration.join(", ")}`);
+  }
+}
+
+for (const skill of policyManagedInternalSkills()) {
+  for (const base of ["skills", ".agents/skills"]) {
+    const metadataPath = join(root, base, skill, "agents/openai.yaml");
+    if (!existsSync(metadataPath)) fail(`missing Codex metadata for internal skill: ${relative(root, metadataPath)}`);
+    const metadata = parseCodexMetadata(metadataPath, await Bun.file(metadataPath).text());
+    if (!disablesImplicitInvocation(metadata)) {
+      fail(`internal skill must disable implicit invocation: ${relative(root, metadataPath)}`);
+    }
   }
 }
 

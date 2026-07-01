@@ -1,0 +1,7 @@
+# skill-forge-source-sha256: ef7a696f479ca64ed5caf4ef5d7558877c911db6dda756f16123faab3dcaccf3
+interface:
+  display_name: "Amadeus Construction Implementation Execution"
+  short_description: "Execute Amadeus Construction tasks"
+  default_prompt: "Use $amadeus-construction-implementation-execution to execute Amadeus Construction tasks."
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,7 @@
+# skill-forge-source-sha256: 1e4e3e8df81d2f85cd2819911970c60e8ca5ff498f8d3bb0d7e9bf7bda8b372f
+interface:
+  display_name: "Amadeus Grilling"
+  short_description: "Run Amadeus decision grilling"
+  default_prompt: "Use $amadeus-grilling to run Amadeus decision grilling."
+policy:
+  allow_implicit_invocation: false

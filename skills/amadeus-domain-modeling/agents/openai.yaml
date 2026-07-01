@@ -1,0 +1,7 @@
+# skill-forge-source-sha256: d264a0fe2ba5ac2856fe504955baff32daec845f6cd7d0c83c7311b50e7e9f4d
+interface:
+  display_name: "Amadeus Domain Modeling"
+  short_description: "Model Amadeus domain knowledge"
+  default_prompt: "Use $amadeus-domain-modeling to model Amadeus domain knowledge."
+policy:
+  allow_implicit_invocation: false

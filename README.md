@@ -66,11 +66,30 @@ Use cross-cutting support skills when a phase needs additional analysis, domain 
 
 ### Internal Skills
 
-Internal skills are used by Amadeus workflows when needed.
+Internal skills are implementation helpers used by Amadeus workflows when needed.
 Use the phase skills or cross-cutting support skills as the public entrypoints unless the task explicitly requires an internal skill.
 
+- `amadeus-decision-review`
 - `amadeus-grilling`
 - `amadeus-domain-modeling`
+- `amadeus-history-review`
+- `amadeus-learning-review`
+- `amadeus-ideation-intent-capture`
+- `amadeus-ideation-scope-framing`
+- `amadeus-ideation-feasibility-shaping`
+- `amadeus-ideation-mock-framing`
+- `amadeus-ideation-traceability-finalization`
+- `amadeus-inception-codebase-analysis`
+- `amadeus-inception-requirements-definition`
+- `amadeus-inception-user-stories`
+- `amadeus-inception-use-cases`
+- `amadeus-inception-units-generation`
+- `amadeus-inception-traceability-finalization`
+- `amadeus-construction-functional-design`
+- `amadeus-construction-bolt-preparation`
+- `amadeus-construction-implementation-execution`
+- `amadeus-construction-verification-hardening`
+- `amadeus-construction-traceability-finalization`
 
 The repository root keeps `.amadeus/` as the steering layer for Amadeus's own development.
 Repository examples are stored as phase-by-phase snapshots under [examples/](examples/).

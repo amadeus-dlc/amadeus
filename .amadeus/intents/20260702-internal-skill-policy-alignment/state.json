@@ -1,0 +1,281 @@
+{
+  "intent": "20260702-internal-skill-policy-alignment",
+  "phase": "construction",
+  "status": "in_progress",
+  "ideation": {
+    "intentCapture": {
+      "status": "completed",
+      "createdArtifacts": [
+        "../20260702-internal-skill-policy-alignment.md",
+        "state.json"
+      ],
+      "next": "ideation/scope-framing"
+    },
+    "status": "completed",
+    "requiredArtifacts": [
+      "../20260702-internal-skill-policy-alignment.md",
+      "ideation/scope.md",
+      "ideation/ideation.md",
+      "ideation/decisions.md",
+      "ideation/traceability.md"
+    ],
+    "requiredMocks": [
+      "ideation/mocks/initial-confirmation.puml"
+    ],
+    "gate": "passed"
+  },
+  "inception": {
+    "status": "completed",
+    "codebaseAnalysis": {
+      "requirement": "required",
+      "status": "passed",
+      "evidence": [
+        {
+          "kind": "file",
+          "path": "README.md"
+        },
+        {
+          "kind": "file",
+          "path": "README.ja.md"
+        },
+        {
+          "kind": "file",
+          "path": "skills"
+        },
+        {
+          "kind": "file",
+          "path": ".agents/skills"
+        },
+        {
+          "kind": "file",
+          "path": ".agents/skills/skill-forge/references/openai_yaml.md"
+        },
+        {
+          "kind": "file",
+          "path": ".agents/skills/skill-forge/scripts/quick_validate.py"
+        },
+        {
+          "kind": "file",
+          "path": "CLAUDE.md"
+        },
+        {
+          "kind": "file",
+          "path": "package.json"
+        }
+      ],
+      "targetScope": [
+        "README.md",
+        "README.ja.md",
+        "skills/amadeus-*",
+        ".agents/skills/amadeus-*",
+        ".agents/skills/skill-forge/references/openai_yaml.md",
+        ".agents/skills/skill-forge/scripts/quick_validate.py",
+        "CLAUDE.md",
+        "package.json"
+      ],
+      "analyzedCommit": "584db2d3694557187fa64e357c3a6f0ea6cb86cb",
+      "analyzedAt": "2026-07-01T18:39:21Z",
+      "freshness": "current"
+    },
+    "requiredArtifacts": [
+      "inception/codebase-analysis.md",
+      "inception/requirements.md",
+      "inception/acceptance.md",
+      "inception/user-stories.md",
+      "inception/use-cases.md",
+      "inception/units.md",
+      "inception/units/U001-internal-skill-policy-alignment.md",
+      "inception/units/U001-internal-skill-policy-alignment/design.md",
+      "inception/bolts.md",
+      "inception/traceability.md",
+      "inception/decisions.md"
+    ],
+    "requiredRequirementArtifacts": [
+      "inception/requirements/R001-internal-skills-readme-alignment.md",
+      "inception/requirements/R002-internal-skill-classification.md",
+      "inception/requirements/R003-implicit-invocation-policy-targets.md",
+      "inception/requirements/R004-codex-claude-configuration-placement.md",
+      "inception/requirements/R005-follow-up-scope-separation.md"
+    ],
+    "requiredStoryArtifacts": [
+      "inception/user-stories/S001-maintainer-classification-review.md",
+      "inception/user-stories/S002-agent-policy-alignment.md",
+      "inception/user-stories/S003-reviewer-scope-verification.md"
+    ],
+    "requiredUseCaseArtifacts": [
+      "inception/use-cases/UC001-inventory-internal-skills.md",
+      "inception/use-cases/UC002-classify-internal-skills.md",
+      "inception/use-cases/UC003-confirm-policy-placement.md",
+      "inception/use-cases/UC004-review-scope-and-evidence.md"
+    ],
+    "requiredDecisionArtifacts": [
+      "inception/decisions/D001-inception-boundary.md",
+      "inception/decisions/D002-bc001-self-development-governance.md",
+      "inception/decisions/D003-unit-bolt-granularity.md",
+      "inception/decisions/D004-follow-up-scope-separation.md"
+    ],
+    "requiredBoltArtifacts": [
+      "inception/bolts/B001-readme-internal-skill-catalog.md",
+      "inception/bolts/B002-implicit-invocation-policy.md",
+      "inception/bolts/B003-follow-up-and-verification.md"
+    ],
+    "gate": "passed"
+  },
+  "construction": {
+    "status": "in_progress",
+    "requiredArtifacts": [
+      "construction/decisions.md",
+      "construction/traceability.md",
+      "construction/U001-internal-skill-policy-alignment/functional-design/business-logic-model.md",
+      "construction/U001-internal-skill-policy-alignment/functional-design/business-rules.md",
+      "construction/U001-internal-skill-policy-alignment/functional-design/domain-entities.md"
+    ],
+    "requiredBoltArtifacts": [
+      "construction/bolts/B001-readme-internal-skill-catalog/tasks.md",
+      "construction/bolts/B001-readme-internal-skill-catalog/notes.md",
+      "construction/bolts/B001-readme-internal-skill-catalog/test-results.md",
+      "construction/bolts/B002-implicit-invocation-policy/tasks.md",
+      "construction/bolts/B002-implicit-invocation-policy/notes.md",
+      "construction/bolts/B002-implicit-invocation-policy/test-results.md",
+      "construction/bolts/B003-follow-up-and-verification/tasks.md",
+      "construction/bolts/B003-follow-up-and-verification/notes.md",
+      "construction/bolts/B003-follow-up-and-verification/test-results.md"
+    ],
+    "targetBolts": [
+      "B001",
+      "B002",
+      "B003"
+    ],
+    "functionalDesign": {
+      "targetUnits": [
+        "U001"
+      ],
+      "units": [
+        {
+          "unitId": "U001",
+          "requirement": "required",
+          "status": "passed",
+          "frontendSurface": "absent",
+          "targetSource": "construction_target_bolts",
+          "runMode": "initial"
+        }
+      ]
+    },
+    "bolts": [
+      {
+        "id": "B001",
+        "taskGeneration": {
+          "status": "ready_for_approval",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-internal-skill-policy-alignment/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-internal-skill-policy-alignment/functional-design/business-rules.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-internal-skill-policy-alignment/functional-design/domain-entities.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U001-internal-skill-policy-alignment/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B001-readme-internal-skill-catalog.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B001-readme-internal-skill-catalog/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B001-readme-internal-skill-catalog/notes.md"
+            }
+          ]
+        }
+      },
+      {
+        "id": "B002",
+        "taskGeneration": {
+          "status": "ready_for_approval",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-internal-skill-policy-alignment/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-internal-skill-policy-alignment/functional-design/business-rules.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-internal-skill-policy-alignment/functional-design/domain-entities.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U001-internal-skill-policy-alignment/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B002-implicit-invocation-policy.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B002-implicit-invocation-policy/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B002-implicit-invocation-policy/notes.md"
+            }
+          ]
+        }
+      },
+      {
+        "id": "B003",
+        "taskGeneration": {
+          "status": "ready_for_approval",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-internal-skill-policy-alignment/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-internal-skill-policy-alignment/functional-design/business-rules.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-internal-skill-policy-alignment/functional-design/domain-entities.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U001-internal-skill-policy-alignment/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B003-follow-up-and-verification.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B003-follow-up-and-verification/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B003-follow-up-and-verification/notes.md"
+            }
+          ]
+        }
+      }
+    ],
+    "gate": "not_ready",
+    "requiredDecisionArtifacts": [
+      "construction/decisions/D001-readme-skill-classification.md",
+      "construction/decisions/D002-codex-internal-skill-policy.md",
+      "construction/decisions/D003-follow-up-scope-separation.md"
+    ]
+  }
+}

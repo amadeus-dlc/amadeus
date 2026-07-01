@@ -6,3 +6,4 @@
 |---|---|---|---|---|---|
 | 20260701-self-development-first-cycle | 自己開発の初回テーマ選定 | completed | multi_intent | recommended 候補を GitHub Issue として起票し、`amadeus-ideation` に渡す。 | [Discovery のモジュールファイル](discoveries/20260701-self-development-first-cycle.md) |
 | 20260702-reference-link-policy | Amadeus 成果物の参照リンク化方針 | completed | single_intent | Intent Draft を `amadeus-ideation` に渡す。 | [Discovery のモジュールファイル](discoveries/20260702-reference-link-policy.md) |
+| 20260702-internal-skill-forge-readme-alignment | 内部 skill の skill-forge 確認と README 反映 | completed | multi_intent | recommended 候補を `amadeus-ideation` に渡す。 | [Discovery のモジュールファイル](discoveries/20260702-internal-skill-forge-readme-alignment.md) |

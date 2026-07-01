@@ -4,8 +4,8 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, cpSync, statS
 import { basename, dirname, join, relative, resolve } from "node:path";
 
 const alwaysAllowedFiles = ["SKILL.md", "pyproject.toml", "uv.lock"];
-const alwaysAllowedDirs = ["references", "scripts", "assets", "templates"];
-const conditionalDirs = ["agents", "validator", "eval-viewer"];
+const alwaysAllowedDirs = ["references", "scripts", "assets", "templates", "agents"];
+const conditionalDirs = ["validator", "eval-viewer"];
 const disallowedNames = new Set([
   "dev-scripts",
   "evals",
