@@ -1,7 +1,7 @@
 {
   "intent": "20260702-internal-skill-forge-readme-alignment",
   "phase": "construction",
-  "status": "in_progress",
+  "status": "completed",
   "ideation": {
     "status": "completed",
     "intentCapture": {
@@ -118,7 +118,7 @@
     "gate": "passed"
   },
   "construction": {
-    "status": "in_progress",
+    "status": "completed",
     "targetBolts": [
       "B001",
       "B002",
@@ -169,15 +169,19 @@
       "construction/bolts/B001-readme-role-inventory/tasks.md",
       "construction/bolts/B001-readme-role-inventory/notes.md",
       "construction/bolts/B001-readme-role-inventory/test-results.md",
+      "construction/bolts/B001-readme-role-inventory/pr.md",
       "construction/bolts/B002-skill-forge-review-scope/tasks.md",
       "construction/bolts/B002-skill-forge-review-scope/notes.md",
       "construction/bolts/B002-skill-forge-review-scope/test-results.md",
+      "construction/bolts/B002-skill-forge-review-scope/pr.md",
       "construction/bolts/B003-source-promoted-alignment/tasks.md",
       "construction/bolts/B003-source-promoted-alignment/notes.md",
       "construction/bolts/B003-source-promoted-alignment/test-results.md",
+      "construction/bolts/B003-source-promoted-alignment/pr.md",
       "construction/bolts/B004-compatibility-and-validation-closure/tasks.md",
       "construction/bolts/B004-compatibility-and-validation-closure/notes.md",
-      "construction/bolts/B004-compatibility-and-validation-closure/test-results.md"
+      "construction/bolts/B004-compatibility-and-validation-closure/test-results.md",
+      "construction/bolts/B004-compatibility-and-validation-closure/pr.md"
     ],
     "bolts": [
       {
@@ -345,6 +349,6 @@
         }
       }
     ],
-    "gate": "not_ready"
+    "gate": "passed"
   }
 }
