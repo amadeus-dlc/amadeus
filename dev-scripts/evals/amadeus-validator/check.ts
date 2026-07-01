@@ -879,6 +879,23 @@ function writeBlockedCodebaseAnalysisStateWithoutReason(workspace: string): void
   writeFileSync(path, JSON.stringify(state, null, 2));
 }
 
+function writeGatePassedUnresolvedCodebaseAnalysisState(workspace: string): void {
+  const path = intentPath(workspace, "state.json");
+  const state = JSON.parse(readFileSync(path, "utf8"));
+  state.inception = {
+    ...state.inception,
+    codebaseAnalysis: {
+      requirement: "unresolved",
+      status: "blocked",
+      evidence: [],
+      targetScope: [],
+      blockedReason: "target_scope_unresolved",
+      freshness: "unknown",
+    },
+  };
+  writeFileSync(path, JSON.stringify(state, null, 2));
+}
+
 function defaultCompletedInceptionState(): Record<string, any> {
   return {
     status: "completed",
@@ -2870,7 +2887,16 @@ runExpectFailure(
 const requiredCodebaseAnalysisWorkspace = phaseWorkspaceCopy();
 writeRequiredCodebaseAnalysisState(requiredCodebaseAnalysisWorkspace);
 writeCodebaseAnalysis(requiredCodebaseAnalysisWorkspace);
+addCodebaseAnalysisTraceRow(requiredCodebaseAnalysisWorkspace);
 run(["bun", "run", validator, requiredCodebaseAnalysisWorkspace, intent]);
+
+const requiredCodebaseAnalysisWithoutTraceWorkspace = phaseWorkspaceCopy();
+writeRequiredCodebaseAnalysisState(requiredCodebaseAnalysisWithoutTraceWorkspace);
+writeCodebaseAnalysis(requiredCodebaseAnalysisWithoutTraceWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, requiredCodebaseAnalysisWithoutTraceWorkspace, intent],
+  "required の Codebase Analysis は追跡行を持つ",
+);
 
 const requiredCodebaseAnalysisWithoutFileWorkspace = phaseWorkspaceCopy();
 writeRequiredCodebaseAnalysisStateWithoutFile(requiredCodebaseAnalysisWithoutFileWorkspace);
@@ -2922,6 +2948,13 @@ writeBlockedCodebaseAnalysisStateWithoutReason(blockedCodebaseAnalysisWithoutRea
 runExpectFailure(
   ["bun", "run", validator, blockedCodebaseAnalysisWithoutReasonWorkspace, intent],
   "blocked の Codebase Analysis は blockedReason を持つ",
+);
+
+const gatePassedUnresolvedCodebaseAnalysisWorkspace = phaseWorkspaceCopy();
+writeGatePassedUnresolvedCodebaseAnalysisState(gatePassedUnresolvedCodebaseAnalysisWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, gatePassedUnresolvedCodebaseAnalysisWorkspace, intent],
+  "Inception gate passed の Codebase Analysis は unresolved ではない",
 );
 
 const wrongCodebaseAnalysisTraceDesignWorkspace = phaseWorkspaceCopy();

@@ -41,6 +41,7 @@ export function checkInceptionCodebaseAnalysisStage(
   checkCodebaseAnalysisTargetScope(context, statePath, value);
   checkCodebaseAnalysisStateMatrix(context, statePath, input.state, value);
   context.checkCodebaseAnalysis(input.inceptionBase, input.state);
+  context.checkCodebaseAnalysisTraceabilityRows(input.inceptionBase, input.state);
 }
 
 function checkCodebaseAnalysisEvidence(context: PhaseValidationContext, path: string, intentBase: string, value: Record<string, any>): void {
@@ -169,6 +170,9 @@ function checkGatePassedCodebaseAnalysisState(
   status: string,
 ): void {
   const gatePassed = String(state.inception?.gate ?? "").trim() === "passed";
+  if (gatePassed && requirement === "unresolved") {
+    context.failRow(path, "Inception gate passed の Codebase Analysis は unresolved ではない", requirement);
+  }
   if (gatePassed && requirement === "required" && status !== "passed") {
     context.failRow(path, "Inception gate passed の required Codebase Analysis は passed である", status || "空欄");
   }

@@ -54,6 +54,7 @@ type E2eCase = {
   expectedArtifacts: ExpectedArtifacts;
   expectedFileChanges: string[];
   expectedMarkdownChanges: ExpectedMarkdownChanges;
+  assert?: (workspace: string) => void;
 };
 
 type Options = {
@@ -2431,6 +2432,7 @@ function e2eCase(mode: E2eMode): E2eCase {
         [],
         [],
       ),
+      assert: assertGreenfieldCodebaseAnalysisState,
     },
     "inception-internal-requirements-definition": {
       id: "inception-internal-requirements-definition",
@@ -2623,6 +2625,21 @@ function prepareE2eGiven(workspace: string, testCase: E2eCase): void {
 
 function assertE2eCase(workspace: string, testCase: E2eCase): void {
   assertArtifacts(workspace, testCase.expectedArtifacts);
+  testCase.assert?.(workspace);
+}
+
+function assertGreenfieldCodebaseAnalysisState(workspace: string): void {
+  const statePath = join(intentTarget(workspace), "state.json");
+  const state = JSON.parse(readFileSync(statePath, "utf8"));
+  const actual = state.inception?.codebaseAnalysis;
+  const expected = greenfieldCodebaseAnalysisState();
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    fail([
+      "codebase analysis state mismatch",
+      `expected: ${JSON.stringify(expected)}`,
+      `actual: ${JSON.stringify(actual)}`,
+    ].join("\n"));
+  }
 }
 
 function assertFileChanges(before: FileSnapshot, after: FileSnapshot, expectedFiles: string[]): void {
