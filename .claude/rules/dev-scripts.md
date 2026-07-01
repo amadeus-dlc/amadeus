@@ -1,0 +1,1 @@
+../../.agents/rules/dev-scripts.md
