@@ -48,6 +48,21 @@
 - provenance の最低記録項目が追跡できる。
 - 後続 Intent に渡す項目が、scope、traceability、decisions のいずれかに記録されている。
 
+## stage と workspace 対応記録
+
+PR 作成前に、対象 Intent の traceability、decisions、または PR 説明から次の項目を追跡できる状態にする。
+
+| 項目 | 記録先 | 用途 |
+|---|---|---|
+| build workspace | 対象 Intent の traceability、decisions、または PR 説明 | 利用した skill、validator、開発用スクリプトの実行場所を確認する。 |
+| host environment | 対象 Intent の traceability、decisions、または PR 説明 | 昇格済み skill または生成された skill が動作する環境を確認する。 |
+| target workspace | 対象 Intent の traceability、decisions、または PR 説明 | 変更差分と自己開発用 `.amadeus/` 成果物の更新場所を確認する。 |
+| target artifacts | 対象 Intent の traceability、decisions、または PR 説明 | skill が生成、更新、検証した成果物集合を確認する。 |
+| validator 結果 | 対象 Intent の検証成果物または PR 説明 | 対象 phase の成果物契約を満たすことを確認する。 |
+| 標準検証結果 | 対象 Intent の検証成果物または PR 説明 | `npm run typecheck`、`npm run diff:check`、必要なテストの結果を確認する。 |
+
+stage2 を次回 stage0 として扱う場合は、対象 PR の merge、基準 commit、build workspace の参照 commit、Maintainer の stage0 採用判断を追跡できるようにする。
+
 ## レビュー対応
 
 - CI エラーがある場合は、コメント対応より先に CI エラーを解消する。

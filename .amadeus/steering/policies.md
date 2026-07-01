@@ -18,6 +18,8 @@
 ## 判断基準
 
 - stage2 を次回 stage0 として扱うには、対象 PR が現在の基準 branch に merge 済みであり、build workspace が merge 後の基準 commit を参照し、人間が採用を承認している必要がある。
+- stage0 採用判断は Maintainer が行い、validator pass や CI pass だけで stage2 を次回 stage0 に自動昇格しない。
+- stage0 採用判断の証拠には、対象 PR、基準 commit、build workspace の参照 commit、対象 Intent、検証結果を含める。
 - provenance は、実際に使った build workspace、target workspace、skill、validator、開発用スクリプト、stage 判定、人間の stage0 採用判断から追跡できる形で記録する。
 - 初回導入では、skill、validator、example snapshot、ハーネスの実装変更を後続 Intent に分ける。
 
@@ -25,6 +27,8 @@
 
 - build workspace の path と commit。
 - target workspace の path と commit。
+- host environment の識別情報。
+- target artifacts の対象範囲。
 - 利用した昇格済み skill の path、commit、md5。
 - 利用した validator の path、commit、md5、実行結果。
 - 利用した開発用スクリプトの path、commit、md5。
