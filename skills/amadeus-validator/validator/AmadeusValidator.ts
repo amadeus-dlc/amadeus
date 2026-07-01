@@ -1518,6 +1518,7 @@ class AmadeusValidator {
       }
       this.checkTaskLabelReferences(path, block, taskId, "要求", this.idsFor(`${inceptionBase}/requirements.md`), false);
       this.checkTaskLabelReferences(path, block, taskId, "ユースケース", this.idsFor(`${inceptionBase}/use-cases.md`), true);
+      this.checkTaskDesignReasonReferences(path, block, taskId, intentBase);
       this.checkTaskDependencies(path, block, taskId, taskIds, this.idsFor(`${inceptionBase}/bolts.md`), this.constructionBoltDirectories(inceptionBase, constructionBase));
     }
   }
@@ -1532,6 +1533,40 @@ class AmadeusValidator {
         this.failRow(path, `Task の \`${label}\` が既存 ID またはなしである`, `${taskId}: ${value}`);
       }
     }
+  }
+
+  private checkTaskDesignReasonReferences(path: string, block: string, taskId: string, intentBase: string): void {
+    const condition = "Task の `設計根拠` が Task Generation 入力成果物または見出しを指す";
+    for (const value of this.taskLabelValues(block, "設計根拠")) {
+      const resolved = tryResolveArtifactLinkTarget(path, value)?.value;
+      const anchor = this.linkAnchor(value);
+      const detail = `${taskId}: ${value}`;
+      if (!resolved || !this.taskGenerationDesignReasonTarget(resolved, intentBase, path)) {
+        this.failRow(path, condition, detail);
+        continue;
+      }
+      if (!this.isFile(this.absolute(resolved))) {
+        this.failRow(path, condition, `${detail} -> ${resolved} が存在しない`);
+        continue;
+      }
+      if (anchor && !this.headingExists(resolved, anchor)) {
+        this.failRow(path, condition, `${detail} -> ${resolved}#${anchor} が存在しない`);
+        continue;
+      }
+      this.checkedFiles.add(resolved);
+      this.pass(path, condition, detail);
+    }
+  }
+
+  private taskGenerationDesignReasonTarget(target: string, intentBase: string, taskPath: string): boolean {
+    const inceptionBase = `${intentBase}/inception`;
+    const constructionBase = `${intentBase}/construction`;
+    const boltName = basename(dirname(taskPath));
+    return (
+      target.match(new RegExp(`^${this.escapeRegExp(constructionBase)}/[^/]+/functional-design/[^/]+\\.md$`)) !== null
+      || target.match(new RegExp(`^${this.escapeRegExp(inceptionBase)}/units/[^/]+/design\\.md$`)) !== null
+      || target === `${inceptionBase}/bolts/${boltName}.md`
+    );
   }
 
   private checkTaskDependencies(path: string, block: string, taskId: string, taskIds: Set<string>, boltIds: Set<string>, boltDirectories: Map<string, string>): void {
@@ -3305,6 +3340,30 @@ class AmadeusValidator {
     const match = block.match(new RegExp(`^\\s+- ${this.escapeRegExp(label)}:\\s*(.*?)\\s*$`, "m"));
     if (!match) return [];
     return this.splitValues(match[1]);
+  }
+
+  private linkAnchor(target: string): string | undefined {
+    const value = String(target ?? "").trim();
+    const hashIndex = value.indexOf("#");
+    if (hashIndex < 0) return undefined;
+    const anchor = value.slice(hashIndex + 1).trim();
+    return anchor.length > 0 ? anchor : undefined;
+  }
+
+  private headingExists(path: string, anchor: string): boolean {
+    const expected = this.decodeAnchor(anchor);
+    return this.read(path).split(/\r?\n/).some((line) => {
+      const match = line.match(/^#{1,6}\s+(.+?)\s*$/);
+      return match?.[1]?.trim() === expected;
+    });
+  }
+
+  private decodeAnchor(anchor: string): string {
+    try {
+      return decodeURIComponent(anchor);
+    } catch {
+      return anchor;
+    }
   }
 
   private bulletsAfterHeading(path: string, heading: string): string[] {

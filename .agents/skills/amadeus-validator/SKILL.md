@@ -128,7 +128,7 @@ Bun が使えない場合は `blocked` として報告する。
 - Context Map の `Downstream` と `Upstream` は、Domain Map の Bounded Context を参照する。
 - 対象 Intent ディレクトリ名が指定された場合、`inception/bolts.md` の `ユニット` が既存 Unit を参照する。
 - 対象 Intent ディレクトリ名が指定された場合、複数 Unit を参照する Bolt のモジュールファイルに `複数 Unit を扱う理由` 見出しと本文が存在する。
-- 対象 Intent ディレクトリ名が指定され、Construction Bolt 配下の `tasks.md` が存在する場合、Task が `作業`、`要求`、`ユースケース`、`依存`、`設計根拠`、`証拠` を持つ。
+- 対象 Intent ディレクトリ名が指定され、Construction Bolt 配下の `tasks.md` が存在する場合、Task が `作業`、`要求`、`ユースケース`、`依存`、`設計根拠`、`証拠` を持ち、`設計根拠` が Task Generation 入力成果物または見出しを指す。
 - Inception phase の Intent では、`construction/bolts/**/tasks.md` が存在しない。
 - Inception 以降の Unit は、`units.md` の `コンテキスト` から Domain Map の `adopted` Bounded Context を参照する。
 - Discovery、Event Storming、Intent の phase ディレクトリに `grillings.md` または `grillings/` が存在する場合、両方が揃っている。
