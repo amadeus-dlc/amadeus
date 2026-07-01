@@ -1,6 +1,6 @@
 {
   "intent": "20260701-skill-contract-catalog",
-  "phase": "ideation",
+  "phase": "inception",
   "status": "completed",
   "ideation": {
     "intentCapture": {
@@ -21,6 +21,106 @@
     ],
     "requiredMocks": [
       "ideation/mocks/initial-confirmation.puml"
+    ],
+    "gate": "passed"
+  },
+  "inception": {
+    "status": "completed",
+    "codebaseAnalysis": {
+      "requirement": "required",
+      "status": "passed",
+      "evidence": [
+        {
+          "kind": "file",
+          "path": "amadeus-contracts/catalog/index.ts"
+        },
+        {
+          "kind": "file",
+          "path": "amadeus-contracts/catalog/types.ts"
+        },
+        {
+          "kind": "file",
+          "path": "dev-scripts/amadeus-contracts.ts"
+        },
+        {
+          "kind": "file",
+          "path": "dev-scripts/evals/amadeus-contracts/check.ts"
+        },
+        {
+          "kind": "file",
+          "path": "skills/amadeus-validator/validator/generated/artifact-contracts.ts"
+        },
+        {
+          "kind": "file",
+          "path": ".amadeus/domain-map.md"
+        }
+      ],
+      "targetScope": [
+        "amadeus-contracts/catalog/**",
+        "amadeus-contracts/generated/**",
+        "dev-scripts/amadeus-contracts.ts",
+        "dev-scripts/generate-amadeus-contracts.ts",
+        "dev-scripts/check-amadeus-contracts.ts",
+        "dev-scripts/evals/amadeus-contracts/check.ts",
+        "skills/amadeus-ideation/SKILL.md",
+        "skills/amadeus-inception/SKILL.md",
+        "skills/amadeus-construction/SKILL.md",
+        "skills/amadeus-grilling/SKILL.md",
+        "skills/amadeus-validator/SKILL.md",
+        ".agents/skills/amadeus-ideation/SKILL.md",
+        ".agents/skills/amadeus-inception/SKILL.md",
+        ".agents/skills/amadeus-construction/SKILL.md",
+        ".agents/skills/amadeus-grilling/SKILL.md",
+        ".agents/skills/amadeus-validator/SKILL.md",
+        "skills/amadeus-validator/validator/generated/**",
+        ".agents/skills/amadeus-validator/validator/generated/**"
+      ],
+      "analyzedCommit": "da9f20013b2f8a7e00d3af9b34f0c431ad7be0d6",
+      "analyzedAt": "2026-07-01T12:33:20Z",
+      "freshness": "current"
+    },
+    "requiredArtifacts": [
+      "inception/codebase-analysis.md",
+      "inception/requirements.md",
+      "inception/acceptance.md",
+      "inception/user-stories.md",
+      "inception/use-cases.md",
+      "inception/units.md",
+      "inception/units/U001-skill-contract-catalog-model.md",
+      "inception/units/U001-skill-contract-catalog-model/design.md",
+      "inception/units/U002-skill-contract-generation-and-drift.md",
+      "inception/units/U002-skill-contract-generation-and-drift/design.md",
+      "inception/units/U003-skill-contract-consumer-integration.md",
+      "inception/units/U003-skill-contract-consumer-integration/design.md",
+      "inception/bolts.md",
+      "inception/traceability.md",
+      "inception/decisions.md"
+    ],
+    "requiredRequirementArtifacts": [
+      "inception/requirements/R001-skill-contract-type-catalog.md",
+      "inception/requirements/R002-representative-skill-contracts.md",
+      "inception/requirements/R003-generated-skill-contract-artifacts.md",
+      "inception/requirements/R004-skill-contract-generation-check.md",
+      "inception/requirements/R005-skill-contract-consumer-entry.md"
+    ],
+    "requiredStoryArtifacts": [
+      "inception/user-stories/S001-review-generated-skill-contract.md"
+    ],
+    "requiredUseCaseArtifacts": [
+      "inception/use-cases/UC001-maintain-skill-contract-catalog.md",
+      "inception/use-cases/UC002-generate-and-check-skill-contracts.md",
+      "inception/use-cases/UC003-consume-skill-contracts.md"
+    ],
+    "requiredDecisionArtifacts": [
+      "inception/decisions/D001-inception-boundary.md",
+      "inception/decisions/D002-bc001-self-development-governance.md",
+      "inception/decisions/D003-generated-reference-contracts.md",
+      "inception/decisions/D004-unit-bolt-granularity.md"
+    ],
+    "requiredBoltArtifacts": [
+      "inception/bolts/B001-skill-contract-catalog-model.md",
+      "inception/bolts/B002-skill-contract-generation-and-drift.md",
+      "inception/bolts/B003-skill-contract-consumer-integration.md"
     ],
     "gate": "passed"
   }
