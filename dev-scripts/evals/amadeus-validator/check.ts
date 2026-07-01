@@ -317,6 +317,21 @@ function addLegacyDesignGateToTargetBolt(workspace: string): void {
   writeFileSync(path, JSON.stringify(state, null, 2));
 }
 
+function duplicateTargetBoltState(workspace: string): void {
+  const path = intentPath(workspace, "state.json");
+  const state = JSON.parse(readFileSync(path, "utf8"));
+  const target = state.construction?.bolts?.find((item: Record<string, any>) => item.id === "B001");
+  if (!target) fail("construction fixture does not contain expected target bolt");
+  state.construction.bolts.push({
+    ...target,
+    taskGeneration: {
+      status: "passed",
+      evidence: taskGenerationEvidence(bolt1),
+    },
+  });
+  writeFileSync(path, JSON.stringify(state, null, 2));
+}
+
 function assertValidatorModuleSplit(): void {
   const validatorRoot = join(root, "skills/amadeus-validator/validator");
   const requiredModules = [
@@ -2896,6 +2911,17 @@ writeConstructionState(readyNonTargetBoltWorkspace, {
   ],
 });
 run(["bun", "run", validator, readyNonTargetBoltWorkspace, intent]);
+
+const duplicateConstructionBoltStateWorkspace = phaseWorkspaceCopy();
+writeFunctionalDesign(duplicateConstructionBoltStateWorkspace);
+writeConstructionTasks(duplicateConstructionBoltStateWorkspace);
+writeConstructionNotes(duplicateConstructionBoltStateWorkspace);
+writeConstructionState(duplicateConstructionBoltStateWorkspace);
+duplicateTargetBoltState(duplicateConstructionBoltStateWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, duplicateConstructionBoltStateWorkspace, intent],
+  "`construction.bolts[].id` が重複しない",
+);
 
 const completedConstructionWithoutTestResultsWorkspace = phaseWorkspaceCopy();
 writeFunctionalDesign(completedConstructionWithoutTestResultsWorkspace);

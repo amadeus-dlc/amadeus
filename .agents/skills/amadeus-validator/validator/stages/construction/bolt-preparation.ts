@@ -105,6 +105,11 @@ function collectConstructionBoltStates(
       results.push(fail(path, "`construction.bolts[].id` が空欄でない", "空欄"));
       continue;
     }
+    if (byId.has(id)) {
+      results.push(fail(path, "`construction.bolts[].id` が重複しない", id));
+      continue;
+    }
+    results.push(pass(path, "`construction.bolts[].id` が重複しない", id));
     byId.set(id, item);
   }
   return byId;
