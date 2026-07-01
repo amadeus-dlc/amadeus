@@ -149,7 +149,7 @@ bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspac
 
 ## Getting Help
 
-- Issues: [github.com/j5ik2o/amadeus/issues](https://github.com/j5ik2o/amadeus/issues)
+- Issues: [github.com/amadeus-dlc/amadeus/issues](https://github.com/amadeus-dlc/amadeus/issues)
 
 ## Contributing
 
