@@ -535,8 +535,9 @@ Inception 以降の Unit の `コンテキスト` は、Domain Map の `adopted`
 - `.amadeus/intents/<intent-id>-<slug>/inception/codebase-analysis.md`
 
 `codebase-analysis.md` は条件付き成果物である。
-存在する場合、`.amadeus/intents/<intent-id>-<slug>/state.json` の `inception.codebaseAnalysis.requirement` が `required` の場合、または `inception.requiredArtifacts` に `inception/codebase-analysis.md` が含まれる場合だけ検証する。
-存在せず、`inception.codebaseAnalysis.requirement` が `required` でもなく、`inception.requiredArtifacts` にも含まれない場合は不足にしない。
+存在する場合は、条件にかかわらず必須見出しを検証する。
+`.amadeus/intents/<intent-id>-<slug>/state.json` の `inception.codebaseAnalysis.requirement` が `required` で `status` が `ready_for_approval` または `passed` の場合、または `inception.requiredArtifacts` に `inception/codebase-analysis.md` が含まれる場合は、存在と必須見出しを検証する。
+存在せず、state 上は未承認の `required` で、`inception.requiredArtifacts` にも含まれない場合は不足にしない。
 
 必須見出しは次である。
 
