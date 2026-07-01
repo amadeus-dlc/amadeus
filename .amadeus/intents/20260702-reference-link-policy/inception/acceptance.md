@@ -7,7 +7,7 @@
 | R001 | 充足済み | [B001 test-results](../construction/bolts/B001-reference-link-rules/test-results.md)、[PR #285](https://github.com/amadeus-dlc/amadeus/pull/285) |
 | R002 | 充足済み | [B001 test-results](../construction/bolts/B001-reference-link-rules/test-results.md)、[PR #285](https://github.com/amadeus-dlc/amadeus/pull/285) |
 | R003 | 充足済み | [B002 test-results](../construction/bolts/B002-artifact-application-scope/test-results.md)、[PR #285](https://github.com/amadeus-dlc/amadeus/pull/285) |
-| R004 | 採用済み | 未登録 |
+| R004 | 充足済み | [B003 test-results](../construction/bolts/B003-validation-boundary/test-results.md)、[PR #285](https://github.com/amadeus-dlc/amadeus/pull/285) |
 
 ## 状態ルール
 

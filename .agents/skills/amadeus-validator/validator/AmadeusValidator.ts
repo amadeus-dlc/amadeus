@@ -1521,9 +1521,9 @@ class AmadeusValidator {
   private checkPrUrl(path: string): void {
     if (!this.isFile(this.absolute(path))) return;
     const body = this.sectionBody(path, "Pull Request") ?? "";
-    const match = body.match(/https?:\/\/\S+/);
-    if (match) this.pass(path, "PR 記録が URL を持つ", match[0]);
-    else this.failRow(path, "PR 記録が URL を持つ", "URL なし");
+    const match = this.githubPullRequestMarkdownLink(body);
+    if (match) this.pass(path, "PR 記録が GitHub Pull Request リンクを持つ", match);
+    else this.failRow(path, "PR 記録が GitHub Pull Request リンクを持つ", "リンクなし");
   }
 
   private checkTasks(path: string): void {
@@ -2158,7 +2158,23 @@ class AmadeusValidator {
           this.failRow(path, "Construction 完了時の Task Generation 追跡が未実施を残さない", `${column}: 未実施`);
         }
       }
+      this.checkCompletedConstructionPrTraceability(path, row);
     }
+  }
+
+  private checkCompletedConstructionPrTraceability(path: string, row: Record<string, string>): void {
+    const value = String(row["PR"] ?? "").trim();
+    const match = this.githubPullRequestMarkdownLink(value);
+    if (match) {
+      this.pass(path, "Construction 完了時の PR 欄が GitHub Pull Request リンクである", match);
+    } else {
+      this.failRow(path, "Construction 完了時の PR 欄が GitHub Pull Request リンクである", value || "空欄");
+    }
+  }
+
+  private githubPullRequestMarkdownLink(value: string): string | undefined {
+    const match = value.match(/\[PR #(\d+)\]\(https:\/\/github\.com\/[^/\s)]+\/[^/\s)]+\/pull\/\1\)/);
+    return match?.[0];
   }
 
   private checkNoneUseCaseTaskGenerationReasons(

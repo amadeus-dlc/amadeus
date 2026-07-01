@@ -30,6 +30,7 @@
 - Bolt 配下の `tasks.md` が存在する場合、各 Task が `作業`、`要求`、`ユースケース`、`依存`、`設計根拠`、`証拠` を持つことを検証する。
 - Inception phase では、Bolt 配下に `tasks.md` が存在しないことを検証する。
 - Construction 段階では、対象 Bolt の `tasks.md`、`state.json.construction.bolts[].taskGeneration`、Task Generation evidence、`Task Generation からの追跡` を検証する。
+- Construction 完了時は、対象 Bolt の `pr.md` が required artifacts に含まれ、PR 欄が GitHub Pull Request リンクであることを検証する。
 - Validator は Phase module と Stage module に分割され、`AmadeusValidator.ts` が Inception / Construction の詳細検証を所有していないことを検証する。
 - `evals.json` が JSON として解釈できる。
 - `git diff --check` が成功する。
@@ -56,6 +57,7 @@
 | `construction-task-generation-ready` | 完了 | Task Generation ready 時点で `tasks.md`、Bolt 単位の Task Generation 状態、`Task Generation からの追跡` がある。 | `examples/04-construction-design-ready` が `pass`。一時コピーで Task Generation evidence、Task Generation 追跡を壊すと `fail`。 |
 | `validator-phase-stage-modules` | 完了 | Validator の Phase module と Stage module が存在し、`AmadeusValidator.ts` に Inception / Construction の詳細検証が残っていない。 | `dev-scripts/evals/amadeus-validator/check.ts` の構造検査が `pass`。 |
 | `construction-traceability` | 完了 | Construction 完了時は `Construction からの追跡` が証拠追跡行を持つ。 | 一時コピーで空表にすると `fail`。 |
+| `construction-pr-record-required` | 完了 | Construction 完了時は対象 Bolt の `pr.md` と `traceability.md` の GitHub Pull Request リンクが必要である。 | 一時コピーで `pr.md` を required artifacts から外す、または PR 欄を裸の `PR #999` にすると `fail`。 |
 | `construction-bolt-state-duplicates` | 完了 | `construction.bolts[]` は同じ Bolt ID を複数回持たない。 | 一時コピーで `B001` の状態を重複させると `fail`。 |
 | `construction-legacy-design-gate` | 完了 | Construction 完了時も旧 `construction.bolts[].designGate` を状態契約に残さない。 | 一時コピーで旧 `designGate.status` を `draft` として追加すると `fail`。 |
 | `task-contract-validation` | 完了 | Construction の Bolt 配下 `tasks.md` の Task が必須項目を持つ。 | 一時コピーで `T001` の `要求`、`ユースケース`、`依存` を壊すと `fail`。 |

@@ -17,7 +17,7 @@
 ## 実装判断
 
 - B001 では Construction template の core 3 文書に、参照リンク方針を成果物へ残すための最小構造を追加する。
-- PR URL は未作成のため、`pr.md` は作成していない。
+- PR URL は [PR #285](https://github.com/amadeus-dlc/amadeus/pull/285) として記録済みである。
 
 ## 検証入口
 

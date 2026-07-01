@@ -6,6 +6,7 @@
 |---|---|---|---|---|---|
 | [B001 tasks](bolts/B001-reference-link-rules/tasks.md) | B001/T001, B001/T002 | `skills/amadeus-construction/templates/intents/construction/U001-unit/functional-design/business-logic-model.md`, `skills/amadeus-construction/templates/intents/construction/U001-unit/functional-design/business-rules.md`, `skills/amadeus-construction/templates/intents/construction/U001-unit/functional-design/domain-entities.md` | [B001 test-results](bolts/B001-reference-link-rules/test-results.md) | [PR #285](https://github.com/amadeus-dlc/amadeus/pull/285) | completed |
 | [B002 tasks](bolts/B002-artifact-application-scope/tasks.md) | B002/T001, B002/T002, B002/T003 | `skills/amadeus-inception/templates/intents/inception/traceability.md`, `skills/amadeus-inception/templates/intents/inception/decisions.md`, `.amadeus/intents/20260701-self-development-cycle-stage-workspace/construction/traceability.md` | [B002 test-results](bolts/B002-artifact-application-scope/test-results.md) | [PR #285](https://github.com/amadeus-dlc/amadeus/pull/285) | completed |
+| [B003 tasks](bolts/B003-validation-boundary/tasks.md) | B003/T001, B003/T002, B003/T003 | `skills/amadeus-validator/validator/stages/construction/bolt-preparation.ts`, `skills/amadeus-validator/validator/AmadeusValidator.ts`, `skills/amadeus-validator/SKILL.md`, `.agents/skills/amadeus-validator/**`, `dev-scripts/evals/amadeus-validator/check.ts` | [B003 test-results](bolts/B003-validation-boundary/test-results.md) | [PR #285](https://github.com/amadeus-dlc/amadeus/pull/285) | completed |
 
 ## Construction からの追跡
 
@@ -13,6 +14,7 @@
 |---|---|---|---|
 | B001 | B001/T001, B001/T002 | [B001 test-results](bolts/B001-reference-link-rules/test-results.md)、[PR #285](https://github.com/amadeus-dlc/amadeus/pull/285)、`skills/amadeus-construction/templates/intents/construction/U001-unit/functional-design/business-logic-model.md`、`skills/amadeus-construction/templates/intents/construction/U001-unit/functional-design/business-rules.md`、`skills/amadeus-construction/templates/intents/construction/U001-unit/functional-design/domain-entities.md` | completed |
 | B002 | B002/T001, B002/T002, B002/T003 | [B002 test-results](bolts/B002-artifact-application-scope/test-results.md)、[PR #285](https://github.com/amadeus-dlc/amadeus/pull/285)、`skills/amadeus-inception/templates/intents/inception/traceability.md`、`skills/amadeus-inception/templates/intents/inception/decisions.md`、[D003](decisions/D003-artifact-application-scope.md) | completed |
+| B003 | B003/T001, B003/T002, B003/T003 | [B003 test-results](bolts/B003-validation-boundary/test-results.md)、[PR #285](https://github.com/amadeus-dlc/amadeus/pull/285)、[D004](decisions/D004-validation-boundary.md) | completed |
 
 ## Deployment Unit からの追跡
 
@@ -27,3 +29,8 @@
 | `.agents/skills/amadeus-inception/templates/intents/inception/**` | B002/T001 | source skill の変更を昇格 | [B002 test-results](bolts/B002-artifact-application-scope/test-results.md) | [PR #285](https://github.com/amadeus-dlc/amadeus/pull/285) | completed |
 | `.amadeus/intents/20260701-self-development-cycle-stage-workspace/construction/traceability.md` | B002/T002 | PR番号参照を GitHub Pull Request URL へリンク化 | [B002 test-results](bolts/B002-artifact-application-scope/test-results.md) | [PR #285](https://github.com/amadeus-dlc/amadeus/pull/285) | completed |
 | `examples/**/.amadeus` | B002/T003 | B002 では直接変更せず、source skill と validator の契約が揃った後の再生成対象として扱う | [B002 test-results](bolts/B002-artifact-application-scope/test-results.md) | [PR #285](https://github.com/amadeus-dlc/amadeus/pull/285) | completed |
+| `skills/amadeus-validator/validator/stages/construction/bolt-preparation.ts` | B003/T001 | 完了済み Construction の `pr.md` 必須検査を追加 | [B003 test-results](bolts/B003-validation-boundary/test-results.md) | [PR #285](https://github.com/amadeus-dlc/amadeus/pull/285) | completed |
+| `skills/amadeus-validator/validator/AmadeusValidator.ts` | B003/T002 | `pr.md` と PR欄の GitHub Pull Request リンク検査を追加 | [B003 test-results](bolts/B003-validation-boundary/test-results.md) | [PR #285](https://github.com/amadeus-dlc/amadeus/pull/285) | completed |
+| `skills/amadeus-validator/SKILL.md` | B003/T003 | PR記録欠落検出の契約を追加 | [B003 test-results](bolts/B003-validation-boundary/test-results.md) | [PR #285](https://github.com/amadeus-dlc/amadeus/pull/285) | completed |
+| `.agents/skills/amadeus-validator/**` | B003/T003 | source skill の変更を昇格 | [B003 test-results](bolts/B003-validation-boundary/test-results.md) | [PR #285](https://github.com/amadeus-dlc/amadeus/pull/285) | completed |
+| `dev-scripts/evals/amadeus-validator/check.ts` | B003/T001, B003/T002 | `pr.md` 欠落とPR欄の非リンク表記を検出する eval を追加 | [B003 test-results](bolts/B003-validation-boundary/test-results.md) | [PR #285](https://github.com/amadeus-dlc/amadeus/pull/285) | completed |

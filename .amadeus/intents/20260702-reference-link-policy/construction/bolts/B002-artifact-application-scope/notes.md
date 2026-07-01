@@ -20,7 +20,7 @@
 
 - B002 では `examples/**/.amadeus` を直接変更しない。
 - example snapshot を部分的に手作業更新すると、source skill から生成できる成果物かどうかを確認できなくなるためである。
-- PR URL は未作成のため、`pr.md` は作成していない。
+- PR URL は [PR #285](https://github.com/amadeus-dlc/amadeus/pull/285) として記録済みである。
 
 ## 検証入口
 

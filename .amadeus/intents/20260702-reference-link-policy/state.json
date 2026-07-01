@@ -121,15 +121,21 @@
       "construction/bolts/B002-artifact-application-scope/tasks.md",
       "construction/bolts/B002-artifact-application-scope/notes.md",
       "construction/bolts/B002-artifact-application-scope/test-results.md",
-      "construction/bolts/B002-artifact-application-scope/pr.md"
+      "construction/bolts/B002-artifact-application-scope/pr.md",
+      "construction/bolts/B003-validation-boundary/tasks.md",
+      "construction/bolts/B003-validation-boundary/notes.md",
+      "construction/bolts/B003-validation-boundary/test-results.md",
+      "construction/bolts/B003-validation-boundary/pr.md"
     ],
     "targetBolts": [
       "B001",
-      "B002"
+      "B002",
+      "B003"
     ],
     "functionalDesign": {
       "targetUnits": [
-        "U001"
+        "U001",
+        "U002"
       ],
       "units": [
         {
@@ -139,6 +145,14 @@
           "frontendSurface": "absent",
           "targetSource": "construction_target_bolts",
           "runMode": "rerun"
+        },
+        {
+          "unitId": "U002",
+          "requirement": "required",
+          "status": "passed",
+          "frontendSurface": "absent",
+          "targetSource": "construction_target_bolts",
+          "runMode": "initial"
         }
       ]
     },
@@ -219,6 +233,46 @@
             {
               "kind": "approval",
               "path": "construction/bolts/B002-artifact-application-scope/pr.md"
+            }
+          ]
+        }
+      },
+      {
+        "id": "B003",
+        "taskGeneration": {
+          "status": "passed",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U002-validation-boundary/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U002-validation-boundary/functional-design/business-rules.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U002-validation-boundary/functional-design/domain-entities.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U002-validation-boundary/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B003-validation-boundary.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B003-validation-boundary/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B003-validation-boundary/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/bolts/B003-validation-boundary/pr.md"
             }
           ]
         }
