@@ -1876,65 +1876,99 @@ class AmadeusValidator {
     this.checkNotBlank(path, table, "PR");
     this.checkNotBlank(path, table, "状態");
 
-    if (this.isObject(construction) && Array.isArray(construction.bolts)) {
-      const targetBolts = new Set(
-        Array.isArray(construction.targetBolts) ? construction.targetBolts.map((value: unknown) => String(value ?? "").trim()) : [],
-      );
-      for (const item of construction.bolts) {
-        if (!this.isObject(item) || !this.isObject(item.taskGeneration)) continue;
-        const boltId = String(item.id ?? "").trim();
-        if (!targetBolts.has(boltId)) continue;
-        const status = String(item.taskGeneration.status ?? "").trim();
-        if (status !== "ready_for_approval" && status !== "passed") continue;
+    this.checkReadyTaskGenerationTraceabilityRows(path, table, construction, intentBase, boltDirectories);
+    this.checkCompletedConstructionTaskGenerationTraceability(path, table, construction, boltDirectories);
+  }
 
-        const taskEvidence = Array.isArray(item.taskGeneration.evidence)
-          ? item.taskGeneration.evidence
-            .filter((value: unknown) => this.isObject(value) && String(value.kind ?? "").trim() === "tasks")
-            .map((value: any) => String(value.path ?? "").trim())
-          : [];
-        const row = table.rows.find((candidate) => {
-          const links = this.markdownLinks(String(candidate["Evidence"] ?? "")).map((link) => this.cleanLinkTarget(link));
-          return taskEvidence.some((evidence) => {
-            const evidenceLink = evidence.length > 0 ? this.relativeLink(path, `${intentBase}/${evidence}`) : "";
-            return links.includes(evidence) || links.includes(evidenceLink);
-          });
-        });
-        if (!row) {
-          this.failRow(path, "`Task Generation からの追跡` が tasks evidence を持つ", `${boltId}: ${taskEvidence.join(", ") || "空欄"}`);
-          continue;
-        }
-        this.pass(path, "`Task Generation からの追跡` が tasks evidence を持つ", `${boltId}: ${taskEvidence.join(", ")}`);
+  private checkReadyTaskGenerationTraceabilityRows(
+    path: string,
+    table: Table,
+    construction: unknown,
+    intentBase: string,
+    boltDirectories: Map<string, string>,
+  ): void {
+    if (!this.isObject(construction) || !Array.isArray(construction.bolts)) return;
+    const targetBolts = new Set(
+      Array.isArray(construction.targetBolts) ? construction.targetBolts.map((value: unknown) => String(value ?? "").trim()) : [],
+    );
+    for (const item of construction.bolts) {
+      if (!this.isObject(item) || !this.isObject(item.taskGeneration)) continue;
+      const boltId = String(item.id ?? "").trim();
+      if (!targetBolts.has(boltId)) continue;
+      const status = String(item.taskGeneration.status ?? "").trim();
+      if (status !== "ready_for_approval" && status !== "passed") continue;
+      this.checkReadyTaskGenerationTraceabilityRow(path, table, intentBase, boltDirectories, boltId, item.taskGeneration);
+    }
+  }
 
-        const taskReferences = this.splitValues(row["Task"]);
-        const wrongBoltReferences = taskReferences.filter((reference) => !reference.startsWith(`${boltId}/`));
-        if (wrongBoltReferences.length === 0) {
-          this.pass(path, "`Task Generation からの追跡` が対象 Bolt の Task を指す", boltId);
-        } else {
-          this.failRow(path, "`Task Generation からの追跡` が対象 Bolt の Task を指す", wrongBoltReferences.join(", "));
-        }
+  private checkReadyTaskGenerationTraceabilityRow(
+    path: string,
+    table: Table,
+    intentBase: string,
+    boltDirectories: Map<string, string>,
+    boltId: string,
+    taskGeneration: Record<string, any>,
+  ): void {
+    const taskEvidence = this.taskGenerationEvidencePaths(taskGeneration);
+    const row = table.rows.find((candidate) => this.taskGenerationEvidenceRowMatches(path, intentBase, candidate, taskEvidence));
+    if (!row) {
+      this.failRow(path, "`Task Generation からの追跡` が tasks evidence を持つ", `${boltId}: ${taskEvidence.join(", ") || "空欄"}`);
+      return;
+    }
+    this.pass(path, "`Task Generation からの追跡` が tasks evidence を持つ", `${boltId}: ${taskEvidence.join(", ")}`);
+    this.checkTaskGenerationTaskReferences(path, row, boltId, boltDirectories);
+  }
 
-        const boltDir = boltDirectories.get(boltId);
-        const expectedTaskReferences = boltDir
-          ? [...this.taskIdsFor(`${boltDir}/tasks.md`)].map((taskId) => `${boltId}/${taskId}`)
-          : [];
-        const missing = expectedTaskReferences.filter((reference) => !taskReferences.includes(reference));
-        if (missing.length === 0) this.pass(path, "`Task Generation からの追跡` が対象 Bolt の全 Task を指す", boltId);
-        else this.failRow(path, "`Task Generation からの追跡` が対象 Bolt の全 Task を指す", missing.join(", "));
-      }
+  private taskGenerationEvidencePaths(taskGeneration: Record<string, any>): string[] {
+    return Array.isArray(taskGeneration.evidence)
+      ? taskGeneration.evidence
+        .filter((value: unknown) => this.isObject(value) && String(value.kind ?? "").trim() === "tasks")
+        .map((value: any) => String(value.path ?? "").trim())
+      : [];
+  }
+
+  private taskGenerationEvidenceRowMatches(path: string, intentBase: string, row: Record<string, string>, taskEvidence: string[]): boolean {
+    const links = this.markdownLinks(String(row["Evidence"] ?? "")).map((link) => this.cleanLinkTarget(link));
+    return taskEvidence.some((evidence) => {
+      const evidenceLink = evidence.length > 0 ? this.relativeLink(path, `${intentBase}/${evidence}`) : "";
+      return links.includes(evidence) || links.includes(evidenceLink);
+    });
+  }
+
+  private checkTaskGenerationTaskReferences(path: string, row: Record<string, string>, boltId: string, boltDirectories: Map<string, string>): void {
+    const taskReferences = this.splitValues(row["Task"]);
+    const wrongBoltReferences = taskReferences.filter((reference) => !reference.startsWith(`${boltId}/`));
+    if (wrongBoltReferences.length === 0) {
+      this.pass(path, "`Task Generation からの追跡` が対象 Bolt の Task を指す", boltId);
+    } else {
+      this.failRow(path, "`Task Generation からの追跡` が対象 Bolt の Task を指す", wrongBoltReferences.join(", "));
     }
 
-    const constructionCompleted =
-      String(construction?.status ?? "").trim() === "completed" || String(construction?.gate ?? "").trim() === "passed";
-    if (constructionCompleted) {
-      for (const row of table.rows) {
-        for (const column of ["実装", "検証"]) {
-          if (String(row[column] ?? "").trim() === "未実施") {
-            this.failRow(path, "Construction 完了時の Task Generation 追跡が未実施を残さない", `${column}: 未実施`);
-          }
+    const boltDir = boltDirectories.get(boltId);
+    const expectedTaskReferences = boltDir
+      ? [...this.taskIdsFor(`${boltDir}/tasks.md`)].map((taskId) => `${boltId}/${taskId}`)
+      : [];
+    const missing = expectedTaskReferences.filter((reference) => !taskReferences.includes(reference));
+    if (missing.length === 0) this.pass(path, "`Task Generation からの追跡` が対象 Bolt の全 Task を指す", boltId);
+    else this.failRow(path, "`Task Generation からの追跡` が対象 Bolt の全 Task を指す", missing.join(", "));
+  }
+
+  private checkCompletedConstructionTaskGenerationTraceability(
+    path: string,
+    table: Table,
+    construction: Record<string, any>,
+    boltDirectories: Map<string, string>,
+  ): void {
+    const completed = String(construction?.status ?? "").trim() === "completed" || String(construction?.gate ?? "").trim() === "passed";
+    if (!completed) return;
+    for (const row of table.rows) {
+      for (const column of ["実装", "検証"]) {
+        if (String(row[column] ?? "").trim() === "未実施") {
+          this.failRow(path, "Construction 完了時の Task Generation 追跡が未実施を残さない", `${column}: 未実施`);
         }
       }
-      this.checkNoneUseCaseTaskGenerationReasons(path, table, boltDirectories);
     }
+    this.checkNoneUseCaseTaskGenerationReasons(path, table, boltDirectories);
   }
 
   private checkNoneUseCaseTaskGenerationReasons(path: string, table: Table, boltDirectories: Map<string, string>): void {
