@@ -663,6 +663,24 @@ function removeTaskDesignReason(workspace: string): void {
   );
 }
 
+function replaceTaskDesignReasonWithMissingArtifact(workspace: string): void {
+  replaceInFile(
+    intentPath(workspace, `bolts/${bolt1}/tasks.md`),
+    "  - 設計根拠: ../../U002-order-creation/functional-design/business-logic-model.md#入力",
+    "  - 設計根拠: ../../U002-order-creation/functional-design/missing-model.md#入力",
+    "tasks fixture does not contain expected design reason",
+  );
+}
+
+function replaceTaskDesignReasonWithMissingHeading(workspace: string): void {
+  replaceInFile(
+    intentPath(workspace, `bolts/${bolt1}/tasks.md`),
+    "  - 設計根拠: ../../U002-order-creation/functional-design/business-logic-model.md#入力",
+    "  - 設計根拠: ../../U002-order-creation/functional-design/business-logic-model.md#存在しない見出し",
+    "tasks fixture does not contain expected design reason",
+  );
+}
+
 function writeConstructionTasks(workspace: string): void {
   ensureBoltDirectory(workspace, bolt1);
   writeFileSync(
@@ -2538,6 +2556,32 @@ removeTaskDesignReason(missingTaskDesignReasonWorkspace);
 runExpectFailure(
   ["bun", "run", validator, missingTaskDesignReasonWorkspace, intent],
   "Task が `設計根拠` を持つ",
+);
+
+const missingTaskDesignReasonArtifactWorkspace = phaseWorkspaceCopy();
+writeFunctionalDesign(missingTaskDesignReasonArtifactWorkspace);
+writeConstructionTasks(missingTaskDesignReasonArtifactWorkspace);
+writeConstructionNotes(missingTaskDesignReasonArtifactWorkspace);
+writeConstructionTestResults(missingTaskDesignReasonArtifactWorkspace);
+appendTaskGenerationTrace(missingTaskDesignReasonArtifactWorkspace);
+writeConstructionState(missingTaskDesignReasonArtifactWorkspace);
+replaceTaskDesignReasonWithMissingArtifact(missingTaskDesignReasonArtifactWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, missingTaskDesignReasonArtifactWorkspace, intent],
+  "Task の `設計根拠` が Task Generation 入力成果物または見出しを指す",
+);
+
+const missingTaskDesignReasonHeadingWorkspace = phaseWorkspaceCopy();
+writeFunctionalDesign(missingTaskDesignReasonHeadingWorkspace);
+writeConstructionTasks(missingTaskDesignReasonHeadingWorkspace);
+writeConstructionNotes(missingTaskDesignReasonHeadingWorkspace);
+writeConstructionTestResults(missingTaskDesignReasonHeadingWorkspace);
+appendTaskGenerationTrace(missingTaskDesignReasonHeadingWorkspace);
+writeConstructionState(missingTaskDesignReasonHeadingWorkspace);
+replaceTaskDesignReasonWithMissingHeading(missingTaskDesignReasonHeadingWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, missingTaskDesignReasonHeadingWorkspace, intent],
+  "Task の `設計根拠` が Task Generation 入力成果物または見出しを指す",
 );
 
 const wrongTaskReferencesWorkspace = phaseWorkspaceCopy();

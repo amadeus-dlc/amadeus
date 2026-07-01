@@ -650,7 +650,7 @@ Bolt 配下の `tasks.md` では、各 Task が次を持つ必要がある。
 `ユースケース` は `use-cases.md` の `一覧` に存在する Use Case ID、または `なし` にする。
 `なし` は、相互作用がない内部作業の場合だけ使う。
 Task Generation が `ready_for_approval` または `passed` の場合、`ユースケース` が `なし` の Task は `Task Generation からの追跡` に Use Case を参照しない理由を持つ。
-`設計根拠` は、同じ Bolt の `design.md` 内で Task 化の根拠になる見出しまたは判断を指す。
+`設計根拠` は、対象 Unit の Functional Design、対象 Unit の Unit Design Brief、または同じ Bolt のモジュールファイル内で Task 化の根拠になる成果物または見出しを指す。
 
 `decisions.md` の必須見出しは次である。
 
