@@ -4,11 +4,11 @@
 
 | 要求 | 状態 | 証拠 |
 |---|---|---|
-| R001 | 検証済み | [B001 test-results](../construction/bolts/B001-decision-review-stage-prerequisite-evidence/test-results.md), [B002 test-results](../construction/bolts/B002-skill-contract-prerequisite-alignment/test-results.md) |
-| R002 | 検証済み | [B001 test-results](../construction/bolts/B001-decision-review-stage-prerequisite-evidence/test-results.md), [B002 test-results](../construction/bolts/B002-skill-contract-prerequisite-alignment/test-results.md) |
-| R003 | 検証済み | [B001 test-results](../construction/bolts/B001-decision-review-stage-prerequisite-evidence/test-results.md), [B002 test-results](../construction/bolts/B002-skill-contract-prerequisite-alignment/test-results.md) |
-| R004 | 検証済み | [B003 test-results](../construction/bolts/B003-failure-routing-and-example-boundary/test-results.md) |
-| R005 | 検証済み | [B003 test-results](../construction/bolts/B003-failure-routing-and-example-boundary/test-results.md) |
+| R001 | 検証済み | [B001 test-results](../construction/bolts/B001-decision-review-stage-prerequisite-evidence/test-results.md), [B001 PR](../construction/bolts/B001-decision-review-stage-prerequisite-evidence/pr.md), [B002 test-results](../construction/bolts/B002-skill-contract-prerequisite-alignment/test-results.md), [B002 PR](../construction/bolts/B002-skill-contract-prerequisite-alignment/pr.md) |
+| R002 | 検証済み | [B001 test-results](../construction/bolts/B001-decision-review-stage-prerequisite-evidence/test-results.md), [B001 PR](../construction/bolts/B001-decision-review-stage-prerequisite-evidence/pr.md), [B002 test-results](../construction/bolts/B002-skill-contract-prerequisite-alignment/test-results.md), [B002 PR](../construction/bolts/B002-skill-contract-prerequisite-alignment/pr.md) |
+| R003 | 検証済み | [B001 test-results](../construction/bolts/B001-decision-review-stage-prerequisite-evidence/test-results.md), [B001 PR](../construction/bolts/B001-decision-review-stage-prerequisite-evidence/pr.md), [B002 test-results](../construction/bolts/B002-skill-contract-prerequisite-alignment/test-results.md), [B002 PR](../construction/bolts/B002-skill-contract-prerequisite-alignment/pr.md) |
+| R004 | 検証済み | [B001 test-results](../construction/bolts/B001-decision-review-stage-prerequisite-evidence/test-results.md), [B001 PR](../construction/bolts/B001-decision-review-stage-prerequisite-evidence/pr.md), [B002 test-results](../construction/bolts/B002-skill-contract-prerequisite-alignment/test-results.md), [B002 PR](../construction/bolts/B002-skill-contract-prerequisite-alignment/pr.md), [B003 test-results](../construction/bolts/B003-failure-routing-and-example-boundary/test-results.md), [B003 PR](../construction/bolts/B003-failure-routing-and-example-boundary/pr.md) |
+| R005 | 検証済み | [B003 test-results](../construction/bolts/B003-failure-routing-and-example-boundary/test-results.md), [B003 PR](../construction/bolts/B003-failure-routing-and-example-boundary/pr.md) |
 
 ## 状態ルール
 
