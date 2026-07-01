@@ -164,4 +164,5 @@ npm run test:all
 
 ## License
 
-このリポジトリには、現時点で license file が含まれていません。
+このリポジトリは MIT OR Apache-2.0 のデュアルライセンスです。
+詳細は [LICENSE-MIT](LICENSE-MIT) と [LICENSE-APACHE](LICENSE-APACHE) を参照してください。

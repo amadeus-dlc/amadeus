@@ -163,4 +163,5 @@ npm run test:all
 
 ## License
 
-No license file is currently included in this repository.
+This repository is dual-licensed under MIT OR Apache-2.0.
+See [LICENSE-MIT](LICENSE-MIT) and [LICENSE-APACHE](LICENSE-APACHE).
