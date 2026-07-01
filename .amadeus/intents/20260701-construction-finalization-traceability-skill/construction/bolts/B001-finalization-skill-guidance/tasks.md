@@ -9,7 +9,7 @@
   - ユースケース: UC001, UC002
   - 依存: なし
   - 設計根拠: ../../U001-finalization-skill-guidance/functional-design/business-logic-model.md
-  - 証拠: `skills/amadeus-construction/SKILL.md`, `.agents/skills/amadeus-construction/SKILL.md`
+  - 証拠: [test-results.md](test-results.md), [pr.md](pr.md)
 
 - [x] T002: Traceability finalization 内部 skill の手順を更新する。
   - 作業:
@@ -19,4 +19,4 @@
   - ユースケース: UC002
   - 依存: T001
   - 設計根拠: ../../U001-finalization-skill-guidance/functional-design/business-rules.md
-  - 証拠: `skills/amadeus-construction-traceability-finalization/SKILL.md`, `.agents/skills/amadeus-construction-traceability-finalization/SKILL.md`
+  - 証拠: [test-results.md](test-results.md), [pr.md](pr.md)

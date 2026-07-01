@@ -4,10 +4,10 @@
 
 | 要求 | 状態 | 証拠 |
 |---|---|---|
-| R001 | 充足済み | [B001 test-results](../construction/bolts/B001-finalization-skill-guidance/test-results.md), [B002 test-results](../construction/bolts/B002-template-and-example-alignment/test-results.md) |
-| R002 | 充足済み | [B001 test-results](../construction/bolts/B001-finalization-skill-guidance/test-results.md), [B002 test-results](../construction/bolts/B002-template-and-example-alignment/test-results.md) |
-| R003 | 充足済み | [B001 test-results](../construction/bolts/B001-finalization-skill-guidance/test-results.md) |
-| R004 | 充足済み | [B002 test-results](../construction/bolts/B002-template-and-example-alignment/test-results.md) |
+| R001 | 検証済み | [B001 test-results](../construction/bolts/B001-finalization-skill-guidance/test-results.md), [B001 PR](../construction/bolts/B001-finalization-skill-guidance/pr.md), [B002 test-results](../construction/bolts/B002-template-and-example-alignment/test-results.md), [B002 PR](../construction/bolts/B002-template-and-example-alignment/pr.md) |
+| R002 | 検証済み | [B001 test-results](../construction/bolts/B001-finalization-skill-guidance/test-results.md), [B001 PR](../construction/bolts/B001-finalization-skill-guidance/pr.md), [B002 test-results](../construction/bolts/B002-template-and-example-alignment/test-results.md), [B002 PR](../construction/bolts/B002-template-and-example-alignment/pr.md) |
+| R003 | 検証済み | [B001 test-results](../construction/bolts/B001-finalization-skill-guidance/test-results.md), [B001 PR](../construction/bolts/B001-finalization-skill-guidance/pr.md) |
+| R004 | 検証済み | [B002 test-results](../construction/bolts/B002-template-and-example-alignment/test-results.md), [B002 PR](../construction/bolts/B002-template-and-example-alignment/pr.md) |
 
 ## 状態ルール
 
