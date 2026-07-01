@@ -128,6 +128,14 @@ Discovery のモジュールディレクトリ名だけは `未確認` にせず
 Amadeus 自身の変更要望を Intent 化する前に使う。
 GitHub Issue、会話、docs 点検、validator 結果、example 検証、CI 結果を入力テーマとして整理し、通常の Discovery と同じ成果物へ記録する。
 
+不足確認の進め方は `guided` と同じである。
+既存資料や会話から分かることは質問せず、Discovery 判定に必要な不足だけを `amadeus-grilling` で一問ずつ確認する。
+質問した場合は、その場で成果物を作らず、ユーザーの回答を待つ。
+回答に記録対象の判断が含まれる場合は、Discovery 成果物への反映と同じ変更で `grillings.md` と `grillings/Gxxx-*.md` を更新する。
+
+`gate: passed` にするには、通常の Gate 条件と同じく、grilling で確認した前提、または既存資料から確認できる前提が `確認した前提` に記録されている必要がある。
+不足が残る場合は `gate: not_ready` とし、`推奨次アクション` に `amadeus-grilling` 継続を記録する。
+
 この mode は、Discovery の成果物契約を増やさない。
 `state.json.decision` は既存値だけを使い、`self_development_intent` のような値を追加しない。
 自己開発かどうかは、Intent 化判断ではなく入力テーマの分類として扱う。
