@@ -18,6 +18,7 @@
 | 20260702-reference-link-policy | Amadeus 成果物の参照リンク化方針を定義する。 | 20260701-self-development-cycle-stage-workspace | [20260702-reference-link-policy.md](intents/20260702-reference-link-policy.md) |
 | 20260702-construction-internal-next-skill-parent-routing | Construction 内部 skill の次工程案内を親 skill 経由の継続として明記する。 | 20260701-construction-finalization-traceability-skill | [20260702-construction-internal-next-skill-parent-routing.md](intents/20260702-construction-internal-next-skill-parent-routing.md) |
 | 20260702-internal-skill-policy-alignment | 内部 skill の対象範囲と暗黙起動ポリシーを揃える。 | なし | [20260702-internal-skill-policy-alignment.md](intents/20260702-internal-skill-policy-alignment.md) |
+| 20260702-internal-skill-forge-readme-alignment | `amadeus-*` skill を `skill-forge` で確認し、README の skill 一覧と内部 skill の扱いをそろえる。 | 20260702-stage-prerequisite-checks | [20260702-internal-skill-forge-readme-alignment.md](intents/20260702-internal-skill-forge-readme-alignment.md) |
 
 ## 依存関係
 
@@ -37,3 +38,4 @@
 | 20260702-reference-link-policy | 20260701-self-development-cycle-stage-workspace | Issue #243 は、自己開発 cycle と workspace 対応記録で作成された Functional Design を観察例にし、Amadeus 成果物の参照リンク化方針を後続 Intent として扱うため。 |
 | 20260702-construction-internal-next-skill-parent-routing | 20260701-construction-finalization-traceability-skill | Issue #274 は、Construction finalization を忘れないための次工程案内を扱い、Issue #245 の Construction finalization 追跡要件と同じ公開入口契約を前提にするため。 |
 | 20260702-internal-skill-policy-alignment | なし | Issue #284 の recommended 候補は、現在の skill ディレクトリと README の差分を整理するため、既存 Intent の完了を前提にしない。 |
+| 20260702-internal-skill-forge-readme-alignment | 20260702-stage-prerequisite-checks | `amadeus-*` skill の供給元、昇格先成果物、README の公開入口説明を区別して確認する必要があり、stage 前提確認の成果物を前提にするため。 |

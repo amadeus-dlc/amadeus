@@ -1,0 +1,18 @@
+@startuml
+salt
+{
+  {#
+    . | Skill Forge README alignment check
+    Input | README, skills/amadeus-*, .agents/skills/amadeus-*, skill-forge
+    Check 1 | Which skills are public entrypoints?
+    Check 2 | Which skills are internal workflow steps?
+    Check 3 | Do trigger descriptions match the README role?
+    Check 4 | Do source skill and promoted artifact differ?
+    Check 5 | Is backward compatibility explicitly maintained?
+    Outcome | README update / skill contract update / eval or metadata check / no compatibility layer
+  }
+  {
+    [Align README] | [Align skill contract] | [Run skill-forge checks] | [Record follow-up]
+  }
+}
+@enduml
