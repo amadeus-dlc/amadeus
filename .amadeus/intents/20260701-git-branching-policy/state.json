@@ -1,7 +1,7 @@
 {
   "intent": "20260701-git-branching-policy",
-  "phase": "ideation",
-  "status": "in_progress",
+  "phase": "inception",
+  "status": "completed",
   "ideation": {
     "intentCapture": {
       "status": "completed",
@@ -21,6 +21,89 @@
     ],
     "requiredMocks": [
       "ideation/mocks/initial-confirmation.puml"
+    ],
+    "gate": "passed"
+  },
+  "inception": {
+    "status": "completed",
+    "codebaseAnalysis": {
+      "requirement": "required",
+      "status": "passed",
+      "evidence": [
+        {
+          "kind": "file",
+          "path": "AGENTS.md"
+        },
+        {
+          "kind": "file",
+          "path": ".amadeus/steering/policies.md"
+        },
+        {
+          "kind": "file",
+          "path": ".amadeus/steering/policies/README.md"
+        },
+        {
+          "kind": "file",
+          "path": ".amadeus/development.md"
+        },
+        {
+          "kind": "file",
+          "path": ".amadeus/domain-map.md"
+        }
+      ],
+      "targetScope": [
+        "AGENTS.md",
+        ".amadeus/steering/policies.md",
+        ".amadeus/steering/policies/README.md",
+        ".amadeus/development.md",
+        ".amadeus/steering/structure.md",
+        ".amadeus/domain-map.md",
+        ".amadeus/context-map.md",
+        ".amadeus/intents/20260701-self-development-cycle-stage-workspace/**",
+        ".amadeus/intents/20260701-git-branching-policy/**"
+      ],
+      "analyzedCommit": "1d5d46a75906e7756cd3aeb71d6290ac6c602822",
+      "analyzedAt": "2026-07-01T10:48:19Z",
+      "freshness": "current"
+    },
+    "requiredArtifacts": [
+      "inception/codebase-analysis.md",
+      "inception/requirements.md",
+      "inception/acceptance.md",
+      "inception/user-stories.md",
+      "inception/use-cases.md",
+      "inception/units.md",
+      "inception/units/U001-git-branching-policy.md",
+      "inception/units/U001-git-branching-policy/design.md",
+      "inception/units/U002-policy-traceability-validation.md",
+      "inception/units/U002-policy-traceability-validation/design.md",
+      "inception/bolts.md",
+      "inception/traceability.md",
+      "inception/decisions.md"
+    ],
+    "requiredRequirementArtifacts": [
+      "inception/requirements/R001-policy-placement.md",
+      "inception/requirements/R002-branch-lifecycle.md",
+      "inception/requirements/R003-agents-policy-responsibility.md",
+      "inception/requirements/R004-policy-reference-validation.md"
+    ],
+    "requiredStoryArtifacts": [
+      "inception/user-stories/S001-branch-policy-review.md"
+    ],
+    "requiredUseCaseArtifacts": [
+      "inception/use-cases/UC001-define-policy-placement.md",
+      "inception/use-cases/UC002-apply-branch-lifecycle.md",
+      "inception/use-cases/UC003-review-policy-compliance.md"
+    ],
+    "requiredDecisionArtifacts": [
+      "inception/decisions/D001-inception-boundary.md",
+      "inception/decisions/D002-bc001-self-development-governance.md",
+      "inception/decisions/D003-unit-bolt-granularity.md"
+    ],
+    "requiredBoltArtifacts": [
+      "inception/bolts/B001-policy-placement.md",
+      "inception/bolts/B002-branch-lifecycle-rules.md",
+      "inception/bolts/B003-policy-reference-validation.md"
     ],
     "gate": "passed"
   }
