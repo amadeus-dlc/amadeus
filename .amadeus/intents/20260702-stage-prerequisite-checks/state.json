@@ -162,12 +162,15 @@
       "construction/bolts/B001-decision-review-stage-prerequisite-evidence/tasks.md",
       "construction/bolts/B001-decision-review-stage-prerequisite-evidence/notes.md",
       "construction/bolts/B001-decision-review-stage-prerequisite-evidence/test-results.md",
+      "construction/bolts/B001-decision-review-stage-prerequisite-evidence/pr.md",
       "construction/bolts/B002-skill-contract-prerequisite-alignment/tasks.md",
       "construction/bolts/B002-skill-contract-prerequisite-alignment/notes.md",
       "construction/bolts/B002-skill-contract-prerequisite-alignment/test-results.md",
+      "construction/bolts/B002-skill-contract-prerequisite-alignment/pr.md",
       "construction/bolts/B003-failure-routing-and-example-boundary/tasks.md",
       "construction/bolts/B003-failure-routing-and-example-boundary/notes.md",
-      "construction/bolts/B003-failure-routing-and-example-boundary/test-results.md"
+      "construction/bolts/B003-failure-routing-and-example-boundary/test-results.md",
+      "construction/bolts/B003-failure-routing-and-example-boundary/pr.md"
     ],
     "targetBolts": [
       "B001",
@@ -207,6 +210,10 @@
             {
               "kind": "approval",
               "path": "construction/decisions/D002-decision-review-stage-prerequisite.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/bolts/B001-decision-review-stage-prerequisite-evidence/pr.md"
             }
           ]
         }
@@ -243,6 +250,10 @@
             {
               "kind": "approval",
               "path": "construction/decisions/D003-skill-contract-alignment.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/bolts/B002-skill-contract-prerequisite-alignment/pr.md"
             }
           ]
         }
@@ -279,6 +290,10 @@
             {
               "kind": "approval",
               "path": "construction/decisions/D004-distribution-example-boundary.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/bolts/B003-failure-routing-and-example-boundary/pr.md"
             }
           ]
         }

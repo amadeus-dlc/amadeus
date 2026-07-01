@@ -8,7 +8,7 @@
   - ユースケース: UC001, UC002
   - 依存: B001/T001
   - 設計根拠: ../../U001-stage-prerequisite-evidence/functional-design/business-rules.md
-  - 証拠: [test-results.md](test-results.md)
+  - 証拠: [test-results.md](test-results.md), [PR #280](pr.md)
 
 - [x] T002: Skill Contract 生成物を更新する。
   - 作業:
@@ -18,7 +18,7 @@
   - ユースケース: UC001
   - 依存: T001
   - 設計根拠: ../../U001-stage-prerequisite-evidence/functional-design/domain-entities.md
-  - 証拠: [test-results.md](test-results.md)
+  - 証拠: [test-results.md](test-results.md), [PR #280](pr.md)
 
 - [x] T003: phase skill 起動時説明を stage 前提確認へ整合させる。
   - 作業:
@@ -28,4 +28,4 @@
   - ユースケース: UC001
   - 依存: B001/T002
   - 設計根拠: ../../U001-stage-prerequisite-evidence/functional-design/business-logic-model.md
-  - 証拠: [test-results.md](test-results.md)
+  - 証拠: [test-results.md](test-results.md), [PR #280](pr.md)
