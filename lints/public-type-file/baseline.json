@@ -228,15 +228,6 @@
         "MapEvidencePhase",
         "PhaseValidationContext"
       ]
-    },
-    {
-      "id": "lints/ts-complexity/check.ts",
-      "file": "lints/ts-complexity/check.ts",
-      "publicTypeCount": 2,
-      "publicTypes": [
-        "ComplexityMeasurement",
-        "ComplexityCheckResult"
-      ]
     }
   ]
 }
