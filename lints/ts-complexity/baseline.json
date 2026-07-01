@@ -30,31 +30,17 @@
       "complexity": 38
     },
     {
-      "id": ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts#class:AmadeusValidator>method:checkGrillings",
-      "file": ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts",
-      "name": "checkGrillings",
-      "line": 2518,
-      "complexity": 31
-    },
-    {
-      "id": "skills/amadeus-validator/validator/AmadeusValidator.ts#class:AmadeusValidator>method:checkGrillings",
-      "file": "skills/amadeus-validator/validator/AmadeusValidator.ts",
-      "name": "checkGrillings",
-      "line": 2518,
-      "complexity": 31
-    },
-    {
       "id": ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts#class:AmadeusValidator>method:checkGrillingSession",
       "file": ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts",
       "name": "checkGrillingSession",
-      "line": 2615,
+      "line": 2657,
       "complexity": 28
     },
     {
       "id": "skills/amadeus-validator/validator/AmadeusValidator.ts#class:AmadeusValidator>method:checkGrillingSession",
       "file": "skills/amadeus-validator/validator/AmadeusValidator.ts",
       "name": "checkGrillingSession",
-      "line": 2615,
+      "line": 2657,
       "complexity": 28
     },
     {
@@ -82,14 +68,14 @@
       "id": ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts#class:AmadeusValidator>method:checkedFileCategory",
       "file": ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts",
       "name": "checkedFileCategory",
-      "line": 3420,
+      "line": 3462,
       "complexity": 23
     },
     {
       "id": "skills/amadeus-validator/validator/AmadeusValidator.ts#class:AmadeusValidator>method:checkedFileCategory",
       "file": "skills/amadeus-validator/validator/AmadeusValidator.ts",
       "name": "checkedFileCategory",
-      "line": 3420,
+      "line": 3462,
       "complexity": 23
     }
   ]

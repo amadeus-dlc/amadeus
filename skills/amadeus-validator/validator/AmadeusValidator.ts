@@ -30,6 +30,11 @@ type RowCategoryRule = {
   matches: (row: Row) => boolean;
 };
 
+type GrillingIndexState = {
+  sessionIds: Set<string>;
+  sessionStates: Map<string, string>;
+};
+
 type Table = {
   headers: string[];
   rows: Record<string, string>[];
@@ -2535,39 +2540,60 @@ class AmadeusValidator {
 
     this.checkFile(indexPath, "grillings 索引が存在する");
     this.checkFile(sessionsPath, "grilling session ディレクトリが存在する", true);
+    const indexState = this.checkGrillingsIndex(base, indexPath);
+    const sessionFiles = this.grillingSessionFiles(sessionsPath);
+    const allDecisionIds = this.collectGrillingDecisionIds(sessionsPath, sessionFiles);
+    this.checkGrillingSessionFiles(base, sessionsPath, sessionFiles, indexState, allDecisionIds);
+  }
+
+  private checkGrillingsIndex(base: string, indexPath: string): GrillingIndexState {
     this.checkHeadings(indexPath, ["一覧"]);
     const table = this.checkTable(indexPath, "一覧", ["ID", "主題", "対象", "状態", "主な確定判断", "反映先", "詳細"]);
-    let indexedSessionIds = new Set<string>();
-    const indexedSessionStates = new Map<string, string>();
-    if (table) {
-      const ids = this.collectIds(indexPath, table, "ID", /^G\d{3}$/);
-      indexedSessionIds = ids;
-      this.checkNotBlank(indexPath, table, "主題");
-      this.checkNotBlank(indexPath, table, "対象");
-      this.checkNotBlank(indexPath, table, "主な確定判断");
-      this.checkNotBlank(indexPath, table, "反映先");
-      this.checkDetailLinks(indexPath, table, "詳細");
-      for (const row of table.rows) {
-        this.checkAllowed(indexPath, "状態", row["状態"], grillingSessionStatusValues);
-        const id = String(row["ID"] ?? "").trim();
-        const state = String(row["状態"] ?? "").trim();
-        if (id.length > 0) indexedSessionStates.set(id, state);
-        this.checkGrillingTarget(indexPath, base, "grilling 索引の `反映先` が存在する", row["反映先"], id);
-        const detailLinks = this.markdownLinks(String(row["詳細"] ?? "")).map((link) => this.cleanLinkTarget(link));
-        const expectedPrefix = `grillings/${id}-`;
-        if (id.length > 0 && ids.has(id) && detailLinks.some((link) => link.startsWith(expectedPrefix) && link.endsWith(".md"))) {
-          this.pass(indexPath, "`詳細` が対応する grilling session を指す", id);
-        } else {
-          this.failRow(indexPath, "`詳細` が対応する grilling session を指す", `${id}: ${detailLinks.join(", ") || "リンクなし"}`);
-        }
-      }
-    }
+    if (!table) return { sessionIds: new Set(), sessionStates: new Map() };
 
+    const sessionIds = this.collectIds(indexPath, table, "ID", /^G\d{3}$/);
+    const sessionStates = new Map<string, string>();
+    this.checkNotBlank(indexPath, table, "主題");
+    this.checkNotBlank(indexPath, table, "対象");
+    this.checkNotBlank(indexPath, table, "主な確定判断");
+    this.checkNotBlank(indexPath, table, "反映先");
+    this.checkDetailLinks(indexPath, table, "詳細");
+    for (const row of table.rows) {
+      this.checkGrillingsIndexRow(base, indexPath, row, sessionIds, sessionStates);
+    }
+    return { sessionIds, sessionStates };
+  }
+
+  private checkGrillingsIndexRow(
+    base: string,
+    indexPath: string,
+    row: Record<string, string>,
+    sessionIds: Set<string>,
+    sessionStates: Map<string, string>,
+  ): void {
+    this.checkAllowed(indexPath, "状態", row["状態"], grillingSessionStatusValues);
+    const id = String(row["ID"] ?? "").trim();
+    const state = String(row["状態"] ?? "").trim();
+    if (id.length > 0) sessionStates.set(id, state);
+    this.checkGrillingTarget(indexPath, base, "grilling 索引の `反映先` が存在する", row["反映先"], id);
+    const detailLinks = this.markdownLinks(String(row["詳細"] ?? "")).map((link) => this.cleanLinkTarget(link));
+    const expectedPrefix = `grillings/${id}-`;
+    if (id.length > 0 && sessionIds.has(id) && detailLinks.some((link) => link.startsWith(expectedPrefix) && link.endsWith(".md"))) {
+      this.pass(indexPath, "`詳細` が対応する grilling session を指す", id);
+    } else {
+      this.failRow(indexPath, "`詳細` が対応する grilling session を指す", `${id}: ${detailLinks.join(", ") || "リンクなし"}`);
+    }
+  }
+
+  private grillingSessionFiles(sessionsPath: string): string[] {
     const entries = readdirSync(this.absolute(sessionsPath)).sort();
     const sessionFiles = entries.filter((entry) => this.isFile(this.absolute(`${sessionsPath}/${entry}`)));
     if (sessionFiles.length > 0) this.pass(sessionsPath, "grilling session ファイルが1件以上ある", `${sessionFiles.length}件`);
     else this.failRow(sessionsPath, "grilling session ファイルが1件以上ある", "0件");
+    return sessionFiles;
+  }
 
+  private collectGrillingDecisionIds(sessionsPath: string, sessionFiles: string[]): Set<string> {
     const allDecisionIds = new Set<string>();
     for (const entry of sessionFiles) {
       const path = `${sessionsPath}/${entry}`;
@@ -2585,30 +2611,46 @@ class AmadeusValidator {
         }
       }
     }
+    return allDecisionIds;
+  }
 
+  private checkGrillingSessionFiles(
+    base: string,
+    sessionsPath: string,
+    sessionFiles: string[],
+    indexState: GrillingIndexState,
+    allDecisionIds: Set<string>,
+  ): void {
     const seenSessionIds = new Set<string>();
     for (const entry of sessionFiles) {
       const path = `${sessionsPath}/${entry}`;
       const sessionId = entry.match(/^(G\d{3})-/)?.[1];
-      if (grillingSessionFilePattern.test(entry)) {
-        this.pass(path, "grilling session ファイル名が Gnnn-<topic>.md 形式である", entry);
-      } else {
-        this.failRow(path, "grilling session ファイル名が Gnnn-<topic>.md 形式である", entry);
-      }
-      if (sessionId) {
-        if (seenSessionIds.has(sessionId)) {
-          this.failRow(path, "grilling session ID が対象 root 内で重複しない", sessionId);
-        } else {
-          this.pass(path, "grilling session ID が対象 root 内で重複しない", sessionId);
-          seenSessionIds.add(sessionId);
-        }
-      }
-      if (sessionId && indexedSessionIds.has(sessionId)) {
+      this.checkGrillingSessionFileName(path, entry);
+      this.checkUniqueGrillingSessionId(path, sessionId, seenSessionIds);
+      if (sessionId && indexState.sessionIds.has(sessionId)) {
         this.pass(path, "grilling session が `grillings.md` に登録されている", sessionId);
       } else {
         this.failRow(path, "grilling session が `grillings.md` に登録されている", sessionId ?? entry);
       }
-      this.checkGrillingSession(base, path, allDecisionIds, sessionId ? indexedSessionStates.get(sessionId) : undefined);
+      this.checkGrillingSession(base, path, allDecisionIds, sessionId ? indexState.sessionStates.get(sessionId) : undefined);
+    }
+  }
+
+  private checkGrillingSessionFileName(path: string, entry: string): void {
+    if (grillingSessionFilePattern.test(entry)) {
+      this.pass(path, "grilling session ファイル名が Gnnn-<topic>.md 形式である", entry);
+    } else {
+      this.failRow(path, "grilling session ファイル名が Gnnn-<topic>.md 形式である", entry);
+    }
+  }
+
+  private checkUniqueGrillingSessionId(path: string, sessionId: string | undefined, seenSessionIds: Set<string>): void {
+    if (!sessionId) return;
+    if (seenSessionIds.has(sessionId)) {
+      this.failRow(path, "grilling session ID が対象 root 内で重複しない", sessionId);
+    } else {
+      this.pass(path, "grilling session ID が対象 root 内で重複しない", sessionId);
+      seenSessionIds.add(sessionId);
     }
   }
 
