@@ -4,7 +4,11 @@
 
 このディレクトリは、自己開発で共有する詳細な方針記録を扱う。
 
-現時点では、詳細な方針記録は未登録である。
+## 登録済み policy
+
+| policy | 役割 |
+|---|---|
+| [git-branching.md](git-branching.md) | Git ブランチ戦略、branch lifecycle、policy 参照と検出境界を扱う。 |
 
 ## 記録方針
 
