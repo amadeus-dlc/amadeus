@@ -72,6 +72,21 @@ Discovery のモジュールディレクトリ名は、`.amadeus/discoveries.md`
 必要な場合だけ、関連しそうな既存 Intent の `ideation/scope.md`、`inception/requirements.md`、`inception/traceability.md` を読む。
 Discovery は Ideation や Inception の代替ではない。
 
+## dry-run の入力境界
+
+`amadeus-discovery dry-run` は、読み取り専用で Discovery 候補を表示する入口である。
+この skill で `dry-run` を扱う場合は、候補表示に必要な入力境界を確認する。
+
+必要に応じて、`dry-run` は `amadeus-history-review` の過去分析結果と `amadeus-learning-review` の学習分類結果を入力にできる。
+`amadeus-discovery` は、それらの結果を Discovery 候補表示の参考情報として使う consumer である。
+
+`amadeus-discovery` は過去分析と学習分類を所有しない。
+過去成果物の横断分析は `amadeus-history-review` が扱う。
+学習先分類は `amadeus-learning-review` が扱う。
+
+`dry-run` は `.amadeus/` 成果物を更新せず、GitHub Issue を作成せず、`amadeus-ideation` を自動実行しない。
+候補表示から成果物作成へ進む場合は、人間が次の skill を明示する。
+
 ## テンプレート
 
 成果物を新規作成する場合は、テンプレートを使う。
