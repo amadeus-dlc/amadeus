@@ -17,6 +17,15 @@ type TaskGenerationEvidenceCheck = StageResult & {
   evidenceByKind: Map<string, string[]>;
 };
 
+type RequiredArtifactsContext = {
+  path: string;
+  intentBase: string;
+  required: Set<string>;
+  boltDirectories: Map<string, string>;
+  taskGenerationStatuses: Map<string, string>;
+  requiresTestResults: boolean;
+};
+
 type BoltPreparationStageInput = {
   statePath: string;
   construction: Record<string, any>;
@@ -299,44 +308,95 @@ function checkTargetBoltRequiredArtifacts(input: BoltPreparationStageInput): Che
   const constructionBase = input.constructionBaseForStatePath(path);
   const required = new Set(requiredBoltArtifacts.map((value: unknown) => String(value ?? "").trim()));
   const boltDirectories = input.constructionBoltDirectories(inceptionBase, constructionBase);
-  const taskGenerationStatuses = new Map<string, string>();
-  if (Array.isArray(construction.bolts)) {
-    for (const item of construction.bolts) {
-      if (!input.isObject(item) || !input.isObject(item.taskGeneration)) continue;
-      const id = String(item.id ?? "").trim();
-      if (id.length === 0) continue;
-      taskGenerationStatuses.set(id, String(item.taskGeneration.status ?? "").trim());
-    }
-  }
-  const requiresTestResults =
-    String(construction.status ?? "").trim() === "completed" || String(construction.gate ?? "").trim() === "passed";
+  const taskGenerationStatuses = collectTaskGenerationStatuses(input, construction.bolts);
+  const requiresTestResults = constructionRequiresTestResults(construction);
+  const context = { path, intentBase, required, boltDirectories, taskGenerationStatuses, requiresTestResults };
   for (const value of targetBolts) {
-    const boltId = String(value ?? "").trim();
-    const boltDir = boltDirectories.get(boltId);
-    if (!boltDir) continue;
-    const artifactPaths = [`${boltDir}/notes.md`];
-    const taskPath = input.relativeToIntent(intentBase, `${boltDir}/tasks.md`);
-    const taskGenerationStatus = taskGenerationStatuses.get(boltId);
-    if (taskGenerationStatus === "ready_for_approval" || taskGenerationStatus === "passed" || taskGenerationStatus === "failed") {
-      artifactPaths.push(`${boltDir}/tasks.md`);
-    } else if (taskGenerationStatus === "not_started" || taskGenerationStatus === "in_progress" || taskGenerationStatus === "blocked") {
-      if (required.has(taskPath)) {
-        results.push(fail(path, "`taskGeneration.status` 未生成時は requiredBoltArtifacts に tasks.md を含めない", `${boltId}: ${taskPath}`));
-      } else {
-        results.push(pass(path, "`taskGeneration.status` 未生成時は requiredBoltArtifacts に tasks.md を含めない", `${boltId}: ${taskPath}`));
-      }
-    }
-    if (requiresTestResults) artifactPaths.push(`${boltDir}/test-results.md`);
-    for (const artifactPath of artifactPaths) {
-      const relativePath = input.relativeToIntent(intentBase, artifactPath);
-      const condition = artifactPath.endsWith("/test-results.md")
-        ? "Construction 完了時の必須 Bolt 成果物が test-results.md を含む"
-        : "Construction 必須 Bolt 成果物が targetBolt の証拠成果物を含む";
-      if (required.has(relativePath)) results.push(pass(path, condition, `${boltId}: ${relativePath}`));
-      else results.push(fail(path, condition, `${boltId}: ${relativePath}`));
-    }
+    results.push(...checkTargetBoltRequiredArtifactsEntry(input, context, value));
   }
   return results;
+}
+
+function collectTaskGenerationStatuses(input: BoltPreparationStageInput, bolts: unknown): Map<string, string> {
+  const statuses = new Map<string, string>();
+  if (!Array.isArray(bolts)) return statuses;
+
+  for (const item of bolts) {
+    if (!input.isObject(item) || !input.isObject(item.taskGeneration)) continue;
+    const id = String(item.id ?? "").trim();
+    if (id.length === 0) continue;
+    statuses.set(id, String(item.taskGeneration.status ?? "").trim());
+  }
+  return statuses;
+}
+
+function constructionRequiresTestResults(construction: Record<string, any>): boolean {
+  return String(construction.status ?? "").trim() === "completed" || String(construction.gate ?? "").trim() === "passed";
+}
+
+function checkTargetBoltRequiredArtifactsEntry(
+  input: BoltPreparationStageInput,
+  context: RequiredArtifactsContext,
+  value: unknown,
+): CheckResult[] {
+  const boltId = String(value ?? "").trim();
+  const boltDir = context.boltDirectories.get(boltId);
+  if (!boltDir) return [];
+
+  const results: CheckResult[] = [];
+  const artifactPaths = targetBoltRequiredArtifactPaths(input, context, boltId, boltDir, results);
+  for (const artifactPath of artifactPaths) {
+    results.push(checkRequiredBoltArtifact(input, context, boltId, artifactPath));
+  }
+  return results;
+}
+
+function targetBoltRequiredArtifactPaths(
+  input: BoltPreparationStageInput,
+  context: RequiredArtifactsContext,
+  boltId: string,
+  boltDir: string,
+  results: CheckResult[],
+): string[] {
+  const artifactPaths = [`${boltDir}/notes.md`];
+  const taskPath = input.relativeToIntent(context.intentBase, `${boltDir}/tasks.md`);
+  const taskGenerationStatus = context.taskGenerationStatuses.get(boltId);
+  if (taskGenerationProducesTasks(taskGenerationStatus)) {
+    artifactPaths.push(`${boltDir}/tasks.md`);
+  } else if (taskGenerationHasNoGeneratedTasks(taskGenerationStatus)) {
+    results.push(checkTasksNotRequiredBeforeGeneration(context, boltId, taskPath));
+  }
+  if (context.requiresTestResults) artifactPaths.push(`${boltDir}/test-results.md`);
+  return artifactPaths;
+}
+
+function taskGenerationProducesTasks(status: string | undefined): boolean {
+  return status === "ready_for_approval" || status === "passed" || status === "failed";
+}
+
+function taskGenerationHasNoGeneratedTasks(status: string | undefined): boolean {
+  return status === "not_started" || status === "in_progress" || status === "blocked";
+}
+
+function checkTasksNotRequiredBeforeGeneration(context: RequiredArtifactsContext, boltId: string, taskPath: string): CheckResult {
+  if (context.required.has(taskPath)) {
+    return fail(context.path, "`taskGeneration.status` 未生成時は requiredBoltArtifacts に tasks.md を含めない", `${boltId}: ${taskPath}`);
+  }
+  return pass(context.path, "`taskGeneration.status` 未生成時は requiredBoltArtifacts に tasks.md を含めない", `${boltId}: ${taskPath}`);
+}
+
+function checkRequiredBoltArtifact(
+  input: BoltPreparationStageInput,
+  context: RequiredArtifactsContext,
+  boltId: string,
+  artifactPath: string,
+): CheckResult {
+  const relativePath = input.relativeToIntent(context.intentBase, artifactPath);
+  const condition = artifactPath.endsWith("/test-results.md")
+    ? "Construction 完了時の必須 Bolt 成果物が test-results.md を含む"
+    : "Construction 必須 Bolt 成果物が targetBolt の証拠成果物を含む";
+  if (context.required.has(relativePath)) return pass(context.path, condition, `${boltId}: ${relativePath}`);
+  return fail(context.path, condition, `${boltId}: ${relativePath}`);
 }
 
 function checkTaskGenerationStateMatrix(
