@@ -22,7 +22,7 @@ Agent が skill 変更 PR を作成するとき、レビュー判断に必要な
 
 1. Agent は、変更が skill 変更だけで構成されているか確認する。
 2. Agent は、source skill を変更し、昇格先成果物を同じ PR で同期する。
-3. Agent は、skill-forge で skill 境界、trigger description、本文指示、eval coverage を確認する。
+3. Agent は、skill-forge で skill 境界、trigger description、本文指示、eval coverage、存在する場合は Codex metadata を確認する。
 4. Agent は、PR 説明に挙動差分の3観点（変わる判断、変わる成果物構造、影響する後続 phase）を記録する。
 5. Agent は、PR 説明の固定見出し「skill-forge 確認」に、確認した観点と確認結果を記録する。
 6. Agent は、GitHub に PR を作成する。
