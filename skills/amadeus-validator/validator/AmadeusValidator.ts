@@ -25,6 +25,11 @@ type Row = {
   evidence: string;
 };
 
+type RowCategoryRule = {
+  category: string;
+  matches: (row: Row) => boolean;
+};
+
 type Table = {
   headers: string[];
   rows: Record<string, string>[];
@@ -153,6 +158,81 @@ const indexSpecs: Record<string, { headings: string[]; listHeading: string; colu
     targetColumn: "判断",
   },
 };
+
+const rowCategoryRules: RowCategoryRule[] = [
+  {
+    category: "Grilling Decision Trail",
+    matches: ({ target, condition }) => target.includes("/grillings") || condition.includes("grilling"),
+  },
+  {
+    category: "実行環境",
+    matches: ({ condition }) => condition.includes("作業ディレクトリ") || condition.includes("成果物ルート"),
+  },
+  {
+    category: "Event Storming",
+    matches: ({ target, condition }) => target.includes("/event-storming/") || condition.includes("Event Storming") || condition.includes("Domain Event"),
+  },
+  {
+    category: "Discovery",
+    matches: ({ target, condition }) => target.includes(".amadeus/discoveries") || condition.includes("Discovery") || condition.includes("Intent 候補"),
+  },
+  {
+    category: "検証範囲",
+    matches: ({ condition }) => condition.includes("対象 Intent ディレクトリ名"),
+  },
+  {
+    category: "状態",
+    matches: ({ condition }) => condition.includes("`initialized`"),
+  },
+  {
+    category: "Ideation",
+    matches: ({ target, condition }) => target.includes("/ideation.md") || target.includes("/scope.md") || condition.includes("Ideation") || condition.includes("Inception"),
+  },
+  {
+    category: "状態",
+    matches: ({ target, condition }) => target.endsWith("state.json") || condition.includes("state.json") || condition.includes("`phase`") || condition.includes("`status`"),
+  },
+  {
+    category: "モック",
+    matches: ({ target, condition }) => target.includes("/mocks/") || condition.includes("モック") || condition.includes(".puml"),
+  },
+  {
+    category: "ファイル存在",
+    matches: ({ condition }) => condition.includes("存在する") && !condition.includes("参照先"),
+  },
+  {
+    category: "見出し",
+    matches: ({ condition }) => condition.includes("見出し"),
+  },
+  {
+    category: "表列",
+    matches: ({ condition }) => condition.includes("表列") || condition.includes("表がある"),
+  },
+  {
+    category: "識別子",
+    matches: ({ condition }) => condition.includes("識別子"),
+  },
+  {
+    category: "リンク参照",
+    matches: ({ condition }) => condition.includes("相対リンク") || condition.includes("を指す"),
+  },
+  {
+    category: "依存関係",
+    matches: ({ condition }) => condition.includes("依存"),
+  },
+  {
+    category: "Index ID参照",
+    matches: ({ condition }) => condition.includes("一覧内の既存 ID"),
+  },
+  {
+    category: "空欄",
+    matches: ({ condition }) => condition.includes("空欄"),
+  },
+  {
+    category: "ドメイン境界",
+    matches: ({ target, condition }) => target.includes("domain-map.md") || target.includes("context-map.md") || condition.includes("コンテキスト") || condition.includes("Domain Map") || condition.includes("Context Map") || condition.includes("許可値"),
+  },
+];
 
 class AmadeusValidator {
   private readonly root: string;
@@ -3348,33 +3428,9 @@ class AmadeusValidator {
   }
 
   private categoryFor(row: Row): string {
-    const condition = row.condition;
-    const target = row.target;
-    if (target.includes("/grillings") || condition.includes("grilling")) return "Grilling Decision Trail";
-    if (condition.includes("作業ディレクトリ") || condition.includes("成果物ルート")) return "実行環境";
-    if (target.includes("/event-storming/") || condition.includes("Event Storming") || condition.includes("Domain Event")) return "Event Storming";
-    if (target.includes(".amadeus/discoveries") || condition.includes("Discovery") || condition.includes("Intent 候補")) return "Discovery";
-    if (condition.includes("対象 Intent ディレクトリ名")) return "検証範囲";
-    if (condition.includes("`initialized`")) return "状態";
-    if (target.includes("/ideation.md") || target.includes("/scope.md") || condition.includes("Ideation") || condition.includes("Inception")) return "Ideation";
-    if (target.endsWith("state.json") || condition.includes("state.json") || condition.includes("`phase`") || condition.includes("`status`")) return "状態";
-    if (target.includes("/mocks/") || condition.includes("モック") || condition.includes(".puml")) return "モック";
-    if (condition.includes("存在する") && !condition.includes("参照先")) return "ファイル存在";
-    if (condition.includes("見出し")) return "見出し";
-    if (condition.includes("表列") || condition.includes("表がある")) return "表列";
-    if (condition.includes("識別子")) return "識別子";
-    if (condition.includes("相対リンク") || condition.includes("を指す")) return "リンク参照";
-    if (condition.includes("依存")) return "依存関係";
-    if (condition.includes("一覧内の既存 ID")) return "Index ID参照";
-    if (condition.includes("空欄")) return "空欄";
-    if (
-      target.includes("domain-map.md") ||
-      target.includes("context-map.md") ||
-      condition.includes("コンテキスト") ||
-      condition.includes("Domain Map") ||
-      condition.includes("Context Map") ||
-      condition.includes("許可値")
-    ) return "ドメイン境界";
+    for (const rule of rowCategoryRules) {
+      if (rule.matches(row)) return rule.category;
+    }
     return "その他";
   }
 
