@@ -11,6 +11,11 @@ import {
   pullRequestUrl,
 } from "./domain/primitives";
 import { cleanMarkdownLinkTarget, tryResolveArtifactLinkTarget } from "./domain/artifact-links";
+import {
+  currentIntentEvidenceTargets as selectCurrentIntentEvidenceTargets,
+  evaluateEvidencePolicy,
+} from "./domain/evidence-policy";
+import { type FunctionalDesignEvidenceStatus } from "./domain/functional-design-evidence-status";
 import { type CheckResult } from "./domain/results";
 import { checkConstructionPhase } from "./phases/construction";
 import { checkInceptionPhase } from "./phases/inception";
@@ -2454,18 +2459,21 @@ class AmadeusValidator {
       return;
     }
 
-    const acceptedTarget = this.acceptedDomainMapEvidenceTarget(currentIntentRoot, currentIntentTargets, evidencePhases, true);
+    const evaluation = evaluateEvidencePolicy({
+      policyName: "domain-map-adoption",
+      currentIntentRoot,
+      targets: currentIntentTargets,
+      evidencePhases,
+      functionalDesignStatus: (target) => this.functionalDesignEvidenceStatus(target),
+    });
     const condition = this.domainMapEvidenceCondition(evidencePhases);
-    if (acceptedTarget) {
-      const detail = `${unitId}: ${contextId}: ${acceptedTarget}`;
+    if (evaluation.result === "accepted") {
+      const detail = `${unitId}: ${contextId}: ${evaluation.target}`;
       this.pass(path, condition, detail);
+    } else if (evaluation.result === "rejected_functional_design") {
+      this.failRow(path, "Domain Map の Functional Design 採用根拠が passed である", `${unitId}: ${contextId}: ${evaluation.target}`);
     } else {
-      const rejectedTarget = this.acceptedDomainMapEvidenceTarget(currentIntentRoot, currentIntentTargets, evidencePhases);
-      if (rejectedTarget && !this.functionalDesignEvidenceHasPassedStatus(rejectedTarget)) {
-        this.failRow(path, "Domain Map の Functional Design 採用根拠が passed である", `${unitId}: ${contextId}: ${rejectedTarget}`);
-      } else {
-        this.failRow(path, condition, `${unitId}: ${contextId}: ${currentIntentTargets.join(", ")}`);
-      }
+      this.failRow(path, condition, `${unitId}: ${contextId}: ${currentIntentTargets.join(", ")}`);
     }
   }
 
@@ -2483,41 +2491,39 @@ class AmadeusValidator {
       const upstream = String(row["Upstream"] ?? "").trim();
       const dependency = `${downstream} -> ${upstream}`;
       const evidenceTargets = this.resolvedEvidenceTargets(path, row["根拠"]);
-      const currentIntentTargets = this.currentIntentTargets(evidenceTargets, currentIntentRoot);
+      const currentIntentTargets = selectCurrentIntentEvidenceTargets(evidenceTargets, currentIntentRoot);
       const downstreamTargets = this.domainMapBoundedContextCurrentIntentTargets(downstream, currentIntentRoot);
       const upstreamTargets = this.domainMapBoundedContextCurrentIntentTargets(upstream, currentIntentRoot);
       const currentIntentDependency = currentIntentTargets.length > 0 || downstreamTargets.length > 0 || upstreamTargets.length > 0;
       if (!currentIntentDependency) continue;
 
-      const acceptedTarget = this.acceptedContextMapEvidenceTarget(currentIntentRoot, currentIntentTargets, evidencePhases, true);
-      if (acceptedTarget) {
-        const detail = `${dependency}: ${acceptedTarget}`;
+      const evaluation = evaluateEvidencePolicy({
+        policyName: "context-map-dependency",
+        currentIntentRoot,
+        targets: currentIntentTargets,
+        evidencePhases,
+        functionalDesignStatus: (target) => this.functionalDesignEvidenceStatus(target),
+      });
+      if (evaluation.result === "accepted") {
+        const detail = `${dependency}: ${evaluation.target}`;
         this.pass(path, condition, detail);
+      } else if (evaluation.result === "rejected_functional_design") {
+        this.failRow(path, "Context Map の Functional Design 採用根拠が passed である", `${dependency}: ${evaluation.target}`);
       } else {
-        const rejectedTarget = this.acceptedContextMapEvidenceTarget(currentIntentRoot, currentIntentTargets, evidencePhases);
-        if (rejectedTarget && !this.functionalDesignEvidenceHasPassedStatus(rejectedTarget)) {
-          this.failRow(path, "Context Map の Functional Design 採用根拠が passed である", `${dependency}: ${rejectedTarget}`);
-        } else {
-          const targets = currentIntentTargets.length > 0 ? currentIntentTargets : evidenceTargets;
-          this.failRow(path, condition, `${dependency}: ${targets.length > 0 ? targets.join(", ") : "根拠なし"}`);
-        }
+        const targets = currentIntentTargets.length > 0 ? currentIntentTargets : evidenceTargets;
+        this.failRow(path, condition, `${dependency}: ${targets.length > 0 ? targets.join(", ") : "根拠なし"}`);
       }
     }
   }
 
   private currentIntentEvidenceTargets(path: string, evidence: unknown, currentIntentRoot: string): string[] {
-    return this.currentIntentTargets(this.resolvedEvidenceTargets(path, evidence), currentIntentRoot);
+    return selectCurrentIntentEvidenceTargets(this.resolvedEvidenceTargets(path, evidence), currentIntentRoot);
   }
 
   private resolvedEvidenceTargets(path: string, evidence: unknown): string[] {
     return this.markdownLinks(String(evidence ?? ""))
       .map((target) => tryResolveArtifactLinkTarget(path, target)?.value)
       .filter((target): target is string => target !== undefined);
-  }
-
-  private currentIntentTargets(targets: string[], currentIntentRoot: string): string[] {
-    return targets
-      .filter((target) => target === `${currentIntentRoot}.md` || target.startsWith(`${currentIntentRoot}/`));
   }
 
   private domainMapBoundedContextCurrentIntentTargets(contextId: string, currentIntentRoot: string): string[] {
@@ -2533,45 +2539,12 @@ class AmadeusValidator {
     return this.currentIntentEvidenceTargets(path, row["根拠"], currentIntentRoot);
   }
 
-  private acceptedDomainMapEvidenceTarget(currentIntentRoot: string, targets: string[], evidencePhases: MapEvidencePhase[], requirePassedFunctionalDesign = false): string | undefined {
-    const patterns: RegExp[] = [];
-    if (evidencePhases.includes("inception")) {
-      patterns.push(new RegExp(`^${this.escapeRegExp(currentIntentRoot)}/inception/decisions/D\\d{3}-[^/]+\\.md$`));
-    }
-    if (evidencePhases.includes("construction")) {
-      patterns.push(
-        new RegExp(`^${this.escapeRegExp(currentIntentRoot)}/construction/decisions/D\\d{3}-[^/]+\\.md$`),
-        new RegExp(`^${this.escapeRegExp(currentIntentRoot)}/construction/[^/]+/functional-design/[^/]+\\.md$`),
-        new RegExp(`^${this.escapeRegExp(currentIntentRoot)}/construction/traceability\\.md$`),
-      );
-    }
-    return targets.find((target) => patterns.some((pattern) => pattern.test(target)) && (!requirePassedFunctionalDesign || this.functionalDesignEvidenceHasPassedStatus(target)));
-  }
-
-  private acceptedContextMapEvidenceTarget(currentIntentRoot: string, targets: string[], evidencePhases: MapEvidencePhase[], requirePassedFunctionalDesign = false): string | undefined {
-    const patterns: RegExp[] = [];
-    if (evidencePhases.includes("inception")) {
-      patterns.push(
-        new RegExp(`^${this.escapeRegExp(currentIntentRoot)}/inception/decisions/D\\d{3}-[^/]+\\.md$`),
-        new RegExp(`^${this.escapeRegExp(currentIntentRoot)}/inception/traceability\\.md$`),
-      );
-    }
-    if (evidencePhases.includes("construction")) {
-      patterns.push(
-        new RegExp(`^${this.escapeRegExp(currentIntentRoot)}/construction/decisions/D\\d{3}-[^/]+\\.md$`),
-        new RegExp(`^${this.escapeRegExp(currentIntentRoot)}/construction/[^/]+/functional-design/[^/]+\\.md$`),
-        new RegExp(`^${this.escapeRegExp(currentIntentRoot)}/construction/traceability\\.md$`),
-      );
-    }
-    return targets.find((target) => patterns.some((pattern) => pattern.test(target)) && (!requirePassedFunctionalDesign || this.functionalDesignEvidenceHasPassedStatus(target)));
-  }
-
-  private functionalDesignEvidenceHasPassedStatus(target: string): boolean {
+  private functionalDesignEvidenceStatus(target: string): FunctionalDesignEvidenceStatus {
     const unitName = this.functionalDesignEvidenceUnitName(target);
-    if (!unitName) return true;
+    if (!unitName) return "not_functional_design";
     const unitId = unitName.match(/^(U\d{3})(?:-|$)/)?.[1];
-    if (!unitId) return false;
-    return this.constructionFunctionalDesignUnitStatus(unitId) === "passed";
+    if (!unitId) return "not_passed";
+    return this.constructionFunctionalDesignUnitStatus(unitId) === "passed" ? "passed" : "not_passed";
   }
 
   private functionalDesignEvidenceUnitName(target: string): string | undefined {
