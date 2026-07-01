@@ -361,4 +361,79 @@ export const skillContracts = [
     ],
     consumerReferences: commonConsumerReferences,
   },
+  {
+    skillId: "amadeus-decision-review",
+    skillName: "amadeus-decision-review",
+    sourcePaths: ["skills/amadeus-decision-review/SKILL.md", ".agents/skills/amadeus-decision-review/SKILL.md"],
+    generatedReferencePaths: [
+      "skills/amadeus-decision-review/references/skill-contract.md",
+      ".agents/skills/amadeus-decision-review/references/skill-contract.md",
+    ],
+    prerequisites: [
+      {
+        id: "PRE001",
+        description: "対象 phase skill、対象 Intent または成果物セット、実行モードを解決できる。",
+      },
+      {
+        id: "PRE002",
+        description: "既存成果物と現在参照できる証拠の範囲を説明できる。",
+      },
+    ],
+    invariants: [
+      {
+        id: "INV001",
+        description: "decision review 自体は質問を実行しない。",
+      },
+      {
+        id: "INV002",
+        description: "validator の pass を内容承認または質問不要の単独根拠として扱わない。",
+      },
+    ],
+    postconditions: [
+      {
+        id: "POST001",
+        description: "grill_required、no_grill、repair_only、follow_up_issue_candidate のいずれかに分類できる。",
+      },
+      {
+        id: "POST002",
+        description: "grill_required の場合は amadeus-grilling への handoff 項目を返せる。",
+      },
+    ],
+    readBoundary: {
+      allowed: [
+        ".amadeus/intents/**",
+        ".amadeus/steering/**",
+        ".amadeus/domain-map.md",
+        ".amadeus/context-map.md",
+        "関連 Issue/PR",
+        "作業ツリー",
+        "Skill Contract",
+      ],
+      prohibited: ["秘密情報", "対象外 workspace の成果物"],
+    },
+    writeBoundary: {
+      allowed: [],
+      prohibited: ["成果物の作成または更新", "実装コード", "テストコード", "merge 操作"],
+    },
+    delegation: {
+      allowed: [
+        { skillId: "amadeus-grilling", purpose: "grill_required の場合に質問を一問だけ行う。" },
+      ],
+      order: ["amadeus-grilling"],
+      prohibited: ["amadeus-construction-implementation-execution"],
+    },
+    grillingConditions: [
+      {
+        id: "GR001",
+        description: "人間判断が必要で、既存成果物や作業ツリーだけでは解消できない不明瞭ノードがある場合に handoff する。",
+      },
+    ],
+    feedbackConditions: [
+      {
+        id: "FB001",
+        description: "現在 Intent の成功条件外の小さな課題は follow_up_issue_candidate として扱う。",
+      },
+    ],
+    consumerReferences: commonConsumerReferences,
+  },
 ] as const satisfies readonly SkillContract[];

@@ -55,6 +55,20 @@ Spec、実装、CI、運用手順は作らない。
 
 実行モードの指定がなければ `auto` にする。
 
+## Decision Review
+
+起動時に判断材料が揃っているかを確認する場合は、`amadeus-decision-review` の規則を参照する。
+
+`amadeus-decision-review` は、既存成果物、Issue、PR、作業ツリー、validator 結果、Skill Contract、信頼できる参照元を入力証拠として扱う。
+decision review の outcome は `grill_required`、`no_grill`、`repair_only`、`follow_up_issue_candidate` に分ける。
+
+`grill_required` の場合だけ、`amadeus-grilling` に一問、確認理由、推奨回答、推奨理由、反映先候補を渡す。
+`amadeus-decision-review` 自体は質問を実行しない。
+
+`repair_only` は成果物構造の補修だけで解ける場合に使い、`repair` へ進む。
+`follow_up_issue_candidate` は現在 Intent の成功条件外の小さな課題に限定し、人間承認なしに GitHub Issue を作成しない。
+validator の `pass` は、実行時に参照できる最低限の構造条件を満たすという意味であり、内容承認として扱わない。
+
 ## テンプレート
 
 Inception 成果物を新規作成または構造補修する場合は、テンプレートを使う。

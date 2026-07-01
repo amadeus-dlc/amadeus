@@ -4,11 +4,11 @@
 
 | 要求 | 状態 | 証拠 |
 |---|---|---|
-| R001 | 採用済み | 未登録 |
-| R002 | 採用済み | 未登録 |
-| R003 | 採用済み | 未登録 |
-| R004 | 採用済み | 未登録 |
-| R005 | 採用済み | 未登録 |
+| R001 | 充足済み | [B001 test-results](../construction/bolts/B001-decision-review-internal-contract/test-results.md), [B003 test-results](../construction/bolts/B003-verification-contract-alignment/test-results.md) |
+| R002 | 充足済み | [B001 test-results](../construction/bolts/B001-decision-review-internal-contract/test-results.md) |
+| R003 | 充足済み | [B001 test-results](../construction/bolts/B001-decision-review-internal-contract/test-results.md), [B002 test-results](../construction/bolts/B002-phase-skill-entry-integration/test-results.md) |
+| R004 | 充足済み | [B002 test-results](../construction/bolts/B002-phase-skill-entry-integration/test-results.md) |
+| R005 | 充足済み | [B003 test-results](../construction/bolts/B003-verification-contract-alignment/test-results.md) |
 
 ## 状態ルール
 
