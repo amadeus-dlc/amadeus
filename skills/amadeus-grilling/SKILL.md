@@ -153,6 +153,27 @@ Discovery と Event Storming では、`<id>/grillings` から同じ ID の親 Ma
 `repair` では原則として Grilling Decision Trail を更新しない。
 ただし、既存の `grillings.md` や `grillings/Gxxx-*.md` 自体が壊れている場合は、構造補修として直してよい。
 
+## 長期化した議論の引き継ぎ
+
+grilling が長期化し、別の会話単位で継続するほうが安全な場合は、`handoff` を運用補助として使う。
+
+`handoff` は Amadeus DLC の成果物ではない。
+作成した引き継ぎ文書は OS の一時ディレクトリに置き、`.amadeus/` 配下には置かない。
+
+確定した判断は Grilling Decision Trail に残す。
+`handoff` には、次の会話単位で再開するために必要な参照先だけを書く。
+
+`handoff` には少なくとも次を含める。
+
+- 対象 workspace と対象成果物セット。
+- 参照すべき `grillings.md` と `grillings/Gxxx-*.md`。
+- すでに確定した判断の要約。
+- 未回答の質問と、次に確認すべき一問。
+- 次の会話単位で使う推奨 skill。
+
+既存成果物に書かれている内容を `handoff` に重複して写さない。
+成果物、PR、Issue、差分、検証結果が存在する場合は、path または URL で参照する。
+
 ## Amadeus での使いどころ
 
 次のような場面で使う。
