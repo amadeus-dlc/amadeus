@@ -26,6 +26,12 @@ import {
   parseUnitIndex,
 } from "../../../skills/amadeus-validator/validator/domain/typed-documents";
 import { parseConstructionFunctionalDesignState } from "../../../skills/amadeus-validator/validator/domain/functional-design-state";
+import { type EvidenceKind } from "../../../skills/amadeus-validator/validator/domain/evidence-kind";
+import {
+  currentIntentEvidenceTargets,
+  evaluateEvidencePolicy,
+  evidencePolicyAllowedKindsByPhase,
+} from "../../../skills/amadeus-validator/validator/domain/evidence-policy";
 import { checkConstructionFunctionalDesignStage } from "../../../skills/amadeus-validator/validator/stages/construction/functional-design";
 
 function assert(condition: boolean, message: string): void {
@@ -173,6 +179,46 @@ const rejectedNoneIdRefList = parseIdRefList("なし", artifactPath("traceabilit
   condition: "unit.idRefs",
 });
 assert(rejectedNoneIdRefList.results.some((result) => result.result === "fail"), "parseIdRefList rejects none unless allowed");
+
+const domainMapInceptionEvidenceKinds = new Set<EvidenceKind>(evidencePolicyAllowedKindsByPhase["domain-map-adoption"].inception);
+assert(domainMapInceptionEvidenceKinds.has("inception-decision"), "EvidencePolicy allows Inception decisions for Domain Map adoption");
+assert(!domainMapInceptionEvidenceKinds.has("inception-traceability"), "EvidencePolicy keeps Domain Map Inception adoption tied to decisions");
+const contextMapConstructionEvidenceKinds = new Set<EvidenceKind>(evidencePolicyAllowedKindsByPhase["context-map-dependency"].construction);
+assert(contextMapConstructionEvidenceKinds.has("functional-design"), "EvidencePolicy allows Functional Design evidence for Context Map Construction adoption");
+assert(contextMapConstructionEvidenceKinds.has("construction-traceability"), "EvidencePolicy allows Construction traceability for Context Map Construction adoption");
+assert(
+  currentIntentEvidenceTargets(
+    [
+      ".amadeus/intents/20260629-minimum-purchase-flow.md",
+      ".amadeus/intents/20260629-minimum-purchase-flow/inception/decisions/D001-ready.md",
+      ".amadeus/intents/20260629-other-flow/inception/decisions/D001-ready.md",
+    ],
+    ".amadeus/intents/20260629-minimum-purchase-flow",
+  ).length === 2,
+  "EvidencePolicy extracts current Intent evidence targets",
+);
+const intentRecordOnlyEvaluation = evaluateEvidencePolicy({
+  policyName: "context-map-dependency",
+  currentIntentRoot: ".amadeus/intents/20260629-minimum-purchase-flow",
+  targets: [".amadeus/intents/20260629-minimum-purchase-flow.md"],
+  evidencePhases: ["inception", "construction"],
+  functionalDesignStatus: () => "not_functional_design",
+});
+assert(intentRecordOnlyEvaluation.result === "rejected", "EvidencePolicy rejects current Intent Record-only adoption evidence");
+const laterDecisionEvaluation = evaluateEvidencePolicy({
+  policyName: "context-map-dependency",
+  currentIntentRoot: ".amadeus/intents/20260629-minimum-purchase-flow",
+  targets: [
+    ".amadeus/intents/20260629-minimum-purchase-flow/construction/U001-order/functional-design/business-logic-model.md",
+    ".amadeus/intents/20260629-minimum-purchase-flow/construction/decisions/D001-ready.md",
+  ],
+  evidencePhases: ["construction"],
+  functionalDesignStatus: (target) => target.includes("/functional-design/") ? "not_passed" : "not_functional_design",
+});
+assert(
+  laterDecisionEvaluation.result === "accepted" && laterDecisionEvaluation.target === ".amadeus/intents/20260629-minimum-purchase-flow/construction/decisions/D001-ready.md",
+  "EvidencePolicy can accept a later valid evidence target after an unpassed Functional Design link",
+);
 
 const invalidIdRefList = parseIdRefList("[U001](inception/requirements/U001-unit.md)", artifactPath("traceability.md"), unitIdRef, {
   target: "traceability.md",
