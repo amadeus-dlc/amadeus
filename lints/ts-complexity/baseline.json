@@ -2,13 +2,6 @@
   "maxComplexity": 20,
   "entries": [
     {
-      "id": "dev-scripts/validate-amadeus-examples.ts#function:validateSkillProvenance",
-      "file": "dev-scripts/validate-amadeus-examples.ts",
-      "name": "validateSkillProvenance",
-      "line": 469,
-      "complexity": 25
-    },
-    {
       "id": ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts#class:AmadeusValidator>method:checkedFileCategory",
       "file": ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts",
       "name": "checkedFileCategory",
