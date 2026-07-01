@@ -68,6 +68,27 @@ Use `expectations` as the canonical field for verifiable checks. Older hand-writ
 
 Output from `scripts/run_eval.py`.
 
+Trigger eval sets are separate from output evals in `evals/evals.json`. Store
+trigger eval sets in a dedicated file such as `evals/trigger_evals.json` so
+normal skill output evals do not overwrite trigger test fixtures.
+
+```json
+[
+  {
+    "query": "the user prompt",
+    "should_trigger": true
+  },
+  {
+    "query": "another prompt",
+    "should_trigger": false
+  }
+]
+```
+
+**Trigger eval set fields:**
+- `query`: User prompt under test
+- `should_trigger`: Expected trigger decision
+
 ```json
 {
   "query": "the user prompt",
