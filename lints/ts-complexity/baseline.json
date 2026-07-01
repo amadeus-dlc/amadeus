@@ -2,31 +2,17 @@
   "maxComplexity": 20,
   "entries": [
     {
-      "id": ".agents/skills/amadeus-validator/validator/stages/construction/bolt-preparation.ts#function:checkConstructionBoltTaskGeneration",
-      "file": ".agents/skills/amadeus-validator/validator/stages/construction/bolt-preparation.ts",
-      "name": "checkConstructionBoltTaskGeneration",
-      "line": 42,
-      "complexity": 38
-    },
-    {
-      "id": "skills/amadeus-validator/validator/stages/construction/bolt-preparation.ts#function:checkConstructionBoltTaskGeneration",
-      "file": "skills/amadeus-validator/validator/stages/construction/bolt-preparation.ts",
-      "name": "checkConstructionBoltTaskGeneration",
-      "line": 42,
-      "complexity": 38
-    },
-    {
       "id": ".agents/skills/amadeus-validator/validator/stages/construction/bolt-preparation.ts#function:checkTargetBoltRequiredArtifacts",
       "file": ".agents/skills/amadeus-validator/validator/stages/construction/bolt-preparation.ts",
       "name": "checkTargetBoltRequiredArtifacts",
-      "line": 171,
+      "line": 289,
       "complexity": 27
     },
     {
       "id": "skills/amadeus-validator/validator/stages/construction/bolt-preparation.ts#function:checkTargetBoltRequiredArtifacts",
       "file": "skills/amadeus-validator/validator/stages/construction/bolt-preparation.ts",
       "name": "checkTargetBoltRequiredArtifacts",
-      "line": 171,
+      "line": 289,
       "complexity": 27
     },
     {

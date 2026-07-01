@@ -7,6 +7,16 @@ type StageResult = {
   checkedFiles: string[];
 };
 
+type TaskGenerationContext = {
+  path: string;
+  intentBase: string;
+  boltDirectories: Map<string, string>;
+};
+
+type TaskGenerationEvidenceCheck = StageResult & {
+  evidenceByKind: Map<string, string[]>;
+};
+
 type BoltPreparationStageInput = {
   statePath: string;
   construction: Record<string, any>;
@@ -58,7 +68,24 @@ function checkConstructionBoltTaskGeneration(input: BoltPreparationStageInput): 
   const inceptionBase = input.inceptionBaseForStatePath(path);
   const constructionBase = input.constructionBaseForStatePath(path);
   const boltDirectories = input.constructionBoltDirectories(inceptionBase, constructionBase);
+  const byId = collectConstructionBoltStates(input, values, results);
+  const context = { path, intentBase, boltDirectories };
+
+  for (const value of targetBolts) {
+    const boltResult = checkTargetBoltTaskGeneration(input, context, byId, value);
+    results.push(...boltResult.results);
+    checkedFiles.push(...boltResult.checkedFiles);
+  }
+  return { results, checkedFiles };
+}
+
+function collectConstructionBoltStates(
+  input: BoltPreparationStageInput,
+  values: unknown[],
+  results: CheckResult[],
+): Map<string, Record<string, any>> {
   const byId = new Map<string, Record<string, any>>();
+  const path = input.statePath;
   for (const item of values) {
     if (!input.isObject(item)) {
       results.push(fail(path, "`construction.bolts[]` がオブジェクトである", input.typeName(item)));
@@ -71,101 +98,192 @@ function checkConstructionBoltTaskGeneration(input: BoltPreparationStageInput): 
     }
     byId.set(id, item);
   }
+  return byId;
+}
 
-  for (const value of targetBolts) {
-    const boltId = String(value ?? "").trim();
-    const item = byId.get(boltId);
-    if (!item) {
-      results.push(fail(path, "`construction.bolts` が targetBolt の taskGeneration を持つ", boltId));
-      continue;
-    }
-    results.push(pass(path, "`construction.bolts` が targetBolt の taskGeneration を持つ", boltId));
+function checkTargetBoltTaskGeneration(
+  input: BoltPreparationStageInput,
+  context: TaskGenerationContext,
+  byId: Map<string, Record<string, any>>,
+  value: unknown,
+): StageResult {
+  const results: CheckResult[] = [];
+  const checkedFiles: string[] = [];
+  const boltId = String(value ?? "").trim();
+  const item = byId.get(boltId);
+  if (!item) {
+    results.push(fail(context.path, "`construction.bolts` が targetBolt の taskGeneration を持つ", boltId));
+    return { results, checkedFiles };
+  }
+  results.push(pass(context.path, "`construction.bolts` が targetBolt の taskGeneration を持つ", boltId));
+  results.push(...checkDeprecatedBoltStateFields(input, context.path, boltId, item));
 
-    if (input.isObject(item.designGate)) {
-      results.push(fail(path, "`construction.bolts[].designGate` を残さない", boltId));
-    } else {
-      results.push(pass(path, "`construction.bolts[].designGate` を残さない", boltId));
-    }
-    if (input.isObject(item.tasks)) {
-      results.push(fail(path, "`construction.bolts[].tasks` を状態契約に残さない", boltId));
-    } else {
-      results.push(pass(path, "`construction.bolts[].tasks` を状態契約に残さない", boltId));
-    }
+  const taskGeneration = item.taskGeneration;
+  if (!input.isObject(taskGeneration)) {
+    results.push(fail(context.path, "`construction.bolts[].taskGeneration` がオブジェクトである", `${boltId}: ${input.typeName(taskGeneration)}`));
+    return { results, checkedFiles };
+  }
+  results.push(pass(context.path, "`construction.bolts[].taskGeneration` がオブジェクトである", boltId));
+  const taskGenerationResult = checkTaskGenerationObject(input, context, boltId, taskGeneration);
+  results.push(...taskGenerationResult.results);
+  checkedFiles.push(...taskGenerationResult.checkedFiles);
+  return { results, checkedFiles };
+}
 
-    const taskGeneration = item.taskGeneration;
-    if (!input.isObject(taskGeneration)) {
-      results.push(fail(path, "`construction.bolts[].taskGeneration` がオブジェクトである", `${boltId}: ${input.typeName(taskGeneration)}`));
-      continue;
-    }
-    results.push(pass(path, "`construction.bolts[].taskGeneration` がオブジェクトである", boltId));
-    const status = String(taskGeneration.status ?? "").trim();
-    results.push(checkAllowed(path, "construction.bolts[].taskGeneration.status", status, taskGenerationStatusValues));
+function checkDeprecatedBoltStateFields(
+  input: BoltPreparationStageInput,
+  path: string,
+  boltId: string,
+  item: Record<string, any>,
+): CheckResult[] {
+  const results: CheckResult[] = [];
+  if (input.isObject(item.designGate)) {
+    results.push(fail(path, "`construction.bolts[].designGate` を残さない", boltId));
+  } else {
+    results.push(pass(path, "`construction.bolts[].designGate` を残さない", boltId));
+  }
+  if (input.isObject(item.tasks)) {
+    results.push(fail(path, "`construction.bolts[].tasks` を状態契約に残さない", boltId));
+  } else {
+    results.push(pass(path, "`construction.bolts[].tasks` を状態契約に残さない", boltId));
+  }
+  return results;
+}
 
-    const blockedReason = String(taskGeneration.blockedReason ?? "").trim();
-    if (blockedReason.length > 0) results.push(checkAllowed(path, "construction.bolts[].taskGeneration.blockedReason", blockedReason, taskGenerationBlockedReasonValues));
+function checkTaskGenerationObject(
+  input: BoltPreparationStageInput,
+  context: TaskGenerationContext,
+  boltId: string,
+  taskGeneration: Record<string, any>,
+): StageResult {
+  const results: CheckResult[] = [];
+  const checkedFiles: string[] = [];
+  const status = String(taskGeneration.status ?? "").trim();
+  results.push(checkAllowed(context.path, "construction.bolts[].taskGeneration.status", status, taskGenerationStatusValues));
 
-    const evidenceValues = Array.isArray(taskGeneration.evidence) ? taskGeneration.evidence : [];
-    if (Array.isArray(taskGeneration.evidence)) {
-      results.push(pass(path, "`construction.bolts[].taskGeneration.evidence` が配列である", `${boltId}: ${evidenceValues.length}件`));
-    } else {
-      results.push(fail(path, "`construction.bolts[].taskGeneration.evidence` が配列である", `${boltId}: ${input.typeName(taskGeneration.evidence)}`));
-    }
+  const blockedReason = String(taskGeneration.blockedReason ?? "").trim();
+  if (blockedReason.length > 0) {
+    results.push(checkAllowed(context.path, "construction.bolts[].taskGeneration.blockedReason", blockedReason, taskGenerationBlockedReasonValues));
+  }
 
-    const evidenceByKind = new Map<string, string[]>();
-    for (const evidence of evidenceValues) {
-      if (!input.isObject(evidence)) {
-        results.push(fail(path, "Task Generation evidence がオブジェクトである", `${boltId}: ${input.typeName(evidence)}`));
-        continue;
-      }
-      const kind = String(evidence.kind ?? "").trim();
-      const evidencePath = String(evidence.path ?? "").trim();
-      results.push(checkAllowed(path, "Task Generation evidence kind", kind, taskGenerationEvidenceKindValues));
-      if (evidencePath.length === 0) {
-        results.push(fail(path, "Task Generation evidence.path が空欄でない", `${boltId}: ${kind}`));
-      } else {
-        results.push(pass(path, "Task Generation evidence.path が空欄でない", `${boltId}: ${kind}: ${evidencePath}`));
-        if (evidencePath.includes("/../") || evidencePath.startsWith("/") || !evidencePath.startsWith("inception/") && !evidencePath.startsWith("construction/")) {
-          results.push(fail(path, "Task Generation evidence.path が Intent 内相対パスである", `${boltId}: ${evidencePath}`));
-        } else {
-          results.push(pass(path, "Task Generation evidence.path が Intent 内相対パスである", `${boltId}: ${evidencePath}`));
-        }
-        if (evidencePath.endsWith("/design.md") && evidencePath.includes("construction/bolts/")) {
-          results.push(fail(path, "Task Generation evidence は Bolt 側 design.md を指さない", `${boltId}: ${evidencePath}`));
-        } else {
-          results.push(pass(path, "Task Generation evidence は Bolt 側 design.md を指さない", `${boltId}: ${evidencePath}`));
-        }
-        const evidenceArtifactPath = `${intentBase}/${evidencePath}`;
-        if (input.fileExists(evidenceArtifactPath)) {
-          checkedFiles.push(evidenceArtifactPath);
-          results.push(pass(path, "Task Generation evidence が存在する", evidencePath));
-        } else {
-          results.push(fail(path, "Task Generation evidence が存在する", `${evidencePath} が存在しない`));
-        }
-      }
-      if (!evidenceByKind.has(kind)) evidenceByKind.set(kind, []);
-      evidenceByKind.get(kind)?.push(evidencePath);
-    }
+  const evidenceResult = checkTaskGenerationEvidenceList(input, context, boltId, taskGeneration.evidence);
+  results.push(...evidenceResult.results);
+  checkedFiles.push(...evidenceResult.checkedFiles);
+  checkTaskGenerationStateMatrix(results, context.path, {
+    boltId,
+    status,
+    blockedReason,
+    evidenceCount: Array.isArray(taskGeneration.evidence) ? taskGeneration.evidence.length : 0,
+    evidenceByKind: evidenceResult.evidenceByKind,
+  });
+  results.push(...checkTaskGenerationTasksEvidence(input, context, boltId, status, evidenceResult.evidenceByKind));
+  return { results, checkedFiles };
+}
 
-    checkTaskGenerationStateMatrix(results, path, {
-      boltId,
-      status,
-      blockedReason,
-      evidenceCount: evidenceValues.length,
-      evidenceByKind,
-    });
+function checkTaskGenerationEvidenceList(
+  input: BoltPreparationStageInput,
+  context: TaskGenerationContext,
+  boltId: string,
+  evidence: unknown,
+): TaskGenerationEvidenceCheck {
+  const results: CheckResult[] = [];
+  const checkedFiles: string[] = [];
+  const evidenceValues = Array.isArray(evidence) ? evidence : [];
+  if (Array.isArray(evidence)) {
+    results.push(pass(context.path, "`construction.bolts[].taskGeneration.evidence` が配列である", `${boltId}: ${evidenceValues.length}件`));
+  } else {
+    results.push(fail(context.path, "`construction.bolts[].taskGeneration.evidence` が配列である", `${boltId}: ${input.typeName(evidence)}`));
+  }
 
-    const boltDir = boltDirectories.get(boltId);
-    const expectedTaskEvidence = boltDir ? input.relativeToIntent(intentBase, `${boltDir}/tasks.md`) : "";
-    if ((status === "ready_for_approval" || status === "passed") && expectedTaskEvidence.length > 0) {
-      const taskEvidence = evidenceByKind.get("tasks") ?? [];
-      if (taskEvidence.includes(expectedTaskEvidence)) {
-        results.push(pass(path, "Task Generation tasks evidence が対象 tasks.md を指す", `${boltId}: ${expectedTaskEvidence}`));
-      } else {
-        results.push(fail(path, "Task Generation tasks evidence が対象 tasks.md を指す", `${boltId}: ${taskEvidence.join(", ") || "空欄"}`));
-      }
+  const evidenceByKind = new Map<string, string[]>();
+  for (const item of evidenceValues) {
+    const evidenceResult = checkTaskGenerationEvidence(input, context, boltId, item);
+    results.push(...evidenceResult.results);
+    checkedFiles.push(...evidenceResult.checkedFiles);
+    if (evidenceResult.kind !== undefined) {
+      if (!evidenceByKind.has(evidenceResult.kind)) evidenceByKind.set(evidenceResult.kind, []);
+      evidenceByKind.get(evidenceResult.kind)?.push(evidenceResult.evidencePath);
     }
   }
-  return { results, checkedFiles };
+  return { results, checkedFiles, evidenceByKind };
+}
+
+function checkTaskGenerationEvidence(
+  input: BoltPreparationStageInput,
+  context: TaskGenerationContext,
+  boltId: string,
+  evidence: unknown,
+): StageResult & { kind?: string; evidencePath: string } {
+  const results: CheckResult[] = [];
+  const checkedFiles: string[] = [];
+  if (!input.isObject(evidence)) {
+    results.push(fail(context.path, "Task Generation evidence がオブジェクトである", `${boltId}: ${input.typeName(evidence)}`));
+    return { results, checkedFiles, evidencePath: "" };
+  }
+
+  const kind = String(evidence.kind ?? "").trim();
+  const evidencePath = String(evidence.path ?? "").trim();
+  results.push(checkAllowed(context.path, "Task Generation evidence kind", kind, taskGenerationEvidenceKindValues));
+  if (evidencePath.length === 0) {
+    results.push(fail(context.path, "Task Generation evidence.path が空欄でない", `${boltId}: ${kind}`));
+  } else {
+    results.push(...checkTaskGenerationEvidencePath(input, context, boltId, kind, evidencePath, checkedFiles));
+  }
+  return { results, checkedFiles, kind, evidencePath };
+}
+
+function checkTaskGenerationEvidencePath(
+  input: BoltPreparationStageInput,
+  context: TaskGenerationContext,
+  boltId: string,
+  kind: string,
+  evidencePath: string,
+  checkedFiles: string[],
+): CheckResult[] {
+  const results: CheckResult[] = [];
+  results.push(pass(context.path, "Task Generation evidence.path が空欄でない", `${boltId}: ${kind}: ${evidencePath}`));
+  results.push(checkIntentRelativeEvidencePath(context.path, boltId, evidencePath));
+  results.push(checkEvidenceDoesNotPointBoltDesign(context.path, boltId, evidencePath));
+  const evidenceArtifactPath = `${context.intentBase}/${evidencePath}`;
+  if (input.fileExists(evidenceArtifactPath)) {
+    checkedFiles.push(evidenceArtifactPath);
+    results.push(pass(context.path, "Task Generation evidence が存在する", evidencePath));
+  } else {
+    results.push(fail(context.path, "Task Generation evidence が存在する", `${evidencePath} が存在しない`));
+  }
+  return results;
+}
+
+function checkIntentRelativeEvidencePath(path: string, boltId: string, evidencePath: string): CheckResult {
+  if (evidencePath.includes("/../") || evidencePath.startsWith("/") || !evidencePath.startsWith("inception/") && !evidencePath.startsWith("construction/")) {
+    return fail(path, "Task Generation evidence.path が Intent 内相対パスである", `${boltId}: ${evidencePath}`);
+  }
+  return pass(path, "Task Generation evidence.path が Intent 内相対パスである", `${boltId}: ${evidencePath}`);
+}
+
+function checkEvidenceDoesNotPointBoltDesign(path: string, boltId: string, evidencePath: string): CheckResult {
+  if (evidencePath.endsWith("/design.md") && evidencePath.includes("construction/bolts/")) {
+    return fail(path, "Task Generation evidence は Bolt 側 design.md を指さない", `${boltId}: ${evidencePath}`);
+  }
+  return pass(path, "Task Generation evidence は Bolt 側 design.md を指さない", `${boltId}: ${evidencePath}`);
+}
+
+function checkTaskGenerationTasksEvidence(
+  input: BoltPreparationStageInput,
+  context: TaskGenerationContext,
+  boltId: string,
+  status: string,
+  evidenceByKind: Map<string, string[]>,
+): CheckResult[] {
+  const boltDir = context.boltDirectories.get(boltId);
+  const expectedTaskEvidence = boltDir ? input.relativeToIntent(context.intentBase, `${boltDir}/tasks.md`) : "";
+  if ((status !== "ready_for_approval" && status !== "passed") || expectedTaskEvidence.length === 0) return [];
+
+  const taskEvidence = evidenceByKind.get("tasks") ?? [];
+  if (taskEvidence.includes(expectedTaskEvidence)) {
+    return [pass(context.path, "Task Generation tasks evidence が対象 tasks.md を指す", `${boltId}: ${expectedTaskEvidence}`)];
+  }
+  return [fail(context.path, "Task Generation tasks evidence が対象 tasks.md を指す", `${boltId}: ${taskEvidence.join(", ") || "空欄"}`)];
 }
 
 function checkTargetBoltRequiredArtifacts(input: BoltPreparationStageInput): CheckResult[] {
