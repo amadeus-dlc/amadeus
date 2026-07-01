@@ -642,6 +642,12 @@ function removeDiscoveryCandidate(workspace: string): void {
   writeFileSync(path, updated.join("\n"));
 }
 
+function addUnindexedDiscoveryDirectoryWithoutState(workspace: string): void {
+  const path = join(workspace, ".amadeus/discoveries/20260630-unindexed-discovery");
+  mkdirSync(path, { recursive: true });
+  writeFileSync(join(path, "brief.md"), "# 未登録 Discovery\n");
+}
+
 function replaceDesignTraceDesignLink(workspace: string): void {
   replaceInFile(
     intentPath(workspace, "traceability.md"),
@@ -2635,6 +2641,13 @@ removeDiscoveryCandidate(discoveryMultiIntentTooSmallWorkspace);
 runExpectFailure(
   ["bun", "run", validator, discoveryMultiIntentTooSmallWorkspace],
   "multi_intent の Intent 候補が2件以上ある",
+);
+
+const unindexedDiscoveryDirectoryWithoutStateWorkspace = phaseWorkspaceCopy();
+addUnindexedDiscoveryDirectoryWithoutState(unindexedDiscoveryDirectoryWithoutStateWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, unindexedDiscoveryDirectoryWithoutStateWorkspace],
+  "Discovery のモジュールディレクトリが一覧に登録されている",
 );
 
 const wrongDesignTraceWorkspace = phaseWorkspaceCopy();

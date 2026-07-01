@@ -424,10 +424,11 @@ class AmadeusValidator {
 
     const discoveriesRoot = this.absolute(".amadeus/discoveries");
     if (!this.isDirectory(discoveriesRoot)) return;
-    const glob = new Bun.Glob("*/state.json");
     const indexed = new Set(ids);
-    for (const statePath of glob.scanSync({ cwd: discoveriesRoot })) {
-      const id = statePath.split("/", 1)[0];
+    const directories = readdirSync(discoveriesRoot)
+      .filter((entry) => this.isDirectory(join(discoveriesRoot, entry)))
+      .sort();
+    for (const id of directories) {
       if (indexed.has(id)) this.pass(path, "Discovery のモジュールディレクトリが一覧に登録されている", id);
       else this.failRow(path, "Discovery のモジュールディレクトリが一覧に登録されている", id);
     }
