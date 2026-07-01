@@ -1,0 +1,12 @@
+@startsalt
+title 自己開発 cycle 記録の初期確認
+{
+  {T
+    + 入力 | GitHub Issue、Discovery、PR merge 結果
+    + stage 判定 | stage0、stage1、stage2
+    + 採用判断 | 人間が stage2 を次回 stage0 として採用するか
+    + workspace 対応 | build workspace、host environment、target workspace、target artifacts
+    + 次に確認すること | 記録先と受け入れ条件
+  }
+}
+@endsalt

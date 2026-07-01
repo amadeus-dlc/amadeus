@@ -36,7 +36,7 @@ multi_intent
 
 | 候補 | 状態 | Intent | 課題 | 成功状態 | 除外範囲 | 依存 |
 |---|---|---|---|---|---|---|
-| 自己開発 cycle の stage 判定と workspace 対応記録を定義する | recommended | 未作成、[Issue #233](https://github.com/amadeus-dlc/amadeus/issues/233) | stage0、stage1、stage2 と build workspace、target workspace の対応記録が未確定で、後続 Intent の provenance が揺れやすい。 | stage 判定語彙、採用判断、workspace 対応記録の置き場所が決まり、GitHub Issue と Intent に追跡できる。 | skill 実装、validator 実装、example snapshot 再生成は含めない。 | なし |
+| 自己開発 cycle の stage 判定と workspace 対応記録を定義する | intent_record_created | [20260701-stage-workspace-records](../intents/20260701-stage-workspace-records.md) | stage0、stage1、stage2 と build workspace、target workspace の対応記録が未確定で、後続 Intent の provenance が揺れやすい。 | stage 判定語彙、採用判断、workspace 対応記録の置き場所が決まり、GitHub Issue と Intent に追跡できる。 | skill 実装、validator 実装、example snapshot 再生成は含めない。 | なし |
 | example snapshot provenance の十分性を確認する | waiting | 未作成 | `examples/skill-provenance.json` だけで example snapshot の provenance が足りるか未確認である。 | example 更新時に必要な provenance 項目と不足時の記録先が決まる。 | example の一括再生成は含めない。 | stage 判定と workspace 対応記録の定義後に扱う。 |
 | host environment assets と target artifacts の混入検出を検討する | waiting | 未作成 | host environment の assets と target artifacts の assets が混ざった場合の検出責務が未確認である。 | validator または運用方針で検出する対象と対象外が決まる。 | 実装は含めず、検出責務の判断までに留める。 | stage 判定と workspace 対応記録の定義後に扱う。 |
 
