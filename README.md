@@ -94,16 +94,16 @@ Validate everything covered by the example wrapper.
 npm run validate:all
 ```
 
-Run the validator directly against a workspace.
+Run the validator against a workspace.
 
 ```sh
-bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspace>
+npm run validate:workspace -- <workspace>
 ```
 
-Run the validator directly against a specific Intent.
+Run the validator against a specific Intent.
 
 ```sh
-bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspace> <intent-id>-<slug>
+npm run validate:workspace -- <workspace> <intent-id>-<slug>
 ```
 
 ## Documentation
