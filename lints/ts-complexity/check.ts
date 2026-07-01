@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import ts from "typescript";
 
@@ -10,19 +10,6 @@ type ComplexityMeasurement = {
   name: string;
   line: number;
   complexity: number;
-};
-
-type BaselineEntry = {
-  id: string;
-  file: string;
-  name: string;
-  line: number;
-  complexity: number;
-};
-
-type ComplexityBaseline = {
-  maxComplexity: number;
-  entries: BaselineEntry[];
 };
 
 type ComplexityCheckResult = {
@@ -39,13 +26,11 @@ type AnalyzeOptions = {
 
 type CheckOptions = AnalyzeOptions & {
   maxComplexity?: number;
-  baselinePath?: string;
 };
 
 const defaultRoot = process.cwd();
 const defaultInclude = [".agents/skills", "amadeus-contracts", "dev-scripts", "lints", "skills"];
 const defaultMaxComplexity = 20;
-const defaultBaselinePath = "lints/ts-complexity/baseline.json";
 const branchKinds = new Set<ts.SyntaxKind>([
   ts.SyntaxKind.IfStatement,
   ts.SyntaxKind.ForStatement,
@@ -102,37 +87,9 @@ export function analyzeTsComplexity(options: AnalyzeOptions = {}): ComplexityMea
 export function checkTsComplexity(options: CheckOptions = {}): ComplexityCheckResult {
   const root = resolve(options.root ?? defaultRoot);
   const maxComplexity = options.maxComplexity ?? defaultMaxComplexity;
-  const baselinePath = resolve(root, options.baselinePath ?? defaultBaselinePath);
   const measurements = analyzeTsComplexity({ root, include: options.include });
   const violations = measurements.filter((measurement) => measurement.complexity > maxComplexity);
-  const baseline = readBaseline(baselinePath);
-  const baselineEntries = new Map((baseline?.entries ?? []).map((entry) => [entry.id, entry]));
-  const violationIds = new Set(violations.map((violation) => violation.id));
-  const messages: string[] = [];
-
-  for (const violation of violations) {
-    const baselineEntry = baselineEntries.get(violation.id);
-    if (!baselineEntry) {
-      messages.push(`new complexity violation: ${formatMeasurement(violation)} > ${maxComplexity}`);
-      continue;
-    }
-    if (violation.complexity > baselineEntry.complexity) {
-      messages.push(
-        `complexity increased: ${formatMeasurement(violation)} was ${baselineEntry.complexity}, limit ${maxComplexity}`,
-      );
-    }
-    if (violation.complexity < baselineEntry.complexity) {
-      messages.push(
-        `complexity baseline is stale: ${formatMeasurement(violation)} was ${baselineEntry.complexity}, limit ${maxComplexity}`,
-      );
-    }
-  }
-
-  for (const entry of baselineEntries.values()) {
-    if (!violationIds.has(entry.id)) {
-      messages.push(`stale complexity baseline entry: ${entry.id}`);
-    }
-  }
+  const messages = violations.map((violation) => `complexity violation: ${formatMeasurement(violation)} > ${maxComplexity}`);
 
   return {
     ok: messages.length === 0,
@@ -140,25 +97,6 @@ export function checkTsComplexity(options: CheckOptions = {}): ComplexityCheckRe
     measurements,
     violations,
   };
-}
-
-export function writeTsComplexityBaseline(options: CheckOptions = {}): ComplexityBaseline {
-  const root = resolve(options.root ?? defaultRoot);
-  const maxComplexity = options.maxComplexity ?? defaultMaxComplexity;
-  const baselinePath = resolve(root, options.baselinePath ?? defaultBaselinePath);
-  const measurements = analyzeTsComplexity({ root, include: options.include });
-  const entries = measurements
-    .filter((measurement) => measurement.complexity > maxComplexity)
-    .map((measurement) => ({
-      id: measurement.id,
-      file: measurement.file,
-      name: measurement.name,
-      line: measurement.line,
-      complexity: measurement.complexity,
-    }));
-  const baseline = { maxComplexity, entries };
-  writeFileSync(baselinePath, JSON.stringify(baseline, null, 2) + "\n");
-  return baseline;
 }
 
 function listTsFiles(root: string, include: string[]): string[] {
@@ -328,31 +266,22 @@ function normalizePath(path: string): string {
   return path.split("\\").join("/");
 }
 
-function readBaseline(path: string): ComplexityBaseline | undefined {
-  if (!existsSync(path)) return undefined;
-  return JSON.parse(readFileSync(path, "utf8")) as ComplexityBaseline;
-}
-
 function formatMeasurement(measurement: ComplexityMeasurement): string {
   return `${measurement.file}:${measurement.line} ${measurement.name} complexity ${measurement.complexity}`;
 }
 
 function parseArgs(args: string[]): {
-  mode: "check" | "report" | "update-baseline";
+  mode: "check" | "report";
   maxComplexity: number;
-  baselinePath: string;
 } {
-  let mode: "check" | "report" | "update-baseline" = "check";
+  let mode: "check" | "report" = "check";
   let maxComplexity = defaultMaxComplexity;
-  let baselinePath = defaultBaselinePath;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg === "--check") mode = "check";
     else if (arg === "--report") mode = "report";
-    else if (arg === "--update-baseline") mode = "update-baseline";
     else if (arg === "--max-complexity") maxComplexity = Number(args[++index]);
-    else if (arg === "--baseline") baselinePath = args[++index];
     else throw new Error(`unknown argument: ${arg}`);
   }
 
@@ -360,24 +289,18 @@ function parseArgs(args: string[]): {
     throw new Error(`max complexity must be a positive integer: ${maxComplexity}`);
   }
 
-  return { mode, maxComplexity, baselinePath };
+  return { mode, maxComplexity };
 }
 
 if (import.meta.main) {
   try {
     const args = parseArgs(process.argv.slice(2));
-    if (args.mode === "update-baseline") {
-      const baseline = writeTsComplexityBaseline(args);
-      console.log(`ts complexity baseline: ${baseline.entries.length} entries`);
-      process.exit(0);
-    }
-
     const result = checkTsComplexity(args);
     const reportRows = (args.mode === "report" ? result.measurements : result.violations).slice(0, 30);
     for (const measurement of reportRows) console.log(formatMeasurement(measurement));
 
     if (args.mode === "report") {
-      console.log(`ts complexity: report (${result.violations.length} baseline violations)`);
+      console.log(`ts complexity: report (${result.violations.length} violations)`);
       process.exit(0);
     }
 
@@ -386,7 +309,7 @@ if (import.meta.main) {
       process.exit(1);
     }
 
-    console.log(`ts complexity: ok (${result.violations.length} baseline violations)`);
+    console.log(`ts complexity: ok (${result.violations.length} violations)`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
