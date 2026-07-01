@@ -1092,6 +1092,7 @@ class AmadeusValidator {
       checkRequirements: (path) => this.checkRequirements(path),
       checkAcceptance: (path, requirementsPath) => this.checkAcceptance(path, requirementsPath),
       checkCodebaseAnalysis: (base, state) => this.checkCodebaseAnalysis(base, state),
+      checkCodebaseAnalysisTraceabilityRows: (base, state) => this.checkCodebaseAnalysisTraceabilityRows(base, state),
       checkNoInceptionDomainArtifacts: (base) => this.checkNoInceptionDomainArtifacts(base),
       checkOptionalIndex: (path, spec) => this.checkOptionalIndex(path, spec),
       checkUnitContextReferences: (base, required, contextsPath, condition, evidencePhases) => this.checkUnitContextReferences(base, required, contextsPath, condition, evidencePhases),
@@ -1755,15 +1756,37 @@ class AmadeusValidator {
     const path = `${base}/codebase-analysis.md`;
     const intentBase = this.intentBaseForPhaseBase(base);
     const requiredPath = this.relativeToIntent(intentBase, path);
-    const required = new Set((state.inception?.requiredArtifacts ?? []).map((value: unknown) => String(value).trim())).has(requiredPath);
+    const requiredByArtifacts = new Set((state.inception?.requiredArtifacts ?? []).map((value: unknown) => String(value).trim())).has(requiredPath);
+    const codebaseAnalysisState = state.inception?.codebaseAnalysis ?? {};
+    const requirement = String(codebaseAnalysisState.requirement ?? "").trim();
+    const status = String(codebaseAnalysisState.status ?? "").trim();
+    const requiredByState = requirement === "required" && (status === "ready_for_approval" || status === "passed");
+    const required = requiredByArtifacts || requiredByState;
     if (required) {
       this.checkFile(path, "既存コード分析が必須成果物として存在する");
-      this.checkHeadings(path, ["対象コード", "既存能力", "統合点", "ギャップ", "リスク", "Inception への入力"]);
+      this.checkHeadings(path, ["対象コード", "既存能力", "統合点", "ギャップ", "リスク", "Inception への入力", "証拠", "鮮度", "未確認事項"]);
     } else if (this.isFile(this.absolute(path))) {
       this.pass(path, "既存コード分析が存在する場合は検証対象である", "存在を確認");
-      this.checkHeadings(path, ["対象コード", "既存能力", "統合点", "ギャップ", "リスク", "Inception への入力"]);
+      this.checkHeadings(path, ["対象コード", "既存能力", "統合点", "ギャップ", "リスク", "Inception への入力", "証拠", "鮮度", "未確認事項"]);
     } else {
       this.skipped(path, "既存コード分析は条件付き成果物である", "requiredArtifacts に未指定で、ファイルも存在しない");
+    }
+  }
+
+  private checkCodebaseAnalysisTraceabilityRows(base: string, state: Record<string, any>): void {
+    const codebaseAnalysis = state.inception?.codebaseAnalysis ?? {};
+    const gatePassed = String(state.inception?.gate ?? "").trim() === "passed";
+    const required = String(codebaseAnalysis.requirement ?? "").trim() === "required";
+    const passed = String(codebaseAnalysis.status ?? "").trim() === "passed";
+    if (!gatePassed || !required || !passed) return;
+
+    const path = `${base}/traceability.md`;
+    const table = this.checkTable(path, "既存コード分析からの追跡", ["分析", "要求", "ユースケース", "ユニット", "ボルト", "設計", "入力"]);
+    if (!table) return;
+    if (table.rows.length > 0) {
+      this.pass(path, "required の Codebase Analysis は追跡行を持つ", `${table.rows.length}件`);
+    } else {
+      this.failRow(path, "required の Codebase Analysis は追跡行を持つ", "行がない");
     }
   }
 

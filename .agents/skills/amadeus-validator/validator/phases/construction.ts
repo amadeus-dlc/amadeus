@@ -1,6 +1,7 @@
 import { dirname } from "node:path";
 import { checkConstructionBoltPreparationStage } from "../stages/construction/bolt-preparation";
 import { checkConstructionFunctionalDesignStage } from "../stages/construction/functional-design";
+import { checkInceptionCodebaseAnalysisStage } from "../stages/inception/codebase-analysis";
 import { type PhaseValidationContext } from "./types";
 
 export function checkConstructionPhase(
@@ -15,7 +16,7 @@ export function checkConstructionPhase(
 
   context.checkRequirements(`${inceptionBase}/requirements.md`);
   context.checkAcceptance(`${inceptionBase}/acceptance.md`, `${inceptionBase}/requirements.md`);
-  context.checkCodebaseAnalysis(inceptionBase, input.state);
+  checkInceptionCodebaseAnalysisStage(context, { inceptionBase, state: input.state });
   context.checkNoInceptionDomainArtifacts(inceptionBase);
 
   for (const [filename, spec] of Object.entries(context.indexSpecs)) {

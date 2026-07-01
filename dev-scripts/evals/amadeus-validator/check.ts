@@ -338,6 +338,7 @@ function assertValidatorModuleSplit(): void {
     "phases/inception.ts",
     "phases/construction.ts",
     "phases/types.ts",
+    "stages/inception/codebase-analysis.ts",
     "stages/inception/requirements-definition.ts",
     "stages/inception/user-stories.ts",
     "stages/inception/use-cases.ts",
@@ -710,8 +711,204 @@ function writeCodebaseAnalysis(workspace: string): void {
       "",
       "- R004 と U002 の設計入力として扱う。",
       "",
+      "## 証拠",
+      "",
+      "- `apps/order` を確認した。",
+      "",
+      "## 鮮度",
+      "",
+      "- current",
+      "",
+      "## 未確認事項",
+      "",
+      "- 販売可能在庫との接続は未確認。",
+      "",
     ].join("\n"),
   );
+}
+
+function writeRequiredCodebaseAnalysisState(workspace: string): void {
+  const path = intentPath(workspace, "state.json");
+  const state = JSON.parse(readFileSync(path, "utf8"));
+  state.inception = {
+    ...state.inception,
+    codebaseAnalysis: {
+      requirement: "required",
+      status: "passed",
+      evidence: [{ kind: "artifact", path: "inception/codebase-analysis.md" }],
+      targetScope: ["apps/order"],
+      analyzedCommit: "abc1234",
+      analyzedAt: "2026-07-01T00:00:00Z",
+      freshness: "current",
+    },
+  };
+  writeFileSync(path, JSON.stringify(state, null, 2));
+}
+
+function writeRequiredCodebaseAnalysisStateWithoutFile(workspace: string): void {
+  const path = intentPath(workspace, "state.json");
+  const state = JSON.parse(readFileSync(path, "utf8"));
+  state.inception = {
+    ...state.inception,
+    codebaseAnalysis: {
+      requirement: "required",
+      status: "passed",
+      evidence: [{ kind: "artifact", path: "inception/codebase-analysis.md" }],
+      targetScope: ["apps/order"],
+      freshness: "current",
+    },
+  };
+  writeFileSync(path, JSON.stringify(state, null, 2));
+}
+
+function writeInProgressCodebaseAnalysisStateWithoutFile(workspace: string): void {
+  const path = intentPath(workspace, "state.json");
+  const state = JSON.parse(readFileSync(path, "utf8"));
+  state.status = "in_progress";
+  state.inception = {
+    ...state.inception,
+    status: "in_progress",
+    gate: "not_ready",
+    codebaseAnalysis: {
+      requirement: "required",
+      status: "in_progress",
+      evidence: [],
+      targetScope: [],
+      freshness: "unknown",
+    },
+  };
+  writeFileSync(path, JSON.stringify(state, null, 2));
+}
+
+function writeRequiredCodebaseAnalysisStateWithMissingEvidenceReference(workspace: string): void {
+  const path = intentPath(workspace, "state.json");
+  const state = JSON.parse(readFileSync(path, "utf8"));
+  state.inception = {
+    ...state.inception,
+    codebaseAnalysis: {
+      requirement: "required",
+      status: "passed",
+      evidence: [{ kind: "artifact" }],
+      targetScope: ["apps/order"],
+      freshness: "current",
+    },
+  };
+  writeFileSync(path, JSON.stringify(state, null, 2));
+}
+
+function writeGatePassedStaleCodebaseAnalysisState(workspace: string): void {
+  const path = intentPath(workspace, "state.json");
+  const state = JSON.parse(readFileSync(path, "utf8"));
+  state.inception = {
+    ...state.inception,
+    codebaseAnalysis: {
+      requirement: "required",
+      status: "stale",
+      evidence: [{ kind: "artifact", path: "inception/codebase-analysis.md" }],
+      targetScope: ["apps/order"],
+      freshness: "stale",
+    },
+  };
+  writeFileSync(path, JSON.stringify(state, null, 2));
+}
+
+function writeGreenfieldCodebaseAnalysisState(workspace: string): void {
+  const path = intentPath(workspace, "state.json");
+  const state = JSON.parse(readFileSync(path, "utf8"));
+  state.inception = {
+    ...state.inception,
+    codebaseAnalysis: {
+      requirement: "not_required",
+      status: "skipped",
+      evidence: [],
+      targetScope: [],
+      skipReason: "greenfield",
+      freshness: "unknown",
+    },
+  };
+  writeFileSync(path, JSON.stringify(state, null, 2));
+}
+
+function writeInvalidCodebaseAnalysisState(workspace: string): void {
+  const path = intentPath(workspace, "state.json");
+  const state = JSON.parse(readFileSync(path, "utf8"));
+  state.inception = {
+    ...state.inception,
+    codebaseAnalysis: {
+      requirement: "required",
+      status: "passed",
+      evidence: [],
+      targetScope: [],
+      skipReason: "greenfield",
+      freshness: "ancient",
+    },
+  };
+  writeFileSync(path, JSON.stringify(state, null, 2));
+}
+
+function writeRequiredSkippedCodebaseAnalysisState(workspace: string): void {
+  const path = intentPath(workspace, "state.json");
+  const state = JSON.parse(readFileSync(path, "utf8"));
+  state.inception = {
+    ...state.inception,
+    codebaseAnalysis: {
+      requirement: "required",
+      status: "skipped",
+      evidence: [],
+      targetScope: [],
+      skipReason: "greenfield",
+      freshness: "unknown",
+    },
+  };
+  writeFileSync(path, JSON.stringify(state, null, 2));
+}
+
+function writeBlockedCodebaseAnalysisStateWithoutReason(workspace: string): void {
+  const path = intentPath(workspace, "state.json");
+  const state = JSON.parse(readFileSync(path, "utf8"));
+  state.inception = {
+    ...state.inception,
+    codebaseAnalysis: {
+      requirement: "unresolved",
+      status: "blocked",
+      evidence: [],
+      targetScope: [],
+      freshness: "unknown",
+    },
+  };
+  writeFileSync(path, JSON.stringify(state, null, 2));
+}
+
+function writeGatePassedUnresolvedCodebaseAnalysisState(workspace: string): void {
+  const path = intentPath(workspace, "state.json");
+  const state = JSON.parse(readFileSync(path, "utf8"));
+  state.inception = {
+    ...state.inception,
+    codebaseAnalysis: {
+      requirement: "unresolved",
+      status: "blocked",
+      evidence: [],
+      targetScope: [],
+      blockedReason: "target_scope_unresolved",
+      freshness: "unknown",
+    },
+  };
+  writeFileSync(path, JSON.stringify(state, null, 2));
+}
+
+function defaultCompletedInceptionState(): Record<string, any> {
+  return {
+    status: "completed",
+    gate: "passed",
+    codebaseAnalysis: {
+      requirement: "not_required",
+      status: "skipped",
+      evidence: [],
+      targetScope: [],
+      skipReason: "greenfield",
+      freshness: "unknown",
+    },
+  };
 }
 
 function addCodebaseAnalysisTraceRow(workspace: string): void {
@@ -1945,7 +2142,7 @@ function writeConstructionState(workspace: string, overrides: Record<string, any
   state.phase = "construction";
   state.status = overrides.status ?? "in_progress";
   state.ideation = { status: "completed", gate: "passed", intentCapture };
-  state.inception = overrides.inception ?? { status: "completed", gate: "passed" };
+  state.inception = overrides.inception ?? defaultCompletedInceptionState();
   state.construction = {
     status: overrides.constructionStatus ?? "in_progress",
     targetBolts: overrides.targetBolts ?? ["B001"],
@@ -2687,6 +2884,79 @@ runExpectFailure(
   "`分析` が対象 Intent の codebase-analysis.md を指す",
 );
 
+const requiredCodebaseAnalysisWorkspace = phaseWorkspaceCopy();
+writeRequiredCodebaseAnalysisState(requiredCodebaseAnalysisWorkspace);
+writeCodebaseAnalysis(requiredCodebaseAnalysisWorkspace);
+addCodebaseAnalysisTraceRow(requiredCodebaseAnalysisWorkspace);
+run(["bun", "run", validator, requiredCodebaseAnalysisWorkspace, intent]);
+
+const requiredCodebaseAnalysisWithoutTraceWorkspace = phaseWorkspaceCopy();
+writeRequiredCodebaseAnalysisState(requiredCodebaseAnalysisWithoutTraceWorkspace);
+writeCodebaseAnalysis(requiredCodebaseAnalysisWithoutTraceWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, requiredCodebaseAnalysisWithoutTraceWorkspace, intent],
+  "required の Codebase Analysis は追跡行を持つ",
+);
+
+const requiredCodebaseAnalysisWithoutFileWorkspace = phaseWorkspaceCopy();
+writeRequiredCodebaseAnalysisStateWithoutFile(requiredCodebaseAnalysisWithoutFileWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, requiredCodebaseAnalysisWithoutFileWorkspace, intent],
+  "既存コード分析が必須成果物として存在する",
+);
+
+const inProgressCodebaseAnalysisWithoutFileWorkspace = phaseWorkspaceCopy();
+writeInProgressCodebaseAnalysisStateWithoutFile(inProgressCodebaseAnalysisWithoutFileWorkspace);
+run(["bun", "run", validator, inProgressCodebaseAnalysisWithoutFileWorkspace, intent]);
+
+const requiredCodebaseAnalysisMissingEvidenceReferenceWorkspace = phaseWorkspaceCopy();
+writeRequiredCodebaseAnalysisStateWithMissingEvidenceReference(requiredCodebaseAnalysisMissingEvidenceReferenceWorkspace);
+writeCodebaseAnalysis(requiredCodebaseAnalysisMissingEvidenceReferenceWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, requiredCodebaseAnalysisMissingEvidenceReferenceWorkspace, intent],
+  "`inception.codebaseAnalysis.evidence[]` は参照先を持つ",
+);
+
+const gatePassedStaleCodebaseAnalysisWorkspace = phaseWorkspaceCopy();
+writeGatePassedStaleCodebaseAnalysisState(gatePassedStaleCodebaseAnalysisWorkspace);
+writeCodebaseAnalysis(gatePassedStaleCodebaseAnalysisWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, gatePassedStaleCodebaseAnalysisWorkspace, intent],
+  "Inception gate passed の required Codebase Analysis は passed である",
+);
+
+const greenfieldCodebaseAnalysisWorkspace = phaseWorkspaceCopy();
+writeGreenfieldCodebaseAnalysisState(greenfieldCodebaseAnalysisWorkspace);
+run(["bun", "run", validator, greenfieldCodebaseAnalysisWorkspace, intent]);
+
+const invalidCodebaseAnalysisStateWorkspace = phaseWorkspaceCopy();
+writeInvalidCodebaseAnalysisState(invalidCodebaseAnalysisStateWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, invalidCodebaseAnalysisStateWorkspace, intent],
+  "inception.codebaseAnalysis.freshness",
+);
+
+const requiredSkippedCodebaseAnalysisWorkspace = phaseWorkspaceCopy();
+writeRequiredSkippedCodebaseAnalysisState(requiredSkippedCodebaseAnalysisWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, requiredSkippedCodebaseAnalysisWorkspace, intent],
+  "required の Codebase Analysis は skipped ではない",
+);
+
+const blockedCodebaseAnalysisWithoutReasonWorkspace = phaseWorkspaceCopy();
+writeBlockedCodebaseAnalysisStateWithoutReason(blockedCodebaseAnalysisWithoutReasonWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, blockedCodebaseAnalysisWithoutReasonWorkspace, intent],
+  "blocked の Codebase Analysis は blockedReason を持つ",
+);
+
+const gatePassedUnresolvedCodebaseAnalysisWorkspace = phaseWorkspaceCopy();
+writeGatePassedUnresolvedCodebaseAnalysisState(gatePassedUnresolvedCodebaseAnalysisWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, gatePassedUnresolvedCodebaseAnalysisWorkspace, intent],
+  "Inception gate passed の Codebase Analysis は unresolved ではない",
+);
+
 const wrongCodebaseAnalysisTraceDesignWorkspace = phaseWorkspaceCopy();
 writeCodebaseAnalysis(wrongCodebaseAnalysisTraceDesignWorkspace);
 addCodebaseAnalysisTraceRow(wrongCodebaseAnalysisTraceDesignWorkspace);
@@ -2917,6 +3187,7 @@ writeConstructionState(constructionWithStaleInceptionRequiredWorkspace, {
   inception: {
     status: "completed",
     gate: "passed",
+    codebaseAnalysis: defaultCompletedInceptionState().codebaseAnalysis,
     requiredArtifacts: [
       "requirements.md",
       "acceptance.md",

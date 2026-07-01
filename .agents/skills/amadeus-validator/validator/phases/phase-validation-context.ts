@@ -18,6 +18,7 @@ export type PhaseValidationContext = {
   checkRequirements: (path: string) => void;
   checkAcceptance: (path: string, requirementsPath: string) => void;
   checkCodebaseAnalysis: (base: string, state: Record<string, any>) => void;
+  checkCodebaseAnalysisTraceabilityRows: (base: string, state: Record<string, any>) => void;
   checkNoInceptionDomainArtifacts: (base: string) => void;
   checkOptionalIndex: (path: string, spec: IndexSpec) => void;
   checkUnitContextReferences: (base: string, required: boolean, contextsPath: string, condition: string, evidencePhases: MapEvidencePhase[]) => void;

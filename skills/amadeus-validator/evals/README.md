@@ -19,8 +19,10 @@
 - Inception 段階では Unit のモジュールファイルとモジュールディレクトリ配下の `design.md` を検証する。
 - Inception 段階では Bounded Context のモジュールファイルとモジュールディレクトリ配下の `models.md`、`contracts.md` を検証する。
 - Inception 段階では Bolt 配下の `design.md` を禁止する。
-- `codebase-analysis.md` が存在する場合、または `state.json.inception.requiredArtifacts` に含まれる場合、必須見出しを検証する。
-- `codebase-analysis.md` が存在せず、`state.json.inception.requiredArtifacts` にも含まれない場合は不足にしない。
+- `state.json.inception.codebaseAnalysis` の requirement、status、evidence、targetScope、skipReason、blockedReason、freshness を検証する。
+- `codebase-analysis.md` が存在する場合、条件にかかわらず必須見出しを検証する。
+- `state.json.inception.codebaseAnalysis.requirement` が `required` で `status` が `ready_for_approval` または `passed` の場合、または `state.json.inception.requiredArtifacts` に含まれる場合、`codebase-analysis.md` の存在と必須見出しを検証する。
+- `codebase-analysis.md` が存在せず、state 上は未承認の `required` で、`state.json.inception.requiredArtifacts` にも含まれない場合は不足にしない。
 - `traceability.md` の `既存コード分析からの追跡` が、`分析`、`要求`、`ユースケース`、`ユニット`、`ボルト`、`設計`、`入力` の列を持つことを検証する。
 - `traceability.md` の `設計からの追跡` にある `設計` が同じ行の Unit 配下 `design.md` を指すことを検証する。
 - `traceability.md` の `既存コード分析からの追跡` にある `要求`、`ユースケース`、`ユニット`、`ボルト` が対応する index に存在することを検証する。
@@ -45,7 +47,8 @@
 | `unit-design-required` | 完了 | Unit のモジュールファイルとモジュールディレクトリ配下の `design.md` が存在し、必須見出しに本文がある。 | 一時コピーで Unit の `詳細` を `units/<unit-id>-<slug>/unit.md` へ変更すると `fail`。 |
 | `bounded-context-module-required` | 完了 | Bounded Context のモジュールファイルが存在し、目的、責務、外部境界、関連成果物を持つ。 | 一時コピーで Bounded Context のモジュールファイルを削除すると `fail`。 |
 | `bolt-design-forbidden` | 完了 | Bolt 配下に `design.md` を置かない。 | `dev-scripts/evals/amadeus-validator/check.ts` の一時 workspace 検査で確認する。 |
-| `codebase-analysis-headings` | 完了 | `codebase-analysis.md` は条件付き成果物である。 | `examples/03-inception-completed` では存在せず、requiredArtifacts にも含まれないため不足にしない。 |
+| `codebase-analysis-state` | 完了 | `state.json.inception.codebaseAnalysis` の requirement、status、evidence、targetScope、freshness を検証する。 | required かつ passed の場合に `codebase-analysis.md` がないと `fail`。未承認の required は artifact 未作成でも `pass`。greenfield skipped は `pass`。 |
+| `codebase-analysis-headings` | 完了 | `codebase-analysis.md` は条件付き成果物である。 | `examples/03-inception-completed` では greenfield skipped のため不足にしない。 |
 | `codebase-analysis-traceability-columns` | 完了 | `既存コード分析からの追跡` が必須列を持つ。 | `examples/03-inception-completed` の空表が `pass`。 |
 | `codebase-analysis-traceability-links` | 完了 | `既存コード分析からの追跡` の `分析` と `設計` が対象成果物を指す。 | 一時コピーで `分析` または `設計` のリンクを別成果物に変更すると `fail`。 |
 | `design-traceability-links` | 完了 | `設計からの追跡` の `設計` が同じ行の Unit Design Brief を指す。 | 一時コピーで `設計` を別 Unit の `design.md` に変更すると `fail`。 |

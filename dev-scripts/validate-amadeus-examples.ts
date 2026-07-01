@@ -329,6 +329,7 @@ function validatePartialProvenancePreservesUpstreamDigests(): boolean {
   ];
   const inceptionPaths = [
     "skills/amadeus-inception/SKILL.md",
+    "skills/amadeus-inception-codebase-analysis/SKILL.md",
     "skills/amadeus-inception-requirements-definition/SKILL.md",
     "skills/amadeus-inception-user-stories/SKILL.md",
     "skills/amadeus-inception-use-cases/SKILL.md",

@@ -13,6 +13,7 @@ type IdeationInternalProcess =
   "traceability-finalization";
 type IdeationInternalMode = `ideation-internal-${IdeationInternalProcess}`;
 type InceptionInternalProcess =
+  "codebase-analysis" |
   "requirements-definition" |
   "user-stories" |
   "use-cases" |
@@ -53,6 +54,7 @@ type E2eCase = {
   expectedArtifacts: ExpectedArtifacts;
   expectedFileChanges: string[];
   expectedMarkdownChanges: ExpectedMarkdownChanges;
+  assert?: (workspace: string) => void;
 };
 
 type Options = {
@@ -79,6 +81,7 @@ const requiredSkills = [
   "amadeus-ideation-mock-framing",
   "amadeus-ideation-traceability-finalization",
   "amadeus-inception",
+  "amadeus-inception-codebase-analysis",
   "amadeus-inception-requirements-definition",
   "amadeus-inception-user-stories",
   "amadeus-inception-use-cases",
@@ -101,6 +104,7 @@ const ideationInternalProcesses = [
 ] as const;
 const ideationInternalModes = ideationInternalProcesses.map((process) => `ideation-internal-${process}` as const);
 const inceptionInternalProcesses = [
+  "codebase-analysis",
   "requirements-definition",
   "user-stories",
   "use-cases",
@@ -761,11 +765,21 @@ function prepareInceptionTraceabilityFinalizationFixture(workspace: string): voi
 }
 
 function applyInceptionIntentArtifacts(workspace: string): void {
+  applyInceptionCodebaseAnalysisArtifacts(workspace);
   applyInceptionRequirementsDefinitionArtifacts(workspace);
   applyInceptionUserStoriesArtifacts(workspace);
   applyInceptionUseCasesArtifacts(workspace);
   applyInceptionUnitsGenerationArtifacts(workspace);
   applyInceptionTraceabilityFinalizationArtifacts(workspace);
+}
+
+function applyInceptionCodebaseAnalysisArtifacts(workspace: string): void {
+  updateIntentState(workspace, (state) => {
+    state.inception = {
+      ...(state.inception ?? {}),
+      codebaseAnalysis: greenfieldCodebaseAnalysisState(),
+    };
+  });
 }
 
 function applyInceptionRequirementsDefinitionArtifacts(workspace: string): void {
@@ -878,6 +892,24 @@ function markInceptionReadyForConstruction(workspace: string): void {
   state.inception.status = "completed";
   state.inception.gate = "passed";
   writeFileSync(statePath, JSON.stringify(state, null, 2));
+}
+
+function updateIntentState(workspace: string, updater: (state: Record<string, any>) => void): void {
+  const statePath = join(intentTarget(workspace), "state.json");
+  const state = JSON.parse(readFileSync(statePath, "utf8"));
+  updater(state);
+  writeFileSync(statePath, JSON.stringify(state, null, 2));
+}
+
+function greenfieldCodebaseAnalysisState(): Record<string, any> {
+  return {
+    requirement: "not_required",
+    status: "skipped",
+    evidence: [],
+    targetScope: [],
+    skipReason: "greenfield",
+    freshness: "unknown",
+  };
 }
 
 function writeConstructionReadyTasks(workspace: string): void {
@@ -1242,6 +1274,7 @@ function writeInceptionState(target: string): void {
       },
       inception: {
         status: "in_progress",
+        codebaseAnalysis: greenfieldCodebaseAnalysisState(),
         requiredArtifacts: [
           "inception/requirements.md",
           "inception/acceptance.md",
@@ -1296,6 +1329,7 @@ function writeConstructionState(target: string): void {
       },
       inception: {
         status: "completed",
+        codebaseAnalysis: greenfieldCodebaseAnalysisState(),
         requiredArtifacts: [
           "inception/requirements.md",
           "inception/acceptance.md",
@@ -1632,7 +1666,8 @@ function intentInceptionPrompt(): string {
     "- 対象 Intent 配下の Inception 成果物だけを作成または更新してください。",
     "- Domain Map と Context Map は既存成果物を参照するだけにし、新規作成や更新はしないでください。",
     "- 実装、CI は作らないでください。",
-    "- greenfield なので `codebase-analysis.md` は必須成果物に含めず、対象外理由を traceability に残してください。",
+    "- greenfield なので `codebase-analysis.md` は必須成果物に含めず、`state.json.inception.codebaseAnalysis` に対象外理由を残してください。",
+    "- `state.json.inception.codebaseAnalysis` は requirement: not_required、status: skipped、skipReason: greenfield、evidence: []、targetScope: []、freshness: unknown にしてください。",
     "- `inception.gate` を `passed` にする場合は、既存の Domain Map にある adopted BC、または人間が確定した BC を `units.md` の `コンテキスト` から参照してください。",
     "- BC が未確認なら `inception.gate` は `not_ready` にしてください。",
     "- Task は Construction の Task Generation で生成するため、Inception では `tasks.md` を作らないでください。",
@@ -1644,6 +1679,16 @@ function intentInceptionPrompt(): string {
 
 function intentInceptionInternalPrompt(process: InceptionInternalProcess): string {
   const processDetails: Record<InceptionInternalProcess, { skill: string; lines: string[] }> = {
+    "codebase-analysis": {
+      skill: "amadeus-inception-codebase-analysis",
+      lines: [
+        "内部skill: amadeus-inception-codebase-analysis。",
+        "Codebase Analysis だけを進めてください。",
+        "greenfield なので `codebase-analysis.md` は作らないでください。",
+        "作成対象:",
+        "- `state.json.inception.codebaseAnalysis`",
+      ],
+    },
     "requirements-definition": {
       skill: "amadeus-inception-requirements-definition",
       lines: [
@@ -2041,6 +2086,12 @@ function inceptionIntentMarkdownArtifacts(intent: string): string[] {
   ];
 }
 
+function inceptionCodebaseAnalysisArtifacts(intent: string): string[] {
+  return [
+    ...ideationIntentArtifacts(intent),
+  ];
+}
+
 function inceptionRequirementsDefinitionArtifacts(intent: string): string[] {
   return [
     ...ideationIntentArtifacts(intent),
@@ -2369,6 +2420,20 @@ function e2eCase(mode: E2eMode): E2eCase {
         [],
       ),
     },
+    "inception-internal-codebase-analysis": {
+      id: "inception-internal-codebase-analysis",
+      prompt: intentInceptionInternalPrompt("codebase-analysis"),
+      prepareGiven: prepareIdeationIntentFixture,
+      givenMustRemainValid: [fixtureIntent],
+      applyMock: applyInceptionCodebaseAnalysisArtifacts,
+      expectedArtifacts: expectedArtifacts(inceptionCodebaseAnalysisArtifacts(fixtureIntent), [fixtureIntent]),
+      expectedFileChanges: [`.amadeus/intents/${fixtureIntent}/state.json`],
+      expectedMarkdownChanges: expectedMarkdownChanges(
+        [],
+        [],
+      ),
+      assert: assertGreenfieldCodebaseAnalysisState,
+    },
     "inception-internal-requirements-definition": {
       id: "inception-internal-requirements-definition",
       prompt: intentInceptionInternalPrompt("requirements-definition"),
@@ -2560,6 +2625,21 @@ function prepareE2eGiven(workspace: string, testCase: E2eCase): void {
 
 function assertE2eCase(workspace: string, testCase: E2eCase): void {
   assertArtifacts(workspace, testCase.expectedArtifacts);
+  testCase.assert?.(workspace);
+}
+
+function assertGreenfieldCodebaseAnalysisState(workspace: string): void {
+  const statePath = join(intentTarget(workspace), "state.json");
+  const state = JSON.parse(readFileSync(statePath, "utf8"));
+  const actual = state.inception?.codebaseAnalysis;
+  const expected = greenfieldCodebaseAnalysisState();
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    fail([
+      "codebase analysis state mismatch",
+      `expected: ${JSON.stringify(expected)}`,
+      `actual: ${JSON.stringify(actual)}`,
+    ].join("\n"));
+  }
 }
 
 function assertFileChanges(before: FileSnapshot, after: FileSnapshot, expectedFiles: string[]): void {
