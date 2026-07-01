@@ -811,6 +811,39 @@ function writeInvalidCodebaseAnalysisState(workspace: string): void {
   writeFileSync(path, JSON.stringify(state, null, 2));
 }
 
+function writeRequiredSkippedCodebaseAnalysisState(workspace: string): void {
+  const path = intentPath(workspace, "state.json");
+  const state = JSON.parse(readFileSync(path, "utf8"));
+  state.inception = {
+    ...state.inception,
+    codebaseAnalysis: {
+      requirement: "required",
+      status: "skipped",
+      evidence: [],
+      targetScope: [],
+      skipReason: "greenfield",
+      freshness: "unknown",
+    },
+  };
+  writeFileSync(path, JSON.stringify(state, null, 2));
+}
+
+function writeBlockedCodebaseAnalysisStateWithoutReason(workspace: string): void {
+  const path = intentPath(workspace, "state.json");
+  const state = JSON.parse(readFileSync(path, "utf8"));
+  state.inception = {
+    ...state.inception,
+    codebaseAnalysis: {
+      requirement: "unresolved",
+      status: "blocked",
+      evidence: [],
+      targetScope: [],
+      freshness: "unknown",
+    },
+  };
+  writeFileSync(path, JSON.stringify(state, null, 2));
+}
+
 function defaultCompletedInceptionState(): Record<string, any> {
   return {
     status: "completed",
@@ -2824,6 +2857,20 @@ writeInvalidCodebaseAnalysisState(invalidCodebaseAnalysisStateWorkspace);
 runExpectFailure(
   ["bun", "run", validator, invalidCodebaseAnalysisStateWorkspace, intent],
   "inception.codebaseAnalysis.freshness",
+);
+
+const requiredSkippedCodebaseAnalysisWorkspace = phaseWorkspaceCopy();
+writeRequiredSkippedCodebaseAnalysisState(requiredSkippedCodebaseAnalysisWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, requiredSkippedCodebaseAnalysisWorkspace, intent],
+  "required の Codebase Analysis は skipped ではない",
+);
+
+const blockedCodebaseAnalysisWithoutReasonWorkspace = phaseWorkspaceCopy();
+writeBlockedCodebaseAnalysisStateWithoutReason(blockedCodebaseAnalysisWithoutReasonWorkspace);
+runExpectFailure(
+  ["bun", "run", validator, blockedCodebaseAnalysisWithoutReasonWorkspace, intent],
+  "blocked の Codebase Analysis は blockedReason を持つ",
 );
 
 const wrongCodebaseAnalysisTraceDesignWorkspace = phaseWorkspaceCopy();

@@ -78,6 +78,9 @@ function checkCodebaseAnalysisStateMatrix(context: PhaseValidationContext, path:
     if (targetScopeCount > 0) context.pass(path, "required の Codebase Analysis は targetScope を持つ", `${targetScopeCount}件`);
     else context.failRow(path, "required の Codebase Analysis は targetScope を持つ", "0件");
   }
+  if (requirement === "required" && status === "skipped") {
+    context.failRow(path, "required の Codebase Analysis は skipped ではない", status);
+  }
 
   if (requirement === "not_required") {
     if (status === "skipped") context.pass(path, "not_required の Codebase Analysis は skipped である", status);
@@ -88,5 +91,9 @@ function checkCodebaseAnalysisStateMatrix(context: PhaseValidationContext, path:
 
   if (requirement === "unresolved" && status !== "blocked" && status !== "not_started" && status !== "in_progress") {
     context.failRow(path, "unresolved の Codebase Analysis は未解決状態である", status || "空欄");
+  }
+  if (status === "blocked") {
+    if (String(value.blockedReason ?? "").trim()) context.pass(path, "blocked の Codebase Analysis は blockedReason を持つ", String(value.blockedReason));
+    else context.failRow(path, "blocked の Codebase Analysis は blockedReason を持つ", "空欄");
   }
 }
