@@ -30,6 +30,11 @@ type RowCategoryRule = {
   matches: (row: Row) => boolean;
 };
 
+type CheckedFileCategoryRule = {
+  category: string;
+  matches: (file: string) => boolean;
+};
+
 type GrillingIndexState = {
   sessionIds: Set<string>;
   sessionStates: Map<string, string>;
@@ -236,6 +241,81 @@ const rowCategoryRules: RowCategoryRule[] = [
   {
     category: "ドメイン境界",
     matches: ({ target, condition }) => target.includes("domain-map.md") || target.includes("context-map.md") || condition.includes("コンテキスト") || condition.includes("Domain Map") || condition.includes("Context Map") || condition.includes("許可値"),
+  },
+];
+
+const checkedFileCategoryRules: CheckedFileCategoryRule[] = [
+  {
+    category: "Amadeus ルート",
+    matches: (file) => file === ".amadeus",
+  },
+  {
+    category: "Grilling Decision Trail",
+    matches: (file) => file.includes("/grillings/") || file.endsWith("/grillings.md"),
+  },
+  {
+    category: "Discovery",
+    matches: (file) => file.startsWith(".amadeus/discoveries/"),
+  },
+  {
+    category: "Event Storming",
+    matches: (file) => file.startsWith(".amadeus/event-storming/"),
+  },
+  {
+    category: "Steering",
+    matches: (file) => file.startsWith(".amadeus/steering/") || file === ".amadeus/steering" || file === ".amadeus/steering.md",
+  },
+  {
+    category: "全体ドメイン",
+    matches: (file) => file === ".amadeus/domain-map.md" || file === ".amadeus/context-map.md",
+  },
+  {
+    category: "全体成果物",
+    matches: (file) => /^\.amadeus\/[^/]+\.md$/.test(file),
+  },
+  {
+    category: "Intent 状態",
+    matches: (file) => /^\.amadeus\/intents\/[^/]+\/state\.json$/.test(file),
+  },
+  {
+    category: "Event Storming",
+    matches: (file) => /^\.amadeus\/intents\/[^/]+\/event-storming\//.test(file),
+  },
+  {
+    category: "Intent モック",
+    matches: (file) => /^\.amadeus\/intents\/[^/]+\/mocks\//.test(file),
+  },
+  {
+    category: "Intent 基本成果物",
+    matches: (file) => /^\.amadeus\/intents\/[^/]+\/[^/]+\.md$/.test(file),
+  },
+  {
+    category: "Intent ドメイン",
+    matches: (file) => /^\.amadeus\/intents\/[^/]+\/domain\//.test(file),
+  },
+  {
+    category: "Bolt / Task",
+    matches: (file) => /^\.amadeus\/intents\/[^/]+\/bolts\//.test(file),
+  },
+  {
+    category: "Requirement 詳細",
+    matches: (file) => /^\.amadeus\/intents\/[^/]+\/requirements\//.test(file),
+  },
+  {
+    category: "Story 詳細",
+    matches: (file) => /^\.amadeus\/intents\/[^/]+\/user-stories\//.test(file),
+  },
+  {
+    category: "Use Case 詳細",
+    matches: (file) => /^\.amadeus\/intents\/[^/]+\/use-cases\//.test(file),
+  },
+  {
+    category: "Unit 詳細",
+    matches: (file) => /^\.amadeus\/intents\/[^/]+\/units\//.test(file),
+  },
+  {
+    category: "Decision 詳細",
+    matches: (file) => /^\.amadeus\/intents\/[^/]+\/decisions\//.test(file),
   },
 ];
 
@@ -3518,25 +3598,7 @@ class AmadeusValidator {
   }
 
   private checkedFileCategory(file: string): string {
-    if (file === ".amadeus") return "Amadeus ルート";
-    if (file.includes("/grillings/") || file.endsWith("/grillings.md")) return "Grilling Decision Trail";
-    if (file.startsWith(".amadeus/discoveries/")) return "Discovery";
-    if (file.startsWith(".amadeus/event-storming/")) return "Event Storming";
-    if (file.startsWith(".amadeus/steering/") || file === ".amadeus/steering" || file === ".amadeus/steering.md") return "Steering";
-    if (file === ".amadeus/domain-map.md" || file === ".amadeus/context-map.md") return "全体ドメイン";
-    if (/^\.amadeus\/[^/]+\.md$/.test(file)) return "全体成果物";
-    if (/^\.amadeus\/intents\/[^/]+\/state\.json$/.test(file)) return "Intent 状態";
-    if (/^\.amadeus\/intents\/[^/]+\/event-storming\//.test(file)) return "Event Storming";
-    if (/^\.amadeus\/intents\/[^/]+\/mocks\//.test(file)) return "Intent モック";
-    if (/^\.amadeus\/intents\/[^/]+\/[^/]+\.md$/.test(file)) return "Intent 基本成果物";
-    if (/^\.amadeus\/intents\/[^/]+\/domain\//.test(file)) return "Intent ドメイン";
-    if (/^\.amadeus\/intents\/[^/]+\/bolts\//.test(file)) return "Bolt / Task";
-    if (/^\.amadeus\/intents\/[^/]+\/requirements\//.test(file)) return "Requirement 詳細";
-    if (/^\.amadeus\/intents\/[^/]+\/user-stories\//.test(file)) return "Story 詳細";
-    if (/^\.amadeus\/intents\/[^/]+\/use-cases\//.test(file)) return "Use Case 詳細";
-    if (/^\.amadeus\/intents\/[^/]+\/units\//.test(file)) return "Unit 詳細";
-    if (/^\.amadeus\/intents\/[^/]+\/decisions\//.test(file)) return "Decision 詳細";
-    return "その他";
+    return checkedFileCategoryRules.find((rule) => rule.matches(file))?.category ?? "その他";
   }
 
   private checkedFileCategoryOrder(category: string): number {
