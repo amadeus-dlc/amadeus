@@ -6,6 +6,7 @@
 |---|---|---|---|---|---|
 | D001 | Functional Design scope | U001 の Functional Design を必須にし、UI 構成なしとして core 3 文書を作る。統合契約は BR001〜BR008 でモデル化する。 | accepted | なし | [D001-functional-design-scope.md](decisions/D001-functional-design-scope.md) |
 | D002 | Task Generation 承認 | B001 と B002 の Task 分解を Maintainer が承認した。 | accepted | D001 | [D002-task-generation-approval.md](decisions/D002-task-generation-approval.md) |
+| D003 | PR #332 merge finalization | PR #332 の merge を Construction 完了証拠として採用する。 | accepted | D001, D002 | [D003-pr-332-merge-finalization.md](decisions/D003-pr-332-merge-finalization.md) |
 
 ## 依存関係
 
@@ -13,6 +14,7 @@
 |---|---|---|
 | D001 | なし | Functional Design の対象 Unit と契約モデルが後続判断の前提であるため。 |
 | D002 | D001 | Task 分解は Functional Design と Unit Design Brief を根拠にするため。 |
+| D003 | D001, D002 | 実装 PR の merge は、Functional Design と承認済み Task の実行結果を完了証拠としてまとめるため。 |
 
 ## Domain Map と Context Map
 
