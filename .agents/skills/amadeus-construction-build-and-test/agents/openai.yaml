@@ -1,0 +1,6 @@
+interface:
+  display_name: "Amadeus Construction Build and Test"
+  short_description: "Build and test the bolt"
+  default_prompt: "Use $amadeus-construction-build-and-test to build and test the bolt and record results."
+policy:
+  allow_implicit_invocation: false

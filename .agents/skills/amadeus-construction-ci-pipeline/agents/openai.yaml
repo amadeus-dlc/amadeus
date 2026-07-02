@@ -1,0 +1,6 @@
+interface:
+  display_name: "Amadeus Construction CI Pipeline"
+  short_description: "Design CI pipeline"
+  default_prompt: "Use $amadeus-construction-ci-pipeline to design the CI configuration and quality gates."
+policy:
+  allow_implicit_invocation: false

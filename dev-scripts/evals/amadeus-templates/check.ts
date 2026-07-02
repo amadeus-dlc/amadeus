@@ -240,6 +240,77 @@ const targetSkills: Record<string, Contract> = {
       "templates/inception/delivery-planning/questions.md": [],
     },
   },
+  "amadeus-construction-functional-design": {
+    skillText: [".amadeus/settings/templates", "templates/construction/functional-design"],
+    files: {
+      "templates/construction/functional-design/business-logic-model.md": ["目的", "対象 Unit", "業務ロジック", "入力", "出力", "未確認事項"],
+      "templates/construction/functional-design/business-rules.md": ["目的", "業務ルール", "例外", "Intent Contracts", "未確認事項"],
+      "templates/construction/functional-design/domain-entities.md": ["目的", "Domain Entity", "関係", "Domain Map と Context Map への反映候補", "未確認事項"],
+      "templates/construction/functional-design/frontend-components.md": ["構成"],
+      "templates/construction/functional-design/questions.md": [],
+    },
+  },
+  "amadeus-construction-nfr-requirements": {
+    skillText: [".amadeus/settings/templates", "templates/construction/nfr-requirements"],
+    files: {
+      "templates/construction/nfr-requirements/performance-requirements.md": ["要求", "根拠"],
+      "templates/construction/nfr-requirements/security-requirements.md": ["要求", "根拠"],
+      "templates/construction/nfr-requirements/scalability-requirements.md": ["要求", "根拠"],
+      "templates/construction/nfr-requirements/reliability-requirements.md": ["要求", "根拠"],
+      "templates/construction/nfr-requirements/tech-stack-decisions.md": ["判断", "理由"],
+      "templates/construction/nfr-requirements/questions.md": [],
+    },
+  },
+  "amadeus-construction-nfr-design": {
+    skillText: [".amadeus/settings/templates", "templates/construction/nfr-design"],
+    files: {
+      "templates/construction/nfr-design/performance-design.md": ["設計", "対応する要求"],
+      "templates/construction/nfr-design/security-design.md": ["設計", "対応する要求"],
+      "templates/construction/nfr-design/scalability-design.md": ["設計", "対応する要求"],
+      "templates/construction/nfr-design/reliability-design.md": ["設計", "対応する要求"],
+      "templates/construction/nfr-design/logical-components.md": ["構成", "責務"],
+      "templates/construction/nfr-design/questions.md": [],
+    },
+  },
+  "amadeus-construction-infrastructure-design": {
+    skillText: [".amadeus/settings/templates", "templates/construction/infrastructure-design"],
+    files: {
+      "templates/construction/infrastructure-design/deployment-architecture.md": ["構成", "根拠"],
+      "templates/construction/infrastructure-design/infrastructure-services.md": ["対応", "根拠"],
+      "templates/construction/infrastructure-design/monitoring-design.md": ["監視項目", "通知"],
+      "templates/construction/infrastructure-design/cicd-pipeline.md": ["構成", "トリガー"],
+      "templates/construction/infrastructure-design/shared-infrastructure.md": ["共有対象", "影響"],
+      "templates/construction/infrastructure-design/questions.md": [],
+    },
+  },
+  "amadeus-construction-code-generation": {
+    skillText: [".amadeus/settings/templates", "templates/construction/code-generation"],
+    files: {
+      "templates/construction/code-generation/plan.md": ["変更対象", "変更順序", "検証方法"],
+      "templates/construction/code-generation/summary.md": ["変更したファイル", "対応した要求"],
+      "templates/construction/code-generation/questions.md": [],
+    },
+  },
+  "amadeus-construction-build-and-test": {
+    skillText: [".amadeus/settings/templates", "templates/construction/build-and-test"],
+    files: {
+      "templates/construction/build-and-test/build-instructions.md": ["手順"],
+      "templates/construction/build-and-test/unit-test-instructions.md": ["手順"],
+      "templates/construction/build-and-test/integration-test-instructions.md": ["手順"],
+      "templates/construction/build-and-test/performance-test-instructions.md": ["手順"],
+      "templates/construction/build-and-test/security-test-instructions.md": ["手順"],
+      "templates/construction/build-and-test/summary.md": ["Definition of Done の充足"],
+      "templates/construction/build-and-test/test-results.md": ["実行結果"],
+    },
+  },
+  "amadeus-construction-ci-pipeline": {
+    skillText: [".amadeus/settings/templates", "templates/construction/ci-pipeline"],
+    files: {
+      "templates/construction/ci-pipeline/ci-config.md": ["構成"],
+      "templates/construction/ci-pipeline/quality-gates.md": ["ゲート"],
+      "templates/construction/ci-pipeline/questions.md": [],
+    },
+  },
   "amadeus-ideation": {
     skillText: [".amadeus/settings/templates", "templates/intents/ideation"],
     files: {
@@ -618,8 +689,7 @@ const textContracts: TextContract[] = [
     includes: [
       "Functional Design は詳細な Domain Model と Intent Contracts の管理元である。",
       "Functional Design の承認後に Domain Map と Context Map へ昇格する候補を、`domain-entities.md` の `Domain Map と Context Map への反映候補` に記録する。",
-      "Functional Design が `passed` で、共有境界として採用する判断がある場合は Domain Map、コンテキスト間依存として採用する判断がある場合は Context Map へ反映できる。",
-      "Functional Design が `passed` で、共有境界として採用する判断がある場合は Domain Map、コンテキスト間依存として採用する判断がある場合は Context Map を、`adopted` または `retired` の現在の索引として更新する。",
+      "対象 Unit の Functional Design が承認済みで、共有境界として採用する判断がある場合は Domain Map、コンテキスト間依存として採用する判断がある場合は Context Map を、`adopted` または `retired` の現在の索引として更新する。",
       "template に Catalog 外の補助見出しがある場合は、その見出しも保持する。",
       "Domain Map と Context Map には候補を載せない。",
     ],

@@ -1,108 +1,113 @@
 ---
 name: amadeus-construction-functional-design
 description: >-
-  Amadeus Construction の内部 skill。Construction の先頭 Stage として Unit ごとの Functional Design だけを進める。
-  state.json.construction.functionalDesign の条件型に従い、construction/<unit-id>-<slug>/functional-design/** と state を作成または補修する場面では必ず使う。
-  Bolt Preparation、tasks.md、実装、検証、追跡確定は行わない。
+  Amadeus Construction の内部 skill。Stage 3.1 Functional Design だけを Unit ごとに実行する。
+  新しいデータモデル、複雑な業務ロジック、業務ルールの設計が必要な Unit で、
+  business-logic-model.md、business-rules.md、domain-entities.md、必要な場合の frontend-components.md を
+  作成または補修する場面では必ず使う。新しい業務ロジックのない単純な変更では実行しない。
+  実装、テスト、Bolt 記録は作らない。
 ---
 
 # amadeus-construction-functional-design
 
 ## 目的
 
-Construction phase の `3.1 Functional Design` だけを進める。
+Construction の Stage 3.1 Functional Design だけを、対象 Unit ごとに進める。
 
-この skill は `amadeus-construction` の内部 skill である。
-Unit ごとの Functional Design の必要性を state 型で判定し、必要な Unit の Functional Design 成果物を作成または補修する。
+この skill は `amadeus` 入口から Bolt 実行の中で呼び出される内部 skill である。
+
+対象 Unit の業務ロジックモデル、業務ルール、ドメインエンティティを設計する。
+UI がある Unit ではフロントエンドコンポーネントの構成も設計する。
+
 Functional Design は詳細な Domain Model と Intent Contracts の管理元である。
-Functional Design の承認後に Domain Map と Context Map へ昇格する候補を、`domain-entities.md` の `Domain Map と Context Map への反映候補` に記録する。
-Functional Design が `passed` で、共有境界として採用する判断がある場合は Domain Map、コンテキスト間依存として採用する判断がある場合は Context Map へ反映できる。
-Domain Map と Context Map には候補を載せない。
-
-Bolt Preparation、Task 生成、実装、検証、PR 記録、追跡確定は行わない。
 
 ## 前提
 
-対象 Intent が Inception を完了していることを前提にする。
+対象 Intent の `state.json` で、`stages["functional-design"]` が実行対象であり、対象 Unit の `stages["functional-design"].units["<unit-id>"].state` が `pending`、`active`、`awaiting_approval`、`revising` のいずれかであることを前提にする。
+
+状態が `awaiting_approval` の場合は、成果物を作り直さず、ゲートの提示から再開する。
+状態が `revising` の場合は、前回の成果物と差し戻し理由を提示してから、修正だけを行う。
+どちらの場合も、手順を最初からやり直さない。
+
+Condition は「新しいデータモデル、複雑な業務ロジック、業務ルールの設計が必要な場合」である。
+新しい業務ロジックのない単純な変更では、成果物を作らず対象 Unit の状態を `skipped` にし、理由を記録して `amadeus` へ戻る。
 
 少なくとも次を読む。
 
-- `.amadeus/intents.md`
-- `.amadeus/intents/<intent-id>-<slug>.md`
-- `.amadeus/intents/<intent-id>-<slug>/state.json`
-- `.amadeus/intents/<intent-id>-<slug>/inception/requirements.md`
-- `.amadeus/intents/<intent-id>-<slug>/inception/acceptance.md`
-- `.amadeus/intents/<intent-id>-<slug>/inception/use-cases.md`
-- `.amadeus/intents/<intent-id>-<slug>/inception/units.md`
-- `.amadeus/intents/<intent-id>-<slug>/inception/units/<unit-id>-<slug>.md`
-- `.amadeus/intents/<intent-id>-<slug>/inception/units/<unit-id>-<slug>/design.md`
-- `.amadeus/intents/<intent-id>-<slug>/inception/bolts.md`
-- `.amadeus/intents/<intent-id>-<slug>/inception/bolts/<bolt-id>-<slug>.md`
-- `.amadeus/domain-map.md`、存在する場合
-- `.amadeus/context-map.md`、存在する場合
-- 作業ツリーの関連コード、テスト、設定
+- `inception/units-generation/units.md`（対象 Unit。Units Generation を実行しなかった場合は暗黙 Unit として Intent のモジュールファイルと要求を使う）
+- `inception/requirements-analysis/requirements.md`（実行した場合）
+- `inception/application-design/`（実行した場合）
+- `.amadeus/domain-map.md`、`.amadeus/context-map.md`、Event Storming の成果物（存在する場合。Aggregate Candidate と Bounded Context Candidate を判断材料にする）
+- `state.json`
 
-`state.json.inception.gate` が `passed` でない場合は停止する。
-対象 Unit が確定できない場合は、`state.json.construction.functionalDesign.units[]` に `requirement: unresolved`、`status: blocked`、`blockedReason: target_unit_unresolved` を記録する。
+Application Design を実行しなかった場合は、縮退時の入力代替に従い、`inception/requirements-analysis/requirements.md` と `.amadeus/knowledge/codebase/<repo>/` の成果物を設計の材料にし、使った代替を `business-logic-model.md` に記録する。
+
+## 質問
+
+Construction では質問を例外扱いにする。
+前段の成果物が扱わなかった本物の欠落（Unit 固有のエッジケースなど）を検出した場合だけ、`amadeus-grilling` のプロトコルで一問ずつ確認する。
+質問を行った場合は `construction/<unit-id>-<slug>/functional-design/questions.md` に記録する。
+
+## テンプレート
+
+優先順位は次である。
+
+1. `.amadeus/settings/templates/intents/construction/functional-design/`
+2. この skill に同梱された `templates/construction/functional-design/`
+
+template に Catalog 外の補助見出しがある場合は、その見出しも保持する。
+分からない項目は空欄にせず、`未確認` と書く。
 
 ## 成果物
 
-作成または更新できる Amadeus 成果物は次だけである。
+作成または更新するものは次だけである。
 
-- `.amadeus/intents/<intent-id>-<slug>/construction/<unit-id>-<slug>/functional-design/business-logic-model.md`
-- `.amadeus/intents/<intent-id>-<slug>/construction/<unit-id>-<slug>/functional-design/business-rules.md`
-- `.amadeus/intents/<intent-id>-<slug>/construction/<unit-id>-<slug>/functional-design/domain-entities.md`
-- `.amadeus/intents/<intent-id>-<slug>/construction/<unit-id>-<slug>/functional-design/frontend-components.md`
-- `.amadeus/intents/<intent-id>-<slug>/construction/decisions.md`
-- `.amadeus/intents/<intent-id>-<slug>/construction/decisions/<decision-id>-<slug>.md`
-- `.amadeus/intents/<intent-id>-<slug>/state.json`
-- Functional Design が `passed` で共有境界として採用する内容がある場合だけ、`.amadeus/domain-map.md`
-- Functional Design が `passed` でコンテキスト間依存として採用する内容がある場合だけ、`.amadeus/context-map.md`
-- 記録対象の質問と回答が親 skill から渡された場合だけ、`.amadeus/intents/<intent-id>-<slug>/construction/grillings.md`
-- 記録対象の質問と回答が親 skill から渡された場合だけ、`.amadeus/intents/<intent-id>-<slug>/construction/grillings/Gxxx-*.md`
+- `construction/<unit-id>-<slug>/functional-design/business-logic-model.md`
+- `construction/<unit-id>-<slug>/functional-design/business-rules.md`（Intent Contracts を含む）
+- `construction/<unit-id>-<slug>/functional-design/domain-entities.md`
+- `construction/<unit-id>-<slug>/functional-design/frontend-components.md`（UI がある場合のみ）
+- `state.json`（対象 Unit の状態と approval evidence）
+- 質問を行った場合は `construction/<unit-id>-<slug>/functional-design/questions.md`
 
-`frontend-components.md` は `frontendSurface: present` の場合だけ作成または補修する。
-`frontendSurface: absent` の場合、Unit 全体を skip しない。
+Functional Design の承認後に Domain Map と Context Map へ昇格する候補を、`domain-entities.md` の `Domain Map と Context Map への反映候補` に記録する。
+対象 Unit の Functional Design が承認済みで、共有境界として採用する判断がある場合は Domain Map、コンテキスト間依存として採用する判断がある場合は Context Map を、`adopted` または `retired` の現在の索引として更新する。
+Domain Map と Context Map には候補を載せない。
 
 ## 手順
 
-1. 対象 Unit を `state.json.construction.functionalDesign.targetUnits`、`state.json.construction.targetUnits`、`state.json.construction.targetBolts`、ユーザー指定の順に解決する。
-2. 対象 Unit ごとに `requirement`、`status`、`frontendSurface`、`targetSource`、`runMode` を決める。
-3. 必要な Unit の core 3 文書を Catalog の見出しと表構造に従って作成または補修する。
-   template に Catalog 外の補助見出しがある場合は、その見出しも保持する。
-4. UI 構成がある Unit だけ `frontend-components.md` を作成または補修する。
-5. `state.json.construction.functionalDesign` を更新し、`artifacts`、`required`、`surfaces`、`gate` を保存しない。更新は同梱スクリプトで行える: `bun run .agents/skills/amadeus-validator/scripts/StateScaffold.ts <workspace> functional-design --intent <intent-id>-<slug> --unit <unit-id> [--frontend-surface absent|present]`（construction ブロック不在時は先に `construction-start` を実行する。validator での確認は最初の Bolt 準備完了後に行う）。
-6. Functional Design の判断が Construction の境界や重要判断に当たる場合だけ、`decisions.md` と `decisions/**` に残す。
-7. Functional Design の承認後に Domain Map と Context Map へ昇格する候補があれば、`domain-entities.md` の `Domain Map と Context Map への反映候補` に記録する。
-8. Functional Design が `passed` で、共有境界として採用する判断がある場合は Domain Map、コンテキスト間依存として採用する判断がある場合は Context Map を、`adopted` または `retired` の現在の索引として更新する。
-9. 親 skill から記録対象の質問と回答が渡された場合だけ、`amadeus-grilling` の構造に従って Grilling Decision Trail を同じ変更で更新する。
+以下の手順は、状態が `pending` から開始する場合の流れである。
+`awaiting_approval` または `revising` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
 
-## 状態契約
+1. 状態が `pending` の場合だけ Condition を判定する。偽なら対象 Unit を `skipped` にして終了する。`active`、`awaiting_approval`、`revising` からの再開では再判定しない。
+2. 対象 Unit の `stages["functional-design"].units["<unit-id>"].state` を `active` にする。
+3. 対象 Unit、要求、Application Design、ドメインの判断材料を読み、本物の欠落だけを質問で確認する。
+4. `business-logic-model.md`、`business-rules.md`、`domain-entities.md` を作る。UI がある場合は `frontend-components.md` も作る。
+5. 対象 Unit の状態を `awaiting_approval` にし、ゲートを提示する。
 
-Functional Design の要否はファイル存在ではなく `state.json.construction.functionalDesign` で判定する。
+## ゲート
 
-`requirement: required` の Unit は、Catalog から core 3 文書が必須として導出される。
-`frontend-components.md` の必須性は `frontendSurface` だけで決める。
+成果物の要約と確認先パスを示し、Approve と Request Changes の 2 択で承認を求める。
+Construction のゲートは 2 択に限り、スキップ済みステージの追加実行を選択肢にしない。
+Request Changes が 3 回続いたら Accept as-is を選択肢に加える。
+ゲートを提示したターンでは人間の回答を待つ。
 
-`FunctionalDesignGateResult` は state に保存しない。
-Validator が `FunctionalDesignStatus` と Catalog に基づく成果物検証から導出する。
+`state.json.autonomy` が `continue_autonomously` で、対象 Bolt が walking skeleton ではない場合は、ゲートを提示せずに次へ進む。
+この場合の approval evidence は、Bolt PR の merge 後に `amadeus` 入口の Bolt 境界処理が `via: "pr"` と PR の URL で記録する。
+失敗や本物の欠落を検出した場合は、autonomy に関わらず停止して人間に確認する。
 
-既に `status: passed` の Unit を再実行しない場合は、`passed` を維持する。
-再実行対象にする場合だけ `runMode: rerun` として、対象 Unit の `functional-design/` を更新する。
+承認されたら対象 Unit の `state` を `completed` にし、`approval` に `approvedAt` と `via: "conversation"` を記録する。
+差し戻されたら対象 Unit の `state` を `revising` にする。
+Accept as-is が選ばれた場合は、対象 Unit の `state` を `completed` にし、`approval` に `approvedAt`、`via: "conversation"`、`"acceptedAsIs": true` を記録し、この判断を `construction/decisions.md` に記録する。
 
 ## 禁止事項
 
-- Bolt 側の設計ファイルを作らない。
-- `tasks.md` を作らない。
-- 実装コードやテストコードを変更しない。
-- `test-results.md`、`pr.md`、`traceability.md`、`acceptance.md` を更新しない。
-- `state.json.construction.functionalDesign.units[]` に `artifacts`、`required`、`surfaces`、`gate` を保存しない。
-- Functional Design の要否をファイル存在で判定しない。
-- Spec、`.kiro/specs/**`、`openspec/**` を作らない。
+- 新しい業務ロジックのない単純な変更に対して実行しない。
+- 実装、テストコード、Bolt 記録（`bolts/**`）を作らない。
+- Domain Map と Context Map に候補を載せない。反映は承認済みの採用判断だけにする。
+- 承認を待たずに `completed` を記録しない。
 
 ## 次の skill
 
-- Bolt Preparation へ進む場合: `amadeus-construction` を Bolt 実行準備目的で呼び出す。
-  親 skill は `amadeus-construction-bolt-preparation` に委譲する。
-- 親 skill から Bolt 実行準備プロセスを明示的に委譲されている場合だけ: `amadeus-construction-bolt-preparation`
-- Construction 全体を進める場合: `amadeus-construction`
+- 続きを進める場合: `amadeus`（入口が Bolt 内の次ステージを解決する）
+- ドメインモデルを能動的に磨く場合: `amadeus-domain-modeling`
+- 成果物の構造検証: `amadeus-validator`
