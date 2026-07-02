@@ -96,7 +96,7 @@ Intent Record を新規作成または構造補修する場合は、テンプレ
 4. `.amadeus/intents.md` に Intent 行と依存関係行を追加または補修する。
 5. Intent のモジュールファイルを作成または補修する。
 6. Intent のモジュールディレクトリを作成する。
-7. `state.json` を作成または補修する。
+7. `state.json` を作成または補修する。新規作成は同梱スクリプトで雛形を生成する: `bun run .agents/skills/amadeus-validator/scripts/StateScaffold.ts <workspace> intent-capture --intent <intent-id>-<slug>`
 8. 関連する Discovery 候補の状態を `intent_record_created` に更新する。
 9. 作成後に validator が使える場合は、対象 Intent を検証する。
 

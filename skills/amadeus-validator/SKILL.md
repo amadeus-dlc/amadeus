@@ -40,6 +40,20 @@ Validator の成果物契約とドメインモデルは次を参照する。
 Bun が使えない場合は `blocked` として報告する。
 検証のために依存パッケージをインストールしない。
 
+## 同梱スクリプト
+
+phase 遷移時の `state.json` 雛形を生成、更新するスクリプトを同梱する。
+状態語彙は validator の生成済み契約（`validator/generated/**`）を参照するため、雛形と検査の乖離が構造的に起きにくい。
+
+```sh
+bun run .agents/skills/amadeus-validator/scripts/StateScaffold.ts <workspace> <遷移種別> --intent <intent-id>-<slug>
+```
+
+遷移種別は `intent-capture`、`inception-start`、`inception-complete`、`construction-start`、`functional-design`、`bolt-preparation`、`finalization` である。
+更新は対象遷移が定義する項目だけを設定し、既存の値と他 phase のブロックを保持する。
+必須成果物配列と evidence には、実在するファイルだけを含める。
+`construction-start` と `functional-design` の直後の validator 確認は、最初の `bolt-preparation` 完了後に行う。
+
 ## 入力
 
 - 検証対象の作業ディレクトリ。
