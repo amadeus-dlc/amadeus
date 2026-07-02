@@ -1,0 +1,27 @@
+{
+  "intent": "20260702-bolt-wave-parallel-execution",
+  "phase": "ideation",
+  "status": "completed",
+  "ideation": {
+    "status": "completed",
+    "intentCapture": {
+      "status": "completed",
+      "createdArtifacts": [
+        "../20260702-bolt-wave-parallel-execution.md",
+        "state.json"
+      ],
+      "next": "ideation/scope-framing"
+    },
+    "requiredArtifacts": [
+      "../20260702-bolt-wave-parallel-execution.md",
+      "ideation/scope.md",
+      "ideation/ideation.md",
+      "ideation/decisions.md",
+      "ideation/traceability.md"
+    ],
+    "requiredMocks": [
+      "ideation/mocks/initial-confirmation.puml"
+    ],
+    "gate": "passed"
+  }
+}
