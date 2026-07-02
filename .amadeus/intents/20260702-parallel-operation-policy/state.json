@@ -111,7 +111,9 @@
     ],
     "requiredBoltArtifacts": [
       "construction/bolts/B001-policy-body-and-registration/tasks.md",
-      "construction/bolts/B001-policy-body-and-registration/notes.md"
+      "construction/bolts/B001-policy-body-and-registration/notes.md",
+      "construction/bolts/B002-boundary-cross-reference/tasks.md",
+      "construction/bolts/B002-boundary-cross-reference/notes.md"
     ],
     "bolts": [
       {
@@ -153,10 +155,47 @@
             }
           ]
         }
+      },
+      {
+        "id": "B002",
+        "taskGeneration": {
+          "status": "ready_for_approval",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-parallel-operation-policy-contract/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-parallel-operation-policy-contract/functional-design/business-rules.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-parallel-operation-policy-contract/functional-design/domain-entities.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U001-parallel-operation-policy-contract/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B002-boundary-cross-reference.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B002-boundary-cross-reference/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B002-boundary-cross-reference/notes.md"
+            }
+          ]
+        }
       }
     ],
     "targetBolts": [
-      "B001"
+      "B001",
+      "B002"
     ],
     "functionalDesign": {
       "targetUnits": [
