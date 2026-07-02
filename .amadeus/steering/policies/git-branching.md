@@ -21,6 +21,9 @@ AGENTS.md は、現在の作業環境で Agent が従う操作指示を扱う。
 
 両者が重なる場合は、AGENTS.md の操作指示を実行上の制約として守り、この policy を Intent 成果物での説明と追跡の参照先として使う。
 
+複数 worktree にまたがる並行の判断（並行させる単位、共有成果物の統合、ゲート承認の運用、同一 worktree での直列化）は [並行運用ポリシー](parallel-operation.md) が扱う。
+この policy は単一 branch の lifecycle を扱い、並行の可否と順序は並行運用ポリシーに従う。
+
 ## Branch Lifecycle
 
 ### 起点
