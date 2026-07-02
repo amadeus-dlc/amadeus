@@ -175,7 +175,7 @@ Construction 成果物を新規作成または構造補修する内部 skill は
 |---|---|---|
 | Inception 必須成果物がない | 停止 | Construction の前提が不足しているため |
 | `state.json.phase` が `inception` で gate が `passed`、Construction 成果物が不足している | `guided` | Construction へ進める前段だから |
-| `state.json.phase` が `construction` で、対象 Bolt が実装済みかつ検証済み（`test-results.md` あり）、`pr.md` がなく `construction.gate` が `passed` でない（基準 branch 由来の checkout） | 追跡と状態確定（finalization） | 実装 PR の merge 後に完了確定が未実施だから |
+| `state.json.phase` が `construction` で、対象 Bolt が実装済みかつ検証済み（`test-results.md` あり）、`pr.md` がなく `construction.gate` が `passed` でなく（基準 branch 由来の checkout）、かつ構造補修が不要である | 追跡と状態確定（finalization） | 実装 PR の merge 後に完了確定が未実施だから。構造が壊れている場合は下の repair の行を優先する |
 | `state.json.phase` が `construction` で必須成果物が存在し、内容を煮詰める依頼である | `refine` | 既存 Construction を深める段階だから |
 | `state.json.phase` が `construction` で必須見出し、相対リンク、`requiredArtifacts`、`requiredBoltArtifacts` だけが壊れている | `repair` | 構造補修が目的だから |
 | `state.json.phase` が `construction` だが、構造補修と内容判断の両方が必要である | まず `repair` | 壊れた構造の上で内容判断をしないため |
