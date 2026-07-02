@@ -1,7 +1,7 @@
 {
   "intent": "20260702-provenance-mechanization",
   "phase": "construction",
-  "status": "in_progress",
+  "status": "completed",
   "ideation": {
     "intentCapture": {
       "status": "completed",
@@ -108,8 +108,8 @@
     "gate": "passed"
   },
   "construction": {
-    "status": "in_progress",
-    "gate": "not_ready",
+    "status": "completed",
+    "gate": "passed",
     "requiredArtifacts": [
       "construction/decisions.md",
       "construction/traceability.md"
@@ -120,7 +120,13 @@
       "construction/bolts/B002-provenance-check-script-and-ci-integration/tasks.md",
       "construction/bolts/B002-provenance-check-script-and-ci-integration/notes.md",
       "construction/bolts/B003-record-method-and-boundary-documentation/tasks.md",
-      "construction/bolts/B003-record-method-and-boundary-documentation/notes.md"
+      "construction/bolts/B003-record-method-and-boundary-documentation/notes.md",
+      "construction/bolts/B001-provenance-generate-script-and-eval/test-results.md",
+      "construction/bolts/B001-provenance-generate-script-and-eval/pr.md",
+      "construction/bolts/B002-provenance-check-script-and-ci-integration/test-results.md",
+      "construction/bolts/B002-provenance-check-script-and-ci-integration/pr.md",
+      "construction/bolts/B003-record-method-and-boundary-documentation/test-results.md",
+      "construction/bolts/B003-record-method-and-boundary-documentation/pr.md"
     ],
     "bolts": [
       {
