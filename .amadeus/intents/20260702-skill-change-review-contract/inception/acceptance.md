@@ -4,10 +4,10 @@
 
 | 要求 | 状態 | 証拠 |
 |---|---|---|
-| R001 | 検証済み | [B001 test-results](../construction/bolts/B001-policies-review-support-contract/test-results.md) |
-| R002 | 検証済み | [B001 test-results](../construction/bolts/B001-policies-review-support-contract/test-results.md) |
-| R003 | 検証済み | [B001 test-results](../construction/bolts/B001-policies-review-support-contract/test-results.md) |
-| R004 | 検証済み | [B002 test-results](../construction/bolts/B002-development-and-readme-alignment/test-results.md) |
+| R001 | 検証済み | [B001 test-results](../construction/bolts/B001-policies-review-support-contract/test-results.md)、[B001 pr.md](../construction/bolts/B001-policies-review-support-contract/pr.md) |
+| R002 | 検証済み | [B001 test-results](../construction/bolts/B001-policies-review-support-contract/test-results.md)、[B001 pr.md](../construction/bolts/B001-policies-review-support-contract/pr.md) |
+| R003 | 検証済み | [B001 test-results](../construction/bolts/B001-policies-review-support-contract/test-results.md)、[B001 pr.md](../construction/bolts/B001-policies-review-support-contract/pr.md) |
+| R004 | 検証済み | [B002 test-results](../construction/bolts/B002-development-and-readme-alignment/test-results.md)、[B002 pr.md](../construction/bolts/B002-development-and-readme-alignment/pr.md) |
 
 ## 状態ルール
 
