@@ -321,6 +321,12 @@ const originalState = readState(workspace);
   if (!reapplied.construction.bolts?.find((item: any) => item.id === "B001")) fail("construction-start: 再実行が Bolt 準備の結果を保持しない");
   assertDeepEqual(reapplied.construction.targetBolts, ["B001"], "construction-start の再実行は targetBolts を保持する");
 
+  // Construction 進行後に inception 系の遷移を再実行しても phase を巻き戻さない
+  runScaffold(workspace, ["inception-complete", "--intent", intent]);
+  const notRegressed = readState(workspace);
+  if (notRegressed.phase !== "construction" || notRegressed.status !== "in_progress") fail("inception-complete: Construction 進行後の再実行が phase を巻き戻す");
+  if (!notRegressed.construction?.bolts?.find((item: any) => item.id === "B001")) fail("inception-complete: Construction 進行後の再実行が construction ブロックを壊す");
+
   // Task Generation Gate の人間承認は eval が再現する（承認は skill と人間の責務）
   const approvedState = readState(workspace);
   const approvedBolt = approvedState.construction.bolts.find((item: any) => item.id === "B001");

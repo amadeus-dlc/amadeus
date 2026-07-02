@@ -188,8 +188,10 @@ function applyInceptionStart(): void {
     summary.push("inception は完了済みのため変更なし");
     return;
   }
-  state.phase = "inception";
-  state.status = "in_progress";
+  if (!state.construction) {
+    state.phase = "inception";
+    state.status = "in_progress";
+  }
   state.inception = {
     ...existing,
     status: "in_progress",
@@ -204,8 +206,10 @@ function applyInceptionStart(): void {
 function applyInceptionComplete(): void {
   const state = readState();
   const inception = state.inception ?? {};
-  state.phase = "inception";
-  state.status = "completed";
+  if (!state.construction) {
+    state.phase = "inception";
+    state.status = "completed";
+  }
   state.inception = {
     ...inception,
     status: "completed",
