@@ -16,7 +16,7 @@
 | B001 | B001/T002 | [B001 test-results](bolts/B001-provenance-generate-script-and-eval/test-results.md)、[B001 pr.md](bolts/B001-provenance-generate-script-and-eval/pr.md) | verified |
 | B002 | B002/T001 | [B002 test-results](bolts/B002-provenance-check-script-and-ci-integration/test-results.md)、[B002 pr.md](bolts/B002-provenance-check-script-and-ci-integration/pr.md) | verified |
 | B002 | B002/T002 | [B002 test-results](bolts/B002-provenance-check-script-and-ci-integration/test-results.md)、[B002 pr.md](bolts/B002-provenance-check-script-and-ci-integration/pr.md) | verified |
-| B003 | B003/T001 | [D001](decisions/D001-check-reconciliation-semantics.md)、[B003 test-results](bolts/B003-record-method-and-boundary-documentation/test-results.md)、[B003 pr.md](bolts/B003-record-method-and-boundary-documentation/pr.md) | verified |
+| B003 | B003/T001 | [Inception D001](../inception/decisions/D001-inspection-boundary-adoption.md)、[B003 test-results](bolts/B003-record-method-and-boundary-documentation/test-results.md)、[B003 pr.md](bolts/B003-record-method-and-boundary-documentation/pr.md) | verified |
 | B003 | B003/T002 | [B003 test-results](bolts/B003-record-method-and-boundary-documentation/test-results.md)、[B003 pr.md](bolts/B003-record-method-and-boundary-documentation/pr.md) | verified |
 
 ## Deployment Unit からの追跡
