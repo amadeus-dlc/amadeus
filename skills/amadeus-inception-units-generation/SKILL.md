@@ -78,7 +78,7 @@ Unit が多い場合は `units/<unit-id>-<slug>.md` へ分割してよい。
 `awaiting_approval` または `revising` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
 
 1. `stages["units-generation"].state` を `active` にする。
-2. Application Design の成果物と要求を読み、Unit 候補を洗い出す。スコープバックログの項目も Unit 候補として評価する。
+2. Application Design の成果物（実行した場合）と要求を読み、Unit 候補を洗い出す。Application Design を実行しなかった場合は、前提の縮退時の入力代替に従い、Reverse Engineering の `architecture.md` と `component-inventory.md`、または `requirements.md` から Unit 境界を判断する。スコープバックログの項目も Unit 候補として評価する。
 3. 境界戦略と粒度を人間に確認する。
 4. `units.md` と `unit-dependencies.md` を作る。依存は非循環にする。stories がある場合は `unit-story-map.md` も作る。
 5. `stages["units-generation"].state` を `awaiting_approval` にし、ゲートを提示する。
