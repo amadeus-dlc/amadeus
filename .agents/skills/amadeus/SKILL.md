@@ -70,7 +70,7 @@ Unit 数や Bolt 数の見込みを受理の判定材料にしない。
 
 1. Intent 識別子を `YYYYMMDD-<slug>` 形式で決める。日付は作業日のローカル日付、slug は小文字英数字とハイフンだけにする。同日同名は末尾に `-2`、`-3` の連番を付ける。
 2. Intent のモジュールファイルをテンプレートから作る。分からない項目は空欄にせず `未確認` と書く。
-3. `state.json` をテンプレートから作る。`scope` と `depth` を確定値にし、`stages` には scope が実行対象にするステージだけを `pending` で列挙する（[references/stage-catalog.md](references/stage-catalog.md) の対応表に従う）。
+3. `state.json` をテンプレートから作る。`scope` と `depth` を確定値にし、`stages` には scope が実行対象にするステージだけを `pending` で列挙する（[references/stage-catalog.md](references/stage-catalog.md) の対応表に従う）。`currentStage` には実行対象の最初のステージの slug を書く。
 4. scope が Ideation の全ステージを SKIP にする場合は、`phase` を `inception` にし、`phaseGates.ideation` に `{"skipped": true}` を記録する。
 5. `.amadeus/active-intent` に Intent 識別子を書く。
 6. `bun run .agents/skills/amadeus-validator/scripts/IndexGenerate.ts <workspace>` で `.amadeus/intents.md` を再生成する。
@@ -86,9 +86,9 @@ Unit 数や Bolt 数の見込みを受理の判定材料にしない。
 
 1. `state.json` を読む。`status` が `parked` の場合は `currentStage` から再開する。
 2. 現在 phase の実行対象ステージがすべて `completed` または `skipped` の場合は、手順 6 の phase 境界処理へ進む。
-3. `stages` から、状態が `revising`、`active`、`awaiting_approval` のステージがあればそれを優先する。なければ、ステージ順序（[references/stage-catalog.md](references/stage-catalog.md)）で最初の `pending` を選ぶ。
-4. 選んだステージが `CONDITIONAL` の場合は、Condition を判定する。偽の場合は状態を `skipped` にし、理由を記録して手順 2 へ戻る。
-5. ステージに対応する内部 skill を呼び出す。対応表は [references/stage-catalog.md](references/stage-catalog.md) に従う。対応する skill が利用できない場合は、実行せずに停止し、不足しているステージ skill 名を報告する。
+3. `stages` から、状態が `revising`、`active`、`awaiting_approval` のステージがあればそれを優先し、Condition を再判定せずに手順 5 へ進む。なければ、ステージ順序（[references/stage-catalog.md](references/stage-catalog.md)）で最初の `pending` を選ぶ。
+4. 選んだ `pending` のステージが `CONDITIONAL` の場合は、Condition を判定する。偽の場合は状態を `skipped` にし、理由を記録して手順 2 へ戻る。
+5. `currentStage` を選んだステージの slug に更新し、ステージに対応する内部 skill を呼び出す。対応表は [references/stage-catalog.md](references/stage-catalog.md) に従う。対応する skill が利用できない場合は、実行せずに停止し、不足しているステージ skill 名を報告する。
 6. phase 境界処理を行う。実行したステージが 1 つ以上ある phase は、phase PR の作成を案内し、merge の確認後に `phaseGates.<phase>` へ approval evidence（`approvedAt`、`via: "pr"`、`reference` に PR の URL）を記録して、`phase` を次へ進める。実行したステージが 1 つもない phase は、`phaseGates.<phase>` に `{"skipped": true}` を記録して通過し、手順 2 へ戻る。
 
 phase 境界処理（phase PR の案内、`phaseGates` の記録、`phase` の遷移）は、この skill だけが行う。
