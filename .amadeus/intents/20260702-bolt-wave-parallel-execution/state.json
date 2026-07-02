@@ -1,6 +1,6 @@
 {
   "intent": "20260702-bolt-wave-parallel-execution",
-  "phase": "ideation",
+  "phase": "inception",
   "status": "completed",
   "ideation": {
     "status": "completed",
@@ -21,6 +21,80 @@
     ],
     "requiredMocks": [
       "ideation/mocks/initial-confirmation.puml"
+    ],
+    "gate": "passed"
+  },
+  "inception": {
+    "status": "completed",
+    "codebaseAnalysis": {
+      "requirement": "required",
+      "status": "passed",
+      "evidence": [
+        {
+          "kind": "file",
+          "path": "skills/amadeus-construction/SKILL.md"
+        },
+        {
+          "kind": "file",
+          "path": "skills/amadeus-construction-bolt-preparation/SKILL.md"
+        },
+        {
+          "kind": "file",
+          "path": ".amadeus/steering/policies/parallel-operation.md"
+        },
+        {
+          "kind": "file",
+          "path": ".amadeus/intents/20260702-shared-index-generation/construction/decisions/D003-b002-b003-task-generation-approval.md"
+        },
+        {
+          "kind": "file",
+          "path": ".amadeus/intents/20260702-shared-index-generation/inception/bolts.md"
+        }
+      ],
+      "targetScope": [
+        "skills/amadeus-construction/SKILL.md",
+        "skills/amadeus-construction-bolt-preparation/SKILL.md",
+        ".amadeus/steering/policies/parallel-operation.md",
+        ".amadeus/intents/20260702-shared-index-generation",
+        "dev-scripts/evals/llm-templates"
+      ],
+      "analyzedCommit": "5b104caa2a2cadc8475755440be3c1054addc4ea",
+      "analyzedAt": "2026-07-02T13:56:52Z",
+      "freshness": "current"
+    },
+    "requiredArtifacts": [
+      "inception/requirements.md",
+      "inception/acceptance.md",
+      "inception/use-cases.md",
+      "inception/codebase-analysis.md",
+      "inception/units.md",
+      "inception/units/U001-bolt-wave-execution-contract.md",
+      "inception/units/U001-bolt-wave-execution-contract/design.md",
+      "inception/bolts.md",
+      "inception/traceability.md",
+      "inception/decisions.md"
+    ],
+    "requiredRequirementArtifacts": [
+      "inception/requirements/R001-wave-derivation-contract.md",
+      "inception/requirements/R002-wave-execution-procedure.md",
+      "inception/requirements/R003-wave-batch-approval.md",
+      "inception/requirements/R004-serial-execution-compatibility.md"
+    ],
+    "requiredStoryArtifacts": [],
+    "requiredUseCaseArtifacts": [
+      "inception/use-cases/UC001-derive-waves.md",
+      "inception/use-cases/UC002-batch-approve-wave.md",
+      "inception/use-cases/UC003-execute-and-integrate-wave.md",
+      "inception/use-cases/UC004-serial-execution-default.md"
+    ],
+    "requiredDecisionArtifacts": [
+      "inception/decisions/D001-inception-boundary.md",
+      "inception/decisions/D002-skip-user-stories.md",
+      "inception/decisions/D003-single-unit-exception.md"
+    ],
+    "requiredBoltArtifacts": [
+      "inception/bolts/B001-wave-contract-definition.md",
+      "inception/bolts/B002-verification-alignment.md"
     ],
     "gate": "passed"
   }
