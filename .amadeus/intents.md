@@ -16,6 +16,7 @@
 | 20260701-skill-contract-catalog | Skill Contract を amadeus-contracts に追加し、skill 実行契約を生成参照できるようにする。 | 20260701-feedback-learning-loop | [20260701-skill-contract-catalog.md](intents/20260701-skill-contract-catalog.md) |
 | 20260701-skill-execution-reporting | amadeus-* skill の実行上の問題報告を標準化する。 | 20260701-construction-finalization-traceability-skill | [20260701-skill-execution-reporting.md](intents/20260701-skill-execution-reporting.md) |
 | 20260702-amadeus-discovery-dry-run-mode | `amadeus-discovery` に読み取り専用の `dry-run` mode を追加する。 | 20260701-history-learning-review-skills | [20260702-amadeus-discovery-dry-run-mode.md](intents/20260702-amadeus-discovery-dry-run-mode.md) |
+| 20260702-bolt-wave-parallel-execution | bolts の依存グラフに基づき、依存のない Bolt を wave 単位で並行実行する契約を Construction skill に定義する。 | 20260702-parallel-operation-policy, 20260702-shared-index-generation, 20260702-gate-queue-visualization | [20260702-bolt-wave-parallel-execution.md](intents/20260702-bolt-wave-parallel-execution.md) |
 | 20260702-construction-finalization-resume | merge 後の Construction finalization を決定論的に再開、検出できるようにする。 | 20260702-skill-change-review-contract | [20260702-construction-finalization-resume.md](intents/20260702-construction-finalization-resume.md) |
 | 20260702-construction-internal-next-skill-parent-routing | Construction 内部 skill の次工程案内を親 skill 経由の継続として明記する。 | 20260701-construction-finalization-traceability-skill | [20260702-construction-internal-next-skill-parent-routing.md](intents/20260702-construction-internal-next-skill-parent-routing.md) |
 | 20260702-gate-queue-visualization | 複数 Intent の state.json を横断スキャンし、承認待ちの Intent、phase、ゲート、待ち理由を一覧できるようにする。 | 20260702-shared-index-generation, 20260702-phase-gate-approval-contract, 20260702-state-json-scaffolding | [20260702-gate-queue-visualization.md](intents/20260702-gate-queue-visualization.md) |
@@ -45,6 +46,9 @@
 | 20260701-skill-contract-catalog | 20260701-feedback-learning-loop | Issue #263 は、Issue #257 の decision review と Issue #259 の learning review が参照する skill 実行契約を生成物として扱うため。 |
 | 20260701-skill-execution-reporting | 20260701-construction-finalization-traceability-skill | Issue #248 は、Issue #245 の自己開発作業中に見つかった skill 実行上の問題報告の扱いを標準化するため。 |
 | 20260702-amadeus-discovery-dry-run-mode | 20260701-history-learning-review-skills | Issue #272 は、過去分析と学習分類の結果を入力にできる読み取り専用の Intent 候補探索を扱うため。 |
+| 20260702-bolt-wave-parallel-execution | 20260702-parallel-operation-policy | wave 実行契約は、この Intent が確定した並行運用の判断基準（worktree 分離、同一 worktree での直列化）を前提にするため。 |
+| 20260702-bolt-wave-parallel-execution | 20260702-shared-index-generation | 共有インデックスの追記衝突の解消が、並行実行の構造前提であるため。 |
+| 20260702-bolt-wave-parallel-execution | 20260702-gate-queue-visualization | wave 内の複数 Bolt の Task Generation 承認は、承認待ちキューの確認とまとめ承認の運用を前提にするため。 |
 | 20260702-construction-finalization-resume | 20260702-skill-change-review-contract | Issue #309 の skill 変更 PR は、同 Intent で確定したレビュー支援契約（挙動差分要約、skill-forge 確認、粒度制約）の適用対象であるため。 |
 | 20260702-construction-internal-next-skill-parent-routing | 20260701-construction-finalization-traceability-skill | Issue #274 は、Construction finalization を忘れないための次工程案内を扱い、Issue #245 の Construction finalization 追跡要件と同じ公開入口契約を前提にするため。 |
 | 20260702-gate-queue-visualization | 20260702-shared-index-generation | Discovery 候補の待機条件「並行 Intent が走り始めてから効果が出るため、共有インデックスの生成物化の後に扱う」が、この Intent（Issue #334）の cycle 完了で解消したため。 |

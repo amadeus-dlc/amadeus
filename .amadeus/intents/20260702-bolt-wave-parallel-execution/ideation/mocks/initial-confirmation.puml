@@ -1,0 +1,22 @@
+@startuml
+salt
+{
+  {#
+    . | Bolt の依存 wave 並行実行の確認
+    前提 | bolts.md の依存表が B001（依存なし）、B002 と B003（B001 に依存）、B004（B002 と B003 に依存）を持つ
+    導出 | 依存グラフから wave を導出する: wave 1 = {B001}、wave 2 = {B002, B003}、wave 3 = {B004}
+    実行 | wave 2 の B002 と B003 を worktree 分離で並行実行する。同一 worktree 内は直列のまま
+    統合 | wave 2 の完了後に統合し、検証（validator と標準検証）を通してから wave 3 へ進む
+    承認 | 各 Bolt の Task Generation Gate は維持し、wave 内の複数承認は承認待ちキューでまとめて処理する
+  }
+  {#
+    wave | Bolt | 実行 | 統合と検証
+    1 | B001 | 直列 | wave 完了時
+    2 | B002, B003 | worktree 分離で並行 | wave 完了時にまとめて統合、検証
+    3 | B004 | 直列 | wave 完了時
+  }
+  {
+    [wave は依存表から導出する] | [並行は worktree 分離で行う] | [wave ごとに統合と検証を行う]
+  }
+}
+@enduml
