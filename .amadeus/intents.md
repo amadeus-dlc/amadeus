@@ -21,6 +21,7 @@
 | 20260702-gate-queue-visualization | 複数 Intent の state.json を横断スキャンし、承認待ちの Intent、phase、ゲート、待ち理由を一覧できるようにする。 | 20260702-shared-index-generation, 20260702-phase-gate-approval-contract, 20260702-state-json-scaffolding | [20260702-gate-queue-visualization.md](intents/20260702-gate-queue-visualization.md) |
 | 20260702-internal-skill-forge-readme-alignment | `amadeus-*` skill を `skill-forge` で確認し、README の skill 一覧と内部 skill の扱いをそろえる。 | 20260702-stage-prerequisite-checks | [20260702-internal-skill-forge-readme-alignment.md](intents/20260702-internal-skill-forge-readme-alignment.md) |
 | 20260702-internal-skill-policy-alignment | 内部 skill の対象範囲と暗黙起動ポリシーを揃える。 | なし | [20260702-internal-skill-policy-alignment.md](intents/20260702-internal-skill-policy-alignment.md) |
+| 20260702-parallel-operation-policy | worktree 並行、フェーズパイプライン、ゲート承認のバッチ化の運用判断を steering policy として記録する。 | 20260702-shared-index-generation, 20260701-git-branching-policy | [20260702-parallel-operation-policy.md](intents/20260702-parallel-operation-policy.md) |
 | 20260702-phase-gate-approval-contract | phase skill の人間ゲートと承認 evidence 検査を決定論的契約にする。 | 20260701-decision-review-grilling-gate, 20260702-skill-change-review-contract | [20260702-phase-gate-approval-contract.md](intents/20260702-phase-gate-approval-contract.md) |
 | 20260702-phase-pr-consolidation-policy | 小さい Intent の phase PR 統合条件を steering policy として定義する。 | 20260701-git-branching-policy, 20260702-state-json-scaffolding | [20260702-phase-pr-consolidation-policy.md](intents/20260702-phase-pr-consolidation-policy.md) |
 | 20260702-provenance-mechanization | provenance 記録の生成と検証を機械化する。 | 20260701-self-development-cycle-stage-workspace | [20260702-provenance-mechanization.md](intents/20260702-provenance-mechanization.md) |
@@ -51,6 +52,8 @@
 | 20260702-gate-queue-visualization | 20260702-state-json-scaffolding | 横断スキャンの対象になる `state.json` の構造安定は、雛形生成の Intent が前提になるため。 |
 | 20260702-internal-skill-forge-readme-alignment | 20260702-stage-prerequisite-checks | `amadeus-*` skill の供給元、昇格先成果物、README の公開入口説明を区別して確認する必要があり、stage 前提確認の成果物を前提にするため。 |
 | 20260702-internal-skill-policy-alignment | なし | Issue #284 の recommended 候補は、現在の skill ディレクトリと README の差分を整理するため、既存 Intent の完了を前提にしない。 |
+| 20260702-parallel-operation-policy | 20260702-shared-index-generation | Discovery 候補の待機条件「生成物化後の並行運用で得た経験を根拠にするため、共有インデックスの生成物化の後に扱う」が、この Intent（Issue #334）の cycle 完了で解消したため。 |
+| 20260702-parallel-operation-policy | 20260701-git-branching-policy | 並行運用の判断基準は、この Intent が定義した Git Branching Policy の branch lifecycle と worktree 衝突回避の規則を前提にし、責務分担を整合させる必要があるため。 |
 | 20260702-phase-gate-approval-contract | 20260701-decision-review-grilling-gate | Issue #306 の grilling 起動トリガーは Issue #257 で確定した decision review 契約への追加であるため。 |
 | 20260702-phase-gate-approval-contract | 20260702-skill-change-review-contract | Issue #306 と #307 の skill 変更 PR はレビュー支援契約の適用対象であるため。 |
 | 20260702-phase-pr-consolidation-policy | 20260701-git-branching-policy | Issue #310 は Git Branching Policy の branch 命名との整合確認を含むため。 |

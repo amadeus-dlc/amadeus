@@ -1,0 +1,29 @@
+{
+  "intent": "20260702-parallel-operation-policy",
+  "phase": "ideation",
+  "status": "completed",
+  "ideation": {
+    "status": "completed",
+    "intentCapture": {
+      "status": "completed",
+      "createdArtifacts": [
+        "../20260702-parallel-operation-policy.md",
+        "state.json"
+      ],
+      "next": "ideation/scope-framing"
+    },
+    "requiredArtifacts": [
+      "../20260702-parallel-operation-policy.md",
+      "ideation/scope.md",
+      "ideation/ideation.md",
+      "ideation/decisions.md",
+      "ideation/traceability.md",
+      "ideation/grillings.md",
+      "ideation/grillings/G001-new-intent-vs-existing-intent-update.md"
+    ],
+    "requiredMocks": [
+      "ideation/mocks/initial-confirmation.puml"
+    ],
+    "gate": "passed"
+  }
+}
