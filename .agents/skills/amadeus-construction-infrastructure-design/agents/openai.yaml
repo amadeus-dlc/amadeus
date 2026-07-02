@@ -1,0 +1,6 @@
+interface:
+  display_name: "Amadeus Construction Infrastructure Design"
+  short_description: "Design unit infrastructure"
+  default_prompt: "Use $amadeus-construction-infrastructure-design to design deployment and infrastructure for the unit."
+policy:
+  allow_implicit_invocation: false

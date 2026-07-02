@@ -1,0 +1,6 @@
+interface:
+  display_name: "Amadeus Construction NFR Requirements"
+  short_description: "Capture unit NFR requirements"
+  default_prompt: "Use $amadeus-construction-nfr-requirements to capture the unit's non-functional requirements."
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Amadeus Construction NFR Design"
+  short_description: "Design unit NFR patterns"
+  default_prompt: "Use $amadeus-construction-nfr-design to design how the unit meets its NFR requirements."
+policy:
+  allow_implicit_invocation: false
