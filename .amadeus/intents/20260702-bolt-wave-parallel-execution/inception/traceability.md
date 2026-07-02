@@ -26,7 +26,7 @@
 | Discovery 20260702-parallel-execution | Ideation D001 | 候補の課題と成功状態、待機条件が 3 候補の cycle 完了で解消した経緯を確定した入力であるため。 |
 | 既存 Ideation scope | SC-IN-001 から SC-IN-004 | Inception の要求境界を Ideation の採用境界から引き継ぐため。 |
 | [G001](grillings/G001-contract-placement.md) | R001, R004 | wave 実行契約の定義先（公開入口 amadeus-construction）の確定判断を反映するため。 |
-| #334 cycle と並行運用ポリシー | R002, R003 | worktree 分離の必要性とまとめ承認（D003）の観察済み実例であるため。 |
+| #334 cycle と並行運用ポリシー | R002, R003 | worktree 分離の必要性とまとめ承認（[20260702-shared-index-generation の D003](../../20260702-shared-index-generation/construction/decisions/D003-b002-b003-task-generation-approval.md)）の観察済み実例であるため。 |
 
 ## ボルトからの追跡
 
