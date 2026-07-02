@@ -1,7 +1,7 @@
 {
   "intent": "20260702-shared-index-generation",
-  "phase": "ideation",
-  "status": "in_progress",
+  "phase": "inception",
+  "status": "completed",
   "ideation": {
     "status": "completed",
     "intentCapture": {
@@ -21,6 +21,87 @@
     ],
     "requiredMocks": [
       "ideation/mocks/initial-confirmation.puml"
+    ],
+    "gate": "passed"
+  },
+  "inception": {
+    "status": "completed",
+    "codebaseAnalysis": {
+      "requirement": "required",
+      "status": "passed",
+      "evidence": [
+        {
+          "kind": "file",
+          "path": ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts"
+        },
+        {
+          "kind": "file",
+          "path": ".agents/skills/amadeus-validator/scripts/StateScaffold.ts"
+        },
+        {
+          "kind": "file",
+          "path": "skills/amadeus-ideation-intent-capture/SKILL.md"
+        },
+        {
+          "kind": "file",
+          "path": "skills/amadeus-discovery/SKILL.md"
+        },
+        {
+          "kind": "file",
+          "path": "skills/amadeus-steering/templates/steering/intents.md"
+        }
+      ],
+      "targetScope": [
+        ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts",
+        ".agents/skills/amadeus-validator/scripts",
+        "skills/amadeus-ideation-intent-capture/SKILL.md",
+        "skills/amadeus-discovery/SKILL.md",
+        "skills/amadeus-steering/templates/steering",
+        ".amadeus/intents",
+        ".amadeus/discoveries",
+        "examples"
+      ],
+      "analyzedCommit": "9fd3b4834853431c870163c0a70a300dae64af8d",
+      "analyzedAt": "2026-07-02T07:35:00Z",
+      "freshness": "current"
+    },
+    "requiredArtifacts": [
+      "inception/requirements.md",
+      "inception/acceptance.md",
+      "inception/use-cases.md",
+      "inception/codebase-analysis.md",
+      "inception/units.md",
+      "inception/units/U001-shared-index-generation-contract.md",
+      "inception/units/U001-shared-index-generation-contract/design.md",
+      "inception/bolts.md",
+      "inception/traceability.md",
+      "inception/decisions.md"
+    ],
+    "requiredRequirementArtifacts": [
+      "inception/requirements/R001-index-source-consolidation.md",
+      "inception/requirements/R002-deterministic-regeneration.md",
+      "inception/requirements/R003-generation-marker.md",
+      "inception/requirements/R004-consistency-validation.md",
+      "inception/requirements/R005-distribution-and-procedure-alignment.md",
+      "inception/requirements/R006-existing-data-and-examples-migration.md",
+      "inception/requirements/R007-verification-first.md"
+    ],
+    "requiredStoryArtifacts": [],
+    "requiredUseCaseArtifacts": [
+      "inception/use-cases/UC001-regenerate-index-on-module-change.md",
+      "inception/use-cases/UC002-merge-parallel-branches.md",
+      "inception/use-cases/UC003-detect-and-fix-inconsistency.md"
+    ],
+    "requiredDecisionArtifacts": [
+      "inception/decisions/D001-inception-boundary.md",
+      "inception/decisions/D002-skip-user-stories.md",
+      "inception/decisions/D003-single-unit-exception.md"
+    ],
+    "requiredBoltArtifacts": [
+      "inception/bolts/B001-regeneration-script-and-verification.md",
+      "inception/bolts/B002-validator-consistency-checks.md",
+      "inception/bolts/B003-skill-procedures-and-templates.md",
+      "inception/bolts/B004-workspace-and-examples-migration.md"
     ],
     "gate": "passed"
   }
