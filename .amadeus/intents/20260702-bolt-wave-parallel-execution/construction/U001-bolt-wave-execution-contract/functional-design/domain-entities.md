@@ -26,7 +26,7 @@ Functional Design は詳細な Domain Model と Intent Contracts の管理元で
 
 | 対象 | 種別 | 候補内容 | 承認後の扱い | 根拠 |
 |---|---|---|---|---|
-| なし | Domain Map | 反映候補なし。BC001 自己開発運用の既存境界内の Construction 実行契約の追加である。 | 反映しない | [D003](../../../inception/decisions/D003-single-unit-exception.md) |
+| なし | Domain Map | 反映候補なし。BC001 自己開発運用の既存境界内の Construction 実行契約の追加である。 | 反映しない | [Inception D003 単一 Unit 例外](../../../inception/decisions/D003-single-unit-exception.md) |
 
 ## 未確認事項
 

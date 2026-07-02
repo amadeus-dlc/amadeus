@@ -17,7 +17,7 @@ U001 Bolt wave 実行契約。
 | BL003 | 同じ wave 内の複数 Bolt の Bolt 実行準備をまとめて行い、まとめて `ready_for_approval` にして停止する。承認は Bolt ごとの Task Generation Gate 契約のまま、まとめて処理できる。 | wave 分割、承認待ちキュー | wave 単位の承認済み Task | R003, UC002 |
 | BL004 | 承認済みの wave 内の Bolt を、Bolt ごとに分離した worktree で並行実行する。同一 worktree 内の Bolt と検証は直列のままにする。 | 承認済みの wave | 並行実行された Bolt 成果物 | R002, UC003 |
 | BL005 | wave 内の全 Bolt の実装と検証の完了後に並行 branch を統合し、共有成果物を整合させ、標準検証を通してから次の wave の Bolt 実行準備へ進む。 | wave の完了 | 統合済みの作業ツリー | R002, UC003 |
-| BL006 | wave 並行の条件（依存のない Bolt が複数あり、worktree 分離で実行できる）を満たさない場合は、従来どおり Bolt を 1 件ずつ直列に実行する。 | wave 分割、実行環境 | 直列の実行計画 | R004, UC004 |
+| BL006 | wave 並行の条件（同じ wave に互いに依存しない Bolt が複数入り、worktree 分離で実行できる）を満たさない場合は、従来どおり Bolt を 1 件ずつ直列に実行する。 | wave 分割、実行環境 | 直列の実行計画 | R004, UC004 |
 
 ## 入力
 
