@@ -1,7 +1,7 @@
 {
   "intent": "20260702-construction-finalization-resume",
-  "phase": "inception",
-  "status": "completed",
+  "phase": "construction",
+  "status": "in_progress",
   "ideation": {
     "intentCapture": {
       "status": "completed",
@@ -95,5 +95,112 @@
       "inception/bolts/B002-skill-auto-rule-and-promotion.md"
     ],
     "gate": "passed"
+  },
+  "construction": {
+    "status": "in_progress",
+    "targetBolts": [
+      "B001",
+      "B002"
+    ],
+    "functionalDesign": {
+      "targetUnits": [
+        "U001"
+      ],
+      "units": [
+        {
+          "unitId": "U001",
+          "requirement": "required",
+          "status": "passed",
+          "frontendSurface": "absent",
+          "targetSource": "construction_target_bolts",
+          "runMode": "initial"
+        }
+      ]
+    },
+    "bolts": [
+      {
+        "id": "B001",
+        "taskGeneration": {
+          "status": "passed",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-finalization-resume-contract/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-finalization-resume-contract/functional-design/business-rules.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U001-finalization-resume-contract/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B001-detection-script-and-eval.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B001-detection-script-and-eval/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B001-detection-script-and-eval/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/decisions/D003-task-generation-approval.md"
+            }
+          ]
+        }
+      },
+      {
+        "id": "B002",
+        "taskGeneration": {
+          "status": "passed",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-finalization-resume-contract/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-finalization-resume-contract/functional-design/business-rules.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U001-finalization-resume-contract/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B002-skill-auto-rule-and-promotion.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B002-skill-auto-rule-and-promotion/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B002-skill-auto-rule-and-promotion/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/decisions/D003-task-generation-approval.md"
+            }
+          ]
+        }
+      }
+    ],
+    "requiredArtifacts": [
+      "construction/decisions.md",
+      "construction/traceability.md"
+    ],
+    "requiredBoltArtifacts": [
+      "construction/bolts/B001-detection-script-and-eval/tasks.md",
+      "construction/bolts/B001-detection-script-and-eval/notes.md",
+      "construction/bolts/B002-skill-auto-rule-and-promotion/tasks.md",
+      "construction/bolts/B002-skill-auto-rule-and-promotion/notes.md"
+    ],
+    "gate": "not_ready"
   }
 }

@@ -17,7 +17,7 @@
     "contracts:generate": "bun run dev-scripts/generate-amadeus-contracts.ts",
     "contracts:check": "bun run dev-scripts/check-amadeus-contracts.ts",
     "claude-wiring:check": "bun run dev-scripts/check-claude-host-wiring.ts",
-    "test:it:all": "npm run test:it:amadeus-templates && npm run test:it:amadeus-examples && npm run test:it:amadeus-domain-placement && npm run test:it:lints && npm run test:it:public-type-file && npm run test:it:ts-complexity && npm run test:it:amadeus-contracts && npm run test:it:amadeus-validator && npm run test:it:amadeus-validator-domain && npm run test:it:promote-skill && npm run test:it:claude-host-wiring && npm run test:it:llm-runner-options:real-command && npm run test:it:llm-provider-options:mock-real && npm run test:it:state-scaffold",
+    "test:it:all": "npm run test:it:amadeus-templates && npm run test:it:amadeus-examples && npm run test:it:amadeus-domain-placement && npm run test:it:lints && npm run test:it:public-type-file && npm run test:it:ts-complexity && npm run test:it:amadeus-contracts && npm run test:it:amadeus-validator && npm run test:it:amadeus-validator-domain && npm run test:it:promote-skill && npm run test:it:claude-host-wiring && npm run test:it:llm-runner-options:real-command && npm run test:it:llm-provider-options:mock-real && npm run test:it:state-scaffold && npm run test:it:list-unfinalized-intents",
     "test:it:amadeus-templates": "bun run dev-scripts/evals/amadeus-templates/check.ts",
     "test:it:amadeus-examples": "bun run dev-scripts/evals/amadeus-examples/check.ts",
     "test:it:amadeus-domain-placement": "bun run dev-scripts/evals/amadeus-domain-placement/check.ts",
@@ -132,7 +132,8 @@
     "test:examples": "npm run validate:all && bun run dev-scripts/validate-amadeus-examples.ts --generation-plan",
     "examples:generate:real": "bun run dev-scripts/generate-amadeus-examples.ts --provider real",
     "diff:check": "git diff --check",
-    "test:it:state-scaffold": "bun run dev-scripts/evals/state-scaffold/check.ts"
+    "test:it:state-scaffold": "bun run dev-scripts/evals/state-scaffold/check.ts",
+    "test:it:list-unfinalized-intents": "bun run skills/amadeus-construction/evals/list-unfinalized-intents/check.ts"
   },
   "devDependencies": {
     "@types/bun": "^1.3.14",
