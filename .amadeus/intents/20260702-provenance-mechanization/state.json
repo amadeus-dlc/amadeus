@@ -1,7 +1,7 @@
 {
   "intent": "20260702-provenance-mechanization",
-  "phase": "inception",
-  "status": "completed",
+  "phase": "construction",
+  "status": "in_progress",
   "ideation": {
     "intentCapture": {
       "status": "completed",
@@ -106,5 +106,163 @@
       "inception/bolts/B003-record-method-and-boundary-documentation.md"
     ],
     "gate": "passed"
+  },
+  "construction": {
+    "status": "in_progress",
+    "gate": "not_ready",
+    "requiredArtifacts": [
+      "construction/decisions.md",
+      "construction/traceability.md"
+    ],
+    "requiredBoltArtifacts": [
+      "construction/bolts/B001-provenance-generate-script-and-eval/tasks.md",
+      "construction/bolts/B001-provenance-generate-script-and-eval/notes.md",
+      "construction/bolts/B002-provenance-check-script-and-ci-integration/tasks.md",
+      "construction/bolts/B002-provenance-check-script-and-ci-integration/notes.md",
+      "construction/bolts/B003-record-method-and-boundary-documentation/tasks.md",
+      "construction/bolts/B003-record-method-and-boundary-documentation/notes.md"
+    ],
+    "bolts": [
+      {
+        "id": "B001",
+        "taskGeneration": {
+          "status": "passed",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-provenance-record-contract/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-provenance-record-contract/functional-design/business-rules.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-provenance-record-contract/functional-design/domain-entities.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U001-provenance-record-contract/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B001-provenance-generate-script-and-eval.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B001-provenance-generate-script-and-eval/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B001-provenance-generate-script-and-eval/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/decisions/D003-task-generation-approval.md"
+            }
+          ]
+        }
+      },
+      {
+        "id": "B002",
+        "taskGeneration": {
+          "status": "passed",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-provenance-record-contract/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-provenance-record-contract/functional-design/business-rules.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-provenance-record-contract/functional-design/domain-entities.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U001-provenance-record-contract/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B002-provenance-check-script-and-ci-integration.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B002-provenance-check-script-and-ci-integration/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B002-provenance-check-script-and-ci-integration/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/decisions/D003-task-generation-approval.md"
+            }
+          ]
+        }
+      },
+      {
+        "id": "B003",
+        "taskGeneration": {
+          "status": "passed",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-provenance-record-contract/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-provenance-record-contract/functional-design/business-rules.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-provenance-record-contract/functional-design/domain-entities.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U001-provenance-record-contract/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B003-record-method-and-boundary-documentation.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B003-record-method-and-boundary-documentation/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B003-record-method-and-boundary-documentation/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/decisions/D003-task-generation-approval.md"
+            }
+          ]
+        }
+      }
+    ],
+    "targetBolts": [
+      "B001",
+      "B002",
+      "B003"
+    ],
+    "functionalDesign": {
+      "targetUnits": [
+        "U001"
+      ],
+      "units": [
+        {
+          "unitId": "U001",
+          "requirement": "required",
+          "status": "passed",
+          "frontendSurface": "absent",
+          "targetSource": "construction_target_bolts",
+          "runMode": "initial"
+        }
+      ]
+    }
   }
 }

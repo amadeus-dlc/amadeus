@@ -4,11 +4,11 @@
 
 | 要求 | 状態 | 証拠 |
 |---|---|---|
-| R001 | 採用済み | 未登録 |
-| R002 | 採用済み | 未登録 |
-| R003 | 採用済み | 未登録 |
-| R004 | 採用済み | 未登録 |
-| R005 | 採用済み | 未登録 |
+| R001 | 検証済み | [B001 test-results](../construction/bolts/B001-provenance-generate-script-and-eval/test-results.md) |
+| R002 | 検証済み | [B002 test-results](../construction/bolts/B002-provenance-check-script-and-ci-integration/test-results.md) |
+| R003 | 検証済み | [B002 test-results](../construction/bolts/B002-provenance-check-script-and-ci-integration/test-results.md) |
+| R004 | 検証済み | [B003 test-results](../construction/bolts/B003-record-method-and-boundary-documentation/test-results.md) |
+| R005 | 検証済み | [Inception D001](../inception/decisions/D001-inspection-boundary-adoption.md)、[B003 test-results](../construction/bolts/B003-record-method-and-boundary-documentation/test-results.md) |
 
 ## 状態ルール
 

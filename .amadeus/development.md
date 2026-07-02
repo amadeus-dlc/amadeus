@@ -22,7 +22,7 @@
 6. Intent の phase に対応する Amadeus skill を使い、成果物を作成または更新する。
 7. 実装や文書変更を行う前に、対象の変更種別と完了条件を確認する。
 8. 変更後に、対象 Intent の traceability、decisions、state を必要に応じて更新する。
-9. provenance の最低記録項目を、対象 Intent の traceability または decisions に残す。
+9. `provenance:generate`（`npm run provenance:generate`）を実行し、対象 Intent 直下の `provenance/Pnnn-<slug>.json` に provenance の最低記録項目を記録する。
 10. validator と標準検証を実行し、結果を対象 Intent または PR 説明に記録する。
 11. Pull Request を作成し、対応 Issue と対象 Intent をリンクする。
 12. CI、review comment、review thread を確認し、妥当な指摘を反映する。
@@ -51,16 +51,18 @@
 
 ## stage と workspace 対応記録
 
-PR 作成前に、対象 Intent の traceability、decisions、または PR 説明から次の項目を追跡できる状態にする。
+PR 作成前に、対象 Intent 直下の `provenance/Pnnn-<slug>.json`（`provenance:generate` の生成物）、traceability、decisions、または PR 説明から次の項目を追跡できる状態にする。
 
 | 項目 | 記録先 | 用途 |
 |---|---|---|
-| build workspace | 対象 Intent の traceability、decisions、または PR 説明 | 利用した skill、validator、開発用スクリプトの実行場所を確認する。 |
-| host environment | 対象 Intent の traceability、decisions、または PR 説明 | 昇格済み skill または生成された skill が動作する環境を確認する。 |
-| target workspace | 対象 Intent の traceability、decisions、または PR 説明 | 変更差分と自己開発用 `.amadeus/` 成果物の更新場所を確認する。 |
-| target artifacts | 対象 Intent の traceability、decisions、または PR 説明 | skill が生成、更新、検証した成果物集合を確認する。 |
-| validator 結果 | 対象 Intent の検証成果物または PR 説明 | 対象 phase の成果物契約を満たすことを確認する。 |
-| 標準検証結果 | 対象 Intent の検証成果物または PR 説明 | `npm run typecheck`、`npm run diff:check`、必要なテストの結果を確認する。 |
+| build workspace | 対象 Intent の `provenance/Pnnn-<slug>.json` | 利用した skill、validator、開発用スクリプトの実行場所を確認する。 |
+| host environment | 対象 Intent の `provenance/Pnnn-<slug>.json` | 昇格済み skill または生成された skill が動作する環境を確認する。 |
+| target workspace | 対象 Intent の `provenance/Pnnn-<slug>.json` | 変更差分と自己開発用 `.amadeus/` 成果物の更新場所を確認する。 |
+| target artifacts | 対象 Intent の `provenance/Pnnn-<slug>.json` | skill が生成、更新、検証した成果物集合を確認する。 |
+| validator 結果 | 対象 Intent の `provenance/Pnnn-<slug>.json`、検証成果物、または PR 説明 | 対象 phase の成果物契約を満たすことを確認する。 |
+| 標準検証結果 | 対象 Intent の検証成果物または PR 説明 | `npm run typecheck`、`npm run diff:check`、必要なテストの結果を確認する。`npm run test:all` の `test:it:all` chain に `provenance:check` の eval を含む。 |
+
+記録済みの `provenance/Pnnn-<slug>.json` は `provenance:check`（`npm run provenance:check`）で実測値と照合する。検査責務の境界は [steering/policies.md](steering/policies.md) を参照する。
 
 stage2 を次回 stage0 として扱う場合は、対象 PR の merge、基準 commit、build workspace の参照 commit、Maintainer の stage0 採用判断を追跡できるようにする。
 
