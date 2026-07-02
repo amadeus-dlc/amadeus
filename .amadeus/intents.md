@@ -25,6 +25,7 @@
 | 20260702-state-json-scaffolding | phase 遷移の state.json 雛形を skill 同梱スクリプトで生成する。 | 20260702-phase-gate-approval-contract | [20260702-state-json-scaffolding.md](intents/20260702-state-json-scaffolding.md) |
 | 20260702-phase-pr-consolidation-policy | 小さい Intent の phase PR 統合条件を steering policy として定義する。 | 20260701-git-branching-policy, 20260702-state-json-scaffolding | [20260702-phase-pr-consolidation-policy.md](intents/20260702-phase-pr-consolidation-policy.md) |
 | 20260702-shared-index-generation | 共有インデックス intents.md と discoveries.md を配下モジュールからの生成物にする。 | なし | [20260702-shared-index-generation.md](intents/20260702-shared-index-generation.md) |
+| 20260702-provenance-mechanization | provenance 記録の生成と検証を機械化する。 | 20260701-self-development-cycle-stage-workspace | [20260702-provenance-mechanization.md](intents/20260702-provenance-mechanization.md) |
 
 ## 依存関係
 
@@ -51,3 +52,4 @@
 | 20260702-state-json-scaffolding | 20260702-phase-gate-approval-contract | Issue #311 の雛形に含める approval evidence の形式は、ゲート契約の Intent で確定した Task Generation Gate の契約を前提にするため。 |
 | 20260702-phase-pr-consolidation-policy | 20260701-git-branching-policy, 20260702-state-json-scaffolding | Issue #310 は Git Branching Policy の branch 命名との整合確認を含み、統合 PR の state 検証は雛形生成（Issue #311）が前提を単純にするため。 |
 | 20260702-shared-index-generation | なし | Issue #334 は Discovery 20260702-parallel-execution の recommended 候補であり、既存 Intent の完了を前提にしないため。 |
+| 20260702-provenance-mechanization | 20260701-self-development-cycle-stage-workspace | Issue #296 は、Intent 20260701-self-development-cycle-stage-workspace の U002 Unit Design Brief が残した「evidence を JSON として標準化する必要が出た場合」という再確認条件の発火元であるため。 |

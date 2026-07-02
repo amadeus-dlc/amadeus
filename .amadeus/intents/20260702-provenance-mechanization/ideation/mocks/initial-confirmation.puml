@@ -1,0 +1,15 @@
+@startuml
+salt
+{
+  {#
+    . | provenance 記録の生成と検証の確認
+    入力 | 対象 Intent、build workspace と target workspace の path、commit、利用ツールの path
+    生成 | provenance:generate が実測した値から JSON 記録を Intent 配下へ出力する
+    照合 | provenance:check が記録済みの値を再計算して照合する
+    検出 | ずれ（md5 不一致、commit 不一致、参照先欠落）があれば CI を fail にする
+  }
+  {
+    [記録を生成してそのままコミットする] | [ずれがなければ CI を pass させる] | [ずれがあれば fail させて修正を促す]
+  }
+}
+@enduml
