@@ -18,6 +18,7 @@
 | 20260702-amadeus-discovery-dry-run-mode | `amadeus-discovery` に読み取り専用の `dry-run` mode を追加する。 | 20260701-history-learning-review-skills | [20260702-amadeus-discovery-dry-run-mode.md](intents/20260702-amadeus-discovery-dry-run-mode.md) |
 | 20260702-construction-finalization-resume | merge 後の Construction finalization を決定論的に再開、検出できるようにする。 | 20260702-skill-change-review-contract | [20260702-construction-finalization-resume.md](intents/20260702-construction-finalization-resume.md) |
 | 20260702-construction-internal-next-skill-parent-routing | Construction 内部 skill の次工程案内を親 skill 経由の継続として明記する。 | 20260701-construction-finalization-traceability-skill | [20260702-construction-internal-next-skill-parent-routing.md](intents/20260702-construction-internal-next-skill-parent-routing.md) |
+| 20260702-gate-queue-visualization | 複数 Intent の state.json を横断スキャンし、承認待ちの Intent、phase、ゲート、待ち理由を一覧できるようにする。 | 20260702-shared-index-generation, 20260702-phase-gate-approval-contract, 20260702-state-json-scaffolding | [20260702-gate-queue-visualization.md](intents/20260702-gate-queue-visualization.md) |
 | 20260702-internal-skill-forge-readme-alignment | `amadeus-*` skill を `skill-forge` で確認し、README の skill 一覧と内部 skill の扱いをそろえる。 | 20260702-stage-prerequisite-checks | [20260702-internal-skill-forge-readme-alignment.md](intents/20260702-internal-skill-forge-readme-alignment.md) |
 | 20260702-internal-skill-policy-alignment | 内部 skill の対象範囲と暗黙起動ポリシーを揃える。 | なし | [20260702-internal-skill-policy-alignment.md](intents/20260702-internal-skill-policy-alignment.md) |
 | 20260702-phase-gate-approval-contract | phase skill の人間ゲートと承認 evidence 検査を決定論的契約にする。 | 20260701-decision-review-grilling-gate, 20260702-skill-change-review-contract | [20260702-phase-gate-approval-contract.md](intents/20260702-phase-gate-approval-contract.md) |
@@ -45,6 +46,9 @@
 | 20260702-amadeus-discovery-dry-run-mode | 20260701-history-learning-review-skills | Issue #272 は、過去分析と学習分類の結果を入力にできる読み取り専用の Intent 候補探索を扱うため。 |
 | 20260702-construction-finalization-resume | 20260702-skill-change-review-contract | Issue #309 の skill 変更 PR は、同 Intent で確定したレビュー支援契約（挙動差分要約、skill-forge 確認、粒度制約）の適用対象であるため。 |
 | 20260702-construction-internal-next-skill-parent-routing | 20260701-construction-finalization-traceability-skill | Issue #274 は、Construction finalization を忘れないための次工程案内を扱い、Issue #245 の Construction finalization 追跡要件と同じ公開入口契約を前提にするため。 |
+| 20260702-gate-queue-visualization | 20260702-shared-index-generation | Discovery 候補の待機条件「並行 Intent が走り始めてから効果が出るため、共有インデックスの生成物化の後に扱う」が、この Intent（Issue #334）の cycle 完了で解消したため。 |
+| 20260702-gate-queue-visualization | 20260702-phase-gate-approval-contract | 横断スキャンが読み取る `state.json` のゲート語彙と approval evidence は、この Intent で確定した契約に従うため。 |
+| 20260702-gate-queue-visualization | 20260702-state-json-scaffolding | 横断スキャンの対象になる `state.json` の構造安定は、雛形生成の Intent が前提になるため。 |
 | 20260702-internal-skill-forge-readme-alignment | 20260702-stage-prerequisite-checks | `amadeus-*` skill の供給元、昇格先成果物、README の公開入口説明を区別して確認する必要があり、stage 前提確認の成果物を前提にするため。 |
 | 20260702-internal-skill-policy-alignment | なし | Issue #284 の recommended 候補は、現在の skill ディレクトリと README の差分を整理するため、既存 Intent の完了を前提にしない。 |
 | 20260702-phase-gate-approval-contract | 20260701-decision-review-grilling-gate | Issue #306 の grilling 起動トリガーは Issue #257 で確定した decision review 契約への追加であるため。 |
