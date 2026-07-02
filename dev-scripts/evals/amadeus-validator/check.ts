@@ -58,16 +58,10 @@ function runExpectSuccessIncludes(command: string[], expected: string, cwd = roo
   }
 }
 
-function runExpectOutputExcludes(command: string[], excluded: string, cwd = root): void {
-  const result = Bun.spawnSync(command, {
-    cwd,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const stdout = new TextDecoder().decode(result.stdout);
-  const stderr = new TextDecoder().decode(result.stderr);
-  if (stdout.includes(excluded) || stderr.includes(excluded)) {
-    fail(["command output unexpectedly includes: " + excluded, "stdout:", stdout, "stderr:", stderr].join("\n"));
+function runExpectSuccessExcludes(command: string[], excluded: string, cwd = root): void {
+  const stdout = run(command, cwd);
+  if (stdout.includes(excluded)) {
+    fail(["command succeeded but output unexpectedly includes: " + excluded, "stdout:", stdout].join("\n"));
   }
 }
 
@@ -3808,7 +3802,7 @@ writeConstructionState(taskGenerationPassedWithApprovalWorkspace, {
     },
   ],
 });
-runExpectOutputExcludes(
+runExpectSuccessExcludes(
   ["bun", "run", validator, taskGenerationPassedWithApprovalWorkspace, intent],
   "Task Generation passed は approval evidence を持つ。根拠",
 );
@@ -3830,7 +3824,7 @@ writeConstructionState(taskGenerationReadyWithoutApprovalWorkspace, {
     },
   ],
 });
-runExpectOutputExcludes(
+runExpectSuccessExcludes(
   ["bun", "run", validator, taskGenerationReadyWithoutApprovalWorkspace, intent],
   "approval evidence を持つ。根拠",
 );
