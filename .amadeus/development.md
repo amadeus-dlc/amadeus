@@ -42,7 +42,7 @@
 ## PR 準備条件
 
 - 対応 Issue と対象 Intent がリンクされている。
-- 対象 phase の成果物が validator で pass している。
+- 対象 phase の成果物が validator で pass している。phase PR を統合した場合は、含まれる各 phase の成果物に同じ条件を適用する。統合の許可条件は [Git Branching Policy](steering/policies/git-branching.md) の「phase PR の統合」に従う。
 - `npm run test:all` の結果が記録されている。
 - 変更種別ごとの必須条件が満たされている。
 - skill 変更では、挙動差分の要約、skill-forge 確認の記録、粒度制約の確認が必須条件に含まれる。詳細は [steering/policies.md](steering/policies.md) の変更種別表と判断基準に従う。

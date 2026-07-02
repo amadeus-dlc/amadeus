@@ -1,7 +1,7 @@
 {
   "intent": "20260702-phase-pr-consolidation-policy",
-  "phase": "inception",
-  "status": "completed",
+  "phase": "construction",
+  "status": "in_progress",
   "ideation": {
     "status": "completed",
     "intentCapture": {
@@ -90,5 +90,120 @@
       "inception/bolts/B002-development-doc-alignment.md"
     ],
     "gate": "passed"
+  },
+  "construction": {
+    "status": "in_progress",
+    "gate": "not_ready",
+    "requiredArtifacts": [
+      "construction/traceability.md",
+      "construction/decisions.md"
+    ],
+    "requiredBoltArtifacts": [
+      "construction/bolts/B001-policy-consolidation-rules/tasks.md",
+      "construction/bolts/B001-policy-consolidation-rules/notes.md",
+      "construction/bolts/B002-development-doc-alignment/tasks.md",
+      "construction/bolts/B002-development-doc-alignment/notes.md"
+    ],
+    "bolts": [
+      {
+        "id": "B001",
+        "taskGeneration": {
+          "status": "passed",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-pr-consolidation-contract/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-pr-consolidation-contract/functional-design/business-rules.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-pr-consolidation-contract/functional-design/domain-entities.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U001-pr-consolidation-contract/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B001-policy-consolidation-rules.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B001-policy-consolidation-rules/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B001-policy-consolidation-rules/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/decisions/D002-task-generation-approval.md"
+            }
+          ]
+        }
+      },
+      {
+        "id": "B002",
+        "taskGeneration": {
+          "status": "passed",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-pr-consolidation-contract/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-pr-consolidation-contract/functional-design/business-rules.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-pr-consolidation-contract/functional-design/domain-entities.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U001-pr-consolidation-contract/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B002-development-doc-alignment.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B002-development-doc-alignment/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B002-development-doc-alignment/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/decisions/D002-task-generation-approval.md"
+            }
+          ]
+        }
+      }
+    ],
+    "targetBolts": [
+      "B001",
+      "B002"
+    ],
+    "functionalDesign": {
+      "targetUnits": [
+        "U001"
+      ],
+      "units": [
+        {
+          "unitId": "U001",
+          "requirement": "required",
+          "status": "passed",
+          "frontendSurface": "absent",
+          "targetSource": "construction_target_bolts",
+          "runMode": "initial"
+        }
+      ]
+    }
   }
 }
