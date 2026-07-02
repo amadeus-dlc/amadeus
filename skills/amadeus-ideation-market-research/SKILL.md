@@ -19,7 +19,11 @@ Ideation の Stage 1.2 Market Research だけを進める。
 
 ## 前提
 
-対象 Intent の `state.json` で、`stages["market-research"]` が実行対象であり、状態が `pending`、`active`、`revising` のいずれかであることを前提にする。
+対象 Intent の `state.json` で、`stages["market-research"]` が実行対象であり、状態が `pending`、`active`、`awaiting_approval`、`revising` のいずれかであることを前提にする。
+
+状態が `awaiting_approval` の場合は、成果物を作り直さず、ゲートの提示から再開する。
+状態が `revising` の場合は、前回の成果物と差し戻し理由を提示してから、修正だけを行う。
+どちらの場合も、手順を最初からやり直さない。
 
 Condition は「外部市場での位置づけ、または build-vs-buy の判断がある場合」である。
 Condition が偽の場合は、成果物を作らず `stages["market-research"]` を `skipped` にし、理由を記録して `amadeus` へ戻る。
@@ -63,7 +67,7 @@ Condition が偽の場合は、成果物を作らず `stages["market-research"]`
 
 ## 手順
 
-1. Condition を判定する。偽なら `skipped` を記録して終了する。
+1. 状態が `pending` の場合だけ Condition を判定する。偽なら `skipped` を記録して終了する。`active`、`awaiting_approval`、`revising` からの再開では再判定しない。
 2. `stages["market-research"].state` を `active` にする。
 3. Intent のモジュールファイルと steering layer を読み、不足論点を質問で確認する。
 4. 3 つの成果物を作る。

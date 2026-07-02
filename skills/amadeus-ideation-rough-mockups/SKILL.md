@@ -20,7 +20,11 @@ UI がない Intent では、システム相互作用図を作る。
 
 ## 前提
 
-対象 Intent の `state.json` で、`stages["rough-mockups"]` が実行対象であり、状態が `pending`、`active`、`revising` のいずれかであることを前提にする。
+対象 Intent の `state.json` で、`stages["rough-mockups"]` が実行対象であり、状態が `pending`、`active`、`awaiting_approval`、`revising` のいずれかであることを前提にする。
+
+状態が `awaiting_approval` の場合は、成果物を作り直さず、ゲートの提示から再開する。
+状態が `revising` の場合は、前回の成果物と差し戻し理由を提示してから、修正だけを行う。
+どちらの場合も、手順を最初からやり直さない。
 
 Condition は「UI が対象に含まれる場合。API や backend はシステム相互作用図で代替する」である。
 UI もシステム相互作用もない場合は、成果物を作らず `stages["rough-mockups"]` を `skipped` にし、理由を記録して `amadeus` へ戻る。
@@ -63,7 +67,7 @@ UI もシステム相互作用もない場合は、成果物を作らず `stages
 
 ## 手順
 
-1. Condition を判定する。偽なら `skipped` を記録して終了する。
+1. 状態が `pending` の場合だけ Condition を判定する。偽なら `skipped` を記録して終了する。`active`、`awaiting_approval`、`revising` からの再開では再判定しない。
 2. `stages["rough-mockups"].state` を `active` にする。
 3. scope-document と intent-backlog を読み、確認対象のフローを特定する。
 4. 不足論点を質問で確認する。

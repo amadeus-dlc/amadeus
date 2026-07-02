@@ -20,7 +20,11 @@ Ideation の Stage 1.4 Scope Definition だけを進める。
 
 ## 前提
 
-対象 Intent の `state.json` で、`stages["scope-definition"]` が実行対象であり、状態が `pending`、`active`、`revising` のいずれかであることを前提にする。
+対象 Intent の `state.json` で、`stages["scope-definition"]` が実行対象であり、状態が `pending`、`active`、`awaiting_approval`、`revising` のいずれかであることを前提にする。
+
+状態が `awaiting_approval` の場合は、成果物を作り直さず、ゲートの提示から再開する。
+状態が `revising` の場合は、前回の成果物と差し戻し理由を提示してから、修正だけを行う。
+どちらの場合も、手順を最初からやり直さない。
 
 少なくとも次を読む。
 
