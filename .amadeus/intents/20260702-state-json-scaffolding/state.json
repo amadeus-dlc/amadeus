@@ -1,7 +1,7 @@
 {
   "intent": "20260702-state-json-scaffolding",
   "phase": "construction",
-  "status": "in_progress",
+  "status": "completed",
   "ideation": {
     "intentCapture": {
       "status": "completed",
@@ -104,8 +104,8 @@
     "gate": "passed"
   },
   "construction": {
-    "status": "in_progress",
-    "gate": "not_ready",
+    "status": "completed",
+    "gate": "passed",
     "requiredArtifacts": [
       "construction/traceability.md",
       "construction/decisions.md"
@@ -114,7 +114,11 @@
       "construction/bolts/B001-scaffold-script-and-eval/tasks.md",
       "construction/bolts/B001-scaffold-script-and-eval/notes.md",
       "construction/bolts/B002-procedure-reference-and-promotion/tasks.md",
-      "construction/bolts/B002-procedure-reference-and-promotion/notes.md"
+      "construction/bolts/B002-procedure-reference-and-promotion/notes.md",
+      "construction/bolts/B001-scaffold-script-and-eval/test-results.md",
+      "construction/bolts/B001-scaffold-script-and-eval/pr.md",
+      "construction/bolts/B002-procedure-reference-and-promotion/test-results.md",
+      "construction/bolts/B002-procedure-reference-and-promotion/pr.md"
     ],
     "bolts": [
       {
