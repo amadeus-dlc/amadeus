@@ -85,10 +85,14 @@ Unit 数や Bolt 数の見込みを受理の判定材料にしない。
 対象 Intent が決まったら、次の手順でステージを解決する。
 
 1. `state.json` を読む。`status` が `parked` の場合は `currentStage` から再開する。
-2. `stages` から、状態が `revising`、`active`、`awaiting_approval` のステージがあればそれを優先する。なければ、ステージ順序（[references/stage-catalog.md](references/stage-catalog.md)）で最初の `pending` を選ぶ。
-3. 選んだステージが `CONDITIONAL` の場合は、Condition を判定する。偽の場合は状態を `skipped` にし、理由を記録して次のステージへ進む。
-4. ステージに対応する内部 skill を呼び出す。対応表は [references/stage-catalog.md](references/stage-catalog.md) に従う。対応する skill が利用できない場合は、実行せずに停止し、不足しているステージ skill 名を報告する。
-5. phase 内の実行対象ステージがすべて `completed` または `skipped` になったら、phase PR の作成を案内し、merge の確認後に `phaseGates` へ approval evidence を記録して次の phase へ進む。実行したステージが 1 つもない phase は、`{"skipped": true}` を記録して通過する。
+2. 現在 phase の実行対象ステージがすべて `completed` または `skipped` の場合は、手順 6 の phase 境界処理へ進む。
+3. `stages` から、状態が `revising`、`active`、`awaiting_approval` のステージがあればそれを優先する。なければ、ステージ順序（[references/stage-catalog.md](references/stage-catalog.md)）で最初の `pending` を選ぶ。
+4. 選んだステージが `CONDITIONAL` の場合は、Condition を判定する。偽の場合は状態を `skipped` にし、理由を記録して手順 2 へ戻る。
+5. ステージに対応する内部 skill を呼び出す。対応表は [references/stage-catalog.md](references/stage-catalog.md) に従う。対応する skill が利用できない場合は、実行せずに停止し、不足しているステージ skill 名を報告する。
+6. phase 境界処理を行う。実行したステージが 1 つ以上ある phase は、phase PR の作成を案内し、merge の確認後に `phaseGates.<phase>` へ approval evidence（`approvedAt`、`via: "pr"`、`reference` に PR の URL）を記録して、`phase` を次へ進める。実行したステージが 1 つもない phase は、`phaseGates.<phase>` に `{"skipped": true}` を記録して通過し、手順 2 へ戻る。
+
+phase 境界処理（phase PR の案内、`phaseGates` の記録、`phase` の遷移）は、この skill だけが行う。
+ステージ内部 skill には委譲しない。
 
 ステージゲートで停止中の Intent を再開した場合は、ゲートの提示から再開する。
 `revising` からの再開は、ステージを最初からやり直さず、前回の成果物と差し戻し理由を提示してから修正に入る。

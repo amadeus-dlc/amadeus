@@ -60,7 +60,7 @@ traceability には、成功条件から Ideation 成果物への対応を記録
 4. `initiative-brief.md` を作る。
 5. `decisions.md` と個別 decision、`traceability.md` を確定する。
 6. `stages["approval-handoff"].state` を `awaiting_approval` にし、ゲートを提示する。
-7. 承認後、Ideation 成果物の phase PR の作成を案内する。merge の確認後、`phaseGates.ideation` に approval evidence（`via: "pr"`、PR の URL）を記録し、`phase` を `inception` にする。
+7. 承認後は `amadeus` 入口へ戻る。phase PR の案内、`phaseGates.ideation` の記録、`phase` の遷移は `amadeus` 入口の責務であり、この skill では行わない。
 
 ## ゲート
 
@@ -74,7 +74,7 @@ Request Changes が 3 回続いたら Accept as-is を選択肢に加える。
 
 - Ideation の未完了ステージを飛ばしてまとめない。
 - Inception 成果物（要求、ストーリー、設計、Unit、Bolt）を作らない。
-- phase PR の merge を待たずに `phase` を進めない。
+- `phaseGates` の記録と `phase` の遷移をこの skill で行わない。phase 境界処理は `amadeus` 入口の責務である。
 - 承認を待たずに `completed` を記録しない。
 
 ## 次の skill
