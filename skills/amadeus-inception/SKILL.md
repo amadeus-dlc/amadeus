@@ -711,6 +711,8 @@ greenfield で `codebase-analysis.md` を作らない場合も、この見出し
 
 ## `state.json`
 
+Inception 開始時と完了時の `state.json` は、同梱スクリプトで雛形を生成、更新する: `bun run .agents/skills/amadeus-validator/scripts/StateScaffold.ts <workspace> inception-start --intent <intent-id>-<slug>`、完了時は `inception-complete`。必須成果物配列は実在ファイルの走査で確定される。
+
 Inception 完了時の `state.json` は次の形にする。
 既存の `ideation` の状態ブロックは削除せず、Inception の状態を追加する。
 
