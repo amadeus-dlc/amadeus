@@ -1,7 +1,7 @@
 {
   "intent": "20260702-gate-queue-visualization",
   "phase": "construction",
-  "status": "in_progress",
+  "status": "completed",
   "ideation": {
     "status": "completed",
     "intentCapture": {
@@ -101,8 +101,8 @@
     "gate": "passed"
   },
   "construction": {
-    "status": "in_progress",
-    "gate": "not_ready",
+    "status": "completed",
+    "gate": "passed",
     "requiredArtifacts": [
       "construction/traceability.md",
       "construction/decisions.md"
@@ -111,7 +111,11 @@
       "construction/bolts/B001-listing-script-and-verification/tasks.md",
       "construction/bolts/B001-listing-script-and-verification/notes.md",
       "construction/bolts/B002-skill-procedure-and-promotion/tasks.md",
-      "construction/bolts/B002-skill-procedure-and-promotion/notes.md"
+      "construction/bolts/B002-skill-procedure-and-promotion/notes.md",
+      "construction/bolts/B001-listing-script-and-verification/test-results.md",
+      "construction/bolts/B001-listing-script-and-verification/pr.md",
+      "construction/bolts/B002-skill-procedure-and-promotion/test-results.md",
+      "construction/bolts/B002-skill-procedure-and-promotion/pr.md"
     ],
     "bolts": [
       {
