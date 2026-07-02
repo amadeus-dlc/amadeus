@@ -23,7 +23,8 @@
 - stage2 を次回 stage0 として扱うには、対象 PR が現在の基準 branch に merge 済みであり、build workspace が merge 後の基準 commit を参照し、人間が採用を承認している必要がある。
 - stage0 採用判断は Maintainer が行い、validator pass や CI pass だけで stage2 を次回 stage0 に自動昇格しない。
 - stage0 採用判断の証拠には、対象 PR、基準 commit、build workspace の参照 commit、対象 Intent、検証結果を含める。
-- provenance は、実際に使った build workspace、target workspace、skill、validator、開発用スクリプト、stage 判定、人間の stage0 採用判断から追跡できる形で記録する。
+- provenance は `provenance:generate` の実行で実測し、対象 Intent 直下の `provenance/Pnnn-<slug>.json` として記録する。実際に使った build workspace、target workspace、skill、validator、開発用スクリプト、stage 判定、人間の stage0 採用判断から追跡できる値を対象にし、人間は値を手書きしない。
+- 検査責務の境界（validator = 成果物構造の検証、`provenance:check` = 実測値の照合、evaluator = 意味と接続性の評価）は、[20260702-provenance-mechanization の D001](../intents/20260702-provenance-mechanization/inception/decisions/D001-inspection-boundary-adoption.md) に従う。
 - 初回導入では、skill、validator、example snapshot、ハーネスの実装変更を後続 Intent に分ける。
 - 作業 branch は最新の `origin/main` を基点に作る。
 - PR merge 後は、最新の `origin/main` に追従してから次の作業 branch を作る。
@@ -34,6 +35,8 @@
 - merge 操作は人間が行う。
 
 ## provenance の最低記録項目
+
+次の9項目は `provenance:generate`（`npm run provenance:generate`）の実行結果として、対象 Intent 直下の `provenance/Pnnn-<slug>.json` に記録する。`provenance:check`（`npm run provenance:check`）が記録済み値を実測と照合する。
 
 - build workspace の path と commit。
 - target workspace の path と commit。

@@ -1,0 +1,32 @@
+# Construction Tasks
+
+- [x] T001: `provenance:generate` の eval を先に追加し、RED を確認する
+  - 作業:
+    - `dev-scripts/evals/provenance-generate/check.ts` を作成し、一時 workspace fixture で次を検証する。
+      - 正常系: 対象 Intent 識別子、利用ツール（skill / validator / devScripts）の path 一覧、入力項目（harness 名、target artifacts、stage 判定根拠、stage0 採用判断）を渡して実行し、出力 JSON が `domain-entities.md`「Provenance Record のフィールド構成」の9項目 + `schemaVersion` + `generatedAt` を持つこと（BR001, BR006）。
+      - 出力先が対象 Intent 直下の `provenance/Pnnn-<slug>.json` であること（BR002）。
+      - 既存ファイル上書きなし: 既存の `provenance/P001-*.json` がある状態で実行すると `P002-*.json` として3桁連番で採番され、既存ファイルを上書きしないこと（BR002, BL002）。
+      - 入力エラー: 実測対象ファイル（skill の `SKILL.md`、validator の `AmadeusValidator.ts`、devScripts の対象スクリプト）の working tree 内容が対象 workspace の HEAD の内容と異なる（未コミット変更がある）場合、`provenance:generate` が該当 path を示してエラー終了すること（固定設計値: 実測 commit の意味）。
+      - 対象 Intent ディレクトリが存在しない場合に失敗し、対象 Intent を示すこと（`business-rules.md` の例外表）。
+      - 人間による次回 stage0 採用判断が未判断の場合、`stage0Adoption.present` が `false`、`stage0Adoption.reference` が `null` で出力されること（`business-rules.md` の例外表）。
+    - `package.json` に `test:it:provenance-generate`（`dev-scripts/evals/provenance-generate/check.ts` を実行）を追加する。
+    - 実装前に eval を実行し、失敗（RED）を確認して記録する。
+  - 要求: R001
+  - ユースケース: UC001
+  - 依存: なし
+  - 設計根拠: ../../U001-provenance-record-contract/functional-design/domain-entities.md
+  - 証拠: [test-results.md](test-results.md)
+
+- [x] T002: `provenance:generate` を最小実装し、GREEN を確認する
+  - 作業:
+    - `dev-scripts/provenance-generate.ts`（Bun + TypeScript）を新設し、BL001（実測ロジック）と BL002（ファイル出力、採番）を実装する。
+    - 実測は `git rev-parse HEAD`（commit）、ファイルハッシュ計算（md5、対象ファイルは skill が昇格先の `SKILL.md`、validator が `AmadeusValidator.ts`、devScripts が対象スクリプトファイル）、host environment の os / runtime（Bun バージョン）で行う。harness 名、target artifacts、stage 判定根拠、stage0 採用判断、利用ツールの path 一覧は呼び出し側からの入力として受け取る。
+    - 記録する `commit` は生成時点の対象 workspace の HEAD とする。実測対象ファイルの working tree 内容が HEAD の内容と異なる場合、md5・commit・path の三つ組が崩れるため、該当 path を入力エラーとして示して失敗させる。
+    - 出力は `provenance/Pnnn-<slug>.json`（3桁連番、`provenance/` 配下の既存ファイルを走査して次番号を決定、欠番を再利用しない、既存ファイルは上書きしない）。
+    - `package.json` に `provenance:generate`（実行入口）を追加する。
+    - T001 の eval が pass する（GREEN）ことを確認する。
+  - 要求: R001
+  - ユースケース: UC001
+  - 依存: T001
+  - 設計根拠: ../../U001-provenance-record-contract/functional-design/business-logic-model.md#業務ロジック
+  - 証拠: [test-results.md](test-results.md)
