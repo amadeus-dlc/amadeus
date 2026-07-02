@@ -9,6 +9,10 @@
 | `npm run provenance:check -- .`（実 workspace） | pass | 検出 0 件、exit 0（`provenance/` を持つ Intent が 0 件のため期待どおり）。 |
 | `npm run test:all` | pass | `test:it:all` 連鎖の末尾で `test:it:provenance-generate` と `test:it:provenance-check` が実行されることを確認した。 |
 
+## CI 環境前提の発見と対応
+
+初回の GitHub Actions 実行で、shallow clone（fetch-depth: 1）には記録された commit の履歴が存在せず、`provenance:check` が commit 不一致を誤検出することが分かった。`.github/workflows/ci.yaml` の checkout に `fetch-depth: 0` を設定して解消した（詳細は notes.md）。
+
 ## 安全性確認
 
 - 照合は `git show <記録commit>:<path>` による読み取りだけで行い、working tree を変更しない。
