@@ -62,6 +62,9 @@ traceability には、成功条件から Ideation 成果物への対応を記録
 
 ## 手順
 
+以下の手順は、状態が `pending` から開始する場合の流れである。
+`awaiting_approval` または `revising` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
+
 1. Ideation の実行対象ステージ（前提に列挙した slug のうち `stages` に含まれるもの）がすべて `completed` または `skipped` であることを確認する。未完了があれば停止し、`amadeus` へ戻る。Inception 以降のステージの状態は判定に使わない。
 2. `stages["approval-handoff"].state` を `active` にする。
 3. 全ステージ成果物を読み、矛盾や未確認の残りを検出する。判断が必要な残りは一問ずつ確認し、`questions.md` に記録する。

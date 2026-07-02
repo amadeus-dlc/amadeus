@@ -69,6 +69,9 @@ Condition が偽の場合は、成果物を作らず `stages["feasibility"]` を
 
 ## 手順
 
+以下の手順は、状態が `pending` から開始する場合の流れである。
+`awaiting_approval` または `revising` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
+
 1. 状態が `pending` の場合だけ Condition を判定する。偽なら `skipped` を記録して終了する。`active`、`awaiting_approval`、`revising` からの再開では再判定しない。
 2. `stages["feasibility"].state` を `active` にする。
 3. Intent のモジュールファイル、market-research の成果物、steering layer を読み、不足論点を質問で確認する。

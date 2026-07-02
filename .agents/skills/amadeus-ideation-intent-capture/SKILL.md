@@ -71,6 +71,9 @@ Birth で作られた Intent のモジュールファイルの骨格に対して
 
 ## 手順
 
+以下の手順は、状態が `pending` から開始する場合の流れである。
+`awaiting_approval` または `revising` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
+
 1. `stages["intent-capture"].state` を `active` にする。
 2. モジュールファイルの骨格と steering layer を読み、不足している論点を洗い出す。
 3. 質問を一問ずつ提示し、回答を `questions.md` に記録する。

@@ -67,6 +67,9 @@ UI もシステム相互作用もない場合は、成果物を作らず `stages
 
 ## 手順
 
+以下の手順は、状態が `pending` から開始する場合の流れである。
+`awaiting_approval` または `revising` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
+
 1. 状態が `pending` の場合だけ Condition を判定する。偽なら `skipped` を記録して終了する。`active`、`awaiting_approval`、`revising` からの再開では再判定しない。
 2. `stages["rough-mockups"].state` を `active` にする。
 3. scope-document と intent-backlog を読み、確認対象のフローを特定する。
