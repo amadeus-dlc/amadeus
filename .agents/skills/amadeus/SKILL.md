@@ -90,7 +90,7 @@ Unit 数や Bolt 数の見込みを受理の判定材料にしない。
 4. 判定対象から、状態が `revising`、`active`、`awaiting_approval` のステージがあればそれを優先し、Condition を再判定せずに手順 6 へ進む。なければ、ステージ順序で最初の `pending` を選ぶ。
 5. 選んだ `pending` のステージが `CONDITIONAL` の場合は、Condition を判定する。偽の場合は状態を `skipped` にし、理由を記録して手順 3 へ戻る。
 6. `currentStage` を選んだステージの slug に更新し、ステージに対応する内部 skill を呼び出す。対応表は [references/stage-catalog.md](references/stage-catalog.md) に従う。対応する skill が利用できない場合は、実行せずに停止し、不足しているステージ skill 名を報告する。
-7. phase 境界処理を行う。実行したステージが 1 つ以上ある phase は、phase PR の作成を案内し、merge の確認後に `phaseGates.<phase>` へ approval evidence（`approvedAt`、`via: "pr"`、`reference` に PR の URL）を記録して、`phase` を次へ進める。実行したステージが 1 つもない phase は、`phaseGates.<phase>` に `{"skipped": true}` を記録して通過する。phase を進めたら手順 2 へ戻る。
+7. phase 境界処理を行う。実行したステージが 1 つ以上ある phase は、phase PR の作成を案内し、merge の確認後に `phaseGates.<phase>` へ approval evidence（`approvedAt`、`via: "pr"`、`reference` に PR の URL）を記録して、`phase` を次へ進める。現在の phase が `construction` の場合は、phase PR の案内の前に `construction/decisions.md` と `construction/traceability.md` を確定し、merge の確認後に `status` を `completed` にする。実行したステージが 1 つもない phase は、`phaseGates.<phase>` に `{"skipped": true}` を記録して通過する。phase を進めたら手順 2 へ戻る。
 
 phase 境界処理（phase PR の案内、`phaseGates` の記録、`phase` の遷移）は、この skill だけが行う。
 ステージ内部 skill には委譲しない。
@@ -105,7 +105,7 @@ Construction は Bolt を実行単位にする。
 2. **Bolt の開始**。branch と worktree を steering layer の policies（branch 戦略）に従って作り、`bolts["<bolt-id>"]` に `state: "active"` と束ねる Unit の一覧を記録する。
 3. **Unit 単位ステージの実行**。Bolt に束ねた Unit ごとに、Stage 3.1 から 3.5 をステージ順で解決し、対応する内部 skill を呼び出す。Unit 単位の状態は `stages["<slug>"].units["<unit-id>"]` で管理する。
 4. **Build and Test**。Bolt 内の全 Unit の Code Generation 完了後に、Stage 3.6 を 1 回呼び出す。失敗時は autonomy に関わらず停止して人間に確認する（halt-and-ask）。
-5. **Bolt 境界処理**。Build and Test の成功後、Bolt PR の作成を案内する。merge の確認後、`bolts["<bolt-id>"].gate` に approval evidence（`approvedAt`、`via: "pr"`、`reference` に PR の URL）を記録し、`state` を `completed` にする。`autonomy` が `continue_autonomously` の Bolt では、この merge をもって Bolt 内の各ステージの approval を `via: "pr"` と同じ URL で補完記録する。
+5. **Bolt 境界処理**。Build and Test の成功後、Bolt PR の作成を案内する。merge の確認後、`bolts["<bolt-id>"].gate` に approval evidence（`approvedAt`、`via: "pr"`、`reference` に PR の URL）を記録し、`state` を `completed` にする。`autonomy` が `continue_autonomously` の Bolt では、この merge をもって Bolt 内の各ステージの approval を `via: "pr"` と同じ URL で補完記録し、Bolt 内の Functional Design が `domain-entities.md` に記録した `Domain Map と Context Map への反映候補` のうち採用判断が確定したものを、Domain Map と Context Map へ反映する。
 6. **walking skeleton ゲート**。最初の Bolt は、`autonomy` の設定に関わらず、設計成果物と生成コードをまとめて必ず人間が承認する（Bolt PR の merge で確定する）。
 7. **ladder 提案**。walking skeleton の merge 直後に一度だけ、残りの Bolt の進め方を確認し、回答を `state.json.autonomy` に記録する。選択肢は「Continue autonomously（残りの Bolt をゲートなしで実行する。失敗時は停止して確認する）」と「Gate every Bolt（Bolt ごとにゲートを提示する）」の 2 つである。
 8. **反復**。次の Bolt があれば手順 1 へ戻る。全 Bolt 完了後、Stage 3.7 を Intent 単位で解決する。
