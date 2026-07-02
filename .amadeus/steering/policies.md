@@ -8,6 +8,7 @@
 - skill 変更、validator 変更、example 更新、語彙追加、docs 更新を変更種別として扱う。
 - build workspace、host environment、target workspace、target artifacts を分けて記録する。
 - Git ブランチ戦略は [Git Branching Policy](policies/git-branching.md) に従う。
+- 複数 worktree の並行運用は [並行運用ポリシー](policies/parallel-operation.md) に従う。
 - AGENTS.md は操作指示を扱い、steering policy は Intent 成果物から参照する長期方針を扱う。
 
 ## 禁止事項
