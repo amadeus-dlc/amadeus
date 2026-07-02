@@ -157,7 +157,7 @@
       {
         "id": "B002",
         "taskGeneration": {
-          "status": "ready_for_approval",
+          "status": "passed",
           "evidence": [
             {
               "kind": "functional_design",
@@ -186,6 +186,10 @@
             {
               "kind": "notes",
               "path": "construction/bolts/B002-skill-procedure-and-promotion/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/decisions/D003-b002-task-generation-approval.md"
             }
           ]
         }

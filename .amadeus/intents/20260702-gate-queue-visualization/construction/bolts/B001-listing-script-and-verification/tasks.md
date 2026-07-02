@@ -1,6 +1,6 @@
 # Construction Tasks
 
-- [ ] T001: 検証を先行追加し、RED を確認する。
+- [x] T001: 検証を先行追加し、RED を確認する。
   - 作業:
     - `dev-scripts/evals/gate-queue-list/check.ts` を新設し、一時ディレクトリの fixture workspace（複数 Intent の `state.json` を持つ最小の `.amadeus/`）に対して次を検証する。
     - 承認待ちあり: `taskGeneration.status` が `ready_for_approval` の Bolt、phase gate が `waiting_approval` の Intent、`status` が `waiting_approval` の Intent が、Intent、phase、ゲート、待ち理由の 4 列 Markdown 表に出る。
@@ -15,9 +15,9 @@
   - ユースケース: UC001, UC002
   - 依存: なし
   - 設計根拠: ../../U001-approval-queue-listing-contract/functional-design/business-rules.md
-  - 証拠: 未登録
+  - 証拠: [test-results.md](test-results.md)
 
-- [ ] T002: GateQueueList.ts を実装し、GREEN を確認する。
+- [x] T002: GateQueueList.ts を実装し、GREEN を確認する。
   - 作業:
     - `skills/amadeus-validator/scripts/GateQueueList.ts` を新設し、workspace を受けて `.amadeus/intents/*/state.json` を横断スキャンし、承認待ち一覧を stdout へ出力する。
     - 走査、判定、整形、対象外の扱いは Functional Design の BL001 から BL007 に従う。判定語彙は `validator/generated/task-generation-contract.ts` を import して参照し、値を複製しない。
@@ -27,9 +27,9 @@
   - ユースケース: UC001, UC002, UC003
   - 依存: T001
   - 設計根拠: ../../U001-approval-queue-listing-contract/functional-design/business-logic-model.md
-  - 証拠: 未登録
+  - 証拠: [test-results.md](test-results.md)
 
-- [ ] T003: amadeus-validator の昇格先を promote で同期する。
+- [x] T003: amadeus-validator の昇格先を promote で同期する。
   - 作業:
     - `bun run dev-scripts/promote-skill.ts amadeus-validator --replace` を実行し、`scripts/GateQueueList.ts` を含む昇格先を同期する。
     - `npm run test:it:promote-skill` と `npm run test:all` で同期と非破壊を確認する。
@@ -37,4 +37,4 @@
   - ユースケース: なし
   - 依存: T002
   - 設計根拠: ../../U001-approval-queue-listing-contract/functional-design/business-rules.md
-  - 証拠: 未登録
+  - 証拠: [test-results.md](test-results.md)
