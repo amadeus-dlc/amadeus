@@ -8,7 +8,7 @@
 | R002 | 検証済み | [B001 test-results](../construction/bolts/B001-policy-body-and-registration/test-results.md)、[B001 pr.md](../construction/bolts/B001-policy-body-and-registration/pr.md) |
 | R003 | 検証済み | [B001 test-results](../construction/bolts/B001-policy-body-and-registration/test-results.md)、[B001 pr.md](../construction/bolts/B001-policy-body-and-registration/pr.md) |
 | R004 | 検証済み | [B001 test-results](../construction/bolts/B001-policy-body-and-registration/test-results.md)、[B001 pr.md](../construction/bolts/B001-policy-body-and-registration/pr.md) |
-| R005 | 検証済み | [B001 test-results](../construction/bolts/B001-policy-body-and-registration/test-results.md)、[B002 test-results](../construction/bolts/B002-boundary-cross-reference/test-results.md)、[B002 pr.md](../construction/bolts/B002-boundary-cross-reference/pr.md) |
+| R005 | 検証済み | [B001 test-results](../construction/bolts/B001-policy-body-and-registration/test-results.md)、[B001 pr.md](../construction/bolts/B001-policy-body-and-registration/pr.md)、[B002 test-results](../construction/bolts/B002-boundary-cross-reference/test-results.md)、[B002 pr.md](../construction/bolts/B002-boundary-cross-reference/pr.md) |
 
 ## 状態ルール
 
