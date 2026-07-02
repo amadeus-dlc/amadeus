@@ -1,0 +1,17 @@
+@startuml
+salt
+{
+  {#
+    . | merge 後の Construction 再実行確認
+    入力 | 対象 Intent、state.json、Bolt 成果物（tasks、test-results、pr.md）
+    検出 | 同梱スクリプトが未 finalize の Intent を列挙する
+    確認 1 | 対象 Bolt が実装済みかつ検証済み（test-results.md あり）か
+    確認 2 | 実装 PR が merge 済みか
+    確認 3 | construction.gate が passed でないか
+    判定 | 3条件がそろえば auto 判定は finalization を選ぶ
+  }
+  {
+    [finalization へ進む] | [未 merge のため待機する] | [検出結果なしで通常判定に戻る]
+  }
+}
+@enduml
