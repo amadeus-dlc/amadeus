@@ -163,7 +163,7 @@ bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspac
 
 ## Contributing
 
-このリポジトリには、現時点で `CONTRIBUTING.md` がありません。
+貢献のライセンス条件、DCO の sign-off、進め方は [CONTRIBUTING.ja.md](CONTRIBUTING.ja.md) を参照してください。
 大きな変更を始める前に、対象範囲、影響する skill、期待する成果物、検証計画を GitHub Issue に記録してください。
 
 ローカル開発では次を使います。
@@ -176,3 +176,5 @@ npm run test:all
 
 このリポジトリは MIT OR Apache-2.0 のデュアルライセンスです。
 詳細は [LICENSE-MIT](LICENSE-MIT) と [LICENSE-APACHE](LICENSE-APACHE) を参照してください。
+
+明示的に別の条件を示さない限り、Apache-2.0 ライセンスの定義に従ってこのプロジェクトへ意図的に提出された貢献は、追加の条件なしに上記のデュアルライセンスで提供されたものとみなします。
