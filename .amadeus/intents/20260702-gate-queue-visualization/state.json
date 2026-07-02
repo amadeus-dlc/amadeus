@@ -1,6 +1,6 @@
 {
   "intent": "20260702-gate-queue-visualization",
-  "phase": "ideation",
+  "phase": "inception",
   "status": "completed",
   "ideation": {
     "status": "completed",
@@ -21,6 +21,82 @@
     ],
     "requiredMocks": [
       "ideation/mocks/initial-confirmation.puml"
+    ],
+    "gate": "passed"
+  },
+  "inception": {
+    "status": "completed",
+    "codebaseAnalysis": {
+      "requirement": "required",
+      "status": "passed",
+      "evidence": [
+        {
+          "kind": "file",
+          "path": ".agents/skills/amadeus-validator/validator/generated/task-generation-contract.ts"
+        },
+        {
+          "kind": "file",
+          "path": ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts"
+        },
+        {
+          "kind": "file",
+          "path": ".agents/skills/amadeus-construction/scripts/list-unfinalized-intents.ts"
+        },
+        {
+          "kind": "file",
+          "path": ".agents/skills/amadeus-validator/scripts/StateScaffold.ts"
+        },
+        {
+          "kind": "file",
+          "path": "examples/04-construction-design-ready/.amadeus/intents/20260629-minimum-purchase-flow/state.json"
+        }
+      ],
+      "targetScope": [
+        ".agents/skills/amadeus-validator/validator/generated/task-generation-contract.ts",
+        ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts",
+        ".agents/skills/amadeus-validator/scripts",
+        ".agents/skills/amadeus-construction/scripts/list-unfinalized-intents.ts",
+        "skills/amadeus-validator/evals",
+        ".amadeus/intents",
+        "examples"
+      ],
+      "analyzedCommit": "b4846473e9a9d3c3bec4a0c341f5607177a05d69",
+      "analyzedAt": "2026-07-02T11:16:25Z",
+      "freshness": "current"
+    },
+    "requiredArtifacts": [
+      "inception/requirements.md",
+      "inception/acceptance.md",
+      "inception/use-cases.md",
+      "inception/codebase-analysis.md",
+      "inception/units.md",
+      "inception/units/U001-approval-queue-listing-contract.md",
+      "inception/units/U001-approval-queue-listing-contract/design.md",
+      "inception/bolts.md",
+      "inception/traceability.md",
+      "inception/decisions.md"
+    ],
+    "requiredRequirementArtifacts": [
+      "inception/requirements/R001-gate-contract-conformance.md",
+      "inception/requirements/R002-approval-queue-listing.md",
+      "inception/requirements/R003-zero-waiting-visibility.md",
+      "inception/requirements/R004-distribution-and-procedure.md",
+      "inception/requirements/R005-verification-first.md"
+    ],
+    "requiredStoryArtifacts": [],
+    "requiredUseCaseArtifacts": [
+      "inception/use-cases/UC001-list-approval-queue.md",
+      "inception/use-cases/UC002-confirm-no-waiting.md",
+      "inception/use-cases/UC003-agent-presents-queue.md"
+    ],
+    "requiredDecisionArtifacts": [
+      "inception/decisions/D001-inception-boundary.md",
+      "inception/decisions/D002-skip-user-stories.md",
+      "inception/decisions/D003-single-unit-exception.md"
+    ],
+    "requiredBoltArtifacts": [
+      "inception/bolts/B001-listing-script-and-verification.md",
+      "inception/bolts/B002-skill-procedure-and-promotion.md"
     ],
     "gate": "passed"
   }
