@@ -1,7 +1,7 @@
 {
   "intent": "20260702-bolt-wave-parallel-execution",
   "phase": "construction",
-  "status": "in_progress",
+  "status": "completed",
   "ideation": {
     "status": "completed",
     "intentCapture": {
@@ -99,8 +99,8 @@
     "gate": "passed"
   },
   "construction": {
-    "status": "in_progress",
-    "gate": "not_ready",
+    "status": "completed",
+    "gate": "passed",
     "requiredArtifacts": [
       "construction/traceability.md",
       "construction/decisions.md"
@@ -109,7 +109,11 @@
       "construction/bolts/B001-wave-contract-definition/tasks.md",
       "construction/bolts/B001-wave-contract-definition/notes.md",
       "construction/bolts/B002-verification-alignment/tasks.md",
-      "construction/bolts/B002-verification-alignment/notes.md"
+      "construction/bolts/B002-verification-alignment/notes.md",
+      "construction/bolts/B001-wave-contract-definition/test-results.md",
+      "construction/bolts/B001-wave-contract-definition/pr.md",
+      "construction/bolts/B002-verification-alignment/test-results.md",
+      "construction/bolts/B002-verification-alignment/pr.md"
     ],
     "bolts": [
       {

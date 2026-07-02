@@ -7,6 +7,7 @@
 | D001 | Functional Design scope | U001 の Functional Design を必須にし、UI 構成なしとして core 3 文書を作る。wave 契約の挿入位置、導出規則、適用条件、policy 一般形参照を確定する。 | accepted | なし | [D001-functional-design-scope.md](decisions/D001-functional-design-scope.md) |
 | D002 | Task Generation 承認 | B001 の Task 分解を Maintainer が承認した。 | accepted | D001 | [D002-task-generation-approval.md](decisions/D002-task-generation-approval.md) |
 | D003 | B002 の Task Generation 承認 | B002 の Task 分解を Maintainer が承認した。 | accepted | D001 | [D003-b002-task-generation-approval.md](decisions/D003-b002-task-generation-approval.md) |
+| D004 | PR #371 merge finalization | PR #371（補正 PR #372 を含む）の merge を Construction 完了証拠として採用する。 | accepted | D002, D003 | [D004-pr-371-merge-finalization.md](decisions/D004-pr-371-merge-finalization.md) |
 
 ## 依存関係
 
@@ -15,6 +16,7 @@
 | D001 | なし | Functional Design の設計判断が Task 分解と文書作成の前提であるため。 |
 | D002 | D001 | Task 分解は Functional Design と Unit Design Brief を根拠にするため。 |
 | D003 | D001 | Task 分解は Functional Design と Unit Design Brief を根拠にするため。 |
+| D004 | D002, D003 | 実装 PR の merge は、承認済み Task の実行結果を完了証拠としてまとめるため。 |
 
 ## Domain Map と Context Map
 
