@@ -1,0 +1,16 @@
+@startuml
+salt
+{
+  {#
+    . | 共有インデックス再生成の並行統合の確認
+    前提 | branch A が Intent X を、branch B が Intent Y を、それぞれ intents/ 配下のモジュールとして追加する
+    統合 | 両 branch を main へ統合する。intents.md はどちらの branch でも手書き編集しない
+    再生成 | 生成入口を実行し、intents/ 配下のモジュールから intents.md を決定論的に再生成する
+    結果 | intents.md に Intent X と Intent Y の行が両方含まれ、手動コンフリクト解消が発生しない
+    検証 | validator がインデックスと配下モジュールの不整合を検査し、fail が出ない
+  }
+  {
+    [モジュール追加だけで branch を完結させる] | [統合後に再生成する] | [不整合は validator で検出する]
+  }
+}
+@enduml
