@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-02T10:25:49.103Z",
+  "generatedAt": "2026-07-02T10:34:42.160Z",
   "buildWorkspace": {
     "path": "/Users/j5ik2o/Sources/j5ik2o.github.com/j5ik2o/amadeus",
-    "commit": "f5aef39d3d8f5e050f48d692d8ef380574162b04"
+    "commit": "438b586a8b5248d3e4fd47399765fb8327207515"
   },
   "targetWorkspace": {
     "path": "/Users/j5ik2o/Sources/j5ik2o.github.com/j5ik2o/amadeus",
-    "commit": "f5aef39d3d8f5e050f48d692d8ef380574162b04"
+    "commit": "438b586a8b5248d3e4fd47399765fb8327207515"
   },
   "hostEnvironment": {
     "os": "darwin 25.5.0",
@@ -27,35 +27,35 @@
   "skills": [
     {
       "path": ".agents/skills/amadeus-construction/SKILL.md",
-      "commit": "f5aef39d3d8f5e050f48d692d8ef380574162b04",
+      "commit": "438b586a8b5248d3e4fd47399765fb8327207515",
       "md5": "d9c21e91bfecebde3046d684563a1ba6"
     },
     {
       "path": ".agents/skills/amadeus-validator/SKILL.md",
-      "commit": "f5aef39d3d8f5e050f48d692d8ef380574162b04",
+      "commit": "438b586a8b5248d3e4fd47399765fb8327207515",
       "md5": "c6682c582a253c80774a8ca596bedcd5"
     }
   ],
   "validator": {
     "path": ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts",
-    "commit": "f5aef39d3d8f5e050f48d692d8ef380574162b04",
-    "md5": "38f39a6e8513893ca2ff9fbecb4a4d54",
+    "commit": "438b586a8b5248d3e4fd47399765fb8327207515",
+    "md5": "227d312a2244b828387d33dc440e5b60",
     "result": "pass（不足または矛盾: なし、対象 Intent 指定と workspace 全体の両方）"
   },
   "devScripts": [
     {
       "path": "dev-scripts/provenance-generate.ts",
-      "commit": "f5aef39d3d8f5e050f48d692d8ef380574162b04",
+      "commit": "438b586a8b5248d3e4fd47399765fb8327207515",
       "md5": "c9fd876616a46682efcdc401337162a8"
     },
     {
       "path": "dev-scripts/provenance-check.ts",
-      "commit": "f5aef39d3d8f5e050f48d692d8ef380574162b04",
+      "commit": "438b586a8b5248d3e4fd47399765fb8327207515",
       "md5": "993675b1f1045bd9ce0ca093e5df01f6"
     },
     {
       "path": ".agents/skills/amadeus-validator/scripts/StateScaffold.ts",
-      "commit": "f5aef39d3d8f5e050f48d692d8ef380574162b04",
+      "commit": "438b586a8b5248d3e4fd47399765fb8327207515",
       "md5": "e3455211603ba41b091c9ea690d942e6"
     }
   ],
