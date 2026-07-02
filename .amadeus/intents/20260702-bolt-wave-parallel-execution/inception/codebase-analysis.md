@@ -8,14 +8,14 @@
 | `skills/amadeus-construction-bolt-preparation/SKILL.md` | 内部 skill | `ready_for_approval` へ到達したら停止して人間の承認を待つ契約を持つ。Bolt ごとのゲートであり、wave 内の複数 Bolt をまとめて承認する運用と両立する（ゲート契約自体の変更は不要）。 |
 | `inception/bolts.md` の構造契約 | 成果物契約 | `一覧` の `依存` 列と `依存関係` 表が必須構造であり、validator が検査する。wave の導出材料（依存グラフ）は既に機械可読である。 |
 | `.amadeus/steering/policies/parallel-operation.md` | steering policy | worktree 分離での並行、同一 worktree での直列化、統合手順（追従、再生成、検証）、承認運用（キュー確認、まとめ承認）を判断基準として持つ。wave 実行の運用前提が policy 化済みである。 |
-| `.amadeus/intents/20260702-shared-index-generation/**` | 先例 | B002 と B003 が「B001 の後に並行実行可能」な依存構造だったが直列実行した実例。D003 が B002 と B003 の Task Generation をまとめ承認した先例でもある。 |
+| `.amadeus/intents/20260702-shared-index-generation/**` | 先例 | B002 と B003 が「B001 の後に並行実行可能」な依存構造だったが直列実行した実例。同 Intent の Construction 判断 D003 が B002 と B003 の Task Generation をまとめ承認した先例でもある。 |
 | `state.json` の `construction` ブロック | 状態契約 | `targetBolts` と `bolts[].taskGeneration` は Bolt 単位であり、wave はどの Bolt を先に扱うかの順序判断であって新しい状態フィールドを要求しない。 |
 
 ## 既存能力
 
 - `bolts.md` の依存表が必須構造として確定しており、wave（依存がすべて前の wave までに完了した Bolt の集合）をトポロジカルレベルとして決定論的に導出できる。
 - 並行実行の運用前提（worktree 分離、直列化、統合手順、まとめ承認）が並行運用ポリシーとして確定済みで、skill 契約はこれらの運用と整合する形で書ける。
-- Task Generation Gate の契約（`ready_for_approval` 停止、承認 evidence）が確定済みで、wave 内の複数 Bolt のまとめ承認は既存契約の運用（#334 D003 の先例）として成立する。
+- Task Generation Gate の契約（`ready_for_approval` 停止、承認 evidence）が確定済みで、wave 内の複数 Bolt のまとめ承認は既存契約の運用（20260702-shared-index-generation の Construction 判断 D003 の先例）として成立する。
 
 ## 統合点
 

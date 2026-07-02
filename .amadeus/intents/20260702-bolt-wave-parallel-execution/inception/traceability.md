@@ -46,7 +46,7 @@
 | 分析 | 要求 | ユースケース | ユニット | ボルト | 設計 | 入力 |
 |---|---|---|---|---|---|---|
 | [codebase-analysis.md](codebase-analysis.md) | R001 | UC001 | U001 | B001 | [design.md](units/U001-bolt-wave-execution-contract/design.md) | `bolts.md` の依存表が必須構造として確定しており、wave をトポロジカルレベルとして導出できる。 |
-| [codebase-analysis.md](codebase-analysis.md) | R002, R003 | UC002, UC003 | U001 | B001 | [design.md](units/U001-bolt-wave-execution-contract/design.md) | 並行運用ポリシー（worktree 分離、統合手順、承認運用）と #334 D003 のまとめ承認先例が契約の根拠になる。 |
+| [codebase-analysis.md](codebase-analysis.md) | R002, R003 | UC002, UC003 | U001 | B001 | [design.md](units/U001-bolt-wave-execution-contract/design.md) | 並行運用ポリシー（worktree 分離、統合手順、承認運用）と 20260702-shared-index-generation の Construction 判断 D003 のまとめ承認先例が契約の根拠になる。 |
 | [codebase-analysis.md](codebase-analysis.md) | R004 | UC004 | U001 | B001, B002 | [design.md](units/U001-bolt-wave-execution-contract/design.md) | 直列前提の既存契約と e2e eval があり、直列既定の維持と非破壊確認が必要である。 |
 
 ## ユニットからの追跡

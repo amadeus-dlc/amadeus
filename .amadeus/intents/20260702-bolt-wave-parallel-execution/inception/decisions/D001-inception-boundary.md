@@ -3,7 +3,7 @@
 ## 背景
 
 Issue #352 は、wave 単位の並行実行契約を Construction skill から読めるようにすることを求める。
-既存コードには、wave の導出材料（`bolts.md` の依存表）、運用前提（並行運用ポリシー）、まとめ承認の先例（#334 D003）、直列前提の既存契約と e2e eval がある。
+既存コードには、wave の導出材料（`bolts.md` の依存表）、運用前提（並行運用ポリシー）、まとめ承認の先例（20260702-shared-index-generation の Construction 判断 D003）、直列前提の既存契約と e2e eval がある。
 
 ## 判断
 

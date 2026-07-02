@@ -7,7 +7,7 @@ wave 内の複数 Bolt の Task Generation をまとめて `ready_for_approval` 
 ## 背景
 
 Task Generation Gate は Bolt ごとの人間承認であり、この契約は変えない（SC-OUT-004）。
-複数 Bolt のまとめ承認には先例があり（#334 の D003 が B002 と B003 をまとめ承認）、承認待ちキューの確認とまとめ承認の運用は確立している。
+複数 Bolt のまとめ承認には先例があり（20260702-shared-index-generation の Construction 判断 D003 が B002 と B003 をまとめ承認）、承認待ちキューの確認とまとめ承認の運用は確立している。
 
 ## 受け入れ条件
 
