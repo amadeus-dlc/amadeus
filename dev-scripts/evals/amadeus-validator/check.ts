@@ -4014,4 +4014,41 @@ runExpectFailure(
   "completed のステージは approval evidence を持つ",
 );
 
+const v2CurrentStageWorkspace = workspaceCopy();
+{
+  const state = v2State();
+  state.currentStage = "intent-capture";
+  addV2Intent(v2CurrentStageWorkspace, state);
+}
+runExpectFailure(
+  ["bun", "run", validator, v2CurrentStageWorkspace, v2Intent],
+  "`currentStage` が scope の実行対象である",
+);
+
+const v2EmptyUnitsWorkspace = workspaceCopy();
+{
+  const state = v2State();
+  state.phase = "construction";
+  state.currentStage = "code-generation";
+  state.stages["requirements-analysis"] = {
+    state: "completed",
+    approval: { approvedAt: "2026-07-03T11:00:00+09:00", via: "conversation" },
+  };
+  state.stages["code-generation"] = { units: {} };
+  state.phaseGates = {
+    ideation: { skipped: true },
+    inception: { approvedAt: "2026-07-03T12:00:00+09:00", via: "pr", reference: "https://example.test/pr/1" },
+  };
+  addV2Intent(v2EmptyUnitsWorkspace, state);
+  mkdirSync(join(v2EmptyUnitsWorkspace, ".amadeus/intents", v2Intent, "inception/requirements-analysis"), { recursive: true });
+  writeFileSync(
+    join(v2EmptyUnitsWorkspace, ".amadeus/intents", v2Intent, "inception/requirements-analysis/requirements.md"),
+    "# Requirements\n\n## 一覧\n\n| ID | 要求 | 由来する成功条件 |\n|---|---|---|\n| R001 | タイムアウトしない | 成功条件 1 |\n",
+  );
+}
+runExpectFailure(
+  ["bun", "run", validator, v2EmptyUnitsWorkspace, v2Intent],
+  "Unit 単位ステージの `units` が空ではない",
+);
+
 console.log("amadeus validator eval: ok");

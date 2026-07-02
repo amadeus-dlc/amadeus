@@ -83,6 +83,7 @@ export function checkLifecycleV2Intent(ctx: LifecycleV2Context, input: Lifecycle
   const scope = String(input.state.scope ?? "");
   if (!scopeValues.has(scope)) return;
 
+  checkCurrentStage(ctx, statePath, input.state, scope);
   checkStages(ctx, statePath, input, scope);
   checkPhaseGates(ctx, statePath, input.state);
   checkBolts(ctx, statePath, input.state);
@@ -101,16 +102,18 @@ function checkRootFields(ctx: LifecycleV2Context, statePath: string, input: Life
     ctx.failRow(statePath, "`intentId` が Intent ディレクトリ名と一致する", String(input.state.intentId ?? ""));
   }
 
-  const currentStage = input.state.currentStage;
-  if (String(input.state.phase) === "completed" && currentStage === undefined) {
-    ctx.pass(statePath, "`currentStage` が既知のステージである", "phase completed のため不要");
-  } else {
-    checkAllowedValue(ctx, statePath, "`currentStage` が既知のステージである", currentStage, new Set(stageBySlug.keys()));
-  }
-
   if (String(input.state.status) === "completed" && String(input.state.phase) !== "completed") {
     ctx.failRow(statePath, "`status` が completed の場合 `phase` も completed である", String(input.state.phase));
   }
+}
+
+function checkCurrentStage(ctx: LifecycleV2Context, statePath: string, state: Record<string, any>, scope: string): void {
+  const condition = "`currentStage` が scope の実行対象である";
+  if (String(state.phase) === "completed" && state.currentStage === undefined) {
+    ctx.pass(statePath, condition, "phase completed のため不要");
+    return;
+  }
+  checkAllowedValue(ctx, statePath, condition, state.currentStage, expectedStageSlugs(scope));
 }
 
 function checkAllowedValue(ctx: LifecycleV2Context, statePath: string, condition: string, actual: unknown, allowed: Set<string>): void {
@@ -144,7 +147,12 @@ function checkStages(ctx: LifecycleV2Context, statePath: string, input: Lifecycl
     const stage = stageBySlug.get(slug);
     if (!stage) continue;
     if (stage.perUnit && entry && typeof entry === "object" && entry.units && typeof entry.units === "object") {
-      for (const [unitId, unitEntry] of Object.entries(entry.units as Record<string, any>)) {
+      const unitEntries = Object.entries(entry.units as Record<string, any>);
+      if (unitEntries.length === 0) {
+        ctx.failRow(statePath, "Unit 単位ステージの `units` が空ではない", slug);
+        continue;
+      }
+      for (const [unitId, unitEntry] of unitEntries) {
         checkStageEntry(ctx, statePath, `${slug}.units.${unitId}`, unitEntry);
       }
       continue;
