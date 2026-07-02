@@ -1,4 +1,6 @@
-# Discovery 一覧
+<!-- 生成物: 直接編集しないでください。discoveries/ 配下の各モジュールを更新し、`bun run IndexGenerate.ts <workspace>` で再生成してください。 -->
+
+# Discovery
 
 ## 一覧
 

@@ -1,3 +1,5 @@
+<!-- 生成物: 直接編集しないでください。intents/ 配下の各モジュールを更新し、`bun run IndexGenerate.ts <workspace>` で再生成してください。 -->
+
 # インテント
 
 ## 一覧

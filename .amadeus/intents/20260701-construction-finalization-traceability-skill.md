@@ -1,5 +1,15 @@
 # Construction finalization skill の追跡表要件明記
 
+## 概要
+
+Construction finalization skill に完了時の追跡表要件を明記する。
+
+## 依存
+
+| 依存 | 理由 |
+|---|---|
+| 20260701-self-development-cycle-stage-workspace | Issue #245 は、Issue #233 の Construction 最終化で見つかった skill 説明と validator 要件のずれを扱うため。 |
+
 ## 目標プロファイル
 
 | フィールド | 値 | 説明 |

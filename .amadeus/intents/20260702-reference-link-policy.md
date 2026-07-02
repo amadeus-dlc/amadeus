@@ -1,5 +1,15 @@
 # Amadeus 成果物の参照リンク化方針
 
+## 概要
+
+Amadeus 成果物の参照リンク化方針を定義する。
+
+## 依存
+
+| 依存 | 理由 |
+|---|---|
+| 20260701-self-development-cycle-stage-workspace | Issue #243 は、自己開発 cycle と workspace 対応記録で作成された Functional Design を観察例にし、Amadeus 成果物の参照リンク化方針を後続 Intent として扱うため。 |
+
 ## 目標プロファイル
 
 | フィールド | 値 | 説明 |

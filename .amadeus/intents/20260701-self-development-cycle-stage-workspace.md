@@ -1,5 +1,15 @@
 # 自己開発 cycle の stage 判定と workspace 対応記録
 
+## 概要
+
+自己開発 cycle の stage 判定と workspace 対応記録を定義する。
+
+## 依存
+
+| 依存 | 理由 |
+|---|---|
+| 20260629-self-dev-steering-layer | 初回導入 Intent の D002 により、Issue #233 を後続 Intent として扱うため。 |
+
 ## 目標プロファイル
 
 | フィールド | 値 | 説明 |

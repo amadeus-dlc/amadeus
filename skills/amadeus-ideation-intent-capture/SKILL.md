@@ -16,8 +16,9 @@ Ideation phase の Intent Capture & Framing だけを進める。
 公開入口としての `amadeus-ideation` から呼び出されることを主な用途にする。
 
 Intent Record を作成または補修する。
-Intent Record は、Intent のモジュールファイル、モジュールディレクトリ、`.amadeus/intents.md` の行、`state.json` で構成する。
-Intent のモジュールファイルには、`目標プロファイル`、目的、成功条件、範囲を置く。
+Intent Record は、Intent のモジュールファイル、モジュールディレクトリ、`state.json` で構成する。
+Intent のモジュールファイルには、`目標プロファイル`、目的、成功条件、範囲、`## 概要`、`## 依存` を置く。
+`.amadeus/intents.md` は、Intent のモジュールファイルから `bun run .agents/skills/amadeus-validator/scripts/IndexGenerate.ts <workspace>` で再生成する共有インデックスであり、手書きしない。
 
 要求、ユースケース、ユニット、ボルト、タスク、ドメインモデル、Spec、実装は作らない。
 
@@ -68,10 +69,10 @@ Intent Record を新規作成または構造補修する場合は、テンプレ
 
 作成または更新するものは次だけである。
 
-- `.amadeus/intents.md`
 - `.amadeus/intents/<intent-id>-<slug>.md`
 - `.amadeus/intents/<intent-id>-<slug>/state.json`
 - 関連する `.amadeus/discoveries/<discovery-id>.md`
+- `.amadeus/intents.md`（`IndexGenerate.ts` の再生成による更新。手書きしない）
 
 関連する Discovery Brief を更新する場合は、対象候補の状態だけを `intent_record_created` にする。
 候補状態に `captured`、`intent_created`、`linked`、`initialized` は使わない。
@@ -93,11 +94,11 @@ Intent Record を新規作成または構造補修する場合は、テンプレ
 1. steering layer と入力を読み、Intent 名、目標種別、進行プロファイル、ラベル、目的、成功条件、範囲、依存を取り出す。
 2. 関連する Discovery Brief がある場合は、対象候補を特定する。
 3. Intent 識別子を決める。
-4. `.amadeus/intents.md` に Intent 行と依存関係行を追加または補修する。
-5. Intent のモジュールファイルを作成または補修する。
-6. Intent のモジュールディレクトリを作成する。
-7. `state.json` を作成または補修する。新規作成は同梱スクリプトで雛形を生成する: `bun run .agents/skills/amadeus-validator/scripts/StateScaffold.ts <workspace> intent-capture --intent <intent-id>-<slug>`
-8. 関連する Discovery 候補の状態を `intent_record_created` に更新する。
+4. Intent のモジュールファイルを作成または補修する。`## 概要`（H1 直後、本文 1 段落）と `## 依存`（依存と理由の 2 列の表）を含める。
+5. Intent のモジュールディレクトリを作成する。
+6. `state.json` を作成または補修する。新規作成は同梱スクリプトで雛形を生成する: `bun run .agents/skills/amadeus-validator/scripts/StateScaffold.ts <workspace> intent-capture --intent <intent-id>-<slug>`
+7. 関連する Discovery 候補の状態を `intent_record_created` に更新する。
+8. `bun run .agents/skills/amadeus-validator/scripts/IndexGenerate.ts <workspace>` で共有インデックス（`.amadeus/intents.md`）を再生成する。
 9. 作成後に validator が使える場合は、対象 Intent を検証する。
 
 既存 Intent Record の一部だけが欠けている場合は、欠けている構造だけを補修する。

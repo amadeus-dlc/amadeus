@@ -1,5 +1,15 @@
 # amadeus-* skill 実行上の問題報告標準化
 
+## 概要
+
+amadeus-* skill の実行上の問題報告を標準化する。
+
+## 依存
+
+| 依存 | 理由 |
+|---|---|
+| 20260701-construction-finalization-traceability-skill | Issue #248 は、Issue #245 の自己開発作業中に見つかった skill 実行上の問題報告の扱いを標準化するため。 |
+
 ## 目標プロファイル
 
 | フィールド | 値 | 説明 |

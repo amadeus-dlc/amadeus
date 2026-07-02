@@ -280,6 +280,9 @@ Amadeus 自身を brownfield として扱う場合は、実行モードに関係
 
 ### `discoveries.md`
 
+生成物である。
+先頭に生成マーカーを置き、`discoveries/*.md` から `bun run .agents/skills/amadeus-validator/scripts/IndexGenerate.ts <workspace>` で再生成する。
+
 - `一覧`
 
 `一覧` の表の列:
@@ -294,6 +297,9 @@ Amadeus 自身を brownfield として扱う場合は、実行モードに関係
 Discovery がまだない場合は、表に行を作らない。
 
 ### `intents.md`
+
+生成物である。
+先頭に生成マーカーを置き、`intents/*.md` から `bun run .agents/skills/amadeus-validator/scripts/IndexGenerate.ts <workspace>` で再生成する。
 
 - `一覧`
 - `依存関係`

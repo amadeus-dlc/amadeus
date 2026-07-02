@@ -1,5 +1,15 @@
 # Skill Contract Catalog
 
+## 概要
+
+Skill Contract を amadeus-contracts に追加し、skill 実行契約を生成参照できるようにする。
+
+## 依存
+
+| 依存 | 理由 |
+|---|---|
+| 20260701-feedback-learning-loop | Issue #263 は、Issue #257 の decision review と Issue #259 の learning review が参照する skill 実行契約を生成物として扱うため。 |
+
 ## 目標プロファイル
 
 | フィールド | 値 | 説明 |

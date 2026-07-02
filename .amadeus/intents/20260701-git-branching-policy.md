@@ -1,5 +1,15 @@
 # Git ブランチ戦略 steering policy 定義
 
+## 概要
+
+Git ブランチ戦略を steering policy として定義する。
+
+## 依存
+
+| 依存 | 理由 |
+|---|---|
+| 20260701-self-development-cycle-stage-workspace | Issue #254 は、複数 Intent と複数 worktree の作業判断を steering policy として扱うため、stage と workspace の対応記録を前提にする。 |
+
 ## 目標プロファイル
 
 | フィールド | 値 | 説明 |

@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSy
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { createLlmProvider, isLlmProviderMode, shellQuote, type LlmProvider, type LlmProviderMode, type LlmRequest, type MockLlmCases } from "../llm-support/provider";
+import { buildIntentsIndex } from "../../../.agents/skills/amadeus-validator/scripts/IndexGenerate";
 
 type SkillMode = "steering" | "event-storming" | "ideation" | "inception" | "construction";
 type IdeationInternalProcess =
@@ -360,7 +361,30 @@ function applyLoanDomainBoundaryFixture(workspace: string): void {
   mkdirSync(join(workspace, ".amadeus/intents"), { recursive: true });
   writeFileSync(
     join(workspace, ".amadeus/intents/20260626-loan-boundaries.md"),
-    ["# 既存貸出境界", "", "## 目的", "", "貸出管理の既存 adopted Boundary を表す mock eval 用 Intent Record である。"].join("\n"),
+    [
+      "# 既存貸出境界",
+      "",
+      "## 概要",
+      "",
+      "貸出管理の既存 Bounded Context の採用状態を表す mock eval 用 Intent Record である。",
+      "",
+      "## 依存",
+      "",
+      "| 依存 | 理由 |",
+      "|---|---|",
+      "| なし | mock eval 用の固定 fixture であり、他 Intent に依存しないため。 |",
+      "",
+      "## 目的",
+      "",
+      "貸出管理の既存 adopted Boundary を表す mock eval 用 Intent Record である。",
+    ].join("\n"),
+  );
+  // intents/*.md はすべて Intent モジュールとして扱われ、対応する state.json が要求されるため、
+  // mock eval 用の固定 fixture にも最小限の状態ファイルを用意する。
+  mkdirSync(join(workspace, ".amadeus/intents/20260626-loan-boundaries"), { recursive: true });
+  writeFileSync(
+    join(workspace, ".amadeus/intents/20260626-loan-boundaries/state.json"),
+    JSON.stringify({ intent: "20260626-loan-boundaries", phase: "inception", status: "completed" }, null, 2),
   );
   writeFileSync(
     join(workspace, ".amadeus/domain-map.md"),
@@ -393,6 +417,9 @@ function applyLoanDomainBoundaryFixture(workspace: string): void {
       "",
     ].join("\n"),
   );
+  // 新規 Intent モジュール追加後は、生成物である intents.md を再生成して
+  // 「Index 生成整合」検査を満たす状態にする。
+  writeFileSync(join(workspace, ".amadeus/intents.md"), buildIntentsIndex(workspace));
 }
 
 function applyEventStormingArtifacts(workspace: string): void {
@@ -560,25 +587,10 @@ function applyEventStormingArtifacts(workspace: string): void {
 }
 
 function writeIntentIndex(workspace: string, intent: string): void {
-  writeFileSync(
-    join(workspace, ".amadeus/intents.md"),
-    [
-      "# インテント",
-      "",
-      "## 一覧",
-      "",
-      "| 識別子 | 概要 | 依存 | 詳細 |",
-      "|---|---|---|---|",
-      `| ${intent} | 利用者が図書貸出をセルフサービスで開始できるようにする。 | なし | [${intent}.md](intents/${intent}.md) |`,
-      "",
-      "## 依存関係",
-      "",
-      "| インテント | 依存 | 理由 |",
-      "|---|---|---|",
-      `| ${intent} | なし | 単独で成立する初期 Intent である。 |`,
-      "",
-    ].join("\n"),
-  );
+  // intents.md は生成物であるため、fixture の Intent モジュール（## 概要、## 依存 を持つ）から
+  // 生成器で再生成し、「Index 生成整合」検査（生成物と配下モジュールの導出内容の完全一致）を満たす状態にする。
+  void intent;
+  writeFileSync(join(workspace, ".amadeus/intents.md"), buildIntentsIndex(workspace));
 }
 
 function prepareIntentRecordFixture(workspace: string): void {
@@ -604,6 +616,9 @@ function applyIntentRecordArtifacts(workspace: string, intent: string, name: str
   replaceInFile(join(workspace, ".amadeus/intents", `${intent}.md`), {
     "<intent-id>-<slug>": intent,
     "<intent-name>": name,
+    "<intent-summary>": purpose,
+    "<dependency-intent-id>": "なし",
+    "<dependency-reason>": "単独で成立する初期 Intent である。",
     "<intent-purpose>": purpose,
     "<success-condition>": "未確認",
     "<in-scope>": "未確認",
@@ -2052,10 +2067,18 @@ function loanDomainBoundaryArtifacts(): string[] {
   ];
 }
 
+// intents/*.md はすべて Intent モジュールとして扱われ、対応する state.json が要求されるため、
+// 作成される非 Markdown 成果物としてだけ artifact manifest に含める
+// (skill プロンプトの根拠パス言及チェックが対象にする Markdown 成果物とは別に扱う)。
+function loanDomainBoundaryNonMarkdownArtifacts(): string[] {
+  return [".amadeus/intents/20260626-loan-boundaries/state.json"];
+}
+
 function inceptionIntentArtifacts(intent: string): string[] {
   return [
     ...ideationIntentArtifacts(intent),
     ...loanDomainBoundaryArtifacts(),
+    ...loanDomainBoundaryNonMarkdownArtifacts(),
     `.amadeus/intents/${intent}/inception/requirements.md`,
     `.amadeus/intents/${intent}/inception/requirements/R001-loan-eligibility-check.md`,
     `.amadeus/intents/${intent}/inception/acceptance.md`,
@@ -2151,6 +2174,7 @@ function inceptionUnitsGenerationArtifacts(intent: string): string[] {
   return [
     ...inceptionUseCasesArtifacts(intent),
     ...loanDomainBoundaryArtifacts(),
+    ...loanDomainBoundaryNonMarkdownArtifacts(),
     `.amadeus/intents/${intent}/inception/units.md`,
     `.amadeus/intents/${intent}/inception/units/U001-loan-eligibility-check.md`,
     `.amadeus/intents/${intent}/inception/units/U001-loan-eligibility-check/design.md`,

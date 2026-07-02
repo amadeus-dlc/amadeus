@@ -1,7 +1,7 @@
 {
   "intent": "20260702-shared-index-generation",
-  "phase": "inception",
-  "status": "completed",
+  "phase": "construction",
+  "status": "in_progress",
   "ideation": {
     "status": "completed",
     "intentCapture": {
@@ -104,5 +104,206 @@
       "inception/bolts/B004-workspace-and-examples-migration.md"
     ],
     "gate": "passed"
+  },
+  "construction": {
+    "status": "in_progress",
+    "gate": "not_ready",
+    "requiredArtifacts": [
+      "construction/traceability.md",
+      "construction/decisions.md"
+    ],
+    "requiredBoltArtifacts": [
+      "construction/bolts/B001-regeneration-script-and-verification/tasks.md",
+      "construction/bolts/B001-regeneration-script-and-verification/notes.md",
+      "construction/bolts/B002-validator-consistency-checks/tasks.md",
+      "construction/bolts/B002-validator-consistency-checks/notes.md",
+      "construction/bolts/B003-skill-procedures-and-templates/tasks.md",
+      "construction/bolts/B003-skill-procedures-and-templates/notes.md",
+      "construction/bolts/B004-workspace-and-examples-migration/tasks.md",
+      "construction/bolts/B004-workspace-and-examples-migration/notes.md"
+    ],
+    "bolts": [
+      {
+        "id": "B001",
+        "taskGeneration": {
+          "status": "passed",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-shared-index-generation-contract/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-shared-index-generation-contract/functional-design/business-rules.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-shared-index-generation-contract/functional-design/domain-entities.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U001-shared-index-generation-contract/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B001-regeneration-script-and-verification.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B001-regeneration-script-and-verification/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B001-regeneration-script-and-verification/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/decisions/D002-task-generation-approval.md"
+            }
+          ]
+        }
+      },
+      {
+        "id": "B002",
+        "taskGeneration": {
+          "status": "passed",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-shared-index-generation-contract/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-shared-index-generation-contract/functional-design/business-rules.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-shared-index-generation-contract/functional-design/domain-entities.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U001-shared-index-generation-contract/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B002-validator-consistency-checks.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B002-validator-consistency-checks/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B002-validator-consistency-checks/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/decisions/D003-b002-b003-task-generation-approval.md"
+            }
+          ]
+        }
+      },
+      {
+        "id": "B003",
+        "taskGeneration": {
+          "status": "passed",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-shared-index-generation-contract/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-shared-index-generation-contract/functional-design/business-rules.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-shared-index-generation-contract/functional-design/domain-entities.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U001-shared-index-generation-contract/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B003-skill-procedures-and-templates.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B003-skill-procedures-and-templates/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B003-skill-procedures-and-templates/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/decisions/D003-b002-b003-task-generation-approval.md"
+            }
+          ]
+        }
+      },
+      {
+        "id": "B004",
+        "taskGeneration": {
+          "status": "passed",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-shared-index-generation-contract/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-shared-index-generation-contract/functional-design/business-rules.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-shared-index-generation-contract/functional-design/domain-entities.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U001-shared-index-generation-contract/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B004-workspace-and-examples-migration.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B004-workspace-and-examples-migration/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B004-workspace-and-examples-migration/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/decisions/D005-b004-task-generation-approval.md"
+            }
+          ]
+        }
+      }
+    ],
+    "targetBolts": [
+      "B001",
+      "B002",
+      "B003",
+      "B004"
+    ],
+    "functionalDesign": {
+      "targetUnits": [
+        "U001"
+      ],
+      "units": [
+        {
+          "unitId": "U001",
+          "requirement": "required",
+          "status": "passed",
+          "frontendSurface": "absent",
+          "targetSource": "construction_target_bolts",
+          "runMode": "initial"
+        }
+      ]
+    }
   }
 }

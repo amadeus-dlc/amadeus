@@ -3,6 +3,7 @@
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { buildDiscoveriesIndex, buildIntentsIndex } from "../../../.agents/skills/amadeus-validator/scripts/IndexGenerate";
 
 const root = resolve(import.meta.dir, "../../..");
 const fixture = join(root, "examples/03-inception-completed/.amadeus");
@@ -70,7 +71,16 @@ function workspaceCopy(): string {
   cpSync(fixture, join(workspace, ".amadeus"), { recursive: true });
   updateDiscoveryCandidateStatus(workspace, "intent_record_created");
   writeRootDomainMaps(workspace);
+  regenerateSharedIndexes(workspace);
   return workspace;
+}
+
+// writeRootDomainMaps が intents/ 配下に fixture 用モジュール（20260628-existing-boundaries.md）を
+// 追加するため、共有インデックス（intents.md、discoveries.md）を実際の生成器で再生成し、
+// 「Index 生成整合」検査（生成物と配下モジュールの導出内容の完全一致）を満たす状態にする。
+function regenerateSharedIndexes(workspace: string): void {
+  writeFileSync(rootArtifactPath(workspace, "intents.md"), buildIntentsIndex(workspace));
+  writeFileSync(rootArtifactPath(workspace, "discoveries.md"), buildDiscoveriesIndex(workspace));
 }
 
 function phaseWorkspaceCopy(): string {
@@ -1187,7 +1197,30 @@ function replaceDecisionDetailWithLegacyPath(workspace: string): void {
 function writeRootDomainMaps(workspace: string): void {
   writeFileSync(
     rootArtifactPath(workspace, "intents/20260628-existing-boundaries.md"),
-    ["# 既存 Boundary 採用", "", "## 目的", "", "Domain Map の既存 adopted Bounded Context を表す eval 用 Intent Record である。"].join("\n"),
+    [
+      "# 既存 Boundary 採用",
+      "",
+      "## 概要",
+      "",
+      "既存 Bounded Context の採用状態を表す eval 用 Intent Record である。",
+      "",
+      "## 依存",
+      "",
+      "| 依存 | 理由 |",
+      "|---|---|",
+      "| なし | eval 用の固定 fixture であり、他 Intent に依存しないため。 |",
+      "",
+      "## 目的",
+      "",
+      "Domain Map の既存 adopted Bounded Context を表す eval 用 Intent Record である。",
+    ].join("\n"),
+  );
+  // intents/*.md はすべて Intent モジュールとして扱われ、対応する state.json が要求されるため、
+  // eval 用の固定 fixture にも最小限の状態ファイルを用意する。
+  mkdirSync(rootArtifactPath(workspace, "intents/20260628-existing-boundaries"), { recursive: true });
+  writeFileSync(
+    rootArtifactPath(workspace, "intents/20260628-existing-boundaries/state.json"),
+    JSON.stringify({ intent: "20260628-existing-boundaries", phase: "inception", status: "completed" }, null, 2),
   );
   writeFileSync(
     rootArtifactPath(workspace, "domain-map.md"),

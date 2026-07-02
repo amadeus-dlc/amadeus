@@ -1,5 +1,15 @@
 # merge 後の Construction finalization の再開と検出
 
+## 概要
+
+merge 後の Construction finalization を決定論的に再開、検出できるようにする。
+
+## 依存
+
+| 依存 | 理由 |
+|---|---|
+| 20260702-skill-change-review-contract | Issue #309 の skill 変更 PR は、同 Intent で確定したレビュー支援契約（挙動差分要約、skill-forge 確認、粒度制約）の適用対象であるため。 |
+
 ## 目標プロファイル
 
 | フィールド | 値 | 説明 |

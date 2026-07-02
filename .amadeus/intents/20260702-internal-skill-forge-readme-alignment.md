@@ -1,5 +1,15 @@
 # 内部 skill と README の skill-forge 確認
 
+## 概要
+
+`amadeus-*` skill を `skill-forge` で確認し、README の skill 一覧と内部 skill の扱いをそろえる。
+
+## 依存
+
+| 依存 | 理由 |
+|---|---|
+| 20260702-stage-prerequisite-checks | `amadeus-*` skill の供給元、昇格先成果物、README の公開入口説明を区別して確認する必要があり、stage 前提確認の成果物を前提にするため。 |
+
 ## 目標プロファイル
 
 | フィールド | 値 | 説明 |
