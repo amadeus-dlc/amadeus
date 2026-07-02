@@ -1,7 +1,7 @@
 {
   "intent": "20260702-skill-change-review-contract",
   "phase": "construction",
-  "status": "in_progress",
+  "status": "completed",
   "ideation": {
     "intentCapture": {
       "status": "completed",
@@ -112,7 +112,7 @@
     "gate": "passed"
   },
   "construction": {
-    "status": "in_progress",
+    "status": "completed",
     "targetBolts": [
       "B001",
       "B002"
@@ -216,8 +216,10 @@
       "construction/bolts/B001-policies-review-support-contract/test-results.md",
       "construction/bolts/B002-development-and-readme-alignment/tasks.md",
       "construction/bolts/B002-development-and-readme-alignment/notes.md",
-      "construction/bolts/B002-development-and-readme-alignment/test-results.md"
+      "construction/bolts/B002-development-and-readme-alignment/test-results.md",
+      "construction/bolts/B001-policies-review-support-contract/pr.md",
+      "construction/bolts/B002-development-and-readme-alignment/pr.md"
     ],
-    "gate": "not_ready"
+    "gate": "passed"
   }
 }
