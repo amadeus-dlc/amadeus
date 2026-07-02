@@ -1,0 +1,13 @@
+@startsalt
+title 並行運用 policy 初期確認
+{
+  {T
+    + 入力 | GitHub Issue #351 と並行候補の Intent 群
+    + 並行の判断 | policy の判断基準で、並行させる単位と統合の順序を決める
+    + worktree 作業 | Intent ごとに worktree を分け、同一 worktree の Bolt は直列に実行する
+    + 共有成果物の統合 | merge 後に共有インデックスを再生成し、衝突を解消する
+    + ゲート承認 | 承認待ちをまとめて確認し、バッチで承認を進める
+    + 次に確認すること | policy の配置先と判断基準の粒度を Inception で確定する
+  }
+}
+@endsalt
