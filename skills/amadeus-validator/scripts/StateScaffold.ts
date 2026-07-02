@@ -111,29 +111,41 @@ function appendMissing(list: string[], entries: string[]): string[] {
 const summary: string[] = [];
 
 function applyIntentCapture(): void {
-  if (existsSync(statePath)) {
-    const existing = JSON.parse(readFileSync(statePath, "utf8"));
-    const inProgressIdeation = existing.phase === "ideation" && existing.ideation?.status === "in_progress";
-    if (!inProgressIdeation) fail("既存の state.json が進行済みのため、intent-capture では上書きしません");
-  }
-  const state: State = {
+  const defaults: State = {
     intent: intentDir,
     phase: "ideation",
     status: "in_progress",
+  };
+  const ideationDefaults: State = {
+    status: "in_progress",
+    intentCapture: {
+      status: "completed",
+      createdArtifacts: [`../${intentDir}.md`, "state.json"],
+      next: "ideation/scope-framing",
+    },
+    requiredArtifacts: [],
+    requiredMocks: [],
+    gate: "not_ready",
+  };
+  if (!existsSync(statePath)) {
+    writeState({ ...defaults, ideation: ideationDefaults });
+    summary.push("ideation 開始の state.json を生成");
+    return;
+  }
+  const existing = JSON.parse(readFileSync(statePath, "utf8"));
+  const inProgressIdeation = existing.phase === "ideation" && existing.ideation?.status === "in_progress";
+  if (!inProgressIdeation) fail("既存の state.json が進行済みのため、intent-capture では上書きしません");
+  const state: State = {
+    ...defaults,
+    ...existing,
     ideation: {
-      status: "in_progress",
-      intentCapture: {
-        status: "completed",
-        createdArtifacts: [`../${intentDir}.md`, "state.json"],
-        next: "ideation/scope-framing",
-      },
-      requiredArtifacts: [],
-      requiredMocks: [],
-      gate: "not_ready",
+      ...ideationDefaults,
+      ...existing.ideation,
+      intentCapture: existing.ideation?.intentCapture ?? ideationDefaults.intentCapture,
     },
   };
   writeState(state);
-  summary.push("ideation 開始の state.json を生成");
+  summary.push("ideation 開始の state.json を補完（既存の値を保持）");
 }
 
 function inceptionArtifactArrays(): State {

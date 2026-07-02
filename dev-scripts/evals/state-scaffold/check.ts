@@ -213,6 +213,14 @@ const captureWorkspace = workspaceCopy();
   if (state.ideation?.gate !== "not_ready") fail("intent-capture: gate が不正");
   runValidator(captureWorkspace, newIntent);
   assertIdempotent(captureWorkspace, ["intent-capture", "--intent", newIntent], newIntent);
+
+  // 進行中 ideation の既存値（requiredArtifacts など）を再実行で潰さない
+  const progressed = readState(captureWorkspace, newIntent);
+  progressed.ideation.requiredArtifacts = [`../${newIntent}.md`];
+  writeState(captureWorkspace, progressed, newIntent);
+  runScaffold(captureWorkspace, ["intent-capture", "--intent", newIntent]);
+  const preserved = readState(captureWorkspace, newIntent);
+  assertDeepEqual(preserved.ideation.requiredArtifacts, [`../${newIntent}.md`], "intent-capture の再実行は進行中 ideation の値を保持する");
 }
 
 // ---- inception-start / inception-complete: 既存 Intent の replay ----
