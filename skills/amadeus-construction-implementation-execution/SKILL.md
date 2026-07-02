@@ -34,7 +34,9 @@ Construction phase の実装実行だけを進める。
 
 `notes.md` がない場合は、`amadeus-construction-bolt-preparation` を案内して停止する。
 `tasks.md` がない場合は、`amadeus-construction-bolt-preparation` を案内して停止する。
-`state.json.construction.bolts[]` の対象 Bolt の `taskGeneration.status` が `ready_for_approval` または `passed` でない場合は、実装せずに停止する。
+`state.json.construction.bolts[]` の対象 Bolt の `taskGeneration.status` が `passed`（人間承認済み）の場合だけ、実装へ進む。
+`ready_for_approval` の場合は実装せずに停止し、人間承認待ちであることを報告する。
+それ以外の場合は実装せずに停止し、`amadeus-construction-bolt-preparation` を案内する。
 
 ## 成果物
 

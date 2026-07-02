@@ -62,6 +62,9 @@ Spec、実装、CI、運用手順は作らない。
 `amadeus-decision-review` は、既存成果物、Issue、PR、作業ツリー、validator 結果、Skill Contract、信頼できる参照元を入力証拠として扱う。
 decision review の outcome は `grill_required`、`no_grill`、`repair_only`、`follow_up_issue_candidate` に分ける。
 
+前段 phase の必須成果物にある `未確定事項` と `未確認事項` 見出しのうち、「<現在 phase> で判断する」を含む項目が 1 件以上残っている場合は、`amadeus-decision-review` の決定論的 grilling トリガーに従い、outcome を `grill_required` とする。
+調査で解消できる項目は、解消した根拠を記録すれば質問を省略できる。
+
 phase skill 起動時は、skill 供給元と実行環境の stage 前提も確認する。
 source skill、昇格先成果物、host environment での利用可否を分けて扱う。
 stage0、stage1、stage2、stage0 採用判断を確認し、stage2 を stage0 として扱う場合は人間による stage0 採用判断を証拠に含める。

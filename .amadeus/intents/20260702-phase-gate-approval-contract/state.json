@@ -1,7 +1,7 @@
 {
   "intent": "20260702-phase-gate-approval-contract",
-  "phase": "inception",
-  "status": "completed",
+  "phase": "construction",
+  "status": "in_progress",
   "ideation": {
     "intentCapture": {
       "status": "completed",
@@ -109,5 +109,160 @@
       "inception/bolts/B003-approval-evidence-check.md"
     ],
     "gate": "passed"
+  },
+  "construction": {
+    "status": "in_progress",
+    "gate": "not_ready",
+    "requiredArtifacts": [
+      "construction/traceability.md",
+      "construction/decisions.md"
+    ],
+    "requiredBoltArtifacts": [
+      "construction/bolts/B001-implementation-gate-contract/tasks.md",
+      "construction/bolts/B001-implementation-gate-contract/notes.md",
+      "construction/bolts/B002-trigger-and-scaffold-contract/tasks.md",
+      "construction/bolts/B002-trigger-and-scaffold-contract/notes.md",
+      "construction/bolts/B003-approval-evidence-check/tasks.md",
+      "construction/bolts/B003-approval-evidence-check/notes.md"
+    ],
+    "bolts": [
+      {
+        "id": "B001",
+        "taskGeneration": {
+          "status": "passed",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-phase-gate-skill-contract/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-phase-gate-skill-contract/functional-design/business-rules.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U001-phase-gate-skill-contract/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B001-implementation-gate-contract.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B001-implementation-gate-contract/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B001-implementation-gate-contract/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/decisions/D002-task-generation-approval.md"
+            }
+          ]
+        }
+      },
+      {
+        "id": "B002",
+        "taskGeneration": {
+          "status": "passed",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-phase-gate-skill-contract/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U001-phase-gate-skill-contract/functional-design/business-rules.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U001-phase-gate-skill-contract/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B002-trigger-and-scaffold-contract.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B002-trigger-and-scaffold-contract/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B002-trigger-and-scaffold-contract/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/decisions/D002-task-generation-approval.md"
+            }
+          ]
+        }
+      },
+      {
+        "id": "B003",
+        "taskGeneration": {
+          "status": "passed",
+          "evidence": [
+            {
+              "kind": "functional_design",
+              "path": "construction/U002-approval-evidence-validation/functional-design/business-logic-model.md"
+            },
+            {
+              "kind": "functional_design",
+              "path": "construction/U002-approval-evidence-validation/functional-design/business-rules.md"
+            },
+            {
+              "kind": "unit_design_brief",
+              "path": "inception/units/U002-approval-evidence-validation/design.md"
+            },
+            {
+              "kind": "bolt_module",
+              "path": "inception/bolts/B003-approval-evidence-check.md"
+            },
+            {
+              "kind": "tasks",
+              "path": "construction/bolts/B003-approval-evidence-check/tasks.md"
+            },
+            {
+              "kind": "notes",
+              "path": "construction/bolts/B003-approval-evidence-check/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/decisions/D002-task-generation-approval.md"
+            }
+          ]
+        }
+      }
+    ],
+    "targetBolts": [
+      "B001",
+      "B002",
+      "B003"
+    ],
+    "functionalDesign": {
+      "targetUnits": [
+        "U001",
+        "U002"
+      ],
+      "units": [
+        {
+          "unitId": "U001",
+          "requirement": "required",
+          "status": "passed",
+          "frontendSurface": "absent",
+          "targetSource": "construction_target_bolts",
+          "runMode": "initial"
+        },
+        {
+          "unitId": "U002",
+          "requirement": "required",
+          "status": "passed",
+          "frontendSurface": "absent",
+          "targetSource": "construction_target_bolts",
+          "runMode": "initial"
+        }
+      ]
+    }
   }
 }
