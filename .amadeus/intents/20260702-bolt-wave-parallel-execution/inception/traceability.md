@@ -76,7 +76,7 @@ Domain Map と Context Map は、採用済みの Bounded Context と依存関係
 | 要求 | R004 | R001, R002, R003 | 直列実行との整合は、wave 契約の全体が確定した後に確認できるため。 | [requirements.md](requirements.md) |
 | ユースケース | UC001 | なし | wave の導出は bolts.md の依存表だけを前提に成立するため。 | [use-cases.md](use-cases.md) |
 | ユースケース | UC002 | UC001 | まとめ承認は wave 分割が導出されていることが前提になるため。 | [use-cases.md](use-cases.md) |
-| ユースケース | UC003 | UC001, UC002 | 並行実行は wave 分割と承認済みの Task が前提になるため。 | [use-cases.md](use-cases.md) |
+| ユースケース | UC003 | UC001 | 並行実行は wave 分割と Task Generation の承認済み（passed）だけを前提にし、承認の形には依存しないため。 | [use-cases.md](use-cases.md) |
 | ユースケース | UC004 | なし | 直列実行は従来どおりの既定であり、他の相互作用に依存しないため。 | [use-cases.md](use-cases.md) |
 | ユニット | U001 | なし | wave の導出、実行、統合、承認は同じ実行契約を共有する単一の価値単位であるため。 | [units.md](units.md) |
 | ボルト | B001 | なし | wave 契約の本文が、整合確認の前提であるため。 | [bolts.md](bolts.md) |
