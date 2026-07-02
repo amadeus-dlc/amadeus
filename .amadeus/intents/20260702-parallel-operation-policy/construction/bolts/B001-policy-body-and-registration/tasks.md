@@ -1,6 +1,6 @@
 # Construction Tasks
 
-- [ ] T001: parallel-operation.md 本文を作成する。
+- [x] T001: parallel-operation.md 本文を作成する。
   - 作業:
     - `.amadeus/steering/policies/parallel-operation.md` を新設する。見出し構成は BR001（目的、対象、責務分担、判断基準の章 4 つ、根拠）に従う。
     - 並行させる単位の判断基準（接触面による並行可否。BR004）、共有成果物の統合手順（追従、再生成、検証の順。BR005）、ゲート承認の運用（キュー確認、まとめ承認、承認記録、遡及承認。BR006）、同一 worktree での直列化（BR007）を、肯定形の行動指針として書く（BR002）。
@@ -10,9 +10,9 @@
   - ユースケース: UC001, UC002, UC003
   - 依存: なし
   - 設計根拠: ../../U001-parallel-operation-policy-contract/functional-design/business-rules.md
-  - 証拠: 未登録
+  - 証拠: [test-results.md](test-results.md)
 
-- [ ] T002: 索引へ登録する。
+- [x] T002: 索引へ登録する。
   - 作業:
     - `.amadeus/steering/policies.md` の方針に並行運用ポリシーへの参照行を追加する。
     - `.amadeus/steering/policies/README.md` の登録済み policy 表に行を追加する。
@@ -21,4 +21,4 @@
   - ユースケース: UC004
   - 依存: T001
   - 設計根拠: ../../U001-parallel-operation-policy-contract/functional-design/business-rules.md
-  - 証拠: 未登録
+  - 証拠: [test-results.md](test-results.md)
