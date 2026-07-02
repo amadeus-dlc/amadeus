@@ -162,7 +162,7 @@ npm run validate:workspace -- <workspace> <intent-id>-<slug>
 
 ## Contributing
 
-This repository does not currently include a `CONTRIBUTING.md`.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the licensing terms of contributions, the DCO sign-off, and the workflow.
 Before making a large change, open an issue that describes the scope, affected skills, expected artifacts, and validation plan.
 
 For local development, use:
@@ -175,3 +175,5 @@ npm run test:all
 
 This repository is dual-licensed under MIT OR Apache-2.0.
 See [LICENSE-MIT](LICENSE-MIT) and [LICENSE-APACHE](LICENSE-APACHE).
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in this project by you, as defined in the Apache-2.0 license, shall be dual-licensed as above, without any additional terms or conditions.

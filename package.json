@@ -1,6 +1,7 @@
 {
   "name": "amadeus",
   "private": true,
+  "license": "(MIT OR Apache-2.0)",
   "scripts": {
     "test": "npm run test:all",
     "test:all": "npm run test:ci:mock",
