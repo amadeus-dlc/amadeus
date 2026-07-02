@@ -1,7 +1,7 @@
 {
   "intent": "20260702-internal-skill-policy-alignment",
   "phase": "construction",
-  "status": "in_progress",
+  "status": "completed",
   "ideation": {
     "intentCapture": {
       "status": "completed",
@@ -122,7 +122,7 @@
     "gate": "passed"
   },
   "construction": {
-    "status": "in_progress",
+    "status": "completed",
     "requiredArtifacts": [
       "construction/decisions.md",
       "construction/traceability.md",
@@ -139,7 +139,10 @@
       "construction/bolts/B002-implicit-invocation-policy/test-results.md",
       "construction/bolts/B003-follow-up-and-verification/tasks.md",
       "construction/bolts/B003-follow-up-and-verification/notes.md",
-      "construction/bolts/B003-follow-up-and-verification/test-results.md"
+      "construction/bolts/B003-follow-up-and-verification/test-results.md",
+      "construction/bolts/B001-readme-internal-skill-catalog/pr.md",
+      "construction/bolts/B002-implicit-invocation-policy/pr.md",
+      "construction/bolts/B003-follow-up-and-verification/pr.md"
     ],
     "targetBolts": [
       "B001",
@@ -165,7 +168,7 @@
       {
         "id": "B001",
         "taskGeneration": {
-          "status": "ready_for_approval",
+          "status": "passed",
           "evidence": [
             {
               "kind": "functional_design",
@@ -194,6 +197,10 @@
             {
               "kind": "notes",
               "path": "construction/bolts/B001-readme-internal-skill-catalog/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/decisions/D004-pr-287-merge-finalization.md"
             }
           ]
         }
@@ -201,7 +208,7 @@
       {
         "id": "B002",
         "taskGeneration": {
-          "status": "ready_for_approval",
+          "status": "passed",
           "evidence": [
             {
               "kind": "functional_design",
@@ -230,6 +237,10 @@
             {
               "kind": "notes",
               "path": "construction/bolts/B002-implicit-invocation-policy/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/decisions/D004-pr-287-merge-finalization.md"
             }
           ]
         }
@@ -237,7 +248,7 @@
       {
         "id": "B003",
         "taskGeneration": {
-          "status": "ready_for_approval",
+          "status": "passed",
           "evidence": [
             {
               "kind": "functional_design",
@@ -266,12 +277,16 @@
             {
               "kind": "notes",
               "path": "construction/bolts/B003-follow-up-and-verification/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/decisions/D004-pr-287-merge-finalization.md"
             }
           ]
         }
       }
     ],
-    "gate": "not_ready",
+    "gate": "passed",
     "requiredDecisionArtifacts": [
       "construction/decisions/D001-readme-skill-classification.md",
       "construction/decisions/D002-codex-internal-skill-policy.md",

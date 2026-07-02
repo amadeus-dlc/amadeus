@@ -22,6 +22,7 @@
 | 20260702-internal-skill-policy-alignment | 内部 skill の対象範囲と暗黙起動ポリシーを揃える。 | なし | [20260702-internal-skill-policy-alignment.md](intents/20260702-internal-skill-policy-alignment.md) |
 | 20260702-phase-gate-approval-contract | phase skill の人間ゲートと承認 evidence 検査を決定論的契約にする。 | 20260701-decision-review-grilling-gate, 20260702-skill-change-review-contract | [20260702-phase-gate-approval-contract.md](intents/20260702-phase-gate-approval-contract.md) |
 | 20260702-phase-pr-consolidation-policy | 小さい Intent の phase PR 統合条件を steering policy として定義する。 | 20260701-git-branching-policy, 20260702-state-json-scaffolding | [20260702-phase-pr-consolidation-policy.md](intents/20260702-phase-pr-consolidation-policy.md) |
+| 20260702-provenance-mechanization | provenance 記録の生成と検証を機械化する。 | 20260701-self-development-cycle-stage-workspace | [20260702-provenance-mechanization.md](intents/20260702-provenance-mechanization.md) |
 | 20260702-reference-link-policy | Amadeus 成果物の参照リンク化方針を定義する。 | 20260701-self-development-cycle-stage-workspace | [20260702-reference-link-policy.md](intents/20260702-reference-link-policy.md) |
 | 20260702-shared-index-generation | 共有インデックス intents.md と discoveries.md を配下モジュールからの生成物にする。 | なし | [20260702-shared-index-generation.md](intents/20260702-shared-index-generation.md) |
 | 20260702-skill-change-review-contract | skill 変更のレビュー支援契約を steering policy として確定する。 | なし | [20260702-skill-change-review-contract.md](intents/20260702-skill-change-review-contract.md) |
@@ -50,6 +51,7 @@
 | 20260702-phase-gate-approval-contract | 20260702-skill-change-review-contract | Issue #306 と #307 の skill 変更 PR はレビュー支援契約の適用対象であるため。 |
 | 20260702-phase-pr-consolidation-policy | 20260701-git-branching-policy | Issue #310 は Git Branching Policy の branch 命名との整合確認を含むため。 |
 | 20260702-phase-pr-consolidation-policy | 20260702-state-json-scaffolding | 統合 PR の state 検証は雛形生成（Issue #311）が前提を単純にするため。 |
+| 20260702-provenance-mechanization | 20260701-self-development-cycle-stage-workspace | Issue #296 は、Intent 20260701-self-development-cycle-stage-workspace の U002 Unit Design Brief が残した「evidence を JSON として標準化する必要が出た場合」という再確認条件の発火元であるため。 |
 | 20260702-reference-link-policy | 20260701-self-development-cycle-stage-workspace | Issue #243 は、自己開発 cycle と workspace 対応記録で作成された Functional Design を観察例にし、Amadeus 成果物の参照リンク化方針を後続 Intent として扱うため。 |
 | 20260702-shared-index-generation | なし | Issue #334 は Discovery 20260702-parallel-execution の recommended 候補であり、既存 Intent の完了を前提にしないため。 |
 | 20260702-skill-change-review-contract | なし | Issue #298 は既存の steering policies の変更種別「skill 変更」必須条件を強化する独立した文書変更であり、他 Intent の完了を前提にしないため。 |
