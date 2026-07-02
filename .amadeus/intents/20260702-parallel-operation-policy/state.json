@@ -1,6 +1,6 @@
 {
   "intent": "20260702-parallel-operation-policy",
-  "phase": "ideation",
+  "phase": "inception",
   "status": "completed",
   "ideation": {
     "status": "completed",
@@ -23,6 +23,82 @@
     ],
     "requiredMocks": [
       "ideation/mocks/initial-confirmation.puml"
+    ],
+    "gate": "passed"
+  },
+  "inception": {
+    "status": "completed",
+    "codebaseAnalysis": {
+      "requirement": "required",
+      "status": "passed",
+      "evidence": [
+        {
+          "kind": "file",
+          "path": ".amadeus/steering/policies/git-branching.md"
+        },
+        {
+          "kind": "file",
+          "path": ".amadeus/steering/policies.md"
+        },
+        {
+          "kind": "file",
+          "path": ".amadeus/steering/policies/README.md"
+        },
+        {
+          "kind": "file",
+          "path": ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts"
+        },
+        {
+          "kind": "file",
+          "path": ".agents/skills/amadeus-validator/scripts/GateQueueList.ts"
+        }
+      ],
+      "targetScope": [
+        ".amadeus/steering/policies/git-branching.md",
+        ".amadeus/steering/policies.md",
+        ".amadeus/steering/policies/README.md",
+        ".amadeus/intents/20260702-shared-index-generation",
+        ".amadeus/intents/20260702-gate-queue-visualization",
+        ".agents/skills/amadeus-validator/scripts/GateQueueList.ts"
+      ],
+      "analyzedCommit": "edebc629916f27ccf78cd8bf15d038f6d6937ee7",
+      "analyzedAt": "2026-07-02T12:57:00Z",
+      "freshness": "current"
+    },
+    "requiredArtifacts": [
+      "inception/requirements.md",
+      "inception/acceptance.md",
+      "inception/use-cases.md",
+      "inception/codebase-analysis.md",
+      "inception/units.md",
+      "inception/units/U001-parallel-operation-policy-contract.md",
+      "inception/units/U001-parallel-operation-policy-contract/design.md",
+      "inception/bolts.md",
+      "inception/traceability.md",
+      "inception/decisions.md"
+    ],
+    "requiredRequirementArtifacts": [
+      "inception/requirements/R001-parallel-unit-criteria.md",
+      "inception/requirements/R002-shared-artifact-integration.md",
+      "inception/requirements/R003-gate-approval-operation.md",
+      "inception/requirements/R004-worktree-serialization.md",
+      "inception/requirements/R005-registration-and-boundary.md"
+    ],
+    "requiredStoryArtifacts": [],
+    "requiredUseCaseArtifacts": [
+      "inception/use-cases/UC001-decide-parallel-start.md",
+      "inception/use-cases/UC002-integrate-after-merge.md",
+      "inception/use-cases/UC003-operate-approval-queue.md",
+      "inception/use-cases/UC004-locate-policy.md"
+    ],
+    "requiredDecisionArtifacts": [
+      "inception/decisions/D001-inception-boundary.md",
+      "inception/decisions/D002-skip-user-stories.md",
+      "inception/decisions/D003-single-unit-exception.md"
+    ],
+    "requiredBoltArtifacts": [
+      "inception/bolts/B001-policy-body-and-registration.md",
+      "inception/bolts/B002-boundary-cross-reference.md"
     ],
     "gate": "passed"
   }
