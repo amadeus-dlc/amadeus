@@ -126,7 +126,7 @@ v2には、次のようなセンサーがある。
 
 ### 9. ConstructionはBolt単位で進める
 
-Constructionでは、Unit of Workをさらに実装可能なBoltに分ける。最初のBoltはwalking skeletonとして必ずゲートされ、アーキテクチャが最小のエンドツーエンドで成立するかを確認する。
+Boltの分割と順序は、Inceptionの最終ステージであるDelivery Planning（Stage 2.8）で`bolt-plan.md`として計画される。Constructionはこの計画に沿ってBolt単位で実行を進め、Boltを計画するステージを持たない。最初のBoltはwalking skeletonとして必ずゲートされ、アーキテクチャが最小のエンドツーエンドで成立するかを確認する。
 
 その後、ユーザーは残りのBoltを自律実行させるか、Boltごとにゲートするかを選べる。これにより、全工程を細かく承認しすぎる負担と、大量コードを一括レビューする危険の中間を取る。
 

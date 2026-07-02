@@ -96,7 +96,9 @@ amadeus では、`amadeus-validate-intent`、`amadeus-validate-traceability`、`
 
 ## Boltモデル
 
-Construction フェーズでは、Unit of Work を複数の Bolt に分解する。
+Bolt の分割と順序は、Inception の Delivery Planning stage で `bolt-plan.md` として計画する。
+
+Construction フェーズは、計画済みの Bolt を Bolt 単位で実行し、Bolt を計画する stage を持たない。
 
 Bolt には、Walking Skeleton、Feature、Integration のような役割がある。
 
