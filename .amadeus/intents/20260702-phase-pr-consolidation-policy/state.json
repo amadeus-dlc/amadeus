@@ -1,6 +1,6 @@
 {
   "intent": "20260702-phase-pr-consolidation-policy",
-  "phase": "ideation",
+  "phase": "inception",
   "status": "completed",
   "ideation": {
     "status": "completed",
@@ -21,6 +21,73 @@
     ],
     "requiredMocks": [
       "ideation/mocks/initial-confirmation.puml"
+    ],
+    "gate": "passed"
+  },
+  "inception": {
+    "status": "completed",
+    "codebaseAnalysis": {
+      "requirement": "required",
+      "status": "passed",
+      "evidence": [
+        {
+          "kind": "file",
+          "path": ".amadeus/steering/policies/git-branching.md"
+        },
+        {
+          "kind": "file",
+          "path": ".amadeus/steering/policies.md"
+        },
+        {
+          "kind": "file",
+          "path": ".amadeus/development.md"
+        },
+        {
+          "kind": "file",
+          "path": ".amadeus/intents/20260702-phase-gate-approval-contract/state.json"
+        }
+      ],
+      "targetScope": [
+        ".amadeus/steering/policies/git-branching.md",
+        ".amadeus/steering/policies.md",
+        ".amadeus/development.md"
+      ],
+      "analyzedCommit": "b84694d3acb4f918471711ce43168b871cf08d64",
+      "analyzedAt": "2026-07-02T06:37:48Z",
+      "freshness": "current"
+    },
+    "requiredArtifacts": [
+      "inception/requirements.md",
+      "inception/acceptance.md",
+      "inception/use-cases.md",
+      "inception/codebase-analysis.md",
+      "inception/units.md",
+      "inception/units/U001-pr-consolidation-contract.md",
+      "inception/units/U001-pr-consolidation-contract/design.md",
+      "inception/bolts.md",
+      "inception/traceability.md",
+      "inception/decisions.md"
+    ],
+    "requiredRequirementArtifacts": [
+      "inception/requirements/R001-consolidation-conditions.md",
+      "inception/requirements/R002-consolidation-boundary-and-naming.md",
+      "inception/requirements/R003-consolidated-pr-records.md",
+      "inception/requirements/R004-existing-documents-consistency.md"
+    ],
+    "requiredStoryArtifacts": [],
+    "requiredUseCaseArtifacts": [
+      "inception/use-cases/UC001-judge-consolidation-conditions.md",
+      "inception/use-cases/UC002-create-consolidated-pr.md",
+      "inception/use-cases/UC003-review-and-gate-judgment.md"
+    ],
+    "requiredDecisionArtifacts": [
+      "inception/decisions/D001-inception-scope.md",
+      "inception/decisions/D002-bc001-reference.md",
+      "inception/decisions/D003-stories-and-granularity.md"
+    ],
+    "requiredBoltArtifacts": [
+      "inception/bolts/B001-policy-consolidation-rules.md",
+      "inception/bolts/B002-development-doc-alignment.md"
     ],
     "gate": "passed"
   }
