@@ -1,7 +1,7 @@
 {
   "intent": "20260702-construction-internal-next-skill-parent-routing",
   "phase": "construction",
-  "status": "in_progress",
+  "status": "completed",
   "ideation": {
     "intentCapture": {
       "status": "completed",
@@ -114,7 +114,7 @@
     "gate": "passed"
   },
   "construction": {
-    "status": "in_progress",
+    "status": "completed",
     "requiredArtifacts": [
       "construction/decisions.md",
       "construction/traceability.md"
@@ -157,7 +157,7 @@
       {
         "id": "B001",
         "taskGeneration": {
-          "status": "ready_for_approval",
+          "status": "passed",
           "evidence": [
             {
               "kind": "functional_design",
@@ -186,6 +186,10 @@
             {
               "kind": "notes",
               "path": "construction/bolts/B001-implementation-next-skill-guidance/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/decisions/D003-task-generation-retroactive-approval.md"
             }
           ]
         }
@@ -193,7 +197,7 @@
       {
         "id": "B002",
         "taskGeneration": {
-          "status": "ready_for_approval",
+          "status": "passed",
           "evidence": [
             {
               "kind": "functional_design",
@@ -222,6 +226,10 @@
             {
               "kind": "notes",
               "path": "construction/bolts/B002-verification-next-skill-guidance/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/decisions/D003-task-generation-retroactive-approval.md"
             }
           ]
         }
@@ -229,7 +237,7 @@
       {
         "id": "B003",
         "taskGeneration": {
-          "status": "ready_for_approval",
+          "status": "passed",
           "evidence": [
             {
               "kind": "functional_design",
@@ -258,11 +266,15 @@
             {
               "kind": "notes",
               "path": "construction/bolts/B003-routing-alignment-check/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/decisions/D003-task-generation-retroactive-approval.md"
             }
           ]
         }
       }
     ],
-    "gate": "not_ready"
+    "gate": "passed"
   }
 }
