@@ -20,6 +20,14 @@
 2. T002 で走査、判定、整形、CLI を実装し、GREEN を確認する。
 3. T003 で昇格先を同期し、標準検証の pass を確認する。
 
+## 実装で確定した判断
+
+- T001 の RED は「Module not found "skills/amadeus-validator/scripts/GateQueueList.ts"」による検証失敗として確認した（`npm run test:it:gate-queue-list` が exit 非 0）。
+- 承認待ちとして扱う `taskGeneration.status` は、契約カタログの `gateResultByStatus` から gate 結果が `waiting_approval` になる status を導出する（現行語彙では `ready_for_approval`）。値をスクリプト内に複製しない。
+- top-level `status: waiting_approval` は `state.phase` が示す phase の行へ併記する。phase が既知の 3 phase 以外の場合は、行を落とさずゲート列を `未確認` にする（fail-safe）。
+- 同一 Intent 内の行の並び順は、phase 順（ideation、inception、construction）、phase gate 行が Task Generation 行より先、Bolt ID 昇順とした。
+- 昇格済みスクリプトを現 workspace と `examples/04-construction-design-ready` に対して実行し、実データでの検出（現 workspace で 3 件、examples/04 で 1 件）と exit 0 を確認した。
+
 ## 未確認事項
 
 - Inception の実装対象 IT002 は検証の置き場所を `skills/amadeus-validator/evals/` としていたが、決定論的検証は先例（`index-generate`）に合わせて `dev-scripts/evals/gate-queue-list/` に置く。`skills/amadeus-validator/evals/evals.json` への LLM eval 追加の要否は B002 で判断する。
