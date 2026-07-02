@@ -9,6 +9,7 @@
 | D003 | B002 と B003 の Task Generation 承認 | B002 と B003 の Task 分解を Maintainer が承認した。実装は Sonnet へ順次委譲する。 | accepted | D001 | [D003-b002-b003-task-generation-approval.md](decisions/D003-b002-b003-task-generation-approval.md) |
 | D004 | greenfield のゼロ状態整合 | 生成器がゼロ件時にテンプレートと同じ案内文を出力し、検証でテンプレートとの一致を固定する。 | accepted | D001 | [D004-greenfield-zero-state-alignment.md](decisions/D004-greenfield-zero-state-alignment.md) |
 | D005 | B004 の Task Generation 承認 | B004 の Task 分解を Maintainer が承認した。実装は Sonnet へ委譲する。 | accepted | D001 | [D005-b004-task-generation-approval.md](decisions/D005-b004-task-generation-approval.md) |
+| D006 | PR #348 merge finalization | PR #348 の merge を Construction 完了証拠として採用する。 | accepted | D002, D003, D005 | [D006-pr-348-merge-finalization.md](decisions/D006-pr-348-merge-finalization.md) |
 
 ## 依存関係
 
@@ -19,6 +20,7 @@
 | D003 | D001 | Task 分解は Functional Design と Unit Design Brief を根拠にするため。 |
 | D004 | D001 | ゼロ状態の出力形式は D001 で確定した生成契約の補完であるため。 |
 | D005 | D001 | Task 分解は Functional Design と Unit Design Brief を根拠にするため。 |
+| D006 | D002, D003, D005 | 実装 PR の merge は、承認済み Task の実行結果を完了証拠としてまとめるため。 |
 
 ## Domain Map と Context Map
 
