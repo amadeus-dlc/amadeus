@@ -168,6 +168,6 @@ v2 の UUIDv7 は採用しない。
 
 - `state.json` が本スキーマに適合する。
 - `completed` のステージに、契約が必須とする成果物が存在する。
-- `skipped` のステージの成果物を、後続ステージが必須入力として参照していない。
+- 必須入力の供給ステージが `skipped` の場合、後続ステージが [scopes.md](scopes.md) の縮退時の入力代替に従っている。
 - `scope` の実行対象と `stages` のキー集合が一致する。
 - phase 遷移が `phaseGates` の approval evidence を持つ。

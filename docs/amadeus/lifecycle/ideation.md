@@ -20,7 +20,7 @@ phase 完了は Ideation 成果物の PR と人間 merge で確定する。
 
 scope が SKIP にするステージは実行しない。
 scope が EXECUTE にするステージのうち、`ALWAYS` は必ず実行し、`CONDITIONAL` は `Condition` が真の場合だけ実行する。
-実行しなかった `CONDITIONAL` ステージの成果物を、後続ステージの必須入力にしない。
+必須入力の供給ステージを実行しなかった場合の扱いは、[scopes.md](scopes.md) の縮退時の入力代替に従う。
 
 既存成果物がある場合は、再作成ではなく点検または補修で充足してよい。
 

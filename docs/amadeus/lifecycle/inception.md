@@ -312,10 +312,12 @@ Unit の境界戦略（サービス別、機能別、ドメイン別、デプロ
 
 | Artifact | 必須 | 供給元 |
 |---|---|---|
-| `components.md`、`component-methods.md`、`services.md`、`component-dependency.md`、`design-decisions.md` | 必須 | Stage 2.6 |
+| `components.md`、`component-methods.md`、`services.md`、`component-dependency.md`、`design-decisions.md` | 必須（Application Design 実行時） | Stage 2.6 |
 | `requirements.md` | 必須 | Stage 2.3 |
 | `stories.md` | 任意 | Stage 2.4 |
 | `intent-backlog.md` | 任意 | Stage 1.4 |
+
+Application Design を実行しなかった場合は、[scopes.md](scopes.md) の縮退時の入力代替に従い、Reverse Engineering の成果物または `requirements.md` から Unit 境界を判断する。
 
 ### Outputs
 
@@ -361,7 +363,7 @@ Bolt の束ね方（Unit 1 個ずつ、関連 Unit の束、Unit をまたぐ薄
 | `units.md`、`unit-dependencies.md` | 必須 | Stage 2.7 |
 | `unit-story-map.md` | 任意 | Stage 2.7 |
 | `requirements.md` | 必須 | Stage 2.3 |
-| `components.md` | 必須 | Stage 2.6 |
+| `components.md` | 必須（Application Design 実行時） | Stage 2.6 |
 | `stories.md`、`mockups.md` | 任意 | Stage 2.4、2.5 |
 | `team-practices.md` | 任意 | Stage 2.2 |
 
