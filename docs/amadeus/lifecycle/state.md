@@ -60,7 +60,7 @@
 | `phase` | 現在の phase。`ideation`、`inception`、`construction`、`completed` のいずれか。 |
 | `currentStage` | 実行中または次に実行するステージの slug。 |
 | `stages` | ステージ slug からステージ状態への対応。scope が実行対象にするステージだけを持つ。 |
-| `phaseGates` | phase 境界の承認記録。phase 名から approval evidence への対応。 |
+| `phaseGates` | phase 境界の承認記録。phase 名から approval evidence への対応。全ステージが SKIP の phase は approval evidence の代わりに `{"skipped": true}` を記録する。 |
 
 Unit 単位ステージ（Construction 3.1〜3.5）は、`stages` の値を Unit 単位の対応に拡張する。
 
@@ -145,10 +145,10 @@ Request Changes が 3 回続いた後の Accept as-is による完了は、`appr
 
 phase は `ideation`、`inception`、`construction` の順に進む。
 
-phase 内の実行対象ステージがすべて `completed` または `skipped` になり、phase PR が merge された時点で、次の phase へ遷移する。
+実行したステージが 1 つ以上ある phase は、実行対象ステージがすべて `completed` または `skipped` になり、phase PR が merge された時点で、次の phase へ遷移する。
 
-scope が phase 内の全ステージを SKIP にする場合、その phase は成果物と PR を作らずに通過する。
-例として bugfix は Ideation の全ステージが SKIP であり、Intake の birth 承認から直接 Inception 相当のステージへ進む。
+scope が phase 内の全ステージを SKIP にする場合、その phase は成果物と phase PR を作らずに通過し、`phaseGates` に `{"skipped": true}` を記録する。
+例として bugfix は Ideation の全ステージが SKIP であり、Intake の birth 承認を根拠に `"ideation": {"skipped": true}` を記録して、直接 Inception のステージへ進む。
 
 `status` が `parked` の Intent は、単一入口の次の呼び出しで `currentStage` から再開する。
 
@@ -170,4 +170,5 @@ v2 の UUIDv7 は採用しない。
 - `completed` のステージに、契約が必須とする成果物が存在する。
 - 必須入力の供給ステージが `skipped` の場合、後続ステージが [scopes.md](scopes.md) の縮退時の入力代替に従っている。
 - `scope` の実行対象と `stages` のキー集合が一致する。
-- phase 遷移が `phaseGates` の approval evidence を持つ。
+- 実行したステージが 1 つ以上ある phase の遷移が、`phaseGates` の approval evidence を持つ。
+- 全ステージが SKIP の phase の遷移が、`phaseGates` の `{"skipped": true}` を持つ。
