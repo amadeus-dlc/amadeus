@@ -1,0 +1,16 @@
+@startuml
+salt
+{
+  {#
+    . | phase PR 統合の確認
+    入力 | 対象 Intent の実行スコープ、変更対象、Ideation の未確定事項の解消状況
+    判定 | 統合条件（refactor または docs 系、文書のみ、未確定事項が解消済み）に該当するか
+    統合 | 該当する場合、複数 phase の成果物を 1 branch にまとめて PR 化する
+    記録 | PR 説明に含まれる phase 成果物を明記する
+    gate | gate の判定は phase ごとに state.json で行う（PR の単位と独立）
+  }
+  {
+    [統合 PR として作成する] | [既定どおり phase ごとの PR にする] | [条件に該当せず既定へ戻る]
+  }
+}
+@enduml

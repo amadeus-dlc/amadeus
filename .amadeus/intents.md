@@ -23,6 +23,7 @@
 | 20260702-construction-finalization-resume | merge 後の Construction finalization を決定論的に再開、検出できるようにする。 | 20260702-skill-change-review-contract | [20260702-construction-finalization-resume.md](intents/20260702-construction-finalization-resume.md) |
 | 20260702-phase-gate-approval-contract | phase skill の人間ゲートと承認 evidence 検査を決定論的契約にする。 | 20260701-decision-review-grilling-gate, 20260702-skill-change-review-contract | [20260702-phase-gate-approval-contract.md](intents/20260702-phase-gate-approval-contract.md) |
 | 20260702-state-json-scaffolding | phase 遷移の state.json 雛形を skill 同梱スクリプトで生成する。 | 20260702-phase-gate-approval-contract | [20260702-state-json-scaffolding.md](intents/20260702-state-json-scaffolding.md) |
+| 20260702-phase-pr-consolidation-policy | 小さい Intent の phase PR 統合条件を steering policy として定義する。 | 20260701-git-branching-policy, 20260702-state-json-scaffolding | [20260702-phase-pr-consolidation-policy.md](intents/20260702-phase-pr-consolidation-policy.md) |
 
 ## 依存関係
 
@@ -47,3 +48,4 @@
 | 20260702-construction-finalization-resume | 20260702-skill-change-review-contract | Issue #309 の skill 変更 PR は、同 Intent で確定したレビュー支援契約（挙動差分要約、skill-forge 確認、粒度制約）の適用対象であるため。 |
 | 20260702-phase-gate-approval-contract | 20260701-decision-review-grilling-gate, 20260702-skill-change-review-contract | Issue #306 の grilling 起動トリガーは Issue #257 で確定した decision review 契約への追加であり、Issue #306 と #307 の skill 変更 PR はレビュー支援契約の適用対象であるため。 |
 | 20260702-state-json-scaffolding | 20260702-phase-gate-approval-contract | Issue #311 の雛形に含める approval evidence の形式は、ゲート契約の Intent で確定した Task Generation Gate の契約を前提にするため。 |
+| 20260702-phase-pr-consolidation-policy | 20260701-git-branching-policy, 20260702-state-json-scaffolding | Issue #310 は Git Branching Policy の branch 命名との整合確認を含み、統合 PR の state 検証は雛形生成（Issue #311）が前提を単純にするため。 |
