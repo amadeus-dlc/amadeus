@@ -1,7 +1,7 @@
 {
   "intent": "20260702-phase-pr-consolidation-policy",
   "phase": "construction",
-  "status": "in_progress",
+  "status": "completed",
   "ideation": {
     "status": "completed",
     "intentCapture": {
@@ -92,8 +92,8 @@
     "gate": "passed"
   },
   "construction": {
-    "status": "in_progress",
-    "gate": "not_ready",
+    "status": "completed",
+    "gate": "passed",
     "requiredArtifacts": [
       "construction/traceability.md",
       "construction/decisions.md"
@@ -102,7 +102,11 @@
       "construction/bolts/B001-policy-consolidation-rules/tasks.md",
       "construction/bolts/B001-policy-consolidation-rules/notes.md",
       "construction/bolts/B002-development-doc-alignment/tasks.md",
-      "construction/bolts/B002-development-doc-alignment/notes.md"
+      "construction/bolts/B002-development-doc-alignment/notes.md",
+      "construction/bolts/B001-policy-consolidation-rules/test-results.md",
+      "construction/bolts/B001-policy-consolidation-rules/pr.md",
+      "construction/bolts/B002-development-doc-alignment/test-results.md",
+      "construction/bolts/B002-development-doc-alignment/pr.md"
     ],
     "bolts": [
       {
