@@ -80,7 +80,7 @@ Domain Map と Context Map には候補を載せない。
 
 1. 状態が `pending` の場合だけ Condition を判定する。偽なら対象 Unit を `skipped` にして終了する。`active`、`awaiting_approval`、`revising` からの再開では再判定しない。
 2. 対象 Unit の `stages["functional-design"].units["<unit-id>"].state` を `active` にする。
-3. 対象 Unit、要求、Application Design、ドメインの判断材料を読み、本物の欠落だけを質問で確認する。
+3. 対象 Unit、要求、Application Design、ドメインの判断材料を読み、本物の欠落だけを質問で確認する。Application Design を実行しなかった場合は、前提の縮退時の入力代替に従い、使った代替を `business-logic-model.md` に記録する。
 4. `business-logic-model.md`、`business-rules.md`、`domain-entities.md` を作る。UI がある場合は `frontend-components.md` も作る。
 5. 対象 Unit の状態を `awaiting_approval` にし、ゲートを提示する。
 
@@ -95,9 +95,12 @@ Request Changes が 3 回続いたら Accept as-is を選択肢に加える。
 この場合の approval evidence は、Bolt PR の merge 後に `amadeus` 入口の Bolt 境界処理が `via: "pr"` と PR の URL で記録する。
 失敗や本物の欠落を検出した場合は、autonomy に関わらず停止して人間に確認する。
 
-承認されたら対象 Unit の `state` を `completed` にし、`approval` に `approvedAt` と `via: "conversation"` を記録する。
-差し戻されたら対象 Unit の `state` を `revising` にする。
-Accept as-is が選ばれた場合は、対象 Unit の `state` を `completed` にし、`approval` に `approvedAt`、`via: "conversation"`、`"acceptedAsIs": true` を記録し、この判断を `construction/decisions.md` に記録する。
+承認されたら `stages["functional-design"].units["<unit-id>"].state` を `completed` にし、`stages["functional-design"].units["<unit-id>"].approval` に `approvedAt` と `via: "conversation"` を記録する。
+差し戻されたら `stages["functional-design"].units["<unit-id>"].state` を `revising` にする。
+Accept as-is が選ばれた場合は、`stages["functional-design"].units["<unit-id>"].state` を `completed` にし、`stages["functional-design"].units["<unit-id>"].approval` に `approvedAt`、`via: "conversation"`、`"acceptedAsIs": true` を記録し、この判断を `construction/decisions.md` に記録する。
+
+承認（Accept as-is を含む）の後で、`domain-entities.md` の `Domain Map と Context Map への反映候補` のうち採用判断が確定したものだけを、Domain Map と Context Map へ反映する。
+autonomy により会話内ゲートを提示しなかった場合は、Bolt PR の merge 後に同じ反映を行う。
 
 ## 禁止事項
 

@@ -83,9 +83,9 @@ Request Changes が 3 回続いたら Accept as-is を選択肢に加える。
 この場合の approval evidence は、Bolt PR の merge 後に `amadeus` 入口の Bolt 境界処理が `via: "pr"` と PR の URL で記録する。
 失敗や本物の欠落を検出した場合は、autonomy に関わらず停止して人間に確認する。
 
-承認されたら対象 Unit の `state` を `completed` にし、`approval` に `approvedAt` と `via: "conversation"` を記録する。
-差し戻されたら対象 Unit の `state` を `revising` にする。
-Accept as-is が選ばれた場合は、対象 Unit の `state` を `completed` にし、`approval` に `approvedAt`、`via: "conversation"`、`"acceptedAsIs": true` を記録し、この判断を `construction/decisions.md` に記録する。
+承認されたら `stages["nfr-design"].units["<unit-id>"].state` を `completed` にし、`stages["nfr-design"].units["<unit-id>"].approval` に `approvedAt` と `via: "conversation"` を記録する。
+差し戻されたら `stages["nfr-design"].units["<unit-id>"].state` を `revising` にする。
+Accept as-is が選ばれた場合は、`stages["nfr-design"].units["<unit-id>"].state` を `completed` にし、`stages["nfr-design"].units["<unit-id>"].approval` に `approvedAt`、`via: "conversation"`、`"acceptedAsIs": true` を記録し、この判断を `construction/decisions.md` に記録する。
 
 ## 禁止事項
 

@@ -90,7 +90,7 @@ Unit 数や Bolt 数の見込みを受理の判定材料にしない。
 4. 判定対象から、状態が `revising`、`active`、`awaiting_approval` のステージがあればそれを優先し、Condition を再判定せずに手順 6 へ進む。なければ、ステージ順序で最初の `pending` を選ぶ。
 5. 選んだ `pending` のステージが `CONDITIONAL` の場合は、Condition を判定する。偽の場合は状態を `skipped` にし、理由を記録して手順 3 へ戻る。
 6. `currentStage` を選んだステージの slug に更新し、ステージに対応する内部 skill を呼び出す。対応表は [references/stage-catalog.md](references/stage-catalog.md) に従う。対応する skill が利用できない場合は、実行せずに停止し、不足しているステージ skill 名を報告する。
-7. phase 境界処理を行う。実行したステージが 1 つ以上ある phase は、phase PR の作成を案内し、merge の確認後に `phaseGates.<phase>` へ approval evidence（`approvedAt`、`via: "pr"`、`reference` に PR の URL）を記録して、`phase` を次へ進める。実行したステージが 1 つもない phase は、`phaseGates.<phase>` に `{"skipped": true}` を記録して通過する。phase を進めたら手順 2 へ戻る。
+7. phase 境界処理を行う。実行したステージが 1 つ以上ある phase は、phase PR の作成を案内し、merge の確認後に `phaseGates.<phase>` へ approval evidence（`approvedAt`、`via: "pr"`、`reference` に PR の URL）を記録して、`phase` を次へ進める。現在の phase が `construction` の場合は、phase PR の案内の前に `construction/decisions.md` と `construction/traceability.md` を確定し、merge の確認後に `status` を `completed` にする。実行したステージが 1 つもない phase は、`phaseGates.<phase>` に `{"skipped": true}` を記録して通過する。phase を進めたら手順 2 へ戻る。
 
 phase 境界処理（phase PR の案内、`phaseGates` の記録、`phase` の遷移）は、この skill だけが行う。
 ステージ内部 skill には委譲しない。

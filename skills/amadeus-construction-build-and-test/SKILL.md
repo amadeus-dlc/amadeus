@@ -47,7 +47,8 @@ workshop はテスト戦略だけを Minimal に上書きする。
 ## 成果物
 
 作成または更新するものは次だけである。
-配置先は `construction/bolts/<bolt-id>-<slug>/` である。
+
+`construction/bolts/<bolt-id>-<slug>/` に置くもの:
 
 - `build-instructions.md`（ビルド手順）
 - `unit-test-instructions.md`（ユニットテスト手順）
@@ -56,7 +57,10 @@ workshop はテスト戦略だけを Minimal に上書きする。
 - `security-test-instructions.md`（セキュリティテストを実行した場合）
 - `summary.md`（ビルドとテストの要約）
 - `test-results.md`（テスト実行結果。実行したコマンドと結果を含める）
-- `state.json`（対象 Bolt の記録）
+
+Intent のモジュールディレクトリ直下で更新するもの:
+
+- `state.json`（`bolts["<bolt-id>"]` の記録。Bolt ディレクトリには置かない）
 
 ## 手順
 
