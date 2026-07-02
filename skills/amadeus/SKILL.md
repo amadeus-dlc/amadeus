@@ -105,7 +105,7 @@ Construction は Bolt を実行単位にする。
 2. **Bolt の開始**。branch と worktree を steering layer の policies（branch 戦略）に従って作り、`bolts["<bolt-id>"]` に `state: "active"` と束ねる Unit の一覧を記録する。
 3. **Unit 単位ステージの実行**。Bolt に束ねた Unit ごとに、Stage 3.1 から 3.5 をステージ順で解決し、対応する内部 skill を呼び出す。Unit 単位の状態は `stages["<slug>"].units["<unit-id>"]` で管理する。
 4. **Build and Test**。Bolt 内の全 Unit の Code Generation 完了後に、Stage 3.6 を 1 回呼び出す。失敗時は autonomy に関わらず停止して人間に確認する（halt-and-ask）。
-5. **Bolt 境界処理**。Build and Test の成功後、Bolt PR の作成を案内する。merge の確認後、`bolts["<bolt-id>"].gate` に approval evidence（`approvedAt`、`via: "pr"`、`reference` に PR の URL）を記録し、`state` を `completed` にする。`autonomy` が `continue_autonomously` の Bolt では、この merge をもって Bolt 内の各ステージの approval を `via: "pr"` と同じ URL で補完記録する。
+5. **Bolt 境界処理**。Build and Test の成功後、Bolt PR の作成を案内する。merge の確認後、`bolts["<bolt-id>"].gate` に approval evidence（`approvedAt`、`via: "pr"`、`reference` に PR の URL）を記録し、`state` を `completed` にする。`autonomy` が `continue_autonomously` の Bolt では、この merge をもって Bolt 内の各ステージの approval を `via: "pr"` と同じ URL で補完記録し、Bolt 内の Functional Design が `domain-entities.md` に記録した `Domain Map と Context Map への反映候補` のうち採用判断が確定したものを、Domain Map と Context Map へ反映する。
 6. **walking skeleton ゲート**。最初の Bolt は、`autonomy` の設定に関わらず、設計成果物と生成コードをまとめて必ず人間が承認する（Bolt PR の merge で確定する）。
 7. **ladder 提案**。walking skeleton の merge 直後に一度だけ、残りの Bolt の進め方を確認し、回答を `state.json.autonomy` に記録する。選択肢は「Continue autonomously（残りの Bolt をゲートなしで実行する。失敗時は停止して確認する）」と「Gate every Bolt（Bolt ごとにゲートを提示する）」の 2 つである。
 8. **反復**。次の Bolt があれば手順 1 へ戻る。全 Bolt 完了後、Stage 3.7 を Intent 単位で解決する。

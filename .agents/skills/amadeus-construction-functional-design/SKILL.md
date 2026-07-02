@@ -100,7 +100,8 @@ Request Changes が 3 回続いたら Accept as-is を選択肢に加える。
 Accept as-is が選ばれた場合は、`stages["functional-design"].units["<unit-id>"].state` を `completed` にし、`stages["functional-design"].units["<unit-id>"].approval` に `approvedAt`、`via: "conversation"`、`"acceptedAsIs": true` を記録し、この判断を `construction/decisions.md` に記録する。
 
 承認（Accept as-is を含む）の後で、`domain-entities.md` の `Domain Map と Context Map への反映候補` のうち採用判断が確定したものだけを、Domain Map と Context Map へ反映する。
-autonomy により会話内ゲートを提示しなかった場合は、Bolt PR の merge 後に同じ反映を行う。
+autonomy により会話内ゲートを提示しなかった場合は、この skill は反映を行わない。
+その場合の反映は、Bolt PR の merge 後に `amadeus` 入口の Bolt 境界処理が行う。
 
 ## 禁止事項
 
