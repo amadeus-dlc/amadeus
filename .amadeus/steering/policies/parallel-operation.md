@@ -46,7 +46,7 @@ phase をまたぐパイプライン（ある Intent の Construction と別の 
 
 並行 branch のマージ後は、次の順で共有成果物を整合させる。
 
-1. 最新の `origin/main` を取得し、作業 branch を追従させる（操作は [Git Branching Policy](git-branching.md) の merge 後処理に従う）。
+1. 最新の `origin/main` を取得し、継続中の作業 branch を追従させる（追従の操作は [Git Branching Policy](git-branching.md) の追従に従う。新しい作業を始める場合は merge 後処理に従い、merge 後の `origin/main` を基点に branch を作る）。
 2. 共有インデックス（`intents.md`、`discoveries.md`）に影響する変更がある場合は、再生成を実行して整合させる。
 3. 標準検証で整合を確認してから作業を再開する。
 
