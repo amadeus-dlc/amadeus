@@ -58,6 +58,19 @@ function runExpectSuccessIncludes(command: string[], expected: string, cwd = roo
   }
 }
 
+function runExpectOutputExcludes(command: string[], excluded: string, cwd = root): void {
+  const result = Bun.spawnSync(command, {
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const stdout = new TextDecoder().decode(result.stdout);
+  const stderr = new TextDecoder().decode(result.stderr);
+  if (stdout.includes(excluded) || stderr.includes(excluded)) {
+    fail(["command output unexpectedly includes: " + excluded, "stdout:", stdout, "stderr:", stderr].join("\n"));
+  }
+}
+
 function workspaceCopy(): string {
   const workspace = mkdtempSync(join(tmpdir(), "amadeus-validator"));
   cpSync(fixture, join(workspace, ".amadeus"), { recursive: true });
@@ -3751,6 +3764,75 @@ writeConstructionState(constructionReadyWithoutDesignTraceWorkspace);
 runExpectFailure(
   ["bun", "run", validator, constructionReadyWithoutDesignTraceWorkspace, intent],
   "`Task Generation からの追跡` の表がある",
+);
+
+const taskGenerationPassedWithoutApprovalWorkspace = phaseWorkspaceCopy();
+writeFunctionalDesign(taskGenerationPassedWithoutApprovalWorkspace);
+writeConstructionTasks(taskGenerationPassedWithoutApprovalWorkspace);
+writeConstructionNotes(taskGenerationPassedWithoutApprovalWorkspace);
+writeConstructionTestResults(taskGenerationPassedWithoutApprovalWorkspace);
+appendTaskGenerationTrace(taskGenerationPassedWithoutApprovalWorkspace, { status: "passed" });
+writeConstructionState(taskGenerationPassedWithoutApprovalWorkspace, {
+  bolts: [
+    {
+      id: "B001",
+      taskGeneration: {
+        status: "passed",
+        evidence: taskGenerationEvidence(bolt1),
+      },
+    },
+  ],
+});
+runExpectFailure(
+  ["bun", "run", validator, taskGenerationPassedWithoutApprovalWorkspace, intent],
+  "Task Generation passed は approval evidence を持つ",
+);
+
+const taskGenerationPassedWithApprovalWorkspace = phaseWorkspaceCopy();
+writeFunctionalDesign(taskGenerationPassedWithApprovalWorkspace);
+writeConstructionTasks(taskGenerationPassedWithApprovalWorkspace);
+writeConstructionNotes(taskGenerationPassedWithApprovalWorkspace);
+writeConstructionTestResults(taskGenerationPassedWithApprovalWorkspace);
+appendTaskGenerationTrace(taskGenerationPassedWithApprovalWorkspace, { status: "passed" });
+writeConstructionState(taskGenerationPassedWithApprovalWorkspace, {
+  bolts: [
+    {
+      id: "B001",
+      taskGeneration: {
+        status: "passed",
+        evidence: [
+          ...taskGenerationEvidence(bolt1),
+          { kind: "approval", path: `construction/bolts/${bolt1}/notes.md` },
+        ],
+      },
+    },
+  ],
+});
+runExpectOutputExcludes(
+  ["bun", "run", validator, taskGenerationPassedWithApprovalWorkspace, intent],
+  "Task Generation passed は approval evidence を持つ。根拠",
+);
+
+const taskGenerationReadyWithoutApprovalWorkspace = phaseWorkspaceCopy();
+writeFunctionalDesign(taskGenerationReadyWithoutApprovalWorkspace);
+writeConstructionTasks(taskGenerationReadyWithoutApprovalWorkspace);
+writeConstructionNotes(taskGenerationReadyWithoutApprovalWorkspace);
+writeConstructionTestResults(taskGenerationReadyWithoutApprovalWorkspace);
+appendTaskGenerationTrace(taskGenerationReadyWithoutApprovalWorkspace);
+writeConstructionState(taskGenerationReadyWithoutApprovalWorkspace, {
+  bolts: [
+    {
+      id: "B001",
+      taskGeneration: {
+        status: "ready_for_approval",
+        evidence: taskGenerationEvidence(bolt1),
+      },
+    },
+  ],
+});
+runExpectOutputExcludes(
+  ["bun", "run", validator, taskGenerationReadyWithoutApprovalWorkspace, intent],
+  "approval evidence を持つ。根拠",
 );
 
 console.log("amadeus validator eval: ok");
