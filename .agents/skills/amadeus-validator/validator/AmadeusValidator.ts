@@ -16,6 +16,7 @@ import {
   evaluateEvidencePolicy,
 } from "./domain/evidence-policy";
 import { buildDiscoveriesIndex, buildIntentsIndex, HeadingContractViolationError } from "../scripts/IndexGenerate";
+import { checkLifecycleV2Intent } from "./lifecycle-v2";
 import { type FunctionalDesignEvidenceStatus } from "./domain/functional-design-evidence-status";
 import { type CheckResult } from "./domain/results";
 import { checkConstructionPhase } from "./phases/construction";
@@ -176,6 +177,17 @@ const indexSpecs: Record<string, { headings: string[]; listHeading: string; colu
 };
 
 const rowCategoryRules: RowCategoryRule[] = [
+  {
+    category: "v2 ライフサイクル",
+    matches: ({ condition }) =>
+      condition.includes("v2 互換ライフサイクル") ||
+      condition.includes("scope の実行対象と一致する") ||
+      condition.includes("approval evidence") ||
+      condition.includes("phaseGates") ||
+      condition.includes("ステージ状態が既知の値である") ||
+      condition.includes("Bolt 状態が既知の値である") ||
+      condition === "completed のステージは必須成果物を持つ",
+  },
   {
     category: "Index 生成整合",
     matches: ({ condition }) => condition.startsWith("Index 生成整合"),
@@ -1054,6 +1066,20 @@ class AmadeusValidator {
     this.checkFile(statePath, "Intent 状態ファイルが存在する");
     const state = this.intentState(statePath);
     if (!state) return;
+
+    if (String(state.schemaVersion ?? "") === "2") {
+      this.checkNoLegacyIntentRootArtifacts(base);
+      this.checkExistingPhaseGrillings(base);
+      checkLifecycleV2Intent(
+        {
+          pass: (target, condition, evidence) => this.pass(target, condition, evidence),
+          failRow: (target, condition, evidence) => this.failRow(target, condition, evidence),
+          checkFile: (path, condition) => this.checkFile(path, condition),
+        },
+        { base, intentId, state },
+      );
+      return;
+    }
 
     this.checkNoLegacyIntentRootArtifacts(base);
     this.checkExistingPhaseGrillings(base);
