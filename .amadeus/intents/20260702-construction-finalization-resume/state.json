@@ -1,7 +1,7 @@
 {
   "intent": "20260702-construction-finalization-resume",
   "phase": "construction",
-  "status": "in_progress",
+  "status": "completed",
   "ideation": {
     "intentCapture": {
       "status": "completed",
@@ -97,7 +97,7 @@
     "gate": "passed"
   },
   "construction": {
-    "status": "in_progress",
+    "status": "completed",
     "targetBolts": [
       "B001",
       "B002"
@@ -199,8 +199,12 @@
       "construction/bolts/B001-detection-script-and-eval/tasks.md",
       "construction/bolts/B001-detection-script-and-eval/notes.md",
       "construction/bolts/B002-skill-auto-rule-and-promotion/tasks.md",
-      "construction/bolts/B002-skill-auto-rule-and-promotion/notes.md"
+      "construction/bolts/B002-skill-auto-rule-and-promotion/notes.md",
+      "construction/bolts/B001-detection-script-and-eval/test-results.md",
+      "construction/bolts/B001-detection-script-and-eval/pr.md",
+      "construction/bolts/B002-skill-auto-rule-and-promotion/test-results.md",
+      "construction/bolts/B002-skill-auto-rule-and-promotion/pr.md"
     ],
-    "gate": "not_ready"
+    "gate": "passed"
   }
 }
