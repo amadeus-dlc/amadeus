@@ -1,0 +1,6 @@
+interface:
+  display_name: "Amadeus Inception Reverse Engineering"
+  short_description: "Analyze existing codebase knowledge"
+  default_prompt: "Use $amadeus-inception-reverse-engineering to analyze the existing codebase into shared knowledge."
+policy:
+  allow_implicit_invocation: false

@@ -160,6 +160,86 @@ const targetSkills: Record<string, Contract> = {
       "templates/ideation/approval-handoff/questions.md": [],
     },
   },
+  "amadeus-inception-reverse-engineering": {
+    skillText: [".amadeus/settings/templates", "templates/knowledge/codebase"],
+    files: {
+      "templates/knowledge/codebase/business-overview.md": ["概要", "主要な業務フロー"],
+      "templates/knowledge/codebase/architecture.md": ["全体構成", "主要な境界"],
+      "templates/knowledge/codebase/code-structure.md": ["ディレクトリ構成", "主要モジュール"],
+      "templates/knowledge/codebase/api-documentation.md": ["公開 API", "内部 API"],
+      "templates/knowledge/codebase/component-inventory.md": ["一覧"],
+      "templates/knowledge/codebase/technology-stack.md": ["言語とランタイム", "主要ライブラリ"],
+      "templates/knowledge/codebase/dependencies.md": ["外部依存", "内部依存"],
+      "templates/knowledge/codebase/code-quality-assessment.md": ["テストの状態", "主要なリスク"],
+      "templates/knowledge/codebase/timestamp.md": [],
+    },
+  },
+  "amadeus-inception-practices-discovery": {
+    skillText: [".amadeus/settings/templates", "templates/inception/practices-discovery"],
+    files: {
+      "templates/inception/practices-discovery/team-practices.md": ["プラクティス"],
+      "templates/inception/practices-discovery/discovered-rules.md": ["ルール候補"],
+      "templates/inception/practices-discovery/evidence.md": ["根拠"],
+      "templates/inception/practices-discovery/timestamp.md": [],
+      "templates/inception/practices-discovery/questions.md": [],
+    },
+  },
+  "amadeus-inception-requirements-analysis": {
+    skillText: [".amadeus/settings/templates", "templates/inception/requirements-analysis"],
+    files: {
+      "templates/inception/requirements-analysis/requirements.md": ["一覧"],
+      "templates/inception/requirements-analysis/questions.md": [],
+    },
+  },
+  "amadeus-inception-user-stories": {
+    skillText: [".amadeus/settings/templates", "templates/inception/user-stories"],
+    files: {
+      "templates/inception/user-stories/stories.md": ["一覧"],
+      "templates/inception/user-stories/personas.md": ["一覧"],
+      "templates/inception/user-stories/assessment.md": ["充足評価"],
+      "templates/inception/user-stories/questions.md": [],
+    },
+  },
+  "amadeus-inception-refined-mockups": {
+    skillText: [".amadeus/settings/templates", "templates/inception/refined-mockups"],
+    files: {
+      "templates/inception/refined-mockups/mockups.md": [],
+      "templates/inception/refined-mockups/interaction-spec.md": [],
+      "templates/inception/refined-mockups/design-system-mapping.md": ["対応"],
+      "templates/inception/refined-mockups/accessibility-checklist.md": ["確認"],
+      "templates/inception/refined-mockups/questions.md": [],
+    },
+  },
+  "amadeus-inception-application-design": {
+    skillText: [".amadeus/settings/templates", "templates/inception/application-design"],
+    files: {
+      "templates/inception/application-design/components.md": ["一覧"],
+      "templates/inception/application-design/component-methods.md": [],
+      "templates/inception/application-design/services.md": ["一覧"],
+      "templates/inception/application-design/component-dependency.md": ["依存関係"],
+      "templates/inception/application-design/design-decisions.md": ["一覧"],
+      "templates/inception/application-design/questions.md": [],
+    },
+  },
+  "amadeus-inception-units-generation": {
+    skillText: [".amadeus/settings/templates", "templates/inception/units-generation"],
+    files: {
+      "templates/inception/units-generation/units.md": ["一覧"],
+      "templates/inception/units-generation/unit-dependencies.md": ["依存 DAG"],
+      "templates/inception/units-generation/unit-story-map.md": ["対応"],
+      "templates/inception/units-generation/questions.md": [],
+    },
+  },
+  "amadeus-inception-delivery-planning": {
+    skillText: [".amadeus/settings/templates", "templates/inception/delivery-planning"],
+    files: {
+      "templates/inception/delivery-planning/bolt-plan.md": ["一覧"],
+      "templates/inception/delivery-planning/team-allocation.md": ["割り当て"],
+      "templates/inception/delivery-planning/risk-and-sequencing-rationale.md": ["順序付けの根拠", "リスク"],
+      "templates/inception/delivery-planning/external-dependency-map.md": ["外部依存"],
+      "templates/inception/delivery-planning/questions.md": [],
+    },
+  },
   "amadeus-ideation": {
     skillText: [".amadeus/settings/templates", "templates/intents/ideation"],
     files: {
@@ -460,8 +540,8 @@ const textContracts: TextContract[] = [
     path: "skills/amadeus-inception-units-generation/SKILL.md",
     promotedPath: ".agents/skills/amadeus-inception-units-generation/SKILL.md",
     includes: [
-      "Unit の `コンテキスト` は Domain Map の `adopted` Bounded Context、または Inception で採用判断する境界候補として扱う。",
-      "Domain Map 未登録の Bounded Context を仮参照する場合は、Finalization で Domain Map へ反映する必要がある未確認事項として残す。",
+      "このステージはトポロジ（Unit の境界と依存）だけを作る。",
+      "実装順序、critical path の推奨、経済的な順序付け（何を先に出荷するか）は扱わない。",
     ],
     excludes: [".amadeus/domain/**", "domain layer"],
   },
