@@ -8,7 +8,7 @@
 | R002 | 検証済み | [B002 test-results](../construction/bolts/B002-trigger-and-scaffold-contract/test-results.md)、[B002 pr.md](../construction/bolts/B002-trigger-and-scaffold-contract/pr.md) |
 | R003 | 検証済み | [B002 test-results](../construction/bolts/B002-trigger-and-scaffold-contract/test-results.md)、[B002 pr.md](../construction/bolts/B002-trigger-and-scaffold-contract/pr.md) |
 | R004 | 検証済み | [B003 test-results](../construction/bolts/B003-approval-evidence-check/test-results.md)、[B003 pr.md](../construction/bolts/B003-approval-evidence-check/pr.md) |
-| R005 | 検証済み | [B001 test-results](../construction/bolts/B001-implementation-gate-contract/test-results.md)、[B002 test-results](../construction/bolts/B002-trigger-and-scaffold-contract/test-results.md)、[B003 test-results](../construction/bolts/B003-approval-evidence-check/test-results.md) |
+| R005 | 検証済み | [B001 test-results](../construction/bolts/B001-implementation-gate-contract/test-results.md)、[B002 test-results](../construction/bolts/B002-trigger-and-scaffold-contract/test-results.md)、[B003 test-results](../construction/bolts/B003-approval-evidence-check/test-results.md)、[B001 pr.md](../construction/bolts/B001-implementation-gate-contract/pr.md)、[B002 pr.md](../construction/bolts/B002-trigger-and-scaffold-contract/pr.md)、[B003 pr.md](../construction/bolts/B003-approval-evidence-check/pr.md) |
 
 ## 状態ルール
 
