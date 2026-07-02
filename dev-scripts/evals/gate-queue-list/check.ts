@@ -167,6 +167,32 @@ writeIntentState(waiting, "20260704-delta", {
   }
 }
 
+// (4b) 非オブジェクト: JSON としては妥当だが object でない state.json（null など）も警告のうえ読み飛ばし、一覧全体は成功する
+{
+  const nonObject = newWorkspace("gate-queue-list-non-object-");
+  writeIntentState(nonObject, "20260701-alpha", {
+    phase: "ideation",
+    status: "in_progress",
+    ideation: { status: "in_progress", gate: "waiting_approval" },
+  });
+  const nullDir = join(nonObject, ".amadeus/intents", "20260702-null-state");
+  mkdirSync(nullDir, { recursive: true });
+  writeFileSync(join(nullDir, "state.json"), "null\n");
+  const arrayDir = join(nonObject, ".amadeus/intents", "20260703-array-state");
+  mkdirSync(arrayDir, { recursive: true });
+  writeFileSync(join(arrayDir, "state.json"), "[1, 2]\n");
+  const result = runResult(["bun", "run", script, nonObject]);
+  if (result.exitCode !== 0) {
+    fail("(非オブジェクト) null や配列の state.json で一覧全体が失敗した: " + result.exitCode + "\n" + result.stderr);
+  }
+  if (!result.stderr.includes("20260702-null-state") || !result.stderr.includes("20260703-array-state")) {
+    fail("(非オブジェクト) stderr の警告に対象 Intent が含まれない:\n" + result.stderr);
+  }
+  if (!result.stdout.includes("| 20260701-alpha |")) {
+    fail("(非オブジェクト) 読める Intent の承認待ちが表に出ていない:\n" + result.stdout);
+  }
+}
+
 // (5) 対象外: .amadeus/intents がない workspace は stderr 通知のうえ exit 0
 {
   const outside = mkdtempSync(join(tmpdir(), "gate-queue-list-outside-"));

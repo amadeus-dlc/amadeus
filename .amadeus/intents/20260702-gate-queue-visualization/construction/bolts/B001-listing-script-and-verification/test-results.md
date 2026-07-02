@@ -10,6 +10,7 @@
 | 実データ確認 | 昇格済み `GateQueueList.ts` を現 workspace と `examples/04-construction-design-ready` に対して実行 | pass | 現 workspace で 3 件（20260702-construction-internal-next-skill-parent-routing の B001〜B003）、examples/04 で 1 件を検出し、exit 0（2026-07-02） |
 | 標準検証 | `npm run test:all`（`test:it:gate-queue-list` を連鎖に追加済み） | pass | exit code 0（2026-07-02） |
 | 構造検証 | `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . 20260702-gate-queue-visualization` | pass | 不足または矛盾: なし（2026-07-02） |
+| 検証（レビュー対応） | 非オブジェクト state.json（`null`、配列）のケース 4b を RED 先行で追加し、防御追加後に `npm run test:it:gate-queue-list` と `npm run test:all` が pass | pass | PR #359 Bugbot 指摘対応の実行結果（2026-07-02、exit 0） |
 
 ## 安全性確認
 

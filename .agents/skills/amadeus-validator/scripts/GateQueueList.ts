@@ -60,6 +60,10 @@ for (const name of readdirSync(intentsDir).sort()) {
     console.error(`警告: state.json を JSON として解釈できないため読み飛ばします: ${name}`);
     continue;
   }
+  if (!state || typeof state !== "object" || Array.isArray(state)) {
+    console.error(`警告: state.json が object でないため読み飛ばします: ${name}`);
+    continue;
+  }
 
   const currentPhase = String(state.phase ?? "").trim();
   const phaseReasons = new Map<string, string[]>();

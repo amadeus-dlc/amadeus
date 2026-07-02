@@ -27,6 +27,7 @@
 - top-level `status: waiting_approval` は `state.phase` が示す phase の行へ併記する。phase が既知の 3 phase 以外の場合は、行を落とさずゲート列を `未確認` にする（fail-safe）。
 - 同一 Intent 内の行の並び順は、phase 順（ideation、inception、construction）、phase gate 行が Task Generation 行より先、Bolt ID 昇順とした。
 - 昇格済みスクリプトを現 workspace と `examples/04-construction-design-ready` に対して実行し、実データでの検出（現 workspace で 3 件、examples/04 で 1 件）と exit 0 を確認した。
+- PR #359 の Bugbot 指摘（JSON として妥当な `null` や配列の state.json で `state.phase` アクセスがクラッシュする）を受け、object でない parse 結果を警告のうえ読み飛ばす防御を追加した（RED ケース 4b を先行追加してから修正）。同じ走査パターンの `list-unfinalized-intents.ts` にも同種の未防御があるが、本 Intent の対象外のため follow_up_issue_candidate として報告する。
 
 ## 未確認事項
 
