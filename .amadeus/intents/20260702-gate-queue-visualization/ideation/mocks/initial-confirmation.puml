@@ -1,0 +1,20 @@
+@startuml
+salt
+{
+  {#
+    . | ゲート待ちキュー一覧の確認
+    前提 | 複数 Intent が並行し、Intent A は Ideation gate で、Intent B は Bolt B001 の Task Generation Gate（ready_for_approval）で承認待ちになっている
+    実行 | 一覧の実行入口を 1 回実行し、.amadeus/intents/*/state.json を横断スキャンする
+    結果 | 承認待ちの Intent、phase、ゲート、待ち理由が一覧に表示される
+    0 件時 | 承認待ちがない workspace では、承認待ちが 0 件である旨が表示される
+  }
+  {#
+    Intent | phase | ゲート | 待ち理由
+    20260702-intent-a | ideation | Ideation gate | Ideation 成果物が揃い、人間の承認を待っている
+    20260702-intent-b | construction | Task Generation Gate（B001） | taskGeneration.status が ready_for_approval で人間の承認を待っている
+  }
+  {
+    [1 回の実行で一覧する] | [0 件でもその旨を表示する] | [判定条件は state.json の契約に従う]
+  }
+}
+@enduml
