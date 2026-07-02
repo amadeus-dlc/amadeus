@@ -599,8 +599,11 @@ function prepareIntentRecordFixture(workspace: string): void {
 }
 
 function applyIntentRecordArtifacts(workspace: string, intent: string, name: string, purpose: string): void {
-  const source = join(root, ".agents/skills/amadeus-ideation-intent-capture/templates/intents/intent-record");
-  const intentSource = join(root, ".agents/skills/amadeus-ideation-intent-capture/templates/intents/intent-record.md");
+  // 旧 ideation フローの Intent Record テンプレートは Issue #369 の v2 互換ライフサイクル移行で
+  // skill 同梱から退役したため、旧フロー e2e 用の固定 fixture として凍結している。
+  // 旧フローの e2e 一式は #369 の退役 wave で削除する。
+  const source = join(import.meta.dir, "fixtures/legacy-intent-record/intent-record");
+  const intentSource = join(import.meta.dir, "fixtures/legacy-intent-record/intent-record.md");
   const target = join(workspace, ".amadeus/intents", intent);
   ensureFile(intentSource);
   cpSync(source, target, { recursive: true });

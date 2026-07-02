@@ -1,0 +1,6 @@
+interface:
+  display_name: "Amadeus Ideation Approval Handoff"
+  short_description: "Compile Amadeus initiative brief"
+  default_prompt: "Use $amadeus-ideation-approval-handoff to compile the initiative brief and hand off to Inception."
+policy:
+  allow_implicit_invocation: false

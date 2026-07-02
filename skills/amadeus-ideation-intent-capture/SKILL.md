@@ -1,136 +1,109 @@
 ---
 name: amadeus-ideation-intent-capture
 description: >-
-  Amadeus Ideation の内部 skill。入力テーマ、Discovery Brief、または既存情報から Intent Record を作成または補修し、
-  Intent Capture & Framing だけを実行する必要がある場面では必ず使う。scope、ideation、mocks、traceability、
-  decisions、Inception 成果物、Spec、実装は作らない。
+  Amadeus Ideation の内部 skill。Stage 1.1 Intent Capture & Framing だけを実行する。
+  Birth 済み Intent の目的、対象、成功条件、契機を clarifying questions で確定し、
+  Intent のモジュールファイルと stakeholder-map.md を作成または補修する場面では必ず使う。
+  scope-document、intent-backlog、要求、Unit、Bolt、実装は作らない。
 ---
 
 # amadeus-ideation-intent-capture
 
 ## 目的
 
-Ideation phase の Intent Capture & Framing だけを進める。
+Ideation の Stage 1.1 Intent Capture & Framing だけを進める。
 
-この skill は `amadeus-ideation` の内部 skill である。
-公開入口としての `amadeus-ideation` から呼び出されることを主な用途にする。
+この skill は `amadeus` 入口から呼び出される内部 skill である。
 
-Intent Record を作成または補修する。
-Intent Record は、Intent のモジュールファイル、モジュールディレクトリ、`state.json` で構成する。
-Intent のモジュールファイルには、`目標プロファイル`、目的、成功条件、範囲、`## 概要`、`## 依存` を置く。
-`.amadeus/intents.md` は、Intent のモジュールファイルから `bun run .agents/skills/amadeus-validator/scripts/IndexGenerate.ts <workspace>` で再生成する共有インデックスであり、手書きしない。
-
-要求、ユースケース、ユニット、ボルト、タスク、ドメインモデル、Spec、実装は作らない。
+Birth で作られた Intent のモジュールファイルの骨格に対して、解決する問題、対象者、観測可能な成功基準、契機を clarifying questions で確定し、利害関係者の整理を作る。
 
 ## 前提
 
-`.amadeus/` の steering layer が存在することを前提にする。
+対象 Intent の `state.json` で、`stages["intent-capture"]` が実行対象であり、状態が `pending`、`active`、`awaiting_approval`、`revising` のいずれかであることを前提にする。
+
+状態が `awaiting_approval` の場合は、成果物を作り直さず、ゲートの提示から再開する。
+状態が `revising` の場合は、前回の成果物と差し戻し理由を提示してから、修正だけを行う。
+どちらの場合も、手順を最初からやり直さない。
 
 少なくとも次を読む。
 
-- `.amadeus/intents.md`
-- `.amadeus/discoveries.md`
-- 関連する `.amadeus/discoveries/<discovery-id>.md`
+- `.amadeus/intents/<intent-id>-<slug>.md`
+- `.amadeus/intents/<intent-id>-<slug>/state.json`
 - steering layer
-- 既存の `.amadeus/intents/<intent-id>-<slug>.md`
-- 既存の `.amadeus/intents/<intent-id>-<slug>/state.json`
 
-存在しない任意成果物は読み飛ばしてよい。
-`.amadeus/` がない場合は停止し、先に `amadeus-steering` を使うよう案内する。
+## 質問
 
-## 入力
+次の論点を確認する。
 
-- 入力テーマ。
-- Discovery Brief。
-- 既存 Intent の断片。
-- 希望する Intent 識別子。
-- 依存 Intent。
+- 何の業務問題または技術課題を解くのか。
+- 対象者は誰で、どんな痛みがあるのか。
+- 成功はどう観測できるのか。技術的な Intent では、保存すべき振る舞いと観測可能な改善指標は何か。
+- なぜ今この作業を始めるのか（契機）。
 
-入力テーマまたは Discovery Brief から Intent 識別子を作る場合は、`YYYYMMDD-<slug>` 形式にする。
-日付は作業日のローカル日付を使う。
-slug は小文字英数字とハイフンだけにする。
+質問は `amadeus-grilling` のプロトコルに従い、一問ずつ、推奨回答を添えて提示し、回答を待つ。
+質問の量は `state.json.depth` を目安にする（Minimal 2〜4 問、Standard 5〜8 問、Comprehensive 8〜12 問以上）。
+回答の曖昧さと矛盾を検出し、必要なら追加質問する。
+
+質問と回答は `ideation/intent-capture/questions.md` に記録する。
+成果物の意味や後続判断に影響する確定判断は、`ideation/grillings.md` と `ideation/grillings/Gxxx-<topic>.md` にも記録する。
 
 ## テンプレート
 
-Intent Record を新規作成または構造補修する場合は、テンプレートを使う。
-
 優先順位は次である。
 
-1. `.amadeus/settings/templates/intents/intent-record.md` と `.amadeus/settings/templates/intents/intent-record/`
-2. `amadeus-ideation-intent-capture` に同梱された `templates/intents/intent-record.md` と `templates/intents/intent-record/`
+1. `.amadeus/settings/templates/intents/ideation/intent-capture/`
+2. この skill に同梱された `templates/ideation/intent-capture/`
 
-プロジェクト固有テンプレートが存在しない場合は、同梱テンプレートを使う。
-どちらもない場合は、作成前にテンプレート不足として止める。
-
-テンプレートの `<...>` は、入力テーマ、Discovery Brief、steering layer、既存情報から分かる値に置き換える。
+テンプレートの `<...>` は、回答と steering layer から分かる値に置き換える。
 分からない項目は空欄にせず、`未確認` と書く。
 
 ## 成果物
 
 作成または更新するものは次だけである。
 
-- `.amadeus/intents/<intent-id>-<slug>.md`
-- `.amadeus/intents/<intent-id>-<slug>/state.json`
-- 関連する `.amadeus/discoveries/<discovery-id>.md`
-- `.amadeus/intents.md`（`IndexGenerate.ts` の再生成による更新。手書きしない）
+- `.amadeus/intents/<intent-id>-<slug>.md`（目的、対象、成功条件、契機、目標プロファイルの確定）
+- `ideation/intent-capture/stakeholder-map.md`
+- `ideation/intent-capture/questions.md`
+- `state.json`（`stages["intent-capture"]` の状態と approval evidence）
+- `.amadeus/intents.md`（`bun run .agents/skills/amadeus-validator/scripts/IndexGenerate.ts <workspace>` による再生成。手書きしない）
 
-関連する Discovery Brief を更新する場合は、対象候補の状態だけを `intent_record_created` にする。
-候補状態に `captured`、`intent_created`、`linked`、`initialized` は使わない。
-
-`state.json` は次を満たす。
-
-- `intent` は Intent ディレクトリ名と一致する。
-- `phase` は `ideation` である。
-- `status` は `in_progress` である。
-- `ideation.intentCapture.status` は `completed` である。
-- `ideation.intentCapture.createdArtifacts` は Intent Record の作成済み成果物を指す。
-- `ideation.intentCapture.next` は `ideation/scope-framing` である。
-- `ideation.requiredArtifacts` は空配列である。
-- `ideation.requiredMocks` は空配列である。
-- `ideation.gate` は `not_ready` である。
+成功条件は、Intent 受理条件の①（観測可能な成功基準）を満たす形で書く。
 
 ## 手順
 
-1. steering layer と入力を読み、Intent 名、目標種別、進行プロファイル、ラベル、目的、成功条件、範囲、依存を取り出す。
-2. 関連する Discovery Brief がある場合は、対象候補を特定する。
-3. Intent 識別子を決める。
-4. Intent のモジュールファイルを作成または補修する。`## 概要`（H1 直後、本文 1 段落）と `## 依存`（依存と理由の 2 列の表）を含める。
-5. Intent のモジュールディレクトリを作成する。
-6. `state.json` を作成または補修する。新規作成は同梱スクリプトで雛形を生成する: `bun run .agents/skills/amadeus-validator/scripts/StateScaffold.ts <workspace> intent-capture --intent <intent-id>-<slug>`
-7. 関連する Discovery 候補の状態を `intent_record_created` に更新する。
-8. `bun run .agents/skills/amadeus-validator/scripts/IndexGenerate.ts <workspace>` で共有インデックス（`.amadeus/intents.md`）を再生成する。
-9. 作成後に validator が使える場合は、対象 Intent を検証する。
+以下の手順は、状態が `pending` から開始する場合の流れである。
+`awaiting_approval` または `revising` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
 
-既存 Intent Record の一部だけが欠けている場合は、欠けている構造だけを補修する。
-既存の目標プロファイル、目的、成功条件、範囲、依存は、明らかな欠落を埋める場合だけ更新する。
+1. `stages["intent-capture"].state` を `active` にする。
+2. モジュールファイルの骨格と steering layer を読み、不足している論点を洗い出す。
+3. 質問を一問ずつ提示し、回答を `questions.md` に記録する。
+4. モジュールファイルの目的、対象、成功条件、契機、目標プロファイルを確定する。
+5. `stakeholder-map.md` を作る。利害関係者、決定者と影響者の区別、必要な確認先を書く。
+6. `IndexGenerate.ts` で `.amadeus/intents.md` を再生成する。
+7. `stages["intent-capture"].state` を `awaiting_approval` にし、ゲートを提示する。
 
-## 目標プロファイル
+## ゲート
 
-`目標プロファイル` は、Intent の達成対象と進め方を初期整理する。
+成果物の要約と確認先パスを示し、次の 2 択で承認を求める。
 
-| フィールド | 値 |
-|---|---|
-| `goalType` | `business`、`technical`、`mixed`、`未確認` |
-| `scope` | `enterprise`、`feature`、`mvp`、`poc`、`bugfix`、`refactor`、`infra`、`security-patch`、`workshop`、`未確認` |
-| `labels` | 任意のラベル。複数ある場合はカンマ区切りにする。未判断の場合は `未確認` と書く。 |
+- Approve：承認して次ステージへ。
+- Request Changes：修正指示を受けて手直しする。
 
-`goalType` は、Intent が達成したい目標の性質を表す。
-`scope` は、AI-DLC v2 の Scope に対応する進行プロファイルを表す。
-`labels` は、検索、集計、補足分類だけに使い、phase や stage の制御には使わない。
+同じステージで Request Changes が 3 回続いたら、Accept as-is（現状のまま確定して先へ進む）を選択肢に加える。
+ゲートを提示したターンでは人間の回答を待ち、承認なしに先へ進まない。
+
+承認されたら `stages["intent-capture"].state` を `completed` にし、`stages["intent-capture"].approval` に `approvedAt` と `via: "conversation"` を記録する。
+差し戻されたら `stages["intent-capture"].state` を `revising` にする。
+Accept as-is が選ばれた場合は、`stages["intent-capture"].state` を `completed` にし、`stages["intent-capture"].approval` に `approvedAt`、`via: "conversation"`、`"acceptedAsIs": true` を記録し、この判断を `ideation/decisions.md` に記録する。
 
 ## 禁止事項
 
-- 公開入口として直接使う前提で作業を広げない。
-- `state.json.phase` に `initialized` を書かない。
-- `initialized` ブロックを作らない。
-- Discovery 候補状態に `initialized` を書かない。
-- `scope.md`、`ideation.md`、`mocks/**`、`traceability.md`、`decisions/**` を作らない。
-- `requirements.md`、`acceptance.md`、`user-stories.md`、`use-cases.md`、`units.md`、`bolts.md` を作らない。
-- `domain/**`、Spec、実装、CI を作らない。
-- repo の開発用文書や開発用スクリプトを実行時参照として書かない。
+- Birth（Intent の新規作成判断）をこの skill で行わない。Birth は `amadeus` 入口の責務である。
+- `scope-document.md`、`intent-backlog.md`、`requirements.md`、Unit、Bolt、実装を作らない。
+- 承認を待たずに `completed` を記録しない。
+- `.amadeus/intents.md` を手書きしない。
 
 ## 次の skill
 
-- スコープ整理へ進む場合: `amadeus-ideation-scope-framing`
-- Ideation 全体を進める場合: `amadeus-ideation`
-- 成果物の構造を検証する場合: `amadeus-validator`
+- 続きを進める場合: `amadeus`（入口が次ステージを解決する）
+- 成果物の構造検証: `amadeus-validator`
