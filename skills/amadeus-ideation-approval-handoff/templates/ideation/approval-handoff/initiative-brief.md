@@ -26,8 +26,7 @@
 
 ## モック
 
-- [wireframes.md](../rough-mockups/wireframes.md)
-- [user-flow.md](../rough-mockups/user-flow.md)
+<mock-references>
 
 ## Inception への引き継ぎ
 

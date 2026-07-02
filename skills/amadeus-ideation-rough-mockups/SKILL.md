@@ -83,7 +83,7 @@ Request Changes が 3 回続いたら Accept as-is を選択肢に加える。
 ゲートを提示したターンでは人間の回答を待つ。
 
 承認されたら `stages["rough-mockups"].state` を `completed` にし、`stages["rough-mockups"].approval` に `approvedAt` と `via: "conversation"` を記録する。
-差し戻されたら `state` を `revising` にする。
+差し戻されたら `stages["rough-mockups"].state` を `revising` にする。
 Accept as-is が選ばれた場合は、`stages["rough-mockups"].state` を `completed` にし、`stages["rough-mockups"].approval` に `approvedAt`、`via: "conversation"`、`"acceptedAsIs": true` を記録し、この判断を `ideation/decisions.md` に記録する。
 
 ## 禁止事項
