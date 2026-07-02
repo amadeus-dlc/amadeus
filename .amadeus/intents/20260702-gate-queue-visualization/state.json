@@ -115,7 +115,7 @@
       {
         "id": "B001",
         "taskGeneration": {
-          "status": "ready_for_approval",
+          "status": "passed",
           "evidence": [
             {
               "kind": "functional_design",
@@ -144,6 +144,10 @@
             {
               "kind": "notes",
               "path": "construction/bolts/B001-listing-script-and-verification/notes.md"
+            },
+            {
+              "kind": "approval",
+              "path": "construction/decisions/D002-task-generation-approval.md"
             }
           ]
         }
