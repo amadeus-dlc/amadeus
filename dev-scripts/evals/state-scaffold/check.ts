@@ -311,6 +311,16 @@ const originalState = readState(workspace);
   runValidator(workspace);
   assertIdempotent(workspace, ["bolt-preparation", "--intent", intent, "--bolt", bolt1, "--unit", unit2]);
 
+  // construction-start の再実行は、所有項目（status、gate）を再適用し、Bolt 準備の結果を保持する
+  const staleState = readState(workspace);
+  staleState.construction.status = "needs_changes";
+  writeState(workspace, staleState);
+  runScaffold(workspace, ["construction-start", "--intent", intent]);
+  const reapplied = readState(workspace);
+  if (reapplied.construction.status !== "in_progress") fail("construction-start: 再実行が所有項目 status を再適用しない");
+  if (!reapplied.construction.bolts?.find((item: any) => item.id === "B001")) fail("construction-start: 再実行が Bolt 準備の結果を保持しない");
+  assertDeepEqual(reapplied.construction.targetBolts, ["B001"], "construction-start の再実行は targetBolts を保持する");
+
   // Task Generation Gate の人間承認は eval が再現する（承認は skill と人間の責務）
   const approvedState = readState(workspace);
   const approvedBolt = approvedState.construction.bolts.find((item: any) => item.id === "B001");
@@ -322,13 +332,21 @@ const originalState = readState(workspace);
   writeTestResults(workspace);
   writePr(workspace);
   writeTraceability(workspace, "finalized");
+  // 手書きで欠落した追跡を finalization の再走査が補完する
+  const missingArtifacts = readState(workspace);
+  missingArtifacts.construction.requiredBoltArtifacts = missingArtifacts.construction.requiredBoltArtifacts.filter(
+    (path: string) => !path.endsWith("/tasks.md"),
+  );
+  writeState(workspace, missingArtifacts);
   runScaffold(workspace, ["finalization", "--intent", intent]);
   const finalized = readState(workspace);
   if (finalized.status !== "completed" || finalized.construction?.status !== "completed" || finalized.construction?.gate !== "passed") {
     fail("finalization: status または gate が不正");
   }
-  if (!finalized.construction.requiredBoltArtifacts.includes(`construction/bolts/${bolt1}/test-results.md`)) {
-    fail("finalization: requiredBoltArtifacts に test-results.md がない");
+  for (const file of ["tasks.md", "notes.md", "test-results.md", "pr.md"]) {
+    if (!finalized.construction.requiredBoltArtifacts.includes(`construction/bolts/${bolt1}/${file}`)) {
+      fail(`finalization: requiredBoltArtifacts に ${file} がない`);
+    }
   }
   const finalBolt = finalized.construction.bolts.find((item: any) => item.id === "B001");
   assertDeepEqual(finalBolt.taskGeneration.evidence, evidenceBeforeFinalization, "finalization は taskGeneration evidence を保持する");

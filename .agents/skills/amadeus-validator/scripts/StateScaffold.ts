@@ -227,21 +227,24 @@ function applyConstructionStart(): void {
   state.phase = "construction";
   state.status = "in_progress";
   state.construction = {
+    ...existing,
     status: "in_progress",
     gate: "not_ready",
-    requiredArtifacts: ["construction/traceability.md", "construction/decisions.md"].filter((path) => intentRelativeExists(path)),
-    requiredBoltArtifacts: [],
-    bolts: [],
-    targetBolts: [],
+    requiredArtifacts: appendMissing(
+      existing.requiredArtifacts ?? [],
+      ["construction/traceability.md", "construction/decisions.md"].filter((path) => intentRelativeExists(path)),
+    ),
+    requiredBoltArtifacts: existing.requiredBoltArtifacts ?? [],
+    bolts: existing.bolts ?? [],
+    targetBolts: existing.targetBolts ?? [],
     functionalDesign: {
       targetUnits: [],
       units: [],
       ...(existing.functionalDesign ?? {}),
     },
-    ...existing,
   };
   writeState(state);
-  summary.push("construction ブロックを追加");
+  summary.push("construction ブロックを追加（遷移が所有する項目を再適用し、他の値は保持）");
 }
 
 function applyFunctionalDesign(): void {
@@ -321,14 +324,18 @@ function applyFinalization(): void {
   const construction = state.construction ?? fail("construction ブロックがありません。先に construction-start を実行してください");
   const boltDirectories = listDirectories("construction/bolts");
   const evidenceArtifacts = boltDirectories.flatMap((name) =>
-    ["test-results.md", "pr.md"].map((file) => `construction/bolts/${name}/${file}`).filter((path) => intentRelativeExists(path)),
+    ["tasks.md", "notes.md", "test-results.md", "pr.md"].map((file) => `construction/bolts/${name}/${file}`).filter((path) => intentRelativeExists(path)),
+  );
+  construction.requiredArtifacts = appendMissing(
+    construction.requiredArtifacts ?? [],
+    ["construction/traceability.md", "construction/decisions.md"].filter((path) => intentRelativeExists(path)),
   );
   construction.requiredBoltArtifacts = appendMissing(construction.requiredBoltArtifacts ?? [], evidenceArtifacts);
   construction.status = "completed";
   construction.gate = "passed";
   state.status = "completed";
   writeState(state);
-  summary.push("construction を完了へ更新（test-results と pr の実在ファイルを追跡へ追加）");
+  summary.push("construction を完了へ更新（phase 配下の実在ファイルを再走査して追跡へ追加）");
 }
 
 switch (transition) {
