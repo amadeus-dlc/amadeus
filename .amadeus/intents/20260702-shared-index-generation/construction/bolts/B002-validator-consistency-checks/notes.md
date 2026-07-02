@@ -21,3 +21,8 @@
 ## 未確認事項
 
 - 検査カテゴリの名前は実装時に既存カテゴリの語彙に合わせて確定する。
+
+## レビュー対応
+
+- Cursor Bugbot の指摘（PR #348、Medium）: Discovery の `state.json` が欠落または不正な場合、例外が rethrow されて validator の run 全体が中断し、実行環境の blocked として報告されていた。
+- 対応: `IndexGenerate.ts` が state.json の欠落と JSON 解釈不能を契約違反として収集し、validator は「Index 生成整合: 配下モジュールの state.json が読める」の構造化された fail として報告する。検証に state.json 欠落ケースを RED から GREEN で追加した。

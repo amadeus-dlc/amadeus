@@ -294,6 +294,30 @@ function indexGenerationCategoryCounts(report: string): { pass: number; warning:
   }
 }
 
+// (7) state.json 欠落: Discovery モジュールに state.json がない場合、クラッシュや blocked ではなく Index 生成整合の fail として報告する
+{
+  const ws = newWorkspace("index-generate-missing-state-");
+  writeIntent(ws, "20260701-alpha", "Alpha", "Alpha の概要である。", [{ dep: "なし", reason: "初回 Intent であるため。" }]);
+  const dir = join(ws, ".amadeus/discoveries");
+  writeFileSync(join(dir, "20260701-nostate.md"), discoveryModule("Nostate の探索", ["候補を起票する。"]));
+  // state.json を意図的に作らない
+  const cli = runResult(["bun", "run", script, ws]);
+  if (cli.exitCode === 0) fail("(state欠落) CLI が state.json 欠落を検出せず成功した");
+  if (!(cli.stdout + cli.stderr).includes("20260701-nostate")) {
+    fail("(state欠落) CLI の失敗報告に対象が含まれない:\nstdout:\n" + cli.stdout + "\nstderr:\n" + cli.stderr);
+  }
+  const result = runValidator(ws);
+  if (!result.stdout.startsWith("# Amadeus Validator 結果")) {
+    fail("(state欠落) validator がクラッシュした:\nstdout:\n" + result.stdout + "\nstderr:\n" + result.stderr);
+  }
+  if (!result.stdout.includes("Index 生成整合: 配下モジュールの state.json が読める")) {
+    fail("(state欠落) state.json 欠落が Index 生成整合の構造化された fail として報告されない:\n" + result.stdout);
+  }
+  if (result.stdout.includes("検証対象を読める。根拠: state.json")) {
+    fail("(state欠落) 例外が run 全体を中断させ、実行環境の blocked として扱われている:\n" + result.stdout);
+  }
+}
+
 // (6) greenfield 整合: モジュール 0 件の workspace の生成結果が steering テンプレートと一字一句一致する
 {
   const ws = newWorkspace("index-generate-greenfield-");

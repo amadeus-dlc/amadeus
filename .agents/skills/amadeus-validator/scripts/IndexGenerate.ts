@@ -41,7 +41,15 @@ export class HeadingContractViolationError extends Error {
   readonly violations: HeadingViolation[];
 
   constructor(violations: HeadingViolation[]) {
-    super(violations.map((violation) => `見出し契約違反: ${violation.file} に ${violation.missing.join("、")} がありません`).join("\n"));
+    super(
+      violations
+        .map((violation) =>
+          violation.file.endsWith("state.json")
+            ? `モジュール契約違反: ${violation.file} が読めません（${violation.missing.join("、")}）`
+            : `見出し契約違反: ${violation.file} に ${violation.missing.join("、")} がありません`,
+        )
+        .join("\n"),
+    );
     this.name = "HeadingContractViolationError";
     this.violations = violations;
   }
@@ -178,8 +186,17 @@ export function buildDiscoveriesIndex(workspace: string): string {
     }
     const actions = bulletsOf(actionsSection).join("");
     const statePath = join(discoveriesDir, id, "state.json");
-    if (!existsSync(statePath)) throw new Error(`state.json が見つかりません: ${statePath}`);
-    const state = JSON.parse(readFileSync(statePath, "utf8"));
+    if (!existsSync(statePath)) {
+      violations.push({ file: `discoveries/${id}/state.json`, missing: ["ファイルが存在しない"] });
+      continue;
+    }
+    let state: Record<string, unknown>;
+    try {
+      state = JSON.parse(readFileSync(statePath, "utf8"));
+    } catch {
+      violations.push({ file: `discoveries/${id}/state.json`, missing: ["JSON として解釈できない"] });
+      continue;
+    }
     const status = state.status ?? "";
     const decision = state.decision ?? "";
     listRows.push(`| ${id} | ${theme} | ${status} | ${decision} | ${actions} | [Discovery のモジュールファイル](discoveries/${id}.md) |`);

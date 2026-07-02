@@ -1751,11 +1751,19 @@ class AmadeusValidator {
     } catch (error) {
       if (error instanceof HeadingContractViolationError) {
         for (const violation of error.violations) {
-          this.failRow(
-            path,
-            "Index 生成整合: 配下モジュールが見出し契約を満たす",
-            `${violation.file}: ${violation.missing.join("、")} が不足`,
-          );
+          if (violation.file.endsWith("state.json")) {
+            this.failRow(
+              path,
+              "Index 生成整合: 配下モジュールの state.json が読める",
+              `${violation.file}: ${violation.missing.join("、")}`,
+            );
+          } else {
+            this.failRow(
+              path,
+              "Index 生成整合: 配下モジュールが見出し契約を満たす",
+              `${violation.file}: ${violation.missing.join("、")} が不足`,
+            );
+          }
         }
         return;
       }
