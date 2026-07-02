@@ -113,7 +113,8 @@
         },
         {
           "path": "skills/amadeus-inception-user-stories/SKILL.md",
-          "md5": "9478d2828c835aad5fefd3f5e9492674"
+          "md5": "9478d2828c835aad5fefd3f5e9492674",
+          "staleReason": "Issue #369 で v2 互換ライフサイクルの Stage 2.4 契約へ書き換えた。real provider による example 再生成は #369 の workspace 再初期化で実施する。"
         },
         {
           "path": "skills/amadeus-inception-use-cases/SKILL.md",
@@ -122,7 +123,7 @@
         {
           "path": "skills/amadeus-inception-units-generation/SKILL.md",
           "md5": "22a3c9fb154becd67b157eccc502fa0f",
-          "staleReason": "Issue #177 で Inception による新規 Boundary 初回採用時の Unit 境界候補の扱いを更新した。real provider による example 再生成は後続 PR で実施する。"
+          "staleReason": "Issue #369 で v2 互換ライフサイクルの Stage 2.7 契約へ書き換えた。real provider による example 再生成は #369 の workspace 再初期化で実施する。"
         },
         {
           "path": "skills/amadeus-inception-traceability-finalization/SKILL.md",
@@ -186,7 +187,8 @@
         },
         {
           "path": "skills/amadeus-inception-user-stories/SKILL.md",
-          "md5": "9478d2828c835aad5fefd3f5e9492674"
+          "md5": "9478d2828c835aad5fefd3f5e9492674",
+          "staleReason": "Issue #369 で v2 互換ライフサイクルの Stage 2.4 契約へ書き換えた。real provider による example 再生成は #369 の workspace 再初期化で実施する。"
         },
         {
           "path": "skills/amadeus-inception-use-cases/SKILL.md",
@@ -195,7 +197,7 @@
         {
           "path": "skills/amadeus-inception-units-generation/SKILL.md",
           "md5": "22a3c9fb154becd67b157eccc502fa0f",
-          "staleReason": "Issue #177 で Inception による新規 Boundary 初回採用時の Unit 境界候補の扱いを更新した。real provider による example 再生成は後続 PR で実施する。"
+          "staleReason": "Issue #369 で v2 互換ライフサイクルの Stage 2.7 契約へ書き換えた。real provider による example 再生成は #369 の workspace 再初期化で実施する。"
         },
         {
           "path": "skills/amadeus-inception-traceability-finalization/SKILL.md",

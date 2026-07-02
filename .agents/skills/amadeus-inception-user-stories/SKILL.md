@@ -1,76 +1,92 @@
 ---
 name: amadeus-inception-user-stories
 description: >-
-  Amadeus Inception の内部 skill。要件定義済みで、人間アクターのユーザー価値表現が必要な Intent に対して、ユーザーストーリーだけを実行し、
-  user-stories.md、user-stories/<story-id>.md を作成または補修する必要がある場面では必ず使う。
-  use-cases、units、bolts、traceability、decisions、Spec、実装は作らない。
+  Amadeus Inception の内部 skill。Stage 2.4 User Stories だけを実行する。
+  利用者向け機能、複数ペルソナ、複雑な業務ロジック、チーム横断の作業がある Intent で、
+  stories.md、personas.md、assessment.md を作成または補修する場面では必ず使う。
+  純粋なリファクタリング、単発のバグ修正、インフラのみの変更では実行しない。
+  要求、設計、Unit、Bolt、実装は作らない。
 ---
 
 # amadeus-inception-user-stories
 
 ## 目的
 
-Inception phase の User Stories だけを進める。
+Inception の Stage 2.4 User Stories だけを進める。
 
-この skill は `amadeus-inception` の内部 skill である。
-要件定義の成果物から、人間アクターのユーザー価値としてのユーザーストーリーを作る。
+この skill は `amadeus` 入口から呼び出される内部 skill である。
 
-システムまたは外部システムだけが相互作用主体である場合は、この skill で空の Story 成果物を作らない。
+要求を人間アクターの価値表現へ落とし、ペルソナを整理する。
 
 ## 前提
 
-対象 Intent が Ideation を完了し、要件定義の成果物を持っていることを前提にする。
+対象 Intent の `state.json` で、`stages["user-stories"]` が実行対象であり、状態が `pending`、`active`、`awaiting_approval`、`revising` のいずれかであることを前提にする。
+
+状態が `awaiting_approval` の場合は、成果物を作り直さず、ゲートの提示から再開する。
+状態が `revising` の場合は、前回の成果物と差し戻し理由を提示してから、修正だけを行う。
+どちらの場合も、手順を最初からやり直さない。
+
+Condition は「利用者向け機能、複数ペルソナ、複雑な業務ロジック、チーム横断の作業がある場合」である。
+純粋なリファクタリング、単発のバグ修正、インフラのみの変更、開発者ツールの場合は、成果物を作らず `stages["user-stories"]` を `skipped` にし、理由を記録して `amadeus` へ戻る。
 
 少なくとも次を読む。
 
-- `.amadeus/intents.md`
-- `.amadeus/intents/<intent-id>-<slug>.md`
-- `.amadeus/intents/<intent-id>-<slug>/state.json`
-- `.amadeus/intents/<intent-id>-<slug>/ideation/scope.md`
-- `.amadeus/intents/<intent-id>-<slug>/ideation/ideation.md`
-- `.amadeus/intents/<intent-id>-<slug>/inception/requirements.md`
-- `.amadeus/intents/<intent-id>-<slug>/inception/requirements/**`
-- `.amadeus/intents/<intent-id>-<slug>/inception/acceptance.md`
-- steering layer
-
-要件定義の成果物が不足している場合は、`amadeus-inception-requirements-definition` を案内して停止する。
+- `inception/requirements-analysis/requirements.md`
+- `state.json`
+- `.amadeus/knowledge/codebase/<repo>/business-overview.md` と `component-inventory.md`（brownfield の場合）
+- `inception/practices-discovery/team-practices.md`（実行した場合）
+- steering layer（アクターの定義）
 
 ## テンプレート
 
-新規作成または構造補修では、`amadeus-inception/templates/intents/inception/` のテンプレートを使う。
+優先順位は次である。
 
-プロジェクト固有テンプレートが `.amadeus/settings/templates/intents/inception/` にある場合は、そちらを優先する。
+1. `.amadeus/settings/templates/intents/inception/user-stories/`
+2. この skill に同梱された `templates/inception/user-stories/`
+
+分からない項目は空欄にせず、`未確認` と書く。
 
 ## 成果物
 
 作成または更新するものは次だけである。
 
-- `.amadeus/intents/<intent-id>-<slug>/inception/user-stories.md`
-- `.amadeus/intents/<intent-id>-<slug>/inception/user-stories/<story-id>-<slug>.md`
-- 記録対象の質問と回答が親 skill から渡された場合だけ、`.amadeus/intents/<intent-id>-<slug>/inception/grillings.md`
-- 記録対象の質問と回答が親 skill から渡された場合だけ、`.amadeus/intents/<intent-id>-<slug>/inception/grillings/Gxxx-*.md`
-
-既存成果物がある場合は、同じ ID と同じファイル名を尊重する。
-不明な値は空欄にせず、`未確認` と書く。
+- `inception/user-stories/stories.md`（ストーリー一覧。識別子 `S001` 以降と要求への参照を含める）
+- `inception/user-stories/personas.md`
+- `inception/user-stories/assessment.md`（要求に対するストーリーの充足評価）
+- `state.json`（`stages["user-stories"]` の状態と approval evidence）
+- 質問を行った場合は `inception/user-stories/questions.md`
 
 ## 手順
 
-1. Requirement と受け入れ状態から、人間アクターのユーザー価値表現が必要かを判定する。
-2. 必要な場合は、ユーザー価値をユーザーストーリーとして切る。
-3. 不要な場合は、Story 成果物を作らず、後続の Use Cases で Story 参照を `なし` にする前提を親 skill に返す。
-4. ユーザーストーリーが Requirement の言い換えだけになっている場合は、粒度不足を疑う。
-5. 自然な粒度であれば、後続の追跡確定で理由を残せるように根拠を本文に残す。
-6. 親 skill から記録対象の質問と回答が渡された場合だけ、`amadeus-grilling` の構造に従って Grilling Decision Trail を同じ変更で更新する。
-7. 作成後に validator が使える場合は、対象 Intent を検証する。
+以下の手順は、状態が `pending` から開始する場合の流れである。
+`awaiting_approval` または `revising` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
+
+1. 状態が `pending` の場合だけ Condition を判定する。偽なら `skipped` を記録して終了する。`active`、`awaiting_approval`、`revising` からの再開では再判定しない。
+2. `stages["user-stories"].state` を `active` にする。
+3. 要求とアクターの定義を読み、ペルソナとストーリーを洗い出す。判断が必要な論点は `amadeus-grilling` のプロトコルで一問ずつ確認する。
+4. `stories.md`、`personas.md`、`assessment.md` を作る。
+5. `stages["user-stories"].state` を `awaiting_approval` にし、ゲートを提示する。
+
+## ゲート
+
+成果物の要約と確認先パスを示し、Approve と Request Changes の 2 択で承認を求める。
+Inception ステージでは、スキップ済みステージの追加実行を第 3 の選択肢にできる。
+スキップ済みステージの追加実行が選ばれた場合は、対象ステージの `stages` の状態を `skipped` から `pending` に戻し、skip 理由の記録を取り消してから `amadeus` 入口へ戻る。入口が次の解決で対象ステージを選ぶ。
+Request Changes が 3 回続いたら Accept as-is を選択肢に加える。
+ゲートを提示したターンでは人間の回答を待つ。
+
+承認されたら `stages["user-stories"].state` を `completed` にし、`stages["user-stories"].approval` に `approvedAt` と `via: "conversation"` を記録する。
+差し戻されたら `stages["user-stories"].state` を `revising` にする。
+Accept as-is が選ばれた場合は、`stages["user-stories"].state` を `completed` にし、`stages["user-stories"].approval` に `approvedAt`、`via: "conversation"`、`"acceptedAsIs": true` を記録し、この判断を `inception/decisions.md` に記録する。
 
 ## 禁止事項
 
-- `requirements/**`、`acceptance.md` を更新しない。
-- `use-cases/**`、`units/**`、`bolts/**` を作らない。
-- `traceability.md`、`decisions/**`、`state.json` を更新しない。
-- domain model、Spec、実装、CI を作らない。
+- 純粋なリファクタリング、単発のバグ修正、インフラのみの変更に対して実行しない。
+- ユースケース成果物（`use-cases.md`）を作らない。アクターとシステムの相互作用の詳細は Construction の Functional Design が扱う。
+- 要求、設計、Unit、Bolt、実装を作らない。
+- 承認を待たずに `completed` を記録しない。
 
 ## 次の skill
 
-- Use Cases へ進む場合: `amadeus-inception-use-cases`
-- Inception 全体を進める場合: `amadeus-inception`
+- 続きを進める場合: `amadeus`（入口が次ステージを解決する）
+- 成果物の構造検証: `amadeus-validator`

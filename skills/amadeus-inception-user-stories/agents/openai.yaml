@@ -1,7 +1,6 @@
-# skill-forge-source-sha256: d33f04109af1eb9669a48fb174801d4582df5e89168c6d3c311014413e50215e
 interface:
   display_name: "Amadeus Inception User Stories"
-  short_description: "Write Amadeus Inception user stories"
-  default_prompt: "Use $amadeus-inception-user-stories to write Amadeus Inception user stories."
+  short_description: "Write Amadeus user stories"
+  default_prompt: "Use $amadeus-inception-user-stories to express requirements as user stories and personas."
 policy:
   allow_implicit_invocation: false

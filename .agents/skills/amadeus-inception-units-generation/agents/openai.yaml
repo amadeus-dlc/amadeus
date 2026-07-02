@@ -1,7 +1,6 @@
-# skill-forge-source-sha256: 21c3938a11c19686ff7e55010e95dbb77fe66955ff667ef16d58593c7f400fd7
 interface:
   display_name: "Amadeus Inception Units Generation"
-  short_description: "Generate Amadeus Units and Bolts"
-  default_prompt: "Use $amadeus-inception-units-generation to generate Amadeus Units and Bolts."
+  short_description: "Generate Amadeus units DAG"
+  default_prompt: "Use $amadeus-inception-units-generation to generate units and the dependency DAG."
 policy:
   allow_implicit_invocation: false

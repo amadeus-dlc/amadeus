@@ -1,89 +1,108 @@
 ---
 name: amadeus-inception-units-generation
 description: >-
-  Amadeus Inception の内部 skill。ユースケース作成済み Intent に対して、Units Generation だけを実行し、
-  units.md、units/<unit-id>-<slug>.md、units/<unit-id>-<slug>/design.md、bolts.md、bolts/<bolt-id>-<slug>.md を作成または補修する必要がある場面では必ず使う。
-  traceability、decisions、domain、Spec、実装は作らない。
+  Amadeus Inception の内部 skill。Stage 2.7 Units Generation だけを実行する。
+  Application Design と要求から Unit と依存 DAG を生成し、units.md、unit-dependencies.md、
+  unit-story-map.md を作成または補修する場面では必ず使う。トポロジ（Unit の境界と依存）だけを作り、
+  実装順序と経済的な順序付けは Delivery Planning に委ねる。Bolt、実装は作らない。
 ---
 
 # amadeus-inception-units-generation
 
 ## 目的
 
-Inception phase の Units Generation だけを進める。
+Inception の Stage 2.7 Units Generation だけを進める。
 
-この skill は `amadeus-inception` の内部 skill である。
-Requirement、存在する場合の User Story、Use Case から Unit を切り、Unit Design Brief を作る。
-その設計戦略に従って Bolt を切る。
-Task は Construction の Task Generation で生成する。
+この skill は `amadeus` 入口から呼び出される内部 skill である。
+
+Application Design と要求から、Unit と依存 DAG を生成する。
+
+このステージはトポロジ（Unit の境界と依存）だけを作る。
+実装順序、critical path の推奨、経済的な順序付け（何を先に出荷するか）は扱わない。
+それらは Stage 2.8 Delivery Planning の責務である。
 
 ## 前提
 
-対象 Intent が Ideation、要件定義、Use Cases を完了していることを前提にする。
+対象 Intent の `state.json` で、`stages["units-generation"]` が実行対象であり、状態が `pending`、`active`、`awaiting_approval`、`revising` のいずれかであることを前提にする。
 
-User Stories は、人間アクターのユーザー価値表現が必要な場合だけ完了していることを前提にする。
+状態が `awaiting_approval` の場合は、成果物を作り直さず、ゲートの提示から再開する。
+状態が `revising` の場合は、前回の成果物と差し戻し理由を提示してから、修正だけを行う。
+どちらの場合も、手順を最初からやり直さない。
 
 少なくとも次を読む。
 
-- `.amadeus/intents.md`
-- `.amadeus/intents/<intent-id>-<slug>.md`
-- `.amadeus/intents/<intent-id>-<slug>/state.json`
-- `.amadeus/intents/<intent-id>-<slug>/ideation/scope.md`
-- `.amadeus/intents/<intent-id>-<slug>/ideation/ideation.md`
-- `.amadeus/intents/<intent-id>-<slug>/inception/requirements.md`
-- `.amadeus/intents/<intent-id>-<slug>/inception/acceptance.md`
-- `.amadeus/intents/<intent-id>-<slug>/inception/user-stories.md`、存在する場合
-- `.amadeus/intents/<intent-id>-<slug>/inception/use-cases.md`
-- steering layer
+- `inception/requirements-analysis/requirements.md`
+- `inception/application-design/`（実行した場合。components、component-methods、services、component-dependency、design-decisions）
+- `inception/user-stories/stories.md`（実行した場合）
+- `ideation/scope-definition/intent-backlog.md`（存在する場合。項目を Unit 候補として評価する）
+- `state.json`
 
-Use Cases の成果物が不足している場合は、`amadeus-inception-use-cases` を案内して停止する。
+Application Design を実行しなかった場合は、縮退時の入力代替に従い、Reverse Engineering の `architecture.md` と `component-inventory.md`、または `requirements.md` から Unit 境界を判断する。
+
+## 質問
+
+次の論点を人間に確認する。
+
+- Unit の境界戦略はどれか（サービス別、機能別、ドメイン別、デプロイ対象別）。
+- 粒度はどちらに寄せるか（粗い、細かい）。
+
+質問は `amadeus-grilling` のプロトコルに従い、一問ずつ、推奨回答を添えて提示し、回答を待つ。
+質問を行った場合は `inception/units-generation/questions.md` に記録する。
+境界戦略と粒度の確定判断は `inception/grillings.md` と `inception/grillings/Gxxx-<topic>.md` にも記録する。
 
 ## テンプレート
 
-新規作成または構造補修では、`amadeus-inception/templates/intents/inception/` のテンプレートを使う。
+優先順位は次である。
 
-プロジェクト固有テンプレートが `.amadeus/settings/templates/intents/inception/` にある場合は、そちらを優先する。
+1. `.amadeus/settings/templates/intents/inception/units-generation/`
+2. この skill に同梱された `templates/inception/units-generation/`
+
+分からない項目は空欄にせず、`未確認` と書く。
 
 ## 成果物
 
 作成または更新するものは次だけである。
 
-- `.amadeus/intents/<intent-id>-<slug>/inception/units.md`
-- `.amadeus/intents/<intent-id>-<slug>/inception/units/<unit-id>-<slug>.md`
-- `.amadeus/intents/<intent-id>-<slug>/inception/units/<unit-id>-<slug>/design.md`
-- `.amadeus/intents/<intent-id>-<slug>/inception/bolts.md`
-- `.amadeus/intents/<intent-id>-<slug>/inception/bolts/<bolt-id>-<slug>.md`
-- 記録対象の質問と回答が親 skill から渡された場合だけ、`.amadeus/intents/<intent-id>-<slug>/inception/grillings.md`
-- 記録対象の質問と回答が親 skill から渡された場合だけ、`.amadeus/intents/<intent-id>-<slug>/inception/grillings/Gxxx-*.md`
+- `inception/units-generation/units.md`（Unit 一覧。識別子 `U001` 以降、責務、対応する要求）
+- `inception/units-generation/unit-dependencies.md`（Unit の依存 DAG）
+- `inception/units-generation/unit-story-map.md`（Unit とストーリーの対応。stories がある場合のみ）
+- `state.json`（`stages["units-generation"]` の状態と approval evidence）
+- 質問を行った場合は `inception/units-generation/questions.md`
 
-既存成果物がある場合は、同じ ID と同じファイル名を尊重する。
-不明な値は空欄にせず、`未確認` と書く。
+Unit が多い場合は `units/<unit-id>-<slug>.md` へ分割してよい。
+その場合も `units.md` を一覧として維持する。
 
 ## 手順
 
-1. ユースケースから、実施価値としてまとまる Unit を切る。
-2. Unit ごとにモジュールファイルと Unit Design Brief の `design.md` を作る。
-3. Unit Design Brief の `Bolt 分割方針` に従って Bolt を切る。
-4. Bolt ごとにモジュールファイルを作り、Construction で Task 化するための完了条件、依存、未確認事項を残す。
-5. 既存コードに載せる brownfield の場合は、既存能力、統合点、ギャップを読んでから Unit Design Brief を作る。
-6. Unit と Bolt のモジュールファイルに `実装対象` を作り、repository、path、branch、PR、CI を分かる範囲で記録する。
-7. 実装対象の `repository` と `path` が未確定の場合は `未確認` と書き、`branch`、`PR`、`CI` が該当しない場合は `なし` と書く。
-8. Unit の `コンテキスト` は Domain Map の `adopted` Bounded Context、または Inception で採用判断する境界候補として扱う。
-9. Domain Map 未登録の Bounded Context を仮参照する場合は、Finalization で Domain Map へ反映する必要がある未確認事項として残す。
-10. 対応する Bounded Context が未確認の場合は、推測で Intent 固有の Domain Model 成果物を作らず、未確認事項として残す。
-11. 親 skill から記録対象の質問と回答が渡された場合だけ、`amadeus-grilling` の構造に従って Grilling Decision Trail を同じ変更で更新する。
-12. 作成後に validator が使える場合は、対象 Intent を検証する。
+以下の手順は、状態が `pending` から開始する場合の流れである。
+`awaiting_approval` または `revising` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
+
+1. `stages["units-generation"].state` を `active` にする。
+2. Application Design の成果物と要求を読み、Unit 候補を洗い出す。スコープバックログの項目も Unit 候補として評価する。
+3. 境界戦略と粒度を人間に確認する。
+4. `units.md` と `unit-dependencies.md` を作る。依存は非循環にする。stories がある場合は `unit-story-map.md` も作る。
+5. `stages["units-generation"].state` を `awaiting_approval` にし、ゲートを提示する。
+
+## ゲート
+
+成果物の要約と確認先パスを示し、Approve と Request Changes の 2 択で承認を求める。
+Inception ステージでは、スキップ済みステージの追加実行を第 3 の選択肢にできる。
+スキップ済みステージの追加実行が選ばれた場合は、対象ステージの `stages` の状態を `skipped` から `pending` に戻し、skip 理由の記録を取り消してから `amadeus` 入口へ戻る。入口が次の解決で対象ステージを選ぶ。
+Request Changes が 3 回続いたら Accept as-is を選択肢に加える。
+ゲートを提示したターンでは人間の回答を待つ。
+
+承認されたら `stages["units-generation"].state` を `completed` にし、`stages["units-generation"].approval` に `approvedAt` と `via: "conversation"` を記録する。
+差し戻されたら `stages["units-generation"].state` を `revising` にする。
+Accept as-is が選ばれた場合は、`stages["units-generation"].state` を `completed` にし、`stages["units-generation"].approval` に `approvedAt`、`via: "conversation"`、`"acceptedAsIs": true` を記録し、この判断を `inception/decisions.md` に記録する。
 
 ## 禁止事項
 
-- `requirements/**`、`user-stories/**`、`use-cases/**` を更新しない。
-- `traceability.md`、`decisions/**`、`state.json` を更新しない。
-- Intent 固有の正式な Domain Model 成果物を作らない。
-- 詳細な Domain Model、契約、Spec、実装、CI を作らない。
-- `tasks.md` や Task ID を作らない。
-- Bolt 配下に `design.md` を作らない。
+- 実装順序、critical path、経済的な順序付けを書かない。それらは Delivery Planning の責務である。
+- Bolt と Unit Design Brief を作らない。
+- 技術レイヤー（DB、API、フロント）だけを根拠に Unit を分割しない。
+- 承認を待たずに `completed` を記録しない。
 
 ## 次の skill
 
-- 追跡と状態確定へ進む場合: `amadeus-inception-traceability-finalization`
-- Inception 全体を進める場合: `amadeus-inception`
+- 続きを進める場合: `amadeus`（入口が次ステージを解決する）
+- 成果物の構造検証: `amadeus-validator`

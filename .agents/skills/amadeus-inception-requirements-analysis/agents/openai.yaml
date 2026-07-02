@@ -1,0 +1,6 @@
+interface:
+  display_name: "Amadeus Inception Requirements Analysis"
+  short_description: "Analyze Amadeus Intent requirements"
+  default_prompt: "Use $amadeus-inception-requirements-analysis to turn the Intent into verifiable requirements."
+policy:
+  allow_implicit_invocation: false
