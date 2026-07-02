@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 2,
+  "intentId": "<intent-id>-<slug>",
+  "scope": "<scope>",
+  "depth": "<depth>",
+  "status": "in_progress",
+  "phase": "ideation",
+  "currentStage": "<first-stage-slug>",
+  "stages": {
+    "<stage-slug>": { "state": "pending" }
+  },
+  "phaseGates": {}
+}

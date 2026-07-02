@@ -93,11 +93,71 @@ const targetSkills: Record<string, Contract> = {
       "templates/event-storming/session/state.json": [],
     },
   },
-  "amadeus-ideation-intent-capture": {
-    skillText: [".amadeus/settings/templates", "templates/intents/intent-record"],
+  amadeus: {
+    skillText: [".amadeus/settings/templates", "templates/intents/intent-module"],
     files: {
-      "templates/intents/intent-record.md": ["目標プロファイル", "目的", "成功条件", "範囲"],
-      "templates/intents/intent-record/state.json": [],
+      "templates/intents/intent-module.md": ["概要", "依存", "目標プロファイル", "目的", "対象", "成功条件", "契機", "範囲"],
+      "templates/intents/state.json": [],
+    },
+  },
+  "amadeus-ideation-intent-capture": {
+    skillText: [".amadeus/settings/templates", "templates/ideation/intent-capture"],
+    files: {
+      "templates/ideation/intent-capture/stakeholder-map.md": ["利害関係者", "コミュニケーション要件"],
+      "templates/ideation/intent-capture/questions.md": [],
+    },
+    absentFiles: ["templates/intents/intent-record.md"],
+  },
+  "amadeus-ideation-market-research": {
+    skillText: [".amadeus/settings/templates", "templates/ideation/market-research"],
+    files: {
+      "templates/ideation/market-research/competitive-analysis.md": ["競合と代替手段"],
+      "templates/ideation/market-research/market-trends.md": ["判断に効く動向"],
+      "templates/ideation/market-research/build-vs-buy.md": ["選択肢", "推奨"],
+      "templates/ideation/market-research/questions.md": [],
+    },
+  },
+  "amadeus-ideation-feasibility": {
+    skillText: [".amadeus/settings/templates", "templates/ideation/feasibility"],
+    files: {
+      "templates/ideation/feasibility/feasibility-assessment.md": ["評価", "結論"],
+      "templates/ideation/feasibility/constraint-register.md": ["交渉不能な制約"],
+      "templates/ideation/feasibility/raid-log.md": ["記録"],
+      "templates/ideation/feasibility/questions.md": [],
+    },
+  },
+  "amadeus-ideation-scope-definition": {
+    skillText: [".amadeus/settings/templates", "templates/ideation/scope-definition"],
+    files: {
+      "templates/ideation/scope-definition/scope-document.md": ["最小スコープ", "対象", "対象外", "順序の方針"],
+      "templates/ideation/scope-definition/intent-backlog.md": ["バックログ"],
+      "templates/ideation/scope-definition/questions.md": [],
+    },
+  },
+  "amadeus-ideation-team-formation": {
+    skillText: [".amadeus/settings/templates", "templates/ideation/team-formation"],
+    files: {
+      "templates/ideation/team-formation/team-assessment.md": ["体制評価"],
+      "templates/ideation/team-formation/skill-matrix.md": ["スキルと充足"],
+      "templates/ideation/team-formation/mob-composition.md": ["構成"],
+      "templates/ideation/team-formation/questions.md": [],
+    },
+  },
+  "amadeus-ideation-rough-mockups": {
+    skillText: [".amadeus/settings/templates", "templates/ideation/rough-mockups"],
+    files: {
+      "templates/ideation/rough-mockups/wireframes.md": [],
+      "templates/ideation/rough-mockups/user-flow.md": [],
+      "templates/ideation/rough-mockups/questions.md": [],
+    },
+  },
+  "amadeus-ideation-approval-handoff": {
+    skillText: [".amadeus/settings/templates", "templates/ideation/approval-handoff"],
+    files: {
+      "templates/ideation/approval-handoff/initiative-brief.md": ["目的と成功条件", "スコープ境界", "バックログ要約", "Inception への引き継ぎ"],
+      "templates/ideation/approval-handoff/decisions.md": ["一覧"],
+      "templates/ideation/approval-handoff/traceability.md": ["成功条件と成果物の対応"],
+      "templates/ideation/approval-handoff/questions.md": [],
     },
   },
   "amadeus-ideation": {

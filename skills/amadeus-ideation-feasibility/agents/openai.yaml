@@ -1,0 +1,6 @@
+interface:
+  display_name: "Amadeus Ideation Feasibility"
+  short_description: "Assess Amadeus Intent feasibility"
+  default_prompt: "Use $amadeus-ideation-feasibility to assess feasibility and constraints for an Amadeus Intent."
+policy:
+  allow_implicit_invocation: false
