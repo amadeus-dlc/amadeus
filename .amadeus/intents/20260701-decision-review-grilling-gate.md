@@ -1,5 +1,15 @@
 # Decision Review Grilling Gate
 
+## 概要
+
+phase skill 起動時の decision tree 再評価と grilling 起動条件を標準化する。
+
+## 依存
+
+| 依存 | 理由 |
+|---|---|
+| 20260701-skill-contract-catalog | Issue #257 は、phase skill 起動時の decision tree 再評価で Skill Contract と既存成果物を入力にするため。 |
+
 ## 目標プロファイル
 
 | フィールド | 値 | 説明 |

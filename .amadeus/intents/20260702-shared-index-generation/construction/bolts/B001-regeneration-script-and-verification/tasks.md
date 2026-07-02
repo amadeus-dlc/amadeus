@@ -1,0 +1,41 @@
+# Construction Tasks
+
+- [x] T001: 検証を先行追加し、RED を確認する。
+  - 作業:
+    - `dev-scripts/evals/index-generate/check.ts` を新設し、一時ディレクトリの fixture workspace（見出し契約を満たす Intent と Discovery のモジュールを持つ最小の `.amadeus/`）に対して次を検証する。
+    - 決定論性: 同じ入力で 2 回生成した出力が一致する。
+    - 冪等性: 生成済みインデックスがある状態での再生成が出力を変えない。
+    - 並行統合: 2 つの Intent モジュールを別々に追加した状態から生成すると、両方の行を識別子の辞書順で含む。
+    - マーカー: 出力の先頭が生成マーカーの HTML コメント 1 行である。
+    - 見出し契約違反: 概要または依存の見出しがないモジュールで、対象ファイルと不足を示して失敗する。
+    - `--check`: 実ファイルを改変した状態で `--check` が不一致の対象を示して exit 1 になる。
+    - `package.json` に `test:it:index-generate` 入口を追加し、既存の test 連鎖に組み込む。
+    - スクリプト未実装の状態で検証が失敗（RED）することを実行結果で確認し、記録する。
+  - 要求: R007
+  - ユースケース: UC002
+  - 依存: なし
+  - 設計根拠: ../../U001-shared-index-generation-contract/functional-design/business-rules.md
+  - 証拠: [test-results.md](test-results.md)
+
+- [x] T002: IndexGenerate.ts を実装し、GREEN を確認する。
+  - 作業:
+    - `skills/amadeus-validator/scripts/IndexGenerate.ts` を新設し、workspace を受けて `intents.md` と `discoveries.md` を生成、上書きする。
+    - 導出は Functional Design の BL001 から BL005 に従う。Intent モジュールの `## 概要` と `## 依存` の表からの収集、依存関係表の導出、Discovery の H1 と `## 推奨次アクション` と `state.json` からの抽出、識別子の辞書順の整列、先頭マーカーの付与、見出し契約違反での失敗を含む。
+    - 期待内容を構築する生成ロジックを export し、validator（B002）が import して再利用できる形にする。
+    - `--check` モードで、期待内容と実ファイルの不一致時に対象を示して exit 1 にする。
+    - `npm run test:it:index-generate` で T001 の検証が pass（GREEN）することを確認する。
+  - 要求: R001, R002, R003
+  - ユースケース: UC001, UC002
+  - 依存: T001
+  - 設計根拠: ../../U001-shared-index-generation-contract/functional-design/business-logic-model.md
+  - 証拠: [test-results.md](test-results.md)
+
+- [x] T003: amadeus-validator の昇格先を promote で同期する。
+  - 作業:
+    - `bun run dev-scripts/promote-skill.ts amadeus-validator --replace` を実行し、`scripts/IndexGenerate.ts` を含む昇格先を同期する。
+    - `npm run test:it:promote-skill` と `npm run test:all` で同期と非破壊を確認する。
+  - 要求: R005
+  - ユースケース: なし
+  - 依存: T002
+  - 設計根拠: ../../U001-shared-index-generation-contract/functional-design/business-rules.md
+  - 証拠: [test-results.md](test-results.md)

@@ -1,5 +1,15 @@
 # Construction 内部 skill の親 skill 経由案内
 
+## 概要
+
+Construction 内部 skill の次工程案内を親 skill 経由の継続として明記する。
+
+## 依存
+
+| 依存 | 理由 |
+|---|---|
+| 20260701-construction-finalization-traceability-skill | Issue #274 は、Construction finalization を忘れないための次工程案内を扱い、Issue #245 の Construction finalization 追跡要件と同じ公開入口契約を前提にするため。 |
+
 ## 目標プロファイル
 
 | フィールド | 値 | 説明 |

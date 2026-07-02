@@ -1,5 +1,16 @@
 # phase skill の人間ゲートと承認 evidence 検査の決定論的契約
 
+## 概要
+
+phase skill の人間ゲートと承認 evidence 検査を決定論的契約にする。
+
+## 依存
+
+| 依存 | 理由 |
+|---|---|
+| 20260701-decision-review-grilling-gate | Issue #306 の grilling 起動トリガーは Issue #257 で確定した decision review 契約への追加であるため。 |
+| 20260702-skill-change-review-contract | Issue #306 と #307 の skill 変更 PR はレビュー支援契約の適用対象であるため。 |
+
 ## 目標プロファイル
 
 | フィールド | 値 | 説明 |

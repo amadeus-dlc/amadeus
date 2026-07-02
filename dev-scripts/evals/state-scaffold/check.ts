@@ -3,6 +3,7 @@
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { buildIntentsIndex } from "../../../.agents/skills/amadeus-validator/scripts/IndexGenerate";
 
 const root = resolve(import.meta.dir, "../../..");
 const fixture = join(root, "examples/03-inception-completed/.amadeus");
@@ -199,12 +200,10 @@ const captureWorkspace = workspaceCopy();
   const moduleSource = readFileSync(join(captureWorkspace, `.amadeus/intents/${intent}.md`), "utf8");
   writeFileSync(join(captureWorkspace, `.amadeus/intents/${newIntent}.md`), moduleSource);
   mkdirSync(join(captureWorkspace, ".amadeus/intents", newIntent), { recursive: true });
+  // intents.md は生成物であるため、新規モジュール追加後に生成器で再生成し、
+  // 「Index 生成整合」検査（生成物と配下モジュールの導出内容の完全一致）を満たす状態にする。
   const indexPath = join(captureWorkspace, ".amadeus/intents.md");
-  const index = readFileSync(indexPath, "utf8");
-  const listRow = `| ${newIntent} | eval 用の雛形生成対象。 | なし | [${newIntent}.md](intents/${newIntent}.md) |`;
-  const depRow = `| ${newIntent} | なし | eval 用の独立 Intent であるため。 |`;
-  const withList = index.replace(/\n\n## 依存関係/, `\n${listRow}\n\n## 依存関係`);
-  writeFileSync(indexPath, withList.trimEnd() + `\n${depRow}\n`);
+  writeFileSync(indexPath, buildIntentsIndex(captureWorkspace));
 
   runScaffold(captureWorkspace, ["intent-capture", "--intent", newIntent]);
   const state = readState(captureWorkspace, newIntent);

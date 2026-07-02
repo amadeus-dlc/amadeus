@@ -1,5 +1,15 @@
 # `amadeus-discovery` dry-run mode
 
+## 概要
+
+`amadeus-discovery` に読み取り専用の `dry-run` mode を追加する。
+
+## 依存
+
+| 依存 | 理由 |
+|---|---|
+| 20260701-history-learning-review-skills | Issue #272 は、過去分析と学習分類の結果を入力にできる読み取り専用の Intent 候補探索を扱うため。 |
+
 ## 目標プロファイル
 
 | フィールド | 値 | 説明 |

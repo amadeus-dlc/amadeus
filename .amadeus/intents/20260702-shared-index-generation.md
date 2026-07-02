@@ -1,5 +1,15 @@
 # インテント：共有インデックスの生成物化
 
+## 概要
+
+共有インデックス intents.md と discoveries.md を配下モジュールからの生成物にする。
+
+## 依存
+
+| 依存 | 理由 |
+|---|---|
+| なし | Issue #334 は Discovery 20260702-parallel-execution の recommended 候補であり、既存 Intent の完了を前提にしないため。 |
+
 ## 目標プロファイル
 
 | フィールド | 値 | 説明 |

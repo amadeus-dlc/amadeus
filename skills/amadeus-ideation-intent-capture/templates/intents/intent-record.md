@@ -1,5 +1,15 @@
 # インテント：<intent-name>
 
+## 概要
+
+<intent-summary>
+
+## 依存
+
+| 依存 | 理由 |
+|---|---|
+| <dependency-intent-id> | <dependency-reason> |
+
 ## 目標プロファイル
 
 | フィールド | 値 | 説明 |

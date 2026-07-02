@@ -1,5 +1,16 @@
 # 小さい Intent の phase PR 統合条件
 
+## 概要
+
+小さい Intent の phase PR 統合条件を steering policy として定義する。
+
+## 依存
+
+| 依存 | 理由 |
+|---|---|
+| 20260701-git-branching-policy | Issue #310 は Git Branching Policy の branch 命名との整合確認を含むため。 |
+| 20260702-state-json-scaffolding | 統合 PR の state 検証は雛形生成（Issue #311）が前提を単純にするため。 |
+
 ## 目標プロファイル
 
 | フィールド | 値 | 説明 |

@@ -1,5 +1,15 @@
 # 後段 feedback と Intent 横断の学習ループ
 
+## 概要
+
+後段 feedback と Intent 横断の学習ループを定義する。
+
+## 依存
+
+| 依存 | 理由 |
+|---|---|
+| 20260701-skill-execution-reporting | Issue #259 は、Issue #248 の実行時問題報告を入力にして、後段 feedback と Intent 横断の学習先を標準化するため。 |
+
 ## 目標プロファイル
 
 | フィールド | 値 | 説明 |

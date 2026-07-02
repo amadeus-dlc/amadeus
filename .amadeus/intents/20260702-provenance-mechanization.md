@@ -1,5 +1,15 @@
 # provenance 記録の生成と検証の機械化
 
+## 概要
+
+provenance 記録の生成と検証を機械化する。
+
+## 依存
+
+| 依存 | 理由 |
+|---|---|
+| 20260701-self-development-cycle-stage-workspace | Issue #296 は、Intent 20260701-self-development-cycle-stage-workspace の U002 Unit Design Brief が残した「evidence を JSON として標準化する必要が出た場合」という再確認条件の発火元であるため。 |
+
 ## 目標プロファイル
 
 | フィールド | 値 | 説明 |

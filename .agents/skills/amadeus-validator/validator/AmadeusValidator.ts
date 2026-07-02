@@ -15,6 +15,7 @@ import {
   currentIntentEvidenceTargets as selectCurrentIntentEvidenceTargets,
   evaluateEvidencePolicy,
 } from "./domain/evidence-policy";
+import { buildDiscoveriesIndex, buildIntentsIndex, HeadingContractViolationError } from "../scripts/IndexGenerate";
 import { type FunctionalDesignEvidenceStatus } from "./domain/functional-design-evidence-status";
 import { type CheckResult } from "./domain/results";
 import { checkConstructionPhase } from "./phases/construction";
@@ -175,6 +176,10 @@ const indexSpecs: Record<string, { headings: string[]; listHeading: string; colu
 };
 
 const rowCategoryRules: RowCategoryRule[] = [
+  {
+    category: "Index 生成整合",
+    matches: ({ condition }) => condition.startsWith("Index 生成整合"),
+  },
   {
     category: "Grilling Decision Trail",
     matches: ({ target, condition }) => target.includes("/grillings") || condition.includes("grilling"),
@@ -400,6 +405,7 @@ class AmadeusValidator {
     this.checkDiscoveries();
     this.checkEventStormingSessions(".amadeus/event-storming", "pre-intent");
     this.checkIntents();
+    this.checkIndexGeneration();
     this.checkDomainMap(".amadeus/domain-map.md");
     this.checkContextMap(".amadeus/context-map.md");
   }
@@ -1727,6 +1733,68 @@ class AmadeusValidator {
     this.checkTableTargets(path, depTable, "インテント", ids, false);
     this.checkDependencyValues(path, depTable, "依存", ids);
     this.checkNotBlank(path, depTable, "理由");
+  }
+
+  // 共有インデックス（intents.md、discoveries.md）の不整合検査。
+  // 生成ロジック（buildIntentsIndex、buildDiscoveriesIndex）を再利用し、導出した期待内容と実ファイルの
+  // 完全一致で判定する（BL006、BR008）。列構造検査（checkIntents、checkDiscoveries）とは独立して行う。
+  private checkIndexGeneration(): void {
+    this.checkIndexGenerationTarget(".amadeus/intents.md", () => buildIntentsIndex(this.root));
+    this.checkIndexGenerationTarget(".amadeus/discoveries.md", () => buildDiscoveriesIndex(this.root));
+  }
+
+  private checkIndexGenerationTarget(path: string, build: () => string): void {
+    const condition = "Index 生成整合: 生成物が配下モジュールの導出内容と一致する";
+    let expected: string;
+    try {
+      expected = build();
+    } catch (error) {
+      if (error instanceof HeadingContractViolationError) {
+        for (const violation of error.violations) {
+          if (violation.file.endsWith("state.json")) {
+            this.failRow(
+              path,
+              "Index 生成整合: 配下モジュールの state.json が読める",
+              `${violation.file}: ${violation.missing.join("、")}`,
+            );
+          } else {
+            this.failRow(
+              path,
+              "Index 生成整合: 配下モジュールが見出し契約を満たす",
+              `${violation.file}: ${violation.missing.join("、")} が不足`,
+            );
+          }
+        }
+        return;
+      }
+      throw error;
+    }
+
+    if (!this.isFile(this.absolute(path))) {
+      this.failRow(path, condition, "生成物が存在しない");
+      return;
+    }
+    const actual = this.read(path);
+    if (actual === expected) {
+      this.pass(path, condition, "配下モジュールからの導出内容と完全一致を確認");
+      return;
+    }
+    this.failRow(path, condition, this.describeIndexMismatch(actual, expected));
+  }
+
+  private describeIndexMismatch(actual: string, expected: string): string {
+    const actualLines = actual.split("\n");
+    const expectedLines = expected.split("\n");
+    const sizeNote = `実際 ${actualLines.length} 行 / 期待 ${expectedLines.length} 行`;
+    const maxLines = Math.max(actualLines.length, expectedLines.length);
+    for (let i = 0; i < maxLines; i++) {
+      if (actualLines[i] !== expectedLines[i]) {
+        const actualLine = actualLines[i] === undefined ? "(行なし)" : JSON.stringify(actualLines[i]);
+        const expectedLine = expectedLines[i] === undefined ? "(行なし)" : JSON.stringify(expectedLines[i]);
+        return `${i + 1} 行目が一致しない（実際: ${actualLine}、期待: ${expectedLine}）。${sizeNote}`;
+      }
+    }
+    return `内容が一致しない。${sizeNote}`;
   }
 
   private checkRequirements(path: string): void {

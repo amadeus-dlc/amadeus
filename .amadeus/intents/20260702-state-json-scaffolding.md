@@ -1,5 +1,15 @@
 # phase 遷移の state.json 雛形生成
 
+## 概要
+
+phase 遷移の state.json 雛形を skill 同梱スクリプトで生成する。
+
+## 依存
+
+| 依存 | 理由 |
+|---|---|
+| 20260702-phase-gate-approval-contract | Issue #311 の雛形に含める approval evidence の形式は、ゲート契約の Intent で確定した Task Generation Gate の契約を前提にするため。 |
+
 ## 目標プロファイル
 
 | フィールド | 値 | 説明 |

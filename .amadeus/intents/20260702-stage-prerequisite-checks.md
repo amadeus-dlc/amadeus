@@ -1,5 +1,15 @@
 # phase skill 起動時の stage 前提確認
 
+## 概要
+
+phase skill 起動時に skill 供給元と実行環境の stage 前提を確認する。
+
+## 依存
+
+| 依存 | 理由 |
+|---|---|
+| 20260701-history-learning-review-skills | Issue #278 は、Issue #277 と Issue #272 の前提不成立を代表例として、phase skill 起動時の skill 供給元と実行環境の stage 前提確認を扱うため。 |
+
 ## 目標プロファイル
 
 | フィールド | 値 | 説明 |
