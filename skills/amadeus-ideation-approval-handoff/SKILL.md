@@ -68,7 +68,8 @@ initiative brief の要約と確認先パスを示し、Approve と Request Chan
 Request Changes が 3 回続いたら Accept as-is を選択肢に加える。
 ゲートを提示したターンでは人間の回答を待つ。
 
-承認されたら `completed` と approval evidence を記録し、差し戻されたら `revising` にする。
+承認されたら `stages["approval-handoff"].state` を `completed` にし、`stages["approval-handoff"].approval` に `approvedAt` と `via: "conversation"` を記録する。
+差し戻されたら `state` を `revising` にする。
 
 ## 禁止事項
 

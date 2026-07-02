@@ -85,8 +85,8 @@ Birth で作られた Intent のモジュールファイルの骨格に対して
 同じステージで Request Changes が 3 回続いたら、Accept as-is（現状のまま確定して先へ進む）を選択肢に加える。
 ゲートを提示したターンでは人間の回答を待ち、承認なしに先へ進まない。
 
-承認されたら `stages["intent-capture"]` を `completed` にし、approval evidence（`approvedAt`、`via: "conversation"`）を記録する。
-差し戻されたら `revising` にする。
+承認されたら `stages["intent-capture"].state` を `completed` にし、`stages["intent-capture"].approval` に `approvedAt` と `via: "conversation"` を記録する。
+差し戻されたら `state` を `revising` にする。
 
 ## 禁止事項
 
