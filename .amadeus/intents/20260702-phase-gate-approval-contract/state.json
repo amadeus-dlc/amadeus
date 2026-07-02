@@ -1,7 +1,7 @@
 {
   "intent": "20260702-phase-gate-approval-contract",
   "phase": "construction",
-  "status": "in_progress",
+  "status": "completed",
   "ideation": {
     "intentCapture": {
       "status": "completed",
@@ -111,8 +111,8 @@
     "gate": "passed"
   },
   "construction": {
-    "status": "in_progress",
-    "gate": "not_ready",
+    "status": "completed",
+    "gate": "passed",
     "requiredArtifacts": [
       "construction/traceability.md",
       "construction/decisions.md"
@@ -123,7 +123,13 @@
       "construction/bolts/B002-trigger-and-scaffold-contract/tasks.md",
       "construction/bolts/B002-trigger-and-scaffold-contract/notes.md",
       "construction/bolts/B003-approval-evidence-check/tasks.md",
-      "construction/bolts/B003-approval-evidence-check/notes.md"
+      "construction/bolts/B003-approval-evidence-check/notes.md",
+      "construction/bolts/B001-implementation-gate-contract/test-results.md",
+      "construction/bolts/B001-implementation-gate-contract/pr.md",
+      "construction/bolts/B002-trigger-and-scaffold-contract/test-results.md",
+      "construction/bolts/B002-trigger-and-scaffold-contract/pr.md",
+      "construction/bolts/B003-approval-evidence-check/test-results.md",
+      "construction/bolts/B003-approval-evidence-check/pr.md"
     ],
     "bolts": [
       {
