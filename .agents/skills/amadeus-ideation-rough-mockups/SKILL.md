@@ -78,11 +78,13 @@ UI もシステム相互作用もない場合は、成果物を作らず `stages
 
 成果物の要約と確認先パスを示し、Approve と Request Changes の 2 択で承認を求める。
 Ideation ステージでは、スキップ済みステージの追加実行を第 3 の選択肢にできる。
+スキップ済みステージの追加実行が選ばれた場合は、対象ステージの `stages` の状態を `skipped` から `pending` に戻し、skip 理由の記録を取り消してから `amadeus` 入口へ戻る。入口が次の解決で対象ステージを選ぶ。
 Request Changes が 3 回続いたら Accept as-is を選択肢に加える。
 ゲートを提示したターンでは人間の回答を待つ。
 
 承認されたら `stages["rough-mockups"].state` を `completed` にし、`stages["rough-mockups"].approval` に `approvedAt` と `via: "conversation"` を記録する。
 差し戻されたら `state` を `revising` にする。
+Accept as-is が選ばれた場合は、`stages["rough-mockups"].state` を `completed` にし、`stages["rough-mockups"].approval` に `approvedAt`、`via: "conversation"`、`"acceptedAsIs": true` を記録し、この判断を `ideation/decisions.md` に記録する。
 
 ## 禁止事項
 

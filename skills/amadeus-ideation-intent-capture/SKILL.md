@@ -91,6 +91,7 @@ Birth で作られた Intent のモジュールファイルの骨格に対して
 
 承認されたら `stages["intent-capture"].state` を `completed` にし、`stages["intent-capture"].approval` に `approvedAt` と `via: "conversation"` を記録する。
 差し戻されたら `state` を `revising` にする。
+Accept as-is が選ばれた場合は、`stages["intent-capture"].state` を `completed` にし、`stages["intent-capture"].approval` に `approvedAt`、`via: "conversation"`、`"acceptedAsIs": true` を記録し、この判断を `ideation/decisions.md` に記録する。
 
 ## 禁止事項
 
