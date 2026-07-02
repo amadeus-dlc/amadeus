@@ -85,6 +85,8 @@ source skill、昇格先成果物、host environment での利用可否を分け
 stage0、stage1、stage2、stage0 採用判断を確認し、stage2 を stage0 として扱う場合は人間による stage0 採用判断を証拠に含める。
 stage 前提が前段 phase または前段 stage の不足を示し、現在 Intent の成功条件を妨げる場合は `upstream_feedback_required` として戻す。
 
+起動時に、同梱スクリプトの検出結果を入力証拠に含められる: `bun run .agents/skills/amadeus-construction/scripts/list-unfinalized-intents.ts <workspace>`（未 finalize の Intent を stdout へ 1 行 1 件で列挙する。検出 0 件を含む正常実行は exit 0）。検出結果が得られない場合は、通常の判定へ戻る。
+
 `grill_required` の場合だけ、`amadeus-grilling` に一問、確認理由、推奨回答、推奨理由、反映先候補を渡す。
 `amadeus-decision-review` 自体は質問を実行しない。
 
@@ -173,6 +175,7 @@ Construction 成果物を新規作成または構造補修する内部 skill は
 |---|---|---|
 | Inception 必須成果物がない | 停止 | Construction の前提が不足しているため |
 | `state.json.phase` が `inception` で gate が `passed`、Construction 成果物が不足している | `guided` | Construction へ進める前段だから |
+| `state.json.phase` が `construction` で、対象 Bolt が実装済みかつ検証済み（`test-results.md` あり）、`pr.md` がなく `construction.gate` が `passed` でなく（基準 branch 由来の checkout）、かつ構造補修が不要である | 追跡と状態確定（finalization） | 実装 PR の merge 後に完了確定が未実施だから。構造が壊れている場合は下の repair の行を優先する |
 | `state.json.phase` が `construction` で必須成果物が存在し、内容を煮詰める依頼である | `refine` | 既存 Construction を深める段階だから |
 | `state.json.phase` が `construction` で必須見出し、相対リンク、`requiredArtifacts`、`requiredBoltArtifacts` だけが壊れている | `repair` | 構造補修が目的だから |
 | `state.json.phase` が `construction` だが、構造補修と内容判断の両方が必要である | まず `repair` | 壊れた構造の上で内容判断をしないため |
