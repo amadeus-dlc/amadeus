@@ -42,7 +42,8 @@ greenfield の場合は、成果物を作らず `stages["reverse-engineering"]` 
 ## 成果物
 
 作成または更新するものは次だけである。
-配置先は Intent 配下ではなく、steering layer 配下の `.amadeus/knowledge/codebase/<repo>/` である。
+
+steering layer 配下の `.amadeus/knowledge/codebase/<repo>/` に置くもの:
 
 - `business-overview.md`
 - `architecture.md`
@@ -53,6 +54,9 @@ greenfield の場合は、成果物を作らず `stages["reverse-engineering"]` 
 - `dependencies.md`
 - `code-quality-assessment.md`
 - `timestamp.md`（解析時刻と対象コミット）
+
+Intent 配下に置くもの:
+
 - `state.json`（`stages["reverse-engineering"]` の状態と approval evidence）
 - 質問を行った場合は `inception/reverse-engineering/questions.md`
 

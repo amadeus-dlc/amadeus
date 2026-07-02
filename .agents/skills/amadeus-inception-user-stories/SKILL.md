@@ -4,7 +4,7 @@ description: >-
   Amadeus Inception の内部 skill。Stage 2.4 User Stories だけを実行する。
   利用者向け機能、複数ペルソナ、複雑な業務ロジック、チーム横断の作業がある Intent で、
   stories.md、personas.md、assessment.md を作成または補修する場面では必ず使う。
-  純粋なリファクタリング、単発のバグ修正、インフラのみの変更では実行しない。
+  純粋なリファクタリング、単発のバグ修正、インフラのみの変更、開発者ツールでは実行しない。
   要求、設計、Unit、Bolt、実装は作らない。
 ---
 
