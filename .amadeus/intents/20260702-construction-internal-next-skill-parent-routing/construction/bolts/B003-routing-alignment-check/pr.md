@@ -2,8 +2,10 @@
 
 ## Pull Request
 
-- URL: https://github.com/amadeus-dlc/amadeus/pull/282
-- 状態: open draft
+- URL: [PR #282](https://github.com/amadeus-dlc/amadeus/pull/282)
+- 状態: merged
+- merge commit: `ecdca0ebec150924d4c727c7618f14b34c9b27c5`
+- mergedAt: `2026-07-01T16:43:49Z`
 
 ## 対象
 
@@ -19,4 +21,4 @@
 |---|---|---|
 | CI | pass | GitHub Actions `mock` が SUCCESS。 |
 | レビュー | コメントなし | PR #282 にトップレベルコメント、レビュー、インラインコメントなし。 |
-| マージ | 未実施 | マージ操作は人間が行う。 |
+| マージ | 完了 | PR #282 は 2026-07-01T16:43:49Z に人間が merge 済み。承認記録は [D003](../../decisions/D003-task-generation-retroactive-approval.md) を参照。 |
