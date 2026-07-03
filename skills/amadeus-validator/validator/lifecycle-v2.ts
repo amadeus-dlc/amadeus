@@ -318,7 +318,7 @@ function checkCompletedArtifacts(ctx: LifecycleV2Context, input: LifecycleV2Inpu
     const def = stageBySlug.get(stage.slug);
     if (!def || !def.scopes.includes(scope)) continue;
     if (def.perUnit) {
-      if (stage.unit === undefined || stage.unit === "implicit") continue;
+      if (stage.unit === undefined) continue;
       for (const artifact of def.requiredArtifacts) {
         ctx.checkFile(`${input.base}/construction/${stage.unit}/${artifact}`, "completed のステージは必須成果物を持つ");
       }
@@ -336,7 +336,6 @@ function checkCompletedBoltArtifacts(ctx: LifecycleV2Context, input: LifecycleV2
   if (String(doc.phaseProgress["Construction"] ?? "") !== "Verified") return;
   const boltArtifacts = ["build-instructions.md", "unit-test-instructions.md", "build-and-test-summary.md", "build-test-results.md"];
   for (const ref of splitBoltRefs(doc.fields["Bolt Refs"])) {
-    if (ref === "implicit") continue;
     for (const artifact of boltArtifacts) {
       ctx.checkFile(`${input.base}/construction/bolts/${ref}/${artifact}`, "completed のステージは必須成果物を持つ");
     }

@@ -130,6 +130,8 @@ function buildFixture(): string {
   write(a, `intents/${oldIntentId}/inception/requirements-analysis/requirements.md`, "# 要求\n\n| ID | 要求 |\n|---|---|\n| R001 | v2 構造 |\n");
   write(a, `intents/${oldIntentId}/inception/requirements-analysis/questions.md`, "# 質問記録\n\n- Q1: 境界の確認。\n");
   write(a, `intents/${oldIntentId}/construction/implicit/functional-design/business-logic-model.md`, "# Business Logic Model\n\n中核ロジック。\n");
+  write(a, `intents/${oldIntentId}/construction/implicit/functional-design/business-rules.md`, "# Business Rules\n\n業務ルール。\n");
+  write(a, `intents/${oldIntentId}/construction/implicit/functional-design/domain-entities.md`, "# Domain Entities\n\nエンティティ。\n");
   write(a, `intents/${oldIntentId}/construction/implicit/code-generation/plan.md`, "# Plan\n\n実装計画。\n");
 
   // intents.md は旧 IndexGenerate の出力相当（移行で作り直すため最小限でよい）

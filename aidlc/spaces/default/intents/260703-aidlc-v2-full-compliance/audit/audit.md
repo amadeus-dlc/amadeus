@@ -125,3 +125,28 @@
 **Details**: bolt: implicit. npm run test:all exit 0。Artifacts: build-instructions.md, unit-test-instructions.md, integration-test-instructions.md, build-and-test-summary.md, build-test-results.md
 
 ---
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T09:01:03Z
+**Event**: BOLT_COMPLETED
+**Bolt names**: implicit
+**Batch number**: 1
+**Details**: walking skeleton の Bolt PR が人間の merge で承認された: https://github.com/amadeus-dlc/amadeus/pull/389
+
+---
+
+## PHASE_VERIFIED
+**Timestamp**: 2026-07-03T09:01:03Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: Construction
+**Pass/fail**: pass
+**Details**: construction phase PR（Bolt PR と兼用、CD002）: https://github.com/amadeus-dlc/amadeus/pull/389。traceability は construction/traceability.md で確定
+
+---
+
+## WORKFLOW_COMPLETED
+**Timestamp**: 2026-07-03T09:06:37Z
+**Event**: WORKFLOW_COMPLETED
+**Scope**: refactor
+**Details**: R001〜R007 成立（Issue #387 クローズ済み）。ladder 提案は残 Bolt なしのため実施しない（CD003）
+
+---
