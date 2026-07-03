@@ -995,3 +995,10 @@
 **Details**: Bolt B004-docs-and-proof。Bolt Refs の slug 付き表記への正規化に伴う補完記録（完了自体は既存 entry を参照。examples 再生成と旧 skill 削除は CD005 と CD006 の後続作業）。
 
 ---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T22:49:03Z
+**Event**: GATE_APPROVED
+**Details**: User Input: 「廃止して e2e で代替（推奨）」（examples の今後についての質問への回答。PR #427 レビュー中）。CD010 として記録。
+
+---

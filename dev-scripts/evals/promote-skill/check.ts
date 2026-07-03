@@ -48,40 +48,10 @@ function amadeusSkills(): string[] {
     .sort();
 }
 
-function requiredInternalSkillGroups(): Record<string, string[]> {
-  return {
-    amadeus: [
-      "amadeus-ideation-intent-capture",
-      "amadeus-ideation-market-research",
-      "amadeus-ideation-feasibility",
-      "amadeus-ideation-scope-definition",
-      "amadeus-ideation-team-formation",
-      "amadeus-ideation-rough-mockups",
-      "amadeus-ideation-approval-handoff",
-      "amadeus-inception-reverse-engineering",
-      "amadeus-inception-practices-discovery",
-      "amadeus-inception-requirements-analysis",
-      "amadeus-inception-user-stories",
-      "amadeus-inception-refined-mockups",
-      "amadeus-inception-application-design",
-      "amadeus-inception-units-generation",
-      "amadeus-inception-delivery-planning",
-      "amadeus-construction-functional-design",
-      "amadeus-construction-nfr-requirements",
-      "amadeus-construction-nfr-design",
-      "amadeus-construction-infrastructure-design",
-      "amadeus-construction-code-generation",
-      "amadeus-construction-build-and-test",
-      "amadeus-construction-ci-pipeline",
-    ],
-  };
-}
-
 function policyManagedInternalSkills(): string[] {
   return [
     "amadeus-domain-modeling",
     "amadeus-grilling",
-    ...Object.values(requiredInternalSkillGroups()).flat(),
   ].sort();
 }
 
@@ -120,27 +90,9 @@ function disablesImplicitInvocation(metadata: unknown): boolean {
 }
 
 run(["bun", "run", "dev-scripts/promote-skill.ts", "amadeus-grilling", "--dry-run"]);
-run(["bun", "run", "dev-scripts/promote-skill.ts", "amadeus-steering", "--dry-run"]);
+run(["bun", "run", "dev-scripts/promote-skill.ts", "amadeus", "--dry-run"]);
 run(["bun", "run", "dev-scripts/promote-skill.ts", "amadeus-validator", "--dry-run"]);
 runExpectFailure(["bun", "run", "dev-scripts/promote-skill.ts", "amadeus-grilling"]);
-
-for (const [parentSkill, internalSkills] of Object.entries(requiredInternalSkillGroups())) {
-  const missingInternalSkills = internalSkills.filter((skill) => {
-    return !existsSync(join(root, "skills", skill, "SKILL.md")) || !existsSync(join(root, ".agents/skills", skill, "SKILL.md"));
-  });
-  if (missingInternalSkills.length > 0) {
-    fail(`missing internal skills for ${parentSkill}: ${missingInternalSkills.join(", ")}`);
-  }
-
-  const parentSkillBody = await Bun.file(join(root, "skills", parentSkill, "SKILL.md")).text();
-  const stageCatalogPath = join(root, "skills", parentSkill, "references/stage-catalog.md");
-  const stageCatalogBody = existsSync(stageCatalogPath) ? await Bun.file(stageCatalogPath).text() : "";
-  const orchestrationBody = parentSkillBody + stageCatalogBody;
-  const missingInternalOrchestration = internalSkills.filter((skill) => !orchestrationBody.includes(`\`${skill}\``));
-  if (missingInternalOrchestration.length > 0) {
-    fail(`missing internal skill orchestration for ${parentSkill}: ${missingInternalOrchestration.join(", ")}`);
-  }
-}
 
 for (const skill of policyManagedInternalSkills()) {
   for (const base of ["skills", ".agents/skills"]) {

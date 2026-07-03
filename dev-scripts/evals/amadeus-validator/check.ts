@@ -11,7 +11,10 @@ import { join, resolve } from "node:path";
 
 const root = resolve(import.meta.dir, "../../..");
 const validator = ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts";
-const spaceTemplates = join(root, ".agents/skills/amadeus-steering/templates/space");
+// amadeus-steering は退役済み（examples 廃止に伴う旧 skill 整理）。
+// この eval は Space の構造検証だけを目的とするため、amadeus-steering の生成物を
+// 直接参照せず、この eval 専用の固定 fixture（fixtures/space/）を使う。
+const spaceTemplates = join(root, "dev-scripts/evals/amadeus-validator/fixtures/space");
 
 const cleanups: string[] = [];
 

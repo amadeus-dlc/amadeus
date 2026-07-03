@@ -1,6 +1,0 @@
-interface:
-  display_name: "Amadeus Ideation Intent Capture"
-  short_description: "Capture Amadeus Intent framing"
-  default_prompt: "Use $amadeus-ideation-intent-capture to capture and frame an Amadeus Intent."
-policy:
-  allow_implicit_invocation: false

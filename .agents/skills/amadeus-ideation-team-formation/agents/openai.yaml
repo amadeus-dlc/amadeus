@@ -1,6 +1,0 @@
-interface:
-  display_name: "Amadeus Ideation Team Formation"
-  short_description: "Assess Amadeus Intent team formation"
-  default_prompt: "Use $amadeus-ideation-team-formation to assess team formation for an Amadeus Intent."
-policy:
-  allow_implicit_invocation: false

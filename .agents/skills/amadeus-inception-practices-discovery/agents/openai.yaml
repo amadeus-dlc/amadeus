@@ -1,6 +1,0 @@
-interface:
-  display_name: "Amadeus Inception Practices Discovery"
-  short_description: "Discover team development practices"
-  default_prompt: "Use $amadeus-inception-practices-discovery to discover team development practices with evidence."
-policy:
-  allow_implicit_invocation: false

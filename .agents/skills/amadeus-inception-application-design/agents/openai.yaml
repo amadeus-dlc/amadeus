@@ -1,6 +1,0 @@
-interface:
-  display_name: "Amadeus Inception Application Design"
-  short_description: "Design Amadeus application structure"
-  default_prompt: "Use $amadeus-inception-application-design to design components, services, and dependencies."
-policy:
-  allow_implicit_invocation: false

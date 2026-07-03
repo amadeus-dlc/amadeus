@@ -1,6 +1,0 @@
-interface:
-  display_name: "Amadeus Ideation Rough Mockups"
-  short_description: "Sketch Amadeus Intent rough mockups"
-  default_prompt: "Use $amadeus-ideation-rough-mockups to sketch rough mockups for an Amadeus Intent."
-policy:
-  allow_implicit_invocation: false

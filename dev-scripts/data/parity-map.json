@@ -80,8 +80,8 @@
       "reason": "上流に対応のない独自 3 skill。R004 により機能を失わずに維持する。上流 38 skill の名前写像対象には含まれないため、parity-check の一方向（baseline -> local 存在）検査では検査されない。"
     },
     {
-      "target": "amadeus-construction-*、amadeus-ideation-*、amadeus-inception-* など旧 skill 群",
-      "reason": "B004（skill 整理）まで残置する、置換前の旧 skill 群。上流 38 skill との 1 対 1 対応の対象外であり、parity-check では検査されない。"
+      "target": "amadeus-construction-*、amadeus-ideation-*、amadeus-inception-*、amadeus-steering など旧 skill 群",
+      "reason": "削除済み（examples 機構の廃止に伴う旧 skill 整理）。置換前の旧 skill 群であり、上流 38 skill との 1 対 1 対応の対象外だったため、parity-check では検査されていなかった。"
     }
   ]
 }

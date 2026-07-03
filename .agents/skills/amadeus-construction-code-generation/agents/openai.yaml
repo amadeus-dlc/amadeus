@@ -1,6 +1,0 @@
-interface:
-  display_name: "Amadeus Construction Code Generation"
-  short_description: "Implement unit code"
-  default_prompt: "Use $amadeus-construction-code-generation to plan and implement the unit's code and tests."
-policy:
-  allow_implicit_invocation: false

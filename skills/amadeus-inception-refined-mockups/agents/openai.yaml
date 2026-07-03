@@ -1,6 +1,0 @@
-interface:
-  display_name: "Amadeus Inception Refined Mockups"
-  short_description: "Refine Amadeus mockups"
-  default_prompt: "Use $amadeus-inception-refined-mockups to refine rough mockups against requirements and stories."
-policy:
-  allow_implicit_invocation: false

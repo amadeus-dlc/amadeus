@@ -52,37 +52,19 @@ npm run test:it:promote-skill
 - 対象範囲と責任境界を明確にする。
 - テンプレートは、`aidlc/spaces/<space>/memory/templates/` の上書きがあればそれを、なければ対象 skill の同梱テンプレートを使う。
 
-## Examples
+## 実行検証
 
-`examples/` は、実際の skill で生成できる Amadeus 成果物だけを置く。
+「実際に動く実行結果の検証」は、example snapshot ではなくエンジン sandbox e2e（`dev-scripts/evals/engine-e2e/check.ts`）で行う。
+sandbox e2e は決定論的であり、LLM を呼ばない。
+一時ディレクトリへ `.agents/aidlc/{tools,aidlc-common,sensors,scopes,agents,knowledge}` をコピーした隔離 workspace を作り、本番 `aidlc/` を変更しない。
 
-example は skill の実行結果として成立する snapshot であり、読者向けの説明ではない。
-手作業の理想形やレビュー用の抜粋を `examples/` として置かない。
-example の正しさは validator と wrapper（`npm run test:examples`）で確認する。
+sandbox e2e は、`intent-birth` による record 生成、`aidlc-orchestrate.ts next` の run-stage directive 発行、produces 不在時の完了拒否、human presence 未充足時の承認拒否、audit shard の自動生成を確認する。
+sandbox e2e は、成功時も失敗時も一時ディレクトリを片付ける。
 
-snapshot は v2 互換ライフサイクルの段階別に置く。
+sandbox e2e は `npm run test:it:engine-e2e` で単独実行できる。
+`npm run test:all` にも含まれる。
 
-- `examples/01-ideation-completed`
-- `examples/02-inception-completed`
-- `examples/03-construction-design-ready`
-- `examples/04-construction-implementation-planned`
-
-新しい example を追加または更新する場合は、対象の skill を real provider で実際に駆動して生成する。
-段階別 example を再生成する場合は、repo root で `npm run examples:generate:real` を使う。
-手順を手作業で再現しない。
-
-上流 step を変えずに途中 step 以降だけを再生成する場合は、`dev-scripts/generate-amadeus-examples.ts` の `--from <step-id>` を使う。
-利用できる step id は、`01-ideation-completed`、`02-inception-completed`、`03-construction-design-ready`、`04-construction-implementation-planned` である。
-`--from` は直前の snapshot を入力として使い、指定 step 以降だけを更新対象にする。
-
-example は、生成に使った source skill の `skills/**/SKILL.md` と md5 を `examples/skill-provenance.json` に記録する。
-source skill の md5 を更新する場合は、該当 example を real provider で実際に再生成してから更新する。
-md5 だけを現在値へ書き換えない。
-`skills/amadeus*/SKILL.md` または `.agents/skills/amadeus*/SKILL.md` を変更した PR では、PR 作成前に `npm run test:examples` を実行し、provenance 不一致が出たら対象 step 以降を real provider で再生成する。
-real provider で再生成できない場合は md5 を更新せず、該当 entry に `staleReason` を残す。
-`staleReason` は一時的な例外であり、後続 PR で real provider による再生成を実施して削除する。
-
-skill が生成できない構造が必要になった場合は、example だけを直さず、先に skill、template、validator、eval の契約を直す。
+skill が生成できない構造が必要になった場合は、先に skill、template、validator、eval の契約を直す。
 
 ## 検証
 
