@@ -140,15 +140,41 @@ type SnapshotInvariant = {
 const snapshotInvariants: SnapshotInvariant[] = [
   {
     snapshot: "examples/01-ideation-completed",
-    state: { schemaVersion: "2", phase: "inception", "phaseGates.ideation.via": "pr", "stages.approval-handoff.state": "completed" },
+    state: {
+      schemaVersion: "2",
+      intentId,
+      scope: "feature",
+      status: "in_progress",
+      phase: "inception",
+      "phaseGates.ideation.via": "pr",
+      "stages.approval-handoff.state": "completed",
+    },
   },
   {
     snapshot: "examples/02-inception-completed",
-    state: { schemaVersion: "2", phase: "construction", "phaseGates.inception.via": "pr", "stages.delivery-planning.state": "completed" },
+    state: {
+      schemaVersion: "2",
+      intentId,
+      scope: "feature",
+      status: "in_progress",
+      phase: "construction",
+      "phaseGates.ideation.via": "pr",
+      "phaseGates.inception.via": "pr",
+      "stages.delivery-planning.state": "completed",
+    },
   },
   {
     snapshot: "examples/03-construction-design-ready",
-    state: { schemaVersion: "2", phase: "construction", "stages.code-generation.state": "pending" },
+    state: {
+      schemaVersion: "2",
+      intentId,
+      scope: "feature",
+      status: "in_progress",
+      phase: "construction",
+      "phaseGates.ideation.via": "pr",
+      "phaseGates.inception.via": "pr",
+      "stages.code-generation.state": "pending",
+    },
     unitStates: [{ stage: "functional-design", state: "completed" }],
     allBoltStates: "active",
     boltUnits: [
@@ -167,7 +193,15 @@ const snapshotInvariants: SnapshotInvariant[] = [
   {
     // 04 は 03 の累積であり、functional-design の不変条件も維持されることを再検査する。
     snapshot: "examples/04-construction-implementation-planned",
-    state: { schemaVersion: "2", phase: "construction" },
+    state: {
+      schemaVersion: "2",
+      intentId,
+      scope: "feature",
+      status: "in_progress",
+      phase: "construction",
+      "phaseGates.ideation.via": "pr",
+      "phaseGates.inception.via": "pr",
+    },
     unitStates: [
       { stage: "functional-design", state: "completed" },
       { stage: "code-generation", state: "active" },
