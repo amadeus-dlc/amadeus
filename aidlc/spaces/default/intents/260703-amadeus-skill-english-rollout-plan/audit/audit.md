@@ -797,3 +797,20 @@
 **Details**: B001 #395 方針確定の Stage 3.6 を開始した。
 
 ---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T12:46:07Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Bolt**: B001
+**Details**: B001 #395 方針確定。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/409。Merge commit: f519abea0ae677bdab7876868765ec020abf802e。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T12:46:07Z
+**Event**: BOLT_COMPLETED
+**Bolt**: B001
+**Details**: walking skeleton の Bolt PR が人間の merge で承認された。PR: https://github.com/amadeus-dlc/amadeus/pull/409。Merge commit: f519abea0ae677bdab7876868765ec020abf802e。
+
+---

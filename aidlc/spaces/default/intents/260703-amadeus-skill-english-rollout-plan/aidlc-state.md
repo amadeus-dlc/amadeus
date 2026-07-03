@@ -24,8 +24,8 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 25
-- **Completed**: 18
-- **In Progress**: B001 / build-and-test pending Bolt PR #409
+- **Completed**: 19
+- **In Progress**: Construction Autonomy Mode decision after B001
 
 ## Runtime State
 - **Revision Count**: 0
@@ -71,7 +71,7 @@ Per unit: U001-issue-395-policy-definition
 - [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
 - [S] infrastructure-design — SKIP: #395 方針確定にはインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計がない。
 - [x] code-generation — EXECUTE
-- [-] build-and-test — EXECUTE
+- [x] build-and-test — EXECUTE
 - [ ] ci-pipeline — EXECUTE
 
 ### OPERATION PHASE
@@ -86,12 +86,12 @@ Per unit: U001-issue-395-policy-definition
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
 - **Current Stage**: build-and-test
-- **Next Stage**: Bolt PR
+- **Next Stage**: functional-design
 - **Status**: Running
 - **Construction Autonomy Mode**: unset
-- **Last Updated**: 2026-07-03T12:42:27Z
+- **Last Updated**: 2026-07-03T12:46:07Z
 
 ## Session Resume Point
-- **Last Completed Stage**: code-generation
-- **Next Action**: Await B001 Bolt PR merge: https://github.com/amadeus-dlc/amadeus/pull/409
-- **Pending Artifacts**: B001 の build-and-test 完了確定と BOLT_COMPLETED は PR merge 待ち。ci-pipeline は未完了。
+- **Last Completed Stage**: build-and-test
+- **Next Action**: Set Construction Autonomy Mode, then start B002 (#400 小さい土台 PR)
+- **Pending Artifacts**: B002 以降の Construction 成果物は未作成。ci-pipeline は未完了。
