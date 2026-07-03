@@ -1,12 +1,18 @@
 """Shared utilities for skill-forge scripts."""
 
 import os
+import re
 import shutil
 import sys
+from contextlib import contextmanager
 from pathlib import Path
+
+import yaml
 
 CLI_CLAUDE = "claude"
 CLI_CODEX = "codex"
+
+FRONTMATTER_PATTERN = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
 
 
 def get_default_cli_home_name(cli_type: str) -> str:
@@ -106,44 +112,85 @@ def resolve_skill_dir(cli_type: str, project_root: Path | None = None) -> Path:
     return resolve_cli_home(cli_type, project_root) / "skills"
 
 
-def parse_skill_md(skill_path: Path) -> tuple[str, str, str]:
-    """Parse a SKILL.md file, returning (name, description, full_content)."""
-    content = (skill_path / "SKILL.md").read_text()
-    lines = content.split("\n")
+def project_skill_install_dir(cli_type: str, project_root: Path) -> Path:
+    """Return the project-level skills directory the CLI discovers from cwd.
 
-    if lines[0].strip() != "---":
+    Unlike resolve_skill_dir, home-directory overrides are irrelevant here:
+    trigger evals run the CLI with cwd at the project root, and the CLI always
+    discovers this path regardless of any home override.
+    """
+    if cli_type == CLI_CODEX:
+        return project_root / ".agents" / "skills"
+    return project_root / ".claude" / "skills"
+
+
+@contextmanager
+def mask_installed_skill(cli_type: str, skill_name: str, project_root: Path):
+    """Temporarily move a same-named installed skill out of CLI discovery.
+
+    Trigger evals present the description under test through a temporary
+    skill. When the real skill is also installed in the project, both are
+    visible under the same name and the real one contaminates the
+    measurement (for Codex it even shadows the marker), so it is moved aside
+    for the duration and restored afterwards.
+
+    Yields the masked location (usable as a copy source), or None when the
+    skill is not installed in the project.
+    """
+    installed = project_skill_install_dir(cli_type, project_root) / skill_name
+    if not (installed.is_symlink() or installed.exists()):
+        yield None
+        return
+
+    # The mask dir sits at the same depth as the skills dir so relative
+    # symlink targets keep resolving from the masked location.
+    mask_root = installed.parent.parent / f"skill-forge-masked-{os.getpid()}"
+    mask_root.mkdir(parents=True, exist_ok=True)
+    masked = mask_root / skill_name
+    installed.rename(masked)
+    print(
+        f"Note: temporarily moved {installed} to {masked} during the trigger "
+        "eval; it is restored automatically when the eval finishes.",
+        file=sys.stderr,
+    )
+    try:
+        yield masked
+    finally:
+        masked.rename(installed)
+        try:
+            mask_root.rmdir()
+        except OSError:
+            pass
+
+
+def parse_frontmatter(content: str) -> dict:
+    """Parse SKILL.md YAML frontmatter into a dict.
+
+    Raises ValueError with a human-readable reason on malformed frontmatter.
+    """
+    content = content.replace("\r\n", "\n")
+    if not content.startswith("---"):
         raise ValueError("SKILL.md missing frontmatter (no opening ---)")
-
-    end_idx = None
-    for i, line in enumerate(lines[1:], start=1):
-        if line.strip() == "---":
-            end_idx = i
-            break
-
-    if end_idx is None:
+    match = FRONTMATTER_PATTERN.match(content)
+    if not match:
         raise ValueError("SKILL.md missing frontmatter (no closing ---)")
+    try:
+        frontmatter = yaml.safe_load(match.group(1))
+    except yaml.YAMLError as exc:
+        raise ValueError(f"Invalid YAML in frontmatter: {exc}") from exc
+    if not isinstance(frontmatter, dict):
+        raise ValueError("Frontmatter must be a YAML dictionary")
+    return frontmatter
 
-    name = ""
-    description = ""
-    frontmatter_lines = lines[1:end_idx]
-    i = 0
-    while i < len(frontmatter_lines):
-        line = frontmatter_lines[i]
-        if line.startswith("name:"):
-            name = line[len("name:"):].strip().strip('"').strip("'")
-        elif line.startswith("description:"):
-            value = line[len("description:"):].strip()
-            # Handle YAML multiline indicators (>, |, >-, |-)
-            if value in (">", "|", ">-", "|-"):
-                continuation_lines: list[str] = []
-                i += 1
-                while i < len(frontmatter_lines) and (frontmatter_lines[i].startswith("  ") or frontmatter_lines[i].startswith("\t")):
-                    continuation_lines.append(frontmatter_lines[i].strip())
-                    i += 1
-                description = " ".join(continuation_lines)
-                continue
-            else:
-                description = value.strip('"').strip("'")
-        i += 1
 
+def parse_skill_md(skill_path: Path) -> tuple[str, str, str]:
+    """Parse a SKILL.md file, returning (name, description, full_content).
+
+    The description is whitespace-normalized to a single line, since callers
+    embed it in eval prompts and generated frontmatter.
+    """
+    content = (skill_path / "SKILL.md").read_text()
+    frontmatter = parse_frontmatter(content)
+    name = str(frontmatter.get("name") or "").strip()
+    description = " ".join(str(frontmatter.get("description") or "").split())
     return name, description, content

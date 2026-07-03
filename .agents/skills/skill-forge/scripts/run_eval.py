@@ -9,11 +9,13 @@ from pathlib import Path
 
 from scripts.run_eval_claude import run_single_query_claude
 from scripts.run_eval_codex import run_single_query_codex
+from scripts.trigger_probe import TIMEOUT, TRIGGERED
 from scripts.utils import (
     CLI_CLAUDE,
     CLI_CODEX,
     detect_cli,
     find_project_root,
+    mask_installed_skill,
     parse_skill_md,
 )
 
@@ -27,10 +29,12 @@ def run_single_query(
     model: str | None = None,
     cli_type: str = CLI_CLAUDE,
     cli_command: str | None = None,
-) -> bool:
-    """Run a single query and return whether the skill was triggered.
+    source_skill_dir: str | None = None,
+) -> str:
+    """Run a single query and return the trigger outcome.
 
-    Dispatches to the appropriate CLI-specific implementation.
+    Dispatches to the appropriate CLI-specific implementation and returns
+    TRIGGERED, COMPLETED, or TIMEOUT.
     """
     if cli_type == CLI_CODEX:
         return run_single_query_codex(
@@ -39,7 +43,7 @@ def run_single_query(
         )
     return run_single_query_claude(
         query, skill_name, skill_description, timeout, project_root, model,
-        cli_command,
+        cli_command, source_skill_dir=source_skill_dir,
     )
 
 
@@ -56,43 +60,55 @@ def run_eval(
     cli_type: str = CLI_CLAUDE,
     cli_command: str | None = None,
 ) -> dict:
-    """Run the full eval set and return results."""
-    results = []
-    query_triggers: dict[str, list[bool]] = {}
-    query_errors: dict[str, list[str]] = {}
-    query_items: dict[str, dict] = {}
+    """Run the full eval set and return results.
 
-    with ProcessPoolExecutor(max_workers=num_workers) as executor:
-        future_to_info = {}
-        for item in eval_set:
-            query = item["query"]
-            query_triggers.setdefault(query, [])
-            query_errors.setdefault(query, [])
-            query_items[query] = item
-            for run_idx in range(runs_per_query):
-                future = executor.submit(
-                    run_single_query,
-                    item["query"],
-                    skill_name,
-                    description,
-                    timeout,
-                    str(project_root),
-                    model,
-                    cli_type,
-                    cli_command,
-                )
-                future_to_info[future] = (item, run_idx)
+    Results are keyed by eval-set position and returned in input order, so
+    duplicate query texts stay independent.
+    """
+    if cli_type == CLI_CODEX and num_workers > 1:
+        # Codex discovers repo skills from the shared .agents/skills/, so
+        # concurrent runs would see each other's same-named temp skills and
+        # read the wrong marker. Measured: parallel runs drop the trigger
+        # rate to roughly 1/num_workers of the serial value.
+        print(
+            "Note: Codex trigger evals run serially — concurrent runs share "
+            ".agents/skills/ and contaminate each other's measurements.",
+            file=sys.stderr,
+        )
+        num_workers = 1
 
-        for future in as_completed(future_to_info):
-            item, _ = future_to_info[future]
-            query = item["query"]
-            try:
-                query_triggers[query].append(future.result())
-            except Exception as e:
-                print(f"Error: query failed: {e}", file=sys.stderr)
-                query_errors[query].append(str(e))
+    run_outcomes: list[list[str]] = [[] for _ in eval_set]
+    run_errors: list[list[str]] = [[] for _ in eval_set]
 
-    total_errors = sum(len(errs) for errs in query_errors.values())
+    with mask_installed_skill(cli_type, skill_name, project_root) as masked_skill_dir:
+        source_skill_dir = str(masked_skill_dir) if masked_skill_dir else None
+        with ProcessPoolExecutor(max_workers=num_workers) as executor:
+            future_to_index = {}
+            for index, item in enumerate(eval_set):
+                for _ in range(runs_per_query):
+                    future = executor.submit(
+                        run_single_query,
+                        item["query"],
+                        skill_name,
+                        description,
+                        timeout,
+                        str(project_root),
+                        model,
+                        cli_type,
+                        cli_command,
+                        source_skill_dir,
+                    )
+                    future_to_index[future] = index
+
+            for future in as_completed(future_to_index):
+                index = future_to_index[future]
+                try:
+                    run_outcomes[index].append(future.result())
+                except Exception as e:
+                    print(f"Error: query failed: {e}", file=sys.stderr)
+                    run_errors[index].append(str(e))
+
+    total_errors = sum(len(errs) for errs in run_errors)
     if total_errors > 0:
         print(
             f"Warning: {total_errors} query run(s) failed with errors. "
@@ -100,12 +116,23 @@ def run_eval(
             file=sys.stderr,
         )
 
-    for query, triggers in query_triggers.items():
-        item = query_items[query]
-        errors = query_errors.get(query, [])
-        effective_runs = len(triggers)
+    total_timeouts = sum(outcomes.count(TIMEOUT) for outcomes in run_outcomes)
+    if total_timeouts > 0:
+        print(
+            f"Warning: {total_timeouts} run(s) hit the {timeout}s timeout before "
+            f"a decisive event and count as non-triggers. Raise --timeout if "
+            f"should-trigger queries are affected.",
+            file=sys.stderr,
+        )
+
+    results = []
+    for item, outcomes, errors in zip(eval_set, run_outcomes, run_errors):
+        query = item["query"]
+        effective_runs = len(outcomes)
+        triggers = outcomes.count(TRIGGERED)
+        timeouts = outcomes.count(TIMEOUT)
         if effective_runs > 0:
-            trigger_rate = sum(triggers) / effective_runs
+            trigger_rate = triggers / effective_runs
         else:
             trigger_rate = 0.0
         should_trigger = item["should_trigger"]
@@ -127,12 +154,14 @@ def run_eval(
             "query": query,
             "should_trigger": should_trigger,
             "trigger_rate": trigger_rate,
-            "triggers": sum(triggers),
+            "triggers": triggers,
             "runs": effective_runs,
             "attempted_runs": runs_per_query,
             "status": status,
             "pass": did_pass,
         }
+        if timeouts:
+            result_entry["timeouts"] = timeouts
         if errors:
             result_entry["errors"] = errors
             result_entry["error_count"] = len(errors)
@@ -150,6 +179,7 @@ def run_eval(
             "passed": passed,
             "failed": total - passed,
             "errors": total_errors,
+            "timeouts": total_timeouts,
         },
     }
 

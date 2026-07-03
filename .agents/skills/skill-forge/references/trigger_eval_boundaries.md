@@ -11,6 +11,8 @@ Each query result has these fields:
 - `attempted_runs`: Number of runs requested for the query.
 - `runs`: Number of runs that returned a trigger/non-trigger result without raising.
 - `triggers`: Number of successful runs where the detector saw a trigger signal.
+- `timeouts`: Number of runs where the observation window elapsed without a
+  decisive event. Present only when non-zero. See "Timeouts" below.
 - `trigger_rate`: `triggers / runs`, or `0.0` when `runs` is `0`.
 - `status`: Execution status.
   - `ok`: At least one successful run and no run errors.
@@ -21,6 +23,32 @@ Each query result has these fields:
 A successful non-trigger is `status: "ok"`, `runs > 0`, and `triggers == 0`.
 
 An eval infrastructure failure is `status: "error"` or `status: "not_run"` with `runs == 0`. Treat it as failed even when `should_trigger` is `false`.
+
+## Timeouts
+
+A run that reaches the `--timeout` window without a trigger signal counts as a
+non-trigger run: trigger decisions happen early in a session, so a long
+trigger-free window is treated as evidence of non-trigger rather than as an
+error. The run still increments `runs` and keeps `status: "ok"`.
+
+This is a bias to watch: a hung or slow CLI makes every `should_trigger`
+query fail and every `should_not_trigger` query pass. When `timeouts` is
+non-zero on failing positive queries, or `timeouts == runs` across the board,
+raise `--timeout` or investigate the CLI before trusting the scores.
+
+## Same-name skill masking
+
+While an eval batch runs, `run_eval` temporarily moves a project-installed
+skill with the same name (`.claude/skills/<name>` for Claude,
+`.agents/skills/<name>` for Codex) into a sibling `skill-forge-masked-<pid>`
+directory and restores it when the batch finishes. Without this, the installed
+skill stays visible next to the temporary skill under test: the agent may
+consult the installed copy, which carries the original description (and, for
+Codex, no marker), contaminating the measurement.
+
+If the process is killed hard mid-batch, the restore may not run. Recover by
+moving the skill directory back from `skill-forge-masked-<pid>` to its
+original location.
 
 ## Claude Code detector
 
@@ -58,6 +86,16 @@ The Codex path creates a temporary repository skill under `.agents/skills/<skill
 ```
 
 It runs `codex exec --json -s read-only -C <project-root> <query>`.
+
+Codex runs execute serially regardless of `--num-workers`: all runs share the
+repository `.agents/skills/`, so concurrent temp skills carry the same visible
+name and a run may read another run's marker copy. Measured on a real batch,
+8-way parallelism dropped the positive trigger rate from ~50% to ~4%.
+
+Codex detection also needs the full response: the marker only becomes visible
+in a completed `agent_message`, so a triggering run typically takes 1-3
+minutes. Use `--timeout 240` or higher; the 30s default is claude-oriented and
+would count almost every Codex run as a timeout non-trigger.
 
 The detector treats the skill as triggered only when:
 
