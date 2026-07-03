@@ -445,3 +445,232 @@
 **Details**: Q3 回答: commit 固定 + 明示更新（推奨案を採用）。基準 commit fde1e1af7aae16f4c4defc991abaa3877ee2ac26 を固定して成果物に記録し、上流への追従は明示的な Issue または Intent で行う（C003 へ反映済み）。回答時点での記録が漏れていたため backfill した（Recovered=true。Bugbot 指摘 3521318458 への対応）。
 
 ---
+
+## PHASE_VERIFIED
+**Timestamp**: 2026-07-03T18:04:57Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: Ideation
+**Pass/fail**: pass
+**Details**: https://github.com/amadeus-dlc/amadeus/pull/426
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T18:04:57Z
+**Event**: STAGE_STARTED
+**Stage**: reverse-engineering
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T18:15:36Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: reverse-engineering
+**Details**: codekb/amadeus/ の 9 ファイルを commit 42f3caee 基準で鮮度更新し、gate を提示した。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T18:15:36Z
+**Event**: GATE_APPROVED
+**Stage**: reverse-engineering
+**Details**: User Input: 「構築まで自動承認でお願いします。もう寝るので」「中間のPRは無しでOK」（事前の包括承認による自動承認）
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T18:15:36Z
+**Event**: STAGE_COMPLETED
+**Stage**: reverse-engineering
+**Details**: 自動承認（人間の事前指示）。codekb 9 ファイルの鮮度更新を確定。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T18:15:36Z
+**Event**: STAGE_SKIPPED
+**Stage**: practices-discovery
+**Details**: Condition 偽。チームの開発実践（branch 戦略、テスト方針、品質基準）は memory/team.md と development.md に確立済みで、新たな発見と昇格の必要がない。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T18:15:36Z
+**Event**: STAGE_STARTED
+**Stage**: requirements-analysis
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T18:17:16Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: requirements-analysis
+**Details**: requirements.md（R001〜R011）を作成し、gate を提示した。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T18:17:16Z
+**Event**: GATE_APPROVED
+**Stage**: requirements-analysis
+**Details**: User Input: 「構築まで自動承認でお願いします。もう寝るので」（事前の包括承認による自動承認）
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T18:17:16Z
+**Event**: STAGE_COMPLETED
+**Stage**: requirements-analysis
+**Details**: 自動承認（人間の事前指示）。R001〜R011 を確定。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T18:17:16Z
+**Event**: STAGE_SKIPPED
+**Stage**: user-stories
+**Details**: Condition 偽。開発者ツールでユーザー向け機能と複数ペルソナがない（skill 契約の除外条件「developer tools」に該当）。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T18:17:16Z
+**Event**: STAGE_SKIPPED
+**Stage**: refined-mockups
+**Details**: Condition 偽。UI がなく、Ideation の rough mockups も skip（対話契約は上流の conductor と directive 契約で定義済み）。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T18:17:16Z
+**Event**: STAGE_STARTED
+**Stage**: application-design
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T18:20:22Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: application-design
+**Details**: components.md（C-ENG〜C-EX の 11 コンポーネント）、component-methods.md、services.md、component-dependency.md、decisions.md（設計判断 7 件）を作成し、gate を提示した。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T18:20:22Z
+**Event**: GATE_APPROVED
+**Stage**: application-design
+**Details**: User Input: 「構築まで自動承認でお願いします。もう寝るので」（事前の包括承認による自動承認）
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T18:20:22Z
+**Event**: STAGE_COMPLETED
+**Stage**: application-design
+**Details**: 自動承認（人間の事前指示）。11 コンポーネントと設計判断 7 件を確定。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T18:20:22Z
+**Event**: STAGE_STARTED
+**Stage**: units-generation
+
+---
+
+## DECISION_RECORDED
+**Timestamp**: 2026-07-03T18:21:52Z
+**Event**: DECISION_RECORDED
+**Stage**: units-generation
+**Details**: Unit 境界戦略と粒度。選択肢: (1) 機能単位、粗め 8 Unit（推奨） (2) 細かめ分割 (3) サービス単位
+
+---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T18:21:52Z
+**Event**: QUESTION_ANSWERED
+**Stage**: units-generation
+**Details**: 推奨案を採用（事前の包括承認「構築まで自動承認」による自動確定。GD012）。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T18:21:52Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: units-generation
+**Details**: unit-of-work.md（U001〜U008）、unit-of-work-dependency.md（非循環 DAG）、grillings G003 を作成し、gate を提示した。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T18:21:52Z
+**Event**: GATE_APPROVED
+**Stage**: units-generation
+**Details**: User Input: 「構築まで自動承認でお願いします。もう寝るので」（事前の包括承認による自動承認）
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T18:21:52Z
+**Event**: STAGE_COMPLETED
+**Stage**: units-generation
+**Details**: 自動承認（人間の事前指示）。U001〜U008 と依存 DAG を確定。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T18:21:52Z
+**Event**: STAGE_STARTED
+**Stage**: delivery-planning
+
+---
+
+## DECISION_RECORDED
+**Timestamp**: 2026-07-03T18:24:28Z
+**Event**: DECISION_RECORDED
+**Stage**: delivery-planning
+**Details**: Bolt の束ね方。選択肢: (1) 最初だけ薄切り + 以降は関連 Unit の束（4 Bolt、推奨） (2) Unit ごとに 1 Bolt（8 Bolt） (3) 全部 1 Bolt
+
+---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T18:24:28Z
+**Event**: QUESTION_ANSWERED
+**Stage**: delivery-planning
+**Details**: 推奨案を採用（事前の包括承認による自動確定。GD013）。walking skeleton と順序は GD010、GD011 の確定を再利用。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T18:24:28Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: delivery-planning
+**Details**: bolt-plan.md（B001〜B004、DoD と確信仮説つき）、risk-and-sequencing-rationale.md、external-dependency-map.md、grillings G004 を作成し、gate を提示した。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T18:24:28Z
+**Event**: GATE_APPROVED
+**Stage**: delivery-planning
+**Details**: User Input: 「構築まで自動承認でお願いします。もう寝るので」（事前の包括承認による自動承認）
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T18:24:28Z
+**Event**: STAGE_COMPLETED
+**Stage**: delivery-planning
+**Details**: 自動承認（人間の事前指示）。B001〜B004 の Bolt 計画を確定。Inception の実行対象ステージがすべて完了した。
+
+---
+
+## PHASE_VERIFIED
+**Timestamp**: 2026-07-03T18:24:28Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: Inception
+**Pass/fail**: pass
+**Details**: 人間指示「中間のPRは無しでOK」により phase PR を省略し、最終 PR へ統合する。validator pass を確認済み。
+
+---

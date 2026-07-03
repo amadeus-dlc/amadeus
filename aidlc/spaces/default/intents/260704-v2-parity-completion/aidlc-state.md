@@ -24,8 +24,8 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 25
-- **Completed**: 7
-- **In Progress**: none (awaiting Ideation phase PR merge)
+- **Completed**: 12
+- **In Progress**: none (starting Bolt B001)
 
 ## Runtime State
 - **Revision Count**: 0
@@ -33,9 +33,9 @@
 ## Phase Progress
 
 - **Initialization**: Verified
-- **Ideation**: Active
-- **Inception**: Pending
-- **Construction**: Pending
+- **Ideation**: Verified
+- **Inception**: Verified
+- **Construction**: Active
 - **Operation**: Skipped
 
 ## Stage Progress
@@ -55,14 +55,14 @@
 - [x] approval-handoff — EXECUTE
 
 ### INCEPTION PHASE
-- [ ] reverse-engineering — EXECUTE
-- [ ] practices-discovery — EXECUTE
-- [ ] requirements-analysis — EXECUTE
-- [ ] user-stories — EXECUTE
-- [ ] refined-mockups — EXECUTE
-- [ ] application-design — EXECUTE
-- [ ] units-generation — EXECUTE
-- [ ] delivery-planning — EXECUTE
+- [x] reverse-engineering — EXECUTE
+- [S] practices-discovery — SKIP: practices already established in memory/
+- [x] requirements-analysis — EXECUTE
+- [S] user-stories — SKIP: developer tool, no user-facing personas
+- [S] refined-mockups — SKIP: no UI
+- [x] application-design — EXECUTE
+- [x] units-generation — EXECUTE
+- [x] delivery-planning — EXECUTE
 
 ### CONSTRUCTION PHASE
 Per unit: (units not yet generated)
@@ -84,14 +84,14 @@ Per unit: (units not yet generated)
 - [S] feedback-optimization — SKIP: condition false for this intent (D005)
 
 ## Current Status
-- **Lifecycle Phase**: IDEATION
-- **Current Stage**: approval-handoff
-- **Next Stage**: reverse-engineering (INCEPTION, after phase PR merge)
+- **Lifecycle Phase**: CONSTRUCTION
+- **Current Stage**: code-generation
+- **Next Stage**: build-and-test
 - **Status**: Running
 - **Construction Autonomy Mode**: unset
 - **Last Updated**: 2026-07-03T18:20:00Z
 
 ## Session Resume Point
-- **Last Completed Stage**: approval-handoff
-- **Next Action**: create Ideation phase PR, confirm merge, then record PHASE_VERIFIED and proceed to INCEPTION (2.1 reverse-engineering)
+- **Last Completed Stage**: delivery-planning
+- **Next Action**: execute Bolt B001 (walking skeleton): 3.5 code-generation for engine vertical slice
 - **Pending Artifacts**: none

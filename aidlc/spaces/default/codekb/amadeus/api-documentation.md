@@ -24,6 +24,7 @@ Amadeus の公開入口は HTTP API ではなく、skill と CLI である。
 | `npm run contracts:check` | skill contract 生成物の整合を検査する。 |
 | `npm run claude-wiring:check` | `.claude/` と `.agents/` の接続を検査する。 |
 | `npm run test:examples` | examples snapshot と provenance を検査する。 |
+| `npm run validate:all` | `dev-scripts/validate-amadeus-examples.ts` で workspace snapshot と Intent snapshot をまとめて検証する。 |
 
 ## 内部入口
 

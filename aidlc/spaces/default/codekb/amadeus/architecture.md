@@ -6,7 +6,7 @@ Amadeus は「契約」「実行能力」「検証」「実例」「自己開発
 
 | 層 | 主な場所 | 責務 |
 |---|---|---|
-| 契約 | `docs/amadeus/lifecycle/`、`CONTEXT.md`、`AMADEUS.md` | Amadeus DLC の phase、stage、scope、成果物、語彙を定義する。 |
+| 契約 | `docs/amadeus/lifecycle/`、`CONTEXT.md`、`AMADEUS.md`、`docs/amadeus/skill-language-policy.md`、`docs/amadeus/aidlc-v2-*.md` | Amadeus DLC の phase、stage、scope、成果物、語彙、AI-DLC v2 との差分判断（reviewer、sensor、Learn、Operation phase 境界、Build and Test 失敗時処理）を定義する。 |
 | 実行能力 | `skills/amadeus*/`、`.agents/skills/amadeus*/` | 単一入口、内部 stage skill、補助 skill を提供する。 |
 | 検証 | `.agents/skills/amadeus-validator/`、`skills/amadeus-validator/`、`dev-scripts/` | 配布先での構造検証と、リポジトリ開発用 eval、e2e、examples 検証を担う。 |
 | 実例 | `examples/`、`examples/skill-provenance.json` | Amadeus DLC の段階別 snapshot と provenance を保持する。 |
@@ -43,3 +43,11 @@ Intent 状態は `aidlc-state.md` が保持する。
 `amadeus-validator` は配布先ユーザー環境でも実行できる構造検証を担う。
 
 開発用の scripts や eval に依存しない検査は、skill 配下の validator に置く。
+
+validator 本体は `AmadeusValidator.ts`、`aidlc-state-contract.ts`、`space-paths.ts`、AI-DLC v2 準拠を検査する `lifecycle-v2.ts`、`domain/`（`artifact-links.ts`、`artifact-path.ts`、`domain-primitive.ts`、`primitives.ts`）で構成される。
+
+### 英語化境界
+
+`skills/amadeus*/SKILL.md` と `.agents/skills/amadeus*/SKILL.md` は、`docs/amadeus/skill-language-policy.md` に従う場合だけ英語化できる。
+
+生成される Amadeus DLC 成果物、テンプレート、`aidlc/**/*.md`、ユーザー向け gate 文言は日本語のまま維持する。
