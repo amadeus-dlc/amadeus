@@ -112,13 +112,13 @@ Per unit: U004-issue-402-remaining-skill-rollout-units
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: ci-pipeline
+- **Current Stage**: build-and-test
 - **Next Stage**: none
 - **Status**: Completed
 - **Construction Autonomy Mode**: autonomous
 - **Last Updated**: 2026-07-03T13:31:40Z
 
 ## Session Resume Point
-- **Last Completed Stage**: ci-pipeline
+- **Last Completed Stage**: build-and-test
 - **Next Action**: none (intent completed)
 - **Pending Artifacts**: none
