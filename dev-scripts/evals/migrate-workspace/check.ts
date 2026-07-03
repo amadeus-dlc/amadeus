@@ -200,5 +200,28 @@ check("移行後 workspace が validator で pass する", /^pass$/m.test(worksp
 const intentReport = run(["bun", "run", validator, workspace, newDirName]);
 check("移行後 Intent が validator で pass する", /^pass$/m.test(intentReport), intentReport.split("\n").slice(-10).join("\n"));
 
+// completed な state.json の変換では、Operation の Skipped に PHASE_SKIPPED を対にする。
+{
+  const { renderAudit } = await import("../../migrate-workspace-to-aidlc");
+  const completedState = {
+    intentId: "20260601-done-intent",
+    scope: "bugfix",
+    depth: "Minimal",
+    status: "completed",
+    phase: "completed",
+    stages: {
+      "reverse-engineering": { state: "completed", approval: { approvedAt: "2026-06-01T10:00:00+09:00", via: "conversation" } },
+    },
+    phaseGates: { ideation: { skipped: true } },
+  };
+  const audit = renderAudit(completedState, "2026-06-02T00:00:00Z");
+  check(
+    "completed の移行は Operation の PHASE_SKIPPED を遡及記録する",
+    audit.includes("**Event**: PHASE_SKIPPED") && audit.includes("**Phase**: Operation"),
+    "PHASE_SKIPPED (Operation) がない",
+  );
+  check("completed の移行は WORKFLOW_COMPLETED を遡及記録する", audit.includes("**Event**: WORKFLOW_COMPLETED"), "WORKFLOW_COMPLETED がない");
+}
+
 for (const dir of cleanups) rmSync(dir, { recursive: true, force: true });
 console.log("migrate workspace eval: ok");
