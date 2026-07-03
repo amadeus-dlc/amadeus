@@ -62,13 +62,14 @@ snapshot は v2 互換ライフサイクルの段階別に置く。
 - `examples/01-ideation-completed`
 - `examples/02-inception-completed`
 - `examples/03-construction-design-ready`
+- `examples/04-construction-implementation-planned`
 
 新しい example を追加または更新する場合は、対象の skill を real provider で実際に駆動して生成する。
 段階別 example を再生成する場合は、repo root で `npm run examples:generate:real` を使う。
 手順を手作業で再現しない。
 
 上流 step を変えずに途中 step 以降だけを再生成する場合は、`dev-scripts/generate-amadeus-examples.ts` の `--from <step-id>` を使う。
-利用できる step id は、`01-ideation-completed`、`02-inception-completed`、`03-construction-design-ready` である。
+利用できる step id は、`01-ideation-completed`、`02-inception-completed`、`03-construction-design-ready`、`04-construction-implementation-planned` である。
 `--from` は直前の snapshot を入力として使い、指定 step 以降だけを更新対象にする。
 
 example は、生成に使った source skill の `skills/**/SKILL.md` と md5 を `examples/skill-provenance.json` に記録する。

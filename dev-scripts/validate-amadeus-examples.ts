@@ -1,27 +1,26 @@
 #!/usr/bin/env bun
 // examples/ の v2 契約 snapshot を検証する開発用 wrapper。
+// 段階不変条件の定義は dev-scripts/examples-contract.ts に一元化し、generator と共有する。
 // 使い方:
 //   bun run dev-scripts/validate-amadeus-examples.ts --workspaces-only
 //   bun run dev-scripts/validate-amadeus-examples.ts --intents-only
 //   bun run dev-scripts/validate-amadeus-examples.ts --provenance
+//   bun run dev-scripts/validate-amadeus-examples.ts --invariants
 //   bun run dev-scripts/validate-amadeus-examples.ts --generation-plan
 //   bun run dev-scripts/validate-amadeus-examples.ts --all
 
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { checkSnapshotInvariant, exampleIntentId, exampleSnapshots, snapshotInvariants } from "./examples-contract";
 
 const root = resolve(import.meta.dir, "..");
 const validator = join(root, ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts");
-const intentId = "20260703-minimum-purchase-flow";
-const snapshots = [
-  "examples/01-ideation-completed",
-  "examples/02-inception-completed",
-  "examples/03-construction-design-ready",
-];
+const intentId = exampleIntentId;
+const snapshots = exampleSnapshots;
 const provenanceManifestPath = join(root, "examples/skill-provenance.json");
 
-type Mode = "workspaces" | "intents" | "provenance" | "generation-plan" | "all";
+type Mode = "workspaces" | "intents" | "provenance" | "invariants" | "generation-plan" | "all";
 
 function fail(message: string): never {
   console.error(message);
@@ -32,9 +31,10 @@ function parseMode(args: string[]): Mode {
   if (args.includes("--workspaces-only")) return "workspaces";
   if (args.includes("--intents-only")) return "intents";
   if (args.includes("--provenance")) return "provenance";
+  if (args.includes("--invariants")) return "invariants";
   if (args.includes("--generation-plan")) return "generation-plan";
   if (args.includes("--all")) return "all";
-  fail("mode を指定してください: --workspaces-only | --intents-only | --provenance | --generation-plan | --all");
+  fail("mode を指定してください: --workspaces-only | --intents-only | --provenance | --invariants | --generation-plan | --all");
 }
 
 function run(command: string[], cwd = root): string {
@@ -113,6 +113,17 @@ function validateProvenance(): void {
   console.log("provenance: ok");
 }
 
+// コミット済み snapshot に対して、examples-contract の段階不変条件を再検査する。
+// 生成時と同じ定義を使うため、generator との鏡映漏れは起きない。
+function validateSnapshotInvariants(): void {
+  existingSnapshots();
+  for (const invariant of snapshotInvariants) {
+    const intentBase = join(root, invariant.snapshot, ".amadeus/intents", intentId);
+    checkSnapshotInvariant(invariant, intentBase, fail);
+    console.log(`invariants pass: ${invariant.snapshot}`);
+  }
+}
+
 function runExpectFailure(command: string[], expected: string, cwd = root): void {
   const result = Bun.spawnSync(command, { cwd, stdout: "pipe", stderr: "pipe" });
   const stdout = new TextDecoder().decode(result.stdout);
@@ -155,13 +166,18 @@ function validateGenerationPlan(): void {
   // --from 途中 step は直前 snapshot を入力にし、前段 step を対象にしない。
   assertPlan(
     run(["bun", "run", generator, "--dry-run", "--from", "02-inception-completed"]),
-    ["input snapshot: examples/01-ideation-completed", stepLines[1], stepLines[2]],
+    ["input snapshot: examples/01-ideation-completed", stepLines[1], stepLines[2], stepLines[3]],
     ["step: 01-ideation-completed"],
   );
   assertPlan(
     run(["bun", "run", generator, "--dry-run", "--from", "03-construction-design-ready"]),
-    ["input snapshot: examples/02-inception-completed", stepLines[2]],
+    ["input snapshot: examples/02-inception-completed", stepLines[2], stepLines[3]],
     ["step: 01-ideation-completed", "step: 02-inception-completed"],
+  );
+  assertPlan(
+    run(["bun", "run", generator, "--dry-run", "--from", "04-construction-implementation-planned"]),
+    ["input snapshot: examples/03-construction-design-ready", stepLines[3]],
+    ["step: 01-ideation-completed", "step: 02-inception-completed", "step: 03-construction-design-ready"],
   );
 
   // 存在しない step id は、利用可能な step id を示して失敗する。
@@ -177,5 +193,6 @@ const mode = parseMode(Bun.argv.slice(2));
 if (mode === "workspaces" || mode === "all") validateWorkspaces();
 if (mode === "intents" || mode === "all") validateIntents();
 if (mode === "provenance" || mode === "all") validateProvenance();
+if (mode === "invariants" || mode === "all") validateSnapshotInvariants();
 if (mode === "generation-plan" || mode === "all") validateGenerationPlan();
 console.log("validate amadeus examples: ok");

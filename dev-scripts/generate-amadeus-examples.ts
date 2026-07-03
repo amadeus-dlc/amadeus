@@ -12,6 +12,7 @@ import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { createLlmProvider, type LlmProvider } from "./evals/llm-support/provider";
+import { checkSnapshotInvariant, exampleIntentId, invariantForSnapshot } from "./examples-contract";
 
 type Options = {
   dryRun: boolean;
@@ -21,12 +22,12 @@ type Options = {
   from?: string;
 };
 
+// 段階不変条件（state、Unit / Bolt 状態、成果物の存在と不在）は examples-contract.ts に一元定義し、
+// step ごとの検査は snapshot に対応する不変条件を適用する。
 type GenerationStep = {
   id: string;
   snapshot: string;
   prompt: string;
-  expectedState: Record<string, string>;
-  expectedFiles: string[];
   provenanceSkillFiles: string[];
 };
 
@@ -50,7 +51,7 @@ const root = resolve(import.meta.dir, "..");
 const workspace = join(root, ".tmp/amadeus-example-generation/workspace");
 const logs = join(root, ".tmp/amadeus-example-generation/logs");
 const stagedSnapshots = join(root, ".tmp/amadeus-example-generation/snapshots");
-const intentId = "20260703-minimum-purchase-flow";
+const intentId = exampleIntentId;
 const defaultRunner = "dev-scripts/run-claude-personal.sh";
 const provenanceManifestPath = Bun.env.AMADEUS_EXAMPLES_PROVENANCE_MANIFEST ?? join(root, "examples/skill-provenance.json");
 
@@ -112,6 +113,11 @@ const inceptionSkillFiles = [
 const constructionSkillFiles = [
   ...inceptionSkillFiles,
   "skills/amadeus-construction-functional-design/SKILL.md",
+];
+
+const implementationPlanSkillFiles = [
+  ...constructionSkillFiles,
+  "skills/amadeus-construction-code-generation/SKILL.md",
 ];
 
 function sharedPromptRules(): string[] {
@@ -222,75 +228,54 @@ function constructionPrompt(): string {
   ].join("\n");
 }
 
+function implementationPlanPrompt(): string {
+  return [
+    `既存の Amadeus workspace で、Intent \`${intentId}\` を実装の直前（実装計画の確定）まで進めます。`,
+    "",
+    "手順 1: `amadeus` skill を使い、対象 Intent の続きから再開してください。",
+    "",
+    "手順 2: walking skeleton の Bolt `B001` に束ねた各 Unit について、Stage 3.5 Code Generation を開始してください。",
+    "`stages[\"code-generation\"].units[\"<unit-id>\"].state` を `active` にし、対象 Unit の設計成果物と要求を入力に、",
+    "`construction/<unit-id>-<slug>/code-generation/plan.md`（実装計画。変更対象、変更順序、検証方法）を作成してください。",
+    "",
+    "手順 3: `plan.md` の作成までで停止してください。",
+    "この workspace は example であり、実装対象のリポジトリを持たないため、次は行わないでください。",
+    "",
+    "- アプリケーションコードとテストコードの生成",
+    "- `code-generation/summary.md` の作成",
+    "- 完了承認のゲート提示と `completed` の記録",
+    "",
+    "各 Unit の状態は `active` のままにし、Bolt `B001` も `active` のまま残してください。",
+    "",
+    ...sharedPromptRules(),
+    `- 作業後に \`bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . ${intentId}\` を実行し、fail があれば修正してから結果を要約してください。`,
+  ].join("\n");
+}
+
 const steps: GenerationStep[] = [
   {
     id: "01-ideation-completed",
     snapshot: "examples/01-ideation-completed",
     prompt: ideationPrompt(),
-    expectedState: {
-      schemaVersion: "2",
-      intentId,
-      scope: "feature",
-      status: "in_progress",
-      phase: "inception",
-      "phaseGates.ideation.via": "pr",
-      "stages.intent-capture.state": "completed",
-      "stages.scope-definition.state": "completed",
-      "stages.approval-handoff.state": "completed",
-    },
-    expectedFiles: [
-      ".amadeus/intents.md",
-      `.amadeus/intents/${intentId}.md`,
-      `.amadeus/intents/${intentId}/ideation/scope-definition/scope-document.md`,
-      `.amadeus/intents/${intentId}/ideation/scope-definition/intent-backlog.md`,
-      `.amadeus/intents/${intentId}/ideation/approval-handoff/initiative-brief.md`,
-      `.amadeus/intents/${intentId}/ideation/decisions.md`,
-      `.amadeus/intents/${intentId}/ideation/traceability.md`,
-    ],
     provenanceSkillFiles: ideationSkillFiles,
   },
   {
     id: "02-inception-completed",
     snapshot: "examples/02-inception-completed",
     prompt: inceptionPrompt(),
-    expectedState: {
-      schemaVersion: "2",
-      intentId,
-      scope: "feature",
-      status: "in_progress",
-      phase: "construction",
-      "phaseGates.ideation.via": "pr",
-      "phaseGates.inception.via": "pr",
-      "stages.requirements-analysis.state": "completed",
-      "stages.units-generation.state": "completed",
-      "stages.delivery-planning.state": "completed",
-    },
-    expectedFiles: [
-      `.amadeus/intents/${intentId}/inception/requirements-analysis/requirements.md`,
-      `.amadeus/intents/${intentId}/inception/units-generation/units.md`,
-      `.amadeus/intents/${intentId}/inception/units-generation/unit-dependencies.md`,
-      `.amadeus/intents/${intentId}/inception/delivery-planning/bolt-plan.md`,
-    ],
     provenanceSkillFiles: inceptionSkillFiles,
   },
   {
     id: "03-construction-design-ready",
     snapshot: "examples/03-construction-design-ready",
     prompt: constructionPrompt(),
-    expectedState: {
-      schemaVersion: "2",
-      intentId,
-      scope: "feature",
-      status: "in_progress",
-      phase: "construction",
-      "phaseGates.inception.via": "pr",
-    },
-    expectedFiles: [
-      `.amadeus/intents/${intentId}/construction/*/functional-design/business-logic-model.md`,
-      `.amadeus/intents/${intentId}/construction/*/functional-design/business-rules.md`,
-      `.amadeus/intents/${intentId}/construction/*/functional-design/domain-entities.md`,
-    ],
     provenanceSkillFiles: constructionSkillFiles,
+  },
+  {
+    id: "04-construction-implementation-planned",
+    snapshot: "examples/04-construction-implementation-planned",
+    prompt: implementationPlanPrompt(),
+    provenanceSkillFiles: implementationPlanSkillFiles,
   },
 ];
 
@@ -402,58 +387,11 @@ function prepareWorkspace(inputStep?: GenerationStep): void {
 
 // ---- 検査 ----
 
-function readState(base: string): Record<string, unknown> {
-  const path = join(base, ".amadeus/intents", intentId, "state.json");
-  if (!existsSync(path)) fail(`missing state.json: ${path}`);
-  return JSON.parse(readFileSync(path, "utf8"));
-}
-
-function stateValue(state: Record<string, unknown>, dottedPath: string): unknown {
-  let current: unknown = state;
-  for (const key of dottedPath.split(".")) {
-    if (typeof current !== "object" || current === null) return undefined;
-    current = (current as Record<string, unknown>)[key];
-  }
-  return current;
-}
-
-function assertExpectedState(step: GenerationStep): void {
-  const state = readState(workspace);
-  for (const [path, expected] of Object.entries(step.expectedState)) {
-    const actual = stateValue(state, path);
-    if (String(actual ?? "") !== expected) {
-      fail(`${step.id}: state.json の ${path} が期待値と一致しません（期待: ${expected}、実際: ${String(actual ?? "未設定")}）`);
-    }
-  }
-}
-
-// expectedFiles は 1 セグメントだけ `*` を許可する簡易パターンで確認する。
-function assertExpectedFiles(step: GenerationStep): void {
-  for (const pattern of step.expectedFiles) {
-    if (!matchExists(workspace, pattern)) {
-      fail(`${step.id}: 期待する成果物が見つかりません: ${pattern}`);
-    }
-  }
-}
-
-function matchExists(base: string, pattern: string): boolean {
-  const segments = pattern.split("/");
-  let candidates = [base];
-  for (const segment of segments) {
-    const next: string[] = [];
-    for (const candidate of candidates) {
-      if (segment === "*") {
-        if (!existsSync(candidate) || !statSync(candidate).isDirectory()) continue;
-        for (const entry of readdirSync(candidate)) next.push(join(candidate, entry));
-      } else {
-        const target = join(candidate, segment);
-        if (existsSync(target)) next.push(target);
-      }
-    }
-    candidates = next;
-    if (candidates.length === 0) return false;
-  }
-  return candidates.length > 0;
+// 生成直後の workspace に、snapshot と同じ段階不変条件（examples-contract）を適用する。
+function assertSnapshotInvariant(step: GenerationStep): void {
+  const invariant = invariantForSnapshot(step.snapshot);
+  const intentBase = join(workspace, ".amadeus/intents", intentId);
+  checkSnapshotInvariant(invariant, intentBase, fail);
 }
 
 function assertValidatorPass(step: GenerationStep): void {
@@ -597,8 +535,7 @@ if (!options.dryRun) {
       workspace,
     });
     console.log(`last message: ${result.outputPath}`);
-    assertExpectedState(step);
-    assertExpectedFiles(step);
+    assertSnapshotInvariant(step);
     assertValidatorPass(step);
     stageSnapshot(step);
     console.log(`snapshot staged: ${step.snapshot}`);
