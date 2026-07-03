@@ -94,3 +94,7 @@ PR 説明には次を記録する。
 Issue #395 の完了証拠は、対応 PR の merge または明示的な Issue close とする。
 
 後続の #400、#401、#402 は、この方針を前提として英語化作業または差分対応順序の判断へ進む。
+
+## 関連文書
+
+- [AI-DLC v2 Difference Response Plan](aidlc-v2-difference-response-plan.md)

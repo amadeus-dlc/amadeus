@@ -8,7 +8,7 @@
 - **State Version**: 7
 - **Active Agent**: amadeus
 - **Worktree Path**: 
-- **Bolt Refs**: B001, B002
+- **Bolt Refs**: B001, B002, B003
 - **Practices Affirmed Timestamp**: 
 
 ## Scope Configuration
@@ -25,7 +25,7 @@
 ## Execution Plan Summary
 - **Total Stages**: 25
 - **Completed**: 19
-- **In Progress**: B002 / build-and-test
+- **In Progress**: B003 / build-and-test
 
 ## Runtime State
 - **Revision Count**: 0
@@ -79,8 +79,17 @@ Per unit: U002-issue-400-small-foundation-pr
 - [S] nfr-requirements — SKIP: #400 小さい土台 PR は非機能要求の追加、変更、評価を伴わない。
 - [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
 - [S] infrastructure-design — SKIP: #400 小さい土台 PR はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
-- [?] code-generation — EXECUTE: autonomous のため会話内 gate は提示せず、B002 PR merge を approval evidence として確定する。
-- [?] build-and-test — EXECUTE: 検証は pass。B002 PR merge を approval evidence として確定する。
+- [x] code-generation — EXECUTE: PR #410 merge により完了確定。
+- [x] build-and-test — EXECUTE: PR #410 merge により完了確定。
+- [ ] ci-pipeline — EXECUTE
+
+Per unit: U003-issue-401-upstream-difference-order
+- [S] functional-design — SKIP: #401 は #391、#392、#393、#394 の対応順序と PR 境界を整理する計画文書であり、新しいデータモデル、複雑な業務ロジック、業務ルール設計を追加しない。
+- [S] nfr-requirements — SKIP: #401 は非機能要求の追加、変更、評価を伴わない。
+- [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+- [S] infrastructure-design — SKIP: #401 はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
+- [?] code-generation — EXECUTE: autonomous のため会話内 gate は提示せず、B003 PR merge を approval evidence として確定する。
+- [?] build-and-test — EXECUTE: 検証は pass。B003 PR merge を approval evidence として確定する。
 - [ ] ci-pipeline — EXECUTE
 
 ### OPERATION PHASE
@@ -98,9 +107,9 @@ Per unit: U002-issue-400-small-foundation-pr
 - **Next Stage**: ci-pipeline
 - **Status**: Running
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-07-03T12:56:50Z
+- **Last Updated**: 2026-07-03T13:08:18Z
 
 ## Session Resume Point
 - **Last Completed Stage**: build-and-test
-- **Next Action**: Create B002 (#400 小さい土台 PR) Bolt PR
-- **Pending Artifacts**: B002 code-generation と build-and-test は PR merge により approval evidence を確定する。ci-pipeline は B001 と B002 で未完了。
+- **Next Action**: Create B003 (#401 AI-DLC v2 差分対応順序) Bolt PR
+- **Pending Artifacts**: B003 code-generation と build-and-test は PR merge により approval evidence を確定する。ci-pipeline は B001、B002、B003 で未完了。

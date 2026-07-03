@@ -21,7 +21,7 @@ flowchart TD
   artifacts["Amadeus DLC 成果物"]
   issue395["#395 方針確定"]
   issue400["#400 小さい土台 PR"]
-  issue401["#401 本家差分対応順序"]
+  issue401["#401 AI-DLC v2 差分対応順序"]
   issue402["#402 残り展開単位"]
   github["GitHub Issue と PR"]
   evidence["完了証拠"]

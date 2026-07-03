@@ -17,7 +17,7 @@ flowchart TD
   issue399["#399 親タスク"]
   issue395["#395 方針確定"]
   issue400["#400 小さい土台 PR"]
-  issue401["#401 本家差分対応順序"]
+  issue401["#401 AI-DLC v2 差分対応順序"]
   issue402["#402 残り展開単位"]
 
   issue399 --> issue395
