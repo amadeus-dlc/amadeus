@@ -7,7 +7,7 @@ team.md の内容を上書きする。
 
 | 識別子 | 目的 | 期待価値 | 成功指標 | 状態 |
 |---|---|---|---|---|
-| OBJ001 | Amadeus 本体開発を Amadeus DLC の成果物で管理する。 | Intent 作成後から PR 準備までの手戻りを減らす。 | 自己開発用 steering layer と最初の Intent が追跡可能である。 | 採用 |
+| OBJ001 | Amadeus 本体開発を Amadeus DLC の成果物で管理する。 | Intent 作成後から PR 準備までの手戻りを減らす。 | 自己開発用 Space と最初の Intent が追跡可能である。 | 採用 |
 
 ## コア能力
 
@@ -24,7 +24,7 @@ team.md の内容を上書きする。
 
 ## 価値仮説
 
-- 自己開発用 steering layer があると、実装前の判断、検証方針、PR 準備の抜け漏れを減らせる。
+- 自己開発用 Space があると、実装前の判断、検証方針、PR 準備の抜け漏れを減らせる。
 - target workspace を明示すると、実行する側の skill と変更対象の成果物を混同しにくくなる。
 - stage 判定を記録すると、次回作業でどの成果物を stage0 として扱えるかを人間が判断しやすくなる。
 
@@ -33,7 +33,7 @@ team.md の内容を上書きする。
 - Amadeus は、source skill、昇格先 skill、validator、example snapshot、開発用スクリプトで構成する。
 - skill の source は `skills/amadeus-*` に置く。
 - 昇格先成果物は `.agents/skills/amadeus-*` に置く。
-- example snapshot は `examples/**/.amadeus` に置く。
+- example snapshot は `examples/**/aidlc` に置く。
 
 ## 主要技術
 
@@ -85,36 +85,39 @@ npm run examples:generate:real
 
 ## 編成方針
 
-- target workspace の root `.amadeus/` は、Amadeus 本体開発用の steering layer と Intent 成果物を扱う。
-- `examples/**/.amadeus` は、読者向け説明ではなく、skill の実行結果として成立する snapshot として扱う。
+- target workspace の `aidlc/spaces/default/` は、Amadeus 本体開発用の Space（memory、knowledge）と Intent record を扱う。
+- `examples/**/aidlc` は、読者向け説明ではなく、skill の実行結果として成立する snapshot として扱う。
 - `.agents/skills/amadeus-*` は、host environment で動作する skill と、target artifacts としての昇格先成果物の二重の役割を持つ。
 
 ## ディレクトリパターン
 
 | パターン | 場所 | 役割 | 例 | 状態 |
 |---|---|---|---|---|
-| Steering layer | `.amadeus/` | 自己開発の共有前提を置く。 | `.amadeus/steering.md` | 採用 |
-| Intent layer | `.amadeus/intents/<intent-id>-<slug>/` | 個別変更の成果物を置く。 | `.amadeus/intents/20260629-self-dev-steering-layer/` | 採用 |
+| Space | `aidlc/spaces/default/` | 自己開発の共有前提（`memory/`、`knowledge/`）を置く。 | `aidlc/spaces/default/memory/team.md` | 採用 |
+| Intent record | `aidlc/spaces/default/intents/<YYMMDD>-<label>/` | 個別変更の成果物を置く。 | `aidlc/spaces/default/intents/260629-self-dev-steering-layer/` | 採用 |
 | Source skill | `skills/amadeus-*` | 作業中の skill source を置く。 | `skills/amadeus-validator/` | 採用 |
 | Source skill assets | `skills/amadeus-*/assets` | source skill に属する素材を置く。 | `skills/amadeus-validator/assets/` | 採用 |
 | 昇格先 skill | `.agents/skills/amadeus-*` | 実行側が読む skill を置く。 | `.agents/skills/amadeus-validator/` | 採用 |
 | 昇格先 skill assets | `.agents/skills/amadeus-*/assets` | 昇格先成果物に属する素材を置く。 | `.agents/skills/amadeus-validator/assets/` | 採用 |
-| Example snapshot | `examples/**/.amadeus` | skill 生成結果の snapshot を置く。 | `examples/05-construction-design-ready/.amadeus` | 採用 |
+| Example snapshot | `examples/**/aidlc` | skill 生成結果の snapshot を置く。 | `examples/03-construction-design-ready/aidlc` | 採用 |
 | 参照元 | `CONTEXT.md`、`AMADEUS.md`、`.agents/rules/**/*.md` | 判断、語彙、作業規則の基準を置く。 | `CONTEXT.md` | 採用 |
 
 ## 命名規約
 
 | 対象 | 規約 | 例 | 状態 |
 |---|---|---|---|
-| Intent | `YYYYMMDD-<slug>` | `20260629-self-dev-steering-layer` | 採用 |
+| Intent | `<YYMMDD>-<label>` | `260629-self-dev-steering-layer` | 採用 |
 | Requirement | `Rnnn-<slug>` | `R001-provenance-recording` | 採用 |
 | Unit | `Unnn-<slug>` | `U001-validator-contract` | 採用 |
 | Bolt | `Bnnn-<slug>` | `B001-validator-check` | 採用 |
 
+Intent の正準 ID は `intents/intents.json`（registry）の UUIDv7 である。
+上記の `<YYMMDD>-<label>` は record ディレクトリ名（dirName）であり、人間が参照するときの表示名として使う。
+
 ## 依存関係の整理
 
 - GitHub Issue を先に作り、Intent の根拠として記録する。
-- PR 作成時は、対応 Issue と `.amadeus/intents/...` をリンクする。
+- PR 作成時は、対応 Issue と `aidlc/spaces/default/intents/...` をリンクする。
 - stage2 は、次回作業の stage0 に自動昇格しない。
 
 ## コード構成原則

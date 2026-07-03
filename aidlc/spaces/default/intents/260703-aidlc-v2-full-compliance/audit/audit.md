@@ -82,3 +82,10 @@
 **Details**: backfilled by migration (Recovered=true)
 
 ---
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T05:04:34Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Details**: unit: implicit, backfilled by migration (Recovered=true). Stage 3.5 は移行前の state.json で active になっていた
+
+---
