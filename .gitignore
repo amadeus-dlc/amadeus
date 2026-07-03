@@ -23,3 +23,9 @@ result
 /codex-events.jsonl
 /codex-stderr.log
 /last-message.md
+
+# AI-DLC エンジンのマシンローカル状態
+/aidlc/.aidlc-clone-id
+/aidlc/.aidlc-sessions/
+/aidlc/spaces/*/intents/*/runtime-graph.json
+/aidlc/spaces/*/intents/*/.aidlc-*

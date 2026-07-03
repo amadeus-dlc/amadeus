@@ -8,7 +8,7 @@
 - **State Version**: 7
 - **Active Agent**: amadeus
 - **Worktree Path**: 
-- **Bolt Refs**: 
+- **Bolt Refs**: B001
 - **Practices Affirmed Timestamp**: 
 
 ## Scope Configuration
@@ -25,7 +25,7 @@
 ## Execution Plan Summary
 - **Total Stages**: 25
 - **Completed**: 12
-- **In Progress**: none (starting Bolt B001)
+- **In Progress**: code-generation (B002)
 
 ## Runtime State
 - **Revision Count**: 0
@@ -65,13 +65,13 @@
 - [x] delivery-planning — EXECUTE
 
 ### CONSTRUCTION PHASE
-Per unit: (units not yet generated)
-- [ ] functional-design — EXECUTE
-- [ ] nfr-requirements — EXECUTE
-- [ ] nfr-design — EXECUTE
-- [ ] infrastructure-design — EXECUTE
-- [ ] code-generation — EXECUTE
-- [ ] build-and-test — EXECUTE
+Per unit: B001-walking-skeleton (U001+U002+U003 slice)
+- [S] functional-design — SKIP: no new business logic (engine copied as-is, wiring designed in 2.6)
+- [S] nfr-requirements — SKIP: no new NFRs, tech stack decided
+- [S] nfr-design — SKIP: nfr-requirements not executed
+- [S] infrastructure-design — SKIP: no deployment change
+- [x] code-generation — EXECUTE
+- [x] build-and-test — EXECUTE (B001 done; later bolts tracked in their blocks)
 - [ ] ci-pipeline — EXECUTE
 
 ### OPERATION PHASE
@@ -85,13 +85,13 @@ Per unit: (units not yet generated)
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: code-generation
-- **Next Stage**: build-and-test
+- **Current Stage**: build-and-test
+- **Next Stage**: (B002 after B001 completes)
 - **Status**: Running
 - **Construction Autonomy Mode**: unset
 - **Last Updated**: 2026-07-03T18:20:00Z
 
 ## Session Resume Point
-- **Last Completed Stage**: delivery-planning
-- **Next Action**: execute Bolt B001 (walking skeleton): 3.5 code-generation for engine vertical slice
+- **Last Completed Stage**: build-and-test (B001)
+- **Next Action**: execute Bolt B002 (skill replacement and retirement)
 - **Pending Artifacts**: none

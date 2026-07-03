@@ -674,3 +674,87 @@
 **Details**: 人間指示「中間のPRは無しでOK」により phase PR を省略し、最終 PR へ統合する。validator pass を確認済み。
 
 ---
+
+## BOLT_STARTED
+**Timestamp**: 2026-07-03T18:25:02Z
+**Event**: BOLT_STARTED
+**Details**: Bolt B001（walking skeleton: true）。エンジン縦切り（U001 + U002 + U003 の薄切り）。branch claude/issue-396-inception 上で実行（中間 PR 省略の人間指示により Bolt 専用 branch は作らない）。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T18:25:02Z
+**Event**: STAGE_SKIPPED
+**Stage**: functional-design
+**Details**: Condition 偽（B001）。新しいデータモデルやビジネスロジックはなく、エンジン契約は本家定義の無改変コピー。結線層の設計は application-design で確定済み。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T18:25:02Z
+**Event**: STAGE_SKIPPED
+**Stage**: nfr-requirements
+**Details**: Condition 偽（B001）。新規 NFR はなく、技術スタック（Bun + TypeScript）は決定済み。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T18:25:02Z
+**Event**: STAGE_SKIPPED
+**Stage**: nfr-design
+**Details**: Condition 偽（B001）。nfr-requirements を実行していないため（縮退規則）。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T18:25:02Z
+**Event**: STAGE_SKIPPED
+**Stage**: infrastructure-design
+**Details**: Condition 偽（B001）。デプロイやクラウドリソースの変更はない。hooks と settings は開発環境の配線であり、3.5 の実装対象として扱う。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T18:25:02Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T18:33:58Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Details**: B001 walking skeleton。エンジン 117 ファイルの無改変コピー、settings の名前空間マージ（hooks 11 + 実行許可 1）、engine-bridge.md、amadeus-intent-capture 適応コピーと昇格。code-generation-plan.md と code-summary.md を作成し、gate を提示した。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T18:33:58Z
+**Event**: GATE_APPROVED
+**Stage**: code-generation
+**Details**: User Input: 「構築まで自動承認でお願いします。もう寝るので」（事前の包括承認による自動承認。walking skeleton の最終的な人間承認は、中間 PR 省略の指示により最終 PR レビューへ統合）
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T18:33:58Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Details**: 自動承認（人間の事前指示）。B001 の実装を確定。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T18:33:58Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T18:38:21Z
+**Event**: BOLT_COMPLETED
+**Details**: Bolt B001（walking skeleton）完了。DoD 4 項目を充足（build-and-test-summary.md）。中間 PR は人間指示により省略し、最終 PR へ統合する。実装確定 commit は branch claude/issue-396-inception に積む。
+
+---
