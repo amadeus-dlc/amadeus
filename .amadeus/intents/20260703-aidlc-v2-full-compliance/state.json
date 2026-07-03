@@ -15,7 +15,11 @@
       }
     },
     "requirements-analysis": {
-      "state": "awaiting_approval"
+      "state": "completed",
+      "approval": {
+        "approvedAt": "2026-07-03T13:44:23+09:00",
+        "via": "conversation"
+      }
     },
     "functional-design": {
       "state": "pending"
