@@ -25,7 +25,7 @@
 ## Execution Plan Summary
 - **Total Stages**: 25
 - **Completed**: 19
-- **In Progress**: B010 #399 final verification
+- **In Progress**: Construction phase boundary (phase PR pending merge)
 
 ## Runtime State
 - **Revision Count**: 0
@@ -151,8 +151,8 @@ Per unit: U010-issue-399-final-verification
 - [S] nfr-requirements — SKIP: #399 最終検証は非機能要求の追加、変更、評価を伴わない。
 - [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
 - [S] infrastructure-design — SKIP: #399 最終検証はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
-- [?] code-generation — EXECUTE: 最終検証の記録を作成済み。承認確定は B010 PR merge 後に記録する。
-- [?] build-and-test — EXECUTE: 検証 pass（STAGE_AWAITING_APPROVAL 記録済み）。承認確定は B010 PR merge 後に記録する。
+- [x] code-generation — EXECUTE: PR #423 merge により完了確定。
+- [x] build-and-test — EXECUTE: PR #423 merge により完了確定。
 - [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、最終検証に追加の CI 新設または大きな変更は不要。
 
 ### OPERATION PHASE
@@ -166,13 +166,13 @@ Per unit: U010-issue-399-final-verification
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: build-and-test
-- **Next Stage**: ci-pipeline
+- **Current Stage**: ci-pipeline
+- **Next Stage**: (phase boundary)
 - **Status**: Running
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-07-03T16:11:58Z
+- **Last Updated**: 2026-07-03T16:18:49Z
 
 ## Session Resume Point
-- **Last Completed Stage**: build-and-test (B005)
-- **Next Action**: Run B010 final verification, then close Issue #399 via the B010 PR merge and finish the Construction phase boundary
-- **Pending Artifacts**: B010 verification records and PR merge evidence, real-provider example regeneration to clear provenance staleReason, Construction phase finalization (decisions, traceability, WORKFLOW_COMPLETED)
+- **Last Completed Stage**: build-and-test (B010)
+- **Next Action**: Await the Construction phase PR merge, then record PHASE_VERIFIED and WORKFLOW_COMPLETED, set the registry status to completed, and regenerate intents.md
+- **Pending Artifacts**: Construction phase PR merge evidence, WORKFLOW_COMPLETED and registry completion records, real-provider example regeneration to clear provenance staleReason (separate follow-up PR)

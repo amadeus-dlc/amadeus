@@ -1481,3 +1481,37 @@
 **Details**: `npm run test:all`、`npm run validate:all`、Amadeus Validator、`git diff --check`、日本語残存 grep、昇格先同期 diff が pass した。autonomous 実行のため会話内 gate は提示せず、approval evidence は B010 PR merge 後に記録する。
 
 ---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T16:18:49Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Unit**: U010-issue-399-final-verification
+**Details**: B010 #399 final verification。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/423。Merge commit: d9b2e9dd。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T16:18:49Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Bolt**: B010
+**Details**: B010 #399 final verification。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/423。Merge commit: d9b2e9dd。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T16:18:49Z
+**Event**: BOLT_COMPLETED
+**Bolt**: B010
+**Details**: autonomous の Bolt PR が人間の merge で承認された。Bolt ref: B010-issue-399-final-verification。PR: https://github.com/amadeus-dlc/amadeus/pull/423。Merge commit: d9b2e9dd。Issue #399 は merge により close された。全 Bolt（B001〜B010）が完了した。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T16:18:49Z
+**Event**: STAGE_SKIPPED
+**Stage**: ci-pipeline
+**Details**: 全 Unit の ci-pipeline は SKIP 済みであり、Intent レベルの Stage 3.7 も追加の CI 新設または大きな変更を伴わないため skip を確定した。既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行している。
+
+---
