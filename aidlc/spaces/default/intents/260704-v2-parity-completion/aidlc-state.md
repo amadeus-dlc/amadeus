@@ -6,7 +6,7 @@
 - **Scope**: feature
 - **Start Date**: 2026-07-03T17:09:59Z
 - **State Version**: 7
-- **Active Agent**: amadeus
+- **Active Agent**: aidlc-pipeline-deploy-agent
 - **Worktree Path**: 
 - **Bolt Refs**: B001, B002, B003, B004
 - **Practices Affirmed Timestamp**: 
@@ -24,14 +24,12 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 25
-- **Completed**: 12
-- **In Progress**: code-generation (B004)
+- **Completed**: 21
+- **In Progress**: none
 
 ## Runtime State
 - **Revision Count**: 0
 
-- **Parked**: 2026-07-03T18:41:11Z
-- **Parked At Stage**: build-and-test
 ## Phase Progress
 
 - **Initialization**: Verified
@@ -72,8 +70,8 @@ Per unit: B004-docs-and-proof
 - [S] nfr-requirements — SKIP: same rationale as B001
 - [S] nfr-design — SKIP: nfr-requirements not executed
 - [S] infrastructure-design — SKIP: no deployment change
-- [-] code-generation — EXECUTE
-- [ ] build-and-test — EXECUTE
+- [x] code-generation — EXECUTE
+- [x] build-and-test — EXECUTE
 
 Per unit: B003-inspection
 - [S] functional-design — SKIP: same rationale as B001 (tooling, no new business logic)
@@ -98,7 +96,7 @@ Per unit: B001-walking-skeleton
 - [S] infrastructure-design — SKIP: no deployment change
 - [x] code-generation — EXECUTE
 - [x] build-and-test — EXECUTE (B001 done; later bolts tracked in their blocks)
-- [ ] ci-pipeline — EXECUTE
+- [x] ci-pipeline — EXECUTE
 
 ### OPERATION PHASE
 - [S] deployment-pipeline — SKIP: condition false for this intent (D005)
@@ -111,13 +109,13 @@ Per unit: B001-walking-skeleton
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: build-and-test
-- **Next Stage**: (B002 after B001 completes)
-- **Status**: Running
-- **Construction Autonomy Mode**: unset
-- **Last Updated**: 2026-07-03T18:41:11Z
+- **Current Stage**: ci-pipeline
+- **Next Stage**: none
+- **Status**: Completed
+- **Construction Autonomy Mode**: autonomous
+- **Last Updated**: 2026-07-03T20:12:30Z
 
 ## Session Resume Point
-- **Last Completed Stage**: build-and-test (B003)
-- **Next Action**: execute Bolt B004 (docs revision, examples regeneration, dogfooding)
+- **Last Completed Stage**: ci-pipeline
+- **Next Action**: Workflow complete
 - **Pending Artifacts**: none

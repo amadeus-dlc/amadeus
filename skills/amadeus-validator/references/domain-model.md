@@ -17,7 +17,8 @@ aidlc/ 配下の成果物
   -> Report Formatter（検査カテゴリ別の pass / fail / blocked）
 ```
 
-`AmadeusValidator` は、Space（`memory/`、`knowledge/`）、共有インデックス（`intents.md` の Index 生成整合と `intents.json` の registry 整合を含む）、Domain Map、Context Map、Event Storming、Grilling Decision Trail、Intent のモジュールファイルを検査する。
+`AmadeusValidator` は、Space（`memory/`、`knowledge/`）、`intents.json` の registry 整合、Domain Map、Context Map、Event Storming、Grilling Decision Trail を検査する。
+`intents.md`（共有インデックス）と Intent のモジュールファイル（`<dirName>.md`）は GD009 で廃止された成果物であり、存在する場合だけ検査する。
 
 `lifecycle-v2` は、`aidlc-state.md` の scope、depth、Stage Progress、Phase Progress、Current Status と、`audit/audit.md` のイベント（`WORKFLOW_STARTED`、`STAGE_COMPLETED`、`PHASE_VERIFIED`、`PHASE_SKIPPED`、`BOLT_COMPLETED`、`WORKFLOW_COMPLETED`）、completed ステージの必須成果物を検査する。
 契約は `docs/amadeus/lifecycle/state.md` と `scopes.md` に従い、scope とステージの対応表は `skills/amadeus/references/stage-catalog.md` と一致させる。

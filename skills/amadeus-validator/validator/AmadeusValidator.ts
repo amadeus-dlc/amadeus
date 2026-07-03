@@ -3,7 +3,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { cleanMarkdownLinkTarget } from "./domain/artifact-links";
-import { buildIntentsIndex, HeadingContractViolationError } from "../scripts/IndexGenerate";
 import { checkAidlcIntentRecord } from "./lifecycle-v2";
 import { spaceBase } from "./space-paths";
 
@@ -100,10 +99,6 @@ const rowCategoryRules: RowCategoryRule[] = [
   {
     category: "Intent Registry",
     matches: ({ target, condition }) => target.endsWith("intents.json") || target.endsWith("active-intent") || condition.includes("registry"),
-  },
-  {
-    category: "Index 生成整合",
-    matches: ({ condition }) => condition.startsWith("Index 生成整合"),
   },
   {
     category: "Grilling Decision Trail",
@@ -293,7 +288,6 @@ class AmadeusValidator {
     this.checkEventStormingSessions(`${this.space}/knowledge/event-storming`, "pre-intent");
     this.checkIntents();
     this.checkIntentsRegistry();
-    this.checkIndexGeneration();
     this.checkDomainMap(`${this.space}/knowledge/domain-map.md`);
     this.checkContextMap(`${this.space}/knowledge/context-map.md`);
   }
@@ -827,9 +821,7 @@ class AmadeusValidator {
   private checkIntentIndexes(intentId: string): void {
     const base = `${this.space}/intents/${intentId}`;
 
-    this.checkFile(`${this.space}/intents/${intentId}.md`, "Intent のモジュールファイルが存在する");
-    this.checkHeadings(`${this.space}/intents/${intentId}.md`, ["概要", "依存", "目標プロファイル"]);
-    this.checkIntentGoalProfile(`${this.space}/intents/${intentId}.md`);
+    this.checkIntentModuleFile(`${this.space}/intents/${intentId}.md`);
     this.checkEventStormingSessions(`${base}/event-storming`, "intent-scoped", intentId);
 
     const statePath = `${base}/aidlc-state.md`;
@@ -944,6 +936,18 @@ class AmadeusValidator {
     }
   }
 
+  // Intent モジュールファイル（`<dirName>.md`）は GD009 で廃止された旧成果物である。
+  // examples の旧 snapshot との互換のため、存在する場合だけ検査する。
+  private checkIntentModuleFile(path: string): void {
+    if (!this.isFile(this.absolute(path))) {
+      this.skipped(path, "Intent のモジュールファイルは退役した成果物であり、存在する場合だけ検査する", "ファイルなし");
+      return;
+    }
+    this.checkFile(path, "Intent のモジュールファイルが存在する");
+    this.checkHeadings(path, ["概要", "依存", "目標プロファイル"]);
+    this.checkIntentGoalProfile(path);
+  }
+
   private checkIntentGoalProfile(path: string): void {
     const table = this.checkTable(path, "目標プロファイル", ["フィールド", "値", "説明"]);
     if (!table) {
@@ -982,6 +986,10 @@ class AmadeusValidator {
 
   private checkIntents(): void {
     const path = `${this.space}/intents/intents.md`;
+    if (!this.isFile(this.absolute(path))) {
+      this.skipped(path, "インテント一覧（intents.md）は退役した索引であり、存在する場合だけ検査する", "ファイルなし");
+      return;
+    }
     this.checkFile(path, "インテント一覧が存在する");
     this.checkHeadings(path, ["一覧", "依存関係"]);
     const table = this.checkTable(path, "一覧", ["識別子", "概要", "依存", "詳細"]);
@@ -999,58 +1007,6 @@ class AmadeusValidator {
     this.checkNotBlank(path, depTable, "理由");
   }
 
-  // 共有インデックス（intents.md）の不整合検査。
-  // 生成ロジック（buildIntentsIndex）を再利用し、導出した期待内容と実ファイルの
-  // 完全一致で判定する（BL006、BR008）。列構造検査（checkIntents）とは独立して行う。
-  private checkIndexGeneration(): void {
-    this.checkIndexGenerationTarget(`${this.space}/intents/intents.md`, () => buildIntentsIndex(this.root));
-  }
-
-  private checkIndexGenerationTarget(path: string, build: () => string): void {
-    const condition = "Index 生成整合: 生成物が配下モジュールの導出内容と一致する";
-    let expected: string;
-    try {
-      expected = build();
-    } catch (error) {
-      if (error instanceof HeadingContractViolationError) {
-        for (const violation of error.violations) {
-          this.failRow(
-            path,
-            "Index 生成整合: 配下モジュールが見出し契約を満たす",
-            `${violation.file}: ${violation.missing.join("、")} が不足`,
-          );
-        }
-        return;
-      }
-      throw error;
-    }
-
-    if (!this.isFile(this.absolute(path))) {
-      this.failRow(path, condition, "生成物が存在しない");
-      return;
-    }
-    const actual = this.read(path);
-    if (actual === expected) {
-      this.pass(path, condition, "配下モジュールからの導出内容と完全一致を確認");
-      return;
-    }
-    this.failRow(path, condition, this.describeIndexMismatch(actual, expected));
-  }
-
-  private describeIndexMismatch(actual: string, expected: string): string {
-    const actualLines = actual.split("\n");
-    const expectedLines = expected.split("\n");
-    const sizeNote = `実際 ${actualLines.length} 行 / 期待 ${expectedLines.length} 行`;
-    const maxLines = Math.max(actualLines.length, expectedLines.length);
-    for (let i = 0; i < maxLines; i++) {
-      if (actualLines[i] !== expectedLines[i]) {
-        const actualLine = actualLines[i] === undefined ? "(行なし)" : JSON.stringify(actualLines[i]);
-        const expectedLine = expectedLines[i] === undefined ? "(行なし)" : JSON.stringify(expectedLines[i]);
-        return `${i + 1} 行目が一致しない（実際: ${actualLine}、期待: ${expectedLine}）。${sizeNote}`;
-      }
-    }
-    return `内容が一致しない。${sizeNote}`;
-  }
 
   private checkGrillings(base: string): void {
     const indexPath = `${base}/grillings.md`;

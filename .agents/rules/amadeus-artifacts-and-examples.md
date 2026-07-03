@@ -29,8 +29,8 @@ npm run test:it:promote-skill
 ## 言語
 
 - `aidlc/**/*.md`、`skills/amadeus*/templates/**/*.md`、`.agents/skills/amadeus*/templates/**/*.md` は日本語で書く。
-- `skills/amadeus*/SKILL.md` と `.agents/skills/amadeus*/SKILL.md` は、[Skill Language Policy](../../docs/amadeus/skill-language-policy.md) に従う場合だけ英語化できる。
-- `SKILL.md` を英語化しても、生成される Amadeus DLC 成果物、テンプレート由来の Markdown、ユーザー向け gate 文言は日本語のまま維持する。
+- `skills/amadeus*/SKILL.md`、`.agents/skills/amadeus*/SKILL.md`、および `skills/amadeus*/**/*.ts`、`.agents/skills/amadeus*/**/*.ts` は英語必須である（詳細は [Skill Language Policy](../../docs/amadeus/skill-language-policy.md) を参照）。
+- 英語必須の対象でも、生成される Amadeus DLC 成果物、テンプレート由来の Markdown、ユーザー向け gate 文言は日本語のまま維持する。
 - 英語で下書きしてから日本語へ翻訳しない。
 - `.kiro/specs/**/*.md` と `openspec/**/*.md` を作る場合も日本語で書く。
 - `aidlc-state.md`、`intents.json`、audit イベントのような機械可読・構造的成果物は、v2 の構造と英語ラベルをそのまま使う。

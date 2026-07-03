@@ -905,3 +905,41 @@
 **Details**: B004。
 
 ---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T19:40:03Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Details**: B004 の halt-and-ask 事項: examples の real provider 再生成は個人 Codex アカウント（dev-scripts/run-codex-gpt-5.5-low-fast-personal.sh）を消費し、生成ハーネスは旧アーキテクチャ前提のため適応が必要。事前包括承認の範囲外（コスト消費と追加設計）と判断し、再生成と依存する旧 skill 削除（22 個 + steering）は人間の判断待ちとする。B004 の残り（規範文書改定、GD009 廃止、dogfooding）は続行する。
+
+---
+
+## AUTONOMY_MODE_SET
+**Timestamp**: 2026-07-03T20:09:02Z
+**Event**: AUTONOMY_MODE_SET
+**Details**: autonomous。人間の事前指示「構築まで自動承認でお願いします。もう寝るので」を ladder 提案への回答として記録（walking skeleton B001 は完了済み。最終的な人間承認は最終 PR レビューに統合）。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T20:11:48Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Details**: B004（自動承認、人間の事前指示）。規範文書改定と GD009（モジュールファイル、intents.md、IndexGenerate の廃止）を確定。examples 再生成と旧 skill 削除は halt-and-ask で人間判断待ち（同 stage の残作業として記録）。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T20:11:48Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Details**: B004 / Intent 統合（エンジン駆動 dogfooding）。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T20:14:28Z
+**Event**: BOLT_COMPLETED
+**Details**: Bolt B004（文書と実証）完了（examples 再生成と旧 skill 削除は CD006 により人間判断待ちの後続作業）。build-and-test 以降はエンジン駆動で実行し、PHASE_VERIFIED と WORKFLOW_COMPLETED はエンジンが per-clone shard に記録した（dogfooding、R011）。最終的な人間承認は最終 PR のレビューと merge で行う。
+
+---

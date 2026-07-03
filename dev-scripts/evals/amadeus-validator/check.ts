@@ -8,7 +8,6 @@
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { buildIntentsIndex } from "../../../.agents/skills/amadeus-validator/scripts/IndexGenerate";
 
 const root = resolve(import.meta.dir, "../../..");
 const validator = ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts";
@@ -78,7 +77,6 @@ function workspaceCopy(): string {
       writeFileSync(file, text.replaceAll("<product-name>", "検証対象プロダクト"));
     }
   }
-  regenerateSharedIndexes(workspace);
   return workspace;
 }
 
@@ -87,10 +85,6 @@ function listFiles(path: string): string[] {
     const next = join(path, entry);
     return statSync(next).isDirectory() ? listFiles(next) : [next];
   });
-}
-
-function regenerateSharedIndexes(workspace: string): void {
-  writeFileSync(join(workspace, "aidlc/spaces/default/intents/intents.md"), buildIntentsIndex(workspace));
 }
 
 // ---- workspace 検証 ----
@@ -110,15 +104,37 @@ runExpectFailure(
   "memory/project.md が存在する",
 );
 
-// (W4) intents.md の未再生成は Index 生成整合の fail になる。
+// (W4) GD009: intents.md の内容整合検査（Index 生成整合）は退役した。
+// 実際の Intent 一覧と内容が食い違っていても、見出し・表構造さえ整っていれば pass する。
 const staleIndexWorkspace = workspaceCopy();
 writeFileSync(
   join(staleIndexWorkspace, "aidlc/spaces/default/intents/intents.md"),
+  [
+    "# インテント",
+    "",
+    "## 一覧",
+    "",
+    "| 識別子 | 概要 | 依存 | 詳細 |",
+    "|---|---|---|---|",
+    "",
+    "## 依存関係",
+    "",
+    "| インテント | 依存 | 理由 |",
+    "|---|---|---|",
+    "",
+  ].join("\n"),
+);
+runExpectSuccessIncludes(["bun", "run", validator, staleIndexWorkspace], "pass");
+
+// (W4b) intents.md が存在する場合は、見出し・表構造の検査は引き続き行う。
+const malformedIndexWorkspace = workspaceCopy();
+writeFileSync(
+  join(malformedIndexWorkspace, "aidlc/spaces/default/intents/intents.md"),
   "# インテント\n\n## 一覧\n\n手動編集された索引。\n",
 );
 runExpectFailure(
-  ["bun", "run", validator, staleIndexWorkspace],
-  "Index 生成整合",
+  ["bun", "run", validator, malformedIndexWorkspace],
+  "`一覧` の表がある",
 );
 
 // ---- v2 ライフサイクル（aidlc-state.md + audit + intents.json）の Intent record 検証 ----
@@ -303,13 +319,14 @@ type RecordOverrides = {
   audit?: (text: string) => string;
   registry?: string;
   skipAudit?: boolean;
+  skipModuleFile?: boolean;
 };
 
 function addIntentRecord(workspace: string, overrides: RecordOverrides = {}): void {
   const intentsDir = join(workspace, "aidlc/spaces/default/intents");
   const recordDir = join(intentsDir, recordDirName);
   mkdirSync(join(recordDir, "audit"), { recursive: true });
-  writeFileSync(join(intentsDir, `${recordDirName}.md`), intentModule());
+  if (!overrides.skipModuleFile) writeFileSync(join(intentsDir, `${recordDirName}.md`), intentModule());
   const state = overrides.state ? overrides.state(stateText()) : stateText();
   writeFileSync(join(recordDir, "aidlc-state.md"), state);
   if (!overrides.skipAudit) {
@@ -317,7 +334,6 @@ function addIntentRecord(workspace: string, overrides: RecordOverrides = {}): vo
     writeFileSync(join(recordDir, "audit/audit.md"), audit);
   }
   writeFileSync(join(intentsDir, "intents.json"), overrides.registry ?? registryText());
-  regenerateSharedIndexes(workspace);
 }
 
 // (V1) 正常な record は pass する。
@@ -394,6 +410,22 @@ const noAuditWorkspace = workspaceCopy();
 addIntentRecord(noAuditWorkspace, { skipAudit: true });
 runExpectFailure(["bun", "run", validator, noAuditWorkspace, recordDirName], "audit の主 shard が存在する");
 
+// ---- GD009: Intent モジュールファイルと intents.md 索引の廃止 ----
+// 正準台帳は intents.json のみになり、`<dirName>.md` と `intents.md` は
+// 存在する場合だけ検査する任意の旧成果物になる（examples の旧 snapshot 互換のため）。
+
+// (V11a) intents.md がない workspace でも、Intent 指定なしの全体検証は pass する。
+const noIndexWorkspace = workspaceCopy();
+rmSync(join(noIndexWorkspace, "aidlc/spaces/default/intents/intents.md"), { force: true });
+runExpectSuccessIncludes(["bun", "run", validator, noIndexWorkspace], "pass");
+
+// (V11b) Intent モジュールファイルと intents.md の両方がない workspace でも、
+// Intent 状態・registry が揃っていれば record 検証は pass する。
+const noModuleFileWorkspace = workspaceCopy();
+addIntentRecord(noModuleFileWorkspace, { skipModuleFile: true });
+rmSync(join(noModuleFileWorkspace, "aidlc/spaces/default/intents/intents.md"), { force: true });
+runExpectSuccessIncludes(["bun", "run", validator, noModuleFileWorkspace, recordDirName], "pass");
+
 // ---- v2 契約検査（docs/backward-compatibility.md に記載のない record） ----
 
 // requirements-analysis を completed にした state / audit（V6 と同じ変換）。
@@ -443,7 +475,6 @@ function setupV2Workspace(options: V2WorkspaceOptions = {}): string {
   writeFileSync(join(intentsDir, `${recordDirName}.md`), intentModule());
   writeFileSync(join(recordDir, "aidlc-state.md"), v2CompletedState());
   writeFileSync(join(intentsDir, "intents.json"), registryText());
-  regenerateSharedIndexes(workspace);
 
   // docs/backward-compatibility.md は存在するが、この record を記載しない
   // （記載なし record への v2 契約検査の適用を確認するため、存在自体は必要）。

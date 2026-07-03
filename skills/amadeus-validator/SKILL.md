@@ -48,22 +48,6 @@ following references.
 Report `blocked` if Bun is unavailable.
 Do not install dependency packages for validation.
 
-## Bundled Scripts
-
-This skill bundles a script that regenerates the shared index `intents.md`
-from its underlying modules.
-`aidlc/spaces/<space>/intents/intents.md` is a generated artifact; regenerate
-it with this script instead of hand-editing it.
-
-```sh
-bun run .agents/skills/amadeus-validator/scripts/IndexGenerate.ts <workspace>
-```
-
-Adding `--check` confirms an exact match between the expected generated
-content and the actual file, and exits with 1 on a mismatch.
-The validator's "Index generation consistency" check reuses this generation
-logic to judge.
-
 ## Inputs
 
 - The working directory to validate.
@@ -86,7 +70,8 @@ Read in the following order.
 5. `aidlc/spaces/<space>/knowledge/*.md` (`glossary.md`, `actors.md`,
    `external-systems.md`, `background.md`, etc.)
 6. `aidlc/spaces/<space>/intents/intents.json`
-7. `aidlc/spaces/<space>/intents/intents.md`
+7. `aidlc/spaces/<space>/intents/intents.md`. Read only if it exists (a
+   retired artifact).
 8. `aidlc/spaces/<space>/intents/active-intent`. Read only if it exists.
 9. `aidlc/spaces/<space>/knowledge/event-storming/*.md` and
    `aidlc/spaces/<space>/knowledge/event-storming/*/state.json`. Read only if
@@ -97,7 +82,8 @@ Read in the following order.
 11. `aidlc/spaces/<space>/knowledge/domain-map.md`
 12. `aidlc/spaces/<space>/knowledge/context-map.md`
 13. `aidlc/spaces/<space>/intents/<dirName>.md`. Read only if the target
-    Intent directory name is specified.
+    Intent directory name is specified and the file exists (a retired
+    artifact).
 14. `aidlc/spaces/<space>/intents/<dirName>/aidlc-state.md`. Read only if the
     target Intent directory name is specified.
 15. `aidlc/spaces/<space>/intents/<dirName>/audit/audit.md`. Read only if it
@@ -127,10 +113,10 @@ Confirm at least the following.
 - `aidlc/spaces/<space>/intents/` exists.
 - `aidlc/spaces/<space>/intents/intents.json` exists and can be interpreted
   as the Intent registry.
-- `aidlc/spaces/<space>/intents/intents.md` exists and satisfies the
-  conditions in [artifacts validation](references/artifacts.md) and Index
-  generation consistency (an exact match with the content derived by
-  IndexGenerate).
+- `aidlc/spaces/<space>/intents/intents.md` is a retired artifact; when it
+  exists, it satisfies the conditions in
+  [artifacts validation](references/artifacts.md). Its absence is not a
+  failure.
 - If `aidlc/spaces/<space>/intents/active-intent` exists, it points to a
   record in the registry.
 - `aidlc/spaces/<space>/knowledge/domain-map.md` exists, and its Subdomain
@@ -141,8 +127,9 @@ Confirm at least the following.
   `adopted`, `retired`, and evidence links can be validated.
 - The Context Map's `Downstream` and `Upstream` reference Bounded Contexts in
   the Domain Map.
-- The target Intent's module file exists and has the `概要`, `依存`, and
-  `目標プロファイル` headings plus the target profile table.
+- The target Intent's module file (`<dirName>.md`) is a retired artifact;
+  when it exists, it has the `概要`, `依存`, and `目標プロファイル` headings
+  plus the target profile table. Its absence is not a failure.
 - The target Intent's record has no retired legacy-placement artifacts
   (such as `state.json`) directly under it that should instead be placed
   under a phase directory.
