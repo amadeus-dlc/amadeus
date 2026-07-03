@@ -101,6 +101,60 @@ Per unit: U004-issue-402-remaining-skill-rollout-units
 - [x] build-and-test — EXECUTE: PR #413 merge により完了確定。
 - [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、Issue #399 の子 Issue 完了追跡に追加の CI 新設または大きな変更は不要。
 
+Per unit: U005-issue-391-394-aidlc-v2-differences
+- [S] functional-design — SKIP: #391〜#394 の差分対応は、既存の stage skill と成果物契約の差分判断であり、新しいデータモデル、複雑な業務ロジック、業務ルール設計を追加しない。
+- [S] nfr-requirements — SKIP: #391〜#394 の差分対応は非機能要求の追加、変更、評価を伴わない。
+- [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+- [S] infrastructure-design — SKIP: #391〜#394 の差分対応はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
+- [-] code-generation — EXECUTE: #391、#393、#392、#394 の完了または対象外判断を追跡する。
+- [ ] build-and-test — EXECUTE
+- [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、Issue #399 の差分対応追跡に追加の CI 新設または大きな変更は不要。
+
+Per unit: U006-core-entrypoints-verification-englishization
+- [S] functional-design — SKIP: Core entrypoints and verification 英語化は `SKILL.md` の翻訳と契約保持であり、新しいデータモデル、複雑な業務ロジック、業務ルール設計を追加しない。
+- [S] nfr-requirements — SKIP: Core entrypoints and verification 英語化は非機能要求の追加、変更、評価を伴わない。
+- [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+- [S] infrastructure-design — SKIP: Core entrypoints and verification 英語化はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
+- [ ] code-generation — EXECUTE
+- [ ] build-and-test — EXECUTE
+- [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、英語化追跡に追加の CI 新設または大きな変更は不要。
+
+Per unit: U007-construction-stage-skills-englishization
+- [S] functional-design — SKIP: Construction stage skills 英語化は `SKILL.md` の翻訳と契約保持であり、新しいデータモデル、複雑な業務ロジック、業務ルール設計を追加しない。
+- [S] nfr-requirements — SKIP: Construction stage skills 英語化は非機能要求の追加、変更、評価を伴わない。
+- [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+- [S] infrastructure-design — SKIP: Construction stage skills 英語化はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
+- [ ] code-generation — EXECUTE
+- [ ] build-and-test — EXECUTE
+- [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、英語化追跡に追加の CI 新設または大きな変更は不要。
+
+Per unit: U008-inception-stage-skills-englishization
+- [S] functional-design — SKIP: Inception stage skills 英語化は `SKILL.md` の翻訳と契約保持であり、新しいデータモデル、複雑な業務ロジック、業務ルール設計を追加しない。
+- [S] nfr-requirements — SKIP: Inception stage skills 英語化は非機能要求の追加、変更、評価を伴わない。
+- [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+- [S] infrastructure-design — SKIP: Inception stage skills 英語化はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
+- [ ] code-generation — EXECUTE
+- [ ] build-and-test — EXECUTE
+- [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、英語化追跡に追加の CI 新設または大きな変更は不要。
+
+Per unit: U009-ideation-supporting-skills-englishization
+- [S] functional-design — SKIP: Ideation and supporting skills 英語化は `SKILL.md` の翻訳と契約保持であり、新しいデータモデル、複雑な業務ロジック、業務ルール設計を追加しない。
+- [S] nfr-requirements — SKIP: Ideation and supporting skills 英語化は非機能要求の追加、変更、評価を伴わない。
+- [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+- [S] infrastructure-design — SKIP: Ideation and supporting skills 英語化はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
+- [ ] code-generation — EXECUTE
+- [ ] build-and-test — EXECUTE
+- [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、英語化追跡に追加の CI 新設または大きな変更は不要。
+
+Per unit: U010-issue-399-final-verification
+- [S] functional-design — SKIP: #399 最終検証は完了証拠と traceability の確認であり、新しいデータモデル、複雑な業務ロジック、業務ルール設計を追加しない。
+- [S] nfr-requirements — SKIP: #399 最終検証は非機能要求の追加、変更、評価を伴わない。
+- [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+- [S] infrastructure-design — SKIP: #399 最終検証はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
+- [ ] code-generation — EXECUTE
+- [ ] build-and-test — EXECUTE
+- [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、最終検証に追加の CI 新設または大きな変更は不要。
+
 ### OPERATION PHASE
 - [S] deployment-pipeline — SKIP: out of Amadeus scope
 - [S] environment-provisioning — SKIP: out of Amadeus scope
