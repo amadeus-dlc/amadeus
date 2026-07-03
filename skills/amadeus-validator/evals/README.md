@@ -12,6 +12,7 @@
 - 対象 Intent ディレクトリ名が指定された場合、全体成果物に加えて対象 Intent を検証する。
 - `.amadeus/intents.md` の Intent 識別子が `YYYYMMDD-<slug>` 形式で、詳細リンクのディレクトリ名と一致することを検証する。
 - `.amadeus/intents.md` が IndexGenerate の導出内容と完全一致することを検証する。
+- `state.json.schemaVersion` が `2` 以外の Intent は、旧契約として検証せず fail にする。
 - `state.json.schemaVersion` が `2` の Intent では、scope、depth、status、phase、`stages` のキー集合と scope の実行対象の一致、ステージ状態、approval evidence、`phaseGates`、`bolts`、completed ステージの必須成果物を検証する。
 - Event Storming の成果物、level、`nextRecommendedSkill`（`amadeus` または `amadeus-domain-modeling`）を検証する。
 - Domain Map と Context Map の `adopted`、`retired`、根拠リンクを検証する。

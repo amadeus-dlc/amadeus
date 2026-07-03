@@ -26,7 +26,6 @@
 ### Allowed
 
 - .amadeus/**
-- skills/amadeus-validator/validator/generated/**
 - 検証対象の関連成果物
 
 ### Prohibited

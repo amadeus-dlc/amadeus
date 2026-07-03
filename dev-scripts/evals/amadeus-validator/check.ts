@@ -212,6 +212,18 @@ runExpectSuccessIncludes(
   "v2 ライフサイクル",
 );
 
+// (V0) 旧契約の拒否: schemaVersion 1 の Intent は v1 契約として検証せず、schemaVersion の不一致として fail する。
+const v1RejectedWorkspace = workspaceCopy();
+{
+  const state = v2State();
+  state.schemaVersion = 1;
+  addV2Intent(v1RejectedWorkspace, state);
+}
+runExpectFailure(
+  ["bun", "run", validator, v1RejectedWorkspace, v2Intent],
+  "`schemaVersion` が 2 である",
+);
+
 const v2BadScopeWorkspace = workspaceCopy();
 {
   const state = v2State();
