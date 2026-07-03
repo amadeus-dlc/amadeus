@@ -79,7 +79,7 @@ Domain Map と Context Map には候補を載せない。
 以下の手順は、checkbox が `[ ]` から開始する場合の流れである。
 `[?]` または `[R]` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
 
-1. checkbox が `[ ]` の場合だけ Condition を判定する。偽なら対象 Unit を `[S]` にし、`STAGE_SKIPPED` を追記して終了する。`[-]`、`[?]`、`[R]` からの再開では再判定しない。
+1. checkbox が `[ ]` の場合だけ Condition を判定する。偽なら対象 Unit を `[S]` にし、`audit/audit.md` に `STAGE_SKIPPED` を追記して終了する。`[-]`、`[?]`、`[R]` からの再開では再判定しない。
 2. 対象 Unit の `functional-design` の checkbox を `[-]` にする。
 3. 対象 Unit、要求、Application Design、ドメインの判断材料を読み、本物の欠落だけを質問で確認する。Application Design を実行しなかった場合は、前提の縮退時の入力代替に従い、使った代替を `business-logic-model.md` に記録する。
 4. `business-logic-model.md`、`business-rules.md`、`domain-entities.md` を作る。UI がある場合は `frontend-components.md` も作る。
