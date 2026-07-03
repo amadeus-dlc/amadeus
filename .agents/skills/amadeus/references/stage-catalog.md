@@ -8,6 +8,9 @@
 
 | Stage | Phase | Slug | Execution | Skill |
 |---|---|---|---|---|
+| 0.1 | initialization | workspace-scaffold | ALWAYS | `amadeus`（入口が直接実行する） |
+| 0.2 | initialization | workspace-detection | ALWAYS | `amadeus`（入口が直接実行する） |
+| 0.3 | initialization | state-init | ALWAYS | `amadeus`（入口が直接実行する） |
 | 1.1 | ideation | intent-capture | ALWAYS | `amadeus-ideation-intent-capture` |
 | 1.2 | ideation | market-research | CONDITIONAL | `amadeus-ideation-market-research` |
 | 1.3 | ideation | feasibility | CONDITIONAL | `amadeus-ideation-feasibility` |
@@ -41,6 +44,9 @@ EXECUTE はその scope で実行対象にすることを表す。
 
 | Stage | enterprise | feature | mvp | poc | bugfix | refactor | infra | security-patch | workshop |
 |---|---|---|---|---|---|---|---|---|---|
+| 0.1 workspace-scaffold | EXECUTE | EXECUTE | EXECUTE | EXECUTE | EXECUTE | EXECUTE | EXECUTE | EXECUTE | EXECUTE |
+| 0.2 workspace-detection | EXECUTE | EXECUTE | EXECUTE | EXECUTE | EXECUTE | EXECUTE | EXECUTE | EXECUTE | EXECUTE |
+| 0.3 state-init | EXECUTE | EXECUTE | EXECUTE | EXECUTE | EXECUTE | EXECUTE | EXECUTE | EXECUTE | EXECUTE |
 | 1.1 intent-capture | EXECUTE | EXECUTE | EXECUTE | EXECUTE | | | | | |
 | 1.2 market-research | EXECUTE | EXECUTE | | | | | | | |
 | 1.3 feasibility | EXECUTE | EXECUTE | EXECUTE | | | | | | |
@@ -82,9 +88,9 @@ workshop はテスト戦略だけを Minimal に上書きする。
 |---|---|
 | 2.3 requirements-analysis（security-patch の場合） | 3.2 nfr-requirements が要求の捕捉を兼ね、`security-requirements.md` を要求の定義元にする。 |
 | 2.6 application-design | reverse-engineering の `architecture.md` と `component-inventory.md` を構造の材料にする。greenfield では `requirements.md` から直接判断する。 |
-| 2.7 units-generation | Intent 全体を単一の暗黙 Unit として扱う。Unit の記述は Intent のモジュールファイルと `requirements.md` で代替する。 |
+| 2.7 units-generation | Intent 全体を単一の暗黙 Unit として扱う。Unit の記述は `requirements.md` と Intent のモジュールファイルで代替する。 |
 | 2.8 delivery-planning | Intent 全体を単一の暗黙 Bolt として扱う。walking skeleton ゲートはその Bolt に適用する。 |
 | 3.1 functional-design | `requirements.md` と reverse-engineering の成果物を設計の材料にする。 |
 | 3.2 nfr-requirements | 3.3 nfr-design と 3.4 infrastructure-design は実行しない。 |
 
-暗黙 Unit と暗黙 Bolt は独自の成果物を作らず、`state.json` の記録では識別子として `implicit` を使う。
+暗黙 Unit と暗黙 Bolt は独自の成果物を作らず、`aidlc-state.md` と audit の記録では識別子として `implicit` を使う。

@@ -1,4 +1,4 @@
-# Test Results：<bolt-name>
+# Build Test Results：<bolt-name>
 
 ## 実行結果
 

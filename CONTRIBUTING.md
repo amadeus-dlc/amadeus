@@ -40,4 +40,4 @@ npm run test:all
 ## Language Conventions
 
 - `README.md` and this document are written in English, with Japanese counterparts.
-- Markdown artifacts under `.amadeus/**`, `skills/**`, and `.agents/skills/**` are written in Japanese.
+- Markdown artifacts under `aidlc/**`, `skills/**`, and `.agents/skills/**` are written in Japanese.

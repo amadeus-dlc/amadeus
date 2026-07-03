@@ -7,7 +7,7 @@ It provides agent skills, templates, validators, and documentation for moving wo
 
 ## Highlights
 
-- Run the whole lifecycle through the single public entrypoint skill `amadeus`, which handles Intake (continuation by default, human-approved Intent birth, scope estimation) and stage routing driven by `state.json`.
+- Run the whole lifecycle through the single public entrypoint skill `amadeus`, which handles Intake (continuation by default, human-approved Intent birth, scope estimation) and stage routing driven by `aidlc-state.md`.
 - Adapt ceremony to the work: each scope (`enterprise`, `feature`, `mvp`, `poc`, `bugfix`, `refactor`, `infra`, `security-patch`, `workshop`) executes only its own subset of the 22 stages.
 - Use generated examples under [examples/](examples/) as snapshots of what the skills can produce.
 - Keep lifecycle artifacts auditable with explicit stage states, approval evidence, phase gates, Bolt gates, and validation results.
@@ -45,7 +45,7 @@ The skills are grouped by how they participate in Amadeus DLC.
 `amadeus` is the single public entrypoint for the lifecycle.
 
 It decides whether an input continues an existing Intent, merges into an existing Intent's scope backlog, or proposes the birth of a new Intent (which always requires human approval).
-It then resolves the next stage from the Intent's `state.json` and delegates the actual work to the stage skills.
+It then resolves the next stage from the Intent record's `aidlc-state.md` and delegates the actual work to the stage skills.
 
 1. `amadeus-steering` (workspace foundation, run once per workspace)
 2. `amadeus` (Intake and stage routing for every Intent)
@@ -73,10 +73,10 @@ Use `amadeus` or the auxiliary entrypoints as the public entrypoints unless the 
 | Decision and learning support | `amadeus-decision-review`, `amadeus-history-review`, `amadeus-learning-review` |
 
 When reviewing or changing an Amadeus skill, you must use `skill-forge` to check the skill boundary, trigger description, body instructions, eval coverage, and Codex metadata when present.
-For skill change pull requests, this check and a record of its results in the pull request description are required conditions; the definitions live in the steering policies ([.amadeus/steering/policies.md](.amadeus/steering/policies.md)).
+For skill change pull requests, this check and a record of its results in the pull request description are required conditions; the definitions live in the workspace's shared practices ([aidlc/spaces/default/memory/team.md](aidlc/spaces/default/memory/team.md)).
 For Amadeus source changes, check both `skills/amadeus-*` and `.agents/skills/amadeus-*`; keep promoted artifacts aligned through the repository promotion flow.
 
-The repository root keeps `.amadeus/` as the steering layer for Amadeus's own development.
+The repository root keeps `aidlc/` as the workspace for Amadeus's own development.
 
 ### Typical Flow
 
@@ -84,7 +84,7 @@ The repository root keeps `.amadeus/` as the steering layer for Amadeus's own de
 |---|---|---|
 | 1 | `amadeus-steering` | Create or inspect the shared workspace foundation. |
 | 2 | `amadeus` | Run Intake for an input: continue or merge into an existing Intent, or propose a new Intent birth with an estimated scope for human approval. |
-| 3 | `amadeus` | Route each following session to the next stage from `state.json`, delegating to the stage skills through Ideation, Inception, and Construction; Construction runs Bolt by Bolt with a mandatory human gate on the walking skeleton. |
+| 3 | `amadeus` | Route each following session to the next stage from the Intent record's `aidlc-state.md`, delegating to the stage skills through Ideation, Inception, and Construction; Construction runs Bolt by Bolt with a mandatory human gate on the walking skeleton. |
 
 Auxiliary entrypoints can be used alongside the flow when needed.
 `amadeus-event-storming` maps Domain Events, Processes, Aggregate Candidates, Bounded Context Candidates, and Hotspots as supporting analysis.
@@ -108,7 +108,7 @@ npm run validate:workspace -- <workspace>
 Run the validator against a specific Intent.
 
 ```sh
-npm run validate:workspace -- <workspace> <intent-id>-<slug>
+npm run validate:workspace -- <workspace> <YYMMDD>-<label>
 ```
 
 ## Documentation
@@ -122,17 +122,17 @@ npm run validate:workspace -- <workspace> <intent-id>-<slug>
   - [Inception](docs/amadeus/lifecycle/inception.md)
   - [Construction](docs/amadeus/lifecycle/construction.md)
   - [State](docs/amadeus/lifecycle/state.md)
-- Steering layer reference: [docs/amadeus/steering.md](docs/amadeus/steering.md)
+- Space reference: [docs/amadeus/steering.md](docs/amadeus/steering.md)
 - Architecture decisions: [docs/adr/](docs/adr/)
 - AI-DLC reference material: [docs/ai-dlc/](docs/ai-dlc/)
 
 ## Boundaries
 
-- `.amadeus/` is the artifact root in a target workspace.
-  In this repository root, it is limited to the steering layer for Amadeus's own development.
-- Intent directory names must match `.amadeus/intents.md` and `.amadeus/intents/<intent-id>-<slug>/`.
+- `aidlc/` is the workspace root in a target workspace; each Space (`aidlc/spaces/<space>/`, default `default`) holds `memory/`, `knowledge/`, `codekb/`, and `intents/`.
+  In this repository root, it is limited to the workspace for Amadeus's own development.
+- Intent directory names must match `aidlc/spaces/<space>/intents/intents.md` and `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`.
 - New Intents are born only through the `amadeus` Intake with explicit human approval; work that belongs to an existing Intent's outcome goes to that Intent's scope backlog instead of becoming a new Intent.
-- Domain findings are placed according to scope: Intent-specific notes go to `domain-notes.md`, adopted boundaries go to `.amadeus/domain-map.md`, adopted context dependencies go to `.amadeus/context-map.md`, Inception relationships go to `inception/traceability.md`, and detailed models and contracts go to Construction Functional Design.
+- Domain findings are placed according to scope: Intent-specific notes go to `domain-notes.md`, adopted boundaries go to `aidlc/spaces/<space>/knowledge/domain-map.md`, adopted context dependencies go to `aidlc/spaces/<space>/knowledge/context-map.md`, Inception relationships go to `inception/traceability.md`, and detailed models and contracts go to Construction Functional Design.
 - Unknown values are recorded as `未確認` instead of being left blank.
 - External systems, Bounded Contexts, Intents, and dependencies are not invented from guesses.
 - Spec, `.kiro/specs/**`, `openspec/**`, and Operation artifacts are not fixed as procedures until their corresponding skills are confirmed.

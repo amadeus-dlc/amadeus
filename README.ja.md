@@ -7,7 +7,7 @@ Amadeus は、AI-DLC v2 と意味論互換のライフサイクル（Ideation、
 
 ## Highlights
 
-- 単一の公開入口 skill `amadeus` がライフサイクル全体を扱います。Intake（合流既定、人間承認付きの Intent Birth、scope 推定）と、`state.json` に基づくステージルーティングを行います。
+- 単一の公開入口 skill `amadeus` がライフサイクル全体を扱います。Intake（合流既定、人間承認付きの Intent Birth、scope 推定）と、`aidlc-state.md` に基づくステージルーティングを行います。
 - scope（`enterprise`、`feature`、`mvp`、`poc`、`bugfix`、`refactor`、`infra`、`security-patch`、`workshop`）ごとに、22 ステージのうち実行対象だけを実行し、儀式量を作業に合わせて縮退します。
 - [examples/](examples/) 配下の生成例を、skill が生成できる snapshot として参照できます。
 - ステージ状態、approval evidence、phase gate、Bolt gate、検証結果を明示し、成果物を監査しやすくします。
@@ -45,7 +45,7 @@ skill は Amadeus DLC への関わり方で分類します。
 `amadeus` がライフサイクルの単一公開入口です。
 
 入力が既存 Intent の継続か、既存 Intent のスコープバックログへの合流か、新しい Intent の Birth 提案（必ず人間の承認を要する）かを判定します。
-その後、対象 Intent の `state.json` から次のステージを解決し、ステージ内部 skill へ委譲します。
+その後、対象 Intent の `aidlc-state.md` から次のステージを解決し、ステージ内部 skill へ委譲します。
 
 1. `amadeus-steering`（workspace の共有土台。workspace ごとに最初に一度）
 2. `amadeus`（すべての Intent の Intake とステージルーティング）
@@ -73,10 +73,10 @@ skill は Amadeus DLC への関わり方で分類します。
 | 判断と学習支援 | `amadeus-decision-review`、`amadeus-history-review`、`amadeus-learning-review` |
 
 Amadeus skill を確認または変更するときは、必ず `skill-forge` で skill 境界、trigger description、本文指示、eval coverage、存在する場合は Codex metadata を確認します。
-skill 変更 PR では、この確認と結果の PR 説明への記録が必須条件です。定義は steering policies（[.amadeus/steering/policies.md](.amadeus/steering/policies.md)）にあります。
+skill 変更 PR では、この確認と結果の PR 説明への記録が必須条件です。定義は team memory（[aidlc/spaces/default/memory/team.md](aidlc/spaces/default/memory/team.md)）の判断基準にあります。
 Amadeus の source を変更する場合は、`skills/amadeus-*` と `.agents/skills/amadeus-*` の両方を確認し、昇格先成果物はリポジトリの昇格手順でそろえます。
 
-このリポジトリでは、root `.amadeus/` を Amadeus 本体開発用の steering layer として扱います。
+このリポジトリでは、root `aidlc/` を Amadeus 本体開発用の workspace として扱います。
 
 ### Typical Flow
 
@@ -84,7 +84,7 @@ Amadeus の source を変更する場合は、`skills/amadeus-*` と `.agents/sk
 |---|---|---|
 | 1 | `amadeus-steering` | workspace の共有土台を作成または点検します。 |
 | 2 | `amadeus` | 入力の Intake を行います。既存 Intent への継続または合流を既定にし、新しいアウトカムだけを scope 推定付きの Birth 提案として人間に確認します。 |
-| 3 | `amadeus` | 以降のセッションで `state.json` から次ステージを解決し、Ideation、Inception、Construction のステージ内部 skill へ委譲します。Construction は Bolt 単位で進め、walking skeleton は必ず人間が承認します。 |
+| 3 | `amadeus` | 以降のセッションで `aidlc-state.md` から次ステージを解決し、Ideation、Inception、Construction のステージ内部 skill へ委譲します。Construction は Bolt 単位で進め、walking skeleton は必ず人間が承認します。 |
 
 補助入口は、必要に応じて flow と併用します。
 `amadeus-event-storming` は Domain Event、Process、Aggregate Candidate、Bounded Context Candidate、Hotspot を補助分析として整理します。
@@ -108,7 +108,7 @@ bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspac
 validator を特定 Intent に対して直接実行します。
 
 ```sh
-bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspace> <intent-id>-<slug>
+bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspace> <YYMMDD>-<label>
 ```
 
 ## Documentation
@@ -122,18 +122,19 @@ bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspac
   - [Inception](docs/amadeus/lifecycle/inception.md)
   - [Construction](docs/amadeus/lifecycle/construction.md)
   - [State](docs/amadeus/lifecycle/state.md)
-- Steering layer reference: [docs/amadeus/steering.md](docs/amadeus/steering.md)
+- Space reference: [docs/amadeus/steering.md](docs/amadeus/steering.md)
 - Architecture Decision: [docs/adr/](docs/adr/)
 - AI-DLC 参照資料: [docs/ai-dlc/](docs/ai-dlc/)
 
 ## Boundaries
 
-- `.amadeus/` は対象 workspace の成果物ルートです。
-  このリポジトリ root では、Amadeus 本体開発用の steering layer に限定して扱います。
-- Intent ディレクトリ名は `.amadeus/intents.md` と `.amadeus/intents/<intent-id>-<slug>/` で一致させます。
+- `aidlc/` は対象 workspace の成果物ルートです。
+  このリポジトリ root では、Amadeus 本体開発用の workspace に限定して扱います。
+- Space（既定は `aidlc/spaces/default/`）は、`memory/`、`knowledge/`、`codekb/`、`intents/` を持ちます。
+- Intent ディレクトリ名は `aidlc/spaces/<space>/intents/intents.md` と `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/` で一致させます。
 - 新しい Intent は `amadeus` の Intake から人間の明示承認を経てだけ生まれます。既存 Intent のアウトカムに属する作業は、新しい Intent にせず対象 Intent のスコープバックログへ合流させます。
 - ドメイン上の発見は範囲に応じて置き分けます。
-  対象 Intent の `domain-notes.md`、`.amadeus/domain-map.md`、`.amadeus/context-map.md`、`inception/traceability.md`、Construction の Functional Design を使い分けます。
+  対象 Intent の `domain-notes.md`、`aidlc/spaces/<space>/knowledge/domain-map.md`、`aidlc/spaces/<space>/knowledge/context-map.md`、`inception/traceability.md`、Construction の Functional Design を使い分けます。
 - 不明な値は空欄にせず、`未確認` と記録します。
 - 外部システム、Bounded Context、Intent、依存関係を推測で作りません。
 - Spec、`.kiro/specs/**`、`openspec/**`、Operation 成果物は、対応 skill が確定するまで手順として固定しません。

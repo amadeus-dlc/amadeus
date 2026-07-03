@@ -1,4 +1,4 @@
-# Summary：<bolt-name>
+# Build and Test Summary：<bolt-name>
 
 ## Definition of Done の充足
 

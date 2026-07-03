@@ -1,7 +1,7 @@
 ---
 name: amadeus-history-review
 description: >-
-  Amadeus の内部 skill。`.amadeus/` の過去成果物、Issue、PR、CI 結果を読み取り専用で分析し、
+  Amadeus の内部 skill。`aidlc/` の過去成果物、Issue、PR、CI 結果を読み取り専用で分析し、
   再利用判断、未確認事項、繰り返し問題、後続候補を抽出する。成果物更新や Issue 作成は行わず、
   必要に応じて `amadeus-learning-review` または `amadeus` の Intake へ渡す分析結果を返す。
 ---
@@ -10,7 +10,7 @@ description: >-
 
 ## 目的
 
-`.amadeus/` の過去成果物を読み取り専用で横断分析し、現在の判断に使える再利用情報と不足情報を返す。
+Space（`aidlc/spaces/<space>/`）の過去成果物を読み取り専用で横断分析し、現在の判断に使える再利用情報と不足情報を返す。
 
 この skill は過去分析の入口である。
 成果物を更新せず、GitHub Issue を作成せず、Intent Record を作成せず、Domain Map と Context Map へ自動昇格しない。
@@ -20,8 +20,8 @@ description: >-
 - 検証対象の作業ディレクトリ。
 - 対象 Intent または対象テーマ。
 - 任意の Issue、PR、CI 結果。
-- `.amadeus/` の steering layer。
-- `.amadeus/` の Intent layer。
+- Space（`aidlc/spaces/<space>/`）の `memory/` と `knowledge/`。
+- Space（`aidlc/spaces/<space>/`）の `intents/`。
 - 直近の validator 結果または eval 結果。
 
 入力が不足する場合は、不足項目を分析結果の未確認事項へ残す。
@@ -31,22 +31,18 @@ description: >-
 
 優先して読む成果物:
 
-- `.amadeus/README.md`
-- `.amadeus/steering.md`
-- `.amadeus/steering/objective.md`
-- `.amadeus/steering/product.md`
-- `.amadeus/steering/tech.md`
-- `.amadeus/steering/structure.md`
-- `.amadeus/glossary.md`
-- `.amadeus/domain-map.md`
-- `.amadeus/context-map.md`
-- `.amadeus/intents.md`
-- `.amadeus/intents/**/state.json`
-- `.amadeus/intents/**/ideation/ideation.md`
-- `.amadeus/intents/**/ideation/traceability.md`
-- `.amadeus/intents/**/inception/requirements.md`
-- `.amadeus/intents/**/inception/traceability.md`
-- `.amadeus/intents/**/construction/**`
+- `aidlc/spaces/<space>/memory/org.md`
+- `aidlc/spaces/<space>/memory/team.md`
+- `aidlc/spaces/<space>/memory/project.md`
+- `aidlc/spaces/<space>/knowledge/glossary.md`
+- `aidlc/spaces/<space>/knowledge/domain-map.md`
+- `aidlc/spaces/<space>/knowledge/context-map.md`
+- `aidlc/spaces/<space>/intents/intents.md`
+- `aidlc/spaces/<space>/intents/**/aidlc-state.md`
+- `aidlc/spaces/<space>/intents/**/ideation/traceability.md`
+- `aidlc/spaces/<space>/intents/**/inception/requirements-analysis/requirements.md`
+- `aidlc/spaces/<space>/intents/**/inception/traceability.md`
+- `aidlc/spaces/<space>/intents/**/construction/**`
 
 必要な場合だけ読む補助情報:
 
@@ -67,7 +63,7 @@ description: >-
 | 未確認事項 | 現在の証拠だけでは確定できない事項。 | `amadeus-grilling`、phase skill |
 | 繰り返し問題 | 複数の Intent、Issue、PR、CI 結果にまたがる問題。 | `amadeus-learning-review` |
 | 前段 feedback 候補 | 現在 Intent の成功条件を妨げる前段成果物の不足や矛盾。 | `amadeus-learning-review` |
-| steering knowledge 候補 | steering layer へ反映する可能性がある知識。 | `amadeus-learning-review` |
+| steering knowledge 候補 | Space の `memory/` と `knowledge/` へ反映する可能性がある知識。 | `amadeus-learning-review` |
 | Domain Map 候補 | 共有境界として採用検討が必要な内容。 | `amadeus-learning-review` |
 | Context Map 候補 | コンテキスト間依存として採用検討が必要な内容。 | `amadeus-learning-review` |
 | 後続 Issue 候補 | 現在 Intent の成功条件外だが小さく追跡できる課題。 | 人間判断 |

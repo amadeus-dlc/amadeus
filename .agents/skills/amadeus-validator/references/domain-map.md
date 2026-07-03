@@ -2,8 +2,8 @@
 
 ## 対象
 
-- `.amadeus/domain-map.md`
-- `.amadeus/context-map.md`
+- `aidlc/spaces/<space>/knowledge/domain-map.md`
+- `aidlc/spaces/<space>/knowledge/context-map.md`
 
 ## Domain Map
 

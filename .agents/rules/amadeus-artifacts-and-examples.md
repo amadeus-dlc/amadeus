@@ -4,8 +4,8 @@
 
 ## 対象
 
-- Steering layer: 対象 workspace の `.amadeus/` 直下の成果物
-- Intent layer: 対象 workspace の `.amadeus/intents/<intent-id>-<slug>/`
+- Space: 対象 workspace の `aidlc/spaces/<space>/`（既定は `default`。`memory/`、`knowledge/`、`codekb/`、`intents/`）
+- Intent record: `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`
 - Skill sources: `skills/amadeus*/`
 - Promoted skills: `.agents/skills/amadeus*/`
 
@@ -28,9 +28,10 @@ npm run test:it:promote-skill
 
 ## 言語
 
-- `.amadeus/**/*.md`、`skills/**/*.md`、`.agents/skills/**/*.md` は日本語で書く。
+- `aidlc/**/*.md`、`skills/**/*.md`、`.agents/skills/**/*.md` は日本語で書く。
 - 英語で下書きしてから日本語へ翻訳しない。
 - `.kiro/specs/**/*.md` と `openspec/**/*.md` を作る場合も日本語で書く。
+- `aidlc-state.md`、`intents.json`、audit イベントのような機械可読・構造的成果物は、v2 の構造と英語ラベルをそのまま使う。
 
 ## Amadeus DLC の基準
 
@@ -39,7 +40,7 @@ npm run test:it:promote-skill
 - scope が SKIP にするステージは実行しない。ステージと成果物の契約は `docs/amadeus/lifecycle/` に従う。
 - Construction は Bolt を実行単位にし、walking skeleton の Bolt PR は必ず人間が承認する。
 - Spec、`.kiro/specs/**`、`openspec/**`、Operation 成果物は、対応が確定するまで固定しない。
-- 新しい成果物を作る前に、対象 workspace の `.amadeus/README.md`、`.amadeus/steering.md`、対象 Intent の `state.json` を読む。
+- 新しい成果物を作る前に、対象 workspace の `aidlc/spaces/<space>/memory/`（org.md、team.md、project.md）と、対象 Intent の `aidlc-state.md` を読む。
 - 不明な値は空欄にせず、`未確認` と書く。
 - 推測で外部システム、境界づけられたコンテキスト、Intent、依存関係を作らない。
 
@@ -47,7 +48,7 @@ npm run test:it:promote-skill
 
 - 同じ段階の既存成果物を読み、見出し、表、識別子、語彙を合わせる。
 - 対象範囲と責任境界を明確にする。
-- テンプレートは、`.amadeus/settings/templates/` の上書きがあればそれを、なければ対象 skill の同梱テンプレートを使う。
+- テンプレートは、`aidlc/spaces/<space>/memory/templates/` の上書きがあればそれを、なければ対象 skill の同梱テンプレートを使う。
 
 ## Examples
 
@@ -88,7 +89,7 @@ repo 全体の標準検証は次で実行する。
 npm run test:all
 ```
 
-`.amadeus/` 成果物を作成または更新した場合は、次で構造検証する。
+`aidlc/` 成果物を作成または更新した場合は、次で構造検証する。
 
 ```sh
 bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspace>
@@ -97,7 +98,7 @@ bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspac
 特定 Intent も検証する場合は次で検証する。
 
 ```sh
-bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspace> <intent-id>-<slug>
+bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspace> <YYMMDD>-<label>
 ```
 
 validator の `pass` は、実行時に参照できる最低限の構造条件を満たすという意味である。

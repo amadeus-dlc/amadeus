@@ -6,7 +6,7 @@
 |---|---|---|
 | build workspace | エージェント、skill、validator、開発用スクリプトを動かす場所。 | 採用 |
 | host environment | 昇格済み skill または生成された skill が動作する環境。 | 採用 |
-| target workspace | 変更差分、自己開発用 `.amadeus/`、作業中の成果物を置く場所。 | 採用 |
+| target workspace | 変更差分、自己開発用 `aidlc/`、作業中の成果物を置く場所。 | 採用 |
 | target artifacts | skill が生成、更新、検証する成果物集合。 | 採用 |
 | stage0 | 作業開始時点で build workspace から利用可能な昇格済み skill、既存 validator、開発用スクリプト。 | 採用 |
 | stage1 | target workspace にある作業中の source skill とローカル検証結果。 | 採用 |
@@ -27,4 +27,4 @@
 
 | 禁止ワード | 理由 |
 |---|---|
-| `.target-amadeus/` | root `.amadeus/` を自己開発用 steering layer として扱う方針と衝突するため。 |
+| `target-aidlc/` | root `aidlc/` を自己開発用 workspace として扱う方針と衝突するため。 |
