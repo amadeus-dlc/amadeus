@@ -18,5 +18,15 @@
       "amadeus"
     ],
     "status": "completed"
+  },
+  {
+    "uuid": "019f28f5-681c-7000-b203-09ad07d5b724",
+    "slug": "v2-parity-completion",
+    "dirName": "260704-v2-parity-completion",
+    "scope": "feature",
+    "repos": [
+      "amadeus"
+    ],
+    "status": "in_progress"
   }
 ]
