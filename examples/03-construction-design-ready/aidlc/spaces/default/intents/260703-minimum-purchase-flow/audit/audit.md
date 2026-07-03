@@ -609,3 +609,66 @@
 **Details**: インフラ変更はなく、デプロイ構成は定義済みであるため skip した。
 
 ---
+
+## Stage Started: functional-design
+**Timestamp**: 2026-07-03T10:08:26Z
+**Event**: STAGE_STARTED
+**Stage**: functional-design
+**Unit**: U003-inventory-reference
+**Details**: U003 在庫参照の Stage 3.1 を開始した。在庫管理システムとの REST API 連携と在庫にもとづく選択可否の業務ルールがあるため実行した。
+
+---
+
+## Stage Awaiting Approval: functional-design
+**Timestamp**: 2026-07-03T10:08:26Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: functional-design
+**Unit**: U003-inventory-reference
+**Details**: business-logic-model.md、business-rules.md、domain-entities.md を確認対象として提示した。
+
+---
+
+## Gate Approved: functional-design
+**Timestamp**: 2026-07-03T10:08:26Z
+**Event**: GATE_APPROVED
+**Stage**: functional-design
+**Unit**: U003-inventory-reference
+**Details**: ユーザー指示を人間の承認として扱い、U003 在庫参照の Stage 3.1 を承認した。
+
+---
+
+## Stage Completed: functional-design
+**Timestamp**: 2026-07-03T10:08:26Z
+**Event**: STAGE_COMPLETED
+**Stage**: functional-design
+**Unit**: U003-inventory-reference
+**Details**: U003 在庫参照の functional-design を完了した。
+
+---
+
+## Stage Skipped: nfr-requirements
+**Timestamp**: 2026-07-03T10:08:26Z
+**Event**: STAGE_SKIPPED
+**Stage**: nfr-requirements
+**Unit**: U003-inventory-reference
+**Details**: 性能、セキュリティ、スケーラビリティの特別な要求はなく、技術スタックは確定済みであるため skip した。
+
+---
+
+## Stage Skipped: nfr-design
+**Timestamp**: 2026-07-03T10:08:26Z
+**Event**: STAGE_SKIPPED
+**Stage**: nfr-design
+**Unit**: U003-inventory-reference
+**Details**: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+
+---
+
+## Stage Skipped: infrastructure-design
+**Timestamp**: 2026-07-03T10:08:26Z
+**Event**: STAGE_SKIPPED
+**Stage**: infrastructure-design
+**Unit**: U003-inventory-reference
+**Details**: インフラ変更はなく、デプロイ構成は定義済みであるため skip した。
+
+---

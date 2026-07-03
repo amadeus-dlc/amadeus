@@ -24,7 +24,7 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 22
-- **Completed**: 15
+- **Completed**: 17
 - **In Progress**: B001（walking skeleton、code generation 前で停止）
 
 ## Runtime State
