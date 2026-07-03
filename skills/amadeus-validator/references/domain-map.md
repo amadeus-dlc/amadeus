@@ -40,11 +40,8 @@
 `状態` は `adopted` または `retired` にする。
 `根拠` は存在する相対リンクにする。
 
-対象 Intent の `inception.gate` が `passed` の場合、Inception 以降の Unit は、`units.md` の `コンテキスト` から Domain Map の `adopted` Bounded Context を参照する。
-
-既存 Boundary を参照する場合、Unit の `コンテキスト` は既存の `adopted` Bounded Context を参照する。
-
-現在の Intent で新規 Boundary を採用する場合、Domain Map の Bounded Context 行は `adopted` にし、`根拠` は Inception の判断を指す。
+Domain Map の行は、Construction の承認済み成果物（Functional Design の反映候補の採用判断）から更新される。
+validator は行の構造、許可値、根拠リンクの存在を検証し、採用判断の内容妥当性は検証しない。
 
 ## Context Map
 

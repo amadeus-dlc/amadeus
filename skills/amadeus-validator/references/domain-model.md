@@ -2,95 +2,31 @@
 
 ## 目的
 
-Validator Domain Model は、Amadeus 成果物を文字列ではなく Typed Document として扱うための基盤である。
+Validator Domain Model は、Amadeus Validator の検証構造と、型で守る最小のドメインモデルを説明する。
 
-Validator は Markdown を直接検証するのではなく、`MarkdownDocument` に parse し、さらに成果物種別ごとの Typed Document へ変換してから CheckResult を作る。
+旧契約（schemaVersion 1）向けの Typed Document 群（UnitIndex、BusinessRules ほか）と evidence policy は #381 で退役した。
 
 ## 基本構造
 
 検証の流れは次である。
 
 ```text
-Markdown text
-  -> MarkdownDocument
-  -> Typed Document
-  -> Amadeus DLC Contract Catalog
-  -> CheckResult[]
-  -> Report Formatter
+.amadeus/ 配下の成果物
+  -> AmadeusValidator（workspace 検査、Intent 検査の入口、検査台帳）
+  -> lifecycle-v2（schemaVersion 2 の Intent 状態契約）
+  -> Report Formatter（検査カテゴリ別の pass / fail / blocked）
 ```
 
-`MarkdownDocument` は、見出し、セクション、表、本文を持つ構文モデルである。
+`AmadeusValidator` は、steering layer、共有インデックス（`intents.md` の Index 生成整合を含む）、Domain Map、Context Map、Event Storming、Grilling Decision Trail、Intent のモジュールファイルを検査する。
 
-Typed Document は、`UnitIndex`、`BusinessLogicModel`、`BusinessRules`、`DomainEntities`、`FrontendComponents` のような成果物種別ごとの意味モデルである。
+`lifecycle-v2` は、`state.json`（schemaVersion 2）の scope、depth、`stages`、approval evidence、`phaseGates`、`bolts`、completed ステージの必須成果物を検査する。
+契約は `docs/amadeus/lifecycle/state.md` と `scopes.md` に従い、scope とステージの対応表は `skills/amadeus/references/stage-catalog.md` と一致させる。
 
-Typed Document は `validate()` を持たない。
-検証は Catalog と Stage Contract を適用する側が行う。
+## Domain Modules
 
-## Functional Design State
+`domain/` には、型で守る最小のドメインモデルだけを置く。
 
-`ConstructionFunctionalDesignState` は、`state.json.construction.functionalDesign` を表す Validator の domain model である。
+- `ArtifactPath`：成果物ルート内に収まる相対 path。絶対 path とルート外への脱出を拒否する。
+- `artifact-links`：Markdown リンクの正規化（anchor とタイトルの除去）と、成果物ルート内での解決を扱う。
 
-`FunctionalDesignUnitState` は、Unit ごとの要否、進行状態、frontend surface の判定、対象解決元、実行モードだけを持つ。
-
-`FunctionalDesignUnitState` は `artifacts`、`required`、`surfaces`、`gate` を持たない。
-成果物の必須性、条件付き成果物、path、見出し、表構造は Amadeus DLC Contract Catalog から導出する。
-
-`FunctionalDesignGateResult` は保存値ではない。
-Validator は `FunctionalDesignStatus` と Catalog に基づく成果物検証から gate result を導出する。
-
-`targetSource` は対象 Unit の解決元だけを表す。
-`runMode` は初回実行か再実行かだけを表す。
-由来と実行契機を同じ値に混ぜない。
-
-`frontendSurface: "absent"` は Unit 全体の skip を意味しない。
-この値は `frontend-components.md` の条件付き requirement だけに影響する。
-
-## Domain Primitive
-
-Domain Primitive は、不変条件を持つ値だけに使う。
-
-対象は次である。
-
-- `RequirementId`
-- `StoryId`
-- `UseCaseId`
-- `UnitId`
-- `BoltId`
-- `BoundedContextId`
-- `ArtifactPath`
-- `DocumentTitle`
-- `SectionTitle`
-- `TableColumnName`
-- `RuleId`
-
-本文、説明、未確認事項、調査メモ、自由記述の段落は `string` のまま扱う。
-これらは不変条件よりも文脈と内容が重要であり、個別 primitive にすると境界が増えすぎるためである。
-
-Typed Document が別の成果物、境界づけられたコンテキスト、または行を参照する場合は、リンク文字列ではなく ID primitive の配列として持つ。
-たとえば `UnitIndexRow` は `RequirementId[]`、`BoundedContextId[]`、依存先 `UnitId[]` を持つ。
-
-## ParseResult
-
-`ParseResult<TDocument>` は、partial な Typed Document と `CheckResult[]` を同時に返す。
-
-文書の一部が壊れていても、読める範囲は Typed Document に残す。
-壊れている箇所は `CheckResult` の `warning`、`fail`、`blocked`、または `skipped` として返す。
-
-## CheckResult
-
-`CheckResult` は、表示文ではなく構造化された検証結果である。
-
-保持する値は次である。
-
-- `result`
-- `target`
-- `condition`
-- `evidence`
-
-`result` は `pass`、`warning`、`fail`、`blocked`、`skipped` のいずれかである。
-
-`warning` は、内容上の疑いを示すが gate failure にはしない検査結果である。
-たとえば、対象外境界が Inception 成果物に混入した可能性は `warning` として返す。
-
-Report Formatter は `CheckResult` を日本語の表示へ変換する。
-表示用の文言を Typed Document や Catalog の契約として扱わない。
+リンク解決は `resolveArtifactLinkTarget` が行い、外部 URL とルート外への解決を拒否する。
