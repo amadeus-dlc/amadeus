@@ -60,7 +60,8 @@ const inceptionScopes = [...businessScopes, "workshop"];
 
 // scope 対応は skills/amadeus/references/stage-catalog.md の表と一致させる。
 // 成果物名は v2 の実ファイル名（R005）に従う。
-const stageCatalog: readonly StageDef[] = [
+// 移行スクリプトと examples 契約が同じ対応表を参照できるよう export する。
+export const stageCatalog: readonly StageDef[] = [
   { slug: "workspace-scaffold", phase: "initialization", perUnit: false, scopes: allScopes, requiredArtifacts: [] },
   { slug: "workspace-detection", phase: "initialization", perUnit: false, scopes: allScopes, requiredArtifacts: [] },
   { slug: "state-init", phase: "initialization", perUnit: false, scopes: allScopes, requiredArtifacts: [] },
