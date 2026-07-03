@@ -25,7 +25,7 @@
 ## Execution Plan Summary
 - **Total Stages**: 25
 - **Completed**: 19
-- **In Progress**: B005 finalization pending #394 PR merge, then B010 final verification
+- **In Progress**: B010 #399 final verification
 
 ## Runtime State
 - **Revision Count**: 0
@@ -106,8 +106,8 @@ Per unit: U005-issue-391-394-aidlc-v2-differences
 - [S] nfr-requirements — SKIP: #391〜#394 の差分対応は非機能要求の追加、変更、評価を伴わない。
 - [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
 - [S] infrastructure-design — SKIP: #391〜#394 の差分対応はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
-- [?] code-generation — EXECUTE: #391（PR #419）、#393（PR #420）、#392（PR #421）は merge 済み。#394 は作業完了で、承認確定（STAGE_COMPLETED）は #394 PR merge 後に記録する。
-- [?] build-and-test — EXECUTE: 検証 pass（STAGE_AWAITING_APPROVAL 記録済み）。承認確定は #394 PR merge 後に記録する。
+- [x] code-generation — EXECUTE: #391〜#394 を個別 PR（#419、#420、#421、#422）で対応。PR #422 merge により完了確定。
+- [x] build-and-test — EXECUTE: PR #422 merge により完了確定。
 - [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、Issue #399 の差分対応追跡に追加の CI 新設または大きな変更は不要。
 
 Per unit: U006-core-entrypoints-verification-englishization
@@ -151,8 +151,8 @@ Per unit: U010-issue-399-final-verification
 - [S] nfr-requirements — SKIP: #399 最終検証は非機能要求の追加、変更、評価を伴わない。
 - [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
 - [S] infrastructure-design — SKIP: #399 最終検証はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
-- [ ] code-generation — EXECUTE
-- [ ] build-and-test — EXECUTE
+- [?] code-generation — EXECUTE: 最終検証の記録を作成済み。承認確定は B010 PR merge 後に記録する。
+- [?] build-and-test — EXECUTE: 検証 pass（STAGE_AWAITING_APPROVAL 記録済み）。承認確定は B010 PR merge 後に記録する。
 - [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、最終検証に追加の CI 新設または大きな変更は不要。
 
 ### OPERATION PHASE
@@ -170,9 +170,9 @@ Per unit: U010-issue-399-final-verification
 - **Next Stage**: ci-pipeline
 - **Status**: Running
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-07-03T15:58:32Z
+- **Last Updated**: 2026-07-03T16:11:58Z
 
 ## Session Resume Point
-- **Last Completed Stage**: build-and-test (B009)
-- **Next Action**: Await #394 PR merge to finalize B005, then run B010 final verification and Issue #399 close
-- **Pending Artifacts**: #394 PR merge evidence, B005 completion records (STAGE_COMPLETED, BOLT_COMPLETED), real-provider example regeneration to clear provenance staleReason, final #399 traceability (B010)
+- **Last Completed Stage**: build-and-test (B005)
+- **Next Action**: Run B010 final verification, then close Issue #399 via the B010 PR merge and finish the Construction phase boundary
+- **Pending Artifacts**: B010 verification records and PR merge evidence, real-provider example regeneration to clear provenance staleReason, Construction phase finalization (decisions, traceability, WORKFLOW_COMPLETED)
