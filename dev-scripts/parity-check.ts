@@ -7,7 +7,8 @@
 // 検査対象:
 //   (a) baseline の skill 名を写像した各名前が skills/ と .agents/skills/ に存在する
 //   (b) baseline の engine ファイル（tools/, aidlc-common/, sensors/, hooks/, scopes/, agents/, knowledge/）が
-//       .claude/ 配下に同一 sha256 で存在する
+//       parity-map の relocations に従い .agents/aidlc/ 配下の実体と同一 sha256 で存在する
+//       （relocations に宣言のないファイルは .claude/ 配下を直接照合する）
 //   (c) rules/aidlc.md は parity-map の relocations に従い .agents/rules/aidlc.md の実体を照合する
 //   (d) parity-map.json に宣言のない差分（欠落・hash 不一致）があれば fail し、差分を列挙する
 //
@@ -76,8 +77,18 @@ function checkSkills(root: string, baseline: ParityBaseline, map: ParityMap): st
 }
 
 function resolveLocalEnginePath(root: string, upstreamPath: string, relocations: Relocation[]): string {
-  const relocation = relocations.find((entry) => entry.upstreamPath === upstreamPath);
-  return relocation ? join(root, relocation.localPath) : join(root, ".claude", upstreamPath);
+  const exact = relocations.find((entry) => entry.upstreamPath === upstreamPath);
+  if (exact) return join(root, exact.localPath);
+
+  // ディレクトリ単位の配置写像（例: "tools" -> ".agents/aidlc/tools"）。
+  // upstreamPath がそのディレクトリ配下のファイルであれば、写像先ディレクトリ + 残りの相対パスで解決する。
+  const dirRelocation = relocations.find((entry) => upstreamPath.startsWith(`${entry.upstreamPath}/`));
+  if (dirRelocation) {
+    const remainder = upstreamPath.slice(dirRelocation.upstreamPath.length + 1);
+    return join(root, dirRelocation.localPath, remainder);
+  }
+
+  return join(root, ".claude", upstreamPath);
 }
 
 function checkEngineFiles(root: string, baseline: ParityBaseline, map: ParityMap): string[] {

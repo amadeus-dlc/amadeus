@@ -21,7 +21,7 @@ that flag without this skill.
 1. Ask the engine for the single-stage directive:
 
    ```bash
-   bun .claude/tools/aidlc-orchestrate.ts next --stage code-generation --single
+   bun .agents/aidlc/tools/aidlc-orchestrate.ts next --stage code-generation --single
    ```
 
    The engine emits one `run-stage` directive for `code-generation` (carrying the
@@ -38,7 +38,7 @@ that flag without this skill.
 2. When the stage's work is done, commit the single-stage record:
 
    ```bash
-   bun .claude/tools/aidlc-orchestrate.ts report --single --stage code-generation --result completed
+   bun .agents/aidlc/tools/aidlc-orchestrate.ts report --single --stage code-generation --result completed
    ```
 
    This records a STAGE_STARTED / STAGE_COMPLETED pair under a synthetic workflow

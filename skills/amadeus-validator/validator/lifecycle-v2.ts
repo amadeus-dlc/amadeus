@@ -28,7 +28,7 @@ type LifecycleV2Input = {
   stateText: string;
   auditText?: string;
   // true: docs/backward-compatibility.md に記載された record。現行（v2 事前適応）の旧形式検査を維持する。
-  // false: 記載のない record。.claude/aidlc-common/stages/ の frontmatter から導出した v2 契約検査を適用する。
+  // false: 記載のない record。.agents/aidlc/aidlc-common/stages/ の frontmatter から導出した v2 契約検査を適用する。
   legacy: boolean;
   // legacy が false のとき、audit/ 配下に .md shard が1件以上あるかどうか。
   auditShardExists: boolean;
@@ -362,7 +362,7 @@ function checkCompletedBoltArtifacts(ctx: LifecycleV2Context, input: LifecycleV2
 }
 
 // v2 契約検査（backward-compatibility.md に記載のない record 向け）。
-// 必須成果物は stageCatalog のハードコードではなく、.claude/aidlc-common/stages/<phase>/<stage>.md の
+// 必須成果物は stageCatalog のハードコードではなく、.agents/aidlc/aidlc-common/stages/<phase>/<stage>.md の
 // frontmatter `produces:` から導出する。stage の phase/perUnit は既存 stageCatalog の分類をそのまま使う
 // （scope 対応表は stage-catalog.md と一致させており、frontmatter 由来にする対象は produces のみ）。
 function checkCompletedArtifactsV2(ctx: LifecycleV2Context, input: LifecycleV2Input, doc: AidlcStateDocument, scope: string): void {
@@ -371,7 +371,7 @@ function checkCompletedArtifactsV2(ctx: LifecycleV2Context, input: LifecycleV2In
     const def = stageBySlug.get(stage.slug);
     if (!def || !def.scopes.includes(scope)) continue;
 
-    const stageFilePath = `.claude/aidlc-common/stages/${def.phase}/${stage.slug}.md`;
+    const stageFilePath = `.agents/aidlc/aidlc-common/stages/${def.phase}/${stage.slug}.md`;
     const stageFileText = ctx.readOptional(stageFilePath);
     if (stageFileText === undefined) {
       ctx.failRow(stageFilePath, "v2 契約: stage 定義ファイルが存在する", "存在しない");
@@ -423,7 +423,7 @@ function checkPhaseCheckArtifactsV2(ctx: LifecycleV2Context, input: LifecycleV2I
 
 // stage 定義ファイルの frontmatter から、`key:` の YAML 文字列配列を取り出す最小限のパーサ。
 // `key: []`（空）と `key:\n  - item`（複数行リスト）の2形式だけを扱う
-// （.claude/aidlc-common/stages/**/*.md の `produces:` はこの2形式に限られる）。
+// （.agents/aidlc/aidlc-common/stages/**/*.md の `produces:` はこの2形式に限られる）。
 // key が frontmatter に存在しない場合は undefined を返す（空リストと区別し、呼び出し側で契約異常として扱う）。
 function extractFrontmatterStringList(text: string, key: string): string[] | undefined {
   const frontmatterMatch = text.match(/^---\n([\s\S]*?)\n---/);

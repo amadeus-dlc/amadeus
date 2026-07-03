@@ -445,7 +445,7 @@ function v2CompletedAudit(): string {
 }
 
 function writeStageDefinition(workspace: string, phase: string, slug: string, produces: string[]): void {
-  const dir = join(workspace, ".claude/aidlc-common/stages", phase);
+  const dir = join(workspace, ".agents/aidlc/aidlc-common/stages", phase);
   mkdirSync(dir, { recursive: true });
   const producesYaml = produces.length === 0 ? "produces: []" : ["produces:", ...produces.map((item) => `  - ${item}`)].join("\n");
   writeFileSync(
@@ -527,7 +527,7 @@ runExpectFailure(
 // (V17b) stage 定義に produces がないと fail する（silent-pass しない）。
 {
   const workspace = setupV2Workspace();
-  const stagePath = join(workspace, ".claude/aidlc-common/stages/inception/requirements-analysis.md");
+  const stagePath = join(workspace, ".agents/aidlc/aidlc-common/stages/inception/requirements-analysis.md");
   writeFileSync(stagePath, "---\nslug: requirements-analysis\nphase: inception\n---\n");
   runExpectFailure(
     ["bun", "run", validator, workspace, recordDirName],
@@ -553,7 +553,7 @@ runExpectFailure(
   "v2 契約: audit shard が1件以上存在する",
 );
 
-// (V16) stage 定義ファイル（.claude/aidlc-common/stages/）がないと fail する。
+// (V16) stage 定義ファイル（.agents/aidlc/aidlc-common/stages/）がないと fail する。
 const v2MissingStageDefWorkspace = setupV2Workspace({ writeStageDefs: false });
 runExpectFailure(
   ["bun", "run", validator, v2MissingStageDefWorkspace, recordDirName],

@@ -11,6 +11,41 @@
       "upstreamPath": "rules/aidlc.md",
       "localPath": ".agents/rules/aidlc.md",
       "reason": "symlink 化。.claude/rules/aidlc.md は .agents/rules/aidlc.md への symlink であり、実体（.agents/rules/aidlc.md）を直接照合する。"
+    },
+    {
+      "upstreamPath": "tools",
+      "localPath": ".agents/aidlc/tools",
+      "reason": "host 中立化（人間指示）。.claude/tools は .agents/aidlc/tools への symlink であり、実体（.agents/aidlc/tools）を直接照合する。"
+    },
+    {
+      "upstreamPath": "aidlc-common",
+      "localPath": ".agents/aidlc/aidlc-common",
+      "reason": "host 中立化（人間指示）。.claude/aidlc-common は .agents/aidlc/aidlc-common への symlink であり、実体（.agents/aidlc/aidlc-common）を直接照合する。"
+    },
+    {
+      "upstreamPath": "sensors",
+      "localPath": ".agents/aidlc/sensors",
+      "reason": "host 中立化（人間指示）。.claude/sensors は .agents/aidlc/sensors への symlink であり、実体（.agents/aidlc/sensors）を直接照合する。"
+    },
+    {
+      "upstreamPath": "hooks",
+      "localPath": ".agents/aidlc/hooks",
+      "reason": "host 中立化（人間指示）。.claude/hooks は .agents/aidlc/hooks への symlink であり、実体（.agents/aidlc/hooks）を直接照合する。"
+    },
+    {
+      "upstreamPath": "scopes",
+      "localPath": ".agents/aidlc/scopes",
+      "reason": "host 中立化（人間指示）。.claude/scopes は .agents/aidlc/scopes への symlink であり、実体（.agents/aidlc/scopes）を直接照合する。"
+    },
+    {
+      "upstreamPath": "agents",
+      "localPath": ".agents/aidlc/agents",
+      "reason": "host 中立化（人間指示）。.claude/agents は .agents/aidlc/agents への symlink であり、実体（.agents/aidlc/agents）を直接照合する。"
+    },
+    {
+      "upstreamPath": "knowledge",
+      "localPath": ".agents/aidlc/knowledge",
+      "reason": "host 中立化（人間指示）。.claude/knowledge は .agents/aidlc/knowledge への symlink であり、実体（.agents/aidlc/knowledge）を直接照合する。"
     }
   ],
   "missingSkillExceptions": [],

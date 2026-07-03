@@ -35,7 +35,8 @@
     "allow": [
       "Bash(cat:*)",
       "Bash(find:*)",
-      "Bash(bun $CLAUDE_PROJECT_DIR/.claude/tools/*)"
+      "Bash(bun $CLAUDE_PROJECT_DIR/.claude/tools/*)",
+      "Bash(bun $CLAUDE_PROJECT_DIR/.agents/aidlc/tools/*)"
     ],
     "ask": [],
     "deny": []
