@@ -166,7 +166,7 @@ Per unit: U010-issue-399-final-verification
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: ci-pipeline
+- **Current Stage**: build-and-test
 - **Next Stage**: (phase boundary)
 - **Status**: Running
 - **Construction Autonomy Mode**: autonomous
