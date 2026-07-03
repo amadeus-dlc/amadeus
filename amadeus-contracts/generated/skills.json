@@ -35,8 +35,8 @@
       ],
       "readBoundary": {
         "allowed": [
-          ".amadeus/intents/**",
-          ".amadeus/steering/**",
+          "aidlc/spaces/<space>/intents/**",
+          "aidlc/spaces/<space>/memory/**",
           "対象 skill が渡した前提"
         ],
         "prohibited": [
@@ -151,7 +151,7 @@
       ],
       "readBoundary": {
         "allowed": [
-          ".amadeus/**",
+          "aidlc/**",
           "検証対象の関連成果物"
         ],
         "prohibited": [
@@ -277,10 +277,10 @@
       ],
       "readBoundary": {
         "allowed": [
-          ".amadeus/intents/**",
-          ".amadeus/steering/**",
-          ".amadeus/domain-map.md",
-          ".amadeus/context-map.md",
+          "aidlc/spaces/<space>/intents/**",
+          "aidlc/spaces/<space>/memory/**",
+          "aidlc/spaces/<space>/knowledge/domain-map.md",
+          "aidlc/spaces/<space>/knowledge/context-map.md",
           "関連 Issue/PR",
           "作業ツリー",
           "Skill Contract"
