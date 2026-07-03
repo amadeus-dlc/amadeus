@@ -844,12 +844,22 @@ class AmadeusValidator {
     );
   }
 
-  // docs/backward-compatibility.md に記載された record かどうかを判定する。
-  // ファイル自体がなければ、既存 record への影響を避けるため現行（旧形式）検査を維持する。
+  // 旧形式（legacy）として検査する record かどうかを判定する。
+  // docs/backward-compatibility.md が存在する場合は記載だけが legacy を決める
+  // （backward-compatibility rules: 記載された対象だけを互換性維持対象として扱う）。
+  // 文書が存在しない workspace（examples snapshot など）では、旧形式の構造標識
+  // （audit/audit.md 単一 shard）の有無で判定する。
   private isBackwardCompatRecord(base: string): boolean {
     const docPath = "docs/backward-compatibility.md";
-    if (!this.isFile(this.absolute(docPath))) return true;
-    return this.read(docPath).includes(`${base}/`);
+    if (this.isFile(this.absolute(docPath))) return this.read(docPath).includes(`${base}/`);
+    // 文書がない workspace では v2 の構造標識（audit.md 以外の per-clone shard）を持つ
+    // record だけを v2 として検査し、それ以外は旧形式として検査する。
+    const auditDir = `${base}/audit`;
+    if (!this.isDirectory(this.absolute(auditDir))) return true;
+    const hasPerCloneShard = readdirSync(this.absolute(auditDir)).some(
+      (entry) => entry.endsWith(".md") && entry !== "audit.md" && this.isFile(this.absolute(`${auditDir}/${entry}`)),
+    );
+    return !hasPerCloneShard;
   }
 
   // legacy record は audit/audit.md 単一ファイルを主 shard として読む。

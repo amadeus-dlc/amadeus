@@ -535,6 +535,17 @@ runExpectFailure(
   );
 }
 
+// (V14b) docs/backward-compatibility.md が存在しない workspace でも、
+// 旧形式標識（audit/audit.md）のない record には v2 契約検査が適用される（legacy へ黙って fallback しない）。
+{
+  const workspace = setupV2Workspace({ writeQuestionsArtifact: false });
+  rmSync(join(workspace, "docs/backward-compatibility.md"));
+  runExpectFailure(
+    ["bun", "run", validator, workspace, recordDirName],
+    "v2 契約: completed のステージは produces 成果物を持つ",
+  );
+}
+
 // (V15) audit shard が1件もないと fail する。
 const v2MissingAuditShardWorkspace = setupV2Workspace({ writeAuditShard: false });
 runExpectFailure(
