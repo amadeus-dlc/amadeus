@@ -1411,3 +1411,73 @@
 **Details**: `npm run test:all`、Amadeus Validator、`git diff --check` が pass した（#394 PR。#391〜#393 は各 PR で検証済み）。autonomous 実行のため会話内 gate は提示せず、approval evidence は #394 PR merge 後に記録する。
 
 ---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T16:11:58Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Unit**: U005-issue-391-394-aidlc-v2-differences
+**Details**: B005 #391〜#394 AI-DLC v2 differences。#394 PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/422。Merge commit: b069da46。#391 は PR #419（24b6a505）、#393 は PR #420（d8c2609f）、#392 は PR #421（84f40dd1）で merge 済み。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T16:11:58Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Bolt**: B005
+**Details**: B005 #391〜#394 AI-DLC v2 differences。#394 PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/422。Merge commit: b069da46。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T16:11:58Z
+**Event**: BOLT_COMPLETED
+**Bolt**: B005
+**Details**: autonomous の Bolt PR が人間の merge で承認された。Bolt ref: B005-issue-391-394-aidlc-v2-differences。PR: https://github.com/amadeus-dlc/amadeus/pull/419、#420、#421、#422（Issue ごとの個別 PR）。最終 merge commit: b069da46。Issue #391、#392、#393、#394 はすべて close 済み。
+
+---
+
+## BOLT_STARTED
+**Timestamp**: 2026-07-03T16:11:58Z
+**Event**: BOLT_STARTED
+**Bolt**: B010
+**Details**: B010 #399 final verification を開始した。walking skeleton ではない。Amadeus 系 SKILL.md の全面英語化、昇格先同期、検証結果、Issue #399 の完了条件を確認する。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T16:11:58Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Unit**: U010-issue-399-final-verification
+**Details**: #399 の完了条件（B001〜B009 の完了証拠、全面英語化の残存日本語検査、source と昇格先の同期、全体検証）を新しい証拠で確認し、最終 traceability を確定する。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T16:15:26Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Unit**: U010-issue-399-final-verification
+**Details**: #399 の完了条件を新しい証拠で確認し、最終検証の記録を作成した。autonomous 実行のため会話内 gate は提示せず、approval evidence は B010 PR merge 後に記録する。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T16:15:26Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Bolt**: B010
+**Details**: B010 #399 final verification の Stage 3.6 を開始した。U010 の code-generation は作業完了・承認待ち（`[?]`）であり、承認は Bolt PR merge で確定する（autonomous mode）。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T16:15:26Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+**Bolt**: B010
+**Details**: `npm run test:all`、`npm run validate:all`、Amadeus Validator、`git diff --check`、日本語残存 grep、昇格先同期 diff が pass した。autonomous 実行のため会話内 gate は提示せず、approval evidence は B010 PR merge 後に記録する。
+
+---

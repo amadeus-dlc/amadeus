@@ -24,17 +24,21 @@
 
 | 残タスク | Bolt | 完了条件 | 状態 |
 |---|---|---|---|
-| #391、#393、#392、#394 の差分対応 | B005 | 各 Issue の完了、または明示的な対象外判断を確認できる。 | #391 は PR #419 merge（24b6a505）、#393 は PR #420 merge（d8c2609f）、#392 は PR #421 merge（84f40dd1）で close 済み。#394 は Operation phase 境界の明文化（docs/amadeus/aidlc-v2-operation-phase-boundary.md、lifecycle overview）で対応済みで、完了証拠は merge で確定する。 |
+| #391、#393、#392、#394 の差分対応 | B005 | 各 Issue の完了、または明示的な対象外判断を確認できる。 | 完了。#391 は PR #419（24b6a505）、#393 は PR #420（d8c2609f）、#392 は PR #421（84f40dd1）、#394 は PR #422（b069da46）の merge で close 済み。 |
 | Core entrypoints and verification 英語化 | B006 | `amadeus`、`amadeus-steering`、`amadeus-validator` の source skill と昇格先 skill が英語化され、検証が pass している。 | PR #417 merge（6ef9f349、2026-07-03T15:12:46Z）により完了。 |
 | Construction stage skills 英語化 | B007 | 残り Construction stage skill の source skill と昇格先 skill が英語化され、検証が pass している。 | PR #417 merge（6ef9f349、2026-07-03T15:12:46Z）により完了。 |
 | Inception stage skills 英語化 | B008 | Inception stage skill の source skill と昇格先 skill が英語化され、検証が pass している。 | PR #417 merge（6ef9f349、2026-07-03T15:12:46Z）により完了。 |
 | Ideation and supporting skills 英語化 | B009 | Ideation stage skill、補助分析、review 系 skill の source skill と昇格先 skill が英語化され、検証が pass している。 | PR #417 merge（6ef9f349、2026-07-03T15:12:46Z）により完了。 |
-| #399 最終検証 | B010 | Amadeus 系 `SKILL.md` の全面英語化、昇格先同期、検証結果、Issue #399 の完了条件を確認できる。 | B005 完了後に実施する。 |
+| #399 最終検証 | B010 | Amadeus 系 `SKILL.md` の全面英語化、昇格先同期、検証結果、Issue #399 の完了条件を確認できる。 | 実施済み（U010 code-generation の検証結果と B010 Bolt record）。完了確定は B010 PR merge で行い、merge により Issue #399 を close する。 |
 
 ## 最終判断
 
 Issue #399 の直接子 Issue である #395、#400、#401、#402 の順序、依存関係、完了境界、完了状態は追跡可能になった。
 
-残り 31 skill の英語化（B006〜B009、RU002〜RU006）は PR #417 で実施し、検証が pass した。PR #417 の merge（6ef9f349）により B006〜B009 は完了確定した。
+残り 31 skill の英語化（B006〜B009、RU002〜RU006）は PR #417 で実施し、PR #417 の merge（6ef9f349）により完了確定した。
 
-親 Issue #399 は、B005（#391〜#394）と B010（最終検証）が完了するまで完了扱いにしない。
+B005（#391〜#394）は 4 件の個別 PR（#419、#420、#421、#422）の merge で完了した。
+
+B010 の最終検証は、全面英語化（許容リテラルのみ残存）、昇格先同期（diff ゼロ）、全体検証（test:all、validate:all、Amadeus Validator、diff check）の pass を確認した。
+
+親 Issue #399 の完了条件（CD001）は満たされており、B010 PR の merge で #399 を close する。Intent 全体の完了（Construction phase verification、WORKFLOW_COMPLETED、registry completed）は phase 境界処理として後続で行う。
