@@ -132,7 +132,7 @@ type SnapshotInvariant = {
   state: Record<string, string>;
   unitStates?: Array<{ stage: string; state: string }>;
   allBoltStates?: string;
-  boltUnits?: BoltUnitInvariant;
+  boltUnits?: BoltUnitInvariant[];
   files?: string[];
   absentFiles?: string[];
 };
@@ -151,28 +151,45 @@ const snapshotInvariants: SnapshotInvariant[] = [
     state: { schemaVersion: "2", phase: "construction", "stages.code-generation.state": "pending" },
     unitStates: [{ stage: "functional-design", state: "completed" }],
     allBoltStates: "active",
-    boltUnits: {
-      stage: "functional-design",
-      state: "completed",
-      files: [
-        "construction/<unit>/functional-design/business-logic-model.md",
-        "construction/<unit>/functional-design/business-rules.md",
-        "construction/<unit>/functional-design/domain-entities.md",
-      ],
-    },
+    boltUnits: [
+      {
+        stage: "functional-design",
+        state: "completed",
+        files: [
+          "construction/<unit>/functional-design/business-logic-model.md",
+          "construction/<unit>/functional-design/business-rules.md",
+          "construction/<unit>/functional-design/domain-entities.md",
+        ],
+      },
+    ],
     absentFiles: ["construction/*/code-generation/plan.md"],
   },
   {
+    // 04 は 03 の累積であり、functional-design の不変条件も維持されることを再検査する。
     snapshot: "examples/04-construction-implementation-planned",
     state: { schemaVersion: "2", phase: "construction" },
-    unitStates: [{ stage: "code-generation", state: "active" }],
+    unitStates: [
+      { stage: "functional-design", state: "completed" },
+      { stage: "code-generation", state: "active" },
+    ],
     allBoltStates: "active",
-    boltUnits: {
-      stage: "code-generation",
-      state: "active",
-      files: ["construction/<unit>/code-generation/plan.md"],
-      absentFiles: ["construction/<unit>/code-generation/summary.md"],
-    },
+    boltUnits: [
+      {
+        stage: "functional-design",
+        state: "completed",
+        files: [
+          "construction/<unit>/functional-design/business-logic-model.md",
+          "construction/<unit>/functional-design/business-rules.md",
+          "construction/<unit>/functional-design/domain-entities.md",
+        ],
+      },
+      {
+        stage: "code-generation",
+        state: "active",
+        files: ["construction/<unit>/code-generation/plan.md"],
+        absentFiles: ["construction/<unit>/code-generation/summary.md"],
+      },
+    ],
     absentFiles: ["construction/*/code-generation/summary.md"],
   },
 ];
@@ -261,8 +278,17 @@ function boltUnitIds(invariant: SnapshotInvariant, state: Record<string, unknown
 }
 
 function checkBoltUnitInvariant(invariant: SnapshotInvariant, state: Record<string, unknown>, intentBase: string): void {
-  if (!invariant.boltUnits) return;
-  const expected = invariant.boltUnits;
+  for (const expected of invariant.boltUnits ?? []) {
+    checkOneBoltUnitInvariant(invariant, state, intentBase, expected);
+  }
+}
+
+function checkOneBoltUnitInvariant(
+  invariant: SnapshotInvariant,
+  state: Record<string, unknown>,
+  intentBase: string,
+  expected: BoltUnitInvariant,
+): void {
   for (const unitId of boltUnitIds(invariant, state)) {
     const unitState = stateValue(state, `stages.${expected.stage}.units.${unitId}.state`);
     if (String(unitState ?? "") !== expected.state) {

@@ -29,7 +29,7 @@ type GenerationStep = {
   expectedFiles: string[];
   absentFiles?: string[];
   expectedUnitStates?: Array<{ stage: string; state: string }>;
-  expectedBoltUnits?: { stage: string; state: string; files?: string[]; absentFiles?: string[] };
+  expectedBoltUnits?: Array<{ stage: string; state: string; files?: string[]; absentFiles?: string[] }>;
   provenanceSkillFiles: string[];
 };
 
@@ -320,15 +320,17 @@ const steps: GenerationStep[] = [
     expectedFiles: [
       `.amadeus/intents/${intentId}/construction/*/functional-design/business-logic-model.md`,
     ],
-    expectedBoltUnits: {
-      stage: "functional-design",
-      state: "completed",
-      files: [
-        `.amadeus/intents/${intentId}/construction/<unit>/functional-design/business-logic-model.md`,
-        `.amadeus/intents/${intentId}/construction/<unit>/functional-design/business-rules.md`,
-        `.amadeus/intents/${intentId}/construction/<unit>/functional-design/domain-entities.md`,
-      ],
-    },
+    expectedBoltUnits: [
+      {
+        stage: "functional-design",
+        state: "completed",
+        files: [
+          `.amadeus/intents/${intentId}/construction/<unit>/functional-design/business-logic-model.md`,
+          `.amadeus/intents/${intentId}/construction/<unit>/functional-design/business-rules.md`,
+          `.amadeus/intents/${intentId}/construction/<unit>/functional-design/domain-entities.md`,
+        ],
+      },
+    ],
     provenanceSkillFiles: constructionSkillFiles,
   },
   {
@@ -349,13 +351,27 @@ const steps: GenerationStep[] = [
     absentFiles: [
       `.amadeus/intents/${intentId}/construction/*/code-generation/summary.md`,
     ],
-    expectedUnitStates: [{ stage: "code-generation", state: "active" }],
-    expectedBoltUnits: {
-      stage: "code-generation",
-      state: "active",
-      files: [`.amadeus/intents/${intentId}/construction/<unit>/code-generation/plan.md`],
-      absentFiles: [`.amadeus/intents/${intentId}/construction/<unit>/code-generation/summary.md`],
-    },
+    expectedUnitStates: [
+      { stage: "functional-design", state: "completed" },
+      { stage: "code-generation", state: "active" },
+    ],
+    expectedBoltUnits: [
+      {
+        stage: "functional-design",
+        state: "completed",
+        files: [
+          `.amadeus/intents/${intentId}/construction/<unit>/functional-design/business-logic-model.md`,
+          `.amadeus/intents/${intentId}/construction/<unit>/functional-design/business-rules.md`,
+          `.amadeus/intents/${intentId}/construction/<unit>/functional-design/domain-entities.md`,
+        ],
+      },
+      {
+        stage: "code-generation",
+        state: "active",
+        files: [`.amadeus/intents/${intentId}/construction/<unit>/code-generation/plan.md`],
+        absentFiles: [`.amadeus/intents/${intentId}/construction/<unit>/code-generation/summary.md`],
+      },
+    ],
     provenanceSkillFiles: implementationPlanSkillFiles,
   },
 ];
@@ -560,9 +576,17 @@ function stepBoltUnitIds(step: GenerationStep, state: Record<string, unknown>): 
 }
 
 function assertExpectedBoltUnits(step: GenerationStep): void {
-  if (!step.expectedBoltUnits) return;
-  const expected = step.expectedBoltUnits;
   const state = readState(workspace);
+  for (const expected of step.expectedBoltUnits ?? []) {
+    assertOneBoltUnitExpectation(step, state, expected);
+  }
+}
+
+function assertOneBoltUnitExpectation(
+  step: GenerationStep,
+  state: Record<string, unknown>,
+  expected: { stage: string; state: string; files?: string[]; absentFiles?: string[] },
+): void {
   for (const unitId of stepBoltUnitIds(step, state)) {
     const unitState = stateValue(state, `stages.${expected.stage}.units.${unitId}.state`);
     if (String(unitState ?? "") !== expected.state) {
