@@ -7,13 +7,12 @@
 対象 skill は次である。
 
 - `amadeus-steering`
-- `amadeus-event-storming`
 - `amadeus`（単一入口）
 - Ideation の 7 ステージ skill
 - Inception の 8 ステージ skill
 - Construction の 7 ステージ skill
 
-あわせて、維持 skill（decision-review、history-review、learning-review、domain-modeling、domain-grilling、validator ほか）の本文契約を text contract として検証する。
+あわせて、維持 skill（domain-modeling、validator ほか）の本文契約を text contract として検証する。
 
 ## 検証条件
 

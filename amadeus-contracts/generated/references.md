@@ -15,7 +15,3 @@
 ### amadeus-validator
 
 - reference: `skills/amadeus-validator/references/skill-contract.md`
-
-### amadeus-decision-review
-
-- reference: `skills/amadeus-decision-review/references/skill-contract.md`

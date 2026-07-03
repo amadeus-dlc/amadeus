@@ -121,7 +121,7 @@ function renderSkillContractReference(contract: (typeof skillContracts)[number])
     "",
     ...(
       contract.delegation.allowed.length > 0
-        ? contract.delegation.allowed.map((item) => `- \`${item.skillId}\`: ${item.purpose}`)
+        ? contract.delegation.allowed.map((item: { skillId: string; purpose: string }) => `- \`${item.skillId}\`: ${item.purpose}`)
         : ["- なし"]
     ),
     "",

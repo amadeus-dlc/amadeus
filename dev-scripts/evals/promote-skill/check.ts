@@ -79,11 +79,8 @@ function requiredInternalSkillGroups(): Record<string, string[]> {
 
 function policyManagedInternalSkills(): string[] {
   return [
-    "amadeus-decision-review",
     "amadeus-domain-modeling",
     "amadeus-grilling",
-    "amadeus-history-review",
-    "amadeus-learning-review",
     ...Object.values(requiredInternalSkillGroups()).flat(),
   ].sort();
 }

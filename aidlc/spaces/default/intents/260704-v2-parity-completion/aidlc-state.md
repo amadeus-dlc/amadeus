@@ -8,7 +8,7 @@
 - **State Version**: 7
 - **Active Agent**: amadeus
 - **Worktree Path**: 
-- **Bolt Refs**: B001
+- **Bolt Refs**: B001, B002, B003
 - **Practices Affirmed Timestamp**: 
 
 ## Scope Configuration
@@ -25,11 +25,13 @@
 ## Execution Plan Summary
 - **Total Stages**: 25
 - **Completed**: 12
-- **In Progress**: code-generation (B002)
+- **In Progress**: code-generation (B003)
 
 ## Runtime State
 - **Revision Count**: 0
 
+- **Parked**: 2026-07-03T18:41:11Z
+- **Parked At Stage**: build-and-test
 ## Phase Progress
 
 - **Initialization**: Verified
@@ -65,6 +67,22 @@
 - [x] delivery-planning — EXECUTE
 
 ### CONSTRUCTION PHASE
+Per unit: B003-inspection (U005+U006)
+- [S] functional-design — SKIP: same rationale as B001 (tooling, no new business logic)
+- [S] nfr-requirements — SKIP: same rationale as B001
+- [S] nfr-design — SKIP: nfr-requirements not executed
+- [S] infrastructure-design — SKIP: no deployment change
+- [-] code-generation — EXECUTE
+- [ ] build-and-test — EXECUTE
+
+Per unit: B002-skill-replacement (U003 rest + U004)
+- [S] functional-design — SKIP: same rationale as B001 (adaptive copy, no new business logic)
+- [S] nfr-requirements — SKIP: same rationale as B001
+- [S] nfr-design — SKIP: nfr-requirements not executed
+- [S] infrastructure-design — SKIP: no deployment change
+- [x] code-generation — EXECUTE
+- [x] build-and-test — EXECUTE (B002 done)
+
 Per unit: B001-walking-skeleton (U001+U002+U003 slice)
 - [S] functional-design — SKIP: no new business logic (engine copied as-is, wiring designed in 2.6)
 - [S] nfr-requirements — SKIP: no new NFRs, tech stack decided
@@ -89,9 +107,9 @@ Per unit: B001-walking-skeleton (U001+U002+U003 slice)
 - **Next Stage**: (B002 after B001 completes)
 - **Status**: Running
 - **Construction Autonomy Mode**: unset
-- **Last Updated**: 2026-07-03T18:20:00Z
+- **Last Updated**: 2026-07-03T18:41:11Z
 
 ## Session Resume Point
-- **Last Completed Stage**: build-and-test (B001)
-- **Next Action**: execute Bolt B002 (skill replacement and retirement)
+- **Last Completed Stage**: build-and-test (B002)
+- **Next Action**: execute Bolt B003 (validator adaptation + parity check)
 - **Pending Artifacts**: none

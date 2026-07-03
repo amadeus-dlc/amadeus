@@ -758,3 +758,72 @@
 **Details**: Bolt B001（walking skeleton）完了。DoD 4 項目を充足（build-and-test-summary.md）。中間 PR は人間指示により省略し、最終 PR へ統合する。実装確定 commit は branch claude/issue-396-inception に積む。
 
 ---
+
+## BOLT_STARTED
+**Timestamp**: 2026-07-03T18:40:00Z
+**Event**: BOLT_STARTED
+**Details**: Bolt B002（walking skeleton: false）。skill 置換と整理（U003 残り + U004）。branch claude/issue-396-inception 上で継続。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T18:40:00Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Details**: B002。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T19:10:15Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Details**: B002。36 skill 新規 + 入口置換 + 5 skill 削除 + 検証コード追随。code-summary.md を作成し、gate を提示した。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T19:10:15Z
+**Event**: GATE_APPROVED
+**Stage**: code-generation
+**Details**: User Input: 「構築まで自動承認でお願いします。もう寝るので」（事前の包括承認による自動承認）
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T19:10:15Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Details**: 自動承認（人間の事前指示）。B002 の実装を確定。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T19:10:15Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Details**: B002。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T19:10:15Z
+**Event**: BOLT_COMPLETED
+**Details**: Bolt B002（skill 置換と整理）完了。npm run test:all green（build-test-results.md）。中間 PR は人間指示により省略し、最終 PR へ統合する。
+
+---
+
+## BOLT_STARTED
+**Timestamp**: 2026-07-03T19:10:15Z
+**Event**: BOLT_STARTED
+**Details**: Bolt B003（walking skeleton: false）。検査整備（U005 validator 新契約追従 + U006 パリティ検査機械化）。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T19:10:15Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Details**: B003。
+
+---
