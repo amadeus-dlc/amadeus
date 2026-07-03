@@ -176,6 +176,8 @@ function buildMemory(amadeusDir: string, spaceDir: string): void {
 
   writeFileSync(join(memory, "project.md"), buildProjectMemory(amadeusDir));
 
+  // 自己開発手順などの method 系の独自文書は memory/ に残す。
+  copyIfExists(join(amadeusDir, "development.md"), join(memory, "development.md"));
   copyIfExists(join(amadeusDir, "settings/templates"), join(memory, "templates"));
 }
 
