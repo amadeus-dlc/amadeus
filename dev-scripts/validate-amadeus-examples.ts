@@ -120,11 +120,19 @@ function validateProvenance(): void {
 // 生成時に generator が検査する状態を、コミット済み snapshot に対しても再検査する。
 // 手動編集で snapshot の意味（どの段階で止まっているか）が壊れた場合に CI で検出する。
 
+type BoltUnitInvariant = {
+  stage: string;
+  state: string;
+  files?: string[];
+  absentFiles?: string[];
+};
+
 type SnapshotInvariant = {
   snapshot: string;
   state: Record<string, string>;
   unitStates?: Array<{ stage: string; state: string }>;
   allBoltStates?: string;
+  boltUnits?: BoltUnitInvariant;
   files?: string[];
   absentFiles?: string[];
 };
@@ -143,7 +151,15 @@ const snapshotInvariants: SnapshotInvariant[] = [
     state: { schemaVersion: "2", phase: "construction", "stages.code-generation.state": "pending" },
     unitStates: [{ stage: "functional-design", state: "completed" }],
     allBoltStates: "active",
-    files: ["construction/*/functional-design/business-logic-model.md"],
+    boltUnits: {
+      stage: "functional-design",
+      state: "completed",
+      files: [
+        "construction/<unit>/functional-design/business-logic-model.md",
+        "construction/<unit>/functional-design/business-rules.md",
+        "construction/<unit>/functional-design/domain-entities.md",
+      ],
+    },
     absentFiles: ["construction/*/code-generation/plan.md"],
   },
   {
@@ -151,7 +167,12 @@ const snapshotInvariants: SnapshotInvariant[] = [
     state: { schemaVersion: "2", phase: "construction" },
     unitStates: [{ stage: "code-generation", state: "active" }],
     allBoltStates: "active",
-    files: ["construction/*/code-generation/plan.md"],
+    boltUnits: {
+      stage: "code-generation",
+      state: "active",
+      files: ["construction/<unit>/code-generation/plan.md"],
+      absentFiles: ["construction/<unit>/code-generation/summary.md"],
+    },
     absentFiles: ["construction/*/code-generation/summary.md"],
   },
 ];
@@ -225,6 +246,43 @@ function checkInvariantUnitAndBoltStates(invariant: SnapshotInvariant, state: Re
   }
 }
 
+// Bolt に束ねた各 Unit が、対象 stage の units に期待状態で存在し、Unit ごとの成果物条件を満たすことを確認する。
+// glob の「どれか 1 つ」判定では検出できない、一部 Unit の欠落を検出する。
+function boltUnitIds(invariant: SnapshotInvariant, state: Record<string, unknown>): string[] {
+  const bolts = stateValue(state, "bolts");
+  if (typeof bolts !== "object" || bolts === null || Object.keys(bolts).length === 0) {
+    fail(`${invariant.snapshot}: state.json に bolts がありません`);
+  }
+  const ids = Object.values(bolts as Record<string, { units?: unknown }>).flatMap((bolt) =>
+    Array.isArray(bolt.units) ? bolt.units.map((unit) => String(unit)) : [],
+  );
+  if (ids.length === 0) fail(`${invariant.snapshot}: bolts に units の一覧がありません`);
+  return [...new Set(ids)];
+}
+
+function checkBoltUnitInvariant(invariant: SnapshotInvariant, state: Record<string, unknown>, intentBase: string): void {
+  if (!invariant.boltUnits) return;
+  const expected = invariant.boltUnits;
+  for (const unitId of boltUnitIds(invariant, state)) {
+    const unitState = stateValue(state, `stages.${expected.stage}.units.${unitId}.state`);
+    if (String(unitState ?? "") !== expected.state) {
+      fail(`${invariant.snapshot}: Bolt の Unit ${unitId} が stages.${expected.stage}.units に期待状態でありません（期待: ${expected.state}、実際: ${String(unitState ?? "未設定")}）`);
+    }
+    for (const pattern of expected.files ?? []) {
+      const path = pattern.replaceAll("<unit>", unitId);
+      if (!matchExists(intentBase, path)) {
+        fail(`${invariant.snapshot}: Unit ${unitId} の期待成果物が見つかりません: ${path}`);
+      }
+    }
+    for (const pattern of expected.absentFiles ?? []) {
+      const path = pattern.replaceAll("<unit>", unitId);
+      if (matchExists(intentBase, path)) {
+        fail(`${invariant.snapshot}: Unit ${unitId} に存在してはならない成果物が見つかりました: ${path}`);
+      }
+    }
+  }
+}
+
 function checkInvariantFiles(invariant: SnapshotInvariant, intentBase: string): void {
   for (const pattern of invariant.files ?? []) {
     if (!matchExists(intentBase, pattern)) {
@@ -245,6 +303,7 @@ function validateSnapshotInvariants(): void {
     const state = readSnapshotState(invariant, intentBase);
     checkInvariantState(invariant, state);
     checkInvariantUnitAndBoltStates(invariant, state);
+    checkBoltUnitInvariant(invariant, state, intentBase);
     checkInvariantFiles(invariant, intentBase);
     console.log(`invariants pass: ${invariant.snapshot}`);
   }

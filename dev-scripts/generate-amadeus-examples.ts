@@ -29,6 +29,7 @@ type GenerationStep = {
   expectedFiles: string[];
   absentFiles?: string[];
   expectedUnitStates?: Array<{ stage: string; state: string }>;
+  expectedBoltUnits?: { stage: string; state: string; files?: string[]; absentFiles?: string[] };
   provenanceSkillFiles: string[];
 };
 
@@ -318,9 +319,16 @@ const steps: GenerationStep[] = [
     },
     expectedFiles: [
       `.amadeus/intents/${intentId}/construction/*/functional-design/business-logic-model.md`,
-      `.amadeus/intents/${intentId}/construction/*/functional-design/business-rules.md`,
-      `.amadeus/intents/${intentId}/construction/*/functional-design/domain-entities.md`,
     ],
+    expectedBoltUnits: {
+      stage: "functional-design",
+      state: "completed",
+      files: [
+        `.amadeus/intents/${intentId}/construction/<unit>/functional-design/business-logic-model.md`,
+        `.amadeus/intents/${intentId}/construction/<unit>/functional-design/business-rules.md`,
+        `.amadeus/intents/${intentId}/construction/<unit>/functional-design/domain-entities.md`,
+      ],
+    },
     provenanceSkillFiles: constructionSkillFiles,
   },
   {
@@ -342,6 +350,12 @@ const steps: GenerationStep[] = [
       `.amadeus/intents/${intentId}/construction/*/code-generation/summary.md`,
     ],
     expectedUnitStates: [{ stage: "code-generation", state: "active" }],
+    expectedBoltUnits: {
+      stage: "code-generation",
+      state: "active",
+      files: [`.amadeus/intents/${intentId}/construction/<unit>/code-generation/plan.md`],
+      absentFiles: [`.amadeus/intents/${intentId}/construction/<unit>/code-generation/summary.md`],
+    },
     provenanceSkillFiles: implementationPlanSkillFiles,
   },
 ];
@@ -532,6 +546,43 @@ function assertExpectedUnitStates(step: GenerationStep): void {
   }
 }
 
+// Bolt に束ねた各 Unit が、対象 stage の units に期待状態で存在し、Unit ごとの成果物条件を満たすことを確認する。
+function stepBoltUnitIds(step: GenerationStep, state: Record<string, unknown>): string[] {
+  const bolts = stateValue(state, "bolts");
+  if (typeof bolts !== "object" || bolts === null || Object.keys(bolts).length === 0) {
+    fail(`${step.id}: state.json に bolts がありません`);
+  }
+  const ids = Object.values(bolts as Record<string, { units?: unknown }>).flatMap((bolt) =>
+    Array.isArray(bolt.units) ? bolt.units.map((unit) => String(unit)) : [],
+  );
+  if (ids.length === 0) fail(`${step.id}: bolts に units の一覧がありません`);
+  return [...new Set(ids)];
+}
+
+function assertExpectedBoltUnits(step: GenerationStep): void {
+  if (!step.expectedBoltUnits) return;
+  const expected = step.expectedBoltUnits;
+  const state = readState(workspace);
+  for (const unitId of stepBoltUnitIds(step, state)) {
+    const unitState = stateValue(state, `stages.${expected.stage}.units.${unitId}.state`);
+    if (String(unitState ?? "") !== expected.state) {
+      fail(`${step.id}: Bolt の Unit ${unitId} が stages.${expected.stage}.units に期待状態でありません（期待: ${expected.state}、実際: ${String(unitState ?? "未設定")}）`);
+    }
+    for (const pattern of expected.files ?? []) {
+      const path = pattern.replaceAll("<unit>", unitId);
+      if (!matchExists(workspace, path)) {
+        fail(`${step.id}: Unit ${unitId} の期待成果物が見つかりません: ${path}`);
+      }
+    }
+    for (const pattern of expected.absentFiles ?? []) {
+      const path = pattern.replaceAll("<unit>", unitId);
+      if (matchExists(workspace, path)) {
+        fail(`${step.id}: Unit ${unitId} に存在してはならない成果物が見つかりました: ${path}`);
+      }
+    }
+  }
+}
+
 function assertValidatorPass(step: GenerationStep): void {
   run(["bun", "run", ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts", ".", intentId], workspace);
   console.log(`${step.id}: validator pass`);
@@ -677,6 +728,7 @@ if (!options.dryRun) {
     assertExpectedFiles(step);
     assertAbsentFiles(step);
     assertExpectedUnitStates(step);
+    assertExpectedBoltUnits(step);
     assertValidatorPass(step);
     stageSnapshot(step);
     console.log(`snapshot staged: ${step.snapshot}`);
