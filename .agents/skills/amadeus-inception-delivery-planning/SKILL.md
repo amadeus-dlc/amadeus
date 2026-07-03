@@ -89,7 +89,7 @@ Bolt が多い場合は `bolts/<bolt-id>-<slug>.md` へ分割してよい。
 5. `risk-and-sequencing-rationale.md` と `external-dependency-map.md` を作る。チームがある場合は `team-allocation.md` も作る。
 6. stage の `memory.md` に、実行中の解釈、逸脱、トレードオフ、未解決の問いを記録する。
 7. `aidlc-state.md` の `delivery-planning` の checkbox を `[?]` にし、`STAGE_AWAITING_APPROVAL` イベントを `audit/audit.md` に追記して、ゲートを提示する。
-8. 承認後は `amadeus` 入口へ戻る。Inception の phase PR の案内、`phaseGates.inception` の記録、`phase` の遷移は `amadeus` 入口の責務であり、この skill では行わない。
+8. 承認後は `amadeus` 入口へ戻る。Inception の phase PR の案内、`PHASE_VERIFIED` イベントの記録、Phase Progress と `Lifecycle Phase` の遷移は `amadeus` 入口の責務であり、この skill では行わない。
 
 ## ゲート
 
@@ -108,7 +108,7 @@ Accept as-is が選ばれた場合は、checkbox を `[x]` にし、`GATE_APPROV
 - Units Generation の完了前に実行しない。
 - 依存 DAG と矛盾する順序を作らない。
 - Task 分解と実装を作らない。
-- `phaseGates` の記録と `phase` の遷移をこの skill で行わない。phase 境界処理は `amadeus` 入口の責務である。
+- `PHASE_VERIFIED` の記録と `Lifecycle Phase` の遷移をこの skill で行わない。phase 境界処理は `amadeus` 入口の責務である。
 - 承認を待たずに `completed` を記録しない。
 
 ## 次の skill
