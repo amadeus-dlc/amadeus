@@ -89,3 +89,10 @@
 **Details**: unit: implicit, backfilled by migration (Recovered=true). Stage 3.5 は移行前の state.json で active になっていた
 
 ---
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T07:51:33Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Details**: unit: implicit. Artifacts: code-generation-plan.md, code-summary.md, 実装一式（v2 完全準拠の移行）。npm run test:all exit 0
+
+---

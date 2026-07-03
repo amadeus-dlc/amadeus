@@ -70,7 +70,7 @@ Per unit: implicit
 - [S] nfr-requirements — SKIP: out of refactor scope
 - [S] nfr-design — SKIP: out of refactor scope
 - [S] infrastructure-design — SKIP: out of refactor scope
-- [-] code-generation — EXECUTE
+- [?] code-generation — EXECUTE
 - [ ] build-and-test — EXECUTE
 - [S] ci-pipeline — SKIP: out of refactor scope
 
@@ -89,9 +89,9 @@ Per unit: implicit
 - **Next Stage**: build-and-test
 - **Status**: Running
 - **Construction Autonomy Mode**: unset
-- **Last Updated**: 2026-07-03T05:59:11Z
+- **Last Updated**: 2026-07-03T07:51:33Z
 
 ## Session Resume Point
 - **Last Completed Stage**: functional-design
-- **Next Action**: continue code-generation
-- **Pending Artifacts**: none
+- **Next Action**: present code-generation gate
+- **Pending Artifacts**: gate approval for code-generation
