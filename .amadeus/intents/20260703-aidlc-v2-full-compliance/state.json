@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 2,
+  "intentId": "20260703-aidlc-v2-full-compliance",
+  "scope": "refactor",
+  "depth": "Standard",
+  "status": "in_progress",
+  "phase": "inception",
+  "currentStage": "reverse-engineering",
+  "stages": {
+    "reverse-engineering": { "state": "pending" },
+    "requirements-analysis": { "state": "pending" },
+    "functional-design": { "state": "pending" },
+    "code-generation": { "state": "pending" },
+    "build-and-test": { "state": "pending" }
+  },
+  "phaseGates": {
+    "ideation": { "skipped": true }
+  }
+}
