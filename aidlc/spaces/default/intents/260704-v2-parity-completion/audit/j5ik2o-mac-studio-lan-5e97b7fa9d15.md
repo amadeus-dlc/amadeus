@@ -366,3 +366,239 @@
 **Duration ms**: 425
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-03T19:12:05Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a1e8b3c2327bde76c
+**Message**: 進めて
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-03T19:24:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: d9c76a67
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: dev-scripts/evals/amadeus-validator/check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-03T19:24:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: d9c76a67
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: dev-scripts/evals/amadeus-validator/check.ts
+**Duration ms**: 437
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-03T19:24:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: 07bd1643
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: skills/amadeus-validator/validator/lifecycle-v2.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-03T19:24:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: 07bd1643
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: skills/amadeus-validator/validator/lifecycle-v2.ts
+**Duration ms**: 472
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-03T19:24:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4f96bb59
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: skills/amadeus-validator/validator/lifecycle-v2.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-03T19:24:50Z
+**Event**: SENSOR_FAILED
+**Fire id**: 4f96bb59
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: skills/amadeus-validator/validator/lifecycle-v2.ts
+**Detail path**: aidlc/spaces/default/intents/260704-v2-parity-completion/.aidlc-sensors/build-and-test/type-check-4f96bb59.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-03T19:25:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: e3063f76
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: skills/amadeus-validator/validator/lifecycle-v2.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-03T19:25:02Z
+**Event**: SENSOR_FAILED
+**Fire id**: e3063f76
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: skills/amadeus-validator/validator/lifecycle-v2.ts
+**Detail path**: aidlc/spaces/default/intents/260704-v2-parity-completion/.aidlc-sensors/build-and-test/type-check-e3063f76.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-03T19:25:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: f2963bce
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: skills/amadeus-validator/validator/lifecycle-v2.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-03T19:25:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: f2963bce
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: skills/amadeus-validator/validator/lifecycle-v2.ts
+**Duration ms**: 423
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-03T19:25:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 76ae97bf
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: skills/amadeus-validator/validator/AmadeusValidator.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-03T19:25:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: 76ae97bf
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: skills/amadeus-validator/validator/AmadeusValidator.ts
+**Duration ms**: 452
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-03T19:30:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: d3f1fee1
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: dev-scripts/generate-parity-baseline.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-03T19:30:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: d3f1fee1
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: dev-scripts/generate-parity-baseline.ts
+**Duration ms**: 492
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-03T19:31:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: 879a9376
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: dev-scripts/evals/parity/check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-03T19:31:21Z
+**Event**: SENSOR_PASSED
+**Fire id**: 879a9376
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: dev-scripts/evals/parity/check.ts
+**Duration ms**: 418
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-03T19:31:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: f68753f5
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: dev-scripts/evals/parity/check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-03T19:31:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: f68753f5
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: dev-scripts/evals/parity/check.ts
+**Duration ms**: 412
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-03T19:32:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: e759b128
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: dev-scripts/parity-check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-03T19:32:19Z
+**Event**: SENSOR_PASSED
+**Fire id**: e759b128
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: dev-scripts/parity-check.ts
+**Duration ms**: 418
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-03T19:36:34Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: general-purpose
+**Agent ID**: ac49c27e24fb1631f
+**Message**: Bolt B003（検査整備）の実装が完了しました。commit は行っていません。\n\n## 作成・変更ファイル一覧\n\n**新規作成**\n- `/Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/docs/backward-compatibility.md` — 互換性維持対象3 record（対象・理由・終了条件）\n- `/Us
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-03T19:36:39Z
+**Event**: HUMAN_TURN
+
+---

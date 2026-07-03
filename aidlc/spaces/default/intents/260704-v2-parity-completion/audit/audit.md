@@ -827,3 +827,81 @@
 **Details**: B003。
 
 ---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T19:37:26Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Details**: B001（walking skeleton）。BOLT_COMPLETED（同 Bolt）で完了済みの記録の補完。検証結果は construction/bolts/B001-walking-skeleton/build-test-results.md。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T19:37:26Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Details**: B002。BOLT_COMPLETED（同 Bolt）で完了済みの記録の補完。検証結果は construction/bolts/B002-skill-replacement/build-test-results.md。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T19:38:25Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Details**: B003。backward-compatibility 登録、validator v2 契約対応（TDD）、パリティ検査機械化（差分ゼロ）、record 配置の是正。gate を提示した。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T19:38:25Z
+**Event**: GATE_APPROVED
+**Stage**: code-generation
+**Details**: User Input: 「構築まで自動承認でお願いします。もう寝るので」（事前の包括承認による自動承認）
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T19:38:25Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Details**: 自動承認（人間の事前指示）。B003 の実装を確定。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T19:38:25Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Details**: B003。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T19:38:25Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Details**: B003。全検証 green（build-test-results.md）。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T19:38:25Z
+**Event**: BOLT_COMPLETED
+**Details**: Bolt B003（検査整備）完了。パリティ検査差分ゼロ、validator 新契約対応、record validator pass。中間 PR は人間指示により省略。
+
+---
+
+## BOLT_STARTED
+**Timestamp**: 2026-07-03T19:38:25Z
+**Event**: BOLT_STARTED
+**Details**: Bolt B004（walking skeleton: false）。文書と実証（U007 規範文書改定 + U008 examples 再生成と dogfooding）。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T19:38:25Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Details**: B004。
+
+---

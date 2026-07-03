@@ -394,5 +394,137 @@ const noAuditWorkspace = workspaceCopy();
 addIntentRecord(noAuditWorkspace, { skipAudit: true });
 runExpectFailure(["bun", "run", validator, noAuditWorkspace, recordDirName], "audit の主 shard が存在する");
 
+// ---- v2 契約検査（docs/backward-compatibility.md に記載のない record） ----
+
+// requirements-analysis を completed にした state / audit（V6 と同じ変換）。
+function v2CompletedState(): string {
+  return stateText()
+    .replace("- [-] requirements-analysis", "- [x] requirements-analysis")
+    .replace("- **Current Stage**: requirements-analysis", "- **Current Stage**: code-generation");
+}
+
+function v2CompletedAudit(): string {
+  return auditText() + auditEntry("STAGE_COMPLETED", "requirements approved", "requirements-analysis");
+}
+
+function writeStageDefinition(workspace: string, phase: string, slug: string, produces: string[]): void {
+  const dir = join(workspace, ".claude/aidlc-common/stages", phase);
+  mkdirSync(dir, { recursive: true });
+  const producesYaml = produces.length === 0 ? "produces: []" : ["produces:", ...produces.map((item) => `  - ${item}`)].join("\n");
+  writeFileSync(
+    join(dir, `${slug}.md`),
+    ["---", `slug: ${slug}`, `phase: ${phase}`, "execution: ALWAYS", producesYaml, "---", "", `# ${slug}`, ""].join("\n"),
+  );
+}
+
+function writeV2StageDefinitions(workspace: string): void {
+  writeStageDefinition(workspace, "initialization", "workspace-scaffold", []);
+  writeStageDefinition(workspace, "initialization", "workspace-detection", []);
+  writeStageDefinition(workspace, "initialization", "state-init", []);
+  writeStageDefinition(workspace, "inception", "reverse-engineering", []);
+  writeStageDefinition(workspace, "inception", "requirements-analysis", ["requirements", "requirements-analysis-questions"]);
+}
+
+type V2WorkspaceOptions = {
+  writeStageDefs?: boolean;
+  writeQuestionsArtifact?: boolean;
+  writePhaseCheck?: boolean;
+  writeAuditShard?: boolean;
+};
+
+// backward-compatibility.md に記載のない record（v2 契約検査の対象）を組み立てる。
+function setupV2Workspace(options: V2WorkspaceOptions = {}): string {
+  const { writeStageDefs = true, writeQuestionsArtifact = true, writePhaseCheck = true, writeAuditShard = true } = options;
+
+  const workspace = workspaceCopy();
+  const intentsDir = join(workspace, "aidlc/spaces/default/intents");
+  const recordDir = join(intentsDir, recordDirName);
+  mkdirSync(join(recordDir, "audit"), { recursive: true });
+  writeFileSync(join(intentsDir, `${recordDirName}.md`), intentModule());
+  writeFileSync(join(recordDir, "aidlc-state.md"), v2CompletedState());
+  writeFileSync(join(intentsDir, "intents.json"), registryText());
+  regenerateSharedIndexes(workspace);
+
+  // docs/backward-compatibility.md は存在するが、この record を記載しない
+  // （記載なし record への v2 契約検査の適用を確認するため、存在自体は必要）。
+  mkdirSync(join(workspace, "docs"), { recursive: true });
+  writeFileSync(join(workspace, "docs/backward-compatibility.md"), "# Backward Compatibility\n\n(v2 契約検査テスト用。対象なし)\n");
+
+  if (writeStageDefs) writeV2StageDefinitions(workspace);
+
+  mkdirSync(join(recordDir, "inception/requirements-analysis"), { recursive: true });
+  writeFileSync(join(recordDir, "inception/requirements-analysis/requirements.md"), "# Requirements\n");
+  if (writeQuestionsArtifact) {
+    writeFileSync(join(recordDir, "inception/requirements-analysis/requirements-analysis-questions.md"), "# Questions\n");
+  }
+
+  if (writePhaseCheck) {
+    mkdirSync(join(recordDir, "verification"), { recursive: true });
+    writeFileSync(join(recordDir, "verification/phase-check-initialization.md"), "# Phase Check\n");
+  }
+
+  if (writeAuditShard) {
+    writeFileSync(join(recordDir, "audit/host-a-clone-1.md"), v2CompletedAudit());
+  }
+
+  return workspace;
+}
+
+// (V12) v2 契約の必須成果物・phase-check・audit shard がすべて揃っていれば pass する。
+const v2HappyWorkspace = setupV2Workspace();
+runExpectSuccessIncludes(["bun", "run", validator, v2HappyWorkspace, recordDirName], "pass");
+
+// (V13) produces 由来の成果物が欠けていると fail する。
+const v2MissingProducesWorkspace = setupV2Workspace({ writeQuestionsArtifact: false });
+runExpectFailure(
+  ["bun", "run", validator, v2MissingProducesWorkspace, recordDirName],
+  "v2 契約: completed のステージは produces 成果物を持つ",
+);
+
+// (V14) Verified の phase に phase-check 成果物がないと fail する。
+const v2MissingPhaseCheckWorkspace = setupV2Workspace({ writePhaseCheck: false });
+runExpectFailure(
+  ["bun", "run", validator, v2MissingPhaseCheckWorkspace, recordDirName],
+  "v2 契約: Verified の phase は phase-check 成果物を持つ",
+);
+
+// (V15) audit shard が1件もないと fail する。
+const v2MissingAuditShardWorkspace = setupV2Workspace({ writeAuditShard: false });
+runExpectFailure(
+  ["bun", "run", validator, v2MissingAuditShardWorkspace, recordDirName],
+  "v2 契約: audit shard が1件以上存在する",
+);
+
+// (V16) stage 定義ファイル（.claude/aidlc-common/stages/）がないと fail する。
+const v2MissingStageDefWorkspace = setupV2Workspace({ writeStageDefs: false });
+runExpectFailure(
+  ["bun", "run", validator, v2MissingStageDefWorkspace, recordDirName],
+  "v2 契約: stage 定義ファイルが存在する",
+);
+
+// (V17) backward-compatibility.md に記載された record は旧形式検査を維持する
+// （v2 契約が要求する requirements-analysis-questions.md、verification/、stage 定義ファイルがなくても pass する）。
+const legacyPreservedWorkspace = workspaceCopy();
+addIntentRecord(legacyPreservedWorkspace, {
+  state: (text) =>
+    text
+      .replace("- [-] requirements-analysis", "- [x] requirements-analysis")
+      .replace("- **Current Stage**: requirements-analysis", "- **Current Stage**: code-generation"),
+  audit: (text) => text + auditEntry("STAGE_COMPLETED", "requirements approved", "requirements-analysis"),
+});
+mkdirSync(join(legacyPreservedWorkspace, "aidlc/spaces/default/intents", recordDirName, "inception/requirements-analysis"), {
+  recursive: true,
+});
+writeFileSync(
+  join(legacyPreservedWorkspace, "aidlc/spaces/default/intents", recordDirName, "inception/requirements-analysis/requirements.md"),
+  "# Requirements\n",
+);
+mkdirSync(join(legacyPreservedWorkspace, "docs"), { recursive: true });
+writeFileSync(
+  join(legacyPreservedWorkspace, "docs/backward-compatibility.md"),
+  `# Backward Compatibility\n\n- 対象: \`aidlc/spaces/default/intents/${recordDirName}/\`\n`,
+);
+runExpectSuccessIncludes(["bun", "run", validator, legacyPreservedWorkspace, recordDirName], "pass");
+
 for (const dir of cleanups) rmSync(dir, { recursive: true, force: true });
 console.log("amadeus validator eval: ok");

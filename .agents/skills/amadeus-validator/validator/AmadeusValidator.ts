@@ -836,9 +836,8 @@ class AmadeusValidator {
     this.checkFile(statePath, "Intent 状態ファイル（aidlc-state.md）が存在する");
     if (!this.isFile(this.absolute(statePath))) return;
     const stateText = this.read(statePath);
-    const auditPath = `${base}/audit/audit.md`;
-    const auditText = this.isFile(this.absolute(auditPath)) ? this.read(auditPath) : undefined;
-    if (auditText !== undefined) this.checkedFiles.add(auditPath);
+    const legacy = this.isBackwardCompatRecord(base);
+    const { auditText, auditShardExists } = this.readAuditEvidence(base, legacy);
 
     this.checkNoLegacyIntentRootArtifacts(base);
     this.checkExistingPhaseGrillings(base);
@@ -847,9 +846,36 @@ class AmadeusValidator {
         pass: (target, condition, evidence) => this.pass(target, condition, evidence),
         failRow: (target, condition, evidence) => this.failRow(target, condition, evidence),
         checkFile: (path, condition) => this.checkFile(path, condition),
+        readOptional: (path) => (this.isFile(this.absolute(path)) ? this.read(path) : undefined),
       },
-      { base, dirName: intentId, stateText, auditText },
+      { base, dirName: intentId, stateText, auditText, legacy, auditShardExists },
     );
+  }
+
+  // docs/backward-compatibility.md に記載された record かどうかを判定する。
+  // ファイル自体がなければ、既存 record への影響を避けるため現行（旧形式）検査を維持する。
+  private isBackwardCompatRecord(base: string): boolean {
+    const docPath = "docs/backward-compatibility.md";
+    if (!this.isFile(this.absolute(docPath))) return true;
+    return this.read(docPath).includes(`${base}/`);
+  }
+
+  // legacy record は audit/audit.md 単一ファイルを主 shard として読む。
+  // v2 契約の record は audit/ 配下の .md ファイルすべてを shard として結合する。
+  private readAuditEvidence(base: string, legacy: boolean): { auditText?: string; auditShardExists: boolean } {
+    if (legacy) {
+      const auditPath = `${base}/audit/audit.md`;
+      const auditText = this.isFile(this.absolute(auditPath)) ? this.read(auditPath) : undefined;
+      return { auditText, auditShardExists: auditText !== undefined };
+    }
+    const auditDir = `${base}/audit`;
+    if (!this.isDirectory(this.absolute(auditDir))) return { auditText: undefined, auditShardExists: false };
+    const shardFiles = readdirSync(this.absolute(auditDir))
+      .filter((entry) => entry.endsWith(".md") && this.isFile(this.absolute(`${auditDir}/${entry}`)))
+      .sort();
+    if (shardFiles.length === 0) return { auditText: undefined, auditShardExists: false };
+    const auditText = shardFiles.map((entry) => this.read(`${auditDir}/${entry}`)).join("\n");
+    return { auditText, auditShardExists: true };
   }
 
   private checkNoLegacyIntentRootArtifacts(base: string): void {
