@@ -17,7 +17,8 @@
 | U004 #402 残り展開単位 | U003 #401 AI-DLC v2 差分対応順序 | 残り展開単位は、#401 と #391、#392、#393、#394 の扱いを前提にするため。 |
 | U005 #391〜#394 AI-DLC v2 差分対応 | U003 #401 AI-DLC v2 差分対応順序 | 実際の差分対応は、#401 で確定した順序と PR 境界を前提にするため。 |
 | U006 Core entrypoints and verification 英語化 | U004 #402 残り展開単位 | Core 系の英語化は、#402 の RU002 方針を前提にするため。 |
-| U007 Construction stage skills 英語化 | U005 #391〜#394 AI-DLC v2 差分対応 | Construction stage skill の英語化は、Build and Test などの差分対応判断を前提にするため。 |
+| U006 Core entrypoints and verification 英語化 | U005 #391〜#394 AI-DLC v2 差分対応 | Core 系の英語化は、#394 を含む差分対応判断を前提にするため。 |
+| U007 Construction stage skills 英語化 | U006 Core entrypoints and verification 英語化 | Construction stage skill の英語化は、Core entrypoints and verification の語彙を前提にするため。 |
 | U008 Inception stage skills 英語化 | U007 Construction stage skills 英語化 | Inception stage skill は Construction へ渡す語彙と整合させる必要があるため。 |
 | U009 Ideation and supporting skills 英語化 | U008 Inception stage skills 英語化 | Ideation と補助 skill は、Inception までの語彙を前提にできるため。 |
 | U010 #399 最終検証 | U009 Ideation and supporting skills 英語化 | 最終検証は、全英語化 PR と昇格先同期が完了した後にだけ実施できるため。 |
@@ -42,7 +43,7 @@ flowchart TD
   u003 --> u004
   u003 --> u005
   u004 --> u006
-  u005 --> u007
+  u005 --> u006
   u006 --> u007
   u007 --> u008
   u008 --> u009
