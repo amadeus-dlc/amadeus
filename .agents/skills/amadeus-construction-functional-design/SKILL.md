@@ -185,6 +185,13 @@ If the conversation gate was skipped because of autonomy mode, this skill does
 not update those maps. In that case, the `amadeus` entrypoint's Bolt boundary
 processing performs the reflection after the Bolt PR is merged.
 
+AI-DLC v2 assigns this stage `reviewer: aidlc-architecture-reviewer-agent`
+with `reviewer_max_iterations: 2`. Amadeus DLC intentionally runs no
+reviewer sub-agent: independent review maps to this gate's human approval
+(or the Bolt PR review in autonomous mode), the Request Changes revision
+loop bounds the review iterations, and `amadeus-validator` covers
+structural validation. See `docs/amadeus/aidlc-v2-reviewer-mapping.md`.
+
 ## Prohibitions
 
 - Do not run for a simple change with no new business logic.

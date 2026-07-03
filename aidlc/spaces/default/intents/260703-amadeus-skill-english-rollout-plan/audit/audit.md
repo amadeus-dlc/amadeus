@@ -1367,3 +1367,20 @@
 **Details**: autonomous の Bolt PR が人間の merge で承認された。Bolt ref: B009-ideation-supporting-skills-englishization。PR: https://github.com/amadeus-dlc/amadeus/pull/417。Merge commit: 6ef9f349a6f6ce8cd1c23a04dd74f952989b4fcc。B006〜B009 は人間指示により単一リカバリ PR で統合実行した（CD007）。
 
 ---
+
+## BOLT_STARTED
+**Timestamp**: 2026-07-03T15:24:37Z
+**Event**: BOLT_STARTED
+**Bolt**: B005
+**Details**: B005 #391〜#394 AI-DLC v2 differences を開始した。walking skeleton ではない。対応順序は docs/amadeus/aidlc-v2-difference-response-plan.md に従い、#391、#393、#392、#394 の順に Issue ごとの個別 PR で対応する。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T15:24:37Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Unit**: U005-issue-391-394-aidlc-v2-differences
+**Details**: #391 reviewer 指定の対応から着手する。本家 pinned commit d341522e1491db4884e9127004c3882365229218 の stage 定義から reviewer 指定を抽出し、Amadeus DLC 側の写像を明文化する。
+
+---
