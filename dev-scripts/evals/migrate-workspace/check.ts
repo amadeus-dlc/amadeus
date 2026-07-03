@@ -130,6 +130,8 @@ function buildFixture(): string {
   write(a, `intents/${oldIntentId}/inception/requirements-analysis/requirements.md`, "# 要求\n\n| ID | 要求 |\n|---|---|\n| R001 | v2 構造 |\n");
   write(a, `intents/${oldIntentId}/inception/requirements-analysis/questions.md`, "# 質問記録\n\n- Q1: 境界の確認。\n");
   write(a, `intents/${oldIntentId}/construction/implicit/functional-design/business-logic-model.md`, "# Business Logic Model\n\n中核ロジック。\n");
+  write(a, `intents/${oldIntentId}/construction/implicit/functional-design/business-rules.md`, "# Business Rules\n\n業務ルール。\n");
+  write(a, `intents/${oldIntentId}/construction/implicit/functional-design/domain-entities.md`, "# Domain Entities\n\nエンティティ。\n");
   write(a, `intents/${oldIntentId}/construction/implicit/code-generation/plan.md`, "# Plan\n\n実装計画。\n");
 
   // intents.md は旧 IndexGenerate の出力相当（移行で作り直すため最小限でよい）
@@ -197,6 +199,29 @@ const workspaceReport = run(["bun", "run", validator, workspace]);
 check("移行後 workspace が validator で pass する", /^pass$/m.test(workspaceReport), workspaceReport.split("\n").slice(-10).join("\n"));
 const intentReport = run(["bun", "run", validator, workspace, newDirName]);
 check("移行後 Intent が validator で pass する", /^pass$/m.test(intentReport), intentReport.split("\n").slice(-10).join("\n"));
+
+// completed な state.json の変換では、Operation の Skipped に PHASE_SKIPPED を対にする。
+{
+  const { renderAudit } = await import("../../migrate-workspace-to-aidlc");
+  const completedState = {
+    intentId: "20260601-done-intent",
+    scope: "bugfix",
+    depth: "Minimal",
+    status: "completed",
+    phase: "completed",
+    stages: {
+      "reverse-engineering": { state: "completed", approval: { approvedAt: "2026-06-01T10:00:00+09:00", via: "conversation" } },
+    },
+    phaseGates: { ideation: { skipped: true } },
+  };
+  const audit = renderAudit(completedState, "2026-06-02T00:00:00Z");
+  check(
+    "completed の移行は Operation の PHASE_SKIPPED を遡及記録する",
+    audit.includes("**Event**: PHASE_SKIPPED") && audit.includes("**Phase**: Operation"),
+    "PHASE_SKIPPED (Operation) がない",
+  );
+  check("completed の移行は WORKFLOW_COMPLETED を遡及記録する", audit.includes("**Event**: WORKFLOW_COMPLETED"), "WORKFLOW_COMPLETED がない");
+}
 
 for (const dir of cleanups) rmSync(dir, { recursive: true, force: true });
 console.log("migrate workspace eval: ok");

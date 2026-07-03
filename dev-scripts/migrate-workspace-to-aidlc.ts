@@ -565,6 +565,10 @@ export function renderAudit(state: OldState, nowIso: string): string {
   parts.push(...phaseAuditEntries(state, nowIso));
   parts.push(...stageAuditEntries(state, nowIso));
   parts.push(...boltAuditEntries(state, nowIso));
+  if (String(state.status ?? "") === "completed") {
+    parts.push(auditEntry("PHASE_SKIPPED", nowIso, [["Phase", "Operation"], ["Reason", "out of Amadeus scope"]]));
+    parts.push(auditEntry("WORKFLOW_COMPLETED", nowIso, [["Scope", scope], ["Details", "backfilled by migration (Recovered=true)"]]));
+  }
   return parts.join("\n");
 }
 
