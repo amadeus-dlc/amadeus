@@ -58,10 +58,10 @@ every number in the report.
 
 ### Step 2: Read the narrative sources
 
-- `aidlc-docs/audit.md` — the full event trail (for ordering and the
+- `<record>/audit/*.md` (per-clone shards) — the full event trail (for ordering and the
   reasoning behind each decision).
-- `aidlc-docs/aidlc-state.md` — the active-stage cursor.
-- The artefacts under `aidlc-docs/<phase>/<stage>/` — for what each
+- `<record>/aidlc-state.md` — the active-stage cursor.
+- The artefacts under `<record>/<phase>/<stage>/` (the record root is `aidlc/spaces/<space>/intents/<dirName>/`) — for what each
   stage produced.
 
 These are your sources for *prose*. Do not derive counts from them when

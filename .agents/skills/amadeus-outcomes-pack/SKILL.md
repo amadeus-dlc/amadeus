@@ -56,14 +56,14 @@ and STOP. Otherwise keep the parsed JSON for the count fields below.
 
 ### Step 2: Read the content sources
 
-- All artefacts under `aidlc-docs/<phase>/<stage>/` — requirements,
+- All artefacts under `<record>/<phase>/<stage>/` (the record root is `aidlc/spaces/<space>/intents/<dirName>/`) — requirements,
   design decisions, NFRs, infrastructure.
 - The delivered application and infrastructure code at the workspace
   root.
 
 ### Step 3: Write OUTCOMES.md
 
-Write `OUTCOMES.md` at the workspace root (not inside `aidlc-docs/`):
+Write `OUTCOMES.md` at the workspace root (not inside the record directory):
 
 ```markdown
 # Outcomes Pack
