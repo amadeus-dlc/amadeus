@@ -8,7 +8,7 @@
 - **State Version**: 7
 - **Active Agent**: amadeus
 - **Worktree Path**: 
-- **Bolt Refs**: B001, B002, B003, B004
+- **Bolt Refs**: B001-issue-395-policy-definition, B002-issue-400-small-foundation-pr, B003-issue-401-upstream-difference-order, B004-issue-402-remaining-skill-rollout-units
 - **Practices Affirmed Timestamp**: 
 
 ## Scope Configuration
@@ -24,8 +24,8 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 25
-- **Completed**: 19
-- **In Progress**: B004 / build-and-test
+- **Completed**: 25
+- **In Progress**: none
 
 ## Runtime State
 - **Revision Count**: 0
@@ -35,7 +35,7 @@
 - **Initialization**: Verified
 - **Ideation**: Verified
 - **Inception**: Verified
-- **Construction**: Active
+- **Construction**: Verified
 - **Operation**: Skipped
 
 ## Stage Progress
@@ -72,7 +72,7 @@ Per unit: U001-issue-395-policy-definition
 - [S] infrastructure-design — SKIP: #395 方針確定にはインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計がない。
 - [x] code-generation — EXECUTE
 - [x] build-and-test — EXECUTE
-- [ ] ci-pipeline — EXECUTE
+- [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、Issue #399 の子 Issue 完了追跡に追加の CI 新設または大きな変更は不要。
 
 Per unit: U002-issue-400-small-foundation-pr
 - [S] functional-design — SKIP: #400 小さい土台 PR は代表 SKILL.md の英語化と昇格フロー確認であり、新しいデータモデル、複雑な業務ロジック、業務ルール設計を追加しない。
@@ -81,7 +81,7 @@ Per unit: U002-issue-400-small-foundation-pr
 - [S] infrastructure-design — SKIP: #400 小さい土台 PR はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
 - [x] code-generation — EXECUTE: PR #410 merge により完了確定。
 - [x] build-and-test — EXECUTE: PR #410 merge により完了確定。
-- [ ] ci-pipeline — EXECUTE
+- [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、Issue #399 の子 Issue 完了追跡に追加の CI 新設または大きな変更は不要。
 
 Per unit: U003-issue-401-upstream-difference-order
 - [S] functional-design — SKIP: #401 は #391、#392、#393、#394 の対応順序と PR 境界を整理する計画文書であり、新しいデータモデル、複雑な業務ロジック、業務ルール設計を追加しない。
@@ -90,16 +90,16 @@ Per unit: U003-issue-401-upstream-difference-order
 - [S] infrastructure-design — SKIP: #401 はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
 - [x] code-generation — EXECUTE: PR #411 merge により完了確定。
 - [x] build-and-test — EXECUTE: PR #411 merge により完了確定。
-- [ ] ci-pipeline — EXECUTE
+- [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、Issue #399 の子 Issue 完了追跡に追加の CI 新設または大きな変更は不要。
 
 Per unit: U004-issue-402-remaining-skill-rollout-units
 - [S] functional-design — SKIP: #402 は残り Amadeus skill の英語化単位、優先順位、検証コマンド、衝突回避を整理する計画文書であり、新しいデータモデル、複雑な業務ロジック、業務ルール設計を追加しない。
 - [S] nfr-requirements — SKIP: #402 は非機能要求の追加、変更、評価を伴わない。
 - [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
 - [S] infrastructure-design — SKIP: #402 はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
-- [?] code-generation — EXECUTE: autonomous のため会話内 gate は提示せず、B004 PR merge を approval evidence として確定する。
-- [?] build-and-test — EXECUTE: 検証は pass。B004 PR merge を approval evidence として確定する。
-- [ ] ci-pipeline — EXECUTE
+- [x] code-generation — EXECUTE: PR #413 merge により完了確定。
+- [x] build-and-test — EXECUTE: PR #413 merge により完了確定。
+- [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、Issue #399 の子 Issue 完了追跡に追加の CI 新設または大きな変更は不要。
 
 ### OPERATION PHASE
 - [S] deployment-pipeline — SKIP: out of Amadeus scope
@@ -112,13 +112,13 @@ Per unit: U004-issue-402-remaining-skill-rollout-units
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: build-and-test
-- **Next Stage**: ci-pipeline
-- **Status**: Running
+- **Current Stage**: ci-pipeline
+- **Next Stage**: none
+- **Status**: Completed
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-07-03T13:25:59Z
+- **Last Updated**: 2026-07-03T13:31:40Z
 
 ## Session Resume Point
-- **Last Completed Stage**: build-and-test
-- **Next Action**: Create B004 (#402 残り展開単位) Bolt PR
-- **Pending Artifacts**: B004 code-generation と build-and-test は PR merge により approval evidence を確定する。ci-pipeline は B001、B002、B003、B004 で未完了。
+- **Last Completed Stage**: ci-pipeline
+- **Next Action**: none (intent completed)
+- **Pending Artifacts**: none
