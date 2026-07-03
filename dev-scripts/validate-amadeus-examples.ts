@@ -185,55 +185,67 @@ function matchExists(base: string, pattern: string): boolean {
   return candidates.length > 0;
 }
 
+function readSnapshotState(invariant: SnapshotInvariant, intentBase: string): Record<string, unknown> {
+  const statePath = join(intentBase, "state.json");
+  if (!existsSync(statePath)) fail(`${invariant.snapshot}: state.json がありません`);
+  return JSON.parse(readFileSync(statePath, "utf8")) as Record<string, unknown>;
+}
+
+function checkInvariantState(invariant: SnapshotInvariant, state: Record<string, unknown>): void {
+  for (const [path, expected] of Object.entries(invariant.state)) {
+    const actual = stateValue(state, path);
+    if (String(actual ?? "") !== expected) {
+      fail(`${invariant.snapshot}: state.json の ${path} が期待値と一致しません（期待: ${expected}、実際: ${String(actual ?? "未設定")}）`);
+    }
+  }
+}
+
+function checkAllEntryStates(
+  invariant: SnapshotInvariant,
+  value: unknown,
+  label: string,
+  expected: string,
+): void {
+  if (typeof value !== "object" || value === null || Object.keys(value).length === 0) {
+    fail(`${invariant.snapshot}: ${label} が空です`);
+  }
+  for (const [id, entry] of Object.entries(value as Record<string, { state?: string }>)) {
+    if (String(entry?.state ?? "") !== expected) {
+      fail(`${invariant.snapshot}: ${label}.${id}.state が期待値と一致しません（期待: ${expected}、実際: ${String(entry?.state ?? "未設定")}）`);
+    }
+  }
+}
+
+function checkInvariantUnitAndBoltStates(invariant: SnapshotInvariant, state: Record<string, unknown>): void {
+  for (const expected of invariant.unitStates ?? []) {
+    checkAllEntryStates(invariant, stateValue(state, `stages.${expected.stage}.units`), `stages.${expected.stage}.units`, expected.state);
+  }
+  if (invariant.allBoltStates !== undefined) {
+    checkAllEntryStates(invariant, stateValue(state, "bolts"), "bolts", invariant.allBoltStates);
+  }
+}
+
+function checkInvariantFiles(invariant: SnapshotInvariant, intentBase: string): void {
+  for (const pattern of invariant.files ?? []) {
+    if (!matchExists(intentBase, pattern)) {
+      fail(`${invariant.snapshot}: 期待する成果物が見つかりません: ${pattern}`);
+    }
+  }
+  for (const pattern of invariant.absentFiles ?? []) {
+    if (matchExists(intentBase, pattern)) {
+      fail(`${invariant.snapshot}: 存在してはならない成果物が見つかりました: ${pattern}`);
+    }
+  }
+}
+
 function validateSnapshotInvariants(): void {
   existingSnapshots();
   for (const invariant of snapshotInvariants) {
     const intentBase = join(root, invariant.snapshot, ".amadeus/intents", intentId);
-    const statePath = join(intentBase, "state.json");
-    if (!existsSync(statePath)) fail(`${invariant.snapshot}: state.json がありません`);
-    const state = JSON.parse(readFileSync(statePath, "utf8")) as Record<string, unknown>;
-
-    for (const [path, expected] of Object.entries(invariant.state)) {
-      const actual = stateValue(state, path);
-      if (String(actual ?? "") !== expected) {
-        fail(`${invariant.snapshot}: state.json の ${path} が期待値と一致しません（期待: ${expected}、実際: ${String(actual ?? "未設定")}）`);
-      }
-    }
-
-    for (const expected of invariant.unitStates ?? []) {
-      const units = stateValue(state, `stages.${expected.stage}.units`);
-      if (typeof units !== "object" || units === null || Object.keys(units).length === 0) {
-        fail(`${invariant.snapshot}: stages.${expected.stage}.units に Unit がありません`);
-      }
-      for (const [unitId, entry] of Object.entries(units as Record<string, { state?: string }>)) {
-        if (String(entry?.state ?? "") !== expected.state) {
-          fail(`${invariant.snapshot}: stages.${expected.stage}.units.${unitId}.state が期待値と一致しません（期待: ${expected.state}、実際: ${String(entry?.state ?? "未設定")}）`);
-        }
-      }
-    }
-
-    if (invariant.allBoltStates !== undefined) {
-      const bolts = stateValue(state, "bolts");
-      if (typeof bolts !== "object" || bolts === null || Object.keys(bolts).length === 0) {
-        fail(`${invariant.snapshot}: state.json に bolts がありません`);
-      }
-      for (const [boltId, entry] of Object.entries(bolts as Record<string, { state?: string }>)) {
-        if (String(entry?.state ?? "") !== invariant.allBoltStates) {
-          fail(`${invariant.snapshot}: bolts.${boltId}.state が期待値と一致しません（期待: ${invariant.allBoltStates}、実際: ${String(entry?.state ?? "未設定")}）`);
-        }
-      }
-    }
-
-    for (const pattern of invariant.files ?? []) {
-      if (!matchExists(intentBase, pattern)) {
-        fail(`${invariant.snapshot}: 期待する成果物が見つかりません: ${pattern}`);
-      }
-    }
-    for (const pattern of invariant.absentFiles ?? []) {
-      if (matchExists(intentBase, pattern)) {
-        fail(`${invariant.snapshot}: 存在してはならない成果物が見つかりました: ${pattern}`);
-      }
-    }
+    const state = readSnapshotState(invariant, intentBase);
+    checkInvariantState(invariant, state);
+    checkInvariantUnitAndBoltStates(invariant, state);
+    checkInvariantFiles(invariant, intentBase);
     console.log(`invariants pass: ${invariant.snapshot}`);
   }
 }
