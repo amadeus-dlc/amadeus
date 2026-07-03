@@ -6,44 +6,48 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "8df3ab811cbef6fe465f3d4102cb89ef"
+          "md5": "8df3ab811cbef6fe465f3d4102cb89ef",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B006）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus/SKILL.md",
           "md5": "ed6fc5fe22112ad89b9898d4685f2dda",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記した手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B006）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-intent-capture/SKILL.md",
-          "md5": "e75a707bc5e9cee0cc1c1e0834218bb9"
+          "md5": "e75a707bc5e9cee0cc1c1e0834218bb9",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-market-research/SKILL.md",
           "md5": "afae1294b4b7728092160adea191e8d9",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記しただけの手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-feasibility/SKILL.md",
           "md5": "5ae719caea22532742299edb22daf4fe",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記しただけの手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-scope-definition/SKILL.md",
-          "md5": "d563a00aa822e54dc34696a93f5b3966"
+          "md5": "d563a00aa822e54dc34696a93f5b3966",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-team-formation/SKILL.md",
           "md5": "86d67c96ad7be52807d04d909a99d31b",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記した手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-rough-mockups/SKILL.md",
           "md5": "d7e7d8b126fdaec699d10f041c79873c",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記した手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-approval-handoff/SKILL.md",
-          "md5": "bd5253dadae7433cc1e9cf3b5ccc0df3"
+          "md5": "bd5253dadae7433cc1e9cf3b5ccc0df3",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         }
       ]
     },
@@ -52,80 +56,88 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "8df3ab811cbef6fe465f3d4102cb89ef"
+          "md5": "8df3ab811cbef6fe465f3d4102cb89ef",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B006）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus/SKILL.md",
           "md5": "ed6fc5fe22112ad89b9898d4685f2dda",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記した手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B006）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-intent-capture/SKILL.md",
-          "md5": "e75a707bc5e9cee0cc1c1e0834218bb9"
+          "md5": "e75a707bc5e9cee0cc1c1e0834218bb9",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-market-research/SKILL.md",
           "md5": "afae1294b4b7728092160adea191e8d9",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記しただけの手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-feasibility/SKILL.md",
           "md5": "5ae719caea22532742299edb22daf4fe",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記しただけの手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-scope-definition/SKILL.md",
-          "md5": "d563a00aa822e54dc34696a93f5b3966"
+          "md5": "d563a00aa822e54dc34696a93f5b3966",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-team-formation/SKILL.md",
           "md5": "86d67c96ad7be52807d04d909a99d31b",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記した手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-rough-mockups/SKILL.md",
           "md5": "d7e7d8b126fdaec699d10f041c79873c",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記した手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-approval-handoff/SKILL.md",
-          "md5": "bd5253dadae7433cc1e9cf3b5ccc0df3"
+          "md5": "bd5253dadae7433cc1e9cf3b5ccc0df3",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-inception-reverse-engineering/SKILL.md",
           "md5": "5fe534673bfd1bcd37d3022f47a3584a",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記しただけの手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B008）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-inception-practices-discovery/SKILL.md",
-          "md5": "43596ec0b33e9812aa8782b386dd26ef"
+          "md5": "43596ec0b33e9812aa8782b386dd26ef",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B008）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-inception-requirements-analysis/SKILL.md",
-          "md5": "564435ca4506149f4ae447ae5ad3fcc7"
+          "md5": "564435ca4506149f4ae447ae5ad3fcc7",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B008）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-inception-user-stories/SKILL.md",
           "md5": "02a4cfb5cc3bc1111b7509ad4cdf4709",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記した手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B008）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-inception-refined-mockups/SKILL.md",
           "md5": "c62d30d19790815a4eefc35d8f81fadd",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記した手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B008）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-inception-application-design/SKILL.md",
           "md5": "1d8e4ff3656a13eaa726779f66dc05f2",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記した手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B008）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-inception-units-generation/SKILL.md",
-          "md5": "b873e185ad222b2baccb318ae73129bc"
+          "md5": "b873e185ad222b2baccb318ae73129bc",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B008）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-inception-delivery-planning/SKILL.md",
-          "md5": "131e582c24526f89fa20467808858fb6"
+          "md5": "131e582c24526f89fa20467808858fb6",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B008）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         }
       ]
     },
@@ -134,80 +146,88 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "8df3ab811cbef6fe465f3d4102cb89ef"
+          "md5": "8df3ab811cbef6fe465f3d4102cb89ef",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B006）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus/SKILL.md",
           "md5": "ed6fc5fe22112ad89b9898d4685f2dda",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記した手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B006）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-intent-capture/SKILL.md",
-          "md5": "e75a707bc5e9cee0cc1c1e0834218bb9"
+          "md5": "e75a707bc5e9cee0cc1c1e0834218bb9",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-market-research/SKILL.md",
           "md5": "afae1294b4b7728092160adea191e8d9",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記しただけの手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-feasibility/SKILL.md",
           "md5": "5ae719caea22532742299edb22daf4fe",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記しただけの手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-scope-definition/SKILL.md",
-          "md5": "d563a00aa822e54dc34696a93f5b3966"
+          "md5": "d563a00aa822e54dc34696a93f5b3966",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-team-formation/SKILL.md",
           "md5": "86d67c96ad7be52807d04d909a99d31b",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記した手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-rough-mockups/SKILL.md",
           "md5": "d7e7d8b126fdaec699d10f041c79873c",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記した手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-approval-handoff/SKILL.md",
-          "md5": "bd5253dadae7433cc1e9cf3b5ccc0df3"
+          "md5": "bd5253dadae7433cc1e9cf3b5ccc0df3",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-inception-reverse-engineering/SKILL.md",
           "md5": "5fe534673bfd1bcd37d3022f47a3584a",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記しただけの手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B008）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-inception-practices-discovery/SKILL.md",
-          "md5": "43596ec0b33e9812aa8782b386dd26ef"
+          "md5": "43596ec0b33e9812aa8782b386dd26ef",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B008）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-inception-requirements-analysis/SKILL.md",
-          "md5": "564435ca4506149f4ae447ae5ad3fcc7"
+          "md5": "564435ca4506149f4ae447ae5ad3fcc7",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B008）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-inception-user-stories/SKILL.md",
           "md5": "02a4cfb5cc3bc1111b7509ad4cdf4709",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記した手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B008）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-inception-refined-mockups/SKILL.md",
           "md5": "c62d30d19790815a4eefc35d8f81fadd",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記した手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B008）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-inception-application-design/SKILL.md",
           "md5": "1d8e4ff3656a13eaa726779f66dc05f2",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記した手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B008）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-inception-units-generation/SKILL.md",
-          "md5": "b873e185ad222b2baccb318ae73129bc"
+          "md5": "b873e185ad222b2baccb318ae73129bc",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B008）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-inception-delivery-planning/SKILL.md",
-          "md5": "131e582c24526f89fa20467808858fb6"
+          "md5": "131e582c24526f89fa20467808858fb6",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B008）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-construction-functional-design/SKILL.md",
@@ -221,80 +241,88 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "8df3ab811cbef6fe465f3d4102cb89ef"
+          "md5": "8df3ab811cbef6fe465f3d4102cb89ef",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B006）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus/SKILL.md",
           "md5": "ed6fc5fe22112ad89b9898d4685f2dda",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記した手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B006）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-intent-capture/SKILL.md",
-          "md5": "e75a707bc5e9cee0cc1c1e0834218bb9"
+          "md5": "e75a707bc5e9cee0cc1c1e0834218bb9",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-market-research/SKILL.md",
           "md5": "afae1294b4b7728092160adea191e8d9",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記しただけの手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-feasibility/SKILL.md",
           "md5": "5ae719caea22532742299edb22daf4fe",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記しただけの手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-scope-definition/SKILL.md",
-          "md5": "d563a00aa822e54dc34696a93f5b3966"
+          "md5": "d563a00aa822e54dc34696a93f5b3966",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-team-formation/SKILL.md",
           "md5": "86d67c96ad7be52807d04d909a99d31b",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記した手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-rough-mockups/SKILL.md",
           "md5": "d7e7d8b126fdaec699d10f041c79873c",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記した手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-ideation-approval-handoff/SKILL.md",
-          "md5": "bd5253dadae7433cc1e9cf3b5ccc0df3"
+          "md5": "bd5253dadae7433cc1e9cf3b5ccc0df3",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B009）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-inception-reverse-engineering/SKILL.md",
           "md5": "5fe534673bfd1bcd37d3022f47a3584a",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記しただけの手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B008）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-inception-practices-discovery/SKILL.md",
-          "md5": "43596ec0b33e9812aa8782b386dd26ef"
+          "md5": "43596ec0b33e9812aa8782b386dd26ef",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B008）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-inception-requirements-analysis/SKILL.md",
-          "md5": "564435ca4506149f4ae447ae5ad3fcc7"
+          "md5": "564435ca4506149f4ae447ae5ad3fcc7",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B008）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-inception-user-stories/SKILL.md",
           "md5": "02a4cfb5cc3bc1111b7509ad4cdf4709",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記した手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B008）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-inception-refined-mockups/SKILL.md",
           "md5": "c62d30d19790815a4eefc35d8f81fadd",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記した手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B008）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-inception-application-design/SKILL.md",
           "md5": "1d8e4ff3656a13eaa726779f66dc05f2",
-          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記した手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
+          "staleReason": "PR #403 の手修正に続き、PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B008）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-inception-units-generation/SKILL.md",
-          "md5": "b873e185ad222b2baccb318ae73129bc"
+          "md5": "b873e185ad222b2baccb318ae73129bc",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B008）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-inception-delivery-planning/SKILL.md",
-          "md5": "131e582c24526f89fa20467808858fb6"
+          "md5": "131e582c24526f89fa20467808858fb6",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B008）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         },
         {
           "path": "skills/amadeus-construction-functional-design/SKILL.md",
@@ -303,7 +331,8 @@
         },
         {
           "path": "skills/amadeus-construction-code-generation/SKILL.md",
-          "md5": "20fab9f6620097996a2776bf59f11d33"
+          "md5": "20fab9f6620097996a2776bf59f11d33",
+          "staleReason": "PR #417 で SKILL.md を英語化した（Issue #399 リカバリ、B007）。生成される日本語 snapshot の構造は変わらないため維持し、real provider 再生成は後続 PR で実施する。"
         }
       ]
     }
