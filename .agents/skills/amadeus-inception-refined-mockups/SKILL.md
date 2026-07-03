@@ -1,107 +1,144 @@
 ---
 name: amadeus-inception-refined-mockups
 description: >-
-  Amadeus Inception の内部 skill。Stage 2.5 Refined Mockups だけを実行する。
-  UI があり Ideation で rough mockups を作った Intent で、mockups.md、interaction-spec.md、
-  design-system-mapping.md、accessibility-checklist.md を作成または補修する場面では必ず使う。
-  API は相互作用図を精緻化する。要求、設計、Unit、Bolt、実装は作らない。
+  Internal Amadeus Inception skill. Use only for Stage 2.5 Refined Mockups.
+  Use when the Intent has UI and Ideation produced rough mockups, and must
+  create or repair mockups.md, interaction-spec.md, design-system-mapping.md,
+  and accessibility-checklist.md. For an API, refine the interaction diagram.
+  Do not create requirements, design, Units, Bolts, or implementation.
 ---
 
 # amadeus-inception-refined-mockups
 
-## 目的
+## Purpose
 
-Inception の Stage 2.5 Refined Mockups だけを進める。
+Advance only Inception Stage 2.5 Refined Mockups.
 
-この skill は `amadeus` 入口から呼び出される内部 skill である。
+This is an internal skill called from the `amadeus` entrypoint.
 
-rough mockups を、要求とストーリーに対応づけた詳細モックへ精緻化する。
+Refine the rough mockups into detailed mockups mapped to the requirements and
+stories.
 
-## 前提
+## Prerequisites
 
-対象 record の `aidlc-state.md` で、Stage Progress の `refined-mockups` が実行対象であり、checkbox が `[ ]`、`[-]`、`[?]`、`[R]` のいずれかであることを前提にする。
+Assume the target record's `aidlc-state.md` has `refined-mockups` as an
+executable Stage Progress item, with the checkbox in one of these states:
+`[ ]`, `[-]`, `[?]`, or `[R]`.
 
-checkbox が `[?]` の場合は、成果物を作り直さず、ゲートの提示から再開する。
-checkbox が `[R]` の場合は、前回の成果物と差し戻し理由を提示してから、修正だけを行う。
-どちらの場合も、手順を最初からやり直さない。
+If the checkbox is `[?]`, resume from gate presentation without recreating the
+artifacts.
 
-Condition は「UI があり、Ideation で rough mockups を作った場合。API は相互作用図を精緻化する」である。
-rough mockups が存在しない場合は、成果物を作らず checkbox を `[S]` にして注記に skip 理由を書き、`STAGE_SKIPPED` イベントを `audit/audit.md` に追記して `amadeus` へ戻る。
+If the checkbox is `[R]`, present the previous artifacts and the requested
+changes, then make only the necessary corrections.
 
-少なくとも次を読む。
+In both cases, do not restart the whole procedure.
 
-- `ideation/rough-mockups/wireframes.md` と `user-flow.md`
+The Condition is: the Intent has UI and Ideation produced rough mockups. For
+an API, refine the interaction diagram.
+
+If rough mockups do not exist, create no artifacts. Set the checkbox to `[S]`,
+write the skip reason in the note, append a `STAGE_SKIPPED` event to
+`audit/audit.md`, and return to `amadeus`.
+
+Read at least the following inputs:
+
+- `ideation/rough-mockups/wireframes.md` and `user-flow.md`
 - `inception/requirements-analysis/requirements.md`
-- `inception/user-stories/stories.md`（実行した場合）
-- `inception/practices-discovery/team-practices.md`（実行した場合）
+- `inception/user-stories/stories.md`, if it was executed
+- `inception/practices-discovery/team-practices.md`, if it was executed
 - `aidlc-state.md`
 
-## 質問
+## Questions
 
-次の論点を確認する。
+Confirm the following points:
 
-- 詳細化で確定すべき相互作用はどれか。
-- 使うデザインシステムや UI 規約はあるか。
-- アクセシビリティで満たすべき基準は何か。
+- Which interactions must be finalized during refinement?
+- Are there design system or UI conventions to use?
+- What accessibility standards must be met?
 
-質問は `amadeus-grilling` のプロトコルに従い、一問ずつ、推奨回答を添えて提示し、回答を待つ。
-質問の量は `aidlc-state.md` の `Depth` を目安にする。
-質問と回答は `inception/refined-mockups/refined-mockups-questions.md` に記録する。
+Ask questions one at a time following the `amadeus-grilling` protocol, attach
+a recommended answer, and wait for the response.
+Use `aidlc-state.md`'s `Depth` as a guide for how many questions to ask.
+Record the questions and answers in
+`inception/refined-mockups/refined-mockups-questions.md`.
 
-## テンプレート
+## Templates
 
-優先順位は次である。
+Use templates in this priority order:
 
 1. `aidlc/spaces/<space>/memory/templates/intents/inception/refined-mockups/`
-2. この skill に同梱された `templates/inception/refined-mockups/`
+2. `templates/inception/refined-mockups/` bundled with this skill.
 
-図は Markdown に内包できる PlantUML または Mermaid で書く。
-分からない項目は空欄にせず、`未確認` と書く。
+Write diagrams in PlantUML or Mermaid that can be embedded in Markdown.
+Do not leave unknown items blank. Write `未確認`.
 
-## 成果物
+## Artifacts
 
-作成または更新するものは次だけである。
+Create or update only the following files:
 
 - `inception/refined-mockups/mockups.md`
 - `inception/refined-mockups/interaction-spec.md`
 - `inception/refined-mockups/design-system-mapping.md`
 - `inception/refined-mockups/accessibility-checklist.md`
 - `inception/refined-mockups/refined-mockups-questions.md`
-- `inception/refined-mockups/memory.md`（stage 実行の学習記録）
-- `aidlc-state.md`（対象ステージの checkbox）と `audit/audit.md`（ゲートイベントの追記）
+- `inception/refined-mockups/memory.md` (learning record of the stage
+  execution)
+- `aidlc-state.md` for the target stage checkbox and `audit/audit.md` for gate
+  events
 
-## 手順
+## Procedure
 
-以下の手順は、checkbox が `[ ]` から開始する場合の流れである。
-`[?]` または `[R]` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
+The following procedure applies when starting from checkbox `[ ]`.
 
-1. checkbox が `[ ]` の場合だけ Condition を判定する。偽なら checkbox を `[S]` にして注記に skip 理由を書き、`audit/audit.md` に `STAGE_SKIPPED` を追記して終了する。`[-]`、`[?]`、`[R]` からの再開では再判定しない。
-2. `aidlc-state.md` の `refined-mockups` の checkbox を `[-]` にする。
-3. rough mockups、要求、ストーリーを読み、不足論点を質問で確認する。
-4. 4 つの成果物を作る。各モックは対応する要求とストーリーの識別子を参照する。
-5. stage の `memory.md` に、実行中の解釈、逸脱、トレードオフ、未解決の問いを記録する。
-6. `aidlc-state.md` の `refined-mockups` の checkbox を `[?]` にし、`STAGE_AWAITING_APPROVAL` イベントを `audit/audit.md` に追記して、ゲートを提示する。
+When resuming from `[?]` or `[R]`, follow the prerequisite resume rules and
+run only the steps needed for gate presentation or correction.
 
-## ゲート
+1. Only when the checkbox is `[ ]`, evaluate the Condition. If it is false,
+   set the checkbox to `[S]`, write the skip reason in the note, append
+   `STAGE_SKIPPED` to `audit/audit.md`, and stop. Do not reevaluate when
+   resuming from `[-]`, `[?]`, or `[R]`.
+2. Set the `refined-mockups` checkbox in `aidlc-state.md` to `[-]`.
+3. Read the rough mockups, requirements, and stories, and confirm any gaps
+   with questions.
+4. Create the four artifacts. Each mockup references the identifiers of the
+   corresponding requirements and stories.
+5. Record interpretations, deviations, tradeoffs, and unresolved questions
+   made during execution in the stage's `memory.md`.
+6. Set the `refined-mockups` checkbox to `[?]`, append a
+   `STAGE_AWAITING_APPROVAL` event to `audit/audit.md`, and present the gate.
 
-成果物の要約と確認先パスを示し、Approve と Request Changes の 2 択で承認を求める。
-Inception ステージでは、スキップ済みステージの追加実行を第 3 の選択肢にできる。
-スキップ済みステージの追加実行が選ばれた場合は、対象ステージの checkbox を `[S]` から `[ ]` に戻し、skip 注記を `EXECUTE` に戻してから `amadeus` 入口へ戻る。入口が次の解決で対象ステージを選ぶ。
-Request Changes が 3 回続いたら Accept as-is を選択肢に加える。
-ゲートを提示したターンでは人間の回答を待つ。
+## Gate
 
-承認されたら checkbox を `[x]` にし、`GATE_APPROVED`（人間の回答をそのまま記録）と `STAGE_COMPLETED` を `audit/audit.md` に追記する。
-差し戻されたら checkbox を `[R]` にし、`GATE_REJECTED`（差し戻し理由をそのまま記録）と `STAGE_REVISING` を追記する。
-Accept as-is が選ばれた場合は、checkbox を `[x]` にし、`GATE_APPROVED`（Accept as-is である旨を含めて記録）と `STAGE_COMPLETED` を追記し、この判断を `inception/decisions.md` に記録する。
+Show an artifact summary and the paths to review, then ask for approval with
+exactly two options: Approve or Request Changes.
 
-## 禁止事項
+For Inception stages, additional execution of a skipped stage can be a third
+option.
+If additional execution of a skipped stage is selected, revert the target
+stage's checkbox from `[S]` to `[ ]`, revert the skip note to `EXECUTE`, and
+return to the `amadeus` entrypoint. The entrypoint selects the target stage on
+the next resolution.
+If Request Changes happens three times in a row, add Accept as-is as an
+option.
+When presenting a gate, wait for the human response in that turn.
 
-- rough mockups なしで実行しない。
-- 実装（HTML、CSS、コンポーネントコード）を作らない。
-- 要求、Unit、Bolt を作らない。
-- 承認を待たずに `completed` を記録しない。
+When approved, set the checkbox to `[x]`, append `GATE_APPROVED` with the
+human response recorded as-is, and append `STAGE_COMPLETED` to
+`audit/audit.md`.
+When changes are requested, set the checkbox to `[R]`, append `GATE_REJECTED`
+with the requested changes recorded as-is, and append `STAGE_REVISING`.
+If Accept as-is is selected, set the checkbox to `[x]`, append `GATE_APPROVED`
+noting Accept as-is, append `STAGE_COMPLETED`, and record this decision in
+`inception/decisions.md`.
 
-## 次の skill
+## Prohibitions
 
-- 続きを進める場合: `amadeus`（入口が次ステージを解決する）
-- 成果物の構造検証: `amadeus-validator`
+- Do not run without rough mockups.
+- Do not create implementation (HTML, CSS, component code).
+- Do not create requirements, Units, or Bolts.
+- Do not record `completed` without waiting for approval.
+
+## Next Skill
+
+- To continue: `amadeus` (the entrypoint resolves the next stage).
+- Validate artifact structure: `amadeus-validator`.

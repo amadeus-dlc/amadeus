@@ -1,117 +1,177 @@
 ---
 name: amadeus-inception-delivery-planning
 description: >-
-  Amadeus Inception の内部 skill。Stage 2.8 Delivery Planning だけを実行する。
-  Units Generation 済みの Intent で、Unit の依存 DAG に経済的な順序付けを行い、
-  bolt-plan.md、risk-and-sequencing-rationale.md、external-dependency-map.md を
-  作成または補修する場面では必ず使う。Inception の最終ステージであり、実装は作らない。
+  Internal Amadeus Inception skill. Use only for Stage 2.8 Delivery Planning.
+  Use when an Intent that has completed Units Generation needs economic
+  sequencing applied to the Unit dependency DAG, and must create or repair
+  bolt-plan.md, risk-and-sequencing-rationale.md, and
+  external-dependency-map.md. This is the final Inception stage. Do not
+  create implementation.
 ---
 
 # amadeus-inception-delivery-planning
 
-## 目的
+## Purpose
 
-Inception の Stage 2.8 Delivery Planning だけを進める。
+Advance only Inception Stage 2.8 Delivery Planning.
 
-この skill は `amadeus` 入口から呼び出される内部 skill である。
+This is an internal skill called from the `amadeus` entrypoint.
 
-Unit の依存 DAG に対して経済的な順序付け（何を先に出荷するか）を行い、Bolt 計画を作る。
+Apply economic sequencing (what to ship first) to the Unit dependency DAG,
+and create the Bolt plan.
 
-## 前提
+## Prerequisites
 
-対象 record の `aidlc-state.md` で、Stage Progress の `delivery-planning` が実行対象であり、checkbox が `[ ]`、`[-]`、`[?]`、`[R]` のいずれかであることを前提にする。
+Assume the target record's `aidlc-state.md` has `delivery-planning` as an
+executable Stage Progress item, with the checkbox in one of these states:
+`[ ]`, `[-]`, `[?]`, or `[R]`.
 
-checkbox が `[?]` の場合は、成果物を作り直さず、ゲートの提示から再開する。
-checkbox が `[R]` の場合は、前回の成果物と差し戻し理由を提示してから、修正だけを行う。
-どちらの場合も、手順を最初からやり直さない。
+If the checkbox is `[?]`, resume from gate presentation without recreating
+the artifacts.
 
-`aidlc-state.md` の `units-generation` の checkbox が `[x]` であることを確認する。
-未完了の場合は停止し、`amadeus` へ戻る。
+If the checkbox is `[R]`, present the previous artifacts and the requested
+changes, then make only the necessary corrections.
 
-少なくとも次を読む。
+In both cases, do not restart the whole procedure.
 
-- `inception/units-generation/unit-of-work.md` と `unit-of-work-dependency.md`
-- `inception/units-generation/unit-of-work-story-map.md`（存在する場合）
+Confirm that the `units-generation` checkbox in `aidlc-state.md` is `[x]`.
+If it is not complete, stop and return to `amadeus`.
+
+Read at least the following:
+
+- `inception/units-generation/unit-of-work.md` and
+  `unit-of-work-dependency.md`
+- `inception/units-generation/unit-of-work-story-map.md`, if it exists
 - `inception/requirements-analysis/requirements.md`
-- `inception/application-design/components.md`（実行した場合）
-- `inception/user-stories/stories.md` と `inception/refined-mockups/mockups.md`（実行した場合）
-- `inception/practices-discovery/team-practices.md`（実行した場合）
-- `ideation/team-formation/team-assessment.md`（実行した場合）
+- `inception/application-design/components.md`, if executed
+- `inception/user-stories/stories.md` and
+  `inception/refined-mockups/mockups.md`, if executed
+- `inception/practices-discovery/team-practices.md`, if executed
+- `ideation/team-formation/team-assessment.md`, if executed
 - `aidlc-state.md`
 
-## 質問
+## Questions
 
-次の論点を人間に確認する。
+Confirm the following points with the human.
 
-- Bolt の束ね方はどれか（Unit 1 個ずつ、関連 Unit の束、Unit をまたぐ薄いスライス）。
-- 最初の Bolt（walking skeleton）で貫通させる最小スライスはどこか。
-- 順序付けの優先はどれか（リスク先行、価値先行、依存先行）。
+- Which Bolt bundling approach to use (one Unit at a time, a bundle of
+  related Units, or a thin slice across Units).
+- What is the minimal slice to drive through in the first Bolt (walking
+  skeleton).
+- Which sequencing priority to use (risk-first, value-first, or
+  dependency-first).
 
-質問は `amadeus-grilling` のプロトコルに従い、一問ずつ、推奨回答を添えて提示し、回答を待つ。
-質問と回答は `inception/delivery-planning/delivery-planning-questions.md` に記録する。
-束ね方と順序の確定判断は `inception/grillings.md` と `inception/grillings/Gxxx-<topic>.md` にも記録する。
+Follow the `amadeus-grilling` protocol: ask one question at a time, attach a
+recommended answer, and wait for the response.
+Record questions and answers in
+`inception/delivery-planning/delivery-planning-questions.md`.
+Also record the finalized bundling and sequencing decisions in
+`inception/grillings.md` and `inception/grillings/Gxxx-<topic>.md`.
 
-## テンプレート
+## Templates
 
-優先順位は次である。
+Use templates in this priority order:
 
 1. `aidlc/spaces/<space>/memory/templates/intents/inception/delivery-planning/`
-2. この skill に同梱された `templates/inception/delivery-planning/`
+2. `templates/inception/delivery-planning/` bundled with this skill.
 
-分からない項目は空欄にせず、`未確認` と書く。
-実行しなかったステージに対応する項（体制など）は、存在しないファイルへのリンクを書かずに `該当なし` と書く。
+Do not leave unknown items blank. Write `未確認`.
+For items corresponding to a stage that was not executed (such as team
+structure), do not write links to nonexistent files; write `該当なし`.
 
-## 成果物
+## Artifacts
 
-作成または更新するものは次だけである。
+Create or update only the following files:
 
-- `inception/delivery-planning/bolt-plan.md`（Bolt 一覧。識別子 `B001` 以降、束ねる Unit、実行順序、Definition of Done、confidence hypothesis）
-- `inception/delivery-planning/team-allocation.md`（Bolt への担当割り当て。チームがある場合のみ）
-- `inception/delivery-planning/risk-and-sequencing-rationale.md`（順序付けの根拠とリスク）
-- `inception/delivery-planning/external-dependency-map.md`（外部依存の対応）
+- `inception/delivery-planning/bolt-plan.md` (the Bolt list: identifiers
+  from `B001` onward, bundled Units, execution order, Definition of Done,
+  and confidence hypothesis)
+- `inception/delivery-planning/team-allocation.md` (assignment of owners to
+  Bolts, only when a team exists)
+- `inception/delivery-planning/risk-and-sequencing-rationale.md` (the
+  sequencing rationale and risks)
+- `inception/delivery-planning/external-dependency-map.md` (the mapping of
+  external dependencies)
 - `inception/delivery-planning/delivery-planning-questions.md`
-- `inception/delivery-planning/memory.md`（stage 実行の学習記録）
-- `aidlc-state.md`（対象ステージの checkbox）と `audit/audit.md`（ゲートイベントの追記）
+- `inception/delivery-planning/memory.md` (the stage execution learning
+  record)
+- `aidlc-state.md` for the target stage checkbox and `audit/audit.md` for
+  gate events
 
-最初の Bolt は、アーキテクチャを貫通する最小スライス（walking skeleton）にする。
-各 Bolt には Definition of Done と、その Bolt の出荷が何を証明するか（confidence hypothesis）を付ける。
-Bolt が多い場合は `bolts/<bolt-id>-<slug>.md` へ分割してよい。
+Make the first Bolt the minimal slice that drives through the architecture
+(walking skeleton).
+Attach a Definition of Done to each Bolt, and a confidence hypothesis of
+what shipping that Bolt proves.
+When there are many Bolts, splitting into `bolts/<bolt-id>-<slug>.md` is
+allowed.
 
-## 手順
+## Procedure
 
-以下の手順は、checkbox が `[ ]` から開始する場合の流れである。
-`[?]` または `[R]` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
+The following procedure applies when starting from checkbox `[ ]`.
 
-1. `aidlc-state.md` の `units-generation` の checkbox が `[x]` であることを確認する。未完了なら停止し、`amadeus` へ戻る。
-2. `aidlc-state.md` の `delivery-planning` の checkbox を `[-]` にする。
-3. Unit の依存 DAG と要求を読み、束ね方、walking skeleton、順序の優先を人間に確認する。
-4. `bolt-plan.md` を作る。順序は依存 DAG と矛盾しないようにする。
-5. `risk-and-sequencing-rationale.md` と `external-dependency-map.md` を作る。チームがある場合は `team-allocation.md` も作る。
-6. stage の `memory.md` に、実行中の解釈、逸脱、トレードオフ、未解決の問いを記録する。
-7. `aidlc-state.md` の `delivery-planning` の checkbox を `[?]` にし、`STAGE_AWAITING_APPROVAL` イベントを `audit/audit.md` に追記して、ゲートを提示する。
-8. 承認後は `amadeus` 入口へ戻る。Inception の phase PR の案内、`PHASE_VERIFIED` イベントの記録、Phase Progress と `Lifecycle Phase` の遷移は `amadeus` 入口の責務であり、この skill では行わない。
+When resuming from `[?]` or `[R]`, follow the prerequisite resume rules and
+run only the steps needed for gate presentation or correction.
 
-## ゲート
+1. Confirm that the `units-generation` checkbox in `aidlc-state.md` is
+   `[x]`. If it is not complete, stop and return to `amadeus`.
+2. Set the `delivery-planning` checkbox in `aidlc-state.md` to `[-]`.
+3. Read the Unit dependency DAG and requirements, and confirm the bundling
+   approach, walking skeleton, and sequencing priority with the human.
+4. Create `bolt-plan.md`. Make sure the order does not contradict the
+   dependency DAG.
+5. Create `risk-and-sequencing-rationale.md` and
+   `external-dependency-map.md`. If a team exists, also create
+   `team-allocation.md`.
+6. Record interpretations, deviations, tradeoffs, and unresolved questions
+   made during execution in the stage's `memory.md`.
+7. Set the `delivery-planning` checkbox in `aidlc-state.md` to `[?]`, append
+   a `STAGE_AWAITING_APPROVAL` event to `audit/audit.md`, and present the
+   gate.
+8. After approval, return to the `amadeus` entrypoint. Guiding the Inception
+   phase PR, recording the `PHASE_VERIFIED` event, and transitioning Phase
+   Progress and `Lifecycle Phase` are the responsibility of the `amadeus`
+   entrypoint; this skill does not perform them.
 
-bolt-plan の要約と確認先パスを示し、Approve と Request Changes の 2 択で承認を求める。
-Inception ステージでは、スキップ済みステージの追加実行を第 3 の選択肢にできる。
-スキップ済みステージの追加実行が選ばれた場合は、対象ステージの checkbox を `[S]` から `[ ]` に戻し、skip 注記を `EXECUTE` に戻してから `amadeus` 入口へ戻る。入口が次の解決で対象ステージを選ぶ。
-Request Changes が 3 回続いたら Accept as-is を選択肢に加える。
-ゲートを提示したターンでは人間の回答を待つ。
+## Gate
 
-承認されたら checkbox を `[x]` にし、`GATE_APPROVED`（人間の回答をそのまま記録）と `STAGE_COMPLETED` を `audit/audit.md` に追記する。
-差し戻されたら checkbox を `[R]` にし、`GATE_REJECTED`（差し戻し理由をそのまま記録）と `STAGE_REVISING` を追記する。
-Accept as-is が選ばれた場合は、checkbox を `[x]` にし、`GATE_APPROVED`（Accept as-is である旨を含めて記録）と `STAGE_COMPLETED` を追記し、この判断を `inception/decisions.md` に記録する。
+Show a summary of the bolt plan and the paths to review, then ask for
+approval with exactly two options: Approve or Request Changes.
 
-## 禁止事項
+For Inception stages, additional execution of a skipped stage can be a
+third option. If additional execution of a skipped stage is selected,
+revert the target stage's checkbox from `[S]` to `[ ]`, revert the skip
+note to `EXECUTE`, and return to the `amadeus` entrypoint. The entrypoint
+selects the target stage on its next resolution.
 
-- Units Generation の完了前に実行しない。
-- 依存 DAG と矛盾する順序を作らない。
-- Task 分解と実装を作らない。
-- `PHASE_VERIFIED` の記録と `Lifecycle Phase` の遷移をこの skill で行わない。phase 境界処理は `amadeus` 入口の責務である。
-- 承認を待たずに `completed` を記録しない。
+If Request Changes happens three times in a row, add Accept as-is as an
+option.
 
-## 次の skill
+When presenting a gate, wait for the human response in that turn.
 
-- 続きを進める場合: `amadeus`（入口が Inception の phase 境界処理と Construction のステージを解決する）
-- 成果物の構造検証: `amadeus-validator`
+When approved, set the checkbox to `[x]`, and append `GATE_APPROVED`
+(recording the human response as-is) and `STAGE_COMPLETED` to
+`audit/audit.md`.
+
+When changes are requested, set the checkbox to `[R]`, and append
+`GATE_REJECTED` (recording the requested changes as-is) and
+`STAGE_REVISING`.
+
+If Accept as-is is selected, set the checkbox to `[x]`, append
+`GATE_APPROVED` (noting Accept as-is) and `STAGE_COMPLETED`, and record this
+decision in `inception/decisions.md`.
+
+## Prohibitions
+
+- Do not run before Units Generation is complete.
+- Do not create an order that contradicts the dependency DAG.
+- Do not create task breakdowns or implementation.
+- Do not record `PHASE_VERIFIED` or transition `Lifecycle Phase` in this
+  skill. Phase boundary processing is the responsibility of the `amadeus`
+  entrypoint.
+- Do not record `completed` without waiting for approval.
+
+## Next Skill
+
+- Continue: `amadeus`, which resolves Inception's phase boundary processing
+  and Construction's stages.
+- Validate artifact structure: `amadeus-validator`

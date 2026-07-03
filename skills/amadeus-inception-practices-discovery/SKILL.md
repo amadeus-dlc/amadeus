@@ -1,108 +1,154 @@
 ---
 name: amadeus-inception-practices-discovery
 description: >-
-  Amadeus Inception の内部 skill。Stage 2.2 Practices Discovery だけを実行する。
-  対象 Intent でチームの開発プラクティス（ブランチ戦略、テスト方針、デプロイ、品質基準）を
-  証拠付きで発見し、team-practices.md、discovered-rules.md、evidence.md を作成または更新する場面では必ず使う。
-  memory/（team.md、project.md）への昇格は人間の承認を要する。要求、設計、Unit、Bolt、実装は作らない。
+  Internal Amadeus Inception skill. Use only for Stage 2.2 Practices Discovery.
+  Use when the target Intent needs the team's development practices (branch
+  strategy, testing policy, deployment, quality standards) discovered with
+  evidence, and must create or update team-practices.md, discovered-rules.md,
+  and evidence.md. Promotion into memory/ (team.md, project.md) requires human
+  approval. Do not create requirements, design, Units, Bolts, or
+  implementation.
 ---
 
 # amadeus-inception-practices-discovery
 
-## 目的
+## Purpose
 
-Inception の Stage 2.2 Practices Discovery だけを進める。
+Advance only Inception Stage 2.2 Practices Discovery.
 
-この skill は `amadeus` 入口から呼び出される内部 skill である。
+This is an internal skill called from the `amadeus` entrypoint.
 
-チームの開発プラクティスを発見して証拠付きで記録し、人間が確認したものを Space の `memory/`（team.md、project.md）へ昇格する。
+Discover the team's development practices, record them with evidence, and
+promote the items the human confirms into the Space's `memory/` (team.md,
+project.md).
 
-## 前提
+## Prerequisites
 
-対象 record の `aidlc-state.md` で、Stage Progress の `practices-discovery` が実行対象であり、checkbox が `[ ]`、`[-]`、`[?]`、`[R]` のいずれかであることを前提にする。
+Assume the target record's `aidlc-state.md` has `practices-discovery` as an
+executable Stage Progress item, with the checkbox in one of these states:
+`[ ]`, `[-]`, `[?]`, or `[R]`.
 
-checkbox が `[?]` の場合は、成果物を作り直さず、ゲートの提示から再開する。
-checkbox が `[R]` の場合は、前回の成果物と差し戻し理由を提示してから、修正だけを行う。
-どちらの場合も、手順を最初からやり直さない。
+If the checkbox is `[?]`, resume from gate presentation without recreating the
+artifacts.
 
-Condition は「鮮度維持のため毎回再実行する」である。
-scope が実行対象にする場合、このステージを skip しない。
-既存の発見結果がある場合も再確認し、古くなった記述を更新する。
-brownfield は Reverse Engineering の成果物と repo 内の証拠から発見し、greenfield は質問で確認する。
+If the checkbox is `[R]`, present the previous artifacts and the requested
+changes, then make only the necessary corrections.
 
-少なくとも次を読む。
+In both cases, do not restart the whole procedure.
 
-- `aidlc/spaces/<space>/codekb/<repo>/`（brownfield の場合）
-- Space の `memory/team.md` と `memory/project.md`（既存 policies）
+The Condition is: re-execute every time, to keep the discovery current. When
+scope makes this stage executable, do not skip it. Even when a previous
+discovery result exists, re-check it and update stale descriptions. For
+brownfield, discover from the Reverse Engineering artifacts and evidence in
+the repo. For greenfield, confirm with questions.
+
+Read at least the following inputs:
+
+- `aidlc/spaces/<space>/codekb/<repo>/` (for brownfield)
+- The Space's `memory/team.md` and `memory/project.md` (existing policies)
 - `aidlc-state.md`
 
-## 質問
+## Questions
 
-greenfield、または証拠から判断できない論点は、次を確認する。
+For greenfield, or for points that cannot be judged from evidence, confirm the
+following:
 
-- ブランチ戦略と PR の単位はどうしているか。
-- テストの方針と品質基準は何か。
-- デプロイと CI のトリガーはどうしているか。
+- What is the branch strategy and the unit of a PR?
+- What is the testing policy and the quality standard?
+- What triggers deployment and CI?
 
-質問は `amadeus-grilling` のプロトコルに従い、一問ずつ、推奨回答を添えて提示し、回答を待つ。
-質問の量は `aidlc-state.md` の `Depth` を目安にする。
-質問を行った場合は `inception/practices-discovery/practices-discovery-questions.md` に記録する。
+Ask questions using the `amadeus-grilling` protocol, one question at a time,
+each with a recommended answer, and wait for the response. Use
+`aidlc-state.md`'s `Depth` as a guide for the amount of questions. If you ask
+questions, record them in
+`inception/practices-discovery/practices-discovery-questions.md`.
 
-## テンプレート
+## Templates
 
-優先順位は次である。
+Use templates in this priority order:
 
 1. `aidlc/spaces/<space>/memory/templates/intents/inception/practices-discovery/`
-2. この skill に同梱された `templates/inception/practices-discovery/`
+2. `templates/inception/practices-discovery/` bundled with this skill.
 
-分からない項目は空欄にせず、`未確認` と書く。
+Do not leave unknown items blank. Write `未確認`.
 
-## 成果物
+## Artifacts
 
-作成または更新するものは次だけである。
+Create or update only the following files:
 
 - `inception/practices-discovery/team-practices.md`
 - `inception/practices-discovery/discovered-rules.md`
 - `inception/practices-discovery/evidence.md`
 - `inception/practices-discovery/practices-discovery-timestamp.md`
-- `inception/practices-discovery/memory.md`（stage 実行の学習記録）
-- `aidlc-state.md`（対象ステージの checkbox）と `audit/audit.md`（ゲートイベントの追記）
-- 質問を行った場合は `inception/practices-discovery/practices-discovery-questions.md`
+- `inception/practices-discovery/memory.md` (the learning record of the stage
+  execution)
+- `aidlc-state.md` for the target stage checkbox and `audit/audit.md` for gate
+  events
+- `inception/practices-discovery/practices-discovery-questions.md`, only if
+  questions were asked
 
-## 手順
+## Procedure
 
-以下の手順は、checkbox が `[ ]` から開始する場合の流れである。
-`[?]` または `[R]` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
+The following procedure applies when starting from checkbox `[ ]`.
 
-1. `aidlc-state.md` の `practices-discovery` の checkbox を `[-]` にする。
-2. brownfield は codebase 知識と repo 内の証拠（CI 設定、既存 PR、設定ファイル）からプラクティスを抽出する。greenfield は質問で確認する。
-3. `team-practices.md`、`discovered-rules.md`、`evidence.md`、`practices-discovery-timestamp.md` を作る。
-4. stage の `memory.md` に、実行中の解釈、逸脱、トレードオフ、未解決の問いを記録する。
-5. `aidlc-state.md` の `practices-discovery` の checkbox を `[?]` にし、`STAGE_AWAITING_APPROVAL` イベントを `audit/audit.md` に追記して、ゲートを提示する。
+When resuming from `[?]` or `[R]`, follow the prerequisite resume rules and
+run only the steps needed for gate presentation or correction.
 
-`memory/team.md` と `memory/project.md` への昇格は、ゲートの承認後だけ行う（ゲートの節を参照）。
+1. Set the `practices-discovery` checkbox in `aidlc-state.md` to `[-]`.
+2. For brownfield, extract practices from codebase knowledge and evidence in
+   the repo (CI configuration, existing PRs, configuration files). For
+   greenfield, confirm with questions.
+3. Create `team-practices.md`, `discovered-rules.md`, `evidence.md`, and
+   `practices-discovery-timestamp.md`.
+4. Record the interpretations, deviations, tradeoffs, and unresolved questions
+   from the execution in the stage's `memory.md`.
+5. Set the `practices-discovery` checkbox in `aidlc-state.md` to `[?]`,
+   append the `STAGE_AWAITING_APPROVAL` event to `audit/audit.md`, and present
+   the gate.
 
-## ゲート
+Promote into `memory/team.md` and `memory/project.md` only after gate approval
+(see the Gate section).
 
-成果物の要約と確認先パスを示し、Approve と Request Changes の 2 択で承認を求める。
-Inception ステージでは、スキップ済みステージの追加実行を第 3 の選択肢にできる。
-スキップ済みステージの追加実行が選ばれた場合は、対象ステージの checkbox を `[S]` から `[ ]` に戻し、skip 注記を `EXECUTE` に戻してから `amadeus` 入口へ戻る。入口が次の解決で対象ステージを選ぶ。
-Request Changes が 3 回続いたら Accept as-is を選択肢に加える。
-ゲートを提示したターンでは人間の回答を待つ。
+## Gate
 
-承認されたら checkbox を `[x]` にし、`GATE_APPROVED`（人間の回答をそのまま記録）と `STAGE_COMPLETED` を `audit/audit.md` に追記する。
-承認の後で、確認済みプラクティスの `memory/team.md` と `memory/project.md` への昇格を提案し、人間が承認した項目だけを反映する。
-差し戻されたら checkbox を `[R]` にし、`GATE_REJECTED`（差し戻し理由をそのまま記録）と `STAGE_REVISING` を追記する。
-Accept as-is が選ばれた場合は、checkbox を `[x]` にし、`GATE_APPROVED`（Accept as-is である旨を含めて記録）と `STAGE_COMPLETED` を追記し、この判断を `inception/decisions.md` に記録する。
+Show an artifact summary and the paths to review, then ask for approval with
+exactly two options: Approve or Request Changes.
 
-## 禁止事項
+In Inception stages, additional execution of an already-skipped stage can be
+offered as a third option. When additional execution of a skipped stage is
+selected, revert the target stage's checkbox from `[S]` to `[ ]`, revert the
+skip note to `EXECUTE`, and return to the `amadeus` entrypoint. The entrypoint
+selects the target stage on its next resolution.
 
-- 人間の承認なしに `memory/team.md` と `memory/project.md` を変更しない。
-- 証拠のないプラクティスを確定として書かない。証拠がない場合は `未確認` と書く。
-- 要求、設計、Unit、Bolt、実装を作らない。
-- 承認を待たずに `completed` を記録しない。
+If Request Changes happens three times in a row, add Accept as-is as an
+option.
 
-## 次の skill
+When presenting a gate, wait for the human response in that turn.
 
-- 続きを進める場合: `amadeus`（入口が次ステージを解決する）
-- 成果物の構造検証: `amadeus-validator`
+When approved, set the checkbox to `[x]`, and append `GATE_APPROVED` (with the
+human response recorded as-is) and `STAGE_COMPLETED` to `audit/audit.md`.
+After approval, propose promoting the confirmed practices into
+`memory/team.md` and `memory/project.md`, and reflect only the items the human
+approves.
+
+When changes are requested, set the checkbox to `[R]`, and append
+`GATE_REJECTED` (with the requested changes recorded as-is) and
+`STAGE_REVISING`.
+
+If Accept as-is is selected, set the checkbox to `[x]`, append
+`GATE_APPROVED` (noting Accept as-is) and `STAGE_COMPLETED`, and record this
+decision in `inception/decisions.md`.
+
+## Prohibitions
+
+- Do not change `memory/team.md` or `memory/project.md` without human
+  approval.
+- Do not write an unevidenced practice as confirmed. If there is no evidence,
+  write `未確認`.
+- Do not create requirements, design, Units, Bolts, or implementation.
+- Do not record `completed` without waiting for approval.
+
+## Next Skill
+
+- Continue: `amadeus`, which resolves the next stage.
+- Validate artifact structure: `amadeus-validator`.

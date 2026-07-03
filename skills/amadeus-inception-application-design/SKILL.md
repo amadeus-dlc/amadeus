@@ -1,113 +1,162 @@
 ---
 name: amadeus-inception-application-design
 description: >-
-  Amadeus Inception の内部 skill。Stage 2.6 Application Design だけを実行する。
-  新しいコンポーネントやサービス、またはサービス層の設計が必要な Intent で、
-  components.md、component-methods.md、services.md、component-dependency.md、decisions.md を
-  作成または補修する場面では必ず使う。既存コンポーネントの修正だけの場合は実行しない。
-  Unit、Bolt、実装は作らない。
+  Internal Amadeus Inception skill. Use only for Stage 2.6 Application Design.
+  Use when an Intent needs design for new components or services, or for the
+  service layer, and must create or repair components.md,
+  component-methods.md, services.md, component-dependency.md, and
+  decisions.md. Do not run for a change that only modifies existing
+  components. Do not create Units, Bolts, or implementation.
 ---
 
 # amadeus-inception-application-design
 
-## 目的
+## Purpose
 
-Inception の Stage 2.6 Application Design だけを進める。
+Advance only Inception Stage 2.6 Application Design.
 
-この skill は `amadeus` 入口から呼び出される内部 skill である。
+This is an internal skill called from the `amadeus` entrypoint.
 
-要求とストーリーから、コンポーネント、メソッド境界、サービス、依存関係を設計する。
-この設計は Units Generation の Unit 境界の材料になる。
+Design components, method boundaries, services, and dependencies from the
+requirements and stories. This design becomes an input to Units Generation's
+Unit boundaries.
 
-## 前提
+## Prerequisites
 
-対象 record の `aidlc-state.md` で、Stage Progress の `application-design` が実行対象であり、checkbox が `[ ]`、`[-]`、`[?]`、`[R]` のいずれかであることを前提にする。
+Assume the target record's `aidlc-state.md` has `application-design` as an
+executable Stage Progress item, with the checkbox in one of these states:
+`[ ]`, `[-]`, `[?]`, or `[R]`.
 
-checkbox が `[?]` の場合は、成果物を作り直さず、ゲートの提示から再開する。
-checkbox が `[R]` の場合は、前回の成果物と差し戻し理由を提示してから、修正だけを行う。
-どちらの場合も、手順を最初からやり直さない。
+If the checkbox is `[?]`, resume from gate presentation without recreating the
+artifacts.
 
-Condition は「新しいコンポーネントやサービスが必要な場合、またはサービス層の設計が必要な場合」である。
-既存コンポーネントの修正だけの場合は、成果物を作らず checkbox を `[S]` にして注記に skip 理由を書き、`STAGE_SKIPPED` イベントを `audit/audit.md` に追記して `amadeus` へ戻る。
+If the checkbox is `[R]`, present the previous artifacts and the requested
+changes, then make only the necessary corrections.
 
-少なくとも次を読む。
+In both cases, do not restart the whole procedure.
+
+The Condition is: a new component or service is needed, or the service layer
+needs design.
+
+For a change that only modifies existing components, create no artifacts. Set
+the checkbox to `[S]`, write the skip reason in the note, append a
+`STAGE_SKIPPED` event to `audit/audit.md`, and return to `amadeus`.
+
+Read at least the following inputs:
 
 - `inception/requirements-analysis/requirements.md`
-- `inception/user-stories/stories.md`（実行した場合）
-- `aidlc/spaces/<space>/codekb/<repo>/architecture.md` と `component-inventory.md`（brownfield の場合）
-- `inception/practices-discovery/team-practices.md`（実行した場合）
-- `aidlc/spaces/<space>/knowledge/domain-map.md` と Event Storming の成果物（存在する場合。境界の判断材料にする）
+- `inception/user-stories/stories.md`, if executed
+- `aidlc/spaces/<space>/codekb/<repo>/architecture.md` and
+  `component-inventory.md`, for brownfield
+- `inception/practices-discovery/team-practices.md`, if executed
+- `aidlc/spaces/<space>/knowledge/domain-map.md` and Event Storming artifacts,
+  if they exist. Use them as decision inputs for boundaries.
 - `aidlc-state.md`
 
-## 質問
+## Questions
 
-次の論点を確認する。
+Confirm the following points:
 
-- 新しいコンポーネントの責務境界はどこか。
-- 既存アーキテクチャとの整合で譲れない点は何か。
-- サービスの分割単位はどうするか。
+- Where are the new component's responsibility boundaries?
+- What must not be compromised for consistency with the existing
+  architecture?
+- How should services be divided?
 
-質問は `amadeus-grilling` のプロトコルに従い、一問ずつ、推奨回答を添えて提示し、回答を待つ。
-質問の量は `aidlc-state.md` の `Depth` を目安にする。
-質問を行った場合は `inception/application-design/application-design-questions.md` に記録する。
-設計の確定判断は `inception/grillings.md` と `inception/grillings/Gxxx-<topic>.md` にも記録する。
+Follow the `amadeus-grilling` protocol: present questions one at a time with a
+recommended answer, and wait for the response. Use `aidlc-state.md`'s `Depth`
+as a guide for how many questions to ask. If you ask questions, record them in
+`inception/application-design/application-design-questions.md`. Record design
+decisions in `inception/grillings.md` and
+`inception/grillings/Gxxx-<topic>.md` as well.
 
-## テンプレート
+## Templates
 
-優先順位は次である。
+Use templates in this priority order:
 
 1. `aidlc/spaces/<space>/memory/templates/intents/inception/application-design/`
-2. この skill に同梱された `templates/inception/application-design/`
+2. `templates/inception/application-design/` bundled with this skill.
 
-分からない項目は空欄にせず、`未確認` と書く。
+Do not leave unknown items blank. Write `未確認`.
 
-## 成果物
+## Artifacts
 
-作成または更新するものは次だけである。
+Create or update only the following files:
 
-- `inception/application-design/components.md`（コンポーネント一覧と責務）
-- `inception/application-design/component-methods.md`（メソッド境界）
-- `inception/application-design/services.md`（サービス設計）
-- `inception/application-design/component-dependency.md`（依存関係）
-- `inception/application-design/decisions.md`（このステージの設計判断）
-- `inception/application-design/memory.md`（stage 実行の学習記録）
-- `aidlc-state.md`（対象ステージの checkbox）と `audit/audit.md`（ゲートイベントの追記）
-- 質問を行った場合は `inception/application-design/application-design-questions.md`
+- `inception/application-design/components.md` (component list and
+  responsibilities)
+- `inception/application-design/component-methods.md` (method boundaries)
+- `inception/application-design/services.md` (service design)
+- `inception/application-design/component-dependency.md` (dependencies)
+- `inception/application-design/decisions.md` (this stage's design decisions)
+- `inception/application-design/memory.md` (stage execution learning record)
+- `aidlc-state.md` (the target stage checkbox) and `audit/audit.md` (gate
+  event entries)
+- `inception/application-design/application-design-questions.md`, only if
+  questions were asked
 
-`inception/application-design/decisions.md` はこのステージの設計判断を扱い、phase の `inception/decisions.md` とは分ける。
+`inception/application-design/decisions.md` handles this stage's design
+decisions, separate from the phase's `inception/decisions.md`.
 
-## 手順
+## Procedure
 
-以下の手順は、checkbox が `[ ]` から開始する場合の流れである。
-`[?]` または `[R]` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
+The following procedure applies when starting from checkbox `[ ]`.
 
-1. checkbox が `[ ]` の場合だけ Condition を判定する。偽なら checkbox を `[S]` にして注記に skip 理由を書き、`audit/audit.md` に `STAGE_SKIPPED` を追記して終了する。`[-]`、`[?]`、`[R]` からの再開では再判定しない。
-2. `aidlc-state.md` の `application-design` の checkbox を `[-]` にする。
-3. 要求、ストーリー、既存アーキテクチャ、ドメインの判断材料を読み、不足論点を質問で確認する。
-4. 5 つの成果物を作る。各コンポーネントは対応する要求の識別子を参照する。
-5. stage の `memory.md` に、実行中の解釈、逸脱、トレードオフ、未解決の問いを記録する。
-6. `aidlc-state.md` の `application-design` の checkbox を `[?]` にし、`STAGE_AWAITING_APPROVAL` イベントを `audit/audit.md` に追記して、ゲートを提示する。
+When resuming from `[?]` or `[R]`, follow the prerequisite resume rules and run
+only the steps needed for gate presentation or correction.
 
-## ゲート
+1. Only when the checkbox is `[ ]`, evaluate the Condition. If it is false, set
+   the checkbox to `[S]`, write the skip reason in the note, append
+   `STAGE_SKIPPED` to `audit/audit.md`, and stop. Do not reevaluate when
+   resuming from `[-]`, `[?]`, or `[R]`.
+2. Set the `application-design` checkbox in `aidlc-state.md` to `[-]`.
+3. Read the requirements, stories, existing architecture, and domain decision
+   inputs, and confirm missing points with questions.
+4. Create the five artifacts. Each component must reference the identifier of
+   its corresponding requirement.
+5. Record the interpretations, deviations, tradeoffs, and unresolved questions
+   from this run in the stage's `memory.md`.
+6. Set the `application-design` checkbox in `aidlc-state.md` to `[?]`, append
+   the `STAGE_AWAITING_APPROVAL` event to `audit/audit.md`, and present the
+   gate.
 
-成果物の要約と確認先パスを示し、Approve と Request Changes の 2 択で承認を求める。
-Inception ステージでは、スキップ済みステージの追加実行を第 3 の選択肢にできる。
-スキップ済みステージの追加実行が選ばれた場合は、対象ステージの checkbox を `[S]` から `[ ]` に戻し、skip 注記を `EXECUTE` に戻してから `amadeus` 入口へ戻る。入口が次の解決で対象ステージを選ぶ。
-Request Changes が 3 回続いたら Accept as-is を選択肢に加える。
-ゲートを提示したターンでは人間の回答を待つ。
+## Gate
 
-承認されたら checkbox を `[x]` にし、`GATE_APPROVED`（人間の回答をそのまま記録）と `STAGE_COMPLETED` を `audit/audit.md` に追記する。
-差し戻されたら checkbox を `[R]` にし、`GATE_REJECTED`（差し戻し理由をそのまま記録）と `STAGE_REVISING` を追記する。
-Accept as-is が選ばれた場合は、checkbox を `[x]` にし、`GATE_APPROVED`（Accept as-is である旨を含めて記録）と `STAGE_COMPLETED` を追記し、この判断を `inception/decisions.md` に記録する。
+Show an artifact summary and the paths to review, then ask for approval with
+exactly two options: Approve or Request Changes.
 
-## 禁止事項
+For Inception stages, executing an additional skipped stage can be offered as
+a third option.
 
-- 既存コンポーネントの修正だけの Intent に対して実行しない。
-- Unit と Bolt を作らない。Unit 境界の確定は Units Generation の責務である。
-- 実装とテストコードを作らない。
-- 承認を待たずに `completed` を記録しない。
+If executing an additional skipped stage is selected, set the target stage's
+checkbox in `aidlc-state.md` from `[S]` back to `[ ]`, revert the skip note to
+`EXECUTE`, and return to the `amadeus` entrypoint. The entrypoint selects the
+target stage on its next resolution.
 
-## 次の skill
+If Request Changes happens three times in a row, add Accept as-is as an
+option.
 
-- 続きを進める場合: `amadeus`（入口が次ステージを解決する）
-- 成果物の構造検証: `amadeus-validator`
+When presenting a gate, wait for the human response in that turn.
+
+When approved, set the checkbox to `[x]`, and append `GATE_APPROVED`
+(recording the human response as-is) and `STAGE_COMPLETED` to
+`audit/audit.md`.
+
+When changes are requested, set the checkbox to `[R]`, and append
+`GATE_REJECTED` (recording the rejection reason as-is) and `STAGE_REVISING`.
+
+If Accept as-is is selected, set the checkbox to `[x]`, append `GATE_APPROVED`
+(recording that it is Accept as-is) and `STAGE_COMPLETED`, and record this
+decision in `inception/decisions.md`.
+
+## Prohibitions
+
+- Do not run for an Intent that only modifies existing components.
+- Do not create Units or Bolts. Finalizing Unit boundaries is Units
+  Generation's responsibility.
+- Do not create implementation or test code.
+- Do not record `completed` before approval.
+
+## Next Skill
+
+- To continue: `amadeus` (the entrypoint resolves the next stage).
+- Validate artifact structure: `amadeus-validator`.
