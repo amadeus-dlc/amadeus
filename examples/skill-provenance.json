@@ -18,11 +18,13 @@
         },
         {
           "path": "skills/amadeus-ideation-market-research/SKILL.md",
-          "md5": "afae1294b4b7728092160adea191e8d9"
+          "md5": "afae1294b4b7728092160adea191e8d9",
+          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記しただけの手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
         },
         {
           "path": "skills/amadeus-ideation-feasibility/SKILL.md",
-          "md5": "5ae719caea22532742299edb22daf4fe"
+          "md5": "5ae719caea22532742299edb22daf4fe",
+          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記しただけの手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
         },
         {
           "path": "skills/amadeus-ideation-scope-definition/SKILL.md",
@@ -59,11 +61,13 @@
         },
         {
           "path": "skills/amadeus-ideation-market-research/SKILL.md",
-          "md5": "afae1294b4b7728092160adea191e8d9"
+          "md5": "afae1294b4b7728092160adea191e8d9",
+          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記しただけの手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
         },
         {
           "path": "skills/amadeus-ideation-feasibility/SKILL.md",
-          "md5": "5ae719caea22532742299edb22daf4fe"
+          "md5": "5ae719caea22532742299edb22daf4fe",
+          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記しただけの手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
         },
         {
           "path": "skills/amadeus-ideation-scope-definition/SKILL.md",
@@ -83,7 +87,8 @@
         },
         {
           "path": "skills/amadeus-inception-reverse-engineering/SKILL.md",
-          "md5": "5fe534673bfd1bcd37d3022f47a3584a"
+          "md5": "5fe534673bfd1bcd37d3022f47a3584a",
+          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記しただけの手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
         },
         {
           "path": "skills/amadeus-inception-practices-discovery/SKILL.md",
@@ -132,11 +137,13 @@
         },
         {
           "path": "skills/amadeus-ideation-market-research/SKILL.md",
-          "md5": "afae1294b4b7728092160adea191e8d9"
+          "md5": "afae1294b4b7728092160adea191e8d9",
+          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記しただけの手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
         },
         {
           "path": "skills/amadeus-ideation-feasibility/SKILL.md",
-          "md5": "5ae719caea22532742299edb22daf4fe"
+          "md5": "5ae719caea22532742299edb22daf4fe",
+          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記しただけの手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
         },
         {
           "path": "skills/amadeus-ideation-scope-definition/SKILL.md",
@@ -156,7 +163,8 @@
         },
         {
           "path": "skills/amadeus-inception-reverse-engineering/SKILL.md",
-          "md5": "5fe534673bfd1bcd37d3022f47a3584a"
+          "md5": "5fe534673bfd1bcd37d3022f47a3584a",
+          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記しただけの手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
         },
         {
           "path": "skills/amadeus-inception-practices-discovery/SKILL.md",
@@ -209,11 +217,13 @@
         },
         {
           "path": "skills/amadeus-ideation-market-research/SKILL.md",
-          "md5": "afae1294b4b7728092160adea191e8d9"
+          "md5": "afae1294b4b7728092160adea191e8d9",
+          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記しただけの手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
         },
         {
           "path": "skills/amadeus-ideation-feasibility/SKILL.md",
-          "md5": "5ae719caea22532742299edb22daf4fe"
+          "md5": "5ae719caea22532742299edb22daf4fe",
+          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記しただけの手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
         },
         {
           "path": "skills/amadeus-ideation-scope-definition/SKILL.md",
@@ -233,7 +243,8 @@
         },
         {
           "path": "skills/amadeus-inception-reverse-engineering/SKILL.md",
-          "md5": "5fe534673bfd1bcd37d3022f47a3584a"
+          "md5": "5fe534673bfd1bcd37d3022f47a3584a",
+          "staleReason": "PR #403 で skip 時の audit/audit.md 追記先を明記しただけの手修正。snapshot 内容は別途手で整合済みで、real provider 再生成は省略した。"
         },
         {
           "path": "skills/amadeus-inception-practices-discovery/SKILL.md",

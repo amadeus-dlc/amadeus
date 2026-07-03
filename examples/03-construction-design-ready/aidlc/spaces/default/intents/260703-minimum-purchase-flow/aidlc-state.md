@@ -85,6 +85,15 @@ Per unit: U002-order-creation
 - [ ] build-and-test — EXECUTE
 - [ ] ci-pipeline — EXECUTE
 
+Per unit: U003-inventory-reference
+- [x] functional-design — EXECUTE
+- [S] nfr-requirements — SKIP: 性能、セキュリティ、スケーラビリティの特別な要求はなく、技術スタックは確定済みである。
+- [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+- [S] infrastructure-design — SKIP: インフラ変更はなく、デプロイ構成は定義済みである。
+- [ ] code-generation — EXECUTE
+- [ ] build-and-test — EXECUTE
+- [ ] ci-pipeline — EXECUTE
+
 ### OPERATION PHASE
 - [S] deployment-pipeline — SKIP: out of Amadeus scope
 - [S] environment-provisioning — SKIP: out of Amadeus scope

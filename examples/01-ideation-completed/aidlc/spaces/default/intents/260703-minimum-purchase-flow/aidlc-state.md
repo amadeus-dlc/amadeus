@@ -67,7 +67,7 @@
 - [ ] delivery-planning — EXECUTE
 
 ### CONSTRUCTION PHASE
-Per unit: implicit
+Per unit: [unit-name]
 - [ ] functional-design — EXECUTE
 - [ ] nfr-requirements — EXECUTE
 - [ ] nfr-design — EXECUTE
