@@ -18,6 +18,7 @@ const snapshots = [
   "examples/01-ideation-completed",
   "examples/02-inception-completed",
   "examples/03-construction-design-ready",
+  "examples/04-construction-implementation-planned",
 ];
 const provenanceManifestPath = join(root, "examples/skill-provenance.json");
 
@@ -155,13 +156,18 @@ function validateGenerationPlan(): void {
   // --from 途中 step は直前 snapshot を入力にし、前段 step を対象にしない。
   assertPlan(
     run(["bun", "run", generator, "--dry-run", "--from", "02-inception-completed"]),
-    ["input snapshot: examples/01-ideation-completed", stepLines[1], stepLines[2]],
+    ["input snapshot: examples/01-ideation-completed", stepLines[1], stepLines[2], stepLines[3]],
     ["step: 01-ideation-completed"],
   );
   assertPlan(
     run(["bun", "run", generator, "--dry-run", "--from", "03-construction-design-ready"]),
-    ["input snapshot: examples/02-inception-completed", stepLines[2]],
+    ["input snapshot: examples/02-inception-completed", stepLines[2], stepLines[3]],
     ["step: 01-ideation-completed", "step: 02-inception-completed"],
+  );
+  assertPlan(
+    run(["bun", "run", generator, "--dry-run", "--from", "04-construction-implementation-planned"]),
+    ["input snapshot: examples/03-construction-design-ready", stepLines[3]],
+    ["step: 01-ideation-completed", "step: 02-inception-completed", "step: 03-construction-design-ready"],
   );
 
   // 存在しない step id は、利用可能な step id を示して失敗する。

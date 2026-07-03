@@ -27,6 +27,8 @@ type GenerationStep = {
   prompt: string;
   expectedState: Record<string, string>;
   expectedFiles: string[];
+  absentFiles?: string[];
+  expectedUnitStates?: Array<{ stage: string; state: string }>;
   provenanceSkillFiles: string[];
 };
 
@@ -112,6 +114,11 @@ const inceptionSkillFiles = [
 const constructionSkillFiles = [
   ...inceptionSkillFiles,
   "skills/amadeus-construction-functional-design/SKILL.md",
+];
+
+const implementationPlanSkillFiles = [
+  ...constructionSkillFiles,
+  "skills/amadeus-construction-code-generation/SKILL.md",
 ];
 
 function sharedPromptRules(): string[] {
@@ -222,6 +229,30 @@ function constructionPrompt(): string {
   ].join("\n");
 }
 
+function implementationPlanPrompt(): string {
+  return [
+    `既存の Amadeus workspace で、Intent \`${intentId}\` を実装の直前（実装計画の確定）まで進めます。`,
+    "",
+    "手順 1: `amadeus` skill を使い、対象 Intent の続きから再開してください。",
+    "",
+    "手順 2: walking skeleton の Bolt `B001` に束ねた各 Unit について、Stage 3.5 Code Generation を開始してください。",
+    "`stages[\"code-generation\"].units[\"<unit-id>\"].state` を `active` にし、対象 Unit の設計成果物と要求を入力に、",
+    "`construction/<unit-id>-<slug>/code-generation/plan.md`（実装計画。変更対象、変更順序、検証方法）を作成してください。",
+    "",
+    "手順 3: `plan.md` の作成までで停止してください。",
+    "この workspace は example であり、実装対象のリポジトリを持たないため、次は行わないでください。",
+    "",
+    "- アプリケーションコードとテストコードの生成",
+    "- `code-generation/summary.md` の作成",
+    "- 完了承認のゲート提示と `completed` の記録",
+    "",
+    "各 Unit の状態は `active` のままにし、Bolt `B001` も `active` のまま残してください。",
+    "",
+    ...sharedPromptRules(),
+    `- 作業後に \`bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . ${intentId}\` を実行し、fail があれば修正してから結果を要約してください。`,
+  ].join("\n");
+}
+
 const steps: GenerationStep[] = [
   {
     id: "01-ideation-completed",
@@ -291,6 +322,27 @@ const steps: GenerationStep[] = [
       `.amadeus/intents/${intentId}/construction/*/functional-design/domain-entities.md`,
     ],
     provenanceSkillFiles: constructionSkillFiles,
+  },
+  {
+    id: "04-construction-implementation-planned",
+    snapshot: "examples/04-construction-implementation-planned",
+    prompt: implementationPlanPrompt(),
+    expectedState: {
+      schemaVersion: "2",
+      intentId,
+      scope: "feature",
+      status: "in_progress",
+      phase: "construction",
+      "phaseGates.inception.via": "pr",
+    },
+    expectedFiles: [
+      `.amadeus/intents/${intentId}/construction/*/code-generation/plan.md`,
+    ],
+    absentFiles: [
+      `.amadeus/intents/${intentId}/construction/*/code-generation/summary.md`,
+    ],
+    expectedUnitStates: [{ stage: "code-generation", state: "active" }],
+    provenanceSkillFiles: implementationPlanSkillFiles,
   },
 ];
 
@@ -456,6 +508,30 @@ function matchExists(base: string, pattern: string): boolean {
   return candidates.length > 0;
 }
 
+function assertAbsentFiles(step: GenerationStep): void {
+  for (const pattern of step.absentFiles ?? []) {
+    if (matchExists(workspace, pattern)) {
+      fail(`${step.id}: 存在してはならない成果物が見つかりました: ${pattern}`);
+    }
+  }
+}
+
+function assertExpectedUnitStates(step: GenerationStep): void {
+  if (!step.expectedUnitStates) return;
+  const state = readState(workspace);
+  for (const expected of step.expectedUnitStates) {
+    const units = stateValue(state, `stages.${expected.stage}.units`);
+    if (typeof units !== "object" || units === null || Object.keys(units).length === 0) {
+      fail(`${step.id}: stages.${expected.stage}.units に Unit がありません`);
+    }
+    for (const [unitId, entry] of Object.entries(units as Record<string, { state?: string }>)) {
+      if (String(entry?.state ?? "") !== expected.state) {
+        fail(`${step.id}: stages.${expected.stage}.units.${unitId}.state が期待値と一致しません（期待: ${expected.state}、実際: ${String(entry?.state ?? "未設定")}）`);
+      }
+    }
+  }
+}
+
 function assertValidatorPass(step: GenerationStep): void {
   run(["bun", "run", ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts", ".", intentId], workspace);
   console.log(`${step.id}: validator pass`);
@@ -599,6 +675,8 @@ if (!options.dryRun) {
     console.log(`last message: ${result.outputPath}`);
     assertExpectedState(step);
     assertExpectedFiles(step);
+    assertAbsentFiles(step);
+    assertExpectedUnitStates(step);
     assertValidatorPass(step);
     stageSnapshot(step);
     console.log(`snapshot staged: ${step.snapshot}`);

@@ -11,6 +11,7 @@
 | [01-ideation-completed](01-ideation-completed/) | Ideation の実行対象ステージが完了し、`phaseGates.ideation` を記録して `phase` が `inception` へ進んだ状態。 |
 | [02-inception-completed](02-inception-completed/) | Inception の実行対象ステージ（要求、ストーリー、設計、Unit、Bolt 計画）が完了し、`phaseGates.inception` を記録して `phase` が `construction` へ進んだ状態。 |
 | [03-construction-design-ready](03-construction-design-ready/) | walking skeleton の Bolt `B001` が active になり、対象 Unit の Functional Design が完了して Code Generation 前で止まっている状態。 |
+| [04-construction-implementation-planned](04-construction-implementation-planned/) | 実装の直前。`B001` の各 Unit で Stage 3.5 が `active` になり、実装計画（`code-generation/plan.md`）まで確定して、コード生成前で止まっている状態。 |
 
 各 snapshot は前の snapshot を入力に生成した累積の workspace である。
 
