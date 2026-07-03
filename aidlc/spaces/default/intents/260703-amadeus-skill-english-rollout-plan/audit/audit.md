@@ -797,3 +797,108 @@
 **Details**: B001 #395 方針確定の Stage 3.6 を開始した。
 
 ---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T12:46:07Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Bolt**: B001
+**Details**: B001 #395 方針確定。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/409。Merge commit: f519abea0ae677bdab7876868765ec020abf802e。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T12:46:07Z
+**Event**: BOLT_COMPLETED
+**Bolt**: B001
+**Details**: walking skeleton の Bolt PR が人間の merge で承認された。PR: https://github.com/amadeus-dlc/amadeus/pull/409。Merge commit: f519abea0ae677bdab7876868765ec020abf802e。
+
+---
+
+## AUTONOMY_MODE_SET
+**Timestamp**: 2026-07-03T12:51:25Z
+**Event**: AUTONOMY_MODE_SET
+**Mode**: autonomous
+**Details**: User Input: 2。B001 完了後の Construction Autonomy Mode として autonomous を選択した。B002 以降の非 walking skeleton Bolt は会話内ゲートを提示せずに進め、approval evidence は Bolt PR の merge 後に記録する。
+
+---
+
+## BOLT_STARTED
+**Timestamp**: 2026-07-03T12:51:25Z
+**Event**: BOLT_STARTED
+**Bolt**: B002
+**Details**: #400 小さい土台 PR Bolt を開始した。対象 Unit は U002-issue-400-small-foundation-pr。代表 skill は `amadeus-construction-functional-design` とし、意味変更を伴わない英語化、昇格フロー、検証結果を追跡する。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T12:51:25Z
+**Event**: STAGE_SKIPPED
+**Stage**: functional-design
+**Unit**: U002-issue-400-small-foundation-pr
+**Details**: #400 小さい土台 PR は代表 SKILL.md の英語化と昇格フロー確認であり、新しいデータモデル、複雑な業務ロジック、業務ルール設計を追加しないため skip した。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T12:51:25Z
+**Event**: STAGE_SKIPPED
+**Stage**: nfr-requirements
+**Unit**: U002-issue-400-small-foundation-pr
+**Details**: #400 小さい土台 PR は非機能要求の追加、変更、評価を伴わないため skip した。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T12:51:25Z
+**Event**: STAGE_SKIPPED
+**Stage**: nfr-design
+**Unit**: U002-issue-400-small-foundation-pr
+**Details**: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T12:51:25Z
+**Event**: STAGE_SKIPPED
+**Stage**: infrastructure-design
+**Unit**: U002-issue-400-small-foundation-pr
+**Details**: #400 小さい土台 PR はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わないため skip した。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T12:51:25Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Unit**: U002-issue-400-small-foundation-pr
+**Details**: U002 #400 小さい土台 PR の Stage 3.5 を開始した。Construction Autonomy Mode が autonomous のため、会話内ゲートは提示しない。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T12:54:23Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Unit**: U002-issue-400-small-foundation-pr
+**Details**: autonomous 実行のため会話内 gate は提示しない。`skills/amadeus-construction-functional-design/SKILL.md`、`.agents/skills/amadeus-construction-functional-design/SKILL.md`、code-generation-plan.md、code-summary.md、memory.md を確認対象とし、approval evidence は B002 PR merge 後に記録する。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T12:54:23Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Bolt**: B002
+**Details**: B002 #400 小さい土台 PR の Stage 3.6 を開始した。promotion flow、全体テスト、Amadeus Validator の結果を記録する。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T12:56:50Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+**Bolt**: B002
+**Details**: `npm run test:it:promote-skill`、`npm run test:all`、Amadeus Validator が pass した。autonomous 実行のため会話内 gate は提示せず、approval evidence は B002 PR merge 後に記録する。
+
+---
