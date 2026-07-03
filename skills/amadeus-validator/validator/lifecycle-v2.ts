@@ -18,6 +18,8 @@ type LifecycleV2Context = {
   pass: (target: string, condition: string, evidence: string) => void;
   failRow: (target: string, condition: string, evidence: string) => void;
   checkFile: (path: string, condition: string) => void;
+  // v2 契約検査（stage 定義ファイルの frontmatter 参照）専用。存在しなければ undefined を返す。
+  readOptional: (path: string) => string | undefined;
 };
 
 type LifecycleV2Input = {
@@ -25,6 +27,11 @@ type LifecycleV2Input = {
   dirName: string;
   stateText: string;
   auditText?: string;
+  // true: docs/backward-compatibility.md に記載された record。現行（v2 事前適応）の旧形式検査を維持する。
+  // false: 記載のない record。.agents/aidlc/aidlc-common/stages/ の frontmatter から導出した v2 契約検査を適用する。
+  legacy: boolean;
+  // legacy が false のとき、audit/ 配下に .md shard が1件以上あるかどうか。
+  auditShardExists: boolean;
 };
 
 type StageDef = {
@@ -110,7 +117,12 @@ export function checkAidlcIntentRecord(ctx: LifecycleV2Context, input: Lifecycle
   checkPhaseProgress(ctx, statePath, doc);
   checkCurrentStatus(ctx, statePath, doc, scope);
   checkAuditEvidence(ctx, input, doc, events);
-  checkCompletedArtifacts(ctx, input, doc, scope);
+  if (input.legacy) {
+    checkCompletedArtifacts(ctx, input, doc, scope);
+  } else {
+    checkCompletedArtifactsV2(ctx, input, doc, scope);
+    checkPhaseCheckArtifactsV2(ctx, input, doc);
+  }
 }
 
 function parseAuditEvents(auditText: string): AuditEvent[] {
@@ -245,8 +257,15 @@ function checkCurrentStatus(ctx: LifecycleV2Context, statePath: string, doc: Aid
 }
 
 function checkAuditEvidence(ctx: LifecycleV2Context, input: LifecycleV2Input, doc: AidlcStateDocument, events: AuditEvent[]): void {
-  const auditPath = `${input.base}/audit/audit.md`;
-  ctx.checkFile(auditPath, "audit の主 shard が存在する");
+  const auditPath = input.legacy ? `${input.base}/audit/audit.md` : `${input.base}/audit`;
+  if (input.legacy) {
+    ctx.checkFile(auditPath, "audit の主 shard が存在する");
+  } else if (input.auditShardExists) {
+    ctx.pass(auditPath, "v2 契約: audit shard が1件以上存在する", "shard を確認");
+  } else {
+    ctx.failRow(auditPath, "v2 契約: audit shard が1件以上存在する", "shard なし");
+    return;
+  }
   if (input.auditText === undefined) return;
 
   checkEventPresence(ctx, auditPath, events, "WORKFLOW_STARTED", "WORKFLOW_STARTED が記録されている");
@@ -340,4 +359,88 @@ function checkCompletedBoltArtifacts(ctx: LifecycleV2Context, input: LifecycleV2
       ctx.checkFile(`${input.base}/construction/bolts/${ref}/${artifact}`, "completed のステージは必須成果物を持つ");
     }
   }
+}
+
+// v2 契約検査（backward-compatibility.md に記載のない record 向け）。
+// 必須成果物は stageCatalog のハードコードではなく、.agents/aidlc/aidlc-common/stages/<phase>/<stage>.md の
+// frontmatter `produces:` から導出する。stage の phase/perUnit は既存 stageCatalog の分類をそのまま使う
+// （scope 対応表は stage-catalog.md と一致させており、frontmatter 由来にする対象は produces のみ）。
+function checkCompletedArtifactsV2(ctx: LifecycleV2Context, input: LifecycleV2Input, doc: AidlcStateDocument, scope: string): void {
+  for (const stage of doc.stages) {
+    if (checkboxStateName(stage.mark) !== "Completed") continue;
+    const def = stageBySlug.get(stage.slug);
+    if (!def || !def.scopes.includes(scope)) continue;
+
+    const stageFilePath = `.agents/aidlc/aidlc-common/stages/${def.phase}/${stage.slug}.md`;
+    const stageFileText = ctx.readOptional(stageFilePath);
+    if (stageFileText === undefined) {
+      ctx.failRow(stageFilePath, "v2 契約: stage 定義ファイルが存在する", "存在しない");
+      continue;
+    }
+    const produces = extractFrontmatterStringList(stageFileText, "produces");
+    if (produces === undefined) {
+      ctx.failRow(stageFilePath, "v2 契約: stage 定義の produces を解析できる", "produces が欠落しているか解析できない");
+      continue;
+    }
+
+    if (def.perUnit) {
+      if (stage.unit === undefined) {
+        ctx.failRow(
+          `${input.base}/aidlc-state.md`,
+          "v2 契約: per-unit ステージの completed 判定に Per unit 文脈がある",
+          `stage ${stage.slug} が completed だが Per unit ブロックの文脈がない`,
+        );
+        continue;
+      }
+      for (const artifact of produces) {
+        ctx.checkFile(
+          `${input.base}/construction/${stage.unit}/${stage.slug}/${artifact}.md`,
+          "v2 契約: completed のステージは produces 成果物を持つ",
+        );
+      }
+      continue;
+    }
+    for (const artifact of produces) {
+      ctx.checkFile(`${input.base}/${def.phase}/${stage.slug}/${artifact}.md`, "v2 契約: completed のステージは produces 成果物を持つ");
+    }
+  }
+}
+
+// verification/phase-check-<phase>.md（フェーズ境界検証）は、Phase Progress が Verified の phase について確認する。
+// 上流の stage 定義が phase-check の作成を指示するのは ideation（approval-handoff）、
+// inception（delivery-planning）、construction（ci-pipeline）の 3 phase だけである。
+// Initialization と Operation には phase-check を書く stage が存在しないため検査しない。
+const PHASE_CHECK_PHASES = new Set(["Ideation", "Inception", "Construction"]);
+
+function checkPhaseCheckArtifactsV2(ctx: LifecycleV2Context, input: LifecycleV2Input, doc: AidlcStateDocument): void {
+  for (const phase of AIDLC_PHASES) {
+    if (!PHASE_CHECK_PHASES.has(String(phase))) continue;
+    if (String(doc.phaseProgress[phase] ?? "") !== "Verified") continue;
+    const slug = phase.toLowerCase();
+    ctx.checkFile(`${input.base}/verification/phase-check-${slug}.md`, "v2 契約: Verified の phase は phase-check 成果物を持つ");
+  }
+}
+
+// stage 定義ファイルの frontmatter から、`key:` の YAML 文字列配列を取り出す最小限のパーサ。
+// `key: []`（空）と `key:\n  - item`（複数行リスト）の2形式だけを扱う
+// （.agents/aidlc/aidlc-common/stages/**/*.md の `produces:` はこの2形式に限られる）。
+// key が frontmatter に存在しない場合は undefined を返す（空リストと区別し、呼び出し側で契約異常として扱う）。
+function extractFrontmatterStringList(text: string, key: string): string[] | undefined {
+  const frontmatterMatch = text.match(/^---\n([\s\S]*?)\n---/);
+  const frontmatter = frontmatterMatch?.[1] ?? "";
+  const lines = frontmatter.split("\n");
+  const startIndex = lines.findIndex((line) => line.startsWith(`${key}:`));
+  if (startIndex < 0) return undefined;
+
+  const inline = lines[startIndex].slice(key.length + 1).trim();
+  if (inline === "[]") return [];
+  if (inline.length > 0) return undefined;
+
+  const items: string[] = [];
+  for (let index = startIndex + 1; index < lines.length; index += 1) {
+    const match = lines[index].match(/^\s*-\s+(.+?)\s*$/);
+    if (!match || match[1].includes(":")) break;
+    items.push(match[1].trim());
+  }
+  return items;
 }

@@ -10,7 +10,8 @@
 - 日本語の技術文書を書く、または推敲するときは `japanese-tech-writing` skill の規範に従う。
 - 英語の識別子、ファイル名、コマンド名は必要な場合だけ使う。
 - 機械可読・構造的成果物（`aidlc-state.md`、`intents.json`、audit イベント、改名対象のファイル名）は v2 の構造と英語ラベルをそのまま使う。
-- Amadeus skill の `SKILL.md` 本文は、[Skill Language Policy](docs/amadeus/skill-language-policy.md) に従う場合だけ英語化できる。
+- Amadeus skill の `SKILL.md` と TS スクリプトは英語必須である（詳細は [Skill Language Policy](docs/amadeus/skill-language-policy.md) を参照）。
+- 記述系成果物（要求、設計、計画などの本文）とユーザー向け gate 文言は日本語を維持する。
 - `aidlc/**/*.md`、テンプレートから生成される Markdown、`.kiro/specs/**/*.md`、`openspec/**/*.md` は日本語で書く。
 
 ## Project Context
@@ -30,33 +31,38 @@ Space は、複数 Intent で共有する方法（`memory/`）、ドメイン知
 ### Intent record
 
 Intent record は、特定 Intent のライフサイクル成果物（各ステージの成果物、判断、追跡、`aidlc-state.md`、`audit/`）を扱う。
-Intent の正準台帳は `intents/intents.json`、人間向け一覧は `intents/intents.md` を参照する。
+Intent の正準台帳は `intents/intents.json` である。
+Intent の概要は `ideation/intent-capture/intent-statement.md` を参照する。
+Intent モジュールファイル（`intents/<dirName>.md`）と `intents.md` 索引は廃止した（GD009）。
+人間向け一覧が必要な場合は、`intents.json` から都度生成する。
 
 ## Skills
 
 ライフサイクルの公開入口は `amadeus` の 1 個である。
 
-`amadeus` は、Intake（合流既定、受理条件の確認、scope 推定、人間承認付きの Birth 提案）、Initialization（0.1〜0.3 の record scaffold と `aidlc-state.md` 生成）、`aidlc-state.md` に基づく次ステージの解決だけを行い、ステージ成果物の作成はステージ内部 skill（Ideation 7、Inception 8、Construction 7）に委譲する。
-ステージと skill の対応は [skills/amadeus/references/stage-catalog.md](skills/amadeus/references/stage-catalog.md) に従う。
+`amadeus` はエンジン駆動である。
+`.agents/aidlc/tools/aidlc-orchestrate.ts` の `next` / `report` を forwarding loop として呼び、エンジンが返す directive に従って 1 手ずつ実行し、結果を report してから次の `next` を呼ぶ。
+scope 解決、Birth 判定、stage 順序、gate 判定、workflow 完了は、すべてエンジンが持ち、prose で再導出しない。
 
-補助入口は次の 6 個である。
+ステージ skill（`skills/amadeus-<phase>-<stage>/`、`skills/amadeus-<stage>/` など）は、上流 `awslabs/aidlc-workflows`（v2 ブランチ、基準 commit `fde1e1af7aae16f4c4defc991abaa3877ee2ac26`）38 skill の適応コピーである。
+適応点は、skill 名の `amadeus-*` への改名と、質問提示の `amadeus-grilling` プロトコルへの結線に限定する。
+これらは単独実行用の stage runner（例: `/aidlc --stage code-generation --single`）であり、主実行経路はエンジンが持つ。
+ステージ skill の一覧は [skills/amadeus/references/stage-catalog.md](skills/amadeus/references/stage-catalog.md) を参照する。
+上流とのパリティは `npm run parity:check` で検査する。
 
-1. `amadeus-steering`
-2. `amadeus-event-storming`
-3. `amadeus-grilling`
-4. `amadeus-domain-modeling`
-5. `amadeus-domain-grilling`
-6. `amadeus-validator`
+補助入口は次の 3 個である。
+
+1. `amadeus-grilling`
+2. `amadeus-domain-modeling`
+3. `amadeus-validator`
 
 Intake は、入力が既存 Intent のアウトカムに属する場合、新しい Intent を作らずスコープバックログへの合流を提案する。
 新しい Intent は、人間の明示承認なしに作らない。
 scope（bugfix、refactor など）が SKIP にするステージは実行しない。
+Operation phase（4.1〜4.7）は、本家と同じ CONDITIONAL 実行対象として採用する。
 
 Construction は Bolt を実行単位にし、walking skeleton の Bolt PR は必ず人間が承認する。
-Construction では、Spec、`.kiro/specs/**`、`openspec/**`、Operation 成果物を作らない。
-
-Event Storming は、Domain Event、Process、Aggregate Candidate、Bounded Context Candidate、Hotspot を整理する補助分析入口である。
-Event Storming は phase を進めず、Requirement、Use Case、Unit、Bolt、Task、Aggregate、Bounded Context を確定しない。
+Construction では、Spec、`.kiro/specs/**`、`openspec/**` を作らない。
 
 旧構造（`.amadeus/`、`state.json`、`<YYYYMMDD>-<slug>` 識別子）と旧公開入口は退役した（Issue #369、#387）。
 未確定の skill 名や旧コマンド名を前提にしない。
@@ -79,11 +85,8 @@ bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts .
 bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . <YYMMDD>-<label>
 ```
 
-このリポジトリの例示 snapshot を検証する場合は次で行う。
-
-```sh
-npm run validate:all
-```
+「実際に動く実行結果の検証」は、エンジン sandbox e2e（`npm run test:it:engine-e2e`）で行う。
+sandbox e2e は決定論的であり、LLM を呼ばず、本番 `aidlc/` を変更しない。
 
 Skill 昇格の確認は、必要に応じて `dev-scripts/promote-skill.ts` を使う。
 昇格先に `evals/` や開発用ファイルを混ぜない。
@@ -92,6 +95,7 @@ Amadeus skill の言語方針は [Skill Language Policy](docs/amadeus/skill-lang
 ## Development Rules
 
 - 基準 branch は `main` として扱い、Git ブランチ戦略は `aidlc/spaces/default/memory/team.md` の働き方に従う。
+- 後方互換維持対象は [docs/backward-compatibility.md](docs/backward-compatibility.md) に記載されたものだけとして扱う。
 - 古い成果物階層や旧コマンド群を、確認なしに戻さない。
 - 不明な値は空欄にせず、`未確認` として記録する。
 - 推測で外部システム、境界づけられたコンテキスト、Intent、依存関係を作らない。

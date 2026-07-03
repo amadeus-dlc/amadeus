@@ -1,6 +1,0 @@
-interface:
-  display_name: "Amadeus Inception Delivery Planning"
-  short_description: "Plan Amadeus bolt delivery"
-  default_prompt: "Use $amadeus-inception-delivery-planning to sequence units into a bolt plan."
-policy:
-  allow_implicit_invocation: false

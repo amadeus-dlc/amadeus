@@ -4,7 +4,9 @@
 
 Amadeus は、Amadeus DLC を実行、検証、配布するための実装プロジェクトである。
 
-Amadeus DLC は、AI と人間が協調してソフトウェア開発を進める lifecycle 契約であり、Initialization、Ideation、Inception、Construction の 4 phase と成果物、gate、traceability、validator を扱う。
+Amadeus DLC は、AI と人間が協調してソフトウェア開発を進める lifecycle 契約であり、Initialization、Ideation、Inception、Construction、Operation の 5 phase と成果物、gate、traceability、validator を扱う。
+
+Operation phase は record の scaffold と Stage Progress の 7 行だけを持ち、いずれの stage も実行対象にしない（`docs/amadeus/aidlc-v2-operation-phase-boundary.md`）。
 
 Amadeus は、この契約を `skills/amadeus*`、`.agents/skills/amadeus*`、validator、template、docs、`aidlc/` 成果物として運用する。
 
@@ -22,3 +24,7 @@ Amadeus は、この契約を `skills/amadeus*`、`.agents/skills/amadeus*`、va
 このリポジトリでは、Amadeus 本体の開発も Amadeus DLC の Intent として `aidlc/spaces/default/` に記録する。
 
 GitHub Issue を起点にし、Issue、Intent、PR、CI、レビューボット、merge 証拠を traceability と audit で追跡する。
+
+現在の active Intent は `260704-v2-parity-completion`（親 Issue #396、状態は open）である。
+
+先行 Intent `260703-amadeus-skill-english-rollout-plan`（親 Issue #399）は Status: Completed であり、Amadeus skill の `SKILL.md` 英語化は完了している。

@@ -1,6 +1,0 @@
-interface:
-  display_name: "Amadeus Inception Units Generation"
-  short_description: "Generate Amadeus units DAG"
-  default_prompt: "Use $amadeus-inception-units-generation to generate units and the dependency DAG."
-policy:
-  allow_implicit_invocation: false

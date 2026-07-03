@@ -1,0 +1,847 @@
+{
+  "baselineCommit": "fde1e1af7aae16f4c4defc991abaa3877ee2ac26",
+  "generatedAt": "2026-07-03T19:33:10.209Z",
+  "engineDirectories": [
+    "tools",
+    "aidlc-common",
+    "sensors",
+    "hooks",
+    "scopes",
+    "agents",
+    "knowledge"
+  ],
+  "skills": [
+    "aidlc",
+    "aidlc-application-design",
+    "aidlc-approval-handoff",
+    "aidlc-bugfix",
+    "aidlc-build-and-test",
+    "aidlc-ci-pipeline",
+    "aidlc-code-generation",
+    "aidlc-delivery-planning",
+    "aidlc-deployment-execution",
+    "aidlc-deployment-pipeline",
+    "aidlc-environment-provisioning",
+    "aidlc-feasibility",
+    "aidlc-feature",
+    "aidlc-feedback-optimization",
+    "aidlc-functional-design",
+    "aidlc-incident-response",
+    "aidlc-infrastructure-design",
+    "aidlc-init",
+    "aidlc-intent-capture",
+    "aidlc-market-research",
+    "aidlc-mvp",
+    "aidlc-nfr-design",
+    "aidlc-nfr-requirements",
+    "aidlc-observability-setup",
+    "aidlc-outcomes-pack",
+    "aidlc-performance-validation",
+    "aidlc-practices-discovery",
+    "aidlc-refined-mockups",
+    "aidlc-replay",
+    "aidlc-requirements-analysis",
+    "aidlc-reverse-engineering",
+    "aidlc-rough-mockups",
+    "aidlc-scope-definition",
+    "aidlc-security-patch",
+    "aidlc-session-cost",
+    "aidlc-team-formation",
+    "aidlc-units-generation",
+    "aidlc-user-stories"
+  ],
+  "engineFiles": [
+    {
+      "path": "agents/aidlc-architect-agent.md",
+      "sha256": "149592836cea26162d509e30b6da8d2f2f591f405721fb956a33f7fb1fc87900"
+    },
+    {
+      "path": "agents/aidlc-architecture-reviewer-agent.md",
+      "sha256": "573de67ce89d3ed6d7aecdaaaca1f55fe2291eb3dcbb1f3e144d023ae5beb870"
+    },
+    {
+      "path": "agents/aidlc-aws-platform-agent.md",
+      "sha256": "bdbf4602fd4ecbe431082bc04c5efc636cc9d4e77d92672ca22fc6362dc34781"
+    },
+    {
+      "path": "agents/aidlc-compliance-agent.md",
+      "sha256": "64f49faca22478e05db090a88fe25c12ade122ad0987d4b3efdcd6e64cced2d9"
+    },
+    {
+      "path": "agents/aidlc-delivery-agent.md",
+      "sha256": "47454cbaece98734b3b5a73cd58a64b649caa56fb1e9d1621af3acef1e9e9371"
+    },
+    {
+      "path": "agents/aidlc-design-agent.md",
+      "sha256": "8aa9888f07a3dcb18bbedb672e099150ea0a3eb6871c86a1e743b1890fb074a6"
+    },
+    {
+      "path": "agents/aidlc-developer-agent.md",
+      "sha256": "5a4664eb2fa1b1560460551b2e9eae0d996fd5804e2e78791fa89e5decf4610e"
+    },
+    {
+      "path": "agents/aidlc-devsecops-agent.md",
+      "sha256": "e027d34d99e5f86ed0cffbaf8e4392c484e3b653158cf587890940111e9646ae"
+    },
+    {
+      "path": "agents/aidlc-operations-agent.md",
+      "sha256": "1363b5e4d7653aec954e415b2c558391eb6f0b2d7f2b122324b7656f197769cf"
+    },
+    {
+      "path": "agents/aidlc-pipeline-deploy-agent.md",
+      "sha256": "1effc5f4de909deb68dd2cab7802f925e8987db9f2977049821db0244a418c05"
+    },
+    {
+      "path": "agents/aidlc-product-agent.md",
+      "sha256": "0a8f0f0d1c320d5ee22ab4657743adebbef5a61c6b593e71fe6ae781bf54198d"
+    },
+    {
+      "path": "agents/aidlc-product-lead-agent.md",
+      "sha256": "f051fd24dc71754e5693a713f22d773b9415abce2bdad40e0481af59c0b81ec3"
+    },
+    {
+      "path": "agents/aidlc-quality-agent.md",
+      "sha256": "87ff2614d72157718530f9ea429f7585e1ff1580acd605b87cc91b90f60da62d"
+    },
+    {
+      "path": "aidlc-common/conductor.md",
+      "sha256": "c52e4f722bf187878611357e7739192ae0420174e41be925da026b26caf5433e"
+    },
+    {
+      "path": "aidlc-common/protocols/stage-definition.md",
+      "sha256": "a1ebc14bc04a9f5d1a9a2ab4ecd4395e7534286bbe8e9c146d540ada8418d1a8"
+    },
+    {
+      "path": "aidlc-common/protocols/stage-protocol-governance.md",
+      "sha256": "585acfafbbc20dfa429de59aac77f84b0327482faceeb03fd33af756daf94d74"
+    },
+    {
+      "path": "aidlc-common/protocols/stage-protocol-recovery.md",
+      "sha256": "9c48237bc18e79f7964cc9cc4e080d95e04f708fc4f873feb5862952927ec8fb"
+    },
+    {
+      "path": "aidlc-common/protocols/stage-protocol.md",
+      "sha256": "39ca4eb2342e46cb974b7b1bd5e2d5d763dfb906aa11f3cc1633d77b3067e957"
+    },
+    {
+      "path": "aidlc-common/stages/construction/build-and-test.md",
+      "sha256": "c3688ae24b9cc77074569a038ad7f222a9d3ef182d91681692208d14dc63b385"
+    },
+    {
+      "path": "aidlc-common/stages/construction/ci-pipeline.md",
+      "sha256": "45fbac8ee89d9bef13bf2243ef60abcd2a974474d0545124e2334f460324930a"
+    },
+    {
+      "path": "aidlc-common/stages/construction/code-generation.md",
+      "sha256": "36ebdc6cd58832db3ebd53c4656875c4f6ffa6bd61b695fe18b4cf566de825f7"
+    },
+    {
+      "path": "aidlc-common/stages/construction/functional-design.md",
+      "sha256": "3892e16b6b266690c8b71f4dc4bd3ae14ce50fb53171cbd2bfc343d8cc892882"
+    },
+    {
+      "path": "aidlc-common/stages/construction/infrastructure-design.md",
+      "sha256": "540ea57c47851cbe660ca14798eaa6877725fe5f1b55db5a9229c3d2d29aa788"
+    },
+    {
+      "path": "aidlc-common/stages/construction/nfr-design.md",
+      "sha256": "798747fed43e6a25e06e707a30234bb8e93a6e7410f71254863db4eea165f1f2"
+    },
+    {
+      "path": "aidlc-common/stages/construction/nfr-requirements.md",
+      "sha256": "cd241a90125b7d1e4d875748bf1cd853e6ad3521445fd8226c2bccd35a40e886"
+    },
+    {
+      "path": "aidlc-common/stages/ideation/approval-handoff.md",
+      "sha256": "adfac53dc6c610622f048e4a2a950debf90a185b42db371345342fa0177f33c7"
+    },
+    {
+      "path": "aidlc-common/stages/ideation/feasibility.md",
+      "sha256": "026ee319bfde9cc97dfe532b37b1044275aaa831ee18cfc1af68651152dc1bd0"
+    },
+    {
+      "path": "aidlc-common/stages/ideation/intent-capture.md",
+      "sha256": "a5ecf3538be75c18a8cd70bdd82ddc2ddc80836250cd7b35914f3a7eba9bcd42"
+    },
+    {
+      "path": "aidlc-common/stages/ideation/market-research.md",
+      "sha256": "dbabd9574c1ce60bd768ee825495bab977b24ebc4fa509e83e8f421e7732821a"
+    },
+    {
+      "path": "aidlc-common/stages/ideation/rough-mockups.md",
+      "sha256": "954a1726d0dffb46a730323ec9beda31243aa149413d9619616727a8af0d8f4c"
+    },
+    {
+      "path": "aidlc-common/stages/ideation/scope-definition.md",
+      "sha256": "0c2f56f3c51cf4640107cd4261193a2b3d8475eb5edfacefba778d065eff4ab0"
+    },
+    {
+      "path": "aidlc-common/stages/ideation/team-formation.md",
+      "sha256": "b18daa3e7be342ceb2e3286f30be792db387b19802a565ebc1e8677e3c733c9b"
+    },
+    {
+      "path": "aidlc-common/stages/inception/application-design.md",
+      "sha256": "4e0c91e7e02171398c092f29b17d3707db32c21f0d47c1f092ce02bd86f29da9"
+    },
+    {
+      "path": "aidlc-common/stages/inception/delivery-planning.md",
+      "sha256": "a23694dbbabad19dde90246d870ce15f4af6f3917ede423c81ed94a72275f2e6"
+    },
+    {
+      "path": "aidlc-common/stages/inception/practices-discovery.md",
+      "sha256": "680c4523cde58fe0efb3951aed831d5d15367df1e27ac6342d8fdb257ceed8e5"
+    },
+    {
+      "path": "aidlc-common/stages/inception/refined-mockups.md",
+      "sha256": "87cc330b541e76b24dff9bde2a96c50fc6cd3e3cf17ca442a44f09be0e68deda"
+    },
+    {
+      "path": "aidlc-common/stages/inception/requirements-analysis.md",
+      "sha256": "3c12bf0f02499d0a2126dffcf7560aa188843ebab298d6205fe4d00f9e621bfb"
+    },
+    {
+      "path": "aidlc-common/stages/inception/reverse-engineering.md",
+      "sha256": "c31ff08b727c02ad84bd53c6aa4e3aebc57fc49168c68cab323eee4eaa5e5b6e"
+    },
+    {
+      "path": "aidlc-common/stages/inception/units-generation.md",
+      "sha256": "0d80508d62dadbf02df7dd1da0e3ec511478076ba6cdcc3aab94e9190ffa4313"
+    },
+    {
+      "path": "aidlc-common/stages/inception/user-stories.md",
+      "sha256": "f1cc750d99d511e6f1a599ad59f9d7d0c56c9ab7a1b011848dd2a4964ab64d4b"
+    },
+    {
+      "path": "aidlc-common/stages/initialization/state-init.md",
+      "sha256": "f93c4a4cfa00960772792531ed2a2e6e1413bba7edced5a9f789cf01d295afe6"
+    },
+    {
+      "path": "aidlc-common/stages/initialization/workspace-detection.md",
+      "sha256": "7841ca1ac4aba450b9f5d53e53f4a8ddc39d85f826add7f27d2614cba54b1b0a"
+    },
+    {
+      "path": "aidlc-common/stages/initialization/workspace-scaffold.md",
+      "sha256": "fa167121a5fb1483814628e96d6d91e0f72356ba52ee94eed82373bb8002091d"
+    },
+    {
+      "path": "aidlc-common/stages/operation/deployment-execution.md",
+      "sha256": "1dff18dc93bee7417c058c298e8b54c7c25e9adbb82648eed79f8474ff60370d"
+    },
+    {
+      "path": "aidlc-common/stages/operation/deployment-pipeline.md",
+      "sha256": "401bad24b8159ed0acbcfb6887d87cd5e56549b34cca0b612663800cacaee6e7"
+    },
+    {
+      "path": "aidlc-common/stages/operation/environment-provisioning.md",
+      "sha256": "ee4058c21013434e4b75c68a85440a84ae4d12ce7ec5015f9ff72b91ba30f3aa"
+    },
+    {
+      "path": "aidlc-common/stages/operation/feedback-optimization.md",
+      "sha256": "b7c9dc9699f7d08974cdd927abf40193a64dda0f9fa7b47b868a1bbc65aae941"
+    },
+    {
+      "path": "aidlc-common/stages/operation/incident-response.md",
+      "sha256": "291035dfe24121ec646a67d7894cb06059e0149abfc20b3daed480e71889152c"
+    },
+    {
+      "path": "aidlc-common/stages/operation/observability-setup.md",
+      "sha256": "c6a9c8890050f0eefc7708501b006957527635dbf244b9fd25043f1466e71794"
+    },
+    {
+      "path": "aidlc-common/stages/operation/performance-validation.md",
+      "sha256": "82c3551265046bb721e437a41e8b28198c4732022771aa47bd4b3294673e7b06"
+    },
+    {
+      "path": "hooks/aidlc-audit-logger.ts",
+      "sha256": "064eac85c2f71d9832fc93c65a36b22a0af795539b349c9400952d25c66647f7"
+    },
+    {
+      "path": "hooks/aidlc-log-subagent.ts",
+      "sha256": "db27dce40319564be9451960eb7a2ae38574c671d883fb380d013f3244f6ab5b"
+    },
+    {
+      "path": "hooks/aidlc-mint-presence.ts",
+      "sha256": "ff7556c56f6bebe0bc447be6632ccc34d14bb68b11220ad8e36bfd0bc37d2b90"
+    },
+    {
+      "path": "hooks/aidlc-runtime-compile.ts",
+      "sha256": "8a54c7bad431576d829597ecfa02447a74d13e09d0fb878fc37a69e0486efd6a"
+    },
+    {
+      "path": "hooks/aidlc-sensor-fire.ts",
+      "sha256": "c88f3c8817ad5864b895185858d9006fb81ebf50644ac3f160a8bbd10c0a0a51"
+    },
+    {
+      "path": "hooks/aidlc-session-end.ts",
+      "sha256": "5ce0a5e79c86f98b2218b16a0957dafd5c48c2c65b815485069f7cd3d10fef56"
+    },
+    {
+      "path": "hooks/aidlc-session-start.ts",
+      "sha256": "b0c6ae251bfe81b0a7adc8e370925734829500ffa1691fd4710f6412578839be"
+    },
+    {
+      "path": "hooks/aidlc-statusline.ts",
+      "sha256": "9802dd0df676db2e686c8d2082adda5fe6ab28ee9db9811709f32ca101e7280e"
+    },
+    {
+      "path": "hooks/aidlc-stop.ts",
+      "sha256": "71fb8ef269917355b6bbd37392df751947283e54af6fe437552e24d6c63253cc"
+    },
+    {
+      "path": "hooks/aidlc-sync-statusline.ts",
+      "sha256": "35a7c593e6f05768bc92ceaa9596f4112aecad8c8820a5e9f7b32eb090f9871e"
+    },
+    {
+      "path": "hooks/aidlc-validate-state.ts",
+      "sha256": "fb11958d948b6d1349d6120b3d7f20787dbba95f0c7beae9bb890690615c72b0"
+    },
+    {
+      "path": "knowledge/aidlc-architect-agent/adr-template.md",
+      "sha256": "d10447be6559ee1834e9471aa9fb4dbec2655cc71566ab44f350dbef81edc5b4"
+    },
+    {
+      "path": "knowledge/aidlc-architect-agent/architecture-guide.md",
+      "sha256": "06f5c429030ca7b1da74817e21b1a753867276b5b012726a2b8007c4332dc3a2"
+    },
+    {
+      "path": "knowledge/aidlc-architect-agent/architecture-patterns.md",
+      "sha256": "e30a524e5d4669ddb62af351f6b1dbc512ceb6b65e0a52f2460b379222f055a5"
+    },
+    {
+      "path": "knowledge/aidlc-architect-agent/ddd-patterns.md",
+      "sha256": "2d5fbfb1c35410bb48b709793a26a2bae1eeb7cfc93a8e5e424db121af9ad1ce"
+    },
+    {
+      "path": "knowledge/aidlc-architect-agent/nfr-design-guide.md",
+      "sha256": "856d91e29e6820abfdec79844467b2f72f0c19558fcb0c5f19d64e84be695816"
+    },
+    {
+      "path": "knowledge/aidlc-architect-agent/nfr-design-patterns.md",
+      "sha256": "af41327921e7acab9b7855131313252120c2da2148dc6336da1eac3582d4f526"
+    },
+    {
+      "path": "knowledge/aidlc-architecture-reviewer-agent/reviewing.md",
+      "sha256": "0a9e6978d152a5bd13c14ca6bea2070890419333e51af7e9db09bd00ad690b45"
+    },
+    {
+      "path": "knowledge/aidlc-aws-platform-agent/cdk-best-practices.md",
+      "sha256": "4789e101ef3865270795a46f17f99a0f7fd0f9259b8225025e6182487ea5ae53"
+    },
+    {
+      "path": "knowledge/aidlc-aws-platform-agent/cost-optimization-patterns.md",
+      "sha256": "f21bbbed8aab03f7416062b7fb32b1f80c90b558ea94acadaa6ab6dc4f6e8041"
+    },
+    {
+      "path": "knowledge/aidlc-aws-platform-agent/infrastructure-guide.md",
+      "sha256": "67ee5f3b67828e84dcefbd276ddfb3b5efcc04deca3355c9a2d6cd60d54044f8"
+    },
+    {
+      "path": "knowledge/aidlc-aws-platform-agent/well-architected-framework.md",
+      "sha256": "650b0e613d76d9ae3326b998c389ba8d9f068196ea772468dc4b3a751d6d8f24"
+    },
+    {
+      "path": "knowledge/aidlc-compliance-agent/regulatory-frameworks.md",
+      "sha256": "6774d09d0814c7af5fc600a8fbe61e35b01cbe947209e532d88d2e43164655b1"
+    },
+    {
+      "path": "knowledge/aidlc-delivery-agent/mob-programming-guide.md",
+      "sha256": "ca5b7529c575eb62ee97f26a8422d76984112676061be1b83a32ee5aa670e7e0"
+    },
+    {
+      "path": "knowledge/aidlc-delivery-agent/team-topologies.md",
+      "sha256": "d936bfb7481a94690351d693fced2559ea7ffc00e46b3cf2e9efa4c2feec6f1d"
+    },
+    {
+      "path": "knowledge/aidlc-delivery-agent/workflow-planning-guide.md",
+      "sha256": "3ebc912b41d7ea41d443cf2879c8cadbdcbccda777e80ffb8ff70b1d946fdcc9"
+    },
+    {
+      "path": "knowledge/aidlc-design-agent/accessibility-wcag.md",
+      "sha256": "ea5fb2d543998de8660b7f98b9d368d9a2a264320fdf375684135146c5346de3"
+    },
+    {
+      "path": "knowledge/aidlc-design-agent/component-spec-template.md",
+      "sha256": "253b47804d6c7177cf184175c10a54ac35af4028a5d42de330d0e3a7b126c7b8"
+    },
+    {
+      "path": "knowledge/aidlc-design-agent/interaction-design-patterns.md",
+      "sha256": "d0ff5a138681a83a4af0fb012ff8c8c05fcb5fe40f5f6c844a4f29ddd411335d"
+    },
+    {
+      "path": "knowledge/aidlc-design-agent/ux-guide.md",
+      "sha256": "b377bf0d5ae64fde1c1cecffbfbfcab2033f89ee538e8378d610a7a2d018739f"
+    },
+    {
+      "path": "knowledge/aidlc-design-agent/wireframing-guide.md",
+      "sha256": "c9cc515f881bfdcf28af3ff9a30cc4f997511549b6286326a0689e0f7c8c82fb"
+    },
+    {
+      "path": "knowledge/aidlc-developer-agent/api-design-guide.md",
+      "sha256": "a5e78f2f2c256286a541d8be298bad91b8de2cdcde8810922381fbada011e0b8"
+    },
+    {
+      "path": "knowledge/aidlc-developer-agent/code-analysis-guide.md",
+      "sha256": "9a277562315b9cd01e8f1bd99c432ffcae1a0467c6914cdcb7bca74f0a39e56f"
+    },
+    {
+      "path": "knowledge/aidlc-developer-agent/code-generation-guide.md",
+      "sha256": "d893013765635c374eeffd3d901a380048a61c0be9538a1411a7173bdf28125c"
+    },
+    {
+      "path": "knowledge/aidlc-developer-agent/code-generation-patterns.md",
+      "sha256": "74d8d7836635cd197d3a5e5adbd0c8ffa4c03ac0ee69a80900e01fa225315298"
+    },
+    {
+      "path": "knowledge/aidlc-developer-agent/data-modelling-patterns.md",
+      "sha256": "1b8b55db0da2d748fb3b88d2fd7eb1593cd4b20ad342a9b942f499ff3a1fe755"
+    },
+    {
+      "path": "knowledge/aidlc-developer-agent/re-artifacts.md",
+      "sha256": "126c6b2ef8d8db186e9de45daf41161715abc0f5f439e2ea86538ab9395638b2"
+    },
+    {
+      "path": "knowledge/aidlc-devsecops-agent/devsecops-pipeline-patterns.md",
+      "sha256": "c9defc71193fb07cbf066bd1de4c7d3d7d482a50d91714de3e6b0330ba5206b0"
+    },
+    {
+      "path": "knowledge/aidlc-devsecops-agent/nfr-requirements-guide.md",
+      "sha256": "16d99282fa44c965192d26ca3b8639c448e4a08bacec9f13a9eb86344c58c193"
+    },
+    {
+      "path": "knowledge/aidlc-devsecops-agent/security-guide.md",
+      "sha256": "7df1003a10e5a989a0345167b59e25abed747f83c419ba0d1699023466be3b5a"
+    },
+    {
+      "path": "knowledge/aidlc-devsecops-agent/threat-modelling-stride.md",
+      "sha256": "bc3df5f6a47634f3a6ff0f78c8f1af9162cb7f35176c530a0f5b0f454ac25a2b"
+    },
+    {
+      "path": "knowledge/aidlc-operations-agent/incident-response-guide.md",
+      "sha256": "8e6e2bcf51b422fe28216ef3ff514821412eacc962bb8f37e4a8b028b8edc0d0"
+    },
+    {
+      "path": "knowledge/aidlc-operations-agent/nfr-performance-guide.md",
+      "sha256": "bad8292569ef5f2a4f8165d13c363ea4bdbf0293718515b7b9d030b5074ba9a1"
+    },
+    {
+      "path": "knowledge/aidlc-operations-agent/observability-patterns.md",
+      "sha256": "c13df81342161b0bd4eae20a6e603c36b7b64ac775b94f688180d9dc0eb0be19"
+    },
+    {
+      "path": "knowledge/aidlc-operations-agent/slo-sli-patterns.md",
+      "sha256": "737d7b46eb6829ba4f136f31322505d67b21b21f056497528c1a2ed59f33ad63"
+    },
+    {
+      "path": "knowledge/aidlc-pipeline-deploy-agent/branching-strategies.md",
+      "sha256": "82fbf6fe177df021cdfafd27a52f4b32bf6afc2180a7421b00b69709a19b67ca"
+    },
+    {
+      "path": "knowledge/aidlc-pipeline-deploy-agent/cicd-patterns.md",
+      "sha256": "08e64c6a91973ca9021a06f1d83a8aa75962cc8576f8d32df79e180d17ce2dbb"
+    },
+    {
+      "path": "knowledge/aidlc-pipeline-deploy-agent/deployment-strategies.md",
+      "sha256": "d5510bca14b1751b2d591e162eaa94c4925b43bd0f61fd8be016fe9e3bfa7f63"
+    },
+    {
+      "path": "knowledge/aidlc-product-agent/functional-design-guide.md",
+      "sha256": "5dded65b9023fa835a399fabb5587133abe2286421366fb72f09ee8c33e8b1ff"
+    },
+    {
+      "path": "knowledge/aidlc-product-agent/market-research-methods.md",
+      "sha256": "46364f519c0a6061e4cfeebcbd8ed833628601f8868b43add11c9b1f4bcbad28"
+    },
+    {
+      "path": "knowledge/aidlc-product-agent/prioritization-frameworks.md",
+      "sha256": "17e5bb6d4b5cb8afd05ad3e5929f7676c460be12cb924f7ffd122dd4097de1de"
+    },
+    {
+      "path": "knowledge/aidlc-product-agent/product-guide.md",
+      "sha256": "d7466ca5d5dc23684b56b7c966256392dab3a73563d7c82396f7944f3e45384f"
+    },
+    {
+      "path": "knowledge/aidlc-product-agent/requirements-elicitation.md",
+      "sha256": "898152a3b78f5370bd78987acef8333e4e5932c5b4801b91bcbafac833f69ad4"
+    },
+    {
+      "path": "knowledge/aidlc-product-agent/requirements-guide.md",
+      "sha256": "cda16cdaac57be8d2303062cacafce846fbb0e19d66273c683af0a70e9ec2173"
+    },
+    {
+      "path": "knowledge/aidlc-product-agent/user-story-patterns.md",
+      "sha256": "d7bcdec5ce4e9e17b51a9761feeaa64ce696cbc7528e45de0a686e396b76c81f"
+    },
+    {
+      "path": "knowledge/aidlc-product-lead-agent/reviewing.md",
+      "sha256": "7aa1546cb21f0bc96bb1db9e0f8f6c699ec14def4ecc5ff8af5c8248bbe5dac1"
+    },
+    {
+      "path": "knowledge/aidlc-quality-agent/nfr-reliability-guide.md",
+      "sha256": "28ea7f3b59fc8feea1fe77f14dfe1a36b6001a20ab580846771654b220c2e30c"
+    },
+    {
+      "path": "knowledge/aidlc-quality-agent/nfr-validation-methods.md",
+      "sha256": "cbf6b21acf112d208e29a192b0a527c2102e49ecd20299cd043d1ab7c2313218"
+    },
+    {
+      "path": "knowledge/aidlc-quality-agent/test-strategy-patterns.md",
+      "sha256": "e840aeb913f8f9e45a87a7246c9bf697314c940c6fdb0c1af3cb59c0b7166f7e"
+    },
+    {
+      "path": "knowledge/aidlc-quality-agent/testing-guide.md",
+      "sha256": "af45291ed21f530cd42469104ee85c0920305288a6f222c03e65582c631baecc"
+    },
+    {
+      "path": "knowledge/aidlc-shared/ai-dlc-principles.md",
+      "sha256": "544cb9977f47aaea11c4d838293646f8171bc1a442c33e73180daa5904c67816"
+    },
+    {
+      "path": "knowledge/aidlc-shared/audit-format.md",
+      "sha256": "4857de4f83ccf8d3b8a9f994053b5f988aa719015a6846fc54e4aeb97cc17013"
+    },
+    {
+      "path": "knowledge/aidlc-shared/brownfield.md",
+      "sha256": "9fe4d24392a39f5edad08bf5b17d3aec4c9ae03304edf418a4e7d1716d91dcab"
+    },
+    {
+      "path": "knowledge/aidlc-shared/knowledge-readme-template.md",
+      "sha256": "13ddd3ac45f5e42d672e5c72b881e5e615b9c4dcabb116566f0e3b7462db4ec8"
+    },
+    {
+      "path": "knowledge/aidlc-shared/memory-template.md",
+      "sha256": "10d9559bb7a90c4d4746b96938361772b693ca16673f02ce7b6c1be69624fc66"
+    },
+    {
+      "path": "knowledge/aidlc-shared/rules-reading.md",
+      "sha256": "450039583f9274f6f957107cfab879fee56e4bfd501cd1615f1aa74622939fa9"
+    },
+    {
+      "path": "knowledge/aidlc-shared/state-template.md",
+      "sha256": "c13bc1c44f44525cbb015cafdfe24d90fe9d73688e5658e552529ade12dc96ca"
+    },
+    {
+      "path": "knowledge/aidlc-shared/verification.md",
+      "sha256": "394f50345a8ba04b17e2183669843b5baa687ff2992289bdd353f04b5d0bb849"
+    },
+    {
+      "path": "knowledge/aidlc-shared/worktree-info-schema.md",
+      "sha256": "eaf2df02e95027ca7d2dbad5d9dfee3980efdb697d205ceef1aebc566d761f16"
+    },
+    {
+      "path": "scopes/aidlc-bugfix.md",
+      "sha256": "fffd06ca2a461a0c553981198934d77d44a623a85e64fe93aaa040a8af6a244a"
+    },
+    {
+      "path": "scopes/aidlc-enterprise.md",
+      "sha256": "83eba9cbb6fbe12b0ecc93340fddb0c0fee2bd5de0c5412acacb72498c98ef82"
+    },
+    {
+      "path": "scopes/aidlc-feature.md",
+      "sha256": "3df685cb30bebeed9415571a4854e45efef7822c19745b20351c8c48fc2f9a30"
+    },
+    {
+      "path": "scopes/aidlc-infra.md",
+      "sha256": "ba29d294defdf2fce0dd2e6467dd57b5663b6dcf175c1f78c4863f4b1fe64bae"
+    },
+    {
+      "path": "scopes/aidlc-mvp.md",
+      "sha256": "d97cf0d246e3537a1457ad7e0d141828cb7e10d74c82aafef39df827b2e3f6de"
+    },
+    {
+      "path": "scopes/aidlc-poc.md",
+      "sha256": "7ed73c7fb71a8025eb6f0ccc9090930aa87c59b72574c75ad7e94d60a327a0bb"
+    },
+    {
+      "path": "scopes/aidlc-refactor.md",
+      "sha256": "84642ad10d57dbce26d1e6c30e5992254aaf46c0fecc94b7776597c42dc20f81"
+    },
+    {
+      "path": "scopes/aidlc-security-patch.md",
+      "sha256": "64614c6f36b7940122f8ba6dec058e45491884d916599bddfcfe4e76b416bf62"
+    },
+    {
+      "path": "scopes/aidlc-workshop.md",
+      "sha256": "dfb2bbdab220fe215808de1408354f41a6adb54a002c22baa62bc00af64bb76e"
+    },
+    {
+      "path": "sensors/aidlc-linter.md",
+      "sha256": "4a183d1595d60b95b1ad19a2b6bfd0781ded6e7d338b12839d1c46fc830f5f0b"
+    },
+    {
+      "path": "sensors/aidlc-required-sections.md",
+      "sha256": "c316b52145ecc622038f5d607cf1d89a853e5b43b91e1186ff48a5fcacf1f7e9"
+    },
+    {
+      "path": "sensors/aidlc-type-check.md",
+      "sha256": "f05457a3e665415282c9758877b295af63d284e65689b3f6e902e8effe315efc"
+    },
+    {
+      "path": "sensors/aidlc-upstream-coverage.md",
+      "sha256": "122232ba855d14b4aaa97cd89a3abe2200cffb3bfdc8b2a79793a9ecb049136f"
+    },
+    {
+      "path": "tools/aidlc-audit.ts",
+      "sha256": "daf5c7b09840bf84631c9eb715f702abc49c863141c6dd9cc50c2fb1226186c8"
+    },
+    {
+      "path": "tools/aidlc-bolt.ts",
+      "sha256": "a57dd35add34c958d89d708a1734451ea35d6b9c2ef3abe140f5d54a2c3657ff"
+    },
+    {
+      "path": "tools/aidlc-directive.ts",
+      "sha256": "2689ff6a13fc9a6de8b8d0fb778280d75dae3613ed2fbfd327f1e7110e8db5bc"
+    },
+    {
+      "path": "tools/aidlc-graph.ts",
+      "sha256": "e3124da4b02b7f56df855094ac597076329eb096edadf2964436608f1e13c60c"
+    },
+    {
+      "path": "tools/aidlc-includes.ts",
+      "sha256": "3dd127977a75ca5db374bb11765dec12f03179e66dcaf2cdfc7ae3dc31b57825"
+    },
+    {
+      "path": "tools/aidlc-jump.ts",
+      "sha256": "6e4e4adb268a10611d99a012e72223cc8b70172a465f52bac043a96a854ea162"
+    },
+    {
+      "path": "tools/aidlc-learnings.ts",
+      "sha256": "2a44de87459d3ec340d9e0a85427accd9d26121286efea59cd16e6766af4b76d"
+    },
+    {
+      "path": "tools/aidlc-lib.ts",
+      "sha256": "1db727c60910f4749044e473cffcd08bff60ecd5dc030081aaf48af305fa54e9"
+    },
+    {
+      "path": "tools/aidlc-log.ts",
+      "sha256": "a7ee5ddc637b6be803e7f6e991b41cd0fd59674914c6253bcd05984061f7a8d5"
+    },
+    {
+      "path": "tools/aidlc-orchestrate.ts",
+      "sha256": "fa0b32b19c986db997096dd3ccd346ba1a9074a3ff9e108d3d8bbfd10362a4a3"
+    },
+    {
+      "path": "tools/aidlc-rule-schema.ts",
+      "sha256": "0ceb6ed00675fa990b5663d202c2943946b5538067c242479e5719889a457646"
+    },
+    {
+      "path": "tools/aidlc-runner-gen.ts",
+      "sha256": "b81da7d53bd8d0df5bed0d76bc067d8f9fbafffc15a25821f73276480878400d"
+    },
+    {
+      "path": "tools/aidlc-runtime.ts",
+      "sha256": "44291303a09b9b82520feddee9ffd5302547634991ea4024b4e0e4c7afd6f5ea"
+    },
+    {
+      "path": "tools/aidlc-sensor-linter.ts",
+      "sha256": "22ffefb0acf8f605d7a78ef0d5609277a132513c9bb28272d9dd85e3e76142d1"
+    },
+    {
+      "path": "tools/aidlc-sensor-required-sections.ts",
+      "sha256": "75fb7853ffab08ee22fb83a3b5728d536f7b79b2a8d7b6987fb82ae71dc9c21e"
+    },
+    {
+      "path": "tools/aidlc-sensor-schema.ts",
+      "sha256": "019b1cc67f7a5a1e7b20fa8ddb212fe476ec56fda09c35662c9cd9a8500ac77e"
+    },
+    {
+      "path": "tools/aidlc-sensor-type-check.ts",
+      "sha256": "d342e1e379e2e9295be0b5d0efdabf8171a4c47783de03cc622a07ceacd234f9"
+    },
+    {
+      "path": "tools/aidlc-sensor-upstream-coverage.ts",
+      "sha256": "a4f088dd9899d327742fe9222747b8f9ca8b86f2d4b285abb3333f87fe7f1d6a"
+    },
+    {
+      "path": "tools/aidlc-sensor.ts",
+      "sha256": "ca5c14b27da4e11ec62cf50e39b2d5b9b4374715bfd97f44e83a8eff447357fa"
+    },
+    {
+      "path": "tools/aidlc-stage-schema.ts",
+      "sha256": "8112d4964fdba5a21195d4b895efcadd916410c27d839ca00f68f6aecc5273e8"
+    },
+    {
+      "path": "tools/aidlc-state.ts",
+      "sha256": "30c6ca1196223d41391dac2db6421a5cb4082b596967038f3db5637fdbf85ac4"
+    },
+    {
+      "path": "tools/aidlc-swarm.ts",
+      "sha256": "06e3635ef0d70fd3352079502784174c147f65891e78c7c50799e2674e9cd488"
+    },
+    {
+      "path": "tools/aidlc-utility.ts",
+      "sha256": "4283ead2666816adbf5ea39cbad0a2e0dfc444939490296975bf525afd71a177"
+    },
+    {
+      "path": "tools/aidlc-validate.ts",
+      "sha256": "832819d8c8f583d3f36e376b33f22d2dd7b163618819b47692a00cfec7c29c1e"
+    },
+    {
+      "path": "tools/aidlc-version.ts",
+      "sha256": "8b07daade4e9d14d89b209e130f3d0121e12ecdcdcd51a8b24672e96a2e8bd98"
+    },
+    {
+      "path": "tools/aidlc-worktree.ts",
+      "sha256": "d07fe04f1ded20e35ba0b70b0a8ee9da0e8d19d0b3afd1b8d505b6ba0423d37d"
+    },
+    {
+      "path": "tools/data/harness.json",
+      "sha256": "7d1294f566fcc20224a0bea626d290947a8ff2e4ee4afdf9adebad3800c90751"
+    },
+    {
+      "path": "tools/data/memory-seed/org.md",
+      "sha256": "ff72cbf1b08bb9c71851f7a85e54de92b49577422feafd403be872b3c4713a63"
+    },
+    {
+      "path": "tools/data/memory-seed/phases/construction.md",
+      "sha256": "336a0e700510ec5d932aa0e4476c1123ce925e6a4afffee31c513bf7d1e1cf1b"
+    },
+    {
+      "path": "tools/data/memory-seed/phases/ideation.md",
+      "sha256": "6179c9da75d3f2944c37f51968bcdab2fb4e59052b30a1ebb716f0bbd0d4fcb4"
+    },
+    {
+      "path": "tools/data/memory-seed/phases/inception.md",
+      "sha256": "a23a5931ec6cb06dd9b49d905f001694babc99089e97da0314fc9920fb3ee64b"
+    },
+    {
+      "path": "tools/data/memory-seed/phases/operation.md",
+      "sha256": "2ca872806259b476e5fc10896d39b3461cae4a80e173e4a7af122eeb0c7e66b9"
+    },
+    {
+      "path": "tools/data/memory-seed/project.md",
+      "sha256": "8fdb302740a412b0f79887c84dd5714680f621b2ce3351ae241559880ea2bd66"
+    },
+    {
+      "path": "tools/data/memory-seed/team.md",
+      "sha256": "f6b436fce9a309effc6a5c7b43ebaefb7d89aaba83fdf367ea2ba41d09f3e16f"
+    },
+    {
+      "path": "tools/data/memory-seed/templates/.gitkeep",
+      "sha256": "9cf930a165d4d24fd80ff21a9c7df39419a285e035fbe669bf5460ad0921d13c"
+    },
+    {
+      "path": "tools/data/scaffold/construction/build-and-test/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/construction/ci-pipeline/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/ideation/approval-handoff/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/ideation/feasibility/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/ideation/intent-capture/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/ideation/market-research/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/ideation/rough-mockups/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/ideation/scope-definition/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/ideation/team-formation/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/inception/application-design/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/inception/delivery-planning/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/inception/refined-mockups/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/inception/requirements-analysis/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/inception/reverse-engineering/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/inception/units-generation/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/inception/user-stories/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/initialization/state-init/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/initialization/workspace-detection/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/initialization/workspace-scaffold/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/operation/deployment-execution/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/operation/deployment-pipeline/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/operation/environment-provisioning/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/operation/feedback-optimization/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/operation/incident-response/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/operation/observability-setup/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/operation/performance-validation/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scaffold/verification/.gitkeep",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "tools/data/scope-grid.json",
+      "sha256": "83ba258a19838e1a330aba38d55e4421738cc533d04a15a2a4c8c445c5ab29c0"
+    },
+    {
+      "path": "tools/data/stage-graph.json",
+      "sha256": "effd9539f5c1e825fbbb9cd132d15697d0da33f010bbcf92bd288edda8d5c21a"
+    },
+    {
+      "path": "tools/data/templates/.gitkeep",
+      "sha256": "da10c5820101c36f22cdd2930e09d1ae4d7a8d14871f1e225ca670566afec968"
+    }
+  ],
+  "rulesAidlcMd": {
+    "path": "rules/aidlc.md",
+    "sha256": "18fbbfa515b3b3027102ce5fedc20f09769c269e80c65d6ecf933cb0445e4a3c"
+  }
+}

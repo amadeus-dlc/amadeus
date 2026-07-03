@@ -1,7 +1,0 @@
-# skill-forge-source-sha256: d1ca72ee5856e84901c14a6ca862fccf7c9861ddc04dd13423f7719c279777ee
-interface:
-  display_name: "Amadeus History Review"
-  short_description: "Review prior Amadeus artifacts"
-  default_prompt: "Use $amadeus-history-review to review prior Amadeus artifacts."
-policy:
-  allow_implicit_invocation: false

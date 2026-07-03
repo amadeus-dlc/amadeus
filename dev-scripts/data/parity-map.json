@@ -1,0 +1,87 @@
+{
+  "baselineCommit": "fde1e1af7aae16f4c4defc991abaa3877ee2ac26",
+  "skillNameMapping": {
+    "prefix": "aidlc",
+    "replacement": "amadeus",
+    "rule": "aidlc-<x> -> amadeus-<x>; aidlc（入口） -> amadeus"
+  },
+  "checkedEngineDirectories": ["tools", "aidlc-common", "sensors", "hooks", "scopes", "agents", "knowledge"],
+  "relocations": [
+    {
+      "upstreamPath": "rules/aidlc.md",
+      "localPath": ".agents/rules/aidlc.md",
+      "reason": "symlink 化。.claude/rules/aidlc.md は .agents/rules/aidlc.md への symlink であり、実体（.agents/rules/aidlc.md）を直接照合する。"
+    },
+    {
+      "upstreamPath": "tools",
+      "localPath": ".agents/aidlc/tools",
+      "reason": "host 中立化（人間指示）。.claude/tools は .agents/aidlc/tools への symlink であり、実体（.agents/aidlc/tools）を直接照合する。"
+    },
+    {
+      "upstreamPath": "aidlc-common",
+      "localPath": ".agents/aidlc/aidlc-common",
+      "reason": "host 中立化（人間指示）。.claude/aidlc-common は .agents/aidlc/aidlc-common への symlink であり、実体（.agents/aidlc/aidlc-common）を直接照合する。"
+    },
+    {
+      "upstreamPath": "sensors",
+      "localPath": ".agents/aidlc/sensors",
+      "reason": "host 中立化（人間指示）。.claude/sensors は .agents/aidlc/sensors への symlink であり、実体（.agents/aidlc/sensors）を直接照合する。"
+    },
+    {
+      "upstreamPath": "hooks",
+      "localPath": ".agents/aidlc/hooks",
+      "reason": "host 中立化（人間指示）。.claude/hooks は .agents/aidlc/hooks への symlink であり、実体（.agents/aidlc/hooks）を直接照合する。"
+    },
+    {
+      "upstreamPath": "scopes",
+      "localPath": ".agents/aidlc/scopes",
+      "reason": "host 中立化（人間指示）。.claude/scopes は .agents/aidlc/scopes への symlink であり、実体（.agents/aidlc/scopes）を直接照合する。"
+    },
+    {
+      "upstreamPath": "agents",
+      "localPath": ".agents/aidlc/agents",
+      "reason": "host 中立化（人間指示）。.claude/agents は .agents/aidlc/agents への symlink であり、実体（.agents/aidlc/agents）を直接照合する。"
+    },
+    {
+      "upstreamPath": "knowledge",
+      "localPath": ".agents/aidlc/knowledge",
+      "reason": "host 中立化（人間指示）。.claude/knowledge は .agents/aidlc/knowledge への symlink であり、実体（.agents/aidlc/knowledge）を直接照合する。"
+    }
+  ],
+  "missingSkillExceptions": [],
+  "engineFileExceptions": [],
+  "exceptions": [
+    {
+      "target": "aidlc/ seed（上流の dist/claude/aidlc/ サンプルデータ）",
+      "reason": "上流の aidlc/ サンプルデータは取り込まず、既存 aidlc/ 実データ（Space、Intent record）を正とする（R001 受け入れ条件）。parity-check の検査対象（.claude/ 配下の engine ファイルと skills/ の名前写像）に含まれない。"
+    },
+    {
+      "target": ".mcp.json",
+      "reason": "開発環境固有の MCP 設定であり、上流と同期しない。parity-check の検査対象に含まれない。"
+    },
+    {
+      "target": "CLAUDE.md",
+      "reason": "リポジトリ固有のエージェント指示であり、上流と同期しない。parity-check の検査対象に含まれない。"
+    },
+    {
+      "target": ".claude/settings.json のうち hooks 以外",
+      "reason": "hooks 以外の設定はこのリポジトリの既存開発環境（kiro skill 群、既存 hooks、dev-scripts）向けであり、上流と同期しない（C001）。settings.json 自体が parity-check の検査対象（tools/aidlc-common/sensors/hooks/scopes/agents/knowledge/skills）に含まれない。"
+    },
+    {
+      "target": "skills/**/SKILL.md、.agents/skills/**/SKILL.md",
+      "reason": "改名（aidlc-* → amadeus-*）と amadeus-grilling への質問結線のための適応コピーであり、hash 照合対象外とする。parity-check は skill ディレクトリの存在照合のみを行う。"
+    },
+    {
+      "target": "question-rendering.md の references/ 配置",
+      "reason": "参照ファイルを skill 側の references/ 配下へ移設しており、上流の配置とは異なる。移設先は skills/amadeus*/references/ であり、.claude/ 配下の engine ファイル照合（tools/aidlc-common/sensors/hooks/scopes/agents/knowledge）の対象外。"
+    },
+    {
+      "target": "amadeus-grilling, amadeus-domain-modeling, amadeus-validator",
+      "reason": "上流に対応のない独自 3 skill。R004 により機能を失わずに維持する。上流 38 skill の名前写像対象には含まれないため、parity-check の一方向（baseline -> local 存在）検査では検査されない。"
+    },
+    {
+      "target": "amadeus-construction-*、amadeus-ideation-*、amadeus-inception-*、amadeus-steering など旧 skill 群",
+      "reason": "削除済み（examples 機構の廃止に伴う旧 skill 整理）。置換前の旧 skill 群であり、上流 38 skill との 1 対 1 対応の対象外だったため、parity-check では検査されていなかった。"
+    }
+  ]
+}

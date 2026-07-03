@@ -1,6 +1,0 @@
-interface:
-  display_name: "Amadeus Ideation Market Research"
-  short_description: "Research market for Amadeus Intent"
-  default_prompt: "Use $amadeus-ideation-market-research to research market context for an Amadeus Intent."
-policy:
-  allow_implicit_invocation: false

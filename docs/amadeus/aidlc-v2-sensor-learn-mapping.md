@@ -1,5 +1,12 @@
 # AI-DLC v2 Sensor and Learn Mapping
 
+## 上書き注記（D004）
+
+この文書が下した sensor 実行機構と learnings ritual の決定論ツールの不採用判断は、Intent `260704-v2-parity-completion` の D004 により採用へ変更した。
+Issue #393 の不採用判断は「hook 実行基盤を含める判断が確定した場合は再検討する」と明記しており、本家 TS エンジンの適応コピー戦略（D001）がその再検討条件を成立させた。
+検査体制は、本家 sensor（エンジンごとコピーし、stage 完了時に即時検査する）と `amadeus-validator`（workspace 横断で永続検査する）の併用とする。
+以下の本文は、Issue #393 時点の判断を歴史記録として残す。
+
 この文書は、Issue #393 の判断として、AI-DLC v2 の stage 定義にある sensor と Learn（learnings ritual と `memory.md`）を Amadeus DLC のどの成果物と検証へ写像するかを定義する。
 
 参照元は次である。

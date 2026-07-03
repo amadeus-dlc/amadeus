@@ -12,7 +12,8 @@
 //                                  → knowledge/
 //   knowledge/codebase/<repo>/     → codekb/<repo>/
 //   intents/<YYYYMMDD>-<slug>      → intents/<YYMMDD>-<slug>/（state.json → aidlc-state.md、audit 遡及記録、R005 改名）
-//   active-intent / intents.md     → intents/ 配下（intents.json を新設し uuid v7 を採番）
+//   active-intent                  → intents/ 配下（intents.json を新設し uuid v7 を採番）
+//   ※ intents.md 索引は GD009 で廃止されたため、この移行では生成しない。
 
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
@@ -21,7 +22,6 @@ import {
   AIDLC_STAGE_SLUGS_BY_PHASE,
 } from "../.agents/skills/amadeus-validator/validator/aidlc-state-contract";
 import { stageCatalog } from "../.agents/skills/amadeus-validator/validator/lifecycle-v2";
-import { buildIntentsIndex } from "../.agents/skills/amadeus-validator/scripts/IndexGenerate";
 
 const stageNumbers: Record<string, string> = {
   "workspace-scaffold": "0.1",
@@ -666,7 +666,6 @@ function main(): void {
   buildMemory(amadeusDir, spaceDir);
   buildKnowledge(amadeusDir, spaceDir);
   migrateIntents(amadeusDir, spaceDir, repo);
-  writeFileSync(join(spaceDir, "intents/intents.md"), buildIntentsIndex(workspace));
 
   if (deleteOld) rmSync(amadeusDir, { recursive: true, force: true });
   console.log(`migrate: ${spaceDir} へ移行しました${deleteOld ? "（旧 .amadeus/ は削除済み）" : ""}`);

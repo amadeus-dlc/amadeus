@@ -22,6 +22,8 @@ CI 相当の入口は `npm run test:all` である。
 
 この入口は typecheck、lint、contracts、Claude wiring、integration eval、mock e2e、examples 検証、diff check を実行する。
 
+GitHub Actions（`.github/workflows/ci.yaml`）は `push`（`main` branch）と `pull_request` を trigger にし、`AMADEUS_LLM_PROVIDER=mock` で `mock` job を実行する。
+
 ## GitHub 連携
 
 GitHub Issues と Pull Requests を Amadeus 本体自己開発の外部状態として扱う。

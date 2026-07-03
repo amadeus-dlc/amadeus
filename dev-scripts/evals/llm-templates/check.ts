@@ -1,40 +1,14 @@
 #!/usr/bin/env bun
 
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, cpSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, cpSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, relative, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { createLlmProvider, isLlmProviderMode, shellQuote, type LlmProvider, type LlmProviderMode, type LlmRequest, type MockLlmCases } from "../llm-support/provider";
 
-type InitialE2eMode = "steering" | "event-storming";
-type E2eMode = InitialE2eMode | `${InitialE2eMode}-rerun`;
-type Mode = "ping" | E2eMode | "all";
-
-type ExpectedArtifacts = {
-  mustExist: string[];
-  mustNotExist: string[];
-  mustRemainValid: string[];
-};
-
-type ExpectedMarkdownChanges = {
-  created: string[];
-  mayUpdate: string[];
-  updated: string[];
-};
-
-type MarkdownSnapshot = Map<string, string>;
-type FileSnapshot = Map<string, string | null>;
-
-type E2eCase = {
-  id: E2eMode;
-  prompt: string;
-  prepareGiven: (workspace: string) => void;
-  givenMustRemainValid: string[];
-  applyMock: (workspace: string) => void;
-  expectedArtifacts: ExpectedArtifacts;
-  expectedFileChanges: string[];
-  expectedMarkdownChanges: ExpectedMarkdownChanges;
-  assert?: (workspace: string) => void;
-};
+// この eval は amadeus-steering の E2E だった（examples 機構の廃止に伴い退役）。
+// 現在は runner/provider のオプション解決を検証する `--mode ping` の共通ハーネスとしてだけ残す。
+// 実際に呼び出す側は provider-options-check.ts と runner-options-check.ts。
+type Mode = "ping";
 
 type Options = {
   dryRun: boolean;
@@ -48,33 +22,16 @@ type Options = {
 
 const root = resolve(import.meta.dir, "../../..");
 const defaultCodexRunner = "dev-scripts/run-codex-corporate.sh";
-const validator = ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts";
 const requiredSkills = [
-  "amadeus-steering",
-  "amadeus-event-storming",
   "amadeus-validator",
   "japanese-tech-writing",
-];
-const initialE2eModes = ["steering", "event-storming"] as const;
-const rerunE2eModes = initialE2eModes.map((mode) => `${mode}-rerun` as const);
-const e2eModes = [...initialE2eModes, ...rerunE2eModes] as const;
-const forbiddenSpecArtifacts = [
-  "aidlc/spaces/default/spec.md",
-  "aidlc/spaces/default/specs",
-  ".kiro/specs",
-  "openspec",
-];
-// amadeus-discovery は #369 で退役したため、steering layer が Discovery 成果物を作らないことを検証する。
-const retiredDiscoveryArtifacts = [
-  "aidlc/spaces/default/discoveries.md",
-  "aidlc/spaces/default/discoveries",
 ];
 
 function parseArgs(args: string[]): Options {
   const options: Options = {
     dryRun: false,
     keep: false,
-    mode: "steering",
+    mode: "ping",
     printCommand: false,
     provider: providerModeFromEnvironment(),
     runner: process.env.AMADEUS_CODEX_RUNNER ?? defaultCodexRunner,
@@ -95,7 +52,7 @@ function parseArgs(args: string[]): Options {
       index += 1;
     } else if (arg === "--mode") {
       const value = args[index + 1];
-      if (!isMode(value)) fail(`--mode requires ping, all, or one of: ${e2eModes.join(", ")}`);
+      if (value !== "ping") fail("--mode requires ping");
       options.mode = value;
       index += 1;
     } else if (arg === "--workspace") {
@@ -127,106 +84,17 @@ function resolveRunner(path: string): string {
   return resolve(root, path);
 }
 
-function isMode(value: string | undefined): value is Mode {
-  return value === "ping" ||
-    isE2eMode(value) ||
-    value === "all";
-}
-
-function isE2eMode(value: string | undefined): value is E2eMode {
-  return e2eModes.includes(value as E2eMode);
-}
-
 function fail(message: string): never {
   console.error(message);
   process.exit(1);
-}
-
-function run(command: string[], cwd: string): string {
-  const result = Bun.spawnSync(command, {
-    cwd,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-
-  const stdout = new TextDecoder().decode(result.stdout);
-  const stderr = new TextDecoder().decode(result.stderr);
-
-  if (result.exitCode !== 0) {
-    fail([
-      `command failed: ${command.join(" ")}`,
-      "stdout:",
-      stdout,
-      "stderr:",
-      stderr,
-    ].join("\n"));
-  }
-
-  return stdout;
 }
 
 function ensureFile(path: string): void {
   if (!existsSync(path)) fail(`missing file: ${path}`);
 }
 
-function ensureMissing(path: string): void {
-  if (existsSync(path)) fail(`unexpected file: ${path}`);
-}
-
 function ensureDir(path: string): void {
   if (!existsSync(path)) mkdirSync(path, { recursive: true });
-}
-
-function listFiles(path: string): string[] {
-  return readdirSync(path).flatMap((entry) => {
-    const next = join(path, entry);
-    return statSync(next).isDirectory() ? listFiles(next) : [next];
-  });
-}
-
-function listAmadeusFiles(workspace: string): string[] {
-  const amadeus = join(workspace, "aidlc");
-  if (!existsSync(amadeus)) return [];
-  return listFiles(amadeus).map((file) => relative(workspace, file)).sort();
-}
-
-function listAmadeusMarkdownFiles(workspace: string): string[] {
-  return listAmadeusFiles(workspace).filter((file) => file.endsWith(".md"));
-}
-
-function snapshotMarkdown(workspace: string): MarkdownSnapshot {
-  return new Map(listAmadeusMarkdownFiles(workspace).map((file) => {
-    const path = join(workspace, file);
-    const stat = statSync(path);
-    return [file, `${stat.size}:${stat.mtimeMs}:${readFileSync(path, "utf8")}`];
-  }));
-}
-
-function snapshotFiles(workspace: string, files: string[]): FileSnapshot {
-  return new Map(unique(files).map((file) => {
-    const path = join(workspace, file);
-    if (!existsSync(path)) return [file, null];
-    const stat = statSync(path);
-    return [file, `${stat.size}:${stat.mtimeMs}:${readFileSync(path, "utf8")}`];
-  }));
-}
-
-function unique(files: string[]): string[] {
-  return [...new Set(files)].sort();
-}
-
-function replaceInTree(path: string, replacements: Record<string, string>): void {
-  for (const file of listFiles(path)) {
-    replaceInFile(file, replacements);
-  }
-}
-
-function replaceInFile(file: string, replacements: Record<string, string>): void {
-    let content = readFileSync(file, "utf8");
-    for (const [from, to] of Object.entries(replacements)) {
-      content = content.replaceAll(from, to);
-    }
-    writeFileSync(file, content);
 }
 
 function createWorkspace(options: Options): string {
@@ -262,478 +130,12 @@ function prepareWorkspace(workspace: string): void {
   );
 }
 
-function prepareSteeringFixture(workspace: string): void {
-  const source = join(root, ".agents/skills/amadeus-steering/templates/space");
-  const target = join(workspace, "aidlc/spaces/default");
-  ensureFile(join(source, "README.md"));
-  cpSync(source, target, { recursive: true });
-  rmSync(join(target, "README.md"), { force: true });
-  replaceInTree(target, {
-    "<product-name>": "図書貸出セルフサービス",
-  });
-}
-
-function applyEventStormingArtifacts(workspace: string): void {
-  const source = join(root, ".agents/skills/amadeus-event-storming/templates/event-storming/session");
-  const summarySource = join(root, ".agents/skills/amadeus-event-storming/templates/event-storming/session.md");
-  const target = join(workspace, "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow");
-  ensureFile(summarySource);
-  cpSync(source, target, { recursive: true });
-  writeFileSync(
-    join(workspace, "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow.md"),
-    [
-      "# Event Storming Summary",
-      "",
-      "## Purpose",
-      "",
-      "- 利用者が図書貸出をセルフサービスで開始し、返却期限を確認する流れを整理する。",
-      "",
-      "## Scope",
-      "",
-      "- pre-intent",
-      "",
-      "## Related Intent",
-      "",
-      "- なし",
-      "",
-      "## Level Status",
-      "",
-      "| Level | Status | Evidence |",
-      "|---|---|---|",
-      "| big-picture | ready | events.md, board.md, hotspots.md |",
-      "| process-modeling | ready | flow.md |",
-      "| system-design | ready | aggregate-candidates.md, bounded-context-candidates.md |",
-      "",
-      "## Next Skill",
-      "",
-      "- amadeus-domain-modeling",
-      "",
-      "## Handoff To Domain Modeling",
-      "",
-      "| Candidate | Kind | Evidence | Open Questions |",
-      "|---|---|---|---|",
-      "| AGC001 | Aggregate Candidate | DEV001, DEV002 | 返却期限変更を同じ集約で扱うか |",
-      "| BCC001 | Bounded Context Candidate | AGC001, DEV001, DEV002 | 利用者管理と境界を分けるか |",
-      "",
-      "## Supersession",
-      "",
-      "| Field | Value |",
-      "|---|---|",
-      "| Supersedes | なし |",
-      "| Superseded By | なし |",
-      "| Reason | なし |",
-      "",
-    ].join("\n"),
-  );
-  writeFileSync(
-    join(target, "events.md"),
-    [
-      "# Domain Events",
-      "",
-      "## 一覧",
-      "",
-      "| ID | Domain Event | Description | Source | Excluded Similar Events |",
-      "|---|---|---|---|---|",
-      "| DEV001 | 貸出が開始された | 利用者が図書の貸出を開始した | ヒアリング | 貸出ボタンがクリックされた |",
-      "| DEV002 | 返却期限が決まった | 貸出に対する返却期限が決まった | ヒアリング | 返却期限計算 API が呼ばれた |",
-      "",
-    ].join("\n"),
-  );
-  writeFileSync(
-    join(target, "flow.md"),
-    [
-      "# Event Storming Flow",
-      "",
-      "## Flow",
-      "",
-      "| ID | Type | Label | Trigger | Produces | Related | Note |",
-      "|---|---|---|---|---|---|---|",
-      "| ACT001 | Actor | 利用者 |  | CMD001 |  | 図書を借りる |",
-      "| CMD001 | Command | 貸出を開始する | ACT001 | DEV001 |  | UI event は Command の契機として扱う |",
-      "| DEV001 | Domain Event | 貸出が開始された | CMD001 | POL001 |  |  |",
-      "| POL001 | Policy | 貸出開始時に返却期限を決める | DEV001 | DEV002 |  |  |",
-      "| DEV002 | Domain Event | 返却期限が決まった | POL001 | RM001 |  |  |",
-      "| RM001 | Read Model | 貸出状況 | DEV001, DEV002 |  | ACT001 | 利用者が参照する |",
-      "",
-    ].join("\n"),
-  );
-  writeFileSync(
-    join(target, "board.md"),
-    [
-      "# Event Storming Board",
-      "",
-      "## Board",
-      "",
-      "| Order | Type | ID | Label | Related | Note |",
-      "|---:|---|---|---|---|---|",
-      "| 1 | Actor | ACT001 | 利用者 | CMD001 | 図書を借りる |",
-      "| 2 | Command | CMD001 | 貸出を開始する | DEV001 | 利用者が実行する |",
-      "| 3 | Domain Event | DEV001 | 貸出が開始された | POL001 | 貸出事実 |",
-      "| 4 | Policy | POL001 | 貸出開始時に返却期限を決める | DEV002 | 期限決定へ進む |",
-      "| 5 | Domain Event | DEV002 | 返却期限が決まった | AGC001 | 期限事実 |",
-      "| 6 | Read Model | RM001 | 貸出状況 | DEV001, DEV002 | 利用者が参照する |",
-      "| 7 | Aggregate Candidate | AGC001 | 貸出 | DEV001, DEV002 | 貸出と返却期限の一貫性境界候補 |",
-      "| 8 | Bounded Context Candidate | BCC001 | 貸出管理 | AGC001 | 貸出関連ルールの境界候補 |",
-      "",
-    ].join("\n"),
-  );
-  writeFileSync(
-    join(target, "aggregate-candidates.md"),
-    [
-      "# Aggregate Candidates",
-      "",
-      "## 一覧",
-      "",
-      "| ID | Candidate | Rationale | Related Domain Events | Consistency Clues | Open Questions |",
-      "|---|---|---|---|---|---|",
-      "| AGC001 | 貸出 | 貸出開始と返却期限の一貫性が密に見える | DEV001, DEV002 | 貸出開始後に返却期限が必要 | 返却期限変更を含めるか |",
-      "",
-    ].join("\n"),
-  );
-  writeFileSync(
-    join(target, "bounded-context-candidates.md"),
-    [
-      "# Bounded Context Candidates",
-      "",
-      "## 一覧",
-      "",
-      "| ID | Candidate | Rationale | Related Domain Events | Related Aggregate Candidates | Open Questions |",
-      "|---|---|---|---|---|---|",
-      "| BCC001 | 貸出管理 | 貸出開始と返却期限のルールが密に関係する | DEV001, DEV002 | AGC001 | 利用者管理と同じ境界かは未確認 |",
-      "",
-    ].join("\n"),
-  );
-  writeFileSync(
-    join(target, "hotspots.md"),
-    [
-      "# Hotspots",
-      "",
-      "## 一覧",
-      "",
-      "| ID | Type | Summary | Source | Status | Related | Next Action |",
-      "|---|---|---|---|---|---|---|",
-      "| HOT001 | Open Question | 返却期限変更の扱いが未確定 | ヒアリング | open | DEV002 | Domain Modeling で確認する |",
-      "",
-    ].join("\n"),
-  );
-  writeFileSync(
-    join(target, "state.json"),
-    JSON.stringify({
-      schemaVersion: 1,
-      id: "ES001-loan-flow",
-      phase: "event-storming",
-      status: "ready",
-      currentLevel: "system-design",
-      completedLevels: ["big-picture", "process-modeling", "system-design"],
-      scope: "pre-intent",
-      relatedIntent: null,
-      nextRecommendedSkill: "amadeus-domain-modeling",
-    }, null, 2),
-  );
-}
-
-function steeringPrompt(): string {
-  return [
-    "amadeus-steering を使ってください。",
-    "",
-    "空の workspace に Amadeus の Space（aidlc/spaces/default/）を作成してください。",
-    "",
-    "題材:",
-    "- プロダクト名: 図書貸出セルフサービス",
-    "- 主目的: 利用者が図書館カウンターに並ばずに貸出と返却を進められる",
-    "- 主なアクター: 利用者, 図書館職員",
-    "- 外部システム: 図書管理システム",
-    "- 主要領域: 貸出, 返却, 利用者通知",
-    "",
-    "制約:",
-    "- 質問せずに続行してください。",
-    "- `aidlc/` 配下だけを作成してください。",
-    "- git commit はしないでください。",
-    "- 作成後に `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts .` を実行し、結果を要約してください。",
-  ].join("\n");
-}
-
 function pingPrompt(): string {
   return [
     "動作確認です。",
     "ファイルを作成せず、コマンドも実行しないでください。",
     "最後の返答は `pong` だけにしてください。",
   ].join("\n");
-}
-
-function eventStormingPrompt(): string {
-  return [
-    "amadeus-event-storming を使ってください。",
-    "",
-    "pre-intent の Event Storming `ES001-loan-flow` を system-design level まで整理してください。",
-    "",
-    "Event Storming で分かっていること:",
-    "- 対象シナリオ: 利用者が図書貸出をセルフサービスで開始し、返却期限を確認する。",
-    "- Domain Event: DEV001 貸出が開始された。DEV002 返却期限が決まった。",
-    "- Actor: ACT001 利用者。",
-    "- Command: CMD001 貸出を開始する。",
-    "- Policy: POL001 貸出開始時に返却期限を決める。",
-    "- Read Model: RM001 貸出状況。",
-    "- Aggregate Candidate: AGC001 貸出。",
-    "- Bounded Context Candidate: BCC001 貸出管理。",
-    "- Hotspot: HOT001 返却期限変更の扱いが未確定。",
-    "",
-    "作成対象:",
-    "- `aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow.md`",
-    "- `aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/events.md`",
-    "- `aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/flow.md`",
-    "- `aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/board.md`",
-    "- `aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/aggregate-candidates.md`",
-    "- `aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/bounded-context-candidates.md`",
-    "- `aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/hotspots.md`",
-    "- `aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/state.json`",
-    "",
-    "制約:",
-    "- 質問せずに続行してください。",
-    "- 同梱テンプレートを使い、上の ID とファイル名で最小成果物を作成してください。",
-    "- Event は Domain Event だけとして扱い、UI event、technical event、integration event、log event は Domain Event にしないでください。",
-    "- Requirement、Use Case、Unit、Bolt、Task、domain model、実装、CI は作らないでください。",
-    "- `amadeus`、`amadeus-domain-modeling` は自動実行しないでください。",
-    "- git commit はしないでください。",
-    "- 作成後に `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts .` を実行し、結果を要約してください。",
-  ].join("\n");
-}
-
-function rerunPrompt(basePrompt: string): string {
-  return [
-    basePrompt,
-    "",
-    "再実行条件:",
-    "- 既存成果物がすでにある状態で再実行してください。",
-    "- 不足があれば補完し、既存内容と矛盾する重複成果物は作らないでください。",
-    "- 実装、CI は作らないでください。",
-  ].join("\n");
-}
-
-function promptFor(mode: Mode): string {
-  if (mode === "ping") return pingPrompt();
-  if (isE2eMode(mode)) return e2eCase(mode).prompt;
-  fail("all mode does not have a single prompt");
-}
-
-function steeringArtifacts(): string[] {
-  return [
-    "aidlc/spaces/default/memory/org.md",
-    "aidlc/spaces/default/memory/team.md",
-    "aidlc/spaces/default/memory/project.md",
-    "aidlc/spaces/default/knowledge/glossary.md",
-    "aidlc/spaces/default/knowledge/actors.md",
-    "aidlc/spaces/default/knowledge/external-systems.md",
-    "aidlc/spaces/default/knowledge/background.md",
-    "aidlc/spaces/default/knowledge/domain-map.md",
-    "aidlc/spaces/default/knowledge/context-map.md",
-    "aidlc/spaces/default/intents/intents.json",
-    "aidlc/spaces/default/intents/intents.md",
-  ];
-}
-
-function steeringMarkdownArtifacts(): string[] {
-  return markdownOnly(steeringArtifacts());
-}
-
-function eventStormingArtifacts(): string[] {
-  return [
-    ...steeringArtifacts(),
-    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow.md",
-    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/events.md",
-    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/flow.md",
-    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/board.md",
-    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/aggregate-candidates.md",
-    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/bounded-context-candidates.md",
-    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/hotspots.md",
-    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/state.json",
-  ];
-}
-
-function eventStormingMarkdownArtifacts(): string[] {
-  return [
-    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow.md",
-    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/events.md",
-    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/flow.md",
-    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/board.md",
-    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/aggregate-candidates.md",
-    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/bounded-context-candidates.md",
-    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/hotspots.md",
-  ];
-}
-
-function markdownOnly(files: string[]): string[] {
-  return files.filter((file) => file.endsWith(".md"));
-}
-
-function expectedArtifacts(mustExist: string[], mustRemainValid: string[]): ExpectedArtifacts {
-  return {
-    mustExist: unique(mustExist),
-    mustNotExist: [
-      ...forbiddenSpecArtifacts,
-      ...retiredDiscoveryArtifacts,
-    ],
-    mustRemainValid,
-  };
-}
-
-function expectedMarkdownChanges(created: string[], updated: string[], mayUpdate: string[] = []): ExpectedMarkdownChanges {
-  return {
-    created: unique(markdownOnly(created)),
-    mayUpdate: unique(markdownOnly(mayUpdate)),
-    updated: unique(markdownOnly(updated)),
-  };
-}
-
-function e2eCase(mode: E2eMode): E2eCase {
-  const baseCases: Record<InitialE2eMode, E2eCase> = {
-    steering: {
-      id: "steering",
-      prompt: steeringPrompt(),
-      prepareGiven: () => {},
-      givenMustRemainValid: [],
-      applyMock: prepareSteeringFixture,
-      expectedArtifacts: expectedArtifacts(steeringArtifacts(), ["."]),
-      expectedFileChanges: [],
-      expectedMarkdownChanges: expectedMarkdownChanges(steeringMarkdownArtifacts(), []),
-    },
-    "event-storming": {
-      id: "event-storming",
-      prompt: eventStormingPrompt(),
-      prepareGiven: prepareSteeringFixture,
-      givenMustRemainValid: ["."],
-      applyMock: applyEventStormingArtifacts,
-      expectedArtifacts: expectedArtifacts(eventStormingArtifacts(), ["."]),
-      expectedFileChanges: [],
-      expectedMarkdownChanges: expectedMarkdownChanges(eventStormingMarkdownArtifacts(), []),
-    },
-  };
-
-  if (!mode.endsWith("-rerun")) return baseCases[mode as InitialE2eMode];
-
-  const baseMode = mode.replace("-rerun", "") as InitialE2eMode;
-  const baseCase = baseCases[baseMode];
-  return {
-    ...baseCase,
-    id: mode,
-    prompt: rerunPrompt(baseCase.prompt),
-    prepareGiven: (workspace) => {
-      baseCase.prepareGiven(workspace);
-      baseCase.applyMock(workspace);
-    },
-    givenMustRemainValid: baseCase.expectedArtifacts.mustRemainValid,
-    expectedFileChanges: [],
-    expectedMarkdownChanges: expectedMarkdownChanges([], [], [
-      ...baseCase.expectedMarkdownChanges.created,
-      ...baseCase.expectedMarkdownChanges.updated,
-    ]),
-  };
-}
-
-function prepareDryRun(workspace: string, mode: Mode): void {
-  if (mode === "all") {
-    for (const targetMode of initialE2eModes) {
-      const modeWorkspace = join(workspace, targetMode);
-      ensureDir(modeWorkspace);
-      prepareWorkspace(modeWorkspace);
-      prepareE2eGiven(modeWorkspace, e2eCase(targetMode));
-    }
-  } else if (isE2eMode(mode)) {
-    prepareE2eGiven(workspace, e2eCase(mode));
-  }
-}
-
-function prepareE2eGiven(workspace: string, testCase: E2eCase): void {
-  testCase.prepareGiven(workspace);
-  assertValidTargets(workspace, testCase.givenMustRemainValid);
-}
-
-function assertE2eCase(workspace: string, testCase: E2eCase): void {
-  assertArtifacts(workspace, testCase.expectedArtifacts);
-  testCase.assert?.(workspace);
-}
-
-function assertFileChanges(before: FileSnapshot, after: FileSnapshot, expectedFiles: string[]): void {
-  const missing = unique(expectedFiles).filter((file) => after.get(file) === null);
-  const unchanged = unique(expectedFiles).filter((file) => {
-    const previous = before.get(file);
-    const current = after.get(file);
-    return current !== null && current === previous;
-  });
-
-  if (missing.length > 0 || unchanged.length > 0) {
-    fail([
-      "workspace file change coverage mismatch",
-      `missing changed files: ${missing.length === 0 ? "<none>" : missing.join(", ")}`,
-      `unchanged files: ${unchanged.length === 0 ? "<none>" : unchanged.join(", ")}`,
-    ].join("\n"));
-  }
-}
-
-function assertMarkdownChanges(before: MarkdownSnapshot, after: MarkdownSnapshot, expected: ExpectedMarkdownChanges): void {
-  const actualCreated = [...after.keys()].filter((file) => !before.has(file)).sort();
-  const actualUpdated = [...after.keys()].filter((file) => {
-    const previous = before.get(file);
-    return previous !== undefined && previous !== after.get(file);
-  }).sort();
-  const expectedCreated = unique(expected.created);
-  const allowedUpdated = unique([...expected.updated, ...expected.mayUpdate]);
-  const expectedUpdated = unique(expected.updated);
-
-  const missingCreated = expectedCreated.filter((file) => !actualCreated.includes(file));
-  const unexpectedCreated = actualCreated.filter((file) => !expectedCreated.includes(file));
-  const missingUpdated = expectedUpdated.filter((file) => !actualUpdated.includes(file));
-  const unexpectedUpdated = actualUpdated.filter((file) => !allowedUpdated.includes(file));
-
-  if (missingCreated.length > 0 || unexpectedCreated.length > 0 || missingUpdated.length > 0 || unexpectedUpdated.length > 0) {
-    fail([
-      "markdown change coverage mismatch",
-      `missing created: ${missingCreated.length === 0 ? "<none>" : missingCreated.join(", ")}`,
-      `unexpected created: ${unexpectedCreated.length === 0 ? "<none>" : unexpectedCreated.join(", ")}`,
-      `missing updated: ${missingUpdated.length === 0 ? "<none>" : missingUpdated.join(", ")}`,
-      `unexpected updated: ${unexpectedUpdated.length === 0 ? "<none>" : unexpectedUpdated.join(", ")}`,
-    ].join("\n"));
-  }
-}
-
-function assertArtifacts(workspace: string, expectedArtifacts: ExpectedArtifacts): void {
-  for (const file of expectedArtifacts.mustExist) {
-    ensureFile(join(workspace, file));
-  }
-  for (const file of expectedArtifacts.mustNotExist) {
-    ensureMissing(join(workspace, file));
-  }
-
-  const expected = unique(expectedArtifacts.mustExist);
-  const actual = listAmadeusFiles(workspace);
-  const missing = expected.filter((file) => !actual.includes(file));
-  const unexpected = actual.filter((file) => !expected.includes(file));
-  const specArtifacts = actual.filter(isSpecArtifact);
-
-  if (missing.length > 0 || unexpected.length > 0 || specArtifacts.length > 0) {
-    fail([
-      "artifact manifest mismatch",
-      `missing: ${missing.length === 0 ? "<none>" : missing.join(", ")}`,
-      `unexpected: ${unexpected.length === 0 ? "<none>" : unexpected.join(", ")}`,
-      `spec artifacts: ${specArtifacts.length === 0 ? "<none>" : specArtifacts.join(", ")}`,
-    ].join("\n"));
-  }
-
-  assertValidTargets(workspace, expectedArtifacts.mustRemainValid);
-}
-
-function isSpecArtifact(file: string): boolean {
-  return file.split(/[\\/]/).some((segment) => segment === "spec" || segment === "specs");
-}
-
-function assertValidTargets(workspace: string, targets: string[]): void {
-  for (const target of targets) {
-    if (target === ".") {
-      run(["bun", "run", validator, "."], workspace);
-    } else {
-      run(["bun", "run", validator, ".", target], workspace);
-    }
-  }
 }
 
 function assertPing(output: string): void {
@@ -752,51 +154,22 @@ async function runProvider(provider: LlmProvider, request: LlmRequest) {
 }
 
 function mockCases(): MockLlmCases {
-  const cases: MockLlmCases = {
+  return {
     ping: {
       message: "pong\n",
     },
   };
-
-  for (const mode of e2eModes) {
-    const testCase = e2eCase(mode);
-    cases[mode] = {
-      apply: (request) => testCase.applyMock(request.workspace),
-      message: `${mode} 成果物を作成または更新しました。\n`,
-    };
-  }
-
-  return cases;
-}
-
-async function runE2e(provider: LlmProvider, workspace: string, testCase: E2eCase): Promise<void> {
-  prepareE2eGiven(workspace, testCase);
-  const beforeFiles = snapshotFiles(workspace, testCase.expectedFileChanges);
-  const beforeMarkdown = snapshotMarkdown(workspace);
-  const result = await runProvider(provider, {
-    caseId: testCase.id,
-    outputPath: join(workspace, "last-message.md"),
-    prompt: testCase.prompt,
-    workspace,
-  });
-  const afterFiles = snapshotFiles(workspace, testCase.expectedFileChanges);
-  const afterMarkdown = snapshotMarkdown(workspace);
-  assertE2eCase(workspace, testCase);
-  assertFileChanges(beforeFiles, afterFiles, testCase.expectedFileChanges);
-  assertMarkdownChanges(beforeMarkdown, afterMarkdown, testCase.expectedMarkdownChanges);
-  ensureFile(result.outputPath);
 }
 
 async function main(): Promise<void> {
   const options = parseArgs(Bun.argv.slice(2));
   const runner = resolveRunner(options.runner);
   if (options.provider === "real") ensureFile(runner);
-  ensureFile(join(root, validator));
 
   const workspace = createWorkspace(options);
   prepareWorkspace(workspace);
   const output = join(workspace, "last-message.md");
-  const selectedPrompt = options.mode === "all" ? "" : promptFor(options.mode);
+  const selectedPrompt = pingPrompt();
   const provider = createLlmProvider({
     mockCases: mockCases(),
     mode: options.provider,
@@ -818,7 +191,6 @@ async function main(): Promise<void> {
   }
 
   if (options.dryRun) {
-    prepareDryRun(workspace, options.mode);
     console.log(`llm template eval dry-run: ok`);
     console.log(`mode: ${options.mode}`);
     console.log(`workspace: ${workspace}`);
@@ -833,30 +205,14 @@ async function main(): Promise<void> {
     console.log(`workspace: ${workspace}`);
     console.log(`mode: ${options.mode}`);
     console.log(`provider: ${provider.describe()}`);
-    if (options.mode === "all") {
-      for (const mode of initialE2eModes) {
-        const modeWorkspace = join(workspace, mode);
-        ensureDir(modeWorkspace);
-        prepareWorkspace(modeWorkspace);
-        console.log(`mode workspace: ${modeWorkspace}`);
-        await runE2e(provider, modeWorkspace, e2eCase(mode));
-        console.log(`llm ${mode} eval: ok`);
-      }
-      console.log("llm template eval: ok");
-    } else if (options.mode === "ping") {
-      const result = await runProvider(provider, {
-        caseId: options.mode,
-        outputPath: output,
-        prompt: selectedPrompt,
-        workspace,
-      });
-      assertPing(result.outputPath);
-      console.log("llm ping eval: ok");
-    } else {
-      await runE2e(provider, workspace, e2eCase(options.mode));
-      console.log(`llm ${options.mode} eval: ok`);
-      console.log("llm template eval: ok");
-    }
+    const result = await runProvider(provider, {
+      caseId: options.mode,
+      outputPath: output,
+      prompt: selectedPrompt,
+      workspace,
+    });
+    assertPing(result.outputPath);
+    console.log("llm ping eval: ok");
   } finally {
     if (!options.keep && !options.workspace) rmSync(workspace, { recursive: true, force: true });
   }

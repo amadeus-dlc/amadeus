@@ -1,6 +1,0 @@
-interface:
-  display_name: "Amadeus Inception User Stories"
-  short_description: "Write Amadeus user stories"
-  default_prompt: "Use $amadeus-inception-user-stories to express requirements as user stories and personas."
-policy:
-  allow_implicit_invocation: false

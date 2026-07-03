@@ -1,6 +1,0 @@
-interface:
-  display_name: "Amadeus Construction Functional Design"
-  short_description: "Design unit business logic"
-  default_prompt: "Use $amadeus-construction-functional-design to design the unit's business logic, rules, and domain entities."
-policy:
-  allow_implicit_invocation: false

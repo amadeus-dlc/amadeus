@@ -445,3 +445,560 @@
 **Details**: Q3 回答: commit 固定 + 明示更新（推奨案を採用）。基準 commit fde1e1af7aae16f4c4defc991abaa3877ee2ac26 を固定して成果物に記録し、上流への追従は明示的な Issue または Intent で行う（C003 へ反映済み）。回答時点での記録が漏れていたため backfill した（Recovered=true。Bugbot 指摘 3521318458 への対応）。
 
 ---
+
+## PHASE_VERIFIED
+**Timestamp**: 2026-07-03T18:04:57Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: Ideation
+**Pass/fail**: pass
+**Details**: https://github.com/amadeus-dlc/amadeus/pull/426
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T18:04:57Z
+**Event**: STAGE_STARTED
+**Stage**: reverse-engineering
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T18:15:36Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: reverse-engineering
+**Details**: codekb/amadeus/ の 9 ファイルを commit 42f3caee 基準で鮮度更新し、gate を提示した。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T18:15:36Z
+**Event**: GATE_APPROVED
+**Stage**: reverse-engineering
+**Details**: User Input: 「構築まで自動承認でお願いします。もう寝るので」「中間のPRは無しでOK」（事前の包括承認による自動承認）
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T18:15:36Z
+**Event**: STAGE_COMPLETED
+**Stage**: reverse-engineering
+**Details**: 自動承認（人間の事前指示）。codekb 9 ファイルの鮮度更新を確定。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T18:15:36Z
+**Event**: STAGE_SKIPPED
+**Stage**: practices-discovery
+**Details**: Condition 偽。チームの開発実践（branch 戦略、テスト方針、品質基準）は memory/team.md と development.md に確立済みで、新たな発見と昇格の必要がない。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T18:15:36Z
+**Event**: STAGE_STARTED
+**Stage**: requirements-analysis
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T18:17:16Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: requirements-analysis
+**Details**: requirements.md（R001〜R011）を作成し、gate を提示した。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T18:17:16Z
+**Event**: GATE_APPROVED
+**Stage**: requirements-analysis
+**Details**: User Input: 「構築まで自動承認でお願いします。もう寝るので」（事前の包括承認による自動承認）
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T18:17:16Z
+**Event**: STAGE_COMPLETED
+**Stage**: requirements-analysis
+**Details**: 自動承認（人間の事前指示）。R001〜R011 を確定。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T18:17:16Z
+**Event**: STAGE_SKIPPED
+**Stage**: user-stories
+**Details**: Condition 偽。開発者ツールでユーザー向け機能と複数ペルソナがない（skill 契約の除外条件「developer tools」に該当）。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T18:17:16Z
+**Event**: STAGE_SKIPPED
+**Stage**: refined-mockups
+**Details**: Condition 偽。UI がなく、Ideation の rough mockups も skip（対話契約は上流の conductor と directive 契約で定義済み）。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T18:17:16Z
+**Event**: STAGE_STARTED
+**Stage**: application-design
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T18:20:22Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: application-design
+**Details**: components.md（C-ENG〜C-EX の 11 コンポーネント）、component-methods.md、services.md、component-dependency.md、decisions.md（設計判断 7 件）を作成し、gate を提示した。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T18:20:22Z
+**Event**: GATE_APPROVED
+**Stage**: application-design
+**Details**: User Input: 「構築まで自動承認でお願いします。もう寝るので」（事前の包括承認による自動承認）
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T18:20:22Z
+**Event**: STAGE_COMPLETED
+**Stage**: application-design
+**Details**: 自動承認（人間の事前指示）。11 コンポーネントと設計判断 7 件を確定。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T18:20:22Z
+**Event**: STAGE_STARTED
+**Stage**: units-generation
+
+---
+
+## DECISION_RECORDED
+**Timestamp**: 2026-07-03T18:21:52Z
+**Event**: DECISION_RECORDED
+**Stage**: units-generation
+**Details**: Unit 境界戦略と粒度。選択肢: (1) 機能単位、粗め 8 Unit（推奨） (2) 細かめ分割 (3) サービス単位
+
+---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T18:21:52Z
+**Event**: QUESTION_ANSWERED
+**Stage**: units-generation
+**Details**: 推奨案を採用（事前の包括承認「構築まで自動承認」による自動確定。GD012）。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T18:21:52Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: units-generation
+**Details**: unit-of-work.md（U001〜U008）、unit-of-work-dependency.md（非循環 DAG）、grillings G003 を作成し、gate を提示した。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T18:21:52Z
+**Event**: GATE_APPROVED
+**Stage**: units-generation
+**Details**: User Input: 「構築まで自動承認でお願いします。もう寝るので」（事前の包括承認による自動承認）
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T18:21:52Z
+**Event**: STAGE_COMPLETED
+**Stage**: units-generation
+**Details**: 自動承認（人間の事前指示）。U001〜U008 と依存 DAG を確定。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T18:21:52Z
+**Event**: STAGE_STARTED
+**Stage**: delivery-planning
+
+---
+
+## DECISION_RECORDED
+**Timestamp**: 2026-07-03T18:24:28Z
+**Event**: DECISION_RECORDED
+**Stage**: delivery-planning
+**Details**: Bolt の束ね方。選択肢: (1) 最初だけ薄切り + 以降は関連 Unit の束（4 Bolt、推奨） (2) Unit ごとに 1 Bolt（8 Bolt） (3) 全部 1 Bolt
+
+---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T18:24:28Z
+**Event**: QUESTION_ANSWERED
+**Stage**: delivery-planning
+**Details**: 推奨案を採用（事前の包括承認による自動確定。GD013）。walking skeleton と順序は GD010、GD011 の確定を再利用。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T18:24:28Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: delivery-planning
+**Details**: bolt-plan.md（B001〜B004、DoD と確信仮説つき）、risk-and-sequencing-rationale.md、external-dependency-map.md、grillings G004 を作成し、gate を提示した。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T18:24:28Z
+**Event**: GATE_APPROVED
+**Stage**: delivery-planning
+**Details**: User Input: 「構築まで自動承認でお願いします。もう寝るので」（事前の包括承認による自動承認）
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T18:24:28Z
+**Event**: STAGE_COMPLETED
+**Stage**: delivery-planning
+**Details**: 自動承認（人間の事前指示）。B001〜B004 の Bolt 計画を確定。Inception の実行対象ステージがすべて完了した。
+
+---
+
+## PHASE_VERIFIED
+**Timestamp**: 2026-07-03T18:24:28Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: Inception
+**Pass/fail**: pass
+**Details**: 人間指示「中間のPRは無しでOK」により phase PR を省略し、最終 PR へ統合する。validator pass を確認済み。
+
+---
+
+## BOLT_STARTED
+**Timestamp**: 2026-07-03T18:25:02Z
+**Event**: BOLT_STARTED
+**Details**: Bolt B001（walking skeleton: true）。エンジン縦切り（U001 + U002 + U003 の薄切り）。branch claude/issue-396-inception 上で実行（中間 PR 省略の人間指示により Bolt 専用 branch は作らない）。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T18:25:02Z
+**Event**: STAGE_SKIPPED
+**Stage**: functional-design
+**Details**: Condition 偽（B001）。新しいデータモデルやビジネスロジックはなく、エンジン契約は本家定義の無改変コピー。結線層の設計は application-design で確定済み。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T18:25:02Z
+**Event**: STAGE_SKIPPED
+**Stage**: nfr-requirements
+**Details**: Condition 偽（B001）。新規 NFR はなく、技術スタック（Bun + TypeScript）は決定済み。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T18:25:02Z
+**Event**: STAGE_SKIPPED
+**Stage**: nfr-design
+**Details**: Condition 偽（B001）。nfr-requirements を実行していないため（縮退規則）。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T18:25:02Z
+**Event**: STAGE_SKIPPED
+**Stage**: infrastructure-design
+**Details**: Condition 偽（B001）。デプロイやクラウドリソースの変更はない。hooks と settings は開発環境の配線であり、3.5 の実装対象として扱う。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T18:25:02Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T18:33:58Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Details**: B001 walking skeleton。エンジン 117 ファイルの無改変コピー、settings の名前空間マージ（hooks 11 + 実行許可 1）、engine-bridge.md、amadeus-intent-capture 適応コピーと昇格。code-generation-plan.md と code-summary.md を作成し、gate を提示した。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T18:33:58Z
+**Event**: GATE_APPROVED
+**Stage**: code-generation
+**Details**: User Input: 「構築まで自動承認でお願いします。もう寝るので」（事前の包括承認による自動承認。walking skeleton の最終的な人間承認は、中間 PR 省略の指示により最終 PR レビューへ統合）
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T18:33:58Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Details**: 自動承認（人間の事前指示）。B001 の実装を確定。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T18:33:58Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T18:38:21Z
+**Event**: BOLT_COMPLETED
+**Details**: Bolt B001（walking skeleton）完了。DoD 4 項目を充足（build-and-test-summary.md）。中間 PR は人間指示により省略し、最終 PR へ統合する。実装確定 commit は branch claude/issue-396-inception に積む。
+
+---
+
+## BOLT_STARTED
+**Timestamp**: 2026-07-03T18:40:00Z
+**Event**: BOLT_STARTED
+**Details**: Bolt B002（walking skeleton: false）。skill 置換と整理（U003 残り + U004）。branch claude/issue-396-inception 上で継続。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T18:40:00Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Details**: B002。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T19:10:15Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Details**: B002。36 skill 新規 + 入口置換 + 5 skill 削除 + 検証コード追随。code-summary.md を作成し、gate を提示した。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T19:10:15Z
+**Event**: GATE_APPROVED
+**Stage**: code-generation
+**Details**: User Input: 「構築まで自動承認でお願いします。もう寝るので」（事前の包括承認による自動承認）
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T19:10:15Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Details**: 自動承認（人間の事前指示）。B002 の実装を確定。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T19:10:15Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Details**: B002。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T19:10:15Z
+**Event**: BOLT_COMPLETED
+**Details**: Bolt B002（skill 置換と整理）完了。npm run test:all green（build-test-results.md）。中間 PR は人間指示により省略し、最終 PR へ統合する。
+
+---
+
+## BOLT_STARTED
+**Timestamp**: 2026-07-03T19:10:15Z
+**Event**: BOLT_STARTED
+**Details**: Bolt B003（walking skeleton: false）。検査整備（U005 validator 新契約追従 + U006 パリティ検査機械化）。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T19:10:15Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Details**: B003。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T19:37:26Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Details**: B001（walking skeleton）。BOLT_COMPLETED（同 Bolt）で完了済みの記録の補完。検証結果は construction/bolts/B001-walking-skeleton/build-test-results.md。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T19:37:26Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Details**: B002。BOLT_COMPLETED（同 Bolt）で完了済みの記録の補完。検証結果は construction/bolts/B002-skill-replacement/build-test-results.md。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T19:38:25Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Details**: B003。backward-compatibility 登録、validator v2 契約対応（TDD）、パリティ検査機械化（差分ゼロ）、record 配置の是正。gate を提示した。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T19:38:25Z
+**Event**: GATE_APPROVED
+**Stage**: code-generation
+**Details**: User Input: 「構築まで自動承認でお願いします。もう寝るので」（事前の包括承認による自動承認）
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T19:38:25Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Details**: 自動承認（人間の事前指示）。B003 の実装を確定。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T19:38:25Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Details**: B003。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T19:38:25Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Details**: B003。全検証 green（build-test-results.md）。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T19:38:25Z
+**Event**: BOLT_COMPLETED
+**Details**: Bolt B003（検査整備）完了。パリティ検査差分ゼロ、validator 新契約対応、record validator pass。中間 PR は人間指示により省略。
+
+---
+
+## BOLT_STARTED
+**Timestamp**: 2026-07-03T19:38:25Z
+**Event**: BOLT_STARTED
+**Details**: Bolt B004（walking skeleton: false）。文書と実証（U007 規範文書改定 + U008 examples 再生成と dogfooding）。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T19:38:25Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Details**: B004。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T19:40:03Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Details**: B004 の halt-and-ask 事項: examples の real provider 再生成は個人 Codex アカウント（dev-scripts/run-codex-gpt-5.5-low-fast-personal.sh）を消費し、生成ハーネスは旧アーキテクチャ前提のため適応が必要。事前包括承認の範囲外（コスト消費と追加設計）と判断し、再生成と依存する旧 skill 削除（22 個 + steering）は人間の判断待ちとする。B004 の残り（規範文書改定、GD009 廃止、dogfooding）は続行する。
+
+---
+
+## AUTONOMY_MODE_SET
+**Timestamp**: 2026-07-03T20:09:02Z
+**Event**: AUTONOMY_MODE_SET
+**Details**: autonomous。人間の事前指示「構築まで自動承認でお願いします。もう寝るので」を ladder 提案への回答として記録（walking skeleton B001 は完了済み。最終的な人間承認は最終 PR レビューに統合）。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T20:11:48Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Details**: B004（自動承認、人間の事前指示）。規範文書改定と GD009（モジュールファイル、intents.md、IndexGenerate の廃止）を確定。examples 再生成と旧 skill 削除は halt-and-ask で人間判断待ち（同 stage の残作業として記録）。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T20:11:48Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Details**: B004 / Intent 統合（エンジン駆動 dogfooding）。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T20:14:28Z
+**Event**: BOLT_COMPLETED
+**Details**: Bolt B004（文書と実証）完了（examples 再生成と旧 skill 削除は CD006 により人間判断待ちの後続作業）。build-and-test 以降はエンジン駆動で実行し、PHASE_VERIFIED と WORKFLOW_COMPLETED はエンジンが per-clone shard に記録した（dogfooding、R011）。最終的な人間承認は最終 PR のレビューと merge で行う。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T20:15:45Z
+**Event**: STAGE_COMPLETED
+**Stage**: ci-pipeline
+**Details**: エンジン駆動（dogfooding）で完了。gate 承認はエンジンの report が記録（per-clone shard 参照）。成果物は construction/ci-pipeline/。
+
+---
+
+## WORKFLOW_COMPLETED
+**Timestamp**: 2026-07-03T20:15:45Z
+**Event**: WORKFLOW_COMPLETED
+**Details**: エンジンが workflow 完了を判定し per-clone shard に記録した（scope: feature の実行対象ステージがすべて完了）。この entry は移行期の橋渡しとして audit.md へ転記したもの。examples 再生成と旧 skill 削除は CD005 と CD006 の後続作業として追跡する。最終的な人間承認は最終 PR の merge。
+
+---
+
+## PHASE_VERIFIED
+**Timestamp**: 2026-07-03T20:16:17Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: Construction
+**Pass/fail**: pass
+**Details**: エンジンが per-clone shard に記録した PHASE_VERIFIED の橋渡し転記。中間 PR は人間指示により省略し、最終 PR（レビューと merge が最終承認）に統合する。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T20:16:37Z
+**Event**: BOLT_COMPLETED
+**Details**: Bolt B001-walking-skeleton。Bolt Refs の slug 付き表記への正規化に伴う補完記録（完了自体は同 Bolt の既存 BOLT_COMPLETED entry を参照）。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T20:16:37Z
+**Event**: BOLT_COMPLETED
+**Details**: Bolt B002-skill-replacement。Bolt Refs の slug 付き表記への正規化に伴う補完記録（完了自体は同 Bolt の既存 BOLT_COMPLETED entry を参照）。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T20:16:37Z
+**Event**: BOLT_COMPLETED
+**Details**: Bolt B003-inspection。Bolt Refs の slug 付き表記への正規化に伴う補完記録（完了自体は同 Bolt の既存 BOLT_COMPLETED entry を参照）。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T20:16:50Z
+**Event**: BOLT_COMPLETED
+**Details**: Bolt B004-docs-and-proof。Bolt Refs の slug 付き表記への正規化に伴う補完記録（完了自体は既存 entry を参照。examples 再生成と旧 skill 削除は CD005 と CD006 の後続作業）。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T22:49:03Z
+**Event**: GATE_APPROVED
+**Details**: User Input: 「廃止して e2e で代替（推奨）」（examples の今後についての質問への回答。PR #427 レビュー中）。CD010 として記録。
+
+---

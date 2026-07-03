@@ -10,7 +10,7 @@
     {
       "id": 2,
       "prompt": "Intent `260703-fix-login-timeout` を Amadeus Validator で検証して。",
-      "expected_output": "全体成果物に加えて対象 Intent のモジュールファイルと `aidlc-state.md` を検証する。scope、depth、Stage Progress の checkbox と scope の実行対象の一致、Phase Progress、Current Status、`audit/audit.md` のイベント（`STAGE_COMPLETED`、`PHASE_VERIFIED`、`PHASE_SKIPPED`、`BOLT_COMPLETED` ほか）、completed ステージの必須成果物を v2 ライフサイクルの契約として確認する。",
+      "expected_output": "全体成果物に加えて対象 Intent の `aidlc-state.md` を検証する。Intent のモジュールファイル（`<dirName>.md`）は GD009 で廃止された任意成果物であり、存在する場合だけ検証する。scope、depth、Stage Progress の checkbox と scope の実行対象の一致、Phase Progress、Current Status、`audit/audit.md` のイベント（`STAGE_COMPLETED`、`PHASE_VERIFIED`、`PHASE_SKIPPED`、`BOLT_COMPLETED` ほか）、completed ステージの必須成果物を v2 ライフサイクルの契約として確認する。",
       "files": []
     },
     {
@@ -21,8 +21,8 @@
     },
     {
       "id": 4,
-      "prompt": "`intents.md` の Intent 識別子と詳細リンクが `<dirName>` 形式で揃っているか、`intents.json` の registry と一致しているか Amadeus Validator で確認して。",
-      "expected_output": "intents.md の一覧表の必須列、識別子形式（`<YYMMDD>-<label>`）、詳細リンクの対応、Index 生成整合（IndexGenerate の導出内容との完全一致）、intents.json の registry と record ディレクトリの双方向対応を確認し、結果を日本語 Markdown で報告する。",
+      "prompt": "`intents.md` が残っていれば Intent 識別子と詳細リンクが `<dirName>` 形式で揃っているか、`intents.json` の registry と一致しているか Amadeus Validator で確認して。",
+      "expected_output": "intents.md（GD009 で廃止された任意成果物）が存在する場合だけ、一覧表の必須列、識別子形式（`<YYMMDD>-<label>`）、詳細リンクの対応を確認する。intents.json の registry と record ディレクトリの双方向対応を確認し、結果を日本語 Markdown で報告する。",
       "files": []
     },
     {
