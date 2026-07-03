@@ -130,7 +130,6 @@ Amadeus の対象ドメインについて、質問で曖昧さを解きながら
 Grilling Decision Trail は、対象成果物セットの root 直下に記録する。
 
 - Intent 固有の判断は、対象 phase に合わせて `.amadeus/intents/<intent-id>-<slug>/<phase>/grillings.md` と `.amadeus/intents/<intent-id>-<slug>/<phase>/grillings/Gxxx-*.md` に記録する。
-- Discovery 固有の判断は `.amadeus/discoveries/<discovery-id>/grillings.md` と `.amadeus/discoveries/<discovery-id>/grillings/Gxxx-*.md` に記録する。
 - Event Storming 固有の判断は `.amadeus/event-storming/<event-storming-id>/grillings.md` と `.amadeus/event-storming/<event-storming-id>/grillings/Gxxx-*.md` に記録する。
 - Intent 配下の Event Storming 固有の判断は `.amadeus/intents/<intent-id>-<slug>/event-storming/<event-storming-id>/grillings.md` と `.amadeus/intents/<intent-id>-<slug>/event-storming/<event-storming-id>/grillings/Gxxx-*.md` に記録する。
 - 全体ドメインまたは共有用語だけに反映する判断は、現行構造では専用の Grilling Decision Trail を新設しない。必要なら `.amadeus/domain-map.md`、`.amadeus/context-map.md`、`.amadeus/glossary.md` の根拠または対象 Intent の decision に残す。

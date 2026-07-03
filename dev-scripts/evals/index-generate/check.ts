@@ -3,7 +3,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { buildDiscoveriesIndex, buildIntentsIndex, DISCOVERIES_MARKER, INTENTS_MARKER } from "../../../skills/amadeus-validator/scripts/IndexGenerate";
+import { buildIntentsIndex, INTENTS_MARKER } from "../../../skills/amadeus-validator/scripts/IndexGenerate";
 
 const root = resolve(import.meta.dir, "../../..");
 const script = "skills/amadeus-validator/scripts/IndexGenerate.ts";
@@ -49,7 +49,6 @@ function newWorkspace(prefix: string): string {
   const workspace = mkdtempSync(join(tmpdir(), prefix));
   cleanups.push(workspace);
   mkdirSync(join(workspace, ".amadeus/intents"), { recursive: true });
-  mkdirSync(join(workspace, ".amadeus/discoveries"), { recursive: true });
   return workspace;
 }
 
@@ -65,43 +64,21 @@ function writeIntent(workspace: string, id: string, title: string, summary: stri
   writeFileSync(join(dir, id, "state.json"), JSON.stringify({ schemaVersion: 1, phase: "ideation", status: "in_progress" }, null, 2) + "\n");
 }
 
-function discoveryModule(theme: string, bullets: string[]): string {
-  return [`# ${theme} Discovery Brief`, "", "## 推奨次アクション", "", ...bullets.map((b) => `- ${b}`), ""].join("\n");
-}
-
-function writeDiscovery(workspace: string, id: string, theme: string, bullets: string[], status: string, decision: string): void {
-  const dir = join(workspace, ".amadeus/discoveries");
-  writeFileSync(join(dir, `${id}.md`), discoveryModule(theme, bullets));
-  mkdirSync(join(dir, id), { recursive: true });
-  writeFileSync(
-    join(dir, id, "state.json"),
-    JSON.stringify({ schemaVersion: 1, phase: "discovery", status, decision, gate: "passed" }, null, 2) + "\n",
-  );
-}
-
 function intentsPath(workspace: string): string {
   return join(workspace, ".amadeus/intents.md");
 }
 
-function discoveriesPath(workspace: string): string {
-  return join(workspace, ".amadeus/discoveries.md");
-}
-
-// ---- 基本 fixture: Intent 2 件、Discovery 1 件（複数箇条書き）----
+// ---- 基本 fixture: Intent 2 件 ----
 
 const workspace = newWorkspace("index-generate-");
 writeIntent(workspace, "20260701-alpha", "Alpha", "Alpha の概要文である。", [{ dep: "なし", reason: "初回 Intent であるため。" }]);
 writeIntent(workspace, "20260702-beta", "Beta", "Beta の概要文である。", [{ dep: "20260701-alpha", reason: "Alpha の完了を前提にするため。" }]);
-writeDiscovery(workspace, "20260701-gamma", "Gamma の探索", ["候補Xを起票する。", "候補Yも検討する。"], "completed", "single_intent");
 
-// (1) 決定論性: 同じ入力で 2 回生成した出力が一致する（純粋関数としての buildXxxIndex を直接比較）
+// (1) 決定論性: 同じ入力で 2 回生成した出力が一致する（純粋関数としての buildIntentsIndex を直接比較）
 {
   const intentsA = buildIntentsIndex(workspace);
   const intentsB = buildIntentsIndex(workspace);
   if (intentsA !== intentsB) fail("決定論性違反: buildIntentsIndex が同じ入力で異なる出力を返した");
-  const discoveriesA = buildDiscoveriesIndex(workspace);
-  const discoveriesB = buildDiscoveriesIndex(workspace);
-  if (discoveriesA !== discoveriesB) fail("決定論性違反: buildDiscoveriesIndex が同じ入力で異なる出力を返した");
 }
 
 // (4) マーカー: 出力の先頭が生成マーカーの HTML コメント 1 行である
@@ -110,9 +87,6 @@ run(["bun", "run", script, workspace]);
   const intentsLines = readFileSync(intentsPath(workspace), "utf8").split("\n");
   if (intentsLines[0] !== INTENTS_MARKER) fail(`マーカー不一致（intents.md）: ${intentsLines[0]}`);
   if (intentsLines[1] !== "") fail("マーカー直後に空行がない（intents.md）");
-  const discoveriesLines = readFileSync(discoveriesPath(workspace), "utf8").split("\n");
-  if (discoveriesLines[0] !== DISCOVERIES_MARKER) fail(`マーカー不一致（discoveries.md）: ${discoveriesLines[0]}`);
-  if (discoveriesLines[1] !== "") fail("マーカー直後に空行がない（discoveries.md）");
 }
 
 // CLI が生成した内容が export された build 関数の期待内容と一致する（CLI と export 関数が同じロジックであることの確認）
@@ -120,48 +94,33 @@ run(["bun", "run", script, workspace]);
   const expectedIntents = buildIntentsIndex(workspace);
   const actualIntents = readFileSync(intentsPath(workspace), "utf8");
   if (actualIntents !== expectedIntents) fail("CLI が生成した intents.md が buildIntentsIndex の期待内容と一致しない");
-  const expectedDiscoveries = buildDiscoveriesIndex(workspace);
-  const actualDiscoveries = readFileSync(discoveriesPath(workspace), "utf8");
-  if (actualDiscoveries !== expectedDiscoveries) fail("CLI が生成した discoveries.md が buildDiscoveriesIndex の期待内容と一致しない");
 
-  // 一覧行の中身（依存列、複数箇条書きの連結）を確認する
+  // 一覧行の中身（依存列）を確認する
   if (!actualIntents.includes("| 20260702-beta | Beta の概要文である。 | 20260701-alpha | [20260702-beta.md](intents/20260702-beta.md) |")) {
     fail("intents.md の一覧行が期待どおりでない（依存列）");
-  }
-  if (!actualDiscoveries.includes("候補Xを起票する。候補Yも検討する。")) {
-    fail("discoveries.md の推奨次アクション列が複数箇条書きを連結していない");
   }
 }
 
 // (2) 冪等性: 生成済みインデックスがある状態での再生成が出力を変えない
 {
   const beforeIntents = readFileSync(intentsPath(workspace), "utf8");
-  const beforeDiscoveries = readFileSync(discoveriesPath(workspace), "utf8");
   run(["bun", "run", script, workspace]);
   const afterIntents = readFileSync(intentsPath(workspace), "utf8");
-  const afterDiscoveries = readFileSync(discoveriesPath(workspace), "utf8");
   if (beforeIntents !== afterIntents) fail("冪等性違反: 再生成で intents.md が変化した");
-  if (beforeDiscoveries !== afterDiscoveries) fail("冪等性違反: 再生成で discoveries.md が変化した");
 }
 
 // (3) 並行統合: 2 つの Intent モジュールを別々に追加した状態から生成すると、両方の行を識別子の辞書順で含む
 {
-  // 既存 fixture に対し、辞書順で先頭に来る Intent と Discovery を追加する（並行 branch が別々にモジュールを追加した状況を模す）
+  // 既存 fixture に対し、辞書順で先頭に来る Intent を追加する（並行 branch が別々にモジュールを追加した状況を模す）
   writeIntent(workspace, "20260601-zzz-early", "ZzzEarly", "並行統合確認用の Intent である。", [{ dep: "なし", reason: "独立 Intent であるため。" }]);
-  writeDiscovery(workspace, "20260601-delta", "Delta の探索", ["候補Zを検討する。"], "completed", "single_intent");
   run(["bun", "run", script, workspace]);
   const intentsContent = readFileSync(intentsPath(workspace), "utf8");
-  const discoveriesContent = readFileSync(discoveriesPath(workspace), "utf8");
   const ids = ["20260601-zzz-early", "20260701-alpha", "20260702-beta"];
   const positions = ids.map((id) => intentsContent.indexOf(`| ${id} |`));
   if (positions.some((p) => p === -1)) fail("並行統合: intents.md に期待した行がない");
   for (let i = 1; i < positions.length; i++) {
     if (positions[i - 1] >= positions[i]) fail("並行統合: intents.md の行が識別子の辞書順になっていない");
   }
-  const discoveryIds = ["20260601-delta", "20260701-gamma"];
-  const discoveryPositions = discoveryIds.map((id) => discoveriesContent.indexOf(`| ${id} |`));
-  if (discoveryPositions.some((p) => p === -1)) fail("並行統合: discoveries.md に期待した行がない");
-  if (discoveryPositions[0] >= discoveryPositions[1]) fail("並行統合: discoveries.md の行が識別子の辞書順になっていない");
 }
 
 // (5) 見出し契約違反: 概要または依存の見出しがないモジュールで、対象ファイルと不足を示して失敗する
@@ -191,8 +150,27 @@ run(["bun", "run", script, workspace]);
   if (checkResult.exitCode !== 0) fail("--check: 一致しているのに exit 1 になった: " + checkResult.stderr);
 }
 
+// (7) 退役確認: discoveries.md を生成しない
+{
+  const ws = newWorkspace("index-generate-no-discoveries-");
+  writeIntent(ws, "20260701-alpha", "Alpha", "Alpha の概要文である。", [{ dep: "なし", reason: "初回 Intent であるため。" }]);
+  run(["bun", "run", script, ws]);
+  const discoveriesFile = join(ws, ".amadeus/discoveries.md");
+  if (readFileSyncOptional(discoveriesFile) !== undefined) {
+    fail("(退役確認) IndexGenerate が discoveries.md を生成した");
+  }
+}
+
+function readFileSyncOptional(path: string): string | undefined {
+  try {
+    return readFileSync(path, "utf8");
+  } catch {
+    return undefined;
+  }
+}
+
 // ---- validator 統合: index 整合検査 (T001) ----
-// skills/amadeus-validator/validator/AmadeusValidator.ts が buildIntentsIndex/buildDiscoveriesIndex を
+// skills/amadeus-validator/validator/AmadeusValidator.ts が buildIntentsIndex を
 // 再利用した不整合検査を持つことを、専用の検査カテゴリ「Index 生成整合」の pass/fail 件数で確認する。
 // このカテゴリだけを見ることで、steering layer 等の未整備に起因する他カテゴリの fail と区別する。
 
@@ -208,22 +186,20 @@ function indexGenerationCategoryCounts(report: string): { pass: number; warning:
   return { pass: Number(match[1]), warning: Number(match[2]), fail: Number(match[3]), blocked: Number(match[4]) };
 }
 
-// (1) 整合: IndexGenerate で生成した直後の fixture workspace は、Index 生成整合カテゴリで fail を出さない
+// (統合1) 整合: IndexGenerate で生成した直後の fixture workspace は、Index 生成整合カテゴリで fail を出さない
 {
   const ws = newWorkspace("index-generate-validator-consistent-");
   writeIntent(ws, "20260701-alpha", "Alpha", "Alpha の概要文である。", [{ dep: "なし", reason: "初回 Intent であるため。" }]);
-  writeDiscovery(ws, "20260701-gamma", "Gamma の探索", ["候補Xを起票する。"], "completed", "single_intent");
   run(["bun", "run", script, ws]);
   const result = runValidator(ws);
   const counts = indexGenerationCategoryCounts(result.stdout);
   if (counts.fail !== 0) fail("(統合1) 整合直後の workspace で Index 生成整合カテゴリに fail がある:\n" + result.stdout);
 }
 
-// (2) 行の改変: intents.md の既存行を書き換えると Index 生成整合カテゴリが fail になる
+// (統合2) 行の改変: intents.md の既存行を書き換えると Index 生成整合カテゴリが fail になる
 {
   const ws = newWorkspace("index-generate-validator-corrupted-");
   writeIntent(ws, "20260701-alpha", "Alpha", "Alpha の概要文である。", [{ dep: "なし", reason: "初回 Intent であるため。" }]);
-  writeDiscovery(ws, "20260701-gamma", "Gamma の探索", ["候補Xを起票する。"], "completed", "single_intent");
   run(["bun", "run", script, ws]);
   const corrupted = readFileSync(intentsPath(ws), "utf8").replace("Alpha の概要文である。", "Alpha の改変された概要。");
   writeFileSync(intentsPath(ws), corrupted);
@@ -235,11 +211,10 @@ function indexGenerationCategoryCounts(report: string): { pass: number; warning:
   }
 }
 
-// (3) 行の過不足: モジュール追加後に再生成しないと Index 生成整合カテゴリが fail になる
+// (統合3) 行の過不足: モジュール追加後に再生成しないと Index 生成整合カテゴリが fail になる
 {
   const ws = newWorkspace("index-generate-validator-missing-row-");
   writeIntent(ws, "20260701-alpha", "Alpha", "Alpha の概要文である。", [{ dep: "なし", reason: "初回 Intent であるため。" }]);
-  writeDiscovery(ws, "20260701-gamma", "Gamma の探索", ["候補Xを起票する。"], "completed", "single_intent");
   run(["bun", "run", script, ws]);
   writeIntent(ws, "20260702-beta", "Beta", "Beta の概要文である。", [{ dep: "20260701-alpha", reason: "Alpha の完了を前提にするため。" }]);
   const result = runValidator(ws);
@@ -250,11 +225,10 @@ function indexGenerationCategoryCounts(report: string): { pass: number; warning:
   }
 }
 
-// (4) マーカー欠落: 生成マーカー行を削除すると Index 生成整合カテゴリが fail になる
+// (統合4) マーカー欠落: 生成マーカー行を削除すると Index 生成整合カテゴリが fail になる
 {
   const ws = newWorkspace("index-generate-validator-missing-marker-");
   writeIntent(ws, "20260701-alpha", "Alpha", "Alpha の概要文である。", [{ dep: "なし", reason: "初回 Intent であるため。" }]);
-  writeDiscovery(ws, "20260701-gamma", "Gamma の探索", ["候補Xを起票する。"], "completed", "single_intent");
   run(["bun", "run", script, ws]);
   const withoutMarker = readFileSync(intentsPath(ws), "utf8").split("\n").slice(2).join("\n");
   writeFileSync(intentsPath(ws), withoutMarker);
@@ -266,7 +240,7 @@ function indexGenerationCategoryCounts(report: string): { pass: number; warning:
   }
 }
 
-// (5) 見出し契約違反: クラッシュではなく fail として報告する
+// (統合5) 見出し契約違反: クラッシュではなく fail として報告する
 {
   const ws = newWorkspace("index-generate-validator-heading-violation-");
   writeFileSync(
@@ -278,7 +252,6 @@ function indexGenerationCategoryCounts(report: string): { pass: number; warning:
     join(ws, ".amadeus/intents/20260701-broken/state.json"),
     JSON.stringify({ schemaVersion: 1, phase: "ideation", status: "in_progress" }, null, 2) + "\n",
   );
-  writeDiscovery(ws, "20260701-gamma", "Gamma の探索", ["候補Xを起票する。"], "completed", "single_intent");
   const result = runValidator(ws);
   if (!result.stdout.startsWith("# Amadeus Validator 結果")) {
     fail("(統合5) validator がクラッシュした可能性がある:\nstdout:\n" + result.stdout + "\nstderr:\n" + result.stderr);
@@ -294,43 +267,14 @@ function indexGenerationCategoryCounts(report: string): { pass: number; warning:
   }
 }
 
-// (7) state.json 欠落: Discovery モジュールに state.json がない場合、クラッシュや blocked ではなく Index 生成整合の fail として報告する
-{
-  const ws = newWorkspace("index-generate-missing-state-");
-  writeIntent(ws, "20260701-alpha", "Alpha", "Alpha の概要である。", [{ dep: "なし", reason: "初回 Intent であるため。" }]);
-  const dir = join(ws, ".amadeus/discoveries");
-  writeFileSync(join(dir, "20260701-nostate.md"), discoveryModule("Nostate の探索", ["候補を起票する。"]));
-  // state.json を意図的に作らない
-  const cli = runResult(["bun", "run", script, ws]);
-  if (cli.exitCode === 0) fail("(state欠落) CLI が state.json 欠落を検出せず成功した");
-  if (!(cli.stdout + cli.stderr).includes("20260701-nostate")) {
-    fail("(state欠落) CLI の失敗報告に対象が含まれない:\nstdout:\n" + cli.stdout + "\nstderr:\n" + cli.stderr);
-  }
-  const result = runValidator(ws);
-  if (!result.stdout.startsWith("# Amadeus Validator 結果")) {
-    fail("(state欠落) validator がクラッシュした:\nstdout:\n" + result.stdout + "\nstderr:\n" + result.stderr);
-  }
-  if (!result.stdout.includes("Index 生成整合: 配下モジュールの state.json が読める")) {
-    fail("(state欠落) state.json 欠落が Index 生成整合の構造化された fail として報告されない:\n" + result.stdout);
-  }
-  if (result.stdout.includes("検証対象を読める。根拠: state.json")) {
-    fail("(state欠落) 例外が run 全体を中断させ、実行環境の blocked として扱われている:\n" + result.stdout);
-  }
-}
-
-// (6) greenfield 整合: モジュール 0 件の workspace の生成結果が steering テンプレートと一字一句一致する
+// (統合6) greenfield 整合: モジュール 0 件の workspace の生成結果が steering テンプレートと一字一句一致する
 {
   const ws = newWorkspace("index-generate-greenfield-");
   run(["bun", "run", script, ws]);
   const generatedIntents = readFileSync(intentsPath(ws), "utf8");
-  const generatedDiscoveries = readFileSync(join(ws, ".amadeus/discoveries.md"), "utf8");
   const templateIntents = readFileSync(join(root, "skills/amadeus-steering/templates/steering/intents.md"), "utf8");
-  const templateDiscoveries = readFileSync(join(root, "skills/amadeus-steering/templates/steering/discoveries.md"), "utf8");
   if (generatedIntents !== templateIntents) {
     fail("(greenfield) 生成した intents.md が steering テンプレートと一致しない:\n生成:\n" + generatedIntents + "\nテンプレート:\n" + templateIntents);
-  }
-  if (generatedDiscoveries !== templateDiscoveries) {
-    fail("(greenfield) 生成した discoveries.md が steering テンプレートと一致しない:\n生成:\n" + generatedDiscoveries + "\nテンプレート:\n" + templateDiscoveries);
   }
 }
 

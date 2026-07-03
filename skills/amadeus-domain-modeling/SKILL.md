@@ -65,7 +65,7 @@ Amadeus workspace は、全体のドメイン知識と Intent 固有のドメイ
 - `.amadeus/intents.md`
 
 Intent 固有の用語、モデル、契約、判断を扱う場合は、対象 Intent ディレクトリ名を確定する。
-対象 Intent が存在しない場合は、作業を止め、先に `amadeus-ideation` で Intent Recordを作るよう案内する。
+対象 Intent が存在しない場合は、作業を止め、先に `amadeus` で Intent を作るよう案内する。
 対象 Intent の `domain-notes.md` がない場合は、候補や未確定事項を記録する必要が出た時点で作る。
 
 ## セッション中の振る舞い

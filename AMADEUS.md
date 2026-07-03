@@ -2,7 +2,7 @@
 
 この文書は、エージェントがこのリポジトリで Amadeus を扱うときの共通入口である。
 概要は [README.md](README.md) を参照する。
-詳細な成果物規則は [docs/amadeus/stages/](docs/amadeus/stages/) と [examples/README.md](examples/README.md) を参照する。
+詳細な成果物契約は [docs/amadeus/lifecycle/](docs/amadeus/lifecycle/overview.md) と [docs/amadeus/steering.md](docs/amadeus/steering.md) を参照する。
 
 ## 作業言語
 
@@ -16,45 +16,46 @@
 
 - Steering layer: 対象 workspace の `.amadeus/` 直下の成果物
 - Intent layer: 対象 workspace の `.amadeus/intents/<intent-id>-<slug>/`
-- Skill sources: `skills/amadeus-*/`
-- Promoted skills: `.agents/skills/amadeus-*/`
+- Skill sources: `skills/amadeus*/`
+- Promoted skills: `.agents/skills/amadeus*/`
 
 ### Steering layer
 
 Steering layer は、複数 Intent で共有する前提を扱う。
-例示は [examples/](examples/) 配下の各 snapshot に置く。
+このリポジトリの root `.amadeus/` は、Amadeus 本体開発用の steering layer である。
 
 ### Intent layer
 
-Intent layer は、特定 Intent の要求、受け入れ状態、ユースケース、Unit、Bolt、Task、判断、追跡を扱う。
-例示の Intent 一覧は各 snapshot の `.amadeus/intents.md` を参照する。
+Intent layer は、特定 Intent のライフサイクル成果物（各ステージの成果物、判断、追跡、`state.json`）を扱う。
+Intent 一覧は `.amadeus/intents.md` を参照する。
 
 ## Skills
 
-現時点で確定している入口は次の 10 個である。
+ライフサイクルの公開入口は `amadeus` の 1 個である。
+
+`amadeus` は、Intake（合流既定、受理条件の確認、scope 推定、人間承認付きの Birth 提案）と、`state.json` に基づく次ステージの解決だけを行い、ステージ成果物の作成はステージ内部 skill（Ideation 7、Inception 8、Construction 7）に委譲する。
+ステージと skill の対応は [skills/amadeus/references/stage-catalog.md](skills/amadeus/references/stage-catalog.md) に従う。
+
+補助入口は次の 6 個である。
 
 1. `amadeus-steering`
-2. `amadeus-discovery`
-3. `amadeus-event-storming`
-4. `amadeus-ideation`
-5. `amadeus-inception`
-6. `amadeus-construction`
-7. `amadeus-grilling`
-8. `amadeus-domain-modeling`
-9. `amadeus-domain-grilling`
-10. `amadeus-validator`
+2. `amadeus-event-storming`
+3. `amadeus-grilling`
+4. `amadeus-domain-modeling`
+5. `amadeus-domain-grilling`
+6. `amadeus-validator`
 
-Construction は、Inception で定義した Unit を Functional Design で具体化し、Bolt を Task に分解してから実装、検証、証拠化する入口である。
-Construction では、Unit ごとの `functional-design/` に詳細な Domain Model、Intent Contracts、機能構造、業務ルール、必要な UI 構成を整理する。
-Construction の Bolt preparation では、Functional Design、Unit Design Brief、対象 Bolt のモジュールファイルを根拠に `tasks.md` を生成する。
+Intake は、入力が既存 Intent のアウトカムに属する場合、新しい Intent を作らずスコープバックログへの合流を提案する。
+新しい Intent は、人間の明示承認なしに作らない。
+scope（bugfix、refactor など）が SKIP にするステージは実行しない。
+
+Construction は Bolt を実行単位にし、walking skeleton の Bolt PR は必ず人間が承認する。
 Construction では、Spec、`.kiro/specs/**`、`openspec/**`、Operation 成果物を作らない。
-
-Discovery は、Ideation の前に入力テーマを整理する任意の補助分析入口である。
-Discovery は `amadeus-ideation` を自動実行しない。
 
 Event Storming は、Domain Event、Process、Aggregate Candidate、Bounded Context Candidate、Hotspot を整理する補助分析入口である。
 Event Storming は phase を進めず、Requirement、Use Case、Unit、Bolt、Task、Aggregate、Bounded Context を確定しない。
 
+`amadeus-discovery` と phase 別公開入口（`amadeus-ideation`、`amadeus-inception`、`amadeus-construction`）は Issue #369 で退役した。
 未確定の skill 名や旧コマンド名を前提にしない。
 
 ## Validation
@@ -73,12 +74,6 @@ bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts .
 
 ```sh
 bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . <intent-id>-<slug>
-```
-
-このリポジトリの例示 snapshot を検証する場合は次で行う。
-
-```sh
-npm run validate:all
 ```
 
 Skill 昇格の確認は、必要に応じて `dev-scripts/promote-skill.ts` を使う。

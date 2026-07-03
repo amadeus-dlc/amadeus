@@ -27,5 +27,4 @@
 | `steering/policies/` | 詳細な方針記録を扱う。 |
 | `domain-map.md` | 採用済みまたは廃止済みの Subdomain と Bounded Context を扱う。 |
 | `context-map.md` | 採用済みまたは廃止済みのコンテキスト間依存を扱う。 |
-| `discoveries.md` | Discovery 一覧と判定記録への入口を扱う。 |
 | `intents.md` | Intent 一覧と依存関係を扱う。 |

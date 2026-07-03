@@ -22,18 +22,12 @@ for (const path of [
   "amadeus-contracts/generated/stages.json",
   "amadeus-contracts/generated/skills.json",
   "amadeus-contracts/generated/references.md",
-  "skills/amadeus-ideation/references/skill-contract.md",
-  "skills/amadeus-inception/references/skill-contract.md",
-  "skills/amadeus-construction/references/skill-contract.md",
   "skills/amadeus-grilling/references/skill-contract.md",
   "skills/amadeus-validator/references/skill-contract.md",
   "skills/amadeus-validator/validator/generated/artifact-contracts.ts",
   "skills/amadeus-validator/validator/generated/functional-design-contract.ts",
   "skills/amadeus-validator/validator/generated/task-generation-contract.ts",
   "skills/amadeus-validator/validator/generated/skill-contracts.ts",
-  ".agents/skills/amadeus-ideation/references/skill-contract.md",
-  ".agents/skills/amadeus-inception/references/skill-contract.md",
-  ".agents/skills/amadeus-construction/references/skill-contract.md",
   ".agents/skills/amadeus-grilling/references/skill-contract.md",
   ".agents/skills/amadeus-validator/references/skill-contract.md",
   ".agents/skills/amadeus-validator/validator/generated/artifact-contracts.ts",
@@ -69,9 +63,9 @@ const skillsJson = readFileSync(join(root, "amadeus-contracts/generated/skills.j
 assert(skillsJson.includes("\"skillContracts\""), "skills.json contains skill contracts");
 assert(skillsJson.includes("\"consumerReferences\""), "skills.json contains consumer references");
 
-const ideationReference = readFileSync(join(root, "skills/amadeus-ideation/references/skill-contract.md"), "utf8");
-assert(ideationReference.includes("## Consumer References"), "skill reference documents include consumer references");
-assert(ideationReference.includes("validator"), "skill reference documents include validator consumer");
+const grillingReference = readFileSync(join(root, "skills/amadeus-grilling/references/skill-contract.md"), "utf8");
+assert(grillingReference.includes("## Consumer References"), "skill reference documents include consumer references");
+assert(grillingReference.includes("validator"), "skill reference documents include validator consumer");
 
 const tempRoot = mkdtempSync(join(tmpdir(), "amadeus-contracts-eval"));
 writeGeneratedContractFiles(tempRoot);

@@ -6,7 +6,7 @@
 
 AI-DLC v2（[awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows) の `v2` ブランチ）の Ideation、Inception、Construction の仕様を、意味論互換で Amadeus に実装するための契約を定義する。
 
-現行の [docs/amadeus/stages/](../stages/) は旧モデルの現行契約であり、#369 の実装完了時に本契約へ置き換える。
+旧モデルの段階別契約（docs/amadeus/stages/）は、#369 の退役 wave で本契約に置き換えて削除した。steering layer の契約は [steering.md](../steering.md) を参照する。
 置き換えまでの間、稼働中の skill は旧契約に従い、#369 の実装作業は本契約に従う。
 
 ## 互換方針

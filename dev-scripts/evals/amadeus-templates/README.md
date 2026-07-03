@@ -7,11 +7,13 @@
 対象 skill は次である。
 
 - `amadeus-steering`
-- `amadeus-discovery`
-- `amadeus-ideation-intent-capture`
-- `amadeus-ideation`
-- `amadeus-inception`
-- `amadeus-construction`
+- `amadeus-event-storming`
+- `amadeus`（単一入口）
+- Ideation の 7 ステージ skill
+- Inception の 8 ステージ skill
+- Construction の 7 ステージ skill
+
+あわせて、維持 skill（decision-review、history-review、learning-review、domain-modeling、domain-grilling、validator ほか）の本文契約を text contract として検証する。
 
 ## 検証条件
 
@@ -20,19 +22,9 @@
 - 標準テンプレートに必須見出しが存在する。
 - JSON テンプレートは JSON として解釈できる。
 - `promote-skill.ts` で一時昇格した結果に `templates/` が含まれる。
-- `examples/` 配下の段階別 snapshot をサンプル成果物として扱い、全体と各 Intent が validator を通る。
 
 ## 再実行コマンド
 
 ```sh
 bun run dev-scripts/evals/amadeus-templates/check.ts
 ```
-
-## 手動 eval 状態
-
-検証日: 2026-06-28
-
-| ケース | 状態 | 確認内容 | 証拠 |
-|---|---|---|---|
-| `template-contract` | 完了 | 対象6 skill のテンプレート、必須見出し、JSON 形式、昇格結果を確認した。 | `bun run dev-scripts/evals/amadeus-templates/check.ts` が `amadeus template eval: ok`。 |
-| `sample-amadeus-artifacts` | 完了 | `examples/` の段階別 snapshot をサンプル成果物として validator で確認した。 | 同 eval 内で snapshot 全体と対象 Intent の validator が pass。 |

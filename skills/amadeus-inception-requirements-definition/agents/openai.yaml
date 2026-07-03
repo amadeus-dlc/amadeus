@@ -1,7 +1,0 @@
-# skill-forge-source-sha256: d6a79f333620a7c6c601b9c1f6b94f7cf2892b908e9817bde973f2ab0ea4069f
-interface:
-  display_name: "Amadeus Inception Requirements Definition"
-  short_description: "Define Amadeus Inception requirements"
-  default_prompt: "Use $amadeus-inception-requirements-definition to define Amadeus Inception requirements."
-policy:
-  allow_implicit_invocation: false

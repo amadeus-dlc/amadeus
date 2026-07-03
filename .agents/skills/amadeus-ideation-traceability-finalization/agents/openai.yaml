@@ -1,7 +1,0 @@
-# skill-forge-source-sha256: 7cb416d68b1abdc168923310b75d320d2494a91543c864fe69d875ff0352072f
-interface:
-  display_name: "Amadeus Ideation Traceability Finalization"
-  short_description: "Finalize Amadeus ideation traceability"
-  default_prompt: "Use $amadeus-ideation-traceability-finalization to finalize Amadeus ideation traceability."
-policy:
-  allow_implicit_invocation: false

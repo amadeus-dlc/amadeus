@@ -2,8 +2,8 @@
 name: amadeus-steering
 description: >-
   Amadeus workspace の steering layer を greenfield または brownfield で初期化、点検、補修する。`.amadeus/` がない新規プロジェクト、
-  既存プロジェクトに Amadeus を載せる場面、Intent 作成前に objective、actors、glossary、policies、knowledge、discoveries.md、intents.md
-  の土台を揃えたい場面では必ず使う。個別 Intent の ideation、requirements、use-cases、units、bolts を作るための skill ではない。
+  既存プロジェクトに Amadeus を載せる場面、Intent 作成前に objective、actors、glossary、policies、knowledge、intents.md
+  の土台を揃えたい場面では必ず使う。個別 Intent のライフサイクル（Ideation、Inception、Construction）を進めるための skill ではない。
 ---
 
 # amadeus-steering
@@ -12,7 +12,7 @@ description: >-
 
 Amadeus DLC の steering layer を作る。
 
-Steering layer は、複数 Intent で共有する目的、方針、知識、用語、アクター、外部システム、Discovery 一覧、Intent 一覧を扱う。
+Steering layer は、複数 Intent で共有する目的、方針、知識、用語、アクター、外部システム、Intent 一覧を扱う。
 個別 Intent の要求、ユースケース、ユニット、ボルト、タスクは扱わない。
 プロダクト、技術、構造の判断パターンは `steering/product.md`、`steering/tech.md`、`steering/structure.md` に置く。
 
@@ -143,7 +143,6 @@ greenfield では、少なくとも次を作る。
 - `.amadeus/glossary.md`
 - `.amadeus/domain-map.md`
 - `.amadeus/context-map.md`
-- `.amadeus/discoveries.md`
 - `.amadeus/intents.md`
 
 brownfield では、既存成果物を読み、欠けている成果物だけを追加する。
@@ -158,7 +157,7 @@ Amadeus 自身を brownfield として扱う場合は、実行モードに関係
 
 退避版そのものを永続的な成果物にしない。
 差分確認の採用判断だけを、採用対象 `.amadeus/` の既存成果物に要約する。
-自己開発 cycle 全体の判断なら `.amadeus/steering/knowledge.md`、特定 Discovery のやり直しなら `.amadeus/discoveries/<discovery-id>.md` の `判定理由`、特定 Intent の再生成なら対象 phase の `decisions.md` または `decisions/**` に記録する。
+自己開発 cycle 全体の判断なら `.amadeus/steering/knowledge.md`、特定 Intent の再生成なら対象 phase の `decisions.md` または `decisions/**` に記録する。
 
 差分確認の要約には、比較元、比較先、比較理由、主な差分、採用判断、必要な未確認事項を含める。
 
@@ -175,7 +174,7 @@ Amadeus 自身を brownfield として扱う場合は、実行モードに関係
 8. steering layer の必須成果物を作る。
 9. Domain Map と Context Map は、採用済み情報がない空の表として作る。
 10. 未確認の情報は `未確認` と書き、空欄にしない。
-11. Intent は作らない。個別 Intent が必要になったら `amadeus-ideation` へ渡す。
+11. Intent は作らない。個別 Intent が必要になったら `amadeus` へ渡す。
 12. 昇格済みの `amadeus-validator` が使える場合は、全体成果物だけを検証する。
 
 ## ファイル別の最低構造
@@ -278,24 +277,6 @@ Amadeus 自身を brownfield として扱う場合は、実行モードに関係
 - `禁止事項`
 - `判断基準`
 
-### `discoveries.md`
-
-生成物である。
-先頭に生成マーカーを置き、`discoveries/*.md` から `bun run .agents/skills/amadeus-validator/scripts/IndexGenerate.ts <workspace>` で再生成する。
-
-- `一覧`
-
-`一覧` の表の列:
-
-- `識別子`
-- `テーマ`
-- `状態`
-- `判定`
-- `推奨次アクション`
-- `詳細`
-
-Discovery がまだない場合は、表に行を作らない。
-
 ### `intents.md`
 
 生成物である。
@@ -332,6 +313,5 @@ Intent がまだない場合は、表に行を作らない。
 
 ## 次の skill
 
-- 新しい Intent Recordだけを作る場合: `amadeus-ideation`
-- 既存 Intent の Ideation 成果物を作る場合: `amadeus-ideation`
+- 新しい Intent を始める場合、または既存 Intent を進める場合: `amadeus`
 - 成果物の構造を検証する場合: `amadeus-validator`

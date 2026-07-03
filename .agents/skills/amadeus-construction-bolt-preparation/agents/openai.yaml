@@ -1,7 +1,0 @@
-# skill-forge-source-sha256: 1896659cbd8bd99542195a683fccceeba3bdeeb72aacea3bb4f231fc2bdc8e90
-interface:
-  display_name: "Amadeus Construction Bolt Preparation"
-  short_description: "Prepare Amadeus Bolt tasks"
-  default_prompt: "Use $amadeus-construction-bolt-preparation to prepare Amadeus Bolt tasks."
-policy:
-  allow_implicit_invocation: false

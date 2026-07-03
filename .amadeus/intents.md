@@ -6,65 +6,12 @@
 
 | 識別子 | 概要 | 依存 | 詳細 |
 |---|---|---|---|
-| 20260629-self-dev-steering-layer | Amadeus 本体リポジトリに自己開発用 steering layer を導入する。 | なし | [20260629-self-dev-steering-layer.md](intents/20260629-self-dev-steering-layer.md) |
-| 20260701-construction-finalization-traceability-skill | Construction finalization skill に完了時の追跡表要件を明記する。 | 20260701-self-development-cycle-stage-workspace | [20260701-construction-finalization-traceability-skill.md](intents/20260701-construction-finalization-traceability-skill.md) |
-| 20260701-decision-review-grilling-gate | phase skill 起動時の decision tree 再評価と grilling 起動条件を標準化する。 | 20260701-skill-contract-catalog | [20260701-decision-review-grilling-gate.md](intents/20260701-decision-review-grilling-gate.md) |
-| 20260701-feedback-learning-loop | 後段 feedback と Intent 横断の学習ループを定義する。 | 20260701-skill-execution-reporting | [20260701-feedback-learning-loop.md](intents/20260701-feedback-learning-loop.md) |
-| 20260701-git-branching-policy | Git ブランチ戦略を steering policy として定義する。 | 20260701-self-development-cycle-stage-workspace | [20260701-git-branching-policy.md](intents/20260701-git-branching-policy.md) |
-| 20260701-history-learning-review-skills | `.amadeus/` 過去分析と学習分類の内部 skill を追加する。 | 20260701-feedback-learning-loop | [20260701-history-learning-review-skills.md](intents/20260701-history-learning-review-skills.md) |
-| 20260701-self-development-cycle-stage-workspace | 自己開発 cycle の stage 判定と workspace 対応記録を定義する。 | 20260629-self-dev-steering-layer | [20260701-self-development-cycle-stage-workspace.md](intents/20260701-self-development-cycle-stage-workspace.md) |
-| 20260701-skill-contract-catalog | Skill Contract を amadeus-contracts に追加し、skill 実行契約を生成参照できるようにする。 | 20260701-feedback-learning-loop | [20260701-skill-contract-catalog.md](intents/20260701-skill-contract-catalog.md) |
-| 20260701-skill-execution-reporting | amadeus-* skill の実行上の問題報告を標準化する。 | 20260701-construction-finalization-traceability-skill | [20260701-skill-execution-reporting.md](intents/20260701-skill-execution-reporting.md) |
-| 20260702-amadeus-discovery-dry-run-mode | `amadeus-discovery` に読み取り専用の `dry-run` mode を追加する。 | 20260701-history-learning-review-skills | [20260702-amadeus-discovery-dry-run-mode.md](intents/20260702-amadeus-discovery-dry-run-mode.md) |
-| 20260702-bolt-wave-parallel-execution | bolts の依存グラフに基づき、依存のない Bolt を wave 単位で並行実行する契約を Construction skill に定義する。 | 20260702-parallel-operation-policy, 20260702-shared-index-generation, 20260702-gate-queue-visualization | [20260702-bolt-wave-parallel-execution.md](intents/20260702-bolt-wave-parallel-execution.md) |
-| 20260702-construction-finalization-resume | merge 後の Construction finalization を決定論的に再開、検出できるようにする。 | 20260702-skill-change-review-contract | [20260702-construction-finalization-resume.md](intents/20260702-construction-finalization-resume.md) |
-| 20260702-construction-internal-next-skill-parent-routing | Construction 内部 skill の次工程案内を親 skill 経由の継続として明記する。 | 20260701-construction-finalization-traceability-skill | [20260702-construction-internal-next-skill-parent-routing.md](intents/20260702-construction-internal-next-skill-parent-routing.md) |
-| 20260702-gate-queue-visualization | 複数 Intent の state.json を横断スキャンし、承認待ちの Intent、phase、ゲート、待ち理由を一覧できるようにする。 | 20260702-shared-index-generation, 20260702-phase-gate-approval-contract, 20260702-state-json-scaffolding | [20260702-gate-queue-visualization.md](intents/20260702-gate-queue-visualization.md) |
-| 20260702-internal-skill-forge-readme-alignment | `amadeus-*` skill を `skill-forge` で確認し、README の skill 一覧と内部 skill の扱いをそろえる。 | 20260702-stage-prerequisite-checks | [20260702-internal-skill-forge-readme-alignment.md](intents/20260702-internal-skill-forge-readme-alignment.md) |
-| 20260702-internal-skill-policy-alignment | 内部 skill の対象範囲と暗黙起動ポリシーを揃える。 | なし | [20260702-internal-skill-policy-alignment.md](intents/20260702-internal-skill-policy-alignment.md) |
-| 20260702-parallel-operation-policy | worktree 並行、フェーズパイプライン、ゲート承認のバッチ化の運用判断を steering policy として記録する。 | 20260702-shared-index-generation, 20260701-git-branching-policy | [20260702-parallel-operation-policy.md](intents/20260702-parallel-operation-policy.md) |
-| 20260702-phase-gate-approval-contract | phase skill の人間ゲートと承認 evidence 検査を決定論的契約にする。 | 20260701-decision-review-grilling-gate, 20260702-skill-change-review-contract | [20260702-phase-gate-approval-contract.md](intents/20260702-phase-gate-approval-contract.md) |
-| 20260702-phase-pr-consolidation-policy | 小さい Intent の phase PR 統合条件を steering policy として定義する。 | 20260701-git-branching-policy, 20260702-state-json-scaffolding | [20260702-phase-pr-consolidation-policy.md](intents/20260702-phase-pr-consolidation-policy.md) |
-| 20260702-provenance-mechanization | provenance 記録の生成と検証を機械化する。 | 20260701-self-development-cycle-stage-workspace | [20260702-provenance-mechanization.md](intents/20260702-provenance-mechanization.md) |
-| 20260702-reference-link-policy | Amadeus 成果物の参照リンク化方針を定義する。 | 20260701-self-development-cycle-stage-workspace | [20260702-reference-link-policy.md](intents/20260702-reference-link-policy.md) |
-| 20260702-shared-index-generation | 共有インデックス intents.md と discoveries.md を配下モジュールからの生成物にする。 | なし | [20260702-shared-index-generation.md](intents/20260702-shared-index-generation.md) |
-| 20260702-skill-change-review-contract | skill 変更のレビュー支援契約を steering policy として確定する。 | なし | [20260702-skill-change-review-contract.md](intents/20260702-skill-change-review-contract.md) |
-| 20260702-stage-prerequisite-checks | phase skill 起動時に skill 供給元と実行環境の stage 前提を確認する。 | 20260701-history-learning-review-skills | [20260702-stage-prerequisite-checks.md](intents/20260702-stage-prerequisite-checks.md) |
-| 20260702-state-json-scaffolding | phase 遷移の state.json 雛形を skill 同梱スクリプトで生成する。 | 20260702-phase-gate-approval-contract | [20260702-state-json-scaffolding.md](intents/20260702-state-json-scaffolding.md) |
+
+Intent は未登録である。
 
 ## 依存関係
 
 | インテント | 依存 | 理由 |
 |---|---|---|
-| 20260629-self-dev-steering-layer | なし | 初回導入 Intent であり、既存 Intent に依存しないため。 |
-| 20260701-construction-finalization-traceability-skill | 20260701-self-development-cycle-stage-workspace | Issue #245 は、Issue #233 の Construction 最終化で見つかった skill 説明と validator 要件のずれを扱うため。 |
-| 20260701-decision-review-grilling-gate | 20260701-skill-contract-catalog | Issue #257 は、phase skill 起動時の decision tree 再評価で Skill Contract と既存成果物を入力にするため。 |
-| 20260701-feedback-learning-loop | 20260701-skill-execution-reporting | Issue #259 は、Issue #248 の実行時問題報告を入力にして、後段 feedback と Intent 横断の学習先を標準化するため。 |
-| 20260701-git-branching-policy | 20260701-self-development-cycle-stage-workspace | Issue #254 は、複数 Intent と複数 worktree の作業判断を steering policy として扱うため、stage と workspace の対応記録を前提にする。 |
-| 20260701-history-learning-review-skills | 20260701-feedback-learning-loop | Issue #277 は、Issue #259 の学習分類契約を内部 skill として具体化し、Issue #272 の dry-run が過去分析結果を入力にできる前提を作るため。 |
-| 20260701-self-development-cycle-stage-workspace | 20260629-self-dev-steering-layer | 初回導入 Intent の D002 により、Issue #233 を後続 Intent として扱うため。 |
-| 20260701-skill-contract-catalog | 20260701-feedback-learning-loop | Issue #263 は、Issue #257 の decision review と Issue #259 の learning review が参照する skill 実行契約を生成物として扱うため。 |
-| 20260701-skill-execution-reporting | 20260701-construction-finalization-traceability-skill | Issue #248 は、Issue #245 の自己開発作業中に見つかった skill 実行上の問題報告の扱いを標準化するため。 |
-| 20260702-amadeus-discovery-dry-run-mode | 20260701-history-learning-review-skills | Issue #272 は、過去分析と学習分類の結果を入力にできる読み取り専用の Intent 候補探索を扱うため。 |
-| 20260702-bolt-wave-parallel-execution | 20260702-parallel-operation-policy | wave 実行契約は、この Intent が確定した並行運用の判断基準（worktree 分離、同一 worktree での直列化）を前提にするため。 |
-| 20260702-bolt-wave-parallel-execution | 20260702-shared-index-generation | 共有インデックスの追記衝突の解消が、並行実行の構造前提であるため。 |
-| 20260702-bolt-wave-parallel-execution | 20260702-gate-queue-visualization | wave 内の複数 Bolt の Task Generation 承認は、承認待ちキューの確認とまとめ承認の運用を前提にするため。 |
-| 20260702-construction-finalization-resume | 20260702-skill-change-review-contract | Issue #309 の skill 変更 PR は、同 Intent で確定したレビュー支援契約（挙動差分要約、skill-forge 確認、粒度制約）の適用対象であるため。 |
-| 20260702-construction-internal-next-skill-parent-routing | 20260701-construction-finalization-traceability-skill | Issue #274 は、Construction finalization を忘れないための次工程案内を扱い、Issue #245 の Construction finalization 追跡要件と同じ公開入口契約を前提にするため。 |
-| 20260702-gate-queue-visualization | 20260702-shared-index-generation | Discovery 候補の待機条件「並行 Intent が走り始めてから効果が出るため、共有インデックスの生成物化の後に扱う」が、この Intent（Issue #334）の cycle 完了で解消したため。 |
-| 20260702-gate-queue-visualization | 20260702-phase-gate-approval-contract | 横断スキャンが読み取る `state.json` のゲート語彙と approval evidence は、この Intent で確定した契約に従うため。 |
-| 20260702-gate-queue-visualization | 20260702-state-json-scaffolding | 横断スキャンの対象になる `state.json` の構造安定は、雛形生成の Intent が前提になるため。 |
-| 20260702-internal-skill-forge-readme-alignment | 20260702-stage-prerequisite-checks | `amadeus-*` skill の供給元、昇格先成果物、README の公開入口説明を区別して確認する必要があり、stage 前提確認の成果物を前提にするため。 |
-| 20260702-internal-skill-policy-alignment | なし | Issue #284 の recommended 候補は、現在の skill ディレクトリと README の差分を整理するため、既存 Intent の完了を前提にしない。 |
-| 20260702-parallel-operation-policy | 20260702-shared-index-generation | Discovery 候補の待機条件「生成物化後の並行運用で得た経験を根拠にするため、共有インデックスの生成物化の後に扱う」が、この Intent（Issue #334）の cycle 完了で解消したため。 |
-| 20260702-parallel-operation-policy | 20260701-git-branching-policy | 並行運用の判断基準は、この Intent が定義した Git Branching Policy の branch lifecycle と worktree 衝突回避の規則を前提にし、責務分担を整合させる必要があるため。 |
-| 20260702-phase-gate-approval-contract | 20260701-decision-review-grilling-gate | Issue #306 の grilling 起動トリガーは Issue #257 で確定した decision review 契約への追加であるため。 |
-| 20260702-phase-gate-approval-contract | 20260702-skill-change-review-contract | Issue #306 と #307 の skill 変更 PR はレビュー支援契約の適用対象であるため。 |
-| 20260702-phase-pr-consolidation-policy | 20260701-git-branching-policy | Issue #310 は Git Branching Policy の branch 命名との整合確認を含むため。 |
-| 20260702-phase-pr-consolidation-policy | 20260702-state-json-scaffolding | 統合 PR の state 検証は雛形生成（Issue #311）が前提を単純にするため。 |
-| 20260702-provenance-mechanization | 20260701-self-development-cycle-stage-workspace | Issue #296 は、Intent 20260701-self-development-cycle-stage-workspace の U002 Unit Design Brief が残した「evidence を JSON として標準化する必要が出た場合」という再確認条件の発火元であるため。 |
-| 20260702-reference-link-policy | 20260701-self-development-cycle-stage-workspace | Issue #243 は、自己開発 cycle と workspace 対応記録で作成された Functional Design を観察例にし、Amadeus 成果物の参照リンク化方針を後続 Intent として扱うため。 |
-| 20260702-shared-index-generation | なし | Issue #334 は Discovery 20260702-parallel-execution の recommended 候補であり、既存 Intent の完了を前提にしないため。 |
-| 20260702-skill-change-review-contract | なし | Issue #298 は既存の steering policies の変更種別「skill 変更」必須条件を強化する独立した文書変更であり、他 Intent の完了を前提にしないため。 |
-| 20260702-stage-prerequisite-checks | 20260701-history-learning-review-skills | Issue #278 は、Issue #277 と Issue #272 の前提不成立を代表例として、phase skill 起動時の skill 供給元と実行環境の stage 前提確認を扱うため。 |
-| 20260702-state-json-scaffolding | 20260702-phase-gate-approval-contract | Issue #311 の雛形に含める approval evidence の形式は、ゲート契約の Intent で確定した Task Generation Gate の契約を前提にするため。 |
+
+Intent 間の依存関係は未登録である。

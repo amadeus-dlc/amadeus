@@ -1,7 +1,0 @@
-# skill-forge-source-sha256: cdb3e917d34bde2a2dc80d87c6c2383d758b64737b1b0f64570b1df418554270
-interface:
-  display_name: "Amadeus Ideation Scope Framing"
-  short_description: "Frame Amadeus Intent scope"
-  default_prompt: "Use $amadeus-ideation-scope-framing to frame Amadeus Intent scope."
-policy:
-  allow_implicit_invocation: false
