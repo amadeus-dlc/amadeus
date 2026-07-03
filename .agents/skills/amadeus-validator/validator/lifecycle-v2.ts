@@ -279,7 +279,7 @@ function checkEventPresence(ctx: LifecycleV2Context, auditPath: string, events: 
 }
 
 function checkPhaseEvents(ctx: LifecycleV2Context, auditPath: string, doc: AidlcStateDocument, events: AuditEvent[]): void {
-  for (const phase of ["Ideation", "Inception", "Construction"]) {
+  for (const phase of ["Ideation", "Inception", "Construction", "Operation"]) {
     const value = String(doc.phaseProgress[phase] ?? "");
     if (value === "Verified") {
       const found = events.some((entry) => entry.event === "PHASE_VERIFIED" && entry.body.includes(phase));

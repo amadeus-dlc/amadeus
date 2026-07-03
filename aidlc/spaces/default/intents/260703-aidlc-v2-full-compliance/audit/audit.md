@@ -143,6 +143,14 @@
 
 ---
 
+## PHASE_SKIPPED
+**Timestamp**: 2026-07-03T09:06:37Z
+**Event**: PHASE_SKIPPED
+**Phase**: Operation
+**Reason**: out of Amadeus scope（Operation は record の scaffold だけを持ち、実行対象にしない）
+
+---
+
 ## WORKFLOW_COMPLETED
 **Timestamp**: 2026-07-03T09:06:37Z
 **Event**: WORKFLOW_COMPLETED
