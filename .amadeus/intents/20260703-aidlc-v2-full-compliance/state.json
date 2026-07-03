@@ -24,12 +24,20 @@
     "functional-design": {
       "units": {
         "implicit": {
-          "state": "awaiting_approval"
+          "state": "completed",
+          "approval": {
+            "approvedAt": "2026-07-03T13:58:40+09:00",
+            "via": "conversation"
+          }
         }
       }
     },
     "code-generation": {
-      "state": "pending"
+      "units": {
+        "implicit": {
+          "state": "active"
+        }
+      }
     },
     "build-and-test": {
       "state": "pending"
