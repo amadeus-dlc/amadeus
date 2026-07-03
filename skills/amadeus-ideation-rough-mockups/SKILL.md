@@ -71,7 +71,7 @@ UI もシステム相互作用もない場合は、成果物を作らず checkbo
 以下の手順は、checkbox が `[ ]` から開始する場合の流れである。
 `[?]` または `[R]` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
 
-1. checkbox が `[ ]` の場合だけ Condition を判定する。偽なら `[S]` を記録して終了する。`[-]`、`[?]`、`[R]` からの再開では再判定しない。
+1. checkbox が `[ ]` の場合だけ Condition を判定する。偽なら checkbox を `[S]` にして注記に skip 理由を書き、`audit/audit.md` に `STAGE_SKIPPED` を追記して終了する。`[-]`、`[?]`、`[R]` からの再開では再判定しない。
 2. `aidlc-state.md` の `rough-mockups` の checkbox を `[-]` にする。
 3. scope-document と intent-backlog を読み、確認対象のフローを特定する。
 4. 不足論点を質問で確認する。

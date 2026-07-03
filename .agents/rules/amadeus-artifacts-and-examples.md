@@ -76,6 +76,7 @@ snapshot は v2 互換ライフサイクルの段階別に置く。
 example は、生成に使った source skill の `skills/**/SKILL.md` と md5 を `examples/skill-provenance.json` に記録する。
 source skill の md5 を更新する場合は、該当 example を real provider で実際に再生成してから更新する。
 md5 だけを現在値へ書き換えない。
+`skills/amadeus*/SKILL.md` または `.agents/skills/amadeus*/SKILL.md` を変更した PR では、PR 作成前に `npm run test:examples` を実行し、provenance 不一致が出たら対象 step 以降を real provider で再生成する。
 real provider で再生成できない場合は md5 を更新せず、該当 entry に `staleReason` を残す。
 `staleReason` は一時的な例外であり、後続 PR で real provider による再生成を実施して削除する。
 
