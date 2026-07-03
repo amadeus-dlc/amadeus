@@ -58,7 +58,7 @@
 
 ### INCEPTION PHASE
 - [S] reverse-engineering — SKIP: greenfield
-- [S] practices-discovery — SKIP: greenfield かつ単独開発者であり、証拠付きで発見できる確立済みのチームプラクティスが存在しない
+- [S] practices-discovery — SKIP: 単独開発者で開発し、確立済みのチームプラクティスの発見対象がない
 - [x] requirements-analysis — EXECUTE
 - [x] user-stories — EXECUTE
 - [x] refined-mockups — EXECUTE
@@ -67,13 +67,7 @@
 - [x] delivery-planning — EXECUTE
 
 ### CONSTRUCTION PHASE
-Per unit: U001-inventory-lookup
-- [x] functional-design — EXECUTE
-- [S] nfr-requirements — SKIP: 性能、セキュリティ、スケーラビリティの特別な要求がなく、技術スタックは確定済みである
-- [S] nfr-design — SKIP: NFR Requirements を実行していないため、設計対象の NFR 要求がない
-- [S] infrastructure-design — SKIP: インフラ変更がなく、デプロイ構成は定義済みである
-- [ ] code-generation — EXECUTE
-Per unit: U002-product-selection
+Per unit: U001-product-selection
 - [x] functional-design — EXECUTE
 - [S] nfr-requirements — SKIP: 性能、セキュリティ、スケーラビリティの特別な要求がなく、技術スタックは確定済みである
 - [S] nfr-design — SKIP: NFR Requirements を実行していないため、設計対象の NFR 要求がない
@@ -103,9 +97,9 @@ Per unit: U003-order-creation
 - **Next Stage**: code-generation（B001 の Unit ごと。walking skeleton の続き）
 - **Status**: Running
 - **Construction Autonomy Mode**: unset
-- **Last Updated**: 2026-07-03T07:35:00Z
+- **Last Updated**: 2026-07-03T08:43:09Z
 
 ## Session Resume Point
-- **Last Completed Stage**: functional-design（B001 の U001〜U003。3.2〜3.4 は Condition 偽で skip）
+- **Last Completed Stage**: functional-design（B001 の U001 と U003。3.2〜3.4 は Condition 偽で skip）
 - **Next Action**: amadeus 入口で B001 の code-generation（Stage 3.5）から再開する。B001 は開始済みのまま残っている
 - **Pending Artifacts**: なし

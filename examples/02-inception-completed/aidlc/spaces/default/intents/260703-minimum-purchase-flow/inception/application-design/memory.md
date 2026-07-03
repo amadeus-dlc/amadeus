@@ -2,19 +2,20 @@
 
 ## Interpretations
 
-- 「新しいコンポーネントとサービス層の設計が必要」という実行指示の事実から Condition を真と判定した。greenfield のため、全コンポーネントを新規に設計した。
-- メソッド境界はドメイン知識の言葉で定義し、型と例外表現の確定は Construction に委ねた。
+- コンポーネントの語彙を glossary.md の 3 領域（商品選択、注文作成、在庫参照）に合わせ、実装パターンの用語ではなくドメインの言葉で命名した。
+- knowledge/domain-map.md と context-map.md は未登録のため、境界の判断材料には要求、ストーリー、制約だけを使った。
 
 ## Deviations
 
-- 実行指示により逐次質問を行わず、指示内容と既存成果物から回答を確定した。質問と回答は application-design-questions.md に、設計の確定判断は inception/grillings.md（G002）に記録した。
+- 実行指示により質問を対話で行わず、application-design-questions.md に推奨回答と確定理由を記録する形へ代替した。
+- 設計の確定判断は inception/application-design/decisions.md に記録した。grilling セッションを実行していないため、inception/grillings.md は作成していない。
 
 ## Tradeoffs
 
-- 最小スコープに対して 3 層構成はやや厚いが、在庫参照失敗の判定（GD001）を UI から分離すること、Unit 境界の材料になることを優先した。
-- 在庫参照の共有はサービス間の結合を生むが、API 仕様が未確認の外部連携を一箇所へ集約する利点を優先した。
+- 在庫参照を商品サービスに含めたため、在庫状況の利用先が増えた場合はサービス分割の再評価が必要になる。最小購入フローの単純さを優先した。
+- 注文作成時の在庫再確認を行わないため、選択から注文作成までの間に在庫が変動した注文を受ける余地がある。要求にない検証を足さないことを優先し、必要になれば Construction で再評価する。
 
 ## Open questions
 
-- 在庫管理システムの API 仕様が確定した際、在庫参照のメソッド境界（一括参照か個別参照か）の見直しが必要か。
-- Web フレームワークと ORM の選定（Construction の NFR Requirements で扱う）。
+- 在庫管理システムの REST API の仕様が未確認のため、在庫参照の入出力（商品の識別子の形式、在庫状況の表現）は Construction の設計で確定する。
+- リレーショナルデータベースの製品選定が未確認である。Construction の NFR Requirements の技術スタック判断で確定する。

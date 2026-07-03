@@ -25,7 +25,7 @@
 ## Execution Plan Summary
 - **Total Stages**: 22
 - **Completed**: 15
-- **In Progress**: code-generation（B001 の U001〜U003。code-generation-plan.md まで作成済み。実行指示によりここで停止中）
+- **In Progress**: code-generation（B001 の U001 と U003。実装計画 code-generation-plan.md まで作成し、実行指示によりここで停止中）
 
 ## Runtime State
 - **Revision Count**: 0
@@ -58,7 +58,7 @@
 
 ### INCEPTION PHASE
 - [S] reverse-engineering — SKIP: greenfield
-- [S] practices-discovery — SKIP: greenfield かつ単独開発者であり、証拠付きで発見できる確立済みのチームプラクティスが存在しない
+- [S] practices-discovery — SKIP: 単独開発者で開発し、確立済みのチームプラクティスの発見対象がない
 - [x] requirements-analysis — EXECUTE
 - [x] user-stories — EXECUTE
 - [x] refined-mockups — EXECUTE
@@ -67,13 +67,7 @@
 - [x] delivery-planning — EXECUTE
 
 ### CONSTRUCTION PHASE
-Per unit: U001-inventory-lookup
-- [x] functional-design — EXECUTE
-- [S] nfr-requirements — SKIP: 性能、セキュリティ、スケーラビリティの特別な要求がなく、技術スタックは確定済みである
-- [S] nfr-design — SKIP: NFR Requirements を実行していないため、設計対象の NFR 要求がない
-- [S] infrastructure-design — SKIP: インフラ変更がなく、デプロイ構成は定義済みである
-- [-] code-generation — EXECUTE
-Per unit: U002-product-selection
+Per unit: U001-product-selection
 - [x] functional-design — EXECUTE
 - [S] nfr-requirements — SKIP: 性能、セキュリティ、スケーラビリティの特別な要求がなく、技術スタックは確定済みである
 - [S] nfr-design — SKIP: NFR Requirements を実行していないため、設計対象の NFR 要求がない
@@ -100,12 +94,12 @@ Per unit: U003-order-creation
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
 - **Current Stage**: code-generation
-- **Next Stage**: build-and-test（B001。全 Unit の Code Generation 完了後に 1 回実行する）
+- **Next Stage**: code-generation の続き（U001 と U003 のコードとテストコードの生成、code-summary.md、ゲート提示。完了後に build-and-test）
 - **Status**: Running
 - **Construction Autonomy Mode**: unset
-- **Last Updated**: 2026-07-03T07:40:11Z
+- **Last Updated**: 2026-07-03T08:53:57Z
 
 ## Session Resume Point
-- **Last Completed Stage**: functional-design（B001 の U001〜U003。3.2〜3.4 は Condition 偽で skip）
-- **Next Action**: amadeus 入口で B001 の code-generation（Stage 3.5）の続きから再開する。U001〜U003 の code-generation-plan.md は作成済みであり、実装対象リポジトリを持たない example のため、コード生成、code-summary.md、ゲート提示の手前で停止している。B001 は開始済みのまま残っている
-- **Pending Artifacts**: construction/U001-inventory-lookup/code-generation/code-generation-plan.md, construction/U002-product-selection/code-generation/code-generation-plan.md, construction/U003-order-creation/code-generation/code-generation-plan.md
+- **Last Completed Stage**: functional-design（B001 の U001 と U003。3.2〜3.4 は Condition 偽で skip）
+- **Next Action**: amadeus 入口で B001 の code-generation（Stage 3.5）の続きから再開する。U001 と U003 の実装計画は作成済みであり、コードとテストコードの生成、code-summary.md の作成、ゲート提示が残っている。両 Unit の checkbox は `[-]`、B001 は開始済みのまま残っている
+- **Pending Artifacts**: construction/U001-product-selection/code-generation/code-summary.md、construction/U003-order-creation/code-generation/code-summary.md（コードとテストコードの生成後に作成する）

@@ -25,7 +25,7 @@
 ## Execution Plan Summary
 - **Total Stages**: 22
 - **Completed**: 14
-- **In Progress**: なし（次は Construction の Bolt 実行）
+- **In Progress**: なし（次は Construction の Bolt 実行。B001 注文作成の貫通から始める）
 
 ## Runtime State
 - **Revision Count**: 0
@@ -58,7 +58,7 @@
 
 ### INCEPTION PHASE
 - [S] reverse-engineering — SKIP: greenfield
-- [S] practices-discovery — SKIP: greenfield かつ単独開発者であり、証拠付きで発見できる確立済みのチームプラクティスが存在しない
+- [S] practices-discovery — SKIP: 単独開発者で開発し、確立済みのチームプラクティスの発見対象がない
 - [x] requirements-analysis — EXECUTE
 - [x] user-stories — EXECUTE
 - [x] refined-mockups — EXECUTE
@@ -88,12 +88,12 @@ Per unit: [unit-name]
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
 - **Current Stage**: delivery-planning
-- **Next Stage**: functional-design（B001 注文作成貫通の Bolt 実行に従う）
+- **Next Stage**: functional-design
 - **Status**: Running
 - **Construction Autonomy Mode**: unset
-- **Last Updated**: 2026-07-03T07:15:47Z
+- **Last Updated**: 2026-07-03T08:29:08Z
 
 ## Session Resume Point
 - **Last Completed Stage**: delivery-planning
-- **Next Action**: amadeus 入口で Construction の Bolt 実行を開始する（B001 注文作成貫通、walking skeleton、U001 → U002 → U003）
+- **Next Action**: amadeus 入口で Construction の Bolt 実行を開始する（bolt-plan.md の B001 注文作成の貫通が walking skeleton）
 - **Pending Artifacts**: なし
