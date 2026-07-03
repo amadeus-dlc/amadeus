@@ -943,3 +943,55 @@
 **Details**: Bolt B004（文書と実証）完了（examples 再生成と旧 skill 削除は CD006 により人間判断待ちの後続作業）。build-and-test 以降はエンジン駆動で実行し、PHASE_VERIFIED と WORKFLOW_COMPLETED はエンジンが per-clone shard に記録した（dogfooding、R011）。最終的な人間承認は最終 PR のレビューと merge で行う。
 
 ---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T20:15:45Z
+**Event**: STAGE_COMPLETED
+**Stage**: ci-pipeline
+**Details**: エンジン駆動（dogfooding）で完了。gate 承認はエンジンの report が記録（per-clone shard 参照）。成果物は construction/ci-pipeline/。
+
+---
+
+## WORKFLOW_COMPLETED
+**Timestamp**: 2026-07-03T20:15:45Z
+**Event**: WORKFLOW_COMPLETED
+**Details**: エンジンが workflow 完了を判定し per-clone shard に記録した（scope: feature の実行対象ステージがすべて完了）。この entry は移行期の橋渡しとして audit.md へ転記したもの。examples 再生成と旧 skill 削除は CD005 と CD006 の後続作業として追跡する。最終的な人間承認は最終 PR の merge。
+
+---
+
+## PHASE_VERIFIED
+**Timestamp**: 2026-07-03T20:16:17Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: Construction
+**Pass/fail**: pass
+**Details**: エンジンが per-clone shard に記録した PHASE_VERIFIED の橋渡し転記。中間 PR は人間指示により省略し、最終 PR（レビューと merge が最終承認）に統合する。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T20:16:37Z
+**Event**: BOLT_COMPLETED
+**Details**: Bolt B001-walking-skeleton。Bolt Refs の slug 付き表記への正規化に伴う補完記録（完了自体は同 Bolt の既存 BOLT_COMPLETED entry を参照）。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T20:16:37Z
+**Event**: BOLT_COMPLETED
+**Details**: Bolt B002-skill-replacement。Bolt Refs の slug 付き表記への正規化に伴う補完記録（完了自体は同 Bolt の既存 BOLT_COMPLETED entry を参照）。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T20:16:37Z
+**Event**: BOLT_COMPLETED
+**Details**: Bolt B003-inspection。Bolt Refs の slug 付き表記への正規化に伴う補完記録（完了自体は同 Bolt の既存 BOLT_COMPLETED entry を参照）。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T20:16:50Z
+**Event**: BOLT_COMPLETED
+**Details**: Bolt B004-docs-and-proof。Bolt Refs の slug 付き表記への正規化に伴う補完記録（完了自体は既存 entry を参照。examples 再生成と旧 skill 削除は CD005 と CD006 の後続作業）。
+
+---

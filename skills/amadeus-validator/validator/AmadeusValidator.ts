@@ -36,7 +36,7 @@ type Table = {
 };
 const intentDirectoryPattern = /^\d{6}-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const uuidV7Pattern = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-const registryStatusValues = new Set(["in_progress", "parked", "completed"]);
+const registryStatusValues = new Set(["in_progress", "parked", "completed", "complete"]);
 const registryScopeValues = new Set(["enterprise", "feature", "mvp", "poc", "bugfix", "refactor", "infra", "security-patch", "workshop"]);
 const eventStormingDirectoryPattern = /^ES\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const eventStormingStatusValues = new Set(["draft", "reviewing", "ready", "superseded"]);

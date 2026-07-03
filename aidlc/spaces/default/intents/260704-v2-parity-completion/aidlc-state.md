@@ -8,7 +8,7 @@
 - **State Version**: 7
 - **Active Agent**: aidlc-pipeline-deploy-agent
 - **Worktree Path**: 
-- **Bolt Refs**: B001, B002, B003, B004
+- **Bolt Refs**: B001-walking-skeleton, B002-skill-replacement, B003-inspection, B004-docs-and-proof
 - **Practices Affirmed Timestamp**: 
 
 ## Scope Configuration
@@ -35,7 +35,7 @@
 - **Initialization**: Verified
 - **Ideation**: Verified
 - **Inception**: Verified
-- **Construction**: Active
+- **Construction**: Verified
 - **Operation**: Skipped
 
 ## Stage Progress
