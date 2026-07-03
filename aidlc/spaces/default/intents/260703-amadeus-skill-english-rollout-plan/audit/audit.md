@@ -1385,12 +1385,21 @@
 
 ---
 
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T15:58:32Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Unit**: U005-issue-391-394-aidlc-v2-differences
+**Details**: #391（PR #419）、#393（PR #420）、#392（PR #421）は merge 済みで、#394 の判断記録を作成し Code Generation の作業を完了した。autonomous 実行のため会話内 gate は提示せず、approval evidence は #394 PR merge 後に記録する。
+
+---
+
 ## STAGE_STARTED
 **Timestamp**: 2026-07-03T15:58:32Z
 **Event**: STAGE_STARTED
 **Stage**: build-and-test
 **Bolt**: B005
-**Details**: B005 #391〜#394 AI-DLC v2 differences の Stage 3.6 を開始した。#391〜#393 は merge 済み、#394 は本 PR で対応する。全体テスト、Amadeus Validator、文書リンクの結果を記録する。
+**Details**: B005 #391〜#394 AI-DLC v2 differences の Stage 3.6 を開始した。U005 の code-generation は作業完了・承認待ち（`[?]`）であり、承認は Bolt PR merge で確定する（autonomous mode）。全体テスト、Amadeus Validator、文書リンクの結果を記録する。
 
 ---
 
