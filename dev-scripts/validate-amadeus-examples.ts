@@ -113,15 +113,63 @@ function validateProvenance(): void {
   console.log("provenance: ok");
 }
 
-function validateGenerationPlan(): void {
-  const stdout = run(["bun", "run", "dev-scripts/generate-amadeus-examples.ts", "--dry-run"]);
-  for (const expected of [
-    "provider: real",
-    "dryRun: true",
-    ...snapshots.map((snapshot) => `-> ${snapshot}`),
-  ]) {
+function runExpectFailure(command: string[], expected: string, cwd = root): void {
+  const result = Bun.spawnSync(command, { cwd, stdout: "pipe", stderr: "pipe" });
+  const stdout = new TextDecoder().decode(result.stdout);
+  const stderr = new TextDecoder().decode(result.stderr);
+  if (result.exitCode === 0) {
+    fail(["command unexpectedly succeeded: " + command.join(" "), "stdout:", stdout].join("\n"));
+  }
+  if (!stdout.includes(expected) && !stderr.includes(expected)) {
+    fail(["command failed without expected evidence: " + expected, "stdout:", stdout, "stderr:", stderr].join("\n"));
+  }
+}
+
+function assertPlan(stdout: string, mustInclude: string[], mustExclude: string[]): void {
+  for (const expected of mustInclude) {
     if (!stdout.includes(expected)) fail(`generation plan の出力に ${JSON.stringify(expected)} がありません:\n${stdout}`);
   }
+  for (const excluded of mustExclude) {
+    if (stdout.includes(excluded)) fail(`generation plan の出力に ${JSON.stringify(excluded)} が含まれています:\n${stdout}`);
+  }
+}
+
+function validateGenerationPlan(): void {
+  const generator = "dev-scripts/generate-amadeus-examples.ts";
+  const stepLines = snapshots.map((snapshot) => `-> ${snapshot}`);
+
+  // 全 step の計画。
+  assertPlan(
+    run(["bun", "run", generator, "--dry-run"]),
+    ["provider: real", "dryRun: true", ...stepLines],
+    ["input snapshot:"],
+  );
+
+  // --from 先頭は全 step と等しく、入力 snapshot を持たない。
+  assertPlan(
+    run(["bun", "run", generator, "--dry-run", "--from", "01-ideation-completed"]),
+    ["dryRun: true", ...stepLines],
+    ["input snapshot:"],
+  );
+
+  // --from 途中 step は直前 snapshot を入力にし、前段 step を対象にしない。
+  assertPlan(
+    run(["bun", "run", generator, "--dry-run", "--from", "02-inception-completed"]),
+    ["input snapshot: examples/01-ideation-completed", stepLines[1], stepLines[2]],
+    ["step: 01-ideation-completed"],
+  );
+  assertPlan(
+    run(["bun", "run", generator, "--dry-run", "--from", "03-construction-design-ready"]),
+    ["input snapshot: examples/02-inception-completed", stepLines[2]],
+    ["step: 01-ideation-completed", "step: 02-inception-completed"],
+  );
+
+  // 存在しない step id は、利用可能な step id を示して失敗する。
+  runExpectFailure(
+    ["bun", "run", generator, "--dry-run", "--from", "invalid-step"],
+    "unknown --from step id",
+  );
+
   console.log("generation plan: ok");
 }
 
