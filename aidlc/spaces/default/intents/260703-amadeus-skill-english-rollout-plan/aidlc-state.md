@@ -8,7 +8,7 @@
 - **State Version**: 7
 - **Active Agent**: amadeus
 - **Worktree Path**: 
-- **Bolt Refs**: 
+- **Bolt Refs**: B001
 - **Practices Affirmed Timestamp**: 
 
 ## Scope Configuration
@@ -25,7 +25,7 @@
 ## Execution Plan Summary
 - **Total Stages**: 25
 - **Completed**: 16
-- **In Progress**: なし（Construction の stage と Bolt は未実行）
+- **In Progress**: B001 / Bolt PR preparation
 
 ## Runtime State
 - **Revision Count**: 0
@@ -65,13 +65,13 @@
 - [x] delivery-planning — EXECUTE
 
 ### CONSTRUCTION PHASE
-Per unit: pending
-- [ ] functional-design — EXECUTE
-- [ ] nfr-requirements — EXECUTE
-- [ ] nfr-design — EXECUTE
-- [ ] infrastructure-design — EXECUTE
-- [ ] code-generation — EXECUTE
-- [ ] build-and-test — EXECUTE
+Per unit: U001-issue-395-policy-definition
+- [x] functional-design — EXECUTE
+- [S] nfr-requirements — SKIP: #395 方針確定には性能、セキュリティ、スケーラビリティ、信頼性、技術スタック選定の新規要求がない。
+- [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+- [S] infrastructure-design — SKIP: #395 方針確定にはインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計がない。
+- [x] code-generation — EXECUTE
+- [x] build-and-test — EXECUTE
 - [ ] ci-pipeline — EXECUTE
 
 ### OPERATION PHASE
@@ -85,13 +85,13 @@ Per unit: pending
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: delivery-planning
-- **Next Stage**: functional-design
+- **Current Stage**: build-and-test
+- **Next Stage**: Bolt PR
 - **Status**: Running
 - **Construction Autonomy Mode**: unset
-- **Last Updated**: 2026-07-03T12:20:42Z
+- **Last Updated**: 2026-07-03T12:33:26Z
 
 ## Session Resume Point
-- **Last Completed Stage**: delivery-planning
-- **Next Action**: Start Construction Bolt B001 (#395 方針確定)
-- **Pending Artifacts**: Construction 成果物は未作成
+- **Last Completed Stage**: code-generation
+- **Next Action**: Create Bolt PR for B001 (#395 方針確定)
+- **Pending Artifacts**: B001 の Bolt PR と merge 確認は未完了。ci-pipeline は未完了。

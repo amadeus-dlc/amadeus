@@ -681,3 +681,128 @@
 **Details**: PR: https://github.com/amadeus-dlc/amadeus/pull/408。Merge commit: b34a60ca6f215f1c4a4a2ec3749078c2174e3db8。
 
 ---
+
+## Bolt Started: B001
+**Timestamp**: 2026-07-03T12:24:10Z
+**Event**: BOLT_STARTED
+**Bolt**: B001
+**Details**: #395 方針確定 Bolt を walking skeleton として開始した。branch は codex/issue-399-construction を使い、Project Information の Bolt Refs に B001 を追記した。
+
+---
+
+## Stage Started: functional-design
+**Timestamp**: 2026-07-03T12:24:10Z
+**Event**: STAGE_STARTED
+**Stage**: functional-design
+**Unit**: U001-issue-395-policy-definition
+**Details**: U001 #395 方針確定の Stage 3.1 を開始した。英語化方針、対象範囲、検証方法、言語ルール衝突の扱いを業務ルールとして定義する必要があるため実行した。
+
+---
+
+## Stage Awaiting Approval: functional-design
+**Timestamp**: 2026-07-03T12:24:10Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: functional-design
+**Unit**: U001-issue-395-policy-definition
+**Details**: business-logic-model.md、business-rules.md、domain-entities.md、memory.md を確認対象として提示した。
+
+---
+
+## Gate Approved: functional-design
+**Timestamp**: 2026-07-03T12:26:29Z
+**Event**: GATE_APPROVED
+**Stage**: functional-design
+**Unit**: U001-issue-395-policy-definition
+**Details**: User Input: 1
+
+---
+
+## Stage Completed: functional-design
+**Timestamp**: 2026-07-03T12:26:29Z
+**Event**: STAGE_COMPLETED
+**Stage**: functional-design
+**Unit**: U001-issue-395-policy-definition
+**Details**: U001 #395 方針確定の functional-design を承認済みとして完了した。
+
+---
+
+## Stage Skipped: nfr-requirements
+**Timestamp**: 2026-07-03T12:26:29Z
+**Event**: STAGE_SKIPPED
+**Stage**: nfr-requirements
+**Unit**: U001-issue-395-policy-definition
+**Details**: #395 方針確定には性能、セキュリティ、スケーラビリティ、信頼性、技術スタック選定の新規要求がないため skip した。
+
+---
+
+## Stage Skipped: nfr-design
+**Timestamp**: 2026-07-03T12:26:29Z
+**Event**: STAGE_SKIPPED
+**Stage**: nfr-design
+**Unit**: U001-issue-395-policy-definition
+**Details**: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+
+---
+
+## Stage Skipped: infrastructure-design
+**Timestamp**: 2026-07-03T12:26:29Z
+**Event**: STAGE_SKIPPED
+**Stage**: infrastructure-design
+**Unit**: U001-issue-395-policy-definition
+**Details**: #395 方針確定にはインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計がないため skip した。
+
+---
+
+## Stage Started: code-generation
+**Timestamp**: 2026-07-03T12:26:29Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Unit**: U001-issue-395-policy-definition
+**Details**: U001 #395 方針確定の Stage 3.5 を開始した。
+
+---
+
+## Stage Awaiting Approval: code-generation
+**Timestamp**: 2026-07-03T12:28:52Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Unit**: U001-issue-395-policy-definition
+**Details**: docs/amadeus/skill-language-policy.md、AGENTS.md、AMADEUS.md、.agents/rules/amadeus-artifacts-and-examples.md、README.md、README.ja.md、code-generation-plan.md、code-summary.md、memory.md を確認対象として提示した。
+
+---
+
+## Gate Approved: code-generation
+**Timestamp**: 2026-07-03T12:32:21Z
+**Event**: GATE_APPROVED
+**Stage**: code-generation
+**Unit**: U001-issue-395-policy-definition
+**Details**: User Input: 1
+
+---
+
+## Stage Completed: code-generation
+**Timestamp**: 2026-07-03T12:32:21Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Unit**: U001-issue-395-policy-definition
+**Details**: U001 #395 方針確定の code-generation を承認済みとして完了した。
+
+---
+
+## Stage Started: build-and-test
+**Timestamp**: 2026-07-03T12:32:21Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Bolt**: B001
+**Details**: B001 #395 方針確定の Stage 3.6 を開始した。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T12:33:26Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Bolt**: B001
+**Details**: B001 #395 方針確定。npm run test:all exit 0。Artifacts: build-instructions.md, unit-test-instructions.md, integration-test-instructions.md, build-and-test-summary.md, build-test-results.md, memory.md
+
+---

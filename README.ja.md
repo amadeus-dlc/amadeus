@@ -114,6 +114,7 @@ bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspac
 ## Documentation
 
 - agent 共通入口: [AMADEUS.md](AMADEUS.md)
+- skill 言語方針: [docs/amadeus/skill-language-policy.md](docs/amadeus/skill-language-policy.md)
 - 生成例: [examples/](examples/)
 - ライフサイクル契約（3 phase 22 ステージ、scope、state スキーマ）:
   - [Overview](docs/amadeus/lifecycle/overview.md)

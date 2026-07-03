@@ -10,6 +10,8 @@
 - 日本語の技術文書を書く、または推敲するときは `japanese-tech-writing` skill の規範に従う。
 - 英語の識別子、ファイル名、コマンド名は必要な場合だけ使う。
 - 機械可読・構造的成果物（`aidlc-state.md`、`intents.json`、audit イベント、改名対象のファイル名）は v2 の構造と英語ラベルをそのまま使う。
+- Amadeus skill の `SKILL.md` 本文は、[Skill Language Policy](docs/amadeus/skill-language-policy.md) に従う場合だけ英語化できる。
+- `aidlc/**/*.md`、テンプレートから生成される Markdown、`.kiro/specs/**/*.md`、`openspec/**/*.md` は日本語で書く。
 
 ## Project Context
 
@@ -85,6 +87,7 @@ npm run validate:all
 
 Skill 昇格の確認は、必要に応じて `dev-scripts/promote-skill.ts` を使う。
 昇格先に `evals/` や開発用ファイルを混ぜない。
+Amadeus skill の言語方針は [Skill Language Policy](docs/amadeus/skill-language-policy.md) に従う。
 
 ## Development Rules
 
