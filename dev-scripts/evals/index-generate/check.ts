@@ -48,7 +48,7 @@ function runExpectFailure(command: string[], expected: string, cwd = root): void
 function newWorkspace(prefix: string): string {
   const workspace = mkdtempSync(join(tmpdir(), prefix));
   cleanups.push(workspace);
-  mkdirSync(join(workspace, ".amadeus/intents"), { recursive: true });
+  mkdirSync(join(workspace, "aidlc/spaces/default/intents"), { recursive: true });
   return workspace;
 }
 
@@ -58,21 +58,21 @@ function intentModule(title: string, summary: string, deps: Array<{ dep: string;
 }
 
 function writeIntent(workspace: string, id: string, title: string, summary: string, deps: Array<{ dep: string; reason: string }>): void {
-  const dir = join(workspace, ".amadeus/intents");
+  const dir = join(workspace, "aidlc/spaces/default/intents");
   writeFileSync(join(dir, `${id}.md`), intentModule(title, summary, deps));
   mkdirSync(join(dir, id), { recursive: true });
-  writeFileSync(join(dir, id, "state.json"), JSON.stringify({ schemaVersion: 1, phase: "ideation", status: "in_progress" }, null, 2) + "\n");
+  writeFileSync(join(dir, id, "aidlc-state.md"), "# AI-DLC State Tracking\n");
 }
 
 function intentsPath(workspace: string): string {
-  return join(workspace, ".amadeus/intents.md");
+  return join(workspace, "aidlc/spaces/default/intents/intents.md");
 }
 
 // ---- 基本 fixture: Intent 2 件 ----
 
 const workspace = newWorkspace("index-generate-");
-writeIntent(workspace, "20260701-alpha", "Alpha", "Alpha の概要文である。", [{ dep: "なし", reason: "初回 Intent であるため。" }]);
-writeIntent(workspace, "20260702-beta", "Beta", "Beta の概要文である。", [{ dep: "20260701-alpha", reason: "Alpha の完了を前提にするため。" }]);
+writeIntent(workspace, "260701-alpha", "Alpha", "Alpha の概要文である。", [{ dep: "なし", reason: "初回 Intent であるため。" }]);
+writeIntent(workspace, "260702-beta", "Beta", "Beta の概要文である。", [{ dep: "260701-alpha", reason: "Alpha の完了を前提にするため。" }]);
 
 // (1) 決定論性: 同じ入力で 2 回生成した出力が一致する（純粋関数としての buildIntentsIndex を直接比較）
 {
@@ -96,7 +96,7 @@ run(["bun", "run", script, workspace]);
   if (actualIntents !== expectedIntents) fail("CLI が生成した intents.md が buildIntentsIndex の期待内容と一致しない");
 
   // 一覧行の中身（依存列）を確認する
-  if (!actualIntents.includes("| 20260702-beta | Beta の概要文である。 | 20260701-alpha | [20260702-beta.md](intents/20260702-beta.md) |")) {
+  if (!actualIntents.includes("| 260702-beta | Beta の概要文である。 | 260701-alpha | [260702-beta.md](260702-beta.md) |")) {
     fail("intents.md の一覧行が期待どおりでない（依存列）");
   }
 }
@@ -112,10 +112,10 @@ run(["bun", "run", script, workspace]);
 // (3) 並行統合: 2 つの Intent モジュールを別々に追加した状態から生成すると、両方の行を識別子の辞書順で含む
 {
   // 既存 fixture に対し、辞書順で先頭に来る Intent を追加する（並行 branch が別々にモジュールを追加した状況を模す）
-  writeIntent(workspace, "20260601-zzz-early", "ZzzEarly", "並行統合確認用の Intent である。", [{ dep: "なし", reason: "独立 Intent であるため。" }]);
+  writeIntent(workspace, "260601-zzz-early", "ZzzEarly", "並行統合確認用の Intent である。", [{ dep: "なし", reason: "独立 Intent であるため。" }]);
   run(["bun", "run", script, workspace]);
   const intentsContent = readFileSync(intentsPath(workspace), "utf8");
-  const ids = ["20260601-zzz-early", "20260701-alpha", "20260702-beta"];
+  const ids = ["260601-zzz-early", "260701-alpha", "260702-beta"];
   const positions = ids.map((id) => intentsContent.indexOf(`| ${id} |`));
   if (positions.some((p) => p === -1)) fail("並行統合: intents.md に期待した行がない");
   for (let i = 1; i < positions.length; i++) {
@@ -127,15 +127,15 @@ run(["bun", "run", script, workspace]);
 {
   const violationWorkspace = newWorkspace("index-generate-violation-");
   writeFileSync(
-    join(violationWorkspace, ".amadeus/intents/20260701-broken.md"),
+    join(violationWorkspace, "aidlc/spaces/default/intents/260701-broken.md"),
     ["# インテント：Broken", "", "## 依存", "", "| 依存 | 理由 |", "|---|---|", "| なし | 初回 Intent であるため。 |", ""].join("\n"),
   );
-  mkdirSync(join(violationWorkspace, ".amadeus/intents/20260701-broken"), { recursive: true });
+  mkdirSync(join(violationWorkspace, "aidlc/spaces/default/intents/260701-broken"), { recursive: true });
   writeFileSync(
-    join(violationWorkspace, ".amadeus/intents/20260701-broken/state.json"),
-    JSON.stringify({ schemaVersion: 1, phase: "ideation", status: "in_progress" }, null, 2) + "\n",
+    join(violationWorkspace, "aidlc/spaces/default/intents/260701-broken/aidlc-state.md"),
+    "# AI-DLC State Tracking\n",
   );
-  runExpectFailure(["bun", "run", script, violationWorkspace], "intents/20260701-broken.md");
+  runExpectFailure(["bun", "run", script, violationWorkspace], "intents/260701-broken.md");
   runExpectFailure(["bun", "run", script, violationWorkspace], "## 概要");
 }
 
@@ -153,9 +153,9 @@ run(["bun", "run", script, workspace]);
 // (7) 退役確認: discoveries.md を生成しない
 {
   const ws = newWorkspace("index-generate-no-discoveries-");
-  writeIntent(ws, "20260701-alpha", "Alpha", "Alpha の概要文である。", [{ dep: "なし", reason: "初回 Intent であるため。" }]);
+  writeIntent(ws, "260701-alpha", "Alpha", "Alpha の概要文である。", [{ dep: "なし", reason: "初回 Intent であるため。" }]);
   run(["bun", "run", script, ws]);
-  const discoveriesFile = join(ws, ".amadeus/discoveries.md");
+  const discoveriesFile = join(ws, "aidlc/spaces/default/discoveries.md");
   if (readFileSyncOptional(discoveriesFile) !== undefined) {
     fail("(退役確認) IndexGenerate が discoveries.md を生成した");
   }
@@ -189,7 +189,7 @@ function indexGenerationCategoryCounts(report: string): { pass: number; warning:
 // (統合1) 整合: IndexGenerate で生成した直後の fixture workspace は、Index 生成整合カテゴリで fail を出さない
 {
   const ws = newWorkspace("index-generate-validator-consistent-");
-  writeIntent(ws, "20260701-alpha", "Alpha", "Alpha の概要文である。", [{ dep: "なし", reason: "初回 Intent であるため。" }]);
+  writeIntent(ws, "260701-alpha", "Alpha", "Alpha の概要文である。", [{ dep: "なし", reason: "初回 Intent であるため。" }]);
   run(["bun", "run", script, ws]);
   const result = runValidator(ws);
   const counts = indexGenerationCategoryCounts(result.stdout);
@@ -199,44 +199,44 @@ function indexGenerationCategoryCounts(report: string): { pass: number; warning:
 // (統合2) 行の改変: intents.md の既存行を書き換えると Index 生成整合カテゴリが fail になる
 {
   const ws = newWorkspace("index-generate-validator-corrupted-");
-  writeIntent(ws, "20260701-alpha", "Alpha", "Alpha の概要文である。", [{ dep: "なし", reason: "初回 Intent であるため。" }]);
+  writeIntent(ws, "260701-alpha", "Alpha", "Alpha の概要文である。", [{ dep: "なし", reason: "初回 Intent であるため。" }]);
   run(["bun", "run", script, ws]);
   const corrupted = readFileSync(intentsPath(ws), "utf8").replace("Alpha の概要文である。", "Alpha の改変された概要。");
   writeFileSync(intentsPath(ws), corrupted);
   const result = runValidator(ws);
   const counts = indexGenerationCategoryCounts(result.stdout);
   if (counts.fail === 0) fail("(統合2) intents.md の行改変で Index 生成整合カテゴリが fail にならない:\n" + result.stdout);
-  if (!result.stdout.includes("`.amadeus/intents.md`: Index 生成整合")) {
-    fail("(統合2) fail 対象に .amadeus/intents.md が示されていない:\n" + result.stdout);
+  if (!result.stdout.includes("`aidlc/spaces/default/intents/intents.md`: Index 生成整合")) {
+    fail("(統合2) fail 対象に intents/intents.md が示されていない:\n" + result.stdout);
   }
 }
 
 // (統合3) 行の過不足: モジュール追加後に再生成しないと Index 生成整合カテゴリが fail になる
 {
   const ws = newWorkspace("index-generate-validator-missing-row-");
-  writeIntent(ws, "20260701-alpha", "Alpha", "Alpha の概要文である。", [{ dep: "なし", reason: "初回 Intent であるため。" }]);
+  writeIntent(ws, "260701-alpha", "Alpha", "Alpha の概要文である。", [{ dep: "なし", reason: "初回 Intent であるため。" }]);
   run(["bun", "run", script, ws]);
-  writeIntent(ws, "20260702-beta", "Beta", "Beta の概要文である。", [{ dep: "20260701-alpha", reason: "Alpha の完了を前提にするため。" }]);
+  writeIntent(ws, "260702-beta", "Beta", "Beta の概要文である。", [{ dep: "260701-alpha", reason: "Alpha の完了を前提にするため。" }]);
   const result = runValidator(ws);
   const counts = indexGenerationCategoryCounts(result.stdout);
   if (counts.fail === 0) fail("(統合3) モジュール追加後の未再生成で Index 生成整合カテゴリが fail にならない:\n" + result.stdout);
-  if (!result.stdout.includes("`.amadeus/intents.md`: Index 生成整合")) {
-    fail("(統合3) fail 対象に .amadeus/intents.md が示されていない:\n" + result.stdout);
+  if (!result.stdout.includes("`aidlc/spaces/default/intents/intents.md`: Index 生成整合")) {
+    fail("(統合3) fail 対象に intents/intents.md が示されていない:\n" + result.stdout);
   }
 }
 
 // (統合4) マーカー欠落: 生成マーカー行を削除すると Index 生成整合カテゴリが fail になる
 {
   const ws = newWorkspace("index-generate-validator-missing-marker-");
-  writeIntent(ws, "20260701-alpha", "Alpha", "Alpha の概要文である。", [{ dep: "なし", reason: "初回 Intent であるため。" }]);
+  writeIntent(ws, "260701-alpha", "Alpha", "Alpha の概要文である。", [{ dep: "なし", reason: "初回 Intent であるため。" }]);
   run(["bun", "run", script, ws]);
   const withoutMarker = readFileSync(intentsPath(ws), "utf8").split("\n").slice(2).join("\n");
   writeFileSync(intentsPath(ws), withoutMarker);
   const result = runValidator(ws);
   const counts = indexGenerationCategoryCounts(result.stdout);
   if (counts.fail === 0) fail("(統合4) 生成マーカー欠落で Index 生成整合カテゴリが fail にならない:\n" + result.stdout);
-  if (!result.stdout.includes("`.amadeus/intents.md`: Index 生成整合")) {
-    fail("(統合4) fail 対象に .amadeus/intents.md が示されていない:\n" + result.stdout);
+  if (!result.stdout.includes("`aidlc/spaces/default/intents/intents.md`: Index 生成整合")) {
+    fail("(統合4) fail 対象に intents/intents.md が示されていない:\n" + result.stdout);
   }
 }
 
@@ -244,13 +244,13 @@ function indexGenerationCategoryCounts(report: string): { pass: number; warning:
 {
   const ws = newWorkspace("index-generate-validator-heading-violation-");
   writeFileSync(
-    join(ws, ".amadeus/intents/20260701-broken.md"),
+    join(ws, "aidlc/spaces/default/intents/260701-broken.md"),
     ["# インテント：Broken", "", "## 依存", "", "| 依存 | 理由 |", "|---|---|", "| なし | 初回 Intent であるため。 |", ""].join("\n"),
   );
-  mkdirSync(join(ws, ".amadeus/intents/20260701-broken"), { recursive: true });
+  mkdirSync(join(ws, "aidlc/spaces/default/intents/260701-broken"), { recursive: true });
   writeFileSync(
-    join(ws, ".amadeus/intents/20260701-broken/state.json"),
-    JSON.stringify({ schemaVersion: 1, phase: "ideation", status: "in_progress" }, null, 2) + "\n",
+    join(ws, "aidlc/spaces/default/intents/260701-broken/aidlc-state.md"),
+    "# AI-DLC State Tracking\n",
   );
   const result = runValidator(ws);
   if (!result.stdout.startsWith("# Amadeus Validator 結果")) {
@@ -259,7 +259,7 @@ function indexGenerationCategoryCounts(report: string): { pass: number; warning:
   if (result.exitCode !== 1) fail("(統合5) 見出し契約違反時の exitCode が想定外（fail=1 を期待）: " + result.exitCode);
   const counts = indexGenerationCategoryCounts(result.stdout);
   if (counts.fail === 0) fail("(統合5) 見出し契約違反が Index 生成整合カテゴリの fail として報告されない:\n" + result.stdout);
-  if (!result.stdout.includes("intents/20260701-broken.md")) {
+  if (!result.stdout.includes("intents/260701-broken.md")) {
     fail("(統合5) 見出し契約違反の対象ファイルが報告に含まれない:\n" + result.stdout);
   }
   if (!result.stdout.includes("## 概要")) {
@@ -272,7 +272,7 @@ function indexGenerationCategoryCounts(report: string): { pass: number; warning:
   const ws = newWorkspace("index-generate-greenfield-");
   run(["bun", "run", script, ws]);
   const generatedIntents = readFileSync(intentsPath(ws), "utf8");
-  const templateIntents = readFileSync(join(root, "skills/amadeus-steering/templates/steering/intents.md"), "utf8");
+  const templateIntents = readFileSync(join(root, "skills/amadeus-steering/templates/space/intents/intents.md"), "utf8");
   if (generatedIntents !== templateIntents) {
     fail("(greenfield) 生成した intents.md が steering テンプレートと一致しない:\n生成:\n" + generatedIntents + "\nテンプレート:\n" + templateIntents);
   }

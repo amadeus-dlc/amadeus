@@ -2,14 +2,15 @@
 // 共有インデックス `intents.md` を配下モジュールから再生成する同梱スクリプト。
 // 使い方:
 //   bun run IndexGenerate.ts <workspace> [--check]
-// <workspace> は `.amadeus/` を持つ対象ディレクトリを指定する。
+// <workspace> は `aidlc/` を持つ対象ディレクトリを指定する。
+// Space は aidlc/active-space（なければ default）で解決する。
 // 既定（--check なし）は intents.md を生成、上書きする。
 // --check は生成される期待内容と実ファイルの完全一致（マーカーを含む）を確認し、
 // 不一致の対象ファイルを示して exit 1 にする。一致していれば exit 0 にする。
 //
 // 生成対象と導出規則:
-//   <workspace>/.amadeus/intents.md
-//     intents/*.md の H1 直後の `## 概要`（本文 1 段落）を概要列に、
+//   <workspace>/aidlc/spaces/<space>/intents/intents.md
+//     同じ intents/ 配下の <dirName>.md の H1 直後の `## 概要`（本文 1 段落）を概要列に、
 //     `## 依存`（依存 | 理由 の表）を一覧の依存列と依存関係表（インテント | 依存 | 理由）に使う。
 // 行の並び順は、識別子（ファイル名 stem）の辞書順にする。
 //
@@ -21,6 +22,7 @@
 
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { spaceBase } from "../validator/space-paths";
 
 export const INTENTS_MARKER =
   "<!-- 生成物: 直接編集しないでください。intents/ 配下の各モジュールを更新し、`bun run IndexGenerate.ts <workspace>` で再生成してください。 -->";
@@ -100,13 +102,14 @@ function parseDependencyRows(section: string): DependencyRow[] {
 // `.amadeus/intents.md` の期待内容を、配下の intents/ 以下の各モジュールファイルから導出する。
 // 見出し契約（## 概要、## 依存）を満たさないモジュールがある場合は HeadingContractViolationError を投げる。
 export function buildIntentsIndex(workspace: string): string {
-  const intentsDir = join(workspace, ".amadeus/intents");
+  const intentsDir = join(workspace, spaceBase(workspace), "intents");
   const ids = listModuleIds(intentsDir);
   const violations: HeadingViolation[] = [];
   const listRows: string[] = [];
   const dependencyRows: string[] = [];
 
   for (const id of ids) {
+    if (id === "intents") continue; // 生成物自身は索引の対象にしない
     const filePath = join(intentsDir, `${id}.md`);
     const text = readFileSync(filePath, "utf8");
     const summarySection = extractSection(text, "## 概要");
@@ -122,7 +125,7 @@ export function buildIntentsIndex(workspace: string): string {
     const deps = parseDependencyRows(dependencySection as string);
     const depIds = deps.map((row) => row.dep).filter((dep) => dep !== "なし");
     const depColumn = depIds.length > 0 ? depIds.join(", ") : "なし";
-    listRows.push(`| ${id} | ${summary} | ${depColumn} | [${id}.md](intents/${id}.md) |`);
+    listRows.push(`| ${id} | ${summary} | ${depColumn} | [${id}.md](${id}.md) |`);
     for (const { dep, reason } of deps) {
       dependencyRows.push(`| ${id} | ${dep} | ${reason} |`);
     }
@@ -156,7 +159,7 @@ function fail(message: string): never {
 }
 
 function runCheck(workspace: string, intentsContent: string): void {
-  const intentsFile = join(workspace, ".amadeus/intents.md");
+  const intentsFile = join(workspace, spaceBase(workspace), "intents/intents.md");
   const actualIntents = existsSync(intentsFile) ? readFileSync(intentsFile, "utf8") : undefined;
   if (actualIntents !== intentsContent) {
     fail(`不整合検査で不一致を検出しました: ${intentsFile}`);
@@ -165,7 +168,7 @@ function runCheck(workspace: string, intentsContent: string): void {
 }
 
 function runGenerate(workspace: string, intentsContent: string): void {
-  const intentsFile = join(workspace, ".amadeus/intents.md");
+  const intentsFile = join(workspace, spaceBase(workspace), "intents/intents.md");
   writeFileSync(intentsFile, intentsContent);
   console.log(`index generate: ${intentsFile} を再生成しました`);
 }
@@ -175,8 +178,8 @@ function main(): void {
   if (args.length < 1) fail("引数が不足しています: <workspace> [--check]");
   const workspace = resolve(args[0]);
   const checkMode = args.includes("--check");
-  const amadeusDir = join(workspace, ".amadeus");
-  if (!existsSync(amadeusDir)) fail(`対象 workspace に .amadeus/ が存在しません: ${amadeusDir}`);
+  const aidlcDir = join(workspace, "aidlc");
+  if (!existsSync(aidlcDir)) fail(`対象 workspace に aidlc/ が存在しません: ${aidlcDir}`);
 
   let intentsContent: string | undefined;
   try {
