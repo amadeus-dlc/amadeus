@@ -15,10 +15,15 @@
 
 ## 未解決の問題
 
-- #392、#394 の判断は未実施である。
+- #394 の判断は未実施である。
 
 ## #393 の解釈
 
 - 本家の sensor は gate 前の決定論的検査であり、Amadeus では `amadeus-validator`（構造）、`traceability.md`（上流対応）、Build and Test と CI（コード検査）が同じ役割を分担済みとみなした。
 - 本家の Learn の 4 見出し（Interpretations、Deviations、Tradeoffs、Open questions）は、Amadeus の stage `memory.md` の既存契約（解釈、逸脱、トレードオフ、未解決の問題）と同型であり、記録先の新設は不要と判断した。
 - learnings ritual の「表面化と定着」は `amadeus-history-review` と `amadeus-learning-review` の分類契約へ写像し、自動昇格しない既存原則を維持した。
+
+## #392 の解釈
+
+- 本家の「最大 2 回の修正試行」は反復を有限にして人間へ委ねる仕組みであり、Amadeus の「最初の失敗で即 halt-and-ask」は同じ終着点へより早く到達する設計とみなした。
+- Build and Test に修正責務を持たせると、コード変更が Code Generation の記録（code-generation-plan.md、code-summary.md）を経由せず発生し、Bolt PR で人間が承認する対象と記録の対応が崩れる。この点を維持の主根拠にした。
