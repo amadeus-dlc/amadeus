@@ -25,7 +25,7 @@
 ## Execution Plan Summary
 - **Total Stages**: 22
 - **Completed**: 8
-- **In Progress**: reverse-engineering
+- **In Progress**: practices-discovery
 
 ## Runtime State
 - **Revision Count**: 0
@@ -87,7 +87,7 @@ Per unit: implicit
 
 ## Current Status
 - **Lifecycle Phase**: INCEPTION
-- **Current Stage**: reverse-engineering
+- **Current Stage**: practices-discovery
 - **Next Stage**: practices-discovery
 - **Status**: Running
 - **Construction Autonomy Mode**: unset
