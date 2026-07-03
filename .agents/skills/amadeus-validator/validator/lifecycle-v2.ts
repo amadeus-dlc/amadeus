@@ -378,6 +378,10 @@ function checkCompletedArtifactsV2(ctx: LifecycleV2Context, input: LifecycleV2In
       continue;
     }
     const produces = extractFrontmatterStringList(stageFileText, "produces");
+    if (produces === undefined) {
+      ctx.failRow(stageFilePath, "v2 契約: stage 定義の produces を解析できる", "produces が欠落しているか解析できない");
+      continue;
+    }
 
     if (def.perUnit) {
       if (stage.unit === undefined) {
@@ -420,15 +424,17 @@ function checkPhaseCheckArtifactsV2(ctx: LifecycleV2Context, input: LifecycleV2I
 // stage 定義ファイルの frontmatter から、`key:` の YAML 文字列配列を取り出す最小限のパーサ。
 // `key: []`（空）と `key:\n  - item`（複数行リスト）の2形式だけを扱う
 // （.claude/aidlc-common/stages/**/*.md の `produces:` はこの2形式に限られる）。
-function extractFrontmatterStringList(text: string, key: string): string[] {
+// key が frontmatter に存在しない場合は undefined を返す（空リストと区別し、呼び出し側で契約異常として扱う）。
+function extractFrontmatterStringList(text: string, key: string): string[] | undefined {
   const frontmatterMatch = text.match(/^---\n([\s\S]*?)\n---/);
   const frontmatter = frontmatterMatch?.[1] ?? "";
   const lines = frontmatter.split("\n");
   const startIndex = lines.findIndex((line) => line.startsWith(`${key}:`));
-  if (startIndex < 0) return [];
+  if (startIndex < 0) return undefined;
 
   const inline = lines[startIndex].slice(key.length + 1).trim();
-  if (inline.length > 0) return [];
+  if (inline === "[]") return [];
+  if (inline.length > 0) return undefined;
 
   const items: string[] = [];
   for (let index = startIndex + 1; index < lines.length; index += 1) {

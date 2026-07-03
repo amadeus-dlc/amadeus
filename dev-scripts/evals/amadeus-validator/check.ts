@@ -524,6 +524,17 @@ runExpectFailure(
   "v2 契約: Verified の phase は phase-check 成果物を持つ",
 );
 
+// (V17b) stage 定義に produces がないと fail する（silent-pass しない）。
+{
+  const workspace = setupV2Workspace();
+  const stagePath = join(workspace, ".claude/aidlc-common/stages/inception/requirements-analysis.md");
+  writeFileSync(stagePath, "---\nslug: requirements-analysis\nphase: inception\n---\n");
+  runExpectFailure(
+    ["bun", "run", validator, workspace, recordDirName],
+    "v2 契約: stage 定義の produces を解析できる",
+  );
+}
+
 // (V15) audit shard が1件もないと fail する。
 const v2MissingAuditShardWorkspace = setupV2Workspace({ writeAuditShard: false });
 runExpectFailure(
