@@ -6,13 +6,17 @@
 
 ## 状態
 
-active
+superseded
 
 ## 根拠
 
 親タスク管理だけで閉じると、Amadeus skill 英語化の作業が細切れになりすぎる。
 
 そのため、#399 を親タスクとして、子 Issue の完了まで一体で追跡する。
+
+## 置き換え先
+
+[D006](D006-full-skill-englishization-boundary.md)
 
 ## 参照
 

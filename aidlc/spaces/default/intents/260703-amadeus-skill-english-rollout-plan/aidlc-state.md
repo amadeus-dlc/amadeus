@@ -173,6 +173,6 @@ Per unit: U010-issue-399-final-verification
 - **Last Updated**: 2026-07-03T13:59:22Z
 
 ## Session Resume Point
-- **Last Completed Stage**: build-and-test for B004 direct child tracking
+- **Last Completed Stage**: build-and-test
 - **Next Action**: Continue Issue #399 with B005 #391〜#394 AI-DLC v2 difference response, then B006〜B009 full `SKILL.md` Englishization rollout
 - **Pending Artifacts**: #391〜#394 completion or explicit out-of-scope decisions, RU002〜RU006 Englishization PRs, source/promoted skill synchronization, final Japanese-removal verification for Amadeus `SKILL.md`, final #399 traceability
