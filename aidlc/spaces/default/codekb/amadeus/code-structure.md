@@ -4,31 +4,34 @@
 
 | ディレクトリ | 役割 |
 |---|---|
-| `.amadeus/` | 自己開発用 workspace（steering layer、intents、knowledge）。この Intent の移行対象。 |
-| `skills/amadeus*/` | skill の source。単一入口 `amadeus`、22 ステージ skill、補助入口 6、内部 3。 |
-| `.agents/skills/` | 昇格先。`promote-skill.ts` でのみ同期する。 |
-| `.claude/skills/`、`.claude/rules/` | `.agents/` への symlink（claude-wiring:check が対を検査）。 |
-| `docs/amadeus/lifecycle/` | v2 互換ライフサイクルの契約文書 6 本。 |
-| `docs/amadeus/steering.md` | steering layer の契約文書。 |
-| `dev-scripts/` | 開発用スクリプト（promote、contracts、examples generator / wrapper / contract、evals）。 |
-| `dev-scripts/evals/` | eval 群（amadeus-templates、amadeus-validator、amadeus-validator-domain、amadeus-contracts、promote-skill、claude-host-wiring、index-generate、llm-templates、llm-support）。 |
-| `amadeus-contracts/` | skill contract の catalog と生成物（skills.json、references.md）。 |
-| `examples/` | v2 契約の snapshot 4 本と skill-provenance.json。 |
-| `lints/` | ts-complexity（複雑度 20 上限）と public-type-file（公開型 1 ファイル 1 個）の lint。 |
+| `aidlc/` | Amadeus 本体自己開発用の Amadeus DLC 成果物。 |
+| `aidlc/spaces/default/memory/` | 組織、チーム、プロジェクトの長期方針。 |
+| `aidlc/spaces/default/knowledge/` | Glossary、Domain Map、Context Map、背景、外部システム、アクター。 |
+| `aidlc/spaces/default/intents/` | Intent registry、索引、active Intent、Intent record。 |
+| `aidlc/spaces/default/codekb/amadeus/` | Amadeus リポジトリの Reverse Engineering 成果物。 |
+| `skills/amadeus*/` | source skill とテンプレート。 |
+| `.agents/skills/amadeus*/` | 昇格先 skill。Codex 実行時に参照される。 |
+| `amadeus-contracts/` | skill contract の catalog と生成物。 |
+| `dev-scripts/` | promote、contracts、examples、eval、移行、検証用スクリプト。 |
+| `docs/` | Amadeus DLC の契約文書、ADR、AI-DLC 参照文書。 |
+| `examples/` | 段階別 snapshot と provenance。 |
+| `lints/` | public type file と TypeScript complexity の検査。 |
 
 ## 主要モジュール
 
-この Intent（v2 完全準拠）が触る主要モジュールと役割は次である。
+| モジュール | 場所 | 役割 |
+|---|---|---|
+| 単一入口 `amadeus` | `skills/amadeus/SKILL.md`、`.agents/skills/amadeus/SKILL.md` | Intake、Initialization、stage routing、phase 境界、Construction の Bolt 実行。 |
+| stage catalog | `skills/amadeus/references/stage-catalog.md`、`.agents/skills/amadeus/references/stage-catalog.md` | stage、scope、skill の対応表。 |
+| Ideation skill | `skills/amadeus-ideation-*/` | Intent Capture から Approval & Handoff までの成果物作成。 |
+| Inception skill | `skills/amadeus-inception-*/` | Reverse Engineering、Practices Discovery、Requirements、User Stories、Design、Units、Delivery Planning。 |
+| Construction skill | `skills/amadeus-construction-*/` | Functional Design から CI Pipeline までの成果物と実装支援。 |
+| validator | `skills/amadeus-validator/validator/`、`.agents/skills/amadeus-validator/validator/` | Space、Intent、状態、audit、成果物リンク、Domain Map、Context Map の検証。 |
+| IndexGenerate | `skills/amadeus-validator/scripts/IndexGenerate.ts`、`.agents/skills/amadeus-validator/scripts/IndexGenerate.ts` | `intents.json` と Intent モジュールファイルから `intents.md` を生成する。 |
+| examples 検証 | `dev-scripts/validate-amadeus-examples.ts`、`dev-scripts/examples-contract.ts` | snapshot の構造と provenance を検査する。 |
 
-- `skills/amadeus/SKILL.md`: Intake、Birth 手順（モジュールファイル、state.json、active-intent、IndexGenerate 呼び出し）、ルーティング、phase 境界、Bolt 実行。Birth 手順が Initialization 0.1〜0.3 への置き換え対象。
-- `skills/amadeus/references/stage-catalog.md`: ステージ、skill、scope グリッドの対応表。Initialization stage の追加対象。
-- `skills/amadeus/templates/intents/`: Intent モジュールファイルと state.json のテンプレート。aidlc-state.md への置き換え対象。
-- `skills/amadeus-validator/validator/AmadeusValidator.ts`（約 1,800 行）: workspace 検査（steering、intents.md、Domain Map、Context Map、Event Storming、grillings）と Intent 検査の入口。workspace 構造の移行と aidlc-state.md 読み取りへの改修対象。
-- `skills/amadeus-validator/validator/lifecycle-v2.ts`（約 285 行）: schemaVersion 2 の state 契約検証。stageCatalog 定数（22 ステージの scope 対応と必須成果物名）を持つ。状態形式と成果物名の変更対象。
-- `skills/amadeus-validator/scripts/IndexGenerate.ts`: `intents.md` の生成。intents.json registry 追加時の関連対象。
-- 22 ステージ skill の `SKILL.md` と `templates/`: 成果物ファイル名（`questions.md`、`units.md`、`plan.md` ほか）の改名対象。テンプレートのファイル名とテンプレート内の相互参照の両方を持つ。
-- `dev-scripts/examples-contract.ts`: snapshot の段階不変条件（成果物名を含む）。改名の追従対象。
-- `dev-scripts/generate-amadeus-examples.ts` / `validate-amadeus-examples.ts`: examples の生成と検証。プロンプト内のパス指定と期待成果物名の追従対象。
-- `dev-scripts/evals/amadeus-templates/check.ts`: skill テンプレートの構造契約（ファイル名と見出し）。改名の追従対象。
-- `docs/amadeus/lifecycle/*.md`: 成果物名、state スキーマ、Birth / Initialization の契約記述の更新対象。
-- `CONTEXT.md`、`.agents/rules/amadeus-artifacts-and-examples.md`、`AMADEUS.md`、`README.md` / `README.ja.md`: 語彙とパス表記の更新対象。
+## 現在の自己開発対象
+
+現在の active Intent は `260703-amadeus-skill-english-rollout-plan` である。
+
+この Intent は、Issue #399 を起点に #395、#400、#401、#402 の順序、依存関係、完了証拠を追跡する。

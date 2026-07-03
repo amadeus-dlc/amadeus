@@ -1,22 +1,32 @@
 # API：amadeus
 
-## 公開 API
+## 公開入口
 
-Amadeus の公開インターフェイスは HTTP API ではなく、skill 入口とコマンド入口である。
+Amadeus の公開入口は HTTP API ではなく、skill と CLI である。
 
 | 入口 | 形式 | 契約 |
 |---|---|---|
-| `amadeus` | skill | Intake（合流既定、Birth 提案）とステージルーティング。 |
-| `amadeus-steering` | skill | steering layer の初期化、点検、補修。 |
-| `amadeus-event-storming`、`amadeus-grilling`、`amadeus-domain-modeling`、`amadeus-domain-grilling` | skill | 補助入口。 |
-| `amadeus-validator` | skill | 実行時構造検証の入口。 |
-| `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspace> [<intent-id>-<slug>]` | CLI | 検証。exit 0 = pass、1 = fail。日本語 Markdown の検査台帳を出力。 |
-| `bun run .agents/skills/amadeus-validator/scripts/IndexGenerate.ts <workspace> [--check]` | CLI | `intents.md` の再生成と整合検査。 |
+| `amadeus` | skill | Intake、Initialization、stage routing、phase 境界、Construction の Bolt 実行。 |
+| `amadeus-steering` | skill | Space の初期化、点検、補修。 |
+| `amadeus-event-storming` | skill | Event Storming 成果物の作成または補修。 |
+| `amadeus-grilling` | skill | 設計論点を一問ずつ確認する。 |
+| `amadeus-domain-modeling` | skill | Domain Map、Context Map、Glossary などを補修する。 |
+| `amadeus-domain-grilling` | skill | 用語、境界、モデルを質問で確認し、成果物へ記録する。 |
+| `amadeus-validator` | skill | 配布先ユーザー環境で Amadeus DLC 成果物を検証する。 |
 
-## 内部 API
+## CLI 入口
 
-- ステージ内部 skill（22 個）: `amadeus` 入口のルーティングからだけ呼ばれる。Codex metadata（`agents/openai.yaml`）で暗黙起動を禁止している。
-- `dev-scripts/promote-skill.ts <skill> [--replace] [--dry-run]`: source → 昇格先の同期。
-- `npm run` scripts: `test:all`（CI 入口）、`test:examples`、`validate:all`、`examples:generate:real`、`contracts:generate` / `contracts:check`。
-- `dev-scripts/examples-contract.ts` の export: `exampleIntentId`、`exampleSnapshots`、`snapshotInvariants`、`checkSnapshotInvariant`、`matchExists`、`invariantForSnapshot`。generator と wrapper が共有する。
-- `lifecycle-v2.ts` の export: `checkLifecycleV2Intent(ctx, input)`。validator 本体から呼ばれ、pass / failRow / checkFile の 3 関数だけに依存する。
+| コマンド | 役割 |
+|---|---|
+| `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspace> [<intent-dirName>]` | Space または Intent の構造を検証する。 |
+| `bun run .agents/skills/amadeus-validator/scripts/IndexGenerate.ts <workspace> [--check]` | `intents.md` の生成または整合検査を行う。 |
+| `npm run test:all` | CI と同等の mock 検証を実行する。 |
+| `npm run contracts:check` | skill contract 生成物の整合を検査する。 |
+| `npm run claude-wiring:check` | `.claude/` と `.agents/` の接続を検査する。 |
+| `npm run test:examples` | examples snapshot と provenance を検査する。 |
+
+## 内部入口
+
+stage 内部 skill は、単一入口 `amadeus` から呼ばれる前提である。
+
+内部 skill は対象 stage の成果物だけを作成し、phase 境界処理や別 stage の成果物作成は行わない。

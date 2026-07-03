@@ -374,3 +374,302 @@
 **Details**: Approval & Handoff を承認済みとして完了した。
 
 ---
+
+## PHASE_VERIFIED
+**Timestamp**: 2026-07-03T11:47:47Z
+**Event**: PHASE_VERIFIED
+**Stage**: ideation
+**Details**: PR: https://github.com/amadeus-dlc/amadeus/pull/406
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T11:47:47Z
+**Event**: STAGE_STARTED
+**Stage**: reverse-engineering
+**Details**: Inception 2.1 Reverse Engineering を開始した。
+
+---
+
+## PHASE_VERIFIED
+**Timestamp**: 2026-07-03T11:47:47Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: Ideation
+**Details**: PR: https://github.com/amadeus-dlc/amadeus/pull/406
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T11:49:40Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: reverse-engineering
+**Details**: Reverse Engineering 成果物を codekb/amadeus に更新し、承認待ちにした。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T11:53:16Z
+**Event**: GATE_APPROVED
+**Stage**: reverse-engineering
+**Details**: User Input: 1
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T11:53:16Z
+**Event**: STAGE_COMPLETED
+**Stage**: reverse-engineering
+**Details**: Reverse Engineering を承認済みとして完了した。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T11:53:16Z
+**Event**: STAGE_STARTED
+**Stage**: practices-discovery
+**Details**: Inception 2.2 Practices Discovery を開始した。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T11:53:58Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: practices-discovery
+**Details**: Practices Discovery 成果物を作成し、承認待ちにした。memory への新規昇格候補はない。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T11:56:18Z
+**Event**: GATE_APPROVED
+**Stage**: practices-discovery
+**Details**: User Input: 1
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T11:56:18Z
+**Event**: STAGE_COMPLETED
+**Stage**: practices-discovery
+**Details**: Practices Discovery を承認済みとして完了した。memory への新規昇格は行わない。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T11:56:18Z
+**Event**: STAGE_STARTED
+**Stage**: requirements-analysis
+**Details**: Inception 2.3 Requirements Analysis を開始した。
+
+---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T11:58:41Z
+**Event**: QUESTION_ANSWERED
+**Stage**: requirements-analysis
+**Question**: Q001
+**Details**: User Input: 1。子 Issue の完了証拠を `requirements.md` の受け入れ条件として定義し、後続の `delivery-planning` と `traceability` で更新対象にする。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T11:58:41Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: requirements-analysis
+**Details**: Requirements Analysis 成果物を作成し、承認待ちにした。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T12:01:08Z
+**Event**: GATE_APPROVED
+**Stage**: requirements-analysis
+**Details**: User Input: 1
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T12:01:08Z
+**Event**: STAGE_COMPLETED
+**Stage**: requirements-analysis
+**Details**: Requirements Analysis を承認済みとして完了した。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T12:01:08Z
+**Event**: STAGE_STARTED
+**Stage**: user-stories
+**Details**: Inception 2.4 User Stories を開始した。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T12:01:08Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: user-stories
+**Details**: User Stories 成果物を作成し、承認待ちにした。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T12:02:51Z
+**Event**: GATE_APPROVED
+**Stage**: user-stories
+**Details**: User Input: 1
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T12:02:51Z
+**Event**: STAGE_COMPLETED
+**Stage**: user-stories
+**Details**: User Stories を承認済みとして完了した。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T12:02:51Z
+**Event**: STAGE_STARTED
+**Stage**: refined-mockups
+**Details**: Inception 2.5 Refined Mockups を開始した。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T12:02:51Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: refined-mockups
+**Details**: Refined Mockups 成果物を作成し、承認待ちにした。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T12:05:24Z
+**Event**: GATE_APPROVED
+**Stage**: refined-mockups
+**Details**: User Input: 1
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T12:05:24Z
+**Event**: STAGE_COMPLETED
+**Stage**: refined-mockups
+**Details**: Refined Mockups を承認済みとして完了した。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T12:05:24Z
+**Event**: STAGE_STARTED
+**Stage**: application-design
+**Details**: Inception 2.6 Application Design を開始した。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T12:05:24Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: application-design
+**Details**: Application Design 成果物を作成し、承認待ちにした。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T12:07:43Z
+**Event**: GATE_APPROVED
+**Stage**: application-design
+**Details**: User Input: 1
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T12:07:43Z
+**Event**: STAGE_COMPLETED
+**Stage**: application-design
+**Details**: Application Design を承認済みとして完了した。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T12:07:43Z
+**Event**: STAGE_STARTED
+**Stage**: units-generation
+**Details**: Inception 2.7 Units Generation を開始した。
+
+---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T12:08:50Z
+**Event**: QUESTION_ANSWERED
+**Stage**: units-generation
+**Question**: Q001
+**Details**: User Input: 1。Unit 境界は、子 Issue 単位を基本にした機能別、中粒度とする。#401 配下 Issue は U003 に内包する。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T12:08:50Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: units-generation
+**Details**: Units Generation 成果物を作成し、承認待ちにした。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T12:12:08Z
+**Event**: GATE_APPROVED
+**Stage**: units-generation
+**Details**: User Input: 1
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T12:12:08Z
+**Event**: STAGE_COMPLETED
+**Stage**: units-generation
+**Details**: Units Generation を承認済みとして完了した。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T12:12:08Z
+**Event**: STAGE_STARTED
+**Stage**: delivery-planning
+**Details**: Inception 2.8 Delivery Planning を開始した。
+
+---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T12:13:10Z
+**Event**: QUESTION_ANSWERED
+**Stage**: delivery-planning
+**Question**: Q001
+**Details**: User Input: 1。Bolt は Unit 1 個ずつ束ね、B001 を walking skeleton とし、依存先行で順序付ける。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T12:13:10Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: delivery-planning
+**Details**: Delivery Planning 成果物を作成し、承認待ちにした。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T12:15:24Z
+**Event**: GATE_APPROVED
+**Stage**: delivery-planning
+**Details**: User Input: 1
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T12:15:24Z
+**Event**: STAGE_COMPLETED
+**Stage**: delivery-planning
+**Details**: Delivery Planning を承認済みとして完了した。
+
+---
