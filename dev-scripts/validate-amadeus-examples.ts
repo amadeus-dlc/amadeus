@@ -147,12 +147,13 @@ function assertPlan(stdout: string, mustInclude: string[], mustExclude: string[]
 
 function validateGenerationPlan(): void {
   const generator = "dev-scripts/generate-amadeus-examples.ts";
+  const defaultRunner = "runner: dev-scripts/run-codex-gpt-5.5-low-fast-personal.sh";
   const stepLines = snapshots.map((snapshot) => `-> ${snapshot}`);
 
   // 全 step の計画。
   assertPlan(
     run(["bun", "run", generator, "--dry-run"]),
-    ["provider: real", "dryRun: true", ...stepLines],
+    ["provider: real", defaultRunner, "dryRun: true", ...stepLines],
     ["input snapshot:"],
   );
 
