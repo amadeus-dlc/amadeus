@@ -305,6 +305,12 @@ Minimal は要求 1 件につきテスト 1 件と happy-path の下限、Standa
 
 ### Notes
 
+失敗時処理は Amadeus DLC の意図的差分である。
+AI-DLC v2 は Build and Test が診断と修正を最大 2 回試みるが、Amadeus DLC はこのステージで実装修正を行わない。
+失敗時は autonomy mode に関わらず停止し、失敗内容を `build-test-results.md` に記録して人間へ確認する（halt-and-ask）。
+修正は人間の指示の下で対象 Unit の Code Generation の修正として行い、再実行は失敗原因に関係する手順だけをやり直す。
+理由と本家との対比は [AI-DLC v2 Build and Test Failure Handling](../aidlc-v2-build-and-test-failure-handling.md) に従う。
+
 このステージの完了後、Bolt の PR を作成する。
 PR の説明には Definition of Done と confidence hypothesis を記載し、merge 後に `construction/bolts/<bolt-id>-<slug>/pr.md` へ記録する。
 `pr.md` は Amadeus 拡張の成果物である。

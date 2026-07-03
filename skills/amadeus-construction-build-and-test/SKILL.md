@@ -106,6 +106,13 @@ failure details in `build-test-results.md`, and confirm with the human
 Fix the failure, under the human's instruction, as a correction to the
 target Unit's Code Generation.
 
+AI-DLC v2's Build and Test attempts to diagnose and fix a failure (up to
+2 attempts) before presenting it at the gate. Amadeus DLC intentionally
+keeps this stage fix-free: failures halt-and-ask immediately, and fixes
+run as corrections to the target Unit's Code Generation under the human's
+instruction. See
+`docs/amadeus/aidlc-v2-build-and-test-failure-handling.md`.
+
 ## Gate
 
 Confirm this stage's completion via the Bolt PR and the human merge.
