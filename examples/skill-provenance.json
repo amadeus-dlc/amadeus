@@ -6,39 +6,39 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "ce2291329cff7850709f8f80948ec824"
+          "md5": "8df3ab811cbef6fe465f3d4102cb89ef"
         },
         {
           "path": "skills/amadeus/SKILL.md",
-          "md5": "7c68cacf0b6cf1272218d7de70186637"
+          "md5": "ed6fc5fe22112ad89b9898d4685f2dda"
         },
         {
           "path": "skills/amadeus-ideation-intent-capture/SKILL.md",
-          "md5": "7f6cc5497e6811c81807c0f1abaad759"
+          "md5": "e75a707bc5e9cee0cc1c1e0834218bb9"
         },
         {
           "path": "skills/amadeus-ideation-market-research/SKILL.md",
-          "md5": "b74707e53f3f5407c3b963a3ce0dea0b"
+          "md5": "78a254b1bb65b0edb937b6f812625409"
         },
         {
           "path": "skills/amadeus-ideation-feasibility/SKILL.md",
-          "md5": "5c1d7e8bb2e19c6909d20ac41ad1a3b3"
+          "md5": "a8c46280682e4e12a0d22bcb3f0e0b7b"
         },
         {
           "path": "skills/amadeus-ideation-scope-definition/SKILL.md",
-          "md5": "5f1d5e361d7d71cc4ddf033ab70248af"
+          "md5": "d563a00aa822e54dc34696a93f5b3966"
         },
         {
           "path": "skills/amadeus-ideation-team-formation/SKILL.md",
-          "md5": "0a46102a2fcd1b050128d1b2ca336faa"
+          "md5": "8fc26d1a63e502f49924060ef797a445"
         },
         {
           "path": "skills/amadeus-ideation-rough-mockups/SKILL.md",
-          "md5": "cf6653eb6185e314101ab700f24589f6"
+          "md5": "6d64c6d27c481ed415557739e0a2fb27"
         },
         {
           "path": "skills/amadeus-ideation-approval-handoff/SKILL.md",
-          "md5": "46e685f643bf3c2d206792124ffaf8e0"
+          "md5": "bd5253dadae7433cc1e9cf3b5ccc0df3"
         }
       ]
     },
@@ -47,71 +47,71 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "ce2291329cff7850709f8f80948ec824"
+          "md5": "8df3ab811cbef6fe465f3d4102cb89ef"
         },
         {
           "path": "skills/amadeus/SKILL.md",
-          "md5": "7c68cacf0b6cf1272218d7de70186637"
+          "md5": "ed6fc5fe22112ad89b9898d4685f2dda"
         },
         {
           "path": "skills/amadeus-ideation-intent-capture/SKILL.md",
-          "md5": "7f6cc5497e6811c81807c0f1abaad759"
+          "md5": "e75a707bc5e9cee0cc1c1e0834218bb9"
         },
         {
           "path": "skills/amadeus-ideation-market-research/SKILL.md",
-          "md5": "b74707e53f3f5407c3b963a3ce0dea0b"
+          "md5": "78a254b1bb65b0edb937b6f812625409"
         },
         {
           "path": "skills/amadeus-ideation-feasibility/SKILL.md",
-          "md5": "5c1d7e8bb2e19c6909d20ac41ad1a3b3"
+          "md5": "a8c46280682e4e12a0d22bcb3f0e0b7b"
         },
         {
           "path": "skills/amadeus-ideation-scope-definition/SKILL.md",
-          "md5": "5f1d5e361d7d71cc4ddf033ab70248af"
+          "md5": "d563a00aa822e54dc34696a93f5b3966"
         },
         {
           "path": "skills/amadeus-ideation-team-formation/SKILL.md",
-          "md5": "0a46102a2fcd1b050128d1b2ca336faa"
+          "md5": "8fc26d1a63e502f49924060ef797a445"
         },
         {
           "path": "skills/amadeus-ideation-rough-mockups/SKILL.md",
-          "md5": "cf6653eb6185e314101ab700f24589f6"
+          "md5": "6d64c6d27c481ed415557739e0a2fb27"
         },
         {
           "path": "skills/amadeus-ideation-approval-handoff/SKILL.md",
-          "md5": "46e685f643bf3c2d206792124ffaf8e0"
+          "md5": "bd5253dadae7433cc1e9cf3b5ccc0df3"
         },
         {
           "path": "skills/amadeus-inception-reverse-engineering/SKILL.md",
-          "md5": "9d44f13ea8550f0e55eadd03ca2f0cc7"
+          "md5": "ca46a2a3e711db95e499c286425fd659"
         },
         {
           "path": "skills/amadeus-inception-practices-discovery/SKILL.md",
-          "md5": "580e9fe70c80ccf00da5f8c47bda8adb"
+          "md5": "7f0c8521f35afc8d4a09ad64cefc258f"
         },
         {
           "path": "skills/amadeus-inception-requirements-analysis/SKILL.md",
-          "md5": "94743667e3a769382961c48dd0d980f1"
+          "md5": "564435ca4506149f4ae447ae5ad3fcc7"
         },
         {
           "path": "skills/amadeus-inception-user-stories/SKILL.md",
-          "md5": "482239f270e6f75052c0010a39fdbdb3"
+          "md5": "3f371bbed679b7f0dfc15141eb48cc43"
         },
         {
           "path": "skills/amadeus-inception-refined-mockups/SKILL.md",
-          "md5": "1e1e8edbf6866bf73293608830546861"
+          "md5": "750651904ea9e3f7bb57579f34ac9994"
         },
         {
           "path": "skills/amadeus-inception-application-design/SKILL.md",
-          "md5": "bd24fa7e982b372763fcd3337564a4ff"
+          "md5": "20130bfaeca78a90ef3a848c30c22ffe"
         },
         {
           "path": "skills/amadeus-inception-units-generation/SKILL.md",
-          "md5": "88c3e7e9be11227bac98df51704f27d5"
+          "md5": "b873e185ad222b2baccb318ae73129bc"
         },
         {
           "path": "skills/amadeus-inception-delivery-planning/SKILL.md",
-          "md5": "ae6e5f71c01b25c9319e56ed40bbb01e"
+          "md5": "566ca4c0bf05e94fe5e8ebb637f20f2e"
         }
       ]
     },
@@ -120,75 +120,75 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "ce2291329cff7850709f8f80948ec824"
+          "md5": "8df3ab811cbef6fe465f3d4102cb89ef"
         },
         {
           "path": "skills/amadeus/SKILL.md",
-          "md5": "7c68cacf0b6cf1272218d7de70186637"
+          "md5": "ed6fc5fe22112ad89b9898d4685f2dda"
         },
         {
           "path": "skills/amadeus-ideation-intent-capture/SKILL.md",
-          "md5": "7f6cc5497e6811c81807c0f1abaad759"
+          "md5": "e75a707bc5e9cee0cc1c1e0834218bb9"
         },
         {
           "path": "skills/amadeus-ideation-market-research/SKILL.md",
-          "md5": "b74707e53f3f5407c3b963a3ce0dea0b"
+          "md5": "78a254b1bb65b0edb937b6f812625409"
         },
         {
           "path": "skills/amadeus-ideation-feasibility/SKILL.md",
-          "md5": "5c1d7e8bb2e19c6909d20ac41ad1a3b3"
+          "md5": "a8c46280682e4e12a0d22bcb3f0e0b7b"
         },
         {
           "path": "skills/amadeus-ideation-scope-definition/SKILL.md",
-          "md5": "5f1d5e361d7d71cc4ddf033ab70248af"
+          "md5": "d563a00aa822e54dc34696a93f5b3966"
         },
         {
           "path": "skills/amadeus-ideation-team-formation/SKILL.md",
-          "md5": "0a46102a2fcd1b050128d1b2ca336faa"
+          "md5": "8fc26d1a63e502f49924060ef797a445"
         },
         {
           "path": "skills/amadeus-ideation-rough-mockups/SKILL.md",
-          "md5": "cf6653eb6185e314101ab700f24589f6"
+          "md5": "6d64c6d27c481ed415557739e0a2fb27"
         },
         {
           "path": "skills/amadeus-ideation-approval-handoff/SKILL.md",
-          "md5": "46e685f643bf3c2d206792124ffaf8e0"
+          "md5": "bd5253dadae7433cc1e9cf3b5ccc0df3"
         },
         {
           "path": "skills/amadeus-inception-reverse-engineering/SKILL.md",
-          "md5": "9d44f13ea8550f0e55eadd03ca2f0cc7"
+          "md5": "ca46a2a3e711db95e499c286425fd659"
         },
         {
           "path": "skills/amadeus-inception-practices-discovery/SKILL.md",
-          "md5": "580e9fe70c80ccf00da5f8c47bda8adb"
+          "md5": "7f0c8521f35afc8d4a09ad64cefc258f"
         },
         {
           "path": "skills/amadeus-inception-requirements-analysis/SKILL.md",
-          "md5": "94743667e3a769382961c48dd0d980f1"
+          "md5": "564435ca4506149f4ae447ae5ad3fcc7"
         },
         {
           "path": "skills/amadeus-inception-user-stories/SKILL.md",
-          "md5": "482239f270e6f75052c0010a39fdbdb3"
+          "md5": "3f371bbed679b7f0dfc15141eb48cc43"
         },
         {
           "path": "skills/amadeus-inception-refined-mockups/SKILL.md",
-          "md5": "1e1e8edbf6866bf73293608830546861"
+          "md5": "750651904ea9e3f7bb57579f34ac9994"
         },
         {
           "path": "skills/amadeus-inception-application-design/SKILL.md",
-          "md5": "bd24fa7e982b372763fcd3337564a4ff"
+          "md5": "20130bfaeca78a90ef3a848c30c22ffe"
         },
         {
           "path": "skills/amadeus-inception-units-generation/SKILL.md",
-          "md5": "88c3e7e9be11227bac98df51704f27d5"
+          "md5": "b873e185ad222b2baccb318ae73129bc"
         },
         {
           "path": "skills/amadeus-inception-delivery-planning/SKILL.md",
-          "md5": "ae6e5f71c01b25c9319e56ed40bbb01e"
+          "md5": "566ca4c0bf05e94fe5e8ebb637f20f2e"
         },
         {
           "path": "skills/amadeus-construction-functional-design/SKILL.md",
-          "md5": "d0d56903a1b1c7125de1dbf28ea7ca51"
+          "md5": "97a249bbfd300ea50bbf4f1bc97958d5"
         }
       ]
     },
@@ -197,79 +197,79 @@
       "skillFiles": [
         {
           "path": "skills/amadeus-steering/SKILL.md",
-          "md5": "ce2291329cff7850709f8f80948ec824"
+          "md5": "8df3ab811cbef6fe465f3d4102cb89ef"
         },
         {
           "path": "skills/amadeus/SKILL.md",
-          "md5": "7c68cacf0b6cf1272218d7de70186637"
+          "md5": "ed6fc5fe22112ad89b9898d4685f2dda"
         },
         {
           "path": "skills/amadeus-ideation-intent-capture/SKILL.md",
-          "md5": "7f6cc5497e6811c81807c0f1abaad759"
+          "md5": "e75a707bc5e9cee0cc1c1e0834218bb9"
         },
         {
           "path": "skills/amadeus-ideation-market-research/SKILL.md",
-          "md5": "b74707e53f3f5407c3b963a3ce0dea0b"
+          "md5": "78a254b1bb65b0edb937b6f812625409"
         },
         {
           "path": "skills/amadeus-ideation-feasibility/SKILL.md",
-          "md5": "5c1d7e8bb2e19c6909d20ac41ad1a3b3"
+          "md5": "a8c46280682e4e12a0d22bcb3f0e0b7b"
         },
         {
           "path": "skills/amadeus-ideation-scope-definition/SKILL.md",
-          "md5": "5f1d5e361d7d71cc4ddf033ab70248af"
+          "md5": "d563a00aa822e54dc34696a93f5b3966"
         },
         {
           "path": "skills/amadeus-ideation-team-formation/SKILL.md",
-          "md5": "0a46102a2fcd1b050128d1b2ca336faa"
+          "md5": "8fc26d1a63e502f49924060ef797a445"
         },
         {
           "path": "skills/amadeus-ideation-rough-mockups/SKILL.md",
-          "md5": "cf6653eb6185e314101ab700f24589f6"
+          "md5": "6d64c6d27c481ed415557739e0a2fb27"
         },
         {
           "path": "skills/amadeus-ideation-approval-handoff/SKILL.md",
-          "md5": "46e685f643bf3c2d206792124ffaf8e0"
+          "md5": "bd5253dadae7433cc1e9cf3b5ccc0df3"
         },
         {
           "path": "skills/amadeus-inception-reverse-engineering/SKILL.md",
-          "md5": "9d44f13ea8550f0e55eadd03ca2f0cc7"
+          "md5": "ca46a2a3e711db95e499c286425fd659"
         },
         {
           "path": "skills/amadeus-inception-practices-discovery/SKILL.md",
-          "md5": "580e9fe70c80ccf00da5f8c47bda8adb"
+          "md5": "7f0c8521f35afc8d4a09ad64cefc258f"
         },
         {
           "path": "skills/amadeus-inception-requirements-analysis/SKILL.md",
-          "md5": "94743667e3a769382961c48dd0d980f1"
+          "md5": "564435ca4506149f4ae447ae5ad3fcc7"
         },
         {
           "path": "skills/amadeus-inception-user-stories/SKILL.md",
-          "md5": "482239f270e6f75052c0010a39fdbdb3"
+          "md5": "3f371bbed679b7f0dfc15141eb48cc43"
         },
         {
           "path": "skills/amadeus-inception-refined-mockups/SKILL.md",
-          "md5": "1e1e8edbf6866bf73293608830546861"
+          "md5": "750651904ea9e3f7bb57579f34ac9994"
         },
         {
           "path": "skills/amadeus-inception-application-design/SKILL.md",
-          "md5": "bd24fa7e982b372763fcd3337564a4ff"
+          "md5": "20130bfaeca78a90ef3a848c30c22ffe"
         },
         {
           "path": "skills/amadeus-inception-units-generation/SKILL.md",
-          "md5": "88c3e7e9be11227bac98df51704f27d5"
+          "md5": "b873e185ad222b2baccb318ae73129bc"
         },
         {
           "path": "skills/amadeus-inception-delivery-planning/SKILL.md",
-          "md5": "ae6e5f71c01b25c9319e56ed40bbb01e"
+          "md5": "566ca4c0bf05e94fe5e8ebb637f20f2e"
         },
         {
           "path": "skills/amadeus-construction-functional-design/SKILL.md",
-          "md5": "d0d56903a1b1c7125de1dbf28ea7ca51"
+          "md5": "97a249bbfd300ea50bbf4f1bc97958d5"
         },
         {
           "path": "skills/amadeus-construction-code-generation/SKILL.md",
-          "md5": "f315651688ae29821b1863c259557604"
+          "md5": "20fab9f6620097996a2776bf59f11d33"
         }
       ]
     }
