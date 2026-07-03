@@ -13,7 +13,7 @@
 
 ## Scope Configuration
 - **Stages to Execute**: 0.1, 0.2, 0.3, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7
-- **Stages to Skip**: 4.1-4.7 (out of Amadeus scope)
+- **Stages to Skip**: 4.1-4.7 (conditions false for this intent; D005 adopts Operation stages as CONDITIONAL)
 - **Depth**: Standard
 
 ## Workspace State
@@ -75,13 +75,13 @@ Per unit: (units not yet generated)
 - [ ] ci-pipeline — EXECUTE
 
 ### OPERATION PHASE
-- [S] deployment-pipeline — SKIP: out of Amadeus scope
-- [S] environment-provisioning — SKIP: out of Amadeus scope
-- [S] deployment-execution — SKIP: out of Amadeus scope
-- [S] observability-setup — SKIP: out of Amadeus scope
-- [S] incident-response — SKIP: out of Amadeus scope
-- [S] performance-validation — SKIP: out of Amadeus scope
-- [S] feedback-optimization — SKIP: out of Amadeus scope
+- [S] deployment-pipeline — SKIP: condition false for this intent (D005)
+- [S] environment-provisioning — SKIP: condition false for this intent (D005)
+- [S] deployment-execution — SKIP: condition false for this intent (D005)
+- [S] observability-setup — SKIP: condition false for this intent (D005)
+- [S] incident-response — SKIP: condition false for this intent (D005)
+- [S] performance-validation — SKIP: condition false for this intent (D005)
+- [S] feedback-optimization — SKIP: condition false for this intent (D005)
 
 ## Current Status
 - **Lifecycle Phase**: IDEATION
