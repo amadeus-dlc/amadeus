@@ -24,8 +24,8 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 25
-- **Completed**: 19
-- **In Progress**: B001 / Bolt PR #409
+- **Completed**: 18
+- **In Progress**: B001 / build-and-test pending Bolt PR #409
 
 ## Runtime State
 - **Revision Count**: 0
@@ -71,7 +71,7 @@ Per unit: U001-issue-395-policy-definition
 - [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
 - [S] infrastructure-design — SKIP: #395 方針確定にはインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計がない。
 - [x] code-generation — EXECUTE
-- [x] build-and-test — EXECUTE
+- [-] build-and-test — EXECUTE
 - [ ] ci-pipeline — EXECUTE
 
 ### OPERATION PHASE
@@ -85,13 +85,13 @@ Per unit: U001-issue-395-policy-definition
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: ci-pipeline
+- **Current Stage**: build-and-test
 - **Next Stage**: Bolt PR
 - **Status**: Running
 - **Construction Autonomy Mode**: unset
-- **Last Updated**: 2026-07-03T12:38:02Z
+- **Last Updated**: 2026-07-03T12:42:27Z
 
 ## Session Resume Point
-- **Last Completed Stage**: build-and-test
+- **Last Completed Stage**: code-generation
 - **Next Action**: Await B001 Bolt PR merge: https://github.com/amadeus-dlc/amadeus/pull/409
-- **Pending Artifacts**: B001 の merge 確認は未完了。ci-pipeline は未完了。
+- **Pending Artifacts**: B001 の build-and-test 完了確定と BOLT_COMPLETED は PR merge 待ち。ci-pipeline は未完了。
