@@ -6,7 +6,7 @@
 
 **Amadeus DLC**：Amadeus Development Life Cycle の略である。
 Amadeus DLC は、AI と人間が協調してソフトウェア開発を進めるための lifecycle 契約である。
-Amadeus DLC は Ideation、Inception、Construction の 3 phase 22 ステージ、補助分析、成果物、gate、validator、traceability を扱う。
+Amadeus DLC は Initialization、Ideation、Inception、Construction の 4 phase（0.1〜0.3 と 22 ステージ）、補助分析、成果物、gate、validator、traceability を扱う。
 Amadeus DLC は AI-DLC v2 のステージ仕様、Scope 適応、承認 gate、状態管理、監査可能性と意味論互換である。
 ただし、Amadeus DLC は AI-DLC v2 の写しではなく、このリポジトリで定義する Profile と成果物契約である。
 
@@ -22,7 +22,7 @@ Amadeus DLC はこれらの意味論を、単一入口 `amadeus`、日本語 Mar
 
 **cc-sdd**：Amadeus DLC が設計成果物から実装計画へ進む順序の参考にした仕様駆動開発の成果物構造である。
 cc-sdd は `requirements.md` と `design.md` を入力にして作業計画を生成する流れを持つ。
-Amadeus DLC はこの流れを参考にし、Construction の Code Generation で設計成果物を入力に実装計画（`plan.md`）を立てる。
+Amadeus DLC はこの流れを参考にし、Construction の Code Generation で設計成果物を入力に実装計画（`code-generation-plan.md`）を立てる。
 ただし、cc-sdd は Amadeus DLC の lifecycle 契約そのものではなく、参照アンカーとして扱う。
 
 ## Naming Rules
