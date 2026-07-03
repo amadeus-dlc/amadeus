@@ -8,7 +8,7 @@
 - **State Version**: 7
 - **Active Agent**: amadeus
 - **Worktree Path**: 
-- **Bolt Refs**: B001-issue-395-policy-definition, B002-issue-400-small-foundation-pr, B003-issue-401-upstream-difference-order, B004-issue-402-remaining-skill-rollout-units
+- **Bolt Refs**: B001-issue-395-policy-definition, B002-issue-400-small-foundation-pr, B003-issue-401-upstream-difference-order, B004-issue-402-remaining-skill-rollout-units, B005-issue-391-394-aidlc-v2-differences, B006-core-entrypoints-verification-englishization, B007-construction-stage-skills-englishization, B008-inception-stage-skills-englishization, B009-ideation-supporting-skills-englishization, B010-issue-399-final-verification
 - **Practices Affirmed Timestamp**: 
 
 ## Scope Configuration
@@ -25,7 +25,7 @@
 ## Execution Plan Summary
 - **Total Stages**: 25
 - **Completed**: 19
-- **In Progress**: Construction phase PR merge
+- **In Progress**: Issue #399 completion boundary correction and remaining Englishization rollout
 
 ## Runtime State
 - **Revision Count**: 0
@@ -113,12 +113,12 @@ Per unit: U004-issue-402-remaining-skill-rollout-units
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
 - **Current Stage**: build-and-test
-- **Next Stage**: none
+- **Next Stage**: code-generation
 - **Status**: Running
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-07-03T13:31:40Z
+- **Last Updated**: 2026-07-03T13:59:22Z
 
 ## Session Resume Point
-- **Last Completed Stage**: build-and-test
-- **Next Action**: Human merge of Construction phase PR #414, then record phase verification and workflow completion
-- **Pending Artifacts**: Construction phase PR #414 merge confirmation, PHASE_VERIFIED, WORKFLOW_COMPLETED, registry completed update, Issue #399 close
+- **Last Completed Stage**: build-and-test for B004 direct child tracking
+- **Next Action**: Continue Issue #399 with B005 #391〜#394 AI-DLC v2 difference response, then B006〜B009 full `SKILL.md` Englishization rollout
+- **Pending Artifacts**: #391〜#394 completion or explicit out-of-scope decisions, RU002〜RU006 Englishization PRs, source/promoted skill synchronization, final Japanese-removal verification for Amadeus `SKILL.md`, final #399 traceability

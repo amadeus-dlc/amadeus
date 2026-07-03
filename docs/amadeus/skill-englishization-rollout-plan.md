@@ -2,6 +2,8 @@
 
 この文書は、Issue #402 の判断として、残り Amadeus skill の段階的英語化単位、優先順位、検証コマンドを定義する。
 
+Issue #402 は展開単位の確定で完了するが、親 Issue #399 はこの文書で定義した RU002〜RU006 の実行完了まで閉じない。
+
 Issue #395 の [Skill Language Policy](skill-language-policy.md)、Issue #400 の代表 skill 英語化、Issue #401 の [AI-DLC v2 Difference Response Plan](aidlc-v2-difference-response-plan.md) を前提にする。
 
 ## 方針
@@ -91,3 +93,5 @@ RU002 から RU006 は、該当する #391、#393、#392、#394 の判断が mer
 Issue #402 は、この文書を含む PR が merge され、残り skill の英語化単位、優先順位、検証コマンド、#391 から #394 との衝突回避を追跡できる状態になった時点で完了とする。
 
 残り skill の実際の英語化完了は、Issue #402 の完了条件に含めない。
+
+ただし、残り skill の実際の英語化完了は、Issue #399 の完了条件に含める。

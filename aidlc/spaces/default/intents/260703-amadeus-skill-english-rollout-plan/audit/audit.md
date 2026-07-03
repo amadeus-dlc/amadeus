@@ -1148,3 +1148,11 @@
 **Details**: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行している。Issue #399 の子 Issue 完了追跡には CI の新設または大きな変更が不要なため、Stage 3.7 を skip した。
 
 ---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T13:59:22Z
+**Event**: QUESTION_ANSWERED
+**Question**: Issue #399 の完了境界は、直接子 Issue の完了だけでよいか。
+**Details**: User Input: intentが閉じられようとしていますが、SKILL.mdが英語化されていませんよね。全面的に英語化されるはずなのですが、。回答として、#399 は Amadeus 系 `SKILL.md` の全面英語化完了まで閉じない境界へ補正する。
+
+---
