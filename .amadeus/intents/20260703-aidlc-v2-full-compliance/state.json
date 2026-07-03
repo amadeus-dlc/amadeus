@@ -4,8 +4,8 @@
   "scope": "refactor",
   "depth": "Standard",
   "status": "in_progress",
-  "phase": "inception",
-  "currentStage": "requirements-analysis",
+  "phase": "construction",
+  "currentStage": "functional-design",
   "stages": {
     "reverse-engineering": {
       "state": "completed",
@@ -34,6 +34,19 @@
   "phaseGates": {
     "ideation": {
       "skipped": true
+    },
+    "inception": {
+      "approvedAt": "2026-07-03T13:48:04+09:00",
+      "via": "pr",
+      "reference": "https://github.com/amadeus-dlc/amadeus/pull/388"
+    }
+  },
+  "bolts": {
+    "implicit": {
+      "state": "active",
+      "units": [
+        "implicit"
+      ]
     }
   }
 }
