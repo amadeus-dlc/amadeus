@@ -66,7 +66,7 @@ Intent 配下に置くもの:
 以下の手順は、checkbox が `[ ]` から開始する場合の流れである。
 `[?]` または `[R]` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
 
-1. checkbox が `[ ]` の場合だけ Condition を判定する。greenfield なら `[S]` を記録して終了する。`[-]`、`[?]`、`[R]` からの再開では再判定しない。
+1. checkbox が `[ ]` の場合だけ Condition を判定する。greenfield なら checkbox を `[S]` にして注記に skip 理由を書き、`STAGE_SKIPPED` を追記して終了する。`[-]`、`[?]`、`[R]` からの再開では再判定しない。
 2. `aidlc-state.md` の `reverse-engineering` の checkbox を `[-]` にする。
 3. 対象リポジトリのコードを解析し、9 つの成果物を `aidlc/spaces/<space>/codekb/<repo>/` に作成または更新する。
 4. `timestamp.md` に解析時刻と対象コミットを記録する。
