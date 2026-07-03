@@ -172,6 +172,11 @@ check("active-intent が新 dirName を指す", readFileSync(join(space, "intent
 const stateText = readFileSync(join(recordDir, "aidlc-state.md"), "utf8");
 check("aidlc-state.md に v2 セクションがある", stateText.includes("## Stage Progress") && stateText.includes("## Phase Progress"), "セクション不足");
 check("scope が refactor である", stateText.includes("- **Scope**: refactor"), "Scope 行不一致");
+{
+  const line = stateText.split("\n").find((entry) => entry.startsWith("- **Stages to Execute**: ")) ?? "";
+  const numbers = line.replace("- **Stages to Execute**: ", "").split(", ").filter(Boolean);
+  check("Stages to Execute に重複がない", numbers.length === new Set(numbers).size && numbers.length > 0, line);
+}
 check("完了ステージが [x] である", stateText.includes("- [x] requirements-analysis"), "requirements-analysis の checkbox 不一致");
 check("進行中ステージが [-] である", stateText.includes("- [-] code-generation"), "code-generation の checkbox 不一致");
 check("scope 外ステージが [S] である", stateText.includes("- [S] intent-capture — SKIP:"), "intent-capture の checkbox 不一致");

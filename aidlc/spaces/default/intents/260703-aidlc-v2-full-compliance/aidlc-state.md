@@ -12,7 +12,7 @@
 - **Practices Affirmed Timestamp**: 
 
 ## Scope Configuration
-- **Stages to Execute**: 0.1, 0.2, 0.3, 0.1, 0.2, 0.3, 2.1, 2.3, 3.1, 3.5, 3.6
+- **Stages to Execute**: 0.1, 0.2, 0.3, 2.1, 2.3, 3.1, 3.5, 3.6
 - **Stages to Skip**: all others (out of refactor scope)
 - **Depth**: Standard
 
@@ -23,9 +23,9 @@
 - **Build System**: bun
 
 ## Execution Plan Summary
-- **Total Stages**: 11
+- **Total Stages**: 8
 - **Completed**: 6
-- **In Progress**: functional-design
+- **In Progress**: code-generation
 
 ## Runtime State
 - **Revision Count**: 0
@@ -85,13 +85,13 @@ Per unit: implicit
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: functional-design
-- **Next Stage**: code-generation
+- **Current Stage**: code-generation
+- **Next Stage**: build-and-test
 - **Status**: Running
 - **Construction Autonomy Mode**: unset
 - **Last Updated**: 2026-07-03T05:59:11Z
 
 ## Session Resume Point
 - **Last Completed Stage**: functional-design
-- **Next Action**: continue functional-design
+- **Next Action**: continue code-generation
 - **Pending Artifacts**: none
