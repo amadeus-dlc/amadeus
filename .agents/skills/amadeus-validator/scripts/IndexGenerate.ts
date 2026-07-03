@@ -38,11 +38,7 @@ export class HeadingContractViolationError extends Error {
   constructor(violations: HeadingViolation[]) {
     super(
       violations
-        .map((violation) =>
-          violation.file.endsWith("state.json")
-            ? `モジュール契約違反: ${violation.file} が読めません（${violation.missing.join("、")}）`
-            : `見出し契約違反: ${violation.file} に ${violation.missing.join("、")} がありません`,
-        )
+        .map((violation) => `見出し契約違反: ${violation.file} に ${violation.missing.join("、")} がありません`)
         .join("\n"),
     );
     this.name = "HeadingContractViolationError";
@@ -99,7 +95,7 @@ function parseDependencyRows(section: string): DependencyRow[] {
   return rows;
 }
 
-// `.amadeus/intents.md` の期待内容を、配下の intents/ 以下の各モジュールファイルから導出する。
+// `intents/intents.md` の期待内容を、同じ intents/ 配下の各モジュールファイルから導出する。
 // 見出し契約（## 概要、## 依存）を満たさないモジュールがある場合は HeadingContractViolationError を投げる。
 export function buildIntentsIndex(workspace: string): string {
   const intentsDir = join(workspace, spaceBase(workspace), "intents");

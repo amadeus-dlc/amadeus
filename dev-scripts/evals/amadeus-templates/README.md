@@ -17,7 +17,7 @@
 
 ## 検証条件
 
-- 各 skill の `SKILL.md` が `.amadeus/settings/templates` と同梱 `templates/` の優先順位を説明している。
+- 各 skill の `SKILL.md` が `memory/templates` と同梱 `templates/` の優先順位を説明している。
 - source skill と promoted skill の両方に標準テンプレートが存在する。
 - 標準テンプレートに必須見出しが存在する。
 - JSON テンプレートは JSON として解釈できる。
