@@ -8,5 +8,15 @@
       "amadeus"
     ],
     "status": "completed"
+  },
+  {
+    "uuid": "019f279e-e9cd-7000-8fff-c2a326ed72bb",
+    "slug": "amadeus-skill-english-rollout-plan",
+    "dirName": "260703-amadeus-skill-english-rollout-plan",
+    "scope": "feature",
+    "repos": [
+      "amadeus"
+    ],
+    "status": "in_progress"
   }
 ]
