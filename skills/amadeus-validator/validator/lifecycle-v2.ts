@@ -380,7 +380,14 @@ function checkCompletedArtifactsV2(ctx: LifecycleV2Context, input: LifecycleV2In
     const produces = extractFrontmatterStringList(stageFileText, "produces");
 
     if (def.perUnit) {
-      if (stage.unit === undefined) continue;
+      if (stage.unit === undefined) {
+        ctx.failRow(
+          `${input.base}/aidlc-state.md`,
+          "v2 契約: per-unit ステージの completed 判定に Per unit 文脈がある",
+          `stage ${stage.slug} が completed だが Per unit ブロックの文脈がない`,
+        );
+        continue;
+      }
       for (const artifact of produces) {
         ctx.checkFile(
           `${input.base}/construction/${stage.unit}/${stage.slug}/${artifact}.md`,
