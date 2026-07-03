@@ -53,7 +53,7 @@ aidlc/
 |---|---|---|
 | `aidlc-state.md` | ワークフロー状態(6状態チェックボックス) | コミット |
 | `audit/<host>-<clone>.md` | 監査証跡(クローンごとの追記専用シャード、68イベント分類) | コミット |
-| `verification/phase-check-<phase>.md` | フェーズ境界検証(5ファイル: initialization/ideation/inception/construction/operation) | コミット |
+| `verification/phase-check-<phase>.md` | フェーズ境界検証(3ファイル: ideation/inception/construction。stage 定義が作成を指示するのはこの3 phaseだけで、initialization と operation にはない。2026-07 の実機確認で訂正) | コミット |
 | `.aidlc-recovery.md` | リカバリ用ブレッドクラム | gitignore |
 | `runtime-graph.json` | 実行テレメトリ(監査シャードから再導出可能) | gitignore |
 | `.aidlc-sensors/`, `.aidlc-hooks-health/` | センサー所見・ハートビート | gitignore |

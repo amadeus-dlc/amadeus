@@ -432,11 +432,16 @@ runExpectSuccessIncludes(["bun", "run", validator, noModuleFileWorkspace, record
 function v2CompletedState(): string {
   return stateText()
     .replace("- [-] requirements-analysis", "- [x] requirements-analysis")
-    .replace("- **Current Stage**: requirements-analysis", "- **Current Stage**: code-generation");
+    .replace("- **Current Stage**: requirements-analysis", "- **Current Stage**: code-generation")
+    .replace("- **Inception**: Active", "- **Inception**: Verified");
 }
 
 function v2CompletedAudit(): string {
-  return auditText() + auditEntry("STAGE_COMPLETED", "requirements approved", "requirements-analysis");
+  return (
+    auditText() +
+    auditEntry("STAGE_COMPLETED", "requirements approved", "requirements-analysis") +
+    auditEntry("PHASE_VERIFIED", "Phase boundary: Inception. pass")
+  );
 }
 
 function writeStageDefinition(workspace: string, phase: string, slug: string, produces: string[]): void {
@@ -491,7 +496,7 @@ function setupV2Workspace(options: V2WorkspaceOptions = {}): string {
 
   if (writePhaseCheck) {
     mkdirSync(join(recordDir, "verification"), { recursive: true });
-    writeFileSync(join(recordDir, "verification/phase-check-initialization.md"), "# Phase Check\n");
+    writeFileSync(join(recordDir, "verification/phase-check-inception.md"), "# Phase Check\n");
   }
 
   if (writeAuditShard) {
@@ -512,7 +517,7 @@ runExpectFailure(
   "v2 契約: completed のステージは produces 成果物を持つ",
 );
 
-// (V14) Verified の phase に phase-check 成果物がないと fail する。
+// (V14) Verified の phase（上流が phase-check を指示する ideation / inception / construction）に phase-check 成果物がないと fail する。Initialization は Verified でも対象外（上流に phase-check を書く stage がない）。
 const v2MissingPhaseCheckWorkspace = setupV2Workspace({ writePhaseCheck: false });
 runExpectFailure(
   ["bun", "run", validator, v2MissingPhaseCheckWorkspace, recordDirName],

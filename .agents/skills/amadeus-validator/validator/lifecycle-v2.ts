@@ -403,8 +403,14 @@ function checkCompletedArtifactsV2(ctx: LifecycleV2Context, input: LifecycleV2In
 }
 
 // verification/phase-check-<phase>.md（フェーズ境界検証）は、Phase Progress が Verified の phase について確認する。
+// 上流の stage 定義が phase-check の作成を指示するのは ideation（approval-handoff）、
+// inception（delivery-planning）、construction（ci-pipeline）の 3 phase だけである。
+// Initialization と Operation には phase-check を書く stage が存在しないため検査しない。
+const PHASE_CHECK_PHASES = new Set(["Ideation", "Inception", "Construction"]);
+
 function checkPhaseCheckArtifactsV2(ctx: LifecycleV2Context, input: LifecycleV2Input, doc: AidlcStateDocument): void {
   for (const phase of AIDLC_PHASES) {
+    if (!PHASE_CHECK_PHASES.has(String(phase))) continue;
     if (String(doc.phaseProgress[phase] ?? "") !== "Verified") continue;
     const slug = phase.toLowerCase();
     ctx.checkFile(`${input.base}/verification/phase-check-${slug}.md`, "v2 契約: Verified の phase は phase-check 成果物を持つ");
