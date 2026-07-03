@@ -15,7 +15,7 @@
 
 ## 未解決の問題
 
-- #394 の判断は未実施である。
+- なし。
 
 ## #393 の解釈
 
@@ -27,3 +27,9 @@
 
 - 本家の「最大 2 回の修正試行」は反復を有限にして人間へ委ねる仕組みであり、Amadeus の「最初の失敗で即 halt-and-ask」は同じ終着点へより早く到達する設計とみなした。
 - Build and Test に修正責務を持たせると、コード変更が Code Generation の記録（code-generation-plan.md、code-summary.md）を経由せず発生し、Bolt PR で人間が承認する対象と記録の対応が崩れる。この点を維持の主根拠にした。
+
+## #394 の解釈
+
+- Operation phase の対象外は既存方針だが、理由が宣言（SKIP 注記、AMADEUS.md）に留まっていた。成果物契約、gate、validator、PR 境界の 4 観点で「なぜ現在の契約に載らないか」を説明し、宣言から理由へ追跡できるようにした。
+- 本家 Operation 7 stage のうち設計に相当する部分（パイプライン、デプロイアーキテクチャ、監視項目、性能要求）は Construction の既存 stage が既に扱っており、対象外は「実環境への作用と観測」に限られることを一覧で明確にした。
+- stage-catalog には Operation の記載自体がないため変更せず、lifecycle overview と境界 doc からの追跡にした。
