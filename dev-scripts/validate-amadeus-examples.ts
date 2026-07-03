@@ -4,11 +4,12 @@
 //   bun run dev-scripts/validate-amadeus-examples.ts --workspaces-only
 //   bun run dev-scripts/validate-amadeus-examples.ts --intents-only
 //   bun run dev-scripts/validate-amadeus-examples.ts --provenance
+//   bun run dev-scripts/validate-amadeus-examples.ts --invariants
 //   bun run dev-scripts/validate-amadeus-examples.ts --generation-plan
 //   bun run dev-scripts/validate-amadeus-examples.ts --all
 
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 const root = resolve(import.meta.dir, "..");
@@ -22,7 +23,7 @@ const snapshots = [
 ];
 const provenanceManifestPath = join(root, "examples/skill-provenance.json");
 
-type Mode = "workspaces" | "intents" | "provenance" | "generation-plan" | "all";
+type Mode = "workspaces" | "intents" | "provenance" | "invariants" | "generation-plan" | "all";
 
 function fail(message: string): never {
   console.error(message);
@@ -33,9 +34,10 @@ function parseMode(args: string[]): Mode {
   if (args.includes("--workspaces-only")) return "workspaces";
   if (args.includes("--intents-only")) return "intents";
   if (args.includes("--provenance")) return "provenance";
+  if (args.includes("--invariants")) return "invariants";
   if (args.includes("--generation-plan")) return "generation-plan";
   if (args.includes("--all")) return "all";
-  fail("mode を指定してください: --workspaces-only | --intents-only | --provenance | --generation-plan | --all");
+  fail("mode を指定してください: --workspaces-only | --intents-only | --provenance | --invariants | --generation-plan | --all");
 }
 
 function run(command: string[], cwd = root): string {
@@ -114,6 +116,128 @@ function validateProvenance(): void {
   console.log("provenance: ok");
 }
 
+// ---- snapshot 不変条件 ----
+// 生成時に generator が検査する状態を、コミット済み snapshot に対しても再検査する。
+// 手動編集で snapshot の意味（どの段階で止まっているか）が壊れた場合に CI で検出する。
+
+type SnapshotInvariant = {
+  snapshot: string;
+  state: Record<string, string>;
+  unitStates?: Array<{ stage: string; state: string }>;
+  allBoltStates?: string;
+  files?: string[];
+  absentFiles?: string[];
+};
+
+const snapshotInvariants: SnapshotInvariant[] = [
+  {
+    snapshot: "examples/01-ideation-completed",
+    state: { schemaVersion: "2", phase: "inception", "phaseGates.ideation.via": "pr", "stages.approval-handoff.state": "completed" },
+  },
+  {
+    snapshot: "examples/02-inception-completed",
+    state: { schemaVersion: "2", phase: "construction", "phaseGates.inception.via": "pr", "stages.delivery-planning.state": "completed" },
+  },
+  {
+    snapshot: "examples/03-construction-design-ready",
+    state: { schemaVersion: "2", phase: "construction", "stages.code-generation.state": "pending" },
+    unitStates: [{ stage: "functional-design", state: "completed" }],
+    allBoltStates: "active",
+    files: ["construction/*/functional-design/business-logic-model.md"],
+    absentFiles: ["construction/*/code-generation/plan.md"],
+  },
+  {
+    snapshot: "examples/04-construction-implementation-planned",
+    state: { schemaVersion: "2", phase: "construction" },
+    unitStates: [{ stage: "code-generation", state: "active" }],
+    allBoltStates: "active",
+    files: ["construction/*/code-generation/plan.md"],
+    absentFiles: ["construction/*/code-generation/summary.md"],
+  },
+];
+
+function stateValue(state: Record<string, unknown>, dottedPath: string): unknown {
+  let current: unknown = state;
+  for (const key of dottedPath.split(".")) {
+    if (typeof current !== "object" || current === null) return undefined;
+    current = (current as Record<string, unknown>)[key];
+  }
+  return current;
+}
+
+function matchExists(base: string, pattern: string): boolean {
+  const segments = pattern.split("/");
+  let candidates = [base];
+  for (const segment of segments) {
+    const next: string[] = [];
+    for (const candidate of candidates) {
+      if (segment === "*") {
+        if (!existsSync(candidate) || !statSync(candidate).isDirectory()) continue;
+        for (const entry of readdirSync(candidate)) next.push(join(candidate, entry));
+      } else {
+        const target = join(candidate, segment);
+        if (existsSync(target)) next.push(target);
+      }
+    }
+    candidates = next;
+    if (candidates.length === 0) return false;
+  }
+  return candidates.length > 0;
+}
+
+function validateSnapshotInvariants(): void {
+  existingSnapshots();
+  for (const invariant of snapshotInvariants) {
+    const intentBase = join(root, invariant.snapshot, ".amadeus/intents", intentId);
+    const statePath = join(intentBase, "state.json");
+    if (!existsSync(statePath)) fail(`${invariant.snapshot}: state.json がありません`);
+    const state = JSON.parse(readFileSync(statePath, "utf8")) as Record<string, unknown>;
+
+    for (const [path, expected] of Object.entries(invariant.state)) {
+      const actual = stateValue(state, path);
+      if (String(actual ?? "") !== expected) {
+        fail(`${invariant.snapshot}: state.json の ${path} が期待値と一致しません（期待: ${expected}、実際: ${String(actual ?? "未設定")}）`);
+      }
+    }
+
+    for (const expected of invariant.unitStates ?? []) {
+      const units = stateValue(state, `stages.${expected.stage}.units`);
+      if (typeof units !== "object" || units === null || Object.keys(units).length === 0) {
+        fail(`${invariant.snapshot}: stages.${expected.stage}.units に Unit がありません`);
+      }
+      for (const [unitId, entry] of Object.entries(units as Record<string, { state?: string }>)) {
+        if (String(entry?.state ?? "") !== expected.state) {
+          fail(`${invariant.snapshot}: stages.${expected.stage}.units.${unitId}.state が期待値と一致しません（期待: ${expected.state}、実際: ${String(entry?.state ?? "未設定")}）`);
+        }
+      }
+    }
+
+    if (invariant.allBoltStates !== undefined) {
+      const bolts = stateValue(state, "bolts");
+      if (typeof bolts !== "object" || bolts === null || Object.keys(bolts).length === 0) {
+        fail(`${invariant.snapshot}: state.json に bolts がありません`);
+      }
+      for (const [boltId, entry] of Object.entries(bolts as Record<string, { state?: string }>)) {
+        if (String(entry?.state ?? "") !== invariant.allBoltStates) {
+          fail(`${invariant.snapshot}: bolts.${boltId}.state が期待値と一致しません（期待: ${invariant.allBoltStates}、実際: ${String(entry?.state ?? "未設定")}）`);
+        }
+      }
+    }
+
+    for (const pattern of invariant.files ?? []) {
+      if (!matchExists(intentBase, pattern)) {
+        fail(`${invariant.snapshot}: 期待する成果物が見つかりません: ${pattern}`);
+      }
+    }
+    for (const pattern of invariant.absentFiles ?? []) {
+      if (matchExists(intentBase, pattern)) {
+        fail(`${invariant.snapshot}: 存在してはならない成果物が見つかりました: ${pattern}`);
+      }
+    }
+    console.log(`invariants pass: ${invariant.snapshot}`);
+  }
+}
+
 function runExpectFailure(command: string[], expected: string, cwd = root): void {
   const result = Bun.spawnSync(command, { cwd, stdout: "pipe", stderr: "pipe" });
   const stdout = new TextDecoder().decode(result.stdout);
@@ -183,5 +307,6 @@ const mode = parseMode(Bun.argv.slice(2));
 if (mode === "workspaces" || mode === "all") validateWorkspaces();
 if (mode === "intents" || mode === "all") validateIntents();
 if (mode === "provenance" || mode === "all") validateProvenance();
+if (mode === "invariants" || mode === "all") validateSnapshotInvariants();
 if (mode === "generation-plan" || mode === "all") validateGenerationPlan();
 console.log("validate amadeus examples: ok");
