@@ -66,7 +66,7 @@
 
 ### Prohibited
 
-- amadeus-construction-implementation-execution
+- amadeus-construction-code-generation
 
 ## Grilling Conditions
 

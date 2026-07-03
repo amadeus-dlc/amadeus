@@ -1,7 +1,0 @@
-# skill-forge-source-sha256: 3a39cd4b41e5768a09305a05c5da53038e4e4857d03370b3b07ac437d112e532
-interface:
-  display_name: "Amadeus Inception Traceability Finalization"
-  short_description: "Finalize Amadeus Inception traceability"
-  default_prompt: "Use $amadeus-inception-traceability-finalization to finalize Amadeus Inception traceability."
-policy:
-  allow_implicit_invocation: false

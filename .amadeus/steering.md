@@ -23,7 +23,6 @@
 - `development.md`
 - `domain-map.md`
 - `context-map.md`
-- `discoveries.md`
 - `intents.md`
 
 ## 読む順序
@@ -41,8 +40,7 @@
 11. `development.md`
 12. `domain-map.md`
 13. `context-map.md`
-14. `discoveries.md`
-15. `intents.md`
+14. `intents.md`
 
 ## Intent Layer へ進む基準
 

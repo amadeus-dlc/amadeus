@@ -1,15 +1,15 @@
 # Amadeus
 
 Amadeus は、AI と人間が協調してソフトウェア開発を進める Amadeus DLC を運用するためのプロジェクトです。
-Amadeus は、Ideation、Inception、Construction、補助分析を進めるための agent skill、template、example、validator、ドキュメントを提供します。
+Amadeus は、AI-DLC v2 と意味論互換のライフサイクル（Ideation、Inception、Construction）と補助分析を進めるための agent skill、template、validator、ドキュメントを提供します。
 
 [English](README.md) | [日本語](README.ja.md)
 
 ## Highlights
 
-- `amadeus-steering`、`amadeus-ideation`、`amadeus-inception`、`amadeus-construction` などの目的別 skill で Amadeus DLC を進めます。
-- phase state、gate、traceability、decisions、検証結果を明示し、成果物を監査しやすくします。
-- [examples/](examples/) 配下の生成例を、skill が生成できる snapshot として参照できます。
+- 単一の公開入口 skill `amadeus` がライフサイクル全体を扱います。Intake（合流既定、人間承認付きの Intent Birth、scope 推定）と、`state.json` に基づくステージルーティングを行います。
+- scope（`enterprise`、`feature`、`mvp`、`poc`、`bugfix`、`refactor`、`infra`、`security-patch`、`workshop`）ごとに、22 ステージのうち実行対象だけを実行し、儀式量を作業に合わせて縮退します。
+- ステージ状態、approval evidence、phase gate、Bolt gate、検証結果を明示し、成果物を監査しやすくします。
 - 同梱の `amadeus-validator` で Amadeus workspace と Intent 成果物を検証できます。
 
 ## Quickstart
@@ -28,12 +28,6 @@ bun install
 
 ### Run
 
-同梱 example を検証します。
-
-```sh
-npm run validate:all
-```
-
 mock provider を使う標準検証を実行します。
 
 ```sh
@@ -45,80 +39,58 @@ npm run test:all
 Amadeus は agent skill を通じて使います。
 skill は Amadeus DLC への関わり方で分類します。
 
-### フェーズスキル
+### ライフサイクル入口
 
-フェーズスキルは lifecycle の順序で使います。
-`amadeus-discovery` は任意ですが、入力テーマが大きい、曖昧、または Intent 作成に進む準備ができていない場合に推奨します。
+`amadeus` がライフサイクルの単一公開入口です。
 
-1. `amadeus-steering`
-2. `amadeus-discovery`（任意、推奨）
-3. `amadeus-ideation`
-4. `amadeus-inception`
-5. `amadeus-construction`
+入力が既存 Intent の継続か、既存 Intent のスコープバックログへの合流か、新しい Intent の Birth 提案（必ず人間の承認を要する）かを判定します。
+その後、対象 Intent の `state.json` から次のステージを解決し、ステージ内部 skill へ委譲します。
 
-### 横断的補助スキル
+1. `amadeus-steering`（workspace の共有土台。workspace ごとに最初に一度）
+2. `amadeus`（すべての Intent の Intake とステージルーティング）
 
-横断的補助スキルは、phase の途中で追加分析、ドメイン確認、成果物検証が必要な場合に使います。
+### 補助入口
+
+補助入口は、追加分析、ドメイン確認、成果物検証が必要な場合に使います。
 
 - `amadeus-event-storming`
+- `amadeus-grilling`
+- `amadeus-domain-modeling`
 - `amadeus-domain-grilling`
 - `amadeus-validator`
 
 ### 内部スキル
 
-内部スキルは、必要に応じて Amadeus の workflow から使う実装補助です。
-明示的に内部スキルが必要な作業でない場合は、フェーズスキルまたは横断的補助スキルを公開入口として使います。
-README では workflow family ごとに整理し、すべての内部 step を公開入口として扱わないようにします。
+内部スキルは、`amadeus` のステージルーティングまたは他の skill から使う実装補助です。
+明示的に内部スキルが必要な作業でない場合は、`amadeus` または補助入口を公開入口として使います。
 
 | family | 内部 skill |
 |---|---|
-| 判断と学習支援 | `amadeus-decision-review`、`amadeus-grilling`、`amadeus-history-review`、`amadeus-learning-review` |
-| ドメイン支援 | `amadeus-domain-modeling` |
-| Ideation 内部 | `amadeus-ideation-intent-capture`、`amadeus-ideation-scope-framing`、`amadeus-ideation-feasibility-shaping`、`amadeus-ideation-mock-framing`、`amadeus-ideation-traceability-finalization` |
-| Inception 内部 | `amadeus-inception-codebase-analysis`、`amadeus-inception-requirements-definition`、`amadeus-inception-user-stories`、`amadeus-inception-use-cases`、`amadeus-inception-units-generation`、`amadeus-inception-traceability-finalization` |
-| Construction 内部 | `amadeus-construction-functional-design`、`amadeus-construction-bolt-preparation`、`amadeus-construction-implementation-execution`、`amadeus-construction-verification-hardening`、`amadeus-construction-traceability-finalization` |
+| Ideation ステージ（1.1〜1.7） | `amadeus-ideation-intent-capture`、`amadeus-ideation-market-research`、`amadeus-ideation-feasibility`、`amadeus-ideation-scope-definition`、`amadeus-ideation-team-formation`、`amadeus-ideation-rough-mockups`、`amadeus-ideation-approval-handoff` |
+| Inception ステージ（2.1〜2.8） | `amadeus-inception-reverse-engineering`、`amadeus-inception-practices-discovery`、`amadeus-inception-requirements-analysis`、`amadeus-inception-user-stories`、`amadeus-inception-refined-mockups`、`amadeus-inception-application-design`、`amadeus-inception-units-generation`、`amadeus-inception-delivery-planning` |
+| Construction ステージ（3.1〜3.7） | `amadeus-construction-functional-design`、`amadeus-construction-nfr-requirements`、`amadeus-construction-nfr-design`、`amadeus-construction-infrastructure-design`、`amadeus-construction-code-generation`、`amadeus-construction-build-and-test`、`amadeus-construction-ci-pipeline` |
+| 判断と学習支援 | `amadeus-decision-review`、`amadeus-history-review`、`amadeus-learning-review` |
 
 Amadeus skill を確認または変更するときは、必ず `skill-forge` で skill 境界、trigger description、本文指示、eval coverage、存在する場合は Codex metadata を確認します。
 skill 変更 PR では、この確認と結果の PR 説明への記録が必須条件です。定義は steering policies（[.amadeus/steering/policies.md](.amadeus/steering/policies.md)）にあります。
 Amadeus の source を変更する場合は、`skills/amadeus-*` と `.agents/skills/amadeus-*` の両方を確認し、昇格先成果物はリポジトリの昇格手順でそろえます。
 
 このリポジトリでは、root `.amadeus/` を Amadeus 本体開発用の steering layer として扱います。
-リポジトリ内の生成例は [examples/](examples/) 配下の段階別 snapshot として管理します。
 
 ### Typical Flow
 
 | 手順 | skill | 目的 |
 |---|---|---|
 | 1 | `amadeus-steering` | workspace の共有土台を作成または点検します。 |
-| 2 | `amadeus-discovery` | 大きい入力テーマ、曖昧な入力テーマ、既存 Intent との関係が不明な入力テーマを Intent 化前に整理します。この手順は任意ですが推奨します。 |
-| 3 | `amadeus-ideation` | Intent Record を作り、Ideation 成果物を完了状態へ進めます。 |
-| 4 | `amadeus-inception` | Requirement、受け入れ状態、User Story、Use Case、Unit、Bolt、Unit Design Brief、traceability、decision を定義します。 |
-| 5 | `amadeus-construction` | Bolt を Task に分解し、実装、検証、証拠化、traceability 更新まで進めます。 |
+| 2 | `amadeus` | 入力の Intake を行います。既存 Intent への継続または合流を既定にし、新しいアウトカムだけを scope 推定付きの Birth 提案として人間に確認します。 |
+| 3 | `amadeus` | 以降のセッションで `state.json` から次ステージを解決し、Ideation、Inception、Construction のステージ内部 skill へ委譲します。Construction は Bolt 単位で進め、walking skeleton は必ず人間が承認します。 |
 
-横断的補助スキルは、必要に応じて flow と併用します。
+補助入口は、必要に応じて flow と併用します。
 `amadeus-event-storming` は Domain Event、Process、Aggregate Candidate、Bounded Context Candidate、Hotspot を補助分析として整理します。
 `amadeus-domain-grilling` は質問によるドメイン確認と成果物更新を組み合わせます。
 `amadeus-validator` は workspace と Intent の成果物構造を検証します。
 
 ### Validation
-
-workspace 単位の example 成果物だけを検証します。
-
-```sh
-npm run validate
-```
-
-Intent 単位の example 成果物を検証します。
-
-```sh
-npm run validate:intents
-```
-
-example wrapper の対象をすべて検証します。
-
-```sh
-npm run validate:all
-```
 
 validator を workspace に対して直接実行します。
 
@@ -135,14 +107,14 @@ bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspac
 ## Documentation
 
 - agent 共通入口: [AMADEUS.md](AMADEUS.md)
-- 生成例: [examples/](examples/)
-- Stage reference:
-  - [Steering](docs/amadeus/stages/steering.md)
-  - [Discovery](docs/amadeus/stages/discovery.md)
-  - [Ideation](docs/amadeus/stages/ideation.md)
-  - [Inception](docs/amadeus/stages/inception.md)
-  - [Construction](docs/amadeus/stages/construction.md)
-  - [Operation](docs/amadeus/stages/operation.md)
+- ライフサイクル契約（3 phase 22 ステージ、scope、state スキーマ）:
+  - [Overview](docs/amadeus/lifecycle/overview.md)
+  - [Scopes](docs/amadeus/lifecycle/scopes.md)
+  - [Ideation](docs/amadeus/lifecycle/ideation.md)
+  - [Inception](docs/amadeus/lifecycle/inception.md)
+  - [Construction](docs/amadeus/lifecycle/construction.md)
+  - [State](docs/amadeus/lifecycle/state.md)
+- Steering layer reference: [docs/amadeus/steering.md](docs/amadeus/steering.md)
 - Architecture Decision: [docs/adr/](docs/adr/)
 - AI-DLC 参照資料: [docs/ai-dlc/](docs/ai-dlc/)
 
@@ -151,6 +123,7 @@ bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspac
 - `.amadeus/` は対象 workspace の成果物ルートです。
   このリポジトリ root では、Amadeus 本体開発用の steering layer に限定して扱います。
 - Intent ディレクトリ名は `.amadeus/intents.md` と `.amadeus/intents/<intent-id>-<slug>/` で一致させます。
+- 新しい Intent は `amadeus` の Intake から人間の明示承認を経てだけ生まれます。既存 Intent のアウトカムに属する作業は、新しい Intent にせず対象 Intent のスコープバックログへ合流させます。
 - ドメイン上の発見は範囲に応じて置き分けます。
   対象 Intent の `domain-notes.md`、`.amadeus/domain-map.md`、`.amadeus/context-map.md`、`inception/traceability.md`、Construction の Functional Design を使い分けます。
 - 不明な値は空欄にせず、`未確認` と記録します。

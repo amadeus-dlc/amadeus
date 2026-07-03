@@ -41,33 +41,38 @@ function runExpectFailure(command: string[], cwd = root): [string, string] {
 
 function amadeusSkills(): string[] {
   return readdirSync(join(root, "skills"))
-    .filter((entry) => entry.startsWith("amadeus-") && statSync(join(root, "skills", entry)).isDirectory())
+    .filter(
+      (entry) =>
+        (entry === "amadeus" || entry.startsWith("amadeus-")) && statSync(join(root, "skills", entry)).isDirectory(),
+    )
     .sort();
 }
 
 function requiredInternalSkillGroups(): Record<string, string[]> {
   return {
-    "amadeus-ideation": [
+    amadeus: [
       "amadeus-ideation-intent-capture",
-      "amadeus-ideation-scope-framing",
-      "amadeus-ideation-feasibility-shaping",
-      "amadeus-ideation-mock-framing",
-      "amadeus-ideation-traceability-finalization",
-    ],
-    "amadeus-inception": [
-      "amadeus-inception-codebase-analysis",
-      "amadeus-inception-requirements-definition",
+      "amadeus-ideation-market-research",
+      "amadeus-ideation-feasibility",
+      "amadeus-ideation-scope-definition",
+      "amadeus-ideation-team-formation",
+      "amadeus-ideation-rough-mockups",
+      "amadeus-ideation-approval-handoff",
+      "amadeus-inception-reverse-engineering",
+      "amadeus-inception-practices-discovery",
+      "amadeus-inception-requirements-analysis",
       "amadeus-inception-user-stories",
-      "amadeus-inception-use-cases",
+      "amadeus-inception-refined-mockups",
+      "amadeus-inception-application-design",
       "amadeus-inception-units-generation",
-      "amadeus-inception-traceability-finalization",
-    ],
-    "amadeus-construction": [
+      "amadeus-inception-delivery-planning",
       "amadeus-construction-functional-design",
-      "amadeus-construction-bolt-preparation",
-      "amadeus-construction-implementation-execution",
-      "amadeus-construction-verification-hardening",
-      "amadeus-construction-traceability-finalization",
+      "amadeus-construction-nfr-requirements",
+      "amadeus-construction-nfr-design",
+      "amadeus-construction-infrastructure-design",
+      "amadeus-construction-code-generation",
+      "amadeus-construction-build-and-test",
+      "amadeus-construction-ci-pipeline",
     ],
   };
 }
@@ -131,7 +136,10 @@ for (const [parentSkill, internalSkills] of Object.entries(requiredInternalSkill
   }
 
   const parentSkillBody = await Bun.file(join(root, "skills", parentSkill, "SKILL.md")).text();
-  const missingInternalOrchestration = internalSkills.filter((skill) => !parentSkillBody.includes(`\`${skill}\``));
+  const stageCatalogPath = join(root, "skills", parentSkill, "references/stage-catalog.md");
+  const stageCatalogBody = existsSync(stageCatalogPath) ? await Bun.file(stageCatalogPath).text() : "";
+  const orchestrationBody = parentSkillBody + stageCatalogBody;
+  const missingInternalOrchestration = internalSkills.filter((skill) => !orchestrationBody.includes(`\`${skill}\``));
   if (missingInternalOrchestration.length > 0) {
     fail(`missing internal skill orchestration for ${parentSkill}: ${missingInternalOrchestration.join(", ")}`);
   }

@@ -20,7 +20,6 @@
 - `steering/policies/`
 - `domain-map.md`
 - `context-map.md`
-- `discoveries.md`
 - `intents.md`
 
 ## 読む順序
@@ -35,8 +34,7 @@
 8. `glossary.md`
 9. `domain-map.md`
 10. `context-map.md`
-11. `discoveries.md`
-12. `intents.md`
+11. `intents.md`
 
 ## Intent Layer へ進む基準
 

@@ -26,6 +26,6 @@
 ## 未確認事項
 
 - stage0、stage1、stage2 を `CONTEXT.md` に追加する必要があるか。
-- `examples/skill-provenance.json` だけで example snapshot の provenance が足りるか。
 - host environment の assets と target artifacts の assets の混入を validator で検出する必要があるか。
 - build workspace と target workspace の対応をどの成果物に記録するか。
+- v2 契約の examples snapshot 再生成で、provenance の記録方式をどう再設計するか（Issue #369 の後続 Issue で扱う）。

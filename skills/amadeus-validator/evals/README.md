@@ -11,60 +11,23 @@
 - 対象 Intent ディレクトリ名が未指定の場合、全体成果物だけを検証する。
 - 対象 Intent ディレクトリ名が指定された場合、全体成果物に加えて対象 Intent を検証する。
 - `.amadeus/intents.md` の Intent 識別子が `YYYYMMDD-<slug>` 形式で、詳細リンクのディレクトリ名と一致することを検証する。
-- `.amadeus/discoveries.md` と各 Discovery のモジュールファイル、`state.json` の対応を検証する。
-- Discovery の `state.json.decision` と `Discovery のモジュールファイル` の `判定` が一致することを検証する。
-- Discovery が `gate: passed` の場合、判定別の構造条件を検証する。
-- Ideation 段階では、後続段階の成果物欠落を不足にしない。
-- Inception 段階では、`state.json` の `ideation` と `inception` の状態契約を検証する。
-- Inception 段階では Unit のモジュールファイルとモジュールディレクトリ配下の `design.md` を検証する。
-- Inception 段階では Bounded Context のモジュールファイルとモジュールディレクトリ配下の `models.md`、`contracts.md` を検証する。
-- Inception 段階では Bolt 配下の `design.md` を禁止する。
-- `state.json.inception.codebaseAnalysis` の requirement、status、evidence、targetScope、skipReason、blockedReason、freshness を検証する。
-- `codebase-analysis.md` が存在する場合、条件にかかわらず必須見出しを検証する。
-- `state.json.inception.codebaseAnalysis.requirement` が `required` で `status` が `ready_for_approval` または `passed` の場合、または `state.json.inception.requiredArtifacts` に含まれる場合、`codebase-analysis.md` の存在と必須見出しを検証する。
-- `codebase-analysis.md` が存在せず、state 上は未承認の `required` で、`state.json.inception.requiredArtifacts` にも含まれない場合は不足にしない。
-- `traceability.md` の `既存コード分析からの追跡` が、`分析`、`要求`、`ユースケース`、`ユニット`、`ボルト`、`設計`、`入力` の列を持つことを検証する。
-- `traceability.md` の `設計からの追跡` にある `設計` が同じ行の Unit 配下 `design.md` を指すことを検証する。
-- `traceability.md` の `既存コード分析からの追跡` にある `要求`、`ユースケース`、`ユニット`、`ボルト` が対応する index に存在することを検証する。
-- `traceability.md` の `既存コード分析からの追跡` にある `分析` が `codebase-analysis.md`、`設計` が同じ行の Unit 配下 `design.md` を指すことを検証する。
-- Bolt 配下の `tasks.md` が存在する場合、各 Task が `作業`、`要求`、`ユースケース`、`依存`、`設計根拠`、`証拠` を持つことを検証する。
-- Inception phase では、Bolt 配下に `tasks.md` が存在しないことを検証する。
-- Construction 段階では、対象 Bolt の `tasks.md`、`state.json.construction.bolts[].taskGeneration`、Task Generation evidence、`Task Generation からの追跡` を検証する。
-- Construction 完了時は、対象 Bolt の `pr.md` が required artifacts に含まれ、PR 欄が GitHub Pull Request リンクであることを検証する。
-- Validator は Phase module と Stage module に分割され、`AmadeusValidator.ts` が Inception / Construction の詳細検証を所有していないことを検証する。
+- `.amadeus/intents.md` が IndexGenerate の導出内容と完全一致することを検証する。
+- `state.json.schemaVersion` が `2` の Intent では、scope、depth、status、phase、`stages` のキー集合と scope の実行対象の一致、ステージ状態、approval evidence、`phaseGates`、`bolts`、completed ステージの必須成果物を検証する。
+- Event Storming の成果物、level、`nextRecommendedSkill`（`amadeus` または `amadeus-domain-modeling`）を検証する。
+- Domain Map と Context Map の `adopted`、`retired`、根拠リンクを検証する。
+- Event Storming、Intent の phase ディレクトリの Grilling Decision Trail を検証する。
 - `evals.json` が JSON として解釈できる。
 - `git diff --check` が成功する。
 
-## 手動 eval 状態
+## 検証入口
 
-検証日: 2026-07-01
+コードレベルの検証は次で実行する。
 
-| ケース | 状態 | 確認内容 | 証拠 |
-|---|---|---|---|
-| `workspace-only-validation` | 完了 | Intent ディレクトリ名未指定時は全体成果物だけを検証する。 | `bun run skills/amadeus-validator/validator/AmadeusValidator.ts examples/01-discovery-completed` が `pass`。 |
-| `ideation-intent-validation` | 完了 | Ideation 段階では Inception 以降の欠落を不足にしない。 | `bun run skills/amadeus-validator/validator/AmadeusValidator.ts examples/02-ideation-completed 20260628-discovery-brief-creation` が `pass`。 |
-| `inception-state-validation` | 完了 | Inception 段階の `state.json` が状態契約を満たす。 | `bun run skills/amadeus-validator/validator/AmadeusValidator.ts examples/03-inception-completed 20260628-discovery-brief-creation` が `pass`。一時コピーで Construction の requiredBoltArtifacts を不足させると `fail`。 |
-| `runtime-only-dependency` | 完了 | Bun と TypeScript だけで検証する。 | `bun --version` が成功。 |
-| `unit-design-required` | 完了 | Unit のモジュールファイルとモジュールディレクトリ配下の `design.md` が存在し、必須見出しに本文がある。 | 一時コピーで Unit の `詳細` を `units/<unit-id>-<slug>/unit.md` へ変更すると `fail`。 |
-| `bounded-context-module-required` | 完了 | Bounded Context のモジュールファイルが存在し、目的、責務、外部境界、関連成果物を持つ。 | 一時コピーで Bounded Context のモジュールファイルを削除すると `fail`。 |
-| `bolt-design-forbidden` | 完了 | Bolt 配下に `design.md` を置かない。 | `dev-scripts/evals/amadeus-validator/check.ts` の一時 workspace 検査で確認する。 |
-| `codebase-analysis-state` | 完了 | `state.json.inception.codebaseAnalysis` の requirement、status、evidence、targetScope、freshness を検証する。 | required かつ passed の場合に `codebase-analysis.md` がないと `fail`。未承認の required は artifact 未作成でも `pass`。greenfield skipped は `pass`。 |
-| `codebase-analysis-headings` | 完了 | `codebase-analysis.md` は条件付き成果物である。 | `examples/03-inception-completed` では greenfield skipped のため不足にしない。 |
-| `codebase-analysis-traceability-columns` | 完了 | `既存コード分析からの追跡` が必須列を持つ。 | `examples/03-inception-completed` の空表が `pass`。 |
-| `codebase-analysis-traceability-links` | 完了 | `既存コード分析からの追跡` の `分析` と `設計` が対象成果物を指す。 | 一時コピーで `分析` または `設計` のリンクを別成果物に変更すると `fail`。 |
-| `design-traceability-links` | 完了 | `設計からの追跡` の `設計` が同じ行の Unit Design Brief を指す。 | 一時コピーで `設計` を別 Unit の `design.md` に変更すると `fail`。 |
-| `design-traceability-ids` | 完了 | `設計からの追跡` の ID が対応する index に存在する。 | 一時コピーで `要求` を `R999` に変更すると `fail`。 |
-| `construction-task-generation-ready` | 完了 | Task Generation ready 時点で `tasks.md`、Bolt 単位の Task Generation 状態、`Task Generation からの追跡` がある。 | `examples/04-construction-design-ready` が `pass`。一時コピーで Task Generation evidence、Task Generation 追跡を壊すと `fail`。 |
-| `validator-phase-stage-modules` | 完了 | Validator の Phase module と Stage module が存在し、`AmadeusValidator.ts` に Inception / Construction の詳細検証が残っていない。 | `dev-scripts/evals/amadeus-validator/check.ts` の構造検査が `pass`。 |
-| `construction-traceability` | 完了 | Construction 完了時は `Construction からの追跡` が証拠追跡行を持つ。 | 一時コピーで空表にすると `fail`。 |
-| `construction-pr-record-required` | 完了 | Construction 完了時は対象 Bolt の `pr.md` と `traceability.md` の GitHub Pull Request リンクが必要である。 | 一時コピーで `pr.md` を required artifacts から外す、または PR 欄を裸の `PR #999` にすると `fail`。 |
-| `construction-bolt-state-duplicates` | 完了 | `construction.bolts[]` は同じ Bolt ID を複数回持たない。 | 一時コピーで `B001` の状態を重複させると `fail`。 |
-| `construction-legacy-design-gate` | 完了 | Construction 完了時も旧 `construction.bolts[].designGate` を状態契約に残さない。 | 一時コピーで旧 `designGate.status` を `draft` として追加すると `fail`。 |
-| `task-contract-validation` | 完了 | Construction の Bolt 配下 `tasks.md` の Task が必須項目を持つ。 | 一時コピーで `T001` の `要求`、`ユースケース`、`依存` を壊すと `fail`。 |
-| `intent-directory-name-validation` | 完了 | Intent 識別子、詳細リンク、ディレクトリ名が `YYYYMMDD-<slug>` 形式で一致する。 | `examples/02-ideation-completed` 以降の snapshot が `pass`。 |
-| `discovery-layer-validation` | 完了 | Discovery 一覧、`Discovery のモジュールファイル`、`state.json` の対応と gate 条件を検証する。 | 一時コピーで `state.json.decision` と `Discovery のモジュールファイル` の `判定` を不一致にすると `fail`。 |
-| `discovery-directory-scan` | 完了 | Discovery ディレクトリ全体を走査し、`state.json` がない未登録ディレクトリも検出する。 | 一時コピーで未登録 Discovery ディレクトリに `brief.md` だけを置くと `fail`。 |
-| `event-storming-next-recommended-skill` | 完了 | `pre-intent` の `process-modeling` では `nextRecommendedSkill` を `amadeus-discovery` 単一にする。 | 一時コピーで `amadeus-ideation` に変更すると `fail`。 |
+```sh
+bun run dev-scripts/evals/amadeus-validator/check.ts
+```
+
+v2 互換ライフサイクル（schemaVersion 2）の happy シナリオと失敗シナリオは、この検証入口が一時 workspace を合成して確認する。
 
 ## 再実行コマンド
 
@@ -72,10 +35,6 @@
 bun -e 'JSON.parse(await Bun.file("skills/amadeus-validator/evals/evals.json").text()); console.log("evals.json: ok")'
 cmp -s skills/amadeus-validator/SKILL.md .agents/skills/amadeus-validator/SKILL.md && echo "SKILL.md: identical"
 cmp -s skills/amadeus-validator/validator/AmadeusValidator.ts .agents/skills/amadeus-validator/validator/AmadeusValidator.ts && echo "AmadeusValidator.ts: identical"
-bun run skills/amadeus-validator/validator/AmadeusValidator.ts examples/01-discovery-completed
-bun run skills/amadeus-validator/validator/AmadeusValidator.ts examples/02-ideation-completed 20260628-discovery-brief-creation
-bun run skills/amadeus-validator/validator/AmadeusValidator.ts examples/03-inception-completed 20260628-discovery-brief-creation
-bun run skills/amadeus-validator/validator/AmadeusValidator.ts examples/04-construction-design-ready 20260628-discovery-brief-creation
 bun run dev-scripts/evals/amadeus-validator/check.ts
 git diff --check
 ```

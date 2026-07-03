@@ -3,7 +3,7 @@ name: amadeus-history-review
 description: >-
   Amadeus の内部 skill。`.amadeus/` の過去成果物、Issue、PR、CI 結果を読み取り専用で分析し、
   再利用判断、未確認事項、繰り返し問題、後続候補を抽出する。成果物更新や Issue 作成は行わず、
-  必要に応じて `amadeus-learning-review` または `amadeus-discovery dry-run` へ渡す分析結果を返す。
+  必要に応じて `amadeus-learning-review` または `amadeus` の Intake へ渡す分析結果を返す。
 ---
 
 # amadeus-history-review
@@ -96,8 +96,8 @@ Domain Map と Context Map は候補を扱わず、承認済みの `adopted` と
 
 学習先分類が必要な場合は `amadeus-learning-review` へ渡す。
 
-Discovery の候補表示に使う場合は、`amadeus-discovery dry-run` の入力として渡す。
-ただし `amadeus-discovery` は過去分析そのものを所有しない。
+新しい作業テーマの判定に使う場合は、`amadeus` の Intake の入力として渡す。
+ただし `amadeus` は過去分析そのものを所有しない。
 
 人間判断が必要な場合は、呼び出し元 phase skill が `amadeus-grilling` へ handoff する。
 `amadeus-history-review` は質問を実行しない。
@@ -119,7 +119,7 @@ Discovery の候補表示に使う場合は、`amadeus-discovery dry-run` の入
 - PR 作成。
 - Domain Map と Context Map への自動昇格。
 - 学習先分類の最終判断。
-- `amadeus-discovery dry-run` の候補表示本体。
+- `amadeus` の Intake の判定本体。
 - `amadeus-grilling` の質問実行。
 
 ## 検証境界

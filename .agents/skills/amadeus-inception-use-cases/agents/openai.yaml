@@ -1,7 +1,0 @@
-# skill-forge-source-sha256: 05db5e5acd6cbb13279423bbcf2cc12b76fd4e95c9037502c7f54da0fa4d7ebe
-interface:
-  display_name: "Amadeus Inception Use Cases"
-  short_description: "Write Amadeus Inception use cases"
-  default_prompt: "Use $amadeus-inception-use-cases to write Amadeus Inception use cases."
-policy:
-  allow_implicit_invocation: false

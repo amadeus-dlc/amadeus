@@ -14,7 +14,7 @@
     {
       "id": 3,
       "prompt": "質問なしで最小の .amadeus steering だけ作って。scaffold-only で。Intent はまだいらない。",
-      "expected_output": "質問せず、空欄ではなく未確認を使って最小の steering layer 成果物を作る。Intent の中身は作らず、次に amadeus-ideation へ渡す判断を出す。"
+      "expected_output": "質問せず、空欄ではなく未確認を使って最小の steering layer 成果物を作る。Intent の中身は作らず、次に amadeus へ渡す判断を出す。"
     }
   ]
 }

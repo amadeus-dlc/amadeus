@@ -8,10 +8,6 @@
 
 - <scope>
 
-## Related Discovery
-
-- <related-discovery-or-none>
-
 ## Related Intent
 
 - <related-intent-or-none>
