@@ -125,6 +125,13 @@ If Accept as-is is selected, set the `ci-pipeline` checkbox to `[x]`, append
 `GATE_APPROVED` (noting Accept as-is) and `STAGE_COMPLETED`, and record the
 decision in `construction/decisions.md`.
 
+AI-DLC v2 declares the `required-sections`, `upstream-coverage`, `linter`,
+and `type-check` sensors for this stage. Amadeus DLC runs no sensor
+mechanism: the markdown sensors map to `amadeus-validator` structural
+validation and the phase's `traceability.md`, and the code sensors map to
+Build and Test (Stage 3.6) records and the Bolt PR's CI. See
+`docs/amadeus/aidlc-v2-sensor-learn-mapping.md`.
+
 ## Prohibitions
 
 - Do not run before all Bolts are complete.

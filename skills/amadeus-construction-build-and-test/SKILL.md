@@ -117,6 +117,13 @@ Set the `build-and-test` checkbox to `[x]` after all Bolts complete, and
 append `STAGE_COMPLETED` (with the last Bolt PR's URL in Details) to
 `audit/audit.md`.
 
+AI-DLC v2 declares the `required-sections`, `upstream-coverage`, and
+`type-check` sensors for this stage. Amadeus DLC runs no sensor mechanism:
+the markdown sensors map to `amadeus-validator` structural validation and
+the phase's `traceability.md`, and `type-check` maps to this stage's own
+build and test execution recorded in `build-test-results.md` and the Bolt
+PR's CI. See `docs/amadeus/aidlc-v2-sensor-learn-mapping.md`.
+
 ## Prohibitions
 
 - Do not run for a Bolt that includes a Unit with incomplete Code Generation.

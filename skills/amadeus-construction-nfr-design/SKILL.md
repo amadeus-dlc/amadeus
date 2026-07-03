@@ -145,6 +145,13 @@ reviewer sub-agent: independent review maps to this gate's human approval
 loop bounds the review iterations, and `amadeus-validator` covers
 structural validation. See `docs/amadeus/aidlc-v2-reviewer-mapping.md`.
 
+AI-DLC v2 declares the `required-sections`, `upstream-coverage`, `linter`,
+and `type-check` sensors for this stage. Amadeus DLC runs no sensor
+mechanism: the markdown sensors map to `amadeus-validator` structural
+validation and the phase's `traceability.md`, and the code sensors map to
+Build and Test (Stage 3.6) records and the Bolt PR's CI. See
+`docs/amadeus/aidlc-v2-sensor-learn-mapping.md`.
+
 ## Prohibitions
 
 - Do not run without the NFR Requirements artifacts.
