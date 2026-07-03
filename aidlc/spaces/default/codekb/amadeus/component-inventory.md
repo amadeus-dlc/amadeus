@@ -2,18 +2,25 @@
 
 ## 一覧
 
-| コンポーネント | 場所 | 責務 | v2 完全準拠での扱い |
-|---|---|---|---|
-| 単一入口 `amadeus` | `skills/amadeus/` | Intake、Birth、ルーティング、phase 境界、Bolt 実行 | Birth を Initialization 0.1〜0.3 へ置き換え。aidlc-state.md 読み書きへ変更 |
-| Ideation ステージ skill × 7 | `skills/amadeus-ideation-*/` | Stage 1.1〜1.7 の成果物作成 | `intent-statement.md` 採用（1.1）、`<stage>-questions.md` への改名、`memory.md` 追加 |
-| Inception ステージ skill × 8 | `skills/amadeus-inception-*/` | Stage 2.1〜2.8 の成果物作成 | `unit-of-work` 系ほかの改名、`memory.md` 追加 |
-| Construction ステージ skill × 7 | `skills/amadeus-construction-*/` | Stage 3.1〜3.7 の成果物作成 | `code-generation-plan.md` ほかの改名、`memory.md` 追加 |
-| 補助入口 × 6 | steering、event-storming、grilling、domain-modeling、domain-grilling、validator | workspace 基盤、補助分析、検証 | steering は `memory/` 構造への移行対象 |
-| 内部 skill × 3 | decision-review、history-review、learning-review | 判断と学習の支援 | 参照パスの追従のみ |
-| validator 本体 | `skills/amadeus-validator/validator/` | workspace と Intent の構造検証 | `aidlc/spaces/` 構造、aidlc-state.md、intents.json、scaffold の検証へ改修 |
-| IndexGenerate | `skills/amadeus-validator/scripts/` | `intents.md` の生成と整合検査 | intents.json との併存へ対応 |
-| contracts | `amadeus-contracts/`、`dev-scripts/amadeus-contracts.ts` | skill contract の catalog と生成 | 参照パスの追従のみ |
-| examples パイプライン | `dev-scripts/generate-amadeus-examples.ts`、`validate-amadeus-examples.ts`、`examples-contract.ts` | snapshot の生成、検証、不変条件 | 新構造・新ファイル名での再生成と追従 |
-| e2e / eval 群 | `dev-scripts/evals/` | mock e2e（steering、event-storming）、テンプレート契約、validator 検証 | fixture のパスと期待値の追従 |
-| lint | `lints/` | 複雑度と公開型の規律 | 変更なし |
-| 契約文書 | `docs/amadeus/lifecycle/`、`docs/amadeus/steering.md` | ライフサイクルと steering の契約 | v2 準拠内容へ全面改訂 |
+| コンポーネント | 場所 | 責務 |
+|---|---|---|
+| 単一入口 `amadeus` | `skills/amadeus/`、`.agents/skills/amadeus/` | Intake、Initialization、stage routing、phase 境界、Bolt 実行。 |
+| Ideation stage skill | `skills/amadeus-ideation-*/`、`.agents/skills/amadeus-ideation-*/` | Ideation の stage 成果物を作る。 |
+| Inception stage skill | `skills/amadeus-inception-*/`、`.agents/skills/amadeus-inception-*/` | Inception の stage 成果物を作る。 |
+| Construction stage skill | `skills/amadeus-construction-*/`、`.agents/skills/amadeus-construction-*/` | Construction の stage 成果物と実装支援を扱う。 |
+| steering skill | `skills/amadeus-steering/`、`.agents/skills/amadeus-steering/` | Space の memory、knowledge、intents 索引を整える。 |
+| event-storming skill | `skills/amadeus-event-storming/`、`.agents/skills/amadeus-event-storming/` | Event Storming 成果物を扱う。 |
+| domain 系 skill | `skills/amadeus-domain-*`、`.agents/skills/amadeus-domain-*` | Glossary、Domain Map、Context Map、Intent 固有のモデル論点を扱う。 |
+| grilling skill | `skills/amadeus-grilling/`、`.agents/skills/amadeus-grilling/` | 一問ずつの確認プロトコルを扱う。 |
+| validator | `skills/amadeus-validator/`、`.agents/skills/amadeus-validator/` | 配布先で実行できる構造検証を提供する。 |
+| skill contract | `amadeus-contracts/`、`dev-scripts/amadeus-contracts.ts` | skill の境界、条件、委譲関係の生成元。 |
+| promote-skill | `dev-scripts/promote-skill.ts` | source skill から昇格先 skill への反映を行う。 |
+| examples pipeline | `dev-scripts/generate-amadeus-examples.ts`、`dev-scripts/validate-amadeus-examples.ts`、`dev-scripts/examples-contract.ts` | examples の生成、検証、不変条件を扱う。 |
+| eval 群 | `dev-scripts/evals/` | validator、templates、contracts、e2e、migration の検査を扱う。 |
+| lints | `lints/` | public type file と TypeScript complexity を検査する。 |
+
+## Issue #399 に関係するコンポーネント
+
+Issue #399 の Inception では、`skills/amadeus*/` と `.agents/skills/amadeus*/` の英語化計画を扱う。
+
+完了証拠は GitHub Issue、PR、CI、レビューボット、merge 状態に依存する。

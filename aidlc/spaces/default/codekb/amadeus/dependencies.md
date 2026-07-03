@@ -2,18 +2,29 @@
 
 ## 外部依存
 
-- Bun（実行環境）と Node.js / npm（scripts 入口）。
-- codex / claude CLI（real provider の e2e と examples 生成だけが使う。mock CI は不要）。
-- GitHub（Issue / PR 駆動の開発、CI、Bugbot レビュー）。
-- 一次情報として awslabs/aidlc-workflows の v2 ブランチ（契約の互換元。実行時依存ではない）。
+| 依存 | 用途 |
+|---|---|
+| Bun | TypeScript スクリプトの実行。 |
+| Node.js と npm | `npm run` の検証入口。 |
+| GitHub | Issue、Pull Request、CI、レビューボット、merge 証拠。 |
+| codex CLI と claude CLI | real provider の examples 生成と e2e。mock CI では不要。 |
 
 ## 内部依存
 
-この Intent に効く内部依存の向きは次である。
+| 依存関係 | 意味 |
+|---|---|
+| `CONTEXT.md` → 文書と成果物 | Amadeus DLC の語彙を定義する。 |
+| `skills/amadeus/references/stage-catalog.md` → `aidlc-state.md` | stage、scope、skill の対応を決める。 |
+| `skills/amadeus*/` → `.agents/skills/amadeus*/` | source skill から昇格先 skill へ反映する。 |
+| `skills/amadeus-validator/scripts/IndexGenerate.ts` → `intents.md` | Intent registry から人間向け索引を生成する。 |
+| `skills/amadeus-validator/validator/` → `aidlc/` | Space と Intent の構造を検証する。 |
+| `dev-scripts/examples-contract.ts` → generator と validator wrapper | examples snapshot の不変条件を共有する。 |
+| `dev-scripts/evals/**` → CI | テンプレート、validator、契約、移行、e2e を検査する。 |
 
-- `docs/amadeus/lifecycle/**`（契約） ← `skills/amadeus/references/stage-catalog.md` ← `lifecycle-v2.ts` の stageCatalog 定数。3 者は同じ対応表を持つ契約であり、片方だけ変えると validator か eval が fail する。
-- `skills/**` → `.agents/skills/**`（promote-skill.ts 経由のみ） → `.claude/skills/**`（symlink）。
-- `dev-scripts/examples-contract.ts` ← generator と wrapper の両方。成果物名の変更はここを起点に追従する。
-- `dev-scripts/evals/amadeus-templates/check.ts` ← 各 skill の templates のファイル名と見出し。改名時に期待値の更新が必須。
-- `examples/**` ← real provider 生成物。契約変更後は再生成が必須（`skill-provenance.json` の md5 照合が CI で効く）。
-- `.amadeus/**`（自己開発 workspace） ← `amadeus` 入口、validator、IndexGenerate。workspace 構造の移行はこの 3 つと同時に進める必要がある。
+## Issue #399 の依存
+
+Issue #399 の計画は、#395、#400、#401、#402 の順序に依存する。
+
+#401 は #391、#392、#393、#394 の扱いを完了証拠として持つ。
+
+子 Issue の完了は、対応 PR の merge または明示的な Issue close で観測する。

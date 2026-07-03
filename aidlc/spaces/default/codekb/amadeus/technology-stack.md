@@ -1,14 +1,29 @@
 # 技術スタック：amadeus
 
-## 言語とランタイム
+## 言語と実行環境
 
-- TypeScript（strict）。実行は Bun に任せ、`tsc --noEmit` は型検査だけに使う。
-- スクリプトと validator はすべて Bun 前提の `.ts` である（dev-scripts 規則）。
-- 成果物と skill 本文は日本語 Markdown である。
+- TypeScript を使う。
+- Bun で `.ts` スクリプトを実行する。
+- npm scripts は検証入口として使う。
+- Markdown を Amadeus DLC 成果物と skill 本文の主要形式にする。
 
-## 主要ライブラリ
+## 主要な開発依存
 
-- 実行時依存はない。devDependencies は `typescript` と `@types/bun` だけである。
-- Node.js 標準 API（`node:fs`、`node:path`、`node:crypto`）と Bun API（`Bun.spawnSync` ほか）だけを使い、外部パッケージを増やさない方針である。
-- real provider の e2e と examples 生成は、`dev-scripts/run-{codex,claude}-{corporate,personal}.sh` の wrapper 経由で codex / claude CLI を起動する（runner 名で CLI 種別を判別）。
-- CI は GitHub Actions（`.github/workflows/ci.yaml`）で `npm run test:all` を実行する。
+- `typescript`
+- `@types/bun`
+
+外部パッケージは最小限に保つ方針である。
+
+validator と dev-scripts は、Node.js 標準 API と Bun API を中心に構成する。
+
+## 検証
+
+CI 相当の入口は `npm run test:all` である。
+
+この入口は typecheck、lint、contracts、Claude wiring、integration eval、mock e2e、examples 検証、diff check を実行する。
+
+## GitHub 連携
+
+GitHub Issues と Pull Requests を Amadeus 本体自己開発の外部状態として扱う。
+
+PR 作成後は CI とレビューボットの結果を確認し、merge 操作は人間が行う。

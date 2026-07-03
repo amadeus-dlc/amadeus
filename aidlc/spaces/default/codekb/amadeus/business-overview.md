@@ -2,18 +2,23 @@
 
 ## 概要
 
-Amadeus は、AI と人間が協調してソフトウェア開発を進めるライフサイクル契約「Amadeus DLC」を運用するプロジェクトである。
-AI-DLC v2 と意味論互換の 3 phase 22 ステージ（Ideation、Inception、Construction）を、agent skill、テンプレート、validator、日本語 Markdown 成果物として提供する。
+Amadeus は、Amadeus DLC を実行、検証、配布するための実装プロジェクトである。
 
-利用形態は 2 つある。
+Amadeus DLC は、AI と人間が協調してソフトウェア開発を進める lifecycle 契約であり、Initialization、Ideation、Inception、Construction の 4 phase と成果物、gate、traceability、validator を扱う。
 
-- 配布先 workspace での利用。単一入口 `amadeus` skill が Intake とステージルーティングを行い、成果物を `.amadeus/` に置く。
-- 自己開発。Amadeus 本体リポジトリの root `.amadeus/` を steering layer とし、Amadeus DLC で Amadeus 自身を開発する。
+Amadeus は、この契約を `skills/amadeus*`、`.agents/skills/amadeus*`、validator、template、docs、`aidlc/` 成果物として運用する。
 
 ## 主要な業務フロー
 
-1. **Intake と Birth**: 入力テーマを `amadeus` skill が判定する（継続、既存 Intent への合流、または人間承認付きの Birth 提案）。Birth は Intent のモジュールファイルと `state.json` を作り、`intents.md` 索引を再生成する。
-2. **ステージルーティング**: `state.json`（schemaVersion 2）の `stages` と scope の実行対象から次ステージを解決し、対応する内部 skill（Ideation 7、Inception 8、Construction 7）へ委譲する。
-3. **phase 境界**: phase の全ステージ完了後、phase PR の merge を確認して `phaseGates.<phase>` に approval evidence を記録し、phase を進める。
-4. **Construction の Bolt 実行**: `bolt-plan.md` の順に Bolt を実行し、walking skeleton は必ず人間が承認する。
-5. **検証**: `amadeus-validator` が workspace と Intent の構造を検証する。examples の生成と検査、e2e、eval が CI（`npm run test:all`）で回る。
+1. **Space steering**: `amadeus-steering` が `aidlc/spaces/<space>/` の memory、knowledge、intents 索引を整える。
+2. **Intake と Birth**: 単一入口 `amadeus` が継続、合流、新規 Intent の Birth 提案を判定し、人間承認後に Initialization 0.1〜0.3 を実行する。
+3. **ステージルーティング**: `aidlc-state.md` の Lifecycle Phase、Stage Progress、Current Status から次ステージを解決し、対応する内部 skill へ委譲する。
+4. **phase 境界**: phase の全ステージ完了後、phase PR の merge を確認し、`PHASE_VERIFIED` を audit に記録して次 phase へ進める。
+5. **Construction の Bolt 実行**: Delivery Planning の Bolt 計画、または暗黙 Bolt を使い、Build and Test と PR gate を通じて実装を進める。
+6. **検証**: `amadeus-validator` が Space、Intent、成果物、状態、audit、traceability の構造を検証する。
+
+## 自己開発での位置づけ
+
+このリポジトリでは、Amadeus 本体の開発も Amadeus DLC の Intent として `aidlc/spaces/default/` に記録する。
+
+GitHub Issue を起点にし、Issue、Intent、PR、CI、レビューボット、merge 証拠を traceability と audit で追跡する。
