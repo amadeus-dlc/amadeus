@@ -24,7 +24,7 @@ engine owns all routing; the conductor persona arrives on the first directive's
 4. Repeat from step 1 until `directive.kind == done`.
 
 When the engine emits an `ask` directive during this loop, follow the grilling
-bridge protocol in `skills/amadeus-grilling/references/engine-bridge.md` (one
+bridge protocol in `../amadeus-grilling/references/engine-bridge.md` (path relative to this skill's directory) (one
 question at a time, recommended answer attached, answers written back in
 `[Answer]:` format).
 

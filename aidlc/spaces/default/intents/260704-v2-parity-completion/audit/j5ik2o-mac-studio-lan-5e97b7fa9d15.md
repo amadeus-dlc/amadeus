@@ -1251,3 +1251,69 @@
 **Event**: HUMAN_TURN
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-03T20:40:19Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a267456e9fbaaeeb0
+**Message**: PR #427 をマージした。examples の再生成も実行して
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-03T20:40:43Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-03T20:40:54Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a802da06328695394
+**Message**: CI が green なら PR #427 を merge して examples 再生成も進めて
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-03T20:41:30Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-03T20:41:43Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a9b7aa0e4daedebab
+**Message**: PR #427 をマージした。examples 再生成も実行して
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-03T21:45:00Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-03T21:46:03Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a14962c05525adcb6
+**Message**: マージした。examples再生成もやっていいよ
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-03T21:58:02Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-03T22:03:02Z
+**Event**: HUMAN_TURN
+
+---

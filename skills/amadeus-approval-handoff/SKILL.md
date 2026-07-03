@@ -31,7 +31,7 @@ that flag without this skill.
    the engine delivers it.
 
    When this stage asks the user questions, follow the grilling bridge protocol
-   in `skills/amadeus-grilling/references/engine-bridge.md` (one question at a
+   in `../amadeus-grilling/references/engine-bridge.md` (path relative to this skill's directory) (one question at a
    time, recommended answer attached, answers written back in `[Answer]:`
    format).
 
