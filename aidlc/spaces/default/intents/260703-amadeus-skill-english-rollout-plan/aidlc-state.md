@@ -25,7 +25,7 @@
 ## Execution Plan Summary
 - **Total Stages**: 25
 - **Completed**: 19
-- **In Progress**: B006-B009 remaining SKILL.md Englishization delivered in recovery PR #417; completion evidence pending merge
+- **In Progress**: B005 #391-#394 AI-DLC v2 difference response and B010 final verification
 
 ## Runtime State
 - **Revision Count**: 0
@@ -115,8 +115,8 @@ Per unit: U006-core-entrypoints-verification-englishization
 - [S] nfr-requirements — SKIP: Core entrypoints and verification 英語化は非機能要求の追加、変更、評価を伴わない。
 - [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
 - [S] infrastructure-design — SKIP: Core entrypoints and verification 英語化はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
-- [x] code-generation — EXECUTE: 3 skill の英語化と昇格反映を完了。完了確定は PR #417 merge 後に記録する。
-- [-] build-and-test — EXECUTE
+- [x] code-generation — EXECUTE: 3 skill の英語化と昇格反映。PR #417 merge により完了確定。
+- [x] build-and-test — EXECUTE: PR #417 merge により完了確定。
 - [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、英語化追跡に追加の CI 新設または大きな変更は不要。
 
 Per unit: U007-construction-stage-skills-englishization
@@ -124,8 +124,8 @@ Per unit: U007-construction-stage-skills-englishization
 - [S] nfr-requirements — SKIP: Construction stage skills 英語化は非機能要求の追加、変更、評価を伴わない。
 - [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
 - [S] infrastructure-design — SKIP: Construction stage skills 英語化はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
-- [x] code-generation — EXECUTE: 6 skill の英語化と昇格反映を完了。完了確定は PR #417 merge 後に記録する。
-- [-] build-and-test — EXECUTE
+- [x] code-generation — EXECUTE: 6 skill の英語化と昇格反映。PR #417 merge により完了確定。
+- [x] build-and-test — EXECUTE: PR #417 merge により完了確定。
 - [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、英語化追跡に追加の CI 新設または大きな変更は不要。
 
 Per unit: U008-inception-stage-skills-englishization
@@ -133,8 +133,8 @@ Per unit: U008-inception-stage-skills-englishization
 - [S] nfr-requirements — SKIP: Inception stage skills 英語化は非機能要求の追加、変更、評価を伴わない。
 - [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
 - [S] infrastructure-design — SKIP: Inception stage skills 英語化はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
-- [x] code-generation — EXECUTE: 8 skill の英語化と昇格反映を完了。完了確定は PR #417 merge 後に記録する。
-- [-] build-and-test — EXECUTE
+- [x] code-generation — EXECUTE: 8 skill の英語化と昇格反映。PR #417 merge により完了確定。
+- [x] build-and-test — EXECUTE: PR #417 merge により完了確定。
 - [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、英語化追跡に追加の CI 新設または大きな変更は不要。
 
 Per unit: U009-ideation-supporting-skills-englishization
@@ -142,8 +142,8 @@ Per unit: U009-ideation-supporting-skills-englishization
 - [S] nfr-requirements — SKIP: Ideation and supporting skills 英語化は非機能要求の追加、変更、評価を伴わない。
 - [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
 - [S] infrastructure-design — SKIP: Ideation and supporting skills 英語化はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
-- [x] code-generation — EXECUTE: 14 skill の英語化と昇格反映を完了。完了確定は PR #417 merge 後に記録する。
-- [-] build-and-test — EXECUTE
+- [x] code-generation — EXECUTE: 14 skill の英語化と昇格反映。PR #417 merge により完了確定。
+- [x] build-and-test — EXECUTE: PR #417 merge により完了確定。
 - [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、英語化追跡に追加の CI 新設または大きな変更は不要。
 
 Per unit: U010-issue-399-final-verification
@@ -166,13 +166,13 @@ Per unit: U010-issue-399-final-verification
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: build-and-test
-- **Next Stage**: ci-pipeline
+- **Current Stage**: code-generation
+- **Next Stage**: build-and-test
 - **Status**: Running
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-07-03T15:07:20Z
+- **Last Updated**: 2026-07-03T15:15:13Z
 
 ## Session Resume Point
-- **Last Completed Stage**: code-generation
-- **Next Action**: Await recovery PR #417 merge to finalize B006-B009 (STAGE_COMPLETED, BOLT_COMPLETED), then continue B005 #391-#394 AI-DLC v2 difference response and B010 final verification
-- **Pending Artifacts**: PR #417 merge evidence for B006-B009, #391-#394 completion or explicit out-of-scope decisions (B005), real-provider example regeneration to clear provenance staleReason, final #399 traceability (B010)
+- **Last Completed Stage**: build-and-test
+- **Next Action**: Continue B005 #391-#394 AI-DLC v2 difference response, then B010 final verification and Issue #399 close
+- **Pending Artifacts**: #391-#394 completion or explicit out-of-scope decisions (B005), real-provider example regeneration to clear provenance staleReason, final #399 traceability (B010)
