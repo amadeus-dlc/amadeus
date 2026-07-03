@@ -1008,3 +1008,109 @@
 **Details**: `npm run test:all` と Amadeus Validator が pass した。autonomous 実行のため会話内 gate は提示せず、approval evidence は B003 PR merge 後に記録する。
 
 ---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T13:21:12Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Unit**: U003-issue-401-upstream-difference-order
+**Details**: B003 #401 AI-DLC v2 差分対応順序。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/411。Merge commit: eb18826209fe4e20e5deee0116310f30e379ba7c。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T13:21:12Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Bolt**: B003
+**Details**: B003 #401 AI-DLC v2 差分対応順序。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/411。Merge commit: eb18826209fe4e20e5deee0116310f30e379ba7c。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T13:21:12Z
+**Event**: BOLT_COMPLETED
+**Bolt**: B003
+**Details**: autonomous の Bolt PR が人間の merge で承認された。PR: https://github.com/amadeus-dlc/amadeus/pull/411。Merge commit: eb18826209fe4e20e5deee0116310f30e379ba7c。Issue #401 は 2026-07-03T13:21:13Z に close 済み。
+
+---
+
+## BOLT_STARTED
+**Timestamp**: 2026-07-03T13:22:48Z
+**Event**: BOLT_STARTED
+**Bolt**: B004
+**Details**: #402 残り展開単位 Bolt を開始した。対象 Unit は U004-issue-402-remaining-skill-rollout-units。残り Amadeus skill の英語化単位、優先順位、検証コマンド、#391 から #394 との衝突回避を #402 の完了証拠として追跡する。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T13:22:48Z
+**Event**: STAGE_SKIPPED
+**Stage**: functional-design
+**Unit**: U004-issue-402-remaining-skill-rollout-units
+**Details**: #402 は残り Amadeus skill の英語化単位、優先順位、検証コマンド、衝突回避を整理する計画文書であり、新しいデータモデル、複雑な業務ロジック、業務ルール設計を追加しないため skip した。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T13:22:48Z
+**Event**: STAGE_SKIPPED
+**Stage**: nfr-requirements
+**Unit**: U004-issue-402-remaining-skill-rollout-units
+**Details**: #402 は非機能要求の追加、変更、評価を伴わないため skip した。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T13:22:48Z
+**Event**: STAGE_SKIPPED
+**Stage**: nfr-design
+**Unit**: U004-issue-402-remaining-skill-rollout-units
+**Details**: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T13:22:48Z
+**Event**: STAGE_SKIPPED
+**Stage**: infrastructure-design
+**Unit**: U004-issue-402-remaining-skill-rollout-units
+**Details**: #402 はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わないため skip した。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T13:22:48Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Unit**: U004-issue-402-remaining-skill-rollout-units
+**Details**: U004 #402 残り展開単位の Stage 3.5 を開始した。Construction Autonomy Mode が autonomous のため、会話内 gate は提示しない。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T13:25:10Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Unit**: U004-issue-402-remaining-skill-rollout-units
+**Details**: autonomous 実行のため会話内 gate は提示しない。`docs/amadeus/skill-englishization-rollout-plan.md`、`docs/amadeus/skill-language-policy.md`、code-generation-plan.md、code-summary.md、memory.md を確認対象とし、approval evidence は B004 PR merge 後に記録する。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T13:25:10Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Bolt**: B004
+**Details**: B004 #402 残り展開単位の Stage 3.6 を開始した。文書リンク、全体テスト、Amadeus Validator の結果を記録する。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T13:25:59Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+**Bolt**: B004
+**Details**: `npm run test:all` と Amadeus Validator が pass した。autonomous 実行のため会話内 gate は提示せず、approval evidence は B004 PR merge 後に記録する。
+
+---

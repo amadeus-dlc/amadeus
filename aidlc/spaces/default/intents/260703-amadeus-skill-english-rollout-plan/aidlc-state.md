@@ -8,7 +8,7 @@
 - **State Version**: 7
 - **Active Agent**: amadeus
 - **Worktree Path**: 
-- **Bolt Refs**: B001, B002, B003
+- **Bolt Refs**: B001, B002, B003, B004
 - **Practices Affirmed Timestamp**: 
 
 ## Scope Configuration
@@ -25,7 +25,7 @@
 ## Execution Plan Summary
 - **Total Stages**: 25
 - **Completed**: 19
-- **In Progress**: B003 / build-and-test
+- **In Progress**: B004 / build-and-test
 
 ## Runtime State
 - **Revision Count**: 0
@@ -88,8 +88,17 @@ Per unit: U003-issue-401-upstream-difference-order
 - [S] nfr-requirements — SKIP: #401 は非機能要求の追加、変更、評価を伴わない。
 - [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
 - [S] infrastructure-design — SKIP: #401 はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
-- [?] code-generation — EXECUTE: autonomous のため会話内 gate は提示せず、B003 PR merge を approval evidence として確定する。
-- [?] build-and-test — EXECUTE: 検証は pass。B003 PR merge を approval evidence として確定する。
+- [x] code-generation — EXECUTE: PR #411 merge により完了確定。
+- [x] build-and-test — EXECUTE: PR #411 merge により完了確定。
+- [ ] ci-pipeline — EXECUTE
+
+Per unit: U004-issue-402-remaining-skill-rollout-units
+- [S] functional-design — SKIP: #402 は残り Amadeus skill の英語化単位、優先順位、検証コマンド、衝突回避を整理する計画文書であり、新しいデータモデル、複雑な業務ロジック、業務ルール設計を追加しない。
+- [S] nfr-requirements — SKIP: #402 は非機能要求の追加、変更、評価を伴わない。
+- [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+- [S] infrastructure-design — SKIP: #402 はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
+- [?] code-generation — EXECUTE: autonomous のため会話内 gate は提示せず、B004 PR merge を approval evidence として確定する。
+- [?] build-and-test — EXECUTE: 検証は pass。B004 PR merge を approval evidence として確定する。
 - [ ] ci-pipeline — EXECUTE
 
 ### OPERATION PHASE
@@ -107,9 +116,9 @@ Per unit: U003-issue-401-upstream-difference-order
 - **Next Stage**: ci-pipeline
 - **Status**: Running
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-07-03T13:08:18Z
+- **Last Updated**: 2026-07-03T13:25:59Z
 
 ## Session Resume Point
 - **Last Completed Stage**: build-and-test
-- **Next Action**: Create B003 (#401 AI-DLC v2 差分対応順序) Bolt PR
-- **Pending Artifacts**: B003 code-generation と build-and-test は PR merge により approval evidence を確定する。ci-pipeline は B001、B002、B003 で未完了。
+- **Next Action**: Create B004 (#402 残り展開単位) Bolt PR
+- **Pending Artifacts**: B004 code-generation と build-and-test は PR merge により approval evidence を確定する。ci-pipeline は B001、B002、B003、B004 で未完了。

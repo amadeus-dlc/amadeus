@@ -98,3 +98,4 @@ Issue #395 の完了証拠は、対応 PR の merge または明示的な Issue 
 ## 関連文書
 
 - [AI-DLC v2 Difference Response Plan](aidlc-v2-difference-response-plan.md)
+- [Skill Englishization Rollout Plan](skill-englishization-rollout-plan.md)
