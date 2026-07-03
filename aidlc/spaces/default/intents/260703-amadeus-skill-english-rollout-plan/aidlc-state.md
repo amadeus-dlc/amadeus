@@ -101,6 +101,6 @@ Per unit: U002-issue-400-small-foundation-pr
 - **Last Updated**: 2026-07-03T12:56:50Z
 
 ## Session Resume Point
-- **Last Completed Stage**: code-generation
+- **Last Completed Stage**: build-and-test
 - **Next Action**: Create B002 (#400 小さい土台 PR) Bolt PR
 - **Pending Artifacts**: B002 code-generation と build-and-test は PR merge により approval evidence を確定する。ci-pipeline は B001 と B002 で未完了。
