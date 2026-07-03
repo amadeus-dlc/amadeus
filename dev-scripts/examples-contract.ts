@@ -1,12 +1,13 @@
 // examples snapshot の共有契約。
-// 各 snapshot の段階不変条件（state、Unit / Bolt 状態、成果物の存在と不在）をここで一元定義し、
+// 各 snapshot の段階不変条件（aidlc-state.md のフィールドと checkbox、成果物の存在と不在）をここで一元定義し、
 // generator（生成直後の検査）と validate-amadeus-examples（コミット済みツリーの --invariants 検査）の
 // 両方が同じ定義を使う。二重定義による鏡映漏れを構造的に防ぐ。
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { checkboxStateName, parseAidlcState } from "../.agents/skills/amadeus-validator/validator/aidlc-state-contract";
 
-export const exampleIntentId = "20260703-minimum-purchase-flow";
+export const exampleIntentId = "260703-minimum-purchase-flow";
 
 export const exampleSnapshots = [
   "examples/01-ideation-completed",
@@ -15,18 +16,19 @@ export const exampleSnapshots = [
   "examples/04-construction-implementation-planned",
 ];
 
-// state は state.json の dotted path と期待値の対。
-// unitStates は対象 stage の units 配下すべてが期待状態であること。
-// allBoltStates は bolts 配下すべてが期待状態であること。
-// boltUnits は Bolt に束ねた各 Unit が対象 stage に期待状態で存在し、Unit ごとの成果物条件を満たすこと
-// （files / absentFiles の `<unit>` は Unit ID に置換する）。
-// files / absentFiles は Intent ディレクトリからの相対パターン（1 セグメントだけ `*` を許可）。
+// stateFields は aidlc-state.md のフィールド行（**Key**: value）の期待値。
+// nonEmptyFields は空でないことだけを求めるフィールド。
+// phaseProgress は Phase Progress の期待値。
+// stageMarks は unit を持たないステージ行の checkbox 状態名（Pending / Active / AwaitingApproval / Revising / Completed / Skipped）。
+// unitStageMarks は Per unit ブロックの全 unit が期待状態であること。files / absentFiles の `<unit>` は unit 識別子に置換する。
+// files / absentFiles は record ディレクトリからの相対パターン（1 セグメントだけ `*` を許可）。
 export type SnapshotInvariant = {
   snapshot: string;
-  state: Record<string, string>;
-  unitStates?: Array<{ stage: string; state: string }>;
-  allBoltStates?: string;
-  boltUnits?: Array<{ stage: string; state: string; files?: string[]; absentFiles?: string[] }>;
+  stateFields: Record<string, string>;
+  nonEmptyFields?: string[];
+  phaseProgress?: Record<string, string>;
+  stageMarks?: Record<string, string>;
+  unitStageMarks?: Array<{ stage: string; state: string; files?: string[]; absentFiles?: string[] }>;
   files?: string[];
   absentFiles?: string[];
 };
@@ -40,18 +42,19 @@ const functionalDesignUnitFiles = [
 export const snapshotInvariants: SnapshotInvariant[] = [
   {
     snapshot: "examples/01-ideation-completed",
-    state: {
-      schemaVersion: "2",
-      intentId: exampleIntentId,
-      scope: "feature",
-      status: "in_progress",
-      phase: "inception",
-      "phaseGates.ideation.via": "pr",
-      "stages.intent-capture.state": "completed",
-      "stages.scope-definition.state": "completed",
-      "stages.approval-handoff.state": "completed",
+    stateFields: {
+      Scope: "feature",
+      Status: "Running",
+      "Lifecycle Phase": "INCEPTION",
+    },
+    phaseProgress: { Ideation: "Verified" },
+    stageMarks: {
+      "intent-capture": "Completed",
+      "scope-definition": "Completed",
+      "approval-handoff": "Completed",
     },
     files: [
+      "ideation/intent-capture/intent-statement.md",
       "ideation/scope-definition/scope-document.md",
       "ideation/scope-definition/intent-backlog.md",
       "ideation/approval-handoff/initiative-brief.md",
@@ -61,69 +64,59 @@ export const snapshotInvariants: SnapshotInvariant[] = [
   },
   {
     snapshot: "examples/02-inception-completed",
-    state: {
-      schemaVersion: "2",
-      intentId: exampleIntentId,
-      scope: "feature",
-      status: "in_progress",
-      phase: "construction",
-      "phaseGates.ideation.via": "pr",
-      "phaseGates.inception.via": "pr",
-      "stages.requirements-analysis.state": "completed",
-      "stages.units-generation.state": "completed",
-      "stages.delivery-planning.state": "completed",
+    stateFields: {
+      Scope: "feature",
+      Status: "Running",
+      "Lifecycle Phase": "CONSTRUCTION",
+    },
+    phaseProgress: { Ideation: "Verified", Inception: "Verified" },
+    stageMarks: {
+      "requirements-analysis": "Completed",
+      "units-generation": "Completed",
+      "delivery-planning": "Completed",
     },
     files: [
       "inception/requirements-analysis/requirements.md",
-      "inception/units-generation/units.md",
-      "inception/units-generation/unit-dependencies.md",
+      "inception/units-generation/unit-of-work.md",
+      "inception/units-generation/unit-of-work-dependency.md",
       "inception/delivery-planning/bolt-plan.md",
     ],
   },
   {
     snapshot: "examples/03-construction-design-ready",
-    state: {
-      schemaVersion: "2",
-      intentId: exampleIntentId,
-      scope: "feature",
-      status: "in_progress",
-      phase: "construction",
-      "phaseGates.ideation.via": "pr",
-      "phaseGates.inception.via": "pr",
-      "stages.code-generation.state": "pending",
+    stateFields: {
+      Scope: "feature",
+      Status: "Running",
+      "Lifecycle Phase": "CONSTRUCTION",
     },
-    unitStates: [{ stage: "functional-design", state: "completed" }],
-    allBoltStates: "active",
-    boltUnits: [{ stage: "functional-design", state: "completed", files: functionalDesignUnitFiles }],
-    absentFiles: ["construction/*/code-generation/plan.md", "construction/*/code-generation/summary.md"],
+    phaseProgress: { Ideation: "Verified", Inception: "Verified", Construction: "Active" },
+    nonEmptyFields: ["Bolt Refs"],
+    unitStageMarks: [
+      { stage: "functional-design", state: "Completed", files: functionalDesignUnitFiles },
+      { stage: "code-generation", state: "Pending" },
+    ],
+    absentFiles: ["construction/*/code-generation/code-generation-plan.md", "construction/*/code-generation/code-summary.md"],
   },
   {
     // 04 は 03 の累積であり、functional-design の不変条件も維持されることを再検査する。
     snapshot: "examples/04-construction-implementation-planned",
-    state: {
-      schemaVersion: "2",
-      intentId: exampleIntentId,
-      scope: "feature",
-      status: "in_progress",
-      phase: "construction",
-      "phaseGates.ideation.via": "pr",
-      "phaseGates.inception.via": "pr",
+    stateFields: {
+      Scope: "feature",
+      Status: "Running",
+      "Lifecycle Phase": "CONSTRUCTION",
     },
-    unitStates: [
-      { stage: "functional-design", state: "completed" },
-      { stage: "code-generation", state: "active" },
-    ],
-    allBoltStates: "active",
-    boltUnits: [
-      { stage: "functional-design", state: "completed", files: functionalDesignUnitFiles },
+    phaseProgress: { Ideation: "Verified", Inception: "Verified", Construction: "Active" },
+    nonEmptyFields: ["Bolt Refs"],
+    unitStageMarks: [
+      { stage: "functional-design", state: "Completed", files: functionalDesignUnitFiles },
       {
         stage: "code-generation",
-        state: "active",
-        files: ["construction/<unit>/code-generation/plan.md"],
-        absentFiles: ["construction/<unit>/code-generation/summary.md"],
+        state: "Active",
+        files: ["construction/<unit>/code-generation/code-generation-plan.md"],
+        absentFiles: ["construction/<unit>/code-generation/code-summary.md"],
       },
     ],
-    absentFiles: ["construction/*/code-generation/summary.md"],
+    absentFiles: ["construction/*/code-generation/code-summary.md"],
   },
 ];
 
@@ -154,111 +147,100 @@ export function matchExists(base: string, pattern: string): boolean {
   return candidates.length > 0;
 }
 
-function stateValue(state: Record<string, unknown>, dottedPath: string): unknown {
-  let current: unknown = state;
-  for (const key of dottedPath.split(".")) {
-    if (typeof current !== "object" || current === null) return undefined;
-    current = (current as Record<string, unknown>)[key];
-  }
-  return current;
-}
-
 type FailFn = (message: string) => never;
+type ParsedState = ReturnType<typeof parseAidlcState>;
 
-function checkStateEntries(invariant: SnapshotInvariant, state: Record<string, unknown>, fail: FailFn): void {
-  for (const [path, expected] of Object.entries(invariant.state)) {
-    const actual = stateValue(state, path);
-    if (String(actual ?? "") !== expected) {
-      fail(`${invariant.snapshot}: state.json の ${path} が期待値と一致しません（期待: ${expected}、実際: ${String(actual ?? "未設定")}）`);
+function checkStateFields(invariant: SnapshotInvariant, doc: ParsedState, fail: FailFn): void {
+  for (const [key, expected] of Object.entries(invariant.stateFields)) {
+    const actual = String(doc.fields[key] ?? "");
+    if (actual !== expected) {
+      fail(`${invariant.snapshot}: aidlc-state.md の ${key} が期待値と一致しません（期待: ${expected}、実際: ${actual === "" ? "未設定" : actual}）`);
+    }
+  }
+  for (const key of invariant.nonEmptyFields ?? []) {
+    if (String(doc.fields[key] ?? "").trim() === "") {
+      fail(`${invariant.snapshot}: aidlc-state.md の ${key} が空です`);
+    }
+  }
+  for (const [phase, expected] of Object.entries(invariant.phaseProgress ?? {})) {
+    const actual = String(doc.phaseProgress[phase] ?? "");
+    if (actual !== expected) {
+      fail(`${invariant.snapshot}: Phase Progress の ${phase} が期待値と一致しません（期待: ${expected}、実際: ${actual === "" ? "未設定" : actual}）`);
     }
   }
 }
 
-function checkAllEntryStates(invariant: SnapshotInvariant, value: unknown, label: string, expected: string, fail: FailFn): void {
-  if (typeof value !== "object" || value === null || Object.keys(value).length === 0) {
-    fail(`${invariant.snapshot}: ${label} が空です`);
-  }
-  for (const [id, entry] of Object.entries(value as Record<string, { state?: string }>)) {
-    if (String(entry?.state ?? "") !== expected) {
-      fail(`${invariant.snapshot}: ${label}.${id}.state が期待値と一致しません（期待: ${expected}、実際: ${String(entry?.state ?? "未設定")}）`);
+function checkStageMarks(invariant: SnapshotInvariant, doc: ParsedState, fail: FailFn): void {
+  for (const [slug, expected] of Object.entries(invariant.stageMarks ?? {})) {
+    const entry = doc.stages.find((stage) => stage.slug === slug && stage.unit === undefined);
+    const actual = entry === undefined ? "行なし" : checkboxStateName(entry.mark);
+    if (actual !== expected) {
+      fail(`${invariant.snapshot}: ${slug} の checkbox が期待値と一致しません（期待: ${expected}、実際: ${actual}）`);
     }
   }
 }
 
-function checkUnitAndBoltStates(invariant: SnapshotInvariant, state: Record<string, unknown>, fail: FailFn): void {
-  for (const expected of invariant.unitStates ?? []) {
-    checkAllEntryStates(invariant, stateValue(state, `stages.${expected.stage}.units`), `stages.${expected.stage}.units`, expected.state, fail);
-  }
-  if (invariant.allBoltStates !== undefined) {
-    checkAllEntryStates(invariant, stateValue(state, "bolts"), "bolts", invariant.allBoltStates, fail);
-  }
+function unitIds(invariant: SnapshotInvariant, doc: ParsedState, fail: FailFn): string[] {
+  const ids = [...new Set(doc.stages.filter((stage) => stage.unit !== undefined).map((stage) => String(stage.unit)))];
+  if (ids.length === 0) fail(`${invariant.snapshot}: aidlc-state.md に Per unit ブロックがありません`);
+  return ids;
 }
 
-function boltUnitIds(invariant: SnapshotInvariant, state: Record<string, unknown>, fail: FailFn): string[] {
-  const bolts = stateValue(state, "bolts");
-  if (typeof bolts !== "object" || bolts === null || Object.keys(bolts).length === 0) {
-    fail(`${invariant.snapshot}: state.json に bolts がありません`);
-  }
-  const ids = Object.values(bolts as Record<string, { units?: unknown }>).flatMap((bolt) =>
-    Array.isArray(bolt.units) ? bolt.units.map((unit) => String(unit)) : [],
-  );
-  if (ids.length === 0) fail(`${invariant.snapshot}: bolts に units の一覧がありません`);
-  return [...new Set(ids)];
-}
-
-function checkBoltUnits(invariant: SnapshotInvariant, state: Record<string, unknown>, intentBase: string, fail: FailFn): void {
-  for (const expected of invariant.boltUnits ?? []) {
-    for (const unitId of boltUnitIds(invariant, state, fail)) {
-      const unitState = stateValue(state, `stages.${expected.stage}.units.${unitId}.state`);
-      if (String(unitState ?? "") !== expected.state) {
-        fail(`${invariant.snapshot}: Bolt の Unit ${unitId} が stages.${expected.stage}.units に期待状態でありません（期待: ${expected.state}、実際: ${String(unitState ?? "未設定")}）`);
+function checkUnitStageMarks(invariant: SnapshotInvariant, doc: ParsedState, recordBase: string, fail: FailFn): void {
+  if (!invariant.unitStageMarks || invariant.unitStageMarks.length === 0) return;
+  for (const expected of invariant.unitStageMarks) {
+    for (const unitId of unitIds(invariant, doc, fail)) {
+      const entry = doc.stages.find((stage) => stage.slug === expected.stage && stage.unit === unitId);
+      const actual = entry === undefined ? "行なし" : checkboxStateName(entry.mark);
+      if (actual !== expected.state) {
+        fail(`${invariant.snapshot}: Unit ${unitId} の ${expected.stage} が期待状態でありません（期待: ${expected.state}、実際: ${actual}）`);
       }
-      checkUnitFiles(invariant, intentBase, unitId, expected, fail);
+      checkUnitFiles(invariant, recordBase, unitId, expected, fail);
     }
   }
 }
 
 function checkUnitFiles(
   invariant: SnapshotInvariant,
-  intentBase: string,
+  recordBase: string,
   unitId: string,
   expected: { files?: string[]; absentFiles?: string[] },
   fail: FailFn,
 ): void {
   for (const pattern of expected.files ?? []) {
     const path = pattern.replaceAll("<unit>", unitId);
-    if (!matchExists(intentBase, path)) {
+    if (!matchExists(recordBase, path)) {
       fail(`${invariant.snapshot}: Unit ${unitId} の期待成果物が見つかりません: ${path}`);
     }
   }
   for (const pattern of expected.absentFiles ?? []) {
     const path = pattern.replaceAll("<unit>", unitId);
-    if (matchExists(intentBase, path)) {
+    if (matchExists(recordBase, path)) {
       fail(`${invariant.snapshot}: Unit ${unitId} に存在してはならない成果物が見つかりました: ${path}`);
     }
   }
 }
 
-function checkFilePatterns(invariant: SnapshotInvariant, intentBase: string, fail: FailFn): void {
+function checkFilePatterns(invariant: SnapshotInvariant, recordBase: string, fail: FailFn): void {
   for (const pattern of invariant.files ?? []) {
-    if (!matchExists(intentBase, pattern)) {
+    if (!matchExists(recordBase, pattern)) {
       fail(`${invariant.snapshot}: 期待する成果物が見つかりません: ${pattern}`);
     }
   }
   for (const pattern of invariant.absentFiles ?? []) {
-    if (matchExists(intentBase, pattern)) {
+    if (matchExists(recordBase, pattern)) {
       fail(`${invariant.snapshot}: 存在してはならない成果物が見つかりました: ${pattern}`);
     }
   }
 }
 
-// intentBase は `.amadeus/intents/<intent-id>` を指す絶対パス。
-export function checkSnapshotInvariant(invariant: SnapshotInvariant, intentBase: string, fail: FailFn): void {
-  const statePath = join(intentBase, "state.json");
-  if (!existsSync(statePath)) fail(`${invariant.snapshot}: state.json がありません`);
-  const state = JSON.parse(readFileSync(statePath, "utf8")) as Record<string, unknown>;
-  checkStateEntries(invariant, state, fail);
-  checkUnitAndBoltStates(invariant, state, fail);
-  checkBoltUnits(invariant, state, intentBase, fail);
-  checkFilePatterns(invariant, intentBase, fail);
+// recordBase は `aidlc/spaces/<space>/intents/<dirName>` を指す絶対パス。
+export function checkSnapshotInvariant(invariant: SnapshotInvariant, recordBase: string, fail: FailFn): void {
+  const statePath = join(recordBase, "aidlc-state.md");
+  if (!existsSync(statePath)) fail(`${invariant.snapshot}: aidlc-state.md がありません`);
+  const doc = parseAidlcState(readFileSync(statePath, "utf8"));
+  checkStateFields(invariant, doc, fail);
+  checkStageMarks(invariant, doc, fail);
+  checkUnitStageMarks(invariant, doc, recordBase, fail);
+  checkFilePatterns(invariant, recordBase, fail);
 }

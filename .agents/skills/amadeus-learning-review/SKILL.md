@@ -38,7 +38,7 @@ description: >-
 |---|---|---|
 | `current_phase_update_required` | 現在 phase 内で解消でき、現在 Intent の成功条件に必要である。 | 呼び出し元 phase skill |
 | `upstream_feedback_required` | 現在 Intent の成功条件を妨げる前段成果物の不足や矛盾である。 | 前段 phase skill または補修方針 |
-| `steering_knowledge_candidate` | steering layer に残す可能性がある知識である。 | 人間判断または steering 更新候補 |
+| `steering_knowledge_candidate` | Space の `memory/` と `knowledge/` に残す可能性がある知識である。 | 人間判断または steering 更新候補 |
 | `domain_map_candidate` | 共有境界として採用検討が必要である。 | 人間判断または domain modeling |
 | `context_map_candidate` | コンテキスト間依存として採用検討が必要である。 | 人間判断または domain modeling |
 | `follow_up_issue_candidate` | 現在 Intent の成功条件外だが、小さく追跡できる課題である。 | 人間承認後の GitHub Issue |
@@ -53,7 +53,7 @@ Domain Map と Context Map は候補を扱わず、承認済みの `adopted` と
 1. 現在 Intent の成功条件を妨げているか確認する。
 2. 現在 phase 内で解消できるか確認する。
 3. 前段成果物の不足や矛盾か確認する。
-4. steering layer、Domain Map、Context Map へ採用検討すべき知識か確認する。
+4. Space の `memory/` と `knowledge/`、Domain Map、Context Map へ採用検討すべき知識か確認する。
 5. 後続 Issue または後続 Intent として分けるべきか確認する。
 6. どれにも当てはまらない場合は `no_learning_action` にする。
 

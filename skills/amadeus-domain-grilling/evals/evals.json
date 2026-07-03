@@ -4,8 +4,8 @@
     {
       "id": 1,
       "name": "ask-one-domain-question",
-      "prompt": "20260626-password-reset のドメイン用語を grill しながら Amadeus 成果物にも残したい。まず詰めて。",
-      "expected_output": "既存の .amadeus 成果物を確認し、ドメイン論点を一つだけ質問する。推奨回答、理由、回答後に更新する候補を示し、成果物はまだ更新しない。"
+      "prompt": "260626-password-reset のドメイン用語を grill しながら Amadeus 成果物にも残したい。まず詰めて。",
+      "expected_output": "既存の aidlc/ 成果物を確認し、ドメイン論点を一つだけ質問する。推奨回答、理由、回答後に更新する候補を示し、成果物はまだ更新しない。"
     },
     {
       "id": 2,

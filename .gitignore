@@ -7,7 +7,11 @@ result
 
 /.kiro/
 /openspec/
-/.amadeus-snapshots/
+/.aidlc-snapshots/
+
+# v2 のカーソル（作業者ローカルの状態。examples 配下は対象外）
+/aidlc/active-space
+/aidlc/spaces/*/intents/active-intent
 
 # API Keys and Tokens (security)
 *_api_key.sh

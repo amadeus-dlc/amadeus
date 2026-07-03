@@ -19,26 +19,26 @@ Bolt 全体のビルドとテストを実行し、手順と結果を記録する
 
 ## 前提
 
-対象 Intent の `state.json` で、`stages["build-and-test"]` が実行対象であり、対象 Bolt の `bolts["<bolt-id>"]` が `active` であることを前提にする。
-対象 Bolt に束ねた全 Unit の `stages["code-generation"].units["<unit-id>"].state` が `completed` であることを確認する。
+対象 record の `aidlc-state.md` で、Stage Progress の `build-and-test` が実行対象であり、対象 Bolt が Project Information の `Bolt Refs` に含まれ、audit に `BOLT_STARTED` はあるが `BOLT_COMPLETED` がまだないことを前提にする。
+対象 Bolt に束ねた全 Unit の CONSTRUCTION PHASE の `Per unit: <unit-id>` ブロックにある `code-generation` の checkbox が `[x]` であることを確認する。
 未完了の Unit があれば停止し、`amadeus` へ戻る。
 
-テストの量は `state.json.depth` のテスト戦略に従う。
+テストの量は `aidlc-state.md` の `Depth` のテスト戦略に従う。
 Minimal は要求 1 件につきテスト 1 件と、コンポーネントごとの happy-path を下限にする。
 Standard はコンポーネント境界を検証し、Comprehensive は網羅的に検証する。
 workshop はテスト戦略だけを Minimal に上書きする。
 
 少なくとも次を読む。
 
-- 対象 Bolt の全 Unit の `construction/<unit-id>-<slug>/code-generation/plan.md` と `summary.md`
+- 対象 Bolt の全 Unit の `construction/<unit-id>-<slug>/code-generation/code-generation-plan.md` と `code-summary.md`
 - `inception/delivery-planning/bolt-plan.md`（対象 Bolt の Definition of Done。Delivery Planning を実行しなかった場合は暗黙 Bolt として Intent の成功条件を使う）
-- `state.json`
+- `aidlc-state.md`
 
 ## テンプレート
 
 優先順位は次である。
 
-1. `.amadeus/settings/templates/intents/construction/build-and-test/`
+1. `aidlc/spaces/<space>/memory/templates/intents/construction/build-and-test/`
 2. この skill に同梱された `templates/construction/build-and-test/`
 
 分からない項目は空欄にせず、`未確認` と書く。
@@ -55,38 +55,40 @@ workshop はテスト戦略だけを Minimal に上書きする。
 - `integration-test-instructions.md`（統合テストを実行した場合）
 - `performance-test-instructions.md`（性能テストを実行した場合）
 - `security-test-instructions.md`（セキュリティテストを実行した場合）
-- `summary.md`（ビルドとテストの要約）
-- `test-results.md`（テスト実行結果。実行したコマンドと結果を含める）
+- `build-and-test-summary.md`（ビルドとテストの要約）
+- `build-test-results.md`（テスト実行結果。実行したコマンドと結果を含める）
+- `memory.md`
 
-Intent のモジュールディレクトリ直下で更新するもの:
+record 直下で更新するもの:
 
-- `state.json`（`bolts["<bolt-id>"]` の記録。Bolt ディレクトリには置かない）
+- `aidlc-state.md`（`build-and-test` の checkbox。全 Bolt 完了後に更新する）と `audit/audit.md`（Bolt イベントの記録。Bolt ディレクトリには置かない）
 
 ## 手順
 
 以下の手順は、対象 Bolt で最初に実行する場合の流れである。
 再実行では、失敗の原因に関係する手順だけをやり直す。
 
-1. 対象 Bolt の全 Unit の Code Generation が `completed` であることを確認する。未完了なら停止し、`amadeus` へ戻る。
+1. 対象 Bolt の全 Unit の Code Generation の checkbox が `[x]` であることを確認する。未完了なら停止し、`amadeus` へ戻る。
 2. Bolt の worktree でビルドを実行し、`build-instructions.md` に手順を記録する。
-3. テスト戦略に従いテストを実行し、実行した種別ごとの手順と `test-results.md` を記録する。
-4. `summary.md` に、Definition of Done に対する充足を記録する。
-5. すべて成功した場合は、`amadeus` 入口へ戻る。Bolt PR の作成、`bolts["<bolt-id>"].gate` の記録、Bolt の完了確定は入口の Bolt 境界処理が行う。
+3. テスト戦略に従いテストを実行し、実行した種別ごとの手順と `build-test-results.md` を記録する。
+4. `build-and-test-summary.md` に、Definition of Done に対する充足を記録する。
+5. `memory.md` に、実行中の解釈、逸脱、トレードオフ、未解決の問いを記録する。
+6. すべて成功した場合は、`amadeus` 入口へ戻る。Bolt PR の作成、`BOLT_COMPLETED` イベントの記録、Bolt の完了確定は入口の Bolt 境界処理が行う。
 
-ビルドまたはテストが失敗した場合は、`state.json.autonomy` に関わらず停止し、失敗内容を `test-results.md` に記録して人間に確認する（halt-and-ask）。
+ビルドまたはテストが失敗した場合は、autonomy に関わらず停止し、失敗内容を `build-test-results.md` に記録して人間に確認する（halt-and-ask）。
 失敗の修正は、人間の指示を受けて対象 Unit の Code Generation の修正として行う。
 
 ## ゲート
 
 このステージの完了確認は、Bolt PR と人間 merge で行う。
-会話内のステージゲートは提示せず、手順 5 で `amadeus` 入口へ戻る。
-`stages["build-and-test"]` は、全 Bolt の完了後に `completed` にし、`approval` には最後の Bolt の `via: "pr"` evidence を記録する。
+会話内のステージゲートは提示せず、手順 6 で `amadeus` 入口へ戻る。
+`build-and-test` の checkbox は、全 Bolt の完了後に `[x]` にし、`STAGE_COMPLETED`（Details に最後の Bolt PR の URL）を `audit/audit.md` に追記する。
 
 ## 禁止事項
 
 - Code Generation 未完了の Unit を含む Bolt に対して実行しない。
 - 失敗を無視して先へ進まない。失敗時は必ず停止して人間に確認する。
-- テスト結果を要約だけにしない。実行したコマンドと結果を `test-results.md` に残す。
+- テスト結果を要約だけにしない。実行したコマンドと結果を `build-test-results.md` に残す。
 - 実装の修正をこの skill で行わない。修正は Code Generation の責務である。
 - Bolt PR の作成と merge をこの skill で行わない。
 

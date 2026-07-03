@@ -59,15 +59,15 @@ const initialE2eModes = ["steering", "event-storming"] as const;
 const rerunE2eModes = initialE2eModes.map((mode) => `${mode}-rerun` as const);
 const e2eModes = [...initialE2eModes, ...rerunE2eModes] as const;
 const forbiddenSpecArtifacts = [
-  ".amadeus/spec.md",
-  ".amadeus/specs",
+  "aidlc/spaces/default/spec.md",
+  "aidlc/spaces/default/specs",
   ".kiro/specs",
   "openspec",
 ];
 // amadeus-discovery は #369 で退役したため、steering layer が Discovery 成果物を作らないことを検証する。
 const retiredDiscoveryArtifacts = [
-  ".amadeus/discoveries.md",
-  ".amadeus/discoveries",
+  "aidlc/spaces/default/discoveries.md",
+  "aidlc/spaces/default/discoveries",
 ];
 
 function parseArgs(args: string[]): Options {
@@ -185,7 +185,7 @@ function listFiles(path: string): string[] {
 }
 
 function listAmadeusFiles(workspace: string): string[] {
-  const amadeus = join(workspace, ".amadeus");
+  const amadeus = join(workspace, "aidlc");
   if (!existsSync(amadeus)) return [];
   return listFiles(amadeus).map((file) => relative(workspace, file)).sort();
 }
@@ -263,10 +263,11 @@ function prepareWorkspace(workspace: string): void {
 }
 
 function prepareSteeringFixture(workspace: string): void {
-  const source = join(root, ".agents/skills/amadeus-steering/templates/steering");
-  const target = join(workspace, ".amadeus");
+  const source = join(root, ".agents/skills/amadeus-steering/templates/space");
+  const target = join(workspace, "aidlc/spaces/default");
   ensureFile(join(source, "README.md"));
   cpSync(source, target, { recursive: true });
+  rmSync(join(target, "README.md"), { force: true });
   replaceInTree(target, {
     "<product-name>": "図書貸出セルフサービス",
   });
@@ -275,11 +276,11 @@ function prepareSteeringFixture(workspace: string): void {
 function applyEventStormingArtifacts(workspace: string): void {
   const source = join(root, ".agents/skills/amadeus-event-storming/templates/event-storming/session");
   const summarySource = join(root, ".agents/skills/amadeus-event-storming/templates/event-storming/session.md");
-  const target = join(workspace, ".amadeus/event-storming/ES001-loan-flow");
+  const target = join(workspace, "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow");
   ensureFile(summarySource);
   cpSync(source, target, { recursive: true });
   writeFileSync(
-    join(workspace, ".amadeus/event-storming/ES001-loan-flow.md"),
+    join(workspace, "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow.md"),
     [
       "# Event Storming Summary",
       "",
@@ -435,7 +436,7 @@ function steeringPrompt(): string {
   return [
     "amadeus-steering を使ってください。",
     "",
-    "空の workspace に Amadeus steering layer を作成してください。",
+    "空の workspace に Amadeus の Space（aidlc/spaces/default/）を作成してください。",
     "",
     "題材:",
     "- プロダクト名: 図書貸出セルフサービス",
@@ -446,7 +447,7 @@ function steeringPrompt(): string {
     "",
     "制約:",
     "- 質問せずに続行してください。",
-    "- `.amadeus/` 配下だけを作成してください。",
+    "- `aidlc/` 配下だけを作成してください。",
     "- git commit はしないでください。",
     "- 作成後に `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts .` を実行し、結果を要約してください。",
   ].join("\n");
@@ -478,14 +479,14 @@ function eventStormingPrompt(): string {
     "- Hotspot: HOT001 返却期限変更の扱いが未確定。",
     "",
     "作成対象:",
-    "- `.amadeus/event-storming/ES001-loan-flow.md`",
-    "- `.amadeus/event-storming/ES001-loan-flow/events.md`",
-    "- `.amadeus/event-storming/ES001-loan-flow/flow.md`",
-    "- `.amadeus/event-storming/ES001-loan-flow/board.md`",
-    "- `.amadeus/event-storming/ES001-loan-flow/aggregate-candidates.md`",
-    "- `.amadeus/event-storming/ES001-loan-flow/bounded-context-candidates.md`",
-    "- `.amadeus/event-storming/ES001-loan-flow/hotspots.md`",
-    "- `.amadeus/event-storming/ES001-loan-flow/state.json`",
+    "- `aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow.md`",
+    "- `aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/events.md`",
+    "- `aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/flow.md`",
+    "- `aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/board.md`",
+    "- `aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/aggregate-candidates.md`",
+    "- `aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/bounded-context-candidates.md`",
+    "- `aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/hotspots.md`",
+    "- `aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/state.json`",
     "",
     "制約:",
     "- 質問せずに続行してください。",
@@ -517,22 +518,17 @@ function promptFor(mode: Mode): string {
 
 function steeringArtifacts(): string[] {
   return [
-    ".amadeus/README.md",
-    ".amadeus/steering.md",
-    ".amadeus/steering/objective.md",
-    ".amadeus/steering/product.md",
-    ".amadeus/steering/tech.md",
-    ".amadeus/steering/structure.md",
-    ".amadeus/steering/actors.md",
-    ".amadeus/steering/external-systems.md",
-    ".amadeus/glossary.md",
-    ".amadeus/steering/knowledge.md",
-    ".amadeus/steering/knowledge/README.md",
-    ".amadeus/steering/policies.md",
-    ".amadeus/steering/policies/README.md",
-    ".amadeus/domain-map.md",
-    ".amadeus/context-map.md",
-    ".amadeus/intents.md",
+    "aidlc/spaces/default/memory/org.md",
+    "aidlc/spaces/default/memory/team.md",
+    "aidlc/spaces/default/memory/project.md",
+    "aidlc/spaces/default/knowledge/glossary.md",
+    "aidlc/spaces/default/knowledge/actors.md",
+    "aidlc/spaces/default/knowledge/external-systems.md",
+    "aidlc/spaces/default/knowledge/background.md",
+    "aidlc/spaces/default/knowledge/domain-map.md",
+    "aidlc/spaces/default/knowledge/context-map.md",
+    "aidlc/spaces/default/intents/intents.json",
+    "aidlc/spaces/default/intents/intents.md",
   ];
 }
 
@@ -543,26 +539,26 @@ function steeringMarkdownArtifacts(): string[] {
 function eventStormingArtifacts(): string[] {
   return [
     ...steeringArtifacts(),
-    ".amadeus/event-storming/ES001-loan-flow.md",
-    ".amadeus/event-storming/ES001-loan-flow/events.md",
-    ".amadeus/event-storming/ES001-loan-flow/flow.md",
-    ".amadeus/event-storming/ES001-loan-flow/board.md",
-    ".amadeus/event-storming/ES001-loan-flow/aggregate-candidates.md",
-    ".amadeus/event-storming/ES001-loan-flow/bounded-context-candidates.md",
-    ".amadeus/event-storming/ES001-loan-flow/hotspots.md",
-    ".amadeus/event-storming/ES001-loan-flow/state.json",
+    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow.md",
+    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/events.md",
+    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/flow.md",
+    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/board.md",
+    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/aggregate-candidates.md",
+    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/bounded-context-candidates.md",
+    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/hotspots.md",
+    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/state.json",
   ];
 }
 
 function eventStormingMarkdownArtifacts(): string[] {
   return [
-    ".amadeus/event-storming/ES001-loan-flow.md",
-    ".amadeus/event-storming/ES001-loan-flow/events.md",
-    ".amadeus/event-storming/ES001-loan-flow/flow.md",
-    ".amadeus/event-storming/ES001-loan-flow/board.md",
-    ".amadeus/event-storming/ES001-loan-flow/aggregate-candidates.md",
-    ".amadeus/event-storming/ES001-loan-flow/bounded-context-candidates.md",
-    ".amadeus/event-storming/ES001-loan-flow/hotspots.md",
+    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow.md",
+    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/events.md",
+    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/flow.md",
+    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/board.md",
+    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/aggregate-candidates.md",
+    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/bounded-context-candidates.md",
+    "aidlc/spaces/default/knowledge/event-storming/ES001-loan-flow/hotspots.md",
   ];
 }
 

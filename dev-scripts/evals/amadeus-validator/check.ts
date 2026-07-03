@@ -1,9 +1,9 @@
 #!/usr/bin/env bun
 
 // amadeus-validator のコードレベル検証。
-// steering テンプレートから合成した一時 workspace を使い、workspace 検証と
-// schemaVersion 2（v2 互換ライフサイクル）の Intent 検証を確認する。
-// 旧契約（schemaVersion 1 の Intent、Discovery）のシナリオは #369 の退役 wave で削除した。
+// space テンプレートから合成した一時 workspace（aidlc/spaces/default/）を使い、
+// workspace 検証と v2 ライフサイクル（aidlc-state.md + audit + intents.json）の
+// Intent record 検証を確認する。
 
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -12,7 +12,7 @@ import { buildIntentsIndex } from "../../../.agents/skills/amadeus-validator/scr
 
 const root = resolve(import.meta.dir, "../../..");
 const validator = ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts";
-const steeringTemplates = join(root, ".agents/skills/amadeus-steering/templates/steering");
+const spaceTemplates = join(root, ".agents/skills/amadeus-steering/templates/space");
 
 const cleanups: string[] = [];
 
@@ -66,12 +66,13 @@ function runExpectSuccessExcludes(command: string[], excluded: string, cwd = roo
   }
 }
 
-// steering テンプレートから最小の有効な workspace を合成する。
+// space テンプレートから最小の有効な workspace を合成する。
 function workspaceCopy(): string {
   const workspace = mkdtempSync(join(tmpdir(), "amadeus-validator"));
   cleanups.push(workspace);
-  cpSync(steeringTemplates, join(workspace, ".amadeus"), { recursive: true });
-  for (const file of listFiles(join(workspace, ".amadeus"))) {
+  cpSync(spaceTemplates, join(workspace, "aidlc/spaces/default"), { recursive: true });
+  rmSync(join(workspace, "aidlc/spaces/default/README.md"), { force: true });
+  for (const file of listFiles(join(workspace, "aidlc"))) {
     const text = readFileSync(file, "utf8");
     if (text.includes("<product-name>")) {
       writeFileSync(file, text.replaceAll("<product-name>", "検証対象プロダクト"));
@@ -89,30 +90,30 @@ function listFiles(path: string): string[] {
 }
 
 function regenerateSharedIndexes(workspace: string): void {
-  writeFileSync(join(workspace, ".amadeus/intents.md"), buildIntentsIndex(workspace));
+  writeFileSync(join(workspace, "aidlc/spaces/default/intents/intents.md"), buildIntentsIndex(workspace));
 }
 
 // ---- workspace 検証 ----
 
-// (W1) steering テンプレート由来の workspace は Intent 指定なしで pass する。
+// (W1) space テンプレート由来の workspace は Intent 指定なしで pass する。
 const happyWorkspace = workspaceCopy();
 runExpectSuccessIncludes(["bun", "run", validator, happyWorkspace], "pass");
 
-// (W2) 退役確認: 検証結果に Discovery の検査が現れない（discoveries.md を要求しない）。
-runExpectSuccessExcludes(["bun", "run", validator, happyWorkspace], "discoveries.md");
+// (W2) 退役確認: 検証結果に旧構造の検査が現れない（.amadeus や state.json を要求しない）。
+runExpectSuccessExcludes(["bun", "run", validator, happyWorkspace], ".amadeus");
 
-// (W3) steering 成果物の欠落は fail になる。
-const brokenSteeringWorkspace = workspaceCopy();
-rmSync(join(brokenSteeringWorkspace, ".amadeus/steering/objective.md"));
+// (W3) memory 成果物の欠落は fail になる。
+const brokenMemoryWorkspace = workspaceCopy();
+rmSync(join(brokenMemoryWorkspace, "aidlc/spaces/default/memory/project.md"));
 runExpectFailure(
-  ["bun", "run", validator, brokenSteeringWorkspace],
-  "steering の目的一覧が存在する",
+  ["bun", "run", validator, brokenMemoryWorkspace],
+  "memory/project.md が存在する",
 );
 
 // (W4) intents.md の未再生成は Index 生成整合の fail になる。
 const staleIndexWorkspace = workspaceCopy();
 writeFileSync(
-  join(staleIndexWorkspace, ".amadeus/intents.md"),
+  join(staleIndexWorkspace, "aidlc/spaces/default/intents/intents.md"),
   "# インテント\n\n## 一覧\n\n手動編集された索引。\n",
 );
 runExpectFailure(
@@ -120,11 +121,12 @@ runExpectFailure(
   "Index 生成整合",
 );
 
-// ---- schemaVersion 2（v2 互換ライフサイクル）の Intent 検証 ----
+// ---- v2 ライフサイクル（aidlc-state.md + audit + intents.json）の Intent record 検証 ----
 
-const v2Intent = "20260703-fix-login-timeout";
+const recordDirName = "260703-fix-login-timeout";
+const recordUuid = "01980000-0000-7000-8000-000000000001";
 
-function v2IntentModule(): string {
+function intentModule(): string {
   return [
     "# インテント：ログインタイムアウトの修正",
     "",
@@ -146,179 +148,251 @@ function v2IntentModule(): string {
     "| scope | bugfix | 既存コードの特定バグ修正である。 |",
     "| labels | 未確認 | 補足分類は未確認。 |",
     "",
-    "## 目的",
+  ].join("\n");
+}
+
+// bugfix scope（2.1、2.3、3.5、3.6 実行対象）の inception 進行中 record。
+function stateText(): string {
+  return [
+    "# AI-DLC State Tracking",
     "",
-    "ログインの不当なタイムアウトを解消する。",
+    "## Project Information",
+    "- **Project**: ログインタイムアウトの修正",
+    "- **Project Type**: Brownfield",
+    "- **Scope**: bugfix",
+    "- **Start Date**: 2026-07-03T01:00:00Z",
+    "- **State Version**: 7",
+    "- **Active Agent**: amadeus",
+    "- **Worktree Path**: ",
+    "- **Bolt Refs**: ",
+    "- **Practices Affirmed Timestamp**: ",
     "",
-    "## 対象",
+    "## Scope Configuration",
+    "- **Stages to Execute**: 0.1, 0.2, 0.3, 2.1, 2.3, 3.5, 3.6",
+    "- **Stages to Skip**: all others (out of bugfix scope)",
+    "- **Depth**: Minimal",
     "",
-    "ログインする利用者。",
+    "## Workspace State",
+    "- **Project Root**: .",
+    "- **Languages**: TypeScript",
+    "- **Frameworks**: none",
+    "- **Build System**: bun",
     "",
-    "## 成功条件",
+    "## Execution Plan Summary",
+    "- **Total Stages**: 7",
+    "- **Completed**: 4",
+    "- **In Progress**: requirements-analysis",
     "",
-    "- 通常負荷でログインがタイムアウトしない。",
+    "## Runtime State",
+    "- **Revision Count**: 0",
     "",
-    "## 契機",
+    "## Phase Progress",
     "",
-    "利用者からの障害報告。",
+    "- **Initialization**: Verified",
+    "- **Ideation**: Skipped",
+    "- **Inception**: Active",
+    "- **Construction**: Pending",
+    "- **Operation**: Pending",
     "",
-    "## 範囲",
+    "## Stage Progress",
     "",
-    "含めるもの:",
+    "### INITIALIZATION PHASE",
+    "- [x] workspace-scaffold — EXECUTE",
+    "- [x] workspace-detection — EXECUTE",
+    "- [x] state-init — EXECUTE",
     "",
-    "- タイムアウト原因の修正。",
+    "### IDEATION PHASE",
+    "- [S] intent-capture — SKIP: out of bugfix scope",
+    "- [S] market-research — SKIP: out of bugfix scope",
+    "- [S] feasibility — SKIP: out of bugfix scope",
+    "- [S] scope-definition — SKIP: out of bugfix scope",
+    "- [S] team-formation — SKIP: out of bugfix scope",
+    "- [S] rough-mockups — SKIP: out of bugfix scope",
+    "- [S] approval-handoff — SKIP: out of bugfix scope",
     "",
-    "含めないもの:",
+    "### INCEPTION PHASE",
+    "- [x] reverse-engineering — EXECUTE",
+    "- [S] practices-discovery — SKIP: out of bugfix scope",
+    "- [-] requirements-analysis",
+    "- [S] user-stories — SKIP: out of bugfix scope",
+    "- [S] refined-mockups — SKIP: out of bugfix scope",
+    "- [S] application-design — SKIP: out of bugfix scope",
+    "- [S] units-generation — SKIP: out of bugfix scope",
+    "- [S] delivery-planning — SKIP: out of bugfix scope",
     "",
-    "- 認証方式の変更。",
+    "### CONSTRUCTION PHASE",
+    "Per unit: implicit",
+    "- [S] functional-design — SKIP: out of bugfix scope",
+    "- [S] nfr-requirements — SKIP: out of bugfix scope",
+    "- [S] nfr-design — SKIP: out of bugfix scope",
+    "- [S] infrastructure-design — SKIP: out of bugfix scope",
+    "- [ ] code-generation",
+    "- [ ] build-and-test",
+    "- [S] ci-pipeline — SKIP: out of bugfix scope",
+    "",
+    "### OPERATION PHASE",
+    "- [S] deployment-pipeline — SKIP: out of Amadeus scope",
+    "- [S] environment-provisioning — SKIP: out of Amadeus scope",
+    "- [S] deployment-execution — SKIP: out of Amadeus scope",
+    "- [S] observability-setup — SKIP: out of Amadeus scope",
+    "- [S] incident-response — SKIP: out of Amadeus scope",
+    "- [S] performance-validation — SKIP: out of Amadeus scope",
+    "- [S] feedback-optimization — SKIP: out of Amadeus scope",
+    "",
+    "## Current Status",
+    "- **Lifecycle Phase**: INCEPTION",
+    "- **Current Stage**: requirements-analysis",
+    "- **Next Stage**: code-generation",
+    "- **Status**: Running",
+    "- **Construction Autonomy Mode**: unset",
+    "- **Last Updated**: 2026-07-03T02:00:00Z",
+    "",
+    "## Session Resume Point",
+    "- **Last Completed Stage**: reverse-engineering",
+    "- **Next Action**: continue requirements-analysis",
+    "- **Pending Artifacts**: requirements.md",
     "",
   ].join("\n");
 }
 
-function v2State(): Record<string, any> {
-  return {
-    schemaVersion: 2,
-    intentId: v2Intent,
-    scope: "bugfix",
-    depth: "Minimal",
-    status: "in_progress",
-    phase: "inception",
-    currentStage: "requirements-analysis",
-    stages: {
-      "reverse-engineering": {
-        state: "completed",
-        approval: { approvedAt: "2026-07-03T10:00:00+09:00", via: "conversation" },
-      },
-      "requirements-analysis": { state: "active" },
-      "code-generation": { state: "pending" },
-      "build-and-test": { state: "pending" },
-    },
-    phaseGates: { ideation: { skipped: true } },
-  };
+function auditEntry(event: string, details: string, stage?: string): string {
+  return [
+    `## ${event}`,
+    "**Timestamp**: 2026-07-03T01:00:00Z",
+    `**Event**: ${event}`,
+    ...(stage === undefined ? [] : [`**Stage**: ${stage}`]),
+    `**Details**: ${details}`,
+    "",
+    "---",
+    "",
+  ].join("\n");
 }
 
-function addV2Intent(workspace: string, state: Record<string, any> = v2State()): void {
-  const dir = join(workspace, ".amadeus/intents", v2Intent);
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(join(workspace, ".amadeus/intents", `${v2Intent}.md`), v2IntentModule());
-  writeFileSync(join(dir, "state.json"), `${JSON.stringify(state, null, 2)}\n`);
+function auditText(): string {
+  return [
+    "# Audit Trail",
+    "",
+    auditEntry("WORKFLOW_STARTED", "Scope: bugfix"),
+    auditEntry("STAGE_COMPLETED", "record scaffold created", "workspace-scaffold"),
+    auditEntry("STAGE_COMPLETED", "workspace scanned", "workspace-detection"),
+    auditEntry("STAGE_COMPLETED", "state initialised", "state-init"),
+    auditEntry("PHASE_SKIPPED", "Phase: Ideation (out of bugfix scope)"),
+    auditEntry("STAGE_COMPLETED", "codebase knowledge updated", "reverse-engineering"),
+  ].join("\n");
+}
+
+function registryText(): string {
+  return `${JSON.stringify(
+    [
+      {
+        uuid: recordUuid,
+        slug: "fix-login-timeout",
+        dirName: recordDirName,
+        scope: "bugfix",
+        repos: ["app"],
+        status: "in_progress",
+      },
+    ],
+    null,
+    2,
+  )}\n`;
+}
+
+type RecordOverrides = {
+  state?: (text: string) => string;
+  audit?: (text: string) => string;
+  registry?: string;
+  skipAudit?: boolean;
+};
+
+function addIntentRecord(workspace: string, overrides: RecordOverrides = {}): void {
+  const intentsDir = join(workspace, "aidlc/spaces/default/intents");
+  const recordDir = join(intentsDir, recordDirName);
+  mkdirSync(join(recordDir, "audit"), { recursive: true });
+  writeFileSync(join(intentsDir, `${recordDirName}.md`), intentModule());
+  const state = overrides.state ? overrides.state(stateText()) : stateText();
+  writeFileSync(join(recordDir, "aidlc-state.md"), state);
+  if (!overrides.skipAudit) {
+    const audit = overrides.audit ? overrides.audit(auditText()) : auditText();
+    writeFileSync(join(recordDir, "audit/audit.md"), audit);
+  }
+  writeFileSync(join(intentsDir, "intents.json"), overrides.registry ?? registryText());
   regenerateSharedIndexes(workspace);
 }
 
-const v2HappyWorkspace = workspaceCopy();
-addV2Intent(v2HappyWorkspace);
-runExpectSuccessIncludes(
-  ["bun", "run", validator, v2HappyWorkspace, v2Intent],
-  "v2 ライフサイクル",
-);
+// (V1) 正常な record は pass する。
+const happyIntentWorkspace = workspaceCopy();
+addIntentRecord(happyIntentWorkspace);
+runExpectSuccessIncludes(["bun", "run", validator, happyIntentWorkspace, recordDirName], "pass");
 
-// (V0) 旧契約の拒否: schemaVersion 1 の Intent は v1 契約として検証せず、schemaVersion の不一致として fail する。
-const v1RejectedWorkspace = workspaceCopy();
-{
-  const state = v2State();
-  state.schemaVersion = 1;
-  addV2Intent(v1RejectedWorkspace, state);
-}
-runExpectFailure(
-  ["bun", "run", validator, v1RejectedWorkspace, v2Intent],
-  "`schemaVersion` が 2 である",
-);
+// (V2) Scope が未知の値なら fail する。
+const badScopeWorkspace = workspaceCopy();
+addIntentRecord(badScopeWorkspace, {
+  state: (text) => text.replace("- **Scope**: bugfix", "- **Scope**: feature-x"),
+});
+runExpectFailure(["bun", "run", validator, badScopeWorkspace, recordDirName], "`Scope` が既知の値である");
 
-const v2BadScopeWorkspace = workspaceCopy();
-{
-  const state = v2State();
-  state.scope = "feature-x";
-  addV2Intent(v2BadScopeWorkspace, state);
-}
-runExpectFailure(
-  ["bun", "run", validator, v2BadScopeWorkspace, v2Intent],
-  "`scope` が既知の値である",
-);
+// (V3) Stage Progress の行欠落は fail する。
+const missingLineWorkspace = workspaceCopy();
+addIntentRecord(missingLineWorkspace, {
+  state: (text) => text.replace("- [S] market-research — SKIP: out of bugfix scope\n", ""),
+});
+runExpectFailure(["bun", "run", validator, missingLineWorkspace, recordDirName], "Stage Progress に全ステージの行がある");
 
-const v2StageSetWorkspace = workspaceCopy();
-{
-  const state = v2State();
-  state.stages["market-research"] = { state: "pending" };
-  addV2Intent(v2StageSetWorkspace, state);
-}
-runExpectFailure(
-  ["bun", "run", validator, v2StageSetWorkspace, v2Intent],
-  "`stages` のキー集合が scope の実行対象と一致する",
-);
+// (V4) scope 外のステージが [S] 以外なら fail する。
+const wrongMarkWorkspace = workspaceCopy();
+addIntentRecord(wrongMarkWorkspace, {
+  state: (text) => text.replace("- [S] intent-capture — SKIP: out of bugfix scope", "- [ ] intent-capture — EXECUTE"),
+});
+runExpectFailure(["bun", "run", validator, wrongMarkWorkspace, recordDirName], "scope 外のステージが [S] である");
 
-const v2MissingGateWorkspace = workspaceCopy();
-{
-  const state = v2State();
-  state.phaseGates = {};
-  addV2Intent(v2MissingGateWorkspace, state);
-}
-runExpectFailure(
-  ["bun", "run", validator, v2MissingGateWorkspace, v2Intent],
-  "先行 phase の `phaseGates` が記録されている",
-);
+// (V5) 完了ステージに STAGE_COMPLETED イベントがないと fail する。
+const missingEventWorkspace = workspaceCopy();
+addIntentRecord(missingEventWorkspace, {
+  audit: (text) => text.replace('**Stage**: reverse-engineering', "**Stage**: なし"),
+});
+runExpectFailure(["bun", "run", validator, missingEventWorkspace, recordDirName], "完了ステージは STAGE_COMPLETED イベントを持つ");
 
-const v2MissingArtifactWorkspace = workspaceCopy();
-{
-  const state = v2State();
-  state.stages["requirements-analysis"] = {
-    state: "completed",
-    approval: { approvedAt: "2026-07-03T11:00:00+09:00", via: "conversation" },
-  };
-  state.currentStage = "code-generation";
-  addV2Intent(v2MissingArtifactWorkspace, state);
-}
-runExpectFailure(
-  ["bun", "run", validator, v2MissingArtifactWorkspace, v2Intent],
-  "completed のステージは必須成果物を持つ",
-);
+// (V6) 完了ステージの必須成果物がないと fail する。
+const missingArtifactWorkspace = workspaceCopy();
+addIntentRecord(missingArtifactWorkspace, {
+  state: (text) =>
+    text
+      .replace("- [-] requirements-analysis", "- [x] requirements-analysis")
+      .replace("- **Current Stage**: requirements-analysis", "- **Current Stage**: code-generation"),
+  audit: (text) => text + auditEntry("STAGE_COMPLETED", "requirements approved", "requirements-analysis"),
+});
+runExpectFailure(["bun", "run", validator, missingArtifactWorkspace, recordDirName], "completed のステージは必須成果物を持つ");
 
-const v2MissingApprovalWorkspace = workspaceCopy();
-{
-  const state = v2State();
-  state.stages["reverse-engineering"] = { state: "completed" };
-  addV2Intent(v2MissingApprovalWorkspace, state);
-}
-runExpectFailure(
-  ["bun", "run", validator, v2MissingApprovalWorkspace, v2Intent],
-  "completed のステージは approval evidence を持つ",
-);
+// (V7) Current Stage が scope 外なら fail する。
+const badCurrentWorkspace = workspaceCopy();
+addIntentRecord(badCurrentWorkspace, {
+  state: (text) => text.replace("- **Current Stage**: requirements-analysis", "- **Current Stage**: intent-capture"),
+});
+runExpectFailure(["bun", "run", validator, badCurrentWorkspace, recordDirName], "`Current Stage` が scope の実行対象である");
 
-const v2CurrentStageWorkspace = workspaceCopy();
-{
-  const state = v2State();
-  state.currentStage = "intent-capture";
-  addV2Intent(v2CurrentStageWorkspace, state);
-}
-runExpectFailure(
-  ["bun", "run", validator, v2CurrentStageWorkspace, v2Intent],
-  "`currentStage` が scope の実行対象である",
-);
+// (V8) record 直下の state.json は旧配置として fail する。
+const legacyStateWorkspace = workspaceCopy();
+addIntentRecord(legacyStateWorkspace);
+writeFileSync(join(legacyStateWorkspace, "aidlc/spaces/default/intents", recordDirName, "state.json"), "{}\n");
+runExpectFailure(["bun", "run", validator, legacyStateWorkspace, recordDirName], "Intent 直下の旧配置成果物を使わない");
 
-const v2EmptyUnitsWorkspace = workspaceCopy();
-{
-  const state = v2State();
-  state.phase = "construction";
-  state.currentStage = "code-generation";
-  state.stages["requirements-analysis"] = {
-    state: "completed",
-    approval: { approvedAt: "2026-07-03T11:00:00+09:00", via: "conversation" },
-  };
-  state.stages["code-generation"] = { units: {} };
-  state.phaseGates = {
-    ideation: { skipped: true },
-    inception: { approvedAt: "2026-07-03T12:00:00+09:00", via: "pr", reference: "https://example.test/pr/1" },
-  };
-  addV2Intent(v2EmptyUnitsWorkspace, state);
-  mkdirSync(join(v2EmptyUnitsWorkspace, ".amadeus/intents", v2Intent, "inception/requirements-analysis"), { recursive: true });
-  writeFileSync(
-    join(v2EmptyUnitsWorkspace, ".amadeus/intents", v2Intent, "inception/requirements-analysis/requirements.md"),
-    "# Requirements\n\n## 一覧\n\n| ID | 要求 | 由来する成功条件 |\n|---|---|---|\n| R001 | タイムアウトしない | 成功条件 1 |\n",
-  );
-}
-runExpectFailure(
-  ["bun", "run", validator, v2EmptyUnitsWorkspace, v2Intent],
-  "Unit 単位ステージの `units` が空ではない",
-);
+// (V9) registry の uuid が UUIDv7 でないと fail する。
+const badUuidWorkspace = workspaceCopy();
+addIntentRecord(badUuidWorkspace, {
+  registry: registryText().replace(recordUuid, "01980000-0000-4000-8000-000000000001"),
+});
+runExpectFailure(["bun", "run", validator, badUuidWorkspace, recordDirName], "registry の `uuid` が UUIDv7 である");
+
+// (V10) record が registry に未登録なら fail する。
+const unregisteredWorkspace = workspaceCopy();
+addIntentRecord(unregisteredWorkspace, { registry: "[]\n" });
+runExpectFailure(["bun", "run", validator, unregisteredWorkspace, recordDirName], "record ディレクトリが registry に登録されている");
+
+// (V11) audit の主 shard がないと fail する。
+const noAuditWorkspace = workspaceCopy();
+addIntentRecord(noAuditWorkspace, { skipAudit: true });
+runExpectFailure(["bun", "run", validator, noAuditWorkspace, recordDirName], "audit の主 shard が存在する");
 
 for (const dir of cleanups) rmSync(dir, { recursive: true, force: true });
 console.log("amadeus validator eval: ok");

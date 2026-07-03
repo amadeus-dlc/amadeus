@@ -25,8 +25,8 @@
 
 ### Allowed
 
-- .amadeus/intents/**
-- .amadeus/steering/**
+- aidlc/spaces/<space>/intents/**
+- aidlc/spaces/<space>/memory/**
 - 対象 skill が渡した前提
 
 ### Prohibited

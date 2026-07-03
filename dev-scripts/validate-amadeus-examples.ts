@@ -48,7 +48,7 @@ function run(command: string[], cwd = root): string {
 }
 
 function existingSnapshots(): string[] {
-  const found = snapshots.filter((snapshot) => existsSync(join(root, snapshot, ".amadeus")));
+  const found = snapshots.filter((snapshot) => existsSync(join(root, snapshot, "aidlc")));
   if (found.length === 0) {
     fail(`検証対象の snapshot がありません。examples:generate:real で生成してください: ${snapshots.join(", ")}`);
   }
@@ -118,8 +118,8 @@ function validateProvenance(): void {
 function validateSnapshotInvariants(): void {
   existingSnapshots();
   for (const invariant of snapshotInvariants) {
-    const intentBase = join(root, invariant.snapshot, ".amadeus/intents", intentId);
-    checkSnapshotInvariant(invariant, intentBase, fail);
+    const recordBase = join(root, invariant.snapshot, "aidlc/spaces/default/intents", intentId);
+    checkSnapshotInvariant(invariant, recordBase, fail);
     console.log(`invariants pass: ${invariant.snapshot}`);
   }
 }

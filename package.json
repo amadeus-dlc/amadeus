@@ -17,7 +17,7 @@
     "contracts:generate": "bun run dev-scripts/generate-amadeus-contracts.ts",
     "contracts:check": "bun run dev-scripts/check-amadeus-contracts.ts",
     "claude-wiring:check": "bun run dev-scripts/check-claude-host-wiring.ts",
-    "test:it:all": "npm run test:it:amadeus-templates && npm run test:it:lints && npm run test:it:public-type-file && npm run test:it:ts-complexity && npm run test:it:amadeus-contracts && npm run test:it:amadeus-validator && npm run test:it:amadeus-validator-domain && npm run test:it:promote-skill && npm run test:it:claude-host-wiring && npm run test:it:llm-runner-options:real-command && npm run test:it:llm-provider-options:mock-real && npm run test:it:index-generate",
+    "test:it:all": "npm run test:it:amadeus-templates && npm run test:it:lints && npm run test:it:public-type-file && npm run test:it:ts-complexity && npm run test:it:amadeus-contracts && npm run test:it:aidlc-state && npm run test:it:amadeus-validator && npm run test:it:amadeus-validator-domain && npm run test:it:promote-skill && npm run test:it:claude-host-wiring && npm run test:it:llm-runner-options:real-command && npm run test:it:llm-provider-options:mock-real && npm run test:it:index-generate && npm run test:it:migrate-workspace",
     "test:it:amadeus-templates": "bun run dev-scripts/evals/amadeus-templates/check.ts",
     "test:it:lints": "bun run lints/eval.ts",
     "test:it:public-type-file": "bun run lints/public-type-file/eval.ts",
@@ -49,7 +49,9 @@
     "validate:intents": "bun run dev-scripts/validate-amadeus-examples.ts --intents-only",
     "validate:all": "npm run validate && npm run validate:intents",
     "test:examples": "bun run dev-scripts/validate-amadeus-examples.ts --all",
-    "examples:generate:real": "bun run dev-scripts/generate-amadeus-examples.ts --provider real"
+    "examples:generate:real": "bun run dev-scripts/generate-amadeus-examples.ts --provider real",
+    "test:it:aidlc-state": "bun run dev-scripts/evals/aidlc-state/check.ts",
+    "test:it:migrate-workspace": "bun run dev-scripts/evals/migrate-workspace/check.ts"
   },
   "devDependencies": {
     "@types/bun": "^1.3.14",

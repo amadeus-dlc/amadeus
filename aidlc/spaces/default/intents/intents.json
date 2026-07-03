@@ -1,0 +1,12 @@
+[
+  {
+    "uuid": "019f268f-46f4-7000-ae53-3a4ee7cc6ebc",
+    "slug": "aidlc-v2-full-compliance",
+    "dirName": "260703-aidlc-v2-full-compliance",
+    "scope": "refactor",
+    "repos": [
+      "amadeus"
+    ],
+    "status": "in_progress"
+  }
+]

@@ -125,8 +125,8 @@ function sharedPromptRules(): string[] {
     "実行条件:",
     "- 質問せずに続行してください。判断が必要な点は、この指示と既存成果物から最も妥当な内容を選び、成果物に理由を書いてください。",
     "- Birth 提案、ステージの完了承認、ladder の確認など、人間の承認を待つ箇所は、この指示を人間の承認として扱ってください。",
-    "- ステージの完了承認は approval に `via: \"conversation\"` で記録してください。",
-    "- `.amadeus/` 配下だけを作成、更新してください。git commit、branch 作成、worktree 作成はしないでください。",
+    "- ステージの完了承認は checkbox を `[x]` にし、`GATE_APPROVED` と `STAGE_COMPLETED` を audit に追記して記録してください。",
+    "- `aidlc/` 配下だけを作成、更新してください。git commit、branch 作成、worktree 作成はしないでください。",
     "- 成果物は各 skill の同梱テンプレートと成果物契約に従い、日本語で書いてください。",
     "- 不明な値は空欄にせず `未確認` と書いてください。",
   ];
@@ -136,7 +136,7 @@ function ideationPrompt(): string {
   return [
     "Amadeus DLC の examples 用 workspace を作ります。",
     "",
-    "手順 1: `amadeus-steering` を scaffold-only で実行し、steering layer を作成してください。",
+    "手順 1: `amadeus-steering` を scaffold-only で実行し、Space（aidlc/spaces/default/）を作成してください。",
     "",
     "題材:",
     "- プロダクト名: EC サイト最小購入フロー",
@@ -144,7 +144,7 @@ function ideationPrompt(): string {
     "- 主なアクター: 購入者, 販売管理者",
     "- 外部システム: 在庫管理システム",
     "- 主要領域: 商品選択, 注文作成, 在庫参照",
-    "- 技術前提（確定済みとして steering の tech.md に反映する）: TypeScript と Node.js の Web アプリケーション、購入者向け Web UI、在庫管理システムとは REST API で連携、注文はリレーショナルデータベースに記録",
+    "- 技術前提（確定済みとして memory/project.md の技術セクションに反映する）: TypeScript と Node.js の Web アプリケーション、購入者向け Web UI、在庫管理システムとは REST API で連携、注文はリレーショナルデータベースに記録",
     "",
     "手順 2: `amadeus` skill の Intake を実行してください。",
     "入力テーマは「利用者が商品を選択して注文を作成できる最小の購入フローを実現する」です。",
@@ -165,7 +165,7 @@ function ideationPrompt(): string {
     "",
     "手順 4: Ideation の phase 境界処理を行ってください。",
     "phase PR は作成できないため、`https://github.com/example/ec-site/pull/101` が merge 済みであるものとして",
-    "`phaseGates.ideation` に approval evidence を記録し、`phase` を `inception` へ進めてください。",
+    "`PHASE_VERIFIED` イベント（Details に PR の URL）を audit に追記し、Phase Progress の `Ideation` を `Verified` にして `Lifecycle Phase` を `INCEPTION` へ進めてください。",
     "Inception のステージは実行せず、そこで停止してください。",
     "",
     ...sharedPromptRules(),
@@ -193,7 +193,7 @@ function inceptionPrompt(): string {
     "",
     "手順 3: Inception の phase 境界処理を行ってください。",
     "phase PR は作成できないため、`https://github.com/example/ec-site/pull/102` が merge 済みであるものとして",
-    "`phaseGates.inception` に approval evidence を記録し、`phase` を `construction` へ進めてください。",
+    "`PHASE_VERIFIED` イベント（Details に PR の URL）を audit に追記し、Phase Progress の `Inception` を `Verified` にして `Lifecycle Phase` を `CONSTRUCTION` へ進めてください。",
     "Construction のステージと Bolt は実行せず、そこで停止してください。",
     "",
     ...sharedPromptRules(),
@@ -208,7 +208,7 @@ function constructionPrompt(): string {
     "手順 1: `amadeus` skill を使い、対象 Intent の続きから再開してください。",
     "",
     "手順 2: `amadeus` の「Construction の Bolt 実行」に従い、walking skeleton の Bolt `B001` を開始してください。",
-    "branch と worktree は作成できないため、`state.json.bolts` への記録（`state: \"active\"` と束ねる Unit の一覧）だけを行ってください。",
+    "branch と worktree は作成できないため、Project Information の `Bolt Refs` への追記と `BOLT_STARTED` イベントの追記だけを行ってください。",
     "",
     "手順 3: `B001` に束ねた Unit について、Stage 3.1 から 3.4 を順に解決してください。",
     "",
@@ -218,10 +218,10 @@ function constructionPrompt(): string {
     "- インフラ変更はなく、デプロイ構成は定義済みである。",
     "",
     "Stage 3.1 Functional Design は成果物を作成し、完了承認まで記録してください。",
-    "実行しないステージは、状態を `skipped` にして理由を記録してください。",
+    "実行しないステージは、checkbox を `[S]` にして注記に理由を書き、`STAGE_SKIPPED` を audit に追記してください。",
     "",
-    "手順 4: Stage 3.5 Code Generation は実行せず、`pending` のまま停止してください。",
-    "Bolt `B001` も `active` のまま残してください。",
+    "手順 4: Stage 3.5 Code Generation は実行せず、checkbox を `[ ]` のまま停止してください。",
+    "Bolt `B001` は開始済み（`Bolt Refs` に記録済み）のまま残してください。",
     "",
     ...sharedPromptRules(),
     `- 作業後に \`bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . ${intentId}\` を実行し、fail があれば修正してから結果を要約してください。`,
@@ -235,17 +235,17 @@ function implementationPlanPrompt(): string {
     "手順 1: `amadeus` skill を使い、対象 Intent の続きから再開してください。",
     "",
     "手順 2: walking skeleton の Bolt `B001` に束ねた各 Unit について、Stage 3.5 Code Generation を開始してください。",
-    "`stages[\"code-generation\"].units[\"<unit-id>\"].state` を `active` にし、対象 Unit の設計成果物と要求を入力に、",
-    "`construction/<unit-id>-<slug>/code-generation/plan.md`（実装計画。変更対象、変更順序、検証方法）を作成してください。",
+    "対象 Unit の `code-generation` の checkbox を `[-]` にし、対象 Unit の設計成果物と要求を入力に、",
+    "`construction/<unit-id>-<slug>/code-generation/code-generation-plan.md`（実装計画。変更対象、変更順序、検証方法）を作成してください。",
     "",
-    "手順 3: `plan.md` の作成までで停止してください。",
+    "手順 3: `code-generation-plan.md` の作成までで停止してください。",
     "この workspace は example であり、実装対象のリポジトリを持たないため、次は行わないでください。",
     "",
     "- アプリケーションコードとテストコードの生成",
-    "- `code-generation/summary.md` の作成",
-    "- 完了承認のゲート提示と `completed` の記録",
+    "- `code-generation/code-summary.md` の作成",
+    "- 完了承認のゲート提示と `[x]` の記録",
     "",
-    "各 Unit の状態は `active` のままにし、Bolt `B001` も `active` のまま残してください。",
+    "各 Unit の checkbox は `[-]` のままにし、Bolt `B001` も完了イベントを記録せずに残してください。",
     "",
     ...sharedPromptRules(),
     `- 作業後に \`bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . ${intentId}\` を実行し、fail があれば修正してから結果を要約してください。`,
@@ -379,9 +379,9 @@ function prepareWorkspace(inputStep?: GenerationStep): void {
   writeFileSync(join(workspace, "CLAUDE.md"), ["# CLAUDE.md", "", ...instructions, ""].join("\n"));
 
   if (inputStep) {
-    const inputSnapshot = join(root, inputStep.snapshot, ".amadeus");
+    const inputSnapshot = join(root, inputStep.snapshot, "aidlc");
     if (!existsSync(inputSnapshot)) fail(`missing input snapshot: ${inputStep.snapshot}`);
-    cpSync(inputSnapshot, join(workspace, ".amadeus"), { recursive: true });
+    cpSync(inputSnapshot, join(workspace, "aidlc"), { recursive: true });
   }
 }
 
@@ -390,7 +390,7 @@ function prepareWorkspace(inputStep?: GenerationStep): void {
 // 生成直後の workspace に、snapshot と同じ段階不変条件（examples-contract）を適用する。
 function assertSnapshotInvariant(step: GenerationStep): void {
   const invariant = invariantForSnapshot(step.snapshot);
-  const intentBase = join(workspace, ".amadeus/intents", intentId);
+  const intentBase = join(workspace, "aidlc/spaces/default/intents", intentId);
   checkSnapshotInvariant(invariant, intentBase, fail);
 }
 
@@ -402,16 +402,16 @@ function assertValidatorPass(step: GenerationStep): void {
 // ---- snapshot と provenance ----
 
 function stageSnapshot(step: GenerationStep): void {
-  const target = join(stagedSnapshots, step.id, ".amadeus");
+  const target = join(stagedSnapshots, step.id, "aidlc");
   rmSync(join(stagedSnapshots, step.id), { recursive: true, force: true });
   ensureDir(target);
-  cpSync(join(workspace, ".amadeus"), target, { recursive: true });
+  cpSync(join(workspace, "aidlc"), target, { recursive: true });
 }
 
 function applyStagedSnapshots(targetSteps: GenerationStep[]): void {
   for (const step of targetSteps) {
-    const source = join(stagedSnapshots, step.id, ".amadeus");
-    const target = join(root, step.snapshot, ".amadeus");
+    const source = join(stagedSnapshots, step.id, "aidlc");
+    const target = join(root, step.snapshot, "aidlc");
     rmSync(join(root, step.snapshot), { recursive: true, force: true });
     ensureDir(join(root, step.snapshot));
     cpSync(source, target, { recursive: true });

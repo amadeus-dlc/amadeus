@@ -61,7 +61,7 @@ export const skillContracts = [
       },
     ],
     readBoundary: {
-      allowed: [".amadeus/intents/**", ".amadeus/steering/**", "対象 skill が渡した前提"],
+      allowed: ["aidlc/spaces/<space>/intents/**", "aidlc/spaces/<space>/memory/**", "対象 skill が渡した前提"],
       prohibited: ["質問対象と無関係な成果物"],
     },
     writeBoundary: {
@@ -114,7 +114,7 @@ export const skillContracts = [
       },
     ],
     readBoundary: {
-      allowed: [".amadeus/**", "検証対象の関連成果物"],
+      allowed: ["aidlc/**", "検証対象の関連成果物"],
       prohibited: ["秘密情報", "検証対象外 workspace"],
     },
     writeBoundary: {
@@ -180,10 +180,10 @@ export const skillContracts = [
     ],
     readBoundary: {
       allowed: [
-        ".amadeus/intents/**",
-        ".amadeus/steering/**",
-        ".amadeus/domain-map.md",
-        ".amadeus/context-map.md",
+        "aidlc/spaces/<space>/intents/**",
+        "aidlc/spaces/<space>/memory/**",
+        "aidlc/spaces/<space>/knowledge/domain-map.md",
+        "aidlc/spaces/<space>/knowledge/context-map.md",
         "関連 Issue/PR",
         "作業ツリー",
         "Skill Contract",

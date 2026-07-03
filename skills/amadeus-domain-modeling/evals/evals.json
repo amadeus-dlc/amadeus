@@ -4,25 +4,25 @@
     {
       "id": 1,
       "name": "capture-unresolved-term",
-      "prompt": "20260626-password-reset の作業中に「再設定セッション」という語が出た。意味がまだ曖昧なので、Amadeus のどこに記録すべきか判断して反映して。",
-      "expected_output": "対象 Intent の domain-notes.md に候補として記録し、.amadeus/glossary.md、CONTEXT.md、docs/adr は更新しない。"
+      "prompt": "260626-password-reset の作業中に「再設定セッション」という語が出た。意味がまだ曖昧なので、Amadeus のどこに記録すべきか判断して反映して。",
+      "expected_output": "対象 Intent の domain-notes.md に候補として記録し、aidlc/spaces/<space>/knowledge/glossary.md、CONTEXT.md、docs/adr は更新しない。"
     },
     {
       "id": 2,
       "name": "promote-shared-glossary-term",
-      "prompt": "「アカウント所有者」は全 Intent で使う確定用語にしたい。既存用語との衝突を見て、必要なら .amadeus/glossary.md に追加して。",
-      "expected_output": "既存 glossary を確認し、確定用語として .amadeus/glossary.md を更新する。対象 Intent の domain-notes.md があれば反映済みに記録する。CONTEXT.md は更新しない。"
+      "prompt": "「アカウント所有者」は全 Intent で使う確定用語にしたい。既存用語との衝突を見て、必要なら aidlc/spaces/<space>/knowledge/glossary.md に追加して。",
+      "expected_output": "既存 glossary を確認し、確定用語として aidlc/spaces/<space>/knowledge/glossary.md を更新する。対象 Intent の domain-notes.md があれば反映済みに記録する。CONTEXT.md は更新しない。"
     },
     {
       "id": 3,
       "name": "promote-intent-model-element",
-      "prompt": "20260626-password-reset の再設定トークンを値オブジェクトとしてモデルに反映したい。根拠は R002 と UC002。Intent 側の domain model を更新して。",
+      "prompt": "260626-password-reset の再設定トークンを値オブジェクトとしてモデルに反映したい。根拠は R002 と UC002。Intent 側の domain model を更新して。",
       "expected_output": "特定 Unit の実装設計に閉じる値オブジェクトは Construction Functional Design 候補として扱い、必要なら domain-notes.md と inception/traceability.md を整合させる。全体として採用済みの境界や依存にする判断がある場合だけ domain-map.md または context-map.md に反映し、詳細なモデルと契約は Construction Functional Design に反映する。"
     },
     {
       "id": 4,
       "name": "missing-amadeus-root",
-      "prompt": ".amadeus がない repo で、見つかった用語を glossary に追加して。",
+      "prompt": "aidlc/ がない repo で、見つかった用語を glossary に追加して。",
       "expected_output": "作業を止め、amadeus-steering を案内する。CONTEXT.md や docs/adr に代替記録しない。"
     }
   ]

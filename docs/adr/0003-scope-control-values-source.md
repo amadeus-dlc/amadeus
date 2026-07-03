@@ -2,7 +2,7 @@
 
 ## ステータス
 
-採用。
+上書き済み。Issue #387（AI-DLC v2 完全準拠）で、状態ファイルは `state.json` から v2 規定の `aidlc-state.md` に置き換わり、v2 の state template が Scope と Depth を Project Information と Scope Configuration に保持する。そのため本 ADR の「状態ファイルに scope 制御値を保存しない」は v2 契約に置き換えられた。制御値の意味論の定義元を成果物契約（scopes.md）に置く判断は引き続き有効である。
 
 ## 日付
 

@@ -4,7 +4,8 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { cleanMarkdownLinkTarget } from "./domain/artifact-links";
 import { buildIntentsIndex, HeadingContractViolationError } from "../scripts/IndexGenerate";
-import { checkLifecycleV2Intent } from "./lifecycle-v2";
+import { checkAidlcIntentRecord } from "./lifecycle-v2";
+import { spaceBase } from "./space-paths";
 
 type Result = "pass" | "warning" | "fail" | "blocked" | "skipped";
 
@@ -34,7 +35,10 @@ type Table = {
   headers: string[];
   rows: Record<string, string>[];
 };
-const intentDirectoryPattern = /^\d{8}-[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const intentDirectoryPattern = /^\d{6}-[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const uuidV7Pattern = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const registryStatusValues = new Set(["in_progress", "parked", "completed"]);
+const registryScopeValues = new Set(["enterprise", "feature", "mvp", "poc", "bugfix", "refactor", "infra", "security-patch", "workshop"]);
 const eventStormingDirectoryPattern = /^ES\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const eventStormingStatusValues = new Set(["draft", "reviewing", "ready", "superseded"]);
 const eventStormingLevelValues = new Set(["big-picture", "process-modeling", "system-design"]);
@@ -80,13 +84,22 @@ const rowCategoryRules: RowCategoryRule[] = [
   {
     category: "v2 ライフサイクル",
     matches: ({ condition }) =>
-      condition.includes("v2 互換ライフサイクル") ||
-      condition.includes("scope の実行対象と一致する") ||
-      condition.includes("approval evidence") ||
-      condition.includes("phaseGates") ||
-      condition.includes("ステージ状態が既知の値である") ||
-      condition.includes("Bolt 状態が既知の値である") ||
+      condition.includes("aidlc-state.md") ||
+      condition.includes("Stage Progress") ||
+      condition.includes("Phase Progress") ||
+      condition.includes("checkbox") ||
+      condition.includes("scope の実行対象") ||
+      condition.includes("scope 外のステージ") ||
+      condition.includes("イベントを持つ") ||
+      condition.includes("WORKFLOW_STARTED") ||
+      condition.includes("WORKFLOW_COMPLETED") ||
+      condition.includes("audit の主 shard") ||
+      condition.includes("先行 phase") ||
       condition === "completed のステージは必須成果物を持つ",
+  },
+  {
+    category: "Intent Registry",
+    matches: ({ target, condition }) => target.endsWith("intents.json") || target.endsWith("active-intent") || condition.includes("registry"),
   },
   {
     category: "Index 生成整合",
@@ -118,7 +131,8 @@ const rowCategoryRules: RowCategoryRule[] = [
   },
   {
     category: "状態",
-    matches: ({ target, condition }) => target.endsWith("state.json") || condition.includes("state.json") || condition.includes("`phase`") || condition.includes("`status`"),
+    matches: ({ target, condition }) =>
+      target.endsWith("state.json") || target.endsWith("aidlc-state.md") || condition.includes("state.json") || condition.includes("`phase`") || condition.includes("`status`"),
   },
   {
     category: "モック",
@@ -162,10 +176,13 @@ const rowCategoryRules: RowCategoryRule[] = [
   },
 ];
 
+const spacePrefix = /^aidlc\/spaces\/[^/]+\//;
+const intentRecordPrefix = /^aidlc\/spaces\/[^/]+\/intents\/[^/]+\//;
+
 const checkedFileCategoryRules: CheckedFileCategoryRule[] = [
   {
     category: "Amadeus ルート",
-    matches: (file) => file === ".amadeus",
+    matches: (file) => file === "aidlc" || /^aidlc\/spaces\/[^/]+$/.test(file),
   },
   {
     category: "Grilling Decision Trail",
@@ -173,69 +190,42 @@ const checkedFileCategoryRules: CheckedFileCategoryRule[] = [
   },
   {
     category: "Event Storming",
-    matches: (file) => file.startsWith(".amadeus/event-storming/"),
+    matches: (file) => file.includes("/event-storming/"),
   },
   {
-    category: "Steering",
-    matches: (file) => file.startsWith(".amadeus/steering/") || file === ".amadeus/steering" || file === ".amadeus/steering.md",
+    category: "Memory",
+    matches: (file) => spacePrefix.test(file) && file.replace(spacePrefix, "").startsWith("memory"),
   },
   {
     category: "全体ドメイン",
-    matches: (file) => file === ".amadeus/domain-map.md" || file === ".amadeus/context-map.md",
+    matches: (file) => file.endsWith("/knowledge/domain-map.md") || file.endsWith("/knowledge/context-map.md"),
   },
   {
-    category: "全体成果物",
-    matches: (file) => /^\.amadeus\/[^/]+\.md$/.test(file),
+    category: "Knowledge",
+    matches: (file) => spacePrefix.test(file) && file.replace(spacePrefix, "").startsWith("knowledge"),
+  },
+  {
+    category: "Intent Registry",
+    matches: (file) => file.endsWith("/intents/intents.json") || file.endsWith("/intents/intents.md") || file.endsWith("/intents/active-intent"),
   },
   {
     category: "Intent 状態",
-    matches: (file) => /^\.amadeus\/intents\/[^/]+\/state\.json$/.test(file),
-  },
-  {
-    category: "Event Storming",
-    matches: (file) => /^\.amadeus\/intents\/[^/]+\/event-storming\//.test(file),
-  },
-  {
-    category: "Intent モック",
-    matches: (file) => /^\.amadeus\/intents\/[^/]+\/mocks\//.test(file),
+    matches: (file) => intentRecordPrefix.test(file) && (file.endsWith("/aidlc-state.md") || file.includes("/audit/")),
   },
   {
     category: "Intent 基本成果物",
-    matches: (file) => /^\.amadeus\/intents\/[^/]+\/[^/]+\.md$/.test(file),
-  },
-  {
-    category: "Intent ドメイン",
-    matches: (file) => /^\.amadeus\/intents\/[^/]+\/domain\//.test(file),
+    matches: (file) => /^aidlc\/spaces\/[^/]+\/intents\/[^/]+\.md$/.test(file) || /^aidlc\/spaces\/[^/]+\/intents\/[^/]+\/[^/]+\.md$/.test(file),
   },
   {
     category: "Bolt / Task",
-    matches: (file) => /^\.amadeus\/intents\/[^/]+\/bolts\//.test(file),
-  },
-  {
-    category: "Requirement 詳細",
-    matches: (file) => /^\.amadeus\/intents\/[^/]+\/requirements\//.test(file),
-  },
-  {
-    category: "Story 詳細",
-    matches: (file) => /^\.amadeus\/intents\/[^/]+\/user-stories\//.test(file),
-  },
-  {
-    category: "Use Case 詳細",
-    matches: (file) => /^\.amadeus\/intents\/[^/]+\/use-cases\//.test(file),
-  },
-  {
-    category: "Unit 詳細",
-    matches: (file) => /^\.amadeus\/intents\/[^/]+\/units\//.test(file),
-  },
-  {
-    category: "Decision 詳細",
-    matches: (file) => /^\.amadeus\/intents\/[^/]+\/decisions\//.test(file),
+    matches: (file) => intentRecordPrefix.test(file) && file.includes("/bolts/"),
   },
 ];
 
 class AmadeusValidator {
   private readonly root: string;
   private readonly intentId?: string;
+  private readonly space: string;
   private readonly rows: Row[] = [];
   private readonly checkedFiles = new Set<string>();
   private readonly knownIds = new Map<string, Set<string>>();
@@ -243,19 +233,19 @@ class AmadeusValidator {
   constructor(root: string, intentId?: string) {
     this.root = resolve(root);
     this.intentId = this.blank(intentId) ? undefined : intentId;
+    this.space = spaceBase(this.root);
   }
 
   run(): string {
     try {
       this.checkWorkspace();
       if (!this.failed()) {
-        this.checkFile(".amadeus/README.md", "必須ファイルが存在する");
-        this.checkSteeringLayer();
+        this.checkSpaceLayers();
         this.checkGlobalIndexes();
         if (this.intentId) {
           this.checkIntentIndexes(this.intentId);
         } else {
-          this.pass(".amadeus/intents.md", "対象 Intent ディレクトリ名", "指定なし。全体成果物だけを検証");
+          this.pass(`${this.space}/intents/intents.md`, "対象 Intent ディレクトリ名", "指定なし。全体成果物だけを検証");
         }
       }
     } catch (error) {
@@ -273,44 +263,129 @@ class AmadeusValidator {
       return;
     }
 
-    this.checkFile(".amadeus", "Amadeus の成果物ルートが存在する", true);
+    this.checkFile("aidlc", "Amadeus の成果物ルートが存在する", true);
+    this.checkFile("aidlc/spaces", "Space の親ディレクトリが存在する", true);
+    this.checkFile(this.space, "対象 Space が存在する", true);
   }
 
-  private checkSteeringLayer(): void {
-    this.checkFile(".amadeus/steering.md", "steering 入口が存在する");
-    this.checkHeadings(".amadeus/steering.md", ["役割", "対象成果物", "読む順序", "Intent Layer へ進む基準", "責務境界"]);
+  private checkSpaceLayers(): void {
+    this.checkFile(`${this.space}/memory`, "memory ディレクトリが存在する", true);
+    this.checkFile(`${this.space}/memory/org.md`, "memory/org.md が存在する");
+    this.checkFile(`${this.space}/memory/team.md`, "memory/team.md が存在する");
+    this.checkFile(`${this.space}/memory/project.md`, "memory/project.md が存在する");
+    this.checkOptionalDirectory(`${this.space}/memory/phases`, "memory/phases は任意である");
+    this.checkOptionalDirectory(`${this.space}/memory/templates`, "memory/templates は任意である");
+    this.checkFile(`${this.space}/knowledge`, "knowledge ディレクトリが存在する", true);
+    this.checkOptionalDirectory(`${this.space}/codekb`, "codekb は brownfield で作られる任意ディレクトリである");
+    this.checkFile(`${this.space}/intents`, "intents ディレクトリが存在する", true);
+  }
 
-    this.checkFile(".amadeus/steering", "steering 詳細ディレクトリが存在する", true);
-    this.checkFile(".amadeus/steering/objective.md", "steering の目的一覧が存在する");
-    this.checkHeadings(".amadeus/steering/objective.md", ["一覧"]);
-    this.checkFile(".amadeus/steering/product.md", "steering のプロダクト概要が存在する");
-    this.checkHeadings(".amadeus/steering/product.md", ["コア能力", "主要ユースケース", "価値仮説"]);
-    this.checkFile(".amadeus/steering/tech.md", "steering の技術スタックが存在する");
-    this.checkHeadings(".amadeus/steering/tech.md", ["アーキテクチャ", "主要技術", "開発標準", "開発環境", "主要技術判断"]);
-    this.checkFile(".amadeus/steering/structure.md", "steering のプロジェクト構造が存在する");
-    this.checkHeadings(".amadeus/steering/structure.md", ["編成方針", "ディレクトリパターン", "命名規約", "依存関係の整理", "コード構成原則"]);
-    this.checkFile(".amadeus/steering/actors.md", "steering のアクター一覧が存在する");
-    this.checkHeadings(".amadeus/steering/actors.md", ["一覧"]);
-    this.checkFile(".amadeus/steering/external-systems.md", "steering の外部システム一覧が存在する");
-    this.checkHeadings(".amadeus/steering/external-systems.md", ["一覧"]);
-    this.checkFile(".amadeus/steering/knowledge.md", "steering のナレッジ索引が存在する");
-    this.checkHeadings(".amadeus/steering/knowledge.md", ["背景", "前提", "未確認事項"]);
-    this.checkFile(".amadeus/steering/knowledge", "steering のナレッジ詳細ディレクトリが存在する", true);
-    this.checkFile(".amadeus/steering/knowledge/README.md", "steering のナレッジ詳細入口が存在する");
-    this.checkHeadings(".amadeus/steering/knowledge/README.md", ["役割", "記録方針"]);
-    this.checkFile(".amadeus/steering/policies.md", "steering のポリシー索引が存在する");
-    this.checkHeadings(".amadeus/steering/policies.md", ["方針", "禁止事項", "判断基準"]);
-    this.checkFile(".amadeus/steering/policies", "steering のポリシー詳細ディレクトリが存在する", true);
-    this.checkFile(".amadeus/steering/policies/README.md", "steering のポリシー詳細入口が存在する");
-    this.checkHeadings(".amadeus/steering/policies/README.md", ["役割", "記録方針"]);
+  private checkOptionalDirectory(path: string, condition: string): void {
+    if (this.isDirectory(this.absolute(path))) {
+      this.checkedFiles.add(path);
+      this.pass(path, condition, "存在を確認");
+    } else {
+      this.skipped(path, condition, "ディレクトリなし");
+    }
   }
 
   private checkGlobalIndexes(): void {
-    this.checkEventStormingSessions(".amadeus/event-storming", "pre-intent");
+    this.checkEventStormingSessions(`${this.space}/knowledge/event-storming`, "pre-intent");
     this.checkIntents();
+    this.checkIntentsRegistry();
     this.checkIndexGeneration();
-    this.checkDomainMap(".amadeus/domain-map.md");
-    this.checkContextMap(".amadeus/context-map.md");
+    this.checkDomainMap(`${this.space}/knowledge/domain-map.md`);
+    this.checkContextMap(`${this.space}/knowledge/context-map.md`);
+  }
+
+  private checkIntentsRegistry(): void {
+    const path = `${this.space}/intents/intents.json`;
+    this.checkFile(path, "Intent registry（intents.json）が存在する");
+    if (!this.isFile(this.absolute(path))) return;
+
+    let entries: unknown;
+    try {
+      entries = JSON.parse(this.read(path));
+    } catch (error) {
+      this.failRow(path, "intents.json が JSON として解釈できる", (error as Error).message);
+      return;
+    }
+    if (!Array.isArray(entries)) {
+      this.failRow(path, "intents.json が registry の配列である", this.typeName(entries));
+      return;
+    }
+    this.pass(path, "intents.json が registry の配列である", `${entries.length} 件`);
+
+    const dirNames = new Set<string>();
+    for (const entry of entries as Record<string, any>[]) {
+      this.checkRegistryEntry(path, entry, dirNames);
+    }
+    this.checkRegistryCoverage(path, dirNames);
+    this.checkActiveIntentCursor(dirNames);
+  }
+
+  private checkRegistryEntry(path: string, entry: Record<string, any>, dirNames: Set<string>): void {
+    const dirName = String(entry.dirName ?? "");
+    const label = dirName === "" ? "(dirName 未設定)" : dirName;
+    if (uuidV7Pattern.test(String(entry.uuid ?? ""))) {
+      this.pass(path, "registry の `uuid` が UUIDv7 である", label);
+    } else {
+      this.failRow(path, "registry の `uuid` が UUIDv7 である", `${label}: ${String(entry.uuid ?? "未設定")}`);
+    }
+    if (intentDirectoryPattern.test(dirName)) {
+      this.pass(path, "registry の `dirName` が <YYMMDD>-<label> 形式である", dirName);
+    } else {
+      this.failRow(path, "registry の `dirName` が <YYMMDD>-<label> 形式である", label);
+    }
+    if (this.blank(entry.slug)) {
+      this.failRow(path, "registry の `slug` が空欄でない", label);
+    } else {
+      this.pass(path, "registry の `slug` が空欄でない", String(entry.slug));
+    }
+    this.checkAllowed(path, "scope", entry.scope, registryScopeValues);
+    this.checkAllowed(path, "status", entry.status, registryStatusValues);
+    if (Array.isArray(entry.repos)) {
+      this.pass(path, "registry の `repos` が配列である", `${label}: ${entry.repos.length} 件`);
+    } else {
+      this.failRow(path, "registry の `repos` が配列である", label);
+    }
+    if (dirName !== "") dirNames.add(dirName);
+  }
+
+  private checkRegistryCoverage(path: string, dirNames: Set<string>): void {
+    const intentsDir = this.absolute(`${this.space}/intents`);
+    if (!this.isDirectory(intentsDir)) return;
+    const records = readdirSync(intentsDir)
+      .filter((entry) => this.isDirectory(join(intentsDir, entry)))
+      .filter((entry) => intentDirectoryPattern.test(entry))
+      .sort();
+    for (const record of records) {
+      if (dirNames.has(record)) {
+        this.pass(path, "record ディレクトリが registry に登録されている", record);
+      } else {
+        this.failRow(path, "record ディレクトリが registry に登録されている", record);
+      }
+    }
+    for (const dirName of [...dirNames].sort()) {
+      if (!records.includes(dirName)) {
+        this.failRow(path, "registry の `dirName` の record ディレクトリが存在する", dirName);
+      }
+    }
+  }
+
+  private checkActiveIntentCursor(dirNames: Set<string>): void {
+    const path = `${this.space}/intents/active-intent`;
+    if (!this.isFile(this.absolute(path))) {
+      this.skipped(path, "active-intent カーソルは任意である", "ファイルなし");
+      return;
+    }
+    this.checkedFiles.add(path);
+    const value = this.read(path).trim();
+    if (dirNames.has(value)) {
+      this.pass(path, "active-intent が registry の record を指す", value);
+    } else {
+      this.failRow(path, "active-intent が registry の record を指す", value === "" ? "空" : value);
+    }
   }
 
   private checkEventStormingSessions(rootPath: string, expectedScope: "pre-intent" | "intent-scoped", intentId?: string): void {
@@ -750,38 +825,36 @@ class AmadeusValidator {
   }
 
   private checkIntentIndexes(intentId: string): void {
-    const base = `.amadeus/intents/${intentId}`;
+    const base = `${this.space}/intents/${intentId}`;
 
-    this.checkFile(`.amadeus/intents/${intentId}.md`, "Intent のモジュールファイルが存在する");
-    this.checkHeadings(`.amadeus/intents/${intentId}.md`, ["目標プロファイル", "目的", "成功条件", "範囲"]);
-    this.checkIntentGoalProfile(`.amadeus/intents/${intentId}.md`);
+    this.checkFile(`${this.space}/intents/${intentId}.md`, "Intent のモジュールファイルが存在する");
+    this.checkHeadings(`${this.space}/intents/${intentId}.md`, ["概要", "依存", "目標プロファイル"]);
+    this.checkIntentGoalProfile(`${this.space}/intents/${intentId}.md`);
     this.checkEventStormingSessions(`${base}/event-storming`, "intent-scoped", intentId);
 
-    const statePath = `${base}/state.json`;
-    this.checkFile(statePath, "Intent 状態ファイルが存在する");
-    const state = this.intentState(statePath);
-    if (!state) return;
-
-    // 旧契約（schemaVersion 1）の Intent 検証は #381 で退役した。
-    if (String(state.schemaVersion ?? "") !== "2") {
-      this.failRow(statePath, "`schemaVersion` が 2 である", String(state.schemaVersion ?? "未設定"));
-      return;
-    }
+    const statePath = `${base}/aidlc-state.md`;
+    this.checkFile(statePath, "Intent 状態ファイル（aidlc-state.md）が存在する");
+    if (!this.isFile(this.absolute(statePath))) return;
+    const stateText = this.read(statePath);
+    const auditPath = `${base}/audit/audit.md`;
+    const auditText = this.isFile(this.absolute(auditPath)) ? this.read(auditPath) : undefined;
+    if (auditText !== undefined) this.checkedFiles.add(auditPath);
 
     this.checkNoLegacyIntentRootArtifacts(base);
     this.checkExistingPhaseGrillings(base);
-    checkLifecycleV2Intent(
+    checkAidlcIntentRecord(
       {
         pass: (target, condition, evidence) => this.pass(target, condition, evidence),
         failRow: (target, condition, evidence) => this.failRow(target, condition, evidence),
         checkFile: (path, condition) => this.checkFile(path, condition),
       },
-      { base, intentId, state },
+      { base, dirName: intentId, stateText, auditText },
     );
   }
 
   private checkNoLegacyIntentRootArtifacts(base: string): void {
     const legacyFiles = [
+      "state.json",
       "scope.md",
       "ideation.md",
       "requirements.md",
@@ -810,7 +883,8 @@ class AmadeusValidator {
     for (const file of legacyFiles) {
       const path = `${base}/${file}`;
       if (this.isFile(this.absolute(path))) {
-        this.failRow(path, "Intent 直下の旧配置成果物を使わない", `${file} は phase ディレクトリ配下へ置く`);
+        const guidance = file === "state.json" ? "state.json は退役した。状態は aidlc-state.md が持つ" : `${file} は phase ディレクトリ配下へ置く`;
+        this.failRow(path, "Intent 直下の旧配置成果物を使わない", guidance);
       }
     }
     for (const directory of legacyDirectories) {
@@ -881,7 +955,7 @@ class AmadeusValidator {
   }
 
   private checkIntents(): void {
-    const path = ".amadeus/intents.md";
+    const path = `${this.space}/intents/intents.md`;
     this.checkFile(path, "インテント一覧が存在する");
     this.checkHeadings(path, ["一覧", "依存関係"]);
     const table = this.checkTable(path, "一覧", ["識別子", "概要", "依存", "詳細"]);
@@ -903,7 +977,7 @@ class AmadeusValidator {
   // 生成ロジック（buildIntentsIndex）を再利用し、導出した期待内容と実ファイルの
   // 完全一致で判定する（BL006、BR008）。列構造検査（checkIntents）とは独立して行う。
   private checkIndexGeneration(): void {
-    this.checkIndexGenerationTarget(".amadeus/intents.md", () => buildIntentsIndex(this.root));
+    this.checkIndexGenerationTarget(`${this.space}/intents/intents.md`, () => buildIntentsIndex(this.root));
   }
 
   private checkIndexGenerationTarget(path: string, build: () => string): void {
@@ -914,19 +988,11 @@ class AmadeusValidator {
     } catch (error) {
       if (error instanceof HeadingContractViolationError) {
         for (const violation of error.violations) {
-          if (violation.file.endsWith("state.json")) {
-            this.failRow(
-              path,
-              "Index 生成整合: 配下モジュールの state.json が読める",
-              `${violation.file}: ${violation.missing.join("、")}`,
-            );
-          } else {
-            this.failRow(
-              path,
-              "Index 生成整合: 配下モジュールが見出し契約を満たす",
-              `${violation.file}: ${violation.missing.join("、")} が不足`,
-            );
-          }
+          this.failRow(
+            path,
+            "Index 生成整合: 配下モジュールが見出し契約を満たす",
+            `${violation.file}: ${violation.missing.join("、")} が不足`,
+          );
         }
         return;
       }
@@ -1305,7 +1371,7 @@ class AmadeusValidator {
   }
 
   private grillingCompanionTargetAllowed(base: string, cleanTarget: string, resolved: string): boolean {
-    const companionRoots = [".amadeus/event-storming"];
+    const companionRoots = [`${this.space}/knowledge/event-storming`];
     if (!companionRoots.some((root) => base.startsWith(`${root}/`))) return false;
     const companionName = basename(base);
     return cleanTarget === `../${companionName}.md` && resolved === resolve(this.absolute(`${dirname(base)}/${companionName}.md`));
@@ -1356,7 +1422,7 @@ class AmadeusValidator {
     const table = this.checkTable(path, "Dependencies", ["Downstream", "Upstream", "依存内容", "組織パターン", "統合パターン", "状態", "根拠"]);
     if (!table) return;
 
-    const contextIds = this.idsFor(".amadeus/domain-map.md");
+    const contextIds = this.idsFor(`${this.space}/knowledge/domain-map.md`);
     this.checkNotBlank(path, table, "依存内容");
     this.checkDetailLinks(path, table, "根拠");
     for (const row of table.rows) {
@@ -1445,7 +1511,7 @@ class AmadeusValidator {
     const known = this.knownIds.get(path);
     if (known) return known;
     if (!this.isFile(this.absolute(path))) return new Set();
-    const heading = path === ".amadeus/domain-map.md" || path.endsWith("/domain-map.md") ? "Bounded Contexts" : "一覧";
+    const heading = path.endsWith("/domain-map.md") ? "Bounded Contexts" : "一覧";
     const table = this.tableAfterHeading(path, heading);
     if (!table || !table.headers.includes("識別子")) return new Set();
     const ids = new Set(table.rows.map((row) => String(row["識別子"] ?? "").trim()).filter(Boolean));
@@ -1507,9 +1573,9 @@ class AmadeusValidator {
       for (const target of links) {
         this.checkLink(path, target);
         const clean = this.cleanLinkTarget(target);
-        const match = clean.match(/^intents\/([^/]+)\.md$/);
+        const match = clean.match(/^([^/]+)\.md$/);
         if (!match) {
-          this.failRow(path, "`詳細` が intents/<intent-id>-<slug>.md を指す", target);
+          this.failRow(path, "`詳細` が同じ intents/ 配下の <dirName>.md を指す", target);
           continue;
         }
         const intentId = match[1];
@@ -1525,8 +1591,8 @@ class AmadeusValidator {
     for (const row of table.rows) {
       const id = String(row["識別子"] ?? "").trim();
       if (!ids.has(id)) continue;
-      this.checkFile(`.amadeus/intents/${id}`, "Intent モジュールディレクトリが存在する", true);
-      this.checkFile(`.amadeus/intents/${id}/state.json`, "Intent 状態ファイルが存在する");
+      this.checkFile(`${this.space}/intents/${id}`, "Intent record ディレクトリが存在する", true);
+      this.checkFile(`${this.space}/intents/${id}/aidlc-state.md`, "Intent 状態ファイル（aidlc-state.md）が存在する");
     }
   }
 
