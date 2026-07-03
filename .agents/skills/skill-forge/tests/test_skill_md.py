@@ -20,12 +20,13 @@ from pathlib import Path
 import pytest
 
 from scripts.run_eval import run_single_query
+from scripts.trigger_probe import TRIGGERED
 from scripts.utils import CLI_CLAUDE, parse_skill_md
 
 # ── 定数 ──────────────────────────────────────────────────────────────────────
 
 SKILL_DIR = Path(__file__).parent.parent
-EVALS_PATH = SKILL_DIR / "evals" / "trigger_evals.json"
+EVALS_PATH = SKILL_DIR / "evals" / "evals.json"
 
 RUNS_PER_QUERY = int(os.environ.get("SKILL_EVAL_RUNS", "3"))
 TRIGGER_THRESHOLD = float(os.environ.get("SKILL_EVAL_THRESHOLD", "0.5"))
@@ -88,7 +89,7 @@ def _trigger_rate(query: str, skill_info: tuple, project_root: str) -> float:
         )
         for _ in range(RUNS_PER_QUERY)
     ]
-    return sum(results) / len(results)
+    return sum(1 for r in results if r == TRIGGERED) / len(results)
 
 
 # ── テスト ────────────────────────────────────────────────────────────────────
@@ -99,7 +100,7 @@ def _trigger_rate(query: str, skill_info: tuple, project_root: str) -> float:
 @pytest.mark.parametrize("entry", _EVALS, ids=[e["query"][:60] for e in _EVALS])
 def test_skill_trigger(entry, skill_info, project_root):
     """
-    Given: trigger_evals.json に定義されたクエリ
+    Given: evals.json に定義されたクエリ
     When:  claude に RUNS_PER_QUERY 回投げる
     Then:  トリガー率が TRIGGER_THRESHOLD を境に should_trigger と一致する
     """

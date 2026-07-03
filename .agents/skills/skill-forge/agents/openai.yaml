@@ -1,4 +1,4 @@
-# skill-forge-source-sha256: 9c4f11421b13dd1c60931322f151fcaa37f0ad557893e88e9a45b4a70c923f0f
+# skill-forge-source-sha256: 5ed735b2ea51c15ab7682506369d2762d694c5290721cc5de1fb4a4398c9fad7
 interface:
   display_name: "Skill Forge"
   short_description: "Create and improve agent skills"

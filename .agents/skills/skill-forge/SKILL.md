@@ -1,19 +1,20 @@
 ---
 name: skill-forge
 description: >-
-  Create or improve Claude Code and Codex skills. Use when the request is
-  explicitly about a skill itself: creating a skill, editing SKILL.md, testing a
-  draft in .claude/skills/.../SKILL.md or .agents/skills/.../SKILL.md, improving
-  an existing skill, debugging skill triggering, running skill evals or
-  benchmarks, optimizing trigger descriptions, packaging a skill, or turning an
-  already-described workflow into a reusable team skill. Use this even when the
-  user says "turn this workflow I just described into a reusable skill" without
-  mentioning SKILL.md. Trigger on phrases like existing skill, skill draft,
-  SKILL.md, skill trigger, skill eval, make this into a skill, or turn this
-  workflow into a skill. Exclude ordinary implementation work, generic
-  automation/workflow setup, GitHub Actions/CI setup, debugging, code review,
-  database migrations, schema changes, and incidents unless the user asks to
-  create, improve, test, package, or convert a skill.
+  Create or improve Claude Code and Codex skills. Use only when the request is
+  explicitly about the skill itself: creating a new skill, editing a SKILL.md
+  file, testing a skill draft in .claude/skills/.../SKILL.md or
+  .agents/skills/.../SKILL.md, improving an existing skill, debugging why a
+  skill is not triggering, running evals or benchmarks for a skill, or turning
+  an already-described workflow into a reusable skill. Trigger on phrases like
+  existing skill, skill draft, SKILL.md, skill trigger, skill eval, make this
+  into a skill, or turn this workflow into a skill. Do not use for ordinary
+  implementation work unless the user explicitly mentions a skill, SKILL.md,
+  or converting the task into a skill. That exclusion includes generic coding
+  tasks, generic automation/workflow setup, CI setup, GitHub Actions
+  workflows, debugging, code review, database migrations, schema changes, and
+  production incident response when the user is just asking for help with the
+  task itself.
 ---
 
 # Skill Forge
@@ -123,16 +124,16 @@ Generate Codex UI metadata after the target skill has stable `SKILL.md`
 frontmatter:
 
 ```bash
-uv run python scripts/generate_openai_yaml.py <skill-dir>
+uv run python -m scripts.generate_openai_yaml <skill-dir>
 ```
 
 Run validation before packaging or publishing:
 
 ```bash
-uv run python scripts/quick_validate.py <skill-dir>
-uv run python scripts/quick_validate.py <skill-dir> --platform claude
-uv run python scripts/quick_validate.py <skill-dir> --platform codex
-uv run python scripts/quick_validate.py <skill-dir> --platform codex --strict-openai-yaml
+uv run python -m scripts.quick_validate <skill-dir>
+uv run python -m scripts.quick_validate <skill-dir> --platform claude
+uv run python -m scripts.quick_validate <skill-dir> --platform codex
+uv run python -m scripts.quick_validate <skill-dir> --platform codex --strict-openai-yaml
 ```
 
 Use `--platform claude` for Claude Code-only frontmatter such as
