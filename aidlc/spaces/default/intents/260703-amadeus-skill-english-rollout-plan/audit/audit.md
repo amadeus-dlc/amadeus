@@ -1263,3 +1263,107 @@
 **Details**: `npm run test:all`、`test:it:amadeus-templates`、`test:it:promote-skill`、Amadeus Validator、`git diff --check` が pass した（B006〜B009 統合実行）。autonomous 実行のため会話内 gate は提示せず、approval evidence は PR #417 merge 後に記録する。
 
 ---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T15:15:13Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Unit**: U006-core-entrypoints-verification-englishization
+**Details**: B006 Core entrypoints and verification 英語化。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/417。Merge commit: 6ef9f349a6f6ce8cd1c23a04dd74f952989b4fcc。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T15:15:13Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Bolt**: B006
+**Details**: B006 Core entrypoints and verification 英語化。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/417。Merge commit: 6ef9f349a6f6ce8cd1c23a04dd74f952989b4fcc。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T15:15:13Z
+**Event**: BOLT_COMPLETED
+**Bolt**: B006
+**Details**: autonomous の Bolt PR が人間の merge で承認された。Bolt ref: B006-core-entrypoints-verification-englishization。PR: https://github.com/amadeus-dlc/amadeus/pull/417。Merge commit: 6ef9f349a6f6ce8cd1c23a04dd74f952989b4fcc。B006〜B009 は人間指示により単一リカバリ PR で統合実行した（CD007）。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T15:15:13Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Unit**: U007-construction-stage-skills-englishization
+**Details**: B007 Construction stage skills 英語化。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/417。Merge commit: 6ef9f349a6f6ce8cd1c23a04dd74f952989b4fcc。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T15:15:13Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Bolt**: B007
+**Details**: B007 Construction stage skills 英語化。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/417。Merge commit: 6ef9f349a6f6ce8cd1c23a04dd74f952989b4fcc。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T15:15:13Z
+**Event**: BOLT_COMPLETED
+**Bolt**: B007
+**Details**: autonomous の Bolt PR が人間の merge で承認された。Bolt ref: B007-construction-stage-skills-englishization。PR: https://github.com/amadeus-dlc/amadeus/pull/417。Merge commit: 6ef9f349a6f6ce8cd1c23a04dd74f952989b4fcc。B006〜B009 は人間指示により単一リカバリ PR で統合実行した（CD007）。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T15:15:13Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Unit**: U008-inception-stage-skills-englishization
+**Details**: B008 Inception stage skills 英語化。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/417。Merge commit: 6ef9f349a6f6ce8cd1c23a04dd74f952989b4fcc。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T15:15:13Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Bolt**: B008
+**Details**: B008 Inception stage skills 英語化。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/417。Merge commit: 6ef9f349a6f6ce8cd1c23a04dd74f952989b4fcc。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T15:15:13Z
+**Event**: BOLT_COMPLETED
+**Bolt**: B008
+**Details**: autonomous の Bolt PR が人間の merge で承認された。Bolt ref: B008-inception-stage-skills-englishization。PR: https://github.com/amadeus-dlc/amadeus/pull/417。Merge commit: 6ef9f349a6f6ce8cd1c23a04dd74f952989b4fcc。B006〜B009 は人間指示により単一リカバリ PR で統合実行した（CD007）。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T15:15:13Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Unit**: U009-ideation-supporting-skills-englishization
+**Details**: B009 Ideation and supporting skills 英語化。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/417。Merge commit: 6ef9f349a6f6ce8cd1c23a04dd74f952989b4fcc。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T15:15:13Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Bolt**: B009
+**Details**: B009 Ideation and supporting skills 英語化。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/417。Merge commit: 6ef9f349a6f6ce8cd1c23a04dd74f952989b4fcc。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T15:15:13Z
+**Event**: BOLT_COMPLETED
+**Bolt**: B009
+**Details**: autonomous の Bolt PR が人間の merge で承認された。Bolt ref: B009-ideation-supporting-skills-englishization。PR: https://github.com/amadeus-dlc/amadeus/pull/417。Merge commit: 6ef9f349a6f6ce8cd1c23a04dd74f952989b4fcc。B006〜B009 は人間指示により単一リカバリ PR で統合実行した（CD007）。
+
+---
