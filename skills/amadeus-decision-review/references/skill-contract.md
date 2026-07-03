@@ -28,10 +28,10 @@
 
 ### Allowed
 
-- .amadeus/intents/**
-- .amadeus/steering/**
-- .amadeus/domain-map.md
-- .amadeus/context-map.md
+- aidlc/spaces/<space>/intents/**
+- aidlc/spaces/<space>/memory/**
+- aidlc/spaces/<space>/knowledge/domain-map.md
+- aidlc/spaces/<space>/knowledge/context-map.md
 - 関連 Issue/PR
 - 作業ツリー
 - Skill Contract

@@ -25,7 +25,7 @@
 
 ### Allowed
 
-- .amadeus/**
+- aidlc/**
 - 検証対象の関連成果物
 
 ### Prohibited

@@ -11,15 +11,15 @@ Validator Domain Model は、Amadeus Validator の検証構造と、型で守る
 検証の流れは次である。
 
 ```text
-.amadeus/ 配下の成果物
+aidlc/ 配下の成果物
   -> AmadeusValidator（workspace 検査、Intent 検査の入口、検査台帳）
-  -> lifecycle-v2（schemaVersion 2 の Intent 状態契約）
+  -> lifecycle-v2（aidlc-state.md と audit イベントの Intent 状態契約）
   -> Report Formatter（検査カテゴリ別の pass / fail / blocked）
 ```
 
-`AmadeusValidator` は、steering layer、共有インデックス（`intents.md` の Index 生成整合を含む）、Domain Map、Context Map、Event Storming、Grilling Decision Trail、Intent のモジュールファイルを検査する。
+`AmadeusValidator` は、Space（`memory/`、`knowledge/`）、共有インデックス（`intents.md` の Index 生成整合と `intents.json` の registry 整合を含む）、Domain Map、Context Map、Event Storming、Grilling Decision Trail、Intent のモジュールファイルを検査する。
 
-`lifecycle-v2` は、`state.json`（schemaVersion 2）の scope、depth、`stages`、approval evidence、`phaseGates`、`bolts`、completed ステージの必須成果物を検査する。
+`lifecycle-v2` は、`aidlc-state.md` の scope、depth、Stage Progress、Phase Progress、Current Status と、`audit/audit.md` のイベント（`WORKFLOW_STARTED`、`STAGE_COMPLETED`、`PHASE_VERIFIED`、`PHASE_SKIPPED`、`BOLT_COMPLETED`、`WORKFLOW_COMPLETED`）、completed ステージの必須成果物を検査する。
 契約は `docs/amadeus/lifecycle/state.md` と `scopes.md` に従い、scope とステージの対応表は `skills/amadeus/references/stage-catalog.md` と一致させる。
 
 ## Domain Modules

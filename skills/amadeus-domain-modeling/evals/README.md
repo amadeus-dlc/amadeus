@@ -4,9 +4,9 @@
 
 `amadeus-domain-modeling` は、次を満たした場合だけ `.agents/skills/amadeus-domain-modeling/` へコピー昇格できる。
 
-- 未確定語は `.amadeus/intents/<intent-id>-<slug>/domain-notes.md` に候補として記録する。
-- 確定した共有用語だけを `.amadeus/glossary.md` に追加する。
-- 全体として採用済みのサブドメインと BC は `.amadeus/domain-map.md`、BC 間依存と連携関係は `.amadeus/context-map.md`、詳細なモデルと契約は Construction の Functional Design に反映する。
+- 未確定語は `aidlc/spaces/<space>/intents/<dirName>/domain-notes.md` に候補として記録する。
+- 確定した共有用語だけを `aidlc/spaces/<space>/knowledge/glossary.md` に追加する。
+- 全体として採用済みのサブドメインと BC は `aidlc/spaces/<space>/knowledge/domain-map.md`、BC 間依存と連携関係は `aidlc/spaces/<space>/knowledge/context-map.md`、詳細なモデルと契約は Construction の Functional Design に反映する。
 - 特定 Unit の実装設計に閉じるモデルと契約は Construction の Functional Design に反映する。
 - モデル要素や契約 ID が変わる場合は、対象 Intent の `inception/traceability.md` も整合させる。
 - 曖昧語や衝突語は、この skill 自体が既存の Amadeus 成果物と照合し、必要な確認を行う。
@@ -28,7 +28,7 @@
 | `capture-unresolved-term` | 完了 | 未確定語を domain-notes.md にだけ記録する。 | `/tmp/amadeus-domain-modeling-eval.766VOu/capture-unresolved-term/repo` |
 | `promote-shared-glossary-term` | 完了 | 確定共有用語を glossary.md に追加し、CONTEXT.md は触らない。 | `/tmp/amadeus-domain-modeling-eval.766VOu/promote-shared-glossary-term/repo` |
 | `promote-intent-model-element` | 完了 | Unit 固有の model element は Construction Functional Design 候補として扱い、必要なら `inception/traceability.md` を整合する。 | `/tmp/amadeus-domain-modeling-eval.766VOu/promote-intent-model-element/repo` |
-| `missing-amadeus-root` | 完了 | `.amadeus/` がなければ停止し、amadeus-steering を案内する。 | `/tmp/amadeus-domain-modeling-eval.766VOu/missing-amadeus-root/output.md` |
+| `missing-amadeus-root` | 完了 | `aidlc/` がなければ停止し、amadeus-steering を案内する。 | `/tmp/amadeus-domain-modeling-eval.766VOu/missing-amadeus-root/output.md` |
 
 ## 再実行コマンド
 

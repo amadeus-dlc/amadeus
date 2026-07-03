@@ -20,18 +20,18 @@ Ideation の Stage 1.4 Scope Definition だけを進める。
 
 ## 前提
 
-対象 Intent の `state.json` で、`stages["scope-definition"]` が実行対象であり、状態が `pending`、`active`、`awaiting_approval`、`revising` のいずれかであることを前提にする。
+対象 record の `aidlc-state.md` で、Stage Progress の `scope-definition` が実行対象であり、checkbox が `[ ]`、`[-]`、`[?]`、`[R]` のいずれかであることを前提にする。
 
-状態が `awaiting_approval` の場合は、成果物を作り直さず、ゲートの提示から再開する。
-状態が `revising` の場合は、前回の成果物と差し戻し理由を提示してから、修正だけを行う。
+checkbox が `[?]` の場合は、成果物を作り直さず、ゲートの提示から再開する。
+checkbox が `[R]` の場合は、前回の成果物と差し戻し理由を提示してから、修正だけを行う。
 どちらの場合も、手順を最初からやり直さない。
 
 少なくとも次を読む。
 
-- `.amadeus/intents/<intent-id>-<slug>.md`
-- `state.json`
+- `aidlc/spaces/<space>/intents/<dirName>.md`
+- `aidlc-state.md`
 - `ideation/feasibility/`（実行した場合。特に `constraint-register.md`）
-- steering layer
+- Space の `memory/` と `knowledge/`
 
 ## 質問
 
@@ -44,15 +44,15 @@ Ideation の Stage 1.4 Scope Definition だけを進める。
 - 特定の作業候補に紐づく期限があるか。
 
 質問は `amadeus-grilling` のプロトコルに従い、一問ずつ、推奨回答を添えて提示し、回答を待つ。
-質問の量は `state.json.depth` を目安にする。
-質問と回答は `ideation/scope-definition/questions.md` に記録する。
+質問の量は `aidlc-state.md` の `Depth` を目安にする。
+質問と回答は `ideation/scope-definition/scope-definition-questions.md` に記録する。
 スコープの確定判断は `ideation/grillings.md` と `ideation/grillings/Gxxx-<topic>.md` にも記録する。
 
 ## テンプレート
 
 優先順位は次である。
 
-1. `.amadeus/settings/templates/intents/ideation/scope-definition/`
+1. `aidlc/spaces/<space>/memory/templates/intents/ideation/scope-definition/`
 2. この skill に同梱された `templates/ideation/scope-definition/`
 
 分からない項目は空欄にせず、`未確認` と書く。
@@ -63,35 +63,37 @@ Ideation の Stage 1.4 Scope Definition だけを進める。
 
 - `ideation/scope-definition/scope-document.md`
 - `ideation/scope-definition/intent-backlog.md`
-- `ideation/scope-definition/questions.md`
-- `state.json`（`stages["scope-definition"]` の状態と approval evidence）
+- `ideation/scope-definition/scope-definition-questions.md`
+- `ideation/scope-definition/memory.md`（stage 実行の学習記録）
+- `aidlc-state.md`（対象ステージの checkbox）と `audit/audit.md`（ゲートイベントの追記）
 
 スコープバックログの項目は proto-Unit として書き、MoSCoW を基本に優先度を付ける。
 必要に応じて WSJF または RICE を使う。
 
 ## 手順
 
-以下の手順は、状態が `pending` から開始する場合の流れである。
-`awaiting_approval` または `revising` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
+以下の手順は、checkbox が `[ ]` から開始する場合の流れである。
+`[?]` または `[R]` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
 
-1. `stages["scope-definition"].state` を `active` にする。
-2. Intent のモジュールファイル、制約、steering layer を読み、テーマ内の作業候補を洗い出す。
+1. `aidlc-state.md` の `scope-definition` の checkbox を `[-]` にする。
+2. Intent のモジュールファイル、制約、Space の `memory/` と `knowledge/` を読み、テーマ内の作業候補を洗い出す。
 3. 不足論点を質問で確認する。
 4. `scope-document.md` に対象と対象外の境界を書く。
 5. `intent-backlog.md` に、今回の対象に含めない作業候補と将来候補を優先度付きで書く。
-6. `stages["scope-definition"].state` を `awaiting_approval` にし、ゲートを提示する。
+6. stage の `memory.md` に、実行中の解釈、逸脱、トレードオフ、未解決の問いを記録する。
+7. `aidlc-state.md` の `scope-definition` の checkbox を `[?]` にし、`STAGE_AWAITING_APPROVAL` イベントを `audit/audit.md` に追記して、ゲートを提示する。
 
 ## ゲート
 
 成果物の要約と確認先パスを示し、Approve と Request Changes の 2 択で承認を求める。
 Ideation ステージでは、スキップ済みステージの追加実行を第 3 の選択肢にできる。
-スキップ済みステージの追加実行が選ばれた場合は、対象ステージの `stages` の状態を `skipped` から `pending` に戻し、skip 理由の記録を取り消してから `amadeus` 入口へ戻る。入口が次の解決で対象ステージを選ぶ。
+スキップ済みステージの追加実行が選ばれた場合は、対象ステージの checkbox を `[S]` から `[ ]` に戻し、skip 注記を `EXECUTE` に戻してから `amadeus` 入口へ戻る。入口が次の解決で対象ステージを選ぶ。
 Request Changes が 3 回続いたら Accept as-is を選択肢に加える。
 ゲートを提示したターンでは人間の回答を待つ。
 
-承認されたら `stages["scope-definition"].state` を `completed` にし、`stages["scope-definition"].approval` に `approvedAt` と `via: "conversation"` を記録する。
-差し戻されたら `stages["scope-definition"].state` を `revising` にする。
-Accept as-is が選ばれた場合は、`stages["scope-definition"].state` を `completed` にし、`stages["scope-definition"].approval` に `approvedAt`、`via: "conversation"`、`"acceptedAsIs": true` を記録し、この判断を `ideation/decisions.md` に記録する。
+承認されたら checkbox を `[x]` にし、`GATE_APPROVED`（人間の回答をそのまま記録）と `STAGE_COMPLETED` を `audit/audit.md` に追記する。
+差し戻されたら checkbox を `[R]` にし、`GATE_REJECTED`（差し戻し理由をそのまま記録）と `STAGE_REVISING` を追記する。
+Accept as-is が選ばれた場合は、checkbox を `[x]` にし、`GATE_APPROVED`（Accept as-is である旨を含めて記録）と `STAGE_COMPLETED` を追記し、この判断を `ideation/decisions.md` に記録する。
 
 ## 禁止事項
 
