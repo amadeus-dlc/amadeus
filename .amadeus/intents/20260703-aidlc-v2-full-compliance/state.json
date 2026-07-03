@@ -7,13 +7,25 @@
   "phase": "inception",
   "currentStage": "reverse-engineering",
   "stages": {
-    "reverse-engineering": { "state": "pending" },
-    "requirements-analysis": { "state": "pending" },
-    "functional-design": { "state": "pending" },
-    "code-generation": { "state": "pending" },
-    "build-and-test": { "state": "pending" }
+    "reverse-engineering": {
+      "state": "awaiting_approval"
+    },
+    "requirements-analysis": {
+      "state": "pending"
+    },
+    "functional-design": {
+      "state": "pending"
+    },
+    "code-generation": {
+      "state": "pending"
+    },
+    "build-and-test": {
+      "state": "pending"
+    }
   },
   "phaseGates": {
-    "ideation": { "skipped": true }
+    "ideation": {
+      "skipped": true
+    }
   }
 }
