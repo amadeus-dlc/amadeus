@@ -1,102 +1,117 @@
 ---
 name: amadeus-grilling
 description: >-
-  Amadeus の Intent、steering、domain、設計境界、実施方針を一問ずつ詰める。ユーザーが grill、質問で詰める、設計を煮詰める、
-  曖昧な論点を確認する、または Amadeus skill が guided で不足論点を確認する場面では必ず使う。質問は一度に並べず、
-  各質問に推奨回答を添え、回答を待つ。
+  Interview one question at a time about Amadeus's Intent, steering, domain,
+  design boundaries, and execution policy. Always use this when the user
+  wants to grill, press through questions, hammer out a design, or confirm an
+  ambiguous point, or when an Amadeus skill needs to confirm an insufficient
+  point in guided mode. Do not line up multiple questions at once. Attach a
+  recommended answer to each question and wait for the response.
 ---
 
 # amadeus-grilling
 
-## 目的
+## Purpose
 
-計画や設計の曖昧さを、質問によって一つずつ解消する。
+Resolve ambiguity in a plan or design one question at a time.
 
-共有理解に達するまで、設計木の枝を順番に辿る。
-互いに依存する判断は、依存関係をほどきながら一つずつ解決する。
+Trace the branches of the design tree in order until reaching shared
+understanding. For decisions that depend on each other, unravel the
+dependencies and resolve them one at a time.
 
-## 基本姿勢
+## Basic Stance
 
-質問は厳密に行う。
-ただし、質問を増やすこと自体を目的にしない。
+Ask questions rigorously. However, do not make increasing the number of
+questions an end in itself.
 
-ユーザーが判断しなければ進められない点だけを聞く。
-コードベース、`aidlc/` 配下の成果物、既存ドキュメント、既存の会話から答えられることは、質問せずに自分で確認する。
+Ask only about points that cannot proceed without the user's judgment.
+Confirm anything answerable from the codebase, artifacts under `aidlc/`,
+existing documents, or the existing conversation yourself, without asking.
 
-## 質問の出し方
+## How to Ask Questions
 
-質問は一問ずつ出す。
-複数の質問を一度に並べると、どの判断から解くべきか分かりにくくなるためである。
+Ask questions one at a time. Lining up multiple questions at once makes it
+unclear which decision to resolve first.
 
-各質問では、次を含める。
+Include the following in each question:
 
-- 何を決めたいのか。
-- なぜ今その判断が必要なのか。
-- 推奨回答。
-- 推奨する理由。
+- What you want to decide.
+- Why that decision is needed now.
+- A recommended answer.
+- The reason for the recommendation.
 
-質問したら、ユーザーの回答を待つ。
-回答を受ける前に、次の質問へ進まない。
+After asking a question, wait for the user's answer. Do not move on to the
+next question before receiving the answer.
 
-## 推奨回答
+## Recommended Answers
 
-各質問には、必ず推奨回答を添える。
+Always attach a recommended answer to each question.
 
-推奨回答は、現時点の成果物、設計境界、実装リスク、後続作業への影響を踏まえて出す。
-推奨できない場合は、その理由と、判断に必要な不足情報を明示する。
+Base the recommended answer on the current artifacts, design boundaries,
+implementation risk, and impact on subsequent work. If you cannot recommend
+an answer, state the reason and the missing information needed for the
+decision.
 
-## 調査優先
+## Research First
 
-質問がコードベースや成果物を調べれば答えられる場合は、先に調べる。
+If a question can be answered by investigating the codebase or artifacts,
+investigate first.
 
-調査対象の例:
+Examples of investigation targets:
 
 - `aidlc/`
 - `README.md`
 - `AGENTS.md`
 - `AMADEUS.md`
-- 既存の skill
-- 既存の Intent 成果物
-- 既存の domain、glossary、decision、traceability
+- Existing skills
+- Existing Intent artifacts
+- Existing domain, glossary, decision, and traceability
 
-調べた結果、まだ人間の判断が必要な場合だけ質問する。
+Ask only when, after investigating, human judgment is still required.
 
 ## Grilling Decision Trail
 
-`guided` または `refine` で、成果物の意味や後続判断に影響する質問と回答が発生した場合は、確定した判断過程を Grilling Decision Trail として記録する。
+When a question and answer arising in `guided` or `refine` affects the
+meaning of an artifact or a subsequent decision, record the confirmed
+decision process as a Grilling Decision Trail.
 
-Grilling Decision Trail は生ログではない。
-未確定の発言、途中で否定された案、単なる実行許可、作業順序の軽い確認、コマンド実行の確認、一時的な作業都合は記録しない。
+A Grilling Decision Trail is not a raw log. Do not record unconfirmed
+remarks, proposals later rejected, mere execution permissions, light
+confirmations of work order, confirmations of command execution, or
+temporary work convenience.
 
-記録対象は次のような判断である。
+The decisions to record are ones such as:
 
-- スコープ。
-- 成功条件。
-- 対象外。
-- 依存。
-- 用語。
-- 境界づけられたコンテキスト。
-- 分割方針。
-- 状態判断。
-- 反映先。
-- supersede 判断。
+- Scope.
+- Success criteria.
+- Out of scope.
+- Dependencies.
+- Terminology.
+- Bounded Context.
+- Decomposition policy.
+- State decisions.
+- Reflection target.
+- Supersede decisions.
 
-`amadeus-grilling` は、記録対象、記録構造、状態、採番の基準である。
-実際の `grillings.md` と `grillings/Gxxx-*.md` の作成または更新は、grill を呼び出した phase skill が行う。
+`amadeus-grilling` is the standard for what to record, the record structure,
+states, and numbering. Creating or updating the actual `grillings.md` and
+`grillings/Gxxx-*.md` is done by the phase skill that called grill.
 
-質問したターンでは成果物を更新しない。
-ユーザー回答を受け取った次のターンで、phase skill が自分の成果物境界で回答を解釈し、phase 成果物への反映と同じ変更で Grilling Decision Trail を更新する。
+Do not update artifacts in the turn where you asked the question. In the next
+turn, after receiving the user's answer, the phase skill interprets the
+answer within its own artifact boundary and updates the Grilling Decision
+Trail in the same change as the reflection into the phase artifacts.
 
-配置は対象成果物セットの root 直下にする。
+Place it directly under the root of the target artifact set.
 
 ```text
-<対象 root>/
+<target root>/
   grillings.md
   grillings/
     G001-<topic>.md
 ```
 
-対象 root は次である。
+The target roots are:
 
 ```text
 aidlc/spaces/<space>/knowledge/event-storming/<event-storming-id>/
@@ -104,15 +119,21 @@ aidlc/spaces/<space>/intents/<dirName>/
 aidlc/spaces/<space>/intents/<dirName>/event-storming/<event-storming-id>/
 ```
 
-Space の `memory/` と `knowledge/` は、`aidlc/spaces/<space>/` 直下の構造が混在しているため、この記録対象から外す。
+Exclude the Space's `memory/` and `knowledge/` from this recording target,
+because the structure directly under `aidlc/spaces/<space>/` is mixed.
 
-全体ドメインまたは共有用語だけに反映する判断は、現行構造では専用の Grilling Decision Trail を新設しない。
-必要なら `aidlc/spaces/<space>/knowledge/domain-map.md`、`aidlc/spaces/<space>/knowledge/context-map.md`、`aidlc/spaces/<space>/knowledge/glossary.md` の根拠または対象 Intent の decision に残す。
+For decisions that only affect the overall domain or shared terminology, do
+not create a dedicated Grilling Decision Trail under the current structure.
+If needed, record the rationale in
+`aidlc/spaces/<space>/knowledge/domain-map.md`,
+`aidlc/spaces/<space>/knowledge/context-map.md`,
+`aidlc/spaces/<space>/knowledge/glossary.md`, or in the target Intent's
+decision.
 
-`grillings.md` は索引だけを扱う。
-session 詳細は `grillings/Gxxx-*.md` に置く。
+`grillings.md` handles only the index. Place session details in
+`grillings/Gxxx-*.md`.
 
-`grillings.md` は次の最低構造を持つ。
+`grillings.md` has at least the following structure:
 
 ```md
 # Grillings
@@ -124,69 +145,82 @@ session 詳細は `grillings/Gxxx-*.md` に置く。
 | G001 | Ideation Scope | Intent | completed | 対象範囲を管理画面に限定する | [scope.md](scope.md) | [G001](grillings/G001-ideation-scope.md) |
 ```
 
-session ファイル名は `G001-<topic>.md` にする。
-`<topic>` は英小文字、数字、ハイフンだけで書く。
+Name session files `G001-<topic>.md`. Write `<topic>` using only lowercase
+English letters, digits, and hyphens.
 
-session 状態は次のいずれかにする。
+Set session state to one of:
 
 - `active`
 - `completed`
 - `superseded`
 
-個別判断の状態は次のいずれかにする。
+Set the state of an individual decision to one of:
 
 - `active`
 - `superseded`
 
-session ファイルには、`概要`、`確定判断`、`質問記録` を置く。
-`概要` には session 全体の反映先を必ず書く。
-`概要` と個別判断の反映先は、対象 root 内の成果物を指す。
-Event Storming では、`<id>/grillings` から同じ ID の親 Markdown を指す `../<id>.md` を許可する。
-共有用語への反映は、Grilling Decision Trail からの相対リンクでは行わない。`aidlc/spaces/<space>/knowledge/glossary.md` の用語の根拠、または対象 Intent の decision に記録する。
-各質問記録には、`確認したいこと`、`確認が必要な理由`、`推奨回答`、`推奨理由`、`ユーザー回答` を必ず書く。
-各質問記録からは確定判断 ID を必ず参照する。
-個別判断には反映先を必ず書く。
-`superseded` の個別判断には置き換え先を必ず書く。
+Place `概要`, `確定判断`, and `質問記録` in the session file. Always write the
+reflection target for the whole session in `概要`. The reflection targets in
+`概要` and in individual decisions point to artifacts within the target root.
+In Event Storming, allow `../<id>.md`, which points from `<id>/grillings` to
+the parent Markdown with the same ID. Do not reflect shared terminology
+through a relative link from the Grilling Decision Trail. Record it in the
+rationale for the term in `aidlc/spaces/<space>/knowledge/glossary.md`, or in
+the target Intent's decision. Always write `確認したいこと`,
+`確認が必要な理由`, `推奨回答`, `推奨理由`, and `ユーザー回答` in each question
+record. Always reference the decision ID from each question record. Always
+write the reflection target in each individual decision. Always write the
+replacement target for a `superseded` individual decision.
 
-`scaffold-only` では質問しないため、Grilling Decision Trail を作らない。
-`repair` では原則として Grilling Decision Trail を更新しない。
-ただし、既存の `grillings.md` や `grillings/Gxxx-*.md` 自体が壊れている場合は、構造補修として直してよい。
+`scaffold-only` does not ask questions, so it creates no Grilling Decision
+Trail. `repair` does not, in principle, update the Grilling Decision Trail.
+However, if the existing `grillings.md` or `grillings/Gxxx-*.md` itself is
+broken, you may fix it as a structural repair.
 
-## 長期化した議論の引き継ぎ
+## Handing Off Prolonged Discussions
 
-grilling が長期化し、別の会話単位で継続するほうが安全な場合は、`handoff` を運用補助として使う。
+When grilling becomes prolonged and it is safer to continue in a separate
+conversation unit, use `handoff` as an operational aid.
 
-`handoff` は Amadeus DLC の成果物ではない。
-作成した引き継ぎ文書は OS の一時ディレクトリに置き、`aidlc/` 配下には置かない。
+`handoff` is not an Amadeus DLC artifact. Place the handoff document you
+create in the OS temporary directory, not under `aidlc/`.
 
-確定した判断は Grilling Decision Trail に残す。
-`handoff` には、次の会話単位で再開するために必要な参照先だけを書く。
+Keep confirmed decisions in the Grilling Decision Trail. Write in `handoff`
+only the references needed to resume in the next conversation unit.
 
-`handoff` には少なくとも次を含める。
+Include at least the following in `handoff`:
 
-- 対象 workspace と対象成果物セット。
-- 参照すべき `grillings.md` と `grillings/Gxxx-*.md`。
-- すでに確定した判断の要約。
-- 未回答の質問と、次に確認すべき一問。
-- 次の会話単位で使う推奨 skill。
+- The target workspace and the target artifact set.
+- The `grillings.md` and `grillings/Gxxx-*.md` to reference.
+- A summary of decisions already confirmed.
+- Unanswered questions and the single next question to confirm.
+- The recommended skill to use in the next conversation unit.
 
-既存成果物に書かれている内容を `handoff` に重複して写さない。
-成果物、PR、Issue、差分、検証結果が存在する場合は、path または URL で参照する。
+Do not duplicate content already written in existing artifacts into
+`handoff`. When artifacts, PRs, Issues, diffs, or validation results exist,
+reference them by path or URL.
 
-## Amadeus での使いどころ
+## Where to Use in Amadeus
 
-次のような場面で使う。
+Use it in scenes such as:
 
-- Space の `memory/`（目的、制約）と `knowledge/`（アクター、ドメイン領域）を確認する。
-- Intent の目的、依存、成功条件、範囲を確認する。
-- Ideation の対象、対象外、実現可能性、体制、初期モック、Inception への引き継ぎを確認する。
-- 用語、概念、境界づけられたコンテキスト、DDD モデル、契約の意味を確認する。
-- Unit、Bolt、Spec の粒度や例外理由を確認する。
+- Confirming the Space's `memory/` (purpose, constraints) and `knowledge/`
+  (actors, domain areas).
+- Confirming the Intent's purpose, dependencies, success criteria, and scope.
+- Confirming Ideation's target, out-of-scope, feasibility, team formation,
+  rough mockups, and handoff to Inception.
+- Confirming the meaning of terminology, concepts, Bounded Context, DDD
+  models, and contracts.
+- Confirming the granularity of Unit, Bolt, and Spec, and reasons for
+  exceptions.
 
-## 禁止事項
+## Prohibitions
 
-- 複数の質問を一度に並べない。
-- 既存成果物を読めば分かることを質問しない。
-- 推奨回答なしで質問しない。
-- 質問したターンで、回答を待たずに成果物を更新しない。
-- ユーザーの回答を、既存成果物と矛盾する形で確定しない。矛盾がある場合は、矛盾を先に説明して確認する。
+- Do not line up multiple questions at once.
+- Do not ask about anything answerable by reading existing artifacts.
+- Do not ask a question without a recommended answer.
+- Do not update artifacts in the turn where you asked, without waiting for
+  the answer.
+- Do not finalize the user's answer in a way that contradicts existing
+  artifacts. If there is a contradiction, explain the contradiction first and
+  confirm.

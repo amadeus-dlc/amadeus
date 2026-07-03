@@ -1,108 +1,143 @@
 ---
 name: amadeus-ideation-scope-definition
 description: >-
-  Amadeus Ideation の内部 skill。Stage 1.4 Scope Definition だけを実行する。
-  対象 Intent の対象と対象外の境界を定め、テーマ内の作業候補を優先度付きのスコープバックログとして整理し、
-  scope-document.md と intent-backlog.md を作成または補修する場面では必ず使う。
-  今回やらない作業を別 Intent として起こさない。要求、Unit、Bolt、実装は作らない。
+  Internal Amadeus Ideation skill. Use only for Stage 1.4 Scope Definition.
+  Use when you must define the target Intent's in-scope and out-of-scope
+  boundaries, organize work candidates within the theme into a prioritized
+  scope backlog, and create or repair scope-document.md and
+  intent-backlog.md. Do not raise work deferred this time as a separate
+  Intent. Do not create requirements, Units, Bolts, or implementation.
 ---
 
 # amadeus-ideation-scope-definition
 
-## 目的
+## Purpose
 
-Ideation の Stage 1.4 Scope Definition だけを進める。
+Advance only Ideation Stage 1.4 Scope Definition.
 
-この skill は `amadeus` 入口から呼び出される内部 skill である。
+This is an internal skill called from the `amadeus` entrypoint.
 
-対象と対象外の境界を定め、価値を出せる最小スコープを確認し、テーマ内の作業候補を優先度付きのスコープバックログとして整理する。
-スコープバックログは「今回やらないもの」の受け皿であり、将来 Intent の予約席ではない。
+Define the in-scope and out-of-scope boundaries, confirm the minimum scope
+that delivers value, and organize work candidates within the theme into a
+prioritized scope backlog.
+The scope backlog is a holding place for "work not done this time," not a
+reserved seat for a future Intent.
 
-## 前提
+## Prerequisites
 
-対象 record の `aidlc-state.md` で、Stage Progress の `scope-definition` が実行対象であり、checkbox が `[ ]`、`[-]`、`[?]`、`[R]` のいずれかであることを前提にする。
+Assume the target record's `aidlc-state.md` has `scope-definition` as an
+executable Stage Progress item, and the checkbox is one of `[ ]`, `[-]`,
+`[?]`, or `[R]`.
 
-checkbox が `[?]` の場合は、成果物を作り直さず、ゲートの提示から再開する。
-checkbox が `[R]` の場合は、前回の成果物と差し戻し理由を提示してから、修正だけを行う。
-どちらの場合も、手順を最初からやり直さない。
+If the checkbox is `[?]`, resume from gate presentation without recreating
+the artifacts.
+If the checkbox is `[R]`, present the previous artifacts and the requested
+changes, then make only the necessary corrections.
+In both cases, do not restart the whole procedure.
 
-少なくとも次を読む。
+Read at least the following inputs:
 
 - `aidlc/spaces/<space>/intents/<dirName>.md`
 - `aidlc-state.md`
-- `ideation/feasibility/`（実行した場合。特に `constraint-register.md`）
-- Space の `memory/` と `knowledge/`
+- `ideation/feasibility/` (if executed; especially `constraint-register.md`)
+- the Space's `memory/` and `knowledge/`
 
-## 質問
+## Questions
 
-次の論点を確認する。
+Confirm the following points:
 
-- 価値を出せる最小のスコープはどこまでか。
-- 作業候補のうち must-have と nice-to-have はどれか。
-- 作業候補間に依存があるか。
-- 順序の好みはどれか（リスク先行、価値先行、依存先行）。
-- 特定の作業候補に紐づく期限があるか。
+- How far does the minimum scope that delivers value extend?
+- Which work candidates are must-have and which are nice-to-have?
+- Are there dependencies among work candidates?
+- What is the preferred ordering (risk-first, value-first,
+  dependency-first)?
+- Are there deadlines tied to specific work candidates?
 
-質問は `amadeus-grilling` のプロトコルに従い、一問ずつ、推奨回答を添えて提示し、回答を待つ。
-質問の量は `aidlc-state.md` の `Depth` を目安にする。
-質問と回答は `ideation/scope-definition/scope-definition-questions.md` に記録する。
-スコープの確定判断は `ideation/grillings.md` と `ideation/grillings/Gxxx-<topic>.md` にも記録する。
+Follow the `amadeus-grilling` protocol: ask one question at a time with a
+recommended answer attached, and wait for the response.
+Use `aidlc-state.md`'s `Depth` as the guide for how many questions to ask.
+Record the questions and answers in
+`ideation/scope-definition/scope-definition-questions.md`.
+Also record scope-confirmation decisions in `ideation/grillings.md` and
+`ideation/grillings/Gxxx-<topic>.md`.
 
-## テンプレート
+## Templates
 
-優先順位は次である。
+Use templates in this priority order:
 
 1. `aidlc/spaces/<space>/memory/templates/intents/ideation/scope-definition/`
-2. この skill に同梱された `templates/ideation/scope-definition/`
+2. `templates/ideation/scope-definition/` bundled with this skill.
 
-分からない項目は空欄にせず、`未確認` と書く。
+Do not leave unknown items blank. Write `未確認`.
 
-## 成果物
+## Artifacts
 
-作成または更新するものは次だけである。
+Create or update only the following files:
 
 - `ideation/scope-definition/scope-document.md`
 - `ideation/scope-definition/intent-backlog.md`
 - `ideation/scope-definition/scope-definition-questions.md`
-- `ideation/scope-definition/memory.md`（stage 実行の学習記録）
-- `aidlc-state.md`（対象ステージの checkbox）と `audit/audit.md`（ゲートイベントの追記）
+- `ideation/scope-definition/memory.md` (the stage execution learning
+  record)
+- `aidlc-state.md` for the target stage checkbox and `audit/audit.md` for
+  gate event entries
 
-スコープバックログの項目は proto-Unit として書き、MoSCoW を基本に優先度を付ける。
-必要に応じて WSJF または RICE を使う。
+Write scope backlog items as proto-Units and prioritize them using MoSCoW
+as the baseline. Use WSJF or RICE when needed.
 
-## 手順
+## Procedure
 
-以下の手順は、checkbox が `[ ]` から開始する場合の流れである。
-`[?]` または `[R]` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
+The following procedure applies when starting from checkbox `[ ]`.
+When resuming from `[?]` or `[R]`, follow the prerequisite resume rules and
+run only the steps needed for gate presentation or correction.
 
-1. `aidlc-state.md` の `scope-definition` の checkbox を `[-]` にする。
-2. Intent のモジュールファイル、制約、Space の `memory/` と `knowledge/` を読み、テーマ内の作業候補を洗い出す。
-3. 不足論点を質問で確認する。
-4. `scope-document.md` に対象と対象外の境界を書く。
-5. `intent-backlog.md` に、今回の対象に含めない作業候補と将来候補を優先度付きで書く。
-6. stage の `memory.md` に、実行中の解釈、逸脱、トレードオフ、未解決の問いを記録する。
-7. `aidlc-state.md` の `scope-definition` の checkbox を `[?]` にし、`STAGE_AWAITING_APPROVAL` イベントを `audit/audit.md` に追記して、ゲートを提示する。
+1. Set the `scope-definition` checkbox in `aidlc-state.md` to `[-]`.
+2. Read the Intent's module files, constraints, and the Space's `memory/`
+   and `knowledge/`, and identify work candidates within the theme.
+3. Ask questions to confirm any gaps.
+4. Write the in-scope and out-of-scope boundaries in `scope-document.md`.
+5. In `intent-backlog.md`, write the work candidates excluded from this
+   scope and the future candidates, prioritized.
+6. Record the interpretations, deviations, tradeoffs, and unresolved
+   questions from the stage's execution in `memory.md`.
+7. Set the `scope-definition` checkbox in `aidlc-state.md` to `[?]`,
+   append a `STAGE_AWAITING_APPROVAL` event to `audit/audit.md`, and
+   present the gate.
 
-## ゲート
+## Gate
 
-成果物の要約と確認先パスを示し、Approve と Request Changes の 2 択で承認を求める。
-Ideation ステージでは、スキップ済みステージの追加実行を第 3 の選択肢にできる。
-スキップ済みステージの追加実行が選ばれた場合は、対象ステージの checkbox を `[S]` から `[ ]` に戻し、skip 注記を `EXECUTE` に戻してから `amadeus` 入口へ戻る。入口が次の解決で対象ステージを選ぶ。
-Request Changes が 3 回続いたら Accept as-is を選択肢に加える。
-ゲートを提示したターンでは人間の回答を待つ。
+Show an artifact summary and the paths to review, then ask for approval
+with exactly two options: Approve or Request Changes.
+In Ideation stages, executing an additional skipped stage can be offered
+as a third option.
+If executing an additional skipped stage is selected, revert the target
+stage's checkbox from `[S]` to `[ ]`, revert the skip note to `EXECUTE`,
+and return to the `amadeus` entrypoint. The entrypoint selects the target
+stage at the next resolution.
+If Request Changes happens three times in a row, add Accept as-is as an
+option.
+When presenting a gate, wait for the human response in that turn.
 
-承認されたら checkbox を `[x]` にし、`GATE_APPROVED`（人間の回答をそのまま記録）と `STAGE_COMPLETED` を `audit/audit.md` に追記する。
-差し戻されたら checkbox を `[R]` にし、`GATE_REJECTED`（差し戻し理由をそのまま記録）と `STAGE_REVISING` を追記する。
-Accept as-is が選ばれた場合は、checkbox を `[x]` にし、`GATE_APPROVED`（Accept as-is である旨を含めて記録）と `STAGE_COMPLETED` を追記し、この判断を `ideation/decisions.md` に記録する。
+When approved, set the checkbox to `[x]`, and append `GATE_APPROVED`
+(recording the human response as-is) and `STAGE_COMPLETED` to
+`audit/audit.md`.
+When changes are requested, set the checkbox to `[R]`, and append
+`GATE_REJECTED` (recording the requested changes as-is) and
+`STAGE_REVISING`.
+If Accept as-is is selected, set the checkbox to `[x]`, append
+`GATE_APPROVED` (recording that it is Accept as-is) and
+`STAGE_COMPLETED`, and record this decision in `ideation/decisions.md`.
 
-## 禁止事項
+## Prohibitions
 
-- バックログ項目を新しい Intent として起こさない。Intent 化の判断は `amadeus` 入口の Intake だけが行う。
-- 対象外の作業を暗黙に捨てない。認識した作業候補は必ずバックログに記録する。
-- 要求、Unit、Bolt、実装を作らない。
-- 承認を待たずに `completed` を記録しない。
+- Do not raise backlog items as new Intents. Only the `amadeus`
+  entrypoint's Intake decides whether to create an Intent.
+- Do not implicitly discard out-of-scope work. Record every recognized
+  work candidate in the backlog.
+- Do not create requirements, Units, Bolts, or implementation.
+- Do not record `completed` before approval.
 
-## 次の skill
+## Next Skill
 
-- 続きを進める場合: `amadeus`（入口が次ステージを解決する）
-- 成果物の構造検証: `amadeus-validator`
+- Continue: `amadeus`, which resolves the next stage.
+- Validate artifact structure: `amadeus-validator`.

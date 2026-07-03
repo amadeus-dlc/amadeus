@@ -1,98 +1,152 @@
 ---
 name: amadeus-ideation-approval-handoff
 description: >-
-  Amadeus Ideation の内部 skill。Stage 1.7 Approval & Handoff だけを実行する。
-  Ideation の成果物を initiative-brief.md に集約し、phase の decisions.md と traceability.md を確定して、
-  Inception への引き継ぎ承認と phase PR を進める場面では必ず使う。
-  Inception 成果物、要求、Unit、Bolt、実装は作らない。
+  Internal Amadeus Ideation skill. Use only for Stage 1.7 Approval & Handoff.
+  Use when Ideation's artifacts must be consolidated into
+  initiative-brief.md, the phase's decisions.md and traceability.md
+  finalized, and handoff approval to Inception and the phase PR advanced.
+  Do not create Inception artifacts, requirements, Units, Bolts, or
+  implementation.
 ---
 
 # amadeus-ideation-approval-handoff
 
-## 目的
+## Purpose
 
-Ideation の Stage 1.7 Approval & Handoff だけを進める。
+Advance only Ideation Stage 1.7 Approval & Handoff.
 
-この skill は `amadeus` 入口から呼び出される内部 skill である。
+This is an internal skill called from the `amadeus` entrypoint.
 
-Ideation の全成果物を initiative brief に集約し、phase の判断記録と追跡を確定し、Inception への引き継ぎ承認を得る。
+Consolidate all Ideation artifacts into the initiative brief, finalize the
+phase's decision records and traceability, and obtain approval for handoff to
+Inception.
 
-## 前提
+## Prerequisites
 
-対象 record の `aidlc-state.md` で、Stage Progress の `approval-handoff` が実行対象であり、checkbox が `[ ]`、`[-]`、`[?]`、`[R]` のいずれかであることを前提にする。
+Assume the target record's `aidlc-state.md` has `approval-handoff` as an
+executable Stage Progress item, and its checkbox is in one of these states:
+`[ ]`, `[-]`, `[?]`, or `[R]`.
 
-checkbox が `[?]` の場合は、成果物を作り直さず、ゲートの提示から再開する。
-checkbox が `[R]` の場合は、前回の成果物と差し戻し理由を提示してから、修正だけを行う。
-どちらの場合も、手順を最初からやり直さない。
+If the checkbox is `[?]`, resume from gate presentation without recreating
+the artifacts.
 
-Ideation の他の実行対象ステージがすべて checkbox `[x]` または `[S]` であることを確認する。
-Ideation のステージは `intent-capture`、`market-research`、`feasibility`、`scope-definition`、`team-formation`、`rough-mockups`、`approval-handoff` であり、`aidlc-state.md` の Stage Progress にある IDEATION PHASE のこれらの checkbox を確認対象にする。
-Inception 以降のステージ（`reverse-engineering` 以降）は `[ ]` のままで正常であり、確認対象にしない。
+If the checkbox is `[R]`, present the previous artifacts and the reason for
+the requested changes, then make only the necessary corrections.
 
-少なくとも次を読む。
+In both cases, do not restart the whole procedure.
+
+Confirm that all other executable Ideation stages have checkbox `[x]` or
+`[S]`.
+
+The Ideation stages are `intent-capture`, `market-research`, `feasibility`,
+`scope-definition`, `team-formation`, `rough-mockups`, and
+`approval-handoff`; treat these checkboxes in the IDEATION PHASE of the Stage
+Progress in `aidlc-state.md` as the confirmation targets.
+
+Stages from Inception onward (`reverse-engineering` and later) are normal
+while `[ ]` and are not confirmation targets.
+
+Read at least the following:
 
 - `aidlc/spaces/<space>/intents/<dirName>.md`
 - `aidlc-state.md`
-- `ideation/` 配下の全ステージ成果物
-- `ideation/grillings.md`（存在する場合）
+- All stage artifacts under `ideation/`
+- `ideation/grillings.md`, if it exists
 
-## テンプレート
+## Templates
 
-優先順位は次である。
+Use templates in this priority order:
 
 1. `aidlc/spaces/<space>/memory/templates/intents/ideation/approval-handoff/`
-2. この skill に同梱された `templates/ideation/approval-handoff/`
+2. `templates/ideation/approval-handoff/` bundled with this skill.
 
-分からない項目は空欄にせず、`未確認` と書く。
-実行しなかったステージに対応する項（モック、体制など）は、存在しないファイルへのリンクを書かずに `該当なし` と書く。
+Do not leave unknown items blank. Write `未確認`.
 
-## 成果物
+For items corresponding to a stage that was not executed (mockups, team
+formation, etc.), write `該当なし` instead of linking to a file that does not
+exist.
 
-作成または更新するものは次だけである。
+## Artifacts
+
+Create or update only the following files:
 
 - `ideation/approval-handoff/initiative-brief.md`
-- `ideation/decisions.md` と `ideation/decisions/D001-<slug>.md` 以降
+- `ideation/decisions.md` and `ideation/decisions/D001-<slug>.md` onward
 - `ideation/traceability.md`
 - `ideation/approval-handoff/approval-handoff-questions.md`
 - `ideation/approval-handoff/memory.md`
-- `aidlc-state.md`（`approval-handoff` の checkbox）と `audit/audit.md`（ゲートイベントの追記）
+- `aidlc-state.md` for the `approval-handoff` checkbox, and `audit/audit.md`
+  for gate events
 
-initiative brief は、Intent の目的、成功条件、スコープ境界、バックログ要約、制約、体制、モックの参照を 1 つにまとめ、Inception が最初に読む文書にする。
-decisions には、Ideation で確定した判断を記録する。
-traceability には、成功条件から Ideation 成果物への対応を記録する。
+The initiative brief consolidates the Intent's purpose, success criteria,
+scope boundaries, backlog summary, constraints, team formation, and mockup
+references into one document that Inception reads first.
 
-## 手順
+Record decisions finalized during Ideation in decisions.
 
-以下の手順は、checkbox が `[ ]` から開始する場合の流れである。
-`[?]` または `[R]` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
+Record the mapping from success criteria to Ideation artifacts in
+traceability.
 
-1. Ideation の実行対象ステージ（前提に列挙した slug）がすべて checkbox `[x]` または `[S]` であることを確認する。未完了があれば停止し、`amadeus` へ戻る。Inception 以降のステージの状態は判定に使わない。
-2. `aidlc-state.md` の `approval-handoff` の checkbox を `[-]` にする。
-3. 全ステージ成果物を読み、矛盾や未確認の残りを検出する。判断が必要な残りは一問ずつ確認し、`approval-handoff-questions.md` に記録する。
-4. `initiative-brief.md` を作る。
-5. `decisions.md` と個別 decision、`traceability.md` を確定する。
-6. stage の `memory.md` に、実行中の解釈、逸脱、トレードオフ、未解決の問いを記録する。
-7. `aidlc-state.md` の `approval-handoff` の checkbox を `[?]` にし、`STAGE_AWAITING_APPROVAL` イベントを `audit/audit.md` に追記して、ゲートを提示する。
-8. 承認後は `amadeus` 入口へ戻る。phase PR の案内、Ideation の `PHASE_VERIFIED` イベントの記録、Phase Progress の遷移は `amadeus` 入口の責務であり、この skill では行わない。
+## Procedure
 
-## ゲート
+The following procedure applies when starting from checkbox `[ ]`.
 
-initiative brief の要約と確認先パスを示し、Approve と Request Changes の 2 択で承認を求める。
-Request Changes が 3 回続いたら Accept as-is を選択肢に加える。
-ゲートを提示したターンでは人間の回答を待つ。
+When resuming from `[?]` or `[R]`, follow the prerequisite resume rules and
+run only the steps needed to re-present the gate or make corrections.
 
-承認されたら checkbox を `[x]` にし、`GATE_APPROVED`（人間の回答をそのまま記録）と `STAGE_COMPLETED` を `audit/audit.md` に追記する。
-差し戻されたら checkbox を `[R]` にし、`GATE_REJECTED`（差し戻し理由をそのまま記録）と `STAGE_REVISING` を追記する。
-Accept as-is が選ばれた場合は、checkbox を `[x]` にし、`GATE_APPROVED`（Accept as-is である旨を含めて記録）と `STAGE_COMPLETED` を追記し、この判断を `ideation/decisions.md` に記録する。
+1. Confirm that all executable Ideation stages (the slugs listed in
+   Prerequisites) have checkbox `[x]` or `[S]`. If any are incomplete, stop
+   and return to `amadeus`. Do not use the state of Inception-onward stages
+   in this determination.
+2. Set the `approval-handoff` checkbox in `aidlc-state.md` to `[-]`.
+3. Read all stage artifacts and detect contradictions or remaining `未確認`
+   items. For remainders that need judgment, confirm one question at a time
+   and record them in `approval-handoff-questions.md`.
+4. Create `initiative-brief.md`.
+5. Finalize `decisions.md`, the individual decisions, and `traceability.md`.
+6. Record interpretations, deviations, tradeoffs, and unresolved questions
+   from this execution in the stage's `memory.md`.
+7. Set the `approval-handoff` checkbox in `aidlc-state.md` to `[?]`, append
+   a `STAGE_AWAITING_APPROVAL` event to `audit/audit.md`, and present the
+   gate.
+8. After approval, return to the `amadeus` entrypoint. Guiding the phase PR,
+   recording Ideation's `PHASE_VERIFIED` event, and transitioning Phase
+   Progress are the `amadeus` entrypoint's responsibility; this skill does
+   not perform them.
 
-## 禁止事項
+## Gate
 
-- Ideation の未完了ステージを飛ばしてまとめない。
-- Inception 成果物（要求、ストーリー、設計、Unit、Bolt）を作らない。
-- `PHASE_VERIFIED` イベントの記録と Phase Progress の遷移をこの skill で行わない。phase 境界処理は `amadeus` 入口の責務である。
-- 承認を待たずに `completed` を記録しない。
+Show a summary of the initiative brief and the paths to review, then ask for
+approval with exactly two options: Approve or Request Changes.
 
-## 次の skill
+If Request Changes happens three times in a row, add Accept as-is as an
+option.
 
-- 続きを進める場合: `amadeus`（入口が Inception のステージを解決する）
-- 成果物の構造検証: `amadeus-validator`
+When presenting a gate, wait for the human response in that turn.
+
+When approved, set the checkbox to `[x]`, and append `GATE_APPROVED`
+(recording the human response as-is) and `STAGE_COMPLETED` to
+`audit/audit.md`.
+
+When changes are requested, set the checkbox to `[R]`, and append
+`GATE_REJECTED` (recording the requested changes as-is) and
+`STAGE_REVISING`.
+
+If Accept as-is is selected, set the checkbox to `[x]`, append
+`GATE_APPROVED` (noting Accept as-is) and `STAGE_COMPLETED`, and record this
+decision in `ideation/decisions.md`.
+
+## Prohibitions
+
+- Do not skip incomplete Ideation stages and consolidate anyway.
+- Do not create Inception artifacts (requirements, stories, design, Units,
+  Bolts).
+- Do not record the `PHASE_VERIFIED` event or transition Phase Progress in
+  this skill. Phase boundary processing is the `amadeus` entrypoint's
+  responsibility.
+- Do not record `completed` without waiting for approval.
+
+## Next Skill
+
+- Continue: `amadeus`, which resolves the Inception stage.
+- Validate artifact structure: `amadeus-validator`.

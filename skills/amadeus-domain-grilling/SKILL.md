@@ -1,44 +1,64 @@
 ---
 name: amadeus-domain-grilling
 description: >-
-  Amadeus の用語、概念、境界づけられたコンテキスト、DDD モデル、契約、ドメイン判断を一問ずつ詰めながら、確定した内容を Amadeus 成果物へ記録する。
-  ユーザーが grill-with-docs 相当、domain を grill、用語やモデルを質問で詰めつつ `aidlc/` に残す、または `amadeus-grilling` と
-  `amadeus-domain-modeling` を組み合わせたい場面では必ず使う。一般的な設計質問だけなら `amadeus-grilling`、記録済み内容の補修だけなら
-  `amadeus-domain-modeling` を使う。`grillして` のように意図が曖昧な場合はこの skill として進めず、起動候補の skill 名を番号付きで示して確認する。
+  Interview Amadeus's terminology, concepts, bounded contexts, DDD models,
+  contracts, and domain decisions one question at a time, and record the
+  confirmed content into Amadeus artifacts. Use this whenever the user wants a
+  grill-with-docs equivalent, wants to grill the domain, wants to interview
+  terms or models while recording them into `aidlc/`, or wants to combine
+  `amadeus-grilling` with `amadeus-domain-modeling`. Use `amadeus-grilling`
+  alone for general design questions only, and use `amadeus-domain-modeling`
+  alone for repairing already recorded content only. When intent is
+  ambiguous, such as a bare request to "grill" something, do not proceed as
+  this skill; instead list candidate skill names with numbers and confirm.
 ---
 
 # amadeus-domain-grilling
 
-## 目的
+## Purpose
 
-Amadeus の対象ドメインについて、質問で曖昧さを解きながら、確定した知識を `aidlc/` 成果物へ残す。
+Resolve ambiguity in Amadeus's target domain through questions, and record
+the confirmed knowledge into `aidlc/` artifacts.
 
-この skill は、`amadeus-grilling` と `amadeus-domain-modeling` の合成入口である。
-質問の作法は `amadeus-grilling` に従う。
-用語、モデル、契約、decision の記録先と昇格条件は `amadeus-domain-modeling` に従う。
+This skill is a composite entrypoint of `amadeus-grilling` and
+`amadeus-domain-modeling`. Follow `amadeus-grilling` for the question
+protocol. Follow `amadeus-domain-modeling` for where to record terms,
+models, contracts, and decisions, and for promotion conditions.
 
-## 適用判定
+## Applicability Judgment
 
-最初に、この skill として進めてよいかを判定する。
+First, judge whether it is appropriate to proceed as this skill.
 
-ユーザーの依頼と workspace の文脈から、次の両方が読み取れる場合だけ `amadeus-domain-grilling` を適用する。
+Apply `amadeus-domain-grilling` only when both of the following can be read
+from the user's request and the workspace context.
 
-1. Amadeus 成果物を扱う意図がある。
-2. 用語、概念、境界づけられたコンテキスト、DDD モデル、契約、ドメイン判断のいずれかを質問で詰め、確定内容を `aidlc/` へ記録する意図がある。
+1. There is intent to work with Amadeus artifacts.
+2. There is intent to interview terminology, concepts, bounded contexts, DDD
+   models, contracts, or domain decisions through questions, and to record
+   the confirmed content into `aidlc/`.
 
-次のような依頼は、この skill として進める。
+Proceed as this skill for requests such as the following.
 
-- `Amadeus の domain を grill して`
-- `用語を質問で詰めて aidlc に残したい`
-- `境界づけられたコンテキストを grill しながら domain-notes.md に残したい`
-- `amadeus-grilling と amadeus-domain-modeling を組み合わせて進めたい`
+- "Grill Amadeus's domain"
+- "I want to interview terminology through questions and record it in
+  aidlc"
+- "I want to grill bounded contexts while recording them in
+  domain-notes.md"
+- "I want to proceed by combining amadeus-grilling and
+  amadeus-domain-modeling"
 
-一方で、`grillして`、`軽く grill-me して`、`この設計を詰めて` のように、Amadeus のドメイン成果物へ記録する意図が読めない場合は確認する。
-特に、現在の workspace が Amadeus 自体を開発するリポジトリに見える場合は、skill 設計、運用方針、一般設計の検討である可能性を先に疑う。
-判断材料として、カレントディレクトリ名、`README*.md`、`AGENTS.md`、`AMADEUS.md`、`skills/amadeus-*`、root `aidlc/` の有無を確認する。
+On the other hand, confirm when intent to record into Amadeus's domain
+artifacts cannot be read, as with requests such as a bare "grill it",
+a casual "grill-me this", or "hash out this design". In particular, when the
+current workspace looks like the repository that develops Amadeus itself,
+first suspect that the request may be about skill design, operating policy,
+or general design discussion. As judgment inputs, check the current
+directory name and whether `README*.md`, `AGENTS.md`, `AMADEUS.md`,
+`skills/amadeus-*`, and a root `aidlc/` exist.
 
-確認が必要な場合は、起動候補の skill 名を番号付きで示し、ユーザーの回答を待つ。
-候補には、抽象的な説明だけでなく skill 名を必ず含める。
+When confirmation is needed, present the candidate skill names as a
+numbered list and wait for the user's response. Always include the skill
+name itself in each candidate, not just an abstract description.
 
 ```markdown
 どの skill として進めるか確認させてください。
@@ -58,50 +78,68 @@ Amadeus の対象ドメインについて、質問で曖昧さを解きながら
    すでに確定した Amadeus の用語、モデル、契約だけを `aidlc/` に記録または補修する。
 ```
 
-## 使う skill
+## Skills to Use
 
-この skill を使う時は、次の SKILL.md も読む。
+When using this skill, also read the following SKILL.md files.
 
 - `amadeus-grilling`
 - `amadeus-domain-modeling`
 
-役割分担は次である。
+The division of responsibility is as follows.
 
-| skill | 担うこと | 担わないこと |
+| skill | Handles | Does not handle |
 |---|---|---|
-| `amadeus-grilling` | 一問ずつ質問し、推奨回答と理由を添え、回答を待つ | 成果物の更新 |
-| `amadeus-domain-modeling` | 用語、概念、モデル、契約、decision を `aidlc/` に記録する | 質問進行の制御 |
-| `amadeus-domain-grilling` | 上記2つを組み合わせ、質問で確定した内容を記録へつなげる | 独自の用語規則や成果物構造を作る |
+| `amadeus-grilling` | Ask one question at a time, attach a recommended answer and reason, and wait for the response | Updating artifacts |
+| `amadeus-domain-modeling` | Record terms, concepts, models, contracts, and decisions into `aidlc/` | Controlling question progression |
+| `amadeus-domain-grilling` | Combine the two above, and connect content confirmed through questions to recording | Creating its own terminology rules or artifact structure |
 
-## 使う場面
+## When to Use
 
-次のような依頼で使う。
+Use this for requests such as the following.
 
-- `grill-with-docs` 相当を Amadeus 成果物で行いたい。
-- 用語や概念を質問で詰めながら `aidlc/spaces/<space>/knowledge/glossary.md` や `domain-notes.md` に残したい。
-- 境界づけられたコンテキスト、DDD モジュール、集約、エンティティ、値オブジェクト、契約を会話で確定したい。
-- Intent 固有のドメイン候補を、全体モデルへ昇格するか判断したい。
-- ドメイン判断を `decisions.md` と `decisions/<decision-id>-<slug>.md` に残すべきか確認したい。
+- Doing a `grill-with-docs` equivalent within Amadeus artifacts.
+- Interviewing terms or concepts through questions while recording them
+  into `aidlc/spaces/<space>/knowledge/glossary.md` or `domain-notes.md`.
+- Confirming bounded contexts, DDD modules, aggregates, entities, value
+  objects, or contracts through conversation.
+- Deciding whether to promote an Intent-specific domain candidate into the
+  overall model.
+- Confirming whether a domain decision should be recorded in
+  `decisions.md` and `decisions/<decision-id>-<slug>.md`.
 
-一般的な設計境界や進め方だけを詰めるなら `amadeus-grilling` を使う。
-すでに確定した用語やモデルを記録、補修、昇格するだけなら `amadeus-domain-modeling` を使う。
+Use `amadeus-grilling` alone for interviewing only general design
+boundaries or approach. Use `amadeus-domain-modeling` alone for only
+recording, repairing, or promoting already confirmed terms or models.
 
-## 手順
+## Procedure
 
-1. `amadeus-grilling` と `amadeus-domain-modeling` の SKILL.md を読む。
-2. `aidlc/`、`aidlc/spaces/<space>/knowledge/glossary.md`、`aidlc/spaces/<space>/knowledge/domain-map.md`、`aidlc/spaces/<space>/knowledge/context-map.md`、必要なら対象 Intent の `domain-notes.md`、`inception/requirements-analysis/requirements.md`、`inception/units-generation/unit-of-work.md`、`inception/delivery-planning/bolt-plan.md`、`inception/traceability.md`、`inception/decisions.md`、Construction の Functional Design を確認する。
-3. 読めば分かることは質問しない。
-4. まだ人間の判断が必要な最初のドメイン論点を1つだけ選ぶ。
-5. `amadeus-grilling` の形式で、一問だけ質問する。
-6. 質問には、何を決めたいか、なぜ今必要か、推奨回答、推奨理由を含める。
-7. 質問したターンでは成果物を更新しない。
-8. ユーザーの回答を受けたら、`amadeus-domain-modeling` に従って該当する `aidlc/` 成果物を更新する。
-9. 回答に記録対象の判断が含まれる場合は、成果物更新と同じ変更で対象成果物セットの `grillings.md` と `grillings/Gxxx-*.md` を更新する。
-10. 更新後、次に残るドメイン論点があれば、再び一問だけ質問する。
+1. Read the `amadeus-grilling` and `amadeus-domain-modeling` SKILL.md
+   files.
+2. Check `aidlc/`, `aidlc/spaces/<space>/knowledge/glossary.md`,
+   `aidlc/spaces/<space>/knowledge/domain-map.md`,
+   `aidlc/spaces/<space>/knowledge/context-map.md`, and, if needed, the
+   target Intent's `domain-notes.md`,
+   `inception/requirements-analysis/requirements.md`,
+   `inception/units-generation/unit-of-work.md`,
+   `inception/delivery-planning/bolt-plan.md`, `inception/traceability.md`,
+   `inception/decisions.md`, and Construction Functional Design.
+3. Do not ask about anything that reading already makes clear.
+4. Choose only one domain topic that still needs human judgment.
+5. Ask exactly one question, in the `amadeus-grilling` format.
+6. Include in the question what you want to decide, why it is needed now,
+   a recommended answer, and the reason for the recommendation.
+7. Do not update artifacts in the turn where you ask the question.
+8. Once the user answers, update the corresponding `aidlc/` artifacts
+   following `amadeus-domain-modeling`.
+9. If the answer contains a decision to record, update the target artifact
+   set's `grillings.md` and `grillings/Gxxx-*.md` in the same change as the
+   artifact update.
+10. After updating, if a domain topic still remains, ask one more question
+    again.
 
-## 質問の出力
+## Question Output
 
-質問が必要な場合は、次の形を使う。
+When a question is needed, use the following format.
 
 ```markdown
 確認した成果物: <確認した主なファイル>
@@ -112,35 +150,64 @@ Amadeus の対象ドメインについて、質問で曖昧さを解きながら
 回答後に更新する候補: <domain-notes.md / glossary.md / domain-map.md / context-map.md / Construction Functional Design / inception/traceability.md / inception/decisions.md など>
 ```
 
-複数の質問を一度に並べない。
-次の質問は、ユーザーの回答を受けて、必要な成果物更新を終えてから出す。
+Do not line up multiple questions at once. Ask the next question only
+after receiving the user's response and finishing the necessary artifact
+updates.
 
-## 回答後の更新
+## Updates After Answers
 
-ユーザー回答で内容が確定したら、`amadeus-domain-modeling` の更新先ルールに従う。
+Once the content is confirmed by the user's answer, follow
+`amadeus-domain-modeling`'s rules for where to record it.
 
-- 未確定語、候補、問いは、対象 Intent の `domain-notes.md` に記録する。
-- 全 Intent で共有する確定用語は `aidlc/spaces/<space>/knowledge/glossary.md` に記録する。
-- 全体として採用済みのサブドメイン、BC は `aidlc/spaces/<space>/knowledge/domain-map.md` に記録する。
-- 採用済みの BC 間依存、連携関係は `aidlc/spaces/<space>/knowledge/context-map.md` に記録する。
-- 詳細なモデル、契約、特定 Unit の実装設計に閉じる設計判断は Construction の Functional Design に記録する。
-- モデル要素や契約 ID に影響する場合は、対象 Intent の `inception/traceability.md` も整合させる。
-- 戻しにくく、背景なしでは意図が分かりにくく、実際の trade-off がある判断だけ decision にする。
+- Record unconfirmed terms, candidates, and open questions in the target
+  Intent's `domain-notes.md`.
+- Record confirmed terms shared across all Intents in
+  `aidlc/spaces/<space>/knowledge/glossary.md`.
+- Record subdomains and BCs adopted overall in
+  `aidlc/spaces/<space>/knowledge/domain-map.md`.
+- Record adopted dependencies and collaborations between BCs in
+  `aidlc/spaces/<space>/knowledge/context-map.md`.
+- Record detailed models, contracts, and design decisions scoped to a
+  specific Unit's implementation design in Construction Functional Design.
+- If a decision affects model elements or contract IDs, also align
+  the target Intent's `inception/traceability.md`.
+- Turn a decision into a `decision` only when it is hard to reverse, its
+  intent is hard to understand without background, and it involves a real
+  trade-off.
 
-Grilling Decision Trail は、対象成果物セットの root 直下に記録する。
+Record the Grilling Decision Trail directly under the target artifact
+set's root.
 
-- Intent 固有の判断は `aidlc/spaces/<space>/intents/<dirName>/grillings.md` と `aidlc/spaces/<space>/intents/<dirName>/grillings/Gxxx-*.md` に記録する。
-- Event Storming 固有の判断は `aidlc/spaces/<space>/knowledge/event-storming/<event-storming-id>/grillings.md` と `aidlc/spaces/<space>/knowledge/event-storming/<event-storming-id>/grillings/Gxxx-*.md` に記録する。
-- Intent 配下の Event Storming 固有の判断は `aidlc/spaces/<space>/intents/<dirName>/event-storming/<event-storming-id>/grillings.md` と `aidlc/spaces/<space>/intents/<dirName>/event-storming/<event-storming-id>/grillings/Gxxx-*.md` に記録する。
-- 全体ドメインまたは共有用語だけに反映する判断は、現行構造では専用の Grilling Decision Trail を新設しない。必要なら `aidlc/spaces/<space>/knowledge/domain-map.md`、`aidlc/spaces/<space>/knowledge/context-map.md`、`aidlc/spaces/<space>/knowledge/glossary.md` の根拠または対象 Intent の decision に残す。
-- Space の `memory/` と `knowledge/` は、`aidlc/spaces/<space>/` 直下の構造が混在しているため、この記録対象から外す。
+- Record Intent-specific decisions in
+  `aidlc/spaces/<space>/intents/<dirName>/grillings.md` and
+  `aidlc/spaces/<space>/intents/<dirName>/grillings/Gxxx-*.md`.
+- Record Event-Storming-specific decisions in
+  `aidlc/spaces/<space>/knowledge/event-storming/<event-storming-id>/grillings.md`
+  and
+  `aidlc/spaces/<space>/knowledge/event-storming/<event-storming-id>/grillings/Gxxx-*.md`.
+- Record decisions specific to Event Storming under an Intent in
+  `aidlc/spaces/<space>/intents/<dirName>/event-storming/<event-storming-id>/grillings.md`
+  and
+  `aidlc/spaces/<space>/intents/<dirName>/event-storming/<event-storming-id>/grillings/Gxxx-*.md`.
+- For decisions that reflect only into the overall domain or shared
+  terminology, do not create a dedicated Grilling Decision Trail under the
+  current structure. If needed, record the rationale in
+  `aidlc/spaces/<space>/knowledge/domain-map.md`,
+  `aidlc/spaces/<space>/knowledge/context-map.md`,
+  `aidlc/spaces/<space>/knowledge/glossary.md`, or the target Intent's
+  decision.
+- Exclude the Space's `memory/` and `knowledge/` from this recording
+  target, because their structure is mixed directly under
+  `aidlc/spaces/<space>/`.
 
-## 禁止事項
+## Prohibitions
 
-- この skill 独自の成果物構造を作らない。
-- `amadeus-domain-modeling` と異なる用語、モデル、契約の識別子規則を作らない。
-- 質問が必要なターンで成果物を更新しない。
-- 複数の質問を一度に並べない。
-- 読めば分かることを質問しない。
-- `CONTEXT.md` や `docs/adr/**` を更新しない。
-- `requirements.md`、`stories.md`、`unit-of-work.md`、`bolt-plan.md` などの stage 成果物を新規作成しない。
+- Do not create an artifact structure unique to this skill.
+- Do not create identifier rules for terms, models, or contracts that
+  differ from `amadeus-domain-modeling`.
+- Do not update artifacts in a turn where a question is needed.
+- Do not line up multiple questions at once.
+- Do not ask about anything that reading already makes clear.
+- Do not update `CONTEXT.md` or `docs/adr/**`.
+- Do not newly create stage artifacts such as `requirements.md`,
+  `stories.md`, `unit-of-work.md`, or `bolt-plan.md`.
