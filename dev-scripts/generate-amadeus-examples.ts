@@ -12,6 +12,7 @@ import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { createLlmProvider, type LlmProvider } from "./evals/llm-support/provider";
+import { checkSnapshotInvariant, exampleIntentId, invariantForSnapshot } from "./examples-contract";
 
 type Options = {
   dryRun: boolean;
@@ -21,15 +22,12 @@ type Options = {
   from?: string;
 };
 
+// 段階不変条件（state、Unit / Bolt 状態、成果物の存在と不在）は examples-contract.ts に一元定義し、
+// step ごとの検査は snapshot に対応する不変条件を適用する。
 type GenerationStep = {
   id: string;
   snapshot: string;
   prompt: string;
-  expectedState: Record<string, string>;
-  expectedFiles: string[];
-  absentFiles?: string[];
-  expectedUnitStates?: Array<{ stage: string; state: string }>;
-  expectedBoltUnits?: Array<{ stage: string; state: string; files?: string[]; absentFiles?: string[] }>;
   provenanceSkillFiles: string[];
 };
 
@@ -53,7 +51,7 @@ const root = resolve(import.meta.dir, "..");
 const workspace = join(root, ".tmp/amadeus-example-generation/workspace");
 const logs = join(root, ".tmp/amadeus-example-generation/logs");
 const stagedSnapshots = join(root, ".tmp/amadeus-example-generation/snapshots");
-const intentId = "20260703-minimum-purchase-flow";
+const intentId = exampleIntentId;
 const defaultRunner = "dev-scripts/run-claude-personal.sh";
 const provenanceManifestPath = Bun.env.AMADEUS_EXAMPLES_PROVENANCE_MANIFEST ?? join(root, "examples/skill-provenance.json");
 
@@ -259,119 +257,24 @@ const steps: GenerationStep[] = [
     id: "01-ideation-completed",
     snapshot: "examples/01-ideation-completed",
     prompt: ideationPrompt(),
-    expectedState: {
-      schemaVersion: "2",
-      intentId,
-      scope: "feature",
-      status: "in_progress",
-      phase: "inception",
-      "phaseGates.ideation.via": "pr",
-      "stages.intent-capture.state": "completed",
-      "stages.scope-definition.state": "completed",
-      "stages.approval-handoff.state": "completed",
-    },
-    expectedFiles: [
-      ".amadeus/intents.md",
-      `.amadeus/intents/${intentId}.md`,
-      `.amadeus/intents/${intentId}/ideation/scope-definition/scope-document.md`,
-      `.amadeus/intents/${intentId}/ideation/scope-definition/intent-backlog.md`,
-      `.amadeus/intents/${intentId}/ideation/approval-handoff/initiative-brief.md`,
-      `.amadeus/intents/${intentId}/ideation/decisions.md`,
-      `.amadeus/intents/${intentId}/ideation/traceability.md`,
-    ],
     provenanceSkillFiles: ideationSkillFiles,
   },
   {
     id: "02-inception-completed",
     snapshot: "examples/02-inception-completed",
     prompt: inceptionPrompt(),
-    expectedState: {
-      schemaVersion: "2",
-      intentId,
-      scope: "feature",
-      status: "in_progress",
-      phase: "construction",
-      "phaseGates.ideation.via": "pr",
-      "phaseGates.inception.via": "pr",
-      "stages.requirements-analysis.state": "completed",
-      "stages.units-generation.state": "completed",
-      "stages.delivery-planning.state": "completed",
-    },
-    expectedFiles: [
-      `.amadeus/intents/${intentId}/inception/requirements-analysis/requirements.md`,
-      `.amadeus/intents/${intentId}/inception/units-generation/units.md`,
-      `.amadeus/intents/${intentId}/inception/units-generation/unit-dependencies.md`,
-      `.amadeus/intents/${intentId}/inception/delivery-planning/bolt-plan.md`,
-    ],
     provenanceSkillFiles: inceptionSkillFiles,
   },
   {
     id: "03-construction-design-ready",
     snapshot: "examples/03-construction-design-ready",
     prompt: constructionPrompt(),
-    expectedState: {
-      schemaVersion: "2",
-      intentId,
-      scope: "feature",
-      status: "in_progress",
-      phase: "construction",
-      "phaseGates.inception.via": "pr",
-    },
-    expectedFiles: [
-      `.amadeus/intents/${intentId}/construction/*/functional-design/business-logic-model.md`,
-    ],
-    expectedBoltUnits: [
-      {
-        stage: "functional-design",
-        state: "completed",
-        files: [
-          `.amadeus/intents/${intentId}/construction/<unit>/functional-design/business-logic-model.md`,
-          `.amadeus/intents/${intentId}/construction/<unit>/functional-design/business-rules.md`,
-          `.amadeus/intents/${intentId}/construction/<unit>/functional-design/domain-entities.md`,
-        ],
-      },
-    ],
     provenanceSkillFiles: constructionSkillFiles,
   },
   {
     id: "04-construction-implementation-planned",
     snapshot: "examples/04-construction-implementation-planned",
     prompt: implementationPlanPrompt(),
-    expectedState: {
-      schemaVersion: "2",
-      intentId,
-      scope: "feature",
-      status: "in_progress",
-      phase: "construction",
-      "phaseGates.inception.via": "pr",
-    },
-    expectedFiles: [
-      `.amadeus/intents/${intentId}/construction/*/code-generation/plan.md`,
-    ],
-    absentFiles: [
-      `.amadeus/intents/${intentId}/construction/*/code-generation/summary.md`,
-    ],
-    expectedUnitStates: [
-      { stage: "functional-design", state: "completed" },
-      { stage: "code-generation", state: "active" },
-    ],
-    expectedBoltUnits: [
-      {
-        stage: "functional-design",
-        state: "completed",
-        files: [
-          `.amadeus/intents/${intentId}/construction/<unit>/functional-design/business-logic-model.md`,
-          `.amadeus/intents/${intentId}/construction/<unit>/functional-design/business-rules.md`,
-          `.amadeus/intents/${intentId}/construction/<unit>/functional-design/domain-entities.md`,
-        ],
-      },
-      {
-        stage: "code-generation",
-        state: "active",
-        files: [`.amadeus/intents/${intentId}/construction/<unit>/code-generation/plan.md`],
-        absentFiles: [`.amadeus/intents/${intentId}/construction/<unit>/code-generation/summary.md`],
-      },
-    ],
     provenanceSkillFiles: implementationPlanSkillFiles,
   },
 ];
@@ -484,127 +387,11 @@ function prepareWorkspace(inputStep?: GenerationStep): void {
 
 // ---- 検査 ----
 
-function readState(base: string): Record<string, unknown> {
-  const path = join(base, ".amadeus/intents", intentId, "state.json");
-  if (!existsSync(path)) fail(`missing state.json: ${path}`);
-  return JSON.parse(readFileSync(path, "utf8"));
-}
-
-function stateValue(state: Record<string, unknown>, dottedPath: string): unknown {
-  let current: unknown = state;
-  for (const key of dottedPath.split(".")) {
-    if (typeof current !== "object" || current === null) return undefined;
-    current = (current as Record<string, unknown>)[key];
-  }
-  return current;
-}
-
-function assertExpectedState(step: GenerationStep): void {
-  const state = readState(workspace);
-  for (const [path, expected] of Object.entries(step.expectedState)) {
-    const actual = stateValue(state, path);
-    if (String(actual ?? "") !== expected) {
-      fail(`${step.id}: state.json の ${path} が期待値と一致しません（期待: ${expected}、実際: ${String(actual ?? "未設定")}）`);
-    }
-  }
-}
-
-// expectedFiles は 1 セグメントだけ `*` を許可する簡易パターンで確認する。
-function assertExpectedFiles(step: GenerationStep): void {
-  for (const pattern of step.expectedFiles) {
-    if (!matchExists(workspace, pattern)) {
-      fail(`${step.id}: 期待する成果物が見つかりません: ${pattern}`);
-    }
-  }
-}
-
-function matchExists(base: string, pattern: string): boolean {
-  const segments = pattern.split("/");
-  let candidates = [base];
-  for (const segment of segments) {
-    const next: string[] = [];
-    for (const candidate of candidates) {
-      if (segment === "*") {
-        if (!existsSync(candidate) || !statSync(candidate).isDirectory()) continue;
-        for (const entry of readdirSync(candidate)) next.push(join(candidate, entry));
-      } else {
-        const target = join(candidate, segment);
-        if (existsSync(target)) next.push(target);
-      }
-    }
-    candidates = next;
-    if (candidates.length === 0) return false;
-  }
-  return candidates.length > 0;
-}
-
-function assertAbsentFiles(step: GenerationStep): void {
-  for (const pattern of step.absentFiles ?? []) {
-    if (matchExists(workspace, pattern)) {
-      fail(`${step.id}: 存在してはならない成果物が見つかりました: ${pattern}`);
-    }
-  }
-}
-
-function assertExpectedUnitStates(step: GenerationStep): void {
-  if (!step.expectedUnitStates) return;
-  const state = readState(workspace);
-  for (const expected of step.expectedUnitStates) {
-    const units = stateValue(state, `stages.${expected.stage}.units`);
-    if (typeof units !== "object" || units === null || Object.keys(units).length === 0) {
-      fail(`${step.id}: stages.${expected.stage}.units に Unit がありません`);
-    }
-    for (const [unitId, entry] of Object.entries(units as Record<string, { state?: string }>)) {
-      if (String(entry?.state ?? "") !== expected.state) {
-        fail(`${step.id}: stages.${expected.stage}.units.${unitId}.state が期待値と一致しません（期待: ${expected.state}、実際: ${String(entry?.state ?? "未設定")}）`);
-      }
-    }
-  }
-}
-
-// Bolt に束ねた各 Unit が、対象 stage の units に期待状態で存在し、Unit ごとの成果物条件を満たすことを確認する。
-function stepBoltUnitIds(step: GenerationStep, state: Record<string, unknown>): string[] {
-  const bolts = stateValue(state, "bolts");
-  if (typeof bolts !== "object" || bolts === null || Object.keys(bolts).length === 0) {
-    fail(`${step.id}: state.json に bolts がありません`);
-  }
-  const ids = Object.values(bolts as Record<string, { units?: unknown }>).flatMap((bolt) =>
-    Array.isArray(bolt.units) ? bolt.units.map((unit) => String(unit)) : [],
-  );
-  if (ids.length === 0) fail(`${step.id}: bolts に units の一覧がありません`);
-  return [...new Set(ids)];
-}
-
-function assertExpectedBoltUnits(step: GenerationStep): void {
-  const state = readState(workspace);
-  for (const expected of step.expectedBoltUnits ?? []) {
-    assertOneBoltUnitExpectation(step, state, expected);
-  }
-}
-
-function assertOneBoltUnitExpectation(
-  step: GenerationStep,
-  state: Record<string, unknown>,
-  expected: { stage: string; state: string; files?: string[]; absentFiles?: string[] },
-): void {
-  for (const unitId of stepBoltUnitIds(step, state)) {
-    const unitState = stateValue(state, `stages.${expected.stage}.units.${unitId}.state`);
-    if (String(unitState ?? "") !== expected.state) {
-      fail(`${step.id}: Bolt の Unit ${unitId} が stages.${expected.stage}.units に期待状態でありません（期待: ${expected.state}、実際: ${String(unitState ?? "未設定")}）`);
-    }
-    for (const pattern of expected.files ?? []) {
-      const path = pattern.replaceAll("<unit>", unitId);
-      if (!matchExists(workspace, path)) {
-        fail(`${step.id}: Unit ${unitId} の期待成果物が見つかりません: ${path}`);
-      }
-    }
-    for (const pattern of expected.absentFiles ?? []) {
-      const path = pattern.replaceAll("<unit>", unitId);
-      if (matchExists(workspace, path)) {
-        fail(`${step.id}: Unit ${unitId} に存在してはならない成果物が見つかりました: ${path}`);
-      }
-    }
-  }
+// 生成直後の workspace に、snapshot と同じ段階不変条件（examples-contract）を適用する。
+function assertSnapshotInvariant(step: GenerationStep): void {
+  const invariant = invariantForSnapshot(step.snapshot);
+  const intentBase = join(workspace, ".amadeus/intents", intentId);
+  checkSnapshotInvariant(invariant, intentBase, fail);
 }
 
 function assertValidatorPass(step: GenerationStep): void {
@@ -748,11 +535,7 @@ if (!options.dryRun) {
       workspace,
     });
     console.log(`last message: ${result.outputPath}`);
-    assertExpectedState(step);
-    assertExpectedFiles(step);
-    assertAbsentFiles(step);
-    assertExpectedUnitStates(step);
-    assertExpectedBoltUnits(step);
+    assertSnapshotInvariant(step);
     assertValidatorPass(step);
     stageSnapshot(step);
     console.log(`snapshot staged: ${step.snapshot}`);
