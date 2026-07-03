@@ -15,7 +15,7 @@
       }
     },
     "requirements-analysis": {
-      "state": "pending"
+      "state": "awaiting_approval"
     },
     "functional-design": {
       "state": "pending"
