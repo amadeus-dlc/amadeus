@@ -437,3 +437,11 @@
 **Details**: gate 承認（Approve）。initiative-brief.md、decisions D001〜D007、traceability.md を確定。Ideation の実行対象ステージがすべて完了した。
 
 ---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T18:02:24Z
+**Event**: QUESTION_ANSWERED
+**Stage**: feasibility
+**Details**: Q3 回答: commit 固定 + 明示更新（推奨案を採用）。基準 commit fde1e1af7aae16f4c4defc991abaa3877ee2ac26 を固定して成果物に記録し、上流への追従は明示的な Issue または Intent で行う（C003 へ反映済み）。回答時点での記録が漏れていたため backfill した（Recovered=true。Bugbot 指摘 3521318458 への対応）。
+
+---
