@@ -2,7 +2,7 @@
 
 ## ステータス
 
-採用。
+採用。ただし成果物ルートと状態ファイルは Issue #387（AI-DLC v2 完全準拠）で `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/` と `aidlc-state.md` に置き換えた。phase ディレクトリ構成の判断は引き続き有効である。
 
 ## 日付
 
