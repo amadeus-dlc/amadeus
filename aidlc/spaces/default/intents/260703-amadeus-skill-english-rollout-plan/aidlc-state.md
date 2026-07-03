@@ -112,8 +112,8 @@ Per unit: U004-issue-402-remaining-skill-rollout-units
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: build-and-test
-- **Next Stage**: code-generation
+- **Current Stage**: code-generation
+- **Next Stage**: build-and-test
 - **Status**: Running
 - **Construction Autonomy Mode**: autonomous
 - **Last Updated**: 2026-07-03T13:59:22Z
