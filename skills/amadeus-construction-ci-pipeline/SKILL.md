@@ -1,99 +1,140 @@
 ---
 name: amadeus-construction-ci-pipeline
 description: >-
-  Amadeus Construction の内部 skill。Stage 3.7 CI Pipeline だけを Intent 単位で実行する。
-  CI パイプラインの新設または大きな変更が必要な Intent で、ci-config.md と quality-gates.md を
-  作成または補修する場面では必ず使う。十分な CI が既にある場合は実行しない。
-  実装と Bolt 記録は作らない。
+  Internal Amadeus Construction skill. Use only for Stage 3.7 CI Pipeline, per
+  Intent. Use when an Intent needs a new CI pipeline or a large change to one,
+  and must create or repair ci-config.md and quality-gates.md. Do not run when
+  sufficient CI already exists. Do not create implementation or Bolt records.
 ---
 
 # amadeus-construction-ci-pipeline
 
-## 目的
+## Purpose
 
-Construction の Stage 3.7 CI Pipeline だけを、Intent 単位で進める。
+Advance only Construction Stage 3.7 CI Pipeline, per Intent.
 
-この skill は `amadeus` 入口から呼び出される内部 skill である。
+This is an internal skill called from the `amadeus` entrypoint.
 
-ビルドとテストの結果から、CI 設定と品質ゲートを設計する。
-CI のトリガー設計（push、PR、tag）は、Practices Discovery で確認したチームプラクティスに従う。
+Design the CI configuration and quality gates from the build and test
+results. Follow the team practices confirmed in Practices Discovery for the
+CI trigger design (push, PR, tag).
 
-## 前提
+## Prerequisites
 
-対象 record の `aidlc-state.md` で、Stage Progress の `ci-pipeline` が実行対象であり、checkbox が `[ ]`、`[-]`、`[?]`、`[R]` のいずれかであることを前提にする。
+Assume the target record's `aidlc-state.md` has `ci-pipeline` as an
+executable Stage Progress item, with the checkbox in one of these states:
+`[ ]`, `[-]`, `[?]`, or `[R]`.
 
-checkbox が `[?]` の場合は、成果物を作り直さず、ゲートの提示から再開する。
-checkbox が `[R]` の場合は、前回の成果物と差し戻し理由を提示してから、修正だけを行う。
-どちらの場合も、手順を最初からやり直さない。
+If the checkbox is `[?]`, resume from gate presentation without recreating
+the artifacts.
 
-Condition は「CI パイプラインの新設または大きな変更が必要な場合」である。
-十分な CI が既にある場合は、成果物を作らず `ci-pipeline` の checkbox を `[S]` にして注記に skip 理由を書き、`STAGE_SKIPPED` イベントを `audit/audit.md` に追記して `amadeus` へ戻る。
+If the checkbox is `[R]`, present the previous artifacts and the requested
+changes, then make only the necessary corrections.
 
-全 Bolt が完了していることを確認する。
-未完了の Bolt があれば停止し、`amadeus` へ戻る。
+In both cases, do not restart the whole procedure.
 
-少なくとも次を読む。
+The Condition is: a new CI pipeline or a large change to one is needed.
 
-- `construction/bolts/` 配下の `build-and-test-summary.md` と `build-test-results.md`
-- `inception/practices-discovery/team-practices.md`（実行した場合）
+If sufficient CI already exists, create no artifacts. Set the `ci-pipeline`
+checkbox to `[S]`, write the skip reason in the note, append a
+`STAGE_SKIPPED` event to `audit/audit.md`, and return to `amadeus`.
+
+Confirm that all Bolts are complete. If any Bolt is incomplete, stop and
+return to `amadeus`.
+
+Read at least the following inputs:
+
+- `build-and-test-summary.md` and `build-test-results.md` under
+  `construction/bolts/`
+- `inception/practices-discovery/team-practices.md`, if it was executed
 - `aidlc-state.md`
 
-## 質問
+## Questions
 
-Construction では質問を例外扱いにする。
-前段の成果物が扱わなかった本物の欠落を検出した場合だけ、`amadeus-grilling` のプロトコルで一問ずつ確認する。
-質問を行った場合は `construction/ci-pipeline/ci-pipeline-questions.md` に記録する。
+Treat questions during Construction as exceptional.
 
-## テンプレート
+Ask only when you detect a real gap that earlier artifacts did not cover,
+using the `amadeus-grilling` protocol and asking one question at a time.
 
-優先順位は次である。
+If you ask questions, record them in
+`construction/ci-pipeline/ci-pipeline-questions.md`.
+
+## Templates
+
+Use templates in this priority order:
 
 1. `aidlc/spaces/<space>/memory/templates/intents/construction/ci-pipeline/`
-2. この skill に同梱された `templates/construction/ci-pipeline/`
+2. `templates/construction/ci-pipeline/` bundled with this skill.
 
-分からない項目は空欄にせず、`未確認` と書く。
+Do not leave unknown items blank. Write `未確認`.
 
-## 成果物
+## Artifacts
 
-作成または更新するものは次だけである。
+Create or update only the following files:
 
-- `construction/ci-pipeline/ci-config.md`（CI 設定の設計）
-- `construction/ci-pipeline/quality-gates.md`（品質ゲート）
+- `construction/ci-pipeline/ci-config.md` (CI configuration design)
+- `construction/ci-pipeline/quality-gates.md` (quality gates)
 - `construction/ci-pipeline/memory.md`
-- `aidlc-state.md`（`ci-pipeline` の checkbox）と `audit/audit.md`（ゲートイベントの追記）
-- 質問を行った場合は `construction/ci-pipeline/ci-pipeline-questions.md`
+- `aidlc-state.md` for the `ci-pipeline` checkbox and `audit/audit.md` for
+  gate events
+- `construction/ci-pipeline/ci-pipeline-questions.md`, only if questions were
+  asked
 
-## 手順
+## Procedure
 
-以下の手順は、checkbox が `[ ]` から開始する場合の流れである。
-`[?]` または `[R]` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
+The following procedure applies when starting from checkbox `[ ]`.
 
-1. checkbox が `[ ]` の場合だけ Condition を判定する。十分な CI が既にある場合は `[S]` にして注記に skip 理由を書き、`audit/audit.md` に `STAGE_SKIPPED` を追記して終了する。`[-]`、`[?]`、`[R]` からの再開では再判定しない。
-2. `ci-pipeline` の checkbox を `[-]` にする。
-3. Bolt のビルドとテストの記録、チームプラクティスを読み、本物の欠落だけを質問で確認する。
-4. `ci-config.md` と `quality-gates.md` を作る。
-5. `construction/ci-pipeline/memory.md` に、実行中の解釈、逸脱、トレードオフ、未解決の問いを記録する。
-6. `ci-pipeline` の checkbox を `[?]` にし、`STAGE_AWAITING_APPROVAL` イベントを `audit/audit.md` に追記して、ゲートを提示する。
+When resuming from `[?]` or `[R]`, follow the prerequisite resume rules and
+run only the steps needed for gate presentation or correction.
 
-## ゲート
+1. Only when the checkbox is `[ ]`, evaluate the Condition. If sufficient CI
+   already exists, set it to `[S]`, write the skip reason in the note,
+   append `STAGE_SKIPPED` to `audit/audit.md`, and stop. Do not reevaluate
+   when resuming from `[-]`, `[?]`, or `[R]`.
+2. Set the `ci-pipeline` checkbox to `[-]`.
+3. Read the Bolt build and test records and team practices, and ask
+   questions only for real gaps.
+4. Create `ci-config.md` and `quality-gates.md`.
+5. Record interpretations, deviations, tradeoffs, and unresolved questions in
+   `construction/ci-pipeline/memory.md`.
+6. Set the `ci-pipeline` checkbox to `[?]`, append `STAGE_AWAITING_APPROVAL`
+   to `audit/audit.md`, and present the gate.
 
-成果物の要約と確認先パスを示し、Approve と Request Changes の 2 択で承認を求める。
-Construction のゲートは 2 択に限り、スキップ済みステージの追加実行を選択肢にしない。
-Request Changes が 3 回続いたら Accept as-is を選択肢に加える。
-ゲートを提示したターンでは人間の回答を待つ。
+## Gate
 
-承認されたら `ci-pipeline` の checkbox を `[x]` にし、`GATE_APPROVED`（人間の回答をそのまま記録）と `STAGE_COMPLETED` を `audit/audit.md` に追記する。
-差し戻されたら `ci-pipeline` の checkbox を `[R]` にし、`GATE_REJECTED`（差し戻し理由をそのまま記録）と `STAGE_REVISING` を追記する。
-Accept as-is が選ばれた場合は、`ci-pipeline` の checkbox を `[x]` にし、`GATE_APPROVED`（Accept as-is である旨を含めて記録）と `STAGE_COMPLETED` を追記し、この判断を `construction/decisions.md` に記録する。
+Show an artifact summary and the paths to review, then ask for approval with
+exactly two options: Approve or Request Changes.
 
-## 禁止事項
+Construction gates are limited to those two options. Do not offer additional
+execution for skipped stages as a gate option.
 
-- 全 Bolt の完了前に実行しない。
-- チームプラクティスと矛盾する CI トリガーを設計しない。矛盾がある場合は人間に確認する。
-- 実装、テスト実行、Bolt 記録を作らない。
-- 承認を待たずに checkbox を `[x]` にしない。
+If Request Changes happens three times in a row, add Accept as-is as an
+option.
 
-## 次の skill
+When presenting a gate, wait for the human response in that turn.
 
-- 続きを進める場合: `amadeus`（入口が Construction の phase 境界処理を解決する）
-- 成果物の構造検証: `amadeus-validator`
+When approved, set the `ci-pipeline` checkbox to `[x]`, and append
+`GATE_APPROVED` (with the human response recorded as-is) and
+`STAGE_COMPLETED` to `audit/audit.md`.
+
+When changes are requested, set the `ci-pipeline` checkbox to `[R]`, and
+append `GATE_REJECTED` (with the requested changes recorded as-is) and
+`STAGE_REVISING`.
+
+If Accept as-is is selected, set the `ci-pipeline` checkbox to `[x]`, append
+`GATE_APPROVED` (noting Accept as-is) and `STAGE_COMPLETED`, and record the
+decision in `construction/decisions.md`.
+
+## Prohibitions
+
+- Do not run before all Bolts are complete.
+- Do not design a CI trigger that conflicts with team practices. If a
+  conflict exists, ask the human.
+- Do not create implementation, test execution, or Bolt records.
+- Do not set the checkbox to `[x]` before approval.
+
+## Next Skill
+
+- Continue the workflow: `amadeus`, which resolves the Construction phase
+  boundary processing.
+- Validate artifact structure: `amadeus-validator`.

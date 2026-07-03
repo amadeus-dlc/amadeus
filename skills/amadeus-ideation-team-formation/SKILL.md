@@ -1,104 +1,150 @@
 ---
 name: amadeus-ideation-team-formation
 description: >-
-  Amadeus Ideation の内部 skill。Stage 1.5 Team Formation だけを実行する。
-  対象 Intent でチーム構成、キャパシティ、mob 計画が意味を持つ場合に、
-  team-assessment.md、skill-matrix.md、mob-composition.md を作成または補修する場面では必ず使う。
-  単独開発者や小規模チームでは実行しない。要求、Unit、Bolt、実装は作らない。
+  Internal Amadeus Ideation skill. Use only for Stage 1.5 Team Formation. Use
+  when team composition, capacity, or mob planning is meaningful for the
+  target Intent, and must create or repair team-assessment.md,
+  skill-matrix.md, and mob-composition.md. Do not run for a solo developer
+  or a small team. Do not create requirements, Unit, Bolt, or implementation.
 ---
 
 # amadeus-ideation-team-formation
 
-## 目的
+## Purpose
 
-Ideation の Stage 1.5 Team Formation だけを進める。
+Advance only Ideation Stage 1.5 Team Formation.
 
-この skill は `amadeus` 入口から呼び出される内部 skill である。
+This is an internal skill called from the `amadeus` entrypoint.
 
-スコープとバックログに対して、チームの体制、スキル、mob 構成を評価する。
+Evaluate team structure, skills, and mob composition against the scope and
+backlog.
 
-## 前提
+## Prerequisites
 
-対象 record の `aidlc-state.md` で、Stage Progress の `team-formation` が実行対象であり、checkbox が `[ ]`、`[-]`、`[?]`、`[R]` のいずれかであることを前提にする。
+Assume the target record's `aidlc-state.md` has `team-formation` as an
+executable Stage Progress item, and the checkbox is in one of these states:
+`[ ]`, `[-]`, `[?]`, or `[R]`.
 
-checkbox が `[?]` の場合は、成果物を作り直さず、ゲートの提示から再開する。
-checkbox が `[R]` の場合は、前回の成果物と差し戻し理由を提示してから、修正だけを行う。
-どちらの場合も、手順を最初からやり直さない。
+If the checkbox is `[?]`, resume from gate presentation without recreating
+the artifacts.
 
-Condition は「チーム構成、キャパシティ、mob 計画が意味を持つ場合」である。
-単独開発者や小規模チームの場合は、成果物を作らず checkbox を `[S]` にして注記に skip 理由を書き、`STAGE_SKIPPED` イベントを `audit/audit.md` に追記して `amadeus` へ戻る。
+If the checkbox is `[R]`, present the previous artifacts and the reason for
+the requested changes, then make only the necessary corrections.
 
-少なくとも次を読む。
+In both cases, do not restart the procedure from the beginning.
+
+The Condition is: team composition, capacity, or mob planning is
+meaningful.
+
+For a solo developer or small team, create no artifacts, set the checkbox
+to `[S]`, write the skip reason in the note, append a `STAGE_SKIPPED` event
+to `audit/audit.md`, and return to `amadeus`.
+
+Read at least the following:
 
 - `aidlc/spaces/<space>/intents/<dirName>.md`
 - `aidlc-state.md`
-- `ideation/scope-definition/scope-document.md` と `intent-backlog.md`
-- Space の `memory/` と `knowledge/`（アクターの定義）
+- `ideation/scope-definition/scope-document.md` and `intent-backlog.md`
+- The Space's `memory/` and `knowledge/` (actor definitions)
 
-## 質問
+## Questions
 
-次の論点を確認する。
+Confirm the following points:
 
-- このスコープに関わる人は誰か。
-- 必要なスキルと現在の充足はどうか。
-- mob または並行の作業単位をどう組むか。
+- Who is involved in this scope?
+- What skills are needed, and how well are they currently covered?
+- How should mob or parallel units of work be organized?
 
-質問は `amadeus-grilling` のプロトコルに従い、一問ずつ、推奨回答を添えて提示し、回答を待つ。
-質問の量は `aidlc-state.md` の `Depth` を目安にする。
-質問と回答は `ideation/team-formation/team-formation-questions.md` に記録する。
+Follow the `amadeus-grilling` protocol: ask one question at a time, attach
+a recommended answer, and wait for the response.
 
-## テンプレート
+Use `aidlc-state.md`'s `Depth` as a guide for the number of questions.
 
-優先順位は次である。
+Record questions and answers in
+`ideation/team-formation/team-formation-questions.md`.
+
+## Templates
+
+Use templates in this priority order:
 
 1. `aidlc/spaces/<space>/memory/templates/intents/ideation/team-formation/`
-2. この skill に同梱された `templates/ideation/team-formation/`
+2. `templates/ideation/team-formation/` bundled with this skill.
 
-分からない項目は空欄にせず、`未確認` と書く。
+Do not leave unknown items blank. Write `未確認`.
 
-## 成果物
+## Artifacts
 
-作成または更新するものは次だけである。
+Create or update only the following files:
 
 - `ideation/team-formation/team-assessment.md`
 - `ideation/team-formation/skill-matrix.md`
 - `ideation/team-formation/mob-composition.md`
 - `ideation/team-formation/team-formation-questions.md`
-- `ideation/team-formation/memory.md`（stage 実行の学習記録）
-- `aidlc-state.md`（対象ステージの checkbox）と `audit/audit.md`（ゲートイベントの追記）
+- `ideation/team-formation/memory.md` (the learning record of the stage
+  execution)
+- `aidlc-state.md` (the target stage's checkbox) and `audit/audit.md`
+  (appending gate events)
 
-## 手順
+## Procedure
 
-以下の手順は、checkbox が `[ ]` から開始する場合の流れである。
-`[?]` または `[R]` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
+The following procedure applies when starting from checkbox `[ ]`.
 
-1. checkbox が `[ ]` の場合だけ Condition を判定する。偽なら checkbox を `[S]` にして注記に skip 理由を書き、`audit/audit.md` に `STAGE_SKIPPED` を追記して終了する。`[-]`、`[?]`、`[R]` からの再開では再判定しない。
-2. `aidlc-state.md` の `team-formation` の checkbox を `[-]` にする。
-3. scope-document、intent-backlog、Space の `memory/` と `knowledge/` を読み、不足論点を質問で確認する。
-4. 3 つの成果物を作る。
-5. stage の `memory.md` に、実行中の解釈、逸脱、トレードオフ、未解決の問いを記録する。
-6. `aidlc-state.md` の `team-formation` の checkbox を `[?]` にし、`STAGE_AWAITING_APPROVAL` イベントを `audit/audit.md` に追記して、ゲートを提示する。
+When resuming from `[?]` or `[R]`, follow the prerequisite resume rules and
+run only the steps needed for gate re-presentation or correction.
 
-## ゲート
+1. Only when the checkbox is `[ ]`, evaluate the Condition. If it is false,
+   set the checkbox to `[S]`, write the skip reason in the note, append
+   `STAGE_SKIPPED` to `audit/audit.md`, and stop. Do not reevaluate when
+   resuming from `[-]`, `[?]`, or `[R]`.
+2. Set `aidlc-state.md`'s `team-formation` checkbox to `[-]`.
+3. Read the scope-document, intent-backlog, and the Space's `memory/` and
+   `knowledge/`, and confirm missing points with questions.
+4. Create the three artifacts.
+5. Record interpretations, deviations, tradeoffs, and unresolved questions
+   made during execution in the stage's `memory.md`.
+6. Set `aidlc-state.md`'s `team-formation` checkbox to `[?]`, append a
+   `STAGE_AWAITING_APPROVAL` event to `audit/audit.md`, and present the
+   gate.
 
-成果物の要約と確認先パスを示し、Approve と Request Changes の 2 択で承認を求める。
-Ideation ステージでは、スキップ済みステージの追加実行を第 3 の選択肢にできる。
-スキップ済みステージの追加実行が選ばれた場合は、対象ステージの checkbox を `[S]` から `[ ]` に戻し、skip 注記を `EXECUTE` に戻してから `amadeus` 入口へ戻る。入口が次の解決で対象ステージを選ぶ。
-Request Changes が 3 回続いたら Accept as-is を選択肢に加える。
-ゲートを提示したターンでは人間の回答を待つ。
+## Gate
 
-承認されたら checkbox を `[x]` にし、`GATE_APPROVED`（人間の回答をそのまま記録）と `STAGE_COMPLETED` を `audit/audit.md` に追記する。
-差し戻されたら checkbox を `[R]` にし、`GATE_REJECTED`（差し戻し理由をそのまま記録）と `STAGE_REVISING` を追記する。
-Accept as-is が選ばれた場合は、checkbox を `[x]` にし、`GATE_APPROVED`（Accept as-is である旨を含めて記録）と `STAGE_COMPLETED` を追記し、この判断を `ideation/decisions.md` に記録する。
+Show an artifact summary and the paths to review, then ask for approval
+with exactly two options: Approve or Request Changes.
 
-## 禁止事項
+In Ideation stages, additional execution of a skipped stage can be a third
+option.
 
-- 単独開発者や小規模チームに対して実行しない。
-- Bolt への担当割り当てを確定しない。割り当ては Inception の Delivery Planning が扱う。
-- 要求、Unit、Bolt、実装を作らない。
-- 承認を待たずに `completed` を記録しない。
+If additional execution of a skipped stage is selected, revert the target
+stage's checkbox from `[S]` to `[ ]`, revert the skip note to `EXECUTE`, and
+return to the `amadeus` entrypoint. The entrypoint selects the target stage
+in its next resolution.
 
-## 次の skill
+If Request Changes happens three times in a row, add Accept as-is as an
+option.
 
-- 続きを進める場合: `amadeus`（入口が次ステージを解決する）
-- 成果物の構造検証: `amadeus-validator`
+When presenting a gate, wait for the human response in that turn.
+
+When approved, set the checkbox to `[x]`, and append `GATE_APPROVED`
+(recording the human response as-is) and `STAGE_COMPLETED` to
+`audit/audit.md`.
+
+When changes are requested, set the checkbox to `[R]`, and append
+`GATE_REJECTED` (recording the requested changes as-is) and
+`STAGE_REVISING`.
+
+If Accept as-is is selected, set the checkbox to `[x]`, append
+`GATE_APPROVED` (noting Accept as-is) and `STAGE_COMPLETED`, and record this
+decision in `ideation/decisions.md`.
+
+## Prohibitions
+
+- Do not run for a solo developer or a small team.
+- Do not finalize Bolt assignments. Assignment is handled by Inception's
+  Delivery Planning.
+- Do not create requirements, Unit, Bolt, or implementation.
+- Do not record `completed` without waiting for approval.
+
+## Next Skill
+
+- Continue: `amadeus` (the entrypoint resolves the next stage).
+- Validate artifact structure: `amadeus-validator`.

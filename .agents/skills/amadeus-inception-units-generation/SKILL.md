@@ -1,111 +1,172 @@
 ---
 name: amadeus-inception-units-generation
 description: >-
-  Amadeus Inception の内部 skill。Stage 2.7 Units Generation だけを実行する。
-  Application Design と要求から Unit と依存 DAG を生成し、unit-of-work.md、unit-of-work-dependency.md、
-  unit-of-work-story-map.md を作成または補修する場面では必ず使う。トポロジ（Unit の境界と依存）だけを作り、
-  実装順序と経済的な順序付けは Delivery Planning に委ねる。Bolt、実装は作らない。
+  Internal Amadeus Inception skill. Use only for Stage 2.7 Units Generation.
+  Generate Units and the dependency DAG from Application Design and the
+  requirements, and use it whenever creating or repairing unit-of-work.md,
+  unit-of-work-dependency.md, and unit-of-work-story-map.md. Create only the
+  topology (Unit boundaries and dependencies); leave implementation ordering
+  and economic sequencing to Delivery Planning. Do not create Bolts or
+  implementation.
 ---
 
 # amadeus-inception-units-generation
 
-## 目的
+## Purpose
 
-Inception の Stage 2.7 Units Generation だけを進める。
+Advance only Inception Stage 2.7 Units Generation.
 
-この skill は `amadeus` 入口から呼び出される内部 skill である。
+This is an internal skill called from the `amadeus` entrypoint.
 
-Application Design と要求から、Unit と依存 DAG を生成する。
+Generate Units and the dependency DAG from Application Design and the
+requirements.
 
-このステージはトポロジ（Unit の境界と依存）だけを作る。
-実装順序、critical path の推奨、経済的な順序付け（何を先に出荷するか）は扱わない。
-それらは Stage 2.8 Delivery Planning の責務である。
+This stage creates only the topology (Unit boundaries and dependencies).
+Do not handle implementation ordering, critical path recommendations, or economic sequencing (what to ship first).
+Those are the responsibility of Stage 2.8 Delivery Planning.
 
-## 前提
+## Prerequisites
 
-対象 record の `aidlc-state.md` で、Stage Progress の `units-generation` が実行対象であり、checkbox が `[ ]`、`[-]`、`[?]`、`[R]` のいずれかであることを前提にする。
+Assume the target record's `aidlc-state.md` has `units-generation` as an
+executable Stage Progress item, with the checkbox in one of these states:
+`[ ]`, `[-]`, `[?]`, or `[R]`.
 
-checkbox が `[?]` の場合は、成果物を作り直さず、ゲートの提示から再開する。
-checkbox が `[R]` の場合は、前回の成果物と差し戻し理由を提示してから、修正だけを行う。
-どちらの場合も、手順を最初からやり直さない。
+If the checkbox is `[?]`, resume from gate presentation without recreating
+the artifacts.
 
-少なくとも次を読む。
+If the checkbox is `[R]`, present the previous artifacts and the requested
+changes, then make only the necessary corrections.
+
+In both cases, do not restart the whole procedure.
+
+Read at least the following inputs:
 
 - `inception/requirements-analysis/requirements.md`
-- `inception/application-design/`（実行した場合。components、component-methods、services、component-dependency、decisions）
-- `inception/user-stories/stories.md`（実行した場合）
-- `ideation/scope-definition/intent-backlog.md`（存在する場合。項目を Unit 候補として評価する）
+- `inception/application-design/`, if it was executed (components,
+  component-methods, services, component-dependency, decisions).
+- `inception/user-stories/stories.md`, if it was executed.
+- `ideation/scope-definition/intent-backlog.md`, if it exists. Evaluate its
+  items as Unit candidates.
 - `aidlc-state.md`
 
-Application Design を実行しなかった場合は、縮退時の入力代替に従い、`aidlc/spaces/<space>/codekb/<repo>/architecture.md` と `aidlc/spaces/<space>/codekb/<repo>/component-inventory.md`、または `inception/requirements-analysis/requirements.md` から Unit 境界を判断する。
-代替を使った場合は、使った代替を `unit-of-work.md` に記録する。
+If Application Design was not executed, follow the fallback input rule and
+determine Unit boundaries from
+`aidlc/spaces/<space>/codekb/<repo>/architecture.md` and
+`aidlc/spaces/<space>/codekb/<repo>/component-inventory.md`, or from
+`inception/requirements-analysis/requirements.md`.
+If a fallback was used, record the fallback used in `unit-of-work.md`.
 
-## 質問
+## Questions
 
-次の論点を人間に確認する。
+Confirm the following points with the human.
 
-- Unit の境界戦略はどれか（サービス別、機能別、ドメイン別、デプロイ対象別）。
-- 粒度はどちらに寄せるか（粗い、細かい）。
+- Which Unit boundary strategy to use (by service, by feature, by domain, or
+  by deployment target).
+- Which granularity to lean toward (coarse or fine).
 
-質問は `amadeus-grilling` のプロトコルに従い、一問ずつ、推奨回答を添えて提示し、回答を待つ。
-質問を行った場合は `inception/units-generation/units-generation-questions.md` に記録する。
-境界戦略と粒度の確定判断は `inception/grillings.md` と `inception/grillings/Gxxx-<topic>.md` にも記録する。
+Follow the `amadeus-grilling` protocol: ask one question at a time, attach a
+recommended answer, and wait for the response.
 
-## テンプレート
+If you ask questions, record them in
+`inception/units-generation/units-generation-questions.md`.
 
-優先順位は次である。
+Also record the finalized decisions on boundary strategy and granularity in
+`inception/grillings.md` and `inception/grillings/Gxxx-<topic>.md`.
+
+## Templates
+
+Use templates in this priority order:
 
 1. `aidlc/spaces/<space>/memory/templates/intents/inception/units-generation/`
-2. この skill に同梱された `templates/inception/units-generation/`
+2. `templates/inception/units-generation/` bundled with this skill.
 
-分からない項目は空欄にせず、`未確認` と書く。
+Do not leave unknown items blank. Write `未確認`.
 
-## 成果物
+## Artifacts
 
-作成または更新するものは次だけである。
+Create or update only the following files:
 
-- `inception/units-generation/unit-of-work.md`（Unit 一覧。識別子 `U001` 以降、責務、対応する要求）
-- `inception/units-generation/unit-of-work-dependency.md`（Unit の依存 DAG）
-- `inception/units-generation/unit-of-work-story-map.md`（Unit とストーリーの対応。stories がある場合のみ）
-- `inception/units-generation/memory.md`（stage 実行の学習記録）
-- `aidlc-state.md`（対象ステージの checkbox）と `audit/audit.md`（ゲートイベントの追記）
-- 質問を行った場合は `inception/units-generation/units-generation-questions.md`
+- `inception/units-generation/unit-of-work.md` (Unit list: identifiers from
+  `U001` onward, responsibilities, and corresponding requirements)
+- `inception/units-generation/unit-of-work-dependency.md` (Unit dependency
+  DAG)
+- `inception/units-generation/unit-of-work-story-map.md` (Unit-to-story
+  mapping, only when stories exist)
+- `inception/units-generation/memory.md` (learning record from stage
+  execution)
+- `aidlc-state.md` for the target stage checkbox, and `audit/audit.md` for
+  gate event entries
+- `inception/units-generation/units-generation-questions.md`, only if
+  questions were asked
 
-Unit が多い場合は `units/<unit-id>-<slug>.md` へ分割してよい。
-その場合も `unit-of-work.md` を一覧として維持する。
+When there are many Units, you may split them into
+`units/<unit-id>-<slug>.md`. Even then, keep `unit-of-work.md` as the summary
+list.
 
-## 手順
+## Procedure
 
-以下の手順は、checkbox が `[ ]` から開始する場合の流れである。
-`[?]` または `[R]` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
+The following procedure applies when starting from checkbox `[ ]`.
 
-1. `aidlc-state.md` の `units-generation` の checkbox を `[-]` にする。
-2. Application Design の成果物（実行した場合）と要求を読み、Unit 候補を洗い出す。Application Design を実行しなかった場合は、前提の縮退時の入力代替に従い、`aidlc/spaces/<space>/codekb/<repo>/` の `architecture.md` と `component-inventory.md`、または `inception/requirements-analysis/requirements.md` から Unit 境界を判断し、使った代替を `unit-of-work.md` に記録する。スコープバックログの項目も Unit 候補として評価する。
-3. 境界戦略と粒度を人間に確認する。
-4. `unit-of-work.md` と `unit-of-work-dependency.md` を作る。依存は非循環にする。stories がある場合は `unit-of-work-story-map.md` も作る。
-5. stage の `memory.md` に、実行中の解釈、逸脱、トレードオフ、未解決の問いを記録する。
-6. `aidlc-state.md` の `units-generation` の checkbox を `[?]` にし、`STAGE_AWAITING_APPROVAL` イベントを `audit/audit.md` に追記して、ゲートを提示する。
+When resuming from `[?]` or `[R]`, follow the prerequisite resume rules and
+run only the steps needed for gate re-presentation or correction.
 
-## ゲート
+1. Set the `units-generation` checkbox in `aidlc-state.md` to `[-]`.
+2. Read the Application Design artifacts (if executed) and the requirements,
+   and identify Unit candidates. If Application Design was not executed,
+   follow the prerequisite's fallback input rule and determine Unit
+   boundaries from `architecture.md` and `component-inventory.md` under
+   `aidlc/spaces/<space>/codekb/<repo>/`, or from
+   `inception/requirements-analysis/requirements.md`, and record the fallback
+   used in `unit-of-work.md`. Also evaluate scope backlog items as Unit
+   candidates.
+3. Confirm the boundary strategy and granularity with the human.
+4. Create `unit-of-work.md` and `unit-of-work-dependency.md`. Make the
+   dependencies acyclic. If stories exist, also create
+   `unit-of-work-story-map.md`.
+5. Record interpretations, deviations, tradeoffs, and unresolved questions
+   made during execution in the stage's `memory.md`.
+6. Set the `units-generation` checkbox in `aidlc-state.md` to `[?]`, append a
+   `STAGE_AWAITING_APPROVAL` event to `audit/audit.md`, and present the gate.
 
-成果物の要約と確認先パスを示し、Approve と Request Changes の 2 択で承認を求める。
-Inception ステージでは、スキップ済みステージの追加実行を第 3 の選択肢にできる。
-スキップ済みステージの追加実行が選ばれた場合は、対象ステージの checkbox を `[S]` から `[ ]` に戻し、skip 注記を `EXECUTE` に戻してから `amadeus` 入口へ戻る。入口が次の解決で対象ステージを選ぶ。
-Request Changes が 3 回続いたら Accept as-is を選択肢に加える。
-ゲートを提示したターンでは人間の回答を待つ。
+## Gate
 
-承認されたら checkbox を `[x]` にし、`GATE_APPROVED`（人間の回答をそのまま記録）と `STAGE_COMPLETED` を `audit/audit.md` に追記する。
-差し戻されたら checkbox を `[R]` にし、`GATE_REJECTED`（差し戻し理由をそのまま記録）と `STAGE_REVISING` を追記する。
-Accept as-is が選ばれた場合は、checkbox を `[x]` にし、`GATE_APPROVED`（Accept as-is である旨を含めて記録）と `STAGE_COMPLETED` を追記し、この判断を `inception/decisions.md` に記録する。
+Show an artifact summary and the paths to review, then ask for approval with
+exactly two options: Approve or Request Changes.
 
-## 禁止事項
+For Inception stages, you may add executing a skipped stage as a third
+option.
 
-- 実装順序、critical path、経済的な順序付けを書かない。それらは Delivery Planning の責務である。
-- Bolt と Unit Design Brief を作らない。
-- 技術レイヤー（DB、API、フロント）だけを根拠に Unit を分割しない。
-- 承認を待たずに `completed` を記録しない。
+If executing a skipped stage is selected, revert the target stage's checkbox
+from `[S]` to `[ ]`, revert the skip note to `EXECUTE`, and return to the
+`amadeus` entrypoint. The entrypoint selects the target stage on its next
+resolution.
 
-## 次の skill
+If Request Changes happens three times in a row, add Accept as-is as an
+option.
 
-- 続きを進める場合: `amadeus`（入口が次ステージを解決する）
-- 成果物の構造検証: `amadeus-validator`
+When presenting a gate, wait for the human response in that turn.
+
+When approved, set the checkbox to `[x]`, and append `GATE_APPROVED`
+(recording the human response as-is) and `STAGE_COMPLETED` to
+`audit/audit.md`.
+
+When changes are requested, set the checkbox to `[R]`, and append
+`GATE_REJECTED` (recording the requested changes as-is) and
+`STAGE_REVISING`.
+
+If Accept as-is is selected, set the checkbox to `[x]`, append
+`GATE_APPROVED` (noting Accept as-is) and `STAGE_COMPLETED`, and record the
+decision in `inception/decisions.md`.
+
+## Prohibitions
+
+- Do not write implementation ordering, critical path, or economic
+  sequencing. Those are the responsibility of Delivery Planning.
+- Do not create Bolts or Unit Design Briefs.
+- Do not split Units based solely on technical layers (DB, API, frontend).
+- Do not record `completed` without waiting for approval.
+
+## Next Skill
+
+- Continue: `amadeus`, which resolves the next stage.
+- Validate artifact structure: `amadeus-validator`.

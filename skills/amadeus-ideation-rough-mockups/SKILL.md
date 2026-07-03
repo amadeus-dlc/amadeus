@@ -1,103 +1,147 @@
 ---
 name: amadeus-ideation-rough-mockups
 description: >-
-  Amadeus Ideation の内部 skill。Stage 1.6 Rough Mockups だけを実行する。
-  対象 Intent に UI がある場合、または API や backend のシステム相互作用を確認したい場合に、
-  wireframes.md と user-flow.md を作成または補修する場面では必ず使う。
-  高忠実度 UI、詳細モック、要求、実装は作らない。
+  Internal Amadeus Ideation skill. Use only for Stage 1.6 Rough Mockups. Use
+  when the target Intent has a UI, or when you want to confirm API or
+  backend system interactions, and must create or repair wireframes.md and
+  user-flow.md. Do not create high-fidelity UI, detailed mockups,
+  requirements, or implementation.
 ---
 
 # amadeus-ideation-rough-mockups
 
-## 目的
+## Purpose
 
-Ideation の Stage 1.6 Rough Mockups だけを進める。
+Advance only Ideation Stage 1.6 Rough Mockups.
 
-この skill は `amadeus` 入口から呼び出される内部 skill である。
+This is an internal skill called from the `amadeus` entrypoint.
 
-後続の要求とストーリーの具体例として確認できる粒度で、ワイヤーフレームとユーザーフローを作る。
-UI がない Intent では、システム相互作用図を作る。
+Create wireframes and a user flow at a granularity that later requirements
+and stories can check as concrete examples. For an Intent with no UI, create
+a system interaction diagram.
 
-## 前提
+## Prerequisites
 
-対象 record の `aidlc-state.md` で、Stage Progress の `rough-mockups` が実行対象であり、checkbox が `[ ]`、`[-]`、`[?]`、`[R]` のいずれかであることを前提にする。
+Assume the target record's `aidlc-state.md` has `rough-mockups` as an
+executable Stage Progress item, and the checkbox is one of `[ ]`, `[-]`,
+`[?]`, or `[R]`.
 
-checkbox が `[?]` の場合は、成果物を作り直さず、ゲートの提示から再開する。
-checkbox が `[R]` の場合は、前回の成果物と差し戻し理由を提示してから、修正だけを行う。
-どちらの場合も、手順を最初からやり直さない。
+If the checkbox is `[?]`, resume from gate presentation without recreating
+the artifacts.
 
-Condition は「UI が対象に含まれる場合。API や backend はシステム相互作用図で代替する」である。
-UI もシステム相互作用もない場合は、成果物を作らず checkbox を `[S]` にして注記に skip 理由を書き、`STAGE_SKIPPED` イベントを `audit/audit.md` に追記して `amadeus` へ戻る。
+If the checkbox is `[R]`, present the previous artifacts and the rejection
+reason, then make only the corrections.
 
-少なくとも次を読む。
+In both cases, do not restart the whole procedure.
+
+The Condition is: the target includes a UI. For API or backend, a system
+interaction diagram substitutes for it.
+
+If there is neither a UI nor a system interaction, create no artifacts. Set
+the checkbox to `[S]`, write the skip reason in the note, append a
+`STAGE_SKIPPED` event to `audit/audit.md`, and return to `amadeus`.
+
+Read at least the following:
 
 - `aidlc/spaces/<space>/intents/<dirName>.md`
 - `aidlc-state.md`
-- `ideation/scope-definition/scope-document.md` と `intent-backlog.md`
+- `ideation/scope-definition/scope-document.md` and `intent-backlog.md`
 
-## 質問
+## Questions
 
-次の論点を確認する。
+Confirm the following points.
 
-- 利用者が最初に確認したい画面または相互作用はどれか。
-- 主要なフローの開始点と終了点はどこか。
+- Which screen or interaction does the user want to check first?
+- Where are the start and end points of the main flow?
 
-質問は `amadeus-grilling` のプロトコルに従い、一問ずつ、推奨回答を添えて提示し、回答を待つ。
-質問の量は `aidlc-state.md` の `Depth` を目安にする。
-質問と回答は `ideation/rough-mockups/rough-mockups-questions.md` に記録する。
+Follow the `amadeus-grilling` protocol for questions: present them one at a
+time with a recommended answer, and wait for the response. Use
+`aidlc-state.md`'s `Depth` as a guide for the number of questions.
 
-## テンプレート
+Record the questions and answers in
+`ideation/rough-mockups/rough-mockups-questions.md`.
 
-優先順位は次である。
+## Templates
+
+Use templates in this priority order:
 
 1. `aidlc/spaces/<space>/memory/templates/intents/ideation/rough-mockups/`
-2. この skill に同梱された `templates/ideation/rough-mockups/`
+2. `templates/ideation/rough-mockups/` bundled with this skill.
 
-図は Markdown に内包できる PlantUML または Mermaid で書く。
-分からない項目は空欄にせず、`未確認` と書く。
+Write diagrams in PlantUML or Mermaid that can be embedded in Markdown.
 
-## 成果物
+Do not leave unknown items blank. Write `未確認`.
 
-作成または更新するものは次だけである。
+## Artifacts
 
-- `ideation/rough-mockups/wireframes.md`（UI がない場合はシステム相互作用図）
+Create or update only the following files:
+
+- `ideation/rough-mockups/wireframes.md` (a system interaction diagram when
+  there is no UI)
 - `ideation/rough-mockups/user-flow.md`
 - `ideation/rough-mockups/rough-mockups-questions.md`
-- `ideation/rough-mockups/memory.md`（stage 実行の学習記録）
-- `aidlc-state.md`（対象ステージの checkbox）と `audit/audit.md`（ゲートイベントの追記）
+- `ideation/rough-mockups/memory.md` (learning record of the stage
+  execution)
+- `aidlc-state.md` (the target stage's checkbox) and `audit/audit.md` (gate
+  event entries)
 
-## 手順
+## Procedure
 
-以下の手順は、checkbox が `[ ]` から開始する場合の流れである。
-`[?]` または `[R]` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
+The following procedure applies when starting from checkbox `[ ]`.
 
-1. checkbox が `[ ]` の場合だけ Condition を判定する。偽なら checkbox を `[S]` にして注記に skip 理由を書き、`audit/audit.md` に `STAGE_SKIPPED` を追記して終了する。`[-]`、`[?]`、`[R]` からの再開では再判定しない。
-2. `aidlc-state.md` の `rough-mockups` の checkbox を `[-]` にする。
-3. scope-document と intent-backlog を読み、確認対象のフローを特定する。
-4. 不足論点を質問で確認する。
-5. `wireframes.md` と `user-flow.md` を作る。
-6. stage の `memory.md` に、実行中の解釈、逸脱、トレードオフ、未解決の問いを記録する。
-7. `aidlc-state.md` の `rough-mockups` の checkbox を `[?]` にし、`STAGE_AWAITING_APPROVAL` イベントを `audit/audit.md` に追記して、ゲートを提示する。
+When resuming from `[?]` or `[R]`, follow the prerequisite resume rules and
+run only the steps needed for gate re-presentation or correction.
 
-## ゲート
+1. Only when the checkbox is `[ ]`, evaluate the Condition. If it is false,
+   set the checkbox to `[S]`, write the skip reason in the note, append
+   `STAGE_SKIPPED` to `audit/audit.md`, and stop. Do not reevaluate when
+   resuming from `[-]`, `[?]`, or `[R]`.
+2. Set `aidlc-state.md`'s `rough-mockups` checkbox to `[-]`.
+3. Read scope-document and intent-backlog, and identify the flows to check.
+4. Confirm gaps with questions.
+5. Create `wireframes.md` and `user-flow.md`.
+6. Record interpretations, deviations, tradeoffs, and unresolved questions
+   made during execution in the stage's `memory.md`.
+7. Set `aidlc-state.md`'s `rough-mockups` checkbox to `[?]`, append a
+   `STAGE_AWAITING_APPROVAL` event to `audit/audit.md`, and present the
+   gate.
 
-成果物の要約と確認先パスを示し、Approve と Request Changes の 2 択で承認を求める。
-Ideation ステージでは、スキップ済みステージの追加実行を第 3 の選択肢にできる。
-スキップ済みステージの追加実行が選ばれた場合は、対象ステージの checkbox を `[S]` から `[ ]` に戻し、skip 注記を `EXECUTE` に戻してから `amadeus` 入口へ戻る。入口が次の解決で対象ステージを選ぶ。
-Request Changes が 3 回続いたら Accept as-is を選択肢に加える。
-ゲートを提示したターンでは人間の回答を待つ。
+## Gate
 
-承認されたら checkbox を `[x]` にし、`GATE_APPROVED`（人間の回答をそのまま記録）と `STAGE_COMPLETED` を `audit/audit.md` に追記する。
-差し戻されたら checkbox を `[R]` にし、`GATE_REJECTED`（差し戻し理由をそのまま記録）と `STAGE_REVISING` を追記する。
-Accept as-is が選ばれた場合は、checkbox を `[x]` にし、`GATE_APPROVED`（Accept as-is である旨を含めて記録）と `STAGE_COMPLETED` を追記し、この判断を `ideation/decisions.md` に記録する。
+Show an artifact summary and the paths to review, then ask for approval
+with exactly two options: Approve or Request Changes.
 
-## 禁止事項
+In Ideation stages, additional execution of a skipped stage can be a third
+option. If additional execution of a skipped stage is selected, revert the
+target stage's checkbox from `[S]` to `[ ]`, revert the skip note to
+`EXECUTE`, and return to the `amadeus` entrypoint. The entrypoint selects
+the target stage in the next resolution.
 
-- 高忠実度の UI やデザインシステム対応を作らない。詳細化は Inception の Refined Mockups が扱う。
-- 要求、Unit、Bolt、実装を作らない。
-- 承認を待たずに `completed` を記録しない。
+If Request Changes happens three times in a row, add Accept as-is as an
+option.
 
-## 次の skill
+When presenting a gate, wait for the human response in that turn.
 
-- 続きを進める場合: `amadeus`（入口が次ステージを解決する）
-- 成果物の構造検証: `amadeus-validator`
+When approved, set the checkbox to `[x]`, append `GATE_APPROVED` with the
+human response recorded as-is, and append `STAGE_COMPLETED` to
+`audit/audit.md`.
+
+When changes are requested, set the checkbox to `[R]`, append
+`GATE_REJECTED` with the requested changes recorded as-is, and append
+`STAGE_REVISING`.
+
+If Accept as-is is selected, set the checkbox to `[x]`, append
+`GATE_APPROVED` noting Accept as-is, append `STAGE_COMPLETED`, and record
+the decision in `ideation/decisions.md`.
+
+## Prohibitions
+
+- Do not create high-fidelity UI or design system support. Detailing is
+  handled by Inception's Refined Mockups.
+- Do not create requirements, Units, Bolts, or implementation.
+- Do not record `completed` without waiting for approval.
+
+## Next Skill
+
+- Continue: `amadeus` (the entrypoint resolves the next stage).
+- Validate artifact structure: `amadeus-validator`.

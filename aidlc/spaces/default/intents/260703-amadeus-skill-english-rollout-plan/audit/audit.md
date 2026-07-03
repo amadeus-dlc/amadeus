@@ -1148,3 +1148,118 @@
 **Details**: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行している。Issue #399 の子 Issue 完了追跡には CI の新設または大きな変更が不要なため、Stage 3.7 を skip した。
 
 ---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T13:59:22Z
+**Event**: QUESTION_ANSWERED
+**Question**: Issue #399 の完了境界は、直接子 Issue の完了だけでよいか。
+**Details**: User Input: intentが閉じられようとしていますが、SKILL.mdが英語化されていませんよね。全面的に英語化されるはずなのですが、。回答として、#399 は Amadeus 系 `SKILL.md` の全面英語化完了まで閉じない境界へ補正する。
+
+---
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T14:42:41Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Unit**: U006-core-entrypoints-verification-englishization
+**Details**: B006 Core entrypoints and verification（`amadeus`、`amadeus-steering`、`amadeus-validator`）の英語化を開始した。人間指示（PR #417 のリカバリ依頼）により、B006〜B009 の英語化を単一リカバリ PR で実行する。#391〜#394 の意味差分対応（B005）は本 PR に含めず open のままとする。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T14:48:56Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Unit**: U007-construction-stage-skills-englishization
+**Details**: B007 Construction stage skills（nfr-requirements、nfr-design、infrastructure-design、code-generation、build-and-test、ci-pipeline）の英語化を開始した。単一リカバリ PR での統合実行のため、B006 の Build and Test 記録と並行する。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T14:52:42Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Unit**: U008-inception-stage-skills-englishization
+**Details**: B008 Inception stage skills（reverse-engineering、practices-discovery、requirements-analysis、user-stories、refined-mockups、application-design、units-generation、delivery-planning）の英語化を開始した。単一リカバリ PR での統合実行のため、B006〜B007 の Build and Test 記録と並行する。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T14:55:08Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Unit**: U009-ideation-supporting-skills-englishization
+**Details**: B009 Ideation stage skills（7 件）と Supporting analysis and review skills（grilling、domain-grilling、domain-modeling、event-storming、decision-review、history-review、learning-review）の英語化を開始した。単一リカバリ PR での統合実行のため、B006〜B008 の記録と並行する。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T15:05:08Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Bolt**: B006
+**Details**: B006 Core entrypoints and verification 英語化の Stage 3.6 を開始した。B006〜B009 の全体テストは単一リカバリ PR の統合実行として 1 回実施し、各 Bolt record から参照する。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T15:05:08Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Bolt**: B007
+**Details**: B007 Construction stage skills 英語化の Stage 3.6 を開始した。全体テストは B006〜B009 の統合実行として記録する。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T15:05:08Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Bolt**: B008
+**Details**: B008 Inception stage skills 英語化の Stage 3.6 を開始した。全体テストは B006〜B009 の統合実行として記録する。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T15:05:08Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Bolt**: B009
+**Details**: B009 Ideation and supporting skills 英語化の Stage 3.6 を開始した。全体テストは B006〜B009 の統合実行として記録する。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T15:07:20Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+**Bolt**: B006
+**Details**: `npm run test:all`、`test:it:amadeus-templates`、`test:it:promote-skill`、Amadeus Validator、`git diff --check` が pass した（B006〜B009 統合実行）。autonomous 実行のため会話内 gate は提示せず、approval evidence は PR #417 merge 後に記録する。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T15:07:20Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+**Bolt**: B007
+**Details**: `npm run test:all`、`test:it:amadeus-templates`、`test:it:promote-skill`、Amadeus Validator、`git diff --check` が pass した（B006〜B009 統合実行）。autonomous 実行のため会話内 gate は提示せず、approval evidence は PR #417 merge 後に記録する。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T15:07:20Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+**Bolt**: B008
+**Details**: `npm run test:all`、`test:it:amadeus-templates`、`test:it:promote-skill`、Amadeus Validator、`git diff --check` が pass した（B006〜B009 統合実行）。autonomous 実行のため会話内 gate は提示せず、approval evidence は PR #417 merge 後に記録する。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T15:07:20Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+**Bolt**: B009
+**Details**: `npm run test:all`、`test:it:amadeus-templates`、`test:it:promote-skill`、Amadeus Validator、`git diff --check` が pass した（B006〜B009 統合実行）。autonomous 実行のため会話内 gate は提示せず、approval evidence は PR #417 merge 後に記録する。
+
+---

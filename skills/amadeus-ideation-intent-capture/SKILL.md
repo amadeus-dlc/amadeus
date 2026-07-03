@@ -1,112 +1,164 @@
 ---
 name: amadeus-ideation-intent-capture
 description: >-
-  Amadeus Ideation の内部 skill。Stage 1.1 Intent Capture & Framing だけを実行する。
-  Birth 済み Intent の目的、対象、成功条件、契機を clarifying questions で確定し、
-  intent-statement.md と stakeholder-map.md を作成または補修する場面では必ず使う。
-  scope-document、intent-backlog、要求、Unit、Bolt、実装は作らない。
+  Internal Amadeus Ideation skill. Use only for Stage 1.1 Intent Capture &
+  Framing. Use when a Birthed Intent's purpose, target, success criteria, and
+  trigger must be confirmed through clarifying questions, and
+  intent-statement.md and stakeholder-map.md must be created or repaired. Do
+  not create scope-document, intent-backlog, requirements, Unit, Bolt, or
+  implementation.
 ---
 
 # amadeus-ideation-intent-capture
 
-## 目的
+## Purpose
 
-Ideation の Stage 1.1 Intent Capture & Framing だけを進める。
+Advance only Ideation Stage 1.1 Intent Capture & Framing.
 
-この skill は `amadeus` 入口から呼び出される内部 skill である。
+This is an internal skill called from the `amadeus` entrypoint.
 
-Birth で作られた Intent の骨格に対して、解決する問題、対象者、観測可能な成功基準、契機を clarifying questions で確定して `intent-statement.md` を作り、利害関係者の整理を作る。
+For the Intent skeleton created at Birth, confirm the problem to solve, the
+target audience, the observable success criteria, and the trigger through
+clarifying questions, create `intent-statement.md`, and build the stakeholder
+map.
 
-## 前提
+## Prerequisites
 
-対象 record の `aidlc-state.md` で、Stage Progress の `intent-capture` が実行対象であり、checkbox が `[ ]`、`[-]`、`[?]`、`[R]` のいずれかであることを前提にする。
+Assume the target record's `aidlc-state.md` has `intent-capture` as an
+executable Stage Progress item, and the `intent-capture` checkbox is in one of
+these states: `[ ]`, `[-]`, `[?]`, or `[R]`.
 
-checkbox が `[?]` の場合は、成果物を作り直さず、ゲートの提示から再開する。
-checkbox が `[R]` の場合は、前回の成果物と差し戻し理由を提示してから、修正だけを行う。
-どちらの場合も、手順を最初からやり直さない。
+If the checkbox is `[?]`, resume from gate presentation without recreating the
+artifacts.
 
-少なくとも次を読む。
+If the checkbox is `[R]`, present the previous artifacts and the requested
+changes, then make only the necessary corrections.
+
+In both cases, do not restart the whole procedure.
+
+Read at least the following inputs:
 
 - `aidlc/spaces/<space>/intents/<dirName>.md`
 - `aidlc-state.md`
-- Space の `memory/` と `knowledge/`
+- The Space's `memory/` and `knowledge/`
 
-## 質問
+## Questions
 
-次の論点を確認する。
+Confirm the following points.
 
-- 何の業務問題または技術課題を解くのか。
-- 対象者は誰で、どんな痛みがあるのか。
-- 成功はどう観測できるのか。技術的な Intent では、保存すべき振る舞いと観測可能な改善指標は何か。
-- なぜ今この作業を始めるのか（契機）。
+- What business problem or technical challenge does this solve?
+- Who is the target audience, and what pain do they have?
+- How can success be observed? For a technical Intent, what behavior must be
+  preserved and what observable improvement metrics apply?
+- Why start this work now (the trigger)?
 
-質問は `amadeus-grilling` のプロトコルに従い、一問ずつ、推奨回答を添えて提示し、回答を待つ。
-質問の量は `aidlc-state.md` の `Depth` を目安にする（Minimal 2〜4 問、Standard 5〜8 問、Comprehensive 8〜12 問以上）。
-回答の曖昧さと矛盾を検出し、必要なら追加質問する。
+Follow the `amadeus-grilling` protocol: ask one question at a time, attach a
+recommended answer, and wait for the response.
 
-質問と回答は `ideation/intent-capture/intent-capture-questions.md` に記録する。
-成果物の意味や後続判断に影響する確定判断は、`ideation/grillings.md` と `ideation/grillings/Gxxx-<topic>.md` にも記録する。
+Use `aidlc-state.md`'s `Depth` as a guide for the number of questions
+(Minimal: 2-4 questions, Standard: 5-8 questions, Comprehensive: 8-12 or
+more).
 
-## テンプレート
+Detect ambiguity and contradictions in the answers, and ask additional
+questions when needed.
 
-優先順位は次である。
+Record the questions and answers in
+`ideation/intent-capture/intent-capture-questions.md`.
+
+Also record confirmed decisions that affect the meaning of artifacts or later
+judgment in `ideation/grillings.md` and
+`ideation/grillings/Gxxx-<topic>.md`.
+
+## Templates
+
+Use templates in this priority order:
 
 1. `aidlc/spaces/<space>/memory/templates/intents/ideation/intent-capture/`
-2. この skill に同梱された `templates/ideation/intent-capture/`
+2. `templates/ideation/intent-capture/` bundled with this skill.
 
-テンプレートの `<...>` は、回答と Space の `memory/` と `knowledge/` から分かる値に置き換える。
-分からない項目は空欄にせず、`未確認` と書く。
+Replace the template's `<...>` placeholders with values known from the
+answers and the Space's `memory/` and `knowledge/`.
 
-## 成果物
+Do not leave unknown items blank. Write `未確認`.
 
-作成または更新するものは次だけである。
+## Artifacts
 
-- `ideation/intent-capture/intent-statement.md`（目的、対象、成功条件、契機、範囲の確定）
-- `aidlc/spaces/<space>/intents/<dirName>.md`（目標プロファイルの確定）
+Create or update only the following files:
+
+- `ideation/intent-capture/intent-statement.md` (confirms the purpose,
+  target, success criteria, trigger, and scope)
+- `aidlc/spaces/<space>/intents/<dirName>.md` (confirms the goal profile)
 - `ideation/intent-capture/stakeholder-map.md`
 - `ideation/intent-capture/intent-capture-questions.md`
 - `ideation/intent-capture/memory.md`
-- `aidlc-state.md`（`intent-capture` の checkbox）と `audit/audit.md`（ゲートイベントの追記）
-- `aidlc/spaces/<space>/intents/intents.md`（`bun run .agents/skills/amadeus-validator/scripts/IndexGenerate.ts <workspace>` による再生成。手書きしない）
+- `aidlc-state.md` for the `intent-capture` checkbox and `audit/audit.md` for
+  gate event entries
+- `aidlc/spaces/<space>/intents/intents.md` (regenerated via
+  `bun run .agents/skills/amadeus-validator/scripts/IndexGenerate.ts
+  <workspace>`; do not hand-edit)
 
-成功条件は、Intent 受理条件の①（観測可能な成功基準）を満たす形で書く。
+Write the success criteria so they satisfy Intent acceptance condition ①
+(observable success criteria).
 
-## 手順
+## Procedure
 
-以下の手順は、checkbox が `[ ]` から開始する場合の流れである。
-`[?]` または `[R]` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
+The following procedure applies when starting from checkbox `[ ]`.
 
-1. `aidlc-state.md` の `intent-capture` の checkbox を `[-]` にする。
-2. モジュールファイルの骨格と Space の `memory/`、`knowledge/` を読み、不足している論点を洗い出す。
-3. 質問を一問ずつ提示し、回答を `intent-capture-questions.md` に記録する。
-4. `intent-statement.md` の目的、対象、成功条件、契機、範囲を確定し、モジュールファイルの目標プロファイルを確定する。
-5. `stakeholder-map.md` を作る。利害関係者、決定者と影響者の区別、必要な確認先を書く。
-6. `IndexGenerate.ts` で `aidlc/spaces/<space>/intents/intents.md` を再生成する。
-7. stage の `memory.md` に、実行中の解釈、逸脱、トレードオフ、未解決の問いを記録する。
-8. `aidlc-state.md` の `intent-capture` の checkbox を `[?]` にし、`STAGE_AWAITING_APPROVAL` イベントを `audit/audit.md` に追記して、ゲートを提示する。
+When resuming from `[?]` or `[R]`, follow the prerequisite resume rules and
+run only the steps needed for gate presentation or correction.
 
-## ゲート
+1. Set the `intent-capture` checkbox in `aidlc-state.md` to `[-]`.
+2. Read the module file's skeleton and the Space's `memory/` and
+   `knowledge/`, and identify the missing points.
+3. Present questions one at a time, and record the answers in
+   `intent-capture-questions.md`.
+4. Confirm the purpose, target, success criteria, trigger, and scope in
+   `intent-statement.md`, and confirm the goal profile in the module file.
+5. Create `stakeholder-map.md`. Write the stakeholders, the distinction
+   between decision-makers and influencers, and the confirmation contacts
+   needed.
+6. Regenerate `aidlc/spaces/<space>/intents/intents.md` with
+   `IndexGenerate.ts`.
+7. Record interpretations, deviations, tradeoffs, and unresolved questions
+   made during execution in the stage's `memory.md`.
+8. Set the `intent-capture` checkbox in `aidlc-state.md` to `[?]`, append a
+   `STAGE_AWAITING_APPROVAL` event to `audit/audit.md`, and present the gate.
 
-成果物の要約と確認先パスを示し、次の 2 択で承認を求める。
+## Gate
 
-- Approve：承認して次ステージへ。
-- Request Changes：修正指示を受けて手直しする。
+Show an artifact summary and the paths to review, then ask for approval with
+the following two options:
 
-同じステージで Request Changes が 3 回続いたら、Accept as-is（現状のまま確定して先へ進む）を選択肢に加える。
-ゲートを提示したターンでは人間の回答を待ち、承認なしに先へ進まない。
+- Approve: approve and proceed to the next stage.
+- Request Changes: receive correction instructions and revise.
 
-承認されたら checkbox を `[x]` にし、`GATE_APPROVED`（人間の回答をそのまま記録）と `STAGE_COMPLETED` を `audit/audit.md` に追記する。
-差し戻されたら checkbox を `[R]` にし、`GATE_REJECTED`（差し戻し理由をそのまま記録）と `STAGE_REVISING` を追記する。
-Accept as-is が選ばれた場合は、checkbox を `[x]` にし、`GATE_APPROVED`（Accept as-is である旨を含めて記録）と `STAGE_COMPLETED` を追記し、この判断を `ideation/decisions.md` に記録する。
+If Request Changes happens three times in a row at the same stage, add
+Accept as-is (finalize as-is and proceed) as an option.
 
-## 禁止事項
+In the turn where the gate is presented, wait for the human's response, and
+do not proceed without approval.
 
-- Birth（Intent の新規作成判断）をこの skill で行わない。Birth は `amadeus` 入口の責務である。
-- `scope-document.md`、`intent-backlog.md`、`requirements.md`、Unit、Bolt、実装を作らない。
-- 承認を待たずに `completed` を記録しない。
-- `aidlc/spaces/<space>/intents/intents.md` を手書きしない。
+When approved, set the checkbox to `[x]`, and append `GATE_APPROVED`
+(recording the human's response as-is) and `STAGE_COMPLETED` to
+`audit/audit.md`.
 
-## 次の skill
+When changes are requested, set the checkbox to `[R]`, and append
+`GATE_REJECTED` (recording the requested changes as-is) and `STAGE_REVISING`.
 
-- 続きを進める場合: `amadeus`（入口が次ステージを解決する）
-- 成果物の構造検証: `amadeus-validator`
+If Accept as-is is selected, set the checkbox to `[x]`, append
+`GATE_APPROVED` (noting that it is Accept as-is) and `STAGE_COMPLETED`, and
+record this decision in `ideation/decisions.md`.
+
+## Prohibitions
+
+- Do not perform Birth (the decision to create a new Intent) in this skill.
+  Birth is the responsibility of the `amadeus` entrypoint.
+- Do not create `scope-document.md`, `intent-backlog.md`, `requirements.md`,
+  Unit, Bolt, or implementation.
+- Do not record `completed` without waiting for approval.
+- Do not hand-edit `aidlc/spaces/<space>/intents/intents.md`.
+
+## Next Skill
+
+- To continue: `amadeus` (the entrypoint resolves the next stage)
+- Validate artifact structure: `amadeus-validator`

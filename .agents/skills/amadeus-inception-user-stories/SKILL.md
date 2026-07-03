@@ -1,94 +1,131 @@
 ---
 name: amadeus-inception-user-stories
 description: >-
-  Amadeus Inception の内部 skill。Stage 2.4 User Stories だけを実行する。
-  利用者向け機能、複数ペルソナ、複雑な業務ロジック、チーム横断の作業がある Intent で、
-  stories.md、personas.md、user-stories-assessment.md を作成または補修する場面では必ず使う。
-  純粋なリファクタリング、単発のバグ修正、インフラのみの変更、開発者ツールでは実行しない。
-  要求、設計、Unit、Bolt、実装は作らない。
+  Internal Amadeus Inception skill. Use only for Stage 2.4 User Stories. Use
+  when the Intent has user-facing functionality, multiple personas, complex
+  business logic, or cross-team work, and must create or repair stories.md,
+  personas.md, and user-stories-assessment.md. Do not run for pure
+  refactoring, a single bug fix, infrastructure-only changes, or developer
+  tools. Do not create requirements, design, Units, Bolts, or implementation.
 ---
 
 # amadeus-inception-user-stories
 
-## 目的
+## Purpose
 
-Inception の Stage 2.4 User Stories だけを進める。
+Advance only Inception Stage 2.4 User Stories.
 
-この skill は `amadeus` 入口から呼び出される内部 skill である。
+This is an internal skill called from the `amadeus` entrypoint.
 
-要求を人間アクターの価値表現へ落とし、ペルソナを整理する。
+Translate requirements into value expressions for human actors, and organize
+personas.
 
-## 前提
+## Prerequisites
 
-対象 record の `aidlc-state.md` で、Stage Progress の `user-stories` が実行対象であり、checkbox が `[ ]`、`[-]`、`[?]`、`[R]` のいずれかであることを前提にする。
+Assume the target record's `aidlc-state.md` has `user-stories` as an
+executable Stage Progress item, and the checkbox is in one of these states:
+`[ ]`, `[-]`, `[?]`, or `[R]`.
 
-checkbox が `[?]` の場合は、成果物を作り直さず、ゲートの提示から再開する。
-checkbox が `[R]` の場合は、前回の成果物と差し戻し理由を提示してから、修正だけを行う。
-どちらの場合も、手順を最初からやり直さない。
+If the checkbox is `[?]`, resume from gate presentation without recreating the
+artifacts.
+If the checkbox is `[R]`, present the previous artifacts and the requested
+changes, then make only the necessary corrections.
+In both cases, do not restart the whole procedure.
 
-Condition は「利用者向け機能、複数ペルソナ、複雑な業務ロジック、チーム横断の作業がある場合」である。
-純粋なリファクタリング、単発のバグ修正、インフラのみの変更、開発者ツールの場合は、成果物を作らず checkbox を `[S]` にして注記に skip 理由を書き、`STAGE_SKIPPED` イベントを `audit/audit.md` に追記して `amadeus` へ戻る。
+The Condition is: the Intent has user-facing functionality, multiple personas,
+complex business logic, or cross-team work.
+For pure refactoring, a single bug fix, infrastructure-only changes, or
+developer tools, create no artifacts. Set the checkbox to `[S]`, write the
+skip reason in the note, append a `STAGE_SKIPPED` event to `audit/audit.md`,
+and return to `amadeus`.
 
-少なくとも次を読む。
+Read at least the following inputs:
 
 - `inception/requirements-analysis/requirements.md`
 - `aidlc-state.md`
-- `aidlc/spaces/<space>/codekb/<repo>/business-overview.md` と `component-inventory.md`（brownfield の場合）
-- `inception/practices-discovery/team-practices.md`（実行した場合）
-- Space の `memory/`（アクターの定義）
+- `aidlc/spaces/<space>/codekb/<repo>/business-overview.md` and
+  `component-inventory.md` (for brownfield)
+- `inception/practices-discovery/team-practices.md` (if executed)
+- the Space's `memory/` (actor definitions)
 
-## テンプレート
+## Templates
 
-優先順位は次である。
+Use templates in this priority order:
 
 1. `aidlc/spaces/<space>/memory/templates/intents/inception/user-stories/`
-2. この skill に同梱された `templates/inception/user-stories/`
+2. `templates/inception/user-stories/` bundled with this skill.
 
-分からない項目は空欄にせず、`未確認` と書く。
+Do not leave unknown items blank. Write `未確認`.
 
-## 成果物
+## Artifacts
 
-作成または更新するものは次だけである。
+Create or update only the following files:
 
-- `inception/user-stories/stories.md`（ストーリー一覧。識別子 `S001` 以降と要求への参照を含める）
+- `inception/user-stories/stories.md` (the story list; include identifiers
+  from `S001` onward and references to requirements)
 - `inception/user-stories/personas.md`
-- `inception/user-stories/user-stories-assessment.md`（要求に対するストーリーの充足評価）
-- `inception/user-stories/memory.md`（stage 実行の学習記録）
-- `aidlc-state.md`（対象ステージの checkbox）と `audit/audit.md`（ゲートイベントの追記）
-- 質問を行った場合は `inception/user-stories/user-stories-questions.md`
+- `inception/user-stories/user-stories-assessment.md` (assessment of story
+  coverage against requirements)
+- `inception/user-stories/memory.md` (learning record of the stage execution)
+- `aidlc-state.md` for the target stage checkbox and `audit/audit.md` for gate
+  events
+- `inception/user-stories/user-stories-questions.md`, only if questions were
+  asked
 
-## 手順
+## Procedure
 
-以下の手順は、checkbox が `[ ]` から開始する場合の流れである。
-`[?]` または `[R]` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
+The following procedure applies when starting from checkbox `[ ]`.
+When resuming from `[?]` or `[R]`, follow the prerequisite resume rules and
+run only the steps needed for gate presentation or correction.
 
-1. checkbox が `[ ]` の場合だけ Condition を判定する。偽なら checkbox を `[S]` にして注記に skip 理由を書き、`audit/audit.md` に `STAGE_SKIPPED` を追記して終了する。`[-]`、`[?]`、`[R]` からの再開では再判定しない。
-2. `aidlc-state.md` の `user-stories` の checkbox を `[-]` にする。
-3. 要求とアクターの定義を読み、ペルソナとストーリーを洗い出す。判断が必要な論点は `amadeus-grilling` のプロトコルで一問ずつ確認する。
-4. `stories.md`、`personas.md`、`user-stories-assessment.md` を作る。
-5. stage の `memory.md` に、実行中の解釈、逸脱、トレードオフ、未解決の問いを記録する。
-6. `aidlc-state.md` の `user-stories` の checkbox を `[?]` にし、`STAGE_AWAITING_APPROVAL` イベントを `audit/audit.md` に追記して、ゲートを提示する。
+1. Only when the checkbox is `[ ]`, evaluate the Condition. If it is false,
+   set the checkbox to `[S]`, write the skip reason in the note, append
+   `STAGE_SKIPPED` to `audit/audit.md`, and stop. Do not reevaluate when
+   resuming from `[-]`, `[?]`, or `[R]`.
+2. Set the `user-stories` checkbox in `aidlc-state.md` to `[-]`.
+3. Read the requirements and actor definitions, and identify personas and
+   stories. Use the `amadeus-grilling` protocol to confirm points needing
+   judgment one question at a time.
+4. Create `stories.md`, `personas.md`, and `user-stories-assessment.md`.
+5. Record the interpretations, deviations, tradeoffs, and unresolved
+   questions from the execution in the stage's `memory.md`.
+6. Set the `user-stories` checkbox in `aidlc-state.md` to `[?]`, append the
+   `STAGE_AWAITING_APPROVAL` event to `audit/audit.md`, and present the gate.
 
-## ゲート
+## Gate
 
-成果物の要約と確認先パスを示し、Approve と Request Changes の 2 択で承認を求める。
-Inception ステージでは、スキップ済みステージの追加実行を第 3 の選択肢にできる。
-スキップ済みステージの追加実行が選ばれた場合は、対象ステージの checkbox を `[S]` から `[ ]` に戻し、skip 注記を `EXECUTE` に戻してから `amadeus` 入口へ戻る。入口が次の解決で対象ステージを選ぶ。
-Request Changes が 3 回続いたら Accept as-is を選択肢に加える。
-ゲートを提示したターンでは人間の回答を待つ。
+Show an artifact summary and the paths to review, then ask for approval with
+exactly two options: Approve or Request Changes.
+In Inception stages, additional execution of an already-skipped stage can be
+a third option.
+If additional execution of a skipped stage is selected, revert the target
+stage's checkbox from `[S]` to `[ ]`, revert the skip note to `EXECUTE`, and
+return to the `amadeus` entrypoint. The entrypoint selects the target stage
+at the next resolution.
+If Request Changes happens three times in a row, add Accept as-is as an
+option.
+When presenting a gate, wait for the human response in that turn.
 
-承認されたら checkbox を `[x]` にし、`GATE_APPROVED`（人間の回答をそのまま記録）と `STAGE_COMPLETED` を `audit/audit.md` に追記する。
-差し戻されたら checkbox を `[R]` にし、`GATE_REJECTED`（差し戻し理由をそのまま記録）と `STAGE_REVISING` を追記する。
-Accept as-is が選ばれた場合は、checkbox を `[x]` にし、`GATE_APPROVED`（Accept as-is である旨を含めて記録）と `STAGE_COMPLETED` を追記し、この判断を `inception/decisions.md` に記録する。
+When approved, set the checkbox to `[x]`, and append `GATE_APPROVED`
+(recording the human response as-is) and `STAGE_COMPLETED` to
+`audit/audit.md`.
+When changes are requested, set the checkbox to `[R]`, and append
+`GATE_REJECTED` (recording the requested changes as-is) and
+`STAGE_REVISING`.
+If Accept as-is is selected, set the checkbox to `[x]`, append
+`GATE_APPROVED` (including the note that it is Accept as-is) and
+`STAGE_COMPLETED`, and record this decision in `inception/decisions.md`.
 
-## 禁止事項
+## Prohibitions
 
-- 純粋なリファクタリング、単発のバグ修正、インフラのみの変更に対して実行しない。
-- ユースケース成果物（`use-cases.md`）を作らない。アクターとシステムの相互作用の詳細は Construction の Functional Design が扱う。
-- 要求、設計、Unit、Bolt、実装を作らない。
-- 承認を待たずに `completed` を記録しない。
+- Do not run for pure refactoring, a single bug fix, or infrastructure-only
+  changes.
+- Do not create use-case artifacts (`use-cases.md`). Construction Functional
+  Design handles the details of actor-system interactions.
+- Do not create requirements, design, Units, Bolts, or implementation.
+- Do not record `completed` before approval.
 
-## 次の skill
+## Next Skill
 
-- 続きを進める場合: `amadeus`（入口が次ステージを解決する）
-- 成果物の構造検証: `amadeus-validator`
+- Continue the flow: `amadeus`, which resolves the next stage.
+- Validate artifact structure: `amadeus-validator`.

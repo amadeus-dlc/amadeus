@@ -1,32 +1,42 @@
 ---
 name: amadeus-event-storming
 description: >-
-  Amadeus workspace の Space が存在する状態で、Intent 作成前または Intent 配下の対象テーマを Event Storming
-  として整理する。Domain Event、Process、Aggregate Candidate、Bounded Context Candidate、Hotspot を
-  `aidlc/spaces/<space>/knowledge/event-storming/<event-storming-id>.md` と `aidlc/spaces/<space>/knowledge/event-storming/<event-storming-id>/`、または
-  `aidlc/spaces/<space>/intents/<dirName>/event-storming/<event-storming-id>.md` と
-  `aidlc/spaces/<space>/intents/<dirName>/event-storming/<event-storming-id>/` に作成または補修する場面では必ず使う。
-  Requirement、Use Case、Unit、Bolt、Task、Aggregate、Bounded Context、実装を確定するための skill ではない。
+  Use this whenever a Space exists in the Amadeus workspace and you organize
+  the target theme, before Intent creation or within an Intent, as Event
+  Storming. Always use it to create or repair Domain Event, Process,
+  Aggregate Candidate, Bounded Context Candidate, and Hotspot in
+  `aidlc/spaces/<space>/knowledge/event-storming/<event-storming-id>.md` and
+  `aidlc/spaces/<space>/knowledge/event-storming/<event-storming-id>/`, or in
+  `aidlc/spaces/<space>/intents/<dirName>/event-storming/<event-storming-id>.md`
+  and
+  `aidlc/spaces/<space>/intents/<dirName>/event-storming/<event-storming-id>/`.
+  This is not a skill for finalizing Requirement, Use Case, Unit, Bolt, Task,
+  Aggregate, Bounded Context, or implementation.
 ---
 
 # amadeus-event-storming
 
-## 目的
+## Purpose
 
-Domain Event を起点に、人間からドメイン上の事実、順序、原因、判断待ちを引き出す。
+Starting from Domain Events, draw out domain facts, sequence, causes, and
+pending decisions from the human.
 
-この skill は lifecycle phase を進めない。
-Intake、Ideation、Inception、Domain Modeling が参照できる Event Storming 分析成果物を作る。
+This skill does not advance the lifecycle phase.
+It creates Event Storming analysis artifacts that Intake, Ideation, Inception,
+and Domain Modeling can reference.
 
-Event Storming で扱う Event は Domain Event だけである。
-UI event、technical event、integration event、log event は Domain Event として扱わず、必要なら `hotspots.md` または `flow.md` の補足に残す。
+The only Event that Event Storming handles is the Domain Event.
+Do not treat UI events, technical events, integration events, or log events as
+Domain Events; leave them, if needed, as supplementary notes in
+`hotspots.md` or `flow.md`.
 
-## 前提
+## Prerequisites
 
-`aidlc/spaces/<space>/` の Space が存在することを前提にする。
-Space は `aidlc/active-space`（なければ `default`）で解決する。
+Assume the Space at `aidlc/spaces/<space>/` exists.
+Resolve the Space from `aidlc/active-space` (default `default` if absent).
 
-少なくとも次が存在しない場合は、作業を止めて `amadeus-steering` を案内する。
+If at least the following do not exist, stop the work and direct the user to
+`amadeus-steering`.
 
 - `aidlc/spaces/<space>/memory/org.md`
 - `aidlc/spaces/<space>/memory/team.md`
@@ -39,136 +49,167 @@ Space は `aidlc/active-space`（なければ `default`）で解決する。
 - `aidlc/spaces/<space>/knowledge/context-map.md`
 - `aidlc/spaces/<space>/intents/intents.md`
 
-Intent 配下に作る場合は、対象 Intent の次も存在することを確認する。
+When creating under an Intent, also confirm that the following exist for the
+target Intent.
 
 - `aidlc/spaces/<space>/intents/<dirName>.md`
 - `aidlc/spaces/<space>/intents/<dirName>/aidlc-state.md`
 
-## 入力
+## Inputs
 
-- 検証対象の作業ディレクトリ。
-- 対象テーマまたは対象シナリオ。
-- scope。未指定なら、Intent が明示されていない場合は `pre-intent`、Intent が明示されている場合は `intent-scoped` にする。
-- level。未指定なら `big-picture` にする。
-- Event Storming セッション ID。未指定なら `ESnnn-<slug>` を提案する。
-- 実行モード。指定がなければ `guided` にする。
+- The working directory to validate.
+- The target theme or target scenario.
+- scope. If unspecified, use `pre-intent` when no Intent is specified, and
+  `intent-scoped` when an Intent is specified.
+- level. If unspecified, use `big-picture`.
+- Event Storming session ID. If unspecified, propose `ESnnn-<slug>`.
+- Execution mode. If unspecified, use `guided`.
 
-scope は次のいずれかにする。
+scope must be one of the following.
 
 - `pre-intent`
 - `intent-scoped`
 
-level は次のいずれかにする。
+level must be one of the following.
 
 - `big-picture`
 - `process-modeling`
 - `system-design`
 
-1回の実行で主対象にする level は1つだけにする。
-ただし、同じ Event Storming ディレクトリ内で level を進める。
+Make only one level the primary target of a single run.
+However, advance through levels within the same Event Storming directory.
 
-## 既存成果物の確認
+## Checking Existing Artifacts
 
-作成前に、既存 Event Storming を確認する。
+Before creating, check for existing Event Storming.
 
 - `aidlc/spaces/<space>/knowledge/event-storming/*.md`
 - `aidlc/spaces/<space>/knowledge/event-storming/*/state.json`
 - `aidlc/spaces/<space>/intents/*/event-storming/*.md`
 - `aidlc/spaces/<space>/intents/*/event-storming/*/state.json`
 
-同じ対象シナリオ、近い対象シナリオ、未完了 Event Storming がある場合は、新規作成ではなく既存 Event Storming の再開または補修を優先する。
+If the same target scenario, a similar target scenario, or an incomplete
+Event Storming exists, prioritize resuming or repairing the existing Event
+Storming over creating a new one.
 
-関連しそうな Intent がある場合だけ、次を読む。
+Only when a potentially related Intent exists, read the following.
 
 - `aidlc/spaces/<space>/intents/<dirName>.md`
 - `aidlc/spaces/<space>/intents/<dirName>/aidlc-state.md`
-- 対象 Intent の phase ディレクトリ配下で、対象シナリオに関係する成果物
+- Artifacts under the target Intent's phase directories that relate to the
+  target scenario
 
-## テンプレート
+## Templates
 
-成果物を新規作成する場合は、テンプレートを使う。
+When creating an artifact for the first time, use a template.
 
-優先順位は次である。
+The priority order is as follows.
 
-1. `aidlc/spaces/<space>/memory/templates/event-storming/session.md` と `aidlc/spaces/<space>/memory/templates/event-storming/session/`
-2. この skill に同梱された `templates/event-storming/session.md` と `templates/event-storming/session/`
+1. `aidlc/spaces/<space>/memory/templates/event-storming/session.md` and
+   `aidlc/spaces/<space>/memory/templates/event-storming/session/`
+2. `templates/event-storming/session.md` and
+   `templates/event-storming/session/` bundled with this skill.
 
-テンプレートの `<...>` は、確認済みの値または `未確認` に置き換える。
-`state.json.relatedIntent` は、関連先がない場合は `null` のままにする。
-関連先がある場合は、JSON の quoted string に置き換える。
-Event Storming セッション ID と scope だけは `未確認` にせず、作成前に確定する。
-intent-scoped の場合、`state.json.relatedIntent` は対象 Intent ディレクトリ名に置き換える。
+Replace `<...>` in the template with a confirmed value or `未確認`.
+Leave `state.json.relatedIntent` as `null` when there is no related target.
+When there is a related target, replace it with a JSON quoted string.
+Do not leave the Event Storming session ID and scope as `未確認`; confirm
+them before creating.
+For intent-scoped, replace `state.json.relatedIntent` with the target Intent
+directory name.
 
-## 実行モード
+## Execution Modes
 
 ### `guided`
 
-既定モード。
-作成前に、対象 level を ready に近づけるために必要な不足だけを質問する。
+The default mode.
+Before creating, ask only about the gaps needed to bring the target level
+closer to ready.
 
-質問は `amadeus-grilling` を使って行う。
-複数の論点が残っている場合でも、一度に並べず一問ずつ質問する。
-質問数の目安は7問にする。
-目安を超えても、対象 level を ready にするための判断が未確定であれば質問を続ける。
-目安を超えて質問を続ける場合は、追加確認が必要な理由を短く示す。
-既存成果物、既存資料、会話から分かることは質問しない。
+Ask questions using `amadeus-grilling`.
+Even when multiple points remain open, ask one question at a time rather
+than listing them all at once.
+Aim for around 7 questions.
+Even beyond that guideline, keep asking if the decisions needed to make the
+target level ready remain unconfirmed.
+When continuing past the guideline, briefly state why additional
+confirmation is needed.
+Do not ask about things that are already clear from existing artifacts,
+existing materials, or the conversation.
 
-対象シナリオが未確定の場合は、最初に対象シナリオを確認する。
-対象シナリオが既存 Intent から明確な場合は、Domain Event から聞く。
+If the target scenario is unconfirmed, confirm the target scenario first.
+If the target scenario is already clear from an existing Intent, start by
+asking about Domain Events.
 
-最初の Domain Event 質問は次を基本にする。
+Base the first Domain Event question on the following.
 
 ```text
 この対象で、ドメイン上「起きた」と言える重要な事実を、過去形で3つから10個挙げると何ですか？
 ```
 
-質問した場合は、その場で成果物を作らず、ユーザーの回答を待つ。
-回答に記録対象の判断が含まれる場合は、Event Storming 成果物への反映と同じ変更で `grillings.md` と `grillings/Gxxx-*.md` を更新する。
-記録対象は成果物の意味や後続判断に影響する質問と回答だけにする。
+After asking a question, do not create artifacts on the spot; wait for the
+user's response.
+When the response includes a decision to record, update `grillings.md` and
+`grillings/Gxxx-*.md` in the same change that reflects it into the Event
+Storming artifacts.
+Limit what gets recorded to only the questions and answers that affect the
+artifacts' meaning or later decisions.
 
 ### `scaffold-only`
 
-ユーザーが明示した場合だけ使う。
-質問せず、与えられた情報だけで Event Storming 成果物を作る。
+Use only when the user explicitly specifies it.
+Do not ask questions; create the Event Storming artifacts using only the
+given information.
 
-不足している Domain Event、関係、候補、未確認事項は `未確認` として残す。
-`status` は `draft` にする。
+Leave missing Domain Events, relationships, candidates, and unconfirmed
+items as `未確認`.
+Set `status` to `draft`.
 
 ### `repair`
 
-既存 Event Storming 成果物の見出し、表列、リンク、`state.json` の対応だけを補修する。
-既存の `grillings.md` または `grillings/Gxxx-*.md` が存在し、構造だけが壊れている場合は、Grilling Decision Trail の索引、session ファイル名、必須見出し、表列、相対リンク、状態、反映先、判断 ID、置き換え先、質問記録の参照だけを補修してよい。
+Repair only the headings, table columns, links, and `state.json`
+correspondence of existing Event Storming artifacts.
+When an existing `grillings.md` or `grillings/Gxxx-*.md` exists and only the
+structure is broken, you may repair only the Grilling Decision Trail index,
+session file names, required headings, table columns, relative links,
+status, reflection targets, decision IDs, replacement targets, and question
+record references.
 
-Domain Event、Aggregate Candidate、Bounded Context Candidate の意味を推測で変更しない。
+Do not change the meaning of Domain Event, Aggregate Candidate, or Bounded
+Context Candidate by guesswork.
 
 ### `refine`
 
-既存 Event Storming 成果物に、ユーザー回答で確定した内容だけを追記または更新する。
+Append or update only the content confirmed by user answers into existing
+Event Storming artifacts.
 
-既存の Domain Event や候補を上書きする場合は、理由を `hotspots.md` または `Event Storming のモジュールファイル` の `Supersession` に残す。
-grilling による質問と回答で確定した判断を反映する場合は、同じ変更で `grillings.md` と `grillings/Gxxx-*.md` も更新する。
+When overwriting an existing Domain Event or candidate, leave the reason in
+`Supersession` of `hotspots.md` or the `Event Storming module file`.
+When reflecting a decision confirmed through a grilling question and answer,
+also update `grillings.md` and `grillings/Gxxx-*.md` in the same change.
 
-## 成果物
+## Artifacts
 
-pre-intent の作成先は次だけである。
+The only creation targets for pre-intent are the following.
 
 ```text
 aidlc/spaces/<space>/knowledge/event-storming/<event-storming-id>.md
 aidlc/spaces/<space>/knowledge/event-storming/<event-storming-id>/
 ```
 
-intent-scoped の作成先は次だけである。
+The only creation targets for intent-scoped are the following.
 
 ```text
 aidlc/spaces/<space>/intents/<dirName>/event-storming/<event-storming-id>.md
 aidlc/spaces/<space>/intents/<dirName>/event-storming/<event-storming-id>/
 ```
 
-intent-scoped の場合、`state.json.scope` は `intent-scoped`、`state.json.relatedIntent` は `<dirName>` にする。
+For intent-scoped, set `state.json.scope` to `intent-scoped` and
+`state.json.relatedIntent` to `<dirName>`.
 
-作成または更新するものは次だけである。
+The only files to create or update are the following.
 
-- `Event Storming のモジュールファイル`
+- `Event Storming module file`
 - `events.md`
 - `flow.md`
 - `board.md`
@@ -176,21 +217,23 @@ intent-scoped の場合、`state.json.scope` は `intent-scoped`、`state.json.r
 - `bounded-context-candidates.md`
 - `hotspots.md`
 - `state.json`
-- 記録対象の質問と回答が発生した場合だけ、`grillings.md`
-- 記録対象の質問と回答が発生した場合だけ、`grillings/Gxxx-*.md`
+- `grillings.md`, only when a question and answer to record occurs
+- `grillings/Gxxx-*.md`, only when a question and answer to record occurs
 
-`big-picture` では `Event Storming のモジュールファイル`、`events.md`、`board.md`、`hotspots.md`、`state.json` を使う。
-`process-modeling` では `flow.md` を追加する。
-`system-design` では `aggregate-candidates.md` と `bounded-context-candidates.md` を追加する。
+`big-picture` uses the `Event Storming module file`, `events.md`,
+`board.md`, `hotspots.md`, and `state.json`.
+`process-modeling` adds `flow.md`.
+`system-design` adds `aggregate-candidates.md` and
+`bounded-context-candidates.md`.
 
-Requirement、Use Case、Unit、Bolt、Task は作らない。
-Aggregate、Bounded Context、Contract、不変条件は確定しない。
-実装、テスト、CI、PR は作らない。
-`amadeus`、`amadeus-domain-modeling` は自動実行しない。
+Do not create Requirement, Use Case, Unit, Bolt, or Task.
+Do not finalize Aggregate, Bounded Context, Contract, or invariants.
+Do not create implementation, tests, CI, or PR.
+Do not auto-execute `amadeus` or `amadeus-domain-modeling`.
 
 ## `state.json`
 
-`state.json` は次の形にする。
+Give `state.json` the following shape.
 
 ```json
 {
@@ -206,18 +249,19 @@ Aggregate、Bounded Context、Contract、不変条件は確定しない。
 }
 ```
 
-`status` は次のいずれかにする。
+`status` must be one of the following.
 
 - `draft`
 - `reviewing`
 - `ready`
 - `superseded`
 
-`ready` は後続 skill が参照できるという意味であり、phase gate 通過ではない。
+`ready` means that a downstream skill can reference it; it is not passing a
+phase gate.
 
-## `Event Storming のモジュールファイル`
+## `Event Storming module file`
 
-`Event Storming のモジュールファイル` は次の見出しを持つ。
+The `Event Storming module file` has the following headings.
 
 - `Purpose`
 - `Scope`
@@ -226,20 +270,22 @@ Aggregate、Bounded Context、Contract、不変条件は確定しない。
 - `Next Skill`
 - `Supersession`
 
-`system-design` が ready の場合だけ、次の見出しも持つ。
+Only when `system-design` is ready does it also have the following heading.
 
 - `Handoff To Domain Modeling`
 
-`Handoff To Domain Modeling` は、`amadeus-domain-modeling` が判断するための入力である。
-Event Storming 側で採用、変更、分割、統合、棄却を判断しない。
+`Handoff To Domain Modeling` is input for `amadeus-domain-modeling` to decide
+on.
+Event Storming itself does not decide adoption, modification, splitting,
+merging, or rejection.
 
 ## ID
 
-Event Storming セッション ID は `ESnnn-<slug>` にする。
+Set the Event Storming session ID to `ESnnn-<slug>`.
 
-成果物内の要素 ID は次にする。
+Set the element IDs within artifacts as follows.
 
-| 要素 | ID |
+| Element | ID |
 |---|---|
 | Domain Event | `DEVnnn` |
 | Command | `CMDnnn` |
@@ -251,56 +297,72 @@ Event Storming セッション ID は `ESnnn-<slug>` にする。
 | Bounded Context Candidate | `BCCnnn` |
 | Hotspot | `HOTnnn` |
 
-## ファイル詳細
+## File Details
 
-`events.md` の一覧見出しは `一覧` にする。
-表列は `ID`、`Domain Event`、`Description`、`Source`、`Excluded Similar Events` にする。
+Set the list heading in `events.md` to `一覧`.
+Set the table columns to `ID`, `Domain Event`, `Description`, `Source`, and
+`Excluded Similar Events`.
 
-`flow.md` の表列は `ID`、`Type`、`Label`、`Trigger`、`Produces`、`Related`、`Note` にする。
-`Type` は `Actor`、`Command`、`Domain Event`、`Policy`、`External System`、`Read Model` のいずれかにする。
+Set the table columns in `flow.md` to `ID`, `Type`, `Label`, `Trigger`,
+`Produces`, `Related`, and `Note`.
+Set `Type` to one of `Actor`, `Command`, `Domain Event`, `Policy`,
+`External System`, or `Read Model`.
 
-`board.md` の表列は `Order`、`Type`、`ID`、`Label`、`Related`、`Note` にする。
-`Type` は `Actor`、`Command`、`Domain Event`、`Policy`、`External System`、`Read Model`、`Aggregate Candidate`、`Bounded Context Candidate` のいずれかにする。
+Set the table columns in `board.md` to `Order`, `Type`, `ID`, `Label`,
+`Related`, and `Note`.
+Set `Type` to one of `Actor`, `Command`, `Domain Event`, `Policy`,
+`External System`, `Read Model`, `Aggregate Candidate`, or
+`Bounded Context Candidate`.
 
-`aggregate-candidates.md` の表列は `ID`、`Candidate`、`Rationale`、`Related Domain Events`、`Consistency Clues`、`Open Questions` にする。
+Set the table columns in `aggregate-candidates.md` to `ID`, `Candidate`,
+`Rationale`, `Related Domain Events`, `Consistency Clues`, and
+`Open Questions`.
 
-`bounded-context-candidates.md` の表列は `ID`、`Candidate`、`Rationale`、`Related Domain Events`、`Related Aggregate Candidates`、`Open Questions` にする。
+Set the table columns in `bounded-context-candidates.md` to `ID`,
+`Candidate`, `Rationale`, `Related Domain Events`,
+`Related Aggregate Candidates`, and `Open Questions`.
 
-`hotspots.md` の表列は `ID`、`Type`、`Summary`、`Source`、`Status`、`Related`、`Next Action` にする。
-`Status` は `open`、`resolved`、`accepted` のいずれかにする。
+Set the table columns in `hotspots.md` to `ID`, `Type`, `Summary`, `Source`,
+`Status`, `Related`, and `Next Action`.
+Set `Status` to one of `open`, `resolved`, or `accepted`.
 
-`Event Storming のモジュールファイル` の `Handoff To Domain Modeling` は、`Candidate` に `AGCnnn` または `BCCnnn` の ID を書く。
-表示名は `Evidence` または `Open Questions` に含める。
+In `Handoff To Domain Modeling` of the `Event Storming module file`, write
+the `AGCnnn` or `BCCnnn` ID in `Candidate`.
+Include the display name in `Evidence` or `Open Questions`.
 
-## ready 条件
+## ready Conditions
 
-`big-picture ready` の条件は次である。
+The conditions for `big-picture ready` are as follows.
 
-- 主要な Domain Event が `events.md` にある。
-- Domain Event が `board.md` に時系列で並んでいる。
-- 未確認事項が `hotspots.md` に分離されている。
+- The major Domain Events are in `events.md`.
+- The Domain Events are arranged chronologically in `board.md`.
+- Unconfirmed items are separated out into `hotspots.md`.
 
-`process-modeling ready` の条件は次である。
+The conditions for `process-modeling ready` are as follows.
 
-- `big-picture` が完了している。
-- Domain Event の前後にある Command、Actor、Policy が `flow.md` にある。
-- 関係する External System と Read Model が必要に応じて `flow.md` にある。
-- `board.md` に Domain Event、Command、Actor、Policy の関係がある。
-- 未確認事項が `hotspots.md` に分離されている。
+- `big-picture` is complete.
+- The Commands, Actors, and Policies around each Domain Event are in
+  `flow.md`.
+- Related External Systems and Read Models are in `flow.md` as needed.
+- `board.md` has the relationships among Domain Event, Command, Actor, and
+  Policy.
+- Unconfirmed items are separated out into `hotspots.md`.
 
-`system-design ready` の条件は次である。
+The conditions for `system-design ready` are as follows.
 
-- `process-modeling` が完了している。
-- `board.md` に Domain Event、Command、Policy、Aggregate Candidate、Bounded Context Candidate の関係がある。
-- `aggregate-candidates.md` に候補と根拠がある。
-- `bounded-context-candidates.md` に候補と根拠がある。
-- 未確定事項が `hotspots.md` に分離されている。
+- `process-modeling` is complete.
+- `board.md` has the relationships among Domain Event, Command, Policy,
+  Aggregate Candidate, and Bounded Context Candidate.
+- `aggregate-candidates.md` has candidates and rationale.
+- `bounded-context-candidates.md` has candidates and rationale.
+- Unconfirmed items are separated out into `hotspots.md`.
 
-`system-design ready` は Aggregate、Bounded Context、不変条件、Contract、実装設計の確定ではない。
+`system-design ready` does not mean Aggregate, Bounded Context, invariants,
+Contract, or implementation design are finalized.
 
-## 次に使う skill
+## Next Skill
 
-`nextRecommendedSkill` は、scope と level に応じて選ぶ。
+`nextRecommendedSkill` is chosen according to scope and level.
 
 | scope | level | nextRecommendedSkill |
 |---|---|---|
@@ -313,30 +375,34 @@ Event Storming セッション ID は `ESnnn-<slug>` にする。
 
 ## Supersession
 
-Event Storming 成果物は意味を変えて上書きしない。
-対象シナリオや理解が変わった場合は、新しい Event Storming を追加し、古いものを `superseded` にする。
+Do not overwrite Event Storming artifacts in a way that changes their
+meaning.
+When the target scenario or understanding changes, add a new Event Storming
+and set the old one to `superseded`.
 
-`Event Storming のモジュールファイル` の `Supersession` に、`Supersedes`、`Superseded By`、`Reason` を残す。
+Leave `Supersedes`, `Superseded By`, and `Reason` in `Supersession` of the
+`Event Storming module file`.
 
-## 検証
+## Validation
 
-作成または補修後、次を実行する。
+After creating or repairing, run the following.
 
 ```bash
 bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts .
 ```
 
-Intent 配下に作った場合は、対象 Intent も指定して実行する。
+If created under an Intent, also specify the target Intent and run the
+following.
 
 ```bash
 bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . <dirName>
 ```
 
-## 禁止事項
+## Prohibitions
 
-- Domain Event 以外を Event と呼ばない。
-- Requirement、Use Case、Unit、Bolt、Task を作らない。
-- Aggregate、Bounded Context、Contract、不変条件を確定しない。
-- 実装、テスト、CI、PR を作らない。
-- `.kiro/specs`、`openspec`、Spec 成果物を作らない。
-- `amadeus`、`amadeus-domain-modeling` を自動実行しない。
+- Do not call anything other than a Domain Event an Event.
+- Do not create Requirement, Use Case, Unit, Bolt, or Task.
+- Do not finalize Aggregate, Bounded Context, Contract, or invariants.
+- Do not create implementation, tests, CI, or PR.
+- Do not create `.kiro/specs`, `openspec`, or Spec artifacts.
+- Do not auto-execute `amadeus` or `amadeus-domain-modeling`.

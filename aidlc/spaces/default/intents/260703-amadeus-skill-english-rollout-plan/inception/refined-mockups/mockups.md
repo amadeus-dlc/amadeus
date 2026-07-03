@@ -62,18 +62,20 @@ flowchart TD
   issue392["#392"]
   issue393["#393"]
   issue394["#394"]
-  evidence401["#401 の完了証拠"]
+  plan401["#401 の計画証拠"]
+  remaining["B005 #391〜#394 個別完了"]
   parent["#399 完了判断"]
 
   issue401 --> issue391
   issue401 --> issue392
   issue401 --> issue393
   issue401 --> issue394
-  issue391 --> evidence401
-  issue392 --> evidence401
-  issue393 --> evidence401
-  issue394 --> evidence401
-  evidence401 --> parent
+  issue391 --> plan401
+  issue392 --> plan401
+  issue393 --> plan401
+  issue394 --> plan401
+  plan401 --> remaining
+  remaining --> parent
 ```
 
 ## M004：skill 英語化 PR の確認境界

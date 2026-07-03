@@ -8,7 +8,7 @@
 - **State Version**: 7
 - **Active Agent**: amadeus
 - **Worktree Path**: 
-- **Bolt Refs**: B001-issue-395-policy-definition, B002-issue-400-small-foundation-pr, B003-issue-401-upstream-difference-order, B004-issue-402-remaining-skill-rollout-units
+- **Bolt Refs**: B001-issue-395-policy-definition, B002-issue-400-small-foundation-pr, B003-issue-401-upstream-difference-order, B004-issue-402-remaining-skill-rollout-units, B005-issue-391-394-aidlc-v2-differences, B006-core-entrypoints-verification-englishization, B007-construction-stage-skills-englishization, B008-inception-stage-skills-englishization, B009-ideation-supporting-skills-englishization, B010-issue-399-final-verification
 - **Practices Affirmed Timestamp**: 
 
 ## Scope Configuration
@@ -25,7 +25,7 @@
 ## Execution Plan Summary
 - **Total Stages**: 25
 - **Completed**: 19
-- **In Progress**: Construction phase PR merge
+- **In Progress**: B006-B009 remaining SKILL.md Englishization delivered in recovery PR #417; completion evidence pending merge
 
 ## Runtime State
 - **Revision Count**: 0
@@ -101,6 +101,60 @@ Per unit: U004-issue-402-remaining-skill-rollout-units
 - [x] build-and-test — EXECUTE: PR #413 merge により完了確定。
 - [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、Issue #399 の子 Issue 完了追跡に追加の CI 新設または大きな変更は不要。
 
+Per unit: U005-issue-391-394-aidlc-v2-differences
+- [S] functional-design — SKIP: #391〜#394 の差分対応は、既存の stage skill と成果物契約の差分判断であり、新しいデータモデル、複雑な業務ロジック、業務ルール設計を追加しない。
+- [S] nfr-requirements — SKIP: #391〜#394 の差分対応は非機能要求の追加、変更、評価を伴わない。
+- [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+- [S] infrastructure-design — SKIP: #391〜#394 の差分対応はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
+- [-] code-generation — EXECUTE: #391、#393、#392、#394 の完了または対象外判断を追跡する。
+- [ ] build-and-test — EXECUTE
+- [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、Issue #399 の差分対応追跡に追加の CI 新設または大きな変更は不要。
+
+Per unit: U006-core-entrypoints-verification-englishization
+- [S] functional-design — SKIP: Core entrypoints and verification 英語化は `SKILL.md` の翻訳と契約保持であり、新しいデータモデル、複雑な業務ロジック、業務ルール設計を追加しない。
+- [S] nfr-requirements — SKIP: Core entrypoints and verification 英語化は非機能要求の追加、変更、評価を伴わない。
+- [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+- [S] infrastructure-design — SKIP: Core entrypoints and verification 英語化はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
+- [x] code-generation — EXECUTE: 3 skill の英語化と昇格反映を完了。完了確定は PR #417 merge 後に記録する。
+- [-] build-and-test — EXECUTE
+- [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、英語化追跡に追加の CI 新設または大きな変更は不要。
+
+Per unit: U007-construction-stage-skills-englishization
+- [S] functional-design — SKIP: Construction stage skills 英語化は `SKILL.md` の翻訳と契約保持であり、新しいデータモデル、複雑な業務ロジック、業務ルール設計を追加しない。
+- [S] nfr-requirements — SKIP: Construction stage skills 英語化は非機能要求の追加、変更、評価を伴わない。
+- [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+- [S] infrastructure-design — SKIP: Construction stage skills 英語化はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
+- [x] code-generation — EXECUTE: 6 skill の英語化と昇格反映を完了。完了確定は PR #417 merge 後に記録する。
+- [-] build-and-test — EXECUTE
+- [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、英語化追跡に追加の CI 新設または大きな変更は不要。
+
+Per unit: U008-inception-stage-skills-englishization
+- [S] functional-design — SKIP: Inception stage skills 英語化は `SKILL.md` の翻訳と契約保持であり、新しいデータモデル、複雑な業務ロジック、業務ルール設計を追加しない。
+- [S] nfr-requirements — SKIP: Inception stage skills 英語化は非機能要求の追加、変更、評価を伴わない。
+- [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+- [S] infrastructure-design — SKIP: Inception stage skills 英語化はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
+- [x] code-generation — EXECUTE: 8 skill の英語化と昇格反映を完了。完了確定は PR #417 merge 後に記録する。
+- [-] build-and-test — EXECUTE
+- [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、英語化追跡に追加の CI 新設または大きな変更は不要。
+
+Per unit: U009-ideation-supporting-skills-englishization
+- [S] functional-design — SKIP: Ideation and supporting skills 英語化は `SKILL.md` の翻訳と契約保持であり、新しいデータモデル、複雑な業務ロジック、業務ルール設計を追加しない。
+- [S] nfr-requirements — SKIP: Ideation and supporting skills 英語化は非機能要求の追加、変更、評価を伴わない。
+- [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+- [S] infrastructure-design — SKIP: Ideation and supporting skills 英語化はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
+- [x] code-generation — EXECUTE: 14 skill の英語化と昇格反映を完了。完了確定は PR #417 merge 後に記録する。
+- [-] build-and-test — EXECUTE
+- [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、英語化追跡に追加の CI 新設または大きな変更は不要。
+
+Per unit: U010-issue-399-final-verification
+- [S] functional-design — SKIP: #399 最終検証は完了証拠と traceability の確認であり、新しいデータモデル、複雑な業務ロジック、業務ルール設計を追加しない。
+- [S] nfr-requirements — SKIP: #399 最終検証は非機能要求の追加、変更、評価を伴わない。
+- [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+- [S] infrastructure-design — SKIP: #399 最終検証はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
+- [ ] code-generation — EXECUTE
+- [ ] build-and-test — EXECUTE
+- [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、最終検証に追加の CI 新設または大きな変更は不要。
+
 ### OPERATION PHASE
 - [S] deployment-pipeline — SKIP: out of Amadeus scope
 - [S] environment-provisioning — SKIP: out of Amadeus scope
@@ -113,12 +167,12 @@ Per unit: U004-issue-402-remaining-skill-rollout-units
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
 - **Current Stage**: build-and-test
-- **Next Stage**: none
+- **Next Stage**: ci-pipeline
 - **Status**: Running
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-07-03T13:31:40Z
+- **Last Updated**: 2026-07-03T15:07:20Z
 
 ## Session Resume Point
-- **Last Completed Stage**: build-and-test
-- **Next Action**: Human merge of Construction phase PR #414, then record phase verification and workflow completion
-- **Pending Artifacts**: Construction phase PR #414 merge confirmation, PHASE_VERIFIED, WORKFLOW_COMPLETED, registry completed update, Issue #399 close
+- **Last Completed Stage**: code-generation
+- **Next Action**: Await recovery PR #417 merge to finalize B006-B009 (STAGE_COMPLETED, BOLT_COMPLETED), then continue B005 #391-#394 AI-DLC v2 difference response and B010 final verification
+- **Pending Artifacts**: PR #417 merge evidence for B006-B009, #391-#394 completion or explicit out-of-scope decisions (B005), real-provider example regeneration to clear provenance staleReason, final #399 traceability (B010)

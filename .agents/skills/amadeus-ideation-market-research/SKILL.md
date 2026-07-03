@@ -1,102 +1,131 @@
 ---
 name: amadeus-ideation-market-research
 description: >-
-  Amadeus Ideation の内部 skill。Stage 1.2 Market Research だけを実行する。
-  対象 Intent に外部市場での位置づけ、または build-vs-buy の判断がある場合に、
-  competitive-analysis.md、market-trends.md、build-vs-buy.md を作成または補修する場面では必ず使う。
-  社内ツール、バグ修正、リファクタリングでは実行しない。scope-document、要求、実装は作らない。
+  Internal Amadeus Ideation skill. Use only for Stage 1.2 Market Research. Use
+  when the target Intent has an external market position or a build-vs-buy
+  decision, and must create or repair competitive-analysis.md,
+  market-trends.md, and build-vs-buy.md. Do not run for internal tools, bug
+  fixes, or refactoring. Do not create scope-document, requirements, or
+  implementation.
 ---
 
 # amadeus-ideation-market-research
 
-## 目的
+## Purpose
 
-Ideation の Stage 1.2 Market Research だけを進める。
+Advance only Ideation Stage 1.2 Market Research.
 
-この skill は `amadeus` 入口から呼び出される内部 skill である。
+This is an internal skill called from the `amadeus` entrypoint.
 
-競合状況、市場動向、build-vs-buy の判断材料を整理する。
+Organize the competitive landscape, market trends, and build-vs-buy decision
+inputs.
 
-## 前提
+## Prerequisites
 
-対象 record の `aidlc-state.md` で、Stage Progress の `market-research` が実行対象であり、checkbox が `[ ]`、`[-]`、`[?]`、`[R]` のいずれかであることを前提にする。
+Assume the target record's `aidlc-state.md` has `market-research` as an
+executable Stage Progress item, and the checkbox is in one of these states:
+`[ ]`, `[-]`, `[?]`, or `[R]`.
 
-checkbox が `[?]` の場合は、成果物を作り直さず、ゲートの提示から再開する。
-checkbox が `[R]` の場合は、前回の成果物と差し戻し理由を提示してから、修正だけを行う。
-どちらの場合も、手順を最初からやり直さない。
+If the checkbox is `[?]`, resume from gate presentation without recreating the
+artifacts. If the checkbox is `[R]`, present the previous artifacts and the
+requested changes, then make only the necessary corrections. In both cases, do
+not restart the whole procedure.
 
-Condition は「外部市場での位置づけ、または build-vs-buy の判断がある場合」である。
-Condition が偽の場合は、成果物を作らず checkbox を `[S]` にして注記に skip 理由を書き、`STAGE_SKIPPED` イベントを `audit/audit.md` に追記して `amadeus` へ戻る。
+The Condition is: there is an external market position or a build-vs-buy
+decision. If the Condition is false, create no artifacts. Set the checkbox to
+`[S]`, write the skip reason in the note, append a `STAGE_SKIPPED` event to
+`audit/audit.md`, and return to `amadeus`.
 
-少なくとも次を読む。
+Read at least the following inputs:
 
 - `aidlc/spaces/<space>/intents/<dirName>.md`
 - `aidlc-state.md`
-- Space の `memory/` と `knowledge/`
+- The Space's `memory/` and `knowledge/`.
 
-## 質問
+## Questions
 
-次の論点を確認する。
+Confirm the following points:
 
-- 比較対象になる競合や代替手段は何か。
-- 市場や利用者の動向で判断に効くものは何か。
-- 作るか買うか（build-vs-buy）の判断に必要な条件は何か。
+- What competitors or alternatives serve as comparison targets?
+- What market or user trends affect the decision?
+- What conditions are needed for the build-vs-buy decision?
 
-質問は `amadeus-grilling` のプロトコルに従い、一問ずつ、推奨回答を添えて提示し、回答を待つ。
-質問の量は `aidlc-state.md` の `Depth` を目安にする。
-質問と回答は `ideation/market-research/market-research-questions.md` に記録する。
+Follow the `amadeus-grilling` protocol: ask one question at a time, attach a
+recommended answer, and wait for the response. Use `aidlc-state.md`'s `Depth`
+as a guide for the number of questions. Record questions and answers in
+`ideation/market-research/market-research-questions.md`.
 
-## テンプレート
+## Templates
 
-優先順位は次である。
+Use templates in this priority order:
 
 1. `aidlc/spaces/<space>/memory/templates/intents/ideation/market-research/`
-2. この skill に同梱された `templates/ideation/market-research/`
+2. `templates/ideation/market-research/` bundled with this skill.
 
-分からない項目は空欄にせず、`未確認` と書く。
+Do not leave unknown items blank. Write `未確認`.
 
-## 成果物
+## Artifacts
 
-作成または更新するものは次だけである。
+Create or update only the following files:
 
 - `ideation/market-research/competitive-analysis.md`
 - `ideation/market-research/market-trends.md`
 - `ideation/market-research/build-vs-buy.md`
 - `ideation/market-research/market-research-questions.md`
-- `ideation/market-research/memory.md`（stage 実行の学習記録）
-- `aidlc-state.md`（対象ステージの checkbox）と `audit/audit.md`（ゲートイベントの追記）
+- `ideation/market-research/memory.md` (learning record of the stage
+  execution)
+- `aidlc-state.md` for the target stage's checkbox, and `audit/audit.md` for
+  gate event entries
 
-## 手順
+## Procedure
 
-以下の手順は、checkbox が `[ ]` から開始する場合の流れである。
-`[?]` または `[R]` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
+The following procedure applies when starting from checkbox `[ ]`. When
+resuming from `[?]` or `[R]`, follow the prerequisite resume rules and run only
+the steps needed for gate re-presentation or correction.
 
-1. checkbox が `[ ]` の場合だけ Condition を判定する。偽なら checkbox を `[S]` にして注記に skip 理由を書き、`audit/audit.md` に `STAGE_SKIPPED` を追記して終了する。`[-]`、`[?]`、`[R]` からの再開では再判定しない。
-2. `aidlc-state.md` の `market-research` の checkbox を `[-]` にする。
-3. Intent のモジュールファイルと Space の `memory/` と `knowledge/` を読み、不足論点を質問で確認する。
-4. 3 つの成果物を作る。
-5. stage の `memory.md` に、実行中の解釈、逸脱、トレードオフ、未解決の問いを記録する。
-6. `aidlc-state.md` の `market-research` の checkbox を `[?]` にし、`STAGE_AWAITING_APPROVAL` イベントを `audit/audit.md` に追記して、ゲートを提示する。
+1. Only when the checkbox is `[ ]`, evaluate the Condition. If it is false,
+   set the checkbox to `[S]`, write the skip reason in the note, append
+   `STAGE_SKIPPED` to `audit/audit.md`, and stop. Do not reevaluate when
+   resuming from `[-]`, `[?]`, or `[R]`.
+2. Set the `market-research` checkbox in `aidlc-state.md` to `[-]`.
+3. Read the Intent's module files and the Space's `memory/` and `knowledge/`,
+   and confirm missing points with questions.
+4. Create the three artifacts.
+5. Record interpretations, deviations, tradeoffs, and unresolved questions
+   made during execution in the stage's `memory.md`.
+6. Set the `market-research` checkbox in `aidlc-state.md` to `[?]`, append a
+   `STAGE_AWAITING_APPROVAL` event to `audit/audit.md`, and present the gate.
 
-## ゲート
+## Gate
 
-成果物の要約と確認先パスを示し、Approve と Request Changes の 2 択で承認を求める。
-Ideation ステージでは、スキップ済みステージの追加実行を第 3 の選択肢にできる。
-スキップ済みステージの追加実行が選ばれた場合は、対象ステージの checkbox を `[S]` から `[ ]` に戻し、skip 注記を `EXECUTE` に戻してから `amadeus` 入口へ戻る。入口が次の解決で対象ステージを選ぶ。
-Request Changes が 3 回続いたら Accept as-is を選択肢に加える。
-ゲートを提示したターンでは人間の回答を待つ。
+Show an artifact summary and the paths to review, then ask for approval with
+exactly two options: Approve or Request Changes.
 
-承認されたら checkbox を `[x]` にし、`GATE_APPROVED`（人間の回答をそのまま記録）と `STAGE_COMPLETED` を `audit/audit.md` に追記する。
-差し戻されたら checkbox を `[R]` にし、`GATE_REJECTED`（差し戻し理由をそのまま記録）と `STAGE_REVISING` を追記する。
-Accept as-is が選ばれた場合は、checkbox を `[x]` にし、`GATE_APPROVED`（Accept as-is である旨を含めて記録）と `STAGE_COMPLETED` を追記し、この判断を `ideation/decisions.md` に記録する。
+In the Ideation stage, additional execution of a skipped stage can be a third
+option. If additional execution of a skipped stage is selected, revert the
+target stage's checkbox from `[S]` to `[ ]`, revert the skip note to
+`EXECUTE`, and return to the `amadeus` entrypoint. The entrypoint selects the
+target stage in the next resolution.
 
-## 禁止事項
+If Request Changes happens three times in a row, add Accept as-is as an
+option. When presenting a gate, wait for the human response in that turn.
 
-- 社内ツール、バグ修正、リファクタリングに対して実行しない。
-- `scope-document.md`、`intent-backlog.md`、要求、実装を作らない。
-- 承認を待たずに `completed` を記録しない。
+When approved, set the checkbox to `[x]`, and append `GATE_APPROVED`
+(recording the human response as-is) and `STAGE_COMPLETED` to
+`audit/audit.md`. When changes are requested, set the checkbox to `[R]`, and
+append `GATE_REJECTED` (recording the requested changes as-is) and
+`STAGE_REVISING`. If Accept as-is is selected, set the checkbox to `[x]`,
+append `GATE_APPROVED` (noting Accept as-is) and `STAGE_COMPLETED`, and record
+this decision in `ideation/decisions.md`.
 
-## 次の skill
+## Prohibitions
 
-- 続きを進める場合: `amadeus`（入口が次ステージを解決する）
-- 成果物の構造検証: `amadeus-validator`
+- Do not run for internal tools, bug fixes, or refactoring.
+- Do not create `scope-document.md`, `intent-backlog.md`, requirements, or
+  implementation.
+- Do not record `completed` without waiting for approval.
+
+## Next Skill
+
+- Continue: `amadeus`, which resolves the next stage.
+- Validate artifact structure: `amadeus-validator`.

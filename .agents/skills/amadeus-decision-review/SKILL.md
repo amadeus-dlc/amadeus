@@ -1,139 +1,165 @@
 ---
 name: amadeus-decision-review
 description: >-
-  Amadeus phase skill の起動時に、既存成果物と現在参照できる証拠から decision tree を再評価し、
-  `amadeus-grilling` を起動すべきか、通常処理へ進めるか、構造補修へ戻すか、後続 Issue 候補として報告するかを判断する内部 skill。
-  質問実行は行わず、必要な場合は `amadeus-grilling` への handoff を作る。
+  Internal skill that, at Amadeus phase skill startup, re-evaluates the
+  decision tree from existing artifacts and currently referenceable evidence,
+  and decides whether to invoke `amadeus-grilling`, proceed to normal
+  processing, return to structural repair, or report as a follow-up Issue
+  candidate. Does not execute questions itself; creates a handoff to
+  `amadeus-grilling` when needed.
 ---
 
 # amadeus-decision-review
 
-## 目的
+## Purpose
 
-phase skill 起動時の意思決定を再確認する。
+Re-evaluate decision-making at phase skill startup.
 
-既存成果物、Issue、PR、作業ツリー、validator 結果、Skill Contract、信頼できる参照元を入力証拠として読み、判断ノードごとに次の処理分岐を選ぶ。
+Read existing artifacts, Issues, PRs, the work tree, validator results, Skill
+Contract, and trusted reference sources as input evidence, and choose the next
+processing branch for each Decision Node.
 
-phase skill 起動時は、skill 供給元と実行環境の stage 前提も入力証拠として扱う。
-source skill、昇格先成果物、host environment での利用可否を分けて確認する。
-stage0、stage1、stage2、stage0 採用判断を確認し、stage2 を stage0 として扱う場合は人間による stage0 採用判断を証拠に含める。
+At phase skill startup, also treat the
+stage assumptions of the skill supply source and the execution environment as
+input evidence.
+Confirm availability separately for
+the source skill, promoted artifacts, and host environment.
+Confirm stage0, stage1, stage2, and the stage0 adoption decision, and when
+treating stage2 as stage0, include the human stage0 adoption decision as
+evidence.
 
-この skill は判断ゲートである。
-質問実行は `amadeus-grilling` に委譲する。
+This skill is a decision gate.
+Delegate question execution to `amadeus-grilling`.
 
-## 入力
+## Inputs
 
-- 対象 phase skill。
-- 対象 Intent または成果物セット。
-- 実行モード。
-- ユーザー入力。
-- 既存成果物。
-- Issue、PR、作業ツリー。
-- validator 結果。
-- Skill Contract。
-- 信頼できる参照元。
-- skill 供給元と実行環境の stage 前提。
-- source skill、昇格先成果物、host environment での利用可否。
-- stage0、stage1、stage2、stage0 採用判断。
+- Target phase skill.
+- Target Intent or artifact set.
+- Execution mode.
+- User input.
+- Existing artifacts.
+- Issues, PRs, work tree.
+- validator results.
+- Skill Contract.
+- Trusted reference sources.
+- Stage assumptions of the skill supply source and the execution environment.
+- Availability of the source skill, promoted artifacts, and host environment.
+- stage0, stage1, stage2, and the stage0 adoption decision.
 
-## 判断ノード
+## Decision Nodes
 
-| ノード | 確認内容 | 主な入力 |
+| Node | What to check | Main inputs |
 |---|---|---|
-| DN001 | 対象 Intent または成果物セットを解決できるか。 | ユーザー入力、`aidlc/`、Issue |
-| DN002 | phase gate または前段成果物が実行条件を満たすか。 | `aidlc-state.md`（Stage Progress、Phase Progress）、`audit/audit.md`、traceability、decisions |
-| DN003 | skill 供給元と実行環境の stage 前提が成立しているか。 | source skill、昇格先成果物、host environment、stage0、stage1、stage2、stage0 採用判断 |
-| DN004 | 既存成果物と現在参照できる証拠だけで判断できるか。 | 既存成果物、作業ツリー、Skill Contract |
-| DN005 | 構造補修だけで解ける問題か。 | validator 結果、必須見出し、リンク、state |
-| DN006 | 前段 phase または前段 stage の成果物不足が現在の成功条件を妨げているか。 | scope、requirements、acceptance、Bolt、Skill Contract、stage 前提 |
-| DN007 | 現在 Intent の成功条件外の小さな課題か。 | scope、requirements、acceptance、Bolt |
+| DN001 | Can the target Intent or artifact set be resolved? | User input, `aidlc/`, Issue |
+| DN002 | Does the phase gate or the preceding artifacts satisfy the execution condition? | `aidlc-state.md` (Stage Progress, Phase Progress), `audit/audit.md`, traceability, decisions |
+| DN003 | Are the stage assumptions of the skill supply source and the execution environment satisfied? | source skill, promoted artifacts, host environment, stage0, stage1, stage2, stage0 adoption decision |
+| DN004 | Can this be decided using only existing artifacts and currently referenceable evidence? | Existing artifacts, work tree, Skill Contract |
+| DN005 | Is this a problem solvable by structural repair alone? | validator results, required headings, links, state |
+| DN006 | Is a shortage of artifacts from a preceding phase or preceding stage blocking the current success condition? | scope, requirements, acceptance, Bolt, Skill Contract, stage assumptions |
+| DN007 | Is this a minor issue outside the current Intent's success condition? | scope, requirements, acceptance, Bolt |
 
 ## Outcome
 
-| outcome | 用途 | 次の処理 |
+| outcome | Purpose | Next processing |
 |---|---|---|
-| `grill_required` | 人間判断が必要で、既存成果物や作業ツリーだけでは解消できない。 | `amadeus-grilling` へ handoff する。 |
-| `no_grill` | 既存成果物と現在参照できる証拠から判断できる。 | 通常処理へ進む。 |
-| `repair_only` | 成果物構造の補修だけで解ける。 | 対象 phase skill の `repair` へ進む。 |
-| `upstream_feedback_required` | 前段 phase または前段 stage の成果物不足、矛盾、粒度誤りが現在 Intent の成功条件を妨げている。 | 該当する phase skill または内部 stage skill へ戻す。 |
-| `follow_up_issue_candidate` | 現在 Intent の成功条件外だが、後続 Issue 候補として扱える。 | 人間承認後に Issue 化する。 |
+| `grill_required` | Human judgment is needed and cannot be resolved with existing artifacts or the work tree alone. | Hand off to `amadeus-grilling`. |
+| `no_grill` | Can be decided from existing artifacts and currently referenceable evidence. | Proceed to normal processing. |
+| `repair_only` | Solvable by artifact structure repair alone. | Proceed to the target phase skill's `repair`. |
+| `upstream_feedback_required` | A shortage, contradiction, or granularity error in a preceding phase's or preceding stage's artifacts is blocking the current Intent's success condition. | Return to the applicable phase skill or internal stage skill. |
+| `follow_up_issue_candidate` | Outside the current Intent's success condition, but can be treated as a follow-up Issue candidate. | Create an Issue after human approval. |
 
-## 決定論的 grilling トリガー
+## Deterministic grilling Triggers
 
-phase skill 起動時の decision review では、次の決定論的トリガーを裁量判断より先に評価する。
+In decision review at phase skill startup, evaluate the following
+deterministic triggers before discretionary judgment.
 
-前段 phase の必須成果物にある `未確定事項` と `未確認事項` 見出しのうち、「<現在 phase> で判断する」を含む項目が 1 件以上残っている場合は、outcome を `grill_required` とする。
-該当項目は、呼び出し元 phase skill が `amadeus-grilling` の作法で一問ずつ確認する。
+If the required artifacts of the preceding phase have one or more remaining
+items under the `未確定事項` and `未確認事項` headings that contain
+「<現在 phase> で判断する」, set the outcome to `grill_required`.
+The calling phase skill confirms each matching item one question at a time,
+following the `amadeus-grilling` protocol.
 
-調査（既存成果物、実データの確認）で解消できる項目は、解消した根拠を記録すれば質問を省略できる。
-残った項目だけを一問ずつ確認する。
+Items that can be resolved through investigation (checking existing artifacts,
+checking actual data) can skip the question if the resolution evidence is
+recorded.
+Confirm only the remaining items, one question at a time.
 
-この判定を成立させるため、後続 phase へ送る未確定事項は「〜は <phase> で判断する。」の形で書く。
+To make this determination work, write unresolved items passed to a
+subsequent phase in the form 「〜は <phase> で判断する。」.
 
 ## Grilling Handoff
 
-`grill_required` の場合だけ、次を呼び出し元 phase skill へ返す。
+Only when the outcome is `grill_required`, return the following to the
+calling phase skill.
 
-- 一問。
-- 確認理由。
-- 推奨回答。
-- 推奨理由。
-- 反映先候補。
-- 判断ノード。
-- 根拠となる入力証拠。
+- One question.
+- Reason for confirming.
+- Recommended answer.
+- Reason for the recommendation.
+- Candidate reflection target.
+- Decision Node.
+- Supporting input evidence.
 
-`amadeus-decision-review` は質問を表示しない。
-呼び出し元 phase skill が `amadeus-grilling` の質問作法に従って一問だけ質問する。
+`amadeus-decision-review` does not display questions.
+The calling phase skill asks exactly one question, following
+`amadeus-grilling`'s question protocol.
 
-## 境界
+## Boundaries
 
-所有するもの:
+Owns:
 
-- 入力証拠の分類。
-- 判断ノードの再評価。
-- outcome の分類。
-- `amadeus-grilling` へ渡す handoff 項目の選定。
-- skill 供給元と実行環境の stage 前提確認。
+- Classification of input evidence.
+- Re-evaluation of Decision Nodes.
+- Classification of the outcome.
+- Selection of the handoff items passed to `amadeus-grilling`.
+- Confirmation of the stage assumptions of the skill supply source and the
+  execution environment.
 
-所有しないもの:
+Does not own:
 
-- `amadeus-grilling` の質問作法。
-- Grilling Decision Trail の配置変更。
-- validator による内容承認。
-- evaluator の品質評価。
-- 既存 Intent 成果物の一括移行。
-- host environment の自動検出。
-- stage0 採用判断の自動化。
-- GitHub Issue の自動作成。
+- `amadeus-grilling`'s question protocol.
+- Changing the placement of the Grilling Decision Trail.
+- Content approval by the validator.
+- Quality evaluation by the evaluator.
+- Bulk migration of existing Intent artifacts.
+- Automatic detection of the host environment.
+- Automation of the stage0 adoption decision.
+- Automatic creation of GitHub Issues.
 
-## stage 前提確認
+## stage Assumption Check
 
-phase skill 起動時は、次の証拠を分けて確認する。
+At phase skill startup, confirm the following evidence separately.
 
-| 証拠 | 確認内容 | 不成立時の主な分類 |
+| Evidence | What to check | Main classification when not satisfied |
 |---|---|---|
-| source skill | `skills/amadeus-*` に対象 skill または内部 skill が存在するか。 | `upstream_feedback_required` |
-| 昇格先成果物 | `.agents/skills/amadeus-*` に source skill の内容が反映されているか。 | `repair_only` または `upstream_feedback_required` |
-| host environment | 現在の実行環境で対象 skill を利用できるか。 | `upstream_feedback_required` |
-| stage0 | 作業開始時点で build workspace から利用可能な skill、validator、開発用スクリプトか。 | `no_grill` または `upstream_feedback_required` |
-| stage1 | target workspace にある作業中の source skill と検証結果か。 | `no_grill` または `repair_only` |
-| stage2 | target workspace の昇格先成果物、example、validator がそろって通った状態か。 | `follow_up_issue_candidate` または `upstream_feedback_required` |
-| stage0 採用判断 | stage2 を次回 stage0 として扱う人間判断があるか。 | `upstream_feedback_required` |
+| source skill | Does `skills/amadeus-*` have the target skill or an internal skill? | `upstream_feedback_required` |
+| promoted artifacts | Is the source skill's content reflected in `.agents/skills/amadeus-*`? | `repair_only` or `upstream_feedback_required` |
+| host environment | Can the target skill be used in the current execution environment? | `upstream_feedback_required` |
+| stage0 | Is it the skill, validator, and dev script available from the build workspace at the start of work? | `no_grill` or `upstream_feedback_required` |
+| stage1 | Is it the in-progress source skill and validation results in the target workspace? | `no_grill` or `repair_only` |
+| stage2 | Is it the state where the target workspace's promoted artifacts, examples, and validator all pass together? | `follow_up_issue_candidate` or `upstream_feedback_required` |
+| stage0 adoption decision | Is there a human decision to treat stage2 as the next stage0? | `upstream_feedback_required` |
 
-stage2 は stage0 採用判断なしに次回 stage0 として扱わない。
-validator や CI の成功は stage0 採用判断の証拠候補であり、判断そのものではない。
-配布対象 skill では、特定リポジトリの Issue 番号を前提にした説明ではなく、source skill、昇格先成果物、host environment、stage 前提の一般説明として扱う。
+Do not treat stage2 as the next stage0 without the stage0 adoption decision.
+validator or CI success is a candidate piece of evidence for the stage0
+adoption decision, not the decision itself.
+For a distributed skill, treat this as a general description of the source
+skill, promoted artifacts, host environment, and stage assumptions, not an
+explanation premised on a specific repository's Issue number.
 
-## 検証境界
+## Validation Boundary
 
-validator の `pass` は、実行時に参照できる最低限の構造条件を満たすという意味であり、内容承認ではない。
-evaluator の結果は品質評価であり、採用先は phase skill または人間判断で分類する。
-Skill Contract は入力証拠と境界情報であり、decision review の結果そのものではない。
+The validator's `pass` means that the minimum structural conditions referenceable at runtime are satisfied, and it is not content approval.
+The evaluator's result is a quality evaluation; the phase skill or human
+judgment classifies where it is adopted.
+Skill Contract is input evidence and boundary information, not the decision
+review's result itself.
 
-## 禁止事項
+## Prohibitions
 
-- 質問を実行しない。
-- 複数の質問を並べない。
-- Grilling Decision Trail の構造を変更しない。
-- validator の `pass` を質問不要の根拠として単独採用しない。
-- 現在 Intent の成功条件外の課題を、現在成果物へ混ぜない。
+- Do not execute questions.
+- Do not line up multiple questions.
+- Do not change the Grilling Decision Trail's structure.
+- Do not adopt the validator's `pass` alone as grounds for skipping questions.
+- Do not mix issues outside the current Intent's success condition into the
+  current artifacts.

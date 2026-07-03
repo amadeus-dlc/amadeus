@@ -15,11 +15,13 @@ Issue #399 を起点にした Amadeus skill 英語化実施計画の完了境界
 | GD001 | この Intent は親タスクの実施計画管理に限定する。 | superseded | [intent-capture-questions.md](intent-capture/intent-capture-questions.md) の Q001 | GD004 |
 | GD002 | 子 Issue の PR 作成や完了確認は、それぞれの後続作業で扱う。 | superseded | [intent-capture-questions.md](intent-capture/intent-capture-questions.md) の Q001 | GD004 |
 | GD003 | 成功は、Issue #399、Intent 成果物、後続の計画成果物から、#395、#400、#401、#402 の順序、依存関係、完了境界、各 Issue の扱いを追跡できることで観測する。 | superseded | [intent-capture-questions.md](intent-capture/intent-capture-questions.md) の Q003 | GD005 |
-| GD004 | この Intent は #395、#400、#401、#402 の完了まで含める。 | active | [intent-capture-questions.md](intent-capture/intent-capture-questions.md) の Q001 | なし |
-| GD005 | 成功は、Issue #399、Intent 成果物、後続の計画成果物から、#395、#400、#401、#402 の順序、依存関係、完了境界、完了状態を追跡できることで観測する。 | active | [intent-capture-questions.md](intent-capture/intent-capture-questions.md) の Q003 | なし |
+| GD004 | この Intent は #395、#400、#401、#402 の完了まで含める。 | superseded | [intent-capture-questions.md](intent-capture/intent-capture-questions.md) の Q001 | GD009 |
+| GD005 | 成功は、Issue #399、Intent 成果物、後続の計画成果物から、#395、#400、#401、#402 の順序、依存関係、完了境界、完了状態を追跡できることで観測する。 | superseded | [intent-capture-questions.md](intent-capture/intent-capture-questions.md) の Q003 | GD009 |
 | GD006 | 子 Issue の完了まで含める理由は、作業が細切れになりすぎることを避けるためである。 | active | [intent-capture-questions.md](intent-capture/intent-capture-questions.md) の Q004 | なし |
 | GD007 | 子 Issue の完了は、対応 PR の merge または明示的な Issue close で観測する。 | active | [intent-capture-questions.md](intent-capture/intent-capture-questions.md) の Q005 | なし |
-| GD008 | #401 配下の #391、#392、#393、#394 は #401 の完了証拠として追跡し、個別の完了そのものはこの Intent の直接完了条件にしない。 | active | [intent-capture-questions.md](intent-capture/intent-capture-questions.md) の Q006 | なし |
+| GD008 | #401 配下の #391、#392、#393、#394 は #401 の完了証拠として追跡し、個別の完了そのものはこの Intent の直接完了条件にしない。 | superseded | [intent-capture-questions.md](intent-capture/intent-capture-questions.md) の Q006 | GD010 |
+| GD009 | Issue #399 は、#395、#400、#401、#402 の完了に加えて、RU002〜RU006 の段階的英語化完了まで含める。 | active | [intent-capture-questions.md](intent-capture/intent-capture-questions.md) の Q007 | なし |
+| GD010 | #391、#392、#393、#394 は、#401 の計画証拠だけで代替せず、個別完了または対象外判断を Issue #399 の残タスクとして追跡する。 | active | [intent-capture-questions.md](intent-capture/intent-capture-questions.md) の Q007 | なし |
 
 ## 質問記録
 
@@ -67,3 +69,12 @@ Issue #399 を起点にした Amadeus skill 英語化実施計画の完了境界
 - 推奨理由: #401 の責務は #391〜#394 の対応順と PR 分割の確定であり、#391〜#394 の個別完了まで親 Intent の直接条件にすると完了境界が広がりすぎる。
 - ユーザー回答: #401 の完了証拠として追跡する。#391〜#394 個別の完了そのものは直接完了条件にしない。
 - 確定判断: GD008
+
+### Q007
+
+- 確認したいこと: #399 は直接子 Issue の完了だけで閉じるか、それとも `SKILL.md` 全面英語化まで含めるか。
+- 確認が必要な理由: 直接子 Issue の完了だけで閉じると、Amadeus 系 `SKILL.md` が未英語化のまま親 Issue が完了扱いになる。
+- 推奨回答: #399 は、#391〜#394 の差分対応と RU002〜RU006 の段階的英語化完了まで含める。
+- 推奨理由: Issue #399 は「方針確定 → 小さい英語化 PR → 意味差分対応 → 残り skill の段階的英語化」を親タスクとして管理するため。
+- ユーザー回答: `SKILL.md` がまだ英語化されていないため、全面的な英語化まで含める。
+- 確定判断: GD009、GD010
