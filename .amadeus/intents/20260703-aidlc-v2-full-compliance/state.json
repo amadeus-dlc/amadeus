@@ -22,7 +22,11 @@
       }
     },
     "functional-design": {
-      "state": "pending"
+      "units": {
+        "implicit": {
+          "state": "awaiting_approval"
+        }
+      }
     },
     "code-generation": {
       "state": "pending"
