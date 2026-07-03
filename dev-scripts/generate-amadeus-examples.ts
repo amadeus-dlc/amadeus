@@ -52,7 +52,7 @@ const workspace = join(root, ".tmp/amadeus-example-generation/workspace");
 const logs = join(root, ".tmp/amadeus-example-generation/logs");
 const stagedSnapshots = join(root, ".tmp/amadeus-example-generation/snapshots");
 const intentId = exampleIntentId;
-const defaultRunner = "dev-scripts/run-claude-personal.sh";
+const defaultRunner = "dev-scripts/run-codex-gpt-5.5-low-fast-personal.sh";
 const provenanceManifestPath = Bun.env.AMADEUS_EXAMPLES_PROVENANCE_MANIFEST ?? join(root, "examples/skill-provenance.json");
 
 // 生成 workspace に配布する skill 集合。実行時に参照される可能性がある skill だけを置く。
