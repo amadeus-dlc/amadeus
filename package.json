@@ -5,7 +5,7 @@
   "scripts": {
     "test": "npm run test:all",
     "test:all": "npm run test:ci:mock",
-    "test:ci:mock": "npm run typecheck && npm run lint:check && npm run contracts:check && npm run claude-wiring:check && npm run test:it:all && npm run test:e2e:ci:mock && npm run diff:check",
+    "test:ci:mock": "npm run typecheck && npm run lint:check && npm run contracts:check && npm run claude-wiring:check && npm run test:it:all && npm run test:e2e:ci:mock && npm run test:examples && npm run diff:check",
     "typecheck": "tsc --noEmit",
     "lint": "npm run lint:check",
     "lint:report": "bun run lints/check.ts --report",
@@ -44,7 +44,12 @@
     "test:e2e:steering:rerun:real": "bun run dev-scripts/evals/llm-templates/check.ts --provider real --mode steering-rerun",
     "test:e2e:event-storming:rerun:real": "bun run dev-scripts/evals/llm-templates/check.ts --provider real --mode event-storming-rerun",
     "validate:workspace": "bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts",
-    "diff:check": "git diff --check"
+    "diff:check": "git diff --check",
+    "validate": "bun run dev-scripts/validate-amadeus-examples.ts --workspaces-only",
+    "validate:intents": "bun run dev-scripts/validate-amadeus-examples.ts --intents-only",
+    "validate:all": "npm run validate && npm run validate:intents",
+    "test:examples": "bun run dev-scripts/validate-amadeus-examples.ts --all",
+    "examples:generate:real": "bun run dev-scripts/generate-amadeus-examples.ts --provider real"
   },
   "devDependencies": {
     "@types/bun": "^1.3.14",

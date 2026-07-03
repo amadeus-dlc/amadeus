@@ -51,18 +51,33 @@ npm run test:it:promote-skill
 
 ## Examples
 
-`examples/` は、実際の skill で生成できる Amadeus 成果物だけを置く場所である。
+`examples/` は、実際の skill で生成できる Amadeus 成果物だけを置く。
 
-旧契約の snapshot と生成基盤は Issue #369 の退役 wave で削除した。
-v2 契約での snapshot 設計と real provider による再生成は [Issue #380](https://github.com/amadeus-dlc/amadeus/issues/380) で行う。
-それまで `examples/` を作らず、手作業の理想形やレビュー用の抜粋を `examples/` として置かない。
+example は skill の実行結果として成立する snapshot であり、読者向けの説明ではない。
+手作業の理想形やレビュー用の抜粋を `examples/` として置かない。
+example の正しさは validator と wrapper（`npm run test:examples`）で確認する。
 
-再整備後も、次の原則を維持する。
+snapshot は v2 互換ライフサイクルの段階別に置く。
 
-- example は skill の実行結果として成立する snapshot であり、読者向けの説明ではない。
-- example の正しさは validator と eval で確認する。
-- 生成に使った source skill の記録（provenance）を機械照合できるようにする。
-- skill が生成できない構造が必要になった場合は、example だけを直さず、先に skill、template、validator、eval の契約を直す。
+- `examples/01-ideation-completed`
+- `examples/02-inception-completed`
+- `examples/03-construction-design-ready`
+
+新しい example を追加または更新する場合は、対象の skill を real provider で実際に駆動して生成する。
+段階別 example を再生成する場合は、repo root で `npm run examples:generate:real` を使う。
+手順を手作業で再現しない。
+
+上流 step を変えずに途中 step 以降だけを再生成する場合は、`dev-scripts/generate-amadeus-examples.ts` の `--from <step-id>` を使う。
+利用できる step id は、`01-ideation-completed`、`02-inception-completed`、`03-construction-design-ready` である。
+`--from` は直前の snapshot を入力として使い、指定 step 以降だけを更新対象にする。
+
+example は、生成に使った source skill の `skills/**/SKILL.md` と md5 を `examples/skill-provenance.json` に記録する。
+source skill の md5 を更新する場合は、該当 example を real provider で実際に再生成してから更新する。
+md5 だけを現在値へ書き換えない。
+real provider で再生成できない場合は md5 を更新せず、該当 entry に `staleReason` を残す。
+`staleReason` は一時的な例外であり、後続 PR で real provider による再生成を実施して削除する。
+
+skill が生成できない構造が必要になった場合は、example だけを直さず、先に skill、template、validator、eval の契約を直す。
 
 ## 検証
 

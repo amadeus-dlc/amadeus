@@ -9,6 +9,7 @@ Amadeus は、AI-DLC v2 と意味論互換のライフサイクル（Ideation、
 
 - 単一の公開入口 skill `amadeus` がライフサイクル全体を扱います。Intake（合流既定、人間承認付きの Intent Birth、scope 推定）と、`state.json` に基づくステージルーティングを行います。
 - scope（`enterprise`、`feature`、`mvp`、`poc`、`bugfix`、`refactor`、`infra`、`security-patch`、`workshop`）ごとに、22 ステージのうち実行対象だけを実行し、儀式量を作業に合わせて縮退します。
+- [examples/](examples/) 配下の生成例を、skill が生成できる snapshot として参照できます。
 - ステージ状態、approval evidence、phase gate、Bolt gate、検証結果を明示し、成果物を監査しやすくします。
 - 同梱の `amadeus-validator` で Amadeus workspace と Intent 成果物を検証できます。
 
@@ -92,6 +93,12 @@ Amadeus の source を変更する場合は、`skills/amadeus-*` と `.agents/sk
 
 ### Validation
 
+同梱の example snapshot を検証します。
+
+```sh
+npm run validate:all
+```
+
 validator を workspace に対して直接実行します。
 
 ```sh
@@ -107,6 +114,7 @@ bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspac
 ## Documentation
 
 - agent 共通入口: [AMADEUS.md](AMADEUS.md)
+- 生成例: [examples/](examples/)
 - ライフサイクル契約（3 phase 22 ステージ、scope、state スキーマ）:
   - [Overview](docs/amadeus/lifecycle/overview.md)
   - [Scopes](docs/amadeus/lifecycle/scopes.md)

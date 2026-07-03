@@ -9,6 +9,7 @@ It provides agent skills, templates, validators, and documentation for moving wo
 
 - Run the whole lifecycle through the single public entrypoint skill `amadeus`, which handles Intake (continuation by default, human-approved Intent birth, scope estimation) and stage routing driven by `state.json`.
 - Adapt ceremony to the work: each scope (`enterprise`, `feature`, `mvp`, `poc`, `bugfix`, `refactor`, `infra`, `security-patch`, `workshop`) executes only its own subset of the 22 stages.
+- Use generated examples under [examples/](examples/) as snapshots of what the skills can produce.
 - Keep lifecycle artifacts auditable with explicit stage states, approval evidence, phase gates, Bolt gates, and validation results.
 - Validate Amadeus workspaces and Intent artifacts with the bundled `amadeus-validator`.
 
@@ -92,6 +93,12 @@ Auxiliary entrypoints can be used alongside the flow when needed.
 
 ### Validation
 
+Validate the bundled example snapshots.
+
+```sh
+npm run validate:all
+```
+
 Run the validator against a workspace.
 
 ```sh
@@ -107,6 +114,7 @@ npm run validate:workspace -- <workspace> <intent-id>-<slug>
 ## Documentation
 
 - Agent entrypoint: [AMADEUS.md](AMADEUS.md)
+- Examples: [examples/](examples/)
 - Lifecycle contract (3 phases, 22 stages, scopes, state schema):
   - [Overview](docs/amadeus/lifecycle/overview.md)
   - [Scopes](docs/amadeus/lifecycle/scopes.md)

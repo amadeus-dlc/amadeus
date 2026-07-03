@@ -76,6 +76,12 @@ bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts .
 bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . <intent-id>-<slug>
 ```
 
+このリポジトリの例示 snapshot を検証する場合は次で行う。
+
+```sh
+npm run validate:all
+```
+
 Skill 昇格の確認は、必要に応じて `dev-scripts/promote-skill.ts` を使う。
 昇格先に `evals/` や開発用ファイルを混ぜない。
 
