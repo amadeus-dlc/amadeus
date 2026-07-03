@@ -811,7 +811,7 @@
 **Timestamp**: 2026-07-03T12:46:07Z
 **Event**: BOLT_COMPLETED
 **Bolt**: B001
-**Details**: walking skeleton の Bolt PR が人間の merge で承認された。PR: https://github.com/amadeus-dlc/amadeus/pull/409。Merge commit: f519abea0ae677bdab7876868765ec020abf802e。
+**Details**: walking skeleton の Bolt PR が人間の merge で承認された。Bolt ref: B001-issue-395-policy-definition。PR: https://github.com/amadeus-dlc/amadeus/pull/409。Merge commit: f519abea0ae677bdab7876868765ec020abf802e。
 
 ---
 
@@ -925,7 +925,7 @@
 **Timestamp**: 2026-07-03T13:03:24Z
 **Event**: BOLT_COMPLETED
 **Bolt**: B002
-**Details**: autonomous の Bolt PR が人間の merge で承認された。PR: https://github.com/amadeus-dlc/amadeus/pull/410。Merge commit: 3618ff0c3de8659d83fae986455a52cbc064eb36。Issue #400 は 2026-07-03T13:03:25Z に close 済み。
+**Details**: autonomous の Bolt PR が人間の merge で承認された。Bolt ref: B002-issue-400-small-foundation-pr。PR: https://github.com/amadeus-dlc/amadeus/pull/410。Merge commit: 3618ff0c3de8659d83fae986455a52cbc064eb36。Issue #400 は 2026-07-03T13:03:25Z に close 済み。
 
 ---
 
@@ -1031,7 +1031,7 @@
 **Timestamp**: 2026-07-03T13:21:12Z
 **Event**: BOLT_COMPLETED
 **Bolt**: B003
-**Details**: autonomous の Bolt PR が人間の merge で承認された。PR: https://github.com/amadeus-dlc/amadeus/pull/411。Merge commit: eb18826209fe4e20e5deee0116310f30e379ba7c。Issue #401 は 2026-07-03T13:21:13Z に close 済み。
+**Details**: autonomous の Bolt PR が人間の merge で承認された。Bolt ref: B003-issue-401-upstream-difference-order。PR: https://github.com/amadeus-dlc/amadeus/pull/411。Merge commit: eb18826209fe4e20e5deee0116310f30e379ba7c。Issue #401 は 2026-07-03T13:21:13Z に close 済み。
 
 ---
 
@@ -1112,5 +1112,39 @@
 **Stage**: build-and-test
 **Bolt**: B004
 **Details**: `npm run test:all` と Amadeus Validator が pass した。autonomous 実行のため会話内 gate は提示せず、approval evidence は B004 PR merge 後に記録する。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T13:28:58Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Unit**: U004-issue-402-remaining-skill-rollout-units
+**Details**: B004 #402 残り展開単位。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/413。Merge commit: b7475080143946e0ba634d119a4b5a308f7d669b。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T13:28:58Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Bolt**: B004
+**Details**: B004 #402 残り展開単位。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/413。Merge commit: b7475080143946e0ba634d119a4b5a308f7d669b。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T13:28:58Z
+**Event**: BOLT_COMPLETED
+**Bolt**: B004
+**Details**: autonomous の Bolt PR が人間の merge で承認された。Bolt ref: B004-issue-402-remaining-skill-rollout-units。PR: https://github.com/amadeus-dlc/amadeus/pull/413。Merge commit: b7475080143946e0ba634d119a4b5a308f7d669b。Issue #402 は 2026-07-03T13:28:59Z に close 済み。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T13:31:40Z
+**Event**: STAGE_SKIPPED
+**Stage**: ci-pipeline
+**Details**: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行している。Issue #399 の子 Issue 完了追跡には CI の新設または大きな変更が不要なため、Stage 3.7 を skip した。
 
 ---
