@@ -25,7 +25,9 @@ PR #420（merge commit `d8c2609f`）の merge により Issue #393 は close さ
 | 22 stage skill の `SKILL.md` Gate 節（source + 昇格先） | 当該 stage の sensor 宣言と Amadeus 側の写像を明記した。 |
 | `examples/skill-provenance.json` | 影響 entry の staleReason に #393 対応の追記を反映した。md5 は書き換えていない。 |
 
-## #392 Build and Test の失敗時処理（実施済み）
+## #392 Build and Test の失敗時処理（完了）
+
+PR #421（merge commit `84f40dd1`）の merge により Issue #392 は close された。
 
 | ファイル | 変更内容 |
 |---|---|
@@ -34,13 +36,18 @@ PR #420（merge commit `d8c2609f`）の merge により Issue #393 は close さ
 | `docs/amadeus/lifecycle/overview.md` | 「v2 との構造差分」表へ Build and Test の失敗時処理の行を追加した。 |
 | `skills/amadeus-construction-build-and-test/SKILL.md`（source + 昇格先） | 手順の halt-and-ask 段落の直後に、本家との意図的差分の注記を追加した。 |
 
-## #394 Operation phase の対象外理由（未着手）
+## #394 Operation phase の対象外理由（実施済み）
+
+| ファイル | 変更内容 |
+|---|---|
+| `docs/amadeus/aidlc-v2-operation-phase-boundary.md` | 新規作成。Operation phase を対象外にする理由を成果物契約、gate、validator、PR 境界の 4 観点で説明し、本家 Operation skill 7 件の一覧と Amadeus 側の扱い、将来対応の入口（専用 Issue 起票と Intake 経由の新 Intent）を記録した。 |
+| `docs/amadeus/lifecycle/overview.md` | Phase 構成の Operation 段落へ理由の参照を追加し、「v2 との構造差分」表へ Operation phase の行を追加した。 |
 
 ## 対応した要求
 
 | 要求 | 対応 |
 |---|---|
-| R003 | #391（PR #419）と #393（PR #420）の完了証拠を記録した。#392 は本 PR で対応済みで、完了証拠は merge で確定する。#394 は B005 内で継続する。 |
+| R003 | #391（PR #419）、#393（PR #420）、#392（PR #421）の完了証拠を記録した。#394 は本 PR で対応済みで、完了証拠は merge で確定する。 |
 | R006 | 意味差分の明示（写像）を英語化と別 PR で行い、翻訳と意味変更の境界を維持した。 |
 
 ## 検証
@@ -49,6 +56,5 @@ PR #420（merge commit `d8c2609f`）の merge により Issue #393 は close さ
 
 ## 未完了
 
-- #392 の merge による完了証拠の確定。
-- #394 の対応 PR。
-- B005 の Build and Test。
+- #394 の merge による完了証拠の確定。
+- B005 の Build and Test の完了確定（PR merge 後に記録）。

@@ -1384,3 +1384,21 @@
 **Details**: #391 reviewer 指定の対応から着手する。本家 pinned commit d341522e1491db4884e9127004c3882365229218 の stage 定義から reviewer 指定を抽出し、Amadeus DLC 側の写像を明文化する。
 
 ---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T15:58:32Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Bolt**: B005
+**Details**: B005 #391〜#394 AI-DLC v2 differences の Stage 3.6 を開始した。#391〜#393 は merge 済み、#394 は本 PR で対応する。全体テスト、Amadeus Validator、文書リンクの結果を記録する。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T15:59:58Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+**Bolt**: B005
+**Details**: `npm run test:all`、Amadeus Validator、`git diff --check` が pass した（#394 PR。#391〜#393 は各 PR で検証済み）。autonomous 実行のため会話内 gate は提示せず、approval evidence は #394 PR merge 後に記録する。
+
+---

@@ -25,7 +25,7 @@
 ## Execution Plan Summary
 - **Total Stages**: 25
 - **Completed**: 19
-- **In Progress**: B005 #391-#394 AI-DLC v2 difference response and B010 final verification
+- **In Progress**: B005 finalization pending #394 PR merge, then B010 final verification
 
 ## Runtime State
 - **Revision Count**: 0
@@ -106,8 +106,8 @@ Per unit: U005-issue-391-394-aidlc-v2-differences
 - [S] nfr-requirements — SKIP: #391〜#394 の差分対応は非機能要求の追加、変更、評価を伴わない。
 - [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
 - [S] infrastructure-design — SKIP: #391〜#394 の差分対応はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わない。
-- [-] code-generation — EXECUTE: #391、#393、#392、#394 の完了または対象外判断を追跡する。
-- [ ] build-and-test — EXECUTE
+- [x] code-generation — EXECUTE: #391（PR #419）、#393（PR #420）、#392（PR #421）は merge 済み。#394 は対応済みで、完了確定は #394 PR の merge 後に記録する。
+- [-] build-and-test — EXECUTE
 - [S] ci-pipeline — SKIP: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行しており、Issue #399 の差分対応追跡に追加の CI 新設または大きな変更は不要。
 
 Per unit: U006-core-entrypoints-verification-englishization
@@ -170,9 +170,9 @@ Per unit: U010-issue-399-final-verification
 - **Next Stage**: build-and-test
 - **Status**: Running
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-07-03T15:15:13Z
+- **Last Updated**: 2026-07-03T15:58:32Z
 
 ## Session Resume Point
 - **Last Completed Stage**: build-and-test
-- **Next Action**: Continue B005 #391-#394 AI-DLC v2 difference response, then B010 final verification and Issue #399 close
-- **Pending Artifacts**: #391-#394 completion or explicit out-of-scope decisions (B005), real-provider example regeneration to clear provenance staleReason, final #399 traceability (B010)
+- **Next Action**: Await #394 PR merge to finalize B005, then run B010 final verification and Issue #399 close
+- **Pending Artifacts**: #394 PR merge evidence, B005 completion records (STAGE_COMPLETED, BOLT_COMPLETED), real-provider example regeneration to clear provenance staleReason, final #399 traceability (B010)
