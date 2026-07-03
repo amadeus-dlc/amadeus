@@ -5,5 +5,5 @@
 
 | # | 確認したいこと | 推奨回答 | 回答 |
 |---|---|---|---|
-| 1 | 未確認の残り（在庫連携仕様、障害時の振る舞い、技術スタック）をどう扱うか | Inception へ引き継ぐ | Inception へ引き継ぐ。`initiative-brief.md` の「Inception への引き継ぎ」に列挙した |
+| 1 | 未確認の残り（在庫連携の具体仕様、障害時の振る舞い、UI フレームワークと RDB 製品）をどう扱うか | Inception へ引き継ぐ | Inception へ引き継ぐ。`initiative-brief.md` の「Inception への引き継ぎ」に列挙した |
 | 2 | Ideation の成果物間に矛盾はないか | なし | 検出しなかった。skip した 2 ステージの理由は `decisions.md` に記録した |

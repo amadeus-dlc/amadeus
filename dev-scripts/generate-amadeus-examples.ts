@@ -138,6 +138,7 @@ function ideationPrompt(): string {
     "- 主なアクター: 購入者, 販売管理者",
     "- 外部システム: 在庫管理システム",
     "- 主要領域: 商品選択, 注文作成, 在庫参照",
+    "- 技術前提（確定済みとして steering の tech.md に反映する）: TypeScript と Node.js の Web アプリケーション、購入者向け Web UI、在庫管理システムとは REST API で連携、注文はリレーショナルデータベースに記録",
     "",
     "手順 2: `amadeus` skill の Intake を実行してください。",
     "入力テーマは「利用者が商品を選択して注文を作成できる最小の購入フローを実現する」です。",
@@ -497,9 +498,18 @@ function updatedManifest(targetSteps: GenerationStep[]): SkillProvenanceManifest
       })),
     });
   }
-  const entries = steps
-    .map((step) => bySnapshot.get(step.snapshot))
-    .filter((entry): entry is SkillProvenanceEntry => entry !== undefined);
+  const missing = steps.filter((step) => !bySnapshot.has(step.snapshot)).map((step) => step.snapshot);
+  if (missing.length > 0) {
+    fail([
+      `provenance manifest に entry がない snapshot があります: ${missing.join(", ")}`,
+      "部分再生成（--from）は既存 manifest の entry を前提にします。--from を外して全 step を再生成してください。",
+    ].join("\n"));
+  }
+  const entries = steps.map((step) => {
+    const entry = bySnapshot.get(step.snapshot);
+    if (!entry) fail(`provenance manifest の entry を解決できません: ${step.snapshot}`);
+    return entry;
+  });
   return { version: 1, entries };
 }
 

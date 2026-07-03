@@ -10,7 +10,7 @@
     "intent-capture": {
       "state": "completed",
       "approval": {
-        "approvedAt": "2026-07-03T10:17:08+09:00",
+        "approvedAt": "2026-07-03T11:02:34+09:00",
         "via": "conversation"
       }
     },
@@ -21,14 +21,14 @@
     "feasibility": {
       "state": "completed",
       "approval": {
-        "approvedAt": "2026-07-03T10:19:30+09:00",
+        "approvedAt": "2026-07-03T11:04:03+09:00",
         "via": "conversation"
       }
     },
     "scope-definition": {
       "state": "completed",
       "approval": {
-        "approvedAt": "2026-07-03T10:22:00+09:00",
+        "approvedAt": "2026-07-03T11:04:56+09:00",
         "via": "conversation"
       }
     },
@@ -39,80 +39,80 @@
     "rough-mockups": {
       "state": "completed",
       "approval": {
-        "approvedAt": "2026-07-03T10:25:00+09:00",
+        "approvedAt": "2026-07-03T11:05:50+09:00",
         "via": "conversation"
       }
     },
     "approval-handoff": {
       "state": "completed",
       "approval": {
-        "approvedAt": "2026-07-03T10:28:00+09:00",
+        "approvedAt": "2026-07-03T11:07:23+09:00",
         "via": "conversation"
       }
     },
     "reverse-engineering": {
       "state": "skipped",
-      "reason": "greenfield の Intent であり、解析対象の既存コードベースがない"
+      "reason": "greenfield の Intent であり、分析対象の既存コードベースがない"
     },
     "practices-discovery": {
       "state": "skipped",
-      "reason": "開発は単独開発者で行い、確立済みのチームプラクティスの発見対象がない"
+      "reason": "単独開発者であり、証拠付きで発見すべき確立済みのチームプラクティスがない"
     },
     "requirements-analysis": {
       "state": "completed",
       "approval": {
-        "approvedAt": "2026-07-03T10:32:00+09:00",
+        "approvedAt": "2026-07-03T11:14:30+09:00",
         "via": "conversation"
       }
     },
     "user-stories": {
       "state": "completed",
       "approval": {
-        "approvedAt": "2026-07-03T10:36:00+09:00",
+        "approvedAt": "2026-07-03T11:15:40+09:00",
         "via": "conversation"
       }
     },
     "refined-mockups": {
       "state": "completed",
       "approval": {
-        "approvedAt": "2026-07-03T10:40:00+09:00",
+        "approvedAt": "2026-07-03T11:17:10+09:00",
         "via": "conversation"
       }
     },
     "application-design": {
       "state": "completed",
       "approval": {
-        "approvedAt": "2026-07-03T10:44:00+09:00",
+        "approvedAt": "2026-07-03T11:19:20+09:00",
         "via": "conversation"
       }
     },
     "units-generation": {
       "state": "completed",
       "approval": {
-        "approvedAt": "2026-07-03T10:48:00+09:00",
+        "approvedAt": "2026-07-03T11:21:05+09:00",
         "via": "conversation"
       }
     },
     "delivery-planning": {
       "state": "completed",
       "approval": {
-        "approvedAt": "2026-07-03T10:52:00+09:00",
+        "approvedAt": "2026-07-03T11:23:15+09:00",
         "via": "conversation"
       }
     },
     "functional-design": {
       "units": {
-        "U002-order-creation": {
+        "U001-product-browsing": {
           "state": "completed",
           "approval": {
-            "approvedAt": "2026-07-03T11:10:00+09:00",
+            "approvedAt": "2026-07-03T11:31:37+09:00",
             "via": "conversation"
           }
         },
-        "U003-inventory-reference": {
+        "U002-order-creation": {
           "state": "completed",
           "approval": {
-            "approvedAt": "2026-07-03T11:12:00+09:00",
+            "approvedAt": "2026-07-03T11:33:10+09:00",
             "via": "conversation"
           }
         }
@@ -120,11 +120,11 @@
     },
     "nfr-requirements": {
       "units": {
-        "U002-order-creation": {
+        "U001-product-browsing": {
           "state": "skipped",
           "reason": "性能、セキュリティ、スケーラビリティの特別な要求がなく、技術スタックは確定済みと人間が確認した"
         },
-        "U003-inventory-reference": {
+        "U002-order-creation": {
           "state": "skipped",
           "reason": "性能、セキュリティ、スケーラビリティの特別な要求がなく、技術スタックは確定済みと人間が確認した"
         }
@@ -132,11 +132,11 @@
     },
     "nfr-design": {
       "units": {
-        "U002-order-creation": {
+        "U001-product-browsing": {
           "state": "skipped",
           "reason": "NFR Requirements を実行しておらず、縮退規則に従い NFR パターンの設計対象がない"
         },
-        "U003-inventory-reference": {
+        "U002-order-creation": {
           "state": "skipped",
           "reason": "NFR Requirements を実行しておらず、縮退規則に従い NFR パターンの設計対象がない"
         }
@@ -144,11 +144,11 @@
     },
     "infrastructure-design": {
       "units": {
-        "U002-order-creation": {
+        "U001-product-browsing": {
           "state": "skipped",
           "reason": "インフラ変更がなく、デプロイ構成は定義済みと人間が確認した"
         },
-        "U003-inventory-reference": {
+        "U002-order-creation": {
           "state": "skipped",
           "reason": "インフラ変更がなく、デプロイ構成は定義済みと人間が確認した"
         }
@@ -160,12 +160,12 @@
   },
   "phaseGates": {
     "ideation": {
-      "approvedAt": "2026-07-03T10:30:00+09:00",
+      "approvedAt": "2026-07-03T11:07:23+09:00",
       "via": "pr",
       "reference": "https://github.com/example/ec-site/pull/101"
     },
     "inception": {
-      "approvedAt": "2026-07-03T10:55:00+09:00",
+      "approvedAt": "2026-07-03T11:24:00+09:00",
       "via": "pr",
       "reference": "https://github.com/example/ec-site/pull/102"
     }
@@ -173,7 +173,7 @@
   "bolts": {
     "B001-walking-skeleton": {
       "state": "active",
-      "units": ["U002-order-creation", "U003-inventory-reference"]
+      "units": ["U001-product-browsing", "U002-order-creation"]
     }
   }
 }

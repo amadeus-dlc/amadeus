@@ -4,4 +4,6 @@
 
 | 依存 | 影響する Bolt | 状態 | 対応 |
 |---|---|---|---|
-| 在庫管理システム（EXT001）との連携 | B001、B002 | 連携仕様と確認先は未確認 | Construction の NFR Requirements までに連携仕様と確認先を確定する。依存は在庫参照コンポーネント（U003）に閉じ、B001 で参照不能時の振る舞い（R006）を含めて貫通を確かめる |
+| 在庫管理システムの REST API（EXT001） | B002 | 連携仕様と確認先が未確認 | B001 の実行中に仕様を確認する。影響は C006 在庫参照クライアントに閉じている（GD004）。確定できるまで B002 を開始しない |
+| リレーショナルデータベースの具体的な製品 | B001、B002 | 未確認 | Construction の NFR Requirements（tech-stack-decisions）で確定する |
+| Web UI のフレームワーク | B001、B002 | 未確認 | Construction の NFR Requirements（tech-stack-decisions）で確定する |
