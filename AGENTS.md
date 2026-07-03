@@ -3,6 +3,7 @@
 - すべて日本語でやりとりすること
 - ソースコードの単語は最低限に留め、ドメイン知識の言葉で記述すること
 - 日本語を書くときは`japanese-tech-writing`スキルを使うこと
+- Amadeus skill の `SKILL.md` 英語化を扱う場合は、[Skill Language Policy](docs/amadeus/skill-language-policy.md) に従うこと
 
 ## Review exclusion settings
 

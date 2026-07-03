@@ -8,7 +8,7 @@
 - **State Version**: 7
 - **Active Agent**: amadeus
 - **Worktree Path**: 
-- **Bolt Refs**: 
+- **Bolt Refs**: B001
 - **Practices Affirmed Timestamp**: 
 
 ## Scope Configuration
@@ -24,8 +24,8 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 25
-- **Completed**: 16
-- **In Progress**: Inception phase boundary
+- **Completed**: 18
+- **In Progress**: B001 / build-and-test pending Bolt PR #409
 
 ## Runtime State
 - **Revision Count**: 0
@@ -34,8 +34,8 @@
 
 - **Initialization**: Verified
 - **Ideation**: Verified
-- **Inception**: Active
-- **Construction**: Pending
+- **Inception**: Verified
+- **Construction**: Active
 - **Operation**: Skipped
 
 ## Stage Progress
@@ -65,13 +65,13 @@
 - [x] delivery-planning — EXECUTE
 
 ### CONSTRUCTION PHASE
-Per unit: pending
-- [ ] functional-design — EXECUTE
-- [ ] nfr-requirements — EXECUTE
-- [ ] nfr-design — EXECUTE
-- [ ] infrastructure-design — EXECUTE
-- [ ] code-generation — EXECUTE
-- [ ] build-and-test — EXECUTE
+Per unit: U001-issue-395-policy-definition
+- [x] functional-design — EXECUTE
+- [S] nfr-requirements — SKIP: #395 方針確定には性能、セキュリティ、スケーラビリティ、信頼性、技術スタック選定の新規要求がない。
+- [S] nfr-design — SKIP: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+- [S] infrastructure-design — SKIP: #395 方針確定にはインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計がない。
+- [x] code-generation — EXECUTE
+- [-] build-and-test — EXECUTE
 - [ ] ci-pipeline — EXECUTE
 
 ### OPERATION PHASE
@@ -84,14 +84,14 @@ Per unit: pending
 - [S] feedback-optimization — SKIP: out of Amadeus scope
 
 ## Current Status
-- **Lifecycle Phase**: INCEPTION
-- **Current Stage**: delivery-planning
-- **Next Stage**: delivery-planning
+- **Lifecycle Phase**: CONSTRUCTION
+- **Current Stage**: build-and-test
+- **Next Stage**: Bolt PR
 - **Status**: Running
 - **Construction Autonomy Mode**: unset
-- **Last Updated**: 2026-07-03T12:15:24Z
+- **Last Updated**: 2026-07-03T12:42:27Z
 
 ## Session Resume Point
-- **Last Completed Stage**: delivery-planning
-- **Next Action**: Prepare Inception phase change proposal
-- **Pending Artifacts**: none
+- **Last Completed Stage**: code-generation
+- **Next Action**: Await B001 Bolt PR merge: https://github.com/amadeus-dlc/amadeus/pull/409
+- **Pending Artifacts**: B001 の build-and-test 完了確定と BOLT_COMPLETED は PR merge 待ち。ci-pipeline は未完了。
