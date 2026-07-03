@@ -26,7 +26,7 @@
 |---|---|---|---|
 | #395 方針確定 | Must | なし | 対応 PR の merge または明示的な Issue close |
 | #400 小さい土台 PR | Must | #395 | 対応 PR の merge または明示的な Issue close |
-| #401 本家差分対応順序 | Must | #400 | 対応 PR の merge または明示的な Issue close。#391〜#394 の扱いを確認する。 |
+| #401 AI-DLC v2 差分対応順序 | Must | #400 | 対応 PR の merge または明示的な Issue close。#391〜#394 の扱いを確認する。 |
 | #402 残り展開単位 | Must | #401 | 対応 PR の merge または明示的な Issue close |
 
 ## 制約

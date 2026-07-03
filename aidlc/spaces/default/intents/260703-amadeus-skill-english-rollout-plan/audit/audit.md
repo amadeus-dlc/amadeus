@@ -902,3 +902,109 @@
 **Details**: `npm run test:it:promote-skill`、`npm run test:all`、Amadeus Validator が pass した。autonomous 実行のため会話内 gate は提示せず、approval evidence は B002 PR merge 後に記録する。
 
 ---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T13:03:24Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Unit**: U002-issue-400-small-foundation-pr
+**Details**: B002 #400 小さい土台 PR。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/410。Merge commit: 3618ff0c3de8659d83fae986455a52cbc064eb36。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T13:03:24Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Bolt**: B002
+**Details**: B002 #400 小さい土台 PR。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/410。Merge commit: 3618ff0c3de8659d83fae986455a52cbc064eb36。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T13:03:24Z
+**Event**: BOLT_COMPLETED
+**Bolt**: B002
+**Details**: autonomous の Bolt PR が人間の merge で承認された。PR: https://github.com/amadeus-dlc/amadeus/pull/410。Merge commit: 3618ff0c3de8659d83fae986455a52cbc064eb36。Issue #400 は 2026-07-03T13:03:25Z に close 済み。
+
+---
+
+## BOLT_STARTED
+**Timestamp**: 2026-07-03T13:05:00Z
+**Event**: BOLT_STARTED
+**Bolt**: B003
+**Details**: #401 AI-DLC v2 差分対応順序 Bolt を開始した。対象 Unit は U003-issue-401-upstream-difference-order。#391、#392、#393、#394 の扱いと PR 境界を #401 の完了証拠として追跡する。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T13:05:00Z
+**Event**: STAGE_SKIPPED
+**Stage**: functional-design
+**Unit**: U003-issue-401-upstream-difference-order
+**Details**: #401 は #391、#392、#393、#394 の対応順序と PR 境界を整理する計画文書であり、新しいデータモデル、複雑な業務ロジック、業務ルール設計を追加しないため skip した。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T13:05:00Z
+**Event**: STAGE_SKIPPED
+**Stage**: nfr-requirements
+**Unit**: U003-issue-401-upstream-difference-order
+**Details**: #401 は非機能要求の追加、変更、評価を伴わないため skip した。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T13:05:00Z
+**Event**: STAGE_SKIPPED
+**Stage**: nfr-design
+**Unit**: U003-issue-401-upstream-difference-order
+**Details**: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T13:05:00Z
+**Event**: STAGE_SKIPPED
+**Stage**: infrastructure-design
+**Unit**: U003-issue-401-upstream-difference-order
+**Details**: #401 はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わないため skip した。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T13:05:00Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Unit**: U003-issue-401-upstream-difference-order
+**Details**: U003 #401 AI-DLC v2 差分対応順序の Stage 3.5 を開始した。Construction Autonomy Mode が autonomous のため、会話内ゲートは提示しない。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T13:07:30Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Unit**: U003-issue-401-upstream-difference-order
+**Details**: autonomous 実行のため会話内 gate は提示しない。`docs/amadeus/aidlc-v2-difference-response-plan.md`、`docs/amadeus/skill-language-policy.md`、code-generation-plan.md、code-summary.md、memory.md を確認対象とし、approval evidence は B003 PR merge 後に記録する。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T13:07:30Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Bolt**: B003
+**Details**: B003 #401 AI-DLC v2 差分対応順序の Stage 3.6 を開始した。文書リンク、全体テスト、Amadeus Validator の結果を記録する。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T13:08:18Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+**Bolt**: B003
+**Details**: `npm run test:all` と Amadeus Validator が pass した。autonomous 実行のため会話内 gate は提示せず、approval evidence は B003 PR merge 後に記録する。
+
+---
