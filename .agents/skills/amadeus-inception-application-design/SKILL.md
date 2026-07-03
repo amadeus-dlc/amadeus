@@ -148,6 +148,13 @@ If Accept as-is is selected, set the checkbox to `[x]`, append `GATE_APPROVED`
 (recording that it is Accept as-is) and `STAGE_COMPLETED`, and record this
 decision in `inception/decisions.md`.
 
+AI-DLC v2 assigns this stage `reviewer: aidlc-architecture-reviewer-agent`
+with `reviewer_max_iterations: 2`. Amadeus DLC intentionally runs no
+reviewer sub-agent: independent review maps to this gate's human approval
+and the phase PR review, the Request Changes revision loop bounds the
+review iterations, and `amadeus-validator` covers structural validation.
+See `docs/amadeus/aidlc-v2-reviewer-mapping.md`.
+
 ## Prohibitions
 
 - Do not run for an Intent that only modifies existing components.

@@ -142,6 +142,13 @@ append `STAGE_REVISING`. If Accept as-is is selected, set the target Unit
 checkbox to `[x]`, append `GATE_APPROVED` noting Accept as-is, append
 `STAGE_COMPLETED`, and record the decision in `construction/decisions.md`.
 
+AI-DLC v2 assigns this stage `reviewer: aidlc-architecture-reviewer-agent`
+with `reviewer_max_iterations: 2`. Amadeus DLC intentionally runs no
+reviewer sub-agent: independent review maps to this gate's human approval
+(or the Bolt PR review in autonomous mode), the Request Changes revision
+loop bounds the review iterations, and `amadeus-validator` covers
+structural validation. See `docs/amadeus/aidlc-v2-reviewer-mapping.md`.
+
 ## Prohibitions
 
 - Do not execute the deployment. Leave execution to a human.
