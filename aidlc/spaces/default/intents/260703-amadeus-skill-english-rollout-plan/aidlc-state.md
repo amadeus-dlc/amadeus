@@ -24,8 +24,8 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 25
-- **Completed**: 16
-- **In Progress**: B001 / Bolt PR preparation
+- **Completed**: 19
+- **In Progress**: B001 / Bolt PR #409
 
 ## Runtime State
 - **Revision Count**: 0
@@ -85,13 +85,13 @@ Per unit: U001-issue-395-policy-definition
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: build-and-test
+- **Current Stage**: ci-pipeline
 - **Next Stage**: Bolt PR
 - **Status**: Running
 - **Construction Autonomy Mode**: unset
-- **Last Updated**: 2026-07-03T12:33:26Z
+- **Last Updated**: 2026-07-03T12:38:02Z
 
 ## Session Resume Point
-- **Last Completed Stage**: code-generation
-- **Next Action**: Create Bolt PR for B001 (#395 方針確定)
-- **Pending Artifacts**: B001 の Bolt PR と merge 確認は未完了。ci-pipeline は未完了。
+- **Last Completed Stage**: build-and-test
+- **Next Action**: Await B001 Bolt PR merge: https://github.com/amadeus-dlc/amadeus/pull/409
+- **Pending Artifacts**: B001 の merge 確認は未完了。ci-pipeline は未完了。
