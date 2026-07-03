@@ -1,104 +1,164 @@
 ---
 name: amadeus-construction-code-generation
 description: >-
-  Amadeus Construction の内部 skill。Stage 3.5 Code Generation だけを Unit ごとに実行する。
-  Bolt の worktree 内で、対象 Unit の設計成果物を入力に実装計画を立て、コードとテストコードを
-  生成し、code-generation-plan.md と code-summary.md を作成する場面では必ず使う。テスト実行と Bolt 記録は
-  Build and Test が扱う。traceability と state の phase 確定は行わない。
+  Internal Amadeus Construction skill. Use only for Stage 3.5 Code Generation,
+  per Unit. Use when, inside the Bolt's worktree, you must build an
+  implementation plan from the target Unit's design artifacts as input,
+  generate code and test code, and create code-generation-plan.md and
+  code-summary.md. Build and Test handles test execution and Bolt records. Do
+  not finalize traceability or the state's phase.
 ---
 
 # amadeus-construction-code-generation
 
-## 目的
+## Purpose
 
-Construction の Stage 3.5 Code Generation だけを、対象 Unit ごとに進める。
+Advance only Construction Stage 3.5 Code Generation for the target Unit.
 
-この skill は `amadeus` 入口から Bolt 実行の中で呼び出される内部 skill である。
+This is an internal skill called from the `amadeus` entrypoint while a Bolt is
+being executed.
 
-対象 Unit の設計成果物を入力に、実装計画を立て、コードとテストコードを生成する。
+Build an implementation plan from the target Unit's design artifacts as
+input, then generate code and test code.
 
-## 前提
+## Prerequisites
 
-対象 record の `aidlc-state.md` で、Stage Progress の `code-generation` が実行対象であり、CONSTRUCTION PHASE の `Per unit: <unit-id>` ブロックにある `code-generation` の checkbox が `[ ]`、`[-]`、`[?]`、`[R]` のいずれかであることを前提にする。
+Assume the target record's `aidlc-state.md` has `code-generation` as an
+executable Stage Progress item, and the CONSTRUCTION PHASE `Per unit:
+<unit-id>` block has the `code-generation` checkbox in one of these states:
+`[ ]`, `[-]`, `[?]`, or `[R]`.
 
-checkbox が `[?]` の場合は、成果物を作り直さず、ゲートの提示から再開する。
-checkbox が `[R]` の場合は、前回の成果物と差し戻し理由を提示してから、修正だけを行う。
-どちらの場合も、手順を最初からやり直さない。
+If the checkbox is `[?]`, resume from gate presentation without recreating
+the artifacts.
 
-実装は対象 Bolt の branch と worktree で行う。
-branch の作成と worktree の隔離は `amadeus` 入口の Bolt の開始処理が行い、この skill は worktree 内で作業する。
+If the checkbox is `[R]`, present the previous artifacts and the requested
+changes, then make only the necessary corrections.
 
-少なくとも次を読む。
+In both cases, do not restart the whole procedure.
 
-- `inception/units-generation/unit-of-work.md`（対象 Unit。Units Generation を実行しなかった場合は暗黙 Unit として Intent のモジュールファイルと要求を使う）
-- `inception/requirements-analysis/requirements.md`（Requirements Analysis 実行時。security-patch では `construction/<unit-id>-<slug>/nfr-requirements/security-requirements.md` を要求の定義元にする）
-- `construction/<unit-id>-<slug>/functional-design/`、`nfr-design/`、`infrastructure-design/` の成果物（実行した場合）
-- `inception/practices-discovery/team-practices.md`（実行した場合）
-- `aidlc-state.md`
+Implement in the target Bolt's branch and worktree. The `amadeus` entrypoint's
+Bolt start processing creates the branch and isolates the worktree; this
+skill works inside the worktree.
 
-## 質問
+Read at least the following inputs:
 
-Construction では質問を例外扱いにする。
-前段の成果物が扱わなかった本物の欠落を検出した場合だけ、`amadeus-grilling` のプロトコルで一問ずつ確認する。
-質問を行った場合は `construction/<unit-id>-<slug>/code-generation/code-generation-questions.md` に記録する。
+- `inception/units-generation/unit-of-work.md` for the target Unit. If Units
+  Generation was not executed, use the Intent module files and requirements
+  as the implicit Unit.
+- `inception/requirements-analysis/requirements.md`, if Requirements Analysis
+  was executed. For security-patch, use
+  `construction/<unit-id>-<slug>/nfr-requirements/security-requirements.md`
+  as the source of requirements.
+- Artifacts under `construction/<unit-id>-<slug>/functional-design/`,
+  `nfr-design/`, and `infrastructure-design/`, if executed.
+- `inception/practices-discovery/team-practices.md`, if executed.
+- `aidlc-state.md`.
 
-## テンプレート
+## Questions
 
-優先順位は次である。
+Treat questions during Construction as exceptional.
+
+Ask only when you detect a real gap that earlier artifacts did not cover.
+Use the `amadeus-grilling` protocol and ask one question at a time.
+
+If you ask questions, record them in
+`construction/<unit-id>-<slug>/code-generation/code-generation-questions.md`.
+
+## Templates
+
+Use templates in this priority order:
 
 1. `aidlc/spaces/<space>/memory/templates/intents/construction/code-generation/`
-2. この skill に同梱された `templates/construction/code-generation/`
+2. `templates/construction/code-generation/` bundled with this skill.
 
-分からない項目は空欄にせず、`未確認` と書く。
+Do not leave unknown items blank. Write `未確認`.
 
-## 成果物
+## Artifacts
 
-作成または更新するものは次だけである。
+Create or update only the following:
 
-- アプリケーションコードとテストコード（対象リポジトリへの最小の変更）
-- `construction/<unit-id>-<slug>/code-generation/code-generation-plan.md`（実装計画。変更対象、変更順序、検証方法）
-- `construction/<unit-id>-<slug>/code-generation/code-summary.md`（実装結果の要約。変更したファイル、対応した要求）
+- Application code and test code (minimal changes to the target repository)
+- `construction/<unit-id>-<slug>/code-generation/code-generation-plan.md`
+  (the implementation plan: what to change, the order of changes, and the
+  verification method)
+- `construction/<unit-id>-<slug>/code-generation/code-summary.md` (a summary
+  of the implementation result: the files changed and the requirements
+  addressed)
 - `construction/<unit-id>-<slug>/code-generation/memory.md`
-- `aidlc-state.md`（対象 Unit の checkbox）と `audit/audit.md`（ゲートイベントの追記）
-- 質問を行った場合は `construction/<unit-id>-<slug>/code-generation/code-generation-questions.md`
+- `aidlc-state.md` for the target Unit checkbox and `audit/audit.md` for gate
+  events
+- `construction/<unit-id>-<slug>/code-generation/code-generation-questions.md`,
+  only if questions were asked
 
-## 手順
+## Procedure
 
-以下の手順は、checkbox が `[ ]` から開始する場合の流れである。
-`[?]` または `[R]` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
+The following procedure applies when starting from checkbox `[ ]`.
 
-1. 対象 Unit の `code-generation` の checkbox を `[-]` にする。
-2. 対象 Unit の設計成果物と要求を読み、`code-generation-plan.md` を作る。
-3. 計画に従い、コードとテストコードを最小の変更で生成する。既存コードの周辺の書き方（命名、コメント密度、慣用句）に合わせる。
-4. `code-summary.md` を作る。
-5. `construction/<unit-id>-<slug>/code-generation/memory.md` に、実行中の解釈、逸脱、トレードオフ、未解決の問いを記録する。
-6. 対象 Unit の checkbox を `[?]` にし、`STAGE_AWAITING_APPROVAL` イベントを `audit/audit.md` に追記して、ゲートを提示する。
+When resuming from `[?]` or `[R]`, follow the prerequisite resume rules and
+run only the steps needed for gate presentation or correction.
 
-規模が大きい場合は、実装を subagent に委譲してよい。
+1. Set the target Unit's `code-generation` checkbox to `[-]`.
+2. Read the target Unit's design artifacts and requirements, then create
+   `code-generation-plan.md`.
+3. Follow the plan to generate code and test code with minimal changes.
+   Match the surrounding style of the existing code (naming, comment
+   density, idioms).
+4. Create `code-summary.md`.
+5. Record the interpretations, deviations, tradeoffs, and unresolved
+   questions made during execution in
+   `construction/<unit-id>-<slug>/code-generation/memory.md`.
+6. Set the target Unit checkbox to `[?]`, append the `STAGE_AWAITING_APPROVAL`
+   event to `audit/audit.md`, and present the gate.
 
-## ゲート
+For large-scale work, implementation may be delegated to a subagent.
 
-実装計画と変更の要約を示し、Approve と Request Changes の 2 択で承認を求める。
-Construction のゲートは 2 択に限り、スキップ済みステージの追加実行を選択肢にしない。
-Request Changes が 3 回続いたら Accept as-is を選択肢に加える。
-ゲートを提示したターンでは人間の回答を待つ。
+## Gate
 
-`aidlc-state.md` の `Construction Autonomy Mode` が `autonomous` で、対象 Bolt が walking skeleton ではない場合は、ゲートを提示せずに次へ進む。
-この場合の approval evidence は、Bolt PR の merge 後に `amadeus` 入口の Bolt 境界処理が `STAGE_COMPLETED`（Details に PR の URL）として記録する。
-失敗や本物の欠落を検出した場合は、autonomy に関わらず停止して人間に確認する。
+Show the implementation plan and a summary of the changes, then ask for
+approval with exactly two options: Approve or Request Changes.
 
-承認されたら対象 Unit の checkbox を `[x]` にし、`GATE_APPROVED`（人間の回答をそのまま記録）と `STAGE_COMPLETED` を `audit/audit.md` に追記する。
-差し戻されたら対象 Unit の checkbox を `[R]` にし、`GATE_REJECTED`（差し戻し理由をそのまま記録）と `STAGE_REVISING` を追記する。
-Accept as-is が選ばれた場合は、対象 Unit の checkbox を `[x]` にし、`GATE_APPROVED`（Accept as-is である旨を含めて記録）と `STAGE_COMPLETED` を追記し、この判断を `construction/decisions.md` に記録する。
+Construction gates are limited to those two options. Do not offer additional
+execution for skipped stages as a gate option.
 
-## 禁止事項
+If Request Changes happens three times in a row, add Accept as-is as an
+option.
 
-- Bolt の worktree の外で対象リポジトリを変更しない。
-- 対象 Unit の範囲を超える変更（隣接コードの改善、無関係なリファクタリング）をしない。
-- テストの実行結果を記録しない。実行と記録は Build and Test の責務である。
-- 承認を待たずに `completed` を記録しない。
+When presenting a gate, wait for the human response in that turn.
 
-## 次の skill
+If `aidlc-state.md` has `Construction Autonomy Mode: autonomous` and the
+target Bolt is not a walking skeleton, do not present the gate. Continue to
+the next stage.
 
-- 続きを進める場合: `amadeus`（入口が Bolt 内の次ステージを解決する）
-- 成果物の構造検証: `amadeus-validator`
+In that case, approval evidence is recorded after the Bolt PR is merged: the
+`amadeus` entrypoint's Bolt boundary processing records `STAGE_COMPLETED`
+with the PR URL in Details.
+
+If you detect a failure or real gap, stop and ask the human regardless of
+autonomy mode.
+
+When approved, set the target Unit checkbox to `[x]`, append `GATE_APPROVED`
+with the human response recorded as-is, and append `STAGE_COMPLETED` to
+`audit/audit.md`.
+
+When changes are requested, set the target Unit checkbox to `[R]`, append
+`GATE_REJECTED` with the requested changes recorded as-is, and append
+`STAGE_REVISING`.
+
+If Accept as-is is selected, set the target Unit checkbox to `[x]`, append
+`GATE_APPROVED` noting Accept as-is, append `STAGE_COMPLETED`, and record the
+decision in `construction/decisions.md`.
+
+## Prohibitions
+
+- Do not modify the target repository outside the Bolt's worktree.
+- Do not make changes beyond the target Unit's scope (improvements to
+  adjacent code, unrelated refactoring).
+- Do not record test execution results. Execution and recording are Build
+  and Test's responsibility.
+- Do not record `completed` before approval.
+
+## Next Skill
+
+- Continue the Bolt: `amadeus`, which resolves the next stage inside the
+  Bolt.
+- Validate artifact structure: `amadeus-validator`.

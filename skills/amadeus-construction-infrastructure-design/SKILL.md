@@ -1,105 +1,154 @@
 ---
 name: amadeus-construction-infrastructure-design
 description: >-
-  Amadeus Construction の内部 skill。Stage 3.4 Infrastructure Design だけを Unit ごとに実行する。
-  インフラサービスの対応付け、デプロイアーキテクチャ、クラウドリソースが必要な Unit で、
-  deployment-architecture.md ほかの設計成果物を作成または補修する場面では必ず使う。
-  インフラ変更がなく定義済みの場合は実行しない。デプロイの実行と実装は作らない。
+  Internal Amadeus Construction skill. Use only for Stage 3.4 Infrastructure
+  Design, per Unit. Use when a Unit needs infrastructure service mapping,
+  deployment architecture, or cloud resources, and must create or repair
+  deployment-architecture.md and other design artifacts. Do not run when
+  there is no infrastructure change and infrastructure is already defined.
+  Do not execute deployment or implement code.
 ---
 
 # amadeus-construction-infrastructure-design
 
-## 目的
+## Purpose
 
-Construction の Stage 3.4 Infrastructure Design だけを、対象 Unit ごとに進める。
+Advance only Construction Stage 3.4 Infrastructure Design for the target Unit.
 
-この skill は `amadeus` 入口から Bolt 実行の中で呼び出される内部 skill である。
+This is an internal skill called from the `amadeus` entrypoint while a Bolt is
+being executed.
 
-NFR 設計とアプリケーション設計から、デプロイアーキテクチャ、インフラサービス、監視、CI/CD パイプラインの設計を作る。
-Amadeus は Operation phase を対象外にするため、デプロイの実行はこのステージの設計成果物を根拠に人間が行う。
+Design the deployment architecture, infrastructure services, monitoring, and
+CI/CD pipeline from the NFR Design and Application Design. Because Amadeus
+excludes the Operation phase, a human executes the deployment based on this
+stage's design artifacts.
 
-## 前提
+## Prerequisites
 
-対象 record の `aidlc-state.md` で、Stage Progress の `infrastructure-design` が実行対象であり、CONSTRUCTION PHASE の `Per unit: <unit-id>` ブロックにある `infrastructure-design` の checkbox が `[ ]`、`[-]`、`[?]`、`[R]` のいずれかであることを前提にする。
+Assume the target record's `aidlc-state.md` has `infrastructure-design` as an
+executable Stage Progress item, and the CONSTRUCTION PHASE `Per unit:
+<unit-id>` block has the `infrastructure-design` checkbox in one of these
+states: `[ ]`, `[-]`, `[?]`, or `[R]`.
 
-checkbox が `[?]` の場合は、成果物を作り直さず、ゲートの提示から再開する。
-checkbox が `[R]` の場合は、前回の成果物と差し戻し理由を提示してから、修正だけを行う。
-どちらの場合も、手順を最初からやり直さない。
+If the checkbox is `[?]`, resume from gate presentation without recreating the
+artifacts. If the checkbox is `[R]`, present the previous artifacts and the
+requested changes, then make only the necessary corrections. In both cases, do
+not restart the whole procedure.
 
-Condition は「インフラサービスの対応付け、デプロイアーキテクチャ、クラウドリソースが必要な場合」である。
-インフラ変更がなく、インフラが定義済みの場合は、成果物を作らず対象 Unit の checkbox を `[S]` にして注記に skip 理由を書き、`STAGE_SKIPPED` イベントを `audit/audit.md` に追記して `amadeus` へ戻る。
+The Condition is: infrastructure service mapping, deployment architecture, or
+cloud resources are needed. For no infrastructure change with infrastructure
+already defined, create no artifacts. Set the target Unit checkbox to `[S]`,
+write the skip reason in the note, append a `STAGE_SKIPPED` event to
+`audit/audit.md`, and return to `amadeus`.
 
-少なくとも次を読む。
+Read at least the following inputs:
 
-- `construction/<unit-id>-<slug>/nfr-design/` の 5 成果物（NFR Design 実行時）
-- `inception/application-design/components.md` と `services.md`（Application Design 実行時）
-- `construction/<unit-id>-<slug>/functional-design/business-logic-model.md`（Functional Design 実行時）
+- The 5 artifacts under `construction/<unit-id>-<slug>/nfr-design/` (when NFR
+  Design was executed)
+- `inception/application-design/components.md` and `services.md` (when
+  Application Design was executed)
+- `construction/<unit-id>-<slug>/functional-design/business-logic-model.md`
+  (when Functional Design was executed)
 - `aidlc-state.md`
 
-供給ステージを実行しなかった入力は、縮退時の入力代替に従い、`inception/requirements-analysis/requirements.md`、対象リポジトリの既存デプロイ設定（CI 設定、IaC 定義）、`aidlc/spaces/<space>/codekb/<repo>/` の成果物を材料にし、使った代替を `deployment-architecture.md` に記録する。
+For inputs from stages that were not executed, follow the fallback input rule:
+use `inception/requirements-analysis/requirements.md`, the target
+repository's existing deployment configuration (CI configuration, IaC
+definitions), and the artifacts under `aidlc/spaces/<space>/codekb/<repo>/` as
+material, and record the fallback inputs used in
+`deployment-architecture.md`.
 
-## 質問
+## Questions
 
-Construction では質問を例外扱いにする。
-前段の成果物が扱わなかった本物の欠落を検出した場合だけ、`amadeus-grilling` のプロトコルで一問ずつ確認する。
-質問を行った場合は `construction/<unit-id>-<slug>/infrastructure-design/infrastructure-design-questions.md` に記録する。
+Treat questions during Construction as exceptional.
 
-## テンプレート
+Ask only when you detect a real gap that earlier artifacts did not cover. Use
+the `amadeus-grilling` protocol and ask one question at a time.
 
-優先順位は次である。
+If you ask questions, record them in
+`construction/<unit-id>-<slug>/infrastructure-design/infrastructure-design-questions.md`.
+
+## Templates
+
+Use templates in this priority order:
 
 1. `aidlc/spaces/<space>/memory/templates/intents/construction/infrastructure-design/`
-2. この skill に同梱された `templates/construction/infrastructure-design/`
+2. `templates/construction/infrastructure-design/` bundled with this skill.
 
-分からない項目は空欄にせず、`未確認` と書く。
+Do not leave unknown items blank. Write `未確認`.
 
-## 成果物
+## Artifacts
 
-作成または更新するものは次だけである。
+Create or update only the following files:
 
 - `construction/<unit-id>-<slug>/infrastructure-design/deployment-architecture.md`
 - `construction/<unit-id>-<slug>/infrastructure-design/infrastructure-services.md`
 - `construction/<unit-id>-<slug>/infrastructure-design/monitoring-design.md`
 - `construction/<unit-id>-<slug>/infrastructure-design/cicd-pipeline.md`
-- `construction/<unit-id>-<slug>/infrastructure-design/shared-infrastructure.md`（共有インフラがある場合のみ）
+- `construction/<unit-id>-<slug>/infrastructure-design/shared-infrastructure.md`,
+  only when shared infrastructure exists
 - `construction/<unit-id>-<slug>/infrastructure-design/memory.md`
-- `aidlc-state.md`（対象 Unit の checkbox）と `audit/audit.md`（ゲートイベントの追記）
-- 質問を行った場合は `construction/<unit-id>-<slug>/infrastructure-design/infrastructure-design-questions.md`
+- `aidlc-state.md` for the target Unit checkbox and `audit/audit.md` for gate
+  events
+- `construction/<unit-id>-<slug>/infrastructure-design/infrastructure-design-questions.md`,
+  only if questions were asked
 
-## 手順
+## Procedure
 
-以下の手順は、checkbox が `[ ]` から開始する場合の流れである。
-`[?]` または `[R]` からの再開では、前提の再開規則に従い、ゲートの再提示または修正に必要な手順だけを実行する。
+The following procedure applies when starting from checkbox `[ ]`.
 
-1. checkbox が `[ ]` の場合だけ Condition を判定する。偽なら対象 Unit を `[S]` にして注記に skip 理由を書き、`audit/audit.md` に `STAGE_SKIPPED` を追記して終了する。`[-]`、`[?]`、`[R]` からの再開では再判定しない。
-2. 対象 Unit の `infrastructure-design` の checkbox を `[-]` にする。
-3. 入力を読み、本物の欠落だけを質問で確認する。供給ステージを実行しなかった入力は、前提の縮退時の入力代替に従い、使った代替を `deployment-architecture.md` に記録する。
-4. 成果物を作る。
-5. `construction/<unit-id>-<slug>/infrastructure-design/memory.md` に、実行中の解釈、逸脱、トレードオフ、未解決の問いを記録する。
-6. 対象 Unit の checkbox を `[?]` にし、`STAGE_AWAITING_APPROVAL` イベントを `audit/audit.md` に追記して、ゲートを提示する。
+When resuming from `[?]` or `[R]`, follow the prerequisite resume rules and run
+only the steps needed for gate presentation or correction.
 
-## ゲート
+1. Only when the checkbox is `[ ]`, evaluate the Condition. If it is false, set
+   the target Unit to `[S]`, write the skip reason in the note, append
+   `STAGE_SKIPPED` to `audit/audit.md`, and stop. Do not reevaluate when
+   resuming from `[-]`, `[?]`, or `[R]`.
+2. Set the target Unit's `infrastructure-design` checkbox to `[-]`.
+3. Read the inputs and confirm only real gaps with questions. For inputs from
+   stages that were not executed, follow the prerequisite's fallback input
+   rule, and record the fallback inputs used in `deployment-architecture.md`.
+4. Create the artifacts.
+5. Record interpretations, deviations, tradeoffs, and unresolved questions in
+   `construction/<unit-id>-<slug>/infrastructure-design/memory.md`.
+6. Set the target Unit checkbox to `[?]`, append `STAGE_AWAITING_APPROVAL` to
+   `audit/audit.md`, and present the gate.
 
-成果物の要約と確認先パスを示し、Approve と Request Changes の 2 択で承認を求める。
-Construction のゲートは 2 択に限り、スキップ済みステージの追加実行を選択肢にしない。
-Request Changes が 3 回続いたら Accept as-is を選択肢に加える。
-ゲートを提示したターンでは人間の回答を待つ。
+## Gate
 
-`aidlc-state.md` の `Construction Autonomy Mode` が `autonomous` で、対象 Bolt が walking skeleton ではない場合は、ゲートを提示せずに次へ進む。
-この場合の approval evidence は、Bolt PR の merge 後に `amadeus` 入口の Bolt 境界処理が `STAGE_COMPLETED`（Details に PR の URL）として記録する。
-失敗や本物の欠落を検出した場合は、autonomy に関わらず停止して人間に確認する。
+Show an artifact summary and the paths to review, then ask for approval with
+exactly two options: Approve or Request Changes.
 
-承認されたら対象 Unit の checkbox を `[x]` にし、`GATE_APPROVED`（人間の回答をそのまま記録）と `STAGE_COMPLETED` を `audit/audit.md` に追記する。
-差し戻されたら対象 Unit の checkbox を `[R]` にし、`GATE_REJECTED`（差し戻し理由をそのまま記録）と `STAGE_REVISING` を追記する。
-Accept as-is が選ばれた場合は、対象 Unit の checkbox を `[x]` にし、`GATE_APPROVED`（Accept as-is である旨を含めて記録）と `STAGE_COMPLETED` を追記し、この判断を `construction/decisions.md` に記録する。
+Construction gates are limited to those two options. Do not offer additional
+execution for skipped stages as a gate option.
 
-## 禁止事項
+If Request Changes happens three times in a row, add Accept as-is as an
+option.
 
-- デプロイを実行しない。実行は人間に委ねる。
-- 実装とテストコードを作らない。
-- 承認を待たずに `completed` を記録しない。
+When presenting a gate, wait for the human response in that turn.
 
-## 次の skill
+If `aidlc-state.md` has `Construction Autonomy Mode: autonomous` and the target
+Bolt is not a walking skeleton, do not present the gate. Continue to the next
+stage. In that case, approval evidence is recorded after the Bolt PR is
+merged: the `amadeus` entrypoint's Bolt boundary processing records
+`STAGE_COMPLETED` with the PR URL in Details. If you detect a failure or real
+gap, stop and ask the human regardless of autonomy mode.
 
-- 続きを進める場合: `amadeus`（入口が Bolt 内の次ステージを解決する）
-- 成果物の構造検証: `amadeus-validator`
+When approved, set the target Unit checkbox to `[x]`, append `GATE_APPROVED`
+with the human response recorded as-is, and append `STAGE_COMPLETED` to
+`audit/audit.md`. When changes are requested, set the target Unit checkbox to
+`[R]`, append `GATE_REJECTED` with the requested changes recorded as-is, and
+append `STAGE_REVISING`. If Accept as-is is selected, set the target Unit
+checkbox to `[x]`, append `GATE_APPROVED` noting Accept as-is, append
+`STAGE_COMPLETED`, and record the decision in `construction/decisions.md`.
+
+## Prohibitions
+
+- Do not execute the deployment. Leave execution to a human.
+- Do not create implementation or test code.
+- Do not record `completed` without waiting for approval.
+
+## Next Skill
+
+- Continue the Bolt: `amadeus`, which resolves the next stage inside the Bolt.
+- Validate artifact structure: `amadeus-validator`.

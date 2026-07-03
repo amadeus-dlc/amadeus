@@ -1,98 +1,135 @@
 ---
 name: amadeus-construction-build-and-test
 description: >-
-  Amadeus Construction の内部 skill。Stage 3.6 Build and Test だけを Bolt ごとに 1 回実行する。
-  Bolt 内の全 Unit の Code Generation 完了後に、ビルドとテストを実行して手順と結果を
-  construction/bolts/<bolt-id>-<slug>/ に記録する場面では必ず使う。失敗時は autonomy に
-  関わらず停止して人間に確認する。実装の修正と Bolt PR の作成は行わない。
+  Internal Amadeus Construction skill. Use only for Stage 3.6 Build and Test,
+  once per Bolt. Use when all Units in the Bolt have completed Code
+  Generation and the build and tests must run, with the procedure and
+  results recorded under construction/bolts/<bolt-id>-<slug>/. On failure,
+  halt and ask the human regardless of autonomy mode. Do not fix the
+  implementation or create the Bolt PR.
 ---
 
 # amadeus-construction-build-and-test
 
-## 目的
+## Purpose
 
-Construction の Stage 3.6 Build and Test だけを、対象 Bolt ごとに 1 回進める。
+Advance only Construction Stage 3.6 Build and Test, once for the target Bolt.
 
-この skill は `amadeus` 入口から Bolt 実行の中で呼び出される内部 skill である。
+This is an internal skill called from the `amadeus` entrypoint while a Bolt is
+being executed.
 
-Bolt 全体のビルドとテストを実行し、手順と結果を記録する。
+Run the build and tests for the whole Bolt, and record the procedure and
+results.
 
-## 前提
+## Prerequisites
 
-対象 record の `aidlc-state.md` で、Stage Progress の `build-and-test` が実行対象であり、対象 Bolt が Project Information の `Bolt Refs` に含まれ、audit に `BOLT_STARTED` はあるが `BOLT_COMPLETED` がまだないことを前提にする。
-対象 Bolt に束ねた全 Unit の CONSTRUCTION PHASE の `Per unit: <unit-id>` ブロックにある `code-generation` の checkbox が `[x]` であることを確認する。
-未完了の Unit があれば停止し、`amadeus` へ戻る。
+Assume that in the target record's `aidlc-state.md`, `build-and-test` is an
+executable Stage Progress item, the target Bolt is included in Project
+Information's `Bolt Refs`, and the audit has `BOLT_STARTED` but not yet
+`BOLT_COMPLETED`.
 
-テストの量は `aidlc-state.md` の `Depth` のテスト戦略に従う。
-Minimal は要求 1 件につきテスト 1 件と、コンポーネントごとの happy-path を下限にする。
-Standard はコンポーネント境界を検証し、Comprehensive は網羅的に検証する。
-workshop はテスト戦略だけを Minimal に上書きする。
+Confirm that the `code-generation` checkbox in the CONSTRUCTION PHASE
+`Per unit: <unit-id>` block is `[x]` for every Unit bundled into the target
+Bolt. If any Unit is incomplete, stop and return to `amadeus`.
 
-少なくとも次を読む。
+The amount of testing follows the test strategy in `aidlc-state.md`'s
+`Depth`. Minimal sets the floor at one test per requirement plus a happy-path
+test per component. Standard verifies component boundaries, and
+Comprehensive verifies exhaustively. workshop overrides only the test
+strategy to Minimal.
 
-- 対象 Bolt の全 Unit の `construction/<unit-id>-<slug>/code-generation/code-generation-plan.md` と `code-summary.md`
-- `inception/delivery-planning/bolt-plan.md`（対象 Bolt の Definition of Done。Delivery Planning を実行しなかった場合は暗黙 Bolt として Intent の成功条件を使う）
+Read at least the following:
+
+- `construction/<unit-id>-<slug>/code-generation/code-generation-plan.md` and
+  `code-summary.md` for every Unit in the target Bolt
+- `inception/delivery-planning/bolt-plan.md` (the target Bolt's Definition of
+  Done; if Delivery Planning was not executed, use the Intent's success
+  criteria as the implicit Bolt)
 - `aidlc-state.md`
 
-## テンプレート
+## Templates
 
-優先順位は次である。
+Use templates in this priority order:
 
 1. `aidlc/spaces/<space>/memory/templates/intents/construction/build-and-test/`
-2. この skill に同梱された `templates/construction/build-and-test/`
+2. `templates/construction/build-and-test/` bundled with this skill.
 
-分からない項目は空欄にせず、`未確認` と書く。
-実行しなかったテスト種別の成果物は作らない。
+Do not leave unknown items blank. Write `未確認`.
 
-## 成果物
+Do not create artifacts for test types that were not run.
 
-作成または更新するものは次だけである。
+## Artifacts
 
-`construction/bolts/<bolt-id>-<slug>/` に置くもの:
+Create or update only the following files:
 
-- `build-instructions.md`（ビルド手順）
-- `unit-test-instructions.md`（ユニットテスト手順）
-- `integration-test-instructions.md`（統合テストを実行した場合）
-- `performance-test-instructions.md`（性能テストを実行した場合）
-- `security-test-instructions.md`（セキュリティテストを実行した場合）
-- `build-and-test-summary.md`（ビルドとテストの要約）
-- `build-test-results.md`（テスト実行結果。実行したコマンドと結果を含める）
+Under `construction/bolts/<bolt-id>-<slug>/`:
+
+- `build-instructions.md` (build procedure)
+- `unit-test-instructions.md` (unit test procedure)
+- `integration-test-instructions.md` (when integration tests were run)
+- `performance-test-instructions.md` (when performance tests were run)
+- `security-test-instructions.md` (when security tests were run)
+- `build-and-test-summary.md` (build and test summary)
+- `build-test-results.md` (test execution results; include the commands run
+  and their results)
 - `memory.md`
 
-record 直下で更新するもの:
+Updated directly under the record:
 
-- `aidlc-state.md`（`build-and-test` の checkbox。全 Bolt 完了後に更新する）と `audit/audit.md`（Bolt イベントの記録。Bolt ディレクトリには置かない）
+- `aidlc-state.md` (the `build-and-test` checkbox; update after all Bolts
+  complete) and `audit/audit.md` (Bolt event records; do not place under the
+  Bolt directory)
 
-## 手順
+## Procedure
 
-以下の手順は、対象 Bolt で最初に実行する場合の流れである。
-再実行では、失敗の原因に関係する手順だけをやり直す。
+The following procedure is the flow for the first execution on the target
+Bolt. On a re-run, redo only the steps related to the cause of the failure.
 
-1. 対象 Bolt の全 Unit の Code Generation の checkbox が `[x]` であることを確認する。未完了なら停止し、`amadeus` へ戻る。
-2. Bolt の worktree でビルドを実行し、`build-instructions.md` に手順を記録する。
-3. テスト戦略に従いテストを実行し、実行した種別ごとの手順と `build-test-results.md` を記録する。
-4. `build-and-test-summary.md` に、Definition of Done に対する充足を記録する。
-5. `memory.md` に、実行中の解釈、逸脱、トレードオフ、未解決の問いを記録する。
-6. すべて成功した場合は、`amadeus` 入口へ戻る。Bolt PR の作成、`BOLT_COMPLETED` イベントの記録、Bolt の完了確定は入口の Bolt 境界処理が行う。
+1. Confirm that the Code Generation checkbox is `[x]` for every Unit in the
+   target Bolt. If any is incomplete, stop and return to `amadeus`.
+2. Run the build in the Bolt's worktree, and record the procedure in
+   `build-instructions.md`.
+3. Run tests according to the test strategy, and record the procedure for
+   each type run along with `build-test-results.md`.
+4. Record in `build-and-test-summary.md` how the Definition of Done is
+   satisfied.
+5. Record interpretations, deviations, tradeoffs, and unresolved questions
+   made during execution in `memory.md`.
+6. When everything succeeds, return to the `amadeus` entrypoint. Creating the
+   Bolt PR, recording the `BOLT_COMPLETED` event, and finalizing the Bolt's
+   completion are done by the entrypoint's Bolt boundary processing.
 
-ビルドまたはテストが失敗した場合は、autonomy に関わらず停止し、失敗内容を `build-test-results.md` に記録して人間に確認する（halt-and-ask）。
-失敗の修正は、人間の指示を受けて対象 Unit の Code Generation の修正として行う。
+If the build or tests fail, stop regardless of autonomy mode, record the
+failure details in `build-test-results.md`, and confirm with the human
+(halt-and-ask).
 
-## ゲート
+Fix the failure, under the human's instruction, as a correction to the
+target Unit's Code Generation.
 
-このステージの完了確認は、Bolt PR と人間 merge で行う。
-会話内のステージゲートは提示せず、手順 6 で `amadeus` 入口へ戻る。
-`build-and-test` の checkbox は、全 Bolt の完了後に `[x]` にし、`STAGE_COMPLETED`（Details に最後の Bolt PR の URL）を `audit/audit.md` に追記する。
+## Gate
 
-## 禁止事項
+Confirm this stage's completion via the Bolt PR and the human merge.
 
-- Code Generation 未完了の Unit を含む Bolt に対して実行しない。
-- 失敗を無視して先へ進まない。失敗時は必ず停止して人間に確認する。
-- テスト結果を要約だけにしない。実行したコマンドと結果を `build-test-results.md` に残す。
-- 実装の修正をこの skill で行わない。修正は Code Generation の責務である。
-- Bolt PR の作成と merge をこの skill で行わない。
+Do not present a conversational stage gate; return to the `amadeus`
+entrypoint in step 6.
 
-## 次の skill
+Set the `build-and-test` checkbox to `[x]` after all Bolts complete, and
+append `STAGE_COMPLETED` (with the last Bolt PR's URL in Details) to
+`audit/audit.md`.
 
-- 続きを進める場合: `amadeus`（入口が Bolt 境界処理と次の Bolt を解決する）
-- 成果物の構造検証: `amadeus-validator`
+## Prohibitions
+
+- Do not run for a Bolt that includes a Unit with incomplete Code Generation.
+- Do not ignore a failure and proceed. On failure, always stop and confirm
+  with the human.
+- Do not leave test results as a summary only. Keep the commands run and
+  their results in `build-test-results.md`.
+- Do not fix the implementation in this skill. Fixing is Code Generation's
+  responsibility.
+- Do not create or merge the Bolt PR in this skill.
+
+## Next Skill
+
+- Continue: `amadeus` (the entrypoint resolves Bolt boundary processing and
+  the next Bolt).
+- Validate artifact structure: `amadeus-validator`.
