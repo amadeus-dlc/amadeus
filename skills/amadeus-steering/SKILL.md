@@ -1,132 +1,152 @@
 ---
 name: amadeus-steering
 description: >-
-  Amadeus workspace の Space（aidlc/spaces/<space>/）を greenfield または brownfield で初期化、点検、補修する。`aidlc/` がない新規プロジェクト、
-  既存プロジェクトに Amadeus を載せる場面、Intent 作成前に memory、knowledge、glossary、intents 索引の土台を揃えたい場面では必ず使う。
-  個別 Intent のライフサイクル（Ideation、Inception、Construction）を進めるための skill ではない。
+  Initialize, inspect, or repair the Amadeus workspace Space
+  (`aidlc/spaces/<space>/`) in greenfield or brownfield mode. Use when there is
+  a new project with no `aidlc/`, when adding Amadeus to an existing project,
+  or when the memory, knowledge, glossary, and intents index foundation must
+  be established before creating an Intent. Do not use this to advance an
+  individual Intent's lifecycle (Ideation, Inception, Construction).
 ---
 
 # amadeus-steering
 
-## 目的
+## Purpose
 
-Amadeus DLC の Space を作る。
+Create the Amadeus DLC Space.
 
-Space は `aidlc/spaces/<space>/` であり、複数 Intent で共有する方法（`memory/`）、ドメイン知識（`knowledge/`）、コードベース知識（`codekb/`）、Intent の記録（`intents/`）を持つ。
-既定の Space 名は `default` である。
-個別 Intent の要求、ユースケース、Unit、Bolt、Task は扱わない。
+The Space is `aidlc/spaces/<space>/`, holding a way shared across Intents
+(`memory/`), domain knowledge (`knowledge/`), codebase knowledge (`codekb/`),
+and Intent records (`intents/`). The default Space name is `default`. Do not
+handle an individual Intent's requirements, use cases, Units, Bolts, or Tasks.
 
-チームの働き方は `memory/`（`org.md`、`team.md`、`project.md`）に置く。
-ドメイン知識（用語、アクター、外部システム、背景、Domain Map、Context Map）は `knowledge/` に置く。
+Place the team's ways of working in `memory/` (`org.md`, `team.md`,
+`project.md`). Place domain knowledge (terminology, actors, external systems,
+background, Domain Map, Context Map) in `knowledge/`.
 
-Domain Map と Context Map は、Inception と Construction の承認済み stage 成果物から更新する共有成果物である。
-この skill では、空の Domain Map と Context Map を作る。
-ただし、Subdomain、Bounded Context、コンテキスト間依存、詳細な Domain Model、契約は作らない。
+The Domain Map and Context Map are shared artifacts updated from approved
+stage artifacts in Inception and Construction. This skill creates only an
+empty Domain Map and Context Map. Do not create Subdomains, Bounded Contexts,
+inter-context dependencies, a detailed Domain Model, or contracts.
 
-## 入力
+## Inputs
 
-- 検証対象の作業ディレクトリ。
-- greenfield か brownfield か。
-  - greenfield: `aidlc/` が存在しない、または Amadeus 成果物を新規に作る。
-  - brownfield: `aidlc/` または既存の要求、設計、README、業務資料がある。
-- 実行モード。指定がなければ `guided` にする。
-- 分かっている場合は、プロダクト目的、主要アクター、外部システム、既知の用語、既知の制約。
+- The working directory to inspect.
+- Whether it is greenfield or brownfield.
+  - greenfield: `aidlc/` does not exist, or Amadeus artifacts are created from
+    scratch.
+  - brownfield: `aidlc/`, or existing requirements, design, README, or
+    business documents, exist.
+- The execution mode. Default to `guided` if not specified.
+- The product purpose, key actors, external systems, known terminology, and
+  known constraints, if known.
 
-不明な入力は、未確認として成果物に書く。
-推測で確定済みにしない。
+Write unknown inputs into artifacts as 未確認. Do not treat a guess as
+confirmed.
 
-Amadeus 自身を対象 workspace にする場合も brownfield として扱う。
-自己開発専用 mode は作らず、既存資料、既存 `aidlc/`、GitHub Issue、docs、validator 結果、example 検証、CI 結果を参照元にして Space を点検または補修する。
+Treat Amadeus itself as brownfield when it is the target workspace. Do not
+create a self-development-only mode; instead inspect or repair the Space
+using existing materials, the existing `aidlc/`, GitHub Issues, docs,
+validator results, example verification, and CI results as reference
+sources.
 
-## 未確認の書き方
+## How to Write 未確認
 
-空欄は作らない。
-分からない値は `未確認` と書き、状態または本文に確認すべき問いを残す。
+Do not leave blanks. Write an unknown value as `未確認`, and leave the
+question that needs confirmation in the state or the body text.
 
-ただし、存在自体が未確認のものは、識別子を推測して作らない。
+However, do not guess an identifier and create an entry for something whose
+existence itself is unconfirmed.
 
-- 目的や主要アクターは、Space の入口として最低1行の `未確認` 行を置いてよい。
-- 外部システム、Intent は、存在が未確認なら行を作らず、表の下に未確認であることを書く。
+- For purpose or key actors, it is acceptable to place at least one `未確認`
+  line as an entry point for the Space.
+- For external systems and Intents, if existence is unconfirmed, do not
+  create a row; instead write below the table that it is unconfirmed.
 
-この分け方により、必要な入口は残しつつ、存在するか分からない外部境界や Intent を作ったことにしない。
+This distinction keeps the necessary entry points while not treating an
+external boundary or Intent of unknown existence as something that was
+created.
 
-## テンプレート
+## Templates
 
-成果物を新規作成する場合は、テンプレートを使う。
+Use a template when creating an artifact for the first time.
 
-優先順位は次である。
+Priority order:
 
 1. `aidlc/spaces/<space>/memory/templates/space/`
-2. この skill に同梱された `templates/space/`
+2. `templates/space/` bundled with this skill.
 
-`memory/templates/` は、プロジェクト固有の上書きとして扱う。
-存在しない場合は、`templates/space/` の標準テンプレートを使う。
-どちらもない場合は、作成前にテンプレート不足として止める。
+Treat `memory/templates/` as a project-specific override. If it does not
+exist, use the standard templates in `templates/space/`. If neither exists,
+stop before creation, treating it as a missing template.
 
-テンプレートの `<...>` は、確認済みの値または `未確認` に置き換える。
-存在自体が未確認の外部システム、Intent は、推測で行を作らない。
+Replace a template's `<...>` placeholder with a confirmed value or `未確認`.
+Do not guess a row for an external system or Intent whose existence itself is
+unconfirmed.
 
-## 実行モード
+## Execution Modes
 
 ### `guided`
 
-既定モード。
-作成前に、必要最低限の質問をして Space の初期値を埋める。
+The default mode. Before creation, ask the minimum necessary questions and
+fill in the Space's initial values.
 
-質問は `/amadeus-grilling` を使って行う。
-複数の論点が残っている場合でも、一度に並べず一問ずつ質問する。
-質問数の目安は5問にする。
-目安を超えても、Space 作成に必要な判断が未確定であれば質問を続ける。
-目安を超えて質問を続ける場合は、追加確認が必要な理由を短く示す。
-質問は、成果物を作るために必要なものだけにする。
-既存資料や会話から分かることは質問しない。
+Ask questions using `/amadeus-grilling`. Even when multiple open points
+remain, ask one question at a time rather than listing them all at once.
+Target about 5 questions. Continue asking beyond that target if a judgment
+necessary for Space creation is still undecided. When continuing beyond the
+target, briefly state why further confirmation is needed. Ask only questions
+necessary to create the artifacts. Do not ask about anything already known
+from existing materials or the conversation.
 
-greenfield で最初に聞く候補は次である。
+Candidate first questions for greenfield:
 
-- このプロダクトで達成したい主目的は何か。
-- 主な利用者または関係者は誰か。
-- 外部システム連携はあるか。
-- 守るべき制約や禁止事項はあるか。
-- 主要な業務領域を1から3個で言うと何か。
+- What is the main purpose this product should achieve?
+- Who are the main users or stakeholders?
+- Are there external system integrations?
+- Are there constraints or prohibitions that must be observed?
+- What are the 1 to 3 main business domains, stated briefly?
 
-質問した場合は、その場で成果物を作らず、ユーザーの回答を待つ。
-回答を受け取ってから `aidlc/` を作る。
-ユーザーが回答せずに続行するよう明示した場合だけ、未回答項目を `未確認` として作る。
-その場合は、未確認事項に確認すべき問いを残す。
+If you asked questions, do not create artifacts on the spot; wait for the
+user's response. Create `aidlc/` only after receiving the response. Create an
+unanswered item as `未確認` only when the user explicitly directs you to
+continue without answering. In that case, leave the question that needs
+confirmation among the unconfirmed items.
 
 ### `discovery`
 
-brownfield 向けのモード。
-既存の README、設計資料、業務資料、`aidlc/` から draft できる範囲を抽出する。
-その後、矛盾または不足だけを質問する。
+The mode for brownfield. Extract the range that can be drafted from the
+existing README, design documents, business documents, and `aidlc/`. Then ask
+questions only about contradictions or gaps.
 
-質問数の目安は5問にする。
-目安を超えても、Space 作成に必要な判断が未確定であれば質問を続ける。
-目安を超えて質問を続ける場合は、追加確認が必要な理由を短く示す。
-既存資料の根拠が弱い内容は、確定済みにせず `未確認` として書く。
+Target about 5 questions. Continue asking beyond that target if a judgment
+necessary for Space creation is still undecided. When continuing beyond the
+target, briefly state why further confirmation is needed. Write content with
+weak grounding in existing materials as `未確認` rather than treating it as
+confirmed.
 
-質問が必要な場合は、次を提示して回答を待つ。
+When questions are needed, present the following and wait for a response:
 
-- 既存資料から draft できた項目。
-- draft の根拠にしたファイル。
-- 矛盾または不足している項目。
-- 目安5問の質問。
+- Items that could be drafted from existing materials.
+- The files used as the basis for the draft.
+- Items that are contradictory or missing.
+- About 5 questions.
 
-質問した場合は、その場で成果物を追加しない。
-回答を受け取ってから、不足している Space 成果物だけを追加する。
+If you asked questions, do not add artifacts on the spot. Add only the
+missing Space artifacts after receiving the response.
 
 ### `scaffold-only`
 
-ユーザーが明示した場合だけ使う。
-質問せず、最小の Space 成果物を作る。
+Use only when the user explicitly directs it. Create the minimal Space
+artifacts without asking questions.
 
-空欄は作らない。
-不明な値には `未確認` と書く。
-未確認事項には、後で人間が答えるべき問いを残す。
+Do not leave blanks. Write `未確認` for an unknown value. Leave a question
+that a human should answer later among the unconfirmed items.
 
-## 成果物
+## Artifacts
 
-greenfield では、少なくとも次を作る（`<space>` は既定で `default`）。
+For greenfield, create at least the following (`<space>` defaults to
+`default`):
 
 - `aidlc/spaces/<space>/memory/org.md`
 - `aidlc/spaces/<space>/memory/team.md`
@@ -137,49 +157,67 @@ greenfield では、少なくとも次を作る（`<space>` は既定で `defaul
 - `aidlc/spaces/<space>/knowledge/background.md`
 - `aidlc/spaces/<space>/knowledge/domain-map.md`
 - `aidlc/spaces/<space>/knowledge/context-map.md`
-- `aidlc/spaces/<space>/intents/intents.json`（空の registry `[]`）
+- `aidlc/spaces/<space>/intents/intents.json` (an empty registry `[]`)
 - `aidlc/spaces/<space>/intents/intents.md`
 
-`aidlc/active-space` と `intents/active-intent` はカーソルであり、この skill では作らない。
-record の scaffold は Initialization（`amadeus` 入口）が作る。
+`aidlc/active-space` and `intents/active-intent` are cursors; this skill does
+not create them. Record scaffolding is created by Initialization (the
+`amadeus` entrypoint).
 
-brownfield では、既存成果物を読み、欠けている成果物だけを追加する。
-既存の本文、判断、用語、識別子を上書きしない。
+For brownfield, read existing artifacts and add only the missing ones. Do not
+overwrite existing body text, decisions, terminology, or identifiers.
 
-## 自己開発 bootstrap と再生成比較
+## Self-Development Bootstrap and Regeneration Comparison
 
-Amadeus 自身を brownfield として扱う場合は、実行モードに関係なく、初回 `aidlc/` が bootstrap 用になり得ることを前提にする。
+When treating Amadeus itself as brownfield, assume, regardless of execution
+mode, that the first `aidlc/` may serve as a bootstrap.
 
-昇格済み skill で Space を作り直す場合は、作り直し前の Space を `.aidlc-snapshots/previous/` に退避し、退避版は git 管理外で直近1世代だけ保持する。
-再生成前に既存の `.aidlc-snapshots/previous/` がある場合は、古い退避版を削除してから現在の Space を退避する。
+When rebuilding the Space with a promoted skill, evacuate the pre-rebuild
+Space to `.aidlc-snapshots/previous/`; the evacuated copy stays outside git
+management and only the most recent generation is kept. If
+`.aidlc-snapshots/previous/` already exists before regeneration, delete the
+old evacuated copy before evacuating the current Space.
 
-退避版そのものを永続的な成果物にしない。
-差分確認の採用判断だけを、採用対象 Space の既存成果物に要約する。
-自己開発 cycle 全体の判断なら `knowledge/background.md`、特定 Intent の再生成なら対象 phase の `decisions.md` または `decisions/**` に記録する。
+Do not make the evacuated copy itself a permanent artifact. Summarize only
+the adoption decision from the diff review into the existing artifacts of the
+adopted Space. Record it in `knowledge/background.md` for a decision about
+the whole self-development cycle, or in the target phase's `decisions.md` or
+`decisions/**` for a regeneration of a specific Intent.
 
-差分確認の要約には、比較元、比較先、比較理由、主な差分、採用判断、必要な未確認事項を含める。
+The diff review summary must include the comparison source, the comparison
+target, the reason for comparison, the main differences, the adoption
+decision, and any necessary unconfirmed items.
 
-## 手順
+## Procedure
 
-1. 作業ディレクトリを確認する。
-2. `aidlc/` と対象 Space の有無を確認する。Space は `aidlc/active-space`（なければ `default`）で解決する。
-3. 実行モードを決める。指定がなければ `guided` にする。
-4. brownfield または `discovery` の場合は、既存の README、設計資料、業務資料、`aidlc/` を読み、既存の参照元を尊重する。
-5. Amadeus 自身を対象 workspace にし、昇格済み skill で Space を作り直す場合は、再生成前に自己開発 bootstrap と再生成比較の手順を適用する。
-6. `guided` または `discovery` の場合は、足りない情報だけを目安5問で質問する。
-   質問した場合は、回答を待ってから次へ進む。
-7. `aidlc/spaces/<space>/` がなければ、`memory/`、`knowledge/`、`intents/` を作る。
-8. Space の必須成果物を作る。
-9. Domain Map と Context Map は、採用済み情報がない空の表として作る。
-10. 未確認の情報は `未確認` と書き、空欄にしない。
-11. Intent は作らない。個別 Intent が必要になったら `amadeus` へ渡す。
-12. 昇格済みの `amadeus-validator` が使える場合は、全体成果物だけを検証する。
+1. Confirm the working directory.
+2. Confirm whether `aidlc/` and the target Space exist. Resolve the Space
+   from `aidlc/active-space` (or `default` if absent).
+3. Decide the execution mode. Default to `guided` if not specified.
+4. For brownfield or `discovery`, read the existing README, design documents,
+   business documents, and `aidlc/`, and respect existing reference sources.
+5. When Amadeus itself is the target workspace and a promoted skill is
+   rebuilding the Space, apply the Self-Development Bootstrap and
+   Regeneration Comparison procedure before regenerating.
+6. For `guided` or `discovery`, ask about only the missing information,
+   targeting about 5 questions. If you asked questions, wait for the
+   response before proceeding.
+7. If `aidlc/spaces/<space>/` does not exist, create `memory/`, `knowledge/`,
+   and `intents/`.
+8. Create the Space's required artifacts.
+9. Create the Domain Map and Context Map as empty tables with no adopted
+   information.
+10. Write unconfirmed information as `未確認`; do not leave it blank.
+11. Do not create Intents. When an individual Intent becomes necessary, hand
+    off to `amadeus`.
+12. If the promoted `amadeus-validator` is available, validate only the
+    overall artifacts.
 
-## ファイル別の最低構造
+## Minimum Structure per File
 
 ### `memory/org.md`
 
-Amadeus DLC の組織既定を書く。
+Write the Amadeus DLC's organizational defaults.
 
 - `方針`
 - `禁止事項`
@@ -187,7 +225,7 @@ Amadeus DLC の組織既定を書く。
 
 ### `memory/team.md`
 
-チームの働き方を書く。org.md の既定を上書きする。
+Write the team's ways of working. This overrides org.md's defaults.
 
 - `方針`
 - `禁止事項`
@@ -195,9 +233,10 @@ Amadeus DLC の組織既定を書く。
 
 ### `memory/project.md`
 
-プロジェクト固有の判断材料を書く。team.md の内容を上書きする。
+Write project-specific decision material. This overrides the content of
+team.md.
 
-- `目的`（表列: `識別子`、`目的`、`期待価値`、`成功指標`、`状態`）
+- `目的` (table columns: `識別子`, `目的`, `期待価値`, `成功指標`, `状態`)
 - `コア能力`
 - `主要ユースケース`
 - `価値仮説`
@@ -212,7 +251,8 @@ Amadeus DLC の組織既定を書く。
 - `依存関係の整理`
 - `コード構成原則`
 
-プロダクトの能力、技術、構造は、網羅ではなく後続の判断に使うパターンとして書く。
+Write the product's capabilities, technology, and structure as patterns to
+use in later decisions, not as an exhaustive inventory.
 
 ### `knowledge/glossary.md`
 
@@ -220,16 +260,17 @@ Amadeus DLC の組織既定を書く。
 - `避ける語`
 - `禁止ワード`
 
-未確定語は確定用語に混ぜない。
-確定していない場合は、用語表に `未確認` として根拠を書く。
-避ける語または禁止ワードが確定していない場合は、`未確認` を避ける語または禁止ワードとして登録しない。
-その表はヘッダーだけにするか、表の下に「現時点ではなし。」と書く。
+Do not mix an unconfirmed term with confirmed terms. If it is not yet
+confirmed, write the grounds as `未確認` in the term table. If an avoided
+term or prohibited word is not yet confirmed, do not register `未確認` itself
+as an avoided term or prohibited word. Either leave that table as a header
+only, or write "現時点ではなし。" below the table.
 
 ### `knowledge/actors.md`
 
 - `一覧`
 
-表の列:
+Table columns:
 
 - `識別子`
 - `名前`
@@ -241,7 +282,7 @@ Amadeus DLC の組織既定を書く。
 
 - `一覧`
 
-表の列:
+Table columns:
 
 - `識別子`
 - `名前`
@@ -249,8 +290,8 @@ Amadeus DLC の組織既定を書く。
 - `接点`
 - `状態`
 
-外部システムがない場合も、`EXT001` を推測で作らない。
-一覧表は空にしてよい。
+Even when there are no external systems, do not guess and create `EXT001`.
+The list table may be left empty.
 
 ### `knowledge/background.md`
 
@@ -260,45 +301,51 @@ Amadeus DLC の組織既定を書く。
 
 ### `intents/intents.json`
 
-Intent registry である。
-初期化時は空の配列 `[]` にする。
-行の追加は Initialization（`amadeus` 入口）が行う。
+This is the Intent registry. Initialize it as an empty array `[]`.
+Initialization (the `amadeus` entrypoint) adds rows.
 
 ### `intents/intents.md`
 
-生成物である。
-先頭に生成マーカーを置き、同じ `intents/` 配下の `<dirName>.md` から `bun run .agents/skills/amadeus-validator/scripts/IndexGenerate.ts <workspace>` で再生成する。
+This is a generated file. Place a generation marker at the top, and
+regenerate it from the `<dirName>.md` files under the same `intents/`
+directory using
+`bun run .agents/skills/amadeus-validator/scripts/IndexGenerate.ts
+<workspace>`.
 
 - `一覧`
 - `依存関係`
 
-`一覧` の表の列:
+`一覧` table columns:
 
 - `識別子`
 - `概要`
 - `依存`
 - `詳細`
 
-`依存関係` の表の列:
+`依存関係` table columns:
 
 - `インテント`
 - `依存`
 - `理由`
 
-Intent がまだない場合は、表に行を作らない。
+If there are no Intents yet, do not create a row in the table.
 
-## 禁止事項
+## Prohibitions
 
-- 個別 Intent record ディレクトリを作らない。
-- `requirements.md`、`unit-of-work.md`、`bolt-plan.md` などの stage 成果物を作らない。
-- 未確認のドメイン語彙を確定語として追加しない。
-- brownfield の既存成果物を、根拠なく置き換えない。
-- 既存の識別子を採番し直さない。
-- Installer、配布方法、後方互換方針を決めない。
-- repo の開発用文書や開発用スクリプトを実行時参照として書かない。
-- 自己開発専用の steering mode や専用成果物を作らない。
+- Do not create an individual Intent record directory.
+- Do not create stage artifacts such as `requirements.md`, `unit-of-work.md`,
+  or `bolt-plan.md`.
+- Do not add unconfirmed domain vocabulary as a confirmed term.
+- Do not replace an existing brownfield artifact without grounds.
+- Do not renumber an existing identifier.
+- Do not decide the installer, distribution method, or backward-compatibility
+  policy.
+- Do not write the repo's development documents or development scripts as
+  runtime references.
+- Do not create a self-development-only steering mode or dedicated
+  artifacts.
 
-## 次の skill
+## Next Skill
 
-- 新しい Intent を始める場合、または既存 Intent を進める場合: `amadeus`
-- 成果物の構造を検証する場合: `amadeus-validator`
+- To start a new Intent, or to advance an existing Intent: `amadeus`
+- To validate artifact structure: `amadeus-validator`

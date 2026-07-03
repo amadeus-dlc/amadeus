@@ -1,57 +1,90 @@
 ---
 name: amadeus
 description: >-
-  Amadeus の v2 ライフサイクルの単一公開入口。新しい作業テーマの開始、既存 Intent の継続や再開、
-  次ステージの実行、Intent 化の判断が必要な場面では必ず使う。Intake（合流既定、受理条件の確認、scope 推定、
-  Birth 提案）、Initialization（0.1〜0.3）、aidlc-state.md に基づく次ステージの解決だけを行い、
-  ステージ成果物の作成はステージ内部 skill に委譲する。grilling、domain-modeling、event-storming、steering、validator の代替ではない。
+  The single public entrypoint for the Amadeus v2 lifecycle. Use it whenever
+  starting a new work theme, continuing or resuming an existing Intent,
+  executing the next stage, or deciding whether to create an Intent. It
+  performs only Intake (merge-by-default, acceptance-condition confirmation,
+  scope estimation, Birth proposal), Initialization (0.1-0.3), and next-stage
+  resolution based on aidlc-state.md, delegating stage-artifact creation to
+  stage-internal skills. It is not a substitute for grilling, domain-modeling,
+  event-storming, steering, or validator.
 ---
 
 # amadeus
 
-## 目的
+## Purpose
 
-Amadeus ライフサイクルの単一公開入口として、Intake と次ステージの解決を行う。
+As the single public entrypoint for the Amadeus lifecycle, perform Intake and
+next-stage resolution.
 
-ユーザーは phase やステージを選ばない。
-入力から、既存 Intent の継続か、新しい Intent の Birth 提案かを判定し、対象 record の `aidlc-state.md` から次に実行するステージを解決して、対応するステージ内部 skill を呼び出す。
+The user does not choose a phase or stage.
+From the input, determine whether it continues an existing Intent or proposes
+the Birth of a new Intent, resolve the next stage to execute from the target
+record's `aidlc-state.md`, and call the corresponding stage-internal skill.
 
-この skill 自身はステージ成果物を作らない。
+This skill itself does not create stage artifacts.
 
-## 前提
+## Prerequisites
 
-`aidlc/spaces/<space>/` の Space が存在することを前提にする。
-Space は `aidlc/active-space`（なければ `default`）で解決する。
-Space がない場合は停止し、先に `amadeus-steering` を使うよう案内する。
+Assume that a Space exists at `aidlc/spaces/<space>/`.
+Resolve the Space from `aidlc/active-space` (or `default` if it does not
+exist).
+If no Space exists, stop and direct the user to use `amadeus-steering` first.
 
-少なくとも次を読む。
+Read at least the following:
 
-- `aidlc/spaces/<space>/intents/active-intent`（存在する場合。現在作業中の record の dirName）
-- `aidlc/spaces/<space>/intents/intents.json`（registry）
+- `aidlc/spaces/<space>/intents/active-intent` (if it exists; the dirName of
+  the record currently being worked on)
+- `aidlc/spaces/<space>/intents/intents.json` (registry)
 - `aidlc/spaces/<space>/intents/intents.md`
-- 対象になり得る `aidlc/spaces/<space>/intents/<dirName>.md` と `<dirName>/aidlc-state.md`
-- `aidlc/spaces/<space>/memory/`（org.md、team.md、project.md）
+- The possible target `aidlc/spaces/<space>/intents/<dirName>.md` and
+  `<dirName>/aidlc-state.md`
+- `aidlc/spaces/<space>/memory/` (org.md, team.md, project.md)
 
 ## Intake
 
-入力を受けたら、次の順で判定する。
+Upon receiving input, judge in the following order.
 
-1. **継続判定**。入力が `active-intent` の指す Intent、または既存 Intent の続き（ゲートへの回答、修正指示、同じ主題の追加作業）であれば、その Intent のルーティングへ進む。判定に迷う場合は継続とみなす。新規扱いにするのは、既存 Intent の主題と無関係な、明確に別個の作業を名指ししている場合だけである。
-2. **合流判定**。入力が既存 Intent のアウトカムに属する新しい作業であれば、新しい Intent を作らず、その Intent への合流を提案する。合流先は、対象 Intent に `ideation/scope-definition/intent-backlog.md` が存在する場合はスコープバックログへの追加、存在しない場合（scope が Scope Definition を実行しない、またはまだ実行していない）は Intent の要求成果物への追記にする。
-3. **受理条件の確認**。新しいアウトカムに見える入力は、次の 3 条件を確認する。①観測可能な成功基準を持つ（技術的な作業は、保存すべき振る舞いと観測可能な改善指標を持つ）、②独立して完了判断できる、③既存 Intent のアウトカムに属さない。満たさない場合は拒否せず、`amadeus-grilling` のプロトコルで一問ずつ確認し、成功基準を言語化できれば受理し、既存 Intent の成功条件の一部だと分かれば合流へ導く。
-4. **scope 推定**。入力の語から scope を推定する（後述）。
-5. **Birth 提案**。新しい Intent の作成を、推定した scope を明示した一問として人間に確認する。人間の明示的な承認なしに Intent を作らない。
+1. **Continuation Judgment**. If the input is the Intent pointed to by
+   `active-intent`, or continues an existing Intent (a gate response, a
+   correction instruction, or additional work on the same subject), proceed
+   to that Intent's routing. When judgment is uncertain, treat it as a
+   continuation. Treat it as new only when it names clearly separate work
+   unrelated to the existing Intent's subject.
+2. **Merge Judgment**. If the input is new work belonging to an existing
+   Intent's outcome, do not create a new Intent; propose merging it into that
+   Intent instead. The merge target is an addition to the scope backlog if
+   the target Intent has `ideation/scope-definition/intent-backlog.md`, or an
+   addition to the Intent's requirement artifacts if it does not (when the
+   scope does not execute Scope Definition, or has not executed it yet).
+3. **Acceptance Condition Confirmation**. For input that looks like a new
+   outcome, confirm the following three conditions: (1) it has an observable
+   success criterion (technical work has behavior to preserve and an
+   observable improvement metric), (2) its completion can be judged
+   independently, and (3) it does not belong to an existing Intent's outcome.
+   If it does not satisfy them, do not reject it; confirm one question at a
+   time using the `amadeus-grilling` protocol, accept it if a success
+   criterion can be articulated, and lead it to a merge if it turns out to be
+   part of an existing Intent's success condition.
+4. **Scope Estimation**. Estimate the scope from the words in the input
+   (described below).
+5. **Birth Proposal**. Confirm the creation of a new Intent with the human as
+   a single question that states the estimated scope explicitly. Do not
+   create an Intent without the human's explicit approval.
 
-Intake は Intent の規模を数値で判定しない。
-Unit 数や Bolt 数の見込みを受理の判定材料にしない。
-1 回の入力から作る Intent は最大 1 個であり、テーマ内の残りの作業はスコープバックログが受け皿になる。
+Intake does not judge Intent size numerically.
+Do not use projected Unit or Bolt counts as acceptance criteria.
+At most one Intent is created from a single input; the scope backlog receives
+the remaining work within the theme.
 
-## scope 推定
+## Scope Estimation
 
-次のキーワードを手掛かりに scope を推定する。
-推定は仮説であり、確定は必ず Birth 提案で人間が行う。
+Estimate the scope using the following keywords as clues.
+The estimate is a hypothesis; the human always makes the final decision at
+the Birth proposal.
 
-| Scope | 手掛かり |
+| Scope | Clues |
 |---|---|
 | bugfix | fix、bug、broken、バグ、不具合、修正したい |
 | refactor | refactor、clean up、simplify、リファクタリング、整理したい、簡素化 |
@@ -60,102 +93,212 @@ Unit 数や Bolt 数の見込みを受理の判定材料にしない。
 | infra | infrastructure、deploy、infra、インフラ、デプロイ |
 | mvp | mvp、minimum viable |
 | workshop | workshop、lab、training、ワークショップ、研修 |
-| enterprise | 手掛かりなし。人間が明示した場合だけ使う |
-| feature | 既定値。上記に当てはまらない入力、またはテーマを文章で説明した入力 |
+| enterprise | No clue; used only when the human states it explicitly |
+| feature | Default value. Input that does not match any of the above, or input that describes the theme in prose |
 
-英語キーワードは単語境界で照合し、部分文字列では発火させない（debug は bugfix の手掛かりにしない）。
-複数の scope に当てはまる場合や判断に迷う場合は `feature` を仮説にし、Birth 提案で選択肢を示す。
+Match English keywords at word boundaries; do not trigger on substrings (do
+not treat debug as a clue for bugfix).
+When input matches multiple scopes or judgment is uncertain, hypothesize
+`feature` and present the options at the Birth proposal.
 
-## Initialization（Birth）
+## Initialization (Birth)
 
-人間が Birth 提案を承認したら、Initialization phase（Stage 0.1〜0.3）を実行して Intent Record を作る。
-Initialization の 3 ステージは全 scope で実行し、承認ゲートを持たない。
+When the human approves the Birth proposal, execute the Initialization phase
+(Stage 0.1-0.3) to create the Intent Record.
+The three Initialization stages execute for every scope and have no approval
+gate.
 
 ### 0.1 Workspace Scaffold
 
-1. record の dirName を `<YYMMDD>-<label>` 形式で決める。日付は作業日のローカル日付の下 6 桁（YYMMDD）、label は小文字英数字とハイフンだけにする。同日同名は末尾に `-2`、`-3` の連番を付ける。
-2. `aidlc/spaces/<space>/intents/<dirName>/` を作り、配下に 5 つの phase ディレクトリ（`initialization/`、`ideation/`、`inception/`、`construction/`、`operation/`）とその stage サブディレクトリ、`verification/`、`audit/` を作る。
-3. Space に `knowledge/` がなければ作る。
-4. `audit/audit.md` を作り、`WORKFLOW_STARTED` と、0.1 の `STAGE_STARTED`、`WORKSPACE_SCAFFOLDED`、`STAGE_COMPLETED` を追記する。イベントの形式は [references/audit-events.md](references/audit-events.md) に従う。
+1. Decide the record's dirName in `<YYMMDD>-<label>` format. The date is the
+   last 6 digits (YYMMDD) of the local date of the work day; the label uses
+   only lowercase alphanumerics and hyphens. For the same date and name,
+   append a sequence suffix `-2`, `-3`, and so on.
+2. Create `aidlc/spaces/<space>/intents/<dirName>/`, and under it create the
+   5 phase directories (`initialization/`, `ideation/`, `inception/`,
+   `construction/`, `operation/`) and their stage subdirectories, plus
+   `verification/` and `audit/`.
+3. If the Space has no `knowledge/`, create it.
+4. Create `audit/audit.md`, and append `WORKFLOW_STARTED`, then 0.1's
+   `STAGE_STARTED`, `WORKSPACE_SCAFFOLDED`, and `STAGE_COMPLETED`. Follow
+   [references/audit-events.md](references/audit-events.md) for the event
+   format.
 
 ### 0.2 Workspace Detection
 
-1. 対象リポジトリを読み取り専用で走査し、greenfield / brownfield、言語、フレームワーク、ビルドシステムを判定する。
-2. `STAGE_STARTED`、`WORKSPACE_SCANNED`、`STAGE_COMPLETED` を audit に追記する。
+1. Scan the target repository read-only and judge greenfield / brownfield,
+   language, framework, and build system.
+2. Append `STAGE_STARTED`, `WORKSPACE_SCANNED`, and `STAGE_COMPLETED` to the
+   audit.
 
 ### 0.3 State Initialization
 
-1. `aidlc-state.md` を state template から生成する。template は [references/aidlc-v2/state-template.md](references/aidlc-v2/state-template.md) を使い、セクション構成と英語ラベルを変えない。
-2. Project Information（Project、Project Type、Scope、Start Date、State Version 7）、Scope Configuration（実行対象ステージ、Depth）、Workspace State（0.2 の判定結果）を埋める。
-3. Stage Progress を埋める。Initialization の 3 ステージは `[x]`、scope の実行対象は `[ ]`（`EXECUTE` 注記）、scope 外は `[S]`（`SKIP: out of <scope> scope` 注記）、Operation の 7 ステージは `[S]`（`SKIP: out of Amadeus scope` 注記）にする。scope とステージの対応は [references/stage-catalog.md](references/stage-catalog.md) に従う。brownfield では 2.1 を実行対象、greenfield では 2.1 を `[S]`（`SKIP: greenfield` 注記）にする。
-4. 最初の実行対象ステージを `[-]` にし、Phase Progress（`Initialization` は `Verified`、最初の実行対象ステージの phase は `Active`、実行対象ステージのない phase は `Skipped`、残りは `Pending`）と Current Status、Session Resume Point を埋める。`Construction Autonomy Mode` は `unset` にする。
-5. `STAGE_STARTED`、`WORKSPACE_INITIALISED`、`STAGE_COMPLETED` を audit に追記する。実行対象ステージのない phase には `PHASE_SKIPPED` を追記する。
-6. registry を更新する。uuid を UUIDv7 で採番し（`bun -e "console.log(Bun.randomUUIDv7())"`）、`intents.json` に `{uuid, slug, dirName, scope, repos, status}` の行を追加する。`status` は `in_progress` にする。
-7. Intent のモジュールファイル `<dirName>.md` をテンプレートから作る。モジュールファイルは `概要`、`依存`、`目標プロファイル` だけを持つ。分からない項目は空欄にせず `未確認` と書く。
-8. `intents/active-intent` に dirName を書く。
-9. `bun run .agents/skills/amadeus-validator/scripts/IndexGenerate.ts <workspace>` で `intents.md` を再生成する。
+1. Generate `aidlc-state.md` from the state template. Use
+   [references/aidlc-v2/state-template.md](references/aidlc-v2/state-template.md)
+   as the template, and do not change the section structure or English
+   labels.
+2. Fill in Project Information (Project, Project Type, Scope, Start Date,
+   State Version 7), Scope Configuration (executable stages, Depth), and
+   Workspace State (0.2's judgment results).
+3. Fill in Stage Progress. Set the three Initialization stages to `[x]`; set
+   stages executable under the scope to `[ ]` (with an `EXECUTE` note); set
+   stages outside the scope to `[S]` (with a `SKIP: out of <scope> scope`
+   note); set the 7 Operation stages to `[S]` (with a `SKIP: out of Amadeus
+   scope` note). Follow [references/stage-catalog.md](references/stage-catalog.md)
+   for the mapping between scope and stages. For brownfield, make 2.1
+   executable; for greenfield, set 2.1 to `[S]` (with a `SKIP: greenfield`
+   note).
+4. Set the first executable stage to `[-]`, and fill in Phase Progress
+   (`Initialization` is `Verified`; the phase of the first executable stage
+   is `Active`; a phase with no executable stage is `Skipped`; the rest are
+   `Pending`), Current Status, and Session Resume Point. Set `Construction
+   Autonomy Mode` to `unset`.
+5. Append `STAGE_STARTED`, `WORKSPACE_INITIALISED`, and `STAGE_COMPLETED` to
+   the audit. Append `PHASE_SKIPPED` for a phase with no executable stage.
+6. Update the registry. Assign a uuid with UUIDv7
+   (`bun -e "console.log(Bun.randomUUIDv7())"`), and add a `{uuid, slug,
+   dirName, scope, repos, status}` row to `intents.json`. Set `status` to
+   `in_progress`.
+7. Create the Intent's module file `<dirName>.md` from the template. The
+   module file has only `概要`, `依存`, and `目標プロファイル`. Do not leave
+   unknown items blank; write `未確認`.
+8. Write the dirName to `intents/active-intent`.
+9. Regenerate `intents.md` with
+   `bun run .agents/skills/amadeus-validator/scripts/IndexGenerate.ts <workspace>`.
 
-テンプレートの優先順位は次である。
+The template priority order is as follows.
 
 1. `aidlc/spaces/<space>/memory/templates/intents/intent-module.md`
-2. この skill に同梱された `templates/intents/intent-module.md`
+2. `templates/intents/intent-module.md` bundled with this skill
 
-## ルーティング
+## Routing
 
-対象 Intent が決まったら、次の手順でステージを解決する。
+Once the target Intent is decided, resolve the stage using the following
+procedure.
 
-1. record の `aidlc-state.md` を読む。読み書きは、セクション見出し、チェックリスト行（`- [x] <stage-slug>` 形式）、フィールド行（`**Key**: value` 形式）だけを対象にし、書き込みは対象行の置換だけで行う。
-2. Stage Progress のうち、Current Status の `Lifecycle Phase` に属するステージだけを判定対象にする。ステージの phase 帰属は [references/stage-catalog.md](references/stage-catalog.md) の Phase 列に従う。現在の phase に属さないステージは、状態に関わらず選択しない。
-3. 判定対象がすべて `[x]` または `[S]` の場合は、手順 7 の phase 境界処理へ進む。
-4. 判定対象から、checkbox が `[R]`、`[-]`、`[?]` のステージがあればそれを優先し、Condition を再判定せずに手順 6 へ進む。なければ、ステージ順序で最初の `[ ]` を選ぶ。
-5. 選んだ `[ ]` のステージが `CONDITIONAL` の場合は、Condition を判定する。偽の場合は checkbox を `[S]` にして注記に skip 理由を書き、`audit/audit.md` に `STAGE_SKIPPED` イベントを追記して手順 3 へ戻る。
-6. 選んだステージの checkbox を `[-]` にし、Current Status の `Current Stage` を更新し、`STAGE_STARTED` を追記して、ステージに対応する内部 skill を呼び出す。対応表は [references/stage-catalog.md](references/stage-catalog.md) に従う。対応する skill が利用できない場合は、実行せずに停止し、不足しているステージ skill 名を報告する。
-7. phase 境界処理を行う。実行したステージが 1 つ以上ある phase は、phase PR の作成を案内し、merge の確認後に `PHASE_VERIFIED` イベント（Details に PR の URL）を追記して、Phase Progress を `Verified` にし、`Lifecycle Phase` を次へ進める。現在の phase が `CONSTRUCTION` の場合は、phase PR の案内の前に `construction/decisions.md` と `construction/traceability.md` を確定し、merge の確認後に Current Status の `Status` を `Completed` にし、`WORKFLOW_COMPLETED` を追記し、registry の `status` を `completed` にする。実行したステージが 1 つもない phase は、`PHASE_SKIPPED` イベントを追記し、Phase Progress を `Skipped` にして通過する。phase を進めたら手順 2 へ戻る。
+1. Read the record's `aidlc-state.md`. Limit reads and writes to section
+   headings, checklist lines (`- [x] <stage-slug>` format), and field lines
+   (`**Key**: value` format); perform writes only as replacement of the
+   target line.
+2. Among Stage Progress, judge only the stages belonging to Current Status's
+   `Lifecycle Phase`. Follow the Phase column of
+   [references/stage-catalog.md](references/stage-catalog.md) for each
+   stage's phase membership. Do not select a stage that does not belong to
+   the current phase, regardless of its state.
+3. If all judgment targets are `[x]` or `[S]`, proceed to step 7's phase
+   boundary processing.
+4. Among the judgment targets, if there is a stage whose checkbox is `[R]`,
+   `[-]`, or `[?]`, prioritize it and proceed to step 6 without re-judging
+   the Condition. If not, select the first `[ ]` in stage order.
+5. If the selected `[ ]` stage is `CONDITIONAL`, judge the Condition. If it
+   is false, set the checkbox to `[S]`, write the skip reason in the note,
+   append a `STAGE_SKIPPED` event to `audit/audit.md`, and return to step 3.
+6. Set the selected stage's checkbox to `[-]`, update Current Status's
+   `Current Stage`, append `STAGE_STARTED`, and call the internal skill
+   corresponding to the stage. Follow
+   [references/stage-catalog.md](references/stage-catalog.md) for the
+   mapping table. If the corresponding skill is not available, stop without
+   executing and report the name of the missing stage skill.
+7. Perform phase boundary processing. For a phase with one or more executed
+   stages, direct the creation of a phase PR, and after confirming the
+   merge, append a `PHASE_VERIFIED` event (with the PR URL in Details), set
+   Phase Progress to `Verified`, and advance `Lifecycle Phase` to the next
+   one. If the current phase is `CONSTRUCTION`, finalize
+   `construction/decisions.md` and `construction/traceability.md` before
+   directing the phase PR, and after confirming the merge, set Current
+   Status's `Status` to `Completed`, append `WORKFLOW_COMPLETED`, and set the
+   registry's `status` to `completed`. For a phase with no executed stages,
+   append a `PHASE_SKIPPED` event, set Phase Progress to `Skipped`, and pass
+   through. After advancing the phase, return to step 2.
 
-phase 境界処理（phase PR の案内、`PHASE_VERIFIED` の記録、`Lifecycle Phase` の遷移）は、この skill だけが行う。
-ステージ内部 skill には委譲しない。
+Only this skill performs phase boundary processing (directing the phase PR,
+recording `PHASE_VERIFIED`, and transitioning `Lifecycle Phase`).
+Do not delegate it to stage-internal skills.
 
-現在の phase が `CONSTRUCTION` の場合、手順 4 から 6 のステージ選択と実行は、次の「Construction の Bolt 実行」に従う。
+If the current phase is `CONSTRUCTION`, follow the next section,
+"Construction Bolt Execution," for the stage selection and execution in
+steps 4 through 6.
 
-## Construction の Bolt 実行
+## Construction Bolt Execution
 
-Construction は Bolt を実行単位にする。
+Construction uses the Bolt as its execution unit.
 
-1. **Bolt の解決**。`inception/delivery-planning/bolt-plan.md` と Project Information の `Bolt Refs`、audit の `BOLT_STARTED` / `BOLT_COMPLETED` を照合し、開始済みで未完了の Bolt があればそれを続け、なければ計画順で最初の未実行 Bolt を選ぶ。Delivery Planning を実行しなかった scope では、Intent 全体を単一の暗黙 Bolt（識別子 `implicit`）として扱う。
-2. **Bolt の開始**。branch と worktree を `memory/` の働き方（branch 戦略）に従って作り、Project Information の `Bolt Refs` に Bolt 識別子を追記し、`BOLT_STARTED` イベント（Bolt 名、walking skeleton かどうか）を追記する。
-3. **Unit 単位ステージの実行**。Bolt に束ねた Unit ごとに、Stage 3.1 から 3.5 をステージ順で解決し、対応する内部 skill を呼び出す。Unit 単位の checkbox は、CONSTRUCTION PHASE の `Per unit: <unit>` ブロックで管理する。
-4. **Build and Test**。Bolt 内の全 Unit の Code Generation 完了後に、Stage 3.6 を 1 回呼び出す。失敗時は autonomy に関わらず停止して人間に確認する（halt-and-ask）。
-5. **Bolt 境界処理**。Build and Test の成功後、Bolt PR の作成を案内する。merge の確認後、`BOLT_COMPLETED` イベント（Details に PR の URL）を追記する。`Construction Autonomy Mode` が `autonomous` の Bolt では、この merge をもって Bolt 内の各ステージの `[?]` を `[x]` に確定し、`STAGE_COMPLETED`（Details に PR の URL）を追記し、Bolt 内の Functional Design が `domain-entities.md` に記録した `Domain Map と Context Map への反映候補` のうち採用判断が確定したものを、Domain Map と Context Map へ反映する。
-6. **walking skeleton ゲート**。最初の Bolt は、autonomy の設定に関わらず、設計成果物と生成コードをまとめて必ず人間が承認する（Bolt PR の merge で確定する）。
-7. **ladder 提案**。walking skeleton の merge 直後に一度だけ、残りの Bolt の進め方を確認し、回答を Current Status の `Construction Autonomy Mode` に記録し（`autonomous` または `gated`）、`AUTONOMY_MODE_SET` イベントを追記する。選択肢は「autonomous（残りの Bolt をゲートなしで実行する。失敗時は停止して確認する）」と「gated（Bolt ごとにゲートを提示する）」の 2 つである。
-8. **反復**。次の Bolt があれば手順 1 へ戻る。全 Bolt 完了後、Stage 3.7 を Intent 単位で解決する。
-9. **phase 境界**。3.7 の完了（または skip）後、`construction/decisions.md` と `construction/traceability.md` を確定し、phase PR を案内する。merge の確認後、`PHASE_VERIFIED` を追記し、Phase Progress の `Construction` を `Verified` にし、`Status` を `Completed` にし、`WORKFLOW_COMPLETED` を追記し、registry の `status` を `completed` にする。
+1. **Bolt Resolution**. Cross-reference
+   `inception/delivery-planning/bolt-plan.md`, Project Information's `Bolt
+   Refs`, and the audit's `BOLT_STARTED` / `BOLT_COMPLETED`; if there is a
+   Bolt that has started and is not yet complete, continue it, otherwise
+   select the first unexecuted Bolt in plan order. In a scope that did not
+   execute Delivery Planning, treat the entire Intent as a single implicit
+   Bolt (identifier `implicit`).
+2. **Bolt Start**. Create the branch and worktree following the working
+   style (branch strategy) in `memory/`, append the Bolt identifier to
+   Project Information's `Bolt Refs`, and append a `BOLT_STARTED` event (Bolt
+   name, whether it is a walking skeleton).
+3. **Unit-Level Stage Execution**. For each Unit bundled into the Bolt,
+   resolve Stage 3.1 through 3.5 in stage order and call the corresponding
+   internal skill. Manage Unit-level checkboxes in the CONSTRUCTION PHASE's
+   `Per unit: <unit>` block.
+4. **Build and Test**. After Code Generation completes for all Units in the
+   Bolt, call Stage 3.6 once. On failure, stop and confirm with the human
+   regardless of autonomy (halt-and-ask).
+5. **Bolt Boundary Processing**. After Build and Test succeeds, direct the
+   creation of a Bolt PR. After confirming the merge, append a
+   `BOLT_COMPLETED` event (with the PR URL in Details). For a Bolt whose
+   `Construction Autonomy Mode` is `autonomous`, this merge finalizes each
+   stage's `[?]` in the Bolt to `[x]`, appends `STAGE_COMPLETED` (with the PR
+   URL in Details), and reflects into the Domain Map and Context Map the
+   entries under `Domain Map と Context Map への反映候補`, recorded by the
+   Bolt's Functional Design in `domain-entities.md`, whose adoption decision
+   has been finalized.
+6. **Walking Skeleton Gate**. Regardless of the autonomy setting, the human
+   always approves the first Bolt's design artifacts and generated code
+   together (finalized by the Bolt PR's merge).
+7. **Ladder Proposal**. Immediately after the walking skeleton's merge, once
+   only, confirm how to proceed with the remaining Bolts, record the answer
+   in Current Status's `Construction Autonomy Mode` (`autonomous` or
+   `gated`), and append an `AUTONOMY_MODE_SET` event. There are two options:
+   "autonomous (execute the remaining Bolts without gates; stop and confirm
+   on failure)" and "gated (present a gate for each Bolt)".
+8. **Iteration**. If there is a next Bolt, return to step 1. After all Bolts
+   complete, resolve Stage 3.7 at the Intent level.
+9. **Phase Boundary**. After 3.7 completes (or is skipped), finalize
+   `construction/decisions.md` and `construction/traceability.md`, and
+   direct the phase PR. After confirming the merge, append `PHASE_VERIFIED`,
+   set Phase Progress's `Construction` to `Verified`, set `Status` to
+   `Completed`, append `WORKFLOW_COMPLETED`, and set the registry's `status`
+   to `completed`.
 
-ステージゲートで停止中の Intent を再開した場合は、ゲートの提示から再開する。
-`[R]` からの再開は、ステージを最初からやり直さず、前回の成果物と差し戻し理由を提示してから修正に入る。
+When resuming an Intent stopped at a stage gate, resume from gate
+presentation.
+Resuming from `[R]` does not restart the stage from the beginning; present
+the previous artifacts and the reason for rejection, then begin corrections.
 
-## ゲート
+## Gate
 
-ステージの完了承認はステージ内部 skill が提示する。
-この skill は、phase 境界の PR 作成の案内と、phase 境界イベントの記録だけを扱う。
+Stage-internal skills present stage completion approval.
+This skill handles only directing PR creation at phase boundaries and
+recording phase-boundary events.
 
-ゲートを提示したターンでは、人間の回答を待つ。
-回答を推測して先へ進まない。
+In the turn where a gate is presented, wait for the human's response.
+Do not guess the response and proceed.
 
-## 禁止事項
+## Prohibitions
 
-- 人間の承認なしに Intent を作らない。承認前にモジュールファイルや `aidlc-state.md` を作らない。
-- Unit 数や Bolt 数の見込みで Intent 化を判定しない。
-- scope が SKIP にするステージを実行しない。
-- ステージ成果物をこの skill で直接作らない。
-- `intents.md` を手書きしない。
-- `audit/` の記録済みイベントを書き換えない。追記だけを行う。
-- record の scaffold を Initialization の外で作らない。
+- Do not create an Intent without human approval. Do not create the module
+  file or `aidlc-state.md` before approval.
+- Do not decide whether to create an Intent based on projected Unit or Bolt
+  counts.
+- Do not execute a stage that the scope marks as SKIP.
+- Do not create stage artifacts directly with this skill.
+- Do not hand-write `intents.md`.
+- Do not rewrite recorded events under `audit/`. Only append.
+- Do not create the record scaffold outside Initialization.
 
-## 次の skill
+## Next Skill
 
-- ステージの実行: [references/stage-catalog.md](references/stage-catalog.md) の対応表にあるステージ内部 skill
-- 設計論点を一問ずつ詰める場合: `amadeus-grilling`
-- ドメインモデルを磨く場合: `amadeus-domain-modeling`
-- Space の初期化や補修: `amadeus-steering`
-- 成果物の構造検証: `amadeus-validator`
+- To execute a stage: the stage-internal skill in the mapping table at
+  [references/stage-catalog.md](references/stage-catalog.md)
+- To confirm design points one question at a time: `amadeus-grilling`
+- To refine the domain model: `amadeus-domain-modeling`
+- To initialize or repair a Space: `amadeus-steering`
+- To validate artifact structure: `amadeus-validator`

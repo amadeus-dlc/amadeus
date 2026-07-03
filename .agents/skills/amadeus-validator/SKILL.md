@@ -1,163 +1,235 @@
 ---
 name: amadeus-validator
 description: >-
-  配布先ユーザー環境で Amadeus の実行時構造を検証する。Amadeus 成果物、Intent、
-  Event Storming、任意の Grilling Decision Trail、Domain Map、Context Map、Upstream/Downstream、組織パターン、
-  統合パターン、Construction 成果物を、
-  repo root の開発用 scripts に依存せず確認したいとき、または `aidlc/` 配下の成果物を作成、更新した後に使う。
+  Validate Amadeus's runtime structure in the distributed user environment.
+  Use this to check Amadeus artifacts, Intent, Event Storming, any Grilling
+  Decision Trail, Domain Map, Context Map, Upstream/Downstream, Organization
+  Pattern, Integration Pattern, and Construction artifacts without depending
+  on repo root development scripts, or after creating or updating artifacts
+  under `aidlc/`.
 ---
 
 # amadeus-validator
 
-## 目的
+## Purpose
 
-配布先ユーザー環境で、Amadeus 成果物が実行時に参照できる最低限の構造条件を満たしているか確認する。
+Confirm, in the distributed user environment, that Amadeus artifacts satisfy
+the minimum structural conditions referenceable at runtime.
 
-この skill は Amadeus Validator の入口である。
-Development Validator としての repo root の package scripts や `scripts/**` ではない。
+This skill is the entry point for the Amadeus Validator.
+It is not the repo root's package scripts or `scripts/**`, which serve as the
+Development Validator.
 
-## 起動契約
+## Invocation Contract
 
-この skill は、`aidlc/` 配下のファイル更新を検知して自動起動する仕組みを持たない。
-ファイル監視、Git hook、エディタ拡張、外部 automation などを前提にしない。
+This skill has no mechanism to auto-start by detecting file updates under
+`aidlc/`.
+Do not assume file watching, Git hooks, editor extensions, or external
+automation.
 
-エージェントが `aidlc/` 配下の成果物を作成または更新した場合は、作業後にこの skill を明示的に使って検証する。
-対象 Intent ディレクトリ名が分かる場合は、対象 Intent も指定して検証する。
+When an agent creates or updates artifacts under `aidlc/`, use this skill
+explicitly after the work to validate. If the target Intent directory name is
+known, also specify the target Intent when validating.
 
-## 内部参照
+## Internal References
 
-Validator の成果物契約とドメインモデルは次を参照する。
+The Validator's artifact contract and domain model are described in the
+following references.
 
 - [artifacts validation](references/artifacts.md)
 - [Domain Map and Context Map validation](references/domain-map.md)
 - [Validator Domain Model](references/domain-model.md)
 
-## 実行時依存
+## Runtime Dependencies
 
-- Bun。
-- TypeScript 実行は Bun に任せる。
+- Bun.
+- Leave TypeScript execution to Bun.
 
-Bun が使えない場合は `blocked` として報告する。
-検証のために依存パッケージをインストールしない。
+Report `blocked` if Bun is unavailable.
+Do not install dependency packages for validation.
 
-## 同梱スクリプト
+## Bundled Scripts
 
-共有インデックス `intents.md` を配下モジュールから再生成するスクリプトを同梱する。
-`aidlc/spaces/<space>/intents/intents.md` は生成物であり、手書きせずこのスクリプトで再生成する。
+This skill bundles a script that regenerates the shared index `intents.md`
+from its underlying modules.
+`aidlc/spaces/<space>/intents/intents.md` is a generated artifact; regenerate
+it with this script instead of hand-editing it.
 
 ```sh
 bun run .agents/skills/amadeus-validator/scripts/IndexGenerate.ts <workspace>
 ```
 
-`--check` を付けると、生成される期待内容と実ファイルの完全一致を確認し、不一致なら exit 1 にする。
-validator の「Index 生成整合」検査は、この生成ロジックを再利用して判定する。
+Adding `--check` confirms an exact match between the expected generated
+content and the actual file, and exits with 1 on a mismatch.
+The validator's "Index generation consistency" check reuses this generation
+logic to judge.
 
-## 入力
+## Inputs
 
-- 検証対象の作業ディレクトリ。
-- 必要に応じて、対象 Intent ディレクトリ名。
+- The working directory to validate.
+- The target Intent directory name, when needed.
 
-対象 Intent ディレクトリ名が指定されない場合は、全体成果物を検証する。
-対象 Intent ディレクトリ名が指定された場合は、全体成果物に加えて `aidlc/spaces/<space>/intents/<dirName>/`（record）を検証する。
+If the target Intent directory name is not specified, validate the overall
+artifacts only.
+If the target Intent directory name is specified, validate
+`aidlc/spaces/<space>/intents/<dirName>/` (the record) in addition to the
+overall artifacts.
 
-## 読む参照元
+## Reference Sources to Read
 
-次の順で読む。
+Read in the following order.
 
 1. `CONTEXT.md`
 2. `aidlc/spaces/<space>/memory/org.md`
 3. `aidlc/spaces/<space>/memory/team.md`
 4. `aidlc/spaces/<space>/memory/project.md`
-5. `aidlc/spaces/<space>/knowledge/*.md`（`glossary.md`、`actors.md`、`external-systems.md`、`background.md` など）
+5. `aidlc/spaces/<space>/knowledge/*.md` (`glossary.md`, `actors.md`,
+   `external-systems.md`, `background.md`, etc.)
 6. `aidlc/spaces/<space>/intents/intents.json`
 7. `aidlc/spaces/<space>/intents/intents.md`
-8. `aidlc/spaces/<space>/intents/active-intent`。存在する場合だけ読む。
-9. `aidlc/spaces/<space>/knowledge/event-storming/*.md` と `aidlc/spaces/<space>/knowledge/event-storming/*/state.json`。存在する場合だけ読む。
-10. `aidlc/spaces/<space>/knowledge/event-storming/*/grillings.md` と `aidlc/spaces/<space>/knowledge/event-storming/*/grillings/*.md`。存在する場合だけ読む。
+8. `aidlc/spaces/<space>/intents/active-intent`. Read only if it exists.
+9. `aidlc/spaces/<space>/knowledge/event-storming/*.md` and
+   `aidlc/spaces/<space>/knowledge/event-storming/*/state.json`. Read only if
+   they exist.
+10. `aidlc/spaces/<space>/knowledge/event-storming/*/grillings.md` and
+    `aidlc/spaces/<space>/knowledge/event-storming/*/grillings/*.md`. Read
+    only if they exist.
 11. `aidlc/spaces/<space>/knowledge/domain-map.md`
 12. `aidlc/spaces/<space>/knowledge/context-map.md`
-13. `aidlc/spaces/<space>/intents/<dirName>.md`。対象 Intent ディレクトリ名が指定された場合だけ読む。
-14. `aidlc/spaces/<space>/intents/<dirName>/aidlc-state.md`。対象 Intent ディレクトリ名が指定された場合だけ読む。
-15. `aidlc/spaces/<space>/intents/<dirName>/audit/audit.md`。存在する場合だけ読む。
-16. `aidlc/spaces/<space>/intents/<dirName>/{ideation,inception,construction}/grillings.md` と `aidlc/spaces/<space>/intents/<dirName>/{ideation,inception,construction}/grillings/*.md`。存在する場合だけ読む。
-17. `aidlc/spaces/<space>/intents/<dirName>/event-storming/*/grillings.md` と `aidlc/spaces/<space>/intents/<dirName>/event-storming/*/grillings/*.md`。存在する場合だけ読む。
-18. 対象 Intent の `aidlc-state.md` の Stage Progress が要求する phase ディレクトリ配下の必須成果物。存在する場合だけ読む。
+13. `aidlc/spaces/<space>/intents/<dirName>.md`. Read only if the target
+    Intent directory name is specified.
+14. `aidlc/spaces/<space>/intents/<dirName>/aidlc-state.md`. Read only if the
+    target Intent directory name is specified.
+15. `aidlc/spaces/<space>/intents/<dirName>/audit/audit.md`. Read only if it
+    exists.
+16. `aidlc/spaces/<space>/intents/<dirName>/{ideation,inception,construction}/grillings.md`
+    and
+    `aidlc/spaces/<space>/intents/<dirName>/{ideation,inception,construction}/grillings/*.md`.
+    Read only if they exist.
+17. `aidlc/spaces/<space>/intents/<dirName>/event-storming/*/grillings.md` and
+    `aidlc/spaces/<space>/intents/<dirName>/event-storming/*/grillings/*.md`.
+    Read only if they exist.
+18. The mandatory artifacts under the phase directory required by the target
+    Intent's `aidlc-state.md` Stage Progress. Read only if they exist.
 
-存在しない参照元がある場合は、存在しない事実を結果に含める。
-存在しない参照元を推測で補完しない。
+If a reference source does not exist, include that fact in the result.
+Do not fill in a missing reference source by guessing.
 
-## 検証範囲
+## Validation Scope
 
-少なくとも次を確認する。
+Confirm at least the following.
 
-- Amadeus の成果物ルートが `aidlc/` であり、`aidlc/spaces/` の下に対象 Space が存在する。
-- `aidlc/spaces/<space>/memory/org.md`、`aidlc/spaces/<space>/memory/team.md`、`aidlc/spaces/<space>/memory/project.md` が存在する。
-- `aidlc/spaces/<space>/knowledge/` が存在する。
-- `aidlc/spaces/<space>/intents/` が存在する。
-- `aidlc/spaces/<space>/intents/intents.json` が存在し、Intent registry として解釈できる。
-- `aidlc/spaces/<space>/intents/intents.md` が存在し、[artifacts validation](references/artifacts.md) の条件と Index 生成整合（IndexGenerate の導出内容との完全一致）を満たす。
-- `aidlc/spaces/<space>/intents/active-intent` が存在する場合、registry 上の record を指す。
-- `aidlc/spaces/<space>/knowledge/domain-map.md` が存在し、Subdomain と Bounded Context の `adopted`、`retired`、根拠リンクを検証できる。
-- `aidlc/spaces/<space>/knowledge/context-map.md` が存在し、Upstream Context、Downstream Context、Organization Pattern、Integration Pattern、`adopted`、`retired`、根拠リンクを検証できる。
-- Context Map の `Downstream` と `Upstream` は、Domain Map の Bounded Context を参照する。
-- 対象 Intent のモジュールファイルが存在し、`概要`、`依存`、`目標プロファイル` の見出しと目標プロファイル表を持つ。
-- 対象 Intent の record 直下に、退役済みの旧配置成果物（`state.json` など、phase ディレクトリ配下へ置くべき成果物）がない。
-- 対象 Intent の `aidlc-state.md` が存在し、Project Information、Scope Configuration、Phase Progress、Stage Progress、Current Status の内容を、scope の実行対象との一致、ステージの checkbox 状態、`audit/audit.md` のイベント整合、Bolt の記録、completed ステージの必須成果物とあわせて、v2 互換ライフサイクルの契約として検証する。
-- Event Storming の成果物、level、`nextRecommendedSkill`（`amadeus` または `amadeus-domain-modeling`）を検証する。
-- Event Storming、Intent の phase ディレクトリに `grillings.md` または `grillings/` が存在する場合、両方が揃っている。
-- Event Storming、Intent の phase ディレクトリに Grilling Decision Trail が存在する場合、`grillings.md` の一覧、session ファイル名、session の質問記録、`確認したいこと`、`確認が必要な理由`、`推奨回答`、`推奨理由`、`ユーザー回答`、確定判断、反映先、反映先が対象 root 内に収まること、active の置き換え先なし、superseded の置き換え先を検証する。
+- The Amadeus artifact root is `aidlc/`, and the target Space exists under
+  `aidlc/spaces/`.
+- `aidlc/spaces/<space>/memory/org.md`, `aidlc/spaces/<space>/memory/team.md`,
+  and `aidlc/spaces/<space>/memory/project.md` exist.
+- `aidlc/spaces/<space>/knowledge/` exists.
+- `aidlc/spaces/<space>/intents/` exists.
+- `aidlc/spaces/<space>/intents/intents.json` exists and can be interpreted
+  as the Intent registry.
+- `aidlc/spaces/<space>/intents/intents.md` exists and satisfies the
+  conditions in [artifacts validation](references/artifacts.md) and Index
+  generation consistency (an exact match with the content derived by
+  IndexGenerate).
+- If `aidlc/spaces/<space>/intents/active-intent` exists, it points to a
+  record in the registry.
+- `aidlc/spaces/<space>/knowledge/domain-map.md` exists, and its Subdomain
+  and Bounded Context `adopted`, `retired`, and evidence links can be
+  validated.
+- `aidlc/spaces/<space>/knowledge/context-map.md` exists, and its Upstream
+  Context, Downstream Context, Organization Pattern, Integration Pattern,
+  `adopted`, `retired`, and evidence links can be validated.
+- The Context Map's `Downstream` and `Upstream` reference Bounded Contexts in
+  the Domain Map.
+- The target Intent's module file exists and has the `概要`, `依存`, and
+  `目標プロファイル` headings plus the target profile table.
+- The target Intent's record has no retired legacy-placement artifacts
+  (such as `state.json`) directly under it that should instead be placed
+  under a phase directory.
+- The target Intent's `aidlc-state.md` exists, and its Project Information,
+  Scope Configuration, Phase Progress, Stage Progress, and Current Status
+  content are validated as a v2-compatible lifecycle contract, together with
+  consistency between the scope's execution targets, the stage checkbox
+  states, the event consistency of `audit/audit.md`, Bolt records, and the
+  mandatory artifacts of completed stages.
+- Event Storming artifacts, level, and `nextRecommendedSkill` (`amadeus` or
+  `amadeus-domain-modeling`) are validated.
+- When `grillings.md` or `grillings/` exists in an Event Storming or Intent
+  phase directory, both are present together.
+- When a Grilling Decision Trail exists in an Event Storming or Intent phase
+  directory, validate the `grillings.md` listing, the session file names,
+  the session's recorded questions, `確認したいこと`, `確認が必要な理由`,
+  `推奨回答`, `推奨理由`, `ユーザー回答`, the confirmed decision, the
+  reflection target, that the reflection target stays inside the target
+  root, that an active entry has no replacement, and that a superseded entry
+  has a replacement.
 
-## 検証手順
+## Validation Procedure
 
-次の順で検証する。
+Validate in the following order.
 
-1. Bun が使えるか確認する。
-2. 対象 Intent ディレクトリ名を確定する。
-   - ユーザーが Intent ディレクトリ名を指定した場合は、そのディレクトリ名だけを対象 Intent にする。
-   - Intent ディレクトリ名が指定されていない場合は、全体成果物だけを検証する。
-   - `aidlc/spaces/<space>/intents/intents.md` から勝手に全 Intent を検証対象に増やさない。
-3. skill 同梱の `validator/AmadeusValidator.ts` を実行する。
+1. Confirm that Bun is available.
+2. Determine the target Intent directory name.
+   - If the user specified an Intent directory name, treat only that
+     directory name as the target Intent.
+   - If no Intent directory name was specified, validate only the overall
+     artifacts.
+   - Do not expand the validation target to all Intents on your own based on
+     `aidlc/spaces/<space>/intents/intents.md`.
+3. Run the bundled `validator/AmadeusValidator.ts`.
 
-全体成果物だけを検証する場合:
+When validating only the overall artifacts:
 
 ```sh
 bun run <skill-dir>/validator/AmadeusValidator.ts <workdir>
 ```
 
-対象 Intent ディレクトリ名も検証する場合:
+When also validating a target Intent directory name:
 
 ```sh
 bun run <skill-dir>/validator/AmadeusValidator.ts <workdir> <dirName>
 ```
 
-`AmadeusValidator.ts` は、内部で検査台帳を作り、`pass`、`fail`、`blocked` の判定と不足内容を日本語 Markdown で出力する。
-この出力を最終報告の基準にする。
+`AmadeusValidator.ts` internally builds an inspection ledger and outputs the
+`pass`, `fail`, or `blocked` judgment and any gaps as Japanese Markdown.
+Base the final report on this output.
 
-## 判定
+## Judgment
 
-判定は `pass`、`fail`、`blocked` のいずれかで出す。
+Give the judgment as one of `pass`, `fail`, or `blocked`.
 
-`pass` は、検証対象が実行時に参照できる最低限の構造条件を満たしていることを示す。
-`fail` は、成果物の矛盾または必須項目の欠落を示す。
-`blocked` は、検証対象や判断材料が不足していることを示す。
+`pass` means the validation target satisfies the minimum structural
+conditions referenceable at runtime.
+`fail` means the artifacts contain a contradiction or a missing required
+item.
+`blocked` means the validation target or the material needed for judgment is
+insufficient.
 
-`pass` だけで gate を通過した扱いにしない。
-`waived` を検証結果にしない。
+Do not treat `pass` alone as passing the gate.
+Do not output `waived` as a validation result.
 
-## 検証結果と学習候補
+## Validation Results and Learning Candidates
 
-validator の結果は構造検出である。
-`pass`、`fail`、`blocked` は、実行時に参照できる成果物構造、必須項目、不足、矛盾を検出した結果として扱う。
-validator の `pass` は内容承認ではない。
-decision review の質問要否や採用判断は、validator の結果だけで決めない。
+The validator's result is structural detection.
+Treat `pass`, `fail`, and `blocked` as the result of detecting artifact
+structure, required items, gaps, and contradictions that are referenceable
+at runtime.
+The validator's `pass` is not content approval.
+Do not decide decision review's question necessity or adoption decisions from the validator's result alone.
 
-evaluator の結果は品質評価であり、validator の判定とは分ける。
-validator または evaluator の結果が複数 Intent で再利用できる知見を示す場合でも、自動的に Steering knowledge、Domain Map、Context Map へ昇格しない。
-phase skill または人間判断で、`current_phase_update_required`、`upstream_feedback_required`、`steering_knowledge_candidate`、`domain_map_candidate`、`context_map_candidate`、`follow_up_issue_candidate`、`follow_up_intent_candidate`、`no_learning_action` のいずれかに分類する。
+The evaluator's result is quality evaluation; keep it separate from the validator's judgment.
+Even when the validator's or evaluator's result shows a learning reusable
+across multiple Intents, do not auto-promote it into Steering knowledge,
+Domain Map, or Context Map.
+Classify it, by phase skill or human judgment, as one of
+`current_phase_update_required`, `upstream_feedback_required`,
+`steering_knowledge_candidate`, `domain_map_candidate`,
+`context_map_candidate`, `follow_up_issue_candidate`,
+`follow_up_intent_candidate`, or `no_learning_action`.
 
-## 出力
+## Output
 
-日本語で次の形にまとめる。
+Compile the result in Japanese, in the following form.
 
 ```md
 # Amadeus Validator 結果
@@ -199,12 +271,16 @@ pass | fail | blocked
 - <推奨する次の skill。なければ「なし」>
 ```
 
-## 禁止事項
+## Prohibitions
 
-- repo root の `scripts/**` を Amadeus Validator の格納先や実行入口として扱わない。
-- repo root の package scripts を配布先ユーザー環境の検証入口として扱わない。
-- skill 同梱の `validator/AmadeusValidator.ts` 以外を実行時検証入口にしない。
-- 検証のために依存パッケージをインストールしない。
-- Installer の接続、配布単位、インストール後の実行順序を決めない。
-- Intent 状態や成果物状態を変更しない。
-- 親参照や欠落ファイルを推測で補完しない。
+- Do not treat repo root's `scripts/**` as the storage location or
+  execution entry point for the Amadeus Validator.
+- Do not treat repo root's package scripts as the validation entry point in
+  the distributed user environment.
+- Do not use anything other than the bundled `validator/AmadeusValidator.ts`
+  as the runtime validation entry point.
+- Do not install dependency packages for validation.
+- Do not decide the Installer's connections, distribution unit, or
+  post-install execution order.
+- Do not change Intent state or artifact state.
+- Do not fill in parent references or missing files by guessing.
