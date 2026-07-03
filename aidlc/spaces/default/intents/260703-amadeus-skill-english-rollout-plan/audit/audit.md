@@ -1515,3 +1515,28 @@
 **Details**: 全 Unit の ci-pipeline は SKIP 済みであり、Intent レベルの Stage 3.7 も追加の CI 新設または大きな変更を伴わないため skip を確定した。既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行している。
 
 ---
+
+## PHASE_VERIFIED
+**Timestamp**: 2026-07-03T16:25:15Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: Construction
+**Pass/fail**: pass
+**Details**: Construction phase PR: https://github.com/amadeus-dlc/amadeus/pull/424。Merge commit: e7ca5a60。decisions は construction/decisions.md（CD001〜CD012）、traceability は construction/traceability.md で確定。
+
+---
+
+## PHASE_SKIPPED
+**Timestamp**: 2026-07-03T16:25:15Z
+**Event**: PHASE_SKIPPED
+**Phase**: Operation
+**Reason**: out of Amadeus scope（Operation は record の scaffold だけを持ち、実行対象にしない。理由は docs/amadeus/aidlc-v2-operation-phase-boundary.md に従う）
+
+---
+
+## WORKFLOW_COMPLETED
+**Timestamp**: 2026-07-03T16:25:15Z
+**Event**: WORKFLOW_COMPLETED
+**Scope**: feature
+**Details**: R001〜R006 成立。Issue #399 は PR #423 の merge で close 済み。B001〜B010 の全 Bolt が完了し、Amadeus 系 SKILL.md の全面英語化（source 32 + 昇格先 32、許容リテラルのみ残存）と AI-DLC v2 意味差分 4 件（#391〜#394）の判断記録を確定した。
+
+---

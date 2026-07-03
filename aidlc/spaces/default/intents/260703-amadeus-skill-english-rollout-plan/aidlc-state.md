@@ -25,7 +25,7 @@
 ## Execution Plan Summary
 - **Total Stages**: 25
 - **Completed**: 19
-- **In Progress**: Construction phase boundary (phase PR pending merge)
+- **In Progress**: none (intent completed)
 
 ## Runtime State
 - **Revision Count**: 0
@@ -35,7 +35,7 @@
 - **Initialization**: Verified
 - **Ideation**: Verified
 - **Inception**: Verified
-- **Construction**: Active
+- **Construction**: Verified
 - **Operation**: Skipped
 
 ## Stage Progress
@@ -167,12 +167,12 @@ Per unit: U010-issue-399-final-verification
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
 - **Current Stage**: build-and-test
-- **Next Stage**: (phase boundary)
-- **Status**: Running
+- **Next Stage**: none
+- **Status**: Completed
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-07-03T16:18:49Z
+- **Last Updated**: 2026-07-03T16:25:15Z
 
 ## Session Resume Point
 - **Last Completed Stage**: build-and-test (B010)
-- **Next Action**: Await the Construction phase PR merge, then record PHASE_VERIFIED and WORKFLOW_COMPLETED, set the registry status to completed, and regenerate intents.md
-- **Pending Artifacts**: Construction phase PR merge evidence, WORKFLOW_COMPLETED and registry completion records, real-provider example regeneration to clear provenance staleReason (separate follow-up PR)
+- **Next Action**: none (intent completed)
+- **Pending Artifacts**: none（provenance の real provider 再生成は Intent 外の後続作業として別 PR で扱う）
