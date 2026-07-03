@@ -7,11 +7,13 @@ import { join, resolve } from "node:path";
 const root = resolve(import.meta.dir, "../../..");
 const checkScript = join(root, "dev-scripts/evals/llm-templates/check.ts");
 const corporateRunner = join(root, "dev-scripts/run-codex-corporate.sh");
+const claudePersonalRunner = join(root, "dev-scripts/run-claude-personal.sh");
 
 type Case = {
   args?: string[];
   env?: Record<string, string>;
-  expectedRunner: string;
+  expectedCommand?: string;
+  expectedRunner?: string;
   name: string;
 };
 
@@ -58,10 +60,11 @@ function runCase(testCase: Case): void {
       ].join("\n"));
     }
 
-    if (!stdout.includes(`'${testCase.expectedRunner}' 'exec'`)) {
+    const expected = testCase.expectedCommand ?? `'${testCase.expectedRunner}' 'exec'`;
+    if (!stdout.includes(expected)) {
       fail([
-        `${testCase.name}: unexpected runner`,
-        `expected: ${testCase.expectedRunner}`,
+        `${testCase.name}: unexpected runner command`,
+        `expected: ${expected}`,
         "stdout:",
         stdout,
       ].join("\n"));
@@ -86,6 +89,11 @@ const cases: Case[] = [
     args: ["--runner", "dev-scripts/run-codex-corporate.sh"],
     env: { AMADEUS_CODEX_RUNNER: "dev-scripts/run-codex-personal.sh" },
     expectedRunner: corporateRunner,
+  },
+  {
+    name: "claude runner uses claude print-mode command",
+    args: ["--runner", "dev-scripts/run-claude-personal.sh"],
+    expectedCommand: `'${claudePersonalRunner}' '-p'`,
   },
 ];
 

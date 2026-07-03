@@ -26,7 +26,7 @@ export function isLlmProviderMode(value: string | undefined): value is LlmProvid
 
 export function createLlmProvider(options: ProviderOptions): LlmProvider {
   if (options.mode === "mock") return createMockLlmProvider(options.mockCases);
-  return createCodexLlmProvider(options.root, options.runner);
+  return createRealLlmProvider(options.root, options.runner);
 }
 
 export function shellQuote(value: string): string {
@@ -47,8 +47,19 @@ function createMockLlmProvider(cases: MockLlmCases): LlmProvider {
   };
 }
 
-function createCodexLlmProvider(root: string, runner: string): LlmProvider {
+// runner の種別は wrapper スクリプト名で判定する。
+// claude を含む runner は claude CLI（print mode、最終応答は stdout）、それ以外は codex CLI として起動する。
+export function isClaudeRunner(runner: string): boolean {
+  return runner.split("/").pop()?.includes("claude") ?? false;
+}
+
+function createRealLlmProvider(root: string, runner: string): LlmProvider {
   const resolvedRunner = resolve(root, runner);
+  if (isClaudeRunner(resolvedRunner)) return createClaudeLlmProvider(resolvedRunner);
+  return createCodexLlmProvider(resolvedRunner);
+}
+
+function createCodexLlmProvider(resolvedRunner: string): LlmProvider {
   return {
     describe: () => "real",
     previewCommand: (request) => codexCommand(resolvedRunner, request.workspace, request.outputPath, request.prompt),
@@ -58,6 +69,23 @@ function createCodexLlmProvider(root: string, runner: string): LlmProvider {
       const command = codexCommand(resolvedRunner, request.workspace, request.outputPath, request.prompt);
 
       await runLogged(command, request.workspace, events, stderr);
+      ensureFile(request.outputPath);
+      return { outputPath: request.outputPath };
+    },
+  };
+}
+
+function createClaudeLlmProvider(resolvedRunner: string): LlmProvider {
+  return {
+    describe: () => "real",
+    previewCommand: (request) => claudeCommand(resolvedRunner, request.prompt),
+    run: async (request) => {
+      const events = join(request.workspace, "claude-stdout.log");
+      const stderr = join(request.workspace, "claude-stderr.log");
+      const command = claudeCommand(resolvedRunner, request.prompt);
+
+      const stdout = await runLogged(command, request.workspace, events, stderr);
+      writeFileSync(request.outputPath, stdout);
       ensureFile(request.outputPath);
       return { outputPath: request.outputPath };
     },
@@ -75,6 +103,16 @@ function codexCommand(runner: string, workspace: string, output: string, prompt:
     "--json",
     "--output-last-message",
     output,
+    prompt,
+  ];
+}
+
+function claudeCommand(runner: string, prompt: string): string[] {
+  return [
+    runner,
+    "-p",
+    "--output-format",
+    "text",
     prompt,
   ];
 }
