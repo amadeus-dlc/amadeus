@@ -139,6 +139,12 @@ If Accept as-is is selected, set the checkbox to `[x]`, append
 `GATE_APPROVED` (noting Accept as-is) and `STAGE_COMPLETED`, and record this
 decision in `inception/decisions.md`.
 
+AI-DLC v2 declares the `required-sections` and `upstream-coverage` sensors
+for this stage. Amadeus DLC runs no sensor mechanism: `required-sections`
+maps to `amadeus-validator` structural validation, and `upstream-coverage`
+maps to this stage's required inputs and the phase's `traceability.md`. See
+`docs/amadeus/aidlc-v2-sensor-learn-mapping.md`.
+
 ## Prohibitions
 
 - Do not change `memory/team.md` or `memory/project.md` without human

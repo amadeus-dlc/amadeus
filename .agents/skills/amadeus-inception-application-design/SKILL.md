@@ -155,6 +155,12 @@ and the phase PR review, the Request Changes revision loop bounds the
 review iterations, and `amadeus-validator` covers structural validation.
 See `docs/amadeus/aidlc-v2-reviewer-mapping.md`.
 
+AI-DLC v2 declares the `required-sections` and `upstream-coverage` sensors
+for this stage. Amadeus DLC runs no sensor mechanism: `required-sections`
+maps to `amadeus-validator` structural validation, and `upstream-coverage`
+maps to this stage's required inputs and the phase's `traceability.md`. See
+`docs/amadeus/aidlc-v2-sensor-learn-mapping.md`.
+
 ## Prohibitions
 
 - Do not run for an Intent that only modifies existing components.

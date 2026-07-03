@@ -24,7 +24,7 @@
 
 | 残タスク | Bolt | 完了条件 | 状態 |
 |---|---|---|---|
-| #391、#393、#392、#394 の差分対応 | B005 | 各 Issue の完了、または明示的な対象外判断を確認できる。 | #391 は reviewer 写像（docs/amadeus/aidlc-v2-reviewer-mapping.md、11 skill の Gate 節）で対応済み。#393、#392、#394 は未着手。 |
+| #391、#393、#392、#394 の差分対応 | B005 | 各 Issue の完了、または明示的な対象外判断を確認できる。 | #391 は PR #419 merge（24b6a505）で close 済み。#393 は sensor と Learn の写像（docs/amadeus/aidlc-v2-sensor-learn-mapping.md、lifecycle overview、22 skill の Gate 節）で対応済み。#392、#394 は未着手。 |
 | Core entrypoints and verification 英語化 | B006 | `amadeus`、`amadeus-steering`、`amadeus-validator` の source skill と昇格先 skill が英語化され、検証が pass している。 | PR #417 merge（6ef9f349、2026-07-03T15:12:46Z）により完了。 |
 | Construction stage skills 英語化 | B007 | 残り Construction stage skill の source skill と昇格先 skill が英語化され、検証が pass している。 | PR #417 merge（6ef9f349、2026-07-03T15:12:46Z）により完了。 |
 | Inception stage skills 英語化 | B008 | Inception stage skill の source skill と昇格先 skill が英語化され、検証が pass している。 | PR #417 merge（6ef9f349、2026-07-03T15:12:46Z）により完了。 |

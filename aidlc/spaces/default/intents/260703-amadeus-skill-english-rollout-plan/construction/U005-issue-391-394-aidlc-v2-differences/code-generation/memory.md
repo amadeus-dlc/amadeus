@@ -15,4 +15,10 @@
 
 ## 未解決の問題
 
-- #393、#392、#394 の判断は未実施である。
+- #392、#394 の判断は未実施である。
+
+## #393 の解釈
+
+- 本家の sensor は gate 前の決定論的検査であり、Amadeus では `amadeus-validator`（構造）、`traceability.md`（上流対応）、Build and Test と CI（コード検査）が同じ役割を分担済みとみなした。
+- 本家の Learn の 4 見出し（Interpretations、Deviations、Tradeoffs、Open questions）は、Amadeus の stage `memory.md` の既存契約（解釈、逸脱、トレードオフ、未解決の問題）と同型であり、記録先の新設は不要と判断した。
+- learnings ritual の「表面化と定着」は `amadeus-history-review` と `amadeus-learning-review` の分類契約へ写像し、自動昇格しない既存原則を維持した。

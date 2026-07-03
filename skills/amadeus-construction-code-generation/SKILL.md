@@ -155,6 +155,12 @@ the Bolt PR's human review and CI, and this gate. The Request Changes
 revision loop bounds the review iterations. See
 `docs/amadeus/aidlc-v2-reviewer-mapping.md`.
 
+AI-DLC v2 declares the `linter` and `type-check` sensors for this stage.
+Amadeus DLC runs no sensor mechanism: both map to Build and Test
+(Stage 3.6), which records the commands and results in
+`build-test-results.md`, and to the Bolt PR's CI. See
+`docs/amadeus/aidlc-v2-sensor-learn-mapping.md`.
+
 ## Prohibitions
 
 - Do not modify the target repository outside the Bolt's worktree.
