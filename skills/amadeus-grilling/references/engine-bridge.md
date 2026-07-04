@@ -25,7 +25,10 @@ bridge's procedure below applies.
 
 1. Present the directive's questions one at a time, following the
    `amadeus-grilling` protocol: each question includes a recommended answer
-   and its rationale. Do not line up multiple questions at once.
+   and its rationale. Do not line up multiple questions at once. See
+   `skills/amadeus/references/question-rendering.md` § "Grill me rendering
+   rules" for the harness-neutral rendering mechanism (tool-call shape,
+   recommendation marker, split rule) that this presentation follows.
 2. Wait for the human's response before presenting the next question.
 3. For each structured question:
    - Before presenting the question, run:
@@ -39,9 +42,13 @@ bridge's procedure below applies.
 4. Write the confirmed answers into the `<stage>-questions.md` file using the
    upstream `[Answer]:` tag format. The questions file remains the source of
    truth for the stage's confirmed answers.
-5. User-facing question text is Japanese. The questions file's structure,
-   headings, and tag labels (including `[Answer]:`) stay in the upstream
-   format.
+5. User-facing question text follows the **conversation language** of the
+   current session — see `skills/amadeus/references/question-rendering.md` §
+   "Display language" for the canonical rule (the `[Answer]:` write-back
+   pairs the canonical English label with its display translation; the
+   canonical label alone is what gets logged and reported). The questions
+   file's structure, headings, and tag labels (including `[Answer]:`) stay in
+   the upstream format.
 
 ## Non-goals
 

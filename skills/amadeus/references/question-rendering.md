@@ -6,6 +6,15 @@ The protocol and stage files are harness-neutral: they say *present a
 structured question* and carry a fenced ` ```question ` spec block. This annex
 is the one place that binds that contract to a concrete mechanism.
 
+## Harness routing
+
+This annex defines the **Claude Code** binding. On **Codex**, the
+harness-specific binding lives in `question-rendering-codex.md` (same
+directory as this file). Sections marked "harness-neutral" below (the
+Display language section, and the interview rendering rules further down)
+apply to every harness: Claude Code and Codex each follow them within their
+own tool-call mechanism.
+
 ## Mechanism
 
 On Claude Code, every structured question renders via the **`AskUserQuestion`
@@ -48,6 +57,26 @@ AskUserQuestion({
 })
 ```
 
+## Display language (harness-neutral)
+
+The user-facing prompt and the `label`/`description` of every structured
+question — the mode selection below, a gate approval, or a stage question
+presented interactively — are shown to the human in the **conversation
+language** of the current session (the language the human is chatting in).
+
+Machine-readable records and branching stay in the **canonical English
+label**, never the display translation: mode dispatch, the `[Answer]:`
+write-back tag, `amadeus-log.ts decision`/`answer` entries, and the
+`--user-input` value reported to the engine all use the canonical label.
+
+When writing an `[Answer]:` entry, pair the canonical label with its display
+translation — e.g. `[Answer]: Approve (承認)` — never the translation alone.
+
+This section, the spec block, and this annex's own prose stay in English
+(Skill Language Policy): it is an English-written instruction that governs
+runtime display in whatever the conversation language happens to be, not a
+translation of the annex itself.
+
 ## Mode selection (Guide me / Grill me / I'll edit the file / Chat)
 
 `amadeus-common/protocols/stage-protocol.md` § "Question flow" Step 2 offers the
@@ -87,6 +116,34 @@ protocol defined in `../../amadeus-grilling/references/engine-bridge.md`:
   `bun .agents/amadeus/tools/amadeus-log.ts answer --stage <slug> --details "<exact choice>"`.
 - Write each confirmed answer into the `<stage>-questions.md` file using the
   `[Answer]:` tag format — the questions file remains the source of truth.
+
+### Grill me rendering rules
+
+The bullets above are the Claude Code binding. This section restates them as
+harness-neutral rendering rules that every harness follows for Grill me, each
+within its own tool-call mechanism (see `question-rendering-codex.md` for the
+Codex binding):
+
+- **One question per tool call.** Load exactly one question per tool call —
+  never batch multiple questions into a single call. This section requires
+  one question per tool call on every harness; on Claude Code that means one
+  question per `AskUserQuestion` call.
+- **Recommendation first.** The recommended answer is the first option, and
+  its label carries a recommendation marker in the conversation language
+  (e.g. a Japanese conversation appends "（推奨）" to the label).
+- **Rationale in prose.** The recommendation's rationale, and why the
+  decision matters now, is stated in the question body or in the prose
+  immediately before the tool call — not squeezed into an option
+  description, which stays a short supplement.
+- **Split rule.** When a question's option count exceeds the harness's
+  per-call limit, this annex reuses the existing split rule (options A-D,
+  then E+) from "Harness-specific behaviors" below.
+- **Free-text escape.** "I'd like to discuss this more" and other free text
+  route through the harness's built-in escape — Claude Code's built-in Other
+  option, Codex's custom option.
+- **Logging and write-back are unchanged.** Decision/answer audit logging and
+  the `[Answer]:` write-back (canonical label + display translation, see
+  Display language above) follow the existing procedure unchanged.
 
 ## Harness-specific behaviors
 
