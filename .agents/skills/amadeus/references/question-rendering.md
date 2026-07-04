@@ -48,6 +48,46 @@ AskUserQuestion({
 })
 ```
 
+## Mode selection (Guide me / Grill me / I'll edit the file / Chat)
+
+`aidlc-common/protocols/stage-protocol.md` § "Question flow" Step 2 offers the
+user a choice of interaction mode when a `<stage>-questions.md` file has been
+created. On Claude Code, render that choice as a 4-option `AskUserQuestion`,
+in this exact order — Guide me stays first and is the default:
+
+```question
+prompt: "I've created [N] questions at `[file path]`. How would you like to answer them?"
+header: Questions
+multiSelect: false
+options:
+  - label: Guide me
+    description: Walk through each question interactively here
+  - label: Grill me
+    description: One question at a time, recommended answer attached (amadeus-grilling bridge)
+  - label: I'll edit the file
+    description: I'll fill in the answers in the file directly
+  - label: Chat
+    description: Discuss freely — I'll extract decisions from our conversation
+```
+
+**Grill me** is inserted as the 2nd option, between Guide me and I'll edit the
+file. Guide me / I'll edit the file / Chat keep their existing labels,
+descriptions, and Step 3a/3b/3c behavior from `stage-protocol.md` unchanged.
+
+**If the user picks Grill me**, follow the `amadeus-grilling` engine bridge
+protocol defined in `../../amadeus-grilling/references/engine-bridge.md`:
+
+- Present the questions one question at a time — never batch multiple
+  questions in a single turn.
+- Attach a recommended answer and its rationale to each question.
+- Wait for the human's response before presenting the next question.
+- Before presenting each question, log the decision with
+  `bun .agents/aidlc/tools/aidlc-log.ts decision --stage <slug> --decision "<summary>" --options "<csv>"`;
+  after the human responds, log the answer with
+  `bun .agents/aidlc/tools/aidlc-log.ts answer --stage <slug> --details "<exact choice>"`.
+- Write each confirmed answer into the `<stage>-questions.md` file using the
+  `[Answer]:` tag format — the questions file remains the source of truth.
+
 ## Harness-specific behaviors
 
 - **Batching limits**: max 4 questions per `AskUserQuestion` call, max 4

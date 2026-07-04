@@ -12,6 +12,15 @@ Apply this bridge whenever an engine directive (a stage prompt driven by the
 AI-DLC engine copied under `.agents/aidlc/`) instructs the agent to fill a
 `<stage>-questions.md` file with answers before the stage can proceed.
 
+## Mode-selection insertion point
+
+`skills/amadeus/references/question-rendering.md` renders the mode selection
+for a `<stage>-questions.md` file as a 4-option choice: Guide me, Grill me,
+I'll edit the file, Chat. **Grill me is inserted as the 2nd option** — Guide
+me stays first and remains the default; I'll edit the file and Chat keep
+their existing positions and behavior. When the user picks Grill me, this
+bridge's procedure below applies.
+
 ## Procedure
 
 1. Present the directive's questions one at a time, following the
