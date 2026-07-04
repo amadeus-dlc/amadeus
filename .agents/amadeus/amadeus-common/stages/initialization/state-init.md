@@ -27,7 +27,7 @@ outputs: <record>/aidlc-state.md (full populated version, engine-resolved)
 
 # State Initialization
 
-Runs deterministically inside `aidlc-utility init`. Kept as reference for state-file contract.
+Runs deterministically inside `amadeus-utility init`. Kept as reference for state-file contract.
 
 MANDATORY: Follow stage-protocol.md for state tracking and audit logging.
 

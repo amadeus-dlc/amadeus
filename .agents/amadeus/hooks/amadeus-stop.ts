@@ -14,7 +14,7 @@
 // question. If the conductor forgets to consult the engine — after a long
 // conversation, or by improvising — the workflow drifts. So the loop cannot
 // rest on the conductor's good behaviour: when the conductor tries to end its
-// turn, this hook runs the engine (`aidlc-orchestrate next`) and, if a
+// turn, this hook runs the engine (`amadeus-orchestrate next`) and, if a
 // directive is still PENDING, blocks the stop and injects the directive back
 // via `reason`. The conductor cannot quit until the engine answers `done`.
 // Enforced by the harness, not by the LLM remembering.
@@ -67,8 +67,8 @@
 //      — no file, all answered, autonomous, or a read error — falls through to
 //      the cap-bounded block, so a genuine mid-stage quit is still nudged.
 //   4. A CONVERSATIONAL turn ends with the human's last prompt answered and NO
-//      workflow-engine engagement (the conductor ran neither aidlc-orchestrate
-//      nor aidlc-state since that prompt). Issue #365's broader reading: a human
+//      workflow-engine engagement (the conductor ran neither amadeus-orchestrate
+//      nor amadeus-state since that prompt). Issue #365's broader reading: a human
 //      who just wants to CHAT mid-workflow should not be nudged at all. We read
 //      the harness transcript (Claude / Codex deliver `transcript_path` on the
 //      Stop payload; Kiro delivers none, so this carve-out is inert there and
@@ -136,7 +136,7 @@ function defaultBlockCap(stateContent: string): number {
 const AUTONOMOUS_BLOCK_CAP = 8;
 const INTERACTIVE_BLOCK_CAP = 2;
 
-// Upper bound on the `aidlc-orchestrate next` consultation. A `next` that never
+// Upper bound on the `amadeus-orchestrate next` consultation. A `next` that never
 // returns must not hang the hook for the whole turn (a session trap the
 // block-count guard cannot see — it only counts blocks that complete). The
 // read-only engine answers in well under a second normally; 10s is generous
@@ -447,8 +447,8 @@ function isPendingQuestionStop(stateContent: string): boolean {
 // not be nudged back into the forwarding loop at all. Park does not cover that
 // (it is not automatic). This carve-out does: when the turn that is ending was
 // CONVERSATIONAL (the most recent genuine human prompt was answered with NO
-// workflow-engine engagement, i.e. the conductor ran neither aidlc-orchestrate
-// nor aidlc-state since that prompt) we ALLOW the stop.
+// workflow-engine engagement, i.e. the conductor ran neither amadeus-orchestrate
+// nor amadeus-state since that prompt) we ALLOW the stop.
 //
 // The signal is the harness transcript. Claude and Codex both deliver a
 // `transcript_path` on the Stop payload (Claude JSONL; Codex date-sharded
@@ -466,7 +466,7 @@ function isPendingQuestionStop(stateContent: string): boolean {
 //      loop must keep running unattended; there is no human chatting to release.
 // Fail-closed throughout: any error returns false and the cap-bounded block stands.
 
-// A workflow-engine tool call: a Bash invocation of aidlc-orchestrate/aidlc-state,
+// A workflow-engine tool call: a Bash invocation of amadeus-orchestrate/amadeus-state,
 // or a tool whose name itself references aidlc. These are the calls that mean
 // "the conductor engaged the workflow this turn"; their presence in the turn
 // that answered the human disqualifies the turn from the conversational carve-out
@@ -481,10 +481,10 @@ function isEngineToolCall(name: string, input: unknown): boolean {
   const text = /^(bash|shell|execute_bash)$/i.test(name) ? cmd : name;
   // Fast reject: no AIDLC engine/state/workspace tool named at all -> not a
   // workflow engagement (a chat turn that ran git/cat/ls etc.).
-  if (!/aidlc-(orchestrate|state|jump|bolt|swarm)\b/.test(text)) return false;
+  if (!/amadeus-(orchestrate|state|jump|bolt|swarm)\b/.test(text)) return false;
   // Split on shell separators so a CHAINED command is judged per sub-command,
   // not as one blob. Otherwise a read-only flag anywhere in the line
-  // (`... --status && aidlc-orchestrate report ...`) would wrongly exempt a
+  // (`... --status && amadeus-orchestrate report ...`) would wrongly exempt a
   // mutating call elsewhere in the same line. Each segment is judged on its own.
   const segments = text.split(/&&|\|\||[;|\n]/);
   for (const seg of segments) {
@@ -499,18 +499,18 @@ function isEngineToolCall(name: string, input: unknown): boolean {
 // `--doctor` / `--help` / `--version` or a read-only utility call: those must
 // NOT disqualify the conversational carve-out. Anything that advances the loop
 // (`next` fetching a directive, `report` committing a transition) or mutates
-// state (aidlc-state completing/transition verbs; a checkbox/jump/bolt/swarm
-// move) DOES count as engagement. Fail-toward-engagement: an aidlc-orchestrate/
+// state (amadeus-state completing/transition verbs; a checkbox/jump/bolt/swarm
+// move) DOES count as engagement. Fail-toward-engagement: an amadeus-orchestrate/
 // state/jump/bolt/swarm verb we do not specifically recognise is treated as
 // engagement (BLOCK), so an unrecognised mutating verb can never leak through as
 // "chat" - the conservative direction for loop integrity.
 function isEngineEngagementSegment(seg: string): boolean {
-  if (!/aidlc-(orchestrate|state|jump|bolt|swarm)\b/.test(seg)) return false;
+  if (!/amadeus-(orchestrate|state|jump|bolt|swarm)\b/.test(seg)) return false;
   // A PURE read-only query: a read-only flag present AND no mutating/advancing
   // verb in the SAME segment. `next --status` is read-only; `report --status`
   // (nonsensical, but) still has `report` so is engagement.
   const hasReadOnlyFlag = /--status\b|--doctor\b|--help\b|--version\b/.test(seg);
-  if (/aidlc-orchestrate\b/.test(seg)) {
+  if (/amadeus-orchestrate\b/.test(seg)) {
     const advances = /\bnext\b|\breport\b/.test(seg);
     if (!advances) return false; // e.g. an orchestrate invocation with only a read-only flag
     // `next --status` is the read-only status query; a bare `next` (or any
@@ -519,12 +519,12 @@ function isEngineEngagementSegment(seg: string): boolean {
     if (hasReadOnlyFlag && /\bnext\b/.test(seg) && !/\breport\b/.test(seg)) return false;
     return true;
   }
-  if (/aidlc-state\b/.test(seg)) {
-    // The mutating / completing subcommands. (Read-only aidlc-state reads like
+  if (/amadeus-state\b/.test(seg)) {
+    // The mutating / completing subcommands. (Read-only amadeus-state reads like
     // `get`/`show` are not here, so they fall through to non-engagement.)
     return /\b(approve|advance|finalize|complete-workflow|gate-start|checkbox|park|unpark|set|skip|reject|revise|resume)\b/.test(seg);
   }
-  // aidlc-jump / aidlc-bolt / aidlc-swarm: a read-only query (--help/--status)
+  // amadeus-jump / amadeus-bolt / amadeus-swarm: a read-only query (--help/--status)
   // is not engagement; anything else mutates (jump moves the pointer, bolt forks/
   // merges, swarm runs Construction) so counts as engagement.
   if (hasReadOnlyFlag) return false;
@@ -784,7 +784,7 @@ function continuationReason(kind: string, stage: string): string {
     `The AIDLC workflow has a pending step (a ${kind} directive${where}). ` +
     "You haven't finished the forwarding loop yet. Run " +
     `\`bun ${harnessDir()}/tools/amadeus-orchestrate.ts next\`, act on the directive it ` +
-    "emits, then run `aidlc-orchestrate report --stage <stage> --result <outcome>` to commit " +
+    "emits, then run `amadeus-orchestrate report --stage <stage> --result <outcome>` to commit " +
     "the transition. Repeat until the engine answers `done`. " +
     "If instead you mean to pause this workflow for now (and resume in a later " +
     `session), run \`bun ${harnessDir()}/tools/amadeus-orchestrate.ts park\` to park it ` +

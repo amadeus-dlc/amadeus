@@ -2,7 +2,7 @@
 //
 // A bolt is one execution of stages 3.1-3.5 for a Unit (or small group of
 // dependency-linked Units). This tool owns BOLT_STARTED, BOLT_COMPLETED,
-// BOLT_FAILED, and AUTONOMY_MODE_SET emissions — separated from aidlc-state
+// BOLT_FAILED, and AUTONOMY_MODE_SET emissions — separated from amadeus-state
 // to keep Construction-phase specifics out of the general state tool.
 // `abort` reuses BOLT_FAILED with a `Reason: aborted` field rather than
 // adding a new event type — keeps the audit count stable and uses field
@@ -69,7 +69,7 @@ function emitAudit(
 // Bolt pair (start --worktree / complete --merge) must propagate the SAME selector
 // to every fork/merge primitive so they all target ONE intent end-to-end (vision
 // §5). The --repo dimension (P7) likewise rides along so a delegated git op
-// (aidlc-worktree discard on abort --discard) anchors to the same sibling repo the
+// (amadeus-worktree discard on abort --discard) anchors to the same sibling repo the
 // fork used. Returns [] when no flag is present -> the primitives default-resolve
 // (the active cursor / inferred lone repo), today's behaviour.
 function selectorArgs(flags: Record<string, string>): string[] {
@@ -153,14 +153,14 @@ function parseFlags(args: string[]): Record<string, string> {
 }
 
 // --- Subcommand: start ---
-// Usage: aidlc-bolt start --name <bolt-names> --batch <n>
+// Usage: amadeus-bolt start --name <bolt-names> --batch <n>
 //                         [--walking-skeleton true|false]
 //                         [--worktree --slug <kebab-slug>] [--repo <name>]
 //
 // --name accepts a single bolt name or comma-separated list for a parallel batch.
 //
 // --repo (P7): the sibling repo the Bolt operates in. start does no git itself
-// (the worktree was created by aidlc-worktree create), but --repo rides the
+// (the worktree was created by amadeus-worktree create), but --repo rides the
 // selector to every delegated primitive so the whole Bolt pair targets one repo.
 //
 // --worktree: after BOLT_STARTED, delegates to `amadeus-state.ts fork` and
@@ -256,7 +256,7 @@ function handleStart(args: string[]): void {
       "start-worktree",
       flags.slug,
       reason,
-      `aidlc-state fork --slug ${flags.slug} exited ${stateForkResult.status}: ${stateForkResult.stderr || stateForkResult.stdout || "(no output)"}`
+      `amadeus-state fork --slug ${flags.slug} exited ${stateForkResult.status}: ${stateForkResult.stderr || stateForkResult.stdout || "(no output)"}`
     );
   }
 
@@ -275,7 +275,7 @@ function handleStart(args: string[]): void {
       "start-worktree",
       flags.slug,
       reason,
-      `aidlc-audit audit-fork --slug ${flags.slug} exited ${auditForkResult.status}: ${auditForkResult.stderr || auditForkResult.stdout || "(no output)"}`
+      `amadeus-audit audit-fork --slug ${flags.slug} exited ${auditForkResult.status}: ${auditForkResult.stderr || auditForkResult.stdout || "(no output)"}`
     );
   }
 
@@ -305,7 +305,7 @@ function handleStart(args: string[]): void {
       "start-worktree",
       flags.slug,
       reason,
-      `aidlc-runtime fragment-fork --slug ${flags.slug} exited ${fragmentForkResult.status}: ${fragmentForkResult.stderr || fragmentForkResult.stdout || "(no output)"}`
+      `amadeus-runtime fragment-fork --slug ${flags.slug} exited ${fragmentForkResult.status}: ${fragmentForkResult.stderr || fragmentForkResult.stdout || "(no output)"}`
     );
   }
 
@@ -322,7 +322,7 @@ function handleStart(args: string[]): void {
 }
 
 // --- Subcommand: complete ---
-// Usage: aidlc-bolt complete --name <bolt-names> --batch <n>
+// Usage: amadeus-bolt complete --name <bolt-names> --batch <n>
 //                            [--merge --slug <kebab-slug>]
 //
 // --merge: after BOLT_COMPLETED, delegates to `amadeus-state.ts merge` and
@@ -357,14 +357,14 @@ function handleComplete(args: string[]): void {
     // any failed-sibling AUQ. This refusal pins that invariant in tooling so
     // an orchestrator that forgets the prose contract cannot land a merge
     // mid-AUQ-sequence. Refusal is non-zero exit + stderr; the orchestrator
-    // must call `aidlc-bolt release-merge --slug <slug>` once the AUQ
+    // must call `amadeus-bolt release-merge --slug <slug>` once the AUQ
     // sequence resolves before retrying complete --merge.
     if (isMergeHeld(pd, flags.slug, flags.intent, flags.space)) {
       failJson(
         "complete-merge",
         flags.slug,
         "merge-held",
-        `Merge held by HOLD-MERGE invariant; resolve the failed-sibling halt-and-ask sequence and run \`aidlc-bolt release-merge --slug ${flags.slug}\` before retrying.`
+        `Merge held by HOLD-MERGE invariant; resolve the failed-sibling halt-and-ask sequence and run \`amadeus-bolt release-merge --slug ${flags.slug}\` before retrying.`
       );
     }
   }
@@ -408,7 +408,7 @@ function handleComplete(args: string[]): void {
       "complete-merge",
       flags.slug,
       reason,
-      `aidlc-state merge --slug ${flags.slug} exited ${stateMergeResult.status}: ${stateMergeResult.stderr || stateMergeResult.stdout || "(no output)"}`
+      `amadeus-state merge --slug ${flags.slug} exited ${stateMergeResult.status}: ${stateMergeResult.stderr || stateMergeResult.stdout || "(no output)"}`
     );
   }
 
@@ -428,7 +428,7 @@ function handleComplete(args: string[]): void {
       "complete-merge",
       flags.slug,
       reason,
-      `aidlc-audit audit-merge --slug ${flags.slug} exited ${auditMergeResult.status}: ${auditMergeResult.stderr || auditMergeResult.stdout || "(no output)"}`
+      `amadeus-audit audit-merge --slug ${flags.slug} exited ${auditMergeResult.status}: ${auditMergeResult.stderr || auditMergeResult.stdout || "(no output)"}`
     );
   }
 
@@ -459,7 +459,7 @@ function handleComplete(args: string[]): void {
       "complete-merge",
       flags.slug,
       reason,
-      `aidlc-runtime fragment-merge --slug ${flags.slug} exited ${fragmentMergeResult.status}: ${fragmentMergeResult.stderr || fragmentMergeResult.stdout || "(no output)"}`
+      `amadeus-runtime fragment-merge --slug ${flags.slug} exited ${fragmentMergeResult.status}: ${fragmentMergeResult.stderr || fragmentMergeResult.stdout || "(no output)"}`
     );
   }
 
@@ -475,11 +475,11 @@ function handleComplete(args: string[]): void {
 }
 
 // --- Subcommand: fail ---
-// Usage: aidlc-bolt fail --name <failed-bolt> --error <summary>
+// Usage: amadeus-bolt fail --name <failed-bolt> --error <summary>
 //                        [--slug <kebab-slug>] [--succeeded-siblings <csv>]
 //
 // `--slug` is optional but should be passed by halt-and-ask flows so
-// downstream `aidlc-worktree info --slug` can correlate the failed Bolt
+// downstream `amadeus-worktree info --slug` can correlate the failed Bolt
 // with its WORKTREE_CREATED audit entry. `--name` is the human-prose Bolt
 // name; `--slug` is the kebab-case derivative threaded through worktree
 // commands.
@@ -512,7 +512,7 @@ function handleFail(args: string[]): void {
 }
 
 // --- Subcommand: abort ---
-// Usage: aidlc-bolt abort --name <bolt-name> --slug <kebab-slug> --reason <text>
+// Usage: amadeus-bolt abort --name <bolt-name> --slug <kebab-slug> --reason <text>
 //                         [--discard]
 //
 // Explicit user-driven abort (Issue 75 US-1 line 51). Emits BOLT_FAILED with
@@ -521,7 +521,7 @@ function handleFail(args: string[]): void {
 // emitted by the orchestrator when code-gen returns failure).
 //
 // Default behaviour preserves the worktree directory for inspection. With
-// --discard, calls aidlc-worktree discard --slug <slug> to tear it down
+// --discard, calls amadeus-worktree discard --slug <slug> to tear it down
 // (audit-of-intent: WORKTREE_DISCARDED emits before tear-down inside the
 // discard subprocess; on discard failure, halt without state damage).
 function handleAbort(args: string[]): void {
@@ -538,7 +538,7 @@ function handleAbort(args: string[]): void {
   // (Reason: aborted) before discard and discard then timed out / errored,
   // the audit would claim the Bolt was aborted-and-cleaned-up while the
   // worktree directory still existed on disk and the slug remained in main's
-  // Bolt Refs (cleared by aidlc-worktree discard's WORKTREE_DISCARDED path).
+  // Bolt Refs (cleared by amadeus-worktree discard's WORKTREE_DISCARDED path).
   // Caught by post-ship 4-agent review (adversarial agent BLOCKER finding).
   // Default path (no --discard) preserves the worktree per US-1 AC line 51,
   // so emit-before-noop is safe and the ordering only matters for --discard.
@@ -555,7 +555,7 @@ function handleAbort(args: string[]): void {
         "abort-discard",
         flags.slug,
         reason,
-        `aidlc-worktree discard --slug ${flags.slug} exited ${result.status}: ${result.stderr || result.stdout || "(no output)"}`
+        `amadeus-worktree discard --slug ${flags.slug} exited ${result.status}: ${result.stderr || result.stdout || "(no output)"}`
       );
     }
   }
@@ -588,8 +588,8 @@ function handleAbort(args: string[]): void {
 }
 
 // --- Subcommand: hold-merge / release-merge ---
-// Usage: aidlc-bolt hold-merge --slug <slug>
-//        aidlc-bolt release-merge --slug <slug>
+// Usage: amadeus-bolt hold-merge --slug <slug>
+//        amadeus-bolt release-merge --slug <slug>
 //
 // HOLD-MERGE invariant tooling. Sets / clears the `Merge-Held` field in
 // the per-Bolt forked state file at
@@ -599,7 +599,7 @@ function handleAbort(args: string[]): void {
 // inserted under `## Project Information` on first hold-merge so the
 // current state template does not need a bump for this optional marker.
 // Reads are via `isMergeHeld` below; checked in `complete --merge` to
-// refuse mid-AUQ merges and exposed via `aidlc-worktree info` for
+// refuse mid-AUQ merges and exposed via `amadeus-worktree info` for
 // resume-path checks.
 //
 // No audit emission — Merge-Held is internal coordination state, not a
@@ -660,7 +660,7 @@ function setMergeHeld(pd: string, slug: string, held: boolean, intent?: string, 
   const path = forkedStateFilePath(pd, slug, intent, space);
   if (!path) {
     error(
-      `No per-Bolt forked state file for slug "${slug}" — was \`aidlc-bolt start --worktree --slug ${slug}\` run?`
+      `No per-Bolt forked state file for slug "${slug}" — was \`amadeus-bolt start --worktree --slug ${slug}\` run?`
     );
   }
   const content = readFileSync(path, "utf-8");
@@ -674,13 +674,13 @@ function setMergeHeld(pd: string, slug: string, held: boolean, intent?: string, 
 }
 
 // --- Subcommand: dispatch-event ---
-// Usage: aidlc-bolt dispatch-event --event MERGE_DISPATCH_INVOKED --slug <slug>
+// Usage: amadeus-bolt dispatch-event --event MERGE_DISPATCH_INVOKED --slug <slug>
 //                                  --practices-excerpt <text>
-//        aidlc-bolt dispatch-event --event MERGE_DISPATCH_RETURNED --slug <slug>
+//        amadeus-bolt dispatch-event --event MERGE_DISPATCH_RETURNED --slug <slug>
 //                                  --strategy <squash|merge|rebase>
 //                                  --target <branch> --confidence <0-1>
 //                                  --notes <text>
-//        aidlc-bolt dispatch-event --event MERGE_DISPATCH_FALLBACK --slug <slug>
+//        amadeus-bolt dispatch-event --event MERGE_DISPATCH_FALLBACK --slug <slug>
 //                                  --reason <enum> --defaults <text>
 //
 // Wires the three MERGE_DISPATCH_* events by emitting via
@@ -772,7 +772,7 @@ function handleDispatchEvent(args: string[]): void {
 }
 
 // --- Subcommand: set-autonomy ---
-// Usage: aidlc-bolt set-autonomy --mode autonomous|gated
+// Usage: amadeus-bolt set-autonomy --mode autonomous|gated
 //
 // Emits AUTONOMY_MODE_SET AND updates the Construction Autonomy Mode field
 // in aidlc-state.md atomically (audit-first).
@@ -875,8 +875,8 @@ function main(): void {
 
 function error(msg: string): never {
   const pd = resolveProjectDir(projectDir);
-  const command = `aidlc-bolt ${process.argv.slice(2).join(" ")}`.trim();
-  emitError(pd, "aidlc-bolt", command, msg);
+  const command = `amadeus-bolt ${process.argv.slice(2).join(" ")}`.trim();
+  emitError(pd, "amadeus-bolt", command, msg);
 }
 
 // Emit BOLT_FAILED for partial-progress recovery in --worktree / --merge

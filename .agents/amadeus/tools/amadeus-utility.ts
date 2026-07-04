@@ -112,8 +112,8 @@ function die(msg: string): never {
   const pdIdx = args.indexOf("--project-dir");
   const explicitPd = pdIdx !== -1 && pdIdx + 1 < args.length ? args[pdIdx + 1] : undefined;
   const pd = resolveProjectDir(explicitPd);
-  const command = `aidlc-utility ${args.join(" ")}`.trim();
-  emitError(pd, "aidlc-utility", command, msg);
+  const command = `amadeus-utility ${args.join(" ")}`.trim();
+  emitError(pd, "amadeus-utility", command, msg);
 }
 
 // Thin wrapper around the canonical appendAuditEntry. All events must be in
@@ -396,7 +396,7 @@ function handleDoctor(projectDir: string): void {
   // them up.
   const harness = harnessDir();
   if (harness === ".claude") {
-    // Claude Code: the EXPECTED roster is the set of aidlc-*.ts hooks that
+    // Claude Code: the EXPECTED roster is the set of amadeus-*.ts hooks that
     // settings.json actually wires (its `hooks` event blocks + the `statusLine`
     // command) — that is the CONTRACT Claude Code will try to run. Each
     // expected hook's PRESENCE is then probed against the project's own
@@ -418,12 +418,12 @@ function handleDoctor(projectDir: string): void {
     let settingsReadable = true;
     try {
       const raw = readFileSync(settingsForHooks, "utf-8");
-      // jq-free: collect every distinct aidlc-*.ts basename referenced anywhere
+      // jq-free: collect every distinct amadeus-*.ts basename referenced anywhere
       // in settings.json (hook command paths like
       // "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-audit-logger.ts" and the
       // statusLine command). Basename, not path, so the probe is dir-relative.
       const refs = new Set<string>();
-      for (const m of raw.matchAll(/aidlc-[A-Za-z0-9_-]+\.ts/g)) {
+      for (const m of raw.matchAll(/amadeus-[A-Za-z0-9_-]+\.ts/g)) {
         refs.add(m[0]);
       }
       expectedHooks = [...refs].sort();
@@ -440,11 +440,11 @@ function handleDoctor(projectDir: string): void {
         fix: "restore .claude/settings.json (copy from `dist/claude/.claude/settings.json`)",
       });
     } else if (expectedHooks.length === 0) {
-      // settings.json parsed but wires no aidlc hooks — also loud (a stripped
+      // settings.json parsed but wires no amadeus hooks — also loud (a stripped
       // settings.json that lost its hooks block is a real misconfiguration).
       results.push({
         pass: false,
-        label: "Hook contract: settings.json wires no aidlc-*.ts hooks",
+        label: "Hook contract: settings.json wires no amadeus-*.ts hooks",
         fix: "restore the hooks block in .claude/settings.json (copy from `dist/claude/.claude/settings.json`)",
       });
     } else {
@@ -462,16 +462,16 @@ function handleDoctor(projectDir: string): void {
     // agents/aidlc.json / hooks.json — checked below). The core hook bodies
     // ship in every tree plus an authored adapter, so probe the explicit roster.
     const tsHooks = [
-      "aidlc-audit-logger",
-      "aidlc-sync-statusline",
-      "aidlc-validate-state",
-      "aidlc-log-subagent",
-      "aidlc-session-start",
-      "aidlc-session-end",
-      "aidlc-statusline",
+      "amadeus-audit-logger",
+      "amadeus-sync-statusline",
+      "amadeus-validate-state",
+      "amadeus-log-subagent",
+      "amadeus-session-start",
+      "amadeus-session-end",
+      "amadeus-statusline",
     ];
-    if (harness === ".kiro") tsHooks.push("aidlc-kiro-adapter");
-    if (harness === ".codex") tsHooks.push("aidlc-codex-adapter");
+    if (harness === ".kiro") tsHooks.push("amadeus-kiro-adapter");
+    if (harness === ".codex") tsHooks.push("amadeus-codex-adapter");
     for (const h of tsHooks) {
       const hookPath = join(projectDir, harness, "hooks", `${h}.ts`);
       results.push({
@@ -819,7 +819,7 @@ function handleDoctor(projectDir: string): void {
     const orphanActive: string[] = []; // dir present but no audit/Bolt Refs trail
     const cleanupOrphans: string[] = []; // dir present, merge succeeded, cleanup failed
 
-    // Helper: did this slug get aborted via `aidlc-bolt abort` (BOLT_FAILED
+    // Helper: did this slug get aborted via `amadeus-bolt abort` (BOLT_FAILED
     // with `Reason: aborted` from multi-failure halt-and-ask)?
     // Default-path abort preserves the worktree, so the slug remains in
     // Bolt Refs but it's not "in flight" — it's awaiting /aidlc --resume.
@@ -897,7 +897,7 @@ function handleDoctor(projectDir: string): void {
         );
       }
       label = `Orphan worktrees: ${orphanActive.length + cleanupOrphans.length} drift`;
-      fix = `${parts.join("; ")}. Inspect and remove via 'aidlc-worktree discard --slug <slug>' or 'rm -rf .aidlc/worktrees/bolt-<slug>'.`;
+      fix = `${parts.join("; ")}. Inspect and remove via 'amadeus-worktree discard --slug <slug>' or 'rm -rf .aidlc/worktrees/bolt-<slug>'.`;
     }
     results.push({ pass, label, fix });
   } catch (e) {
@@ -1008,7 +1008,7 @@ function handleDoctor(projectDir: string): void {
       results.push({
         pass: false,
         label: `Orphan state files: ${orphan.length} drift`,
-        fix: `state files for ${orphan.join(", ")} exist but slug not in Bolt Refs and no WORKTREE_DISCARDED row. Recover via 'aidlc-worktree discard --slug <slug>' (idempotent).`,
+        fix: `state files for ${orphan.join(", ")} exist but slug not in Bolt Refs and no WORKTREE_DISCARDED row. Recover via 'amadeus-worktree discard --slug <slug>' (idempotent).`,
       });
     }
   } catch (e) {
@@ -1045,7 +1045,7 @@ function handleDoctor(projectDir: string): void {
       if (!slug) continue;
       // Terminal short-circuits run BEFORE the disk check. A successfully
       // merged-and-cleaned Bolt has AUDIT_MERGED + WORKTREE_MERGED in main
-      // audit and the worktree directory removed by `aidlc-worktree merge`'s
+      // audit and the worktree directory removed by `amadeus-worktree merge`'s
       // cleanup — without the short-circuit, sub-case (a) would flag every
       // healthy historical AUDIT_FORKED as drift forever. Same logic for
       // active forks (still in flight) and explicit discards.
@@ -1547,7 +1547,7 @@ function handleDoctor(projectDir: string): void {
   // Read seams: pairing via loadRules().frontmatter (it is NOT on the
   // graph node); sensor ids via loadGraph() -> sensors_applicable[].id.
   // Manifest ids are bare ("required-sections"); a rule's pairing value is
-  // aidlc-prefixed — strip "aidlc-" before matching (milestone-7b-frozen join).
+  // amadeus-prefixed — strip "amadeus-" before matching (milestone-7b-frozen join).
   //
   // Emits GUARDRAIL_LOADED once per doctor run — but ONLY when an audit trail
   // already exists (cold-safe, see auditExists below); appendAuditEntry
@@ -1579,7 +1579,7 @@ function handleDoctor(projectDir: string): void {
       pairX++;
       continue;
     }
-    const bareId = pairing.replace(/^aidlc-/, "");
+    const bareId = pairing.replace(/^amadeus-/, "");
     if (sensorIds.has(bareId)) {
       pairP++;
     } else {
@@ -2698,7 +2698,7 @@ function handleCodekbPath(projectDir: string, flags: Record<string, string>): vo
 // it reads its space's live memory — handled in birthIntent.)
 function handleSpaceCreate(projectDir: string, positional: string[], _flags: Record<string, string>): void {
   const raw = positional[1];
-  if (!raw) die("Usage: aidlc-utility space-create <name>");
+  if (!raw) die("Usage: amadeus-utility space-create <name>");
   const name = slugify(raw);
   const dest = join(spacesRoot(projectDir), name);
   if (existsSync(dest)) die(`Space "${name}" already exists at ${dest}.`);
@@ -3425,7 +3425,7 @@ function main(): void {
       break;
     default:
       die(
-        `Usage: aidlc-utility <help|version|status|doctor|intent-birth|intent|space|space-create|codekb-path|scope-change|config-change|set-status|detect-scope|resolve-env-scope|scope-table> [--project-dir <path>] [--scope <scope>] [--json]`
+        `Usage: amadeus-utility <help|version|status|doctor|intent-birth|intent|space|space-create|codekb-path|scope-change|config-change|set-status|detect-scope|resolve-env-scope|scope-table> [--project-dir <path>] [--scope <scope>] [--json]`
       );
   }
 }

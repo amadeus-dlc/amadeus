@@ -200,7 +200,7 @@ for (const entry of applicableSensors) {
   // --stage and owns the template seam — it derives --templates-dir +
   // --template-eligible (via templateEligibleArtifacts) and threads them to the
   // required-sections script. So both invocation sites (this hook and a direct
-  // `aidlc-sensor fire`) converge on the dispatcher's single threading point and
+  // `amadeus-sensor fire`) converge on the dispatcher's single threading point and
   // stay consistent; the hook passes only --stage/--output-path as before.
   try {
     const result = spawnSync(

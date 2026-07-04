@@ -1,6 +1,6 @@
 # Branching Strategies
 
-A menu of common branching strategies, what they look like, when to use them, and how AIDLC's Construction worktrees map onto each. When the orchestrator dispatches amadeus-pipeline-deploy-agent at Bolt boundaries, this file is the menu the agent surveys to map a team's affirmed branching strategy onto the `aidlc-worktree` tool's flags.
+A menu of common branching strategies, what they look like, when to use them, and how AIDLC's Construction worktrees map onto each. When the orchestrator dispatches amadeus-pipeline-deploy-agent at Bolt boundaries, this file is the menu the agent surveys to map a team's affirmed branching strategy onto the `amadeus-worktree` tool's flags.
 
 > **Reading practices:** see `knowledge/amadeus-shared/rules-reading.md` for empty-template detection, semantic-topic matching, and the `team.md → org.md → hardcoded defaults` fallback chain. This file does not duplicate that protocol.
 >
@@ -109,7 +109,7 @@ develop ─────┴───────────┴──────
 - Long-lived `develop` accumulates merge debt against `main` over a release cycle. Painful merges at release-cut time.
 - Hotfixes require dual-merging (to both `main` and `develop`) — easy to miss the second merge.
 
-**Worktree mapping.** Feature Bolts: `--base develop --target develop`. Hotfix Bolts: `--base main --target main` (and the operator merges to `develop` separately — out of scope for `aidlc-worktree`). Strategy is usually `merge` to preserve branch history; `squash` is also valid.
+**Worktree mapping.** Feature Bolts: `--base develop --target develop`. Hotfix Bolts: `--base main --target main` (and the operator merges to `develop` separately — out of scope for `amadeus-worktree`). Strategy is usually `merge` to preserve branch history; `squash` is also valid.
 
 ### Execution runbook
 
@@ -117,7 +117,7 @@ When dispatched for GitFlow:
 
 1. Read `team.md` `## Branching`. Look for the integration-branch name (`develop` is the convention; teams sometimes use `integration` or `next`).
 2. For feature Bolts: `--base <integration> --target <integration> --strategy <merge|squash>`. Default to `merge`.
-3. For hotfix Bolts (rare in Construction; usually triggered by an out-of-band stage): `--base main --target main --strategy merge`. The operator separately merges the hotfix back to `<integration>` after `aidlc-worktree merge` succeeds. Out of scope for the tool.
+3. For hotfix Bolts (rare in Construction; usually triggered by an out-of-band stage): `--base main --target main --strategy merge`. The operator separately merges the hotfix back to `<integration>` after `amadeus-worktree merge` succeeds. Out of scope for the tool.
 4. **Create**: `bun .claude/tools/amadeus-worktree.ts create --slug <bolt-slug> --base <integration>`.
 5. **Merge**: caller must be on `<integration>` at the main checkout. `bun .claude/tools/amadeus-worktree.ts merge --slug <bolt-slug> --target <integration> --strategy <merge|squash>`.
 6. Return per § Response contract; if hotfix, include `notes: "manual merge to <integration> required"` so the orchestrator surfaces the follow-up.
@@ -126,7 +126,7 @@ When dispatched for GitFlow:
 
 - **`<integration>` branch missing locally.** Pre-audit error; tool refuses to invent the branch.
 - **Wrong cwd on merge.** Defensive HEAD check fails: `expected branch <integration>, found <actual>`. Caller must `cd` to the main checkout and `git checkout <integration>` first.
-- **Hotfix merge to second target forgotten.** Out-of-scope for `aidlc-worktree`; orchestrator's amadeus-pipeline-deploy-agent dispatch should always include the second-target reminder in `notes`.
+- **Hotfix merge to second target forgotten.** Out-of-scope for `amadeus-worktree`; orchestrator's amadeus-pipeline-deploy-agent dispatch should always include the second-target reminder in `notes`.
 
 ---
 
@@ -212,7 +212,7 @@ When dispatched for Monorepo:
 
 ## Response contract
 
-When the orchestrator dispatches amadeus-pipeline-deploy-agent for a worktree create or merge, the agent invokes `aidlc-worktree` directly and reports the JSON envelope below back to the orchestrator. SKILL.md Step 0.5 / Step 6.75 then call `aidlc-worktree verify` as a deterministic backstop confirming the audit event landed.
+When the orchestrator dispatches amadeus-pipeline-deploy-agent for a worktree create or merge, the agent invokes `amadeus-worktree` directly and reports the JSON envelope below back to the orchestrator. SKILL.md Step 0.5 / Step 6.75 then call `amadeus-worktree verify` as a deterministic backstop confirming the audit event landed.
 
 ### Create response (success)
 
@@ -275,14 +275,14 @@ If the worktree was already gone (idempotent path), `emitted` is `null` and `rea
 
 ## How AIDLC reads strategy from team practices
 
-The dispatch protocol described in this section is implemented by **SKILL.md Step 0** (worktree create) and **Step 6.5** (worktree merge). `aidlc-bolt complete --merge` orchestrates around the dispatch (forkState merge-back, forkAudit merge-back) but does not call `aidlc-worktree merge` directly — the dispatch lives in SKILL.md prose.
+The dispatch protocol described in this section is implemented by **SKILL.md Step 0** (worktree create) and **Step 6.5** (worktree merge). `amadeus-bolt complete --merge` orchestrates around the dispatch (forkState merge-back, forkAudit merge-back) but does not call `amadeus-worktree merge` directly — the dispatch lives in SKILL.md prose.
 
 When a Bolt starts (Step 0) or completes (Step 6.5), the orchestrator dispatches a Task call to **amadeus-pipeline-deploy-agent** with two inputs:
 
 1. The contents of `.claude/rules/aidlc-team.md`'s `## Way of Working` section (or `aidlc-org.md` if `aidlc-team.md` is empty — fallback chain in `shared/rules-reading.md`).
 2. The Bolt's metadata (slug, source branch, optional target-line hint for release-branch teams).
 
-The agent reads this file (`branching-strategies.md`) as the menu, matches the team's stated strategy to one of the five above, picks the right `aidlc-worktree` flags, invokes the tool, and returns the response envelope per § Response contract.
+The agent reads this file (`branching-strategies.md`) as the menu, matches the team's stated strategy to one of the five above, picks the right `amadeus-worktree` flags, invokes the tool, and returns the response envelope per § Response contract.
 
 If the team's stated strategy doesn't map cleanly to the menu (e.g. "we use a hybrid"), the agent picks the closest fit and notes the deviation in the response's `notes` field; the orchestrator surfaces it in the audit log.
 

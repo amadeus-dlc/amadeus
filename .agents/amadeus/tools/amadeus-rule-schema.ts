@@ -1,6 +1,6 @@
 // Rule frontmatter schema — machine-checkable realisation of the rule-file
 // frontmatter spec in docs/reference/08-rule-system.md. Sibling of
-// amadeus-stage-schema.ts. Consumed by aidlc-graph compile (loadRules) and
+// amadeus-stage-schema.ts. Consumed by amadeus-graph compile (loadRules) and
 // the future doctor rule-drift check (which imports loadRules from
 // amadeus-graph.ts, not this file directly — single walking surface, no
 // parser duplication).
@@ -10,7 +10,7 @@
 //
 // Schema (strict-additive runtime + pull authoring):
 //   - pairing: string   — sensor cross-reference; "feedforward-only" or
-//                          a sensor id matching ^aidlc-
+//                          a sensor id matching ^amadeus-
 //
 // Deleted from the schema:
 //   - enforcement: enforced (no two-mode keyword; all rules are guardrails)
@@ -23,7 +23,7 @@
 import { scalarField } from "./amadeus-lib.ts";
 
 export interface RuleFrontmatter {
-  // pairing: "feedforward-only" or a sensor-id starting with "aidlc-".
+  // pairing: "feedforward-only" or a sensor-id starting with "amadeus-".
   // Compile-time check is shape-only; sensor cross-validation happens
   // at doctor time (separate concern, separate code path).
   pairing?: string;
@@ -68,9 +68,9 @@ export function validateRuleFrontmatter(
     if (typeof obj.pairing !== "string" || obj.pairing.length === 0) {
       throw new Error(`${file}: pairing must be a non-empty string`);
     }
-    if (obj.pairing !== "feedforward-only" && !obj.pairing.startsWith("aidlc-")) {
+    if (obj.pairing !== "feedforward-only" && !obj.pairing.startsWith("amadeus-")) {
       throw new Error(
-        `${file}: pairing must be "feedforward-only" or start with "aidlc-" ` +
+        `${file}: pairing must be "feedforward-only" or start with "amadeus-" ` +
           `(sensor id shape); got "${obj.pairing}"`,
       );
     }

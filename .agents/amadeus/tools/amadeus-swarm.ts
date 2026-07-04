@@ -15,11 +15,11 @@
 // THREE STATELESS SUBCOMMANDS (no iteration counter, no persisted state):
 //   prepare  --batch <n> --units <a,b,c> [--base <branch>] [--concurrency <n>]
 //            [--degraded-from <subagent|ultracode>] [--repo <name>]
-//       Fork an isolated git worktree per unit (aidlc-worktree create +
-//       aidlc-bolt start --worktree) and emit SWARM_STARTED once for the batch.
+//       Fork an isolated git worktree per unit (amadeus-worktree create +
+//       amadeus-bolt start --worktree) and emit SWARM_STARTED once for the batch.
 //       --repo (P7) selects the sibling repo the batch's worktrees fork inside (a
 //       multi-repo intent requires it; single-repo infers the lone repo); the
-//       resolved name is forwarded to every aidlc-worktree create + bolt start.
+//       resolved name is forwarded to every amadeus-worktree create + bolt start.
 //       The anti-tamper baseline is each worktree's OWN git fork (HEAD) — nothing
 //       is stored; check/finalize re-derive the pristine bytes with `git diff
 //       --quiet HEAD`. Runs before any worker, so it cannot fold into check.
@@ -60,13 +60,13 @@
 // if the conductor lies or misremembers.
 //
 // COMPOSES existing tools, does NOT reimplement them:
-//   - aidlc-worktree create        -> the isolated git worktree per unit
-//   - aidlc-bolt start --worktree  -> state/audit/runtime-graph fork into it
-//   - aidlc-bolt complete --merge  -> the AIDLC-data merge back to the base
-//   - aidlc-bolt release-merge     -> release the existing per-Bolt HOLD-MERGE
+//   - amadeus-worktree create        -> the isolated git worktree per unit
+//   - amadeus-bolt start --worktree  -> state/audit/runtime-graph fork into it
+//   - amadeus-bolt complete --merge  -> the AIDLC-data merge back to the base
+//   - amadeus-bolt release-merge     -> release the existing per-Bolt HOLD-MERGE
 //     lock before a serialised merge (idempotent — safe if never held). The merge
 //     phase is serial (a one-at-a-time loop), so only one merge is ever in flight.
-//   - aidlc-bolt fail              -> close a failed unit's Bolt lifecycle
+//   - amadeus-bolt fail              -> close a failed unit's Bolt lifecycle
 //     (BOLT_FAILED paired with the BOLT_STARTED that `start --worktree` emitted).
 
 import { spawnSync } from "node:child_process";
@@ -307,7 +307,7 @@ function emitSwarmCompleted(
   );
 }
 
-// Close a failed unit's per-Bolt lifecycle by composing `aidlc-bolt fail` (emits
+// Close a failed unit's per-Bolt lifecycle by composing `amadeus-bolt fail` (emits
 // BOLT_FAILED paired with the BOLT_STARTED that `start --worktree` emitted).
 // Preserves the worktree per the halt-and-ask contract. Best-effort: the swarm's
 // own SWARM_UNIT_FAILED is the authoritative swarm signal, so a failure to emit
@@ -341,7 +341,7 @@ function handlePrepare(rest: string[]): void {
   // on a multi-repo intent with no --repo (forwarded as the batch failure), infers
   // the lone repo for a single-repo intent, and yields cwd=projectDir for a legacy
   // intent (today's behaviour). The repoCwd is where `--base` is derived from and
-  // is forwarded to every `aidlc-worktree create` so the worktree forks in-repo.
+  // is forwarded to every `amadeus-worktree create` so the worktree forks in-repo.
   let repoCwd: string;
   let repoName: string | null;
   try {
@@ -402,7 +402,7 @@ function handlePrepare(rest: string[]): void {
       prepared.push({
         unit,
         ok: false,
-        error: "could not parse worktree_path from aidlc-worktree create",
+        error: "could not parse worktree_path from amadeus-worktree create",
       });
       continue;
     }

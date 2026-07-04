@@ -363,7 +363,7 @@ function handleSet(args: string[]): void {
 // in the base state template, so we use setOrInsertField to update-if-present /
 // insert-under-`## Runtime State`-if-absent (mirrors amadeus-bolt.ts's Merge-Held
 // pattern for a runtime-only field). No audit row — the stance is metadata the
-// next `aidlc-orchestrate next` reads to resolve the deferred Construction
+// next `amadeus-orchestrate next` reads to resolve the deferred Construction
 // Bolt-1 gate, not a state-machine transition; it rides no event, exactly like
 // `set` itself. The orchestration engine shells out to THIS subcommand rather
 // than writing state itself (the engine writes nothing).
@@ -399,7 +399,7 @@ function handleSetSkeletonStance(args: string[]): void {
   });
 }
 
-// park - persist a `Parked` runtime field so the next `aidlc-orchestrate next`
+// park - persist a `Parked` runtime field so the next `amadeus-orchestrate next`
 // emits a terminal `parked` directive and the Stop hook lets the turn end
 // (issue #367: a clean multi-session exit, so the agent never rubber-stamps
 // stages to reach `done`). `Parked` and `Parked At Stage` are runtime-only
@@ -2185,7 +2185,7 @@ function handleFork(args: string[]): void {
   const wtPath = flags["target-dir"] ?? worktreePath(pd, slug);
 
   if (!existsSync(wtPath)) {
-    errorWithSlug(slug, `worktree directory does not exist: ${wtPath}. Run aidlc-worktree create first.`);
+    errorWithSlug(slug, `worktree directory does not exist: ${wtPath}. Run amadeus-worktree create first.`);
   }
 
   // mkdir BEFORE acquiring the lock. A read-only-fs mkdir failure must not
@@ -2231,7 +2231,7 @@ function handleFork(args: string[]): void {
     // present and exits without poisoning audit).
     const currentRefs = getField(mainContent, "Bolt Refs") ?? "";
     if (parseRefsList(currentRefs).includes(slug)) {
-      errorWithSlug(slug, `slug already in Bolt Refs (current: ${currentRefs.trim()}). If a prior fork failed mid-operation, run 'aidlc-worktree discard --slug ${slug}' and 'amadeus-state.ts merge --slug ${slug}' (which will exit "already merged" cleanly) or remove the stale entry from main state, then retry.`);
+      errorWithSlug(slug, `slug already in Bolt Refs (current: ${currentRefs.trim()}). If a prior fork failed mid-operation, run 'amadeus-worktree discard --slug ${slug}' and 'amadeus-state.ts merge --slug ${slug}' (which will exit "already merged" cleanly) or remove the stale entry from main state, then retry.`);
     }
 
     // Append slug to main's Bolt Refs first (the side effect that "registers"
@@ -2467,11 +2467,11 @@ function error(msg: string): never {
   // Honor module-level projectDir (set from --project-dir in main) so test
   // fixtures and explicit overrides propagate to ERROR_LOGGED.
   const pd = resolveProjectDir(projectDir);
-  const command = `aidlc-state ${process.argv.slice(2).join(" ")}`.trim();
+  const command = `amadeus-state ${process.argv.slice(2).join(" ")}`.trim();
   // Thread the active per-intent lock context (set by fork/merge before their
   // per-intent withAuditLock) so emitError's holdsAuditLock probe keys the SAME
   // bucket the caller holds — lock==write on the in-transaction error path.
   // Unset (undefined) for every sentinel-locked handler -> emitError keys the
   // sentinel, matching their lock.
-  emitError(pd, "aidlc-state", command, msg, lockIntent, lockSpace);
+  emitError(pd, "amadeus-state", command, msg, lockIntent, lockSpace);
 }

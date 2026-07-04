@@ -1135,13 +1135,13 @@ function handleFragmentFork(rest: string[], projectDir: string): void {
   }
   if (!flags.slug) {
     process.stderr.write(
-      "aidlc-runtime fragment-fork: --slug <slug> required\n"
+      "amadeus-runtime fragment-fork: --slug <slug> required\n"
     );
     process.exit(1);
   }
   const slugErr = validateBoltSlug(flags.slug);
   if (slugErr !== null) {
-    process.stderr.write(`aidlc-runtime fragment-fork: ${slugErr}\n`);
+    process.stderr.write(`amadeus-runtime fragment-fork: ${slugErr}\n`);
     process.exit(1);
   }
 
@@ -1168,13 +1168,13 @@ function handleFragmentFork(rest: string[], projectDir: string): void {
 
   if (!existsSync(wtPath)) {
     process.stderr.write(
-      `aidlc-runtime fragment-fork: worktree directory not found at ${wtPath}; run aidlc-worktree create first\n`
+      `amadeus-runtime fragment-fork: worktree directory not found at ${wtPath}; run amadeus-worktree create first\n`
     );
     process.exit(1);
   }
   if (existsSync(wtFragmentPath)) {
     process.stderr.write(
-      `aidlc-runtime fragment-fork: fragment already exists at ${wtFragmentPath}; refusing to overwrite (fragment-fork is one-shot)\n`
+      `amadeus-runtime fragment-fork: fragment already exists at ${wtFragmentPath}; refusing to overwrite (fragment-fork is one-shot)\n`
     );
     process.exit(1);
   }
@@ -1222,7 +1222,7 @@ function handleFragmentFork(rest: string[], projectDir: string): void {
 // No content-merge: main's runtime-graph.json is rebuilt by compile via
 // the post-Bash hook on AUDIT_MERGED, which fires AFTER this subcommand
 // returns (the hook is on the parent Bash invocation that called
-// aidlc-bolt complete --merge).
+// amadeus-bolt complete --merge).
 function handleFragmentMerge(rest: string[], projectDir: string): void {
   const flags: Record<string, string> = {};
   for (let i = 0; i < rest.length; i++) {
@@ -1240,13 +1240,13 @@ function handleFragmentMerge(rest: string[], projectDir: string): void {
   }
   if (!flags.slug) {
     process.stderr.write(
-      "aidlc-runtime fragment-merge: --slug <slug> required\n"
+      "amadeus-runtime fragment-merge: --slug <slug> required\n"
     );
     process.exit(1);
   }
   const slugErr = validateBoltSlug(flags.slug);
   if (slugErr !== null) {
-    process.stderr.write(`aidlc-runtime fragment-merge: ${slugErr}\n`);
+    process.stderr.write(`amadeus-runtime fragment-merge: ${slugErr}\n`);
     process.exit(1);
   }
 
@@ -1260,7 +1260,7 @@ function handleFragmentMerge(rest: string[], projectDir: string): void {
     // Fragment-absent: clean no-op. Covers (a) re-run after a successful
     // prior merge, (b) Bolt whose fragment-fork step failed (state-fork +
     // audit-fork were emitted but fragment-fork crashed), (c) worktree dir
-    // already removed by aidlc-worktree merge / discard.
+    // already removed by amadeus-worktree merge / discard.
     console.log(
       JSON.stringify({
         status: "fragment-absent",
@@ -1287,7 +1287,7 @@ function handleFragmentMerge(rest: string[], projectDir: string): void {
 // --- CLI ---
 
 function printHelp(): void {
-  console.log(`Usage: aidlc-runtime <subcommand>
+  console.log(`Usage: amadeus-runtime <subcommand>
 
 Subcommands:
   compile                           Walk audit + memory, write runtime-graph.json
@@ -1297,9 +1297,9 @@ Subcommands:
                                     duration). Read-only; consumed by session skills.
   fragment-fork --slug <slug>       Byte-copy main runtime-graph.json into a Bolt's
                                     worktree at <worktree>/aidlc-docs/runtime-graph.json.
-                                    One-shot. Called by aidlc-bolt start --worktree.
+                                    One-shot. Called by amadeus-bolt start --worktree.
   fragment-merge --slug <slug>      Remove the worktree fragment file. Idempotent.
-                                    Called by aidlc-bolt complete --merge.
+                                    Called by amadeus-bolt complete --merge.
   --help, -h                        Show this message
 
 The compile subcommand is invoked automatically by the PostToolUse Bash
@@ -1328,7 +1328,7 @@ function tryRun(label: string, handler: SubcommandHandler): SubcommandHandler {
     try {
       handler(rest, projectDir);
     } catch (err) {
-      process.stderr.write(`aidlc-runtime ${label}: ${errorMessage(err)}\n`);
+      process.stderr.write(`amadeus-runtime ${label}: ${errorMessage(err)}\n`);
       process.exit(1);
     }
   };
@@ -1345,12 +1345,12 @@ const handleCompile: SubcommandHandler = (_rest, projectDir) => {
 const handleRead: SubcommandHandler = (rest, projectDir) => {
   const stageSlug = rest[0];
   if (!stageSlug) {
-    process.stderr.write("aidlc-runtime read: stage slug required\n");
+    process.stderr.write("amadeus-runtime read: stage slug required\n");
     process.exit(1);
   }
   const row = readStage(stageSlug, projectDir);
   if (!row) {
-    process.stderr.write(`aidlc-runtime read: no row for slug "${stageSlug}"\n`);
+    process.stderr.write(`amadeus-runtime read: no row for slug "${stageSlug}"\n`);
     process.exit(1);
   }
   console.log(JSON.stringify(row, null, 2));
@@ -1360,7 +1360,7 @@ const handleSummary: SubcommandHandler = (rest, projectDir) => {
   const summary = summarize(projectDir);
   if (!summary) {
     process.stderr.write(
-      "aidlc-runtime summary: no runtime-graph.json found — run a workflow first\n"
+      "amadeus-runtime summary: no runtime-graph.json found — run a workflow first\n"
     );
     process.exit(1);
   }
@@ -1410,14 +1410,14 @@ function main(): void {
   }
   if (cmd === undefined) {
     process.stderr.write(
-      "Usage: aidlc-runtime <subcommand>. Valid: compile, read, summary, fragment-fork, fragment-merge. Run with --help for detail.\n"
+      "Usage: amadeus-runtime <subcommand>. Valid: compile, read, summary, fragment-fork, fragment-merge. Run with --help for detail.\n"
     );
     process.exit(1);
   }
 
   const handler = SUBCOMMANDS[cmd];
   if (!handler) {
-    process.stderr.write(`Unknown subcommand: ${cmd}. Run aidlc-runtime --help for usage.\n`);
+    process.stderr.write(`Unknown subcommand: ${cmd}. Run amadeus-runtime --help for usage.\n`);
     process.exit(1);
   }
 

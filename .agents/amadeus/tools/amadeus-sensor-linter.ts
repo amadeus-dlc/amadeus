@@ -116,7 +116,7 @@ function parseArgs(argv: string[]): Args {
 
 function printHelp(): void {
 	process.stdout.write(
-		`Usage: aidlc-sensor-linter --stage <slug> --file-path <path>\n\n` +
+		`Usage: amadeus-sensor-linter --stage <slug> --file-path <path>\n\n` +
 			`Wraps \`bunx eslint --format json --max-warnings -1 <path>\` and\n` +
 			`prints {pass, errorCount, warningCount, violations[]} JSON to stdout.\n`,
 	);

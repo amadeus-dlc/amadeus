@@ -1,4 +1,4 @@
-# `aidlc-worktree info` — Output Schema
+# `amadeus-worktree info` — Output Schema
 
 Pinned schema and exit-code contract for the `info` subcommand. The orchestrator's halt-and-ask prose at `SKILL.md` reads this output to interpolate the worktree path and branch name into the structured-question prompt body for code-generation-failure halt-and-ask.
 
@@ -35,11 +35,11 @@ The exit-code contract mirrors `verify`'s semantics: non-zero is the halt signal
 
 Field semantics:
 
-- **`slug`** — echoes the input `--slug` flag verbatim. The slug is the bare kebab-case identifier (e.g. `onboarding-wizard`); the `bolt-` prefix on `path` and `branch_name` is added by `lib.ts:139` `worktreePath()` and the `aidlc-worktree create --slug <slug>` invocation. See SKILL.md per-Bolt loop "Slug derivation" paragraph for the `name → slug` transformation that produced the bare slug. The orchestrator uses this field to confirm correlation, not to pick a different one.
+- **`slug`** — echoes the input `--slug` flag verbatim. The slug is the bare kebab-case identifier (e.g. `onboarding-wizard`); the `bolt-` prefix on `path` and `branch_name` is added by `lib.ts:139` `worktreePath()` and the `amadeus-worktree create --slug <slug>` invocation. See SKILL.md per-Bolt loop "Slug derivation" paragraph for the `name → slug` transformation that produced the bare slug. The orchestrator uses this field to confirm correlation, not to pick a different one.
 - **`path`** — absolute filesystem path of the per-Bolt worktree at `<projectDir>/.aidlc/worktrees/bolt-<slug>`, parsed from the most-recent matching `WORKTREE_CREATED`'s `**Worktree path**:` field. The user `cd`s here to inspect a paused Bolt.
 - **`branch_name`** — git branch name on which the worktree sits at `bolt-<slug>`, parsed from `**Branch name**:`. Quoted from audit for source-of-truth consistency.
 - **`audit_timestamp`** — ISO 8601 timestamp of the matching `WORKTREE_CREATED` block. Useful for the orchestrator to reason about freshness; not currently surfaced in the AUQ prompt.
-- **`merge_held`** — boolean reflecting the `Merge-Held` field in the per-Bolt forked state at `<path>/aidlc-docs/aidlc-state.md` (`true` only if the file exists AND the field reads `true`; absence resolves to `false`). The orchestrator reads this on resume to decide whether dispatching `aidlc-bolt complete --merge --slug <slug>` is safe. The held state is set by `aidlc-bolt hold-merge --slug <slug>` before a multi-failure halt-and-ask sequence opens and cleared by `aidlc-bolt release-merge --slug <slug>` once all sibling AUQs resolve.
+- **`merge_held`** — boolean reflecting the `Merge-Held` field in the per-Bolt forked state at `<path>/aidlc-docs/aidlc-state.md` (`true` only if the file exists AND the field reads `true`; absence resolves to `false`). The orchestrator reads this on resume to decide whether dispatching `amadeus-bolt complete --merge --slug <slug>` is safe. The held state is set by `amadeus-bolt hold-merge --slug <slug>` before a multi-failure halt-and-ask sequence opens and cleared by `amadeus-bolt release-merge --slug <slug>` once all sibling AUQs resolve.
 
 ## Most-recent semantics
 

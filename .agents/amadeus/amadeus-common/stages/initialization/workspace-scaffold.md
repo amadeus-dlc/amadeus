@@ -26,7 +26,7 @@ outputs: the per-intent record tree (stage artifact dirs + verification dir) and
 
 # Workspace Scaffold
 
-Runs deterministically inside `aidlc-utility intent-birth`. The workspace shell ships in `dist/` (the SEED); birth only ensure-exists the per-intent record and artifact dirs (creates them on demand, idempotent). Kept as reference for audit event semantics.
+Runs deterministically inside `amadeus-utility intent-birth`. The workspace shell ships in `dist/` (the SEED); birth only ensure-exists the per-intent record and artifact dirs (creates them on demand, idempotent). Kept as reference for audit event semantics.
 
 MANDATORY: Follow stage-protocol.md for state tracking and audit logging.
 
@@ -78,7 +78,7 @@ This stage has NO approval gate — it auto-proceeds to the next stage (workspac
 
 ## Sensors
 
-This stage runs deterministic setup logic inside `aidlc-utility intent-birth` —
+This stage runs deterministic setup logic inside `amadeus-utility intent-birth` —
 it ensure-exists the per-intent record and artifact dirs and emits state events. No
 agent-authored markdown lands here, so the frontmatter `sensors:` list
 is empty.

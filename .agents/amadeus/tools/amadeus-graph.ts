@@ -609,7 +609,7 @@ export interface SensorFile {
 
 // Filename anchor — sensor manifests live at `.claude/sensors/amadeus-<id>.md`.
 // Anything not matching the prefix is silently ignored (mirrors loadRules).
-const SENSOR_FILE_REGEX = /^aidlc-([a-z][a-z0-9-]*)\.md$/;
+const SENSOR_FILE_REGEX = /^amadeus-([a-z][a-z0-9-]*)\.md$/;
 
 /** Walk the sensors directory and return a Map keyed by manifest id for
  *  O(1) lookup at resolution time. Public — future doctor sensor-drift
@@ -907,7 +907,7 @@ export function subgraphForScope(scope: string): GraphStage[] {
 /** Resolve a scope's plan: the EXECUTE/SKIP slice over the full graph in
  *  numeric order, shaped `{slug, phase, action}` — byte-identical to
  *  lib.ts's stagesInScope() / the legacy scope-mapping-derived plan. The
- *  `aidlc-graph resolve` subcommand writes this to .aidlc-plan.json. The
+ *  `amadeus-graph resolve` subcommand writes this to .aidlc-plan.json. The
  *  parity test asserts this matches the legacy plan across all 9 scopes. */
 export function resolvePlanForScope(
   scope: string
@@ -1163,7 +1163,7 @@ export function numericStageOrder(a: string, b: string): number {
  *  - `uncompiledStages`: disk->graph. A `<phase>/<slug>.md` whose slug is absent
  *    from the compiled graph, the issue #364 case. The runtime resolves stages
  *    from the compiled graph only (loadGraph), so this file is silently never
- *    executed until `aidlc-graph compile` regenerates the graph. Advisory: the
+ *    executed until `amadeus-graph compile` regenerates the graph. Advisory: the
  *    file is inert, not corrupt, and recompiling is a deliberate authoring act.
  *  - `graphCount`: how many slugs the compiled graph holds. Returned here so a
  *    caller (the doctor) can label the in-sync case without a second
@@ -1563,7 +1563,7 @@ const COMMANDS: Record<string, Handler> = {
     // behind a gate until the orchestrator opts into engine-side resolution.
     if (process.env.AIDLC_GRAPH_RESOLVE !== "1") {
       console.error(
-        "aidlc-graph resolve is gated behind AIDLC_GRAPH_RESOLVE=1 (rollout flag)."
+        "amadeus-graph resolve is gated behind AIDLC_GRAPH_RESOLVE=1 (rollout flag)."
       );
       process.exit(1);
     }
@@ -1621,26 +1621,26 @@ function exportFixturePath(): string {
 
 function printHelp(): void {
   const available = Object.keys(COMMANDS).sort().join(", ");
-  console.log(`Usage: aidlc-graph <subcommand>
+  console.log(`Usage: amadeus-graph <subcommand>
 
 Subcommands:
   ${available}
   --help, -h     Show this message
 
 Common forms:
-  aidlc-graph artifacts                List all artifact slugs
-  aidlc-graph producers <artifact>     Stages producing an artifact
-  aidlc-graph consumers <artifact>     Stages consuming an artifact
-  aidlc-graph topo                     Topological sort of full graph
-  aidlc-graph cycles                   Cycle check on full graph
-  aidlc-graph cycles --scope <name>    Cycle check on scope sub-DAG
-  aidlc-graph scope <name>             Stages on a scope's path
-  aidlc-graph validate-scope <name>    Validate scope dependencies
-  aidlc-graph compile                  Regenerate stage-graph.json + scope-grid.json from YAML
-  aidlc-graph compile --check          CI drift guard (exit 1 on mismatch)
-  aidlc-graph resolve <name>           Emit .aidlc-plan.json for a scope (AIDLC_GRAPH_RESOLVE=1)
-  aidlc-graph export                   Emit designer-facing bundle (stdout)
-  aidlc-graph export --check           CI drift guard against fixture
+  amadeus-graph artifacts                List all artifact slugs
+  amadeus-graph producers <artifact>     Stages producing an artifact
+  amadeus-graph consumers <artifact>     Stages consuming an artifact
+  amadeus-graph topo                     Topological sort of full graph
+  amadeus-graph cycles                   Cycle check on full graph
+  amadeus-graph cycles --scope <name>    Cycle check on scope sub-DAG
+  amadeus-graph scope <name>             Stages on a scope's path
+  amadeus-graph validate-scope <name>    Validate scope dependencies
+  amadeus-graph compile                  Regenerate stage-graph.json + scope-grid.json from YAML
+  amadeus-graph compile --check          CI drift guard (exit 1 on mismatch)
+  amadeus-graph resolve <name>           Emit .aidlc-plan.json for a scope (AIDLC_GRAPH_RESOLVE=1)
+  amadeus-graph export                   Emit designer-facing bundle (stdout)
+  amadeus-graph export --check           CI drift guard against fixture
 
 See docs/reference/16-artifact-vocabulary.md for artifact rules.`);
 }
@@ -1656,7 +1656,7 @@ async function main(): Promise<void> {
     // this shape (stderr-only, mentions "artifacts" to aid discovery).
     const available = Object.keys(COMMANDS).sort().join(", ");
     console.error(
-      `Usage: aidlc-graph <subcommand>. Valid: ${available}. Run with --help for detail.`
+      `Usage: amadeus-graph <subcommand>. Valid: ${available}. Run with --help for detail.`
     );
     process.exit(1);
   }
@@ -1671,7 +1671,7 @@ async function main(): Promise<void> {
   try {
     await handler(args);
   } catch (err) {
-    console.error(`aidlc-graph ${cmd}: ${errorMessage(err)}`);
+    console.error(`amadeus-graph ${cmd}: ${errorMessage(err)}`);
     process.exit(1);
   }
 }

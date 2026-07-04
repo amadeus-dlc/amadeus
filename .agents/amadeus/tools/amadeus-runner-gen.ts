@@ -13,7 +13,7 @@
 // (2) SCOPE-RUNNERS: one thin `skills/aidlc-<scope>/SKILL.md` per
 //     shipped `.claude/scopes/amadeus-<name>.md` file. A scope-runner is packaging,
 //     not definition (decision D-A): each is a ~6-line shell that drives the
-//     engine (`aidlc-orchestrate next --scope <scope>`) to `done` with a fixed
+//     engine (`amadeus-orchestrate next --scope <scope>`) to `done` with a fixed
 //     scope and no scope detection. The full set of scopes is always reachable
 //     via `/aidlc --scope <name>`; runners are typeable sugar over the
 //     high-traffic ones (the FIRST_BATCH).
@@ -247,7 +247,7 @@ function handleWrite(): string[] {
 }
 
 // The on-disk runner SIGNATURE: a stage-runner's SKILL.md drives
-// `aidlc-orchestrate next --stage <slug> --single`. Identifying runners by this
+// `amadeus-orchestrate next --stage <slug> --single`. Identifying runners by this
 // body marker — NOT by compiled-set membership — is what lets the drift guard see
 // ORPHANS: a `skills/aidlc-<slug>/` dir that drives `--single` but whose slug is
 // no longer a compiled stage. Non-runner skills (aidlc, aidlc-replay,
@@ -533,7 +533,7 @@ if (import.meta.main) {
   try {
     main();
   } catch (e) {
-    console.error(`aidlc-runner-gen: ${errorMessage(e)}`);
+    console.error(`amadeus-runner-gen: ${errorMessage(e)}`);
     process.exit(1);
   }
 }

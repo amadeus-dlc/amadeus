@@ -1,6 +1,6 @@
 // Stage frontmatter schema — machine-checkable realisation of the spec in
 // dist/claude/.claude/amadeus-common/protocols/stage-definition.md. Consumed by
-// parseStageFrontmatter (lib.ts), aidlc-graph compile, and the doctor
+// parseStageFrontmatter (lib.ts), amadeus-graph compile, and the doctor
 // schema-lint check (amadeus-utility.ts handleDoctor). Hand-rolled,
 // zero-dep — matches parseAgentFrontmatter precedent in lib.ts. Pure
 // validator: no I/O, no YAML parsing, no mutation — callers pass an
@@ -37,7 +37,7 @@ export interface StageFrontmatter {
   // onto stages. Naming a scope here marks the stage EXECUTE under that
   // scope; absence means SKIP. Optional in the schema (absent and `[]`
   // treated identically) so a fixture stage with no membership still
-  // validates. `aidlc-graph compile` reads this to emit the compiled grid.
+  // validates. `amadeus-graph compile` reads this to emit the compiled grid.
   scopes?: string[];
   // reviewer — agent slug to invoke as a quality gate after the stage body
   // (stage-protocol.md §12a). Optional; absent when the stage has no review step.
@@ -304,7 +304,7 @@ export function validateStageFrontmatter(
   // scopes — optional. When present, must be a list of non-empty strings.
   // Cross-validation (each name resolves to a known .claude/scopes/*.md
   // file) is not enforced here — the schema validator doesn't read the
-  // scopes registry; `aidlc-graph compile` transposes whatever names are
+  // scopes registry; `amadeus-graph compile` transposes whatever names are
   // declared into the grid, and an unknown scope name simply yields a
   // column nobody asks for.
   if ("scopes" in o && o.scopes !== undefined) {

@@ -9,7 +9,7 @@ YAML frontmatter at the top of every stage `.md` is authoritative. The
 build step `bun amadeus-graph.ts compile` regenerates
 `.claude/tools/data/stage-graph.json` from the YAML sources; the runtime
 reads the compiled JSON via the unchanged `loadStageGraph()` API at
-`lib.ts:282-289`. The CI drift check `aidlc-graph compile --check` fails
+`lib.ts:282-289`. The CI drift check `amadeus-graph compile --check` fails
 the build if the JSON diverges from the YAML.
 
 ---
@@ -61,7 +61,7 @@ copies this table verbatim.
 | `consumes[].required` | boolean | yes per entry | Scoped to the active plan. `true` means "if the producing stage runs, this consume must be satisfied" — not a global assertion that the artifact always exists. Scopes that skip the producer (e.g., `bugfix` skipping `units-generation`) make the consume moot; the stage body handles graceful degradation. The reserved `when:` primitive will eventually let authors express richer predicates |
 | `consumes[].conditional_on` | string | optional | `brownfield` \| `greenfield`. Omit for unconditional consumes — no `always` value |
 | `requires_stage` | string[] | yes | empty allowed; each entry a known stage slug. Two roles: (1) semantic data dependency; (2) presentation-order edge for stages with no semantic link but a fixed display order. Primary input to computed `display_order` |
-| `scopes` | string[] | optional | each entry a scope name with a matching `.claude/scopes/amadeus-<name>.md` file. Naming a scope marks this stage EXECUTE under that scope; absence marks it SKIP. The per-stage transpose of the scope membership matrix — `aidlc-graph compile` reads every stage's `scopes:` and emits the compiled EXECUTE/SKIP grid (`tools/data/scope-grid.json`). The 3 initialization stages name all scopes (always EXECUTE). Absent and `[]` are treated identically |
+| `scopes` | string[] | optional | each entry a scope name with a matching `.claude/scopes/amadeus-<name>.md` file. Naming a scope marks this stage EXECUTE under that scope; absence marks it SKIP. The per-stage transpose of the scope membership matrix — `amadeus-graph compile` reads every stage's `scopes:` and emits the compiled EXECUTE/SKIP grid (`tools/data/scope-grid.json`). The 3 initialization stages name all scopes (always EXECUTE). Absent and `[]` are treated identically |
 | `inputs` | string | yes | human prose (preserves today's `**Inputs**:` line) |
 | `outputs` | string | yes | human prose (preserves today's `**Outputs**:` line). **Non-load-bearing at runtime** — the engine NEVER reads `outputs:` for path resolution; it resolves the node's `produces[]` artifact NAMES against the **active intent's record dir** at emit time (see "Artifact paths are engine-resolved" below). Author `outputs:` as relative artifact NAMES (or `<phase>/<stage>/<name>.md` shapes); do NOT hardcode a workspace root (`aidlc-docs/…` or `aidlc/spaces/…`) — it would read FALSE the moment the record re-roots per intent |
 
@@ -170,15 +170,15 @@ future releases will populate.
 
 ## Compile + drift invariant
 
-`aidlc-graph compile` reads all stage YAML sources and regenerates
+`amadeus-graph compile` reads all stage YAML sources and regenerates
 `.claude/tools/data/stage-graph.json`. Consumers continue to read the compiled
 JSON via `loadStageGraph()`.
 
-`aidlc-graph compile --check` re-runs the compile in memory, diffs against
+`amadeus-graph compile --check` re-runs the compile in memory, diffs against
 the checked-in JSON, and exits non-zero if different. CI runs this on every
 change. Drift is impossible if the check passes.
 
-`aidlc-graph` implements this contract. See
+`amadeus-graph` implements this contract. See
 `amadeus-graph.ts` in the harness tools directory for the library and CLI
 (8 exports: loadGraph, producersOf, consumersOf, topoSort, findCycles,
 subgraphForScope, validateScope, artifactsRegistry; plus compile, compile

@@ -138,14 +138,14 @@ user-visible behaviour stays consistent across the dispatch.
 ## 5. Worked example — amadeus-pipeline-deploy-agent reading way-of-working
 
 The orchestrator dispatches `amadeus-pipeline-deploy-agent` at Bolt-create time.
-The agent's job is to map team intent to `aidlc-worktree create --slug
+The agent's job is to map team intent to `amadeus-worktree create --slug
 <slug> --base <branch>`. It reads:
 
 1. `aidlc-team.md` `## Way of Working` → empty (fresh template).
 2. `aidlc-org.md` `## Way of Working` → "trunk-based; base `main`, target
    `main`; squash-merge".
 3. Returns `{base: "main", strategy: "squash"}` to the orchestrator
-   alongside the agent's invocation of `aidlc-worktree`.
+   alongside the agent's invocation of `amadeus-worktree`.
 
 If `aidlc-team.md` `## Way of Working` had read "We use GitFlow with
 `develop` as the integration branch", the agent would map that to

@@ -92,6 +92,111 @@
       "replacement": "amadeus-<id>.md",
       "rule": "sensors/ の命名規則プレースホルダ（stage-protocol.md、全 32 stage 定義、tools 内コメント）。review 指摘で追加、code-generation 決定記録あり。"
     },
+    { "kind": "cli-token", "prefix": "aidlc-audit", "replacement": "amadeus-audit" },
+    { "kind": "cli-token", "prefix": "aidlc-bolt", "replacement": "amadeus-bolt" },
+    { "kind": "cli-token", "prefix": "aidlc-directive", "replacement": "amadeus-directive" },
+    { "kind": "cli-token", "prefix": "aidlc-graph", "replacement": "amadeus-graph" },
+    { "kind": "cli-token", "prefix": "aidlc-includes", "replacement": "amadeus-includes" },
+    { "kind": "cli-token", "prefix": "aidlc-jump", "replacement": "amadeus-jump" },
+    { "kind": "cli-token", "prefix": "aidlc-learnings", "replacement": "amadeus-learnings" },
+    { "kind": "cli-token", "prefix": "aidlc-lib", "replacement": "amadeus-lib" },
+    { "kind": "cli-token", "prefix": "aidlc-log", "replacement": "amadeus-log" },
+    { "kind": "cli-token", "prefix": "aidlc-orchestrate", "replacement": "amadeus-orchestrate" },
+    { "kind": "cli-token", "prefix": "aidlc-rule-schema", "replacement": "amadeus-rule-schema" },
+    { "kind": "cli-token", "prefix": "aidlc-runner-gen", "replacement": "amadeus-runner-gen" },
+    { "kind": "cli-token", "prefix": "aidlc-runtime", "replacement": "amadeus-runtime" },
+    { "kind": "cli-token", "prefix": "aidlc-sensor-linter", "replacement": "amadeus-sensor-linter" },
+    { "kind": "cli-token", "prefix": "aidlc-sensor-required-sections", "replacement": "amadeus-sensor-required-sections" },
+    { "kind": "cli-token", "prefix": "aidlc-sensor-schema", "replacement": "amadeus-sensor-schema" },
+    { "kind": "cli-token", "prefix": "aidlc-sensor-type-check", "replacement": "amadeus-sensor-type-check" },
+    { "kind": "cli-token", "prefix": "aidlc-sensor-upstream-coverage", "replacement": "amadeus-sensor-upstream-coverage" },
+    { "kind": "cli-token", "prefix": "aidlc-sensor", "replacement": "amadeus-sensor" },
+    { "kind": "cli-token", "prefix": "aidlc-stage-schema", "replacement": "amadeus-stage-schema" },
+    { "kind": "cli-token", "prefix": "aidlc-state", "replacement": "amadeus-state" },
+    { "kind": "cli-token", "prefix": "aidlc-swarm", "replacement": "amadeus-swarm" },
+    { "kind": "cli-token", "prefix": "aidlc-utility", "replacement": "amadeus-utility" },
+    { "kind": "cli-token", "prefix": "aidlc-validate", "replacement": "amadeus-validate" },
+    { "kind": "cli-token", "prefix": "aidlc-version", "replacement": "amadeus-version" },
+    { "kind": "cli-token", "prefix": "aidlc-worktree", "replacement": "amadeus-worktree" },
+    { "kind": "cli-token", "prefix": "aidlc-audit-logger", "replacement": "amadeus-audit-logger" },
+    { "kind": "cli-token", "prefix": "aidlc-log-subagent", "replacement": "amadeus-log-subagent" },
+    { "kind": "cli-token", "prefix": "aidlc-mint-presence", "replacement": "amadeus-mint-presence" },
+    { "kind": "cli-token", "prefix": "aidlc-runtime-compile", "replacement": "amadeus-runtime-compile" },
+    { "kind": "cli-token", "prefix": "aidlc-sensor-fire", "replacement": "amadeus-sensor-fire" },
+    { "kind": "cli-token", "prefix": "aidlc-session-end", "replacement": "amadeus-session-end" },
+    { "kind": "cli-token", "prefix": "aidlc-session-start", "replacement": "amadeus-session-start" },
+    { "kind": "cli-token", "prefix": "aidlc-statusline", "replacement": "amadeus-statusline" },
+    { "kind": "cli-token", "prefix": "aidlc-stop", "replacement": "amadeus-stop" },
+    { "kind": "cli-token", "prefix": "aidlc-sync-statusline", "replacement": "amadeus-sync-statusline" },
+    { "kind": "cli-token", "prefix": "aidlc-validate-state", "replacement": "amadeus-validate-state" },
+    { "kind": "cli-token", "prefix": "aidlc-kiro-adapter", "replacement": "amadeus-kiro-adapter" },
+    { "kind": "cli-token", "prefix": "aidlc-codex-adapter", "replacement": "amadeus-codex-adapter" },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-(orchestrate|state|jump|bolt|swarm)",
+      "replacement": "amadeus-(orchestrate|state|jump|bolt|swarm)",
+      "rule": "hooks/amadeus-stop.ts の正規表現リテラル（複合 alternation 群）。PR #453 Bugbot 指摘対応。"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-(state|jump|bolt|utility)",
+      "replacement": "amadeus-(state|jump|bolt|utility)",
+      "rule": "hooks/amadeus-runtime-compile.ts の正規表現リテラル（複合 alternation 群）。PR #453 Bugbot 指摘対応。"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "^aidlc-([a-z][a-z0-9-]*)\\.md$",
+      "replacement": "^amadeus-([a-z][a-z0-9-]*)\\.md$",
+      "rule": "tools/amadeus-graph.ts の SENSOR_FILE_REGEX（sensor-file 実ファイル名の判別に使う正規表現リテラル）。"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": ".aidlc-audit-",
+      "replacement": ".amadeus-audit-",
+      "rule": "tools/amadeus-lib.ts の一時ロックファイル名 prefix（`.amadeus-audit-${hash}.lock`）。"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "\"aidlc-\"",
+      "replacement": "\"amadeus-\"",
+      "rule": "tools/amadeus-rule-schema.ts・amadeus-utility.ts のクォート済み bare prefix 記述（pairing 値の命名規則）。"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "^aidlc-",
+      "replacement": "^amadeus-",
+      "rule": "tools/amadeus-rule-schema.ts のコメント（`^aidlc-` 正規表現アンカー記法）と amadeus-utility.ts の `pairing.replace(/^aidlc-/, \"\")` 正規表現リテラルで共有。"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-sensor-<id>.ts",
+      "replacement": "amadeus-sensor-<id>.ts",
+      "rule": "tools/amadeus-sensor.ts の per-sensor 子ツール命名規則プレースホルダ（例: amadeus-sensor-linter.ts）。"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-*.ts",
+      "replacement": "amadeus-*.ts",
+      "rule": "tools/amadeus-utility.ts の hook contract チェックが使うワイルドカード表記（ラベル文字列）。"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-[A-Za-z0-9_-]+\\.ts",
+      "replacement": "amadeus-[A-Za-z0-9_-]+\\.ts",
+      "rule": "tools/amadeus-utility.ts の hook contract チェックが settings.json から hook basename を抽出する正規表現リテラル。"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-prefixed",
+      "replacement": "amadeus-prefixed",
+      "rule": "tools/amadeus-utility.ts のコメント（`amadeus-prefixed` という複合語での言及）。"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "wires no aidlc hooks",
+      "replacement": "wires no amadeus hooks",
+      "rule": "tools/amadeus-utility.ts のコメント。ハイフンなしの bare 語（`aidlc hooks`）は hook-contract チェックの文脈限定のフレーズとして正規化する（汎用の bare 'amadeus' catch-all は他の無関係な言及（skill 名等）を誤って巻き込むため採用しない）。"
+    },
     {
       "kind": "sub-agent",
       "prefix": "aidlc",

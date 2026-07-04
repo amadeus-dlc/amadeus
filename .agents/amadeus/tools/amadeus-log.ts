@@ -17,7 +17,7 @@ import {
 } from "./amadeus-lib.js";
 
 // Resolve the project dir AND assert that an active workflow exists before any
-// audit emit. WHY: aidlc-log is orchestrator-called per-question and threads no
+// audit emit. WHY: amadeus-log is orchestrator-called per-question and threads no
 // --intent/--space, so it relies on default intent resolution. On a fresh shell
 // (pre-birth) or a >1-intent workspace with no active-intent cursor, that
 // resolution yields null and stateFilePath()/auditFilePath() collapse to the
@@ -27,7 +27,7 @@ import {
 // invariant (amadeus-lib.ts). Existence of the resolved state file is the same
 // "is there an active workflow" signal every other emitter guards on — the
 // hooks via `if (!existsSync(stateFilePath(...)))` no-op, emitError() via the
-// same check. aidlc-log is the lone emitter that was missing it; mirror the
+// same check. amadeus-log is the lone emitter that was missing it; mirror the
 // clean-error idiom (orchestrator-called → a missing workflow is a misuse, not
 // a routine no-op).
 function resolveActiveProjectDir(explicit?: string): string {
@@ -76,7 +76,7 @@ function parseFlags(
 }
 
 // --- Subcommand: decision ---
-// Usage: aidlc-log decision --stage <slug> --decision <text> [--options <csv>] [--rationale <text>]
+// Usage: amadeus-log decision --stage <slug> --decision <text> [--options <csv>] [--rationale <text>]
 //
 // Fires BEFORE AskUserQuestion, recording what options will be shown.
 function handleDecision(args: string[]): void {
@@ -104,7 +104,7 @@ function handleDecision(args: string[]): void {
 }
 
 // --- Subcommand: answer ---
-// Usage: aidlc-log answer --stage <slug> --details <text>
+// Usage: amadeus-log answer --stage <slug> --details <text>
 //
 // Fires AFTER the user answers a question.
 function handleAnswer(args: string[]): void {
@@ -189,8 +189,8 @@ function main(): void {
 
 function error(msg: string): never {
   const pd = resolveProjectDir(projectDir);
-  const command = `aidlc-log ${process.argv.slice(2).join(" ")}`.trim();
-  emitError(pd, "aidlc-log", command, msg);
+  const command = `amadeus-log ${process.argv.slice(2).join(" ")}`.trim();
+  emitError(pd, "amadeus-log", command, msg);
 }
 
 if (import.meta.main) {

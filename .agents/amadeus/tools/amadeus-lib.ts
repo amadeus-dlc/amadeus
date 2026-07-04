@@ -20,7 +20,7 @@ export interface StageEntry {
   lead_agent: string;
   support_agents: string[];
   mode: string;
-  // Optional fields populated by aidlc-graph compile from YAML sources.
+  // Optional fields populated by amadeus-graph compile from YAML sources.
   // Existing callers read only the 8 required fields above; optional
   // additions are source-compatible. Library code that needs these
   // fields uses the GraphStage type in amadeus-graph.ts (required there).
@@ -1703,7 +1703,7 @@ export function recoveryFilePath(projectDir: string, intent?: string, space?: st
   return join(docsRoot(projectDir, intent, space), ".aidlc-recovery.md");
 }
 
-// `<root>/.aidlc-plan.json` — `aidlc-graph resolve` output.
+// `<root>/.aidlc-plan.json` — `amadeus-graph resolve` output.
 export function planFilePath(projectDir: string, intent?: string, space?: string): string {
   return join(docsRoot(projectDir, intent, space), ".aidlc-plan.json");
 }
@@ -2267,7 +2267,7 @@ export function auditLockIdentity(projectDir: string, intent?: string, space?: s
 export function auditLockDir(projectDir: string, intent?: string, space?: string): string {
   const identity = auditLockIdentity(projectDir, intent, space);
   const hash = createHash("md5").update(identity).digest("hex").slice(0, 8);
-  return join(tmpdir(), `.aidlc-audit-${hash}.lock`);
+  return join(tmpdir(), `.amadeus-audit-${hash}.lock`);
 }
 
 // Owner stamp written into the lock dir on acquire. start-time uses the process
@@ -2949,8 +2949,8 @@ export function loadScopeMapping(): Record<string, ScopeDefinition> {
   }
 
   // Shipped path: derive from the compiled grid + per-scope .md metadata.
-  // Keep the grid read local to avoid a circular aidlc-lib -> aidlc-graph
-  // require while aidlc-graph's CLI is still initialising under native Windows
+  // Keep the grid read local to avoid a circular amadeus-lib -> amadeus-graph
+  // require while amadeus-graph's CLI is still initialising under native Windows
   // Bun.
   const grid = loadScopeGridForMapping();
   const metadata = loadScopeMetadata();
@@ -3639,7 +3639,7 @@ export function nextInScopeStage(
 }
 
 // Parse the "- [x] slug — EXECUTE" / "— SKIP" suffix from Stage Progress. The
-// suffix is set by `aidlc-utility init` per scope + Greenfield/Brownfield
+// suffix is set by `amadeus-utility init` per scope + Greenfield/Brownfield
 // overrides, then preserved across stage transitions — it represents the
 // plan, not the current run-state (checkbox letters are separate).
 export function parseStateStageSuffixes(
@@ -3667,7 +3667,7 @@ export function firstInScopeStageOfPhase(
   const mapping = loadScopeMapping()[scope];
   if (!mapping) return null;
 
-  // Lazy require to avoid circular import (aidlc-graph imports from us).
+  // Lazy require to avoid circular import (amadeus-graph imports from us).
   // Type-only import at top of file pins the signature.
   const { subgraphForScope } = require("./amadeus-graph.ts") as {
     subgraphForScope: typeof SubgraphForScope;
@@ -3687,7 +3687,7 @@ export function stagesInScope(
   const graph = loadStageGraph();
   if (!loadScopeMapping()[scope]) return [];
 
-  // Lazy require to avoid circular import (aidlc-graph imports from us).
+  // Lazy require to avoid circular import (amadeus-graph imports from us).
   const { subgraphForScope } = require("./amadeus-graph.ts") as {
     subgraphForScope: typeof SubgraphForScope;
   };
@@ -3740,7 +3740,7 @@ let _errorEmitInProgress = false;
 // effort, no-op if no workflow in cwd, swallows any audit failure), prints
 // JSON error to stderr, exits 1.
 //
-// `tool`    — tool name (e.g. "aidlc-state", "aidlc-jump")
+// `tool`    — tool name (e.g. "amadeus-state", "amadeus-jump")
 // `command` — the failing subcommand + args (typically process.argv.slice(2).join(" "))
 // `msg`     — human-readable error shown to the caller and recorded in audit
 //
@@ -3982,7 +3982,7 @@ export interface UnitDependencyEdge {
 }
 
 // Discriminated result so the two consumers — the required-sections sensor
-// (gate-time validation) and aidlc-runtime compile (DAG emission) — branch on
+// (gate-time validation) and amadeus-runtime compile (DAG emission) — branch on
 // one single source of truth:
 //   - absent    : no fenced ```yaml units: block in the body
 //   - malformed : block present but structurally invalid (duplicate name,

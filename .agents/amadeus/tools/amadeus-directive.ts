@@ -29,7 +29,7 @@ import { isPlainObject } from "./amadeus-lib.ts";
 // Skeleton` practices prose (no parser turns free English into a stance). The
 // engine cannot decide it without smuggling an LLM into routing, so it DEFERS:
 // it emits `gate: "unresolved"` for that one stage, the conductor classifies
-// the prose and feeds the stance back via `aidlc-orchestrate report
+// the prose and feeds the stance back via `amadeus-orchestrate report
 // --skeleton-stance`, and the NEXT `next` emits the now-determined boolean gate.
 // The engine still owns the transition — only a typed stance ever crosses back
 // in. Every OTHER run-stage carries a boolean gate; the sentinel is exclusively
@@ -143,7 +143,7 @@ export interface DispatchSubagentDirective {
 // batch; converge each on a signal. `units` is the build batch to fan out.
 //
 // invoke-swarm shape is intentionally minimal. The engine now EMITS this kind
-// (aidlc-orchestrate `next` answers with it for an eligible Construction batch
+// (amadeus-orchestrate `next` answers with it for an eligible Construction batch
 // under an autonomy grant) and the conductor CONSUMES it (runs amadeus-swarm.ts,
 // takes the baton back on the failure envelope). `units` is the only field both
 // sides need: the conductor reads the rest of the batch context off the compiled

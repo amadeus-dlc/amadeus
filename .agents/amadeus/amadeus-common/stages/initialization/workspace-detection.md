@@ -27,7 +27,7 @@ outputs: workspace classification (greenfield/brownfield), technology stack dete
 
 # Workspace Detection
 
-Runs deterministically inside `aidlc-utility init`. The detection rules in Step 3 below are the source of truth for the scanner's classification logic.
+Runs deterministically inside `amadeus-utility init`. The detection rules in Step 3 below are the source of truth for the scanner's classification logic.
 
 MANDATORY: Follow stage-protocol.md for state tracking and audit logging.
 
@@ -98,7 +98,7 @@ This stage has NO approval gate — it auto-proceeds to the next stage (state-in
 
 ## Sensors
 
-This stage runs the workspace scanner inside `aidlc-utility init`. It
+This stage runs the workspace scanner inside `amadeus-utility init`. It
 emits classification state, not agent-authored markdown — so the
 frontmatter `sensors:` list is empty.
 

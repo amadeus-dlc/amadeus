@@ -396,6 +396,6 @@ function handleExecute(args: string[]): void {
 
 function error(msg: string): never {
   const pd = resolveProjectDir(projectDir);
-  const command = `aidlc-jump ${process.argv.slice(2).join(" ")}`.trim();
-  emitError(pd, "aidlc-jump", command, msg);
+  const command = `amadeus-jump ${process.argv.slice(2).join(" ")}`.trim();
+  emitError(pd, "amadeus-jump", command, msg);
 }

@@ -67,7 +67,7 @@ const DEFAULT_TIMEOUT_GRACE_MS = 100;
 
 // Resolve sibling per-sensor script paths relative to THIS file's location,
 // not cwd. Mirrors amadeus-bolt.ts:84's spawnSibling pattern. The manifest
-// `command:` is `bun <harness>/tools/aidlc-sensor-<id>.ts` — the dispatcher
+// `command:` is `bun <harness>/tools/amadeus-sensor-<id>.ts` — the dispatcher
 // extracts the basename and resolves it next to itself, then spawns bun
 // with cwd=projectDir so the script's own file I/O resolves under the
 // user's project.
@@ -117,13 +117,13 @@ function parseFlags(args: string[]): Record<string, string> {
 }
 
 function dispatchError(msg: string): never {
-	process.stderr.write(`aidlc-sensor: ${msg}\n`);
+	process.stderr.write(`amadeus-sensor: ${msg}\n`);
 	process.exit(1);
 }
 
 // --- Sibling-script resolver ---
 //
-// Manifest `command:` is `bun <harness>/tools/aidlc-sensor-<id>.ts`. The
+// Manifest `command:` is `bun <harness>/tools/amadeus-sensor-<id>.ts`. The
 // dispatcher extracts the .ts basename and resolves it next to itself.
 // This decouples script discovery from cwd — works in tests where
 // projectDir doesn't carry a .claude/tools/ tree, AND in production where
@@ -296,7 +296,7 @@ function handleFire(args: string[]): void {
 	// cwd: projectDir. A relative outputPath would resolve to two different
 	// files. Absolute resolution against the dispatcher's invocation cwd
 	// matches user intent ("the file as I named it from where I invoked
-	// aidlc-sensor"). matches-glob comparison happens on the absolute path.
+	// amadeus-sensor"). matches-glob comparison happens on the absolute path.
 	const rawOutputPath = flags["output-path"];
 	const outputPath = isAbsolute(rawOutputPath)
 		? rawOutputPath
@@ -791,7 +791,7 @@ function globToRegex(glob: string): RegExp {
 // --- Help ---
 
 function printHelp(): void {
-	console.log(`Usage: aidlc-sensor <subcommand>
+	console.log(`Usage: amadeus-sensor <subcommand>
 
 Subcommands:
   list                              List framework sensors
@@ -812,7 +812,7 @@ function main(): void {
 	}
 	if (cmd === undefined) {
 		process.stderr.write(
-			"Usage: aidlc-sensor <subcommand>. Valid: describe, fire, list. Run with --help for detail.\n",
+			"Usage: amadeus-sensor <subcommand>. Valid: describe, fire, list. Run with --help for detail.\n",
 		);
 		process.exit(1);
 	}
@@ -828,7 +828,7 @@ function main(): void {
 			return;
 		default:
 			process.stderr.write(
-				`aidlc-sensor: unknown subcommand: ${cmd}. Valid: describe, fire, list.\n`,
+				`amadeus-sensor: unknown subcommand: ${cmd}. Valid: describe, fire, list.\n`,
 			);
 			process.exit(1);
 	}

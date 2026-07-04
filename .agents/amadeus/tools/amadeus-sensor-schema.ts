@@ -1,6 +1,6 @@
 // Sensor manifest schema — capability descriptor only. Sibling of
 // amadeus-stage-schema.ts and amadeus-rule-schema.ts. Consumed by
-// aidlc-graph compile (loadSensors). Hand-rolled, zero-dep — reuses
+// amadeus-graph compile (loadSensors). Hand-rolled, zero-dep — reuses
 // scalarField from amadeus-lib.ts as a zero-dep YAML primitive.
 //
 // Pull authoring: manifests describe what the sensor IS, not which

@@ -35,7 +35,7 @@ function parseFlags(argv: string[]): Flags {
 }
 
 function fail(msg: string): never {
-	process.stderr.write(`aidlc-sensor-upstream-coverage: ${msg}\n`);
+	process.stderr.write(`amadeus-sensor-upstream-coverage: ${msg}\n`);
 	process.exit(1);
 }
 

@@ -151,7 +151,7 @@ function emit(directive: Directive): void {
   const result = validateDirective(directive);
   if (!result.valid) {
     console.error(
-      `aidlc-orchestrate: refusing to emit a malformed directive: ${result.errors.join("; ")}`,
+      `amadeus-orchestrate: refusing to emit a malformed directive: ${result.errors.join("; ")}`,
     );
     process.exit(1);
   }
@@ -563,7 +563,7 @@ function readSkeletonStance(stateContent: string | null): SkeletonStance | null 
 }
 
 // The state field recording the human's autonomy grant at the walking-skeleton
-// ladder (stage-protocol.md "Ladder prompt" — set via `aidlc-bolt set-autonomy
+// ladder (stage-protocol.md "Ladder prompt" — set via `amadeus-bolt set-autonomy
 // --mode <autonomous|gated>`). ONLY the exact value "autonomous" triggers the
 // swarm; unset / absent / "gated" all read as not-autonomous (the safe default —
 // the human stays in the gate loop). This is deliberately strict: an empty or
@@ -581,7 +581,7 @@ function readAutonomyMode(stateContent: string | null): "autonomous" | null {
 }
 
 // Read the compiled batch DAG (the Bolt/unit topological levels) off the
-// runtime graph that `aidlc-runtime compile` materialises. Returns the
+// runtime graph that `amadeus-runtime compile` materialises. Returns the
 // `batches` array (each inner array is one parallel batch = one topological
 // level) or null when there is no graph file or no bolt_dag node. A pure read:
 // an absent graph is a legitimate branch (the swarm simply does not trigger).
@@ -2773,7 +2773,7 @@ if (import.meta.main) {
     // Any uncaught read error (missing graph, malformed state) surfaces as a
     // non-zero exit with the message on stderr — never a half-emitted
     // directive on stdout.
-    console.error(`aidlc-orchestrate: ${errorMessage(e)}`);
+    console.error(`amadeus-orchestrate: ${errorMessage(e)}`);
     process.exit(1);
   }
 }

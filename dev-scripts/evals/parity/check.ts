@@ -61,7 +61,12 @@ function tmpDir(prefix: string): string {
 
 const engineFixtureFiles: Record<string, string> = {
   "tools/foo.ts": "console.log('foo');\n",
-  "tools/aidlc-widget.ts": "export const widget = 1;\n// see aidlc-state.md and .agents/aidlc/tools for context\n",
+  // 拡張子なし（bare）の cli-token 参照（`aidlc-widget` 単体）と、改名禁止の aidlc-state.md
+  // （bare token の隣接 — .md 拡張子込みなので cli-token kind は照合しない）を同じファイルに同居させ、
+  // 拡張子込み一致（tool kind）・bare 一致（cli-token kind）・保護対象（.md ガード）の 3 者が
+  // 互いに干渉しないことを確認する（PR #453 Bugbot 指摘対応）。
+  "tools/aidlc-widget.ts":
+    "export const widget = 1;\n// see aidlc-state.md and .agents/aidlc/tools for context\n// run aidlc-widget --check for details\n",
   // aidlc-common/bar.md は scope-file / sensor-file の命名規則プレースホルダ（`aidlc-<name>.md`、
   // `aidlc-<id>.md`）が engine ファイル内に埋め込まれるケースを模す（stage-definition.md、
   // stage-protocol.md での実際の参照パターン。review 指摘で追加、code-generation 決定記録あり）。
@@ -140,6 +145,10 @@ const nameMappings = [
   { kind: "shared-dir", prefix: "aidlc-shared", replacement: "amadeus-shared" },
   { kind: "rules-file", prefix: "rules/aidlc.md", replacement: "rules/amadeus.md" },
   { kind: "tool", prefix: "aidlc-widget.ts", replacement: "amadeus-widget.ts" },
+  { kind: "cli-token", prefix: "aidlc-widget", replacement: "amadeus-widget" },
+  // "state" は実対応表にも存在する cli-token 行。aidlc-state.md（改名禁止の v2 成果物）との
+  // 衝突を構造的に防げているかを C10 で確認する（coordinator 指摘の中心的リスク）。
+  { kind: "cli-token", prefix: "aidlc-state", replacement: "amadeus-state" },
   { kind: "hook", prefix: "aidlc-hook-x.ts", replacement: "amadeus-hook-x.ts" },
   { kind: "scope-file", prefix: "aidlc-bugfix.md", replacement: "amadeus-bugfix.md" },
   { kind: "scope-file", prefix: "aidlc-<name>.md", replacement: "amadeus-<name>.md" },
@@ -153,7 +162,8 @@ const expectedLocalFiles: Record<string, { path: string; content: string }> = {
   "tools/foo.ts": { path: ".agents/amadeus/tools/foo.ts", content: "console.log('foo');\n" },
   "tools/aidlc-widget.ts": {
     path: ".agents/amadeus/tools/amadeus-widget.ts",
-    content: "export const widget = 1;\n// see aidlc-state.md and .agents/amadeus/tools for context\n",
+    content:
+      "export const widget = 1;\n// see aidlc-state.md and .agents/amadeus/tools for context\n// run amadeus-widget --check for details\n",
   },
   "aidlc-common/bar.md": {
     path: ".agents/amadeus/amadeus-common/bar.md",
@@ -287,10 +297,23 @@ console.log("parity-check declared engine file exception: ok");
 const bareTokenBugWorkspace = writeMatchingLocalWorkspace();
 writeFileSync(
   join(bareTokenBugWorkspace, ".agents/amadeus/tools/amadeus-widget.ts"),
-  "export const widget = 1;\n// see amadeus-state.md and .agents/amadeus/tools for context\n",
+  "export const widget = 1;\n// see amadeus-state.md and .agents/amadeus/tools for context\n// run amadeus-widget --check for details\n",
 );
 runExpectFailure(["bun", "run", checker, bareTokenBugWorkspace], "tools/aidlc-widget.ts");
 console.log("parity-check bare-token disambiguation guard: ok");
+
+// (C10) disambiguation 境界: cli-token kind（拡張子なし bare 参照専用、PR #453 Bugbot 対応で追加）は
+// .ts/.js/.md が続く場合には照合しない。実対応表にも存在する "state" cli-token 行がある状態で、
+// aidlc-state.md（v2 成果物、改名禁止）を誤って amadeus-state.md へ書き換えるバグを混入させると、
+// cli-token の逆方向正規化（.md ガード）はこれを aidlc-state.md へ戻さないため hash 不一致で fail する
+// （coordinator 指摘の中心的リスク: cli-token が aidlc-state.md 系文字列を破壊しないことの確認）。
+const cliTokenMdGuardWorkspace = writeMatchingLocalWorkspace();
+writeFileSync(
+  join(cliTokenMdGuardWorkspace, ".agents/amadeus/tools/amadeus-widget.ts"),
+  "export const widget = 1;\n// see amadeus-state.md and .agents/amadeus/tools for context\n// run amadeus-widget --check for details\n",
+);
+runExpectFailure(["bun", "run", checker, cliTokenMdGuardWorkspace], "tools/aidlc-widget.ts");
+console.log("parity-check cli-token .md guard: ok");
 
 // (C9) disambiguation 境界: common-dir / shared-dir kind はセグメント境界一致に限る。
 // xaidlc-commonx のような部分文字列を誤って書き換えるバグを混入させると、

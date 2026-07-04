@@ -98,7 +98,7 @@ function runGit(args: string[], cwd?: string): GitResult {
 
 // --- Sibling-worktree detection ---
 //
-// `aidlc-worktree` must run from the main repo checkout, not from a sibling
+// `amadeus-worktree` must run from the main repo checkout, not from a sibling
 // worktree (e.g. `.claude/worktrees/<dev>/`). The main checkout is the
 // directory whose `.git` is the same as `git rev-parse --git-common-dir`'s
 // parent. macOS symlinks `/var → /private/var`, so canonicalise both sides
@@ -126,7 +126,7 @@ function assertNotSiblingWorktree(repoCwd?: string): void {
 
   if (cwdTop !== mainCheckout) {
     error(
-      `aidlc-worktree must run from the main repo checkout, not from a sibling worktree at ${cwdTop}. Bolt worktrees are siblings of the main checkout, not nested.`
+      `amadeus-worktree must run from the main repo checkout, not from a sibling worktree at ${cwdTop}. Bolt worktrees are siblings of the main checkout, not nested.`
     );
   }
 }
@@ -186,7 +186,7 @@ function resolveRepoCwd(
 
 // --- Subcommand: create ---
 //
-// Usage: aidlc-worktree create --slug <slug> --base <branch> [--repo <name>]
+// Usage: amadeus-worktree create --slug <slug> --base <branch> [--repo <name>]
 //                              [--intent <dir>] [--space <name>]
 //
 // --repo (P7): the sibling repo to fork the worktree inside (a multi-repo intent
@@ -258,7 +258,7 @@ function handleCreate(args: string[]): void {
 // --- Subcommand: merge ---
 //
 // Usage:
-//   aidlc-worktree merge --slug <slug> --target <branch> --strategy <squash|merge|rebase>
+//   amadeus-worktree merge --slug <slug> --target <branch> --strategy <squash|merge|rebase>
 //                        [--message <msg>] [--repo <name>] [--intent <dir>] [--space <name>]
 //
 // --repo (P7): the sibling repo the merge lands in — same resolution as `create`.
@@ -497,7 +497,7 @@ function listConflictFiles(cwd?: string): string[] {
 
 // --- Subcommand: discard ---
 //
-// Usage: aidlc-worktree discard --slug <slug> [--repo <name>]
+// Usage: amadeus-worktree discard --slug <slug> [--repo <name>]
 //                               [--intent <dir>] [--space <name>]
 //
 // --repo (P7): the sibling repo the worktree was forked in — same resolution as
@@ -575,7 +575,7 @@ function handleDiscard(args: string[]): void {
 
 // --- Subcommand: list ---
 //
-// Usage: aidlc-worktree list
+// Usage: amadeus-worktree list
 //
 // Filters `git worktree list --porcelain` output to entries that are AIDLC
 // Bolt worktrees: parent path is `<projectDir>/.aidlc/worktrees/` AND the
@@ -638,7 +638,7 @@ function handleList(_args: string[]): void {
 
 // --- Subcommand: verify ---
 //
-// Usage: aidlc-worktree verify --event <WORKTREE_*> --slug <slug>
+// Usage: amadeus-worktree verify --event <WORKTREE_*> --slug <slug>
 //                              [--max-age-seconds <n>]
 //
 // Greps `aidlc-docs/audit.md` for the most recent block matching both
@@ -713,7 +713,7 @@ function handleVerify(args: string[]): void {
 
 // --- Subcommand: info ---
 //
-// Usage: aidlc-worktree info --slug <slug>
+// Usage: amadeus-worktree info --slug <slug>
 //
 // Reads the most-recent WORKTREE_CREATED audit block for `slug`, parses the
 // `Worktree path` and `Branch name` fields, emits JSON to stdout, exits 0.
@@ -861,8 +861,8 @@ function errorWithSlug(slug: string, msg: string): never {
 
 function error(msg: string): never {
   const pd = resolveProjectDir(projectDir);
-  const command = `aidlc-worktree ${process.argv.slice(2).join(" ")}`.trim();
-  emitError(pd, "aidlc-worktree", command, msg);
+  const command = `amadeus-worktree ${process.argv.slice(2).join(" ")}`.trim();
+  emitError(pd, "amadeus-worktree", command, msg);
 }
 
 if (import.meta.main) {

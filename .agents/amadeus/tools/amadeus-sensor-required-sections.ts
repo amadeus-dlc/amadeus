@@ -108,7 +108,7 @@ function resolveTemplatePath(stem: string, flags: Flags): string | null {
 }
 
 function fail(msg: string): never {
-	process.stderr.write(`aidlc-sensor-required-sections: ${msg}\n`);
+	process.stderr.write(`amadeus-sensor-required-sections: ${msg}\n`);
 	process.exit(1);
 }
 

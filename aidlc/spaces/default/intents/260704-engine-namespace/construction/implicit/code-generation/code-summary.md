@@ -238,3 +238,74 @@ parity eval: ok
 
 - **プレースホルダ行の追加発見**（当初指示の「13 行」に対し `nameMappings` は実質 15 行を追加）: `domain-entities.md` の対応表は実ファイル名 13 件のみを列挙していたが、`stage-definition.md`・`stage-protocol.md`・32 stage 定義・4 tools に埋め込まれた命名規則プレースホルダ（`aidlc-<name>.md`/`aidlc-<id>.md`）も byte-match 対象のため、追加で 2 行の `nameMappings`（scope-file/sensor-file kind）を投入した。
 - **参照更新対象の 1 ファイル追加発見**: coordinator 指示の tools 4 本（`amadeus-graph.ts`、`amadeus-lib.ts`、`amadeus-runner-gen.ts`、`amadeus-utility.ts`）に加え、`amadeus-learnings.ts`（sensor マニフェスト形状のコメント内で `aidlc-linter.md` を参照）も grep で発見し、同様に更新した。
+
+## 8. 追記: PR #453 Cursor Bugbot 指摘対応（拡張子なし bare token の見落とし）
+
+disambiguation 規則（tool/hook = 拡張子込み完全一致）を意図的に採用したことの副作用として、**拡張子なし（bare）の機能的参照**（正規表現・CLI コマンド文字列・prose）が対応表の対象外のまま残っていた。Cursor Bugbot が PR 上で 4 件を指摘し、以下を修正した。
+
+### 8.1 Bugbot 指摘 4 件（すべて修正）
+
+| # | 深刻度 | ファイル | 内容 |
+|---|---|---|---|
+| 1 | High | `.agents/amadeus/hooks/amadeus-runtime-compile.ts`（~65行目） | PostToolUse Bash フィルタの正規表現が `aidlc-state\|aidlc-orchestrate\|aidlc-jump\|aidlc-bolt\|aidlc-utility\|aidlc-runtime` のままで、改名後のコマンド（`amadeus-*.ts`）に一致せず stage-graph 再コンパイルが発火しなくなっていた。`amadeus-*` へ更新。 |
+| 2 | Medium | `.agents/amadeus/hooks/amadeus-stop.ts`（~329行目） | transcript engagement 検出が bare `aidlc-orchestrate`/`aidlc-state`/`aidlc-jump`/`aidlc-bolt`/`aidlc-swarm` に依存していた。`amadeus-*` へ更新。 |
+| 3 | Low | 同ファイル（~786行目） | blocked-stop nudge 文言 `` `aidlc-orchestrate report` `` を `amadeus-orchestrate report` へ更新。 |
+| 4 | Medium | `.agents/amadeus/agents/amadeus-pipeline-deploy-agent.md`（~61行目） | worktree verify/flag の prose が `aidlc-worktree` / `` `aidlc-worktree verify` `` のままだった。`amadeus-worktree` へ更新。 |
+
+### 8.2 同種の見落としの横断的な sweep（指示 5）
+
+`.agents/amadeus/`（`amadeus-common` を除く）と `skills/` を、26 tools + 11 hooks の全 base name（拡張子なし・境界厳格）で再 grep し、追加で以下を発見・修正した（合計 25 ファイル + `amadeus-common` 内 5 ファイル）。
+
+- tools 内の bare CLI ラベル・Usage 文字列: `amadeus-sensor-required-sections.ts`、`amadeus-sensor-upstream-coverage.ts`、`amadeus-runner-gen.ts`、`amadeus-sensor-linter.ts`、`amadeus-sensor-type-check.ts`（エラーメッセージ・Usage 文言の bare tool 名）。
+- `amadeus-utility.ts` の **`--doctor` hook-contract チェック**（重大な機能バグ、Bugbot 指摘とは別に発見）: settings.json から hook basename を抽出する正規表現 `matchAll(/aidlc-[A-Za-z0-9_-]+\.ts/g)` が改名後の settings.json（`amadeus-*.ts` のみ記載）に一致せず、`expectedHooks` が常に空になり doctor が偽陽性で fail する状態だった。Kiro/Codex 用 `tsHooks` 配列も一部 `aidlc-*` のまま残っていた（`aidlc-sync-statusline` 等）。すべて `amadeus-*` へ更新。
+- `amadeus-graph.ts` の **`SENSOR_FILE_REGEX`**（同じく重大な機能バグ、独自発見）: `/^aidlc-([a-z][a-z0-9-]*)\.md$/` のままで、改名後の sensor ファイル（`amadeus-*.md`）を一切拾えず `loadSensors()` が常に空 Map を返す状態だった。`^amadeus-` へ修正。
+- `amadeus-rule-schema.ts` の **pairing 値バリデーション**（同じく機能バグ）: `pairing must start with "aidlc-"` の検証・`startsWith("aidlc-")` 判定が旧 prefix のままで、新しい sensor 命名規則（`amadeus-*`）を要求できていなかった。`amadeus-utility.ts` 側の対応する `bareId = pairing.replace(/^aidlc-/, "")` も同様に修正。
+- `.agents/amadeus/amadeus-common/**`（upstream byte-match 対象）内の bare 参照 5 ファイル（`protocols/stage-definition.md`、`stage-protocol.md`、`stages/initialization/{state-init,workspace-detection,workspace-scaffold}.md`）: `aidlc-graph compile`、`` `aidlc-log` / `aidlc-state` ``、`aidlc-utility init`/`intent-birth` を `amadeus-*` へ更新した。coordinator 指摘どおり、scope-file/sensor-file プレースホルダ（7節）と同じ方針（書き換え + 正規化行追加）で一貫させた。
+- **誤りの発見と是正**: 横断 sweep の過程で、前回ラウンドの bare-token 置換スクリプト（`bare_token_fix.py`、境界規則が「ハイフン後続」を許容していた）が `amadeus-runner-gen.ts` のコメント内 `aidlc-state-init`（STAGE スラッグの例示、`aidlc-state.ts` ツールとは無関係の複合識別子）を誤って `amadeus-state-init` に書き換えていたことを発見し、`aidlc-state-init` へ復元した。
+
+### 8.3 parity 機構の拡張（`cli-token` kind、指示 6）
+
+`NameMappingKind` に `"cli-token"` を追加し、`mappingRegex`/`applyMapping` に「拡張子なし bare 参照専用」の disambiguation ケースを実装した。
+
+- 照合規則: `(?<![A-Za-z0-9_-])<token>(?![A-Za-z0-9_-]|\.(?:ts|js|md))` — 前後がセグメント境界であること、かつ直後に `.ts`/`.js`/`.md` が続かないことを要求する。後者のガードにより、`aidlc-state.md`（v2 成果物、改名禁止）や `aidlc-<sensor>.md`（sensor-file）等、拡張子込みの保護対象と構造的に衝突しない。
+- `nameMappings` に 39 行を追加した: tool 26 + hook 11 の base name（`.ts` を含まない bare 形）+ `kiro-adapter`/`codex-adapter`（tool/hook 表にはないが `amadeus-utility.ts` の doctor ロースターに実在する同種のハーネスアダプタ名）。加えて、正規表現の複合 alternation リテラル 2 件（`aidlc-(orchestrate|state|jump|bolt|swarm)`、`aidlc-(state|jump|bolt|utility)`）、`SENSOR_FILE_REGEX` の全体リテラル、ロックファイル prefix（`.aidlc-audit-`）、クォート済み bare prefix（`"aidlc-"`）、`^aidlc-` アンカー表記、`aidlc-sensor-<id>.ts` プレースホルダ、`aidlc-*.ts`/`aidlc-[A-Za-z0-9_-]+\.ts` のワイルドカード表記、`aidlc-prefixed` 複合語、`wires no aidlc hooks` という文脈限定フレーズを、それぞれ専用行として追加した（汎用の bare `"aidlc"`/`"amadeus"` 単独の catch-all は、skill 名（`amadeus-validator` 等）や `Amadeus DLC` のような無関係語を誤って巻き込むため採用しなかった）。
+
+### 8.4 RED → GREEN 証跡（cli-token）
+
+fixture に bare token 参照（`aidlc-widget`、`aidlc-state`）を追加し、`cli-token` ケースを一時的に無効化して RED を確認した。
+
+```
+generate-parity-baseline: ok
+command failed: .../dev-scripts/parity-check.ts .../parity-localGpzvYL
+stderr:
+parity check: 1 件の差分（基準 commit af5c20c09a61616e45e3ef54a13d4875d4f42578）
+- engine ファイル hash 不一致: tools/aidlc-widget.ts（期待 a57d622e...、実際 5a08be42...）
+```
+
+実装を復元し GREEN を確認した（`parity-check cli-token .md guard: ok` を含む全 fixture pass）。実データに対する `bun run dev-scripts/parity-check.ts` も 1 回目の実行で pass した。
+
+### 8.5 再検証結果
+
+- `npm run parity:check`: pass（38 skills、197 engine files、`engineFileExceptions` 空のまま）。
+- `npm run test:all`: pass、exit 0。
+- `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts .`: **pass**（exit 0）。
+- N005 残存 grep（元パターン + 13 件の scope/sensor ファイル名 + プレースホルダ）: `dev-scripts/data/parity-map.json`、`dev-scripts/generate-parity-baseline.ts` の 2 ファイルのみ（4.4節と同じ、機能上不可避）。
+- bare-token クラス専用の追加 grep（26 tools + 11 hooks + kiro/codex-adapter の base name、境界厳格、`amadeus-common`・`parity-check.ts`・`evals/aidlc-state` を除く）:
+
+  ```sh
+  git grep -lE "aidlc-(audit|bolt|directive|graph|includes|jump|learnings|lib|log|orchestrate|rule-schema|runner-gen|runtime|sensor-linter|sensor-required-sections|sensor-schema|sensor-type-check|sensor-upstream-coverage|sensor|stage-schema|state|swarm|utility|validate|version|worktree|audit-logger|log-subagent|mint-presence|runtime-compile|sensor-fire|session-end|session-start|statusline|stop|sync-statusline|validate-state|kiro-adapter|codex-adapter)([^-.a-zA-Z0-9]|$)" -- ':!aidlc/spaces' ':!dev-scripts/data/parity-baseline.json' ':!dev-scripts/evals/parity' ':!.agents/amadeus/amadeus-common' ':!dev-scripts/parity-check.ts' ':!dev-scripts/evals/aidlc-state'
+  ```
+
+  結果: `dev-scripts/data/parity-map.json`（cli-token 対応表自体、`prefix` フィールドは定義上不可避）、`package.json`（`test:it:aidlc-state` — dev-scripts 既存名、protected、4.4節と同種の判断）の 2 件のみ。新規の残存は 0 件。
+
+### 8.6 意図的に対象外とした mention（cosmetic、修正不要と判断）
+
+以下は bare "aidlc" を含むが、engine-namespace 改名の対象外と判断し、変更していない（いずれも既存ラウンドで確認済みの判断を踏襲）。
+
+- `/aidlc --stage <stage> --single` のようなスラッシュコマンド表記（bare `aidlc`、汎用 CLI 呼び出し規約であり対応表の対象外）。
+- `.claude/rules/aidlc-team.md`・`aidlc-org.md`・`aidlc-phase-<phase>.md` 等、upstream 汎用ルールファイル命名の例示（本リポジトリには実在しない汎用プレースホルダ）。
+- `agents/aidlc.json`（Kiro 想定の設定ファイル例、本リポジトリには実在しない）。
+- `aidlc-docs`、`.aidlc-stop-hook`、`.aidlc-hooks-health`（対応表に載らない内部ブックキーピング名、明示的に改名禁止）。
+- `dev-scripts/evals/aidlc-state/`・`test:it:aidlc-state`（dev-scripts 既存ファイル名、エンジンではなく repo 開発スクリプト）。
+
+上記はすべて調査済みであり、「未着手の cosmetic residual」ではなく「調査済みの意図的な対象外」である。

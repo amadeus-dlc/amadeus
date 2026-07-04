@@ -284,11 +284,11 @@ function main(): void {
   const target = args[1];
 
   if (!subcommand) {
-    jsonError("Usage: aidlc-validate outputs <phase|all>");
+    jsonError("Usage: amadeus-validate outputs <phase|all>");
   }
 
   if (!target) {
-    jsonError(`Usage: aidlc-validate ${subcommand} <phase|all>`);
+    jsonError(`Usage: amadeus-validate ${subcommand} <phase|all>`);
   }
 
   switch (subcommand) {

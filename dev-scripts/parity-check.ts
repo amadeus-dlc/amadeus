@@ -46,7 +46,8 @@ type NameMappingKind =
   | "rules-file"
   | "sub-agent"
   | "scope-file"
-  | "sensor-file";
+  | "sensor-file"
+  | "cli-token";
 
 type NameMapping = { kind: NameMappingKind; prefix: string; replacement: string };
 
@@ -115,6 +116,12 @@ function mappingRegex(mapping: NameMapping, direction: "forward" | "reverse"): R
       const base = escaped.replace(/\\\.md$/, "");
       return new RegExp(`(?<![A-Za-z0-9_-])${base}\\.md(?![A-Za-z0-9_])`, "g");
     }
+    case "cli-token":
+      // 拡張子なし（bare）の CLI トークン参照専用（正規表現・コマンド文字列・prose）。
+      // tool/hook kind（拡張子込み）とは独立し、拡張子（.ts/.js/.md）が続く場合には照合しない
+      // — 二重処理を避け、かつ `aidlc-state.md`（v2 成果物、改名禁止）を構造的に保護する。
+      // PR #453 Bugbot 指摘（拡張子なしの機能的参照を対応表が見落としていた）を受けて追加。
+      return new RegExp(`(?<![A-Za-z0-9_-])${escaped}(?![A-Za-z0-9_-]|\\.(?:ts|js|md))`, "g");
   }
 }
 

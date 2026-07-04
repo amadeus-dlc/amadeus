@@ -289,8 +289,8 @@ export function appendAuditEntryUnlocked(
   return { appended: true, event: eventType, timestamp: ts };
 }
 
-// Legacy CLI-style wrapper. Kept for backward compatibility with aidlc-state/aidlc-jump/
-// aidlc-log/aidlc-bolt — they import this and catch exceptions. The
+// Legacy CLI-style wrapper. Kept for backward compatibility with amadeus-state/amadeus-jump/
+// amadeus-log/amadeus-bolt — they import this and catch exceptions. The
 // main() caller below uses this same function but its catch block translates errors
 // via jsonError (which exits).
 export function handleAppend(
@@ -383,7 +383,7 @@ function parseSlugFlag(args: string[], subcommand: string): string {
     }
   }
   if (!slug) {
-    jsonError(`Usage: aidlc-audit ${subcommand} --slug <slug> [--project-dir <path>]`);
+    jsonError(`Usage: amadeus-audit ${subcommand} --slug <slug> [--project-dir <path>]`);
   }
   const err = validateBoltSlug(slug);
   if (err) {
@@ -414,7 +414,7 @@ function handleAuditFork(args: string[], projectDir: string): void {
   }
   if (!existsSync(wtPath)) {
     jsonError(
-      `worktree directory not found at ${wtPath}; run aidlc-worktree create first`
+      `worktree directory not found at ${wtPath}; run amadeus-worktree create first`
     );
   }
   if (existsSync(wtAuditPath)) {
@@ -458,7 +458,7 @@ function handleAuditFork(args: string[], projectDir: string): void {
     appendAuditEntry(
       "ERROR_LOGGED",
       {
-        Tool: "aidlc-audit",
+        Tool: "amadeus-audit",
         Command: "audit-fork",
         Error: `[slug=${slug}] [fork-emitted:${auditTs}] ${message}`,
       },
@@ -659,7 +659,7 @@ function handleAuditMerge(args: string[], projectDir: string): void {
       appendAuditEntryUnlocked(
         "ERROR_LOGGED",
         {
-          Tool: "aidlc-audit",
+          Tool: "amadeus-audit",
           Command: "audit-merge",
           Error: `[slug=${slug}] [fork-emitted:${forkTs}] ${message}`,
         },
@@ -705,14 +705,14 @@ function main(): void {
   const subcommand = filteredArgs[0];
 
   if (!subcommand) {
-    jsonError("Usage: aidlc-audit <append|append-raw|audit-fork|audit-merge> [args...]");
+    jsonError("Usage: amadeus-audit <append|append-raw|audit-fork|audit-merge> [args...]");
   }
 
   switch (subcommand) {
     case "append": {
       const eventType = filteredArgs[1];
       if (!eventType) {
-        jsonError("Usage: aidlc-audit append <event-type> [--field key=value ...]");
+        jsonError("Usage: amadeus-audit append <event-type> [--field key=value ...]");
       }
       const fields = parseFieldArgs(rawArgs);
       handleAppend(eventType, fields, projectDir);
@@ -724,7 +724,7 @@ function main(): void {
       const body = filteredArgs[2];
       if (!heading || !body) {
         jsonError(
-          "Usage: aidlc-audit append-raw <heading> <body>"
+          "Usage: amadeus-audit append-raw <heading> <body>"
         );
       }
       handleAppendRaw(heading, body, projectDir);

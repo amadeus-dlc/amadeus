@@ -125,7 +125,7 @@ function parseArgs(argv: string[]): Args {
 
 function printHelp(): void {
 	process.stdout.write(
-		`Usage: aidlc-sensor-type-check --stage <slug> --file-path <path>\n\n` +
+		`Usage: amadeus-sensor-type-check --stage <slug> --file-path <path>\n\n` +
 			`Wraps \`bunx tsc --project <tsconfig> --noEmit --pretty false\` and\n` +
 			`prints {pass, errors[]} JSON to stdout (filtered to --file-path).\n`,
 	);
