@@ -90,11 +90,11 @@ Per unit: U003-workflow-warning-traceability
 - **Lifecycle Phase**: CONSTRUCTION
 - **Current Stage**: ci-pipeline
 - **Next Stage**: none
-- **Status**: Completed
+- **Status**: Running
 - **Construction Autonomy Mode**: gated
 - **Last Updated**: 2026-07-04T09:54:43Z
 
 ## Session Resume Point
 - **Last Completed Stage**: ci-pipeline
-- **Next Action**: Workflow complete
+- **Next Action**: Await human merge for https://github.com/amadeus-dlc/amadeus/pull/440
 - **Pending Artifacts**: none

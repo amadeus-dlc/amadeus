@@ -1,7 +1,9 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   errorMessage,
+  escapeRegex,
+  findAllEvents,
   getField,
   readAllAuditShards,
   recordDir,
@@ -53,7 +55,7 @@ export function detectWorkflowWarnings(snapshot: WorkflowEvidenceSnapshot): Work
         nextAction: "run the matching report command or inspect the stage audit trail",
       });
     }
-    const active = snapshot.workflowStatus === "Active" || snapshot.workflowStatus === "InProgress";
+    const active = snapshot.workflowStatus === "Active" || snapshot.workflowStatus === "InProgress" || snapshot.workflowStatus === "Running";
     if (active && !snapshot.pendingHumanEvidence && !stageCompleted) {
       findings.push({
         kind: "abandoned-stage",
@@ -110,20 +112,80 @@ export function buildPrReadinessChecklist(items: PrReadinessItem[]): PrReadiness
   );
 }
 
-function listCodeGenerationArtifacts(projectDir: string): string[] {
+function listStageArtifactDirs(root: string, stage: string): string[] {
+  if (!existsSync(root)) return [];
+  const dirs: string[] = [];
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    const path = join(root, entry.name);
+    if (!entry.isDirectory()) continue;
+    if (entry.name === stage) {
+      dirs.push(path);
+      continue;
+    }
+    dirs.push(...listStageArtifactDirs(path, stage));
+  }
+  return dirs;
+}
+
+function listCurrentStageArtifacts(projectDir: string, currentStage: string | null): string[] {
   const dir = recordDir(projectDir);
-  if (dir === null) return [];
+  if (dir === null || currentStage === null || currentStage === "none") return [];
   try {
-    const construction = join(dir, "construction");
-    return readdirSync(construction)
-      .flatMap((unit) => {
-        const codeSummary = join(construction, unit, "code-generation", "code-summary.md");
-        return Bun.file(codeSummary).size > 0 ? [codeSummary] : [];
-      })
+    return listStageArtifactDirs(dir, currentStage)
+      .flatMap((stageDir) =>
+        readdirSync(stageDir, { withFileTypes: true })
+          .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+          .map((entry) => join(stageDir, entry.name))
+      )
       .map((path) => path.replace(`${projectDir}/`, ""));
   } catch {
     return [];
   }
+}
+
+function blockHasStage(block: string, stage: string): boolean {
+  return new RegExp(`^\\*\\*Stage\\*\\*:\\s*${escapeRegex(stage)}\\s*$`, "m").test(block);
+}
+
+function stageEvents(audit: string, event: string, stage: string): { event: string; timestamp: string; block: string }[] {
+  return findAllEvents(audit, event)
+    .filter((row) => blockHasStage(row.block, stage))
+    .map((row) => ({ event, timestamp: row.timestamp, block: row.block }));
+}
+
+function latestStageEvent(audit: string, stage: string): string | null {
+  const rows = [
+    ...stageEvents(audit, "STAGE_STARTED", stage),
+    ...stageEvents(audit, "STAGE_AWAITING_APPROVAL", stage),
+    ...stageEvents(audit, "GATE_APPROVED", stage),
+    ...stageEvents(audit, "HUMAN_APPROVED", stage),
+    ...stageEvents(audit, "STAGE_COMPLETED", stage),
+  ].sort((a, b) => (a.timestamp === b.timestamp ? 0 : a.timestamp < b.timestamp ? -1 : 1));
+  return rows.at(-1)?.event ?? null;
+}
+
+function hasPendingHumanEvidence(audit: string, stage: string | null): boolean {
+  if (stage === null || stage === "none") return false;
+  return latestStageEvent(audit, stage) === "STAGE_AWAITING_APPROVAL";
+}
+
+function stageStateOutcome(state: string, stage: string | null): string | undefined {
+  if (stage === null || stage === "none") return undefined;
+  const match = state.match(new RegExp(`^- \\[([^\\]])\\] ${escapeRegex(stage)}(?:\\s|$)`, "m"));
+  if (!match) return undefined;
+  if (match[1] === "x") return "Completed";
+  if (match[1] === "-") return "Active";
+  if (match[1] === "S") return "Skipped";
+  return "Pending";
+}
+
+function auditStageOutcome(audit: string, stage: string | null): string | undefined {
+  if (stage === null || stage === "none") return undefined;
+  const latest = latestStageEvent(audit, stage);
+  if (latest === "STAGE_COMPLETED") return "Completed";
+  if (latest === "STAGE_AWAITING_APPROVAL") return "AwaitingApproval";
+  if (latest === "STAGE_STARTED") return "Active";
+  return undefined;
 }
 
 export function buildWorkflowWarningSnapshot(projectDir: string): WorkflowEvidenceSnapshot | null {
@@ -133,18 +195,17 @@ export function buildWorkflowWarningSnapshot(projectDir: string): WorkflowEviden
     const currentStage = getField(state, "Current Stage");
     const workflowStatus = getField(state, "Status");
     const auditEvents: string[] = [];
-    if (currentStage !== null && audit.includes("**Event**: STAGE_COMPLETED") && audit.includes(`**Stage**: ${currentStage}`)) {
+    if (currentStage !== null && stageEvents(audit, "STAGE_COMPLETED", currentStage).length > 0) {
       auditEvents.push(`STAGE_COMPLETED:${currentStage}`);
     }
     return {
       currentStage,
       workflowStatus,
-      artifactEvidence: listCodeGenerationArtifacts(projectDir),
+      artifactEvidence: listCurrentStageArtifacts(projectDir, currentStage),
       auditEvents,
-      pendingHumanEvidence:
-        audit.includes("ASK_USER_QUESTION") ||
-        audit.includes("AWAITING_APPROVAL") ||
-        audit.includes("HUMAN_APPROVED"),
+      pendingHumanEvidence: hasPendingHumanEvidence(audit, currentStage),
+      stateStageOutcome: stageStateOutcome(state, currentStage),
+      auditStageOutcome: auditStageOutcome(audit, currentStage),
     };
   } catch {
     return null;

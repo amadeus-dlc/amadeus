@@ -1,11 +1,12 @@
 #!/usr/bin/env bun
 
-import { cpSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
   buildPrReadinessChecklist,
   buildRequirementEvidenceMap,
+  buildWorkflowWarningSnapshot,
   detectWorkflowWarnings,
 } from "../../../.agents/aidlc/tools/aidlc-workflow-traceability.ts";
 
@@ -54,6 +55,15 @@ check("report mismatch warning が出る", warnings.some((warning) => warning.ki
 check("abandoned stage warning が出る", warnings.some((warning) => warning.kind === "abandoned-stage"), JSON.stringify(warnings));
 check("contradiction warning が出る", warnings.some((warning) => warning.kind === "state-audit-contradiction"), JSON.stringify(warnings));
 
+const runningWarnings = detectWorkflowWarnings({
+  currentStage: "ci-pipeline",
+  workflowStatus: "Running",
+  artifactEvidence: [],
+  auditEvents: [],
+  pendingHumanEvidence: false,
+});
+check("Running status は active workflow として abandonment を検出する", runningWarnings.some((warning) => warning.kind === "abandoned-stage"), JSON.stringify(runningWarnings));
+
 const suppressed = detectWorkflowWarnings({
   currentStage: "requirements-analysis",
   workflowStatus: "Active",
@@ -77,6 +87,63 @@ const checklist = buildPrReadinessChecklist([
 check("PR readiness は required item を持つ", checklist.length === 7, JSON.stringify(checklist));
 check("parity failure は failed として残る", checklist.some((item) => item.label === "Parity state" && item.state === "failed"), JSON.stringify(checklist));
 check("未記録 item は missing になる", checklist.some((item) => item.label === "Validator" && item.state === "missing"), JSON.stringify(checklist));
+
+const snapshotWorkspace = mkdtempSync(join(tmpdir(), "workflow-warning-snapshot-"));
+cleanups.push(snapshotWorkspace);
+{
+  const recordDir = join(snapshotWorkspace, "aidlc", "spaces", "default", "intents", "260704-snapshot");
+  mkdirSync(join(recordDir, "construction", "U001", "code-generation"), { recursive: true });
+  mkdirSync(join(recordDir, "construction", "ci-pipeline"), { recursive: true });
+  mkdirSync(join(recordDir, "audit"), { recursive: true });
+  writeFileSync(join(snapshotWorkspace, "aidlc", "spaces", "default", "intents", "active-intent"), "260704-snapshot\n", "utf8");
+  writeFileSync(
+    join(recordDir, "aidlc-state.md"),
+    [
+      "# AI-DLC State Tracking",
+      "",
+      "- [-] ci-pipeline",
+      "",
+      "## Current Status",
+      "- **Current Stage**: ci-pipeline",
+      "- **Status**: Running",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+  writeFileSync(join(recordDir, "construction", "U001", "code-generation", "code-summary.md"), "# stale\n", "utf8");
+  writeFileSync(join(recordDir, "construction", "ci-pipeline", "ci-config.md"), "# current\n", "utf8");
+  writeFileSync(
+    join(recordDir, "audit", "snapshot.md"),
+    [
+      "# AI-DLC Audit Log",
+      "",
+      "## Stage Awaiting Approval",
+      "**Timestamp**: 2026-07-04T00:00:00Z",
+      "**Event**: STAGE_AWAITING_APPROVAL",
+      "**Stage**: code-generation",
+      "",
+      "---",
+      "",
+      "## Stage Completion",
+      "**Timestamp**: 2026-07-04T00:01:00Z",
+      "**Event**: STAGE_COMPLETED",
+      "**Stage**: code-generation",
+      "",
+      "---",
+      "",
+      "## Stage Completion",
+      "**Timestamp**: 2026-07-04T00:02:00Z",
+      "**Event**: STAGE_COMPLETED",
+      "**Stage**: ci-pipeline",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+  const snapshot = buildWorkflowWarningSnapshot(snapshotWorkspace);
+  check("snapshot は現在ステージの成果物だけを拾う", snapshot?.artifactEvidence.length === 1 && snapshot.artifactEvidence[0].includes("ci-pipeline/ci-config.md"), JSON.stringify(snapshot));
+  check("snapshot は過去ステージの承認待ちを pending と扱わない", snapshot?.pendingHumanEvidence === false, JSON.stringify(snapshot));
+  check("snapshot は state と audit の stage outcome を埋める", snapshot?.stateStageOutcome === "Active" && snapshot.auditStageOutcome === "Completed", JSON.stringify(snapshot));
+}
 
 const workspace = mkdtempSync(join(tmpdir(), "workflow-warning-traceability-"));
 cleanups.push(workspace);

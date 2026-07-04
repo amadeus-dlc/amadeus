@@ -743,8 +743,22 @@ function handleDoctor(projectDir: string): void {
       // Find last WORKFLOW_COMPLETED event
       const wcIdx = auditContent.lastIndexOf("**Event**: WORKFLOW_COMPLETED");
       if (wcIdx !== -1) {
+        const awaitingMergeIdx = auditContent.lastIndexOf("**Event**: WORKFLOW_PARKED");
         const status = stateContent.match(/^- \*\*Status\*\*:\s*(\S+)/m);
-        if (status && status[1] !== "Completed") {
+        if (awaitingMergeIdx > wcIdx) {
+          if (status && status[1] !== "Running") {
+            results.push({
+              pass: false,
+              label: `State/audit drift: audit has WORKFLOW_PARKED after completion but state Status=${status[1]}`,
+              fix: "manually set Status=Running in aidlc-state.md until the pull request is merged",
+            });
+          } else {
+            results.push({
+              pass: true,
+              label: "State matches latest audit event (awaiting human merge)",
+            });
+          }
+        } else if (status && status[1] !== "Completed") {
           results.push({
             pass: false,
             label: `State/audit drift: audit has WORKFLOW_COMPLETED but state Status=${status[1]}`,
