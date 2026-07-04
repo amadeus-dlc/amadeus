@@ -65,5 +65,12 @@
     "dirName": "260704-engine-validator-alignme",
     "scope": "bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019f2a5c-8474-7286-8044-0b5a6c521e93",
+    "slug": "skill-quality-repair",
+    "dirName": "260703-skill-quality-repair",
+    "scope": "refactor",
+    "status": "in-flight"
   }
 ]
