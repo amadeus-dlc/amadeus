@@ -156,6 +156,53 @@ for (const dir of engineDirs) {
 }
 
 const utility = join(workspace, ".agents/aidlc/tools/aidlc-utility.ts");
+{
+  const recordDir = join(workspace, "aidlc", "spaces", "default", "intents", "260704-doctor-order");
+  mkdirSync(join(recordDir, "audit"), { recursive: true });
+  writeFileSync(join(workspace, "aidlc", "spaces", "default", "intents", "active-intent"), "260704-doctor-order\n", "utf8");
+  writeFileSync(
+    join(recordDir, "aidlc-state.md"),
+    [
+      "# AI-DLC State Tracking",
+      "",
+      "- [x] ci-pipeline",
+      "",
+      "## Current Status",
+      "- **Current Stage**: ci-pipeline",
+      "- **Status**: Running",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+  writeFileSync(
+    join(recordDir, "audit", "a.md"),
+    [
+      "# AI-DLC Audit Log",
+      "",
+      "## Workflow Completion",
+      "**Timestamp**: 2026-07-04T10:00:00Z",
+      "**Event**: WORKFLOW_COMPLETED",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+  writeFileSync(
+    join(recordDir, "audit", "z.md"),
+    [
+      "# AI-DLC Audit Log",
+      "",
+      "## Workflow Parked",
+      "**Timestamp**: 2026-07-04T09:00:00Z",
+      "**Event**: WORKFLOW_PARKED",
+      "**Stage**: ci-pipeline",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+  const doctorOrder = run(["bun", utility, "doctor"], workspace);
+  check("doctor は audit shard のファイル順ではなく時刻順で drift を判定する", doctorOrder.exitCode !== 0 && doctorOrder.stdout.includes("State/audit drift"), doctorOrder.stdout);
+}
+
 runExpectSuccess(
   ["bun", utility, "intent-birth", "--scope", "poc", "--arguments", "workflow warning", "--label", "workflow-warning"],
   workspace,

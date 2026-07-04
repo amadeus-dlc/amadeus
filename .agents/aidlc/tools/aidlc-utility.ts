@@ -740,12 +740,16 @@ function handleDoctor(projectDir: string): void {
     try {
       const auditContent = auditAllShards;
       const stateContent = readFileSync(stateMdPath, "utf-8");
-      // Find last WORKFLOW_COMPLETED event
-      const wcIdx = auditContent.lastIndexOf("**Event**: WORKFLOW_COMPLETED");
-      if (wcIdx !== -1) {
-        const awaitingMergeIdx = auditContent.lastIndexOf("**Event**: WORKFLOW_PARKED");
+      const workflowCompletedRows = findAllEvents(auditContent, "WORKFLOW_COMPLETED");
+      const workflowParkedRows = findAllEvents(auditContent, "WORKFLOW_PARKED");
+      const latestWorkflowCompleted = workflowCompletedRows.at(-1);
+      const latestWorkflowParked = workflowParkedRows.at(-1);
+      if (latestWorkflowCompleted !== undefined) {
+        const parkedAfterCompleted =
+          latestWorkflowParked !== undefined &&
+          latestWorkflowParked.timestamp > latestWorkflowCompleted.timestamp;
         const status = stateContent.match(/^- \*\*Status\*\*:\s*(\S+)/m);
-        if (awaitingMergeIdx > wcIdx) {
+        if (parkedAfterCompleted) {
           if (status && status[1] !== "Running") {
             results.push({
               pass: false,
