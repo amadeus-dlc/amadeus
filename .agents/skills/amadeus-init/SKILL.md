@@ -36,7 +36,7 @@ no standalone meaning.
    tool then falls back to the scope token):
 
    ```bash
-   bun .agents/aidlc/tools/aidlc-utility.ts intent-birth --scope <name> --arguments "<description>" --label "<2-3 word essence>"
+   bun .agents/amadeus/tools/amadeus-utility.ts intent-birth --scope <name> --arguments "<description>" --label "<2-3 word essence>"
    ```
 
    `--scope` seeds the initial scope (defaults to `poc`); omit `--arguments`

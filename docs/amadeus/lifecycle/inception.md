@@ -50,7 +50,7 @@ brownfield 条件の入力は、greenfield では要求しない。
 | Condition | brownfield の場合に実行する。鮮度維持のため毎回再実行する。greenfield では実行しない |
 | Lead Skill | `amadeus-inception-reverse-engineering` |
 | Mode | internal（subagent 委譲可） |
-| v2 Source | [reverse-engineering.md](https://github.com/awslabs/aidlc-workflows/blob/v2/core/aidlc-common/stages/inception/reverse-engineering.md) |
+| v2 Source | [reverse-engineering.md](https://github.com/awslabs/aidlc-workflows/blob/v2/core/amadeus-common/stages/inception/reverse-engineering.md) |
 
 ### Purpose
 
@@ -94,7 +94,7 @@ brownfield 条件の入力は、greenfield では要求しない。
 | Condition | 鮮度維持のため毎回再実行する。brownfield は証拠と Reverse Engineering 成果物から発見し、greenfield は構造化質問で確認する |
 | Lead Skill | `amadeus-inception-practices-discovery` |
 | Mode | internal |
-| v2 Source | [practices-discovery.md](https://github.com/awslabs/aidlc-workflows/blob/v2/core/aidlc-common/stages/inception/practices-discovery.md) |
+| v2 Source | [practices-discovery.md](https://github.com/awslabs/aidlc-workflows/blob/v2/core/amadeus-common/stages/inception/practices-discovery.md) |
 
 ### Purpose
 
@@ -136,7 +136,7 @@ brownfield 条件の入力は、greenfield では要求しない。
 | Condition | scope が実行対象にする場合は必ず実行する。深さは depth に従う |
 | Lead Skill | `amadeus-inception-requirements-analysis` |
 | Mode | internal |
-| v2 Source | [requirements-analysis.md](https://github.com/awslabs/aidlc-workflows/blob/v2/core/aidlc-common/stages/inception/requirements-analysis.md) |
+| v2 Source | [requirements-analysis.md](https://github.com/awslabs/aidlc-workflows/blob/v2/core/amadeus-common/stages/inception/requirements-analysis.md) |
 
 ### Purpose
 
@@ -179,7 +179,7 @@ Intent を検証可能な要求へ落とす。
 | Condition | 利用者向け機能、複数ペルソナ、複雑な業務ロジック、チーム横断の作業がある場合に実行する。純粋なリファクタリング、単発のバグ修正、インフラのみの変更、開発者ツールでは実行しない |
 | Lead Skill | `amadeus-inception-user-stories` |
 | Mode | internal |
-| v2 Source | [user-stories.md](https://github.com/awslabs/aidlc-workflows/blob/v2/core/aidlc-common/stages/inception/user-stories.md) |
+| v2 Source | [user-stories.md](https://github.com/awslabs/aidlc-workflows/blob/v2/core/amadeus-common/stages/inception/user-stories.md) |
 
 ### Purpose
 
@@ -219,7 +219,7 @@ Intent を検証可能な要求へ落とす。
 | Condition | UI があり、Ideation で rough mockups を作った場合に実行する。API は相互作用図を精緻化する |
 | Lead Skill | `amadeus-inception-refined-mockups` |
 | Mode | internal |
-| v2 Source | [refined-mockups.md](https://github.com/awslabs/aidlc-workflows/blob/v2/core/aidlc-common/stages/inception/refined-mockups.md) |
+| v2 Source | [refined-mockups.md](https://github.com/awslabs/aidlc-workflows/blob/v2/core/amadeus-common/stages/inception/refined-mockups.md) |
 
 ### Purpose
 
@@ -257,7 +257,7 @@ rough mockups を、要求とストーリーに対応づけた詳細モックへ
 | Condition | 新しいコンポーネントやサービスが必要な場合、またはサービス層の設計が必要な場合に実行する。既存コンポーネントの修正だけの場合は実行しない |
 | Lead Skill | `amadeus-inception-application-design` |
 | Mode | internal |
-| v2 Source | [application-design.md](https://github.com/awslabs/aidlc-workflows/blob/v2/core/aidlc-common/stages/inception/application-design.md) |
+| v2 Source | [application-design.md](https://github.com/awslabs/aidlc-workflows/blob/v2/core/amadeus-common/stages/inception/application-design.md) |
 
 ### Purpose
 
@@ -302,7 +302,7 @@ Unit 境界の材料になるアーキテクチャをここで確定する。
 | Condition | scope が実行対象にする場合は必ず実行する。2.8 Delivery Planning と対で実行する |
 | Lead Skill | `amadeus-inception-units-generation` |
 | Mode | internal |
-| v2 Source | [units-generation.md](https://github.com/awslabs/aidlc-workflows/blob/v2/core/aidlc-common/stages/inception/units-generation.md) |
+| v2 Source | [units-generation.md](https://github.com/awslabs/aidlc-workflows/blob/v2/core/amadeus-common/stages/inception/units-generation.md) |
 
 ### Purpose
 
@@ -352,7 +352,7 @@ Unit が多い場合は `units/<unit-id>-<slug>.md` へ分割してよい。
 | Condition | scope が実行対象にする場合は必ず実行する。Inception の最終ステージとして Construction の実行計画を作る |
 | Lead Skill | `amadeus-inception-delivery-planning` |
 | Mode | internal |
-| v2 Source | [delivery-planning.md](https://github.com/awslabs/aidlc-workflows/blob/v2/core/aidlc-common/stages/inception/delivery-planning.md) |
+| v2 Source | [delivery-planning.md](https://github.com/awslabs/aidlc-workflows/blob/v2/core/amadeus-common/stages/inception/delivery-planning.md) |
 
 ### Purpose
 

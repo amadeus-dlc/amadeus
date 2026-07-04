@@ -48,7 +48,7 @@ const annexText = [
   "- Grill me: one question at a time, recommended answer attached (see",
   "  `../../amadeus-grilling/references/engine-bridge.md`).",
   "- Grill me answers are written back as `[Answer]:` and logged with",
-  "  `aidlc-log.ts decision` / `aidlc-log.ts answer`.",
+  "  `amadeus-log.ts decision` / `amadeus-log.ts answer`.",
   "",
 ].join("\n");
 
@@ -156,7 +156,7 @@ const wrongOrderAnnex = makeFixture({
     "- Grill me: one question at a time, recommended answer attached (see",
     "  `../../amadeus-grilling/references/engine-bridge.md`).",
     "- Grill me answers are written back as `[Answer]:` and logged with",
-    "  `aidlc-log.ts decision` / `aidlc-log.ts answer`.",
+    "  `amadeus-log.ts decision` / `amadeus-log.ts answer`.",
     "",
   ].join("\n"),
 });
@@ -178,7 +178,7 @@ const brokenAnnexPath = makeFixture({
     "- Grill me: one question at a time, recommended answer attached (see",
     "  `../amadeus-grilling/references/engine-bridge.md`).",
     "- Grill me answers are written back as `[Answer]:` and logged with",
-    "  `aidlc-log.ts decision` / `aidlc-log.ts answer`.",
+    "  `amadeus-log.ts decision` / `amadeus-log.ts answer`.",
     "",
   ].join("\n"),
 });

@@ -34,7 +34,7 @@ function annexIssues(root: string): string[] {
     "Chat",
     "one question at a time",
     "[Answer]:",
-    "aidlc-log.ts",
+    "amadeus-log.ts",
     "engine-bridge.md",
   ];
   const issues: string[] = [];

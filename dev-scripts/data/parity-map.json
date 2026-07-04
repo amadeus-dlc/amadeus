@@ -5,52 +5,246 @@
     "replacement": "amadeus",
     "rule": "aidlc-<x> -> amadeus-<x>; aidlc（入口） -> amadeus"
   },
-  "subAgentNameMapping": {
-    "prefix": "aidlc",
-    "replacement": "amadeus",
-    "rule": "agents/aidlc-<x>-agent.md -> agents/amadeus-<x>-agent.md; knowledge/aidlc-<x>-agent/ -> knowledge/amadeus-<x>-agent/"
-  },
-  "checkedEngineDirectories": ["tools", "aidlc-common", "sensors", "hooks", "scopes", "agents", "knowledge"],
+  "nameMappings": [
+    {
+      "kind": "engine-dir",
+      "prefix": ".agents/aidlc/",
+      "replacement": ".agents/amadeus/",
+      "rule": "engine-namespace 改名（Issue #445）。.agents/aidlc/ を含む path 接頭辞にのみ照合し、bare aidlc/（workspace）には照合しない。"
+    },
+    {
+      "kind": "common-dir",
+      "prefix": "aidlc-common",
+      "replacement": "amadeus-common",
+      "rule": "engine-namespace 改名（Issue #445）。path セグメント境界一致。"
+    },
+    {
+      "kind": "shared-dir",
+      "prefix": "aidlc-shared",
+      "replacement": "amadeus-shared",
+      "rule": "engine-namespace 改名（Issue #445）。path セグメント境界一致。knowledge/aidlc-shared/ -> knowledge/amadeus-shared/。"
+    },
+    {
+      "kind": "rules-file",
+      "prefix": "rules/aidlc.md",
+      "replacement": "rules/amadeus.md",
+      "rule": "engine-namespace 改名（Issue #445）。path 一致。"
+    },
+    { "kind": "tool", "prefix": "aidlc-audit.ts", "replacement": "amadeus-audit.ts" },
+    { "kind": "tool", "prefix": "aidlc-bolt.ts", "replacement": "amadeus-bolt.ts" },
+    { "kind": "tool", "prefix": "aidlc-directive.ts", "replacement": "amadeus-directive.ts" },
+    { "kind": "tool", "prefix": "aidlc-graph.ts", "replacement": "amadeus-graph.ts" },
+    { "kind": "tool", "prefix": "aidlc-includes.ts", "replacement": "amadeus-includes.ts" },
+    { "kind": "tool", "prefix": "aidlc-jump.ts", "replacement": "amadeus-jump.ts" },
+    { "kind": "tool", "prefix": "aidlc-learnings.ts", "replacement": "amadeus-learnings.ts" },
+    { "kind": "tool", "prefix": "aidlc-lib.ts", "replacement": "amadeus-lib.ts" },
+    { "kind": "tool", "prefix": "aidlc-log.ts", "replacement": "amadeus-log.ts" },
+    { "kind": "tool", "prefix": "aidlc-orchestrate.ts", "replacement": "amadeus-orchestrate.ts" },
+    { "kind": "tool", "prefix": "aidlc-rule-schema.ts", "replacement": "amadeus-rule-schema.ts" },
+    { "kind": "tool", "prefix": "aidlc-runner-gen.ts", "replacement": "amadeus-runner-gen.ts" },
+    { "kind": "tool", "prefix": "aidlc-runtime.ts", "replacement": "amadeus-runtime.ts" },
+    { "kind": "tool", "prefix": "aidlc-sensor-linter.ts", "replacement": "amadeus-sensor-linter.ts" },
+    { "kind": "tool", "prefix": "aidlc-sensor-required-sections.ts", "replacement": "amadeus-sensor-required-sections.ts" },
+    { "kind": "tool", "prefix": "aidlc-sensor-schema.ts", "replacement": "amadeus-sensor-schema.ts" },
+    { "kind": "tool", "prefix": "aidlc-sensor-type-check.ts", "replacement": "amadeus-sensor-type-check.ts" },
+    { "kind": "tool", "prefix": "aidlc-sensor-upstream-coverage.ts", "replacement": "amadeus-sensor-upstream-coverage.ts" },
+    { "kind": "tool", "prefix": "aidlc-sensor.ts", "replacement": "amadeus-sensor.ts" },
+    { "kind": "tool", "prefix": "aidlc-stage-schema.ts", "replacement": "amadeus-stage-schema.ts" },
+    { "kind": "tool", "prefix": "aidlc-state.ts", "replacement": "amadeus-state.ts" },
+    { "kind": "tool", "prefix": "aidlc-swarm.ts", "replacement": "amadeus-swarm.ts" },
+    { "kind": "tool", "prefix": "aidlc-utility.ts", "replacement": "amadeus-utility.ts" },
+    { "kind": "tool", "prefix": "aidlc-validate.ts", "replacement": "amadeus-validate.ts" },
+    { "kind": "tool", "prefix": "aidlc-version.ts", "replacement": "amadeus-version.ts" },
+    { "kind": "tool", "prefix": "aidlc-worktree.ts", "replacement": "amadeus-worktree.ts" },
+    { "kind": "hook", "prefix": "aidlc-audit-logger.ts", "replacement": "amadeus-audit-logger.ts" },
+    { "kind": "hook", "prefix": "aidlc-log-subagent.ts", "replacement": "amadeus-log-subagent.ts" },
+    { "kind": "hook", "prefix": "aidlc-mint-presence.ts", "replacement": "amadeus-mint-presence.ts" },
+    { "kind": "hook", "prefix": "aidlc-runtime-compile.ts", "replacement": "amadeus-runtime-compile.ts" },
+    { "kind": "hook", "prefix": "aidlc-sensor-fire.ts", "replacement": "amadeus-sensor-fire.ts" },
+    { "kind": "hook", "prefix": "aidlc-session-end.ts", "replacement": "amadeus-session-end.ts" },
+    { "kind": "hook", "prefix": "aidlc-session-start.ts", "replacement": "amadeus-session-start.ts" },
+    { "kind": "hook", "prefix": "aidlc-statusline.ts", "replacement": "amadeus-statusline.ts" },
+    { "kind": "hook", "prefix": "aidlc-stop.ts", "replacement": "amadeus-stop.ts" },
+    { "kind": "hook", "prefix": "aidlc-sync-statusline.ts", "replacement": "amadeus-sync-statusline.ts" },
+    { "kind": "hook", "prefix": "aidlc-validate-state.ts", "replacement": "amadeus-validate-state.ts" },
+    { "kind": "scope-file", "prefix": "aidlc-bugfix.md", "replacement": "amadeus-bugfix.md" },
+    { "kind": "scope-file", "prefix": "aidlc-enterprise.md", "replacement": "amadeus-enterprise.md" },
+    { "kind": "scope-file", "prefix": "aidlc-feature.md", "replacement": "amadeus-feature.md" },
+    { "kind": "scope-file", "prefix": "aidlc-infra.md", "replacement": "amadeus-infra.md" },
+    { "kind": "scope-file", "prefix": "aidlc-mvp.md", "replacement": "amadeus-mvp.md" },
+    { "kind": "scope-file", "prefix": "aidlc-poc.md", "replacement": "amadeus-poc.md" },
+    { "kind": "scope-file", "prefix": "aidlc-refactor.md", "replacement": "amadeus-refactor.md" },
+    { "kind": "scope-file", "prefix": "aidlc-security-patch.md", "replacement": "amadeus-security-patch.md" },
+    { "kind": "scope-file", "prefix": "aidlc-workshop.md", "replacement": "amadeus-workshop.md" },
+    {
+      "kind": "scope-file",
+      "prefix": "aidlc-<name>.md",
+      "replacement": "amadeus-<name>.md",
+      "rule": "scopes/ の命名規則プレースホルダ（stage-definition.md、stage-protocol.md、tools 内コメント）。review 指摘で追加、code-generation 決定記録あり。"
+    },
+    { "kind": "sensor-file", "prefix": "aidlc-linter.md", "replacement": "amadeus-linter.md" },
+    { "kind": "sensor-file", "prefix": "aidlc-required-sections.md", "replacement": "amadeus-required-sections.md" },
+    { "kind": "sensor-file", "prefix": "aidlc-type-check.md", "replacement": "amadeus-type-check.md" },
+    { "kind": "sensor-file", "prefix": "aidlc-upstream-coverage.md", "replacement": "amadeus-upstream-coverage.md" },
+    {
+      "kind": "sensor-file",
+      "prefix": "aidlc-<id>.md",
+      "replacement": "amadeus-<id>.md",
+      "rule": "sensors/ の命名規則プレースホルダ（stage-protocol.md、全 32 stage 定義、tools 内コメント）。review 指摘で追加、code-generation 決定記録あり。"
+    },
+    { "kind": "cli-token", "prefix": "aidlc-audit", "replacement": "amadeus-audit" },
+    { "kind": "cli-token", "prefix": "aidlc-bolt", "replacement": "amadeus-bolt" },
+    { "kind": "cli-token", "prefix": "aidlc-directive", "replacement": "amadeus-directive" },
+    { "kind": "cli-token", "prefix": "aidlc-graph", "replacement": "amadeus-graph" },
+    { "kind": "cli-token", "prefix": "aidlc-includes", "replacement": "amadeus-includes" },
+    { "kind": "cli-token", "prefix": "aidlc-jump", "replacement": "amadeus-jump" },
+    { "kind": "cli-token", "prefix": "aidlc-learnings", "replacement": "amadeus-learnings" },
+    { "kind": "cli-token", "prefix": "aidlc-lib", "replacement": "amadeus-lib" },
+    { "kind": "cli-token", "prefix": "aidlc-log", "replacement": "amadeus-log" },
+    { "kind": "cli-token", "prefix": "aidlc-orchestrate", "replacement": "amadeus-orchestrate" },
+    { "kind": "cli-token", "prefix": "aidlc-rule-schema", "replacement": "amadeus-rule-schema" },
+    { "kind": "cli-token", "prefix": "aidlc-runner-gen", "replacement": "amadeus-runner-gen" },
+    { "kind": "cli-token", "prefix": "aidlc-runtime", "replacement": "amadeus-runtime" },
+    { "kind": "cli-token", "prefix": "aidlc-sensor-linter", "replacement": "amadeus-sensor-linter" },
+    { "kind": "cli-token", "prefix": "aidlc-sensor-required-sections", "replacement": "amadeus-sensor-required-sections" },
+    { "kind": "cli-token", "prefix": "aidlc-sensor-schema", "replacement": "amadeus-sensor-schema" },
+    { "kind": "cli-token", "prefix": "aidlc-sensor-type-check", "replacement": "amadeus-sensor-type-check" },
+    { "kind": "cli-token", "prefix": "aidlc-sensor-upstream-coverage", "replacement": "amadeus-sensor-upstream-coverage" },
+    { "kind": "cli-token", "prefix": "aidlc-sensor", "replacement": "amadeus-sensor" },
+    { "kind": "cli-token", "prefix": "aidlc-stage-schema", "replacement": "amadeus-stage-schema" },
+    { "kind": "cli-token", "prefix": "aidlc-state", "replacement": "amadeus-state" },
+    { "kind": "cli-token", "prefix": "aidlc-swarm", "replacement": "amadeus-swarm" },
+    { "kind": "cli-token", "prefix": "aidlc-utility", "replacement": "amadeus-utility" },
+    { "kind": "cli-token", "prefix": "aidlc-validate", "replacement": "amadeus-validate" },
+    { "kind": "cli-token", "prefix": "aidlc-version", "replacement": "amadeus-version" },
+    { "kind": "cli-token", "prefix": "aidlc-worktree", "replacement": "amadeus-worktree" },
+    { "kind": "cli-token", "prefix": "aidlc-audit-logger", "replacement": "amadeus-audit-logger" },
+    { "kind": "cli-token", "prefix": "aidlc-log-subagent", "replacement": "amadeus-log-subagent" },
+    { "kind": "cli-token", "prefix": "aidlc-mint-presence", "replacement": "amadeus-mint-presence" },
+    { "kind": "cli-token", "prefix": "aidlc-runtime-compile", "replacement": "amadeus-runtime-compile" },
+    { "kind": "cli-token", "prefix": "aidlc-sensor-fire", "replacement": "amadeus-sensor-fire" },
+    { "kind": "cli-token", "prefix": "aidlc-session-end", "replacement": "amadeus-session-end" },
+    { "kind": "cli-token", "prefix": "aidlc-session-start", "replacement": "amadeus-session-start" },
+    { "kind": "cli-token", "prefix": "aidlc-statusline", "replacement": "amadeus-statusline" },
+    { "kind": "cli-token", "prefix": "aidlc-stop", "replacement": "amadeus-stop" },
+    { "kind": "cli-token", "prefix": "aidlc-sync-statusline", "replacement": "amadeus-sync-statusline" },
+    { "kind": "cli-token", "prefix": "aidlc-validate-state", "replacement": "amadeus-validate-state" },
+    { "kind": "cli-token", "prefix": "aidlc-kiro-adapter", "replacement": "amadeus-kiro-adapter" },
+    { "kind": "cli-token", "prefix": "aidlc-codex-adapter", "replacement": "amadeus-codex-adapter" },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-(orchestrate|state|jump|bolt|swarm)",
+      "replacement": "amadeus-(orchestrate|state|jump|bolt|swarm)",
+      "rule": "hooks/amadeus-stop.ts の正規表現リテラル（複合 alternation 群）。PR #453 Bugbot 指摘対応。"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-(state|jump|bolt|utility)",
+      "replacement": "amadeus-(state|jump|bolt|utility)",
+      "rule": "hooks/amadeus-runtime-compile.ts の正規表現リテラル（複合 alternation 群）。PR #453 Bugbot 指摘対応。"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "^aidlc-([a-z][a-z0-9-]*)\\.md$",
+      "replacement": "^amadeus-([a-z][a-z0-9-]*)\\.md$",
+      "rule": "tools/amadeus-graph.ts の SENSOR_FILE_REGEX（sensor-file 実ファイル名の判別に使う正規表現リテラル）。"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": ".aidlc-audit-",
+      "replacement": ".amadeus-audit-",
+      "rule": "tools/amadeus-lib.ts の一時ロックファイル名 prefix（`.amadeus-audit-${hash}.lock`）。"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "\"aidlc-\"",
+      "replacement": "\"amadeus-\"",
+      "rule": "tools/amadeus-rule-schema.ts・amadeus-utility.ts のクォート済み bare prefix 記述（pairing 値の命名規則）。"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "^aidlc-",
+      "replacement": "^amadeus-",
+      "rule": "tools/amadeus-rule-schema.ts のコメント（`^aidlc-` 正規表現アンカー記法）と amadeus-utility.ts の `pairing.replace(/^aidlc-/, \"\")` 正規表現リテラルで共有。"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-sensor-<id>.ts",
+      "replacement": "amadeus-sensor-<id>.ts",
+      "rule": "tools/amadeus-sensor.ts の per-sensor 子ツール命名規則プレースホルダ（例: amadeus-sensor-linter.ts）。"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-*.ts",
+      "replacement": "amadeus-*.ts",
+      "rule": "tools/amadeus-utility.ts の hook contract チェックが使うワイルドカード表記（ラベル文字列）。"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-[A-Za-z0-9_-]+\\.ts",
+      "replacement": "amadeus-[A-Za-z0-9_-]+\\.ts",
+      "rule": "tools/amadeus-utility.ts の hook contract チェックが settings.json から hook basename を抽出する正規表現リテラル。"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-prefixed",
+      "replacement": "amadeus-prefixed",
+      "rule": "tools/amadeus-utility.ts のコメント（`amadeus-prefixed` という複合語での言及）。"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "wires no aidlc hooks",
+      "replacement": "wires no amadeus hooks",
+      "rule": "tools/amadeus-utility.ts のコメント。ハイフンなしの bare 語（`aidlc hooks`）は hook-contract チェックの文脈限定のフレーズとして正規化する（汎用の bare 'amadeus' catch-all は他の無関係な言及（skill 名等）を誤って巻き込むため採用しない）。"
+    },
+    {
+      "kind": "sub-agent",
+      "prefix": "aidlc",
+      "replacement": "amadeus",
+      "rule": "agents/aidlc-<x>-agent.md -> agents/amadeus-<x>-agent.md; knowledge/aidlc-<x>-agent/ -> knowledge/amadeus-<x>-agent/"
+    }
+  ],
+  "checkedEngineDirectories": ["tools", "amadeus-common", "sensors", "hooks", "scopes", "agents", "knowledge"],
   "relocations": [
     {
-      "upstreamPath": "rules/aidlc.md",
-      "localPath": ".agents/rules/aidlc.md",
-      "reason": "symlink 化。.claude/rules/aidlc.md は .agents/rules/aidlc.md への symlink であり、実体（.agents/rules/aidlc.md）を直接照合する。"
+      "upstreamPath": "rules/amadeus.md",
+      "localPath": ".agents/rules/amadeus.md",
+      "reason": "symlink 化 + rules-file 改名（Issue #445）。.claude/rules/amadeus.md は .agents/rules/amadeus.md への symlink であり、実体（.agents/rules/amadeus.md）を直接照合する。"
     },
     {
       "upstreamPath": "tools",
-      "localPath": ".agents/aidlc/tools",
-      "reason": "host 中立化（人間指示）。.claude/tools は .agents/aidlc/tools への symlink であり、実体（.agents/aidlc/tools）を直接照合する。"
+      "localPath": ".agents/amadeus/tools",
+      "reason": "host 中立化（人間指示）+ engine-dir 改名（Issue #445）。.claude/tools は .agents/amadeus/tools への symlink であり、実体（.agents/amadeus/tools）を直接照合する。"
     },
     {
-      "upstreamPath": "aidlc-common",
-      "localPath": ".agents/aidlc/aidlc-common",
-      "reason": "host 中立化（人間指示）。.claude/aidlc-common は .agents/aidlc/aidlc-common への symlink であり、実体（.agents/aidlc/aidlc-common）を直接照合する。"
+      "upstreamPath": "amadeus-common",
+      "localPath": ".agents/amadeus/amadeus-common",
+      "reason": "host 中立化（人間指示）+ common-dir 改名（Issue #445）。.claude/amadeus-common は .agents/amadeus/amadeus-common への symlink であり、実体（.agents/amadeus/amadeus-common）を直接照合する。"
     },
     {
       "upstreamPath": "sensors",
-      "localPath": ".agents/aidlc/sensors",
-      "reason": "host 中立化（人間指示）。.claude/sensors は .agents/aidlc/sensors への symlink であり、実体（.agents/aidlc/sensors）を直接照合する。"
+      "localPath": ".agents/amadeus/sensors",
+      "reason": "host 中立化（人間指示）+ engine-dir 改名（Issue #445）。.claude/sensors は .agents/amadeus/sensors への symlink であり、実体（.agents/amadeus/sensors）を直接照合する。"
     },
     {
       "upstreamPath": "hooks",
-      "localPath": ".agents/aidlc/hooks",
-      "reason": "host 中立化（人間指示）。.claude/hooks は .agents/aidlc/hooks への symlink であり、実体（.agents/aidlc/hooks）を直接照合する。"
+      "localPath": ".agents/amadeus/hooks",
+      "reason": "host 中立化（人間指示）+ engine-dir 改名（Issue #445）。.claude/hooks は .agents/amadeus/hooks への symlink であり、実体（.agents/amadeus/hooks）を直接照合する。"
     },
     {
       "upstreamPath": "scopes",
-      "localPath": ".agents/aidlc/scopes",
-      "reason": "host 中立化（人間指示）。.claude/scopes は .agents/aidlc/scopes への symlink であり、実体（.agents/aidlc/scopes）を直接照合する。"
+      "localPath": ".agents/amadeus/scopes",
+      "reason": "host 中立化（人間指示）+ engine-dir 改名（Issue #445）。.claude/scopes は .agents/amadeus/scopes への symlink であり、実体（.agents/amadeus/scopes）を直接照合する。"
     },
     {
       "upstreamPath": "agents",
-      "localPath": ".agents/aidlc/agents",
-      "reason": "host 中立化（人間指示）。.claude/agents は .agents/aidlc/agents への symlink であり、実体（.agents/aidlc/agents）を直接照合する。"
+      "localPath": ".agents/amadeus/agents",
+      "reason": "host 中立化（人間指示）+ engine-dir 改名（Issue #445）。.claude/agents は .agents/amadeus/agents への symlink であり、実体（.agents/amadeus/agents）を直接照合する。"
     },
     {
       "upstreamPath": "knowledge",
-      "localPath": ".agents/aidlc/knowledge",
-      "reason": "host 中立化（人間指示）。.claude/knowledge は .agents/aidlc/knowledge への symlink であり、実体（.agents/aidlc/knowledge）を直接照合する。"
+      "localPath": ".agents/amadeus/knowledge",
+      "reason": "host 中立化（人間指示）+ engine-dir 改名（Issue #445）。.claude/knowledge は .agents/amadeus/knowledge への symlink であり、実体（.agents/amadeus/knowledge）を直接照合する。"
     }
   ],
   "missingSkillExceptions": [],
@@ -70,7 +264,7 @@
     },
     {
       "target": ".claude/settings.json のうち hooks 以外",
-      "reason": "hooks 以外の設定はこのリポジトリの既存開発環境（kiro skill 群、既存 hooks、dev-scripts）向けであり、上流と同期しない（C001）。settings.json 自体が parity-check の検査対象（tools/aidlc-common/sensors/hooks/scopes/agents/knowledge/skills）に含まれない。"
+      "reason": "hooks 以外の設定はこのリポジトリの既存開発環境（kiro skill 群、既存 hooks、dev-scripts）向けであり、上流と同期しない（C001）。settings.json 自体が parity-check の検査対象（checkedEngineDirectories、skills）に含まれない。"
     },
     {
       "target": "skills/**/SKILL.md、.agents/skills/**/SKILL.md",
@@ -78,7 +272,7 @@
     },
     {
       "target": "question-rendering.md の references/ 配置",
-      "reason": "参照ファイルを skill 側の references/ 配下へ移設しており、上流の配置とは異なる。移設先は skills/amadeus*/references/ であり、.claude/ 配下の engine ファイル照合（tools/aidlc-common/sensors/hooks/scopes/agents/knowledge）の対象外。"
+      "reason": "参照ファイルを skill 側の references/ 配下へ移設しており、上流の配置とは異なる。移設先は skills/amadeus*/references/ であり、.claude/ 配下の engine ファイル照合（checkedEngineDirectories）の対象外。"
     },
     {
       "target": "amadeus-grilling, amadeus-domain-modeling, amadeus-validator",
@@ -87,6 +281,10 @@
     {
       "target": "amadeus-construction-*、amadeus-ideation-*、amadeus-inception-*、amadeus-steering など旧 skill 群",
       "reason": "削除済み（examples 機構の廃止に伴う旧 skill 整理）。置換前の旧 skill 群であり、上流 38 skill との 1 対 1 対応の対象外だったため、parity-check では検査されていなかった。"
+    },
+    {
+      "target": "dev-scripts/parity-check.ts、dev-scripts/generate-parity-baseline.ts の上流スキーマ参照（rules/aidlc.md、aidlc-common 等）",
+      "reason": "上流 aidlc-workflows clone 自体のディレクトリ名・baseline JSON のフィールド名であり、上流が改名していない以上、engine-namespace 改名（Issue #445）の対象外。dev-scripts の既存ファイル名（エンジンではなく repo 開発スクリプト）として扱う。"
     }
   ]
 }

@@ -56,9 +56,9 @@ npm run test:it:promote-skill
 
 「実際に動く実行結果の検証」は、example snapshot ではなくエンジン sandbox e2e（`dev-scripts/evals/engine-e2e/check.ts`）で行う。
 sandbox e2e は決定論的であり、LLM を呼ばない。
-一時ディレクトリへ `.agents/aidlc/{tools,aidlc-common,sensors,scopes,agents,knowledge}` をコピーした隔離 workspace を作り、本番 `aidlc/` を変更しない。
+一時ディレクトリへ `.agents/amadeus/{tools,amadeus-common,sensors,scopes,agents,knowledge}` をコピーした隔離 workspace を作り、本番 `aidlc/` を変更しない。
 
-sandbox e2e は、`intent-birth` による record 生成、`aidlc-orchestrate.ts next` の run-stage directive 発行、produces 不在時の完了拒否、human presence 未充足時の承認拒否、audit shard の自動生成を確認する。
+sandbox e2e は、`intent-birth` による record 生成、`amadeus-orchestrate.ts next` の run-stage directive 発行、produces 不在時の完了拒否、human presence 未充足時の承認拒否、audit shard の自動生成を確認する。
 sandbox e2e は、成功時も失敗時も一時ディレクトリを片付ける。
 
 sandbox e2e は `npm run test:it:engine-e2e` で単独実行できる。

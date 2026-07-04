@@ -6,7 +6,7 @@
 
 - リポジトリ: https://github.com/awslabs/aidlc-workflows/tree/v2
 - 参照 commit: `d341522e1491db4884e9127004c3882365229218`
-- stage 定義: `core/aidlc-common/stages/**`、reviewer 実行手順: `core/aidlc-common/protocols/stage-protocol.md` §12a
+- stage 定義: `core/amadeus-common/stages/**`、reviewer 実行手順: `core/amadeus-common/protocols/stage-protocol.md` §12a
 
 ## 判断
 

@@ -25,7 +25,7 @@ type TextContract = {
 
 const targetSkills: Record<string, Contract> = {
   amadeus: {
-    skillText: ["aidlc-orchestrate.ts next", "report --stage", "engine-bridge.md"],
+    skillText: ["amadeus-orchestrate.ts next", "report --stage", "engine-bridge.md"],
     files: {
       "references/question-rendering.md": [],
     },

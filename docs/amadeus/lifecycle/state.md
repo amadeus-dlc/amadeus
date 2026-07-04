@@ -3,8 +3,8 @@
 ## AI-DLC v2 Reference
 
 - [AI-DLC v2 State Machine](https://github.com/awslabs/aidlc-workflows/blob/v2/docs/reference/12-state-machine.md)
-- [AI-DLC v2 State Template](https://github.com/awslabs/aidlc-workflows/blob/v2/core/knowledge/aidlc-shared/state-template.md)
-- [AI-DLC v2 Audit Format](https://github.com/awslabs/aidlc-workflows/blob/v2/core/knowledge/aidlc-shared/audit-format.md)
+- [AI-DLC v2 State Template](https://github.com/awslabs/aidlc-workflows/blob/v2/core/knowledge/amadeus-shared/state-template.md)
+- [AI-DLC v2 Audit Format](https://github.com/awslabs/aidlc-workflows/blob/v2/core/knowledge/amadeus-shared/audit-format.md)
 
 vendored copy は `skills/amadeus/references/aidlc-v2/` に置く。
 準拠判定は vendored copy との構造一致で行う。
