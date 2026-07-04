@@ -3,11 +3,11 @@ slug: refined-mockups
 phase: inception
 execution: CONDITIONAL
 condition: Execute when user-facing UI exists and rough mockups were produced in Ideation; for APIs, refine interaction diagrams
-lead_agent: aidlc-design-agent
+lead_agent: amadeus-design-agent
 support_agents:
-  - aidlc-product-agent
+  - amadeus-product-agent
 mode: inline
-reviewer: aidlc-product-lead-agent
+reviewer: amadeus-product-lead-agent
 reviewer_max_iterations: 2
 produces:
   - mockups
@@ -48,7 +48,7 @@ MANDATORY: Follow stage-protocol.md for approval gates, question format, and com
 
 ### Step 1: Load Agent Personas
 
-Load aidlc-design-agent persona from `agents/aidlc-design-agent.md` and knowledge from `.claude/knowledge/aidlc-design-agent/`.
+Load amadeus-design-agent persona from `agents/amadeus-design-agent.md` and knowledge from `.claude/knowledge/amadeus-design-agent/`.
 
 ### Step 2: Load Prior Context
 
@@ -77,7 +77,7 @@ Validate design decisions against user stories and requirements for consistency.
 
 ### Step 5: Generate Artifacts
 
-Create mid-to-high fidelity mockups (per user story/screen), interaction specification document (use `.claude/knowledge/aidlc-design-agent/component-spec-template.md` as the format for component-level specifications), design system mapping, responsive behavior specification, and accessibility compliance checklist.
+Create mid-to-high fidelity mockups (per user story/screen), interaction specification document (use `.claude/knowledge/amadeus-design-agent/component-spec-template.md` as the format for component-level specifications), design system mapping, responsive behavior specification, and accessibility compliance checklist.
 
 For non-UI: create API developer experience specification.
 

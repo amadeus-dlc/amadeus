@@ -3,13 +3,13 @@ slug: nfr-requirements
 phase: construction
 execution: CONDITIONAL
 condition: Performance requirements, security considerations, scalability concerns, or tech stack selection needed. Skip if no NFR requirements and tech stack already determined.
-lead_agent: aidlc-architect-agent
+lead_agent: amadeus-architect-agent
 support_agents:
-  - aidlc-devsecops-agent
-  - aidlc-compliance-agent
-  - aidlc-quality-agent
+  - amadeus-devsecops-agent
+  - amadeus-compliance-agent
+  - amadeus-quality-agent
 mode: inline
-reviewer: aidlc-architecture-reviewer-agent
+reviewer: amadeus-architecture-reviewer-agent
 reviewer_max_iterations: 2
 for_each: unit-of-work
 produces:
@@ -71,7 +71,7 @@ Execute all steps sequentially as written.
 
 ### Step 1: Load Personas
 
-Load aidlc-architect-agent (lead) persona from `agents/aidlc-architect-agent.md` and knowledge from `.claude/knowledge/aidlc-architect-agent/`. Load aidlc-devsecops-agent persona from `agents/aidlc-devsecops-agent.md` and knowledge from `.claude/knowledge/aidlc-devsecops-agent/` for security requirements input. Load aidlc-compliance-agent persona from `agents/aidlc-compliance-agent.md` and knowledge from `.claude/knowledge/aidlc-compliance-agent/` for regulatory constraint mapping. Load aidlc-quality-agent persona from `agents/aidlc-quality-agent.md` and knowledge from `.claude/knowledge/aidlc-quality-agent/` for testable quality attribute scenarios. Apply aidlc-architect-agent as the primary perspective with aidlc-devsecops-agent, aidlc-compliance-agent, and aidlc-quality-agent providing specialist input.
+Load amadeus-architect-agent (lead) persona from `agents/amadeus-architect-agent.md` and knowledge from `.claude/knowledge/amadeus-architect-agent/`. Load amadeus-devsecops-agent persona from `agents/amadeus-devsecops-agent.md` and knowledge from `.claude/knowledge/amadeus-devsecops-agent/` for security requirements input. Load amadeus-compliance-agent persona from `agents/amadeus-compliance-agent.md` and knowledge from `.claude/knowledge/amadeus-compliance-agent/` for regulatory constraint mapping. Load amadeus-quality-agent persona from `agents/amadeus-quality-agent.md` and knowledge from `.claude/knowledge/amadeus-quality-agent/` for testable quality attribute scenarios. Apply amadeus-architect-agent as the primary perspective with amadeus-devsecops-agent, amadeus-compliance-agent, and amadeus-quality-agent providing specialist input.
 
 ### Step 2: Read Prior Artifacts
 

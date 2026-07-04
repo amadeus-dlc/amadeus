@@ -3,12 +3,12 @@ slug: infrastructure-design
 phase: construction
 execution: CONDITIONAL
 condition: Infrastructure services need mapping, deployment architecture required, or cloud resources needed. Skip if no infrastructure changes and infrastructure already defined.
-lead_agent: aidlc-aws-platform-agent
+lead_agent: amadeus-aws-platform-agent
 support_agents:
-  - aidlc-devsecops-agent
-  - aidlc-compliance-agent
+  - amadeus-devsecops-agent
+  - amadeus-compliance-agent
 mode: inline
-reviewer: aidlc-architecture-reviewer-agent
+reviewer: amadeus-architecture-reviewer-agent
 reviewer_max_iterations: 2
 for_each: unit-of-work
 produces:
@@ -76,7 +76,7 @@ Execute all steps sequentially as written.
 
 ### Step 1: Load Personas
 
-Load aidlc-aws-platform-agent (lead) persona from `agents/aidlc-aws-platform-agent.md` and knowledge from `.claude/knowledge/aidlc-aws-platform-agent/`. Load aidlc-devsecops-agent persona from `agents/aidlc-devsecops-agent.md` and knowledge from `.claude/knowledge/aidlc-devsecops-agent/` for infrastructure security. Load aidlc-compliance-agent persona from `agents/aidlc-compliance-agent.md` and knowledge from `.claude/knowledge/aidlc-compliance-agent/` for data residency and regulatory compliance validation. Apply aidlc-aws-platform-agent as the primary perspective with aidlc-devsecops-agent ensuring infrastructure security and aidlc-compliance-agent ensuring regulatory alignment.
+Load amadeus-aws-platform-agent (lead) persona from `agents/amadeus-aws-platform-agent.md` and knowledge from `.claude/knowledge/amadeus-aws-platform-agent/`. Load amadeus-devsecops-agent persona from `agents/amadeus-devsecops-agent.md` and knowledge from `.claude/knowledge/amadeus-devsecops-agent/` for infrastructure security. Load amadeus-compliance-agent persona from `agents/amadeus-compliance-agent.md` and knowledge from `.claude/knowledge/amadeus-compliance-agent/` for data residency and regulatory compliance validation. Apply amadeus-aws-platform-agent as the primary perspective with amadeus-devsecops-agent ensuring infrastructure security and amadeus-compliance-agent ensuring regulatory alignment.
 
 ### Step 2: Read Prior Artifacts
 

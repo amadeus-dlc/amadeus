@@ -3,11 +3,11 @@ slug: practices-discovery
 phase: inception
 execution: CONDITIONAL
 condition: Always rerun for freshness. Brownfield discovers from evidence + reverse-engineering artifacts. Greenfield prompts user via structured questions using org.md defaults.
-lead_agent: aidlc-pipeline-deploy-agent
+lead_agent: amadeus-pipeline-deploy-agent
 support_agents:
-  - aidlc-quality-agent
-  - aidlc-developer-agent
-  - aidlc-devsecops-agent
+  - amadeus-quality-agent
+  - amadeus-developer-agent
+  - amadeus-devsecops-agent
 mode: inline
 produces:
   - team-practices
@@ -70,13 +70,13 @@ Either way, Step 3 (interview) and Steps 4-7 always run.
 
 The orchestrator issues four `Task` invocations in a single assistant message (parallel batch pattern, mirrors Construction parallel Bolt dispatch). Each agent is independent — no data flow between them, so sequential dispatch is unjustified. Each agent reads its own KB, scans evidence, returns a finding.
 
-1. **aidlc-pipeline-deploy-agent** (lead) — Reads `.claude/knowledge/aidlc-pipeline-deploy-agent/branching-strategies.md`. Scans git history (branch names, merge patterns, lifetime), CI config, deployment cadence. Returns: branching strategy match, deployment frequency, environment topology.
+1. **amadeus-pipeline-deploy-agent** (lead) — Reads `.claude/knowledge/amadeus-pipeline-deploy-agent/branching-strategies.md`. Scans git history (branch names, merge patterns, lifetime), CI config, deployment cadence. Returns: branching strategy match, deployment frequency, environment topology.
 
-2. **aidlc-quality-agent** — Reads its KB on testing methodology. Scans test framework choice, coverage tooling, CI gates, test/code ratios, recent test commits. Returns: testing posture (TDD vs after-the-fact), coverage floor, CI block-or-warn behaviour.
+2. **amadeus-quality-agent** — Reads its KB on testing methodology. Scans test framework choice, coverage tooling, CI gates, test/code ratios, recent test commits. Returns: testing posture (TDD vs after-the-fact), coverage floor, CI block-or-warn behaviour.
 
-3. **aidlc-developer-agent** — Reads its KB on code patterns. Scans naming conventions, layer separation (handlers/services/repositories), error handling (Result<T,E> vs exceptions), file organisation. Returns: code-style rules, architectural boundaries.
+3. **amadeus-developer-agent** — Reads its KB on code patterns. Scans naming conventions, layer separation (handlers/services/repositories), error handling (Result<T,E> vs exceptions), file organisation. Returns: code-style rules, architectural boundaries.
 
-4. **aidlc-devsecops-agent** — Reads its KB on CI/security. Scans linting config, SAST/DAST tooling, secret scanning, dependency-update automation. Returns: security posture, lint/format rules, supply-chain controls.
+4. **amadeus-devsecops-agent** — Reads its KB on CI/security. Scans linting config, SAST/DAST tooling, secret scanning, dependency-update automation. Returns: security posture, lint/format rules, supply-chain controls.
 
 **Dispatch shape**: single assistant message with four `Task` calls. Subagent personas and KB load automatically — do NOT inject them manually. Pass `<record>/aidlc-state.md` and the relevant reverse-engineering artifacts as context. Collect all four findings before proceeding to Step 3.
 

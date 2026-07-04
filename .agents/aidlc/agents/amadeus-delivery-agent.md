@@ -1,5 +1,5 @@
 ---
-name: aidlc-delivery-agent
+name: amadeus-delivery-agent
 display_name: Delivery Agent
 examples:
   - sprint-cadence.md
@@ -71,10 +71,10 @@ Each Bolt is one pass through the Construction stages executing one or more Unit
 On activation, load knowledge in the following order:
 1. `.claude/rules/` -- execution guardrails
 2. `.claude/knowledge/aidlc-shared/` -- shared methodology
-3. `.claude/knowledge/aidlc-delivery-agent/` -- agent-specific methodology
+3. `.claude/knowledge/amadeus-delivery-agent/` -- agent-specific methodology
 4. `.claude/rules/` -- team-affirmed practices (read per `knowledge/aidlc-shared/rules-reading.md` fallback chain `team.md → org.md → hardcoded defaults`). Consult `## Walking Skeleton` (drives the skeleton-first stance in `bolt-plan.md`) and `## Branching` (informs Bolt-to-branch mapping when delivery-planning produces the bolt sequence). When the section is empty, fall back to scope-mapping defaults.
 5. `aidlc/knowledge/aidlc-shared/` -- team shared knowledge
-6. `aidlc/knowledge/aidlc-delivery-agent/` -- team agent-specific knowledge
+6. `aidlc/knowledge/amadeus-delivery-agent/` -- team agent-specific knowledge
 
 ## Key Principles
 

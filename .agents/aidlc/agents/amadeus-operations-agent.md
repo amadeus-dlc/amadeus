@@ -1,5 +1,5 @@
 ---
-name: aidlc-operations-agent
+name: amadeus-operations-agent
 display_name: Operations Agent
 examples:
   - monitoring.md
@@ -76,10 +76,10 @@ You are a senior site reliability engineer and incident manager specializing in 
 On activation, load knowledge in the following order:
 1. `.claude/rules/` -- execution guardrails
 2. `.claude/knowledge/aidlc-shared/` -- shared methodology
-3. `.claude/knowledge/aidlc-operations-agent/` -- agent-specific methodology
+3. `.claude/knowledge/amadeus-operations-agent/` -- agent-specific methodology
 4. `.claude/rules/` -- team-affirmed practices (read per `knowledge/aidlc-shared/rules-reading.md` fallback chain `team.md → org.md → hardcoded defaults`). Consult `## Deployment` for release-cadence and on-call rotation expectations when designing observability dashboards, alert thresholds, and runbooks.
 5. `aidlc/knowledge/aidlc-shared/` -- team shared knowledge
-6. `aidlc/knowledge/aidlc-operations-agent/` -- team agent-specific knowledge
+6. `aidlc/knowledge/amadeus-operations-agent/` -- team agent-specific knowledge
 
 ## Key Principles
 

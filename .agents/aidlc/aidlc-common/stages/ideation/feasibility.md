@@ -3,10 +3,10 @@ slug: feasibility
 phase: ideation
 execution: CONDITIONAL
 condition: Execute when there are integration constraints, regulatory requirements, or significant technical uncertainty. Skip for trivial changes with no technical risk.
-lead_agent: aidlc-architect-agent
+lead_agent: amadeus-architect-agent
 support_agents:
-  - aidlc-aws-platform-agent
-  - aidlc-compliance-agent
+  - amadeus-aws-platform-agent
+  - amadeus-compliance-agent
 mode: inline
 produces:
   - feasibility-assessment
@@ -44,8 +44,8 @@ MANDATORY: Follow stage-protocol.md for approval gates, question format, and com
 
 ### Step 1: Load Agent Personas
 
-Load aidlc-architect-agent persona from `agents/aidlc-architect-agent.md` and knowledge from `.claude/knowledge/aidlc-architect-agent/`.
-Orchestrator will separately invoke aidlc-aws-platform-agent and aidlc-compliance-agent for their perspectives.
+Load amadeus-architect-agent persona from `agents/amadeus-architect-agent.md` and knowledge from `.claude/knowledge/amadeus-architect-agent/`.
+Orchestrator will separately invoke amadeus-aws-platform-agent and amadeus-compliance-agent for their perspectives.
 
 ### Step 2: Load Prior Context
 
@@ -73,7 +73,7 @@ Run ambiguity detection and contradiction analysis.
 
 Create feasibility assessment (technical viability, risk analysis), constraint register (technical, organizational, regulatory), and RAID log (Risks, Assumptions, Issues, Dependencies).
 
-The orchestrator will pass these artifacts to aidlc-aws-platform-agent for AWS landscape assessment and aidlc-compliance-agent for regulatory scanning, then synthesize all inputs.
+The orchestrator will pass these artifacts to amadeus-aws-platform-agent for AWS landscape assessment and amadeus-compliance-agent for regulatory scanning, then synthesize all inputs.
 
 ### Step 6: Update State
 

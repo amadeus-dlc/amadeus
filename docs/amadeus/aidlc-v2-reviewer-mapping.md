@@ -39,17 +39,17 @@ Amadeus DLC では、この動作を次へ対応させる。
 
 | 本家 stage | reviewer | Amadeus skill | 写像先 |
 |---|---|---|---|
-| ideation/rough-mockups | aidlc-product-lead-agent | `amadeus-ideation-rough-mockups` | stage gate の人間承認、Ideation phase PR レビュー、`amadeus-validator`。 |
-| inception/requirements-analysis | aidlc-product-lead-agent | `amadeus-inception-requirements-analysis` | stage gate の人間承認、Inception phase PR レビュー、`amadeus-validator`。 |
-| inception/user-stories | aidlc-product-lead-agent | `amadeus-inception-user-stories` | stage gate の人間承認、Inception phase PR レビュー、`amadeus-validator`。 |
-| inception/refined-mockups | aidlc-product-lead-agent | `amadeus-inception-refined-mockups` | stage gate の人間承認、Inception phase PR レビュー、`amadeus-validator`。 |
-| inception/application-design | aidlc-architecture-reviewer-agent | `amadeus-inception-application-design` | stage gate の人間承認、Inception phase PR レビュー、`amadeus-validator`。 |
-| inception/units-generation | aidlc-architecture-reviewer-agent | `amadeus-inception-units-generation` | stage gate の人間承認、Inception phase PR レビュー、`amadeus-validator`。 |
-| construction/functional-design | aidlc-architecture-reviewer-agent | `amadeus-construction-functional-design` | stage gate の人間承認（autonomous mode では Bolt PR レビュー）、`amadeus-validator`。 |
-| construction/nfr-requirements | aidlc-architecture-reviewer-agent | `amadeus-construction-nfr-requirements` | stage gate の人間承認（autonomous mode では Bolt PR レビュー）、`amadeus-validator`。 |
-| construction/nfr-design | aidlc-architecture-reviewer-agent | `amadeus-construction-nfr-design` | stage gate の人間承認（autonomous mode では Bolt PR レビュー）、`amadeus-validator`。 |
-| construction/infrastructure-design | aidlc-architecture-reviewer-agent | `amadeus-construction-infrastructure-design` | stage gate の人間承認（autonomous mode では Bolt PR レビュー）、`amadeus-validator`。 |
-| construction/code-generation | aidlc-architecture-reviewer-agent | `amadeus-construction-code-generation` | Build and Test（Stage 3.6）の検証、Bolt PR の人間レビューと CI、stage gate。 |
+| ideation/rough-mockups | amadeus-product-lead-agent | `amadeus-ideation-rough-mockups` | stage gate の人間承認、Ideation phase PR レビュー、`amadeus-validator`。 |
+| inception/requirements-analysis | amadeus-product-lead-agent | `amadeus-inception-requirements-analysis` | stage gate の人間承認、Inception phase PR レビュー、`amadeus-validator`。 |
+| inception/user-stories | amadeus-product-lead-agent | `amadeus-inception-user-stories` | stage gate の人間承認、Inception phase PR レビュー、`amadeus-validator`。 |
+| inception/refined-mockups | amadeus-product-lead-agent | `amadeus-inception-refined-mockups` | stage gate の人間承認、Inception phase PR レビュー、`amadeus-validator`。 |
+| inception/application-design | amadeus-architecture-reviewer-agent | `amadeus-inception-application-design` | stage gate の人間承認、Inception phase PR レビュー、`amadeus-validator`。 |
+| inception/units-generation | amadeus-architecture-reviewer-agent | `amadeus-inception-units-generation` | stage gate の人間承認、Inception phase PR レビュー、`amadeus-validator`。 |
+| construction/functional-design | amadeus-architecture-reviewer-agent | `amadeus-construction-functional-design` | stage gate の人間承認（autonomous mode では Bolt PR レビュー）、`amadeus-validator`。 |
+| construction/nfr-requirements | amadeus-architecture-reviewer-agent | `amadeus-construction-nfr-requirements` | stage gate の人間承認（autonomous mode では Bolt PR レビュー）、`amadeus-validator`。 |
+| construction/nfr-design | amadeus-architecture-reviewer-agent | `amadeus-construction-nfr-design` | stage gate の人間承認（autonomous mode では Bolt PR レビュー）、`amadeus-validator`。 |
+| construction/infrastructure-design | amadeus-architecture-reviewer-agent | `amadeus-construction-infrastructure-design` | stage gate の人間承認（autonomous mode では Bolt PR レビュー）、`amadeus-validator`。 |
+| construction/code-generation | amadeus-architecture-reviewer-agent | `amadeus-construction-code-generation` | Build and Test（Stage 3.6）の検証、Bolt PR の人間レビューと CI、stage gate。 |
 
 各 Amadeus skill の `SKILL.md` の Gate 節に、この写像を明記する。
 

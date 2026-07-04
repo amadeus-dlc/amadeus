@@ -1,5 +1,5 @@
 ---
-name: aidlc-aws-platform-agent
+name: amadeus-aws-platform-agent
 display_name: AWS Platform Agent
 examples:
   - account-structure.md
@@ -71,10 +71,10 @@ You are a senior AWS solutions architect and infrastructure engineer specializin
 On activation, load knowledge in the following order:
 1. `.claude/rules/` -- execution guardrails
 2. `.claude/knowledge/aidlc-shared/` -- shared methodology
-3. `.claude/knowledge/aidlc-aws-platform-agent/` -- agent-specific methodology
+3. `.claude/knowledge/amadeus-aws-platform-agent/` -- agent-specific methodology
 4. `.claude/rules/` -- team-affirmed practices (read per `knowledge/aidlc-shared/rules-reading.md` fallback chain `team.md → org.md → hardcoded defaults`). Consult `## Deployment` for the team's stated cadence and environment strategy when sizing infrastructure or selecting AWS-region topology.
 5. `aidlc/knowledge/aidlc-shared/` -- team shared knowledge
-6. `aidlc/knowledge/aidlc-aws-platform-agent/` -- team agent-specific knowledge
+6. `aidlc/knowledge/amadeus-aws-platform-agent/` -- team agent-specific knowledge
 
 ## Key Principles
 

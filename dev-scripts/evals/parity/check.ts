@@ -61,8 +61,9 @@ const engineFixtureFiles: Record<string, string> = {
   "sensors/s.md": "# sensor\n",
   "hooks/h.md": "# hook\n",
   "scopes/sc.md": "# scope\n",
-  "agents/a.md": "# agent\n",
-  "knowledge/k.md": "# knowledge\n",
+  "agents/aidlc-fixture-agent.md": "---\nname: aidlc-fixture-agent\n---\n# Agent\n",
+  "knowledge/aidlc-fixture-agent/guide.md": "# Guide\nUse aidlc-fixture-agent.\n",
+  "knowledge/aidlc-shared/k.md": "# shared\n",
 };
 
 function buildUpstreamFixture(): string {
@@ -122,12 +123,22 @@ function writeParityMap(workspace: string, overrides: Partial<{ missingSkillExce
     baselineCommit: upstreamCommit,
     skillNameMapping: { prefix: "aidlc", replacement: "amadeus", rule: "aidlc-<x> -> amadeus-<x>; aidlc -> amadeus" },
     relocations: [
-      {
-        upstreamPath: "rules/aidlc.md",
-        localPath: ".agents/rules/aidlc.md",
-        reason: "symlink 化。.claude/rules/aidlc.md は .agents/rules/aidlc.md への symlink であり、実体を直接照合する。",
-      },
-    ],
+    {
+      upstreamPath: "rules/aidlc.md",
+      localPath: ".agents/rules/aidlc.md",
+      reason: "symlink 化。.claude/rules/aidlc.md は .agents/rules/aidlc.md への symlink であり、実体を直接照合する。",
+    },
+    {
+      upstreamPath: "agents",
+      localPath: ".agents/aidlc/agents",
+      reason: "host 中立化。sub-agent 名は aidlc-* から amadeus-* へ写像する。",
+    },
+    {
+      upstreamPath: "knowledge",
+      localPath: ".agents/aidlc/knowledge",
+      reason: "host 中立化。per-agent knowledge は aidlc-* から amadeus-* へ写像する。",
+    },
+  ],
     missingSkillExceptions: overrides.missingSkillExceptions ?? [],
     engineFileExceptions: overrides.engineFileExceptions ?? [],
     exceptions: [{ target: "テスト用 fixture", reason: "parity eval のテスト用ダミー除外一覧。" }],
@@ -153,9 +164,15 @@ function writeMatchingLocalWorkspace(): string {
   }
 
   for (const [relativePath, content] of Object.entries(engineFixtureFiles)) {
-    const filePath = join(workspace, ".claude", relativePath);
+    const mappedPath = relativePath
+      .replace(/^agents\/aidlc-([a-z0-9-]+-agent\.md)$/, "agents/amadeus-$1")
+      .replace(/^knowledge\/aidlc-([a-z0-9-]+-agent)\//, "knowledge/amadeus-$1/");
+    const mappedContent = content.replaceAll("aidlc-fixture-agent", "amadeus-fixture-agent");
+    const filePath = mappedPath.startsWith("agents/") || mappedPath.startsWith("knowledge/")
+      ? join(workspace, ".agents/aidlc", mappedPath)
+      : join(workspace, ".claude", mappedPath);
     mkdirSync(join(filePath, ".."), { recursive: true });
-    writeFileSync(filePath, content);
+    writeFileSync(filePath, mappedContent);
   }
 
   mkdirSync(join(workspace, ".agents/rules"), { recursive: true });

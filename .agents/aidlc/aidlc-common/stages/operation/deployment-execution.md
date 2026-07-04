@@ -3,9 +3,9 @@ slug: deployment-execution
 phase: operation
 execution: CONDITIONAL
 condition: Execute after deployment pipeline and environment are ready
-lead_agent: aidlc-pipeline-deploy-agent
+lead_agent: amadeus-pipeline-deploy-agent
 support_agents:
-  - aidlc-developer-agent
+  - amadeus-developer-agent
 mode: inline
 produces:
   - deployment-log
@@ -45,7 +45,7 @@ MANDATORY: Follow stage-protocol.md for approval gates, question format, and com
 
 ### Step 1: Load Agent Personas
 
-Load aidlc-pipeline-deploy-agent persona from `agents/aidlc-pipeline-deploy-agent.md` and knowledge from `.claude/knowledge/aidlc-pipeline-deploy-agent/`.
+Load amadeus-pipeline-deploy-agent persona from `agents/amadeus-pipeline-deploy-agent.md` and knowledge from `.claude/knowledge/amadeus-pipeline-deploy-agent/`.
 
 ### Step 2: Load Prior Context
 
@@ -68,7 +68,7 @@ Follow stage-protocol.md question flow.
 
 ### Step 4: Execute Deployment
 
-Push artifacts through the pipeline. Run smoke tests. Validate health checks. Execute database migrations if needed: delegate to Task tool with subagent_type="aidlc-developer-agent" for migration execution.
+Push artifacts through the pipeline. Run smoke tests. Validate health checks. Execute database migrations if needed: delegate to Task tool with subagent_type="amadeus-developer-agent" for migration execution.
 
 ### Step 5: Generate Artifacts
 

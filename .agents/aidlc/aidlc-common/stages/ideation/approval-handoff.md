@@ -3,9 +3,9 @@ slug: approval-handoff
 phase: ideation
 execution: ALWAYS
 condition: Always executes — compiles all Ideation artifacts into initiative brief for approval
-lead_agent: aidlc-delivery-agent
+lead_agent: amadeus-delivery-agent
 support_agents:
-  - aidlc-product-agent
+  - amadeus-product-agent
 mode: inline
 produces:
   - initiative-brief
@@ -52,7 +52,7 @@ MANDATORY: Follow stage-protocol.md for approval gates, question format, and com
 
 ### Step 1: Load Agent Personas
 
-Load aidlc-delivery-agent persona from `agents/aidlc-delivery-agent.md` and knowledge from `.claude/knowledge/aidlc-delivery-agent/`.
+Load amadeus-delivery-agent persona from `agents/amadeus-delivery-agent.md` and knowledge from `.claude/knowledge/amadeus-delivery-agent/`.
 
 ### Step 2: Load Prior Context
 

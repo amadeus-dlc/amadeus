@@ -365,7 +365,7 @@ When the orchestrator runs a Bolt in phased mode:
 3. **The standard question protocol** (interaction mode choice, answer collection, ambiguity analysis) applies once per stage group within the Bolt, not per Unit.
 4. **A single Bolt-level answers gate** confirms the Bolt's answers across all stages before design artifacts begin.
 5. **Design artifacts**: Stage files execute in ARTIFACT-ONLY mode — reading the approved answers and generating artifacts. No human interaction during generation.
-6. **Code generation (3.5)**: Per-Unit Task delegation to the aidlc-developer-agent. The stage file's per-Unit approval gate is **suppressed by the orchestrator** — a single Bolt-level gate (or batch-level gate for parallel batches) replaces it.
+6. **Code generation (3.5)**: Per-Unit Task delegation to the amadeus-developer-agent. The stage file's per-Unit approval gate is **suppressed by the orchestrator** — a single Bolt-level gate (or batch-level gate for parallel batches) replaces it.
 7. **Bolt gate**: Walking skeleton — always present. Subsequent Bolts — per `Construction Autonomy Mode`. Failure always halts and asks regardless of mode. See SKILL.md §CONSTRUCTION Flow for the ladder prompt, autonomy mode, and halt-and-ask details.
 
 **Engine-driven per-unit iteration.** The orchestration engine now drives the per-Unit loop for the inline per-Unit design stages (functional-design, nfr-requirements, nfr-design, infrastructure-design) the same way it always has for code-generation: on a `next` that lands on an in-flight per-Unit stage (off the swarm path), the engine emits ONE `run-stage` directive per Unit, in Bolt build order, carrying the resolved Unit name in `directive.unit` and its artifact paths. The per-Unit ARTIFACTS on disk are the coverage ledger (a Unit is done for a stage once all of the stage's `produces` exist under `construction/<unit>/<stage>/`); the engine substitutes the next uncovered Unit on each `next`. The stage's per-Unit gate is **suppressed** (`gate: false`) on every not-yet-covered Unit, and the stage's real gate is presented exactly once, on the re-entry after the LAST Unit's artifacts land on disk, so a single stage-level approval covers all Units and cannot be reached until every Unit is built (the same "per-Unit gate suppressed, single gate replaces it" rule point 6 already states for code-generation, now applied across all five per-Unit stages, and enforced deterministically: `report --result approved` on a not-yet-completed per-Unit stage is refused while any Unit is uncovered). A scope with no compiled Unit list degrades to one single-iteration directive (unchanged behaviour).
@@ -590,7 +590,7 @@ Each stage specifies its lead and supporting agents. To load a persona:
 6. Prior stage artifacts as required by the current stage
 
 ### For inline stages:
-1. Read the lead agent's flat file (e.g., `agents/aidlc-architect-agent.md`) for role framing
+1. Read the lead agent's flat file (e.g., `agents/amadeus-architect-agent.md`) for role framing
 2. Load knowledge per the order above
 3. Apply the agent's perspective when executing the stage
 
@@ -600,10 +600,10 @@ Each stage specifies its lead and supporting agents. To load a persona:
 3. Specify subagent_type from the stage metadata
 
 ### Multi-agent stages:
-Some stages use multiple agents (e.g., Feasibility uses aidlc-architect-agent + aidlc-aws-platform-agent + aidlc-compliance-agent). Every multi-agent stage in the shipped graph is `mode: inline`, so the support agents are perspectives the orchestrator adopts in its own context — load each support agent's file + knowledge the same way you loaded the lead (see "For inline stages" above), produce the lead's output first, then layer in each support perspective, then synthesise. Do NOT call `Task` for a support agent on an inline stage; `Task` is reserved for `mode: subagent` stages. Agents do NOT invoke each other — only the orchestrator delegates.
+Some stages use multiple agents (e.g., Feasibility uses amadeus-architect-agent + amadeus-aws-platform-agent + amadeus-compliance-agent). Every multi-agent stage in the shipped graph is `mode: inline`, so the support agents are perspectives the orchestrator adopts in its own context — load each support agent's file + knowledge the same way you loaded the lead (see "For inline stages" above), produce the lead's output first, then layer in each support perspective, then synthesise. Do NOT call `Task` for a support agent on an inline stage; `Task` is reserved for `mode: subagent` stages. Agents do NOT invoke each other — only the orchestrator delegates.
 
 ### 11 Agents (v2):
-aidlc-product-agent, aidlc-design-agent, aidlc-delivery-agent, aidlc-architect-agent, aidlc-aws-platform-agent, aidlc-compliance-agent, aidlc-devsecops-agent, aidlc-developer-agent, aidlc-quality-agent, aidlc-pipeline-deploy-agent, aidlc-operations-agent
+amadeus-product-agent, amadeus-design-agent, amadeus-delivery-agent, amadeus-architect-agent, amadeus-aws-platform-agent, amadeus-compliance-agent, amadeus-devsecops-agent, amadeus-developer-agent, amadeus-quality-agent, amadeus-pipeline-deploy-agent, amadeus-operations-agent
 
 ---
 

@@ -139,11 +139,11 @@ Emitted by the Inception stage `practices-discovery` and by the Construction orc
 
 ### Merge Dispatch (3 events)
 
-Emitted when Construction's Bolt-merge step calls aidlc-pipeline-deploy-agent via Task to determine the merge strategy from team practices prose. Emitted via the `aidlc-bolt dispatch-event` subcommand. The orchestrator brackets each aidlc-pipeline-deploy-agent dispatch — pre-call INVOKED, post-call RETURNED on successful parse, FALLBACK on timeout/malformed-YAML. Audit-of-intent semantic: INVOKED emits before the LLM Task call (no disk side-effect for the dispatch itself; reconciliation by slug + timestamp window). Doctor reconciles orphan INVOKED rows.
+Emitted when Construction's Bolt-merge step calls amadeus-pipeline-deploy-agent via Task to determine the merge strategy from team practices prose. Emitted via the `aidlc-bolt dispatch-event` subcommand. The orchestrator brackets each amadeus-pipeline-deploy-agent dispatch — pre-call INVOKED, post-call RETURNED on successful parse, FALLBACK on timeout/malformed-YAML. Audit-of-intent semantic: INVOKED emits before the LLM Task call (no disk side-effect for the dispatch itself; reconciliation by slug + timestamp window). Doctor reconciles orphan INVOKED rows.
 
 | Event | When | Required Fields | Emitter |
 |-------|------|-----------------|---------|
-| `MERGE_DISPATCH_INVOKED` | Orchestrator dispatched aidlc-pipeline-deploy-agent with current practices section + Bolt context | Timestamp, Bolt slug, Practices section excerpt | `tools/aidlc-bolt.ts` `dispatch-event --event MERGE_DISPATCH_INVOKED` |
+| `MERGE_DISPATCH_INVOKED` | Orchestrator dispatched amadeus-pipeline-deploy-agent with current practices section + Bolt context | Timestamp, Bolt slug, Practices section excerpt | `tools/aidlc-bolt.ts` `dispatch-event --event MERGE_DISPATCH_INVOKED` |
 | `MERGE_DISPATCH_RETURNED` | Agent returned parsed YAML with strategy, target branch, confidence, notes | Timestamp, Bolt slug, Strategy, Target branch, Confidence, Notes | `tools/aidlc-bolt.ts` `dispatch-event --event MERGE_DISPATCH_RETURNED` |
 | `MERGE_DISPATCH_FALLBACK` | Agent timed out or returned malformed YAML; orchestrator fell back to org defaults — critical observability hook | Timestamp, Bolt slug, Fallback reason, Defaults applied | `tools/aidlc-bolt.ts` `dispatch-event --event MERGE_DISPATCH_FALLBACK` |
 

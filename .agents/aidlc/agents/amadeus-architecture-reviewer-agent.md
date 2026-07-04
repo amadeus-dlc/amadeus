@@ -1,5 +1,5 @@
 ---
-name: aidlc-architecture-reviewer-agent
+name: amadeus-architecture-reviewer-agent
 display_name: Architecture Reviewer
 description: >
   Senior solutions architect who reviews technical design artifacts for soundness, implementability, and coherence. Finds broken cross-references, hidden dependencies, unachievable quality targets, and designs that won't survive contact with reality.

@@ -3,9 +3,9 @@ slug: delivery-planning
 phase: inception
 execution: ALWAYS
 condition: Always executes — capstone Inception stage, produces the detailed execution plan for Construction and Operation
-lead_agent: aidlc-delivery-agent
+lead_agent: amadeus-delivery-agent
 support_agents:
-  - aidlc-architect-agent
+  - amadeus-architect-agent
 mode: inline
 produces:
   - bolt-plan
@@ -52,8 +52,8 @@ MANDATORY: Follow stage-protocol.md for approval gates, question format, and com
 
 ### Step 1: Load Agent Personas
 
-Load aidlc-delivery-agent persona from `agents/aidlc-delivery-agent.md` and knowledge from `.claude/knowledge/aidlc-delivery-agent/`.
-Load aidlc-architect-agent for build order validation.
+Load amadeus-delivery-agent persona from `agents/amadeus-delivery-agent.md` and knowledge from `.claude/knowledge/amadeus-delivery-agent/`.
+Load amadeus-architect-agent for build order validation.
 
 ### Step 2: Load Prior Context
 
@@ -90,13 +90,13 @@ Create `<record>/inception/delivery-planning/delivery-planning-questions.md` wit
 - Are there external dependencies (APIs, data availability, approvals, external-team hand-offs)? For each gated item capture: owner, lead time, which Bolt it blocks, mitigation/workaround.
 - What are the key risk items that should be tackled earliest?
 
-Per-Bolt questions (the aidlc-delivery-agent loops these during artifact generation, one set of answers per Bolt in the plan):
+Per-Bolt questions (the amadeus-delivery-agent loops these during artifact generation, one set of answers per Bolt in the plan):
 
 - Which Units of Work does this Bolt bundle?
 - Is this Bolt the walking skeleton? If yes, which architectural layers does it prove?
 - What is the Definition of Done for this Bolt?
 - What is the confidence hypothesis for this Bolt — what will shipping it prove?
-- Which mob owns this Bolt? (References teams from 1.5 when 1.5 ran; when 1.5 was SKIP — mvp, workshop — default to aidlc-developer-agent for all Bolts.)
+- Which mob owns this Bolt? (References teams from 1.5 when 1.5 ran; when 1.5 was SKIP — mvp, workshop — default to amadeus-developer-agent for all Bolts.)
 
 NOTE: Bolt sequencing is economic, not topological. Bolt order may deviate from 2.7's topological order when a risk-first or walking-skeleton-first argument justifies it. The deviation must be captured in `risk-and-sequencing-rationale.md`.
 
@@ -106,14 +106,14 @@ Follow stage-protocol.md question flow.
 
 ### Step 4: Collect and Analyze Answers
 
-Validate the chosen Bolt sequence respects 2.7's dependency DAG (with aidlc-architect-agent input). Flag any deviation from topological order so it can be justified in the rationale artifact.
+Validate the chosen Bolt sequence respects 2.7's dependency DAG (with amadeus-architect-agent input). Flag any deviation from topological order so it can be justified in the rationale artifact.
 
 ### Step 5: Generate Artifacts
 
 Create four artifacts in `<record>/inception/delivery-planning/`:
 
 - `bolt-plan.md` — the ordered sequence of Bolts. Each Bolt entry: included Unit(s) of Work, walking-skeleton marker if applicable, Definition of Done for that Bolt, confidence hypothesis ("what will shipping this Bolt prove?"), expected demo.
-- `team-allocation.md` — Bolt-to-mob assignment. References teams from 1.5 when 1.5 ran (enterprise, feature). When 1.5 is SKIP (mvp, workshop), states that all Bolts are executed by aidlc-developer-agent (AI). When team count > 1, this is the Program Board analog.
+- `team-allocation.md` — Bolt-to-mob assignment. References teams from 1.5 when 1.5 ran (enterprise, feature). When 1.5 is SKIP (mvp, workshop), states that all Bolts are executed by amadeus-developer-agent (AI). When team count > 1, this is the Program Board analog.
 - `risk-and-sequencing-rationale.md` — the why behind the Bolt ordering: WSJF-style scoring, risk-first argument, walking-skeleton-first argument, or value-first argument. References the heuristic used (Cohn, Reinertsen CD3, or SAFe WSJF).
 - `external-dependency-map.md` — gated items (external APIs, data availability windows, approval lead times, external-team hand-offs) mapped to the Bolts that consume them. Lightweight or empty when fully AI-contained.
 

@@ -30,6 +30,7 @@ type Relocation = { upstreamPath: string; localPath: string; reason: string };
 
 type ParityMap = {
   skillNameMapping: { prefix: string; replacement: string };
+  subAgentNameMapping?: { prefix: string; replacement: string };
   relocations: Relocation[];
   missingSkillExceptions?: string[];
   engineFileExceptions?: string[];
@@ -53,12 +54,51 @@ function sha256(path: string): string {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
 
+function sha256Text(text: string): string {
+  return createHash("sha256").update(text).digest("hex");
+}
+
 function mapSkillName(upstreamName: string, mapping: ParityMap["skillNameMapping"]): string {
   if (upstreamName === mapping.prefix) return mapping.replacement;
   if (upstreamName.startsWith(`${mapping.prefix}-`)) {
     return `${mapping.replacement}-${upstreamName.slice(mapping.prefix.length + 1)}`;
   }
   return upstreamName;
+}
+
+function subAgentMapping(map: ParityMap): { prefix: string; replacement: string } {
+  return map.subAgentNameMapping ?? map.skillNameMapping;
+}
+
+function mapSubAgentToken(token: string, map: ParityMap): string {
+  const mapping = subAgentMapping(map);
+  if (token.startsWith(`${mapping.prefix}-`) && token.endsWith("-agent")) {
+    return `${mapping.replacement}-${token.slice(mapping.prefix.length + 1)}`;
+  }
+  return token;
+}
+
+function mapSubAgentPath(upstreamPath: string, map: ParityMap): string {
+  const agentFile = upstreamPath.match(/^agents\/(aidlc-[a-z0-9-]+-agent\.md)$/);
+  if (agentFile) {
+    const token = agentFile[1].replace(/\.md$/, "");
+    return `agents/${mapSubAgentToken(token, map)}.md`;
+  }
+
+  const knowledgeFile = upstreamPath.match(/^knowledge\/(aidlc-[a-z0-9-]+-agent)\/(.+)$/);
+  if (knowledgeFile) {
+    return `knowledge/${mapSubAgentToken(knowledgeFile[1], map)}/${knowledgeFile[2]}`;
+  }
+
+  return upstreamPath;
+}
+
+function normalizeSubAgentContent(content: string, map: ParityMap): string {
+  const mapping = subAgentMapping(map);
+  return content.replace(
+    new RegExp(`${mapping.replacement}-([a-z0-9-]+-agent)`, "g"),
+    `${mapping.prefix}-$1`
+  );
 }
 
 function checkSkills(root: string, baseline: ParityBaseline, map: ParityMap): string[] {
@@ -91,17 +131,21 @@ function resolveLocalEnginePath(root: string, upstreamPath: string, relocations:
   return join(root, ".claude", upstreamPath);
 }
 
+function resolveMappedLocalEnginePath(root: string, upstreamPath: string, map: ParityMap): string {
+  return resolveLocalEnginePath(root, mapSubAgentPath(upstreamPath, map), map.relocations);
+}
+
 function checkEngineFiles(root: string, baseline: ParityBaseline, map: ParityMap): string[] {
   const exceptions = new Set(map.engineFileExceptions ?? []);
   const issues: string[] = [];
   for (const entry of baseline.engineFiles) {
     if (exceptions.has(entry.path)) continue;
-    const localPath = resolveLocalEnginePath(root, entry.path, map.relocations);
+    const localPath = resolveMappedLocalEnginePath(root, entry.path, map);
     if (!existsSync(localPath)) {
       issues.push(`engine ファイル欠落: ${entry.path} -> ${localPath}`);
       continue;
     }
-    const actual = sha256(localPath);
+    const actual = sha256Text(normalizeSubAgentContent(readFileSync(localPath, "utf8"), map));
     if (actual !== entry.sha256) {
       issues.push(`engine ファイル hash 不一致: ${entry.path}（期待 ${entry.sha256}、実際 ${actual}）`);
     }

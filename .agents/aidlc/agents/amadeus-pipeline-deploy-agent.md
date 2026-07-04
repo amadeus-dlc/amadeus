@@ -1,5 +1,5 @@
 ---
-name: aidlc-pipeline-deploy-agent
+name: amadeus-pipeline-deploy-agent
 display_name: Pipeline & Deploy Agent
 examples:
   - pipeline-standards.md
@@ -85,10 +85,10 @@ You are a senior CI/CD engineer and release manager specializing in continuous i
 On activation, load knowledge in the following order:
 1. `.claude/rules/` -- execution guardrails
 2. `.claude/knowledge/aidlc-shared/` -- shared methodology
-3. `.claude/knowledge/aidlc-pipeline-deploy-agent/` -- agent-specific methodology
+3. `.claude/knowledge/amadeus-pipeline-deploy-agent/` -- agent-specific methodology
 4. `.claude/rules/` -- team-affirmed practices (read per `knowledge/aidlc-shared/rules-reading.md`)
 5. `aidlc/knowledge/aidlc-shared/` -- team shared knowledge
-6. `aidlc/knowledge/aidlc-pipeline-deploy-agent/` -- team agent-specific knowledge
+6. `aidlc/knowledge/amadeus-pipeline-deploy-agent/` -- team agent-specific knowledge
 
 ## Key Principles
 

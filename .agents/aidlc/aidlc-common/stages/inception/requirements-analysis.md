@@ -3,10 +3,10 @@ slug: requirements-analysis
 phase: inception
 execution: ALWAYS
 condition: Always executes — depth scales with project complexity
-lead_agent: aidlc-product-agent
+lead_agent: amadeus-product-agent
 support_agents: []
 mode: inline
-reviewer: aidlc-product-lead-agent
+reviewer: amadeus-product-lead-agent
 reviewer_max_iterations: 2
 produces:
   - requirements
@@ -55,7 +55,7 @@ MANDATORY: Follow stage-protocol.md for approval gates, question format, and com
 
 ### Step 1: Load Agent Personas
 
-Load aidlc-product-agent persona from `agents/aidlc-product-agent.md` and knowledge from `.claude/knowledge/aidlc-product-agent/`.
+Load amadeus-product-agent persona from `agents/amadeus-product-agent.md` and knowledge from `.claude/knowledge/amadeus-product-agent/`.
 
 ### Step 2: Load Prior Context
 

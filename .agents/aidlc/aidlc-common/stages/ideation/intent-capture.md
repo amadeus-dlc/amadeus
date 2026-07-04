@@ -3,9 +3,9 @@ slug: intent-capture
 phase: ideation
 execution: ALWAYS
 condition: First stage of every workflow — establishes the initiative's foundation
-lead_agent: aidlc-product-agent
+lead_agent: amadeus-product-agent
 support_agents:
-  - aidlc-architect-agent
+  - amadeus-architect-agent
 mode: inline
 produces:
   - intent-statement
@@ -33,8 +33,8 @@ MANDATORY: Follow stage-protocol.md for approval gates, question format, and com
 
 ### Step 1: Load Agent Personas
 
-Load aidlc-product-agent persona from `agents/aidlc-product-agent.md` and knowledge from `.claude/knowledge/aidlc-product-agent/`.
-Load aidlc-architect-agent persona from `agents/aidlc-architect-agent.md` for technical context perspective.
+Load amadeus-product-agent persona from `agents/amadeus-product-agent.md` and knowledge from `.claude/knowledge/amadeus-product-agent/`.
+Load amadeus-architect-agent persona from `agents/amadeus-architect-agent.md` for technical context perspective.
 
 ### Step 2: Load Prior Context
 

@@ -3,12 +3,12 @@ slug: application-design
 phase: inception
 execution: CONDITIONAL
 condition: Execute when new components or services are needed, or service layer design is required. Skip when changes are modifications to existing components only.
-lead_agent: aidlc-architect-agent
+lead_agent: amadeus-architect-agent
 support_agents:
-  - aidlc-aws-platform-agent
-  - aidlc-design-agent
+  - amadeus-aws-platform-agent
+  - amadeus-design-agent
 mode: inline
-reviewer: aidlc-architecture-reviewer-agent
+reviewer: amadeus-architecture-reviewer-agent
 reviewer_max_iterations: 2
 produces:
   - components
@@ -52,9 +52,9 @@ MANDATORY: Follow stage-protocol.md for approval gates, question format, and com
 
 ### Step 1: Load Agent Personas
 
-Load aidlc-architect-agent persona from `agents/aidlc-architect-agent.md` and knowledge from `.claude/knowledge/aidlc-architect-agent/`.
-Load aidlc-aws-platform-agent persona from `agents/aidlc-aws-platform-agent.md` and knowledge from `.claude/knowledge/aidlc-aws-platform-agent/` for AWS service mapping.
-Load aidlc-design-agent persona from `agents/aidlc-design-agent.md` and knowledge from `.claude/knowledge/aidlc-design-agent/` for UI component specifications and UX-informed design constraints.
+Load amadeus-architect-agent persona from `agents/amadeus-architect-agent.md` and knowledge from `.claude/knowledge/amadeus-architect-agent/`.
+Load amadeus-aws-platform-agent persona from `agents/amadeus-aws-platform-agent.md` and knowledge from `.claude/knowledge/amadeus-aws-platform-agent/` for AWS service mapping.
+Load amadeus-design-agent persona from `agents/amadeus-design-agent.md` and knowledge from `.claude/knowledge/amadeus-design-agent/` for UI component specifications and UX-informed design constraints.
 
 ### Step 2: Load Prior Context
 

@@ -3,11 +3,11 @@ slug: user-stories
 phase: inception
 execution: CONDITIONAL
 condition: Execute when user-facing features, multiple personas, complex business logic, or cross-team work is involved. Skip for pure refactoring, isolated bug fixes, infrastructure-only changes, or developer tooling.
-lead_agent: aidlc-product-agent
+lead_agent: amadeus-product-agent
 support_agents:
-  - aidlc-design-agent
+  - amadeus-design-agent
 mode: inline
-reviewer: aidlc-product-lead-agent
+reviewer: amadeus-product-lead-agent
 reviewer_max_iterations: 2
 produces:
   - stories
@@ -46,8 +46,8 @@ MANDATORY: Follow stage-protocol.md for approval gates, question format, and com
 
 ### Step 1: Load Agent Personas
 
-Load aidlc-product-agent persona from `agents/aidlc-product-agent.md` and knowledge from `.claude/knowledge/aidlc-product-agent/`.
-Load aidlc-design-agent persona from `agents/aidlc-design-agent.md` and knowledge from `.claude/knowledge/aidlc-design-agent/` for supporting perspective on user experience.
+Load amadeus-product-agent persona from `agents/amadeus-product-agent.md` and knowledge from `.claude/knowledge/amadeus-product-agent/`.
+Load amadeus-design-agent persona from `agents/amadeus-design-agent.md` and knowledge from `.claude/knowledge/amadeus-design-agent/` for supporting perspective on user experience.
 
 ### Step 2: Validate User Stories Are Needed
 

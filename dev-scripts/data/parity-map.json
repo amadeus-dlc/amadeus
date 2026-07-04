@@ -5,6 +5,11 @@
     "replacement": "amadeus",
     "rule": "aidlc-<x> -> amadeus-<x>; aidlc（入口） -> amadeus"
   },
+  "subAgentNameMapping": {
+    "prefix": "aidlc",
+    "replacement": "amadeus",
+    "rule": "agents/aidlc-<x>-agent.md -> agents/amadeus-<x>-agent.md; knowledge/aidlc-<x>-agent/ -> knowledge/amadeus-<x>-agent/"
+  },
   "checkedEngineDirectories": ["tools", "aidlc-common", "sensors", "hooks", "scopes", "agents", "knowledge"],
   "relocations": [
     {

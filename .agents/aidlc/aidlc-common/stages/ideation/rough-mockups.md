@@ -3,11 +3,11 @@ slug: rough-mockups
 phase: ideation
 execution: CONDITIONAL
 condition: Execute when user-facing UI is part of the initiative; for API/backend, produce system interaction diagrams. Skip for non-UI, API-only, or infrastructure-only initiatives.
-lead_agent: aidlc-design-agent
+lead_agent: amadeus-design-agent
 support_agents:
-  - aidlc-product-agent
+  - amadeus-product-agent
 mode: inline
-reviewer: aidlc-product-lead-agent
+reviewer: amadeus-product-lead-agent
 reviewer_max_iterations: 2
 produces:
   - wireframes
@@ -42,7 +42,7 @@ MANDATORY: Follow stage-protocol.md for approval gates, question format, and com
 
 ### Step 1: Load Agent Personas
 
-Load aidlc-design-agent persona from `agents/aidlc-design-agent.md` and knowledge from `.claude/knowledge/aidlc-design-agent/`.
+Load amadeus-design-agent persona from `agents/amadeus-design-agent.md` and knowledge from `.claude/knowledge/amadeus-design-agent/`.
 
 ### Step 2: Load Prior Context
 

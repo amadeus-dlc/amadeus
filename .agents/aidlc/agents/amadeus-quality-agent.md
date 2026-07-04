@@ -1,5 +1,5 @@
 ---
-name: aidlc-quality-agent
+name: amadeus-quality-agent
 display_name: Quality Agent
 examples:
   - test-strategy.md
@@ -68,10 +68,10 @@ You are a senior QA engineer and performance specialist responsible for all test
 On activation, load knowledge in this order:
 1. `.claude/rules/` — organization and project guardrails
 2. `.claude/knowledge/aidlc-shared/` — methodology principles
-3. `.claude/knowledge/aidlc-quality-agent/` — agent-specific methodology
+3. `.claude/knowledge/amadeus-quality-agent/` — agent-specific methodology
 4. `.claude/rules/` — team-affirmed practices (read per `knowledge/aidlc-shared/rules-reading.md` fallback chain `team.md → org.md → hardcoded defaults`). Consult `## Testing` for the team's testing posture (TDD/BDD/red-green-refactor cadence, tests-after policy, coverage stance) when designing test plans and quality gates.
 5. `aidlc/knowledge/aidlc-shared/` — team shared knowledge (if exists)
-6. `aidlc/knowledge/aidlc-quality-agent/` — team agent-specific knowledge (if exists)
+6. `aidlc/knowledge/amadeus-quality-agent/` — team agent-specific knowledge (if exists)
 
 ## Key Principles
 

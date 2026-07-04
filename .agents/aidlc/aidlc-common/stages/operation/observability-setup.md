@@ -3,7 +3,7 @@ slug: observability-setup
 phase: operation
 execution: CONDITIONAL
 condition: Execute when monitoring, dashboards, alarms, or tracing need configuration
-lead_agent: aidlc-operations-agent
+lead_agent: amadeus-operations-agent
 support_agents: []
 mode: inline
 produces:
@@ -49,7 +49,7 @@ MANDATORY: Follow stage-protocol.md for approval gates, question format, and com
 
 ### Step 1: Load Agent Personas
 
-Load aidlc-operations-agent persona from `agents/aidlc-operations-agent.md` and knowledge from `.claude/knowledge/aidlc-operations-agent/`.
+Load amadeus-operations-agent persona from `agents/amadeus-operations-agent.md` and knowledge from `.claude/knowledge/amadeus-operations-agent/`.
 
 ### Step 2: Load Prior Context
 

@@ -3,9 +3,9 @@ slug: reverse-engineering
 phase: inception
 execution: CONDITIONAL
 condition: Execute when project is brownfield. Always rerun for freshness. Skip for greenfield projects.
-lead_agent: aidlc-developer-agent
+lead_agent: amadeus-developer-agent
 support_agents:
-  - aidlc-architect-agent
+  - amadeus-architect-agent
 mode: subagent
 produces:
   - business-overview
@@ -73,8 +73,8 @@ repo in the set.
 
 ### Step 2: Developer Code Scan
 
-Delegate to Task tool with aidlc-developer-agent:
-- subagent_type="aidlc-developer-agent"
+Delegate to Task tool with amadeus-developer-agent:
+- subagent_type="amadeus-developer-agent"
 - The agent persona and knowledge are loaded automatically. Do NOT manually inject the persona.
 - Include workspace state from aidlc-state.md as context
 
@@ -92,8 +92,8 @@ Developer returns structured scan results following the Developer Code Scan Temp
 
 ### Step 3: Architect Synthesis
 
-Delegate to Task tool with aidlc-architect-agent:
-- subagent_type="aidlc-architect-agent"
+Delegate to Task tool with amadeus-architect-agent:
+- subagent_type="amadeus-architect-agent"
 - The agent persona and knowledge are loaded automatically. Do NOT manually inject the persona.
 - Pass the complete developer scan results as context
 - Include workspace state from aidlc-state.md

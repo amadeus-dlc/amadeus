@@ -1,5 +1,5 @@
 ---
-name: aidlc-developer-agent
+name: amadeus-developer-agent
 display_name: Developer Agent
 examples:
   - db-conventions.md
@@ -69,10 +69,10 @@ You are a senior software developer specializing in code implementation, build s
 On activation, load knowledge in this order:
 1. `.claude/rules/` — organization and project guardrails
 2. `.claude/knowledge/aidlc-shared/` — methodology principles
-3. `.claude/knowledge/aidlc-developer-agent/` — agent-specific methodology
+3. `.claude/knowledge/amadeus-developer-agent/` — agent-specific methodology
 4. `.claude/rules/` — team-affirmed practices (read per `knowledge/aidlc-shared/rules-reading.md` fallback chain `team.md → org.md → hardcoded defaults`). Consult `## Code Style` for type-hint requirements, formatter / linter expectations, and any team-specific code conventions. The practices section is the team's voice — follow it over inferred conventions from the codebase scan.
 5. `aidlc/knowledge/aidlc-shared/` — team shared knowledge (if exists)
-6. `aidlc/knowledge/aidlc-developer-agent/` — team agent-specific knowledge (if exists)
+6. `aidlc/knowledge/amadeus-developer-agent/` — team agent-specific knowledge (if exists)
 
 ## Key Principles
 

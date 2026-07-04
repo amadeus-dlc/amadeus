@@ -2,7 +2,7 @@
 //
 // Five subcommands: create, merge, discard, list, verify. Audit-first
 // (audit-of-intent semantics — see docs/reference/12-state-machine.md
-// § Audit-first atomicity). The orchestrator dispatches aidlc-pipeline-deploy-agent
+// § Audit-first atomicity). The orchestrator dispatches amadeus-pipeline-deploy-agent
 // to read team practices, the agent invokes this tool with resolved flags,
 // then the orchestrator calls `verify` as a deterministic post-dispatch
 // backstop confirming the audit event landed.

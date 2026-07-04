@@ -3,7 +3,7 @@ slug: ci-pipeline
 phase: construction
 execution: CONDITIONAL
 condition: Execute when CI pipeline needs creation or significant modification. Skip if CI already exists and is adequate.
-lead_agent: aidlc-pipeline-deploy-agent
+lead_agent: amadeus-pipeline-deploy-agent
 support_agents: []
 mode: inline
 produces:
@@ -42,7 +42,7 @@ MANDATORY: Follow stage-protocol.md for approval gates, question format, and com
 
 ### Step 1: Load Agent Personas
 
-Load aidlc-pipeline-deploy-agent persona from `agents/aidlc-pipeline-deploy-agent.md` and knowledge from `.claude/knowledge/aidlc-pipeline-deploy-agent/`.
+Load amadeus-pipeline-deploy-agent persona from `agents/amadeus-pipeline-deploy-agent.md` and knowledge from `.claude/knowledge/amadeus-pipeline-deploy-agent/`.
 
 ### Step 2: Load Prior Context
 
