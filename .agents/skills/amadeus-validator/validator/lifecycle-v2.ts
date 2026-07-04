@@ -158,8 +158,14 @@ function checkHeaderFields(ctx: LifecycleV2Context, statePath: string, doc: Aidl
     ctx.failRow(statePath, "`State Version` が 7 である", version === "" ? "未設定" : version);
   }
 
+  // `Construction Autonomy Mode` の未設定は旧 state 初期化が書いた既存 record の
+  // 後方互換として許容する（Issue #455）。設定されている場合のみ許可値を検査する。
   const autonomy = String(doc.fields["Construction Autonomy Mode"] ?? "");
-  checkAllowedValue(ctx, statePath, "`Construction Autonomy Mode` が既知の値である", autonomy, autonomyValues);
+  if (autonomy === "") {
+    ctx.pass(statePath, "`Construction Autonomy Mode` が既知の値である", "未設定（後方互換で許容）");
+  } else {
+    checkAllowedValue(ctx, statePath, "`Construction Autonomy Mode` が既知の値である", autonomy, autonomyValues);
+  }
 }
 
 function checkAllowedField(ctx: LifecycleV2Context, statePath: string, doc: AidlcStateDocument, key: string, allowed: Set<string>): void {
@@ -298,15 +304,20 @@ function checkEventPresence(ctx: LifecycleV2Context, auditPath: string, events: 
 }
 
 function checkPhaseEvents(ctx: LifecycleV2Context, auditPath: string, doc: AidlcStateDocument, events: AuditEvent[]): void {
+  // phase 名の照合は大文字小文字非依存（Issue #446）。エンジンは小文字
+  // （`**Phase**: ideation` / `**Phase boundary**: initialization → inception`）を
+  // 書き、既存 record には大文字表記が残っているため、両方を pass させる。
+  const bodyHasPhase = (entry: AuditEvent, phase: string): boolean =>
+    entry.body.toLowerCase().includes(phase.toLowerCase());
   for (const phase of ["Ideation", "Inception", "Construction", "Operation"]) {
     const value = String(doc.phaseProgress[phase] ?? "");
     if (value === "Verified") {
-      const found = events.some((entry) => entry.event === "PHASE_VERIFIED" && entry.body.includes(phase));
+      const found = events.some((entry) => entry.event === "PHASE_VERIFIED" && bodyHasPhase(entry, phase));
       if (found) ctx.pass(auditPath, "Verified の phase は PHASE_VERIFIED イベントを持つ", phase);
       else ctx.failRow(auditPath, "Verified の phase は PHASE_VERIFIED イベントを持つ", phase);
     }
     if (value === "Skipped") {
-      const found = events.some((entry) => entry.event === "PHASE_SKIPPED" && entry.body.includes(phase));
+      const found = events.some((entry) => entry.event === "PHASE_SKIPPED" && bodyHasPhase(entry, phase));
       if (found) ctx.pass(auditPath, "Skipped の phase は PHASE_SKIPPED イベントを持つ", phase);
       else ctx.failRow(auditPath, "Skipped の phase は PHASE_SKIPPED イベントを持つ", phase);
     }

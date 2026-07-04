@@ -248,7 +248,12 @@
     }
   ],
   "missingSkillExceptions": [],
-  "engineFileExceptions": [],
+  "engineFileExceptions": [
+    "tools/aidlc-lib.ts",
+    "tools/aidlc-utility.ts",
+    "tools/aidlc-runtime.ts",
+    "tools/aidlc-learnings.ts"
+  ],
   "exceptions": [
     {
       "target": "aidlc/ seed（上流の dist/claude/aidlc/ サンプルデータ）",
@@ -285,6 +290,10 @@
     {
       "target": "dev-scripts/parity-check.ts、dev-scripts/generate-parity-baseline.ts の上流スキーマ参照（rules/aidlc.md、aidlc-common 等）",
       "reason": "上流 aidlc-workflows clone 自体のディレクトリ名・baseline JSON のフィールド名であり、上流が改名していない以上、engine-namespace 改名（Issue #445）の対象外。dev-scripts の既存ファイル名（エンジンではなく repo 開発スクリプト）として扱う。"
+    },
+    {
+      "target": "tools/aidlc-lib.ts、tools/aidlc-utility.ts、tools/aidlc-runtime.ts、tools/aidlc-learnings.ts（ローカルでは .agents/amadeus/tools/amadeus-*.ts）",
+      "reason": "エンジンが書く値と validator 許可値の不整合解消（Issue #455 / #446）のローカル修正。intent-birth の registry status を in_progress に正準化し、repos 既定値と Construction Autonomy Mode: unset を書き、runtime graph の memory_path に record prefix を通し、learnings surface の phase 解決を record path 構造に合わせた。上流が同修正を取り込んだら engineFileExceptions から外して hash 照合に戻す。"
     }
   ]
 }

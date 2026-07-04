@@ -36,7 +36,8 @@ type Table = {
 };
 const intentDirectoryPattern = /^\d{6}-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const uuidV7Pattern = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-const registryStatusValues = new Set(["in_progress", "parked", "completed", "complete"]);
+// `in-flight` は旧 intent-birth が書いた status の後方互換（Issue #455）。正準は `in_progress`。
+const registryStatusValues = new Set(["in_progress", "in-flight", "parked", "completed", "complete"]);
 const registryScopeValues = new Set(["enterprise", "feature", "mvp", "poc", "bugfix", "refactor", "infra", "security-patch", "workshop"]);
 const eventStormingDirectoryPattern = /^ES\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const eventStormingStatusValues = new Set(["draft", "reviewing", "ready", "superseded"]);
@@ -338,7 +339,10 @@ class AmadeusValidator {
     }
     this.checkAllowed(path, "scope", entry.scope, registryScopeValues);
     this.checkAllowed(path, "status", entry.status, registryStatusValues);
-    if (Array.isArray(entry.repos)) {
+    // `repos` の未設定は旧 intent-birth が書いた既存 record の後方互換として許容する（Issue #455）。
+    if (entry.repos === undefined) {
+      this.pass(path, "registry の `repos` が配列である", `${label}: 未設定（後方互換で許容）`);
+    } else if (Array.isArray(entry.repos)) {
       this.pass(path, "registry の `repos` が配列である", `${label}: ${entry.repos.length} 件`);
     } else {
       this.failRow(path, "registry の `repos` が配列である", label);

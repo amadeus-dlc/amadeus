@@ -1060,10 +1060,10 @@ export function birthIntent(
   appendIntentToRegistry(
     projectDir,
     // An empty repo set (no --repos, no sibling discovery — the legacy single-repo
-    // or fresh-greenfield case) records NO repos row; the lone repo is inferred on
-    // the construction path (resolveConstructionRepo). Only a non-empty set is
-    // persisted, so existing single-repo + flat-legacy intents stay byte-identical.
-    { uuid, slug, dirName, scope, repos: repos && repos.length > 0 ? repos : undefined, status: "in-flight" },
+    // or fresh-greenfield case) records an EMPTY repos row (Issue #455: the
+    // validator expects the field); the lone repo is still inferred on the
+    // construction path (resolveConstructionRepo treats [] as "no recorded repos").
+    { uuid, slug, dirName, scope, repos: repos ?? [], status: "in_progress" },
     space,
   );
   setActiveIntentCursor(projectDir, dirName, space);
@@ -1226,7 +1226,7 @@ export function migrateFlatLayout(projectDir: string): FlatMigrationResult | nul
     // (4) Append to intents.json + set the active-intent cursor (workspace bucket).
     appendIntentToRegistry(
       projectDir,
-      { uuid, slug, dirName: intentDirName, scope: undefined, repos: undefined, status: "in-flight" },
+      { uuid, slug, dirName: intentDirName, scope: undefined, repos: undefined, status: "in_progress" },
       space,
     );
     try {
