@@ -28,5 +28,15 @@
       "amadeus"
     ],
     "status": "complete"
+  },
+  {
+    "uuid": "019f2a92-265b-7b10-8bc8-f52919b1ea9a",
+    "slug": "workflow-failure-observa",
+    "dirName": "260704-workflow-failure-observa",
+    "scope": "mvp",
+    "repos": [
+      "amadeus"
+    ],
+    "status": "complete"
   }
 ]

@@ -4,7 +4,8 @@
 // vendored の v2 state template（skills/amadeus/references/aidlc-v2/state-template.md）を
 // parse でき、行置換の更新が対象行以外を保存することを確認する。
 
-import { readFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
   AIDLC_PHASES,
@@ -222,6 +223,161 @@ const updatedField = updateCurrentStatusField(instanceText, "Current Stage", "bu
 // 存在しない stage の更新は入力を変えない。
 const unchanged = updateStageCheckbox(instanceText, { slug: "no-such-stage" }, "[x]");
 check("update: 不明な stage の更新は入力を変えない", unchanged === instanceText, "変更が発生した");
+
+// --- 4. complete-workflow は最終 phase を Verified にする ---
+
+{
+  const workspace = mkdtempSync(join(tmpdir(), "aidlc-state-complete-"));
+  try {
+    const recordDir = join(workspace, "aidlc", "spaces", "default", "intents", "260704-complete-test");
+    mkdirSync(recordDir, { recursive: true });
+    writeFileSync(join(workspace, "aidlc", "spaces", "default", "intents", "active-intent"), "260704-complete-test\n", "utf8");
+    writeFileSync(
+      join(recordDir, "aidlc-state.md"),
+      instanceText
+        .replace("- **Scope**: refactor", "- **Scope**: mvp")
+        .replace("- **Stages to Execute**: 0.1, 0.2, 0.3, 2.1, 2.3, 3.1, 3.5, 3.6", "- **Stages to Execute**: 0.1, 0.2, 0.3, 3.7")
+        .replace("- **Total Stages**: 8", "- **Total Stages**: 1")
+        .replace("- **Completed**: 5", "- **Completed**: 0")
+        .replace("- **In Progress**: code-generation", "- **In Progress**: ci-pipeline")
+        .replace("- **Construction**: Active", "- **Construction**: Active")
+        .replace("- [-] code-generation", "- [x] code-generation")
+        .replace("- [ ] build-and-test", "- [x] build-and-test")
+        .replace("- [S] ci-pipeline — SKIP: out of refactor scope", "- [-] ci-pipeline — EXECUTE")
+        .replace("- **Current Stage**: code-generation", "- **Current Stage**: ci-pipeline")
+        .replace("- **Next Stage**: build-and-test", "- **Next Stage**: none")
+        .replace("- **Last Completed Stage**: functional-design", "- **Last Completed Stage**: build-and-test")
+        .replace("- **Pending Artifacts**: code-generation-plan.md", "- **Pending Artifacts**: none"),
+      "utf8",
+    );
+    const ciDir = join(recordDir, "construction", "ci-pipeline");
+    mkdirSync(ciDir, { recursive: true });
+    writeFileSync(join(ciDir, "ci-config.md"), "# CI Config\n\n## 入力\n\nok\n", "utf8");
+    writeFileSync(join(ciDir, "quality-gates.md"), "# Quality Gates\n\n## 入力\n\nok\n", "utf8");
+    writeFileSync(join(ciDir, "ci-pipeline-questions.md"), "# CI Pipeline Questions\n\n## 入力\n\nok\n", "utf8");
+
+    const result = Bun.spawnSync(
+      ["bun", join(root, ".agents/aidlc/tools/aidlc-state.ts"), "complete-workflow", "ci-pipeline"],
+      { cwd: workspace, stdout: "pipe", stderr: "pipe" },
+    );
+    const state = readFileSync(join(recordDir, "aidlc-state.md"), "utf8");
+    const parsed = parseAidlcState(state);
+    check(
+      "complete-workflow: Construction が Verified になる",
+      result.exitCode === 0 && parsed.phaseProgress["Construction"] === "Verified",
+      `exit=${result.exitCode} stderr=${new TextDecoder().decode(result.stderr)} phase=${parsed.phaseProgress["Construction"]}`,
+    );
+    check(
+      "complete-workflow: Status が Completed になる",
+      result.exitCode === 0 && parsed.fields["Status"] === "Completed",
+      `status=${parsed.fields["Status"]}`,
+    );
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+}
+
+// --- 5. practices-promote は既存 memory に対象見出しがなくても昇格できる ---
+
+{
+  const workspace = mkdtempSync(join(tmpdir(), "aidlc-state-practices-"));
+  try {
+    const recordDir = join(workspace, "aidlc", "spaces", "default", "intents", "260704-practices-test");
+    const stageDir = join(recordDir, "inception", "practices-discovery");
+    const memoryDir = join(workspace, "aidlc", "spaces", "default", "memory");
+    mkdirSync(stageDir, { recursive: true });
+    mkdirSync(memoryDir, { recursive: true });
+
+    writeFileSync(join(recordDir, "aidlc-state.md"), "# AI-DLC State Tracking\n", "utf8");
+    writeFileSync(
+      join(memoryDir, "team.md"),
+      "# チームの働き方\n\n## 方針\n\n- 既存の日本語見出しだけを持つ。\n",
+      "utf8",
+    );
+    writeFileSync(
+      join(memoryDir, "project.md"),
+      "# プロジェクト\n\n## 目的\n\n- 既存の日本語見出しだけを持つ。\n",
+      "utf8",
+    );
+    writeFileSync(
+      join(stageDir, "team-practices.md"),
+      [
+        "# Team Practices",
+        "",
+        "## Way of Working",
+        "",
+        "Issue と Intent を接続する。",
+        "",
+        "## Walking Skeleton",
+        "",
+        "最初の Bolt で縦断確認する。",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    writeFileSync(
+      join(stageDir, "discovered-rules.md"),
+      [
+        "# Discovered Rules",
+        "",
+        "## Mandated",
+        "",
+        "ALWAYS keep validator evidence.",
+        "",
+        "## Forbidden",
+        "",
+        "NEVER bypass the memory boundary.",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const result = Bun.spawnSync(
+      [
+        "bun",
+        join(root, ".agents/aidlc/tools/aidlc-state.ts"),
+        "practices-promote",
+        "--team-practices",
+        join(stageDir, "team-practices.md"),
+        "--discovered-rules",
+        join(stageDir, "discovered-rules.md"),
+        "--affirming-user",
+        "eval",
+        "--target-dir",
+        memoryDir,
+      ],
+      { cwd: workspace, stdout: "pipe", stderr: "pipe" },
+    );
+    const stdout = new TextDecoder().decode(result.stdout);
+    const stderr = new TextDecoder().decode(result.stderr);
+    const team = readFileSync(join(memoryDir, "team.md"), "utf8");
+    const project = readFileSync(join(memoryDir, "project.md"), "utf8");
+    const auditDir = join(recordDir, "audit");
+
+    check(
+      "practices-promote: 見出しがない team.md へ practice 節を追加できる",
+      result.exitCode === 0 && team.includes("## Way of Working") && team.includes("Issue と Intent を接続する。"),
+      `exit=${result.exitCode} stdout=${stdout} stderr=${stderr}`,
+    );
+    check(
+      "practices-promote: 見出しがない project.md へ rule 節を追加できる",
+      result.exitCode === 0 && project.includes("## Mandated") && project.includes("ALWAYS keep validator evidence.") && project.includes("## Forbidden") && project.includes("NEVER bypass the memory boundary."),
+      `project.md=${project}`,
+    );
+    check(
+      "practices-promote: PRACTICES_AFFIRMED を audit shard に記録する",
+      result.exitCode === 0 && existsSync(auditDir) && readFileSync(join(auditDir, readdirFirst(auditDir)), "utf8").includes("PRACTICES_AFFIRMED"),
+      `auditDir=${auditDir}`,
+    );
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+}
+
+function readdirFirst(dir: string): string {
+  const entries = Array.from(new Bun.Glob("*").scanSync({ cwd: dir })).sort();
+  return entries[0] ?? "";
+}
 
 if (failures > 0) {
   console.error(`aidlc-state eval: ${failures} 件失敗`);

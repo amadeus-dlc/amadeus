@@ -64,6 +64,19 @@ const VALID_CHECKBOX_STATES: CheckboxState[] = [
   "skipped",
 ];
 
+function setPhaseProgressStatus(
+  content: string,
+  phase: string,
+  status: "Pending" | "Active" | "Verified" | "Skipped",
+): string {
+  const label = phase.charAt(0).toUpperCase() + phase.slice(1);
+  const pattern = new RegExp(`^- \\*\\*${label}\\*\\*:\\s*\\S+\\s*$`, "m");
+  if (!pattern.test(content)) {
+    throw new Error(`Phase Progress row not found: ${label}`);
+  }
+  return content.replace(pattern, `- **${label}**: ${status}`);
+}
+
 function isCheckboxState(s: string): s is CheckboxState {
   return (VALID_CHECKBOX_STATES as readonly string[]).includes(s);
 }
@@ -1140,6 +1153,8 @@ function handleCompleteWorkflow(args: string[]): void {
   // 3. Update all fields atomically for workflow completion
   const timestamp = isoTimestamp();
   content = setField(content, "Status", "Completed");
+  content = setField(content, "Lifecycle Phase", completedStage.phase.toUpperCase());
+  content = setPhaseProgressStatus(content, completedStage.phase, "Verified");
   content = setField(content, "Last Updated", timestamp);
   content = setField(content, "Last Completed Stage", completedSlug);
   content = setField(content, "In Progress", "none");
@@ -1171,6 +1186,7 @@ function handleCompleteWorkflow(args: string[]): void {
       "Stages completed": String(completedCount),
     });
     emitAudit(pd, "PHASE_VERIFIED", {
+      Phase: completedStage.phase.charAt(0).toUpperCase() + completedStage.phase.slice(1),
       "Phase boundary": `${completedStage.phase} → end`,
     });
     const workflowFields: Record<string, string> = {
@@ -1753,16 +1769,16 @@ function handlePracticesEvent(args: string[]): void {
 // practices-promote --team-practices <path> --discovered-rules <path>
 //                   [--affirming-user <name>] [--target-dir <path>]
 //
-// Cross-row promotion of affirmed practices into the team-authored method
+// Cross-layer promotion of affirmed practices into the team-authored method
 // files. Reads two draft files from aidlc-docs/inception/practices-discovery/
 // and applies them deterministically to the relocated method files the
 // resolver reads (aidlc/spaces/<space>/memory/, neutral names):
 //
-//   memory/team.md ........... replaceSection × 5 (Way of Working,
+//   memory/team.md ........... ensureSection + replaceSection × 5 (Way of Working,
 //                              Walking Skeleton, Testing Posture,
 //                              Deployment, Code Style)
-//   memory/project.md ........ appendUnderHeading × 2 (Mandated,
-//                              Forbidden), each rule stamped
+//   memory/project.md ........ ensureSection + appendUnderHeading × 2
+//                              (Mandated, Forbidden), each rule stamped
 //                              with `(affirmed YYYY-MM-DD)`
 //
 // Atomicity:
@@ -1813,6 +1829,14 @@ function handlePracticesPromote(args: string[]): void {
   const today = isoTimestamp().slice(0, 10);
   const sectionsWritten: string[] = [];
   const rulesAppended = { mandated: 0, forbidden: 0 };
+  const ensureSection = (content: string, heading: string): string => {
+    const hasHeading = content
+      .split("\n")
+      .some((line) => line.trim() === heading);
+    if (hasHeading) return content;
+    const trimmed = content.replace(/\s*$/, "");
+    return `${trimmed}${trimmed.length > 0 ? "\n\n" : ""}${heading}\n`;
+  };
 
   const fail = (reason: string): never => {
     try {
@@ -1861,8 +1885,8 @@ function handlePracticesPromote(args: string[]): void {
   }
 
   // Step 3a: Build new team.md by section-replacing each of the five
-  // sections. team.md uses Title Case headings; the draft mirrors that
-  // shape.
+  // sections. Older spaces may not have the Title Case headings yet, so
+  // create missing sections before replacing their body.
   const TEAM_SECTIONS = [
     "## Way of Working",
     "## Walking Skeleton",
@@ -1879,6 +1903,7 @@ function handlePracticesPromote(args: string[]): void {
       continue;
     }
     try {
+      newTeamMd = ensureSection(newTeamMd, heading);
       newTeamMd = replaceSection(newTeamMd, heading, draftSection);
       sectionsWritten.push(heading.slice(3));
     } catch (e) {
@@ -1910,6 +1935,8 @@ function handlePracticesPromote(args: string[]): void {
   const forbiddenRules = parseRules(forbiddenDraft);
 
   let newGuardrailsMd = guardrailsMd;
+  newGuardrailsMd = ensureSection(newGuardrailsMd, "## Mandated");
+  newGuardrailsMd = ensureSection(newGuardrailsMd, "## Forbidden");
   for (const rule of mandatedRules) {
     const stamped = `${rule} (affirmed ${today})\n`;
     try {

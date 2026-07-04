@@ -49,7 +49,16 @@
     }
   ],
   "missingSkillExceptions": [],
-  "engineFileExceptions": [],
+  "engineFileExceptions": [
+    "aidlc-common/stages/inception/practices-discovery.md",
+    "hooks/aidlc-log-subagent.ts",
+    "knowledge/aidlc-shared/audit-format.md",
+    "tools/aidlc-lib.ts",
+    "tools/aidlc-orchestrate.ts",
+    "tools/aidlc-state.ts",
+    "tools/aidlc-utility.ts",
+    "tools/data/stage-graph.json"
+  ],
   "exceptions": [
     {
       "target": "aidlc/ seed（上流の dist/claude/aidlc/ サンプルデータ）",
@@ -82,6 +91,10 @@
     {
       "target": "amadeus-construction-*、amadeus-ideation-*、amadeus-inception-*、amadeus-steering など旧 skill 群",
       "reason": "削除済み（examples 機構の廃止に伴う旧 skill 整理）。置換前の旧 skill 群であり、上流 38 skill との 1 対 1 対応の対象外だったため、parity-check では検査されていなかった。"
+    },
+    {
+      "target": "OpenTelemetry 計装、失敗証跡、subagent status、workflow warning、space memory promotion、workflow completion の状態更新に関係する engine ファイル 8 件",
+      "reason": "今回の Intent で Amadeus のエンジン実体を意図的に拡張した差分である。`skills/` と `.agents/skills/` の配布物境界は変更せず、上流基準との差分は `engineFileExceptions` で明示する。"
     }
   ]
 }

@@ -113,6 +113,7 @@ import {
   producersOf,
   subgraphForScope,
 } from "./aidlc-graph.ts";
+import { getAidlcTelemetry } from "./aidlc-telemetry.ts";
 
 // Read the workflow state file if it exists, else null. The engine's `next` is
 // a pure read: an absent state file is a legitimate branch (no workflow yet),
@@ -2767,9 +2768,39 @@ function main(): void {
 }
 
 if (import.meta.main) {
+  const rawArgs = process.argv.slice(2);
+  let command = "(none)";
+  for (let i = 0; i < rawArgs.length; i++) {
+    if (rawArgs[i] === "--project-dir") {
+      i++;
+      continue;
+    }
+    command = rawArgs[i];
+    break;
+  }
+  const telemetryAttributes: Record<string, string | number> = {
+    "aidlc.argv_count": rawArgs.length,
+  };
+  for (let i = 0; i < rawArgs.length; i++) {
+    if (rawArgs[i] === "--stage" && i + 1 < rawArgs.length) {
+      telemetryAttributes["aidlc.stage"] = rawArgs[i + 1];
+      i++;
+      continue;
+    }
+    if (rawArgs[i] === "--result" && i + 1 < rawArgs.length) {
+      telemetryAttributes["aidlc.result"] = rawArgs[i + 1];
+      i++;
+    }
+  }
+  const telemetryScope = getAidlcTelemetry().startCommandScope("aidlc-orchestrate", command, {
+    ...telemetryAttributes,
+  });
   try {
     main();
+    telemetryScope.end({ code: "ok" });
   } catch (e) {
+    telemetryScope.recordError(e);
+    telemetryScope.end({ code: "error", message: errorMessage(e) });
     // Any uncaught read error (missing graph, malformed state) surfaces as a
     // non-zero exit with the message on stderr — never a half-emitted
     // directive on stdout.

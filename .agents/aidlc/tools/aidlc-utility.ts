@@ -11,6 +11,7 @@ import {
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { appendAuditEntry, appendAuditEntryUnlocked } from "./aidlc-audit.ts";
+import { summarizeHookDrops } from "./aidlc-failure-evidence.ts";
 import {
   artifactsRegistry,
   findCycles,
@@ -84,7 +85,9 @@ import {
   rulesSubdir,
 } from "./aidlc-lib.ts";
 import { validateStageFrontmatter } from "./aidlc-stage-schema.ts";
+import { getAidlcTelemetry } from "./aidlc-telemetry.ts";
 import { AIDLC_VERSION } from "./aidlc-version.ts";
+import { formatWorkflowWarnings, traceabilityErrorText } from "./aidlc-workflow-traceability.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -658,6 +661,71 @@ function handleDoctor(projectDir: string): void {
       pass: false,
       label: "Hook heartbeat data",
       fix: "health dir exists but no hooks have fired — verify hooks are registered in settings.json",
+    });
+  }
+
+  try {
+    const drops = summarizeHookDrops(healthDir);
+    getAidlcTelemetry().recordMetric("aidlc.hook_drops.observed", drops.totalDrops, {
+      "aidlc.tool": "aidlc-utility",
+      "aidlc.command": "doctor",
+    });
+    getAidlcTelemetry().recordMetric("aidlc.hook_drops.malformed", drops.malformedLines, {
+      "aidlc.tool": "aidlc-utility",
+      "aidlc.command": "doctor",
+    });
+    if (drops.totalDrops === 0) {
+      results.push({
+        pass: true,
+        label: `Hook drops: 0 observed${drops.malformedLines > 0 ? `, ${drops.malformedLines} malformed warning` : ""}`,
+      });
+    } else {
+      const parts = drops.hooks
+        .filter((hook) => hook.drops > 0 || hook.malformed > 0)
+        .map((hook) => {
+          const details = [`${hook.hook}: ${hook.drops} drop${hook.drops === 1 ? "" : "s"}`];
+          if (hook.malformed > 0) details.push(`${hook.malformed} malformed`);
+          if (hook.lastTimestamp !== null) details.push(`last ${hook.lastTimestamp}`);
+          if (hook.lastReason !== null) details.push(`reason ${hook.lastReason}`);
+          return details.join(", ");
+        });
+      results.push({
+        pass: false,
+        label: `Hook drops: ${drops.totalDrops} observed${drops.malformedLines > 0 ? `, ${drops.malformedLines} malformed` : ""}`,
+        fix: `${parts.join("; ")}. Inspect .aidlc-hooks-health/*.drops and the matching audit shard before trusting hook-derived evidence.`,
+      });
+    }
+  } catch (e) {
+    results.push({
+      pass: false,
+      label: "Hook drops: check failed",
+      fix: errorMessage(e),
+    });
+  }
+
+  try {
+    const telemetry = getAidlcTelemetry().status();
+    results.push({
+      pass: true,
+      label: `Telemetry core: ${telemetry.core}; exporter ${telemetry.exporter}; test sink ${telemetry.testSink}`,
+    });
+  } catch {
+    results.push({
+      pass: false,
+      label: "Telemetry core: unavailable",
+      fix: "verify @opentelemetry/api is installed and aidlc-telemetry.ts can be imported",
+    });
+  }
+
+  try {
+    results.push({
+      pass: true,
+      label: formatWorkflowWarnings(projectDir),
+    });
+  } catch (e) {
+    results.push({
+      pass: true,
+      label: `Workflow warnings: unavailable (${traceabilityErrorText(e)})`,
     });
   }
 

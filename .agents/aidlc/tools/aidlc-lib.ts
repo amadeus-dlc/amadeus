@@ -3,6 +3,8 @@ import { accessSync, appendFileSync, constants as fsConstants, cpSync, existsSyn
 import { hostname, tmpdir } from "node:os";
 import { basename, dirname, join, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { buildErrorAuditFields } from "./aidlc-failure-evidence.ts";
+import { getAidlcTelemetry } from "./aidlc-telemetry.ts";
 // Type-only import for the lazy-loaded aidlc-graph.ts dependency. The
 // runtime require() below avoids the circular import (aidlc-graph.ts
 // imports loadScopeMapping/loadStageGraph from this file). Type-only
@@ -3764,6 +3766,20 @@ export function emitError(
   intent?: string,
   space?: string
 ): never {
+  const auditFields = buildErrorAuditFields({
+    tool,
+    command,
+    error: msg,
+  });
+  getAidlcTelemetry().recordError(msg, {
+    "aidlc.tool": tool,
+    "aidlc.command": command,
+    "aidlc.error_fingerprint": auditFields["Error fingerprint"],
+  });
+  getAidlcTelemetry().recordMetric("aidlc.error.logged", 1, {
+    "aidlc.tool": tool,
+    "aidlc.command": command,
+  });
   if (!_errorEmitInProgress) {
     _errorEmitInProgress = true;
     try {
@@ -3794,17 +3810,9 @@ export function emitError(
         // shard. Omitted intent/space -> sentinel, which is correct for every
         // sentinel-locked caller (the common case).
         if (holdsAuditLock(projectDir, intent, space)) {
-          audit.appendAuditEntryUnlocked("ERROR_LOGGED", {
-            Tool: tool,
-            Command: command,
-            Error: msg,
-          }, projectDir, intent, space);
+          audit.appendAuditEntryUnlocked("ERROR_LOGGED", auditFields, projectDir, intent, space);
         } else {
-          audit.appendAuditEntry("ERROR_LOGGED", {
-            Tool: tool,
-            Command: command,
-            Error: msg,
-          }, projectDir, intent, space);
+          audit.appendAuditEntry("ERROR_LOGGED", auditFields, projectDir, intent, space);
         }
       }
     } catch {
@@ -3866,7 +3874,7 @@ export function parseFieldArgs(args: string[]): Record<string, string> {
 
 // --- Markdown section helpers ---
 // Used by practices-discovery affirmation (copy under ## Mandated /
-// ## Forbidden) and the orchestrator (reads aidlc-team.md sections for
+// ## Forbidden) and the orchestrator (reads team.md sections for
 // stance lookup). Pure string operations against well-formed markdown.
 // Caller is responsible for code-fence-free input — rules/aidlc-*.md
 // never contain fenced ## lines per spec.
@@ -3956,7 +3964,7 @@ export function replaceSection(
   // Replaces the prose between `heading` and the next `## ` heading (or EOF)
   // with `newContent`. The heading line itself is preserved. Throws if
   // `heading` is not present. Used by practices-discovery affirmation:
-  // re-runs overwrite aidlc-team.md sections rather than accumulating duplicates.
+  // re-runs overwrite team.md sections rather than accumulating duplicates.
   const headingRegex = new RegExp(
     `^${escapeRegex(heading)}[ \\t]*$`,
     "m",

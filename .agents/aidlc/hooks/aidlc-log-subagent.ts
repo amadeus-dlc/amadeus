@@ -6,6 +6,7 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { appendAuditEntry } from "../tools/aidlc-audit.ts";
+import { buildSubagentAuditFields } from "../tools/aidlc-subagent-status.ts";
 import {
   auditFilePath,
   type ClaudeCodeHookInput,
@@ -38,18 +39,10 @@ try {
   process.exit(0);
 }
 
-const agentType = parsed.agent_type ?? "unknown";
-const agentId: string = parsed.agent_id ?? "";
-const agentMessage: string = (parsed.last_assistant_message ?? "").slice(0, 200);
-
 const auditFile = auditFilePath(projectDir);
 if (!existsSync(auditFile)) process.exit(0);
 
-const fields: Record<string, string> = {
-  "Agent Type": agentType,
-};
-if (agentId) fields["Agent ID"] = agentId;
-if (agentMessage) fields.Message = agentMessage;
+const fields = buildSubagentAuditFields(parsed);
 
 try {
   appendAuditEntry("SUBAGENT_COMPLETED", fields, projectDir);
