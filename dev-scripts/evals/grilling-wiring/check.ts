@@ -40,7 +40,16 @@ function runExpectFailure(command: string[], cwd: string): string {
 const annexText = [
   "# Question Rendering — Claude Code harness annex",
   "",
+  "## Harness routing",
+  "",
+  "Codex uses `question-rendering-codex.md`.",
+  "",
   "## Mechanism",
+  "",
+  "## Display language",
+  "",
+  "Shown in the conversation language. `[Answer]:` pairs the canonical label",
+  "with its display translation.",
   "",
   "Mode selection renders as a 4-option choice, in this order: Guide me, Grill me,",
   "I'll edit the file, Chat. Guide me stays first and default.",
@@ -50,11 +59,46 @@ const annexText = [
   "- Grill me answers are written back as `[Answer]:` and logged with",
   "  `amadeus-log.ts decision` / `amadeus-log.ts answer`.",
   "",
+  "### Grill me rendering rules",
+  "",
+  "This section requires one question per tool call, with the recommended option first carrying a recommendation marker.",
+  "This annex reuses the existing split rule for 5+ options; see `question-rendering-codex.md` for the Codex binding.",
+  "",
+].join("\n");
+
+const codexAnnexText = [
+  "# Question Rendering — Codex harness annex",
+  "",
+  "## Shared rules",
+  "",
+  "See `question-rendering.md` for the neutral Display language and",
+  "interview rendering rules sections.",
+  "",
+  "## Mechanism",
+  "",
+  "Renders via `request_user_input`.",
+  "",
+  "## Mode selection",
+  "",
+  "Fold Guide me / Grill me / I'll edit the file into 3 options + custom;",
+  "Chat is reachable via custom.",
+  "",
+  "## Text fallback",
+  "",
+  "One question per message, lettered options, recommendation marker.",
+  "",
 ].join("\n");
 
 const conductorText = ["# amadeus", "", "run-stage row references the annex.", ""].join("\n");
 
-const bridgeText = ["# Engine Bridge", "", "Grill me is inserted as the 2nd mode-selection option.", ""].join("\n");
+const bridgeText = [
+  "# Engine Bridge",
+  "",
+  "Grill me is inserted as the 2nd mode-selection option.",
+  "User-facing question text follows the conversation language; see",
+  "`question-rendering.md` for the canonical Display language rule.",
+  "",
+].join("\n");
 
 const newStageSkillText = [
   "# amadeus-foo",
@@ -83,11 +127,24 @@ const oldStageSkillText = [
 
 function writeSkillTree(
   fixtureRoot: string,
-  options: { stageSkillText: string; annexText: string; withPromotedCopies: boolean; withGrillingSkill: boolean },
+  options: {
+    stageSkillText: string;
+    annexText: string;
+    codexAnnexText: string;
+    withPromotedCopies: boolean;
+    withGrillingSkill: boolean;
+    includeCodexAnnex: boolean;
+  },
 ): void {
   mkdirSync(join(fixtureRoot, "skills/amadeus/references"), { recursive: true });
   writeFileSync(join(fixtureRoot, "skills/amadeus/SKILL.md"), conductorText);
   writeFileSync(join(fixtureRoot, "skills/amadeus/references/question-rendering.md"), options.annexText);
+  if (options.includeCodexAnnex) {
+    writeFileSync(
+      join(fixtureRoot, "skills/amadeus/references/question-rendering-codex.md"),
+      options.codexAnnexText,
+    );
+  }
 
   if (options.withGrillingSkill) {
     mkdirSync(join(fixtureRoot, "skills/amadeus-grilling/references"), { recursive: true });
@@ -101,6 +158,12 @@ function writeSkillTree(
     mkdirSync(join(fixtureRoot, ".agents/skills/amadeus/references"), { recursive: true });
     writeFileSync(join(fixtureRoot, ".agents/skills/amadeus/SKILL.md"), conductorText);
     writeFileSync(join(fixtureRoot, ".agents/skills/amadeus/references/question-rendering.md"), options.annexText);
+    if (options.includeCodexAnnex) {
+      writeFileSync(
+        join(fixtureRoot, ".agents/skills/amadeus/references/question-rendering-codex.md"),
+        options.codexAnnexText,
+      );
+    }
     if (options.withGrillingSkill) {
       mkdirSync(join(fixtureRoot, ".agents/skills/amadeus-grilling/references"), { recursive: true });
       writeFileSync(join(fixtureRoot, ".agents/skills/amadeus-grilling/references/engine-bridge.md"), bridgeText);
@@ -114,8 +177,10 @@ function makeFixture(
   options: Partial<{
     stageSkillText: string;
     annexText: string;
+    codexAnnexText: string;
     withPromotedCopies: boolean;
     withGrillingSkill: boolean;
+    includeCodexAnnex: boolean;
   }> = {},
 ): string {
   const fixtureRoot = mkdtempSync(join(tmpdir(), "grilling-wiring"));
@@ -123,8 +188,10 @@ function makeFixture(
   writeSkillTree(fixtureRoot, {
     stageSkillText: options.stageSkillText ?? newStageSkillText,
     annexText: options.annexText ?? annexText,
+    codexAnnexText: options.codexAnnexText ?? codexAnnexText,
     withPromotedCopies: options.withPromotedCopies ?? true,
     withGrillingSkill: options.withGrillingSkill ?? true,
+    includeCodexAnnex: options.includeCodexAnnex ?? true,
   });
   return fixtureRoot;
 }
@@ -186,6 +253,42 @@ expectIssue(
   runExpectFailure(checkCommand, brokenAnnexPath),
   "does not resolve to an existing file",
   "annex engine-bridge reference with wrong relative-path depth",
+);
+
+// Codex annex（question-rendering-codex.md）が存在しない場合は fail する。
+const missingCodexAnnex = makeFixture({ includeCodexAnnex: false });
+expectIssue(
+  runExpectFailure(checkCommand, missingCodexAnnex),
+  "missing file: skills/amadeus/references/question-rendering-codex.md",
+  "missing codex annex file",
+);
+
+// canonical annex に Display language 節が欠けている場合は fail する。
+const missingDisplayLanguageAnnex = makeFixture({
+  annexText: [
+    "# Question Rendering — Claude Code harness annex",
+    "",
+    "## Mechanism",
+    "",
+    "Mode selection renders as a 4-option choice, in this order: Guide me, Grill me,",
+    "I'll edit the file, Chat. Guide me stays first and default.",
+    "",
+    "- Grill me: one question at a time, recommended answer attached (see",
+    "  `../../amadeus-grilling/references/engine-bridge.md`).",
+    "- Grill me answers are written back as `[Answer]:` and logged with",
+    "  `amadeus-log.ts decision` / `amadeus-log.ts answer`.",
+    "",
+    "### Grill me rendering rules",
+    "",
+    "This section requires one question per tool call, with the recommended option first carrying a recommendation marker.",
+    "This annex reuses the existing split rule for 5+ options; see `question-rendering-codex.md` for the Codex binding.",
+    "",
+  ].join("\n"),
+});
+expectIssue(
+  runExpectFailure(checkCommand, missingDisplayLanguageAnnex),
+  'missing required marker "Display language"',
+  "annex missing Display language section",
 );
 
 // 旧ボイラープレートが残るステージ skill は fail する。
