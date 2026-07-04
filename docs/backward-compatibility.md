@@ -4,7 +4,7 @@
 ここに記載のない構造、入口、成果物名、配置は互換性維持対象ではない。
 `amadeus-validator` は、Intent record の検証時にこのファイルを参照する。
 `aidlc/spaces/<space>/intents/<dirName>/` の形式で記載された record は、AmadeusValidator の現行（v2 事前適応、以下「旧形式」）検査を維持する。
-記載のない record ディレクトリには、v2 契約検査（`.claude/aidlc-common/stages/` の frontmatter `produces:` から導出した必須成果物、`verification/phase-check-<phase>.md`、`audit/*.md` shard の存在検査）を適用する。
+記載のない record ディレクトリには、v2 契約検査（`.claude/amadeus-common/stages/` の frontmatter `produces:` から導出した必須成果物、`verification/phase-check-<phase>.md`、`audit/*.md` shard の存在検査）を適用する。
 
 ## 対象
 

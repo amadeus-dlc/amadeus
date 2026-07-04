@@ -1,7 +1,7 @@
 # Question Rendering — Claude Code harness annex
 
 This file defines how THIS harness renders the structured questions that
-`aidlc-common/protocols/stage-protocol.md` § "Structured questions" requires.
+`amadeus-common/protocols/stage-protocol.md` § "Structured questions" requires.
 The protocol and stage files are harness-neutral: they say *present a
 structured question* and carry a fenced ` ```question ` spec block. This annex
 is the one place that binds that contract to a concrete mechanism.
@@ -50,7 +50,7 @@ AskUserQuestion({
 
 ## Mode selection (Guide me / Grill me / I'll edit the file / Chat)
 
-`aidlc-common/protocols/stage-protocol.md` § "Question flow" Step 2 offers the
+`amadeus-common/protocols/stage-protocol.md` § "Question flow" Step 2 offers the
 user a choice of interaction mode when a `<stage>-questions.md` file has been
 created. On Claude Code, render that choice as a 4-option `AskUserQuestion`,
 in this exact order — Guide me stays first and is the default:
@@ -82,9 +82,9 @@ protocol defined in `../../amadeus-grilling/references/engine-bridge.md`:
 - Attach a recommended answer and its rationale to each question.
 - Wait for the human's response before presenting the next question.
 - Before presenting each question, log the decision with
-  `bun .agents/aidlc/tools/aidlc-log.ts decision --stage <slug> --decision "<summary>" --options "<csv>"`;
+  `bun .agents/amadeus/tools/amadeus-log.ts decision --stage <slug> --decision "<summary>" --options "<csv>"`;
   after the human responds, log the answer with
-  `bun .agents/aidlc/tools/aidlc-log.ts answer --stage <slug> --details "<exact choice>"`.
+  `bun .agents/amadeus/tools/amadeus-log.ts answer --stage <slug> --details "<exact choice>"`.
 - Write each confirmed answer into the `<stage>-questions.md` file using the
   `[Answer]:` tag format — the questions file remains the source of truth.
 
@@ -103,4 +103,4 @@ protocol defined in `../../amadeus-grilling/references/engine-bridge.md`:
   record it verbatim (protocol: never summarize User Input).
 - **Long prompts**: the question body renders at full terminal width and wraps
   gracefully (multi-line wrap verified on macOS before each release) — see
-  `knowledge/aidlc-shared/worktree-info-schema.md` for the long-path fallback.
+  `knowledge/amadeus-shared/worktree-info-schema.md` for the long-path fallback.

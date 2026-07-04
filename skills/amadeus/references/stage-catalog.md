@@ -1,7 +1,7 @@
 # Stage Catalog
 
 Stage-to-runner mapping for the engine-driven lifecycle.
-The engine (`.agents/aidlc/tools/aidlc-orchestrate.ts`) owns stage resolution; the authoritative stage definitions live in `.agents/aidlc/aidlc-common/stages/<phase>/<slug>.md` (frontmatter: execution, condition, scopes, produces, consumes, sensors).
+The engine (`.agents/amadeus/tools/amadeus-orchestrate.ts`) owns stage resolution; the authoritative stage definitions live in `.agents/amadeus/amadeus-common/stages/<phase>/<slug>.md` (frontmatter: execution, condition, scopes, produces, consumes, sensors).
 This table only maps each stage to its optional single-stage runner skill (`/aidlc --stage <slug> --single` packaging).
 
 | Stage | Phase | Slug | Runner skill |
@@ -37,5 +37,5 @@ This table only maps each stage to its optional single-stage runner skill (`/aid
 | 4.6 | operation | performance-validation | `amadeus-performance-validation` |
 | 4.7 | operation | feedback-optimization | `amadeus-feedback-optimization` |
 
-Scope-to-stage mapping and execution conditions are engine-owned: see `.agents/aidlc/scopes/` (one file per scope) and each stage definition's frontmatter.
-Scope entry skills (`amadeus-bugfix`, `amadeus-feature`, `amadeus-mvp`, `amadeus-security-patch`) and utility skills (`amadeus-replay`, `amadeus-session-cost`, `amadeus-outcomes-pack`) are listed by `bun .agents/aidlc/tools/aidlc-utility.ts help`.
+Scope-to-stage mapping and execution conditions are engine-owned: see `.agents/amadeus/scopes/` (one file per scope) and each stage definition's frontmatter.
+Scope entry skills (`amadeus-bugfix`, `amadeus-feature`, `amadeus-mvp`, `amadeus-security-patch`) and utility skills (`amadeus-replay`, `amadeus-session-cost`, `amadeus-outcomes-pack`) are listed by `bun .agents/amadeus/tools/amadeus-utility.ts help`.

@@ -57,7 +57,7 @@ Promote to `aidlc/spaces/<space>/knowledge/glossary.md` only terms whose meaning
 ## Checks at Session Start
 
 If the Space (`aidlc/spaces/<space>/`) does not exist, do not record terms or models into a substitute file.
-Stop the work and direct the user to first initialize the Space by starting a workflow with the `amadeus` entrypoint (the engine's Initialization phase scaffolds the Space; see `bun .agents/aidlc/tools/aidlc-utility.ts help` for the space verbs).
+Stop the work and direct the user to first initialize the Space by starting a workflow with the `amadeus` entrypoint (the engine's Initialization phase scaffolds the Space; see `bun .agents/amadeus/tools/amadeus-utility.ts help` for the space verbs).
 
 The Space is unprepared if at least one of the following does not exist.
 

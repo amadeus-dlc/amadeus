@@ -3,13 +3,13 @@
 This reference defines how an AI-DLC engine directive that requires filling a
 `<stage>-questions.md` file connects to the `amadeus-grilling` interview
 protocol. It is prompt-layer only: it does not modify engine code under
-`.agents/aidlc/tools/`, `.agents/aidlc/aidlc-common/`, `.agents/aidlc/sensors/`, or
-`.agents/aidlc/hooks/`.
+`.agents/amadeus/tools/`, `.agents/amadeus/amadeus-common/`, `.agents/amadeus/sensors/`, or
+`.agents/amadeus/hooks/`.
 
 ## When this applies
 
 Apply this bridge whenever an engine directive (a stage prompt driven by the
-AI-DLC engine copied under `.agents/aidlc/`) instructs the agent to fill a
+AI-DLC engine copied under `.agents/amadeus/`) instructs the agent to fill a
 `<stage>-questions.md` file with answers before the stage can proceed.
 
 ## Mode-selection insertion point
@@ -30,11 +30,11 @@ bridge's procedure below applies.
 3. For each structured question:
    - Before presenting the question, run:
      ```sh
-     bun .agents/aidlc/tools/aidlc-log.ts decision --stage <slug> --decision "<summary>" --options "<csv>"
+     bun .agents/amadeus/tools/amadeus-log.ts decision --stage <slug> --decision "<summary>" --options "<csv>"
      ```
    - After the human responds, run:
      ```sh
-     bun .agents/aidlc/tools/aidlc-log.ts answer --stage <slug> --details "<exact choice>"
+     bun .agents/amadeus/tools/amadeus-log.ts answer --stage <slug> --details "<exact choice>"
      ```
 4. Write the confirmed answers into the `<stage>-questions.md` file using the
    upstream `[Answer]:` tag format. The questions file remains the source of

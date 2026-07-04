@@ -1,10 +1,10 @@
 #!/usr/bin/env bun
 
-// engine e2e sandbox eval — LLM を使わず、実エンジン（.agents/aidlc/ の
+// engine e2e sandbox eval — LLM を使わず、実エンジン（.agents/amadeus/ の
 // intent-birth / next / report）を隔離 temp workspace で駆動し、
 // examples/ snapshot 検証を置き換える決定的な e2e チェック。
 //
-// aidlc-orchestrate.ts の next/report は失敗時も process を exit 0 のまま
+// amadeus-orchestrate.ts の next/report は失敗時も process を exit 0 のまま
 // 終える設計（{"kind":"error", ...} という directive を stdout に出す）。
 // そのため各コマンドの成否判定は exitCode ではなく、出力 JSON の kind/message
 // を見て行う。
@@ -16,7 +16,7 @@ import { join, resolve } from "node:path";
 const root = resolve(import.meta.dir, "../../..");
 // intent-birth / next / report の実行に実際に必要だと確認できたエンジンディレクトリだけを
 // コピーする（hooks なしでも next/report/intent-birth の挙動は同一だったため除外）。
-const ENGINE_DIRS = ["tools", "aidlc-common", "sensors", "scopes", "agents", "knowledge"];
+const ENGINE_DIRS = ["tools", "amadeus-common", "sensors", "scopes", "agents", "knowledge"];
 
 const cleanups: string[] = [];
 
@@ -67,14 +67,14 @@ const workspace = mkdtempSync(join(tmpdir(), "engine-e2e-"));
 cleanups.push(workspace);
 
 for (const dir of ENGINE_DIRS) {
-  const src = join(root, ".agents/aidlc", dir);
-  const dest = join(workspace, ".agents/aidlc", dir);
+  const src = join(root, ".agents/amadeus", dir);
+  const dest = join(workspace, ".agents/amadeus", dir);
   mkdirSync(dest, { recursive: true });
   cpSync(src, dest, { recursive: true });
 }
 
-const utility = join(workspace, ".agents/aidlc/tools/aidlc-utility.ts");
-const orchestrate = join(workspace, ".agents/aidlc/tools/aidlc-orchestrate.ts");
+const utility = join(workspace, ".agents/amadeus/tools/amadeus-utility.ts");
+const orchestrate = join(workspace, ".agents/amadeus/tools/amadeus-orchestrate.ts");
 
 // ---- 1. intent-birth ----
 

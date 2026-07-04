@@ -6,7 +6,7 @@
 
 - リポジトリ: https://github.com/awslabs/aidlc-workflows/tree/v2
 - 参照 commit: `d341522e1491db4884e9127004c3882365229218`
-- 失敗時手順: `core/aidlc-common/stages/construction/build-and-test.md`（診断、修正、再実行を最大 2 回試み、解決できない場合は `test-results.md` へ記録して gate へ進む）
+- 失敗時手順: `core/amadeus-common/stages/construction/build-and-test.md`（診断、修正、再実行を最大 2 回試み、解決できない場合は `test-results.md` へ記録して gate へ進む）
 
 ## 判断
 

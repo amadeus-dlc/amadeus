@@ -38,5 +38,15 @@
     "repos": [
       "amadeus"
     ]
+  },
+  {
+    "uuid": "019f2d52-6cdb-742f-bf7a-3a470af75556",
+    "slug": "engine-namespace",
+    "dirName": "260704-engine-namespace",
+    "scope": "refactor",
+    "status": "complete",
+    "repos": [
+      "amadeus"
+    ]
   }
 ]

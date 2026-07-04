@@ -6,7 +6,7 @@
 
 - リポジトリ: https://github.com/awslabs/aidlc-workflows/tree/v2
 - 参照 commit: `d341522e1491db4884e9127004c3882365229218`
-- Operation stage 定義: `core/aidlc-common/stages/operation/**`（7 stage）
+- Operation stage 定義: `core/amadeus-common/stages/operation/**`（7 stage）
 
 ## 判断
 
