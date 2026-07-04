@@ -28,5 +28,15 @@
       "amadeus"
     ],
     "status": "complete"
+  },
+  {
+    "uuid": "019f2d03-3348-7270-9dfb-ec91b2159dd5",
+    "slug": "grilling-mode-wiring",
+    "dirName": "260704-grilling-mode-wiring",
+    "scope": "bugfix",
+    "status": "complete",
+    "repos": [
+      "amadeus"
+    ]
   }
 ]

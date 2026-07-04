@@ -30,8 +30,10 @@ that flag without this skill.
    exactly as the directive describes; do not load the conductor persona by hand,
    the engine delivers it.
 
-   When this stage asks the user questions, follow the grilling bridge protocol
-   in `../amadeus-grilling/references/engine-bridge.md` (path relative to this skill's directory) (one question at a
+   When this stage asks the user questions, offer Grill me as the 2nd option
+   of the mode selection (Guide me / Grill me / I'll edit the file / Chat).
+   When the user picks Grill me, follow the grilling bridge protocol in
+   `../amadeus-grilling/references/engine-bridge.md` (path relative to this skill's directory) (one question at a
    time, recommended answer attached, answers written back in `[Answer]:`
    format).
 
