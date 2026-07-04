@@ -175,6 +175,8 @@ function stageStateOutcome(state: string, stage: string | null): string | undefi
   if (!match) return undefined;
   if (match[1] === "x") return "Completed";
   if (match[1] === "-") return "Active";
+  if (match[1] === "?") return "AwaitingApproval";
+  if (match[1] === "R") return "Revising";
   if (match[1] === "S") return "Skipped";
   return "Pending";
 }

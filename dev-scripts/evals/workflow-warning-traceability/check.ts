@@ -145,6 +145,44 @@ cleanups.push(snapshotWorkspace);
   check("snapshot は state と audit の stage outcome を埋める", snapshot?.stateStageOutcome === "Active" && snapshot.auditStageOutcome === "Completed", JSON.stringify(snapshot));
 }
 
+const awaitingApprovalWorkspace = mkdtempSync(join(tmpdir(), "workflow-warning-awaiting-"));
+cleanups.push(awaitingApprovalWorkspace);
+{
+  const recordDir = join(awaitingApprovalWorkspace, "aidlc", "spaces", "default", "intents", "260704-awaiting");
+  mkdirSync(join(recordDir, "audit"), { recursive: true });
+  writeFileSync(join(awaitingApprovalWorkspace, "aidlc", "spaces", "default", "intents", "active-intent"), "260704-awaiting\n", "utf8");
+  writeFileSync(
+    join(recordDir, "aidlc-state.md"),
+    [
+      "# AI-DLC State Tracking",
+      "",
+      "- [?] ci-pipeline",
+      "",
+      "## Current Status",
+      "- **Current Stage**: ci-pipeline",
+      "- **Status**: Running",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+  writeFileSync(
+    join(recordDir, "audit", "awaiting.md"),
+    [
+      "# AI-DLC Audit Log",
+      "",
+      "## Stage Awaiting Approval",
+      "**Timestamp**: 2026-07-04T00:00:00Z",
+      "**Event**: STAGE_AWAITING_APPROVAL",
+      "**Stage**: ci-pipeline",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+  const snapshot = buildWorkflowWarningSnapshot(awaitingApprovalWorkspace);
+  const findings = snapshot === null ? [] : detectWorkflowWarnings(snapshot);
+  check("snapshot は [?] と STAGE_AWAITING_APPROVAL を同じ承認待ちとして扱う", snapshot?.stateStageOutcome === "AwaitingApproval" && snapshot.auditStageOutcome === "AwaitingApproval" && !findings.some((warning) => warning.kind === "state-audit-contradiction"), JSON.stringify({ snapshot, findings }));
+}
+
 const workspace = mkdtempSync(join(tmpdir(), "workflow-warning-traceability-"));
 cleanups.push(workspace);
 

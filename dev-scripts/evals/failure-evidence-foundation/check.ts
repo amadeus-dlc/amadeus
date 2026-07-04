@@ -130,6 +130,9 @@ const rejected = runExpectSuccess(
 const rejectedDirective = parseDirective(rejected);
 check("人間不在 gate が error directive になる", rejectedDirective.kind === "error", JSON.stringify(rejectedDirective));
 
+const unknownSubcommand = run(["bun", orchestrate, "unknown-subcommand"], workspace, telemetryEnv);
+check("unknown subcommand は non-zero で終了する", unknownSubcommand.exitCode !== 0, JSON.stringify(unknownSubcommand));
+
 const auditDir = join(recordDir, "audit");
 const shardName = readdirSync(auditDir).find((name) => name.endsWith(".md") && name !== "audit.md");
 check("audit shard が存在する", shardName !== undefined, auditDir);
@@ -151,6 +154,7 @@ check("doctor が Telemetry core を表示する", doctor.stdout.includes("Telem
 check("telemetry JSONL が作られている", existsSync(telemetryFile), telemetryFile);
 const telemetryText = readFileSync(telemetryFile, "utf-8");
 check("orchestrate span が記録されている", telemetryText.includes("aidlc.aidlc-orchestrate.next"), telemetryText);
+check("unknown subcommand の orchestrate span が記録されている", telemetryText.includes("aidlc.aidlc-orchestrate.unknown-subcommand"), telemetryText);
 check("tool invocation metric が記録されている", telemetryText.includes("aidlc.tool.invocations"), telemetryText);
 check("hook drop metric が記録されている", telemetryText.includes("aidlc.hook_drops.observed"), telemetryText);
 

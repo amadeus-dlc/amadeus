@@ -151,10 +151,7 @@ const DEFAULT_SCOPE = "feature";
 function emit(directive: Directive): void {
   const result = validateDirective(directive);
   if (!result.valid) {
-    console.error(
-      `aidlc-orchestrate: refusing to emit a malformed directive: ${result.errors.join("; ")}`,
-    );
-    process.exit(1);
+    throw new Error(`refusing to emit a malformed directive: ${result.errors.join("; ")}`);
   }
   console.log(JSON.stringify(result.data));
 }
@@ -2760,10 +2757,7 @@ function main(): void {
     default:
       // Unknown / missing subcommand — usage to stderr, exit 1. Matches the
       // stderr-only usage shape the sibling tools use for a bad subcommand.
-      console.error(
-        `Unknown subcommand: ${subcommand ?? "(none)"}. Valid: next, report, park`,
-      );
-      process.exit(1);
+      throw new Error(`Unknown subcommand: ${subcommand ?? "(none)"}. Valid: next, report, park`);
   }
 }
 
