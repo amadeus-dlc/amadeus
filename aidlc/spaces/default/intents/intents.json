@@ -50,6 +50,16 @@
     ]
   },
   {
+    "uuid": "019f2e0c-f8f2-705c-bcfb-31b5e5b55217",
+    "slug": "question-rendering-ux",
+    "dirName": "260704-question-rendering-ux",
+    "scope": "refactor",
+    "status": "complete",
+    "repos": [
+      "amadeus"
+    ]
+  },
+  {
     "uuid": "019f2df2-f7b6-746c-a7ef-36007129aa90",
     "slug": "engine-validator-alignme",
     "dirName": "260704-engine-validator-alignme",
