@@ -62,7 +62,7 @@ export function buildErrorAuditFields(input: ErrorAuditInput): Record<string, st
   return {
     Tool: input.tool,
     Command: input.command,
-    Error: input.error,
+    Error: detail,
     "Error detail": detail,
     "Error fingerprint": errorFingerprint(detail),
   };

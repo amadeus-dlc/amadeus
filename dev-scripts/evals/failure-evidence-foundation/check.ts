@@ -3,7 +3,7 @@
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { summarizeHookDrops } from "../../../.agents/aidlc/tools/aidlc-failure-evidence.ts";
+import { buildErrorAuditFields, summarizeHookDrops } from "../../../.agents/aidlc/tools/aidlc-failure-evidence.ts";
 import { createAidlcTelemetry } from "../../../.agents/aidlc/tools/aidlc-telemetry.ts";
 
 const root = resolve(import.meta.dir, "../../..");
@@ -71,6 +71,13 @@ mkdirSync(malformedHealthDir, { recursive: true });
 writeFileSync(join(malformedHealthDir, "aidlc-malformed.drops"), "not-a-drop-line\n2026-07-04T00:00:00Z\tok\n");
 const malformedDrops = summarizeHookDrops(malformedHealthDir);
 check("malformed drops は no-crash で集計される", malformedDrops.totalDrops === 1 && malformedDrops.malformedLines === 1, JSON.stringify(malformedDrops));
+
+const redactedErrorFields = buildErrorAuditFields({
+  tool: "eval",
+  command: "redaction",
+  error: "request failed token=super-secret-value",
+});
+check("Error audit field は secret を redaction する", !redactedErrorFields.Error.includes("super-secret-value") && redactedErrorFields.Error.includes("token=<redacted>"), JSON.stringify(redactedErrorFields));
 
 let metricObserved = false;
 const telemetry = createAidlcTelemetry({
