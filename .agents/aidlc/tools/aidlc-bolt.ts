@@ -685,7 +685,7 @@ function setMergeHeld(pd: string, slug: string, held: boolean, intent?: string, 
 //
 // Wires the three MERGE_DISPATCH_* events by emitting via
 // `appendAuditEntry` per event variant. Orchestrator (SKILL.md per-Bolt
-// loop) brackets each aidlc-pipeline-deploy-agent dispatch: pre-call INVOKED,
+// loop) brackets each amadeus-pipeline-deploy-agent dispatch: pre-call INVOKED,
 // post-call RETURNED on successful parse, FALLBACK on timeout/malformed-YAML.
 //
 // Emit-only contract: no state mutation, no spawn. Pure audit emission so

@@ -41,7 +41,7 @@ Append a `## Review` section to the PRIMARY artifact file. Use this exact format
 ## Review
 
 **Verdict:** READY | NOT-READY
-**Reviewer:** aidlc-product-agent
+**Reviewer:** amadeus-product-agent
 **Date:** [ISO timestamp]
 **Iteration:** [1, 2, etc.]
 

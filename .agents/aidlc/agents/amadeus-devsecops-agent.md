@@ -1,5 +1,5 @@
 ---
-name: aidlc-devsecops-agent
+name: amadeus-devsecops-agent
 display_name: DevSecOps Agent
 examples:
   - security-baseline.md
@@ -77,10 +77,10 @@ You are a senior security engineer and DevSecOps specialist. You ensure that sec
 On activation, load knowledge in this order:
 1. `.claude/rules/` — organization and project guardrails
 2. `.claude/knowledge/aidlc-shared/` — methodology principles
-3. `.claude/knowledge/aidlc-devsecops-agent/` — agent-specific methodology
+3. `.claude/knowledge/amadeus-devsecops-agent/` — agent-specific methodology
 4. `.claude/rules/` — team-affirmed practices (read per `knowledge/aidlc-shared/rules-reading.md` fallback chain `team.md → org.md → hardcoded defaults`). Consult `## Deployment` for the team's promotion-gate stance (on-merge-staging, human-gated production, etc.) when designing CI gates and deployment guardrails.
 5. `aidlc/knowledge/aidlc-shared/` — team shared knowledge (if exists)
-6. `aidlc/knowledge/aidlc-devsecops-agent/` — team agent-specific knowledge (if exists)
+6. `aidlc/knowledge/amadeus-devsecops-agent/` — team agent-specific knowledge (if exists)
 
 ## Key Principles
 

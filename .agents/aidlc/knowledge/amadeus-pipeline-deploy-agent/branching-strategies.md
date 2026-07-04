@@ -1,6 +1,6 @@
 # Branching Strategies
 
-A menu of common branching strategies, what they look like, when to use them, and how AIDLC's Construction worktrees map onto each. When the orchestrator dispatches aidlc-pipeline-deploy-agent at Bolt boundaries, this file is the menu the agent surveys to map a team's affirmed branching strategy onto the `aidlc-worktree` tool's flags.
+A menu of common branching strategies, what they look like, when to use them, and how AIDLC's Construction worktrees map onto each. When the orchestrator dispatches amadeus-pipeline-deploy-agent at Bolt boundaries, this file is the menu the agent surveys to map a team's affirmed branching strategy onto the `aidlc-worktree` tool's flags.
 
 > **Reading practices:** see `knowledge/aidlc-shared/rules-reading.md` for empty-template detection, semantic-topic matching, and the `team.md → org.md → hardcoded defaults` fallback chain. This file does not duplicate that protocol.
 >
@@ -126,7 +126,7 @@ When dispatched for GitFlow:
 
 - **`<integration>` branch missing locally.** Pre-audit error; tool refuses to invent the branch.
 - **Wrong cwd on merge.** Defensive HEAD check fails: `expected branch <integration>, found <actual>`. Caller must `cd` to the main checkout and `git checkout <integration>` first.
-- **Hotfix merge to second target forgotten.** Out-of-scope for `aidlc-worktree`; orchestrator's aidlc-pipeline-deploy-agent dispatch should always include the second-target reminder in `notes`.
+- **Hotfix merge to second target forgotten.** Out-of-scope for `aidlc-worktree`; orchestrator's amadeus-pipeline-deploy-agent dispatch should always include the second-target reminder in `notes`.
 
 ---
 
@@ -212,7 +212,7 @@ When dispatched for Monorepo:
 
 ## Response contract
 
-When the orchestrator dispatches aidlc-pipeline-deploy-agent for a worktree create or merge, the agent invokes `aidlc-worktree` directly and reports the JSON envelope below back to the orchestrator. SKILL.md Step 0.5 / Step 6.75 then call `aidlc-worktree verify` as a deterministic backstop confirming the audit event landed.
+When the orchestrator dispatches amadeus-pipeline-deploy-agent for a worktree create or merge, the agent invokes `aidlc-worktree` directly and reports the JSON envelope below back to the orchestrator. SKILL.md Step 0.5 / Step 6.75 then call `aidlc-worktree verify` as a deterministic backstop confirming the audit event landed.
 
 ### Create response (success)
 
@@ -277,7 +277,7 @@ If the worktree was already gone (idempotent path), `emitted` is `null` and `rea
 
 The dispatch protocol described in this section is implemented by **SKILL.md Step 0** (worktree create) and **Step 6.5** (worktree merge). `aidlc-bolt complete --merge` orchestrates around the dispatch (forkState merge-back, forkAudit merge-back) but does not call `aidlc-worktree merge` directly — the dispatch lives in SKILL.md prose.
 
-When a Bolt starts (Step 0) or completes (Step 6.5), the orchestrator dispatches a Task call to **aidlc-pipeline-deploy-agent** with two inputs:
+When a Bolt starts (Step 0) or completes (Step 6.5), the orchestrator dispatches a Task call to **amadeus-pipeline-deploy-agent** with two inputs:
 
 1. The contents of `.claude/rules/aidlc-team.md`'s `## Way of Working` section (or `aidlc-org.md` if `aidlc-team.md` is empty — fallback chain in `shared/rules-reading.md`).
 2. The Bolt's metadata (slug, source branch, optional target-line hint for release-branch teams).

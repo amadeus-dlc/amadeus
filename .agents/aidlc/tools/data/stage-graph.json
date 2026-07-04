@@ -139,9 +139,9 @@
     "phase": "ideation",
     "execution": "ALWAYS",
     "condition": "First stage of every workflow — establishes the initiative's foundation",
-    "lead_agent": "aidlc-product-agent",
+    "lead_agent": "amadeus-product-agent",
     "support_agents": [
-      "aidlc-architect-agent"
+      "amadeus-architect-agent"
     ],
     "mode": "inline",
     "produces": [
@@ -201,7 +201,7 @@
     "phase": "ideation",
     "execution": "CONDITIONAL",
     "condition": "Execute when initiative has external market positioning or build-vs-buy considerations. Skip for internal tools, bug fixes, or refactors.",
-    "lead_agent": "aidlc-product-agent",
+    "lead_agent": "amadeus-product-agent",
     "support_agents": [],
     "mode": "inline",
     "produces": [
@@ -267,10 +267,10 @@
     "phase": "ideation",
     "execution": "CONDITIONAL",
     "condition": "Execute when there are integration constraints, regulatory requirements, or significant technical uncertainty. Skip for trivial changes with no technical risk.",
-    "lead_agent": "aidlc-architect-agent",
+    "lead_agent": "amadeus-architect-agent",
     "support_agents": [
-      "aidlc-aws-platform-agent",
-      "aidlc-compliance-agent"
+      "amadeus-aws-platform-agent",
+      "amadeus-compliance-agent"
     ],
     "mode": "inline",
     "produces": [
@@ -350,9 +350,9 @@
     "phase": "ideation",
     "execution": "ALWAYS",
     "condition": "Always executes — defines the scope boundary and prioritized backlog",
-    "lead_agent": "aidlc-product-agent",
+    "lead_agent": "amadeus-product-agent",
     "support_agents": [
-      "aidlc-delivery-agent"
+      "amadeus-delivery-agent"
     ],
     "mode": "inline",
     "produces": [
@@ -427,7 +427,7 @@
     "phase": "ideation",
     "execution": "CONDITIONAL",
     "condition": "Execute when team composition, capacity, or mob planning is relevant. Skip for solo developer or small team projects.",
-    "lead_agent": "aidlc-delivery-agent",
+    "lead_agent": "amadeus-delivery-agent",
     "support_agents": [],
     "mode": "inline",
     "produces": [
@@ -501,9 +501,9 @@
     "phase": "ideation",
     "execution": "CONDITIONAL",
     "condition": "Execute when user-facing UI is part of the initiative; for API/backend, produce system interaction diagrams. Skip for non-UI, API-only, or infrastructure-only initiatives.",
-    "lead_agent": "aidlc-design-agent",
+    "lead_agent": "amadeus-design-agent",
     "support_agents": [
-      "aidlc-product-agent"
+      "amadeus-product-agent"
     ],
     "mode": "inline",
     "produces": [
@@ -538,7 +538,7 @@
       "feature",
       "mvp"
     ],
-    "reviewer": "aidlc-product-lead-agent",
+    "reviewer": "amadeus-product-lead-agent",
     "reviewer_max_iterations": 2,
     "inputs": "Intent statement, scope definition, intent backlog",
     "outputs": "wireframes.md, user-flow.md, rough-mockups-questions.md (under this stage's record dir, engine-resolved)",
@@ -580,9 +580,9 @@
     "phase": "ideation",
     "execution": "ALWAYS",
     "condition": "Always executes — compiles all Ideation artifacts into initiative brief for approval",
-    "lead_agent": "aidlc-delivery-agent",
+    "lead_agent": "amadeus-delivery-agent",
     "support_agents": [
-      "aidlc-product-agent"
+      "amadeus-product-agent"
     ],
     "mode": "inline",
     "produces": [
@@ -679,9 +679,9 @@
     "phase": "inception",
     "execution": "CONDITIONAL",
     "condition": "Execute when project is brownfield. Always rerun for freshness. Skip for greenfield projects.",
-    "lead_agent": "aidlc-developer-agent",
+    "lead_agent": "amadeus-developer-agent",
     "support_agents": [
-      "aidlc-architect-agent"
+      "amadeus-architect-agent"
     ],
     "mode": "subagent",
     "produces": [
@@ -753,11 +753,11 @@
     "phase": "inception",
     "execution": "CONDITIONAL",
     "condition": "Always rerun for freshness. Brownfield discovers from evidence + reverse-engineering artifacts. Greenfield prompts user via structured questions using org.md defaults.",
-    "lead_agent": "aidlc-pipeline-deploy-agent",
+    "lead_agent": "amadeus-pipeline-deploy-agent",
     "support_agents": [
-      "aidlc-quality-agent",
-      "aidlc-developer-agent",
-      "aidlc-devsecops-agent"
+      "amadeus-quality-agent",
+      "amadeus-developer-agent",
+      "amadeus-devsecops-agent"
     ],
     "mode": "inline",
     "produces": [
@@ -853,7 +853,7 @@
     "phase": "inception",
     "execution": "ALWAYS",
     "condition": "Always executes — depth scales with project complexity",
-    "lead_agent": "aidlc-product-agent",
+    "lead_agent": "amadeus-product-agent",
     "support_agents": [],
     "mode": "inline",
     "produces": [
@@ -908,7 +908,7 @@
       "security-patch",
       "workshop"
     ],
-    "reviewer": "aidlc-product-lead-agent",
+    "reviewer": "amadeus-product-lead-agent",
     "reviewer_max_iterations": 2,
     "inputs": "RE artifacts (if brownfield), user's project description (from <record>/audit/<host>-<clone>.md)",
     "outputs": "requirements.md, requirements-analysis-questions.md (under this stage's record dir, engine-resolved)",
@@ -950,9 +950,9 @@
     "phase": "inception",
     "execution": "CONDITIONAL",
     "condition": "Execute when user-facing features, multiple personas, complex business logic, or cross-team work is involved. Skip for pure refactoring, isolated bug fixes, infrastructure-only changes, or developer tooling.",
-    "lead_agent": "aidlc-product-agent",
+    "lead_agent": "amadeus-product-agent",
     "support_agents": [
-      "aidlc-design-agent"
+      "amadeus-design-agent"
     ],
     "mode": "inline",
     "produces": [
@@ -993,7 +993,7 @@
       "mvp",
       "workshop"
     ],
-    "reviewer": "aidlc-product-lead-agent",
+    "reviewer": "amadeus-product-lead-agent",
     "reviewer_max_iterations": 2,
     "inputs": "<record>/inception/requirements-analysis/requirements.md, RE artifacts (if brownfield)",
     "outputs": "stories.md, personas.md, user-stories-assessment.md (under this stage's record dir, engine-resolved)",
@@ -1035,9 +1035,9 @@
     "phase": "inception",
     "execution": "CONDITIONAL",
     "condition": "Execute when user-facing UI exists and rough mockups were produced in Ideation; for APIs, refine interaction diagrams",
-    "lead_agent": "aidlc-design-agent",
+    "lead_agent": "amadeus-design-agent",
     "support_agents": [
-      "aidlc-product-agent"
+      "amadeus-product-agent"
     ],
     "mode": "inline",
     "produces": [
@@ -1082,7 +1082,7 @@
       "mvp",
       "workshop"
     ],
-    "reviewer": "aidlc-product-lead-agent",
+    "reviewer": "amadeus-product-lead-agent",
     "reviewer_max_iterations": 2,
     "inputs": "Rough mockups from rough-mockups stage, user stories from user-stories stage, requirements from requirements-analysis stage",
     "outputs": "mockups.md, interaction-spec.md, design-system-mapping.md, accessibility-checklist.md, refined-mockups-questions.md (under this stage's record dir, engine-resolved)",
@@ -1124,10 +1124,10 @@
     "phase": "inception",
     "execution": "CONDITIONAL",
     "condition": "Execute when new components or services are needed, or service layer design is required. Skip when changes are modifications to existing components only.",
-    "lead_agent": "aidlc-architect-agent",
+    "lead_agent": "amadeus-architect-agent",
     "support_agents": [
-      "aidlc-aws-platform-agent",
-      "aidlc-design-agent"
+      "amadeus-aws-platform-agent",
+      "amadeus-design-agent"
     ],
     "mode": "inline",
     "produces": [
@@ -1175,7 +1175,7 @@
       "mvp",
       "workshop"
     ],
-    "reviewer": "aidlc-architecture-reviewer-agent",
+    "reviewer": "amadeus-architecture-reviewer-agent",
     "reviewer_max_iterations": 2,
     "inputs": "<record>/inception/requirements-analysis/requirements.md, <record>/inception/user-stories/stories.md (if produced), RE artifacts (if brownfield)",
     "outputs": "components.md, component-methods.md, services.md, component-dependency.md, decisions.md (under this stage's record dir, engine-resolved)",
@@ -1217,9 +1217,9 @@
     "phase": "inception",
     "execution": "ALWAYS",
     "condition": "Always executes when in scope. Produces the dependency DAG that Stage 2.8 Delivery Planning consumes for Bolt sequencing. In the compiled scope grid, 2.7 and 2.8 travel together — both EXECUTE or both SKIP per scope.",
-    "lead_agent": "aidlc-architect-agent",
+    "lead_agent": "amadeus-architect-agent",
     "support_agents": [
-      "aidlc-delivery-agent"
+      "amadeus-delivery-agent"
     ],
     "mode": "inline",
     "produces": [
@@ -1270,7 +1270,7 @@
       "mvp",
       "workshop"
     ],
-    "reviewer": "aidlc-architecture-reviewer-agent",
+    "reviewer": "amadeus-architecture-reviewer-agent",
     "reviewer_max_iterations": 2,
     "inputs": "<record>/inception/application-design/ (all design artifacts), <record>/inception/requirements-analysis/requirements.md, <record>/inception/user-stories/stories.md (if produced)",
     "outputs": "unit-of-work.md, unit-of-work-dependency.md, unit-of-work-story-map.md (under this stage's record dir, engine-resolved)",
@@ -1312,9 +1312,9 @@
     "phase": "inception",
     "execution": "ALWAYS",
     "condition": "Always executes — capstone Inception stage, produces the detailed execution plan for Construction and Operation",
-    "lead_agent": "aidlc-delivery-agent",
+    "lead_agent": "amadeus-delivery-agent",
     "support_agents": [
-      "aidlc-architect-agent"
+      "amadeus-architect-agent"
     ],
     "mode": "inline",
     "produces": [
@@ -1411,9 +1411,9 @@
     "phase": "construction",
     "execution": "CONDITIONAL",
     "condition": "New data models, complex business logic, or business rules need design. Skip if simple logic changes with no new business logic.",
-    "lead_agent": "aidlc-architect-agent",
+    "lead_agent": "amadeus-architect-agent",
     "support_agents": [
-      "aidlc-developer-agent"
+      "amadeus-developer-agent"
     ],
     "mode": "inline",
     "for_each": "unit-of-work",
@@ -1465,7 +1465,7 @@
       "refactor",
       "workshop"
     ],
-    "reviewer": "aidlc-architecture-reviewer-agent",
+    "reviewer": "amadeus-architecture-reviewer-agent",
     "reviewer_max_iterations": 2,
     "inputs": "unit-of-work.md, unit-of-work-story-map.md, requirements.md, application design artifacts",
     "outputs": "business-logic-model.md, business-rules.md, domain-entities.md, CONDITIONAL: frontend-components.md (under this stage's per-unit record dir, engine-resolved)",
@@ -1517,11 +1517,11 @@
     "phase": "construction",
     "execution": "CONDITIONAL",
     "condition": "Performance requirements, security considerations, scalability concerns, or tech stack selection needed. Skip if no NFR requirements and tech stack already determined.",
-    "lead_agent": "aidlc-architect-agent",
+    "lead_agent": "amadeus-architect-agent",
     "support_agents": [
-      "aidlc-devsecops-agent",
-      "aidlc-compliance-agent",
-      "aidlc-quality-agent"
+      "amadeus-devsecops-agent",
+      "amadeus-compliance-agent",
+      "amadeus-quality-agent"
     ],
     "mode": "inline",
     "for_each": "unit-of-work",
@@ -1569,7 +1569,7 @@
       "security-patch",
       "workshop"
     ],
-    "reviewer": "aidlc-architecture-reviewer-agent",
+    "reviewer": "amadeus-architecture-reviewer-agent",
     "reviewer_max_iterations": 2,
     "inputs": "functional design artifacts, requirements.md, RE artifacts",
     "outputs": "performance-requirements.md, security-requirements.md, scalability-requirements.md, reliability-requirements.md, tech-stack-decisions.md (under this stage's per-unit record dir, engine-resolved)",
@@ -1621,9 +1621,9 @@
     "phase": "construction",
     "execution": "CONDITIONAL",
     "condition": "NFR Requirements was executed and NFR patterns need design. Skip if NFR Requirements was skipped.",
-    "lead_agent": "aidlc-architect-agent",
+    "lead_agent": "amadeus-architect-agent",
     "support_agents": [
-      "aidlc-aws-platform-agent"
+      "amadeus-aws-platform-agent"
     ],
     "mode": "inline",
     "for_each": "unit-of-work",
@@ -1677,7 +1677,7 @@
       "infra",
       "workshop"
     ],
-    "reviewer": "aidlc-architecture-reviewer-agent",
+    "reviewer": "amadeus-architecture-reviewer-agent",
     "reviewer_max_iterations": 2,
     "inputs": "NFR requirements artifacts, functional design artifacts",
     "outputs": "performance-design.md, security-design.md, scalability-design.md, reliability-design.md, logical-components.md (under this stage's per-unit record dir, engine-resolved)",
@@ -1729,10 +1729,10 @@
     "phase": "construction",
     "execution": "CONDITIONAL",
     "condition": "Infrastructure services need mapping, deployment architecture required, or cloud resources needed. Skip if no infrastructure changes and infrastructure already defined.",
-    "lead_agent": "aidlc-aws-platform-agent",
+    "lead_agent": "amadeus-aws-platform-agent",
     "support_agents": [
-      "aidlc-devsecops-agent",
-      "aidlc-compliance-agent"
+      "amadeus-devsecops-agent",
+      "amadeus-compliance-agent"
     ],
     "mode": "inline",
     "for_each": "unit-of-work",
@@ -1794,7 +1794,7 @@
       "infra",
       "workshop"
     ],
-    "reviewer": "aidlc-architecture-reviewer-agent",
+    "reviewer": "amadeus-architecture-reviewer-agent",
     "reviewer_max_iterations": 2,
     "inputs": "NFR design artifacts, application design, functional design",
     "outputs": "deployment-architecture.md, infrastructure-services.md, monitoring-design.md, cicd-pipeline.md, CONDITIONAL: shared-infrastructure.md (under this stage's per-unit record dir, engine-resolved)",
@@ -1846,7 +1846,7 @@
     "phase": "construction",
     "execution": "ALWAYS",
     "condition": "Always executes for every unit in the execution plan.",
-    "lead_agent": "aidlc-developer-agent",
+    "lead_agent": "amadeus-developer-agent",
     "support_agents": [],
     "mode": "subagent",
     "for_each": "unit-of-work",
@@ -1910,7 +1910,7 @@
       "security-patch",
       "workshop"
     ],
-    "reviewer": "aidlc-architecture-reviewer-agent",
+    "reviewer": "amadeus-architecture-reviewer-agent",
     "reviewer_max_iterations": 2,
     "inputs": "ALL prior design artifacts for this unit",
     "outputs": "application code + code-generation-plan.md, code-summary.md (under this stage's per-unit record dir, engine-resolved)",
@@ -1952,9 +1952,9 @@
     "phase": "construction",
     "execution": "ALWAYS",
     "condition": "Always executes once after all per-unit stages are finished.",
-    "lead_agent": "aidlc-quality-agent",
+    "lead_agent": "amadeus-quality-agent",
     "support_agents": [
-      "aidlc-devsecops-agent"
+      "amadeus-devsecops-agent"
     ],
     "mode": "inline",
     "produces": [
@@ -2039,7 +2039,7 @@
     "phase": "construction",
     "execution": "CONDITIONAL",
     "condition": "Execute when CI pipeline needs creation or significant modification. Skip if CI already exists and is adequate.",
-    "lead_agent": "aidlc-pipeline-deploy-agent",
+    "lead_agent": "amadeus-pipeline-deploy-agent",
     "support_agents": [],
     "mode": "inline",
     "produces": [
@@ -2127,7 +2127,7 @@
     "phase": "operation",
     "execution": "CONDITIONAL",
     "condition": "Execute when CD pipeline needs creation or significant modification",
-    "lead_agent": "aidlc-pipeline-deploy-agent",
+    "lead_agent": "amadeus-pipeline-deploy-agent",
     "support_agents": [],
     "mode": "inline",
     "produces": [
@@ -2209,10 +2209,10 @@
     "phase": "operation",
     "execution": "CONDITIONAL",
     "condition": "Execute when AWS environments need provisioning or validation",
-    "lead_agent": "aidlc-aws-platform-agent",
+    "lead_agent": "amadeus-aws-platform-agent",
     "support_agents": [
-      "aidlc-devsecops-agent",
-      "aidlc-compliance-agent"
+      "amadeus-devsecops-agent",
+      "amadeus-compliance-agent"
     ],
     "mode": "inline",
     "produces": [
@@ -2288,9 +2288,9 @@
     "phase": "operation",
     "execution": "CONDITIONAL",
     "condition": "Execute after deployment pipeline and environment are ready",
-    "lead_agent": "aidlc-pipeline-deploy-agent",
+    "lead_agent": "amadeus-pipeline-deploy-agent",
     "support_agents": [
-      "aidlc-developer-agent"
+      "amadeus-developer-agent"
     ],
     "mode": "inline",
     "produces": [
@@ -2372,7 +2372,7 @@
     "phase": "operation",
     "execution": "CONDITIONAL",
     "condition": "Execute when monitoring, dashboards, alarms, or tracing need configuration",
-    "lead_agent": "aidlc-operations-agent",
+    "lead_agent": "amadeus-operations-agent",
     "support_agents": [],
     "mode": "inline",
     "produces": [
@@ -2461,7 +2461,7 @@
     "phase": "operation",
     "execution": "CONDITIONAL",
     "condition": "Execute when operational runbooks and incident response procedures are needed",
-    "lead_agent": "aidlc-operations-agent",
+    "lead_agent": "amadeus-operations-agent",
     "support_agents": [],
     "mode": "inline",
     "produces": [
@@ -2544,7 +2544,7 @@
     "phase": "operation",
     "execution": "CONDITIONAL",
     "condition": "Execute when NFR performance targets need validation under load",
-    "lead_agent": "aidlc-quality-agent",
+    "lead_agent": "amadeus-quality-agent",
     "support_agents": [],
     "mode": "inline",
     "produces": [
@@ -2629,9 +2629,9 @@
     "phase": "operation",
     "execution": "CONDITIONAL",
     "condition": "Execute when ongoing operational monitoring and optimization are needed",
-    "lead_agent": "aidlc-operations-agent",
+    "lead_agent": "amadeus-operations-agent",
     "support_agents": [
-      "aidlc-aws-platform-agent"
+      "amadeus-aws-platform-agent"
     ],
     "mode": "inline",
     "produces": [

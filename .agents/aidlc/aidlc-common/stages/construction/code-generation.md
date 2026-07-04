@@ -3,10 +3,10 @@ slug: code-generation
 phase: construction
 execution: ALWAYS
 condition: Always executes for every unit in the execution plan.
-lead_agent: aidlc-developer-agent
+lead_agent: amadeus-developer-agent
 support_agents: []
 mode: subagent
-reviewer: aidlc-architecture-reviewer-agent
+reviewer: amadeus-architecture-reviewer-agent
 reviewer_max_iterations: 2
 for_each: unit-of-work
 workspace_requires: true
@@ -138,9 +138,9 @@ Present a structured question to get plan approval before proceeding to generati
 Before delegating, display to the user:
 "Generating code for [N] plan steps. This may take several minutes depending on project complexity. I'll show a summary when complete."
 
-Delegate to Task tool with subagent_type="aidlc-developer-agent".
+Delegate to Task tool with subagent_type="amadeus-developer-agent".
 
-The aidlc-developer-agent persona and its knowledge are loaded automatically by the named agent. Do NOT manually inject the persona in the prompt.
+The amadeus-developer-agent persona and its knowledge are loaded automatically by the named agent. Do NOT manually inject the persona in the prompt.
 
 Include in the delegation prompt:
 - Design artifacts for the CURRENT UNIT ONLY (not all units)

@@ -25,7 +25,7 @@ Every commit that passes CI and staging validation deploys to production automat
 
 ## Branch Strategies
 
-> See `branching-strategies.md` in this directory for the deeper menu aidlc-pipeline-deploy-agent surveys at Bolt-merge dispatch — including diagrams, common problems, AIDLC worktree mapping per strategy, and parallel-Bolts notes for each. The summaries below cover the CI-flow context.
+> See `branching-strategies.md` in this directory for the deeper menu amadeus-pipeline-deploy-agent surveys at Bolt-merge dispatch — including diagrams, common problems, AIDLC worktree mapping per strategy, and parallel-Bolts notes for each. The summaries below cover the CI-flow context.
 
 ### Trunk-Based Development (Preferred)
 - All developers commit to `main` (or short-lived feature branches merged within 1-2 days).

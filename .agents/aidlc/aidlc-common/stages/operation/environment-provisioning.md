@@ -3,10 +3,10 @@ slug: environment-provisioning
 phase: operation
 execution: CONDITIONAL
 condition: Execute when AWS environments need provisioning or validation
-lead_agent: aidlc-aws-platform-agent
+lead_agent: amadeus-aws-platform-agent
 support_agents:
-  - aidlc-devsecops-agent
-  - aidlc-compliance-agent
+  - amadeus-devsecops-agent
+  - amadeus-compliance-agent
 mode: inline
 produces:
   - environment-inventory
@@ -42,7 +42,7 @@ MANDATORY: Follow stage-protocol.md for approval gates, question format, and com
 
 ### Step 1: Load Agent Personas
 
-Load aidlc-aws-platform-agent persona from `agents/aidlc-aws-platform-agent.md` and knowledge from `.claude/knowledge/aidlc-aws-platform-agent/`.
+Load amadeus-aws-platform-agent persona from `agents/amadeus-aws-platform-agent.md` and knowledge from `.claude/knowledge/amadeus-aws-platform-agent/`.
 
 ### Step 2: Load Prior Context
 
@@ -61,7 +61,7 @@ Follow stage-protocol.md question flow.
 
 ### Step 4: Provision and Validate
 
-Provision target AWS environments using IaC from Construction. Validate infrastructure configuration. The orchestrator will invoke aidlc-devsecops-agent for security posture validation.
+Provision target AWS environments using IaC from Construction. Validate infrastructure configuration. The orchestrator will invoke amadeus-devsecops-agent for security posture validation.
 
 ### Step 5: Generate Artifacts
 

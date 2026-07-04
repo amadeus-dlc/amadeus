@@ -3,11 +3,11 @@ slug: units-generation
 phase: inception
 execution: ALWAYS
 condition: Always executes when in scope. Produces the dependency DAG that Stage 2.8 Delivery Planning consumes for Bolt sequencing. In the compiled scope grid, 2.7 and 2.8 travel together — both EXECUTE or both SKIP per scope.
-lead_agent: aidlc-architect-agent
+lead_agent: amadeus-architect-agent
 support_agents:
-  - aidlc-delivery-agent
+  - amadeus-delivery-agent
 mode: inline
-reviewer: aidlc-architecture-reviewer-agent
+reviewer: amadeus-architecture-reviewer-agent
 reviewer_max_iterations: 2
 produces:
   - unit-of-work
@@ -56,8 +56,8 @@ NOTE: **Stage 2.7 produces the dependency DAG (topology). Stage 2.8 chooses the 
 
 ### Step 1: Load Agent Personas
 
-Load aidlc-architect-agent persona from `agents/aidlc-architect-agent.md` and knowledge from `.claude/knowledge/aidlc-architect-agent/`.
-Load aidlc-delivery-agent persona from `agents/aidlc-delivery-agent.md` and knowledge from `.claude/knowledge/aidlc-delivery-agent/` for feasibility validation and prioritization.
+Load amadeus-architect-agent persona from `agents/amadeus-architect-agent.md` and knowledge from `.claude/knowledge/amadeus-architect-agent/`.
+Load amadeus-delivery-agent persona from `agents/amadeus-delivery-agent.md` and knowledge from `.claude/knowledge/amadeus-delivery-agent/` for feasibility validation and prioritization.
 
 ### Step 2: Load Prior Context
 

@@ -91,9 +91,9 @@ slug: scope-definition
 phase: ideation
 execution: ALWAYS
 condition: Always executes — defines the scope boundary and prioritized backlog
-lead_agent: aidlc-product-agent
+lead_agent: amadeus-product-agent
 support_agents:
-  - aidlc-delivery-agent
+  - amadeus-delivery-agent
 mode: inline
 produces:
   - scope-document

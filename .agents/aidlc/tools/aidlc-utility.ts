@@ -2369,7 +2369,7 @@ function handleIntentBirthStateBuild(
     : "IDEATION";
   const firstPostInitAgent = firstPostInitEntry
     ? firstPostInitEntry.lead_agent
-    : "aidlc-product-agent";
+    : "amadeus-product-agent";
 
   const nextAfterFirst = nextInScopeStage(firstPostInit, scope);
   const nextStageName = nextAfterFirst ? nextAfterFirst.slug : "none";

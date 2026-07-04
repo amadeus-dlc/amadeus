@@ -3,9 +3,9 @@ slug: build-and-test
 phase: construction
 execution: ALWAYS
 condition: Always executes once after all per-unit stages are finished.
-lead_agent: aidlc-quality-agent
+lead_agent: amadeus-quality-agent
 support_agents:
-  - aidlc-devsecops-agent
+  - amadeus-devsecops-agent
 mode: inline
 produces:
   - build-instructions
@@ -47,7 +47,7 @@ MANDATORY: Follow stage-protocol.md for approval gates, question format, and com
 
 ### Step 1: Load Personas
 
-Load aidlc-quality-agent (lead) persona from `agents/aidlc-quality-agent.md` and knowledge from `.claude/knowledge/aidlc-quality-agent/`. Load aidlc-devsecops-agent persona from `agents/aidlc-devsecops-agent.md` and knowledge from `.claude/knowledge/aidlc-devsecops-agent/` for security testing input. Apply aidlc-quality-agent as the primary perspective with aidlc-devsecops-agent providing security testing expertise.
+Load amadeus-quality-agent (lead) persona from `agents/amadeus-quality-agent.md` and knowledge from `.claude/knowledge/amadeus-quality-agent/`. Load amadeus-devsecops-agent persona from `agents/amadeus-devsecops-agent.md` and knowledge from `.claude/knowledge/amadeus-devsecops-agent/` for security testing input. Apply amadeus-quality-agent as the primary perspective with amadeus-devsecops-agent providing security testing expertise.
 
 ### Step 2: Analyze Testing Requirements
 

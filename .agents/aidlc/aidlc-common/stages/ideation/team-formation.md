@@ -3,7 +3,7 @@ slug: team-formation
 phase: ideation
 execution: CONDITIONAL
 condition: Execute when team composition, capacity, or mob planning is relevant. Skip for solo developer or small team projects.
-lead_agent: aidlc-delivery-agent
+lead_agent: amadeus-delivery-agent
 support_agents: []
 mode: inline
 produces:
@@ -38,7 +38,7 @@ MANDATORY: Follow stage-protocol.md for approval gates, question format, and com
 
 ### Step 1: Load Agent Personas
 
-Load aidlc-delivery-agent persona from `agents/aidlc-delivery-agent.md` and knowledge from `.claude/knowledge/aidlc-delivery-agent/`.
+Load amadeus-delivery-agent persona from `agents/amadeus-delivery-agent.md` and knowledge from `.claude/knowledge/amadeus-delivery-agent/`.
 
 ### Step 2: Load Prior Context
 

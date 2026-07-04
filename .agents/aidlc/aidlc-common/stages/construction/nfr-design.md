@@ -3,11 +3,11 @@ slug: nfr-design
 phase: construction
 execution: CONDITIONAL
 condition: NFR Requirements was executed and NFR patterns need design. Skip if NFR Requirements was skipped.
-lead_agent: aidlc-architect-agent
+lead_agent: amadeus-architect-agent
 support_agents:
-  - aidlc-aws-platform-agent
+  - amadeus-aws-platform-agent
 mode: inline
-reviewer: aidlc-architecture-reviewer-agent
+reviewer: amadeus-architecture-reviewer-agent
 reviewer_max_iterations: 2
 for_each: unit-of-work
 produces:
@@ -71,7 +71,7 @@ Execute all steps sequentially as written.
 
 ### Step 1: Load Personas
 
-Load aidlc-architect-agent (lead) persona from `agents/aidlc-architect-agent.md` and knowledge from `.claude/knowledge/aidlc-architect-agent/`. Load aidlc-aws-platform-agent persona from `agents/aidlc-aws-platform-agent.md` and knowledge from `.claude/knowledge/aidlc-aws-platform-agent/` for infrastructure and platform input. Apply aidlc-architect-agent as the primary perspective with aidlc-aws-platform-agent providing domain-specific input.
+Load amadeus-architect-agent (lead) persona from `agents/amadeus-architect-agent.md` and knowledge from `.claude/knowledge/amadeus-architect-agent/`. Load amadeus-aws-platform-agent persona from `agents/amadeus-aws-platform-agent.md` and knowledge from `.claude/knowledge/amadeus-aws-platform-agent/` for infrastructure and platform input. Apply amadeus-architect-agent as the primary perspective with amadeus-aws-platform-agent providing domain-specific input.
 
 ### Step 2: Read Prior Artifacts
 

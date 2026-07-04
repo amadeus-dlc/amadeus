@@ -3,11 +3,11 @@ slug: functional-design
 phase: construction
 execution: CONDITIONAL
 condition: New data models, complex business logic, or business rules need design. Skip if simple logic changes with no new business logic.
-lead_agent: aidlc-architect-agent
+lead_agent: amadeus-architect-agent
 support_agents:
-  - aidlc-developer-agent
+  - amadeus-developer-agent
 mode: inline
-reviewer: aidlc-architecture-reviewer-agent
+reviewer: amadeus-architecture-reviewer-agent
 reviewer_max_iterations: 2
 for_each: unit-of-work
 produces:
@@ -69,7 +69,7 @@ Execute all steps sequentially as written.
 
 ### Step 1: Load Personas
 
-Load aidlc-architect-agent (lead) persona from `agents/aidlc-architect-agent.md` and knowledge from `.claude/knowledge/aidlc-architect-agent/`. Load aidlc-developer-agent persona from `agents/aidlc-developer-agent.md` and knowledge from `.claude/knowledge/aidlc-developer-agent/` for technical implementation input. Apply aidlc-architect-agent as the primary perspective with aidlc-developer-agent providing technical feasibility input.
+Load amadeus-architect-agent (lead) persona from `agents/amadeus-architect-agent.md` and knowledge from `.claude/knowledge/amadeus-architect-agent/`. Load amadeus-developer-agent persona from `agents/amadeus-developer-agent.md` and knowledge from `.claude/knowledge/amadeus-developer-agent/` for technical implementation input. Apply amadeus-architect-agent as the primary perspective with amadeus-developer-agent providing technical feasibility input.
 
 ### Step 2: Read Unit Context
 

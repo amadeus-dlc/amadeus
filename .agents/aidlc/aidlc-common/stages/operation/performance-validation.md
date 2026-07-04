@@ -3,7 +3,7 @@ slug: performance-validation
 phase: operation
 execution: CONDITIONAL
 condition: Execute when NFR performance targets need validation under load
-lead_agent: aidlc-quality-agent
+lead_agent: amadeus-quality-agent
 support_agents: []
 mode: inline
 produces:
@@ -45,7 +45,7 @@ MANDATORY: Follow stage-protocol.md for approval gates, question format, and com
 
 ### Step 1: Load Agent Personas
 
-Load aidlc-quality-agent persona from `agents/aidlc-quality-agent.md` and knowledge from `.claude/knowledge/aidlc-quality-agent/`.
+Load amadeus-quality-agent persona from `agents/amadeus-quality-agent.md` and knowledge from `.claude/knowledge/amadeus-quality-agent/`.
 
 ### Step 2: Load Prior Context
 

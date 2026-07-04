@@ -3,7 +3,7 @@
 > **Audience**: any agent that needs to read team-affirmed practices from
 > `.claude/rules/`.
 > **Owner of this file**: framework. Cited by
-> `aidlc-pipeline-deploy-agent/branching-strategies.md` and by other agents
+> `amadeus-pipeline-deploy-agent/branching-strategies.md` and by other agents
 > that adopt practices-aware behaviour.
 
 The rules namespace resolves through a strict-additive five-layer chain
@@ -135,9 +135,9 @@ user-visible behaviour stays consistent across the dispatch.
 
 ---
 
-## 5. Worked example — aidlc-pipeline-deploy-agent reading way-of-working
+## 5. Worked example — amadeus-pipeline-deploy-agent reading way-of-working
 
-The orchestrator dispatches `aidlc-pipeline-deploy-agent` at Bolt-create time.
+The orchestrator dispatches `amadeus-pipeline-deploy-agent` at Bolt-create time.
 The agent's job is to map team intent to `aidlc-worktree create --slug
 <slug> --base <branch>`. It reads:
 
