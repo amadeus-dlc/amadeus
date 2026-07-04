@@ -367,7 +367,9 @@ function compile(opts: CompileOptions): { skipped?: string; written?: string } {
       started_at: entry.started_at,
       completed_at: entry.completed_at,
       agent: entry.agent || phaseInfo.agent,
-      memory_path: relativeMemoryPath(phaseInfo.phase, slug),
+      // record prefix を通さないと intent ディレクトリ抜きの path になり、
+      // surface が diary を見つけられない（Issue #455 FR-4）。
+      memory_path: relativeMemoryPath(phaseInfo.phase, slug, relativeRecordDir(projectDir)),
       memory_entries: memory.memory_entries,
       memory_breakdown: memory.memory_breakdown,
       sensor_firings: [],

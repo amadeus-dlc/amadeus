@@ -194,7 +194,11 @@ function handleSurface(args: string[], projectDir: string): void {
   const raw = existsSync(memAbs) ? readFileSync(memAbs, "utf-8") : "";
   const entries = parseMemoryEntries(raw);
 
-  const phase = memRel.split("/")[1] ?? "";
+  // memory_path は `<record prefix>/<phase>/<slug>/memory.md`（record prefix は
+  // `aidlc/spaces/<space>/intents/<dirName>` など可変長）。phase は末尾から
+  // 3 番目のセグメントで解決する（先頭からだと "spaces" を拾う — Issue #455 FR-4）。
+  const memSegments = memRel.split("/");
+  const phase = memSegments.length >= 3 ? memSegments[memSegments.length - 3] : "";
 
   const candidates: SurfaceCandidate[] = [];
   const parked: SurfaceParkedQuestion[] = [];

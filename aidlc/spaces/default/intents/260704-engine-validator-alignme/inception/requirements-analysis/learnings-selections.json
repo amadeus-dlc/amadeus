@@ -1,0 +1,21 @@
+{
+  "stage_slug": "requirements-analysis",
+  "selections": [
+    {
+      "candidate_id": "cursor-presence-mint",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "Cursor ハーネスでは AskUserQuestion の presence hook が発火しないため、質問 widget への実回答を確認した直後に限り hooks/amadeus-mint-presence.ts で HUMAN_TURN を手動 mint してから amadeus-log answer / 承認を記録する",
+      "source": "user_addition"
+    },
+    {
+      "candidate_id": "surface-zero-repro",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "amadeus-learnings.ts surface が phase: spaces / memory_entries_total: 0 を返す事象は 260704-engine-validator-alignme の requirements-analysis でも再現した（エントリ実在）。FR-4 修正時の再現ケースとして本ステージの memory.md を使える",
+      "source": "user_addition"
+    }
+  ]
+}

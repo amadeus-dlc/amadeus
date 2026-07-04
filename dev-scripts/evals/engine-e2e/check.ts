@@ -92,6 +92,69 @@ check("Intent record ディレクトリが作られている", recordDirName !==
 const recordDir = join(intentsRoot, recordDirName!);
 check("aidlc-state.md が存在する", existsSync(join(recordDir, "aidlc-state.md")), recordDir);
 
+// ---- 1b. エンジンが書く値と validator 許可値の整合（Issue #455 / #446） ----
+
+// FR-1: intent-birth が registry に正準 status `in_progress` を書く。
+const registryEntries = JSON.parse(readFileSync(join(intentsRoot, "intents.json"), "utf8")) as Record<string, unknown>[];
+check("registry entry が1件である", registryEntries.length === 1, JSON.stringify(registryEntries));
+check(
+  "FR-1: intent-birth が status: in_progress を書く",
+  registryEntries[0].status === "in_progress",
+  JSON.stringify(registryEntries[0].status)
+);
+
+// FR-3.1: intent-birth が registry entry に repos 配列の既定値を書く。
+check(
+  "FR-3.1: intent-birth が repos 配列を書く",
+  Array.isArray(registryEntries[0].repos),
+  JSON.stringify(registryEntries[0].repos)
+);
+
+// FR-3.2: state 初期化が Construction Autonomy Mode の既定値（unset）を書く。
+const bornState = readFileSync(join(recordDir, "aidlc-state.md"), "utf8");
+check(
+  "FR-3.2: state 初期化が Construction Autonomy Mode: unset を書く",
+  bornState.includes("- **Construction Autonomy Mode**: unset"),
+  bornState.slice(bornState.indexOf("## Current Status")),
+);
+
+// ---- 1c. FR-4: surface が record path の memory.md を実エントリ数と正しい phase で返す ----
+
+// poc scope の birth 直後は Current Stage = intent-capture（ideation）。
+// runtime graph を compile し、record 配下の diary にエントリを書いてから surface する。
+const runtimeTool = join(workspace, ".agents/amadeus/tools/amadeus-runtime.ts");
+runExpectSuccess(["bun", runtimeTool, "compile"], workspace);
+const diaryDir = join(recordDir, "ideation/intent-capture");
+mkdirSync(diaryDir, { recursive: true });
+writeFileSync(
+  join(diaryDir, "memory.md"),
+  [
+    "## Interpretations",
+    "- 2026-07-04T00:00:00Z — 解釈の観測; 文脈A",
+    "",
+    "## Deviations",
+    "- 2026-07-04T00:00:00Z — 逸脱の観測; 文脈B",
+    "",
+    "## Tradeoffs",
+    "",
+    "## Open questions",
+    "",
+  ].join("\n")
+);
+const learningsTool = join(workspace, ".agents/amadeus/tools/amadeus-learnings.ts");
+const surfaceStdout = runExpectSuccess(["bun", learningsTool, "surface", "--slug", "intent-capture"], workspace);
+const surfaceOut = parseDirective(surfaceStdout);
+check(
+  "FR-4: surface が実エントリ数を返す",
+  surfaceOut.memory_entries_total === 2,
+  JSON.stringify(surfaceOut)
+);
+check(
+  "FR-4: surface が record path から正しい phase を解決する",
+  surfaceOut.phase === "ideation",
+  JSON.stringify(surfaceOut.phase)
+);
+
 // ---- 2. next ----
 
 const nextStdout = runExpectSuccess(["bun", orchestrate, "next"], workspace);

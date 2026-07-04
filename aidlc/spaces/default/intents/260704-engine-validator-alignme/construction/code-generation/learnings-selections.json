@@ -1,0 +1,29 @@
+{
+  "stage_slug": "code-generation",
+  "selections": [
+    {
+      "candidate_id": "c1",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "registry の repos 既定値は空配列 [] とする。resolveConstructionRepo は intentRepos が entry.repos ?? [] を返すため [] と行なしを同一に扱い、lone-repo 推論の挙動は変わらない",
+      "source": "orchestrator"
+    },
+    {
+      "candidate_id": "c2",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "amadeus-learnings surface の 0 件バグの根本原因は、runtime graph compile の memory_path の record prefix 欠落と、phase の先頭固定 index 解決（split(\"/\")[1]）の複合。同種の path 解決は record path 構造（末尾からのセグメント）で行う",
+      "source": "orchestrator"
+    },
+    {
+      "candidate_id": "c3",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "エンジンツール（.agents/amadeus/tools/）を修正したら dev-scripts/data/parity-map.json の engineFileExceptions への宣言と skills/ 正準ソースへの同一反映が必要。上流が同修正を取り込んだら例外を解除する",
+      "source": "orchestrator"
+    }
+  ]
+}

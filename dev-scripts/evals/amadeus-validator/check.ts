@@ -287,6 +287,19 @@ function auditEntry(event: string, details: string, stage?: string): string {
   ].join("\n");
 }
 
+// エンジンが実際に書くフィールド形式（**Phase**: ideation など）の audit エントリ。
+function auditEntryWithFields(event: string, fields: [string, string][]): string {
+  return [
+    `## ${event}`,
+    "**Timestamp**: 2026-07-03T01:00:00Z",
+    `**Event**: ${event}`,
+    ...fields.map(([key, value]) => `**${key}**: ${value}`),
+    "",
+    "---",
+    "",
+  ].join("\n");
+}
+
 function auditText(): string {
   return [
     "# Audit Trail",
@@ -470,11 +483,12 @@ type V2WorkspaceOptions = {
   writeQuestionsArtifact?: boolean;
   writePhaseCheck?: boolean;
   writeAuditShard?: boolean;
+  auditText?: string;
 };
 
 // backward-compatibility.md に記載のない record（v2 契約検査の対象）を組み立てる。
 function setupV2Workspace(options: V2WorkspaceOptions = {}): string {
-  const { writeStageDefs = true, writeQuestionsArtifact = true, writePhaseCheck = true, writeAuditShard = true } = options;
+  const { writeStageDefs = true, writeQuestionsArtifact = true, writePhaseCheck = true, writeAuditShard = true, auditText: auditOverride } = options;
 
   const workspace = workspaceCopy();
   const intentsDir = join(workspace, "aidlc/spaces/default/intents");
@@ -503,7 +517,7 @@ function setupV2Workspace(options: V2WorkspaceOptions = {}): string {
   }
 
   if (writeAuditShard) {
-    writeFileSync(join(recordDir, "audit/host-a-clone-1.md"), v2CompletedAudit());
+    writeFileSync(join(recordDir, "audit/host-a-clone-1.md"), auditOverride ?? v2CompletedAudit());
   }
 
   return workspace;
@@ -586,6 +600,46 @@ writeFileSync(
   `# Backward Compatibility\n\n- 対象: \`aidlc/spaces/default/intents/${recordDirName}/\`\n`,
 );
 runExpectSuccessIncludes(["bun", "run", validator, legacyPreservedWorkspace, recordDirName], "pass");
+
+// ---- エンジンと validator の許可値整合（Issue #455 / #446） ----
+
+// (V18) FR-1: 既存 record に残る registry status `in-flight` は後方互換として pass する。
+const inFlightStatusWorkspace = workspaceCopy();
+addIntentRecord(inFlightStatusWorkspace, {
+  registry: registryText().replace('"status": "in_progress"', '"status": "in-flight"'),
+});
+runExpectSuccessIncludes(["bun", "run", validator, inFlightStatusWorkspace, recordDirName], "pass");
+
+// (V19) FR-2: エンジンが実際に記録する小文字 phase 表記（PHASE_SKIPPED の
+// `**Phase**: ideation`、PHASE_VERIFIED の `**Phase boundary**: initialization → inception`）
+// でも phase イベント照合が pass する（既存 record の大文字表記は V12 が担保する）。
+const lowercasePhaseAudit = [
+  "# Audit Trail",
+  "",
+  auditEntry("WORKFLOW_STARTED", "Scope: bugfix"),
+  auditEntry("STAGE_COMPLETED", "record scaffold created", "workspace-scaffold"),
+  auditEntry("STAGE_COMPLETED", "workspace scanned", "workspace-detection"),
+  auditEntry("STAGE_COMPLETED", "state initialised", "state-init"),
+  auditEntryWithFields("PHASE_SKIPPED", [
+    ["Phase", "ideation"],
+    ["Scope", "bugfix"],
+    ["Reason", "scope bugfix excludes ideation"],
+  ]),
+  auditEntry("STAGE_COMPLETED", "codebase knowledge updated", "reverse-engineering"),
+  auditEntry("STAGE_COMPLETED", "requirements approved", "requirements-analysis"),
+  auditEntryWithFields("PHASE_VERIFIED", [["Phase boundary", "initialization → inception"]]),
+].join("\n");
+const lowercasePhaseWorkspace = setupV2Workspace({ auditText: lowercasePhaseAudit });
+runExpectSuccessIncludes(["bun", "run", validator, lowercasePhaseWorkspace, recordDirName], "pass");
+
+// (V20) FR-3: registry に `repos` がなく、state に `Construction Autonomy Mode` 行が
+// ない既存 record も pass する（両フィールドの未設定を許容する）。
+const missingOptionalFieldsWorkspace = workspaceCopy();
+addIntentRecord(missingOptionalFieldsWorkspace, {
+  registry: registryText().replace(/\s*"repos": \[[^\]]*\],/, ""),
+  state: (text) => text.replace("- **Construction Autonomy Mode**: unset\n", ""),
+});
+runExpectSuccessIncludes(["bun", "run", validator, missingOptionalFieldsWorkspace, recordDirName], "pass");
 
 for (const dir of cleanups) rmSync(dir, { recursive: true, force: true });
 console.log("amadeus validator eval: ok");

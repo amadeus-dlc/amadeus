@@ -127,3 +127,13 @@ Intent の正準 ID は `intents/intents.json`（registry）の UUIDv7 である
 - source skill の assets と昇格先 skill の assets は、所有者と更新手段を分けて扱う。
 - repo の開発用スクリプトを、skill の実行時参照として書かない。
 - 既存の昇格手段を経由せずに `.agents/skills/amadeus-*` を同期しない。
+
+## Corrections
+- Cursor ハーネスでは AskUserQuestion の presence hook が発火しないため、質問 widget への実回答を確認した直後に限り hooks/amadeus-mint-presence.ts で HUMAN_TURN を手動 mint してから amadeus-log answer / 承認を記録する (learned 2026-07-04) <!-- cid:requirements-analysis:cursor-presence-mint -->
+- amadeus-learnings.ts surface が phase: spaces / memory_entries_total: 0 を返す事象は 260704-engine-validator-alignme の requirements-analysis でも再現した（エントリ実在）。FR-4 修正時の再現ケースとして本ステージの memory.md を使える (learned 2026-07-04) <!-- cid:requirements-analysis:surface-zero-repro -->
+- registry の repos 既定値は空配列 [] とする。resolveConstructionRepo は intentRepos が entry.repos ?? [] を返すため [] と行なしを同一に扱い、lone-repo 推論の挙動は変わらない (learned 2026-07-04) <!-- cid:code-generation:c1 -->
+- amadeus-learnings surface の 0 件バグの根本原因は、runtime graph compile の memory_path の record prefix 欠落と、phase の先頭固定 index 解決（split("/")[1]）の複合。同種の path 解決は record path 構造（末尾からのセグメント）で行う (learned 2026-07-04) <!-- cid:code-generation:c2 -->
+- エンジンツール（.agents/amadeus/tools/）を修正したら dev-scripts/data/parity-map.json の engineFileExceptions への宣言と skills/ 正準ソースへの同一反映が必要。上流が同修正を取り込んだら例外を解除する (learned 2026-07-04) <!-- cid:code-generation:c3 -->
+
+## Testing Posture
+- build-and-test は Minimal 戦略でも produces 全件を生成する（report が成果物不在を拒否するため）。不適用のテスト instruction は空ファイルにせず、適用判断と根拠を記す簡潔な文書にする (learned 2026-07-04) <!-- cid:build-and-test:c1 -->
