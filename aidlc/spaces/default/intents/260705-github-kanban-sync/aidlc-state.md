@@ -69,7 +69,9 @@
 - [x] delivery-planning — EXECUTE
 
 ### CONSTRUCTION PHASE
-Per unit: u001-registry-issues-field, u002-kanban-sync-cli, u003-kanban-hooks
+Per unit: u001-registry-issues-field
+Per unit: u002-kanban-sync-cli
+Per unit: u003-kanban-hooks
 - [x] functional-design — EXECUTE
 - [x] nfr-requirements — EXECUTE
 - [x] nfr-design — EXECUTE
