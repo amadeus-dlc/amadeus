@@ -94,7 +94,7 @@ npm run examples:generate:real
 | パターン | 場所 | 役割 | 例 | 状態 |
 |---|---|---|---|---|
 | Space | `aidlc/spaces/default/` | 自己開発の共有前提（`memory/`、`knowledge/`）を置く。 | `aidlc/spaces/default/memory/team.md` | 採用 |
-| Intent record | `aidlc/spaces/default/intents/<YYMMDD>-<label>/` | 個別変更の成果物を置く。 | `aidlc/spaces/default/intents/260629-self-dev-steering-layer/` | 採用 |
+| Intent record | `aidlc/spaces/default/intents/<YYMMDD>-<label>/` | 個別変更の成果物を置く。 | `aidlc/spaces/default/intents/260705-github-kanban-sync/` | 採用 |
 | Source skill | `skills/amadeus-*` | 作業中の skill source を置く。 | `skills/amadeus-validator/` | 採用 |
 | Source skill assets | `skills/amadeus-*/assets` | source skill に属する素材を置く。 | `skills/amadeus-validator/assets/` | 採用 |
 | 昇格先 skill | `.agents/skills/amadeus-*` | 実行側が読む skill を置く。 | `.agents/skills/amadeus-validator/` | 採用 |
@@ -106,9 +106,9 @@ npm run examples:generate:real
 
 | 対象 | 規約 | 例 | 状態 |
 |---|---|---|---|
-| Intent | `<YYMMDD>-<label>` | `260629-self-dev-steering-layer` | 採用 |
+| Intent | `<YYMMDD>-<label>` | `260705-github-kanban-sync` | 採用 |
 | Requirement | `Rnnn-<slug>` | `R001-provenance-recording` | 採用 |
-| Unit | `Unnn-<slug>` | `U001-validator-contract` | 採用 |
+| Unit | `unnn-<slug>`（小文字。engine の slug 正規化 = PR #483 により worktree / branch 派生物が小文字へ揃うため） | `u001-registry-issues-field` | 採用 |
 | Bolt | `Bnnn-<slug>` | `B001-validator-check` | 採用 |
 
 Intent の正準 ID は `intents/intents.json`（registry）の UUIDv7 である。

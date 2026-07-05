@@ -29,7 +29,6 @@
 | Inception skill | `skills/amadeus-inception-*/` | Reverse Engineering、Practices Discovery、Requirements、User Stories、Design、Units、Delivery Planning。 |
 | Construction skill | `skills/amadeus-construction-*/` | Functional Design から CI Pipeline までの成果物と実装支援。 |
 | validator | `skills/amadeus-validator/validator/`、`.agents/skills/amadeus-validator/validator/` | Space、Intent、状態、audit、成果物リンク、Domain Map、Context Map、AI-DLC v2 準拠（`lifecycle-v2.ts`）の検証。 |
-| IndexGenerate | `skills/amadeus-validator/scripts/IndexGenerate.ts`、`.agents/skills/amadeus-validator/scripts/IndexGenerate.ts` | `intents.json` と Intent モジュールファイルから `intents.md` を生成する。 |
 | examples 検証 | `dev-scripts/validate-amadeus-examples.ts`、`dev-scripts/examples-contract.ts` | snapshot の構造と provenance を検査する。 |
 
 ## 現在の自己開発対象

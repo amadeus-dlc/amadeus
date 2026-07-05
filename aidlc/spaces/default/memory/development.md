@@ -17,7 +17,7 @@
 1. GitHub Issue を確認する。
 2. Issue の目的、対象、対象外、受け入れ条件を読み、作業範囲を決める。
 3. target workspace を別 `git worktree` として用意する。
-4. target workspace で `memory/org.md`、`memory/team.md`、`memory/project.md`、`intents/intents.md` を読む。
+4. target workspace で `memory/org.md`、`memory/team.md`、`memory/project.md`、`intents/intents.json`（正準台帳）を読む。
 5. `amadeus` skill の Intake で、既存 Intent への継続または合流か、新しい Intent の Birth 提案かを判定する。新しい Intent は人間の承認後に作る。
 6. `amadeus` skill のルーティングに従い、`aidlc-state.md` が解決した次ステージの内部 skill で成果物を作成または更新する。
 7. 実装や文書変更を行う前に、対象の変更種別と完了条件を確認する。

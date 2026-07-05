@@ -235,5 +235,14 @@
     "issues": [
       491
     ]
+  },
+  {
+    "uuid": "019f3226-28d4-7214-af2c-650cb0f39b6b",
+    "slug": "space-inventory",
+    "dirName": "260705-space-inventory",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete",
+    "issues": []
   }
 ]

@@ -19,7 +19,6 @@ Amadeus の公開入口は HTTP API ではなく、skill と CLI である。
 | コマンド | 役割 |
 |---|---|
 | `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspace> [<intent-dirName>]` | Space または Intent の構造を検証する。 |
-| `bun run .agents/skills/amadeus-validator/scripts/IndexGenerate.ts <workspace> [--check]` | `intents.md` の生成または整合検査を行う。 |
 | `npm run test:all` | CI と同等の mock 検証を実行する。 |
 | `npm run contracts:check` | skill contract 生成物の整合を検査する。 |
 | `npm run claude-wiring:check` | `.claude/` と `.agents/` の接続を検査する。 |
