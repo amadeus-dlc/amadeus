@@ -58,8 +58,8 @@
 - [x] approval-handoff — EXECUTE
 
 ### INCEPTION PHASE
-- [ ] reverse-engineering — SKIP
-- [S] practices-discovery — EXECUTE
+- [S] reverse-engineering — SKIP: greenfield のため scope 判定で SKIP
+- [S] practices-discovery — SKIP: practices already established in memory/（org.md、team.md、project.md。前例: 260704-v2-parity-completion）
 - [-] requirements-analysis — EXECUTE
 - [ ] user-stories — EXECUTE
 - [ ] refined-mockups — EXECUTE
@@ -92,7 +92,7 @@ Per unit: [TBD]
 - **Next Stage**: user-stories
 - **Status**: Running
 - **Construction Autonomy Mode**: unset
-- **Last Updated**: 2026-07-05T02:41:26Z
+- **Last Updated**: 2026-07-05T02:47:17Z
 
 ## Session Resume Point
 - **Last Completed Stage**: approval-handoff
