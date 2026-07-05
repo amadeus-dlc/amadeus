@@ -13,7 +13,7 @@
 ## Tradeoffs
 <!-- example: 2026-05-29T10:14:32Z — picked TDD over BDD this run; the team is unit-first and the domain is well-understood -->
 - 2026-07-05T03:18:00Z — 削除なしの upsert 冪等（D-AD3）を採用; 完全ミラーの削除ロジックは軽量方針に反する
-- 2026-07-05T03:18:00Z — スキャン対象は実行時 cwd の aidlc/ とした（D-AD7）; 複数 worktree の実況は「最後に書いた者」へ収束する
+- 2026-07-05T03:18:00Z — スキャン対象は実行時 cwd の aidlc/ とした（D-AD7 初版）; 複数 worktree の実況は「最後に書いた者」へ収束する【reviewer 指摘で廃止。現行は D-AD7 改訂 = キューに載った自 Intent の --dirs 部分 sync + D-AD11 = worktree からの --all 拒否。この行は経緯の記録として残す】
 
 ## Open questions
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
