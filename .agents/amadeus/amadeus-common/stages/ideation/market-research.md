@@ -22,6 +22,7 @@ sensors:
 scopes:
   - enterprise
   - feature
+  - pdm
 inputs: Intent statement from intent-capture stage
 outputs: competitive-analysis.md, market-trends.md, build-vs-buy.md, market-research-questions.md (under this stage's record dir, engine-resolved)
 ---

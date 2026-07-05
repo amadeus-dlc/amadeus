@@ -134,6 +134,7 @@ Source of truth: one file per scope under `.agents/amadeus/scopes/amadeus-<name>
 | feature        | Standard      | (default)    | 32 / 32         |
 | infra          | Standard      | (default)    | 13 / 32         |
 | mvp            | Standard      | (default)    | 22 / 32         |
+| pdm            | Standard      | (default)    | 12 / 32         |
 | poc            | Minimal       | (default)    | 8 / 32          |
 | refactor       | Minimal       | (default)    | 8 / 32          |
 | security-patch | Minimal       | (default)    | 10 / 32         |
