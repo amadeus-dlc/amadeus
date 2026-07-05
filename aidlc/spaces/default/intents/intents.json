@@ -263,6 +263,14 @@
     "status": "complete"
   },
   {
+    "uuid": "019f32f1-1cc4-750c-bd31-0bb79306413f",
+    "slug": "steering-learnings",
+    "dirName": "260705-steering-learnings",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete"
+  },
+  {
     "uuid": "019f31b9-6553-7aee-b1d0-e8801ccb2ea8",
     "slug": "pdm-scope",
     "dirName": "260705-pdm-scope",
