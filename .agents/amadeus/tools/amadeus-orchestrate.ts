@@ -1506,7 +1506,7 @@ function handleNext(args: string[], projectDir: string | undefined): void {
     // unit per `next`, gate suppressed on every uncovered unit with the real
     // gate only on the all-covered re-entry; issue #368) and emits a single
     // directive for every other stage.
-    if (!tryEmitSwarm(currentSlug, scope, stateContent, pd)) {
+    if (!tryEmitSwarm(currentSlug, scope, stateContent, pd, recordPrefix, codekbCtx)) {
       emitForSlug(currentSlug, projectType, scope, stateContent, recordPrefix, codekbCtx, pd);
     }
     return;
@@ -1532,7 +1532,7 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   // swarm path, emitForSlug drives the engine's per-unit for_each loop for a
   // per-unit Construction stage (issue #368) and emits a single directive
   // otherwise.
-  if (!tryEmitSwarm(next.slug, scope, stateContent, pd)) {
+  if (!tryEmitSwarm(next.slug, scope, stateContent, pd, recordPrefix, codekbCtx)) {
     emitForSlug(next.slug, projectType, scope, stateContent, recordPrefix, codekbCtx, pd);
   }
 }
@@ -1571,6 +1571,8 @@ function tryEmitSwarm(
   scope: string,
   stateContent: string | null,
   projectDir: string,
+  recordPrefix: string | null,
+  codekbCtx: CodekbCtx,
 ): boolean {
   const node = nodeForSlug(slug);
   if (!node) return false;
@@ -1582,8 +1584,27 @@ function tryEmitSwarm(
   if (readAutonomyMode(stateContent) !== "autonomous") return false;
   const batches = readBoltDagBatches(projectDir);
   if (!batches || batches.length === 0) return false;
-  const firstBatch = batches[0];
-  if (!Array.isArray(firstBatch) || firstBatch.length === 0) return false;
+  // Issue #486: bolt_dag.batches is the STATIC topology — completed batches
+  // must be excluded here, or every `next` re-offers batch 1 forever and the
+  // conductor has to track batch progression by hand. Coverage uses the same
+  // ledger as the per-unit loop (unitCovered: the stage's produces on disk),
+  // so no bolt-name correlation is needed. The first batch with uncovered
+  // units is offered (only its uncovered units); when every unit of every
+  // batch is covered, fall through (return false) to emitPerUnitRunStage's
+  // all-covered re-entry, which presents the stage's real gate.
+  const nodeForCoverage = node;
+  let firstBatch: string[] | null = null;
+  for (const batch of batches) {
+    if (!Array.isArray(batch) || batch.length === 0) continue;
+    const uncovered = batch.filter(
+      (u) => !unitCovered(projectDir, nodeForCoverage, u, recordPrefix, codekbCtx),
+    );
+    if (uncovered.length > 0) {
+      firstBatch = uncovered;
+      break;
+    }
+  }
+  if (firstBatch === null) return false;
   // Thread the construction repo to the conductor when the engine can resolve it
   // DETERMINISTICALLY (read-only — intentRepos never throws; it returns [] for a
   // legacy/flat intent). NOT resolveConstructionRepo here: that THROWS on >1, and

@@ -622,7 +622,8 @@
     "hooks/aidlc-stop.ts",
     "tools/aidlc-jump.ts",
     "tools/aidlc-audit.ts",
-    "tools/aidlc-worktree.ts"
+    "tools/aidlc-worktree.ts",
+    "tools/aidlc-orchestrate.ts"
   ],
   "exceptions": [
     {
