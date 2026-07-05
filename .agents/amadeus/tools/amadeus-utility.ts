@@ -661,6 +661,46 @@ function handleDoctor(projectDir: string): void {
     });
   }
 
+  // 6b. Hook drops (Issue #432). Hooks are fail-open (always exit 0);
+  // recordHookDrop() appends one `<ISO>\t<reason>` line per silent failure to
+  // .aidlc-hooks-health/<hook>.drops. Until now nothing ever READ those files —
+  // surface each hook with drops as a FAIL row (count + latest parseable
+  // reason). No auto-expiry: the operator clears by deleting the file after
+  // investigating (the fix text says so). No .drops files → no rows at all
+  // (output unchanged — the backward-compat contract).
+  if (heartbeatDirExists) {
+    try {
+      const dropFiles = readdirSync(healthDir).filter((f) => f.endsWith(".drops"));
+      for (const f of dropFiles) {
+        try {
+          const lines = readFileSync(join(healthDir, f), "utf-8")
+            .split("\n")
+            .filter((l) => l.trim() !== "");
+          if (lines.length === 0) continue;
+          const hookName = f.replace(/\.drops$/, "");
+          // Latest parseable line (ISO\treason); unparseable lines still count.
+          let latest = "未確認";
+          for (let i = lines.length - 1; i >= 0; i--) {
+            const m = lines[i].match(/^(\S+)\t(.*)$/);
+            if (m) {
+              latest = `${m[1]} ${m[2]}`;
+              break;
+            }
+          }
+          results.push({
+            pass: false,
+            label: `Hook drops: ${hookName} ${lines.length} 件 (latest: ${latest})`,
+            fix: `hook の静かな失敗が記録されている — 理由を確認したうえで ${join(healthDir, f)} を削除してクリアする`,
+          });
+        } catch {
+          // skip unreadable drop file
+        }
+      }
+    } catch {
+      // skip unreadable dir
+    }
+  }
+
   // State / audit drift check — if latest audit event implies the state file
   // should be in a certain shape (e.g., Status=Completed after WORKFLOW_COMPLETED),
   // verify the state actually matches. Covers the rare case where audit-first
