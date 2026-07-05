@@ -376,7 +376,17 @@ const wrongMarkWorkspace = workspaceCopy();
 addIntentRecord(wrongMarkWorkspace, {
   state: (text) => text.replace("- [S] intent-capture — SKIP: out of bugfix scope", "- [ ] intent-capture — EXECUTE"),
 });
-runExpectFailure(["bun", "run", validator, wrongMarkWorkspace, recordDirName], "scope 外のステージが [S] である");
+runExpectFailure(["bun", "run", validator, wrongMarkWorkspace, recordDirName], "scope 外のステージが [S] または [ ]+SKIP である");
+
+// (V4b) scope 外のステージがエンジン実出力形（`- [ ] <slug> — SKIP`、reason 注記なし）
+// でも pass する（Issue #458）。intent-birth 直後の state-build はこの形で書くが、
+// 既存 fixture（[S] ... — SKIP: out of bugfix scope という手書き形）はこの形と乖離しており
+// #458 を検出できなかった。
+const engineSkipFormWorkspace = workspaceCopy();
+addIntentRecord(engineSkipFormWorkspace, {
+  state: (text) => text.replace(/- \[S\] ([a-z-]+) — SKIP: out of (?:bugfix|Amadeus) scope/g, "- [ ] $1 — SKIP"),
+});
+runExpectSuccessIncludes(["bun", "run", validator, engineSkipFormWorkspace, recordDirName], "pass");
 
 // (V5) 完了ステージに STAGE_COMPLETED イベントがないと fail する。
 const missingEventWorkspace = workspaceCopy();

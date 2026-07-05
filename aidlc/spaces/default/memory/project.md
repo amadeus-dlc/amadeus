@@ -135,5 +135,7 @@ Intent の正準 ID は `intents/intents.json`（registry）の UUIDv7 である
 - amadeus-learnings surface の 0 件バグの根本原因は、runtime graph compile の memory_path の record prefix 欠落と、phase の先頭固定 index 解決（split("/")[1]）の複合。同種の path 解決は record path 構造（末尾からのセグメント）で行う (learned 2026-07-04) <!-- cid:code-generation:c2 -->
 - エンジンツール（.agents/amadeus/tools/）を修正したら dev-scripts/data/parity-map.json の engineFileExceptions への宣言と skills/ 正準ソースへの同一反映が必要。上流が同修正を取り込んだら例外を解除する (learned 2026-07-04) <!-- cid:code-generation:c3 -->
 
+- aidlc-state.md の Per unit: [TBD] を更新する tool verb は存在しない。units-generation を SKIP する scope では、Construction 成果物を置いた実 unit 名へ record 整合として手動更新する（前例: e10f8294）。放置すると validator が construction/[TBD]/ の produces を要求して fail する (learned 2026-07-05) <!-- cid:build-and-test:c2 -->
 ## Testing Posture
 - build-and-test は Minimal 戦略でも produces 全件を生成する（report が成果物不在を拒否するため）。不適用のテスト instruction は空ファイルにせず、適用判断と根拠を記す簡潔な文書にする (learned 2026-07-04) <!-- cid:build-and-test:c1 -->
+- エンジン/validator の eval fixture はエンジンの実出力形を正とする。validator の期待に手書きで合わせた fixture は不整合を隠す（#458 は fixture が [S] 前提だったため見逃された）。可能なら隔離 workspace で実 CLI を起動して実出力そのものを検査する (learned 2026-07-05) <!-- cid:code-generation:c5 -->

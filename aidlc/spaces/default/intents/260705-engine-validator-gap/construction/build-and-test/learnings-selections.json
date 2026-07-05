@@ -1,0 +1,13 @@
+{
+  "stage_slug": "build-and-test",
+  "selections": [
+    {
+      "candidate_id": "c2",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "aidlc-state.md の Per unit: [TBD] を更新する tool verb は存在しない。units-generation を SKIP する scope では、Construction 成果物を置いた実 unit 名へ record 整合として手動更新する（前例: e10f8294）。放置すると validator が construction/[TBD]/ の produces を要求して fail する",
+      "source": "orchestrator"
+    }
+  ]
+}

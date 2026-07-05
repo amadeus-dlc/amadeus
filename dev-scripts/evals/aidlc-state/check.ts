@@ -4,7 +4,8 @@
 // vendored の v2 state template（skills/amadeus/references/aidlc-v2/state-template.md）を
 // parse でき、行置換の更新が対象行以外を保存することを確認する。
 
-import { readFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
   AIDLC_PHASES,
@@ -222,6 +223,66 @@ const updatedField = updateCurrentStatusField(instanceText, "Current Stage", "bu
 // 存在しない stage の更新は入力を変えない。
 const unchanged = updateStageCheckbox(instanceText, { slug: "no-such-stage" }, "[x]");
 check("update: 不明な stage の更新は入力を変えない", unchanged === instanceText, "変更が発生した");
+
+// --- 4. amadeus-state.ts advance の stdout memory_path が record prefix を含む（Issue #457） ---
+//
+// amadeus-runtime.ts の memory_path（同じ relativeMemoryPath ファミリー）は
+// PR #456 で record prefix 付きに直しているが、amadeus-state.ts advance の
+// stdout はまだ prefix なし（bare space prefix へフォールバック）に不整合が
+// 残っていないかを、実 CLI を隔離 temp workspace で駆動して確認する。
+{
+  const root = resolve(import.meta.dir, "../../..");
+  const ENGINE_DIRS = ["tools", "amadeus-common", "sensors", "scopes", "agents", "knowledge"];
+  const workspace = mkdtempSync(join(tmpdir(), "aidlc-state-advance-"));
+  try {
+    for (const dir of ENGINE_DIRS) {
+      const src = join(root, ".agents/amadeus", dir);
+      const dest = join(workspace, ".agents/amadeus", dir);
+      mkdirSync(dest, { recursive: true });
+      cpSync(src, dest, { recursive: true });
+    }
+
+    const utility = join(workspace, ".agents/amadeus/tools/amadeus-utility.ts");
+    const stateTool = join(workspace, ".agents/amadeus/tools/amadeus-state.ts");
+
+    const birth = Bun.spawnSync(
+      ["bun", utility, "intent-birth", "--scope", "poc", "--arguments", "aidlc-state advance eval", "--label", "aidlc-state-advance-eval"],
+      { cwd: workspace, stdout: "pipe", stderr: "pipe" }
+    );
+    const birthStdout = new TextDecoder().decode(birth.stdout);
+    if (birth.exitCode !== 0) {
+      throw new Error(`intent-birth failed: ${new TextDecoder().decode(birth.stderr)}\n${birthStdout}`);
+    }
+
+    const intentsRoot = join(workspace, "aidlc/spaces/default/intents");
+    const recordDirName = readdirSync(intentsRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)[0];
+    check("advance eval: Intent record ディレクトリが作られている", recordDirName !== undefined, birthStdout);
+
+    // poc scope の birth 直後は Current Stage = intent-capture。artifact guard は
+    // #457 の検査対象外のため、eval 専用の既存エスケープハッチで無効化する。
+    const advance = Bun.spawnSync(["bun", stateTool, "advance", "intent-capture"], {
+      cwd: workspace,
+      stdout: "pipe",
+      stderr: "pipe",
+      env: { ...process.env, AIDLC_SKIP_ARTIFACT_GUARD: "1" },
+    });
+    const advanceStdout = new TextDecoder().decode(advance.stdout);
+    if (advance.exitCode !== 0) {
+      throw new Error(`advance failed: ${new TextDecoder().decode(advance.stderr)}\n${advanceStdout}`);
+    }
+    const advanceJson = JSON.parse(advanceStdout.slice(advanceStdout.indexOf("{")));
+    const expectedPrefix = `aidlc/spaces/default/intents/${recordDirName}/`;
+    check(
+      "advance: memory_path が record prefix（aidlc/spaces/<space>/intents/<dirName>/）で始まる",
+      typeof advanceJson.memory_path === "string" && advanceJson.memory_path.startsWith(expectedPrefix),
+      `memory_path=${advanceJson.memory_path}`
+    );
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+}
 
 if (failures > 0) {
   console.error(`aidlc-state eval: ${failures} 件失敗`);
