@@ -14,4 +14,4 @@
 ## ギャップ
 
 スキルギャップはない。
-環境ギャップが 2 件ある（raid-log.md I01、I02）: `project` scope 付与と org project 作成権限の確認。いずれも Maintainer の人間操作である。
+環境ギャップが 2 件ある: `project` scope 付与（raid-log.md I01）と org project 作成権限の確認（feasibility の open question）。いずれも Maintainer の人間操作である。
