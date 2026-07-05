@@ -38,10 +38,12 @@ function assertMainRepoCheckout(): void {
 function parseArgs(argv: string[]): { all: boolean; dirs: string[] | null } {
   const all = argv.includes("--all");
   const dirsIdx = argv.indexOf("--dirs");
-  const dirs =
+  const parsed =
     dirsIdx >= 0 && argv[dirsIdx + 1]
       ? argv[dirsIdx + 1]!.split(",").map((s) => s.trim()).filter(Boolean)
       : null;
+  // `--dirs ,` のような空指定は usage エラーへ倒す（GitHub アクセス前に止める）
+  const dirs = parsed !== null && parsed.length > 0 ? parsed : null;
   return { all, dirs };
 }
 

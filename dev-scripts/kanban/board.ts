@@ -69,8 +69,11 @@ export function resolveProject(org: string, title: string): ProjectRef {
   return hit;
 }
 
-// 単一選択（Status）の option 更新は「既存 option 全体 + 不足分」の完全セットを渡す。
-// 素朴な追加は既存 option の置換・ID 欠落を招く（component-methods.md の実装留意）。
+// 単一選択（Status）の option 更新は「既存 option 全体 + 不足分」の完全セット再送で行う
+// （component-methods.md の実装留意）。GraphQL の入力型
+// ProjectV2SingleSelectFieldOptionInput は id を受け取れないため、既存 option は
+// 「名前・色・説明を保持した再送」で維持する（既存 item の値は名前一致で保たれる）。
+// 更新後は listFields で option を再取得し、以降の upsert は新しい option ID を使う。
 export function buildEnsureStatusOptions(
   existing: StatusOption[],
   required: string[]
@@ -144,6 +147,7 @@ export function ensureFields(project: ProjectRef, columns: string[]): FieldMap {
   const missing = columns.filter((c) => !(status.options ?? []).some((o) => o.name === c));
   if (missing.length > 0) {
     const merged = buildEnsureStatusOptions(status.options ?? [], columns);
+    // 入力型に id フィールドが無いため、id は送らない（既存 option は名前で保持される）
     const optionsArg = merged
       .map(
         (o) =>
