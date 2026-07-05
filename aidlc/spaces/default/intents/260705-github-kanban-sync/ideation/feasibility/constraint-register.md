@@ -20,7 +20,7 @@
 |---|---|---|
 | C08 | 新規スクリプトは Bun + TypeScript、TDD（先に失敗する検証）で作る | dev-scripts ルール |
 | C09 | 段階（①台帳整備、②手動 sync、③hook 結線）ごとに別 PR。merge は人間が行う | intent-statement.md、team.md |
-| C10 | `intents.json`（正準台帳）への `issues` フィールド追加は実装前に Maintainer の明示承認を得る | stakeholder-map.md |
+| C10 | `intents.json`（正準台帳）への `issues` フィールド追加は実装前に Maintainer の明示承認を得る（承認取得済み: scope-definition の DECISION_RECORDED、decision-log D11） | stakeholder-map.md |
 | C11 | board 作成・`gh auth refresh -s project` は人間操作 | intent-capture open question |
 
 ## 規制制約

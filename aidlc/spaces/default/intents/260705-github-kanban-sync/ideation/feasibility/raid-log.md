@@ -23,7 +23,7 @@
 | ID | 問題 | 状態 |
 |---|---|---|
 | I01 | 現在の `gh` トークンに `project` scope が無い | 未解消。Construction 開始前に `gh auth refresh -s project` を人間が実施する（C11） |
-| I02 | `intents.json` に Issue 参照フィールドが無い | 未解消。段階 ① で Maintainer 承認のうえ追加する（C10） |
+| I02 | `intents.json` に Issue 参照フィールドが無い | 承認済み。scope-definition で Maintainer が `issues` フィールド追加を承認した（DECISION_RECORDED、decision-log D11）。実装は段階 ① で行う |
 
 ## Dependencies（依存）
 
