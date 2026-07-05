@@ -366,6 +366,13 @@ function mergeSettings(target: string, wiring: readonly HookWiringEntry[]): { to
     }
   }
 
+  // Snapshot of every non-hooks key BEFORE the merge mutates anything —
+  // the post-write re-read is deep-compared against this (FR-2.7,
+  // business-logic-model O-1 step 4: non-target keys stay value-identical).
+  const nonHooksSnapshot = JSON.stringify(
+    Object.fromEntries(Object.entries(settings as Record<string, unknown>).filter(([key]) => key !== "hooks"))
+  );
+
   if (!settings.hooks || typeof settings.hooks !== "object" || Array.isArray(settings.hooks)) {
     settings.hooks = {};
   }
@@ -401,8 +408,14 @@ function mergeSettings(target: string, wiring: readonly HookWiringEntry[]): { to
 
   try {
     writeFileSync(settingsPath, JSON.stringify(settings, null, 2), "utf-8");
-    // Re-read and validate — catches silent corruption on write (FR-2.7).
-    JSON.parse(readFileSync(settingsPath, "utf-8"));
+    // Re-read and validate — catches silent corruption on write, and
+    // deep-compares every non-hooks key against the pre-merge snapshot
+    // (FR-2.7: the merge must never change user-owned values).
+    const reread = JSON.parse(readFileSync(settingsPath, "utf-8")) as Record<string, unknown>;
+    const rereadNonHooks = JSON.stringify(Object.fromEntries(Object.entries(reread).filter(([key]) => key !== "hooks")));
+    if (rereadNonHooks !== nonHooksSnapshot) {
+      throw new Error("post-write verification failed: a non-hooks key changed during the merge");
+    }
   } catch (e) {
     throw new InstallError(
       `failed to write ${settingsPath}: ${errorMessage(e)}`,

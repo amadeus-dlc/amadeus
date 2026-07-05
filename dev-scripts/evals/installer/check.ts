@@ -503,7 +503,7 @@ ok("FR-2.8 temp workspace removed", !existsSync(ws));
     writeFileSync(settingsPath, JSON.stringify(original, null, 2), "utf-8");
 
     const install1 = run(["bun", installerPath, "--target", wsMerge], root);
-    ok("FR-2.7 install with pre-existing settings.json reaches the settings step", existsSync(settingsPath), `stdout:\n${install1.stdout}\nstderr:\n${install1.stderr}`);
+    ok("FR-2.7 install with pre-existing settings.json completes (exit 0, settings step reached)", install1.exitCode === 0 && install1.stdout.includes("[4/5] settings"), `exit=${install1.exitCode}\nstdout:\n${install1.stdout}\nstderr:\n${install1.stderr}`);
 
     const raw = readFileSync(settingsPath, "utf-8");
     let parsed: { env?: unknown; permissions?: unknown; hooks?: Record<string, Array<{ matcher: string; hooks: Array<{ command: string }> }>> } = {};
@@ -536,7 +536,7 @@ ok("FR-2.8 temp workspace removed", !existsSync(ws));
 
     // Second run: manifest entries dedupe, user's entries still untouched.
     const install2 = run(["bun", installerPath, "--target", wsMerge], root);
-    ok("FR-2.7 second install over merged settings.json still runs", existsSync(settingsPath), `stdout:\n${install2.stdout}\nstderr:\n${install2.stderr}`);
+    ok("FR-2.7 second install over merged settings.json completes (exit 0)", install2.exitCode === 0 && install2.stdout.includes("[4/5] settings"), `exit=${install2.exitCode}\nstdout:\n${install2.stdout}\nstderr:\n${install2.stderr}`);
     const countAfterSecond = countHookCommands(settingsPath);
     ok("FR-2.7 hook command count unchanged after second merge (manifest entries deduped)", countAfterSecond === 13, String(countAfterSecond));
 
