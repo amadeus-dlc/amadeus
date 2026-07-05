@@ -7469,8 +7469,304 @@
 
 ---
 
+## Bolt Completed
+**Timestamp**: 2026-07-05T04:46:39Z
+**Event**: BOLT_COMPLETED
+**Bolt names**: B002-kanban-sync-cli
+**Batch number**: 2
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-05T04:47:26Z
+**Event**: BOLT_STARTED
+**Bolt names**: B003-kanban-hooks
+**Batch number**: 3
+**Walking skeleton**: false
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T04:47:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0f5c0455
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/kanban-hooks/check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T04:48:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0f5c0455
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/kanban-hooks/check.ts
+**Duration ms**: 820
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T04:48:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1c37eb7a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/kanban-hooks/check.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-05T04:48:00Z
+**Event**: SENSOR_FAILED
+**Fire id**: 1c37eb7a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/kanban-hooks/check.ts
+**Detail path**: aidlc/spaces/default/intents/260705-github-kanban-sync/.aidlc-sensors/code-generation/type-check-1c37eb7a.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T04:48:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 17a154db
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/kanban/hooks/kanban-queue.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T04:48:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 17a154db
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/kanban/hooks/kanban-queue.ts
+**Duration ms**: 786
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T04:48:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3e64814c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/kanban/hooks/kanban-queue.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T04:48:26Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3e64814c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/kanban/hooks/kanban-queue.ts
+**Duration ms**: 489
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T04:48:42Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1f8d5cb9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/kanban/hooks/kanban-flush.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T04:48:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1f8d5cb9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/kanban/hooks/kanban-flush.ts
+**Duration ms**: 828
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T04:48:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: c2c7ba4f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/kanban/hooks/kanban-flush.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T04:48:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: c2c7ba4f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/kanban/hooks/kanban-flush.ts
+**Duration ms**: 450
+
+---
+
+## Bolt Completed
+**Timestamp**: 2026-07-05T04:51:52Z
+**Event**: BOLT_COMPLETED
+**Bolt names**: B003-kanban-hooks
+**Batch number**: 3
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-05T04:52:35Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-05T04:52:35Z
+**Event**: GATE_APPROVED
+**Stage**: code-generation
+**User Input**: auto（人間指示: すべての承認 auto。B001〜B003 完了、PR #473 #474 #475 提出済み）
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-05T04:52:35Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Details**: Stage Code Generation approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-05T04:52:35Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Agent**: amadeus-quality-agent
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-05T04:52:48Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state park --project-dir /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus
+**Error**: Refusing to park: Construction Autonomy Mode is autonomous. An unattended autonomous run has no human to resume it and must keep moving - do not park it.
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-05T04:53:33Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: aa9239d3ce0dad0a6
+**Message**: Amadeus の後始末・引き継ぎはすべて完了し、PR #465〜#469 マージ済み、worktree と branch も整理済みです。次は、hooks の並行セッション不具合の Issue 起票と #464 着手の可否を教えてください（返信すると誤督促ループも止まります）。
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-05T04:53:35Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-05T04:53:35Z
+**Event**: GATE_APPROVED
+**Stage**: build-and-test
+**User Input**: auto（人間指示: すべての承認 auto。test:all exit 0、eval 66 検査 ok）
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-05T04:53:35Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Details**: Stage Build and Test approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-05T04:53:35Z
+**Event**: STAGE_STARTED
+**Stage**: ci-pipeline
+**Agent**: amadeus-pipeline-deploy-agent
+
+---
+
+## Stage Skip
+**Timestamp**: 2026-07-05T04:53:52Z
+**Event**: STAGE_SKIPPED
+**Stage**: ci-pipeline
+**Reason**: Condition 偽。新しい CI パイプラインを追加しない。3 eval は既存 CI 入口（npm run test:all = mock CI）へ結線済みで、CI 設定ファイルの変更は無い（infrastructure-design の cicd-pipeline.md 全 3 Unit の判断のとおり）
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-05T04:54:21Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state complete-workflow
+**Error**: Usage: amadeus-state.ts complete-workflow <completed-slug> [--reason <text>]
+
+---
+
+## Phase Completion
+**Timestamp**: 2026-07-05T04:54:30Z
+**Event**: PHASE_COMPLETED
+**From phase**: construction
+**To phase**: (end)
+**Stages completed**: 21
+
+---
+
+## Phase Verification
+**Timestamp**: 2026-07-05T04:54:30Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: construction → end
+
+---
+
+## Workflow Completion
+**Timestamp**: 2026-07-05T04:54:30Z
+**Event**: WORKFLOW_COMPLETED
+**Scope**: feature
+**Details**: Scope: feature, 21 stages completed
+**Reason**: 全 in-scope ステージ完了（ci-pipeline は condition 偽で SKIP）。B001〜B003 の Bolt PR #473〜#475 提出済み
+
+---
 ## Human Turn
 **Timestamp**: 2026-07-05T05:11:33Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-05T05:13:39Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-05T05:15:02Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-05T05:31:58Z
 **Event**: HUMAN_TURN
 
 ---

@@ -31,5 +31,8 @@ result
 /aidlc/spaces/*/intents/*/.aidlc-*
 /aidlc/spaces/*/intents/.aidlc-hooks-health/
 
+# kanban-sync hook の worktree ローカル状態（u003-kanban-hooks）
+/.claude/kanban-sync/
+
 # 個人ローカル設定（agmsg 等の絶対パスを含むためコミットしない）
 /.claude/settings.local.json
