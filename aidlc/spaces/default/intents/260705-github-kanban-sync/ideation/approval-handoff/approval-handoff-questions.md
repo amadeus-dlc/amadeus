@@ -12,7 +12,7 @@ A. なし。未解消 2 件（`gh` の project scope 付与、org project 作成
 B. あり（Other で指定）
 X. Other (please specify)
 
-[Answer]: A（推奨採用。raid-log.md I01 / I02 は P2 着手前が期限のため。自己回答: 人間指示による auto）
+[Answer]: A（推奨採用。未解消はいずれも P2 着手前が期限の人間操作 2 件（I01 = gh の project scope 付与、org project の作成と repo リンク）である。I02（issues フィールド追加）は scope-definition で承認取得済みで、実装は段階 ①（P1）で行う。自己回答: 人間指示による auto）
 
 ## Q2. Ideation の成果を 1 つの phase PR にまとめる時機はいつにしますか？
 
