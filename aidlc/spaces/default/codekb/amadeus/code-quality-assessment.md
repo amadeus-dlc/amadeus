@@ -1,45 +1,13 @@
 # コード品質評価：amadeus
 
-## 検証の状態
-
-CI 相当の入口は `npm run test:all` である。
-
-この入口は、次の検査を含む。
-
-- TypeScript typecheck。
-- public type file と TypeScript complexity の lint。
-- skill contract の整合検査。
-- Claude wiring の整合検査。
-- validator、template、contract、migration などの integration eval。
-- steering と event-storming の mock e2e。
-- examples snapshot と provenance の検査。
-- `git diff --check`。
-
 ## 強み
 
-- Amadeus DLC 成果物は `amadeus-validator` で構造検証できる。
-- validator は AI-DLC v2 準拠検証（`lifecycle-v2.ts`）も持つ。
-- examples は段階別 snapshot と provenance を持つため、skill 変更の影響を検出しやすい。
-- source skill と昇格先 skill の同期は `promote-skill.ts` に集約されている。
-- 実際に `skills/amadeus*/` と `.agents/skills/amadeus*/` を比較すると、`evals/`（source 側のみの開発用ディレクトリ）を除き差分はない。
-- AGENTS.md と memory/team.md に PR 監視、merge 権限、人間 gate の運用が記録されている。
-- 32 skill の `SKILL.md` は英語化がおおむね完了しており（Issue #399、Intent `260703-amadeus-skill-english-rollout-plan` は Status: Completed）、残る日本語は `未確認` などテンプレート出力ラベルに限られる。
-- Build and Test（Stage 3.6）の失敗時処理は AI-DLC v2 と意図的に差分を保ち、autonomy mode に関わらず halt-and-ask で人間へ確認する契約が明文化されている（`docs/amadeus/aidlc-v2-build-and-test-failure-handling.md`）。
+- 決定論的 eval（25 種）が「隔離 workspace + 実 CLI 駆動」で統一され、手書き fixture による不整合の隠蔽を避ける規約が learnings に定着している。
+- 失敗の観測経路が対称に揃っている: ツール CLI とエンジンの ERROR_LOGGED（#431）、hooks の drops + doctor 表面化（#432）、audit の追記型台帳。
+- 上流適応の追跡（parity）と skill 昇格（promote）の機械化により、二重管理の逸脱が検査で捕まる。
 
-## リスク
+## 既知の弱み（記録時点）
 
-| リスク | 影響 | 緩和 |
-|---|---|---|
-| source skill と昇格先 skill のずれ | 配布先で使う skill と変更対象の source skill が不整合になる。 | 昇格フローを使い、同一 PR で扱う。 |
-| 成果物名と validator 契約のずれ | validator や examples 検証が fail する。 | stage catalog、templates、validator、examples を同時に確認する。 |
-| Issue と Intent の対応喪失 | 親 Issue の完了判断ができなくなる。 | Intent traceability と PR 説明に対象 Issue を記録する。 |
-| PR コメント対応漏れ | merge 準備が不十分になる。 | CI を先に確認し、トップレベルコメントとインラインコメントを監視する。 |
-| examples snapshot の provenance staleness | `examples/skill-provenance.json` の 4 snapshot は、英語化 PR（#417 など）以降、全 `skillFiles` に `staleReason` が付いたままである。real provider 再生成が未実施のため、snapshot の内容が最新 SKILL.md と厳密に一致しているかは検証できていない。 | real provider（`npm run examples:generate:real` 相当）で再生成し、`staleReason` を削除する後続作業を明示的な Issue または Intent で扱う。 |
-
-## Issue #399 での注意点（完了済み）
-
-英語化と意味変更を同じ PR に混ぜると、Reviewer が差分の主旨を判断しにくい。
-
-小さい土台 PR から進め、翻訳変更、意味変更、昇格フロー、検証結果を PR 説明で分けて記録する必要がある。
-
-Issue #399 は CLOSED であり、この注意点は今後 Amadeus skill を大きく変更する PR（例えば active Intent `260704-v2-parity-completion`）でも踏襲する価値がある教訓として残す。
+- パス解決の固定深度仮定が層をまたいで再発してきた（runtime memory_path = #457/#458、graph rulesDir = #491、workspace-detection の定型 dir 前提 = #459）。「構造を根拠にした解決」への置換が進行中の傾向として続く見込み。
+- intents.json の entry 追記が並行 PR 間で毎回衝突する（2026-07-05 に 4 回）。entry 分割ファイル化 + 生成物化が検討中。
+- codekb を含む知識スナップショットの鮮度は自動検査されない（本ファイル群の 7/3 版が実体とズレたまま参照可能だった実例あり）。

@@ -4,29 +4,23 @@
 
 | コンポーネント | 場所 | 責務 |
 |---|---|---|
-| 単一入口 `amadeus` | `skills/amadeus/`、`.agents/skills/amadeus/` | Intake、Initialization、stage routing、phase 境界、Bolt 実行。 |
-| Ideation stage skill | `skills/amadeus-ideation-*/`、`.agents/skills/amadeus-ideation-*/` | Ideation の stage 成果物を作る。 |
-| Inception stage skill | `skills/amadeus-inception-*/`、`.agents/skills/amadeus-inception-*/` | Inception の stage 成果物を作る。 |
-| Construction stage skill | `skills/amadeus-construction-*/`、`.agents/skills/amadeus-construction-*/` | Construction の stage 成果物と実装支援を扱う。 |
-| steering skill | `skills/amadeus-steering/`、`.agents/skills/amadeus-steering/` | Space の memory、knowledge、intents 索引を整える。 |
-| event-storming skill | `skills/amadeus-event-storming/`、`.agents/skills/amadeus-event-storming/` | Event Storming 成果物を扱う。 |
-| domain 系 skill | `skills/amadeus-domain-*`、`.agents/skills/amadeus-domain-*` | Glossary、Domain Map、Context Map、Intent 固有のモデル論点を扱う。 |
-| grilling skill | `skills/amadeus-grilling/`、`.agents/skills/amadeus-grilling/` | 一問ずつの確認プロトコルを扱う。 |
-| validator | `skills/amadeus-validator/`、`.agents/skills/amadeus-validator/` | 配布先で実行できる構造検証（AI-DLC v2 準拠検証を含む）を提供する。 |
-| skill contract | `amadeus-contracts/`、`dev-scripts/amadeus-contracts.ts` | skill の境界、条件、委譲関係の生成元。 |
-| promote-skill | `dev-scripts/promote-skill.ts` | source skill から昇格先 skill への反映を行う。 |
-| examples pipeline | `dev-scripts/generate-amadeus-examples.ts`、`dev-scripts/validate-amadeus-examples.ts`、`dev-scripts/examples-contract.ts` | examples の生成、検証、不変条件を扱う。 |
-| eval 群 | `dev-scripts/evals/` | validator、templates、contracts、e2e、migration の検査を扱う。 |
-| lints | `lints/` | public type file と TypeScript complexity を検査する。 |
+| 単一入口 `amadeus` | `skills/amadeus/`、`.agents/skills/amadeus/` | forwarding loop の conductor。routing はエンジンに委譲し、実行品質（persona、質問、diary、gate）を担う |
+| stage skill（32） | `skills/amadeus-<stage>/`（例: `amadeus-intent-capture`、`amadeus-code-generation`） | 上流 38 skill の適応コピー。単独実行用 stage runner（フラットな stage 名。phase prefix 型の命名は存在しない） |
+| scope skill | `skills/amadeus-{feature,bugfix,mvp,...}/` | scope 別の入口補助 |
+| 補助入口 | `skills/amadeus-grilling/`、`skills/amadeus-domain-modeling/`、`skills/amadeus-validator/` | 一問ずつの確認、ドメインモデリング、構造検証（公開入口はこの 3 個 + amadeus） |
+| 運用 skill | `skills/amadeus-{init,replay,session-cost,outcomes-pack,reverse-engineering}/` ほか | 初期化、リプレイ、コスト集計、成果物パック、コードスキャン |
+| エンジン | `.agents/amadeus/tools/`（26 CLI） | 状態機械と directive 発行の正 |
+| hooks | `.agents/amadeus/hooks/`（11） | セッション横断の自動記録と督促 |
+| validator | `skills/amadeus-validator/validator/` → 昇格先 | v2 準拠の構造検証（マルチ Unit の Per unit 対応 = #484） |
+| skill contract | `amadeus-contracts/`、`dev-scripts/{generate,check}-amadeus-contracts.ts` | skill 境界・条件・委譲の生成と検査 |
+| promote-skill | `dev-scripts/promote-skill.ts` | source → 昇格先の唯一の同期手段 |
+| parity | `dev-scripts/parity-check.ts` + `dev-scripts/data/parity-{map,baseline}.json` | 上流（fde1e1af）との適応差分の追跡。意図的適応は engineFileExceptions へ宣言 |
+| eval 群 | `dev-scripts/evals/`（25 種） | 隔離 workspace で実 CLI を駆動する決定論的検証（engine-e2e、hooks、kanban、validator ほか） |
+| kanban 可視化 | `dev-scripts/kanban/`、`dev-scripts/kanban-sync.ts` | Projects v2 への一方向鏡（repo 内限定の暫定機構 = #470） |
+| lints | `lints/` | public type file / ts-complexity |
 
-## Issue #399 に関係するコンポーネント
+## 退役済み（参照しない）
 
-Issue #399 は `skills/amadeus*/` と `.agents/skills/amadeus*/` の英語化計画を扱い、CLOSED（Intent `260703-amadeus-skill-english-rollout-plan` は Status: Completed）である。
-
-完了証拠は GitHub Issue、PR（#409〜#425 など）、CI、レビューボット、merge 状態に依存する。
-
-`examples/skill-provenance.json` の 4 snapshot（`01-ideation-completed`〜`04-construction-implementation-planned`）は、英語化に伴い全 `skillFiles` に `staleReason` が付いた状態を維持しており、real provider による再生成は Intent 外の後続作業として扱う。
-
-## Issue #396 に関係するコンポーネント
-
-現在の active Intent `260704-v2-parity-completion`（Issue #396、open）は、成果物の双方向一致、skill 一覧の一致、TS エンジン駆動化を扱う。
+- `intents.md` 索引と IndexGenerate.ts（GD009）
+- `amadeus-steering` / `amadeus-event-storming` skill、`amadeus-ideation-*` などの phase prefix 命名（初回解析時の記述で、現行 skill 体制には存在しない）
+- examples pipeline（generate/validate-amadeus-examples.ts、examples-contract.ts、skill-provenance.json）は現行ツリーに存在しない
