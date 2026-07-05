@@ -22,6 +22,7 @@ import {
   getField,
   readAllAuditShards,
   resolveConstructionRepo,
+  normalizeWorktreeSlug,
   resolveProjectDir,
   worktreePath,
   worktreeStateFilePath,
@@ -148,12 +149,15 @@ function pathKey(p: string): string {
 
 function validateSlug(slug: string | undefined): string {
   if (!slug) error("Missing --slug <slug>");
-  if (!SLUG_RE.test(slug)) {
+  // Record 側の表示名（Unnn-<slug> 形式など大文字を含む）を受理し、派生物
+  // （dir 名、branch 名）は小文字の正準形へ正規化する（Issue #478 gap2）。
+  const normalized = normalizeWorktreeSlug(slug);
+  if (!SLUG_RE.test(normalized)) {
     error(
-      `Invalid --slug: "${slug}". Must be kebab-case (lowercase letter then [a-z0-9-]).`
+      `Invalid --slug: "${slug}". Must normalize to kebab-case (letter then [a-z0-9-]).`
     );
   }
-  return slug;
+  return normalized;
 }
 
 function validateStrategy(strategy: string | undefined): string {

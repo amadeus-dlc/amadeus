@@ -7,14 +7,13 @@ import {
   activeIntent,
   appendSlug,
   appendUnderHeading,
-  type CheckboxState,
   codekbDir,
   countCheckboxes,
   emitError,
   errorMessage,
   extractMarkdownSection,
-  findStageBySlug,
   findAllEvents,
+  findStageBySlug,
   firstInScopeStageOfPhase,
   getField,
   holdsAuditLock,
@@ -24,11 +23,12 @@ import {
   isoTimestamp,
   loadScopeMapping,
   nextInScopeStage,
-  PHASE_NUMBERS,
-  PHASES,
+  normalizeWorktreeSlug,
   parseCheckboxes,
   parseRefsList,
   parseStateStageSuffixes,
+  PHASE_NUMBERS,
+  PHASES,
   readAllAuditShards,
   readStateFile,
   recordDir,
@@ -44,6 +44,7 @@ import {
   setFieldStrict,
   setOrInsertField,
   stagesInScope,
+  type CheckboxState,
   updateIntentStatus,
   validScopes,
   withAuditLock,
@@ -231,10 +232,15 @@ const SLUG_RE = /^[a-z][a-z0-9-]*$/;
 
 function validateSlug(slug: string | undefined): string {
   if (!slug) errorWithSlug("(missing)", `Missing --slug <slug>`);
-  if (!SLUG_RE.test(slug)) {
-    errorWithSlug(slug, `Invalid --slug: "${slug}". Must be kebab-case (lowercase letter then [a-z0-9-]).`);
+  // Record 側の表示名（Unnn-<slug> など）は小文字の正準形へ正規化して受理する。
+  // worktreePath / worktree の validateSlug と同じチョークポイント関数を使い、
+  // bolt start --worktree のフルチェーン（state fork → audit-fork）で一貫させる
+  // （Issue #478 gap2、reviewer C1）。
+  const normalized = normalizeWorktreeSlug(slug);
+  if (!SLUG_RE.test(normalized)) {
+    errorWithSlug(slug, `Invalid --slug: "${slug}". Must normalize to kebab-case (letter then [a-z0-9-]).`);
   }
-  return slug;
+  return normalized;
 }
 
 function errorWithSlug(slug: string, msg: string): never {

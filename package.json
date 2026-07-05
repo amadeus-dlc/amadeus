@@ -21,7 +21,7 @@
     "claude-wiring:check": "bun run dev-scripts/check-claude-host-wiring.ts",
     "grilling-wiring:check": "bun run dev-scripts/check-grilling-wiring.ts",
     "issue-ref-contract:check": "bun run dev-scripts/check-issue-ref-contract.ts",
-    "test:it:all": "npm run test:it:amadeus-templates && npm run test:it:lints && npm run test:it:public-type-file && npm run test:it:ts-complexity && npm run test:it:amadeus-contracts && npm run test:it:aidlc-state && npm run test:it:amadeus-validator && npm run test:it:amadeus-validator-domain && npm run test:it:promote-skill && npm run test:it:claude-host-wiring && npm run test:it:grilling-wiring && npm run test:it:issue-ref-contract && npm run test:it:llm-runner-options:real-command && npm run test:it:llm-provider-options:mock-real && npm run test:it:migrate-workspace && npm run test:it:parity && npm run test:it:kanban-registry && npm run test:it:kanban-sync && npm run test:it:kanban-hooks && npm run test:it:jump-phase-guard && npm run test:it:hooks-state-bugfix",
+    "test:it:all": "npm run test:it:amadeus-templates && npm run test:it:lints && npm run test:it:public-type-file && npm run test:it:ts-complexity && npm run test:it:amadeus-contracts && npm run test:it:aidlc-state && npm run test:it:amadeus-validator && npm run test:it:amadeus-validator-domain && npm run test:it:promote-skill && npm run test:it:claude-host-wiring && npm run test:it:grilling-wiring && npm run test:it:issue-ref-contract && npm run test:it:llm-runner-options:real-command && npm run test:it:llm-provider-options:mock-real && npm run test:it:migrate-workspace && npm run test:it:parity && npm run test:it:kanban-registry && npm run test:it:kanban-sync && npm run test:it:kanban-hooks && npm run test:it:jump-phase-guard && npm run test:it:engine-gap-trio && npm run test:it:hooks-state-bugfix",
     "test:it:amadeus-templates": "bun run dev-scripts/evals/amadeus-templates/check.ts",
     "test:it:lints": "bun run lints/eval.ts",
     "test:it:public-type-file": "bun run lints/public-type-file/eval.ts",
@@ -46,7 +46,8 @@
     "kanban:sync": "bun run dev-scripts/kanban-sync.ts --all",
     "test:it:kanban-hooks": "bun run dev-scripts/evals/kanban-hooks/check.ts",
     "test:it:hooks-state-bugfix": "bun run dev-scripts/evals/hooks-state-bugfix/check.ts",
-    "test:it:jump-phase-guard": "bun run dev-scripts/evals/jump-phase-guard/check.ts"
+    "test:it:jump-phase-guard": "bun run dev-scripts/evals/jump-phase-guard/check.ts",
+    "test:it:engine-gap-trio": "bun run dev-scripts/evals/engine-gap-trio/check.ts"
   },
   "devDependencies": {
     "@types/bun": "^1.3.14",

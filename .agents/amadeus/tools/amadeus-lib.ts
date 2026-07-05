@@ -1498,8 +1498,17 @@ export function readAllAuditShards(projectDir: string, intent?: string, space?: 
   return parts.join("\n");
 }
 
+// Slug inputs may arrive in the record's display casing (e.g. unit names like
+// "U001-registry-issues-field" per the Unnn-<slug> naming convention). Derived
+// artifacts (worktree dirs, branch names) must be lowercase kebab-case — on
+// case-insensitive filesystems (macOS default) two casings would collide
+// silently, so ONE canonical lowercase form is used everywhere (Issue #478).
+export function normalizeWorktreeSlug(slug: string): string {
+  return slug.toLowerCase();
+}
+
 export function worktreePath(projectDir: string, boltSlug: string): string {
-  return join(projectDir, ".aidlc", "worktrees", `bolt-${boltSlug}`);
+  return join(projectDir, ".aidlc", "worktrees", `bolt-${normalizeWorktreeSlug(boltSlug)}`);
 }
 
 // --- Multi-repo: repos are siblings of the workspace ----------------------------
@@ -1981,8 +1990,10 @@ export function validateBoltSlug(slug: string): string | null {
   if (slug.length > BOLT_SLUG_MAX_LENGTH) {
     return `Bolt slug "${slug.slice(0, 32)}..." is ${slug.length} chars; max is ${BOLT_SLUG_MAX_LENGTH}`;
   }
-  if (!BOLT_SLUG_REGEX.test(slug)) {
-    return `Invalid Bolt slug "${slug}" — must match ${BOLT_SLUG_REGEX} (lowercase letter, then lowercase letters/digits/hyphens)`;
+  // Record 側の表示名（Unnn-<slug> など大文字混じり）は正規化後の形で判定する。
+  // 派生物は worktreePath / validateSlug が同じ正規化で小文字へ揃える（Issue #478 gap2）。
+  if (!BOLT_SLUG_REGEX.test(normalizeWorktreeSlug(slug))) {
+    return `Invalid Bolt slug "${slug}" — must normalize to ${BOLT_SLUG_REGEX} (letter, then letters/digits/hyphens)`;
   }
   return null;
 }

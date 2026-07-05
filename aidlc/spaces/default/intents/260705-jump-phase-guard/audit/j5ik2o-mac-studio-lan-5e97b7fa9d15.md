@@ -810,3 +810,21 @@
 **Details**: Scope: bugfix, 6 stages completed
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-05T08:29:04Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a4de8075f75e4b342
+**Message**: File is untracked (new intent), which is expected since this whole intent hasn't been committed yet. The edit is confirmed in place.\n\n## 判定: READY\n\n前回の指摘（WF3 が `aidlc/spaces/default/memory/phases/cons
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-05T08:29:39Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-worktree
+**Command**: amadeus-worktree
+**Error**: Unknown subcommand: undefined. Valid: create, merge, discard, list, verify, info
+
+---

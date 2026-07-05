@@ -620,7 +620,9 @@
     "tools/aidlc-state.ts",
     "hooks/aidlc-mint-presence.ts",
     "hooks/aidlc-stop.ts",
-    "tools/aidlc-jump.ts"
+    "tools/aidlc-jump.ts",
+    "tools/aidlc-audit.ts",
+    "tools/aidlc-worktree.ts"
   ],
   "exceptions": [
     {
