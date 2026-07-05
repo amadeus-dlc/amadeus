@@ -122,6 +122,8 @@ const ensure = buildEnsureStatusOptions(
 ok("既存 option を保持したまま不足 6 option を加える", ensure.length === 7, String(ensure.length));
 ok("既存 option の ID を保持する", ensure[0]!.id === "o1");
 ok("追加 option は ID を持たない（新規作成扱い）", ensure.slice(1).every((o) => !("id" in o) || o.id === undefined));
+// 既存 option の維持は「名前の保持」で行う（更新 API の入力型に id は無い）
+ok("既存 option の名前が保持される", ensure[0]!.name === "Todo");
 
 const body = buildDraftIssueBody({ ...baseCard, issues: [470, 471], worktree: "/w/x", scope: "feature" });
 ok("draft body に Issue リンクが入る", body.includes("#470") && body.includes("#471"));
