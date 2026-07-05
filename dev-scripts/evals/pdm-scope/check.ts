@@ -20,6 +20,7 @@ import {
   readFileSync,
   rmSync,
   symlinkSync,
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -163,6 +164,81 @@ const EXPECTED_EXECUTE = [
       "(d) pdm の completed ステージの成果物欠落を validator が fail 検出する",
       /intent-capture\/intent-statement\.md/.test(vout),
       vout.split("\n").filter((l) => l.includes("intent-capture")).join(" | ").slice(0, 300)
+    );
+  } finally {
+    rmSync(ws, { recursive: true, force: true });
+  }
+}
+
+// --- (e) completion path（Bugbot High「delivery-planning skip でデッドロック」の反証） ---
+// phase-check-<phase>.md は conductor の knowledge work であり（#481 R002、
+// amadeus-state.ts の拒否メッセージが生成を指示する契約）、delivery-planning が
+// SKIP でも「拒否 → conductor が生成 → 完了成功」で成立する。bugfix / refactor
+// scope も delivery-planning を skip して同経路で完了している（実運用実績）。
+{
+  const ws = mkdtempSync(join(tmpdir(), "pdm-scope-e-"));
+  try {
+    for (const dir of ENGINE_DIRS) {
+      const src = join(root, ".agents/amadeus", dir);
+      const dest = join(ws, ".agents/amadeus", dir);
+      mkdirSync(dest, { recursive: true });
+      cpSync(src, dest, { recursive: true });
+    }
+    mkdirSync(join(ws, ".claude"), { recursive: true });
+    for (const dir of ["tools", "hooks", "sensors", "scopes", "agents", "knowledge"]) {
+      symlinkSync(join("..", ".agents/amadeus", dir), join(ws, ".claude", dir));
+    }
+    const run = (cmd: string[]) => {
+      const proc = Bun.spawnSync({
+        cmd,
+        cwd: ws,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: { ...process.env, CLAUDE_PROJECT_DIR: ws },
+      });
+      return {
+        exitCode: proc.exitCode ?? -1,
+        out: new TextDecoder().decode(proc.stdout) + new TextDecoder().decode(proc.stderr),
+      };
+    };
+    const tools = join(ws, ".agents/amadeus/tools");
+    run(["bun", join(tools, "amadeus-utility.ts"), "intent-birth", "--scope", "pdm", "--arguments", "completion eval", "--label", "pdm-done"]);
+    const intentsRoot = join(ws, "aidlc/spaces/default/intents");
+    const dirName = readdirSync(intentsRoot, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name)[0]!;
+    const rec = join(intentsRoot, dirName);
+    // 終点 stage（refined-mockups）まで forward jump し、produces を用意する
+    run(["bun", join(tools, "amadeus-jump.ts"), "execute", "--target", "refined-mockups", "--direction", "forward"]);
+    const rm = join(rec, "inception", "refined-mockups");
+    mkdirSync(rm, { recursive: true });
+    for (const f of ["mockups", "interaction-spec", "design-system-mapping", "accessibility-checklist"]) {
+      writeFileSync(join(rm, `${f}.md`), `# ${f}
+
+## eval
+
+fixture
+`, "utf-8");
+    }
+    // phase-check なし → 完了は拒否され、生成すべきパスが指示される（デッドロックではない）
+    const denied = run(["bun", join(tools, "amadeus-state.ts"), "complete-workflow", "refined-mockups", "--reason", "eval"]);
+    ok("(e) phase-check 不在の完了は拒否される", denied.exitCode !== 0, denied.out.slice(0, 200));
+    ok(
+      "(e) 拒否メッセージが生成すべき phase-check パスを指示する（conductor knowledge work の契約）",
+      denied.out.includes("phase-check-inception"),
+      denied.out.slice(0, 250)
+    );
+    // conductor が phase-check を生成 → 完了成功（Inception Verified / Status Completed）
+    mkdirSync(join(rec, "verification"), { recursive: true });
+    writeFileSync(
+      join(rec, "verification", "phase-check-inception.md"),
+      ["# Phase Check — inception", "", "## 検査", "", "eval 用。", ""].join("\n"),
+      "utf-8"
+    );
+    const done = run(["bun", join(tools, "amadeus-state.ts"), "complete-workflow", "refined-mockups", "--reason", "eval"]);
+    ok("(e) phase-check 生成後は完了が成功する", done.exitCode === 0, done.out.slice(0, 200));
+    const st = readFileSync(join(rec, "aidlc-state.md"), "utf-8");
+    ok(
+      "(e) Inception が Verified、Status が Completed になる",
+      /- \*\*Inception\*\*: Verified/.test(st) && /- \*\*Status\*\*: Completed/.test(st)
     );
   } finally {
     rmSync(ws, { recursive: true, force: true });
