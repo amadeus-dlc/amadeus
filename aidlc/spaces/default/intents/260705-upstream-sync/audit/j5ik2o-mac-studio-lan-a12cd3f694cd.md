@@ -1414,6 +1414,327 @@
 
 ---
 
+## Artifact Created
+**Timestamp**: 2026-07-05T23:43:10Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer1/aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/business-logic-model.md
+**Context**: construction > upstream-sync > functional-design > business-logic-model.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T23:43:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: e784a1a6
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T23:43:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: e784a1a6
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/business-logic-model.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T23:43:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: 61cf80ce
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T23:43:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: 61cf80ce
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/business-logic-model.md
+**Duration ms**: 37
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-05T23:43:39Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer1/aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/business-rules.md
+**Context**: construction > upstream-sync > functional-design > business-rules.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T23:43:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: 75d86c45
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T23:43:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: 75d86c45
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/business-rules.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T23:43:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7a404bc3
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T23:43:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7a404bc3
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/business-rules.md
+**Duration ms**: 39
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-05T23:44:04Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer1/aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/domain-entities.md
+**Context**: construction > upstream-sync > functional-design > domain-entities.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T23:44:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: c2906cd9
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T23:44:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: c2906cd9
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/domain-entities.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T23:44:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5d12094f
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T23:44:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5d12094f
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/domain-entities.md
+**Duration ms**: 41
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-05T23:44:15Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer1/aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/frontend-components.md
+**Context**: construction > upstream-sync > functional-design > frontend-components.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T23:44:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: fd9013e5
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/frontend-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T23:44:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: fd9013e5
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/frontend-components.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T23:44:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4758e9d5
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/frontend-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T23:44:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4758e9d5
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/frontend-components.md
+**Duration ms**: 38
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-05T23:55:21Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a80718830da56cf00
+**Message**: 審査に必要な事実確認がすべて揃いました。\n\n## Review\n\n**verdict: READY**\n\n---\n\n### 検証した主要事項\n\n**1. 分類表の正確性（domain-entities.md）**\n\n`parity-map.json` の `engineFileExceptions` を実測確認した。\n\n- `runner-gen`、`version`: 例外リスト外 ─ "機械的
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-05T23:55:21Z
+**Event**: HUMAN_TURN
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-05T23:55:37Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer1/aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/domain-entities.md
+**Context**: construction > upstream-sync > functional-design > domain-entities.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T23:55:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: 27a05864
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T23:55:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: 27a05864
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/domain-entities.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T23:55:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: 43394b78
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T23:55:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: 43394b78
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/domain-entities.md
+**Duration ms**: 37
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-05T23:55:41Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer1/aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/business-rules.md
+**Context**: construction > upstream-sync > functional-design > business-rules.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T23:55:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0300376c
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T23:55:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0300376c
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/business-rules.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T23:55:42Z
+**Event**: SENSOR_FIRED
+**Fire id**: a63d0f2c
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T23:55:42Z
+**Event**: SENSOR_PASSED
+**Fire id**: a63d0f2c
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/construction/upstream-sync/functional-design/business-rules.md
+**Duration ms**: 37
+
+---
+
 ## Sensor Fired
 **Timestamp**: 2026-07-06T00:20:01Z
 **Event**: SENSOR_FIRED
