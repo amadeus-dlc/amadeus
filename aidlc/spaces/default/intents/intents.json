@@ -194,5 +194,16 @@
       407,
       342
     ]
+  },
+  {
+    "uuid": "019f31dd-52b2-7ac9-ae91-25116b8761cc",
+    "slug": "workspace-detect",
+    "dirName": "260705-workspace-detect",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      459
+    ]
   }
 ]

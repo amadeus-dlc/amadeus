@@ -1969,11 +1969,23 @@ export function detectWorkspace(projectDir: string): ScanResult {
     }
   }
 
-  // Recurse into known source dirs if present (capped depth)
-  for (const dirName of SCAN_SOURCE_DIRS) {
-    if (topSet.has(dirName)) {
-      countFilesByLang(join(projectDir, dirName), langCounts, 6);
+  // Recurse into every non-excluded, non-dot top-level directory (capped
+  // depth). Issue #459: the old walk covered only SCAN_SOURCE_DIRS, so a
+  // codebase whose sources live elsewhere (dev-scripts/, skills/, lints/ —
+  // this very repo) counted zero files and fell through to Greenfield /
+  // Unknown. Dot-directories stay excluded — they are config/harness space,
+  // and counting them would flip a harness-only empty project to Brownfield.
+  for (const entry of topSet) {
+    if (entry.startsWith(".")) continue;
+    const full = join(projectDir, entry);
+    let st: import("node:fs").Stats;
+    try {
+      st = lstatSync(full);
+    } catch {
+      continue;
     }
+    if (st.isSymbolicLink() || !st.isDirectory()) continue;
+    countFilesByLang(full, langCounts, 6);
   }
 
   // Language list: primary = highest count; secondary = >= 20% of primary count
