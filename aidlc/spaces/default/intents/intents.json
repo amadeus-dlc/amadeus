@@ -216,5 +216,13 @@
     "issues": [
       459
     ]
+  },
+  {
+    "uuid": "019f31b4-449e-79d3-8793-e7ef6f006d7e",
+    "slug": "evaluator-vocabulary",
+    "dirName": "260705-evaluator-vocabulary",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete"
   }
 ]
