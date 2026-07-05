@@ -404,3 +404,48 @@
 **Error**: Stage "build-and-test" is still pending. Run the stage before reporting it complete.
 
 ---
+
+## Error Logged
+**Timestamp**: 2026-07-05T12:29:31Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state approve code-generation --user-input auto（Maintainer 直接指示） --project-dir /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus
+**Error**: Refusing to complete "code-generation": it is a code-producing stage (workspace_requires) but no source work is evident outside the aidlc/ workspace tree. In a git workspace this means no uncommitted change and no code in the last commit; otherwise no source file exists. Planning docs alone do not satisfy Code Generation - write the code to the workspace.
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-05T12:29:31Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: report --stage code-generation --result approved --user-input auto（Maintainer 直接指示）
+**Error**: Transition rejected by amadeus-state.ts approve for "code-generation": {"error":"Refusing to complete \"code-generation\": it is a code-producing stage (workspace_requires) but no source work is evident outside the aidlc/ workspace tree. In a git workspace this means no uncommitted change and no code in the last commit; otherwise no source file exists. Planning docs alone do not satisfy Code Generation - write the code to the workspace."}
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-05T12:30:18Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state skip code-generation --reason 知識文書（aidlc/ 内の codekb）の全面更新のみで、workspace コードの変更が存在しない。エンジンの code-producing ガード（workspace_requires）の指摘どおりであり、本 Intent の成果物は codekb 9 ファイルが正である
+**Error**: Stage code-generation is in state 'awaiting-approval' but command requires one of: pending, in-progress, revising
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-05T12:30:18Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state gate-start build-and-test
+**Error**: Stage build-and-test is in state 'pending' but command requires one of: in-progress
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-05T12:30:18Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: report --stage build-and-test --result approved --user-input auto（test:all exit 0、参照実在検査 0 件）
+**Error**: Stage "build-and-test" is still pending. Run the stage before reporting it complete.
+
+---
