@@ -101,7 +101,7 @@ const KNOWN_CODEKB_STAGES: ReadonlySet<string> = new Set(["reverse-engineering"]
 // (`- **Inception**: ...`), while every phase-boundary transition in this file
 // carries the lowercase `stage.phase` value. One mapping keeps the two in
 // sync; declared at module top for the same TDZ reason as HARNESS_DOC_DIRS.
-const PHASE_PROGRESS_FIELD: Readonly<Record<string, string>> = {
+export const PHASE_PROGRESS_FIELD: Readonly<Record<string, string>> = {
   initialization: "Initialization",
   ideation: "Ideation",
   inception: "Inception",
@@ -114,7 +114,7 @@ const PHASE_PROGRESS_FIELD: Readonly<Record<string, string>> = {
 // phase-boundary block, complete-workflow) so the two can never drift —
 // the bug this fixes: PHASE_VERIFIED fired but the field stayed at its prior
 // value (Active/Pending) forever, since nothing else ever revisits it.
-function markPhaseVerified(content: string, phase: string): string {
+export function markPhaseVerified(content: string, phase: string): string {
   const field = PHASE_PROGRESS_FIELD[phase];
   if (!field) return content; // unknown phase name - defensive no-op
   return setField(content, field, "Verified");
@@ -142,7 +142,7 @@ const PHASE_CHECK_REQUIRED_PHASES: ReadonlySet<string> = new Set([
 // artifact and it is missing. No-op for phases outside
 // PHASE_CHECK_REQUIRED_PHASES. Runs before any state mutation (mirrors
 // verifyStageArtifacts), so a refusal leaves the state file untouched.
-function verifyPhaseCheckArtifact(pd: string, phase: string): void {
+export function verifyPhaseCheckArtifact(pd: string, phase: string): void {
   if (!PHASE_CHECK_REQUIRED_PHASES.has(phase)) return;
   const rec = recordDir(pd);
   if (rec === null) {
