@@ -139,6 +139,16 @@ Confirm at least the following.
   consistency between the scope's execution targets, the stage checkbox
   states, the event consistency of `audit/audit.md`, Bolt records, and the
   mandatory artifacts of completed stages.
+- codekb-adoption stubs (Issue #501, FR-3): when a completed
+  reverse-engineering stage's record artifact is a reference-ledger stub —
+  a relative markdown link to a canonical `.md` under the shared
+  `aidlc/spaces/<space>/codekb/<repo>/` plus an adoption rationale (the
+  verification base commit and the source of the decision) — the referenced
+  canonical file must exist. A dangling reference fails. A record artifact
+  with no codekb link is treated as real (non-stub) content and passes on
+  existence alone. This formalizes the stub form converged on by
+  `260705-codekb-refresh`, `260705-agmsg-trial-docs`, and
+  `260705-steering-learnings`.
 - Event Storming artifacts, level, and `nextRecommendedSkill` (`amadeus` or
   `amadeus-domain-modeling`) are validated.
 - When `grillings.md` or `grillings/` exists in an Event Storming or Intent

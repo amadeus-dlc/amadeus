@@ -426,9 +426,66 @@ function checkCompletedArtifactsV2(ctx: LifecycleV2Context, input: LifecycleV2In
       continue;
     }
     for (const artifact of produces) {
-      ctx.checkFile(`${input.base}/${def.phase}/${stage.slug}/${artifact}.md`, "v2 契約: completed のステージは produces 成果物を持つ");
+      const artifactPath = `${input.base}/${def.phase}/${stage.slug}/${artifact}.md`;
+      ctx.checkFile(artifactPath, "v2 契約: completed のステージは produces 成果物を持つ");
+      if (stage.slug === "reverse-engineering") {
+        checkCodekbAdoptionStub(ctx, artifactPath);
+      }
     }
   }
+}
+
+// codekb 採用方式の参照解決検査（Issue #501、FR-3）。reverse-engineering の record
+// 成果物が参照台帳 stub である場合、参照先の正本が実在することを検査する。
+//
+// stub の正式契約（前例 260705-codekb-refresh / 260705-agmsg-trial-docs /
+// 260705-steering-learnings で収れんした形）:
+//   - 共有 codekb の正本 .md への相対 markdown リンク（`codekb/` を path に含む）
+//   - 採用根拠（検証基準 commit と判断の出典）
+// codekb リンクを含まないファイルは stub ではない実内容とみなし、従来どおり
+// 存在検査だけで pass する。参照先が存在しない stub は fail する（FR-3.3）。
+// ディレクトリへのリンク（`codekb/<repo>/` など）は .md 参照ではないため解決
+// 対象にしない。
+function checkCodekbAdoptionStub(ctx: LifecycleV2Context, artifactPath: string): void {
+  const text = ctx.readOptional(artifactPath);
+  if (text === undefined) return; // 存在自体は checkFile が報告済み
+  const links = [...text.matchAll(/\]\(([^)\s]*codekb\/[^)\s]*\.md)\)/g)].map((match) => match[1]);
+  if (links.length === 0) return;
+  const baseDir = artifactPath.split("/").slice(0, -1).join("/");
+  for (const link of links) {
+    const resolved = normalizeRelPath(`${baseDir}/${link}`);
+    // SKILL.md の契約どおり、参照先は共有 codekb store（aidlc/spaces/<space>/codekb/）
+    // 配下に限る。`codekb/` を含むだけの無関係な path（record 内の decoy など）は
+    // 正本参照として認めない。
+    if (!/^aidlc\/spaces\/[^/]+\/codekb\//.test(resolved)) {
+      ctx.failRow(
+        artifactPath,
+        "v2 契約: codekb 採用 stub の参照先正本が存在する",
+        `参照先が共有 codekb store（aidlc/spaces/<space>/codekb/）配下でない: ${resolved}`,
+      );
+      continue;
+    }
+    if (ctx.readOptional(resolved) !== undefined) {
+      ctx.pass(artifactPath, "v2 契約: codekb 採用 stub の参照先正本が存在する", resolved);
+    } else {
+      ctx.failRow(artifactPath, "v2 契約: codekb 採用 stub の参照先正本が存在する", `参照先が存在しない: ${resolved}`);
+    }
+  }
+}
+
+// `a/b/../c` 形の相対セグメントを解決した workspace 相対 path を返す（POSIX 区切り前提。
+// validator の検査 path は常に workspace 相対の POSIX 形で流通している）。
+function normalizeRelPath(path: string): string {
+  const parts: string[] = [];
+  for (const segment of path.split("/")) {
+    if (segment === "" || segment === ".") continue;
+    if (segment === "..") {
+      parts.pop();
+      continue;
+    }
+    parts.push(segment);
+  }
+  return parts.join("/");
 }
 
 // verification/phase-check-<phase>.md（フェーズ境界検証）は、Phase Progress が Verified の phase について確認する。
