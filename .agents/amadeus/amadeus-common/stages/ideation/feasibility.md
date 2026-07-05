@@ -32,6 +32,7 @@ scopes:
   - enterprise
   - feature
   - mvp
+  - pdm
 inputs: Intent statement from intent-capture stage, market research from market-research stage (if executed)
 outputs: feasibility-assessment.md, constraint-register.md, raid-log.md, feasibility-questions.md (under this stage's record dir, engine-resolved)
 ---

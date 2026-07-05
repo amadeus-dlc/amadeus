@@ -21,6 +21,7 @@ scopes:
   - feature
   - mvp
   - poc
+  - pdm
 inputs: User's project description ($ARGUMENTS), scope selection
 outputs: intent-statement.md, stakeholder-map.md, intent-capture-questions.md (under this stage's record dir, engine-resolved)
 ---

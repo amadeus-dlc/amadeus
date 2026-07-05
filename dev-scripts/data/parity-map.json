@@ -625,7 +625,20 @@
     "tools/aidlc-worktree.ts",
     "tools/aidlc-orchestrate.ts",
     "tools/aidlc-graph.ts",
-    "tools/data/stage-graph.json"
+    "tools/data/stage-graph.json",
+    "aidlc-common/stages/initialization/workspace-scaffold.md",
+    "aidlc-common/stages/initialization/workspace-detection.md",
+    "aidlc-common/stages/initialization/state-init.md",
+    "aidlc-common/stages/ideation/intent-capture.md",
+    "aidlc-common/stages/ideation/market-research.md",
+    "aidlc-common/stages/ideation/feasibility.md",
+    "aidlc-common/stages/ideation/scope-definition.md",
+    "aidlc-common/stages/ideation/rough-mockups.md",
+    "aidlc-common/stages/ideation/approval-handoff.md",
+    "aidlc-common/stages/inception/requirements-analysis.md",
+    "aidlc-common/stages/inception/user-stories.md",
+    "aidlc-common/stages/inception/refined-mockups.md",
+    "tools/data/scope-grid.json"
   ],
   "exceptions": [
     {

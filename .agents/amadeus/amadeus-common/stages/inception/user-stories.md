@@ -34,6 +34,7 @@ scopes:
   - feature
   - mvp
   - workshop
+  - pdm
 inputs: <record>/inception/requirements-analysis/requirements.md, RE artifacts (if brownfield)
 outputs: stories.md, personas.md, user-stories-assessment.md (under this stage's record dir, engine-resolved)
 ---

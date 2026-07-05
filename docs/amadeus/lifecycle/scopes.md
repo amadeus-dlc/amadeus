@@ -17,7 +17,8 @@ scope は Intent の `aidlc-state.md` に記録し、ステージ解決の入力
 
 ## Scope 一覧
 
-v2 の 9 scope をそのまま採用する。
+v2 の 9 scope をそのまま採用し、Amadeus 独自の追加として `pdm` を持つ（計 10 scope）。
+`pdm` は上流に存在しないため、上流パリティ検査では例外として宣言している（[Issue #429](https://github.com/amadeus-dlc/amadeus/issues/429)）。
 
 | Scope | Depth | キーワード | 説明 |
 |---|---|---|---|
@@ -30,6 +31,7 @@ v2 の 9 scope をそのまま採用する。
 | infra | Standard | infrastructure, deploy, infra | インフラ変更。NFR 系と infrastructure-design、ci-pipeline に寄る。 |
 | security-patch | Minimal | security, CVE, vulnerability, patch | 脆弱性対応。理解、セキュリティ要求、修正、検証を通す。 |
 | workshop | Standard | workshop, lab, training | ファシリテーター主導の学習セッション。Ideation を省き、テスト水準を Minimal にする。 |
+| pdm | Standard | pdm, prd, product-discovery | 企画、調査、要求定義で完結する PdM の Intent。Ideation 全体と Inception の要求系（requirements-analysis、user-stories、refined-mockups）を実行し、Construction 以降を持たない。終点成果物は PRD 一式（intent-statement、competitive-analysis、build-vs-buy、scope-document、initiative-brief、requirements、stories、personas、wireframes）。 |
 
 Amadeus は Operation phase を対象外にするため、v2 で Operation ステージを含む scope（enterprise、feature、infra、security-patch、workshop）は、その分だけステージ集合が狭くなる。
 security-patch の deployment 系ステージと infra の provisioning 系ステージは Amadeus では実行対象がなく、必要な場合は Intent の成果物にデプロイ手順を記録して人間に委ねる。

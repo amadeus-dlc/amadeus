@@ -22,7 +22,8 @@
       "refactor",
       "infra",
       "security-patch",
-      "workshop"
+      "workshop",
+      "pdm"
     ],
     "inputs": "none (first stage after session start)",
     "outputs": "the per-intent record tree (stage artifact dirs + verification dir) and the space-level knowledge/ dir",
@@ -67,7 +68,8 @@
       "refactor",
       "infra",
       "security-patch",
-      "workshop"
+      "workshop",
+      "pdm"
     ],
     "inputs": "none (scans filesystem)",
     "outputs": "workspace classification (greenfield/brownfield), technology stack detection",
@@ -112,7 +114,8 @@
       "refactor",
       "infra",
       "security-patch",
-      "workshop"
+      "workshop",
+      "pdm"
     ],
     "inputs": "workspace classification from workspace-detection, scope from orchestrator",
     "outputs": "<record>/aidlc-state.md (full populated version, engine-resolved)",
@@ -159,7 +162,8 @@
       "enterprise",
       "feature",
       "mvp",
-      "poc"
+      "poc",
+      "pdm"
     ],
     "inputs": "User's project description ($ARGUMENTS), scope selection",
     "outputs": "intent-statement.md, stakeholder-map.md, intent-capture-questions.md (under this stage's record dir, engine-resolved)",
@@ -175,6 +179,10 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
+      },
+      {
+        "path": "aidlc/spaces/default/memory/phases/ideation.md",
+        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -221,7 +229,8 @@
     ],
     "scopes": [
       "enterprise",
-      "feature"
+      "feature",
+      "pdm"
     ],
     "inputs": "Intent statement from intent-capture stage",
     "outputs": "competitive-analysis.md, market-trends.md, build-vs-buy.md, market-research-questions.md (under this stage's record dir, engine-resolved)",
@@ -237,6 +246,10 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
+      },
+      {
+        "path": "aidlc/spaces/default/memory/phases/ideation.md",
+        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -300,7 +313,8 @@
     "scopes": [
       "enterprise",
       "feature",
-      "mvp"
+      "mvp",
+      "pdm"
     ],
     "inputs": "Intent statement from intent-capture stage, market research from market-research stage (if executed)",
     "outputs": "feasibility-assessment.md, constraint-register.md, raid-log.md, feasibility-questions.md (under this stage's record dir, engine-resolved)",
@@ -316,6 +330,10 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
+      },
+      {
+        "path": "aidlc/spaces/default/memory/phases/ideation.md",
+        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -373,7 +391,8 @@
     "scopes": [
       "enterprise",
       "feature",
-      "mvp"
+      "mvp",
+      "pdm"
     ],
     "inputs": "Intent statement, feasibility assessment, constraint register",
     "outputs": "scope-document.md, intent-backlog.md, scope-definition-questions.md (under this stage's record dir, engine-resolved)",
@@ -389,6 +408,10 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
+      },
+      {
+        "path": "aidlc/spaces/default/memory/phases/ideation.md",
+        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -459,6 +482,10 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
+      },
+      {
+        "path": "aidlc/spaces/default/memory/phases/ideation.md",
+        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -516,7 +543,8 @@
     "scopes": [
       "enterprise",
       "feature",
-      "mvp"
+      "mvp",
+      "pdm"
     ],
     "reviewer": "amadeus-product-lead-agent",
     "reviewer_max_iterations": 2,
@@ -534,6 +562,10 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
+      },
+      {
+        "path": "aidlc/spaces/default/memory/phases/ideation.md",
+        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -613,7 +645,8 @@
     ],
     "scopes": [
       "enterprise",
-      "feature"
+      "feature",
+      "pdm"
     ],
     "inputs": "All Ideation phase artifacts (intent, market research, feasibility, scope, team, mockups)",
     "outputs": "initiative-brief.md, decision-log.md, approval-handoff-questions.md (under this stage's record dir, engine-resolved)",
@@ -629,6 +662,10 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
+      },
+      {
+        "path": "aidlc/spaces/default/memory/phases/ideation.md",
+        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -699,6 +736,10 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
+      },
+      {
+        "path": "aidlc/spaces/default/memory/phases/inception.md",
+        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -795,6 +836,10 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
+      },
+      {
+        "path": "aidlc/spaces/default/memory/phases/inception.md",
+        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -870,7 +915,8 @@
       "refactor",
       "infra",
       "security-patch",
-      "workshop"
+      "workshop",
+      "pdm"
     ],
     "reviewer": "amadeus-product-lead-agent",
     "reviewer_max_iterations": 2,
@@ -888,6 +934,10 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
+      },
+      {
+        "path": "aidlc/spaces/default/memory/phases/inception.md",
+        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -951,7 +1001,8 @@
       "enterprise",
       "feature",
       "mvp",
-      "workshop"
+      "workshop",
+      "pdm"
     ],
     "reviewer": "amadeus-product-lead-agent",
     "reviewer_max_iterations": 2,
@@ -969,6 +1020,10 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
+      },
+      {
+        "path": "aidlc/spaces/default/memory/phases/inception.md",
+        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -1036,7 +1091,8 @@
       "enterprise",
       "feature",
       "mvp",
-      "workshop"
+      "workshop",
+      "pdm"
     ],
     "reviewer": "amadeus-product-lead-agent",
     "reviewer_max_iterations": 2,
@@ -1054,6 +1110,10 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
+      },
+      {
+        "path": "aidlc/spaces/default/memory/phases/inception.md",
+        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -1143,6 +1203,10 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
+      },
+      {
+        "path": "aidlc/spaces/default/memory/phases/inception.md",
+        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -1234,6 +1298,10 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
+      },
+      {
+        "path": "aidlc/spaces/default/memory/phases/inception.md",
+        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -1329,6 +1397,10 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
+      },
+      {
+        "path": "aidlc/spaces/default/memory/phases/inception.md",
+        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -2123,6 +2195,10 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
+      },
+      {
+        "path": "aidlc/spaces/default/memory/phases/operation.md",
+        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -2198,6 +2274,10 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
+      },
+      {
+        "path": "aidlc/spaces/default/memory/phases/operation.md",
+        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -2278,6 +2358,10 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
+      },
+      {
+        "path": "aidlc/spaces/default/memory/phases/operation.md",
+        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -2363,6 +2447,10 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
+      },
+      {
+        "path": "aidlc/spaces/default/memory/phases/operation.md",
+        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -2442,6 +2530,10 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
+      },
+      {
+        "path": "aidlc/spaces/default/memory/phases/operation.md",
+        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -2523,6 +2615,10 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
+      },
+      {
+        "path": "aidlc/spaces/default/memory/phases/operation.md",
+        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -2612,6 +2708,10 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
+      },
+      {
+        "path": "aidlc/spaces/default/memory/phases/operation.md",
+        "scope": "phase"
       }
     ],
     "sensors_applicable": [
