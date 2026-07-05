@@ -160,5 +160,16 @@
     "issues": [
       478
     ]
+  },
+  {
+    "uuid": "019f318e-eb09-7a37-9372-1d3448e88dfb",
+    "slug": "swarm-batch-progress",
+    "dirName": "260705-swarm-batch-progress",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      486
+    ]
   }
 ]
