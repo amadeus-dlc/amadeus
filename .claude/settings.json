@@ -78,6 +78,15 @@
             "command": "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-session-end.ts"
           }
         ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun $CLAUDE_PROJECT_DIR/dev-scripts/kanban/hooks/kanban-flush.ts"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -120,6 +129,15 @@
             "command": "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-runtime-compile.ts"
           }
         ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun $CLAUDE_PROJECT_DIR/dev-scripts/kanban/hooks/kanban-queue.ts"
+          }
+        ]
       }
     ],
     "PreCompact": [
@@ -151,6 +169,15 @@
           {
             "type": "command",
             "command": "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-stop.ts"
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun $CLAUDE_PROJECT_DIR/dev-scripts/kanban/hooks/kanban-flush.ts"
           }
         ]
       }

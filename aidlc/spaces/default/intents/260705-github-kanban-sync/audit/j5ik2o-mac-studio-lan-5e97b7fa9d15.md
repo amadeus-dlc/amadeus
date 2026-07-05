@@ -7468,3 +7468,150 @@
 **Findings count**: 2
 
 ---
+
+## Bolt Completed
+**Timestamp**: 2026-07-05T04:46:39Z
+**Event**: BOLT_COMPLETED
+**Bolt names**: B002-kanban-sync-cli
+**Batch number**: 2
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-05T04:47:26Z
+**Event**: BOLT_STARTED
+**Bolt names**: B003-kanban-hooks
+**Batch number**: 3
+**Walking skeleton**: false
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T04:47:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0f5c0455
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/kanban-hooks/check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T04:48:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0f5c0455
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/kanban-hooks/check.ts
+**Duration ms**: 820
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T04:48:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1c37eb7a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/kanban-hooks/check.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-05T04:48:00Z
+**Event**: SENSOR_FAILED
+**Fire id**: 1c37eb7a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/kanban-hooks/check.ts
+**Detail path**: aidlc/spaces/default/intents/260705-github-kanban-sync/.aidlc-sensors/code-generation/type-check-1c37eb7a.md
+**Findings count**: 2
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T04:48:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 17a154db
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/kanban/hooks/kanban-queue.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T04:48:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 17a154db
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/kanban/hooks/kanban-queue.ts
+**Duration ms**: 786
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T04:48:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3e64814c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/kanban/hooks/kanban-queue.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T04:48:26Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3e64814c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/kanban/hooks/kanban-queue.ts
+**Duration ms**: 489
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T04:48:42Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1f8d5cb9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/kanban/hooks/kanban-flush.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T04:48:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1f8d5cb9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/kanban/hooks/kanban-flush.ts
+**Duration ms**: 828
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T04:48:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: c2c7ba4f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/kanban/hooks/kanban-flush.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T04:48:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: c2c7ba4f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/kanban/hooks/kanban-flush.ts
+**Duration ms**: 450
+
+---
