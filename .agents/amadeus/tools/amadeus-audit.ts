@@ -6,6 +6,7 @@ import {
   auditFilePath,
   errorMessage,
   isoTimestamp,
+  normalizeWorktreeSlug,
   parseFieldArgs,
   relativeRecordDir,
   releaseAuditLock,
@@ -389,7 +390,10 @@ function parseSlugFlag(args: string[], subcommand: string): string {
   if (err) {
     jsonError(err);
   }
-  return slug;
+  // 正準形（小文字）で返す。AUDIT_FORKED の Bolt slug フィールドは audit-merge が
+  // 完全一致で相関するため、raw の mixed-case を記録すると後続の merge と相関が
+  // 切れる（Issue #478 gap2、Bugbot 指摘対応）。
+  return normalizeWorktreeSlug(slug);
 }
 
 function handleAuditFork(args: string[], projectDir: string): void {
