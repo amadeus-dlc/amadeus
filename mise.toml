@@ -1,0 +1,3 @@
+[tools]
+node = "24"
+claude = "2.1.200"
