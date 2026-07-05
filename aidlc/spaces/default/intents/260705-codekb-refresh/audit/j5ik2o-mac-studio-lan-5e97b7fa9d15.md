@@ -475,3 +475,71 @@
 **Error**: Stage "build-and-test" is still pending. Run the stage before reporting it complete.
 
 ---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-05T12:30:52Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-05T12:30:52Z
+**Event**: GATE_APPROVED
+**Stage**: build-and-test
+**User Input**: auto（test:all exit 0、参照実在検査 0 件）
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-05T12:30:52Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Details**: Stage Build and Test approved by gate
+
+---
+
+## Phase Completion
+**Timestamp**: 2026-07-05T12:30:52Z
+**Event**: PHASE_COMPLETED
+**From phase**: construction
+**To phase**: (end)
+**Stages completed**: 7
+
+---
+
+## Phase Verification
+**Timestamp**: 2026-07-05T12:30:52Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: construction → end
+
+---
+
+## Workflow Completion
+**Timestamp**: 2026-07-05T12:30:52Z
+**Event**: WORKFLOW_COMPLETED
+**Scope**: refactor
+**Details**: Scope: refactor, 7 stages completed
+
+---
+
+## Memory Empty
+**Timestamp**: 2026-07-05T12:30:52Z
+**Event**: MEMORY_EMPTY
+**Stage**: reverse-engineering
+
+---
+
+## Memory Empty
+**Timestamp**: 2026-07-05T12:30:52Z
+**Event**: MEMORY_EMPTY
+**Stage**: requirements-analysis
+
+---
+
+## Memory Empty
+**Timestamp**: 2026-07-05T12:30:52Z
+**Event**: MEMORY_EMPTY
+**Stage**: functional-design
+
+---
