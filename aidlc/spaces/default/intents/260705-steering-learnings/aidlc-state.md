@@ -89,7 +89,7 @@ Per unit: steering-learnings
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: code-generation
+- **Current Stage**: build-and-test
 - **Next Stage**: none
 - **Status**: Completed
 - **Construction Autonomy Mode**: unset
