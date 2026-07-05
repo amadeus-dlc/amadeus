@@ -32,6 +32,11 @@ type Entry = {
 
 const raw: unknown = JSON.parse(readFileSync(registryPath, "utf-8"));
 ok("registry が配列である", Array.isArray(raw));
+if (!Array.isArray(raw)) {
+  // 配列でない registry は以降の検査を実行できないため、ここで確定失敗させる
+  console.error("kanban-registry eval: registry が配列でないため中断");
+  process.exit(1);
+}
 const entries = raw as Entry[];
 
 ok("全 entry が uuid / slug / status を持つ", entries.every(
