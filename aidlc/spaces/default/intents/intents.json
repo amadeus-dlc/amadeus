@@ -138,5 +138,16 @@
     "issues": [
       477
     ]
+  },
+  {
+    "uuid": "019f3154-9e0c-704c-8b80-29439a46401b",
+    "slug": "jump-phase-guard",
+    "dirName": "260705-jump-phase-guard",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      481
+    ]
   }
 ]

@@ -30,107 +30,463 @@
       "replacement": "rules/amadeus.md",
       "rule": "engine-namespace 改名（Issue #445）。path 一致。"
     },
-    { "kind": "tool", "prefix": "aidlc-audit.ts", "replacement": "amadeus-audit.ts" },
-    { "kind": "tool", "prefix": "aidlc-bolt.ts", "replacement": "amadeus-bolt.ts" },
-    { "kind": "tool", "prefix": "aidlc-directive.ts", "replacement": "amadeus-directive.ts" },
-    { "kind": "tool", "prefix": "aidlc-graph.ts", "replacement": "amadeus-graph.ts" },
-    { "kind": "tool", "prefix": "aidlc-includes.ts", "replacement": "amadeus-includes.ts" },
-    { "kind": "tool", "prefix": "aidlc-jump.ts", "replacement": "amadeus-jump.ts" },
-    { "kind": "tool", "prefix": "aidlc-learnings.ts", "replacement": "amadeus-learnings.ts" },
-    { "kind": "tool", "prefix": "aidlc-lib.ts", "replacement": "amadeus-lib.ts" },
-    { "kind": "tool", "prefix": "aidlc-log.ts", "replacement": "amadeus-log.ts" },
-    { "kind": "tool", "prefix": "aidlc-orchestrate.ts", "replacement": "amadeus-orchestrate.ts" },
-    { "kind": "tool", "prefix": "aidlc-rule-schema.ts", "replacement": "amadeus-rule-schema.ts" },
-    { "kind": "tool", "prefix": "aidlc-runner-gen.ts", "replacement": "amadeus-runner-gen.ts" },
-    { "kind": "tool", "prefix": "aidlc-runtime.ts", "replacement": "amadeus-runtime.ts" },
-    { "kind": "tool", "prefix": "aidlc-sensor-linter.ts", "replacement": "amadeus-sensor-linter.ts" },
-    { "kind": "tool", "prefix": "aidlc-sensor-required-sections.ts", "replacement": "amadeus-sensor-required-sections.ts" },
-    { "kind": "tool", "prefix": "aidlc-sensor-schema.ts", "replacement": "amadeus-sensor-schema.ts" },
-    { "kind": "tool", "prefix": "aidlc-sensor-type-check.ts", "replacement": "amadeus-sensor-type-check.ts" },
-    { "kind": "tool", "prefix": "aidlc-sensor-upstream-coverage.ts", "replacement": "amadeus-sensor-upstream-coverage.ts" },
-    { "kind": "tool", "prefix": "aidlc-sensor.ts", "replacement": "amadeus-sensor.ts" },
-    { "kind": "tool", "prefix": "aidlc-stage-schema.ts", "replacement": "amadeus-stage-schema.ts" },
-    { "kind": "tool", "prefix": "aidlc-state.ts", "replacement": "amadeus-state.ts" },
-    { "kind": "tool", "prefix": "aidlc-swarm.ts", "replacement": "amadeus-swarm.ts" },
-    { "kind": "tool", "prefix": "aidlc-utility.ts", "replacement": "amadeus-utility.ts" },
-    { "kind": "tool", "prefix": "aidlc-validate.ts", "replacement": "amadeus-validate.ts" },
-    { "kind": "tool", "prefix": "aidlc-version.ts", "replacement": "amadeus-version.ts" },
-    { "kind": "tool", "prefix": "aidlc-worktree.ts", "replacement": "amadeus-worktree.ts" },
-    { "kind": "hook", "prefix": "aidlc-audit-logger.ts", "replacement": "amadeus-audit-logger.ts" },
-    { "kind": "hook", "prefix": "aidlc-log-subagent.ts", "replacement": "amadeus-log-subagent.ts" },
-    { "kind": "hook", "prefix": "aidlc-mint-presence.ts", "replacement": "amadeus-mint-presence.ts" },
-    { "kind": "hook", "prefix": "aidlc-runtime-compile.ts", "replacement": "amadeus-runtime-compile.ts" },
-    { "kind": "hook", "prefix": "aidlc-sensor-fire.ts", "replacement": "amadeus-sensor-fire.ts" },
-    { "kind": "hook", "prefix": "aidlc-session-end.ts", "replacement": "amadeus-session-end.ts" },
-    { "kind": "hook", "prefix": "aidlc-session-start.ts", "replacement": "amadeus-session-start.ts" },
-    { "kind": "hook", "prefix": "aidlc-statusline.ts", "replacement": "amadeus-statusline.ts" },
-    { "kind": "hook", "prefix": "aidlc-stop.ts", "replacement": "amadeus-stop.ts" },
-    { "kind": "hook", "prefix": "aidlc-sync-statusline.ts", "replacement": "amadeus-sync-statusline.ts" },
-    { "kind": "hook", "prefix": "aidlc-validate-state.ts", "replacement": "amadeus-validate-state.ts" },
-    { "kind": "scope-file", "prefix": "aidlc-bugfix.md", "replacement": "amadeus-bugfix.md" },
-    { "kind": "scope-file", "prefix": "aidlc-enterprise.md", "replacement": "amadeus-enterprise.md" },
-    { "kind": "scope-file", "prefix": "aidlc-feature.md", "replacement": "amadeus-feature.md" },
-    { "kind": "scope-file", "prefix": "aidlc-infra.md", "replacement": "amadeus-infra.md" },
-    { "kind": "scope-file", "prefix": "aidlc-mvp.md", "replacement": "amadeus-mvp.md" },
-    { "kind": "scope-file", "prefix": "aidlc-poc.md", "replacement": "amadeus-poc.md" },
-    { "kind": "scope-file", "prefix": "aidlc-refactor.md", "replacement": "amadeus-refactor.md" },
-    { "kind": "scope-file", "prefix": "aidlc-security-patch.md", "replacement": "amadeus-security-patch.md" },
-    { "kind": "scope-file", "prefix": "aidlc-workshop.md", "replacement": "amadeus-workshop.md" },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-audit.ts",
+      "replacement": "amadeus-audit.ts"
+    },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-bolt.ts",
+      "replacement": "amadeus-bolt.ts"
+    },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-directive.ts",
+      "replacement": "amadeus-directive.ts"
+    },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-graph.ts",
+      "replacement": "amadeus-graph.ts"
+    },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-includes.ts",
+      "replacement": "amadeus-includes.ts"
+    },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-jump.ts",
+      "replacement": "amadeus-jump.ts"
+    },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-learnings.ts",
+      "replacement": "amadeus-learnings.ts"
+    },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-lib.ts",
+      "replacement": "amadeus-lib.ts"
+    },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-log.ts",
+      "replacement": "amadeus-log.ts"
+    },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-orchestrate.ts",
+      "replacement": "amadeus-orchestrate.ts"
+    },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-rule-schema.ts",
+      "replacement": "amadeus-rule-schema.ts"
+    },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-runner-gen.ts",
+      "replacement": "amadeus-runner-gen.ts"
+    },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-runtime.ts",
+      "replacement": "amadeus-runtime.ts"
+    },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-sensor-linter.ts",
+      "replacement": "amadeus-sensor-linter.ts"
+    },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-sensor-required-sections.ts",
+      "replacement": "amadeus-sensor-required-sections.ts"
+    },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-sensor-schema.ts",
+      "replacement": "amadeus-sensor-schema.ts"
+    },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-sensor-type-check.ts",
+      "replacement": "amadeus-sensor-type-check.ts"
+    },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-sensor-upstream-coverage.ts",
+      "replacement": "amadeus-sensor-upstream-coverage.ts"
+    },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-sensor.ts",
+      "replacement": "amadeus-sensor.ts"
+    },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-stage-schema.ts",
+      "replacement": "amadeus-stage-schema.ts"
+    },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-state.ts",
+      "replacement": "amadeus-state.ts"
+    },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-swarm.ts",
+      "replacement": "amadeus-swarm.ts"
+    },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-utility.ts",
+      "replacement": "amadeus-utility.ts"
+    },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-validate.ts",
+      "replacement": "amadeus-validate.ts"
+    },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-version.ts",
+      "replacement": "amadeus-version.ts"
+    },
+    {
+      "kind": "tool",
+      "prefix": "aidlc-worktree.ts",
+      "replacement": "amadeus-worktree.ts"
+    },
+    {
+      "kind": "hook",
+      "prefix": "aidlc-audit-logger.ts",
+      "replacement": "amadeus-audit-logger.ts"
+    },
+    {
+      "kind": "hook",
+      "prefix": "aidlc-log-subagent.ts",
+      "replacement": "amadeus-log-subagent.ts"
+    },
+    {
+      "kind": "hook",
+      "prefix": "aidlc-mint-presence.ts",
+      "replacement": "amadeus-mint-presence.ts"
+    },
+    {
+      "kind": "hook",
+      "prefix": "aidlc-runtime-compile.ts",
+      "replacement": "amadeus-runtime-compile.ts"
+    },
+    {
+      "kind": "hook",
+      "prefix": "aidlc-sensor-fire.ts",
+      "replacement": "amadeus-sensor-fire.ts"
+    },
+    {
+      "kind": "hook",
+      "prefix": "aidlc-session-end.ts",
+      "replacement": "amadeus-session-end.ts"
+    },
+    {
+      "kind": "hook",
+      "prefix": "aidlc-session-start.ts",
+      "replacement": "amadeus-session-start.ts"
+    },
+    {
+      "kind": "hook",
+      "prefix": "aidlc-statusline.ts",
+      "replacement": "amadeus-statusline.ts"
+    },
+    {
+      "kind": "hook",
+      "prefix": "aidlc-stop.ts",
+      "replacement": "amadeus-stop.ts"
+    },
+    {
+      "kind": "hook",
+      "prefix": "aidlc-sync-statusline.ts",
+      "replacement": "amadeus-sync-statusline.ts"
+    },
+    {
+      "kind": "hook",
+      "prefix": "aidlc-validate-state.ts",
+      "replacement": "amadeus-validate-state.ts"
+    },
+    {
+      "kind": "scope-file",
+      "prefix": "aidlc-bugfix.md",
+      "replacement": "amadeus-bugfix.md"
+    },
+    {
+      "kind": "scope-file",
+      "prefix": "aidlc-enterprise.md",
+      "replacement": "amadeus-enterprise.md"
+    },
+    {
+      "kind": "scope-file",
+      "prefix": "aidlc-feature.md",
+      "replacement": "amadeus-feature.md"
+    },
+    {
+      "kind": "scope-file",
+      "prefix": "aidlc-infra.md",
+      "replacement": "amadeus-infra.md"
+    },
+    {
+      "kind": "scope-file",
+      "prefix": "aidlc-mvp.md",
+      "replacement": "amadeus-mvp.md"
+    },
+    {
+      "kind": "scope-file",
+      "prefix": "aidlc-poc.md",
+      "replacement": "amadeus-poc.md"
+    },
+    {
+      "kind": "scope-file",
+      "prefix": "aidlc-refactor.md",
+      "replacement": "amadeus-refactor.md"
+    },
+    {
+      "kind": "scope-file",
+      "prefix": "aidlc-security-patch.md",
+      "replacement": "amadeus-security-patch.md"
+    },
+    {
+      "kind": "scope-file",
+      "prefix": "aidlc-workshop.md",
+      "replacement": "amadeus-workshop.md"
+    },
     {
       "kind": "scope-file",
       "prefix": "aidlc-<name>.md",
       "replacement": "amadeus-<name>.md",
       "rule": "scopes/ の命名規則プレースホルダ（stage-definition.md、stage-protocol.md、tools 内コメント）。review 指摘で追加、code-generation 決定記録あり。"
     },
-    { "kind": "sensor-file", "prefix": "aidlc-linter.md", "replacement": "amadeus-linter.md" },
-    { "kind": "sensor-file", "prefix": "aidlc-required-sections.md", "replacement": "amadeus-required-sections.md" },
-    { "kind": "sensor-file", "prefix": "aidlc-type-check.md", "replacement": "amadeus-type-check.md" },
-    { "kind": "sensor-file", "prefix": "aidlc-upstream-coverage.md", "replacement": "amadeus-upstream-coverage.md" },
+    {
+      "kind": "sensor-file",
+      "prefix": "aidlc-linter.md",
+      "replacement": "amadeus-linter.md"
+    },
+    {
+      "kind": "sensor-file",
+      "prefix": "aidlc-required-sections.md",
+      "replacement": "amadeus-required-sections.md"
+    },
+    {
+      "kind": "sensor-file",
+      "prefix": "aidlc-type-check.md",
+      "replacement": "amadeus-type-check.md"
+    },
+    {
+      "kind": "sensor-file",
+      "prefix": "aidlc-upstream-coverage.md",
+      "replacement": "amadeus-upstream-coverage.md"
+    },
     {
       "kind": "sensor-file",
       "prefix": "aidlc-<id>.md",
       "replacement": "amadeus-<id>.md",
       "rule": "sensors/ の命名規則プレースホルダ（stage-protocol.md、全 32 stage 定義、tools 内コメント）。review 指摘で追加、code-generation 決定記録あり。"
     },
-    { "kind": "cli-token", "prefix": "aidlc-audit", "replacement": "amadeus-audit" },
-    { "kind": "cli-token", "prefix": "aidlc-bolt", "replacement": "amadeus-bolt" },
-    { "kind": "cli-token", "prefix": "aidlc-directive", "replacement": "amadeus-directive" },
-    { "kind": "cli-token", "prefix": "aidlc-graph", "replacement": "amadeus-graph" },
-    { "kind": "cli-token", "prefix": "aidlc-includes", "replacement": "amadeus-includes" },
-    { "kind": "cli-token", "prefix": "aidlc-jump", "replacement": "amadeus-jump" },
-    { "kind": "cli-token", "prefix": "aidlc-learnings", "replacement": "amadeus-learnings" },
-    { "kind": "cli-token", "prefix": "aidlc-lib", "replacement": "amadeus-lib" },
-    { "kind": "cli-token", "prefix": "aidlc-log", "replacement": "amadeus-log" },
-    { "kind": "cli-token", "prefix": "aidlc-orchestrate", "replacement": "amadeus-orchestrate" },
-    { "kind": "cli-token", "prefix": "aidlc-rule-schema", "replacement": "amadeus-rule-schema" },
-    { "kind": "cli-token", "prefix": "aidlc-runner-gen", "replacement": "amadeus-runner-gen" },
-    { "kind": "cli-token", "prefix": "aidlc-runtime", "replacement": "amadeus-runtime" },
-    { "kind": "cli-token", "prefix": "aidlc-sensor-linter", "replacement": "amadeus-sensor-linter" },
-    { "kind": "cli-token", "prefix": "aidlc-sensor-required-sections", "replacement": "amadeus-sensor-required-sections" },
-    { "kind": "cli-token", "prefix": "aidlc-sensor-schema", "replacement": "amadeus-sensor-schema" },
-    { "kind": "cli-token", "prefix": "aidlc-sensor-type-check", "replacement": "amadeus-sensor-type-check" },
-    { "kind": "cli-token", "prefix": "aidlc-sensor-upstream-coverage", "replacement": "amadeus-sensor-upstream-coverage" },
-    { "kind": "cli-token", "prefix": "aidlc-sensor", "replacement": "amadeus-sensor" },
-    { "kind": "cli-token", "prefix": "aidlc-stage-schema", "replacement": "amadeus-stage-schema" },
-    { "kind": "cli-token", "prefix": "aidlc-state", "replacement": "amadeus-state" },
-    { "kind": "cli-token", "prefix": "aidlc-swarm", "replacement": "amadeus-swarm" },
-    { "kind": "cli-token", "prefix": "aidlc-utility", "replacement": "amadeus-utility" },
-    { "kind": "cli-token", "prefix": "aidlc-validate", "replacement": "amadeus-validate" },
-    { "kind": "cli-token", "prefix": "aidlc-version", "replacement": "amadeus-version" },
-    { "kind": "cli-token", "prefix": "aidlc-worktree", "replacement": "amadeus-worktree" },
-    { "kind": "cli-token", "prefix": "aidlc-audit-logger", "replacement": "amadeus-audit-logger" },
-    { "kind": "cli-token", "prefix": "aidlc-log-subagent", "replacement": "amadeus-log-subagent" },
-    { "kind": "cli-token", "prefix": "aidlc-mint-presence", "replacement": "amadeus-mint-presence" },
-    { "kind": "cli-token", "prefix": "aidlc-runtime-compile", "replacement": "amadeus-runtime-compile" },
-    { "kind": "cli-token", "prefix": "aidlc-sensor-fire", "replacement": "amadeus-sensor-fire" },
-    { "kind": "cli-token", "prefix": "aidlc-session-end", "replacement": "amadeus-session-end" },
-    { "kind": "cli-token", "prefix": "aidlc-session-start", "replacement": "amadeus-session-start" },
-    { "kind": "cli-token", "prefix": "aidlc-statusline", "replacement": "amadeus-statusline" },
-    { "kind": "cli-token", "prefix": "aidlc-stop", "replacement": "amadeus-stop" },
-    { "kind": "cli-token", "prefix": "aidlc-sync-statusline", "replacement": "amadeus-sync-statusline" },
-    { "kind": "cli-token", "prefix": "aidlc-validate-state", "replacement": "amadeus-validate-state" },
-    { "kind": "cli-token", "prefix": "aidlc-kiro-adapter", "replacement": "amadeus-kiro-adapter" },
-    { "kind": "cli-token", "prefix": "aidlc-codex-adapter", "replacement": "amadeus-codex-adapter" },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-audit",
+      "replacement": "amadeus-audit"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-bolt",
+      "replacement": "amadeus-bolt"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-directive",
+      "replacement": "amadeus-directive"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-graph",
+      "replacement": "amadeus-graph"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-includes",
+      "replacement": "amadeus-includes"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-jump",
+      "replacement": "amadeus-jump"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-learnings",
+      "replacement": "amadeus-learnings"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-lib",
+      "replacement": "amadeus-lib"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-log",
+      "replacement": "amadeus-log"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-orchestrate",
+      "replacement": "amadeus-orchestrate"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-rule-schema",
+      "replacement": "amadeus-rule-schema"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-runner-gen",
+      "replacement": "amadeus-runner-gen"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-runtime",
+      "replacement": "amadeus-runtime"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-sensor-linter",
+      "replacement": "amadeus-sensor-linter"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-sensor-required-sections",
+      "replacement": "amadeus-sensor-required-sections"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-sensor-schema",
+      "replacement": "amadeus-sensor-schema"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-sensor-type-check",
+      "replacement": "amadeus-sensor-type-check"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-sensor-upstream-coverage",
+      "replacement": "amadeus-sensor-upstream-coverage"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-sensor",
+      "replacement": "amadeus-sensor"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-stage-schema",
+      "replacement": "amadeus-stage-schema"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-state",
+      "replacement": "amadeus-state"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-swarm",
+      "replacement": "amadeus-swarm"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-utility",
+      "replacement": "amadeus-utility"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-validate",
+      "replacement": "amadeus-validate"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-version",
+      "replacement": "amadeus-version"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-worktree",
+      "replacement": "amadeus-worktree"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-audit-logger",
+      "replacement": "amadeus-audit-logger"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-log-subagent",
+      "replacement": "amadeus-log-subagent"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-mint-presence",
+      "replacement": "amadeus-mint-presence"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-runtime-compile",
+      "replacement": "amadeus-runtime-compile"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-sensor-fire",
+      "replacement": "amadeus-sensor-fire"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-session-end",
+      "replacement": "amadeus-session-end"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-session-start",
+      "replacement": "amadeus-session-start"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-statusline",
+      "replacement": "amadeus-statusline"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-stop",
+      "replacement": "amadeus-stop"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-sync-statusline",
+      "replacement": "amadeus-sync-statusline"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-validate-state",
+      "replacement": "amadeus-validate-state"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-kiro-adapter",
+      "replacement": "amadeus-kiro-adapter"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-codex-adapter",
+      "replacement": "amadeus-codex-adapter"
+    },
     {
       "kind": "cli-token",
       "prefix": "aidlc-(orchestrate|state|jump|bolt|swarm)",
@@ -204,7 +560,15 @@
       "rule": "agents/aidlc-<x>-agent.md -> agents/amadeus-<x>-agent.md; knowledge/aidlc-<x>-agent/ -> knowledge/amadeus-<x>-agent/"
     }
   ],
-  "checkedEngineDirectories": ["tools", "amadeus-common", "sensors", "hooks", "scopes", "agents", "knowledge"],
+  "checkedEngineDirectories": [
+    "tools",
+    "amadeus-common",
+    "sensors",
+    "hooks",
+    "scopes",
+    "agents",
+    "knowledge"
+  ],
   "relocations": [
     {
       "upstreamPath": "rules/amadeus.md",
@@ -255,7 +619,8 @@
     "tools/aidlc-learnings.ts",
     "tools/aidlc-state.ts",
     "hooks/aidlc-mint-presence.ts",
-    "hooks/aidlc-stop.ts"
+    "hooks/aidlc-stop.ts",
+    "tools/aidlc-jump.ts"
   ],
   "exceptions": [
     {
