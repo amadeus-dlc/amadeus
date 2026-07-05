@@ -74,7 +74,7 @@ Per unit: codekb-refresh
 - [ ] nfr-requirements — SKIP
 - [ ] nfr-design — SKIP
 - [ ] infrastructure-design — SKIP
-- [?] code-generation — EXECUTE
+- [S] code-generation — EXECUTE
 - [ ] build-and-test — EXECUTE
 - [ ] ci-pipeline — SKIP
 
@@ -93,7 +93,7 @@ Per unit: codekb-refresh
 - **Next Stage**: build-and-test
 - **Status**: Running
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-07-05T12:28:11Z
+- **Last Updated**: 2026-07-05T12:30:30Z
 
 ## Session Resume Point
 - **Last Completed Stage**: functional-design

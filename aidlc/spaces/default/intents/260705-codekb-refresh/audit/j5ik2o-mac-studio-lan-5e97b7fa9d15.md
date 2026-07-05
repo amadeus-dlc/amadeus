@@ -449,3 +449,29 @@
 **Error**: Stage "build-and-test" is still pending. Run the stage before reporting it complete.
 
 ---
+
+## Stage Skip
+**Timestamp**: 2026-07-05T12:30:30Z
+**Event**: STAGE_SKIPPED
+**Stage**: code-generation
+**Reason**: 知識文書（aidlc/ 内の codekb）の全面更新のみで workspace コード変更なし。エンジンの code-producing ガードの指摘どおり。成果物の正は codekb 9 ファイル
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-05T12:30:40Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state gate-start build-and-test
+**Error**: Stage build-and-test is in state 'pending' but command requires one of: in-progress
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-05T12:30:40Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: report --stage build-and-test --result approved --user-input auto（test:all exit 0、参照実在検査 0 件）
+**Error**: Stage "build-and-test" is still pending. Run the stage before reporting it complete.
+
+---
