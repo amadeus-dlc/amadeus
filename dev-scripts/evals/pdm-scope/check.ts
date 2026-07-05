@@ -150,6 +150,13 @@ const EXPECTED_EXECUTE = [
       env: { ...process.env, CLAUDE_PROJECT_DIR: ws },
     });
     const vout = new TextDecoder().decode(vproc.stdout);
+    // liveness guard: validator が完走して判定を出したことを先に確認する
+    // （crash すると出力が空になり、パターン不一致の意味が変わるため）
+    ok(
+      "(d) validator が完走して判定を出力する",
+      /## 判定/.test(vout) && vproc.exitCode === 1,
+      `exit=${vproc.exitCode}`
+    );
     ok(
       "(d) pdm の completed ステージの成果物欠落を validator が fail 検出する",
       /intent-capture\/intent-statement\.md/.test(vout),
