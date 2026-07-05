@@ -182,5 +182,17 @@
     "issues": [
       432
     ]
+  },
+  {
+    "uuid": "019f3153-396d-7839-ac70-8d0445466105",
+    "slug": "parallel-policy-docs",
+    "dirName": "260705-parallel-policy-docs",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      407,
+      342
+    ]
   }
 ]
