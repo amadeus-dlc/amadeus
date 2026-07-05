@@ -376,6 +376,27 @@
 
 ---
 
+## Human Turn
+**Timestamp**: 2026-07-05T23:15:00Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-05T23:16:17Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: a56b432205b4ee684
+**Message**: これで十分な情報が揃いました。構造化スキャン結果を以下に示します。\n\n---\n\n## 差分スキャン結果（3049eadf..HEAD）\n\n### 差分の要約（PR 単位）\n\n| PR | 変更ファイル数（非 aidlc） | 内容 |\n|---|---|---|\n| #489 pdm scope 追加 | 11 | `.agents/amadeus/scopes/amadeus-pdm.md` 新
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-05T23:16:17Z
+**Event**: HUMAN_TURN
+
+---
+
 ## Sensor Fired
 **Timestamp**: 2026-07-05T23:16:41Z
 **Event**: SENSOR_FIRED
