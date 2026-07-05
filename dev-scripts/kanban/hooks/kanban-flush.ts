@@ -4,6 +4,7 @@
 import {
   appendFileSync,
   existsSync,
+  mkdirSync,
   readFileSync,
   renameSync,
   rmSync,
@@ -56,6 +57,7 @@ export function restoreProcessingToQueue(dir: string): void {
 }
 
 function drop(dir: string, reason: string): void {
+  mkdirSync(dir, { recursive: true });
   appendFileSync(join(dir, "drops.log"), `${new Date().toISOString()}\t${reason}\n`, "utf-8");
 }
 
@@ -94,11 +96,18 @@ function runFlush(projectDir: string): void {
 }
 
 if (import.meta.main) {
+  const projectDir = resolveKanbanProjectDir(process.env, import.meta.url);
   try {
     // Stop / SessionEnd では stdin の内容を使わない（TTY でも安全）
-    runFlush(resolveKanbanProjectDir(process.env, import.meta.url));
-  } catch {
-    // hook は失敗を伝播させない（BR-4）。drop 記録は runFlush 内で実施済み
+    runFlush(projectDir);
+  } catch (e) {
+    // hook は失敗を伝播させない（BR-4）が、runFlush 外へ漏れた同期例外
+    // （rename / read の失敗など）も drop 記録には残す（best-effort）
+    try {
+      drop(stateDir(projectDir), `flush hook 例外: ${e instanceof Error ? e.message : String(e)}`);
+    } catch {
+      // 記録自体が不可能な場合だけ無音で諦める
+    }
   }
   process.exit(0);
 }

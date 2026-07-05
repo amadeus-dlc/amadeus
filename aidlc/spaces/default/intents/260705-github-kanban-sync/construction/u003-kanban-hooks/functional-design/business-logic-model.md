@@ -33,8 +33,10 @@ stdin JSON
      cwd = PROJECT_DIR、timeout = 60 秒（spawnSync の timeout。amadeus-stop.ts の
      ENGINE_TIMEOUT_MS と同じ流儀）で同期実行
      - 成功: queue.processing を削除、last-success を現在時刻で更新
-     - 失敗 / timeout: drops.log へ 1 行追記し、queue.processing の内容を queue の先頭へ戻して削除
-       （次回 flush で再試行。FR-5.4 / FR-4.2）
+     - 失敗 / timeout: drops.log へ 1 行追記し、queue.processing の内容を queue へ行単位 append で
+       戻して削除（次回 flush で再試行。FR-5.4 / FR-4.2。順序は先頭に戻さない —
+       flush は毎回 uniq した全件を対象にするため順序は結果に影響せず、
+       行単位 append は同時追記との読み取り結合競合を避ける）
   7. 常に exit 0（hook は失敗を伝播させない）
 ```
 

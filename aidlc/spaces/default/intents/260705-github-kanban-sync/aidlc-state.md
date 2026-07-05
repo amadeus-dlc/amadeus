@@ -91,7 +91,7 @@ Per unit: u003-kanban-hooks
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: ci-pipeline
+- **Current Stage**: build-and-test
 - **Next Stage**: none
 - **Status**: Completed
 - **Construction Autonomy Mode**: autonomous
