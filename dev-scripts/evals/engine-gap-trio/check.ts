@@ -171,6 +171,19 @@ function mainShard(workspace: string, dirName: string): { name: string; path: st
       !(fork.stdout + fork.stderr).includes("Invalid --slug"),
       fork.stdout + fork.stderr
     );
+    // audit-merge は AUDIT_FORKED の Bolt slug を完全一致で相関するため、
+    // 大文字入力でも記録は正準形（小文字）でなければならない
+    const relRecord2 = `aidlc/spaces/default/intents/${dirName}`;
+    const wtAudit2 = join(ws, ".aidlc/worktrees", "bolt-u002-mixed-case", relRecord2, "audit");
+    mkdirSync(wtAudit2, { recursive: true });
+    const forked = run(["bun", auditTool, "audit-fork", "--slug", "U002-Mixed-Case"], ws);
+    ok("(gap2) 大文字 slug でも audit-fork が worktree を解決して成功する", forked.exitCode === 0, forked.stdout + forked.stderr);
+    const mainAudit = readdirSync(join(recordDirPath(ws, dirName), "audit"))
+      .map((f) => readFileSync(join(recordDirPath(ws, dirName), "audit", f), "utf-8")).join("\n");
+    ok(
+      "(gap2) AUDIT_FORKED の Bolt slug は正準形（小文字）で記録される",
+      mainAudit.includes("**Bolt slug**: u002-mixed-case") && !mainAudit.includes("**Bolt slug**: U002-Mixed-Case"),
+    );
   } finally {
     rmSync(ws, { recursive: true, force: true });
   }
