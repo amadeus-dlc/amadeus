@@ -46,14 +46,19 @@ ok("全 entry が uuid / slug / status を持つ", entries.every(
 // issues 契約（BR-1 / BR-2）: 省略可。ある場合は正の整数・重複なしの配列。
 for (const e of entries) {
   if (e.issues === undefined) continue;
+  if (!Array.isArray(e.issues)) {
+    // 非配列（null 等）は以降の Set 検査が throw するため、失敗計上して次へ
+    ok(`${e.slug}: issues が正の整数の配列である`, false, JSON.stringify(e.issues));
+    continue;
+  }
   ok(
     `${e.slug}: issues が正の整数の配列である`,
-    Array.isArray(e.issues) && e.issues.every((n) => Number.isInteger(n) && n > 0),
+    e.issues.every((n) => Number.isInteger(n) && n > 0),
     JSON.stringify(e.issues)
   );
   ok(
     `${e.slug}: issues に重複がない`,
-    new Set(e.issues).size === (e.issues as number[]).length
+    new Set(e.issues).size === e.issues.length
   );
 }
 
@@ -61,6 +66,12 @@ for (const e of entries) {
 // 遡及補完（FR-1.3）は「判別できない entry には付与しない」ため、無い entry の存在は正常。
 const withIssues = entries.filter((e) => e.issues !== undefined);
 ok("issues を持つ entry が 1 件以上ある（遡及補完済み）", withIssues.length >= 1);
+// 「判別できない entry には付与しない」契約（FR-1.3 / BR-4）の護持:
+// 全 entry へ機械的に issues を付ける変更が入ったら、この検査が退行を検知する。
+ok(
+  "issues を持たない entry も 1 件以上ある（判別不能は付与しない契約の護持）",
+  entries.some((e) => e.issues === undefined)
+);
 
 // 代表 entry: 本 Intent 自身は Issue #470 に紐づく（FR-1.3 の検証アンカー）。
 const self = entries.find((e) => e.dirName === "260705-github-kanban-sync");
