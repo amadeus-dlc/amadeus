@@ -16,7 +16,7 @@ import {
   worktreePath,
 } from "./amadeus-lib.ts";
 
-// --- Canonical event types (69) ---
+// --- Canonical event types (70) ---
 // See docs/reference/12-state-machine.md for the state transitions that emit each event.
 
 const VALID_EVENT_TYPES = new Set([
@@ -27,6 +27,8 @@ const VALID_EVENT_TYPES = new Set([
   "STAGE_COMPLETED",
   "STAGE_JUMPED",
   "STAGE_SKIPPED",
+  // Docs-only workspace_requires guard exemption (Issue #499)
+  "GUARD_EXEMPTED",
   // Phase lifecycle
   "PHASE_STARTED",
   "PHASE_COMPLETED",

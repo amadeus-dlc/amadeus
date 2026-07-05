@@ -8,7 +8,7 @@
 
 All event names follow `SUBJECT_PAST_VERB` — every event answers "what happened?"
 
-## Event Registry (69 events, 18 categories)
+## Event Registry (70 events, 18 categories)
 
 ### Workflow Lifecycle (4 events)
 
@@ -28,7 +28,7 @@ All event names follow `SUBJECT_PAST_VERB` — every event answers "what happene
 | `PHASE_VERIFIED` | Traceability check at boundary | Timestamp, Phase boundary, Pass/fail, Issues | `tools/amadeus-state.ts advance`, `tools/amadeus-state.ts complete-workflow` |
 | `PHASE_SKIPPED` | Scope excludes phase | Timestamp, Phase, Scope, Reason | `tools/amadeus-utility.ts init` (per-phase scope eval) |
 
-### Stage Lifecycle (6 events)
+### Stage Lifecycle (8 events)
 
 | Event | When | Required Fields | Emitter |
 |-------|------|-----------------|---------|
@@ -38,6 +38,7 @@ All event names follow `SUBJECT_PAST_VERB` — every event answers "what happene
 | ✓ `STAGE_COMPLETED` | Stage finishes (`[x]`) | Timestamp, Stage, Details, Artifacts | `tools/amadeus-state.ts approve` (gated stages; also auto-advances to next), `tools/amadeus-state.ts advance` (non-gated stages), `tools/amadeus-utility.ts init` (init stages) |
 | `STAGE_JUMPED` | Forward/backward/redo jump target reached | Timestamp, Direction, Source, Target, Scope | `tools/amadeus-jump.ts execute` |
 | `STAGE_SKIPPED` | Stage skipped during jump (`[S]`) | Timestamp, Stage, Reason | `tools/amadeus-jump.ts execute`, `tools/amadeus-state.ts skip` |
+| `GUARD_EXEMPTED` | A `workspace_requires` stage-completion guard refusal was exempted by a registry docs-only declaration (Issue #499) | Timestamp, Stage, Evidence | `tools/amadeus-state.ts` `verifyStageArtifacts` (via `advance`/`finalize`/`complete-workflow`) |
 
 ### Session Events (5 events — hook-owned, independent of workflow lifecycle)
 

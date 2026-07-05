@@ -280,5 +280,18 @@
     "issues": [
       429
     ]
+  },
+  {
+    "uuid": "019f332c-55e2-70c1-8074-e3384cc641ec",
+    "slug": "docs-codekb-guards",
+    "dirName": "260705-docs-codekb-guards",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      498,
+      499,
+      501
+    ]
   }
 ]

@@ -144,3 +144,5 @@ Intent の正準 ID は `intents/intents.json`（registry）の UUIDv7 である
 ## Testing Posture
 - build-and-test は Minimal 戦略でも produces 全件を生成する（report が成果物不在を拒否するため）。不適用のテスト instruction は空ファイルにせず、適用判断と根拠を記す簡潔な文書にする (learned 2026-07-04) <!-- cid:build-and-test:c1 -->
 - エンジン/validator の eval fixture はエンジンの実出力形を正とする。validator の期待に手書きで合わせた fixture は不整合を隠す（#458 は fixture が [S] 前提だったため見逃された）。可能なら隔離 workspace で実 CLI を起動して実出力そのものを検査する (learned 2026-07-05) <!-- cid:code-generation:c5 -->
+- TDD が中断されて実装が eval より先行した場合は、遡及 RED 検証（実装ファイルを git stash → 追加した eval 検査が FAIL することを確認 → stash pop → 全 GREEN）で eval の検出力を証明してから GREEN と扱う (learned 2026-07-05) <!-- cid:code-generation:c6 -->
+- エンジン/validator の eval の試験材料は、作業中 Intent の record（自己参照で内容が動く）ではなく、merge 済みの固定 record と実 codekb を隔離 workspace へコピーして使う（例: 260705-steering-learnings の stub 9 件） (learned 2026-07-05) <!-- cid:code-generation:c7 -->

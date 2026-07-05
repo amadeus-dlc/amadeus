@@ -626,6 +626,7 @@
     "tools/aidlc-orchestrate.ts",
     "tools/aidlc-graph.ts",
     "tools/data/stage-graph.json",
+    "knowledge/aidlc-shared/audit-format.md",
     "aidlc-common/stages/initialization/workspace-scaffold.md",
     "aidlc-common/stages/initialization/workspace-detection.md",
     "aidlc-common/stages/initialization/state-init.md",
@@ -684,6 +685,14 @@
     {
       "target": "tools/aidlc-lib.ts、tools/aidlc-utility.ts、tools/aidlc-state.ts、hooks/aidlc-mint-presence.ts、hooks/aidlc-stop.ts（ローカルでは .agents/amadeus/tools/amadeus-*.ts、.agents/amadeus/hooks/amadeus-*.ts）",
       "reason": "hooks と engine state のバグ修正バッチ（Issue #464 / #476）のローカル修正。amadeus-state.ts の advance / complete-workflow が emit する PHASE_VERIFIED と同一トランザクションで aidlc-state.md の Phase Progress を Verified へ更新し（R001）、verification/phase-check-<phase>.md の存在を phase 境界完了の条件にした（R002）。amadeus-utility.ts の state-init も同じ initialization→firstPostInit 境界を即時通過させる経路のため同様に修正した。amadeus-lib.ts に registry の complete-系判定を共有 helper（activeIntentIsComplete）として追加し、amadeus-mint-presence.ts が complete な Intent への HUMAN_TURN mint を skip する（R004）のと、amadeus-stop.ts が所有（session→intent 一致）×進行中（同 helper）の 2 条件 AND で督促判定する（R003）のとで、同じ判定を共有させた。上流に対応のない独自修正であり、上流が同種の修正を取り込むまで engineFileExceptions に残す。"
+    },
+    {
+      "target": "tools/aidlc-lib.ts（ローカルでは .agents/amadeus/tools/amadeus-lib.ts）",
+      "reason": "Issue #498: codekbRepoName が linked worktree で worktree ディレクトリ名を codekb repo キーに漏らすバグの修正。basename フォールバックの前に git rev-parse --git-common-dir 由来の主リポジトリ名解決を追加。上流が同修正を取り込んだら解除。"
+    },
+    {
+      "target": "tools/aidlc-state.ts、tools/aidlc-lib.ts、tools/aidlc-audit.ts（ローカルでは .agents/amadeus/tools/amadeus-state.ts、amadeus-lib.ts、amadeus-audit.ts）、knowledge/aidlc-shared/audit-format.md（ローカルでは .agents/amadeus/knowledge/amadeus-shared/audit-format.md）",
+      "reason": "Issue #499: docs 系 Intent と code-generation の workspace_requires ガードの構造的衝突の解消。registry の docsOnly 宣言（amadeus-state.ts declare-docs-only、非空 evidence 必須）で検査を免除し、免除の発動を GUARD_EXEMPTED として audit に記録する（audit-format.md にイベント契約を追記）。宣言なしの拒否経路は従来どおりで #366 型の抜け検出を保全する。上流が同修正を取り込んだら解除。"
     }
   ]
 }

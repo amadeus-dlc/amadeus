@@ -95,7 +95,8 @@ const rowCategoryRules: RowCategoryRule[] = [
       condition.includes("WORKFLOW_COMPLETED") ||
       condition.includes("audit の主 shard") ||
       condition.includes("先行 phase") ||
-      condition === "completed のステージは必須成果物を持つ",
+      condition === "completed のステージは必須成果物を持つ" ||
+      condition.includes("codekb 採用 stub"),
   },
   {
     category: "Intent Registry",
