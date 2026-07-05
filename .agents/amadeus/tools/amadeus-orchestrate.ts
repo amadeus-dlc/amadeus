@@ -155,7 +155,55 @@ function emit(directive: Directive): void {
     );
     process.exit(1);
   }
+  // Issue #431: every error directive is also EVIDENCE of a failed workflow
+  // step — mirror the other CLIs' emitError contract by best-effort appending
+  // ERROR_LOGGED before printing. Recording never touches stdout (the
+  // directive JSON stays the only stdout output) and never blocks the emit.
+  if (directive.kind === "error") {
+    recordEngineError(directive.message);
+  }
   console.log(JSON.stringify(result.data));
+}
+
+// Best-effort ERROR_LOGGED append for the engine (Issue #431). Mirrors
+// amadeus-lib's emitError contract WITHOUT the exit: no-op when no workflow
+// state exists in cwd (pre-init errors have no record to write to), and any
+// recording failure is swallowed — we are already on an error path, and the
+// caller still gets the error directive / stderr message regardless.
+function recordEngineError(message: string): void {
+  try {
+    // Extract --project-dir the same way main() does (this helper can fire
+    // before/without main's local parse, e.g. from the top-level catch).
+    let projectDirFlag: string | undefined;
+    const rawArgs = process.argv.slice(2);
+    for (let i = 0; i < rawArgs.length; i++) {
+      if (rawArgs[i] === "--project-dir" && i + 1 < rawArgs.length) {
+        projectDirFlag = rawArgs[i + 1];
+      }
+    }
+    const pd = resolveProjectDir(projectDirFlag);
+    if (!existsSync(stateFilePath(pd))) return;
+    // Lazy require breaks the load-time cycle exactly like lib's emitError
+    // (amadeus-audit.ts imports from this module's dependencies).
+    const audit = require("./amadeus-audit.ts") as {
+      appendAuditEntry: (
+        event: string,
+        fields: Record<string, string>,
+        projectDir: string,
+      ) => unknown;
+    };
+    audit.appendAuditEntry(
+      "ERROR_LOGGED",
+      {
+        Tool: "amadeus-orchestrate",
+        Command: rawArgs.join(" "),
+        Error: message,
+      },
+      pd,
+    );
+  } catch {
+    // Swallowed by contract — recording failure must not mask the original error.
+  }
 }
 
 // --- Composing the sibling CLI tools (shell-out) ---
@@ -2793,7 +2841,9 @@ if (import.meta.main) {
   } catch (e) {
     // Any uncaught read error (missing graph, malformed state) surfaces as a
     // non-zero exit with the message on stderr — never a half-emitted
-    // directive on stdout.
+    // directive on stdout. Best-effort ERROR_LOGGED first (Issue #431) so the
+    // failure leaves audit evidence, not just a conversation-log trace.
+    recordEngineError(errorMessage(e));
     console.error(`amadeus-orchestrate: ${errorMessage(e)}`);
     process.exit(1);
   }

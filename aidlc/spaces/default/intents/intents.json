@@ -194,5 +194,16 @@
       407,
       342
     ]
+  },
+  {
+    "uuid": "019f31e9-bad7-793a-bd87-ee9b16ee9aa4",
+    "slug": "engine-error-logged",
+    "dirName": "260705-engine-error-logged",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      431
+    ]
   }
 ]
