@@ -24,7 +24,7 @@ Amadeus は「契約」「実行能力」「検証」「実例」「自己開発
 
 Intent は `aidlc/spaces/<space>/intents/<dirName>.md` と `<dirName>/` の record で構成される。
 
-`intents.json` が registry、`intents.md` が人間向け索引、`active-intent` が現在対象を示す。
+`intents.json` が registry（正準台帳）、`active-intent` が現在対象を示す（人間向け索引 `intents.md` は GD009 で廃止。必要なら registry から都度生成する）。
 
 ### 状態境界
 

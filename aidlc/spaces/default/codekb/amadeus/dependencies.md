@@ -16,7 +16,6 @@
 | `CONTEXT.md` → 文書と成果物 | Amadeus DLC の語彙を定義する。 |
 | `skills/amadeus/references/stage-catalog.md` → `aidlc-state.md` | stage、scope、skill の対応を決める。 |
 | `skills/amadeus*/` → `.agents/skills/amadeus*/` | source skill から昇格先 skill へ反映する。 |
-| `skills/amadeus-validator/scripts/IndexGenerate.ts` → `intents.md` | Intent registry から人間向け索引を生成する。 |
 | `skills/amadeus-validator/validator/` → `aidlc/` | Space と Intent の構造を検証する。 |
 | `dev-scripts/examples-contract.ts` → generator と validator wrapper | examples snapshot の不変条件を共有する。 |
 | `dev-scripts/evals/**` → CI | テンプレート、validator、契約、移行、e2e を検査する。 |
