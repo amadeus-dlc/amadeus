@@ -127,5 +127,16 @@
       464,
       476
     ]
+  },
+  {
+    "uuid": "019f3102-927e-7d29-9d26-f38445166812",
+    "slug": "ledger-pr-docs",
+    "dirName": "260705-ledger-pr-docs",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      477
+    ]
   }
 ]
