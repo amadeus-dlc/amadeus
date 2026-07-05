@@ -173,8 +173,12 @@ export function ensureFields(project: ProjectRef, columns: string[]): FieldMap {
 
 const LIST_ITEMS_MAX_PAGES = 10; // 100 件/頁 × 10 = 1000 item。暫定機構の想定規模の余裕上限
 
-export function listItems(projectId: string): Map<string, { itemId: string; draftId: string | null }> {
+export function listItems(projectId: string): {
+  items: Map<string, { itemId: string; draftId: string | null }>;
+  duplicates: Map<string, string[]>;
+} {
   const out = new Map<string, { itemId: string; draftId: string | null }>();
+  const duplicates = new Map<string, string[]>();
   let cursor: string | null = null;
   let exhausted = false;
   for (let page = 0; page < LIST_ITEMS_MAX_PAGES; page++) {
@@ -193,8 +197,13 @@ export function listItems(projectId: string): Map<string, { itemId: string; draf
     };
     const items = data.data?.node?.items;
     for (const n of items?.nodes ?? []) {
-      if (n.content?.title) {
-        out.set(n.content.title, { itemId: n.id, draftId: n.content.id ?? null });
+      const title = n.content?.title;
+      if (!title) continue;
+      if (out.has(title)) {
+        // 同時 sync のレースで生まれた重複カード。先勝ちで索引し、余剰は archive 対象に積む
+        duplicates.set(title, [...(duplicates.get(title) ?? []), n.id]);
+      } else {
+        out.set(title, { itemId: n.id, draftId: n.content?.id ?? null });
       }
     }
     if (!items?.pageInfo?.hasNextPage) {
@@ -209,7 +218,29 @@ export function listItems(projectId: string): Map<string, { itemId: string; draf
       `project の item が ${LIST_ITEMS_MAX_PAGES * 100} 件を超えており索引を打ち切った（暫定機構の想定規模超過。上限の見直しが必要）`
     );
   }
-  return out;
+  return { items: out, duplicates };
+}
+
+// 同時 sync のレース（listItems → create の TOCTOU）で生まれた重複カードを archive で
+// 収束させる（自己修復）。archive は可逆であり、D-AD3 の非削除（registry 外 item の放置）
+// とは対象が異なる。次回以降の sync が実行されるたびに重複は 1 枚へ収束する。
+export function archiveDuplicateItems(
+  project: ProjectRef,
+  duplicates: Map<string, string[]>,
+  targetTitles: Set<string>
+): number {
+  let archived = 0;
+  for (const [title, ids] of duplicates) {
+    if (!targetTitles.has(title)) continue; // 対象 Intent 以外の重複には触れない
+    for (const id of ids) {
+      graphql(
+        `mutation($pid:ID!,$iid:ID!){ archiveProjectV2Item(input:{projectId:$pid, itemId:$iid}){ item { id } } }`,
+        { pid: project.id, iid: id }
+      );
+      archived++;
+    }
+  }
+  return archived;
 }
 
 function createDraftItem(projectId: string, title: string, body: string): string {

@@ -11,6 +11,7 @@ import {
   scanIntents,
 } from "./kanban/scan";
 import {
+  archiveDuplicateItems,
   assertProjectScope,
   ensureFields,
   listItems,
@@ -70,12 +71,17 @@ async function main(): Promise<number> {
     return 1;
   }
 
-  const items = listItems(project.id);
+  const { items, duplicates } = listItems(project.id);
+  const archived = archiveDuplicateItems(
+    project,
+    duplicates,
+    new Set(cards.map((c) => c.dirName))
+  );
   for (const card of cards) {
     upsertItem(project, fieldMap, items, card, columnOf(card, card.phase));
   }
   console.log(
-    JSON.stringify({ synced: cards.length, project: project.number, dirs: dirs ?? "all" })
+    JSON.stringify({ synced: cards.length, archivedDuplicates: archived, project: project.number, dirs: dirs ?? "all" })
   );
   return 0;
 }
