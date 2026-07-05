@@ -171,26 +171,28 @@ export function ensureFields(project: ProjectRef, columns: string[]): FieldMap {
   };
 }
 
-export function listItems(projectId: string): Map<string, string> {
-  const out = new Map<string, string>();
+export function listItems(projectId: string): Map<string, { itemId: string; draftId: string | null }> {
+  const out = new Map<string, { itemId: string; draftId: string | null }>();
   let cursor: string | null = null;
   for (let page = 0; page < 10; page++) {
     const data = graphql(
-      `query($pid:ID!,$after:String){ node(id:$pid){ ... on ProjectV2 { items(first:100, after:$after){ pageInfo{ hasNextPage endCursor } nodes{ id content{ ... on DraftIssue { title } ... on Issue { title } ... on PullRequest { title } } } } } } }`,
+      `query($pid:ID!,$after:String){ node(id:$pid){ ... on ProjectV2 { items(first:100, after:$after){ pageInfo{ hasNextPage endCursor } nodes{ id content{ ... on DraftIssue { id title } ... on Issue { title } ... on PullRequest { title } } } } } } }`,
       cursor ? { pid: projectId, after: cursor } : { pid: projectId }
     ) as {
       data?: {
         node?: {
           items?: {
             pageInfo?: { hasNextPage?: boolean; endCursor?: string };
-            nodes?: Array<{ id: string; content?: { title?: string } }>;
+            nodes?: Array<{ id: string; content?: { id?: string; title?: string } }>;
           };
         };
       };
     };
     const items = data.data?.node?.items;
     for (const n of items?.nodes ?? []) {
-      if (n.content?.title) out.set(n.content.title, n.id);
+      if (n.content?.title) {
+        out.set(n.content.title, { itemId: n.id, draftId: n.content.id ?? null });
+      }
     }
     if (!items?.pageInfo?.hasNextPage) break;
     cursor = items.pageInfo.endCursor ?? null;
@@ -212,15 +214,23 @@ function createDraftItem(projectId: string, title: string, body: string): string
 export function upsertItem(
   project: ProjectRef,
   fieldMap: FieldMap,
-  items: Map<string, string>,
+  items: Map<string, { itemId: string; draftId: string | null }>,
   card: IntentCard,
   column: Column
 ): void {
-  let itemId = items.get(card.dirName);
-  if (!itemId) {
-    itemId = createDraftItem(project.id, card.dirName, buildDraftIssueBody(card));
-    items.set(card.dirName, itemId);
+  const body = buildDraftIssueBody(card);
+  let entry = items.get(card.dirName);
+  if (!entry) {
+    entry = { itemId: createDraftItem(project.id, card.dirName, body), draftId: null };
+    items.set(card.dirName, entry);
+  } else if (entry.draftId) {
+    // 既存 draft の本文も全上書きする（Issue リンク・scope・worktree の陳腐化防止。FR-3.4）
+    graphql(
+      `mutation($did:ID!,$title:String!,$body:String!){ updateProjectV2DraftIssue(input:{draftIssueId:$did, title:$title, body:$body}){ draftIssue { id } } }`,
+      { did: entry.draftId, title: card.dirName, body }
+    );
   }
+  const itemId = entry.itemId;
   const specs: FieldSpec[] = [];
   const optionId = fieldMap.status.options.get(column);
   if (optionId) specs.push({ fieldId: fieldMap.status.id, kind: "single_select", optionId });
