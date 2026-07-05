@@ -991,6 +991,26 @@ export function activeIntentUuid(projectDir: string, space?: string): string | n
   return match && match.uuid ? match.uuid : null;
 }
 
+// The complete-系 registry statuses (Issue #476): a registry row in either of
+// these states names a workflow that has already finished. Shared by every
+// hook that must not act on a completed workflow — mint-presence's HUMAN_TURN
+// skip (R004) and the Stop hook's ownership x in-progress gate (R003) both key
+// off this SAME set, so the two can never define "complete" differently.
+const COMPLETE_INTENT_STATUSES: ReadonlySet<string> = new Set(["complete", "completed"]);
+
+// True when the space's active-intent cursor names a registry row whose status
+// is complete-系. False when no registry-tracked active intent resolves
+// (legacy flat record, or no active intent at all) — there is nothing to skip
+// in that case, so callers fall back to their normal behaviour.
+export function activeIntentIsComplete(projectDir: string, space?: string): boolean {
+  const sp = space ?? activeSpace(projectDir);
+  const uuid = activeIntentUuid(projectDir, sp);
+  if (!uuid) return false;
+  const entry = readIntentRegistry(projectDir, sp).find((e) => e.uuid === uuid);
+  if (!entry) return false;
+  return COMPLETE_INTENT_STATUSES.has(entry.status.toLowerCase());
+}
+
 // Resolve an intent UUID to its registry row across EVERY space (a conversation
 // may have been working an intent in a different space than the active one).
 // Returns the {space, slug} of the first match, or null when the uuid names no

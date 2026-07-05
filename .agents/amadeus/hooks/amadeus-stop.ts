@@ -89,12 +89,15 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  activeIntentIsComplete,
+  activeIntentUuid,
   auditFilePath,
   errorMessage,
   getField,
   hooksHealthDir,
   isoTimestamp,
   parseCheckboxes,
+  readSessionIntentUuid,
   recordHookDrop,
   resolveProjectDirFromHook,
   stageDir,
@@ -167,6 +170,41 @@ function allowStop(): never {
 function blockStop(reason: string): never {
   console.log(JSON.stringify({ decision: "block", reason }));
   process.exit(0);
+}
+
+// --- Ownership x in-progress gate (R003, Issue #476) --------------------------
+//
+// The nag decision below (the engine consultation, the carve-outs, the
+// no-progress cap) all assume this turn's workflow is the SAME one the
+// conductor is meant to be driving. In a multi-session environment that is not
+// guaranteed: a stale session whose cursor once pointed at an intent that
+// another session has since moved past, or that has since completed, must not
+// be nudged to keep "finishing" a workflow it no longer owns or that is
+// already done. So before ANY nag decision, require BOTH:
+//   1. OWNERSHIP — this session's `.aidlc-sessions/<session-id>` stamp (written
+//      by amadeus-session-start.ts) names the SAME intent UUID as the live
+//      active-intent cursor. No stamp, a stamp for a different intent, or no
+//      registry-tracked cursor at all all count as "not owned".
+//   2. IN-PROGRESS — that intent's registry row is not complete-系 (shares the
+//      activeIntentIsComplete() predicate with mint-presence's R004 skip, so
+//      the two hooks can never disagree on "is this workflow still live").
+// Either failing means allow the stop outright — this can only ever WIDEN the
+// set of allowed stops (never a new block), and it runs BEFORE the engine is
+// even consulted, so a completed/foreign workflow's pending directive (if any)
+// never reaches the nag path at all. Fail-closed on any read/parse error: an
+// error means ownership could not be confirmed, so the safer default is to
+// allow rather than nag on uncertain data.
+function sessionOwnsInProgressWorkflow(sessionId: string): boolean {
+  try {
+    if (!sessionId) return false;
+    const cursorUuid = activeIntentUuid(projectDir);
+    if (!cursorUuid) return false; // no registry-tracked active intent
+    const stampedUuid = readSessionIntentUuid(projectDir, sessionId);
+    if (!stampedUuid || stampedUuid !== cursorUuid) return false; // other session, or no record
+    return !activeIntentIsComplete(projectDir);
+  } catch {
+    return false;
+  }
 }
 
 // --- Recursion guard: a durable no-progress counter ---------------------------
@@ -823,6 +861,7 @@ try {
 // handles chat instead).
 let stopHookActive = false;
 let transcriptPath: string | null = null;
+let sessionId = "";
 // Transcript format: Codex's rollout JSONL lives under a `.../sessions/<date>/
 // rollout-*.jsonl` path and uses a {type,payload} shape; Claude's is message-
 // shaped JSONL. Default to Claude; switch to Codex when the path looks like a
@@ -838,11 +877,24 @@ try {
       transcriptPath = obj.transcript_path;
       if (/[/\\]rollout-[^/\\]*\.jsonl$/.test(transcriptPath)) transcriptFormat = "codex";
     }
+    if (typeof obj.session_id === "string") sessionId = obj.session_id;
   }
 } catch {
   // Malformed JSON (or empty): proceed with stopHookActive=false and no
   // transcript. The engine read below still governs whether work is pending; the
   // counter still bounds any block. We never crash on bad input.
+}
+
+// Ownership x in-progress gate (R003, Issue #476). Runs before ANY nag
+// decision — even before the engine is consulted — so a foreign session's or
+// a completed workflow's pending directive never reaches the nag path.
+if (!sessionOwnsInProgressWorkflow(sessionId)) {
+  recordHookDrop(
+    projectDir,
+    HOOK_NAME,
+    "this session does not own an in-progress workflow (ownership/registry-status check); allowing the stop",
+  );
+  allowStop();
 }
 
 // Consult the engine for the next move. A null kind (engine unavailable /

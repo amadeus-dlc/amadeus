@@ -253,7 +253,9 @@
     "tools/aidlc-utility.ts",
     "tools/aidlc-runtime.ts",
     "tools/aidlc-learnings.ts",
-    "tools/aidlc-state.ts"
+    "tools/aidlc-state.ts",
+    "hooks/aidlc-mint-presence.ts",
+    "hooks/aidlc-stop.ts"
   ],
   "exceptions": [
     {
@@ -295,6 +297,10 @@
     {
       "target": "tools/aidlc-lib.ts、tools/aidlc-utility.ts、tools/aidlc-runtime.ts、tools/aidlc-learnings.ts、tools/aidlc-state.ts（ローカルでは .agents/amadeus/tools/amadeus-*.ts）",
       "reason": "エンジンが書く値と validator 許可値の不整合解消（Issue #455 / #446）のローカル修正。intent-birth の registry status を in_progress に正準化し、repos 既定値と Construction Autonomy Mode: unset を書き、runtime graph の memory_path に record prefix を通し、learnings surface の phase 解決を record path 構造に合わせた。加えて、amadeus-state.ts advance の stdout memory_path にも record prefix を通し、runtime graph 側（PR #456）と同じ値になるようにした（Issue #457）。上流が同修正を取り込んだら engineFileExceptions から外して hash 照合に戻す。"
+    },
+    {
+      "target": "tools/aidlc-lib.ts、tools/aidlc-utility.ts、tools/aidlc-state.ts、hooks/aidlc-mint-presence.ts、hooks/aidlc-stop.ts（ローカルでは .agents/amadeus/tools/amadeus-*.ts、.agents/amadeus/hooks/amadeus-*.ts）",
+      "reason": "hooks と engine state のバグ修正バッチ（Issue #464 / #476）のローカル修正。amadeus-state.ts の advance / complete-workflow が emit する PHASE_VERIFIED と同一トランザクションで aidlc-state.md の Phase Progress を Verified へ更新し（R001）、verification/phase-check-<phase>.md の存在を phase 境界完了の条件にした（R002）。amadeus-utility.ts の state-init も同じ initialization→firstPostInit 境界を即時通過させる経路のため同様に修正した。amadeus-lib.ts に registry の complete-系判定を共有 helper（activeIntentIsComplete）として追加し、amadeus-mint-presence.ts が complete な Intent への HUMAN_TURN mint を skip する（R004）のと、amadeus-stop.ts が所有（session→intent 一致）×進行中（同 helper）の 2 条件 AND で督促判定する（R003）のとで、同じ判定を共有させた。上流に対応のない独自修正であり、上流が同種の修正を取り込むまで engineFileExceptions に残す。"
     }
   ]
 }

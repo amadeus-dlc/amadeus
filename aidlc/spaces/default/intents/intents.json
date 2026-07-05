@@ -122,7 +122,7 @@
     "dirName": "260705-hooks-state-bugfix",
     "scope": "bugfix",
     "repos": [],
-    "status": "in_progress",
+    "status": "complete",
     "issues": [
       464,
       476

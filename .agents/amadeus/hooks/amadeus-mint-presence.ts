@@ -15,13 +15,19 @@
 // shards. The gate fails open on an empty ledger, so skipping the mint there is
 // safe. The mint is fail-open (try/catch, exit 0): a mint failure must never
 // block the human's turn.
+//
+// Complete-workflow skip (R004, Issue #476): a cursor pointing at an already-
+// complete Intent has no live gate left to guard, so minting HUMAN_TURN there
+// only grows a finished record's audit shard for no purpose. Skipped via the
+// same activeIntentIsComplete() predicate the Stop hook's ownership gate uses
+// (R003), so "is this workflow still live" is answered identically everywhere.
 import { existsSync } from "node:fs";
-import { resolveProjectDirFromHook, stateFilePath } from "../tools/amadeus-lib.ts";
+import { activeIntentIsComplete, resolveProjectDirFromHook, stateFilePath } from "../tools/amadeus-lib.ts";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
 
 try {
   const projectDir = resolveProjectDirFromHook(import.meta.url);
-  if (existsSync(stateFilePath(projectDir))) {
+  if (existsSync(stateFilePath(projectDir)) && !activeIntentIsComplete(projectDir)) {
     appendAuditEntry("HUMAN_TURN", {}, projectDir);
   }
 } catch {

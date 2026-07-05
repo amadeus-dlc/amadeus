@@ -2376,12 +2376,23 @@ function handleIntentBirthStateBuild(
 
   const projectDesc = flags.arguments || "[Project description]";
 
-  // Phase Progress — per-phase status. Initialization is always Active at init
-  // time. Other phases are Skipped if the adjusted scope mapping has zero
-  // EXECUTE stages for that phase, otherwise Pending. Pending phases flip to
-  // Active on their phase-boundary advance and to Verified at phase completion.
+  // Phase Progress — per-phase status. Initialization is Active at init time,
+  // UNLESS this same scaffold immediately fires its own initialization->
+  // firstPostInit PHASE_VERIFIED below (crossing into the first post-init
+  // phase is automatic, not a later `advance` call) — in that case the field
+  // must already read Verified in THIS write, or it would show a stale
+  // "Active" the moment the workflow reaches its first real stage (R001,
+  // Issue #464; this is the exact bug the record 260705-hooks-state-bugfix
+  // itself exhibited). Other phases are Skipped if the adjusted scope mapping
+  // has zero EXECUTE stages for that phase, otherwise Pending. Pending phases
+  // flip to Active on their phase-boundary advance and to Verified at phase
+  // completion (amadeus-state.ts advance / complete-workflow).
   const phaseStatus = (phase: string): string => {
-    if (phase === "initialization") return "Active";
+    if (phase === "initialization") {
+      return firstPostInitEntry && firstPostInitEntry.phase !== "initialization"
+        ? "Verified"
+        : "Active";
+    }
     const stagesInPhase = graph.filter((s) => s.phase === phase);
     const hasExecute = stagesInPhase.some(
       (s) => (adjustedMapping[s.slug] || scopeDef.stages[s.slug] || "SKIP") === "EXECUTE"

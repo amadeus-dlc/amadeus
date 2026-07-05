@@ -1244,3 +1244,12 @@
 **Details**: Scope: refactor, 7 stages completed
 
 ---
+
+## Error Logged
+**Timestamp**: 2026-07-05T05:16:30Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-utility
+**Command**: amadeus-utility next --new-intent --scope bugfix hooks と engine state のバグ修正バッチ: #464（PHASE_VERIFIED 後に aidlc-state.md の Phase Progress が Verified に更新されない）と #476（hooks が並行セッション・完了済み workflow を考慮せず誤動作する 4 症状）をまとめて修正する
+**Error**: Usage: amadeus-utility <help|version|status|doctor|intent-birth|intent|space|space-create|codekb-path|scope-change|config-change|set-status|detect-scope|resolve-env-scope|scope-table> [--project-dir <path>] [--scope <scope>] [--json]
+
+---
