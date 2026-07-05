@@ -72,7 +72,7 @@ const textContracts: TextContract[] = [
       "The validator's result is structural detection.",
       "The validator's `pass` is not content approval.",
       "Do not decide decision review's question necessity or adoption decisions from the validator's result alone.",
-      "The evaluator's result is quality evaluation; keep it separate from the validator's judgment.",
+      "The engine sensors' result is deterministic quality checking fired at gates (recorded as `SENSOR_FIRED`); keep it separate from the validator's judgment.",
       "`current_phase_update_required`",
       "`upstream_feedback_required`",
       "`steering_knowledge_candidate`",

@@ -204,8 +204,8 @@ at runtime.
 The validator's `pass` is not content approval.
 Do not decide decision review's question necessity or adoption decisions from the validator's result alone.
 
-The evaluator's result is quality evaluation; keep it separate from the validator's judgment.
-Even when the validator's or evaluator's result shows a learning reusable
+The engine sensors' result is deterministic quality checking fired at gates (recorded as `SENSOR_FIRED`); keep it separate from the validator's judgment.
+Even when the validator's or sensors' result shows a learning reusable
 across multiple Intents, do not auto-promote it into Steering knowledge,
 Domain Map, or Context Map.
 Classify it, by phase skill or human judgment, as one of
