@@ -77,8 +77,10 @@ labeled bullets:
 - `- 推奨回答: <text>`
 - `- 推奨理由: <text>`
 - `- ユーザー回答: <text>`
-- `- 確定判断: <GDnnn[, GDnnn...]>` — every referenced ID must exist in this
-  session's `確定判断` table.
+- `- 確定判断: <GDnnn[, GDnnn...]>` — every referenced ID must exist in a
+  `確定判断` table under the same `grillings/` (any session file of the same
+  target root; IDs are unique across that root, so cross-session references
+  are valid).
 
 ## Copy-paste template
 
