@@ -1,32 +1,13 @@
-# API：amadeus
+# API ドキュメント：amadeus
 
-## 公開入口
-
-Amadeus の公開入口は HTTP API ではなく、skill と CLI である。
-
-| 入口 | 形式 | 契約 |
-|---|---|---|
-| `amadeus` | skill | Intake、Initialization、stage routing、phase 境界、Construction の Bolt 実行。 |
-| `amadeus-steering` | skill | Space の初期化、点検、補修。 |
-| `amadeus-event-storming` | skill | Event Storming 成果物の作成または補修。 |
-| `amadeus-grilling` | skill | 設計論点を一問ずつ確認する。 |
-| `amadeus-domain-modeling` | skill | Domain Map、Context Map、Glossary などを補修する。 |
-| `amadeus-domain-grilling` | skill | 用語、境界、モデルを質問で確認し、成果物へ記録する。 |
-| `amadeus-validator` | skill | 配布先ユーザー環境で Amadeus DLC 成果物を検証する。 |
-
-## CLI 入口
+## 主要 CLI 界面（エンジン）
 
 | コマンド | 役割 |
 |---|---|
-| `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspace> [<intent-dirName>]` | Space または Intent の構造を検証する。 |
-| `npm run test:all` | CI と同等の mock 検証を実行する。 |
-| `npm run contracts:check` | skill contract 生成物の整合を検査する。 |
-| `npm run claude-wiring:check` | `.claude/` と `.agents/` の接続を検査する。 |
-| `npm run test:examples` | examples snapshot と provenance を検査する。 |
-| `npm run validate:all` | `dev-scripts/validate-amadeus-examples.ts` で workspace snapshot と Intent snapshot をまとめて検証する。 |
-
-## 内部入口
-
-stage 内部 skill は、単一入口 `amadeus` から呼ばれる前提である。
-
-内部 skill は対象 stage の成果物だけを作成し、phase 境界処理や別 stage の成果物作成は行わない。
+| `bun .agents/amadeus/tools/amadeus-orchestrate.ts next / report / park` | forwarding loop の中核。directive（run-stage / invoke-swarm / ask / print / error / done / parked）を 1 件ずつ返す。error directive と未捕捉例外は ERROR_LOGGED を自動記録する（#431） |
+| `amadeus-state.ts <verb>` | checkbox / set / gate-start / approve / advance / skip / fork / merge / complete-workflow / unpark など状態機械の書き込み口 |
+| `amadeus-utility.ts intent-birth / doctor / scope-table / intent` | workflow 誕生、健全性診断（.drops 表面化 = #432 を含む）、scope 表生成 |
+| `amadeus-graph.ts compile` | stage-graph.json / scope-grid.json の生成（rules 解決は構造的 walk-up = #491） |
+| `amadeus-runtime.ts compile` | 対象 Intent の runtime-graph.json 生成（bolt_dag を含む） |
+| `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <ws> [dirName]` | 配布先で実行できる構造検証 |
+| `npm run test:all` / `npm run kanban:sync` | 標準検証入口 / board 全件同期 |

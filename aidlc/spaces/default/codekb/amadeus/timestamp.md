@@ -1,10 +1,11 @@
 # 解析記録：amadeus
 
-- 解析時刻: 2026-07-03T18:13:09Z
-- 対象コミット: 42f3caee10a45267ad60b90021dc90883b2e95d2
-- 対象 branch: claude/issue-396-inception（origin/main 基点）
-- 根拠: Intent 260704-v2-parity-completion の 2.1。Ideation phase PR #426 merge 後の `origin/main`
+- 解析時刻: 2026-07-05T12:25:00Z
+- 対象コミット: 3049eadf（origin/main）
+- 解析方式: focused manual re-scan（Maintainer 指示による全面更新。2026-07-03 スナップショットを置き換える）
 
-## 部分補正
+## 更新履歴
 
-- 2026-07-05T12:00:00Z: 廃止済み機構（intents.md 索引、IndexGenerate.ts）への記述を現行事実へ補正した（対象: architecture.md、api-documentation.md、dependencies.md、code-structure.md）。全面再解析は行っておらず、他の記述は解析時刻 2026-07-03 時点のスナップショットのままである。
+- 2026-07-03T18:13:09Z: 初回解析（対象コミット 42f3caee）。
+- 2026-07-05T12:00:00Z: 廃止機構（intents.md 索引、IndexGenerate.ts）の記述を部分補正（PR #495）。
+- 2026-07-05T12:25:00Z: エンジン駆動化・skill 体制・退役機構を反映した全面再解析（本更新）。
