@@ -204,6 +204,51 @@
 
 ---
 
+## Subagent Completed
+**Timestamp**: 2026-07-05T19:07:46Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: aa3edea009af0164b
+**Message**: Issue #428（上流 AI-DLC v2 を 2.2.0 へ更新）の Intent を作成し、承認・調査・取り込み方針の確定まで完了しました。次は engineer3 のバグ修正 PR の merge 通知を待って、reverse-engineering からエンジン loop を再開します。
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-05T19:07:54Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-05T19:11:19Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a75da4a99780b12ba
+**Message**: Issue #428（上流 2.2.0 同期）を engineer1 として進行中で、Intent 作成・ドリフト 7 項目確定・Adaptive Workflows 全面取り込み承認まで完了しています。次は engineer3 の bug 修正 PR の merge 通知を待って reverse-engineering から再開します。
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-05T19:18:48Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-05T19:22:49Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a423a311bf4d0d7e8
+**Message**: Issue #428（上流 v2 基準 commit 更新）を engineer1 として進行中。調査・承認・ピア協議対応は完了し、現在は engineer3 のバグ修正 PR の merge 待ち。merge 通知が届き次第 reverse-engineering からエンジン loop を再開します。
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-05T23:08:33Z
+**Event**: HUMAN_TURN
+
+---
+
 ## Sensor Fired
 **Timestamp**: 2026-07-05T23:09:36Z
 **Event**: SENSOR_FIRED
@@ -244,6 +289,90 @@
 **Stage slug**: reverse-engineering
 **Output path**: aidlc/spaces/default/intents/intents.json
 **Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T23:10:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1531063c
+**Sensor ID**: required-sections
+**Stage slug**: reverse-engineering
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/audit/j5ik2o-mac-studio-lan-a12cd3f694cd.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T23:10:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1531063c
+**Sensor ID**: required-sections
+**Stage slug**: reverse-engineering
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/audit/j5ik2o-mac-studio-lan-a12cd3f694cd.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T23:10:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1f49a772
+**Sensor ID**: upstream-coverage
+**Stage slug**: reverse-engineering
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/audit/j5ik2o-mac-studio-lan-a12cd3f694cd.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T23:10:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1f49a772
+**Sensor ID**: upstream-coverage
+**Stage slug**: reverse-engineering
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/audit/j5ik2o-mac-studio-lan-a12cd3f694cd.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T23:10:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: 743240fb
+**Sensor ID**: required-sections
+**Stage slug**: reverse-engineering
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/audit/j5ik2o-mac-studio-lan-a12cd3f694cd.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T23:10:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: 743240fb
+**Sensor ID**: required-sections
+**Stage slug**: reverse-engineering
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/audit/j5ik2o-mac-studio-lan-a12cd3f694cd.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T23:10:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: c9399f71
+**Sensor ID**: upstream-coverage
+**Stage slug**: reverse-engineering
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/audit/j5ik2o-mac-studio-lan-a12cd3f694cd.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T23:10:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: c9399f71
+**Sensor ID**: upstream-coverage
+**Stage slug**: reverse-engineering
+**Output path**: aidlc/spaces/default/intents/260705-upstream-sync/audit/j5ik2o-mac-studio-lan-a12cd3f694cd.md
+**Duration ms**: 37
 
 ---
 
