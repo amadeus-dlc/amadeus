@@ -115,5 +115,17 @@
     "issues": [
       470
     ]
+  },
+  {
+    "uuid": "019f30b5-2cab-7be8-accb-cae05255a755",
+    "slug": "hooks-state-bugfix",
+    "dirName": "260705-hooks-state-bugfix",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "in_progress",
+    "issues": [
+      464,
+      476
+    ]
   }
 ]
