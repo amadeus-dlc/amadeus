@@ -354,8 +354,11 @@ function checkCompletedArtifacts(ctx: LifecycleV2Context, input: LifecycleV2Inpu
     if (!def || !def.scopes.includes(scope)) continue;
     if (def.perUnit) {
       if (stage.unit === undefined) continue;
-      for (const artifact of def.requiredArtifacts) {
-        ctx.checkFile(`${input.base}/construction/${stage.unit}/${artifact}`, "completed のステージは必須成果物を持つ");
+      // マルチ Unit は全 unit を検査する（Issue #478 gap3）
+      for (const unit of stage.units ?? [stage.unit]) {
+        for (const artifact of def.requiredArtifacts) {
+          ctx.checkFile(`${input.base}/construction/${unit}/${artifact}`, "completed のステージは必須成果物を持つ");
+        }
       }
       continue;
     }
@@ -408,11 +411,16 @@ function checkCompletedArtifactsV2(ctx: LifecycleV2Context, input: LifecycleV2In
         );
         continue;
       }
-      for (const artifact of produces) {
-        ctx.checkFile(
-          `${input.base}/construction/${stage.unit}/${stage.slug}/${artifact}.md`,
-          "v2 契約: completed のステージは produces 成果物を持つ",
-        );
+      // 連続 Per unit 行はマルチ Unit の集合であり、全 unit の produces を検査する
+      // （従来は最後の 1 unit だけ検査され、他 unit の欠落を見逃した。Issue #478 gap3）
+      const units = stage.units ?? [stage.unit];
+      for (const unit of units) {
+        for (const artifact of produces) {
+          ctx.checkFile(
+            `${input.base}/construction/${unit}/${stage.slug}/${artifact}.md`,
+            "v2 契約: completed のステージは produces 成果物を持つ",
+          );
+        }
       }
       continue;
     }

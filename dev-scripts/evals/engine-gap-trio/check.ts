@@ -9,8 +9,8 @@
 //   Reentrant fork として成功し、分岐していれば拒否する。
 // gap2 (R201-R202): slug の小文字正規化 — 大文字入力（U001-...）が小文字と同じ
 //   worktree パスへ解決される（lib の worktreePath チョークポイント）。
-// gap3 (R301-R303) の検査は validator skill 変更の PR（PR-B）で追加する
-//   （validator 修正なしでは RED になる不可分な検査のため）。
+// gap3 (R301-R303): validator のマルチ Per unit — 連続する Per unit 行を集合と
+//   して解釈し、全 unit の produces を検査する（欠落 unit を fail で検出する）。
 
 import {
   cpSync,
@@ -184,6 +184,56 @@ function mainShard(workspace: string, dirName: string): { name: string; path: st
       "(gap2) AUDIT_FORKED の Bolt slug は正準形（小文字）で記録される",
       mainAudit.includes("**Bolt slug**: u002-mixed-case") && !mainAudit.includes("**Bolt slug**: U002-Mixed-Case"),
     );
+  } finally {
+    rmSync(ws, { recursive: true, force: true });
+  }
+}
+
+// --- gap3: validator のマルチ Per unit（欠落 unit の検出と後方互換） ---
+{
+  const ws = makeWorkspace();
+  try {
+    const dirName = birthIntent(ws, "gap-three");
+    const rec = recordDirPath(ws, dirName);
+    const statePath = join(rec, "aidlc-state.md");
+    let state = readFileSync(statePath, "utf-8");
+    state = state.replace("Per unit: [TBD]", "Per unit: unit-alpha\nPer unit: unit-beta");
+    state = state.replace(/^- \[.\] code-generation — EXECUTE$/m, "- [x] code-generation — EXECUTE");
+    writeFileSync(statePath, state, "utf-8");
+    const auditTool = join(ws, ".agents/amadeus/tools/amadeus-audit.ts");
+    run(["bun", auditTool, "append", "STAGE_COMPLETED", "--field", "Stage=code-generation"], ws);
+
+    // produces は unit-beta（最後の unit）だけに置く → unit-alpha の欠落を検出できるか
+    for (const f of ["code-generation-plan", "code-summary"]) {
+      const dir = join(rec, "construction", "unit-beta", "code-generation");
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, `${f}.md`), `# ${f}\n\n## eval\n\nfixture\n`, "utf-8");
+    }
+    const validator = join(root, ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts");
+    const v1 = run(["bun", validator, ws, dirName], ws);
+    // validator が完走していること（crash なら以降の件数カウントが偽 GREEN になる）
+    ok("(gap3) validator が完走して判定を出力する（欠落ケース）", /## 判定/.test(v1.stdout) && v1.exitCode === 1, `exit=${v1.exitCode}`);
+    ok(
+      "(gap3) 欠落 unit（unit-alpha）の produces 不在を fail として検出する",
+      /unit-alpha\/code-generation/.test(v1.stdout),
+      v1.stdout.split("\n").filter((l) => l.includes("produces")).join(" | ")
+    );
+
+    // unit-alpha にも produces を置けば、この検査は fail しない
+    for (const f of ["code-generation-plan", "code-summary"]) {
+      const dir = join(rec, "construction", "unit-alpha", "code-generation");
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, `${f}.md`), `# ${f}\n\n## eval\n\nfixture\n`, "utf-8");
+    }
+    const v2 = run(["bun", validator, ws, dirName], ws);
+    // 完走の証拠（判定見出し + 正常系 exit code の範囲）を先に確認してから件数を数える
+    ok(
+      "(gap3) validator が完走して判定を出力する（充足ケース）",
+      /## 判定/.test(v2.stdout) && (v2.exitCode === 0 || v2.exitCode === 1),
+      `exit=${v2.exitCode}`
+    );
+    const producesFails = (v2.stdout.match(/produces 成果物を持つ。根拠/g) ?? []).length;
+    ok("(gap3) 全 unit に produces があれば produces 検査は fail しない", producesFails === 0, String(producesFails));
   } finally {
     rmSync(ws, { recursive: true, force: true });
   }

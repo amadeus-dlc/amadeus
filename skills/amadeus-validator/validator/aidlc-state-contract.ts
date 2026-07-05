@@ -56,7 +56,7 @@ export type AidlcStateDocument = {
   sections: { heading: string; start: number; end: number }[];
   fields: Record<string, string>;
   phaseProgress: Record<string, string>;
-  stages: { phase: string; slug: string; mark: string; annotation?: string; unit?: string; line: number }[];
+  stages: { phase: string; slug: string; mark: string; annotation?: string; unit?: string; units?: string[]; line: number }[];
 };
 
 const sectionHeadingPattern = /^## (.+)$/;
@@ -79,7 +79,9 @@ export function parseAidlcState(text: string): AidlcStateDocument {
   const doc: AidlcStateDocument = { sections: [], fields: {}, phaseProgress: {}, stages: [] };
   let currentSection = "";
   let currentPhase = "";
-  let currentUnit: string | undefined;
+  let currentUnits: string[] = [];
+  // 直前の意味のある行が Per unit 行だったか（連続行は集合として累積する。Issue #478 gap3）
+  let lastWasPerUnit = false;
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index] ?? "";
@@ -89,19 +91,32 @@ export function parseAidlcState(text: string): AidlcStateDocument {
       doc.sections.push({ heading: sectionMatch[1] ?? "", start: index, end: lines.length });
       currentSection = sectionMatch[1] ?? "";
       currentPhase = "";
-      currentUnit = undefined;
+      currentUnits = [];
+      lastWasPerUnit = false;
       continue;
     }
     parseSectionLine(doc, currentSection, line, index, {
       setPhase: (phase) => {
         currentPhase = phase;
-        currentUnit = undefined;
+        currentUnits = [];
+        lastWasPerUnit = false;
       },
       setUnit: (unit) => {
-        currentUnit = unit;
+        // 連続する Per unit 行は集合として累積する。checkbox 行を挟んで現れた
+        // Per unit 行は新しいブロックの開始として置き換える（Issue #478 gap3）
+        if (lastWasPerUnit) {
+          currentUnits.push(unit);
+        } else {
+          currentUnits = [unit];
+        }
+        lastWasPerUnit = true;
+      },
+      onCheckbox: () => {
+        lastWasPerUnit = false;
       },
       getPhase: () => currentPhase,
-      getUnit: () => currentUnit,
+      getUnit: () => currentUnits[currentUnits.length - 1],
+      getUnits: () => (currentUnits.length > 0 ? [...currentUnits] : undefined),
     });
   }
   closeSection(doc, lines.length);
@@ -116,8 +131,10 @@ function closeSection(doc: AidlcStateDocument, end: number): void {
 type ParseCursor = {
   setPhase: (phase: string) => void;
   setUnit: (unit: string) => void;
+  onCheckbox: () => void;
   getPhase: () => string;
   getUnit: () => string | undefined;
+  getUnits: () => string[] | undefined;
 };
 
 function parseSectionLine(doc: AidlcStateDocument, section: string, line: string, index: number, cursor: ParseCursor): void {
@@ -134,12 +151,14 @@ function parseSectionLine(doc: AidlcStateDocument, section: string, line: string
     }
     const checkboxMatch = line.match(checkboxPattern);
     if (checkboxMatch) {
+      cursor.onCheckbox();
       doc.stages.push({
         phase: cursor.getPhase(),
         slug: checkboxMatch[2] ?? "",
         mark: checkboxMatch[1] ?? "",
         annotation: checkboxMatch[3],
         unit: cursor.getUnit(),
+        units: cursor.getUnits(),
         line: index,
       });
     }
