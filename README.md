@@ -35,6 +35,49 @@ Run the full mock-based verification suite.
 npm run test:all
 ```
 
+## Install into a Workspace
+
+Use this section to install the Amadeus engine into your own project workspace (distinct from the [Quickstart](#quickstart) above, which sets up this repository for development on Amadeus itself).
+
+### Prerequisites
+
+- [Bun](https://bun.sh).
+
+### Install
+
+Run from a clone of this repository, targeting the workspace you want to install into:
+
+```sh
+bun run scripts/amadeus-install.ts --target <workspace>
+```
+
+or, equivalently:
+
+```sh
+npm run amadeus:install -- --target <workspace>
+```
+
+### What gets installed
+
+- The engine, `.agents/amadeus/` (7 directories: `agents`, `amadeus-common`, `hooks`, `knowledge`, `scopes`, `sensors`, `tools`).
+- The `amadeus*` skills, under both `.claude/skills/` and `.agents/skills/`.
+- `.claude/{agents,amadeus-common,hooks,knowledge,scopes,sensors,tools}`, relative symlinks into `.agents/amadeus/`.
+- `AMADEUS.md` at the workspace root, transformed for end users (development-only sections removed).
+- The Amadeus hooks wiring, merged into `.claude/settings.json` (existing keys such as `env`, `permissions`, and other tools' hooks are left untouched).
+
+Codex users need no `.claude/` wiring: `.agents/` alone is a complete, standalone install.
+
+### Post-install verification
+
+```sh
+bun <workspace>/.agents/amadeus/tools/amadeus-utility.ts doctor --project-dir <workspace>
+bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspace>
+```
+
+### Updating
+
+To update, re-run the same install command against the same workspace. It is idempotent: replaced content converges to the same result, and the hooks merge never creates duplicate entries.
+
 ## Usage
 
 Amadeus is used through agent skills.
