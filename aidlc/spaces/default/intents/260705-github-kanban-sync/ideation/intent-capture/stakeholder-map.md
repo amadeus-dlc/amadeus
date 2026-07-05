@@ -19,4 +19,4 @@
 
 - 進捗と判断は、本 Intent record（`aidlc/spaces/default/intents/260705-github-kanban-sync/`）と Issue #470 で追跡する。
 - 段階（①台帳整備、②手動 sync、③hook 結線）ごとに別 PR とし、PR 説明から Issue #470 と本 Intent をリンクする。
-- 台帳スキーマ変更（`issues` フィールド）は、実装前に Maintainer の明示承認を得る（正準台帳の構造変更のため）。
+- 台帳スキーマ変更（`issues` フィールド）は、実装前に Maintainer の明示承認を得る（正準台帳の構造変更のため）。承認は scope-definition で取得済みである（DECISION_RECORDED、decision-log D11）。
