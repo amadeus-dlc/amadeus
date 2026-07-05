@@ -9,8 +9,8 @@
 | 関数 | 契約 |
 |---|---|
 | `scanIntents(spaceDir: string, now: Date, dirNames?: string[]): IntentCard[]` | `intents.json` を読み、entry ごとに record dir の `aidlc-state.md` と `audit/` を読んで IntentCard を返す。`dirNames` 指定時はその record だけを対象にする（部分 sync 用）。record dir が無い entry は agent / host / stage を `未確認` で返す（欠損で落とさない） |
-| `parseStateFields(content: string): {agent, worktree, stage, awaiting}` | `**Active Agent**` などのフィールド行と `[?]` 行を正規表現で抽出する純関数 |
-| `latestHost(auditDir: string): string` | 各 `<host>-<clone>.md` の本文中 `**Timestamp**:` の最大値を比較し、最新の shard のファイル名から `<host>` を返す純関数。mtime は使わない（checkout / rebase で書き換わり編集順序を反映しないため。FR-2.2） |
+| `parseStateFields(content: string): {agent, worktree, stage, awaiting}` | `**Active Agent**` などのフィールド行を抽出し、awaiting は行頭チェックボックス記法（`^- \[\?\] `）だけで判定する純関数。`<!-- Checkbox states: ... -->` 凡例コメントを誤検知しない（parseCheckboxes と同じ規律） |
+| `latestHost(auditDir: string): string` | `<host>-<clone>.md` の命名にマッチするファイルだけを対象に、本文中 `**Timestamp**:` の最大値を比較し、最新 shard のファイル名から `<host>` を返す純関数。レガシー集約ログ（`audit.md`）は対象外。マッチ 0 件なら `未確認`。mtime は使わない（checkout / rebase で書き換わり編集順序を反映しないため。FR-2.2） |
 
 ## C-2 ColumnMapper（scan.ts）
 
