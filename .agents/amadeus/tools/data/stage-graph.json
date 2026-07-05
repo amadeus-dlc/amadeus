@@ -175,10 +175,6 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
-      },
-      {
-        "path": "aidlc/spaces/default/memory/phases/ideation.md",
-        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -241,10 +237,6 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
-      },
-      {
-        "path": "aidlc/spaces/default/memory/phases/ideation.md",
-        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -324,10 +316,6 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
-      },
-      {
-        "path": "aidlc/spaces/default/memory/phases/ideation.md",
-        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -401,10 +389,6 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
-      },
-      {
-        "path": "aidlc/spaces/default/memory/phases/ideation.md",
-        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -475,10 +459,6 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
-      },
-      {
-        "path": "aidlc/spaces/default/memory/phases/ideation.md",
-        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -554,10 +534,6 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
-      },
-      {
-        "path": "aidlc/spaces/default/memory/phases/ideation.md",
-        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -653,10 +629,6 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
-      },
-      {
-        "path": "aidlc/spaces/default/memory/phases/ideation.md",
-        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -727,10 +699,6 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
-      },
-      {
-        "path": "aidlc/spaces/default/memory/phases/inception.md",
-        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -827,10 +795,6 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
-      },
-      {
-        "path": "aidlc/spaces/default/memory/phases/inception.md",
-        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -924,10 +888,6 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
-      },
-      {
-        "path": "aidlc/spaces/default/memory/phases/inception.md",
-        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -1009,10 +969,6 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
-      },
-      {
-        "path": "aidlc/spaces/default/memory/phases/inception.md",
-        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -1098,10 +1054,6 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
-      },
-      {
-        "path": "aidlc/spaces/default/memory/phases/inception.md",
-        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -1191,10 +1143,6 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
-      },
-      {
-        "path": "aidlc/spaces/default/memory/phases/inception.md",
-        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -1286,10 +1234,6 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
-      },
-      {
-        "path": "aidlc/spaces/default/memory/phases/inception.md",
-        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -1385,10 +1329,6 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
-      },
-      {
-        "path": "aidlc/spaces/default/memory/phases/inception.md",
-        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -2183,10 +2123,6 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
-      },
-      {
-        "path": "aidlc/spaces/default/memory/phases/operation.md",
-        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -2262,10 +2198,6 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
-      },
-      {
-        "path": "aidlc/spaces/default/memory/phases/operation.md",
-        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -2346,10 +2278,6 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
-      },
-      {
-        "path": "aidlc/spaces/default/memory/phases/operation.md",
-        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -2435,10 +2363,6 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
-      },
-      {
-        "path": "aidlc/spaces/default/memory/phases/operation.md",
-        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -2518,10 +2442,6 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
-      },
-      {
-        "path": "aidlc/spaces/default/memory/phases/operation.md",
-        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -2603,10 +2523,6 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
-      },
-      {
-        "path": "aidlc/spaces/default/memory/phases/operation.md",
-        "scope": "phase"
       }
     ],
     "sensors_applicable": [
@@ -2696,10 +2612,6 @@
       {
         "path": "aidlc/spaces/default/memory/project.md",
         "scope": "project"
-      },
-      {
-        "path": "aidlc/spaces/default/memory/phases/operation.md",
-        "scope": "phase"
       }
     ],
     "sensors_applicable": [

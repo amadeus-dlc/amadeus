@@ -224,5 +224,16 @@
     "scope": "refactor",
     "repos": [],
     "status": "complete"
+  },
+  {
+    "uuid": "019f3208-a52d-7e0a-8c3a-b0a5c8926354",
+    "slug": "rulesdir-resolve",
+    "dirName": "260705-rulesdir-resolve",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      491
+    ]
   }
 ]

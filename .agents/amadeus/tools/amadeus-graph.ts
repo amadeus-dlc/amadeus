@@ -220,10 +220,31 @@ function memorySegmentsForSpace(space: string): string[] {
  *  the layered practices (org/team/project + phases/). AIDLC_RULES_DIR env-var
  *  seam mirrors AIDLC_STAGE_GRAPH so t88's fixture-driven inheritance tests can
  *  isolate from the real tree. Evaluated at call time. The default resolves the
- *  workspace-root aidlc/spaces/default/memory/ relative to this tool's location
- *  (<ws>/<harness>/tools/ → up two to the workspace root). */
+ *  workspace-root aidlc/spaces/default/memory/ via workspaceRootForRules() —
+ *  a structural walk-up from this tool's location (Issue #491 replaced the
+ *  old fixed "up two levels" guess that broke on the .agents/amadeus/tools
+ *  layout). */
 function rulesDir(): string {
-  return process.env.AIDLC_RULES_DIR ?? join(__FILE_DIR, "..", "..", ...MEMORY_SEGMENTS);
+  const env = process.env.AIDLC_RULES_DIR;
+  if (env && env.length > 0) return env;
+  return join(workspaceRootForRules(), ...MEMORY_SEGMENTS);
+}
+
+// Resolve the workspace root by STRUCTURE, not by a fixed depth. The old
+// "two levels up from the tool" assumption held only for the legacy
+// <ws>/.claude/tools layout; the real path today is <ws>/.agents/amadeus/tools
+// (two directories deep), which silently resolved to <ws>/.agents and emptied
+// every stage's rules_in_context (Issue #491, surfaced in PR #489). Walk
+// upward from the tool and return the first ancestor that actually contains
+// aidlc/spaces; fall back to the legacy two-up guess when nothing matches
+// (memory-less sandboxes keep their []-rules behaviour).
+function workspaceRootForRules(): string {
+  let dir = __FILE_DIR;
+  for (let i = 0; i < 6; i++) {
+    dir = join(dir, "..");
+    if (existsSync(join(dir, "aidlc", "spaces"))) return dir;
+  }
+  return join(__FILE_DIR, "..", "..");
 }
 
 /** The harness-neutral DISPLAY path baked into each RuleResolution — the
@@ -1330,6 +1351,18 @@ export function compileStageGraph(): {
   // doctor) read pre-resolved arrays off graph nodes — no runtime walks
   // of .claude/rules/.
   const rules = loadRules();
+  // Fail-loud guard (Issue #491 R103): a memory dir that EXISTS but yields
+  // zero rule candidates means the resolution is broken or the method files
+  // vanished — writing a graph with empty rules_in_context here would repeat
+  // the silent data loss PR #489 caught. A MISSING memory dir stays the
+  // legitimate []-rules branch (fresh / sandbox workspaces).
+  if (rules.length === 0 && existsSync(rulesDir())) {
+    throw new Error(
+      `rules directory ${rulesDir()} exists but resolved zero rule files; ` +
+        `refusing to compile a stage graph with empty rules_in_context ` +
+        `(set AIDLC_RULES_DIR or restore the memory files)`
+    );
+  }
   for (const stage of stages) {
     stage.rules_in_context = resolveRulesForStage(stage, rules);
   }
