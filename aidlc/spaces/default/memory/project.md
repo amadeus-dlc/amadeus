@@ -136,6 +136,10 @@ Intent の正準 ID は `intents/intents.json`（registry）の UUIDv7 である
 - エンジンツール（.agents/amadeus/tools/）を修正したら dev-scripts/data/parity-map.json の engineFileExceptions への宣言と skills/ 正準ソースへの同一反映が必要。上流が同修正を取り込んだら例外を解除する (learned 2026-07-04) <!-- cid:code-generation:c3 -->
 
 - aidlc-state.md の Per unit: [TBD] を更新する tool verb は存在しない。units-generation を SKIP する scope では、Construction 成果物を置いた実 unit 名へ record 整合として手動更新する（前例: e10f8294）。放置すると validator が construction/[TBD]/ の produces を要求して fail する (learned 2026-07-05) <!-- cid:build-and-test:c2 -->
+- GitHub kanban（Projects v2 ミラー）は Maintainer 専用の表示鏡として扱う。エージェントの並行可否判断・情報共有はローカル成果物（intents.json、aidlc-state.md = 正）で行い、遅延を含む鏡を判断材料にしない。並行で走らせるかの判断は人間（ゲート審査官）が行う (learned 2026-07-05) <!-- cid:intent-capture:c2 -->
+- GitHub kanban 機能はこのリポジトリ内だけで起動する開発ツール（dev-scripts/ とリポジトリローカル hook 設定）に限定する。Amadeus 本体の機能（skills/amadeus*、.agents/amadeus/ エンジン、昇格先、parity 対象）としては実装しない (learned 2026-07-05) <!-- cid:market-research:c3 -->
+- Projects v2 への書き込みは gh project item-edit（1 呼び出し 1 フィールド制約）ではなく gh api graphql の mutation batch で行う (learned 2026-07-05) <!-- cid:market-research:c5 -->
+- GitHub kanban sync は暫定機構として軽量に実装する（堅牢化・通知系・統計を作り込まない。冪等な全上書き + drop 記録 + 次回回復の最小構成）。後日本格的な仕組みへ置き換える前提 (learned 2026-07-05) <!-- cid:feasibility:c2 -->
 ## Testing Posture
 - build-and-test は Minimal 戦略でも produces 全件を生成する（report が成果物不在を拒否するため）。不適用のテスト instruction は空ファイルにせず、適用判断と根拠を記す簡潔な文書にする (learned 2026-07-04) <!-- cid:build-and-test:c1 -->
 - エンジン/validator の eval fixture はエンジンの実出力形を正とする。validator の期待に手書きで合わせた fixture は不整合を隠す（#458 は fixture が [S] 前提だったため見逃された）。可能なら隔離 workspace で実 CLI を起動して実出力そのものを検査する (learned 2026-07-05) <!-- cid:code-generation:c5 -->
