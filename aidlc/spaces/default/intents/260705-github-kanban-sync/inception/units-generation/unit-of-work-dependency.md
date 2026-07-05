@@ -6,24 +6,24 @@
 
 ```yaml
 units:
-  - name: U001-registry-issues-field
+  - name: u001-registry-issues-field
     depends_on: []
-  - name: U002-kanban-sync-cli
-    depends_on: [U001-registry-issues-field]
-  - name: U003-kanban-hooks
-    depends_on: [U002-kanban-sync-cli]
+  - name: u002-kanban-sync-cli
+    depends_on: [u001-registry-issues-field]
+  - name: u003-kanban-hooks
+    depends_on: [u002-kanban-sync-cli]
 ```
 
 ## 依存グラフ
 
 ```
-U001-registry-issues-field（P1）
+u001-registry-issues-field（P1）
         │  issues フィールドが IntentCard の入力になる
         ▼
-U002-kanban-sync-cli（P2）
+u002-kanban-sync-cli（P2）
         │  FlushHook が CLI を child process で起動する（D-AD6）
         ▼
-U003-kanban-hooks（P3）
+u003-kanban-hooks（P3）
 ```
 
 直線依存であり、並行実行の余地はない。

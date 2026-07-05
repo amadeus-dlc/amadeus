@@ -6,9 +6,9 @@
 - **Scope**: feature
 - **Start Date**: 2026-07-05T01:39:57Z
 - **State Version**: 7
-- **Active Agent**: amadeus-architect-agent
+- **Active Agent**: amadeus-developer-agent
 - **Worktree Path**:
-- **Bolt Refs**:
+- **Bolt Refs**: [u001-registry-issues-field]
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration
@@ -25,8 +25,8 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 31
-- **Completed**: 15
-- **In Progress**: functional-design
+- **Completed**: 19
+- **In Progress**: code-generation
 
 ## Runtime State
 - **Revision Count**: 0
@@ -69,12 +69,12 @@
 - [x] delivery-planning — EXECUTE
 
 ### CONSTRUCTION PHASE
-Per unit: U001-registry-issues-field, U002-kanban-sync-cli, U003-kanban-hooks
-- [-] functional-design — EXECUTE
-- [ ] nfr-requirements — EXECUTE
-- [ ] nfr-design — EXECUTE
-- [ ] infrastructure-design — EXECUTE
-- [ ] code-generation — EXECUTE
+Per unit: u001-registry-issues-field, u002-kanban-sync-cli, u003-kanban-hooks
+- [x] functional-design — EXECUTE
+- [x] nfr-requirements — EXECUTE
+- [x] nfr-design — EXECUTE
+- [x] infrastructure-design — EXECUTE
+- [-] code-generation — EXECUTE
 - [ ] build-and-test — EXECUTE
 - [ ] ci-pipeline — EXECUTE
 
@@ -89,13 +89,13 @@ Per unit: U001-registry-issues-field, U002-kanban-sync-cli, U003-kanban-hooks
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: functional-design
-- **Next Stage**: nfr-requirements
+- **Current Stage**: code-generation
+- **Next Stage**: build-and-test
 - **Status**: Running
-- **Construction Autonomy Mode**: unset
-- **Last Updated**: 2026-07-05T03:47:14Z
+- **Construction Autonomy Mode**: autonomous
+- **Last Updated**: 2026-07-05T04:32:00Z
 
 ## Session Resume Point
-- **Last Completed Stage**: delivery-planning
-- **Next Action**: Execute Functional Design
+- **Last Completed Stage**: infrastructure-design
+- **Next Action**: Execute Code Generation
 - **Pending Artifacts**: none

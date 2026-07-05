@@ -6,9 +6,9 @@
 
 | Unit | Stories | FR | NFR |
 |---|---|---|---|
-| U001-registry-issues-field | US-1 | FR-1.1〜1.3 | N4、N5 |
-| U002-kanban-sync-cli | US-2、US-3、US-4、US-5 | FR-2.1〜2.3、FR-3.1〜3.7、FR-4.1〜4.2 | N1、N3、N4、N5 |
-| U003-kanban-hooks | US-6 | FR-5.1〜5.4 | N2、N3、N4、N5 |
+| u001-registry-issues-field | US-1 | FR-1.1〜1.3 | N4、N5 |
+| u002-kanban-sync-cli | US-2、US-3、US-4、US-5 | FR-2.1〜2.3、FR-3.1〜3.7、FR-4.1〜4.2 | N1、N3、N4、N5 |
+| u003-kanban-hooks | US-6 | FR-5.1〜5.4 | N2、N3、N4、N5 |
 
 ## カバレッジ確認
 

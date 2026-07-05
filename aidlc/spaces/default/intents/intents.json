@@ -37,6 +37,9 @@
     "status": "complete",
     "repos": [
       "amadeus"
+    ],
+    "issues": [
+      442
     ]
   },
   {
@@ -47,6 +50,9 @@
     "status": "complete",
     "repos": [
       "amadeus"
+    ],
+    "issues": [
+      445
     ]
   },
   {
@@ -57,6 +63,11 @@
     "status": "complete",
     "repos": [
       "amadeus"
+    ],
+    "issues": [
+      448,
+      449,
+      450
     ]
   },
   {
@@ -64,14 +75,23 @@
     "slug": "engine-validator-alignme",
     "dirName": "260704-engine-validator-alignme",
     "scope": "bugfix",
-    "status": "complete"
+    "status": "complete",
+    "issues": [
+      455,
+      446
+    ]
   },
   {
     "uuid": "019f2a5c-8474-7286-8044-0b5a6c521e93",
     "slug": "skill-quality-repair",
     "dirName": "260703-skill-quality-repair",
     "scope": "refactor",
-    "status": "complete"
+    "status": "complete",
+    "issues": [
+      340,
+      405,
+      252
+    ]
   },
   {
     "uuid": "019f2f98-53a4-7b28-b99b-8f713c126ad8",
@@ -79,7 +99,11 @@
     "dirName": "260705-engine-validator-gap",
     "scope": "bugfix",
     "repos": [],
-    "status": "complete"
+    "status": "complete",
+    "issues": [
+      457,
+      458
+    ]
   },
   {
     "uuid": "019f2fee-a630-73f5-a90d-16c78a42bc6c",
@@ -87,6 +111,9 @@
     "dirName": "260705-github-kanban-sync",
     "scope": "feature",
     "repos": [],
-    "status": "in_progress"
+    "status": "in_progress",
+    "issues": [
+      470
+    ]
   }
 ]
