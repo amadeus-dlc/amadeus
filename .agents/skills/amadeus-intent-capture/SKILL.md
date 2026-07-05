@@ -35,7 +35,10 @@ that flag without this skill.
    When the user picks Grill me, follow the grilling bridge protocol in
    `../amadeus-grilling/references/engine-bridge.md` (path relative to this skill's directory) (one question at a
    time, recommended answer attached, answers written back in `[Answer]:`
-   format).
+   format). If this stage's grilling produces a Grilling Decision Trail,
+   generate it per `../amadeus-grilling/references/grilling-trail-contract.md`
+   (path relative to this skill's directory) — the single source for its
+   required columns and fields.
 
 2. When the stage's work is done, commit the single-stage record:
 

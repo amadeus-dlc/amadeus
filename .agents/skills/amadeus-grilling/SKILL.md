@@ -133,44 +133,16 @@ decision.
 `grillings.md` handles only the index. Place session details in
 `grillings/Gxxx-*.md`.
 
-`grillings.md` has at least the following structure:
-
-```md
-# Grillings
-
-## 一覧
-
-| ID | 主題 | 対象 | 状態 | 主な確定判断 | 反映先 | 詳細 |
-|---|---|---|---|---|---|---|
-| G001 | Ideation Scope | Intent | completed | 対象範囲を管理画面に限定する | [scope.md](scope.md) | [G001](grillings/G001-ideation-scope.md) |
-```
-
-Name session files `G001-<topic>.md`. Write `<topic>` using only lowercase
-English letters, digits, and hyphens.
-
-Set session state to one of:
-
-- `active`
-- `completed`
-- `superseded`
-
-Set the state of an individual decision to one of:
-
-- `active`
-- `superseded`
-
-Place `概要`, `確定判断`, and `質問記録` in the session file. Always write the
-reflection target for the whole session in `概要`. The reflection targets in
-`概要` and in individual decisions point to artifacts within the target root.
-In Event Storming, allow `../<id>.md`, which points from `<id>/grillings` to
-the parent Markdown with the same ID. Do not reflect shared terminology
-through a relative link from the Grilling Decision Trail. Record it in the
-rationale for the term in `aidlc/spaces/<space>/knowledge/glossary.md`, or in
-the target Intent's decision. Always write `確認したいこと`,
-`確認が必要な理由`, `推奨回答`, `推奨理由`, and `ユーザー回答` in each question
-record. Always reference the decision ID from each question record. Always
-write the reflection target in each individual decision. Always write the
-replacement target for a `superseded` individual decision.
+The exact format — the `grillings.md` columns, the session file's required
+headings and fields, and a copy-paste template — is defined in exactly one
+place: `references/grilling-trail-contract.md`. Follow it when creating or
+updating either file; do not restate or re-derive the structure here. In
+Event Storming, that contract's `反映先` link rule additionally allows
+`../<id>.md`, which points from `<id>/grillings` to the parent Markdown with
+the same ID. Do not reflect shared terminology through a relative link from
+the Grilling Decision Trail — record it in the rationale for the term in
+`aidlc/spaces/<space>/knowledge/glossary.md`, or in the target Intent's
+decision.
 
 `scaffold-only` does not ask questions, so it creates no Grilling Decision
 Trail. `repair` does not, in principle, update the Grilling Decision Trail.
