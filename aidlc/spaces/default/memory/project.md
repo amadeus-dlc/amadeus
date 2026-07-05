@@ -140,6 +140,7 @@ Intent の正準 ID は `intents/intents.json`（registry）の UUIDv7 である
 - GitHub kanban 機能はこのリポジトリ内だけで起動する開発ツール（dev-scripts/ とリポジトリローカル hook 設定）に限定する。Amadeus 本体の機能（skills/amadeus*、.agents/amadeus/ エンジン、昇格先、parity 対象）としては実装しない (learned 2026-07-05) <!-- cid:market-research:c3 -->
 - Projects v2 への書き込みは gh project item-edit（1 呼び出し 1 フィールド制約）ではなく gh api graphql の mutation batch で行う (learned 2026-07-05) <!-- cid:market-research:c5 -->
 - GitHub kanban sync は暫定機構として軽量に実装する（堅牢化・通知系・統計を作り込まない。冪等な全上書き + drop 記録 + 次回回復の最小構成）。後日本格的な仕組みへ置き換える前提 (learned 2026-07-05) <!-- cid:feasibility:c2 -->
+- 多体連携（leader + engineer1〜3）の gate 承認中継では、中継承認定型文の受信直後に限り hooks/amadeus-mint-presence.ts で HUMAN_TURN を mint し、ピア協議の回答受信では mint しない。承認経路（人間 → leader → engineer）を decision に明記する (learned 2026-07-06) <!-- cid:reverse-engineering:c1 -->
 ## Testing Posture
 - build-and-test は Minimal 戦略でも produces 全件を生成する（report が成果物不在を拒否するため）。不適用のテスト instruction は空ファイルにせず、適用判断と根拠を記す簡潔な文書にする (learned 2026-07-04) <!-- cid:build-and-test:c1 -->
 - エンジン/validator の eval fixture はエンジンの実出力形を正とする。validator の期待に手書きで合わせた fixture は不整合を隠す（#458 は fixture が [S] 前提だったため見逃された）。可能なら隔離 workspace で実 CLI を起動して実出力そのものを検査する (learned 2026-07-05) <!-- cid:code-generation:c5 -->
