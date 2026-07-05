@@ -8,7 +8,7 @@
 - **State Version**: 7
 - **Active Agent**: amadeus-pipeline-deploy-agent
 - **Worktree Path**:
-- **Bolt Refs**: [u001-registry-issues-field]
+- **Bolt Refs**: B001-registry-issues-field, B002-kanban-sync-cli, B003-kanban-hooks
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration
