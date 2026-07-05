@@ -140,7 +140,9 @@ const EXPECTED_EXECUTE = [
     // intent-capture を produces なしで [x] にすると、validator が必須成果物の
     // 欠落を fail として検出する（pdm が scope 配列に無ければ検査自体が走らない）
     const stateTool = join(ws, ".agents/amadeus/tools/amadeus-state.ts");
-    run(["bun", stateTool, "checkbox", "intent-capture=completed"]);
+    const cb = run(["bun", stateTool, "checkbox", "intent-capture=completed"]);
+    // 前提操作の成功を確認する（失敗すると (d) が誤った前提で判定される）
+    ok("(d) 前提の checkbox 操作が成功する", cb.exitCode === 0, cb.out.slice(0, 200));
     const validator = join(root, ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts");
     const vproc = Bun.spawnSync({
       cmd: ["bun", validator, ws, dirName],
