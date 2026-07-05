@@ -252,7 +252,8 @@
     "tools/aidlc-lib.ts",
     "tools/aidlc-utility.ts",
     "tools/aidlc-runtime.ts",
-    "tools/aidlc-learnings.ts"
+    "tools/aidlc-learnings.ts",
+    "tools/aidlc-state.ts"
   ],
   "exceptions": [
     {
@@ -292,8 +293,8 @@
       "reason": "上流 aidlc-workflows clone 自体のディレクトリ名・baseline JSON のフィールド名であり、上流が改名していない以上、engine-namespace 改名（Issue #445）の対象外。dev-scripts の既存ファイル名（エンジンではなく repo 開発スクリプト）として扱う。"
     },
     {
-      "target": "tools/aidlc-lib.ts、tools/aidlc-utility.ts、tools/aidlc-runtime.ts、tools/aidlc-learnings.ts（ローカルでは .agents/amadeus/tools/amadeus-*.ts）",
-      "reason": "エンジンが書く値と validator 許可値の不整合解消（Issue #455 / #446）のローカル修正。intent-birth の registry status を in_progress に正準化し、repos 既定値と Construction Autonomy Mode: unset を書き、runtime graph の memory_path に record prefix を通し、learnings surface の phase 解決を record path 構造に合わせた。上流が同修正を取り込んだら engineFileExceptions から外して hash 照合に戻す。"
+      "target": "tools/aidlc-lib.ts、tools/aidlc-utility.ts、tools/aidlc-runtime.ts、tools/aidlc-learnings.ts、tools/aidlc-state.ts（ローカルでは .agents/amadeus/tools/amadeus-*.ts）",
+      "reason": "エンジンが書く値と validator 許可値の不整合解消（Issue #455 / #446）のローカル修正。intent-birth の registry status を in_progress に正準化し、repos 既定値と Construction Autonomy Mode: unset を書き、runtime graph の memory_path に record prefix を通し、learnings surface の phase 解決を record path 構造に合わせた。加えて、amadeus-state.ts advance の stdout memory_path にも record prefix を通し、runtime graph 側（PR #456）と同じ値になるようにした（Issue #457）。上流が同修正を取り込んだら engineFileExceptions から外して hash 照合に戻す。"
     }
   ]
 }

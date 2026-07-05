@@ -205,7 +205,7 @@ function checkStageMark(
   ctx: LifecycleV2Context,
   statePath: string,
   scope: string,
-  stage: { slug: string; mark: string; unit?: string },
+  stage: { slug: string; mark: string; annotation?: string; unit?: string },
 ): void {
   const label = stage.unit === undefined ? stage.slug : `${stage.slug}（unit: ${stage.unit}）`;
   if (!(stage.mark in AIDLC_CHECKBOX_STATES)) {
@@ -216,10 +216,15 @@ function checkStageMark(
   const def = stageBySlug.get(stage.slug);
   const inScope = def !== undefined && def.scopes.includes(scope);
   if (operationSlugs.has(stage.slug) || (def !== undefined && !inScope)) {
-    if (checkboxStateName(stage.mark) === "Skipped") {
-      ctx.pass(statePath, "scope 外のステージが [S] である", label);
+    // 合法な scope 外表記は 2 通り: `[S]`（--stage/--phase ジャンプで skip した後の
+    // 形）と、`[ ]` ＋ annotation が SKIP（intent-birth 直後にエンジンが書く正常形、
+    // 例: `- [ ] <slug> — SKIP` や `— SKIP: out of bugfix scope`）。
+    const isJumpSkip = checkboxStateName(stage.mark) === "Skipped";
+    const isBirthSkip = checkboxStateName(stage.mark) === "Pending" && (stage.annotation ?? "").startsWith("SKIP");
+    if (isJumpSkip || isBirthSkip) {
+      ctx.pass(statePath, "scope 外のステージが [S] または [ ]+SKIP である", label);
     } else {
-      ctx.failRow(statePath, "scope 外のステージが [S] である", `${label}: ${stage.mark}`);
+      ctx.failRow(statePath, "scope 外のステージが [S] または [ ]+SKIP である", `${label}: ${stage.mark}`);
     }
     return;
   }

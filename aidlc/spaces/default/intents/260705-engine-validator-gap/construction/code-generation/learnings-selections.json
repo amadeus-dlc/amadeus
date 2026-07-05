@@ -1,0 +1,21 @@
+{
+  "stage_slug": "code-generation",
+  "selections": [
+    {
+      "candidate_id": "c1",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "bugfix など units-generation を SKIP する scope では unit-of-work.md が存在しないため、Construction の {unit-name} は intent label の essence（例: engine-validator-gap）で解決する。260704-engine-validator-alignme と 260705-engine-validator-gap の前例に従う",
+      "source": "orchestrator"
+    },
+    {
+      "candidate_id": "c5",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Testing Posture",
+      "text": "エンジン/validator の eval fixture はエンジンの実出力形を正とする。validator の期待に手書きで合わせた fixture は不整合を隠す（#458 は fixture が [S] 前提だったため見逃された）。可能なら隔離 workspace で実 CLI を起動して実出力そのものを検査する",
+      "source": "orchestrator"
+    }
+  ]
+}

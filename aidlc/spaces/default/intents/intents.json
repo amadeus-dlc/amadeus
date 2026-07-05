@@ -72,5 +72,13 @@
     "dirName": "260703-skill-quality-repair",
     "scope": "refactor",
     "status": "complete"
+  },
+  {
+    "uuid": "019f2f98-53a4-7b28-b99b-8f713c126ad8",
+    "slug": "engine-validator-gap",
+    "dirName": "260705-engine-validator-gap",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "complete"
   }
 ]
