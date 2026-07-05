@@ -35,6 +35,49 @@ mock provider を使う標準検証を実行します。
 npm run test:all
 ```
 
+## 利用者向け導入手順
+
+この節は、自分の対象 workspace（このリポジトリ自身の開発用ではない、利用者のプロジェクト）へ Amadeus エンジンを導入する手順です。上の [Quickstart](#quickstart) は Amadeus 本体を開発するための手順であり、対象が異なります。
+
+### 前提
+
+- [Bun](https://bun.sh)。
+
+### 導入コマンド
+
+このリポジトリの clone から、導入先の workspace を指定して実行します。
+
+```sh
+bun run scripts/amadeus-install.ts --target <workspace>
+```
+
+または次でも同じです。
+
+```sh
+npm run amadeus:install -- --target <workspace>
+```
+
+### インストール内容
+
+- エンジン本体 `.agents/amadeus/`（7 dir: `agents`、`amadeus-common`、`hooks`、`knowledge`、`scopes`、`sensors`、`tools`）。
+- `amadeus*` skills（`.claude/skills/` と `.agents/skills/` の両方）。
+- `.claude/{agents,amadeus-common,hooks,knowledge,scopes,sensors,tools}`（`.agents/amadeus/` への相対 symlink）。
+- workspace root の `AMADEUS.md`（利用者向けに変換済み。本体開発専用の節は除去）。
+- `.claude/settings.json` への Amadeus hooks 配線のマージ（`env`、`permissions`、他ツールの hooks など既存内容には触れません）。
+
+Codex 利用者は `.claude/` 側の配線が不要です。`.agents/` 単体で導入が完結します。
+
+### 導入後の検証
+
+```sh
+bun <workspace>/.agents/amadeus/tools/amadeus-utility.ts doctor --project-dir <workspace>
+bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspace>
+```
+
+### 更新
+
+更新は同じコマンドを同じ workspace に対して再実行するだけです。冪等であり、置換対象は同じ結果へ収束し、hooks のマージも重複を生みません。
+
 ## Usage
 
 Amadeus は agent skill を通じて使います。
