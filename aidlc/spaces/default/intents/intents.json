@@ -253,5 +253,13 @@
     "repos": [],
     "status": "complete",
     "issues": []
+  },
+  {
+    "uuid": "019f32a7-dbd9-7718-8f57-db62bbc8a339",
+    "slug": "agmsg-trial-docs",
+    "dirName": "260705-agmsg-trial-docs",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete"
   }
 ]
