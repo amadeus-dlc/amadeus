@@ -12,7 +12,10 @@
 //     Verified になる（advance の phase 境界処理・complete-workflow・state-init
 //     の initialization→first-phase 境界の 3 経路）。
 // (b) R002: verification/phase-check-<phase>.md が無い phase 境界は、advance /
-//     complete-workflow が拒否する。
+//     complete-workflow / approve のいずれの経路でも拒否する（approve は
+//     handleAdvance/handleCompleteWorkflow に completed=[x] 済みで委譲するため、
+//     nested 側の alreadyMarkedCompleted ガードで skip されない専用の gate が要る
+//     — PR #479 の Bugbot 指摘）。
 // (c) R004: amadeus-mint-presence.ts は、cursor の Intent が registry で
 //     complete 系のとき HUMAN_TURN の追記を skip する（進行中の既存契約は維持）。
 // (d) R003: amadeus-stop.ts の督促判定は「所有（session→intent 一致）」×
@@ -261,6 +264,62 @@ const stopHook = (workspace: string) => join(workspace, ".agents/amadeus/hooks/a
       "R001: SKIP された phase（Operation）は Skipped のまま変化しない",
       phaseProgressField(finalState, "Operation") === "Skipped",
       `Operation=${phaseProgressField(finalState, "Operation")}`,
+    );
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+}
+
+// === (b') R002: approve 経路（gate-start → approve）でも phase-check gate が効く ===
+//
+// PR #479 の Bugbot 指摘（High）: approve は先に対象 slug を [x] へ書いてから
+// handleAdvance / handleCompleteWorkflow へ委譲するため、nested 側は
+// alreadyMarkedCompleted=true を見て自分の verifyPhaseCheckArtifact を skip する。
+// 素の advance 経路だけでなく、より一般的な gate 承認経路（gate-start → approve）
+// でも同じ gate が効くことを確認する。
+{
+  const workspace = makeWorkspace();
+  try {
+    const dirName = birthIntent(workspace, "poc", "approve-phase-check-eval");
+    const rec = recordDirPath(workspace, dirName);
+
+    run(["bun", stateTool(workspace), "gate-start", "intent-capture"], workspace, {
+      AIDLC_SKIP_ARTIFACT_GUARD: "1",
+    });
+
+    // RED 相当（phase-check 不在）: approve は拒否され、state は変化しない。
+    const refused = run(["bun", stateTool(workspace), "approve", "intent-capture"], workspace, {
+      AIDLC_SKIP_ARTIFACT_GUARD: "1",
+      AIDLC_SKIP_HUMAN_PRESENCE_GUARD: "1",
+    });
+    ok(
+      "R002: verification/phase-check-ideation.md が無いと approve も拒否される",
+      refused.exitCode !== 0 && /phase-check-ideation/.test(refused.stdout + refused.stderr),
+      `exit=${refused.exitCode} stdout=${refused.stdout} stderr=${refused.stderr}`,
+    );
+    ok(
+      "R002: approve 拒否後も Current Stage・Ideation は変化しない",
+      phaseProgressField(readState(workspace, dirName), "Current Stage") === "intent-capture" &&
+        phaseProgressField(readState(workspace, dirName), "Ideation") === "Pending",
+      readState(workspace, dirName),
+    );
+
+    // phase-check 成果物を用意すれば approve が成功し、Ideation が Verified になる。
+    mkdirSync(join(rec, "verification"), { recursive: true });
+    writeFileSync(join(rec, "verification", "phase-check-ideation.md"), "# Phase Check — Ideation（eval fixture）\n");
+    const approved = run(["bun", stateTool(workspace), "approve", "intent-capture"], workspace, {
+      AIDLC_SKIP_ARTIFACT_GUARD: "1",
+      AIDLC_SKIP_HUMAN_PRESENCE_GUARD: "1",
+    });
+    ok(
+      "R002: phase-check 成果物があれば approve が成功する",
+      approved.exitCode === 0,
+      `exit=${approved.exitCode} stdout=${approved.stdout} stderr=${approved.stderr}`,
+    );
+    ok(
+      "R001: approve 経由の phase 境界通過後も Ideation が Verified になる",
+      phaseProgressField(readState(workspace, dirName), "Ideation") === "Verified",
+      `Ideation=${phaseProgressField(readState(workspace, dirName), "Ideation")}`,
     );
   } finally {
     rmSync(workspace, { recursive: true, force: true });

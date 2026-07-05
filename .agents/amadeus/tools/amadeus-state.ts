@@ -1420,6 +1420,40 @@ function handleApprove(args: string[]): void {
     );
   }
 
+  // Scope + next-stage derivation, computed BEFORE any mutation (moved up from
+  // its former post-writeStateFile position) so the phase-check gate below can
+  // use it. Refuse silent fallback — matches handleAdvance/handleCompleteWorkflow.
+  const scope = getField(content, "Scope");
+  if (!scope) {
+    error(
+      `State file has no Scope field. Refusing to approve — fix the state file first.`
+    );
+  }
+  if (!validScopes().has(scope)) {
+    error(
+      `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`
+    );
+  }
+  const next = nextInScopeStage(slug, scope, content);
+
+  // Phase-check artifact gate (R002, Issue #464 — Bugbot finding on PR #479).
+  // approve marks the slug completed and DELEGATES to handleAdvance /
+  // handleCompleteWorkflow below; those nested calls see alreadyMarkedCompleted
+  // = true and skip their OWN verifyPhaseCheckArtifact call (the guard already
+  // ran on the direct-advance path). Without an explicit check HERE, the
+  // approve path — the ordinary, more common gate-completion path — could cross
+  // a phase boundary and reach PHASE_VERIFIED with no phase-check artifact,
+  // silently defeating R002/AC-1. Mirrors handleAdvance's crossesPhaseBoundary
+  // test (no next stage, i.e. the final stage, always counts — same as
+  // handleCompleteWorkflow's unconditional check). Placed AFTER the
+  // human-presence guard (same ordering precedent: produces artifacts, then
+  // human presence, then this) so an approve missing BOTH a human turn and a
+  // phase-check artifact still reports the human-absence reason first — the
+  // guard existing callers already depend on. Runs before any mutation.
+  if (!next || next.phase !== stage.phase) {
+    verifyPhaseCheckArtifact(pd, stage.phase);
+  }
+
   const timestamp = isoTimestamp();
 
   content = setCheckbox(content, slug, "completed");
@@ -1447,26 +1481,16 @@ function handleApprove(args: string[]): void {
 
   writeStateFile(pd, content);
 
-  // Auto-advance or complete-workflow. Scope is required for next-stage
-  // derivation; refuse silent fallback (matches handleAdvance/handleCompleteWorkflow).
-  const scope = getField(content, "Scope");
-  if (!scope) {
-    error(
-      `State file has no Scope field. Refusing to advance after approve — fix the state file first.`
-    );
-  }
-  if (!validScopes().has(scope)) {
-    error(
-      `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`
-    );
-  }
-
+  // Auto-advance or complete-workflow. `scope` and `next` were already derived
+  // above (before mutation, for the phase-check gate) — reused here rather
+  // than re-fetched, since neither the Scope field nor the forward walk from
+  // `slug` depends on `slug`'s own checkbox state.
+  //
   // No explicit consume step (ledger-event design): the GATE_APPROVED
   // emitted by this commit IS the freshness boundary for the next gate. A second
   // gate auto-cascaded in the same human turn finds the last gate resolution
   // (this GATE_APPROVED) AFTER the only HUMAN_TURN, so humanActedSinceGate refuses
   // it — one commit per human turn, from ledger order, with no marker to flip.
-  const next = nextInScopeStage(slug, scope, content);
   if (next) {
     // Delegate to handleAdvance. The slug is now [x], so handleAdvance takes
     // the alreadyMarkedCompleted path and skips re-emitting STAGE_COMPLETED.
