@@ -71,6 +71,10 @@ async function main(): Promise<number> {
     return 1;
   }
 
+  // --dirs で要求された dirName のうち registry に無いものは、部分成功を exit 0 にしない。
+  // flush は非 0 exit で queue を保持して再試行するため、未反映分の取りこぼしを防ぐ
+  // （冪等 upsert のため、反映済み分の再実行は無害）。
+  const missing = dirs ? dirs.filter((d) => !cards.some((c) => c.dirName === d)) : [];
   const { items, duplicates } = listItems(project.id);
   const archived = archiveDuplicateItems(
     project,
@@ -83,6 +87,10 @@ async function main(): Promise<number> {
   console.log(
     JSON.stringify({ synced: cards.length, archivedDuplicates: archived, project: project.number, dirs: dirs ?? "all" })
   );
+  if (missing.length > 0) {
+    console.error(`registry に無い dirName が要求に含まれる（未反映）: ${missing.join(", ")}`);
+    return 1;
+  }
   return 0;
 }
 
