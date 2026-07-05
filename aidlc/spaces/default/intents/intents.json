@@ -171,5 +171,16 @@
     "issues": [
       486
     ]
+  },
+  {
+    "uuid": "019f319b-c015-7f34-bfad-7af146b60b0d",
+    "slug": "doctor-drops",
+    "dirName": "260705-doctor-drops",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      432
+    ]
   }
 ]
