@@ -149,5 +149,16 @@
     "issues": [
       481
     ]
+  },
+  {
+    "uuid": "019f3166-006e-7f43-b4ef-7e42949b2283",
+    "slug": "engine-gap-trio",
+    "dirName": "260705-engine-gap-trio",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      478
+    ]
   }
 ]

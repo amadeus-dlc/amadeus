@@ -6,6 +6,7 @@ import {
   auditFilePath,
   errorMessage,
   isoTimestamp,
+  normalizeWorktreeSlug,
   parseFieldArgs,
   relativeRecordDir,
   releaseAuditLock,
@@ -389,7 +390,10 @@ function parseSlugFlag(args: string[], subcommand: string): string {
   if (err) {
     jsonError(err);
   }
-  return slug;
+  // 正準形（小文字）で返す。AUDIT_FORKED の Bolt slug フィールドは audit-merge が
+  // 完全一致で相関するため、raw の mixed-case を記録すると後続の merge と相関が
+  // 切れる（Issue #478 gap2、Bugbot 指摘対応）。
+  return normalizeWorktreeSlug(slug);
 }
 
 function handleAuditFork(args: string[], projectDir: string): void {
@@ -417,10 +421,23 @@ function handleAuditFork(args: string[], projectDir: string): void {
       `worktree directory not found at ${wtPath}; run amadeus-worktree create first`
     );
   }
+  // Re-entrancy (Issue #478 gap1): a checkout whose shard is a byte-prefix of
+  // (or identical to) the main shard is just an older committed snapshot of the
+  // SAME ledger — phase-PR workflows commit shards, so every worktree checkout
+  // starts with one. Refork over it loses nothing. A DIVERGED shard (not a
+  // prefix) is evidence of separate work and stays refused.
+  let reentrant = false;
   if (existsSync(wtAuditPath)) {
-    jsonError(
-      `worktree audit already exists at ${wtAuditPath}; refusing to overwrite (audit-fork is one-shot)`
-    );
+    const mainContent = readFileSync(mainAuditPath, "utf-8");
+    const wtContent = readFileSync(wtAuditPath, "utf-8");
+    if (mainContent === wtContent || mainContent.startsWith(wtContent)) {
+      reentrant = true;
+    } else {
+      jsonError(
+        `worktree audit already exists at ${wtAuditPath} and has DIVERGED from the main shard; ` +
+          `refusing to overwrite (audit-fork only re-enters over a committed prefix of the main audit)`
+      );
+    }
   }
 
   // Byte-offset of main audit BEFORE the AUDIT_FORKED row lands. This is the
@@ -434,13 +451,15 @@ function handleAuditFork(args: string[], projectDir: string): void {
   // Audit-of-intent: emit BEFORE the disk copy. appendAuditEntry throws on
   // lock failure — audit-of-intent constraint preserved (no disk side effect
   // when emit fails).
+  const forkFields: Record<string, string> = {
+    "Bolt slug": slug,
+    "Source Audit Hash": sourceHash,
+    "Fork Boundary": String(boundary),
+  };
+  if (reentrant) forkFields.Reentrant = "true"; // 再入 fork を初回と監査上区別する（R103）
   const result = appendAuditEntry(
     "AUDIT_FORKED",
-    {
-      "Bolt slug": slug,
-      "Source Audit Hash": sourceHash,
-      "Fork Boundary": String(boundary),
-    },
+    forkFields,
     projectDir,
     intent,
     space,
