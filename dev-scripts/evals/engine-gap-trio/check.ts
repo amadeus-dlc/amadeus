@@ -211,6 +211,8 @@ function mainShard(workspace: string, dirName: string): { name: string; path: st
     }
     const validator = join(root, ".agents/skills/amadeus-validator/validator/AmadeusValidator.ts");
     const v1 = run(["bun", validator, ws, dirName], ws);
+    // validator が完走していること（crash なら以降の件数カウントが偽 GREEN になる）
+    ok("(gap3) validator が完走して判定を出力する（欠落ケース）", /## 判定/.test(v1.stdout) && v1.exitCode === 1, `exit=${v1.exitCode}`);
     ok(
       "(gap3) 欠落 unit（unit-alpha）の produces 不在を fail として検出する",
       /unit-alpha\/code-generation/.test(v1.stdout),
@@ -224,6 +226,12 @@ function mainShard(workspace: string, dirName: string): { name: string; path: st
       writeFileSync(join(dir, `${f}.md`), `# ${f}\n\n## eval\n\nfixture\n`, "utf-8");
     }
     const v2 = run(["bun", validator, ws, dirName], ws);
+    // 完走の証拠（判定見出し + 正常系 exit code の範囲）を先に確認してから件数を数える
+    ok(
+      "(gap3) validator が完走して判定を出力する（充足ケース）",
+      /## 判定/.test(v2.stdout) && (v2.exitCode === 0 || v2.exitCode === 1),
+      `exit=${v2.exitCode}`
+    );
     const producesFails = (v2.stdout.match(/produces 成果物を持つ。根拠/g) ?? []).length;
     ok("(gap3) 全 unit に produces があれば produces 検査は fail しない", producesFails === 0, String(producesFails));
   } finally {
