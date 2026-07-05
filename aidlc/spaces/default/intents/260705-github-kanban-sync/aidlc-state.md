@@ -24,7 +24,7 @@
 - **Build System**: bun (package.json)
 
 ## Execution Plan Summary
-- **Total Stages**: 31
+- **Total Stages**: 24
 - **Completed**: 19
 - **In Progress**: code-generation
 
