@@ -80,5 +80,13 @@
     "scope": "bugfix",
     "repos": [],
     "status": "complete"
+  },
+  {
+    "uuid": "019f2fee-a630-73f5-a90d-16c78a42bc6c",
+    "slug": "github-kanban-sync",
+    "dirName": "260705-github-kanban-sync",
+    "scope": "feature",
+    "repos": [],
+    "status": "in_progress"
   }
 ]
