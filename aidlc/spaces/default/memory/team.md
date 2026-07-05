@@ -280,6 +280,8 @@ phase をまたぐパイプライン（ある Intent の Construction と別の 
 
 接触面の有無を成果物から判断できない場合は、並行を開始せず、変更対象の記録を先に確認する。
 
+worktree（特に primary checkout）の占有は、開始時に他セッションへ通知し、作業終了時に引き渡す。
+
 ## 共有成果物の統合
 
 並行 branch のマージ後は、次の順で共有成果物を整合させる。
@@ -289,6 +291,8 @@ phase をまたぐパイプライン（ある Intent の Construction と別の 
 3. 標準検証で整合を確認してから作業を再開する。
 
 steering 共有資産の索引行が両 branch で追加されていた場合は、行追加同士の衝突として通常の conflict 解消で統合し、再生成対象であれば再生成を正とする。
+
+ファイル非接触でも、挙動変更（エンジン・skill）とその文書化が並行して進む場合は、意味的接触として申し送る。完了済み Intent の cursor・hooks 状態も、並行運用の接触面として扱う。
 
 ## ゲート承認の運用
 
@@ -302,6 +306,8 @@ steering 共有資産の索引行が両 branch で追加されていた場合は
 
 実装やマージが先行して承認記録が取り残された場合は、遡及承認として承認判断を decision に記録し、`audit/audit.md` に `GATE_APPROVED` と `STAGE_COMPLETED` を追記してから phase 境界処理へ進む。
 
+承認とタスク分配の指示系統は、Maintainer → 代理セッション → worker セッションの委任構造で一元化してよい。代理セッションが接触面の判断とタスクの割り当てを担う。
+
 ## 同一 worktree での直列化
 
 同一 worktree 内では、Bolt と検証を直列に実行する。
@@ -309,6 +315,28 @@ steering 共有資産の索引行が両 branch で追加されていた場合は
 標準検証（`npm run test:all` など）は作業ツリー全体を対象にするため、同一 worktree 内の並行実行は検証結果の信頼性を壊す。
 
 並行は worktree 単位で行い、同じ worktree の中では順番に進める。
+
+## worktree の階層と Bolt 実行契約
+
+Intent worktree は、並行の外側の隔離単位である（「並行させる単位」節の既定どおり、並行は Intent 単位で行い、worktree を Intent ごとに分ける）。
+
+Bolt worktree は、Construction 内の実行隔離である。エンジンの `amadeus-bolt.ts` の `start --worktree` / `complete --merge` サブコマンドが所有し、Bolt 開始時に Intent worktree の内側へ作られ、gate 承認時に Intent worktree へ merge される（実装: `.agents/amadeus/tools/amadeus-bolt.ts` の `start` / `complete` サブコマンド、`.agents/amadeus/tools/amadeus-worktree.ts` の `create` / `merge` / `discard`）。
+
+Bolt worktree の fork・merge はエンジンが所有する処理であり、「同一 worktree での直列化」節が禁じる手動の並行実行の例外ではなく、その内数である。この節は、人間や Agent が同一 worktree 内で複数 Bolt を手動並行実行してよいという意味ではない。
+
+`WORKTREE_CREATED` / `WORKTREE_MERGED` / `WORKTREE_DISCARDED`、`STATE_FORKED` / `STATE_MERGED`、`AUDIT_FORKED` / `AUDIT_MERGED` は、エンジン内部の attestation イベントである（`.agents/amadeus/knowledge/amadeus-shared/audit-format.md` の Bolt worktree イベント節、118〜128 行目）。PR gate 運用が要求する gate evidence は、これらのイベントではなく、従来どおり Bolt PR の merge と `BOLT_COMPLETED` のままとする。理由は、人間が検証できる単位は PR であり、fork・merge 内部の整合はエンジンと eval（engine e2e）が保証する範囲だからである。
+
+本家 AI-DLC v2 の `aidlc-worktree.ts` 相当の deterministic tool は、`amadeus-worktree.ts`（`create` / `merge` / `discard` / `list` / `verify` の 5 subcommand）としてすでに実装済みである。`WORKTREE_CREATED` / `WORKTREE_MERGED` / `WORKTREE_DISCARDED` イベントも同ツールが emit し、`audit-format.md` の該当節（118〜124 行目）が実装ツールとして明記している。`amadeus-bolt.ts` の `start --worktree` / `complete --merge` は、この `amadeus-worktree.ts` と `amadeus-state.ts`（fork / merge）、`amadeus-audit.ts`（audit-fork / audit-merge）をまとめて呼ぶ Bolt ライフサイクルの orchestrator である。したがって「独立 tool を新設しない」という意図的な不採用ではなく、独立 tool（`amadeus-worktree.ts`）はすでに存在し、新設の要否そのものが解消済みである。
+
+### #407 の判断項目と本節の対応
+
+| #407 の判断項目 | 本節の記述 |
+|---|---|
+| 1. Intent ごとの target workspace と、Bolt ごとの worktree のどちらを実際の隔離単位として優先するか | 「Intent worktree は、並行の外側の隔離単位である」の段落（優先ではなく階層関係として両方を使う） |
+| 2. Intent worktree の内側で Bolt worktree を作るのか、Intent worktree を Bolt 実行の基点にするのか | 「Bolt worktree は、Construction 内の実行隔離である」の段落（Intent worktree の内側に作られる） |
+| 3. 複数 Bolt を subagent で並行する場合、同一 worktree 内の直列化 policy とどう整合させるか | 「Bolt worktree の fork・merge はエンジンが所有する処理であり」の段落（直列化規定の例外ではなく内数） |
+| 4. `WORKTREE_*`、`STATE_*`、`AUDIT_*` のイベント契約を、現行の PR gate 運用でどこまで要求するか | 「`WORKTREE_CREATED` / `WORKTREE_MERGED`…」の段落（gate evidence は Bolt PR の merge と `BOLT_COMPLETED` のまま） |
+| 5. 本家 AI-DLC v2 の deterministic tool 差分を埋めるべきか、意図的差分として記録するべきか | 「本家 AI-DLC v2 の `aidlc-worktree.ts` 相当の…」の段落（埋める必要はない。`amadeus-worktree.ts` としてすでに実装済み） |
 
 ## 根拠
 
@@ -320,3 +348,7 @@ steering 共有資産の索引行が両 branch で追加されていた場合は
 | 共有成果物の統合（追従と再生成） | Issue #334 で共有インデックスを生成物化し、並行 branch の統合後に再生成することで手動コンフリクト解消が不要になった。 | Issue #334、[PR #348](https://github.com/amadeus-dlc/amadeus/pull/348) |
 | ゲート承認の運用（キュー確認と遡及承認） | 承認待ちキュー一覧の導入直後に、承認記録が取り残された Intent の滞留 3 件を検出し、遡及承認（decision 記録と audit 補正）で解消した。 | Issue #351、[PR #363](https://github.com/amadeus-dlc/amadeus/pull/363) |
 | 同一 worktree での直列化 | Issue #334 の Construction で、検証競合を避けるために同一 worktree 内の Bolt を直列実行し、並行は worktree 間で行った。 | Issue #334、[PR #348](https://github.com/amadeus-dlc/amadeus/pull/348) |
+| 並行させる単位（worktree 占有の通知・引き渡し） | 2026-07-05、Intent `260705-github-kanban-sync` の Construction（Bolt PR #471〜#475）と、並行する Intent `260705-hooks-state-bugfix`（PR #479）の期間中、primary checkout の占有を開始時に通知し、作業終了時に引き渡した。 | PR #471、PR #472、PR #473、PR #474、PR #475、PR #479 |
+| 共有成果物の統合（完了済み Intent の状態も接触面） | 完了済み Intent `260704-engine-namespace` へ hooks が誤動作し（mint-presence の HUMAN_TURN 追記、stop hook の督促）、完了済み workflow の cursor・hooks 状態も並行運用の接触面であると判明した。 | Issue #476、[PR #479](https://github.com/amadeus-dlc/amadeus/pull/479) |
+| 共有成果物の統合（意味的接触の申し送り） | Intent `260705-hooks-state-bugfix`（PR #479、エンジンの Phase Progress 自動更新）と Intent `260705-ledger-pr-docs`（Issue #477 → PR #480、台帳運用の文書化）が並行し、ファイル非接触でも #479 の挙動変更を #480 の文書が参照する意味的接触が生じた。 | Issue #477、[PR #479](https://github.com/amadeus-dlc/amadeus/pull/479)、[PR #480](https://github.com/amadeus-dlc/amadeus/pull/480) |
+| ゲート承認の運用（指示系統の委任） | Issue #481 の修正着手前に代理セッションへ相談し、Maintainer の包括委任に基づいて worker セッションへタスクを分配した（PR #482）。Construction 中に検出したギャップの記録・割り当て運用（#478）も同じ委任構造で処理した。 | Issue #481、[PR #482](https://github.com/amadeus-dlc/amadeus/pull/482)、Issue #478 |
