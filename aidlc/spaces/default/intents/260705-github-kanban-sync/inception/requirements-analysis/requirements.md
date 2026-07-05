@@ -52,7 +52,7 @@
 
 ### FR-5 hook 結線（P3: kanban-hook-flush）
 
-- FR-5.1: PostToolUse hook は、`aidlc/spaces/*/intents/**` 配下（`intents.json` を含む）への Write / Edit を検知したとき、ローカルキューへ 1 行追記するだけで終了する。ネットワークへ接続しない（C05）。
+- FR-5.1: PostToolUse hook は、`aidlc/spaces/default/intents/**` 配下（`intents.json` を含む）への Write / Edit を検知したとき、ローカルキューへ 1 行追記するだけで終了する。ネットワークへ接続しない（C05）。対象を default space に限定するのは FR-2.1 のスキャン範囲と揃えるためである。
 - FR-5.2: Stop / SessionEnd hook は、キューが空でなければ `kanban-sync.ts` を実行し、成功時にキューを消化する。直近 2 分以内に成功した sync があればスキップする。2 分はハードコード定数とし、設定化しない（暫定機構、C07。questions Q1 = A）。
 - FR-5.3: hook はリポジトリローカルの設定として結線し、Amadeus 本体（`.agents/amadeus/hooks/`、`skills/`）へ追加しない（C02）。
 - FR-5.4: flush の失敗は hooks-health と同型の drop 記録を残す（FR-4.2）。

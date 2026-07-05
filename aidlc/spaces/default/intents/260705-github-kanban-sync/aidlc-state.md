@@ -31,6 +31,7 @@
 ## Runtime State
 - **Revision Count**: 0
 
+- **Skeleton Stance**: scope-dependent
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -62,13 +63,13 @@
 - [S] practices-discovery — SKIP: practices already established in memory/（org.md、team.md、project.md。前例: 260704-v2-parity-completion）
 - [x] requirements-analysis — EXECUTE
 - [x] user-stories — EXECUTE
-- [S] refined-mockups — EXECUTE
+- [S] refined-mockups — SKIP: condition false for this intent（新規 UI なし。Projects v2 標準 UI を使い、列・フィールドは rough-mockups で確定済み）
 - [x] application-design — EXECUTE
 - [x] units-generation — EXECUTE
 - [x] delivery-planning — EXECUTE
 
 ### CONSTRUCTION PHASE
-Per unit: [TBD]
+Per unit: U001-registry-issues-field, U002-kanban-sync-cli, U003-kanban-hooks
 - [-] functional-design — EXECUTE
 - [ ] nfr-requirements — EXECUTE
 - [ ] nfr-design — EXECUTE

@@ -6190,3 +6190,209 @@
 **Findings count**: 4
 
 ---
+
+## Artifact Created
+**Timestamp**: 2026-07-05T03:49:22Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/aidlc/spaces/default/intents/260705-github-kanban-sync/construction/U001-registry-issues-field/functional-design/business-logic-model.md
+**Context**: construction > U001-registry-issues-field > functional-design > business-logic-model.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T03:49:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 500b6c5c
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-github-kanban-sync/construction/U001-registry-issues-field/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T03:49:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 500b6c5c
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-github-kanban-sync/construction/U001-registry-issues-field/functional-design/business-logic-model.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T03:49:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: d7ede405
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-github-kanban-sync/construction/U001-registry-issues-field/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T03:49:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: d7ede405
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-github-kanban-sync/construction/U001-registry-issues-field/functional-design/business-logic-model.md
+**Duration ms**: 31
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-05T03:49:29Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/aidlc/spaces/default/intents/260705-github-kanban-sync/construction/U001-registry-issues-field/functional-design/business-rules.md
+**Context**: construction > U001-registry-issues-field > functional-design > business-rules.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T03:49:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: 21b59f00
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-github-kanban-sync/construction/U001-registry-issues-field/functional-design/business-rules.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-05T03:49:29Z
+**Event**: SENSOR_FAILED
+**Fire id**: 21b59f00
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-github-kanban-sync/construction/U001-registry-issues-field/functional-design/business-rules.md
+**Detail path**: aidlc/spaces/default/intents/260705-github-kanban-sync/.aidlc-sensors/functional-design/required-sections-21b59f00.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T03:49:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: 466effba
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-github-kanban-sync/construction/U001-registry-issues-field/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T03:49:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: 466effba
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-github-kanban-sync/construction/U001-registry-issues-field/functional-design/business-rules.md
+**Duration ms**: 34
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-05T03:49:36Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/aidlc/spaces/default/intents/260705-github-kanban-sync/construction/U001-registry-issues-field/functional-design/domain-entities.md
+**Context**: construction > U001-registry-issues-field > functional-design > domain-entities.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T03:49:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: e1120536
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-github-kanban-sync/construction/U001-registry-issues-field/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T03:49:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: e1120536
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-github-kanban-sync/construction/U001-registry-issues-field/functional-design/domain-entities.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T03:49:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0235c4f6
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-github-kanban-sync/construction/U001-registry-issues-field/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T03:49:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0235c4f6
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-github-kanban-sync/construction/U001-registry-issues-field/functional-design/domain-entities.md
+**Duration ms**: 33
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-05T03:49:41Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/aidlc/spaces/default/intents/260705-github-kanban-sync/construction/U001-registry-issues-field/functional-design/frontend-components.md
+**Context**: construction > U001-registry-issues-field > functional-design > frontend-components.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T03:49:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: e39f9b50
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-github-kanban-sync/construction/U001-registry-issues-field/functional-design/frontend-components.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-05T03:49:41Z
+**Event**: SENSOR_FAILED
+**Fire id**: e39f9b50
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-github-kanban-sync/construction/U001-registry-issues-field/functional-design/frontend-components.md
+**Detail path**: aidlc/spaces/default/intents/260705-github-kanban-sync/.aidlc-sensors/functional-design/required-sections-e39f9b50.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T03:49:42Z
+**Event**: SENSOR_FIRED
+**Fire id**: f9346528
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-github-kanban-sync/construction/U001-registry-issues-field/functional-design/frontend-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T03:49:42Z
+**Event**: SENSOR_PASSED
+**Fire id**: f9346528
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260705-github-kanban-sync/construction/U001-registry-issues-field/functional-design/frontend-components.md
+**Duration ms**: 35
+
+---
