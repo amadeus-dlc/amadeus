@@ -144,12 +144,12 @@ Confirm at least the following.
 - When `grillings.md` or `grillings/` exists in an Event Storming or Intent
   phase directory, both are present together.
 - When a Grilling Decision Trail exists in an Event Storming or Intent phase
-  directory, validate the `grillings.md` listing, the session file names,
-  the session's recorded questions, `確認したいこと`, `確認が必要な理由`,
-  `推奨回答`, `推奨理由`, `ユーザー回答`, the confirmed decision, the
-  reflection target, that the reflection target stays inside the target
-  root, that an active entry has no replacement, and that a superseded entry
-  has a replacement.
+  directory, validate it against the single-source format defined in
+  `../amadeus-grilling/references/grilling-trail-contract.md` (the
+  `grillings.md` listing, the session file names, the session's recorded
+  questions and fields, the confirmed decisions, the reflection targets
+  staying inside the target root, and the active/superseded replacement
+  rules).
 
 ## Validation Procedure
 

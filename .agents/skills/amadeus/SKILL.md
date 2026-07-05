@@ -27,7 +27,7 @@ All stages follow `amadeus-common/protocols/stage-protocol.md` for approval gate
 
 ### Audit Event Naming
 
-All audit events MUST use event types from `knowledge/amadeus-shared/audit-format.md`. Do not invent new event names. State transitions are tool-owned: never emit audit events from prose — the engine's `report` step and the stage tools (`amadeus-state.ts`, `amadeus-log.ts`, `amadeus-bolt.ts`, `amadeus-learnings.ts`, `amadeus-utility.ts`) own every emission. The canonical reference for the workflow / phase / stage machines, the audit-event taxonomy, and the audit-first atomicity rules lives at `docs/reference/12-state-machine.md`.
+All audit events MUST use event types from `knowledge/amadeus-shared/audit-format.md`. Do not invent new event names. State transitions are tool-owned: never emit audit events from prose — the engine's `report` step and the stage tools (`amadeus-state.ts`, `amadeus-log.ts`, `amadeus-bolt.ts`, `amadeus-learnings.ts`, `amadeus-utility.ts`) own every emission. The canonical reference for the workflow / phase / stage machines and the audit-first atomicity rules is `docs/amadeus/lifecycle/state.md` (this repo's state contract); the audit-event taxonomy lives at `knowledge/amadeus-shared/audit-format.md` (vendored upstream copy: `references/aidlc-v2/audit-format.md`).
 
 ---
 
@@ -106,6 +106,16 @@ When an intent is already active, `next` advances it (the engine is read-only an
 - **On CONFIRM:** re-run `next` with `--new-intent` and the confirmed scope + new-work text: `bun .agents/amadeus/tools/amadeus-utility.ts next --new-intent --scope <the confirmed scope> "<the new-work description>"`. The engine returns a `print` directive naming the `intent-birth` command — the **same run-then-continue birth move the fresh-start path uses**, including the `--label "<2-3 word kebab essence>"` placeholder. Act on that directive exactly as "Acting on a directive" describes: replace `--label` with a short 2-3 word essence of the new-work description (e.g. "simple calc") — it becomes the readable, date-prefixed record dir name (`<YYMMDD>-simple-calc`) while the full `--arguments` text is preserved in the audit + state — run it, then re-run `next` to land on the new intent's first stage. Routing through `next --new-intent` (rather than constructing `intent-birth` here) keeps the second-intent birth identical to the first; the offer itself is conductor prose, not a new directive kind.
 - **On DECLINE:** proceed with the active intent — the normal Branch-10 `run-stage`.
 - You switch between intents any time with `/aidlc intent <name>` (bare `/aidlc intent` lists them) — parallel to `/aidlc space <name>`.
+
+### GitHub Issue references as input
+
+`$ARGUMENTS` (a fresh Birth description, a continuation prompt, or the new-work text above) may name a GitHub Issue instead of, or alongside, prose. Resolve it before acting:
+
+- When the target repository context is resolvable (a single Git remote, or a repository the current session is already scoped to), treat a short reference (`#nnn`) as equivalent to that Issue's full URL (`https://github.com/<owner>/<repo>/issues/<nnn>`) — both name the same input.
+- Accept the explicit `owner/repo#nnn` form as-is; it names its own repository context regardless of the current remote.
+- When the repository context is ambiguous (multiple remotes, a fork whose upstream differs, or no Git repository at all) and the input is a bare `#nnn` with no `owner/repo` prefix, do not guess which repository it names — stop and ask the human which repository `#nnn` refers to before treating it as an Issue input.
+
+This equivalence governs how `#nnn` and Issue URLs are read as Intent input (e.g. during Birth or a continuation); it does not change engine routing or `next`/`report` argument parsing. See `references/issue-ref-contract.md` for the full contract and its verification procedure.
 
 ---
 

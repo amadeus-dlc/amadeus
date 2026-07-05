@@ -8,7 +8,7 @@
 | エンティティ | 説明 | 主な属性 |
 |---|---|---|
 | Skill | 監査対象の amadeus-* skill。source（`skills/`）と昇格先（`.agents/skills/`）の対で存在する | 名前、種別（ステージ / 非ステージ）、source path、昇格先 path |
-| AuditFinding | 1 skill × 1 観点の判定結果 | 対象 skill、観点、判定（pass / fail / n-a / 未確認）、根拠、分類（修正対象 / parity 内修正 / parity 逸脱・後続 Issue 候補） |
+| AuditFinding | 1 skill × 1 観点の判定結果 | 対象 skill、観点、判定（pass / fail / n-a / 未確認）、根拠、分類（`repairable` / `parity-limited` / `deferred` — 意味はライフサイクル節を参照） |
 | AuditReport | AuditFinding を束ねた監査記録。`construction/skill-quality-repair/audit-report.md` | 判定表、要約、#340 へのコメント文 |
 | GrillingTrailContract | Grilling Decision Trail の生成規約。テンプレートと規約記述の対 | 置き場所（amadeus-grilling references）、grillings.md 必須列、session 必須項目 |
 | InputReferenceContract | GitHub Issue 短縮参照の入力契約 | 適用 skill 一覧、等価規則（#nnn ≡ URL）、明示形式（owner/repo#nnn）、曖昧時停止規則 |

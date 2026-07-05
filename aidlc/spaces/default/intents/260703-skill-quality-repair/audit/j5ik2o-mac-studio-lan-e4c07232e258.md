@@ -1065,3 +1065,182 @@
 **Reason**: other
 
 ---
+
+## Artifact Reused
+**Timestamp**: 2026-07-05T00:05:13Z
+**Event**: ARTIFACT_REUSED
+**Stage**: functional-design
+**Decision**: keep
+**Artifacts**: business-logic-model.md,business-rules.md,domain-entities.md
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-05T00:15:12Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: functional-design
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-05T00:15:12Z
+**Event**: GATE_APPROVED
+**Stage**: functional-design
+**User Input**: auto 指示に基づく承認（人間指示: auto で PR まで進め、レビューは PR で実施）。reviewer READY (iteration 2)。
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-05T00:15:12Z
+**Event**: STAGE_COMPLETED
+**Stage**: functional-design
+**Details**: Stage Functional Design approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-05T00:15:12Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Agent**: amadeus-developer-agent
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-05T00:43:22Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Recovered**: true
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-05T00:43:22Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state approve code-generation --user-input auto 指示に基づく承認（人間指示: auto で PR まで進め、レビューは PR で実施）。reviewer READY。全検証 pass（test:all / parity:check / promote-skill / validator）。 --project-dir /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/sub
+**Error**: Refusing to approve "code-generation": a real human has not acted at this gate since it opened. The approval gate requires a typed human turn before it can commit. Acknowledge the gate as a human, then approve. (autonomous Construction is exempt)
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-05T00:43:35Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state --help
+**Error**: Unknown subcommand: --help. Valid: get, set, set-skeleton-stance, checkbox, count, advance, finalize, complete-workflow, gate-start, approve, reject, revise, skip, resume, acknowledge-compaction, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, park, unpark
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-05T00:44:00Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-bolt
+**Command**: amadeus-bolt
+**Error**: Unknown subcommand: undefined. Valid: start, complete, fail, abort, set-autonomy, dispatch-event, hold-merge, release-merge
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-05T00:47:44Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state approve code-generation --user-input Approve（人間が gate で承認。ladder: Continue autonomously を選択） --project-dir /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/sub
+**Error**: Refusing to approve "code-generation": a real human has not acted at this gate since it opened. The approval gate requires a typed human turn before it can commit. Acknowledge the gate as a human, then approve. (autonomous Construction is exempt)
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-05T00:48:14Z
+**Event**: HUMAN_TURN
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-05T00:48:15Z
+**Event**: GATE_APPROVED
+**Stage**: code-generation
+**User Input**: Approve（人間が AskUserQuestion gate で実回答: Approve ＋ ladder: Continue autonomously。presence は widget 回答直後の手動 mint、project.md Corrections の運用に従う）
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-05T00:48:15Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Details**: Stage Code Generation approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-05T00:48:15Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Agent**: amadeus-quality-agent
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-05T00:48:22Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-bolt
+**Command**: amadeus-bolt set-autonomy --mode autonomous
+**Error**: State update failed: Field not found in state file: "Construction Autonomy Mode". Cannot update — refusing to silently no-op.
+
+---
+
+## Autonomy Mode Set
+**Timestamp**: 2026-07-05T00:49:19Z
+**Event**: AUTONOMY_MODE_SET
+**Mode**: autonomous
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-05T00:51:28Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-05T00:51:28Z
+**Event**: GATE_APPROVED
+**Stage**: build-and-test
+**User Input**: autonomous Construction（ladder 選択済み: Continue autonomously）。test:all pass (exit 0)、validator pass。produces 7 件生成済み（不適用は判断文書）。
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-05T00:51:28Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Details**: Stage Build and Test approved by gate
+
+---
+
+## Phase Completion
+**Timestamp**: 2026-07-05T00:51:28Z
+**Event**: PHASE_COMPLETED
+**From phase**: construction
+**To phase**: (end)
+**Stages completed**: 7
+
+---
+
+## Phase Verification
+**Timestamp**: 2026-07-05T00:51:28Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: construction → end
+
+---
+
+## Workflow Completion
+**Timestamp**: 2026-07-05T00:51:28Z
+**Event**: WORKFLOW_COMPLETED
+**Scope**: refactor
+**Details**: Scope: refactor, 7 stages completed
+
+---

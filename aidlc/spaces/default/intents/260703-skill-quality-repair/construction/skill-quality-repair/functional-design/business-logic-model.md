@@ -27,7 +27,7 @@
 
 ## WF2: 補修（R002、R003）
 
-1. WF1 の findings を分類する: (a) 非ステージ skill の問題 → 修正対象、(b) ステージ skill の問題かつ parity 契約内（改名・grilling 結線）→ 修正対象、(c) ステージ skill の問題かつ parity 逸脱 → 記録し後続 Issue 候補にする。
+1. WF1 の findings を分類する。分類語彙は `repairable` / `parity-limited` / `deferred` の 3 値に統一する（domain-entities.md のライフサイクルと同一）: (a) 非ステージ skill の問題 → `repairable`（修正対象）、(b) ステージ skill の問題かつ parity 契約内（改名・grilling 結線）→ `parity-limited`（parity 内修正）、(c) ステージ skill の問題かつ parity 逸脱 → `deferred`（後続 Issue 候補として記録）。
 2. 修正対象を source（`skills/amadeus*/`）で修正する。
 3. `bun run dev-scripts/promote-skill.ts <skill> --replace` で昇格する（N003）。
 4. `npm run parity:check` でステージ skill のパリティ維持を確認する（N002）。
@@ -49,7 +49,7 @@
 
 1. WF1 の言語 policy 観点の判定結果から、残日本語のある skill（現時点で 3 個）が policy 違反か、許容される日本語（ユーザー向け gate 文言・成果物例）かを判定する。
 2. 判定結果を監査記録に記録する。
-3. 残作業なしと判定した場合、判定根拠を添えて #341 の close を提案する。残作業がある場合は本 Bolt 内で補修する（WF2 に合流）。
+3. 残作業なしと判定した場合、判定根拠を添えて #341 の close を提案する。残作業があると判定した場合は、残件を監査記録に記録して #341 の継続（close しない）を提案するに留める。SKILL.md 全面英語化の実施作業そのものは requirements.md の対象外であり、本 Bolt では実施しない。個別の言語 policy 違反が R002 の非ステージ skill 補修に該当する場合だけ、その finding は WF1 の分類に従い `repairable` として WF2 で扱う（WF5 からの合流経路ではない）。
 
 ## 処理順序と依存
 
@@ -63,3 +63,12 @@ WF4（入力契約） --> 検証（決定論的検査）
 - WF2 と WF5 は WF1 の判定結果に依存する。
 - WF3 と WF4 は WF1 と独立に進められるが、対象 skill が WF2 の修正対象と重なる場合は同一 skill への変更を 1 回の編集に統合する。
 - 最終検証は `npm run test:all`（N001）でまとめて行う。
+
+## Review
+**Verdict**: READY
+**Iteration**: 2
+**Findings**:
+- 解消済み：WF5 Step 3 と requirements.md 対象外節の矛盾。WF5 は「残作業がある場合は本 Bolt 内で補修する（WF2 に合流）」という記述を廃し、現在は「残作業があると判定した場合は、残件を監査記録に記録して #341 の継続（close しない）を提案するに留める。SKILL.md 全面英語化の実施作業そのものは requirements.md の対象外であり、本 Bolt では実施しない。」と明記している。R002 該当（非ステージ skill の言語 policy 違反）に限り WF1 の分類で `repairable` として WF2 に流れる経路のみが残り、WF5 からの一般的な合流経路は存在しない。「処理順序と依存」の依存図も WF5→WF2 の合流エッジを含んでおらず、記述と整合している。
+- 解消済み：business-rules.md の「入力参照解決ルール（WF4）」から、R005 に根拠のない 4 点目（Issue/PR 曖昧時の確認ルール）が削除され、requirements.md R005 の 3 点（等価規則、owner/repo#nnn 受理、文脈曖昧時の停止）とちょうど一致する記載になった。
+- 解消済み：AuditFinding の分類語彙が `repairable` / `parity-limited` / `deferred` の 3 値に統一された。business-logic-model.md WF2、domain-entities.md の一覧表とライフサイクル図、business-rules.md の parity 境界ルールがいずれも同一語彙を使っており（日本語の補足語「（修正対象）」等は英語 canonical 語への注釈として残るのみで、競合する分類軸ではない）、audit-report.md 生成時にどの語彙を正とするか迷う余地はない。
+- 新規の矛盾は検出されなかった。Q1〜Q4（すべて A）の確定回答、requirements.md の R001〜R006・N001〜N004、および 4 成果物（business-logic-model.md、business-rules.md、domain-entities.md、frontend-components.md）の内容は整合しており、WF1〜WF5 の依存関係、上流不在（unit-of-work 等）の明示的な言及、frontend-components.md の CONDITIONAL 不適用判断もいずれも妥当である。
