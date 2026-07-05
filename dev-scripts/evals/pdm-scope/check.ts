@@ -245,6 +245,93 @@ fixture
   }
 }
 
+// --- (f) 空 Construction の e2e（Maintainer 指摘 2026-07-05T11:06Z への対応） ---
+// (e) は complete-workflow を直接呼ぶが、本検査は通常進行の gate 経路
+// （gate-start → approve → 空 Construction / 空 Operation の phase 境界処理 →
+// workflow 完了判定到達）を実 CLI で駆動する。空 Construction は既存 9 scope に
+// ない新規形状であり、firstInScopeStageOfPhase() が null を返す経路
+// （skeleton-gate 導出・finality 判定）が安全に通過することを確認する。
+{
+  const ws = mkdtempSync(join(tmpdir(), "pdm-scope-f-"));
+  try {
+    for (const dir of ENGINE_DIRS) {
+      const src = join(root, ".agents/amadeus", dir);
+      const dest = join(ws, ".agents/amadeus", dir);
+      mkdirSync(dest, { recursive: true });
+      cpSync(src, dest, { recursive: true });
+    }
+    mkdirSync(join(ws, ".claude"), { recursive: true });
+    for (const dir of ["tools", "hooks", "sensors", "scopes", "agents", "knowledge"]) {
+      symlinkSync(join("..", ".agents/amadeus", dir), join(ws, ".claude", dir));
+    }
+    const run = (cmd: string[]) => {
+      const proc = Bun.spawnSync({
+        cmd,
+        cwd: ws,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: { ...process.env, CLAUDE_PROJECT_DIR: ws },
+      });
+      return {
+        exitCode: proc.exitCode ?? -1,
+        out: new TextDecoder().decode(proc.stdout) + new TextDecoder().decode(proc.stderr),
+      };
+    };
+    const tools = join(ws, ".agents/amadeus/tools");
+    run(["bun", join(tools, "amadeus-utility.ts"), "intent-birth", "--scope", "pdm", "--arguments", "empty construction e2e", "--label", "pdm-gate"]);
+    const intentsRoot = join(ws, "aidlc/spaces/default/intents");
+    const dirName = readdirSync(intentsRoot, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name)[0]!;
+    const rec = join(intentsRoot, dirName);
+    // 終点 stage（refined-mockups）まで forward jump し、produces と phase-check を用意する
+    run(["bun", join(tools, "amadeus-jump.ts"), "execute", "--target", "refined-mockups", "--direction", "forward"]);
+    const rm = join(rec, "inception", "refined-mockups");
+    mkdirSync(rm, { recursive: true });
+    for (const f of ["mockups", "interaction-spec", "design-system-mapping", "accessibility-checklist"]) {
+      writeFileSync(join(rm, `${f}.md`), `# ${f}\n\n## eval\n\nfixture\n`, "utf-8");
+    }
+    mkdirSync(join(rec, "verification"), { recursive: true });
+    writeFileSync(
+      join(rec, "verification", "phase-check-inception.md"),
+      ["# Phase Check — inception", "", "## 検査", "", "eval 用。", ""].join("\n"),
+      "utf-8"
+    );
+    // HUMAN_TURN を mint する（approve の human-presence gate 対策。conductor 実運用と同じ）
+    run(["bun", join(ws, ".agents/amadeus/hooks/amadeus-mint-presence.ts")]);
+    // 通常進行の gate 経路: gate-start → approve（(e) の complete-workflow 直呼びとは別経路）
+    const gs = run(["bun", join(tools, "amadeus-state.ts"), "gate-start", "refined-mockups"]);
+    ok("(f) 終点 stage の gate-start が成功する", gs.exitCode === 0, gs.out.slice(0, 250));
+    const ap = run(["bun", join(tools, "amadeus-state.ts"), "approve", "refined-mockups"]);
+    ok(
+      "(f) 終点 stage の approve が空 Construction / 空 Operation を越えて成功する",
+      ap.exitCode === 0,
+      ap.out.slice(0, 250)
+    );
+    // エンジンの workflow 完了判定: next が done（残 in-scope stage なし）を返す
+    const nx = run(["bun", join(tools, "amadeus-orchestrate.ts"), "next"]);
+    ok("(f) 承認後の next が正常終了する", nx.exitCode === 0, nx.out.slice(0, 250));
+    let kind = "";
+    try {
+      kind = (JSON.parse(nx.out) as { kind?: string }).kind ?? "";
+    } catch {
+      /* JSON でなければ kind 空のまま fail させる */
+    }
+    ok(
+      "(f) next が workflow 完了判定（kind: done）に到達する",
+      kind === "done",
+      nx.out.slice(0, 250)
+    );
+    const st = readFileSync(join(rec, "aidlc-state.md"), "utf-8");
+    ok(
+      "(f) Construction / Operation が Skipped、Status が Completed になる",
+      /- \*\*Construction\*\*: Skipped/.test(st) &&
+        /- \*\*Operation\*\*: Skipped/.test(st) &&
+        /- \*\*Status\*\*: Completed/.test(st)
+    );
+  } finally {
+    rmSync(ws, { recursive: true, force: true });
+  }
+}
+
 if (failures > 0) {
   console.error(`pdm-scope eval: ${failures} failure(s)`);
   process.exit(1);
