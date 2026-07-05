@@ -408,18 +408,28 @@ function mergeSettings(target: string, wiring: readonly HookWiringEntry[]): { to
 
   try {
     writeFileSync(settingsPath, JSON.stringify(settings, null, 2), "utf-8");
-    // Re-read and validate — catches silent corruption on write, and
-    // deep-compares every non-hooks key against the pre-merge snapshot
-    // (FR-2.7: the merge must never change user-owned values).
-    const reread = JSON.parse(readFileSync(settingsPath, "utf-8")) as Record<string, unknown>;
-    const rereadNonHooks = JSON.stringify(Object.fromEntries(Object.entries(reread).filter(([key]) => key !== "hooks")));
-    if (rereadNonHooks !== nonHooksSnapshot) {
-      throw new Error("post-write verification failed: a non-hooks key changed during the merge");
-    }
   } catch (e) {
     throw new InstallError(
       `failed to write ${settingsPath}: ${errorMessage(e)}`,
       "check disk space / permissions on the target, then re-run (idempotent)"
+    );
+  }
+
+  // Post-write verification, reported separately from a write failure: the
+  // file HAS been written at this point, so the fix guidance must say
+  // "inspect", not "check disk space". Re-read and validate — catches silent
+  // corruption on write, and deep-compares every non-hooks key against the
+  // pre-merge snapshot (FR-2.7: the merge must never change user-owned values).
+  try {
+    const reread = JSON.parse(readFileSync(settingsPath, "utf-8")) as Record<string, unknown>;
+    const rereadNonHooks = JSON.stringify(Object.fromEntries(Object.entries(reread).filter(([key]) => key !== "hooks")));
+    if (rereadNonHooks !== nonHooksSnapshot) {
+      throw new Error("a non-hooks key changed during the merge");
+    }
+  } catch (e) {
+    throw new InstallError(
+      `post-write verification of ${settingsPath} failed: ${errorMessage(e)}`,
+      `the file was written and may already contain merged hooks — inspect ${settingsPath}, restore it if needed, then re-run (idempotent)`
     );
   }
 

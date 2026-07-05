@@ -345,14 +345,19 @@ try {
   {
     const amadeusMdPath = join(ws, "AMADEUS.md");
     ok("layout: AMADEUS.md exists at target root", existsSync(amadeusMdPath));
+    // Liveness guard: the negative assertions below must never pass
+    // vacuously on an empty string when the install failed to produce the
+    // file — a missing/empty file is itself a failure of each check.
     const text = existsSync(amadeusMdPath) ? readFileSync(amadeusMdPath, "utf-8") : "";
+    const transformed = text.length > 0;
+    ok("layout: AMADEUS.md is non-empty (transform actually ran)", transformed);
     for (const pattern of MANIFEST.amadeusMd.devReferencePatterns) {
       const re = new RegExp(pattern);
-      ok(`layout: AMADEUS.md has no match for dev-reference pattern ${pattern}`, !re.test(text));
+      ok(`layout: AMADEUS.md has no match for dev-reference pattern ${pattern}`, transformed && !re.test(text));
     }
     // FR-2.6 negative direction, blank-line-compression half: removals must
     // not leave behind runs of 2+ consecutive blank lines.
-    ok("FR-2.6 AMADEUS.md has no run of 2+ consecutive blank lines (compressed)", !text.includes("\n\n\n"), text);
+    ok("FR-2.6 AMADEUS.md has no run of 2+ consecutive blank lines (compressed)", transformed && !text.includes("\n\n\n"), text);
   }
 
   {
