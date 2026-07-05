@@ -255,6 +255,14 @@
     "issues": []
   },
   {
+    "uuid": "019f32a7-dbd9-7718-8f57-db62bbc8a339",
+    "slug": "agmsg-trial-docs",
+    "dirName": "260705-agmsg-trial-docs",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete"
+  },
+  {
     "uuid": "019f31b9-6553-7aee-b1d0-e8801ccb2ea8",
     "slug": "pdm-scope",
     "dirName": "260705-pdm-scope",
