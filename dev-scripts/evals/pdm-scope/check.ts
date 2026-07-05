@@ -115,7 +115,7 @@ const EXPECTED_EXECUTE = [
       .map((e) => e.name)[0]!;
     const state = readFileSync(join(intentsRoot, dirName, "aidlc-state.md"), "utf-8");
 
-    // Construction / Operation の全 checkbox が [S]
+    // Construction / Operation の全ステージが誕生時点で — SKIP 注釈付き [ ] であること
     const CONSTRUCTION_OPS = [
       "functional-design", "nfr-requirements", "nfr-design", "infrastructure-design",
       "code-generation", "build-and-test", "ci-pipeline",
