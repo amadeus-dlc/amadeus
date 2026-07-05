@@ -95,6 +95,73 @@ const HARNESS_DOC_DIRS = new Set([
 // lower in the file would be in its temporal dead zone when the guard runs.
 const KNOWN_CODEKB_STAGES: ReadonlySet<string> = new Set(["reverse-engineering"]);
 
+// --- Phase Progress bookkeeping (R001, Issue #464) ---------------------------
+//
+// `## Phase Progress` bullets are keyed by the capitalised phase name
+// (`- **Inception**: ...`), while every phase-boundary transition in this file
+// carries the lowercase `stage.phase` value. One mapping keeps the two in
+// sync; declared at module top for the same TDZ reason as HARNESS_DOC_DIRS.
+const PHASE_PROGRESS_FIELD: Readonly<Record<string, string>> = {
+  initialization: "Initialization",
+  ideation: "Ideation",
+  inception: "Inception",
+  construction: "Construction",
+  operation: "Operation",
+};
+
+// Mark `phase`'s Phase Progress bullet Verified. Called in the SAME
+// read->write transaction as the PHASE_VERIFIED audit emission (advance's
+// phase-boundary block, complete-workflow) so the two can never drift —
+// the bug this fixes: PHASE_VERIFIED fired but the field stayed at its prior
+// value (Active/Pending) forever, since nothing else ever revisits it.
+function markPhaseVerified(content: string, phase: string): string {
+  const field = PHASE_PROGRESS_FIELD[phase];
+  if (!field) return content; // unknown phase name - defensive no-op
+  return setField(content, field, "Verified");
+}
+
+// --- Phase-check artifact gate (R002, Issue #464) -----------------------------
+//
+// A phase boundary's PHASE_VERIFIED must not fire until the phase it closes
+// has written its verification/phase-check-<phase>.md (the same "evidence
+// before completion" principle as verifyStageArtifacts, produces-shaped).
+// Scoped to the 3 phases whose upstream stage definitions actually produce a
+// phase-check artifact (delivery-planning/ideation's approval-handoff,
+// inception's delivery-planning, construction's ci-pipeline) — mirrors the
+// validator's PHASE_CHECK_PHASES (lifecycle-v2.ts). Initialization and
+// Operation have no stage that ever writes one, so gating them would refuse
+// every ordinary workflow's first phase boundary (the state-init scaffold's
+// own initialization->firstPostInit crossing) with no way to satisfy it.
+const PHASE_CHECK_REQUIRED_PHASES: ReadonlySet<string> = new Set([
+  "ideation",
+  "inception",
+  "construction",
+]);
+
+// Refuse the phase-boundary completion when `phase` requires a phase-check
+// artifact and it is missing. No-op for phases outside
+// PHASE_CHECK_REQUIRED_PHASES. Runs before any state mutation (mirrors
+// verifyStageArtifacts), so a refusal leaves the state file untouched.
+function verifyPhaseCheckArtifact(pd: string, phase: string): void {
+  if (!PHASE_CHECK_REQUIRED_PHASES.has(phase)) return;
+  const rec = recordDir(pd);
+  if (rec === null) {
+    error(
+      `Refusing to verify the "${phase}" phase boundary: no active intent record resolves, ` +
+        `so there is nowhere to check for verification/phase-check-${phase}.md.`
+    );
+  }
+  const artifactPath = join(rec, "verification", `phase-check-${phase}.md`);
+  if (!existsSync(artifactPath)) {
+    error(
+      `Refusing to complete the "${phase}" phase boundary: verification/phase-check-${phase}.md ` +
+        `does not exist under the intent's record directory. The phase-boundary protocol requires ` +
+        `a phase-check artifact before PHASE_VERIFIED. Produce verification/phase-check-${phase}.md ` +
+        `before completing. (expected: ${artifactPath})`
+    );
+  }
+}
+
 // --- Audit emission helper ---
 // Uses the throw-on-error appendAuditEntry (not handleAppend which writes JSON to stdout).
 // Caller wraps in try/catch; a thrown exception is the signal that audit failed and
@@ -928,6 +995,14 @@ function handleAdvance(args: string[]): void {
   // Detect phase boundary (for PHASE_COMPLETED/VERIFIED/STARTED emissions)
   const crossesPhaseBoundary = completedStage.phase !== nextStage.phase;
 
+  // Phase-check artifact gate (R002, Issue #464). Same guard condition as the
+  // artifact guard above: only enforce on the transition that ACTUALLY closes
+  // the phase (not a replay/approve-delegated call that already passed it).
+  // Runs before any mutation; error() exits leaving state untouched.
+  if (crossesPhaseBoundary && !alreadyMarkedCompleted) {
+    verifyPhaseCheckArtifact(pd, completedStage.phase);
+  }
+
   // 1. Mark completed-slug → [x] (idempotent)
   content = setCheckbox(content, completedSlug, "completed");
 
@@ -947,6 +1022,12 @@ function handleAdvance(args: string[]): void {
   content = setField(content, "Last Updated", timestamp);
   content = setField(content, "Last Completed Stage", completedSlug);
   content = setField(content, "Next Action", `Execute ${nextStage.name}`);
+
+  // Phase Progress: mark the phase just closed Verified, in this same
+  // transaction as the PHASE_VERIFIED audit emission below (R001, Issue #464).
+  if (crossesPhaseBoundary) {
+    content = markPhaseVerified(content, completedStage.phase);
+  }
 
   // Sync Completed counter to actual [x] count
   const completedCount = countCheckboxes(content, "completed");
@@ -1128,6 +1209,10 @@ function handleCompleteWorkflow(args: string[]): void {
   // before any mutation so a refusal leaves state untouched.
   if (!alreadyMarkedCompleted) {
     verifyStageArtifacts(pd, completedStage);
+    // Phase-check artifact gate (R002, Issue #464). complete-workflow always
+    // closes completedStage.phase (an implicit "phase -> end" boundary), so
+    // gate it the same way as advance's phase-boundary block.
+    verifyPhaseCheckArtifact(pd, completedStage.phase);
   }
 
   // 1. Mark completed
@@ -1145,6 +1230,10 @@ function handleCompleteWorkflow(args: string[]): void {
   content = setField(content, "In Progress", "none");
   content = setField(content, "Next Stage", "none");
   content = setField(content, "Next Action", "Workflow complete");
+
+  // Phase Progress: mark the final phase Verified, in this same transaction as
+  // the PHASE_VERIFIED audit emission below (R001, Issue #464).
+  content = markPhaseVerified(content, completedStage.phase);
 
   // 4. Atomic audit emissions. Refuse silent fallback — matches handleAdvance.
   const scope = getField(content, "Scope");
@@ -1331,6 +1420,40 @@ function handleApprove(args: string[]): void {
     );
   }
 
+  // Scope + next-stage derivation, computed BEFORE any mutation (moved up from
+  // its former post-writeStateFile position) so the phase-check gate below can
+  // use it. Refuse silent fallback — matches handleAdvance/handleCompleteWorkflow.
+  const scope = getField(content, "Scope");
+  if (!scope) {
+    error(
+      `State file has no Scope field. Refusing to approve — fix the state file first.`
+    );
+  }
+  if (!validScopes().has(scope)) {
+    error(
+      `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`
+    );
+  }
+  const next = nextInScopeStage(slug, scope, content);
+
+  // Phase-check artifact gate (R002, Issue #464 — Bugbot finding on PR #479).
+  // approve marks the slug completed and DELEGATES to handleAdvance /
+  // handleCompleteWorkflow below; those nested calls see alreadyMarkedCompleted
+  // = true and skip their OWN verifyPhaseCheckArtifact call (the guard already
+  // ran on the direct-advance path). Without an explicit check HERE, the
+  // approve path — the ordinary, more common gate-completion path — could cross
+  // a phase boundary and reach PHASE_VERIFIED with no phase-check artifact,
+  // silently defeating R002/AC-1. Mirrors handleAdvance's crossesPhaseBoundary
+  // test (no next stage, i.e. the final stage, always counts — same as
+  // handleCompleteWorkflow's unconditional check). Placed AFTER the
+  // human-presence guard (same ordering precedent: produces artifacts, then
+  // human presence, then this) so an approve missing BOTH a human turn and a
+  // phase-check artifact still reports the human-absence reason first — the
+  // guard existing callers already depend on. Runs before any mutation.
+  if (!next || next.phase !== stage.phase) {
+    verifyPhaseCheckArtifact(pd, stage.phase);
+  }
+
   const timestamp = isoTimestamp();
 
   content = setCheckbox(content, slug, "completed");
@@ -1358,26 +1481,16 @@ function handleApprove(args: string[]): void {
 
   writeStateFile(pd, content);
 
-  // Auto-advance or complete-workflow. Scope is required for next-stage
-  // derivation; refuse silent fallback (matches handleAdvance/handleCompleteWorkflow).
-  const scope = getField(content, "Scope");
-  if (!scope) {
-    error(
-      `State file has no Scope field. Refusing to advance after approve — fix the state file first.`
-    );
-  }
-  if (!validScopes().has(scope)) {
-    error(
-      `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`
-    );
-  }
-
+  // Auto-advance or complete-workflow. `scope` and `next` were already derived
+  // above (before mutation, for the phase-check gate) — reused here rather
+  // than re-fetched, since neither the Scope field nor the forward walk from
+  // `slug` depends on `slug`'s own checkbox state.
+  //
   // No explicit consume step (ledger-event design): the GATE_APPROVED
   // emitted by this commit IS the freshness boundary for the next gate. A second
   // gate auto-cascaded in the same human turn finds the last gate resolution
   // (this GATE_APPROVED) AFTER the only HUMAN_TURN, so humanActedSinceGate refuses
   // it — one commit per human turn, from ledger order, with no marker to flip.
-  const next = nextInScopeStage(slug, scope, content);
   if (next) {
     // Delegate to handleAdvance. The slug is now [x], so handleAdvance takes
     // the alreadyMarkedCompleted path and skips re-emitting STAGE_COMPLETED.

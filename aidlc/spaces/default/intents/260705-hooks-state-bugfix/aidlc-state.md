@@ -1,10 +1,10 @@
 # AI-DLC State Tracking
 
 ## Project Information
-- **Project**: Issue #457 と #458 のエンジンと validator の不整合バグを修正する
+- **Project**: hooks と engine state のバグ修正バッチ: #464（PHASE_VERIFIED 後に aidlc-state.md の Phase Progress が Verified に更新されない）と #476（hooks が並行セッション・完了済み workflow を考慮せず誤動作する 4 症状）をまとめて修正する
 - **Project Type**: Greenfield
 - **Scope**: bugfix
-- **Start Date**: 2026-07-05T00:05:39Z
+- **Start Date**: 2026-07-05T05:16:47Z
 - **State Version**: 7
 - **Active Agent**: amadeus-quality-agent
 - **Worktree Path**:
@@ -18,7 +18,7 @@
 - **Test Strategy**: Minimal
 
 ## Workspace State
-- **Project Root**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/claude+issue-457-458-459-group-a
+- **Project Root**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/sub
 - **Languages**: Unknown
 - **Frameworks**: Unknown
 - **Build System**: bun (package.json)
@@ -69,7 +69,7 @@
 - [ ] delivery-planning — SKIP
 
 ### CONSTRUCTION PHASE
-Per unit: engine-validator-gap
+Per unit: hooks-state-bugfix
 - [ ] functional-design — SKIP
 - [ ] nfr-requirements — SKIP
 - [ ] nfr-design — SKIP
@@ -93,7 +93,7 @@ Per unit: engine-validator-gap
 - **Next Stage**: none
 - **Status**: Completed
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-07-05T01:02:44Z
+- **Last Updated**: 2026-07-05T06:59:22Z
 
 ## Session Resume Point
 - **Last Completed Stage**: build-and-test

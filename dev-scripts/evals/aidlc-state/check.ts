@@ -4,7 +4,7 @@
 // vendored の v2 state template（skills/amadeus/references/aidlc-v2/state-template.md）を
 // parse でき、行置換の更新が対象行以外を保存することを確認する。
 
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
@@ -260,8 +260,17 @@ check("update: 不明な stage の更新は入力を変えない", unchanged ===
       .map((entry) => entry.name)[0];
     check("advance eval: Intent record ディレクトリが作られている", recordDirName !== undefined, birthStdout);
 
-    // poc scope の birth 直後は Current Stage = intent-capture。artifact guard は
-    // #457 の検査対象外のため、eval 専用の既存エスケープハッチで無効化する。
+    // poc scope の birth 直後は Current Stage = intent-capture。intent-capture →
+    // requirements-analysis は ideation→inception の phase 境界を跨ぐため、R002
+    // （Issue #464）の phase-check gate が verification/phase-check-ideation.md
+    // の存在を要求する。#457 の検査対象（memory_path）とは無関係なので、
+    // produces 成果物の存在チェック（artifact guard）は既存のエスケープハッチで
+    // 無効化しつつ、phase-check だけは実ファイルを用意して満たす。
+    mkdirSync(join(workspace, `aidlc/spaces/default/intents/${recordDirName}/verification`), { recursive: true });
+    writeFileSync(
+      join(workspace, `aidlc/spaces/default/intents/${recordDirName}/verification/phase-check-ideation.md`),
+      "# Phase Check — Ideation（aidlc-state eval fixture）\n"
+    );
     const advance = Bun.spawnSync(["bun", stateTool, "advance", "intent-capture"], {
       cwd: workspace,
       stdout: "pipe",
