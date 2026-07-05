@@ -171,10 +171,13 @@ export function ensureFields(project: ProjectRef, columns: string[]): FieldMap {
   };
 }
 
+const LIST_ITEMS_MAX_PAGES = 10; // 100 件/頁 × 10 = 1000 item。暫定機構の想定規模の余裕上限
+
 export function listItems(projectId: string): Map<string, { itemId: string; draftId: string | null }> {
   const out = new Map<string, { itemId: string; draftId: string | null }>();
   let cursor: string | null = null;
-  for (let page = 0; page < 10; page++) {
+  let exhausted = false;
+  for (let page = 0; page < LIST_ITEMS_MAX_PAGES; page++) {
     const data = graphql(
       `query($pid:ID!,$after:String){ node(id:$pid){ ... on ProjectV2 { items(first:100, after:$after){ pageInfo{ hasNextPage endCursor } nodes{ id content{ ... on DraftIssue { id title } ... on Issue { title } ... on PullRequest { title } } } } } } }`,
       cursor ? { pid: projectId, after: cursor } : { pid: projectId }
@@ -194,8 +197,17 @@ export function listItems(projectId: string): Map<string, { itemId: string; draf
         out.set(n.content.title, { itemId: n.id, draftId: n.content.id ?? null });
       }
     }
-    if (!items?.pageInfo?.hasNextPage) break;
+    if (!items?.pageInfo?.hasNextPage) {
+      exhausted = true;
+      break;
+    }
     cursor = items.pageInfo.endCursor ?? null;
+  }
+  if (!exhausted) {
+    // 打ち切りを黙って返すと未索引の既存カードへ重複 draft を作る。明示エラーで停止する
+    throw new Error(
+      `project の item が ${LIST_ITEMS_MAX_PAGES * 100} 件を超えており索引を打ち切った（暫定機構の想定規模超過。上限の見直しが必要）`
+    );
   }
   return out;
 }
@@ -233,7 +245,12 @@ export function upsertItem(
   const itemId = entry.itemId;
   const specs: FieldSpec[] = [];
   const optionId = fieldMap.status.options.get(column);
-  if (optionId) specs.push({ fieldId: fieldMap.status.id, kind: "single_select", optionId });
+  if (!optionId) {
+    // Status を黙って落とすと「フィールドは最新なのに列だけ古い」カードを作る
+    // （FR-3.4 の全上書きに反する）。ensureFields 後に option が無いのは異常なので明示エラー。
+    throw new Error(`Status option「${column}」の ID を解決できない（ensureFields 後に不在。board の Status 設定を確認する）`);
+  }
+  specs.push({ fieldId: fieldMap.status.id, kind: "single_select", optionId });
   const textValues: Record<string, string> = {
     Agent: card.agent,
     Host: card.host,
