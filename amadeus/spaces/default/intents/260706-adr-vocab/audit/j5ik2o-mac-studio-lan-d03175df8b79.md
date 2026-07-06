@@ -1649,3 +1649,401 @@
 **Event**: HUMAN_TURN
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-06T09:45:49Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T09:46:09Z
+**Event**: HUMAN_TURN
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-06T09:46:09Z
+**Event**: DECISION_RECORDED
+**Stage**: code-generation
+**Decision**: gate 承認の転記（種別: 人間承認。承認経路: 人間の包括委任 → leader 内容確認 → engineer3）: 承認者 j5ik2o（Maintainer）の包括委任（2026-07-06 04:07 JST）に基づき、leader が内容確認（2026-07-06 19:48 JST）のうえ中継（agmsg 2026-07-06T09:45:48Z 受信）。承認要旨: B001〜B003 の設計どおりの実施 — docs/adr 削除（互換 stub なし = 後方互換ルール準拠）、有効判断 2 点の移設（ADR 0001 → extension-guide Design lineage、ADR 0002 → lifecycle/overview 成果物配置、見出し不変 = engineer5 アンカー条件遵守）、同期規約の context.md 統合、CONTEXT.md 正準化 + glossary 抜粋宣言、GD009 補正 8 記述 — を承認。次ステージへ進んでよい。intent-module.md テンプレート残存の Issue 候補は gate 報告で leader へ申し送り済み。
+**Rationale**: HUMAN_TURN は中継承認定型文の受信直後に mint 済み。
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-06T09:46:09Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-06T09:46:09Z
+**Event**: GATE_APPROVED
+**Stage**: code-generation
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-06T09:46:09Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Details**: Stage Code Generation approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-06T09:46:09Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Agent**: amadeus-quality-agent
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:47:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5dd4ac37
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/build-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:47:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5dd4ac37
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/build-instructions.md
+**Duration ms**: 50
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:47:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2940b189
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/build-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:47:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2940b189
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/build-instructions.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:47:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 96032665
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/unit-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:47:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 96032665
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/unit-test-instructions.md
+**Duration ms**: 47
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:47:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1cb82159
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/unit-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:47:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1cb82159
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/unit-test-instructions.md
+**Duration ms**: 47
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:47:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1941b46d
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/integration-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:47:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1941b46d
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/integration-test-instructions.md
+**Duration ms**: 45
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:47:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1901afee
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/integration-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:47:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1901afee
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/integration-test-instructions.md
+**Duration ms**: 44
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:47:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 923e7a87
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/performance-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:47:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: 923e7a87
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/performance-test-instructions.md
+**Duration ms**: 45
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:47:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8c8e4759
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/performance-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:47:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8c8e4759
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/performance-test-instructions.md
+**Duration ms**: 46
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:47:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 300160d2
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/security-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:47:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: 300160d2
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/security-test-instructions.md
+**Duration ms**: 46
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:47:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 757b058d
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/security-test-instructions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:47:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: 757b058d
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/security-test-instructions.md
+**Duration ms**: 45
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:47:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3b718ce1
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/build-and-test-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:47:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3b718ce1
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/build-and-test-summary.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:47:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: e843f37f
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/build-and-test-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:47:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: e843f37f
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/build-and-test-summary.md
+**Duration ms**: 44
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:47:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 97f3bf91
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/build-test-results.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:47:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: 97f3bf91
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/build-test-results.md
+**Duration ms**: 45
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:47:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 10fb4f6a
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/build-test-results.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:47:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: 10fb4f6a
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/build-and-test/build-test-results.md
+**Duration ms**: 44
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-06T09:48:25Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer3/amadeus/spaces/default/intents/260706-adr-vocab/verification/phase-check-construction.md
+**Context**: verification > phase-check-construction.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:48:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: bbd1ff81
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/verification/phase-check-construction.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:48:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: bbd1ff81
+**Sensor ID**: required-sections
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/verification/phase-check-construction.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:48:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8b230be3
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/verification/phase-check-construction.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-06T09:48:25Z
+**Event**: SENSOR_FAILED
+**Fire id**: 8b230be3
+**Sensor ID**: upstream-coverage
+**Stage slug**: build-and-test
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/verification/phase-check-construction.md
+**Detail path**: amadeus/spaces/default/intents/260706-adr-vocab/.amadeus-sensors/build-and-test/upstream-coverage-8b230be3.md
+**Findings count**: 1
+
+---
