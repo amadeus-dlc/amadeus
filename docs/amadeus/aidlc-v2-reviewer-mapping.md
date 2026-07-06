@@ -1,80 +1,80 @@
 # AI-DLC v2 Reviewer Mapping
 
-この文書は、Issue #391 の判断として、AI-DLC v2 の stage 定義にある `reviewer` と `reviewer_max_iterations` を Amadeus DLC でどう扱うかを定義する。
+This document defines, as the judgment for Issue #391, how Amadeus DLC handles the `reviewer` and `reviewer_max_iterations` fields found in AI-DLC v2's stage definitions.
 
-参照元は次である。
+References:
 
-- リポジトリ: https://github.com/awslabs/aidlc-workflows/tree/v2
-- 参照 commit: `d341522e1491db4884e9127004c3882365229218`
-- stage 定義: `core/amadeus-common/stages/**`、reviewer 実行手順: `core/amadeus-common/protocols/stage-protocol.md` §12a
+- Repository: https://github.com/awslabs/aidlc-workflows/tree/v2
+- Reference commit: `d341522e1491db4884e9127004c3882365229218`
+- Stage definitions: `core/amadeus-common/stages/**`; reviewer execution procedure: `core/amadeus-common/protocols/stage-protocol.md` §12a
 
-## 判断
+## Decision
 
-Amadeus DLC は、reviewer sub-agent を採用しない。
+Amadeus DLC does not adopt the reviewer sub-agent.
 
-reviewer が担う独立確認は、既存の成果物確認へ写像する。
+The independent confirmation the reviewer carries out is mapped to existing artifact confirmations.
 
-写像先は次の 3 つである。
+It maps to the following 3 destinations.
 
-1. **stage gate**。各 stage の人間承認（Approve / Request Changes）。Construction の autonomous mode では、Bolt PR の人間レビューと merge が承認証拠になる。
-2. **PR レビュー**。phase PR と Bolt PR の人間レビュー、および CI（`npm run test:all`）。
-3. **`amadeus-validator`**。成果物の構造検証。
+1. **Stage gate.** Each stage's human approval (Approve / Request Changes). In Construction's autonomous mode, the human review and merge of the Bolt PR serves as the approval evidence.
+2. **PR review.** Human review of phase PRs and Bolt PRs, plus CI (`npm run test:all`).
+3. **`amadeus-validator`.** Structural verification of the artifacts.
 
-## 本家 reviewer の動作と対応関係
+## Upstream Reviewer Behavior and Its Correspondence
 
-本家の reviewer は、stage 本体が成果物を作った後、承認 gate の前に独立 sub-agent として起動し、成果物へ `## Review`（READY / NOT-READY）を追記する。NOT-READY の場合は builder が指摘へ対応し、`reviewer_max_iterations`（既定 2）まで再レビューする。上限に達したら未解決の指摘を添えて人間の gate へ進む。最終判断は常に人間が行う。
+Upstream's reviewer starts as an independent sub-agent after the stage body produces its artifacts, before the approval gate, and appends `## Review` (READY / NOT-READY) to the artifact. On NOT-READY, the builder addresses the findings and the reviewer re-reviews, up to `reviewer_max_iterations` (default 2). Once the limit is reached, it proceeds to the human gate with the unresolved findings attached. The final judgment is always made by a human.
 
-Amadeus DLC では、この動作を次へ対応させる。
+Amadeus DLC maps this behavior as follows.
 
-| 本家の要素 | Amadeus DLC の対応 |
+| Upstream element | Amadeus DLC's correspondence |
 |---|---|
-| reviewer sub-agent の独立確認 | stage gate の人間承認。autonomous mode では Bolt PR レビュー。構造面は `amadeus-validator`。 |
-| NOT-READY → builder 修正 → 再レビュー | Request Changes → checkbox `[R]` → `STAGE_REVISING` → 修正 → gate 再提示のループ。 |
-| `reviewer_max_iterations` の上限と、上限到達時に未解決指摘つきで gate へ進む動作 | Request Changes が 3 回連続した場合に Accept as-is を選択肢へ追加する規則。 |
-| 最終判断は常に人間 | phase PR と Bolt PR の人間 merge を承認証拠にする既存 gate 契約。 |
+| The reviewer sub-agent's independent confirmation | The stage gate's human approval. In autonomous mode, the Bolt PR review. The structural aspect is covered by `amadeus-validator`. |
+| NOT-READY → builder fix → re-review | The loop of Request Changes → checkbox `[R]` → `STAGE_REVISING` → fix → re-presentation at the gate. |
+| The `reviewer_max_iterations` limit, and proceeding to the gate with unresolved findings once the limit is reached | The rule that adds Accept as-is as an option once Request Changes has occurred 3 times in a row. |
+| The final judgment is always made by a human | The existing gate contract, where the human merge of phase PRs and Bolt PRs serves as the approval evidence. |
 
-## reviewer 指定がある stage の一覧と写像
+## List of Stages That Designate a Reviewer, and Their Mapping
 
-参照 commit 時点で `reviewer` を持つ本家 stage は次の 11 個である。いずれも `reviewer_max_iterations: 2` である。
+As of the reference commit, the following 11 upstream stages carry `reviewer`. All of them have `reviewer_max_iterations: 2`.
 
-| 本家 stage | reviewer | Amadeus skill | 写像先 |
+| Upstream stage | Reviewer | Amadeus skill | Mapping destination |
 |---|---|---|---|
-| ideation/rough-mockups | amadeus-product-lead-agent | `amadeus-ideation-rough-mockups` | stage gate の人間承認、Ideation phase PR レビュー、`amadeus-validator`。 |
-| inception/requirements-analysis | amadeus-product-lead-agent | `amadeus-inception-requirements-analysis` | stage gate の人間承認、Inception phase PR レビュー、`amadeus-validator`。 |
-| inception/user-stories | amadeus-product-lead-agent | `amadeus-inception-user-stories` | stage gate の人間承認、Inception phase PR レビュー、`amadeus-validator`。 |
-| inception/refined-mockups | amadeus-product-lead-agent | `amadeus-inception-refined-mockups` | stage gate の人間承認、Inception phase PR レビュー、`amadeus-validator`。 |
-| inception/application-design | amadeus-architecture-reviewer-agent | `amadeus-inception-application-design` | stage gate の人間承認、Inception phase PR レビュー、`amadeus-validator`。 |
-| inception/units-generation | amadeus-architecture-reviewer-agent | `amadeus-inception-units-generation` | stage gate の人間承認、Inception phase PR レビュー、`amadeus-validator`。 |
-| construction/functional-design | amadeus-architecture-reviewer-agent | `amadeus-construction-functional-design` | stage gate の人間承認（autonomous mode では Bolt PR レビュー）、`amadeus-validator`。 |
-| construction/nfr-requirements | amadeus-architecture-reviewer-agent | `amadeus-construction-nfr-requirements` | stage gate の人間承認（autonomous mode では Bolt PR レビュー）、`amadeus-validator`。 |
-| construction/nfr-design | amadeus-architecture-reviewer-agent | `amadeus-construction-nfr-design` | stage gate の人間承認（autonomous mode では Bolt PR レビュー）、`amadeus-validator`。 |
-| construction/infrastructure-design | amadeus-architecture-reviewer-agent | `amadeus-construction-infrastructure-design` | stage gate の人間承認（autonomous mode では Bolt PR レビュー）、`amadeus-validator`。 |
-| construction/code-generation | amadeus-architecture-reviewer-agent | `amadeus-construction-code-generation` | Build and Test（Stage 3.6）の検証、Bolt PR の人間レビューと CI、stage gate。 |
+| ideation/rough-mockups | amadeus-product-lead-agent | `amadeus-ideation-rough-mockups` | Stage gate's human approval, Ideation phase PR review, `amadeus-validator`. |
+| inception/requirements-analysis | amadeus-product-lead-agent | `amadeus-inception-requirements-analysis` | Stage gate's human approval, Inception phase PR review, `amadeus-validator`. |
+| inception/user-stories | amadeus-product-lead-agent | `amadeus-inception-user-stories` | Stage gate's human approval, Inception phase PR review, `amadeus-validator`. |
+| inception/refined-mockups | amadeus-product-lead-agent | `amadeus-inception-refined-mockups` | Stage gate's human approval, Inception phase PR review, `amadeus-validator`. |
+| inception/application-design | amadeus-architecture-reviewer-agent | `amadeus-inception-application-design` | Stage gate's human approval, Inception phase PR review, `amadeus-validator`. |
+| inception/units-generation | amadeus-architecture-reviewer-agent | `amadeus-inception-units-generation` | Stage gate's human approval, Inception phase PR review, `amadeus-validator`. |
+| construction/functional-design | amadeus-architecture-reviewer-agent | `amadeus-construction-functional-design` | Stage gate's human approval (Bolt PR review in autonomous mode), `amadeus-validator`. |
+| construction/nfr-requirements | amadeus-architecture-reviewer-agent | `amadeus-construction-nfr-requirements` | Stage gate's human approval (Bolt PR review in autonomous mode), `amadeus-validator`. |
+| construction/nfr-design | amadeus-architecture-reviewer-agent | `amadeus-construction-nfr-design` | Stage gate's human approval (Bolt PR review in autonomous mode), `amadeus-validator`. |
+| construction/infrastructure-design | amadeus-architecture-reviewer-agent | `amadeus-construction-infrastructure-design` | Stage gate's human approval (Bolt PR review in autonomous mode), `amadeus-validator`. |
+| construction/code-generation | amadeus-architecture-reviewer-agent | `amadeus-construction-code-generation` | Build and Test's (Stage 3.6) verification, the Bolt PR's human review and CI, the stage gate. |
 
-各 Amadeus skill の `SKILL.md` の Gate 節に、この写像を明記する。
+Each Amadeus skill's `SKILL.md` states this mapping in its Gate section.
 
-## 採用しない理由
+## Reasons for Not Adopting It
 
-1. **gate の重複を避けるため**。本家でも reviewer は人間 gate を代替せず、最終判断は人間に残る。Amadeus DLC は phase PR と Bolt PR による人間 gate を一次の承認契約としており、reviewer sub-agent を挟んでも承認境界は変わらない。
-2. **配布契約を小さく保つため**。Amadeus skill は配布先ユーザー環境で動く。reviewer agent 群（`core/agents/*`）相当の実行時依存を追加すると、単一公開入口と skill 一式という現在の配布契約が広がる。
-3. **反復の上限と逸脱時の扱いが既にあるため**。`reviewer_max_iterations` が担う「反復を有限にし、未解決のまま人間へ委ねる」動作は、Request Changes 3 回連続で Accept as-is を提示する既存規則で満たしている。
+1. **To avoid duplicating the gate.** Even upstream, the reviewer does not replace the human gate; the final judgment stays with a human. Amadeus DLC treats the human gate through phase PRs and Bolt PRs as its primary approval contract, and inserting a reviewer sub-agent would not change the approval boundary.
+2. **To keep the distribution contract small.** Amadeus skills run in the distributed user's environment. Adding a runtime dependency equivalent to the reviewer agent set (`core/agents/*`) would widen the current distribution contract of a single public entry point plus a skill set.
+3. **Because a bound on iteration and handling of the overrun already exist.** The behavior `reviewer_max_iterations` carries — bounding the iteration and handing off to a human while still unresolved — is already satisfied by the existing rule that presents Accept as-is after 3 consecutive Request Changes.
 
-## 検証手段
+## Verification Means
 
-reviewer を採用しない代わりの検証手段は次である。
+The verification means used in place of adopting the reviewer are:
 
-- `amadeus-validator` による成果物の構造検証（起動条件と検証範囲は `skills/amadeus-validator/SKILL.md` に従う）。
-- phase PR と Bolt PR の CI（`npm run test:all`）と人間レビュー。
-- Build and Test（Stage 3.6）による build とテストの実行記録（Code Generation の成果物に対して）。
+- Structural verification of the artifacts by `amadeus-validator` (its trigger conditions and verification scope follow `skills/amadeus-validator/SKILL.md`).
+- CI (`npm run test:all`) and human review on phase PRs and Bolt PRs.
+- The build-and-test execution record from Build and Test (Stage 3.6), against Code Generation's artifacts.
 
-## 将来の再検討条件
+## Future Reconsideration Conditions
 
-次のいずれかが起きた場合、reviewer 採用を別 Issue で再検討する。
+Reconsider adopting the reviewer in a separate Issue if either of the following occurs:
 
-- Amadeus DLC が gate 前の機械レビューを必要とする運用実績（gate 差し戻しの頻発など）を確認した場合。
-- 配布契約に agent 実行基盤を含める判断が別途確定した場合。
+- Amadeus DLC's operational experience confirms a need for a mechanical review before the gate (e.g., frequent gate rejections).
+- A separate decision confirms including an agent-execution runtime in the distribution contract.
 
-## 関連文書
+## Related Documents
 
 - [AI-DLC v2 Difference Response Plan](aidlc-v2-difference-response-plan.md)
 - [Skill Language Policy](skill-language-policy.md)
