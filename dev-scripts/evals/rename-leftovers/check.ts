@@ -273,7 +273,93 @@ console.log("rename-leftovers eval: ok");
   );
 }
 
+// --- (f) B002 stray `skills/` path token の検出 ---
+// dev-scripts/、scripts/、.agents/amadeus/tools/ を tree-wide に走査し、
+// `.agents/skills/`・`core/skills/`・`.claude/skills/`・`harness/codex/skills/` 以外の
+// 単独 `skills/` path token が残っていないことを検出する。
+// allowlist.json の straySkillsScan 設定に従う。
+
+{
+  interface StraySkillsScan {
+    scanRoots: string[];
+    excludePaths: string[];
+    allow: { pattern: string; reason: string; files: string[] }[];
+  }
+  const cfg = (
+    JSON.parse(readFileSync(allowlistPath, "utf-8")) as { straySkillsScan: StraySkillsScan }
+  ).straySkillsScan;
+
+  // 合法プレフィックス: これで終わる位置の直後にある skills/ はスキャン対象外
+  const LEGITIMATE_PREFIXES = [".agents/", "core/", ".claude/", "harness/codex/", "harness/claude/"];
+
+  const hasStrayToken = (line: string): boolean => {
+    let searchFrom = 0;
+    while (true) {
+      const idx = line.indexOf("skills/", searchFrom);
+      if (idx === -1) break;
+      const before = line.slice(0, idx);
+      if (!LEGITIMATE_PREFIXES.some((p) => before.endsWith(p))) return true;
+      searchFrom = idx + "skills/".length;
+    }
+    return false;
+  };
+
+  const isExcluded = (rel: string): boolean =>
+    cfg.excludePaths.some((e) => rel === e || rel.startsWith(e));
+
+  const isAllowedLine = (line: string, rel: string): boolean =>
+    cfg.allow.some(
+      (a) =>
+        (a.files.includes("*") || a.files.some((f) => rel === f || basename(rel) === f)) &&
+        line.includes(a.pattern),
+    );
+
+  const findStrayViolations = (rel: string, content: string): string[] => {
+    const out: string[] = [];
+    const lines = content.split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!hasStrayToken(line)) continue;
+      if (isAllowedLine(line, rel)) continue;
+      out.push(`${rel}:${i + 1}: ${line.trim().slice(0, 120)}`);
+    }
+    return out;
+  };
+
+  // 自己検査: 検出器が旧 skills/ を報告し、core/skills/ は通すこと
+  const selfHit = findStrayViolations("synthetic.ts", 'const p = join(root, "skills/amadeus");');
+  const selfPass = findStrayViolations("synthetic.ts", 'const p = join(root, "core/skills/amadeus");');
+  ok("(f) 自己検査: 旧 skills/ path token を検出する", selfHit.length === 1, JSON.stringify(selfHit));
+  ok("(f) 自己検査: core/skills/ を通す", selfPass.length === 0, JSON.stringify(selfPass));
+
+  const { execSync: execSyncF } = require("node:child_process");
+  const trackedF: string[] = execSyncF(`git ls-files ${cfg.scanRoots.join(" ")}`, {
+    encoding: "utf-8",
+    cwd: root,
+  })
+    .split("\n")
+    .filter(Boolean);
+
+  const violations: string[] = [];
+  for (const rel of trackedF) {
+    if (isExcluded(rel)) continue;
+    let content: string;
+    try {
+      content = readFileSync(join(root, rel), "utf-8");
+    } catch {
+      continue;
+    }
+    violations.push(...findStrayViolations(rel, content));
+  }
+
+  ok(
+    "(f) B002: .agents/skills/・core/skills/・.claude/skills/ 以外の skills/ path token が残っていない",
+    violations.length === 0,
+    `${violations.length} violation(s):\n  ${violations.slice(0, 20).join("\n  ")}`,
+  );
+}
+
 if (failures > 0) {
-  console.error(`rename-leftovers eval: ${failures} 件失敗（(e) 追加分）`);
+  console.error(`rename-leftovers eval: ${failures} 件失敗（(e)(f) 追加分）`);
   process.exit(1);
 }

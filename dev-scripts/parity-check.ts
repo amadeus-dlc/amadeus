@@ -5,7 +5,7 @@
 // このリポジトリが上流 aidlc-workflows とパリティを保っているか検査する。
 //
 // 検査対象:
-//   (a) baseline の skill 名を写像した各名前が skills/ と .agents/skills/ に存在する
+//   (a) baseline の skill 名を写像した各名前が core/skills/ と .agents/skills/ に存在する
 //   (b) baseline の engine ファイル（parity-map.json の checkedEngineDirectories 参照）が
 //       parity-map の nameMappings（対応表駆動のトークン置換）と relocations に従い
 //       .agents/amadeus/ 配下の実体と同一 sha256（内容正規化後）で存在する

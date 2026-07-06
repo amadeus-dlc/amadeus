@@ -149,6 +149,38 @@
       ]
     }
   ],
+  "straySkillsScan": {
+    "_description": "検査 (f): 単独 skills/ path token の tree-wide 残存検出。.agents/skills/・core/skills/・.claude/skills/・harness/codex/skills/ を含まない skills/ 出現を検出する。B002（三層化 restructure）後の旧 skills/ ディレクトリ参照取りこぼしを検出する。",
+    "scanRoots": ["dev-scripts", "scripts", ".agents/amadeus/tools"],
+    "excludePaths": ["dev-scripts/evals/rename-leftovers/"],
+    "allow": [
+      {
+        "pattern": "skills/",
+        "reason": "parity-map.json の nameMappings data values（prefix/replacement 文字列）と reason テキスト。B002 の変更対象外の上流写像定義（skills/aidlc/ → skills/amadeus/ の名前空間対応表）。",
+        "files": ["parity-map.json"]
+      },
+      {
+        "pattern": "| 入口 |",
+        "reason": "migrate-workspace eval の fixture steering.md Markdown テーブル行。実運用パスではなく文書コンテンツのデータ文字列。",
+        "files": ["dev-scripts/evals/migrate-workspace/check.ts"]
+      },
+      {
+        "pattern": "skills/aidlc",
+        "reason": "buildUpstreamFixture が claudeRoot = join(upstream, 'dist/claude/.claude') に対して skills/aidlc を join する。実パスは .claude/skills/aidlc。上流 parity 検証の fixture として必要。",
+        "files": ["dev-scripts/evals/parity/check.ts"]
+      },
+      {
+        "pattern": "skills/ 直下のディレクトリ名一覧",
+        "reason": "generate-parity-baseline.ts のコメント。上流 aidlc-workflows clone の skills/ ディレクトリを指す。上流リポジトリの構造を説明する記述であり、このリポジトリの旧 skills/ への参照ではない。",
+        "files": ["generate-parity-baseline.ts"]
+      },
+      {
+        "pattern": "skill 欠落: skills/",
+        "reason": "parity-check.ts のエラーメッセージ表示文字列（人間向け）。実パス解決は join(root, map.skillsSourceDir ?? 'skills', ...) であり、skillsSourceDir = 'core/skills' が設定済み。",
+        "files": ["parity-check.ts"]
+      }
+    ]
+  },
   "postRenameScan": {
     "_description": "検査 (e): 旧名トークンの tree-wide 残存検出。scanRoots を走査し、excludePaths 配下と allow 該当行を除いて violation とする。",
     "scanRoots": [
