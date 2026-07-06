@@ -7,6 +7,11 @@
 - 解析方式: 差分更新（1aed7eb1..0075f931 = PR #564 model overlay のみ = component-inventory / architecture / api-documentation へ外科的追記、eval 数 31→32 実測補正。#566 分は下の 260706-doctor-guidance の 08:30 更新が、#561/#563/#565 分は 260706-feature-diff の 07:58 更新が反映済みのため対象外へ補正 = rebase 時の時系列 union）
 - 実施 Intent: `260706-adr-vocab`（reverse-engineering、メイン直接処理）
 
+## 前回（2026-07-06T09:06:00Z、b452f4fb..19662e50 = journal-logger。残差分のみ有効）の記録
+
+- 実施 Intent: `260706-journal-logger`（reverse-engineering、conductor 直接処理）
+- 当初 3 PR（#566/#564/#574）を対象に code-structure / component-inventory / api-documentation を更新したが、rebase 統合で #564 分の component-inventory / eval 数は 260706-adr-vocab の 08:40 更新（上の最新記録）を正とし当方分を破棄。有効な残差分は api-documentation.md の apply-model-overrides 行 1 件のみ（main に不在を確認して再適用）。
+
 ## 前回（2026-07-06T08:30:00Z、29f3122c..1aed7eb1 = doctor-guidance）の記録
 
 - 解析時刻: 2026-07-06T08:30:00Z（UTC）

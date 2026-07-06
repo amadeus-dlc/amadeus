@@ -472,5 +472,13 @@
     "scope": "refactor",
     "repos": [],
     "status": "complete"
+  },
+  {
+    "uuid": "019f369e-1694-7b54-9003-ac900e769e9c",
+    "slug": "journal-logger",
+    "dirName": "260706-journal-logger",
+    "scope": "feature",
+    "repos": [],
+    "status": "in_progress"
   }
 ]
