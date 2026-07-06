@@ -4,7 +4,11 @@
 
 回答は Issue の確定記載、leader ディスパッチ（2026-07-06 17:20 JST）、および再現実測・現行実装の実測（requirements.md 該当節）からの出典付き転記である。新規の人間質問はない。
 
-現行構造の前提は上流入力の [codekb/amadeus/architecture.md](../../../../codekb/amadeus/architecture.md)、[codekb/amadeus/api-documentation.md](../../../../codekb/amadeus/api-documentation.md)、[codekb/amadeus/code-quality-assessment.md](../../../../codekb/amadeus/code-quality-assessment.md) に依る。
+本質問の判断は次の上流成果物（consumes）に依る。
+
+- [codekb/amadeus/architecture.md](../../../../codekb/amadeus/architecture.md) — doctor（amadeus-utility --doctor）のエンジン層内の位置づけと hooks の fail-open 設計（Q2 の advisory pass 先例の根拠）。
+- [codekb/amadeus/api-documentation.md](../../../../codekb/amadeus/api-documentation.md) — utility verb 面と exit code 契約（Q2 の exit 0 化の影響範囲判断）。
+- [codekb/amadeus/code-quality-assessment.md](../../../../codekb/amadeus/code-quality-assessment.md) — 隔離 workspace + 実 CLI 駆動の eval 規約（Q4 の eval 置き場と実 birth 採用の根拠）。
 
 ---
 

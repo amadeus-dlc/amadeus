@@ -7,6 +7,8 @@
 - 2026-07-06T08:40:00Z — 再現実測を隔離 workspace で完了（導入 → doctor 1 fail + dist/ 文言 → birth → fail 0。Issue 記載と一致）。
 - 2026-07-06T08:40:00Z — FR-1.1 の fix 文言は installer 再実行へ誘導する。dist/ は配布物に存在せず、エンジン dir 不在 = 導入不完全の正しい回復手段は installer の再実行（冪等）だから。
 
+- 2026-07-06T08:55:00Z — reviewer NOT-READY（H2/M2/L1）を全件反映。H1 = advisory の固定 marker（workspace shell pending first workflow）と installer の部分文字列一致判定を exact 仕様化。H2 = eval の初回 birth は proxy でなく実 CLI 実行と明記（再現実測の実 birth 成功が根拠）。M1 = makeWorkspace の pre-seed 構造を実測し、既存維持 + makeFreshWorkspace 追加の共存方針を明記。M2 = エンジン dir 不在ケースは installer 実行後の削除 → doctor 直接呼びで installer eval 内に配置。L1 = questions の consumes 参照を構造化段落へ拡張し、AC4 に upstream-coverage sensor pass を明記。
+
 ## Deviations
 <!-- example: 2026-05-29T10:14:32Z — skipped the optional caching layer the stage prose suggested; the dataset is small enough that it adds risk -->
 
