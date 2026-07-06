@@ -1772,3 +1772,101 @@
 **Message**: ## Review\n\n**計測結果**:\n- `npm run test:it:build`: 37/37 pass\n- `npm run typecheck`: 0 エラー\n- `npm run test:all`: FAIL 0\n\n---\n\n### 所見\n\n#### 所見 1 (Medium) — stepHarnessOverlay にコアスキル整合ガードなし\n\n`build.ts:235-
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-06T10:46:33Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T10:49:00Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T10:51:36Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T10:52:21Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T10:53:07Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T10:59:58Z
+**Event**: HUMAN_TURN
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-06T11:00:17Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-bolt
+**Command**: amadeus-bolt --help
+**Error**: Unknown subcommand: --help. Valid: start, complete, fail, abort, set-autonomy, dispatch-event, hold-merge, release-merge
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-06T11:00:26Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-bolt
+**Command**: amadeus-bolt start
+**Error**: Missing --name <bolt-name or csv>
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-06T11:00:26Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-bolt
+**Command**: amadeus-bolt complete
+**Error**: Missing --name <bolt-name or csv>
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-06T11:00:32Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-bolt
+**Command**: amadeus-bolt start --name B001-build-ts
+**Error**: Missing --batch <batch-number>
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-06T11:00:39Z
+**Event**: BOLT_STARTED
+**Bolt names**: B001-build-ts
+**Batch number**: 1
+**Walking skeleton**: false
+
+---
+
+## Bolt Completed
+**Timestamp**: 2026-07-06T11:00:51Z
+**Event**: BOLT_COMPLETED
+**Bolt names**: B001-build-ts
+**Batch number**: 1
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-06T11:00:51Z
+**Event**: DECISION_RECORDED
+**Stage**: code-generation
+**Decision**: B001（build.ts walking skeleton）の Bolt 完了。Bolt PR #584 を人間が merge（= walking skeleton の人間承認、BR-7。2026-07-06、merge commit は origin/main 580f6dee 系列）。gate evidence = Bolt PR merge + BOLT_COMPLETED（PR gate 運用の規定どおり）。reviewer READY（Medium 2 は B002/B003 申し送り）。B002 は solo window 確定後に着手
+**Options**: bolt-complete
+
+---
