@@ -1327,12 +1327,38 @@ function handleCompleteWorkflow(args: string[]): void {
   content = setField(content, "Last Updated", timestamp);
   content = setField(content, "Last Completed Stage", completedSlug);
   content = setField(content, "In Progress", "none");
+  content = setField(content, "Current Stage", "none");
   content = setField(content, "Next Stage", "none");
   content = setField(content, "Next Action", "Workflow complete");
 
   // Phase Progress: mark the final phase Verified, in this same transaction as
   // the PHASE_VERIFIED audit emission below (R001, Issue #464).
   content = markPhaseVerified(content, completedStage.phase);
+
+  // #547: phases whose planned stages were ALL skipped mid-flow ([S]) never
+  // start, so nothing else revisits their Phase Progress — the workflow would
+  // close with those phases stuck at Pending and no PHASE_SKIPPED on record
+  // (the birth-time PHASE_SKIPPED only covers phases the scope excludes).
+  // Mark them Skipped here and queue the audit emission with the others below.
+  const checkboxesAtCompletion = parseCheckboxes(content);
+  const scopeForPhases = getField(content, "Scope") ?? "";
+  const phaseOfSlug = new Map<string, string>();
+  if (validScopes().has(scopeForPhases)) {
+    for (const s of stagesInScope(scopeForPhases)) phaseOfSlug.set(s.slug, s.phase);
+  }
+  const skippedPhases: string[] = [];
+  for (const [phase, field] of Object.entries(PHASE_PROGRESS_FIELD)) {
+    if (phase === completedStage.phase) continue;
+    const progress = getField(content, field);
+    if (progress !== "Pending" && progress !== "Active") continue;
+    const inPhase = checkboxesAtCompletion.filter((c) => phaseOfSlug.get(c.slug) === phase);
+    if (inPhase.length === 0) continue;
+    const touched = inPhase.filter((c) => c.state !== "not-started");
+    if (touched.length > 0 && touched.every((c) => c.state === "skipped")) {
+      content = setField(content, field, "Skipped");
+      skippedPhases.push(phase);
+    }
+  }
 
   // 4. Atomic audit emissions. Refuse silent fallback — matches handleAdvance.
   const scope = getField(content, "Scope");
@@ -1358,6 +1384,15 @@ function handleCompleteWorkflow(args: string[]): void {
       "To phase": "(end)",
       "Stages completed": String(completedCount),
     });
+    // #547: audit the mid-flow all-skipped phases marked Skipped above, in the
+    // same transaction as the other completion emissions.
+    for (const phase of skippedPhases) {
+      emitAudit(pd, "PHASE_SKIPPED", {
+        Phase: phase,
+        Scope: scope,
+        Reason: `all planned stages skipped before completion`,
+      });
+    }
     emitAudit(pd, "PHASE_VERIFIED", {
       "Phase boundary": `${completedStage.phase} → end`,
     });

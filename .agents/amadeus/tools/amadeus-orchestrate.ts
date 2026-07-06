@@ -1651,6 +1651,19 @@ function handleNext(args: string[], projectDir: string | undefined): void {
     return;
   }
 
+  // "none" is the closed-workflow sentinel both terminal writers leave behind
+  // (advance's no-next-stage finalize and complete-workflow — #547 aligned the
+  // latter). It names no stage, so resolve it to done here rather than letting
+  // the checkbox walk below treat it as an in-flight stage and fail the graph
+  // lookup.
+  if (currentSlug === "none") {
+    emit({
+      kind: "done",
+      reason: `Workflow is already completed (scope: ${scope}); nothing remains to run.`,
+    });
+    return;
+  }
+
   const checkboxes = parseCheckboxes(stateContent);
   const currentState = checkboxStateOf(checkboxes, currentSlug);
 
