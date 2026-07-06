@@ -1,102 +1,55 @@
 # Org-Level Rules
 
-> Framework defaults. Read in order with amadeus-team.md and
-> amadeus-project.md; later layers override.
+> フレームワークのデフォルト。team.md、project.md と合わせて順に読み込まれ、後のレイヤーが優先される。
 
 ## Way of Working
 
-We use **trunk-based development**. All work merges to `main` via
-short-lived feature branches (typically resolved within 1-2 days).
-Long-lived branches accumulate merge debt; we avoid them.
+私たちは**トランクベース開発**を採用する。すべての作業は短命なフィーチャーブランチ(通常1〜2日以内に解決)を経由して `main` にマージする。長命ブランチはマージ負債を蓄積するため避ける。
 
-For Construction worktrees, the worktree base branch is `main` and the
-merge target is `main`.
+Construction の worktree では、worktree のベースブランチは `main`、マージターゲットも `main` とする。
 
-If our project requires multiple environments (staging, production), we
-still keep one trunk and gate releases via tags or environment-specific
-deployment configs — not via long-lived release branches.
+複数環境(ステージング、本番)が必要なプロジェクトでも、トランクは1本に保ち、リリースはタグまたは環境別のデプロイ設定でゲートする — 長命なリリースブランチは使わない。
 
-We **squash-merge** Bolt branches into `main`. Each Bolt becomes one
-commit on the trunk, named by the Bolt slug, with the full Bolt commit
-history preserved on the source branch until the worktree is discarded.
+Bolt ブランチは `main` へ**スカッシュマージ**する。各 Bolt はトランク上の1コミットとなり、Bolt スラッグで命名される。Bolt の完全なコミット履歴は worktree が破棄されるまでソースブランチ上に保持される。
 
-Squash gives us a clean linear `main` history that maps 1:1 to
-delivery-planning's Bolt sequence. We accept the trade-off of losing
-intermediate commits on `main` because the audit log preserves the full
-event sequence anyway.
+スカッシュにより、delivery-planning の Bolt シーケンスと 1:1 に対応するクリーンで線形な `main` 履歴が得られる。中間コミットが `main` から失われるトレードオフは、監査ログがイベント列全体を保存しているため許容する。
 
 ## Walking Skeleton
 
-We always run the walking-skeleton Bolt **first** when our scope is
-greenfield (`mvp`, `enterprise`, `feature`, `poc`, `workshop`, `infra`).
-Bolt 1 is solo, gated, and the user explicitly approves before remaining
-Bolts run.
+スコープがグリーンフィールド(`mvp`、`enterprise`、`feature`、`poc`、`workshop`、`infra`)の場合、常に walking-skeleton Bolt を**最初に**実行する。Bolt 1 は単独・ゲート付きで実行し、残りの Bolt の実行前にユーザーが明示的に承認する。
 
-We **skip the skeleton ceremony** when our scope is incremental work on
-an existing codebase (`bugfix`, `refactor`, `security-patch`). The first
-Bolt runs like any other — there's nothing to bootstrap.
+スコープが既存コードベースへのインクリメンタルな作業(`bugfix`、`refactor`、`security-patch`)の場合は**スケルトンのセレモニーをスキップ**する。最初の Bolt も他の Bolt と同様に実行する — ブートストラップすべきものが存在しないため。
 
-After Bolt 1 ships (when it runs), the orchestrator fires the **ladder
-prompt**: "How should the remaining Bolts run?" Options: continue
-autonomously, gate every Bolt. The team picks per project. The choice
-persists as `Construction Autonomy Mode` in `amadeus-state.md`.
+Bolt 1 の出荷後(実行された場合)、オーケストレーターが**ラダープロンプト**を発火する:「残りの Bolt はどう実行しますか?」選択肢: 自律的に続行、またはすべての Bolt をゲート。チームがプロジェクトごとに選択し、その選択は `amadeus-state.md` の `Construction Autonomy Mode` として永続化される。
 
 ## Testing Posture
 
-We treat tests as a first-class deliverable in every Bolt. Specific
-methodology — TDD, BDD, ATDD, or classic test-after — is captured by the
-testing-strategy stage when it ships.
+すべての Bolt でテストを第一級の成果物として扱う。具体的な方法論 — TDD、BDD、ATDD、従来型のテスト後行 — は testing-strategy ステージが出荷された時点でそこに記録される。
 
-Until then, our default per scope is:
-- `mvp`, `enterprise`, `feature`, `infra` → tests written alongside
-  code; minimum 80% line coverage; tests run in CI before merge.
-- `bugfix`, `security-patch` → regression test for the specific
-  bug/vulnerability; existing test suite must remain green.
-- `poc`, `refactor`, `workshop` → existing test suite remains green;
-  no new test floor required.
+それまでのスコープ別デフォルト:
+- `mvp`、`enterprise`、`feature`、`infra` → コードと並行してテストを作成。最低ラインカバレッジ80%。マージ前にCIでテストを実行。
+- `bugfix`、`security-patch` → 対象のバグ/脆弱性に対するリグレッションテストを追加。既存テストスイートはグリーンを維持。
+- `poc`、`refactor`、`workshop` → 既存テストスイートのグリーン維持のみ。新規テストの下限は設けない。
 
-Override at `amadeus-team.md` if the team commits to a stricter posture.
+チームがより厳格な姿勢を確約する場合は team.md で上書きする。
 
 ## Deployment
 
-We **deploy on merge** to staging environments. Production deploys gate
-on a separate manual approval — typically tech lead + product owner
-sign-off in CodePipeline or a CD platform's environment protection.
+マージ時にステージング環境へ**デプロイする**。本番デプロイは別途の手動承認でゲートする — 通常は CodePipeline または CD プラットフォームの環境保護における、テックリード + プロダクトオーナーのサインオフ。
 
-Teams that have invested in test coverage and observability sometimes
-graduate to continuous deployment to production (every commit
-auto-deploys); that's a team decision, not a framework default.
+テストカバレッジと可観測性に投資したチームは、本番への継続的デプロイ(全コミット自動デプロイ)に移行することもある。それはチームの判断であり、フレームワークのデフォルトではない。
 
 ## Code Style
 
-We defer to project-level configurations:
-- Formatter: Prettier (JS/TS), Black (Python), `gofmt` (Go), or
-  language-default. Configured in repo root (`.prettierrc`,
-  `pyproject.toml`, etc.).
-- Linter: ESLint, Ruff, golangci-lint, etc. Run in CI before merge;
-  failure blocks the PR.
-- Naming conventions: language idiomatic (camelCase for JS/TS,
-  snake_case for Python, etc.). No project-wide rename rules unless
-  team affirms one.
+プロジェクトレベルの設定に従う:
+- フォーマッタ: Prettier (JS/TS)、Black (Python)、`gofmt` (Go)、または言語デフォルト。リポジトリルートで設定(`.prettierrc`、`pyproject.toml` など)。
+- リンター: ESLint、Ruff、golangci-lint など。マージ前にCIで実行し、失敗はPRをブロックする。
+- 命名規約: 言語のイディオムに従う(JS/TS は camelCase、Python は snake_case など)。チームが承認しない限り、プロジェクト全体のリネームルールは設けない。
 
-When the framework makes a code-style suggestion, agents read the
-project's linter config first; the agent's suggestion only fires if the
-linter doesn't already cover it.
+フレームワークがコードスタイルの提案を行う際、エージェントはまずプロジェクトのリンター設定を読む。エージェントの提案は、リンターがまだカバーしていない場合にのみ発火する。
 
 ## Forbidden
 
-<!-- Things agents must never do -->
-<!-- Example: Do not ask questions about topics already decided in previous stages -->
-
 ## Mandated
 
-<!-- Things agents must always do -->
-<!-- Example: All architecture decisions must include an ADR -->
-
 ## Corrections
-
-<!-- Self-learning loop appends here. -->
-<!-- Use amadeus-team.md to record team-wide overrides; amadeus-project.md
-     to record project-specific deviations. The loaders merge org → team
-     → project at session start; each layer replaces fields the layer
-     above set; missing fields fall through. -->

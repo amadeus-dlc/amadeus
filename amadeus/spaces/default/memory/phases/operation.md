@@ -1,29 +1,28 @@
 # Operation Phase Guardrails
 
-These rules apply to every stage whose `phase: operation` declaration
-imports them as the matching phase rule.
+これらのルールは、`phase: operation` を宣言するすべてのステージに、対応するフェーズルールとしてインポートされ適用される。
 
 ## Infrastructure Safety
 
-- Infrastructure changes require security review — document the security implications of every change
-- Never remove or bypass existing security controls without explicit approval and documented rationale
-- Changes to IAM roles, network policies, or encryption settings must include a risk assessment
+- インフラ変更にはセキュリティレビューを必須とする — すべての変更についてセキュリティ上の影響を文書化する
+- 明示的な承認と文書化された根拠なしに、既存のセキュリティコントロールを削除・バイパスしない
+- IAMロール、ネットワークポリシー、暗号化設定の変更にはリスクアセスメントを含める
 
 ## Deployment Procedures
 
-- All deployment procedures must include rollback steps — document how to reverse every change
-- Deployments to production must have a defined smoke test or health check to verify success
-- Blue/green or canary strategies must document traffic-shifting criteria and abort conditions
+- すべてのデプロイ手順にロールバック手順を含める — すべての変更の戻し方を文書化する
+- 本番デプロイには成功を検証するスモークテストまたはヘルスチェックを定義する
+- Blue/Green やカナリア戦略では、トラフィック切替基準と中断条件を文書化する
 
 ## Observability
 
-- SLOs must be quantified with specific percentages and time windows (e.g., "99.9% availability over a 30-day rolling window")
-- Alerting thresholds must be set below SLO breach to allow time for remediation
-- Every new service or component must have at least one health metric and one error rate metric
+- SLO は具体的なパーセンテージと時間窓で定量化する(例:「30日間ローリングウィンドウで可用性99.9%」)
+- アラート閾値は SLO 違反より手前に設定し、是正の時間を確保する
+- 新しいサービス・コンポーネントには、最低1つのヘルスメトリクスと1つのエラーレートメトリクスを設ける
 
 ## Incident Response
 
-- Runbooks must include escalation paths and contact information
-- Post-incident reviews are required for any P1/P2 incident — document timeline, root cause, and prevention
+- Runbook にはエスカレーションパスと連絡先情報を含める
+- P1/P2 インシデントにはポストインシデントレビューを必須とする — タイムライン、根本原因、再発防止策を文書化する
 
 ## Corrections
