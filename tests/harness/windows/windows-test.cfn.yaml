@@ -1,0 +1,166 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Disposable Windows Server 2022 host for the AI-DLC test harness. The instance
+  is managed through SSM only; no SSH/RDP ingress is opened.
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC for the Windows test instance.
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subnet with outbound internet access for bootstrap downloads and SSM.
+  InstanceType:
+    Type: String
+    Default: c5.4xlarge
+    AllowedPattern: "^[a-z0-9.]+$"
+    Description: >
+      EC2 instance type for the Windows test host. The default c5.4xlarge is
+      the proven size for the full `--all -P 8` live run: the e2e tier carries
+      per-test bun:test timeouts (e.g. t78 lands at ~5.5s of its 5s budget on
+      c5.4xlarge), and a smaller box (t3.large) tips deterministic Bolt/runtime
+      tests into spurious timeouts under parallel load. Shrink only for a
+      lighter tier selection.
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-windows-latest/Windows_Server-2022-English-Full-Base
+    Description: Windows Server 2022 AMI SSM parameter.
+  ProjectDir:
+    Type: String
+    Default: C:\aidlc
+    Description: Directory where the repo archive is synced before running tests.
+  GitForWindowsInstallerUrl:
+    Type: String
+    Default: https://github.com/git-for-windows/git/releases/download/v2.49.0.windows.1/Git-2.49.0-64-bit.exe
+    Description: Git for Windows installer. Provides Git Bash and GNU coreutils for compatibility checks.
+  NodeMsiUrl:
+    Type: String
+    Default: https://nodejs.org/dist/v22.14.0/node-v22.14.0-x64.msi
+    Description: Node.js MSI used by the Windows TUI driver for node-pty.
+
+Resources:
+  WindowsTestRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        # run-all.ps1 sets CLAUDE_CODE_USE_BEDROCK=1, so the live
+        # integration/e2e tiers call Bedrock with the instance role's
+        # credentials. Without this the full --all gate fails on every
+        # claude-driving test with an authorization error.
+        - PolicyName: BedrockInvoke
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                  - bedrock:Converse
+                  - bedrock:ConverseStream
+                Resource: "*"
+      Tags:
+        - Key: Project
+          Value: aidlc-test-harness
+
+  WindowsTestInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref WindowsTestRole
+
+  WindowsTestSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: AI-DLC Windows test harness host; SSM only, no inbound access.
+      VpcId: !Ref VpcId
+      SecurityGroupIngress: []
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-sg"
+        - Key: Project
+          Value: aidlc-test-harness
+
+  WindowsTestInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAmiId
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref WindowsTestInstanceProfile
+      SubnetId: !Ref SubnetId
+      SecurityGroupIds:
+        - !Ref WindowsTestSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-windows"
+        - Key: Project
+          Value: aidlc-test-harness
+      UserData:
+        Fn::Base64: !Sub |
+          <powershell>
+          $ErrorActionPreference = "Stop"
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+          function Add-MachinePath([string]$Dir) {
+            if (-not (Test-Path $Dir)) { return }
+            $current = [Environment]::GetEnvironmentVariable("Path", "Machine")
+            if (-not ($current -split ";" | Where-Object { $_ -eq $Dir })) {
+              [Environment]::SetEnvironmentVariable("Path", "$current;$Dir", "Machine")
+            }
+            if (-not ($env:Path -split ";" | Where-Object { $_ -eq $Dir })) {
+              $env:Path = "$Dir;$env:Path"
+            }
+          }
+
+          New-Item -ItemType Directory -Force -Path "${ProjectDir}" | Out-Null
+          New-Item -ItemType Directory -Force -Path "C:\Windows\Temp\aidlc-bootstrap" | Out-Null
+
+          $gitInstaller = "C:\Windows\Temp\aidlc-bootstrap\git-for-windows.exe"
+          Invoke-WebRequest -Uri "${GitForWindowsInstallerUrl}" -OutFile $gitInstaller
+          Start-Process -FilePath $gitInstaller -ArgumentList "/VERYSILENT","/NORESTART","/NOCANCEL","/SP-" -Wait
+          Add-MachinePath "C:\Program Files\Git\bin"
+          Add-MachinePath "C:\Program Files\Git\usr\bin"
+
+          $nodeInstaller = "C:\Windows\Temp\aidlc-bootstrap\node.msi"
+          Invoke-WebRequest -Uri "${NodeMsiUrl}" -OutFile $nodeInstaller
+          Start-Process -FilePath "msiexec.exe" -ArgumentList "/i","$nodeInstaller","/qn","/norestart" -Wait
+          Add-MachinePath "C:\Program Files\nodejs"
+
+          $env:BUN_INSTALL = "C:\bun"
+          Invoke-Expression (Invoke-RestMethod "https://bun.sh/install.ps1")
+          Add-MachinePath "C:\bun\bin"
+
+          Invoke-Expression (Invoke-RestMethod "https://claude.ai/install.ps1")
+          # The claude installer targets the INSTALLING user's ~\.local\bin —
+          # Administrator under EC2Launch v2 UserData, systemprofile if a
+          # bootstrap variant runs as SYSTEM. Register whichever landed.
+          Add-MachinePath "C:\Users\Administrator\.local\bin"
+          Add-MachinePath "C:\Windows\System32\config\systemprofile\.local\bin"
+
+          Restart-Service AmazonSSMAgent -ErrorAction SilentlyContinue
+          </powershell>
+
+Outputs:
+  InstanceId:
+    Description: EC2 instance ID to pass to the SSM helpers.
+    Value: !Ref WindowsTestInstance
+  ProjectDir:
+    Description: Project directory used by sync.ts, setup.ps1, and run-all.ps1.
+    Value: !Ref ProjectDir
+  RunAllExample:
+    Description: Example SSM command for the full Windows suite once sync/setup are complete.
+    Value: !Sub >-
+      bun tests/harness/windows/ssm-run.ts --region ${AWS::Region} --instance-id ${WindowsTestInstance}
+      -- powershell -ExecutionPolicy Bypass -File ${ProjectDir}\tests\harness\windows\run-all.ps1
+      -ProjectDir ${ProjectDir} -Parallel 8

@@ -1,0 +1,5 @@
+#!/bin/bash
+# Self-locating: resolves run-tests.sh relative to this script so the hook
+# works whether the project is a repo root or nested in a monorepo.
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+bash "$HOOK_DIR/../run-tests.sh"

@@ -1,0 +1,105 @@
+{
+  "_provenance": "Live-captured on kiro-cli 2.6.1 (macOS, enterprise IdC auth) via a tee-everything hook in the Step 0 validation spike, 2026-06-12. Shapes documented in docs/spikes/dist-kiro/findings.md §0.2. Values lightly genericized (paths/session ids); FIELD NAMES are verbatim.",
+  "agentSpawn": {
+    "hook_event_name": "agentSpawn",
+    "cwd": "/tmp/example-project",
+    "prompt": "Say exactly HELLO and nothing else."
+  },
+  "userPromptSubmit": {
+    "hook_event_name": "userPromptSubmit",
+    "cwd": "/tmp/example-project",
+    "prompt": "Say exactly HELLO and nothing else."
+  },
+  "stop": {
+    "hook_event_name": "stop",
+    "cwd": "/tmp/example-project",
+    "assistant_response": "HELLO"
+  },
+  "preToolUse_shell": {
+    "hook_event_name": "preToolUse",
+    "cwd": "/tmp/example-project",
+    "session_id": "cb3a220a-609f-4265-8ff9-2cafd3658000",
+    "tool_name": "shell",
+    "tool_input": { "command": "echo PROBE-BASH" }
+  },
+  "postToolUse_shell": {
+    "hook_event_name": "postToolUse",
+    "cwd": "/tmp/example-project",
+    "session_id": "cb3a220a-609f-4265-8ff9-2cafd3658000",
+    "tool_name": "shell",
+    "tool_input": { "command": "echo PROBE-BASH" },
+    "tool_response": { "items": [{ "Text": "PROBE-BASH" }] }
+  },
+  "postToolUse_write": {
+    "hook_event_name": "postToolUse",
+    "cwd": "/tmp/example-project",
+    "session_id": "cb3a220a-609f-4265-8ff9-2cafd3658000",
+    "tool_name": "write",
+    "tool_input": {
+      "command": "create",
+      "path": "/tmp/example-project/aidlc-docs/ideation/intent-capture/intent-statement.md",
+      "content": "PROBE"
+    },
+    "tool_response": { "items": [{ "Text": "created" }] }
+  },
+  "postToolUse_todo_create": {
+    "hook_event_name": "postToolUse",
+    "cwd": "/tmp/example-project",
+    "session_id": "cb3a220a-609f-4265-8ff9-2cafd3658000",
+    "tool_name": "todo_list",
+    "tool_input": {
+      "command": "create",
+      "task_list_description": "Stage tasks",
+      "tasks": [{ "task_description": "Running Intent Capture [intent-capture]" }]
+    },
+    "tool_response": {
+      "items": [
+        {
+          "Json": {
+            "tasks": [
+              {
+                "id": "1",
+                "task_description": "Running Intent Capture [intent-capture]",
+                "completed": false
+              }
+            ],
+            "description": "Stage tasks",
+            "context": [],
+            "modified_files": []
+          }
+        }
+      ]
+    }
+  },
+  "postToolUse_todo_complete": {
+    "hook_event_name": "postToolUse",
+    "cwd": "/tmp/example-project",
+    "session_id": "cb3a220a-609f-4265-8ff9-2cafd3658000",
+    "tool_name": "todo_list",
+    "tool_input": {
+      "command": "complete",
+      "completed_task_ids": ["1"],
+      "context_update": "stage marked in progress"
+    },
+    "tool_response": {
+      "items": [{ "Json": { "tasks": [], "description": "", "context": [], "modified_files": [] } }]
+    }
+  },
+  "postToolUse_subagent": {
+    "hook_event_name": "postToolUse",
+    "cwd": "/tmp/example-project",
+    "session_id": "cb3a220a-609f-4265-8ff9-2cafd3658000",
+    "tool_name": "subagent",
+    "tool_input": {
+      "task": "Write two files in parallel",
+      "mode": "blocking",
+      "stages": [
+        { "name": "write_w1", "role": "aidlc-developer-agent", "prompt_template": "Write w1.txt" },
+        { "name": "write_w2", "role": "aidlc-developer-agent", "prompt_template": "Write w2.txt" }
+      ]
+    },
+    "tool_response": {
+      "items": [{ "Text": "Pipeline completed: 2 stages finished." }]
+    }
+  }
+}
