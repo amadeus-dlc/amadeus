@@ -14,6 +14,7 @@ import {
   isClaudeCodeHookInput,
   isoTimestamp,
   recordHookDrop,
+  activeIntentIsComplete,
   resolveProjectDirFromHook,
 } from "../tools/amadeus-lib.ts";
 
@@ -38,12 +39,22 @@ try {
   process.exit(0);
 }
 
-const agentType = parsed.agent_type ?? "unknown";
+// #555 side-symptom: SubagentStop delivers agent_type as an EMPTY STRING for
+// generic Task agents, and "" ?? fallback passes through — record "unknown".
+const agentType = parsed.agent_type?.trim() ? parsed.agent_type : "unknown";
 const agentId: string = parsed.agent_id ?? "";
 const agentMessage: string = (parsed.last_assistant_message ?? "").slice(0, 200);
 
 const auditFile = auditFilePath(projectDir);
 if (!existsSync(auditFile)) process.exit(0);
+
+// #555: the active intent may already be complete (registry status complete /
+// WORKFLOW_COMPLETED on record). Appending SUBAGENT_COMPLETED to a closed
+// workflow leaves unpushed residue in every worktree that merely runs
+// subagents — the same failure family as #476; PR #479 guarded mint-presence
+// and the stop hook with activeIntentIsComplete(), and this hook was the
+// remaining unguarded audit writer.
+if (activeIntentIsComplete(projectDir)) process.exit(0);
 
 const fields: Record<string, string> = {
   "Agent Type": agentType,

@@ -725,7 +725,8 @@
     "tools/aidlc-validate.ts",
     "aidlc-common/protocols/stage-protocol.md",
     "tools/aidlc-sensor-linter.ts",
-    "sensors/aidlc-linter.md"
+    "sensors/aidlc-linter.md",
+    "hooks/aidlc-log-subagent.ts"
   ],
   "exceptions": [
     {
@@ -791,6 +792,10 @@
     {
       "target": "tools/aidlc-sensor-linter.ts、sensors/aidlc-linter.md（ローカルでは .agents/amadeus/tools/amadeus-sensor-linter.ts、.agents/amadeus/sensors/amadeus-linter.md）",
       "reason": "Issue #538: linter sensor が実質 no-op（ラップ対象の eslint が未導入）だった問題の解消。workspace の package.json が lint:check script を宣言する場合はそれをラップし（bun run lint:check、exit 0 = pass / 非 0 = 1 violation として診断出力を message に格納）、宣言がなければ従来の eslint 検出 → exit 127 quiet PASS へフォールバックする 2 段検出へ変更。sensor 文書の description と本文も実挙動へ一致させた。repo 固有パスの直書きはしない（汎用機構）。上流が同等の 2 段検出を取り込んだら解除。"
+    },
+    {
+      "target": "tools/aidlc-state.ts（complete-workflow の Current Stage クリアと Phase Progress Skipped 整合 = #547）、hooks/aidlc-log-subagent.ts（完了済み Intent への SubagentStop 完了ガードと agent_type 空文字の unknown 既定 = #555）、tools/aidlc-orchestrate.ts（next の closed-workflow sentinel \"none\" を done 解決 = #547 随伴）（ローカルでは .agents/amadeus/tools/amadeus-state.ts、.agents/amadeus/tools/amadeus-orchestrate.ts、.agents/amadeus/hooks/amadeus-log-subagent.ts）",
+      "reason": "Intent 260706-engine-consistency（Issue #547/#548/#555）のエンジン修正。上流が同修正を取り込んだら例外を解除する。skills/ にはエンジン tools/hooks の正準コピーが存在しないため反映対象なし（validator の #548 修正は skills/amadeus-validator と .agents/skills/amadeus-validator の両側へ反映済み）。"
     }
   ]
 }

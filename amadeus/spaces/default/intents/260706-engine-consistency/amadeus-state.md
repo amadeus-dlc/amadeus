@@ -31,6 +31,7 @@
 ## Runtime State
 - **Revision Count**: 0
 
+- **Skeleton Stance**: scope-dependent
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -68,7 +69,7 @@
 - [ ] delivery-planning — SKIP
 
 ### CONSTRUCTION PHASE
-Per unit: [TBD]
+Per unit: engine-consistency
 - [ ] functional-design — SKIP
 - [ ] nfr-requirements — SKIP
 - [ ] nfr-design — SKIP

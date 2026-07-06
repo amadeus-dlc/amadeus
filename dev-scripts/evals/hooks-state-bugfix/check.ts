@@ -405,6 +405,47 @@ function stopHookScenario(sessionId: string, registryStatus: string, stampSessio
   ok("R003: 対応記録がないセッションでは督促しない", !s4.blocked, `stdout=${s4.res.stdout} stderr=${s4.res.stderr}`);
 }
 
+// --- #555: log-subagent hook の完了ガード ---
+// SubagentStop hook（amadeus-log-subagent.ts）が、完了済み Intent の audit shard へ
+// SUBAGENT_COMPLETED を追記し続けるバグ（#476 系の未カバー）の回帰検査。
+// (a) 完了済み Intent → no-op（shard が成長しない）
+// (b) 進行中 Intent → 従来どおり追記される（退行ガード）
+// (c) agent_type が空文字のとき Agent Type: unknown で記録される（副症状）
+
+function logSubagentScenario(registryStatus: string, agentType: string | undefined) {
+  const workspace = makeWorkspace();
+  try {
+    const dirName = birthIntent(workspace, "poc", "log-subagent-eval");
+    const uuid = registryUuid(workspace, dirName);
+    setRegistryStatus(workspace, uuid, registryStatus);
+    const auditDir = join(workspace, "amadeus/spaces/default/intents", dirName, "audit");
+    const shard = readdirSync(auditDir).find((n) => n.endsWith(".md"));
+    const before = readFileSync(join(auditDir, shard!), "utf8");
+    const stdin = JSON.stringify({
+      session_id: "log-subagent-eval",
+      transcript_path: "",
+      agent_id: "aeval555",
+      ...(agentType === undefined ? {} : { agent_type: agentType }),
+      last_assistant_message: "eval fixture message",
+    });
+    const hook = join(workspace, ".agents/amadeus/hooks/amadeus-log-subagent.ts");
+    const res = runWithStdin(["bun", hook], workspace, stdin);
+    const after = readFileSync(join(auditDir, shard!), "utf8");
+    return { res, grew: after.length > before.length, after };
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+}
+
+{
+  const c1 = logSubagentScenario("complete", "worker");
+  ok("#555: 完了済み Intent への SubagentStop は no-op（shard が成長しない）", !c1.grew, c1.after.slice(-300));
+  const c2 = logSubagentScenario("in_progress", "worker");
+  ok("#555: 進行中 Intent では従来どおり SUBAGENT_COMPLETED が追記される", c2.grew && c2.after.includes("**Agent Type**: worker"), c2.after.slice(-300));
+  const c3 = logSubagentScenario("in_progress", "");
+  ok("#555: agent_type 空文字は Agent Type: unknown で記録される", c3.grew && c3.after.includes("**Agent Type**: unknown"), c3.after.slice(-300));
+}
+
 if (failures > 0) {
   console.error(`hooks-state-bugfix eval: ${failures} 件失敗`);
   process.exit(1);
