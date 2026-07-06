@@ -64,7 +64,7 @@ The Space is unprepared if at least one of the following does not exist.
 - `amadeus/spaces/<space>/knowledge/glossary.md`
 - `amadeus/spaces/<space>/knowledge/domain-map.md`
 - `amadeus/spaces/<space>/knowledge/context-map.md`
-- `amadeus/spaces/<space>/intents/intents.md`
+- `amadeus/spaces/<space>/intents/intents.json`
 
 When handling Intent-specific terminology, models, contracts, or decisions, confirm the target Intent directory name.
 If the target Intent does not exist, stop the work and direct the user to first create the Intent with `amadeus`.
@@ -212,7 +212,7 @@ If there is no basis, do not promote it to a contract; leave it as a candidate i
 - Do not guess at identifiers for BCs, DDD Modules, model elements, or contracts.
 - Do not invent unresolved identifier rules such as Repository or Factory.
 - Do not make an update that requires the target Intent directory name without the Intent directory name.
-- Do not add a new Intent to `amadeus/spaces/<space>/intents/intents.md`.
+- Do not add a new Intent to the registry (`amadeus/spaces/<space>/intents/intents.json`); Intent creation goes through the `amadeus` Intake with explicit human approval, never through direct file edits.
 - Do not create stage artifacts such as `requirements.md`, `stories.md`, `unit-of-work.md`, or `bolt-plan.md`.
 - Do not assume `/amadeus-grilling` is called internally. This skill itself handles the questions needed to sharpen the domain model.
 - Do not write the repo's development documents or development scripts as runtime references.
