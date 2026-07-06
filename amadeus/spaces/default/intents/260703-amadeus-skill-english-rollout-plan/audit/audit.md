@@ -1,0 +1,1544 @@
+# Audit Trail
+
+## WORKFLOW_STARTED
+**Timestamp**: 2026-07-03T10:56:12Z
+**Event**: WORKFLOW_STARTED
+**Details**: 人間が Issue #399 を起点にした Amadeus skill 英語化実施計画の Intent Birth を承認した。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T10:56:12Z
+**Event**: STAGE_STARTED
+**Stage**: workspace-scaffold
+**Details**: Intent record の scaffold を開始した。
+
+---
+
+## WORKSPACE_SCAFFOLDED
+**Timestamp**: 2026-07-03T10:56:12Z
+**Event**: WORKSPACE_SCAFFOLDED
+**Stage**: workspace-scaffold
+**Details**: `aidlc/spaces/default/intents/260703-amadeus-skill-english-rollout-plan/` に phase ディレクトリ、stage サブディレクトリ、verification、audit を作成した。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T10:56:12Z
+**Event**: STAGE_COMPLETED
+**Stage**: workspace-scaffold
+**Details**: Initialization 0.1 Workspace Scaffold を完了した。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T10:56:12Z
+**Event**: STAGE_STARTED
+**Stage**: workspace-detection
+**Details**: 対象 workspace の検出を開始した。
+
+---
+
+## WORKSPACE_SCANNED
+**Timestamp**: 2026-07-03T10:56:12Z
+**Event**: WORKSPACE_SCANNED
+**Stage**: workspace-detection
+**Details**: Brownfield、TypeScript、framework なし、Bun build system と判定した。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T10:56:12Z
+**Event**: STAGE_COMPLETED
+**Stage**: workspace-detection
+**Details**: Initialization 0.2 Workspace Detection を完了した。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T10:56:12Z
+**Event**: STAGE_STARTED
+**Stage**: state-init
+**Details**: Intent state の初期化を開始した。
+
+---
+
+## WORKSPACE_INITIALISED
+**Timestamp**: 2026-07-03T10:56:12Z
+**Event**: WORKSPACE_INITIALISED
+**Stage**: state-init
+**Details**: `aidlc-state.md`、Intent モジュール、registry、active-intent を初期化した。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T10:56:12Z
+**Event**: STAGE_COMPLETED
+**Stage**: state-init
+**Details**: Initialization 0.3 State Initialization を完了した。
+
+---
+
+## PHASE_SKIPPED
+**Timestamp**: 2026-07-03T10:56:12Z
+**Event**: PHASE_SKIPPED
+**Stage**: operation
+**Details**: Operation phase は Amadeus scope 外のため初期状態で skipped とした。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T10:58:09Z
+**Event**: STAGE_STARTED
+**Stage**: intent-capture
+**Details**: Ideation 1.1 Intent Capture & Framing を開始した。
+
+---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T10:59:17Z
+**Event**: QUESTION_ANSWERED
+**Stage**: intent-capture
+**Details**: Q001 answer: 親タスクの実施計画管理に限定する。
+
+---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T11:01:41Z
+**Event**: QUESTION_ANSWERED
+**Stage**: intent-capture
+**Details**: Q002 answer: Maintainer 中心で扱う。Agent と Reviewer は副次的な対象者にする。
+
+---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T11:02:29Z
+**Event**: QUESTION_ANSWERED
+**Stage**: intent-capture
+**Details**: Q003 answer: 追跡可能性で観測する。
+
+---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T11:03:38Z
+**Event**: QUESTION_ANSWERED
+**Stage**: intent-capture
+**Details**: Q001/Q003 revised answer: 前回答を撤回し、子 Issue の完了まで含める。細切れになることを避けるため。
+
+---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T11:05:26Z
+**Event**: QUESTION_ANSWERED
+**Stage**: intent-capture
+**Details**: Q005 answer: PR merge または Issue close で観測する。
+
+---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T11:07:09Z
+**Event**: QUESTION_ANSWERED
+**Stage**: intent-capture
+**Details**: Q006 answer: #401 の完了証拠として追跡する。#391〜#394 個別の完了そのものは直接完了条件にしない。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T11:07:09Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: intent-capture
+**Details**: Intent Capture 成果物を作成し、承認待ちにした。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T11:09:25Z
+**Event**: GATE_APPROVED
+**Stage**: intent-capture
+**Details**: User Input: 1
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T11:09:25Z
+**Event**: STAGE_COMPLETED
+**Stage**: intent-capture
+**Details**: Intent Capture を承認済みとして完了した。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T11:09:25Z
+**Event**: STAGE_SKIPPED
+**Stage**: market-research
+**Details**: Condition false. 外部市場での位置づけ、または build-vs-buy の判断がないため skip した。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T11:09:25Z
+**Event**: STAGE_STARTED
+**Stage**: feasibility
+**Details**: Ideation 1.3 Feasibility を開始した。
+
+---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T11:10:41Z
+**Event**: QUESTION_ANSWERED
+**Stage**: feasibility
+**Details**: Q001 answer: 日本語生成成果物契約、昇格フロー、PR 作成後の監視、merge は人間が行うことを制約として扱う。
+
+---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T11:11:58Z
+**Event**: QUESTION_ANSWERED
+**Stage**: feasibility
+**Details**: Q002 answer: 英語化と意味変更が混ざること、source skill と昇格先成果物がずれること、子 Issue の完了証拠が追跡できなくなることを主なリスクとして扱う。
+
+---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T11:12:48Z
+**Event**: QUESTION_ANSWERED
+**Stage**: feasibility
+**Details**: Q003 answer: GitHub Issue、Pull Request、CI、レビューボットの状態を外部依存として扱う。子 Issue の完了証拠は GitHub 上の PR merge または Issue close で確認できることを前提にする。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T11:12:48Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: feasibility
+**Details**: Feasibility 成果物を作成し、承認待ちにした。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T11:16:20Z
+**Event**: GATE_APPROVED
+**Stage**: feasibility
+**Details**: User Input: 1
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T11:16:20Z
+**Event**: STAGE_COMPLETED
+**Stage**: feasibility
+**Details**: Feasibility を承認済みとして完了した。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T11:16:20Z
+**Event**: STAGE_STARTED
+**Stage**: scope-definition
+**Details**: Ideation 1.4 Scope Definition を開始した。
+
+---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T11:17:15Z
+**Event**: QUESTION_ANSWERED
+**Stage**: scope-definition
+**Details**: Q001 answer: #395、#400、#401、#402 の完了追跡までを最小スコープにする。
+
+---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T11:22:04Z
+**Event**: QUESTION_ANSWERED
+**Stage**: scope-definition
+**Details**: Q002 answer: must-have は #395、#400、#401、#402 の完了追跡、順序、依存関係、完了証拠の記録。nice-to-have は #391〜#394 の個別完了、残り skill 英語化の詳細 PR 計画、英語化そのものの一括実施。
+
+---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T11:23:17Z
+**Event**: QUESTION_ANSWERED
+**Stage**: scope-definition
+**Details**: Q003 answer: #395 → #400 → #401 → #402 の順序にする。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T11:23:17Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: scope-definition
+**Details**: Scope Definition 成果物を作成し、承認待ちにした。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T11:27:46Z
+**Event**: GATE_APPROVED
+**Stage**: scope-definition
+**Details**: User Input: 1
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T11:27:46Z
+**Event**: STAGE_COMPLETED
+**Stage**: scope-definition
+**Details**: Scope Definition を承認済みとして完了した。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T11:27:46Z
+**Event**: STAGE_SKIPPED
+**Stage**: team-formation
+**Details**: Condition false. 単独 Maintainer と小規模な Agent 協働の範囲であり、チームキャパシティや mob 構成の判断が不要なため skip した。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T11:27:46Z
+**Event**: STAGE_STARTED
+**Stage**: rough-mockups
+**Details**: Ideation 1.6 Rough Mockups をシステム相互作用図として開始した。
+
+---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T11:29:06Z
+**Event**: QUESTION_ANSWERED
+**Stage**: rough-mockups
+**Details**: Q001 answer: #399 親 Issue から #395、#400、#401、#402 の順序、依存、PR merge または Issue close を完了証拠として記録する流れを図示する。
+
+---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T11:36:36Z
+**Event**: QUESTION_ANSWERED
+**Stage**: rough-mockups
+**Details**: Q002 answer: 開始点は #399 の計画 Intent 承認、終了点は #402 の対応 PR merge または Issue close とする。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T11:36:36Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: rough-mockups
+**Details**: Rough Mockups 成果物をシステム相互作用図として作成し、承認待ちにした。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T11:38:12Z
+**Event**: GATE_APPROVED
+**Stage**: rough-mockups
+**Details**: User Input: 1
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T11:38:12Z
+**Event**: STAGE_COMPLETED
+**Stage**: rough-mockups
+**Details**: Rough Mockups を承認済みとして完了した。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T11:38:12Z
+**Event**: STAGE_STARTED
+**Stage**: approval-handoff
+**Details**: Ideation 1.7 Approval & Handoff を開始した。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T11:39:11Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: approval-handoff
+**Details**: Approval & Handoff 成果物を作成し、承認待ちにした。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T11:41:05Z
+**Event**: GATE_APPROVED
+**Stage**: approval-handoff
+**Details**: User Input: 1
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T11:41:05Z
+**Event**: STAGE_COMPLETED
+**Stage**: approval-handoff
+**Details**: Approval & Handoff を承認済みとして完了した。
+
+---
+
+## PHASE_VERIFIED
+**Timestamp**: 2026-07-03T11:47:47Z
+**Event**: PHASE_VERIFIED
+**Stage**: ideation
+**Details**: PR: https://github.com/amadeus-dlc/amadeus/pull/406
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T11:47:47Z
+**Event**: STAGE_STARTED
+**Stage**: reverse-engineering
+**Details**: Inception 2.1 Reverse Engineering を開始した。
+
+---
+
+## PHASE_VERIFIED
+**Timestamp**: 2026-07-03T11:47:47Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: Ideation
+**Details**: PR: https://github.com/amadeus-dlc/amadeus/pull/406
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T11:49:40Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: reverse-engineering
+**Details**: Reverse Engineering 成果物を codekb/amadeus に更新し、承認待ちにした。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T11:53:16Z
+**Event**: GATE_APPROVED
+**Stage**: reverse-engineering
+**Details**: User Input: 1
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T11:53:16Z
+**Event**: STAGE_COMPLETED
+**Stage**: reverse-engineering
+**Details**: Reverse Engineering を承認済みとして完了した。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T11:53:16Z
+**Event**: STAGE_STARTED
+**Stage**: practices-discovery
+**Details**: Inception 2.2 Practices Discovery を開始した。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T11:53:58Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: practices-discovery
+**Details**: Practices Discovery 成果物を作成し、承認待ちにした。memory への新規昇格候補はない。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T11:56:18Z
+**Event**: GATE_APPROVED
+**Stage**: practices-discovery
+**Details**: User Input: 1
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T11:56:18Z
+**Event**: STAGE_COMPLETED
+**Stage**: practices-discovery
+**Details**: Practices Discovery を承認済みとして完了した。memory への新規昇格は行わない。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T11:56:18Z
+**Event**: STAGE_STARTED
+**Stage**: requirements-analysis
+**Details**: Inception 2.3 Requirements Analysis を開始した。
+
+---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T11:58:41Z
+**Event**: QUESTION_ANSWERED
+**Stage**: requirements-analysis
+**Question**: Q001
+**Details**: User Input: 1。子 Issue の完了証拠を `requirements.md` の受け入れ条件として定義し、後続の `delivery-planning` と `traceability` で更新対象にする。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T11:58:41Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: requirements-analysis
+**Details**: Requirements Analysis 成果物を作成し、承認待ちにした。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T12:01:08Z
+**Event**: GATE_APPROVED
+**Stage**: requirements-analysis
+**Details**: User Input: 1
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T12:01:08Z
+**Event**: STAGE_COMPLETED
+**Stage**: requirements-analysis
+**Details**: Requirements Analysis を承認済みとして完了した。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T12:01:08Z
+**Event**: STAGE_STARTED
+**Stage**: user-stories
+**Details**: Inception 2.4 User Stories を開始した。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T12:01:08Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: user-stories
+**Details**: User Stories 成果物を作成し、承認待ちにした。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T12:02:51Z
+**Event**: GATE_APPROVED
+**Stage**: user-stories
+**Details**: User Input: 1
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T12:02:51Z
+**Event**: STAGE_COMPLETED
+**Stage**: user-stories
+**Details**: User Stories を承認済みとして完了した。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T12:02:51Z
+**Event**: STAGE_STARTED
+**Stage**: refined-mockups
+**Details**: Inception 2.5 Refined Mockups を開始した。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T12:02:51Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: refined-mockups
+**Details**: Refined Mockups 成果物を作成し、承認待ちにした。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T12:05:24Z
+**Event**: GATE_APPROVED
+**Stage**: refined-mockups
+**Details**: User Input: 1
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T12:05:24Z
+**Event**: STAGE_COMPLETED
+**Stage**: refined-mockups
+**Details**: Refined Mockups を承認済みとして完了した。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T12:05:24Z
+**Event**: STAGE_STARTED
+**Stage**: application-design
+**Details**: Inception 2.6 Application Design を開始した。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T12:05:24Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: application-design
+**Details**: Application Design 成果物を作成し、承認待ちにした。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T12:07:43Z
+**Event**: GATE_APPROVED
+**Stage**: application-design
+**Details**: User Input: 1
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T12:07:43Z
+**Event**: STAGE_COMPLETED
+**Stage**: application-design
+**Details**: Application Design を承認済みとして完了した。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T12:07:43Z
+**Event**: STAGE_STARTED
+**Stage**: units-generation
+**Details**: Inception 2.7 Units Generation を開始した。
+
+---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T12:08:50Z
+**Event**: QUESTION_ANSWERED
+**Stage**: units-generation
+**Question**: Q001
+**Details**: User Input: 1。Unit 境界は、子 Issue 単位を基本にした機能別、中粒度とする。#401 配下 Issue は U003 に内包する。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T12:08:50Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: units-generation
+**Details**: Units Generation 成果物を作成し、承認待ちにした。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T12:12:08Z
+**Event**: GATE_APPROVED
+**Stage**: units-generation
+**Details**: User Input: 1
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T12:12:08Z
+**Event**: STAGE_COMPLETED
+**Stage**: units-generation
+**Details**: Units Generation を承認済みとして完了した。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T12:12:08Z
+**Event**: STAGE_STARTED
+**Stage**: delivery-planning
+**Details**: Inception 2.8 Delivery Planning を開始した。
+
+---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T12:13:10Z
+**Event**: QUESTION_ANSWERED
+**Stage**: delivery-planning
+**Question**: Q001
+**Details**: User Input: 1。Bolt は Unit 1 個ずつ束ね、B001 を walking skeleton とし、依存先行で順序付ける。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T12:13:10Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: delivery-planning
+**Details**: Delivery Planning 成果物を作成し、承認待ちにした。
+
+---
+
+## GATE_APPROVED
+**Timestamp**: 2026-07-03T12:15:24Z
+**Event**: GATE_APPROVED
+**Stage**: delivery-planning
+**Details**: User Input: 1
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T12:15:24Z
+**Event**: STAGE_COMPLETED
+**Stage**: delivery-planning
+**Details**: Delivery Planning を承認済みとして完了した。
+
+---
+
+## PHASE_VERIFIED
+**Timestamp**: 2026-07-03T12:20:42Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: Inception
+**Details**: PR: https://github.com/amadeus-dlc/amadeus/pull/408。Merge commit: b34a60ca6f215f1c4a4a2ec3749078c2174e3db8。
+
+---
+
+## Bolt Started: B001
+**Timestamp**: 2026-07-03T12:24:10Z
+**Event**: BOLT_STARTED
+**Bolt**: B001
+**Details**: #395 方針確定 Bolt を walking skeleton として開始した。branch は codex/issue-399-construction を使い、Project Information の Bolt Refs に B001 を追記した。
+
+---
+
+## Stage Started: functional-design
+**Timestamp**: 2026-07-03T12:24:10Z
+**Event**: STAGE_STARTED
+**Stage**: functional-design
+**Unit**: U001-issue-395-policy-definition
+**Details**: U001 #395 方針確定の Stage 3.1 を開始した。英語化方針、対象範囲、検証方法、言語ルール衝突の扱いを業務ルールとして定義する必要があるため実行した。
+
+---
+
+## Stage Awaiting Approval: functional-design
+**Timestamp**: 2026-07-03T12:24:10Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: functional-design
+**Unit**: U001-issue-395-policy-definition
+**Details**: business-logic-model.md、business-rules.md、domain-entities.md、memory.md を確認対象として提示した。
+
+---
+
+## Gate Approved: functional-design
+**Timestamp**: 2026-07-03T12:26:29Z
+**Event**: GATE_APPROVED
+**Stage**: functional-design
+**Unit**: U001-issue-395-policy-definition
+**Details**: User Input: 1
+
+---
+
+## Stage Completed: functional-design
+**Timestamp**: 2026-07-03T12:26:29Z
+**Event**: STAGE_COMPLETED
+**Stage**: functional-design
+**Unit**: U001-issue-395-policy-definition
+**Details**: U001 #395 方針確定の functional-design を承認済みとして完了した。
+
+---
+
+## Stage Skipped: nfr-requirements
+**Timestamp**: 2026-07-03T12:26:29Z
+**Event**: STAGE_SKIPPED
+**Stage**: nfr-requirements
+**Unit**: U001-issue-395-policy-definition
+**Details**: #395 方針確定には性能、セキュリティ、スケーラビリティ、信頼性、技術スタック選定の新規要求がないため skip した。
+
+---
+
+## Stage Skipped: nfr-design
+**Timestamp**: 2026-07-03T12:26:29Z
+**Event**: STAGE_SKIPPED
+**Stage**: nfr-design
+**Unit**: U001-issue-395-policy-definition
+**Details**: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+
+---
+
+## Stage Skipped: infrastructure-design
+**Timestamp**: 2026-07-03T12:26:29Z
+**Event**: STAGE_SKIPPED
+**Stage**: infrastructure-design
+**Unit**: U001-issue-395-policy-definition
+**Details**: #395 方針確定にはインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計がないため skip した。
+
+---
+
+## Stage Started: code-generation
+**Timestamp**: 2026-07-03T12:26:29Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Unit**: U001-issue-395-policy-definition
+**Details**: U001 #395 方針確定の Stage 3.5 を開始した。
+
+---
+
+## Stage Awaiting Approval: code-generation
+**Timestamp**: 2026-07-03T12:28:52Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Unit**: U001-issue-395-policy-definition
+**Details**: docs/amadeus/skill-language-policy.md、AGENTS.md、AMADEUS.md、.agents/rules/amadeus-artifacts-and-examples.md、README.md、README.ja.md、code-generation-plan.md、code-summary.md、memory.md を確認対象として提示した。
+
+---
+
+## Gate Approved: code-generation
+**Timestamp**: 2026-07-03T12:32:21Z
+**Event**: GATE_APPROVED
+**Stage**: code-generation
+**Unit**: U001-issue-395-policy-definition
+**Details**: User Input: 1
+
+---
+
+## Stage Completed: code-generation
+**Timestamp**: 2026-07-03T12:32:21Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Unit**: U001-issue-395-policy-definition
+**Details**: U001 #395 方針確定の code-generation を承認済みとして完了した。
+
+---
+
+## Stage Started: build-and-test
+**Timestamp**: 2026-07-03T12:32:21Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Bolt**: B001
+**Details**: B001 #395 方針確定の Stage 3.6 を開始した。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T12:46:07Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Bolt**: B001
+**Details**: B001 #395 方針確定。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/409。Merge commit: f519abea0ae677bdab7876868765ec020abf802e。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T12:46:07Z
+**Event**: BOLT_COMPLETED
+**Bolt**: B001
+**Details**: walking skeleton の Bolt PR が人間の merge で承認された。Bolt ref: B001-issue-395-policy-definition。PR: https://github.com/amadeus-dlc/amadeus/pull/409。Merge commit: f519abea0ae677bdab7876868765ec020abf802e。
+
+---
+
+## AUTONOMY_MODE_SET
+**Timestamp**: 2026-07-03T12:51:25Z
+**Event**: AUTONOMY_MODE_SET
+**Mode**: autonomous
+**Details**: User Input: 2。B001 完了後の Construction Autonomy Mode として autonomous を選択した。B002 以降の非 walking skeleton Bolt は会話内ゲートを提示せずに進め、approval evidence は Bolt PR の merge 後に記録する。
+
+---
+
+## BOLT_STARTED
+**Timestamp**: 2026-07-03T12:51:25Z
+**Event**: BOLT_STARTED
+**Bolt**: B002
+**Details**: #400 小さい土台 PR Bolt を開始した。対象 Unit は U002-issue-400-small-foundation-pr。代表 skill は `amadeus-construction-functional-design` とし、意味変更を伴わない英語化、昇格フロー、検証結果を追跡する。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T12:51:25Z
+**Event**: STAGE_SKIPPED
+**Stage**: functional-design
+**Unit**: U002-issue-400-small-foundation-pr
+**Details**: #400 小さい土台 PR は代表 SKILL.md の英語化と昇格フロー確認であり、新しいデータモデル、複雑な業務ロジック、業務ルール設計を追加しないため skip した。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T12:51:25Z
+**Event**: STAGE_SKIPPED
+**Stage**: nfr-requirements
+**Unit**: U002-issue-400-small-foundation-pr
+**Details**: #400 小さい土台 PR は非機能要求の追加、変更、評価を伴わないため skip した。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T12:51:25Z
+**Event**: STAGE_SKIPPED
+**Stage**: nfr-design
+**Unit**: U002-issue-400-small-foundation-pr
+**Details**: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T12:51:25Z
+**Event**: STAGE_SKIPPED
+**Stage**: infrastructure-design
+**Unit**: U002-issue-400-small-foundation-pr
+**Details**: #400 小さい土台 PR はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わないため skip した。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T12:51:25Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Unit**: U002-issue-400-small-foundation-pr
+**Details**: U002 #400 小さい土台 PR の Stage 3.5 を開始した。Construction Autonomy Mode が autonomous のため、会話内ゲートは提示しない。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T12:54:23Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Unit**: U002-issue-400-small-foundation-pr
+**Details**: autonomous 実行のため会話内 gate は提示しない。`skills/amadeus-construction-functional-design/SKILL.md`、`.agents/skills/amadeus-construction-functional-design/SKILL.md`、code-generation-plan.md、code-summary.md、memory.md を確認対象とし、approval evidence は B002 PR merge 後に記録する。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T12:54:23Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Bolt**: B002
+**Details**: B002 #400 小さい土台 PR の Stage 3.6 を開始した。promotion flow、全体テスト、Amadeus Validator の結果を記録する。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T12:56:50Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+**Bolt**: B002
+**Details**: `npm run test:it:promote-skill`、`npm run test:all`、Amadeus Validator が pass した。autonomous 実行のため会話内 gate は提示せず、approval evidence は B002 PR merge 後に記録する。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T13:03:24Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Unit**: U002-issue-400-small-foundation-pr
+**Details**: B002 #400 小さい土台 PR。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/410。Merge commit: 3618ff0c3de8659d83fae986455a52cbc064eb36。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T13:03:24Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Bolt**: B002
+**Details**: B002 #400 小さい土台 PR。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/410。Merge commit: 3618ff0c3de8659d83fae986455a52cbc064eb36。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T13:03:24Z
+**Event**: BOLT_COMPLETED
+**Bolt**: B002
+**Details**: autonomous の Bolt PR が人間の merge で承認された。Bolt ref: B002-issue-400-small-foundation-pr。PR: https://github.com/amadeus-dlc/amadeus/pull/410。Merge commit: 3618ff0c3de8659d83fae986455a52cbc064eb36。Issue #400 は 2026-07-03T13:03:25Z に close 済み。
+
+---
+
+## BOLT_STARTED
+**Timestamp**: 2026-07-03T13:05:00Z
+**Event**: BOLT_STARTED
+**Bolt**: B003
+**Details**: #401 AI-DLC v2 差分対応順序 Bolt を開始した。対象 Unit は U003-issue-401-upstream-difference-order。#391、#392、#393、#394 の扱いと PR 境界を #401 の完了証拠として追跡する。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T13:05:00Z
+**Event**: STAGE_SKIPPED
+**Stage**: functional-design
+**Unit**: U003-issue-401-upstream-difference-order
+**Details**: #401 は #391、#392、#393、#394 の対応順序と PR 境界を整理する計画文書であり、新しいデータモデル、複雑な業務ロジック、業務ルール設計を追加しないため skip した。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T13:05:00Z
+**Event**: STAGE_SKIPPED
+**Stage**: nfr-requirements
+**Unit**: U003-issue-401-upstream-difference-order
+**Details**: #401 は非機能要求の追加、変更、評価を伴わないため skip した。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T13:05:00Z
+**Event**: STAGE_SKIPPED
+**Stage**: nfr-design
+**Unit**: U003-issue-401-upstream-difference-order
+**Details**: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T13:05:00Z
+**Event**: STAGE_SKIPPED
+**Stage**: infrastructure-design
+**Unit**: U003-issue-401-upstream-difference-order
+**Details**: #401 はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わないため skip した。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T13:05:00Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Unit**: U003-issue-401-upstream-difference-order
+**Details**: U003 #401 AI-DLC v2 差分対応順序の Stage 3.5 を開始した。Construction Autonomy Mode が autonomous のため、会話内ゲートは提示しない。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T13:07:30Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Unit**: U003-issue-401-upstream-difference-order
+**Details**: autonomous 実行のため会話内 gate は提示しない。`docs/amadeus/aidlc-v2-difference-response-plan.md`、`docs/amadeus/skill-language-policy.md`、code-generation-plan.md、code-summary.md、memory.md を確認対象とし、approval evidence は B003 PR merge 後に記録する。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T13:07:30Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Bolt**: B003
+**Details**: B003 #401 AI-DLC v2 差分対応順序の Stage 3.6 を開始した。文書リンク、全体テスト、Amadeus Validator の結果を記録する。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T13:08:18Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+**Bolt**: B003
+**Details**: `npm run test:all` と Amadeus Validator が pass した。autonomous 実行のため会話内 gate は提示せず、approval evidence は B003 PR merge 後に記録する。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T13:21:12Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Unit**: U003-issue-401-upstream-difference-order
+**Details**: B003 #401 AI-DLC v2 差分対応順序。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/411。Merge commit: eb18826209fe4e20e5deee0116310f30e379ba7c。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T13:21:12Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Bolt**: B003
+**Details**: B003 #401 AI-DLC v2 差分対応順序。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/411。Merge commit: eb18826209fe4e20e5deee0116310f30e379ba7c。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T13:21:12Z
+**Event**: BOLT_COMPLETED
+**Bolt**: B003
+**Details**: autonomous の Bolt PR が人間の merge で承認された。Bolt ref: B003-issue-401-upstream-difference-order。PR: https://github.com/amadeus-dlc/amadeus/pull/411。Merge commit: eb18826209fe4e20e5deee0116310f30e379ba7c。Issue #401 は 2026-07-03T13:21:13Z に close 済み。
+
+---
+
+## BOLT_STARTED
+**Timestamp**: 2026-07-03T13:22:48Z
+**Event**: BOLT_STARTED
+**Bolt**: B004
+**Details**: #402 残り展開単位 Bolt を開始した。対象 Unit は U004-issue-402-remaining-skill-rollout-units。残り Amadeus skill の英語化単位、優先順位、検証コマンド、#391 から #394 との衝突回避を #402 の完了証拠として追跡する。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T13:22:48Z
+**Event**: STAGE_SKIPPED
+**Stage**: functional-design
+**Unit**: U004-issue-402-remaining-skill-rollout-units
+**Details**: #402 は残り Amadeus skill の英語化単位、優先順位、検証コマンド、衝突回避を整理する計画文書であり、新しいデータモデル、複雑な業務ロジック、業務ルール設計を追加しないため skip した。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T13:22:48Z
+**Event**: STAGE_SKIPPED
+**Stage**: nfr-requirements
+**Unit**: U004-issue-402-remaining-skill-rollout-units
+**Details**: #402 は非機能要求の追加、変更、評価を伴わないため skip した。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T13:22:48Z
+**Event**: STAGE_SKIPPED
+**Stage**: nfr-design
+**Unit**: U004-issue-402-remaining-skill-rollout-units
+**Details**: nfr-requirements を実行しないため、NFR パターン設計の対象がない。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T13:22:48Z
+**Event**: STAGE_SKIPPED
+**Stage**: infrastructure-design
+**Unit**: U004-issue-402-remaining-skill-rollout-units
+**Details**: #402 はインフラサービス対応付け、デプロイアーキテクチャ、クラウドリソースの新規設計を伴わないため skip した。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T13:22:48Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Unit**: U004-issue-402-remaining-skill-rollout-units
+**Details**: U004 #402 残り展開単位の Stage 3.5 を開始した。Construction Autonomy Mode が autonomous のため、会話内 gate は提示しない。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T13:25:10Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Unit**: U004-issue-402-remaining-skill-rollout-units
+**Details**: autonomous 実行のため会話内 gate は提示しない。`docs/amadeus/skill-englishization-rollout-plan.md`、`docs/amadeus/skill-language-policy.md`、code-generation-plan.md、code-summary.md、memory.md を確認対象とし、approval evidence は B004 PR merge 後に記録する。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T13:25:10Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Bolt**: B004
+**Details**: B004 #402 残り展開単位の Stage 3.6 を開始した。文書リンク、全体テスト、Amadeus Validator の結果を記録する。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T13:25:59Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+**Bolt**: B004
+**Details**: `npm run test:all` と Amadeus Validator が pass した。autonomous 実行のため会話内 gate は提示せず、approval evidence は B004 PR merge 後に記録する。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T13:28:58Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Unit**: U004-issue-402-remaining-skill-rollout-units
+**Details**: B004 #402 残り展開単位。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/413。Merge commit: b7475080143946e0ba634d119a4b5a308f7d669b。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T13:28:58Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Bolt**: B004
+**Details**: B004 #402 残り展開単位。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/413。Merge commit: b7475080143946e0ba634d119a4b5a308f7d669b。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T13:28:58Z
+**Event**: BOLT_COMPLETED
+**Bolt**: B004
+**Details**: autonomous の Bolt PR が人間の merge で承認された。Bolt ref: B004-issue-402-remaining-skill-rollout-units。PR: https://github.com/amadeus-dlc/amadeus/pull/413。Merge commit: b7475080143946e0ba634d119a4b5a308f7d669b。Issue #402 は 2026-07-03T13:28:59Z に close 済み。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T13:31:40Z
+**Event**: STAGE_SKIPPED
+**Stage**: ci-pipeline
+**Details**: 既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行している。Issue #399 の子 Issue 完了追跡には CI の新設または大きな変更が不要なため、Stage 3.7 を skip した。
+
+---
+
+## QUESTION_ANSWERED
+**Timestamp**: 2026-07-03T13:59:22Z
+**Event**: QUESTION_ANSWERED
+**Question**: Issue #399 の完了境界は、直接子 Issue の完了だけでよいか。
+**Details**: User Input: intentが閉じられようとしていますが、SKILL.mdが英語化されていませんよね。全面的に英語化されるはずなのですが、。回答として、#399 は Amadeus 系 `SKILL.md` の全面英語化完了まで閉じない境界へ補正する。
+
+---
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T14:42:41Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Unit**: U006-core-entrypoints-verification-englishization
+**Details**: B006 Core entrypoints and verification（`amadeus`、`amadeus-steering`、`amadeus-validator`）の英語化を開始した。人間指示（PR #417 のリカバリ依頼）により、B006〜B009 の英語化を単一リカバリ PR で実行する。#391〜#394 の意味差分対応（B005）は本 PR に含めず open のままとする。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T14:48:56Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Unit**: U007-construction-stage-skills-englishization
+**Details**: B007 Construction stage skills（nfr-requirements、nfr-design、infrastructure-design、code-generation、build-and-test、ci-pipeline）の英語化を開始した。単一リカバリ PR での統合実行のため、B006 の Build and Test 記録と並行する。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T14:52:42Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Unit**: U008-inception-stage-skills-englishization
+**Details**: B008 Inception stage skills（reverse-engineering、practices-discovery、requirements-analysis、user-stories、refined-mockups、application-design、units-generation、delivery-planning）の英語化を開始した。単一リカバリ PR での統合実行のため、B006〜B007 の Build and Test 記録と並行する。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T14:55:08Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Unit**: U009-ideation-supporting-skills-englishization
+**Details**: B009 Ideation stage skills（7 件）と Supporting analysis and review skills（grilling、domain-grilling、domain-modeling、event-storming、decision-review、history-review、learning-review）の英語化を開始した。単一リカバリ PR での統合実行のため、B006〜B008 の記録と並行する。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T15:05:08Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Bolt**: B006
+**Details**: B006 Core entrypoints and verification 英語化の Stage 3.6 を開始した。B006〜B009 の全体テストは単一リカバリ PR の統合実行として 1 回実施し、各 Bolt record から参照する。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T15:05:08Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Bolt**: B007
+**Details**: B007 Construction stage skills 英語化の Stage 3.6 を開始した。全体テストは B006〜B009 の統合実行として記録する。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T15:05:08Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Bolt**: B008
+**Details**: B008 Inception stage skills 英語化の Stage 3.6 を開始した。全体テストは B006〜B009 の統合実行として記録する。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T15:05:08Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Bolt**: B009
+**Details**: B009 Ideation and supporting skills 英語化の Stage 3.6 を開始した。全体テストは B006〜B009 の統合実行として記録する。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T15:07:20Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+**Bolt**: B006
+**Details**: `npm run test:all`、`test:it:amadeus-templates`、`test:it:promote-skill`、Amadeus Validator、`git diff --check` が pass した（B006〜B009 統合実行）。autonomous 実行のため会話内 gate は提示せず、approval evidence は PR #417 merge 後に記録する。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T15:07:20Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+**Bolt**: B007
+**Details**: `npm run test:all`、`test:it:amadeus-templates`、`test:it:promote-skill`、Amadeus Validator、`git diff --check` が pass した（B006〜B009 統合実行）。autonomous 実行のため会話内 gate は提示せず、approval evidence は PR #417 merge 後に記録する。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T15:07:20Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+**Bolt**: B008
+**Details**: `npm run test:all`、`test:it:amadeus-templates`、`test:it:promote-skill`、Amadeus Validator、`git diff --check` が pass した（B006〜B009 統合実行）。autonomous 実行のため会話内 gate は提示せず、approval evidence は PR #417 merge 後に記録する。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T15:07:20Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+**Bolt**: B009
+**Details**: `npm run test:all`、`test:it:amadeus-templates`、`test:it:promote-skill`、Amadeus Validator、`git diff --check` が pass した（B006〜B009 統合実行）。autonomous 実行のため会話内 gate は提示せず、approval evidence は PR #417 merge 後に記録する。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T15:15:13Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Unit**: U006-core-entrypoints-verification-englishization
+**Details**: B006 Core entrypoints and verification 英語化。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/417。Merge commit: 6ef9f349a6f6ce8cd1c23a04dd74f952989b4fcc。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T15:15:13Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Bolt**: B006
+**Details**: B006 Core entrypoints and verification 英語化。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/417。Merge commit: 6ef9f349a6f6ce8cd1c23a04dd74f952989b4fcc。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T15:15:13Z
+**Event**: BOLT_COMPLETED
+**Bolt**: B006
+**Details**: autonomous の Bolt PR が人間の merge で承認された。Bolt ref: B006-core-entrypoints-verification-englishization。PR: https://github.com/amadeus-dlc/amadeus/pull/417。Merge commit: 6ef9f349a6f6ce8cd1c23a04dd74f952989b4fcc。B006〜B009 は人間指示により単一リカバリ PR で統合実行した（CD007）。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T15:15:13Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Unit**: U007-construction-stage-skills-englishization
+**Details**: B007 Construction stage skills 英語化。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/417。Merge commit: 6ef9f349a6f6ce8cd1c23a04dd74f952989b4fcc。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T15:15:13Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Bolt**: B007
+**Details**: B007 Construction stage skills 英語化。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/417。Merge commit: 6ef9f349a6f6ce8cd1c23a04dd74f952989b4fcc。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T15:15:13Z
+**Event**: BOLT_COMPLETED
+**Bolt**: B007
+**Details**: autonomous の Bolt PR が人間の merge で承認された。Bolt ref: B007-construction-stage-skills-englishization。PR: https://github.com/amadeus-dlc/amadeus/pull/417。Merge commit: 6ef9f349a6f6ce8cd1c23a04dd74f952989b4fcc。B006〜B009 は人間指示により単一リカバリ PR で統合実行した（CD007）。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T15:15:13Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Unit**: U008-inception-stage-skills-englishization
+**Details**: B008 Inception stage skills 英語化。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/417。Merge commit: 6ef9f349a6f6ce8cd1c23a04dd74f952989b4fcc。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T15:15:13Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Bolt**: B008
+**Details**: B008 Inception stage skills 英語化。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/417。Merge commit: 6ef9f349a6f6ce8cd1c23a04dd74f952989b4fcc。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T15:15:13Z
+**Event**: BOLT_COMPLETED
+**Bolt**: B008
+**Details**: autonomous の Bolt PR が人間の merge で承認された。Bolt ref: B008-inception-stage-skills-englishization。PR: https://github.com/amadeus-dlc/amadeus/pull/417。Merge commit: 6ef9f349a6f6ce8cd1c23a04dd74f952989b4fcc。B006〜B009 は人間指示により単一リカバリ PR で統合実行した（CD007）。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T15:15:13Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Unit**: U009-ideation-supporting-skills-englishization
+**Details**: B009 Ideation and supporting skills 英語化。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/417。Merge commit: 6ef9f349a6f6ce8cd1c23a04dd74f952989b4fcc。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T15:15:13Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Bolt**: B009
+**Details**: B009 Ideation and supporting skills 英語化。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/417。Merge commit: 6ef9f349a6f6ce8cd1c23a04dd74f952989b4fcc。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T15:15:13Z
+**Event**: BOLT_COMPLETED
+**Bolt**: B009
+**Details**: autonomous の Bolt PR が人間の merge で承認された。Bolt ref: B009-ideation-supporting-skills-englishization。PR: https://github.com/amadeus-dlc/amadeus/pull/417。Merge commit: 6ef9f349a6f6ce8cd1c23a04dd74f952989b4fcc。B006〜B009 は人間指示により単一リカバリ PR で統合実行した（CD007）。
+
+---
+
+## BOLT_STARTED
+**Timestamp**: 2026-07-03T15:24:37Z
+**Event**: BOLT_STARTED
+**Bolt**: B005
+**Details**: B005 #391〜#394 AI-DLC v2 differences を開始した。walking skeleton ではない。対応順序は docs/amadeus/aidlc-v2-difference-response-plan.md に従い、#391、#393、#392、#394 の順に Issue ごとの個別 PR で対応する。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T15:24:37Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Unit**: U005-issue-391-394-aidlc-v2-differences
+**Details**: #391 reviewer 指定の対応から着手する。本家 pinned commit d341522e1491db4884e9127004c3882365229218 の stage 定義から reviewer 指定を抽出し、Amadeus DLC 側の写像を明文化する。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T15:58:32Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Unit**: U005-issue-391-394-aidlc-v2-differences
+**Details**: #391（PR #419）、#393（PR #420）、#392（PR #421）は merge 済みで、#394 の判断記録を作成し Code Generation の作業を完了した。autonomous 実行のため会話内 gate は提示せず、approval evidence は #394 PR merge 後に記録する。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T15:58:32Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Bolt**: B005
+**Details**: B005 #391〜#394 AI-DLC v2 differences の Stage 3.6 を開始した。U005 の code-generation は作業完了・承認待ち（`[?]`）であり、承認は Bolt PR merge で確定する（autonomous mode）。全体テスト、Amadeus Validator、文書リンクの結果を記録する。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T15:59:58Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+**Bolt**: B005
+**Details**: `npm run test:all`、Amadeus Validator、`git diff --check` が pass した（#394 PR。#391〜#393 は各 PR で検証済み）。autonomous 実行のため会話内 gate は提示せず、approval evidence は #394 PR merge 後に記録する。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T16:11:58Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Unit**: U005-issue-391-394-aidlc-v2-differences
+**Details**: B005 #391〜#394 AI-DLC v2 differences。#394 PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/422。Merge commit: b069da46。#391 は PR #419（24b6a505）、#393 は PR #420（d8c2609f）、#392 は PR #421（84f40dd1）で merge 済み。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T16:11:58Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Bolt**: B005
+**Details**: B005 #391〜#394 AI-DLC v2 differences。#394 PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/422。Merge commit: b069da46。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T16:11:58Z
+**Event**: BOLT_COMPLETED
+**Bolt**: B005
+**Details**: autonomous の Bolt PR が人間の merge で承認された。Bolt ref: B005-issue-391-394-aidlc-v2-differences。PR: https://github.com/amadeus-dlc/amadeus/pull/419、#420、#421、#422（Issue ごとの個別 PR）。最終 merge commit: b069da46。Issue #391、#392、#393、#394 はすべて close 済み。
+
+---
+
+## BOLT_STARTED
+**Timestamp**: 2026-07-03T16:11:58Z
+**Event**: BOLT_STARTED
+**Bolt**: B010
+**Details**: B010 #399 final verification を開始した。walking skeleton ではない。Amadeus 系 SKILL.md の全面英語化、昇格先同期、検証結果、Issue #399 の完了条件を確認する。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T16:11:58Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Unit**: U010-issue-399-final-verification
+**Details**: #399 の完了条件（B001〜B009 の完了証拠、全面英語化の残存日本語検査、source と昇格先の同期、全体検証）を新しい証拠で確認し、最終 traceability を確定する。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T16:15:26Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Unit**: U010-issue-399-final-verification
+**Details**: #399 の完了条件を新しい証拠で確認し、最終検証の記録を作成した。autonomous 実行のため会話内 gate は提示せず、approval evidence は B010 PR merge 後に記録する。
+
+---
+
+## STAGE_STARTED
+**Timestamp**: 2026-07-03T16:15:26Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Bolt**: B010
+**Details**: B010 #399 final verification の Stage 3.6 を開始した。U010 の code-generation は作業完了・承認待ち（`[?]`）であり、承認は Bolt PR merge で確定する（autonomous mode）。
+
+---
+
+## STAGE_AWAITING_APPROVAL
+**Timestamp**: 2026-07-03T16:15:26Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+**Bolt**: B010
+**Details**: `npm run test:all`、`npm run validate:all`、Amadeus Validator、`git diff --check`、日本語残存 grep、昇格先同期 diff が pass した。autonomous 実行のため会話内 gate は提示せず、approval evidence は B010 PR merge 後に記録する。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T16:18:49Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Unit**: U010-issue-399-final-verification
+**Details**: B010 #399 final verification。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/423。Merge commit: d9b2e9dd。
+
+---
+
+## STAGE_COMPLETED
+**Timestamp**: 2026-07-03T16:18:49Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Bolt**: B010
+**Details**: B010 #399 final verification。Bolt PR merge により完了確定した。PR: https://github.com/amadeus-dlc/amadeus/pull/423。Merge commit: d9b2e9dd。
+
+---
+
+## BOLT_COMPLETED
+**Timestamp**: 2026-07-03T16:18:49Z
+**Event**: BOLT_COMPLETED
+**Bolt**: B010
+**Details**: autonomous の Bolt PR が人間の merge で承認された。Bolt ref: B010-issue-399-final-verification。PR: https://github.com/amadeus-dlc/amadeus/pull/423。Merge commit: d9b2e9dd。Issue #399 は merge により close された。全 Bolt（B001〜B010）が完了した。
+
+---
+
+## STAGE_SKIPPED
+**Timestamp**: 2026-07-03T16:18:49Z
+**Event**: STAGE_SKIPPED
+**Stage**: ci-pipeline
+**Details**: 全 Unit の ci-pipeline は SKIP 済みであり、Intent レベルの Stage 3.7 も追加の CI 新設または大きな変更を伴わないため skip を確定した。既存の GitHub Actions が pull_request と main push で `npm run test:all` を実行している。
+
+---
+
+## PHASE_VERIFIED
+**Timestamp**: 2026-07-03T16:25:15Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: Construction
+**Pass/fail**: pass
+**Details**: Construction phase PR: https://github.com/amadeus-dlc/amadeus/pull/424。Merge commit: e7ca5a60。decisions は construction/decisions.md（CD001〜CD012）、traceability は construction/traceability.md で確定。
+
+---
+
+## PHASE_SKIPPED
+**Timestamp**: 2026-07-03T16:25:15Z
+**Event**: PHASE_SKIPPED
+**Phase**: Operation
+**Reason**: out of Amadeus scope（Operation は record の scaffold だけを持ち、実行対象にしない。理由は docs/amadeus/aidlc-v2-operation-phase-boundary.md に従う）
+
+---
+
+## WORKFLOW_COMPLETED
+**Timestamp**: 2026-07-03T16:25:15Z
+**Event**: WORKFLOW_COMPLETED
+**Scope**: feature
+**Details**: R001〜R006 成立。Issue #399 は PR #423 の merge で close 済み。B001〜B010 の全 Bolt が完了し、Amadeus 系 SKILL.md の全面英語化（source 32 + 昇格先 32、許容リテラルのみ残存）と AI-DLC v2 意味差分 4 件（#391〜#394）の判断記録を確定した。
+
+---
+
+<!-- relocation-note: 本 record は Issue #526 の全面 rename により aidlc/spaces/... から amadeus/spaces/... へ git mv で移設された（2026-07-06T04:51:30Z）。状態ファイルは aidlc-state.md から amadeus-state.md へ、内部マーカーは .aidlc-* から .amadeus-* へ改名。これ以前のイベント本文中の旧 path 言及は移設前の歴史的記録であり遡及編集しない。 -->

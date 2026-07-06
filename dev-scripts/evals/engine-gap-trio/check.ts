@@ -76,7 +76,7 @@ function birthIntent(workspace: string, label: string): string {
     workspace
   );
   if (res.exitCode !== 0) throw new Error(`intent-birth failed: ${res.stderr}\n${res.stdout}`);
-  const intentsRoot = join(workspace, "aidlc/spaces/default/intents");
+  const intentsRoot = join(workspace, "amadeus/spaces/default/intents");
   const dirName = readdirSync(intentsRoot, { withFileTypes: true })
     .filter((e) => e.isDirectory())
     .map((e) => e.name)[0];
@@ -85,7 +85,7 @@ function birthIntent(workspace: string, label: string): string {
 }
 
 function recordDirPath(workspace: string, dirName: string): string {
-  return join(workspace, "aidlc/spaces/default/intents", dirName);
+  return join(workspace, "amadeus/spaces/default/intents", dirName);
 }
 
 function mainShard(workspace: string, dirName: string): { name: string; path: string } {
@@ -102,7 +102,7 @@ function mainShard(workspace: string, dirName: string): { name: string; path: st
     const dirName = birthIntent(ws, "gap-one");
     const shard = mainShard(ws, dirName);
     const slug = "gap-one-bolt";
-    const relRecord = `aidlc/spaces/default/intents/${dirName}`;
+    const relRecord = `amadeus/spaces/default/intents/${dirName}`;
     const wtAudit = join(ws, ".aidlc/worktrees", `bolt-${slug}`, relRecord, "audit");
     mkdirSync(wtAudit, { recursive: true });
     // phase PR で commit 済みの checkout を再現: main shard の prefix を worktree へ置く
@@ -173,7 +173,7 @@ function mainShard(workspace: string, dirName: string): { name: string; path: st
     );
     // audit-merge は AUDIT_FORKED の Bolt slug を完全一致で相関するため、
     // 大文字入力でも記録は正準形（小文字）でなければならない
-    const relRecord2 = `aidlc/spaces/default/intents/${dirName}`;
+    const relRecord2 = `amadeus/spaces/default/intents/${dirName}`;
     const wtAudit2 = join(ws, ".aidlc/worktrees", "bolt-u002-mixed-case", relRecord2, "audit");
     mkdirSync(wtAudit2, { recursive: true });
     const forked = run(["bun", auditTool, "audit-fork", "--slug", "U002-Mixed-Case"], ws);
@@ -195,7 +195,7 @@ function mainShard(workspace: string, dirName: string): { name: string; path: st
   try {
     const dirName = birthIntent(ws, "gap-three");
     const rec = recordDirPath(ws, dirName);
-    const statePath = join(rec, "aidlc-state.md");
+    const statePath = join(rec, "amadeus-state.md");
     let state = readFileSync(statePath, "utf-8");
     state = state.replace("Per unit: [TBD]", "Per unit: unit-alpha\nPer unit: unit-beta");
     state = state.replace(/^- \[.\] code-generation — EXECUTE$/m, "- [x] code-generation — EXECUTE");

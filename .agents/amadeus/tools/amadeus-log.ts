@@ -21,9 +21,9 @@ import {
 // --intent/--space, so it relies on default intent resolution. On a fresh shell
 // (pre-birth) or a >1-intent workspace with no active-intent cursor, that
 // resolution yields null and stateFilePath()/auditFilePath() collapse to the
-// BARE space record root (aidlc/spaces/<space>/intents/). Emitting there would
+// BARE space record root (amadeus/spaces/<space>/intents/). Emitting there would
 // drop an audit shard DIRECTLY into the bare intents root and break the "no
-// aidlc-state.md / no audit/ ever lives directly in the bare intents root"
+// amadeus-state.md / no audit/ ever lives directly in the bare intents root"
 // invariant (amadeus-lib.ts). Existence of the resolved state file is the same
 // "is there an active workflow" signal every other emitter guards on — the
 // hooks via `if (!existsSync(stateFilePath(...)))` no-op, emitError() via the

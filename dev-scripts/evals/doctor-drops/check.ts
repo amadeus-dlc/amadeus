@@ -2,7 +2,7 @@
 
 // doctor-drops eval（Issue #432）。
 //
-// doctor が .aidlc-hooks-health/*.drops を読んで hook の静かな失敗を表面化する
+// doctor が .amadeus-hooks-health/*.drops を読んで hook の静かな失敗を表面化する
 // ことを、隔離 temp workspace で実 CLI を駆動して検証する。LLM を呼ばず、
 // 本番 aidlc/ を変更しない。成功時・失敗時ともに temp workspace を片付ける。
 //
@@ -50,7 +50,7 @@ function makeWorkspace(): string {
   }
   // doctor の workspace-shell 検査対象（memory）と settings.json を用意し、
   // drops 以外の検査が pass する素の状態を作る（exit code の検査を意味あるものにする）
-  mkdirSync(join(workspace, "aidlc/spaces/default/memory"), { recursive: true });
+  mkdirSync(join(workspace, "amadeus/spaces/default/memory"), { recursive: true });
   cpSync(join(root, ".claude/settings.json"), join(workspace, ".claude/settings.json"));
   return workspace;
 }
@@ -73,7 +73,7 @@ function runDoctor(cwd: string) {
 {
   const ws = makeWorkspace();
   try {
-    const health = join(ws, "aidlc/spaces/default/intents/.aidlc-hooks-health");
+    const health = join(ws, "amadeus/spaces/default/intents/.amadeus-hooks-health");
     mkdirSync(health, { recursive: true });
     writeFileSync(join(health, "amadeus-stop.last"), "2026-07-05T09:00:00Z\n", "utf-8");
     const r = runDoctor(ws);
@@ -88,7 +88,7 @@ function runDoctor(cwd: string) {
 {
   const ws = makeWorkspace();
   try {
-    const health = join(ws, "aidlc/spaces/default/intents/.aidlc-hooks-health");
+    const health = join(ws, "amadeus/spaces/default/intents/.amadeus-hooks-health");
     mkdirSync(health, { recursive: true });
     writeFileSync(join(health, "amadeus-stop.last"), "2026-07-05T09:00:00Z\n", "utf-8");
     // 3 行: 正常 2 行 + 解釈不能 1 行（最新の解釈可能行 = sensor timeout の行）

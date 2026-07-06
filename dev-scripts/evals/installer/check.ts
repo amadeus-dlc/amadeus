@@ -18,7 +18,7 @@
 // content), FR-2.9 (non-destructive aborts on symlink-position conflicts and
 // unparseable settings.json), FR-2.10 (the 3 pre-check patterns), FR-2.11
 // (non-target skills left byte-identical), FR-2.12 (smoke false-positive
-// regression), FR-2.13 (aidlc/ untouchable), FR-4.1 (Codex `.agents/`
+// regression), FR-2.13 (amadeus/ untouchable), FR-4.1 (Codex `.agents/`
 // completeness), FR-3.1 (README documents the installer).
 
 import {
@@ -208,20 +208,20 @@ for (const prefix of MANIFEST.amadeusMd.removeBlocks) {
 }
 
 // ---------------------------------------------------------------------------
-// Temp workspace — a fresh install target. aidlc/spaces/default/memory/ is
+// Temp workspace — a fresh install target. amadeus/spaces/default/memory/ is
 // pre-seeded (simulating an already-shipped workspace shell) because the
-// installer deliberately never touches aidlc/ (BR-1) and doctor's
+// installer deliberately never touches amadeus/ (BR-1) and doctor's
 // "workspace shell ready" check requires that dir to pre-exist.
 // ---------------------------------------------------------------------------
 
-// FR-2.13 marker — content the installer must never touch (aidlc/ untouchable).
-const AIDLC_MARKER_CONTENT = "# pre-existing aidlc/ record\nmust survive install untouched\n";
+// FR-2.13 marker — content the installer must never touch (amadeus/ untouchable).
+const AIDLC_MARKER_CONTENT = "# pre-existing amadeus/ record\nmust survive install untouched\n";
 
 function makeWorkspace(): string {
   const ws = mkdtempSync(join(tmpdir(), "amadeus-installer-eval-"));
-  mkdirSync(join(ws, "aidlc/spaces/default/memory"), { recursive: true });
-  writeFileSync(join(ws, "aidlc/spaces/default/memory/org.md"), "# org\n", "utf-8");
-  writeFileSync(join(ws, "aidlc/spaces/default/memory/marker.md"), AIDLC_MARKER_CONTENT, "utf-8");
+  mkdirSync(join(ws, "amadeus/spaces/default/memory"), { recursive: true });
+  writeFileSync(join(ws, "amadeus/spaces/default/memory/org.md"), "# org\n", "utf-8");
+  writeFileSync(join(ws, "amadeus/spaces/default/memory/marker.md"), AIDLC_MARKER_CONTENT, "utf-8");
   return ws;
 }
 
@@ -304,8 +304,8 @@ function countHookCommands(settingsPath: string): number {
 
 const ws = makeWorkspace();
 // FR-2.13 snapshot — taken before any install runs.
-const aidlcMarkerPath = join(ws, "aidlc/spaces/default/memory/marker.md");
-const aidlcOrgPath = join(ws, "aidlc/spaces/default/memory/org.md");
+const aidlcMarkerPath = join(ws, "amadeus/spaces/default/memory/marker.md");
+const aidlcOrgPath = join(ws, "amadeus/spaces/default/memory/org.md");
 const aidlcMarkerBeforeMtime = statSync(aidlcMarkerPath).mtimeMs;
 const aidlcOrgBeforeMtime = statSync(aidlcOrgPath).mtimeMs;
 try {
@@ -403,11 +403,11 @@ try {
 
   // ---- FR-2.13 — aidlc/ untouchable across both installs ----
   ok(
-    "FR-2.13 aidlc/ marker file byte-identical after two installs",
+    "FR-2.13 amadeus/ marker file byte-identical after two installs",
     existsSync(aidlcMarkerPath) && readFileSync(aidlcMarkerPath, "utf-8") === AIDLC_MARKER_CONTENT
   );
   ok(
-    "FR-2.13 aidlc/ marker file mtime unchanged after two installs",
+    "FR-2.13 amadeus/ marker file mtime unchanged after two installs",
     existsSync(aidlcMarkerPath) && statSync(aidlcMarkerPath).mtimeMs === aidlcMarkerBeforeMtime
   );
   ok(

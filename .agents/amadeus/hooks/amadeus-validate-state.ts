@@ -4,7 +4,7 @@
 // of compaction — fired at the real compaction moment, with full state-file
 // context available.
 //
-// Also writes aidlc-docs/.aidlc-recovery.md as a breadcrumb for the orchestrator
+// Also writes aidlc-docs/.amadeus-recovery.md as a breadcrumb for the orchestrator
 // to detect compaction-related state corruption on the next turn.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -39,7 +39,7 @@ if (!content.includes("## Stage Progress")) missing.push("Stage Progress");
 if (!content.includes("## Current Status")) missing.push("Current Status");
 
 if (missing.length > 0) {
-  console.error(`WARNING: aidlc-state.md missing sections: ${missing.join(", ")}`);
+  console.error(`WARNING: amadeus-state.md missing sections: ${missing.join(", ")}`);
 }
 
 const stateStatus = missing.length > 0

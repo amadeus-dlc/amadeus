@@ -76,7 +76,7 @@ Read all design artifacts for the current unit:
 - Story map from `<record>/inception/units-generation/unit-of-work-story-map.md` (if exists)
 - Requirements from `<record>/inception/requirements-analysis/requirements.md` (if exists)
 
-Incremental scopes (bugfix, poc, refactor, security-patch) skip units-generation and application-design by design; when those inputs are absent, scope the work from the requirements and, on brownfield, the reverse-engineered code knowledge base at `aidlc/spaces/<active-space>/codekb/<repo>/` — never invent the content of a missing artifact.
+Incremental scopes (bugfix, poc, refactor, security-patch) skip units-generation and application-design by design; when those inputs are absent, scope the work from the requirements and, on brownfield, the reverse-engineered code knowledge base at `amadeus/spaces/<active-space>/codekb/<repo>/` — never invent the content of a missing artifact.
 
 ### Step 2: PART 1 — Planning
 
@@ -146,7 +146,7 @@ Include in the delegation prompt:
 - Design artifacts for the CURRENT UNIT ONLY (not all units)
 - A 1-2 line summary of each inception-phase artifact with its file path (requirements summary, stories summary, app design summary) — the subagent can Read specific files if it needs full content
 - The approved code-generation-plan.md (full content)
-- Project workspace details (languages, frameworks, conventions from aidlc-state.md)
+- Project workspace details (languages, frameworks, conventions from amadeus-state.md)
 - Instructions to execute each plan step sequentially and mark checkboxes as completed
 
 The subagent generates all code, test files, and configuration artifacts in the workspace.
@@ -161,7 +161,7 @@ After subagent completes, create `<record>/construction/{unit-name}/code-generat
 
 ### Step 6: Update State
 
-Update `<record>/aidlc-state.md`: mark Code Generation for {unit-name} as `[x]` completed and update "Current Status".
+Update `<record>/amadeus-state.md`: mark Code Generation for {unit-name} as `[x]` completed and update "Current Status".
 
 ### Step 7: Completion
 
@@ -193,7 +193,7 @@ The imported sensors check the code outputs:
 - **`linter`** wraps the project's configured linter (eslint by default).
   Fires on every Write/Edit matching its `matches: "**/*.{ts,js}"` filter.
   Failure mode: lint violations land as `SENSOR_FAILED` audit rows with
-  detail at `<record>/.aidlc-sensors/code-generation/linter-<iso>.md`.
+  detail at `<record>/.amadeus-sensors/code-generation/linter-<iso>.md`.
 - **`type-check`** wraps the project's configured type-checker (tsc by
   default). Fires on `**/*.{ts,tsx}`. Failure mode: type errors emit
   `SENSOR_FAILED` with similar detail.

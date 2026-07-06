@@ -109,7 +109,7 @@ options:
     description: Present an approval gate after each Bolt (or parallel batch).
 ```
 
-- Record the answer in `aidlc-state.md` as `Construction Autonomy Mode: autonomous` or `Construction Autonomy Mode: gated`.
+- Record the answer in `amadeus-state.md` as `Construction Autonomy Mode: autonomous` or `Construction Autonomy Mode: gated`.
 - Emit `AUTONOMY_MODE_SET` audit event with the chosen mode.
 - Session resume: if `Construction Autonomy Mode: unset` but the walking skeleton is already `[x]` complete, re-fire the ladder prompt before executing the next Bolt.
 
@@ -237,7 +237,7 @@ For multi-select questions (where user may choose more than one option), add "(s
 
 Stage files list **topic areas and example questions** — they are guidance, not a script. The agent determines what to actually ask based on three factors:
 
-1. **Depth level** (from `aidlc-state.md` → `**Depth**`) — sets the expected question volume
+1. **Depth level** (from `amadeus-state.md` → `**Depth**`) — sets the expected question volume
 2. **Project context** — what's already known from prior stages, codebase analysis, and the user's description
 3. **Phase progression** — Questions naturally decrease as the lifecycle advances:
    - **Ideation**: Most questions. Business/strategic focus ("why?", "for whom?", "what market?")
@@ -436,7 +436,7 @@ State and audit updates use the CLI tools in `.claude/tools/`. These tools handl
 
 **CWD drift warning**: If a stage runs `cd` in Bash (e.g., `cd todo-app/server && npm install`), subsequent `bun .claude/tools/...` calls using relative paths will fail with "Module not found". Always use absolute paths to the tools directory for tool calls (on Claude Code, `$CLAUDE_PROJECT_DIR/.claude/tools/`), or run `cd` commands in subshells: `(cd subdir && npm install)`.
 
-**Checkpoint updates** (aidlc-state.md):
+**Checkpoint updates** (amadeus-state.md):
 ```bash
 # Stage-start state sync is automatic — the PostToolUse hook on TaskUpdate
 # parses [slug] from activeForm and calls set-status internally.
@@ -446,7 +446,7 @@ State and audit updates use the CLI tools in `.claude/tools/`. These tools handl
 bun .claude/tools/amadeus-state.ts checkbox "SLUG=completed"
 ```
 
-**Field updates** (aidlc-state.md) — the tool writes fields in `- **Field Name**: value` format:
+**Field updates** (amadeus-state.md) — the tool writes fields in `- **Field Name**: value` format:
 ```bash
 bun .claude/tools/amadeus-state.ts set "Current Stage=STAGE_NAME" "Lifecycle Phase=PHASE" "Status=In Progress" "Last Updated=NOW" "Active Agent=AGENT_NAME" "In Progress=STAGE_NAME"
 ```
@@ -492,7 +492,7 @@ bun .claude/tools/amadeus-state.ts lookup validate-stage SLUG     # → JSON wit
 ### MANDATORY: Plan-Level Checkbox Enforcement
 NEVER complete any work without updating plan checkboxes. Update IMMEDIATELY after completing each step. Two-level tracking:
 - **Plan-level checkboxes**: Track individual work items within a stage (e.g., each user story, each component design)
-- **aidlc-state.md stage checkboxes**: Track stage-level completion
+- **amadeus-state.md stage checkboxes**: Track stage-level completion
 
 Both levels MUST stay in sync. NO EXCEPTIONS. If a step is done, its checkbox is checked. If a checkbox is checked, the step MUST be done.
 
@@ -744,7 +744,7 @@ Before creating any artifact file, validate:
 
 ### Template overrides
 Before writing artifact `X` (keyed by the output filename stem — artifact `X` writes to `X.md`), resolve its template in this order, override-before-default, first hit wins:
-1. **team template** — `aidlc/spaces/<space>/memory/templates/X.md` (the active space's hand-authored override);
+1. **team template** — `amadeus/spaces/<space>/memory/templates/X.md` (the active space's hand-authored override);
 2. **framework default** — the engine-shipped default `X.md` *if one ships* (none ship at GA, so this normally misses);
 3. **else** — no template: follow the stage's existing prose.
 
@@ -831,7 +831,7 @@ When a subagent completes its work, it MUST return a structured summary to the o
 To prevent context overflow in subagent calls:
 - **Current-unit only**: Pass only the design artifacts for the unit being implemented, not all units
 - **Summarize inception artifacts**: For CONSTRUCTION subagents, provide a 1-2 line summary of each inception artifact with its file path, rather than embedding full content. The subagent can Read specific files if needed.
-- **Always include**: Agent persona (agent.md), knowledge files, aidlc-state.md, and the specific task instructions
+- **Always include**: Agent persona (agent.md), knowledge files, amadeus-state.md, and the specific task instructions
 - **Cap knowledge files**: If an agent has more than 3 knowledge files (including user-added custom files), include only the most relevant 3 and list the others by path
 
 ### Subagent failure recovery
@@ -899,7 +899,7 @@ The ritual is **tool-as-actor**: a deterministic tool (`amadeus-learnings.ts`) d
 
 **The harness IS mutable.** A confirmed learning IS a practice — it writes to one of two surfaces:
 
-- `aidlc/spaces/<space>/memory/project.md` (default) or `aidlc/spaces/<space>/memory/team.md` — appended as a practice line under the fitting topical heading (e.g. `## Corrections`, `## Testing Posture`, `## Forbidden`), one click to widen a candidate from project to team. These are the SAME method files the resolver reads; there is no parallel `*-learnings.md` surface, no fractional override tier, and no org tier (no widen-to-org path). History of what was learned lives in the audit shards + the per-stage diary, not a rolling dated file.
+- `amadeus/spaces/<space>/memory/project.md` (default) or `amadeus/spaces/<space>/memory/team.md` — appended as a practice line under the fitting topical heading (e.g. `## Corrections`, `## Testing Posture`, `## Forbidden`), one click to widen a candidate from project to team. These are the SAME method files the resolver reads; there is no parallel `*-learnings.md` surface, no fractional override tier, and no org tier (no widen-to-org path). History of what was learned lives in the audit shards + the per-stage diary, not a rolling dated file.
 - `.claude/sensors/amadeus-<id>.md` — for verification checks. A project-tier manifest with a `matches:` capability glob, bound to the originating stage by appending its id to that stage's `sensors:` frontmatter list.
 
 Next time the stage runs, the resolved rules and the bound sensor load automatically at compile — the stage runs better without anyone having edited the stage file's body.

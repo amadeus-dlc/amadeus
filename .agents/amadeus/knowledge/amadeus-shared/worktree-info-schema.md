@@ -39,7 +39,7 @@ Field semantics:
 - **`path`** — absolute filesystem path of the per-Bolt worktree at `<projectDir>/.aidlc/worktrees/bolt-<slug>`, parsed from the most-recent matching `WORKTREE_CREATED`'s `**Worktree path**:` field. The user `cd`s here to inspect a paused Bolt.
 - **`branch_name`** — git branch name on which the worktree sits at `bolt-<slug>`, parsed from `**Branch name**:`. Quoted from audit for source-of-truth consistency.
 - **`audit_timestamp`** — ISO 8601 timestamp of the matching `WORKTREE_CREATED` block. Useful for the orchestrator to reason about freshness; not currently surfaced in the AUQ prompt.
-- **`merge_held`** — boolean reflecting the `Merge-Held` field in the per-Bolt forked state at `<path>/aidlc-docs/aidlc-state.md` (`true` only if the file exists AND the field reads `true`; absence resolves to `false`). The orchestrator reads this on resume to decide whether dispatching `amadeus-bolt complete --merge --slug <slug>` is safe. The held state is set by `amadeus-bolt hold-merge --slug <slug>` before a multi-failure halt-and-ask sequence opens and cleared by `amadeus-bolt release-merge --slug <slug>` once all sibling AUQs resolve.
+- **`merge_held`** — boolean reflecting the `Merge-Held` field in the per-Bolt forked state at `<path>/aidlc-docs/amadeus-state.md` (`true` only if the file exists AND the field reads `true`; absence resolves to `false`). The orchestrator reads this on resume to decide whether dispatching `amadeus-bolt complete --merge --slug <slug>` is safe. The held state is set by `amadeus-bolt hold-merge --slug <slug>` before a multi-failure halt-and-ask sequence opens and cleared by `amadeus-bolt release-merge --slug <slug>` once all sibling AUQs resolve.
 
 ## Most-recent semantics
 
@@ -75,6 +75,6 @@ This fallback is **not currently implemented** — current shipping behaviour as
 
 - Implementation: `.claude/tools/amadeus-worktree.ts` (`handleInfo` handler)
 - Test: `tests/unit/t72-worktree-info.sh`
-- Caller: `.claude/skills/aidlc/SKILL.md` (per-Bolt-loop halt-and-ask flow)
+- Caller: `.claude/skills/amadeus/SKILL.md` (per-Bolt-loop halt-and-ask flow)
 - Audit emitter that produces the `WORKTREE_CREATED` entries `info` reads: `amadeus-worktree.ts` `handleCreate` (also in this file at `~line 154`)
 - Audit-format spec: `.claude/knowledge/amadeus-shared/audit-format.md` `WORKTREE_CREATED` row

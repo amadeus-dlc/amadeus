@@ -38,7 +38,7 @@ Echoes Fowler's "Eslint, Semgrep" examples from the harness-engineering article.
 ## Failure mode
 
 Emits `SENSOR_FAILED` and writes detail to
-`aidlc-docs/.aidlc-sensors/<stage-slug>/linter-<fire-id>.md` (Fire id is the 8-hex correlator from the SENSOR_FIRED audit row) containing the
+`aidlc-docs/.amadeus-sensors/<stage-slug>/linter-<fire-id>.md` (Fire id is the 8-hex correlator from the SENSOR_FIRED audit row) containing the
 linter's structured output (file, line, rule, message per violation).
 
 ## v0.6.0 carry-forward

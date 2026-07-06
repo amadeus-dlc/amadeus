@@ -36,7 +36,7 @@ MANDATORY: Follow stage-protocol.md for state tracking and audit logging.
 
 ### Step 1: Update State
 
-1. Update `<record>/aidlc-state.md`: set `Current Stage` to `detecting workspace`
+1. Update `<record>/amadeus-state.md`: set `Current Stage` to `detecting workspace`
 2. Mark workspace-detection as `[-]` in progress
 
 ### Step 2: Scan Workspace
@@ -54,7 +54,7 @@ Scan signals:
 
 **Exclude from analysis** (framework scaffolding, not application code):
 - The harness directory (`.claude/`, `.kiro/`, or `.codex/`) — AI-DLC framework files (skills, agents, hooks, tools, knowledge)
-- `aidlc/` — AI-DLC workspace root (the space tree at `aidlc/spaces/<space>/...`)
+- `aidlc/` — AI-DLC workspace root (the space tree at `amadeus/spaces/<space>/...`)
 - `node_modules/`, `.git/`
 
 ### Step 3: Detect Project Type
@@ -77,7 +77,7 @@ Does NOT make a project brownfield: README, .gitignore, LICENSE, editor configs,
 
 ### Step 4: Verify Classification
 
-The deterministic scanner applies the rules in Step 3 directly — no override path is needed in normal operation. If a user believes the classification is wrong (e.g. a `create-next-app` scaffold they intend to treat as greenfield), they can edit `<record>/aidlc-state.md` by hand or re-run with `/amadeus --init --force` after cleaning up.
+The deterministic scanner applies the rules in Step 3 directly — no override path is needed in normal operation. If a user believes the classification is wrong (e.g. a `create-next-app` scaffold they intend to treat as greenfield), they can edit `<record>/amadeus-state.md` by hand or re-run with `/amadeus --init --force` after cleaning up.
 
 ### Step 5: Identify Technology Stack
 
@@ -89,7 +89,7 @@ From the scan results, identify:
 
 ### Step 6: Update State and Audit
 
-1. Mark workspace-detection as `[x]` completed in `<record>/aidlc-state.md`
+1. Mark workspace-detection as `[x]` completed in `<record>/amadeus-state.md`
 2. Update Workspace State section with detected languages, frameworks, build system
 3. Append WORKSPACE_SCANNED event to `<record>/audit/<host>-<clone>.md` with scan results and classification
 

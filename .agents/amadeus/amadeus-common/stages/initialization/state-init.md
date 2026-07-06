@@ -23,7 +23,7 @@ scopes:
   - workshop
   - pdm
 inputs: workspace classification from workspace-detection, scope from orchestrator
-outputs: <record>/aidlc-state.md (full populated version, engine-resolved)
+outputs: <record>/amadeus-state.md (full populated version, engine-resolved)
 ---
 
 # State Initialization
@@ -36,13 +36,13 @@ MANDATORY: Follow stage-protocol.md for state tracking and audit logging.
 
 ### Step 1: Update State
 
-1. Update `<record>/aidlc-state.md`: set `Current Stage` to `initializing state`
+1. Update `<record>/amadeus-state.md`: set `Current Stage` to `initializing state`
 2. Mark state-init as `[-]` in progress
 
 ### Step 2: Create Full State File
 
 Read the state template from `.claude/knowledge/amadeus-shared/state-template.md`.
-Overwrite `<record>/aidlc-state.md` with the full populated version:
+Overwrite `<record>/amadeus-state.md` with the full populated version:
 - Project description (from orchestrator's $ARGUMENTS or `<record>/audit/<host>-<clone>.md`)
 - Project type (greenfield/brownfield from workspace-detection)
 - Workspace state (languages, frameworks, build system from workspace-detection)
@@ -71,7 +71,7 @@ Based on project type:
 - **Brownfield** → First post-initialization stage: reverse-engineering (Inception)
 - **Greenfield** → First post-initialization stage: requirements-analysis (Inception), skip reverse-engineering
 
-Update aidlc-state.md with the routing decision:
+Update amadeus-state.md with the routing decision:
 - Set `Stages to Execute` and `Stages to Skip` based on scope + project type
 - Mark reverse-engineering as SKIP for greenfield projects
 
@@ -88,7 +88,7 @@ Update aidlc-state.md with the routing decision:
 
 ### Step 5: Update State and Audit
 
-1. Mark state-init as `[x]` completed in `<record>/aidlc-state.md`
+1. Mark state-init as `[x]` completed in `<record>/amadeus-state.md`
 2. Append WORKSPACE_INITIALISED event to `<record>/audit/<host>-<clone>.md` with project type and tech stack summary
 
 ### Step 6: Auto-Proceed
@@ -97,7 +97,7 @@ This stage has NO approval gate — it auto-proceeds to the first post-initializ
 
 ## Sensors
 
-This stage writes `<record>/aidlc-state.md` deterministically through
+This stage writes `<record>/amadeus-state.md` deterministically through
 `amadeus-state.ts`. The state file is a structured manifest, not the kind
 of free-form artefact the markdown-shape sensors target — so the
 frontmatter `sensors:` list is empty.

@@ -9,7 +9,7 @@
 // taxonomy for sub-classification per the project pattern.
 //
 // AUTONOMY_MODE_SET also updates the Construction Autonomy Mode field in
-// aidlc-state.md atomically with its audit emission.
+// amadeus-state.md atomically with its audit emission.
 //
 // Per-Bolt worktree lifecycle integration. The CLI surface mirrors the
 // lifecycle's three terminal states:
@@ -593,7 +593,7 @@ function handleAbort(args: string[]): void {
 //
 // HOLD-MERGE invariant tooling. Sets / clears the `Merge-Held` field in
 // the per-Bolt forked state file at
-// `<projectDir>/.aidlc/worktrees/bolt-<slug>/aidlc-docs/aidlc-state.md`.
+// `<projectDir>/.amadeus/worktrees/bolt-<slug>/aidlc-docs/amadeus-state.md`.
 // Idempotent — re-running hold-merge on an already-held Bolt or
 // release-merge on an unheld Bolt succeeds without error. The field is
 // inserted under `## Project Information` on first hold-merge so the
@@ -775,7 +775,7 @@ function handleDispatchEvent(args: string[]): void {
 // Usage: amadeus-bolt set-autonomy --mode autonomous|gated
 //
 // Emits AUTONOMY_MODE_SET AND updates the Construction Autonomy Mode field
-// in aidlc-state.md atomically (audit-first).
+// in amadeus-state.md atomically (audit-first).
 function handleSetAutonomy(args: string[]): void {
   const flags = parseFlags(args);
   if (!flags.mode) error("Missing --mode <autonomous|gated>");

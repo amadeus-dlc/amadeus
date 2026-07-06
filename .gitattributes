@@ -1,3 +1,3 @@
 # AI-DLC エンジンが書く per-clone audit shard は上流形式のまま扱う
 # （エンジン出力の末尾空白を whitespace 検査の対象外にする。エンジンは無改変契約）
-aidlc/spaces/*/intents/*/audit/*.md -whitespace
+amadeus/spaces/*/intents/*/audit/*.md -whitespace

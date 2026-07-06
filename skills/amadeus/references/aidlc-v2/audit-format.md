@@ -155,7 +155,7 @@ Emitted by the deterministic-sensor system. The sensor dispatcher emits the four
 |-------|------|-----------------|---------|
 | `SENSOR_FIRED` | Dispatcher invoked a sensor against a stage output (per PostToolUse Write/Edit match on the sensor's `matches` filter) | Timestamp, Fire id, Sensor ID, Stage slug, Output path | `tools/amadeus-sensor.ts` `fire` |
 | `SENSOR_PASSED` | Sensor completed and reported no findings (also: tool-unavailable, script-error fall-through — see Note footnote) | Timestamp, Fire id, Sensor ID, Stage slug, Output path, Duration ms | `tools/amadeus-sensor.ts` `fire` |
-| `SENSOR_FAILED` | Sensor completed and reported findings; detail file written at `aidlc-docs/.aidlc-sensors/<stage-slug>/<sensor-id>-<fire-id>.md` | Timestamp, Fire id, Sensor ID, Stage slug, Output path, Detail path, Findings count | `tools/amadeus-sensor.ts` `fire` |
+| `SENSOR_FAILED` | Sensor completed and reported findings; detail file written at `aidlc-docs/.amadeus-sensors/<stage-slug>/<sensor-id>-<fire-id>.md` | Timestamp, Fire id, Sensor ID, Stage slug, Output path, Detail path, Findings count | `tools/amadeus-sensor.ts` `fire` |
 | `SENSOR_BUDGET_OVERRIDE` | Sensor exceeded its configured cap (registry / binding / depth-derived per the three-layer cap model) and was terminated or skipped | Timestamp, Fire id, Sensor ID, Stage slug, Output path, Cap layer, Cap value, Observed value | `tools/amadeus-sensor.ts` `fire` |
 | `GUARDRAIL_LOADED` | Guardrail loader resolved the scope-hierarchical guardrail set for the active workflow (org → project → phase → stage); doctor's paired-coverage check reads from this event | Timestamp, Scope, Path, Rule count | `tools/amadeus-utility.ts` |
 

@@ -77,7 +77,7 @@ try {
     ws
   );
   if (birth.exitCode !== 0) throw new Error(`intent-birth failed: ${birth.stderr}\n${birth.stdout}`);
-  const intentsRoot = join(ws, "aidlc/spaces/default/intents");
+  const intentsRoot = join(ws, "amadeus/spaces/default/intents");
   const dirName = readdirSync(intentsRoot, { withFileTypes: true })
     .filter((e) => e.isDirectory())
     .map((e) => e.name)[0]!;

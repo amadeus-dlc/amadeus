@@ -13,7 +13,7 @@
 - `intents.md`（GD009 で廃止された任意成果物）は、存在する場合だけ、Intent 識別子が `<YYMMDD>-<label>` 形式で、詳細リンクのディレクトリ名と一致することを検証する。
 - `intents.json`（registry）の各エントリが UUIDv7 の `uuid`、`<YYMMDD>-<label>` 形式の `dirName`、空欄でない `slug`、既知の `scope` と `status` を持ち、record ディレクトリと双方向に対応することを検証する。
 - Intent 直下に `state.json` や旧配置ディレクトリ（`mocks/`、`requirements/`、`units/` など）が残っている場合は、旧契約として fail にする。
-- `aidlc-state.md` では、scope、depth、Project Type、Status、Lifecycle Phase、State Version、Stage Progress の checkbox と scope の実行対象の一致、Phase Progress、Current Stage、`audit/audit.md` のイベント、completed ステージの必須成果物を検証する。
+- `amadeus-state.md` では、scope、depth、Project Type、Status、Lifecycle Phase、State Version、Stage Progress の checkbox と scope の実行対象の一致、Phase Progress、Current Stage、`audit/audit.md` のイベント、completed ステージの必須成果物を検証する。
 - Event Storming の成果物、level、`nextRecommendedSkill`（`amadeus` または `amadeus-domain-modeling`）を検証する。
 - Domain Map と Context Map の `adopted`、`retired`、根拠リンクを検証する。
 - Event Storming、Intent の phase ディレクトリの Grilling Decision Trail を検証する。

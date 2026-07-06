@@ -23,7 +23,7 @@ where the workflow stands by reading five sources, in this order:
    canonical, append-only source of truth for "what happened"; the trail is
    per-clone sharded, so glob `audit/*.md` and merge-sort by timestamp.
    Reconcile the other four against it on any disagreement.
-4. **State docs** (`<record>/aidlc-state.md`, plus any per-stage state) —
+4. **State docs** (`<record>/amadeus-state.md`, plus any per-stage state) —
    where in the workflow we are right now: the current/next stage and the
    completed-stage checklist.
 5. **`runtime-graph.json`** (`<record>/runtime-graph.json`) — the cross-stage
@@ -42,7 +42,7 @@ sources in agreement — see `docs/reference/02-plane-architecture.md` § 5
 ("Recovery as an emergent property").
 
 ### Session resume
-If `aidlc-state.md` exists, read it to determine:
+If `amadeus-state.md` exists, read it to determine:
 - Which stages are completed (marked `[x]`)
 - What the current/next stage is
 - Whether artifacts from prior stages exist
@@ -111,16 +111,16 @@ If a stage needs to be re-run (user requested changes after approval):
 - Present new completion message
 
 ### Context compaction
-The PreCompact hook validates state file structure in `aidlc-state.md` before compaction.
+The PreCompact hook validates state file structure in `amadeus-state.md` before compaction.
 After compaction, the orchestrator can re-read state and continue.
 
-**Note:** PreCompact hooks are informational-only and cannot block compaction. The hook writes a `.aidlc-recovery.md` breadcrumb file recording the last validated state (current stage, timestamp). On session resume, the orchestrator compares this breadcrumb with `aidlc-state.md` to detect possible compaction-related state corruption.
+**Note:** PreCompact hooks are informational-only and cannot block compaction. The hook writes a `.amadeus-recovery.md` breadcrumb file recording the last validated state (current stage, timestamp). On session resume, the orchestrator compares this breadcrumb with `amadeus-state.md` to detect possible compaction-related state corruption.
 
 ### Corrupted state file recovery
-If `aidlc-state.md` exists but cannot be parsed (missing required sections, invalid checkbox syntax, contradictory state):
-1. Create a backup: copy `aidlc-state.md` to `aidlc-state.md.bak`
+If `amadeus-state.md` exists but cannot be parsed (missing required sections, invalid checkbox syntax, contradictory state):
+1. Create a backup: copy `amadeus-state.md` to `amadeus-state.md.bak`
 2. Scan `<record>/` for existing artifacts to determine which stages actually completed
-3. Rebuild `aidlc-state.md` from artifact evidence:
+3. Rebuild `amadeus-state.md` from artifact evidence:
    - If `<record>/inception/reverse-engineering/` has analysis files, mark RE stages complete
    - If `<record>/inception/requirements-analysis/` has requirement docs, mark requirements stages complete
    - If `<record>/inception/application-design/` has design docs, mark design stages complete
@@ -205,13 +205,13 @@ Generation.
 1. Identify which prior stages are affected
 2. Present impact analysis to the user via a structured question
 3. If approved, re-run affected stages in order
-4. Update aidlc-state.md to reflect re-run
+4. Update amadeus-state.md to reflect re-run
 
 ### Scope changes (new requirements):
 1. Document the change in `<record>/audit/<host>-<clone>.md`
 2. Return to requirements-analysis or delivery-planning as appropriate
 3. Re-plan execution from that point forward
-4. If scope change affects which stages execute (e.g., expanding from `poc` to `feature`), update scope configuration in aidlc-state.md
+4. If scope change affects which stages execute (e.g., expanding from `poc` to `feature`), update scope configuration in amadeus-state.md
 
 ### Archive before change
 Before any major change that would overwrite existing artifacts:
@@ -223,7 +223,7 @@ This ensures no prior work is permanently lost.
 ### Unit modification handling
 If the user wants to add, remove, or split implementation units mid-workflow:
 - **Adding a unit**: Add it to the workflow plan, create its story design, slot it into the build order. Do NOT re-run completed units.
-- **Removing a unit**: Mark it as skipped in aidlc-state.md, archive its artifacts if any exist. Check for dependencies — if other units depend on the removed unit, flag the impact.
+- **Removing a unit**: Mark it as skipped in amadeus-state.md, archive its artifacts if any exist. Check for dependencies — if other units depend on the removed unit, flag the impact.
 - **Splitting a unit**: Archive the original unit's artifacts, create two new unit entries in the plan, distribute the original stories between them, run story design for each new unit.
 
 ### Architectural change handling

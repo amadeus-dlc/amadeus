@@ -68,7 +68,7 @@ function fail(message: string, code: 1 | 2): never {
 
 // A confirmed learning IS a practice (vision §6). It lands in the relocated
 // method file the resolver reads — team.md / project.md under
-// aidlc/spaces/<space>/memory/ (neutral names, no `aidlc-` prefix) — NOT a
+// amadeus/spaces/<space>/memory/ (neutral names, no `aidlc-` prefix) — NOT a
 // parallel dated `*-learnings.md` log. memoryDirFor() derives the path from
 // the SAME MEMORY_SEGMENTS loadRules()/the packager use, so the writer can
 // never drift from the reader root (P5 relocated the reader; P6 closes the
@@ -196,7 +196,7 @@ function handleSurface(args: string[], projectDir: string): void {
   const entries = parseMemoryEntries(raw);
 
   // memory_path は `<record prefix>/<phase>/<slug>/memory.md`（record prefix は
-  // `aidlc/spaces/<space>/intents/<dirName>` など可変長）。phase は末尾から
+  // `amadeus/spaces/<space>/intents/<dirName>` など可変長）。phase は末尾から
   // 3 番目のセグメントで解決する（先頭からだと "spaces" を拾う — Issue #455 FR-4）。
   const memSegments = memRel.split("/");
   const phase = memSegments.length >= 3 ? memSegments[memSegments.length - 3] : "";
@@ -617,7 +617,7 @@ function handlePersist(args: string[], projectDir: string): void {
     if (/Failed to acquire audit lock/.test(msg)) {
       fail(
         `${msg}. The audit lock dir may be orphaned by a hard-killed run; ` +
-          `remove it manually (look under the system temp dir for the aidlc audit lock) and retry.`,
+          `remove it manually (look under the system temp dir for the amadeus audit lock) and retry.`,
         1
       );
     }

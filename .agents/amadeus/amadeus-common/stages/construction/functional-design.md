@@ -75,7 +75,7 @@ Load amadeus-architect-agent (lead) persona from `agents/amadeus-architect-agent
 
 Read the unit definition from `<record>/inception/units-generation/unit-of-work.md` and assigned stories from `<record>/inception/units-generation/unit-of-work-story-map.md` (if they exist). Read `<record>/inception/requirements-analysis/requirements.md` (if exists) and any application design artifacts from `<record>/inception/application-design/` (if they exist).
 
-Incremental scopes (refactor) deliberately skip units-generation and application-design, so those inputs are absent by design there. When an input is absent, work from what the scope does provide — the requirements and, on a brownfield workspace, the reverse-engineered code knowledge base at `aidlc/spaces/<active-space>/codekb/<repo>/` (the directory `codekb-path --repo <repo>` prints) — and treat the existing code structure as the de-facto application design. Never invent the content of a missing artifact.
+Incremental scopes (refactor) deliberately skip units-generation and application-design, so those inputs are absent by design there. When an input is absent, work from what the scope does provide — the requirements and, on a brownfield workspace, the reverse-engineered code knowledge base at `amadeus/spaces/<active-space>/codekb/<repo>/` (the directory `codekb-path --repo <repo>` prints) — and treat the existing code structure as the de-facto application design. Never invent the content of a missing artifact.
 
 ### Step 3: Create Functional Design Plan
 
@@ -111,7 +111,7 @@ Generate the following in `<record>/construction/{unit-name}/functional-design/`
 
 ### Step 6: Update State
 
-Update `<record>/aidlc-state.md`: mark Functional Design for {unit-name} as `[x]` completed and update "Current Status".
+Update `<record>/amadeus-state.md`: mark Functional Design for {unit-name} as `[x]` completed and update "Current Status".
 
 ### Step 7: Completion
 
@@ -140,7 +140,7 @@ The imported sensors check those outputs:
 - **`linter`** runs against any TypeScript/JavaScript snippets the design includes (matches `**/*.{ts,js}`).
 - **`type-check`** runs against any TypeScript/TSX snippets the design includes (matches `**/*.{ts,tsx}`).
 
-Failure modes land in `<record>/.aidlc-sensors/<stage-slug>/` as `SENSOR_FAILED` audit rows with per-sensor detail files.
+Failure modes land in `<record>/.amadeus-sensors/<stage-slug>/` as `SENSOR_FAILED` audit rows with per-sensor detail files.
 
 ## Learn
 

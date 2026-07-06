@@ -18,7 +18,7 @@
 //   clear   → SESSION_STARTED
 //   compact → no emission (PreCompact already fired)
 //
-// The hook is a no-op if aidlc-state.md is absent in cwd (no active workflow).
+// The hook is a no-op if amadeus-state.md is absent in cwd (no active workflow).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
@@ -47,7 +47,7 @@ const projectDir = resolveProjectDirFromHook(import.meta.url);
 
 // Idempotent ensure-step (P0.1 robustness): align the harness-native includes
 // with the active space at session start, BEFORE the no-workflow early-exit, so
-// turn-1 on a fresh clone (no aidlc-state.md yet) still has the includes pointed
+// turn-1 on a fresh clone (no amadeus-state.md yet) still has the includes pointed
 // at the active space. A no-op at `default` (the common case) and whenever the
 // cursor + includes already agree — so it never dirties a single-team committed
 // tree. Best-effort: a failure here must never break session startup.
@@ -136,7 +136,7 @@ if (eventType) {
 // A conversation works ONE intent; the active-intent cursor is durable + shared
 // across sessions. So resuming an A-chat after the cursor moved to B would
 // inject B's context silently (vision §3, the central multi-space hazard). We
-// fix it with a per-session→intent stamp (aidlc/.aidlc-sessions/<id>):
+// fix it with a per-session→intent stamp (amadeus/.amadeus-sessions/<id>):
 //   - On a STARTED-class event, stamp the working intent's UUID for this
 //     session so a later resume can detect a cursor drift.
 //   - On RESUMED, if the stamped UUID differs from the live cursor AND still
@@ -192,7 +192,7 @@ const scope = getField(content, "Scope") ?? "unknown";
 // Check for compaction recovery breadcrumb
 const recoveryFile = recoveryFilePath(projectDir);
 const recovery = existsSync(recoveryFile)
-  ? "NOTE: A compaction recovery breadcrumb exists at .aidlc-recovery.md — check if state was preserved correctly.\n"
+  ? "NOTE: A compaction recovery breadcrumb exists at .amadeus-recovery.md — check if state was preserved correctly.\n"
   : "";
 
 // Stage-graph drift advisory (issue #364). The runtime resolves stages from
@@ -221,7 +221,7 @@ Status: ${status}
 Active Agent: ${agent}
 Last Completed: ${last}
 Next Action: ${next}
-${recovery}${driftNote}On resume: offer the user the standard resume options (Resume / Redo / Jump / Start Fresh). Check the active intent's aidlc-state.md for full context.
+${recovery}${driftNote}On resume: offer the user the standard resume options (Resume / Redo / Jump / Start Fresh). Check the active intent's amadeus-state.md for full context.
 
 FORWARDING-LOOP DISCIPLINE (non-negotiable — the engine owns ALL routing):
 - The engine binary (\`amadeus-orchestrate.ts\`) is the ONLY authority on the next move. You run it, you do EXACTLY what its one directive says, you commit with \`report\`, you repeat. You never re-derive routing yourself.

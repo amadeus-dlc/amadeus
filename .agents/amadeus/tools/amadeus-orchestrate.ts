@@ -1,11 +1,11 @@
 // The orchestration engine — the deterministic "what's next?" answerer that
-// stands BESIDE the prose orchestrator (skills/aidlc/SKILL.md), not inside it.
+// stands BESIDE the prose orchestrator (skills/amadeus/SKILL.md), not inside it.
 // Nothing in SKILL.md calls this file yet; it is exercised only by its own
 // unit tests until the differential corpus proves it emits the same directive
 // sequence the prose orchestrator produces today. Framework behaviour is
 // unchanged by this file's existence.
 //
-// The engine reads workflow state (aidlc-docs/aidlc-state.md) and the compiled
+// The engine reads workflow state (aidlc-docs/amadeus-state.md) and the compiled
 // stage graph (data/stage-graph.json), then emits EXACTLY ONE typed Directive
 // (JSON) to stdout. `next` mutates no workflow state itself (state md5 is
 // unchanged across a `next` call) — including birth: on a fresh workspace it
@@ -450,7 +450,7 @@ function composeDispatchDirective(
       `Dispatch the composer agent (${hd}/agents/amadeus-composer-agent.md) as a subagent to propose re-shaping the RUNNING workflow's pending stages` +
         (flags.intent ? ` for: "${flags.intent}".` : "."),
       "The composer reads the live state file's Stage Progress and proposes SKIP/un-SKIP flips for PENDING, ahead-of-cursor stages only (completed [x], in-progress [-], and skipped [S] stages are frozen).",
-      "BEFORE presenting the gate, write the pending-proposal marker `aidlc/.aidlc-compose-pending` (any content) so the turn can end at the gate; on approve run `bun " +
+      "BEFORE presenting the gate, write the pending-proposal marker `amadeus/.amadeus-compose-pending` (any content) so the turn can end at the gate; on approve run `bun " +
         hd +
         "/tools/amadeus-utility.ts recompose --skip <slugs> --add <slugs>` (comma-separated) and DELETE the marker; on reject/edit-then-resolve delete the marker too.",
     );
@@ -481,7 +481,7 @@ function composeDispatchDirective(
 // `!stateContent`, but stateContent is empty in TWO different worlds: a truly
 // empty workspace (zero intents → birth is correct), AND a workspace that
 // already holds intents whose active-intent CURSOR is unset. The cursor
-// (`aidlc/spaces/<sp>/intents/active-intent`) is gitignored per-user state, so a
+// (`amadeus/spaces/<sp>/intents/active-intent`) is gitignored per-user state, so a
 // fresh clone of a >1-intent workspace lands with records on disk but no cursor
 // → activeIntent() returns null (lib:357-361) → stateContent is empty → the
 // birth gate would mint a SECOND intent over the top of the existing ones
@@ -555,7 +555,7 @@ function resolveScope(
 
 // Derive the memory diary path for a stage (SKILL.md: every stage keeps a
 // <record>/<phase>/<stage>/memory.md diary). `recordPrefix` is the RELATIVE
-// per-intent record dir (aidlc/spaces/<space>/intents/<slug>-<id8>) the engine
+// per-intent record dir (amadeus/spaces/<space>/intents/<slug>-<id8>) the engine
 // threads in from the active intent (relativeRecordDir), or null → the bare space
 // record prefix (relativeSpaceRecordPrefix — a pre-birth shell with no intent
 // yet). These are agent-consumed RELATIVE paths the conductor resolves against
@@ -834,7 +834,7 @@ function isPerUnit(node: GraphStage): boolean {
 }
 
 // The KNOWN SET of stages whose artifacts live in the durable, space-level
-// code knowledge base (`aidlc/spaces/<space>/codekb/<repo>/`) rather than under
+// code knowledge base (`amadeus/spaces/<space>/codekb/<repo>/`) rather than under
 // a per-intent record dir. Keyed on the slug ALONE — deliberately NOT a stage
 // frontmatter marker: amadeus-stage-schema.ts OPTIONAL_FIELDS omits `codekb`, so a
 // `codekb: true` field would trip the schema's unknown-key rule and fail the
@@ -898,7 +898,7 @@ function resolveArtifactPath(
   // under the per-intent record dir. This arm fires for BOTH produces[] (owner
   // is the directive's own node) AND consumes[] (owner is the producing stage
   // resolved via producersOf — so a consume of an RE artifact also lands here).
-  // It drops the intents/<slug> tail and keeps only the aidlc/spaces/<space>/
+  // It drops the intents/<slug> tail and keeps only the amadeus/spaces/<space>/
   // stem, mirroring relativeCodekbDir. Guarded on the ctx being present so a
   // ctx-less caller (defaults) falls through to the record-dir arms below.
   if (isCodekb(owner) && codekbCtx) {
@@ -1152,7 +1152,7 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   // deterministically off-band but CANNOT block the turn, so the conductor relays
   // the output AND may still fire a bare `next` (sometimes several times the same
   // turn), rolling the active workflow forward. The seam stamps
-  // aidlc/.aidlc-readonly-latch with the CURRENT turn counter; here, BEFORE any
+  // amadeus/.amadeus-readonly-latch with the CURRENT turn counter; here, BEFORE any
   // state inspection, a TRULY BARE advancing next (none of its own flags set)
   // checks the latch: when latch.turn === the current counter (the SAME turn) we
   // emit `done` instead of routing to a run-stage. Turn-scoped — a legitimate
@@ -1165,8 +1165,8 @@ function handleNext(args: string[], projectDir: string | undefined): void {
       !flags.single && !flags.compose && !flags.newScope && !flags.report) {
     try {
       const pdLatch = resolveProjectDir(projectDir);
-      const latchPath = join(pdLatch, "aidlc", ".aidlc-readonly-latch");
-      const counterPath = join(pdLatch, "aidlc", ".aidlc-turn-counter");
+      const latchPath = join(pdLatch, "amadeus", ".amadeus-readonly-latch");
+      const counterPath = join(pdLatch, "amadeus", ".amadeus-turn-counter");
       let counter = -1;
       let latchTurn = -2;
       let label = "the read-only command";
@@ -1248,7 +1248,7 @@ function handleNext(args: string[], projectDir: string | undefined): void {
 
   const pd = resolveProjectDir(projectDir);
   const stateContent = loadStateFileIfPresent(pd);
-  // The active intent's RELATIVE record-dir prefix (aidlc/spaces/<sp>/intents/
+  // The active intent's RELATIVE record-dir prefix (amadeus/spaces/<sp>/intents/
   // <slug>-<id8>), threaded into every run-stage directive so the conductor's
   // artifact/diary paths resolve under the active intent. null → the flat legacy
   // `aidlc-docs` prefix (a pre-workspace project not yet migrated/born). Resolved
@@ -1256,7 +1256,7 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   const recordPrefix = relativeRecordDir(pd);
   // The space-level codekb context, resolved on the SAME live projectDir as
   // recordPrefix and threaded down the same spine. Lets resolveArtifactPath
-  // place a KNOWN_CODEKB_STAGES artifact under aidlc/spaces/<space>/codekb/
+  // place a KNOWN_CODEKB_STAGES artifact under amadeus/spaces/<space>/codekb/
   // <repo>/ (dropping the intents/<slug> tail) without re-reading the disk in
   // the pure resolver. codekbRepoName is read-only (intentRepos never throws).
   const codekbCtx = codekbCtxFor(pd);
@@ -2176,7 +2176,7 @@ function emitJumpDirective(
     // resolves the active intent's relative dir (null on a fresh workspace). The
     // codekb ctx is computed from the same live projectDir (no handleNext-cached
     // value reaches this inline site), so a codekb stage jumped-to here still
-    // resolves under aidlc/spaces/<space>/codekb/<repo>/.
+    // resolves under amadeus/spaces/<space>/codekb/<repo>/.
     emitRunStageForSlug(first.slug, projectType, scope, null, relativeRecordDir(projectDir), codekbCtxFor(projectDir));
     return;
   }
@@ -2376,7 +2376,7 @@ function spawnState(
 // (handleSingleReport below) uses this, mirroring report's spawn-the-atomic-tool
 // discipline: the engine itself writes nothing; the spawned tool acquires the
 // per-emit audit lock in its own process. This is the audit-only path — it
-// touches `audit.md`, never `aidlc-state.md` — so a `--single` commit cannot
+// touches `audit.md`, never `amadeus-state.md` — so a `--single` commit cannot
 // reach the main pointer even by accident (amadeus-audit.ts has no state write).
 function spawnAuditAppend(
   projectDir: string,
@@ -2426,7 +2426,7 @@ function handleSkeletonStanceReport(
   const stateContent = loadStateFileIfPresent(pd);
   if (!stateContent) {
     emit(errorDirective(
-      "No workflow state found (aidlc-docs/aidlc-state.md is absent) — nothing to record a skeleton stance for.",
+      "No workflow state found (aidlc-docs/amadeus-state.md is absent) — nothing to record a skeleton stance for.",
     ));
     return;
   }
@@ -2663,7 +2663,7 @@ function handleReport(args: string[], projectDir: string | undefined): void {
     emit({
       kind: "error",
       message:
-        "No workflow state found (aidlc-docs/aidlc-state.md is absent) — nothing to report a transition for.",
+        "No workflow state found (aidlc-docs/amadeus-state.md is absent) — nothing to report a transition for.",
     });
     return;
   }

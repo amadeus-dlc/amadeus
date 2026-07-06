@@ -84,13 +84,13 @@ const birthStdout = runExpectSuccess(
 );
 console.log("ok: intent-birth exits 0");
 
-const intentsRoot = join(workspace, "aidlc/spaces/default/intents");
+const intentsRoot = join(workspace, "amadeus/spaces/default/intents");
 const recordDirName = readdirSync(intentsRoot, { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
   .map((entry) => entry.name)[0];
 check("Intent record ディレクトリが作られている", recordDirName !== undefined, birthStdout);
 const recordDir = join(intentsRoot, recordDirName!);
-check("aidlc-state.md が存在する", existsSync(join(recordDir, "aidlc-state.md")), recordDir);
+check("amadeus-state.md が存在する", existsSync(join(recordDir, "amadeus-state.md")), recordDir);
 
 // ---- 1b. エンジンが書く値と validator 許可値の整合（Issue #455 / #446） ----
 
@@ -111,7 +111,7 @@ check(
 );
 
 // FR-3.2: state 初期化が Construction Autonomy Mode の既定値（unset）を書く。
-const bornState = readFileSync(join(recordDir, "aidlc-state.md"), "utf8");
+const bornState = readFileSync(join(recordDir, "amadeus-state.md"), "utf8");
 check(
   "FR-3.2: state 初期化が Construction Autonomy Mode: unset を書く",
   bornState.includes("- **Construction Autonomy Mode**: unset"),

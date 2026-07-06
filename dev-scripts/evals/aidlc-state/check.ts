@@ -254,7 +254,7 @@ check("update: 不明な stage の更新は入力を変えない", unchanged ===
       throw new Error(`intent-birth failed: ${new TextDecoder().decode(birth.stderr)}\n${birthStdout}`);
     }
 
-    const intentsRoot = join(workspace, "aidlc/spaces/default/intents");
+    const intentsRoot = join(workspace, "amadeus/spaces/default/intents");
     const recordDirName = readdirSync(intentsRoot, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name)[0];
@@ -266,9 +266,9 @@ check("update: 不明な stage の更新は入力を変えない", unchanged ===
     // の存在を要求する。#457 の検査対象（memory_path）とは無関係なので、
     // produces 成果物の存在チェック（artifact guard）は既存のエスケープハッチで
     // 無効化しつつ、phase-check だけは実ファイルを用意して満たす。
-    mkdirSync(join(workspace, `aidlc/spaces/default/intents/${recordDirName}/verification`), { recursive: true });
+    mkdirSync(join(workspace, `amadeus/spaces/default/intents/${recordDirName}/verification`), { recursive: true });
     writeFileSync(
-      join(workspace, `aidlc/spaces/default/intents/${recordDirName}/verification/phase-check-ideation.md`),
+      join(workspace, `amadeus/spaces/default/intents/${recordDirName}/verification/phase-check-ideation.md`),
       "# Phase Check — Ideation（aidlc-state eval fixture）\n"
     );
     const advance = Bun.spawnSync(["bun", stateTool, "advance", "intent-capture"], {
@@ -282,9 +282,9 @@ check("update: 不明な stage の更新は入力を変えない", unchanged ===
       throw new Error(`advance failed: ${new TextDecoder().decode(advance.stderr)}\n${advanceStdout}`);
     }
     const advanceJson = JSON.parse(advanceStdout.slice(advanceStdout.indexOf("{")));
-    const expectedPrefix = `aidlc/spaces/default/intents/${recordDirName}/`;
+    const expectedPrefix = `amadeus/spaces/default/intents/${recordDirName}/`;
     check(
-      "advance: memory_path が record prefix（aidlc/spaces/<space>/intents/<dirName>/）で始まる",
+      "advance: memory_path が record prefix（amadeus/spaces/<space>/intents/<dirName>/）で始まる",
       typeof advanceJson.memory_path === "string" && advanceJson.memory_path.startsWith(expectedPrefix),
       `memory_path=${advanceJson.memory_path}`
     );

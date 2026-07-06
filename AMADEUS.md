@@ -9,7 +9,7 @@
 - 返答、仕様、調査メモ、検証結果は日本語で書く。
 - 日本語の技術文書を書く、または推敲するときは `japanese-tech-writing` skill の規範に従う。
 - 英語の識別子、ファイル名、コマンド名は必要な場合だけ使う。
-- 機械可読・構造的成果物（`aidlc-state.md`、`intents.json`、audit イベント、改名対象のファイル名）は v2 の構造と英語ラベルをそのまま使う。
+- 機械可読・構造的成果物（`amadeus-state.md`、`intents.json`、audit イベント、改名対象のファイル名）は v2 の構造と英語ラベルをそのまま使う。
 - Amadeus skill の `SKILL.md` と TS スクリプトは英語必須である（詳細は [Skill Language Policy](docs/amadeus/skill-language-policy.md) を参照）。
 - `docs/amadeus/*.md` は英語を正とし、`*.ja.md` を日本語版として併置する。この対象は「返答、仕様、調査メモ、検証結果は日本語で書く」および「記述系成果物…日本語を維持する」の対象外である（詳細は [Language Policy](docs/amadeus/language-policy.md) を参照）。
 - 記述系成果物（要求、設計、計画などの本文）とユーザー向け gate 文言は日本語を維持する。
@@ -19,8 +19,8 @@
 
 ### Paths
 
-- Space: 対象 workspace の `aidlc/spaces/<space>/`（既定は `default`。`memory/`、`knowledge/`、`codekb/`、`intents/`）
-- Intent record: `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`
+- Space: 対象 workspace の `amadeus/spaces/<space>/`（既定は `default`。`memory/`、`knowledge/`、`codekb/`、`intents/`）
+- Intent record: `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`
 - Skill sources: `skills/amadeus*/`
 - Promoted skills: `.agents/skills/amadeus*/`
 
@@ -31,7 +31,7 @@ Space は、複数 Intent で共有する方法（`memory/`）、ドメイン知
 
 ### Intent record
 
-Intent record は、特定 Intent のライフサイクル成果物（各ステージの成果物、判断、追跡、`aidlc-state.md`、`audit/`）を扱う。
+Intent record は、特定 Intent のライフサイクル成果物（各ステージの成果物、判断、追跡、`amadeus-state.md`、`audit/`）を扱う。
 Intent の正準台帳は `intents/intents.json` である。
 Intent の概要は `ideation/intent-capture/intent-statement.md` を参照する。
 Intent モジュールファイル（`intents/<dirName>.md`）と `intents.md` 索引は廃止した（GD009）。
@@ -97,7 +97,7 @@ Amadeus skill の言語方針は [Skill Language Policy](docs/amadeus/skill-lang
 
 ## Development Rules
 
-- 基準 branch は `main` として扱い、Git ブランチ戦略は `aidlc/spaces/default/memory/team.md` の働き方に従う。
+- 基準 branch は `main` として扱い、Git ブランチ戦略は `amadeus/spaces/default/memory/team.md` の働き方に従う。
 - 後方互換維持対象は [docs/backward-compatibility.md](docs/backward-compatibility.md) に記載されたものだけとして扱う。
 - 古い成果物階層や旧コマンド群を、確認なしに戻さない。
 - 不明な値は空欄にせず、`未確認` として記録する。

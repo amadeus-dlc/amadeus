@@ -64,7 +64,7 @@ async function main(): Promise<number> {
   const project = resolveProject(ORG, PROJECT_TITLE);
   const fieldMap = ensureFields(project, COLUMNS);
 
-  const spaceDir = join(process.cwd(), "aidlc", "spaces", "default");
+  const spaceDir = join(process.cwd(), "amadeus", "spaces", "default");
   const cards = scanIntents(spaceDir, new Date(), dirs ?? undefined);
   if (cards.length === 0) {
     console.error(dirs ? `対象 record が registry に無い: ${dirs.join(", ")}` : "registry に Intent が無い");

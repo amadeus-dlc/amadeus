@@ -8,7 +8,7 @@
 // LLM を呼ばず、本番 aidlc/ を変更しない。成功時・失敗時ともに temp workspace を
 // 片付ける。
 //
-// (a) R001: phase 境界通過後、aidlc-state.md の Phase Progress の該当 phase が
+// (a) R001: phase 境界通過後、amadeus-state.md の Phase Progress の該当 phase が
 //     Verified になる（advance の phase 境界処理・complete-workflow・state-init
 //     の initialization→first-phase 境界の 3 経路）。
 // (b) R002: verification/phase-check-<phase>.md が無い phase 境界は、advance /
@@ -103,7 +103,7 @@ function birthIntent(workspace: string, scope: string, label: string): string {
   const utility = join(workspace, ".agents/amadeus/tools/amadeus-utility.ts");
   const res = run(["bun", utility, "intent-birth", "--scope", scope, "--arguments", `${label} eval`, "--label", label], workspace);
   if (res.exitCode !== 0) throw new Error(`intent-birth failed: ${res.stderr}\n${res.stdout}`);
-  const intentsRoot = join(workspace, "aidlc/spaces/default/intents");
+  const intentsRoot = join(workspace, "amadeus/spaces/default/intents");
   const dirName = readdirSync(intentsRoot, { withFileTypes: true })
     .filter((e) => e.isDirectory())
     .map((e) => e.name)[0];
@@ -112,11 +112,11 @@ function birthIntent(workspace: string, scope: string, label: string): string {
 }
 
 function recordDirPath(workspace: string, dirName: string): string {
-  return join(workspace, "aidlc/spaces/default/intents", dirName);
+  return join(workspace, "amadeus/spaces/default/intents", dirName);
 }
 
 function readState(workspace: string, dirName: string): string {
-  return readFileSync(join(recordDirPath(workspace, dirName), "aidlc-state.md"), "utf-8");
+  return readFileSync(join(recordDirPath(workspace, dirName), "amadeus-state.md"), "utf-8");
 }
 
 function phaseProgressField(stateContent: string, field: string): string {
@@ -131,7 +131,7 @@ function auditTotalLength(workspace: string, dirName: string): number {
 }
 
 function registryUuid(workspace: string, dirName: string): string {
-  const path = join(workspace, "aidlc/spaces/default/intents/intents.json");
+  const path = join(workspace, "amadeus/spaces/default/intents/intents.json");
   const list = JSON.parse(readFileSync(path, "utf-8")) as Array<{ uuid: string; dirName?: string }>;
   const entry = list.find((e) => e.dirName === dirName);
   if (!entry) throw new Error(`no registry entry for ${dirName}`);
@@ -139,7 +139,7 @@ function registryUuid(workspace: string, dirName: string): string {
 }
 
 function setRegistryStatus(workspace: string, uuid: string, status: string): void {
-  const path = join(workspace, "aidlc/spaces/default/intents/intents.json");
+  const path = join(workspace, "amadeus/spaces/default/intents/intents.json");
   const list = JSON.parse(readFileSync(path, "utf-8")) as Array<{ uuid: string; status: string }>;
   for (const entry of list) {
     if (entry.uuid === uuid) entry.status = status;
@@ -368,7 +368,7 @@ function stopHookScenario(sessionId: string, registryStatus: string, stampSessio
     const uuid = registryUuid(workspace, dirName);
     setRegistryStatus(workspace, uuid, registryStatus);
     if (stampSession) {
-      const sessionsDir = join(workspace, "aidlc/.aidlc-sessions");
+      const sessionsDir = join(workspace, "amadeus/.amadeus-sessions");
       mkdirSync(sessionsDir, { recursive: true });
       writeFileSync(join(sessionsDir, sessionId), `${stampUuidOverride ?? uuid}\n`);
     }

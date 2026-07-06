@@ -9,7 +9,7 @@
 // looked up, already attached."
 //
 // Coexists with `amadeus-audit-logger.ts` under the same Write|Edit
-// matcher; recursion guard skips writes to `aidlc-docs/.aidlc-sensors/`.
+// matcher; recursion guard skips writes to `aidlc-docs/.amadeus-sensors/`.
 //
 // Exit-code contract (G5): always exit 0. Sensor verdicts surface
 // through the dispatcher's audit rows (SENSOR_FIRED + paired
@@ -78,9 +78,9 @@ if (!filePath) process.exit(0);
 
 // Step 5 — Recursion guard. Skip writes to the dispatcher's detail-file
 // directory. Post-workspace-move that dir re-roots per intent
-// (<record>/.aidlc-sensors/ via sensorsDir(projectDir, intent, space)); the
+// (<record>/.amadeus-sensors/ via sensorsDir(projectDir, intent, space)); the
 // active-intent resolution is implicit in sensorsDir's bare projectDir call
-// (it resolves the active record root). Keep the flat `aidlc-docs/.aidlc-sensors/`
+// (it resolves the active record root). Keep the flat `aidlc-docs/.amadeus-sensors/`
 // literal as the transitional flat-legacy fallback (retired in P9). Dispatcher
 // uses direct fs I/O so the loop isn't reachable today; defensive depth for
 // future LLM sensors that may emit findings via Write.
@@ -89,8 +89,8 @@ const filePathNorm = filePath.replace(/\\/g, "/");
 if (
   filePathNorm === sensorsLeaf ||
   filePathNorm.startsWith(`${sensorsLeaf}/`) ||
-  filePath.includes("aidlc-docs/.aidlc-sensors/") ||
-  filePath.includes("aidlc-docs\\.aidlc-sensors\\")
+  filePath.includes("aidlc-docs/.amadeus-sensors/") ||
+  filePath.includes("aidlc-docs\\.amadeus-sensors\\")
 ) {
   process.exit(0);
 }
@@ -101,7 +101,7 @@ if (!existsSync(auditFilePath(projectDir))) process.exit(0);
 
 // Step 7 — State-file guard.
 //
-// readStateFile throws on missing aidlc-state.md (lib.ts:169-175).
+// readStateFile throws on missing amadeus-state.md (lib.ts:169-175).
 // Pre-init or partially-deleted workspaces could have audit.md without
 // state.md (audit.md is write-direct; state.md is overwrite-rename).
 // G5 ("always exit 0") demands a guard before the read.

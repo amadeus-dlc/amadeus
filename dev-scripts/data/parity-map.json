@@ -570,6 +570,54 @@
       "prefix": "/aidlc",
       "replacement": "/amadeus",
       "rule": "全面 rename（Issue #526）Commit A: コマンド表記 /aidlc -> /amadeus。lookahead により /aidlc-compose 等の派生トークンには一致しない（派生は既存写像が担う）。"
+    },
+    {
+      "kind": "engine-dir",
+      "prefix": "aidlc/spaces",
+      "replacement": "amadeus/spaces",
+      "rule": "全面 rename（#526）Commit B: workspace ルート。aidlc/spaces の具体形に限定し、aidlc-workflows 等の上流固有名・.agents/aidlc/（既存 rule が先行処理）と衝突しない。"
+    },
+    {
+      "kind": "scope-file",
+      "prefix": "aidlc-state.md",
+      "replacement": "amadeus-state.md",
+      "rule": "全面 rename（#526）Commit B: 状態ファイル名。.md 完全一致（scope-file 型の disambiguation）。"
+    },
+    {
+      "kind": "engine-dir",
+      "prefix": ".aidlc-",
+      "replacement": ".amadeus-",
+      "rule": "全面 rename（#526）Commit B: 内部マーカー。単純前方一致（cli-token は lookahead が全マーカーで失敗するため不採用 = 設計 reviewer F-1 実測）。"
+    },
+    {
+      "kind": "engine-dir",
+      "prefix": "aidlc-${",
+      "replacement": "amadeus-${",
+      "rule": "全面 rename（#526）Commit B: テンプレート補間の無印形（backtick 形は #542 の既存 rule が先行処理）。単純前方一致。"
+    },
+    {
+      "kind": "cli-token",
+      "prefix": "aidlc-init",
+      "replacement": "amadeus-init",
+      "rule": "全面 rename（#526）Commit B: INIT runner dir 名。実 skill 名 amadeus-init への追従。"
+    },
+    {
+      "kind": "engine-dir",
+      "prefix": "skills/aidlc/",
+      "replacement": "skills/amadeus/",
+      "rule": "全面 rename（#526）Commit B: 主 skill dir の prose 参照。trailing slash で skills/aidlc-*（skillNameMapping の担当）と衝突しない。"
+    },
+    {
+      "kind": "engine-dir",
+      "prefix": ".aidlc/",
+      "replacement": ".amadeus/",
+      "rule": "全面 rename（#526）Commit B: Bolt worktrees root（.aidlc/worktrees）。ハイフンなし形。"
+    },
+    {
+      "kind": "engine-dir",
+      "prefix": "aidlc/.",
+      "replacement": "amadeus/.",
+      "rule": "全面 rename（#526）Commit B: workspace root 直下のドットファイル参照（aidlc/.aidlc-sessions 等）。マーカー rule（.aidlc-）適用後の残余を root 側で写像する（順序依存を round-trip 検証済み）。"
     }
   ],
   "checkedEngineDirectories": [

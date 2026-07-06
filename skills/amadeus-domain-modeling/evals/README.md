@@ -4,9 +4,9 @@
 
 `amadeus-domain-modeling` は、次を満たした場合だけ `.agents/skills/amadeus-domain-modeling/` へコピー昇格できる。
 
-- 未確定語は `aidlc/spaces/<space>/intents/<dirName>/domain-notes.md` に候補として記録する。
-- 確定した共有用語だけを `aidlc/spaces/<space>/knowledge/glossary.md` に追加する。
-- 全体として採用済みのサブドメインと BC は `aidlc/spaces/<space>/knowledge/domain-map.md`、BC 間依存と連携関係は `aidlc/spaces/<space>/knowledge/context-map.md`、詳細なモデルと契約は Construction の Functional Design に反映する。
+- 未確定語は `amadeus/spaces/<space>/intents/<dirName>/domain-notes.md` に候補として記録する。
+- 確定した共有用語だけを `amadeus/spaces/<space>/knowledge/glossary.md` に追加する。
+- 全体として採用済みのサブドメインと BC は `amadeus/spaces/<space>/knowledge/domain-map.md`、BC 間依存と連携関係は `amadeus/spaces/<space>/knowledge/context-map.md`、詳細なモデルと契約は Construction の Functional Design に反映する。
 - 特定 Unit の実装設計に閉じるモデルと契約は Construction の Functional Design に反映する。
 - モデル要素や契約 ID が変わる場合は、対象 Intent の `inception/traceability.md` も整合させる。
 - 曖昧語や衝突語は、この skill 自体が既存の Amadeus 成果物と照合し、必要な確認を行う。

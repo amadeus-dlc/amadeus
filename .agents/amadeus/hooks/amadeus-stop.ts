@@ -34,7 +34,7 @@
 //   2. A NO-PROGRESS counter — consecutive blocks with no intervening workflow
 //      advance (no `report` ran, so the position signature is unchanged). It is
 //      persisted across the rapid-fire blocks in a transient file under
-//      aidlc-docs/.aidlc-stop-hook/. Under a no-progress ceiling exposed as
+//      aidlc-docs/.amadeus-stop-hook/. Under a no-progress ceiling exposed as
 //      CLAUDE_CODE_STOP_HOOK_BLOCK_CAP, once the count reaches the cap we LET GO
 //      (allow the stop). The default ceiling is run-mode aware: an unattended
 //      autonomous Construction run keeps the long ceiling (8, the loop must run
@@ -80,8 +80,8 @@
 //      parse miss falls through to the cap-bounded block. It only ever ALLOWS;
 //      it can never block more.
 //
-// No-op outside AIDLC. The frontmatter Stop matcher scopes this to the `aidlc`
-// skill, but we defend here too: with no active workflow (no aidlc-state.md
+// No-op outside AIDLC. The frontmatter Stop matcher scopes this to the `amadeus`
+// skill, but we defend here too: with no active workflow (no amadeus-state.md
 // under the project dir) we exit 0 immediately. A non-AIDLC session is NEVER
 // blocked. Any unexpected error also falls through to allow the stop — failing
 // open is the only safe failure mode for a hook that can otherwise trap a turn.
@@ -149,7 +149,7 @@ const ENGINE_TIMEOUT_MS = 10_000;
 
 const projectDir = resolveProjectDirFromHook(import.meta.url);
 
-// Write a health heartbeat (mirrors the other hooks' .aidlc-hooks-health beat).
+// Write a health heartbeat (mirrors the other hooks' .amadeus-hooks-health beat).
 try {
   const healthDir = hooksHealthDir(projectDir);
   mkdirSync(healthDir, { recursive: true });
@@ -181,7 +181,7 @@ function blockStop(reason: string): never {
 // another session has since moved past, or that has since completed, must not
 // be nudged to keep "finishing" a workflow it no longer owns or that is
 // already done. So before ANY nag decision, require BOTH:
-//   1. OWNERSHIP — this session's `.aidlc-sessions/<session-id>` stamp (written
+//   1. OWNERSHIP — this session's `.amadeus-sessions/<session-id>` stamp (written
 //      by amadeus-session-start.ts) names the SAME intent UUID as the live
 //      active-intent cursor. No stamp, a stamp for a different intent, or no
 //      registry-tracked cursor at all all count as "not owned".
@@ -217,7 +217,7 @@ function sessionOwnsInProgressWorkflow(sessionId: string): boolean {
 // report ran in between (no progress) and we increment the counter; when it
 // changes, the loop is healthy and we reset to 0.
 //
-// The file lives under the gitignored aidlc-docs/.aidlc-stop-hook/ alongside
+// The file lives under the gitignored aidlc-docs/.amadeus-stop-hook/ alongside
 // the other transient framework state. It is keyed off the project dir, so it
 // is per-workflow and survives across the rapid-fire blocks within one stuck
 // turn (the blocks happen in the same project; each re-invocation re-reads it).
@@ -485,7 +485,7 @@ function isPendingQuestionStop(stateContent: string): boolean {
 // and would block the turn - shoving the conductor back into stage execution
 // mid-compose and abandoning the gate (the mid-workflow trap class, reopened
 // for compose). POSITIVE-CONFIRMATION: the conductor writes the marker file
-// `aidlc/.aidlc-compose-pending` before presenting the gate (the engine's
+// `amadeus/.amadeus-compose-pending` before presenting the gate (the engine's
 // compose dispatch print instructs it) and deletes it on approve/reject, the
 // same disk-signal discipline as tier-2's <slug>-questions.md. AUTONOMY GUARD:
 // never fires under autonomous Construction (an unattended run has no human to
@@ -497,7 +497,7 @@ function isPendingComposeStop(stateContent: string): boolean {
     if (getField(stateContent, "Construction Autonomy Mode")?.trim() === "autonomous") {
       return false; // autonomy guard - keep the loop alive
     }
-    return existsSync(join(projectDir, "aidlc", ".aidlc-compose-pending"));
+    return existsSync(join(projectDir, "amadeus", ".amadeus-compose-pending"));
   } catch {
     return false;
   }
@@ -1018,7 +1018,7 @@ if (isPendingComposeStop(stateContent)) {
   recordHookDrop(
     projectDir,
     HOOK_NAME,
-    "an in-flight compose proposal is pending human approval (aidlc/.aidlc-compose-pending present); allowing the stop (pending-compose carve-out)",
+    "an in-flight compose proposal is pending human approval (amadeus/.amadeus-compose-pending present); allowing the stop (pending-compose carve-out)",
   );
   allowStop();
 }

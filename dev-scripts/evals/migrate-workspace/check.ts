@@ -2,7 +2,7 @@
 
 // migrate-workspace-to-aidlc の検証。
 // 旧 `.amadeus/` 構造の fixture workspace を合成し、一括移行の結果が
-// 新契約（aidlc/spaces/default/、aidlc-state.md、intents.json、R005 改名）を満たし、
+// 新契約（amadeus/spaces/default/、amadeus-state.md、intents.json、R005 改名）を満たし、
 // 移行後の workspace と Intent が validator で pass することを確認する。
 
 import { mkdirSync, mkdtempSync, existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -145,7 +145,7 @@ function buildFixture(): string {
 const workspace = buildFixture();
 run(["bun", "run", script, workspace, "--repo", "amadeus", "--delete-old"]);
 
-const space = join(workspace, "aidlc/spaces/default");
+const space = join(workspace, "amadeus/spaces/default");
 
 // R001: Space 構造
 check("memory/org.md が存在する", existsSync(join(space, "memory/org.md")), "なし");
@@ -170,9 +170,9 @@ check("registry に record の行がある", Array.isArray(registry) && registry
 check("registry の uuid が UUIDv7 である", /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(registry[0].uuid), String(registry[0].uuid));
 check("active-intent が新 dirName を指す", readFileSync(join(space, "intents/active-intent"), "utf8").trim() === newDirName, "不一致");
 
-// R003: aidlc-state.md
-const stateText = readFileSync(join(recordDir, "aidlc-state.md"), "utf8");
-check("aidlc-state.md に v2 セクションがある", stateText.includes("## Stage Progress") && stateText.includes("## Phase Progress"), "セクション不足");
+// R003: amadeus-state.md
+const stateText = readFileSync(join(recordDir, "amadeus-state.md"), "utf8");
+check("amadeus-state.md に v2 セクションがある", stateText.includes("## Stage Progress") && stateText.includes("## Phase Progress"), "セクション不足");
 check("scope が refactor である", stateText.includes("- **Scope**: refactor"), "Scope 行不一致");
 {
   const line = stateText.split("\n").find((entry) => entry.startsWith("- **Stages to Execute**: ")) ?? "";

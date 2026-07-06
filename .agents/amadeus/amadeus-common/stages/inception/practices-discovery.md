@@ -45,7 +45,7 @@ scopes:
   - mvp
   - infra
   - workshop
-inputs: <record>/aidlc-state.md + (brownfield) reverse-engineering's 8 artifacts
+inputs: <record>/amadeus-state.md + (brownfield) reverse-engineering's 8 artifacts
 outputs: "team-practices.md, discovered-rules.md, evidence.md, practices-discovery-timestamp.md (4 artifacts under this stage's record dir, engine-resolved). On affirmation, content is promoted to the harness rule layer's aidlc-team.md and aidlc-project.md."
 ---
 
@@ -59,7 +59,7 @@ This stage discovers how the team works — way of working, walking-skeleton sta
 
 ### Step 1: Check Conditions
 
-Read `<record>/aidlc-state.md` to determine project type:
+Read `<record>/amadeus-state.md` to determine project type:
 
 - **Brownfield**: run Step 2 (multi-agent evidence scan) before the interview.
 - **Greenfield**: skip Step 2; the interview asks all five practice areas using `aidlc-org.md` defaults as suggested answers.
@@ -78,7 +78,7 @@ The orchestrator issues four `Task` invocations in a single assistant message (p
 
 4. **amadeus-devsecops-agent** — Reads its KB on CI/security. Scans linting config, SAST/DAST tooling, secret scanning, dependency-update automation. Returns: security posture, lint/format rules, supply-chain controls.
 
-**Dispatch shape**: single assistant message with four `Task` calls. Subagent personas and KB load automatically — do NOT inject them manually. Pass `<record>/aidlc-state.md` and the relevant reverse-engineering artifacts as context. Collect all four findings before proceeding to Step 3.
+**Dispatch shape**: single assistant message with four `Task` calls. Subagent personas and KB load automatically — do NOT inject them manually. Pass `<record>/amadeus-state.md` and the relevant reverse-engineering artifacts as context. Collect all four findings before proceeding to Step 3.
 
 ### Step 3: Interview (Always)
 
@@ -145,7 +145,7 @@ The subcommand:
 After Step 6 succeeds (the subcommand prints `{"emitted":"PRACTICES_AFFIRMED",...}` and exits 0):
 
 1. `PRACTICES_AFFIRMED` was already emitted by the Step 6 subcommand — do NOT re-emit it.
-2. Update `Practices Affirmed Timestamp` in `<record>/aidlc-state.md` via `bun .claude/tools/amadeus-state.ts set "Practices Affirmed Timestamp=NOW"` (the `NOW` literal expands to the current ISO 8601 timestamp; the field is part of the v7 state template).
+2. Update `Practices Affirmed Timestamp` in `<record>/amadeus-state.md` via `bun .claude/tools/amadeus-state.ts set "Practices Affirmed Timestamp=NOW"` (the `NOW` literal expands to the current ISO 8601 timestamp; the field is part of the v7 state template).
 3. Mark practices-discovery as `[x]` completed in the INCEPTION phase block.
 
 If Step 6 failed (`PRACTICES_OVERRIDE` was emitted by the subcommand and exit was non-zero), abort Step 7 entirely. Do NOT update the timestamp or mark the stage complete. The user re-enters the gate after addressing the failure.
@@ -162,7 +162,7 @@ This stage's outputs are markdown artefacts under `<record>/inception/practices-
 
 The imported sensors check those outputs:
 
-- **`required-sections`** verifies the output contains the registry default (≥2 H2 headings). Failure mode: missing headings emit `SENSOR_FAILED` with detail at `<record>/.aidlc-sensors/<stage-slug>/required-sections-<iso>.md`.
+- **`required-sections`** verifies the output contains the registry default (≥2 H2 headings). Failure mode: missing headings emit `SENSOR_FAILED` with detail at `<record>/.amadeus-sensors/<stage-slug>/required-sections-<iso>.md`.
 - **`upstream-coverage`** verifies the output prose references each artefact declared in this stage's `consumes:` frontmatter. This stage declares no upstream artefacts; the sensor still runs but reports zero unreferenced inputs by default.
 
 ## Learn

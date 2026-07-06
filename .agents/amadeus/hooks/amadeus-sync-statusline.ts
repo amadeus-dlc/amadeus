@@ -1,4 +1,4 @@
-// PostToolUse hook: Sync aidlc-state.md on stage task activation
+// PostToolUse hook: Sync amadeus-state.md on stage task activation
 // Triggered on TaskUpdate — extracts slug from activeForm "[slug]" suffix
 // Receives JSON on stdin from Claude Code
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";

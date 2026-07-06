@@ -63,7 +63,7 @@ copies this table verbatim.
 | `requires_stage` | string[] | yes | empty allowed; each entry a known stage slug. Two roles: (1) semantic data dependency; (2) presentation-order edge for stages with no semantic link but a fixed display order. Primary input to computed `display_order` |
 | `scopes` | string[] | optional | each entry a scope name with a matching `.claude/scopes/amadeus-<name>.md` file. Naming a scope marks this stage EXECUTE under that scope; absence marks it SKIP. The per-stage transpose of the scope membership matrix — `amadeus-graph compile` reads every stage's `scopes:` and emits the compiled EXECUTE/SKIP grid (`tools/data/scope-grid.json`). The 3 initialization stages name all scopes (always EXECUTE). Absent and `[]` are treated identically |
 | `inputs` | string | yes | human prose (preserves today's `**Inputs**:` line) |
-| `outputs` | string | yes | human prose (preserves today's `**Outputs**:` line). **Non-load-bearing at runtime** — the engine NEVER reads `outputs:` for path resolution; it resolves the node's `produces[]` artifact NAMES against the **active intent's record dir** at emit time (see "Artifact paths are engine-resolved" below). Author `outputs:` as relative artifact NAMES (or `<phase>/<stage>/<name>.md` shapes); do NOT hardcode a workspace root (`aidlc-docs/…` or `aidlc/spaces/…`) — it would read FALSE the moment the record re-roots per intent |
+| `outputs` | string | yes | human prose (preserves today's `**Outputs**:` line). **Non-load-bearing at runtime** — the engine NEVER reads `outputs:` for path resolution; it resolves the node's `produces[]` artifact NAMES against the **active intent's record dir** at emit time (see "Artifact paths are engine-resolved" below). Author `outputs:` as relative artifact NAMES (or `<phase>/<stage>/<name>.md` shapes); do NOT hardcode a workspace root (`aidlc-docs/…` or `amadeus/spaces/…`) — it would read FALSE the moment the record re-roots per intent |
 
 ---
 
@@ -127,7 +127,7 @@ NAMES, not rooted paths — the engine resolves the root (see below).
 
 A stage emits relative artifact **names** (its `produces[]`); the engine
 resolves them to canonical write paths at directive-emit time, **against the
-active intent's record dir** — `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/<phase>/<stage>/<name>.md`
+active intent's record dir** — `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/<phase>/<stage>/<name>.md`
 (a pre-workspace project is migrated to this layout on first touch — there is no
 flat-root resolution path post-migration). The resolver is `resolveArtifactPath` / `memoryPathFor` in
 `amadeus-orchestrate.ts`, threaded with the active intent's relative record dir

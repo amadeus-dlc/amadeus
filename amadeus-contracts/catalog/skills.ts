@@ -61,7 +61,7 @@ export const skillContracts = [
       },
     ],
     readBoundary: {
-      allowed: ["aidlc/spaces/<space>/intents/**", "aidlc/spaces/<space>/memory/**", "対象 skill が渡した前提"],
+      allowed: ["amadeus/spaces/<space>/intents/**", "amadeus/spaces/<space>/memory/**", "対象 skill が渡した前提"],
       prohibited: ["質問対象と無関係な成果物"],
     },
     writeBoundary: {

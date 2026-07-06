@@ -29,15 +29,15 @@
     "outputs": "the per-intent record tree (stage artifact dirs + verification dir) and the space-level knowledge/ dir",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       }
     ],
@@ -75,15 +75,15 @@
     "outputs": "workspace classification (greenfield/brownfield), technology stack detection",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       }
     ],
@@ -118,18 +118,18 @@
       "pdm"
     ],
     "inputs": "workspace classification from workspace-detection, scope from orchestrator",
-    "outputs": "<record>/aidlc-state.md (full populated version, engine-resolved)",
+    "outputs": "<record>/amadeus-state.md (full populated version, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       }
     ],
@@ -169,19 +169,19 @@
     "outputs": "intent-statement.md, stakeholder-map.md, intent-capture-questions.md (under this stage's record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/ideation.md",
+        "path": "amadeus/spaces/default/memory/phases/ideation.md",
         "scope": "phase"
       }
     ],
@@ -236,19 +236,19 @@
     "outputs": "competitive-analysis.md, market-trends.md, build-vs-buy.md, market-research-questions.md (under this stage's record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/ideation.md",
+        "path": "amadeus/spaces/default/memory/phases/ideation.md",
         "scope": "phase"
       }
     ],
@@ -320,19 +320,19 @@
     "outputs": "feasibility-assessment.md, constraint-register.md, raid-log.md, feasibility-questions.md (under this stage's record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/ideation.md",
+        "path": "amadeus/spaces/default/memory/phases/ideation.md",
         "scope": "phase"
       }
     ],
@@ -398,19 +398,19 @@
     "outputs": "scope-document.md, intent-backlog.md, scope-definition-questions.md (under this stage's record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/ideation.md",
+        "path": "amadeus/spaces/default/memory/phases/ideation.md",
         "scope": "phase"
       }
     ],
@@ -472,19 +472,19 @@
     "outputs": "team-assessment.md, skill-matrix.md, mob-composition.md, team-formation-questions.md (under this stage's record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/ideation.md",
+        "path": "amadeus/spaces/default/memory/phases/ideation.md",
         "scope": "phase"
       }
     ],
@@ -552,19 +552,19 @@
     "outputs": "wireframes.md, user-flow.md, rough-mockups-questions.md (under this stage's record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/ideation.md",
+        "path": "amadeus/spaces/default/memory/phases/ideation.md",
         "scope": "phase"
       }
     ],
@@ -652,19 +652,19 @@
     "outputs": "initiative-brief.md, decision-log.md, approval-handoff-questions.md (under this stage's record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/ideation.md",
+        "path": "amadeus/spaces/default/memory/phases/ideation.md",
         "scope": "phase"
       }
     ],
@@ -722,23 +722,23 @@
       "security-patch",
       "workshop"
     ],
-    "inputs": "<record>/aidlc-state.md",
-    "outputs": "aidlc/spaces/<active-space>/codekb/<repo>/ (9 artifacts: business-overview.md, architecture.md, code-structure.md, api-documentation.md, component-inventory.md, technology-stack.md, dependencies.md, code-quality-assessment.md, reverse-engineering-timestamp.md)",
+    "inputs": "<record>/amadeus-state.md",
+    "outputs": "amadeus/spaces/<active-space>/codekb/<repo>/ (9 artifacts: business-overview.md, architecture.md, code-structure.md, api-documentation.md, component-inventory.md, technology-stack.md, dependencies.md, code-quality-assessment.md, reverse-engineering-timestamp.md)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/inception.md",
+        "path": "amadeus/spaces/default/memory/phases/inception.md",
         "scope": "phase"
       }
     ],
@@ -822,23 +822,23 @@
       "infra",
       "workshop"
     ],
-    "inputs": "<record>/aidlc-state.md + (brownfield) reverse-engineering's 8 artifacts",
+    "inputs": "<record>/amadeus-state.md + (brownfield) reverse-engineering's 8 artifacts",
     "outputs": "team-practices.md, discovered-rules.md, evidence.md, practices-discovery-timestamp.md (4 artifacts under this stage's record dir, engine-resolved). On affirmation, content is promoted to the harness rule layer's aidlc-team.md and aidlc-project.md.",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/inception.md",
+        "path": "amadeus/spaces/default/memory/phases/inception.md",
         "scope": "phase"
       }
     ],
@@ -924,19 +924,19 @@
     "outputs": "requirements.md, requirements-analysis-questions.md (under this stage's record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/inception.md",
+        "path": "amadeus/spaces/default/memory/phases/inception.md",
         "scope": "phase"
       }
     ],
@@ -1010,19 +1010,19 @@
     "outputs": "stories.md, personas.md, user-stories-assessment.md (under this stage's record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/inception.md",
+        "path": "amadeus/spaces/default/memory/phases/inception.md",
         "scope": "phase"
       }
     ],
@@ -1100,19 +1100,19 @@
     "outputs": "mockups.md, interaction-spec.md, design-system-mapping.md, accessibility-checklist.md, refined-mockups-questions.md (under this stage's record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/inception.md",
+        "path": "amadeus/spaces/default/memory/phases/inception.md",
         "scope": "phase"
       }
     ],
@@ -1193,19 +1193,19 @@
     "outputs": "components.md, component-methods.md, services.md, component-dependency.md, decisions.md (under this stage's record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/inception.md",
+        "path": "amadeus/spaces/default/memory/phases/inception.md",
         "scope": "phase"
       }
     ],
@@ -1288,19 +1288,19 @@
     "outputs": "unit-of-work.md, unit-of-work-dependency.md, unit-of-work-story-map.md (under this stage's record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/inception.md",
+        "path": "amadeus/spaces/default/memory/phases/inception.md",
         "scope": "phase"
       }
     ],
@@ -1387,19 +1387,19 @@
     "outputs": "bolt-plan.md, team-allocation.md, risk-and-sequencing-rationale.md, external-dependency-map.md, delivery-planning-questions.md (under this stage's record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/inception.md",
+        "path": "amadeus/spaces/default/memory/phases/inception.md",
         "scope": "phase"
       }
     ],
@@ -1483,19 +1483,19 @@
     "outputs": "business-logic-model.md, business-rules.md, domain-entities.md, CONDITIONAL: frontend-components.md (under this stage's per-unit record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/construction.md",
+        "path": "amadeus/spaces/default/memory/phases/construction.md",
         "scope": "phase"
       }
     ],
@@ -1587,19 +1587,19 @@
     "outputs": "performance-requirements.md, security-requirements.md, scalability-requirements.md, reliability-requirements.md, tech-stack-decisions.md (under this stage's per-unit record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/construction.md",
+        "path": "amadeus/spaces/default/memory/phases/construction.md",
         "scope": "phase"
       }
     ],
@@ -1695,19 +1695,19 @@
     "outputs": "performance-design.md, security-design.md, scalability-design.md, reliability-design.md, logical-components.md (under this stage's per-unit record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/construction.md",
+        "path": "amadeus/spaces/default/memory/phases/construction.md",
         "scope": "phase"
       }
     ],
@@ -1812,19 +1812,19 @@
     "outputs": "deployment-architecture.md, infrastructure-services.md, monitoring-design.md, cicd-pipeline.md, CONDITIONAL: shared-infrastructure.md (under this stage's per-unit record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/construction.md",
+        "path": "amadeus/spaces/default/memory/phases/construction.md",
         "scope": "phase"
       }
     ],
@@ -1928,19 +1928,19 @@
     "outputs": "application code + code-generation-plan.md, code-summary.md (under this stage's per-unit record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/construction.md",
+        "path": "amadeus/spaces/default/memory/phases/construction.md",
         "scope": "phase"
       }
     ],
@@ -2010,19 +2010,19 @@
     "outputs": "build-instructions.md, unit-test-instructions.md, integration-test-instructions.md, performance-test-instructions.md, security-test-instructions.md, build-and-test-summary.md, test-results.md (under this stage's record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/construction.md",
+        "path": "amadeus/spaces/default/memory/phases/construction.md",
         "scope": "phase"
       }
     ],
@@ -2093,19 +2093,19 @@
     "outputs": "ci-config.md, quality-gates.md, ci-pipeline-questions.md (under this stage's record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/construction.md",
+        "path": "amadeus/spaces/default/memory/phases/construction.md",
         "scope": "phase"
       }
     ],
@@ -2185,19 +2185,19 @@
     "outputs": "cd-config.md, deployment-strategy.md, rollback-runbook.md, deployment-pipeline-questions.md (under this stage's record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/operation.md",
+        "path": "amadeus/spaces/default/memory/phases/operation.md",
         "scope": "phase"
       }
     ],
@@ -2264,19 +2264,19 @@
     "outputs": "environment-inventory.md, validation-report.md, environment-provisioning-questions.md (under this stage's record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/operation.md",
+        "path": "amadeus/spaces/default/memory/phases/operation.md",
         "scope": "phase"
       }
     ],
@@ -2348,19 +2348,19 @@
     "outputs": "deployment-log.md, smoke-test-results.md, health-check-report.md, deployment-execution-questions.md (under this stage's record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/operation.md",
+        "path": "amadeus/spaces/default/memory/phases/operation.md",
         "scope": "phase"
       }
     ],
@@ -2437,19 +2437,19 @@
     "outputs": "dashboards.md, alarms.md, slo-config.md, log-queries.md, tracing-config.md, anomaly-config.md, observability-setup-questions.md (under this stage's record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/operation.md",
+        "path": "amadeus/spaces/default/memory/phases/operation.md",
         "scope": "phase"
       }
     ],
@@ -2520,19 +2520,19 @@
     "outputs": "runbooks.md, incident-plan.md, escalation-matrix.md, incident-response-questions.md (under this stage's record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/operation.md",
+        "path": "amadeus/spaces/default/memory/phases/operation.md",
         "scope": "phase"
       }
     ],
@@ -2605,19 +2605,19 @@
     "outputs": "load-test-plan.md, test-results.md, nfr-validation-matrix.md, performance-validation-questions.md (under this stage's record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/operation.md",
+        "path": "amadeus/spaces/default/memory/phases/operation.md",
         "scope": "phase"
       }
     ],
@@ -2698,19 +2698,19 @@
     "outputs": "slo-report.md, cost-analysis.md, drift-report.md, feedback-loop.md, feedback-optimization-questions.md (under this stage's record dir, engine-resolved)",
     "rules_in_context": [
       {
-        "path": "aidlc/spaces/default/memory/org.md",
+        "path": "amadeus/spaces/default/memory/org.md",
         "scope": "org"
       },
       {
-        "path": "aidlc/spaces/default/memory/team.md",
+        "path": "amadeus/spaces/default/memory/team.md",
         "scope": "team"
       },
       {
-        "path": "aidlc/spaces/default/memory/project.md",
+        "path": "amadeus/spaces/default/memory/project.md",
         "scope": "project"
       },
       {
-        "path": "aidlc/spaces/default/memory/phases/operation.md",
+        "path": "amadeus/spaces/default/memory/phases/operation.md",
         "scope": "phase"
       }
     ],

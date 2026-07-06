@@ -3,14 +3,14 @@
 このファイルは `.agents/rules/backward-compatibility.md` が定める互換性維持対象の台帳である。
 ここに記載のない構造、入口、成果物名、配置は互換性維持対象ではない。
 `amadeus-validator` は、Intent record の検証時にこのファイルを参照する。
-`aidlc/spaces/<space>/intents/<dirName>/` の形式で記載された record は、AmadeusValidator の現行（v2 事前適応、以下「旧形式」）検査を維持する。
+`amadeus/spaces/<space>/intents/<dirName>/` の形式で記載された record は、AmadeusValidator の現行（v2 事前適応、以下「旧形式」）検査を維持する。
 記載のない record ディレクトリには、v2 契約検査（`.claude/amadeus-common/stages/` の frontmatter `produces:` から導出した必須成果物、`verification/phase-check-<phase>.md`、`audit/*.md` shard の存在検査）を適用する。
 
 ## 対象
 
-- 対象: `aidlc/spaces/default/intents/260703-aidlc-v2-full-compliance/`
-- 対象: `aidlc/spaces/default/intents/260703-amadeus-skill-english-rollout-plan/`
-- 対象: `aidlc/spaces/default/intents/260704-v2-parity-completion/`
+- 対象: `amadeus/spaces/default/intents/260703-aidlc-v2-full-compliance/`
+- 対象: `amadeus/spaces/default/intents/260703-amadeus-skill-english-rollout-plan/`
+- 対象: `amadeus/spaces/default/intents/260704-v2-parity-completion/`
 
 ## 維持理由
 

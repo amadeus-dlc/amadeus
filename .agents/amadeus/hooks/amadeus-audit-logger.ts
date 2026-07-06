@@ -48,7 +48,7 @@ const auditFileValue = file.replace(/\\/g, "/");
 const fileNorm = auditFileValue; // forward-slash form for all path matching below
 
 // Only log writes to the active intent's RECORD tree. The record re-roots per
-// intent (aidlc/spaces/<space>/intents/<slug>-<id8>/…), so a bare
+// intent (amadeus/spaces/<space>/intents/<slug>-<id8>/…), so a bare
 // `includes("aidlc-docs/")` gate would DROP every artifact write on the workspace
 // layout. docsRoot() resolves that per-intent root when an intent is active, else
 // the bare space record root — the write is logged iff it lands under that root.

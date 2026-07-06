@@ -17,7 +17,7 @@ function ok(name: string, cond: boolean, detail?: string): void {
 
 const registryPath = join(
   import.meta.dir,
-  "../../../aidlc/spaces/default/intents/intents.json"
+  "../../../amadeus/spaces/default/intents/intents.json"
 );
 
 type Entry = {

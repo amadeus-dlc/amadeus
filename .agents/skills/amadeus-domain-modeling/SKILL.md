@@ -3,8 +3,8 @@ name: amadeus-domain-modeling
 description: >-
   Actively refine the target domain model within Amadeus artifacts. Use it whenever you need to pin down terminology,
   the ubiquitous language, concept boundaries, concrete scenarios, the domain model, contracts, or domain decisions,
-  and record the confirmed content into `aidlc/spaces/<space>/knowledge/glossary.md`, `aidlc/spaces/<space>/knowledge/domain-map.md`,
-  `aidlc/spaces/<space>/knowledge/context-map.md`, `aidlc/spaces/<space>/intents/<dirName>/domain-notes.md`, Construction Functional Design,
+  and record the confirmed content into `amadeus/spaces/<space>/knowledge/glossary.md`, `amadeus/spaces/<space>/knowledge/domain-map.md`,
+  `amadeus/spaces/<space>/knowledge/context-map.md`, `amadeus/spaces/<space>/intents/<dirName>/domain-notes.md`, Construction Functional Design,
   or the minimum necessary decision. Do not use this to update the repo's development `CONTEXT.md` or `docs/adr`.
 ---
 
@@ -14,10 +14,10 @@ description: >-
 
 Actively refine, while designing, the model of the target domain that Amadeus artifacts handle.
 
-This skill is not just for reading `aidlc/spaces/<space>/knowledge/glossary.md`, `domain-map.md`, and `context-map.md`.
+This skill is not just for reading `amadeus/spaces/<space>/knowledge/glossary.md`, `domain-map.md`, and `context-map.md`.
 It is a skill for pointing out terminology conflicts, sharpening ambiguous words, testing concept relationships with concrete scenarios, and recording the confirmed content into Amadeus artifacts on the spot.
 
-It handles the domain knowledge of the target product recorded under the Space (`aidlc/spaces/<space>/`).
+It handles the domain knowledge of the target product recorded under the Space (`amadeus/spaces/<space>/`).
 It does not update `CONTEXT.md` or `docs/adr/**`, which hold development terminology for the Amadeus repo itself.
 
 ## File Structure
@@ -25,7 +25,7 @@ It does not update `CONTEXT.md` or `docs/adr/**`, which hold development termino
 The Amadeus workspace keeps organization-wide domain knowledge and Intent-specific domain knowledge separate.
 
 ```text
-aidlc/spaces/<space>/
+amadeus/spaces/<space>/
 ├── knowledge/
 │   ├── glossary.md
 │   ├── domain-map.md
@@ -43,28 +43,28 @@ aidlc/spaces/<space>/
             └── traceability.md
 ```
 
-`aidlc/spaces/<space>/knowledge/glossary.md` handles confirmed terminology shared across all Intents.
-`aidlc/spaces/<space>/knowledge/domain-map.md` handles subdomains and Bounded Contexts adopted organization-wide.
-`aidlc/spaces/<space>/knowledge/context-map.md` handles dependencies and collaboration relationships between adopted Bounded Contexts.
+`amadeus/spaces/<space>/knowledge/glossary.md` handles confirmed terminology shared across all Intents.
+`amadeus/spaces/<space>/knowledge/domain-map.md` handles subdomains and Bounded Contexts adopted organization-wide.
+`amadeus/spaces/<space>/knowledge/context-map.md` handles dependencies and collaboration relationships between adopted Bounded Contexts.
 
-`aidlc/spaces/<space>/intents/<dirName>/domain-notes.md` handles unresolved terms, candidates, questions, and reflection history found within the Intent.
+`amadeus/spaces/<space>/intents/<dirName>/domain-notes.md` handles unresolved terms, candidates, questions, and reflection history found within the Intent.
 The detailed domain model, contracts, and models or contracts scoped to a specific Unit's implementation design are handled in Construction Functional Design.
 
 Create files only when they become necessary.
 When you find an unresolved term or concept, first record it in the target Intent's `domain-notes.md`.
-Promote to `aidlc/spaces/<space>/knowledge/glossary.md` only terms whose meaning is confirmed and that may be used across multiple Intents.
+Promote to `amadeus/spaces/<space>/knowledge/glossary.md` only terms whose meaning is confirmed and that may be used across multiple Intents.
 
 ## Checks at Session Start
 
-If the Space (`aidlc/spaces/<space>/`) does not exist, do not record terms or models into a substitute file.
+If the Space (`amadeus/spaces/<space>/`) does not exist, do not record terms or models into a substitute file.
 Stop the work and direct the user to first initialize the Space by starting a workflow with the `amadeus` entrypoint (the engine's Initialization phase scaffolds the Space; see `bun .agents/amadeus/tools/amadeus-utility.ts help` for the space verbs).
 
 The Space is unprepared if at least one of the following does not exist.
 
-- `aidlc/spaces/<space>/knowledge/glossary.md`
-- `aidlc/spaces/<space>/knowledge/domain-map.md`
-- `aidlc/spaces/<space>/knowledge/context-map.md`
-- `aidlc/spaces/<space>/intents/intents.md`
+- `amadeus/spaces/<space>/knowledge/glossary.md`
+- `amadeus/spaces/<space>/knowledge/domain-map.md`
+- `amadeus/spaces/<space>/knowledge/context-map.md`
+- `amadeus/spaces/<space>/intents/intents.md`
 
 When handling Intent-specific terminology, models, contracts, or decisions, confirm the target Intent directory name.
 If the target Intent does not exist, stop the work and direct the user to first create the Intent with `amadeus`.
@@ -74,7 +74,7 @@ If the target Intent's `domain-notes.md` does not exist, create it once you need
 
 ### Cross-Check Against the Glossary
 
-If the user uses a term that conflicts with the existing `aidlc/spaces/<space>/knowledge/glossary.md`, point it out on the spot.
+If the user uses a term that conflicts with the existing `amadeus/spaces/<space>/knowledge/glossary.md`, point it out on the spot.
 
 Example:
 
@@ -99,7 +99,7 @@ Example:
 認証情報の管理責任に注目するなら「アカウント所有者」と分けた方がよいです。
 ```
 
-Once the proposed term is confirmed, record it in `aidlc/spaces/<space>/knowledge/glossary.md` if it is a shared term.
+Once the proposed term is confirmed, record it in `amadeus/spaces/<space>/knowledge/glossary.md` if it is a shared term.
 Record it in `domain-notes.md` if it is still an Intent-internal candidate.
 
 ### Test with Concrete Scenarios
@@ -121,16 +121,16 @@ When the user states domain behavior, cross-check it against existing Amadeus ar
 
 Examples of what to check:
 
-- `aidlc/spaces/<space>/knowledge/glossary.md`
-- `aidlc/spaces/<space>/intents/<dirName>/domain-notes.md`
-- `aidlc/spaces/<space>/intents/<dirName>/inception/requirements-analysis/requirements.md`
-- `aidlc/spaces/<space>/intents/<dirName>/inception/user-stories/stories.md`
-- `aidlc/spaces/<space>/intents/<dirName>/inception/units-generation/unit-of-work.md`
-- `aidlc/spaces/<space>/intents/<dirName>/inception/delivery-planning/bolt-plan.md`
-- `aidlc/spaces/<space>/intents/<dirName>/inception/traceability.md`
-- `aidlc/spaces/<space>/knowledge/domain-map.md`
-- `aidlc/spaces/<space>/knowledge/context-map.md`
-- `aidlc/spaces/<space>/intents/<dirName>/construction/<unit-id>-<slug>/functional-design/`
+- `amadeus/spaces/<space>/knowledge/glossary.md`
+- `amadeus/spaces/<space>/intents/<dirName>/domain-notes.md`
+- `amadeus/spaces/<space>/intents/<dirName>/inception/requirements-analysis/requirements.md`
+- `amadeus/spaces/<space>/intents/<dirName>/inception/user-stories/stories.md`
+- `amadeus/spaces/<space>/intents/<dirName>/inception/units-generation/unit-of-work.md`
+- `amadeus/spaces/<space>/intents/<dirName>/inception/delivery-planning/bolt-plan.md`
+- `amadeus/spaces/<space>/intents/<dirName>/inception/traceability.md`
+- `amadeus/spaces/<space>/knowledge/domain-map.md`
+- `amadeus/spaces/<space>/knowledge/context-map.md`
+- `amadeus/spaces/<space>/intents/<dirName>/construction/<unit-id>-<slug>/functional-design/`
 
 In a workspace that has implementation code, also check the code as needed.
 If the artifact or code conflicts with what was said, confirm which one to adopt.
@@ -152,15 +152,15 @@ Guide to where to update:
 
 | Confirmed item | Update target |
 |---|---|
-| Unresolved terms, candidates, questions within the Intent | `aidlc/spaces/<space>/intents/<dirName>/domain-notes.md` |
-| Confirmed terminology shared across all Intents | `aidlc/spaces/<space>/knowledge/glossary.md` |
-| Subdomains, BCs adopted organization-wide | `aidlc/spaces/<space>/knowledge/domain-map.md` |
-| Dependencies and collaboration relationships between adopted BCs | `aidlc/spaces/<space>/knowledge/context-map.md` |
+| Unresolved terms, candidates, questions within the Intent | `amadeus/spaces/<space>/intents/<dirName>/domain-notes.md` |
+| Confirmed terminology shared across all Intents | `amadeus/spaces/<space>/knowledge/glossary.md` |
+| Subdomains, BCs adopted organization-wide | `amadeus/spaces/<space>/knowledge/domain-map.md` |
+| Dependencies and collaboration relationships between adopted BCs | `amadeus/spaces/<space>/knowledge/context-map.md` |
 | Detailed models, contracts, design decisions scoped to a specific Unit's implementation design | Construction Functional Design |
-| Tracking of model elements or contract IDs | `aidlc/spaces/<space>/intents/<dirName>/inception/traceability.md` |
-| Hard-to-reverse domain decisions | `aidlc/spaces/<space>/intents/<dirName>/inception/decisions.md` and `inception/decisions/<decision-id>-<slug>.md` |
+| Tracking of model elements or contract IDs | `amadeus/spaces/<space>/intents/<dirName>/inception/traceability.md` |
+| Hard-to-reverse domain decisions | `amadeus/spaces/<space>/intents/<dirName>/inception/decisions.md` and `inception/decisions/<decision-id>-<slug>.md` |
 
-`aidlc/spaces/<space>/knowledge/glossary.md` is a glossary, not a place for specifications, discussion notes, or implementation decisions.
+`amadeus/spaces/<space>/knowledge/glossary.md` is a glossary, not a place for specifications, discussion notes, or implementation decisions.
 Do not put implementation details or temporary notes into it.
 
 ## Criteria for Creating a decision
@@ -207,13 +207,13 @@ If there is no basis, do not promote it to a contract; leave it as a candidate i
 
 - Do not update `CONTEXT.md`.
 - Do not create or update `docs/adr/**`.
-- Do not mix the repo's development terminology with the target domain terminology handled by the Space (`aidlc/spaces/<space>/`).
-- Do not add unresolved terms to `aidlc/spaces/<space>/knowledge/glossary.md`.
-- Do not use `aidlc/spaces/<space>/knowledge/glossary.md` as a place for specifications, a scratch pad, or implementation decisions.
+- Do not mix the repo's development terminology with the target domain terminology handled by the Space (`amadeus/spaces/<space>/`).
+- Do not add unresolved terms to `amadeus/spaces/<space>/knowledge/glossary.md`.
+- Do not use `amadeus/spaces/<space>/knowledge/glossary.md` as a place for specifications, a scratch pad, or implementation decisions.
 - Do not guess at identifiers for BCs, DDD Modules, model elements, or contracts.
 - Do not invent unresolved identifier rules such as Repository or Factory.
 - Do not make an update that requires the target Intent directory name without the Intent directory name.
-- Do not add a new Intent to `aidlc/spaces/<space>/intents/intents.md`.
+- Do not add a new Intent to `amadeus/spaces/<space>/intents/intents.md`.
 - Do not create stage artifacts such as `requirements.md`, `stories.md`, `unit-of-work.md`, or `bolt-plan.md`.
 - Do not assume `/amadeus-grilling` is called internally. This skill itself handles the questions needed to sharpen the domain model.
 - Do not write the repo's development documents or development scripts as runtime references.

@@ -10,7 +10,7 @@
     {
       "id": 2,
       "prompt": "Intent `260703-fix-login-timeout` を Amadeus Validator で検証して。",
-      "expected_output": "全体成果物に加えて対象 Intent の `aidlc-state.md` を検証する。Intent のモジュールファイル（`<dirName>.md`）は GD009 で廃止された任意成果物であり、存在する場合だけ検証する。scope、depth、Stage Progress の checkbox と scope の実行対象の一致、Phase Progress、Current Status、`audit/audit.md` のイベント（`STAGE_COMPLETED`、`PHASE_VERIFIED`、`PHASE_SKIPPED`、`BOLT_COMPLETED` ほか）、completed ステージの必須成果物を v2 ライフサイクルの契約として確認する。",
+      "expected_output": "全体成果物に加えて対象 Intent の `amadeus-state.md` を検証する。Intent のモジュールファイル（`<dirName>.md`）は GD009 で廃止された任意成果物であり、存在する場合だけ検証する。scope、depth、Stage Progress の checkbox と scope の実行対象の一致、Phase Progress、Current Status、`audit/audit.md` のイベント（`STAGE_COMPLETED`、`PHASE_VERIFIED`、`PHASE_SKIPPED`、`BOLT_COMPLETED` ほか）、completed ステージの必須成果物を v2 ライフサイクルの契約として確認する。",
       "files": []
     },
     {
@@ -28,7 +28,7 @@
     {
       "id": 5,
       "prompt": "v2 ライフサイクルの Intent で completed のステージに承認記録があるか Amadeus Validator で確認して。",
-      "expected_output": "対象 Intent の `aidlc-state.md` の Stage Progress を検証し、completed（`[x]`）のステージが `audit/audit.md` に `STAGE_COMPLETED` イベントを持つことを確認する。不足があれば fail として該当ステージを報告する。",
+      "expected_output": "対象 Intent の `amadeus-state.md` の Stage Progress を検証し、completed（`[x]`）のステージが `audit/audit.md` に `STAGE_COMPLETED` イベントを持つことを確認する。不足があれば fail として該当ステージを報告する。",
       "files": []
     }
   ]

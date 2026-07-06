@@ -13,8 +13,8 @@
 aidlc/
 ├── active-space                    # アクティブスペースのカーソル(gitignore, per-user)
 ├── .migrated                       # v1平置きレイアウトからの移行済みマーカー
-├── .aidlc-clone-id                 # このクローンの監査シャード名(gitignore, machine-local)
-├── .aidlc-sessions/                # 会話→intentマップ(gitignore)
+├── .amadeus-clone-id                 # このクローンの監査シャード名(gitignore, machine-local)
+├── .amadeus-sessions/                # 会話→intentマップ(gitignore)
 └── spaces/<space>/
     ├── memory/                     # ルール層(コミット)
     │   ├── org.md                  #   フレームワーク既定
@@ -45,18 +45,18 @@ aidlc/
 
 ## 2. Intentレコードディレクトリ(1 intent = 1ライフサイクル実行)
 
-`aidlc/spaces/<space>/intents/<YYMMDD>-<label>/` 配下。
+`amadeus/spaces/<space>/intents/<YYMMDD>-<label>/` 配下。
 
 ### 2.0 ルート
 
 | ファイル | 説明 | git |
 |---|---|---|
-| `aidlc-state.md` | ワークフロー状態(6状態チェックボックス) | コミット |
+| `amadeus-state.md` | ワークフロー状態(6状態チェックボックス) | コミット |
 | `audit/<host>-<clone>.md` | 監査証跡(クローンごとの追記専用シャード、68イベント分類) | コミット |
 | `verification/phase-check-<phase>.md` | フェーズ境界検証(3ファイル: ideation/inception/construction。stage 定義が作成を指示するのはこの3 phaseだけで、initialization と operation にはない。2026-07 の実機確認で訂正) | コミット |
-| `.aidlc-recovery.md` | リカバリ用ブレッドクラム | gitignore |
+| `.amadeus-recovery.md` | リカバリ用ブレッドクラム | gitignore |
 | `runtime-graph.json` | 実行テレメトリ(監査シャードから再導出可能) | gitignore |
-| `.aidlc-sensors/`, `.aidlc-hooks-health/` | センサー所見・ハートビート | gitignore |
+| `.amadeus-sensors/`, `.amadeus-hooks-health/` | センサー所見・ハートビート | gitignore |
 | `archive/{ISO-date}-{stage-name}/` | redo時の旧成果物退避(オンデマンド生成) | コミット |
 
 ### 2.1 全ステージ共通の随伴ファイル
@@ -70,7 +70,7 @@ aidlc/
 |---|---|
 | 0.1 workspace-scaffold | `scaffold-report.md`(+record dirツリーとknowledge/の骨組み生成) |
 | 0.2 workspace-detection | `workspace-findings.md`(greenfield/brownfield分類、技術スタック検出) |
-| 0.3 state-init | `state-init-summary.md`、`aidlc-state.md` 本体の初期化 |
+| 0.3 state-init | `state-init-summary.md`、`amadeus-state.md` 本体の初期化 |
 
 ### 2.3 Ideation(1.1–1.7)
 
@@ -129,12 +129,12 @@ aidlc/
 
 | コミット | gitignore |
 |---|---|
-| `aidlc-state.md` | `aidlc/active-space`, `intents/active-intent`(per-userカーソル) |
-| `audit/*.md`(per-cloneシャード) | `.aidlc-recovery.md` 等の `intents/*/.aidlc-*`(一時ブレッドクラム) |
+| `amadeus-state.md` | `aidlc/active-space`, `intents/active-intent`(per-userカーソル) |
+| `audit/*.md`(per-cloneシャード) | `.amadeus-recovery.md` 等の `intents/*/.amadeus-*`(一時ブレッドクラム) |
 | 全ステージ成果物 | `runtime-graph.json`(監査シャードから再導出可能) |
-| `verification/` フェーズ検証結果 | `aidlc/.aidlc-clone-id`(machine-local) |
-| スペースレベル `knowledge/` | `aidlc/.aidlc-sessions/` |
-| ステージごと `memory.md` 日誌、スペース `memory/` 層 | `.aidlc-hooks-health/`, `.aidlc-sensors/` |
+| `verification/` フェーズ検証結果 | `aidlc/.amadeus-clone-id`(machine-local) |
+| スペースレベル `knowledge/` | `aidlc/.amadeus-sessions/` |
+| ステージごと `memory.md` 日誌、スペース `memory/` 層 | `.amadeus-hooks-health/`, `.amadeus-sensors/` |
 
 ---
 
@@ -142,4 +142,4 @@ aidlc/
 
 - **コードはrecord dirに入らない**。`aidlc/` は method / state / audit / artifacts のみで、生成コードはワークスペースのコードリポジトリ(単一repoならプロジェクト直下、マルチrepoなら兄弟ディレクトリ)へ。intentが触るrepoは誕生時に `intents.json` の `repos` 行に記録。
 - ライフサイクル: 生成 → 承認ゲートでレビュー → コミット → 下流ステージが消費 → フェーズ境界で検証(traceabilityチェック)。
-- センサー失敗の詳細は `<record>/.aidlc-sensors/<stage-slug>/<sensor>-<iso>.md` に出力される(gitignore)。
+- センサー失敗の詳細は `<record>/.amadeus-sensors/<stage-slug>/<sensor>-<iso>.md` に出力される(gitignore)。

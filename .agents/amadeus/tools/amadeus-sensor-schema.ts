@@ -162,7 +162,7 @@ export function validateSensorManifest(
   if (obj.id !== filenameId) {
     throw new Error(
       `${file}: id "${obj.id}" must match filename stem "${filenameId}" ` +
-        `(file should be aidlc-${obj.id}.md)`,
+        `(file should be amadeus-${obj.id}.md)`,
     );
   }
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 
 // amadeus-validator のコードレベル検証。
-// space テンプレートから合成した一時 workspace（aidlc/spaces/default/）を使い、
-// workspace 検証と v2 ライフサイクル（aidlc-state.md + audit + intents.json）の
+// space テンプレートから合成した一時 workspace（amadeus/spaces/default/）を使い、
+// workspace 検証と v2 ライフサイクル（amadeus-state.md + audit + intents.json）の
 // Intent record 検証を確認する。
 
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -72,9 +72,9 @@ function runExpectSuccessExcludes(command: string[], excluded: string, cwd = roo
 function workspaceCopy(): string {
   const workspace = mkdtempSync(join(tmpdir(), "amadeus-validator"));
   cleanups.push(workspace);
-  cpSync(spaceTemplates, join(workspace, "aidlc/spaces/default"), { recursive: true });
-  rmSync(join(workspace, "aidlc/spaces/default/README.md"), { force: true });
-  for (const file of listFiles(join(workspace, "aidlc"))) {
+  cpSync(spaceTemplates, join(workspace, "amadeus/spaces/default"), { recursive: true });
+  rmSync(join(workspace, "amadeus/spaces/default/README.md"), { force: true });
+  for (const file of listFiles(join(workspace, "amadeus"))) {
     const text = readFileSync(file, "utf8");
     if (text.includes("<product-name>")) {
       writeFileSync(file, text.replaceAll("<product-name>", "検証対象プロダクト"));
@@ -101,7 +101,7 @@ runExpectSuccessExcludes(["bun", "run", validator, happyWorkspace], ".amadeus");
 
 // (W3) memory 成果物の欠落は fail になる。
 const brokenMemoryWorkspace = workspaceCopy();
-rmSync(join(brokenMemoryWorkspace, "aidlc/spaces/default/memory/project.md"));
+rmSync(join(brokenMemoryWorkspace, "amadeus/spaces/default/memory/project.md"));
 runExpectFailure(
   ["bun", "run", validator, brokenMemoryWorkspace],
   "memory/project.md が存在する",
@@ -111,7 +111,7 @@ runExpectFailure(
 // 実際の Intent 一覧と内容が食い違っていても、見出し・表構造さえ整っていれば pass する。
 const staleIndexWorkspace = workspaceCopy();
 writeFileSync(
-  join(staleIndexWorkspace, "aidlc/spaces/default/intents/intents.md"),
+  join(staleIndexWorkspace, "amadeus/spaces/default/intents/intents.md"),
   [
     "# インテント",
     "",
@@ -132,7 +132,7 @@ runExpectSuccessIncludes(["bun", "run", validator, staleIndexWorkspace], "pass")
 // (W4b) intents.md が存在する場合は、見出し・表構造の検査は引き続き行う。
 const malformedIndexWorkspace = workspaceCopy();
 writeFileSync(
-  join(malformedIndexWorkspace, "aidlc/spaces/default/intents/intents.md"),
+  join(malformedIndexWorkspace, "amadeus/spaces/default/intents/intents.md"),
   "# インテント\n\n## 一覧\n\n手動編集された索引。\n",
 );
 runExpectFailure(
@@ -140,7 +140,7 @@ runExpectFailure(
   "`一覧` の表がある",
 );
 
-// ---- v2 ライフサイクル（aidlc-state.md + audit + intents.json）の Intent record 検証 ----
+// ---- v2 ライフサイクル（amadeus-state.md + audit + intents.json）の Intent record 検証 ----
 
 const recordDirName = "260703-fix-login-timeout";
 const recordUuid = "01980000-0000-7000-8000-000000000001";
@@ -339,12 +339,12 @@ type RecordOverrides = {
 };
 
 function addIntentRecord(workspace: string, overrides: RecordOverrides = {}): void {
-  const intentsDir = join(workspace, "aidlc/spaces/default/intents");
+  const intentsDir = join(workspace, "amadeus/spaces/default/intents");
   const recordDir = join(intentsDir, recordDirName);
   mkdirSync(join(recordDir, "audit"), { recursive: true });
   if (!overrides.skipModuleFile) writeFileSync(join(intentsDir, `${recordDirName}.md`), intentModule());
   const state = overrides.state ? overrides.state(stateText()) : stateText();
-  writeFileSync(join(recordDir, "aidlc-state.md"), state);
+  writeFileSync(join(recordDir, "amadeus-state.md"), state);
   if (!overrides.skipAudit) {
     const audit = overrides.audit ? overrides.audit(auditText()) : auditText();
     writeFileSync(join(recordDir, "audit/audit.md"), audit);
@@ -416,7 +416,7 @@ runExpectFailure(["bun", "run", validator, badCurrentWorkspace, recordDirName], 
 // (V8) record 直下の state.json は旧配置として fail する。
 const legacyStateWorkspace = workspaceCopy();
 addIntentRecord(legacyStateWorkspace);
-writeFileSync(join(legacyStateWorkspace, "aidlc/spaces/default/intents", recordDirName, "state.json"), "{}\n");
+writeFileSync(join(legacyStateWorkspace, "amadeus/spaces/default/intents", recordDirName, "state.json"), "{}\n");
 runExpectFailure(["bun", "run", validator, legacyStateWorkspace, recordDirName], "Intent 直下の旧配置成果物を使わない");
 
 // (V9) registry の uuid が UUIDv7 でないと fail する。
@@ -442,14 +442,14 @@ runExpectFailure(["bun", "run", validator, noAuditWorkspace, recordDirName], "au
 
 // (V11a) intents.md がない workspace でも、Intent 指定なしの全体検証は pass する。
 const noIndexWorkspace = workspaceCopy();
-rmSync(join(noIndexWorkspace, "aidlc/spaces/default/intents/intents.md"), { force: true });
+rmSync(join(noIndexWorkspace, "amadeus/spaces/default/intents/intents.md"), { force: true });
 runExpectSuccessIncludes(["bun", "run", validator, noIndexWorkspace], "pass");
 
 // (V11b) Intent モジュールファイルと intents.md の両方がない workspace でも、
 // Intent 状態・registry が揃っていれば record 検証は pass する。
 const noModuleFileWorkspace = workspaceCopy();
 addIntentRecord(noModuleFileWorkspace, { skipModuleFile: true });
-rmSync(join(noModuleFileWorkspace, "aidlc/spaces/default/intents/intents.md"), { force: true });
+rmSync(join(noModuleFileWorkspace, "amadeus/spaces/default/intents/intents.md"), { force: true });
 runExpectSuccessIncludes(["bun", "run", validator, noModuleFileWorkspace, recordDirName], "pass");
 
 // ---- v2 契約検査（docs/backward-compatibility.md に記載のない record） ----
@@ -501,11 +501,11 @@ function setupV2Workspace(options: V2WorkspaceOptions = {}): string {
   const { writeStageDefs = true, writeQuestionsArtifact = true, writePhaseCheck = true, writeAuditShard = true, auditText: auditOverride } = options;
 
   const workspace = workspaceCopy();
-  const intentsDir = join(workspace, "aidlc/spaces/default/intents");
+  const intentsDir = join(workspace, "amadeus/spaces/default/intents");
   const recordDir = join(intentsDir, recordDirName);
   mkdirSync(join(recordDir, "audit"), { recursive: true });
   writeFileSync(join(intentsDir, `${recordDirName}.md`), intentModule());
-  writeFileSync(join(recordDir, "aidlc-state.md"), v2CompletedState());
+  writeFileSync(join(recordDir, "amadeus-state.md"), v2CompletedState());
   writeFileSync(join(intentsDir, "intents.json"), registryText());
 
   // docs/backward-compatibility.md は存在するが、この record を記載しない
@@ -597,17 +597,17 @@ addIntentRecord(legacyPreservedWorkspace, {
       .replace("- **Current Stage**: requirements-analysis", "- **Current Stage**: code-generation"),
   audit: (text) => text + auditEntry("STAGE_COMPLETED", "requirements approved", "requirements-analysis"),
 });
-mkdirSync(join(legacyPreservedWorkspace, "aidlc/spaces/default/intents", recordDirName, "inception/requirements-analysis"), {
+mkdirSync(join(legacyPreservedWorkspace, "amadeus/spaces/default/intents", recordDirName, "inception/requirements-analysis"), {
   recursive: true,
 });
 writeFileSync(
-  join(legacyPreservedWorkspace, "aidlc/spaces/default/intents", recordDirName, "inception/requirements-analysis/requirements.md"),
+  join(legacyPreservedWorkspace, "amadeus/spaces/default/intents", recordDirName, "inception/requirements-analysis/requirements.md"),
   "# Requirements\n",
 );
 mkdirSync(join(legacyPreservedWorkspace, "docs"), { recursive: true });
 writeFileSync(
   join(legacyPreservedWorkspace, "docs/backward-compatibility.md"),
-  `# Backward Compatibility\n\n- 対象: \`aidlc/spaces/default/intents/${recordDirName}/\`\n`,
+  `# Backward Compatibility\n\n- 対象: \`amadeus/spaces/default/intents/${recordDirName}/\`\n`,
 );
 runExpectSuccessIncludes(["bun", "run", validator, legacyPreservedWorkspace, recordDirName], "pass");
 

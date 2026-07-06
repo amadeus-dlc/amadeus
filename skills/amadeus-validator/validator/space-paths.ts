@@ -12,5 +12,5 @@ export function resolveActiveSpace(workspaceRoot: string): string {
 }
 
 export function spaceBase(workspaceRoot: string): string {
-  return `aidlc/spaces/${resolveActiveSpace(workspaceRoot)}`;
+  return `amadeus/spaces/${resolveActiveSpace(workspaceRoot)}`;
 }

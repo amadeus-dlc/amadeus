@@ -84,7 +84,7 @@ const rowCategoryRules: RowCategoryRule[] = [
   {
     category: "v2 ライフサイクル",
     matches: ({ condition }) =>
-      condition.includes("aidlc-state.md") ||
+      condition.includes("amadeus-state.md") ||
       condition.includes("Stage Progress") ||
       condition.includes("Phase Progress") ||
       condition.includes("checkbox") ||
@@ -129,7 +129,7 @@ const rowCategoryRules: RowCategoryRule[] = [
   {
     category: "状態",
     matches: ({ target, condition }) =>
-      target.endsWith("state.json") || target.endsWith("aidlc-state.md") || condition.includes("state.json") || condition.includes("`phase`") || condition.includes("`status`"),
+      target.endsWith("state.json") || target.endsWith("amadeus-state.md") || condition.includes("state.json") || condition.includes("`phase`") || condition.includes("`status`"),
   },
   {
     category: "モック",
@@ -173,13 +173,13 @@ const rowCategoryRules: RowCategoryRule[] = [
   },
 ];
 
-const spacePrefix = /^aidlc\/spaces\/[^/]+\//;
-const intentRecordPrefix = /^aidlc\/spaces\/[^/]+\/intents\/[^/]+\//;
+const spacePrefix = /^amadeus\/spaces\/[^/]+\//;
+const intentRecordPrefix = /^amadeus\/spaces\/[^/]+\/intents\/[^/]+\//;
 
 const checkedFileCategoryRules: CheckedFileCategoryRule[] = [
   {
     category: "Amadeus ルート",
-    matches: (file) => file === "aidlc" || /^aidlc\/spaces\/[^/]+$/.test(file),
+    matches: (file) => file === "amadeus" || /^amadeus\/spaces\/[^/]+$/.test(file),
   },
   {
     category: "Grilling Decision Trail",
@@ -207,11 +207,11 @@ const checkedFileCategoryRules: CheckedFileCategoryRule[] = [
   },
   {
     category: "Intent 状態",
-    matches: (file) => intentRecordPrefix.test(file) && (file.endsWith("/aidlc-state.md") || file.includes("/audit/")),
+    matches: (file) => intentRecordPrefix.test(file) && (file.endsWith("/amadeus-state.md") || file.includes("/audit/")),
   },
   {
     category: "Intent 基本成果物",
-    matches: (file) => /^aidlc\/spaces\/[^/]+\/intents\/[^/]+\.md$/.test(file) || /^aidlc\/spaces\/[^/]+\/intents\/[^/]+\/[^/]+\.md$/.test(file),
+    matches: (file) => /^amadeus\/spaces\/[^/]+\/intents\/[^/]+\.md$/.test(file) || /^amadeus\/spaces\/[^/]+\/intents\/[^/]+\/[^/]+\.md$/.test(file),
   },
   {
     category: "Bolt / Task",
@@ -260,8 +260,8 @@ class AmadeusValidator {
       return;
     }
 
-    this.checkFile("aidlc", "Amadeus の成果物ルートが存在する", true);
-    this.checkFile("aidlc/spaces", "Space の親ディレクトリが存在する", true);
+    this.checkFile("amadeus", "Amadeus の成果物ルートが存在する", true);
+    this.checkFile("amadeus/spaces", "Space の親ディレクトリが存在する", true);
     this.checkFile(this.space, "対象 Space が存在する", true);
   }
 
@@ -829,8 +829,8 @@ class AmadeusValidator {
     this.checkIntentModuleFile(`${this.space}/intents/${intentId}.md`);
     this.checkEventStormingSessions(`${base}/event-storming`, "intent-scoped", intentId);
 
-    const statePath = `${base}/aidlc-state.md`;
-    this.checkFile(statePath, "Intent 状態ファイル（aidlc-state.md）が存在する");
+    const statePath = `${base}/amadeus-state.md`;
+    this.checkFile(statePath, "Intent 状態ファイル（amadeus-state.md）が存在する");
     if (!this.isFile(this.absolute(statePath))) return;
     const stateText = this.read(statePath);
     const legacy = this.isBackwardCompatRecord(base);
@@ -916,7 +916,7 @@ class AmadeusValidator {
     for (const file of legacyFiles) {
       const path = `${base}/${file}`;
       if (this.isFile(this.absolute(path))) {
-        const guidance = file === "state.json" ? "state.json は退役した。状態は aidlc-state.md が持つ" : `${file} は phase ディレクトリ配下へ置く`;
+        const guidance = file === "state.json" ? "state.json は退役した。状態は amadeus-state.md が持つ" : `${file} は phase ディレクトリ配下へ置く`;
         this.failRow(path, "Intent 直下の旧配置成果物を使わない", guidance);
       }
     }
@@ -1589,7 +1589,7 @@ class AmadeusValidator {
       const id = String(row["識別子"] ?? "").trim();
       if (!ids.has(id)) continue;
       this.checkFile(`${this.space}/intents/${id}`, "Intent record ディレクトリが存在する", true);
-      this.checkFile(`${this.space}/intents/${id}/aidlc-state.md`, "Intent 状態ファイル（aidlc-state.md）が存在する");
+      this.checkFile(`${this.space}/intents/${id}/amadeus-state.md`, "Intent 状態ファイル（amadeus-state.md）が存在する");
     }
   }
 

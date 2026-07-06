@@ -1,4 +1,4 @@
-// aidlc-state.md（v2 state template 構造）の parse と行置換更新の契約。
+// amadeus-state.md（v2 state template 構造）の parse と行置換更新の契約。
 // 一次情報は skills/amadeus/references/aidlc-v2/state-template.md の vendored copy である。
 // 読み取りは見出し、checkbox 行、フィールド行だけを解釈し、書き込みは対象行の置換だけを行う。
 

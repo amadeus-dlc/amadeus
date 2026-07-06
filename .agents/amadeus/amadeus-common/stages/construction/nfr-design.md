@@ -118,7 +118,7 @@ Generate the following in `<record>/construction/{unit-name}/nfr-design/`:
 
 ### Step 7: Update State
 
-Update `<record>/aidlc-state.md`: mark NFR Design for {unit-name} as `[x]` completed and update "Current Status".
+Update `<record>/amadeus-state.md`: mark NFR Design for {unit-name} as `[x]` completed and update "Current Status".
 
 ### Step 8: Completion
 
@@ -147,7 +147,7 @@ The imported sensors check those outputs:
 - **`linter`** runs against any TypeScript/JavaScript snippets the design includes (matches `**/*.{ts,js}`).
 - **`type-check`** runs against any TypeScript/TSX snippets the design includes (matches `**/*.{ts,tsx}`).
 
-Failure modes land in `<record>/.aidlc-sensors/<stage-slug>/` as `SENSOR_FAILED` audit rows with per-sensor detail files.
+Failure modes land in `<record>/.amadeus-sensors/<stage-slug>/` as `SENSOR_FAILED` audit rows with per-sensor detail files.
 
 ## Learn
 

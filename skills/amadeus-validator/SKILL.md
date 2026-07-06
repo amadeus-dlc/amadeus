@@ -56,7 +56,7 @@ Do not install dependency packages for validation.
 If the target Intent directory name is not specified, validate the overall
 artifacts only.
 If the target Intent directory name is specified, validate
-`aidlc/spaces/<space>/intents/<dirName>/` (the record) in addition to the
+`amadeus/spaces/<space>/intents/<dirName>/` (the record) in addition to the
 overall artifacts.
 
 ## Reference Sources to Read
@@ -64,39 +64,39 @@ overall artifacts.
 Read in the following order.
 
 1. `CONTEXT.md`
-2. `aidlc/spaces/<space>/memory/org.md`
-3. `aidlc/spaces/<space>/memory/team.md`
-4. `aidlc/spaces/<space>/memory/project.md`
-5. `aidlc/spaces/<space>/knowledge/*.md` (`glossary.md`, `actors.md`,
+2. `amadeus/spaces/<space>/memory/org.md`
+3. `amadeus/spaces/<space>/memory/team.md`
+4. `amadeus/spaces/<space>/memory/project.md`
+5. `amadeus/spaces/<space>/knowledge/*.md` (`glossary.md`, `actors.md`,
    `external-systems.md`, `background.md`, etc.)
-6. `aidlc/spaces/<space>/intents/intents.json`
-7. `aidlc/spaces/<space>/intents/intents.md`. Read only if it exists (a
+6. `amadeus/spaces/<space>/intents/intents.json`
+7. `amadeus/spaces/<space>/intents/intents.md`. Read only if it exists (a
    retired artifact).
-8. `aidlc/spaces/<space>/intents/active-intent`. Read only if it exists.
-9. `aidlc/spaces/<space>/knowledge/event-storming/*.md` and
-   `aidlc/spaces/<space>/knowledge/event-storming/*/state.json`. Read only if
+8. `amadeus/spaces/<space>/intents/active-intent`. Read only if it exists.
+9. `amadeus/spaces/<space>/knowledge/event-storming/*.md` and
+   `amadeus/spaces/<space>/knowledge/event-storming/*/state.json`. Read only if
    they exist.
-10. `aidlc/spaces/<space>/knowledge/event-storming/*/grillings.md` and
-    `aidlc/spaces/<space>/knowledge/event-storming/*/grillings/*.md`. Read
+10. `amadeus/spaces/<space>/knowledge/event-storming/*/grillings.md` and
+    `amadeus/spaces/<space>/knowledge/event-storming/*/grillings/*.md`. Read
     only if they exist.
-11. `aidlc/spaces/<space>/knowledge/domain-map.md`
-12. `aidlc/spaces/<space>/knowledge/context-map.md`
-13. `aidlc/spaces/<space>/intents/<dirName>.md`. Read only if the target
+11. `amadeus/spaces/<space>/knowledge/domain-map.md`
+12. `amadeus/spaces/<space>/knowledge/context-map.md`
+13. `amadeus/spaces/<space>/intents/<dirName>.md`. Read only if the target
     Intent directory name is specified and the file exists (a retired
     artifact).
-14. `aidlc/spaces/<space>/intents/<dirName>/aidlc-state.md`. Read only if the
+14. `amadeus/spaces/<space>/intents/<dirName>/amadeus-state.md`. Read only if the
     target Intent directory name is specified.
-15. `aidlc/spaces/<space>/intents/<dirName>/audit/audit.md`. Read only if it
+15. `amadeus/spaces/<space>/intents/<dirName>/audit/audit.md`. Read only if it
     exists.
-16. `aidlc/spaces/<space>/intents/<dirName>/{ideation,inception,construction}/grillings.md`
+16. `amadeus/spaces/<space>/intents/<dirName>/{ideation,inception,construction}/grillings.md`
     and
-    `aidlc/spaces/<space>/intents/<dirName>/{ideation,inception,construction}/grillings/*.md`.
+    `amadeus/spaces/<space>/intents/<dirName>/{ideation,inception,construction}/grillings/*.md`.
     Read only if they exist.
-17. `aidlc/spaces/<space>/intents/<dirName>/event-storming/*/grillings.md` and
-    `aidlc/spaces/<space>/intents/<dirName>/event-storming/*/grillings/*.md`.
+17. `amadeus/spaces/<space>/intents/<dirName>/event-storming/*/grillings.md` and
+    `amadeus/spaces/<space>/intents/<dirName>/event-storming/*/grillings/*.md`.
     Read only if they exist.
 18. The mandatory artifacts under the phase directory required by the target
-    Intent's `aidlc-state.md` Stage Progress. Read only if they exist.
+    Intent's `amadeus-state.md` Stage Progress. Read only if they exist.
 
 If a reference source does not exist, include that fact in the result.
 Do not fill in a missing reference source by guessing.
@@ -106,23 +106,23 @@ Do not fill in a missing reference source by guessing.
 Confirm at least the following.
 
 - The Amadeus artifact root is `aidlc/`, and the target Space exists under
-  `aidlc/spaces/`.
-- `aidlc/spaces/<space>/memory/org.md`, `aidlc/spaces/<space>/memory/team.md`,
-  and `aidlc/spaces/<space>/memory/project.md` exist.
-- `aidlc/spaces/<space>/knowledge/` exists.
-- `aidlc/spaces/<space>/intents/` exists.
-- `aidlc/spaces/<space>/intents/intents.json` exists and can be interpreted
+  `amadeus/spaces/`.
+- `amadeus/spaces/<space>/memory/org.md`, `amadeus/spaces/<space>/memory/team.md`,
+  and `amadeus/spaces/<space>/memory/project.md` exist.
+- `amadeus/spaces/<space>/knowledge/` exists.
+- `amadeus/spaces/<space>/intents/` exists.
+- `amadeus/spaces/<space>/intents/intents.json` exists and can be interpreted
   as the Intent registry.
-- `aidlc/spaces/<space>/intents/intents.md` is a retired artifact; when it
+- `amadeus/spaces/<space>/intents/intents.md` is a retired artifact; when it
   exists, it satisfies the conditions in
   [artifacts validation](references/artifacts.md). Its absence is not a
   failure.
-- If `aidlc/spaces/<space>/intents/active-intent` exists, it points to a
+- If `amadeus/spaces/<space>/intents/active-intent` exists, it points to a
   record in the registry.
-- `aidlc/spaces/<space>/knowledge/domain-map.md` exists, and its Subdomain
+- `amadeus/spaces/<space>/knowledge/domain-map.md` exists, and its Subdomain
   and Bounded Context `adopted`, `retired`, and evidence links can be
   validated.
-- `aidlc/spaces/<space>/knowledge/context-map.md` exists, and its Upstream
+- `amadeus/spaces/<space>/knowledge/context-map.md` exists, and its Upstream
   Context, Downstream Context, Organization Pattern, Integration Pattern,
   `adopted`, `retired`, and evidence links can be validated.
 - The Context Map's `Downstream` and `Upstream` reference Bounded Contexts in
@@ -133,7 +133,7 @@ Confirm at least the following.
 - The target Intent's record has no retired legacy-placement artifacts
   (such as `state.json`) directly under it that should instead be placed
   under a phase directory.
-- The target Intent's `aidlc-state.md` exists, and its Project Information,
+- The target Intent's `amadeus-state.md` exists, and its Project Information,
   Scope Configuration, Phase Progress, Stage Progress, and Current Status
   content are validated as a v2-compatible lifecycle contract, together with
   consistency between the scope's execution targets, the stage checkbox
@@ -142,7 +142,7 @@ Confirm at least the following.
 - codekb-adoption stubs (Issue #501, FR-3): when a completed
   reverse-engineering stage's record artifact is a reference-ledger stub —
   a relative markdown link to a canonical `.md` under the shared
-  `aidlc/spaces/<space>/codekb/<repo>/` plus an adoption rationale (the
+  `amadeus/spaces/<space>/codekb/<repo>/` plus an adoption rationale (the
   verification base commit and the source of the decision) — the referenced
   canonical file must exist. A dangling reference fails. A record artifact
   with no codekb link is treated as real (non-stub) content and passes on
@@ -172,7 +172,7 @@ Validate in the following order.
    - If no Intent directory name was specified, validate only the overall
      artifacts.
    - Do not expand the validation target to all Intents on your own based on
-     `aidlc/spaces/<space>/intents/intents.md`.
+     `amadeus/spaces/<space>/intents/intents.md`.
 3. Run the bundled `validator/AmadeusValidator.ts`.
 
 When validating only the overall artifacts:

@@ -105,7 +105,7 @@ function stageSlugs(): string[] {
 
 // The dir name for the init-phase runner: `/aidlc-init`. It wraps the whole
 // initialization phase via `/amadeus --init`, NOT a single stage.
-const INIT_RUNNER_DIR = "aidlc-init";
+const INIT_RUNNER_DIR = "amadeus-init";
 
 // Render the ~6-line runner shell for one stage. The body is intentionally thin:
 // it states what the runner does and the one command it drives. It does NOT
@@ -190,7 +190,7 @@ Start a fresh AI-DLC workflow. The workspace shell ships in \`dist/\` (no setup
 command), and the engine auto-births the first intent when you describe what to
 build — this skill is opt-in packaging over that birth move. Initialization is a
 PHASE, not a single stage — it mints the intent, detects the workspace
-(greenfield/brownfield), and builds \`aidlc-state.md\` together, in one
+(greenfield/brownfield), and builds \`amadeus-state.md\` together, in one
 deterministic call. There is no per-init-stage runner because an init stage has
 no standalone meaning.
 

@@ -80,7 +80,7 @@ function birthIntent(workspace: string, label: string): string {
     workspace
   );
   if (res.exitCode !== 0) throw new Error(`intent-birth failed: ${res.stderr}\n${res.stdout}`);
-  const intentsRoot = join(workspace, "aidlc/spaces/default/intents");
+  const intentsRoot = join(workspace, "amadeus/spaces/default/intents");
   const dirName = readdirSync(intentsRoot, { withFileTypes: true })
     .filter((e) => e.isDirectory())
     .map((e) => e.name)[0];
@@ -89,11 +89,11 @@ function birthIntent(workspace: string, label: string): string {
 }
 
 function recordDirPath(workspace: string, dirName: string): string {
-  return join(workspace, "aidlc/spaces/default/intents", dirName);
+  return join(workspace, "amadeus/spaces/default/intents", dirName);
 }
 
 function readState(workspace: string, dirName: string): string {
-  return readFileSync(join(recordDirPath(workspace, dirName), "aidlc-state.md"), "utf-8");
+  return readFileSync(join(recordDirPath(workspace, dirName), "amadeus-state.md"), "utf-8");
 }
 
 function phaseProgress(state: string, field: string): string {

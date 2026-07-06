@@ -625,13 +625,13 @@ function handleDoctor(projectDir: string): void {
   const shellReady = existsSync(harnessEngineDir) && existsSync(defaultMemoryDir);
   results.push({
     pass: shellReady,
-    label: `workspace shell ready (${harnessDir()}/ + aidlc/spaces/default/memory/)`,
+    label: `workspace shell ready (${harnessDir()}/ + amadeus/spaces/default/memory/)`,
     fix: `copy the workspace shell from \`dist/${harnessDir().replace(/^\./, "")}/\` into your project root`,
   });
 
   // 6. Hook heartbeats
   // Three states:
-  //   (a) .aidlc-hooks-health/ missing entirely → fresh install, hooks haven't
+  //   (a) .amadeus-hooks-health/ missing entirely → fresh install, hooks haven't
   //       had a chance to fire yet. Pass with advisory label — not drift.
   //   (b) Directory exists but no .last files → hooks registered but have
   //       never fired. Genuine drift; fail.
@@ -678,7 +678,7 @@ function handleDoctor(projectDir: string): void {
 
   // 6b. Hook drops (Issue #432). Hooks are fail-open (always exit 0);
   // recordHookDrop() appends one `<ISO>\t<reason>` line per silent failure to
-  // .aidlc-hooks-health/<hook>.drops. Until now nothing ever READ those files —
+  // .amadeus-hooks-health/<hook>.drops. Until now nothing ever READ those files —
   // surface each hook with drops as a FAIL row (count + latest parseable
   // reason). No auto-expiry: the operator clears by deleting the file after
   // investigating (the fix text says so). No .drops files → no rows at all
@@ -735,7 +735,7 @@ function handleDoctor(projectDir: string): void {
           results.push({
             pass: false,
             label: `State/audit drift: audit has WORKFLOW_COMPLETED but state Status=${status[1]}`,
-            fix: "manually set Status=Completed in aidlc-state.md or restart the workflow",
+            fix: "manually set Status=Completed in amadeus-state.md or restart the workflow",
           });
         } else {
           results.push({
@@ -783,7 +783,7 @@ function handleDoctor(projectDir: string): void {
         results.push({
           pass: false,
           label: "state version readable",
-          fix: "State Version field missing or unparseable in aidlc-state.md. Archive your workspace ('mv aidlc-docs aidlc-docs.v6-archive') and start a fresh workflow (describe what to build).",
+          fix: "State Version field missing or unparseable in amadeus-state.md. Archive your workspace ('mv aidlc-docs aidlc-docs.v6-archive') and start a fresh workflow (describe what to build).",
         });
       } else if (versionMatch[1] !== "7") {
         results.push({
@@ -856,7 +856,7 @@ function handleDoctor(projectDir: string): void {
   // ---------------------------------------------------------------------------
   // Check 1 — Orphan worktrees
   //
-  // Walk `.aidlc/worktrees/bolt-*/` directories on disk; cross-reference each
+  // Walk `.amadeus/worktrees/bolt-*/` directories on disk; cross-reference each
   // against:
   //   (a) main state's Bolt Refs (active fork → ✓)
   //   (b) audit WORKTREE_DISCARDED / WORKTREE_MERGED (terminated → orphan dir)
@@ -867,7 +867,7 @@ function handleDoctor(projectDir: string): void {
   // or absent — the issue 75 line 215 "fail-clean on no-worktrees" guarantee.
   // ---------------------------------------------------------------------------
   try {
-    const worktreesDir = join(projectDir, ".aidlc", "worktrees");
+    const worktreesDir = join(projectDir, ".amadeus", "worktrees");
     let observed = 0;
     let activeForks = 0;
     let preservedByAbort = 0;
@@ -952,7 +952,7 @@ function handleDoctor(projectDir: string): void {
         );
       }
       label = `Orphan worktrees: ${orphanActive.length + cleanupOrphans.length} drift`;
-      fix = `${parts.join("; ")}. Inspect and remove via 'amadeus-worktree discard --slug <slug>' or 'rm -rf .aidlc/worktrees/bolt-<slug>'.`;
+      fix = `${parts.join("; ")}. Inspect and remove via 'amadeus-worktree discard --slug <slug>' or 'rm -rf .amadeus/worktrees/bolt-<slug>'.`;
     }
     results.push({ pass, label, fix });
   } catch (e) {
@@ -1027,14 +1027,14 @@ function handleDoctor(projectDir: string): void {
   // ---------------------------------------------------------------------------
   // Check 3 — Orphan state files (paired with STATE_FORKED slug-tag)
   //
-  // Walk `.aidlc/worktrees/*/aidlc-docs/aidlc-state.md`; each found state file
+  // Walk `.amadeus/worktrees/*/aidlc-docs/amadeus-state.md`; each found state file
   // must map to a slug in main's Bolt Refs (active fork) OR pair with a
   // WORKTREE_DISCARDED audit row (pre-discard). Anything else is post-fork
   // drift — STATE_FORKED emitted, slug added to Bolt Refs, but state-write or
   // STATE_MERGED never landed.
   // ---------------------------------------------------------------------------
   try {
-    const worktreesDir = join(projectDir, ".aidlc", "worktrees");
+    const worktreesDir = join(projectDir, ".amadeus", "worktrees");
     const orphan: string[] = [];
     let observed = 0;
 
@@ -1524,7 +1524,7 @@ function handleDoctor(projectDir: string): void {
 
   // Rule drift (advisory, always pass:true) — surface team/project rule files
   // whose `##` headings overlap a POPULATED heading in the org layer
-  // (aidlc/spaces/default/memory/org.md), quoting the org sentence inline so
+  // (amadeus/spaces/default/memory/org.md), quoting the org sentence inline so
   // the orchestrator-LLM can review for contradiction at observation time. A
   // learning is a practice (vision §6) — it lands in team.md / project.md, so
   // those two scopes are the whole team/project surface the walk reads.
@@ -2109,7 +2109,7 @@ function ensureWorkspaceDirs(projectDir: string): void {
   // <harness>/knowledge/ (untouched). Lazy ensure-exists — never SEED.
   mkdirSync(knowledgeDir(projectDir), { recursive: true });
   // Engine-only-install self-heal: recover an ENGINE-ONLY install. Normally the
-  // workspace shell (aidlc/spaces/default/memory/) ships as a SIBLING of the
+  // workspace shell (amadeus/spaces/default/memory/) ships as a SIBLING of the
   // engine dir (the packager's emitMemory → MEMORY_DST), so a complete dist/
   // copy already carries it and the lines below leave it untouched. But a user
   // who copies ONLY the harness engine dir (e.g. dist/kiro/.kiro/) and NOT the

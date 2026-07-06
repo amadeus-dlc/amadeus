@@ -159,11 +159,11 @@ npm run validate:workspace -- <workspace> <YYMMDD>-<label>
 
 - `aidlc/` は対象 workspace の成果物ルートです。
   このリポジトリ root では、Amadeus 本体開発用の workspace に限定して扱います。
-- Space（既定は `aidlc/spaces/default/`）は、`memory/`、`knowledge/`、`codekb/`、`intents/` を持ちます。
-- 正準台帳は `aidlc/spaces/<space>/intents/intents.json`（UUIDv7）です。Intent ディレクトリ名は `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/` に従います。
+- Space（既定は `amadeus/spaces/default/`）は、`memory/`、`knowledge/`、`codekb/`、`intents/` を持ちます。
+- 正準台帳は `amadeus/spaces/<space>/intents/intents.json`（UUIDv7）です。Intent ディレクトリ名は `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/` に従います。
 - 新しい Intent は `amadeus` の Intake から人間の明示承認を経てだけ生まれます。既存 Intent のアウトカムに属する作業は、新しい Intent にせず対象 Intent のスコープバックログへ合流させます。
 - ドメイン上の発見は範囲に応じて置き分けます。
-  対象 Intent の `domain-notes.md`、`aidlc/spaces/<space>/knowledge/domain-map.md`、`aidlc/spaces/<space>/knowledge/context-map.md`、`inception/traceability.md`、Construction の Functional Design を使い分けます。
+  対象 Intent の `domain-notes.md`、`amadeus/spaces/<space>/knowledge/domain-map.md`、`amadeus/spaces/<space>/knowledge/context-map.md`、`inception/traceability.md`、Construction の Functional Design を使い分けます。
 - 不明な値は空欄にせず、`未確認` と記録します。
 - 外部システム、Bounded Context、Intent、依存関係を推測で作りません。
 - Spec、`.kiro/specs/**`、`openspec/**`、Operation 成果物は、対応 skill が確定するまで手順として固定しません。

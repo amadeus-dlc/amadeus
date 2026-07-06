@@ -25,8 +25,8 @@
 
 ### Allowed
 
-- aidlc/spaces/<space>/intents/**
-- aidlc/spaces/<space>/memory/**
+- amadeus/spaces/<space>/intents/**
+- amadeus/spaces/<space>/memory/**
 - 対象 skill が渡した前提
 
 ### Prohibited
