@@ -1,74 +1,74 @@
 # AI-DLC v2 Build and Test Failure Handling
 
-この文書は、Issue #392 の判断として、Build and Test（Stage 3.6）の失敗時処理を AI-DLC v2 に寄せるか、Amadeus DLC の現行契約を維持するかを定義する。
+This document defines, as the judgment for Issue #392, whether to align Build and Test (Stage 3.6) failure handling with AI-DLC v2 or keep Amadeus DLC's current contract.
 
-参照元は次である。
+References:
 
-- リポジトリ: https://github.com/awslabs/aidlc-workflows/tree/v2
-- 参照 commit: `d341522e1491db4884e9127004c3882365229218`
-- 失敗時手順: `core/amadeus-common/stages/construction/build-and-test.md`（診断、修正、再実行を最大 2 回試み、解決できない場合は `test-results.md` へ記録して gate へ進む）
+- Repository: https://github.com/awslabs/aidlc-workflows/tree/v2
+- Reference commit: `d341522e1491db4884e9127004c3882365229218`
+- Failure-handling procedure: `core/amadeus-common/stages/construction/build-and-test.md` (diagnose, fix, and re-run up to 2 attempts; if unresolved, record to `test-results.md` and proceed to the gate)
 
-## 判断
+## Decision
 
-Amadeus DLC は、現行契約を意図的差分として維持する。
+Amadeus DLC keeps its current contract as an intentional difference.
 
-Build and Test は実装修正を行わない。
+Build and Test does not fix the implementation.
 
-失敗時の契約は次である。
+The failure-handling contract is:
 
-1. build またはテストが失敗したら、autonomy mode に関わらず停止し、失敗内容を `build-test-results.md` に記録して人間へ確認する（halt-and-ask）。
-2. 修正は、人間の指示の下で、対象 Unit の Code Generation の修正として実行する。
-3. 修正後の再実行は、失敗原因に関係する手順だけをやり直す。
-4. すべて成功した後に `amadeus` 入口の Bolt 境界処理が Bolt PR の作成を案内し、人間の merge が承認証拠になる。
+1. If a build or a test fails, stop regardless of the autonomy mode, record the failure in `build-test-results.md`, and confirm with a human (halt-and-ask).
+2. The fix runs under human instruction, as a Code Generation fix for the target Unit.
+3. The re-run after the fix redoes only the steps related to the failure cause.
+4. Once everything succeeds, the `amadeus` entry point's Bolt boundary processing guides Bolt PR creation, and the human merge stands as the approval evidence.
 
-## 本家との対比
+## Comparison with Upstream
 
-| 観点 | AI-DLC v2 | Amadeus DLC |
+| Aspect | AI-DLC v2 | Amadeus DLC |
 |---|---|---|
-| 失敗の診断 | Build and Test が診断する | Build and Test は失敗内容を記録し、人間へ確認する |
-| 修正 | Build and Test が最大 2 回修正を試みる | Code Generation の修正として、人間の指示の下で行う |
-| 再実行 | 修正した手順を再実行する | 失敗原因に関係する手順だけを再実行する |
-| 解決できない場合 | `test-results.md` へ記録して gate で人間へ提示する | 最初の失敗時点で記録して人間へ確認する（halt-and-ask） |
-| 人間の最終判断 | gate で行う | halt-and-ask と Bolt PR merge で行う |
+| Failure diagnosis | Build and Test diagnoses it | Build and Test records the failure and confirms with a human |
+| Fix | Build and Test attempts up to 2 fixes | Runs as a Code Generation fix, under human instruction |
+| Re-run | Re-runs the fixed steps | Re-runs only the steps related to the failure cause |
+| When unresolved | Records to `test-results.md` and presents it to a human at the gate | Records at the first failure and confirms with a human immediately (halt-and-ask) |
+| Final human judgment | Made at the gate | Made through halt-and-ask and the Bolt PR merge |
 
-いずれの契約でも最終判断は人間に残る。差分は「人間へ委ねる前に無人の修正試行を挟むかどうか」である。
+Under either contract, the final judgment stays with a human. The difference is whether an unattended fix attempt is inserted before handing off to a human.
 
-## 維持する理由
+## Reasons to Retain
 
-1. **記録の真実性を保つため**。コード変更は Code Generation の成果物（`code-generation-plan.md`、`code-summary.md`）に記録される。Build and Test が修正すると、コード変更が Code Generation の記録を経由せずに発生し、成果物と実装の対応が崩れる。
-2. **Bolt gate の承認対象を保つため**。Bolt PR の merge は、記録された設計と生成コードへの承認である。gate 前の無人修正は、承認対象を記録の外で書き換える。
-3. **halt-and-ask が autonomy 契約の安全弁であるため**。autonomous mode は「失敗時に停止して人間へ確認する」ことを条件に無 gate 実行を許している。失敗時の無人修正はこの安全弁を弱める。
-4. **本家の有限試行の意図は満たしているため**。本家の「最大 2 回で人間へ委ねる」は反復を有限にする仕組みであり、Amadeus は最初の失敗で即座に人間へ委ねることで同じ終着点（人間判断）へ、より早く到達する。
+1. **To preserve the truthfulness of the record.** Code changes are recorded in Code Generation's artifacts (`code-generation-plan.md`, `code-summary.md`). If Build and Test fixed code itself, the change would occur without going through the Code Generation record, breaking the correspondence between the artifacts and the implementation.
+2. **To preserve the Bolt gate's approval target.** A Bolt PR merge is an approval of the recorded design and generated code. An unattended fix before the gate rewrites the approval target outside the record.
+3. **Because halt-and-ask is the safety valve of the autonomy contract.** Autonomous mode permits gate-free execution on the condition that it stops and confirms with a human on failure. An unattended fix on failure weakens this safety valve.
+4. **Because it still satisfies the intent behind upstream's bounded retries.** Upstream's "hand off to a human after at most 2 attempts" bounds the iteration. Amadeus reaches the same destination — human judgment — faster, by handing off immediately on the first failure.
 
-## `build-test-results.md` の記録契約
+## `build-test-results.md` Recording Contract
 
-失敗時も成功時も、次を `build-test-results.md` に残す。
+Whether it fails or succeeds, `build-test-results.md` retains:
 
-- 実行したコマンドとその結果。
-- 失敗内容（失敗したテスト、エラー出力の要点）。
-- 修正後の再実行結果。
+- The commands run and their results.
+- The failure content (which tests failed, the key points of the error output).
+- The re-run result after the fix.
 
-要約だけを残さない。この契約は `amadeus-construction-build-and-test` の Prohibitions に従う。
+It does not retain a summary alone. This contract follows the Prohibitions of `amadeus-construction-build-and-test`.
 
-## Bolt gate との関係
+## Relationship to the Bolt Gate
 
-- Build and Test の成功は Bolt PR 作成の前提である。失敗中の Bolt は PR を作成しない。
-- 失敗した Bolt は、人間の判断で retry または skip できる（lifecycle construction の halt-and-ask 契約）。
-- Bolt PR の merge が、Bolt 内の各 stage の `[?]` を `[x]` へ確定する承認証拠になる（autonomous mode）。
+- Build and Test succeeding is a precondition for Bolt PR creation. A Bolt that is failing does not create a PR.
+- A failed Bolt can be retried or skipped at human judgment (the halt-and-ask contract in lifecycle construction).
+- The Bolt PR merge is the approval evidence that finalizes each stage's `[?]` to `[x]` within the Bolt (autonomous mode).
 
-## 対象外
+## Out of Scope
 
-- 修正の自動再試行の実装。
-- Build and Test への修正責務の追加。
+- Implementing automatic retry of fixes.
+- Adding fix responsibility to Build and Test.
 
-## 将来の再検討条件
+## Future Reconsideration Conditions
 
-次のいずれかが起きた場合、失敗時処理の本家寄せを別 Issue で再検討する。
+Reconsider aligning failure handling with upstream in a separate Issue if either of the following occurs:
 
-- halt-and-ask による停止が、明らかに機械的で安全な修正（typo 等）に対して過剰である運用実績が積み重なった場合。
-- Code Generation との往復が Bolt のリードタイムを支配する運用実績を確認した場合。
+- Operational experience accumulates showing that halting via halt-and-ask is excessive for clearly mechanical, safe fixes (e.g., typos).
+- Operational experience confirms that the round trip with Code Generation dominates a Bolt's lead time.
 
-## 関連文書
+## Related Documents
 
 - [AI-DLC v2 Difference Response Plan](aidlc-v2-difference-response-plan.md)
 - [AI-DLC v2 Reviewer Mapping](aidlc-v2-reviewer-mapping.md)

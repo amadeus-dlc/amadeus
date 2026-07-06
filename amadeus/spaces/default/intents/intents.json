@@ -400,5 +400,13 @@
     "scope": "refactor",
     "repos": [],
     "status": "complete"
+  },
+  {
+    "uuid": "019f3600-0700-7b33-aed1-2d9931b808fb",
+    "slug": "docs-i18n",
+    "dirName": "260706-docs-i18n",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete"
   }
 ]

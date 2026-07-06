@@ -1,83 +1,83 @@
 # AI-DLC v2 Sensor and Learn Mapping
 
-## 上書き注記（D004）
+## Override Note (D004)
 
-この文書が下した sensor 実行機構と learnings ritual の決定論ツールの不採用判断は、Intent `260704-v2-parity-completion` の D004 により採用へ変更した。
-Issue #393 の不採用判断は「hook 実行基盤を含める判断が確定した場合は再検討する」と明記しており、本家 TS エンジンの適応コピー戦略（D001）がその再検討条件を成立させた。
-検査体制は、本家 sensor（エンジンごとコピーし、stage 完了時に即時検査する）と `amadeus-validator`（workspace 横断で永続検査する）の併用とする。
-以下の本文は、Issue #393 時点の判断を歴史記録として残す。
+The non-adoption judgment this document made about the sensor execution mechanism and the learnings ritual's deterministic tool was changed to adoption by D004 of Intent `260704-v2-parity-completion`.
+Issue #393's non-adoption judgment explicitly stated it would be reconsidered "once a decision confirms including a hook-execution runtime," and the adaptive-copy strategy for upstream's TS engine (D001) satisfied that reconsideration condition.
+The inspection setup now combines upstream's sensors (copied per engine, checked immediately at stage completion) with `amadeus-validator` (checked persistently, across the whole workspace).
+The body below preserves the Issue #393 judgment as a historical record; read it under this note. The `amadeus-history-review` / `amadeus-learning-review` skills it references were later retired — the §13 learnings ritual (`amadeus-learnings.ts`) owns that role today.
 
-この文書は、Issue #393 の判断として、AI-DLC v2 の stage 定義にある sensor と Learn（learnings ritual と `memory.md`）を Amadeus DLC のどの成果物と検証へ写像するかを定義する。
+This document defines, as the judgment for Issue #393, which Amadeus DLC artifacts and verifications the sensor and Learn (the learnings ritual and `memory.md`) found in AI-DLC v2's stage definitions map to.
 
-参照元は次である。
+References:
 
-- リポジトリ: https://github.com/awslabs/aidlc-workflows/tree/v2
-- 参照 commit: `d341522e1491db4884e9127004c3882365229218`
-- sensor 宣言: 各 stage 定義の frontmatter `sensors:`、Learn: `core/amadeus-common/protocols/stage-protocol.md` §13
+- Repository: https://github.com/awslabs/aidlc-workflows/tree/v2
+- Reference commit: `d341522e1491db4884e9127004c3882365229218`
+- Sensor declaration: each stage definition's frontmatter `sensors:`; Learn: `core/amadeus-common/protocols/stage-protocol.md` §13
 
-## 判断
+## Decision (Issue #393 — Superseded by D004)
 
-Amadeus DLC は、sensor 実行機構（`.amadeus-sensors/` への検査結果出力、sensor-fire hook）と、learnings ritual の決定論ツール（`amadeus-learnings.ts` 相当）を採用しない。
+Amadeus DLC does not adopt the sensor execution mechanism (inspection output to `.amadeus-sensors/`, the sensor-fire hook) or the learnings ritual's deterministic tool (the equivalent of `amadeus-learnings.ts`).
 
-sensor が担う決定論的検査は既存の検証へ、Learn が担う知見の記録と定着は既存の成果物と review skill へ写像する。
+The deterministic inspection the sensor carries out is mapped to existing verification; the recording and settling of insights that Learn carries out is mapped to existing artifacts and review skills.
 
-## sensor の写像
+## Sensor Mapping
 
-参照 commit 時点の sensor は 4 種で、stage への宣言は次のとおりである。
+As of the reference commit there are 4 sensors, declared on stages as follows.
 
-| sensor | 本家での役割 | 宣言している stage |
+| Sensor | Role upstream | Stages that declare it |
 |---|---|---|
-| `required-sections` | Markdown 成果物が必須節を含むかの検査 | code-generation を除く全 stage |
-| `upstream-coverage` | 成果物が上流成果物を参照しているかの検査 | code-generation を除く全 stage |
-| `linter` | プロジェクトの linter 実行（結果を `<record>/.amadeus-sensors/` へ出力） | Construction の設計 4 stage、code-generation、ci-pipeline |
-| `type-check` | プロジェクトの type-checker 実行 | Construction の設計 4 stage、code-generation、build-and-test、ci-pipeline |
+| `required-sections` | Checks whether a Markdown artifact contains its required sections | All stages except code-generation |
+| `upstream-coverage` | Checks whether an artifact references its upstream artifacts | All stages except code-generation |
+| `linter` | Runs the project's linter (outputs the result to `<record>/.amadeus-sensors/`) | Construction's 4 design stages, code-generation, ci-pipeline |
+| `type-check` | Runs the project's type-checker | Construction's 4 design stages, code-generation, build-and-test, ci-pipeline |
 
-Amadeus DLC 側の検証先は次である。
+Amadeus DLC's verification targets are as follows.
 
-| sensor | Amadeus DLC の検証先 |
+| Sensor | Amadeus DLC's verification target |
 |---|---|
-| `required-sections` | `amadeus-validator` の構造検証。成果物の必須見出しと必須項目を検査する。 |
-| `upstream-coverage` | 各 stage skill の必須入力の読込契約と、phase の `traceability.md`（要求から成果物と検証への対応）。evidence link は `amadeus-validator` が検査する。 |
-| `linter` | Build and Test（Stage 3.6）の実行記録（`build-test-results.md` にコマンドと結果を残す）と、Bolt PR・phase PR の CI。 |
-| `type-check` | 同上。 |
+| `required-sections` | `amadeus-validator`'s structural verification. Checks the artifact's required headings and required items. |
+| `upstream-coverage` | Each stage skill's contract for reading its required inputs, plus the phase's `traceability.md` (the correspondence from requirements to artifacts and verification). `amadeus-validator` checks the evidence links. |
+| `linter` | Build and Test's (Stage 3.6) execution record (`build-test-results.md` retains the commands and results), plus CI on the Bolt PR and phase PR. |
+| `type-check` | Same as above. |
 
-`.amadeus-sensors/` 相当の検査結果ディレクトリは追加しない。検査結果の記録先は、構造検証が validator の結果報告、build とテストが Bolt record の `build-test-results.md` である。
+No inspection-result directory equivalent to `.amadeus-sensors/` is added. The recording destination for inspection results is the validator's result report for structural verification, and the Bolt record's `build-test-results.md` for build and test.
 
-## Learn の写像
+## Learn Mapping
 
-本家の Learn は、stage 実行中に `memory.md` へ 4 見出し（Interpretations、Deviations、Tradeoffs、Open questions）で記録し、stage 完了時の learnings ritual で候補を表面化して、人間の判断で harness へ定着させる。
+Upstream's Learn records under `memory.md` during stage execution, using 4 headings (Interpretations, Deviations, Tradeoffs, Open questions); it surfaces candidates through the learnings ritual at stage completion, and settles them into the harness at human judgment.
 
-Amadeus DLC 側の記録先は次である。
+Amadeus DLC's recording destinations are as follows.
 
-| 本家の Learn 要素 | Amadeus DLC の記録先 |
+| Upstream Learn element | Amadeus DLC's recording destination |
 |---|---|
-| `memory.md` の Interpretations / Deviations / Tradeoffs / Open questions | 各 stage 成果物の `memory.md`。同じ 4 観点（解釈、逸脱、トレードオフ、未解決の問題）を stage skill の手順で記録する。 |
-| Open questions の解消 | `amadeus-grilling` の一問ずつの質問と、stage の `<stage>-questions.md`。確定判断は Grilling Decision Trail（`grillings.md`、`grillings/`）へ残す。 |
-| 確定した判断の記録 | phase の `decisions.md`（gate の Accept as-is 記録を含む）と、stage 固有の decision 成果物。 |
-| 成果物単位の追跡 | phase の `traceability.md`。phase 境界で `amadeus` 入口が確定する。 |
-| 候補の表面化と定着（learnings ritual） | `amadeus-history-review`（過去成果物の読み取りと抽出）と `amadeus-learning-review`（分類）。`steering_knowledge_candidate` は Space の `memory/` と `knowledge/` へ、`domain_map_candidate` と `context_map_candidate` は Domain Map と Context Map へ、`follow_up_issue_candidate` と `follow_up_intent_candidate` は Issue または Intent 化へ接続する。いずれも自動昇格せず、人間の判断を経る。 |
+| `memory.md`'s Interpretations / Deviations / Tradeoffs / Open questions | Each stage artifact's `memory.md`. The same 4 viewpoints (interpretations, deviations, tradeoffs, open questions) are recorded through the stage skill's procedure. |
+| Resolving Open questions | `amadeus-grilling`'s one-question-at-a-time questioning, and the stage's `<stage>-questions.md`. Confirmed judgments are retained in the Grilling Decision Trail (`grillings.md`, `grillings/`). |
+| Recording confirmed judgments | The phase's `decisions.md` (including the gate's Accept as-is record), plus stage-specific decision artifacts. |
+| Tracking per artifact | The phase's `traceability.md`. Confirmed at the phase boundary by the `amadeus` entry point. |
+| Surfacing and settling candidates (the learnings ritual) | `amadeus-history-review` (reading and extracting from past artifacts) and `amadeus-learning-review` (classification). `steering_knowledge_candidate` connects to the Space's `memory/` and `knowledge/`; `domain_map_candidate` and `context_map_candidate` connect to the Domain Map and Context Map; `follow_up_issue_candidate` and `follow_up_intent_candidate` connect to filing an Issue or an Intent. None of these auto-promotes; each goes through human judgment. |
 
-## 採用しない項目と理由
+## Items Not Adopted at the Time, and Why (Superseded by D004)
 
-| 項目 | 理由 |
+| Item | Reason |
 |---|---|
-| sensor 実行機構（sensor-fire hook、`.amadeus-sensors/` 出力） | 配布契約（単一公開入口と skill 一式）に hook 実行基盤を追加しない。決定論的検査は `amadeus-validator` と Build and Test、CI が既に担う。 |
-| learnings ritual の決定論ツール（`amadeus-learnings.ts` 相当） | 候補の表面化と分類は `amadeus-history-review` と `amadeus-learning-review` の契約で担い、定着は人間 gate を経る既存契約を維持する。 |
+| The sensor execution mechanism (the sensor-fire hook, `.amadeus-sensors/` output) | Does not add a hook-execution runtime to the distribution contract (a single public entry point plus a skill set). Deterministic inspection is already carried out by `amadeus-validator`, Build and Test, and CI. |
+| The learnings ritual's deterministic tool (the equivalent of `amadeus-learnings.ts`) | Surfacing and classifying candidates is carried out by the `amadeus-history-review` and `amadeus-learning-review` contract, and settling retains the existing contract that goes through a human gate. |
 
-## stage skill からの追跡
+## Tracking from Stage Skills
 
-各 stage skill の `SKILL.md` Gate 節に、当該 stage の sensor 宣言と Amadeus 側の写像を明記する。
+Each stage skill's `SKILL.md` Gate section states that stage's sensor declaration and its mapping on the Amadeus side.
 
-`memory.md` の 4 観点の記録は、各 stage skill の手順に既に含まれる。
+Recording the 4 viewpoints in `memory.md` is already included in each stage skill's procedure.
 
-## 将来の再検討条件
+## Future Reconsideration Conditions
 
-次のいずれかが起きた場合、sensor 実行機構の採用を別 Issue で再検討する。
+Reconsider adopting the sensor execution mechanism in a separate Issue if either of the following occurs:
 
-- validator と CI で検出できない成果物欠落が gate 差し戻しとして頻発する運用実績を確認した場合。
-- 配布契約に hook 実行基盤を含める判断が別途確定した場合。
+- Operational experience confirms artifact omissions, undetectable by the validator and CI, occurring frequently as gate rejections.
+- A separate decision confirms including a hook-execution runtime in the distribution contract.
 
-## 関連文書
+## Related Documents
 
 - [AI-DLC v2 Difference Response Plan](aidlc-v2-difference-response-plan.md)
 - [AI-DLC v2 Reviewer Mapping](aidlc-v2-reviewer-mapping.md)

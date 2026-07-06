@@ -141,7 +141,7 @@ npm run validate:workspace -- <workspace> <YYMMDD>-<label>
 ## Documentation
 
 - agent 共通入口: [AMADEUS.md](AMADEUS.md)
-- skill 言語方針: [docs/amadeus/skill-language-policy.md](docs/amadeus/skill-language-policy.md)
+- skill 言語方針: [docs/amadeus/skill-language-policy.ja.md](docs/amadeus/skill-language-policy.ja.md)
 - `docs/amadeus/` の言語方針: [docs/amadeus/language-policy.ja.md](docs/amadeus/language-policy.ja.md)
 - ライフサイクル契約（5 phase 32 ステージ、scope、state スキーマ）:
   - [Overview](docs/amadeus/lifecycle/overview.md)
@@ -150,7 +150,7 @@ npm run validate:workspace -- <workspace> <YYMMDD>-<label>
   - [Inception](docs/amadeus/lifecycle/inception.md)
   - [Construction](docs/amadeus/lifecycle/construction.md)
   - [State](docs/amadeus/lifecycle/state.md)
-- Space reference: [docs/amadeus/steering.md](docs/amadeus/steering.md)
+- Space reference: [docs/amadeus/steering.ja.md](docs/amadeus/steering.ja.md)
 - 拡張ガイド: [docs/amadeus/extension-guide.ja.md](docs/amadeus/extension-guide.ja.md)
 - Architecture Decision: [docs/adr/](docs/adr/)
 - AI-DLC 参照資料: [docs/ai-dlc/](docs/ai-dlc/)

@@ -1,71 +1,71 @@
 # AI-DLC v2 Operation Phase Boundary
 
-この文書は、Issue #394 の判断として、AI-DLC v2 の Operation phase skill を Amadeus DLC で対象外にする理由と境界を定義する。
+This document defines, as the judgment for Issue #394, the reason and the boundary for treating AI-DLC v2's Operation phase skills as out of scope in Amadeus DLC.
 
-参照元は次である。
+References:
 
-- リポジトリ: https://github.com/awslabs/aidlc-workflows/tree/v2
-- 参照 commit: `d341522e1491db4884e9127004c3882365229218`
-- Operation stage 定義: `core/amadeus-common/stages/operation/**`（7 stage）
+- Repository: https://github.com/awslabs/aidlc-workflows/tree/v2
+- Reference commit: `d341522e1491db4884e9127004c3882365229218`
+- Operation stage definitions: `core/amadeus-common/stages/operation/**` (7 stages)
 
-## 判断
+## Decision
 
-Amadeus DLC は、Operation phase を現在の対象外として維持する。
+Amadeus DLC keeps Operation phase out of scope for now.
 
-record の scaffold（`operation/` ディレクトリ）と Stage Progress の 7 行だけを持ち、いずれの stage も実行対象にしない。Stage Progress は常に `[S]`（`SKIP: out of Amadeus scope`）にする。
+It carries only the record's scaffold (the `operation/` directory) and the 7 lines of Stage Progress; it does not treat any stage as an execution target. Stage Progress is always `[S]` (`SKIP: out of Amadeus scope`).
 
-Operation skill の追加や取り込みは行わない。
+Amadeus does not add or adopt any Operation skill.
 
-## 対象外にする理由
+## Reasons for Being Out of Scope
 
-### 成果物契約の観点
+### Artifact contract viewpoint
 
-Amadeus DLC の成果物は、`amadeus/` 配下の日本語 Markdown（設計、計画、判断、追跡）であり、リポジトリ内で完結する。
+Amadeus DLC's artifacts are Japanese Markdown under `amadeus/` (design, plans, decisions, traceability), and they stay self-contained within the repository.
 
-Operation stage の成果物は、実環境への作用（デプロイ、プロビジョニング、監視設定）と実環境からの観測（インシデント、性能実測、フィードバック）を前提にする。これらはリポジトリ内の record だけでは真実性を保てず、成果物契約の外にある。
+Operation stage's artifacts presuppose acting on a real environment (deployment, provisioning, monitoring configuration) and observing it (incidents, measured performance, feedback). These cannot preserve their truthfulness through repository-internal records alone, so they fall outside the artifact contract.
 
-### gate の観点
+### Gate viewpoint
 
-Amadeus DLC の承認は、stage gate と phase PR・Bolt PR の人間 merge で構成され、承認対象はリポジトリ差分である。
+Amadeus DLC's approval is made up of stage gates and the human merge of phase PRs and Bolt PRs, and its approval target is the repository diff.
 
-デプロイ実行やインシデント対応の承認は PR merge では表現できず、環境権限や運用手順といった別の承認機構を要する。既存の gate 契約に Operation を載せると、承認対象と承認手段の対応が崩れる。
+Approving a deployment execution or an incident response cannot be expressed through a PR merge; it requires a separate approval mechanism such as environment permissions or an operational procedure. Loading Operation onto the existing gate contract breaks the correspondence between the approval target and the approval means.
 
-### validator の観点
+### Validator viewpoint
 
-`amadeus-validator` は、配布先ユーザー環境で `amadeus/` の構造を機械検証する契約であり、`pass` は「実行時に参照できる最低限の構造条件の充足」を意味する。
+`amadeus-validator` is a contract that mechanically verifies `amadeus/`'s structure in the distributed user's environment, and its `pass` means "the minimum structural conditions referenceable at execution time are satisfied."
 
-デプロイ結果や監視設定といった実環境状態の検証手段を validator は持たない。Operation を対象に含めると、`pass` の意味が構造条件の充足から逸脱する。
+The validator has no means to verify real-environment state such as deployment results or monitoring configuration. Including Operation in its scope would change the meaning of `pass` from structural-condition satisfaction.
 
-### PR 境界の観点
+### PR boundary viewpoint
 
-Amadeus DLC のライフサイクルは、phase PR と Bolt PR で完結する。
+Amadeus DLC's lifecycle is self-contained within phase PRs and Bolt PRs.
 
-Operation の実行単位はリリースや運用イベントであり、PR 境界と一致しない。PR にならない作業を lifecycle に含めると、完了証拠を merge で確定する現在の追跡モデルが成立しない。
+Operation's execution unit is a release or an operational event, and it does not align with a PR boundary. Including work that never becomes a PR in the lifecycle breaks the current tracking model, which fixes completion evidence at merge.
 
-## 本家 Operation skill の一覧と Amadeus 側の扱い
+## Upstream Operation Skill List and How Amadeus Handles Them
 
-| 本家 Operation stage | Amadeus 側の扱い |
+| Upstream Operation stage | How Amadeus handles it |
 |---|---|
-| Deployment Pipeline | 対象外。パイプラインの設計までは Stage 3.4 Infrastructure Design の `cicd-pipeline.md` と Stage 3.7 CI Pipeline の `ci-config.md`、`quality-gates.md` が扱う。実パイプラインの構築と実行は扱わない。 |
-| Environment Provisioning | 対象外。デプロイアーキテクチャの設計までは Stage 3.4 の `deployment-architecture.md` が扱う。実プロビジョニングは扱わない。 |
-| Deployment Execution | 対象外。実行行為そのものであり、対応する設計成果物を持たない。 |
-| Observability Setup | 対象外。監視項目と通知の設計までは Stage 3.4 の `monitoring-design.md` が扱う。実設定は扱わない。 |
-| Incident Response | 対象外。インシデントからの学びは、Issue、PR、CI 結果を入力とする `amadeus-history-review` と `amadeus-learning-review` の分類で取り込める。対応作業そのものは扱わない。 |
-| Performance Validation | 対象外。性能の要求と設計は Stage 3.2 NFR Requirements と 3.3 NFR Design が、テスト実行の記録は Build and Test の `performance-test-instructions.md` と `build-test-results.md` が扱う。実環境での検証は扱わない。 |
-| Feedback & Optimization | 対象外。フィードバックの受け口は `amadeus` Intake の合流判定とスコープバックログ、および history / learning review である。改善の実施は新しい Intent として起票する。 |
+| Deployment Pipeline | Out of scope. Pipeline design up to Stage 3.4 Infrastructure Design's `cicd-pipeline.md` and Stage 3.7 CI Pipeline's `ci-config.md` and `quality-gates.md` is handled. Building and running the actual pipeline is not handled. |
+| Environment Provisioning | Out of scope. Deployment architecture design up to Stage 3.4's `deployment-architecture.md` is handled. Actual provisioning is not handled. |
+| Deployment Execution | Out of scope. It is the execution act itself and has no corresponding design artifact. |
+| Observability Setup | Out of scope. Design of monitoring items and notifications up to Stage 3.4's `monitoring-design.md` is handled. Actual configuration is not handled. |
+| Incident Response | Out of scope. Learnings from an incident can be captured through the §13 learnings ritual (`amadeus-learnings.ts`), taking Issues, PRs, and CI results as input. The response work itself is not handled. |
+| Performance Validation | Out of scope. Performance requirements and design are handled by Stage 3.2 NFR Requirements and 3.3 NFR Design; test-execution records are handled by Build and Test's `performance-test-instructions.md` and `build-test-results.md`. Verification in a real environment is not handled. |
+| Feedback & Optimization | Out of scope. The intake for feedback is the `amadeus` Intake's merge judgment and the scope backlog, plus the §13 learnings ritual. Improvement work is filed as a new Intent. |
 
-## 将来対応する場合の入口
+## Entry Point for Future Adoption
 
-Operation phase の採用は、この文書の更新だけでは行わない。
+Adopting Operation phase is not done merely by updating this document.
 
-次の手順で分離して扱う。
+It is handled separately, through the following steps.
 
-1. 採用の検討は、専用の GitHub Issue を起票して行う（roadmap item として扱う）。
-2. 採用が確定した場合は、`amadeus` の Intake を通じて人間承認付きの新しい Intent として実施する。
-3. その際、成果物契約、gate、validator、PR 境界の 4 観点それぞれで本文書の理由を再評価し、`docs/backward-compatibility.md` の要否も判断する。
+1. Consideration of adoption starts by filing a dedicated GitHub Issue (treated as a roadmap item).
+2. Once adoption is confirmed, it is carried out as a new Intent with human approval, through the `amadeus` Intake.
+3. At that point, re-evaluate this document's reasoning from each of the 4 viewpoints — artifact contract, gate, validator, and PR boundary — and also judge whether `docs/backward-compatibility.md` needs an entry.
 
-## 関連文書
+## Related Documents
 
 - [AI-DLC v2 Difference Response Plan](aidlc-v2-difference-response-plan.md)
 - [Lifecycle Contract Overview](lifecycle/overview.md)
-- [Skill Language Policy](skill-language-policy.md)（維持する契約に Operation phase の対象外境界を含む）
+- [Skill Language Policy](skill-language-policy.md) (its retained contract includes Operation phase's out-of-scope boundary)
