@@ -2730,7 +2730,7 @@
     },
     {
       "unitClass": "hook",
-      "unitId": "aidlc-audit-logger",
+      "unitId": "amadeus-audit-logger",
       "minMechanism": "none",
       "coveredBy": [
         {
@@ -2758,7 +2758,7 @@
     },
     {
       "unitClass": "hook",
-      "unitId": "aidlc-log-subagent",
+      "unitId": "amadeus-log-subagent",
       "minMechanism": "none",
       "coveredBy": [
         {
@@ -2778,14 +2778,14 @@
     },
     {
       "unitClass": "hook",
-      "unitId": "aidlc-mint-presence",
+      "unitId": "amadeus-mint-presence",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
     },
     {
       "unitClass": "hook",
-      "unitId": "aidlc-runtime-compile",
+      "unitId": "amadeus-runtime-compile",
       "minMechanism": "none",
       "coveredBy": [
         {
@@ -2805,7 +2805,7 @@
     },
     {
       "unitClass": "hook",
-      "unitId": "aidlc-sensor-fire",
+      "unitId": "amadeus-sensor-fire",
       "minMechanism": "none",
       "coveredBy": [
         {
@@ -2829,7 +2829,7 @@
     },
     {
       "unitClass": "hook",
-      "unitId": "aidlc-session-end",
+      "unitId": "amadeus-session-end",
       "minMechanism": "none",
       "coveredBy": [
         {
@@ -2841,7 +2841,7 @@
     },
     {
       "unitClass": "hook",
-      "unitId": "aidlc-session-start",
+      "unitId": "amadeus-session-start",
       "minMechanism": "none",
       "coveredBy": [
         {
@@ -2873,7 +2873,7 @@
     },
     {
       "unitClass": "hook",
-      "unitId": "aidlc-statusline",
+      "unitId": "amadeus-statusline",
       "minMechanism": "none",
       "coveredBy": [
         {
@@ -2901,7 +2901,7 @@
     },
     {
       "unitClass": "hook",
-      "unitId": "aidlc-stop",
+      "unitId": "amadeus-stop",
       "minMechanism": "none",
       "coveredBy": [
         {
@@ -2929,7 +2929,7 @@
     },
     {
       "unitClass": "hook",
-      "unitId": "aidlc-sync-statusline",
+      "unitId": "amadeus-sync-statusline",
       "minMechanism": "none",
       "coveredBy": [
         {
@@ -2945,7 +2945,7 @@
     },
     {
       "unitClass": "hook",
-      "unitId": "aidlc-validate-state",
+      "unitId": "amadeus-validate-state",
       "minMechanism": "none",
       "coveredBy": [
         {
@@ -3509,21 +3509,21 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-audit append",
+      "unitId": "amadeus-audit append",
       "minMechanism": "cli",
       "coveredBy": [],
       "status": "UNCOVERED"
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-audit append-raw",
+      "unitId": "amadeus-audit append-raw",
       "minMechanism": "cli",
       "coveredBy": [],
       "status": "UNCOVERED"
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-audit audit-fork",
+      "unitId": "amadeus-audit audit-fork",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -3535,7 +3535,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-audit audit-merge",
+      "unitId": "amadeus-audit audit-merge",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -3547,7 +3547,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-bolt abort",
+      "unitId": "amadeus-bolt abort",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -3567,7 +3567,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-bolt complete",
+      "unitId": "amadeus-bolt complete",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -3595,7 +3595,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-bolt dispatch-event",
+      "unitId": "amadeus-bolt dispatch-event",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -3627,7 +3627,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-bolt fail",
+      "unitId": "amadeus-bolt fail",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -3651,7 +3651,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-bolt hold-merge",
+      "unitId": "amadeus-bolt hold-merge",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -3663,7 +3663,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-bolt release-merge",
+      "unitId": "amadeus-bolt release-merge",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -3675,7 +3675,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-bolt set-autonomy",
+      "unitId": "amadeus-bolt set-autonomy",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -3687,7 +3687,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-bolt start",
+      "unitId": "amadeus-bolt start",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -3715,7 +3715,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-graph artifacts",
+      "unitId": "amadeus-graph artifacts",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -3727,7 +3727,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-graph compile",
+      "unitId": "amadeus-graph compile",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -3747,49 +3747,49 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-graph consumers",
+      "unitId": "amadeus-graph consumers",
       "minMechanism": "cli",
       "coveredBy": [],
       "status": "UNCOVERED"
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-graph cycles",
+      "unitId": "amadeus-graph cycles",
       "minMechanism": "cli",
       "coveredBy": [],
       "status": "UNCOVERED"
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-graph export",
+      "unitId": "amadeus-graph export",
       "minMechanism": "cli",
       "coveredBy": [],
       "status": "UNCOVERED"
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-graph producers",
+      "unitId": "amadeus-graph producers",
       "minMechanism": "cli",
       "coveredBy": [],
       "status": "UNCOVERED"
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-graph resolve",
+      "unitId": "amadeus-graph resolve",
       "minMechanism": "cli",
       "coveredBy": [],
       "status": "UNCOVERED"
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-graph scope",
+      "unitId": "amadeus-graph scope",
       "minMechanism": "cli",
       "coveredBy": [],
       "status": "UNCOVERED"
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-graph topo",
+      "unitId": "amadeus-graph topo",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -3801,7 +3801,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-graph validate-grid",
+      "unitId": "amadeus-graph validate-grid",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -3813,14 +3813,14 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-graph validate-scope",
+      "unitId": "amadeus-graph validate-scope",
       "minMechanism": "cli",
       "coveredBy": [],
       "status": "UNCOVERED"
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-jump execute",
+      "unitId": "amadeus-jump execute",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -3852,7 +3852,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-jump resolve",
+      "unitId": "amadeus-jump resolve",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -3884,7 +3884,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-learnings persist",
+      "unitId": "amadeus-learnings persist",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -3904,7 +3904,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-learnings surface",
+      "unitId": "amadeus-learnings surface",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -3920,7 +3920,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-log answer",
+      "unitId": "amadeus-log answer",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -3932,7 +3932,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-log decision",
+      "unitId": "amadeus-log decision",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -3944,7 +3944,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-runtime compile",
+      "unitId": "amadeus-runtime compile",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -3980,7 +3980,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-runtime fragment-fork",
+      "unitId": "amadeus-runtime fragment-fork",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -3996,7 +3996,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-runtime fragment-merge",
+      "unitId": "amadeus-runtime fragment-merge",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4012,14 +4012,14 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-runtime read",
+      "unitId": "amadeus-runtime read",
       "minMechanism": "cli",
       "coveredBy": [],
       "status": "UNCOVERED"
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-runtime summary",
+      "unitId": "amadeus-runtime summary",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4035,14 +4035,14 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-sensor describe",
+      "unitId": "amadeus-sensor describe",
       "minMechanism": "cli",
       "coveredBy": [],
       "status": "UNCOVERED"
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-sensor fire",
+      "unitId": "amadeus-sensor fire",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4054,7 +4054,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-sensor list",
+      "unitId": "amadeus-sensor list",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4066,7 +4066,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-state acknowledge-compaction",
+      "unitId": "amadeus-state acknowledge-compaction",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4078,7 +4078,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-state advance",
+      "unitId": "amadeus-state advance",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4098,7 +4098,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-state approve",
+      "unitId": "amadeus-state approve",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4130,7 +4130,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-state checkbox",
+      "unitId": "amadeus-state checkbox",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4142,7 +4142,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-state complete-workflow",
+      "unitId": "amadeus-state complete-workflow",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4154,7 +4154,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-state count",
+      "unitId": "amadeus-state count",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4166,7 +4166,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-state finalize",
+      "unitId": "amadeus-state finalize",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4178,7 +4178,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-state fork",
+      "unitId": "amadeus-state fork",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4194,7 +4194,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-state gate-start",
+      "unitId": "amadeus-state gate-start",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4210,7 +4210,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-state get",
+      "unitId": "amadeus-state get",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4222,7 +4222,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-state lookup",
+      "unitId": "amadeus-state lookup",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4234,7 +4234,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-state merge",
+      "unitId": "amadeus-state merge",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4246,7 +4246,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-state park",
+      "unitId": "amadeus-state park",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4258,7 +4258,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-state practices-event",
+      "unitId": "amadeus-state practices-event",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4270,7 +4270,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-state practices-promote",
+      "unitId": "amadeus-state practices-promote",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4282,7 +4282,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-state reject",
+      "unitId": "amadeus-state reject",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4298,7 +4298,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-state resume",
+      "unitId": "amadeus-state resume",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4310,7 +4310,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-state reuse-artifact",
+      "unitId": "amadeus-state reuse-artifact",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4322,7 +4322,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-state revise",
+      "unitId": "amadeus-state revise",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4334,7 +4334,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-state set",
+      "unitId": "amadeus-state set",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4350,7 +4350,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-state set-skeleton-stance",
+      "unitId": "amadeus-state set-skeleton-stance",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4362,7 +4362,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-state skip",
+      "unitId": "amadeus-state skip",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4378,7 +4378,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-state unpark",
+      "unitId": "amadeus-state unpark",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4390,7 +4390,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-utility codekb-path",
+      "unitId": "amadeus-utility codekb-path",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4402,7 +4402,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-utility config-change",
+      "unitId": "amadeus-utility config-change",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4426,7 +4426,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-utility detect",
+      "unitId": "amadeus-utility detect",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4438,7 +4438,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-utility detect-scope",
+      "unitId": "amadeus-utility detect-scope",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4458,7 +4458,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-utility doctor",
+      "unitId": "amadeus-utility doctor",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4506,7 +4506,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-utility help",
+      "unitId": "amadeus-utility help",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4526,7 +4526,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-utility init",
+      "unitId": "amadeus-utility init",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4574,7 +4574,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-utility intent",
+      "unitId": "amadeus-utility intent",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4590,7 +4590,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-utility intent-birth",
+      "unitId": "amadeus-utility intent-birth",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4638,7 +4638,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-utility recompose",
+      "unitId": "amadeus-utility recompose",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4658,7 +4658,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-utility resolve-env-scope",
+      "unitId": "amadeus-utility resolve-env-scope",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4670,7 +4670,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-utility scope-change",
+      "unitId": "amadeus-utility scope-change",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4686,7 +4686,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-utility scope-table",
+      "unitId": "amadeus-utility scope-table",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4706,7 +4706,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-utility set-status",
+      "unitId": "amadeus-utility set-status",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4718,7 +4718,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-utility space",
+      "unitId": "amadeus-utility space",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4742,7 +4742,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-utility space-create",
+      "unitId": "amadeus-utility space-create",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4770,14 +4770,14 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-utility state-init",
+      "unitId": "amadeus-utility state-init",
       "minMechanism": "cli",
       "coveredBy": [],
       "status": "UNCOVERED"
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-utility status",
+      "unitId": "amadeus-utility status",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4801,7 +4801,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-utility version",
+      "unitId": "amadeus-utility version",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4813,7 +4813,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-validate outputs",
+      "unitId": "amadeus-validate outputs",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4825,7 +4825,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-worktree create",
+      "unitId": "amadeus-worktree create",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4853,7 +4853,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-worktree discard",
+      "unitId": "amadeus-worktree discard",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4873,7 +4873,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-worktree info",
+      "unitId": "amadeus-worktree info",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4901,14 +4901,14 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-worktree list",
+      "unitId": "amadeus-worktree list",
       "minMechanism": "cli",
       "coveredBy": [],
       "status": "UNCOVERED"
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-worktree merge",
+      "unitId": "amadeus-worktree merge",
       "minMechanism": "cli",
       "coveredBy": [
         {
@@ -4924,7 +4924,7 @@
     },
     {
       "unitClass": "subcommand",
-      "unitId": "aidlc-worktree verify",
+      "unitId": "amadeus-worktree verify",
       "minMechanism": "cli",
       "coveredBy": [
         {

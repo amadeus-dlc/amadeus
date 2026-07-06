@@ -1,6 +1,6 @@
-// covers: file:skills/aidlc/SKILL.md
+// covers: file:skills/amadeus/SKILL.md
 //
-// t-exec-codex-status.serial.test.ts — drive `$aidlc --status` through Codex
+// t-exec-codex-status.serial.test.ts — drive `$amadeus --status` through Codex
 // CLI's headless surface (`codex exec`) against the SHIPPED dist/codex tree,
 // and assert on the engine's real outputs. The codex-exec driver is the
 // structured "logic half" for the Codex harness — the analogue of kiro's ACP
@@ -21,9 +21,9 @@
 // human-paced.
 //
 // What this proves on the SHIPPED tree, structurally:
-//   - skill discovery at .agents/skills/aidlc under a real codex session;
+//   - skill discovery at .agents/skills/amadeus under a real codex session;
 //   - the engine's print-directive terminal arm (status names no workflow);
-//   - nothing is scaffolded by a read-only utility (no aidlc-docs creature).
+//   - nothing is scaffolded by a read-only utility (no amadeus-docs creature).
 //
 // LIVE GATE: requires AIDLC_CODEX_EXEC_LIVE=1 + a codex >= 0.139.0 binary
 // (AIDLC_CODEX_BIN or PATH) + AWS creds for the Bedrock profile in
@@ -109,7 +109,7 @@ function setupCodexProject(): { proj: string; home: string; root: string } {
       `region = "${AWS_REGION}"`,
       ``,
       `[shell_environment_policy]`,
-      `set = { AIDLC_RULES_DIR = ".codex/aidlc-rules" }`,
+      `set = { AIDLC_RULES_DIR = ".codex/amadeus-rules" }`,
       ``,
       `[projects."${proj}"]`,
       `trust_level = "trusted"`,
@@ -132,13 +132,13 @@ function execCodex(proj: string, home: string, prompt: string): { rc: number; ou
   return { rc: r.status ?? -1, out: `${r.stdout ?? ""}\n${r.stderr ?? ""}` };
 }
 
-describe("t-exec-codex-status — $aidlc --status on the shipped dist/codex via codex exec", () => {
+describe("t-exec-codex-status — $amadeus --status on the shipped dist/codex via codex exec", () => {
   test.skipIf(SKIP_REASON !== null)(
     `no-state: status renders 'no active workflow' and scaffolds nothing${SKIP_REASON ? ` [SKIP: ${SKIP_REASON}]` : ""}`,
     () => {
       const { proj, home, root } = setupCodexProject();
       try {
-        const r = execCodex(proj, home, "Use the $aidlc skill to run: /aidlc --status");
+        const r = execCodex(proj, home, "Use the $amadeus skill to run: /amadeus --status");
         expect(r.rc).toBe(0);
         // The engine's no-workflow status text, surfaced verbatim by the
         // print-directive terminal arm.
@@ -147,8 +147,8 @@ describe("t-exec-codex-status — $aidlc --status on the shipped dist/codex via 
         // hooks-health heartbeat dir is hook plumbing (the byte-shared Stop
         // hook writes it on every turn, same as the Claude harness) — the
         // workspace signals are the state file and the scaffold tree.
-        expect(existsSync(join(proj, "aidlc-docs", "aidlc-state.md"))).toBe(false);
-        expect(existsSync(join(proj, "aidlc-docs", "ideation"))).toBe(false);
+        expect(existsSync(join(proj, "amadeus-docs", "amadeus-state.md"))).toBe(false);
+        expect(existsSync(join(proj, "amadeus-docs", "ideation"))).toBe(false);
       } finally {
         rmSync(root, { recursive: true, force: true });
       }

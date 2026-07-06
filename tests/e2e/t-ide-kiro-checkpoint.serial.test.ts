@@ -1,4 +1,4 @@
-// covers: file:core/tools/aidlc-state.ts
+// covers: file:core/tools/amadeus-state.ts
 //
 // t-ide-kiro-checkpoint.serial.test.ts - the FIRST live test that drives the Kiro
 // IDE (the Electron desktop app), not the Kiro CLI. Every existing live Kiro test
@@ -86,7 +86,7 @@ const SEED_OVERRIDE = process.env.AIDLC_KIRO_IDE_SEED ?? "";
 // (never mutate the developer's dir); otherwise we generate the minimal seed. Returns
 // the dir; the caller rmSync's it in finally.
 function makeSeedDir(): string {
-  const dir = mkdtempSync(join(tmpdir(), "aidlc-kiro-ide-seed-"));
+  const dir = mkdtempSync(join(tmpdir(), "amadeus-kiro-ide-seed-"));
   if (SEED_OVERRIDE) {
     cpSync(SEED_OVERRIDE, dir, { recursive: true });
     return dir;
@@ -253,7 +253,7 @@ describe("t-ide-kiro-checkpoint (live Kiro IDE: human-presence gate enforced on 
     async () => {
       // withState is LOAD-BEARING (not just flavor): the mint hook resolves the
       // active intent from the on-disk cursor, and activeIntent() only honors a
-      // record dir that contains aidlc-state.md (listIntentDirs filters on it). With
+      // record dir that contains amadeus-state.md (listIntentDirs filters on it). With
       // no seeded state the record never resolves, so the mint falls back to the bare
       // space-root audit shard while humanTurnCount() (seededAuditShard) reads the
       // per-intent record shard - the event lands in a file the assertion never reads,

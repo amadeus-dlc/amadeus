@@ -2,9 +2,9 @@
 
 > **Agent deep dive** · [User Guide](../00-introduction.md) › [Agents](../06-agents.md) › [deep dives](README.md) · Technical reference: [design-agent](../../reference/agents/design-agent.md)
 
-The aidlc-design-agent is your UX/UI designer. It produces wireframes and concept sketches during Ideation, then evolves them into high-fidelity mockups with interaction specifications during Inception. It defines information architecture, navigation design, responsive behavior, and accessibility requirements. For non-UI projects, it produces system context diagrams and API experience designs.
+The amadeus-design-agent is your UX/UI designer. It produces wireframes and concept sketches during Ideation, then evolves them into high-fidelity mockups with interaction specifications during Inception. It defines information architecture, navigation design, responsive behavior, and accessibility requirements. For non-UI projects, it produces system context diagrams and API experience designs.
 
-The aidlc-design-agent leads two stages and supports two others. It ensures that every user-facing interface is usable, accessible, and consistent with design system standards.
+The amadeus-design-agent leads two stages and supports two others. It ensures that every user-facing interface is usable, accessible, and consistent with design system standards.
 
 ## Stages Led
 
@@ -22,11 +22,11 @@ The aidlc-design-agent leads two stages and supports two others. It ensures that
 
 ## What to Expect
 
-When the aidlc-design-agent is active, it produces detailed descriptions of screen layouts, user flows, and interaction patterns in markdown. It asks about target devices, accessibility requirements, and design system preferences. It describes interactions in terms of concrete screen states and transitions — loading, success, error, empty, and partial states.
+When the amadeus-design-agent is active, it produces detailed descriptions of screen layouts, user flows, and interaction patterns in markdown. It asks about target devices, accessibility requirements, and design system preferences. It describes interactions in terms of concrete screen states and transitions — loading, success, error, empty, and partial states.
 
 ## How It Collaborates
 
-The aidlc-design-agent receives intent and user stories from the aidlc-product-agent, and component constraints from the aidlc-architect-agent. Its mockups and interaction specs are handed off to the aidlc-developer-agent for implementation and to the aidlc-quality-agent for UX acceptance testing.
+The amadeus-design-agent receives intent and user stories from the amadeus-product-agent, and component constraints from the amadeus-architect-agent. Its mockups and interaction specs are handed off to the amadeus-developer-agent for implementation and to the amadeus-quality-agent for UX acceptance testing.
 
 ## Key Principles
 

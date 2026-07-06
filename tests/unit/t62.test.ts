@@ -1,4 +1,4 @@
-// covers: aidlc-stage-schema.ts:validateStageFrontmatter
+// covers: amadeus-stage-schema.ts:validateStageFrontmatter
 //   (the sole exported validator; also exercises the exported constants
 //    VALID_PHASES / VALID_EXECUTIONS / VALID_MODES / VALID_CONDITIONAL_ON
 //    and RESERVED_KEYS indirectly via the error strings they drive, plus the
@@ -9,7 +9,7 @@
 // tests/unit/t62-stage-schema.sh (plan 62). The original spawned `bun -e`
 // importing validateStageFrontmatter (and RESERVED_AGENT_SLUG) and stringifying
 // the result as "VALID" / "INVALID:<errors joined by |>". The tool is a PURE
-// validator — "no I/O, no YAML parsing, no mutation" (aidlc-stage-schema.ts:6-7)
+// validator — "no I/O, no YAML parsing, no mutation" (amadeus-stage-schema.ts:6-7)
 // — so every one of the 62 behavioural contracts can be asserted in-process by
 // importing and CALLING validateStageFrontmatter directly. There is no CLI
 // arg-parsing or process.exit shell to keep as a spawn seam: the .ts file is a
@@ -35,7 +35,7 @@ import {
   type StageFrontmatter,
   type ValidationContext,
   validateStageFrontmatter,
-} from "../../dist/claude/.claude/tools/aidlc-stage-schema.ts";
+} from "../../dist/claude/.claude/tools/amadeus-stage-schema.ts";
 
 // Shared valid fixture — mirrors the .sh FIXTURE (t62-stage-schema.sh:18-34),
 // itself the scope-definition worked example at stage-definition.md:84-109.
@@ -47,8 +47,8 @@ function fixture(): Record<string, unknown> {
     phase: "ideation",
     execution: "ALWAYS",
     condition: "Always executes",
-    lead_agent: "aidlc-product-agent",
-    support_agents: ["aidlc-delivery-agent"],
+    lead_agent: "amadeus-product-agent",
+    support_agents: ["amadeus-delivery-agent"],
     mode: "inline",
     produces: ["scope-document", "intent-backlog"],
     consumes: [
@@ -84,7 +84,7 @@ describe("t62 stage-schema — validateStageFrontmatter (migrated from t62-stage
     const r = validateStageFrontmatter(fixture());
     expect(r.valid).toBe(true);
     // narrowed by valid===true; data aliases the input per the validator's
-    // documented trust boundary (aidlc-stage-schema.ts:262-271).
+    // documented trust boundary (amadeus-stage-schema.ts:262-271).
     const data = (r as { valid: true; data: StageFrontmatter }).data;
     expect(data.slug).toBe("scope-definition");
   });
@@ -244,7 +244,7 @@ describe("t62 stage-schema — validateStageFrontmatter (migrated from t62-stage
 
   // ============================================================
   // Reserved keys — each produces a reserved-key error (5 assertions)
-  // Exact strings pin RESERVED_KEYS map (aidlc-stage-schema.ts:67-73).
+  // Exact strings pin RESERVED_KEYS map (amadeus-stage-schema.ts:67-73).
   // ============================================================
 
   test("reserved: when", () => {
@@ -388,13 +388,13 @@ describe("t62 stage-schema — validateStageFrontmatter (migrated from t62-stage
 
   // ============================================================
   // Dynamic agent lookup (3 assertions)
-  // Exercises the ctx.agents branch (aidlc-stage-schema.ts:242-256).
+  // Exercises the ctx.agents branch (amadeus-stage-schema.ts:242-256).
   // ============================================================
 
   test("lead_agent not in ctx.agents -> error", () => {
     const out = errs(
       { ...fixture(), lead_agent: "ghost-agent" },
-      { agents: ["aidlc-product-agent", "aidlc-delivery-agent"] },
+      { agents: ["amadeus-product-agent", "amadeus-delivery-agent"] },
     );
     expect(out).toContain('lead_agent "ghost-agent" has no matching');
   });
@@ -402,7 +402,7 @@ describe("t62 stage-schema — validateStageFrontmatter (migrated from t62-stage
   test("support_agents[0] not in ctx.agents -> error", () => {
     const out = errs(
       { ...fixture(), support_agents: ["ghost-agent"] },
-      { agents: ["aidlc-product-agent"] },
+      { agents: ["amadeus-product-agent"] },
     );
     expect(out).toContain('support_agents[0] "ghost-agent" has no matching');
   });
@@ -419,7 +419,7 @@ describe("t62 stage-schema — validateStageFrontmatter (migrated from t62-stage
   // Rule 9 must exempt it even when ctx.agents is supplied. Exercises the
   // RESERVED_AGENT_SLUG export and the `!== RESERVED_AGENT_SLUG` guards on both
   // the lead_agent and support_agents arms of Rule 9
-  // (aidlc-stage-schema.ts:75 + :274-295).
+  // (amadeus-stage-schema.ts:75 + :274-295).
   // ============================================================
 
   test("RESERVED_AGENT_SLUG export is 'orchestrator'", () => {
@@ -436,7 +436,7 @@ describe("t62 stage-schema — validateStageFrontmatter (migrated from t62-stage
           lead_agent: RESERVED_AGENT_SLUG,
           support_agents: [],
         },
-        { agents: ["aidlc-product-agent"] },
+        { agents: ["amadeus-product-agent"] },
       ),
     ).toBe("VALID");
   });
@@ -446,10 +446,10 @@ describe("t62 stage-schema — validateStageFrontmatter (migrated from t62-stage
       errs(
         {
           ...fixture(),
-          lead_agent: "aidlc-product-agent",
+          lead_agent: "amadeus-product-agent",
           support_agents: [RESERVED_AGENT_SLUG],
         },
-        { agents: ["aidlc-product-agent"] },
+        { agents: ["amadeus-product-agent"] },
       ),
     ).toBe("VALID");
   });
@@ -499,7 +499,7 @@ describe("t62 stage-schema — validateStageFrontmatter (migrated from t62-stage
   });
 
   test("reviewer present, cap absent -> valid (cap defaults to 2)", () => {
-    expect(errs({ ...fixture(), reviewer: "aidlc-product-lead-agent" })).toBe(
+    expect(errs({ ...fixture(), reviewer: "amadeus-product-lead-agent" })).toBe(
       "VALID",
     );
   });
@@ -508,7 +508,7 @@ describe("t62 stage-schema — validateStageFrontmatter (migrated from t62-stage
     expect(
       errs({
         ...fixture(),
-        reviewer: "aidlc-product-lead-agent",
+        reviewer: "amadeus-product-lead-agent",
         reviewer_max_iterations: 2,
       }),
     ).toBe("VALID");
@@ -526,7 +526,7 @@ describe("t62 stage-schema — validateStageFrontmatter (migrated from t62-stage
     expect(
       errs({
         ...fixture(),
-        reviewer: "aidlc-product-lead-agent",
+        reviewer: "amadeus-product-lead-agent",
         reviewer_max_iterations: "2",
       }),
     ).toContain("reviewer_max_iterations must be a positive integer");
@@ -536,7 +536,7 @@ describe("t62 stage-schema — validateStageFrontmatter (migrated from t62-stage
     expect(
       errs({
         ...fixture(),
-        reviewer: "aidlc-product-lead-agent",
+        reviewer: "amadeus-product-lead-agent",
         reviewer_max_iterations: 0,
       }),
     ).toContain("reviewer_max_iterations must be a positive integer");
@@ -546,7 +546,7 @@ describe("t62 stage-schema — validateStageFrontmatter (migrated from t62-stage
     expect(
       errs({
         ...fixture(),
-        reviewer: "aidlc-product-lead-agent",
+        reviewer: "amadeus-product-lead-agent",
         reviewer_max_iterations: -3,
       }),
     ).toContain("reviewer_max_iterations must be a positive integer");
@@ -556,7 +556,7 @@ describe("t62 stage-schema — validateStageFrontmatter (migrated from t62-stage
     expect(
       errs({
         ...fixture(),
-        reviewer: "aidlc-product-lead-agent",
+        reviewer: "amadeus-product-lead-agent",
         reviewer_max_iterations: 2.5,
       }),
     ).toContain("reviewer_max_iterations must be a positive integer");
@@ -571,7 +571,7 @@ describe("t62 stage-schema — validateStageFrontmatter (migrated from t62-stage
   test("reviewer not in ctx.agents -> Rule 9 roster error", () => {
     const out = errs(
       { ...fixture(), reviewer: "ghost-reviewer-agent" },
-      { agents: ["aidlc-product-agent", "aidlc-delivery-agent"] },
+      { agents: ["amadeus-product-agent", "amadeus-delivery-agent"] },
     );
     expect(out).toContain('reviewer "ghost-reviewer-agent" has no matching');
   });
@@ -579,12 +579,12 @@ describe("t62 stage-schema — validateStageFrontmatter (migrated from t62-stage
   test("reviewer in ctx.agents -> valid", () => {
     expect(
       errs(
-        { ...fixture(), reviewer: "aidlc-product-lead-agent" },
+        { ...fixture(), reviewer: "amadeus-product-lead-agent" },
         {
           agents: [
-            "aidlc-product-agent",
-            "aidlc-delivery-agent",
-            "aidlc-product-lead-agent",
+            "amadeus-product-agent",
+            "amadeus-delivery-agent",
+            "amadeus-product-lead-agent",
           ],
         },
       ),

@@ -1,4 +1,4 @@
-// covers: file:agents/aidlc-product-agent.md, file:agents/aidlc-design-agent.md, file:agents/aidlc-delivery-agent.md, file:agents/aidlc-architect-agent.md, file:agents/aidlc-aws-platform-agent.md, file:agents/aidlc-compliance-agent.md, file:agents/aidlc-devsecops-agent.md, file:agents/aidlc-developer-agent.md, file:agents/aidlc-quality-agent.md, file:agents/aidlc-pipeline-deploy-agent.md, file:agents/aidlc-operations-agent.md, data:stage-graph.json
+// covers: file:agents/amadeus-product-agent.md, file:agents/amadeus-design-agent.md, file:agents/amadeus-delivery-agent.md, file:agents/amadeus-architect-agent.md, file:agents/amadeus-aws-platform-agent.md, file:agents/amadeus-compliance-agent.md, file:agents/amadeus-devsecops-agent.md, file:agents/amadeus-developer-agent.md, file:agents/amadeus-quality-agent.md, file:agents/amadeus-pipeline-deploy-agent.md, file:agents/amadeus-operations-agent.md, data:stage-graph.json
 //
 // t46 — shipped agent persona files must reference stages by SLUG, never by
 // numeric stage ID. Migrated from tests/unit/t46-agent-no-numeric-stage-ids.sh
@@ -25,11 +25,11 @@
 // identified by slug (e.g. "intent-capture") per SKILL.md's canonical-identifier
 // rule; numbers live only in stage-graph.json for graph-machine use.
 //
-// Subject under test (dist/claude/.claude/agents/aidlc-<agent>-agent.md +
+// Subject under test (dist/claude/.claude/agents/amadeus-<agent>-agent.md +
 // dist/claude/.claude/tools/data/stage-graph.json):
 //   A (format): grep -En '[0-9]+\.[0-9]+' minus the WCAG content-exclusion
 //      returns ZERO matches. The lone allowed digit.dot.digit is the W3C
-//      "WCAG 2.1" version reference in aidlc-design-agent.md, which is not a
+//      "WCAG 2.1" version reference in amadeus-design-agent.md, which is not a
 //      stage ID (.sh L37 `grep -v 'WCAG'`).
 //   B (semantic): every slug bullet in the agent's "## Stages Owned" section
 //      (the bullets between that heading and the next `## ` heading, matching
@@ -80,7 +80,7 @@ const AGENTS = [
 ] as const;
 
 const agentFile = (agent: string): string =>
-  join(AGENTS_DIR, `aidlc-${agent}-agent.md`);
+  join(AGENTS_DIR, `amadeus-${agent}-agent.md`);
 
 /**
  * The set of valid stage slugs, read from the shipped stage-graph.json (the
@@ -100,7 +100,7 @@ function loadGraphSlugs(): Set<string> {
 /**
  * Mirror the .sh's assertion-A scan (L37): every line matching
  * /[0-9]+\.[0-9]+/, then drop any line containing 'WCAG' (the W3C version
- * reference in aidlc-design-agent.md, not a stage ID). Returns the surviving
+ * reference in amadeus-design-agent.md, not a stage ID). Returns the surviving
  * offending lines (empty array === pass).
  */
 function numericStageIdHits(body: string): string[] {
@@ -145,7 +145,7 @@ describe("t46 agent files reference stages by slug, not numeric ID (migrated fro
   test("each agent has no numeric stage IDs (WCAG version refs excluded) [.sh assertion A ×11]", () => {
     for (const agent of AGENTS) {
       // Sanity: the file the .sh grepped must exist.
-      expect(existsSync(agentFile(agent)), `aidlc-${agent}-agent.md missing`).toBe(
+      expect(existsSync(agentFile(agent)), `amadeus-${agent}-agent.md missing`).toBe(
         true,
       );
       const body = readFileSync(agentFile(agent), "utf-8");
@@ -154,7 +154,7 @@ describe("t46 agent files reference stages by slug, not numeric ID (migrated fro
       // offending lines in the assertion message so a regression is debuggable.
       expect(
         hits,
-        `aidlc-${agent}-agent.md has numeric stage ID(s):\n${hits.join("\n")}`,
+        `amadeus-${agent}-agent.md has numeric stage ID(s):\n${hits.join("\n")}`,
       ).toEqual([]);
     }
   });
@@ -176,12 +176,12 @@ describe("t46 agent files reference stages by slug, not numeric ID (migrated fro
       // masquerade as a pass.
       expect(
         slugs.length,
-        `aidlc-${agent}-agent.md: no Stages Owned slug bullets found`,
+        `amadeus-${agent}-agent.md: no Stages Owned slug bullets found`,
       ).toBeGreaterThan(0);
       const unknown = slugs.filter((s) => !graphSlugs.has(s));
       expect(
         unknown,
-        `aidlc-${agent}-agent.md Stages Owned has unknown slug(s): ${unknown.join(", ")}`,
+        `amadeus-${agent}-agent.md Stages Owned has unknown slug(s): ${unknown.join(", ")}`,
       ).toEqual([]);
     }
   });

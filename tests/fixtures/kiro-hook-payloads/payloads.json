@@ -37,7 +37,7 @@
     "tool_name": "write",
     "tool_input": {
       "command": "create",
-      "path": "/tmp/example-project/aidlc-docs/ideation/intent-capture/intent-statement.md",
+      "path": "/tmp/example-project/amadeus-docs/ideation/intent-capture/intent-statement.md",
       "content": "PROBE"
     },
     "tool_response": { "items": [{ "Text": "created" }] }
@@ -94,8 +94,8 @@
       "task": "Write two files in parallel",
       "mode": "blocking",
       "stages": [
-        { "name": "write_w1", "role": "aidlc-developer-agent", "prompt_template": "Write w1.txt" },
-        { "name": "write_w2", "role": "aidlc-developer-agent", "prompt_template": "Write w2.txt" }
+        { "name": "write_w1", "role": "amadeus-developer-agent", "prompt_template": "Write w1.txt" },
+        { "name": "write_w2", "role": "amadeus-developer-agent", "prompt_template": "Write w2.txt" }
       ]
     },
     "tool_response": {

@@ -1,40 +1,40 @@
-// covers: hook:aidlc-runtime-compile
+// covers: hook:amadeus-runtime-compile
 //
 // Mechanism = none. Port of tests/integration/t91-runtime-compile-hook.sh (TAP
 // plan 13). The unit under test is the PostToolUse Bash hook
-// dist/claude/.claude/hooks/aidlc-runtime-compile.ts. A hook is mechanism=none
+// dist/claude/.claude/hooks/amadeus-runtime-compile.ts. A hook is mechanism=none
 // — it has no CLI arg surface; it is driven by feeding Claude Code's
 // PostToolUse JSON on stdin. So every .sh case is preserved here by SPAWNING
 // the hook via node:child_process spawnSync with the JSON piped through
 // `input:`, exactly as the .sh did
 //   `echo '<json>' | CLAUDE_PROJECT_DIR=<p> bun "$proj/.claude/hooks/...ts"`.
 //
-// HOOK CONTRACT (aidlc-runtime-compile.ts):
+// HOOK CONTRACT (amadeus-runtime-compile.ts):
 //   1. TTY guard / empty-or-malformed stdin -> process.exit(0), no work.
 //   2. Command filter: direct transition tools
-//      (`aidlc-(state|jump|bolt|utility).ts`) OR `aidlc-orchestrate.ts report`
-//      must match AND `aidlc-runtime\.ts` must NOT appear (the explicit
+//      (`amadeus-(state|jump|bolt|utility).ts`) OR `amadeus-orchestrate.ts report`
+//      must match AND `amadeus-runtime\.ts` must NOT appear (the explicit
 //      recursion-guard reject fires FIRST, defeating composites).
 //   3. Audit-existence guard before the heartbeat write.
-//   4. Heartbeat at aidlc-docs/.aidlc-hooks-health/runtime-compile.last (only
+//   4. Heartbeat at amadeus-docs/.amadeus-hooks-health/runtime-compile.last (only
 //      written once the command filter passes).
 //   5. Tail-read the LAST 3 audit blocks (split on /\n---\n/); if any carries
 //      `**Event**: (GATE_APPROVED|STAGE_STARTED|STAGE_AWAITING_APPROVAL|
 //      AUDIT_MERGED|WORKFLOW_COMPLETED)` -> dispatch
-//      `bun run <projectDir>/.claude/tools/aidlc-runtime.ts compile` (which
-//      writes aidlc-docs/runtime-graph.json). MEMORY_EMPTY is deliberately NOT
+//      `bun run <projectDir>/.claude/tools/amadeus-runtime.ts compile` (which
+//      writes amadeus-docs/runtime-graph.json). MEMORY_EMPTY is deliberately NOT
 //      in the regex (recursion guard at the event level).
 //   (The old step 6, test-run propagation to the spawned compile, was removed
 //      per #369 when the test-run mechanism was removed.)
 //
 // FIXTURE DISCIPLINE — replicate the .sh's make_project (t91:36-47) EXACTLY:
-// a fresh temp project under aidlc-docs/ + a self-contained .claude/ skeleton
-// with the four tool files (aidlc-runtime.ts, aidlc-lib.ts, aidlc-audit.ts,
+// a fresh temp project under amadeus-docs/ + a self-contained .claude/ skeleton
+// with the four tool files (amadeus-runtime.ts, amadeus-lib.ts, amadeus-audit.ts,
 // data/stage-graph.json) and the hook copied in, plus a minimal
-// aidlc-state.md ("- **Scope**: feature"). The COPY (not symlink) matters:
-// the hook spawns `<projectDir>/.claude/tools/aidlc-runtime.ts`, whose
-// aidlc-lib.ts resolves stage-graph.json relative to its own import.meta.url
-// (aidlc-lib.ts:693 DATA_DIR) — so the data file must sit beside the copied
+// amadeus-state.md ("- **Scope**: feature"). The COPY (not symlink) matters:
+// the hook spawns `<projectDir>/.claude/tools/amadeus-runtime.ts`, whose
+// amadeus-lib.ts resolves stage-graph.json relative to its own import.meta.url
+// (amadeus-lib.ts:693 DATA_DIR) — so the data file must sit beside the copied
 // lib for the compile to read it. mkdtempSync + toPortablePath (Windows path
 // round-trip, since the tool writes audit/graph paths through forward-slash
 // helpers). Nothing is written under tests/fixtures/**. All temp dirs cleaned
@@ -50,8 +50,8 @@
 //        graph written                                                        -> T3.
 //   .sh Case 3  non-aidlc Bash (git status) -> NO graph (2 asserts: no graph
 //        AND no heartbeat — cheap exit before heartbeat)                       -> T4 + T5.
-//   .sh Case 4  aidlc-runtime.ts -> recursion-guarded, no graph              -> T6.
-//   .sh Case 4b composite `aidlc-runtime.ts compile && aidlc-state.ts approve`
+//   .sh Case 4  amadeus-runtime.ts -> recursion-guarded, no graph              -> T6.
+//   .sh Case 4b composite `amadeus-runtime.ts compile && amadeus-state.ts approve`
 //        -> explicit reject fires first, no graph                             -> T7.
 //   .sh Case 5  aidlc Bash but no transition in last-3 (QUESTION_ANSWERED /
 //        DECISION_RECORDED / ARTIFACT_UPDATED) -> no graph (T8) BUT heartbeat
@@ -101,7 +101,7 @@ afterAll(() => {
  * make_project (t91:36-47): a fresh temp project with a self-contained
  * .claude/ skeleton so the hook + the compile it spawns resolve every path
  * via CLAUDE_PROJECT_DIR. Copies (NOT symlinks) the four tool files + the hook
- * — aidlc-lib.ts resolves data/stage-graph.json relative to its own location,
+ * — amadeus-lib.ts resolves data/stage-graph.json relative to its own location,
  * so the data file must sit beside the copied lib. toPortablePath round-trips
  * the path on Windows.
  */
@@ -111,24 +111,24 @@ function makeProject(): string {
   mkdirSync(join(proj, ".claude", "tools", "data"), { recursive: true });
   mkdirSync(join(proj, ".claude", "hooks"), { recursive: true });
   copyFileSync(
-    join(SRC_TOOLS, "aidlc-runtime.ts"),
-    join(proj, ".claude", "tools", "aidlc-runtime.ts"),
+    join(SRC_TOOLS, "amadeus-runtime.ts"),
+    join(proj, ".claude", "tools", "amadeus-runtime.ts"),
   );
   copyFileSync(
-    join(SRC_TOOLS, "aidlc-lib.ts"),
-    join(proj, ".claude", "tools", "aidlc-lib.ts"),
+    join(SRC_TOOLS, "amadeus-lib.ts"),
+    join(proj, ".claude", "tools", "amadeus-lib.ts"),
   );
   copyFileSync(
-    join(SRC_TOOLS, "aidlc-audit.ts"),
-    join(proj, ".claude", "tools", "aidlc-audit.ts"),
+    join(SRC_TOOLS, "amadeus-audit.ts"),
+    join(proj, ".claude", "tools", "amadeus-audit.ts"),
   );
   copyFileSync(
     join(SRC_TOOLS, "data", "stage-graph.json"),
     join(proj, ".claude", "tools", "data", "stage-graph.json"),
   );
   copyFileSync(
-    join(SRC_HOOKS, "aidlc-runtime-compile.ts"),
-    join(proj, ".claude", "hooks", "aidlc-runtime-compile.ts"),
+    join(SRC_HOOKS, "amadeus-runtime-compile.ts"),
+    join(proj, ".claude", "hooks", "amadeus-runtime-compile.ts"),
   );
   // P9: write the minimal state into the default record so the active-intent
   // cursor resolves → the hook reads the record's audit shards (readAllAuditShards)
@@ -142,7 +142,7 @@ function makeProject(): string {
 }
 
 const hookPath = (proj: string): string =>
-  join(proj, ".claude", "hooks", "aidlc-runtime-compile.ts");
+  join(proj, ".claude", "hooks", "amadeus-runtime-compile.ts");
 // The hook reads the audit via the per-clone shard GLOB; writing the AUDIT_*
 // fixtures into one shard under the record's audit/ DIR is what the hook merges.
 const auditPath = (proj: string): string =>
@@ -150,7 +150,7 @@ const auditPath = (proj: string): string =>
 const graphPath = (proj: string): string =>
   join(seededRecordDir(proj), "runtime-graph.json");
 const heartbeatPath = (proj: string): string =>
-  join(seededRecordDir(proj), ".aidlc-hooks-health", "runtime-compile.last");
+  join(seededRecordDir(proj), ".amadeus-hooks-health", "runtime-compile.last");
 
 interface HookResult {
   status: number;
@@ -203,7 +203,7 @@ const AUDIT_GATE_APPROVED = `## Workflow Start
 **Timestamp**: 2026-05-27T10:01:00Z
 **Event**: STAGE_STARTED
 **Stage**: intent-capture
-**Agent**: aidlc-product-agent
+**Agent**: amadeus-product-agent
 
 ---
 
@@ -233,7 +233,7 @@ const AUDIT_TERMINAL_WORKFLOW = `## Workflow Start
 **Timestamp**: 2026-05-27T10:01:00Z
 **Event**: STAGE_STARTED
 **Stage**: intent-capture
-**Agent**: aidlc-product-agent
+**Agent**: amadeus-product-agent
 
 ---
 
@@ -285,7 +285,7 @@ const AUDIT_GATE_START = `## Workflow Start
 **Timestamp**: 2026-05-27T10:01:00Z
 **Event**: STAGE_STARTED
 **Stage**: intent-capture
-**Agent**: aidlc-product-agent
+**Agent**: amadeus-product-agent
 
 ---
 
@@ -330,26 +330,26 @@ const AUDIT_NO_TRANSITION = `## Workflow Start
 // (The AUDIT_GATE_APPROVED_TESTRUN fixture and its Test-Run-propagation case
 // were dropped per #369 when the test-run mechanism was removed.)
 
-describe("t91 aidlc-runtime-compile hook (migrated from t91-runtime-compile-hook.sh, plan 13)", () => {
+describe("t91 amadeus-runtime-compile hook (migrated from t91-runtime-compile-hook.sh, plan 13)", () => {
   // --- Case 1: filter pass — GATE_APPROVED in last 3 -> dispatch -----------
   test("1: GATE_APPROVED in last-3 -> compile dispatched (runtime-graph.json written)", () => {
     const p = makeProject();
     writeFileSync(auditPath(p), AUDIT_GATE_APPROVED, "utf-8");
     const r = runHook(
       p,
-      payload("bun .claude/tools/aidlc-state.ts approve --stage intent-capture"),
+      payload("bun .claude/tools/amadeus-state.ts approve --stage intent-capture"),
     );
     expect(r.status).toBe(0); // STRONGER: the .sh discarded the hook exit code
     expect(existsSync(graphPath(p))).toBe(true);
   }, 30000);
 
-  test("1b: aidlc-orchestrate report command -> compile dispatched", () => {
+  test("1b: amadeus-orchestrate report command -> compile dispatched", () => {
     const p = makeProject();
     writeFileSync(auditPath(p), AUDIT_GATE_APPROVED, "utf-8");
     const r = runHook(
       p,
       payload(
-        "bun .claude/tools/aidlc-orchestrate.ts report --stage intent-capture --result approved",
+        "bun .claude/tools/amadeus-orchestrate.ts report --stage intent-capture --result approved",
       ),
     );
     expect(r.status).toBe(0);
@@ -362,7 +362,7 @@ describe("t91 aidlc-runtime-compile hook (migrated from t91-runtime-compile-hook
     writeFileSync(auditPath(p), AUDIT_TERMINAL_WORKFLOW, "utf-8");
     runHook(
       p,
-      payload("bun .claude/tools/aidlc-state.ts approve --stage intent-capture"),
+      payload("bun .claude/tools/amadeus-state.ts approve --stage intent-capture"),
     );
     expect(existsSync(graphPath(p))).toBe(true);
   }, 30000);
@@ -373,7 +373,7 @@ describe("t91 aidlc-runtime-compile hook (migrated from t91-runtime-compile-hook
     writeFileSync(auditPath(p), AUDIT_GATE_START, "utf-8");
     runHook(
       p,
-      payload("bun .claude/tools/aidlc-state.ts gate-start intent-capture"),
+      payload("bun .claude/tools/amadeus-state.ts gate-start intent-capture"),
     );
     expect(existsSync(graphPath(p))).toBe(true);
   }, 30000);
@@ -394,22 +394,22 @@ describe("t91 aidlc-runtime-compile hook (migrated from t91-runtime-compile-hook
     expect(existsSync(heartbeatPath(p))).toBe(false);
   }, 30000);
 
-  // --- Case 4: aidlc-runtime.ts -> recursion guard, no dispatch -----------
-  test("6: aidlc-runtime.ts -> recursion-guarded (no compile)", () => {
+  // --- Case 4: amadeus-runtime.ts -> recursion guard, no dispatch -----------
+  test("6: amadeus-runtime.ts -> recursion-guarded (no compile)", () => {
     const p = makeProject();
     writeFileSync(auditPath(p), AUDIT_GATE_APPROVED, "utf-8");
-    runHook(p, payload("bun .claude/tools/aidlc-runtime.ts compile"));
+    runHook(p, payload("bun .claude/tools/amadeus-runtime.ts compile"));
     expect(existsSync(graphPath(p))).toBe(false);
   }, 30000);
 
-  // --- Case 4b: composite with aidlc-runtime.ts AND aidlc-state.ts --------
-  test("7: composite Bash with aidlc-runtime.ts -> recursion-guarded (explicit reject first, no compile)", () => {
+  // --- Case 4b: composite with amadeus-runtime.ts AND amadeus-state.ts --------
+  test("7: composite Bash with amadeus-runtime.ts -> recursion-guarded (explicit reject first, no compile)", () => {
     const p = makeProject();
     writeFileSync(auditPath(p), AUDIT_GATE_APPROVED, "utf-8");
     runHook(
       p,
       payload(
-        "bun .claude/tools/aidlc-runtime.ts compile && bun .claude/tools/aidlc-state.ts approve",
+        "bun .claude/tools/amadeus-runtime.ts compile && bun .claude/tools/amadeus-state.ts approve",
       ),
     );
     expect(existsSync(graphPath(p))).toBe(false);
@@ -419,15 +419,15 @@ describe("t91 aidlc-runtime-compile hook (migrated from t91-runtime-compile-hook
   test("8: no transition in last-3 -> no compile dispatched", () => {
     const p = makeProject();
     writeFileSync(auditPath(p), AUDIT_NO_TRANSITION, "utf-8");
-    runHook(p, payload("bun .claude/tools/aidlc-state.ts session"));
+    runHook(p, payload("bun .claude/tools/amadeus-state.ts session"));
     expect(existsSync(graphPath(p))).toBe(false);
   }, 30000);
 
   test("9: no transition in last-3 -> heartbeat still updated (filter passed, only event-class failed)", () => {
     const p = makeProject();
     writeFileSync(auditPath(p), AUDIT_NO_TRANSITION, "utf-8");
-    runHook(p, payload("bun .claude/tools/aidlc-state.ts session"));
-    // The command filter passed (aidlc-state.ts), so the heartbeat write at
+    runHook(p, payload("bun .claude/tools/amadeus-state.ts session"));
+    // The command filter passed (amadeus-state.ts), so the heartbeat write at
     // hook step 5 runs even though the event-class filter (step 7) bailed.
     expect(existsSync(heartbeatPath(p))).toBe(true);
   }, 30000);

@@ -3,18 +3,18 @@
 // In-process port of tests/integration/t44-stage-instruction-completeness.sh
 // (TAP plan 41), mechanism = none. The .sh is a stage-instruction completeness
 // check: it greps the shipped stage `.md` files (under
-// dist/claude/.claude/skills/aidlc/stages/<phase>/<slug>.md) to verify each
+// dist/claude/.claude/skills/amadeus/stages/<phase>/<slug>.md) to verify each
 // stage's prose actually mentions the outputs it declares, the state it
 // updates, its skip condition (when CONDITIONAL), its output directory, and an
 // approval mechanism. Two of its three derived predicates run THROUGH the pure
-// `parseStageFrontmatter` function (aidlc-lib.ts:893) — `is_conditional` reads
+// `parseStageFrontmatter` function (amadeus-lib.ts:893) — `is_conditional` reads
 // `obj.execution`, and `has_question_output` reads `obj.outputs` then extracts
 // the *.md filenames — so the covers id is `function:parseStageFrontmatter`,
 // the sole library function the .sh drives.
 //
 // MECHANISM = none. The .sh's three helpers each spawned `bun -e` to import
-// parseStageFrontmatter from aidlc-lib.ts and project a scalar. parseStageFrontmatter
-// is a PURE function (aidlc-lib.ts:884-886 "Pure — no I/O, no validation"), and
+// parseStageFrontmatter from amadeus-lib.ts and project a scalar. parseStageFrontmatter
+// is a PURE function (amadeus-lib.ts:884-886 "Pure — no I/O, no validation"), and
 // the rest of the .sh is plain `grep`/`grep -i` over file content. So every one
 // of the 41 contracts migrates to in-process: we IMPORT parseStageFrontmatter
 // directly and re-implement the .sh's three helpers against its real return
@@ -31,7 +31,7 @@
 //       dot in the filename satisfies it, so a JS regex with an unescaped `.`
 //       reproduces the SAME match set. Test 3 used "requirements\.md" (escaped);
 //       we escape there too. Same observable either way (the filename is present).
-//   - grep -qi "aidlc-state\|Update State"     -> /aidlc-state|update state/i
+//   - grep -qi "amadeus-state\|Update State"     -> /amadeus-state|update state/i
 //   - grep -qi "[Ss]kip"                        -> /skip/i (the [Ss] is redundant
 //       under -i; /skip/i is the identical match set).
 //   - grep -qi '\[Answer\]\|question.*format\|stage-protocol.*question'
@@ -66,14 +66,14 @@
 // 41 .sh asserts -> 41 expect()-bearing test() cases (10+7+6+7+4+3+1+1+1+1).
 //
 // FIXTURE DISCIPLINE: the .sh read the SHIPPED stage files in place (no temp
-// project, no create_test_project) — STAGES_DIR = $AIDLC_SRC/skills/aidlc/stages.
-// We read the same shipped files under dist/claude/.claude/skills/aidlc/stages.
+// project, no create_test_project) — STAGES_DIR = $AIDLC_SRC/skills/amadeus/stages.
+// We read the same shipped files under dist/claude/.claude/skills/amadeus/stages.
 // Nothing is written; no temp dirs; no fixtures touched.
 
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { parseStageFrontmatter } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { parseStageFrontmatter } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const STAGES_DIR = join(
@@ -81,7 +81,7 @@ const STAGES_DIR = join(
   "dist",
   "claude",
   ".claude",
-  "aidlc-common",
+  "amadeus-common",
   "stages",
 );
 
@@ -205,7 +205,7 @@ describe("t44 stage-instruction completeness — parseStageFrontmatter (migrated
   }
 
   // ============================================================
-  // Tests 18-23: STATE_UPDATE_STAGES mention aidlc-state / Update State
+  // Tests 18-23: STATE_UPDATE_STAGES mention amadeus-state / Update State
   // ============================================================
 
   const STATE_UPDATE_STAGES = [
@@ -216,7 +216,7 @@ describe("t44 stage-instruction completeness — parseStageFrontmatter (migrated
     "requirements-analysis",
     "reverse-engineering",
   ] as const;
-  const STATE_RE = /aidlc-state|update state/i;
+  const STATE_RE = /amadeus-state|update state/i;
 
   for (const slug of STATE_UPDATE_STAGES) {
     test(`state update: ${slug} steps mention state update`, () => {
@@ -254,7 +254,7 @@ describe("t44 stage-instruction completeness — parseStageFrontmatter (migrated
   // Tests 31-34: construction stages mention <record>/construction/
   // ============================================================
 
-  // Rerooted: flat aidlc-docs/construction/ -> per-intent <record>/construction/.
+  // Rerooted: flat amadeus-docs/construction/ -> per-intent <record>/construction/.
   // The per-unit construction stages now write under
   // `<record>/construction/{unit-name}/<stage>/` (e.g. functional-design.md:103,
   // nfr-requirements.md, nfr-design.md, code-generation.md), so the body cites
@@ -269,7 +269,7 @@ describe("t44 stage-instruction completeness — parseStageFrontmatter (migrated
   // Tests 35-37: operation stages mention <record>/operation/
   // ============================================================
 
-  // Rerooted: flat aidlc-docs/operation/ -> per-intent <record>/operation/. The
+  // Rerooted: flat amadeus-docs/operation/ -> per-intent <record>/operation/. The
   // operation stages now cite `<record>/operation` in their body prose
   // (deployment-pipeline.md, observability-setup.md, incident-response.md).
   for (const slug of ["deployment-pipeline", "observability-setup", "incident-response"]) {

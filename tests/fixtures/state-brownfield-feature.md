@@ -6,7 +6,7 @@
 - **Scope**: feature
 - **Start Date**: 2025-08-20T09:00:00Z
 - **State Version**: 7
-- **Active Agent**: aidlc-product-agent
+- **Active Agent**: amadeus-product-agent
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**: 2025-08-20T09:30:00Z
@@ -94,5 +94,5 @@ Per unit: saved-search
 
 ## Session Resume Point
 - **Last Completed Stage**: reverse-engineering
-- **Next Action**: Continue requirements analysis with aidlc-product-agent
+- **Next Action**: Continue requirements analysis with amadeus-product-agent
 - **Pending Artifacts**: requirements.md

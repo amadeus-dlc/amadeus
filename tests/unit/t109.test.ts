@@ -2,7 +2,7 @@
 //
 // t109 — escapeRegex(str) round-trip property test (P0 deterministic floor).
 //
-// Unit under test: escapeRegex in dist/claude/.claude/tools/aidlc-lib.ts:1540
+// Unit under test: escapeRegex in dist/claude/.claude/tools/amadeus-lib.ts:1540
 //   export function escapeRegex(str: string): string {
 //     return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 //   }
@@ -37,7 +37,7 @@
 // is caught.
 
 import { describe, expect, test } from "bun:test";
-import { escapeRegex } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { escapeRegex } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // Every metacharacter the source character class escapes, verbatim:
 //   /[.*+?^${}()|[\]\\]/  ->  . * + ? ^ $ { } ( ) | [ ] \

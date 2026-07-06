@@ -25,21 +25,21 @@ messages, and state tracking.
 
 | Stage | Name                     | Execution   | Condition                                                              | Lead Agent          | Support Agents      | Mode                             |
 |-------|--------------------------|-------------|------------------------------------------------------------------------|---------------------|---------------------|----------------------------------|
-| 4.1   | Deployment Pipeline      | CONDITIONAL | Execute when CD pipeline needs creation or significant modification    | aidlc-pipeline-deploy-agent| (none)             | inline                           |
-| 4.2   | Environment Provisioning | CONDITIONAL | Execute when AWS environments need provisioning or validation          | aidlc-aws-platform-agent  | aidlc-devsecops-agent, aidlc-compliance-agent     | inline                           |
-| 4.3   | Deployment Execution     | CONDITIONAL | Execute after deployment pipeline and environment are ready            | aidlc-pipeline-deploy-agent| aidlc-developer-agent    | inline                           |
-| 4.4   | Observability Setup      | CONDITIONAL | Execute when monitoring, dashboards, alarms, or tracing need config    | aidlc-operations-agent    | (none)              | inline                           |
-| 4.5   | Incident Response        | CONDITIONAL | Execute when operational runbooks and incident response procedures needed | aidlc-operations-agent | (none)              | inline                           |
-| 4.6   | Performance Validation   | CONDITIONAL | Execute when NFR performance targets need validation under load        | aidlc-quality-agent       | (none)              | inline                           |
-| 4.7   | Feedback & Optimization  | CONDITIONAL | Execute when ongoing operational monitoring and optimization needed    | aidlc-operations-agent    | aidlc-aws-platform-agent  | inline                           |
+| 4.1   | Deployment Pipeline      | CONDITIONAL | Execute when CD pipeline needs creation or significant modification    | amadeus-pipeline-deploy-agent| (none)             | inline                           |
+| 4.2   | Environment Provisioning | CONDITIONAL | Execute when AWS environments need provisioning or validation          | amadeus-aws-platform-agent  | amadeus-devsecops-agent, amadeus-compliance-agent     | inline                           |
+| 4.3   | Deployment Execution     | CONDITIONAL | Execute after deployment pipeline and environment are ready            | amadeus-pipeline-deploy-agent| amadeus-developer-agent    | inline                           |
+| 4.4   | Observability Setup      | CONDITIONAL | Execute when monitoring, dashboards, alarms, or tracing need config    | amadeus-operations-agent    | (none)              | inline                           |
+| 4.5   | Incident Response        | CONDITIONAL | Execute when operational runbooks and incident response procedures needed | amadeus-operations-agent | (none)              | inline                           |
+| 4.6   | Performance Validation   | CONDITIONAL | Execute when NFR performance targets need validation under load        | amadeus-quality-agent       | (none)              | inline                           |
+| 4.7   | Feedback & Optimization  | CONDITIONAL | Execute when ongoing operational monitoring and optimization needed    | amadeus-operations-agent    | amadeus-aws-platform-agent  | inline                           |
 
 ### Multi-Agent Stages
 
 Three Operation stages involve multiple agents:
 
-- **4.2 Environment Provisioning**: aidlc-aws-platform-agent (lead) + aidlc-devsecops-agent (security posture validation) + aidlc-compliance-agent (data residency, regulatory controls)
-- **4.3 Deployment Execution**: aidlc-pipeline-deploy-agent (lead) + aidlc-developer-agent (database migrations)
-- **4.7 Feedback & Optimization**: aidlc-operations-agent (lead) + aidlc-aws-platform-agent (cost optimization, drift detection)
+- **4.2 Environment Provisioning**: amadeus-aws-platform-agent (lead) + amadeus-devsecops-agent (security posture validation) + amadeus-compliance-agent (data residency, regulatory controls)
+- **4.3 Deployment Execution**: amadeus-pipeline-deploy-agent (lead) + amadeus-developer-agent (database migrations)
+- **4.7 Feedback & Optimization**: amadeus-operations-agent (lead) + amadeus-aws-platform-agent (cost optimization, drift detection)
 
 In all cases, the conductor invokes the lead agent first, then invokes
 support agents with the lead's output as context. The conductor performs
@@ -56,7 +56,7 @@ every delegation; agents never invoke each other.
 | Stage             | 4.1                                                                                               |
 | Phase             | Operation                                                                                         |
 | Execution         | CONDITIONAL (skip if deployment pipeline already exists and is adequate)                           |
-| Lead Agent        | aidlc-pipeline-deploy-agent                                                                             |
+| Lead Agent        | amadeus-pipeline-deploy-agent                                                                             |
 | support_agents    | (none)                                                                                            |
 | Inputs            | CI pipeline config from Stage 3.7, infrastructure design from Stage 3.4                          |
 
@@ -88,13 +88,13 @@ Strictly 2-option: Approve / Request Changes.
 | Stage             | 4.2                                                                                               |
 | Phase             | Operation                                                                                         |
 | Execution         | CONDITIONAL (skip if environments already provisioned)                                            |
-| Lead Agent        | aidlc-aws-platform-agent                                                                                |
-| support_agents    | aidlc-devsecops-agent (security posture validation), aidlc-compliance-agent (data residency, regulatory controls) |
+| Lead Agent        | amadeus-aws-platform-agent                                                                                |
+| support_agents    | amadeus-devsecops-agent (security posture validation), amadeus-compliance-agent (data residency, regulatory controls) |
 | Inputs            | Infrastructure design from Stage 3.4, CD pipeline config from Stage 4.1                          |
 
 ### Purpose
 
-Provision and validate target AWS environments using Infrastructure as Code from Construction. The aidlc-devsecops-agent validates security posture and the aidlc-compliance-agent checks data residency and regulatory controls.
+Provision and validate target AWS environments using Infrastructure as Code from Construction. The amadeus-devsecops-agent validates security posture and the amadeus-compliance-agent checks data residency and regulatory controls.
 
 ### Outputs
 
@@ -119,8 +119,8 @@ Strictly 2-option: Approve / Request Changes.
 | Stage             | 4.3                                                                                               |
 | Phase             | Operation                                                                                         |
 | Execution         | CONDITIONAL (execute after deployment pipeline and environment are ready; skip if already deployed) |
-| Lead Agent        | aidlc-pipeline-deploy-agent                                                                             |
-| support_agents    | aidlc-developer-agent (database migrations)                                                             |
+| Lead Agent        | amadeus-pipeline-deploy-agent                                                                             |
+| support_agents    | amadeus-developer-agent (database migrations)                                                             |
 | Inputs            | CD pipeline config from Stage 4.1, provisioned environments from Stage 4.2                       |
 
 ### Purpose
@@ -151,7 +151,7 @@ Strictly 2-option: Approve / Request Changes.
 | Stage             | 4.4                                                                                               |
 | Phase             | Operation                                                                                         |
 | Execution         | CONDITIONAL (skip if observability already configured)                                            |
-| Lead Agent        | aidlc-operations-agent                                                                                  |
+| Lead Agent        | amadeus-operations-agent                                                                                  |
 | Inputs            | NFR design from Stage 3.3, infrastructure design from Stage 3.4, deployed application             |
 
 ### Purpose
@@ -186,7 +186,7 @@ Configure monitoring, dashboards, alarms, SLO/SLI tracking, log queries, distrib
 | Stage             | 4.5                                                                                               |
 | Phase             | Operation                                                                                         |
 | Execution         | CONDITIONAL (skip for POCs or non-production deployments)                                         |
-| Lead Agent        | aidlc-operations-agent                                                                                  |
+| Lead Agent        | amadeus-operations-agent                                                                                  |
 | Inputs            | Observability setup from Stage 4.4, NFR design from Stage 3.3, infrastructure design from Stage 3.4 |
 
 ### Purpose
@@ -213,7 +213,7 @@ Generate operational runbooks, incident response plans, and escalation procedure
 | Stage             | 4.6                                                                                               |
 | Phase             | Operation                                                                                         |
 | Execution         | CONDITIONAL (skip for POCs or non-performance-critical applications)                              |
-| Lead Agent        | aidlc-quality-agent                                                                                     |
+| Lead Agent        | amadeus-quality-agent                                                                                     |
 | Inputs            | NFR requirements from Stage 3.2, NFR design from Stage 3.3, observability data from Stage 4.4    |
 
 ### Purpose
@@ -240,8 +240,8 @@ Design and execute load tests to validate NFR performance targets against the de
 | Stage             | 4.7                                                                                               |
 | Phase             | Operation                                                                                         |
 | Execution         | CONDITIONAL (skip for one-off deployments)                                                        |
-| Lead Agent        | aidlc-operations-agent                                                                                  |
-| support_agents    | aidlc-aws-platform-agent (cost optimization, drift detection)                                           |
+| Lead Agent        | amadeus-operations-agent                                                                                  |
+| support_agents    | amadeus-aws-platform-agent (cost optimization, drift detection)                                           |
 | Inputs            | All Operation phase artifacts, production monitoring data                                         |
 
 ### Purpose

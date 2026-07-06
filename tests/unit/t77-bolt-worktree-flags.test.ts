@@ -1,11 +1,11 @@
-// covers: subcommand:aidlc-bolt:start, subcommand:aidlc-bolt:complete, subcommand:aidlc-bolt:abort, subcommand:aidlc-bolt:fail
+// covers: subcommand:amadeus-bolt:start, subcommand:amadeus-bolt:complete, subcommand:amadeus-bolt:abort, subcommand:amadeus-bolt:fail
 //
-// t77 — aidlc-bolt.ts v0.4.0 milestone 11 worktree-flag lifecycle. Migrated from
+// t77 — amadeus-bolt.ts v0.4.0 milestone 11 worktree-flag lifecycle. Migrated from
 // tests/unit/t77-bolt-worktree-flags.sh (TAP plan 28; no `# covers:` header —
 // covers ids derived from the four subcommands the .sh exercises through the
 // --worktree / --merge / --discard / --slug flags).
 //
-// Mechanism: CLI (spawnSync of the real aidlc-bolt.ts via BUN). Every .sh
+// Mechanism: CLI (spawnSync of the real amadeus-bolt.ts via BUN). Every .sh
 // assertion lives on a process-boundary seam that an in-process import cannot
 // reach faithfully:
 //   - exit codes from `error()` (emitError) and `failJson()` (process.exit(1)),
@@ -16,11 +16,11 @@
 //     children, not in this process), and
 //   - the forked worktree state file the state-fork child writes.
 // The --worktree / --merge paths fan out to real sibling subprocesses
-// (aidlc-state.ts fork/merge, aidlc-audit.ts audit-fork/audit-merge,
-// aidlc-runtime.ts fragment-fork/merge) via spawnSibling (aidlc-bolt.ts:89),
+// (amadeus-state.ts fork/merge, amadeus-audit.ts audit-fork/audit-merge,
+// amadeus-runtime.ts fragment-fork/merge) via spawnSibling (amadeus-bolt.ts:89),
 // so the contract is only observable end-to-end through the spawned binary.
 //
-// Source under test (dist/claude/.claude/tools/aidlc-bolt.ts):
+// Source under test (dist/claude/.claude/tools/amadeus-bolt.ts):
 //   :149 handleStart  — --worktree requires --slug (:163), rejects csv --name
 //                       (:166); validates state shape before BOLT_STARTED
 //                       (:176); emits BOLT_STARTED (:197) THEN delegates to
@@ -44,7 +44,7 @@
 //                       worktree, stdout discarded:false (:555).
 //   :868 failJson     — prints {ok:false,slug,stage,reason,detail} JSON and
 //                       process.exit(1). The five-field halt-and-ask envelope.
-//   aidlc-lib.ts:148 worktreePath(pd,slug) = <pd>/.aidlc/worktrees/bolt-<slug>.
+//   amadeus-lib.ts:148 worktreePath(pd,slug) = <pd>/.aidlc/worktrees/bolt-<slug>.
 //
 // Old TAP -> new test parity (28 .sh assertions; 1:1, several STRONGER):
 //   .sh T1  (start --worktree no --slug exits 1)        -> "start --worktree without --slug exits 1"
@@ -101,14 +101,14 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const TOOL = join(AIDLC_SRC, "tools", "aidlc-bolt.ts");
+const TOOL = join(AIDLC_SRC, "tools", "amadeus-bolt.ts");
 
 interface Run {
   status: number;
   out: string; // combined stdout+stderr (mirrors the .sh's 2>&1)
 }
 
-/** spawnSync the real aidlc-bolt.ts, capturing combined stdout+stderr. */
+/** spawnSync the real amadeus-bolt.ts, capturing combined stdout+stderr. */
 function runBolt(args: string[]): Run {
   const res = spawnSync(BUN, [TOOL, ...args], { encoding: "utf-8" });
   return {
@@ -164,7 +164,7 @@ function wtStatePath(proj: string, slug: string): string {
     DEFAULT_SPACE,
     "intents",
     DEFAULT_RECORD_DIR,
-    "aidlc-state.md",
+    "amadeus-state.md",
   );
 }
 
@@ -180,7 +180,7 @@ afterEach(() => {
   projects = [];
 });
 
-describe("t77 aidlc-bolt worktree flags — start --worktree (migrated from t77-bolt-worktree-flags.sh, plan 28)", () => {
+describe("t77 amadeus-bolt worktree flags — start --worktree (migrated from t77-bolt-worktree-flags.sh, plan 28)", () => {
   test("start --worktree without --slug exits 1 [.sh T1]", () => {
     const proj = track(setupV7Project());
     const r = runBolt([
@@ -200,7 +200,7 @@ describe("t77 aidlc-bolt worktree flags — start --worktree (migrated from t77-
       "--slug", "foo", "--project-dir", proj,
     ]);
     expect(r.status).toBe(1);
-    // STRONGER: pin the single-bolt-only diagnostic (aidlc-bolt.ts:166).
+    // STRONGER: pin the single-bolt-only diagnostic (amadeus-bolt.ts:166).
     expect(r.out).toContain("requires a single bolt name");
   });
 
@@ -381,7 +381,7 @@ describe("t77 — complete --merge", () => {
       "--project-dir", proj,
     ]);
     expect(r.status).toBe(1);
-    // STRONGER: pin the merge-requires-slug diagnostic (aidlc-bolt.ts:320).
+    // STRONGER: pin the merge-requires-slug diagnostic (amadeus-bolt.ts:320).
     expect(r.out).toContain("--merge requires --slug");
   });
 

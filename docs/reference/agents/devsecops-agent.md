@@ -1,10 +1,10 @@
-# aidlc-devsecops-agent -- Technical Reference
+# amadeus-devsecops-agent -- Technical Reference
 
 ## Identity
 
 | Field | Value |
 |-------|-------|
-| Name | aidlc-devsecops-agent |
+| Name | amadeus-devsecops-agent |
 | Model Override | opus |
 | Allowed Claude Code Tools | Read, Edit, Write, Glob, Grep, Bash, AskUserQuestion |
 | Disallowed Claude Code Tools | Task |
@@ -36,16 +36,16 @@ multiple stages in the Inception, Construction, and Operation phases.
 
 | Source | Artifacts |
 |--------|-----------|
-| aidlc-compliance-agent | Regulatory requirements from Ideation (constraint register, RAID log) |
-| aidlc-architect-agent | System design, component boundaries for threat modelling |
+| amadeus-compliance-agent | Regulatory requirements from Ideation (constraint register, RAID log) |
+| amadeus-architect-agent | System design, component boundaries for threat modelling |
 
 ### Hands Off To
 
 | Target | Artifacts |
 |--------|-----------|
-| aidlc-developer-agent | Secure coding requirements, vulnerability fix specifications |
-| aidlc-quality-agent | Security test cases for execution |
-| aidlc-pipeline-deploy-agent | Security gates for CI/CD pipeline integration |
+| amadeus-developer-agent | Secure coding requirements, vulnerability fix specifications |
+| amadeus-quality-agent | Security test cases for execution |
+| amadeus-pipeline-deploy-agent | Security gates for CI/CD pipeline integration |
 
 ---
 
@@ -53,7 +53,7 @@ multiple stages in the Inception, Construction, and Operation phases.
 
 ### Methodology (Tier 1)
 
-Path: `.claude/knowledge/aidlc-devsecops-agent/`
+Path: `.claude/knowledge/amadeus-devsecops-agent/`
 
 | File | Content |
 |------|---------|
@@ -64,7 +64,7 @@ Path: `.claude/knowledge/aidlc-devsecops-agent/`
 
 ### Team (Tier 2)
 
-Path: `aidlc/knowledge/aidlc-devsecops-agent/` (the space-level knowledge dir; user-managed)
+Path: `aidlc/knowledge/amadeus-devsecops-agent/` (the space-level knowledge dir; user-managed)
 
 A space-level directory the team creates when it has content (the engine ships `aidlc/knowledge/` empty). Populated by the team with project-specific
 security context such as existing threat models, security policies, approved
@@ -75,6 +75,6 @@ encryption standards, or penetration test findings.
 ## Cross-References
 
 - [Agent Reference Overview](README.md)
-- [Agent Guide: aidlc-devsecops-agent](../../guide/agents/devsecops-agent.md)
+- [Agent Guide: amadeus-devsecops-agent](../../guide/agents/devsecops-agent.md)
 - [Stage Documentation](../04-stages/)
-- Source: [`dist/claude/.claude/agents/aidlc-devsecops-agent.md`](../../../dist/claude/.claude/agents/aidlc-devsecops-agent.md)
+- Source: [`dist/claude/.claude/agents/amadeus-devsecops-agent.md`](../../../dist/claude/.claude/agents/amadeus-devsecops-agent.md)

@@ -1,6 +1,6 @@
 ---
 paths:
-  - "aidlc-docs/construction/**"
+  - "amadeus-docs/construction/**"
 ---
 
 # Construction Phase Rule (all-four fixture)

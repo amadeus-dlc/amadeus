@@ -6,9 +6,9 @@
 // The .sh's first two per-stage assertions ("has Phase field" / "has Lead
 // Agent field") drove the COVERS target — parseStageFrontmatter — through a
 // `bun -e` one-shot (frontmatter_field, t14...:15-23) that imported the
-// function from aidlc-lib.ts, parsed a stage file, and printed the named
+// function from amadeus-lib.ts, parsed a stage file, and printed the named
 // scalar (empty string if absent/non-string). parseStageFrontmatter is a PURE
-// function — "no I/O, no validation" (aidlc-lib.ts:884-888) — and aidlc-lib.ts
+// function — "no I/O, no validation" (amadeus-lib.ts:884-888) — and amadeus-lib.ts
 // carries NO `import.meta.main` block (grep-verified: 0 matches), so it is a
 // library, not a CLI entrypoint. There is no process boundary to keep as a
 // spawn seam: every contract migrates to in-process expect() calls. We read
@@ -25,7 +25,7 @@
 // substring/heading is present in the file), expressed in TS.
 //
 // FIXTURE DISCIPLINE: this test reads the SHIPPED stage files under
-// dist/claude/.claude/skills/aidlc/stages/ (resolved via AIDLC_SRC from
+// dist/claude/.claude/skills/amadeus/stages/ (resolved via AIDLC_SRC from
 // tests/harness/fixtures.ts, exactly as the .sh resolved $AIDLC_SRC). It writes
 // nothing, mutates nothing, and spawns nothing. The stage set is discovered the
 // same way the .sh did: iterate every phase dir, then every *.md inside it.
@@ -47,16 +47,16 @@
 //     drift only as a TAP plan/observed mismatch; here it is an explicit assert).
 //   - S2: a guard that parseStageFrontmatter throws on a non-string argument and
 //     on frontmatter-less input — pins the two documented throw paths
-//     (aidlc-lib.ts:896-904) that the .sh never exercised (it only ever fed real
+//     (amadeus-lib.ts:896-904) that the .sh never exercised (it only ever fed real
 //     stage-file strings). Strengthens coverage of the COVERS target itself.
 
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseStageFrontmatter } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { parseStageFrontmatter } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { AIDLC_SRC } from "../harness/fixtures.ts";
 
-const STAGES_DIR = join(AIDLC_SRC, "aidlc-common", "stages");
+const STAGES_DIR = join(AIDLC_SRC, "amadeus-common", "stages");
 
 // Discover every (phase, stage-file) pair the same way the .sh did:
 //   for phase_dir in "$STAGES_DIR"/*/; do

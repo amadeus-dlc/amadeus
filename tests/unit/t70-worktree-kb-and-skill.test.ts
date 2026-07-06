@@ -1,4 +1,4 @@
-// covers: doc:knowledge/aidlc-shared/rules-reading.md, doc:knowledge/aidlc-pipeline-deploy-agent/branching-strategies.md, doc:agents/aidlc-pipeline-deploy-agent.md
+// covers: doc:knowledge/amadeus-shared/rules-reading.md, doc:knowledge/amadeus-pipeline-deploy-agent/branching-strategies.md, doc:agents/amadeus-pipeline-deploy-agent.md
 //
 // t70 — static shape checks for the worktree KB rewrites + the
 // pipeline-deploy agent's practices-loading wiring. Migrated from
@@ -27,17 +27,17 @@
 // unaffected by the cutover.
 //
 // Source under test (read verbatim, byte cites against the files as shipped):
-//   dist/claude/.claude/knowledge/aidlc-shared/rules-reading.md
+//   dist/claude/.claude/knowledge/amadeus-shared/rules-reading.md
 //     :23  "## 1. Empty-template detection"
 //     :56  "## 2. Semantic-topic matching"
 //     :91  "## 3. Fallback chain"
-//   dist/claude/.claude/knowledge/aidlc-pipeline-deploy-agent/branching-strategies.md
+//   dist/claude/.claude/knowledge/amadeus-pipeline-deploy-agent/branching-strategies.md
 //     5x "### Execution runbook" (one per strategy: trunk-based, GitHub Flow,
 //        GitFlow, Release Branches, Monorepo)
 //     5x "### Failure modes" (one per strategy)
 //     :213 "## Response contract" (top-level section)
 //     :5   cites "shared/rules-reading.md" (the new shared KB)
-//   dist/claude/.claude/agents/aidlc-pipeline-deploy-agent.md
+//   dist/claude/.claude/agents/amadeus-pipeline-deploy-agent.md
 //     :83-91 "## Knowledge Loading" numbered list; position 4 (:89) is
 //            ".claude/rules/ -- team-affirmed practices ..."
 //
@@ -61,19 +61,19 @@ import { AIDLC_SRC } from "../harness/fixtures.ts";
 const PR_PATH = join(
   AIDLC_SRC,
   "knowledge",
-  "aidlc-shared",
+  "amadeus-shared",
   "rules-reading.md",
 );
 const BS_PATH = join(
   AIDLC_SRC,
   "knowledge",
-  "aidlc-pipeline-deploy-agent",
+  "amadeus-pipeline-deploy-agent",
   "branching-strategies.md",
 );
 const AGENT_PATH = join(
   AIDLC_SRC,
   "agents",
-  "aidlc-pipeline-deploy-agent.md",
+  "amadeus-pipeline-deploy-agent.md",
 );
 
 // Read the shipped bytes ONCE; split for line-anchored (^-prefix) assertions.
@@ -159,7 +159,7 @@ describe("t70 branching-strategies.md — per-strategy runbook/failure-mode cove
   });
 });
 
-describe("t70 aidlc-pipeline-deploy-agent.md — Knowledge-Loading wiring", () => {
+describe("t70 amadeus-pipeline-deploy-agent.md — Knowledge-Loading wiring", () => {
   test("pipeline-deploy agent loads .claude/rules/ at Knowledge-Loading position 4 [.sh 9]", () => {
     // .sh: awk-extract the `## Knowledge Loading` numbered list, take the 4th
     // numbered item (`sed -n '4p'`), assert_contains ".claude/rules/".

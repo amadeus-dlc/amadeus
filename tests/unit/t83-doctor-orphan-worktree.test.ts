@@ -1,28 +1,28 @@
-// covers: subcommand:aidlc-utility:doctor
+// covers: subcommand:amadeus-utility:doctor
 //
 // CLI-contract port of tests/unit/t83-doctor-orphan-worktree.sh (TAP plan 16),
 // mechanism = cli. The .sh has no colon-form `# covers:` header; its prose
 // header declares it covers v0.4.0 milestone 15 doctor reconciliation Checks 1, 3, 4,
 // 6 — the orphan-reconciliation family. All of that surface is the
-// `handleDoctor(projectDir)` subcommand of aidlc-utility.ts, so the covers id
-// is `subcommand:aidlc-utility:doctor` (the SAME id t104's doctor twin uses;
+// `handleDoctor(projectDir)` subcommand of amadeus-utility.ts, so the covers id
+// is `subcommand:amadeus-utility:doctor` (the SAME id t104's doctor twin uses;
 // the registry joins on it).
 //
 // Equal-or-stronger migration: every .sh assertion shelled out to
-// `bun aidlc-utility.ts doctor --project-dir <p> 2>&1 || true` and grepped the
+// `bun amadeus-utility.ts doctor --project-dir <p> 2>&1 || true` and grepped the
 // combined stdout+stderr. We preserve that by SPAWNING the real CLI via
 // node:child_process spawnSync (BUN + the tool .ts path), asserting on
 // stdout+stderr — the PROCESS boundary the .sh tested. mechanism = cli.
 //
 // WHY SPAWN (not in-process): handleDoctor terminates with
-// `process.exit(failed > 0 ? 1 : 0)` (aidlc-utility.ts:1385 region) and writes
+// `process.exit(failed > 0 ? 1 : 0)` (amadeus-utility.ts:1385 region) and writes
 // its report via `process.stdout.write`. A bare temp project fails the
 // hook/settings checks, so doctor exits 1 — the .sh swallows that with
 // `|| true` and asserts on stdout content, where the reconciliation rows
 // render regardless of exit code. We mirror exactly: capture status for parity
 // but assert on the rendered report lines.
 //
-// Source under test (dist/claude/.claude/tools/aidlc-utility.ts, handleDoctor):
+// Source under test (dist/claude/.claude/tools/amadeus-utility.ts, handleDoctor):
 //   Check 1 — Orphan worktrees (:563-670)
 //     - `observed === 0`        → "Orphan worktrees: 0 observed" (:644)
 //     - active fork (Bolt Refs) → "Orphan worktrees: 0 (N active fork[s])" (:647-649)
@@ -50,7 +50,7 @@
 //     exactly the .sh's `seed_audit_file` + `seed_state_file` pair.
 //   - Audit blocks are appended in the .sh's `append_audit` shape: a leading
 //     "\n", the block body, then "\n\n---\n" — so findAllEvents' `\n---\n`
-//     split (aidlc-lib.ts:668) sees each block as a discrete entry, byte-for-
+//     split (amadeus-lib.ts:668) sees each block as a discrete entry, byte-for-
 //     byte the heredocs the .sh wrote.
 //   - Bolt Refs are set via sedReplaceInFile, the TS port of the .sh's sed_i on
 //     the `- **Bolt Refs**:` state line.
@@ -95,7 +95,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const UTIL = join(AIDLC_SRC, "tools", "aidlc-utility.ts");
+const UTIL = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
 const STATE_FIXTURE = join(FIXTURES_DIR, "state-mid-ideation.md");
 
 // Every project dir registered here is torn down after each test (mirrors the
@@ -131,8 +131,8 @@ function appendAudit(proj: string, body: string): void {
  * The bare-space worktree record root the doctor's Check 3/4 resolve when no
  * recordPrefix is threaded: worktreeStateFilePath/worktreeAuditFilePath fall back
  * to relativeSpaceRecordPrefix() = aidlc/spaces/default/intents. So the worktree
- * state file lives at <wt>/aidlc/spaces/default/intents/aidlc-state.md and the
- * worktree audit shard under <wt>/aidlc/spaces/default/intents/audit/.
+ * state file lives at <wt>/amadeus/spaces/default/intents/amadeus-state.md and the
+ * worktree audit shard under <wt>/amadeus/spaces/default/intents/audit/.
  */
 function wtRecordRoot(proj: string, slug: string): string {
   return join(
@@ -147,8 +147,8 @@ function wtRecordRoot(proj: string, slug: string): string {
   );
 }
 
-/** Replicate aidlc-lib's auditShardName for a worktree: <host>-<clone-id>.md,
- *  where the clone-id is read from <wt>/aidlc/.aidlc-clone-id. We write a fixed
+/** Replicate amadeus-lib's auditShardName for a worktree: <host>-<clone-id>.md,
+ *  where the clone-id is read from <wt>/amadeus/.amadeus-clone-id. We write a fixed
  *  token there first so the doctor (a separate process) resolves the SAME shard
  *  name — its worktreeAuditFilePath(...) → auditShardName(wtPath) reads the same
  *  on-disk token. (The lib's auditShardName is memoized per-process, so calling
@@ -157,7 +157,7 @@ function seedWtAuditShard(proj: string, slug: string, contents: string): void {
   const wtRoot = join(proj, ".aidlc", "worktrees", `bolt-${slug}`);
   mkdirSync(join(wtRoot, "aidlc"), { recursive: true });
   const token = "ffffffffffff";
-  writeFileSync(join(wtRoot, "aidlc", ".aidlc-clone-id"), `${token}\n`, "utf-8");
+  writeFileSync(join(wtRoot, "aidlc", ".amadeus-clone-id"), `${token}\n`, "utf-8");
   const host =
     hostname()
       .toLowerCase()
@@ -202,7 +202,7 @@ function runDoctor(proj: string): DoctorResult {
   };
 }
 
-describe("t83 aidlc-utility doctor — orphan-reconciliation family (migrated from t83-doctor-orphan-worktree.sh, plan 16)", () => {
+describe("t83 amadeus-utility doctor — orphan-reconciliation family (migrated from t83-doctor-orphan-worktree.sh, plan 16)", () => {
   test("1: fail-clean on no-worktrees — all three orphan checks render 0 observed", () => {
     const proj = freshProject();
     const { out } = runDoctor(proj);
@@ -216,7 +216,7 @@ describe("t83 aidlc-utility doctor — orphan-reconciliation family (migrated fr
     setBoltRefs(proj, "[activeslug]");
     mkWorktree(proj, "activeslug", true);
     writeFileSync(
-      join(wtRecordRoot(proj, "activeslug"), "aidlc-state.md"),
+      join(wtRecordRoot(proj, "activeslug"), "amadeus-state.md"),
       "# stub state\n",
     );
     const { out } = runDoctor(proj);
@@ -262,7 +262,7 @@ describe("t83 aidlc-utility doctor — orphan-reconciliation family (migrated fr
     const proj = freshProject();
     mkWorktree(proj, "orphanstate", true);
     writeFileSync(
-      join(wtRecordRoot(proj, "orphanstate"), "aidlc-state.md"),
+      join(wtRecordRoot(proj, "orphanstate"), "amadeus-state.md"),
       "# state\n",
     );
     const { out } = runDoctor(proj);
@@ -277,7 +277,7 @@ describe("t83 aidlc-utility doctor — orphan-reconciliation family (migrated fr
     const proj = freshProject();
     mkWorktree(proj, "discardedstate", true);
     writeFileSync(
-      join(wtRecordRoot(proj, "discardedstate"), "aidlc-state.md"),
+      join(wtRecordRoot(proj, "discardedstate"), "amadeus-state.md"),
       "# state\n",
     );
     appendAudit(
@@ -323,7 +323,7 @@ describe("t83 aidlc-utility doctor — orphan-reconciliation family (migrated fr
     // Bolt Refs, no WORKTREE_DISCARDED → sub-case (b).
     mkWorktree(proj, "deltatest", true);
     // The worktree audit is now a per-clone shard the doctor resolves via
-    // worktreeAuditFilePath → <wt>/aidlc/spaces/default/intents/audit/<host>-<clone>.md;
+    // worktreeAuditFilePath → <wt>/amadeus/spaces/default/intents/audit/<host>-<clone>.md;
     // seed it at exactly that path (a fixed clone-id token the doctor re-reads).
     seedWtAuditShard(proj, "deltatest", "# wt audit\n");
     appendAudit(

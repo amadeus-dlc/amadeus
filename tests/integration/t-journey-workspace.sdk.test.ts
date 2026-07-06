@@ -1,4 +1,4 @@
-// covers: subcommand:aidlc-utility:intent-birth, subcommand:aidlc-utility:space-create, subcommand:aidlc-utility:space, subcommand:aidlc-utility:intent, file:skills/aidlc/SKILL.md
+// covers: subcommand:amadeus-utility:intent-birth, subcommand:amadeus-utility:space-create, subcommand:amadeus-utility:space, subcommand:amadeus-utility:intent, file:skills/amadeus/SKILL.md
 //
 // t-journey-workspace.sdk.test.ts — the LIVE workspace journey, Claude-SDK
 // logic half (P10 / Stage E). This is the ONE phase that exercises the vision's
@@ -10,7 +10,7 @@
 // The journey (one shared on-disk workspace root carried across SDK turns; each
 // driveAidlc() is a fresh SDK session operating on the SAME persisted records —
 // the cross-session on-disk record state IS the proof of composition):
-//   1. `/aidlc "build auth across both repos"` on a fresh two-sibling-repo
+//   1. `/amadeus "build auth across both repos"` on a fresh two-sibling-repo
 //      workspace → the engine names intent-birth, the conductor runs it, and the
 //      intent auto-births spanning repo-a + repo-b. Asserted on disk: one
 //      intents.json row, repos == the SORTED set ["repo-a","repo-b"], a real
@@ -28,27 +28,27 @@
 //      unconditionally, the shared cross-harness path). Asserted: two isolated
 //      registry rows + record dirs, distinct UUIDs, and A's state + audit shard
 //      byte-untouched by B's birth.
-//   4. `/aidlc space-create teamB` → `/aidlc space teamB` → birth an intent
+//   4. `/amadeus space-create teamB` → `/amadeus space teamB` → birth an intent
 //      there. The two space verbs are driven the PLAIN user way — the engine now
 //      routes a leading space/space-create/intent token through the conductor
-//      (aidlc-orchestrate.ts Branch 1b → terminal print naming aidlc-utility.ts),
+//      (amadeus-orchestrate.ts Branch 1b → terminal print naming amadeus-utility.ts),
 //      so no "do NOT run next" steering is needed; the conductor runs the named
 //      utility and stops without touching the active intent. Asserted:
 //      teamB/memory/org.md copied from default's; team.md + project.md are FRESH
 //      EMPTY stubs (default's promoted learnings do NOT leak); the space-level
 //      knowledge/ dir appears at FIRST BIRTH into teamB (lazy ensure-exists), NOT
 //      at space-create; the active-space cursor moved.
-//   5. `/aidlc space default` (again the plain conductor-routed switch) → intent A
+//   5. `/amadeus space default` (again the plain conductor-routed switch) → intent A
 //      is still resumable (the cursor flip is a pure write) and its audit shard is
 //      intact.
 //
 // DRIFT NOTE (verified @ this branch, surfaced for the runbook): the engine's
-// `next` flag parser (aidlc-orchestrate.ts parseNextFlags :249) does NOT
+// `next` flag parser (amadeus-orchestrate.ts parseNextFlags :249) does NOT
 // recognise `--repos`, and birthPrintDirective (:304) never threads it into the
 // named intent-birth command — so on the AUTO-BIRTH path the repo span is
 // captured by SIBLING AUTO-DISCOVERY (resolveBirthRepoSet → discoverSiblingRepos,
 // lib:1299/1273), not by an explicit flag. Step 1 therefore drives the bare
-// `/aidlc "<desc>"` (no --repos, which would pollute the slug as a stray
+// `/amadeus "<desc>"` (no --repos, which would pollute the slug as a stray
 // positional) and relies on auto-discovery to capture both git-init'd siblings —
 // which is the genuine composed behaviour the vision promises (an intent spanning
 // the repos present in the workspace). The explicit `--repos` flag is honoured
@@ -56,7 +56,7 @@
 //
 // Assertions stay at the JOURNEY level (on-disk record state + verbatim
 // tool-result bytes), tolerant of conversational variance — NEVER on
-// assistantText. SPENDS TOKENS — driveAidlc drives the real /aidlc on
+// assistantText. SPENDS TOKENS — driveAidlc drives the real /amadeus on
 // Opus/Bedrock. Gated on claude-CLI presence (the file calls driveAidlc, so
 // claude-gate.ts marks it SDK-dependent; the runner skips-with-reason when claude
 // is absent — never a hard fail).
@@ -74,7 +74,7 @@ import {
   activeSpace,
   listIntents,
   readIntentRegistry,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // This is the suite's heaviest live test: SIX SDK turns across one journey, one
 // of which (the per-repo reverse-engineering codekb beat) writes many artifacts
@@ -97,18 +97,18 @@ const UUIDV7_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 // The user types "teamB"; the engine slugifies it on disk (slugify lowercases —
-// aidlc-lib.ts:463), so the SPACE DIR + cursor + registry key are "teamb".
+// amadeus-lib.ts:463), so the SPACE DIR + cursor + registry key are "teamb".
 const TEAM_B_SLUG = "teamb";
 
 /**
  * Build a prompt that makes the conductor run the deterministic intent-birth
  * UTILITY directly (not route the request through `next`). WHY this matters: a
- * bare `/aidlc intent-birth …` slash command is parsed by the conductor as
- * freeform input and fed to `aidlc-orchestrate.ts next`; with intent A ALREADY
+ * bare `/amadeus intent-birth …` slash command is parsed by the conductor as
+ * freeform input and fed to `amadeus-orchestrate.ts next`; with intent A ALREADY
  * active, the engine then advances/scope-changes A (Branch 10) instead of
  * birthing — a verified live failure: the conductor ran `scope-change --scope poc`
  * on A, rewriting A's state Scope feature→poc. The journey wants the
- * mints-unconditionally handler (aidlc-utility.ts intent-birth, :1995), so we
+ * mints-unconditionally handler (amadeus-utility.ts intent-birth, :1995), so we
  * instruct the conductor to invoke that tool verbatim and NOT touch the active
  * intent. (This is the SKILL.md run-then-continue shape, named explicitly.)
  */
@@ -116,7 +116,7 @@ function birthToolPrompt(scope: string, args: string): string {
   return (
     `Run this exact command with the Bash tool and then stop — do NOT run \`next\`, ` +
     `do NOT advance or scope-change the currently active intent: ` +
-    `bun .claude/tools/aidlc-utility.ts intent-birth --scope ${scope} --arguments ${JSON.stringify(args)}`
+    `bun .claude/tools/amadeus-utility.ts intent-birth --scope ${scope} --arguments ${JSON.stringify(args)}`
   );
 }
 
@@ -176,13 +176,13 @@ describe("t-journey-workspace (live SDK multi-repo·intent·space journey)", () 
       try {
         // --- Step 1: auto-birth intent A spanning both sibling repos ----------
         // Name the scope explicitly so the engine births via Branch 9a (no
-        // scope-confirm gate) — a bare prose `/aidlc "<desc>"` emits an `ask`
+        // scope-confirm gate) — a bare prose `/amadeus "<desc>"` emits an `ask`
         // scope-confirm (Branch 8, orchestrate:1148) that the single-turn ACP /
         // one-shot codex drivers cannot answer, so the cross-harness journey names
         // the scope. The repo span is STILL captured by sibling auto-discovery
         // (the DRIFT NOTE above), so this stays the genuine multi-repo auto-birth.
         const r1 = await driveAidlc(
-          `/aidlc --scope feature "build auth across both repos"`,
+          `/amadeus --scope feature "build auth across both repos"`,
           {
             projectDir: root,
             answerScript: "default",
@@ -212,7 +212,7 @@ describe("t-journey-workspace (live SDK multi-repo·intent·space journey)", () 
         // the codekb-path tool). We drive only as far as the per-repo codekb
         // landing — NOT the swarm.
         await driveAidlc(
-          `/aidlc --stage reverse-engineering --single`,
+          `/amadeus --stage reverse-engineering --single`,
           {
             projectDir: root,
             answerScript: "default",
@@ -225,21 +225,21 @@ describe("t-journey-workspace (live SDK multi-repo·intent·space journey)", () 
         expect(codekbFiles(root, "repo-b").length).toBeGreaterThan(0);
 
         // Snapshot A's WORKFLOW STATE before birthing B — the deterministic
-        // isolation proof (B's birth must never touch A's aidlc-state.md). We do
+        // isolation proof (B's birth must never touch A's amadeus-state.md). We do
         // NOT byte-compare A's audit SHARD: the per-session SessionStart/SessionEnd
-        // hooks (aidlc-session-{start,end}.ts → appendAuditEntry) legitimately
+        // hooks (amadeus-session-{start,end}.ts → appendAuditEntry) legitimately
         // append SESSION_* events to whatever intent is active, and a fresh
         // driveAidlc() is a new session — so the shard gains session-lifecycle
         // noise that is NOT a collision. The collision the vision forbids is B's
         // BIRTH bleeding into A; that surfaces as a SECOND WORKFLOW_STARTED in A's
         // shard, which we guard directly via workflowStartedCount().
         const recordADir = join(root, "aidlc", "spaces", "default", "intents", recordA as string);
-        const stateABefore = readFileSync(join(recordADir, "aidlc-state.md"), "utf-8");
+        const stateABefore = readFileSync(join(recordADir, "amadeus-state.md"), "utf-8");
         expect(workflowStartedCount(recordADir)).toBe(1);
 
         // --- Step 3: birth a SECOND intent alongside active A -----------------
         // The deterministic shared path: the intent-birth utility mints
-        // unconditionally (aidlc-utility.ts:1995). The engine has no "offer 2nd
+        // unconditionally (amadeus-utility.ts:1995). The engine has no "offer 2nd
         // intent" directive on the logic drivers; routed through `next` with A
         // active it would advance/scope-change A (Branch 10) — so we name the tool
         // command directly (see birthToolPrompt).
@@ -268,14 +268,14 @@ describe("t-journey-workspace (live SDK multi-repo·intent·space journey)", () 
         // and wrote into B's record; A's state file is byte-identical), and B's
         // birth event did NOT bleed into A's shard (still exactly one
         // WORKFLOW_STARTED — A's own).
-        expect(readFileSync(join(recordADir, "aidlc-state.md"), "utf-8")).toBe(stateABefore);
+        expect(readFileSync(join(recordADir, "amadeus-state.md"), "utf-8")).toBe(stateABefore);
         expect(workflowStartedCount(recordADir)).toBe(1);
 
         // --- Step 4: a non-default space, no learnings leak -------------------
         // The user TYPES "teamB"; the engine slugifies it to "teamb" on disk
         // (slugify lowercases — lib:463), so every on-disk path/assertion uses the
         // slug while the command string keeps the human spelling.
-        await driveAidlc(`/aidlc space-create teamB`, {
+        await driveAidlc(`/amadeus space-create teamB`, {
           projectDir: root,
           answerScript: "default",
           timeoutMs: VERB_DRIVE_MS,
@@ -300,13 +300,13 @@ describe("t-journey-workspace (live SDK multi-repo·intent·space journey)", () 
         expect(existsSync(join(teamBRoot, "codekb"))).toBe(true);
         expect(existsSync(join(teamBRoot, "codekb", ".gitkeep"))).toBe(true);
 
-        // Switch into teamB and birth an intent there. The plain `/aidlc space
+        // Switch into teamB and birth an intent there. The plain `/amadeus space
         // teamB` is forwarded to `next`, which (with intent A active in default)
         // recognises the leading `space` verb and emits a TERMINAL print naming
-        // `aidlc-utility.ts space teamB` (Branch 1b, before state inspection — so
+        // `amadeus-utility.ts space teamB` (Branch 1b, before state inspection — so
         // the active intent is never advanced); the conductor runs that tool and
         // stops. The on-disk cursor moving to teamb is the proof the real path ran.
-        await driveAidlc(`/aidlc space teamB`, {
+        await driveAidlc(`/amadeus space teamB`, {
           projectDir: root,
           answerScript: "default",
           timeoutMs: VERB_DRIVE_MS,
@@ -333,7 +333,7 @@ describe("t-journey-workspace (live SDK multi-repo·intent·space journey)", () 
 
         // --- Step 5: switch back to default; intent A still resumable ---------
         // Same plain conductor-routed switch as beat 4, back the other way.
-        await driveAidlc(`/aidlc space default`, {
+        await driveAidlc(`/amadeus space default`, {
           projectDir: root,
           answerScript: "default",
           timeoutMs: VERB_DRIVE_MS,
@@ -345,7 +345,7 @@ describe("t-journey-workspace (live SDK multi-repo·intent·space journey)", () 
         // its shard. The audit shard itself may carry session-lifecycle events
         // from the intervening turns (see workflowStartedCount's note) — that is
         // not a collision.
-        expect(readFileSync(join(recordADir, "aidlc-state.md"), "utf-8")).toBe(stateABefore);
+        expect(readFileSync(join(recordADir, "amadeus-state.md"), "utf-8")).toBe(stateABefore);
         expect(workflowStartedCount(recordADir)).toBe(1);
         // Both default intents are still on disk and resumable.
         expect(readIntentRegistry(root, "default").length).toBe(2);

@@ -1,4 +1,4 @@
-// covers: function:parseSensorManifest, function:validateSensorManifest, file:sensors/aidlc-required-sections.md, file:sensors/aidlc-upstream-coverage.md, file:sensors/aidlc-linter.md, file:sensors/aidlc-type-check.md
+// covers: function:parseSensorManifest, function:validateSensorManifest, file:sensors/amadeus-required-sections.md, file:sensors/amadeus-upstream-coverage.md, file:sensors/amadeus-linter.md, file:sensors/amadeus-type-check.md
 //
 // t86 — sensor manifest schema for the 4 framework sensors + the legacy
 // negative-case fixtures. Migrated from tests/unit/t86-sensor-manifest-schema.sh
@@ -9,14 +9,14 @@
 // — no process boundary, no argv/exit/stdout seam, no LLM, zero tokens. The .sh
 // HAND-ROLLED the schema in awk (extract_field / has_frontmatter_field). The
 // real contract those awk snippets approximate is the shipped validator
-// `aidlc-sensor-schema.ts` (parseSensorManifest + validateSensorManifest),
-// consumed by aidlc-graph compile (loadSensors). This twin is equal-or-stronger
+// `amadeus-sensor-schema.ts` (parseSensorManifest + validateSensorManifest),
+// consumed by amadeus-graph compile (loadSensors). This twin is equal-or-stronger
 // because it asserts against the REAL validator the framework runs, not an awk
 // re-implementation, then additionally pins the exact field literals the .sh
 // grepped for.
 //
 // Source under test:
-//   dist/claude/.claude/tools/aidlc-sensor-schema.ts
+//   dist/claude/.claude/tools/amadeus-sensor-schema.ts
 //     :54  parseSensorManifest(raw): SensorManifest  — extract+coerce frontmatter
 //     :142 validateSensorManifest(obj, file, filenameId): void
 //            - :155 required-fields loop (id, kind, command, default_severity,
@@ -28,7 +28,7 @@
 //            - :178 description must be a non-empty string
 //            - :26  tolerates UNKNOWN keys for forward-compat (so a stray
 //                   `applies_to:` is ignored, NOT rejected — see negative B)
-//   dist/claude/.claude/sensors/aidlc-{required-sections,upstream-coverage,
+//   dist/claude/.claude/sensors/amadeus-{required-sections,upstream-coverage,
 //     linter,type-check}.md — the 4 shipped framework manifests.
 //   tests/fixtures/v05-mr3-sensors-dir/malformed-{unknown-kind,empty-applies-to,
 //     missing-id}.md — legacy negative-case fixtures.
@@ -37,7 +37,7 @@
 //   - id matches filename stem (filename↔id contract)
 //   - kind == deterministic (only valid v0.5.0 enum value)
 //   - command points at the per-sensor script (canonical execution shape:
-//     `bun .claude/tools/aidlc-sensor-<id>.ts`)
+//     `bun .claude/tools/amadeus-sensor-<id>.ts`)
 //   - applies_to ABSENT from the manifest bytes (pull authoring put scope on the
 //     stage side via stage.sensors[]; the resolver gets no info from applies_to)
 //   - default_severity and description present
@@ -71,7 +71,7 @@ import { AIDLC_SRC, FIXTURES_DIR } from "../harness/fixtures.ts";
 import {
   parseSensorManifest,
   validateSensorManifest,
-} from "../../dist/claude/.claude/tools/aidlc-sensor-schema.ts";
+} from "../../dist/claude/.claude/tools/amadeus-sensor-schema.ts";
 
 // AIDLC_SRC === <repo>/dist/claude/.claude — the same root the .sh resolved
 // SENSORS_DIR under ($AIDLC_SRC/sensors).
@@ -79,7 +79,7 @@ const SENSORS_DIR = join(AIDLC_SRC, "sensors");
 const NEG_DIR = join(FIXTURES_DIR, "v05-mr3-sensors-dir");
 
 // The 4 framework manifests, keyed by their expected frontmatter id. id MUST
-// equal the filename stem minus the `aidlc-` prefix and the `.md` suffix
+// equal the filename stem minus the `amadeus-` prefix and the `.md` suffix
 // (filename↔id contract). Same roster as the .sh's SENSOR_NAMES.
 const SENSOR_NAMES = [
   "required-sections",
@@ -89,7 +89,7 @@ const SENSOR_NAMES = [
 ] as const;
 
 const manifestPath = (name: string): string =>
-  join(SENSORS_DIR, `aidlc-${name}.md`);
+  join(SENSORS_DIR, `amadeus-${name}.md`);
 
 /**
  * Reproduce the .sh's has_frontmatter_field for `applies_to` (L67-83): does a
@@ -119,7 +119,7 @@ describe("t86 sensor manifest schema (migrated from t86-sensor-manifest-schema.s
   test("each of the 4 framework manifests exists [.sh Part 1 ×4]", () => {
     for (const name of SENSOR_NAMES) {
       const f = manifestPath(name);
-      expect(existsSync(f), `missing sensors/aidlc-${name}.md`).toBe(true);
+      expect(existsSync(f), `missing sensors/amadeus-${name}.md`).toBe(true);
     }
   });
 
@@ -129,7 +129,7 @@ describe("t86 sensor manifest schema (migrated from t86-sensor-manifest-schema.s
   // the .sh's awk) and pins the five field literals the .sh asserted.
   // ===========================================================================
   for (const name of SENSOR_NAMES) {
-    test(`aidlc-${name}.md: real schema accepts + 5 field pins [.sh Part 2 checks 1-5]`, () => {
+    test(`amadeus-${name}.md: real schema accepts + 5 field pins [.sh Part 2 checks 1-5]`, () => {
       const file = manifestPath(name);
       const raw = readFileSync(file, "utf-8");
       const obj = parseSensorManifest(raw);
@@ -145,12 +145,12 @@ describe("t86 sensor manifest schema (migrated from t86-sensor-manifest-schema.s
       expect(obj.kind).toBe("deterministic");
       // .sh check 3: command points at the per-sensor script (canonical
       // execution shape). Exact literal, same as the .sh's expected_command.
-      expect(obj.command).toBe(`bun .claude/tools/aidlc-sensor-${name}.ts`);
+      expect(obj.command).toBe(`bun .claude/tools/amadeus-sensor-${name}.ts`);
       // .sh check 4: applies_to ABSENT from the frontmatter bytes (pull
       // authoring removed it; scope lives on the stage side via stage.sensors[]).
       expect(
         frontmatterHasAppliesTo(raw),
-        `aidlc-${name}.md still carries applies_to (legacy push shape)`,
+        `amadeus-${name}.md still carries applies_to (legacy push shape)`,
       ).toBe(false);
       // .sh check 5: default_severity AND description present (and non-empty —
       // the validator already enforced non-empty description; pin both here).

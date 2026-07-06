@@ -1,7 +1,7 @@
 ---
 id: malformed-unknown-kind
 kind: arbitrary-bogus
-command: bun .claude/tools/aidlc-sensor.ts fire malformed-unknown-kind
+command: bun .claude/tools/amadeus-sensor.ts fire malformed-unknown-kind
 applies_to:
   all_stages: true
 default_severity: advisory

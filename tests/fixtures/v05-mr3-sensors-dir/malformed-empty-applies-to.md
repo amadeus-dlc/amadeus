@@ -1,7 +1,7 @@
 ---
 id: malformed-empty-applies-to
 kind: deterministic
-command: bun .claude/tools/aidlc-sensor.ts fire malformed-empty-applies-to
+command: bun .claude/tools/amadeus-sensor.ts fire malformed-empty-applies-to
 applies_to: {}
 default_severity: advisory
 description: Negative-case fixture — applies_to has no base shape

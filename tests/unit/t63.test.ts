@@ -1,20 +1,20 @@
-// covers: subcommand:aidlc-graph:artifacts
+// covers: subcommand:amadeus-graph:artifacts
 //
 // CLI-contract port of tests/unit/t63-tool-graph.sh (TAP plan 14),
 // mechanism = cli. Equal-or-stronger migration: every .sh assertion that
-// shelled out to `bun aidlc-graph.ts artifacts` (with the AIDLC_STAGE_GRAPH
-// fixture-injection env-var seam — lib.ts:702-703 / aidlc-graph.ts:153-155)
+// shelled out to `bun amadeus-graph.ts artifacts` (with the AIDLC_STAGE_GRAPH
+// fixture-injection env-var seam — lib.ts:702-703 / amadeus-graph.ts:153-155)
 // is preserved by SPAWNING the real CLI via node:child_process spawnSync
 // (BUN + the tool .ts path), asserting on res.status / res.stdout / res.stderr
 // exactly as the .sh asserted on $? / stdout (2>&1) — the PROCESS boundary,
 // not an in-process artifactsRegistry() call. An in-process twin would lose
 // the exit-code half the .sh relies on for the unknown/missing-subcommand
-// arms (main()'s process.exit(1), aidlc-graph.ts:1222/1230) AND the
+// arms (main()'s process.exit(1), amadeus-graph.ts:1222/1230) AND the
 // stdout-shaping half (the `artifacts` handler's console.log-per-line,
-// aidlc-graph.ts:1094-1098).
+// amadeus-graph.ts:1094-1098).
 //
 // SUBCOMMAND UNIT: this .cli file credits the single subcommand unit the .sh
-// exercises — `aidlc-graph artifacts` (covers KEY subcommand:aidlc-graph
+// exercises — `amadeus-graph artifacts` (covers KEY subcommand:amadeus-graph
 // artifacts, written in COLON form per the claim parser). The .sh fires this
 // subcommand against five injected fixtures plus the real graph, and pokes
 // the two dispatch-error arms (unknown / missing subcommand) that the
@@ -26,7 +26,7 @@
 // process boundary via `bun -e`), so it is preserved as a `bun -e` spawn that
 // imports the tool and prints same-ref / different-ref — byte-identical to the
 // .sh's protocol. It pins the memoisation invariant on artifactsRegistry()
-// (aidlc-graph.ts:768-780, `_artifactsRegistry` cache).
+// (amadeus-graph.ts:768-780, `_artifactsRegistry` cache).
 //
 // PARITY NOTES (every .sh `ok`/`assert_eq` line maps to an expect() below;
 // several are STRONGER than the original):
@@ -92,7 +92,7 @@ const TOOL = join(
   "claude",
   ".claude",
   "tools",
-  "aidlc-graph.ts",
+  "amadeus-graph.ts",
 );
 
 // --- Fixtures — written to a temp dir, injected via AIDLC_STAGE_GRAPH ---
@@ -130,7 +130,7 @@ const FIXTURES: Record<string, string> = {
 };
 
 beforeAll(() => {
-  fixtureDir = mkdtempSync(join(tmpdir(), "aidlc-t63-"));
+  fixtureDir = mkdtempSync(join(tmpdir(), "amadeus-t63-"));
   for (const [name, body] of Object.entries(FIXTURES)) {
     writeFileSync(fx(name), body, "utf-8");
   }
@@ -148,7 +148,7 @@ interface CliResult {
 }
 
 /**
- * Spawn `bun aidlc-graph.ts artifacts` with an optional AIDLC_STAGE_GRAPH
+ * Spawn `bun amadeus-graph.ts artifacts` with an optional AIDLC_STAGE_GRAPH
  * fixture injected on the env. Mirrors the .sh's
  * `AIDLC_STAGE_GRAPH="$FIXTURE_DIR/<f>" bun "$TOOL" artifacts 2>&1`.
  */
@@ -174,7 +174,7 @@ function lines(r: CliResult): string[] {
 
 const KEBAB = /^[a-z][a-z0-9-]*$/;
 
-describe("t63 aidlc-graph artifacts — CLI contract (migrated from t63-tool-graph.sh, plan 14)", () => {
+describe("t63 amadeus-graph artifacts — CLI contract (migrated from t63-tool-graph.sh, plan 14)", () => {
   // ============================================================
   // Empty-graph behaviour (2 assertions)
   // ============================================================
@@ -290,7 +290,7 @@ describe("t63 aidlc-graph artifacts — CLI contract (migrated from t63-tool-gra
     expect(r.status).toBe(1);
     // 'artifacts' appears in the Valid-list the dispatcher prints to stderr.
     expect(r.stderr).toContain("artifacts");
-    // STRONGER: the offending token is echoed (aidlc-graph.ts:1227-1229).
+    // STRONGER: the offending token is echoed (amadeus-graph.ts:1227-1229).
     expect(r.stderr).toContain("bogus");
   });
 
@@ -302,8 +302,8 @@ describe("t63 aidlc-graph artifacts — CLI contract (migrated from t63-tool-gra
     const r = graph([]);
     expect(r.status).toBe(1);
     expect(r.stderr).toContain("artifacts");
-    // STRONGER: the usage banner is emitted (aidlc-graph.ts:1219-1221).
-    expect(r.stderr).toContain("Usage: aidlc-graph");
+    // STRONGER: the usage banner is emitted (amadeus-graph.ts:1219-1221).
+    expect(r.stderr).toContain("Usage: amadeus-graph");
   });
 
   // ============================================================

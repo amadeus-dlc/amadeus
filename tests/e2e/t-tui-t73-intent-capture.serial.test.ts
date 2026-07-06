@@ -24,7 +24,7 @@
 // THE SEEDED REDO-JUMP (matches the .sh fixture exactly):
 //   state-initialization-done.md sets Current Stage == intent-capture (the redo
 //   target) with Completed=3 / 3 [x]. Because Current Stage already equals the
-//   --stage target, aidlc-jump does NOT terminate the workflow on the jump; the
+//   --stage target, amadeus-jump does NOT terminate the workflow on the jump; the
 //   stage runs, its gate approves, and approve auto-advances to the next in-scope
 //   stage (market-research). So after the journey: intent-capture flips to [x],
 //   Completed climbs past 3, and Current Stage moves off intent-capture. The .sh
@@ -42,7 +42,7 @@
 //       * a *intent*statement* artifact exists, is > 100 bytes, and has at least
 //         one markdown heading,
 //       * a *stakeholder* map artifact exists,
-//       * aidlc-state.md Completed counter == the number of `- [x]` lines
+//       * amadeus-state.md Completed counter == the number of `- [x]` lines
 //         (internal consistency invariant), Completed >= 4 (monotonic from the
 //         fixture's 3 + this stage), and Lifecycle Phase == IDEATION,
 //       * audit.md recorded a STAGE_COMPLETED for intent-capture (stronger than
@@ -74,7 +74,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import * as os from "node:os";
 import { join } from "node:path";
 import { resolveWinNode } from "../harness/tui-drive.ts";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { seededRecordDir, seededStateFile } from "../harness/fixtures.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
@@ -215,7 +215,7 @@ describe("t-tui-t73-intent-capture (answering the stage gate produces artifacts 
 
         // --- submit the stage-jump WITH a build description -------------------
         // intent-capture.md Step 2 reads the project description from "$ARGUMENTS
-        // or audit.md". Jumping with a BARE `/aidlc --stage intent-capture` (no
+        // or audit.md". Jumping with a BARE `/amadeus --stage intent-capture` (no
         // description) makes the stage ask "What would you like to build?" as a
         // free-text prompt that answer-gate (keystroke-only) cannot fill → hang
         // (verified live 2026-06-06). Passing the description as trailing freeform
@@ -227,7 +227,7 @@ describe("t-tui-t73-intent-capture (answering the stage gate produces artifacts 
           "--session",
           session,
           "--keys",
-          "/aidlc --stage intent-capture Build a simple React todo app",
+          "/amadeus --stage intent-capture Build a simple React todo app",
           "--literal",
           "--no-enter",
         ]);

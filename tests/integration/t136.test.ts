@@ -2,11 +2,11 @@
 //
 // CLI-contract port of tests/integration/t122-revision-loop.sh (renumbered to t136 for milestone 2; TAP plan 10),
 // mechanism = cli. The .sh exercises the gate → reject → revise → gate cycle
-// end-to-end on a real bugfix workflow by SHELLING OUT to `bun aidlc-state.ts
+// end-to-end on a real bugfix workflow by SHELLING OUT to `bun amadeus-state.ts
 // gate-start|reject|revise|approve ...`. This port preserves that PROCESS
-// boundary: every transition is the real `aidlc-state.ts` subprocess spawned
+// boundary: every transition is the real `amadeus-state.ts` subprocess spawned
 // via node:child_process spawnSync (BUN + the tool .ts), and the observables
-// are read back off the same aidlc-state.md / audit.md the tool writes. An
+// are read back off the same amadeus-state.md / audit.md the tool writes. An
 // in-process twin would lose the multi-tool cumulative-audit-trail contract
 // the .sh is built to verify (Revision Count incrementing across N reject
 // calls; the GATE_REJECTED + STAGE_REVISING emit-as-a-pair invariant; the
@@ -15,7 +15,7 @@
 //
 // COVERS HEADER — colon form, audit ids. The .sh's load-bearing audit
 // assertions are the GATE_REJECTED ×3 and STAGE_REVISING ×3 pair-emission
-// counts (the reject handler's two-event critical section, aidlc-state.ts
+// counts (the reject handler's two-event critical section, amadeus-state.ts
 // handleReject:792-803). Those two events are the covered observables;
 // STAGE_AWAITING_APPROVAL and GATE_APPROVED are also asserted below as
 // equal-parity counterparts to the .sh, but the credited ids are the two
@@ -86,7 +86,7 @@ const STATE_TS = join(
   "claude",
   ".claude",
   "tools",
-  "aidlc-state.ts",
+  "amadeus-state.ts",
 );
 const UTIL_TS = join(
   REPO_ROOT,
@@ -94,13 +94,13 @@ const UTIL_TS = join(
   "claude",
   ".claude",
   "tools",
-  "aidlc-utility.ts",
+  "amadeus-utility.ts",
 );
 
 const SLUG = "requirements-analysis";
 
 // P4: intent-birth writes state into the born intent's per-intent record dir
-// (aidlc/spaces/<space>/intents/<slug>-<id8>/), not the flat aidlc-docs/. After
+// (aidlc/spaces/<space>/intents/<slug>-<id8>/), not the flat amadeus-docs/. After
 // the init in beforeAll the active-intent cursor points at the born record, so
 // every later gate-start/reject/revise/approve (which default-resolve the active
 // intent) reads/writes THAT record — recordDirOf follows the cursor and resolves
@@ -115,19 +115,19 @@ function recordDirOf(p: string): string {
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();
-    if (rec && existsSync(join(intentsDir, rec, "aidlc-state.md"))) {
+    if (rec && existsSync(join(intentsDir, rec, "amadeus-state.md"))) {
       return join(intentsDir, rec);
     }
   }
-  return join(p, "aidlc-docs");
+  return join(p, "amadeus-docs");
 }
 
 const statePath = (p: string): string =>
-  join(recordDirOf(p), "aidlc-state.md");
+  join(recordDirOf(p), "amadeus-state.md");
 
 // Audit is written as per-clone shards under <record>/audit/<host>-<pid>.md
 // (Stage B). Concatenate every shard for a content read; fall back to the flat
-// aidlc-docs/audit.md for a seeded-flat / pre-migration project.
+// amadeus-docs/audit.md for a seeded-flat / pre-migration project.
 function readAudit(p: string): string {
   const auditDir = join(recordDirOf(p), "audit");
   if (existsSync(auditDir)) {
@@ -136,7 +136,7 @@ function readAudit(p: string): string {
       .map((f) => readFileSync(join(auditDir, f), "utf-8"))
       .join("\n");
   }
-  const flat = join(p, "aidlc-docs", "audit.md");
+  const flat = join(p, "amadeus-docs", "audit.md");
   return existsSync(flat) ? readFileSync(flat, "utf-8") : "";
 }
 
@@ -146,7 +146,7 @@ interface CliResult {
   out: string; // combined stdout+stderr (mirrors the .sh's 2>&1)
 }
 
-/** Spawn `bun aidlc-state.ts <args...> --project-dir <p>`. Mirrors `bun "$STATE" ...`. */
+/** Spawn `bun amadeus-state.ts <args...> --project-dir <p>`. Mirrors `bun "$STATE" ...`. */
 function state(p: string, ...args: string[]): CliResult {
   const res = spawnSync(BUN, [STATE_TS, ...args, "--project-dir", p], {
     encoding: "utf-8",
@@ -160,7 +160,7 @@ function state(p: string, ...args: string[]): CliResult {
 }
 
 /**
- * Value of a `- **<field>**: <value>` line in aidlc-state.md. Mirrors the
+ * Value of a `- **<field>**: <value>` line in amadeus-state.md. Mirrors the
  * .sh's `^- **Revision Count**: N` line grep, but returns the exact value
  * (STRONGER). Returns "" when absent.
  */
@@ -259,7 +259,7 @@ afterAll(() => {
   cleanupTestProject(proj); // cleanup_test_project (t122.sh:72)
 });
 
-describe("t136 revision-loop — aidlc-state gate/reject/revise/approve cumulative trail (migrated from t122-revision-loop.sh, plan 10)", () => {
+describe("t136 revision-loop — amadeus-state gate/reject/revise/approve cumulative trail (migrated from t122-revision-loop.sh, plan 10)", () => {
   // --- Cycle 1: gate-start -> reject (t122.sh:40-43) ---
   test("1: first reject increments Revision Count to 1", () => {
     expect(state(proj, "gate-start", SLUG).status).toBe(0); // S1

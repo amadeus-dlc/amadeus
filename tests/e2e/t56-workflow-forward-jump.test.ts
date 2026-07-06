@@ -1,8 +1,8 @@
-// covers: subcommand:aidlc-jump:resolve, subcommand:aidlc-jump:execute, audit:STAGE_JUMPED
+// covers: subcommand:amadeus-jump:resolve, subcommand:amadeus-jump:execute, audit:STAGE_JUMPED
 //
 // t56-workflow-forward-jump.test.ts — SDK-harness port of
 // tests/e2e/t56-workflow-forward-jump.sh (plan 8). Drives the real
-// `/aidlc --stage requirements-analysis` through the Claude Agent SDK from a
+// `/amadeus --stage requirements-analysis` through the Claude Agent SDK from a
 // brownfield bugfix workflow seeded at init-done and asserts ONLY on
 // deterministic surfaces — the jump tool's verbatim stdout JSON, the on-disk
 // state fields, and the parsed audit events — NEVER on assistantText.
@@ -19,8 +19,8 @@
 // `--stage reverse-engineering --scope bugfix` against a STATELESS project and
 // expected auto-init + jump. That journey NO LONGER EXISTS on the v0.6.x
 // engine: with no state, `next --stage <slug>` emits a run-stage directive
-// DIRECTLY off the graph — read-only, no init, no aidlc-jump execute, no
-// aidlc-docs/ created (aidlc-orchestrate.ts emitJumpDirective's no-state
+// DIRECTLY off the graph — read-only, no init, no amadeus-jump execute, no
+// amadeus-docs/ created (amadeus-orchestrate.ts emitJumpDirective's no-state
 // branch: "No state file — resolve cannot compute a direction. Name the
 // requested target directly off the graph"; verified live by probing the
 // engine on a stateless project — directive emitted, zero files written). The
@@ -28,14 +28,14 @@
 // STAGE_JUMPED, phase rewrite, scope) require existing state, so this port
 // seeds the brownfield init-done fixture (Current Stage=reverse-engineering,
 // Scope=bugfix, Completed=3) and jumps FORWARD to requirements-analysis. The
-// .sh's auto-init slice (aidlc-docs created, state written, scope recorded at
+// .sh's auto-init slice (amadeus-docs created, state written, scope recorded at
 // init) is owned by the fresh-init twins t52/t54/t59 — no coverage is lost.
 //
 // THE JOURNEY (verified against the SHIPPED tools, deterministically, 2026-06-10).
 // From state-brownfield-init-done.md (Current Stage=reverse-engineering, idx
 // 2.1), `--stage requirements-analysis` (idx 2.3) resolves direction=forward
-// (aidlc-jump.ts:142-145). With state present the engine names the mutation:
-// a print directive carrying `aidlc-jump.ts execute --target
+// (amadeus-jump.ts:142-145). With state present the engine names the mutation:
+// a print directive carrying `amadeus-jump.ts execute --target
 // requirements-analysis --direction forward --scope bugfix`; the conductor
 // runs it via Bash and the tool's stdout JSON lands in a tool_result.
 // executeJump's forward branch marks the in-flight intermediate
@@ -56,11 +56,11 @@
 //   1 not exit 124 (no silent timeout)
 //       -> the jump tool's stdout JSON landed in a Bash tool_result (a hang
 //          leaves no jumpCall and the driver aborts on timeoutMs).
-//   2 aidlc-docs/ created
+//   2 amadeus-docs/ created
 //       -> RELOCATED to the fresh-init twins (t52/t54/t59) — see the journey
-//          re-base note. Here aidlc-docs/ is the seeded precondition.
+//          re-base note. Here amadeus-docs/ is the seeded precondition.
 //   3 state file created
-//       -> r.stateFile !== undefined (sdk-drive reads aidlc-state.md off disk).
+//       -> r.stateFile !== undefined (sdk-drive reads amadeus-state.md off disk).
 //   4 scope is bugfix
 //       -> readStateField(state,"Scope") === "bugfix" (exact field, stronger
 //          than the .sh's loose `grep bugfix`; carried by the fixture and
@@ -85,17 +85,17 @@
 //          Phase") === "INCEPTION".
 //
 // Known-answer literals (read from the SHIPPED tool / fixture, not guessed):
-//   - no-state --stage is read-only:  aidlc-orchestrate.ts emitJumpDirective no-state branch
-//   - with-state --stage names the jump: aidlc-orchestrate.ts:1366-1380 (print directive)
-//   - forward skip markers:   aidlc-jump.ts:242-264 ([S] for in-flight intermediates)
-//   - Current Stage write:    aidlc-jump.ts:313
-//   - Lifecycle Phase write:  aidlc-jump.ts:312 (target phase uppercased)
-//   - STAGE_JUMPED emit:      aidlc-jump.ts:374; Direction :375; Target :377
-//   - jump stdout JSON:       aidlc-jump.ts:406-420
+//   - no-state --stage is read-only:  amadeus-orchestrate.ts emitJumpDirective no-state branch
+//   - with-state --stage names the jump: amadeus-orchestrate.ts:1366-1380 (print directive)
+//   - forward skip markers:   amadeus-jump.ts:242-264 ([S] for in-flight intermediates)
+//   - Current Stage write:    amadeus-jump.ts:313
+//   - Lifecycle Phase write:  amadeus-jump.ts:312 (target phase uppercased)
+//   - STAGE_JUMPED emit:      amadeus-jump.ts:374; Direction :375; Target :377
+//   - jump stdout JSON:       amadeus-jump.ts:406-420
 //   - fixture: state-brownfield-init-done.md (Scope=bugfix, Current Stage=
 //     reverse-engineering, Completed=3, Lifecycle Phase=INCEPTION)
 //
-// It SPENDS TOKENS — driveAidlc drives the real /aidlc on Opus/Bedrock (the
+// It SPENDS TOKENS — driveAidlc drives the real /amadeus on Opus/Bedrock (the
 // jump). Generous per-test timeout; the driver aborts a hair early so a stuck
 // run surfaces a partial DriveResult, not a hang.
 
@@ -142,7 +142,7 @@ const STOP_AFTER_JUMP = { toolName: "Bash", resultIncludes: JUMP_TARGET_JSON } a
 const AUDIT_DIRECTION_LINE = "**Direction**: FORWARD"; // jump.ts:375
 const AUDIT_TARGET_LINE = `**Target**: ${TARGET_SLUG}`; // jump.ts:377
 
-describe("t56 /aidlc --stage requirements-analysis forward jump (sdk)", () => {
+describe("t56 /amadeus --stage requirements-analysis forward jump (sdk)", () => {
   // -------------------------------------------------------------------------
   // Brownfield bugfix workflow seeded at init-done (Current Stage=
   // reverse-engineering). `--stage requirements-analysis` is a genuine forward
@@ -165,7 +165,7 @@ describe("t56 /aidlc --stage requirements-analysis forward jump (sdk)", () => {
         expect(readStateField(seed, "Current Stage")).toBe(SKIPPED_SLUG);
         expect(readStateField(seed, "Scope")).toBe(SCOPE);
 
-        const r = await driveAidlc(`/aidlc --stage ${TARGET_SLUG}`, {
+        const r = await driveAidlc(`/amadeus --stage ${TARGET_SLUG}`, {
           projectDir: proj,
           // No gate is expected on the jump path; "default" answers any
           // AskUserQuestion as option 1 so the harness never stalls.

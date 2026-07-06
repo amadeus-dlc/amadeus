@@ -17,7 +17,7 @@ Pick by what you're trying to change:
 
 | Guide | You are… | You change… |
 |-------|----------|-------------|
-| **[User Guide](guide/00-introduction.md)** | building software *with* AI-DLC | nothing in the framework — you run `/aidlc`, answer at gates, review artifacts |
+| **[User Guide](guide/00-introduction.md)** | building software *with* AI-DLC | nothing in the framework — you run `/amadeus`, answer at gates, review artifacts |
 | **[Harness Engineer Guide](harness-engineering/00-overview.md)** | reshaping *how* AI-DLC behaves for your team | the **data** the framework reads: stages, agents, scopes, rules, sensors, knowledge — and porting to a new harness |
 | **[Developer Reference](reference/00-overview.md)** | changing AI-DLC *itself* | the **code** that reads that data: the engine, hooks, CLI tools, the compile pipeline, the test suite |
 

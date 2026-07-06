@@ -89,7 +89,7 @@ When a kept learning is a **sensor binding** rather than a rule (you want a new 
 
 Before a kept learning lands on disk, the framework runs a section-level check against `memory/org.md`. If your proposed entry contradicts an org rule under the same heading, the gate stops and quotes the conflicting org sentence inline. You then choose to revise the entry, skip it, or escalate to the org-rule owner. The conflicting rule never lands with the contradiction in it, so the runtime resolver stays simple — it only ever sees rules that already passed the conflict check.
 
-The same section-level check guards the practices-discovery affirmation gate. And when org policy changes *after* a team or project rule is already on disk, `/aidlc --doctor` surfaces the resulting drift on demand: it names the file, the section, and the conflicting org sentence so the team can act on it. The doctor check is advisory and never blocks. The two doctor advisory rows are described in [CLI Commands](12-cli-commands.md) and [Troubleshooting](15-troubleshooting.md).
+The same section-level check guards the practices-discovery affirmation gate. And when org policy changes *after* a team or project rule is already on disk, `/amadeus --doctor` surfaces the resulting drift on demand: it names the file, the section, and the conflicting org sentence so the team can act on it. The doctor check is advisory and never blocks. The two doctor advisory rows are described in [CLI Commands](12-cli-commands.md) and [Troubleshooting](15-troubleshooting.md).
 
 ### Applies next workflow, not mid-run
 
@@ -103,7 +103,7 @@ The next time you start a workflow, the compile reads the new file and the rule 
 
 A concrete walk-through shows the loop end to end.
 
-Sam runs `/aidlc feature` on the ANZ banking project. The workflow lands on `requirements-analysis`. Sam writes a stakeholder note saying "the transaction shouldn't duplicate on retry" — meaning a banking transaction, the payment being processed. The product agent reads "transaction" as a database transaction and interprets the note as an ACID-semantics requirement. Sam corrects it. The agent updates the artifact and continues.
+Sam runs `/amadeus feature` on the ANZ banking project. The workflow lands on `requirements-analysis`. Sam writes a stakeholder note saying "the transaction shouldn't duplicate on retry" — meaning a banking transaction, the payment being processed. The product agent reads "transaction" as a database transaction and interprets the note as an ACID-semantics requirement. Sam corrects it. The agent updates the artifact and continues.
 
 Nothing in the framework predicted this. There's no rule about ANZ-specific terminology and no sensor catching generic-versus-domain term clashes. The agent simply hit an ambiguity.
 
@@ -123,7 +123,7 @@ No rule is installed yet — this is just the agent's diary.
 
 **4. The current workflow continues unchanged.** The stage approves and the workflow advances to `user-stories`. The new lines are on disk but don't enter this workflow's compiled view — Sam already corrected the agent in-stage for this run.
 
-**5. The next workflow picks them up.** Later that day Sam runs `/aidlc bugfix`. The compile at workflow start walks the space memory layer, picks up `memory/project.md`, and includes it in every stage's context. From stage one of the bugfix workflow, the agent knows "transaction" means a payment and the customer entity is the "ANZ customer."
+**5. The next workflow picks them up.** Later that day Sam runs `/amadeus bugfix`. The compile at workflow start walks the space memory layer, picks up `memory/project.md`, and includes it in every stage's context. From stage one of the bugfix workflow, the agent knows "transaction" means a payment and the customer entity is the "ANZ customer."
 
 The cost was paid once — one gate confirmation, one file write — and it pays back on every future workflow for the price of one more file in the directory walk.
 
@@ -141,7 +141,7 @@ A sensor result is **advisory** in this release. A failing sensor produces an au
 
 ### What you see in the audit log
 
-Sensor activity shows up in the intent's `audit/` shards as `Sensor Fired`, `Sensor Passed`, and `Sensor Failed` rows. A failed row links to a detail file (for example `<record>/.aidlc-sensors/<stage-slug>/required-sections-<timestamp>.md`) that lists the specific gap — the missing headings, the unreferenced upstream artifact, the lint error. The audit log is covered in [State and Audit](10-state-and-audit.md).
+Sensor activity shows up in the intent's `audit/` shards as `Sensor Fired`, `Sensor Passed`, and `Sensor Failed` rows. A failed row links to a detail file (for example `<record>/.amadeus-sensors/<stage-slug>/required-sections-<timestamp>.md`) that lists the specific gap — the missing headings, the unreferenced upstream artifact, the lint error. The audit log is covered in [State and Audit](10-state-and-audit.md).
 
 ### The four framework sensors
 
@@ -166,7 +166,7 @@ A modern router splits its work into three planes, and AI-DLC mirrors the split:
 
 - **Control plane** — the *schema* of what should run. Stage definitions, rules, sensors. In networking terms, this is route computation: given the configuration, decide what applies where. The control plane is allowed to be slow and clever because it runs once.
 - **Data plane** — the *actual runs*. Stage executions, agent invocations, the files in the intent's record dir. In networking terms, this is packet forwarding: fast, repeated, by lookup. The data plane reads the resolved answers; it doesn't re-derive them.
-- **Management plane** — the *observe-and-configure* surface. `/aidlc --doctor`, the audit log, `CLAUDE.md`. You configure here and you query here, at human cadence.
+- **Management plane** — the *observe-and-configure* surface. `/amadeus --doctor`, the audit log, `CLAUDE.md`. You configure here and you query here, at human cadence.
 
 The control plane compiles your rules and sensors into a graph **once**, at workflow start. The data plane reads pre-resolved answers off that graph for the rest of the run. That's why a learning captured mid-workflow waits for the next compile: the framework computes the answer at "topology-change time" (workflow start), not at "packet time" (every stage). The result is reproducible runs and clean recovery after a restart.
 

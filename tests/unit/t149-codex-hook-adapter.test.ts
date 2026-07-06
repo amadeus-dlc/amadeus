@@ -1,12 +1,12 @@
 // t149-codex-hook-adapter: the Codex stdin shim normalizes live-captured
 // payloads into the core hooks' contract.
 //
-// covers: file:hooks/aidlc-stop.ts, file:hooks/aidlc-session-start.ts, file:hooks/aidlc-sync-statusline.ts, file:hooks/aidlc-log-subagent.ts, file:hooks/aidlc-audit-logger.ts
+// covers: file:hooks/amadeus-stop.ts, file:hooks/amadeus-session-start.ts, file:hooks/amadeus-sync-statusline.ts, file:hooks/amadeus-log-subagent.ts, file:hooks/amadeus-audit-logger.ts
 //
 // WHAT. Each case pipes a fixture from tests/fixtures/codex-hook-payloads/
 // (field-verbatim captures off Codex CLI 0.137.0 — the spike corpus at
 // tmp/codex-dist/payload-corpus/) into
-// `bun dist/codex/.codex/hooks/aidlc-codex-adapter.ts <target>` inside a
+// `bun dist/codex/.codex/hooks/amadeus-codex-adapter.ts <target>` inside a
 // scratch project carrying an active workflow state, then asserts the
 // observable core-hook effect:
 //   stop              → {"decision":"block"} when the engine says work
@@ -14,7 +14,7 @@
 //                       silent exit 0 when no workflow state exists.
 //   session-start     → {"hookSpecificOutput":{...additionalContext}} (the
 //                       Codex wrapper — core JSON re-wrapped, E1-verified).
-//   audit-and-sensors → apply_patch envelope parsed; an aidlc-docs Add File
+//   audit-and-sensors → apply_patch envelope parsed; an amadeus-docs Add File
 //                       lands ARTIFACT_CREATED in the audit; a non-aidlc
 //                       file is a no-op.
 //   state-sync        → update_plan in_progress step with "[slug]" suffix
@@ -45,7 +45,7 @@ import {
 import { hostname, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { birthIntent } from "../../core/tools/aidlc-lib.ts";
+import { birthIntent } from "../../core/tools/amadeus-lib.ts";
 import {
   DEFAULT_RECORD_DIR,
   DEFAULT_SPACE,
@@ -68,8 +68,8 @@ const FIXTURES = JSON.parse(
 // default record (so the cursor resolves) + the resolved audit SHARD (pinned
 // clone-id so the log-subagent shard gate passes and reads are deterministic).
 // NOTE: the Codex ADAPTER's OWN bookkeeping (codex-session.json) still lives at
-// <cwd>/aidlc-docs/.aidlc-hooks-health/ — that path is hardcoded in the harness
-// adapter (harness/codex/hooks/aidlc-codex-adapter.ts), NOT a core path helper,
+// <cwd>/amadeus-docs/.amadeus-hooks-health/ — that path is hardcoded in the harness
+// adapter (harness/codex/hooks/amadeus-codex-adapter.ts), NOT a core path helper,
 // so test 10 keeps seeding it there.
 const PINNED_CLONE_ID = "testcloneid149";
 function pinnedShardName(): string {
@@ -114,7 +114,7 @@ function scratchProject(withState: boolean): string {
       seededStateFile(dir),
       readFileSync(join(REPO_ROOT, "tests", "fixtures", "state-brownfield-feature.md"), "utf-8"),
     );
-    writeFileSync(join(dir, "aidlc", ".aidlc-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+    writeFileSync(join(dir, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
     const auditDir = seededAuditDir(dir);
     mkdirSync(auditDir, { recursive: true });
     writeFileSync(join(auditDir, pinnedShardName()), "# AI-DLC Audit Log\n");
@@ -142,7 +142,7 @@ function withCwd(payload: Record<string, unknown>, dir: string): Record<string, 
   return { ...payload, cwd: dir };
 }
 
-/** Remap a captured apply_patch payload's `aidlc-docs/` paths (a verbatim
+/** Remap a captured apply_patch payload's `amadeus-docs/` paths (a verbatim
  *  pre-workspace capture) to the active intent's record-relative prefix, so the
  *  per-intent audit-logger gate sees the write under the record root. Rewrites
  *  both the patch `command` envelope and the `tool_response` listing. */
@@ -155,11 +155,11 @@ function remapApplyPatchPaths(
   if (typeof input.command === "string") {
     out.tool_input = {
       ...input,
-      command: input.command.replaceAll("aidlc-docs/", `${recordPrefix}/`),
+      command: input.command.replaceAll("amadeus-docs/", `${recordPrefix}/`),
     };
   }
   if (typeof out.tool_response === "string") {
-    out.tool_response = out.tool_response.replaceAll("aidlc-docs/", `${recordPrefix}/`);
+    out.tool_response = out.tool_response.replaceAll("amadeus-docs/", `${recordPrefix}/`);
   }
   return out;
 }
@@ -171,7 +171,7 @@ function runAdapter(
 ): { stdout: string; code: number } {
   const r = spawnSync(
     "bun",
-    [join(projectDir, ".codex", "hooks", "aidlc-codex-adapter.ts"), target],
+    [join(projectDir, ".codex", "hooks", "amadeus-codex-adapter.ts"), target],
     {
       cwd: projectDir,
       input: typeof payload === "string" ? payload : JSON.stringify(payload),
@@ -193,7 +193,7 @@ describe("t149 Codex hook adapter (live-captured payload fixtures)", () => {
       expect(out.decision).toBe("block");
       expect(out.reason ?? "").not.toBe("");
       // The continuation reason names the codex tools path (harnessDir seam).
-      expect(out.reason).toContain(".codex/tools/aidlc-orchestrate.ts");
+      expect(out.reason).toContain(".codex/tools/amadeus-orchestrate.ts");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -226,10 +226,10 @@ describe("t149 Codex hook adapter (live-captured payload fixtures)", () => {
   });
 
   // P9: the adapter resolves an apply_patch Add/Update File path relative to the
-  // project dir (harness/codex/hooks/aidlc-codex-adapter.ts patchedFiles) and
+  // project dir (harness/codex/hooks/amadeus-codex-adapter.ts patchedFiles) and
   // forwards it to the core audit-logger, which now logs a write ONLY when the
   // path is under the active intent's record root (docsRoot()). The captured
-  // fixture is a verbatim pre-workspace run whose paths are `aidlc-docs/<rel>`;
+  // fixture is a verbatim pre-workspace run whose paths are `amadeus-docs/<rel>`;
   // a real post-P9 Codex run emits the per-intent record path. So we remap the
   // captured prefix to the active intent's record-relative prefix before driving
   // the adapter — the workspace analog of the old flat capture.
@@ -329,7 +329,7 @@ describe("t149 Codex hook adapter (live-captured payload fixtures)", () => {
     const dir = scratchProject(true);
     try {
       // Seed a heartbeat from a DIFFERENT prior session.
-      const health = join(dir, "aidlc-docs", ".aidlc-hooks-health");
+      const health = join(dir, "amadeus-docs", ".amadeus-hooks-health");
       mkdirSync(health, { recursive: true });
       writeFileSync(
         join(health, "codex-session.json"),
@@ -375,7 +375,7 @@ describe("t149 Codex hook adapter (live-captured payload fixtures)", () => {
     // `source`, so the core hook's P8 stamp/rebind path is reachable. Proof:
     // birth an intent (so the live cursor resolves a uuid), fire startup with
     // the fixture session_id, and assert the per-session stamp file
-    // aidlc/.aidlc-sessions/<session_id> was WRITTEN with that uuid. Without
+    // aidlc/.amadeus-sessions/<session_id> was WRITTEN with that uuid. Without
     // the forwarded session_id the core hook's `if (sessionId)` block is inert
     // and no stamp file appears.
     const dir = scratchProject(true);
@@ -384,7 +384,7 @@ describe("t149 Codex hook adapter (live-captured payload fixtures)", () => {
       const sid = String(FIXTURES.sessionStart.session_id);
       const r = runAdapter(dir, "session-start", withCwd(FIXTURES.sessionStart, dir));
       expect(r.code).toBe(0);
-      const stampPath = join(dir, "aidlc", ".aidlc-sessions", sid);
+      const stampPath = join(dir, "aidlc", ".amadeus-sessions", sid);
       expect(existsSync(stampPath)).toBe(true);
       expect(readFileSync(stampPath, "utf-8").trim()).toBe(born.uuid);
     } finally {
@@ -404,7 +404,7 @@ describe("t149 Codex hook adapter (live-captured payload fixtures)", () => {
       // Stamp the session to A via a startup fire (the core hook stamps the
       // live cursor's uuid — currently A).
       runAdapter(dir, "session-start", withCwd({ ...FIXTURES.sessionStart, source: "startup" }, dir));
-      const stampPath = join(dir, "aidlc", ".aidlc-sessions", sid);
+      const stampPath = join(dir, "aidlc", ".amadeus-sessions", sid);
       expect(readFileSync(stampPath, "utf-8").trim()).toBe(a.uuid);
       // Move the live cursor to B (the drift the resume must detect).
       birthIntent(dir, "intent-b", "default");
@@ -440,16 +440,16 @@ describe("t149 Codex hook adapter (live-captured payload fixtures)", () => {
 
   // --- Stop-hook conversational carve-out on Codex (issue #365 cross-harness) ---
   //
-  // Codex's stop adapter (case "stop", aidlc-codex-adapter.ts:336-343) pipes the
+  // Codex's stop adapter (case "stop", amadeus-codex-adapter.ts:336-343) pipes the
   // RAW stdin verbatim to the core hook, and Codex's stop payload carries a real
   // transcript_path (a date-sharded `rollout-*.jsonl`) + stop_hook_active. So the
-  // core hook's conversational carve-out (tier 3, aidlc-stop.ts:886-904) fires
+  // core hook's conversational carve-out (tier 3, amadeus-stop.ts:886-904) fires
   // from the actual transcript, classifying the ending turn:
   //   - human's last prompt answered with NO loop-advancing engine call -> ALLOW.
-  //   - a loop-advancing aidlc-orchestrate call after that prompt -> BLOCK.
+  //   - a loop-advancing amadeus-orchestrate call after that prompt -> BLOCK.
   //   - a READ-ONLY query (next --status) is NOT engagement -> still ALLOW.
   // The core hook detects the Codex format by the rollout-*.jsonl path shape
-  // (aidlc-stop.ts:792), so the transcript file the test writes MUST be named
+  // (amadeus-stop.ts:792), so the transcript file the test writes MUST be named
   // rollout-*.jsonl and live in the scratch dir (the adapter reads a REAL file).
   // The seeded brownfield-feature state (Current Stage requirements-analysis [-],
   // not [?]/[R], no questions file) yields a pending run-stage and trips none of
@@ -458,7 +458,7 @@ describe("t149 Codex hook adapter (live-captured payload fixtures)", () => {
 
   /** Write a Codex rollout transcript (response_item shape) and return its path.
    *  `assistant` is either a plain message turn or a function_call turn - the two
-   *  shapes the core hook's Codex reader classifies (aidlc-stop.ts:582-645). */
+   *  shapes the core hook's Codex reader classifies (amadeus-stop.ts:582-645). */
   function writeCodexTranscript(
     dir: string,
     humanPrompt: string,
@@ -525,13 +525,13 @@ describe("t149 Codex hook adapter (live-captured payload fixtures)", () => {
     }
   });
 
-  test("14: ENGAGED BLOCK - Codex stop blocks when a loop-advancing aidlc-orchestrate call followed the human prompt", () => {
+  test("14: ENGAGED BLOCK - Codex stop blocks when a loop-advancing amadeus-orchestrate call followed the human prompt", () => {
     const dir = scratchProject(true);
     try {
       const transcript = writeCodexTranscript(dir, "ok, continue the workflow", {
         kind: "call",
         name: "Bash",
-        command: "bun .codex/tools/aidlc-orchestrate.ts next",
+        command: "bun .codex/tools/amadeus-orchestrate.ts next",
       });
       const r = runAdapter(dir, "stop", codexStopWithTranscript(dir, transcript));
       expect(r.code).toBe(0);
@@ -550,7 +550,7 @@ describe("t149 Codex hook adapter (live-captured payload fixtures)", () => {
       const transcript = writeCodexTranscript(dir, "what stage am I on?", {
         kind: "call",
         name: "Bash",
-        command: "bun .codex/tools/aidlc-orchestrate.ts next --status",
+        command: "bun .codex/tools/amadeus-orchestrate.ts next --status",
       });
       const r = runAdapter(dir, "stop", codexStopWithTranscript(dir, transcript));
       expect(r.code).toBe(0);

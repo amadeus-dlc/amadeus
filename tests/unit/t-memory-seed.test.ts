@@ -5,7 +5,7 @@
 // the harness engine dir (e.g. dist/kiro/.kiro/) but NOT the sibling aidlc/
 // workspace shell. Normally the shell (aidlc/spaces/default/memory/) ships as a
 // SIBLING of the engine dir, so a complete dist/ copy already carries the method
-// tree. When it is absent, the first /aidlc — which routes through the engine's
+// tree. When it is absent, the first /amadeus — which routes through the engine's
 // intent-birth → ensureWorkspaceDirs — seeds aidlc/spaces/default/memory/ from a
 // copy the packager bundled INSIDE the engine at tools/data/memory-seed/
 // (resolved by frameworkMemorySeedDir, mirroring frameworkTemplatesDir/DATA_DIR).
@@ -22,7 +22,7 @@
 //
 // MECHANISM. (a) imports frameworkMemorySeedDir in-process from the shipped dist
 // tree (the `none` floor for an exported lib fn). (b)/(c) SPAWN the real engine
-// CLI (`aidlc-utility.ts intent-birth`) so the actual first-run path — birth →
+// CLI (`amadeus-utility.ts intent-birth`) so the actual first-run path — birth →
 // ensureWorkspaceDirs → the guarded cpSync — is exercised end-to-end, with the
 // seed resolved relative to the SPAWNED tool's own location (DATA_DIR). Zero
 // tokens, zero network.
@@ -40,10 +40,10 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { REPO_ROOT } from "../harness/fixtures.ts";
-import { frameworkMemorySeedDir } from "../../dist/claude/.claude/tools/aidlc-graph.ts";
+import { frameworkMemorySeedDir } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 
 const BUN = process.execPath; // the bun running this test
-const UTILITY = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "aidlc-utility.ts");
+const UTILITY = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-utility.ts");
 // The seed bundled INSIDE the shipped Claude engine dir (tools/data/memory-seed/).
 const BUNDLED_SEED = join(
   REPO_ROOT,
@@ -63,7 +63,7 @@ afterEach(() => {
 });
 
 function mkTemp(tag: string): string {
-  const d = mkdtempSync(join(tmpdir(), `aidlc-tseed-${tag}-`));
+  const d = mkdtempSync(join(tmpdir(), `amadeus-tseed-${tag}-`));
   tempDirs.push(d);
   return d;
 }
@@ -97,7 +97,7 @@ describe("t-memory-seed engine-only-install self-heal", () => {
   // === (b) THE SELF-HEAL ===================================================
   test("b: an engine-only install (NO aidlc/ shell) gains a populated default memory tree on first birth", () => {
     // A bare temp project — the engine-only-install shape: no sibling aidlc/ shell,
-    // so the default-space method tree is ABSENT before the first /aidlc.
+    // so the default-space method tree is ABSENT before the first /amadeus.
     const proj = mkTemp("heal");
     const defaultMemory = join(proj, DEFAULT_MEMORY_REL);
     expect(existsSync(defaultMemory), "default memory absent before birth").toBe(false);

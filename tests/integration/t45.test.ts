@@ -1,8 +1,8 @@
-// covers: subcommand:aidlc-validate:outputs
+// covers: subcommand:amadeus-validate:outputs
 //
 // CLI-contract port of tests/integration/t45-stage-output-validation.sh (TAP
 // plan 10), mechanism = cli. Equal-or-stronger migration: every .sh
-// assertion that shelled out to `bun aidlc-validate.ts outputs <phase>`
+// assertion that shelled out to `bun amadeus-validate.ts outputs <phase>`
 // (then re-parsed the captured stdout with a second `bun -e` JSON.parse)
 // is preserved by SPAWNING the real CLI via node:child_process spawnSync
 // (BUN + the tool .ts path) and asserting on res.status and on the JSON
@@ -10,13 +10,13 @@
 // boundary (exit code) plus the materialised result object — so it stays
 // a spawn. An in-process handleOutputs() twin would lose the exit-code
 // half (handleOutputs/jsonSuccess write to process.stdout and the unknown-
-// phase arm is process.exit(1) via jsonError, aidlc-validate.ts:271-278)
+// phase arm is process.exit(1) via jsonError, amadeus-validate.ts:271-278)
 // AND the JSON-to-stdout half the .sh's `bun -e 'JSON.parse(...)'` relies
 // on for every phase.
 //
-// NO FIXTURE / NO PROJECT DIR: aidlc-validate `outputs` reads the SHIPPED
-// stage files under dist/claude/.claude/skills/aidlc/stages/<phase>/
-// (STAGES_DIR, aidlc-validate.ts:27-33) and the stage graph via
+// NO FIXTURE / NO PROJECT DIR: amadeus-validate `outputs` reads the SHIPPED
+// stage files under dist/claude/.claude/skills/amadeus/stages/<phase>/
+// (STAGES_DIR, amadeus-validate.ts:27-33) and the stage graph via
 // loadStageGraph(); it writes nothing, emits no audit row, and needs no
 // CLAUDE_PROJECT_DIR. So — unlike t31/t90 — there is no createTestProject /
 // seedAuditFile / temp dir to manage and nothing under tests/fixtures/** is
@@ -38,7 +38,7 @@
 //         * d.stages is a non-empty array, AND
 //         * every stage's own .pass is true with .missing empty — i.e. the
 //           per-stage rows that DRIVE the phase-level pass (pass = stages
-//           .every(s=>s.pass), aidlc-validate.ts:254). The .sh only checked
+//           .every(s=>s.pass), amadeus-validate.ts:254). The .sh only checked
 //           the aggregate; on failure it printed the per-stage `missing`
 //           list, so asserting the per-stage rows mirrors the diagnostic it
 //           would have surfaced.
@@ -47,9 +47,9 @@
 // process.exit(1) arm the in-process note above flags as the reason this
 // stays a spawn):
 //   - "unknown phase -> exit 1 + error JSON on stderr" pins the
-//     handleOutputs `!phases` branch (aidlc-validate.ts:192-194).
+//     handleOutputs `!phases` branch (amadeus-validate.ts:192-194).
 //   - "all -> aggregate pass + phases[] of 5" pins the phaseArg==="all"
-//     branch (aidlc-validate.ts:259-261), the other half of handleOutputs
+//     branch (amadeus-validate.ts:259-261), the other half of handleOutputs
 //     the per-phase loop never reaches.
 //
 // 10 .sh asserts -> 10 expect()-bearing test() cases here (5 exit-code + 5
@@ -67,10 +67,10 @@ const VALIDATE = join(
   "claude",
   ".claude",
   "tools",
-  "aidlc-validate.ts",
+  "amadeus-validate.ts",
 );
 
-// PHASES, in the order aidlc-lib.ts:68-74 declares them — the same five the
+// PHASES, in the order amadeus-lib.ts:68-74 declares them — the same five the
 // .sh loops over (`for phase in initialization ideation inception
 // construction operation`).
 const PHASES = [
@@ -100,7 +100,7 @@ interface PhaseResult {
   pass: boolean;
 }
 
-/** Spawn `bun aidlc-validate.ts outputs <phase>`. Mirrors `"$BUN" "$VALIDATE" outputs "$phase" 2>&1`. */
+/** Spawn `bun amadeus-validate.ts outputs <phase>`. Mirrors `"$BUN" "$VALIDATE" outputs "$phase" 2>&1`. */
 function runOutputs(phase: string): CliResult {
   const res = spawnSync(BUN, [VALIDATE, "outputs", phase], {
     encoding: "utf-8",
@@ -112,7 +112,7 @@ function runOutputs(phase: string): CliResult {
   };
 }
 
-describe("t45 aidlc-validate outputs — CLI contract (migrated from t45-stage-output-validation.sh, plan 10)", () => {
+describe("t45 amadeus-validate outputs — CLI contract (migrated from t45-stage-output-validation.sh, plan 10)", () => {
   for (const phase of PHASES) {
     // .sh Test 1 per phase: RC == 0.
     test(`${phase}: output validation completed (exit 0)`, () => {
@@ -150,7 +150,7 @@ describe("t45 aidlc-validate outputs — CLI contract (migrated from t45-stage-o
     expect(err.error).toContain("Unknown phase: bogusphase");
   });
 
-  // STRONGER: the phaseArg === "all" aggregate branch (aidlc-validate.ts:
+  // STRONGER: the phaseArg === "all" aggregate branch (amadeus-validate.ts:
   // 259-261) — the per-phase loop above never exercises the `{ phases, pass }`
   // shape. All five phases pass today, so the aggregate is true and the
   // phases[] holds exactly five PhaseResult rows in PHASES order.

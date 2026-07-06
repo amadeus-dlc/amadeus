@@ -1,8 +1,8 @@
-// covers: subcommand:aidlc-utility:status
+// covers: subcommand:amadeus-utility:status
 //
 // CLI-contract port of tests/unit/t38-utility-status-gate-awareness.sh
 // (TAP plan 5), mechanism = cli. Equal-or-stronger migration: every .sh
-// assertion that shelled out to `bun aidlc-utility.ts status --project-dir
+// assertion that shelled out to `bun amadeus-utility.ts status --project-dir
 // <p>` is preserved by SPAWNING the real CLI via node:child_process spawnSync
 // (BUN + the tool .ts path), asserting on res.status / combined stdout+stderr
 // exactly as the .sh asserted on $? / 2>&1 output. The contract under test —
@@ -11,7 +11,7 @@
 // status block to stdout), so it stays a spawn; an in-process twin would lose
 // the exit-code half case 4 relies on.
 //
-// CONTRACT (aidlc-utility.ts handleStatus, lines 181-313):
+// CONTRACT (amadeus-utility.ts handleStatus, lines 181-313):
 //   - current stage's checkbox == [?] (awaiting-approval) ->
 //       statusLine = `Awaiting your approval on <displayName>`  (line 223)
 //   - current stage's checkbox == [R] (revising) ->
@@ -23,7 +23,7 @@
 //   - <displayName> = the stage-graph `name` for the current slug; for the
 //       feasibility slug used by state-mid-ideation.md that is
 //       "Feasibility & Constraints" (stage-graph.json:221-223).
-//   Checkbox -> state mapping: aidlc-lib.ts:62-63 ([?]->awaiting-approval,
+//   Checkbox -> state mapping: amadeus-lib.ts:62-63 ([?]->awaiting-approval,
 //   [R]->revising), confirmed against handleStatus's currentCheckbox?.state
 //   branches.
 //
@@ -59,7 +59,7 @@
 // + sed_i mutate + cleanup_test_project per case): each case uses a FRESH temp
 // project dir (createTestProject, which toPortablePath-converts on Windows so
 // the project path round-trips), seeds state-mid-ideation.md via seedStateFile
-// (= seed_state_file), then mutates the seeded aidlc-state.md in place via
+// (= seed_state_file), then mutates the seeded amadeus-state.md in place via
 // sedReplaceInFile / line-delete (= sed_i). All temp dirs cleaned in afterAll.
 // NOTHING is written under tests/fixtures/**; the source fixture is only read.
 
@@ -82,7 +82,7 @@ const UTIL = join(
   "claude",
   ".claude",
   "tools",
-  "aidlc-utility.ts",
+  "amadeus-utility.ts",
 );
 const STATE_FIXTURE = join(
   REPO_ROOT,
@@ -115,7 +115,7 @@ interface CliResult {
   out: string; // combined stdout+stderr (mirrors the .sh's 2>&1)
 }
 
-/** Spawn `bun aidlc-utility.ts status --project-dir <p>`. Mirrors `bun "$UTIL" status --project-dir "$PROJ"`. */
+/** Spawn `bun amadeus-utility.ts status --project-dir <p>`. Mirrors `bun "$UTIL" status --project-dir "$PROJ"`. */
 function status(p: string): CliResult {
   const res = spawnSync(BUN, [UTIL, "status", "--project-dir", p], {
     encoding: "utf-8",
@@ -128,7 +128,7 @@ function status(p: string): CliResult {
 
 /**
  * In-place text replace on the seeded state file. Mirrors sed_i (fixtures.sh)
- * — the .sh used `sed_i 's/.../.../'` against $PROJ/aidlc-docs/aidlc-state.md.
+ * — the .sh used `sed_i 's/.../.../'` against $PROJ/amadeus-docs/amadeus-state.md.
  */
 function sedState(p: string, pattern: RegExp, replacement: string): void {
   const f = statePath(p);
@@ -145,7 +145,7 @@ function deleteStateLines(p: string, pattern: RegExp): void {
   writeFileSync(f, kept);
 }
 
-describe("t38 aidlc-utility status — gate awareness (migrated from t38-utility-status-gate-awareness.sh, plan 5)", () => {
+describe("t38 amadeus-utility status — gate awareness (migrated from t38-utility-status-gate-awareness.sh, plan 5)", () => {
   // --- Test 1: [?] state -> "Awaiting your approval" phrase ---
   // state-mid-ideation has feasibility as [-]; flip it to [?].
   test("1: [?] state triggers 'Awaiting your approval' in --status", () => {

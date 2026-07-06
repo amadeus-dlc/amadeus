@@ -1,8 +1,8 @@
-// covers: subcommand:aidlc-state:practices-event
+// covers: subcommand:amadeus-state:practices-event
 //
 // CLI-contract port of tests/unit/t81-bolt-plan-override.sh (TAP plan 4),
 // mechanism = cli. Equal-or-stronger migration: every .sh assertion that
-// shelled out to `bun aidlc-state.ts practices-event --type override
+// shelled out to `bun amadeus-state.ts practices-event --type override
 // --field "K: V" ...` is preserved by SPAWNING the real CLI via
 // node:child_process spawnSync (BUN + the tool .ts path), asserting on
 // res.stdout (the JSON ack the tool prints) and the audit.md the tool
@@ -18,7 +18,7 @@
 //   write-failure-*); milestone 13 emits it for orchestrator-overrides-bolt-plan-
 //   marker semantics (Reason: bolt-plan-marker-conflict, plus Practices
 //   Stance + Bolt-Plan Marker + Bolt slug fields). The contract being pinned
-//   is that handlePracticesEvent (aidlc-state.ts:1006-1071) accepts arbitrary
+//   is that handlePracticesEvent (amadeus-state.ts:1006-1071) accepts arbitrary
 //   --field "Key: Value" pairs unmodified — discriminator-field
 //   disambiguation needs zero new tool code.
 //
@@ -39,7 +39,7 @@
 //       that block scoping (resets at `## ` headings and `---`).
 //   - .sh Test 3  read t28's pinned $TS_COUNT, assert == 68  -> Test 3:
 //       same observable. Reads the canonical event-count list the tool
-//       enforces (VALID_EVENT_TYPES via aidlc-audit.ts) AND cross-checks
+//       enforces (VALID_EVENT_TYPES via amadeus-audit.ts) AND cross-checks
 //       t28's pin. This PR's discriminator reuse introduces no new event, so
 //       the framework total stays 68 (the reconciled #367/#369 baseline). STRONGER: rather
 //       than only re-reading t28's literal, we also confirm the live tool's
@@ -61,10 +61,10 @@
 //
 // FIXTURE DISCIPLINE (the .sh used setup_integration_project
 // --with-greenfield-stub, but that flag only buys a project dir with an
-// aidlc-docs/ tree — the contract under test is purely the audit.md the tool
+// amadeus-docs/ tree — the contract under test is purely the audit.md the tool
 // writes under --project-dir, NOT any greenfield-stub file). So each case
 // uses a FRESH temp project dir via createTestProject() (fixtures.ts), which
-// scaffolds aidlc-docs/ and toPortablePath-converts on Windows so audit.md —
+// scaffolds amadeus-docs/ and toPortablePath-converts on Windows so audit.md —
 // written by the tool via the forward-slash audit helpers — round-trips when
 // read back. No seed: the tool creates audit.md on first emit, so post-fire
 // PRACTICES_OVERRIDE counts are unambiguous (the seed audit-sample.md carries
@@ -75,12 +75,12 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
-const TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "aidlc-state.ts");
+const TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-state.ts");
 
 const tempDirs: string[] = [];
 
@@ -88,7 +88,7 @@ afterAll(() => {
   for (const d of tempDirs) cleanupTestProject(d);
 });
 
-/** Fresh temp project (createTestProject — aidlc-docs/ scaffolded, Windows-portable). */
+/** Fresh temp project (createTestProject — amadeus-docs/ scaffolded, Windows-portable). */
 function proj(): string {
   const p = createTestProject();
   tempDirs.push(p);
@@ -107,8 +107,8 @@ interface CliResult {
 }
 
 /**
- * Spawn `bun aidlc-state.ts practices-event <args...> --project-dir <p>`.
- * Mirrors the .sh STATE_TOOL invocation (`bun $AIDLC_SRC/tools/aidlc-state.ts
+ * Spawn `bun amadeus-state.ts practices-event <args...> --project-dir <p>`.
+ * Mirrors the .sh STATE_TOOL invocation (`bun $AIDLC_SRC/tools/amadeus-state.ts
  * practices-event ... --project-dir "$PROJ"`).
  */
 function practicesEvent(args: string[], p: string): CliResult {
@@ -211,7 +211,7 @@ const MILESTONE13_FIELDS = [
   "Bolt slug: t81-bolt-1",
 ];
 
-describe("t81 aidlc-state practices-event — bolt-plan-marker-conflict override (migrated from t81-bolt-plan-override.sh, plan 4)", () => {
+describe("t81 amadeus-state practices-event — bolt-plan-marker-conflict override (migrated from t81-bolt-plan-override.sh, plan 4)", () => {
   // --- Test 1: --type override accepts the milestone 13 field set ---
   test("1: practices-event --type override accepts milestone 13 field set (emits PRACTICES_OVERRIDE)", () => {
     const p = proj();
@@ -239,7 +239,7 @@ describe("t81 aidlc-state practices-event — bolt-plan-marker-conflict override
     // The .sh read t28's pinned $TS_COUNT. Under milestone 4, t28 is now a
     // .test.ts (no `assert_eq N "$TS_COUNT"` line to grep), so pin the SAME
     // observable against the SOURCE OF TRUTH instead — VALID_EVENT_TYPES in
-    // aidlc-audit.ts — which is stronger (it asserts the real count, not a
+    // amadeus-audit.ts — which is stronger (it asserts the real count, not a
     // sibling test's transcription of it). bolt-plan-marker-conflict reuses
     // PRACTICES_OVERRIDE (discriminator-field disambiguation) and registers no
     // new event. The framework total is 70: the v0.6.0 Wave 4 milestone 16
@@ -248,7 +248,7 @@ describe("t81 aidlc-state practices-event — bolt-plan-marker-conflict override
     // less TEST_RUN_MODE_ENABLED (removed, -1), plus HUMAN_TURN (+1), plus
     // RECOMPOSED (the adaptive composer's in-flight re-shape, +1).
     const auditSrc = readFileSync(
-      join(REPO_ROOT, "dist", "claude", ".claude", "tools", "aidlc-audit.ts"),
+      join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-audit.ts"),
       "utf-8",
     );
     const block = auditSrc.match(/const VALID_EVENT_TYPES = new Set\(\[([\s\S]*?)\]\)/);

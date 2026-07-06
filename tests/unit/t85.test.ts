@@ -1,17 +1,17 @@
-// covers: subcommand:aidlc-utility:doctor
+// covers: subcommand:amadeus-utility:doctor
 //
 // CLI-contract port of tests/unit/t85-doctor-practices-staleness.sh (TAP
 // plan 6), mechanism = cli. Equal-or-stronger migration: every .sh
-// assertion that shelled out to `bun aidlc-utility.ts doctor
+// assertion that shelled out to `bun amadeus-utility.ts doctor
 // --project-dir <p>` and grepped the combined stdout/stderr is preserved by
 // SPAWNING the real CLI via node:child_process spawnSync (BUN + the tool
 // .ts path), asserting on the same `out` (stdout+stderr, mirroring the .sh's
 // `2>&1`) and — STRONGER — on res.status. handleDoctor is a process.exit
-// entrypoint (aidlc-utility.ts:1385, `import.meta.main` at :2861), so it
+// entrypoint (amadeus-utility.ts:1385, `import.meta.main` at :2861), so it
 // stays a spawn: an in-process twin would lose the exit-code half AND the
 // process.stdout.write report half the practices-staleness contract renders.
 //
-// CONTRACT UNDER TEST (aidlc-utility.ts:894-945, Check 5 — Practices
+// CONTRACT UNDER TEST (amadeus-utility.ts:894-945, Check 5 — Practices
 // staleness): reads `Practices Affirmed Timestamp` from main state, compares
 // to now.
 //   - state file absent / empty / `[`-placeholder / missing field ->
@@ -19,20 +19,20 @@
 //       absent" for the no-state arm; the .sh only exercises the empty /
 //       placeholder / missing-field arms, all of which land on "never
 //       affirmed (informational)").
-//   - within PRACTICES_STALENESS_DAYS (90, aidlc-utility.ts:321) -> pass=true,
+//   - within PRACTICES_STALENESS_DAYS (90, amadeus-utility.ts:321) -> pass=true,
 //       "affirmed N day(s) ago" with NO "advisory".
 //   - beyond 90 days -> pass=true, "affirmed N days ago (advisory — > 90
 //       days; consider re-running practices-discovery)".
 //   - unparseable ISO -> pass=FALSE, "timestamp unreadable" + the bad value
 //       echoed in the fix clause. This is the ONLY failing check the .sh
 //       exercises, so it forces doctor's overall exit to 1 (failed > 0,
-//       aidlc-utility.ts:1385) — pinned here, STRONGER than the .sh's
+//       amadeus-utility.ts:1385) — pinned here, STRONGER than the .sh's
 //       `|| true` swallow.
 //   - future-dated -> pass=true, "affirmed in the future (clock skew or
 //       hand-edited timestamp N day(s) ahead)" (regression for the MINOR fix
 //       that pre-fix produced "affirmed -26525 days ago").
 //
-// The report renderer (aidlc-utility.ts:1359-1369) prints `✓  <label>` for
+// The report renderer (amadeus-utility.ts:1359-1369) prints `✓  <label>` for
 // a passing check and `✗  <label> — <fix>` for a failing one, so the .sh's
 // `grep -qE "✓.*Practices staleness…"` and `grep -q "Practices staleness:
 // timestamp unreadable"` map directly onto the combined output here.
@@ -98,7 +98,7 @@ const TOOL = join(
   "claude",
   ".claude",
   "tools",
-  "aidlc-utility.ts",
+  "amadeus-utility.ts",
 );
 const STATE_FIXTURE = join(REPO_ROOT, "tests", "fixtures", "state-mid-ideation.md");
 
@@ -113,7 +113,7 @@ interface CliResult {
   out: string; // combined stdout+stderr (mirrors the .sh's 2>&1)
 }
 
-/** Spawn `bun aidlc-utility.ts doctor --project-dir <p>`. Mirrors `bun "$UTIL" doctor --project-dir "$PROJ"`. */
+/** Spawn `bun amadeus-utility.ts doctor --project-dir <p>`. Mirrors `bun "$UTIL" doctor --project-dir "$PROJ"`. */
 function doctor(p: string): CliResult {
   const res = spawnSync(BUN, [TOOL, "doctor", "--project-dir", p], {
     encoding: "utf-8",
@@ -174,7 +174,7 @@ function isoDaysAgo(n: number): string {
   return d.toISOString().replace(/\.\d{3}Z$/, "Z");
 }
 
-describe("t85 aidlc-utility doctor — practices staleness (migrated from t85-doctor-practices-staleness.sh, plan 6)", () => {
+describe("t85 amadeus-utility doctor — practices staleness (migrated from t85-doctor-practices-staleness.sh, plan 6)", () => {
   // --- Test 1: empty/template-default placeholder -> never affirmed (info) ---
   test("1: empty/template-default Practices Affirmed Timestamp -> never affirmed (informational)", () => {
     // state-mid-ideation.md ships with the bare template default (empty value
@@ -226,7 +226,7 @@ describe("t85 aidlc-utility doctor — practices staleness (migrated from t85-do
     expect(r.out).toContain("Practices staleness: timestamp unreadable");
     expect(r.out).toContain("not-a-real-iso-string");
     // STRONGER: this is the only failing check the .sh exercises, so
-    // failed > 0 -> doctor exits 1 (aidlc-utility.ts:1385). The .sh swallowed
+    // failed > 0 -> doctor exits 1 (amadeus-utility.ts:1385). The .sh swallowed
     // $? with `|| true`; we pin it.
     expect(r.status).toBe(1);
   });

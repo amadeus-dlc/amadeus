@@ -17,9 +17,9 @@
 //     in covers: (function:extractMarkdownSection, minMechanism none —
 //     verified verbatim in tests/.coverage-registry.json:698).
 //   EXERCISED-FOR-PARITY, NOT CLAIMED (spawnSync, cli mechanism): tests 5-6
-//     spawn `aidlc-state.ts practices-event --type empty` against a fixture
+//     spawn `amadeus-state.ts practices-event --type empty` against a fixture
 //     project and inspect the written audit.md, exactly as the .sh did. The
-//     practices-event subcommand lives in aidlc-state.ts (out of scope here,
+//     practices-event subcommand lives in amadeus-state.ts (out of scope here,
 //     a `cli`-mechanism surface) — a `.none` file CANNOT credit a cli unit
 //     (ladder: none < cli < sdk < tui). These two stay spawnSync(BUN, [...])
 //     to preserve the .sh's behavioural contract (envelope + audit-row
@@ -27,17 +27,17 @@
 //     CLI-boundary cases.
 //
 // Source read for this port:
-//   dist/claude/.claude/tools/aidlc-lib.ts:1612
+//   dist/claude/.claude/tools/amadeus-lib.ts:1612
 //     extractMarkdownSection(content, heading): string — strips fenced code
 //     blocks first (stripFencedCodeBlocks :1643), matches the heading line
 //     anchored `^<heading>[ \t]*$` (trailing-whitespace tolerant, exact-
 //     match so `## Walking` never matches `## Walking Skeleton`), then
 //     returns the slice up to the next `^## ` heading or EOF. Returns "" on
 //     absent heading. Trailing newlines preserved (no .trim()).
-//   dist/claude/.claude/tools/aidlc-state.ts:1006 handlePracticesEvent
+//   dist/claude/.claude/tools/amadeus-state.ts:1006 handlePracticesEvent
 //     — `--type empty` emits PRACTICES_SECTION_EMPTY and prints the envelope
 //     {"emitted":"PRACTICES_SECTION_EMPTY","fields_count":N}; audit fields
-//     render as `**Section**: ...` / `**Fallback**: ...` (aidlc-audit.ts:253).
+//     render as `**Section**: ...` / `**Fallback**: ...` (amadeus-audit.ts:253).
 //
 // PARITY NOTE (honest): the .sh case 1 accepted EITHER `""` OR `"\n"` for the
 // body-less section ("caller trims"). The real helper returns the single
@@ -58,10 +58,10 @@ import { join } from "node:path";
 import {
   extractMarkdownSection,
   readAllAuditShards,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const AIDLC_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
-const STATE_TS = join(AIDLC_SRC, "tools", "aidlc-state.ts");
+const STATE_TS = join(AIDLC_SRC, "tools", "amadeus-state.ts");
 const GREENFIELD_STUB = join(import.meta.dir, "..", "fixtures", "greenfield-todo");
 
 const BUN = process.execPath; // the bun binary running this test, for CLI-boundary checks
@@ -125,7 +125,7 @@ describe("t80 extractMarkdownSection edge cases (in-process)", () => {
 
 // =========================================================================
 // Tests 5-6: practices-event --type empty emit (spawnSync CLI-boundary).
-// EXERCISED-FOR-PARITY, NOT CLAIMED in covers: — aidlc-state.ts is a `cli`
+// EXERCISED-FOR-PARITY, NOT CLAIMED in covers: — amadeus-state.ts is a `cli`
 // surface and this is a `.none` file (ladder forbids the credit). Kept as
 // a spawn so the .sh's envelope + audit-row-fields contract is preserved.
 // =========================================================================
@@ -143,13 +143,13 @@ describe("t80 practices-event --type empty (spawnSync CLI-boundary, parity-only)
   });
 
   /** Rebuild `setup_integration_project --with-greenfield-stub`: a temp dir
-   *  with aidlc-docs/, the framework .claude copied in, and the greenfield
+   *  with amadeus-docs/, the framework .claude copied in, and the greenfield
    *  README stub. Returns the project dir. Nothing under tests/fixtures/ is
    *  written — the stub is COPIED FROM there into the temp project. */
   function setupIntegrationProject(): string {
     const proj = mkdtempSync(join(tmpdir(), "t80-proj-"));
     scratch.push(proj);
-    mkdirSyncRecursive(join(proj, "aidlc-docs"));
+    mkdirSyncRecursive(join(proj, "amadeus-docs"));
     cpSync(AIDLC_SRC, join(proj, ".claude"), { recursive: true });
     cpSync(GREENFIELD_STUB, proj, { recursive: true });
     return proj;
@@ -209,7 +209,7 @@ describe("t80 practices-event --type empty (spawnSync CLI-boundary, parity-only)
     );
     expect(res.status).toBe(0);
 
-    // P9: the flat aidlc-docs/audit.md is retired. practices-event's
+    // P9: the flat amadeus-docs/audit.md is retired. practices-event's
     // appendAuditEvent CREATES the bare SPACE record root's per-clone shard on
     // first emit (no state seeded → no intent resolves → bare root); read it via
     // the shard glob (readAllAuditShards).

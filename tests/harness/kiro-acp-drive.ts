@@ -16,7 +16,7 @@
 //       agent_message_chunk          — assistant prose tokens (NON-deterministic)
 //       tool_call                    — {toolCallId, title, kind, rawInput}
 //                                      title carries the real command, e.g.
-//                                      "Running: bun .kiro/tools/aidlc-utility.ts status"
+//                                      "Running: bun .kiro/tools/amadeus-utility.ts status"
 //       tool_call_update             — content[].content.text = the tool's
 //                                      VERBATIM output (byte-stable, the thing
 //                                      tests assert on), then status:"completed"
@@ -73,7 +73,7 @@ function writeAcpTrace(
 
 export interface AcpToolCall {
   toolCallId: string;
-  /** e.g. "Running: bun .kiro/tools/aidlc-utility.ts status" */
+  /** e.g. "Running: bun .kiro/tools/amadeus-utility.ts status" */
   title: string;
   kind: string;
   rawInput: unknown;
@@ -97,9 +97,9 @@ export interface AcpDriveResult {
   /** Concatenated assistant prose. Debugging only — never assert on this. */
   assistantText: string;
   permissionRequests: AcpPermissionRequest[];
-  /** aidlc-docs/aidlc-state.md after the turn, if present. */
+  /** amadeus-docs/amadeus-state.md after the turn, if present. */
   stateFile?: string;
-  /** Audit **Event**: types parsed from aidlc-docs/audit.md, in file order. */
+  /** Audit **Event**: types parsed from amadeus-docs/audit.md, in file order. */
   auditEvents?: string[];
 }
 
@@ -310,8 +310,8 @@ export class AcpSession {
 }
 
 // P4: birth writes the workflow record per-intent — state at
-// aidlc/spaces/<space>/intents/<slug>-<id8>/aidlc-state.md, audit as per-clone
-// shards at <record>/audit/<host>-<clone>.md — NOT the flat aidlc-docs/. Resolve
+// aidlc/spaces/<space>/intents/<slug>-<id8>/amadeus-state.md, audit as per-clone
+// shards at <record>/audit/<host>-<clone>.md — NOT the flat amadeus-docs/. Resolve
 // the born record from the active-space + active-intent cursors, falling back to
 // the flat layout for a not-yet-born (pre-migration) fixture.
 function recordDirOf(projectDir: string): string {
@@ -323,20 +323,20 @@ function recordDirOf(projectDir: string): string {
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();
-    if (rec && existsSync(join(intentsDir, rec, "aidlc-state.md"))) {
+    if (rec && existsSync(join(intentsDir, rec, "amadeus-state.md"))) {
       return join(intentsDir, rec);
     }
   }
-  return join(projectDir, "aidlc-docs");
+  return join(projectDir, "amadeus-docs");
 }
 
 function stateFilePathOf(projectDir: string): string {
-  return join(recordDirOf(projectDir), "aidlc-state.md");
+  return join(recordDirOf(projectDir), "amadeus-state.md");
 }
 
 function parseAuditEvents(projectDir: string): string[] | undefined {
   // Audit is sharded per clone under <record>/audit/; concat every shard, else
-  // fall back to a flat aidlc-docs/audit.md (pre-migration fixture).
+  // fall back to a flat amadeus-docs/audit.md (pre-migration fixture).
   const auditDir = join(recordDirOf(projectDir), "audit");
   let body: string;
   if (existsSync(auditDir)) {
@@ -344,7 +344,7 @@ function parseAuditEvents(projectDir: string): string[] | undefined {
     if (shards.length === 0) return undefined;
     body = shards.map((f) => readFileSync(join(auditDir, f), "utf-8")).join("\n");
   } else {
-    const flat = join(projectDir, "aidlc-docs", "audit.md");
+    const flat = join(projectDir, "amadeus-docs", "audit.md");
     if (!existsSync(flat)) return undefined;
     body = readFileSync(flat, "utf-8");
   }

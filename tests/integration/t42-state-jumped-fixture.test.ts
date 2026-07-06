@@ -22,7 +22,7 @@
 //        .sh's $FIXTURES_DIR/state-jumped.md — a feature-scope state where a
 //        --phase/--stage jump skipped most of ideation/inception, parked
 //        in-progress at construction's code-generation)
-//   - dist/claude/.claude/knowledge/aidlc-shared/state-template.md  (AIDLC_SRC-
+//   - dist/claude/.claude/knowledge/amadeus-shared/state-template.md  (AIDLC_SRC-
 //        relative; the template the fixture is meant to mirror — used for the
 //        STRONGER cross-checks below, mirroring t12's template pinning)
 //
@@ -65,7 +65,7 @@ const JUMPED = readFileSync(JUMPED_PATH, "utf-8");
 // the cross-checks below pin the fixture's headings/markers to the template
 // (catches silent template drift), as t12 does.
 const TEMPLATE = readFileSync(
-  join(AIDLC_SRC, "knowledge", "aidlc-shared", "state-template.md"),
+  join(AIDLC_SRC, "knowledge", "amadeus-shared", "state-template.md"),
   "utf-8",
 );
 

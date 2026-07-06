@@ -1,24 +1,24 @@
-// covers: subcommand:aidlc-jump:resolve
+// covers: subcommand:amadeus-jump:resolve
 //
 // CLI-contract port of tests/unit/t117-orchestrate-branches.sh (TAP plan 24),
 // mechanism = cli. The .sh drives the orchestration engine's non-happy-path
 // `next` branches (jump / resume / init / scope-change / config-change /
 // env-scope / freeform-intent / init-guard) and CROSS-CHECKS the jump-direction
-// against `aidlc-jump.ts resolve` — the pure-read subcommand the engine
-// DELEGATES forward/backward/redo resolution to (aidlc-orchestrate.ts:664-676,
-// 797-839). This .cli file credits `subcommand:aidlc-jump resolve` (COLON form
+// against `amadeus-jump.ts resolve` — the pure-read subcommand the engine
+// DELEGATES forward/backward/redo resolution to (amadeus-orchestrate.ts:664-676,
+// 797-839). This .cli file credits `subcommand:amadeus-jump resolve` (COLON form
 // in the covers header) because the jump branch's observable contract IS that
 // resolve's `direction` / `target_slug` is what the engine surfaces: tests 1-3
-// fire `bun aidlc-jump.ts resolve ...` directly and assert the same `direction`
+// fire `bun amadeus-jump.ts resolve ...` directly and assert the same `direction`
 // value the engine relays into its run-stage directive, and the SKIP-for-scope
 // error (test 4) is resolve's VERBATIM `is skipped for scope` wording
-// (aidlc-jump.ts:117-119) the engine passes through unchanged.
+// (amadeus-jump.ts:117-119) the engine passes through unchanged.
 //
 // MECHANISM = cli: every .sh case shelled out to `bun "$TOOL" ...` (the engine)
 // and, for the jump cases, also `bun "$JUMP_TOOL" resolve ...`. We preserve the
 // PROCESS boundary by SPAWNING the real binaries via node:child_process
 // spawnSync (BUN + the .ts path), asserting on the combined stdout+stderr (the
-// .sh's 2>&1) and — for test 8 — the file effect (no aidlc-state.md written),
+// .sh's 2>&1) and — for test 8 — the file effect (no amadeus-state.md written),
 // exactly as the .sh did. An in-process twin would lose the engine's
 // shell-out-to-sibling-tool seam (the whole point of these branches) and the
 // emit()/process.exit boundary.
@@ -38,7 +38,7 @@
 //   - .sh T7  OUT  '"kind":"error"'                   -> t7 (init guard)
 //             OUT  'Use --force to reinitialize'      -> t7 (verbatim guard)
 //   - .sh T8  OUT  '"kind":"print"'                   -> t8 (init clean)
-//             FS   no aidlc-state.md created          -> t8 (file effect)
+//             FS   no amadeus-state.md created          -> t8 (file effect)
 //   - .sh T9  OUT  'Cannot use --stage and --phase together' -> t9
 //   - .sh T10 OUT  '"kind":"error"'                   -> t10 (env-scope)
 //             OUT  'Invalid AWS_AIDLC_DEFAULT_SCOPE'   -> t10 (verbatim)
@@ -66,7 +66,7 @@
 // cleanup_test_project per case): each case uses a FRESH temp project dir
 // (createTestProject, which toPortablePath-converts on Windows so any path the
 // tool round-trips through JSON survives). seedStateFile copies the named
-// fixture to aidlc-docs/aidlc-state.md exactly as seed_state_file did. All temp
+// fixture to amadeus-docs/amadeus-state.md exactly as seed_state_file did. All temp
 // dirs cleaned in afterAll. resetAidlcEnv() (reset_aidlc_env) clears
 // AWS_AIDLC_DEFAULT_SCOPE so a developer's exported value can't shadow the
 // fixtures; the env-scope case (t10) sets it explicitly in the spawn env only.
@@ -87,8 +87,8 @@ import {
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const TOOLS_DIR = join(REPO_ROOT, "dist", "claude", ".claude", "tools");
-const ORCH = join(TOOLS_DIR, "aidlc-orchestrate.ts");
-const JUMP = join(TOOLS_DIR, "aidlc-jump.ts");
+const ORCH = join(TOOLS_DIR, "amadeus-orchestrate.ts");
+const JUMP = join(TOOLS_DIR, "amadeus-jump.ts");
 const FIXTURES_DIR = join(REPO_ROOT, "tests", "fixtures");
 
 // reset_aidlc_env (t117:29): clear AWS_AIDLC_DEFAULT_SCOPE so the env-scope
@@ -158,12 +158,12 @@ function run(
   };
 }
 
-/** `bun aidlc-orchestrate.ts next <args...> --project-dir <p>`. */
+/** `bun amadeus-orchestrate.ts next <args...> --project-dir <p>`. */
 function next(args: string[], p: string, env: Record<string, string> = {}): CliResult {
   return run(ORCH, ["next", ...args], p, env);
 }
 
-/** `bun aidlc-jump.ts resolve <args...> --project-dir <p>`. */
+/** `bun amadeus-jump.ts resolve <args...> --project-dir <p>`. */
 function jumpResolve(
   args: string[],
   p: string,
@@ -179,14 +179,14 @@ function directive(out: string): any {
 }
 
 // ============================================================
-// Jump-direction delegation: the engine relays aidlc-jump.ts resolve's
-// `direction` + `target_slug` (covers: subcommand:aidlc-jump:resolve).
+// Jump-direction delegation: the engine relays amadeus-jump.ts resolve's
+// `direction` + `target_slug` (covers: subcommand:amadeus-jump:resolve).
 // ============================================================
 
 describe("t117 jump-direction delegation (migrated from t117-orchestrate-branches.sh, plan 24)", () => {
   // A WITH-STATE jump is a MUTATION (mark intervening [S], emit STAGE_JUMPED,
   // pivot Current Stage) and `next` is read-only, so — like scope-change /
-  // config-change — the engine emits a `print` naming `aidlc-jump.ts execute`
+  // config-change — the engine emits a `print` naming `amadeus-jump.ts execute`
   // carrying the tool-resolved target + direction, NOT a run-stage. (Re-anchored
   // at the v0.6.0 engine cutover: pre-cutover this emitted run-stage directly,
   // producing ZERO state change — the regression t24/t25/t26/t56/t57 caught.)
@@ -241,7 +241,7 @@ describe("t117 jump-direction delegation (migrated from t117-orchestrate-branche
 
   // --- Test 4: jump to a SKIP-for-scope stage → error (verbatim resolve wording) ---
   // state-mid-inception is bugfix scope; intent-capture is SKIP. The engine
-  // relays resolve's VERBATIM `is skipped for scope` message (aidlc-jump.ts:117-119).
+  // relays resolve's VERBATIM `is skipped for scope` message (amadeus-jump.ts:117-119).
   test("4: jump to SKIP-for-scope stage → error carrying resolve's verbatim wording", () => {
     const p = proj("state-mid-inception.md");
     const r = next(["--stage", "intent-capture"], p);

@@ -1,22 +1,22 @@
-// covers: file:skills/aidlc/SKILL.md
+// covers: file:skills/amadeus/SKILL.md
 //
-// t-acp-kiro-status.serial.test.ts — drive `/aidlc --status` through Kiro's
+// t-acp-kiro-status.serial.test.ts — drive `/amadeus --status` through Kiro's
 // Agent Client Protocol surface (`kiro-cli acp`) using the kiro-acp-drive
 // harness driver, and assert on the DETERMINISTIC surfaces that survive the
 // userPromptSubmit seam — stopReason + the on-disk outcome, never the prose.
 //
 // SPIKE-PROVEN (2026-06-12, kiro-cli 2.6.1): initialize → session/new
-// (modes.currentModeId == the shipped `aidlc` agent) → session/prompt runs one
+// (modes.currentModeId == the shipped `amadeus` agent) → session/prompt runs one
 // full agentic turn; tool_call/tool_call_update stream the conductor's tool
 // invocations with byte-verbatim output text.
 //
 // SEAM CHANGE (why this no longer asserts tool_calls). A Kiro userPromptSubmit
-// seam (agents/aidlc.json → aidlc-kiro-adapter.ts) now classifies read-only
+// seam (agents/amadeus.json → amadeus-kiro-adapter.ts) now classifies read-only
 // flags (`--status`/`--doctor`/`--help`/`--version`) as TERMINAL and runs them
 // OFF-BAND inside the hook, handing the conductor the verbatim output with a
 // do-NOT-advance instruction; a turn-scoped engine `done`-guard + a preToolUse
 // backstop neutralize any trailing bare `next`. CONSEQUENCE: `--status` no
-// longer surfaces as an `aidlc-orchestrate.ts next` or `aidlc-utility.ts status`
+// longer surfaces as an `amadeus-orchestrate.ts next` or `amadeus-utility.ts status`
 // ACP tool_call — the seam ran it, and the conductor only relays prose (which is
 // non-deterministic, never assertable). So the only robust surfaces for this
 // seam-dispatched read-only command are stopReason === "end_turn" and the
@@ -33,8 +33,8 @@
 //
 // BYTE-VERBATIM status output ("No active AI-DLC workflow found.", the status
 // block fields) has its deterministic home in the SDK twin t20 (drives the real
-// /aidlc --status and asserts the Bash tool_result bytes) AND the CLI twin t27
-// (spawns aidlc-utility.ts status directly) — so dropping the ACP tool-output
+// /amadeus --status and asserts the Bash tool_result bytes) AND the CLI twin t27
+// (spawns amadeus-utility.ts status directly) — so dropping the ACP tool-output
 // asserts loses no coverage; that surface no longer exists on the ACP path.
 //
 // What this proves on the SHIPPED tree, structurally:
@@ -76,12 +76,12 @@ describe("t-acp-kiro-status (structured ACP round-trip on the shipped dist/kiro)
       try {
         const r = await driveKiroAcp({
           projectDir: sandbox,
-          prompt: "/aidlc --status",
+          prompt: "/amadeus --status",
           timeoutMs: Math.max(120_000, TEST_TIMEOUT_MS - 60_000),
         });
 
         // The seam classifies `--status` as TERMINAL and runs it OFF-BAND, so
-        // no `aidlc-orchestrate.ts next` / `aidlc-utility.ts status` ACP
+        // no `amadeus-orchestrate.ts next` / `amadeus-utility.ts status` ACP
         // tool_call surfaces and the conductor only relays prose (never
         // assertable). The deterministic surfaces are the clean turn end and
         // the on-disk no-op. The verbatim status bytes are covered by the SDK

@@ -1,12 +1,12 @@
-// covers: subcommand:aidlc-runtime:compile
+// covers: subcommand:amadeus-runtime:compile
 //
 // CLI-contract port of tests/integration/t102-memory-roundtrip.sh (TAP plan 6),
 // mechanism = cli. The .sh exercises the producer→consumer round-trip the PR
 // 13 card implies: the producer side writes memory.md from the SHIPPED milestone 13
-// template (knowledge/aidlc-shared/memory-template.md) and appends real
-// entries; the milestone 8 consumer — `aidlc-runtime.ts compile`, the subcommand the
+// template (knowledge/amadeus-shared/memory-template.md) and appends real
+// entries; the milestone 8 consumer — `amadeus-runtime.ts compile`, the subcommand the
 // PostToolUse hook fires — reads them. Every consumer assertion that shelled
-// out to `bun aidlc-runtime.ts compile` is preserved here by SPAWNING the real
+// out to `bun amadeus-runtime.ts compile` is preserved here by SPAWNING the real
 // CLI via node:child_process spawnSync (the run_compile helper, t102:79-82),
 // asserting on the runtime-graph.json the tool writes + the MEMORY_EMPTY rows
 // it appends to audit.md — the PROCESS boundary plus those file side effects.
@@ -14,7 +14,7 @@
 // MECHANISM SPLIT: cases 2-6 are spawn-based (the compile contract). Case 1
 // is the ONE producer-side check the .sh did NOT route through compile — it
 // `cp`s the template, `grep -cE '^## '` counts the 4 H2 headings, and imports
-// parseMemoryHeadings (aidlc-lib.ts) via `bun -e` to confirm a fresh template
+// parseMemoryHeadings (amadeus-lib.ts) via `bun -e` to confirm a fresh template
 // parses to total 0 (the MEMORY_EMPTY trigger). The .sh's Case 1 is an
 // in-process import, not a compile spawn, so the faithful port imports the
 // same pure function directly (same observable: the template's entry total)
@@ -56,7 +56,7 @@
 //     cross-contaminate; on native Windows the raw mktemp path can't
 //     round-trip through the tool's forward-slash path helpers, so it is
 //     cygpath-rewritten (mirrors createTestProject / t90's makeProject).
-//   - The audit.md / aidlc-state.md combos are built inline from the .sh's
+//   - The audit.md / amadeus-state.md combos are built inline from the .sh's
 //     AUDIT_APPROVED + STATE_FEATURE heredocs (t102:37-68). memory.md is
 //     seeded by copying the SHIPPED template (not a tests/fixtures/** copy)
 //     and then string-replacing real entries in, exactly as the .sh's
@@ -81,13 +81,13 @@ import {
   auditFilePath,
   parseMemoryHeadings,
   readAllAuditShards,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { toPortablePath } from "../harness/fixtures.ts";
 
 // P9: with no intent cursor seeded, compile resolves the BARE space record root
 // (docsRoot -> spaceRecordRoot) at aidlc/spaces/default/intents/. State,
 // runtime-graph, the per-stage memory.md, and the per-clone audit SHARD all
-// live under it (the flat aidlc-docs/ root is retired — there is no fallback);
+// live under it (the flat amadeus-docs/ root is retired — there is no fallback);
 // compile reads each stage's memory.md at the bare-space-prefixed memory_path.
 const RECORD_REL = join("aidlc", "spaces", "default", "intents");
 function recordRoot(proj: string): string {
@@ -97,9 +97,9 @@ function recordRoot(proj: string): string {
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const AIDLC_SRC = join(REPO_ROOT, "dist", "claude", ".claude");
-const RUNTIME_TS = join(AIDLC_SRC, "tools", "aidlc-runtime.ts");
+const RUNTIME_TS = join(AIDLC_SRC, "tools", "amadeus-runtime.ts");
 // The SHIPPED milestone 13 template the .sh `cp`s (t102:29).
-const TEMPLATE = join(AIDLC_SRC, "knowledge", "aidlc-shared", "memory-template.md");
+const TEMPLATE = join(AIDLC_SRC, "knowledge", "amadeus-shared", "memory-template.md");
 
 const tempDirs: string[] = [];
 
@@ -126,7 +126,7 @@ const AUDIT_APPROVED = `## Workflow Start
 **Timestamp**: 2026-05-27T10:00:00Z
 **Event**: WORKFLOW_STARTED
 **Scope**: feature
-**Request**: /aidlc feature
+**Request**: /amadeus feature
 
 ---
 
@@ -134,7 +134,7 @@ const AUDIT_APPROVED = `## Workflow Start
 **Timestamp**: 2026-05-27T10:01:00Z
 **Event**: STAGE_STARTED
 **Stage**: intent-capture
-**Agent**: aidlc-product-agent
+**Agent**: amadeus-product-agent
 
 ---
 
@@ -154,11 +154,11 @@ const STATE_FEATURE = [
 
 /**
  * make_project (t102:70-77): fresh temp project with AUDIT_APPROVED +
- * STATE_FEATURE under aidlc-docs/. toPortablePath for the Windows round-trip
+ * STATE_FEATURE under amadeus-docs/. toPortablePath for the Windows round-trip
  * (the tool resolves audit/graph paths through forward-slash helpers).
  */
 function makeProject(): string {
-  const proj = toPortablePath(mkdtempSync(join(tmpdir(), "aidlc-t102-")));
+  const proj = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-t102-")));
   tempDirs.push(proj);
   mkdirSync(recordRoot(proj), { recursive: true });
   // Seed the DETERMINISTIC audit shard the compile tool resolves (auditFilePath)
@@ -166,7 +166,7 @@ function makeProject(): string {
   const shard = auditFilePath(proj);
   mkdirSync(dirname(shard), { recursive: true });
   writeFileSync(shard, AUDIT_APPROVED, "utf-8");
-  writeFileSync(join(recordRoot(proj), "aidlc-state.md"), STATE_FEATURE, "utf-8");
+  writeFileSync(join(recordRoot(proj), "amadeus-state.md"), STATE_FEATURE, "utf-8");
   return proj;
 }
 

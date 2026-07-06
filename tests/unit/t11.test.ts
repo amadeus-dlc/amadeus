@@ -1,7 +1,7 @@
-// covers: hook:aidlc-statusline
+// covers: hook:amadeus-statusline
 //
 // Port of tests/unit/t11-hook-statusline.sh (TAP plan 62), mechanism = none.
-// aidlc-statusline.ts is a HOOK, not a CLI tool — Claude Code registers it via
+// amadeus-statusline.ts is a HOOK, not a CLI tool — Claude Code registers it via
 // the `statusLine` setting and pipes a JSON blob on stdin, expecting a single
 // rendered status line on stdout. There is no subcommand surface and no
 // process.exit contract to assert (the hook always exits 0 and writes via
@@ -26,7 +26,7 @@
 // native Windows when embedded in the stdin JSON). Seeded fixtures come from the
 // shipped tests/fixtures/state-*.md via seedStateFile, exactly as the .sh did;
 // the inline-`cat`-heredoc cases (.sh Tests 8, 9, 22-24, 42-49, 37, 38) are
-// rebuilt by writing the same bytes to <proj>/aidlc-docs/aidlc-state.md. All
+// rebuilt by writing the same bytes to <proj>/amadeus-docs/amadeus-state.md. All
 // temp dirs are cleaned in afterAll. Nothing is written under tests/fixtures/**.
 //
 // PARITY MAP — every .sh assert_* line has an expect() counterpart below; the
@@ -51,7 +51,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const HOOK = join(REPO_ROOT, "dist", "claude", ".claude", "hooks", "aidlc-statusline.ts");
+const HOOK = join(REPO_ROOT, "dist", "claude", ".claude", "hooks", "amadeus-statusline.ts");
 
 const tempDirs: string[] = [];
 
@@ -66,10 +66,10 @@ function proj(): string {
   return p;
 }
 
-// Per-intent record (P9 — the flat aidlc-docs/ root is retired). The statusline
+// Per-intent record (P9 — the flat amadeus-docs/ root is retired). The statusline
 // hook reads state via stateFilePath() → the active intent's record dir; seeding
-// aidlc-state.md there makes the active-intent cursor resolve.
-const statePath = (p: string): string => join(seededRecordDir(p), "aidlc-state.md");
+// amadeus-state.md there makes the active-intent cursor resolve.
+const statePath = (p: string): string => join(seededRecordDir(p), "amadeus-state.md");
 
 /** Write a state file body to the default intent's record (the inline `cat` heredocs). */
 function writeState(p: string, body: string): void {
@@ -114,11 +114,11 @@ const STATE_OPERATION = join(FIXTURES_DIR, "state-operation.md");
 const STATE_COMPLETED = join(FIXTURES_DIR, "state-completed.md");
 const STATE_JUMPED = join(FIXTURES_DIR, "state-jumped.md");
 
-describe("t11 aidlc-statusline hook (migrated from t11-hook-statusline.sh, plan 62)", () => {
+describe("t11 amadeus-statusline hook (migrated from t11-hook-statusline.sh, plan 62)", () => {
   // --- .sh Test 1: ready with no state file ---
   test("1: shows [AIDLC] ready when no state file", () => {
     const p = proj();
-    // create_test_project makes aidlc-docs/ but no state file (the .sh rm -f's it).
+    // create_test_project makes amadeus-docs/ but no state file (the .sh rm -f's it).
     const r = runHook(stdinFor(p));
     // assert_eq "$OUTPUT" "[AIDLC] ready" — exact match on the trimmed line.
     expect(r.out.trim()).toBe("[AIDLC] ready");
@@ -144,7 +144,7 @@ describe("t11 aidlc-statusline hook (migrated from t11-hook-statusline.sh, plan 
     seedStateFile(p, MID_IDEATION);
     const out = runHook(stdinFor(p)).out;
     expect(out).toContain("Architect");
-    expect(out).not.toContain("aidlc-architect-agent");
+    expect(out).not.toContain("amadeus-architect-agent");
   });
 
   // --- .sh Test 6: phase progress 2/7 ---
@@ -196,7 +196,7 @@ describe("t11 aidlc-statusline hook (migrated from t11-hook-statusline.sh, plan 
 ## Current Status
 - **Lifecycle Phase**: IDEATION
 - **Current Stage**: feasibility
-- **Active Agent**: aidlc-product-agent
+- **Active Agent**: amadeus-product-agent
 `,
     );
     // .sh: grep -q "[0-9]/[0-9]" must NOT match.
@@ -330,7 +330,7 @@ describe("t11 aidlc-statusline hook (migrated from t11-hook-statusline.sh, plan 
 ## Current Status
 - **Lifecycle Phase**: INITIALIZATION
 - **Current Stage**: workspace-detection
-- **Active Agent**: aidlc-developer-agent
+- **Active Agent**: amadeus-developer-agent
 - **Status**: Running
 `,
     );
@@ -475,7 +475,7 @@ describe("t11 aidlc-statusline hook (migrated from t11-hook-statusline.sh, plan 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
 - **Current Stage**: code-generation
-- **Active Agent**: aidlc-developer-agent
+- **Active Agent**: amadeus-developer-agent
 - **Status**: Running
 `,
     );
@@ -511,7 +511,7 @@ describe("t11 aidlc-statusline hook (migrated from t11-hook-statusline.sh, plan 
 ## Current Status
 - **Lifecycle Phase**: OPERATION
 - **Current Stage**: observability-setup
-- **Active Agent**: aidlc-operations-agent
+- **Active Agent**: amadeus-operations-agent
 - **Status**: Running
 `,
     );
@@ -547,7 +547,7 @@ describe("t11 aidlc-statusline hook (migrated from t11-hook-statusline.sh, plan 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
 - **Current Stage**: ci-pipeline
-- **Active Agent**: aidlc-pipeline-deploy-agent
+- **Active Agent**: amadeus-pipeline-deploy-agent
 - **Status**: Running
 `,
     );
@@ -588,7 +588,7 @@ describe("t11 aidlc-statusline hook (migrated from t11-hook-statusline.sh, plan 
 ## Current Status
 - **Lifecycle Phase**: IDEATION
 - **Current Stage**: approval-handoff
-- **Active Agent**: aidlc-product-agent
+- **Active Agent**: amadeus-product-agent
 - **Status**: Running
 `,
     );
@@ -613,7 +613,7 @@ describe("t11 aidlc-statusline hook (migrated from t11-hook-statusline.sh, plan 
 - **Project Type**: Greenfield
 - **Scope**: feature
 - **Start Date**: 2026-05-02T10:00:00Z
-- **Active Agent**: aidlc-architect-agent
+- **Active Agent**: amadeus-architect-agent
 
 ## Scope Configuration
 - **Stages to Execute**: 0.1, 0.2, 0.3, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7
@@ -727,7 +727,7 @@ describe("t11 aidlc-statusline hook (migrated from t11-hook-statusline.sh, plan 
 ## Current Status
 - **Lifecycle Phase**: INCEPTION
 - **Current Stage**: requirements-analysis
-- **Active Agent**: aidlc-architect-agent
+- **Active Agent**: amadeus-architect-agent
 - **Status**: Running
 `,
     );
@@ -778,7 +778,7 @@ describe("t11 aidlc-statusline hook (migrated from t11-hook-statusline.sh, plan 
 ## Current Status
 - **Lifecycle Phase**: INCEPTION
 - **Current Stage**: application-design
-- **Active Agent**: aidlc-architect-agent
+- **Active Agent**: amadeus-architect-agent
 - **Status**: Running
 `,
     );
@@ -803,7 +803,7 @@ describe("t11 aidlc-statusline hook (migrated from t11-hook-statusline.sh, plan 
 ## Current Status
 - **Lifecycle Phase**: INCEPTION
 - **Current Stage**: units-generation
-- **Active Agent**: aidlc-architect-agent
+- **Active Agent**: amadeus-architect-agent
 - **Status**: Running
 `,
     );
@@ -846,7 +846,7 @@ describe("t11 aidlc-statusline hook (migrated from t11-hook-statusline.sh, plan 
 ## Current Status
 - **Lifecycle Phase**: INCEPTION
 - **Current Stage**: delivery-planning
-- **Active Agent**: aidlc-architect-agent
+- **Active Agent**: amadeus-architect-agent
 - **Status**: Running
 `,
     );

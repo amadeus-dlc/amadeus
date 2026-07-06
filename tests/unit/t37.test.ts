@@ -1,29 +1,29 @@
-// covers: subcommand:aidlc-utility:doctor
+// covers: subcommand:amadeus-utility:doctor
 //
 // CLI-contract port of tests/unit/t37-utility-doctor-drift.sh (TAP plan 23),
 // mechanism = cli. Equal-or-stronger migration: every .sh assertion that
-// shelled out to `bun aidlc-utility.ts doctor --project-dir <p>` is preserved
+// shelled out to `bun amadeus-utility.ts doctor --project-dir <p>` is preserved
 // by SPAWNING the real CLI via node:child_process spawnSync (BUN + the tool
 // .ts path), asserting on res.status / the combined stdout+stderr exactly as
 // the .sh asserted on `$?` / the `2>&1 || true` capture. The contract under
 // test is the PROCESS boundary (doctor's stdout diagnostics + its
-// process.exit(failed>0?1:0) at aidlc-utility.ts:1385) — an in-process
+// process.exit(failed>0?1:0) at amadeus-utility.ts:1385) — an in-process
 // handleDoctor() twin would lose the exit-code half case 17 relies on, and
 // handleDoctor() itself calls process.exit, so it cannot be invoked in-process
 // without killing the test runner. So all doctor cases (1-17) stay spawns.
 //
 // The .sh injected broken graphs / scope-mappings via the AIDLC_STAGE_GRAPH /
-// AIDLC_SCOPE_MAPPING env seams (aidlc-lib.ts:702-708) that loadStageGraph /
+// AIDLC_SCOPE_MAPPING env seams (amadeus-lib.ts:702-708) that loadStageGraph /
 // loadScopeMapping read at call time. We replicate that — fixture JSON written
 // to a temp file, path passed through the spawn env — so the sad-path cases
 // fire against a deterministic broken graph, never the real shipped data.
 //
 // SUBCOMMAND UNIT: this .cli file credits the one subcommand the .sh exercises
-// — `aidlc-utility doctor` (covers KEY subcommand:aidlc-utility:doctor, COLON
+// — `amadeus-utility doctor` (covers KEY subcommand:amadeus-utility:doctor, COLON
 // form). The lib-export contracts the .sh's tests 18-23 cover (findAllEvents,
 // the three tag regexes, PRACTICES_STALENESS_DAYS, MERGE_DISPATCH_TIMEOUT_SEC,
-// PRACTICES_SECTION_EMPTY recognition, CRLF normalisation) live on aidlc-lib.ts
-// + aidlc-utility.ts and are pure values/functions with no CLI shell — the .sh
+// PRACTICES_SECTION_EMPTY recognition, CRLF normalisation) live on amadeus-lib.ts
+// + amadeus-utility.ts and are pure values/functions with no CLI shell — the .sh
 // reached them by spawning `bun -e` to import + stringify. We import them
 // DIRECTLY in-process (the t62.none.test.ts pattern for pure exports), which is
 // STRONGER than the .sh's stringified-line grep: it asserts the real return
@@ -103,11 +103,11 @@ import {
   findAllEvents,
   MERGE_SUCCEEDED_TAG_REGEX,
   SLUG_TAG_REGEX,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   MERGE_DISPATCH_TIMEOUT_SEC,
   PRACTICES_STALENESS_DAYS,
-} from "../../dist/claude/.claude/tools/aidlc-utility.ts";
+} from "../../dist/claude/.claude/tools/amadeus-utility.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -121,7 +121,7 @@ import {
 
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
-const UTIL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "aidlc-utility.ts");
+const UTIL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-utility.ts");
 
 const tempDirs: string[] = [];
 const tempFiles: string[] = [];
@@ -149,7 +149,7 @@ interface DoctorResult {
 }
 
 /**
- * Spawn `bun aidlc-utility.ts doctor --project-dir <p>`, optionally with the
+ * Spawn `bun amadeus-utility.ts doctor --project-dir <p>`, optionally with the
  * AIDLC_STAGE_GRAPH / AIDLC_SCOPE_MAPPING env seams pointed at fixture files.
  * Mirrors the .sh's `[ENV=...] bun "$UTIL" doctor --project-dir "$PROJ" 2>&1 || true`.
  */
@@ -163,7 +163,7 @@ function doctor(p: string, env: Record<string, string> = {}): DoctorResult {
 
 /** Write a fixture JSON to a temp file and register it for cleanup. Mirrors the .sh's `mktemp` + heredoc. */
 function fixtureFile(prefix: string, contents: string): string {
-  const dir = mkdtempSync(join(tmpdir(), `aidlc-t37-${prefix}-`));
+  const dir = mkdtempSync(join(tmpdir(), `amadeus-t37-${prefix}-`));
   tempDirs.push(dir); // dir gets recursively removed
   const f = join(dir, `${prefix}.json`);
   writeFileSync(f, contents, "utf-8");
@@ -183,10 +183,10 @@ const WORKFLOW_COMPLETED_BLOCK = `
 `;
 
 // ============================================================
-// State / audit drift checks (covers: subcommand:aidlc-utility:doctor)
+// State / audit drift checks (covers: subcommand:amadeus-utility:doctor)
 // ============================================================
 
-describe("t37 aidlc-utility doctor — state/audit drift (migrated from t37-utility-doctor-drift.sh, plan 23)", () => {
+describe("t37 amadeus-utility doctor — state/audit drift (migrated from t37-utility-doctor-drift.sh, plan 23)", () => {
   test("1: WORKFLOW_COMPLETED + Status=Running -> drift reported, exit 1", () => {
     const p = track(createTestProject());
     seedAuditFile(p);
@@ -203,7 +203,7 @@ describe("t37 aidlc-utility doctor — state/audit drift (migrated from t37-util
     );
     const r = doctor(p);
     expect(r.out).toContain("State/audit drift");
-    // STRONGER: the failing check drives process.exit(1) (aidlc-utility.ts:1385).
+    // STRONGER: the failing check drives process.exit(1) (amadeus-utility.ts:1385).
     expect(r.status).toBe(1);
   });
 
@@ -233,7 +233,7 @@ describe("t37 aidlc-utility doctor — state/audit drift (migrated from t37-util
 
   test("4: no state + no audit -> drift check silently skipped", () => {
     const p = track(createTestProject());
-    // createTestProject makes only an empty aidlc-docs/ — no state, no audit.
+    // createTestProject makes only an empty amadeus-docs/ — no state, no audit.
     const r = doctor(p);
     expect(r.out).not.toContain("State matches last audit event");
   });
@@ -241,10 +241,10 @@ describe("t37 aidlc-utility doctor — state/audit drift (migrated from t37-util
 
 // ============================================================
 // Graph-level checks — cycle / orphan / scope / schema / refs / keyword
-// (covers: subcommand:aidlc-utility:doctor)
+// (covers: subcommand:amadeus-utility:doctor)
 // ============================================================
 
-describe("t37 aidlc-utility doctor — graph-level checks", () => {
+describe("t37 amadeus-utility doctor — graph-level checks", () => {
   test("5: cycle detection happy -> 0 cycles on real graph", () => {
     const p = track(createTestProject());
     const r = doctor(p);
@@ -455,7 +455,7 @@ describe("t37 aidlc-utility doctor — graph-level checks", () => {
 
   test("16: heartbeat advisory on fresh install -> 'not yet fired'", () => {
     const p = track(createTestProject());
-    // No .aidlc-hooks-health/ dir -> fresh-install advisory branch.
+    // No .amadeus-hooks-health/ dir -> fresh-install advisory branch.
     const r = doctor(p);
     expect(r.out).toContain("Hook heartbeats: not yet fired");
   });
@@ -473,7 +473,7 @@ describe("t37 aidlc-utility doctor — graph-level checks", () => {
 // real return shape / numeric value rather than the stringified-line grep).
 // ============================================================
 
-describe("t37 aidlc-lib / aidlc-utility — exports + constants", () => {
+describe("t37 amadeus-lib / amadeus-utility — exports + constants", () => {
   test("18: findAllEvents -> chronological + slug filter + empty-array on miss", () => {
     const audit = `## Worktree Created
 **Timestamp**: 2026-05-19T10:00:00Z

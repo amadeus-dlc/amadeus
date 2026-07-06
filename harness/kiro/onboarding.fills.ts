@@ -6,20 +6,20 @@
 import type { OnboardingFills } from "../../scripts/onboarding.ts";
 
 const fills: OnboardingFills = {
-  invoke: "/aidlc",
+  invoke: "/amadeus",
   slots: {
     title_block: `# Project Name <!-- Replace with your project name -->
 
-This project uses AI-DLC (AI-Driven Development Life Cycle) for structured development, running on the **Kiro CLI harness**. The workspace shell ships in \`.kiro/\` (no setup command); the engine auto-births the first intent when you describe what to build. Run \`/aidlc\` followed by a scope or project description to begin. Run \`/aidlc --doctor\` to validate your setup, \`/aidlc --version\` to print the framework version, \`/aidlc --stage <slug>\` to jump to a specific stage, \`/aidlc --phase <name>\` to jump to a phase, \`/aidlc --depth <level>\` to override depth, \`/aidlc --test-strategy <level>\` to override test volume. Run \`/aidlc compose "<task>"\` to have the adaptive composer propose a tailored EXECUTE/SKIP plan (works up front, from a scan report via \`--report <path>\`, and mid-workflow to re-shape the pending stages - every proposal stops at an approve/edit/reject gate).`,
+This project uses AI-DLC (AI-Driven Development Life Cycle) for structured development, running on the **Kiro CLI harness**. The workspace shell ships in \`.kiro/\` (no setup command); the engine auto-births the first intent when you describe what to build. Run \`/amadeus\` followed by a scope or project description to begin. Run \`/amadeus --doctor\` to validate your setup, \`/amadeus --version\` to print the framework version, \`/amadeus --stage <slug>\` to jump to a specific stage, \`/amadeus --phase <name>\` to jump to a phase, \`/amadeus --depth <level>\` to override depth, \`/amadeus --test-strategy <level>\` to override test volume. Run \`/amadeus compose "<task>"\` to have the adaptive composer propose a tailored EXECUTE/SKIP plan (works up front, from a scan report via \`--report <path>\`, and mid-workflow to re-shape the pending stages - every proposal stops at an approve/edit/reject gate).`,
 
     prereq_bullets: `- **Kiro CLI ≥ 2.6**: the hooks/skills/agent features this install relies on (stop hook with blocking, preToolUse/postToolUse matchers, \`.kiro/skills/\` slash commands, workspace \`chat.defaultAgent\`) shipped in the 2.x line. Check with \`kiro-cli --version\`.
 - **bun**: Required for the CLI tools and hook scripts (state management, audit logging, orchestration engine). Install via \`curl -fsSL https://bun.sh/install | bash\`. \`bun\` must be on your PATH for the non-interactive shells the harness spawns — these source \`~/.zshenv\` (zsh) or \`~/.bashrc\` (bash), NOT \`~/.zshrc\`.
-- **Activation**: this install ships \`.kiro/settings/cli.json\` setting \`chat.defaultAgent: "aidlc"\`, so a plain \`kiro-cli chat\` in this project uses the AI-DLC agent and \`/aidlc\` just works. **Note: the workspace default takes precedence over any global default agent you have configured.** If you prefer your own default, delete that settings line and start sessions with \`kiro-cli chat --agent aidlc\` instead.
+- **Activation**: this install ships \`.kiro/settings/cli.json\` setting \`chat.defaultAgent: "amadeus"\`, so a plain \`kiro-cli chat\` in this project uses the AI-DLC agent and \`/amadeus\` just works. **Note: the workspace default takes precedence over any global default agent you have configured.** If you prefer your own default, delete that settings line and start sessions with \`kiro-cli chat --agent amadeus\` instead.
 - **Permissions**: the \`aidlc\` agent pre-approves ONLY \`bun .kiro/tools/*\` shell commands (plus read-only tools); everything else prompts. There is no blanket shell trust. In \`--no-interactive\` runs, tools that would prompt are auto-approved by the harness — prefer interactive sessions for gated workflows.`,
 
     prereq_bullets_tail: "",
 
-    agents_note: `On Kiro the conductor is \`agents/aidlc.json\`; the two subagent stages (2.1, 3.5) delegate to \`aidlc-developer-agent.json\` / \`aidlc-architect-agent.json\` via the Kiro \`subagent\` tool, and the 11 persona \`.md\` files are adopted inline.`,
+    agents_note: `On Kiro the conductor is \`agents/amadeus.json\`; the two subagent stages (2.1, 3.5) delegate to \`amadeus-developer-agent.json\` / \`amadeus-architect-agent.json\` via the Kiro \`subagent\` tool, and the 11 persona \`.md\` files are adopted inline.`,
 
     structure_extra: "",
 
@@ -30,7 +30,7 @@ This project uses AI-DLC (AI-Driven Development Life Cycle) for structured devel
 This is the same AI-DLC core that ships to every harness — one deterministic engine, state machine, audit trail, and stage set, rendered onto Kiro CLI. On Kiro:
 
 - Approval gates and questions render as **numbered prose options** (no structured-question widget); the questions FILE with \`[Answer]:\` tags remains the source of truth.
-- There is **no statusline** and **no welcome message**; use \`/aidlc --status\` and the progress lines at gates.
+- There is **no statusline** and **no welcome message**; use \`/amadeus --status\` and the progress lines at gates.
 - Construction swarm runs as **subagent fan-out only** (\`AIDLC_USE_SWARM=1\` is a loud no-op).
 - Session-end and pre-compaction audit events (\`SESSION_ENDED\`, \`SESSION_COMPACTED\`) are not emitted — Kiro has no hooks for those moments.
 - **MCP servers**: none ship, and the Kiro MCP config mechanism is not configured here (the Claude distribution ships five; Kiro ships zero today).

@@ -4,9 +4,9 @@
 // tests/integration/t39-scope-stage-count-validation.sh (plan 9). Post-PR-10 the
 // authoritative source for per-scope stage inclusion is scope-mapping.json:
 // each scope carries a `stages` map of <slug> -> "EXECUTE" | "SKIP"
-// (ScopeDefinition, aidlc-lib.ts:36-46). The .sh spawned `bun -e` per case to
+// (ScopeDefinition, amadeus-lib.ts:36-46). The .sh spawned `bun -e` per case to
 // JSON.parse that file and count EXECUTE values; here we import the SAME pure
-// loader the rest of the toolchain uses — loadScopeMapping (aidlc-lib.ts:739)
+// loader the rest of the toolchain uses — loadScopeMapping (amadeus-lib.ts:739)
 // — and assert against the real Record<string, ScopeDefinition> it returns.
 //
 // Mechanism: none (a pure in-process function call, zero subprocess, zero LLM,
@@ -51,9 +51,9 @@ import { describe, expect, test } from "bun:test";
 import {
   loadScopeMapping,
   type ScopeDefinition,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
-// Load once — loadScopeMapping memoises internally (aidlc-lib.ts:740), so a
+// Load once — loadScopeMapping memoises internally (amadeus-lib.ts:740), so a
 // single call is the canonical entrypoint; reuse the parsed object across cases
 // exactly as the .sh re-derived counts from the same on-disk JSON per case.
 const MAPPING: Record<string, ScopeDefinition> = loadScopeMapping();

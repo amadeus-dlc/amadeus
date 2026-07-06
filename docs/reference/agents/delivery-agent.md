@@ -1,10 +1,10 @@
-# aidlc-delivery-agent -- Technical Reference
+# amadeus-delivery-agent -- Technical Reference
 
 ## Identity
 
 | Field | Value |
 |-------|-------|
-| Name | aidlc-delivery-agent |
+| Name | amadeus-delivery-agent |
 | Model Override | sonnet |
 | Allowed Claude Code Tools | Read, Edit, Write, Glob, Grep, AskUserQuestion |
 | Disallowed Claude Code Tools | Task |
@@ -36,8 +36,8 @@
 
 | Source | Artifacts |
 |--------|-----------|
-| aidlc-product-agent | Scope, priorities, initiative framing, prioritized backlog |
-| aidlc-architect-agent | Units, complexity estimates, dependency graphs |
+| amadeus-product-agent | Scope, priorities, initiative framing, prioritized backlog |
+| amadeus-architect-agent | Units, complexity estimates, dependency graphs |
 
 ### Hands Off To
 
@@ -52,7 +52,7 @@
 
 ### Methodology (Tier 1)
 
-Path: `.claude/knowledge/aidlc-delivery-agent/`
+Path: `.claude/knowledge/amadeus-delivery-agent/`
 
 | File | Content |
 |------|---------|
@@ -62,7 +62,7 @@ Path: `.claude/knowledge/aidlc-delivery-agent/`
 
 ### Team (Tier 2)
 
-Path: `aidlc/knowledge/aidlc-delivery-agent/` (the space-level knowledge dir; user-managed)
+Path: `aidlc/knowledge/amadeus-delivery-agent/` (the space-level knowledge dir; user-managed)
 
 A space-level directory the team creates when it has content (the engine ships `aidlc/knowledge/` empty). Populated by the team with project-specific
 delivery context such as team conventions, bolt-sizing preferences, or
@@ -73,6 +73,6 @@ organizational capacity constraints.
 ## Cross-References
 
 - [Agent Reference Overview](README.md)
-- [Agent Guide: aidlc-delivery-agent](../../guide/agents/delivery-agent.md)
+- [Agent Guide: amadeus-delivery-agent](../../guide/agents/delivery-agent.md)
 - [Stage Documentation](../04-stages/)
-- Source: [`dist/claude/.claude/agents/aidlc-delivery-agent.md`](../../../dist/claude/.claude/agents/aidlc-delivery-agent.md)
+- Source: [`dist/claude/.claude/agents/amadeus-delivery-agent.md`](../../../dist/claude/.claude/agents/amadeus-delivery-agent.md)

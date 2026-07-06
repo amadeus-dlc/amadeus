@@ -1,11 +1,11 @@
-// covers: file:skills/aidlc/SKILL.md
+// covers: file:skills/amadeus/SKILL.md
 //
 // t41 — SKILL.md forwarding-loop contract + stage-graph data table.
 // Migrated from tests/integration/t41-jump-flag-validation.sh (TAP plan 15, all
 // assert_grep / assert_not_grep against the shipped SKILL.md).
 //
 // Mechanism: none. The subject is a STATIC shipped file — the orchestrator
-// SKILL.md (dist/claude/.claude/skills/aidlc/SKILL.md). The .sh did 15
+// SKILL.md (dist/claude/.claude/skills/amadeus/SKILL.md). The .sh did 15
 // grep / grep -v assertions against its bytes; the equal-or-stronger TS twin
 // reads the SAME file in-process (via AIDLC_SRC from tests/harness/fixtures.ts,
 // the TS port of fixtures.sh's $AIDLC_SRC) and asserts on its content. No
@@ -15,7 +15,7 @@
 //   This is the ENGINE-CUTOVER REWRITE of t41. It formerly validated the prose
 //   orchestrator's flag-handling HANDLER STRUCTURE. At the cutover that entire
 //   dispatch surface moved into the deterministic orchestration engine
-//   (aidlc-orchestrate.ts), so t41 flipped: it now asserts the cutover's
+//   (amadeus-orchestrate.ts), so t41 flipped: it now asserts the cutover's
 //   SKILL.md contract — the forwarding loop is PRESENT, flag handling is
 //   DELEGATED to the engine (the dispatch prose is GONE), and the two
 //   human-readable data tables (scope-table + stage-graph) survive. The
@@ -23,8 +23,8 @@
 //   the engine's own tests (t114-orchestrate-next, t118-engine-differential).
 //
 // Source under test (read directly):
-//   dist/claude/.claude/skills/aidlc/SKILL.md — the /aidlc orchestrator prose.
-//     - the forwarding loop invokes aidlc-orchestrate (engine), calling its
+//   dist/claude/.claude/skills/amadeus/SKILL.md — the /amadeus orchestrator prose.
+//     - the forwarding loop invokes amadeus-orchestrate (engine), calling its
 //       `next` and `report` subcommands and acting on the emitted `directive`.
 //     - the prose flag-dispatch handlers (Composable Flag Extraction, prose
 //       jump-direction "FORWARD JUMP", the Unknown-depth / Unknown-test-strategy
@@ -38,9 +38,9 @@
 // Each assertion hard-codes the expected literal independently of the source.
 //
 // Old TAP -> new test parity (1:1, no guarantee dropped, several STRONGER):
-//   .sh test 1  (grep 'aidlc-orchestrate')               -> "loop invokes the orchestration engine (aidlc-orchestrate)"
-//   .sh test 2  (grep 'aidlc-orchestrate.ts next')       -> "loop calls the engine's next subcommand"
-//   .sh test 3  (grep 'aidlc-orchestrate.ts report')     -> "loop calls the engine's report subcommand"
+//   .sh test 1  (grep 'amadeus-orchestrate')               -> "loop invokes the orchestration engine (amadeus-orchestrate)"
+//   .sh test 2  (grep 'amadeus-orchestrate.ts next')       -> "loop calls the engine's next subcommand"
+//   .sh test 3  (grep 'amadeus-orchestrate.ts report')     -> "loop calls the engine's report subcommand"
 //   .sh test 4  (grep 'directive')                       -> "loop acts on the engine's directive"
 //   .sh test 5  (grep -v 'Composable Flag Extraction')   -> "no prose Composable Flag Extraction handler"
 //   .sh test 6  (grep -v 'FORWARD JUMP')                 -> "no prose jump-direction computation"
@@ -55,7 +55,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { AIDLC_SRC } from "../harness/fixtures.ts";
 
-// The .sh resolved $AIDLC_SRC/skills/aidlc/SKILL.md from fixtures.sh; AIDLC_SRC
+// The .sh resolved $AIDLC_SRC/skills/amadeus/SKILL.md from fixtures.sh; AIDLC_SRC
 // here is the TS port of that same path (fixtures.ts:42).
 const SKILL_PATH = join(AIDLC_SRC, "skills", "aidlc", "SKILL.md");
 const SKILL = readFileSync(SKILL_PATH, "utf-8");
@@ -69,16 +69,16 @@ describe("t41 SKILL.md forwarding-loop contract (migrated from t41-jump-flag-val
   });
 
   // --- Tests 1-4: the forwarding loop is present and consults the engine ---
-  test("1: loop invokes the orchestration engine (aidlc-orchestrate) [.sh test 1]", () => {
-    expect(SKILL.includes("aidlc-orchestrate")).toBe(true);
+  test("1: loop invokes the orchestration engine (amadeus-orchestrate) [.sh test 1]", () => {
+    expect(SKILL.includes("amadeus-orchestrate")).toBe(true);
   });
 
   test("2: loop calls the engine's next subcommand [.sh test 2]", () => {
-    expect(SKILL.includes("aidlc-orchestrate.ts next")).toBe(true);
+    expect(SKILL.includes("amadeus-orchestrate.ts next")).toBe(true);
   });
 
   test("3: loop calls the engine's report subcommand [.sh test 3]", () => {
-    expect(SKILL.includes("aidlc-orchestrate.ts report")).toBe(true);
+    expect(SKILL.includes("amadeus-orchestrate.ts report")).toBe(true);
   });
 
   test("4: loop acts on the engine's directive [.sh test 4]", () => {
@@ -94,7 +94,7 @@ describe("t41 SKILL.md forwarding-loop contract (migrated from t41-jump-flag-val
     expect(SKILL.includes("Composable Flag Extraction")).toBe(false);
   });
 
-  test("6: no prose jump-direction computation (engine delegates to aidlc-jump resolve) [.sh test 6]", () => {
+  test("6: no prose jump-direction computation (engine delegates to amadeus-jump resolve) [.sh test 6]", () => {
     expect(SKILL.includes("FORWARD JUMP")).toBe(false);
   });
 

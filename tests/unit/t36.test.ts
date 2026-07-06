@@ -1,18 +1,18 @@
-// covers: subcommand:aidlc-utility:scope-change
+// covers: subcommand:amadeus-utility:scope-change
 //
 // CLI-contract port of tests/unit/t36-utility-scope-change.sh (TAP plan 7),
 // mechanism = cli. Equal-or-stronger migration: every .sh assertion that
-// shelled out to `bun aidlc-utility.ts scope-change ...` is preserved by
+// shelled out to `bun amadeus-utility.ts scope-change ...` is preserved by
 // SPAWNING the real CLI via node:child_process spawnSync (BUN + the tool
-// .ts path), asserting on res.status / the aidlc-state.md the tool rewrites
+// .ts path), asserting on res.status / the amadeus-state.md the tool rewrites
 // / the audit.md it appends to — the PROCESS boundary, not an in-process
 // handleScopeChange() call. An in-process twin would lose the exit-code half
 // the .sh's Tests 4 & 5 rely on: the tool's reject path is die() ->
-// emitError() -> process.exit(1) (aidlc-utility.ts:74-84 -> aidlc-lib.ts:1546),
+// emitError() -> process.exit(1) (amadeus-utility.ts:74-84 -> amadeus-lib.ts:1546),
 // only observable across the process boundary.
 //
 // CONTRACT CONFIRMED FROM SOURCE (read this session):
-//   - handleScopeChange (aidlc-utility.ts:2193-2350):
+//   - handleScopeChange (amadeus-utility.ts:2193-2350):
 //       * `--scope` required -> die("--scope is required for scope-change")
 //         when absent (line 2194-2195).
 //       * unknown target -> die(`Unknown scope: ${newScope}. ...`) before any
@@ -30,7 +30,7 @@
 //     data/scope-mapping.json: enterprise, feature, mvp, poc, bugfix,
 //     refactor, infra, security-patch, workshop (verified by reading the
 //     JSON keys) — identical to the .sh's Test-3 loop list.
-//   - Audit row shape (aidlc-audit.ts:256-267): a `## Scope Changed` heading,
+//   - Audit row shape (amadeus-audit.ts:256-267): a `## Scope Changed` heading,
 //     then `**Timestamp**:`, `**Event**: SCOPE_CHANGED`, then one
 //     `**<key>**: <value>` line per field, terminated by `---`. The .sh
 //     grepped `^\*\*Event\*\*: SCOPE_CHANGED` and `\*\*Old Scope\*\*: feature`;
@@ -87,7 +87,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -103,7 +103,7 @@ const TOOL = join(
   "claude",
   ".claude",
   "tools",
-  "aidlc-utility.ts",
+  "amadeus-utility.ts",
 );
 // The .sh seeds this fixture for every case (state-mid-ideation.md: Scope=feature,
 // Current Stage=feasibility).
@@ -159,7 +159,7 @@ interface CliResult {
   out: string; // combined stdout+stderr (mirrors the .sh's 2>&1)
 }
 
-/** Spawn `bun aidlc-utility.ts scope-change <args...> --project-dir <p>`. */
+/** Spawn `bun amadeus-utility.ts scope-change <args...> --project-dir <p>`. */
 function scopeChange(args: string[], p: string): CliResult {
   const res = spawnSync(BUN, [TOOL, "scope-change", ...args, "--project-dir", p], {
     encoding: "utf-8",
@@ -171,8 +171,8 @@ function scopeChange(args: string[], p: string): CliResult {
 }
 
 /**
- * Value of `- **<key>**: <value>` from the aidlc-state.md body. Mirrors the
- * tool's own getField (aidlc-utility.ts) which the .sh's `grep '\*\*Scope\*\*:'`
+ * Value of `- **<key>**: <value>` from the amadeus-state.md body. Mirrors the
+ * tool's own getField (amadeus-utility.ts) which the .sh's `grep '\*\*Scope\*\*:'`
  * observed. Returns "" when absent.
  */
 function stateField(file: string, key: string): string {
@@ -200,7 +200,7 @@ function scopeChangedCount(body: string): number {
  * Value of <key> from the FIRST audit block whose `**Event**:` matches <ev>.
  * Walks the file; resets at `## ` headings and `---` separators; splits
  * `**label**: value` on the literal `**: ` separator (audit-row shape per
- * aidlc-audit.ts:256-267). Block-scoped, so it pins Old Scope to the
+ * amadeus-audit.ts:256-267). Block-scoped, so it pins Old Scope to the
  * SCOPE_CHANGED row exactly (STRONGER than the .sh's file-wide grep).
  */
 function auditField(body: string, ev: string, key: string): string {
@@ -231,7 +231,7 @@ function auditField(body: string, ev: string, key: string): string {
   return "";
 }
 
-describe("t36 aidlc-utility scope-change — CLI contract (migrated from t36-utility-scope-change.sh, plan 7)", () => {
+describe("t36 amadeus-utility scope-change — CLI contract (migrated from t36-utility-scope-change.sh, plan 7)", () => {
   // --- .sh Test 1: scope-change on active workflow mutates Scope field ---
   test("1: scope-change updates Scope field to mvp", () => {
     const p = proj();
@@ -277,7 +277,7 @@ describe("t36 aidlc-utility scope-change — CLI contract (migrated from t36-uti
     // No --scope (scopeChange always appends --project-dir, never --scope).
     const r = scopeChange([], p);
     expect(r.status).toBe(1);
-    // STRONGER: assert the require-message fires (die path, aidlc-utility.ts:2195).
+    // STRONGER: assert the require-message fires (die path, amadeus-utility.ts:2195).
     expect(r.out).toContain("--scope is required");
   });
 

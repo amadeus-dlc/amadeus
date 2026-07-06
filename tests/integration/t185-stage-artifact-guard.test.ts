@@ -1,4 +1,4 @@
-// covers: cli:aidlc-state(approve,advance,finalize,complete-workflow), function:handleApprove, function:handleAdvance, function:handleFinalize, function:handleCompleteWorkflow, function:verifyStageArtifacts, function:producesArtifactsExist, function:workspaceHasSourceFile
+// covers: cli:amadeus-state(approve,advance,finalize,complete-workflow), function:handleApprove, function:handleAdvance, function:handleFinalize, function:handleCompleteWorkflow, function:verifyStageArtifacts, function:producesArtifactsExist, function:workspaceHasSourceFile
 //
 // t185 - stage-completion artifact guard (issue #366).
 //
@@ -10,15 +10,15 @@
 // per-intent record dir + workspace tree, so this is a PROCESS boundary
 // exercised by spawning the real dist tool (spawnSync(BUN, [STATE, ...])).
 //
-// V2 PATH NOTE: the workspace refactor (#429) removed the flat aidlc-docs/
+// V2 PATH NOTE: the workspace refactor (#429) removed the flat amadeus-docs/
 // layout. A stage's produces[] artifacts now live under the ACTIVE intent's
 // per-intent record dir (aidlc/spaces/<space>/intents/<slug>-<id8>/<phase>/
 // <stage>/), per-unit Construction artifacts under that record's
 // construction/<unit>/<stage>/, and codekb stages (reverse-engineering) under
 // the space-level aidlc/spaces/<space>/codekb/<repo>/. This test seeds those
-// live seams via seededRecordDir, NOT a flat aidlc-docs/ tree.
+// live seams via seededRecordDir, NOT a flat amadeus-docs/ tree.
 //
-// Source under test (dist/claude/.claude/tools/aidlc-state.ts):
+// Source under test (dist/claude/.claude/tools/amadeus-state.ts):
 //   verifyStageArtifacts(pd, stage) - two layers:
 //     1. producesArtifactsExist - a stage that declares produces[] must have at
 //        least one declared .md on disk under <record>/<phase>/<slug>/ (or
@@ -50,7 +50,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const STATE = join(AIDLC_SRC, "tools", "aidlc-state.ts");
+const STATE = join(AIDLC_SRC, "tools", "amadeus-state.ts");
 const MID_IDEATION = "state-mid-ideation.md"; // Current Stage: feasibility
 
 // Drive a state subcommand with the artifact guard ENABLED (clear the suite's

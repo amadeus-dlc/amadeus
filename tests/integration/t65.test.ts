@@ -9,9 +9,9 @@
 //
 // In-process migration of tests/integration/t65-stage-file-migration.sh (TAP
 // plan 22). The .sh ran ONE big `bun -e` block that imported
-// parseStageFrontmatter / emitStageFrontmatter / loadAgents from aidlc-lib.ts
-// and validateStageFrontmatter from aidlc-stage-schema.ts, walked every
-// stage file under skills/aidlc/stages/<phase>/*.md, emitted a JSON blob,
+// parseStageFrontmatter / emitStageFrontmatter / loadAgents from amadeus-lib.ts
+// and validateStageFrontmatter from amadeus-stage-schema.ts, walked every
+// stage file under skills/amadeus/stages/<phase>/*.md, emitted a JSON blob,
 // then queried that blob with 22 `bun -e` JSON reads (`j <field>`) wrapped in
 // TAP ok/not_ok. None of the 22 touched a CLI shell, argv, or process.exit:
 // the bash layer only existed to JSON-query the single bun aggregation and
@@ -32,11 +32,11 @@
 // registry and are creditable from this .none file.
 //
 // Sources read for this port:
-//   dist/claude/.claude/tools/aidlc-lib.ts
+//   dist/claude/.claude/tools/amadeus-lib.ts
 //     :805 loadAgents(): AgentMetadata[] — sorted-by-slug; each has .slug.
 //     :893 parseStageFrontmatter(raw): Record<string, unknown>.
 //     :1165 emitStageFrontmatter(obj): string — FIELD_ORDER-pinned YAML.
-//   dist/claude/.claude/tools/aidlc-stage-schema.ts
+//   dist/claude/.claude/tools/amadeus-stage-schema.ts
 //     :108 validateStageFrontmatter(obj, ctx?) => {valid,data}|{valid,errors};
 //          ValidationContext.agents (:38) — when present, lead_agent +
 //          support_agents[] must be in the list. The .sh passed
@@ -63,11 +63,11 @@ import {
   emitStageFrontmatter,
   loadAgents,
   parseStageFrontmatter,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
-import { validateStageFrontmatter } from "../../dist/claude/.claude/tools/aidlc-stage-schema.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { validateStageFrontmatter } from "../../dist/claude/.claude/tools/amadeus-stage-schema.ts";
 
 const AIDLC_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
-const STAGES_DIR = join(AIDLC_SRC, "aidlc-common", "stages");
+const STAGES_DIR = join(AIDLC_SRC, "amadeus-common", "stages");
 const GRAPH_JSON = join(AIDLC_SRC, "tools", "data", "stage-graph.json");
 
 // Mirror the .sh's ARTIFACT_RE for the produces[]-slug-shape check.

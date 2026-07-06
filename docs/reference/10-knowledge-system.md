@@ -10,20 +10,20 @@ AI-DLC uses a two-tier knowledge system that separates framework methodology fro
 
 **Tier 1: Methodology knowledge** (`.claude/knowledge/`) -- Ships with the framework. Contains shared principles and per-agent methodology references. Updated when upgrading the framework. Read-only during workflow execution.
 
-**Tier 2: Team knowledge** (the active space — `aidlc/knowledge/`, shorthand for `aidlc/spaces/<space>/knowledge/`) -- User-managed. Contains company-specific standards, policies, and conventions. A sibling of the space's `memory/`, `codekb/`, and `intents/`, so it accumulates across every intent in the space. Free-form and empty at bootstrap: the engine creates the empty `aidlc/knowledge/` directory on the first `/aidlc` and seeds nothing inside it. There is no fixed file set.
+**Tier 2: Team knowledge** (the active space — `aidlc/knowledge/`, shorthand for `aidlc/spaces/<space>/knowledge/`) -- User-managed. Contains company-specific standards, policies, and conventions. A sibling of the space's `memory/`, `codekb/`, and `intents/`, so it accumulates across every intent in the space. Free-form and empty at bootstrap: the engine creates the empty `aidlc/knowledge/` directory on the first `/amadeus` and seeds nothing inside it. There is no fixed file set.
 
 ### Tier 1 Structure
 
 ```
 .claude/knowledge/
-+-- aidlc-shared/
++-- amadeus-shared/
 |   +-- ai-dlc-principles.md       # Core methodology principles
 |   +-- verification.md            # Phase boundary verification rules
 |   +-- brownfield.md              # Brownfield safeguards
 |   +-- audit-format.md            # 68-event audit taxonomy
 |   +-- knowledge-readme-template.md  # Optional README template a team can copy into Tier 2
 |   +-- state-template.md          # State file template
-+-- aidlc-product-agent/
++-- amadeus-product-agent/
 |   +-- requirements-guide.md
 |   +-- product-guide.md
 |   +-- functional-design-guide.md
@@ -31,14 +31,14 @@ AI-DLC uses a two-tier knowledge system that separates framework methodology fro
 |   +-- prioritization-frameworks.md
 |   +-- user-story-patterns.md
 |   +-- market-research-methods.md
-+-- aidlc-architect-agent/
++-- amadeus-architect-agent/
 |   +-- architecture-guide.md
 |   +-- nfr-design-guide.md
 |   +-- ddd-patterns.md
 |   +-- architecture-patterns.md
 |   +-- nfr-design-patterns.md
 |   +-- adr-template.md
-+-- aidlc-developer-agent/
++-- amadeus-developer-agent/
 |   +-- code-analysis-guide.md
 |   +-- code-generation-guide.md
 |   +-- code-generation-patterns.md
@@ -50,13 +50,13 @@ AI-DLC uses a two-tier knowledge system that separates framework methodology fro
 
 ### Tier 2 Structure
 
-Empty at bootstrap. The engine creates the bare `aidlc/knowledge/` directory and nothing inside it — no README, no per-agent subdirectories. The `aidlc-shared/` and per-agent directories below are the convention the agent personas look for; the team creates the ones it has content for.
+Empty at bootstrap. The engine creates the bare `aidlc/knowledge/` directory and nothing inside it — no README, no per-agent subdirectories. The `amadeus-shared/` and per-agent directories below are the convention the agent personas look for; the team creates the ones it has content for.
 
 ```
 aidlc/knowledge/                    # empty at bootstrap; team-created subdirs
-+-- aidlc-shared/                   # optional — loaded by every agent if present
++-- amadeus-shared/                   # optional — loaded by every agent if present
 |   +-- (user-added files)
-+-- aidlc-product-agent/            # optional — loaded when that agent is active
++-- amadeus-product-agent/            # optional — loaded when that agent is active
 |   +-- (user-added files)
 +-- [... a directory per agent the team chooses to populate]
 ```
@@ -81,7 +81,7 @@ sequenceDiagram
     Note over G: org.md + team.md + project.md + phases/<phase>.md
     G-->>O: Rules loaded (strict-additive — all layers present)
 
-    O->>SM: Step 2: Load .claude/knowledge/aidlc-shared/
+    O->>SM: Step 2: Load .claude/knowledge/amadeus-shared/
     Note over SM: Shared methodology principles
     SM-->>O: Shared knowledge loaded
 
@@ -89,7 +89,7 @@ sequenceDiagram
     Note over AM: Agent-specific methodology
     AM-->>O: Agent methodology loaded
 
-    O->>TK: Step 4: Load aidlc/knowledge/aidlc-shared/
+    O->>TK: Step 4: Load aidlc/knowledge/amadeus-shared/
     Note over TK: Team shared knowledge (if exists)
     TK-->>O: Team knowledge loaded
 
@@ -107,9 +107,9 @@ sequenceDiagram
 | Step | Source | Tier | Managed By | Loaded |
 |------|--------|------|-----------|--------|
 | 1 | `aidlc/spaces/<space>/memory/` | -- | Framework + self-learning | First |
-| 2 | `.claude/knowledge/aidlc-shared/` | 1 | Framework | Early |
+| 2 | `.claude/knowledge/amadeus-shared/` | 1 | Framework | Early |
 | 3 | `.claude/knowledge/[agent]/` | 1 | Framework | Early |
-| 4 | `aidlc/knowledge/aidlc-shared/` | 2 | Team | Mid |
+| 4 | `aidlc/knowledge/amadeus-shared/` | 2 | Team | Mid |
 | 5 | `aidlc/knowledge/[agent]/` | 2 | Team | Mid |
 | 6 | Prior stage artifacts | -- | Dynamic | Last |
 
@@ -128,7 +128,7 @@ sequenceDiagram
 
 ### Knowledge README Template
 
-`.claude/knowledge/aidlc-shared/knowledge-readme-template.md` ships an optional README template a team can copy into its Tier 2 directories to document them. The engine does not scaffold or seed it — the space-level `aidlc/knowledge/` directory is created empty, and the team adds whatever it wants. The template explains:
+`.claude/knowledge/amadeus-shared/knowledge-readme-template.md` ships an optional README template a team can copy into its Tier 2 directories to document them. The engine does not scaffold or seed it — the space-level `aidlc/knowledge/` directory is created empty, and the team adds whatever it wants. The template explains:
 
 - What types of files to add for that agent
 - Examples of common customization files
@@ -137,7 +137,7 @@ sequenceDiagram
 
 ### State Template
 
-The `aidlc-state.md` file is created from `.claude/knowledge/aidlc-shared/state-template.md`. The template defines the sections: Project Information, Scope Configuration, Workspace State, Execution Plan Summary, Runtime State, Phase Progress, Stage Progress (checkboxes), Current Status, and Session Resume Point.
+The `amadeus-state.md` file is created from `.claude/knowledge/amadeus-shared/state-template.md`. The template defines the sections: Project Information, Scope Configuration, Workspace State, Execution Plan Summary, Runtime State, Phase Progress, Stage Progress (checkboxes), Current Status, and Session Resume Point.
 
 ---
 
@@ -147,36 +147,36 @@ Add company-specific files to the team knowledge directories:
 
 ```bash
 # Team-wide standards (loaded by all agents)
-aidlc/knowledge/aidlc-shared/company-coding-standards.md
-aidlc/knowledge/aidlc-shared/company-architecture-principles.md
+aidlc/knowledge/amadeus-shared/company-coding-standards.md
+aidlc/knowledge/amadeus-shared/company-architecture-principles.md
 
 # Agent-specific standards (loaded only when that agent is active)
-aidlc/knowledge/aidlc-architect-agent/company-architecture-patterns.md
-aidlc/knowledge/aidlc-devsecops-agent/company-security-policy.md
-aidlc/knowledge/aidlc-developer-agent/company-coding-conventions.md
-aidlc/knowledge/aidlc-quality-agent/company-testing-standards.md
+aidlc/knowledge/amadeus-architect-agent/company-architecture-patterns.md
+aidlc/knowledge/amadeus-devsecops-agent/company-security-policy.md
+aidlc/knowledge/amadeus-developer-agent/company-coding-conventions.md
+aidlc/knowledge/amadeus-quality-agent/company-testing-standards.md
 ```
 
 Files are loaded automatically when the agent is activated (steps 4-5 of the loading order). No configuration changes needed. Any `.md` file placed in a directory is loaded.
 
 ### Knowledge by Agent
 
-> This table is a snapshot. The authoritative `display_name` + `examples` for each agent lives in the agent's frontmatter at `core/agents/<slug>-agent.md` and is surfaced programmatically via `loadAgents()` in `core/tools/aidlc-lib.ts`. Add a new agent there first; update this table in the same PR.
+> This table is a snapshot. The authoritative `display_name` + `examples` for each agent lives in the agent's frontmatter at `core/agents/<slug>-agent.md` and is surfaced programmatically via `loadAgents()` in `core/tools/amadeus-lib.ts`. Add a new agent there first; update this table in the same PR.
 
 | Directory | Purpose | Example Files |
 |-----------|---------|---------------|
-| `aidlc-shared/` | Team-wide standards | `coding-standards.md`, `api-conventions.md` |
-| `aidlc-product-agent/` | Product context | `roadmap.md`, `personas.md` |
-| `aidlc-design-agent/` | UX/UI guidelines | `design-system.md`, `accessibility.md` |
-| `aidlc-delivery-agent/` | PM conventions | `sprint-cadence.md`, `definition-of-done.md` |
-| `aidlc-architect-agent/` | Architecture decisions | `tech-stack.md`, `infrastructure-preferences.md` |
-| `aidlc-developer-agent/` | Coding patterns | `db-conventions.md`, `error-handling.md` |
-| `aidlc-quality-agent/` | Testing standards | `test-strategy.md`, `coverage-requirements.md` |
-| `aidlc-devsecops-agent/` | Security policies | `security-baseline.md`, `compliance-rules.md` |
-| `aidlc-aws-platform-agent/` | Cloud context | `account-structure.md`, `service-limits.md` |
-| `aidlc-compliance-agent/` | Compliance rules | `data-governance.md`, `audit-requirements.md` |
-| `aidlc-pipeline-deploy-agent/` | CI/CD standards | `pipeline-standards.md`, `deployment-gates.md` |
-| `aidlc-operations-agent/` | Ops runbooks | `monitoring.md`, `incident-response.md` |
+| `amadeus-shared/` | Team-wide standards | `coding-standards.md`, `api-conventions.md` |
+| `amadeus-product-agent/` | Product context | `roadmap.md`, `personas.md` |
+| `amadeus-design-agent/` | UX/UI guidelines | `design-system.md`, `accessibility.md` |
+| `amadeus-delivery-agent/` | PM conventions | `sprint-cadence.md`, `definition-of-done.md` |
+| `amadeus-architect-agent/` | Architecture decisions | `tech-stack.md`, `infrastructure-preferences.md` |
+| `amadeus-developer-agent/` | Coding patterns | `db-conventions.md`, `error-handling.md` |
+| `amadeus-quality-agent/` | Testing standards | `test-strategy.md`, `coverage-requirements.md` |
+| `amadeus-devsecops-agent/` | Security policies | `security-baseline.md`, `compliance-rules.md` |
+| `amadeus-aws-platform-agent/` | Cloud context | `account-structure.md`, `service-limits.md` |
+| `amadeus-compliance-agent/` | Compliance rules | `data-governance.md`, `audit-requirements.md` |
+| `amadeus-pipeline-deploy-agent/` | CI/CD standards | `pipeline-standards.md`, `deployment-gates.md` |
+| `amadeus-operations-agent/` | Ops runbooks | `monitoring.md`, `incident-response.md` |
 
 ---
 

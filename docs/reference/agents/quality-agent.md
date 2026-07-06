@@ -1,10 +1,10 @@
-# aidlc-quality-agent -- Technical Reference
+# amadeus-quality-agent -- Technical Reference
 
 ## Identity
 
 | Field | Value |
 |-------|-------|
-| Name | aidlc-quality-agent |
+| Name | amadeus-quality-agent |
 | Model Override | opus |
 | Allowed Claude Code Tools | Read, Edit, Write, Glob, Grep, Bash, AskUserQuestion |
 | Disallowed Claude Code Tools | Task |
@@ -35,16 +35,16 @@
 
 | Source | Artifacts |
 |--------|-----------|
-| aidlc-product-agent | User stories with acceptance criteria for test case derivation |
-| aidlc-architect-agent | NFR targets, design testability assessment, test boundaries |
-| aidlc-developer-agent | Implemented code for testing |
+| amadeus-product-agent | User stories with acceptance criteria for test case derivation |
+| amadeus-architect-agent | NFR targets, design testability assessment, test boundaries |
+| amadeus-developer-agent | Implemented code for testing |
 
 ### Hands Off To
 
 | Target | Artifacts |
 |--------|-----------|
-| aidlc-pipeline-deploy-agent | Test suite integration into CI/CD, quality gate definitions |
-| aidlc-operations-agent | Performance baselines for production monitoring |
+| amadeus-pipeline-deploy-agent | Test suite integration into CI/CD, quality gate definitions |
+| amadeus-operations-agent | Performance baselines for production monitoring |
 
 ---
 
@@ -52,7 +52,7 @@
 
 ### Methodology (Tier 1)
 
-Path: `.claude/knowledge/aidlc-quality-agent/`
+Path: `.claude/knowledge/amadeus-quality-agent/`
 
 | File | Content |
 |------|---------|
@@ -63,7 +63,7 @@ Path: `.claude/knowledge/aidlc-quality-agent/`
 
 ### Team (Tier 2)
 
-Path: `aidlc/knowledge/aidlc-quality-agent/` (the space-level knowledge dir; user-managed)
+Path: `aidlc/knowledge/amadeus-quality-agent/` (the space-level knowledge dir; user-managed)
 
 A space-level directory the team creates when it has content (the engine ships `aidlc/knowledge/` empty). Populated by the team with project-specific
 QA context such as existing test frameworks, coverage targets, performance
@@ -74,6 +74,6 @@ baselines, or quality gate thresholds.
 ## Cross-References
 
 - [Agent Reference Overview](README.md)
-- [Agent Guide: aidlc-quality-agent](../../guide/agents/quality-agent.md)
+- [Agent Guide: amadeus-quality-agent](../../guide/agents/quality-agent.md)
 - [Stage Documentation](../04-stages/)
-- Source: [`dist/claude/.claude/agents/aidlc-quality-agent.md`](../../../dist/claude/.claude/agents/aidlc-quality-agent.md)
+- Source: [`dist/claude/.claude/agents/amadeus-quality-agent.md`](../../../dist/claude/.claude/agents/amadeus-quality-agent.md)

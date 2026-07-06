@@ -18,6 +18,6 @@
 #
 # A resolved template is used WHOLE-DOC (its ## headings become the expected set
 # the required-sections sensor verifies, expected ⊆ output) — no section merge.
-# Read by aidlc-sensor.ts (dispatcher → --framework-templates-dir) and
-# aidlc-sensor-required-sections.ts (the middle branch). The agent reads the same
-# resolution order via core/aidlc-common/protocols/stage-protocol.md.
+# Read by amadeus-sensor.ts (dispatcher → --framework-templates-dir) and
+# amadeus-sensor-required-sections.ts (the middle branch). The agent reads the same
+# resolution order via core/amadeus-common/protocols/stage-protocol.md.

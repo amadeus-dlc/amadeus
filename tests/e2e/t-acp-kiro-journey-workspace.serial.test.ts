@@ -1,4 +1,4 @@
-// covers: subcommand:aidlc-utility:intent-birth, subcommand:aidlc-utility:space-create, subcommand:aidlc-utility:space, file:skills/aidlc/SKILL.md
+// covers: subcommand:amadeus-utility:intent-birth, subcommand:amadeus-utility:space-create, subcommand:amadeus-utility:space, file:skills/amadeus/SKILL.md
 //
 // t-acp-kiro-journey-workspace.serial.test.ts — the LIVE workspace journey,
 // Kiro-ACP logic half (P10 / Stage E). Proves the SAME composed §0 promise the
@@ -21,7 +21,7 @@
 //     active": on a genuine new-work prose it renders an offer, and on the human's
 //     "Yes" it runs `intent-birth` DIRECTLY — "the same run-then-continue shape the
 //     print directive already uses"). That does NOT fight the forwarding override in
-//     agents/aidlc.json, so the production conductor births the 2nd intent over a
+//     agents/amadeus.json, so the production conductor births the 2nd intent over a
 //     keepAlive multi-turn ACP session: turn 1 auto-births A, turn 2 (new-work)
 //     stops at the offer's compare-read (`intent --json`), turn 3 (confirm) stops
 //     at the birth. Live-verified: turn 3 ran `intent-birth` directly; A's state
@@ -30,19 +30,19 @@
 //   * Beats 4-5 (space-create teamB · switch · birth into teamB · switch back) now
 //     ALSO drive through the production `aidlc` conductor — the d44828b engine fix
 //     routes the workspace navigation verbs through `next`: a LEADING
-//     `space`/`space-create`/`intent` token (parseNextFlags aidlc-orchestrate.ts:276,
+//     `space`/`space-create`/`intent` token (parseNextFlags amadeus-orchestrate.ts:276,
 //     WORKSPACE_VERBS:146) maps to a TERMINAL print directive naming
-//     `bun .kiro/tools/aidlc-utility.ts <verb> [<arg>]` (handleNext Branch 1b ~:921,
+//     `bun .kiro/tools/amadeus-utility.ts <verb> [<arg>]` (handleNext Branch 1b ~:921,
 //     placed BEFORE state inspection so it works with or without an active workflow
-//     — it never advances a workflow). The `aidlc` agent's prompt rule (3) — "When a
+//     — it never advances a workflow). The `amadeus` agent's prompt rule (3) — "When a
 //     directive is a print whose message names a command to run, run THAT EXACT
 //     command as your immediate next tool call" — makes the live conductor honor it:
 //     each beat-4/5 turn's tool calls are exactly `next <verb>` (forward) then
-//     `aidlc-utility.ts <verb>` (run the named tool); zero intent-advance.
+//     `amadeus-utility.ts <verb>` (run the named tool); zero intent-advance.
 //     Live-verified 3/3 via a throwaway spike (the ndjson trace showed the two-call
 //     pair for space-create/space/space default, never a `next`-advances-A). The
 //     teamB birth (4c) rides the same engine seam: in teamB (zero intents) a
-//     `/aidlc --scope poc "<desc>"` hits the birth gate (Branch 9a →
+//     `/amadeus --scope poc "<desc>"` hits the birth gate (Branch 9a →
 //     birthPrintDirective ~:1231) which prints `intent-birth …`; the conductor runs
 //     it. Each space verb is its own single-turn driveKiroAcp call (ACP is
 //     single-turn; stopAfterToolTitle catches the named tool's output). This proves
@@ -64,7 +64,7 @@ import {
   activeSpace,
   listIntents,
   readIntentRegistry,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   cleanupWorkspaceJourney,
   setupWorkspaceJourney,
@@ -84,7 +84,7 @@ const VERB_DRIVE_MS = 300_000;
 const CODEKB_DRIVE_MS = Math.max(1_200_000, TEST_TIMEOUT_MS - 7 * VERB_DRIVE_MS);
 
 // The user types "teamB"; the engine slugifies it on disk (slugify lowercases —
-// aidlc-lib.ts), so the SPACE DIR + cursor + registry key are "teamb".
+// amadeus-lib.ts), so the SPACE DIR + cursor + registry key are "teamb".
 const TEAM_B_SLUG = "teamb";
 
 const UUIDV7_RE =
@@ -169,7 +169,7 @@ async function driveCodekbUntilBothRepos(
     await driveKiroAcp({
       projectDir: root,
       session,
-      prompt: `/aidlc --stage reverse-engineering --single`,
+      prompt: `/amadeus --stage reverse-engineering --single`,
       timeoutMs,
       keepAlive: true,
     });
@@ -214,7 +214,7 @@ describe("t-acp-kiro-journey-workspace (live ACP multi-repo·intent·space journ
       // new-work prose, and renders the offer. Beats 4-5 open a THIRD fresh `aidlc`
       // session (`space`) for the same reason: beat 3's `offer` session is cancelled
       // mid-birth, so reusing it would resume that birth rather than parse the new
-      // `/aidlc space-create` prompt. Each space verb is a terminal print directive
+      // `/amadeus space-create` prompt. Each space verb is a terminal print directive
       // ("…then stop"), so all of beats 4-5 reuse this ONE keepAlive `space` session
       // (spike-verified: three sequential space verbs run clean on one session).
       const conductor = new AcpSession(root, "aidlc", true);
@@ -222,7 +222,7 @@ describe("t-acp-kiro-journey-workspace (live ACP multi-repo·intent·space journ
       const space = new AcpSession(root, "aidlc", true);
       try {
         // --- Beat 1: auto-birth A spanning both siblings ---------------------
-        // Name the scope explicitly: a bare prose `/aidlc "<desc>"` emits an `ask`
+        // Name the scope explicitly: a bare prose `/amadeus "<desc>"` emits an `ask`
         // scope-confirm (orchestrate Branch 8) that the SINGLE-TURN ACP driver
         // cannot answer (it renders as prose, not a protocol gate) — so the turn
         // would end before birth. `--scope feature` births via Branch 9a with no
@@ -230,13 +230,13 @@ describe("t-acp-kiro-journey-workspace (live ACP multi-repo·intent·space journ
         const r1 = await driveKiroAcp({
           projectDir: root,
           session: conductor,
-          prompt: `/aidlc --scope feature "build auth across both repos"`,
+          prompt: `/amadeus --scope feature "build auth across both repos"`,
           timeoutMs: VERB_DRIVE_MS,
-          stopAfterToolTitle: /aidlc-utility\.ts intent-birth/,
+          stopAfterToolTitle: /amadeus-utility\.ts intent-birth/,
           keepAlive: true,
         });
         const out1 = r1.toolCalls
-          .filter((t) => t.title.includes("aidlc-utility.ts intent-birth"))
+          .filter((t) => t.title.includes("amadeus-utility.ts intent-birth"))
           .map((t) => t.output.join(""))
           .join("");
         expect(out1).toContain("State initialized:");
@@ -264,7 +264,7 @@ describe("t-acp-kiro-journey-workspace (live ACP multi-repo·intent·space journ
         expect(workflowStartedCount(recordADir)).toBe(1);
         // Snapshot A's workflow state AFTER the RE pass settles — beats 3-5 must
         // leave THIS byte-identical (no foreign birth/space switch bleeds into A).
-        const stateABefore = readFileSync(join(recordADir, "aidlc-state.md"), "utf-8");
+        const stateABefore = readFileSync(join(recordADir, "amadeus-state.md"), "utf-8");
 
         // --- Beat 3: a SECOND isolated intent alongside A, via the conductor's
         //     AUTHORIZED offer→confirm routing (the production flow) -----------
@@ -281,7 +281,7 @@ describe("t-acp-kiro-journey-workspace (live ACP multi-repo·intent·space journ
             "a completely separate, unrelated standalone metrics dashboard — a brand " +
             "new project, nothing to do with the auth work",
           timeoutMs: VERB_DRIVE_MS,
-          stopAfterToolTitle: /aidlc-utility\.ts intent --json/,
+          stopAfterToolTitle: /amadeus-utility\.ts intent --json/,
           keepAlive: true,
         });
         // Turn 3b: confirm. The conductor runs `intent-birth` DIRECTLY (the
@@ -293,7 +293,7 @@ describe("t-acp-kiro-journey-workspace (live ACP multi-repo·intent·space journ
           session: offer,
           prompt: "Yes — start a second intent for the metrics dashboard.",
           timeoutMs: VERB_DRIVE_MS,
-          stopAfterToolTitle: /aidlc-utility\.ts intent-birth/,
+          stopAfterToolTitle: /amadeus-utility\.ts intent-birth/,
           keepAlive: true,
         });
         const reg3 = readIntentRegistry(root);
@@ -301,14 +301,14 @@ describe("t-acp-kiro-journey-workspace (live ACP multi-repo·intent·space journ
         expect(new Set(reg3.map((e) => e.uuid)).size).toBe(2);
         for (const e of reg3) expect(e.uuid).toMatch(UUIDV7_RE);
         // A's workflow state untouched + B's birth did not bleed into A's shard.
-        expect(readFileSync(join(recordADir, "aidlc-state.md"), "utf-8")).toBe(stateABefore);
+        expect(readFileSync(join(recordADir, "amadeus-state.md"), "utf-8")).toBe(stateABefore);
         expect(workflowStartedCount(recordADir)).toBe(1);
 
         // --- Beat 4: non-default space — create, switch, birth there; no leak --
         // The space NAVIGATION verbs (space-create / space) are TERMINAL commands —
-        // they map 1:1 to an aidlc-utility.ts subcommand and carry no workflow work.
+        // they map 1:1 to an amadeus-utility.ts subcommand and carry no workflow work.
         // On Kiro they are dispatched DETERMINISTICALLY by the userPromptSubmit seam
-        // (agents/aidlc.json → aidlc-kiro-adapter.ts verb-intercept): the hook runs
+        // (agents/amadeus.json → amadeus-kiro-adapter.ts verb-intercept): the hook runs
         // the tool OFF-BAND (not as a conductor tool call) and hands the conductor the
         // verbatim output with a do-NOT-advance instruction, so the conductor relays
         // and ends the turn making ZERO tool calls (live-verified: toolCalls=[],
@@ -324,7 +324,7 @@ describe("t-acp-kiro-journey-workspace (live ACP multi-repo·intent·space journ
         await driveKiroAcp({
           projectDir: root,
           session: space,
-          prompt: `/aidlc space-create teamB`,
+          prompt: `/amadeus space-create teamB`,
           timeoutMs: VERB_DRIVE_MS,
           keepAlive: true,
         });
@@ -345,23 +345,23 @@ describe("t-acp-kiro-journey-workspace (live ACP multi-repo·intent·space journ
         await driveKiroAcp({
           projectDir: root,
           session: space,
-          prompt: `/aidlc space teamB`,
+          prompt: `/amadeus space teamB`,
           timeoutMs: VERB_DRIVE_MS,
           keepAlive: true,
         });
         expect(activeSpace(root)).toBe(TEAM_B_SLUG);
 
         // 4c: birth into teamB via the conductor's birth gate — in teamB (zero
-        // intents) a `/aidlc --scope poc "<desc>"` hits Branch 9a → birthPrintDirective
+        // intents) a `/amadeus --scope poc "<desc>"` hits Branch 9a → birthPrintDirective
         // → the conductor runs `intent-birth …` directly. knowledge/ now PRESENT
         // (lazy ensure on first birth); teamB holds its 1 intent, default still holds
         // its 2 (no cross-space leak).
         await driveKiroAcp({
           projectDir: root,
           session: space,
-          prompt: `/aidlc --scope poc "teamB onboarding flow"`,
+          prompt: `/amadeus --scope poc "teamB onboarding flow"`,
           timeoutMs: VERB_DRIVE_MS,
-          stopAfterToolTitle: /aidlc-utility\.ts intent-birth/,
+          stopAfterToolTitle: /amadeus-utility\.ts intent-birth/,
           keepAlive: true,
         });
         expect(listIntents(root, TEAM_B_SLUG).length).toBe(1);
@@ -373,13 +373,13 @@ describe("t-acp-kiro-journey-workspace (live ACP multi-repo·intent·space journ
         await driveKiroAcp({
           projectDir: root,
           session: space,
-          prompt: `/aidlc space default`,
+          prompt: `/amadeus space default`,
           timeoutMs: VERB_DRIVE_MS,
           keepAlive: true,
         });
         expect(activeSpace(root)).toBe("default");
         // A's workflow state survived the round trip; no foreign birth bled in.
-        expect(readFileSync(join(recordADir, "aidlc-state.md"), "utf-8")).toBe(stateABefore);
+        expect(readFileSync(join(recordADir, "amadeus-state.md"), "utf-8")).toBe(stateABefore);
         expect(workflowStartedCount(recordADir)).toBe(1);
         expect(listIntents(root, "default").length).toBe(2);
       } finally {

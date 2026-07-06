@@ -1,10 +1,10 @@
-// covers: hook:aidlc-audit-logger, function:appendAuditEntry
+// covers: hook:amadeus-audit-logger, function:appendAuditEntry
 //
-// t07 — aidlc-audit-logger.ts PostToolUse hook behaviour. Migrated from
+// t07 — amadeus-audit-logger.ts PostToolUse hook behaviour. Migrated from
 // tests/unit/t07-hook-audit-logger.sh (TAP plan 16). Mechanism: cli.
 //
 // WHY CLI (process-boundary, not in-process): the SUBJECT is a hook, not a
-// pure function. aidlc-audit-logger.ts reads PostToolUse JSON from STDIN
+// pure function. amadeus-audit-logger.ts reads PostToolUse JSON from STDIN
 // (`await Bun.stdin.text()`), resolves its projectDir from the
 // CLAUDE_PROJECT_DIR env var OR by stripping `.claude/hooks` off its own
 // script path (resolveProjectDirFromHook), and self-gates with
@@ -16,13 +16,13 @@
 // Code's PostToolUse(Write|Edit) drives it from settings.json:
 // `Bun.spawnSync({ cmd: [BUN, HOOK], stdin: <json bytes>, env: {…CLAUDE_PROJECT_DIR} })`.
 //
-// WORKSPACE LAYOUT (P9): the flat aidlc-docs/ root is retired. The record
+// WORKSPACE LAYOUT (P9): the flat amadeus-docs/ root is retired. The record
 // re-roots per intent at aidlc/spaces/<space>/intents/<slug>-<id8>/, and the
 // audit trail is a DIR of per-clone shards (audit/<host>-<clone>.md), not a
 // single audit.md. The hook now logs a write iff its file_path is UNDER the
 // active intent's record root (docsRoot()), and self-gates on its own resolved
 // shard (auditFilePath()) existing. So this twin:
-//   - seeds aidlc-state.md into the default record so the active-intent cursor
+//   - seeds amadeus-state.md into the default record so the active-intent cursor
 //     resolves (docsRoot() == seededRecordDir(); a bare createTestProject leaves
 //     an empty record whose cursor does NOT resolve), and
 //   - PINS the clone-id token on disk + creates exactly the shard the spawned
@@ -31,7 +31,7 @@
 // Assertions glob-read every shard in audit/ (clone-id-name-agnostic, mirroring
 // readAllAuditShards) — the settled per-intent read pattern (see t170).
 //
-// appendAuditEntry's on-disk block format (aidlc-audit.ts, asserted via real
+// appendAuditEntry's on-disk block format (amadeus-audit.ts, asserted via real
 // bytes): "\n## <heading>\n**Timestamp**: <ts>\n**Event**: <type>\n<fields>\n---\n".
 //
 // FIXTURE DISCIPLINE (one fresh project per case):
@@ -69,7 +69,7 @@ import {
 } from "node:fs";
 import { hostname } from "node:os";
 import { join } from "node:path";
-import { docsRoot } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { docsRoot } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   AIDLC_SRC,
   cleanupTestProject,
@@ -81,7 +81,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const HOOK = join(AIDLC_SRC, "hooks", "aidlc-audit-logger.ts");
+const HOOK = join(AIDLC_SRC, "hooks", "amadeus-audit-logger.ts");
 
 let proj: string;
 
@@ -106,12 +106,12 @@ function pinnedShardName(): string {
  * hook's "shard exists" gate passes. Returns the audit DIR + record root.
  */
 function seedIntentShard(p: string): { auditDir: string; recordRoot: string } {
-  // Any state fixture makes the record carry aidlc-state.md → the cursor (and
+  // Any state fixture makes the record carry amadeus-state.md → the cursor (and
   // thus docsRoot()) resolves to the seeded record. The breadcrumb is purely
   // path-derived, so the fixture choice is incidental.
   seedStateFile(p, join(FIXTURES_DIR, "state-construction.md"));
   // Pin the clone-id BEFORE the hook runs (the hook reads it from disk).
-  writeFileSync(join(p, "aidlc", ".aidlc-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(p, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
   const auditDir = seededAuditDir(p);
   mkdirSync(auditDir, { recursive: true });
   writeFileSync(join(auditDir, pinnedShardName()), "", "utf-8");
@@ -219,14 +219,14 @@ describe("t07 audit-logger PostToolUse hook (mechanism cli — spawned hook + st
     seedStateFile(proj, join(FIXTURES_DIR, "state-construction.md"));
     const auditDir = seededAuditDir(proj);
     expect(existsSync(auditDir)).toBe(false);
-    fire(writeJson(join(docsRoot(proj), "knowledge", "aidlc-shared", "test.md")), proj);
+    fire(writeJson(join(docsRoot(proj), "knowledge", "amadeus-shared", "test.md")), proj);
     expect(existsSync(auditDir)).toBe(false);
   });
 
   test("writes the audit-logger.last heartbeat [.sh test 7]", () => {
     const { recordRoot } = seedIntentShard(proj);
     fire(writeJson(join(recordRoot, "test.md")), proj);
-    const heartbeat = join(recordRoot, ".aidlc-hooks-health", "audit-logger.last");
+    const heartbeat = join(recordRoot, ".amadeus-hooks-health", "audit-logger.last");
     expect(existsSync(heartbeat)).toBe(true);
   });
 
@@ -254,18 +254,18 @@ describe("t07 audit-logger PostToolUse hook (mechanism cli — spawned hook + st
     // is UNSET. Mirrors the .sh's cp of the hook + lib + audit.
     mkdirSync(join(proj, ".claude", "hooks"), { recursive: true });
     mkdirSync(join(proj, ".claude", "tools"), { recursive: true });
-    const localHook = join(proj, ".claude", "hooks", "aidlc-audit-logger.ts");
+    const localHook = join(proj, ".claude", "hooks", "amadeus-audit-logger.ts");
     copyFileSync(HOOK, localHook);
     copyFileSync(
-      join(AIDLC_SRC, "tools", "aidlc-lib.ts"),
-      join(proj, ".claude", "tools", "aidlc-lib.ts"),
+      join(AIDLC_SRC, "tools", "amadeus-lib.ts"),
+      join(proj, ".claude", "tools", "amadeus-lib.ts"),
     );
     copyFileSync(
-      join(AIDLC_SRC, "tools", "aidlc-audit.ts"),
-      join(proj, ".claude", "tools", "aidlc-audit.ts"),
+      join(AIDLC_SRC, "tools", "amadeus-audit.ts"),
+      join(proj, ".claude", "tools", "amadeus-audit.ts"),
     );
     fire(writeJson(join(recordRoot, "test.md")), proj, localHook, /* setEnv */ false);
-    const heartbeat = join(recordRoot, ".aidlc-hooks-health", "audit-logger.last");
+    const heartbeat = join(recordRoot, ".amadeus-hooks-health", "audit-logger.last");
     expect(existsSync(heartbeat)).toBe(true);
   });
 

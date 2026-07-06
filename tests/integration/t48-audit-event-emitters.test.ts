@@ -1,12 +1,12 @@
-// covers: doc:12-state-machine.md(audit-event-taxonomy), doc:audit-format.md(event-registry), data:aidlc-audit.ts(VALID_EVENT_TYPES), function:handleApprove, function:handleReject, function:handleGateStart, function:handleRevise, function:handleSkip, function:handleCompleteWorkflow, function:handleAdvance, function:handleReuseArtifact, function:handleIntentBirth
+// covers: doc:12-state-machine.md(audit-event-taxonomy), doc:audit-format.md(event-registry), data:amadeus-audit.ts(VALID_EVENT_TYPES), function:handleApprove, function:handleReject, function:handleGateStart, function:handleRevise, function:handleSkip, function:handleCompleteWorkflow, function:handleAdvance, function:handleReuseArtifact, function:handleIntentBirth
 //
 // t48 — Drift test for the audit event taxonomy: docs vs code.
 // Migrated from tests/integration/t48-audit-event-emitters.sh (TAP plan 16). The
 // .sh declared NO `# covers:` header — its subject is the cross-consistency of
 // three SOURCE-TEXT surfaces (it is a static-analysis meta-test, not a runtime
 // behaviour test): the emitter registry in docs/reference/12-state-machine.md,
-// the VALID_EVENT_TYPES Set literal in tools/aidlc-audit.ts, the Event Registry
-// in knowledge/aidlc-shared/audit-format.md, and the emission call sites across
+// the VALID_EVENT_TYPES Set literal in tools/amadeus-audit.ts, the Event Registry
+// in knowledge/amadeus-shared/audit-format.md, and the emission call sites across
 // tools/ + hooks/.
 //
 // Mechanism: NONE. The .sh was "L1 — pure bash + grep + awk. No bun, no
@@ -15,18 +15,18 @@
 // and doc files read off disk. So this twin reads the same files and applies
 // the same scanning logic in TypeScript, in-process. Zero spawns, zero LLM,
 // zero tokens. (The point of a drift test is text-vs-text agreement; parsing
-// the source text — rather than importing VALID_EVENT_TYPES, which aidlc-audit
+// the source text — rather than importing VALID_EVENT_TYPES, which amadeus-audit
 // .ts does NOT export — is the faithful surface, and is exactly what the .sh
 // did via `sed -n '/new Set(\[/,/\]);/p'`.)
 //
 // Source / surfaces under test:
 //   - docs/reference/12-state-machine.md   (## Audit event taxonomy tables)
-//   - dist/claude/.claude/tools/aidlc-audit.ts:19  VALID_EVENT_TYPES = new Set([...])
-//   - dist/claude/.claude/knowledge/aidlc-shared/audit-format.md  (## Event Registry)
+//   - dist/claude/.claude/tools/amadeus-audit.ts:19  VALID_EVENT_TYPES = new Set([...])
+//   - dist/claude/.claude/knowledge/amadeus-shared/audit-format.md  (## Event Registry)
 //   - dist/claude/.claude/tools/*.ts + hooks/*.ts  (emission call sites)
-//   - dist/claude/.claude/tools/aidlc-state.ts     (pairing handler bodies)
-//   - dist/claude/.claude/tools/aidlc-utility.ts   (handleIntentBirth body)
-//   - dist/claude/.claude/skills/aidlc/            (forbidden prose-append scan)
+//   - dist/claude/.claude/tools/amadeus-state.ts     (pairing handler bodies)
+//   - dist/claude/.claude/tools/amadeus-utility.ts   (handleIntentBirth body)
+//   - dist/claude/.claude/skills/amadeus/            (forbidden prose-append scan)
 //
 // The four named checks the .sh documents (forward / reverse / tertiary /
 // pairing) plus the md-md catalog cross-check and the prose-append bonus are
@@ -54,7 +54,7 @@
 //   .sh test 13 check_pairing handleReuseArtifact     -> "pairing: handleReuseArtifact emits ARTIFACT_REUSED"
 //   .sh test 14 check_pairing handleIntentBirth              -> "pairing: handleIntentBirth emits WORKFLOW_STARTED + PHASE_STARTED + STAGE_STARTED"
 //   .sh test 15 md-md catalog cross-check             -> "md-md: audit-format.md and 12-state-machine.md agree on the event set"
-//   .sh test 16 forbidden prose append calls          -> "no prose aidlc-audit.ts append calls in skills/aidlc/"
+//   .sh test 16 forbidden prose append calls          -> "no prose amadeus-audit.ts append calls in skills/amadeus/"
 
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -64,10 +64,10 @@ import { AIDLC_SRC, REPO_ROOT } from "../harness/fixtures.ts";
 const DOC = join(REPO_ROOT, "docs", "reference", "12-state-machine.md");
 const TOOLS_DIR = join(AIDLC_SRC, "tools");
 const HOOKS_DIR = join(AIDLC_SRC, "hooks");
-const AUDIT_TS = join(TOOLS_DIR, "aidlc-audit.ts");
-const STATE_TS = join(TOOLS_DIR, "aidlc-state.ts");
-const UTIL_TS = join(TOOLS_DIR, "aidlc-utility.ts");
-const AUDIT_FORMAT = join(AIDLC_SRC, "knowledge", "aidlc-shared", "audit-format.md");
+const AUDIT_TS = join(TOOLS_DIR, "amadeus-audit.ts");
+const STATE_TS = join(TOOLS_DIR, "amadeus-state.ts");
+const UTIL_TS = join(TOOLS_DIR, "amadeus-utility.ts");
+const AUDIT_FORMAT = join(AIDLC_SRC, "knowledge", "amadeus-shared", "audit-format.md");
 const SKILLS_DIR = join(AIDLC_SRC, "skills", "aidlc");
 
 const EMITTERS = "(emitAudit|appendAuditEntry|appendAuditEntryUnlocked|appendAuditEvent)";
@@ -137,7 +137,7 @@ function validEventTypeCount(): number {
   const lines = readFileSync(AUDIT_TS, "utf-8").split("\n");
   const start = lines.findIndex((l) => /new Set\(\[/.test(l));
   const end = lines.findIndex((l, i) => i >= start && /\]\);/.test(l));
-  if (start < 0 || end < 0) throw new Error("aidlc-audit.ts: Set literal not found");
+  if (start < 0 || end < 0) throw new Error("amadeus-audit.ts: Set literal not found");
   return lines
     .slice(start, end + 1)
     .filter((l) => /"[A-Z_]+"/.test(l)).length;
@@ -363,11 +363,11 @@ describe("t48 audit event-emitter drift (migrated from t48-audit-event-emitters.
   });
 
   // .sh bonus / test 16 ------------------------------------------------------
-  test("no prose aidlc-audit.ts append calls in skills/aidlc/ [.sh test 16]", () => {
-    // The doc forbids `bun .claude/tools/aidlc-audit.ts append <EVENT>` as a
+  test("no prose amadeus-audit.ts append calls in skills/amadeus/ [.sh test 16]", () => {
+    // The doc forbids `bun .claude/tools/amadeus-audit.ts append <EVENT>` as a
     // prose instruction; confirm none remain (with the .sh's carve-outs for the
     // recovery-workflow note / never-hand-write warning / cross-reference).
-    const appendRe = /bun .*aidlc-audit\.ts append [A-Z_]+/;
+    const appendRe = /bun .*amadeus-audit\.ts append [A-Z_]+/;
     const carveOut = /(reserved for the future recovery workflow|never hand-write|see §4|Canonical state transitions)/;
     const offenders: string[] = [];
     const walk = (dir: string): void => {

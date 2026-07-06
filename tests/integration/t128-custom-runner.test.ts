@@ -1,18 +1,18 @@
-// covers: subcommand:aidlc-graph:compile, subcommand:aidlc-graph:topo, subcommand:aidlc-runner-gen:write, subcommand:aidlc-runner-gen:check, subcommand:aidlc-orchestrate:next, function:emitSingleRunStage
+// covers: subcommand:amadeus-graph:compile, subcommand:amadeus-graph:topo, subcommand:amadeus-runner-gen:write, subcommand:amadeus-runner-gen:check, subcommand:amadeus-orchestrate:next, function:emitSingleRunStage
 //
 // t128 — a CUSTOM stage authored as a FILE becomes drivable through the
 // generated runner with NO code change (v0.6.0 Wave 3 milestone 14). Migrated from
 // tests/integration/t128-custom-runner.sh (TAP plan 8). This is the proof of the
 // extensibility headline — "to add a stage, write a stage file": drop a stage
-// `.md` into `aidlc-common/stages/<phase>/`, recompile the graph, run the
+// `.md` into `amadeus-common/stages/<phase>/`, recompile the graph, run the
 // stage-runner generator, and the new stage gets a spec-conformant
-// `skills/aidlc-<slug>/` runner that drives `--single` end-to-end.
+// `skills/amadeus-<slug>/` runner that drives `--single` end-to-end.
 //
 // Mechanism: cli — and necessarily SANDBOX-COPY cli, not shipped-tool cli.
-// EVERY aidlc-graph / aidlc-runner-gen / aidlc-orchestrate tool resolves its
+// EVERY amadeus-graph / amadeus-runner-gen / amadeus-orchestrate tool resolves its
 // stages tree, data/stage-graph.json, data/scope-grid.json, and skills/ dir
-// RELATIVE TO ITS OWN FILE LOCATION (aidlc-graph.ts :144-146 __FILE_DIR /
-// DATA_DIR / DEFAULT_STAGES_DIR; aidlc-runner-gen.ts :66-67 TOOLS_DIR /
+// RELATIVE TO ITS OWN FILE LOCATION (amadeus-graph.ts :144-146 __FILE_DIR /
+// DATA_DIR / DEFAULT_STAGES_DIR; amadeus-runner-gen.ts :66-67 TOOLS_DIR /
 // SKILLS_DIR), NOT relative to --project-dir (which only locates the audit
 // lock). The subject of this test is a tree MUTATION — authoring a stage
 // file, recompiling stage-graph.json + scope-grid.json, and generating a
@@ -26,14 +26,14 @@
 // — the same `spawnSync(BUN, [TOOL, ...])` pattern t104.cli / t127 credit.
 //
 // Sandbox: setupIntegrationProject({ noAidlcDocs, stripEnvScope }) — the TS
-// port of `setup_integration_project --no-aidlc-docs --strip-env-scope`
+// port of `setup_integration_project --no-amadeus-docs --strip-env-scope`
 // (fixtures.ts :269) — copies the shipped dist/claude/.claude/ into
 // <proj>/.claude and strips AWS_AIDLC_DEFAULT_SCOPE so the explicit --scope
 // wins. The custom slug is injected as EXECUTE into a dropped fixture scope
 // (mirrors t60's scope-injection) so the stage is in-scope.
 //
 // Source under test:
-//   dist/claude/.claude/tools/aidlc-graph.ts
+//   dist/claude/.claude/tools/amadeus-graph.ts
 //     :1293 compile — withAuditLock + writeFileAtomic of stage-graph.json +
 //            scope-grid.json from the YAML (transposes the custom stage's
 //            `scopes: [fixture-scope]` frontmatter into the grid).
@@ -41,13 +41,13 @@
 //            row (:1083 "not found in stage-graph.json"): sole-writer
 //            discipline, a drift guard not an inserter.
 //     :1267 topo — topoSort(loadGraph()) one slug per line.
-//   dist/claude/.claude/tools/aidlc-runner-gen.ts
-//     :214 handleWrite — one skills/aidlc-<slug>/SKILL.md per RUNNABLE
+//   dist/claude/.claude/tools/amadeus-runner-gen.ts
+//     :214 handleWrite — one skills/amadeus-<slug>/SKILL.md per RUNNABLE
 //            (non-init) compiled stage; name == dir (:121); body drives
 //            `next --stage <slug> --single` (:143).
 //     :273 handleCheck — drift guard: on-disk runner set == compiled
 //            stage-slug set, exit 0 in sync / exit 1 + diff otherwise.
-//   dist/claude/.claude/tools/aidlc-orchestrate.ts
+//   dist/claude/.claude/tools/amadeus-orchestrate.ts
 //     :910 next Branch 4b (--single) → :1246 emitSingleRunStage: builds the
 //            lone run-stage directive from the graph node; the membership
 //            check (subgraphForScope(scope), :1262) reads the compiled grid,
@@ -57,7 +57,7 @@
 // Old TAP -> new test parity (1:1, every .sh assertion -> a named test()):
 //   .sh 1 (graph recompiles after authoring the file)        -> "1: graph recompiles after authoring the custom stage file"
 //   .sh 2 (topo lists the custom slug)                       -> "2: the custom stage is in the compiled graph (topo lists it)"
-//   .sh 3 (generator emits skills/aidlc-<slug>/SKILL.md)     -> "3: the generator emits a runner SKILL.md for the custom stage"
+//   .sh 3 (generator emits skills/amadeus-<slug>/SKILL.md)     -> "3: the generator emits a runner SKILL.md for the custom stage"
 //   .sh 4 (runner frontmatter name == dir)                   -> "4: the custom runner's frontmatter name equals its dir"
 //   .sh 5 (runner body drives next --stage <slug> --single)  -> "5: the custom runner drives next --stage <slug> --single"
 //   .sh 6 (drift check passes after regeneration)            -> "6: stage-runner-drift check passes after regenerating"
@@ -107,9 +107,9 @@ function tools(proj: string): {
 } {
   const t = join(proj, ".claude", "tools");
   return {
-    graph: join(t, "aidlc-graph.ts"),
-    gen: join(t, "aidlc-runner-gen.ts"),
-    orch: join(t, "aidlc-orchestrate.ts"),
+    graph: join(t, "amadeus-graph.ts"),
+    gen: join(t, "amadeus-runner-gen.ts"),
+    orch: join(t, "amadeus-orchestrate.ts"),
   };
 }
 
@@ -134,7 +134,7 @@ function buildSandbox(): string {
   // Mirrors t60. Byte-for-byte the .sh heredoc.
   mkdirSync(join(claude, "scopes"), { recursive: true });
   writeFileSync(
-    join(claude, "scopes", "aidlc-fixture-scope.md"),
+    join(claude, "scopes", "amadeus-fixture-scope.md"),
     `---
 name: fixture-scope
 depth: Minimal
@@ -152,17 +152,17 @@ Test-only scope authored to drive the custom stage via --single.
   // No produces/consumes edges so it slots in without disturbing the graph;
   // lead_agent is a real shipped agent so loadAgents() validation passes.
   // `scopes: [fixture-scope]` is the transpose source.
-  mkdirSync(join(claude, "aidlc-common", "stages", "operation"), {
+  mkdirSync(join(claude, "amadeus-common", "stages", "operation"), {
     recursive: true,
   });
   writeFileSync(
-    join(claude, "aidlc-common", "stages", "operation", `${CUSTOM_SLUG}.md`),
+    join(claude, "amadeus-common", "stages", "operation", `${CUSTOM_SLUG}.md`),
     `---
 slug: ${CUSTOM_SLUG}
 phase: operation
 execution: ALWAYS
 condition: Always runs — a custom stage authored to prove the extensibility path
-lead_agent: aidlc-operations-agent
+lead_agent: amadeus-operations-agent
 support_agents: []
 mode: inline
 produces: []
@@ -188,7 +188,7 @@ outputs: None — the stage body is illustrative
 
   // Pre-seed the new stage's {slug, number, name} row in the SANDBOX
   // stage-graph.json. The compiler is a drift guard, not an inserter
-  // (aidlc-graph.ts:1083): it fills a pre-seeded row from the YAML but refuses
+  // (amadeus-graph.ts:1083): it fills a pre-seeded row from the YAML but refuses
   // to invent a row for an unknown slug. Use a 4.8 number (after the last
   // operation stage 4.7) so it sorts last. The .sh did this via `bun -e`; in
   // TS we edit the JSON directly (same effect on the sandbox file).
@@ -209,7 +209,7 @@ outputs: None — the stage body is illustrative
 
 /** The generated runner SKILL.md path for the custom stage, under the sandbox. */
 function runnerPath(proj: string): string {
-  return join(proj, ".claude", "skills", `aidlc-${CUSTOM_SLUG}`, "SKILL.md");
+  return join(proj, ".claude", "skills", `amadeus-${CUSTOM_SLUG}`, "SKILL.md");
 }
 
 describe("t128 custom stage → drivable runner (migrated from t128-custom-runner.sh, plan 8)", () => {
@@ -247,13 +247,13 @@ describe("t128 custom stage → drivable runner (migrated from t128-custom-runne
     expect(run(gen, ["write", "--project-dir", proj]).status).toBe(0);
     const body = readFileSync(runnerPath(proj), "utf-8");
     // The .sh grepped `^name:` and stripped to the value. Spec invariant
-    // (runner-gen :121): name == dir == aidlc-<slug>.
+    // (runner-gen :121): name == dir == amadeus-<slug>.
     const nameLine = body
       .split("\n")
       .find((l) => /^name:/.test(l));
     expect(nameLine).toBeDefined();
     const name = (nameLine as string).replace(/^name:\s*/, "").trim();
-    expect(name).toBe(`aidlc-${CUSTOM_SLUG}`);
+    expect(name).toBe(`amadeus-${CUSTOM_SLUG}`);
   }, 60000);
 
   test("5: the custom runner drives next --stage <slug> --single [.sh 5]", () => {

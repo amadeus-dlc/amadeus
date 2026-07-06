@@ -1,15 +1,15 @@
-// covers: hook:aidlc-stop
+// covers: hook:amadeus-stop
 //
 // t122-stop-hook-e2e.test.ts — SDK-harness port of
 // tests/e2e/t122-stop-hook-e2e.sh (the .sh's TAP plan was 6 assertions; this
 // port carried them as 4 test() blocks, and the human-wait carve-out adds a
 // 5th — the (7)-labelled real-engine case below, numbered to continue the .sh
 // assertion map, not the test()-block count). WORKFLOW-TIER end-to-end
-// enforcement of the Stop hook aidlc-stop.ts — the framework's FIRST
+// enforcement of the Stop hook amadeus-stop.ts — the framework's FIRST
 // flow-altering hook. The feature-tier twin t121-stop-hook-enforce.test.ts
 // proves the hook's block/done/guard LOGIC against a MOCK engine; THIS file
 // closes the gap t121's mock leaves open: the REAL hook against the REAL
-// aidlc-orchestrate engine, including one genuinely end-to-end pass through a
+// amadeus-orchestrate engine, including one genuinely end-to-end pass through a
 // LIVE driven turn (§6-E non-golden: the framework must FAIL/BLOCK correctly,
 // and must never trap a session).
 //
@@ -22,33 +22,33 @@
 //
 // ASSERTION MAP (.sh test -> surface, equal-or-stronger):
 //   1+2 run-to-done, genuinely e2e
-//       -> driveAidlc("/aidlc --status") over a COMPLETED workflow under the
+//       -> driveAidlc("/amadeus --status") over a COMPLETED workflow under the
 //          LIVE skill-scoped Stop hook (the project carries the real
 //          .claude/settings.json whose Stop hook entry points at the real
-//          aidlc-stop.ts — settings.json:110-118). The engine answers `done`,
+//          amadeus-stop.ts — settings.json:110-118). The engine answers `done`,
 //          the hook ALLOWS, and the headless session runs to completion: the
 //          terminal result event exists and is not an error (the .sh's
 //          "no exit-124 hang"), AND the deterministic status stdout landed in a
 //          Bash tool_result ("Status:         Completed" — the verbatim
-//          handleStatus emission, aidlc-utility.ts:296-310; deterministically
+//          handleStatus emission, amadeus-utility.ts:296-310; deterministically
 //          confirmed on this exact fixture: Completion 32/32, Status Completed).
 //   3 the live hook fired and took the done->allow path
 //       -> GUARDED exactly like the .sh: the skill-scoped Stop hook does not
 //          fire on every headless turn, so when the heartbeat
-//          (aidlc-docs/.aidlc-hooks-health/stop.last, aidlc-stop.ts:90) is
+//          (amadeus-docs/.amadeus-hooks-health/stop.last, amadeus-stop.ts:90) is
 //          absent we SKIP this sub-assertion (record the skip, never fail).
 //          When it IS present, the done branch ran resetGuard()
-//          (aidlc-stop.ts:241-248,357) which wrote block-count.json with
+//          (amadeus-stop.ts:241-248,357) which wrote block-count.json with
 //          count 0 — assert the parsed count === 0.
 //   4 pending directive -> the REAL hook BLOCKS, against the REAL engine
 //       -> seed state-final-stage (final stage [-], engine emits a real
 //          run-stage for feedback-optimization), pipe {"stop_hook_active":false}
 //          into the real hook: stdout is a parseable {"decision":"block"} whose
 //          reason names the pending stage + re-feeds the loop
-//          (continuationReason, aidlc-stop.ts:298-307) and carries no
+//          (continuationReason, amadeus-stop.ts:298-307) and carries no
 //          override-shaped verbs. Deterministic — verified by direct invocation
 //          on this exact fixture (block reason names "feedback-optimization" +
-//          "aidlc-orchestrate"). Exit 0 (a block rides stdout, never the code).
+//          "amadeus-orchestrate"). Exit 0 (a block rides stdout, never the code).
 //   5 done directive -> the REAL hook ALLOWS, against the REAL engine
 //       -> seed state-completed, same payload: empty stdout, exit 0
 //          (deterministically confirmed on this fixture).
@@ -56,10 +56,10 @@
 //     the exhaustive matrix)
 //       -> seed state-final-stage + the no-progress counter AT the cap (8) with
 //          the project's matching progress signature
-//          (`${Current Stage}::${audit line count}`, aidlc-stop.ts:137) +
+//          (`${Current Stage}::${audit line count}`, amadeus-stop.ts:137) +
 //          stop_hook_active:true: the hook RELEASES (empty stdout, exit 0) and
 //          appends the drop record "recursion guard released the stop"
-//          (aidlc-stop.ts:370) to .aidlc-hooks-health/stop.drops — a stuck loop
+//          (amadeus-stop.ts:370) to .amadeus-hooks-health/stop.drops — a stuck loop
 //          can never trap the session even with the directive genuinely pending.
 //          Deterministically confirmed on this fixture (sig
 //          feedback-optimization::2, drop line written).
@@ -67,7 +67,7 @@
 //     t121 owns the exhaustive [?]/[R]/[-] matrix)
 //       -> seed state-final-stage but flip the current stage's row from [-] to
 //          [?] awaiting-approval: the real engine STILL emits a pending
-//          run-stage (the [?] stage is in-flight, aidlc-orchestrate.ts
+//          run-stage (the [?] stage is in-flight, amadeus-orchestrate.ts
 //          :1161-1176), but the hook ALLOWS the stop (empty stdout, exit 0).
 //          The complement of test 4 on the SAME fixture — only the checkbox
 //          state differs and the outcome flips block -> allow. This is the
@@ -81,25 +81,25 @@
 //          block -> allow. t121 owns the autonomy-guard / answered / no-file
 //          matrix.
 //   9 PARK against the REAL engine (NEW, issue #367, the requested gap)
-//       -> seed the Running final stage, run the REAL `aidlc-orchestrate park`
+//       -> seed the Running final stage, run the REAL `amadeus-orchestrate park`
 //          (exit 0, emits a `parked` directive). Park does NOT advance: the
 //          feedback-optimization checkbox stays [-] and Parked / Parked At Stage
-//          are written (aidlc-state.ts:418-441). The real hook then sees the
+//          are written (amadeus-state.ts:418-441). The real hook then sees the
 //          engine re-emit `parked` and ALLOWS the stop (empty stdout, exit 0;
-//          aidlc-stop.ts:760-771), the supported multi-session exit.
+//          amadeus-stop.ts:760-771), the supported multi-session exit.
 //   10 PARK under autonomous Construction is REFUSED (NEW, issue #365 guard)
 //       -> inject `Construction Autonomy Mode: autonomous`; the REAL
-//          `aidlc-state.ts park` refuses (NON-ZERO exit, stderr names the
-//          autonomous refusal, aidlc-state.ts:420-424). Defence-in-depth: with
+//          `amadeus-state.ts park` refuses (NON-ZERO exit, stderr names the
+//          autonomous refusal, amadeus-state.ts:420-424). Defence-in-depth: with
 //          Parked markers injected by hand, the hook's parked branch DECLINES
 //          the allow under autonomous and falls through to the cap-bounded BLOCK
-//          (aidlc-stop.ts:760-771).
+//          (amadeus-stop.ts:760-771).
 //   11 CONVERSATIONAL carve-out (tier 3) against the REAL engine (NEW, issue
 //      #365 broader reading)
 //       -> keep the final stage [-] (engine emits a pending run-stage, as test
 //          4 proved BLOCKS). With a Claude chat transcript (human prompt
 //          answered with TEXT only, no engine call) the hook ALLOWS (empty
-//          stdout, exit 0); with an aidlc-orchestrate Bash call after the prompt
+//          stdout, exit 0); with an amadeus-orchestrate Bash call after the prompt
 //          the SAME fixture still BLOCKS (engine engaged -> mid-loop bail).
 //          t121 owns the codex / autonomy / fail-closed matrix.
 //
@@ -107,15 +107,15 @@
 // do not fire on user interrupt (the .sh's closing note, kept).
 //
 // Known-answer literals (read from the SHIPPED hook/tool/fixtures, not guessed):
-//   - Stop hook registration:    dist settings.json:110-118 (matcher "", aidlc-stop.ts)
-//   - heartbeat write:           aidlc-stop.ts:90 (stop.last)
-//   - guard file:                aidlc-stop.ts:130 (block-count.json)
-//   - progress signature:        aidlc-stop.ts:137 (`${stage}::${auditLines}`)
-//   - resetGuard on done/allow:  aidlc-stop.ts:241-248 (count 0), invoked :357
-//   - block JSON + reason:       aidlc-stop.ts:104,298-307
-//   - release + drop record:     aidlc-stop.ts:364-371 ("recursion guard released the stop")
-//   - block cap env:             aidlc-stop.ts:69 (CLAUDE_CODE_STOP_HOOK_BLOCK_CAP, default 8)
-//   - status stdout:             aidlc-utility.ts:296-310 ("Status:         Completed")
+//   - Stop hook registration:    dist settings.json:110-118 (matcher "", amadeus-stop.ts)
+//   - heartbeat write:           amadeus-stop.ts:90 (stop.last)
+//   - guard file:                amadeus-stop.ts:130 (block-count.json)
+//   - progress signature:        amadeus-stop.ts:137 (`${stage}::${auditLines}`)
+//   - resetGuard on done/allow:  amadeus-stop.ts:241-248 (count 0), invoked :357
+//   - block JSON + reason:       amadeus-stop.ts:104,298-307
+//   - release + drop record:     amadeus-stop.ts:364-371 ("recursion guard released the stop")
+//   - block cap env:             amadeus-stop.ts:69 (CLAUDE_CODE_STOP_HOOK_BLOCK_CAP, default 8)
+//   - status stdout:             amadeus-utility.ts:296-310 ("Status:         Completed")
 //   - fixtures: state-completed.md (Status=Completed, 32/32) /
 //     state-final-stage.md (feedback-optimization [-], Status=Running)
 //
@@ -132,7 +132,7 @@ import {
   docsRoot,
   hooksHealthDir,
   stopHookDir,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { assertToolResultContains } from "../harness/assert.ts";
 import {
   cleanupTestProject,
@@ -169,7 +169,7 @@ const dropsPath = (proj: string): string =>
 // Known-answer literals from the SHIPPED handlers (see header for cites).
 const STATUS_COMPLETED_LINE = "Status:         Completed"; // utility.ts:302 (padEnd shape confirmed by direct run)
 const PENDING_STAGE = "feedback-optimization"; // state-final-stage.md:90 ([-] final stage)
-const DROP_RECORD = "recursion guard released the stop"; // aidlc-stop.ts:370
+const DROP_RECORD = "recursion guard released the stop"; // amadeus-stop.ts:370
 
 /** Pipe a real Stop payload into the SHIPPED hook with the project's REAL
  *  engine resolved via CLAUDE_PROJECT_DIR. Returns exit code + trimmed stdout
@@ -184,7 +184,7 @@ function runRealHook(
     CLAUDE_PROJECT_DIR: proj,
   };
   if (cap !== undefined) env.CLAUDE_CODE_STOP_HOOK_BLOCK_CAP = cap;
-  const res = spawnSync(BUN, [join(proj, ".claude", "hooks", "aidlc-stop.ts")], {
+  const res = spawnSync(BUN, [join(proj, ".claude", "hooks", "amadeus-stop.ts")], {
     input: payload,
     encoding: "utf-8",
     env,
@@ -194,7 +194,7 @@ function runRealHook(
 }
 
 /** The hook's progress signature for a project — Current Stage + audit.md line
- *  count (aidlc-stop.ts:137) — so test 6 can seed the counter AT the cap under
+ *  count (amadeus-stop.ts:137) — so test 6 can seed the counter AT the cap under
  *  the matching key. Mirrors the .sh's progress_sig. */
 function progressSig(proj: string): string {
   const s = readFileSync(seededStateFile(proj), "utf-8");
@@ -216,12 +216,12 @@ function progressSig(proj: string): string {
 describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () => {
   // =========================================================================
   // (1)+(2)+(3) GENUINELY E2E: the loop runs to `done` under the LIVE hook.
-  // Seed a COMPLETED workflow; drive /aidlc --status through a live driven
+  // Seed a COMPLETED workflow; drive /amadeus --status through a live driven
   // turn. The real engine answers `done`, so the live Stop hook ALLOWS and the
   // session runs to completion (no hang).
   // =========================================================================
   test(
-    "(e2e) /aidlc --status over a completed workflow runs to done under the live Stop hook; done->allow trace asserted when the hook fires",
+    "(e2e) /amadeus --status over a completed workflow runs to done under the live Stop hook; done->allow trace asserted when the hook fires",
     async () => {
       const proj = setupIntegrationProject({
         withState: "state-completed.md",
@@ -234,7 +234,7 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
         // is itself the proof the live hook ALLOWED the stop (a block would
         // re-feed the loop; a trap would hit the drive timeout and leave
         // resultEvent undefined).
-        const r = await driveAidlc("/aidlc --status", {
+        const r = await driveAidlc("/amadeus --status", {
           projectDir: proj,
           timeoutMs: DRIVE_TIMEOUT_MS,
         });
@@ -289,7 +289,7 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
       });
       try {
         const r = runRealHook(proj, '{"stop_hook_active":false}');
-        // A block rides STDOUT; the exit code stays 0 (aidlc-stop.ts:104-107).
+        // A block rides STDOUT; the exit code stays 0 (amadeus-stop.ts:104-107).
         expect(r.rc).toBe(0);
         // STRONGER than the .sh's substring greps: parse the JSON and assert
         // the exact decision shape + the reason's contract in one pass.
@@ -297,9 +297,9 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
         expect(parsed.decision).toBe("block");
         // The reason names the pending stage and re-feeds the loop...
         expect(parsed.reason).toContain(PENDING_STAGE);
-        expect(parsed.reason).toContain("aidlc-orchestrate");
+        expect(parsed.reason).toContain("amadeus-orchestrate");
         // ...and uses no override-shaped verbs (the security property SPIKE 1
-        // pinned; aidlc-stop.ts:298-307 phrases continuation, never override).
+        // pinned; amadeus-stop.ts:298-307 phrases continuation, never override).
         expect(/ignore|override|disregard|bypass/i.test(parsed.reason)).toBe(
           false,
         );
@@ -358,7 +358,7 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
         // but the cap wins — decideBlock :231 returns false at count >= cap).
         expect(r.rc).toBe(0);
         expect(r.out).toBe("");
-        // The drop record documents the release (aidlc-stop.ts:364-371).
+        // The drop record documents the release (amadeus-stop.ts:364-371).
         const drops = readFileSync(dropsPath(proj), "utf-8");
         expect(drops).toContain(DROP_RECORD);
       } finally {
@@ -375,7 +375,7 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
   // stage to [?] awaiting-approval — a conductor parked at the approval gate —
   // and prove the real hook now ALLOWS the stop even though the real engine
   // STILL emits a pending run-stage for feedback-optimization (a [?] stage is
-  // in-flight, so aidlc-orchestrate.ts:1161-1176 re-emits run-stage). This is
+  // in-flight, so amadeus-orchestrate.ts:1161-1176 re-emits run-stage). This is
   // the gate-spam fix proven end-to-end: same fixture, same real engine, only
   // the checkbox state differs, and the outcome flips block -> allow.
   // Deterministic (no model in the loop). t121 owns the [?]/[R]/[-] matrix.
@@ -454,12 +454,12 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
   // =========================================================================
   // (9) PARK against the REAL engine (issue #367, the explicitly-requested
   // gap). Seed the Running final-stage workflow (the same fixture test 4 proved
-  // BLOCKS a pending run-stage), then run the REAL `aidlc-orchestrate park`. It
-  // shells out to `aidlc-state.ts park` which persists Parked / Parked At Stage
-  // and emits WORKFLOW_PARKED (aidlc-state.ts:418-441), WITHOUT advancing any
+  // BLOCKS a pending run-stage), then run the REAL `amadeus-orchestrate park`. It
+  // shells out to `amadeus-state.ts park` which persists Parked / Parked At Stage
+  // and emits WORKFLOW_PARKED (amadeus-state.ts:418-441), WITHOUT advancing any
   // stage. The real hook then consults the engine, which now re-emits the
-  // terminal `parked` directive (aidlc-orchestrate.ts:1094-1102), and ALLOWS the
-  // turn to end (aidlc-stop.ts:760-771), the supported multi-session exit, so
+  // terminal `parked` directive (amadeus-orchestrate.ts:1094-1102), and ALLOWS the
+  // turn to end (amadeus-stop.ts:760-771), the supported multi-session exit, so
   // the agent never rubber-stamps the remaining stages to force a `done`. We
   // also pin that park did NOT flip the feedback-optimization checkbox (still
   // [-]) and DID write the Parked / Parked At Stage runtime markers.
@@ -479,7 +479,7 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
         const park = spawnSync(
           BUN,
           [
-            join(proj, ".claude", "tools", "aidlc-orchestrate.ts"),
+            join(proj, ".claude", "tools", "amadeus-orchestrate.ts"),
             "park",
             "--project-dir",
             proj,
@@ -518,11 +518,11 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
   // (10) PARK under autonomous Construction is REFUSED (issue #365 guard,
   // salvaged from the suspend branch). An unattended autonomous run has no human
   // to resume it, so `park` must refuse outright. Two deterministic surfaces:
-  //   - the REAL `aidlc-state.ts park` exits NON-ZERO with stderr naming the
-  //     autonomous refusal (aidlc-state.ts:420-424);
+  //   - the REAL `amadeus-state.ts park` exits NON-ZERO with stderr naming the
+  //     autonomous refusal (amadeus-state.ts:420-424);
   //   - even if the Parked markers were somehow present, the hook's parked
   //     branch DECLINES the allow under autonomous and falls through to the
-  //     cap-bounded BLOCK (aidlc-stop.ts:760-771), defence-in-depth beside the
+  //     cap-bounded BLOCK (amadeus-stop.ts:760-771), defence-in-depth beside the
   //     tool refusal. We inject Parked markers + autonomous mode and assert the
   //     real hook still BLOCKS (the real engine re-emits `parked`, but the hook
   //     declines it). Deterministic (no model in the loop).
@@ -536,7 +536,7 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
       });
       try {
         // Flag the run autonomous (insert under Runtime State, mirroring the
-        // skeleton-stance / parked runtime fields aidlc-state.ts writes there).
+        // skeleton-stance / parked runtime fields amadeus-state.ts writes there).
         sedReplaceInFile(
           seededStateFile(proj),
           "## Runtime State\n- **Revision Count**: 0",
@@ -544,11 +544,11 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
         );
 
         // The REAL state-tool park refuses outright: non-zero exit, stderr names
-        // the autonomous refusal (aidlc-state.ts:420-424).
+        // the autonomous refusal (amadeus-state.ts:420-424).
         const park = spawnSync(
           BUN,
           [
-            join(proj, ".claude", "tools", "aidlc-state.ts"),
+            join(proj, ".claude", "tools", "amadeus-state.ts"),
             "park",
             "--project-dir",
             proj,
@@ -562,7 +562,7 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
         // parked branch declines the allow under autonomous. Inject the markers
         // by hand (the tool refused to write them) and confirm the hook BLOCKS:
         // the real engine re-emits `parked`, but the autonomy guard
-        // (aidlc-stop.ts:760-771) falls through to the cap-bounded block.
+        // (amadeus-stop.ts:760-771) falls through to the cap-bounded block.
         const sf = seededStateFile(proj);
         sedReplaceInFile(
           sf,
@@ -588,7 +588,7 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
   // CONVERSATIONAL: a Claude transcript whose most recent human prompt was
   // answered with TEXT only, no workflow-engine call. The real hook ALLOWS the
   // stop (empty stdout, exit 0). The complement: the SAME fixture with an
-  // aidlc-orchestrate Bash call after the human prompt still BLOCKS (a conductor
+  // amadeus-orchestrate Bash call after the human prompt still BLOCKS (a conductor
   // that engaged the engine and then quit mid-loop must still be nudged).
   // Deterministic (no model in the loop). t121 owns the codex / autonomy /
   // fail-closed matrix.
@@ -643,7 +643,7 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
                   type: "tool_use",
                   name: "Bash",
                   input: {
-                    command: "bun .claude/tools/aidlc-orchestrate.ts next",
+                    command: "bun .claude/tools/amadeus-orchestrate.ts next",
                   },
                 },
               ],

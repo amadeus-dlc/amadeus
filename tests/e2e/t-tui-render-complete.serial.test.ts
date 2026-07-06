@@ -4,7 +4,7 @@
 // branch (§5-C render row, §7 Phase 1), driven SEEDED-STATE in a REAL terminal
 // with ZERO Bedrock tokens.
 //
-// The branch under test (aidlc-statusline.ts ~:230): when the seeded state's
+// The branch under test (amadeus-statusline.ts ~:230): when the seeded state's
 // Status is "Completed"/"Complete" the hook prints
 //   "[AIDLC] COMPLETE <completeBar>"
 // where completeBar is the natural phase bar when it resolves, else a forced full
@@ -96,7 +96,7 @@ describe("t-tui-render statusline COMPLETE sentinel (seeded completed, no tokens
       // COMPLETE branch fires with a full bar). State-driven; no prompt, no tokens.
       const sandbox = setupTuiProject({ withState: "state-completed.md" });
       try {
-        // The statusLine key is what wires aidlc-statusline.ts into the TUI; a copy
+        // The statusLine key is what wires amadeus-statusline.ts into the TUI; a copy
         // that dropped it would render no [AIDLC] line at all.
         expect(
           readFileSync(join(sandbox, ".claude", "settings.json"), "utf8"),

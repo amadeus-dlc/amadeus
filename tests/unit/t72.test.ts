@@ -1,17 +1,17 @@
-// covers: subcommand:aidlc-worktree:info
+// covers: subcommand:amadeus-worktree:info
 //
 // SPIKE (WF-D): bun:test port of tests/unit/t72-worktree-info.sh (TAP plan 10),
 // mechanism = cli. This is the consistency play the user asked for — replace the
 // .sh with a .test.ts of EQUAL fidelity by spawning the real CLI via
 // node:child_process, rather than a weaker .none import-twin.
 //
-// t72 is a pure CLI-contract test: `aidlc-worktree info --slug <s> --project-dir <p>`
-// reads aidlc-docs/audit.md, scans WORKTREE_CREATED blocks end-to-start, and emits
+// t72 is a pure CLI-contract test: `amadeus-worktree info --slug <s> --project-dir <p>`
+// reads amadeus-docs/audit.md, scans WORKTREE_CREATED blocks end-to-start, and emits
 // JSON on a hit / exits non-zero with a stderr message on miss-or-malformed. The
 // contract under test is the PROCESS boundary (exit code + stdout JSON + stderr
 // text), so it stays a spawn — calling handleInfo() in-process would lose the
 // exit-code and stderr-stream half of the contract. As a .cli-mechanism file it
-// legitimately credits the `aidlc-worktree info` subcommand unit (minMechanism:
+// legitimately credits the `amadeus-worktree info` subcommand unit (minMechanism:
 // cli) that a .none twin could not.
 //
 // FIXTURE DISCIPLINE: each case writes a fresh audit.md under mkdtempSync(tmpdir())
@@ -36,12 +36,12 @@ const TOOL = join(
   "dist", "claude",
   ".claude",
   "tools",
-  "aidlc-worktree.ts",
+  "amadeus-worktree.ts",
 );
 
 // --- per-case temp project harness ----------------------------------------
-// P9: `aidlc-worktree info` reads the ACTIVE INTENT's per-clone audit shard via
-// readAllAuditShards(), not a flat aidlc-docs/audit.md. Seed the per-intent
+// P9: `amadeus-worktree info` reads the ACTIVE INTENT's per-clone audit shard via
+// readAllAuditShards(), not a flat amadeus-docs/audit.md. Seed the per-intent
 // workspace shell (createTestProject) + a state file (so the active-intent
 // cursor resolves the record), then write the test's audit content into the
 // deterministic shard the tool will read (seededAuditShard).

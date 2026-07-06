@@ -1,6 +1,6 @@
 # Team-Level Rules
 
-> This team's affirmed practices and corrections. Overrides aidlc-org.md.
+> This team's affirmed practices and corrections. Overrides amadeus-org.md.
 > Populated by practices-discovery affirmation gate. Edit at the gate,
 > not directly.
 

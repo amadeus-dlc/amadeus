@@ -5,7 +5,7 @@
 //   - {{HARNESS_DIR}} — the harness dir token, left UNSUBSTITUTED here so the
 //     packager's single sanctioned transform() (+ rules-rename) handles it,
 //     exactly like every other core/ .md. This module never touches it.
-//   - {{INVOKE}} — the invoke command (`/aidlc`, `$aidlc`, …), substituted here.
+//   - {{INVOKE}} — the invoke command (`/amadeus`, `$amadeus`, …), substituted here.
 //   - {{SLOT:<name>}} — named per-harness slots, filled from the harness's
 //     onboarding.fills.ts. A slot with no fill renders empty (intentional
 //     "section omitted"); an UNKNOWN {{SLOT:...}} left in the output is a bug and
@@ -17,7 +17,7 @@
 
 /** Per-harness fill set: the invoke command + the slot bodies. */
 export type OnboardingFills = {
-  /** The invoke command this harness uses, e.g. "/aidlc" or "$aidlc". */
+  /** The invoke command this harness uses, e.g. "/amadeus" or "$amadeus". */
   invoke: string;
   /**
    * Slot name → markdown body. A slot listed in the skeleton but absent here

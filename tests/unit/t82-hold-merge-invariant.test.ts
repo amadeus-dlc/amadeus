@@ -1,25 +1,25 @@
-// covers: subcommand:aidlc-bolt:hold-merge, subcommand:aidlc-bolt:release-merge, subcommand:aidlc-bolt:complete
+// covers: subcommand:amadeus-bolt:hold-merge, subcommand:amadeus-bolt:release-merge, subcommand:amadeus-bolt:complete
 //
-// t82 — aidlc-bolt.ts HOLD-MERGE invariant tooling (v0.4.0 milestone 13 post-merge
+// t82 — amadeus-bolt.ts HOLD-MERGE invariant tooling (v0.4.0 milestone 13 post-merge
 // fold-in). Migrated from tests/unit/t82-hold-merge-invariant.sh (TAP plan 10).
 //
 // Mechanism: cli. Every assertion is a process-boundary contract:
 //   - `hold-merge` / `release-merge` mutate the per-Bolt FORKED state file at
-//     <proj>/.aidlc/worktrees/bolt-<slug>/aidlc-docs/aidlc-state.md and print a
+//     <proj>/.aidlc/worktrees/bolt-<slug>/amadeus-docs/amadeus-state.md and print a
 //     JSON envelope to stdout, then return (handleHoldMerge / handleReleaseMerge,
-//     aidlc-bolt.ts:587-601).
+//     amadeus-bolt.ts:587-601).
 //   - `complete --merge` refuses with process.exit(1) + a {ok:false,
 //     reason:"merge-held", ...} envelope when the marker is set (failJson,
-//     aidlc-bolt.ts:336-343,868-888), and proceeds (exit 0) once released.
+//     amadeus-bolt.ts:336-343,868-888), and proceeds (exit 0) once released.
 //   - the refusal path must NOT emit BOLT_COMPLETED into main audit.md.
 // The setup itself (`start --worktree --slug`) FANS OUT to sibling tools
-// (aidlc-state fork / aidlc-audit audit-fork / aidlc-runtime fragment-fork via
+// (amadeus-state fork / amadeus-audit audit-fork / amadeus-runtime fragment-fork via
 // spawnSibling, :222-284) to materialise the forked state file — that multi-
 // process fork chain plus the process.exit refusal seam is exactly what an
 // in-process import twin would lose, so this is spawned end-to-end (the same
 // `bun "$TOOL" ...` the .sh ran). spawnCount = all.
 //
-// Source under test (dist/claude/.claude/tools/aidlc-bolt.ts):
+// Source under test (dist/claude/.claude/tools/amadeus-bolt.ts):
 //   :587 handleHoldMerge(args)    -> setMergeHeld(pd, slug, true);
 //                                     console.log({slug, merge_held:true})
 //   :595 handleReleaseMerge(args) -> setMergeHeld(pd, slug, false);
@@ -28,13 +28,13 @@
 //        forked state file is absent (:622-627); else setOrInsertField under
 //        "## Project Information" writes `- **Merge-Held**: true|false`.
 //   :336 handleComplete: if (isMergeHeld(pd, slug)) failJson("complete-merge",
-//        slug, "merge-held", "...run `aidlc-bolt release-merge --slug <slug>`
+//        slug, "merge-held", "...run `amadeus-bolt release-merge --slug <slug>`
 //        before retrying.") — refusal fires BEFORE the BOLT_COMPLETED emit
 //        (:354), so no audit row is written on refusal.
 //   :613 isMergeHeld -> getField(content, "Merge-Held") === "true".
 //
-// Forked-state-file path is worktreePath(pd,slug)/aidlc-docs/aidlc-state.md
-// where worktreePath = <pd>/.aidlc/worktrees/bolt-<slug> (aidlc-lib.ts:148).
+// Forked-state-file path is worktreePath(pd,slug)/amadeus-docs/amadeus-state.md
+// where worktreePath = <pd>/.aidlc/worktrees/bolt-<slug> (amadeus-lib.ts:148).
 //
 // Old TAP -> new test parity (1:1, every .sh assertion -> a named test):
 //   .sh T1  hold-merge sets Merge-Held: true   -> "hold-merge sets `- **Merge-Held**: true` in forked state"
@@ -73,7 +73,7 @@ import {
 resetAidlcEnv();
 
 const BUN = process.execPath; // the bun running this test
-const TOOL = join(AIDLC_SRC, "tools", "aidlc-bolt.ts");
+const TOOL = join(AIDLC_SRC, "tools", "amadeus-bolt.ts");
 const STATE_FIXTURE = join(FIXTURES_DIR, "state-construction.md");
 
 const projects: string[] = [];
@@ -86,7 +86,7 @@ interface BoltResult {
   out: string; // combined stdout+stderr (mirrors the .sh's 2>&1)
 }
 
-/** Spawn `bun aidlc-bolt.ts <args> --project-dir <proj>`, capture 2>&1. */
+/** Spawn `bun amadeus-bolt.ts <args> --project-dir <proj>`, capture 2>&1. */
 function bolt(proj: string, args: string[]): BoltResult {
   const res = spawnSync(BUN, [TOOL, ...args, "--project-dir", proj], {
     encoding: "utf-8",
@@ -131,7 +131,7 @@ function setupForkedProject(slug: string): string {
 
 /** The per-Bolt forked state file the hold-merge marker is written into — the
  *  worktree mirror carries the SAME relative record dir as the main checkout
- *  (aidlc/spaces/default/intents/<record>/aidlc-state.md), not flat aidlc-docs/. */
+ *  (aidlc/spaces/default/intents/<record>/amadeus-state.md), not flat amadeus-docs/. */
 function forkedState(proj: string, slug: string): string {
   return join(
     proj,
@@ -143,7 +143,7 @@ function forkedState(proj: string, slug: string): string {
     DEFAULT_SPACE,
     "intents",
     DEFAULT_RECORD_DIR,
-    "aidlc-state.md",
+    "amadeus-state.md",
   );
 }
 
@@ -162,7 +162,7 @@ function readAudit(proj: string): string {
   return names.map((n) => readFileSync(join(dir, n), "utf-8")).join("\n");
 }
 
-describe("t82 aidlc-bolt HOLD-MERGE invariant (migrated from t82-hold-merge-invariant.sh, plan 10)", () => {
+describe("t82 amadeus-bolt HOLD-MERGE invariant (migrated from t82-hold-merge-invariant.sh, plan 10)", () => {
   test("hold-merge sets `- **Merge-Held**: true` in forked state [.sh T1]", () => {
     const proj = setupForkedProject("hm1");
     const r1 = bolt(proj, ["hold-merge", "--slug", "hm1"]);
@@ -307,7 +307,7 @@ describe("t82 aidlc-bolt HOLD-MERGE invariant (migrated from t82-hold-merge-inva
     expect(r.status).toBe(1);
     // §6-E: the refusal path's negative event-suppression contract. The .sh
     // grepped main audit.md for `^**Event**: BOLT_COMPLETED`. The refusal fires
-    // BEFORE the BOLT_COMPLETED emit (aidlc-bolt.ts:336 < :354), so no such row
+    // BEFORE the BOLT_COMPLETED emit (amadeus-bolt.ts:336 < :354), so no such row
     // exists in main audit.md.
     const audit = readAudit(proj);
     expect(
@@ -343,7 +343,7 @@ describe("t82 aidlc-bolt HOLD-MERGE invariant (migrated from t82-hold-merge-inva
   test("hold-merge errors (exit 1) when forked state absent [.sh T10]", () => {
     // No setup_forked_project here: a plain construction project with NO
     // per-Bolt fork for the slug. setMergeHeld -> forkedStateFilePath returns
-    // null -> error() exits 1 (aidlc-bolt.ts:622-627).
+    // null -> error() exits 1 (amadeus-bolt.ts:622-627).
     const proj = createTestProject();
     projects.push(proj);
     seedStateFile(proj, STATE_FIXTURE);

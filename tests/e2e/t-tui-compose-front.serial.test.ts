@@ -1,20 +1,20 @@
-// covers: file:skills/aidlc/SKILL.md, file:agents/aidlc-composer-agent.md
+// covers: file:skills/amadeus/SKILL.md, file:agents/amadeus-composer-agent.md
 //
 // t-tui-compose-front.serial.test.ts - the P2 front-composer journey through a
 // REAL claude TUI (the render half of what t192 proves on the SDK): drive
-// `/aidlc compose "<task>"` on a fresh workspace, answer the rendered
+// `/amadeus compose "<task>"` on a fresh workspace, answer the rendered
 // approve/edit/reject gate by keystroke (Enter = the leading option, which the
 // SKILL.md composer block pins to Approve), and TERMINATE on the born state
 // landing on disk.
 //
 // What it proves on the SHIPPED tree that the SDK path cannot see: the compose
 // gate RENDERS as a real AskUserQuestion menu a human answers, and answering
-// it drives the write + same-turn birth - one /aidlc invocation, keystrokes
+// it drives the write + same-turn birth - one /amadeus invocation, keystrokes
 // only.
 //
 // Disk assertions (the same P2 contract t192 pins):
 //   - a 10th scope .md + a 10th scope-grid.json key exist (the two-file write),
-//   - the born aidlc-state.md carries the composed (non-stock) scope.
+//   - the born amadeus-state.md carries the composed (non-stock) scope.
 //
 // SPENDS Claude credits - gated behind AIDLC_TUI_LIVE=1 with skip-reasons;
 // tmux-backend only (mirrors t-tui-t50's gating).
@@ -69,7 +69,7 @@ const SKIP_REASON = skipReason();
 
 describe("t-tui compose front journey (live claude TUI)", () => {
   test.skipIf(SKIP_REASON !== null)(
-    `/aidlc compose renders the gate; answering births the composed scope${SKIP_REASON ? ` - SKIP: ${SKIP_REASON}` : ""}`,
+    `/amadeus compose renders the gate; answering births the composed scope${SKIP_REASON ? ` - SKIP: ${SKIP_REASON}` : ""}`,
     async () => {
       const session = `aidlc_tui_compose_${process.pid}`;
       const sandbox = setupTuiProject({ brownfieldStub: true, noAidlcDocs: true });
@@ -90,7 +90,7 @@ describe("t-tui compose front journey (live claude TUI)", () => {
 
         drive([
           "send", "--session", session, "--keys",
-          `/aidlc compose "${TASK}"`,
+          `/amadeus compose "${TASK}"`,
           "--literal", "--no-enter",
         ]);
         drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
@@ -119,7 +119,7 @@ describe("t-tui compose front journey (live claude TUI)", () => {
         // The two-file write landed: a 10th scope .md + a 10th grid key.
         const scopesDir = join(sandbox, ".claude", "scopes");
         const scopeFiles = readdirSync(scopesDir).filter(
-          (f) => f.startsWith("aidlc-") && f.endsWith(".md"),
+          (f) => f.startsWith("amadeus-") && f.endsWith(".md"),
         );
         expect(scopeFiles.length).toBe(10);
         const grid = JSON.parse(

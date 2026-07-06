@@ -1,6 +1,6 @@
 ---
 kind: deterministic
-command: bun .claude/tools/aidlc-sensor.ts fire malformed-missing-id
+command: bun .claude/tools/amadeus-sensor.ts fire malformed-missing-id
 applies_to:
   all_stages: true
 default_severity: advisory

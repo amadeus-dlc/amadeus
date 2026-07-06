@@ -1,4 +1,4 @@
-// covers: file:skills/aidlc/SKILL.md
+// covers: file:skills/amadeus/SKILL.md
 //
 // t-acp-kiro-reviewer.serial.test.ts — LIVE proof that the §12a reviewer step
 // fires on the Kiro harness: a reviewer-declaring stage driven over ACP through
@@ -13,9 +13,9 @@
 // Kiro conductor actually runs the reviewer sub-agent end-to-end — the live
 // reviewer evidence lived only on the Claude TUI leg (t-tui-t51-poc-scope).
 // This is the Kiro logic-half twin: same stage (requirements-analysis, poc,
-// `reviewer: aidlc-product-lead-agent` per its frontmatter), ACP-native shape.
+// `reviewer: amadeus-product-lead-agent` per its frontmatter), ACP-native shape.
 //
-// MECHANISM. `/aidlc --scope poc --stage requirements-analysis --single` emits
+// MECHANISM. `/amadeus --scope poc --stage requirements-analysis --single` emits
 // exactly ONE run-stage directive carrying the graph node's `reviewer` +
 // `reviewer_max_iterations` fields (buildRunStageDirective attaches them from
 // the compiled node; Branch 4b short-circuits every mutating path, so the main
@@ -40,7 +40,7 @@
 //     carries a `## Review` section with a READY / NOT-READY verdict — the
 //     §12a contract (stage-protocol.md "Reviewer executes"), landing under
 //     `aidlc/spaces/**` (the tree the reviewer's write cap names).
-//   - No root-level `aidlc-docs/` appears: the retired flat layout must not
+//   - No root-level `amadeus-docs/` appears: the retired flat layout must not
 //     be resurrected by a reviewer pointed at a dead path.
 //   - Some tool call in the turn references the reviewer agent slug — the
 //     reviewer ran as a SUB-AGENT invocation, not conductor-inline prose.
@@ -65,7 +65,7 @@ const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 1800) * 1000;
 // Two drive turns share the budget; leave headroom for setup/asserts.
 const DRIVE_MS = Math.max(300_000, Math.floor((TEST_TIMEOUT_MS - 120_000) / 2));
 
-const REVIEWER_SLUG = "aidlc-product-lead-agent";
+const REVIEWER_SLUG = "amadeus-product-lead-agent";
 
 function skipReason(): string | null {
   if (process.env.AIDLC_KIRO_ACP_LIVE !== "1") {
@@ -132,7 +132,7 @@ describe("t-acp-kiro-reviewer (live §12a reviewer fires on the shipped dist/kir
       // the requirements pass its anchor (fewer/cheaper clarifying questions);
       // all of requirements-analysis's consumes are optional, so nothing else
       // is required for a poc `--single` run. withState is LOAD-BEARING: the
-      // intent record only resolves when it holds an aidlc-state.md
+      // intent record only resolves when it holds an amadeus-state.md
       // (activeIntent's cursor check + listIntentDirs both require it), and
       // with no record the engine's recordPrefix falls back to the BARE
       // intents root — the stage then writes `intents/inception/...` while
@@ -155,7 +155,7 @@ describe("t-acp-kiro-reviewer (live §12a reviewer fires on the shipped dist/kir
         const r1 = await driveUntilReview(
           session,
           proj,
-          `/aidlc --scope poc --stage requirements-analysis --single` +
+          `/amadeus --scope poc --stage requirements-analysis --single` +
             ` — for any clarifying question this stage asks, choose the` +
             ` recommended option yourself and continue; do not wait for me.` +
             ` Run the stage to completion including the reviewer step.`,
@@ -184,7 +184,7 @@ describe("t-acp-kiro-reviewer (live §12a reviewer fires on the shipped dist/kir
 
         // The retired flat layout must not reappear: a reviewer (or conductor)
         // still pointed at the dead root path would recreate it here.
-        expect(existsSync(join(proj, "aidlc-docs"))).toBe(false);
+        expect(existsSync(join(proj, "amadeus-docs"))).toBe(false);
 
         // The reviewer ran as a sub-agent: some tool call in the turn(s)
         // references the reviewer slug (title, input, or output — tolerant of

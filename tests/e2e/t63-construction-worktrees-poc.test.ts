@@ -1,4 +1,4 @@
-// covers: data:scope-grid(poc), cli:aidlc-bolt(dispatch-event), cli:aidlc-state(practices-event), cli:aidlc-utility(init)
+// covers: data:scope-grid(poc), cli:amadeus-bolt(dispatch-event), cli:amadeus-state(practices-event), cli:amadeus-utility(init)
 //
 // t63 — Construction worktrees per scope, poc (v0.4.0 milestone 13). Migrated from
 // tests/e2e/t63-construction-worktrees-poc.sh (TAP plan 5). poc is the
@@ -23,12 +23,12 @@
 //   dist/claude/.claude/tools/data/scope-grid.json — poc.stages map
 //       (transpose of per-stage `scopes:` frontmatter; runtime source of truth
 //        after milestone 12 retired scope-mapping.json — helpers.sh:46-48)
-//   dist/claude/.claude/tools/aidlc-bolt.ts:660 handleDispatchEvent
+//   dist/claude/.claude/tools/amadeus-bolt.ts:660 handleDispatchEvent
 //       — MERGE_DISPATCH_INVOKED requires --practices-excerpt; emits
 //         appendAuditEntry(pd, "MERGE_DISPATCH_INVOKED", {Bolt slug, ...}) (:670-684)
-//   dist/claude/.claude/tools/aidlc-state.ts:1048 handlePracticesEvent
+//   dist/claude/.claude/tools/amadeus-state.ts:1048 handlePracticesEvent
 //       — --type empty → emitAudit(pd, "PRACTICES_SECTION_EMPTY", fields) (:1100-1102)
-//   dist/claude/.claude/tools/aidlc-utility.ts init → state template
+//   dist/claude/.claude/tools/amadeus-utility.ts init → state template
 //       — emits "- **Worktree Path**:" + "- **Bolt Refs**:" (:2057-2058),
 //         State Version 7 (:2055)
 //
@@ -48,13 +48,13 @@ import { AIDLC_SRC, setupIntegrationProject } from "../harness/fixtures.ts";
 // aidlc/spaces/<space>/intents/<slug>-<id8>/ and audit is SHARDED per clone
 // under <record>/audit/. Read state through the resolved record dir and audit
 // through the shipped merge helper (default-resolves the active intent, falls
-// back to flat aidlc-docs for a not-yet-born project).
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+// back to flat amadeus-docs for a not-yet-born project).
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath; // the bun running this test
-const BOLT = join(AIDLC_SRC, "tools", "aidlc-bolt.ts");
-const STATE = join(AIDLC_SRC, "tools", "aidlc-state.ts");
-const UTILITY = join(AIDLC_SRC, "tools", "aidlc-utility.ts");
+const BOLT = join(AIDLC_SRC, "tools", "amadeus-bolt.ts");
+const STATE = join(AIDLC_SRC, "tools", "amadeus-state.ts");
+const UTILITY = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
 const SCOPE_GRID = join(AIDLC_SRC, "tools", "data", "scope-grid.json");
 
 // scope-grid.json is the compiled runtime source of truth — read it once, in
@@ -68,7 +68,7 @@ const scopeGrid = JSON.parse(readFileSync(SCOPE_GRID, "utf-8")) as Record<
 // One initialized poc project shared across the CLI cases. setupIntegrationProject
 // copies the shipped .claude/ + a greenfield stub; init seeds the v7 state +
 // audit.md. Mirrors setup_construction_project("poc"): setupIntegrationProject
-// --with-greenfield-stub then `aidlc-utility init --force --scope poc`.
+// --with-greenfield-stub then `amadeus-utility init --force --scope poc`.
 let PROJ: string;
 
 beforeAll(() => {
@@ -90,8 +90,8 @@ afterAll(() => {
 });
 
 // P4: resolve the born intent's record dir from the active-space + active-intent
-// cursors (a record dir is the one holding aidlc-state.md), falling back to the
-// flat aidlc-docs/ layout for a not-yet-born project.
+// cursors (a record dir is the one holding amadeus-state.md), falling back to the
+// flat amadeus-docs/ layout for a not-yet-born project.
 function recordDirOf(p: string): string {
   const spaceCursor = join(p, "aidlc", "active-space");
   const space = existsSync(spaceCursor)
@@ -101,16 +101,16 @@ function recordDirOf(p: string): string {
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();
-    if (rec && existsSync(join(intentsDir, rec, "aidlc-state.md"))) {
+    if (rec && existsSync(join(intentsDir, rec, "amadeus-state.md"))) {
       return join(intentsDir, rec);
     }
   }
-  return join(p, "aidlc-docs");
+  return join(p, "amadeus-docs");
 }
 
 /** Merged audit-shard text for the born intent (P4 shards audit per clone). */
 const auditText = () => readAllAuditShards(PROJ);
-const statePath = () => join(recordDirOf(PROJ), "aidlc-state.md");
+const statePath = () => join(recordDirOf(PROJ), "amadeus-state.md");
 
 describe("t63 construction-worktrees poc (migrated from t63-construction-worktrees-poc.sh, plan 5)", () => {
   // --- assertion 1: codegen mode (structural / none) ------------------------
@@ -144,7 +144,7 @@ describe("t63 construction-worktrees poc (migrated from t63-construction-worktre
     const audit = auditText();
     // STRONGER than the .sh's two independent greps: the event line and the
     // Bolt-slug line must BOTH be present (helpers.sh:108-109), and the slug
-    // appears on a "**Bolt slug**: <slug>" field row (aidlc-bolt.ts:675 +
+    // appears on a "**Bolt slug**: <slug>" field row (amadeus-bolt.ts:675 +
     // appendAuditEntry's "**<key>**: <value>" format).
     expect(audit).toContain("MERGE_DISPATCH_INVOKED");
     expect(audit).toContain(`**Bolt slug**: ${slug}`);
@@ -177,7 +177,7 @@ describe("t63 construction-worktrees poc (migrated from t63-construction-worktre
     );
     expect(r.status).toBe(0);
     // The non-golden emit MUST actually fire — the advisory row lands in
-    // audit.md (aidlc-state.ts:1100-1102). STRONGER than the .sh's lone grep:
+    // audit.md (amadeus-state.ts:1100-1102). STRONGER than the .sh's lone grep:
     // also pin the tool's emitted-event JSON on stdout and the field rows the
     // --field flags carried.
     expect(r.stdout).toContain('"emitted":"PRACTICES_SECTION_EMPTY"');
@@ -189,12 +189,12 @@ describe("t63 construction-worktrees poc (migrated from t63-construction-worktre
 
   // --- assertion 5: v7 state has the v0.4.0 fields (init seam / cli) ---------
   test("init writes a v7 state with the v0.4.0 Worktree Path + Bolt Refs fields [.sh 5]", () => {
-    // The state was written by `aidlc-utility init --scope poc` in beforeAll
+    // The state was written by `amadeus-utility init --scope poc` in beforeAll
     // (the .sh's setup_construction_project). Assert the file the tool produced
     // carries the v0.4.0 Construction-worktree fields.
     const state = readFileSync(statePath(), "utf-8");
     // STRONGER than the .sh's two `grep -q` checks: pin the exact template
-    // field lines (aidlc-utility.ts:2057-2058) plus the State Version 7 marker
+    // field lines (amadeus-utility.ts:2057-2058) plus the State Version 7 marker
     // (:2055) that makes these the v7 template's fields.
     expect(state).toContain("- **Worktree Path**:");
     expect(state).toContain("- **Bolt Refs**:");

@@ -1,4 +1,4 @@
-// covers: function:codekbDir, function:relativeCodekbDir, function:codekbRepoName, subcommand:aidlc-utility:codekb-path
+// covers: function:codekbDir, function:relativeCodekbDir, function:codekbRepoName, subcommand:amadeus-utility:codekb-path
 //
 // t182 — codekb placement (deterministic, no-LLM). The fast-tier guard for the
 // codekb-determinism effort: it pins the SPACE-LEVEL placement the engine now
@@ -19,8 +19,8 @@
 // MECHANISM = cli. The lib helpers are EXPORTED (importable in-process, the
 // `none` floor), but the `codekb-path` subcommand is an argv-dispatch surface
 // whose guarantee-principle minMechanism is `cli` — only a SPAWNED tool proves it
-// routes. This file spawns BOTH `aidlc-utility.ts codekb-path` and
-// `aidlc-orchestrate.ts next` (the t116 vehicle), so gen-coverage-registry.ts
+// routes. This file spawns BOTH `amadeus-utility.ts codekb-path` and
+// `amadeus-orchestrate.ts next` (the t116 vehicle), so gen-coverage-registry.ts
 // derives `cli` from the body and the subcommand claim clears its bar while the
 // three function claims clear `none`.
 //
@@ -46,13 +46,13 @@ import {
   codekbDir,
   codekbRepoName,
   relativeCodekbDir,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const TOOLS = join(REPO_ROOT, "dist", "claude", ".claude", "tools");
-const UTILITY = join(TOOLS, "aidlc-utility.ts");
-const ORCH = join(TOOLS, "aidlc-orchestrate.ts");
+const UTILITY = join(TOOLS, "amadeus-utility.ts");
+const ORCH = join(TOOLS, "amadeus-orchestrate.ts");
 const FIXTURES_DIR = join(REPO_ROOT, "tests", "fixtures");
 
 // Clear AWS_AIDLC_DEFAULT_SCOPE so a leaked shell export can't shadow the fixture
@@ -71,8 +71,8 @@ function freshProject(): string {
 }
 
 // A fresh project whose ACTIVE-intent cursor actually resolves: createTestProject
-// seeds the registry row + cursor but NO aidlc-state.md, and activeIntent only
-// honours the cursor when the record dir holds a state file (aidlc-lib.ts
+// seeds the registry row + cursor but NO amadeus-state.md, and activeIntent only
+// honours the cursor when the record dir holds a state file (amadeus-lib.ts
 // activeIntent). Seeding one makes intentRepos read the recorded row, so the
 // codekbRepoName cases below exercise the real registry path, not the null-cursor
 // fallback. The fixture's repos field stays absent until rewriteIntentRepos sets it.
@@ -114,7 +114,7 @@ describe("t182 codekb lib helpers — space-level per-repo placement", () => {
 
   // codekbRepoName resolves the recorded repo set via intentRepos, which keys off
   // the ACTIVE intent — and activeIntent only honours the cursor when the record
-  // dir holds an aidlc-state.md (aidlc-lib.ts activeIntent). So these cases seed a
+  // dir holds an amadeus-state.md (amadeus-lib.ts activeIntent). So these cases seed a
   // state file first (seedRecordedIntent) so the cursor resolves to the row whose
   // repos we then rewrite; without it intentRepos returns [] for the wrong reason.
 

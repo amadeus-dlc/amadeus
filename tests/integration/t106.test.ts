@@ -1,22 +1,22 @@
-// covers: subcommand:aidlc-runtime:summary
+// covers: subcommand:amadeus-runtime:summary
 //
 // CLI-contract port of tests/integration/t106-runtime-summary.sh (TAP plan 13),
 // mechanism = cli. Equal-or-stronger migration: every .sh assertion that
-// shelled out to `bun aidlc-runtime.ts summary [...]` (and the `compile`
+// shelled out to `bun amadeus-runtime.ts summary [...]` (and the `compile`
 // fixture-build it depends on) is preserved by SPAWNING the real CLI via
 // node:child_process spawnSync (the BUN running this test + the tool .ts
 // path), asserting on res.status / res.stdout / res.stderr and the
 // runtime-graph.json that `compile` writes — the PROCESS boundary, not an
 // in-process summarize() call. An in-process twin would lose the
 // missing-graph exit-1 shell (handleSummary's process.exit(1) at
-// aidlc-runtime.ts:1233) that the .sh's Case-C `$?` arm relies on.
+// amadeus-runtime.ts:1233) that the .sh's Case-C `$?` arm relies on.
 //
 // summary reads ONLY the materialised runtime-graph.json — it never re-walks
 // audit — so each case must `compile` a synthetic audit first to produce the
 // graph summary will read. That mirrors the .sh exactly (run_compile then
 // run_summary per case).
 //
-// SUBCOMMAND UNIT: this file credits `subcommand:aidlc-runtime:summary` —
+// SUBCOMMAND UNIT: this file credits `subcommand:amadeus-runtime:summary` —
 // the summary subcommand is the sole surface under test (compile is invoked
 // only as a fixture-builder, already covered by t90.cli.test.ts).
 //
@@ -66,12 +66,12 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { toPortablePath } from "../harness/fixtures.ts";
-import { auditFilePath } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { auditFilePath } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // P9: with no intent cursor seeded, compile/summary resolve the BARE space
 // record root (docsRoot -> spaceRecordRoot) at aidlc/spaces/default/intents/.
 // State, runtime-graph, per-stage memory, and the per-clone audit SHARD all
-// live under it (the flat aidlc-docs/ root is retired — there is no fallback).
+// live under it (the flat amadeus-docs/ root is retired — there is no fallback).
 const RECORD_REL = join("aidlc", "spaces", "default", "intents");
 function recordRoot(proj: string): string {
   return join(proj, RECORD_REL);
@@ -85,7 +85,7 @@ const RUNTIME_TS = join(
   "claude",
   ".claude",
   "tools",
-  "aidlc-runtime.ts",
+  "amadeus-runtime.ts",
 );
 
 const tempDirs: string[] = [];
@@ -125,25 +125,25 @@ function runSummary(proj: string, ...args: string[]): SpawnResult {
 
 /**
  * make_project (t106:31-40): fresh temp project with the given audit.md +
- * aidlc-state.md under aidlc-docs/. toPortablePath: compile/summary resolve
+ * amadeus-state.md under amadeus-docs/. toPortablePath: compile/summary resolve
  * audit/graph paths through forward-slash helpers, so on Windows the raw
  * mktemp path can't round-trip — mirrors createTestProject (fixtures.ts).
  */
 function makeProject(audit: string, state: string): string {
-  const proj = toPortablePath(mkdtempSync(join(tmpdir(), "aidlc-t106-")));
+  const proj = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-t106-")));
   tempDirs.push(proj);
   mkdirSync(recordRoot(proj), { recursive: true });
   // Seed the DETERMINISTIC audit shard the compile tool resolves (auditFilePath).
   const shard = auditFilePath(proj);
   mkdirSync(dirname(shard), { recursive: true });
   writeFileSync(shard, audit, "utf-8");
-  writeFileSync(join(recordRoot(proj), "aidlc-state.md"), state, "utf-8");
+  writeFileSync(join(recordRoot(proj), "amadeus-state.md"), state, "utf-8");
   return proj;
 }
 
 /** Bare temp project with the record shell but no state/audit/graph (Case C). */
 function makeBareProject(): string {
-  const proj = toPortablePath(mkdtempSync(join(tmpdir(), "aidlc-t106-")));
+  const proj = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-t106-")));
   tempDirs.push(proj);
   mkdirSync(recordRoot(proj), { recursive: true });
   return proj;
@@ -183,7 +183,7 @@ const AUDIT_MIX = `## Workflow Start
 **Timestamp**: 2026-05-27T10:01:00Z
 **Event**: STAGE_STARTED
 **Stage**: intent-capture
-**Agent**: aidlc-product-agent
+**Agent**: amadeus-product-agent
 
 ---
 
@@ -199,7 +199,7 @@ const AUDIT_MIX = `## Workflow Start
 **Timestamp**: 2026-05-27T10:11:00Z
 **Event**: STAGE_STARTED
 **Stage**: feasibility
-**Agent**: aidlc-product-agent
+**Agent**: amadeus-product-agent
 
 ---
 
@@ -215,7 +215,7 @@ const AUDIT_MIX = `## Workflow Start
 **Timestamp**: 2026-05-27T10:41:00Z
 **Event**: STAGE_STARTED
 **Stage**: scope-definition
-**Agent**: aidlc-product-agent
+**Agent**: amadeus-product-agent
 
 ---
 `;
@@ -241,7 +241,7 @@ const AUDIT_PENDING = `## Workflow Start
 **Timestamp**: 2026-05-27T10:01:00Z
 **Event**: STAGE_STARTED
 **Stage**: intent-capture
-**Agent**: aidlc-product-agent
+**Agent**: amadeus-product-agent
 
 ---
 `;
@@ -257,7 +257,7 @@ const AUDIT_STALE_COMPLETED = `## Workflow Start
 **Timestamp**: 2026-05-27T10:01:00Z
 **Event**: STAGE_STARTED
 **Stage**: intent-capture
-**Agent**: aidlc-product-agent
+**Agent**: amadeus-product-agent
 
 ---
 
@@ -273,7 +273,7 @@ const AUDIT_STALE_COMPLETED = `## Workflow Start
 **Timestamp**: 2026-05-27T10:11:00Z
 **Event**: STAGE_STARTED
 **Stage**: feasibility
-**Agent**: aidlc-product-agent
+**Agent**: amadeus-product-agent
 
 ---
 `;
@@ -289,7 +289,7 @@ const STATE_COMPLETED_OVERLAY = [
 ].join("\n");
 
 // Synthetic single-stage pair for an UNRELATED slug, field shapes copied
-// exactly from handleSingleReport (aidlc-orchestrate.ts): STAGE_STARTED has
+// exactly from handleSingleReport (amadeus-orchestrate.ts): STAGE_STARTED has
 // Stage + Agent + Workflow; STAGE_COMPLETED has Stage + Details + Workflow.
 // `single-stage:<slug>` marks the pair as belonging to NO main workflow —
 // compile must not pair it, so summary must not count it.
@@ -297,7 +297,7 @@ const SINGLE_STAGE_PAIR = `## Stage Start
 **Timestamp**: 2026-05-27T10:42:00Z
 **Event**: STAGE_STARTED
 **Stage**: application-design
-**Agent**: aidlc-architect-agent
+**Agent**: amadeus-architect-agent
 **Workflow**: single-stage:application-design
 
 ---
@@ -324,7 +324,7 @@ function compileAndSummarize(proj: string): { summary: Summary; raw: string } {
   return { summary: JSON.parse(s.stdout), raw: s.stdout };
 }
 
-describe("t106 aidlc-runtime summary — CLI contract (migrated from t106-runtime-summary.sh, plan 13)", () => {
+describe("t106 amadeus-runtime summary — CLI contract (migrated from t106-runtime-summary.sh, plan 13)", () => {
   // --- Case A: two approved + one pending across ideation ------------------
   describe("Case A: 2 approved + 1 pending across ideation", () => {
     function caseAProject(): string {
@@ -421,7 +421,7 @@ describe("t106 aidlc-runtime summary — CLI contract (migrated from t106-runtim
     const r = runSummary(proj, "--json");
     expect(r.rc).toBe(1);
     // S4 STRONGER: the .sh discarded stderr (2>&1 >/dev/null); assert the
-    // diagnostic the tool emits (aidlc-runtime.ts:1230-1232).
+    // diagnostic the tool emits (amadeus-runtime.ts:1230-1232).
     expect(r.stderr).toContain("no runtime-graph.json found");
   });
 

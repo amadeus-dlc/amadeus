@@ -1,8 +1,8 @@
-// covers: subcommand:aidlc-utility:scope-table, subcommand:aidlc-utility:detect-scope
+// covers: subcommand:amadeus-utility:scope-table, subcommand:amadeus-utility:detect-scope
 //
 // CLI-contract port of tests/unit/t67-scope-table.sh (TAP plan 28),
 // mechanism = cli. Equal-or-stronger migration: every .sh assertion that
-// shelled out to `bun aidlc-utility.ts scope-table ...` / `detect-scope ...`
+// shelled out to `bun amadeus-utility.ts scope-table ...` / `detect-scope ...`
 // (and the `assert_infer` helper's `bun -e` import of inferScopeFromText) is
 // preserved by SPAWNING the real CLI via node:child_process spawnSync
 // (BUN + the tool .ts path), asserting on res.status / res.stdout / res.stderr
@@ -44,9 +44,9 @@
 //       "bugfix enterprise feature infra mvp poc refactor security-patch
 //       workshop" (Test 7), parsed by the same `^| <name>` regex the .sh awk'd.
 //   §3 row count == scopes/*.md count (1 assert) -> Test 8: the .sh pinned
-//       rows matching `^| <name>` === `ls scopes/aidlc-*.md | wc -l`. v0.6.0
+//       rows matching `^| <name>` === `ls scopes/amadeus-*.md | wc -l`. v0.6.0
 //       deleted scope-mapping.json; loadScopeMapping() now derives the scope
-//       SET from the .claude/scopes/aidlc-*.md files present (aidlc-lib.ts:836)
+//       SET from the .claude/scopes/amadeus-*.md files present (amadeus-lib.ts:836)
 //       + scope-grid.json `.stages`, so that filesystem count is STILL the live
 //       source — the .sh assertion is restored faithfully against it (NOT
 //       obsolete). STRONGER: also pins gridCount === mdCount === rendered rows
@@ -107,7 +107,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
@@ -118,7 +118,7 @@ const TOOL = join(
   "claude",
   ".claude",
   "tools",
-  "aidlc-utility.ts",
+  "amadeus-utility.ts",
 );
 const SKILL = join(
   REPO_ROOT,
@@ -140,10 +140,10 @@ const SCOPE_GRID = join(
 );
 // CURRENT canonical scope-set surface (v0.6.0): scope-mapping.json was DELETED;
 // loadScopeMapping() now derives the scope SET from the .claude/scopes/*.md
-// files present (aidlc-lib.ts:836 — `for (const name of Object.keys(metadata))`,
-// metadata sourced from loadScopeMetadata over scopes/aidlc-*.md) and merges in
-// scope-grid.json's per-scope `.stages`. So scopes/aidlc-*.md is the live source
-// the .sh's §3 `ls scopes/aidlc-*.md | wc -l` count targeted — NOT obsolete.
+// files present (amadeus-lib.ts:836 — `for (const name of Object.keys(metadata))`,
+// metadata sourced from loadScopeMetadata over scopes/amadeus-*.md) and merges in
+// scope-grid.json's per-scope `.stages`. So scopes/amadeus-*.md is the live source
+// the .sh's §3 `ls scopes/amadeus-*.md | wc -l` count targeted — NOT obsolete.
 const SCOPES_DIR = join(
   REPO_ROOT,
   "dist",
@@ -152,10 +152,10 @@ const SCOPES_DIR = join(
   "scopes",
 );
 
-/** Count of shipped scope definition files: .claude/scopes/aidlc-*.md. */
+/** Count of shipped scope definition files: .claude/scopes/amadeus-*.md. */
 function scopesMdCount(): number {
   return readdirSync(SCOPES_DIR).filter(
-    (f) => f.startsWith("aidlc-") && f.endsWith(".md"),
+    (f) => f.startsWith("amadeus-") && f.endsWith(".md"),
   ).length;
 }
 
@@ -186,7 +186,7 @@ interface CliResult {
   out: string; // combined stdout+stderr (mirrors the .sh's 2>&1)
 }
 
-/** Spawn `bun aidlc-utility.ts <args...>`. Optional AIDLC_SKILL_MD_PATH env seam. */
+/** Spawn `bun amadeus-utility.ts <args...>`. Optional AIDLC_SKILL_MD_PATH env seam. */
 function util(args: string[], skillMdPath?: string): CliResult {
   const env = { ...process.env };
   if (skillMdPath !== undefined) env.AIDLC_SKILL_MD_PATH = skillMdPath;
@@ -286,7 +286,7 @@ const EXPECTED_ROW_ORDER =
 
 // ============================================================
 // scope-table — emission shape (.sh §1)
-// (covers: subcommand:aidlc-utility:scope-table)
+// (covers: subcommand:amadeus-utility:scope-table)
 // ============================================================
 
 describe("t67 scope-table emission (migrated from t67-scope-table.sh §1-3)", () => {
@@ -325,9 +325,9 @@ describe("t67 scope-table emission (migrated from t67-scope-table.sh §1-3)", ()
   });
 
   // --- §3: row count matches the CURRENT shipped scope-set surface ---
-  // The .sh pinned `rowCount === ls scopes/aidlc-*.md | wc -l`. v0.6.0 deleted
+  // The .sh pinned `rowCount === ls scopes/amadeus-*.md | wc -l`. v0.6.0 deleted
   // scope-mapping.json; loadScopeMapping() now derives the scope SET from the
-  // .claude/scopes/aidlc-*.md files present (aidlc-lib.ts:836) and the per-scope
+  // .claude/scopes/amadeus-*.md files present (amadeus-lib.ts:836) and the per-scope
   // grid from scope-grid.json. The .sh's filesystem count is therefore STILL the
   // live source — not obsolete — so we restore it AND triangulate against the
   // grid (every scopes/*.md scope must carry a grid `.stages` entry) and the
@@ -351,7 +351,7 @@ describe("t67 scope-table emission (migrated from t67-scope-table.sh §1-3)", ()
 
 // ============================================================
 // scope-table --check (.sh §4-6)
-// (covers: subcommand:aidlc-utility:scope-table)
+// (covers: subcommand:amadeus-utility:scope-table)
 // ============================================================
 
 describe("t67 scope-table --check drift guard (migrated from t67 §4-6)", () => {
@@ -401,7 +401,7 @@ describe("t67 scope-table --check drift guard (migrated from t67 §4-6)", () => 
 
 // ============================================================
 // detect-scope --from-text keyword inference (.sh §7-10)
-// (covers: subcommand:aidlc-utility:detect-scope)
+// (covers: subcommand:amadeus-utility:detect-scope)
 // Exercises inferScopeFromText through the real CLI process boundary.
 // ============================================================
 
@@ -473,7 +473,7 @@ describe("t67 detect-scope --from-text boundary + fallback (migrated from t67 §
 
 // ============================================================
 // detect-scope audit-row shape + backward-compat + collision (.sh §11-13)
-// (covers: subcommand:aidlc-utility:detect-scope)
+// (covers: subcommand:amadeus-utility:detect-scope)
 // ============================================================
 
 describe("t67 detect-scope audit + backward-compat + collision (migrated from t67 §11-13)", () => {

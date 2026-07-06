@@ -1,4 +1,4 @@
-// covers: data:scope-grid.json, subcommand:aidlc-bolt:dispatch-event, doc:knowledge/aidlc-shared/state-template.md
+// covers: data:scope-grid.json, subcommand:amadeus-bolt:dispatch-event, doc:knowledge/amadeus-shared/state-template.md
 //
 // Construction worktrees per scope — REFACTOR. Migrated from
 // tests/e2e/t66-construction-worktrees-refactor.sh (TAP plan 4).
@@ -7,8 +7,8 @@
 //     reads of a shipped JSON data file — done in-process (no spawn, no LLM).
 //   - The dispatch-event audit emit (.sh test 2) and the init-built
 //     state-template check (.sh test 4) cross the PROCESS boundary: they spawn
-//     the real `aidlc-bolt.ts dispatch-event` / `aidlc-utility.ts init` tools
-//     via the bun runtime and assert on the audit.md / aidlc-state.md those
+//     the real `amadeus-bolt.ts dispatch-event` / `amadeus-utility.ts init` tools
+//     via the bun runtime and assert on the audit.md / amadeus-state.md those
 //     subprocesses write. That is the same seam the .sh exercised through
 //     setup_construction_project + assert_dispatch_event_runs_for_scope.
 //
@@ -26,11 +26,11 @@
 //     - the compiled {scope:{stages:{slug:MODE}}} grid (milestone 12 transpose of the
 //       per-stage `scopes:` frontmatter; replaced scope-mapping.json). refactor
 //       runs code-generation = EXECUTE and practices-discovery = SKIP.
-//   dist/claude/.claude/tools/aidlc-bolt.ts :660 handleDispatchEvent
+//   dist/claude/.claude/tools/amadeus-bolt.ts :660 handleDispatchEvent
 //     - MERGE_DISPATCH_INVOKED  -> emits audit with fields "Bolt slug" +
 //       "Practices section excerpt" (:670-684)
 //     emit-only: no state mutation, no spawn; pure audit emission via emitAudit.
-//   dist/claude/.claude/tools/aidlc-utility.ts :2048 init state template
+//   dist/claude/.claude/tools/amadeus-utility.ts :2048 init state template
 //     - State Version 7 template carries the v0.4.0 Construction-worktrees
 //       fields `- **Worktree Path**:` (:2057) and `- **Bolt Refs**:` (:2058).
 //
@@ -52,7 +52,7 @@
 //     template that introduced them), and that init exited 0.
 //
 // FIXTURE DISCIPLINE (mirrors setup_construction_project: setupIntegrationProject
-// --with-greenfield-stub, then `aidlc-utility init --force --scope refactor`):
+// --with-greenfield-stub, then `amadeus-utility init --force --scope refactor`):
 // one shared REFACTOR construction sandbox is built once in beforeAll and torn
 // down in afterAll — the same project the .sh threaded through all 4 asserts.
 // NOTHING is written under tests/fixtures/**; the temp dir is cleaned up.
@@ -70,12 +70,12 @@ import {
 // aidlc/spaces/<space>/intents/<slug>-<id8>/ and audit is SHARDED per clone
 // under <record>/audit/. Read state through the resolved record dir and audit
 // through the shipped merge helper (default-resolves the active intent, falls
-// back to flat aidlc-docs for a not-yet-born project).
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+// back to flat amadeus-docs for a not-yet-born project).
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath; // the bun running this test
-const BOLT = join(AIDLC_SRC, "tools", "aidlc-bolt.ts");
-const UTILITY = join(AIDLC_SRC, "tools", "aidlc-utility.ts");
+const BOLT = join(AIDLC_SRC, "tools", "amadeus-bolt.ts");
+const UTILITY = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
 const SCOPE_GRID = join(AIDLC_SRC, "tools", "data", "scope-grid.json");
 
 const SCOPE = "refactor";
@@ -106,8 +106,8 @@ afterAll(() => {
 });
 
 // P4: resolve the born intent's record dir from the active-space + active-intent
-// cursors (a record dir is the one holding aidlc-state.md), falling back to the
-// flat aidlc-docs/ layout for a not-yet-born project. Copied verbatim from t63.
+// cursors (a record dir is the one holding amadeus-state.md), falling back to the
+// flat amadeus-docs/ layout for a not-yet-born project. Copied verbatim from t63.
 function recordDirOf(p: string): string {
   const spaceCursor = join(p, "aidlc", "active-space");
   const space = existsSync(spaceCursor)
@@ -117,14 +117,14 @@ function recordDirOf(p: string): string {
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();
-    if (rec && existsSync(join(intentsDir, rec, "aidlc-state.md"))) {
+    if (rec && existsSync(join(intentsDir, rec, "amadeus-state.md"))) {
       return join(intentsDir, rec);
     }
   }
-  return join(p, "aidlc-docs");
+  return join(p, "amadeus-docs");
 }
 
-const statePath = (): string => join(recordDirOf(proj), "aidlc-state.md");
+const statePath = (): string => join(recordDirOf(proj), "amadeus-state.md");
 
 /** Run a bolt subcommand against the shared project. Mirrors `bun "$BOLT" ...`. */
 function bolt(args: string[]): { status: number; stdout: string; out: string } {
@@ -140,7 +140,7 @@ function bolt(args: string[]): { status: number; stdout: string; out: string } {
  * matches <ev>. Block-scoped (resets at `## ` headings and `---`). Returns ""
  * when absent. STRONGER than the .sh's file-wide grep — pins the field to the
  * right event. P4: reads the merged per-clone audit shards (readAllAuditShards),
- * not the retired flat aidlc-docs/audit.md.
+ * not the retired flat amadeus-docs/audit.md.
  */
 function auditField(ev: string, key: string): string {
   let matched = false;
@@ -215,7 +215,7 @@ describe("t66 construction worktrees — refactor (migrated from t66-constructio
     const lines = readFileSync(statePath(), "utf-8").split("\n");
     // .sh: grep "Worktree Path" AND grep "Bolt Refs". STRONGER: both land as
     // proper `- **<field>**:` state lines (the v7 template at
-    // aidlc-utility.ts:2057-2058), not bare substrings anywhere.
+    // amadeus-utility.ts:2057-2058), not bare substrings anywhere.
     expect(lines.some((l) => l.startsWith("- **Worktree Path**:"))).toBe(true);
     expect(lines.some((l) => l.startsWith("- **Bolt Refs**:"))).toBe(true);
     // State Version 7 is the template that introduced these fields.

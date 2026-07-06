@@ -15,7 +15,7 @@
 //     Approval gates by taking the Recommended default per menu,
 //   - answering advances REAL state on disk (the SDK and tui paths share this
 //     exact disk assertion):
-//       * aidlc-state.md `Practices Affirmed Timestamp` non-empty,
+//       * amadeus-state.md `Practices Affirmed Timestamp` non-empty,
 //       * audit.md has GATE_APPROVED >= 1,
 //       * team.md `## Way of Working` populated (trunk|merge|branch),
 //   - RENDER (the tui-only value-add): the captured grid showed the multi-tab
@@ -35,7 +35,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import * as os from "node:os";
 import { join } from "node:path";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { stateFilePathFor } from "../harness/sdk-drive.ts";
 import { resolveWinNode } from "../harness/tui-drive.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
@@ -118,7 +118,7 @@ describe("t-tui-workshop (answering AUQ gates advances disk state)", () => {
       // setupTuiProject copies the distributable AND the sibling aidlc/ memory
       // shell (the rule layers live there post-P5) and seeds the per-intent
       // workspace shell; noAidlcDocs strips the seeded record so the live
-      // `/aidlc --scope workshop` auto-births its own intent (the `ready`
+      // `/amadeus --scope workshop` auto-births its own intent (the `ready`
       // baseline below holds because no intent resolves until birth).
       const sandbox = setupTuiProject({ noAidlcDocs: true });
       // The render value-add: we tail the grid during the run to prove the
@@ -162,7 +162,7 @@ describe("t-tui-workshop (answering AUQ gates advances disk state)", () => {
           "--session",
           session,
           "--keys",
-          "/aidlc --scope workshop Build a simple React todo app",
+          "/amadeus --scope workshop Build a simple React todo app",
           "--literal",
           "--no-enter",
         ]);
@@ -202,8 +202,8 @@ describe("t-tui-workshop (answering AUQ gates advances disk state)", () => {
         // terminator therefore stopped the loop in that gap, and the immediate
         // `audit.md` read below saw GATE_APPROVED=0 — a real 0-count, not a
         // missing gate. Within the same handleApprove invocation the GATE_APPROVED
-        // row is appended to audit.md (aidlc-state.ts :799) BEFORE `Last Completed
-        // Stage` is flushed to aidlc-state.md by writeStateFile (:809; the :789
+        // row is appended to audit.md (amadeus-state.ts :799) BEFORE `Last Completed
+        // Stage` is flushed to amadeus-state.md by writeStateFile (:809; the :789
         // setField is in-memory only). So the moment the terminator can observe
         // `Last Completed Stage=^practices-discovery$` on disk, GATE_APPROVED is
         // already there — the GATE_APPROVED>=1 assertion below stays honest.
@@ -245,10 +245,10 @@ describe("t-tui-workshop (answering AUQ gates advances disk state)", () => {
           .filter((l) => l.startsWith("**Event**: GATE_APPROVED")).length;
         expect(gateApproved).toBeGreaterThanOrEqual(1);
 
-        // The method relocated (P5/fe7f470) from .claude/rules/aidlc-team.md to
+        // The method relocated (P5/fe7f470) from .claude/rules/amadeus-team.md to
         // the harness-neutral workspace-root aidlc/spaces/default/memory/team.md
-        // (neutral basename, no aidlc- prefix). Affirmation writes the section
-        // there via memoryDirFor (aidlc-state.ts:1346-1352).
+        // (neutral basename, no amadeus- prefix). Affirmation writes the section
+        // there via memoryDirFor (amadeus-state.ts:1346-1352).
         const teamRules = readFileSync(
           join(sandbox, "aidlc", "spaces", "default", "memory", "team.md"),
           "utf8",

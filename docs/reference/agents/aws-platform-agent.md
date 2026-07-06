@@ -1,10 +1,10 @@
-# aidlc-aws-platform-agent -- Technical Reference
+# amadeus-aws-platform-agent -- Technical Reference
 
 ## Identity
 
 | Field | Value |
 |-------|-------|
-| Name | aidlc-aws-platform-agent |
+| Name | amadeus-aws-platform-agent |
 | Model Override | opus |
 | Allowed Claude Code Tools | Read, Edit, Write, Glob, Grep, Bash, AskUserQuestion |
 | Disallowed Claude Code Tools | Task |
@@ -37,15 +37,15 @@
 
 | Source | Artifacts |
 |--------|-----------|
-| aidlc-architect-agent | Application topology, component inventory, infrastructure requirements |
-| aidlc-devsecops-agent | Security requirements, compliance controls, encryption specifications |
+| amadeus-architect-agent | Application topology, component inventory, infrastructure requirements |
+| amadeus-devsecops-agent | Security requirements, compliance controls, encryption specifications |
 
 ### Hands Off To
 
 | Target | Artifacts |
 |--------|-----------|
-| aidlc-pipeline-deploy-agent | Environment endpoints for deployment targets, infrastructure outputs |
-| aidlc-operations-agent | Provisioned infrastructure for observability setup and monitoring |
+| amadeus-pipeline-deploy-agent | Environment endpoints for deployment targets, infrastructure outputs |
+| amadeus-operations-agent | Provisioned infrastructure for observability setup and monitoring |
 
 ---
 
@@ -53,7 +53,7 @@
 
 ### Methodology (Tier 1)
 
-Path: `.claude/knowledge/aidlc-aws-platform-agent/`
+Path: `.claude/knowledge/amadeus-aws-platform-agent/`
 
 | File | Content |
 |------|---------|
@@ -64,7 +64,7 @@ Path: `.claude/knowledge/aidlc-aws-platform-agent/`
 
 ### Team (Tier 2)
 
-Path: `aidlc/knowledge/aidlc-aws-platform-agent/` (the space-level knowledge dir; user-managed)
+Path: `aidlc/knowledge/amadeus-aws-platform-agent/` (the space-level knowledge dir; user-managed)
 
 A space-level directory the team creates when it has content (the engine ships `aidlc/knowledge/` empty). Populated by the team with project-specific
 infrastructure context such as existing VPC designs, AWS account structure,
@@ -75,6 +75,6 @@ approved service catalog, or cost baselines.
 ## Cross-References
 
 - [Agent Reference Overview](README.md)
-- [Agent Guide: aidlc-aws-platform-agent](../../guide/agents/aws-platform-agent.md)
+- [Agent Guide: amadeus-aws-platform-agent](../../guide/agents/aws-platform-agent.md)
 - [Stage Documentation](../04-stages/)
-- Source: [`dist/claude/.claude/agents/aidlc-aws-platform-agent.md`](../../../dist/claude/.claude/agents/aidlc-aws-platform-agent.md)
+- Source: [`dist/claude/.claude/agents/amadeus-aws-platform-agent.md`](../../../dist/claude/.claude/agents/amadeus-aws-platform-agent.md)

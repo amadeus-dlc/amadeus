@@ -3,15 +3,15 @@
 // t157 — the seeded workspace SHELL + re-rooted .gitignore (SEED).
 //
 // WHAT. dist/<harness>/ must ship a READY workspace shell so the very first
-// /aidlc resolves with no --init (vision §9, three seeding moments — the SHELL
+// /amadeus resolves with no --init (vision §9, three seeding moments — the SHELL
 // is the install-time moment). SEED owns four shell pieces on top of P5's
 // relocated method tree:
 //   (1) aidlc/spaces/default/memory/      — the method DEFAULTS (P5 emits the
 //       org/team/project + phases/<p>.md; SEED adds the templates/ FLOOR).
 //   (2) aidlc/spaces/default/memory/templates/  — the TPL override-resolution
 //       floor (empty but present, via a .gitkeep, so the sensor's default
-//       lookup <projectDir>/aidlc/memory/templates is a clean miss, not a
-//       missing-dir edge — aidlc-sensor.ts).
+//       lookup <projectDir>/amadeus/memory/templates is a clean miss, not a
+//       missing-dir edge — amadeus-sensor.ts).
 //   (3) aidlc/active-space                — the per-user space CURSOR, shipped
 //       pointed at the always-present "default" so a fresh copy resolves the
 //       default space with zero ceremony. GITIGNORED in the user's workspace
@@ -24,7 +24,7 @@
 // Plus the re-rooted .gitignore — now a PER-HARNESS artifact (net-new for
 // Kiro/Codex, which shipped none): the committed-vs-ignored split re-rooted
 // under aidlc/spaces/* (vision §5.1). Cursors (active-space, active-intent) +
-// machine-local runtime (runtime-graph.json, .aidlc-*) are IGNORED; the shared
+// machine-local runtime (runtime-graph.json, .amadeus-*) are IGNORED; the shared
 // work — memory, codekb, registry, state, AUDIT (per-clone shards under
 // audit/), artifacts — is COMMITTED. The audit shards are committed WITHOUT a
 // .gitattributes merge=union (which was proven to corrupt the multi-line audit
@@ -35,7 +35,7 @@
 // exists rename is P4's auto-birth territory; the audit-shard WRITER/READER
 // mechanism is P1 Step B's. This test asserts ONLY what SEED ships: the shell
 // resolves + the gitignore split is correct. It must NOT assert a .migrated
-// marker or a dummy intents/*/aidlc-state.md (that would defeat P1's
+// marker or a dummy intents/*/amadeus-state.md (that would defeat P1's
 // flat-layout migration detection).
 //
 // Mechanism: file-inspection over the committed dist trees (zero tokens) +
@@ -53,15 +53,15 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { __resetGraphCache, loadRules } from "../../dist/claude/.claude/tools/aidlc-graph.ts";
+import { __resetGraphCache, loadRules } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 import { REPO_ROOT } from "../harness/fixtures.ts";
 
 const HARNESSES = ["claude", "kiro", "codex"] as const;
 
-// The shipped method tree for a harness: dist/<h>/aidlc/spaces/default/memory/.
+// The shipped method tree for a harness: dist/<h>/amadeus/spaces/default/memory/.
 const mem = (h: string, ...parts: string[]): string =>
   join(REPO_ROOT, "dist", h, "aidlc", "spaces", "default", "memory", ...parts);
-// The shipped active-space cursor: dist/<h>/aidlc/active-space.
+// The shipped active-space cursor: dist/<h>/amadeus/active-space.
 const activeSpace = (h: string): string =>
   join(REPO_ROOT, "dist", h, "aidlc", "active-space");
 // The shipped per-harness gitignore: dist/<h>/.gitignore.
@@ -83,7 +83,7 @@ describe("t157 seeded workspace shell + re-rooted .gitignore (SEED)", () => {
   // === (a) dist-shell — every harness ships the full method DEFAULTS ========
   test("1: every harness ships the method defaults at aidlc/spaces/default/memory/", () => {
     for (const h of HARNESSES) {
-      // The renamed method files (P5) — neutral names, NOT aidlc-*.md.
+      // The renamed method files (P5) — neutral names, NOT amadeus-*.md.
       for (const f of ["org.md", "team.md", "project.md"]) {
         expect(existsSync(mem(h, f)), `${h}: ${f}`).toBe(true);
       }
@@ -120,17 +120,17 @@ describe("t157 seeded workspace shell + re-rooted .gitignore (SEED)", () => {
 
   // === (a) dist-shell — the per-harness NATIVE INCLUDE ships ================
   test("4: every harness ships its native include pointing at the method tree", () => {
-    // Claude: the @-stub at .claude/rules/aidlc.md with explicit @-lines.
+    // Claude: the @-stub at .claude/rules/amadeus.md with explicit @-lines.
     const stub = readFileSync(
       join(REPO_ROOT, "dist", "claude", ".claude", "rules", "aidlc.md"),
       "utf-8",
     );
-    expect(stub).toContain("@../../aidlc/spaces/default/memory/org.md");
+    expect(stub).toContain("@../../amadeus/spaces/default/memory/org.md");
     // Kiro: the agent JSON resources glob.
     const kiroAgent = JSON.parse(
       readFileSync(join(REPO_ROOT, "dist", "kiro", ".kiro", "agents", "aidlc.json"), "utf-8"),
     ) as { resources: string[] };
-    expect(kiroAgent.resources).toContain("file://aidlc/spaces/default/memory/**/*.md");
+    expect(kiroAgent.resources).toContain("file://amadeus/spaces/default/memory/**/*.md");
     // Codex: the AIDLC_RULES_DIR seam in the shipped config.toml + root AGENTS.md.
     const codexConfig = readFileSync(
       join(REPO_ROOT, "dist", "codex", ".codex", "config.toml"),
@@ -146,8 +146,8 @@ describe("t157 seeded workspace shell + re-rooted .gitignore (SEED)", () => {
     // active-space + templates floor + gitignore. It does NOT ship the lazy
     // per-space skeleton (intents/codekb/knowledge — P4 ensure-exists) and must
     // NOT ship anything P1's flat-layout migration detection keys off (a
-    // .migrated marker, or a dummy intents/*/aidlc-state.md) — that would
-    // silently orphan a legacy aidlc-docs/ tree on upgrade.
+    // .migrated marker, or a dummy intents/*/amadeus-state.md) — that would
+    // silently orphan a legacy amadeus-docs/ tree on upgrade.
     for (const h of HARNESSES) {
       const spaceDefault = join(REPO_ROOT, "dist", h, "aidlc", "spaces", "default");
       // The ONLY thing under spaces/default/ is memory/ (the shipped method).
@@ -171,7 +171,7 @@ describe("t157 seeded workspace shell + re-rooted .gitignore (SEED)", () => {
     // seam is exactly what the packager / a real install set). A ready shell
     // resolves the four-layer chain (org→team→project→phase) with no --init.
     for (const h of HARNESSES) {
-      const ws = mkdtempSync(join(tmpdir(), `aidlc-t157-${h}-`));
+      const ws = mkdtempSync(join(tmpdir(), `amadeus-t157-${h}-`));
       tempDirs.push(ws);
       cpSync(join(REPO_ROOT, "dist", h), ws, { recursive: true });
       const copiedMemory = join(ws, "aidlc", "spaces", "default", "memory");
@@ -211,18 +211,18 @@ describe("t157 seeded workspace shell + re-rooted .gitignore (SEED)", () => {
       expect(lines, `${h}: ignores per-intent runtime-graph.json`).toContain(
         "aidlc/spaces/*/intents/*/runtime-graph.json",
       );
-      expect(lines, `${h}: ignores per-intent .aidlc-*`).toContain(
-        "aidlc/spaces/*/intents/*/.aidlc-*",
+      expect(lines, `${h}: ignores per-intent .amadeus-*`).toContain(
+        "aidlc/spaces/*/intents/*/.amadeus-*",
       );
-      // The flat-layout ignore rules are GONE (no leftover aidlc-docs/ leaf).
+      // The flat-layout ignore rules are GONE (no leftover amadeus-docs/ leaf).
       const hasActiveIgnore = (pat: string): boolean =>
         lines.some((l) => l === pat); // an ignore rule, not the in-comment mention
-      expect(hasActiveIgnore("aidlc-docs/audit.md"), `${h}: no flat aidlc-docs/audit.md ignore`).toBe(
+      expect(hasActiveIgnore("amadeus-docs/audit.md"), `${h}: no flat amadeus-docs/audit.md ignore`).toBe(
         false,
       );
       expect(
-        hasActiveIgnore("aidlc-docs/runtime-graph.json"),
-        `${h}: no flat aidlc-docs/runtime-graph.json ignore`,
+        hasActiveIgnore("amadeus-docs/runtime-graph.json"),
+        `${h}: no flat amadeus-docs/runtime-graph.json ignore`,
       ).toBe(false);
     }
   });
@@ -242,7 +242,7 @@ describe("t157 seeded workspace shell + re-rooted .gitignore (SEED)", () => {
         false,
       );
       const ignoresWholeAudit = lines.some(
-        (l) => isIgnoreRule(l) && (l === "aidlc-docs/audit.md" || /\/audit\.md$/.test(l)),
+        (l) => isIgnoreRule(l) && (l === "amadeus-docs/audit.md" || /\/audit\.md$/.test(l)),
       );
       expect(ignoresWholeAudit, `${h}: no single-audit-file ignore`).toBe(false);
     }
@@ -276,7 +276,7 @@ describe("t157 seeded workspace shell + re-rooted .gitignore (SEED)", () => {
         "memory/**",
         "codekb/**",
         "intents.json",
-        "aidlc-state.md",
+        "amadeus-state.md",
         "audit/*.md",
       ]) {
         expect(gi, `${h}: gitignore documents committed ${token}`).toContain(token);

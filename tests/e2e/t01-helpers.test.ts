@@ -14,13 +14,13 @@
 // observe the git repo + filesystem they build. The only subprocess is the
 // real `git` we shell to in order to inspect the fixture's repo state — which
 // is exactly what the .sh did with `git -C "$fixture" ...`. No bun-runtime
-// shell-out to a shipped aidlc-*.ts tool occurs, so the mechanism stays none.
+// shell-out to a shipped amadeus-*.ts tool occurs, so the mechanism stays none.
 //
 // Source under test (tests/harness/fixtures.ts):
 //   :168 setupWorktreeFixture(): string
-//          - mkdtemp under WORKTREE_FIXTURE_PREFIX ("aidlc-worktree-"), realpath
+//          - mkdtemp under WORKTREE_FIXTURE_PREFIX ("amadeus-worktree-"), realpath
 //          - git init -q; symbolic-ref HEAD refs/heads/main; seed README.md;
-//            one "init" commit; mkdir aidlc-docs/
+//            one "init" commit; mkdir amadeus-docs/
 //          - returns the canonical (realpath) project path
 //          - throws (and rm -rf's the dir) on any git failure
 //   :202 cleanupWorktreeFixture(proj): void
@@ -30,7 +30,7 @@
 //          - prunes every registered CHILD worktree (the first porcelain
 //            `worktree ` line is the main checkout), then rm -rf's the parent
 //          - idempotent: safe to call twice / on a missing path
-//   :157 WORKTREE_FIXTURE_PREFIX = "aidlc-worktree-"
+//   :157 WORKTREE_FIXTURE_PREFIX = "amadeus-worktree-"
 //
 // The .sh's assert_worktree_at helper has no fixtures.ts counterpart (it was a
 // TAP ok/not_ok wrapper, not scaffolding) — its CONTRACT (a path is registered
@@ -50,7 +50,7 @@
 // STRONGER than the .sh: test 1 also asserts the canonical path's basename
 // carries the fixture prefix; test 3 reads the rev-list count and asserts the
 // exact integer 1 (the .sh string-compared "1"); the prefix is asserted to be
-// the literal "aidlc-worktree-" so a rename of WORKTREE_FIXTURE_PREFIX that
+// the literal "amadeus-worktree-" so a rename of WORKTREE_FIXTURE_PREFIX that
 // would silently disarm the cleanup guard is caught.
 
 import { afterAll, describe, expect, test } from "bun:test";
@@ -159,7 +159,7 @@ describe("t01 worktree harness helpers (migrated from t01-helpers.sh, plan 7)", 
     // fixture prefix, call cleanup on it, confirm it still exists. Mirrors the
     // basename-prefix guard in cleanupWorktreeFixture / worktree-helpers.sh.
     const sentinel = mkdtempSync(
-      join(process.env.TMPDIR || tmpdir(), "aidlc-NOT-A-FIXTURE-"),
+      join(process.env.TMPDIR || tmpdir(), "amadeus-NOT-A-FIXTURE-"),
     );
     try {
       expect(basename(sentinel).startsWith(WORKTREE_FIXTURE_PREFIX)).toBe(false);

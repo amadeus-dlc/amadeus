@@ -1,4 +1,4 @@
-// covers: file:tools/aidlc-audit.ts, file:knowledge/aidlc-shared/audit-format.md
+// covers: file:tools/amadeus-audit.ts, file:knowledge/amadeus-shared/audit-format.md
 //
 // t28 — audit event-type SYNC contract. Migrated from
 // tests/unit/t28-audit-event-sync.sh (TAP plan 7). The .sh validated that the
@@ -12,15 +12,15 @@
 // sets with the SAME extraction rules the .sh's sed/grep used, and assert the
 // set relationships. There is no argv / exit-code / stdout / audit.md seam to
 // cross (the .sh never ran a tool), and `VALID_EVENT_TYPES` / `EVENT_HEADINGS`
-// are module-private (NOT exported from aidlc-audit.ts), so the contract is
+// are module-private (NOT exported from amadeus-audit.ts), so the contract is
 // precisely the textual cross-file sync the .sh asserted — preserved by
 // parsing the same byte ranges in-process. No spawn, no tokens.
 //
 // Subject under test (the shipped distributable):
-//   - dist/claude/.claude/tools/aidlc-audit.ts
+//   - dist/claude/.claude/tools/amadeus-audit.ts
 //       :19-113  const VALID_EVENT_TYPES = new Set([ "STAGE_STARTED", ... ]);
 //       :117-185 const EVENT_HEADINGS: Record<string,string> = { TYPE: "...", };
-//   - dist/claude/.claude/knowledge/aidlc-shared/audit-format.md
+//   - dist/claude/.claude/knowledge/amadeus-shared/audit-format.md
 //       "## Event Registry (69 events, 18 categories)" .. "## Hook-Generated"
 //       — backtick-delimited `EVENT_TYPE` cells in the registry tables.
 //
@@ -40,10 +40,10 @@
 // test 7 baseline did.
 //
 // Old TAP -> new test parity (1:1, no guarantee dropped):
-//   .sh test 1 (assert_gt TS_COUNT 0)                 -> "extracts a non-empty event set from aidlc-audit.ts"
+//   .sh test 1 (assert_gt TS_COUNT 0)                 -> "extracts a non-empty event set from amadeus-audit.ts"
 //   .sh test 2 (assert_gt MD_COUNT 0)                 -> "extracts a non-empty event set from audit-format.md"
-//   .sh test 3 (every TS event in MD)                 -> "every aidlc-audit.ts event appears in audit-format.md"
-//   .sh test 4 (every MD event in TS)                 -> "every audit-format.md event appears in aidlc-audit.ts"
+//   .sh test 3 (every TS event in MD)                 -> "every amadeus-audit.ts event appears in audit-format.md"
+//   .sh test 4 (every MD event in TS)                 -> "every audit-format.md event appears in amadeus-audit.ts"
 //   .sh test 5 (EVENT_HEADINGS has every TS event)    -> "EVENT_HEADINGS maps every VALID_EVENT_TYPES member"
 //   .sh test 6 (assert_eq TS_COUNT MD_COUNT)          -> "event counts match across the two files"
 //   .sh test 7 (assert_eq TS_COUNT - baseline pin)    -> "VALID_EVENT_TYPES.size === 70 (baseline pin)"
@@ -55,8 +55,8 @@ import { AIDLC_SRC } from "../harness/fixtures.ts";
 
 // AIDLC_SRC === <repo>/dist/claude/.claude — the same root the .sh resolved
 // AUDIT_TS and AUDIT_MD under ($AIDLC_SRC/tools, $AIDLC_SRC/knowledge/...).
-const AUDIT_TS = join(AIDLC_SRC, "tools", "aidlc-audit.ts");
-const AUDIT_MD = join(AIDLC_SRC, "knowledge", "aidlc-shared", "audit-format.md");
+const AUDIT_TS = join(AIDLC_SRC, "tools", "amadeus-audit.ts");
+const AUDIT_MD = join(AIDLC_SRC, "knowledge", "amadeus-shared", "audit-format.md");
 
 // The canonical baseline pinned by .sh test 7. Bump WITH the source when an
 // event is added (v0.6.0 Wave 4 milestone 16: +SWARM_DEGRADED took this to 67;
@@ -114,7 +114,7 @@ const HEADINGS_KEYS = new Set(
 
 describe("t28 audit event-type sync (migrated from t28-audit-event-sync.sh, plan 7)", () => {
   // .sh test 1: assert_gt TS_COUNT 0.
-  test("extracts a non-empty event set from aidlc-audit.ts [.sh test 1]", () => {
+  test("extracts a non-empty event set from amadeus-audit.ts [.sh test 1]", () => {
     expect(TS_EVENTS.length).toBeGreaterThan(0);
   });
 
@@ -125,22 +125,22 @@ describe("t28 audit event-type sync (migrated from t28-audit-event-sync.sh, plan
 
   // .sh test 3: every TS event found in MD. STRONGER than the .sh's
   // accumulate-missing loop: name the exact offenders if any leak through.
-  test("every aidlc-audit.ts event appears in audit-format.md [.sh test 3]", () => {
+  test("every amadeus-audit.ts event appears in audit-format.md [.sh test 3]", () => {
     const mdSet = new Set(MD_EVENTS);
     const missingFromMd = TS_EVENTS.filter((e) => !mdSet.has(e));
     expect(
       missingFromMd,
-      `aidlc-audit.ts events missing from audit-format.md: ${missingFromMd.join(", ")}`,
+      `amadeus-audit.ts events missing from audit-format.md: ${missingFromMd.join(", ")}`,
     ).toEqual([]);
   });
 
   // .sh test 4: every MD event found in TS.
-  test("every audit-format.md event appears in aidlc-audit.ts [.sh test 4]", () => {
+  test("every audit-format.md event appears in amadeus-audit.ts [.sh test 4]", () => {
     const tsSet = new Set(TS_EVENTS);
     const missingFromTs = MD_EVENTS.filter((e) => !tsSet.has(e));
     expect(
       missingFromTs,
-      `audit-format.md events missing from aidlc-audit.ts: ${missingFromTs.join(", ")}`,
+      `audit-format.md events missing from amadeus-audit.ts: ${missingFromTs.join(", ")}`,
     ).toEqual([]);
   });
 

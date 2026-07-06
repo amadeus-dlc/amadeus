@@ -1,23 +1,23 @@
-// covers: subcommand:aidlc-jump:resolve, subcommand:aidlc-jump:execute
+// covers: subcommand:amadeus-jump:resolve, subcommand:amadeus-jump:execute
 //
 // CLI-contract port of tests/unit/t19-tool-jump.sh (TAP plan 16),
 // mechanism = cli. Equal-or-stronger migration: every .sh assertion that
-// shelled out to `bun aidlc-jump.ts resolve|execute ...` (plus the two
-// `bun aidlc-state.ts get ...` reads the .sh used at cases 9 and 12) is
+// shelled out to `bun amadeus-jump.ts resolve|execute ...` (plus the two
+// `bun amadeus-state.ts get ...` reads the .sh used at cases 9 and 12) is
 // preserved by SPAWNING the real CLI via node:child_process spawnSync
 // (BUN + the tool .ts path), asserting on res.status / res.stdout /
 // res.stderr exactly as the .sh asserted on $?/stdout, plus on the
-// aidlc-state.md + audit.md the tool writes — the PROCESS boundary, not
+// amadeus-state.md + audit.md the tool writes — the PROCESS boundary, not
 // in-process handleResolve/handleExecute calls. An in-process twin would
 // lose the process.exit(1) shell that the .sh's `|| true` SKIP-rejection
 // case (Test 5) and the JSON-ack-to-stdout half rely on, and would not
-// exercise the real `bun aidlc-state.ts get` round-trip the .sh used to
+// exercise the real `bun amadeus-state.ts get` round-trip the .sh used to
 // observe Current Stage / Completed (cases 9, 12).
 //
 // SUBCOMMAND UNITS: this .cli file credits BOTH subcommand units the .sh
-// exercises — `aidlc-jump resolve` (covers KEY subcommand:aidlc-jump:resolve,
-// .sh cases 1-6) and `aidlc-jump execute` (covers KEY
-// subcommand:aidlc-jump:execute, .sh cases 7-14). The tool's only two
+// exercises — `amadeus-jump resolve` (covers KEY subcommand:amadeus-jump:resolve,
+// .sh cases 1-6) and `amadeus-jump execute` (covers KEY
+// subcommand:amadeus-jump:execute, .sh cases 7-14). The tool's only two
 // subcommands; both are fired here.
 //
 // PARITY NOTES (every .sh `ok` line maps to an expect() below; several are
@@ -52,7 +52,7 @@
 //   - .sh Test 8  execute forward -> grep '\[x\] intent-capture'
 //       -> Test 8: `- [x] intent-capture` preserved (same observable).
 //   - .sh Test 9  execute forward; state get "Current Stage" == code-generation
-//       -> Test 9: spawn `aidlc-state.ts get "Current Stage"` -> stdout trim
+//       -> Test 9: spawn `amadeus-state.ts get "Current Stage"` -> stdout trim
 //       === "code-generation" (same observable, real CLI round-trip) +
 //       exit 0 (STRONGER).
 //   - .sh Test 10 execute forward -> grep "STAGE_JUMPED" in audit.md
@@ -64,7 +64,7 @@
 //       to keep one observable per case): `- [-] feasibility` present;
 //       `- [ ] code-generation` present (same observables).
 //   - .sh Test 12 execute backward; state get "Completed" == 5
-//       -> Test 12: spawn `aidlc-state.ts get "Completed"` -> stdout trim
+//       -> Test 12: spawn `amadeus-state.ts get "Completed"` -> stdout trim
 //       === "5" (same observable) + exit 0 (STRONGER).
 //   - .sh Test 13 execute redo -> grep '\[-\] feasibility' AND
 //       '\[ \] scope-definition' (2 asserts) -> Test 13 (split into 13a/13b):
@@ -83,7 +83,7 @@
 // FIXTURE DISCIPLINE (mirrors the .sh's create_test_project + seed_state_file
 // + cleanup_test_project per case): each case uses a FRESH temp project dir
 // (createTestProject, which toPortablePath-converts on Windows so the
-// aidlc-state.md / audit.md the tool writes — via toPosix path helpers —
+// amadeus-state.md / audit.md the tool writes — via toPosix path helpers —
 // round-trip when read back). State is seeded from the SAME on-disk fixtures
 // the .sh used (FIXTURES_DIR/state-*.md) via seedStateFile, so checkbox
 // baselines are byte-identical to the bash run. No audit seed is needed: the
@@ -96,7 +96,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -106,14 +106,14 @@ import {
 
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
-const TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "aidlc-jump.ts");
+const TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-jump.ts");
 const STATE_TOOL = join(
   REPO_ROOT,
   "dist",
   "claude",
   ".claude",
   "tools",
-  "aidlc-state.ts",
+  "amadeus-state.ts",
 );
 
 const tempDirs: string[] = [];
@@ -143,7 +143,7 @@ interface CliResult {
   stdout: string;
 }
 
-/** Spawn `bun aidlc-jump.ts <args...> --project-dir <p>`. Mirrors `bun "$TOOL" ...`. */
+/** Spawn `bun amadeus-jump.ts <args...> --project-dir <p>`. Mirrors `bun "$TOOL" ...`. */
 function jump(args: string[], p: string): CliResult {
   const res = spawnSync(BUN, [TOOL, ...args, "--project-dir", p], {
     encoding: "utf-8",
@@ -156,7 +156,7 @@ function jump(args: string[], p: string): CliResult {
   };
 }
 
-/** Spawn `bun aidlc-state.ts get <field> --project-dir <p>`. Mirrors `bun "$STATE_TOOL" get ...`. */
+/** Spawn `bun amadeus-state.ts get <field> --project-dir <p>`. Mirrors `bun "$STATE_TOOL" get ...`. */
 function stateGet(field: string, p: string): CliResult {
   const res = spawnSync(BUN, [STATE_TOOL, "get", field, "--project-dir", p], {
     encoding: "utf-8",
@@ -169,7 +169,7 @@ function stateGet(field: string, p: string): CliResult {
   };
 }
 
-/** Read the aidlc-state.md the tool wrote. */
+/** Read the amadeus-state.md the tool wrote. */
 function readState(p: string): string {
   return readFileSync(statePath(p), "utf-8");
 }
@@ -217,11 +217,11 @@ function auditField(body: string, ev: string, key: string): string {
 }
 
 // ============================================================
-// resolve subcommand (covers: subcommand:aidlc-jump:resolve)
+// resolve subcommand (covers: subcommand:amadeus-jump:resolve)
 // .sh cases 1-6
 // ============================================================
 
-describe("t19 aidlc-jump resolve (migrated from t19-tool-jump.sh, plan 16)", () => {
+describe("t19 amadeus-jump resolve (migrated from t19-tool-jump.sh, plan 16)", () => {
   test("1: resolve detects forward direction", () => {
     const p = proj("state-mid-ideation.md");
     const r = jump(
@@ -297,11 +297,11 @@ describe("t19 aidlc-jump resolve (migrated from t19-tool-jump.sh, plan 16)", () 
 });
 
 // ============================================================
-// execute subcommand (covers: subcommand:aidlc-jump:execute)
+// execute subcommand (covers: subcommand:amadeus-jump:execute)
 // .sh cases 7-14
 // ============================================================
 
-describe("t19 aidlc-jump execute (migrated from t19-tool-jump.sh, plan 16)", () => {
+describe("t19 amadeus-jump execute (migrated from t19-tool-jump.sh, plan 16)", () => {
   test("7: forward marks intermediate [S]", () => {
     const p = proj("state-mid-ideation.md");
     const r = jump(

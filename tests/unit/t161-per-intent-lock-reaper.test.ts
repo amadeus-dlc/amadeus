@@ -11,7 +11,7 @@
 // PID+start-time on acquire and reclaims a provably-dead (ESRCH) or over-age lock
 // — a live, under-threshold holder is NEVER robbed.
 //
-// SOURCE UNDER TEST (dist/claude/.claude/tools/aidlc-lib.ts):
+// SOURCE UNDER TEST (dist/claude/.claude/tools/amadeus-lib.ts):
 //   auditLockDir(pd, intent?, space?) / auditLockIdentity — per-intent + sentinel.
 //   acquireAuditLock(pd, retries, ms, intent?, space?) — stamps owner.json, reaps.
 //   releaseAuditLock / withAuditLock — composite-keyed depth + exit handlers.
@@ -30,14 +30,14 @@ import {
   releaseAuditLock,
   WORKSPACE_LOCK_SENTINEL,
   withAuditLock,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
-const PD = "/tmp/aidlc-t161-project";
+const PD = "/tmp/amadeus-t161-project";
 
 // Clean any lock dirs this test family might leave under tmpdir() between cases.
 function cleanLocks(): void {
   for (const f of readdirSync(tmpdir())) {
-    if (f.startsWith(".aidlc-audit-") || f.includes(".aidlc-audit-")) {
+    if (f.startsWith(".amadeus-audit-") || f.includes(".amadeus-audit-")) {
       try { rmSync(join(tmpdir(), f), { recursive: true, force: true }); } catch { /* ignore */ }
     }
   }
@@ -172,11 +172,11 @@ describe("t161 stale-lock reaper", () => {
 
   test("detectLeakedLocks finds + clears a dead-owner lock for a real project", () => {
     // Build a real per-intent layout on disk so detectLeakedLocks enumerates it.
-    const realPd = join(tmpdir(), `aidlc-t161-detect-${process.pid}`);
+    const realPd = join(tmpdir(), `amadeus-t161-detect-${process.pid}`);
     rmSync(realPd, { recursive: true, force: true });
     const recDir = join(realPd, "aidlc", "spaces", "default", "intents", "auth-deadbeef");
     mkdirSync(recDir, { recursive: true });
-    writeFileSync(join(recDir, "aidlc-state.md"), "- **Current Stage**: x\n", "utf-8");
+    writeFileSync(join(recDir, "amadeus-state.md"), "- **Current Stage**: x\n", "utf-8");
     writeFileSync(join(realPd, "aidlc", "active-space"), "default\n", "utf-8");
     // Stamp a DEAD-owner lock on that intent's bucket.
     const lockDir = auditLockDir(realPd, "auth-deadbeef", "default");

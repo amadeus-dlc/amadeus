@@ -10,9 +10,9 @@
 // safe to import under bun on every platform.
 //
 // Mirrors the bash flags faithfully:
-//   withState        -> seed_state_file       (fixtures.sh:165)  aidlc-docs/aidlc-state.md
-//   withAudit        -> seed_audit_file       (fixtures.sh:166)  aidlc-docs/audit.md
-//   noAidlcDocs      -> --no-aidlc-docs        (fixtures.sh:167)  rm -rf aidlc-docs
+//   withState        -> seed_state_file       (fixtures.sh:165)  amadeus-docs/amadeus-state.md
+//   withAudit        -> seed_audit_file       (fixtures.sh:166)  amadeus-docs/audit.md
+//   noAidlcDocs      -> --no-amadeus-docs        (fixtures.sh:167)  rm -rf amadeus-docs
 //   greenfieldStub   -> --with-greenfield-stub (fixtures.sh:168)  cp greenfield-todo/.
 //   brownfieldStub   -> --with-brownfield-stub (fixtures.sh:169)  cp brownfield-todo/.
 //   reArtifacts      -> --with-re-artifacts     (fixtures.sh:170)  cp re-artifacts/*.md
@@ -65,7 +65,7 @@ const KIRO_IDE_MEMORY_SRC = join(REPO_ROOT, "dist", "kiro-ide", "aidlc");
 function seedTuiWorkspaceShell(proj: string, space = DEFAULT_SPACE): void {
   const intentsDir = intentsDirOf(proj, space);
   mkdirSync(seededRecordDir(proj, space), { recursive: true });
-  writeFileSync(join(proj, "aidlc", ".aidlc-clone-id"), `${FIXTURE_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(proj, "aidlc", ".amadeus-clone-id"), `${FIXTURE_CLONE_ID}\n`, "utf-8");
   writeFileSync(join(proj, "aidlc", "active-space"), `${space}\n`, "utf-8");
   writeFileSync(join(intentsDir, "active-intent"), `${DEFAULT_RECORD_DIR}\n`, "utf-8");
   writeFileSync(
@@ -89,12 +89,12 @@ export interface TuiProjectOptions {
    *  carries the .kiro.hook files the IDE reads - the human-presence mint + block).
    *  Everything else (state, audit, stubs) is harness-neutral. */
   harness?: "claude" | "kiro" | "kiro-ide";
-  /** Seed aidlc-docs/aidlc-state.md from tests/fixtures/<withState> (a filename like
+  /** Seed amadeus-docs/amadeus-state.md from tests/fixtures/<withState> (a filename like
    *  "state-mid-ideation.md"). Omit for a fresh project. */
   withState?: string;
-  /** Seed an empty-ish aidlc-docs/audit.md so the workflow appends to it. */
+  /** Seed an empty-ish amadeus-docs/audit.md so the workflow appends to it. */
   withAudit?: boolean;
-  /** Remove aidlc-docs/ entirely (the --no-aidlc-docs case: a brand-new workspace
+  /** Remove amadeus-docs/ entirely (the --no-amadeus-docs case: a brand-new workspace
    *  that the journey will scaffold itself). */
   noAidlcDocs?: boolean;
   /** Copy the greenfield-todo stub (a README.md) into the project root — drives
@@ -104,12 +104,12 @@ export interface TuiProjectOptions {
    *  project root — drives workspace-detection to Brownfield + reverse-engineering. */
   brownfieldStub?: boolean;
   /** Pre-seed the 4 reverse-engineering artifacts under
-   *  aidlc-docs/inception/reverse-engineering/ (so a requirements-analysis journey
+   *  amadeus-docs/inception/reverse-engineering/ (so a requirements-analysis journey
    *  has its upstream present). */
   reArtifacts?: boolean;
   /** Pre-seed the 3 REQUIRED ideation artifacts (intent-statement,
    *  scope-document, intent-backlog) at their canonical producing-stage paths
-   *  under aidlc-docs/ideation/. A forward `--stage` jump into a late ideation
+   *  under amadeus-docs/ideation/. A forward `--stage` jump into a late ideation
    *  stage (e.g. approval-handoff) scans the target's `consumes` and renders a
    *  Missing-inputs Continue/Cancel gate if a required upstream artifact is
    *  absent (SKILL.md:212-215). A mid-ideation state fixture marks stages [x]
@@ -129,7 +129,7 @@ export interface TuiProjectOptions {
    * Seed a NON-default second space (a sibling dir under aidlc/spaces/) so the
    * statusline orientation prefix paints its `<space> ·` segment. The prefix
    * builder suppresses that segment until listSpaces().length > 1
-   * (aidlc-statusline.ts orientationPrefix → listSpaces(projectDir).length > 1),
+   * (amadeus-statusline.ts orientationPrefix → listSpaces(projectDir).length > 1),
    * so a single-space fixture never paints the space token — the render-half
    * journey (P10 / Stage E) needs >1 space + an active intent for the FULL
    * `<space> · <intent> · <phase>` orientation to appear in a real TUI pane.
@@ -150,7 +150,7 @@ export interface TuiProjectOptions {
  * for cleanup (rmSync) in a finally block, exactly as the inline tests do.
  */
 export function setupTuiProject(opts: TuiProjectOptions = {}): string {
-  let proj = mkdtempSync(join(tmpdir(), "aidlc-tui-"));
+  let proj = mkdtempSync(join(tmpdir(), "amadeus-tui-"));
   // Canonicalise so app-written paths (e.g. state Project Root) compare equal —
   // on macOS mkdtemp hands back /tmp|/var symlinks but the app records the
   // resolved /private/... realpath. Mirrors fixtures.ts createTestProject:70-82
@@ -194,7 +194,7 @@ export function setupTuiProject(opts: TuiProjectOptions = {}): string {
       if (!existsSync(fixturePath)) {
         throw new Error(`setupTuiProject: state fixture not found: ${fixturePath}`);
       }
-      writeFileSync(join(record, "aidlc-state.md"), readFileSync(fixturePath, "utf8"));
+      writeFileSync(join(record, "amadeus-state.md"), readFileSync(fixturePath, "utf8"));
     }
     if (opts.withAudit) {
       // A minimal audit shard the workflow appends to; the readers glob the

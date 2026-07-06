@@ -82,7 +82,7 @@ export function assertToolCalled(result: DriveResult, toolName: string): void {
  * Assert the audit log recorded an event of type `event` (e.g. "STATE_FORKED").
  * Reads result.auditEvents, which sdk-drive parsed from the `**Event**:` lines of
  * the audit trail — P4: the per-intent shards under
- * aidlc/spaces/<space>/intents/<slug>-<id8>/audit/, or the flat aidlc-docs/audit.md
+ * aidlc/spaces/<space>/intents/<slug>-<id8>/audit/, or the flat amadeus-docs/audit.md
  * for a pre-migration fixture (sdk-drive's readAuditEvents resolves both). Fails
  * clearly when no audit was written.
  */
@@ -90,7 +90,7 @@ export function assertAuditEvent(result: DriveResult, event: string): void {
   if (result.auditEvents === undefined) {
     fail(
       `expected audit event "${event}", but no audit log was found ` +
-        `(no per-intent audit shard nor flat aidlc-docs/audit.md — did the run write to the project dir?).`,
+        `(no per-intent audit shard nor flat amadeus-docs/audit.md — did the run write to the project dir?).`,
     );
   }
   if (!result.auditEvents.includes(event)) {
@@ -149,7 +149,7 @@ export function assertResultSubtype(result: DriveResult, subtype: string): void 
 /**
  * Assert a `- **<field>**: <value>` line in the post-run state file equals
  * `expected` (after trimming). Reads result.stateFile (verbatim contents of
- * aidlc-docs/aidlc-state.md). Fails clearly when the state file is absent or
+ * amadeus-docs/amadeus-state.md). Fails clearly when the state file is absent or
  * the field is missing.
  */
 export function assertStateField(
@@ -160,13 +160,13 @@ export function assertStateField(
   if (result.stateFile === undefined) {
     fail(
       `expected state field "${field}"="${expected}", but no state file was ` +
-        `found (aidlc-docs/aidlc-state.md absent).`,
+        `found (amadeus-docs/amadeus-state.md absent).`,
     );
   }
   const actual = readStateField(result.stateFile, field);
   if (actual === undefined) {
     fail(
-      `state field "${field}" not present in aidlc-state.md ` +
+      `state field "${field}" not present in amadeus-state.md ` +
         `(expected "${expected}").`,
     );
   }
@@ -188,13 +188,13 @@ export function assertStateFieldPath(
   if (result.stateFile === undefined) {
     fail(
       `expected state field "${field}"="${expected}", but no state file was ` +
-        `found (aidlc-docs/aidlc-state.md absent).`,
+        `found (amadeus-docs/amadeus-state.md absent).`,
     );
   }
   const actual = readStateField(result.stateFile, field);
   if (actual === undefined) {
     fail(
-      `state field "${field}" not present in aidlc-state.md ` +
+      `state field "${field}" not present in amadeus-state.md ` +
         `(expected path "${expected}").`,
     );
   }
@@ -225,7 +225,7 @@ export function assertStateFieldContains(
   }
   const actual = readStateField(result.stateFile, field);
   if (actual === undefined) {
-    fail(`state field "${field}" not present in aidlc-state.md.`);
+    fail(`state field "${field}" not present in amadeus-state.md.`);
   }
   if (!actual.includes(substring)) {
     fail(

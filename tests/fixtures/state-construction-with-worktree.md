@@ -6,7 +6,7 @@
 - **Scope**: feature
 - **Start Date**: 2026-05-19T00:00:00Z
 - **State Version**: 7
-- **Active Agent**: aidlc-developer-agent
+- **Active Agent**: amadeus-developer-agent
 - **Worktree Path**:
 - **Bolt Refs**: [foo]
 - **Practices Affirmed Timestamp**: 2026-05-19T00:00:00Z

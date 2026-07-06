@@ -44,13 +44,13 @@ CONDITIONAL stages that do not apply to the current scope.
 
 | Stage | Name                        | Condition   | Lead Agent      | Support Agents                              | Mode   |
 |-------|-----------------------------|-------------|-----------------|---------------------------------------------|--------|
-| 1.1   | Intent Capture & Framing    | ALWAYS      | aidlc-product-agent   | aidlc-architect-agent                             | inline |
-| 1.2   | Market Research             | CONDITIONAL | aidlc-product-agent   | --                                          | inline |
-| 1.3   | Feasibility & Constraints   | CONDITIONAL | aidlc-architect-agent | aidlc-aws-platform-agent, aidlc-compliance-agent        | inline |
-| 1.4   | Scope Definition            | ALWAYS      | aidlc-product-agent   | aidlc-delivery-agent                              | inline |
-| 1.5   | Team Formation              | CONDITIONAL | aidlc-delivery-agent  | --                                          | inline |
-| 1.6   | Rough Mockups               | CONDITIONAL | aidlc-design-agent    | aidlc-product-agent                               | inline |
-| 1.7   | Approval & Handoff          | ALWAYS      | aidlc-delivery-agent  | aidlc-product-agent                               | inline |
+| 1.1   | Intent Capture & Framing    | ALWAYS      | amadeus-product-agent   | amadeus-architect-agent                             | inline |
+| 1.2   | Market Research             | CONDITIONAL | amadeus-product-agent   | --                                          | inline |
+| 1.3   | Feasibility & Constraints   | CONDITIONAL | amadeus-architect-agent | amadeus-aws-platform-agent, amadeus-compliance-agent        | inline |
+| 1.4   | Scope Definition            | ALWAYS      | amadeus-product-agent   | amadeus-delivery-agent                              | inline |
+| 1.5   | Team Formation              | CONDITIONAL | amadeus-delivery-agent  | --                                          | inline |
+| 1.6   | Rough Mockups               | CONDITIONAL | amadeus-design-agent    | amadeus-product-agent                               | inline |
+| 1.7   | Approval & Handoff          | ALWAYS      | amadeus-delivery-agent  | amadeus-product-agent                               | inline |
 
 ---
 
@@ -63,8 +63,8 @@ CONDITIONAL stages that do not apply to the current scope.
 | Phase            | Ideation                                                               |
 | Stage #          | 1.1                                                                    |
 | Condition        | ALWAYS -- first stage of every workflow; establishes the initiative's foundation |
-| Lead Agent       | aidlc-product-agent                                                          |
-| Support Agents   | aidlc-architect-agent (technical context)                                    |
+| Lead Agent       | amadeus-product-agent                                                          |
+| Support Agents   | amadeus-architect-agent (technical context)                                    |
 | Mode             | inline                                                                 |
 | Completion Emoji | :bulb:                                                                 |
 
@@ -87,7 +87,7 @@ as seed context so the stage does not re-ask "what do you want to build?"
 
 ### Steps
 
-1. **Load Agent Personas** -- Load aidlc-product-agent persona and knowledge. Load aidlc-architect-agent persona for technical context perspective.
+1. **Load Agent Personas** -- Load amadeus-product-agent persona and knowledge. Load amadeus-architect-agent persona for technical context perspective.
 2. **Load Prior Context** -- Read user's project description. Check for existing artifacts. Load guardrails.
 3. **Generate Clarifying Questions** -- Create `<record>/ideation/intent-capture/intent-capture-questions.md` with questions covering business problem, customer, success metrics, initiative trigger, project type. Uses `[Answer]:` tag format with A-E options plus X (Other). Offers tri-mode question flow.
 4. **Collect and Analyze Answers** -- Confirm all tags filled. Run ambiguity/contradiction analysis.
@@ -120,7 +120,7 @@ as seed context so the stage does not re-ask "what do you want to build?"
 | Phase            | Ideation                                                               |
 | Stage #          | 1.2                                                                    |
 | Condition        | CONDITIONAL -- skip for internal tools, bug fixes, refactors           |
-| Lead Agent       | aidlc-product-agent                                                          |
+| Lead Agent       | amadeus-product-agent                                                          |
 | Support Agents   | (none)                                                                 |
 | Mode             | inline                                                                 |
 | Completion Emoji | :bar_chart:                                                            |
@@ -158,8 +158,8 @@ Validates the initiative against the external competitive landscape. Produces co
 | Phase            | Ideation                                                               |
 | Stage #          | 1.3                                                                    |
 | Condition        | CONDITIONAL -- skip for trivial changes; execute for technical risk or compliance needs |
-| Lead Agent       | aidlc-architect-agent (technical feasibility)                                |
-| Support Agents   | aidlc-aws-platform-agent (AWS landscape), aidlc-compliance-agent (regulatory scanning) |
+| Lead Agent       | amadeus-architect-agent (technical feasibility)                                |
+| Support Agents   | amadeus-aws-platform-agent (AWS landscape), amadeus-compliance-agent (regulatory scanning) |
 | Mode             | inline                                                                  |
 | Completion Emoji | :test_tube:                                                            |
 
@@ -197,8 +197,8 @@ Evaluates technical viability, identifies constraints, and establishes a RAID lo
 | Phase            | Ideation                                                               |
 | Stage #          | 1.4                                                                    |
 | Condition        | ALWAYS -- depth adapts to scope                                        |
-| Lead Agent       | aidlc-product-agent                                                          |
-| Support Agents   | aidlc-delivery-agent (capacity reality-check)                                |
+| Lead Agent       | amadeus-product-agent                                                          |
+| Support Agents   | amadeus-delivery-agent (capacity reality-check)                                |
 | Mode             | inline                                                                 |
 | Completion Emoji | :dart:                                                                 |
 
@@ -235,7 +235,7 @@ Establishes the scope boundary. Produces a prioritized intent backlog (proto-uni
 | Phase            | Ideation                                                               |
 | Stage #          | 1.5                                                                    |
 | Condition        | CONDITIONAL -- skip for solo developer or small team projects          |
-| Lead Agent       | aidlc-delivery-agent                                                         |
+| Lead Agent       | amadeus-delivery-agent                                                         |
 | Mode             | inline                                                                 |
 | Completion Emoji | :people_holding_hands:                                                 |
 
@@ -273,8 +273,8 @@ Assesses team availability, maps skills, identifies gaps, and produces mob compo
 | Phase            | Ideation                                                               |
 | Stage #          | 1.6                                                                    |
 | Condition        | CONDITIONAL -- skip for non-UI, API-only, or infrastructure-only       |
-| Lead Agent       | aidlc-design-agent                                                           |
-| Support Agents   | aidlc-product-agent (validates against intent)                               |
+| Lead Agent       | amadeus-design-agent                                                           |
+| Support Agents   | amadeus-product-agent (validates against intent)                               |
 | Mode             | inline                                                                 |
 | Completion Emoji | :pencil2:                                                              |
 
@@ -311,8 +311,8 @@ Produces early concept visualizations. For UI: low-fidelity wireframes and user 
 | Phase            | Ideation                                                               |
 | Stage #          | 1.7                                                                    |
 | Condition        | ALWAYS -- final Ideation gate before Inception                         |
-| Lead Agent       | aidlc-delivery-agent                                                         |
-| Support Agents   | aidlc-product-agent (validates completeness)                                 |
+| Lead Agent       | amadeus-delivery-agent                                                         |
+| Support Agents   | amadeus-product-agent (validates completeness)                                 |
 | Mode             | inline                                                                 |
 | Completion Emoji | :white_check_mark:                                                     |
 
@@ -326,7 +326,7 @@ All Ideation phase artifacts from stages 1.1-1.6.
 
 ### Steps
 
-1. Load aidlc-delivery-agent persona and knowledge.
+1. Load amadeus-delivery-agent persona and knowledge.
 2. Read ALL Ideation phase artifacts.
 3. Generate approval questions.
 4. Compile initiative brief (one-pager combining all outputs).

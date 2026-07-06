@@ -1,4 +1,4 @@
-// covers: data:scope-grid(security-patch), cli:aidlc-bolt(dispatch-event), cli:aidlc-utility(init), data:state-template(v0.4.0-fields)
+// covers: data:scope-grid(security-patch), cli:amadeus-bolt(dispatch-event), cli:amadeus-utility(init), data:state-template(v0.4.0-fields)
 //
 // t67 — Construction worktrees per scope: the security-patch contract.
 // Migrated from tests/e2e/t67-construction-worktrees-security-patch.sh
@@ -22,27 +22,27 @@
 //     retired in milestone 12 — helpers L46-48). Mechanism none: require the JSON and
 //     assert the cell. The .sh shelled `bun -e require(...)`; the contract is
 //     the data, so we read it directly with zero process spawn.
-//   - Assertions 2 + 4 are process-boundary contracts: `aidlc-utility.ts init`
+//   - Assertions 2 + 4 are process-boundary contracts: `amadeus-utility.ts init`
 //     must WRITE a v7 state file with the two v0.4.0 fields, and
-//     `aidlc-bolt.ts dispatch-event` must EMIT a real MERGE_DISPATCH_INVOKED
+//     `amadeus-bolt.ts dispatch-event` must EMIT a real MERGE_DISPATCH_INVOKED
 //     audit row into that initialized project. Mechanism cli: spawnSync the
 //     real tools via BUN against the .ts paths and assert on the bytes they
 //     write — the same seam assert_dispatch_event_runs_for_scope (helpers
-//     L99-114) and the .sh's grep on aidlc-state.md exercised.
+//     L99-114) and the .sh's grep on amadeus-state.md exercised.
 //
 // Source under test:
 //   - dist/claude/.claude/tools/data/scope-grid.json
 //       security-patch.stages["code-generation"] === "EXECUTE"
 //       security-patch.stages["practices-discovery"] === "SKIP"
-//   - dist/claude/.claude/tools/aidlc-bolt.ts:660 handleDispatchEvent
+//   - dist/claude/.claude/tools/amadeus-bolt.ts:660 handleDispatchEvent
 //       MERGE_DISPATCH_INVOKED branch (:670-685): requires --slug +
 //       --practices-excerpt; emits via emitAudit -> appendAuditEntry with
 //       fields { "Bolt slug": slug, "Practices section excerpt": excerpt };
 //       prints {"emitted":"MERGE_DISPATCH_INVOKED","slug":...} to stdout.
-//   - dist/claude/.claude/tools/aidlc-audit.ts:168 EVENT_HEADINGS maps
+//   - dist/claude/.claude/tools/amadeus-audit.ts:168 EVENT_HEADINGS maps
 //       MERGE_DISPATCH_INVOKED -> "Merge Dispatch Invoked"; the **Event**:
 //       and **Bolt slug**: lines land in audit.md.
-//   - aidlc-utility.ts init writes aidlc-docs/aidlc-state.md from the v7
+//   - amadeus-utility.ts init writes amadeus-docs/amadeus-state.md from the v7
 //       template, which carries `- **Worktree Path**:` and `- **Bolt Refs**:`
 //       (the v0.4.0 Construction-worktree fields).
 //
@@ -74,12 +74,12 @@ import {
 // aidlc/spaces/<space>/intents/<slug>-<id8>/ and audit is SHARDED per clone
 // under <record>/audit/. Read state through the resolved record dir and audit
 // through the shipped merge helper (default-resolves the active intent, falls
-// back to flat aidlc-docs for a not-yet-born project).
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+// back to flat amadeus-docs for a not-yet-born project).
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath; // the bun running this test
-const BOLT = join(AIDLC_SRC, "tools", "aidlc-bolt.ts");
-const UTILITY = join(AIDLC_SRC, "tools", "aidlc-utility.ts");
+const BOLT = join(AIDLC_SRC, "tools", "amadeus-bolt.ts");
+const UTILITY = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
 const SCOPE_GRID_PATH = join(AIDLC_SRC, "tools", "data", "scope-grid.json");
 
 const SCOPE = "security-patch";
@@ -98,15 +98,15 @@ afterAll(() => {
 });
 
 /**
- * setup_construction_project (helpers L36-43): a project with aidlc-docs/,
- * then `aidlc-utility.ts init --force --scope <scope>` so aidlc-state.md and
+ * setup_construction_project (helpers L36-43): a project with amadeus-docs/,
+ * then `amadeus-utility.ts init --force --scope <scope>` so amadeus-state.md and
  * the rest of the v7 workspace exist (the dispatch-event + state probes both
  * read that path). Returns the project dir.
  */
 function setupConstructionProject(scope: string): string {
   const proj = createTestProject();
   tempProjects.push(proj);
-  mkdirSync(join(proj, "aidlc-docs"), { recursive: true });
+  mkdirSync(join(proj, "amadeus-docs"), { recursive: true });
   const res = spawnSync(
     BUN,
     [UTILITY, "init", "--project-dir", proj, "--force", "--scope", scope],
@@ -117,8 +117,8 @@ function setupConstructionProject(scope: string): string {
 }
 
 // P4: resolve the born intent's record dir from the active-space + active-intent
-// cursors (a record dir is the one holding aidlc-state.md), falling back to the
-// flat aidlc-docs/ layout for a not-yet-born project. Copied verbatim from t63.
+// cursors (a record dir is the one holding amadeus-state.md), falling back to the
+// flat amadeus-docs/ layout for a not-yet-born project. Copied verbatim from t63.
 function recordDirOf(p: string): string {
   const spaceCursor = join(p, "aidlc", "active-space");
   const space = existsSync(spaceCursor)
@@ -128,11 +128,11 @@ function recordDirOf(p: string): string {
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();
-    if (rec && existsSync(join(intentsDir, rec, "aidlc-state.md"))) {
+    if (rec && existsSync(join(intentsDir, rec, "amadeus-state.md"))) {
       return join(intentsDir, rec);
     }
   }
-  return join(p, "aidlc-docs");
+  return join(p, "amadeus-docs");
 }
 
 describe("t67 construction worktrees — security-patch (migrated from t67-construction-worktrees-security-patch.sh, plan 4)", () => {
@@ -182,7 +182,7 @@ describe("t67 construction worktrees — security-patch (migrated from t67-const
     expect(audit.includes("**Event**: MERGE_DISPATCH_INVOKED")).toBe(true);
     // STRONGER: the exact slug line, not the .sh's loose "Bolt slug.*" pattern.
     expect(audit.includes(`**Bolt slug**: ${slug}`)).toBe(true);
-    // STRONGER: EVENT_HEADINGS maps the event to this ## heading (aidlc-audit.ts:168).
+    // STRONGER: EVENT_HEADINGS maps the event to this ## heading (amadeus-audit.ts:168).
     expect(audit.includes("## Merge Dispatch Invoked")).toBe(true);
   });
 
@@ -190,7 +190,7 @@ describe("t67 construction worktrees — security-patch (migrated from t67-const
   test("init writes a v7 state carrying Worktree Path + Bolt Refs for security-patch [.sh assert 4]", () => {
     const proj = setupConstructionProject(SCOPE);
     const state = readFileSync(
-      join(recordDirOf(proj), "aidlc-state.md"),
+      join(recordDirOf(proj), "amadeus-state.md"),
       "utf-8",
     );
     // The .sh grepped the two field labels independently; assert both on the

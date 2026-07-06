@@ -1,7 +1,7 @@
 // covers: function:parseMemoryHeadings, function:parseMemoryEntries
 //
 // t88 — §13 memory.md heading-counter parseMemoryHeadings() in
-// aidlc-lib.ts, plus the parseMemoryEntries() count invariant.
+// amadeus-lib.ts, plus the parseMemoryEntries() count invariant.
 // Mechanism: none (pure functions, zero I/O, zero LLM, zero tokens).
 // Technique: example-based.
 //
@@ -11,7 +11,7 @@
 // calls it directly, asserting the SAME observable return values. Every
 // TAP `assert_eq` in the source maps to exactly one `expect` below.
 //
-// Source (dist/claude/.claude/tools/aidlc-lib.ts):
+// Source (dist/claude/.claude/tools/amadeus-lib.ts):
 //   :971  parseMemoryHeadings(raw): { interpretations, deviations,
 //           tradeoffs, open_questions, total }
 //           - throws on non-string raw
@@ -43,7 +43,7 @@ import { describe, expect, test } from "bun:test";
 import {
   parseMemoryEntries,
   parseMemoryHeadings,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // ------------------------------------------------------------
 // Fixtures — transcribed verbatim from the .sh heredocs. The bash

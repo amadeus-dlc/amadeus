@@ -1,7 +1,7 @@
-// covers: subcommand:aidlc-worktree:create, subcommand:aidlc-worktree:merge, subcommand:aidlc-swarm:prepare, function:resolveConstructionRepo, function:repoDir, function:intentRepos
+// covers: subcommand:amadeus-worktree:create, subcommand:amadeus-worktree:merge, subcommand:amadeus-swarm:prepare, function:resolveConstructionRepo, function:repoDir, function:intentRepos
 //
 // Mechanism: cli (spawned dist tools) + real git. P7 — multi-repo construction:
-// `aidlc-worktree create/merge` thread `--repo <name>` so `git worktree add` and
+// `amadeus-worktree create/merge` thread `--repo <name>` so `git worktree add` and
 // the sibling-worktree guard anchor to the TARGET sibling repo, not the (non-git)
 // workspace root. Decouples "the repo to operate on" from "the single projectDir".
 //
@@ -31,9 +31,9 @@ import { join } from "node:path";
 import { AIDLC_SRC, cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const UTIL = join(AIDLC_SRC, "tools", "aidlc-utility.ts");
-const WT_TOOL = join(AIDLC_SRC, "tools", "aidlc-worktree.ts");
-const SWARM_TOOL = join(AIDLC_SRC, "tools", "aidlc-swarm.ts");
+const UTIL = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
+const WT_TOOL = join(AIDLC_SRC, "tools", "amadeus-worktree.ts");
+const SWARM_TOOL = join(AIDLC_SRC, "tools", "amadeus-swarm.ts");
 
 const tempDirs: string[] = [];
 afterAll(() => {
@@ -53,13 +53,13 @@ function runUtil(proj: string, ...args: string[]): RunResult {
   return { status: r.status ?? -1, out: `${r.stdout ?? ""}${r.stderr ?? ""}`, stdout: r.stdout ?? "" };
 }
 
-/** Spawn aidlc-worktree from the WORKSPACE root (the conductor's cwd — NOT a git repo). */
+/** Spawn amadeus-worktree from the WORKSPACE root (the conductor's cwd — NOT a git repo). */
 function runWorktree(proj: string, ...args: string[]): RunResult {
   const r = spawnSync(BUN, [WT_TOOL, ...args, "--project-dir", proj], { encoding: "utf-8", cwd: proj });
   return { status: r.status ?? -1, out: `${r.stdout ?? ""}${r.stderr ?? ""}`, stdout: r.stdout ?? "" };
 }
 
-/** Spawn aidlc-swarm `prepare` from the WORKSPACE root (the conductor's cwd). */
+/** Spawn amadeus-swarm `prepare` from the WORKSPACE root (the conductor's cwd). */
 function runSwarm(proj: string, ...args: string[]): RunResult {
   const r = spawnSync(BUN, [SWARM_TOOL, ...args, "--project-dir", proj], { encoding: "utf-8", cwd: proj });
   return { status: r.status ?? -1, out: `${r.stdout ?? ""}${r.stderr ?? ""}`, stdout: r.stdout ?? "" };
@@ -233,8 +233,8 @@ describe("t166 P7 multi-repo construction — --repo anchors the worktree to the
   // ===========================================================================
   // M1 — the SWARM PREPARE path resolves the target sibling repo. `prepare` is
   // the conductor-facing seam the engine's invoke-swarm directive feeds: it forks
-  // a worktree per unit via `aidlc-worktree create`, so the per-unit bolt branch
-  // is `bolt-<unit>` (verified: aidlc-swarm.ts:387 forwards `--slug <unit>` +
+  // a worktree per unit via `amadeus-worktree create`, so the per-unit bolt branch
+  // is `bolt-<unit>` (verified: amadeus-swarm.ts:387 forwards `--slug <unit>` +
   // `--repo <resolved>` to create). On a multi-repo intent, prepare WITHOUT --repo
   // dead-ends (resolveConstructionRepo throws "spans 2 repos") — proving --repo is
   // what resolves the dead-end M1 fixes the engine side of.

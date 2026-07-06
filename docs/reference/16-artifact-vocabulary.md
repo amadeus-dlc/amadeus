@@ -8,10 +8,10 @@ command line.
 
 The registry itself is **derived**, not written. The authoritative source
 for "which canonical names exist" is the `produces[]` field on every stage
-file. A helper in `dist/claude/.claude/tools/aidlc-graph.ts` reads
+file. A helper in `dist/claude/.claude/tools/amadeus-graph.ts` reads
 the compiled stage graph and returns the union as a set — the same pattern
-used for scopes (`validScopes()` at `aidlc-lib.ts:772`) and for agents
-(`loadAgents()` at `aidlc-lib.ts:794`). Keeping the registry out
+used for scopes (`validScopes()` at `amadeus-lib.ts:772`) and for agents
+(`loadAgents()` at `amadeus-lib.ts:794`). Keeping the registry out
 of this chapter prevents the drift that parallel hand-maintained lists
 invite.
 
@@ -25,7 +25,7 @@ identifier in `consumes[]` to declare a read dependency. The identifier is
 a short kebab-case string — no file extension, no folder prefix, no slash.
 
 Concrete example from milestone 4's worked example in
-`dist/claude/.claude/aidlc-common/protocols/stage-definition.md`:
+`dist/claude/.claude/amadeus-common/protocols/stage-definition.md`:
 
 ```yaml
 slug: scope-definition
@@ -54,8 +54,8 @@ Things that are **not** artifacts in this registry:
   "Filesystem mapping" below.
 - **Filenames.** The on-disk `.md` file and the canonical name don't have
   to match (they usually do, except at collisions).
-- **State plumbing.** `aidlc-state.md`, `audit.md`, and
-  `.aidlc-recovery.md` are managed by tools (`aidlc-state.ts`, hook
+- **State plumbing.** `amadeus-state.md`, `audit.md`, and
+  `.amadeus-recovery.md` are managed by tools (`amadeus-state.ts`, hook
   scripts), not by stages via `produces[]`. They never appear in the
   registry.
 - **Runtime values.** Strings like "user's prose answer" or
@@ -70,15 +70,15 @@ Things that are **not** artifacts in this registry:
    declares every canonical name the stage emits. `consumes:` names the
    canonical strings the stage depends on.
 2. **The registry is computed, not written.** Run
-   `bun dist/claude/.claude/tools/aidlc-graph.ts artifacts` to
+   `bun dist/claude/.claude/tools/amadeus-graph.ts artifacts` to
    print the live registry — one name per line, sorted alphabetically.
    The tool unions every stage's `produces[]` from the compiled
    `stage-graph.json`.
 3. **No parallel list in this chapter.** If a reader wants the enumeration,
    they run the tool. This chapter never lists canonical names as a
    registry table.
-4. **Membership is validated by the doctor.** `/aidlc --doctor` runs a
-   "Graph references" check (`aidlc-utility.ts`) — every `consumes[].artifact`
+4. **Membership is validated by the doctor.** `/amadeus --doctor` runs a
+   "Graph references" check (`amadeus-utility.ts`) — every `consumes[].artifact`
    entry and `requires_stage[]` slug must resolve against the derived registry.
    Orphan consumers are reported as broken references.
 
@@ -93,7 +93,7 @@ stage is populated.
 
 Every canonical name must satisfy `/^[a-z][a-z0-9-]*$/` — the shape
 enforced by `SLUG_RE` in
-`dist/claude/.claude/tools/aidlc-stage-schema.ts`. That means:
+`dist/claude/.claude/tools/amadeus-stage-schema.ts`. That means:
 
 - **Lowercase only.** `scope-document`, not `ScopeDocument` or
   `SCOPE_DOCUMENT`.
@@ -175,14 +175,14 @@ under the per-intent record dir. They land in the durable, per-repo code
 knowledge base at `aidlc/spaces/<space>/codekb/<repo>/` — a store shared across
 every intent in the space, keyed by repo rather than by intent. The path is
 resolved outside the record-relative rule via the `isCodekb` branch in
-`resolveArtifactPath` (`dist/claude/.claude/tools/aidlc-orchestrate.ts`), and
-the same directory is printed by the read-only `/aidlc codekb-path` command.
+`resolveArtifactPath` (`dist/claude/.claude/tools/amadeus-orchestrate.ts`), and
+the same directory is printed by the read-only `/amadeus codekb-path` command.
 
 **Canonical name ≠ filename for collisions.** Where a collision is split
 (see above), the on-disk filename may keep the pre-split form
 (`test-results.md`) while the canonical name is the disambiguated
 version. Use the stage's `produces:` list and
-`bun aidlc-graph.ts artifacts` as the source of truth, not the
+`bun amadeus-graph.ts artifacts` as the source of truth, not the
 filesystem.
 
 ---
@@ -190,7 +190,7 @@ filesystem.
 ## How to view the live registry
 
 ```bash
-bun dist/claude/.claude/tools/aidlc-graph.ts artifacts
+bun dist/claude/.claude/tools/amadeus-graph.ts artifacts
 ```
 
 Prints one canonical name per line, alphabetically sorted.
@@ -212,18 +212,18 @@ No edit to this chapter required — the registry is derived.
 
 1. Edit the producing stage's `.md` file and add the canonical name to
    its `produces:` list.
-2. Run `bun aidlc-graph.ts artifacts` to confirm it appears.
-3. Run `/aidlc --doctor` to confirm no consumer references a name that no
+2. Run `bun amadeus-graph.ts artifacts` to confirm it appears.
+3. Run `/amadeus --doctor` to confirm no consumer references a name that no
    longer exists (the "Graph references" check).
 
 **To rename an artifact:**
 
 1. Rename it in the producing stage's `produces:` entry.
 2. Rename it in every consuming stage's `consumes[].artifact` entry.
-3. `/aidlc --doctor` (post-PR-11) catches any consumer you forgot to
+3. `/amadeus --doctor` (post-PR-11) catches any consumer you forgot to
    update — the old name becomes a missing-producer error.
 
-Stage-graph CI drift detection (`aidlc-graph compile --check`) catches
+Stage-graph CI drift detection (`amadeus-graph compile --check`) catches
 renames that forget to regenerate `stage-graph.json` from the YAML
 sources.
 
@@ -247,15 +247,15 @@ at tag time and the registry at HEAD is a one-line `diff`.
 
 ## Cross-references
 
-- `dist/claude/.claude/aidlc-common/protocols/stage-definition.md` —
+- `dist/claude/.claude/amadeus-common/protocols/stage-definition.md` —
   authoritative stage format spec; defines `produces[]` / `consumes[]`
   as structured fields.
 - [Stage Definition](15-stage-definition.md) — narrative chapter on the
   spec.
 - [State Machine](12-state-machine.md) — parallel derivation pattern
-  for audit events: the canonical enum lives in `aidlc-audit.ts`, not in
+  for audit events: the canonical enum lives in `amadeus-audit.ts`, not in
   the doc.
 - [User Guide — Artifacts Reference](../guide/14-artifacts-reference.md)
   — user-facing artifact lifecycle and directory layout.
-- `dist/claude/.claude/tools/aidlc-graph.ts` — the derivation tool
+- `dist/claude/.claude/tools/amadeus-graph.ts` — the derivation tool
   (`artifactsRegistry()` + `artifacts` CLI subcommand).

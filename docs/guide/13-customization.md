@@ -43,18 +43,18 @@ When every workflow in a project should start at the same scope — for example,
 
 > The shipped `env` block also contains Bedrock model IDs (`CLAUDE_CODE_USE_BEDROCK`, `ANTHROPIC_DEFAULT_OPUS_MODEL`, etc.). Those are listed separately — the example above only shows the scope key for clarity.
 
-With this set, bare `/aidlc` invocations use `workshop` as the default scope. Participants don't need to remember `/aidlc workshop` on every run. The env var is read at workflow initialization only; once the intent's `aidlc-state.md` exists (under its record dir), the state file is authoritative and env changes don't affect an in-flight workflow.
+With this set, bare `/amadeus` invocations use `workshop` as the default scope. Participants don't need to remember `/amadeus workshop` on every run. The env var is read at workflow initialization only; once the intent's `amadeus-state.md` exists (under its record dir), the state file is authoritative and env changes don't affect an in-flight workflow.
 
 **Precedence (highest to lowest):**
 
-1. Explicit CLI flag: `/aidlc feature` or `/aidlc --scope bugfix` wins.
-2. Keyword detection in freeform text: `/aidlc fix the login bug` still maps to `bugfix`. Users can override the detected scope at the existing confirmation prompt.
+1. Explicit CLI flag: `/amadeus feature` or `/amadeus --scope bugfix` wins.
+2. Keyword detection in freeform text: `/amadeus fix the login bug` still maps to `bugfix`. Users can override the detected scope at the existing confirmation prompt.
 3. `AWS_AIDLC_DEFAULT_SCOPE` env var from `.claude/settings.json`.
 4. Hard-coded fallback (`poc` at intent birth, `feature` for unmatched freeform).
 
-**Valid values:** `enterprise`, `feature`, `mvp`, `poc`, `bugfix`, `refactor`, `infra`, `security-patch`, `workshop`. An invalid value errors at invocation time with a clear message. Teams can define additional scopes by dropping a `.claude/scopes/aidlc-<name>.md` file and tagging the member stages' `scopes:` lists — see [Contributing: Adding a Scope](../reference/11-contributing.md#adding-a-scope). Teams can also define additional agents in `.claude/agents/` — see [Contributing: Adding an Agent](../reference/11-contributing.md#adding-an-agent).
+**Valid values:** `enterprise`, `feature`, `mvp`, `poc`, `bugfix`, `refactor`, `infra`, `security-patch`, `workshop`. An invalid value errors at invocation time with a clear message. Teams can define additional scopes by dropping a `.claude/scopes/amadeus-<name>.md` file and tagging the member stages' `scopes:` lists — see [Contributing: Adding a Scope](../reference/11-contributing.md#adding-a-scope). Teams can also define additional agents in `.claude/agents/` — see [Contributing: Adding an Agent](../reference/11-contributing.md#adding-an-agent).
 
-**Verifying the config:** run `/aidlc --doctor` to confirm the env var is set and valid:
+**Verifying the config:** run `/amadeus --doctor` to confirm the env var is set and valid:
 
 ```
 ✓  AWS_AIDLC_DEFAULT_SCOPE=workshop (valid)
@@ -77,9 +77,9 @@ Scopes control which stages execute and at what depth and test strategy. AI-DLC 
 Specify explicitly or let the orchestrator auto-detect:
 
 ```
-/aidlc enterprise       # Explicit scope
-/aidlc Build a payments API  # Auto-detects "feature"
-/aidlc Fix the login bug     # Auto-detects "bugfix"
+/amadeus enterprise       # Explicit scope
+/amadeus Build a payments API  # Auto-detects "feature"
+/amadeus Fix the login bug     # Auto-detects "bugfix"
 ```
 
 ### Overriding at runtime
@@ -87,14 +87,14 @@ Specify explicitly or let the orchestrator auto-detect:
 You can override scope at any time during a workflow:
 
 - **At any approval gate**: request a different scope or depth
-- **Via utility command**: `/aidlc --scope enterprise` changes the active scope
+- **Via utility command**: `/amadeus --scope enterprise` changes the active scope
 - **Stage inclusion**: at approval gates in Ideation and Inception, you can add a previously skipped stage back into the workflow
 
 ---
 
 ## Stage Customization
 
-Each stage is a self-contained `.md` file in `.claude/aidlc-common/stages/[phase]/`. Stage files specify:
+Each stage is a self-contained `.md` file in `.claude/amadeus-common/stages/[phase]/`. Stage files specify:
 
 - **Metadata** — Stage number, phase, execution mode, lead/support agents
 - **Inputs** — Prior artifacts to load
@@ -120,7 +120,7 @@ You can override depth at any approval gate by requesting a different level.
 
 ## Statusline (Claude Code only)
 
-On **Claude Code**, this implementation displays a statusline in the terminal status bar showing workflow progress. Kiro and Codex have no statusline — they surface workflow position through `/aidlc --status` (Kiro) and the `update_plan` task-progress item plus `$aidlc --status` (Codex):
+On **Claude Code**, this implementation displays a statusline in the terminal status bar showing workflow progress. Kiro and Codex have no statusline — they surface workflow position through `/amadeus --status` (Kiro) and the `update_plan` task-progress item plus `$amadeus --status` (Codex):
 
 ```
 [AIDLC] IDEATION [▓▓▓▓▓░░░░░] 4/7 > Intent Capture -- Product Agent
@@ -135,13 +135,13 @@ The statusline is configured in `.claude/settings.json`:
 ```json
 "statusLine": {
   "type": "command",
-  "command": "bun $CLAUDE_PROJECT_DIR/.claude/hooks/aidlc-statusline.ts"
+  "command": "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-statusline.ts"
 }
 ```
 
 ### Customizing the format
 
-Edit `.claude/hooks/aidlc-statusline.ts` directly. The output format is defined in the `main()` function near the end of the file. The hook reads phase, stage, and agent from `aidlc-state.md`, maps stage slugs to display names, and builds both the unicode progress bar and the `n/m` ratio from the same phase-local checkbox parse.
+Edit `.claude/hooks/amadeus-statusline.ts` directly. The output format is defined in the `main()` function near the end of the file. The hook reads phase, stage, and agent from `amadeus-state.md`, maps stage slugs to display names, and builds both the unicode progress bar and the `n/m` ratio from the same phase-local checkbox parse.
 
 ### Disabling the statusline
 
@@ -177,7 +177,7 @@ Only add tools to the allow list if you create custom stages that need additiona
 
 ### Narrowing permissions
 
-Remove tools from the allow list to require manual approval for each use. Note that removing `Task` causes subagent stages (2.1 Reverse Engineering, 3.5 Code Generation) to prompt for permission on each delegation. Workspace detection (0.2) runs deterministically inside `aidlc-utility init` — it does not use `Task`.
+Remove tools from the allow list to require manual approval for each use. Note that removing `Task` causes subagent stages (2.1 Reverse Engineering, 3.5 Code Generation) to prompt for permission on each delegation. Workspace detection (0.2) runs deterministically inside `amadeus-utility init` — it does not use `Task`.
 
 ---
 

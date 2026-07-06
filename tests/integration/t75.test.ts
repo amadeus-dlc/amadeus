@@ -1,30 +1,30 @@
-// covers: subcommand:aidlc-state:practices-promote
+// covers: subcommand:amadeus-state:practices-promote
 //
 // CLI-contract port of tests/integration/t75-practices-promote.sh (TAP plan 24),
 // mechanism = cli. Equal-or-stronger migration: every .sh assertion that
-// shelled out to `bun aidlc-state.ts practices-promote ...` is preserved by
+// shelled out to `bun amadeus-state.ts practices-promote ...` is preserved by
 // SPAWNING the real CLI via node:child_process spawnSync (BUN + the tool
 // .ts path), asserting on res.status / res.stdout (the JSON envelope) / the
 // combined stdout+stderr (mirrors the .sh's 2>&1) AND the on-disk effects the
-// tool produces (aidlc-team.md replaceSection x5, aidlc-project.md
+// tool produces (amadeus-team.md replaceSection x5, amadeus-project.md
 // appendUnderHeading x2 with `(affirmed YYYY-MM-DD)` stamps, the audit.md
 // PRACTICES_AFFIRMED / PRACTICES_OVERRIDE rows). The contract under test is
 // the PROCESS boundary plus those file effects, so it stays a spawn — an
 // in-process handlePracticesPromote() twin would lose the exit-code half the
 // .sh relies on (the fail() path is error() -> process.exit(1),
-// aidlc-state.ts:1140) AND the JSON-ack-to-stdout half (Case A test 2).
+// amadeus-state.ts:1140) AND the JSON-ack-to-stdout half (Case A test 2).
 //
 // SUBCOMMAND UNIT: this .cli file credits the single subcommand unit the .sh
-// exercises — `aidlc-state practices-promote` (covers KEY
-// subcommand:aidlc-state:practices-promote, the colon form). minMechanism is
+// exercises — `amadeus-state practices-promote` (covers KEY
+// subcommand:amadeus-state:practices-promote, the colon form). minMechanism is
 // cli per the coverage registry, matched by the spawn mechanism here.
 //
 // FIXTURE DISCIPLINE (mirrors the .sh's make_fixture + cleanup_test_project
 // per case): each case builds a FRESH temp project dir via createTestProject
 // (which toPortablePath-converts on Windows so the audit.md the tool writes
 // through toPosix path helpers round-trips when read back). make_fixture's
-// .claude/rules/{aidlc-team.md,aidlc-project.md} live targets + the two
-// aidlc-docs/inception/practices-discovery/ drafts are reproduced byte-for-byte
+// .claude/rules/{amadeus-team.md,amadeus-project.md} live targets + the two
+// amadeus-docs/inception/practices-discovery/ drafts are reproduced byte-for-byte
 // from the .sh heredocs. NOTHING is written under tests/fixtures/**. All temp
 // dirs cleaned in afterAll.
 //
@@ -54,7 +54,7 @@
 //     - team.md untouched (OLD content present)          -> B: file contains OLD.
 //   Case C (missing target fails closed, atomicity) — .sh tests 20-21:
 //     - exit non-zero                                    -> C: r.status !== 0.
-//     - error "aidlc-project.md not found"               -> C: r.out contains.
+//     - error "amadeus-project.md not found"               -> C: r.out contains.
 //     - team.md NOT written (no NEW content)             -> C: file lacks NEW.
 //   Case D (partial draft) — .sh tests 22-23 (counts as 4 .sh asserts):
 //     - Way of Working / Testing replaced                -> D: file contains both.
@@ -81,7 +81,7 @@ import {
   seededAuditShard,
   seededStateFile,
 } from "../harness/fixtures.ts";
-import { memoryDirFor } from "../../dist/claude/.claude/tools/aidlc-graph.ts";
+import { memoryDirFor } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
@@ -91,7 +91,7 @@ const STATE_TS = join(
   "claude",
   ".claude",
   "tools",
-  "aidlc-state.ts",
+  "amadeus-state.ts",
 );
 
 const tempDirs: string[] = [];
@@ -177,7 +177,7 @@ NEVER skip CI gates
 `;
 
 const PRACTICES_DISCOVERY_REL = join(
-  "aidlc-docs",
+  "amadeus-docs",
   "inception",
   "practices-discovery",
 );
@@ -196,7 +196,7 @@ function makeFixture(): Fixture {
 
   // P6: practices-promote writes the relocated method files the resolver reads
   // (aidlc/spaces/<space>/memory/{team,project}.md, neutral names) — NOT the old
-  // .claude/rules/aidlc-{team,project}.md. memoryDirFor() is the default target.
+  // .claude/rules/amadeus-{team,project}.md. memoryDirFor() is the default target.
   const memDir = memoryDirFor(proj);
   const draftDir = join(proj, PRACTICES_DISCOVERY_REL);
   mkdirSync(memDir, { recursive: true });
@@ -313,7 +313,7 @@ function auditField(file: string, ev: string, key: string): string {
 }
 
 /** Today in UTC, YYYY-MM-DD. Mirrors the .sh's `date -u +%Y-%m-%d`; the tool
- *  stamps rules via isoTimestamp().slice(0,10) (aidlc-state.ts:1127), the same
+ *  stamps rules via isoTimestamp().slice(0,10) (amadeus-state.ts:1127), the same
  *  UTC calendar day, so the literal-date assertions stay deterministic. */
 function todayUtc(): string {
   return new Date().toISOString().slice(0, 10);
@@ -334,7 +334,7 @@ describe("t75 practices-promote — happy path (migrated from t75-practices-prom
     // .sh test 2: stdout JSON reports PRACTICES_AFFIRMED.
     expect(r.stdout).toContain('"emitted":"PRACTICES_AFFIRMED"');
 
-    // .sh test 3: aidlc-team.md got new content for the asserted sections.
+    // .sh test 3: amadeus-team.md got new content for the asserted sections.
     const teamContent = readFileSync(fx.teamMd, "utf-8");
     expect(teamContent).toContain("NEW_WAY_OF_WORKING_TEXT");
     expect(teamContent).toContain("NEW_TESTING_TEXT");
@@ -343,7 +343,7 @@ describe("t75 practices-promote — happy path (migrated from t75-practices-prom
     expect(teamContent).not.toContain("OLD_WAY_OF_WORKING_TEXT");
     expect(teamContent).not.toContain("OLD_CODE_STYLE_TEXT");
 
-    // .sh test 4: aidlc-project.md got the rules with date stamps.
+    // .sh test 4: amadeus-project.md got the rules with date stamps.
     const today = todayUtc();
     const projectContent = readFileSync(fx.projectMd, "utf-8");
     expect(projectContent).toContain(
@@ -393,7 +393,7 @@ describe("t75 practices-promote — missing draft fails closed", () => {
     expect(r.out).toContain("team-practices draft not found");
 
     // .sh test 18: audit records PRACTICES_OVERRIDE. The tool always emits on
-    // the fail() path before exiting (aidlc-state.ts:1131-1142), so we assert
+    // the fail() path before exiting (amadeus-state.ts:1131-1142), so we assert
     // presence directly (STRONGER than the .sh's conditional `[ -f $AUDIT ]`).
     const audit = auditPath(fx.proj);
     expect(auditEventCount(audit, "PRACTICES_OVERRIDE")).toBeGreaterThanOrEqual(1);
@@ -423,7 +423,7 @@ describe("t75 practices-promote — missing target fails closed (atomicity)", ()
 
     // .sh test 21: team.md must NOT be written when project.md was
     // missing — atomicity rule (read both targets, fail closed before any
-    // write, aidlc-state.ts:1163-1165).
+    // write, amadeus-state.ts:1163-1165).
     expect(readFileSync(fx.teamMd, "utf-8")).not.toContain(
       "NEW_WAY_OF_WORKING_TEXT",
     );
@@ -473,7 +473,7 @@ PARTIAL_NEW_TESTING
 // ============================================================
 
 describe("t75 practices-promote — idempotency on team.md", () => {
-  test("E: re-running the same promote produces an identical aidlc-team.md", () => {
+  test("E: re-running the same promote produces an identical amadeus-team.md", () => {
     const fx = makeFixture();
     const r1 = runPromote(fx);
     expect(r1.status).toBe(0); // STRONGER: .sh discarded stdout; pin clean exit

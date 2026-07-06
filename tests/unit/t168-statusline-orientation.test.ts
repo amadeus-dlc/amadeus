@@ -1,4 +1,4 @@
-// covers: hook:aidlc-statusline
+// covers: hook:amadeus-statusline
 //
 // t168 — the P8 statusline ORIENTATION PREFIX. The statusline always tells the
 // user which world they're in: `[AIDLC] <space> · <intent-slug> · <phase> …`.
@@ -18,12 +18,12 @@
 // this twin SPAWNS the real shipped hook with the workspace JSON on stdin (the
 // same shape Claude Code pipes), exactly like t61's runStatusline helper.
 //
-// SEEDING the per-intent workspace layout: birthIntent() (aidlc-lib.ts) is the
+// SEEDING the per-intent workspace layout: birthIntent() (amadeus-lib.ts) is the
 // real deterministic primitive that mints a record dir under
 // aidlc/spaces/<space>/intents/<slug>-<id8>/, appends the intents.json row, and
 // sets the active-intent cursor — exactly the on-disk shape activeIntent()/
 // listIntents()/orientationPrefix() read. We seed through it (not by hand) so
-// the test tracks the real layout, then overwrite the record's aidlc-state.md
+// the test tracks the real layout, then overwrite the record's amadeus-state.md
 // with a phase-bearing body so the render reaches the orientation branch.
 //
 // Empty-state: a project with no record (no birth) hits the hook's :233 no-op
@@ -38,7 +38,7 @@ import {
   birthIntent,
   setActiveSpaceCursor,
   stateFilePath,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   AIDLC_SRC,
   cleanupTestProject,
@@ -46,7 +46,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const HOOK = join(AIDLC_SRC, "hooks", "aidlc-statusline.ts");
+const HOOK = join(AIDLC_SRC, "hooks", "amadeus-statusline.ts");
 
 let proj: string;
 
@@ -84,7 +84,7 @@ function seedIntent(p: string, slug: string, space: string): void {
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
 - **Current Stage**: ci-pipeline
-- **Active Agent**: aidlc-developer-agent
+- **Active Agent**: amadeus-developer-agent
 - **Status**: Running
 `,
     "utf-8",

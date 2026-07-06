@@ -1,4 +1,4 @@
-// covers: hook:aidlc-audit-logger, hook:aidlc-validate-state, hook:aidlc-session-start, hook:aidlc-statusline, hook:aidlc-log-subagent, hook:aidlc-sensor-fire, hook:aidlc-runtime-compile
+// covers: hook:amadeus-audit-logger, hook:amadeus-validate-state, hook:amadeus-session-start, hook:amadeus-statusline, hook:amadeus-log-subagent, hook:amadeus-sensor-fire, hook:amadeus-runtime-compile
 //
 // t13 — adversarial-input robustness for the framework's stdin-driven hooks.
 // Migrated from tests/unit/t13-hook-input-robustness.sh (TAP plan 20).
@@ -29,31 +29,31 @@
 // the raw file_path into its `**File**:` field; the shell never expands it).
 //
 // SOURCE UNDER TEST — the always-exit-0 / robustness contract per hook:
-//   hooks/aidlc-audit-logger.ts   :31 TTY exit0; :37-40 bad-JSON exit0;
+//   hooks/amadeus-audit-logger.ts   :31 TTY exit0; :37-40 bad-JSON exit0;
 //                                   :43 tool_name ?? ""; :44 file_path ?? "";
 //                                   :100-105 emit failure -> recordHookDrop + exit0
-//   hooks/aidlc-validate-state.ts :30 no-state-file exit0; reads STATE not stdin
+//   hooks/amadeus-validate-state.ts :30 no-state-file exit0; reads STATE not stdin
 //                                   (ignores stdin entirely); :60-72 emit
 //                                   failure non-fatal
-//   hooks/aidlc-session-start.ts  :39 no-state-file exit0; :58-76 stdin read is
+//   hooks/amadeus-session-start.ts  :39 no-state-file exit0; :58-76 stdin read is
 //                                   try/wrapped, malformed -> source="malformed";
 //                                   :88-93 emit failure non-fatal
-//   hooks/aidlc-statusline.ts     :193 TTY -> "" stdin; :195-199 malformed JSON
+//   hooks/amadeus-statusline.ts     :193 TTY -> "" stdin; :195-199 malformed JSON
 //                                   swallowed; :208-211 no state -> "[AIDLC] ready"
-//   hooks/aidlc-log-subagent.ts   :28 TTY exit0; :34-37 bad-JSON exit0;
+//   hooks/amadeus-log-subagent.ts   :28 TTY exit0; :34-37 bad-JSON exit0;
 //                                   :40-42 agent_* ?? defaults; :45 no-audit exit0;
 //                                   :53-58 emit failure -> recordHookDrop + exit0
-//   hooks/aidlc-sensor-fire.ts    :17 "always exit 0" contract; :53 TTY exit0;
+//   hooks/amadeus-sensor-fire.ts    :17 "always exit 0" contract; :53 TTY exit0;
 //                                   :61-67 bad-JSON exit0; :74 empty path exit0;
 //                                   :90 no-audit exit0
-//   hooks/aidlc-runtime-compile.ts:40 TTY exit0; :45-51 bad-JSON exit0;
+//   hooks/amadeus-runtime-compile.ts:40 TTY exit0; :45-51 bad-JSON exit0;
 //                                   :52 command ?? ""; :64 no-command-match exit0
 //
 // FIXTURE DISCIPLINE (mirrors the .sh's create_test_project / seed_audit_file /
 // per-case state heredocs + cleanup_test_project, one fresh project per case):
-//   - createTestProject() -> a fresh temp dir with aidlc-docs/.
+//   - createTestProject() -> a fresh temp dir with amadeus-docs/.
 //   - seedAuditFile() -> copies tests/fixtures/audit-sample.md to
-//     aidlc-docs/audit.md (the precondition for the audit-emitting hooks).
+//     amadeus-docs/audit.md (the precondition for the audit-emitting hooks).
 //   - state-file cases write the SAME state bytes the .sh heredoc'd, including
 //     the injection tokens embedded in field values (Phase/Stage).
 //   - tests 7-10 used a project dir whose NAME contains spaces ("aidlc test
@@ -106,22 +106,22 @@ import {
 
 const BUN = process.execPath; // the bun running this test
 
-const HOOK_AUDIT = join(AIDLC_SRC, "hooks", "aidlc-audit-logger.ts");
-const HOOK_VALIDATE = join(AIDLC_SRC, "hooks", "aidlc-validate-state.ts");
-const HOOK_SESSION = join(AIDLC_SRC, "hooks", "aidlc-session-start.ts");
-const HOOK_STATUS = join(AIDLC_SRC, "hooks", "aidlc-statusline.ts");
-const HOOK_SUBAGENT = join(AIDLC_SRC, "hooks", "aidlc-log-subagent.ts");
-const HOOK_SENSOR = join(AIDLC_SRC, "hooks", "aidlc-sensor-fire.ts");
-const HOOK_RUNTIME = join(AIDLC_SRC, "hooks", "aidlc-runtime-compile.ts");
+const HOOK_AUDIT = join(AIDLC_SRC, "hooks", "amadeus-audit-logger.ts");
+const HOOK_VALIDATE = join(AIDLC_SRC, "hooks", "amadeus-validate-state.ts");
+const HOOK_SESSION = join(AIDLC_SRC, "hooks", "amadeus-session-start.ts");
+const HOOK_STATUS = join(AIDLC_SRC, "hooks", "amadeus-statusline.ts");
+const HOOK_SUBAGENT = join(AIDLC_SRC, "hooks", "amadeus-log-subagent.ts");
+const HOOK_SENSOR = join(AIDLC_SRC, "hooks", "amadeus-sensor-fire.ts");
+const HOOK_RUNTIME = join(AIDLC_SRC, "hooks", "amadeus-runtime-compile.ts");
 
 // P9 per-intent layout: the audit-logger now gates on the file_path being UNDER
-// the active intent's record root (docsRoot()), not on a bare "aidlc-docs/"
+// the active intent's record root (docsRoot()), not on a bare "amadeus-docs/"
 // substring; and the audit-emitting hooks self-gate on their resolved shard
 // existing. So injection/space/unicode artifacts are written UNDER the seeded
 // record (keeping the adversarial token as an INNER path segment), and the
 // audit-emitting cases pin a clone-id + create the resolved shard. The
 // adversarial CONTRACT (always exit 0, token never executed) is unchanged — only
-// the path the artifact lives under moved from aidlc-docs/ to the record dir.
+// the path the artifact lives under moved from amadeus-docs/ to the record dir.
 const PINNED_CLONE_ID = "testcloneid13";
 function pinnedShardName(): string {
   const host =
@@ -157,7 +157,7 @@ function seedShell(proj: string, space = DEFAULT_SPACE): void {
 /** Pin the clone-id + create the resolved empty audit shard so the audit-emitting
  *  hooks' "shard exists" gate passes. Returns the audit DIR. */
 function seedAuditShard(proj: string): string {
-  writeFileSync(join(proj, "aidlc", ".aidlc-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(proj, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
   const auditDir = seededAuditDir(proj);
   mkdirSync(auditDir, { recursive: true });
   writeFileSync(join(auditDir, pinnedShardName()), "", "utf-8");
@@ -211,15 +211,15 @@ function fireState(hook: string, proj: string): FireResult {
   return fireStdin(hook, "", proj);
 }
 
-/** Write the given aidlc-state.md body into the default intent's record (so the
+/** Write the given amadeus-state.md body into the default intent's record (so the
  *  active-intent cursor resolves and the hooks anchor under the record dir). */
 function writeState(proj: string, body: string): void {
   mkdirSync(seededRecordDir(proj), { recursive: true });
-  writeFileSync(join(seededRecordDir(proj), "aidlc-state.md"), body, "utf-8");
+  writeFileSync(join(seededRecordDir(proj), "amadeus-state.md"), body, "utf-8");
 }
 
 function recoveryPath(proj: string): string {
-  return join(seededRecordDir(proj), ".aidlc-recovery.md");
+  return join(seededRecordDir(proj), ".amadeus-recovery.md");
 }
 
 function writeJson(filePath: string): string {
@@ -227,7 +227,7 @@ function writeJson(filePath: string): string {
 }
 
 // A project dir whose NAME contains spaces (the .sh's
-// `mktemp -d "/tmp/aidlc test space XXXXXX"`), seeded with the per-intent
+// `mktemp -d "/tmp/amadeus test space XXXXXX"`), seeded with the per-intent
 // workspace shell. Returned dirs are tracked and torn down in afterEach.
 const spacedDirs: string[] = [];
 function makeSpacedProject(): string {
@@ -281,7 +281,7 @@ describe("t13 hook input robustness (mechanism cli — spawned hooks + adversari
   test("session-start: survives shell injection in state file (exit 0, token verbatim) [.sh test 3]", () => {
     writeState(
       proj,
-      "# AI-DLC State Tracking\n## Current Status\n- **Lifecycle Phase**: $(whoami)\n- **Current Stage**: `whoami`\n- **Active Agent**: aidlc-product-agent\n- **Scope**: feature\n## Stage Progress\n### $(whoami) PHASE\n- [ ] test — EXECUTE\n",
+      "# AI-DLC State Tracking\n## Current Status\n- **Lifecycle Phase**: $(whoami)\n- **Current Stage**: `whoami`\n- **Active Agent**: amadeus-product-agent\n- **Scope**: feature\n## Stage Progress\n### $(whoami) PHASE\n- [ ] test — EXECUTE\n",
     );
     const r = fireState(HOOK_SESSION, proj);
     expect(r.exitCode).toBe(0);
@@ -294,7 +294,7 @@ describe("t13 hook input robustness (mechanism cli — spawned hooks + adversari
   test("statusline: survives shell injection (exit 0, token verbatim) [.sh test 4]", () => {
     writeState(
       proj,
-      "# AI-DLC State Tracking\n## Current Status\n- **Lifecycle Phase**: IDEATION\n- **Current Stage**: $(whoami)\n- **Active Agent**: aidlc-product-agent\n## Stage Progress\n### IDEATION PHASE\n- [ ] test — EXECUTE\n",
+      "# AI-DLC State Tracking\n## Current Status\n- **Lifecycle Phase**: IDEATION\n- **Current Stage**: $(whoami)\n- **Active Agent**: amadeus-product-agent\n## Stage Progress\n### IDEATION PHASE\n- [ ] test — EXECUTE\n",
     );
     const r = fireStdin(HOOK_STATUS, JSON.stringify({ workspace: { project_dir: proj } }), proj);
     expect(r.exitCode).toBe(0);
@@ -348,7 +348,7 @@ describe("t13 hook input robustness (mechanism cli — spawned hooks + adversari
     const spaced = makeSpacedProject();
     writeState(
       spaced,
-      "# AI-DLC State Tracking\n## Current Status\n- **Lifecycle Phase**: IDEATION\n- **Current Stage**: feasibility\n- **Active Agent**: aidlc-product-agent\n- **Scope**: feature\n## Stage Progress\n### IDEATION PHASE\n- [ ] feasibility — EXECUTE\n",
+      "# AI-DLC State Tracking\n## Current Status\n- **Lifecycle Phase**: IDEATION\n- **Current Stage**: feasibility\n- **Active Agent**: amadeus-product-agent\n- **Scope**: feature\n## Stage Progress\n### IDEATION PHASE\n- [ ] feasibility — EXECUTE\n",
     );
     const r = fireState(HOOK_SESSION, spaced);
     expect(r.exitCode).toBe(0);
@@ -360,7 +360,7 @@ describe("t13 hook input robustness (mechanism cli — spawned hooks + adversari
     const spaced = makeSpacedProject();
     writeState(
       spaced,
-      "# AI-DLC State Tracking\n## Current Status\n- **Lifecycle Phase**: IDEATION\n- **Current Stage**: feasibility\n- **Active Agent**: aidlc-product-agent\n## Stage Progress\n### IDEATION PHASE\n- [ ] feasibility — EXECUTE\n",
+      "# AI-DLC State Tracking\n## Current Status\n- **Lifecycle Phase**: IDEATION\n- **Current Stage**: feasibility\n- **Active Agent**: amadeus-product-agent\n## Stage Progress\n### IDEATION PHASE\n- [ ] feasibility — EXECUTE\n",
     );
     const r = fireStdin(HOOK_STATUS, JSON.stringify({ workspace: { project_dir: spaced } }), spaced);
     expect(r.exitCode).toBe(0);
@@ -435,7 +435,7 @@ describe("t13 hook input robustness (mechanism cli — spawned hooks + adversari
     writeState(proj, "# AI-DLC State Tracking\n## Current Status\n## Stage Progress\n");
     seedAuditShard(proj);
     // The .sh's path put the backtick group as a leading segment with an
-    // aidlc-docs/ segment so the OLD substring gate passed. The P9 gate keys on
+    // amadeus-docs/ segment so the OLD substring gate passed. The P9 gate keys on
     // the record root, so the artifact moves UNDER the record — the backtick token
     // stays an inner segment, preserving the non-execution assertion.
     const r = fireStdin(HOOK_AUDIT, writeJson(join(seededRecordDir(proj), "`whoami`", "test.md")), proj);
@@ -467,7 +467,7 @@ describe("t13 hook input robustness (mechanism cli — spawned hooks + adversari
   test("session-start: ignores empty JSON on stdin (exit 0) [.sh test 18]", () => {
     writeState(
       proj,
-      "# AI-DLC State Tracking\n## Current Status\n- **Lifecycle Phase**: IDEATION\n- **Current Stage**: feasibility\n- **Active Agent**: aidlc-product-agent\n- **Scope**: feature\n## Stage Progress\n### IDEATION PHASE\n- [ ] feasibility — EXECUTE\n",
+      "# AI-DLC State Tracking\n## Current Status\n- **Lifecycle Phase**: IDEATION\n- **Current Stage**: feasibility\n- **Active Agent**: amadeus-product-agent\n- **Scope**: feature\n## Stage Progress\n### IDEATION PHASE\n- [ ] feasibility — EXECUTE\n",
     );
     const r = fireStdin(HOOK_SESSION, "{}", proj);
     expect(r.exitCode).toBe(0);

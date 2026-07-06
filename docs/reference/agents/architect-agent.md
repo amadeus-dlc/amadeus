@@ -1,15 +1,15 @@
-# aidlc-architect-agent -- Technical Reference
+# amadeus-architect-agent -- Technical Reference
 
 ## Identity
 
 | Field | Value |
 |-------|-------|
-| Name | aidlc-architect-agent |
+| Name | amadeus-architect-agent |
 | Model Override | **opus** |
 | Allowed Claude Code Tools | Read, Edit, Write, Glob, Grep, AskUserQuestion |
 | Disallowed Claude Code Tools | Task |
 
-The aidlc-architect-agent is the central design authority, handling the most
+The amadeus-architect-agent is the central design authority, handling the most
 architecturally complex reasoning tasks across three phases of the lifecycle.
 It runs on opus alongside the other seven high-judgment agents — the three
 sonnet agents (delivery, pipeline-deploy, operations) produce dominantly
@@ -35,7 +35,7 @@ templated planning, CI/CD, and runbook output.
 | Stage | Name | What This Agent Contributes |
 |-------|------|-----------------------------|
 | intent-capture | Intent Capture and Framing | Provides technical context and feasibility perspective on the captured intent |
-| reverse-engineering | Reverse Engineering (Synthesis step) | Receives code scan results from aidlc-developer-agent and synthesizes into a coherent architectural model |
+| reverse-engineering | Reverse Engineering (Synthesis step) | Receives code scan results from amadeus-developer-agent and synthesizes into a coherent architectural model |
 | delivery-planning | Delivery Planning | Validates build order against architecture dependencies and component coupling |
 
 ---
@@ -46,16 +46,16 @@ templated planning, CI/CD, and runbook output.
 
 | Source | Artifacts |
 |--------|-----------|
-| aidlc-product-agent | Requirements, user stories, intent backlog |
-| aidlc-developer-agent | Code scan results for reverse engineering synthesis |
+| amadeus-product-agent | Requirements, user stories, intent backlog |
+| amadeus-developer-agent | Code scan results for reverse engineering synthesis |
 
 ### Hands Off To
 
 | Target | Artifacts |
 |--------|-----------|
-| aidlc-developer-agent | Unit of work specifications, API contracts, design patterns |
-| aidlc-quality-agent | Test boundaries, NFR targets for validation |
-| aidlc-aws-platform-agent | Infrastructure requirements derived from application design |
+| amadeus-developer-agent | Unit of work specifications, API contracts, design patterns |
+| amadeus-quality-agent | Test boundaries, NFR targets for validation |
+| amadeus-aws-platform-agent | Infrastructure requirements derived from application design |
 
 ---
 
@@ -63,7 +63,7 @@ templated planning, CI/CD, and runbook output.
 
 ### Methodology (Tier 1)
 
-Path: `.claude/knowledge/aidlc-architect-agent/`
+Path: `.claude/knowledge/amadeus-architect-agent/`
 
 | File | Content |
 |------|---------|
@@ -76,7 +76,7 @@ Path: `.claude/knowledge/aidlc-architect-agent/`
 
 ### Team (Tier 2)
 
-Path: `aidlc/knowledge/aidlc-architect-agent/` (the space-level knowledge dir; user-managed)
+Path: `aidlc/knowledge/amadeus-architect-agent/` (the space-level knowledge dir; user-managed)
 
 A space-level directory the team creates when it has content (the engine ships `aidlc/knowledge/` empty). Populated by the team with project-specific
 architecture context such as existing architecture diagrams, technology radar,
@@ -87,6 +87,6 @@ approved patterns, or constraints registers.
 ## Cross-References
 
 - [Agent Reference Overview](README.md)
-- [Agent Guide: aidlc-architect-agent](../../guide/agents/architect-agent.md)
+- [Agent Guide: amadeus-architect-agent](../../guide/agents/architect-agent.md)
 - [Stage Documentation](../04-stages/)
-- Source: [`dist/claude/.claude/agents/aidlc-architect-agent.md`](../../../dist/claude/.claude/agents/aidlc-architect-agent.md)
+- Source: [`dist/claude/.claude/agents/amadeus-architect-agent.md`](../../../dist/claude/.claude/agents/amadeus-architect-agent.md)

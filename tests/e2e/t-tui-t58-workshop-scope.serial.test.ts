@@ -1,7 +1,7 @@
 // covers: scope:workshop
 //
 // t-tui-t58-workshop-scope.serial.tui.test.ts — drive the workshop SCOPE-ROUTING
-// journey through a REAL claude TUI and prove that `/aidlc workshop` skips the
+// journey through a REAL claude TUI and prove that `/amadeus workshop` skips the
 // ENTIRE Ideation phase, runs Inception/Construction/Operation at Standard depth
 // with a Minimal test strategy, and lands < 30 completed stages — ON DISK + as
 // the workshop facilitator SEES it painted. NET-NEW (not a port of an existing
@@ -10,7 +10,7 @@
 // rendered-screen value-add ADDED.
 //
 // DISTINCT FROM t-tui-workshop.serial.tui.test.ts: that file drives the practices
-// AFFIRMATION gate (multi-tab Submit -> aidlc-team.md `## Way of Working`); THIS
+// AFFIRMATION gate (multi-tab Submit -> amadeus-team.md `## Way of Working`); THIS
 // file drives the workshop SCOPE ROUTING contract (which stages run, which are
 // skipped, depth/test-strategy defaults). Different surface, different terminator.
 //
@@ -20,15 +20,15 @@
 //     - workshop has depth "Standard", testStrategy "Minimal", and SKIPs every
 //       ideation stage (intent-capture..approval-handoff all SKIP — lines 105 of
 //       scope-mapping.json), EXECUTEs all inception/construction/operation.
-//     - state-init (aidlc-utility.ts:2044-2099) writes the FULL stage-progress
+//     - state-init (amadeus-utility.ts:2044-2099) writes the FULL stage-progress
 //       block with each ideation slug rendered `- [ ] <slug> — SKIP` (the SKIP
-//       suffix from aidlc-utility.ts:1997), so a SKIP'd ideation stage can NEVER
+//       suffix from amadeus-utility.ts:1997), so a SKIP'd ideation stage can NEVER
 //       reach `[x]`; it stays `[ ] … — SKIP`. determineFirstPostInitStage
 //       (:2175) therefore returns reverse-engineering, so the workflow's first
 //       post-init phase is INCEPTION and `- **Lifecycle Phase**: INCEPTION` lands
 //       — Ideation is never entered.
 //   .sh -> DISK ASSERTION MAP (each grep becomes a structured disk read):
-//     #1  state file created                 -> existsSync(aidlc-state.md)
+//     #1  state file created                 -> existsSync(amadeus-state.md)
 //     #2  no ideation artifacts              -> <record>/ideation/ absent OR empty
 //     #3  no Ideation stage marked [x]       -> 0 lines match `[x] <ideation-slug>`
 //     #4  Inception stages present in state  -> /reverse-engineering|requirements-analysis/
@@ -49,14 +49,14 @@
 //       scope-mapping describes it as "Facilitated group session with mandatory
 //       gates") with a NON-PROSE footer (`Enter to select` / `Submit answers`).
 //
-// WHY PATTERN B (answer-gate, NOT Pattern A): `/aidlc workshop` does NOT run a
+// WHY PATTERN B (answer-gate, NOT Pattern A): `/amadeus workshop` does NOT run a
 // one-shot config edit — it starts a workflow that then asks "What would you like
 // to build?" (SKILL.md:337) and runs the workshop's mandatory gates. A Pattern-A
 // "wait + assert" test would HANG on the first menu it does not answer. So we run
 // the shared `answer-gate` primitive (tui-drive.ts cmdAnswerGate): it presses
 // Enter (= the Recommended default) on every menu and TERMINATES on a
 // DETERMINISTIC on-disk signal — here the `Completed` counter crossing into the
-// post-init range (aidlc-state.ts:258/405/472 syncs `- **Completed**:` to the
+// post-init range (amadeus-state.ts:258/405/472 syncs `- **Completed**:` to the
 // live `[x]` count on every advance). We NEVER wait on rewordable screen prose.
 //
 // SCOPE-CONFIRMATION GATE — verified routing + live-verify guard: `workshop` is a
@@ -186,7 +186,7 @@ const IDEATION_SLUGS = [
 
 // Poll an ON-DISK predicate until true or timeout — the deterministic completion
 // signal. We never gate on the lagging statusline phase flip (it paints `ready`
-// until state-init writes aidlc-state.md, minutes behind the work — the t29
+// until state-init writes amadeus-state.md, minutes behind the work — the t29
 // lesson). Disk is the truth.
 async function waitForDisk(pred: () => boolean, timeoutMs: number): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
@@ -197,8 +197,8 @@ async function waitForDisk(pred: () => boolean, timeoutMs: number): Promise<bool
   return pred();
 }
 
-// The `- **Completed**: N` counter (aidlc-utility.ts:2071 at init = 3; synced to
-// the live `[x]` count on every advance/skip by aidlc-state.ts:258/405/472).
+// The `- **Completed**: N` counter (amadeus-utility.ts:2071 at init = 3; synced to
+// the live `[x]` count on every advance/skip by amadeus-state.ts:258/405/472).
 // Returns the integer, or -1 if absent/unreadable.
 function completedCount(projectDir: string): number {
   const statePath = stateFilePathFor(projectDir);
@@ -216,8 +216,8 @@ describe("t-tui-t58 workshop-scope (skips Ideation, runs Inception+ at Standard/
     `workshop scope routing skips Ideation + lands Inception/Construction/Operation on disk${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
     async () => {
       const session = `aidlc_tui_t58_${process.pid}`;
-      // --no-aidlc-docs: a brand-new workspace the journey scaffolds itself (the
-      // .sh's `setup_integration_project --no-aidlc-docs`). Use an explicit
+      // --no-amadeus-docs: a brand-new workspace the journey scaffolds itself (the
+      // .sh's `setup_integration_project --no-amadeus-docs`). Use an explicit
       // `--scope workshop` flag so this test exercises the workshop lifecycle,
       // not the separate scope-confirmation/disambiguation surface.
       const proj = setupTuiProject({ noAidlcDocs: true });
@@ -264,7 +264,7 @@ describe("t-tui-t58 workshop-scope (skips Ideation, runs Inception+ at Standard/
           "--session",
           session,
           "--keys",
-          "/aidlc --scope workshop Build a simple task tracker",
+          "/amadeus --scope workshop Build a simple task tracker",
           "--literal",
           "--no-enter",
         ]);
@@ -353,7 +353,7 @@ describe("t-tui-t58 workshop-scope (skips Ideation, runs Inception+ at Standard/
         }
 
         // #3 no Ideation stage marked [x]: each SKIP'd ideation slug renders
-        //    `- [ ] <slug> — SKIP` (aidlc-utility.ts:1997) and can never reach
+        //    `- [ ] <slug> — SKIP` (amadeus-utility.ts:1997) and can never reach
         //    `[x]`. Assert ZERO `[x] <ideation-slug>` lines (the .sh's grep -ciE).
         for (const slug of IDEATION_SLUGS) {
           const reX = new RegExp(`\\[x\\]\\s*${slug}\\b`, "i");
@@ -383,7 +383,7 @@ describe("t-tui-t58 workshop-scope (skips Ideation, runs Inception+ at Standard/
         expect(stateMd).toMatch(/^-\s*\*\*Depth\*\*:\s*Standard$/m);
 
         // #13 Test Strategy = Minimal (workshop default, independent of Standard
-        //     depth — scope-mapping.json:100; aidlc-utility.ts:1942 prefers
+        //     depth — scope-mapping.json:100; amadeus-utility.ts:1942 prefers
         //     scopeDef.testStrategy). Pin the field.
         expect(stateMd).toMatch(/^-\s*\*\*Test Strategy\*\*:\s*Minimal$/m);
 

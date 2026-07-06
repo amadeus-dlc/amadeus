@@ -1,21 +1,21 @@
 // covers: audit:GUARDRAIL_LOADED
 //
 // CLI-contract port of tests/integration/t105-doctor-paired-coverage.sh (TAP
-// plan 6), mechanism = cli. Drives the REAL `/aidlc --doctor` handler by
+// plan 6), mechanism = cli. Drives the REAL `/amadeus --doctor` handler by
 // SPAWNING the utility CLI via node:child_process spawnSync (BUN +
-// aidlc-utility.ts) against AIDLC_RULES_DIR fixtures and the seed
+// amadeus-utility.ts) against AIDLC_RULES_DIR fixtures and the seed
 // stage-graph (AIDLC_STAGE_GRAPH), exactly as the .sh's run_doctor helper
 // did (t105:41-47). The contract under test is the PROCESS boundary plus
 // the side effect the tool writes — the paired-coverage advisory row on
-// stdout and the GUARDRAIL_LOADED block appended to aidlc-docs/audit.md.
+// stdout and the GUARDRAIL_LOADED block appended to amadeus-docs/audit.md.
 // An in-process twin would lose the audit-file write (doctor calls
 // appendAuditEvent -> appendAuditEntry, which self-creates the file/dir
-// under projectDir, aidlc-audit.ts:186-196) and the process.exit shell the
+// under projectDir, amadeus-audit.ts:186-196) and the process.exit shell the
 // .sh swallowed with `|| true` (doctor exits 1 on any failed check,
-// aidlc-utility.ts:1385). So all cases stay spawn-based.
+// amadeus-utility.ts:1385). So all cases stay spawn-based.
 //
-// GUARDRAIL_LOADED contract (aidlc-utility.ts:1348-1352, audit row shape at
-// aidlc-audit.ts:251-267, heading map :173):
+// GUARDRAIL_LOADED contract (amadeus-utility.ts:1348-1352, audit row shape at
+// amadeus-audit.ts:251-267, heading map :173):
 //   ## Guardrail Loaded
 //   **Event**: GUARDRAIL_LOADED
 //   **Scope**: all
@@ -28,7 +28,7 @@
 //
 // Paired-coverage label contract (utility.ts:1333-1346): P/(M-X) fraction
 // where M = rules carrying frontmatter.pairing, X = feedforward-only count,
-// needing = M-X, P = rules whose pairing sensor id (aidlc- stripped) resolves
+// needing = M-X, P = rules whose pairing sensor id (amadeus- stripped) resolves
 // in the seed graph's sensors_applicable set. needing==0 -> the
 // "no sensor-bound rules" label. Unpaired rules (named sensor absent
 // everywhere) append "unpaired: <path> → <sensor> (no stage binds it)".
@@ -37,7 +37,7 @@
 //   - .sh case 1 assert_contains "Paired sensor coverage: 1/2 guardrails
 //       paired (1 feedforward-only)"            -> test 1 (same substring).
 //   - .sh case 2 assert_contains
-//       "unpaired: .claude/rules/aidlc-team.md → aidlc-ghost (no stage binds
+//       "unpaired: .claude/rules/amadeus-team.md → amadeus-ghost (no stage binds
 //       it)"                                    -> test 2 (same substring).
 //   - .sh case 3 COV_LINE grep "^✓" on the coverage line -> test 3: the
 //       coverage line is prefixed "✓  " (advisory pass), asserted by isolating
@@ -80,11 +80,11 @@ import { toPortablePath } from "../harness/fixtures.ts";
 import {
   auditFilePath,
   readAllAuditShards,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // P9: with no intent cursor seeded, doctor's appendAuditEvent resolves the BARE
 // space record root's per-clone audit SHARD (auditFilePath -> aidlc/spaces/
-// default/intents/audit/<host>-<clone>.md) — the flat aidlc-docs/audit.md is
+// default/intents/audit/<host>-<clone>.md) — the flat amadeus-docs/audit.md is
 // retired. Seed + read THAT shard. The single-clone fixture means the shard is
 // the whole trail (no merge needed).
 const RECORD_REL = join("aidlc", "spaces", "default", "intents");
@@ -95,7 +95,7 @@ function recordRoot(proj: string): string {
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const AIDLC_SRC = join(REPO_ROOT, "dist", "claude", ".claude");
-const UTIL = join(AIDLC_SRC, "tools", "aidlc-utility.ts");
+const UTIL = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
 const SEED_GRAPH = join(AIDLC_SRC, "tools", "data", "stage-graph.json");
 
 const tempDirs: string[] = [];
@@ -112,15 +112,15 @@ interface DoctorResult {
 
 /**
  * run_doctor (t105:41-47): fresh project dir (survives the call so the test
- * reads aidlc-docs/audit.md), AIDLC_RULES_DIR + AIDLC_STAGE_GRAPH env, spawn
- * `bun aidlc-utility.ts doctor --project-dir <proj>` capturing stdout+stderr.
+ * reads amadeus-docs/audit.md), AIDLC_RULES_DIR + AIDLC_STAGE_GRAPH env, spawn
+ * `bun amadeus-utility.ts doctor --project-dir <proj>` capturing stdout+stderr.
  * doctor process.exit(1)s on any failed check; the .sh swallowed that with
  * `|| true`, so the rc is captured but not asserted (advisory row + audit
  * write are the contract). toPortablePath wraps the project dir for the
  * Windows audit.md round-trip.
  */
 function runDoctor(rulesDir: string): DoctorResult {
-  const proj = toPortablePath(mkdtempSync(join(tmpdir(), "aidlc-t105-proj-")));
+  const proj = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-t105-proj-")));
   tempDirs.push(proj);
   mkdirSync(recordRoot(proj), { recursive: true });
   // Seed the per-clone audit shard so doctor's GUARDRAIL_LOADED / HEALTH_CHECKED
@@ -151,7 +151,7 @@ function runDoctor(rulesDir: string): DoctorResult {
 
 /** Make a fresh temp rules dir; returns its path (cleaned in afterAll). */
 function makeRulesDir(): string {
-  const rd = mkdtempSync(join(tmpdir(), "aidlc-t105-cov-"));
+  const rd = mkdtempSync(join(tmpdir(), "amadeus-t105-cov-"));
   tempDirs.push(rd);
   return rd;
 }
@@ -223,7 +223,7 @@ function coverageLine(out: string): string {
 
 // ---------------------------------------------------------------------------
 // Coverage fixture (t105:54-77): 2 sensor-bound rules (one resolves:
-// aidlc-required-sections; one ghost: aidlc-ghost) + 1 feedforward-only.
+// amadeus-required-sections; one ghost: amadeus-ghost) + 1 feedforward-only.
 // So M=3, X=1, needing=M-X=2, P=1 (required-sections resolves), U=1 (ghost).
 // Label: 1/2, 1 feedforward; rule count = 3.
 // ---------------------------------------------------------------------------
@@ -231,7 +231,7 @@ function seedCoverageRules(rd: string): void {
   writeFileSync(
     join(rd, "org.md"),
     `---
-pairing: aidlc-required-sections
+pairing: amadeus-required-sections
 ---
 
 # Org rule bound to a real sensor
@@ -241,7 +241,7 @@ pairing: aidlc-required-sections
   writeFileSync(
     join(rd, "team.md"),
     `---
-pairing: aidlc-ghost
+pairing: amadeus-ghost
 ---
 
 # Team rule bound to a non-existent sensor
@@ -289,7 +289,7 @@ describe("t105 doctor paired-coverage + GUARDRAIL_LOADED (migrated from t105-doc
     // aidlc/spaces/default/memory/), so the unpaired detail names the team
     // layer by its neutral path.
     expect(r.out).toContain(
-      "unpaired: aidlc/spaces/default/memory/team.md → aidlc-ghost (no stage binds it)",
+      "unpaired: aidlc/spaces/default/memory/team.md → amadeus-ghost (no stage binds it)",
     );
   });
 

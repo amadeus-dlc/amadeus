@@ -1,10 +1,10 @@
-# aidlc-compliance-agent -- Technical Reference
+# amadeus-compliance-agent -- Technical Reference
 
 ## Identity
 
 | Field | Value |
 |-------|-------|
-| Name | aidlc-compliance-agent |
+| Name | amadeus-compliance-agent |
 | Model Override | opus |
 | Allowed Claude Code Tools | Read, Edit, Write, Glob, Grep, WebSearch, AskUserQuestion |
 | Disallowed Claude Code Tools | Task |
@@ -35,22 +35,22 @@ advisory capacity across the lifecycle.
 
 | Source | Artifacts |
 |--------|-----------|
-| aidlc-architect-agent | System design, data flow diagrams for compliance review |
-| aidlc-devsecops-agent | Security controls, encryption specifications for compliance mapping |
+| amadeus-architect-agent | System design, data flow diagrams for compliance review |
+| amadeus-devsecops-agent | Security controls, encryption specifications for compliance mapping |
 
 ### Hands Off To
 
 | Target | Artifacts |
 |--------|-----------|
-| aidlc-architect-agent | Compliance requirements for design incorporation |
-| aidlc-devsecops-agent | Security control specifications derived from regulatory mandates |
+| amadeus-architect-agent | Compliance requirements for design incorporation |
+| amadeus-devsecops-agent | Security control specifications derived from regulatory mandates |
 | Orchestrator | Compliance risk escalations, RAID log updates |
 
 ### Collaborates With (peer)
 
 | Peer | Shared concern |
 |------|----------------|
-| aidlc-aws-platform-agent | Data residency, encryption at rest, IAM audit |
+| amadeus-aws-platform-agent | Data residency, encryption at rest, IAM audit |
 
 ---
 
@@ -58,7 +58,7 @@ advisory capacity across the lifecycle.
 
 ### Methodology (Tier 1)
 
-Path: `.claude/knowledge/aidlc-compliance-agent/`
+Path: `.claude/knowledge/amadeus-compliance-agent/`
 
 | File | Content |
 |------|---------|
@@ -66,7 +66,7 @@ Path: `.claude/knowledge/aidlc-compliance-agent/`
 
 ### Team (Tier 2)
 
-Path: `aidlc/knowledge/aidlc-compliance-agent/` (the space-level knowledge dir; user-managed)
+Path: `aidlc/knowledge/amadeus-compliance-agent/` (the space-level knowledge dir; user-managed)
 
 A space-level directory the team creates when it has content (the engine ships `aidlc/knowledge/` empty). Populated by the team with project-specific
 compliance context such as existing compliance matrices, audit findings, data
@@ -77,6 +77,6 @@ classification schemes, or regulatory interpretations.
 ## Cross-References
 
 - [Agent Reference Overview](README.md)
-- [Agent Guide: aidlc-compliance-agent](../../guide/agents/compliance-agent.md)
+- [Agent Guide: amadeus-compliance-agent](../../guide/agents/compliance-agent.md)
 - [Stage Documentation](../04-stages/)
-- Source: [`dist/claude/.claude/agents/aidlc-compliance-agent.md`](../../../dist/claude/.claude/agents/aidlc-compliance-agent.md)
+- Source: [`dist/claude/.claude/agents/amadeus-compliance-agent.md`](../../../dist/claude/.claude/agents/amadeus-compliance-agent.md)

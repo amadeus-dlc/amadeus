@@ -91,8 +91,8 @@ dir of per-clone shards under `<record>/audit/`.)
 |---|---|
 | Control plane (BGP, OSPF, route computation) | Stage definitions, rules, sensors — the schema of what should run |
 | Data plane (packet forwarding, flow tables) | Stage executions, Bolts, agent invocations — the actual runs |
-| Management plane (SNMP, dashboards, CLI) | `/aidlc --doctor`, designer (future), audit queries, `CLAUDE.md` |
-| Routing protocol (BGP / OSPF) | Compile: `aidlc-graph.ts compile` reads stage frontmatter + rules + sensors, resolves each stage's pull imports against the source registries, emits the graph |
+| Management plane (SNMP, dashboards, CLI) | `/amadeus --doctor`, designer (future), audit queries, `CLAUDE.md` |
+| Routing protocol (BGP / OSPF) | Compile: `amadeus-graph.ts compile` reads stage frontmatter + rules + sensors, resolves each stage's pull imports against the source registries, emits the graph |
 | FIB (forwarding information base) loaded into ASIC | `stage-graph.json` with per-stage `rules_in_context` + `sensors_applicable` resolved at compile time |
 | OpenFlow / NETCONF (interface) | `stage-graph.json` — the explicit interface between compile and orchestrator |
 | Telemetry (NetFlow, sFlow) | Audit log, sensor firings, memory.md entries → the intent's `runtime-graph.json` |
@@ -122,9 +122,9 @@ recompile at the next workflow start.
 
 | State | Lifecycle | Source on disk | Compiled into | Read by |
 |---|---|---|---|---|
-| Stage DAG, scope routing, artifact production | Framework-versioned (changes via framework PR) | Stage frontmatter (`.claude/aidlc-common/stages/*.md`) | `stage-graph.json` | Orchestrator, doctor, designer |
+| Stage DAG, scope routing, artifact production | Framework-versioned (changes via framework PR) | Stage frontmatter (`.claude/amadeus-common/stages/*.md`) | `stage-graph.json` | Orchestrator, doctor, designer |
 | **Rules** (prose, prescriptive) | Mutable; framework PR or learning-loop writes | `aidlc/spaces/<space>/memory/<scope>.md` (filename-derived; org/team/project attach to every stage) | `stage-graph.json` per-node `rules_in_context` | Orchestrator (resolved view); Claude Code auto-load reads source for in-context prose |
-| **Sensors** (manifests, verification checks) | Mutable; framework PR or learning-loop writes (manifest authored once; stages import by id) | `.claude/sensors/aidlc-<id>.md` | `stage-graph.json` per-node `sensors_applicable` | Dispatcher reads resolved list at stage entry; PostToolUse fires from it |
+| **Sensors** (manifests, verification checks) | Mutable; framework PR or learning-loop writes (manifest authored once; stages import by id) | `.claude/sensors/amadeus-<id>.md` | `stage-graph.json` per-node `sensors_applicable` | Dispatcher reads resolved list at stage entry; PostToolUse fires from it |
 | Workflow execution telemetry | Per-workflow, accumulating | `audit/` shards · `memory.md` · Bolt forks | `<record>/runtime-graph.json` | Doctor, gate ritual, future cross-workflow observer |
 | Per-stage observation log | Per-stage-run | `<record>/<phase>/<stage>/memory.md` | (no compile — read directly) | Gate ritual at this stage's gate |
 
@@ -164,7 +164,7 @@ shape as BGP not recomputing routes mid-packet-flight.
 Two failure modes the compile must address from day one. This
 implementation's per-Bolt worktrees isolate state for parallel agents
 most of the time, but `data/stage-graph.json` is repo-shared, not
-worktree-scoped — and the user can launch `/aidlc` in two terminals
+worktree-scoped — and the user can launch `/amadeus` in two terminals
 against the same checkout — so the compile needs defence regardless.
 
 - **Concurrent compiles** would race writes to `data/stage-graph.json`.
@@ -210,7 +210,7 @@ a sensor fired.
 
 The compile is symmetric across all control-plane inputs. Stage
 frontmatter, rule files, and sensor files are all read by
-`aidlc-graph.ts` at workflow start; all contribute to the resolved
+`amadeus-graph.ts` at workflow start; all contribute to the resolved
 per-stage view. Networking does this — BGP and OSPF feed the same FIB;
 ACLs and policies feed the same flow tables. One compiled view,
 multiple sources.
@@ -229,8 +229,8 @@ Concretely, each stage node gains two fields:
     {"path": "aidlc/spaces/default/memory/phases/inception.md", "scope": "phase"}
   ],
   "sensors_applicable": [
-    {"id": "required-sections", "path": ".claude/sensors/aidlc-required-sections.md"},
-    {"id": "upstream-coverage", "path": ".claude/sensors/aidlc-upstream-coverage.md"}
+    {"id": "required-sections", "path": ".claude/sensors/amadeus-required-sections.md"},
+    {"id": "upstream-coverage", "path": ".claude/sensors/amadeus-upstream-coverage.md"}
   ]
 }
 ```
@@ -281,7 +281,7 @@ property of the design's data discipline.
 | Artefact tree (`<record>/<phase>/<stage>/*.md`) | The decisions themselves, in finished form | First |
 | `memory.md` per stage | What got noticed during the decision-making | Second |
 | Audit log (`<record>/audit/` shards) | When each decision happened, who approved | Third |
-| State docs (`<record>/aidlc-state.md`, per-stage state) | Where in the workflow we are right now | Fourth |
+| State docs (`<record>/amadeus-state.md`, per-stage state) | Where in the workflow we are right now | Fourth |
 | `runtime-graph.json` | Cross-stage summary (durations, sensor firings, learnings counts) | Fifth |
 
 The artefacts go first because they're the durable record of what was
@@ -321,7 +321,7 @@ the five against the audit log can detect drift and reconcile.
 ### What this means for the framework
 
 The framework already practises a small version of this: today's
-`aidlc-state.md` carries a `Scope` field that is written at intent
+`amadeus-state.md` carries a `Scope` field that is written at intent
 birth and read on session-resume, so the workflow's scope survives
 context compaction without the orchestrator having to re-derive it. The
 generalisation is that every part of the data plane that records

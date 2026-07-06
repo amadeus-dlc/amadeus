@@ -2,15 +2,15 @@
 //
 // Mechanism: none. Migrated from tests/unit/t61-agent-metadata-derived.sh
 // (TAP plan 5). The contract under test is the agent-metadata loader
-// `loadAgents()` (aidlc-lib.ts:805) — the single source of truth that
+// `loadAgents()` (amadeus-lib.ts:805) — the single source of truth that
 // replaced the old AGENT_KNOWLEDGE + AGENT_DISPLAY literals, derived from
 // `.claude/agents/*.md` frontmatter. The .sh proved three things flow
 // through that loader with NO code change when an agent file is
 // added/dropped: (1) it has no literals left in tools/+hooks/, (2) the
 // loader itself returns the 11 shipped agents alphabetically with the
 // "Pipeline & Deploy Agent" display string, (3) the two CONSUMERS of the
-// loader — `aidlc-utility.ts init` knowledge scaffolding and the
-// `aidlc-statusline.ts` hook — derive their output from that same
+// loader — `amadeus-utility.ts init` knowledge scaffolding and the
+// `amadeus-statusline.ts` hook — derive their output from that same
 // frontmatter. v0.3.0 Foundation milestone 3, #62.
 //
 // WHY .none (not .cli): the keystone observable is the PURE function
@@ -25,7 +25,7 @@
 // `import.meta.url`-relative), seeing the fixture agent. The statusline
 // hook is mechanism=none (a hook driven by controlled stdin); the
 // utility-init spawn is the per-project tool the .sh itself drove
-// (`bun "$PROJ/.claude/tools/aidlc-utility.ts" init`). Both are required
+// (`bun "$PROJ/.claude/tools/amadeus-utility.ts" init`). Both are required
 // for equal parity — an in-process call against the worktree-checkout
 // lib.ts would read the SHIPPED agents dir, never the fixture variant, so
 // the accept/reject/fixture-render assertions (.sh tests 3/4/5) could not
@@ -56,7 +56,7 @@
 //       fixture agents) -> split into "5a" (shipped pipeline ->
 //       "Pipeline & Deploy Agent", the AGENT_DISPLAY-drift regression
 //       guard) and "5b" (fixture-agent -> "Fixture Agent"), one observable
-//       each. Each seeds aidlc-state.md, pipes the workspace JSON to the
+//       each. Each seeds amadeus-state.md, pipes the workspace JSON to the
 //       per-project hook on stdin, and greps the rendered line.
 //
 // 5 .sh asserts -> 7 test() cases (Test 2 split 1->3, Test 5 split 1->2);
@@ -73,7 +73,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 // Direct in-process import of the pure loader — the KEY covered unit.
-import { loadAgents } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { loadAgents } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   AIDLC_SRC,
   cleanupTestProject,
@@ -90,10 +90,10 @@ afterAll(() => {
 });
 
 /**
- * Fresh integration project with the shipped .claude copied in, aidlc-docs
+ * Fresh integration project with the shipped .claude copied in, amadeus-docs
  * removed (so init scaffolds clean) and the env-scope stripped (so the
  * --scope poc flag is authoritative). Mirrors the .sh's
- * `setup_integration_project --no-aidlc-docs --strip-env-scope`.
+ * `setup_integration_project --no-amadeus-docs --strip-env-scope`.
  */
 function proj(): string {
   const p = setupIntegrationProject({ noAidlcDocs: true, stripEnvScope: true });
@@ -154,7 +154,7 @@ modelOverride: opus
 
 /** Spawn the PER-PROJECT statusline hook with the workspace JSON on stdin. Mirrors `echo {...} | bun "$HOOK"`. */
 function runStatusline(p: string): string {
-  const hook = join(p, ".claude", "hooks", "aidlc-statusline.ts");
+  const hook = join(p, ".claude", "hooks", "amadeus-statusline.ts");
   const res = spawnSync(BUN, [hook], {
     encoding: "utf-8",
     input: JSON.stringify({ workspace: { project_dir: p } }),
@@ -166,7 +166,7 @@ function runStatusline(p: string): string {
 function seedState(p: string, activeAgent: string): void {
   // P9: the statusline reads the ACTIVE INTENT's state via stateFilePath(), so
   // the state must live in the per-intent record (projWithRecord keeps the
-  // seeded record + cursors), not a flat aidlc-docs/. Write into seededStateFile.
+  // seeded record + cursors), not a flat amadeus-docs/. Write into seededStateFile.
   const stateFile = seededStateFile(p);
   mkdirSync(join(stateFile, ".."), { recursive: true });
   writeFileSync(
@@ -183,20 +183,20 @@ function seedState(p: string, activeAgent: string): void {
 }
 
 const EXPECTED_SLUGS = [
-  "aidlc-architect-agent",
-  "aidlc-architecture-reviewer-agent",
-  "aidlc-aws-platform-agent",
-  "aidlc-compliance-agent",
-  "aidlc-composer-agent",
-  "aidlc-delivery-agent",
-  "aidlc-design-agent",
-  "aidlc-developer-agent",
-  "aidlc-devsecops-agent",
-  "aidlc-operations-agent",
-  "aidlc-pipeline-deploy-agent",
-  "aidlc-product-agent",
-  "aidlc-product-lead-agent",
-  "aidlc-quality-agent",
+  "amadeus-architect-agent",
+  "amadeus-architecture-reviewer-agent",
+  "amadeus-aws-platform-agent",
+  "amadeus-compliance-agent",
+  "amadeus-composer-agent",
+  "amadeus-delivery-agent",
+  "amadeus-design-agent",
+  "amadeus-developer-agent",
+  "amadeus-devsecops-agent",
+  "amadeus-operations-agent",
+  "amadeus-pipeline-deploy-agent",
+  "amadeus-product-agent",
+  "amadeus-product-lead-agent",
+  "amadeus-quality-agent",
 ];
 
 describe("t61 agent-metadata derived from frontmatter (migrated from t61-agent-metadata-derived.sh, plan 5)", () => {
@@ -237,7 +237,7 @@ describe("t61 agent-metadata derived from frontmatter (migrated from t61-agent-m
 
   test("2c: pipeline-deploy display name is 'Pipeline & Deploy Agent' (AGENT_DISPLAY drift fixed)", () => {
     const pipeline = loadAgents().find(
-      (a) => a.slug === "aidlc-pipeline-deploy-agent",
+      (a) => a.slug === "amadeus-pipeline-deploy-agent",
     );
     expect(pipeline?.display_name).toBe("Pipeline & Deploy Agent");
   });
@@ -277,7 +277,7 @@ describe("t61 agent-metadata derived from frontmatter (migrated from t61-agent-m
   test("4: doctor rejects fixture-agent.md lacking display_name (error cites file + field)", () => {
     const p = proj();
     writeFixtureAgent(p, "", false);
-    const tool = join(p, ".claude", "tools", "aidlc-utility.ts");
+    const tool = join(p, ".claude", "tools", "amadeus-utility.ts");
     const r = spawnSync(BUN, [tool, "doctor", "--project-dir", p], {
       encoding: "utf-8",
     });
@@ -294,7 +294,7 @@ describe("t61 agent-metadata derived from frontmatter (migrated from t61-agent-m
   test("5a: statusline renders 'Pipeline & Deploy Agent' for the shipped pipeline agent", () => {
     const p = projWithRecord();
     writeFixtureAgent(p);
-    seedState(p, "aidlc-pipeline-deploy-agent");
+    seedState(p, "amadeus-pipeline-deploy-agent");
     const out = runStatusline(p);
     // The ampersand form proves the old "Pipeline Deploy Agent" literal
     // (AGENT_DISPLAY drift) is gone and the frontmatter value wins.

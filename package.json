@@ -1,5 +1,5 @@
 {
-  "name": "aidlc-claude-code-dev",
+  "name": "amadeus-claude-code-dev",
   "version": "0.0.0",
   "type": "module",
   "private": true,
@@ -15,7 +15,7 @@
   "license": "MIT-0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/awslabs/aidlc-workflows",
+    "url": "https://github.com/awslabs/amadeus-workflows",
     "directory": "claude-code"
   },
   "devDependencies": {

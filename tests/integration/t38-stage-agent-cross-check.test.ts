@@ -21,24 +21,24 @@
 // same two static surfaces the .sh inspected (no argv / exit-code / stdout /
 // audit.md seam to cross):
 //   - SKILL.md                              (the Stage Graph table, Lead Agent col)
-//   - aidlc-common/stages/<phase>/<slug>.md (the stage files + their YAML)
+//   - amadeus-common/stages/<phase>/<slug>.md (the stage files + their YAML)
 // Zero LLM, zero tokens, zero spawns.
 //
 // Source under test:
-//   - dist/claude/.claude/skills/aidlc/SKILL.md
+//   - dist/claude/.claude/skills/amadeus/SKILL.md
 //       `## Stage Graph` table: | Slug | # | Stage | Phase | Execution |
 //       Lead Agent | Support Agents | Mode |  (the .sh's
 //       `sed -n '/^## Stage Graph/,/^---$/p' | grep '^|' | tail -n +3` row
 //       extraction is reproduced exactly below).
-//   - dist/claude/.claude/tools/aidlc-lib.ts:982 parseStageFrontmatter(raw)
+//   - dist/claude/.claude/tools/amadeus-lib.ts:982 parseStageFrontmatter(raw)
 //       => Record<string, unknown>; pulls the scalar `lead_agent:` from the
 //       `---...---` YAML block (ARRAY_KEYS excludes it, so it arrives as the
 //       scalar string the table column must equal). The .sh did
 //       `typeof obj.lead_agent === 'string' ? obj.lead_agent : ''`, so a
 //       non-string parse becomes "" and mismatches a real table value.
-//   - dist/claude/.claude/aidlc-common/stages/<phase>/<slug>.md  (stage files;
+//   - dist/claude/.claude/amadeus-common/stages/<phase>/<slug>.md  (stage files;
 //       e.g. workspace-scaffold.md frontmatter `lead_agent: orchestrator`,
-//       intent-capture.md `lead_agent: aidlc-product-agent`).
+//       intent-capture.md `lead_agent: amadeus-product-agent`).
 //
 // Normalization contract (the .sh's load-bearing step, t38.sh:46-48): the
 // graph renders an orchestrator-led stage as `(orchestrator)` (parenthesised);
@@ -65,10 +65,10 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { AIDLC_SRC } from "../harness/fixtures.ts";
-import { parseStageFrontmatter } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { parseStageFrontmatter } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const SKILL = join(AIDLC_SRC, "skills", "aidlc", "SKILL.md");
-const STAGES_DIR = join(AIDLC_SRC, "aidlc-common", "stages");
+const STAGES_DIR = join(AIDLC_SRC, "amadeus-common", "stages");
 
 /** A parsed Stage Graph table row (only the columns t38 reads off `|`-split). */
 interface GraphRow {

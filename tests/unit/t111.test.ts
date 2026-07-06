@@ -1,7 +1,7 @@
 // covers: function:appendAuditEntry, function:appendAuditEntryUnlocked, function:handleAppend
 //
 // t111 — P0 deterministic floor. Mechanism = none (pure file I/O, zero LLM,
-// zero tokens). Exercises the audit-append core in aidlc-audit.ts:
+// zero tokens). Exercises the audit-append core in amadeus-audit.ts:
 //   appendAuditEntry          (:199) — validate → lock → delegate → unlock
 //   appendAuditEntryUnlocked  (:228) — block format, CR/LF escaping, append
 //   handleAppend              (:266) — thin wrapper, prints JSON to stdout
@@ -29,11 +29,11 @@ import {
   appendAuditEntry,
   appendAuditEntryUnlocked,
   handleAppend,
-} from "../../dist/claude/.claude/tools/aidlc-audit.ts";
+} from "../../dist/claude/.claude/tools/amadeus-audit.ts";
 import {
   auditFilePath,
   readAllAuditShards,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // --- Per-file temp roots, torn down in afterAll ---------------------------
 const tmpRoots: string[] = [];
@@ -46,7 +46,7 @@ const tmpRoots: string[] = [];
 // pre-seed THAT shard the way the source expects when it wants to assert the
 // seed survives.
 function freshProject(seedAuditMd = false): string {
-  const root = mkdtempSync(join(tmpdir(), "aidlc-t111-"));
+  const root = mkdtempSync(join(tmpdir(), "amadeus-t111-"));
   tmpRoots.push(root);
   if (seedAuditMd) {
     const shard = auditFilePath(root);
@@ -64,7 +64,7 @@ function readAudit(projectDir: string): string {
 }
 
 // Whether the resolved audit shard exists on disk (the per-intent successor to
-// "is there an aidlc-docs/audit.md?").
+// "is there an amadeus-docs/audit.md?").
 function auditShardExists(projectDir: string): boolean {
   return existsSync(auditFilePath(projectDir));
 }
@@ -79,7 +79,7 @@ afterAll(() => {
   }
 });
 
-// The 70 canonical event types, mirrored from aidlc-audit.ts VALID_EVENT_TYPES.
+// The 70 canonical event types, mirrored from amadeus-audit.ts VALID_EVENT_TYPES.
 // Kept as an explicit literal (not re-derived from the source) so that a silent
 // addition/removal in the source surfaces here as a count mismatch worth a look.
 const VALID_EVENT_TYPES = [

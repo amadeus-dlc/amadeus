@@ -1,9 +1,9 @@
-// covers: hook:aidlc-session-start (writeCurrentSessionId), tool:aidlc-utility handleIntent (re-stamp), lib:readCurrentSessionId/writeCurrentSessionId/writeSessionIntentUuid
+// covers: hook:amadeus-session-start (writeCurrentSessionId), tool:amadeus-utility handleIntent (re-stamp), lib:readCurrentSessionId/writeCurrentSessionId/writeSessionIntentUuid
 //
 // t173 — the M2 SELF-SWITCH RE-STAMP. The P8 resume rebind (t169) stamps a
 // session→intent UUID keyed by session_id (which only the session-start hook
 // sees) and OFFERS a rebind on resume when the stamp drifts from the live
-// cursor. BUG: an in-conversation `/aidlc intent <slug>` switch moves the cursor
+// cursor. BUG: an in-conversation `/amadeus intent <slug>` switch moves the cursor
 // via a CLI tool that has NO session_id, so the live session's stamp stays
 // pointing at the OLD intent → resuming THAT SAME conversation fires a FALSE
 // rebind nag ("was working X, switch back?") even though THIS conversation
@@ -20,7 +20,7 @@
 //
 // WHY CLI (process-boundary, not in-process): the subjects are the shipped
 // session-start HOOK (reads session_id off stdin, writes the marker + stamp) and
-// the shipped aidlc-utility `intent` switch (a separate process with no
+// the shipped amadeus-utility `intent` switch (a separate process with no
 // session_id) — the cross-process marker handoff is the whole point, so this
 // twin SPAWNS both real dist artifacts exactly as Claude Code drives them.
 //
@@ -33,7 +33,7 @@ import { join } from "node:path";
 import {
   birthIntent,
   setActiveIntentCursor,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   AIDLC_SRC,
   cleanupTestProject,
@@ -41,8 +41,8 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const HOOK = join(AIDLC_SRC, "hooks", "aidlc-session-start.ts");
-const UTIL = join(AIDLC_SRC, "tools", "aidlc-utility.ts");
+const HOOK = join(AIDLC_SRC, "hooks", "amadeus-session-start.ts");
+const UTIL = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
 
 let proj: string;
 beforeEach(() => {
@@ -77,7 +77,7 @@ function fire(p: string, source: string, sessionId: string): FireResult {
   return { exitCode: r.exitCode, context };
 }
 
-/** Run the REAL `/aidlc intent <target>` switch via the shipped utility tool —
+/** Run the REAL `/amadeus intent <target>` switch via the shipped utility tool —
  *  a separate process with no session_id, exactly as the slash command runs. */
 function util(p: string, target: string): { exitCode: number; stdout: string } {
   const r = Bun.spawnSync({
@@ -140,6 +140,6 @@ describe("t173 session switch re-stamp (mechanism cli — spawned hook + real in
     const resumed = fire(proj, "resume", "S1");
     expect(resumed.exitCode).toBe(0);
     expect(resumed.context).toContain("INTENT REBIND OFFER");
-    expect(resumed.context).toContain(`/aidlc intent ${a.slug}`);
+    expect(resumed.context).toContain(`/amadeus intent ${a.slug}`);
   });
 });

@@ -1,7 +1,7 @@
-// covers: stage:initialization/workspace-detection, audit:WORKSPACE_SCANNED, subcommand:aidlc-utility:init
+// covers: stage:initialization/workspace-detection, audit:WORKSPACE_SCANNED, subcommand:amadeus-utility:init
 //
 // t70.test.ts — SDK-harness port of tests/integration/t70-stage-workspace-detection-greenfield.sh
-// (plan 8). Drives the real /aidlc --init --force (TRAP 2; init
+// (plan 8). Drives the real /amadeus --init --force (TRAP 2; init
 // is a print-and-stop terminal with no gate, SKILL.md:54,138) against a project
 // seeded with the greenfield-todo stub
 // (a bare README.md, no source/manifest/framework config) and a pre-seeded state
@@ -14,18 +14,18 @@
 // with a case-insensitive `[Gg]reenfield` regex and the negative with a
 // case-insensitive `brownfield` regex, and proved "init ran" only via run_claude's
 // exit semantics. The whole init path is deterministic: the engine's --init
-// branch (aidlc-orchestrate.ts:814-838) shells `bun .claude/tools/
-// aidlc-utility.ts init [--force]` via Bash and prints its stdout verbatim.
-// handleInit (aidlc-utility.ts:1716) removes the seeded state on
+// branch (amadeus-orchestrate.ts:814-838) shells `bun .claude/tools/
+// amadeus-utility.ts init [--force]` via Bash and prints its stdout verbatim.
+// handleInit (amadeus-utility.ts:1716) removes the seeded state on
 // --force (:1757), runs the deterministic detectWorkspace scan (:1912 -> :1581),
-// and re-writes aidlc-state.md from a fixed template (:2044). The greenfield-todo
+// and re-writes amadeus-state.md from a fixed template (:2044). The greenfield-todo
 // stub carries no source files / package.json / framework config / manifest /
 // app-source dir, so detectWorkspace's `brownfield` OR-chain (:1658-1663) is all
 // false and projectType === "Greenfield" (:1666). Every .sh grep is re-expressed
 // against that on-disk state + the typed audit event + the verbatim tool stdout.
 //
 // ASSERTION MAP (.sh test -> SDK surface):
-//   1 state file still exists             -> r.stateFile !== undefined (sdk-drive reads aidlc-state.md off disk post-run)
+//   1 state file still exists             -> r.stateFile !== undefined (sdk-drive reads amadeus-state.md off disk post-run)
 //   2 Completed counter == [x] count      -> assertStateField "Completed"="3" (utility.ts:2071 completedInit) AND
 //                                            on-disk `- [x]` line count === 3 (init stages marked [x], utility.ts:1996).
 //                                            Stronger: pins the known-answer 3, not just internal consistency.
@@ -44,19 +44,19 @@
 //                                            (assertToolResultContains refuses to pass vacuously if Bash never ran).
 //
 // Known-answer literals (read from the SHIPPED handler / fixture, not guessed):
-//   - --init --force dispatch:  SKILL.md:531 -> `bun .claude/tools/aidlc-utility.ts init` via Bash, stdout verbatim
-//   - --force removes seeded state then re-writes:  handleInit aidlc-utility.ts:1749-1758
+//   - --init --force dispatch:  SKILL.md:531 -> `bun .claude/tools/amadeus-utility.ts init` via Bash, stdout verbatim
+//   - --force removes seeded state then re-writes:  handleInit amadeus-utility.ts:1749-1758
 //   - classification "Greenfield":         detectWorkspace :1658-1666 (all brownfield signals false for the stub)
-//   - state Project Type line:             aidlc-utility.ts:2048
+//   - state Project Type line:             amadeus-utility.ts:2048
 //   - state Completed = init stage count:  :2009 (graph init-phase count) -> :2071 (=== 3); init stages get [x] :1996
 //   - state Project Root = projectDir:     :2064
 //   - state State Version literal `7`:     :2051
-//   - WORKSPACE_SCANNED audit emit:        :1914 (VALID_EVENT_TYPES member, aidlc-audit.ts:42)
+//   - WORKSPACE_SCANNED audit emit:        :1914 (VALID_EVENT_TYPES member, amadeus-audit.ts:42)
 //   - init stdout "Project type: ...":     :2151
 //   - greenfield-todo stub = bare README:  tests/fixtures/greenfield-todo/README.md (no source/manifest/framework)
 //   - no gate in the init path (no AskUserQuestion):  SKILL.md:82,138 (init prints state and STOPs)
 //
-// It SPENDS TOKENS — each driveAidlc drives the real /aidlc on Opus/Bedrock.
+// It SPENDS TOKENS — each driveAidlc drives the real /amadeus on Opus/Bedrock.
 // Generous per-test timeout so a hung canUseTool fails LOUD via bun:test.
 
 import { describe, expect, test } from "bun:test";
@@ -87,9 +87,9 @@ const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 180) * 1000;
 const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
 
 // Known-answer literals from the SHIPPED handler / fixture (see header).
-const SCANNED_EVENT = "WORKSPACE_SCANNED"; // aidlc-utility.ts:1914
+const SCANNED_EVENT = "WORKSPACE_SCANNED"; // amadeus-utility.ts:1914
 const PROJECT_TYPE = "Greenfield"; // detectWorkspace :1666 for the bare-README stub
-const STATE_VERSION = "7"; // aidlc-utility.ts:2051 (hard literal)
+const STATE_VERSION = "7"; // amadeus-utility.ts:2051 (hard literal)
 const COMPLETED_INIT = "3"; // init-phase stage count (:2009 -> :2071)
 const INIT_STDOUT_TYPE_LINE = "Project type: Greenfield"; // verbatim init stdout :2151
 const STOP_AFTER_INIT = { toolName: "Bash", resultIncludes: INIT_STDOUT_TYPE_LINE } as const;
@@ -100,12 +100,12 @@ function countCompletedCheckboxes(stateText: string): number {
   return stateText.split("\n").filter((l) => /^- \[x\]/.test(l)).length;
 }
 
-describe("t70 /aidlc birth on a greenfield stub (sdk)", () => {
+describe("t70 /amadeus birth on a greenfield stub (sdk)", () => {
   // -------------------------------------------------------------------------
   // P4: the user-facing --init is retired; naming a scope on a fresh workspace
   // BIRTHS the first intent (the engine NAMES intent-birth, the conductor runs
   // it). The deterministic birth tool classifies the greenfield-todo stub and
-  // writes aidlc-state.md into the BORN intent's record. Every .sh state-grep is
+  // writes amadeus-state.md into the BORN intent's record. Every .sh state-grep is
   // re-expressed against the on-disk per-intent state fields / the typed audit
   // event / the verbatim tool stdout. No seeded state (a clean greenfield birth,
   // not a migration).
@@ -124,7 +124,7 @@ describe("t70 /aidlc birth on a greenfield stub (sdk)", () => {
         noAidlcDocs: true,
       });
       try {
-        const r = await driveAidlc('/aidlc --scope poc "build a todo app"', {
+        const r = await driveAidlc('/amadeus --scope poc "build a todo app"', {
           projectDir: proj,
           timeoutMs: DRIVE_TIMEOUT_MS,
           stopAfterToolResult: STOP_AFTER_INIT,
@@ -137,7 +137,7 @@ describe("t70 /aidlc birth on a greenfield stub (sdk)", () => {
         // pins the same Greenfield classification on the TOOL's own stdout.
         assertToolResultContains(r, "Bash", INIT_STDOUT_TYPE_LINE);
 
-        // .sh test 1: state file still exists. sdk-drive reads aidlc-state.md off
+        // .sh test 1: state file still exists. sdk-drive reads amadeus-state.md off
         // disk post-run; r.stateFile is the verbatim contents (undefined if absent).
         expect(r.stateFile).toBeDefined();
         const stateAfter = readStateFile(proj);

@@ -14,14 +14,14 @@
 // remaining scopes the audit flagged UNCOVERED — infra and refactor — by adding
 // their measured first-EXECUTE move to the CASES table below. Each is the
 // identical assertion shape (run-stage + first-EXECUTE stage + baked persona)
-// over the same real `aidlc-orchestrate next --scope <s>` drive, so it covers
+// over the same real `amadeus-orchestrate next --scope <s>` drive, so it covers
 // the scope at the same cli strength, not by a weaker mention. enterprise/poc/
 // workshop are covered by their own tui scope run-throughs; bugfix/feature/mvp/
 // security-patch/infra/refactor are the cli-routed set this corpus owns.
 //
 // WHAT THE .sh PROVED (t130-scope-runners.sh:1-12 prose + the loop at :42-70):
 //   For each first-batch scope the runner's shell makes the SAME first move —
-//   `aidlc-orchestrate.ts next --scope <scope>` over a real init,
+//   `amadeus-orchestrate.ts next --scope <scope>` over a real init,
 //   and the test pins that
 //     (a) the engine resolves a `run-stage` directive,
 //     (b) it lands on that scope's first EXECUTE stage (the brownfield
@@ -35,18 +35,18 @@
 //   the runner's baked-scope FIRST move reaches the engine and carries the persona.
 //
 // WHY SPAWN (mechanism cli, not in-process): the .sh shells out to TWO binaries
-// per case — `aidlc-utility.ts init --scope …` (a state-writing
-// MUTATION) then `aidlc-orchestrate.ts next --scope … ` (the engine's read-only
+// per case — `amadeus-utility.ts init --scope …` (a state-writing
+// MUTATION) then `amadeus-orchestrate.ts next --scope … ` (the engine's read-only
 // directive emit) — against a temp project holding a FULL copy of the shipped
 // .claude/. Both run FROM THE COPY (`bun <proj>/.claude/tools/…`) so the engine
-// resolves the graph, the stage files, AND `../aidlc-common/conductor.md`
-// (aidlc-orchestrate.ts:351, CONDUCTOR_PERSONA_PATH resolved relative to the
+// resolves the graph, the stage files, AND `../amadeus-common/conductor.md`
+// (amadeus-orchestrate.ts:351, CONDUCTOR_PERSONA_PATH resolved relative to the
 // tool module) from the copied tree. An in-process twin would lose the init→next
 // process seam AND the cwd-independent persona resolution the corpus exists to
 // pin. spawnCount = all (init + next per scope).
 //
 // SOURCE UNDER TEST:
-//   - aidlc-orchestrate.ts buildRunStageDirective (:742) — kind:"run-stage",
+//   - amadeus-orchestrate.ts buildRunStageDirective (:742) — kind:"run-stage",
 //     stage = resolved graph node slug; bakes conductor_persona on the FIRST
 //     run-stage (isFirstRunStageOfWorkflow, :385 -> readConductorPersona, :357).
 //   - The per-scope first-EXECUTE-stage routing the engine derives from the
@@ -59,9 +59,9 @@
 // kind + stage + persona asserted together on the SAME parsed directive object,
 // not three independent greps; the .sh's plan 12 = 4 scopes x 3 assertions, this
 // twin extends to 6 scopes x 3 = 18 with the two audit-flagged scopes added):
-//   .sh "aidlc-<scope>: baked-scope first move -> run-stage"            -> directive.kind === "run-stage"
-//   .sh "aidlc-<scope>: lands on first EXECUTE stage (<want>)"          -> directive.stage === <want>
-//   .sh "aidlc-<scope>: directive carries the conductor persona"        -> typeof directive.conductor_persona === "string" && length > 0
+//   .sh "amadeus-<scope>: baked-scope first move -> run-stage"            -> directive.kind === "run-stage"
+//   .sh "amadeus-<scope>: lands on first EXECUTE stage (<want>)"          -> directive.stage === <want>
+//   .sh "amadeus-<scope>: directive carries the conductor persona"        -> typeof directive.conductor_persona === "string" && length > 0
 //
 // FIXTURE DISCIPLINE (mirrors the .sh's make_project at :32-40 — mktemp -d,
 // cp -r "$SRC" "$proj/.claude", init --scope <s>, then rm -rf): each
@@ -97,15 +97,15 @@ const CASES: ReadonlyArray<{ scope: string; wantStage: string }> = [
   // conditional stage greenfield-SKIPs on the empty workspace, so the engine
   // lands on the next EXECUTE: requirements-analysis (in scope so the
   // `requirements` artifact its downstream consumers hard-require has a
-  // producer — scopes/aidlc-security-patch.md).
+  // producer — scopes/amadeus-security-patch.md).
   { scope: "security-patch", wantStage: "requirements-analysis" },
   // infra skips ideation + application-code construction; practices-discovery is
-  // its first EXECUTE stage (scopes/aidlc-infra.md). Measured live.
+  // its first EXECUTE stage (scopes/amadeus-infra.md). Measured live.
   { scope: "infra", wantStage: "practices-discovery" },
   // refactor's first EXECUTE is reverse-engineering, but that brownfield
   // conditional stage greenfield-SKIPs on the empty workspace (same as
   // security-patch's reverse-engineering), so the engine lands on the next
-  // EXECUTE: requirements-analysis (scopes/aidlc-refactor.md). Measured live.
+  // EXECUTE: requirements-analysis (scopes/amadeus-refactor.md). Measured live.
   { scope: "refactor", wantStage: "requirements-analysis" },
 ];
 
@@ -126,7 +126,7 @@ type Directive = any;
  * make_project + first move (t130-scope-runners.sh:32-49): scaffold a full
  * integration project (copy of the shipped .claude/), init --scope <s>
  * via the COPIED utility tool, then resolve the runner's FIRST move
- * `aidlc-orchestrate.ts next --scope <s>` via the COPIED engine and parse the
+ * `amadeus-orchestrate.ts next --scope <s>` via the COPIED engine and parse the
  * single emitted directive JSON off stdout.
  */
 function firstMoveDirective(scope: string): Directive {
@@ -136,7 +136,7 @@ function firstMoveDirective(scope: string): Directive {
   const init = spawnSync(
     BUN,
     [
-      tool(proj, "aidlc-utility.ts"),
+      tool(proj, "amadeus-utility.ts"),
       "init",
       "--scope",
       scope,
@@ -153,7 +153,7 @@ function firstMoveDirective(scope: string): Directive {
   const next = spawnSync(
     BUN,
     [
-      tool(proj, "aidlc-orchestrate.ts"),
+      tool(proj, "amadeus-orchestrate.ts"),
       "next",
       "--scope",
       scope,
@@ -167,7 +167,7 @@ function firstMoveDirective(scope: string): Directive {
 
 describe("t130 scope runners — baked-scope first move through the engine (migrated from t130-scope-runners.sh, plan 12)", () => {
   for (const { scope, wantStage } of CASES) {
-    test(`aidlc-${scope}: first move -> run-stage(${wantStage}) carrying the engine-delivered conductor persona`, () => {
+    test(`amadeus-${scope}: first move -> run-stage(${wantStage}) carrying the engine-delivered conductor persona`, () => {
       const d = firstMoveDirective(scope);
       // .sh assert 1: baked-scope first move resolves a run-stage directive.
       expect(d.kind).toBe("run-stage");

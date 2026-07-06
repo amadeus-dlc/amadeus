@@ -6,7 +6,7 @@
 - **Scope**: feature
 - **Start Date**: 2025-07-01T09:00:00Z
 - **State Version**: 7
-- **Active Agent**: aidlc-product-agent
+- **Active Agent**: amadeus-product-agent
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**:
@@ -94,5 +94,5 @@ Per unit: [unit-name]
 
 ## Session Resume Point
 - **Last Completed Stage**: state-init
-- **Next Action**: Begin intent capture with aidlc-product-agent
+- **Next Action**: Begin intent capture with amadeus-product-agent
 - **Pending Artifacts**: none

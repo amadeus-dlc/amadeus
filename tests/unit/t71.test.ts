@@ -1,13 +1,13 @@
 // t71.none.test.ts — bun:test port of t71-markdown-section-helpers.sh
 //
 // Mechanism: none (no env seam / no subprocess). Every contract is a pure
-// string->string (or throwing) function in aidlc-lib.ts, so each old `bun -e`
+// string->string (or throwing) function in amadeus-lib.ts, so each old `bun -e`
 // spawn becomes a direct import-and-call. No file I/O, no CLI arg parsing, no
 // process.exit shell to preserve — all 12 contracts map 1:1 to in-process
 // assertions.
 //
 // covers: function:extractMarkdownSection, function:appendUnderHeading, function:replaceSection
-//   (dist/claude/.claude/tools/aidlc-lib.ts)
+//   (dist/claude/.claude/tools/amadeus-lib.ts)
 //
 // These helpers are load-bearing for the practices-discovery cross-row
 // promotion (extract reads existing team.md sections, replaceSection
@@ -19,7 +19,7 @@ import {
   appendUnderHeading,
   extractMarkdownSection,
   replaceSection,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 describe("extractMarkdownSection", () => {
   // .sh #1: Returns prose between heading and next ## heading

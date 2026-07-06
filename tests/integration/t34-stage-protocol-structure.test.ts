@@ -1,4 +1,4 @@
-// covers: file:aidlc-common/protocols/stage-protocol.md, file:knowledge/aidlc-shared/state-template.md
+// covers: file:amadeus-common/protocols/stage-protocol.md, file:knowledge/amadeus-shared/state-template.md
 //
 // In-process port of tests/integration/t34-stage-protocol-structure.sh (TAP plan
 // 69), mechanism = none. The .sh is a documentation structure + cross-reference
@@ -18,7 +18,7 @@
 // never touched a function, a CLI tool, argv, exit codes, or a process boundary.
 // gen-coverage-registry derives mechanism from the DRIVERS a test body calls
 // (milestone 3): this twin calls NO driver (no driveAidlc, no tui-drive.ts, no spawn of
-// an aidlc-*.ts tool or run-tests.sh), so its derived set is the deterministic
+// an amadeus-*.ts tool or run-tests.sh), so its derived set is the deterministic
 // `none` floor — matching the t14 / t43 / t44 protocol-content family. Every
 // assertion is readFileSync + a string / regex / count check on the real bytes
 // of the shipped docs, the same observable the .sh's grep / sed asserted.
@@ -30,8 +30,8 @@
 // project, no teardown — there is no mutable surface.
 //
 // Source under test (read fresh each run):
-//   dist/claude/.claude/aidlc-common/protocols/stage-protocol.md   (PROTOCOL)
-//   dist/claude/.claude/knowledge/aidlc-shared/state-template.md   (STATE_TEMPLATE)
+//   dist/claude/.claude/amadeus-common/protocols/stage-protocol.md   (PROTOCOL)
+//   dist/claude/.claude/knowledge/amadeus-shared/state-template.md   (STATE_TEMPLATE)
 // The .sh also DEFINED SKILL / AGENTS_DIR / STAGES_DIR but referenced none of
 // them in any assertion (verified: only $PROTOCOL and $STATE_TEMPLATE appear in
 // assert lines). They are deliberately omitted here — porting an unused var
@@ -85,14 +85,14 @@ import { AIDLC_SRC } from "../harness/fixtures.ts";
 // The two shipped documents the .sh's $PROTOCOL / $STATE_TEMPLATE pointed at.
 const PROTOCOL_PATH = join(
   AIDLC_SRC,
-  "aidlc-common",
+  "amadeus-common",
   "protocols",
   "stage-protocol.md",
 );
 const STATE_TEMPLATE_PATH = join(
   AIDLC_SRC,
   "knowledge",
-  "aidlc-shared",
+  "amadeus-shared",
   "state-template.md",
 );
 
@@ -266,25 +266,25 @@ describe("t34 stage-protocol.md structure + cross-references (migrated from t34-
 
   // =========================================================================
   // §5 — Agent persona loading: all 11 agents on the agent-list line
-  // (.sh 106-114). The .sh extracted the `^aidlc-product-agent` line, then
+  // (.sh 106-114). The .sh extracted the `^amadeus-product-agent` line, then
   // grepped each agent within it. Reproduce: pull THAT line, assert each agent
   // is on it, AND (STRONGER) assert it carries exactly 11 comma-separated
   // agents — so a dropped or added agent fails.
   // =========================================================================
   const AGENT_LINE =
-    PROTOCOL.split("\n").find((l) => l.startsWith("aidlc-product-agent")) ?? "";
+    PROTOCOL.split("\n").find((l) => l.startsWith("amadeus-product-agent")) ?? "";
   const ELEVEN_AGENTS = [
-    "aidlc-product-agent",
-    "aidlc-design-agent",
-    "aidlc-delivery-agent",
-    "aidlc-architect-agent",
-    "aidlc-aws-platform-agent",
-    "aidlc-compliance-agent",
-    "aidlc-devsecops-agent",
-    "aidlc-developer-agent",
-    "aidlc-quality-agent",
-    "aidlc-pipeline-deploy-agent",
-    "aidlc-operations-agent",
+    "amadeus-product-agent",
+    "amadeus-design-agent",
+    "amadeus-delivery-agent",
+    "amadeus-architect-agent",
+    "amadeus-aws-platform-agent",
+    "amadeus-compliance-agent",
+    "amadeus-devsecops-agent",
+    "amadeus-developer-agent",
+    "amadeus-quality-agent",
+    "amadeus-pipeline-deploy-agent",
+    "amadeus-operations-agent",
   ] as const;
   for (const agent of ELEVEN_AGENTS) {
     test(`§5: protocol agent-list line includes ${agent}`, () => {
@@ -297,7 +297,7 @@ describe("t34 stage-protocol.md structure + cross-references (migrated from t34-
     // grow or shrink while still containing the 11 names above.
     const names = AGENT_LINE.split(",")
       .map((s) => s.trim())
-      .filter((s) => s.startsWith("aidlc-") && s.endsWith("-agent"));
+      .filter((s) => s.startsWith("amadeus-") && s.endsWith("-agent"));
     expect(names.length).toBe(11);
   });
 

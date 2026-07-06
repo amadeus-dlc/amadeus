@@ -2,32 +2,32 @@
 //
 // CLI-contract port of tests/integration/t123-failure-injection.sh (renumbered to t137 for milestone 2; TAP plan 8),
 // mechanism = cli. Equal-or-stronger migration: every .sh assertion that
-// shelled out to `bun aidlc-state.ts <sub> ...` / `bun aidlc-utility.ts init`
+// shelled out to `bun amadeus-state.ts <sub> ...` / `bun amadeus-utility.ts init`
 // is preserved by SPAWNING the real CLI via node:child_process spawnSync
 // (BUN + the tool .ts path), asserting on res.status (== $rc) and on the
-// audit.md / aidlc-state.md the tools write — the PROCESS boundary, including
+// audit.md / amadeus-state.md the tools write — the PROCESS boundary, including
 // the process.exit(1) that the .sh's `$?` arm relies on (emitError ->
-// process.exit(1), aidlc-lib.ts:1546). An in-process twin would lose the
+// process.exit(1), amadeus-lib.ts:1546). An in-process twin would lose the
 // exit-code half every failure case hinges on.
 //
 // THE COVERED UNIT — audit:ERROR_LOGGED. This file exercises the
 // failure-injection paths whose observable is the ERROR_LOGGED audit row
-// emitted by emitError (aidlc-lib.ts:1504-1547). emitError fires its
+// emitted by emitError (amadeus-lib.ts:1504-1547). emitError fires its
 // ERROR_LOGGED append ONLY when stateFilePath(projectDir) exists
-// (aidlc-lib.ts:1513) — Failure 4 (read-only state.md, file present) is the
+// (amadeus-lib.ts:1513) — Failure 4 (read-only state.md, file present) is the
 // case that lands a fresh ERROR_LOGGED row, and Test 8 asserts the count
-// climbs. The row format is `**Event**: ERROR_LOGGED` (aidlc-audit.ts:258,
-// heading "Error Logged" aidlc-audit.ts:149), Tool/Command/Error fields
-// (aidlc-lib.ts:1528-1538).
+// climbs. The row format is `**Event**: ERROR_LOGGED` (amadeus-audit.ts:258,
+// heading "Error Logged" amadeus-audit.ts:149), Tool/Command/Error fields
+// (amadeus-lib.ts:1528-1538).
 //
 // CHAOS CONTRACT under test (the .sh's four failure injections):
 //   F1. Permission-denied on audit.md during a transition — audit-first means
 //       appendAuditEntry throws BEFORE writeStateFile, so the tool exits 1 and
-//       aidlc-state.md is byte-identical to its pre-injection snapshot.
+//       amadeus-state.md is byte-identical to its pre-injection snapshot.
 //   F2. Missing audit.md — appendAuditEntry -> appendAuditEntryUnlocked ->
-//       ensureAuditFile (aidlc-audit.ts:254) recreates it; gate-start exits 0.
+//       ensureAuditFile (amadeus-audit.ts:254) recreates it; gate-start exits 0.
 //   F3. Corrupted state (no Scope) — handleAdvance refuses with an error that
-//       names the missing "Scope" field (aidlc-state.ts:290-293); exits 1.
+//       names the missing "Scope" field (amadeus-state.ts:290-293); exits 1.
 //   F4. Read-only state.md — the audit emit succeeds (ERROR_LOGGED lands) but
 //       writeStateFile can't write, so the tool exits 1 AND a fresh
 //       ERROR_LOGGED row is appended (the covered observable).
@@ -56,7 +56,7 @@
 //   - .sh 8  ERROR_LOGGED emitted on state-write failure          -> Test 8:
 //       errorLoggedCount(after) > errorLoggedCount(before) (same observable
 //       as the .sh's grep-count delta). STRONGER: also assert the new row's
-//       Tool field is "aidlc-state", proving the row came from the state
+//       Tool field is "amadeus-state", proving the row came from the state
 //       tool's emitError path and not some pre-seeded event.
 //
 // 8 .sh asserts -> 8 expect()-bearing test() cases here, one observable each.
@@ -71,7 +71,7 @@
 //
 // FIXTURE DISCIPLINE (mirrors create_test_project + cleanup_test_project per
 // case): each case uses a FRESH temp project dir (createTestProject, which
-// toPortablePath-converts on Windows so audit.md / aidlc-state.md — written
+// toPortablePath-converts on Windows so audit.md / amadeus-state.md — written
 // by the tools via forward-slash path helpers — round-trip when read back).
 // F3 copies the SAME tests/fixtures/audit-sample.md the .sh used (read-only
 // source copy; nothing is WRITTEN under tests/fixtures). All temp dirs are
@@ -101,8 +101,8 @@ import {
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const TOOLS = join(REPO_ROOT, "dist", "claude", ".claude", "tools");
-const UTIL = join(TOOLS, "aidlc-utility.ts");
-const STATE = join(TOOLS, "aidlc-state.ts");
+const UTIL = join(TOOLS, "amadeus-utility.ts");
+const STATE = join(TOOLS, "amadeus-state.ts");
 
 // On native Windows, chmod 0444 doesn't actually deny writes, so the three
 // permission-injection cases cannot be exercised faithfully. Gate them.
@@ -120,8 +120,8 @@ afterAll(() => {
       statePath(d),
       auditShardPath(d),
       auditDirOf(d),
-      join(d, "aidlc-docs", "audit.md"),
-      join(d, "aidlc-docs", "aidlc-state.md"),
+      join(d, "amadeus-docs", "audit.md"),
+      join(d, "amadeus-docs", "amadeus-state.md"),
     ]) {
       if (!f) continue;
       try {
@@ -143,7 +143,7 @@ function proj(): string {
 
 // P4: intent-birth writes state into the born intent's per-intent record dir
 // (aidlc/spaces/<space>/intents/<slug>-<id8>/) and audit into per-clone SHARDS
-// under <record>/audit/<host>-<pid>.md — not the flat aidlc-docs/ trio. After
+// under <record>/audit/<host>-<pid>.md — not the flat amadeus-docs/ trio. After
 // init the active-intent cursor points at the born record, so the later
 // state-tool calls (gate-start/advance/acknowledge-compaction) read/write THAT
 // record. recordDirOf follows the cursor and falls back to flat for F3 (which
@@ -157,16 +157,16 @@ function recordDirOf(p: string): string {
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();
-    if (rec && existsSync(join(intentsDir, rec, "aidlc-state.md"))) {
+    if (rec && existsSync(join(intentsDir, rec, "amadeus-state.md"))) {
       return join(intentsDir, rec);
     }
   }
-  return join(p, "aidlc-docs");
+  return join(p, "amadeus-docs");
 }
 
 const auditDirOf = (p: string): string => join(recordDirOf(p), "audit");
 const statePath = (p: string): string =>
-  join(recordDirOf(p), "aidlc-state.md");
+  join(recordDirOf(p), "amadeus-state.md");
 
 /** The single audit shard for a freshly-born record. Returns "" when none. */
 function auditShardPath(p: string): string {
@@ -177,7 +177,7 @@ function auditShardPath(p: string): string {
 }
 
 // Concatenate every audit shard for a content read; fall back to the flat
-// aidlc-docs/audit.md for a seeded-flat / pre-migration project.
+// amadeus-docs/audit.md for a seeded-flat / pre-migration project.
 function readAudit(p: string): string {
   const dir = auditDirOf(p);
   if (existsSync(dir)) {
@@ -186,7 +186,7 @@ function readAudit(p: string): string {
       .map((f) => readFileSync(join(dir, f), "utf-8"))
       .join("\n");
   }
-  const flat = join(p, "aidlc-docs", "audit.md");
+  const flat = join(p, "amadeus-docs", "audit.md");
   return existsSync(flat) ? readFileSync(flat, "utf-8") : "";
 }
 
@@ -196,7 +196,7 @@ interface CliResult {
 }
 
 /**
- * `AIDLC_WORKFLOW_INTENT=chaos bun aidlc-utility.ts init --scope bugfix
+ * `AIDLC_WORKFLOW_INTENT=chaos bun amadeus-utility.ts init --scope bugfix
  * --project-dir <p>` (t123:43-44). Mirrors the .sh's init.
  */
 function init(p: string): CliResult {
@@ -208,7 +208,7 @@ function init(p: string): CliResult {
   return { status: res.status ?? -1, out: `${res.stdout ?? ""}${res.stderr ?? ""}` };
 }
 
-/** Spawn `bun aidlc-state.ts <args...> --project-dir <p>`. Mirrors `bun "$STATE" ...`. */
+/** Spawn `bun amadeus-state.ts <args...> --project-dir <p>`. Mirrors `bun "$STATE" ...`. */
 function state(args: string[], p: string): CliResult {
   const res = spawnSync(BUN, [STATE, ...args, "--project-dir", p], {
     encoding: "utf-8",
@@ -262,12 +262,12 @@ function auditField(content: string, ev: string, key: string): string {
 // ============================================================
 // Failure 1: permission-denied on the audit shard during a transition.
 // Audit-first: appendAuditEntry throws before writeStateFile, so the tool
-// exits 1 and aidlc-state.md is unchanged. (.sh Tests 1-2)
+// exits 1 and amadeus-state.md is unchanged. (.sh Tests 1-2)
 // P4: the audit is the per-clone shard <record>/audit/<host>-<clone>.md; the
 // spawned subprocess resolves the SAME shard (the shard name embeds the stable
-// per-clone token, not the PID — aidlc-lib.ts:955-971), so chmod-ing that one
+// per-clone token, not the PID — amadeus-lib.ts:955-971), so chmod-ing that one
 // shard read-only denies its append. The original test chmod-ed the flat
-// aidlc-docs/audit.md; here the equivalent target is the born record's shard.
+// amadeus-docs/audit.md; here the equivalent target is the born record's shard.
 // ============================================================
 
 describe("t137 F1 — read-only audit shard (audit-first holds)", () => {
@@ -363,7 +363,7 @@ describe("t137 F2 — missing audit shard (ensureAuditFile recovers)", () => {
 describe("t137 F3 — corrupted state.md (advance refuses, names Scope)", () => {
   test("5: advance exits 1 on corrupted state; 6: error names Scope", () => {
     const p = proj();
-    // P9: the flat aidlc-docs/ fallback is retired. createTestProject seeds the
+    // P9: the flat amadeus-docs/ fallback is retired. createTestProject seeds the
     // per-intent shell + default-record cursor, so the advance SUBPROCESS
     // resolves the seeded record (DEFAULT_RECORD_DIR). Hand-seed the
     // corrupted state INTO that record (seededStateFile) — valid markdown but
@@ -396,7 +396,7 @@ describe("t137 F3 — corrupted state.md (advance refuses, names Scope)", () => 
     expect(r.status).toBe(1);
     // .sh Test 6: `echo "$out" | grep -q "Scope"` (out captured 2>&1).
     expect(r.out).toContain("Scope");
-    // STRONGER: pin the exact refusal sentence (aidlc-state.ts:290-293).
+    // STRONGER: pin the exact refusal sentence (amadeus-state.ts:290-293).
     expect(r.out).toContain("no Scope field");
   });
 });
@@ -434,13 +434,13 @@ describe("t137 F4 — read-only state.md (ERROR_LOGGED emitted)", () => {
 
       // .sh Test 8: ERROR_LOGGED count climbed (emitError fired on the
       // state-write failure path; state.md existed so the guard at
-      // aidlc-lib.ts:1513 let the row through).
+      // amadeus-lib.ts:1513 let the row through).
       const errorAfter = errorLoggedCount(readAudit(p));
       expect(errorAfter).toBeGreaterThan(errorBefore);
       // STRONGER than the .sh's bare count delta: the new ERROR_LOGGED row
-      // came from the state tool's emitError (Tool: "aidlc-state",
-      // aidlc-lib.ts:1528-1538 / aidlc-state.ts:1713).
-      expect(auditField(readAudit(p), "ERROR_LOGGED", "Tool")).toBe("aidlc-state");
+      // came from the state tool's emitError (Tool: "amadeus-state",
+      // amadeus-lib.ts:1528-1538 / amadeus-state.ts:1713).
+      expect(auditField(readAudit(p), "ERROR_LOGGED", "Tool")).toBe("amadeus-state");
     },
     30000,
   );

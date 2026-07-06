@@ -1,23 +1,23 @@
-// covers: subcommand:aidlc-state:approve
+// covers: subcommand:amadeus-state:approve
 //
 // CLI-contract port of tests/unit/t115-orchestrate-report.sh (TAP plan 22),
-// mechanism = cli. The .sh drives `aidlc-orchestrate.ts report` — the
+// mechanism = cli. The .sh drives `amadeus-orchestrate.ts report` — the
 // commit-the-transition half of the orchestration engine. report is a
-// stage-aware dispatcher that shells out to `aidlc-state.ts` transition
+// stage-aware dispatcher that shells out to `amadeus-state.ts` transition
 // subcommands per the acted stage's gate status (then finality), with an
 // explicit-stage recovery path that opens a missing gate before approve. The
-// covers UNIT credited here is `aidlc-state.ts approve` — the committing
+// covers UNIT credited here is `amadeus-state.ts approve` — the committing
 // subcommand report dispatches to on every GATED stage (the gated-approve
 // round-trip, the missing-gate recovery, and the final gated approve that
-// self-delegates to complete-workflow). The .sh also fires `aidlc-state.ts
+// self-delegates to complete-workflow). The .sh also fires `amadeus-state.ts
 // gate-start` (to flip [-] -> [?] so approve's validateSlugInState passes) and
-// `aidlc-state.ts advance` (the non-gated path + the replay-guard cases)
+// `amadeus-state.ts advance` (the non-gated path + the replay-guard cases)
 // directly.
 //
 // MECHANISM: this is a .cli file, so every observable is taken at the PROCESS
 // boundary — SPAWN the real binaries via node:child_process spawnSync (BUN +
 // the tool .ts path) and assert on res.status / res.stdout / res.stderr and the
-// audit.md / aidlc-state.md the tools write. An in-process twin would lose the
+// audit.md / amadeus-state.md the tools write. An in-process twin would lose the
 // directive-JSON-to-stdout half (every "kind":"done"/"kind":"error" assertion)
 // and the cross-process atomic-lock / audit-row-order effects the .sh relies on.
 //
@@ -46,7 +46,7 @@
 //   .sh T16 final gated approve -> WORKFLOW_COMPLETED == 1 -> Test 16.
 //   .sh T17 final order "STAGE_COMPLETED PHASE_COMPLETED PHASE_VERIFIED
 //           WORKFLOW_COMPLETED"                           -> Test 17.
-//   .sh T18 final -> Status=Completed (via aidlc-state.ts get) -> Test 18 (same
+//   .sh T18 final -> Status=Completed (via amadeus-state.ts get) -> Test 18 (same
 //           observable: spawn `get Status` and assert stdout === "Completed").
 //   .sh T19 advance replay guard -> '"replay":true'       -> Test 19.
 //   .sh T20 replay guard emits zero new audit events      -> Test 20 (same: the
@@ -81,7 +81,7 @@ import { join } from "node:path";
 import {
   auditLockDir,
   readAllAuditShards,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -95,8 +95,8 @@ import {
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const TOOLS_DIR = join(REPO_ROOT, "dist", "claude", ".claude", "tools");
-const ORCH_TOOL = join(TOOLS_DIR, "aidlc-orchestrate.ts");
-const STATE_TOOL = join(TOOLS_DIR, "aidlc-state.ts");
+const ORCH_TOOL = join(TOOLS_DIR, "amadeus-orchestrate.ts");
+const STATE_TOOL = join(TOOLS_DIR, "amadeus-state.ts");
 
 const tempDirs: string[] = [];
 
@@ -118,7 +118,7 @@ interface CliResult {
   stdout: string;
 }
 
-/** Spawn `bun aidlc-orchestrate.ts <args...> --project-dir <p>`. Mirrors `bun "$TOOL" ...`. */
+/** Spawn `bun amadeus-orchestrate.ts <args...> --project-dir <p>`. Mirrors `bun "$TOOL" ...`. */
 function orchestrate(args: string[], p: string): CliResult {
   const res = spawnSync(BUN, [ORCH_TOOL, ...args, "--project-dir", p], {
     encoding: "utf-8",
@@ -127,7 +127,7 @@ function orchestrate(args: string[], p: string): CliResult {
   return { status: res.status ?? -1, out: `${stdout}${res.stderr ?? ""}`, stdout };
 }
 
-/** Spawn `bun aidlc-state.ts <args...> --project-dir <p>`. Mirrors `bun "$STATE_TOOL" ...`. */
+/** Spawn `bun amadeus-state.ts <args...> --project-dir <p>`. Mirrors `bun "$STATE_TOOL" ...`. */
 function state(args: string[], p: string): CliResult {
   const res = spawnSync(BUN, [STATE_TOOL, ...args, "--project-dir", p], {
     encoding: "utf-8",
@@ -192,8 +192,8 @@ function auditBlocksFor(p: string, ev: string): string[] {
 
 /**
  * The per-project audit lock dir. Mirrors the .sh's lock_dir helper, which in
- * turn mirrors aidlc-lib.ts auditLockDir:
- *   $TMPDIR/.aidlc-audit-<md5(projectDir)[:8]>.lock
+ * turn mirrors amadeus-lib.ts auditLockDir:
+ *   $TMPDIR/.amadeus-audit-<md5(projectDir)[:8]>.lock
  * The .sh shells out to `md5`/`md5sum`; createHash("md5") is the bun parity the
  * .sh comment notes is verified. TMPDIR falls back to /tmp exactly as the .sh's
  * `${TMPDIR:-/tmp}`.
@@ -202,7 +202,7 @@ function lockDir(p: string): string {
   // report→approve threads the RESOLVED active intent (the seeded default
   // record), so the lock keys the PER-INTENT bucket, NOT the workspace sentinel.
   // Use the lib's auditLockDir with the seeded record so the path matches what
-  // the spawned tool acquires/releases (CRITICAL invariant: aidlc-state's
+  // the spawned tool acquires/releases (CRITICAL invariant: amadeus-state's
   // approve resolves the intent).
   return auditLockDir(p, DEFAULT_RECORD_DIR, DEFAULT_SPACE);
 }
@@ -211,7 +211,7 @@ function lockDir(p: string): string {
 // Argument / precondition errors (.sh Tests 1-3)
 // ============================================================
 
-describe("t115 aidlc-orchestrate report — preconditions (migrated from t115-orchestrate-report.sh, plan 22)", () => {
+describe("t115 amadeus-orchestrate report — preconditions (migrated from t115-orchestrate-report.sh, plan 22)", () => {
   test("1: report with no --result emits an error directive", () => {
     const p = projWithState("state-mid-ideation.md");
     const r = orchestrate(["report"], p);
@@ -225,9 +225,9 @@ describe("t115 aidlc-orchestrate report — preconditions (migrated from t115-or
   });
 
   test("3: report with no state file emits an error directive", () => {
-    // create_test_project scaffolds aidlc-docs but no state file; the .sh then
+    // create_test_project scaffolds amadeus-docs but no state file; the .sh then
     // rm -f's the state file. Here we use a bare project (no seed) for the
-    // identical effect — aidlc-state.md is absent.
+    // identical effect — amadeus-state.md is absent.
     const p = createTestProject();
     tempDirs.push(p);
     const r = orchestrate(["report", "--result", "approved"], p);
@@ -237,13 +237,13 @@ describe("t115 aidlc-orchestrate report — preconditions (migrated from t115-or
 
 // ============================================================
 // GATED APPROVE round-trip (.sh Tests 4-9) — feasibility, mid-ideation.
-// report --result approved dispatches `aidlc-state.ts approve`, which OWNS the
+// report --result approved dispatches `amadeus-state.ts approve`, which OWNS the
 // full transition (GATE_APPROVED + STAGE_COMPLETED + STAGE_STARTED), no separate
 // advance. Explicit `--stage` also lets report recover a missing gate before
-// that approve. This is the core unit credited: subcommand:aidlc-state:approve.
+// that approve. This is the core unit credited: subcommand:amadeus-state:approve.
 // ============================================================
 
-describe("t115 gated approve round-trip (report -> aidlc-state approve)", () => {
+describe("t115 gated approve round-trip (report -> amadeus-state approve)", () => {
   test("4: next before report points at the active gated stage", () => {
     const p = projWithState("state-mid-ideation.md");
     const r = orchestrate(["next"], p);
@@ -254,12 +254,12 @@ describe("t115 gated approve round-trip (report -> aidlc-state approve)", () => 
     const p = projWithState("state-mid-ideation.md");
 
     // next emits run-stage(feasibility, gate:true); the conductor "acts"; the
-    // gate opens via aidlc-state.ts gate-start (flips [-] -> [?] so approve's
+    // gate opens via amadeus-state.ts gate-start (flips [-] -> [?] so approve's
     // validateSlugInState(awaiting-approval) passes).
     const gs = state(["gate-start", "feasibility"], p);
     expect(gs.status).toBe(0);
 
-    // report --result approved -> dispatches `aidlc-state.ts approve feasibility`.
+    // report --result approved -> dispatches `amadeus-state.ts approve feasibility`.
     const report = orchestrate(
       ["report", "--result", "approved", "--user-input", "looks good"],
       p,
@@ -337,11 +337,11 @@ describe("t115 gated approve round-trip (report -> aidlc-state approve)", () => 
 
 // ============================================================
 // NON-GATED ADVANCE (.sh Tests 10-11) — workspace-detection, an init stage.
-// report --result completed dispatches `aidlc-state.ts advance` (NOT approve),
+// report --result completed dispatches `amadeus-state.ts advance` (NOT approve),
 // emitting STAGE_COMPLETED then STAGE_STARTED, with no GATE_APPROVED.
 // ============================================================
 
-describe("t115 non-gated advance (report -> aidlc-state advance)", () => {
+describe("t115 non-gated advance (report -> amadeus-state advance)", () => {
   test("10-11: non-gated stage dispatches advance, emits STAGE_COMPLETED then STAGE_STARTED", () => {
     const p = projWithState("state-pre-workspace-detection.md");
     const report = orchestrate(["report", "--result", "completed"], p);
@@ -365,7 +365,7 @@ describe("t115 non-gated advance (report -> aidlc-state advance)", () => {
 // PHASE_COMPLETED + PHASE_VERIFIED + PHASE_STARTED around the stage events.
 // ============================================================
 
-describe("t115 non-gated phase-boundary advance (report -> aidlc-state advance)", () => {
+describe("t115 non-gated phase-boundary advance (report -> amadeus-state advance)", () => {
   test("12-15: phase-boundary advance emits the boundary events, once each, in order", () => {
     const p = projWithState("state-init-active.md");
     const report = orchestrate(["report", "--result", "completed"], p);
@@ -390,7 +390,7 @@ describe("t115 non-gated phase-boundary advance (report -> aidlc-state advance)"
 // and setting Status=Completed. No STAGE_STARTED — there is no next stage.
 // ============================================================
 
-describe("t115 final gated approve -> complete-workflow (report -> aidlc-state approve)", () => {
+describe("t115 final gated approve -> complete-workflow (report -> amadeus-state approve)", () => {
   test("16-18: final gated approve completes the workflow, in order, Status=Completed", () => {
     const p = projWithState("state-final-stage.md");
 
@@ -409,7 +409,7 @@ describe("t115 final gated approve -> complete-workflow (report -> aidlc-state a
     );
 
     // .sh T18: final completion sets Status=Completed (read back via the tool's
-    // get subcommand — the .sh's `aidlc-state.ts get "Status"`).
+    // get subcommand — the .sh's `amadeus-state.ts get "Status"`).
     const status = state(["get", "Status"], p);
     expect(status.stdout.trim()).toBe("Completed");
   }, 30000);
@@ -417,13 +417,13 @@ describe("t115 final gated approve -> complete-workflow (report -> aidlc-state a
 
 // ============================================================
 // DOUBLE-COMMIT REPLAY GUARD (.sh Tests 19-21).
-// report shells out to `aidlc-state.ts advance <slug>`, whose replay guard
+// report shells out to `amadeus-state.ts advance <slug>`, whose replay guard
 // short-circuits a re-commit of the same completed slug: it emits ZERO new audit
 // events and returns "replay":true rather than erroring. Exercised at the exact
 // subcommand report dispatches (advance), driven directly as the .sh does.
 // ============================================================
 
-describe("t115 advance replay guard (aidlc-state advance double-commit)", () => {
+describe("t115 advance replay guard (amadeus-state advance double-commit)", () => {
   test("19-21: a double-commit returns replay:true, emits zero new events, no ERROR_LOGGED", () => {
     const p = projWithState("state-pre-workspace-detection.md");
 
@@ -450,7 +450,7 @@ describe("t115 advance replay guard (aidlc-state advance double-commit)", () => 
 // ============================================================
 // RE-REPORT ON A COMPLETED WORKFLOW (.sh Test 22).
 // Once Completed, the active stage is [x]; a stray second report dispatches
-// approve on an already-completed stage, which aidlc-state.ts rejects. The engine
+// approve on an already-completed stage, which amadeus-state.ts rejects. The engine
 // surfaces a clean error directive — no crash, no half-emitted directive.
 // ============================================================
 

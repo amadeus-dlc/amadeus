@@ -1,4 +1,4 @@
-// covers: file:knowledge/aidlc-architect-agent, file:knowledge/aidlc-aws-platform-agent, file:knowledge/aidlc-compliance-agent, file:knowledge/aidlc-delivery-agent, file:knowledge/aidlc-design-agent, file:knowledge/aidlc-developer-agent, file:knowledge/aidlc-devsecops-agent, file:knowledge/aidlc-operations-agent, file:knowledge/aidlc-pipeline-deploy-agent, file:knowledge/aidlc-product-agent, file:knowledge/aidlc-quality-agent, file:knowledge/aidlc-shared/ai-dlc-principles.md, file:knowledge/aidlc-shared/audit-format.md, file:knowledge/aidlc-shared/brownfield.md, file:knowledge/aidlc-shared/knowledge-readme-template.md, file:knowledge/aidlc-shared/rules-reading.md, file:knowledge/aidlc-shared/state-template.md, file:knowledge/aidlc-shared/verification.md
+// covers: file:knowledge/amadeus-architect-agent, file:knowledge/amadeus-aws-platform-agent, file:knowledge/amadeus-compliance-agent, file:knowledge/amadeus-delivery-agent, file:knowledge/amadeus-design-agent, file:knowledge/amadeus-developer-agent, file:knowledge/amadeus-devsecops-agent, file:knowledge/amadeus-operations-agent, file:knowledge/amadeus-pipeline-deploy-agent, file:knowledge/amadeus-product-agent, file:knowledge/amadeus-quality-agent, file:knowledge/amadeus-shared/ai-dlc-principles.md, file:knowledge/amadeus-shared/audit-format.md, file:knowledge/amadeus-shared/brownfield.md, file:knowledge/amadeus-shared/knowledge-readme-template.md, file:knowledge/amadeus-shared/rules-reading.md, file:knowledge/amadeus-shared/state-template.md, file:knowledge/amadeus-shared/verification.md
 //
 // t15 — knowledge-file inventory + non-emptiness invariant. Migrated from
 // tests/unit/t15-knowledge-file-inventory.sh (the .sh declared no `# covers:`
@@ -19,7 +19,7 @@
 // existsSync / statSync / a recursive .md walk.
 //
 // Subject under test: the shipped knowledge/ corpus of dist/claude/.claude/ —
-// per-agent knowledge dirs + the cross-agent aidlc-shared/ set. Counts and
+// per-agent knowledge dirs + the cross-agent amadeus-shared/ set. Counts and
 // shared filenames verified present on disk this session against the worktree
 // dist tree.
 //
@@ -29,8 +29,8 @@
 //        -> "each of the 11 agent knowledge dirs has at least one .md file"
 //   .sh L29-39  11x assert_eq exact per-agent count (6/4/1/3/5/6/4/4/3/7/4)
 //        -> "each agent dir ships EXACTLY its expected .md count" (per-agent block-scoped)
-//   .sh L45-47  7x assert_file_exists aidlc-shared/<f>
-//        -> "ships each of the 7 named aidlc-shared/ files"
+//   .sh L45-47  7x assert_file_exists amadeus-shared/<f>
+//        -> "ships each of the 7 named amadeus-shared/ files"
 //   .sh L53-57  TOTAL_FILES x assert_gt size 0 (every shipped .md non-empty)
 //        -> "every shipped knowledge .md file is non-empty (byte size > 0)"
 //   .sh L11-14  plan = 11 + 11 + 7 + TOTAL_FILES   (dynamic TAP plan)
@@ -57,20 +57,20 @@ const KNOWLEDGE_DIR = join(AIDLC_SRC, "knowledge");
 // The 11 agent knowledge dirs, in the order the .sh's AGENT_NAMES listed them
 // (.sh L10), each paired with the exact .md count the .sh asserted (.sh L29-39).
 const AGENT_COUNTS: ReadonlyArray<readonly [string, number]> = [
-  ["aidlc-architect-agent", 6],
-  ["aidlc-architecture-reviewer-agent", 1],
-  ["aidlc-aws-platform-agent", 4],
-  ["aidlc-compliance-agent", 1],
-  ["aidlc-composer-agent", 1],
-  ["aidlc-delivery-agent", 3],
-  ["aidlc-design-agent", 5],
-  ["aidlc-developer-agent", 6],
-  ["aidlc-devsecops-agent", 4],
-  ["aidlc-operations-agent", 4],
-  ["aidlc-pipeline-deploy-agent", 3],
-  ["aidlc-product-agent", 7],
-  ["aidlc-product-lead-agent", 1],
-  ["aidlc-quality-agent", 4],
+  ["amadeus-architect-agent", 6],
+  ["amadeus-architecture-reviewer-agent", 1],
+  ["amadeus-aws-platform-agent", 4],
+  ["amadeus-compliance-agent", 1],
+  ["amadeus-composer-agent", 1],
+  ["amadeus-delivery-agent", 3],
+  ["amadeus-design-agent", 5],
+  ["amadeus-developer-agent", 6],
+  ["amadeus-devsecops-agent", 4],
+  ["amadeus-operations-agent", 4],
+  ["amadeus-pipeline-deploy-agent", 3],
+  ["amadeus-product-agent", 7],
+  ["amadeus-product-lead-agent", 1],
+  ["amadeus-quality-agent", 4],
 ];
 
 // The 7 named cross-agent files the .sh existence-checked (.sh L45).
@@ -120,20 +120,20 @@ describe("t15 — knowledge-file inventory + non-emptiness (mechanism: none)", (
   }
 
   // STRENGTHENING: knowledge/ holds EXACTLY the 11 expected agent dirs plus
-  // aidlc-shared/ — no extra agent dir. The .sh's fixed loop never pinned this.
-  test("knowledge/ holds EXACTLY the 14 agent dirs + aidlc-shared/ [.sh L10 — membership strengthening]", () => {
+  // amadeus-shared/ — no extra agent dir. The .sh's fixed loop never pinned this.
+  test("knowledge/ holds EXACTLY the 14 agent dirs + amadeus-shared/ [.sh L10 — membership strengthening]", () => {
     const dirs = readdirSync(KNOWLEDGE_DIR, { withFileTypes: true })
       .filter((e) => e.isDirectory())
       .map((e) => e.name)
       .sort();
-    const expected = [...AGENT_COUNTS.map(([a]) => a), "aidlc-shared"].sort();
+    const expected = [...AGENT_COUNTS.map(([a]) => a), "amadeus-shared"].sort();
     expect(dirs).toEqual(expected);
   });
 
-  // .sh Part 3 (L41-47): the 7 named aidlc-shared/ files exist.
-  test("ships each of the 7 named aidlc-shared/ files [.sh L45-47]", () => {
+  // .sh Part 3 (L41-47): the 7 named amadeus-shared/ files exist.
+  test("ships each of the 7 named amadeus-shared/ files [.sh L45-47]", () => {
     for (const f of SHARED_FILES) {
-      expect(existsSync(join(KNOWLEDGE_DIR, "aidlc-shared", f))).toBe(true);
+      expect(existsSync(join(KNOWLEDGE_DIR, "amadeus-shared", f))).toBe(true);
     }
   });
 

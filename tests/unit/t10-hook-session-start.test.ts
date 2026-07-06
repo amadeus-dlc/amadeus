@@ -1,16 +1,16 @@
-// covers: hook:aidlc-session-start, function:appendAuditEntry
+// covers: hook:amadeus-session-start, function:appendAuditEntry
 //
-// t10 — aidlc-session-start.ts SessionStart hook behaviour. Migrated from
+// t10 — amadeus-session-start.ts SessionStart hook behaviour. Migrated from
 // tests/unit/t10-hook-session-start.sh (TAP plan 17). Mechanism: cli.
 //
 // WHY CLI (process-boundary, not in-process): the SUBJECT is a hook, not a
-// pure function. aidlc-session-start.ts (dist/claude/.claude/hooks/) runs at
+// pure function. amadeus-session-start.ts (dist/claude/.claude/hooks/) runs at
 // module top level on import and TERMINATES the process:
 //   :34  projectDir = resolveProjectDirFromHook(import.meta.url)
 //   :39  if (!existsSync(stateFile)) process.exit(0)
 //          — the "no active workflow" no-op gate (no heartbeat, no audit,
 //            no stdout)
-//   :42-44 mkdir aidlc-docs/.aidlc-hooks-health + write session-start.last
+//   :42-44 mkdir amadeus-docs/.amadeus-hooks-health + write session-start.last
 //          heartbeat (only reached when state IS present)
 //   :55-75 source defaults to "startup"; when stdin is not a TTY it reads
 //          Bun.stdin.text(), JSON.parses it, and pulls raw.source when the
@@ -22,7 +22,7 @@
 //   :87-93 appendAuditEntry(eventType, { Source }, projectDir) when an event
 //          is mapped — writes a "**Event**: <type>" block to audit.md
 //   :96-125 reads the state file, extracts the workflow fields via getField,
-//          appends a ".aidlc-recovery.md exists" NOTE iff that breadcrumb file
+//          appends a ".amadeus-recovery.md exists" NOTE iff that breadcrumb file
 //          is present, then writes JSON.stringify({ additionalContext }) +"\n"
 //          to stdout
 // None of those seams — stdin, the env/script-path projectDir derivation, the
@@ -34,19 +34,19 @@
 //                    env: {…CLAUDE_PROJECT_DIR} })`.
 // Same pattern as t30 (session-end hook twin) and t07 (audit-logger hook twin).
 //
-// appendAuditEntry's on-disk block format (aidlc-audit.ts): SESSION_STARTED
+// appendAuditEntry's on-disk block format (amadeus-audit.ts): SESSION_STARTED
 // maps to the "## Session Started" heading and SESSION_RESUMED to
 // "## Session Resumed"; the **Event**: <type> line is the canonical marker the
 // .sh grepped for. Asserted below against the real bytes on disk.
 //
 // FIXTURE DISCIPLINE (mirrors the .sh's create_test_project + seed_state_file +
 // seed_audit_file + cleanup_test_project, one fresh project per case):
-//   - createTestProject() -> a fresh temp dir with aidlc-docs/.
+//   - createTestProject() -> a fresh temp dir with amadeus-docs/.
 //   - seedStateFile(proj, <fixture>) -> the canonical "active workflow" signal
 //     the hook gates on (MID_IDEATION / state-construction / state-operation /
 //     state-corrupted, the same fixture bytes the .sh used).
 //   - seedAuditFile() -> copies tests/fixtures/audit-sample.md to
-//     aidlc-docs/audit.md (the emit appends to it).
+//     amadeus-docs/audit.md (the emit appends to it).
 //   - cleanupTestProject() rm -rf's each temp project. Nothing written under
 //     tests/fixtures/**.
 //
@@ -56,9 +56,9 @@
 //   .sh  3 (outputs valid JSON w/ additionalContext)   -> "outputs valid JSON with an additionalContext key"
 //   .sh  4 (extracts Lifecycle Phase = IDEATION)       -> "injects the Lifecycle Phase (IDEATION)"
 //   .sh  5 (extracts Current Stage = feasibility)      -> "injects the Current Stage (feasibility)"
-//   .sh  6 (extracts Active Agent)                     -> "injects the Active Agent (aidlc-architect-agent)"
+//   .sh  6 (extracts Active Agent)                     -> "injects the Active Agent (amadeus-architect-agent)"
 //   .sh  7 (extracts Scope = feature)                  -> "injects the Scope (feature)"
-//   .sh  8 (recovery breadcrumb note present)          -> "includes the recovery-breadcrumb NOTE when .aidlc-recovery.md exists"
+//   .sh  8 (recovery breadcrumb note present)          -> "includes the recovery-breadcrumb NOTE when .amadeus-recovery.md exists"
 //   .sh  9 (no recovery note when no breadcrumb)       -> "omits the recovery-breadcrumb NOTE when no breadcrumb"
 //   .sh 10 (writes heartbeat when state exists)        -> "writes the session-start.last heartbeat when state exists"
 //   .sh 11 (CONSTRUCTION phase from fixture)            -> "injects CONSTRUCTION from the construction fixture"
@@ -95,7 +95,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const HOOK = join(AIDLC_SRC, "hooks", "aidlc-session-start.ts");
+const HOOK = join(AIDLC_SRC, "hooks", "amadeus-session-start.ts");
 const MID_IDEATION = join(FIXTURES_DIR, "state-mid-ideation.md");
 const CONSTRUCTION = join(FIXTURES_DIR, "state-construction.md");
 const OPERATION = join(FIXTURES_DIR, "state-operation.md");
@@ -103,13 +103,13 @@ const CORRUPTED = join(FIXTURES_DIR, "state-corrupted.md");
 
 let proj: string;
 
-// Per-intent record paths (P9 — the flat aidlc-docs/ root is retired). state +
+// Per-intent record paths (P9 — the flat amadeus-docs/ root is retired). state +
 // heartbeat + recovery re-root under the default intent's record; the audit
 // trail is a DIR of per-clone shards (read via the glob below). session-start's
 // appendAuditEntry CREATES its own shard if missing (no audit-existence gate), so
 // no shard needs pre-seeding — seedAuditFile only supplies the count baseline.
 function statePath(p: string): string {
-  return join(seededRecordDir(p), "aidlc-state.md");
+  return join(seededRecordDir(p), "amadeus-state.md");
 }
 
 function readAudit(p: string): string {
@@ -128,11 +128,11 @@ function readAudit(p: string): string {
 }
 
 function heartbeatPath(p: string): string {
-  return join(seededRecordDir(p), ".aidlc-hooks-health", "session-start.last");
+  return join(seededRecordDir(p), ".amadeus-hooks-health", "session-start.last");
 }
 
 function recoveryPath(p: string): string {
-  return join(seededRecordDir(p), ".aidlc-recovery.md");
+  return join(seededRecordDir(p), ".amadeus-recovery.md");
 }
 
 interface FireResult {
@@ -177,7 +177,7 @@ describe("t10 session-start SessionStart hook (mechanism cli — spawned hook + 
   });
 
   test("silent exit (no stdout) when no state file [.sh test 1]", () => {
-    // createTestProject seeds no aidlc-state.md, so the hook hits its :39 no-op
+    // createTestProject seeds no amadeus-state.md, so the hook hits its :39 no-op
     // gate and exits 0 before any heartbeat / audit / stdout. The .sh checked
     // the merged stdout+stderr was empty; STRONGER — assert stdout is exactly
     // empty (the additionalContext JSON is the hook's only stdout write).
@@ -220,11 +220,11 @@ describe("t10 session-start SessionStart hook (mechanism cli — spawned hook + 
     expect(ctx).toContain("Current Stage: feasibility");
   });
 
-  test("injects the Active Agent (aidlc-architect-agent) [.sh test 6]", () => {
+  test("injects the Active Agent (amadeus-architect-agent) [.sh test 6]", () => {
     seedStateFile(proj, MID_IDEATION);
     const r = fire(proj);
     const ctx = JSON.parse(r.stdout.trim()).additionalContext as string;
-    expect(ctx).toContain("Active Agent: aidlc-architect-agent");
+    expect(ctx).toContain("Active Agent: amadeus-architect-agent");
   });
 
   test("injects the Scope (feature) [.sh test 7]", () => {
@@ -234,22 +234,22 @@ describe("t10 session-start SessionStart hook (mechanism cli — spawned hook + 
     expect(ctx).toContain("Scope: feature");
   });
 
-  test("includes the recovery-breadcrumb NOTE when .aidlc-recovery.md exists [.sh test 8]", () => {
+  test("includes the recovery-breadcrumb NOTE when .amadeus-recovery.md exists [.sh test 8]", () => {
     seedStateFile(proj, MID_IDEATION);
     writeFileSync(recoveryPath(proj), "# Recovery breadcrumb\n", "utf-8");
     const r = fire(proj);
     const ctx = JSON.parse(r.stdout.trim()).additionalContext as string;
     // .sh grepped "recovery breadcrumb"; STRONGER — assert the exact NOTE the
-    // hook injects (aidlc-session-start.ts :110-112).
+    // hook injects (amadeus-session-start.ts :110-112).
     expect(ctx).toContain("recovery breadcrumb");
     expect(ctx).toContain(
-      "NOTE: A compaction recovery breadcrumb exists at .aidlc-recovery.md",
+      "NOTE: A compaction recovery breadcrumb exists at .amadeus-recovery.md",
     );
   });
 
   test("omits the recovery-breadcrumb NOTE when no breadcrumb [.sh test 9]", () => {
     seedStateFile(proj, MID_IDEATION);
-    // createTestProject seeds no .aidlc-recovery.md (the .sh rm -f'd it).
+    // createTestProject seeds no .amadeus-recovery.md (the .sh rm -f'd it).
     expect(existsSync(recoveryPath(proj))).toBe(false);
     const r = fire(proj);
     const ctx = JSON.parse(r.stdout.trim()).additionalContext as string;
@@ -331,7 +331,7 @@ describe("t10 session-start SessionStart hook (mechanism cli — spawned hook + 
     seedAuditFile(proj);
     fire(proj, '{"source":"clear"}');
     const body = readAudit(proj);
-    // clear maps to SESSION_STARTED (aidlc-session-start.ts :81), with the
+    // clear maps to SESSION_STARTED (amadeus-session-start.ts :81), with the
     // Source field carrying the original "clear".
     expect(
       body.split("\n").some((l) => l.trim() === "**Event**: SESSION_STARTED"),

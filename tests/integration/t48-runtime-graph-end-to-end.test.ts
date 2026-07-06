@@ -1,19 +1,19 @@
-// covers: subcommand:aidlc-runtime:compile
+// covers: subcommand:amadeus-runtime:compile
 //
 // t48 — runtime-graph compile end-to-end. Migrated from
 // tests/integration/t48-runtime-graph-end-to-end.sh (TAP plan 10).
 // Mechanism: cli. The .sh drove a REAL workflow through approval gates and
-// invoked `aidlc-runtime.ts compile` after each transition (simulating what
+// invoked `amadeus-runtime.ts compile` after each transition (simulating what
 // the PostToolUse Bash hook does in a session — a bun-direct invocation does
 // not trigger Claude Code's hooks). This twin keeps that process-boundary
-// shape: it spawns the shipped tools (aidlc-utility init, aidlc-state
-// gate-start / approve, aidlc-runtime compile) via the BUN runtime against
+// shape: it spawns the shipped tools (amadeus-utility init, amadeus-state
+// gate-start / approve, amadeus-runtime compile) via the BUN runtime against
 // the .ts paths and asserts on the bytes the tools write to
 // runtime-graph.json + audit.md on disk. An in-process import would lose the
 // audit-lock regime + state-machine seam the .sh exercised across multiple
 // short-lived processes, so this is deliberately cli (= all spawns).
 //
-// Source under test (dist/claude/.claude/tools/aidlc-runtime.ts):
+// Source under test (dist/claude/.claude/tools/amadeus-runtime.ts):
 //   :314 compile({ projectDir }) walks audit.md + per-stage
 //        memory.md, pairs STAGE_STARTED/STAGE_COMPLETED into one row per slug
 //        (pairStartedCompleted, :171), reads memory.md (readMemory, :269 —
@@ -70,9 +70,9 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const UTIL = join(AIDLC_SRC, "tools", "aidlc-utility.ts");
-const STATE = join(AIDLC_SRC, "tools", "aidlc-state.ts");
-const RUNTIME = join(AIDLC_SRC, "tools", "aidlc-runtime.ts");
+const UTIL = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
+const STATE = join(AIDLC_SRC, "tools", "amadeus-state.ts");
+const RUNTIME = join(AIDLC_SRC, "tools", "amadeus-runtime.ts");
 
 interface RuntimeStageRow {
   stage_slug: string;
@@ -97,8 +97,8 @@ let proj = "";
 let firstStage = "";
 
 // P4: init births a per-intent record (aidlc/spaces/<space>/intents/<slug>-<id8>/),
-// and aidlc-runtime compile writes runtime-graph.json + audit shards INSIDE that
-// record, not the flat aidlc-docs/. Resolve the record dir from the active-space
+// and amadeus-runtime compile writes runtime-graph.json + audit shards INSIDE that
+// record, not the flat amadeus-docs/. Resolve the record dir from the active-space
 // + active-intent cursors, falling back to the flat layout for a not-yet-born
 // project. The graph/audit CONTENT is unchanged — only the LOCATION moved.
 function recordDirOf(p: string): string {
@@ -110,16 +110,16 @@ function recordDirOf(p: string): string {
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();
-    if (rec && existsSync(join(intentsDir, rec, "aidlc-state.md"))) {
+    if (rec && existsSync(join(intentsDir, rec, "amadeus-state.md"))) {
       return join(intentsDir, rec);
     }
   }
-  return join(p, "aidlc-docs");
+  return join(p, "amadeus-docs");
 }
 const graphPathOf = (p: string): string =>
   join(recordDirOf(p), "runtime-graph.json");
 const statePathOf = (p: string): string =>
-  join(recordDirOf(p), "aidlc-state.md");
+  join(recordDirOf(p), "amadeus-state.md");
 // Audit is sharded under <record>/audit/<host>-<pid>.md; concat every shard for
 // a content read, falling back to the flat audit.md for a not-yet-born project.
 function readAudit(p: string): string {
@@ -130,7 +130,7 @@ function readAudit(p: string): string {
       .map((f) => readFileSync(join(auditDir, f), "utf-8"))
       .join("\n");
   }
-  const flat = join(p, "aidlc-docs", "audit.md");
+  const flat = join(p, "amadeus-docs", "audit.md");
   return existsSync(flat) ? readFileSync(flat, "utf-8") : "";
 }
 
@@ -179,7 +179,7 @@ beforeAll(() => {
   initOk = init.status === 0;
 
   // First in-flight stage from state.md (the [-] row), exactly as .sh:49.
-  // P4: state lives in the born intent's record, not the flat aidlc-docs/.
+  // P4: state lives in the born intent's record, not the flat amadeus-docs/.
   const state = readFileSync(statePathOf(proj), "utf-8");
   const inProgress = state
     .split("\n")
@@ -190,7 +190,7 @@ beforeAll(() => {
   // --- Compile #1: pre-approve, stage 1 in flight (pending row only) ------
   // The .sh passes CLAUDE_PROJECT_DIR + falls back to a flag-less invocation;
   // we use the explicit --project-dir form (resolveProjectDir honours it,
-  // aidlc-lib.ts:88) which is the deterministic path.
+  // amadeus-lib.ts:88) which is the deterministic path.
   run(RUNTIME, ["compile", "--project-dir", proj], { CLAUDE_PROJECT_DIR: proj });
   compile1Ok = existsSync(graphPathOf(proj));
   if (compile1Ok) graphAfterInit = readGraph();
@@ -249,7 +249,7 @@ describe("t48 runtime-graph compile end-to-end (migrated from t48-runtime-graph-
   test("4: first stage row has outcome 'pending' pre-approve [.sh test 4]", () => {
     // After init the first stage is [-] (in-flight) — the row is pending: a
     // STAGE_STARTED with no later STAGE_COMPLETED (pairStartedCompleted,
-    // aidlc-runtime.ts:213-227 → :360-361).
+    // amadeus-runtime.ts:213-227 → :360-361).
     const row = rowFor(graphAfterInit, firstStage);
     expect(row).toBeDefined();
     expect(row?.outcome).toBe("pending");
@@ -286,7 +286,7 @@ describe("t48 runtime-graph compile end-to-end (migrated from t48-runtime-graph-
 
   test("8: missing memory.md → memory_entries: null (v0.4.0 backfill) [.sh test 8]", () => {
     // readMemory returns memory_entries:null (NOT 0) when no memory.md exists
-    // (aidlc-runtime.ts:275-277). STRONGER than the .sh's `== "null"` string
+    // (amadeus-runtime.ts:275-277). STRONGER than the .sh's `== "null"` string
     // compare: assert the JSON value is the actual null, not the string.
     const row = rowFor(graphAfterApprove, firstStage);
     expect(row?.memory_entries).toBeNull();
@@ -295,7 +295,7 @@ describe("t48 runtime-graph compile end-to-end (migrated from t48-runtime-graph-
 
   test("9: no MEMORY_EMPTY emitted when memory.md is absent (backfill) [.sh test 9]", () => {
     // MEMORY_EMPTY fires only for an approved row with memory_entries === 0
-    // (aidlc-runtime.ts:388, :773-789). An absent memory.md yields null, so no
+    // (amadeus-runtime.ts:388, :773-789). An absent memory.md yields null, so no
     // emit. STRONGER than the .sh's count for the line: assert ZERO
     // MEMORY_EMPTY blocks total AND zero for this stage specifically.
     const emptyBlocks = auditAfterApprove
@@ -306,7 +306,7 @@ describe("t48 runtime-graph compile end-to-end (migrated from t48-runtime-graph-
   });
 
   test("10: re-compile produces a byte-equivalent runtime-graph.json [.sh test 10]", () => {
-    // Determinism contract (aidlc-runtime.ts:18-23): re-running compile against
+    // Determinism contract (amadeus-runtime.ts:18-23): re-running compile against
     // the same audit log is byte-identical. The .sh compared shasum; we compare
     // the raw bytes directly (STRONGER: also deep-equal the parsed structure,
     // which catches a whitespace-only equality that masks a value change).

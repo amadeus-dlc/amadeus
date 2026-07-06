@@ -1,10 +1,10 @@
 // covers: function:setCheckbox
 //
-// t108 — setCheckbox() in aidlc-lib.ts.
+// t108 — setCheckbox() in amadeus-lib.ts.
 // Mechanism: none (pure string transform, zero I/O, zero LLM, zero tokens).
 // Technique: metamorphic — the no-clobber-neighbours invariant.
 //
-// Source (dist/claude/.claude/tools/aidlc-lib.ts):
+// Source (dist/claude/.claude/tools/amadeus-lib.ts):
 //   :484  setCheckbox(content, slug, newState): string
 //   :489    marker = CHECKBOX_MAP[newState]        // a BRACKETED literal, e.g. "[x]"
 //   :491    regex  = /^(- )\[[ xSR?-]\]( <slug> —)/  with flag "m" ONLY (no "g")
@@ -40,7 +40,7 @@ import {
   CHECKBOX_MAP,
   type CheckboxState,
   setCheckbox,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // U+2014 EM DASH — the divider setCheckbox's regex requires between slug and
 // suffix. Spelled out as an escape so the literal can't be silently mangled

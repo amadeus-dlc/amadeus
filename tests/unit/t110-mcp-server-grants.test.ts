@@ -1,4 +1,4 @@
-// covers: file:mcp.json, file:agents/aidlc-product-agent.md, file:agents/aidlc-design-agent.md, file:agents/aidlc-delivery-agent.md, file:agents/aidlc-architect-agent.md, file:agents/aidlc-aws-platform-agent.md, file:agents/aidlc-compliance-agent.md, file:agents/aidlc-devsecops-agent.md, file:agents/aidlc-developer-agent.md, file:agents/aidlc-quality-agent.md, file:agents/aidlc-pipeline-deploy-agent.md, file:agents/aidlc-operations-agent.md
+// covers: file:mcp.json, file:agents/amadeus-product-agent.md, file:agents/amadeus-design-agent.md, file:agents/amadeus-delivery-agent.md, file:agents/amadeus-architect-agent.md, file:agents/amadeus-aws-platform-agent.md, file:agents/amadeus-compliance-agent.md, file:agents/amadeus-devsecops-agent.md, file:agents/amadeus-developer-agent.md, file:agents/amadeus-quality-agent.md, file:agents/amadeus-pipeline-deploy-agent.md, file:agents/amadeus-operations-agent.md
 //
 // t110 — MCP registry integrity + the inheritance access model. Migrated from
 // tests/unit/t110-mcp-server-grants.sh (TAP plan 32). The .sh had no `# covers:`
@@ -14,7 +14,7 @@
 // seam, no LLM, zero tokens. The .sh shelled out to `bun -e "JSON.parse(...)"`
 // ONLY because bash has no JSON parser; in TS we `import` the JSON and read the
 // agent .md bytes in-process — the same observables, no subprocess required.
-// (The mechanism deriver gates `cli` on a real spawn of an `aidlc-*.ts` literal
+// (The mechanism deriver gates `cli` on a real spawn of an `amadeus-*.ts` literal
 // in drivesCliSurface; this file spawns nothing, so it stays none.)
 //
 // THE ACCESS MODEL (verbatim from the .sh header): servers are declared once in
@@ -29,7 +29,7 @@
 //   - dist/claude/.mcp.json — the public MCP registry (the .sh's $MCP_JSON,
 //     resolved here as REPO_ROOT/dist/claude/.mcp.json; .mcp.json is a SIBLING
 //     of .claude/, not under AIDLC_SRC).
-//   - dist/claude/.claude/agents/aidlc-<agent>-agent.md — the eleven personas
+//   - dist/claude/.claude/agents/amadeus-<agent>-agent.md — the eleven personas
 //     (the .sh's $AGENTS_DIR; AIDLC_SRC/agents here).
 //
 // Test-design note (house style): assert the OBSERVABLE shipped contract the .sh
@@ -133,7 +133,7 @@ const DECLARED = new Set(Object.keys(SERVERS));
 /** Every `mcp__…` token across an agent's `.md`, mirroring the .sh's
  *  `grep -hoE 'mcp__[A-Za-z0-9-]+(__[A-Za-z0-9_-]+)?'`. */
 function mcpTokens(agent: string): string[] {
-  const file = join(AGENTS_DIR, `aidlc-${agent}-agent.md`);
+  const file = join(AGENTS_DIR, `amadeus-${agent}-agent.md`);
   if (!existsSync(file)) return [];
   const body = readFileSync(file, "utf-8");
   return [...body.matchAll(/mcp__[A-Za-z0-9-]+(?:__[A-Za-z0-9_-]+)?/g)].map(
@@ -188,7 +188,7 @@ describe("t110 MCP registry integrity + inheritance access model (migrated from 
     for (const agent of AGENTS) {
       for (const tok of mcpTokens(agent)) {
         if (!isFullyQualified(tok)) {
-          bare.push(`aidlc-${agent}-agent carries bare token '${tok}'`);
+          bare.push(`amadeus-${agent}-agent carries bare token '${tok}'`);
         }
       }
     }
@@ -310,7 +310,7 @@ describe("t110 MCP registry integrity + inheritance access model (migrated from 
         const srv = tok.slice("mcp__".length).split("__")[0];
         if (!DECLARED.has(srv)) {
           dangling.push(
-            `aidlc-${agent}-agent token '${tok}' names undeclared server '${srv}'`,
+            `amadeus-${agent}-agent token '${tok}' names undeclared server '${srv}'`,
           );
         }
       }

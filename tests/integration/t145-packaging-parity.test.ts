@@ -16,7 +16,7 @@
 // continuously.
 //
 // WHY A SUBPROCESS. package.ts is a CLI that spawns the in-tree generators
-// (aidlc-graph compile, aidlc-runner-gen) per harness; running it as a child
+// (amadeus-graph compile, amadeus-runner-gen) per harness; running it as a child
 // mirrors how a developer or CI invokes it, and isolates its temp-dir builds
 // from the suite's process.
 

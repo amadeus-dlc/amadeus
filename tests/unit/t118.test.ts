@@ -1,28 +1,28 @@
-// covers: subcommand:aidlc-jump:resolve
+// covers: subcommand:amadeus-jump:resolve
 //
 // CLI-contract port of tests/unit/t118-engine-differential.sh (TAP plan 38),
 // mechanism = cli. The differential corpus — the WAVE CLOSE GATE for the
-// v0.6.0 Wave 1 engine (aidlc-orchestrate.ts next), extended in Wave 2 milestone 9
+// v0.6.0 Wave 1 engine (amadeus-orchestrate.ts next), extended in Wave 2 milestone 9
 // with the classified-stance anchor + the no-state workflow-birth trio. It
 // proves the deterministic engine emits, FOR EACH OF THE 9 SCOPES, the same
-// scope-shaped directive the prose orchestrator (skills/aidlc/SKILL.md)
+// scope-shaped directive the prose orchestrator (skills/amadeus/SKILL.md)
 // produces today — WITH NO MODEL IN THE LOOP. It NEVER calls the LLM (the .sh
 // deliberately omits run_claude; the prose-orchestrator workflow tests t50-t59
 // drive the model — this corpus is their deterministic mirror).
 //
-// The covers id is subcommand:aidlc-jump:resolve, not aidlc-orchestrate, BY
+// The covers id is subcommand:amadeus-jump:resolve, not amadeus-orchestrate, BY
 // DESIGN: this corpus exercises the explicit-jump branch of the engine
 // (`next --stage <slug>`), which DELEGATES the in-scope SKIP check + target
-// resolution to `aidlc-jump.ts resolve` by shelling out (aidlc-orchestrate.ts
-// emitJumpDirective -> runTool("aidlc-jump.ts", ["resolve", ...])). The
+// resolution to `amadeus-jump.ts resolve` by shelling out (amadeus-orchestrate.ts
+// emitJumpDirective -> runTool("amadeus-jump.ts", ["resolve", ...])). The
 // observable under test — the verbatim `Stage "..." is skipped for scope
 // "<scope>".` error in diff B, and the run-stage emitted for the tool's
-// resolved target_slug in diff A — is OWNED by aidlc-jump.ts resolve
-// (aidlc-jump.ts:116-119, :168-180). The engine relays it unchanged; resolve
+// resolved target_slug in diff A — is OWNED by amadeus-jump.ts resolve
+// (amadeus-jump.ts:116-119, :168-180). The engine relays it unchanged; resolve
 // is the unit credited.
 //
 // MECHANISM: SPAWN the real engine binary via node:child_process spawnSync
-// (BUN + aidlc-orchestrate.ts), mirroring the .sh's `bun "$TOOL" next ...`.
+// (BUN + amadeus-orchestrate.ts), mirroring the .sh's `bun "$TOOL" next ...`.
 // The directive is emitted as JSON to stdout (engine emit()), so we parse the
 // PROCESS-boundary stdout and assert on the parsed directive's fields — same
 // observable the .sh extracted with its python3 json_field helper. An
@@ -78,7 +78,7 @@
 //
 //   No-state workflow-birth trio (4 .sh asserts -> 3 test() cases):
 //     Every diff above seeds state then jumps; these three drive a NO-STATE
-//     invocation (createTestProject makes aidlc-docs/ but NO aidlc-state.md —
+//     invocation (createTestProject makes amadeus-docs/ but NO amadeus-state.md —
 //     same as the .sh's create_test_project), the workflow-birth paths the Wave
 //     2 cutover leans on, which sat outside the close gate (Wave-1 audit findings
 //     2 & 3 slipped through here). Post-hardening, an EXPLICITLY NAMED scope on
@@ -148,7 +148,7 @@ const TOOL = join(
   "claude",
   ".claude",
   "tools",
-  "aidlc-orchestrate.ts",
+  "amadeus-orchestrate.ts",
 );
 const JUMP_TOOL = join(
   REPO_ROOT,
@@ -156,7 +156,7 @@ const JUMP_TOOL = join(
   "claude",
   ".claude",
   "tools",
-  "aidlc-jump.ts",
+  "amadeus-jump.ts",
 );
 
 const tempDirs: string[] = [];
@@ -203,7 +203,7 @@ interface EmitResult {
 
 // emit_scope_stage (t118:79-90): fresh project seeded from
 // state-initialization-done.md, swap ONLY the Scope field, then spawn
-// `bun aidlc-orchestrate.ts next --stage <stage> --project-dir <proj>`.
+// `bun amadeus-orchestrate.ts next --stage <stage> --project-dir <proj>`.
 // Returns the parsed directive (the .sh piped stdout+stderr 2>&1 through
 // json_field; here we JSON.parse the engine's single emitted directive).
 function emitScopeStage(scope: string, stage: string): EmitResult {
@@ -256,7 +256,7 @@ interface FingerprintLoopResult {
 //   (1) `next --stage <fp>` emits a `print` naming `execute --target <fp>
 //       --direction forward` (Current Stage is pivoted to the last init stage
 //       state-init so every post-init fingerprint resolves forward, never redo);
-//   (2) run `aidlc-jump.ts execute` to commit the jump (mutating state);
+//   (2) run `amadeus-jump.ts execute` to commit the jump (mutating state);
 //   (3) bare `next` then reads the pivoted state and emits the run-stage for the
 //       fingerprint — the exact stage|phase|gate of the frozen golden.
 function emitScopeFingerprintLoop(scope: string, fp: string): FingerprintLoopResult {
@@ -313,7 +313,7 @@ function emitNext(fixtureFile: string): EmitResult {
 }
 
 // emitNextNoState (t118.sh:289-315): spawn `next [...args]` against a FRESH
-// project that has aidlc-docs/ but NO aidlc-state.md (createTestProject seeds
+// project that has amadeus-docs/ but NO amadeus-state.md (createTestProject seeds
 // neither) — the no-state workflow-birth paths of the trio. Pass zero args for
 // bare `next`, one for a known-scope positional (`next bugfix`), or several for
 // freeform intent (`next add dark mode toggle`). Mirrors the .sh's bare
@@ -372,7 +372,7 @@ const GOLDEN: GoldenRow[] = [
   { scope: "workshop", fingerprint: "reverse-engineering", phase: "inception", skip: "intent-capture" },
 ];
 
-describe("t118 engine differential corpus — aidlc-orchestrate next (migrated from t118-engine-differential.sh, plan 24)", () => {
+describe("t118 engine differential corpus — amadeus-orchestrate next (migrated from t118-engine-differential.sh, plan 24)", () => {
   // --- Diff A: fingerprint stage IS in scope -> print→execute→run-stage (9 cases) ---
   // At the v0.6.0 engine cutover a WITH-STATE jump became a MUTATION the conductor
   // commits, so the differential is re-anchored END-TO-END through the post-cutover
@@ -409,7 +409,7 @@ describe("t118 engine differential corpus — aidlc-orchestrate next (migrated f
   // The negative half of the fingerprint. 7 scopes SKIP at least one stage;
   // jumping to a SKIP stage must emit an error carrying the verbatim
   // `Stage "..." is skipped for scope "<scope>".` wording relayed from
-  // aidlc-jump.ts resolve (aidlc-jump.ts:116-119). enterprise + feature SKIP
+  // amadeus-jump.ts resolve (amadeus-jump.ts:116-119). enterprise + feature SKIP
   // nothing (golden skip=null) — their negative coverage is the gate-axis
   // anchor below.
   describe("diff B — per-scope SKIP stage -> verbatim resolve skip error", () => {
@@ -424,7 +424,7 @@ describe("t118 engine differential corpus — aidlc-orchestrate next (migrated f
         // .sh ok #2: assert_contains MSG `is skipped for scope "<scope>"`
         expect(msg).toContain(`is skipped for scope "${row.scope}"`);
         // STRONGER: the message names the SKIPPED stage, proving resolve
-        // rejected the RIGHT stage (aidlc-jump.ts:118 emits Stage "<slug>" ...).
+        // rejected the RIGHT stage (amadeus-jump.ts:118 emits Stage "<slug>" ...).
         expect(msg).toContain(`Stage "${skip}"`);
       });
     }
@@ -478,12 +478,12 @@ describe("t118 engine differential corpus — aidlc-orchestrate next (migrated f
 
   // --- No-state workflow-birth trio (3 cases) --- (t118.sh:276-315). Every diff
   // above seeds state then jumps; these drive a NO-STATE invocation
-  // (createTestProject makes aidlc-docs/ but NO aidlc-state.md), the
+  // (createTestProject makes amadeus-docs/ but NO amadeus-state.md), the
   // workflow-birth paths the Wave 2 cutover leans on. They sat outside the close
   // gate, which is how the engine's known-scope / no-state defects (Wave-1 audit
   // findings 2 & 3) slipped through. Each pins the resolved scope / directive
   // kind the engine emits for a fresh workspace.
-  describe("no-state workflow-birth trio — fresh workspace, no aidlc-state.md", () => {
+  describe("no-state workflow-birth trio — fresh workspace, no amadeus-state.md", () => {
     // (1) Bare KNOWN-SCOPE positional: `next bugfix` — the literal scope name is
     // NOT freeform intent. The engine recognises it as the scope (finding 2) and
     // emits the SAME workflow-birth print `next --scope bugfix` emits: a
@@ -520,7 +520,7 @@ describe("t118 engine differential corpus — aidlc-orchestrate next (migrated f
     // advance from and creating one is init's (mutating) job, so it emits the
     // no-state error rather than guessing. The wording names the two explicit
     // moves that DO start a workflow — it must never be the circular "Start a
-    // workflow with /aidlc <scope>" clause (an explicitly named scope births
+    // workflow with /amadeus <scope>" clause (an explicitly named scope births
     // via print now, so telling the user to retype it would be a lie).
     test("no-state bare next -> error directive (no position to advance from)", () => {
       const r = emitNextNoState();
@@ -533,7 +533,7 @@ describe("t118 engine differential corpus — aidlc-orchestrate next (migrated f
       // name-a-scope both birth; there is no --init. A regression back to the
       // circular clause (or a re-introduced --init) reds here.
       expect(r.directive.message ?? "").toContain(
-        'Start one by describing what to build (/aidlc "build the auth service") or by naming a scope (/aidlc --scope <scope>).',
+        'Start one by describing what to build (/amadeus "build the auth service") or by naming a scope (/amadeus --scope <scope>).',
       );
     });
 

@@ -1,11 +1,11 @@
-// covers: file:skills/aidlc/SKILL.md, subcommand:aidlc-utility:recompose
+// covers: file:skills/amadeus/SKILL.md, subcommand:amadeus-utility:recompose
 //
 // t196-compose-inflight.sdk.test.ts - the P4 in-flight recompose journey (sdk
 // live). t194 pins the deterministic verb; this proves the CONDUCTOR arc the
 // SKILL.md composer block names, over a real running workflow:
 //
 //   seed:      an active mid-ideation feature workflow (the born shape).
-//   drive:     `/aidlc compose "drop market research and team formation"`.
+//   drive:     `/amadeus compose "drop market research and team formation"`.
 //   engine:    Branch 4c WITH-STATE dispatch (t198 pins it does not advance).
 //   conductor: dispatches the composer -> proposal (SKIP flips for the two
 //              named pending stages) -> writes the pending marker -> gate
@@ -15,7 +15,7 @@
 //              RECOMPOSED audited; the marker is GONE; the cursor and every
 //              checkbox marker byte-unchanged (a plan edit, not an advance).
 //
-// It SPENDS TOKENS - driveAidlc drives the real /aidlc on Opus/Bedrock. Gated
+// It SPENDS TOKENS - driveAidlc drives the real /amadeus on Opus/Bedrock. Gated
 // on claude-CLI presence.
 
 import { describe, expect, test } from "bun:test";
@@ -37,7 +37,7 @@ const APPROVE_ALL = {
   fallback: { labelContains: "Approve" },
 };
 
-describe("t196 in-flight recompose journey (/aidlc compose mid-workflow, sdk live)", () => {
+describe("t196 in-flight recompose journey (/amadeus compose mid-workflow, sdk live)", () => {
   test(
     "mid-flow compose proposes SKIP flips, approve lands them via the recompose verb, cursor untouched",
     async () => {
@@ -52,7 +52,7 @@ describe("t196 in-flight recompose journey (/aidlc compose mid-workflow, sdk liv
         const birth = Bun.spawnSync({
           cmd: [
             process.execPath,
-            join(proj, ".claude", "tools", "aidlc-utility.ts"),
+            join(proj, ".claude", "tools", "amadeus-utility.ts"),
             "intent-birth", "--scope", "feature", "--project-dir", proj,
           ],
           stdout: "pipe",
@@ -65,7 +65,7 @@ describe("t196 in-flight recompose journey (/aidlc compose mid-workflow, sdk liv
         const cursorBefore = /- \*\*Current Stage\*\*: (.*)/.exec(before)?.[1];
 
         const r = await driveAidlc(
-          '/aidlc compose "drop market research and team formation from this workflow - we already know the market and the team"',
+          '/amadeus compose "drop market research and team formation from this workflow - we already know the market and the team"',
           {
             projectDir: proj,
             answerScript: APPROVE_ALL,

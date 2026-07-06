@@ -1,20 +1,20 @@
-// covers: file:skills/aidlc/SKILL.md
+// covers: file:skills/amadeus/SKILL.md
 //
 // t119 — the orchestrator's SKILL.md line budget. Migrated from
 // tests/smoke/t119-skill-md-line-budget.sh (1 TAP assertion).
 //
 // Mechanism: none. The .sh shelled out to `wc -l` against a static shipped
 // file; there is no tool / process seam under test — the subject IS the line
-// count of dist/claude/.claude/skills/aidlc/SKILL.md. So the twin reads that
+// count of dist/claude/.claude/skills/amadeus/SKILL.md. So the twin reads that
 // file in-process (resolved from the harness's AIDLC_SRC, the same
 // dist/claude/.claude root the .sh reached via $AIDLC_SRC) and counts lines.
 // Zero LLM, zero tokens, zero subprocess.
 //
 // Subject under test (the shipped orchestrator skill):
-//   dist/claude/.claude/skills/aidlc/SKILL.md — must stay under the Agent
+//   dist/claude/.claude/skills/amadeus/SKILL.md — must stay under the Agent
 //   Skills spec's 500-line ceiling. Before the forwarding-loop cutover it ran
 //   895 lines (≈1.8× over); the rewrite deleted all between-stage dispatch
-//   prose (now owned by aidlc-orchestrate.ts) leaving only the loop protocol +
+//   prose (now owned by amadeus-orchestrate.ts) leaving only the loop protocol +
 //   the conductor's execution-quality prose.
 //
 // The pin is the 500 CEILING, deliberately — NOT the current landing (~173
@@ -42,7 +42,7 @@ import { join } from "node:path";
 import { AIDLC_SRC } from "../harness/fixtures.ts";
 
 // AIDLC_SRC = <repo>/dist/claude/.claude — the same root the .sh reached via
-// $AIDLC_SRC. The orchestrator skill sits at skills/aidlc/SKILL.md beneath it.
+// $AIDLC_SRC. The orchestrator skill sits at skills/amadeus/SKILL.md beneath it.
 const SKILL_MD = join(AIDLC_SRC, "skills", "aidlc", "SKILL.md");
 
 // The Agent Skills spec ceiling the .sh pinned via `assert_lt LINES 501`

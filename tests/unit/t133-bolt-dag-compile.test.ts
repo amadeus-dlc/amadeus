@@ -1,15 +1,15 @@
-// covers: subcommand:aidlc-runtime:compile, subcommand:aidlc-sensor-required-sections, function:parseBoltDag
+// covers: subcommand:amadeus-runtime:compile, subcommand:amadeus-sensor-required-sections, function:parseBoltDag
 //
 // t133 — Bolt-DAG runtime compile + gate-time edge-block sensor. Migrated from
 // tests/unit/t133-bolt-dag-compile.sh (TAP plan 10).
 //
 // Mechanism: cli. Both surfaces under test are process-boundary seams that the
 // .sh exercised by shelling out, and that an in-process import would lose:
-//   - aidlc-runtime.ts `compile` writes runtime-graph.json to disk (the bolt_dag
+//   - amadeus-runtime.ts `compile` writes runtime-graph.json to disk (the bolt_dag
 //     node is only observable as on-disk bytes) and writes the omit-diagnostic to
-//     STDERR (computeBoltDag, aidlc-runtime.ts:303-306). Byte-identical recompile
+//     STDERR (computeBoltDag, amadeus-runtime.ts:303-306). Byte-identical recompile
 //     is a disk-bytes contract, not a return value.
-//   - aidlc-sensor-required-sections.ts writes its Result JSON to STDOUT and
+//   - amadeus-sensor-required-sections.ts writes its Result JSON to STDOUT and
 //     terminates with process.exit(0) (:101-102) — a CLI shell. The edge_block
 //     field + pass flag are only observable on that stdout.
 // Both spawn the real .ts via the BUN runtime (process.execPath) against the
@@ -17,19 +17,19 @@
 // tests/integration/t48-runtime-graph-end-to-end.test.ts, tests/integration/t104).
 //
 // Source under test:
-//   dist/claude/.claude/tools/aidlc-runtime.ts
+//   dist/claude/.claude/tools/amadeus-runtime.ts
 //     :297 computeBoltDag(projectDir) — reads unit-of-work-dependency.md, calls
 //          parseBoltDag; returns undefined (node omitted) + STDERR diagnostic on
 //          absent/malformed/cyclic; pure data, no Date.now → byte-identical recompile.
 //     :758-761 compile() appends graph.bolt_dag only when computeBoltDag returns
 //          a node, so the absent envelope keeps key order {workflow_id, scope,
 //          started_at, stages} (the pre-milestone-15 4-key shape).
-//   dist/claude/.claude/tools/aidlc-sensor-required-sections.ts
+//   dist/claude/.claude/tools/amadeus-sensor-required-sections.ts
 //     :89-97 filename-gated extension: for unit-of-work-dependency.md, sets
 //          result.edge_block = parseBoltDag().reason (or "ok"); a non-ok block
 //          forces pass:false. Every other markdown keeps the generic ≥2-H2 check
 //          with NO edge_block field.
-//   dist/claude/.claude/tools/aidlc-lib.ts
+//   dist/claude/.claude/tools/amadeus-lib.ts
 //     :1968 parseBoltDag(body) — the single source of truth both consumers
 //          branch on: {ok,units,batches} | {ok:false, reason: absent|malformed|cyclic}.
 //          :1932 computeBatches — Kahn-by-level, each level sorted lexicographically.
@@ -59,20 +59,20 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { AIDLC_SRC, FIXTURES_DIR, toPortablePath } from "../harness/fixtures.ts";
-import { auditFilePath } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { auditFilePath } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // P9: with no intent cursor seeded, the compile tool resolves the BARE space
 // record root (docsRoot -> spaceRecordRoot) at aidlc/spaces/default/intents/.
 // State, runtime-graph, the unit-dependency artefact, and the audit shard all
-// live under it (the flat aidlc-docs/ root is retired — there is no fallback).
+// live under it (the flat amadeus-docs/ root is retired — there is no fallback).
 const RECORD_REL = join("aidlc", "spaces", "default", "intents");
 function recordRoot(proj: string): string {
   return join(proj, RECORD_REL);
 }
 
 const BUN = process.execPath; // the bun running this test
-const RUNTIME = join(AIDLC_SRC, "tools", "aidlc-runtime.ts");
-const SENSOR = join(AIDLC_SRC, "tools", "aidlc-sensor-required-sections.ts");
+const RUNTIME = join(AIDLC_SRC, "tools", "amadeus-runtime.ts");
+const SENSOR = join(AIDLC_SRC, "tools", "amadeus-sensor-required-sections.ts");
 const STATE_FIXTURE = join(FIXTURES_DIR, "state-construction.md");
 
 const tempDirs: string[] = [];
@@ -81,7 +81,7 @@ afterAll(() => {
   for (const d of tempDirs) rmSync(d, { recursive: true, force: true });
 });
 
-// make_project (.sh:66-99): aidlc-state.md (the construction fixture) + an
+// make_project (.sh:66-99): amadeus-state.md (the construction fixture) + an
 // audit.md carrying WORKFLOW_STARTED so compile builds a real header rather
 // than the empty-graph short-circuit. Each call is a fresh dir, torn down in
 // afterAll — same isolation the .sh's mktemp -d + EXIT trap gave.
@@ -99,7 +99,7 @@ const AUDIT_MD = `# AI-DLC Audit Log
 **Timestamp**: 2026-06-06T08:01:00Z
 **Event**: STAGE_STARTED
 **Stage**: units-generation
-**Agent**: aidlc-architect-agent
+**Agent**: amadeus-architect-agent
 
 ---
 
@@ -112,13 +112,13 @@ const AUDIT_MD = `# AI-DLC Audit Log
 `;
 
 function makeProject(): string {
-  let proj = mkdtempSync(join(tmpdir(), "aidlc-t133-"));
+  let proj = mkdtempSync(join(tmpdir(), "amadeus-t133-"));
   proj = toPortablePath(proj);
   tempDirs.push(proj);
   mkdirSync(join(recordRoot(proj), "inception", "units-generation"), {
     recursive: true,
   });
-  cpSync(STATE_FIXTURE, join(recordRoot(proj), "aidlc-state.md"));
+  cpSync(STATE_FIXTURE, join(recordRoot(proj), "amadeus-state.md"));
   // Seed the DETERMINISTIC audit shard the compile tool resolves
   // (auditFilePath -> the bare space record root's audit/<host>-<clone>.md) so
   // its readAllAuditShards() sees the WORKFLOW_STARTED header.
@@ -290,7 +290,7 @@ describe("t133 Bolt-DAG runtime compile (migrated from t133-bolt-dag-compile.sh,
   }, 30000);
 });
 
-describe("t133 edge-block sensor (aidlc-sensor-required-sections, units-generation 2.7)", () => {
+describe("t133 edge-block sensor (amadeus-sensor-required-sections, units-generation 2.7)", () => {
   // ---- 7-9: sensor edge-block validation -----------------------------------
   test("sensor: valid block → pass:true, edge_block:ok [.sh test 7]", () => {
     const proj = makeProject();

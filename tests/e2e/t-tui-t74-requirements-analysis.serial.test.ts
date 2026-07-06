@@ -12,7 +12,7 @@
 //
 // WHAT IT PROVES (equal-or-stronger than the .sh on the same on-disk surface):
 //   The .sh seeds a brownfield Todo app, mid-inception state (Current Stage ==
-//   requirements-analysis — a redo jump, so aidlc-jump does NOT terminate; the
+//   requirements-analysis — a redo jump, so amadeus-jump does NOT terminate; the
 //   stage's own gate runs, approve auto-advances to the next in-scope stage), and
 //   4 pre-seeded reverse-engineering artefacts. After the stage runs it asserts:
 //     1  requirements-analysis directory created          -> covered by terminator + dir read
@@ -88,7 +88,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import * as os from "node:os";
 import { join } from "node:path";
 import { resolveWinNode } from "../harness/tui-drive.ts";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { seededRecordDir, seededStateFile } from "../harness/fixtures.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
@@ -215,14 +215,14 @@ describe("t-tui-t74-requirements-analysis (answering AUQ gates commits the requi
         // --- submit the stage jump --------------------------------------------
         // The slash command has spaces -> send literally with no auto-Enter, then
         // Enter as a named key (the template's exact two-step). The fixture's
-        // Current Stage already equals the target, so aidlc-jump treats this as a
+        // Current Stage already equals the target, so amadeus-jump treats this as a
         // redo and does NOT terminate — the stage's own gate runs interactively.
         drive([
           "send",
           "--session",
           session,
           "--keys",
-          "/aidlc --stage requirements-analysis",
+          "/amadeus --stage requirements-analysis",
           "--literal",
           "--no-enter",
         ]);
@@ -366,7 +366,7 @@ describe("t-tui-t74-requirements-analysis (answering AUQ gates commits the requi
         // The interactive stage commit emits STAGE_COMPLETED (and the gate emits
         // GATE_APPROVED). The .sh asserted only state lines; this also pins the
         // audit emission the interactive path produces, on the same surface
-        // the workshop port asserts (`**Event**: <type>` line, aidlc-audit.ts:258).
+        // the workshop port asserts (`**Event**: <type>` line, amadeus-audit.ts:258).
         const auditMd = readAllAuditShards(sandbox);
         const auditLines = auditMd.split("\n");
         const stageCompleted = auditLines.filter((l) =>

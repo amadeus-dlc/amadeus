@@ -10,7 +10,7 @@
 // and TERMINATES on the on-disk Completed counter crossing the post-init milestone.
 //
 // What it proves (PATTERN B — multi-gate journey, answer-gate --until-state-field):
-//   - a bugfix workflow starts from `/aidlc bugfix` on a fresh BROWNFIELD workspace
+//   - a bugfix workflow starts from `/amadeus bugfix` on a fresh BROWNFIELD workspace
 //     (statusline leaves `ready` for a live phase),
 //   - the answer-gate clears the Initialization + Inception gates (bugfix SKIPS all
 //     of Ideation per scope-mapping.json) by taking the Recommended default per
@@ -21,12 +21,12 @@
 //     Inception stage progressed"):
 //       * the Completed counter crosses 5 (init=3 + >= 2 Inception); this is the
 //         answer-gate terminator (--until-state-field "Completed=([5-9]|[1-9][0-9])"),
-//       * the born intent's aidlc-state.md records the `bugfix` scope + a brownfield
+//       * the born intent's amadeus-state.md records the `bugfix` scope + a brownfield
 //         classification (.sh tests 3 + 16),
 //       * State Version is 7 (.sh test 12),
 //       * MORE than 4 stages are marked complete `- [x]` (.sh test 13),
 //       * the Completed counter EQUALS the `- [x]` grid count — the invariant the
-//         framework maintains (aidlc-state.ts:256-258 syncs Completed to
+//         framework maintains (amadeus-state.ts:256-258 syncs Completed to
 //         countCheckboxes(...,"completed")); the .sh implied this by greping both,
 //       * all 3 Initialization stages are `[x]` (.sh tests 4-6),
 //       * at least one Inception stage progressed — reverse-engineering or
@@ -102,7 +102,7 @@ import {
 } from "../harness/sdk-drive.ts";
 import { gridHasMenu, resolveWinNode } from "../harness/tui-drive.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
-import { activeSpace } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { activeSpace } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // The space-level per-repo codekb dir the RE stage writes into
 // (aidlc/spaces/<space>/codekb/<repo>/ — the codekb-determinism placement fix).
@@ -194,7 +194,7 @@ describe("t-tui-t50-bugfix-scope (answering gates advances bugfix lifecycle on d
       // brownfieldStub + noAidlcDocs: a brand-new brownfield workspace (a React/Vite
       // Todo app) the bugfix workflow scaffolds itself, driving workspace-detection
       // to Brownfield + reverse-engineering (mirrors the .sh's
-      // setup_integration_project --no-aidlc-docs --with-brownfield-stub).
+      // setup_integration_project --no-amadeus-docs --with-brownfield-stub).
       const sandbox = setupTuiProject({ brownfieldStub: true, noAidlcDocs: true });
       // The render value-add: we tail the grid during the run to prove a gate
       // menu painted at least once (the SDK path can't see it).
@@ -230,7 +230,7 @@ describe("t-tui-t50-bugfix-scope (answering gates advances bugfix lifecycle on d
         // --- submit the bugfix workflow command --------------------------------
         // Use the EXPLICIT `--scope bugfix` flag, not the bare freeform `bugfix`
         // keyword. The shipped distributable settings.json pins
-        // AWS_AIDLC_DEFAULT_SCOPE=workshop, so a bare freeform `/aidlc bugfix ...`
+        // AWS_AIDLC_DEFAULT_SCOPE=workshop, so a bare freeform `/amadeus bugfix ...`
         // is a freeform-vs-env CONFLICT: SKILL.md step 0 (:105) only skips env
         // substitution when `$ARGUMENTS` already contains the literal `--scope`
         // token, so the bare keyword triggers a 3-way scope disambiguation gate at
@@ -242,7 +242,7 @@ describe("t-tui-t50-bugfix-scope (answering gates advances bugfix lifecycle on d
         // proven live by t29's override case), so t50 cleanly tests the bugfix
         // LIFECYCLE without the env-default derail. The trailing description still
         // flows to the known-scope handler (SKILL.md:122: `--scope bugfix` with no
-        // state "behaves like /aidlc bugfix") so the step-6 free-text "what to
+        // state "behaves like /amadeus bugfix") so the step-6 free-text "what to
         // build?" prompt is satisfied up front (answer-gate can't type free text).
         // Send literally (spaces) with no auto-Enter, then Enter as a named key.
         drive([
@@ -250,7 +250,7 @@ describe("t-tui-t50-bugfix-scope (answering gates advances bugfix lifecycle on d
           "--session",
           session,
           "--keys",
-          "/aidlc --scope bugfix the todo checkbox state is not persisted after page reload",
+          "/amadeus --scope bugfix the todo checkbox state is not persisted after page reload",
           "--literal",
           "--no-enter",
         ]);
@@ -273,12 +273,12 @@ describe("t-tui-t50-bugfix-scope (answering gates advances bugfix lifecycle on d
 
         // --- answer the gates via the shared answer-gate primitive (§3) --------
         // It answers all tabs/gates by taking the Recommended default and
-        // TERMINATES when aidlc-state.md's Completed counter reaches the post-init
+        // TERMINATES when amadeus-state.md's Completed counter reaches the post-init
         // milestone — `Completed=([5-9]|[1-9][0-9])` means >= 5 (init 3 + the 2
         // Inception stages bugfix executes: reverse-engineering +
         // requirements-analysis). This is the .sh's "more than 4 completed" (test
         // 13) expressed as a disk terminator; the Completed field is synced to the
-        // `[x]` grid by the framework (aidlc-state.ts:256-258), so the counter IS
+        // `[x]` grid by the framework (amadeus-state.ts:256-258), so the counter IS
         // the grid count. Run it as a long-lived subprocess; its own backstops
         // error loud, so a hang surfaces as a nonzero exit (never a manufactured
         // pass — IRON RULE).
@@ -341,7 +341,7 @@ describe("t-tui-t50-bugfix-scope (answering gates advances bugfix lifecycle on d
         expect(completedGrid).toBeGreaterThan(4);
 
         // The framework invariant the .sh implied by greping both surfaces: the
-        // Completed counter EQUALS the `- [x]` grid count (aidlc-state.ts syncs it).
+        // Completed counter EQUALS the `- [x]` grid count (amadeus-state.ts syncs it).
         // Assert counter==grid so a desynced state file is a finding, not silent.
         const counterMatch = /Completed\*\*:[ \t]*(\d+)/.exec(stateMd);
         expect(counterMatch).not.toBeNull();
@@ -371,7 +371,7 @@ describe("t-tui-t50-bugfix-scope (answering gates advances bugfix lifecycle on d
         // .sh test 11: knowledge directory created. The knowledge relocation
         // (b29ced6) moved this from the per-intent record to the SPACE level
         // (aidlc/spaces/<space>/knowledge — a sibling of intents/), ensured at
-        // birth by ensureWorkspaceDirs (aidlc-utility.ts:1975, which runs in the
+        // birth by ensureWorkspaceDirs (amadeus-utility.ts:1975, which runs in the
         // workspace-scaffold init stage for every scope, bugfix included).
         const knowledgeDir = spaceKnowledgeDirFor(sandbox);
         expect(existsSync(knowledgeDir) && statSync(knowledgeDir).isDirectory()).toBe(true);

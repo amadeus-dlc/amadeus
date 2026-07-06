@@ -4,15 +4,15 @@
 //         function:resolveRulesForStage, function:loadSensors, function:resolveSensorsForStage,
 //         function:compileStageGraph
 //
-// NOTE: this file also spawns the `aidlc-graph compile` / `export` CLIs (see MECHANISM
+// NOTE: this file also spawns the `amadeus-graph compile` / `export` CLIs (see MECHANISM
 // SPLIT below), but those are `subcommand` units with minMechanism: cli and CANNOT be
 // credited from a `.none` file — the ladder requires a `.cli` test. They are exercised
 // for behavioural parity, not claimed in covers:, exactly as t89.none.test.ts does.
 //
 // Bun migration of tests/integration/t66-graph-library.sh (plan 88).
-// The .sh spawned `bun -e "..."` and `bun aidlc-state.ts lookup ...` / `bun aidlc-graph.ts
+// The .sh spawned `bun -e "..."` and `bun amadeus-state.ts lookup ...` / `bun amadeus-graph.ts
 // compile|export` dozens of times and inspected stdout / on-disk graphs with jq + shasum.
-// This port IMPORTS aidlc-graph.ts / aidlc-lib.ts / aidlc-stage-schema.ts and calls the pure
+// This port IMPORTS amadeus-graph.ts / amadeus-lib.ts / amadeus-stage-schema.ts and calls the pure
 // functions directly (no subprocess), then asserts the SAME observable behaviour. The
 // genuine CLI-boundary assertions — those that prove a process exit code, a module-load
 // env read, byte-identical CLI stdout, or parallel-process concurrency serialisation —
@@ -69,22 +69,22 @@ import {
   subgraphForScope,
   topoSort,
   validateScope,
-} from "../../dist/claude/.claude/tools/aidlc-graph.ts";
+} from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 import {
   auditLockDir,
   loadScopeMapping,
   nextInScopeStage,
   withAuditLock,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
-import { validateStageFrontmatter } from "../../dist/claude/.claude/tools/aidlc-stage-schema.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { validateStageFrontmatter } from "../../dist/claude/.claude/tools/amadeus-stage-schema.ts";
 
 // --- Paths --------------------------------------------------------------------
 const TOOLS_DIR = join(import.meta.dir, "..", "..", "dist", "claude", ".claude", "tools");
-const GRAPH_TS = join(TOOLS_DIR, "aidlc-graph.ts");
-const STATE_TS = join(TOOLS_DIR, "aidlc-state.ts");
+const GRAPH_TS = join(TOOLS_DIR, "amadeus-graph.ts");
+const STATE_TS = join(TOOLS_DIR, "amadeus-state.ts");
 const SEED_GRAPH = join(TOOLS_DIR, "data", "stage-graph.json");
 const AIDLC_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
-const REAL_STAGES = join(AIDLC_SRC, "aidlc-common", "stages");
+const REAL_STAGES = join(AIDLC_SRC, "amadeus-common", "stages");
 const REAL_SENSORS = join(AIDLC_SRC, "sensors");
 const PARITY_DIR = join(import.meta.dir, "..", "fixtures", "mr9-parity");
 const EXPORT_FIXTURE = join(import.meta.dir, "..", "fixtures", "designer-export", "export.json");
@@ -465,8 +465,8 @@ describe("t66 plan-identity parity (spawnSync CLI-boundary: 9 scopes)", () => {
 // proving the frontmatter-derived grid == the LEGACY scope-mapping-derived plan
 // BEFORE scope-mapping.json was retired. scope-mapping.json IS now retired
 // (verified: dist/claude/.claude/tools/data/ has scope-grid.json, no
-// scope-mapping.json; nine .claude/scopes/aidlc-<scope>.md files are the
-// authored source). resolvePlanForScope() (aidlc-graph.ts:762-780) reads
+// scope-mapping.json; nine .claude/scopes/amadeus-<scope>.md files are the
+// authored source). resolvePlanForScope() (amadeus-graph.ts:762-780) reads
 // loadScopeGrid()[scope] — the compiled grid — so this resolve path now pins the
 // CURRENT shipped surface, and its output still equals the mr9-parity fixtures
 // byte-for-byte (the cutover held). No obsolete-source resurrection: the
@@ -628,13 +628,13 @@ describe("t66 nextInScopeStage state-file semantics (in-process)", () => {
 // =============================================================================
 // Circular import — both modules load without throw (.sh:539-544, 1 assertion)
 // In-process: the test file already statically imports BOTH modules at the top
-// (aidlc-graph.ts <-> aidlc-lib.ts circular pair). If the circular import threw at
+// (amadeus-graph.ts <-> amadeus-lib.ts circular pair). If the circular import threw at
 // module-load, this file would not have loaded at all. Pin it explicitly via the
 // imported symbols being functions — equivalent to the .sh's dynamic-import probe.
 // =============================================================================
 
 describe("t66 circular import (in-process)", () => {
-  test("lib.ts and aidlc-graph.ts load without circular-import throw", () => {
+  test("lib.ts and amadeus-graph.ts load without circular-import throw", () => {
     expect(`${typeof loadScopeMapping},${typeof loadGraph}`).toBe("function,function");
   });
 });
@@ -696,7 +696,7 @@ describe("t66 AIDLC_STAGE_GRAPH env override (spawnSync env-seam)", () => {
     // that the eval parser eats as escape sequences (\t -> TAB, \c, \d ...),
     // mangling the path to "C:aidlc...distclaude.claude<TAB>ools...". bun/node
     // accept forward-slash specifiers on every OS; no-op on macOS/Linux.
-    const libImport = join(TOOLS_DIR, "aidlc-lib.ts").replace(/\\/g, "/");
+    const libImport = join(TOOLS_DIR, "amadeus-lib.ts").replace(/\\/g, "/");
     const res = spawnSync(
       BUN,
       [
@@ -943,7 +943,7 @@ describe("t66 compile error hardening (in-process + source grep)", () => {
 
 // =============================================================================
 // compile --check drift detection (.sh:821-849, 3 assertions)
-// MUST STAY SPAWN: `aidlc-graph.ts compile --check` exits 0/1 via process.exit; there
+// MUST STAY SPAWN: `amadeus-graph.ts compile --check` exits 0/1 via process.exit; there
 // is no in-process seam for the check's exit boundary. Sandboxed via a fresh tempfile.
 // =============================================================================
 
@@ -1112,7 +1112,7 @@ describe("t66 rules_in_context resolution (in-process + spawnSync seams)", () =>
     const emptyRules = mkdtempSync(join(tmpdir(), "t66-rules-empty-"));
     scratch.push(popRules, emptyRules);
     // Neutral method-file name (P5 relocation: RULE_FILE_REGEX now matches
-    // org/team/project.md, not the old aidlc-<scope>.md).
+    // org/team/project.md, not the old amadeus-<scope>.md).
     writeFileSync(join(popRules, "org.md"), "# org rule\n");
     const graphA = seedGraphCopy();
     const graphB = seedGraphCopy();
@@ -1209,11 +1209,11 @@ describe("t66 sensors_applicable resolution (in-process + spawnSync seams)", () 
       recursive: true,
     });
     writeFileSync(
-      join(sensorsPop, "aidlc-required-sections.md"),
+      join(sensorsPop, "amadeus-required-sections.md"),
       `---
 id: required-sections
 kind: deterministic
-command: bun .claude/tools/aidlc-sensor.ts fire required-sections
+command: bun .claude/tools/amadeus-sensor.ts fire required-sections
 default_severity: advisory
 description: Probe sensor for canonical-emitter test
 ---
@@ -1246,7 +1246,7 @@ description: Probe sensor for canonical-emitter test
     const env = { ...process.env, AIDLC_SENSORS_DIR: sensorsDrift, AIDLC_STAGE_GRAPH: graphS3 };
     spawnSync(BUN, [GRAPH_TS, "compile"], { env, encoding: "utf8" });
     // Edit the linter manifest's matches glob; --check should now fail.
-    const linterPath = join(sensorsDrift, "aidlc-linter.md");
+    const linterPath = join(sensorsDrift, "amadeus-linter.md");
     const orig = readFileSync(linterPath, "utf8");
     writeFileSync(linterPath, orig.replace('"**/*.{ts,js}"', '"**/post-edit/*.ts"'));
     const check = spawnSync(BUN, [GRAPH_TS, "compile", "--check"], { env, encoding: "utf8" });

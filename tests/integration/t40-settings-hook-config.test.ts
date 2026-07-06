@@ -1,4 +1,4 @@
-// covers: hook:aidlc-session-start, hook:aidlc-statusline
+// covers: hook:amadeus-session-start, hook:amadeus-statusline
 //
 // t40 — settings.json hook/statusline/permissions wiring + the
 // settings.local.json.example override stub. Migrated from
@@ -15,9 +15,9 @@
 //
 // SOURCE UNDER TEST (dist/claude/.claude/settings.json):
 //   :32-43  hooks.SessionStart -> one group, matcher "", one hook command
-//           "bun $CLAUDE_PROJECT_DIR/.claude/hooks/aidlc-session-start.ts"
+//           "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-session-start.ts"
 //   :18-21  statusLine.type == "command",
-//           statusLine.command references aidlc-statusline.ts
+//           statusLine.command references amadeus-statusline.ts
 //   :5-17   permissions.allow — exactly 9 entries, including the
 //           "Bash(bun $CLAUDE_PROJECT_DIR/.claude/tools/*)" tools pattern
 // AND (dist/claude/.claude/settings.local.json.example):
@@ -37,7 +37,7 @@
 //   .sh test 1 (hooks.SessionStart array exists)            -> T1
 //   .sh test 2 (SessionStart references session-start.ts)   -> T2
 //   .sh test 3 (statusLine.type == "command")               -> T3
-//   .sh test 4 (statusLine references aidlc-statusline.ts)  -> T4
+//   .sh test 4 (statusLine references amadeus-statusline.ts)  -> T4
 //   .sh test 5 (permissions.allow has exactly 9 tools)      -> T5
 //   .sh test 6 (settings.local.json.example is valid JSON)  -> T6
 
@@ -85,7 +85,7 @@ describe("t40 settings.json hook/statusline/permissions config (migrated from t4
     const commands = (s.hooks?.SessionStart ?? []).flatMap((g) =>
       (g.hooks ?? []).map((h) => h.command ?? ""),
     );
-    expect(commands.some((c) => c.includes("aidlc-session-start.ts"))).toBe(
+    expect(commands.some((c) => c.includes("amadeus-session-start.ts"))).toBe(
       true,
     );
   });
@@ -95,11 +95,11 @@ describe("t40 settings.json hook/statusline/permissions config (migrated from t4
     expect(readSettings().statusLine?.type).toBe("command");
   });
 
-  test("T4: statusLine.command references aidlc-statusline.ts [.sh test 4]", () => {
-    // .sh: assert_grep SETTINGS 'aidlc-statusline.ts'. STRONGER: pinned to
+  test("T4: statusLine.command references amadeus-statusline.ts [.sh test 4]", () => {
+    // .sh: assert_grep SETTINGS 'amadeus-statusline.ts'. STRONGER: pinned to
     // statusLine.command, the field Claude Code actually executes.
     expect(readSettings().statusLine?.command ?? "").toContain(
-      "aidlc-statusline.ts",
+      "amadeus-statusline.ts",
     );
   });
 

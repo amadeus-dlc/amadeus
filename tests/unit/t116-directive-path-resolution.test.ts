@@ -1,10 +1,10 @@
-// covers: subcommand:aidlc-orchestrate:next
+// covers: subcommand:amadeus-orchestrate:next
 //
 // CLI-contract port of tests/unit/t116-directive-path-resolution.sh (TAP plan
 // 13), mechanism = cli. The .sh exercises the engine's run-stage directive
 // builder's artifact-path RESOLUTION: it resolves the graph node's artifact
 // VOCABULARY NAMES (produces = bare names; consumes = {artifact, required,
-// conditional_on} objects) into canonical aidlc-docs/... paths at emit time,
+// conditional_on} objects) into canonical amadeus-docs/... paths at emit time,
 // and drops conditional_on consumes-entries against the workflow's Project Type.
 //   - produces resolve under the directive's OWN stage (the node IS the producer).
 //   - consumes resolve under their PRODUCING stage (a consumed artifact lives in
@@ -13,13 +13,13 @@
 //   - per-unit Construction stages (for_each: unit-of-work) inject a {unit-name}
 //     segment, applied to whichever stage OWNS the file.
 //
-// Source under test (dist/claude/.claude/tools/aidlc-orchestrate.ts):
+// Source under test (dist/claude/.claude/tools/amadeus-orchestrate.ts):
 //   :619 resolveArtifactPath(name, owner, unit)
 //          - codekb owner: aidlc/spaces/<space>/codekb/<repo>/<name>.md (the
 //            isCodekb arm — fires for produces[] AND consumes[] of a codekb stage
 //            like reverse-engineering, dropping the per-intent record tail).
-//          - non-per-unit: aidlc-docs/<owner.phase>/<owner.slug>/<name>.md
-//          - per-unit:     aidlc-docs/construction/<unit>/<owner.slug>/<name>.md
+//          - non-per-unit: amadeus-docs/<owner.phase>/<owner.slug>/<name>.md
+//          - per-unit:     amadeus-docs/construction/<unit>/<owner.slug>/<name>.md
 //   :639 resolveConsumePath(name, node, unit) — keys on producersOf(name)[0],
 //          NOT the consuming node (1:1 producer rule); orphan fallback to node.
 //   :651 projectTypeFrom(stateContent) — reads "Project Type", lowercased to
@@ -31,14 +31,14 @@
 //          consumes[]/produces[] arrays.
 // NONE of these are exported (the tool has zero `export`s — verified), so the
 // resolution is only observable on the directive the spawned engine emits to
-// stdout. MECHANISM = cli: SPAWN the real `bun aidlc-orchestrate.ts next` via
+// stdout. MECHANISM = cli: SPAWN the real `bun amadeus-orchestrate.ts next` via
 // node:child_process spawnSync (BUN + the .ts path) and assert on the parsed
 // JSON directive's produces[]/consumes[] arrays — the same process boundary the
 // .sh drove (`bun "$TOOL" next ... 2>&1` then python-parsed the JSON). An
 // in-process twin is IMPOSSIBLE here: the functions are unreachable from TS.
 //
 // VEHICLE (mirrors the .sh's emit_for, t116:51-63): a WITH-STATE jump now emits
-// a `print` naming aidlc-jump.ts execute (NOT a run-stage; pinned by t114/t117/
+// a `print` naming amadeus-jump.ts execute (NOT a run-stage; pinned by t114/t117/
 // t118), so the path-resolution behaviour is reached via the Branch-10 happy
 // path — seed a fixture, pivot Current Stage to the target slug AND mark its
 // checkbox in-flight ([-]), then run bare `next`. That emits a run-stage for the
@@ -70,7 +70,7 @@
 // sed pivots + cleanup_test_project per emit): each emit uses a FRESH temp project
 // dir (createTestProject, toPortablePath on Windows so any path the tool
 // round-trips through JSON survives). seedStateFile copies the named fixture to
-// aidlc-docs/aidlc-state.md, then sedReplaceInFile pivots Current Stage to the
+// amadeus-docs/amadeus-state.md, then sedReplaceInFile pivots Current Stage to the
 // target and flips its checkbox to [-]. All temp dirs cleaned in afterAll.
 // resetAidlcEnv() clears AWS_AIDLC_DEFAULT_SCOPE so a developer's exported value
 // can't shadow the fixture scope. Each fixture is emitted ONCE and the directive
@@ -99,14 +99,14 @@ const ORCH = join(
   "claude",
   ".claude",
   "tools",
-  "aidlc-orchestrate.ts",
+  "amadeus-orchestrate.ts",
 );
 const FIXTURES_DIR = join(REPO_ROOT, "tests", "fixtures");
 
 // P9: the engine resolves a directive's produces/consumes RELATIVE to the active
 // intent's record dir (relativeRecordDir). The fixtures seed one default intent,
 // so the record prefix is deterministic. Every expected directive path below is
-// rooted here (was the flat `aidlc-docs/` prefix pre-P9).
+// rooted here (was the flat `amadeus-docs/` prefix pre-P9).
 const RP = `aidlc/spaces/${DEFAULT_SPACE}/intents/${DEFAULT_RECORD_DIR}`;
 
 // The reverse-engineering stage's artifacts live in the SPACE-LEVEL codekb store
@@ -195,7 +195,7 @@ function emitFor(
 // The union of a directive's PRESENT and ABSENT consume paths. This suite
 // asserts path RESOLUTION (which producer dir a consume is keyed under), which
 // is orthogonal to the presence split: the bare fixtures seed only
-// aidlc-state.md, so every consumed artifact is absent on disk and lands in
+// amadeus-state.md, so every consumed artifact is absent on disk and lands in
 // consumes_absent. Resolution assertions run over the union; the split's own
 // contract (present vs absent membership) is asserted separately below.
 function allConsumePaths(dir: RunStageDirective): string[] {

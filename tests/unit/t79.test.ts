@@ -1,24 +1,24 @@
-// covers: subcommand:aidlc-bolt:dispatch-event
+// covers: subcommand:amadeus-bolt:dispatch-event
 //
 // CLI-contract port of tests/unit/t79-dispatch-event-validation.sh (TAP plan
 // 12), mechanism = cli. Equal-or-stronger migration: every .sh assertion that
-// shelled out to `bun aidlc-bolt.ts dispatch-event ...` is preserved by
+// shelled out to `bun amadeus-bolt.ts dispatch-event ...` is preserved by
 // SPAWNING the real CLI via node:child_process spawnSync (BUN + the tool .ts
 // path), asserting on res.status / res.stdout / res.stderr exactly as the .sh
 // asserted on the captured `OUT` (2>&1), plus on the audit.md the tool writes
 // — the PROCESS boundary, not in-process handleDispatchEvent calls. An
 // in-process twin would lose the exit-code half the .sh's invalid-arg cases
 // rely on: the tool's error() path is process.exit(1) via emitError
-// (aidlc-bolt.ts:838-842 -> aidlc-lib.ts:1504-1546), and the JSON-ack-to-stdout
+// (amadeus-bolt.ts:838-842 -> amadeus-lib.ts:1504-1546), and the JSON-ack-to-stdout
 // half (console.log of `{"emitted":"..."}`).
 //
 // SUBCOMMAND UNIT: this .cli file credits the single subcommand unit the .sh
-// exercises — `aidlc-bolt dispatch-event` (covers KEY
-// subcommand:aidlc-bolt:dispatch-event, COLON form). All 12 .sh cases fire that
+// exercises — `amadeus-bolt dispatch-event` (covers KEY
+// subcommand:amadeus-bolt:dispatch-event, COLON form). All 12 .sh cases fire that
 // one subcommand across its three --event variants (INVOKED / RETURNED /
 // FALLBACK) plus the dispatch error arm.
 //
-// CONTRACT (aidlc-bolt.ts:660-734, handleDispatchEvent):
+// CONTRACT (amadeus-bolt.ts:660-734, handleDispatchEvent):
 //   - --event + --slug always required (Missing --event / Missing --slug).
 //   - MERGE_DISPATCH_INVOKED: requires --practices-excerpt; emits fields
 //     {Bolt slug, Practices section excerpt}.
@@ -29,7 +29,7 @@
 //     {Bolt slug, Fallback reason, Defaults applied}.
 //   - Unknown --event -> "Invalid --event: ...".
 //   Every variant prints `{"emitted":"<EVENT>","slug":"<slug>"}` on stdout
-//   and writes one audit block via appendAuditEntry (aidlc-audit.ts:240-272:
+//   and writes one audit block via appendAuditEntry (amadeus-audit.ts:240-272:
 //   `**Event**: <type>` then `**<key>**: <value>` lines, blocks separated by
 //   `\n---\n`).
 //
@@ -88,12 +88,12 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { cleanupTestProject, setupIntegrationProject } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
-const TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "aidlc-bolt.ts");
+const TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-bolt.ts");
 
 const tempDirs: string[] = [];
 
@@ -120,7 +120,7 @@ interface CliResult {
   stdout: string;
 }
 
-/** Spawn `bun aidlc-bolt.ts dispatch-event <args...> --project-dir <p>`. Mirrors `bun "$BOLT" dispatch-event ...`. */
+/** Spawn `bun amadeus-bolt.ts dispatch-event <args...> --project-dir <p>`. Mirrors `bun "$BOLT" dispatch-event ...`. */
 function dispatch(args: string[], p: string): CliResult {
   const res = spawnSync(BUN, [TOOL, "dispatch-event", ...args, "--project-dir", p], {
     encoding: "utf-8",
@@ -189,7 +189,7 @@ beforeAll(() => {
 // (.sh Tests 1-6)
 // ============================================================
 
-describe("t79 aidlc-bolt dispatch-event — emission (migrated from t79-dispatch-event-validation.sh, plan 12)", () => {
+describe("t79 amadeus-bolt dispatch-event — emission (migrated from t79-dispatch-event-validation.sh, plan 12)", () => {
   test("1: INVOKED returns JSON envelope with emitted=MERGE_DISPATCH_INVOKED", () => {
     const p = proj();
     const r = dispatch(
@@ -329,7 +329,7 @@ describe("t79 aidlc-bolt dispatch-event — emission (migrated from t79-dispatch
 // (.sh Tests 7-12)
 // ============================================================
 
-describe("t79 aidlc-bolt dispatch-event — validation", () => {
+describe("t79 amadeus-bolt dispatch-event — validation", () => {
   test("7: unknown --event rejected with error (exit 1)", () => {
     const r = dispatch(
       ["--event", "MERGE_DISPATCH_INVALID", "--slug", "t79-bolt-x"],

@@ -1,4 +1,4 @@
-// covers: subcommand:aidlc-utility:intent-birth, subcommand:aidlc-utility:space-create, subcommand:aidlc-utility:space, file:skills/aidlc/SKILL.md
+// covers: subcommand:amadeus-utility:intent-birth, subcommand:amadeus-utility:space-create, subcommand:amadeus-utility:space, file:skills/amadeus/SKILL.md
 //
 // t-exec-codex-journey-workspace.serial.test.ts — the LIVE workspace journey,
 // Codex-exec logic half (P10 / Stage E). Proves the SAME composed §0 promise the
@@ -16,15 +16,15 @@
 // `codex exec` is a one-shot, non-interactive spawn
 // (stdio:["ignore",…] — no stdin), so it CANNOT answer a mid-run question; each
 // journey beat is therefore a separate single-shot spawn invoking one
-// deterministic /aidlc verb whose result we read off disk.
+// deterministic /amadeus verb whose result we read off disk.
 //
 // The journey beats mirror the SDK + ACP legs (repos captured by sibling
 // auto-discovery on the auto-birth path — see the SDK leg's DRIFT NOTE):
-//   1. `/aidlc "build auth across both repos"` → auto-birth A spanning both repos.
+//   1. `/amadeus "build auth across both repos"` → auto-birth A spanning both repos.
 //   2. (cheaper variant) reverse-engineering writes per-repo codekb — no swarm.
-//   3. `/aidlc intent-birth …` → a 2nd isolated intent; A untouched.
-//   4. `/aidlc space-create teamB` → `/aidlc space teamB` → birth there; no leak.
-//   5. `/aidlc space default` → A still resumable.
+//   3. `/amadeus intent-birth …` → a 2nd isolated intent; A untouched.
+//   4. `/amadeus space-create teamB` → `/amadeus space teamB` → birth there; no leak.
+//   5. `/amadeus space default` → A still resumable.
 //
 // LIVE GATE: requires AIDLC_CODEX_EXEC_LIVE=1 + a codex >= 0.139.0 binary
 // (AIDLC_CODEX_BIN or PATH) + AWS creds for the Bedrock profile in
@@ -38,7 +38,7 @@ import {
   activeSpace,
   listIntents,
   readIntentRegistry,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   cleanupWorkspaceJourney,
   REPO_ROOT,
@@ -66,11 +66,11 @@ const UUIDV7_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 // The user types "teamB"; the engine slugifies it on disk (slugify lowercases —
-// aidlc-lib.ts:463), so the SPACE DIR + cursor + registry key are "teamb".
+// amadeus-lib.ts:463), so the SPACE DIR + cursor + registry key are "teamb".
 const TEAM_B_SLUG = "teamb";
 
 /** Prompt the conductor to run the deterministic intent-birth UTILITY directly
- *  (not route via `next`). A bare `/aidlc intent-birth …` is parsed as freeform
+ *  (not route via `next`). A bare `/amadeus intent-birth …` is parsed as freeform
  *  and fed to `next`; with intent A active the engine advances/scope-changes A
  *  instead of birthing (a verified SDK failure rewrote A's Scope). Naming the
  *  exact .codex/tools command hits the mints-unconditionally handler. */
@@ -78,7 +78,7 @@ function birthToolPrompt(scope: string, args: string): string {
   return (
     `Run this exact command with the shell and then stop — do NOT run \`next\`, ` +
     `do NOT advance or scope-change the currently active intent: ` +
-    `bun .codex/tools/aidlc-utility.ts intent-birth --scope ${scope} --arguments ${JSON.stringify(args)}`
+    `bun .codex/tools/amadeus-utility.ts intent-birth --scope ${scope} --arguments ${JSON.stringify(args)}`
   );
 }
 
@@ -137,7 +137,7 @@ function setupCodexJourney(): WorkspaceJourney {
       `region = "${AWS_REGION}"`,
       ``,
       `[shell_environment_policy]`,
-      `set = { AIDLC_RULES_DIR = ".codex/aidlc-rules" }`,
+      `set = { AIDLC_RULES_DIR = ".codex/amadeus-rules" }`,
       ``,
       `[projects."${root}"]`,
       `trust_level = "trusted"`,
@@ -219,7 +219,7 @@ describe("t-exec-codex-journey-workspace (live codex-exec multi-repo·intent·sp
       const { root, home } = journey;
       try {
         // --- Step 1: auto-birth A spanning both siblings ---------------------
-        // Name the scope explicitly: a bare prose `/aidlc "<desc>"` emits an `ask`
+        // Name the scope explicitly: a bare prose `/amadeus "<desc>"` emits an `ask`
         // scope-confirm (orchestrate Branch 8 :1148) that the ONE-SHOT codex exec
         // spawn cannot answer (no stdin), so the run would end before birth.
         // `--scope feature` births via Branch 9a with no gate; the repo span is
@@ -227,7 +227,7 @@ describe("t-exec-codex-journey-workspace (live codex-exec multi-repo·intent·sp
         const r1 = execCodex(
           root,
           home,
-          `Use the $aidlc skill to run: /aidlc --scope feature "build auth across both repos"`,
+          `Use the $amadeus skill to run: /amadeus --scope feature "build auth across both repos"`,
         );
         expect(r1.rc).toBe(0);
         const reg1 = readIntentRegistry(root);
@@ -242,7 +242,7 @@ describe("t-exec-codex-journey-workspace (live codex-exec multi-repo·intent·sp
         const r2 = execCodex(
           root,
           home,
-          `Use the $aidlc skill to run: /aidlc --stage reverse-engineering --single`,
+          `Use the $amadeus skill to run: /amadeus --stage reverse-engineering --single`,
           CODEKB_EXEC_MS,
         );
         expect(r2.rc).toBe(0);
@@ -250,7 +250,7 @@ describe("t-exec-codex-journey-workspace (live codex-exec multi-repo·intent·sp
         expect(codekbFiles(root, "repo-b").length).toBeGreaterThan(0);
 
         const recordADir = join(root, "aidlc", "spaces", "default", "intents", recordA as string);
-        const stateABefore = readFileSync(join(recordADir, "aidlc-state.md"), "utf-8");
+        const stateABefore = readFileSync(join(recordADir, "amadeus-state.md"), "utf-8");
         expect(workflowStartedCount(recordADir)).toBe(1);
 
         // --- Step 3: a SECOND isolated intent alongside A --------------------
@@ -263,11 +263,11 @@ describe("t-exec-codex-journey-workspace (live codex-exec multi-repo·intent·sp
         expect(new Set(reg3.map((e) => e.uuid)).size).toBe(2);
         for (const e of reg3) expect(e.uuid).toMatch(UUIDV7_RE);
         // A's workflow state untouched + B's birth did not bleed into A's shard.
-        expect(readFileSync(join(recordADir, "aidlc-state.md"), "utf-8")).toBe(stateABefore);
+        expect(readFileSync(join(recordADir, "amadeus-state.md"), "utf-8")).toBe(stateABefore);
         expect(workflowStartedCount(recordADir)).toBe(1);
 
         // --- Step 4: non-default space, no learnings leak --------------------
-        const r4 = execCodex(root, home, `Use the $aidlc skill to run: /aidlc space-create teamB`);
+        const r4 = execCodex(root, home, `Use the $amadeus skill to run: /amadeus space-create teamB`);
         expect(r4.rc).toBe(0);
         const teamBMemory = join(root, "aidlc", "spaces", TEAM_B_SLUG, "memory");
         const defaultOrg = readFileSync(
@@ -282,7 +282,7 @@ describe("t-exec-codex-journey-workspace (live codex-exec multi-repo·intent·sp
         expect(existsSync(join(root, "aidlc", "spaces", TEAM_B_SLUG, "knowledge"))).toBe(true);
         expect(existsSync(join(root, "aidlc", "spaces", TEAM_B_SLUG, "codekb"))).toBe(true);
 
-        const r4b = execCodex(root, home, `Use the $aidlc skill to run: /aidlc space teamB`);
+        const r4b = execCodex(root, home, `Use the $amadeus skill to run: /amadeus space teamB`);
         expect(r4b.rc).toBe(0);
         expect(activeSpace(root)).toBe(TEAM_B_SLUG);
 
@@ -293,11 +293,11 @@ describe("t-exec-codex-journey-workspace (live codex-exec multi-repo·intent·sp
         expect(existsSync(join(root, "aidlc", "spaces", TEAM_B_SLUG, "knowledge"))).toBe(true);
 
         // --- Step 5: back to default; A still resumable ----------------------
-        const r5 = execCodex(root, home, `Use the $aidlc skill to run: /aidlc space default`);
+        const r5 = execCodex(root, home, `Use the $amadeus skill to run: /amadeus space default`);
         expect(r5.rc).toBe(0);
         expect(activeSpace(root)).toBe("default");
         // A's workflow state survived the round trip; no foreign birth bled in.
-        expect(readFileSync(join(recordADir, "aidlc-state.md"), "utf-8")).toBe(stateABefore);
+        expect(readFileSync(join(recordADir, "amadeus-state.md"), "utf-8")).toBe(stateABefore);
         expect(workflowStartedCount(recordADir)).toBe(1);
         expect(readIntentRegistry(root, "default").length).toBe(2);
       } finally {

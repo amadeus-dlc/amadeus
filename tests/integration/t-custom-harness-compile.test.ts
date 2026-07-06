@@ -80,17 +80,17 @@ function runTool(proj: string, tool: string, args: string[]): Run {
   });
   return { status: res.status ?? -1, stdout: res.stdout ?? "", stderr: res.stderr ?? "" };
 }
-const graph = (proj: string, args: string[]) => runTool(proj, "aidlc-graph.ts", args);
+const graph = (proj: string, args: string[]) => runTool(proj, "amadeus-graph.ts", args);
 
 function stagePath(proj: string, phase: string, slug: string): string {
-  return join(proj, ".claude", "aidlc-common", "stages", phase, `${slug}.md`);
+  return join(proj, ".claude", "amadeus-common", "stages", phase, `${slug}.md`);
 }
 function editFile(p: string, fn: (s: string) => string): void {
   writeFileSync(p, fn(readFileSync(p, "utf8")));
 }
 // P4: `init` (→ intent-birth) writes the workflow record per-intent under
 // aidlc/spaces/<space>/intents/<slug>-<id8>/ (state, runtime-graph.json,
-// .aidlc-hooks-health/), NOT the flat aidlc-docs/. Resolve the born record from
+// .amadeus-hooks-health/), NOT the flat amadeus-docs/. Resolve the born record from
 // the active-space + active-intent cursors (flat fallback for a pre-birth/
 // pre-migration project).
 function recordDirOf(proj: string): string {
@@ -102,11 +102,11 @@ function recordDirOf(proj: string): string {
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf8").trim();
-    if (rec && existsSync(join(intentsDir, rec, "aidlc-state.md"))) {
+    if (rec && existsSync(join(intentsDir, rec, "amadeus-state.md"))) {
       return join(intentsDir, rec);
     }
   }
-  return join(proj, "aidlc-docs");
+  return join(proj, "amadeus-docs");
 }
 
 describe("t-custom-harness-compile (deterministic — harness-engineer edits resolve, errors fail loud)", () => {
@@ -132,7 +132,7 @@ describe("t-custom-harness-compile (deterministic — harness-engineer edits res
   // G2 — the custom scope routes EXACTLY the init trio + the two custom stages,
   // in numeric order. This is the "define a custom workflow (which stages run)"
   // dimension of harness engineering.
-  test("G2: `aidlc-graph scope data-migration` routes the init trio + both custom stages", () => {
+  test("G2: `amadeus-graph scope data-migration` routes the init trio + both custom stages", () => {
     const proj = setupIntegrationProject({ customHarness: true });
     try {
       const r = graph(proj, ["scope", CUSTOM_SCOPE]);
@@ -186,7 +186,7 @@ describe("t-custom-harness-compile (deterministic — harness-engineer edits res
         expect(node?.lead_agent).toBe(CUSTOM_AGENT_SLUG);
         const entry = (node?.sensors_applicable ?? []).find((s) => s.id === CUSTOM_SENSOR_ID);
         expect(entry).toBeDefined();
-        expect(entry?.matches).toBe("**/{aidlc-docs,intents}/**");
+        expect(entry?.matches).toBe("**/{amadeus-docs,intents}/**");
         expect(node?.inputs).toContain(CUSTOM_KNOWLEDGE_REF);
       }
 
@@ -267,11 +267,11 @@ describe("t-custom-harness-compile (deterministic — harness-engineer edits res
       // the hook, and assert the derived display renders.
       // The statusline renders the agent display only for an ACTIVE workflow —
       // it prints "[AIDLC] ready" unless Lifecycle Phase + Current Stage are
-      // present (aidlc-statusline.ts). Seed the same minimal CONSTRUCTION shape
+      // present (amadeus-statusline.ts). Seed the same minimal CONSTRUCTION shape
       // t61's statusline proof uses. P9: the statusline reads the ACTIVE INTENT's
       // state via stateFilePath(), so seed into the per-intent record
       // (seededStateFile — the cursor setupIntegrationProject seeds resolves it),
-      // not a flat aidlc-docs/.
+      // not a flat amadeus-docs/.
       const stateFile = seededStateFile(proj);
       mkdirSync(dirname(stateFile), { recursive: true });
       writeFileSync(
@@ -281,7 +281,7 @@ describe("t-custom-harness-compile (deterministic — harness-engineer edits res
       );
       const sl = spawnSync(
         "bun",
-        [join(proj, ".claude", "hooks", "aidlc-statusline.ts")],
+        [join(proj, ".claude", "hooks", "amadeus-statusline.ts")],
         {
           cwd: proj,
           encoding: "utf8",
@@ -306,18 +306,18 @@ describe("t-custom-harness-compile (deterministic — harness-engineer edits res
   test("G5: a real init + runtime compile records the custom scope + routed stages in runtime-graph.json", () => {
     const proj = setupIntegrationProject({ customHarness: true });
     try {
-      const init = runTool(proj, "aidlc-utility.ts", ["init", "--scope", CUSTOM_SCOPE]);
+      const init = runTool(proj, "amadeus-utility.ts", ["init", "--scope", CUSTOM_SCOPE]);
       expect(init.status).toBe(0);
 
       // init routed to the custom head stage (the scope's stage map drove this,
       // not a builtin) — proven in state before the runtime graph is even built.
       // P4: birth writes per-intent — resolve the born record.
       const record = recordDirOf(proj);
-      const state = readFileSync(join(record, "aidlc-state.md"), "utf8");
+      const state = readFileSync(join(record, "amadeus-state.md"), "utf8");
       const current = state.match(/Current Stage\*\*:\s*(.+)/)?.[1]?.trim();
       expect(current).toBe(SNAPSHOT_STAGE_SLUG);
 
-      const rt = runTool(proj, "aidlc-runtime.ts", ["compile"]);
+      const rt = runTool(proj, "amadeus-runtime.ts", ["compile"]);
       expect(rt.status).toBe(0);
 
       const runtime = JSON.parse(
@@ -349,11 +349,11 @@ describe("t-custom-harness-compile (deterministic — harness-engineer edits res
   // ERROR PATHS — the BIG GAP. Each test seeds a VALID custom harness, mutates
   // ONE thing to trip ONE guard, and asserts compile (or validate-scope) fails
   // loud with the SPECIFIC message. Strings captured from the live guards;
-  // each cite is the throw site in aidlc-graph.ts (or aidlc-stage-schema.ts).
+  // each cite is the throw site in amadeus-graph.ts (or amadeus-stage-schema.ts).
   // =========================================================================
 
   // E1 — a stage imports a sensor id that has no manifest.
-  // Guard: resolveSensorsForStage in aidlc-graph.ts.
+  // Guard: resolveSensorsForStage in amadeus-graph.ts.
   test("E1: unknown sensor id in a stage's `sensors:` fails compile", () => {
     const proj = setupIntegrationProject({ customHarness: true });
     try {
@@ -369,7 +369,7 @@ describe("t-custom-harness-compile (deterministic — harness-engineer edits res
   });
 
   // E2 — a requires_stage edge points at a slug no stage declares.
-  // Guard: edge-local resolution in aidlc-graph.ts.
+  // Guard: edge-local resolution in amadeus-graph.ts.
   test("E2: unknown requires_stage slug fails compile", () => {
     const proj = setupIntegrationProject({ customHarness: true });
     try {
@@ -387,7 +387,7 @@ describe("t-custom-harness-compile (deterministic — harness-engineer edits res
   // E3 — a stage requires a HIGHER-numbered stage (the edge-local invariant:
   // every requires_stage dep must be lower-numbered). schema-snapshot (2.0)
   // requiring migration-plan (2.9) violates it.
-  // Guard: edge-local invariant in aidlc-graph.ts.
+  // Guard: edge-local invariant in amadeus-graph.ts.
   test("E3: a requires_stage edge to a higher-numbered stage fails compile (edge-local invariant)", () => {
     const proj = setupIntegrationProject({ customHarness: true });
     try {
@@ -409,7 +409,7 @@ describe("t-custom-harness-compile (deterministic — harness-engineer edits res
   // This used to be a hard error (the pre-seed contract). It is now AUTO-SEEDED:
   // compile assigns the next free index in the stage's phase and a title-cased
   // default name, so "drop a stage file, run compile" works end-to-end (#364).
-  // Guard: compileStageGraph in aidlc-graph.ts.
+  // Guard: compileStageGraph in amadeus-graph.ts.
   test("E4: a stage .md with no stage-graph.json row is auto-seeded on compile (#364)", () => {
     const proj = setupIntegrationProject({ customHarness: true });
     try {
@@ -462,7 +462,7 @@ outputs: none
   });
 
   // E5 — two stage .md files declare the same slug.
-  // Guard: duplicate-slug in aidlc-graph.ts.
+  // Guard: duplicate-slug in amadeus-graph.ts.
   test("E5: two stage files with the same slug fail compile", () => {
     const proj = setupIntegrationProject({ customHarness: true });
     try {
@@ -495,16 +495,16 @@ outputs: none
 
   // E7 — two sensor manifests claim the same id. The dup-id guard fires on the
   // SECOND file in sort order, so the dupe must sort AFTER the canonical
-  // aidlc-schema-validator.md (aidlc-zdupe-validator.md does). A dupe sorting
+  // amadeus-schema-validator.md (amadeus-zdupe-validator.md does). A dupe sorting
   // BEFORE would trip the filename-stem-mismatch guard instead — both are valid
   // guards, but this asserts the duplicate-id one specifically.
-  // Guard: loadSensors duplicate-id in aidlc-graph.ts.
+  // Guard: loadSensors duplicate-id in amadeus-graph.ts.
   test("E7: two sensor manifests with the same id fail compile", () => {
     const proj = setupIntegrationProject({ customHarness: true });
     try {
-      const src = join(proj, ".claude", "sensors", `aidlc-${CUSTOM_SENSOR_ID}.md`);
+      const src = join(proj, ".claude", "sensors", `amadeus-${CUSTOM_SENSOR_ID}.md`);
       writeFileSync(
-        join(proj, ".claude", "sensors", "aidlc-zdupe-validator.md"),
+        join(proj, ".claude", "sensors", "amadeus-zdupe-validator.md"),
         readFileSync(src, "utf8"),
       );
       const r = graph(proj, ["compile"]);
@@ -520,7 +520,7 @@ outputs: none
   // consume; validate-scope is the scope-dependency check). Mutate
   // migration-plan to consume a phantom artefact, recompile (compile rewrites
   // the graph from the .md), then validate-scope.
-  // Guard: validateScope orphan-consume in aidlc-graph.ts.
+  // Guard: validateScope orphan-consume in amadeus-graph.ts.
   test("E8: an orphan consume (no producer) fails validate-scope", () => {
     const proj = setupIntegrationProject({ customHarness: true });
     try {
@@ -546,7 +546,7 @@ outputs: none
   // command string is opaque to the compiler), but at fire time the PostToolUse
   // sensor-fire hook spawns the dispatcher, the dispatcher exits non-zero, and
   // the hook records a hook-drop AND STILL exits 0 — the advisory exit-0
-  // contract (aidlc-sensor-fire.ts G5 :268; recordHookDrop :250-256). A broken
+  // contract (amadeus-sensor-fire.ts G5 :268; recordHookDrop :250-256). A broken
   // sensor must never block the workflow; it must surface as an advisory drop.
   //
   // Proven by invoking the REAL hook with a real PostToolUse payload over a
@@ -559,11 +559,11 @@ outputs: none
     const proj = setupIntegrationProject({ customHarness: true });
     try {
       // 1. BREAK the sensor — point its command at a script that doesn't exist.
-      const manifest = join(proj, ".claude", "sensors", `aidlc-${CUSTOM_SENSOR_ID}.md`);
+      const manifest = join(proj, ".claude", "sensors", `amadeus-${CUSTOM_SENSOR_ID}.md`);
       editFile(manifest, (s) =>
         s.replace(
-          "bun .claude/tools/aidlc-sensor-required-sections.ts",
-          "bun .claude/tools/aidlc-DOES-NOT-EXIST.ts",
+          "bun .claude/tools/amadeus-sensor-required-sections.ts",
+          "bun .claude/tools/amadeus-DOES-NOT-EXIST.ts",
         ),
       );
       // compile still SUCCEEDS — a command string is opaque to the compiler.
@@ -571,7 +571,7 @@ outputs: none
 
       // 2. init to the custom stage (Current Stage = schema-snapshot) so the
       //    hook's active-stage lookup resolves the broken sensor.
-      expect(runTool(proj, "aidlc-utility.ts", ["init", "--scope", CUSTOM_SCOPE]).status).toBe(0);
+      expect(runTool(proj, "amadeus-utility.ts", ["init", "--scope", CUSTOM_SCOPE]).status).toBe(0);
 
       // 3. write the artefact (the trigger) and invoke the REAL sensor-fire hook
       //    with the PostToolUse payload Claude Code would send for that Write.
@@ -587,7 +587,7 @@ outputs: none
       });
       const hook = spawnSync(
         "bun",
-        [join(proj, ".claude", "hooks", "aidlc-sensor-fire.ts")],
+        [join(proj, ".claude", "hooks", "amadeus-sensor-fire.ts")],
         { cwd: proj, encoding: "utf8", env: { ...process.env, CLAUDE_PROJECT_DIR: proj }, input: payload },
       );
 
@@ -596,9 +596,9 @@ outputs: none
 
       // THE EVIDENCE: a hook-drop was recorded naming the broken sensor + the
       // dispatcher's missing-script reason (advisory surface, not silent). P4:
-      // .aidlc-hooks-health/ resolves under the born intent's record (hooksHealthDir
+      // .amadeus-hooks-health/ resolves under the born intent's record (hooksHealthDir
       // → docsRoot), so read it from the per-intent record after init.
-      const dropFile = join(recordDirOf(proj), ".aidlc-hooks-health", "sensor-fire.drops");
+      const dropFile = join(recordDirOf(proj), ".amadeus-hooks-health", "sensor-fire.drops");
       expect(existsSync(dropFile)).toBe(true);
       const drops = readFileSync(dropFile, "utf8");
       expect(drops).toContain(CUSTOM_SENSOR_ID);

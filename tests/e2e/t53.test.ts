@@ -1,7 +1,7 @@
 // covers: audit:STAGE_STARTED, scope:bugfix
 //
 // t53.test.ts — SDK-harness port of tests/e2e/t53-workflow-scope-routing.sh
-// (plan 11). Drives the real `/aidlc bugfix` (TRAP 2: the run
+// (plan 11). Drives the real `/amadeus bugfix` (TRAP 2: the run
 // stops at the FIRST orchestrator directive, BEFORE any gate, so headless
 // auto-approve was never load-bearing; both the live prompt and the
 // deterministic seed are plain, human-driven)
@@ -11,7 +11,7 @@
 // blocks, and the parsed + raw audit) — NEVER on assistantText.
 //
 // WHY THIS PORT EXISTS. The .sh asserted entirely by grepping the post-run
-// aidlc-state.md on disk (plus a find over aidlc-docs/ideation/). Those greps
+// amadeus-state.md on disk (plus a find over amadeus-docs/ideation/). Those greps
 // are NOT prose-flaky — they read the FILE the deterministic init tool wrote,
 // not the LLM's rendering. But the .sh reached that file through a `claude -p`
 // subprocess + run_claude's exit-124 heuristic; this port reaches the SAME file
@@ -26,16 +26,16 @@
 // Ideation phase SKIP and only six stages EXECUTE: workspace-scaffold,
 // workspace-detection, state-init (the 3 init stages), reverse-engineering,
 // requirements-analysis (Inception), code-generation, build-and-test
-// (Construction). On a fresh greenfield project (--no-aidlc-docs ->
+// (Construction). On a fresh greenfield project (--no-amadeus-docs ->
 // noAidlcDocs:true) reverse-engineering is auto-downgraded to SKIP
-// (aidlc-utility.ts:1958-1968), leaving requirements-analysis as the first
+// (amadeus-utility.ts:1958-1968), leaving requirements-analysis as the first
 // post-init stage. The deterministic seed runs
-// `aidlc-utility.ts init --scope bugfix` directly, which writes
-// the full aidlc-state.md and the audit's WORKFLOW_STARTED / PHASE_STARTED /
+// `amadeus-utility.ts init --scope bugfix` directly, which writes
+// the full amadeus-state.md and the audit's WORKFLOW_STARTED / PHASE_STARTED /
 // PHASE_SKIPPED×2 / STAGE_STARTED+COMPLETED×3 / WORKSPACE_* events plus the
 // init->Inception phase hand-off (a 4th STAGE_STARTED naming requirements-
 // analysis). Crucially the init tool emits a STAGE_STARTED block for EXECUTE
-// stages ONLY (aidlc-utility.ts:1813,1907,1928,2134) — the SKIP stages
+// stages ONLY (amadeus-utility.ts:1813,1907,1928,2134) — the SKIP stages
 // (every Ideation stage, all Operation stages, etc.) get a `[ ] <slug> — SKIP`
 // row in Stage Progress and a `## Scope Configuration` Skip-list entry, but NO
 // audit STAGE_STARTED. The SDK portion proves the live slash route asks the
@@ -45,8 +45,8 @@
 //
 // ASSERTION MAP (.sh test -> deterministic SDK surface):
 //   1  assert_file_exists STATE             -> readStateFile(proj) !== undefined
-//                                              (init writes aidlc-state.md, utility.ts:2099)
-//   2  no ideation artifacts (empty/absent) -> no files under aidlc-docs/ideation/ on disk
+//                                              (init writes amadeus-state.md, utility.ts:2099)
+//   2  no ideation artifacts (empty/absent) -> no files under amadeus-docs/ideation/ on disk
 //                                              (init scaffolds empty stage dirs only, utility.ts:1818-1838;
 //                                               every Ideation stage is SKIP so no stage writes there)
 //   3  0× `[x] <ideation-stage>`            -> STRONGER: each of the 7 Ideation stage rows in Stage
@@ -77,12 +77,12 @@
 // Known-answer literals (read from the SHIPPED handler / scope-mapping, not guessed):
 //   - bugfix scope mapping (Ideation all SKIP, EXECUTE = init×3 + reverse-engineering +
 //     requirements-analysis + code-generation + build-and-test): scope-mapping.json "bugfix"
-//   - greenfield downgrades reverse-engineering EXECUTE->SKIP: aidlc-utility.ts:1958-1968
-//   - Stage Progress row shape `- [x|-| ] <slug> — EXECUTE|SKIP`: aidlc-utility.ts:1996-1998
-//   - Scope line "- **Scope**: bugfix": aidlc-utility.ts:2049
-//   - STAGE_STARTED emitted for EXECUTE stages only: aidlc-utility.ts:1813,1907,1928,2134
+//   - greenfield downgrades reverse-engineering EXECUTE->SKIP: amadeus-utility.ts:1958-1968
+//   - Stage Progress row shape `- [x|-| ] <slug> — EXECUTE|SKIP`: amadeus-utility.ts:1996-1998
+//   - Scope line "- **Scope**: bugfix": amadeus-utility.ts:2049
+//   - STAGE_STARTED emitted for EXECUTE stages only: amadeus-utility.ts:1813,1907,1928,2134
 //
-// It SPENDS TOKENS — driveAidlc drives the real /aidlc bugfix on
+// It SPENDS TOKENS — driveAidlc drives the real /amadeus bugfix on
 // Opus/Bedrock until the deterministic run-stage directive. Generous per-test
 // timeout so a hung SDK stream fails LOUD.
 
@@ -98,7 +98,7 @@ import {
 import { auditFilePathFor, driveAidlc } from "../harness/sdk-drive.ts";
 
 // ---------------------------------------------------------------------------
-// Timeout budget. `/aidlc bugfix` is live SDK traffic even though the
+// Timeout budget. `/amadeus bugfix` is live SDK traffic even though the
 // test stops after the deterministic orchestrator directive.
 // Honour the suite's AIDLC_TEST_TIMEOUT convention (seconds; the .sh family
 // allotted generous workflow budgets). The drive aborts a hair before bun
@@ -136,7 +136,7 @@ const INIT_STAGES = ["workspace-scaffold", "workspace-detection", "state-init"];
  * valid bugfix workflow; fresh no-state slash-command recovery is covered
  * elsewhere and can otherwise pollute audit.md before the bugfix run begins. */
 function seedBugfixState(proj: string): void {
-  const utility = join(proj, ".claude", "tools", "aidlc-utility.ts");
+  const utility = join(proj, ".claude", "tools", "amadeus-utility.ts");
   // The seed is a plain, deterministic init (TRAP 2). The live journey stops
   // at the first orchestrator directive, before any gate, so it needs no mode.
   const res = spawnSync(
@@ -150,7 +150,7 @@ function seedBugfixState(proj: string): void {
 
 /** Read the Stage-Progress row for a given stage slug from the post-run state
  *  file. Rows have the shape `- [<marker>] <slug> — <EXECUTE|SKIP>`
- *  (aidlc-utility.ts:1996-1998). Returns the marker char (e.g. "x", " ", "-")
+ *  (amadeus-utility.ts:1996-1998). Returns the marker char (e.g. "x", " ", "-")
  *  and the EXECUTE/SKIP suffix, or undefined if the slug has no row. */
 function stageRow(
   stateText: string,
@@ -170,12 +170,12 @@ function completedRowCount(stateText: string): number {
   return (stateText.match(/^- \[x\] /gm) ?? []).length;
 }
 
-/** Files (not dirs) under <proj>/aidlc-docs/ideation/, recursively. The init
+/** Files (not dirs) under <proj>/amadeus-docs/ideation/, recursively. The init
  *  tool scaffolds EMPTY stage dirs; because every Ideation stage is SKIP for
  *  bugfix, nothing should ever write a file there. Mirrors the .sh's
- *  `find aidlc-docs/ideation -type f`. */
+ *  `find amadeus-docs/ideation -type f`. */
 function ideationFiles(proj: string): string[] {
-  const dir = join(proj, "aidlc-docs", "ideation");
+  const dir = join(proj, "amadeus-docs", "ideation");
   if (!existsSync(dir)) return [];
   const out: string[] = [];
   const walk = (d: string): void => {
@@ -191,8 +191,8 @@ function ideationFiles(proj: string): string[] {
 
 /** Extract the `**Stage**:` slug from every STAGE_STARTED block in the raw
  *  audit.md. Each audit block is "## <Heading>\n**Timestamp**: ...\n
- *  **Event**: <TYPE>\n**Stage**: <slug>\n..." (aidlc-audit format; see
- *  aidlc-utility.ts:1813 etc.). We pair each STAGE_STARTED Event line with the
+ *  **Event**: <TYPE>\n**Stage**: <slug>\n..." (amadeus-audit format; see
+ *  amadeus-utility.ts:1813 etc.). We pair each STAGE_STARTED Event line with the
  *  Stage line in the SAME block so a non-STAGE_STARTED Stage field can't leak
  *  in. Returns the slugs in file order. */
 function stageStartedStages(proj: string): string[] {
@@ -209,17 +209,17 @@ function stageStartedStages(proj: string): string[] {
   return slugs;
 }
 
-describe("t53 /aidlc bugfix scope routing (sdk)", () => {
+describe("t53 /amadeus bugfix scope routing (sdk)", () => {
   test(
     "bugfix skips Ideation+Operation, marks init [x], records bugfix scope; STAGE_STARTED names EXECUTE stages only",
     async () => {
-      // --no-aidlc-docs: fresh greenfield project; init creates aidlc-docs/ from
+      // --no-amadeus-docs: fresh greenfield project; init creates amadeus-docs/ from
       // scratch and downgrades reverse-engineering to SKIP (greenfield).
       const proj = setupIntegrationProject({ noAidlcDocs: true });
       try {
         seedBugfixState(proj);
 
-        const r = await driveAidlc("/aidlc bugfix", {
+        const r = await driveAidlc("/amadeus bugfix", {
           projectDir: proj,
           timeoutMs: DRIVE_TIMEOUT_MS,
           stopAfterToolResult: {
@@ -243,7 +243,7 @@ describe("t53 /aidlc bugfix scope routing (sdk)", () => {
         const state = r.stateFile as string;
 
         // ---- .sh test 11: bugfix scope recorded ----
-        // The ## Project Information Scope line (aidlc-utility.ts:2049). Stronger
+        // The ## Project Information Scope line (amadeus-utility.ts:2049). Stronger
         // than the .sh's case-insensitive [Bb]ugfix grep: an exact field read.
         const scope = state.match(/^- \*\*Scope\*\*: (\S+)$/m)?.[1];
         expect(scope).toBe("bugfix");
@@ -293,7 +293,7 @@ describe("t53 /aidlc bugfix scope routing (sdk)", () => {
 
         // ---- .sh test 2: no Ideation artifacts created ----
         // init scaffolds empty stage dirs; every Ideation stage is SKIP, so no
-        // stage ever writes a file under aidlc-docs/ideation/.
+        // stage ever writes a file under amadeus-docs/ideation/.
         expect(ideationFiles(proj)).toEqual([]);
 
         // ---- .sh test 12: completed stages < 12 (bugfix scope constraint) ----

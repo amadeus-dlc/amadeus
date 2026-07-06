@@ -1,15 +1,15 @@
-// covers: subcommand:aidlc-worktree:discard, subcommand:aidlc-worktree:info
+// covers: subcommand:amadeus-worktree:discard, subcommand:amadeus-worktree:info
 //
 // CLI-contract port of tests/e2e/t10-halt-and-ask-discard.sh (TAP plan 8),
-// mechanism = cli. The .sh drives `aidlc-worktree.ts discard` to prove the
+// mechanism = cli. The .sh drives `amadeus-worktree.ts discard` to prove the
 // user-cleanup half of the symmetric preservation invariant (t09 proves the
 // preserve half): an explicit `discard --slug <s>` removes the worktree
 // directory, deregisters the worktree from git, and emits a WORKTREE_DISCARDED
 // audit-of-intent row carrying Reason: agent-discard and the Bolt slug; a
 // second discard is idempotent (exits 0 silently per the PR-7 contract,
-// aidlc-worktree.ts:470-480); and `info` still resolves the worktree path from
+// amadeus-worktree.ts:470-480); and `info` still resolves the worktree path from
 // the audit (audit-of-intent semantics — info reads the most-recent
-// WORKTREE_CREATED audit block, not the live filesystem, aidlc-worktree.ts
+// WORKTREE_CREATED audit block, not the live filesystem, amadeus-worktree.ts
 // :685-722).
 //
 // MECHANISM: this is a .cli file, so every observable is taken at the PROCESS
@@ -22,9 +22,9 @@
 // worktree-mutating cases (create/discard/info), plus a `git worktree list`
 // read for the deregistration assertion.
 //
-// FIXTURE: aidlc-worktree.ts asserts it runs from the main checkout
-// (assertNotSiblingWorktree, aidlc-worktree.ts:101) and runs real git, so the
-// case needs an ACTUAL git repo on `main` with one commit plus an aidlc-docs/
+// FIXTURE: amadeus-worktree.ts asserts it runs from the main checkout
+// (assertNotSiblingWorktree, amadeus-worktree.ts:101) and runs real git, so the
+// case needs an ACTUAL git repo on `main` with one commit plus an amadeus-docs/
 // dir. setupWorktreeFixture (tests/harness/fixtures.ts) builds exactly that;
 // the tool is spawned with cwd = the fixture so `git rev-parse --show-toplevel`
 // resolves to the main checkout. The .sh's `bolt fail` setup step is fixture
@@ -57,7 +57,7 @@
 //   .sh a7 (l48)  assert_eq RC 0  second discard idempotent
 //                   -> Test "3": status === 0 (STRONGER: also asserts the JSON
 //                      reports emitted:null / reason "already-discarded", the
-//                      no-re-emit contract at aidlc-worktree.ts:470-480, and that
+//                      no-re-emit contract at amadeus-worktree.ts:470-480, and that
 //                      no SECOND WORKTREE_DISCARDED row was written)
 //   .sh a8 (l55)  assert_contains INFO_OUT '"path":'  info resolves from audit
 //                   -> Test "4": info stdout contains '"path":' (STRONGER:
@@ -83,7 +83,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const WT_TOOL = join(AIDLC_SRC, "tools", "aidlc-worktree.ts");
+const WT_TOOL = join(AIDLC_SRC, "tools", "amadeus-worktree.ts");
 
 const fixtures: string[] = [];
 afterAll(() => {
@@ -96,7 +96,7 @@ interface CliResult {
   out: string; // combined stdout+stderr (mirrors the .sh's 2>&1)
 }
 
-/** Spawn `bun aidlc-worktree.ts <sub> ... --project-dir <p>` from cwd=<p>. */
+/** Spawn `bun amadeus-worktree.ts <sub> ... --project-dir <p>` from cwd=<p>. */
 function wt(p: string, sub: string, args: string[]): CliResult {
   const res = spawnSync(BUN, [WT_TOOL, sub, ...args, "--project-dir", p], {
     cwd: p,
@@ -159,14 +159,14 @@ function listedWorktrees(p: string): string[] {
     .map((l) => l.slice("worktree ".length).trim());
 }
 
-describe("t10 aidlc-worktree discard halt-and-ask cleanup (migrated from t10-halt-and-ask-discard.sh, plan 8)", () => {
+describe("t10 amadeus-worktree discard halt-and-ask cleanup (migrated from t10-halt-and-ask-discard.sh, plan 8)", () => {
   // Single shared fixture, set up once (the .sh ran as one linear script over
   // one fixture). create establishes the precondition: a worktree on disk.
   const p = setupWorktreeFixture();
   fixtures.push(p);
   // Seed a state file into the default record so the active-intent cursor
   // resolves and the WORKTREE_CREATED/DISCARDED audit lands in the per-intent
-  // record (the fixture's record is stateless; without aidlc-state.md the cursor
+  // record (the fixture's record is stateless; without amadeus-state.md the cursor
   // is rejected and the audit lands at the bare space root).
   writeFileSync(seededStateFile(p), "- **Current Stage**: code-generation\n", "utf-8");
   const created = wt(p, "create", ["--slug", "y", "--base", "main"]);
@@ -223,7 +223,7 @@ describe("t10 aidlc-worktree discard halt-and-ask cleanup (migrated from t10-hal
       // a7: exit 0 (idempotent per the PR-7 contract).
       expect(second.status).toBe(0);
       // STRONGER than the .sh: the no-re-emit JSON contract (emitted:null,
-      // reason "already-discarded", aidlc-worktree.ts:470-480) ...
+      // reason "already-discarded", amadeus-worktree.ts:470-480) ...
       const json = JSON.parse(second.stdout.trim());
       expect(json.emitted).toBeNull();
       expect(json.reason).toBe("already-discarded");

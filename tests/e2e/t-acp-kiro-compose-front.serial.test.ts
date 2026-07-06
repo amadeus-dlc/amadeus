@@ -1,4 +1,4 @@
-// covers: file:skills/aidlc/SKILL.md, file:agents/aidlc-composer-agent.md
+// covers: file:skills/amadeus/SKILL.md, file:agents/amadeus-composer-agent.md
 //
 // t-acp-kiro-compose-front.serial.test.ts - the P2 front-composer journey on
 // Kiro-ACP: the leg that exercises what NO other harness can - the composer
@@ -9,7 +9,7 @@
 //
 // Turn shape (ACP is single-turn; the compose gate renders as numbered prose,
 // so the approve is a SECOND turn on the same keepAlive session):
-//   turn 1: `/aidlc compose "<task>"` on a fresh workspace. The engine's
+//   turn 1: `/amadeus compose "<task>"` on a fresh workspace. The engine's
 //           Branch 4c print names the composer; the conductor delegates via
 //           the subagent tool; the composer detects + proposes; the conductor
 //           renders the approve/edit/reject gate as numbered prose and the
@@ -21,9 +21,9 @@
 //           tool title.
 //
 // Disk assertions (the same P2 contract as t192/SDK + t-tui):
-//   - .kiro/scopes/ gained a 10th aidlc-*.md AND scope-grid.json a 10th key
+//   - .kiro/scopes/ gained a 10th amadeus-*.md AND scope-grid.json a 10th key
 //     (the write landed THROUGH the Kiro sandbox);
-//   - the born aidlc-state.md carries the composed (non-stock) scope.
+//   - the born amadeus-state.md carries the composed (non-stock) scope.
 //
 // KNOWN RISK (plan §7): Kiro-ACP conductor forwarding is fragile (prior live
 // runs dropped $ARGUMENTS / ran the wrong tool). If this leg proves flaky the
@@ -92,7 +92,7 @@ describe("t-acp-kiro compose front journey (live Kiro ACP)", () => {
         await driveKiroAcp({
           projectDir: root,
           session,
-          prompt: `/aidlc compose "${TASK}"`,
+          prompt: `/amadeus compose "${TASK}"`,
           timeoutMs: TURN_MS,
           keepAlive: true,
         });
@@ -106,7 +106,7 @@ describe("t-acp-kiro compose front journey (live Kiro ACP)", () => {
           prompt:
             "1 (Approve the composed plan as-is - write the scope files and start the workflow)",
           timeoutMs: TURN_MS,
-          stopAfterToolTitle: /aidlc-utility\.ts intent-birth/,
+          stopAfterToolTitle: /amadeus-utility\.ts intent-birth/,
           keepAlive: true,
         });
         const birthOut = r2.toolCalls
@@ -117,7 +117,7 @@ describe("t-acp-kiro compose front journey (live Kiro ACP)", () => {
 
         // The two-file write landed THROUGH the Kiro sandbox.
         const scopeFiles = readdirSync(scopesDir).filter(
-          (f) => f.startsWith("aidlc-") && f.endsWith(".md"),
+          (f) => f.startsWith("amadeus-") && f.endsWith(".md"),
         );
         expect(scopeFiles.length).toBe(10);
         const grid = JSON.parse(readFileSync(gridPath, "utf-8")) as Record<string, unknown>;
@@ -132,7 +132,7 @@ describe("t-acp-kiro compose front journey (live Kiro ACP)", () => {
           : "default";
         const intentsDir = join(root, "aidlc", "spaces", space, "intents");
         const rec = readFileSync(join(intentsDir, "active-intent"), "utf-8").trim();
-        const state = readFileSync(join(intentsDir, rec, "aidlc-state.md"), "utf-8");
+        const state = readFileSync(join(intentsDir, rec, "amadeus-state.md"), "utf-8");
         expect(state).toContain(`- **Scope**: ${composed}`);
       } finally {
         session.close();

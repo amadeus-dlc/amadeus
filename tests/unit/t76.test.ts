@@ -1,8 +1,8 @@
-// covers: subcommand:aidlc-state:fork, subcommand:aidlc-state:merge
+// covers: subcommand:amadeus-state:fork, subcommand:amadeus-state:merge
 //
 // CLI-contract port of tests/unit/t76-state-fork-merge.sh (TAP plan 16),
 // mechanism = cli. Equal-or-stronger migration: every .sh assertion that
-// shelled out to `bun aidlc-state.ts --project-dir <p> fork|merge --slug <s>`
+// shelled out to `bun amadeus-state.ts --project-dir <p> fork|merge --slug <s>`
 // is preserved by SPAWNING the real CLI via node:child_process spawnSync
 // (BUN + the tool .ts path), asserting on res.status / res.stdout+stderr and
 // the file effects the tool writes — the worktree state file, main's Bolt
@@ -16,8 +16,8 @@
 // pins.
 //
 // SUBCOMMAND UNITS: this .cli file credits BOTH subcommand units the .sh
-// exercises — `aidlc-state fork` (covers KEY subcommand:aidlc-state:fork)
-// and `aidlc-state merge` (covers KEY subcommand:aidlc-state:merge). Both
+// exercises — `amadeus-state fork` (covers KEY subcommand:amadeus-state:fork)
+// and `amadeus-state merge` (covers KEY subcommand:amadeus-state:merge). Both
 // are fired here, the colon form per the dead-id trap.
 //
 // PARITY NOTES (every .sh `ok`/`skip` line maps to a test() case here; many
@@ -47,7 +47,7 @@
 //       file absent (same two observables). The pre-created lock dir forces
 //       acquireAuditLock to exhaust its 50×100ms budget (~5s) → withAuditLock
 //       throws → errorWithSlug → exit 1 before any worktree write.
-//   - .sh  6 audit-first Part B (POSIX-gated): chmod 0555 worktree aidlc-docs,
+//   - .sh  6 audit-first Part B (POSIX-gated): chmod 0555 worktree amadeus-docs,
 //       fork → rc!=0 AND STATE_FORKED row AND ERROR_LOGGED row AND
 //       '[slug=part-b]' -> Test 6: same four observables, gated on a
 //       runtime read-only-dir probe (skips on platforms that ignore dir mode,
@@ -56,7 +56,7 @@
 //       hand-built EXPECTED (cmp -s) -> Test 7: post-merge main === EXPECTED
 //       string (same byte-for-byte observable, expressed as a string compare).
 //   - .sh  8 merge workflow-level Active Agent untouched (main wins)
-//       -> Test 8: post-merge Active Agent field === aidlc-developer-agent
+//       -> Test 8: post-merge Active Agent field === amadeus-developer-agent
 //       (same observable; STRONGER: exact field value, not a substring grep).
 //   - .sh  9 alphabetical-slug tiebreak: merge beta then alpha; code-generation
 //       stays [-] after beta (deferred), becomes [S] after alpha (lower slug
@@ -109,7 +109,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { auditLockDir } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { auditLockDir } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   DEFAULT_RECORD_DIR,
   DEFAULT_SPACE,
@@ -126,7 +126,7 @@ const STATE_TS = join(
   "claude",
   ".claude",
   "tools",
-  "aidlc-state.ts",
+  "amadeus-state.ts",
 );
 
 const tempDirs: string[] = [];
@@ -163,7 +163,7 @@ interface CliResult {
   stdout: string;
 }
 
-/** Spawn `bun aidlc-state.ts --project-dir <p> <args...>`. Mirrors `bun "$STATE_TS" --project-dir "$proj" ...`. */
+/** Spawn `bun amadeus-state.ts --project-dir <p> <args...>`. Mirrors `bun "$STATE_TS" --project-dir "$proj" ...`. */
 function state(proj: string, ...args: string[]): CliResult {
   const res = spawnSync(BUN, [STATE_TS, "--project-dir", proj, ...args], {
     encoding: "utf-8",
@@ -186,7 +186,7 @@ const auditDir = (p: string): string => seededAuditDir(p);
 const auditPath = (p: string): string => join(seededAuditDir(p), "fixture.md");
 // The worktree mirror carries the SAME relative record dir as the main checkout
 // (relativeRecordDir → aidlc/spaces/default/intents/<record>), so the forked
-// state lands at <wt>/aidlc/spaces/default/intents/<record>/aidlc-state.md.
+// state lands at <wt>/amadeus/spaces/default/intents/<record>/amadeus-state.md.
 const wtRecordDir = (p: string, slug: string): string =>
   join(
     p,
@@ -200,7 +200,7 @@ const wtRecordDir = (p: string, slug: string): string =>
     DEFAULT_RECORD_DIR,
   );
 const wtStatePath = (p: string, slug: string): string =>
-  join(wtRecordDir(p, slug), "aidlc-state.md");
+  join(wtRecordDir(p, slug), "amadeus-state.md");
 
 const sha256File = (file: string): string =>
   createHash("sha256").update(readFileSync(file)).digest("hex");
@@ -215,7 +215,7 @@ const V7_STATE = `# AI-DLC State Tracking
 - **Scope**: feature
 - **Start Date**: 2026-05-18T00:00:00Z
 - **State Version**: 7
-- **Active Agent**: aidlc-developer-agent
+- **Active Agent**: amadeus-developer-agent
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**:
@@ -306,7 +306,7 @@ function readonlyDirsEnforced(): boolean {
   const probe = join(
     tempDirs[0] ?? REPO_ROOT,
     `..`,
-    `.aidlc-t76-probe-${process.pid}`,
+    `.amadeus-t76-probe-${process.pid}`,
   );
   try {
     mkdirSync(probe, { recursive: true });
@@ -333,10 +333,10 @@ function readonlyDirsEnforced(): boolean {
 }
 
 // ============================================================
-// fork subcommand (covers: subcommand:aidlc-state:fork)
+// fork subcommand (covers: subcommand:amadeus-state:fork)
 // ============================================================
 
-describe("t76 aidlc-state fork (migrated from t76-state-fork-merge.sh, plan 16)", () => {
+describe("t76 amadeus-state fork (migrated from t76-state-fork-merge.sh, plan 16)", () => {
   test("1: fork happy path — byte-identical worktree state, Bolt Refs=[demo], STATE_FORKED row", () => {
     const proj = makeFixture();
     mkWorktreeDir(proj, "demo");
@@ -424,7 +424,7 @@ describe("t76 aidlc-state fork (migrated from t76-state-fork-merge.sh, plan 16)"
     }
     const proj = makeFixture();
     mkWorktreeDir(proj, "part-b");
-    // The worktree mirror record dir (where the fork writes aidlc-state.md);
+    // The worktree mirror record dir (where the fork writes amadeus-state.md);
     // making it read-only forces the post-emit worktree write to fail.
     const wtDocs = wtRecordDir(proj, "part-b");
     mkdirSync(wtDocs, { recursive: true });
@@ -503,10 +503,10 @@ describe("t76 aidlc-state fork (migrated from t76-state-fork-merge.sh, plan 16)"
 });
 
 // ============================================================
-// merge subcommand (covers: subcommand:aidlc-state:merge)
+// merge subcommand (covers: subcommand:amadeus-state:merge)
 // ============================================================
 
-describe("t76 aidlc-state merge (migrated from t76-state-fork-merge.sh, plan 16)", () => {
+describe("t76 amadeus-state merge (migrated from t76-state-fork-merge.sh, plan 16)", () => {
   test("7: merge happy round-trip — post-merge main byte-identical to expected", () => {
     const proj = makeFixture();
     mkWorktreeDir(proj, "demo");
@@ -532,7 +532,7 @@ describe("t76 aidlc-state merge (migrated from t76-state-fork-merge.sh, plan 16)
 - **Scope**: feature
 - **Start Date**: 2026-05-18T00:00:00Z
 - **State Version**: 7
-- **Active Agent**: aidlc-developer-agent
+- **Active Agent**: amadeus-developer-agent
 - **Worktree Path**:
 - **Bolt Refs**: [empty list]
 - **Practices Affirmed Timestamp**:
@@ -555,14 +555,14 @@ describe("t76 aidlc-state merge (migrated from t76-state-fork-merge.sh, plan 16)
     writeFileSync(
       wt,
       readFileSync(wt, "utf-8").replace(
-        "- **Active Agent**: aidlc-developer-agent",
+        "- **Active Agent**: amadeus-developer-agent",
         "- **Active Agent**: rogue-agent",
       ),
       "utf-8",
     );
     expect(state(proj, "merge", "--slug", "wftest").status).toBe(0);
     // STRONGER than the .sh substring grep: exact field value.
-    expect(stateField(proj, "Active Agent")).toBe("aidlc-developer-agent");
+    expect(stateField(proj, "Active Agent")).toBe("amadeus-developer-agent");
   }, 30000);
 
   test("9+10: merge — alphabetical-slug tiebreak (beta defers, alpha wins) + Bolt Refs reverts to [empty list]", () => {

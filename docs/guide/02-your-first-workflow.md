@@ -7,7 +7,7 @@ This chapter walks through a complete AI-DLC workflow run, explaining what you s
 ## Starting the Workflow
 
 ```
-/aidlc Build a REST API for inventory management
+/amadeus Build a REST API for inventory management
 ```
 
 At session start, Claude Code renders the AI-DLC welcome message via the `companyAnnouncements` entry in `settings.json`. It explains how AI-DLC works, and shows the stage map and scope options.
@@ -31,7 +31,7 @@ while keeping you in control at every decision point.
 
 ## Initialization Phase (Automatic)
 
-The three initialization stages run deterministically inside `aidlc-utility init` — a single tool call that completes in well under a second. You do not interact with initialization; it auto-births the first intent into the active space and bootstraps its record dir for the workflow.
+The three initialization stages run deterministically inside `amadeus-utility init` — a single tool call that completes in well under a second. You do not interact with initialization; it auto-births the first intent into the active space and bootstraps its record dir for the workflow.
 
 ### Stage 0.1: Workspace Scaffold
 
@@ -52,7 +52,7 @@ A deterministic rule-based scanner walks one level deep into the project plus kn
 
 ### Stage 0.3: State Initialization
 
-The orchestrator writes the intent's `aidlc-state.md` (under its record dir) with the full stage plan based on your scope, depth, test strategy, and the scanner's classification. It also analyzes your input and confirms a scope:
+The orchestrator writes the intent's `amadeus-state.md` (under its record dir) with the full stage plan based on your scope, depth, test strategy, and the scanner's classification. It also analyzes your input and confirms a scope:
 
 ```
 ─── Scope Detection ───────────────────────────────────────────────────────────
@@ -69,7 +69,7 @@ You can accept the detected scope, change to a different scope (e.g., `mvp`), or
 
 After Initialization, the workflow enters Ideation. Each stage from here on runs interactively with an approval gate.
 
-### Stage 1.1: Intent Capture (aidlc-product-agent)
+### Stage 1.1: Intent Capture (amadeus-product-agent)
 
 The status line at the bottom of your terminal updates:
 
@@ -79,7 +79,7 @@ The status line at the bottom of your terminal updates:
 
 This shows: current phase, stage display name, phase progress bar, phase progress ratio, and lead agent. The bar and the ratio share the same scope — both count `[x]` stages within the current phase, so the bar advances every time the ratio does. Remaining context (`ctx:N%`) is always shown on the right, color-coded as it drops.
 
-The aidlc-product-agent asks you to choose an interaction mode:
+The amadeus-product-agent asks you to choose an interaction mode:
 
 ```
 ▸ Choose interaction mode:
@@ -131,14 +131,14 @@ Some stages are **conditional** — they may be skipped based on your scope. Whe
 
 ## Inception Phase
 
-Inception elaborates requirements and designs the solution. Stage 2.1 (Reverse Engineering) is notable because it runs as a **subagent** — the conductor delegates to the aidlc-developer-agent for a code scan, then the aidlc-architect-agent for synthesis. This stage runs only for **brownfield** projects (existing codebases).
+Inception elaborates requirements and designs the solution. Stage 2.1 (Reverse Engineering) is notable because it runs as a **subagent** — the conductor delegates to the amadeus-developer-agent for a code scan, then the amadeus-architect-agent for synthesis. This stage runs only for **brownfield** projects (existing codebases).
 
 ```
 ─── Stage 2.1: Reverse Engineering (subagent) ──────────────────────────────
-Delegating to aidlc-developer-agent for code scan...
+Delegating to amadeus-developer-agent for code scan...
 [Running in background — no interaction needed]
 ...
-Developer scan complete. Delegating to aidlc-architect-agent for synthesis...
+Developer scan complete. Delegating to amadeus-architect-agent for synthesis...
 ...
 ✓ 9 reverse engineering artifacts produced
 ```
@@ -163,7 +163,7 @@ The walking skeleton shipped. How should the remaining Bolts run?
   ▸ Gate every Bolt
 ```
 
-Your answer is recorded in `aidlc-state.md` as `Construction Autonomy Mode` and governs every remaining Bolt in this workflow (session resume respects it). Stage 3.5 (Code Generation) runs as a subagent for each Unit inside the Bolt; the per-Unit gate in that stage file is suppressed — a single Bolt-level (or batch-level) gate replaces it.
+Your answer is recorded in `amadeus-state.md` as `Construction Autonomy Mode` and governs every remaining Bolt in this workflow (session resume respects it). Stage 3.5 (Code Generation) runs as a subagent for each Unit inside the Bolt; the per-Unit gate in that stage file is suppressed — a single Bolt-level (or batch-level) gate replaces it.
 
 Bolts whose dependencies are satisfied and that don't depend on each other run in a **parallel batch** — the orchestrator issues multiple `Task` calls in a single turn. A failure always halts and asks for retry / skip / abort, even when you've chosen autonomous mode.
 
@@ -194,7 +194,7 @@ sequenceDiagram
     participant S as Stage File
     participant A as Agent Persona
 
-    U->>O: /aidlc
+    U->>O: /amadeus
     O->>S: Read stage file (inputs, steps, outputs)
     O->>A: Load agent persona + knowledge
     A->>U: Present interaction mode choice
@@ -206,11 +206,11 @@ sequenceDiagram
     O->>O: Advance to next stage
 ```
 
-<!-- Text fallback: You invoke /aidlc. The conductor reads the stage file and loads the agent persona with knowledge. The agent presents an interaction mode, you provide input, the agent executes steps and presents a completion summary. You respond at the approval gate, and the conductor reports the outcome so the engine advances state. -->
+<!-- Text fallback: You invoke /amadeus. The conductor reads the stage file and loads the agent persona with knowledge. The agent presents an interaction mode, you provide input, the agent executes steps and presents a completion summary. You respond at the approval gate, and the conductor reports the outcome so the engine advances state. -->
 
 ### Subagent Delegation
 
-Two stages (2.1 Reverse Engineering, 3.5 Code Generation) run as subagents. The conductor delegates to a background subprocess — you do not interact during execution. Workspace detection (0.2) now runs deterministically inside `aidlc-utility init` rather than as a subagent.
+Two stages (2.1 Reverse Engineering, 3.5 Code Generation) run as subagents. The conductor delegates to a background subprocess — you do not interact during execution. Workspace detection (0.2) now runs deterministically inside `amadeus-utility init` rather than as a subagent.
 
 ```mermaid
 sequenceDiagram
@@ -238,7 +238,7 @@ By the end of a `feature`-scoped workflow, the intent's record dir (`aidlc/space
 
 ```
 aidlc/spaces/<space>/intents/<YYMMDD>-<label>/
-├── aidlc-state.md          # Workflow state (all stages marked [x])
+├── amadeus-state.md          # Workflow state (all stages marked [x])
 ├── audit/                  # Full decision audit trail (per-clone shards, merged by timestamp)
 ├── ideation/               # Intent, market research, scope, mockups
 ├── inception/              # Requirements, stories, design, units

@@ -9,7 +9,7 @@ AI-DLC (AI-Driven Development Life Cycle) is a methodology for structuring AI-as
 You invoke it with a single command:
 
 ```
-/aidlc Build a REST API for inventory management
+/amadeus Build a REST API for inventory management
 ```
 
 AI-DLC then guides you through a structured workflow — from capturing your intent, through requirements, design, implementation, testing, and deployment — while keeping you in control at every decision point.
@@ -22,11 +22,11 @@ This mirrors how effective human teams work: a mob of 3-5 people covers an entir
 
 ## How the Orchestrator Works
 
-At its core, AI-DLC runs a simple loop. A deterministic **engine** decides what happens next; the **conductor** (the `/aidlc` session, `SKILL.md`) carries it out, then asks the engine for the next move. Across that loop the framework:
+At its core, AI-DLC runs a simple loop. A deterministic **engine** decides what happens next; the **conductor** (the `/amadeus` session, `SKILL.md`) carries it out, then asks the engine for the next move. Across that loop the framework:
 
 1. **Reads stage files** — 32 stage definitions across 5 phases, each specifying inputs, steps, outputs, and the lead agent
 2. **Loads agent personas** — Activates domain-expert perspectives (architect, developer, product manager, etc.) with specialized knowledge
-3. **Manages state and audit** — Tracks progress in `aidlc-state.md` and logs every decision to the intent's `audit/` shards for traceability
+3. **Manages state and audit** — Tracks progress in `amadeus-state.md` and logs every decision to the intent's `audit/` shards for traceability
 4. **Delegates to subagents** — For stages requiring focused, autonomous work (reverse engineering, code generation), spawns a subprocess
 5. **Presents approval gates** — After each stage, you review and approve before the workflow advances
 
@@ -75,7 +75,7 @@ To reshape *how* AI-DLC behaves — add a stage or an agent, define a scope, aut
 | [Artifacts Reference](14-artifacts-reference.md) | The per-intent record dir (`aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`) explained |
 | [Troubleshooting](15-troubleshooting.md) | Symptom-based problem solving |
 | [Worked Examples](16-worked-examples.md) | Full bugfix and feature walkthroughs |
-| [Skills and Runner Commands](17-skills.md) | The `/aidlc-*` stage- and scope-runner commands and the author-your-own-runner path |
+| [Skills and Runner Commands](17-skills.md) | The `/amadeus-*` stage- and scope-runner commands and the author-your-own-runner path |
 | [Workshop Mode](workshop-mode.md) | Multi-developer manual recipe for the workshop scope (claim semantics via git push) |
 | [Running on other harnesses](harnesses/README.md) | Install and run on Kiro IDE or Codex CLI, and what differs per harness |
 | [Glossary](glossary.md) | All terminology defined |

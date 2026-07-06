@@ -1,4 +1,4 @@
-// covers: subcommand:aidlc-utility:help
+// covers: subcommand:amadeus-utility:help
 //
 // CLI-contract port of tests/integration/t31-help-text-consistency.sh (TAP plan
 // 19), mechanism = cli. The .sh captured `HELP_TEXT=$(bun "$TOOL" help 2>/dev/null)`
@@ -10,17 +10,17 @@
 // not an in-process renderHelpText() return.
 //
 // WHY A SPAWN (not an import of renderHelpText): the contract under test is
-// the `help` SUBCOMMAND — `bun aidlc-utility.ts help` — including its exit
+// the `help` SUBCOMMAND — `bun amadeus-utility.ts help` — including its exit
 // code and that it writes the compiled text to STDOUT (handleHelp ->
-// process.stdout.write, aidlc-utility.ts:165-167). The covers id is
-// subcommand:aidlc-utility:help, so the subprocess dispatch arm
-// (aidlc-utility.ts:2815 `case "help"`) is the seam being credited. An
+// process.stdout.write, amadeus-utility.ts:165-167). The covers id is
+// subcommand:amadeus-utility:help, so the subprocess dispatch arm
+// (amadeus-utility.ts:2815 `case "help"`) is the seam being credited. An
 // in-process renderHelpText() twin would lose the exit-0 + stdout-routing half
 // the subcommand contract owns.
 //
 // CONTRACT CONFIRMED: help text is no longer a static constant — renderHelpText()
-// (aidlc-utility.ts:143-163) compiles the scope block live from
-// loadScopeMapping() (aidlc-lib.ts:739) over validScopes() (aidlc-lib.ts:783),
+// (amadeus-utility.ts:143-163) compiles the scope block live from
+// loadScopeMapping() (amadeus-lib.ts:739) over validScopes() (amadeus-lib.ts:783),
 // so stage counts ("All 32 stages" / "7 of 32 stages") are derived from the
 // shipped scope-mapping.json EXECUTE/Total tallies, not hardcoded. This is the
 // exact regression the .sh guards (the 6 stale counts that shipped pre-milestone-10).
@@ -66,10 +66,10 @@
 //   S3: workshop's "minimal test strategy" surfaces — the .sh header (line 8)
 //       says it tests "(d) workshop's minimal test strategy surfaces" but never
 //       wrote that assert; renderHelpText appends ", <ts> test strategy" only
-//       when def.testStrategy is set (aidlc-utility.ts:151-153), and workshop is
+//       when def.testStrategy is set (amadeus-utility.ts:151-153), and workshop is
 //       the only scope with one. This is the documented-but-missing fourth check.
 //   S4: "--test-strategy" + "--version" utility flags present — documented in
-//       HELP_TEXT_TAIL (aidlc-utility.ts:123-124) but unasserted by the .sh.
+//       HELP_TEXT_TAIL (amadeus-utility.ts:123-124) but unasserted by the .sh.
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -83,7 +83,7 @@ const TOOL = join(
   "claude",
   ".claude",
   "tools",
-  "aidlc-utility.ts",
+  "amadeus-utility.ts",
 );
 
 interface CliResult {
@@ -92,7 +92,7 @@ interface CliResult {
 }
 
 /**
- * Spawn `bun aidlc-utility.ts help` once. Mirrors the .sh's
+ * Spawn `bun amadeus-utility.ts help` once. Mirrors the .sh's
  * `HELP_TEXT=$(bun "$TOOL" help 2>/dev/null)`. No --project-dir / env: help
  * is a pure renderer with no filesystem or workflow-state dependency.
  */
@@ -105,7 +105,7 @@ function runHelp(): CliResult {
 // string); each test() re-reads from the shared, immutable capture.
 const HELP = runHelp();
 
-describe("t31 aidlc-utility help — CLI contract (migrated from t31-help-text-consistency.sh, plan 19)", () => {
+describe("t31 amadeus-utility help — CLI contract (migrated from t31-help-text-consistency.sh, plan 19)", () => {
   // --- STRONGER: subcommand exits clean (the .sh never checked $?). ---
   test("S1: help exits 0", () => {
     expect(HELP.status).toBe(0);
@@ -168,7 +168,7 @@ describe("t31 aidlc-utility help — CLI contract (migrated from t31-help-text-c
 
   // --- Stage-count semantics (compiled from scope-mapping.json EXECUTE/Total). ---
   test("enterprise/feature shows 'All 32 stages'", () => {
-    // execute === total -> "All <total> stages" (aidlc-utility.ts:156-157).
+    // execute === total -> "All <total> stages" (amadeus-utility.ts:156-157).
     expect(HELP.stdout).toContain("All 32 stages");
   });
 
@@ -179,7 +179,7 @@ describe("t31 aidlc-utility help — CLI contract (migrated from t31-help-text-c
   });
 
   test("feature row shows '(default)' marker", () => {
-    // defaultMarker fires only for name === "feature" (aidlc-utility.ts:155).
+    // defaultMarker fires only for name === "feature" (amadeus-utility.ts:155).
     expect(HELP.stdout).toContain("(default)");
   });
 

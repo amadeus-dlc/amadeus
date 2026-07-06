@@ -14,7 +14,7 @@
 //
 // WHAT IT PROVES (the memory.md lifecycle the SKILL.md ## Routing block drives):
 //   - init-from-template fires at stage START — the orchestrator copies
-//     knowledge/aidlc-shared/memory-template.md into the stage's
+//     knowledge/amadeus-shared/memory-template.md into the stage's
 //     <record>/ideation/approval-handoff/memory.md (file exists, non-empty).
 //   - the created file carries all FOUR canonical `## ` H2 headings
 //     (## Interpretations / ## Deviations / ## Tradeoffs / ## Open questions)
@@ -23,10 +23,10 @@
 //     assertion 3 (here asserted UNCONDITIONALLY: stronger than the .sh, which
 //     skipped when the orchestrator approximated the copy. A malformed/missing
 //     header is a real defect, not LLM variance, so we hold the bar).
-//   - the jump landed on disk: aidlc-state.md `Current Stage` == approval-handoff.
+//   - the jump landed on disk: amadeus-state.md `Current Stage` == approval-handoff.
 //   - parseMemoryHeadings(file).total == the visible `- ` entry count on disk —
 //     the .sh's assertion 7 (parser ↔ disk agreement), ported by importing the
-//     exported helper from the distributable (aidlc-lib.ts:982; import-safe under
+//     exported helper from the distributable (amadeus-lib.ts:982; import-safe under
 //     bun, never loads node-pty).
 //   - RENDER (the tui-only value-add the SDK path is blind to): the captured grid
 //     showed the AskUserQuestion approval gate at least once during the run — the
@@ -82,9 +82,9 @@ import { existsSync, readFileSync } from "node:fs";
 import * as os from "node:os";
 import { join } from "node:path";
 // parseMemoryHeadings is the SAME parser the runtime-graph populator uses
-// (aidlc-lib.ts:982). Importing it here ports the .sh's parser↔disk assertion 7.
-// aidlc-lib.ts is import-safe (no node-pty); safe under bun on every platform.
-import { parseMemoryHeadings } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+// (amadeus-lib.ts:982). Importing it here ports the .sh's parser↔disk assertion 7.
+// amadeus-lib.ts is import-safe (no node-pty); safe under bun on every platform.
+import { parseMemoryHeadings } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { seededRecordDir, seededStateFile } from "../harness/fixtures.ts";
 import { resolveWinNode } from "../harness/tui-drive.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
@@ -113,7 +113,7 @@ const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
 // content is the lifecycle contract.
 const MEM_RELPATH = join("ideation", "approval-handoff", "memory.md");
 
-// The verbatim template ownership blockquote (knowledge/aidlc-shared/
+// The verbatim template ownership blockquote (knowledge/amadeus-shared/
 // memory-template.md). The init is an LLM-driven copy of that template; a faithful
 // copy reproduces this byte-for-byte.
 const OWNERSHIP_LINE =
@@ -232,7 +232,7 @@ describe("t-tui-t101 (memory.md start→approval lifecycle through a driven gate
           "--session",
           session,
           "--keys",
-          "/aidlc --stage approval-handoff",
+          "/amadeus --stage approval-handoff",
           "--literal",
           "--no-enter",
         ]);
@@ -329,7 +329,7 @@ describe("t-tui-t101 (memory.md start→approval lifecycle through a driven gate
         const visible = mem.split("\n").filter((l) => l.startsWith("- ")).length;
         expect(parsedTotal).toBe(visible);
 
-        // 5. the jump landed: aidlc-state.md Current Stage == approval-handoff
+        // 5. the jump landed: amadeus-state.md Current Stage == approval-handoff
         //    (the on-disk proof the orchestrator entered the target stage — the
         //    precondition for the memory.md init to have fired here at all).
         const stateMd = readFileSync(seededStateFile(sandbox), "utf8");

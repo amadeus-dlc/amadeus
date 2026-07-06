@@ -1,4 +1,4 @@
-// covers: subcommand:aidlc-utility:status, subcommand:aidlc-utility:doctor, subcommand:aidlc-utility:help, subcommand:aidlc-utility:config-change, audit:TEST_STRATEGY_CHANGED
+// covers: subcommand:amadeus-utility:status, subcommand:amadeus-utility:doctor, subcommand:amadeus-utility:help, subcommand:amadeus-utility:config-change, audit:TEST_STRATEGY_CHANGED
 //
 // t-acp-kiro-utilities.serial.test.ts — the Kiro ACP ports of the single-turn
 // SDK contract tests (t20 status / t22 doctor / t23 help / t28 config-change),
@@ -6,12 +6,12 @@
 // through `kiro-cli acp`.
 //
 // SEAM CHANGE (why the read-only cases no longer assert tool output). A Kiro
-// userPromptSubmit seam (agents/aidlc.json → aidlc-kiro-adapter.ts) now
+// userPromptSubmit seam (agents/amadeus.json → amadeus-kiro-adapter.ts) now
 // classifies the read-only flags (`--status`/`--doctor`/`--help`/`--version`)
 // as TERMINAL and runs them OFF-BAND inside the hook, handing the conductor the
 // verbatim output with a do-NOT-advance instruction; a turn-scoped engine
 // `done`-guard + a preToolUse backstop neutralize any trailing bare `next`.
-// CONSEQUENCE: a read-only flag no longer surfaces as an `aidlc-utility.ts <sub>`
+// CONSEQUENCE: a read-only flag no longer surfaces as an `amadeus-utility.ts <sub>`
 // ACP tool_call — the seam ran it off-band, so stopAfterToolTitle would never
 // fire and the tool output would never reach an ACP surface. The robust surfaces for these
 // seam-dispatched read-only commands are stopReason === "end_turn" and the
@@ -22,14 +22,14 @@
 // The byte-verbatim status/doctor/help output ("AI-DLC Health Check", the nine
 // scopes, "No active AI-DLC workflow found.", …) has NO home on the ACP surface
 // anymore; it is covered deterministically by the SDK twins (t20 status / t22
-// doctor / t23 help — drive the real /aidlc flag and assert the Bash
+// doctor / t23 help — drive the real /amadeus flag and assert the Bash
 // tool_result bytes) AND the CLI twins (t27 status+doctor+help / t31 help —
-// spawn aidlc-utility.ts <sub> directly and assert stdout). So dropping the ACP
+// spawn amadeus-utility.ts <sub> directly and assert stdout). So dropping the ACP
 // byte asserts loses no coverage.
 //
 // config-change (`--test-strategy`) is a MUTATION — classifyTerminalCommand
 // returns null for it, so the seam exits 0 and the conductor runs it NORMALLY,
-// so its `aidlc-utility.ts config-change` tool_call STILL surfaces; that case is
+// so its `amadeus-utility.ts config-change` tool_call STILL surfaces; that case is
 // UNCHANGED and keeps its stopAfterToolTitle + on-disk mutation asserts.
 //
 // Trust anchor: kiro-acp-drive.calibration.test.ts (byte-faithfulness,
@@ -41,7 +41,7 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { seededStateFile } from "../harness/fixtures.ts";
 import { driveKiroAcp } from "../harness/kiro-acp-drive.ts";
 import { cleanupTuiProject, KIRO_SRC, setupTuiProject } from "../harness/tui-fixtures.ts";
@@ -79,7 +79,7 @@ describe("t-acp-kiro-utilities (single-turn utility contracts over ACP)", () => 
       const stateBefore = readFileSync(statePath, "utf-8");
       try {
         // `--status` is TERMINAL → the seam runs it OFF-BAND, so no
-        // `aidlc-utility.ts status` tool_call surfaces (stopAfterToolTitle
+        // `amadeus-utility.ts status` tool_call surfaces (stopAfterToolTitle
         // would never fire); the conductor only relays prose. Drive to the
         // natural end_turn and assert the deterministic surfaces: clean turn end
         // + the read-only state byte no-op. The verbatim status FIELDS
@@ -87,7 +87,7 @@ describe("t-acp-kiro-utilities (single-turn utility contracts over ACP)", () => 
         // CLI twin t27 (see header).
         const r = await driveKiroAcp({
           projectDir: proj,
-          prompt: "/aidlc --status",
+          prompt: "/amadeus --status",
           timeoutMs: DRIVE_TIMEOUT_MS,
         });
         expect(r.stopReason).toBe("end_turn");
@@ -113,7 +113,7 @@ describe("t-acp-kiro-utilities (single-turn utility contracts over ACP)", () => 
       const stateBefore = readFileSync(statePath, "utf-8");
       try {
         // `--doctor` is TERMINAL → the seam runs it OFF-BAND, so no
-        // `aidlc-utility.ts doctor` tool_call surfaces (stopAfterToolTitle
+        // `amadeus-utility.ts doctor` tool_call surfaces (stopAfterToolTitle
         // would never fire); the conductor only relays prose. Drive to the
         // natural end_turn and assert the deterministic surfaces: clean turn end
         // + the read-only state byte no-op. The verbatim per-check labels
@@ -124,7 +124,7 @@ describe("t-acp-kiro-utilities (single-turn utility contracts over ACP)", () => 
         // audit-byte no-op.)
         const r = await driveKiroAcp({
           projectDir: proj,
-          prompt: "/aidlc --doctor",
+          prompt: "/amadeus --doctor",
           timeoutMs: DRIVE_TIMEOUT_MS,
         });
         expect(r.stopReason).toBe("end_turn");
@@ -144,7 +144,7 @@ describe("t-acp-kiro-utilities (single-turn utility contracts over ACP)", () => 
       const proj = setupTuiProject({ harness: "kiro", noAidlcDocs: true });
       try {
         // `--help` is TERMINAL → the seam runs it OFF-BAND, so no
-        // `aidlc-utility.ts help` tool_call surfaces (stopAfterToolTitle would
+        // `amadeus-utility.ts help` tool_call surfaces (stopAfterToolTitle would
         // never fire); the conductor only relays prose. Drive to the natural
         // end_turn and assert the deterministic surfaces: clean turn end + the
         // on-disk no-op (no state births from a help run). The verbatim usage
@@ -152,7 +152,7 @@ describe("t-acp-kiro-utilities (single-turn utility contracts over ACP)", () => 
         // twins t27/t31 (see header).
         const r = await driveKiroAcp({
           projectDir: proj,
-          prompt: "/aidlc --help",
+          prompt: "/amadeus --help",
           timeoutMs: DRIVE_TIMEOUT_MS,
         });
         expect(r.stopReason).toBe("end_turn");
@@ -179,11 +179,11 @@ describe("t-acp-kiro-utilities (single-turn utility contracts over ACP)", () => 
       try {
         const r = await driveKiroAcp({
           projectDir: proj,
-          prompt: "/aidlc --test-strategy minimal",
+          prompt: "/amadeus --test-strategy minimal",
           timeoutMs: DRIVE_TIMEOUT_MS,
           // The mutation lives in the named config-change tool; stop once it
           // completes (run-then-continue would otherwise re-enter the loop).
-          stopAfterToolTitle: /aidlc-utility\.ts config-change/,
+          stopAfterToolTitle: /amadeus-utility\.ts config-change/,
         });
         // Disk is the contract: the state field flipped and the audit row
         // landed (tool-owned emission).

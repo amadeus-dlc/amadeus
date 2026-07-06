@@ -11,7 +11,7 @@
 // still holds for them, but the coverage CLAIM stays honest to what is proven.
 //
 // t126-emitter-pairing-cofire.test.ts — METAMORPHIC INVARIANT (§5-D, Phase 4):
-// emitter-pairing co-fire. Drive a REAL `/aidlc <scope>` workflow
+// emitter-pairing co-fire. Drive a REAL `/amadeus <scope>` workflow
 // through the Claude Agent SDK (driveAidlc) and assert, as data over the audit
 // log, that every audit event whose taxonomy declares a co-emission PARTNER has
 // that partner present in the SAME run. {sdk} mechanism (no rendering — the
@@ -24,10 +24,10 @@
 //   calls) — that is a STATIC source check (the literal appears in the handler
 //   body). THIS test is its RUNTIME complement: the partners actually LAND in
 //   audit.md across a real workflow. The handler→pair map verified at
-//   t48:304-312 and aidlc-state.ts / aidlc-utility.ts:
-//     handleApprove          (aidlc-state.ts:675)  -> GATE_APPROVED + STAGE_COMPLETED
-//     handleCompleteWorkflow (aidlc-state.ts)       -> PHASE_COMPLETED + WORKFLOW_COMPLETED
-//     handleInit             (aidlc-utility.ts)      -> WORKFLOW_STARTED + PHASE_STARTED + STAGE_STARTED
+//   t48:304-312 and amadeus-state.ts / amadeus-utility.ts:
+//     handleApprove          (amadeus-state.ts:675)  -> GATE_APPROVED + STAGE_COMPLETED
+//     handleCompleteWorkflow (amadeus-state.ts)       -> PHASE_COMPLETED + WORKFLOW_COMPLETED
+//     handleInit             (amadeus-utility.ts)      -> WORKFLOW_STARTED + PHASE_STARTED + STAGE_STARTED
 //   (handleReject -> GATE_REJECTED + STAGE_REVISING is exercised by t128, not
 //   here: the driver approves every gate, so this golden-path run never rejects.)
 //
@@ -69,7 +69,7 @@ import {
 } from "../harness/fixtures.ts";
 import { auditFilePathFor, driveAidlc } from "../harness/sdk-drive.ts";
 
-// Timeout budget. A full `/aidlc poc` is a multi-turn workflow on
+// Timeout budget. A full `/amadeus poc` is a multi-turn workflow on
 // Opus/Bedrock. Honour the suite's AIDLC_TEST_TIMEOUT convention (seconds). The
 // timer is a WEDGE-BACKSTOP, not a budget — the pass condition is the on-disk
 // WORKFLOW_COMPLETED pair, never the clock. The drive aborts a hair before bun
@@ -82,7 +82,7 @@ const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
  * delegates to. This keeps the live SDK run focused on the co-fire golden path
  * instead of spending turns recovering from an intentionally absent state file. */
 function seedPocState(proj: string): void {
-  const utility = join(proj, ".claude", "tools", "aidlc-utility.ts");
+  const utility = join(proj, ".claude", "tools", "amadeus-utility.ts");
   const res = spawnSync(
     process.execPath,
     [utility, "init", "--scope", "poc", "--project-dir", proj],
@@ -100,21 +100,21 @@ function seedPocState(proj: string): void {
  * golden path are asserted here (reject/revise -> t128).
  */
 const COFIRE_PAIRS: Array<{ lead: string; partners: string[]; handler: string }> = [
-  // handleApprove (aidlc-state.ts:675): a gate approval and the stage completion
+  // handleApprove (amadeus-state.ts:675): a gate approval and the stage completion
   // it triggers are emitted atomically. (t48:304)
   { lead: "GATE_APPROVED", partners: ["STAGE_COMPLETED"], handler: "handleApprove" },
-  // handleInit (aidlc-utility.ts): workflow start brings phase start + the first
+  // handleInit (amadeus-utility.ts): workflow start brings phase start + the first
   // stage start. (t48:312)
   {
     lead: "WORKFLOW_STARTED",
     partners: ["PHASE_STARTED", "STAGE_STARTED"],
     handler: "handleInit",
   },
-  // handleCompleteWorkflow (aidlc-state.ts:520,580-585): the final phase
+  // handleCompleteWorkflow (amadeus-state.ts:520,580-585): the final phase
   // completion co-fires with the phase-verification AND the workflow completion.
   // Pinned by t48:309 (`check_pairing handleCompleteWorkflow ... PHASE_COMPLETED
   // PHASE_VERIFIED WORKFLOW_COMPLETED`). PHASE_VERIFIED is UNCONDITIONAL on this
-  // path: aidlc-state.ts:585 emits it with no branch immediately after
+  // path: amadeus-state.ts:585 emits it with no branch immediately after
   // PHASE_COMPLETED (:580) — so it is a hard co-emission partner, not advisory.
   // (The audit-format.md ✓-vs-blank flag marks doc-level "mandatory to assert in
   // t48", a DIFFERENT axis from whether the handler always emits it; the handler
@@ -148,7 +148,7 @@ describe("t126 emitter-pairing co-fire (metamorphic invariant, sdk)", () => {
       try {
         seedPocState(proj);
 
-        const r = await driveAidlc("/aidlc poc", {
+        const r = await driveAidlc("/amadeus poc", {
           projectDir: proj,
           timeoutMs: DRIVE_TIMEOUT_MS,
         });
@@ -162,10 +162,10 @@ describe("t126 emitter-pairing co-fire (metamorphic invariant, sdk)", () => {
 
         // VACUOUS-PASS GUARD: every pair LEAD this test claims to exercise MUST
         // have fired, or that pair's co-fire check is a silent no-op (the
-        // empty-antecedent trap). A completed `/aidlc poc` guarantees
+        // empty-antecedent trap). A completed `/amadeus poc` guarantees
         // all three: init emits WORKFLOW_STARTED; each auto-approved gate emits
         // GATE_APPROVED; and poc spans Ideation→Inception→Construction so the
-        // terminal handleCompleteWorkflow emits PHASE_COMPLETED (aidlc-state.ts:580
+        // terminal handleCompleteWorkflow emits PHASE_COMPLETED (amadeus-state.ts:580
         // — also fired at every phase boundary, :418). Guarding PHASE_COMPLETED
         // here is what makes the handleCompleteWorkflow pair (PHASE_VERIFIED +
         // WORKFLOW_COMPLETED) a REAL assertion rather than a conditional skip.

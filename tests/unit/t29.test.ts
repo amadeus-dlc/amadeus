@@ -1,19 +1,19 @@
-// covers: hook:aidlc-sync-statusline
+// covers: hook:amadeus-sync-statusline
 //
 // Mechanism = none. Port of tests/unit/t29-hook-sync-statusline.sh (TAP plan 7).
 // The unit under test is the PostToolUse hook dist/claude/.claude/hooks/
-// aidlc-sync-statusline.ts. A hook is mechanism=none — it has no CLI arg
+// amadeus-sync-statusline.ts. A hook is mechanism=none — it has no CLI arg
 // surface; it is driven by feeding Claude Code's PostToolUse JSON on stdin.
 // So every .sh case is preserved here by SPAWNING the hook via
 // node:child_process spawnSync with the JSON piped through `input:`, exactly
 // as the .sh did `echo '<json>' | CLAUDE_PROJECT_DIR=<p> bun "$HOOK"`.
 //
-// The hook resolves the project dir from CLAUDE_PROJECT_DIR (aidlc-lib.ts:116)
+// The hook resolves the project dir from CLAUDE_PROJECT_DIR (amadeus-lib.ts:116)
 // and, on a qualifying TaskUpdate, (a) writes a health heartbeat at
-// aidlc-docs/.aidlc-hooks-health/sync-statusline.last and (b) shells out to
-// <projectDir>/.claude/tools/aidlc-utility.ts set-status, which rewrites
+// amadeus-docs/.amadeus-hooks-health/sync-statusline.last and (b) shells out to
+// <projectDir>/.claude/tools/amadeus-utility.ts set-status, which rewrites
 // Current Stage / Lifecycle Phase / Active Agent / Status / Last Updated in
-// aidlc-state.md (aidlc-utility.ts:2432-2456). For the hook to find that tool,
+// amadeus-state.md (amadeus-utility.ts:2432-2456). For the hook to find that tool,
 // the .sh symlinks $AIDLC_SRC -> $proj/.claude (create_hook_test_project,
 // t29-hook-sync-statusline.sh:25-30). We replicate that symlink here.
 //
@@ -23,7 +23,7 @@
 //        scoped to the field line, not a file-wide regex grep. Plus the hook
 //        exit code is pinned to 0 (the .sh discarded it).
 //   .sh T2 md5 before==after on status=completed             -> T2: byte-equality
-//        of aidlc-state.md before/after (md5sum -> readFileSync compare; same
+//        of amadeus-state.md before/after (md5sum -> readFileSync compare; same
 //        observable: file untouched). Heartbeat absence asserted too (STRONGER:
 //        the hook returns before the heartbeat write on the status guard).
 //   .sh T3 md5 before==after on no activeForm                -> T3: byte-equality
@@ -36,7 +36,7 @@
 //   .sh T6 assert_grep 'Lifecycle Phase.*CONSTRUCTION'        -> T6: STRONGER —
 //        exact `getField(state,"Lifecycle Phase") === "CONSTRUCTION"`. The phase
 //        comes from the stage graph: code-generation -> construction, uppercased
-//        by set-status (aidlc-utility.ts:2442,2446) — verified live via
+//        by set-status (amadeus-utility.ts:2442,2446) — verified live via
 //        findStageBySlug("code-generation").phase === "construction".
 //   .sh T7 assert_file_exists sync-statusline.last           -> T7: existsSync
 //        of the heartbeat file (same observable) + its content is a non-empty
@@ -44,7 +44,7 @@
 //
 // 7 .sh asserts -> 7 expect()-bearing test() cases here. FIXTURE DISCIPLINE
 // mirrors the .sh: each case scaffolds a FRESH temp project (createTestProject)
-// with .claude symlinked to AIDLC_SRC and aidlc-state.md seeded from the shared
+// with .claude symlinked to AIDLC_SRC and amadeus-state.md seeded from the shared
 // state-mid-ideation.md fixture (seedStateFile). toPortablePath round-trips the
 // path on Windows so the hook's CLAUDE_PROJECT_DIR resolution and the state file
 // it reads back agree. Symlinks are not followed by rmSync's recursive delete
@@ -67,7 +67,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const HOOK = join(AIDLC_SRC, "hooks", "aidlc-sync-statusline.ts");
+const HOOK = join(AIDLC_SRC, "hooks", "amadeus-sync-statusline.ts");
 const MID_IDEATION = join(FIXTURES_DIR, "state-mid-ideation.md");
 
 const tempDirs: string[] = [];
@@ -79,7 +79,7 @@ afterAll(() => {
 /**
  * create_hook_test_project (t29:25-30): a fresh temp project whose .claude is a
  * symlink to the shipped AIDLC_SRC, so the hook can resolve
- * <projectDir>/.claude/tools/aidlc-utility.ts. State seeded separately.
+ * <projectDir>/.claude/tools/amadeus-utility.ts. State seeded separately.
  */
 function hookProject(): string {
   const proj = createTestProject();
@@ -93,7 +93,7 @@ function hookProject(): string {
 // and the set-status tool it shells out to both anchor under that record).
 const statePath = (p: string): string => seededStateFile(p);
 const heartbeatPath = (p: string): string =>
-  join(seededRecordDir(p), ".aidlc-hooks-health", "sync-statusline.last");
+  join(seededRecordDir(p), ".amadeus-hooks-health", "sync-statusline.last");
 
 interface HookResult {
   status: number;
@@ -118,7 +118,7 @@ function stateField(proj: string, label: string): string {
   return m ? m[1].trim() : "";
 }
 
-describe("t29 aidlc-sync-statusline hook (migrated from t29-hook-sync-statusline.sh, plan 7)", () => {
+describe("t29 amadeus-sync-statusline hook (migrated from t29-hook-sync-statusline.sh, plan 7)", () => {
   // --- T1: in_progress + [slug] -> Current Stage updated to that slug ---
   test("1: updates Current Stage on in_progress with [slug]", () => {
     const p = hookProject();
@@ -176,7 +176,7 @@ describe("t29 aidlc-sync-statusline hook (migrated from t29-hook-sync-statusline
   // --- T5: no state file -> hook exits 0 (won't fire before handleInit) ---
   test("5: exits 0 when no state file", () => {
     const p = hookProject();
-    // No seedStateFile: the project has aidlc-docs/ but no aidlc-state.md.
+    // No seedStateFile: the project has amadeus-docs/ but no amadeus-state.md.
     const r = runHook(
       p,
       '{"tool_name":"TaskUpdate","tool_input":{"taskId":"t1","status":"in_progress","activeForm":"Running Feasibility [feasibility]"}}',
@@ -213,7 +213,7 @@ describe("t29 aidlc-sync-statusline hook (migrated from t29-hook-sync-statusline
     );
     expect(existsSync(heartbeatPath(p))).toBe(true);
     // STRONGER: the .sh only checked existence; the heartbeat is a non-empty
-    // ISO-8601 UTC timestamp (isoTimestamp(), aidlc-lib.ts:1452).
+    // ISO-8601 UTC timestamp (isoTimestamp(), amadeus-lib.ts:1452).
     const hb = readFileSync(heartbeatPath(p), "utf-8");
     expect(hb).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
   }, 30000);

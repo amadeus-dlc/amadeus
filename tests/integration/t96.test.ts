@@ -1,12 +1,12 @@
-// covers: subcommand:aidlc-runtime:compile
+// covers: subcommand:amadeus-runtime:compile
 //
 // Pure-function port of tests/integration/t96-runtime-instances-compile.sh
 // (TAP plan 10), mechanism = none. The .sh shelled out to
-// `bun aidlc-runtime.ts --project-dir <p> compile` per case, then read the
+// `bun amadeus-runtime.ts --project-dir <p> compile` per case, then read the
 // resulting runtime-graph.json back with a `bun -e` JSONPath projection.
-// In v0.6.1, `aidlc-runtime.ts` keeps compile private behind the CLI handler,
+// In v0.6.1, `amadeus-runtime.ts` keeps compile private behind the CLI handler,
 // so these contracts drive the deterministic shipped tool via `bun
-// aidlc-runtime.ts --project-dir <p> compile` and then JSON.parse the graph the
+// amadeus-runtime.ts --project-dir <p> compile` and then JSON.parse the graph the
 // command wrote. This preserves the .sh's observable boundary without touching
 // shipped runtime exports: zero LLM, zero tokens, temp-project file effects only.
 //
@@ -49,7 +49,7 @@
 // state-construction.md are READ-ONLY here (copied into the temp project,
 // never mutated in place) — the pending-mix (case 9) and shuffle (case 10)
 // audit edits are applied to the temp project's COPY, exactly as the .sh
-// rewrote $PROJ/aidlc-docs/audit.md, never the fixture source. All temp
+// rewrote $PROJ/amadeus-docs/audit.md, never the fixture source. All temp
 // dirs cleaned in afterAll.
 
 import { afterAll, describe, expect, test } from "bun:test";
@@ -66,12 +66,12 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { DEFAULT_SPACE, REPO_ROOT, toPortablePath } from "../harness/fixtures.ts";
-import { auditFilePath } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { auditFilePath } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // P9: with no intent cursor seeded, compile resolves the BARE space record root
 // (docsRoot -> spaceRecordRoot) at aidlc/spaces/default/intents/. State,
 // runtime-graph, and the per-clone audit SHARD live under it (no flat
-// aidlc-docs/ fallback); the compiled parent memory_path uses the bare space
+// amadeus-docs/ fallback); the compiled parent memory_path uses the bare space
 // record PREFIX (relativeMemoryPath with no recordPrefix).
 const RECORD_REL = join("aidlc", "spaces", "default", "intents");
 const RP = `aidlc/spaces/${DEFAULT_SPACE}/intents`;
@@ -86,7 +86,7 @@ const RUNTIME_TS = join(
   "claude",
   ".claude",
   "tools",
-  "aidlc-runtime.ts",
+  "amadeus-runtime.ts",
 );
 
 const STATE_FIXTURE = join(REPO_ROOT, "tests", "fixtures", "state-construction.md");
@@ -105,15 +105,15 @@ afterAll(() => {
 
 /**
  * make_project_with_audit (t96.sh:69-83): fresh temp project with the
- * state-construction.md fixture as aidlc-state.md and the named audit
+ * state-construction.md fixture as amadeus-state.md and the named audit
  * fixture (under FIXTURES_DIR) as audit.md. toPortablePath mirrors the .sh's
  * bun_path cygpath conversion so the embedded paths round-trip on Windows.
  */
 function makeProjectWithAudit(auditFixtureName: string): string {
-  const proj = toPortablePath(mkdtempSync(join(tmpdir(), "aidlc-t96f-")));
+  const proj = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-t96f-")));
   tempDirs.push(proj);
   mkdirSync(recordRoot(proj), { recursive: true });
-  copyFileSync(STATE_FIXTURE, join(recordRoot(proj), "aidlc-state.md"));
+  copyFileSync(STATE_FIXTURE, join(recordRoot(proj), "amadeus-state.md"));
   // The audit fixture goes into the DETERMINISTIC shard the compile tool
   // resolves (auditFilePath) so readAllAuditShards() merges it back.
   const shard = auditFilePath(proj);
@@ -153,7 +153,7 @@ function codeGen(proj: string): any {
 const sha256 = (proj: string): string =>
   createHash("sha256").update(readFileSync(graphPath(proj))).digest("hex");
 
-describe("t96 aidlc-runtime compile — instances[] populator (migrated from t96-runtime-instances-compile.sh, plan 10)", () => {
+describe("t96 amadeus-runtime compile — instances[] populator (migrated from t96-runtime-instances-compile.sh, plan 10)", () => {
   // --- 1. Single-Bolt -> no instances[] ----------------------------------
   test("1: single-Bolt -> no instances[]; row stays single-instance, outcome:approved", () => {
     const proj = makeProjectWithAudit("audit-single-bolt.md");

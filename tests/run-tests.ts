@@ -245,7 +245,7 @@ if (args.verbose) {
   process.env.AIDLC_TEST_LOG_DIR = logDir;
   process.stdout.write(`Verbose mode: logging to ${logDir}\n`);
 } else {
-  logDir = mkdtempSync(join(process.env.TMPDIR || tmpdir(), "aidlc-run-tests."));
+  logDir = mkdtempSync(join(process.env.TMPDIR || tmpdir(), "amadeus-run-tests."));
   cleanupLogDir = true;
 }
 
@@ -490,7 +490,7 @@ async function runBunTestFile(file: string, parallelMode = false): Promise<void>
   };
   process.stdout.write(`\n=== START ${base} ===\n`);
 
-  const junitXml = tmpFile("aidlc-run-tests-junit");
+  const junitXml = tmpFile("amadeus-run-tests-junit");
   const start = Date.now();
   const debugPrefix = args.debug && parallelMode ? `[${base}] ` : args.debug ? "" : null;
 

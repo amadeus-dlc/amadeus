@@ -26,7 +26,7 @@ describe("t148 dist/kiro file structure", () => {
   test("core dirs exist and are populated", () => {
     for (const [dir, min] of [
       ["tools", 20],
-      ["aidlc-common/stages", 5],
+      ["amadeus-common/stages", 5],
       ["knowledge", 5],
       ["sensors", 4],
       ["scopes", 9],
@@ -43,7 +43,7 @@ describe("t148 dist/kiro file structure", () => {
     // The AIDLC method relocated OUT of the harness dir (the old .kiro/steering/
     // rule layers) to the workspace root under aidlc/spaces/default/memory/ — one
     // hand-editable source of truth, identical on every harness, read by Kiro via
-    // the agent JSON `resources` globs (file://aidlc/spaces/default/memory/**/*.md).
+    // the agent JSON `resources` globs (file://amadeus/spaces/default/memory/**/*.md).
     // It sits beside .kiro/, so resolve from KIRO, not K.
     const mem = (...parts: string[]) =>
       join(KIRO, "aidlc", "spaces", "default", "memory", ...parts);
@@ -59,12 +59,12 @@ describe("t148 dist/kiro file structure", () => {
 
   test("authored shell files present", () => {
     for (const f of [
-      "skills/aidlc/SKILL.md",
-      "skills/aidlc/question-rendering.md",
-      "hooks/aidlc-kiro-adapter.ts",
-      "agents/aidlc.json",
-      "agents/aidlc-developer-agent.json",
-      "agents/aidlc-architect-agent.json",
+      "skills/amadeus/SKILL.md",
+      "skills/amadeus/question-rendering.md",
+      "hooks/amadeus-kiro-adapter.ts",
+      "agents/amadeus.json",
+      "agents/amadeus-developer-agent.json",
+      "agents/amadeus-architect-agent.json",
       "settings/cli.json",
     ]) {
       expect(existsSync(join(K, f))).toBe(true);
@@ -82,7 +82,7 @@ describe("t148 dist/kiro file structure", () => {
   });
 
   test("delegation targets cannot nest (no subagent tool)", () => {
-    for (const f of ["aidlc-developer-agent.json", "aidlc-architect-agent.json"]) {
+    for (const f of ["amadeus-developer-agent.json", "amadeus-architect-agent.json"]) {
       const a = readJson(join(K, "agents", f));
       expect((a.tools as string[]) ?? []).not.toContain("subagent");
     }
@@ -144,7 +144,7 @@ describe("t148 dist/kiro file structure", () => {
     ]);
     const all = Object.values(hooks).flat();
     for (const h of all) {
-      expect(h.command).toContain("aidlc-kiro-adapter.ts");
+      expect(h.command).toContain("amadeus-kiro-adapter.ts");
     }
     const matchers = (hooks.postToolUse ?? []).map((h) => h.matcher).sort();
     expect(matchers).toEqual(["execute_bash", "fs_write", "subagent", "todo_list"]);
@@ -157,7 +157,7 @@ describe("t148 dist/kiro file structure", () => {
 
   test("workspace defaults opus-4.8 to xhigh effort via chat.modelDefaults", () => {
     // The shipped cli.json raises reasoning effort to xhigh for the pinned
-    // orchestrator model (claude-opus-4.8 — exactly as agents/aidlc.json pins
+    // orchestrator model (claude-opus-4.8 — exactly as agents/amadeus.json pins
     // it). Kiro's per-model default sub-path is output_config.effort (per
     // kiro.dev/docs/cli/chat/effort). Pin it so the default can't regress.
     const s = readJson(join(K, "settings", "cli.json"));

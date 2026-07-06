@@ -6,7 +6,7 @@
 - **Scope**: feature
 - **Start Date**: 2025-07-01T09:00:00Z
 - **State Version**: 7
-- **Active Agent**: aidlc-product-agent
+- **Active Agent**: amadeus-product-agent
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**:

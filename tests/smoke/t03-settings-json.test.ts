@@ -13,13 +13,13 @@
 // single file under test honestly; it parses through gen-coverage-registry's
 // parseCoversHeader and (like the .sh) joins to no enumerated unit. No coverage
 // guarantee is lost: the .sh contributed none. (Same convention as t47's
-// `file:skills/aidlc/SKILL.md` family of shipped-file content twins.)
+// `file:skills/amadeus/SKILL.md` family of shipped-file content twins.)
 //
 // MECHANISM = none. The .sh shelled out to `jq` over a JSON file and never
 // touched a function, a CLI tool, argv, exit codes, or a process boundary.
 // gen-coverage-registry derives mechanism from the DRIVERS a test body calls
 // (milestone 3): this twin calls NO driver (no driveAidlc, no tui-drive.ts, no spawn of
-// an aidlc-*.ts tool or run-tests.sh), so its derived set is the deterministic
+// an amadeus-*.ts tool or run-tests.sh), so its derived set is the deterministic
 // `none` floor — matching the t47 / t34 / t14 content-structure family. Every
 // assertion is readFileSync + JSON.parse + a value check on the real bytes of
 // the shipped file, the same observable the .sh's `jq` asserted. Replacing `jq`
@@ -35,7 +35,7 @@
 // Source under test (read fresh, parsed once at module load):
 //   dist/claude/.claude/settings.json
 //     .permissions.allow[]                 — pre-approved tool list
-//     .statusLine.command                  — references aidlc-statusline.ts
+//     .statusLine.command                  — references amadeus-statusline.ts
 //     .model                               — "opus[1m]" orchestrator pin
 //     .env.CLAUDE_CODE_USE_BEDROCK         — "1" (Bedrock enabled)
 //     .env.AWS_REGION                      — non-empty (Bedrock requires it)
@@ -53,7 +53,7 @@
 //   .sh 1      jq empty (valid JSON)                       -> "settings.json is valid JSON"
 //   .sh 2-9    permissions.allow contains <8 tools>        -> one test() per tool,
 //                Read/Edit/Write/Bash/Glob/Grep/Task/WebSearch (8 tests)
-//   .sh 10     statusLine.command -> aidlc-statusline.ts   -> "statusLine.command references aidlc-statusline.ts"
+//   .sh 10     statusLine.command -> amadeus-statusline.ts   -> "statusLine.command references amadeus-statusline.ts"
 //   .sh 11     model == opus[1m]                           -> "model is pinned to opus[1m]"
 //   .sh 12     env.CLAUDE_CODE_USE_BEDROCK == 1            -> "env.CLAUDE_CODE_USE_BEDROCK is 1"
 //   .sh 13     env.AWS_REGION non-empty                    -> "env.AWS_REGION is set"
@@ -120,9 +120,9 @@ describe("permissions.allow — pre-approved tool list [.sh tests 2-9]", () => {
 });
 
 describe("statusLine [.sh test 10]", () => {
-  test("statusLine.command references aidlc-statusline.ts", () => {
+  test("statusLine.command references amadeus-statusline.ts", () => {
     const cmd = settings.statusLine?.command ?? "";
-    expect(cmd).toContain("aidlc-statusline.ts");
+    expect(cmd).toContain("amadeus-statusline.ts");
   });
 });
 

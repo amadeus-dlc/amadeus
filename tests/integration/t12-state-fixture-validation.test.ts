@@ -19,8 +19,8 @@
 // Subject under test (the shipped, real bytes — no temp project, no tool):
 //   - tests/fixtures/state-mid-ideation.md          (FIXTURES_DIR-relative)
 //   - tests/fixtures/state-initialization-done.md    (FIXTURES_DIR-relative)
-//   - dist/claude/.claude/knowledge/aidlc-shared/state-template.md  (the TEMPLATE
-//     the .sh resolved via `cd .../aidlc-shared && pwd`/state-template.md, AIDLC_SRC-relative)
+//   - dist/claude/.claude/knowledge/amadeus-shared/state-template.md  (the TEMPLATE
+//     the .sh resolved via `cd .../amadeus-shared && pwd`/state-template.md, AIDLC_SRC-relative)
 //
 // The .sh resolved the template path but never asserted against it directly
 // (it spot-checked the fixtures and noted in a comment that the headings ARE
@@ -61,10 +61,10 @@ const INIT = readFileSync(
   "utf-8",
 );
 // The .sh resolved TEMPLATE as
-// dist/claude/.claude/knowledge/aidlc-shared/state-template.md — the real
+// dist/claude/.claude/knowledge/amadeus-shared/state-template.md — the real
 // structure the fixtures are meant to mirror.
 const TEMPLATE = readFileSync(
-  join(AIDLC_SRC, "knowledge", "aidlc-shared", "state-template.md"),
+  join(AIDLC_SRC, "knowledge", "amadeus-shared", "state-template.md"),
   "utf-8",
 );
 

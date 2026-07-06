@@ -19,7 +19,7 @@ AI-DLC's documentation is split by what you're trying to do, not by topic:
 
 | Guide | You are… | You change… |
 |-------|----------|-------------|
-| [User Guide](../guide/00-introduction.md) | building software *with* AI-DLC | nothing in `.claude/` — you run `/aidlc`, answer at gates, review artifacts |
+| [User Guide](../guide/00-introduction.md) | building software *with* AI-DLC | nothing in `.claude/` — you run `/amadeus`, answer at gates, review artifacts |
 | **Harness Engineer Guide** (this one) | shaping *how* AI-DLC behaves for your team | the **data** the framework reads: stages, agents, scopes, rules, sensors, knowledge |
 | [Developer Reference](../reference/00-overview.md) | changing AI-DLC *itself* | the **code** that reads that data: the orchestrator, hooks, CLI tools, the compile pipeline, the test suite |
 
@@ -51,10 +51,10 @@ until a stage opts to use it.
 
 Two pieces of machinery move work through these stages, and as a harness
 engineer you shape the **data** both of them read. The deterministic **engine**
-(`core/tools/aidlc-orchestrate.ts`, with its `next` and `report`
-subcommands) reads `aidlc-state.md` and the compiled `stage-graph.json`,
+(`core/tools/amadeus-orchestrate.ts`, with its `next` and `report`
+subcommands) reads `amadeus-state.md` and the compiled `stage-graph.json`,
 decides what runs next, and emits one typed directive. The **conductor**
-(`skills/aidlc/SKILL.md`) is a thin forwarding loop that carries each directive
+(`skills/amadeus/SKILL.md`) is a thin forwarding loop that carries each directive
 out. Routing lives in the engine; your stage files, scopes, and rules are the
 inputs that steer it.
 
@@ -77,10 +77,10 @@ You author all of these in `core/` — the hand-authored, harness-neutral source
 
 | Change | Where you author it | Chapter |
 |--------|-------|---------|
-| Edit what a stage does | `core/aidlc-common/stages/<phase>/<slug>.md` | [Anatomy of a Stage](01-anatomy-of-a-stage.md) |
+| Edit what a stage does | `core/amadeus-common/stages/<phase>/<slug>.md` | [Anatomy of a Stage](01-anatomy-of-a-stage.md) |
 | Add a brand-new stage | a new file in the right phase directory + graph wiring | [Adding a Stage](02-adding-a-stage.md) |
 | Add or modify an agent | `core/agents/<name>-agent.md` | [Adding an Agent](03-adding-an-agent.md) |
-| Define a scope | `core/scopes/aidlc-<name>.md` + per-stage `scopes:` tags | [Scopes](04-scopes.md) |
+| Define a scope | `core/scopes/amadeus-<name>.md` + per-stage `scopes:` tags | [Scopes](04-scopes.md) |
 | Teach a standing rule | `core/memory/{team,project}.md` | [Rules and the Learning Loop](05-rules-and-the-loop.md) |
 | Wire a deterministic check | a sensor manifest under `core/sensors/` + a stage's `sensors:` import | [Sensors](06-sensors.md) |
 | Add team domain knowledge | `aidlc/knowledge/<agent>-agent/` (the space-level knowledge dir, at runtime) | [Team Knowledge](07-team-knowledge.md) |
@@ -101,7 +101,7 @@ author in `core/`.
 ## The build model: author in `core/`, regenerate the harnesses
 
 Everything a harness engineer authors lives in **`core/`** — the hand-authored,
-harness-neutral source of truth (stages under `core/aidlc-common/stages/`,
+harness-neutral source of truth (stages under `core/amadeus-common/stages/`,
 agents under `core/agents/`, scopes, rules, sensors, knowledge, tools, hooks).
 The per-harness `dist/<harness>/` trees you actually run (`dist/claude/.claude/`,
 `dist/kiro/.kiro/`, `dist/codex/`) are **generated** from `core/` plus a thin
@@ -110,7 +110,7 @@ rejected by CI. The loop is always:
 
 ```bash
 # 1. edit the source in core/ (never dist/)
-$EDITOR core/aidlc-common/stages/inception/my-stage.md
+$EDITOR core/amadeus-common/stages/inception/my-stage.md
 
 # 2. regenerate every harness tree from core/ + harness/
 bun scripts/package.ts
@@ -120,7 +120,7 @@ bun scripts/package.ts --check
 ```
 
 Commit the `core/` edit and the regenerated `dist/` together. When a recipe in
-the chapters below says to run `bun .claude/tools/aidlc-graph.ts compile` (or
+the chapters below says to run `bun .claude/tools/amadeus-graph.ts compile` (or
 another tool), that command runs against an *installed* tree — your project's
 `.claude/` (or `.kiro/` / `.codex/`) — to recompile the graph at runtime; it is
 not where you author. **You author in `core/`; the tools run in the harness

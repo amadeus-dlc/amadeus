@@ -1,22 +1,22 @@
-// covers: function:stageGraphDrift, hook:aidlc-session-start, subcommand:aidlc-utility:doctor
+// covers: function:stageGraphDrift, hook:amadeus-session-start, subcommand:amadeus-utility:doctor
 //
 // t184 -- stage-graph <-> disk drift detection (issue #364). The runtime resolves
 // stages from the compiled stage-graph.json only (loadGraph), never by scanning
 // the stage `.md` files. So a stage `.md` added to disk WITHOUT recompiling is
 // silently never executed. This suite proves the guardrail that surfaces that:
 //
-//   1. function:stageGraphDrift (aidlc-graph.ts) -- the deterministic two-source
+//   1. function:stageGraphDrift (amadeus-graph.ts) -- the deterministic two-source
 //      set-difference, in-process, driven through the AIDLC_STAGE_GRAPH +
 //      AIDLC_STAGES_DIR seams so both sources point at a temp tree. Proves BOTH
 //      directions (graph->disk missingFiles, disk->graph uncompiledStages) AND the
 //      in-sync zero case.
-//   2. subcommand:aidlc-utility:doctor -- the disk->graph drift surfaces as an
+//   2. subcommand:amadeus-utility:doctor -- the disk->graph drift surfaces as an
 //      ADVISORY row (pass:true, does NOT fail the doctor exit code, mirroring
 //      the rule-drift / MERGE_DISPATCH advisory rows). Driven by SPAWNING the
 //      sandbox doctor against a setupIntegrationProject copy with an extra stage
 //      file injected (the doctor pins stages off its own module dir, so a
 //      sandbox copy is required, same discipline as t129).
-//   3. hook:aidlc-session-start -- the same drift injects a non-blocking NOTE into
+//   3. hook:amadeus-session-start -- the same drift injects a non-blocking NOTE into
 //      the SessionStart additionalContext, fail-open. Driven by SPAWNING the
 //      sandbox hook (CLAUDE_PROJECT_DIR=<sandbox>), mirroring t10.
 //
@@ -39,9 +39,9 @@ import {
 const BUN = process.execPath; // the bun running this test
 
 // In-process helper under test, plus the shipped sources for the seam runs.
-import { compileStageGraph, stageGraphDrift } from "../../core/tools/aidlc-graph.ts";
+import { compileStageGraph, stageGraphDrift } from "../../core/tools/amadeus-graph.ts";
 const STAGE_GRAPH = join(AIDLC_SRC, "tools", "data", "stage-graph.json");
-const STAGES_DIR = join(AIDLC_SRC, "aidlc-common", "stages");
+const STAGES_DIR = join(AIDLC_SRC, "amadeus-common", "stages");
 const MID_IDEATION = join(REPO_ROOT, "tests", "fixtures", "state-mid-ideation.md");
 
 // A realistic custom stage file: valid-enough frontmatter, dropped into a phase
@@ -53,7 +53,7 @@ const CUSTOM_STAGE_MD = [
   `slug: ${CUSTOM_SLUG}`,
   "phase: construction",
   "execution: ALWAYS",
-  "lead_agent: aidlc-developer-agent",
+  "lead_agent: amadeus-developer-agent",
   "mode: inline",
   "---",
   "# My custom stage",
@@ -74,7 +74,7 @@ function newSandbox(): string {
 }
 
 function sandboxStagesDir(proj: string): string {
-  return join(proj, ".claude", "aidlc-common", "stages", "construction");
+  return join(proj, ".claude", "amadeus-common", "stages", "construction");
 }
 
 interface SpawnResult {
@@ -84,7 +84,7 @@ interface SpawnResult {
 
 /** Spawn the sandbox's own doctor (resolves stages off its module dir). */
 function doctor(proj: string): SpawnResult {
-  const util = join(proj, ".claude", "tools", "aidlc-utility.ts");
+  const util = join(proj, ".claude", "tools", "amadeus-utility.ts");
   const r = spawnSync(BUN, [util, "doctor", "--project-dir", proj], {
     encoding: "utf-8",
   });
@@ -93,7 +93,7 @@ function doctor(proj: string): SpawnResult {
 
 /** Fire the sandbox's session-start hook, returning the decoded additionalContext. */
 function sessionStartContext(proj: string): string {
-  const hook = join(proj, ".claude", "hooks", "aidlc-session-start.ts");
+  const hook = join(proj, ".claude", "hooks", "amadeus-session-start.ts");
   const r = Bun.spawnSync({
     cmd: [BUN, hook],
     stdin: new TextEncoder().encode('{"source":"startup"}'),
@@ -205,7 +205,7 @@ describe("t184 stage-graph drift detection (issue #364)", () => {
         "phase: construction",
         "execution: ALWAYS",
         "condition: Always.",
-        "lead_agent: aidlc-developer-agent",
+        "lead_agent: amadeus-developer-agent",
         "support_agents: []",
         "mode: inline",
         "produces: []",
@@ -254,7 +254,7 @@ describe("t184 stage-graph drift detection (issue #364)", () => {
   // ===========================================================================
   // 2. doctor -- disk->graph drift is an ADVISORY (pass:true, does not fail exit).
   // ===========================================================================
-  describe("subcommand:aidlc-utility:doctor -- uncompiled-stage advisory", () => {
+  describe("subcommand:amadeus-utility:doctor -- uncompiled-stage advisory", () => {
     test("clean sandbox: doctor reports 0 uncompiled stage files", () => {
       const proj = newSandbox();
       const r = doctor(proj);
@@ -275,7 +275,7 @@ describe("t184 stage-graph drift detection (issue #364)", () => {
       // The advisory fired and NAMED the slug (drift surfaced, not silent).
       expect(r.out).toContain("not in the compiled graph");
       expect(r.out).toContain(CUSTOM_SLUG);
-      expect(r.out).toContain("aidlc-graph.ts compile");
+      expect(r.out).toContain("amadeus-graph.ts compile");
       // ADVISORY: an uncompiled stage alone must NOT fail the health check.
       // (A clean sandbox doctor exits 0; injecting only this drift keeps it 0.)
       expect(r.status).toBe(0);
@@ -285,7 +285,7 @@ describe("t184 stage-graph drift detection (issue #364)", () => {
   // ===========================================================================
   // 3. session-start hook -- non-blocking drift NOTE in additionalContext.
   // ===========================================================================
-  describe("hook:aidlc-session-start -- drift advisory in additionalContext", () => {
+  describe("hook:amadeus-session-start -- drift advisory in additionalContext", () => {
     test("clean sandbox: no drift NOTE injected", () => {
       const proj = newSandbox();
       seedStateFile(proj, MID_IDEATION);
@@ -306,7 +306,7 @@ describe("t184 stage-graph drift detection (issue #364)", () => {
       const ctx = sessionStartContext(proj);
       expect(ctx).toContain("not in the compiled stage graph");
       expect(ctx).toContain(CUSTOM_SLUG);
-      expect(ctx).toContain("aidlc-graph.ts compile");
+      expect(ctx).toContain("amadeus-graph.ts compile");
       // Hook still emits its normal workflow context (advisory is additive).
       expect(ctx).toContain("AIDLC WORKFLOW ACTIVE");
     }, 30000);

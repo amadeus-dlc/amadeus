@@ -36,7 +36,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { repointHarnessIncludes } from "../../core/tools/aidlc-includes.ts";
+import { repointHarnessIncludes } from "../../core/tools/amadeus-includes.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const distSurface = (h: string, ...parts: string[]): string =>
@@ -96,15 +96,15 @@ describe("t-active-space-includes: Claude @-stub", () => {
     const root = setup();
     const before = readFileSync(join(root, ".claude", "rules", "aidlc.md"), "utf-8");
     const written = repointHarnessIncludes(root, "teamB");
-    expect(written).toEqual([".claude/rules/aidlc.md"]);
+    expect(written).toEqual([".claude/rules/amadeus.md"]);
     const after = readFileSync(join(root, ".claude", "rules", "aidlc.md"), "utf-8");
     const atLines = after.split("\n").filter((l) => l.startsWith("@"));
     // All 7 method @-lines re-pointed; none left on default.
     expect(atLines.length).toBe(7);
     expect(atLines.every((l) => l.includes("/teamB/memory/"))).toBe(true);
     expect(atLines.some((l) => l.includes("/default/memory/"))).toBe(false);
-    expect(after).toContain("@../../aidlc/spaces/teamB/memory/org.md");
-    expect(after).toContain("@../../aidlc/spaces/teamB/memory/phases/operation.md");
+    expect(after).toContain("@../../amadeus/spaces/teamB/memory/org.md");
+    expect(after).toContain("@../../amadeus/spaces/teamB/memory/phases/operation.md");
     // The comment header (non-@ lines) is preserved — same total line count.
     expect(after.split("\n").length).toBe(before.split("\n").length);
   });
@@ -145,7 +145,7 @@ describe("t-active-space-includes: Kiro agents/*.json resources glob", () => {
     const agentsDst = join(root, ".kiro", "agents");
     mkdirSync(agentsDst, { recursive: true });
     // Copy ALL committed kiro agent JSONs (each carries a memory glob).
-    for (const name of ["aidlc.json", "aidlc-developer-agent.json", "aidlc-architect-agent.json", "aidlc-product-lead-agent.json", "aidlc-architecture-reviewer-agent.json"]) {
+    for (const name of ["aidlc.json", "amadeus-developer-agent.json", "amadeus-architect-agent.json", "amadeus-product-lead-agent.json", "amadeus-architecture-reviewer-agent.json"]) {
       cpSync(distSurface("kiro", ".kiro", "agents", name), join(agentsDst, name));
     }
     return root;
@@ -158,7 +158,7 @@ describe("t-active-space-includes: Kiro agents/*.json resources glob", () => {
     expect(written.length).toBe(5);
     expect(written.every((p) => p.startsWith(".kiro/agents/") && p.endsWith(".json"))).toBe(true);
     const conductor = JSON.parse(readFileSync(join(root, ".kiro", "agents", "aidlc.json"), "utf-8"));
-    expect(conductor.resources).toContain("file://aidlc/spaces/teamB/memory/**/*.md");
+    expect(conductor.resources).toContain("file://amadeus/spaces/teamB/memory/**/*.md");
     expect(conductor.resources.some((r: string) => r.includes("/default/memory/"))).toBe(false);
     // Other resource entries preserved.
     expect(conductor.resources).toContain("file://AGENTS.md");

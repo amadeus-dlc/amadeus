@@ -1,10 +1,10 @@
-# aidlc-developer-agent -- Technical Reference
+# amadeus-developer-agent -- Technical Reference
 
 ## Identity
 
 | Field | Value |
 |-------|-------|
-| Name | aidlc-developer-agent |
+| Name | amadeus-developer-agent |
 | Model Override | opus |
 | Allowed Claude Code Tools | Read, Edit, Write, Glob, Grep, Bash, AskUserQuestion |
 | Disallowed Claude Code Tools | Task |
@@ -36,15 +36,15 @@
 
 | Source | Artifacts |
 |--------|-----------|
-| aidlc-architect-agent | Unit of work specifications, design patterns, API specifications |
-| aidlc-quality-agent | Test requirements, bug reports, defect specifications |
+| amadeus-architect-agent | Unit of work specifications, design patterns, API specifications |
+| amadeus-quality-agent | Test requirements, bug reports, defect specifications |
 
 ### Hands Off To
 
 | Target | Artifacts |
 |--------|-----------|
-| aidlc-quality-agent | Implemented code for testing, test infrastructure |
-| aidlc-architect-agent | Code scan results for reverse engineering synthesis |
+| amadeus-quality-agent | Implemented code for testing, test infrastructure |
+| amadeus-architect-agent | Code scan results for reverse engineering synthesis |
 
 ---
 
@@ -52,7 +52,7 @@
 
 ### Methodology (Tier 1)
 
-Path: `.claude/knowledge/aidlc-developer-agent/`
+Path: `.claude/knowledge/amadeus-developer-agent/`
 
 | File | Content |
 |------|---------|
@@ -65,7 +65,7 @@ Path: `.claude/knowledge/aidlc-developer-agent/`
 
 ### Team (Tier 2)
 
-Path: `aidlc/knowledge/aidlc-developer-agent/` (the space-level knowledge dir; user-managed)
+Path: `aidlc/knowledge/amadeus-developer-agent/` (the space-level knowledge dir; user-managed)
 
 A space-level directory the team creates when it has content (the engine ships `aidlc/knowledge/` empty). Populated by the team with project-specific
 development context such as coding standards, framework conventions, existing
@@ -76,6 +76,6 @@ API patterns, or migration strategies.
 ## Cross-References
 
 - [Agent Reference Overview](README.md)
-- [Agent Guide: aidlc-developer-agent](../../guide/agents/developer-agent.md)
+- [Agent Guide: amadeus-developer-agent](../../guide/agents/developer-agent.md)
 - [Stage Documentation](../04-stages/)
-- Source: [`dist/claude/.claude/agents/aidlc-developer-agent.md`](../../../dist/claude/.claude/agents/aidlc-developer-agent.md)
+- Source: [`dist/claude/.claude/agents/amadeus-developer-agent.md`](../../../dist/claude/.claude/agents/amadeus-developer-agent.md)

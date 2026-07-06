@@ -13,7 +13,7 @@
 **Timestamp**: 2026-05-28T08:01:00Z
 **Event**: STAGE_STARTED
 **Stage**: user-stories
-**Agent**: aidlc-product-agent
+**Agent**: amadeus-product-agent
 
 ---
 
@@ -61,4 +61,4 @@
 **Timestamp**: 2026-05-28T08:06:00Z
 **Event**: STAGE_STARTED
 **Stage**: application-design
-**Agent**: aidlc-architect-agent
+**Agent**: amadeus-architect-agent

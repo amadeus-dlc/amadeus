@@ -8,9 +8,9 @@
 // conductor runs it); the deterministic birth handler runs the same
 // detectWorkspace scan + state/audit write the old --init did, now into the BORN
 // intent's per-intent record. This test drives a CLEAN birth
-// (`/aidlc --scope poc "build a todo app"`) over the brownfield stub — NO
+// (`/amadeus --scope poc "build a todo app"`) over the brownfield stub — NO
 // --init --force, and NO seeded state. A seeded flat state would trigger birth's
-// migrate-flat short-circuit (handleIntentBirth aidlc-utility.ts:2022-2037 MOVES
+// migrate-flat short-circuit (handleIntentBirth amadeus-utility.ts:2022-2037 MOVES
 // the flat tree into a record and RETURNS without running the scan), which would
 // skip the very WORKSPACE_SCANNED classification this test pins. A clean birth on
 // the brownfield stub runs the scan and writes the classification (mirrors how
@@ -25,10 +25,10 @@
 // The SDK driver replaces that subprocess wholesale, and sdk-drive's readers
 // (readStateFile/readAuditEvents) resolve the BORN intent's per-intent record.
 // The birth path is a single deterministic Bash dispatch: the engine names
-// `bun .claude/tools/aidlc-utility.ts intent-birth --scope <scope> --arguments "..."`
+// `bun .claude/tools/amadeus-utility.ts intent-birth --scope <scope> --arguments "..."`
 // and the conductor prints its stdout VERBATIM. handleIntentBirth
-// (aidlc-utility.ts:1986) runs detectWorkspace over the brownfield-todo stub and
-// WRITES the classification into the per-intent aidlc-state.md + emits
+// (amadeus-utility.ts:1986) runs detectWorkspace over the brownfield-todo stub and
+// WRITES the classification into the per-intent amadeus-state.md + emits
 // WORKSPACE_SCANNED (:2144). So every .sh assertion maps to a surface the TOOL
 // produced, not the LLM's rendering.
 //
@@ -42,7 +42,7 @@
 // react@^18 as a runtime dep and vite.config.ts at the root.
 //
 // ASSERTION MAP (.sh test -> SDK surface). Source: handleIntentBirth
-// (aidlc-utility.ts:1986) runs the SAME detectWorkspace scan + state/audit write
+// (amadeus-utility.ts:1986) runs the SAME detectWorkspace scan + state/audit write
 // the old --init did, now per-intent. The surfaces below are unchanged; only the
 // dispatch (clean birth, not --init --force) and the record location (per-intent,
 // resolved by sdk-drive's readers) moved.
@@ -54,7 +54,7 @@
 //   3 Project Type ~ [Bb]rownfield     -> assertStateField "Project Type" === "Brownfield"  (state write :2377; scan:1666)
 //   4 Frameworks lists React           -> assertStateFieldContains "Frameworks" "React"     (state write; detectFrameworks:1505)
 //   5 Languages lists TypeScript       -> assertStateFieldContains "Languages" "TypeScript" (state write; LANG_BY_EXT .ts/.tsx)
-//   6 audit has WORKSPACE_SCANNED      -> assertAuditEvent "WORKSPACE_SCANNED"              (handleIntentBirth:2144; aidlc-audit.ts)
+//   6 audit has WORKSPACE_SCANNED      -> assertAuditEvent "WORKSPACE_SCANNED"              (handleIntentBirth:2144; amadeus-audit.ts)
 //   7 [x] count >= 3 (all init stages) -> on disk: count of `^- [x]` >= 3                   (3 init stages marked [x])
 //   8 State Version is 7               -> assertStateField "State Version" === "7"          (birth state template)
 //   9 Languages field present          -> readStateField "Languages" !== undefined          (state write)
@@ -75,7 +75,7 @@
 // run poses no menu — answerScript is left at its "default" (option-1) policy and
 // we assert zero menus were shown.
 //
-// It SPENDS TOKENS — each driveAidlc drives the real /aidlc on Opus/Bedrock.
+// It SPENDS TOKENS — each driveAidlc drives the real /amadeus on Opus/Bedrock.
 
 import { describe, expect, test } from "bun:test";
 import {
@@ -127,7 +127,7 @@ function completedCheckboxCount(stateText: string): number {
 
 describe("t71 workspace detection — brownfield classification writes state (sdk)", () => {
   // -------------------------------------------------------------------------
-  // A CLEAN birth (`/aidlc --scope poc "build a todo app"`) over a brownfield
+  // A CLEAN birth (`/amadeus --scope poc "build a todo app"`) over a brownfield
   // stub — NO --init --force, NO seeded state (a seeded flat state would trigger
   // birth's migrate-flat short-circuit and skip the scan; see header). The
   // birth path has no gate. handleIntentBirth runs the scan +
@@ -148,7 +148,7 @@ describe("t71 workspace detection — brownfield classification writes state (sd
         noAidlcDocs: true,
       });
       try {
-        const r = await driveAidlc('/aidlc --scope poc "build a todo app"', {
+        const r = await driveAidlc('/amadeus --scope poc "build a todo app"', {
           projectDir: proj,
           timeoutMs: DRIVE_TIMEOUT_MS,
           stopAfterToolResult: STOP_AFTER_INIT,

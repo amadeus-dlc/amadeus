@@ -44,7 +44,7 @@ Each fire leaves a row in the intent's `audit/` shards. The event names — exac
 matters when you grep the log — are **`SENSOR_FIRED`** when a sensor starts,
 **`SENSOR_PASSED`** when it clears, and **`SENSOR_FAILED`** when it finds a gap.
 A failed row links to a detail file under
-`<record>/.aidlc-sensors/<stage-slug>/` (in the intent's record dir) that names the specific gap: the
+`<record>/.amadeus-sensors/<stage-slug>/` (in the intent's record dir) that names the specific gap: the
 missing headings, the unreferenced upstream artifact, the lint error. The
 user-facing tour of how this looks during a run is in
 [Rules and the Learning Loop](../guide/09-rules-and-the-learning-loop.md) in the
@@ -54,21 +54,21 @@ User Guide.
 
 ## The four sensors that ship
 
-Four manifests ship under `.claude/sensors/`, each prefixed `aidlc-`:
+Four manifests ship under `.claude/sensors/`, each prefixed `amadeus-`:
 
 | Manifest | Fires on | Checks |
 |----------|----------|--------|
-| `aidlc-required-sections.md` | record-dir markdown output | The output carries the required H2 headings — a generic content-shape check |
-| `aidlc-upstream-coverage.md` | record-dir markdown output | The prose references each upstream artifact the stage declares it consumes |
-| `aidlc-linter.md` | `.ts` / `.js` code output | Wraps your configured linter (ESLint by default) |
-| `aidlc-type-check.md` | `.ts` / `.tsx` code output | Wraps your configured type-checker (`tsc` by default) |
+| `amadeus-required-sections.md` | record-dir markdown output | The output carries the required H2 headings — a generic content-shape check |
+| `amadeus-upstream-coverage.md` | record-dir markdown output | The prose references each upstream artifact the stage declares it consumes |
+| `amadeus-linter.md` | `.ts` / `.js` code output | Wraps your configured linter (ESLint by default) |
+| `amadeus-type-check.md` | `.ts` / `.tsx` code output | Wraps your configured type-checker (`tsc` by default) |
 
 All four are gated by a `matches:` glob (more on that below): the first two
 document-shape checks scope to the artifact tree (the shipped manifests carry
-`**/{aidlc-docs,intents}/**` — the per-intent record tree, with the legacy
-`aidlc-docs/` arm kept for a pre-migration project), the two code-quality checks
+`**/{amadeus-docs,intents}/**` — the per-intent record tree, with the legacy
+`amadeus-docs/` arm kept for a pre-migration project), the two code-quality checks
 to their language globs (`**/*.{ts,js}`, `**/*.{ts,tsx}`).
-Read `aidlc-required-sections.md` end to end before authoring your own — it is
+Read `amadeus-required-sections.md` end to end before authoring your own — it is
 the smallest of the four and shows the whole shape, frontmatter plus prose body.
 
 ---
@@ -80,7 +80,7 @@ the framework deliberately removed it. A stage decides what fires on its
 outputs by naming the sensor in its own frontmatter:
 
 ```yaml
-# core/aidlc-common/stages/construction/code-generation.md
+# core/amadeus-common/stages/construction/code-generation.md
 ---
 slug: code-generation
 phase: construction
@@ -93,8 +93,8 @@ sensors:
 This is **pull authoring**, and it is the same direction as every other binding
 in the harness model: the consumer (the stage) names the capability (the
 sensor), never the reverse. The `sensors:` list holds bare ids — `linter`, not
-`aidlc-linter` — because the id matches the manifest's frontmatter `id:` field,
-which equals the filename stem with the `aidlc-` prefix stripped.
+`amadeus-linter` — because the id matches the manifest's frontmatter `id:` field,
+which equals the filename stem with the `amadeus-` prefix stripped.
 
 The payoff is locality of reference. Open a stage file and you see exactly which
 checks fire when that stage runs — you do not have to scan every manifest
@@ -119,13 +119,13 @@ full resolver mechanics are in
 
 Adding a sensor is two writes: the manifest, then the binding.
 
-**1. Drop a manifest at `core/sensors/aidlc-<id>.md`.** The filename stem
-(minus the `aidlc-` prefix) must equal the frontmatter `id:`. The frontmatter is
+**1. Drop a manifest at `core/sensors/amadeus-<id>.md`.** The filename stem
+(minus the `amadeus-` prefix) must equal the frontmatter `id:`. The frontmatter is
 short — five required fields and a handful of optional ones:
 
 | Field | Required | What it is |
 |-------|----------|------------|
-| `id` | yes | kebab-case; equals the filename stem minus `aidlc-` |
+| `id` | yes | kebab-case; equals the filename stem minus `amadeus-` |
 | `kind` | yes | `deterministic` is the only accepted value today |
 | `command` | yes | the canonical invocation prefix the dispatcher runs |
 | `default_severity` | yes | `advisory` is the only accepted value today |
@@ -152,11 +152,11 @@ add the id to each one — strict-additive, no override layer to reason about. T
 stop a sensor firing on a stage, remove the id from that stage. The manifest
 never changes; only the import lists do.
 
-The `aidlc-` filename prefix is mandatory for every sensor, custom ones
-included — the compile resolver (`loadSensors` in `aidlc-graph.ts`) discovers
-manifests with `SENSOR_FILE_REGEX = /^aidlc-([a-z][a-z0-9-]*)\.md$/` and silently
+The `amadeus-` filename prefix is mandatory for every sensor, custom ones
+included — the compile resolver (`loadSensors` in `amadeus-graph.ts`) discovers
+manifests with `SENSOR_FILE_REGEX = /^amadeus-([a-z][a-z0-9-]*)\.md$/` and silently
 skips any file without the prefix, so it is never discovered and never binds to a
-stage. Name your sensor `core/sensors/aidlc-<id>.md` and set `id: <id>`; the
+stage. Name your sensor `core/sensors/amadeus-<id>.md` and set `id: <id>`; the
 filename-to-id rule applies to the stem after the prefix.
 
 ---
@@ -169,8 +169,8 @@ judgment.
 **`matches` — what shape of file should this analyze?** This glob is the fire
 filter, and it is effectively required: the hook fires the sensor only when the
 path being written matches it, and an entry with **no** `matches` never fires at
-all. The code-quality sensors set it to code globs (`aidlc-linter.md` uses
-`**/*.{ts,js}`; `aidlc-type-check.md` uses `**/*.{ts,tsx}`) so they fire only on
+all. The code-quality sensors set it to code globs (`amadeus-linter.md` uses
+`**/*.{ts,js}`; `amadeus-type-check.md` uses `**/*.{ts,tsx}`) so they fire only on
 code writes and stay quiet on prose; the document-shape sensors scope to the
 artifact tree so they fire on any markdown artifact a stage writes.
 Decide the file shape your check is meaningful for, and write the narrowest glob
@@ -196,7 +196,7 @@ You do not always author sensors by hand. The §13 learning gate can install one
 when you confirm a sensor proposal during a workflow — you decide a deterministic
 check should fire on a stage's output, tick it at the gate, and the framework
 does the same two-write install you would do manually: it scaffolds a
-**project-tier** manifest at your project's `.claude/sensors/aidlc-<id>.md`
+**project-tier** manifest at your project's `.claude/sensors/amadeus-<id>.md`
 (never the shipped framework distribution) and appends the new id to the
 originating stage's `sensors:` import list, atomically. That gate-confirmed path
 emits a **`SENSOR_PROPOSED`** audit row, so no binding is ever installed

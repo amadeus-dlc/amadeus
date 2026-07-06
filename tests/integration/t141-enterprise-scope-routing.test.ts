@@ -2,7 +2,7 @@
 //
 // MR9 live scope-routing journey. The deterministic scope transpose and runner
 // tests already prove the enterprise scope data compiles; this test drives a
-// real `/aidlc --init --scope enterprise` turn through the SDK and asserts the
+// real `/amadeus --init --scope enterprise` turn through the SDK and asserts the
 // routing as data: init stdout, state fields, and audit events. It stops at the
 // init Bash tool_result, before any human gate or stage body, so it proves live
 // conductor-to-tool routing without spending a full workflow.
@@ -75,7 +75,7 @@ describe("t141 enterprise scope routing (sdk live, MR9)", () => {
         stripEnvScope: true,
       });
       try {
-        const r = await driveAidlc(`/aidlc --init --scope ${SCOPE}`, {
+        const r = await driveAidlc(`/amadeus --init --scope ${SCOPE}`, {
           projectDir: proj,
           timeoutMs: DRIVE_TIMEOUT_MS,
           stopAfterToolResult: {

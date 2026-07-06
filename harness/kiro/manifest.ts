@@ -14,7 +14,7 @@
 //   - agents/ is MIXED: the persona .md files are core (copied + rules rename
 //     n/a), the Kiro-native agent .json configs are authored (harnessFiles).
 //   - hooks/ is MIXED: core hook bodies are copied; the one authored
-//     aidlc-kiro-adapter.ts stdin shim is a harnessFile.
+//     amadeus-kiro-adapter.ts stdin shim is a harnessFile.
 //   - AGENTS.md lands at the PROJECT ROOT (dist/kiro/AGENTS.md), outside .kiro/.
 
 import type { HarnessManifest } from "../../scripts/manifest-types.ts";
@@ -25,33 +25,33 @@ const manifest: HarnessManifest = {
   harnessDir: ".kiro",
 
   // Same core projection as claude, EXCEPT: rules→steering, and the
-  // orchestrator skill (skills/aidlc/) is authored, not core.
+  // orchestrator skill (skills/amadeus/) is authored, not core.
   coreDirs: [
     { src: "tools", dst: "tools" },
-    { src: "aidlc-common", dst: "aidlc-common" },
+    { src: "amadeus-common", dst: "amadeus-common" },
     { src: "knowledge", dst: "knowledge" },
     { src: "sensors", dst: "sensors" },
     { src: "scopes", dst: "scopes" },
     { src: "agents", dst: "agents" },
     { src: "hooks", dst: "hooks" },
-    { src: "skills/aidlc-session-cost", dst: "skills/aidlc-session-cost" },
-    { src: "skills/aidlc-replay", dst: "skills/aidlc-replay" },
-    { src: "skills/aidlc-outcomes-pack", dst: "skills/aidlc-outcomes-pack" },
+    { src: "skills/amadeus-session-cost", dst: "skills/amadeus-session-cost" },
+    { src: "skills/amadeus-replay", dst: "skills/amadeus-replay" },
+    { src: "skills/amadeus-outcomes-pack", dst: "skills/amadeus-outcomes-pack" },
   ],
 
   // Authored Kiro shell surfaces. These carry literal `.kiro` (harness-specific
   // by construction); they are .md/.json/.ts copied verbatim (the .md token
   // substitution is a no-op on them — no {{HARNESS_DIR}} token present).
   harnessFiles: [
-    { src: "skills/aidlc/SKILL.md", dst: "skills/aidlc/SKILL.md" },
-    { src: "skills/aidlc/question-rendering.md", dst: "skills/aidlc/question-rendering.md" },
-    { src: "agents/aidlc.json", dst: "agents/aidlc.json" },
-    { src: "agents/aidlc-architect-agent.json", dst: "agents/aidlc-architect-agent.json" },
-    { src: "agents/aidlc-developer-agent.json", dst: "agents/aidlc-developer-agent.json" },
-    { src: "agents/aidlc-product-lead-agent.json", dst: "agents/aidlc-product-lead-agent.json" },
-    { src: "agents/aidlc-architecture-reviewer-agent.json", dst: "agents/aidlc-architecture-reviewer-agent.json" },
-    { src: "agents/aidlc-composer-agent.json", dst: "agents/aidlc-composer-agent.json" },
-    { src: "hooks/aidlc-kiro-adapter.ts", dst: "hooks/aidlc-kiro-adapter.ts" },
+    { src: "skills/amadeus/SKILL.md", dst: "skills/amadeus/SKILL.md" },
+    { src: "skills/amadeus/question-rendering.md", dst: "skills/amadeus/question-rendering.md" },
+    { src: "agents/amadeus.json", dst: "agents/amadeus.json" },
+    { src: "agents/amadeus-architect-agent.json", dst: "agents/amadeus-architect-agent.json" },
+    { src: "agents/amadeus-developer-agent.json", dst: "agents/amadeus-developer-agent.json" },
+    { src: "agents/amadeus-product-lead-agent.json", dst: "agents/amadeus-product-lead-agent.json" },
+    { src: "agents/amadeus-architecture-reviewer-agent.json", dst: "agents/amadeus-architecture-reviewer-agent.json" },
+    { src: "agents/amadeus-composer-agent.json", dst: "agents/amadeus-composer-agent.json" },
+    { src: "hooks/amadeus-kiro-adapter.ts", dst: "hooks/amadeus-kiro-adapter.ts" },
     { src: "settings/cli.json", dst: "settings/cli.json" },
     // Project-root .gitignore (beside .kiro/, not inside it) — re-rooted under
     // aidlc/spaces/* for the workspace layout (SEED): cursors + machine-local
@@ -76,7 +76,7 @@ const manifest: HarnessManifest = {
   // The authored agent .json configs and the kiro adapter live inside the
   // otherwise core-copied agents/ and hooks/ dirs — exempt them from the
   // orphan scan (they are harnessFiles, not core-derived).
-  authoredExempt: [/^agents\/[^/]+\.json$/, /^hooks\/aidlc-kiro-[^/]+\.ts$/, /^hooks\/[^/]+\.kiro\.hook$/],
+  authoredExempt: [/^agents\/[^/]+\.json$/, /^hooks\/amadeus-kiro-[^/]+\.ts$/, /^hooks\/[^/]+\.kiro\.hook$/],
 
   // Kiro ships no per-shell emissions — all its surfaces are authored files.
   emit: null,

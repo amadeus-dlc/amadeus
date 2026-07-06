@@ -1,9 +1,9 @@
-// covers: file:agents/aidlc-product-agent.md, file:agents/aidlc-design-agent.md, file:agents/aidlc-delivery-agent.md, file:agents/aidlc-architect-agent.md, file:agents/aidlc-aws-platform-agent.md, file:agents/aidlc-compliance-agent.md, file:agents/aidlc-devsecops-agent.md, file:agents/aidlc-developer-agent.md, file:agents/aidlc-quality-agent.md, file:agents/aidlc-pipeline-deploy-agent.md, file:agents/aidlc-operations-agent.md
+// covers: file:agents/amadeus-product-agent.md, file:agents/amadeus-design-agent.md, file:agents/amadeus-delivery-agent.md, file:agents/amadeus-architect-agent.md, file:agents/amadeus-aws-platform-agent.md, file:agents/amadeus-compliance-agent.md, file:agents/amadeus-devsecops-agent.md, file:agents/amadeus-developer-agent.md, file:agents/amadeus-quality-agent.md, file:agents/amadeus-pipeline-deploy-agent.md, file:agents/amadeus-operations-agent.md
 //
 // t04 — shipped agent-persona FRONTMATTER contract. Migrated from
 // tests/unit/t04-agent-frontmatter.sh (TAP plan 55 — 5 distinct assertions
 // per agent across the 11 domain-expert personas). The .sh resolved
-// AGENTS_DIR = dist/claude/.claude/agents and, for each `aidlc-<agent>-agent.md`,
+// AGENTS_DIR = dist/claude/.claude/agents and, for each `amadeus-<agent>-agent.md`,
 // grepped the frontmatter for five invariants.
 //
 // Mechanism: none. This is a pure structural/schema check over the shipped
@@ -15,8 +15,8 @@
 // field assertion to the YAML block (between the opening and closing `---`),
 // which is STRONGER than a whole-file grep that could match prose in the body.
 //
-// Subject under test (dist/claude/.claude/agents/aidlc-<agent>-agent.md):
-//   - name:           must equal `aidlc-<agent>-agent` (filename ⇄ name parity;
+// Subject under test (dist/claude/.claude/agents/amadeus-<agent>-agent.md):
+//   - name:           must equal `amadeus-<agent>-agent` (filename ⇄ name parity;
 //                     Claude Code resolves a subagent by its `name`).
 //   - description:    must be present (non-empty) — the routing summary.
 //   - allowedTools:   must be ABSENT — a silently-ignored field removed in
@@ -42,7 +42,7 @@
 // single loop — 5 × 11 = 55. Here each of the 5 invariants is one test() that
 // asserts across ALL 11 agents via expect() per agent, so every one of the 55
 // .sh rows maps to a named expect(). The final test re-counts to pin the plan):
-//   .sh L27-31 (name: matches filename)               -> "name: equals aidlc-<agent>-agent (filename parity)" [11 expects]
+//   .sh L27-31 (name: matches filename)               -> "name: equals amadeus-<agent>-agent (filename parity)" [11 expects]
 //   .sh L34-38 (description: present)                  -> "description: is present and non-empty"            [11 expects]
 //   .sh L41-45 (allowedTools: absent)                  -> "allowedTools: is ABSENT (ignored field removed in v0.5.4)" [11 expects]
 //   .sh L48-52 (disallowedTools contains Task)         -> "disallowedTools: contains Task (no nested subagents)" [11 expects]
@@ -91,7 +91,7 @@ const EXPECTED_MODEL: Record<(typeof AGENTS)[number], "opus" | "sonnet"> = {
 };
 
 const agentFile = (agent: string): string =>
-  join(AGENTS_DIR, `aidlc-${agent}-agent.md`);
+  join(AGENTS_DIR, `amadeus-${agent}-agent.md`);
 
 /**
  * Extract the YAML frontmatter block (the text between the first two `---`
@@ -103,7 +103,7 @@ function frontmatter(agent: string): string {
   const body = readFileSync(agentFile(agent), "utf-8");
   // Frontmatter is delimited by a leading `---\n` ... `\n---`.
   const m = body.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  if (!m) throw new Error(`no YAML frontmatter block in aidlc-${agent}-agent.md`);
+  if (!m) throw new Error(`no YAML frontmatter block in amadeus-${agent}-agent.md`);
   return m[1];
 }
 
@@ -113,17 +113,17 @@ function hasKeyLine(fm: string, key: string): boolean {
 }
 
 describe("t04 agent-persona frontmatter contract (migrated from t04-agent-frontmatter.sh, plan 55)", () => {
-  // .sh L27-31: `grep -q "^name:.*aidlc-${agent}-agent"`.
-  test("name: equals aidlc-<agent>-agent (filename parity) [.sh test 1 ×11]", () => {
+  // .sh L27-31: `grep -q "^name:.*amadeus-${agent}-agent"`.
+  test("name: equals amadeus-<agent>-agent (filename parity) [.sh test 1 ×11]", () => {
     for (const agent of AGENTS) {
       // Sanity: the file the .sh grepped must exist.
       expect(existsSync(agentFile(agent))).toBe(true);
       const fm = frontmatter(agent);
       const m = fm.match(/^name:\s*(\S+)/m);
-      expect(m, `aidlc-${agent}-agent.md: no name: line in frontmatter`).not.toBeNull();
-      // STRONGER than the .sh's `.*aidlc-${agent}-agent` substring grep: pin the
+      expect(m, `amadeus-${agent}-agent.md: no name: line in frontmatter`).not.toBeNull();
+      // STRONGER than the .sh's `.*amadeus-${agent}-agent` substring grep: pin the
       // EXACT value to the filename stem.
-      expect(m?.[1]).toBe(`aidlc-${agent}-agent`);
+      expect(m?.[1]).toBe(`amadeus-${agent}-agent`);
     }
   });
 
@@ -133,14 +133,14 @@ describe("t04 agent-persona frontmatter contract (migrated from t04-agent-frontm
       const fm = frontmatter(agent);
       expect(
         hasKeyLine(fm, "description"),
-        `aidlc-${agent}-agent.md: missing description: field`,
+        `amadeus-${agent}-agent.md: missing description: field`,
       ).toBe(true);
       // STRONGER: the field must actually carry content (block-scalar `>` or
       // inline) — not a bare `description:` with nothing after it. The first
       // description line plus any following indented continuation lines must
       // contain non-whitespace.
       const after = fm.split(/^description:/m)[1] ?? "";
-      expect(after.trim().length, `aidlc-${agent}-agent.md: empty description`).toBeGreaterThan(0);
+      expect(after.trim().length, `amadeus-${agent}-agent.md: empty description`).toBeGreaterThan(0);
     }
   });
 
@@ -153,7 +153,7 @@ describe("t04 agent-persona frontmatter contract (migrated from t04-agent-frontm
       // anchored regex begins-of-line so `disallowedTools:` is not matched.
       expect(
         hasKeyLine(fm, "allowedTools"),
-        `aidlc-${agent}-agent.md: allowedTools: field still present`,
+        `amadeus-${agent}-agent.md: allowedTools: field still present`,
       ).toBe(false);
     }
   });
@@ -163,7 +163,7 @@ describe("t04 agent-persona frontmatter contract (migrated from t04-agent-frontm
     for (const agent of AGENTS) {
       const fm = frontmatter(agent);
       const m = fm.match(/^disallowedTools:\s*(.+)$/m);
-      expect(m, `aidlc-${agent}-agent.md: no disallowedTools: line`).not.toBeNull();
+      expect(m, `amadeus-${agent}-agent.md: no disallowedTools: line`).not.toBeNull();
       // STRONGER: parse the value and assert Task is one of the listed tools,
       // not merely that "Task" appears somewhere on the line.
       const tools = (m?.[1] ?? "").split(",").map((t) => t.trim());
@@ -177,7 +177,7 @@ describe("t04 agent-persona frontmatter contract (migrated from t04-agent-frontm
       const fm = frontmatter(agent);
       // The .sh used `awk -F': *' '/^modelOverride:/ {print $2; exit}'`.
       const m = fm.match(/^modelOverride:\s*(\S+)/m);
-      expect(m, `aidlc-${agent}-agent.md: no modelOverride: line`).not.toBeNull();
+      expect(m, `amadeus-${agent}-agent.md: no modelOverride: line`).not.toBeNull();
       expect(m?.[1]).toBe(EXPECTED_MODEL[agent]);
     }
   });

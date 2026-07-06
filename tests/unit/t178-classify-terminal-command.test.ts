@@ -1,12 +1,12 @@
 // covers: function:classifyTerminalCommand
 // covers: function:READ_ONLY_FLAGS function:WORKSPACE_VERBS
 //
-// t178 — classifyTerminalCommand() in aidlc-lib.ts, plus the two exported sets
+// t178 — classifyTerminalCommand() in amadeus-lib.ts, plus the two exported sets
 // READ_ONLY_FLAGS and WORKSPACE_VERBS that it classifies off.
 // Mechanism: none (pure data-in/data-out classifier — zero I/O, zero LLM, zero
 // tokens). A direct import + call satisfies the "none" minMechanism.
 //
-// Source (dist/claude/.claude/tools/aidlc-lib.ts):
+// Source (dist/claude/.claude/tools/amadeus-lib.ts):
 //   :303  READ_ONLY_FLAGS = {"--status","--help","--doctor","--version"}
 //   :309  WORKSPACE_VERBS = {"space","space-create","intent"}
 //   :318  interface TerminalCommand { subcommand; arg?; source }
@@ -36,7 +36,7 @@ import {
   classifyTerminalCommand,
   READ_ONLY_FLAGS,
   WORKSPACE_VERBS,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 describe("classifyTerminalCommand() — read-only flags (match anywhere)", () => {
   test("a leading --status maps to subcommand 'status', source read-only-flag", () => {

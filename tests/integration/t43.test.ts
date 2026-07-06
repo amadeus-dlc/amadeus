@@ -22,14 +22,14 @@
 // env-seam case is retained because the .sh exercised no process boundary.
 //
 // FIXTURE DISCIPLINE: the inputs are the REAL committed stage files under
-// dist/claude/.claude/skills/aidlc/stages/<phase>/<slug>.md, read-only —
+// dist/claude/.claude/skills/amadeus/stages/<phase>/<slug>.md, read-only —
 // exactly the files the .sh's find_stage_file() walked ($AIDLC_SRC/skills/
 // aidlc/stages). Nothing is written; nothing under tests/fixtures/** is touched.
 // The .sh hard-coded the lifecycle STAGE_ORDER and the per-phase stage lists;
 // those lists are reproduced verbatim here so the same stages are asserted.
 //
 // Sources read for this port:
-//   dist/claude/.claude/tools/aidlc-lib.ts:893 parseStageFrontmatter(raw)
+//   dist/claude/.claude/tools/amadeus-lib.ts:893 parseStageFrontmatter(raw)
 //     — returns Record<string, unknown>; inputs/outputs are string scalars in
 //     the stage frontmatter (verified against the real intent-capture /
 //     reverse-engineering / requirements-analysis files).
@@ -40,17 +40,17 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseStageFrontmatter } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { parseStageFrontmatter } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // --- Paths --------------------------------------------------------------------
-// Mirrors the .sh's STAGES_DIR="$AIDLC_SRC/skills/aidlc/stages".
+// Mirrors the .sh's STAGES_DIR="$AIDLC_SRC/skills/amadeus/stages".
 const STAGES_DIR = join(
   import.meta.dir,
   "..",
   "..",
   "dist", "claude",
   ".claude",
-  "aidlc-common",
+  "amadeus-common",
   "stages",
 );
 
@@ -200,7 +200,7 @@ describe("reverse-engineering conditional execution", () => {
 
 // ============================================================
 // Tests 5-8: Ideation outputs declare their per-intent record dir (.sh:96-105)
-// The flat aidlc-docs/ideation/ root was rerooted to the active intent's
+// The flat amadeus-docs/ideation/ root was rerooted to the active intent's
 // per-intent <record>/<phase>/<stage>/ tree, and the `outputs:` frontmatter was
 // rewritten to RELATIVE artifact names plus the engine-resolution clause
 // "(under this stage's record dir, engine-resolved)" — the path root no longer
@@ -220,7 +220,7 @@ describe("ideation stages declare their per-intent record dir in outputs", () =>
 
 // ============================================================
 // Tests 9-11: Inception outputs declare their per-intent record dir (.sh:107-116)
-// Same reroot as the ideation block: the flat aidlc-docs/inception/ root moved
+// Same reroot as the ideation block: the flat amadeus-docs/inception/ root moved
 // to the per-intent <record>/inception/<stage>/ tree, and `outputs:` now carries
 // relative artifact names plus the "(under this stage's record dir,
 // engine-resolved)" clause.
@@ -257,7 +257,7 @@ describe("inception stages declare their per-intent record dir in outputs", () =
 // The .sh counted the 5 per-unit stages whose outputs contain "{unit-name}" and
 // asserted assert_gt COUNT 3 (i.e. >3 -> at least 4 of 5).
 //
-// REROOT: with the flat aidlc-docs/ tree retired, the `{unit-name}` per-unit key
+// REROOT: with the flat amadeus-docs/ tree retired, the `{unit-name}` per-unit key
 // no longer lives in the `outputs:` frontmatter — that line now carries relative
 // artifact names plus "(under this stage's per-unit record dir, engine-resolved)".
 // The literal `{unit-name}` segment moved into the BODY prose, where each stage
@@ -349,7 +349,7 @@ describe("scope-definition -> team-formation edge", () => {
 // "application-design\|design".
 //
 // REROOT: the old `outputs:` carried the path root
-// aidlc-docs/inception/application-design/..., so the literal "application-design"
+// amadeus-docs/inception/application-design/..., so the literal "application-design"
 // appeared in the output scalar. With the reroot the path root left `outputs:` —
 // application-design's outputs now name the design artifacts directly
 // (components.md, component-methods.md, services.md, component-dependency.md,
@@ -375,8 +375,8 @@ describe("application-design -> units-generation edge", () => {
 // ============================================================
 // Test 18: Operation phase outputs declare their per-intent record dir (.sh:207-217)
 // The .sh counted the 4 checked operation stages whose outputs contain
-// "aidlc-docs/operation/" and asserted the count == 4. Post-reroot the flat
-// aidlc-docs/operation/ root moved to the per-intent <record>/operation/ tree and
+// "amadeus-docs/operation/" and asserted the count == 4. Post-reroot the flat
+// amadeus-docs/operation/ root moved to the per-intent <record>/operation/ tree and
 // `outputs:` carries the "(under this stage's record dir, engine-resolved)"
 // clause instead of the path root. Same intent (all 4 declare their output
 // location), repointed to the new canonical declaration; still an all-4 check.

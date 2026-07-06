@@ -1,4 +1,4 @@
-// covers: file:skills/aidlc/SKILL.md, subcommand:aidlc-utility:recompose
+// covers: file:skills/amadeus/SKILL.md, subcommand:amadeus-utility:recompose
 //
 // t197-compose-chat-inflight.sdk.test.ts - the CHAT-FIRST in-flight reshape
 // journey (sdk live). t196 proves the arc when the human types the literal
@@ -8,7 +8,7 @@
 // plan-reshape):
 //
 //   seed:      an active mid-ideation feature workflow (the born shape).
-//   drive:     `/aidlc can we skip market research? we already know this
+//   drive:     `/amadeus can we skip market research? we already know this
 //              market` - no compose verb, no flag, pure conversation.
 //   conductor: classifies the input as a plan-reshape (not a continuation -
 //              a verbatim forward would silently run the current stage),
@@ -19,7 +19,7 @@
 //              stays pending); derived fields rebuilt; RECOMPOSED audited;
 //              the cursor never moved and no stage advanced.
 //
-// It SPENDS TOKENS - driveAidlc drives the real /aidlc on Opus/Bedrock. Gated
+// It SPENDS TOKENS - driveAidlc drives the real /amadeus on Opus/Bedrock. Gated
 // on claude-CLI presence.
 
 import { describe, expect, test } from "bun:test";
@@ -66,7 +66,7 @@ describe("t197 chat-first in-flight reshape (plain chat, no compose verb, sdk li
         const birth = Bun.spawnSync({
           cmd: [
             process.execPath,
-            join(proj, ".claude", "tools", "aidlc-utility.ts"),
+            join(proj, ".claude", "tools", "amadeus-utility.ts"),
             "intent-birth", "--scope", "feature", "--project-dir", proj,
           ],
           stdout: "pipe",
@@ -81,7 +81,7 @@ describe("t197 chat-first in-flight reshape (plain chat, no compose verb, sdk li
         // The whole point: NO compose verb, NO flag - plain conversation
         // that names skipping a stage of the running workflow.
         const r = await driveAidlc(
-          "/aidlc can we skip market research? we already know this market",
+          "/amadeus can we skip market research? we already know this market",
           {
             projectDir: proj,
             answerScript: APPROVE_ALL,

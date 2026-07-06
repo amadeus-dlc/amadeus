@@ -1,11 +1,11 @@
-// covers: subcommand:aidlc-learnings:surface, subcommand:aidlc-learnings:persist, subcommand:aidlc-graph:compile, function:parseSensorManifest
+// covers: subcommand:amadeus-learnings:surface, subcommand:amadeus-learnings:persist, subcommand:amadeus-graph:compile, function:parseSensorManifest
 //
 // t99 (integration) — §13 learning-gate END-TO-END (v0.5.0 milestone 12). Migrated
 // from tests/integration/t99-learnings-gate-flow.sh (TAP plan 16).
 //
 // Mechanism: cli. The body SPAWNS the real tools via the Bun runtime against
-// the shipped .ts paths — `aidlc-learnings.ts surface|persist` and
-// `aidlc-graph.ts compile` — against a real dist/claude/.claude COPY + audit.md
+// the shipped .ts paths — `amadeus-learnings.ts surface|persist` and
+// `amadeus-graph.ts compile` — against a real dist/claude/.claude COPY + audit.md
 // + memory.md + state + runtime-graph (the same surface→glue→persist round-trip
 // the .sh drove). The process boundary IS the subject: exit codes, on-disk
 // audit rows, the learnings-file lines, the two-write sensor bind, and
@@ -23,7 +23,7 @@
 // rows), and the escalate path writes through.
 //
 // Source under test:
-//   dist/claude/.claude/tools/aidlc-learnings.ts
+//   dist/claude/.claude/tools/amadeus-learnings.ts
 //     surface  — JSON {schema_version, stage_slug, phase,
 //                        memory_entries_total, candidates[], parked_open_questions[]}.
 //                        Candidate carries {id "c<n>", source_heading,
@@ -36,26 +36,26 @@
 //                        memoryDirFor — a learning IS a practice, vision §6; the
 //                        heading is ensure-exists) keyed by a `cid:<slug>:<id>`
 //                        marker, emits RULE_LEARNED. Two-write sensor bind:
-//                        scaffolds .claude/sensors/aidlc-<id>.md + appends the id to the
+//                        scaffolds .claude/sensors/amadeus-<id>.md + appends the id to the
 //                        origin stage's `sensors:` frontmatter, emits SENSOR_PROPOSED
 //                        with Destinations: JSON.stringify([origin_stage]) (:536-549).
 //                        Idempotent (row+line both present → no-op, :463) + recovery
 //                        (row present, line gone → re-write only, skip emit, :467-487).
-//   dist/claude/.claude/tools/aidlc-graph.ts
+//   dist/claude/.claude/tools/amadeus-graph.ts
 //     compile  (:1293) — recompiles stage-graph.json (AIDLC_STAGE_GRAPH seam,
 //                        :154-162) from stage YAML (AIDLC_STAGES_DIR) + sensors
 //                        (AIDLC_SENSORS_DIR); the newly-bound `sensors:` import
 //                        resolves into the stage node's sensors_applicable[] (:131-133).
-//   dist/claude/.claude/tools/aidlc-sensor-schema.ts
+//   dist/claude/.claude/tools/amadeus-sensor-schema.ts
 //     parseSensorManifest (:54) — extracts {id, matches, ...} from manifest YAML.
-//   dist/claude/.claude/aidlc-common/protocols/stage-protocol.md
+//   dist/claude/.claude/amadeus-common/protocols/stage-protocol.md
 //     §13 span "## 13. Learnings Ritual" (:848) → "### Artifact Re-use" (:941):
 //     fossil sweep — zero sensor-protocol.md / applies_to / pre-v3 PR-doctor refs.
 //
 // Old TAP -> new test parity (1:1, every .sh assertion -> a named test()):
 //   .sh assert 1  (Case 1: surface → 3 candidates + 1 parked)        -> "Case 1: surface emits 3 candidates (I/D/T) + 1 parked open question"
-//   .sh assert 2  (Case 1: project pick lands in project-learnings)  -> "Case 1: project pick lands in aidlc-project-learnings.md"
-//   .sh assert 3  (Case 1: team pick lands in team-learnings)        -> "Case 1: team-scoped pick lands in aidlc-team-learnings.md"
+//   .sh assert 2  (Case 1: project pick lands in project-learnings)  -> "Case 1: project pick lands in amadeus-project-learnings.md"
+//   .sh assert 3  (Case 1: team pick lands in team-learnings)        -> "Case 1: team-scoped pick lands in amadeus-team-learnings.md"
 //   .sh assert 4  (Case 1: two RULE_LEARNED rows)                    -> "Case 1: two RULE_LEARNED audit rows"
 //   .sh asserts 5-6 (Case 2: surface + persist skipped in test-run mode) were DROPPED
 //                 per #369 when the test-run mechanism was removed.
@@ -91,20 +91,20 @@ import {
   seededRecordDir,
   seededStateFile,
 } from "../harness/fixtures.ts";
-import { parseSensorManifest } from "../../dist/claude/.claude/tools/aidlc-sensor-schema.ts";
-import { memoryDirFor } from "../../dist/claude/.claude/tools/aidlc-graph.ts";
+import { parseSensorManifest } from "../../dist/claude/.claude/tools/amadeus-sensor-schema.ts";
+import { memoryDirFor } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 
 // P9: createTestProject seeds the per-intent record (DEFAULT_RECORD_DIR)
 // + active-intent cursor, so the learnings/graph tools resolve THAT record (not
-// the flat aidlc-docs/, retired). State, runtime-graph, the per-stage memory,
+// the flat amadeus-docs/, retired). State, runtime-graph, the per-stage memory,
 // and the per-clone audit shard all live under it; the runtime-graph memory_path
 // is record-relative so surface's join(projectDir, memRel) finds the file.
 const RP = `aidlc/spaces/${DEFAULT_SPACE}/intents/${DEFAULT_RECORD_DIR}`;
 
 const BUN = process.execPath; // the bun running this test
 const TOOLS = join(AIDLC_SRC, "tools");
-const LEARNINGS_TS = join(TOOLS, "aidlc-learnings.ts");
-const GRAPH_TS = join(TOOLS, "aidlc-graph.ts");
+const LEARNINGS_TS = join(TOOLS, "amadeus-learnings.ts");
+const GRAPH_TS = join(TOOLS, "amadeus-graph.ts");
 const SEED_GRAPH = join(TOOLS, "data", "stage-graph.json");
 const FIX = join(FIXTURES_DIR, "v05-mr12-learnings");
 const MEMORY_MIXED = join(FIX, "memory-mixed.md");
@@ -159,7 +159,7 @@ interface CliResult {
   stderr: string;
 }
 
-/** Spawn `bun aidlc-learnings.ts surface --slug <slug> --project-dir <pd>`. */
+/** Spawn `bun amadeus-learnings.ts surface --slug <slug> --project-dir <pd>`. */
 function surface(pd: string, slug = "user-stories"): CliResult {
   const r = spawnSync(BUN, [LEARNINGS_TS, "surface", "--slug", slug, "--project-dir", pd], {
     encoding: "utf-8",
@@ -167,7 +167,7 @@ function surface(pd: string, slug = "user-stories"): CliResult {
   return { status: r.status ?? -1, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
 }
 
-/** Spawn `bun aidlc-learnings.ts persist --slug <slug> --selections-json <sel> --project-dir <pd>`. */
+/** Spawn `bun amadeus-learnings.ts persist --slug <slug> --selections-json <sel> --project-dir <pd>`. */
 function persist(pd: string, sel: string, slug = "user-stories", env?: NodeJS.ProcessEnv): CliResult {
   const r = spawnSync(
     BUN,
@@ -320,7 +320,7 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
   // ===========================================================================
   // Case 3 — sensor proposal → project-tier manifest + frontmatter bind →
   // compile binds. Drives the parseSensorManifest in-proc check + a real
-  // `aidlc-graph compile` against the AIDLC_STAGES_DIR / AIDLC_SENSORS_DIR /
+  // `amadeus-graph compile` against the AIDLC_STAGES_DIR / AIDLC_SENSORS_DIR /
   // AIDLC_STAGE_GRAPH seam, exactly as the .sh did.
   // ===========================================================================
   function seedSensorProposal(pd: string): string {
@@ -335,10 +335,10 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
           manifest_fields: {
             id: "acceptance-format",
             kind: "deterministic",
-            command: "bun .claude/tools/aidlc-sensor.ts fire acceptance-format",
+            command: "bun .claude/tools/amadeus-sensor.ts fire acceptance-format",
             default_severity: "advisory",
             description: "Checks AC uses Given/When/Then",
-            matches: "**/aidlc-docs/inception/user-stories/**",
+            matches: "**/amadeus-docs/inception/user-stories/**",
             timeout_seconds: 30,
           },
         },
@@ -347,7 +347,7 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
     return sel;
   }
 
-  const STAGES_DIR_OF = (pd: string) => join(pd, ".claude", "aidlc-common", "stages");
+  const STAGES_DIR_OF = (pd: string) => join(pd, ".claude", "amadeus-common", "stages");
   const SENSORS_DIR_OF = (pd: string) => join(pd, ".claude", "sensors");
 
   test("Case 3: project-tier manifest parses + carries matches glob [.sh 7]", () => {
@@ -355,13 +355,13 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
     const sel = seedSensorProposal(pd);
     const r = persist(pd, sel, "user-stories", { AIDLC_STAGES_DIR: STAGES_DIR_OF(pd) });
     expect(r.status).toBe(0);
-    const manifest = join(SENSORS_DIR_OF(pd), "aidlc-acceptance-format.md");
+    const manifest = join(SENSORS_DIR_OF(pd), "amadeus-acceptance-format.md");
     expect(existsSync(manifest)).toBe(true);
     // In-process: the scaffolded manifest round-trips through the REAL schema
     // parser (the .sh's inline `bun -e` parseSensorManifest one-liner).
     const m = parseSensorManifest(readFileSync(manifest, "utf-8"));
     expect(m.id).toBe("acceptance-format");
-    expect(m.matches).toBe("**/aidlc-docs/inception/user-stories/**");
+    expect(m.matches).toBe("**/amadeus-docs/inception/user-stories/**");
   }, TIMEOUT);
 
   test("Case 3: next compile binds the id into user-stories sensors_applicable [.sh 8]", () => {
@@ -574,7 +574,7 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
   test("§13 rewrite carries zero sensor-protocol.md / applies_to / pre-v3 PR-doctor fossils [.sh 16]", () => {
     const sp = join(
       AIDLC_SRC,
-      "aidlc-common",
+      "amadeus-common",
       "protocols",
       "stage-protocol.md",
     );

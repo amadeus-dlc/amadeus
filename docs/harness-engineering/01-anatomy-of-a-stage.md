@@ -17,7 +17,7 @@ Keeping both in one file means you see the graph edges and the execution steps s
 
 This split is the key to knowing what you're editing. Change a frontmatter field and you've changed the *graph* (a dependency edge, the agent that leads, the execution mode). Change the body and you've changed the *work* (what the agent actually does). The two are independent.
 
-A real stage is authored at `core/aidlc-common/stages/<phase>/<slug>.md` — for example `stages/inception/application-design.md`. Open one alongside this chapter; the shape will be familiar by the end.
+A real stage is authored at `core/amadeus-common/stages/<phase>/<slug>.md` — for example `stages/inception/application-design.md`. Open one alongside this chapter; the shape will be familiar by the end.
 
 ---
 

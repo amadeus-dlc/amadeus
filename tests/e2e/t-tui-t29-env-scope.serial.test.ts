@@ -13,9 +13,9 @@
 //     no-state guidance. The shipped settings env default is not enough by
 //     itself to start a workflow; the state file remains absent.
 //   - Case override (explicit flag wins over env): same shipped `workshop`
-//     default, but `/aidlc --scope feature` overrides it -> Scope=feature on disk.
+//     default, but `/amadeus --scope feature` overrides it -> Scope=feature on disk.
 //     .sh assertion ported: state `- **Scope**: feature`.
-//   - Case known-scope positional: `/aidlc feature` bootstraps Scope=feature
+//   - Case known-scope positional: `/amadeus feature` bootstraps Scope=feature
 //     without a scope-disambiguation gate; the bare known-scope token wins over the
 //     settings default in the live TUI path.
 //   - Case error (invalid env value errors, writes NO state): the env block is
@@ -31,7 +31,7 @@
 // success cases, and the literal error text for the error case.
 //
 // WHY PATTERN A (no answer-gate): the journey does NOT run to completion. A fresh
-// `/aidlc` writes state-init (Scope field + WORKSPACE_INITIALISED audit) and the
+// `/amadeus` writes state-init (Scope field + WORKSPACE_INITIALISED audit) and the
 // orchestrator keeps going into the first post-init stage. We assert the
 // DETERMINISTIC landed emission (the Scope field + the audit event) and the
 // rendered statusline — never racy terminal completion (the Phase-2 lesson). If
@@ -60,7 +60,7 @@
 //   passthrough — a driver tweak, flagged here, not silently assumed.
 //
 //   The .sh's Case D (existing state file ignores env — state is authoritative,
-//   asserted via md5 no-mutation under `/aidlc --status`) is NOT ported here: it
+//   asserted via md5 no-mutation under `/amadeus --status`) is NOT ported here: it
 //   is a read-only no-op path that spends a full LLM turn for a no-mutation
 //   check, and the "state wins over env" invariant is the absence of a
 //   scope-change, which the SDK logic tier asserts deterministically without
@@ -83,7 +83,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import * as os from "node:os";
 import { join } from "node:path";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { stateFilePathFor } from "../harness/sdk-drive.ts";
 import { resolveWinNode } from "../harness/tui-drive.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
@@ -134,7 +134,7 @@ function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: 
 // Poll an ON-DISK predicate until true or timeout — the deterministic completion
 // signal for a fresh-workflow start. We do NOT gate on the statusline flipping to
 // a phase: that flip lags the actual work (the statusline paints `[AIDLC] ready`
-// until state-init WRITES aidlc-state.md, and the pre-state init reasoning can run
+// until state-init WRITES amadeus-state.md, and the pre-state init reasoning can run
 // minutes — observed live, the `feature` override took ~150s to flip while a 240s
 // statusline-wait flaked). The state file landing with the Scope field is the
 // real, deterministic "workflow started" signal, and it is exactly what the test
@@ -177,8 +177,8 @@ async function waitForScopeLanding(
   return { landed: false, pane };
 }
 
-// Has aidlc-state.md landed with a `- **Scope**: <scope>` line for the expected
-// scope? (state-init writes it — aidlc-utility.ts:2049.)
+// Has amadeus-state.md landed with a `- **Scope**: <scope>` line for the expected
+// scope? (state-init writes it — amadeus-utility.ts:2049.)
 function scopeLanded(projectDir: string, scope: string): boolean {
   const statePath = stateFilePathFor(projectDir);
   if (!existsSync(statePath)) return false;
@@ -265,11 +265,11 @@ function launchReady(session: string, projectDir: string): void {
 describe("t-tui-t29 env-scope (AWS_AIDLC_DEFAULT_SCOPE seeds new-workflow scope on disk)", () => {
   // --- Case A: bare command does not bootstrap solely from env default -------
   // v0.6.1's read-only engine uses AWS_AIDLC_DEFAULT_SCOPE for scope resolution
-  // once a command carries an init/jump/freeform target, but a bare `/aidlc` on a
+  // once a command carries an init/jump/freeform target, but a bare `/amadeus` on a
   // no-state project is intentionally not enough to mutate. The live trace
   // proves the TUI renders the no-state guidance and writes no state file.
   test.skipIf(SKIP_REASON !== null)(
-    `bare /aidlc with env default asks for a scope or intent and writes no state${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
+    `bare /amadeus with env default asks for a scope or intent and writes no state${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
     () => {
       const session = `aidlc_tui_t29_envdef_${process.pid}`;
       const proj = setupTuiProject({ noAidlcDocs: true });
@@ -278,7 +278,7 @@ describe("t-tui-t29 env-scope (AWS_AIDLC_DEFAULT_SCOPE seeds new-workflow scope 
         // itself create a workflow for an otherwise empty slash command.
         launchReady(session, proj);
 
-        drive(["send", "--session", session, "--keys", "/aidlc", "--literal", "--no-enter"]);
+        drive(["send", "--session", session, "--keys", "/amadeus", "--literal", "--no-enter"]);
         drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
 
         expect(waitFor(session, "No workflow state found", 240000, 0)).toBe(true);
@@ -288,8 +288,8 @@ describe("t-tui-t29 env-scope (AWS_AIDLC_DEFAULT_SCOPE seeds new-workflow scope 
         // collapse the tail of a tool result behind "+N lines" in the rendered
         // pane. Pin the visible recovery lead plus the no-state disk invariant;
         // the exact full tool string is covered at the engine layer. The engine
-        // emits "…or by naming a scope (/aidlc --scope <scope>)."
-        // (aidlc-orchestrate.ts:1245-1247) — assert a stable substring of that.
+        // emits "…or by naming a scope (/amadeus --scope <scope>)."
+        // (amadeus-orchestrate.ts:1245-1247) — assert a stable substring of that.
         const flat = pane.replace(/[▎\s]+/g, " ");
         expect(flat).toContain("naming a scope");
         // No-scope run births no intent, so no per-intent state file resolves
@@ -306,12 +306,12 @@ describe("t-tui-t29 env-scope (AWS_AIDLC_DEFAULT_SCOPE seeds new-workflow scope 
   // --- Case override: EXPLICIT --scope flag wins over env ---------------------
   // SKILL.md step 0 (:106): "If $ARGUMENTS already contains `--scope`, skip
   // substitution — explicit CLI flag wins." That skip is keyed on the LITERAL
-  // `--scope` token, so `/aidlc --scope feature` is the deterministic flag-beats-
+  // `--scope` token, so `/amadeus --scope feature` is the deterministic flag-beats-
   // env path: no env synthesis, no disambiguation, Scope=feature lands. The live
   // conductor may still paint the generic empty-workspace recovery menu; when it
   // does, the test takes the default "Scaffold & start feature" path and still
   // asserts the same deterministic Scope=feature state write. (Contrast the
-  // bare freeform `/aidlc feature` — covered in the SEPARATE disambiguation-gate
+  // bare freeform `/amadeus feature` — covered in the SEPARATE disambiguation-gate
   // case below — which does NOT contain `--scope`, so step 0 synthesizes
   // `--scope workshop` from env and the orchestrator renders a feature-vs-workshop
   // gate. The .sh used the bare form and only "passed" because it auto-approved
@@ -325,7 +325,7 @@ describe("t-tui-t29 env-scope (AWS_AIDLC_DEFAULT_SCOPE seeds new-workflow scope 
         // Shipped `workshop` env default stays; the explicit --scope flag must win.
         launchReady(session, proj);
 
-        drive(["send", "--session", session, "--keys", "/aidlc --scope feature", "--literal", "--no-enter"]);
+        drive(["send", "--session", session, "--keys", "/amadeus --scope feature", "--literal", "--no-enter"]);
         drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
 
         // TERMINATE on the DETERMINISTIC disk signal: Scope=feature in state.md.
@@ -337,7 +337,7 @@ describe("t-tui-t29 env-scope (AWS_AIDLC_DEFAULT_SCOPE seeds new-workflow scope 
         const { landed, pane } = await waitForScopeLanding(session, proj, "feature", 300000);
         if (!landed) {
           throw new Error(
-            `Scope=feature never landed in aidlc-state.md within budget.\n` +
+            `Scope=feature never landed in amadeus-state.md within budget.\n` +
               `---- last pane ----\n${pane}\n-------------------`,
           );
         }
@@ -362,13 +362,13 @@ describe("t-tui-t29 env-scope (AWS_AIDLC_DEFAULT_SCOPE seeds new-workflow scope 
   );
 
   // --- Case known-scope positional: bare keyword bootstraps that scope --------
-  // `/aidlc feature` is a known-scope request. The first engine call sees no
+  // `/amadeus feature` is a known-scope request. The first engine call sees no
   // state and emits the workflow-birth print naming `init --scope feature`
   // (run-then-continue); the TUI conductor runs it and re-enters the loop, so
   // Scope=feature lands on disk. No scope-disambiguation AUQ is expected or
   // required; a generic no-state bootstrap menu is answered when it appears.
   test.skipIf(SKIP_REASON !== null)(
-    `bare known-scope command (/aidlc feature) bootstraps Scope=feature without a scope disambiguation gate${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
+    `bare known-scope command (/amadeus feature) bootstraps Scope=feature without a scope disambiguation gate${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
     async () => {
       const session = `aidlc_tui_t29_disambig_${process.pid}`;
       const proj = setupTuiProject({ noAidlcDocs: true });
@@ -376,13 +376,13 @@ describe("t-tui-t29 env-scope (AWS_AIDLC_DEFAULT_SCOPE seeds new-workflow scope 
         // Shipped `workshop` env default stays; the known scope positional wins.
         launchReady(session, proj);
 
-        drive(["send", "--session", session, "--keys", "/aidlc feature", "--literal", "--no-enter"]);
+        drive(["send", "--session", session, "--keys", "/amadeus feature", "--literal", "--no-enter"]);
         drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
 
         const { landed, pane } = await waitForScopeLanding(session, proj, "feature", 300000);
         if (!landed) {
           throw new Error(
-            `Scope=feature never landed in aidlc-state.md within budget.\n` +
+            `Scope=feature never landed in amadeus-state.md within budget.\n` +
               `---- last pane ----\n${pane}\n-------------------`,
           );
         }
@@ -414,12 +414,12 @@ describe("t-tui-t29 env-scope (AWS_AIDLC_DEFAULT_SCOPE seeds new-workflow scope 
         setSettingsEnvScope(proj, "bogus");
         launchReady(session, proj);
 
-        drive(["send", "--session", session, "--keys", "/aidlc", "--literal", "--no-enter"]);
+        drive(["send", "--session", session, "--keys", "/amadeus", "--literal", "--no-enter"]);
         drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
 
         // Rendered: the canonical error text appears in the pane. The orchestrator
         // prints `Invalid AWS_AIDLC_DEFAULT_SCOPE "bogus". Valid scopes: ...` and
-        // STOPs (aidlc-utility.ts:2798). The literal substring is the .sh's
+        // STOPs (amadeus-utility.ts:2798). The literal substring is the .sh's
         // assert_contains target (line 58); it must paint VERBATIM.
         expect(waitFor(session, "Invalid AWS_AIDLC_DEFAULT_SCOPE", 240000, 0)).toBe(true);
         const pane = drive(["capture", "--session", session]).stdout;

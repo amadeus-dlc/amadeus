@@ -1,9 +1,9 @@
-// covers: subcommand:aidlc-worktree:discard
+// covers: subcommand:amadeus-worktree:discard
 //
 // CLI-contract port of tests/e2e/t04-worktree-discard-list-verify.sh
 // (TAP plan 12), mechanism = cli. The .sh exercises three read/destructive
-// subcommands of aidlc-worktree.ts — discard, list, verify — but the single
-// covers UNIT credited for this port is subcommand:aidlc-worktree:discard
+// subcommands of amadeus-worktree.ts — discard, list, verify — but the single
+// covers UNIT credited for this port is subcommand:amadeus-worktree:discard
 // (the destructive one with the audit-first WORKTREE_DISCARDED emit + real
 // git worktree-remove + branch -D side effects). list and verify are still
 // asserted at full strength so parity is equal-or-stronger; they just aren't
@@ -17,10 +17,10 @@
 // '"reason":"absent"', '"reason":"stale ...') and the real
 // git-worktree-remove + branch-delete effects the .sh relies on.
 //
-// FIXTURE: aidlc-worktree.ts asserts discard runs from the main checkout
-// (assertNotSiblingWorktree, aidlc-worktree.ts:459->101) and runs real git, so
+// FIXTURE: amadeus-worktree.ts asserts discard runs from the main checkout
+// (assertNotSiblingWorktree, amadeus-worktree.ts:459->101) and runs real git, so
 // each case needs an ACTUAL git repo on `main` with one commit plus an
-// aidlc-docs/ dir. setupWorktreeFixture (tests/harness/fixtures.ts) builds
+// amadeus-docs/ dir. setupWorktreeFixture (tests/harness/fixtures.ts) builds
 // exactly that; the tool is spawned with cwd = the fixture so its
 // `git rev-parse --show-toplevel` resolves to the main checkout. The .sh's
 // inline `git -C "$FIX2" worktree add -q ... -b unrelated` (the non-bolt
@@ -47,10 +47,10 @@
 // shared one fixture). STRONGER additions:
 //   * T4 also asserts the idempotent second discard prints emitted:null with
 //     reason "already-discarded" (the .sh only checked the exit code; the
-//     handler's no-op contract — aidlc-worktree.ts:470-480 — is now pinned).
+//     handler's no-op contract — amadeus-worktree.ts:470-480 — is now pinned).
 //   * T1-4 also asserts the bolt-demo branch is gone (git rev-parse on
 //     refs/heads/bolt-demo fails), proving discard deletes the branch too, not
-//     just the directory (aidlc-worktree.ts:502-510).
+//     just the directory (amadeus-worktree.ts:502-510).
 //   * T12 also asserts the verify (present, default window) case still passes
 //     in the SAME fixture before the max-age=0 stale check, isolating that the
 //     non-zero is the window, not an absent event.
@@ -66,14 +66,14 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const TOOL = join(AIDLC_SRC, "tools", "aidlc-worktree.ts");
+const TOOL = join(AIDLC_SRC, "tools", "amadeus-worktree.ts");
 
 const fixtures: string[] = [];
 afterAll(() => {
   for (const f of fixtures) cleanupWorktreeFixture(f);
 });
 
-/** Fresh git-repo fixture on `main` + aidlc-docs/, registered for cleanup. */
+/** Fresh git-repo fixture on `main` + amadeus-docs/, registered for cleanup. */
 function freshFixture(): string {
   const p = setupWorktreeFixture();
   fixtures.push(p);
@@ -86,7 +86,7 @@ interface CliResult {
   stdout: string;
 }
 
-/** Spawn `bun aidlc-worktree.ts <sub> ... --project-dir <p>` from cwd=<p>. */
+/** Spawn `bun amadeus-worktree.ts <sub> ... --project-dir <p>` from cwd=<p>. */
 function wt(p: string, args: string[]): CliResult {
   const res = spawnSync(BUN, [TOOL, ...args, "--project-dir", p], {
     cwd: p,
@@ -109,7 +109,7 @@ function branchExists(p: string, branch: string): boolean {
   return r.status === 0;
 }
 
-describe("t04 aidlc-worktree discard/list/verify (migrated from t04-worktree-discard-list-verify.sh, plan 12)", () => {
+describe("t04 amadeus-worktree discard/list/verify (migrated from t04-worktree-discard-list-verify.sh, plan 12)", () => {
   test("1-4: discard removes worktree + branch, emits WORKTREE_DISCARDED, idempotent on re-run", () => {
     const p = freshFixture();
     // Seed a worktree to discard.
@@ -121,14 +121,14 @@ describe("t04 aidlc-worktree discard/list/verify (migrated from t04-worktree-dis
     expect(r.status).toBe(0); // T1
     expect(r.out).toContain('"emitted":"WORKTREE_DISCARDED"'); // T2
     expect(existsSync(wtPath(p, "demo"))).toBe(false); // T3
-    // STRONGER: the bolt-demo branch is deleted too (aidlc-worktree.ts:502-510).
+    // STRONGER: the bolt-demo branch is deleted too (amadeus-worktree.ts:502-510).
     expect(branchExists(p, "bolt-demo")).toBe(false);
 
     // T4: second discard on the now-gone slug exits 0 (idempotent).
     const r2 = wt(p, ["discard", "--slug", "demo"]);
     expect(r2.status).toBe(0);
     // STRONGER: the no-op path emits null + reason already-discarded
-    // (aidlc-worktree.ts:470-480).
+    // (amadeus-worktree.ts:470-480).
     expect(r2.out).toContain('"emitted":null');
     expect(r2.out).toContain('"reason":"already-discarded"');
   }, 30000);

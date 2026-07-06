@@ -1,16 +1,16 @@
-// covers: hook:aidlc-validate-state
+// covers: hook:amadeus-validate-state
 //
 // Port of tests/unit/t08-hook-validate-state.sh (TAP plan 14), mechanism = none.
-// The unit under test is a HOOK — aidlc-validate-state.ts, the PreCompact hook
-// that validates aidlc-state.md structure, writes a recovery breadcrumb, and
+// The unit under test is a HOOK — amadeus-validate-state.ts, the PreCompact hook
+// that validates amadeus-state.md structure, writes a recovery breadcrumb, and
 // emits SESSION_COMPACTED when an audit.md already exists. Hooks are
 // mechanism=none: they resolve the project dir from the CLAUDE_PROJECT_DIR env
-// var (aidlc-lib.ts:114-116) and have no exported pure function to import. So
+// var (amadeus-lib.ts:114-116) and have no exported pure function to import. So
 // every .sh assertion is preserved by SPAWNING the hook via
 // node:child_process spawnSync with CLAUDE_PROJECT_DIR set, exactly as the .sh
 // ran `CLAUDE_PROJECT_DIR=<p> bun "$HOOK"`. We assert on res.stderr (the .sh's
 // `2>&1` WARNING grep — the hook prints warnings via console.error,
-// aidlc-validate-state.ts:40), on the recovery breadcrumb / heartbeat the hook
+// amadeus-validate-state.ts:40), on the recovery breadcrumb / heartbeat the hook
 // writes, and on the SESSION_COMPACTED row it appends to audit.md.
 //
 // NO STDIN: unlike the SubagentStop/PostToolUse hooks (t09/t29), this PreCompact
@@ -18,23 +18,23 @@
 // CLAUDE_PROJECT_DIR. The .sh never piped a payload (`bun "$HOOK"` with no
 // `echo ... |`), so neither do we.
 //
-// HOOK CONTRACT (aidlc-validate-state.ts):
-//   - Always writes the heartbeat aidlc-docs/.aidlc-hooks-health/validate-state.last
+// HOOK CONTRACT (amadeus-validate-state.ts):
+//   - Always writes the heartbeat amadeus-docs/.amadeus-hooks-health/validate-state.last
 //     (an ISO timestamp), even before the no-state-file early exit (lines 26-28).
 //   - No state file -> process.exit(0) BEFORE any WARNING / breadcrumb / audit
-//     work (line 30). So: no WARNING on stderr, no .aidlc-recovery.md.
+//     work (line 30). So: no WARNING on stderr, no .amadeus-recovery.md.
 //   - State file present -> validates `## Stage Progress` + `## Current Status`
-//     (lines 36-37); missing sections print `WARNING: aidlc-state.md missing
+//     (lines 36-37); missing sections print `WARNING: amadeus-state.md missing
 //     sections: <names>` on stderr (line 40) and drive the breadcrumb's
 //     `State file: INVALID — missing sections: ...` line (lines 43-45, 53).
-//   - Always (when state exists) writes aidlc-docs/.aidlc-recovery.md carrying
+//   - Always (when state exists) writes amadeus-docs/.amadeus-recovery.md carrying
 //     `**Current stage**: <getField "Current Stage">` and
 //     `**State file**: valid (all required sections present)` | `INVALID — ...`
 //     (lines 47-55).
 //   - SESSION_COMPACTED emitted via appendAuditEntry ONLY when audit.md already
 //     exists (lines 58-59); the hook never auto-creates audit.md. The audit row
 //     renders under `## Session Compacted` with `**Event**: SESSION_COMPACTED`
-//     (aidlc-audit.ts:130, EVENT_HEADINGS) plus Current Stage + State Validity
+//     (amadeus-audit.ts:130, EVENT_HEADINGS) plus Current Stage + State Validity
 //     fields (hook lines 61-67).
 //
 // PARITY NOTES (every .sh `ok` line maps to an expect() below; several STRONGER):
@@ -44,18 +44,18 @@
 //   - .sh Test 2  no state -> heartbeat written anyway                -> Test 2:
 //       heartbeat exists (same observable) + STRONGER: its contents are an ISO
 //       timestamp (hook line 28 writes isoTimestamp()).
-//   - .sh Test 3  no state -> no .aidlc-recovery.md breadcrumb        -> Test 3:
+//   - .sh Test 3  no state -> no .amadeus-recovery.md breadcrumb        -> Test 3:
 //       breadcrumb absent (same observable).
 //   - .sh Test 4  valid mid-ideation fixture -> no WARNING            -> Test 4:
 //       res.stderr has no /WARNING/i (same observable).
 //   - .sh Test 5  state missing `## Stage Progress` -> WARNING names it -> Test 5:
 //       res.stderr contains "Stage Progress" (same observable) + STRONGER: the
-//       full canonical `WARNING: aidlc-state.md missing sections: Stage Progress`
+//       full canonical `WARNING: amadeus-state.md missing sections: Stage Progress`
 //       diagnostic, scoped to stderr.
 //   - .sh Test 6  state missing `## Current Status` -> WARNING names it -> Test 6:
 //       res.stderr contains "Current Status" (same observable) + STRONGER: the
 //       full canonical diagnostic line.
-//   - .sh Test 7  valid fixture -> writes .aidlc-recovery.md          -> Test 7:
+//   - .sh Test 7  valid fixture -> writes .amadeus-recovery.md          -> Test 7:
 //       breadcrumb exists (same observable).
 //   - .sh Test 8  breadcrumb contains stage + "valid" status (2 grep) -> Test 8a/8b:
 //       breadcrumb contains "feasibility" AND "valid" (same observables) +
@@ -120,7 +120,7 @@ const HOOK = join(
   "claude",
   ".claude",
   "hooks",
-  "aidlc-validate-state.ts",
+  "amadeus-validate-state.ts",
 );
 
 const tempDirs: string[] = [];
@@ -136,21 +136,21 @@ function proj(): string {
   return p;
 }
 
-// Per-intent record paths (P9 — the flat aidlc-docs/ root is retired). state +
+// Per-intent record paths (P9 — the flat amadeus-docs/ root is retired). state +
 // recovery + heartbeat re-root under the default intent's record dir; the audit
 // trail is a DIR of per-clone shards (read via the glob below).
-const statePath = (p: string): string => join(seededRecordDir(p), "aidlc-state.md");
+const statePath = (p: string): string => join(seededRecordDir(p), "amadeus-state.md");
 const recoveryPath = (p: string): string =>
-  join(seededRecordDir(p), ".aidlc-recovery.md");
+  join(seededRecordDir(p), ".amadeus-recovery.md");
 const heartbeatPath = (p: string): string =>
-  join(seededRecordDir(p), ".aidlc-hooks-health", "validate-state.last");
+  join(seededRecordDir(p), ".amadeus-hooks-health", "validate-state.last");
 // With NO state file the active-intent cursor does not resolve (a record without
-// aidlc-state.md is not honoured), so docsRoot() falls back to the bare SPACE
+// amadeus-state.md is not honoured), so docsRoot() falls back to the bare SPACE
 // record root — the heartbeat/breadcrumb land there, not under the record.
 const heartbeatPathNoState = (p: string): string =>
-  join(intentsDirOf(p), ".aidlc-hooks-health", "validate-state.last");
+  join(intentsDirOf(p), ".amadeus-hooks-health", "validate-state.last");
 const recoveryPathNoState = (p: string): string =>
-  join(intentsDirOf(p), ".aidlc-recovery.md");
+  join(intentsDirOf(p), ".amadeus-recovery.md");
 
 // The shard the spawned hook resolves, computed from a clone-id we pin on disk
 // (mirrors auditShardName()'s `<host>-<clone>.md` shape). Used only by test 13,
@@ -168,7 +168,7 @@ function pinnedShardName(): string {
 /** Pin the clone-id + create the resolved audit shard so the SESSION_COMPACTED
  *  gate (existsSync(auditFilePath)) passes; returns the audit DIR. */
 function seedAuditShard(p: string): string {
-  writeFileSync(join(p, "aidlc", ".aidlc-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(p, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
   const auditDir = seededAuditDir(p);
   mkdirSync(auditDir, { recursive: true });
   writeFileSync(join(auditDir, pinnedShardName()), "", "utf-8");
@@ -198,7 +198,7 @@ interface HookResult {
 /**
  * Spawn the hook with CLAUDE_PROJECT_DIR=p (no stdin — the PreCompact hook reads
  * none). Mirrors the .sh's `CLAUDE_PROJECT_DIR=<p> bun "$HOOK"`. The hook
- * resolves the project dir from CLAUDE_PROJECT_DIR first (aidlc-lib.ts:116), so
+ * resolves the project dir from CLAUDE_PROJECT_DIR first (amadeus-lib.ts:116), so
  * the absolute hook path never shadows it.
  */
 function runHook(p: string): HookResult {
@@ -261,7 +261,7 @@ function lastCompactedBlock(body: string): Record<string, string> {
   return last;
 }
 
-describe("t08 aidlc-validate-state hook (migrated from t08-hook-validate-state.sh, plan 14)", () => {
+describe("t08 amadeus-validate-state hook (migrated from t08-hook-validate-state.sh, plan 14)", () => {
   // --- Test 1: silent (no WARNING) when no state file ---
   test("1: no state file -> no WARNING on stderr", () => {
     const p = proj();
@@ -309,7 +309,7 @@ describe("t08 aidlc-validate-state hook (migrated from t08-hook-validate-state.s
     expect(r.stderr).toContain("Stage Progress");
     // STRONGER: the full canonical diagnostic line on stderr (hook line 40).
     expect(r.stderr).toContain(
-      "WARNING: aidlc-state.md missing sections: Stage Progress",
+      "WARNING: amadeus-state.md missing sections: Stage Progress",
     );
   });
 
@@ -324,11 +324,11 @@ describe("t08 aidlc-validate-state hook (migrated from t08-hook-validate-state.s
     expect(r.stderr).toContain("Current Status");
     // STRONGER: the full canonical diagnostic line on stderr.
     expect(r.stderr).toContain(
-      "WARNING: aidlc-state.md missing sections: Current Status",
+      "WARNING: amadeus-state.md missing sections: Current Status",
     );
   });
 
-  // --- Test 7: valid fixture -> writes .aidlc-recovery.md ---
+  // --- Test 7: valid fixture -> writes .amadeus-recovery.md ---
   test("7: valid fixture -> writes recovery breadcrumb", () => {
     const p = proj();
     seedStateFile(p, "state-mid-ideation.md");
@@ -386,7 +386,7 @@ describe("t08 aidlc-validate-state hook (migrated from t08-hook-validate-state.s
     // Status` but no `## Stage Progress`, so the canonical diagnostic names only
     // Stage Progress.
     expect(r.stderr).toContain(
-      "WARNING: aidlc-state.md missing sections: Stage Progress",
+      "WARNING: amadeus-state.md missing sections: Stage Progress",
     );
   });
 

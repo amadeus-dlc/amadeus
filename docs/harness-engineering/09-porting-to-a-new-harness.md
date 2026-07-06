@@ -19,9 +19,9 @@ This page walks the contract.
 ```
 core/                      # harness-neutral source — not edited to add a harness (save the optional --doctor arm)
 harness/
-  claude/  manifest.ts · skills/aidlc/ · CLAUDE.md · settings.json
-  kiro/    manifest.ts · skills/aidlc/ · agents/*.json · hooks/aidlc-kiro-adapter.ts · settings/cli.json · AGENTS.md
-  codex/   manifest.ts · emit.ts · skills/aidlc/ · hooks/aidlc-codex-adapter.ts
+  claude/  manifest.ts · skills/amadeus/ · CLAUDE.md · settings.json
+  kiro/    manifest.ts · skills/amadeus/ · agents/*.json · hooks/amadeus-kiro-adapter.ts · settings/cli.json · AGENTS.md
+  codex/   manifest.ts · emit.ts · skills/amadeus/ · hooks/amadeus-codex-adapter.ts
 scripts/
   package.ts               # bun scripts/package.ts [<name>] [--check]
   manifest-types.ts        # the HarnessManifest contract every manifest implements
@@ -31,7 +31,7 @@ dist/<name>/               # GENERATED, committed, drift-guarded
 `core/` prose names the harness directory with the `{{HARNESS_DIR}}` token; the
 packager substitutes whatever `harnessDir` the manifest declares (`.claude` /
 `.kiro` / `.codex` / your `.foo`). `.ts` is byte-copied untransformed — the
-runtime `harnessDir()` seam in `core/tools/aidlc-lib.ts` derives the directory
+runtime `harnessDir()` seam in `core/tools/amadeus-lib.ts` derives the directory
 from the shipped layout at execution time (open-set: it reads the dir name from
 the tool's own path, not a hardcoded list), so the same tool sources run in
 every tree. The acceptance gate is **byte-parity**: regenerating a harness must
@@ -49,7 +49,7 @@ Create `harness/<name>/manifest.ts` exporting a `HarnessManifest`
 
 - `name` / `harnessDir` — the dir the token substitutes to (e.g. `.foo`).
 - `coreDirs: DirMap[]` — which `core/<src>` dirs project into `<harnessDir>/<dst>`.
-  Rename or drop dirs here (Kiro `rules → steering`; Codex `rules → aidlc-rules`
+  Rename or drop dirs here (Kiro `rules → steering`; Codex `rules → amadeus-rules`
   and drops `skills/` — see emit). The 3 session skills are core dirs for
   in-tree harnesses (claude, kiro); codex emits them instead.
 - `harnessFiles: FileMap[]` — authored surfaces copied verbatim from
@@ -62,7 +62,7 @@ Create `harness/<name>/manifest.ts` exporting a `HarnessManifest`
   the IDE reads subagent tool grants from the `.md` frontmatter). Declared as
   manifest data so core stays single-source; the packager errors on a typo'd
   path, a missing frontmatter block, or a key core already declares.
-- `rulesRename` — the renamed rules dir (`"steering"` | `"aidlc-rules"` | `null`).
+- `rulesRename` — the renamed rules dir (`"steering"` | `"amadeus-rules"` | `null`).
   The packager applies it to the copied dir AND to in-prose `<harnessDir>/rules/`
   references AND to the compiled stage-graph rule paths (it sets
   `AIDLC_RULES_DIR` at compile so `loadRules` finds the renamed dir) AND emits it
@@ -71,7 +71,7 @@ Create `harness/<name>/manifest.ts` exporting a `HarnessManifest`
   This is the seam that makes `rulesRename` purely manifest data: set it here and
   every layer (build prose, compiled paths, runtime) follows, with no `core/` edit.
 - `authoredExempt: RegExp[]` — files inside core-copied dirs that are authored,
-  not generated (skip the orphan scan), e.g. `^hooks/aidlc-<name>-adapter\.ts$`.
+  not generated (skip the orphan scan), e.g. `^hooks/amadeus-<name>-adapter\.ts$`.
 - `skipRunnerGen` — set when the harness ships no `<harnessDir>/skills/` (Codex
   emits its skill tree to `.agents/skills/` via `emit`); the packager then skips
   the standard runner-gen step.
@@ -83,7 +83,7 @@ rename + `harnessFiles` (agent JSONs, adapter, the project-root AGENTS.md).
 ## Step 2 — the hook adapter (the per-harness shim)
 
 Core hooks consume Claude-shaped stdin as the normal form. A new harness ships
-**one authored adapter** (`harness/<name>/hooks/aidlc-<name>-adapter.ts`,
+**one authored adapter** (`harness/<name>/hooks/amadeus-<name>-adapter.ts`,
 listed in `harnessFiles` + `authoredExempt`) that normalizes the harness's hook
 payloads into that contract and subprocess-pipes to the shared core hook.
 Never split a core hook into logic+adapter — the core bodies stay byte-shared
@@ -91,11 +91,11 @@ across all harnesses (the `--check` proves it: every `.ts` in a dist is
 byte-identical to its `core/` source).
 
 Wire the adapter to the harness's events the harness's own way: Kiro registers
-targets in `agents/aidlc.json`; Codex emits `hooks.json`. Register only events
+targets in `agents/amadeus.json`; Codex emits `hooks.json`. Register only events
 with a real core-hook consumer.
 
-> **The one sanctioned `core/` edit: the doctor arm.** `/aidlc --doctor`
-> (`core/tools/aidlc-utility.ts`) health-checks an installed tree, and a new
+> **The one sanctioned `core/` edit: the doctor arm.** `/amadeus --doctor`
+> (`core/tools/amadeus-utility.ts`) health-checks an installed tree, and a new
 > harness adds a per-harness arm there for its own install surfaces (adapter +
 > wiring files present, any binary-version floor). This is deliberate
 > per-harness *logic*, not data — a version check spawns the CLI and compares
@@ -113,7 +113,7 @@ the manifest references that the packager calls with an `EmitContext`
 `check`) and that returns the paths it wrote. Codex's is the worked example:
 `config.toml`, `hooks.json`, the hook-trust pre-seed, the `AGENTS.md` merge, the
 agent-TOML transpositions, and the `.agents/skills/` tree (composed from
-`core/tools/aidlc-runner-gen.ts`'s exported render functions under
+`core/tools/amadeus-runner-gen.ts`'s exported render functions under
 `AIDLC_HARNESS_DIR`, never reimplemented). Harnesses whose surfaces are all
 authored files (Claude, Kiro) set `emit: null`.
 

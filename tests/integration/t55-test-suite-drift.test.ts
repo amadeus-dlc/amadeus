@@ -78,11 +78,11 @@
 //           t55 and t06 are excluded by STEM (`t55-test-suite-drift`,
 //           `t06-claude-md-paths`) so BOTH the `.sh` and the `.test.ts` forms are
 //           carved (both legitimately embed the search patterns; t06 is now
-//           `.test.ts`). All original carve-outs preserved (aidlc-version.ts,
-//           /data/, /sensors/aidlc-, the "Per ROADMAP" message, node_modules,
+//           `.test.ts`). All original carve-outs preserved (amadeus-version.ts,
+//           /data/, /sensors/amadeus-, the "Per ROADMAP" message, node_modules,
 //           tests/logs/).
-//   .sh ok 7 (legacy aidlc-claude-code/ distributable-root sweep)
-//        -> test 7 "no stale aidlc-claude-code/ distributable-root references"
+//   .sh ok 7 (legacy amadeus-claude-code/ distributable-root sweep)
+//        -> test 7 "no stale amadeus-claude-code/ distributable-root references"
 //           — KEPT VERBATIM. Carve-out update: t55/t06/t112 excluded by STEM so
 //           their `.test.ts` forms are carved (t06 and t112 are now `.test.ts`).
 //           The README/09-testing t112 rows stay carved.
@@ -380,46 +380,46 @@ describe("t55 — test-suite metadata drift (migrated from t55-test-suite-drift.
 
     // --- Stale path strings across the three roots ---
     const PATH_PATTERNS = [
-      "aidlc-knowledge/",
+      "amadeus-knowledge/",
       ".claude/practices/",
-      "rules/aidlc/",
+      "rules/amadeus/",
       "practices/team.md",
       "practices/org.md",
       "practices/project.md",
-      "aidlc-docs/.sensors/",
+      "amadeus-docs/.sensors/",
       // ── learnings→practices relocation (docs-freshness sweep) ──
-      // The two retired learnings FILES — aidlc-team-learnings.md and
-      // aidlc-project-learnings.md — collapsed into the unified practices
+      // The two retired learnings FILES — amadeus-team-learnings.md and
+      // amadeus-project-learnings.md — collapsed into the unified practices
       // written under aidlc/spaces/<space>/memory/{team,project}.md (see
-      // core/tools/aidlc-learnings.ts → memoryDirFor). These concrete filenames
+      // core/tools/amadeus-learnings.ts → memoryDirFor). These concrete filenames
       // have ZERO legitimate survivors anywhere in core/harness/dist/docs — the
       // only on-disk hits are three tests that embed them as negative-match data
       // (carved by STEM below). So these tokens catch any stale learnings-FILE
       // reference that re-enters the corpus.
       //
-      // We anchor on the full `aidlc-<scope>-learnings.md` filename, NOT a bare
+      // We anchor on the full `amadeus-<scope>-learnings.md` filename, NOT a bare
       // `-learnings.md` substring: the explanatory glob `*-learnings.md` (the
       // prose that DOCUMENTS the collapse — "there is no parallel `*-learnings.md`
       // surface") appears legitimately in ~17 files (core stage-protocol +
-      // aidlc-{graph,learnings}.ts, their dist copies, docs/{guide,reference,
+      // amadeus-{graph,learnings}.ts, their dist copies, docs/{guide,reference,
       // harness-engineering}, and tests). That retirement-narrating prose is
       // correct, not stale, and is already pinned by t174 over the authored
       // surfaces — so a bare-substring token would over-broaden into it.
       //
       // NOTE: the sibling rules→memory relocation (the DOTTED dirs
-      // `.claude/rules/`, `.kiro/steering/`, `.codex/aidlc-rules/`) is
+      // `.claude/rules/`, `.kiro/steering/`, `.codex/amadeus-rules/`) is
       // deliberately NOT swept here either. Those dotted forms survive
       // legitimately in ~77 files: the 52 rendered dist/claude/.claude copies
       // (token-substitution output), the packager/emit/@-stub/native-glob
-      // sources, the resolver doc-comments in aidlc-{lib,graph}.ts, and the
-      // authored-prose mentions of the `.claude/rules/aidlc.md` @-import stub —
+      // sources, the resolver doc-comments in amadeus-{lib,graph}.ts, and the
+      // authored-prose mentions of the `.claude/rules/amadeus.md` @-import stub —
       // and the bare `{{HARNESS_DIR}}/rules/` template token (~73× in
-      // core/aidlc-common) is a SEPARATE deferred sweep (G6) that must NOT be
+      // core/amadeus-common) is a SEPARATE deferred sweep (G6) that must NOT be
       // matched here. That lane is already pinned by t174 (docs-legacy-refs-gate)
       // over the authored-prose surfaces; duplicating it here would mean carving
       // all 77 paths.
-      "aidlc-team-learnings.md",
-      "aidlc-project-learnings.md",
+      "amadeus-team-learnings.md",
+      "amadeus-project-learnings.md",
     ];
     const pathHits = grepHits(
       [
@@ -435,7 +435,7 @@ describe("t55 — test-suite metadata drift (migrated from t55-test-suite-drift.
     ).filter((h: string) => !pathHitCarvedOut(h));
     if (pathHits.length > 0) {
       pathDrift.push(
-        "stale path strings (aidlc-knowledge/, .claude/practices/, rules/aidlc/, practices/{team,org,project}.md, aidlc-docs/.sensors/, aidlc-{team,project}-learnings.md):",
+        "stale path strings (amadeus-knowledge/, .claude/practices/, rules/amadeus/, practices/{team,org,project}.md, amadeus-docs/.sensors/, amadeus-{team,project}-learnings.md):",
       );
       pathDrift.push(...pathHits);
     }
@@ -461,12 +461,12 @@ describe("t55 — test-suite metadata drift (migrated from t55-test-suite-drift.
 
   // ───────────────────────────────────────────────────────────────────────────
   // Check 7 — legacy distributable-root sweep (kept verbatim). The bare literal
-  // `aidlc-claude-code` must not reappear as a live path in framework tree,
+  // `amadeus-claude-code` must not reappear as a live path in framework tree,
   // tests, or docs. Carve-outs: t55/t06/t112 by STEM (so their `.test.ts` forms
   // are carved — t06 and t112 are now `.test.ts`), plus the README/09-testing
   // t112 rows that narrate the move.
   // ───────────────────────────────────────────────────────────────────────────
-  test("7: no stale aidlc-claude-code/ distributable-root references (post-v0.6.0-milestone-0) [.sh ok 7]", () => {
+  test("7: no stale amadeus-claude-code/ distributable-root references (post-v0.6.0-milestone-0) [.sh ok 7]", () => {
     const hits = grepHits(
       [
         join(REPO_ROOT, "core"),
@@ -475,7 +475,7 @@ describe("t55 — test-suite metadata drift (migrated from t55-test-suite-drift.
         join(REPO_ROOT, "tests"),
         join(REPO_ROOT, "docs"),
       ],
-      (line: string) => line.includes("aidlc-claude-code"),
+      (line: string) => line.includes("amadeus-claude-code"),
     ).filter((h: string) => !legacyRootCarvedOut(h));
     expect(hits).toEqual([]);
   });
@@ -544,7 +544,7 @@ function pathHitCarvedOut(hit: string): boolean {
     hit.includes("t55-test-suite-drift") || // STEM: carves .sh AND .test.ts
     hit.includes("t06-claude-md-paths") || // STEM: t06 is now .test.ts
     // ── learnings-filename carve-outs (learnings→practices relocation sweep) ──
-    // The retired filenames aidlc-team-learnings.md / aidlc-project-learnings.md
+    // The retired filenames amadeus-team-learnings.md / amadeus-project-learnings.md
     // have ZERO legitimate survivors in core/harness/dist/docs (verified: grep
     // for the concrete filenames returns nothing there). Their only on-disk
     // appearances are these three tests, which embed the filename as
@@ -561,10 +561,10 @@ function pathHitCarvedOut(hit: string): boolean {
 function versionHitCarvedOut(hit: string): boolean {
   return (
     hit.includes("node_modules") ||
-    hit.includes("aidlc-version.ts") || // its job is to declare a version
+    hit.includes("amadeus-version.ts") || // its job is to declare a version
     hit.includes("/data/") || // stage-graph.json "number" identifiers
-    /aidlc-utility\.ts.*Per ROADMAP/.test(hit) || // user-facing migration message
-    hit.includes("/sensors/aidlc-") // sensor default-version-of-behaviour prose
+    /amadeus-utility\.ts.*Per ROADMAP/.test(hit) || // user-facing migration message
+    hit.includes("/sensors/amadeus-") // sensor default-version-of-behaviour prose
   );
 }
 

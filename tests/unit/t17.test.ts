@@ -1,23 +1,23 @@
-// covers: subcommand:aidlc-state:get, subcommand:aidlc-state:set, subcommand:aidlc-state:checkbox, subcommand:aidlc-state:count, subcommand:aidlc-state:advance, subcommand:aidlc-state:lookup, subcommand:aidlc-state:finalize, subcommand:aidlc-state:complete-workflow, subcommand:aidlc-state:resume, subcommand:aidlc-state:gate-start, subcommand:aidlc-state:approve, subcommand:aidlc-state:reject, subcommand:aidlc-state:revise, subcommand:aidlc-state:skip, subcommand:aidlc-state:reuse-artifact, subcommand:aidlc-state:park, subcommand:aidlc-state:unpark, audit:WORKFLOW_PARKED, audit:WORKFLOW_UNPARKED
+// covers: subcommand:amadeus-state:get, subcommand:amadeus-state:set, subcommand:amadeus-state:checkbox, subcommand:amadeus-state:count, subcommand:amadeus-state:advance, subcommand:amadeus-state:lookup, subcommand:amadeus-state:finalize, subcommand:amadeus-state:complete-workflow, subcommand:amadeus-state:resume, subcommand:amadeus-state:gate-start, subcommand:amadeus-state:approve, subcommand:amadeus-state:reject, subcommand:amadeus-state:revise, subcommand:amadeus-state:skip, subcommand:amadeus-state:reuse-artifact, subcommand:amadeus-state:park, subcommand:amadeus-state:unpark, audit:WORKFLOW_PARKED, audit:WORKFLOW_UNPARKED
 //
 // bun:test port of tests/unit/t17-tool-state.sh (TAP plan 83), mechanism = cli.
-// Faithful 1:1 migration of the aidlc-state.ts CLI-contract test — EQUAL fidelity,
-// not a rewrite. Every .sh assertion that ran `bun aidlc-state.ts <sub> ... --project-dir <p>`
+// Faithful 1:1 migration of the amadeus-state.ts CLI-contract test — EQUAL fidelity,
+// not a rewrite. Every .sh assertion that ran `bun amadeus-state.ts <sub> ... --project-dir <p>`
 // is ported to a spawnSync of the REAL CLI, preserving the full process boundary:
 // exit code (res.status), stdout (res.stdout), and stderr (res.stderr). The .sh
 // folded stdout+stderr with `2>&1`; we reproduce that with a combined() helper so
 // `error()`-on-stderr assertions still match.
 //
 // SPAWN vs IN-PROCESS: the contract under test is entirely the argv-dispatch /
-// process boundary of aidlc-state.ts (and, for a handful of setup steps, the
-// aidlc-utility.ts init driver) — exit code + emitted JSON on stdout + error text
-// on stderr + on-disk mutations to aidlc-docs/aidlc-state.md and aidlc-docs/audit.md.
+// process boundary of amadeus-state.ts (and, for a handful of setup steps, the
+// amadeus-utility.ts init driver) — exit code + emitted JSON on stdout + error text
+// on stderr + on-disk mutations to amadeus-docs/amadeus-state.md and amadeus-docs/audit.md.
 // There are NO pure-function assertions in t17; every one of the 83 is an
 // observable side effect of running the tool. So ALL 124 invocations stay spawns
 // (124 in-process = 0). Calling the handlers in-process would forfeit the exit-code
 // and stderr halves of the contract, exactly the trap the t72 spike called out.
 //
-// As a .cli-mechanism file this legitimately credits the 15 aidlc-state subcommand
+// As a .cli-mechanism file this legitimately credits the 15 amadeus-state subcommand
 // units it exercises (get, set, checkbox, count, advance, lookup, finalize,
 // complete-workflow, resume, gate-start, approve, reject, revise, skip,
 // reuse-artifact). fork / merge / practices-event / practices-promote /
@@ -66,8 +66,8 @@ const TOOLS_DIR = join(
   ".claude",
   "tools",
 );
-const TOOL = join(TOOLS_DIR, "aidlc-state.ts");
-const UTILITY = join(TOOLS_DIR, "aidlc-utility.ts");
+const TOOL = join(TOOLS_DIR, "amadeus-state.ts");
+const UTILITY = join(TOOLS_DIR, "amadeus-utility.ts");
 
 interface RunResult {
   rc: number;
@@ -76,7 +76,7 @@ interface RunResult {
   combined: string;
 }
 
-// Run the real aidlc-state CLI. Mirrors `bun "$TOOL" <args> --project-dir "$PROJ"`.
+// Run the real amadeus-state CLI. Mirrors `bun "$TOOL" <args> --project-dir "$PROJ"`.
 // combined = stdout+stderr (the .sh's `2>&1`). The .sh always appended
 // `--project-dir "$PROJ"`, so callers pass everything-but-that and we add it.
 function runState(proj: string, args: string[]): RunResult {
@@ -89,7 +89,7 @@ function runState(proj: string, args: string[]): RunResult {
   return { rc: res.status ?? -1, stdout, stderr, combined: `${stdout}${stderr}` };
 }
 
-// `bun aidlc-state.ts lookup ...` with NO --project-dir (Tests 14-18 don't pass one).
+// `bun amadeus-state.ts lookup ...` with NO --project-dir (Tests 14-18 don't pass one).
 function runStateBare(args: string[]): RunResult {
   const res = spawnSync(BUN, [TOOL, ...args], { encoding: "utf-8" });
   const stdout = res.stdout ?? "";
@@ -98,7 +98,7 @@ function runStateBare(args: string[]): RunResult {
 }
 
 // Run the utility init driver. Mirrors
-// `bun "$AIDLC_SRC/tools/aidlc-utility.ts" init --scope <s> --project-dir "$PROJ"`.
+// `bun "$AIDLC_SRC/tools/amadeus-utility.ts" init --scope <s> --project-dir "$PROJ"`.
 function runInit(proj: string, scope: string): RunResult {
   const res = spawnSync(BUN, [UTILITY, "init", "--scope", scope, "--project-dir", proj], {
     encoding: "utf-8",
@@ -111,7 +111,7 @@ function runInit(proj: string, scope: string): RunResult {
 
 // P4: intent-birth (which runInit triggers) writes state into the born intent's
 // per-intent record dir (aidlc/spaces/<space>/intents/<slug>-<id8>/), not the flat
-// aidlc-docs/. Resolve the record dir from the active-space + active-intent
+// amadeus-docs/. Resolve the record dir from the active-space + active-intent
 // cursors, falling back to the flat layout for a seeded-flat project (the many
 // seedStateFile cases never call runInit, so they stay flat).
 function recordDirOf(proj: string): string {
@@ -123,13 +123,13 @@ function recordDirOf(proj: string): string {
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();
-    if (rec && existsSync(join(intentsDir, rec, "aidlc-state.md"))) {
+    if (rec && existsSync(join(intentsDir, rec, "amadeus-state.md"))) {
       return join(intentsDir, rec);
     }
   }
-  return join(proj, "aidlc-docs");
+  return join(proj, "amadeus-docs");
 }
-const stateMd = (proj: string) => join(recordDirOf(proj), "aidlc-state.md");
+const stateMd = (proj: string) => join(recordDirOf(proj), "amadeus-state.md");
 // Audit path for appending: a born record has per-clone shards under
 // <record>/audit/<host>-<clone-id>.md. The fixture pins a stable clone-id, so a
 // spawned tool resolves the DETERMINISTIC shard seededAuditShard() returns — a
@@ -149,7 +149,7 @@ function auditMd(proj: string): string {
 }
 const readState = (proj: string) => readFileSync(stateMd(proj), "utf-8");
 // Concatenate every audit shard under the born record's audit/ dir (Stage B);
-// fall back to the flat aidlc-docs/audit.md for a seeded-flat / pre-migration
+// fall back to the flat amadeus-docs/audit.md for a seeded-flat / pre-migration
 // project. Matches the tool's own readAllAuditShards resolution.
 function readAudit(proj: string): string {
   const auditDir = join(recordDirOf(proj), "audit");
@@ -159,7 +159,7 @@ function readAudit(proj: string): string {
       .map((f) => readFileSync(join(auditDir, f), "utf-8"))
       .join("\n");
   }
-  const flat = join(proj, "aidlc-docs", "audit.md");
+  const flat = join(proj, "amadeus-docs", "audit.md");
   return existsSync(flat) ? readFileSync(flat, "utf-8") : "";
 }
 
@@ -436,7 +436,7 @@ describe("t17 advance emission + complete-workflow", () => {
 **Timestamp**: 2026-05-27T10:20:00Z
 **Event**: STAGE_STARTED
 **Stage**: feasibility
-**Agent**: aidlc-architect-agent
+**Agent**: amadeus-architect-agent
 **Workflow**: single-stage:feasibility
 
 ---

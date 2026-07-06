@@ -1,7 +1,7 @@
-// covers: function:parseMemoryHeadings, file:knowledge/aidlc-shared/memory-template.md, subcommand:aidlc-state:advance, subcommand:aidlc-state:approve
+// covers: function:parseMemoryHeadings, file:knowledge/amadeus-shared/memory-template.md, subcommand:amadeus-state:advance, subcommand:amadeus-state:approve
 //
 // t100 — Per-stage memory.md template structure + parser-safety +
-// aidlc-state.ts advance/approve `memory_path` JSON key (v0.5.0 milestone 13).
+// amadeus-state.ts advance/approve `memory_path` JSON key (v0.5.0 milestone 13).
 // Migrated from tests/unit/t100-memory-template-lifecycle.sh (TAP plan 19).
 //
 // Mechanism: MIXED.
@@ -12,26 +12,26 @@
 //     expected literals independently of the parser source.
 //   - Cases 14-16 prove the advance/approve stdout-JSON `memory_path` key. That
 //     key is only observable on the CLI's process.stdout (handleAdvance writes
-//     JSON.stringify(...) to console.log, aidlc-state.ts:483-495), and approve
-//     inherits it via handleAdvance delegation (aidlc-state.ts:775). The
+//     JSON.stringify(...) to console.log, amadeus-state.ts:483-495), and approve
+//     inherits it via handleAdvance delegation (amadeus-state.ts:775). The
 //     process boundary is the contract, so these SPAWN the real tool via the
 //     bun runtime — mechanism cli. An in-process twin would lose the
 //     console.log/stdout seam the .sh's `jq -r '.memory_path'` reads.
 //
 // Source under test:
 //   - Template file:
-//       dist/claude/.claude/knowledge/aidlc-shared/memory-template.md
+//       dist/claude/.claude/knowledge/amadeus-shared/memory-template.md
 //     The four canonical `## ` H2 headings must be the EXACT HEADING_TO_KEY
 //     strings (lowercase-q "## Open questions"), column 0, no leading/trailing
 //     whitespace; seed examples must be SINGLE-LINE HTML comments; the
 //     ownership header is a verbatim blockquote.
-//   - parseMemoryHeadings(raw) (aidlc-lib.ts:1072) — counts non-blank,
+//   - parseMemoryHeadings(raw) (amadeus-lib.ts:1072) — counts non-blank,
 //     non-excluded lines under each of the four canonical headings; blockquote
 //     lines (:1125), single-line HTML comments (:1126), and blank lines (:1124)
 //     are excluded; raw-line exact heading match (:1112) means whitespace-padded
 //     variants count nothing. HEADING_TO_KEY at :1092-1097.
-//   - aidlc-state.ts handleAdvance (:317) emits `memory_path:
-//     aidlc-docs/${nextStage.phase}/${nextStage.slug}/memory.md` (:492);
+//   - amadeus-state.ts handleAdvance (:317) emits `memory_path:
+//     amadeus-docs/${nextStage.phase}/${nextStage.slug}/memory.md` (:492);
 //     handleApprove (:717) auto-advances by delegating to handleAdvance (:775),
 //     so approve's stdout carries the same key.
 //
@@ -55,15 +55,15 @@
 //   .sh 11 (fresh template total === 0)                -> none "fresh template parses to total === 0 (MEMORY_EMPTY survives)"
 //   .sh 12 (all four sub-counts === 0)                 -> none "fresh template: all four sub-counts === 0"
 //   .sh 13 (append one bullet -> interpretations 1)    -> none "appending one real bullet under ## Interpretations -> interpretations === 1, total === 1"
-//   .sh 14 (advance JSON memory_path value)            -> cli  "advance stdout JSON carries memory_path === aidlc-docs/<phase>/<slug>/memory.md"
-//   .sh 15 (memory_path forward-slash, relative)       -> cli  "advance memory_path uses no backslashes and is projectDir-relative (aidlc-docs/ prefix)"
+//   .sh 14 (advance JSON memory_path value)            -> cli  "advance stdout JSON carries memory_path === amadeus-docs/<phase>/<slug>/memory.md"
+//   .sh 15 (memory_path forward-slash, relative)       -> cli  "advance memory_path uses no backslashes and is projectDir-relative (amadeus-docs/ prefix)"
 //   .sh 16 (approve inherits memory_path)              -> cli  "approve inherits the memory_path key via handleAdvance delegation"
 
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { copyFileSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseMemoryHeadings } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { parseMemoryHeadings } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   AIDLC_SRC,
   cleanupTestProject,
@@ -78,16 +78,16 @@ resetAidlcEnv();
 
 // P9: advance/approve emit memory_path against the BARE space record prefix
 // (relativeMemoryPath called with no recordPrefix -> relativeSpaceRecordPrefix);
-// the flat aidlc-docs/ prefix is retired. `advance` does not thread the active
+// the flat amadeus-docs/ prefix is retired. `advance` does not thread the active
 // intent's record dir, so the row carries the bare-space prefix.
 const RP = `aidlc/spaces/${DEFAULT_SPACE}/intents`;
 
 const BUN = process.execPath; // the bun running this test
-const TOOL = join(AIDLC_SRC, "tools", "aidlc-state.ts");
+const TOOL = join(AIDLC_SRC, "tools", "amadeus-state.ts");
 const TEMPLATE = join(
   AIDLC_SRC,
   "knowledge",
-  "aidlc-shared",
+  "amadeus-shared",
   "memory-template.md",
 );
 
@@ -117,10 +117,10 @@ function templateLines(): string[] {
 describe("t100 template structure + parser-safety (in-process)", () => {
   test("template file exists at the canonical path [.sh 1]", () => {
     // Bun's readFileSync throws if absent; readability == existence here, and
-    // also pins the path .claude/knowledge/aidlc-shared/memory-template.md.
+    // also pins the path .claude/knowledge/amadeus-shared/memory-template.md.
     expect(() => templateRaw()).not.toThrow();
     expect(TEMPLATE.endsWith(
-      join("knowledge", "aidlc-shared", "memory-template.md"),
+      join("knowledge", "amadeus-shared", "memory-template.md"),
     )).toBe(true);
   });
 
@@ -141,7 +141,7 @@ describe("t100 template structure + parser-safety (in-process)", () => {
   });
 
   test("template has EXACTLY four '## ' H2 headings (no stray heading) [.sh 6]", () => {
-    // Any stray `## X` resets `current` to null in the parser (aidlc-lib.ts
+    // Any stray `## X` resets `current` to null in the parser (amadeus-lib.ts
     // :1116-1119) — a stray heading would silently sever a canonical section.
     const h2 = templateLines().filter((l) => /^## /.test(l));
     expect(h2.length).toBe(4);
@@ -159,7 +159,7 @@ describe("t100 template structure + parser-safety (in-process)", () => {
   });
 
   test("no '## ' heading carries leading or trailing whitespace [.sh 8]", () => {
-    // The parser matches the RAW line (aidlc-lib.ts:1112) — any leading or
+    // The parser matches the RAW line (amadeus-lib.ts:1112) — any leading or
     // trailing whitespace makes the line miss HEADING_TO_KEY and count nothing.
     for (const line of templateLines()) {
       if (!line.includes("## Interpretations") &&
@@ -180,14 +180,14 @@ describe("t100 template structure + parser-safety (in-process)", () => {
     const lines = templateLines();
     expect(lines).toContain(OWNERSHIP_LINE);
     // It is a blockquote (starts with `>`), so the parser skips it
-    // (aidlc-lib.ts:1125) — it never counts as an entry.
+    // (amadeus-lib.ts:1125) — it never counts as an entry.
     const found = lines.find((l) => l === OWNERSHIP_LINE);
     expect(found?.startsWith(">")).toBe(true);
   });
 
   test("exactly four single-line HTML-comment seed examples [.sh 10]", () => {
     // Each seed example opens and closes on one line as `<!-- example: ... -->`
-    // so parseMemoryHeadings excludes it (aidlc-lib.ts:1126) and the fresh
+    // so parseMemoryHeadings excludes it (amadeus-lib.ts:1126) and the fresh
     // template stays at total === 0. There must be exactly four (one per
     // heading).
     const examples = templateLines().filter((l) =>
@@ -249,7 +249,7 @@ function midIdeationProject(): string {
   return proj;
 }
 
-/** Spawn `aidlc-state.ts <args> --project-dir <proj>`, return combined output. */
+/** Spawn `amadeus-state.ts <args> --project-dir <proj>`, return combined output. */
 function runState(proj: string, args: string[]): { out: string; status: number } {
   const res = spawnSync(BUN, [TOOL, ...args, "--project-dir", proj], {
     encoding: "utf-8",

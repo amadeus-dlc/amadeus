@@ -1,10 +1,10 @@
-// covers: function:transposeScopeGrid, function:canonicalScopeGridJson, function:compileStageGraph, function:subgraphForScope, subcommand:aidlc-graph:compile
+// covers: function:transposeScopeGrid, function:canonicalScopeGridJson, function:compileStageGraph, function:subgraphForScope, subcommand:amadeus-graph:compile
 //
 // t124 — scope-shape transpose: per-stage `scopes:` frontmatter -> the
 // compiled EXECUTE/SKIP grid (scope-grid.json). Migrated from
 // tests/unit/t124-scope-transpose.sh (TAP plan 12). milestone 12 moved scope
 // membership off scope-mapping.json onto each stage's `scopes:` list;
-// `aidlc-graph compile` transposes those lists into scope-grid.json
+// `amadeus-graph compile` transposes those lists into scope-grid.json
 // (a PURE transpose — no graph-closure, no predicate), emitted through the
 // canonical sole-writer + drift-guarded by `compile --check`, the same
 // discipline that protects stage-graph.json.
@@ -15,11 +15,11 @@
 // process-boundary rows — `compile` writing scope-grid.json to disk, and
 // `compile --check`'s exit codes on clean / stale / missing grids — drive
 // the real CLI via spawnSync against the BUN runtime, isolated through the
-// AIDLC_STAGE_GRAPH + AIDLC_SCOPE_GRID env seams (aidlc-graph.ts:161-185).
-// process.exit(1) on drift (aidlc-graph.ts:1219,1236) is only observable on
+// AIDLC_STAGE_GRAPH + AIDLC_SCOPE_GRID env seams (amadeus-graph.ts:161-185).
+// process.exit(1) on drift (amadeus-graph.ts:1219,1236) is only observable on
 // the spawned process's exit code, so those four stay spawns deliberately.
 //
-// Source under test (dist/claude/.claude/tools/aidlc-graph.ts):
+// Source under test (dist/claude/.claude/tools/amadeus-graph.ts):
 //   :971  transposeScopeGrid(stages): ScopeGrid
 //          - scope columns = SORTED UNION of every name any stage declares
 //          - a stage naming a scope => EXECUTE under it; every other cell SKIP
@@ -71,10 +71,10 @@ import {
   loadGraph,
   subgraphForScope,
   transposeScopeGrid,
-} from "../../dist/claude/.claude/tools/aidlc-graph.ts";
+} from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 
 const BUN = process.execPath; // the bun running this test
-const GRAPH_TOOL = join(AIDLC_SRC, "tools", "aidlc-graph.ts");
+const GRAPH_TOOL = join(AIDLC_SRC, "tools", "amadeus-graph.ts");
 const GRAPH_JSON = join(AIDLC_SRC, "tools", "data", "stage-graph.json");
 const GRID_JSON = join(AIDLC_SRC, "tools", "data", "scope-grid.json");
 
@@ -100,7 +100,7 @@ afterAll(() => {
 /** A throwaway grid/graph sandbox path under tmp, registered for teardown. */
 function mkTempPath(tag: string): string {
   const p = join(
-    mkdtempSync(join(tmpdir(), "aidlc-t124-")),
+    mkdtempSync(join(tmpdir(), "amadeus-t124-")),
     `${tag}.json`,
   );
   tempFiles.push(join(p, ".."));
@@ -108,7 +108,7 @@ function mkTempPath(tag: string): string {
 }
 
 /**
- * Run `bun aidlc-graph.ts <args>` with AIDLC_STAGE_GRAPH / AIDLC_SCOPE_GRID
+ * Run `bun amadeus-graph.ts <args>` with AIDLC_STAGE_GRAPH / AIDLC_SCOPE_GRID
  * pointed at sandbox copies — the .sh's env-isolation seam, so the real
  * shipped grid is never touched. Returns the spawnSync result (status +
  * captured streams).
@@ -230,7 +230,7 @@ describe("scope-grid <-> subgraphForScope parity (in-process)", () => {
 // only the spawned `compile` / `compile --check` produce (process.exit(1) on
 // drift is invisible to an in-process import).
 // ===========================================================================
-describe("aidlc-graph compile / --check (Bun spawnSync env seam)", () => {
+describe("amadeus-graph compile / --check (Bun spawnSync env seam)", () => {
   test("compile emits scope-grid.json beside stage-graph.json [.sh test 5]", () => {
     const graphPath = mkTempPath("graph");
     const gridPath = mkTempPath("grid");
@@ -284,7 +284,7 @@ describe("aidlc-graph compile / --check (Bun spawnSync env seam)", () => {
     const gridPath = mkTempPath("grid");
     copyFileSync(GRAPH_JSON, graphPath);
     // gridPath never created -> missing grid is treated like a stale one
-    // (aidlc-graph.ts:1226-1237 reads "" on ENOENT, then byte-compares).
+    // (amadeus-graph.ts:1226-1237 reads "" on ENOENT, then byte-compares).
     expect(existsSync(gridPath)).toBe(false);
     const r = runGraph(["compile", "--check"], graphPath, gridPath);
     expect(r.status).toBe(1);

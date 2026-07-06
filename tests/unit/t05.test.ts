@@ -9,7 +9,7 @@
 // In-process migration of tests/unit/t05-stage-files.sh (TAP plan 64).
 // The .sh spawned `bun -e` TWICE per stage (one for obj.slug, one for
 // obj.phase) — 32 stages x 2 = 64 `bun -e` process launches. Each launch
-// re-imported aidlc-lib.ts and re-parsed one stage file, then printed a
+// re-imported amadeus-lib.ts and re-parsed one stage file, then printed a
 // single scalar that the shell string-compared against the expected slug
 // or phase. This port reads the SAME files with readFileSync and calls
 // parseStageFrontmatter() directly in-process, asserting the SAME two
@@ -22,7 +22,7 @@
 // env-seam case is retained.
 //
 // Sources read for this port:
-//   dist/claude/.claude/tools/aidlc-lib.ts:893
+//   dist/claude/.claude/tools/amadeus-lib.ts:893
 //     export function parseStageFrontmatter(raw: string):
 //       Record<string, unknown>  — returns the parsed YAML frontmatter
 //       object; obj.slug and obj.phase are the two fields asserted here.
@@ -41,7 +41,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseStageFrontmatter } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { parseStageFrontmatter } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const STAGES_DIR = join(
   import.meta.dir,
@@ -49,7 +49,7 @@ const STAGES_DIR = join(
   "..",
   "dist", "claude",
   ".claude",
-  "aidlc-common",
+  "amadeus-common",
   "stages",
 );
 

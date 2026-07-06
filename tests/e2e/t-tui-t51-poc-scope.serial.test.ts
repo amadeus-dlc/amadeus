@@ -10,14 +10,14 @@
 // TERMINATES on the on-disk `Completed>=7` milestone.
 //
 // What it proves (PATTERN B — multi-gate journey, answer-gate --until-state-field):
-//   - a POC workflow starts from `/aidlc poc` on a fresh greenfield workspace
+//   - a POC workflow starts from `/amadeus poc` on a fresh greenfield workspace
 //     (statusline leaves `ready` for a live phase),
 //   - the answer-gate clears the Initialization + early-Ideation gates by taking
 //     the Recommended default per menu, with NO auto-approve,
 //   - answering advances REAL state on disk — the milestone the .sh asserted
 //     (POC, unlike bugfix, includes Ideation, so intent-capture runs):
 //       * the intent-capture intent-statement artifact exists & is non-empty,
-//       * the born intent's aidlc-state.md records the `poc` scope and a greenfield
+//       * the born intent's amadeus-state.md records the `poc` scope and a greenfield
 //         classification,
 //       * <record>/ideation/ exists with a questions file carrying filled
 //         [Answer]: lines and at least one structured (heading-bearing) artifact,
@@ -156,7 +156,7 @@ describe("t-tui-t51-poc-scope (answering gates advances poc Ideation on disk)", 
       const session = `aidlc_tui_t51_poc_${process.pid}`;
       // greenfieldStub + noAidlcDocs: a brand-new greenfield workspace the poc
       // workflow scaffolds itself (mirrors the .sh's
-      // setup_integration_project --no-aidlc-docs --with-greenfield-stub).
+      // setup_integration_project --no-amadeus-docs --with-greenfield-stub).
       const sandbox = setupTuiProject({ greenfieldStub: true, noAidlcDocs: true });
       // The render value-add: we tail the grid during the run to prove a gate
       // menu painted at least once (the SDK path can't see it).
@@ -190,18 +190,18 @@ describe("t-tui-t51-poc-scope (answering gates advances poc Ideation on disk)", 
         expect(waitFor(session, "\\[AIDLC\\].*ready", 45000, 800)).toBe(true);
 
         // --- submit the poc workflow command -----------------------------------
-        // `/aidlc poc` is a single token-stream with no embedded spaces beyond the
+        // `/amadeus poc` is a single token-stream with no embedded spaces beyond the
         // scope word; send literally with no auto-Enter, then Enter as a named key
         // (the template's exact two-step, robust for slash commands).
         // Use EXPLICIT `--scope poc`, not bare freeform `poc`. The shipped
-        // settings.json pins AWS_AIDLC_DEFAULT_SCOPE=workshop, so bare `/aidlc poc`
+        // settings.json pins AWS_AIDLC_DEFAULT_SCOPE=workshop, so bare `/amadeus poc`
         // is a freeform-vs-env CONFLICT (poc vs workshop) → a scope disambiguation
         // gate at workflow START that stalls the phase-wait below (the t50 finding,
         // 2026-06-06). `--scope poc` wins silently+gatelessly (SKILL.md:105 explicit
         // flag wins + :170a auto-confirm; proven live by t29's override case), so
         // t51 tests the poc LIFECYCLE without the env-default derail (disambiguation
         // is t29's job). The trailing description still flows to the known-scope
-        // handler (SKILL.md:122 `--scope poc` with no state behaves like /aidlc poc)
+        // handler (SKILL.md:122 `--scope poc` with no state behaves like /amadeus poc)
         // satisfying the step-6 free-text "what to build?" prompt up front (the
         // answer-gate cannot type free text).
         drive([
@@ -209,7 +209,7 @@ describe("t-tui-t51-poc-scope (answering gates advances poc Ideation on disk)", 
           "--session",
           session,
           "--keys",
-          "/aidlc --scope poc Build a simple React todo app",
+          "/amadeus --scope poc Build a simple React todo app",
           "--literal",
           "--no-enter",
         ]);

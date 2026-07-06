@@ -1,4 +1,4 @@
-// covers: subcommand:aidlc-sensor-required-sections, function:templateEligibleArtifacts, function:memoryTemplatesDir, function:frameworkTemplatesDir
+// covers: subcommand:amadeus-sensor-required-sections, function:templateEligibleArtifacts, function:memoryTemplatesDir, function:frameworkTemplatesDir
 //
 // t155 — TPL: the template-override layer (one file, two readers).
 //
@@ -10,7 +10,7 @@
 // advisory.
 //
 // This file exercises the DETERMINISM half at the PROCESS boundary: it spawns
-// the real per-sensor script (aidlc-sensor-required-sections.ts) via
+// the real per-sensor script (amadeus-sensor-required-sections.ts) via
 // node:child_process spawnSync — the same boundary t133 uses for the
 // edge-block branch — passing the dispatcher-threaded flags --templates-dir +
 // --template-eligible directly, plus the in-process function unit
@@ -46,15 +46,15 @@ import { AIDLC_SRC, toPortablePath } from "../harness/fixtures.ts";
 // Import the function unit from the SHIPPED tree (dist), the same tree the
 // spawned SENSOR script runs from — so the in-process unit and the cli boundary
 // agree on exactly what ships. AIDLC_SRC = <REPO_ROOT>/dist/claude/.claude, so
-// from tests/unit/ that is ../../dist/claude/.claude/tools/aidlc-graph.ts.
+// from tests/unit/ that is ../../dist/claude/.claude/tools/amadeus-graph.ts.
 import {
 	memoryTemplatesDir,
 	templateEligibleArtifacts,
-} from "../../dist/claude/.claude/tools/aidlc-graph.ts";
+} from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 import { existsSync, readdirSync } from "node:fs";
 
 const BUN = process.execPath; // the bun running this test
-const SENSOR = join(AIDLC_SRC, "tools", "aidlc-sensor-required-sections.ts");
+const SENSOR = join(AIDLC_SRC, "tools", "amadeus-sensor-required-sections.ts");
 
 const tempDirs: string[] = [];
 afterAll(() => {
@@ -70,7 +70,7 @@ function makeWorkspace(): {
   templatesDir: string;
   frameworkDir: string;
 } {
-  let root = mkdtempSync(join(tmpdir(), "aidlc-t155-"));
+  let root = mkdtempSync(join(tmpdir(), "amadeus-t155-"));
   root = toPortablePath(root);
   tempDirs.push(root);
   const outDir = join(root, "out");
@@ -424,8 +424,8 @@ describe("t155 template-override sensor branch (cli, spawnSync)", () => {
 
   // 8 - REGRESSION (the dispatcher default-path BLOCKER). The dispatcher's
   // default --templates-dir MUST resolve to the SAME location SEED ships the
-  // templates/ floor. The original bug defaulted to <pd>/aidlc/memory/templates
-  // while SEED ships <pd>/aidlc/spaces/default/memory/templates - a clean miss
+  // templates/ floor. The original bug defaulted to <pd>/amadeus/memory/templates
+  // while SEED ships <pd>/amadeus/spaces/default/memory/templates - a clean miss
   // that silently disabled every team template at the real runtime path. The
   // other tests never caught it because they ALWAYS inject an explicit
   // --templates-dir. These pin the default-path computation (now derived via
@@ -434,9 +434,9 @@ describe("t155 template-override sensor branch (cli, spawnSync)", () => {
   // sensor lookup and the ship location can never drift apart again.
   test("memoryTemplatesDir resolves under spaces/default/memory (the ship + resolver root)", () => {
     const td = memoryTemplatesDir("/ws").replace(/\\/g, "/");
-    expect(td).toBe("/ws/aidlc/spaces/default/memory/templates");
+    expect(td).toBe("/ws/amadeus/spaces/default/memory/templates");
     // NOT the old buggy default the BLOCKER shipped.
-    expect(td).not.toBe("/ws/aidlc/memory/templates");
+    expect(td).not.toBe("/ws/amadeus/memory/templates");
   });
 
   test("the dispatcher default templates dir matches where the packager SHIPS the floor", () => {

@@ -64,7 +64,7 @@ execution modes — see the individual stage files for details. The per-Unit
 approval gate inside `code-generation.md` is **suppressed by the
 engine** during normal Bolt execution; a single Bolt-level (or
 batch-level) gate replaces it. The per-Unit gate remains for direct-
-invocation use (e.g., `/aidlc --stage code-generation`).
+invocation use (e.g., `/amadeus --stage code-generation`).
 
 **Parallel batches.** When two or more Bolts share dependency-satisfaction
 and don't depend on each other, the conductor dispatches their Code
@@ -86,13 +86,13 @@ SKILL.md §CONSTRUCTION Flow for the canonical specification.
 
 | Stage | Name                  | Execution   | Condition                                                                                          | Lead Agent          | Support Agents    | Mode                       | Per-Unit |
 |-------|-----------------------|-------------|----------------------------------------------------------------------------------------------------|---------------------|-------------------|-----------------------------|----------|
-| 3.1   | Functional Design     | CONDITIONAL | New data models, complex business logic, or business rules need design                             | aidlc-architect-agent     | aidlc-developer-agent   | inline                      | Yes      |
-| 3.2   | NFR Requirements      | CONDITIONAL | Performance, security, scalability concerns, or tech stack selection needed                         | aidlc-architect-agent     | aidlc-devsecops-agent, aidlc-compliance-agent, aidlc-quality-agent   | inline                      | Yes      |
-| 3.3   | NFR Design            | CONDITIONAL | NFR Requirements was executed and NFR patterns need design                                          | aidlc-architect-agent     | aidlc-aws-platform-agent| inline                      | Yes      |
-| 3.4   | Infrastructure Design | CONDITIONAL | Infrastructure services need mapping, deployment architecture required, or cloud resources needed   | aidlc-aws-platform-agent  | aidlc-devsecops-agent, aidlc-compliance-agent   | inline                      | Yes      |
-| 3.5   | Code Generation       | ALWAYS      | Always executes for every unit in the execution plan                                               | aidlc-developer-agent     | (none)            | subagent (aidlc-developer-agent)  | Yes      |
-| 3.6   | Build and Test        | ALWAYS      | Always executes once after all per-unit stages are finished                                         | aidlc-quality-agent       | aidlc-devsecops-agent   | inline                      | No       |
-| 3.7   | CI Pipeline           | CONDITIONAL | Execute when CI pipeline needs creation or significant modification                                | aidlc-pipeline-deploy-agent| (none)           | inline                      | No       |
+| 3.1   | Functional Design     | CONDITIONAL | New data models, complex business logic, or business rules need design                             | amadeus-architect-agent     | amadeus-developer-agent   | inline                      | Yes      |
+| 3.2   | NFR Requirements      | CONDITIONAL | Performance, security, scalability concerns, or tech stack selection needed                         | amadeus-architect-agent     | amadeus-devsecops-agent, amadeus-compliance-agent, amadeus-quality-agent   | inline                      | Yes      |
+| 3.3   | NFR Design            | CONDITIONAL | NFR Requirements was executed and NFR patterns need design                                          | amadeus-architect-agent     | amadeus-aws-platform-agent| inline                      | Yes      |
+| 3.4   | Infrastructure Design | CONDITIONAL | Infrastructure services need mapping, deployment architecture required, or cloud resources needed   | amadeus-aws-platform-agent  | amadeus-devsecops-agent, amadeus-compliance-agent   | inline                      | Yes      |
+| 3.5   | Code Generation       | ALWAYS      | Always executes for every unit in the execution plan                                               | amadeus-developer-agent     | (none)            | subagent (amadeus-developer-agent)  | Yes      |
+| 3.6   | Build and Test        | ALWAYS      | Always executes once after all per-unit stages are finished                                         | amadeus-quality-agent       | amadeus-devsecops-agent   | inline                      | No       |
+| 3.7   | CI Pipeline           | CONDITIONAL | Execute when CI pipeline needs creation or significant modification                                | amadeus-pipeline-deploy-agent| (none)           | inline                      | No       |
 
 ---
 
@@ -107,8 +107,8 @@ SKILL.md §CONSTRUCTION Flow for the canonical specification.
 | Execution         | CONDITIONAL (per execution plan)                                                                  |
 | Condition         | New data models, complex business logic, or business rules need design. Skip if simple logic changes with no new business logic. |
 | Per-Unit          | Yes                                                                                               |
-| Lead Agent        | aidlc-architect-agent                                                                                   |
-| support_agents    | aidlc-developer-agent                                                                                   |
+| Lead Agent        | amadeus-architect-agent                                                                                   |
+| support_agents    | amadeus-developer-agent                                                                                   |
 | mode              | inline                                                                                            |
 | Inputs            | unit-of-work.md, unit-of-work-story-map.md, requirements.md, application design artifacts         |
 | Outputs           | `<record>/construction/{unit-name}/functional-design/` -- business-logic-model.md, business-rules.md, domain-entities.md, CONDITIONAL: frontend-components.md |
@@ -116,7 +116,7 @@ SKILL.md §CONSTRUCTION Flow for the canonical specification.
 ### Purpose
 
 Design the business logic, domain model, and rules for a single unit of work.
-The aidlc-architect-agent leads with the aidlc-developer-agent providing technical
+The amadeus-architect-agent leads with the amadeus-developer-agent providing technical
 feasibility input.
 
 ### Inputs
@@ -128,9 +128,9 @@ feasibility input.
 
 ### Steps
 
-1. **Load Personas** -- Load aidlc-architect-agent (lead) persona and knowledge.
-   Load aidlc-developer-agent persona and knowledge for technical implementation
-   input. Apply aidlc-architect-agent as the primary perspective.
+1. **Load Personas** -- Load amadeus-architect-agent (lead) persona and knowledge.
+   Load amadeus-developer-agent persona and knowledge for technical implementation
+   input. Apply amadeus-architect-agent as the primary perspective.
 
 2. **Read Unit Context** -- Read the unit definition, assigned stories,
    requirements, and application design artifacts.
@@ -172,7 +172,7 @@ feasibility input.
      frontend/UI): Component hierarchy, props/state design, interaction flows,
      form validation rules, API integration points
 
-6. **Update State** -- Update `<record>/aidlc-state.md`: mark Functional
+6. **Update State** -- Update `<record>/amadeus-state.md`: mark Functional
    Design for {unit-name} as `[x]` completed and update "Current Status".
 
 7. **Completion** -- Present completion message and approval gate.
@@ -212,8 +212,8 @@ Strictly 2-option: Approve / Request Changes.
 | Execution         | CONDITIONAL (per execution plan)                                                                  |
 | Condition         | Performance requirements, security considerations, scalability concerns, or tech stack selection needed. Skip if no NFR requirements and tech stack already determined. |
 | Per-Unit          | Yes                                                                                               |
-| Lead Agent        | aidlc-architect-agent                                                                                   |
-| support_agents    | aidlc-devsecops-agent, aidlc-compliance-agent, aidlc-quality-agent                                       |
+| Lead Agent        | amadeus-architect-agent                                                                                   |
+| support_agents    | amadeus-devsecops-agent, amadeus-compliance-agent, amadeus-quality-agent                                       |
 | mode              | inline                                                                                            |
 | Inputs            | functional design artifacts, requirements.md, RE artifacts                                        |
 | Outputs           | `<record>/construction/{unit-name}/nfr-requirements/` -- performance-requirements.md, security-requirements.md, scalability-requirements.md, reliability-requirements.md, tech-stack-decisions.md |
@@ -221,9 +221,9 @@ Strictly 2-option: Approve / Request Changes.
 ### Purpose
 
 Define non-functional requirements across performance, security, scalability,
-reliability, and technology selection for a single unit. The aidlc-architect-agent
-leads, with the aidlc-devsecops-agent providing security input, the
-aidlc-compliance-agent providing regulatory input, and the aidlc-quality-agent
+reliability, and technology selection for a single unit. The amadeus-architect-agent
+leads, with the amadeus-devsecops-agent providing security input, the
+amadeus-compliance-agent providing regulatory input, and the amadeus-quality-agent
 providing testability and measurability input.
 
 ### Inputs
@@ -236,9 +236,9 @@ providing testability and measurability input.
 
 ### Steps
 
-1. **Load Personas** -- Load aidlc-architect-agent (lead) persona and knowledge.
-   Load aidlc-devsecops-agent (security requirements), aidlc-compliance-agent
-   (regulatory requirements), and aidlc-quality-agent (testability) personas and
+1. **Load Personas** -- Load amadeus-architect-agent (lead) persona and knowledge.
+   Load amadeus-devsecops-agent (security requirements), amadeus-compliance-agent
+   (regulatory requirements), and amadeus-quality-agent (testability) personas and
    knowledge for support input.
 
 2. **Read Prior Artifacts** -- Read functional design artifacts (if they
@@ -281,7 +281,7 @@ providing testability and measurability input.
      languages, frameworks, databases, infrastructure tools, and justification
      for each choice
 
-7. **Update State** -- Update `<record>/aidlc-state.md`: mark NFR
+7. **Update State** -- Update `<record>/amadeus-state.md`: mark NFR
    Requirements for {unit-name} as `[x]` completed and update "Current Status".
 
 8. **Completion** -- Present completion message and approval gate.
@@ -323,8 +323,8 @@ tech-stack-decisions.md for technology selection rationale.
 | Execution         | CONDITIONAL (only if NFR Requirements was executed)                                               |
 | Condition         | NFR Requirements was executed and NFR patterns need design. Skip if NFR Requirements was skipped. |
 | Per-Unit          | Yes                                                                                               |
-| Lead Agent        | aidlc-architect-agent                                                                                   |
-| support_agents    | aidlc-aws-platform-agent                                                                                |
+| Lead Agent        | amadeus-architect-agent                                                                                   |
+| support_agents    | amadeus-aws-platform-agent                                                                                |
 | mode              | inline                                                                                            |
 | Inputs            | NFR requirements artifacts, functional design artifacts                                           |
 | Outputs           | `<record>/construction/{unit-name}/nfr-design/` -- performance-design.md, security-design.md, scalability-design.md, reliability-design.md, logical-components.md |
@@ -332,7 +332,7 @@ tech-stack-decisions.md for technology selection rationale.
 ### Purpose
 
 Translate NFR requirements into concrete design patterns and architectural
-solutions. The aidlc-architect-agent leads with the aidlc-aws-platform-agent providing
+solutions. The amadeus-architect-agent leads with the amadeus-aws-platform-agent providing
 infrastructure and platform input.
 
 ### Inputs
@@ -345,8 +345,8 @@ infrastructure and platform input.
 
 ### Steps
 
-1. **Load Personas** -- Load aidlc-architect-agent (lead) persona and knowledge.
-   Load aidlc-aws-platform-agent persona and knowledge for infrastructure and
+1. **Load Personas** -- Load amadeus-architect-agent (lead) persona and knowledge.
+   Load amadeus-aws-platform-agent persona and knowledge for infrastructure and
    platform input.
 
 2. **Read Prior Artifacts** -- Read NFR requirements, functional design
@@ -402,7 +402,7 @@ infrastructure and platform input.
      decisions with Infrastructure Design by providing a component-level view
      of where NFR patterns apply.
 
-7. **Update State** -- Update `<record>/aidlc-state.md`: mark NFR Design
+7. **Update State** -- Update `<record>/amadeus-state.md`: mark NFR Design
    for {unit-name} as `[x]` completed and update "Current Status".
 
 8. **Completion** -- Present completion message and approval gate.
@@ -443,8 +443,8 @@ by mapping where NFR patterns apply at the component level.
 | Execution         | CONDITIONAL (per execution plan)                                                                  |
 | Condition         | Infrastructure services need mapping, deployment architecture required, or cloud resources needed. Skip if no infrastructure changes and infrastructure already defined. |
 | Per-Unit          | Yes                                                                                               |
-| Lead Agent        | aidlc-aws-platform-agent                                                                                |
-| support_agents    | aidlc-devsecops-agent, aidlc-compliance-agent                                                           |
+| Lead Agent        | amadeus-aws-platform-agent                                                                                |
+| support_agents    | amadeus-devsecops-agent, amadeus-compliance-agent                                                           |
 | mode              | inline                                                                                            |
 | Inputs            | NFR design artifacts, application design, functional design                                       |
 | Outputs           | `<record>/construction/{unit-name}/infrastructure-design/` -- deployment-architecture.md, infrastructure-services.md, monitoring-design.md, cicd-pipeline.md, CONDITIONAL: shared-infrastructure.md |
@@ -452,9 +452,9 @@ by mapping where NFR patterns apply at the component level.
 ### Purpose
 
 Design the infrastructure, deployment architecture, monitoring, and CI/CD
-pipeline for a single unit. The aidlc-aws-platform-agent leads, with the
-aidlc-devsecops-agent ensuring infrastructure security and the
-aidlc-compliance-agent checking data residency and regulatory constraints.
+pipeline for a single unit. The amadeus-aws-platform-agent leads, with the
+amadeus-devsecops-agent ensuring infrastructure security and the
+amadeus-compliance-agent checking data residency and regulatory constraints.
 
 ### Inputs
 
@@ -467,8 +467,8 @@ aidlc-compliance-agent checking data residency and regulatory constraints.
 
 ### Steps
 
-1. **Load Personas** -- Load aidlc-aws-platform-agent (lead) persona and knowledge.
-   Load aidlc-devsecops-agent (infrastructure security) and aidlc-compliance-agent
+1. **Load Personas** -- Load amadeus-aws-platform-agent (lead) persona and knowledge.
+   Load amadeus-devsecops-agent (infrastructure security) and amadeus-compliance-agent
    (data residency, regulatory constraints) personas and knowledge for support input.
 
 2. **Read Prior Artifacts** -- Read all prior design artifacts for context:
@@ -523,7 +523,7 @@ aidlc-compliance-agent checking data residency and regulatory constraints.
      message queues, shared networking, cross-unit service discovery, resource
      ownership and access boundaries
 
-7. **Update State** -- Update `<record>/aidlc-state.md`: mark
+7. **Update State** -- Update `<record>/amadeus-state.md`: mark
    Infrastructure Design for {unit-name} as `[x]` completed and update
    "Current Status".
 
@@ -565,9 +565,9 @@ share infrastructure resources.
 | Execution         | ALWAYS (per-unit)                                                                                 |
 | Condition         | Always executes for every unit in the execution plan.                                             |
 | Per-Unit          | Yes                                                                                               |
-| Lead Agent        | aidlc-developer-agent                                                                                   |
+| Lead Agent        | amadeus-developer-agent                                                                                   |
 | support_agents    | (none -- focused implementation)                                                                  |
-| mode              | subagent (Task tool subagent_type: aidlc-developer-agent)                                               |
+| mode              | subagent (Task tool subagent_type: amadeus-developer-agent)                                               |
 | Inputs            | ALL prior design artifacts for this unit                                                          |
 | Outputs           | application code (workspace root) + `<record>/construction/{unit-name}/code-generation/` -- code-generation-plan.md, code-summary.md |
 
@@ -660,12 +660,12 @@ This stage has a **two-part structure**: planning followed by generation.
    "Generating code for [N] plan steps. This may take several minutes
    depending on project complexity. I'll show a summary when complete."
 
-   Delegate to Task tool with the aidlc-developer-agent subagent
-   (subagent_type="aidlc-developer-agent").
+   Delegate to Task tool with the amadeus-developer-agent subagent
+   (subagent_type="amadeus-developer-agent").
 
    **Context passed to subagent:**
-   - The lead agent's persona from `agents/aidlc-developer-agent.md` and knowledge
-     from `.claude/knowledge/aidlc-developer-agent/` (included in the prompt
+   - The lead agent's persona from `agents/amadeus-developer-agent.md` and knowledge
+     from `.claude/knowledge/amadeus-developer-agent/` (included in the prompt
      since subagents cannot access conversation history)
    - Design artifacts for the CURRENT UNIT ONLY (not all units)
    - A 1-2 line summary of each inception-phase artifact with its file path
@@ -673,7 +673,7 @@ This stage has a **two-part structure**: planning followed by generation.
      subagent can Read specific files if it needs full content
    - The approved code-generation-plan.md (full content)
    - Project workspace details (languages, frameworks, conventions from
-     aidlc-state.md)
+     amadeus-state.md)
    - Instructions to execute each plan step sequentially and mark checkboxes
      as completed
 
@@ -690,7 +690,7 @@ This stage has a **two-part structure**: planning followed by generation.
    - Test coverage summary
    - Any deviations from the plan
 
-6. **Update State** -- Update `<record>/aidlc-state.md`: mark Code
+6. **Update State** -- Update `<record>/amadeus-state.md`: mark Code
    Generation for {unit-name} as `[x]` completed and update "Current Status".
 
 7. **Completion** -- Present completion message and approval gate.
@@ -711,12 +711,12 @@ Strictly 2-option: Approve / Request Changes.
 
 - **Two-part structure**: The planning phase (Steps 1-3) runs inline with user
   interaction and plan approval. The generation phase (Steps 4-7) delegates to
-  the aidlc-developer-agent subagent via the Task tool. This is different from most
+  the amadeus-developer-agent subagent via the Task tool. This is different from most
   Construction stages which run entirely inline.
-- **Developer-agent subagent**: Code generation uses `subagent_type="aidlc-developer-agent"`
+- **Developer-agent subagent**: Code generation uses `subagent_type="amadeus-developer-agent"`
   (delegated via Task tool), not inline execution. This is the only
   Construction stage that uses a subagent. The subagent inherits the full
-  session toolset (the aidlc-developer-agent declares no `tools:` allowlist),
+  session toolset (the amadeus-developer-agent declares no `tools:` allowlist),
   so it reaches Read, Edit, Write, Glob, Grep, Bash, AskUserQuestion, and the
   inherited MCP tools.
 - **Context budget**: Only the current unit's design artifacts are passed to
@@ -741,8 +741,8 @@ Strictly 2-option: Approve / Request Changes.
 | Execution         | ALWAYS (after ALL units complete)                                                                 |
 | Condition         | Always executes once after all per-unit stages are finished.                                      |
 | Per-Unit          | No (runs once for all units)                                                                     |
-| Lead Agent        | aidlc-quality-agent                                                                                     |
-| support_agents    | aidlc-devsecops-agent                                                                                   |
+| Lead Agent        | amadeus-quality-agent                                                                                     |
+| support_agents    | amadeus-devsecops-agent                                                                                   |
 | mode              | inline                                                                                            |
 | Inputs            | ALL code generation outputs across all units                                                      |
 | Outputs           | `<record>/construction/build-and-test/` -- build-instructions.md, unit-test-instructions.md, integration-test-instructions.md, performance-test-instructions.md, security-test-instructions.md, build-and-test-summary.md, test-results.md, plus conditional test instruction files |
@@ -751,7 +751,7 @@ Strictly 2-option: Approve / Request Changes.
 
 Generate test instructions across all test types, then actually execute the
 build and tests via Bash. This stage operates across ALL units -- it is NOT
-per-unit. The aidlc-quality-agent leads with the aidlc-devsecops-agent providing security
+per-unit. The amadeus-quality-agent leads with the amadeus-devsecops-agent providing security
 testing expertise.
 
 ### Inputs
@@ -763,8 +763,8 @@ testing expertise.
 
 ### Steps
 
-1. **Load Personas** -- Load aidlc-quality-agent (lead) persona and knowledge. Load
-   aidlc-devsecops-agent persona and knowledge for security testing input.
+1. **Load Personas** -- Load amadeus-quality-agent (lead) persona and knowledge. Load
+   amadeus-devsecops-agent persona and knowledge for security testing input.
 
 2. **Analyze Testing Requirements** -- Read code generation outputs across all
    units. Review NFR requirements (if they exist) to identify performance and
@@ -859,7 +859,7 @@ testing expertise.
     **On success:** Update the Build and Test Summary with actual results (not
     just instructions).
 
-11. **Update State** -- Update `<record>/aidlc-state.md`: mark Build and
+11. **Update State** -- Update `<record>/amadeus-state.md`: mark Build and
     Test as `[x]` completed and update "Current Status". Mark CONSTRUCTION
     phase as complete.
 
@@ -918,7 +918,7 @@ Strictly 2-option: Approve / Request Changes.
 | Execution         | CONDITIONAL (skip if CI already exists and is adequate)                                           |
 | Condition         | Execute when CI pipeline needs creation or significant modification                               |
 | Per-Unit          | No (runs once for all units)                                                                     |
-| Lead Agent        | aidlc-pipeline-deploy-agent                                                                             |
+| Lead Agent        | amadeus-pipeline-deploy-agent                                                                             |
 | support_agents    | (none)                                                                                            |
 | mode              | inline                                                                                            |
 | Inputs            | Code generation output from Stage 3.5, build/test results from Stage 3.6                         |
@@ -927,7 +927,7 @@ Strictly 2-option: Approve / Request Changes.
 ### Purpose
 
 Configure the CI (Continuous Integration) pipeline with quality gates,
-artifact management, and build/test automation. The aidlc-pipeline-deploy-agent
+artifact management, and build/test automation. The amadeus-pipeline-deploy-agent
 leads with no support agents.
 
 ### Inputs
@@ -939,7 +939,7 @@ leads with no support agents.
 
 ### Steps
 
-1. **Load Agent Personas** -- Load aidlc-pipeline-deploy-agent persona and
+1. **Load Agent Personas** -- Load amadeus-pipeline-deploy-agent persona and
    knowledge.
 
 2. **Load Prior Context** -- Read build/test results, infrastructure design
@@ -971,7 +971,7 @@ leads with no support agents.
    - Write results to `<record>/verification/phase-check-construction.md`
 
 7. **Update State** -- Mark 3.7 CI Pipeline as `[x]` completed in
-   `<record>/aidlc-state.md`.
+   `<record>/amadeus-state.md`.
 
 8. **Completion** -- Present completion message and approval gate.
 
@@ -1031,7 +1031,7 @@ through a phased construction flow:
   design) compared to the upstream reference
 - Infrastructure Design is expanded to 5 artifacts with dedicated monitoring
   and CI/CD files
-- Code generation uses the aidlc-developer-agent subagent with context budget controls
+- Code generation uses the amadeus-developer-agent subagent with context budget controls
 - Build and Test performs actual command execution and automated failure
   diagnosis
 - CI Pipeline includes phase boundary verification before transitioning to

@@ -1,20 +1,20 @@
-// covers: subcommand:aidlc-bolt:start, subcommand:aidlc-bolt:complete, subcommand:aidlc-bolt:abort
+// covers: subcommand:amadeus-bolt:start, subcommand:amadeus-bolt:complete, subcommand:amadeus-bolt:abort
 //
 // bun:test port of tests/integration/t78-bolt-worktree-lifecycle.sh (TAP plan 13),
 // mechanism = cli. End-to-end per-Bolt worktree lifecycle: every .sh assertion
 // is preserved at equal-or-stronger fidelity by SPAWNING the real CLI via
 // node:child_process spawnSync(BUN, [BOLT, sub, ...args]) and asserting on the
 // PROCESS boundary — exit code (res.status), the canonical multi-event audit.md
-// sequence the chained tools write, the Bolt Refs field on main's aidlc-state.md,
+// sequence the chained tools write, the Bolt Refs field on main's amadeus-state.md,
 // and worktree-directory teardown on disk.
 //
-// WHY cli (not none): the subject IS the cross-process lifecycle. aidlc-bolt
+// WHY cli (not none): the subject IS the cross-process lifecycle. amadeus-bolt
 // start --worktree / complete --merge / abort --discard each fan out to sibling
-// CLIs via spawnSync (aidlc-bolt.ts:89-116 spawnSibling): start delegates to
-// aidlc-state.ts fork + aidlc-audit.ts audit-fork + aidlc-runtime.ts
-// fragment-fork (aidlc-bolt.ts:222-284); complete delegates to state merge +
+// CLIs via spawnSync (amadeus-bolt.ts:89-116 spawnSibling): start delegates to
+// amadeus-state.ts fork + amadeus-audit.ts audit-fork + amadeus-runtime.ts
+// fragment-fork (amadeus-bolt.ts:222-284); complete delegates to state merge +
 // audit-merge + fragment-merge (:371-435); abort --discard delegates to
-// aidlc-worktree.ts discard BEFORE the audit emit (:516-547, the post-review
+// amadeus-worktree.ts discard BEFORE the audit emit (:516-547, the post-review
 // discard-first ordering). The observables — Bolt Refs append/clear, the
 // STATE_FORKED/AUDIT_FORKED/STATE_MERGED/AUDIT_MERGED rows emitted inside each
 // sibling's withAuditLock, the WORKTREE_DISCARDED teardown — only exist after
@@ -23,7 +23,7 @@
 // process.exit failJson shell entirely. So all 13 assertions stay spawns.
 //
 // Source under test:
-//   dist/claude/.claude/tools/aidlc-bolt.ts
+//   dist/claude/.claude/tools/amadeus-bolt.ts
 //     :149 handleStart   — --worktree path: BOLT_STARTED, then state-fork
 //                          (STATE_FORKED + Bolt Refs append on main),
 //                          audit-fork (AUDIT_FORKED + worktree audit.md),
@@ -32,10 +32,10 @@
 //                          (STATE_MERGED + Bolt Refs slug removal),
 //                          audit-merge (AUDIT_MERGED), fragment-merge
 //     :498 handleAbort    — BOLT_FAILED with Reason=aborted; --discard tears
-//                          down the worktree via aidlc-worktree discard FIRST
+//                          down the worktree via amadeus-worktree discard FIRST
 //                          (so BOLT_FAILED only lands when discard succeeded)
-//   dist/claude/.claude/tools/aidlc-worktree.ts :156 create / :455 discard
-//   dist/claude/.claude/tools/aidlc-lib.ts :148 worktreePath ->
+//   dist/claude/.claude/tools/amadeus-worktree.ts :156 create / :455 discard
+//   dist/claude/.claude/tools/amadeus-lib.ts :148 worktreePath ->
 //                          <projectDir>/.aidlc/worktrees/bolt-<slug>
 //
 // Old TAP -> new test parity (1:1, every .sh assertion -> a named test()):
@@ -58,14 +58,14 @@
 //     precedes every fork row and BOLT_COMPLETED precedes every merge row,
 //     not just an equality on the tail window.
 //   - T2/T3 also assert the forked files live under the canonical
-//     .aidlc/worktrees/bolt-<slug>/aidlc-docs/ path (worktreePath contract).
+//     .aidlc/worktrees/bolt-<slug>/amadeus-docs/ path (worktreePath contract).
 //   - T8 asserts Reason=aborted is block-scoped to the BOLT_FAILED row.
 //
 // FIXTURE DISCIPLINE (mirrors the .sh's setup_lifecycle_project per lifecycle:
 // create_test_project + seed state-construction.md + seed audit-sample.md, then
 // cleanup_test_project): each lifecycle gets a FRESH temp project. Lifecycles 2
-// and 5 init a REAL git repo on `main` + one commit so aidlc-worktree create can
-// `git worktree add` (assertNotSiblingWorktree + real git, aidlc-worktree.ts).
+// and 5 init a REAL git repo on `main` + one commit so amadeus-worktree create can
+// `git worktree add` (assertNotSiblingWorktree + real git, amadeus-worktree.ts).
 // NOTHING is written under tests/fixtures/**; all temp dirs cleaned in afterAll.
 
 import { afterAll, describe, expect, test } from "bun:test";
@@ -92,8 +92,8 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const BOLT = join(AIDLC_SRC, "tools", "aidlc-bolt.ts");
-const WT_TOOL = join(AIDLC_SRC, "tools", "aidlc-worktree.ts");
+const BOLT = join(AIDLC_SRC, "tools", "amadeus-bolt.ts");
+const WT_TOOL = join(AIDLC_SRC, "tools", "amadeus-worktree.ts");
 
 const tempDirs: string[] = [];
 
@@ -106,7 +106,7 @@ interface RunResult {
   out: string; // stdout+stderr combined, mirroring the .sh's `2>&1`
 }
 
-/** Spawn `bun aidlc-bolt.ts <args...> --project-dir <proj>`. Mirrors `bun "$TOOL" ... --project-dir "$PROJ"`. */
+/** Spawn `bun amadeus-bolt.ts <args...> --project-dir <proj>`. Mirrors `bun "$TOOL" ... --project-dir "$PROJ"`. */
 function runBolt(proj: string, ...args: string[]): RunResult {
   const res = spawnSync(BUN, [BOLT, ...args, "--project-dir", proj], {
     encoding: "utf-8",
@@ -115,7 +115,7 @@ function runBolt(proj: string, ...args: string[]): RunResult {
   return { status: res.status ?? -1, out: `${res.stdout ?? ""}${res.stderr ?? ""}` };
 }
 
-/** Spawn `bun aidlc-worktree.ts <args...> --project-dir <proj>` (the .sh's WT_TOOL). */
+/** Spawn `bun amadeus-worktree.ts <args...> --project-dir <proj>` (the .sh's WT_TOOL). */
 function runWorktree(proj: string, ...args: string[]): RunResult {
   const res = spawnSync(BUN, [WT_TOOL, ...args, "--project-dir", proj], {
     encoding: "utf-8",
@@ -228,10 +228,10 @@ function lastEventBlock(proj: string): string[] {
   return out;
 }
 
-describe("t78 aidlc-bolt per-Bolt worktree lifecycle (migrated from t78-bolt-worktree-lifecycle.sh, plan 13)", () => {
+describe("t78 amadeus-bolt per-Bolt worktree lifecycle (migrated from t78-bolt-worktree-lifecycle.sh, plan 13)", () => {
   // ===========================================================================
   // Lifecycle 1 — complete-merge happy path. Drives T1-T6.
-  // Pre-create the worktree dir (in production aidlc-worktree create does this;
+  // Pre-create the worktree dir (in production amadeus-worktree create does this;
   // here we satisfy the audit-fork "directory exists" check, .sh:45-50).
   // ===========================================================================
   describe("Lifecycle 1: start --worktree -> complete --merge round-trip", () => {
@@ -251,7 +251,7 @@ describe("t78 aidlc-bolt per-Bolt worktree lifecycle (migrated from t78-bolt-wor
     test("L1: forked worktree state file exists [.sh T2]", () => {
       // STRONGER: the forked state file lands under the canonical worktree mirror
       // record (aidlc/spaces/default/intents/<record>/) — the worktreePath contract.
-      expect(existsSync(join(wtRecordDir(proj, slug), "aidlc-state.md"))).toBe(true);
+      expect(existsSync(join(wtRecordDir(proj, slug), "amadeus-state.md"))).toBe(true);
     });
 
     test("L1: forked worktree audit file exists [.sh T3]", () => {
@@ -268,7 +268,7 @@ describe("t78 aidlc-bolt per-Bolt worktree lifecycle (migrated from t78-bolt-wor
     // [ ] -> [x] in the worktree state (the .sh's sed_i). Per-field merge then
     // propagates back on complete --merge.
     test("L1: simulate per-Unit work in the worktree (checkbox flip)", () => {
-      const wtState = join(wtRecordDir(proj, slug), "aidlc-state.md");
+      const wtState = join(wtRecordDir(proj, slug), "amadeus-state.md");
       const body = readFileSync(wtState, "utf-8");
       const flipped = body.replace(
         "- [ ] code-generation — EXECUTE",
@@ -334,7 +334,7 @@ describe("t78 aidlc-bolt per-Bolt worktree lifecycle (migrated from t78-bolt-wor
 
     test("L2: abort --discard emits BOLT_FAILED on successful discard [.sh T7]", () => {
       // The failure event must ACTUALLY fire (§6-E): BOLT_FAILED only appears
-      // because the aidlc-worktree discard subprocess returned 0 first.
+      // because the amadeus-worktree discard subprocess returned 0 first.
       expect(auditEvents(proj)).toContain("BOLT_FAILED");
     });
 
@@ -403,7 +403,7 @@ describe("t78 aidlc-bolt per-Bolt worktree lifecycle (migrated from t78-bolt-wor
   // ===========================================================================
   // Lifecycle 5 — abort --discard VERIFICATION (review fold-in): when discard
   // succeeds, the worktree directory is actually torn down. Real git so
-  // aidlc-worktree create can fork; do NOT pre-create the dir (create handles
+  // amadeus-worktree create can fork; do NOT pre-create the dir (create handles
   // mkdir + git worktree add atomically). Drives T13.
   // ===========================================================================
   describe("Lifecycle 5: abort --discard tears down the worktree directory", () => {
@@ -412,7 +412,7 @@ describe("t78 aidlc-bolt per-Bolt worktree lifecycle (migrated from t78-bolt-wor
     runWorktree(proj, "create", "--slug", "tearcheck", "--base", "main");
     const wt = worktreeDir(proj, "tearcheck");
 
-    test("L5 setup: aidlc-worktree create produced the worktree dir", () => {
+    test("L5 setup: amadeus-worktree create produced the worktree dir", () => {
       expect(existsSync(wt)).toBe(true);
     });
 

@@ -7,23 +7,23 @@
 //
 // WHAT IT PROVES
 //   A user mid-IDEATION (seeded Current Stage=feasibility) types
-//   `/aidlc --stage approval-handoff` at the live prompt. The jump must:
-//     - land DETERMINISTICALLY on disk: aidlc-jump.ts emits a per-stage
+//   `/amadeus --stage approval-handoff` at the live prompt. The jump must:
+//     - land DETERMINISTICALLY on disk: amadeus-jump.ts emits a per-stage
 //       STAGE_SKIPPED for each in-flight stage it skips over and one canonical
-//       STAGE_JUMPED with Direction: FORWARD (aidlc-jump.ts:349,374-375), and
-//       rewrites aidlc-state.md — Current Stage=approval-handoff, Lifecycle
+//       STAGE_JUMPED with Direction: FORWARD (amadeus-jump.ts:349,374-375), and
+//       rewrites amadeus-state.md — Current Stage=approval-handoff, Lifecycle
 //       Phase=IDEATION, the skipped intermediate stages flipped to [S]
-//       (aidlc-jump.ts:243,312-313), the prior [x] stages untouched, the
+//       (amadeus-jump.ts:243,312-313), the prior [x] stages untouched, the
 //       Completed counter == the live [x] count, and a fresh Last Updated stamp.
 //     - RE-RENDER the statusline: STAGE_DISPLAY["approval-handoff"] =
-//       "Approval & Handoff" (aidlc-statusline.ts:72), painted as
-//       "> Approval & Handoff" by the workflow line (aidlc-statusline.ts:243).
+//       "Approval & Handoff" (amadeus-statusline.ts:72), painted as
+//       "> Approval & Handoff" by the workflow line (amadeus-statusline.ts:243).
 //   The rendered statusline is the tui-only value-add the SDK / claude -p path
 //   was BLIND to — the old .sh only grepped the state/audit bytes.
 //
 // WHY PATTERN A (landed + rendered, NO answer-gate) — and the gate we DESIGN OUT
 //   A forward `--stage` jump is a single deterministic transition. The jump
-//   sets Status=Running (aidlc-jump.ts:309) and the orchestrator keeps going
+//   sets Status=Running (amadeus-jump.ts:309) and the orchestrator keeps going
 //   past the jump. So the journey NEVER reaches a
 //   terminal state we could wait on; asserting terminal completion would be racy
 //   (the Phase-2 lesson). We instead terminate on the LANDED signal — the
@@ -43,7 +43,7 @@
 //   scanned EVERY consume — including `required: false` optionals — so it fired on
 //   essentially every forward jump (the skipped stages' optional outputs are
 //   always absent). That contradicted the graph's own contract
-//   (aidlc-graph.ts:715-716: "consumes[].required: false is silent — a first-class
+//   (amadeus-graph.ts:715-716: "consumes[].required: false is silent — a first-class
 //   valid state"). Verified live 2026-06-06 by driving this journey TWICE: the gate
 //   fired both un-seeded (default ❯ Cancel) and with-required-seeded (default ❯
 //   Continue, optionals still flagged) — proving the gate keyed off optionals too.
@@ -91,7 +91,7 @@ import { existsSync, readFileSync } from "node:fs";
 import * as os from "node:os";
 import { join } from "node:path";
 import { resolveWinNode } from "../harness/tui-drive.ts";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { seededStateFile } from "../harness/fixtures.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
@@ -182,7 +182,7 @@ describe("t-tui-t24 stage-jump (forward --stage lands on disk + re-renders statu
         // but ships no artifacts → required inputs absent → gate), and the
         // landed statusline never paints. Seeding keeps the jump the deterministic
         // single-transition Pattern A this test asserts, and does NOT alter the
-        // [S] marks (those derive purely from checkbox state — aidlc-jump.ts:242-253).
+        // [S] marks (those derive purely from checkbox state — amadeus-jump.ts:242-253).
         ideationArtifacts: true,
       });
       try {
@@ -223,7 +223,7 @@ describe("t-tui-t24 stage-jump (forward --stage lands on disk + re-renders statu
           "--session",
           session,
           "--keys",
-          "/aidlc --stage approval-handoff",
+          "/amadeus --stage approval-handoff",
           "--literal",
           "--no-enter",
         ]);
@@ -232,7 +232,7 @@ describe("t-tui-t24 stage-jump (forward --stage lands on disk + re-renders statu
         // --- wait for the LANDED render (the Pattern-A terminator) ------------
         // The jump rewrites Current Stage=approval-handoff and the statusline hook
         // repaints "> Approval & Handoff" (STAGE_DISPLAY["approval-handoff"],
-        // aidlc-statusline.ts:72,243). --stable-ms 0: the screen streams (live
+        // amadeus-statusline.ts:72,243). --stable-ms 0: the screen streams (live
         // token counter / spinner during the orchestrator turn), so match the
         // instant the landed stage name appears, NOT byte-stability. We do NOT
         // wait on terminal completion: the jump leaves
@@ -253,7 +253,7 @@ describe("t-tui-t24 stage-jump (forward --stage lands on disk + re-renders statu
         expect(pane).toContain("· IDEATION");
         expect(pane).toContain("> Approval & Handoff");
 
-        // --- assert ON DISK: aidlc-state.md (the .sh's state greps) -----------
+        // --- assert ON DISK: amadeus-state.md (the .sh's state greps) -----------
         const stateMd = readFileSync(seededStateFile(proj), "utf8");
 
         // Current Stage rewritten to the jump target (t24.sh:28).
@@ -287,21 +287,21 @@ describe("t-tui-t24 stage-jump (forward --stage lands on disk + re-renders statu
           .split("\n")
           .filter((l) => l.startsWith("**Event**: STAGE_JUMPED")).length;
         expect(stageJumped).toBeGreaterThanOrEqual(1);
-        // FORWARD direction recorded (t24.sh:62). aidlc-jump.ts:375 emits the
+        // FORWARD direction recorded (t24.sh:62). amadeus-jump.ts:375 emits the
         // field `Direction: "FORWARD"`, which appendAuditEvent renders as the
-        // bold-key audit line `**Direction**: FORWARD` (aidlc-audit.ts:259 wraps
+        // bold-key audit line `**Direction**: FORWARD` (amadeus-audit.ts:259 wraps
         // every field key in **). Anchor on that real on-disk format (matches the
         // **Timestamp** assertion below), not a bare `Direction:`.
         expect(auditMd).toMatch(/\*\*Direction\*\*:\s*FORWARD/);
         // Per-stage STAGE_SKIPPED for each in-flight stage skipped over
-        // (aidlc-jump.ts:349) — the audit twin of the [S] state marks. The .sh
+        // (amadeus-jump.ts:349) — the audit twin of the [S] state marks. The .sh
         // asserted the [S] state marks; this is the equal-or-stronger audit-side
         // proof of the same skips.
         const stageSkipped = auditMd
           .split("\n")
           .filter((l) => l.startsWith("**Event**: STAGE_SKIPPED")).length;
         expect(stageSkipped).toBeGreaterThanOrEqual(1);
-        // Audit events carry ISO timestamps (t24.sh:63). aidlc-audit.ts:257
+        // Audit events carry ISO timestamps (t24.sh:63). amadeus-audit.ts:257
         // writes "**Timestamp**: <ts>".
         expect(auditMd).toMatch(/\*\*Timestamp\*\*:.*\d[0-9T:Z-]/);
       } finally {

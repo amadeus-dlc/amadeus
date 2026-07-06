@@ -1,7 +1,7 @@
 // t144-codex-harness-seam: harnessDir()/resolveProjectDir ladder across all
 // three harness dirs (.claude / .kiro / .codex).
 //
-// covers: function:harnessDir, function:resolveProjectDir, function:rulesSubdir, file:tools/aidlc-lib.ts
+// covers: function:harnessDir, function:resolveProjectDir, function:rulesSubdir, file:tools/amadeus-lib.ts
 //
 // WHAT. MR-1 of the dist/codex port widens the kiro harness seam with
 // ".codex": HARNESS_DIRS = [".claude", ".kiro", ".codex"]. This test pins the
@@ -31,7 +31,7 @@ import { fileURLToPath } from "node:url";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const CLAUDE_TOOLS = join(REPO_ROOT, "dist", "claude", ".claude", "tools");
-const CLAUDE_LIB = join(CLAUDE_TOOLS, "aidlc-lib.ts");
+const CLAUDE_LIB = join(CLAUDE_TOOLS, "amadeus-lib.ts");
 
 // Materialize a minimal <root>/<harness>/tools/ tree carrying the real lib
 // (plus its sibling imports) so script-path derivation sees the genuine shipped
@@ -43,7 +43,7 @@ const CLAUDE_LIB = join(CLAUDE_TOOLS, "aidlc-lib.ts");
 function libInHarnessTree(root: string, harness: string, rulesSubdir?: string): string {
   const toolsDir = join(root, harness, "tools");
   mkdirSync(join(toolsDir, "data"), { recursive: true });
-  for (const sibling of ["aidlc-lib.ts", "aidlc-graph.ts", "aidlc-stage-schema.ts", "aidlc-version.ts"]) {
+  for (const sibling of ["amadeus-lib.ts", "amadeus-graph.ts", "amadeus-stage-schema.ts", "amadeus-version.ts"]) {
     cpSync(join(CLAUDE_TOOLS, sibling), join(toolsDir, sibling));
   }
   // Seed the compiled-data files (stage-graph/scope-grid) from claude — they are
@@ -54,7 +54,7 @@ function libInHarnessTree(root: string, harness: string, rulesSubdir?: string): 
     join(toolsDir, "data", "harness.json"),
     `${JSON.stringify({ harnessDir: harness, rulesSubdir: rulesSubdir ?? "rules" }, null, 2)}\n`,
   );
-  return join(toolsDir, "aidlc-lib.ts");
+  return join(toolsDir, "amadeus-lib.ts");
 }
 
 function evalLib(
@@ -104,8 +104,8 @@ describe("t144 codex harness seam — harnessDir + resolveProjectDir ladder ×3 
     const tmp = realpathSync(mkdtempSync(join(tmpdir(), "t144-")));
     try {
       // Lib copied OUTSIDE any harness tree → derivation misses → CWD probe.
-      const libCopy = join(tmp, "aidlc-lib.ts");
-      for (const sibling of ["aidlc-lib.ts", "aidlc-graph.ts", "aidlc-stage-schema.ts", "aidlc-version.ts"]) {
+      const libCopy = join(tmp, "amadeus-lib.ts");
+      for (const sibling of ["amadeus-lib.ts", "amadeus-graph.ts", "amadeus-stage-schema.ts", "amadeus-version.ts"]) {
         cpSync(join(CLAUDE_TOOLS, sibling), join(tmp, sibling));
       }
       cpSync(join(CLAUDE_TOOLS, "data"), join(tmp, "data"), { recursive: true });
@@ -136,8 +136,8 @@ describe("t144 codex harness seam — harnessDir + resolveProjectDir ladder ×3 
     const tmp = realpathSync(mkdtempSync(join(tmpdir(), "t144-")));
     try {
       // Lib outside any harness tree → suffix strip misses → CWD marker rung.
-      const libCopy = join(tmp, "aidlc-lib.ts");
-      for (const sibling of ["aidlc-lib.ts", "aidlc-graph.ts", "aidlc-stage-schema.ts", "aidlc-version.ts"]) {
+      const libCopy = join(tmp, "amadeus-lib.ts");
+      for (const sibling of ["amadeus-lib.ts", "amadeus-graph.ts", "amadeus-stage-schema.ts", "amadeus-version.ts"]) {
         cpSync(join(CLAUDE_TOOLS, sibling), join(tmp, sibling));
       }
       cpSync(join(CLAUDE_TOOLS, "data"), join(tmp, "data"), { recursive: true });
@@ -158,7 +158,7 @@ describe("t144 codex harness seam — harnessDir + resolveProjectDir ladder ×3 
 
   // rulesSubdir() is the companion seam: the AIDLC markdown rule layers live
   // under a per-harness subdirectory (.claude/rules, .kiro/steering,
-  // .codex/aidlc-rules). The .ts tools are byte-copied across all trees, so a
+  // .codex/amadeus-rules). The .ts tools are byte-copied across all trees, so a
   // runtime rule path MUST resolve the segment through this seam — a hardcoded
   // "rules" targets a dir that does not exist on a rename-rules harness (the
   // CRIT-2 practices-promote / learnings / loadRules bug this fixed). The rename
@@ -170,7 +170,7 @@ describe("t144 codex harness seam — harnessDir + resolveProjectDir ladder ×3 
     expect(evalLib(CLAUDE_LIB, "rulesSubdir()")).toBe("rules");
     const tmp = realpathSync(mkdtempSync(join(tmpdir(), "t144-")));
     try {
-      const expected: Record<string, string> = { ".kiro": "steering", ".codex": "aidlc-rules" };
+      const expected: Record<string, string> = { ".kiro": "steering", ".codex": "amadeus-rules" };
       for (const h of [".kiro", ".codex"]) {
         const lib = libInHarnessTree(join(tmp, h.slice(1)), h, expected[h]);
         expect(evalLib(lib, "rulesSubdir()")).toBe(expected[h]);
@@ -183,7 +183,7 @@ describe("t144 codex harness seam — harnessDir + resolveProjectDir ladder ×3 
   // The open-set proof: a synthetic 4th harness (.gemini) the runtime has never
   // heard of — not in KNOWN_HARNESS_DIRS, not in the dev-fallback map — resolves
   // its dir AND its renamed rules subdir purely from the shipped layout +
-  // harness.json, with NO env seams and ZERO edits to aidlc-lib.ts. This is the
+  // harness.json, with NO env seams and ZERO edits to amadeus-lib.ts. This is the
   // T1 "harness #N = one harness/ dir + one manifest row, zero core edits"
   // tenet, made executable.
   test("7b: a brand-new 4th harness (.gemini) resolves dir + rules with zero core edits", () => {
@@ -205,7 +205,7 @@ describe("t144 codex harness seam — harnessDir + resolveProjectDir ladder ×3 
     // The AIDLC_HARNESS_DIR test seam pins the harness without a tree on disk and
     // out-ranks any shipped harness.json (so "pretend .kiro" yields "steering").
     expect(evalLib(CLAUDE_LIB, "rulesSubdir()", { env: { AIDLC_HARNESS_DIR: ".kiro" } })).toBe("steering");
-    expect(evalLib(CLAUDE_LIB, "rulesSubdir()", { env: { AIDLC_HARNESS_DIR: ".codex" } })).toBe("aidlc-rules");
+    expect(evalLib(CLAUDE_LIB, "rulesSubdir()", { env: { AIDLC_HARNESS_DIR: ".codex" } })).toBe("amadeus-rules");
     // ...and the explicit AIDLC_RULES_SUBDIR override wins (fixture seam).
     expect(
       evalLib(CLAUDE_LIB, "rulesSubdir()", {

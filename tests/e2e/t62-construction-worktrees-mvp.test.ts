@@ -1,4 +1,4 @@
-// covers: subcommand:aidlc-bolt:dispatch-event, subcommand:aidlc-utility:init
+// covers: subcommand:amadeus-bolt:dispatch-event, subcommand:amadeus-utility:init
 //
 // Port of tests/e2e/t62-construction-worktrees-mvp.sh (TAP plan 5),
 // mechanism = mixed. The .sh proved the v0.4.0 milestone 13 per-scope Construction-
@@ -8,13 +8,13 @@
 //   (a) the COMPILED scope-grid.json (tools/data/scope-grid.json) — a pure
 //       structural read (`require(...)`); the .sh asserted mvp EXECUTEs both
 //       code-generation and practices-discovery.
-//   (b) `aidlc-bolt dispatch-event` — the deterministic merge-dispatch
+//   (b) `amadeus-bolt dispatch-event` — the deterministic merge-dispatch
 //       observability tool; the .sh fired MERGE_DISPATCH_INVOKED and
 //       MERGE_DISPATCH_FALLBACK for the scope and grepped the resulting
 //       audit.md rows. A process-boundary seam (the tool emits via
 //       appendAuditEntry then console.logs a JSON envelope and process-exits).
-//   (c) the v7 state template written by `aidlc-utility init` — the .sh
-//       grepped the freshly-initialised aidlc-state.md for the v0.4.0
+//   (c) the v7 state template written by `amadeus-utility init` — the .sh
+//       grepped the freshly-initialised amadeus-state.md for the v0.4.0
 //       `Worktree Path` + `Bolt Refs` fields.
 //
 // MECHANISM SPLIT — why this is a `mixed` twin:
@@ -23,22 +23,22 @@
 //     observable the .sh used (t62.sh:28-34 + the assert_scope_codegen_mode
 //     helper). No process, no LLM → mechanism none for these.
 //   * Test 2 (MERGE_DISPATCH_INVOKED) + Test 4 (MERGE_DISPATCH_FALLBACK) SPAWN
-//     the real `aidlc-bolt.ts dispatch-event` CLI (BUN + the tool .ts path) and
+//     the real `amadeus-bolt.ts dispatch-event` CLI (BUN + the tool .ts path) and
 //     assert on the audit.md it writes + the JSON envelope it prints. The
 //     emit-then-process.exit / console.log contract lives only at the process
-//     boundary (aidlc-bolt.ts:660-734 handleDispatchEvent). An in-process
+//     boundary (amadeus-bolt.ts:660-734 handleDispatchEvent). An in-process
 //     handleDispatchEvent call would lose the envelope-to-stdout half the .sh
 //     observed via `>/dev/null 2>&1` + the audit-row grep.
-//   * Test 5 (v7 state fields) SPAWNS `aidlc-utility.ts init --force --scope
+//   * Test 5 (v7 state fields) SPAWNS `amadeus-utility.ts init --force --scope
 //     mvp` against a fresh integration project (mirrors the .sh's
-//     setup_construction_project helper) and reads back the written aidlc-state.md. The template
-//     interpolation + disk write is the CLI seam (aidlc-utility.ts:1720
+//     setup_construction_project helper) and reads back the written amadeus-state.md. The template
+//     interpolation + disk write is the CLI seam (amadeus-utility.ts:1720
 //     handleInit → :2048-2059 the v7 state template carrying `Worktree Path`
 //     + `Bolt Refs`).
 //
 // SUBCOMMAND UNITS credited (COLON form): the two CLI subcommands the .sh
-// actually drives — `aidlc-bolt dispatch-event` (INVOKED + FALLBACK arms) and
-// `aidlc-utility init` (the v7-state writer). The scope-grid structural reads
+// actually drives — `amadeus-bolt dispatch-event` (INVOKED + FALLBACK arms) and
+// `amadeus-utility init` (the v7-state writer). The scope-grid structural reads
 // are an assertion against a shipped DATA file, not a code unit, so they carry
 // no covers id (same convention as the .sh, which `require()`d the JSON
 // directly rather than crediting a function).
@@ -68,13 +68,13 @@
 //       (===1) + block-scoped Fallback reason / Defaults applied / Bolt slug
 //       + the JSON envelope — the .sh did a bare file-wide presence grep.
 //   .sh test 5 (v7 state has v0.4.0 fields for mvp)            -> Test 5
-//       init-written aidlc-state.md contains BOTH `- **Worktree Path**:` and
+//       init-written amadeus-state.md contains BOTH `- **Worktree Path**:` and
 //       `- **Bolt Refs**:`. STRONGER: also asserts `- **State Version**: 7`
 //       and `- **Scope**: mvp` co-present (the v7 template they ride on).
 //
 // FIXTURE DISCIPLINE: each CLI-emitting case takes a FRESH integration project
 // (setupIntegrationProject({ withGreenfieldStub: true }), toPortablePath'd so
-// audit.md/state.md round-trip on Windows) then runs `aidlc-utility init
+// audit.md/state.md round-trip on Windows) then runs `amadeus-utility init
 // --force --scope mvp` against it — byte-for-byte setup_construction_project.
 // Exact per-event audit counts demand a fresh project per emit (the .sh reused
 // one PROJ across both dispatch calls, so its file-wide greps tolerated
@@ -94,12 +94,12 @@ import {
 // aidlc/spaces/<space>/intents/<slug>-<id8>/ and audit is SHARDED per clone
 // under <record>/audit/. Read state through the resolved record dir and audit
 // through the shipped merge helper (default-resolves the active intent, falls
-// back to flat aidlc-docs for a not-yet-born project).
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+// back to flat amadeus-docs for a not-yet-born project).
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath; // the bun running this test
-const BOLT = join(AIDLC_SRC, "tools", "aidlc-bolt.ts");
-const UTILITY = join(AIDLC_SRC, "tools", "aidlc-utility.ts");
+const BOLT = join(AIDLC_SRC, "tools", "amadeus-bolt.ts");
+const UTILITY = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
 const SCOPE_GRID = join(AIDLC_SRC, "tools", "data", "scope-grid.json");
 
 const SCOPE = "mvp";
@@ -128,8 +128,8 @@ function run(tool: string, args: string[]): CliResult {
 
 /**
  * setup_construction_project (mvp) — historical shell-helper parity.
- * Fresh integration sandbox with the greenfield stub, then `aidlc-utility init
- * --force --scope mvp` so aidlc-docs/aidlc-state.md exists (the dispatch tools
+ * Fresh integration sandbox with the greenfield stub, then `amadeus-utility init
+ * --force --scope mvp` so amadeus-docs/amadeus-state.md exists (the dispatch tools
  * + the v7-state assertion both probe it).
  */
 function setupConstructionProject(): string {
@@ -150,8 +150,8 @@ function setupConstructionProject(): string {
 }
 
 // P4: resolve the born intent's record dir from the active-space + active-intent
-// cursors (a record dir is the one holding aidlc-state.md), falling back to the
-// flat aidlc-docs/ layout for a not-yet-born project.
+// cursors (a record dir is the one holding amadeus-state.md), falling back to the
+// flat amadeus-docs/ layout for a not-yet-born project.
 function recordDirOf(p: string): string {
   const spaceCursor = join(p, "aidlc", "active-space");
   const space = existsSync(spaceCursor)
@@ -161,16 +161,16 @@ function recordDirOf(p: string): string {
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();
-    if (rec && existsSync(join(intentsDir, rec, "aidlc-state.md"))) {
+    if (rec && existsSync(join(intentsDir, rec, "amadeus-state.md"))) {
       return join(intentsDir, rec);
     }
   }
-  return join(p, "aidlc-docs");
+  return join(p, "amadeus-docs");
 }
 
 /** Merged audit-shard text for the born intent (P4 shards audit per clone). */
 const auditText = (p: string): string => readAllAuditShards(p);
-const statePath = (p: string): string => join(recordDirOf(p), "aidlc-state.md");
+const statePath = (p: string): string => join(recordDirOf(p), "amadeus-state.md");
 
 /** Count audit blocks whose line is exactly `**Event**: <ev>` in audit TEXT. */
 function auditEventCount(text: string, ev: string): number {
@@ -296,7 +296,7 @@ describe("t62 construction-worktrees mvp (migrated from t62-construction-worktre
     const state = readFileSync(statePath(proj), "utf-8");
     const lines = state.split("\n");
     // The .sh grepped both `Worktree Path` and `Bolt Refs`. The v7 template
-    // (aidlc-utility.ts:2057-2058) emits them as empty list-shaped fields.
+    // (amadeus-utility.ts:2057-2058) emits them as empty list-shaped fields.
     expect(lines.some((l) => l.startsWith("- **Worktree Path**:"))).toBe(true);
     expect(lines.some((l) => l.startsWith("- **Bolt Refs**:"))).toBe(true);
     // STRONGER: pin the v7 template + scope these fields ride on.

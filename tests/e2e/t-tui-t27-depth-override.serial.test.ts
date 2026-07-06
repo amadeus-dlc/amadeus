@@ -1,6 +1,6 @@
-// covers: subcommand:aidlc-utility:config-change
+// covers: subcommand:amadeus-utility:config-change
 //
-// t-tui-t27-depth-override.serial.tui.test.ts — drive the `/aidlc --depth <level>`
+// t-tui-t27-depth-override.serial.tui.test.ts — drive the `/amadeus --depth <level>`
 // config-override journey through a REAL claude TUI and prove the depth change
 // LANDS on disk + RENDERS. A faithful port of
 // tests/integration/t27-integration-depth-override.sh (plan 7). The depth override
@@ -11,13 +11,13 @@
 // WHAT IT PROVES (equal-or-stronger than the .sh, on the same on-disk surface):
 //   Case A — depth override on an EXISTING workflow:
 //     setup state-mid-ideation (Depth=Standard, scope=feature) + audit, type
-//     `/aidlc --depth minimal`. SKILL.md step 8 (SKILL.md:124-125) sees `--depth`
+//     `/amadeus --depth minimal`. SKILL.md step 8 (SKILL.md:124-125) sees `--depth`
 //     WITHOUT --scope/--stage/--phase + state present, so it shells
-//     `aidlc-utility.ts config-change --depth minimal`, prints output, STOPS — no
+//     `amadeus-utility.ts config-change --depth minimal`, prints output, STOPS — no
 //     workflow run-on, a pure one-shot config edit. handleConfigChange
-//     (aidlc-utility.ts:2356) normalises minimal -> "Minimal", setField("Depth",
+//     (amadeus-utility.ts:2356) normalises minimal -> "Minimal", setField("Depth",
 //     ...) (:2386), writes state, and emits DEPTH_CHANGED with Old Depth=Standard
-//     / New Depth=Minimal (:2400). Assert ON DISK: aidlc-state.md `- **Depth**:
+//     / New Depth=Minimal (:2400). Assert ON DISK: amadeus-state.md `- **Depth**:
 //     Minimal` (the .sh's `Depth.*Minimal` grep) + audit.md has a DEPTH_CHANGED
 //     event (the .sh's `DEPTH_CHANGED` grep). Assert RENDERED: the pane shows the
 //     printed confirmation `Depth changed: Standard → Minimal` (:2415) AND the
@@ -27,18 +27,18 @@
 //     Minimal) in both the rendered confirmation and the implicit audit delta.
 //
 //   Case C — invalid depth is REFUSED and leaves state untouched:
-//     setup the same fixture, type `/aidlc --depth extreme`. SKILL.md step 2
+//     setup the same fixture, type `/amadeus --depth extreme`. SKILL.md step 2
 //     (SKILL.md:112) now surfaces an interactive invalid-depth recovery menu
 //     ("isn't valid" / "Which depth level do you want?") before any tool writes.
 //     Even if it reached config-change the CLI dies (`Unknown depth:
-//     "extreme"...`, aidlc-utility.ts:2367) BEFORE writeStateFile. Assert
+//     "extreme"...`, amadeus-utility.ts:2367) BEFORE writeStateFile. Assert
 //     RENDERED: the pane describes the invalid depth and offers the recovery
 //     choices. Assert ON DISK: the state file is BYTE-IDENTICAL to the seed —
 //     the .sh's md5-before/md5-after equality, here a full readFileSync compare,
 //     which is strictly stronger than an md5 hash match.
 //
 // CASE B OMITTED (deliberately, not a weakening): the .sh's Test B
-// (`/aidlc bugfix --depth comprehensive`) creates a NEW workflow from a
+// (`/amadeus bugfix --depth comprehensive`) creates a NEW workflow from a
 // brownfield stub and overrides the scope default depth. That is a SCOPE-START
 // journey, not a depth-OVERRIDE journey — `--depth` arriving WITH `--scope`
 // routes through the init/start path (SKILL.md:531 `init ... --depth`), a
@@ -53,7 +53,7 @@
 // one-shot (Cases A + C) is the journey t27 names.
 //
 // PATTERN-A RENDER FINDING (surfaced, not chased): depth is NOT a statusline
-// field — aidlc-statusline.ts paints phase + progress bar + counter + stage name,
+// field — amadeus-statusline.ts paints phase + progress bar + counter + stage name,
 // never the depth value. So the tui-only render value-add for a depth override is
 // thin: the pane proves (a) the printed `Depth changed: ...` confirmation line and
 // (b) that the workflow statusline row survives the override (the workflow was not
@@ -83,7 +83,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import * as os from "node:os";
 import { join } from "node:path";
 import { resolveWinNode } from "../harness/tui-drive.ts";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { seededAuditDir, seededStateFile } from "../harness/fixtures.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
@@ -149,7 +149,7 @@ async function waitForDisk(pred: () => boolean, timeoutMs: number): Promise<bool
 
 // Does the per-intent audit shard dir carry a canonical `**Event**: <name>` line?
 // (line-anchored so a stray token in a field value cannot satisfy it — the
-// aidlc-audit.ts:259 format.) Reads every `.md` shard under <record>/audit/ and
+// amadeus-audit.ts:259 format.) Reads every `.md` shard under <record>/audit/ and
 // concatenates, since P9 shards the audit per clone.
 function auditHasEvent(auditDir: string, event: string): boolean {
   try {
@@ -249,11 +249,11 @@ describe("t-tui-t27 depth override (config-change lands + renders)", () => {
         expect(readFileSync(statePath, "utf8")).toMatch(/-\s*\*\*Depth\*\*:\s*Standard/);
 
         // type the override
-        sendSlash(session, "/aidlc --depth minimal");
+        sendSlash(session, "/amadeus --depth minimal");
 
         // --- TERMINATE on the DETERMINISTIC on-disk signal, NOT screen prose -----
         // The landed-signal for this config-change is the DEPTH_CHANGED audit event
-        // (aidlc-utility.ts:2400) + the Depth state field — both written by the
+        // (amadeus-utility.ts:2400) + the Depth state field — both written by the
         // tool, deterministic. We do NOT wait on the confirmation TEXT: SKILL.md:125
         // says only "Print output, STOP" (NOT verbatim), so the orchestrator may
         // paraphrase it ("Done. Depth changed from Standard → Minimal …" was
@@ -312,7 +312,7 @@ describe("t-tui-t27 depth override (config-change lands + renders)", () => {
         const before = readFileSync(statePath, "utf8");
 
         // type the invalid override
-        sendSlash(session, "/aidlc --depth extreme");
+        sendSlash(session, "/amadeus --depth extreme");
 
         // --- RENDERED: the invalid-depth recovery menu surfaces. v0.6.1 now
         // offers valid alternatives rather than printing the older "Unknown

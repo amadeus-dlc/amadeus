@@ -1,27 +1,27 @@
-// covers: function:parseMemoryEntries, function:parseMemoryHeadings, subcommand:aidlc-learnings:surface, subcommand:aidlc-learnings:persist
+// covers: function:parseMemoryEntries, function:parseMemoryHeadings, subcommand:amadeus-learnings:surface, subcommand:amadeus-learnings:persist
 //
-// t97 — aidlc-learnings.ts primitives (v0.5.0 milestone 12). Migrated from
+// t97 — amadeus-learnings.ts primitives (v0.5.0 milestone 12). Migrated from
 // tests/unit/t97-learnings-primitives.sh (TAP plan 32). MIXED file (like
 // t66/t18): the six parseMemoryEntries / parseMemoryHeadings cases are PURE
-// FUNCTION units — they import the parsers from aidlc-lib.ts and run
+// FUNCTION units — they import the parsers from amadeus-lib.ts and run
 // IN-PROCESS (minMechanism: none, zero subprocess). The surface / persist
 // cases exercise the CLI PROCESS boundary (exit code + stdout JSON + stderr
 // text + on-disk side effects: RULE_LEARNED audit rows, learnings files,
 // sensor manifests, stage-frontmatter edits), so they SPAWN the real CLI via
 // node:child_process spawnSync(BUN,[TOOL,sub,...args]) at EQUAL fidelity to
 // the .sh's `bun "$LEARNINGS_TS" <sub> ...; EC=$?` pattern. Spawning credits
-// the `aidlc-learnings surface` + `aidlc-learnings persist` subcommand units
+// the `amadeus-learnings surface` + `amadeus-learnings persist` subcommand units
 // (minMechanism: cli) that a .none import-twin could not.
 //
 // Source under test:
-//   dist/claude/.claude/tools/aidlc-lib.ts
+//   dist/claude/.claude/tools/amadeus-lib.ts
 //     :982  parseMemoryHeadings(raw) -> { interpretations, deviations,
 //             tradeoffs, open_questions, total }
 //     :1060 parseMemoryEntries(raw)  -> Array<{ heading, ts, summary,
 //             context, raw }>  (ONE entry per counted line; the invariant
 //             parseMemoryEntries(raw).length === parseMemoryHeadings(raw).total
 //             holds for ANY input — no multi-line merge)
-//   dist/claude/.claude/tools/aidlc-learnings.ts
+//   dist/claude/.claude/tools/amadeus-learnings.ts
 //     surface --slug <s> [--project-dir <p>]  -> JSON candidates + parked;
 //             exit 1 on missing --slug / missing state / slug-not-Active.
 //     persist --slug <s> --selections-json <p> [--project-dir <p>] -> writes
@@ -70,8 +70,8 @@ import {
   parseMemoryEntries,
   parseMemoryHeadings,
   readAllAuditShards,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
-import { memoryDirFor } from "../../dist/claude/.claude/tools/aidlc-graph.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { memoryDirFor } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 
 // P6: a confirmed learning IS a practice (vision §6) — persist appends it
 // under the routed heading in the relocated method files {project,team}.md
@@ -91,7 +91,7 @@ const TOOL = join(
   "dist", "claude",
   ".claude",
   "tools",
-  "aidlc-learnings.ts",
+  "amadeus-learnings.ts",
 );
 
 // =====================================================================
@@ -190,7 +190,7 @@ afterEach(() => {
 // P9: with no intent cursor seeded, the tool resolves the BARE space record
 // root (docsRoot -> spaceRecordRoot) at aidlc/spaces/default/intents/. State,
 // runtime-graph, audit, and the per-stage memory all live under it (the flat
-// aidlc-docs/ root is retired — there is no fallback). mkproj seeds that tree;
+// amadeus-docs/ root is retired — there is no fallback). mkproj seeds that tree;
 // the runtime-graph memory_path is the record-relative path the tool resolves
 // via join(projectDir, memRel).
 const RECORD_REL = join("aidlc", "spaces", "default", "intents");
@@ -198,7 +198,7 @@ function recordRoot(pd: string): string {
   return join(pd, RECORD_REL);
 }
 function stateFile(pd: string): string {
-  return join(recordRoot(pd), "aidlc-state.md");
+  return join(recordRoot(pd), "amadeus-state.md");
 }
 function memoryFile(pd: string): string {
   return join(recordRoot(pd), "inception", "user-stories", "memory.md");
@@ -229,7 +229,7 @@ function mkproj(name: string): string {
 slug: user-stories
 phase: inception
 execution: ALWAYS
-lead_agent: aidlc-product-agent
+lead_agent: amadeus-product-agent
 support_agents: []
 sensors:
   - required-sections
@@ -278,7 +278,7 @@ function grepCountText(text: string, needle: RegExp | string): number {
   return text.split("\n").filter((l) => re.test(l)).length;
 }
 // P9: the tool writes per-clone audit SHARDS under the record's audit/ dir, not
-// a flat aidlc-docs/audit.md. Read the merged trail (single clone here, so it
+// a flat amadeus-docs/audit.md. Read the merged trail (single clone here, so it
 // resolves to the one shard the tool wrote); count rows against the merged text.
 function readAudit(pd: string): string {
   return readAllAuditShards(pd);
@@ -512,7 +512,7 @@ describe("t97 persist (cli, idempotency-sensitive)", () => {
       pd,
       `{ "stage_slug": "user-stories", "selections": [
   { "candidate_id": "c5", "type": "sensor", "origin_stage": "user-stories",
-    "manifest_fields": { "id": "acceptance-format", "kind": "deterministic", "command": "bun .claude/tools/aidlc-sensor.ts fire acceptance-format", "default_severity": "advisory", "description": "Checks AC format", "matches": "**/aidlc-docs/inception/user-stories/**", "timeout_seconds": 30 } } ] }
+    "manifest_fields": { "id": "acceptance-format", "kind": "deterministic", "command": "bun .claude/tools/amadeus-sensor.ts fire acceptance-format", "default_severity": "advisory", "description": "Checks AC format", "matches": "**/amadeus-docs/inception/user-stories/**", "timeout_seconds": 30 } } ] }
 `,
     );
     runCli(
@@ -520,7 +520,7 @@ describe("t97 persist (cli, idempotency-sensitive)", () => {
       { env: { AIDLC_STAGES_DIR: join(pd, ".claude", "skills", "aidlc", "stages") } },
     );
     expect(
-      readFile(join(pd, ".claude", "sensors", "aidlc-acceptance-format.md")),
+      readFile(join(pd, ".claude", "sensors", "amadeus-acceptance-format.md")),
     ).toContain("matches:");
     const stageMd = readFile(
       join(pd, ".claude", "skills", "aidlc", "stages", "inception", "user-stories.md"),

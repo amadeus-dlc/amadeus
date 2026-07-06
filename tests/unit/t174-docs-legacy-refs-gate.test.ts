@@ -3,7 +3,7 @@
 // t174 — the P9 DOCS ALLOWLIST GATE. Mechanism: none (readFileSync over docs/,
 // zero spawn, zero LLM, zero tokens). Technique: deterministic closed predicate.
 //
-// P9 retired the flat `aidlc-docs/` record layout and the `/aidlc --init` command:
+// P9 retired the flat `amadeus-docs/` record layout and the `/amadeus --init` command:
 // the docs now describe the per-intent workspace model + auto-birth. This gate
 // makes that a CLOSED, reviewable predicate rather than a free-text "is this
 // legitimately legacy?" judgement (which is trivially satisfiable by allowlisting
@@ -11,7 +11,7 @@
 // template `core/templates/onboarding.md` (the source-of-truth that renders to the
 // shipped dist `CLAUDE.md` / `AGENTS.md` — the FIRST surface a user reads, and the
 // blind spot that let stale flat-layout prose ship in an earlier pass) for a
-// surviving `aidlc-docs` or `--init` occurrence and FAILS unless:
+// surviving `amadeus-docs` or `--init` occurrence and FAILS unless:
 //   (a) the occurrence is pinned in tests/fixtures/docs-legacy-refs.json by exact
 //       file + line text — so widening the allowlist needs a visible diff there; AND
 //   (b) the pinned-set size stays <= the fixture's `ceiling` — so blanket-
@@ -19,9 +19,9 @@
 //
 // Convergence is `occurrences == pinned set`, NOT grep-clean-to-zero: the migration
 // legitimately keys on the legacy layout and the shipped sensor `matches` glob
-// `**/{aidlc-docs,intents}/**` carries the `aidlc-docs` substring.
+// `**/{amadeus-docs,intents}/**` carries the `amadeus-docs` substring.
 //
-// `--init` token: every aidlc-command `--init` reference is retired; `git init`/
+// `--init` token: every amadeus-command `--init` reference is retired; `git init`/
 // `npm init` are NOT the aidlc command, so the scanner only flags a bare `--init`
 // token (a hyphen-led flag), never an `<word> init` shell command.
 
@@ -40,8 +40,8 @@ const FIXTURE = join(REPO_ROOT, "tests", "fixtures", "docs-legacy-refs.json");
 // blind spot that let stale rules-dir prose ship in an earlier pass).
 //   EXCLUDED by design: dist/** (generated — `package.ts --check` proves byte
 //   parity, so gating the authored source suffices for all 4 dist trees) and
-//   core/aidlc-common/** (the engine-parsed stage/protocol method tree — its
-//   `aidlc-docs/` reroot is a separate deferred sweep; scanning it here would red
+//   core/amadeus-common/** (the engine-parsed stage/protocol method tree — its
+//   `amadeus-docs/` reroot is a separate deferred sweep; scanning it here would red
 //   on pre-existing debt this gate does not own).
 function listExtraAuthoredDocs(): string[] {
   const out: string[] = [];
@@ -49,9 +49,9 @@ function listExtraAuthoredDocs(): string[] {
   for (const name of readdirSync(join(REPO_ROOT, "core", "templates"))) {
     if (name.endsWith(".md")) out.push(`core/templates/${name}`);
   }
-  // each harness's orchestrator SKILL.md: harness/<h>/skills/aidlc/SKILL.md
+  // each harness's orchestrator SKILL.md: harness/<h>/skills/amadeus/SKILL.md
   for (const h of readdirSync(join(REPO_ROOT, "harness"))) {
-    const rel = `harness/${h}/skills/aidlc/SKILL.md`;
+    const rel = `harness/${h}/skills/amadeus/SKILL.md`;
     try {
       statSync(join(REPO_ROOT, rel));
       out.push(rel);
@@ -89,7 +89,7 @@ function listDocs(dir: string): string[] {
   return out;
 }
 
-/** A surviving legacy-ref occurrence: a docs line carrying `aidlc-docs` OR a bare
+/** A surviving legacy-ref occurrence: a docs line carrying `amadeus-docs` OR a bare
  *  `--init` flag token (the retired aidlc command — NOT `git init`/`npm init`). */
 interface Occurrence {
   file: string;
@@ -104,7 +104,7 @@ function scanOccurrences(): Occurrence[] {
     const lines = body.split("\n");
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      const hasAidlcDocs = line.includes("aidlc-docs");
+      const hasAidlcDocs = line.includes("amadeus-docs");
       // A bare `--init` flag token: `--init` not preceded by another flag char.
       const hasInit = /(^|[^-\w])--init\b/.test(line);
       // Retired rules-DIR tokens (the dotted per-harness rules dirs). The method
@@ -115,11 +115,11 @@ function scanOccurrences(): Occurrence[] {
       const hasRulesDir =
         line.includes(".claude/rules/") ||
         line.includes(".kiro/steering/") ||
-        line.includes(".codex/aidlc-rules/");
+        line.includes(".codex/amadeus-rules/");
       // Retired dated learnings-LOG filenames. A confirmed learning is now a
-      // practice in `memory/{team,project}.md` (aidlc-learnings.ts); there is no
+      // practice in `memory/{team,project}.md` (amadeus-learnings.ts); there is no
       // `*-learnings.md` surface. Filename-anchored so the live tool
-      // `aidlc-learnings.ts` and the phrase "learnings ritual" never match.
+      // `amadeus-learnings.ts` and the phrase "learnings ritual" never match.
       const hasLearningsLog = /[a-z]+-learnings\.md/.test(line);
       if (hasAidlcDocs || hasInit || hasRulesDir || hasLearningsLog) {
         out.push({ file: rel, line: i + 1, text: line.trim() });
@@ -137,7 +137,7 @@ describe("t174 docs legacy-ref allowlist gate (P9 — closed predicate)", () => 
     allowedByFile.get(e.file)?.add(e.text.trim());
   }
 
-  test("every surviving aidlc-docs/--init/rules-dir/learnings-log docs occurrence is pinned in the allowlist", () => {
+  test("every surviving amadeus-docs/--init/rules-dir/learnings-log docs occurrence is pinned in the allowlist", () => {
     const unpinned = occurrences.filter(
       (o) => !(allowedByFile.get(o.file)?.has(o.text) ?? false),
     );

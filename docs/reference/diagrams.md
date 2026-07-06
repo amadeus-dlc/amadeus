@@ -1,6 +1,6 @@
 # AI-DLC Workflow Diagrams
 
-This document contains all Mermaid diagrams that visualize the AI-DLC (AI-Driven Development Life Cycle) methodology. Each section includes a brief explanation followed by a rendered diagram. These diagrams are derived from the engine and conductor (`aidlc-orchestrate.ts` + `SKILL.md`), stage protocol (`stage-protocol.md`), stage files, and agent definitions.
+This document contains all Mermaid diagrams that visualize the AI-DLC (AI-Driven Development Life Cycle) methodology. Each section includes a brief explanation followed by a rendered diagram. These diagrams are derived from the engine and conductor (`amadeus-orchestrate.ts` + `SKILL.md`), stage protocol (`stage-protocol.md`), stage files, and agent definitions.
 
 > **Note:** These diagrams are also embedded inline in their relevant reference chapters. This file serves as a consolidated index of all diagrams in one place. `<record>/` in the diagrams below = the active intent's record dir, `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`.
 >
@@ -70,13 +70,13 @@ The Ideation phase captures business intent, validates feasibility, defines scop
 
 ```mermaid
 flowchart TD
-    S11["1.1 Intent Capture & Framing\n(aidlc-product-agent)"]
-    S12["1.2 Market Research\n(aidlc-product-agent)"]
-    S13["1.3 Feasibility & Constraints\n(aidlc-architect-agent)"]
-    S14["1.4 Scope Definition\n(aidlc-product-agent)"]
-    S15["1.5 Team Formation\n(aidlc-delivery-agent)"]
-    S16["1.6 Rough Mockups\n(aidlc-design-agent)"]
-    S17["1.7 Approval & Handoff\n(aidlc-delivery-agent)"]
+    S11["1.1 Intent Capture & Framing\n(amadeus-product-agent)"]
+    S12["1.2 Market Research\n(amadeus-product-agent)"]
+    S13["1.3 Feasibility & Constraints\n(amadeus-architect-agent)"]
+    S14["1.4 Scope Definition\n(amadeus-product-agent)"]
+    S15["1.5 Team Formation\n(amadeus-delivery-agent)"]
+    S16["1.6 Rough Mockups\n(amadeus-design-agent)"]
+    S17["1.7 Approval & Handoff\n(amadeus-delivery-agent)"]
     VG1{{"Verification Gate:\nIdeation --> Inception"}}
 
     S11 ==>|ALWAYS| S12
@@ -110,15 +110,15 @@ The Inception phase analyzes the codebase (for brownfield projects), discovers t
 ```mermaid
 flowchart TD
     S21{{"`**2.1 Reverse Engineering**
-    (aidlc-developer-agent + aidlc-architect-agent)
+    (amadeus-developer-agent + amadeus-architect-agent)
     subagent: two-step`"}}
-    S22a["2.2 Practices Discovery\n(aidlc-pipeline-deploy-agent)"]
-    S22["2.3 Requirements Analysis\n(aidlc-product-agent)"]
-    S23["2.4 User Stories\n(aidlc-product-agent)"]
-    S24["2.5 Refined Mockups\n(aidlc-design-agent)"]
-    S25["2.6 Application Design\n(aidlc-architect-agent)"]
-    S26["2.7 Units Generation\n(aidlc-architect-agent)"]
-    S27["2.8 Delivery Planning\n(aidlc-delivery-agent)"]
+    S22a["2.2 Practices Discovery\n(amadeus-pipeline-deploy-agent)"]
+    S22["2.3 Requirements Analysis\n(amadeus-product-agent)"]
+    S23["2.4 User Stories\n(amadeus-product-agent)"]
+    S24["2.5 Refined Mockups\n(amadeus-design-agent)"]
+    S25["2.6 Application Design\n(amadeus-architect-agent)"]
+    S26["2.7 Units Generation\n(amadeus-architect-agent)"]
+    S27["2.8 Delivery Planning\n(amadeus-delivery-agent)"]
     VG2{{"Verification Gate:\nInception --> Construction"}}
 
     BF_CHECK{"Brownfield?\n(from Initialization 0.3)"}
@@ -169,11 +169,11 @@ flowchart TD
     START(["Begin Construction"])
 
     subgraph PER_BOLT["Per-Bolt Loop (walking skeleton first; later Bolts may parallelise)"]
-        S31["3.1 Functional Design\n(aidlc-architect-agent)\nCONDITIONAL"]
-        S32["3.2 NFR Requirements\n(aidlc-architect-agent)\nCONDITIONAL"]
-        S33["3.3 NFR Design\n(aidlc-architect-agent)\nCONDITIONAL"]
-        S34["3.4 Infrastructure Design\n(aidlc-aws-platform-agent)\nCONDITIONAL"]
-        S35{{"3.5 Code Generation\n(aidlc-developer-agent)\nsubagent: aidlc-developer-agent\nALWAYS per unit in Bolt"}}
+        S31["3.1 Functional Design\n(amadeus-architect-agent)\nCONDITIONAL"]
+        S32["3.2 NFR Requirements\n(amadeus-architect-agent)\nCONDITIONAL"]
+        S33["3.3 NFR Design\n(amadeus-architect-agent)\nCONDITIONAL"]
+        S34["3.4 Infrastructure Design\n(amadeus-aws-platform-agent)\nCONDITIONAL"]
+        S35{{"3.5 Code Generation\n(amadeus-developer-agent)\nsubagent: amadeus-developer-agent\nALWAYS per unit in Bolt"}}
 
         S31 -.-> S32
         S32 -.-> S33
@@ -186,8 +186,8 @@ flowchart TD
     PER_BOLT -->|"More Bolts?"| PER_BOLT
     PER_BOLT -->|"All Bolts done"| S36
 
-    S36["3.6 Build and Test\n(aidlc-quality-agent)\nALWAYS"]
-    S37["3.7 CI Pipeline\n(aidlc-pipeline-deploy-agent)\nCONDITIONAL"]
+    S36["3.6 Build and Test\n(amadeus-quality-agent)\nALWAYS"]
+    S37["3.7 CI Pipeline\n(amadeus-pipeline-deploy-agent)\nCONDITIONAL"]
     VG3{{"Verification Gate:\nConstruction --> Operation"}}
 
     S36 ==> S37
@@ -213,13 +213,13 @@ The Operation phase covers deployment, environment provisioning, observability, 
 
 ```mermaid
 flowchart TD
-    S41["4.1 Deployment Pipeline\n(aidlc-pipeline-deploy-agent)"]
-    S42["4.2 Environment Provisioning\n(aidlc-aws-platform-agent)"]
-    S43["4.3 Deployment Execution\n(aidlc-pipeline-deploy-agent)"]
-    S44["4.4 Observability Setup\n(aidlc-operations-agent)"]
-    S45["4.5 Incident Response\n(aidlc-operations-agent)"]
-    S46["4.6 Performance Validation\n(aidlc-quality-agent)"]
-    S47["4.7 Feedback & Optimization\n(aidlc-operations-agent)"]
+    S41["4.1 Deployment Pipeline\n(amadeus-pipeline-deploy-agent)"]
+    S42["4.2 Environment Provisioning\n(amadeus-aws-platform-agent)"]
+    S43["4.3 Deployment Execution\n(amadeus-pipeline-deploy-agent)"]
+    S44["4.4 Observability Setup\n(amadeus-operations-agent)"]
+    S45["4.5 Incident Response\n(amadeus-operations-agent)"]
+    S46["4.6 Performance Validation\n(amadeus-quality-agent)"]
+    S47["4.7 Feedback & Optimization\n(amadeus-operations-agent)"]
 
     S41 -.->|CONDITIONAL| S42
     S42 -.->|CONDITIONAL| S43
@@ -246,23 +246,23 @@ flowchart TD
 
 ## 6. Agent Collaboration Map
 
-The AI-DLC system uses 11 domain-expert agents. The conductor (SKILL.md) performs each agent invocation as the engine directs; agents never invoke each other directly. Information flows between agents through artifacts stored in the intent's record dir (`aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`). The diagram below shows the primary information flows between agents, culminating in the feedback loop from aidlc-operations-agent back to aidlc-product-agent.
+The AI-DLC system uses 11 domain-expert agents. The conductor (SKILL.md) performs each agent invocation as the engine directs; agents never invoke each other directly. Information flows between agents through artifacts stored in the intent's record dir (`aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`). The diagram below shows the primary information flows between agents, culminating in the feedback loop from amadeus-operations-agent back to amadeus-product-agent.
 
 ```mermaid
 flowchart TD
     ORCH(["SKILL.md (Conductor)"])
 
-    PA["aidlc-product-agent\n(Product Manager)"]
-    DA["aidlc-design-agent\n(UX Designer)"]
-    DLA["aidlc-delivery-agent\n(Delivery Manager)"]
-    AA["aidlc-architect-agent\n(Solutions Architect)"]
-    AWSA["aidlc-aws-platform-agent\n(AWS Platform)"]
-    CA["aidlc-compliance-agent\n(Compliance)"]
-    DSA["aidlc-devsecops-agent\n(DevSecOps)"]
-    DEVA["aidlc-developer-agent\n(Developer)"]
-    QA["aidlc-quality-agent\n(QA Engineer)"]
-    PDA["aidlc-pipeline-deploy-agent\n(Pipeline/Deploy)"]
-    OA["aidlc-operations-agent\n(SRE)"]
+    PA["amadeus-product-agent\n(Product Manager)"]
+    DA["amadeus-design-agent\n(UX Designer)"]
+    DLA["amadeus-delivery-agent\n(Delivery Manager)"]
+    AA["amadeus-architect-agent\n(Solutions Architect)"]
+    AWSA["amadeus-aws-platform-agent\n(AWS Platform)"]
+    CA["amadeus-compliance-agent\n(Compliance)"]
+    DSA["amadeus-devsecops-agent\n(DevSecOps)"]
+    DEVA["amadeus-developer-agent\n(Developer)"]
+    QA["amadeus-quality-agent\n(QA Engineer)"]
+    PDA["amadeus-pipeline-deploy-agent\n(Pipeline/Deploy)"]
+    OA["amadeus-operations-agent\n(SRE)"]
 
     ORCH -->|delegates| PA
     ORCH -->|delegates| DA
@@ -333,9 +333,9 @@ flowchart LR
     subgraph TWOSTEP["Mode 3: Subagent (two-step RE)"]
         direction TB
         TS1["Orchestrator reads\nRE stage file"]
-        TS2["Task: aidlc-developer-agent\ncode scan"]
+        TS2["Task: amadeus-developer-agent\ncode scan"]
         TS3["Developer returns\nscan results"]
-        TS4["Task: aidlc-architect-agent\nsynthesis"]
+        TS4["Task: amadeus-architect-agent\nsynthesis"]
         TS5["Architect produces\n9 artifacts"]
         TS6["Orchestrator presents\ncompletion + approval"]
         TS1 --> TS2 --> TS3 --> TS4 --> TS5 --> TS6
@@ -350,15 +350,15 @@ flowchart LR
 
 ## 8. Session Resume Flow
 
-When the user invokes `/aidlc`, the orchestrator checks for an active intent's `aidlc-state.md`. If found, it offers four resume options. If not found, it births the first intent. The orchestrator also checks for `.aidlc-recovery.md` to detect possible state corruption from context compaction.
+When the user invokes `/amadeus`, the orchestrator checks for an active intent's `amadeus-state.md`. If found, it offers four resume options. If not found, it births the first intent. The orchestrator also checks for `.amadeus-recovery.md` to detect possible state corruption from context compaction.
 
 ```mermaid
 flowchart TD
-    START(["/aidlc invoked"])
+    START(["/amadeus invoked"])
     ARG_CHECK{"Arguments\nprovided?"}
     STATUS_CHECK{"Argument =\n--status?"}
     STATE_EXISTS{"Active intent\nexists?"}
-    RECOVERY_CHECK{".aidlc-recovery.md\nexists?"}
+    RECOVERY_CHECK{".amadeus-recovery.md\nexists?"}
     CORRUPTION{"State matches\nrecovery file?"}
     WARN["Warn user about\npossible corruption"]
 
@@ -435,7 +435,7 @@ sequenceDiagram
     Note over G: org.md + team.md + project.md + phases/<phase>.md
     G-->>O: Rules loaded (strict-additive — all layers present)
 
-    O->>SM: Step 2: Load .claude/knowledge/aidlc-shared/
+    O->>SM: Step 2: Load .claude/knowledge/amadeus-shared/
     Note over SM: Shared methodology principles
     SM-->>O: Shared knowledge loaded
 
@@ -443,7 +443,7 @@ sequenceDiagram
     Note over AM: Agent-specific methodology
     AM-->>O: Agent methodology loaded
 
-    O->>TK: Step 4: Load aidlc/knowledge/aidlc-shared/
+    O->>TK: Step 4: Load aidlc/knowledge/amadeus-shared/
     Note over TK: Team shared knowledge (if exists)
     TK-->>O: Team knowledge loaded
 
@@ -483,7 +483,7 @@ flowchart TD
     REVISION_COUNT{"Revision\ncycle >= 3?"}
     NOTE_2ND["After 2nd revision:\nnote that escape hatch\nactivates next cycle"]
 
-    UPDATE_STATE["Update aidlc-state.md:\nmark stage as completed"]
+    UPDATE_STATE["Update amadeus-state.md:\nmark stage as completed"]
     PROGRESS["Display progress line:\nN/total overall"]
     NEXT_STAGE["Proceed to next stage"]
 
@@ -520,7 +520,7 @@ flowchart TD
 
 ## 12. State Tracking
 
-The `aidlc-state.md` file tracks each stage with checkbox notation: `[ ]` (not started), `[-]` (in progress), `[x]` (completed). Stages always transition through the intermediate `[-]` state -- they never jump from `[ ]` directly to `[x]`. The diagram also shows the side flows for skip, redo, and jump operations.
+The `amadeus-state.md` file tracks each stage with checkbox notation: `[ ]` (not started), `[-]` (in progress), `[x]` (completed). Stages always transition through the intermediate `[-]` state -- they never jump from `[ ]` directly to `[x]`. The diagram also shows the side flows for skip, redo, and jump operations.
 
 ```mermaid
 stateDiagram-v2
@@ -597,32 +597,32 @@ This reference table maps every stage to its execution mode and lead agent for q
 | 0.1 | Workspace Scaffold | inline (auto-proceed) | orchestrator |
 | 0.2 | Workspace Detection | inline (auto-proceed, deterministic scanner) | orchestrator |
 | 0.3 | State Init | inline (auto-proceed) | orchestrator |
-| 1.1 | Intent Capture | inline | aidlc-product-agent |
-| 1.2 | Market Research | inline | aidlc-product-agent |
-| 1.3 | Feasibility | inline | aidlc-architect-agent |
-| 1.4 | Scope Definition | inline | aidlc-product-agent |
-| 1.5 | Team Formation | inline | aidlc-delivery-agent |
-| 1.6 | Rough Mockups | inline | aidlc-design-agent |
-| 1.7 | Approval & Handoff | inline | aidlc-delivery-agent |
-| 2.1 | Reverse Engineering | subagent (two-step) | aidlc-developer-agent + aidlc-architect-agent |
-| 2.2 | Practices Discovery | inline | aidlc-pipeline-deploy-agent |
-| 2.3 | Requirements Analysis | inline | aidlc-product-agent |
-| 2.4 | User Stories | inline | aidlc-product-agent |
-| 2.5 | Refined Mockups | inline | aidlc-design-agent |
-| 2.6 | Application Design | inline | aidlc-architect-agent |
-| 2.7 | Units Generation | inline | aidlc-architect-agent |
-| 2.8 | Delivery Planning | inline | aidlc-delivery-agent |
-| 3.1 | Functional Design | inline | aidlc-architect-agent |
-| 3.2 | NFR Requirements | inline | aidlc-architect-agent |
-| 3.3 | NFR Design | inline | aidlc-architect-agent |
-| 3.4 | Infrastructure Design | inline | aidlc-aws-platform-agent |
-| 3.5 | Code Generation | subagent (aidlc-developer-agent) | aidlc-developer-agent |
-| 3.6 | Build and Test | inline | aidlc-quality-agent |
-| 3.7 | CI Pipeline | inline | aidlc-pipeline-deploy-agent |
-| 4.1 | Deployment Pipeline | inline | aidlc-pipeline-deploy-agent |
-| 4.2 | Environment Provisioning | inline | aidlc-aws-platform-agent |
-| 4.3 | Deployment Execution | inline | aidlc-pipeline-deploy-agent |
-| 4.4 | Observability Setup | inline | aidlc-operations-agent |
-| 4.5 | Incident Response | inline | aidlc-operations-agent |
-| 4.6 | Performance Validation | inline | aidlc-quality-agent |
-| 4.7 | Feedback & Optimization | inline | aidlc-operations-agent |
+| 1.1 | Intent Capture | inline | amadeus-product-agent |
+| 1.2 | Market Research | inline | amadeus-product-agent |
+| 1.3 | Feasibility | inline | amadeus-architect-agent |
+| 1.4 | Scope Definition | inline | amadeus-product-agent |
+| 1.5 | Team Formation | inline | amadeus-delivery-agent |
+| 1.6 | Rough Mockups | inline | amadeus-design-agent |
+| 1.7 | Approval & Handoff | inline | amadeus-delivery-agent |
+| 2.1 | Reverse Engineering | subagent (two-step) | amadeus-developer-agent + amadeus-architect-agent |
+| 2.2 | Practices Discovery | inline | amadeus-pipeline-deploy-agent |
+| 2.3 | Requirements Analysis | inline | amadeus-product-agent |
+| 2.4 | User Stories | inline | amadeus-product-agent |
+| 2.5 | Refined Mockups | inline | amadeus-design-agent |
+| 2.6 | Application Design | inline | amadeus-architect-agent |
+| 2.7 | Units Generation | inline | amadeus-architect-agent |
+| 2.8 | Delivery Planning | inline | amadeus-delivery-agent |
+| 3.1 | Functional Design | inline | amadeus-architect-agent |
+| 3.2 | NFR Requirements | inline | amadeus-architect-agent |
+| 3.3 | NFR Design | inline | amadeus-architect-agent |
+| 3.4 | Infrastructure Design | inline | amadeus-aws-platform-agent |
+| 3.5 | Code Generation | subagent (amadeus-developer-agent) | amadeus-developer-agent |
+| 3.6 | Build and Test | inline | amadeus-quality-agent |
+| 3.7 | CI Pipeline | inline | amadeus-pipeline-deploy-agent |
+| 4.1 | Deployment Pipeline | inline | amadeus-pipeline-deploy-agent |
+| 4.2 | Environment Provisioning | inline | amadeus-aws-platform-agent |
+| 4.3 | Deployment Execution | inline | amadeus-pipeline-deploy-agent |
+| 4.4 | Observability Setup | inline | amadeus-operations-agent |
+| 4.5 | Incident Response | inline | amadeus-operations-agent |
+| 4.6 | Performance Validation | inline | amadeus-quality-agent |
+| 4.7 | Feedback & Optimization | inline | amadeus-operations-agent |

@@ -3,7 +3,7 @@
 // t69.none.test.ts — bun:test port of tests/unit/t69-worktree-path.sh (TAP plan 4).
 //
 // Mechanism: none. worktreePath() is a pure (string, string) -> string path
-// composer in aidlc-lib.ts with ZERO I/O, zero validation, zero CLI shell, so
+// composer in amadeus-lib.ts with ZERO I/O, zero validation, zero CLI shell, so
 // the three behavioural assertions become direct import-and-call expects. The
 // .sh batched them into one `bun -e` probe purely to amortise startup cost;
 // in-process there is no spawn to amortise, so each becomes its own expect().
@@ -16,14 +16,14 @@
 // same primitive's on-disk footprint, so it is ported faithfully as a
 // readFileSync($REPO_ROOT/.gitignore) + per-line regex check.
 //
-// PARTIAL-PORT NOTE: the .sh used setup_integration_project --no-aidlc-docs
+// PARTIAL-PORT NOTE: the .sh used setup_integration_project --no-amadeus-docs
 // ONLY to obtain an absolute projectDir to feed the helper. worktreePath()
 // never touches the filesystem, so this port skips the fixture-project setup
 // entirely and passes a synthetic absolute path ("/tmp/proj"). No behaviour is
 // lost — the helper's output depends only on its string arguments.
 //
 // Sources read for this port:
-//   dist/claude/.claude/tools/aidlc-lib.ts:155
+//   dist/claude/.claude/tools/amadeus-lib.ts:155
 //     worktreePath(projectDir, boltSlug) =>
 //       join(projectDir, ".aidlc", "worktrees", `bolt-${boltSlug}`)
 //   .gitignore:29  ->  /.aidlc/
@@ -37,7 +37,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
-import { worktreePath } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { worktreePath } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // $REPO_ROOT in the .sh resolves to the repo root (one level above tests/).
 const REPO_ROOT = join(import.meta.dir, "..", "..");
@@ -79,7 +79,7 @@ describe("worktreePath() (in-process, pure string composer)", () => {
   // .sh #4: "worktreePath() does not validate or sanitise the slug (milestone 2
   //          contract)". A slug containing '/' passes through verbatim, pinning
   //          the "no validation in milestone 2" decision (validation deferred to milestone 7's
-  //          aidlc-worktree.ts at create-time). If a future change adds slug
+  //          amadeus-worktree.ts at create-time). If a future change adds slug
   //          sanitisation here, this fails and forces a conscious decision.
   test("does not validate or sanitise a slug containing '/'", () => {
     expect(portablePath(worktreePath(PROJ, "a/b")).endsWith("/bolt-a/b")).toBe(true);

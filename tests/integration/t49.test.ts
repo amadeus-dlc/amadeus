@@ -1,16 +1,16 @@
-// covers: subcommand:aidlc-state:approve
+// covers: subcommand:amadeus-state:approve
 //
 // CLI-contract port of tests/integration/t49-state-machine-lifecycle.sh (TAP plan
 // 14), mechanism = cli. Equal-or-stronger migration: the .sh walks one stage
 // through the full state-machine lifecycle —
 //   [ ] -> [-] (init) -> [?] (gate-start) -> [R] (reject) -> [?] (revise)
-//   -> [x] (approve) -> advance — by SHELLING OUT to `bun aidlc-utility.ts
-// init` once and `bun aidlc-state.ts <sub> ...` six times, then grepping the
-// aidlc-state.md checkboxes and the audit.md event stream. Every one of those
+//   -> [x] (approve) -> advance — by SHELLING OUT to `bun amadeus-utility.ts
+// init` once and `bun amadeus-state.ts <sub> ...` six times, then grepping the
+// amadeus-state.md checkboxes and the audit.md event stream. Every one of those
 // invocations is preserved here by SPAWNING the real CLI via
 // node:child_process spawnSync (BUN + the tool .ts path), asserting on the
 // SAME observables: the [?] / [R] / [x] checkbox markers the tool writes into
-// aidlc-state.md, the Current Stage / Revision Count fields it reports back via
+// amadeus-state.md, the Current Stage / Revision Count fields it reports back via
 // `get`, the audit-event counts + field values + ORDER it appends to audit.md,
 // and exit codes. The contract under test is the PROCESS boundary plus those
 // file side-effects, so it stays a spawn — an in-process twin would lose the
@@ -18,8 +18,8 @@
 // which re-enters the module's projectDir global + console.log JSON ack) the
 // .sh's step-5 assertion depends on.
 //
-// COVERS KEY: this file credits the `aidlc-state approve` subcommand
-// (subcommand:aidlc-state:approve) — the keystone of the lifecycle the .sh
+// COVERS KEY: this file credits the `amadeus-state approve` subcommand
+// (subcommand:amadeus-state:approve) — the keystone of the lifecycle the .sh
 // walks (it is the [?] -> [x] transition AND the auto-advance trigger that
 // moves Current Stage forward). The other five subcommands the .sh fires
 // (gate-start / reject / revise / advance + the utility `init`) are exercised
@@ -32,7 +32,7 @@
 // assertions only make sense against a single contiguous event stream. We
 // replicate that exactly: beforeAll() does the init + 6 transitions ONCE into a
 // single temp project (createTestProject — toPortablePath-converts on Windows so
-// audit.md / aidlc-state.md, written by the tool via toPosix paths, round-trip
+// audit.md / amadeus-state.md, written by the tool via toPosix paths, round-trip
 // when read back); every test() then asserts a different observable against that
 // one walk. The dir is cleaned in afterAll. The .sh does NOT seed audit-sample.md
 // — `init` creates a fresh audit.md — so post-walk counts are unambiguous.
@@ -40,7 +40,7 @@
 // PARITY NOTES (every .sh `ok` line maps to an expect()-bearing test() below;
 // several are STRONGER than the original grep / assert_gt):
 //   - .sh Test 1  assert_eq Current Stage == requirements-analysis  -> Test 1.
-//   - .sh Test 2  assert_grep aidlc-state.md '\[?\] requirements-analysis'
+//   - .sh Test 2  assert_grep amadeus-state.md '\[?\] requirements-analysis'
 //       (gate-start [-] -> [?])                                     -> Test 2
 //       (checkbox marker scan, slug-scoped; allows the trailing " — EXECUTE"
 //       suffix the tool writes, same as the .sh's substring grep).
@@ -90,12 +90,12 @@ import { cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const TOOLS = join(REPO_ROOT, "dist", "claude", ".claude", "tools");
-const STATE = join(TOOLS, "aidlc-state.ts");
-const UTIL = join(TOOLS, "aidlc-utility.ts");
+const STATE = join(TOOLS, "amadeus-state.ts");
+const UTIL = join(TOOLS, "amadeus-utility.ts");
 
 // P4: init births a per-intent record (aidlc/spaces/<space>/intents/<slug>-<id8>/);
-// state lands at <record>/aidlc-state.md and audit in per-clone shards under
-// <record>/audit/<host>-<pid>.md, NOT the flat aidlc-docs/. The active-intent
+// state lands at <record>/amadeus-state.md and audit in per-clone shards under
+// <record>/audit/<host>-<pid>.md, NOT the flat amadeus-docs/. The active-intent
 // cursor follows the born record, so every subsequent gate-start/reject/revise/
 // approve/advance default-resolves to it. Fall back to flat for a not-yet-born
 // project. The checkbox markers + audit event stream are unchanged — only the
@@ -109,14 +109,14 @@ function recordDirOf(p: string): string {
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();
-    if (rec && existsSync(join(intentsDir, rec, "aidlc-state.md"))) {
+    if (rec && existsSync(join(intentsDir, rec, "amadeus-state.md"))) {
       return join(intentsDir, rec);
     }
   }
-  return join(p, "aidlc-docs");
+  return join(p, "amadeus-docs");
 }
 const statePath = (p: string): string =>
-  join(recordDirOf(p), "aidlc-state.md");
+  join(recordDirOf(p), "amadeus-state.md");
 // Audit is sharded under <record>/audit/<host>-<pid>.md; concat every shard for
 // a content read, falling back to the flat audit.md for a not-yet-born project.
 function readAudit(p: string): string {
@@ -127,7 +127,7 @@ function readAudit(p: string): string {
       .map((f) => readFileSync(join(auditDir, f), "utf-8"))
       .join("\n");
   }
-  const flat = join(p, "aidlc-docs", "audit.md");
+  const flat = join(p, "amadeus-docs", "audit.md");
   return existsSync(flat) ? readFileSync(flat, "utf-8") : "";
 }
 
@@ -260,7 +260,7 @@ function hasCheckbox(content: string, marker: string, slug: string): boolean {
 //     command overwrites them), so we SNAPSHOT the state-file content right
 //     after each step rather than reading the post-walk file. This is faithful
 //     to the .sh's mid-walk grep, against the same observable (the marker line
-//     the tool wrote into aidlc-state.md at that step). Also captures the
+//     the tool wrote into amadeus-state.md at that step). Also captures the
 //     approve + advance JSON acks. ---
 
 let proj: string;
@@ -281,7 +281,7 @@ beforeAll(() => {
   expect(init.status).toBe(0);
   // P4: resolve the state path only AFTER init — birth creates the per-intent
   // record + active-intent cursor that statePath/recordDirOf follow. Computing
-  // it pre-init would resolve the flat aidlc-docs/ fallback (which never exists
+  // it pre-init would resolve the flat amadeus-docs/ fallback (which never exists
   // for a born project).
   const sp = statePath(proj);
   stateAfterInit = readFileSync(sp, "utf-8");
@@ -318,7 +318,7 @@ afterAll(() => {
   cleanupTestProject(proj);
 });
 
-describe("t49 aidlc-state lifecycle — approve gate (migrated from t49-state-machine-lifecycle.sh, plan 14)", () => {
+describe("t49 amadeus-state lifecycle — approve gate (migrated from t49-state-machine-lifecycle.sh, plan 14)", () => {
   // .sh Test 1 — init lands on requirements-analysis (Current Stage read from
   // the post-init snapshot, before any transition moved the pointer — same as
   // the .sh's `bun "$STATE" get "Current Stage"` immediately after init).

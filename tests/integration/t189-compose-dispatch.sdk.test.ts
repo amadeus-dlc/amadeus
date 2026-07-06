@@ -1,4 +1,4 @@
-// covers: file:skills/aidlc/SKILL.md, file:agents/aidlc-composer-agent.md
+// covers: file:skills/amadeus/SKILL.md, file:agents/amadeus-composer-agent.md
 //
 // t189-compose-dispatch.sdk.test.ts - the P0 composer-dispatch beat (sdk).
 //
@@ -12,7 +12,7 @@
 // data or birthing before an approval.
 //
 // Journey (one interactive run, stopped at the gate):
-//   drive:     `/aidlc compose "<task>"` on a fresh project (no workspace).
+//   drive:     `/amadeus compose "<task>"` on a fresh project (no workspace).
 //   engine:    Branch 4c print naming the composer agent (t198 pins the shape).
 //   conductor: dispatches the composer via the Task tool; the composer runs
 //              `detect --json` (its tool-result carries the scan payload);
@@ -27,11 +27,11 @@
 //   (b) the composer was DISPATCHED (a Task tool call appeared) - the
 //       conductor did not improvise a grid inline;
 //   (c) a gate fired (askedQuestions >= 1) and the run stopped there;
-//   (d) NOTHING was written: no aidlc-state.md (no birth), no composed scope
+//   (d) NOTHING was written: no amadeus-state.md (no birth), no composed scope
 //       file in .claude/scopes/ beyond the 9 stock ones, scope-grid.json
 //       still has exactly 9 keys. P0 stops at render - the write is P2.
 //
-// It SPENDS TOKENS - driveAidlc drives the real /aidlc on Opus/Bedrock. Gated
+// It SPENDS TOKENS - driveAidlc drives the real /amadeus on Opus/Bedrock. Gated
 // on claude-CLI presence (the file calls driveAidlc(), so claude-gate.ts marks
 // it SDK-dependent; the runner skips-with-reason when claude is absent).
 
@@ -53,7 +53,7 @@ const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
 // guesses the verb has no keyword shortcut - the composer is the named move.
 const TASK = "migrate our nightly ETL jobs to event-driven ingestion with replay";
 
-describe("t189 composer dispatch (/aidlc compose, sdk live)", () => {
+describe("t189 composer dispatch (/amadeus compose, sdk live)", () => {
   test(
     "compose verb dispatches the composer agent, renders the gate, writes nothing before approval",
     async () => {
@@ -62,7 +62,7 @@ describe("t189 composer dispatch (/aidlc compose, sdk live)", () => {
         stripEnvScope: true,
       });
       try {
-        const r = await driveAidlc(`/aidlc compose "${TASK}"`, {
+        const r = await driveAidlc(`/amadeus compose "${TASK}"`, {
           projectDir: proj,
           answerScript: "default",
           timeoutMs: DRIVE_TIMEOUT_MS,
@@ -71,10 +71,10 @@ describe("t189 composer dispatch (/aidlc compose, sdk live)", () => {
 
         // (a) The engine emitted the composer-dispatch print - the directive
         // JSON is the engine's verbatim stdout, never the LLM's rewording.
-        assertToolResultContains(r, "Bash", "aidlc-composer-agent");
+        assertToolResultContains(r, "Bash", "amadeus-composer-agent");
 
         // (b) The composer was DISPATCHED as a subagent (SKILL.md: "run the
-        // composer via Task(aidlc-composer-agent)"). The harness surfaces the
+        // composer via Task(amadeus-composer-agent)"). The harness surfaces the
         // subagent tool as "Task" or "Agent" depending on the SDK build -
         // accept either; an inline-improvised grid would show neither.
         const taskCalls = r.toolResults.filter(
@@ -92,13 +92,13 @@ describe("t189 composer dispatch (/aidlc compose, sdk live)", () => {
           ? readdirSync(intentsDir).filter((d) => !d.startsWith("."))
           : [];
         const stateFiles = intentDirs.filter((d) =>
-          existsSync(join(intentsDir, d, "aidlc-state.md")),
+          existsSync(join(intentsDir, d, "amadeus-state.md")),
         );
         expect(stateFiles).toEqual([]);
         // No composed scope file (the 9 stock scopes only):
         const scopesDir = join(proj, ".claude", "scopes");
         const scopeFiles = readdirSync(scopesDir).filter(
-          (f) => f.startsWith("aidlc-") && f.endsWith(".md"),
+          (f) => f.startsWith("amadeus-") && f.endsWith(".md"),
         );
         expect(scopeFiles.length).toBe(9);
         // No grid mutation (exactly the 9 stock keys):

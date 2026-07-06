@@ -46,11 +46,11 @@ yet implemented means you've crossed the line into code.
 ### 1. Decide which phase the stage belongs to
 
 Stage files live under
-`core/aidlc-common/stages/<phase>/<slug>.md`. The phase is the directory.
+`core/amadeus-common/stages/<phase>/<slug>.md`. The phase is the directory.
 There are five:
 
 ```
-core/aidlc-common/stages/
+core/amadeus-common/stages/
 ├── initialization/
 ├── ideation/
 ├── inception/
@@ -136,7 +136,7 @@ are iterating on an already-installed tree, you can recompile that tree's graph
 directly:
 
 ```bash
-bun .claude/tools/aidlc-graph.ts compile
+bun .claude/tools/amadeus-graph.ts compile
 ```
 
 Either way the authoring flow is a one-way pipeline — edit YAML in `core/`, run
@@ -153,17 +153,17 @@ Confirm the new node compiled in and see where it runs:
 
 ```bash
 # Topological order of the full graph — your slug should appear
-bun .claude/tools/aidlc-graph.ts topo
+bun .claude/tools/amadeus-graph.ts topo
 
 # Who produces / consumes your stage's artifacts
-bun .claude/tools/aidlc-graph.ts producers <artifact>
-bun .claude/tools/aidlc-graph.ts consumers <artifact>
+bun .claude/tools/amadeus-graph.ts producers <artifact>
+bun .claude/tools/amadeus-graph.ts consumers <artifact>
 
 # The stages on a given scope's path — does your stage run for this scope?
-bun .claude/tools/aidlc-graph.ts scope <scope-name>
+bun .claude/tools/amadeus-graph.ts scope <scope-name>
 
 # Dependency sanity for a scope
-bun .claude/tools/aidlc-graph.ts validate-scope <scope-name>
+bun .claude/tools/amadeus-graph.ts validate-scope <scope-name>
 ```
 
 A brand-new stage does **not** automatically run in any scope. Scope
@@ -184,7 +184,7 @@ stage compiles into the graph (steps 2–4 above), it is immediately runnable on
 own, with no skill or registration required:
 
 ```bash
-bun .claude/tools/aidlc-orchestrate.ts next --stage <your-slug> --single
+bun .claude/tools/amadeus-orchestrate.ts next --stage <your-slug> --single
 ```
 
 The engine's `--single` mode runs that one stage in isolation. It emits a single
@@ -197,22 +197,22 @@ run, so running one stage on its own can never derail an in-flight workflow.
 
 ### The runner skill is optional packaging
 
-Every shipped runnable stage also gets a thin runner skill at `skills/aidlc-<slug>/SKILL.md`
-so it is typeable as `/aidlc-<slug>` (e.g. `/aidlc-application-design`). These are
+Every shipped runnable stage also gets a thin runner skill at `skills/amadeus-<slug>/SKILL.md`
+so it is typeable as `/amadeus-<slug>` (e.g. `/amadeus-application-design`). These are
 **opt-in sugar over the `--single` flag** — a ~6-line shell that drives
 `next --stage <slug> --single`. They are not hand-written: a generator emits one
 per runnable compiled stage slug, so the set of runners can never drift from the
 set of stages by hand. (The three bootstrap initialization stages get no per-stage
 runner — they have no standalone `--single` meaning; the whole init phase is the
-`/aidlc-init` command instead, packaging the engine's intent-birth move.) After adding (or removing)
+`/amadeus-init` command instead, packaging the engine's intent-birth move.) After adding (or removing)
 a stage, regenerate the runners:
 
 ```bash
 # Regenerate every runner dir from the compiled stage list
-bun .claude/tools/aidlc-runner-gen.ts write
+bun .claude/tools/amadeus-runner-gen.ts write
 
 # CI drift guard: exits 1 if the runner set != the compiled stage set
-bun .claude/tools/aidlc-runner-gen.ts check
+bun .claude/tools/amadeus-runner-gen.ts check
 ```
 
 A runner carries **no `hooks:` block** — the deterministic spine (audit, sensors,
@@ -223,11 +223,11 @@ baked into the first `run-stage` directive. The runner body just states what it
 does and the one command it drives.
 
 If you delete all the runner skills, every stage still runs via
-`/aidlc --stage <slug> --single` — the runners package an already-runnable stage; the stage file is the definition. The
+`/amadeus --stage <slug> --single` — the runners package an already-runnable stage; the stage file is the definition. The
 authoring path is, and stays, "write a stage file."
 
 For the normative contract behind these runners — how the engine, conductor, and
-`run-stage` directive turn a compiled stage into a typeable `/aidlc-<slug>` skill
+`run-stage` directive turn a compiled stage into a typeable `/amadeus-<slug>` skill
 — see [Skill System §4 (skills and runners)](../reference/17-skill-system.md) in
 the Developer Reference.
 
@@ -250,7 +250,7 @@ the Developer Reference.
   typo can't ship a graph that 404s at run time. The reserved `orchestrator`
   slug (the conductor itself, used on the bootstrap initialization stages) is
   exempt — it has no agent file.
-- **CI drift guard.** `bun .claude/tools/aidlc-graph.ts compile --check` exits
+- **CI drift guard.** `bun .claude/tools/amadeus-graph.ts compile --check` exits
   `0` on a clean tree and exits `1` if any stage YAML was edited without
   recompiling the JSON. CI runs this, so a forgotten `compile` blocks the merge
   with a clear message rather than shipping a stale graph.
@@ -264,7 +264,7 @@ the Developer Reference.
   **not** decide which scopes run it. Until you add each scope name to the
   stage's own `scopes:` frontmatter list (and recompile so the transpose
   updates `scope-grid.json`), the new stage exists in the graph but runs
-  nowhere. Confirm with `aidlc-graph.ts scope <scope-name>` for each scope you
+  nowhere. Confirm with `amadeus-graph.ts scope <scope-name>` for each scope you
   care about.
 - **Body prose.** Only the frontmatter is parsed. The `## Steps` body is read by
   the lead agent when the stage activates — write it to match the other stage

@@ -48,12 +48,12 @@ const SKIP_REASON = skipReason();
 
 // Known-answer strings read from the SHIPPED handlers (same provenance as the
 // SDK calibration — real, not guessed):
-//   aidlc-utility.ts handleDoctor(): header + bun label; the Kiro tree adds
+//   amadeus-utility.ts handleDoctor(): header + bun label; the Kiro tree adds
 //   the adapter + agent-config labels (harness-aware doctor, parity closeout).
 const DOCTOR_HEADER = "AI-DLC Health Check";
 const DOCTOR_BUN_LABEL = "bun installed (required for CLI tools and hooks)";
-const DOCTOR_ADAPTER_LABEL = "aidlc-kiro-adapter.ts present";
-const DOCTOR_AGENT_LABEL = "agents/aidlc.json present";
+const DOCTOR_ADAPTER_LABEL = "amadeus-kiro-adapter.ts present";
+const DOCTOR_AGENT_LABEL = "agents/amadeus.json present";
 
 describe("kiro-acp-drive calibration (known-answer)", () => {
   test.skipIf(SKIP_REASON !== null)(
@@ -63,10 +63,10 @@ describe("kiro-acp-drive calibration (known-answer)", () => {
       try {
         const r = await driveKiroAcp({
           projectDir: proj,
-          prompt: "/aidlc --doctor",
+          prompt: "/amadeus --doctor",
           timeoutMs: DRIVE_TIMEOUT_MS,
         });
-        const doctorCall = r.toolCalls.find((t) => t.title.includes("aidlc-utility.ts doctor"));
+        const doctorCall = r.toolCalls.find((t) => t.title.includes("amadeus-utility.ts doctor"));
         expect(doctorCall).toBeDefined();
         const out = doctorCall!.output.join("");
         expect(out).toContain(DOCTOR_HEADER);
@@ -93,16 +93,16 @@ describe("kiro-acp-drive calibration (known-answer)", () => {
       try {
         const r = await driveKiroAcp({
           projectDir: proj,
-          prompt: "/aidlc --status",
+          prompt: "/amadeus --status",
           timeoutMs: DRIVE_TIMEOUT_MS,
           // The turn-boundary edge (findings §ACP): with an ACTIVE workflow
           // the conductor rolls from the status answer into live execution
           // inside the same turn — cancel as soon as the contract's tool
           // completes. (Proven the hard way: without this, calibration 2 ran
           // the workflow for 19 minutes and timed out.)
-          stopAfterToolTitle: /aidlc-utility\.ts status/,
+          stopAfterToolTitle: /amadeus-utility\.ts status/,
         });
-        const statusCall = r.toolCalls.find((t) => t.title.includes("aidlc-utility.ts status"));
+        const statusCall = r.toolCalls.find((t) => t.title.includes("amadeus-utility.ts status"));
         expect(statusCall).toBeDefined();
         const out = statusCall!.output.join("");
         // The status tool renders DISPLAY names (probe-verified): the planted
@@ -125,12 +125,12 @@ describe("kiro-acp-drive calibration (known-answer)", () => {
       try {
         const r = await driveKiroAcp({
           projectDir: proj,
-          prompt: "/aidlc --version",
+          prompt: "/amadeus --version",
           timeoutMs: DRIVE_TIMEOUT_MS,
         });
         // version ran; doctor did NOT — find() must come back empty for it.
-        expect(r.toolCalls.find((t) => t.title.includes("aidlc-utility.ts version"))).toBeDefined();
-        expect(r.toolCalls.find((t) => t.title.includes("aidlc-utility.ts doctor"))).toBeUndefined();
+        expect(r.toolCalls.find((t) => t.title.includes("amadeus-utility.ts version"))).toBeDefined();
+        expect(r.toolCalls.find((t) => t.title.includes("amadeus-utility.ts doctor"))).toBeUndefined();
       } finally {
         cleanupTuiProject(proj);
       }

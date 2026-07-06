@@ -1,17 +1,17 @@
-// covers: subcommand:aidlc-orchestrate:next, subcommand:aidlc-orchestrate:report, function:emitSingleRunStage, function:handleSingleReport
+// covers: subcommand:amadeus-orchestrate:next, subcommand:amadeus-orchestrate:report, function:emitSingleRunStage, function:handleSingleReport
 //
 // t127 — the `--single` stage-runner invariant (v0.6.0 Wave 3 milestone 14).
 // Migrated from tests/integration/t127-single-stage-invariant.sh (TAP plan 16).
 // Mechanism: cli. The whole subject is the engine's PROCESS boundary —
 // `next --stage <slug> --single` / `report --single --stage <slug>` argv,
 // the JSON directive on stdout, the bytes the synthetic-pair commit appends
-// to aidlc-docs/audit.md, AND the pointer-invariant read of the main state
-// file via aidlc-state.ts get. Every assertion is observable only across
+// to amadeus-docs/audit.md, AND the pointer-invariant read of the main state
+// file via amadeus-state.ts get. Every assertion is observable only across
 // that boundary, so each case SPAWNS the real tool via the BUN runtime
 // against the .ts path (the same pattern t104.cli credits), exactly as the
 // .sh shelled out to `bun "$TOOL" ...`.
 //
-// Source under test (dist/claude/.claude/tools/aidlc-orchestrate.ts):
+// Source under test (dist/claude/.claude/tools/amadeus-orchestrate.ts):
 //   :910  next Branch 4b — `if (flags.single)` short-circuits BEFORE the
 //          jump/scope-change branches (so no mutating path is reached): rejects
 //          --single+--phase (:911), requires --stage (:919), else delegates to
@@ -23,7 +23,7 @@
 //   :1741 handleSingleReport(flags, projectDir): requires --result (:1745),
 //          and the EXPLICIT half of the pointer rule — refuses a --single report
 //          with NO --stage as an attempt to advance the main workflow (:1762).
-//          On success spawns the atomic aidlc-audit append TWICE — STAGE_STARTED
+//          On success spawns the atomic amadeus-audit append TWICE — STAGE_STARTED
 //          (Stage+Agent+Workflow) then STAGE_COMPLETED (Stage+Details+Workflow)
 //          (:1784,:1797) under the synthetic id syntheticWorkflowId(slug) =
 //          `single-stage:<slug>` (:1715), then emits a `done` directive (:1811).
@@ -31,7 +31,7 @@
 //   The companion never dispatches advance/approve/complete-workflow, so the
 //   main pointer is structurally untouchable from a single-stage run.
 //
-// The state-pointer read uses aidlc-state.ts `get "Current Stage"` (the .sh's
+// The state-pointer read uses amadeus-state.ts `get "Current Stage"` (the .sh's
 // $STATE_TOOL), spawned the same way, asserting the field is `feasibility`
 // before AND after each --single leg.
 //
@@ -74,8 +74,8 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const TOOL = join(AIDLC_SRC, "tools", "aidlc-orchestrate.ts");
-const STATE_TOOL = join(AIDLC_SRC, "tools", "aidlc-state.ts");
+const TOOL = join(AIDLC_SRC, "tools", "amadeus-orchestrate.ts");
+const STATE_TOOL = join(AIDLC_SRC, "tools", "amadeus-state.ts");
 const STATE_FIXTURE = "state-mid-ideation.md";
 
 const projects: string[] = [];
@@ -100,7 +100,7 @@ function run(tool: string, args: string[]): { out: string; status: number } {
   };
 }
 
-/** `aidlc-state.ts get "Current Stage"` — the main pointer the .sh read. */
+/** `amadeus-state.ts get "Current Stage"` — the main pointer the .sh read. */
 function currentStage(proj: string): string {
   return run(STATE_TOOL, ["get", "Current Stage", "--project-dir", proj]).out.trim();
 }
@@ -112,7 +112,7 @@ function currentStage(proj: string): string {
 function countEvent(proj: string, event: string): number {
   // P9: the synthetic pair lands in the seeded record's per-clone shard
   // (seedAuditFile pins the clone-id, so the report subprocess and the test
-  // resolve the SAME shard), not the flat aidlc-docs/audit.md.
+  // resolve the SAME shard), not the flat amadeus-docs/audit.md.
   const body = readFileSync(seededAuditShard(proj), "utf-8");
   return body.split("\n").filter((l) => l === `**Event**: ${event}`).length;
 }
@@ -247,7 +247,7 @@ describe("t127 --single pointer invariant (migrated from t127-single-stage-invar
       "report", "--single", "--result", "completed", "--project-dir", proj,
     ]);
     expect(r.out).toContain('"kind":"error"');
-    // STRONGER: pin the verbatim refusal wording (aidlc-orchestrate.ts:1763).
+    // STRONGER: pin the verbatim refusal wording (amadeus-orchestrate.ts:1763).
     expect(r.out).toContain("must not advance the main workflow");
   });
 
@@ -267,7 +267,7 @@ describe("t127 --single pointer invariant (migrated from t127-single-stage-invar
     seedStateFile(proj, STATE_FIXTURE);
     const r = run(TOOL, ["next", "--single", "--project-dir", proj]);
     expect(r.out).toContain('"kind":"error"');
-    // STRONGER: pin the verbatim wording (aidlc-orchestrate.ts:921).
+    // STRONGER: pin the verbatim wording (amadeus-orchestrate.ts:921).
     expect(r.out).toContain("--single requires --stage");
   });
 
@@ -291,8 +291,8 @@ describe("t127 --single pointer invariant (migrated from t127-single-stage-invar
   // =========================================================================
   test("15: next --single rejects a SKIP-for-scope stage with the verbatim skip wording [.sh 15]", () => {
     const proj = freshProject();
-    // No-state project: createTestProject already leaves aidlc-docs/ empty, so
-    // there is no aidlc-state.md (the .sh did `rm -f` defensively — here it
+    // No-state project: createTestProject already leaves amadeus-docs/ empty, so
+    // there is no amadeus-state.md (the .sh did `rm -f` defensively — here it
     // never existed). The flag --scope bugfix therefore resolves.
     const r = run(TOOL, [
       "next", "--stage", "user-stories", "--single", "--scope", "bugfix",

@@ -1,4 +1,4 @@
-// covers: hook:aidlc-stop
+// covers: hook:amadeus-stop
 //
 // t187 - park + conversational carve-out (live SDK). The shipped end-to-end
 // proof of the #365 / #366 / #367 park umbrella: drive a REAL agent through the
@@ -9,7 +9,7 @@
 //
 // WHY a live test in addition to t122's deterministic e2e: t122 case (9) pins
 // the REAL engine + REAL hook park transition with NO model in the loop (it
-// spawns `aidlc-orchestrate park` by hand, then feeds the real hook). This pins
+// spawns `amadeus-orchestrate park` by hand, then feeds the real hook). This pins
 // the OTHER half: that a real conductor, told "pause this and resume later",
 // actually REACHES for park (rather than batch-completing stages) and that the
 // Stop hook then lets the turn end. The behavior under test is the conductor's
@@ -28,7 +28,7 @@
 // Instead we assert on the OBSERVABLE on-disk + tool-output outcome of a park,
 // which is stable whenever the conductor parks at all:
 //   1. the conductor invoked park (a Bash toolResult whose input.command names
-//      `aidlc-orchestrate.ts park`, OR a tool_result carrying a `parked`
+//      `amadeus-orchestrate.ts park`, OR a tool_result carrying a `parked`
 //      directive / a WORKFLOW_PARKED audit row),
 //   2. the state file gained Parked / Parked At Stage runtime markers,
 //   3. NO new stage checkbox flipped to [x] (feedback-optimization is still [-]:
@@ -89,12 +89,12 @@ describe("t187 park + conversational carve-out (sdk): a conductor asked to pause
         // to pause and resume in a later session and NOT to complete or advance
         // any stage: the supported response is `park`. Default answer policy
         // (option 1) covers any gate the conductor might surface.
-        // Lead with `/aidlc` so the conductor loads the orchestrator skill (the
+        // Lead with `/amadeus` so the conductor loads the orchestrator skill (the
         // SKILL.md that teaches `park`); a bare prose prompt leaves the model
         // outside conductor mode and it never discovers the park verb (it just
-        // hand-edits state). This mirrors t183 / t122, which both drive `/aidlc`.
+        // hand-edits state). This mirrors t183 / t122, which both drive `/amadeus`.
         const r = await driveAidlc(
-          "/aidlc I need to step away. PAUSE this workflow so I can resume it in a " +
+          "/amadeus I need to step away. PAUSE this workflow so I can resume it in a " +
             "later session. Do NOT complete, advance, or mark any stage as done; " +
             "park it cleanly at the current point and then stop.",
           {
@@ -105,14 +105,14 @@ describe("t187 park + conversational carve-out (sdk): a conductor asked to pause
 
         // ASSERTION 1: the conductor reached for park. Accept any of the three
         // observable park signals (robust to the conductor's exact tool path):
-        //   (a) a Bash tool call whose command names `aidlc-orchestrate.ts park`,
+        //   (a) a Bash tool call whose command names `amadeus-orchestrate.ts park`,
         //   (b) any tool_result whose verbatim stdout carries a `parked`
         //       directive (the engine/park output), or
         //   (c) a WORKFLOW_PARKED audit row appended during the run.
         const parkBash = r.toolResults.some(
           (t) =>
             (t.toolName === "Bash" || t.toolName === "Shell") &&
-            /aidlc-orchestrate\.ts\b[\s\S]*\bpark\b/.test(
+            /amadeus-orchestrate\.ts\b[\s\S]*\bpark\b/.test(
               String((t.input as Record<string, unknown>).command ?? ""),
             ),
         );
@@ -134,7 +134,7 @@ describe("t187 park + conversational carve-out (sdk): a conductor asked to pause
 
         // ASSERTION 2: park wrote the runtime markers. Read the live state file
         // off disk (deterministic, not paraphrased): park persists Parked +
-        // Parked At Stage under Runtime State (aidlc-state.ts handlePark).
+        // Parked At Stage under Runtime State (amadeus-state.ts handlePark).
         const state = r.stateFile ?? "";
         expect(
           readStateField(state, "Parked"),

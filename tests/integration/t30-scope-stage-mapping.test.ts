@@ -1,10 +1,10 @@
-// covers: scope:bugfix, scope:workshop, subcommand:aidlc-utility:scope-table
+// covers: scope:bugfix, scope:workshop, subcommand:amadeus-utility:scope-table
 //
 // t30 — Scope-to-Stage Mapping consistency. Migrated from
 // tests/integration/t30-scope-stage-mapping.sh (TAP plan 17). The .sh had no
 // `# covers:` header; the subject is the consistency between three compiled
 // data artifacts — SKILL.md's compiled scope-grid table (rendered by
-// `aidlc-utility.ts scope-table`), scope-grid.json (the transpose), and
+// `amadeus-utility.ts scope-table`), scope-grid.json (the transpose), and
 // stage-graph.json (phase membership) — so the covers ids name the
 // scope-table subcommand that emits the table and the two scopes whose
 // phase-presence shape the .sh load-bears on (bugfix, workshop).
@@ -23,9 +23,9 @@
 //     { <slug>: "EXECUTE"|"SKIP" } } }. Source of truth for routing.
 //   - dist/claude/.claude/tools/data/stage-graph.json — array of stage nodes
 //     carrying { slug, phase, ... }. Phase membership for Section D.
-//   - dist/claude/.claude/skills/aidlc/SKILL.md — carries a compiled summary
+//   - dist/claude/.claude/skills/amadeus/SKILL.md — carries a compiled summary
 //     table between BEGIN/END markers (lines 104-118). Markers + render
-//     format defined in aidlc-utility.ts: SCOPE_TABLE_BEGIN (:2578),
+//     format defined in amadeus-utility.ts: SCOPE_TABLE_BEGIN (:2578),
 //     SCOPE_TABLE_END (:2580), renderScopeTable() (:2584),
 //     canonicalScopeTableRegion() (:2606).
 //
@@ -70,7 +70,7 @@ import { AIDLC_SRC } from "../harness/fixtures.ts";
 import {
   canonicalScopeTableRegion,
   renderScopeTable,
-} from "../../dist/claude/.claude/tools/aidlc-utility.ts";
+} from "../../dist/claude/.claude/tools/amadeus-utility.ts";
 
 // --- Shipped artifacts (the SAME files the orchestrator + tool read) --------
 const SKILL_PATH = join(AIDLC_SRC, "skills", "aidlc", "SKILL.md");
@@ -197,8 +197,8 @@ describe("t30 — committed SKILL.md table is byte-identical to the rendered tra
   test("committed region === canonicalScopeTableRegion(renderScopeTable())", () => {
     // renderScopeTable() reads scope-grid.json and emits the row format; the
     // committed SKILL.md region must equal canonicalScopeTableRegion of it
-    // (the same byte-compare aidlc-utility scope-table --check enforces,
-    // aidlc-utility.ts:2668-2674). If this holds, the markers, the row count,
+    // (the same byte-compare amadeus-utility scope-table --check enforces,
+    // amadeus-utility.ts:2668-2674). If this holds, the markers, the row count,
     // and every EXECUTE cell are provably the grid's transpose, not a stale
     // hand-edit that merely happens to contain the right substrings.
     const expected = canonicalScopeTableRegion(renderScopeTable());

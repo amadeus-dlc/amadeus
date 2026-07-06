@@ -50,7 +50,7 @@ Verifies the orchestrator's structural correctness without invoking the LLM. If 
 - File existence, permissions, naming conventions (smoke)
 - Hook scripts (11 TypeScript via bun), stage frontmatter, knowledge inventory (unit)
 - Scope-stage mapping, graph consistency, stage I/O contract chains, protocol compliance (integration)
-- Stage output-to-step validation: all declared outputs referenced in instruction steps (integration, deterministic via the `aidlc-validate.ts` CLI tool)
+- Stage output-to-step validation: all declared outputs referenced in instruction steps (integration, deterministic via the `amadeus-validate.ts` CLI tool)
 
 **Run:** `bun tests/run-tests.ts` (default, no flags needed). `bash tests/run-tests.sh` is a compatibility wrapper for existing POSIX commands.
 
@@ -115,7 +115,7 @@ No WSL or Docker is required; the supported validation substrate is native Windo
 
    ```bash
    aws cloudformation deploy \
-     --stack-name aidlc-windows-test \
+     --stack-name amadeus-windows-test \
      --template-file tests/harness/windows/windows-test.cfn.yaml \
      --capabilities CAPABILITY_NAMED_IAM \
      --parameter-overrides VpcId=vpc-... SubnetId=subnet-...
@@ -124,27 +124,27 @@ No WSL or Docker is required; the supported validation substrate is native Windo
 2. Sync the committed git tree under test:
 
    ```bash
-   bun tests/harness/windows/sync.ts --stack-name aidlc-windows-test HEAD
+   bun tests/harness/windows/sync.ts --stack-name amadeus-windows-test HEAD
    ```
 
 3. Install repo dev dependencies on the box:
 
    ```bash
-   bun tests/harness/windows/ssm-run.ts --stack-name aidlc-windows-test -- \
+   bun tests/harness/windows/ssm-run.ts --stack-name amadeus-windows-test -- \
      powershell -ExecutionPolicy Bypass -File C:\aidlc\tests\harness\windows\setup.ps1 -ProjectDir C:\aidlc
    ```
 
 4. Run the Windows `--all` gate with live TUI enabled:
 
    ```bash
-   bun tests/harness/windows/ssm-run.ts --stack-name aidlc-windows-test -- \
+   bun tests/harness/windows/ssm-run.ts --stack-name amadeus-windows-test -- \
      powershell -ExecutionPolicy Bypass -File C:\aidlc\tests\harness\windows\run-all.ps1 -ProjectDir C:\aidlc -Parallel 8
    ```
 
 5. Tear down the host:
 
    ```bash
-   aws cloudformation delete-stack --stack-name aidlc-windows-test
+   aws cloudformation delete-stack --stack-name amadeus-windows-test
    ```
 
 `run-all.ps1` exports `AIDLC_NODE_BIN` and `AIDLC_TUI_LIVE=1` before invoking `bun tests/run-tests.ts --all --debug -P <N>`, so a green result cannot come from silently skipping the live TUI journeys. It probes the claude binary across `C:\Users\Administrator\.local\bin` and the systemprofile home, since the native installer drops `claude.exe` under whichever user ran the CloudFormation UserData bootstrap (Administrator under EC2Launch v2).
@@ -228,19 +228,19 @@ Contents:
 
 ### RE Artifacts Fixture: `tests/fixtures/re-artifacts/`
 
-Pre-seeded reverse-engineering output for downstream stage tests. Copied into the test project's intent record dir at `$PROJ/aidlc/spaces/default/intents/<record>/inception/reverse-engineering/` during setup.
+Pre-seeded reverse-engineering output for downstream stage tests. Copied into the test project's intent record dir at `$PROJ/amadeus/spaces/default/intents/<record>/inception/reverse-engineering/` during setup.
 
 Contents: 4 minimal .md files (architecture-overview, technology-stack, codebase-analysis, integration-points) describing the brownfield-todo app.
 
 ### Inception Artifacts Fixture: `tests/fixtures/inception-artifacts/`
 
-Pre-seeded inception phase output for tests that jump into construction. Copied into `$PROJ/aidlc/spaces/default/intents/<record>/inception/{requirements-analysis,application-design,units-generation}/` during setup.
+Pre-seeded inception phase output for tests that jump into construction. Copied into `$PROJ/amadeus/spaces/default/intents/<record>/inception/{requirements-analysis,application-design,units-generation}/` during setup.
 
 Contents: 7 minimal .md files (requirements, components, component-methods, services, component-dependency, unit-of-work, unit-of-work-story-map) describing the Todo app. Unit name: `todo-core`.
 
 ### Construction Artifacts Fixture: `tests/fixtures/construction-artifacts/`
 
-Pre-seeded construction phase output for tests that jump to mid-construction stages (e.g., code-generation). Copied into `$PROJ/aidlc/spaces/default/intents/<record>/construction/todo-core/functional-design/` during setup.
+Pre-seeded construction phase output for tests that jump to mid-construction stages (e.g., code-generation). Copied into `$PROJ/amadeus/spaces/default/intents/<record>/construction/todo-core/functional-design/` during setup.
 
 Contents: 1 minimal .md file (functional-design) describing the todo-core unit's component specs and state management.
 
@@ -346,8 +346,8 @@ explicitly to keep those files on their in-test SKIP path.
 
 | Scenario | Serial | `--parallel 4` | `--parallel 8` |
 |---|---|---|---|
-| 4 × `/aidlc --help` | 56s | 16s (3.5x) | — |
-| 8 × `/aidlc --help` | — | — | 31s |
+| 4 × `/amadeus --help` | 56s | 16s (3.5x) | — |
+| 8 × `/amadeus --help` | — | — | 31s |
 
 All 8 parallel calls observed `cache_read=73789` — Bedrock prompt caching stays warm across concurrent workers. No throttling or corruption observed at 8-way.
 

@@ -34,7 +34,7 @@ the filename, so the file you pick *is* the scope you author at:
 The four phase files are `phases/ideation.md`, `phases/inception.md`,
 `phases/construction.md`, and `phases/operation.md` (initialization is
 bootstrap-only and ships no rule file). A fifth layer — per-stage rules
-(`aidlc-stage-<slug>.md`) — is reserved for a future release; you cannot author
+(`amadeus-stage-<slug>.md`) — is reserved for a future release; you cannot author
 one yet.
 
 Two judgment calls drive which file you reach for:
@@ -97,7 +97,7 @@ project differences are legitimate project specialization, not a policy violatio
 This check runs at the two admission gates the framework owns — the
 practices-discovery affirmation gate and the learning gate (below) — so by the
 time a rule reaches the resolver, it has already passed conflict-check. Two
-read-only `/aidlc --doctor` rows surface state after the fact: a **rule-drift**
+read-only `/amadeus --doctor` rows surface state after the fact: a **rule-drift**
 row flags headings where team or project content overlaps a populated org heading
 (a candidate contradiction for a human to verify), and a **paired-coverage** row
 reports how many rules name a sensor that actually resolves. Both are advisory and
@@ -117,7 +117,7 @@ The mechanics are covered in the
 [User Guide chapter](../guide/09-rules-and-the-learning-loop.md). The
 harness-engineer view is what the loop produces and where it lands:
 
-1. **The diary records during the stage.** The conductor (the live `/aidlc`
+1. **The diary records during the stage.** The conductor (the live `/amadeus`
    session running the active stage) keeps an observation
    log at `<record>/<phase>/<stage>/memory.md` (under the intent's record dir, `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`), with entries under four
    headings — Interpretations, Deviations, Tradeoffs, Open questions. It is
@@ -174,7 +174,7 @@ the check.
 A learning captured at a gate does **not** change the rules for the rest of the
 current run. You already corrected the agent in conversation for this workflow;
 the rule is for next time. The new line is on disk, but the in-flight workflow
-keeps the compiled view it started with. The *next* `/aidlc` you run recompiles,
+keeps the compiled view it started with. The *next* `/amadeus` you run recompiles,
 the directory walk picks up the new file, and the rule applies from stage one
 onward.
 

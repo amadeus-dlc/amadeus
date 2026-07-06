@@ -139,10 +139,10 @@ AI-DLC installs by copying its distribution for your harness into your project. 
 
 ```bash
 cp -r dist/claude/.claude/ your-project/.claude/
-cp -r dist/claude/aidlc/   your-project/aidlc/     # the workspace shell — a sibling of .claude/, not inside it
+cp -r dist/claude/amadeus/   your-project/amadeus/     # the workspace shell — a sibling of .claude/, not inside it
 ```
 
-The first line copies the engine — the orchestrator, stage files, agent personas, hooks, knowledge files, and default settings. The second copies the **workspace shell**: the pre-built `aidlc/spaces/default/memory/` method tree the engine reads. It ships as a **sibling** of `.claude/` (not inside it), so it must be copied separately — or copy the whole `dist/claude/` tree at once. `/aidlc --doctor` fails its "workspace shell ready" check if `aidlc/spaces/default/memory/` is missing.
+The first line copies the engine — the orchestrator, stage files, agent personas, hooks, knowledge files, and default settings. The second copies the **workspace shell**: the pre-built `aidlc/spaces/default/memory/` method tree the engine reads. It ships as a **sibling** of `.claude/` (not inside it), so it must be copied separately — or copy the whole `dist/claude/` tree at once. `/amadeus --doctor` fails its "workspace shell ready" check if `aidlc/spaces/default/memory/` is missing.
 
 ### Step 2: Navigate to your project
 
@@ -150,7 +150,7 @@ The first line copies the engine — the orchestrator, stage files, agent person
 cd your-project
 ```
 
-All `/aidlc` commands run relative to the project root.
+All `/amadeus` commands run relative to the project root.
 
 ---
 
@@ -161,22 +161,22 @@ workspace shell — the `.claude/` engine plus a pre-built `aidlc/spaces/default
 holding the memory layer (`aidlc/spaces/default/memory/`, where team-affirmed
 practices and learnings live). You do not run any init command.
 
-The first time you run `/aidlc` (or describe what to build), the engine
+The first time you run `/amadeus` (or describe what to build), the engine
 **auto-births** the first intent into the active space. Each intent gets its own
 record dir at `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`, which holds:
 
-- `aidlc-state.md` — the per-intent workflow state
+- `amadeus-state.md` — the per-intent workflow state
 - `audit/` — the audit trail, written as per-clone shards (`<host>-<clone>.md`)
 - `<phase>/<stage>/...` — the stage artifacts (e.g. `inception/requirements-analysis/requirements.md`)
 
 Team knowledge lives one level up, at the space level —
 `aidlc/spaces/<space>/knowledge/` (a sibling of `intents/`) — so it accumulates
 across every intent in the space. The engine creates it empty; you add free-form
-files under an optional `aidlc-shared/` and per-agent subdirectories.
+files under an optional `amadeus-shared/` and per-agent subdirectories.
 
 To add [team knowledge](08-knowledge.md) or team practices before your first run,
 edit the shipped `aidlc/spaces/default/memory/` files; the space-level
-`aidlc/knowledge/` directory is created (empty) once your first `/aidlc` runs.
+`aidlc/knowledge/` directory is created (empty) once your first `/amadeus` runs.
 
 For the full picture of the workspace layout — how it holds many intents at once,
 what spaces are for, and the commands to move between them — see
@@ -189,7 +189,7 @@ what spaces are for, and the commands to move between them — see
 Run the health check to confirm everything is in place:
 
 ```
-/aidlc --doctor
+/amadeus --doctor
 ```
 
 `--doctor` exits 0 when every check passes and 1 when any check fails; the full report writes to stdout in both cases.
@@ -202,8 +202,8 @@ Run the health check to confirm everything is in place:
 | Hook presence | Every hook `settings.json` wires (its `hooks` blocks + the `statusLine` command — all 11 framework hooks) exists in `.claude/hooks/`; a wired-but-missing hook fails loudly. Sourcing the expected roster from `settings.json` means adding a hook there auto-checks it |
 | Project structure | `.claude/settings.json` exists with expected configuration |
 | Workspace shell | `.claude/` + `aidlc/spaces/default/memory/` are present (the shipped shell) |
-| State file | the active intent's `aidlc-state.md` matches its audit trail (no drift) |
-| Hook heartbeats | `.aidlc-hooks-health/` contains recent timestamps from hook executions |
+| State file | the active intent's `amadeus-state.md` matches its audit trail (no drift) |
+| Hook heartbeats | `.amadeus-hooks-health/` contains recent timestamps from hook executions |
 | Graph integrity | No cycles in `stage-graph.json`; every slug has a matching stage file |
 | Scope validation | All 9 scopes walk cleanly against the graph (advisories for scope-truncation gaps are expected) |
 | Schema + references | Every stage's YAML frontmatter validates, and every consumes/requires_stage reference resolves |
@@ -213,13 +213,13 @@ Run the health check to confirm everything is in place:
 
 ```
 ✓ bun installed (required for CLI tools and hooks)
-✓ aidlc-audit-logger.ts present
-✓ aidlc-sync-statusline.ts present
-✓ aidlc-validate-state.ts present
-✓ aidlc-log-subagent.ts present
-✓ aidlc-session-start.ts present
-✓ aidlc-session-end.ts present
-✓ aidlc-statusline.ts present
+✓ amadeus-audit-logger.ts present
+✓ amadeus-sync-statusline.ts present
+✓ amadeus-validate-state.ts present
+✓ amadeus-log-subagent.ts present
+✓ amadeus-session-start.ts present
+✓ amadeus-session-end.ts present
+✓ amadeus-statusline.ts present
 ✓ settings.json present
 ✓ AWS_AIDLC_DEFAULT_SCOPE (unset — no project default)
 ✓ workspace shell ready (.claude/ + aidlc/spaces/default/memory/)
@@ -241,8 +241,8 @@ Run the health check to confirm everything is in place:
 | Hook not present | Re-copy the `.claude/` directory from the distribution |
 | `settings.json` missing | Re-copy from the distribution: `cp dist/claude/.claude/settings.json .claude/settings.json` |
 | Workspace shell missing | Re-copy the workspace shell from `dist/claude/` into your project root |
-| State file issues | Archive the active intent's record dir under `aidlc/spaces/<space>/intents/` and run `/aidlc` to start fresh |
-| Graph/scope/schema/keyword failures | The diagnostic reports the specific artifact, slug, or scope name at fault. These indicate authoring drift in `.claude/aidlc-common/stages/` or `.claude/scopes/`; regenerate the compiled graph + scope grid with `bun .claude/tools/aidlc-graph.ts compile` or inspect the named stage/scope directly. |
+| State file issues | Archive the active intent's record dir under `aidlc/spaces/<space>/intents/` and run `/amadeus` to start fresh |
+| Graph/scope/schema/keyword failures | The diagnostic reports the specific artifact, slug, or scope name at fault. These indicate authoring drift in `.claude/amadeus-common/stages/` or `.claude/scopes/`; regenerate the compiled graph + scope grid with `bun .claude/tools/amadeus-graph.ts compile` or inspect the named stage/scope directly. |
 
 ---
 
@@ -251,14 +251,14 @@ Run the health check to confirm everything is in place:
 Once `--doctor` passes, you are ready to run:
 
 ```
-/aidlc Build a REST API for inventory management
+/amadeus Build a REST API for inventory management
 ```
 
 Or specify a scope directly:
 
 ```
-/aidlc feature
-/aidlc bugfix Fix the login timeout issue
+/amadeus feature
+/amadeus bugfix Fix the login timeout issue
 ```
 
 See [Your First Workflow](02-your-first-workflow.md) for a step-by-step walkthrough of what happens next.
@@ -276,7 +276,7 @@ command -v bun    >/dev/null && echo "✓ bun"          || echo "✗ bun"
 
 # Install (engine + the workspace shell sibling)
 cp -r dist/claude/.claude/ your-project/.claude/
-cp -r dist/claude/aidlc/   your-project/aidlc/
+cp -r dist/claude/amadeus/   your-project/amadeus/
 
 # Launch Claude Code in your project
 cd your-project && claude
@@ -286,10 +286,10 @@ Inside the Claude Code session:
 
 ```
 # Verify (exits 1 on any check failure; read stdout for the full report)
-/aidlc --doctor
+/amadeus --doctor
 
 # Start
-/aidlc Build a task management API with user authentication
+/amadeus Build a task management API with user authentication
 ```
 
 ---

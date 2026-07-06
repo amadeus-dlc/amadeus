@@ -1,6 +1,6 @@
 // harness/codex/emit.ts — the Codex CLI per-shell emission plugin.
 //
-// The unified packager copies core/ → dist/codex/.codex/ (rules → aidlc-rules)
+// The unified packager copies core/ → dist/codex/.codex/ (rules → amadeus-rules)
 // and runs graph compile, then calls this emit() for everything that is CODE,
 // not declarative data: the Codex config, hook wiring, trust pre-seed, the
 // AGENTS.md merge, the 13 agent TOML transpositions, and the .agents/skills/
@@ -9,7 +9,7 @@
 // Ported faithfully from the proven scripts/package-codex.ts emission half
 // (spike tip d465886). The ONE transform class is the harness-dir token /
 // anchored-prefix family, exposed via ctx.substituteToken plus a local
-// aidlc-rules rename mirroring the packager's. Nothing here invents a new sed.
+// amadeus-rules rename mirroring the packager's. Nothing here invents a new sed.
 //
 // emit() also owns the codex compiled-data + skills layout: skills do NOT ship
 // in .codex/skills/ (Codex discovers skills at <project>/.agents/skills/), so
@@ -38,7 +38,7 @@ const HOOK_WIRING: Array<{ event: string; matcher?: string; target: string }> = 
   { event: "Stop", target: "stop" },
 ];
 
-const ADAPTER_CMD = (target: string) => `bun .codex/hooks/aidlc-codex-adapter.ts ${target}`;
+const ADAPTER_CMD = (target: string) => `bun .codex/hooks/amadeus-codex-adapter.ts ${target}`;
 
 function emitHooksJson(): string {
   const hooks: Record<string, Array<Record<string, unknown>>> = {};
@@ -76,7 +76,7 @@ region = "us-east-1"
 # lives at the workspace root under aidlc/spaces/<space>/memory/ — the single
 # hand-editable source of truth, identical on every harness (NOT a per-harness
 # copy under .codex/). The AIDLC_RULES_DIR seam below ships pointed at the
-# always-present default space; /aidlc space <name> re-points it IN PLACE so
+# always-present default space; /amadeus space <name> re-points it IN PLACE so
 # the next session's resolver follows the active space (a byte-identical no-op at
 # default). Codex also auto-merges the root AGENTS.md and the orchestrator
 # injects an @aidlc/spaces/<space>/memory/... prompt mention to pull specific
@@ -116,7 +116,7 @@ status_line = ["model-with-reasoning", "git-branch", "task-progress", "context-u
 function emitDefaultRules(): string {
   return `# dist/codex shipped permission rules (Starlark) — .codex/rules/ is
 # Codex's NATIVE rules dir (this file), distinct from the AIDLC markdown rule
-# layers at .codex/aidlc-rules/ (D-10 rename).
+# layers at .codex/amadeus-rules/ (D-10 rename).
 #
 # bun tool allowlist: the deterministic core runs via these exact prefixes.
 prefix_rule(pattern = ["bun", ".codex/tools/"], decision = "allow")
@@ -168,7 +168,7 @@ const SNAKE: Record<string, string> = {
 };
 
 // Trust entries keyed on "<abs hooks.json path>:<event_snake>:<group>:<idx>".
-// Exported so the `trust` subcommand (aidlc-codex-trust.ts) can print
+// Exported so the `trust` subcommand (amadeus-codex-trust.ts) can print
 // installer-substituted entries.
 export function trustEntries(projectDir: string, hooksJsonPath?: string): string {
   const path = hooksJsonPath ?? `${projectDir}/.codex/hooks.json`;
@@ -238,10 +238,10 @@ export default function emit(ctx: EmitContext): EmitResult {
   const SKILLS_DST = join(distRoot, ".agents", "skills");
 
   // The codex anchored transform: token/prefix substitution (.codex) THEN the
-  // aidlc-rules rename — mirrors the packager's transform for prose the emit
+  // amadeus-rules rename — mirrors the packager's transform for prose the emit
   // layer generates from core sources (AGENTS.md, agent bodies, runner prose).
   const rewriteProse = (s: string): string =>
-    substituteToken(s).replaceAll(".codex/rules/", ".codex/aidlc-rules/");
+    substituteToken(s).replaceAll(".codex/rules/", ".codex/amadeus-rules/");
 
   // --- AGENTS.md, at the dist ROOT (beside .codex/) -------------------------
   // Rendered from the SHARED onboarding skeleton (core/templates/onboarding.md)
@@ -249,16 +249,16 @@ export default function emit(ctx: EmitContext): EmitResult {
   // the read-CLAUDE.md path and the Claude-prose-leak class with it: Codex
   // authors its own header + Prerequisites in harness/codex/onboarding.fills.ts.
   // The skeleton carries {{HARNESS_DIR}}; rewriteProse() substitutes → .codex and
-  // renames rules/ → aidlc-rules/, exactly the codex transform class. Skills ship
+  // renames rules/ → amadeus-rules/, exactly the codex transform class. Skills ship
   // at .agents/skills/ (never .codex/skills/), so redirect that one segment.
   function emitAgentsMd(): string {
     const skeleton = readFileSync(join(coreRoot, "templates", "onboarding.md"), "utf-8");
     let s = renderOnboarding(skeleton, onboardingFills);
     s = substituteToken(s); // {{HARNESS_DIR}} → .codex
-    // Rename the markdown rule layers dir → aidlc-rules/, but NOT the native
+    // Rename the markdown rule layers dir → amadeus-rules/, but NOT the native
     // Starlark `.codex/rules/default.rules` (the codex fills reference both, and
-    // only the aidlc-* markdown layers move). Negative lookahead on default.rules.
-    s = s.replace(/\.codex\/rules\/(?!default\.rules)/g, ".codex/aidlc-rules/");
+    // only the amadeus-* markdown layers move). Negative lookahead on default.rules.
+    s = s.replace(/\.codex\/rules\/(?!default\.rules)/g, ".codex/amadeus-rules/");
     // Skills ship at .agents/skills/, never .codex/skills/.
     s = s.replaceAll(".codex/skills/", ".agents/skills/");
     return s;
@@ -287,7 +287,7 @@ export default function emit(ctx: EmitContext): EmitResult {
   // carries no compiled JSON, so requiring it from coreRoot would fail.)
   const IMPLICIT_GUARD = "policy:\n  allow_implicit_invocation: false\n";
   process.env.AIDLC_HARNESS_DIR = ".codex";
-  const gen = require(join(DCODEX, "tools", "aidlc-runner-gen.ts")) as {
+  const gen = require(join(DCODEX, "tools", "amadeus-runner-gen.ts")) as {
     runnableStages: () => Array<{ slug: string }>;
     renderStageRunner: (node: { slug: string }) => string;
     renderInitRunner: () => string;
@@ -325,32 +325,32 @@ export default function emit(ctx: EmitContext): EmitResult {
     });
   }
 
-  // (a) authored orchestrator shell — verbatim from harness/codex/skills/aidlc/
+  // (a) authored orchestrator shell — verbatim from harness/codex/skills/amadeus/
   for (const f of ["SKILL.md", "question-rendering.md"]) {
     emissions.push({
-      path: join(SKILLS_DST, "aidlc", f),
-      content: () => readFileSync(join(harnessRoot, "skills", "aidlc", f), "utf-8"),
+      path: join(SKILLS_DST, "amadeus", f),
+      content: () => readFileSync(join(harnessRoot, "skills", "amadeus", f), "utf-8"),
     });
   }
   // (b) stage runners + init, generated, with the implicit-invocation guard
   for (const node of gen.runnableStages()) {
-    const dir = join(SKILLS_DST, `aidlc-${node.slug}`);
+    const dir = join(SKILLS_DST, `amadeus-${node.slug}`);
     emissions.push({ path: join(dir, "SKILL.md"), content: () => rewriteProse(gen.renderStageRunner(node)) });
     emissions.push({ path: join(dir, "agents", "openai.yaml"), content: () => IMPLICIT_GUARD });
   }
-  emissions.push({ path: join(SKILLS_DST, "aidlc-init", "SKILL.md"), content: () => rewriteProse(gen.renderInitRunner()) });
-  emissions.push({ path: join(SKILLS_DST, "aidlc-init", "agents", "openai.yaml"), content: () => IMPLICIT_GUARD });
-  emissions.push({ path: join(SKILLS_DST, "aidlc-compose", "SKILL.md"), content: () => rewriteProse(gen.renderComposeRunner()) });
-  emissions.push({ path: join(SKILLS_DST, "aidlc-compose", "agents", "openai.yaml"), content: () => IMPLICIT_GUARD });
+  emissions.push({ path: join(SKILLS_DST, "amadeus-init", "SKILL.md"), content: () => rewriteProse(gen.renderInitRunner()) });
+  emissions.push({ path: join(SKILLS_DST, "amadeus-init", "agents", "openai.yaml"), content: () => IMPLICIT_GUARD });
+  emissions.push({ path: join(SKILLS_DST, "amadeus-compose", "SKILL.md"), content: () => rewriteProse(gen.renderComposeRunner()) });
+  emissions.push({ path: join(SKILLS_DST, "amadeus-compose", "agents", "openai.yaml"), content: () => IMPLICIT_GUARD });
   // (c) FIRST_BATCH scope runners
   const scopes = gen.discoverScopes();
   for (const scope of gen.FIRST_BATCH.filter((s) => s in scopes)) {
-    const dir = join(SKILLS_DST, `aidlc-${scope}`);
+    const dir = join(SKILLS_DST, `amadeus-${scope}`);
     emissions.push({ path: join(dir, "SKILL.md"), content: () => rewriteProse(gen.renderRunner(scope, scopes[scope].description)) });
     emissions.push({ path: join(dir, "agents", "openai.yaml"), content: () => IMPLICIT_GUARD });
   }
   // (d) session skills — byte-copy + prose rewrite from core/skills/
-  for (const skill of ["aidlc-session-cost", "aidlc-replay", "aidlc-outcomes-pack"]) {
+  for (const skill of ["amadeus-session-cost", "amadeus-replay", "amadeus-outcomes-pack"]) {
     const srcDir = join(coreRoot, "skills", skill);
     if (!existsSync(srcDir)) continue;
     for (const file of walk(srcDir)) {

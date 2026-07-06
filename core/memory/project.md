@@ -1,7 +1,7 @@
 # Project-Level Rules
 
-> Project-specific overrides and corrections. Overrides aidlc-team.md
-> and aidlc-org.md. Populated by practices-discovery and the
+> Project-specific overrides and corrections. Overrides amadeus-team.md
+> and amadeus-org.md. Populated by practices-discovery and the
 > self-learning loop.
 >
 > Use sparingly: most teams don't need a project layer. Reach for it

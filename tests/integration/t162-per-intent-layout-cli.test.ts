@@ -1,8 +1,8 @@
-// covers: cli:aidlc-bolt(start-worktree,complete-merge), cli:aidlc-state(fork), cli:aidlc-audit(audit-fork,audit-merge), function:auditShardName, function:recordDir, function:relativeRecordDir
+// covers: cli:amadeus-bolt(start-worktree,complete-merge), cli:amadeus-state(fork), cli:amadeus-audit(audit-fork,audit-merge), function:auditShardName, function:recordDir, function:relativeRecordDir
 //
 // t162 — Integration: drive REAL tools against a PER-INTENT (new-layout) project
 // and prove the threaded space+intent selector actually re-roots writes/reads to
-// aidlc/spaces/<sp>/intents/<slug>-<id8>/ — NOT the flat aidlc-docs/ fallback.
+// aidlc/spaces/<sp>/intents/<slug>-<id8>/ — NOT the flat amadeus-docs/ fallback.
 //
 // WHY THIS TEST EXISTS (the test-integrity coverage gap, itself a review MAJOR):
 // when first written, NO CLI-driven test seeded a per-intent layout — the
@@ -19,12 +19,12 @@
 // (<host>-<pid>.md) diverged → merge re-resolved a different shard → existsSync
 // fail → "main audit not found ... run --init first" → every Bolt merge failed on
 // a new-layout project. The fix makes the shard identity PER-CLONE (a stable
-// gitignored aidlc/.aidlc-clone-id token), so both PIDs resolve ONE shard. Case
+// gitignored aidlc/.amadeus-clone-id token), so both PIDs resolve ONE shard. Case
 // "bolt fork+merge round-trips" drives that real two-process fork→merge and
 // asserts it succeeds. Against the pre-fix code it FAILS at complete --merge.
 //
-// Mechanism: cli. Full real-tool flow (git worktree + aidlc-worktree + aidlc-bolt
-// + aidlc-state + aidlc-audit as spawned subprocesses), asserting on the on-disk
+// Mechanism: cli. Full real-tool flow (git worktree + amadeus-worktree + amadeus-bolt
+// + amadeus-state + amadeus-audit as spawned subprocesses), asserting on the on-disk
 // per-intent record paths and process exit codes. cwd contract mirrors t49: every
 // worktree/bolt spawn runs with `cwd: proj` (assertNotSiblingWorktree checks CWD).
 
@@ -43,13 +43,13 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { AIDLC_SRC, FIXTURES_DIR } from "../harness/fixtures.ts";
-import { auditLockDir } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { auditLockDir } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath;
-const WORKTREE_TOOL = join(AIDLC_SRC, "tools", "aidlc-worktree.ts");
-const BOLT_TOOL = join(AIDLC_SRC, "tools", "aidlc-bolt.ts");
-const STATE_TOOL = join(AIDLC_SRC, "tools", "aidlc-state.ts");
-const AUDIT_TOOL = join(AIDLC_SRC, "tools", "aidlc-audit.ts");
+const WORKTREE_TOOL = join(AIDLC_SRC, "tools", "amadeus-worktree.ts");
+const BOLT_TOOL = join(AIDLC_SRC, "tools", "amadeus-bolt.ts");
+const STATE_TOOL = join(AIDLC_SRC, "tools", "amadeus-state.ts");
+const AUDIT_TOOL = join(AIDLC_SRC, "tools", "amadeus-audit.ts");
 
 const tempProjects: string[] = [];
 
@@ -130,8 +130,8 @@ function readShards(proj: string, recordDir: string): string {
 
 /**
  * Build a git-init'd project seeded with the NEW (per-intent) layout — NOT flat
- * aidlc-docs/. Seeds: aidlc/active-space cursor, two intent records under
- * spaces/default/intents/<record>/aidlc-state.md (construction-stage state), an
+ * amadeus-docs/. Seeds: aidlc/active-space cursor, two intent records under
+ * spaces/default/intents/<record>/amadeus-state.md (construction-stage state), an
  * intents.json registry, and the active-intent cursor pointing at recordA. The
  * record state + intents.json are COMMITTED so the git worktree (branched from
  * main) carries them; the active-intent + audit shards stay gitignored (so the
@@ -139,7 +139,7 @@ function readShards(proj: string, recordDir: string): string {
  * selector must survive; we always drive with explicit --intent).
  */
 function makeNewLayoutProj(recordA: string, recordB: string): string {
-  let proj = mkdtempSync(join(process.env.TMPDIR || tmpdir(), "aidlc-t162-"));
+  let proj = mkdtempSync(join(process.env.TMPDIR || tmpdir(), "amadeus-t162-"));
   try {
     proj = realpathSync(proj);
   } catch {
@@ -158,7 +158,7 @@ function makeNewLayoutProj(recordA: string, recordB: string): string {
   const intentsDir = join(proj, "aidlc", "spaces", DEFAULT_SPACE, "intents");
   for (const rec of [recordA, recordB]) {
     mkdirSync(join(intentsDir, rec), { recursive: true });
-    writeFileSync(join(intentsDir, rec, "aidlc-state.md"), stateBody);
+    writeFileSync(join(intentsDir, rec, "amadeus-state.md"), stateBody);
   }
   mkdirSync(join(proj, "aidlc", "spaces", DEFAULT_SPACE, "memory"), { recursive: true });
   // intents.json registry (canonical human list — committed).
@@ -182,10 +182,10 @@ function makeNewLayoutProj(recordA: string, recordB: string): string {
     join(proj, ".gitignore"),
     [
       "aidlc/active-space",
-      "aidlc/.aidlc-clone-id",
+      "aidlc/.amadeus-clone-id",
       "aidlc/spaces/*/intents/active-intent",
       "aidlc/spaces/*/intents/*/runtime-graph.json",
-      "aidlc/spaces/*/intents/*/.aidlc-*",
+      "aidlc/spaces/*/intents/*/.amadeus-*",
       "aidlc/spaces/*/intents/*/audit/",
       "",
     ].join("\n"),
@@ -212,7 +212,7 @@ describe("t162 — real tools against a per-intent (new-layout) project", () => 
 
   // ===========================================================================
   // (a) The seeded `append` and the audit-fork land under the per-intent record,
-  //     NOT the flat aidlc-docs/ fallback. Proves auditFilePath re-roots when an
+  //     NOT the flat amadeus-docs/ fallback. Proves auditFilePath re-roots when an
   //     intent is active.
   // ===========================================================================
   test(
@@ -224,9 +224,9 @@ describe("t162 — real tools against a per-intent (new-layout) project", () => 
       const aShards = shardNames(proj, RECORD_A);
       expect(aShards.length).toBe(1); // ONE per-clone shard (clone-id, not per-PID)
       expect(readShards(proj, RECORD_A)).toContain("WORKFLOW_STARTED");
-      // The flat fallback was NEVER created (no aidlc-docs/ tree at all).
-      expect(existsSync(join(proj, "aidlc-docs"))).toBe(false);
-      expect(existsSync(join(proj, "aidlc-docs", "audit.md"))).toBe(false);
+      // The flat fallback was NEVER created (no amadeus-docs/ tree at all).
+      expect(existsSync(join(proj, "amadeus-docs"))).toBe(false);
+      expect(existsSync(join(proj, "amadeus-docs", "audit.md"))).toBe(false);
     },
     TEST_TIMEOUT,
   );
@@ -286,7 +286,7 @@ describe("t162 — real tools against a per-intent (new-layout) project", () => 
       // recordB starts with no audit shard.
       expect(shardNames(proj, RECORD_B).length).toBe(0);
       const bStateBefore = readFileSync(
-        join(recordPath(proj, RECORD_B), "aidlc-state.md"), "utf-8",
+        join(recordPath(proj, RECORD_B), "amadeus-state.md"), "utf-8",
       );
 
       // Create a worktree + state-fork pinned to recordA.
@@ -300,16 +300,16 @@ describe("t162 — real tools against a per-intent (new-layout) project", () => 
       // recordA got STATE_FORKED + an updated state (Bolt Refs gained the slug).
       expect(readShards(proj, RECORD_A)).toContain("STATE_FORKED");
       expect(
-        readFileSync(join(recordPath(proj, RECORD_A), "aidlc-state.md"), "utf-8"),
+        readFileSync(join(recordPath(proj, RECORD_A), "amadeus-state.md"), "utf-8"),
       ).toContain(slug);
 
       // recordB is byte-for-byte untouched: no shard, identical state file.
       expect(shardNames(proj, RECORD_B).length).toBe(0);
       expect(
-        readFileSync(join(recordPath(proj, RECORD_B), "aidlc-state.md"), "utf-8"),
+        readFileSync(join(recordPath(proj, RECORD_B), "amadeus-state.md"), "utf-8"),
       ).toBe(bStateBefore);
       // And the flat fallback still does not exist.
-      expect(existsSync(join(proj, "aidlc-docs"))).toBe(false);
+      expect(existsSync(join(proj, "amadeus-docs"))).toBe(false);
     },
     TEST_TIMEOUT,
   );

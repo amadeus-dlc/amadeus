@@ -1,8 +1,8 @@
-// covers: file:skills/aidlc/SKILL.md, file:agents/aidlc-composer-agent.md
+// covers: file:skills/amadeus/SKILL.md, file:agents/amadeus-composer-agent.md
 //
 // t193-compose-report-journey.sdk.test.ts - the P3 report-composer journey
 // (sdk live). The report moment is the front path with a report-shaped input:
-// `/aidlc compose --report <path>` makes the engine's Branch 4c print carry
+// `/amadeus compose --report <path>` makes the engine's Branch 4c print carry
 // the report-triage instruction; the dispatched composer reads the file,
 // triages findings (auto-fixable vs human-decision), and composes a compact
 // fix-and-ship grid - which for a bug-shaped scan should ROUTE TO THE STOCK
@@ -11,7 +11,7 @@
 // canonical bugfix shape).
 //
 // Journey (one interactive run, stopped at the birth):
-//   drive:     `/aidlc compose --report scan-report-sample.json` on a fresh
+//   drive:     `/amadeus compose --report scan-report-sample.json` on a fresh
 //              BROWNFIELD project (the fixture stub) with the report copied in.
 //   conductor: dispatch -> triage -> proposal (matched: bugfix) -> gate
 //              (answerScript approves) -> NO scope write (stock match) ->
@@ -22,7 +22,7 @@
 // The deterministic halves are pinned by t198 (the --report flag parses,
 // value not leaked). This proves the LIVE triage->route->birth arc.
 //
-// It SPENDS TOKENS - driveAidlc drives the real /aidlc on Opus/Bedrock. Gated
+// It SPENDS TOKENS - driveAidlc drives the real /amadeus on Opus/Bedrock. Gated
 // on claude-CLI presence (driveAidlc marks it SDK-dependent).
 
 import { describe, expect, test } from "bun:test";
@@ -50,7 +50,7 @@ const APPROVE_ALL = {
   fallback: { labelContains: "Approve" },
 };
 
-describe("t193 report composer journey (/aidlc compose --report, sdk live)", () => {
+describe("t193 report composer journey (/amadeus compose --report, sdk live)", () => {
   test(
     "a bug-shaped scan triages to the stock bugfix scope: no scope write, same-turn birth on bugfix",
     async () => {
@@ -68,7 +68,7 @@ describe("t193 report composer journey (/aidlc compose --report, sdk live)", () 
         expect(readdirSync(scopesDir).filter((f) => f.endsWith(".md")).length).toBe(9);
 
         const r = await driveAidlc(
-          "/aidlc compose --report scan-report-sample.json",
+          "/amadeus compose --report scan-report-sample.json",
           {
             projectDir: proj,
             answerScript: APPROVE_ALL,
@@ -91,7 +91,7 @@ describe("t193 report composer journey (/aidlc compose --report, sdk live)", () 
         // Matched-stock path: NO scope write (still exactly the 9 stock files
         // + 9 grid keys).
         expect(
-          readdirSync(scopesDir).filter((f) => f.startsWith("aidlc-") && f.endsWith(".md"))
+          readdirSync(scopesDir).filter((f) => f.startsWith("amadeus-") && f.endsWith(".md"))
             .length,
         ).toBe(9);
         const grid = JSON.parse(

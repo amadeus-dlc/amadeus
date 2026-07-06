@@ -38,7 +38,7 @@ import {
   type JourneyHarness,
   setupWorkspaceJourney,
 } from "../harness/fixtures.ts";
-import { discoverSiblingRepos, listIntents } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { discoverSiblingRepos, listIntents } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const HARNESS_ENGINE_DIR: Record<JourneyHarness, string> = {
   claude: ".claude",
@@ -63,7 +63,7 @@ describe("t177 workspace-journey fixture (deterministic, no LLM)", () => {
         // so the rule-layer resolver finds the method.
         expect(existsSync(join(journey.root, "aidlc", "spaces", "default", "memory"))).toBe(true);
         // The pinned per-clone audit-shard token is in place.
-        expect(existsSync(join(journey.root, "aidlc", ".aidlc-clone-id"))).toBe(true);
+        expect(existsSync(join(journey.root, "aidlc", ".amadeus-clone-id"))).toBe(true);
 
         // repo-a / repo-b are immediate children, each a real git checkout.
         expect(journey.repoA).toBe(join(journey.root, "repo-a"));

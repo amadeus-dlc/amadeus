@@ -1,7 +1,7 @@
 # Stage Protocol Reference
 
 Human-readable restructuring of the machine-oriented
-`dist/claude/.claude/aidlc-common/protocols/stage-protocol.md`. Preserves all
+`dist/claude/.claude/amadeus-common/protocols/stage-protocol.md`. Preserves all
 rules, conditions, and behaviors while reorganizing for developer consumption.
 Section references (e.g., "Protocol Section 1") map to the source file.
 
@@ -69,20 +69,20 @@ Before and during every stage, verify these commonly missed steps:
 
 State transitions and audit emissions are tool-owned rather than
 hand-written audit blocks. The conductor reports forward progress through
-`aidlc-orchestrate.ts report --stage <slug>`; the engine delegates to the
+`amadeus-orchestrate.ts report --stage <slug>`; the engine delegates to the
 state tool, which atomically updates state and emits the paired audit event
 with a fresh timestamp.
 
 | # | Check |
 |---|-------|
-| 1 | At the approval gate, optionally call `bun .claude/tools/aidlc-state.ts gate-start <slug>` (positional slug, not `--stage`) -- the tool flips state from `[-]` to `[?]` AwaitingApproval and emits `STAGE_AWAITING_APPROVAL` atomically, so status shows the held gate while the prompt is open. If skipped, the engine's `report` / `reject` paths backfill the missing `STAGE_AWAITING_APPROVAL` row (tagged `Recovered=true`) before recording the outcome. (`STAGE_STARTED` / the `[-]` transition is emitted earlier by `advance` / `approve` when the stage becomes active.) |
-| 2 | Log options BEFORE calling `AskUserQuestion` via `bun .claude/tools/aidlc-log.ts decision` (not by hand-writing to the `audit/` shards) |
-| 3 | After the user responds, log the exact choice via `bun .claude/tools/aidlc-log.ts answer`, then use `aidlc-orchestrate.ts report --stage <slug> --result approved` for approval or `aidlc-state.ts reject <slug>` for request-changes. If the approval UI first captures only the "Request Changes" choice, ask once for revision feedback and then call `reject` immediately before any revision work or re-presented gate |
+| 1 | At the approval gate, optionally call `bun .claude/tools/amadeus-state.ts gate-start <slug>` (positional slug, not `--stage`) -- the tool flips state from `[-]` to `[?]` AwaitingApproval and emits `STAGE_AWAITING_APPROVAL` atomically, so status shows the held gate while the prompt is open. If skipped, the engine's `report` / `reject` paths backfill the missing `STAGE_AWAITING_APPROVAL` row (tagged `Recovered=true`) before recording the outcome. (`STAGE_STARTED` / the `[-]` transition is emitted earlier by `advance` / `approve` when the stage becomes active.) |
+| 2 | Log options BEFORE calling `AskUserQuestion` via `bun .claude/tools/amadeus-log.ts decision` (not by hand-writing to the `audit/` shards) |
+| 3 | After the user responds, log the exact choice via `bun .claude/tools/amadeus-log.ts answer`, then use `amadeus-orchestrate.ts report --stage <slug> --result approved` for approval or `amadeus-state.ts reject <slug>` for request-changes. If the approval UI first captures only the "Request Changes" choice, ask once for revision feedback and then call `reject` immediately before any revision work or re-presented gate |
 | 4 | Never summarize user input -- pass exact option labels to the log tool; for automated stages use `N/A -- [reason]` |
 | 5 | One audit entry per interaction -- the log/state tools enforce single-event emission; never merge multiple events into one call |
-| 6 | At stage end, call `aidlc-orchestrate.ts report --stage <slug> --result approved` (gated stages) or `report --stage <slug> --result completed` (Initialization). The engine flips `[?]`/`[-]` to `[x]`, emits `GATE_APPROVED` when gated, and emits `STAGE_COMPLETED` atomically through the state tool |
+| 6 | At stage end, call `amadeus-orchestrate.ts report --stage <slug> --result approved` (gated stages) or `report --stage <slug> --result completed` (Initialization). The engine flips `[?]`/`[-]` to `[x]`, emits `GATE_APPROVED` when gated, and emits `STAGE_COMPLETED` atomically through the state tool |
 | 7 | Mark previous stage task `completed` and current stage task `in_progress` with `activeForm` BEFORE work begins (the `sync-statusline` hook handles state syncing) |
-| 8 | Use ONLY event types from `knowledge/aidlc-shared/audit-format.md` -- the state and log tools enforce this; never write directly to the `audit/` shards |
+| 8 | Use ONLY event types from `knowledge/amadeus-shared/audit-format.md` -- the state and log tools enforce this; never write directly to the `audit/` shards |
 | 9 | Do NOT hand-write `STAGE_STARTED` / `STAGE_COMPLETED` blocks to the `audit/` shards. The state-tool subcommands emit them. Hand-written blocks break atomicity and miss the timestamp guarantee |
 
 ---
@@ -92,7 +92,7 @@ with a fresh timestamp.
 Every stage except the 3 Initialization stages requires explicit user approval
 before advancing. Approval uses `AskUserQuestion` with structured UI options.
 
-The gate corresponds to the `[?]` AwaitingApproval checkbox state in `aidlc-state.md`; rejection transitions the stage to `[R]` Revising. See [State Machine](12-state-machine.md) for the full stage state diagram and the canonical `GATE_APPROVED` / `GATE_REJECTED` / `STAGE_AWAITING_APPROVAL` emitters.
+The gate corresponds to the `[?]` AwaitingApproval checkbox state in `amadeus-state.md`; rejection transitions the stage to `[R]` Revising. See [State Machine](12-state-machine.md) for the full stage state diagram and the canonical `GATE_APPROVED` / `GATE_REJECTED` / `STAGE_AWAITING_APPROVAL` emitters.
 
 *(Protocol Section 1)*
 
@@ -173,7 +173,7 @@ flowchart TD
     REVISION_COUNT{"Revision\ncycle >= 3?"}
     NOTE_2ND["After 2nd revision:\nnote that escape hatch\nactivates next cycle"]
 
-    UPDATE_STATE["Update aidlc-state.md:\nmark stage as completed"]
+    UPDATE_STATE["Update amadeus-state.md:\nmark stage as completed"]
     PROGRESS["Display progress line:\nN/total overall"]
     NEXT_STAGE["Proceed to next stage"]
 
@@ -425,7 +425,7 @@ use `TaskList` to find by subject. For skipped stages:
 
 Two-level tracking must stay in sync:
 - **Plan-level**: individual work items (each user story, each component)
-- **State-level**: stage completion in `aidlc-state.md`
+- **State-level**: stage completion in `amadeus-state.md`
 
 If a step is done, its checkbox is checked. If checked, step must be done.
 Update immediately after completing each step.
@@ -536,7 +536,7 @@ dynamic per workflow position.
 
 ### Inline Stages
 
-1. Read lead agent's flat file (e.g., `agents/aidlc-architect-agent.md`)
+1. Read lead agent's flat file (e.g., `agents/amadeus-architect-agent.md`)
 2. Load knowledge per 6-step order
 3. Apply agent's perspective during execution
 
@@ -555,14 +555,14 @@ conductor loads into its own context — not `Task` dispatches. `Task` is reserv
 `mode: subagent` stages. Either way the conductor performs every delegation; agents
 never spawn subagents.
 
-Example: Feasibility uses `aidlc-architect-agent` (lead) + `aidlc-aws-platform-agent` +
-`aidlc-compliance-agent`, all inline.
+Example: Feasibility uses `amadeus-architect-agent` (lead) + `amadeus-aws-platform-agent` +
+`amadeus-compliance-agent`, all inline.
 
 ### The 11 Agents
 
-aidlc-product-agent, aidlc-design-agent, aidlc-delivery-agent, aidlc-architect-agent,
-aidlc-aws-platform-agent, aidlc-compliance-agent, aidlc-devsecops-agent, aidlc-developer-agent,
-aidlc-quality-agent, aidlc-pipeline-deploy-agent, aidlc-operations-agent.
+amadeus-product-agent, amadeus-design-agent, amadeus-delivery-agent, amadeus-architect-agent,
+amadeus-aws-platform-agent, amadeus-compliance-agent, amadeus-devsecops-agent, amadeus-developer-agent,
+amadeus-quality-agent, amadeus-pipeline-deploy-agent, amadeus-operations-agent.
 
 ---
 
@@ -572,7 +572,7 @@ aidlc-quality-agent, aidlc-pipeline-deploy-agent, aidlc-operations-agent.
 
 ### Resume Context
 
-When `aidlc-state.md` exists at session start, the conductor reads it to
+When `amadeus-state.md` exists at session start, the conductor reads it to
 determine completed stages (`[x]`), current/next stage, and artifact
 existence, then offers to resume from the last incomplete stage.
 
@@ -580,7 +580,7 @@ existence, then offers to resume from the last incomplete stage.
 
 | Phase/Stage Group | Context to Load |
 |-------------------|----------------|
-| **Initialization (0.1-0.3)** | Workspace filesystem; `aidlc-state.md` |
+| **Initialization (0.1-0.3)** | Workspace filesystem; `amadeus-state.md` |
 | **Ideation (1.1-1.7)** | `<record>/ideation/` artifacts; guardrails |
 | **Inception -- RE** | RE artifacts; ideation scope/feasibility |
 | **Inception -- Requirements** | RE artifacts (if performed); requirements-analysis docs |
@@ -601,15 +601,15 @@ If a stage needs re-run (changes requested after approval):
 
 ### Compaction Recovery
 
-`PreCompact` hook validates `aidlc-state.md` structure before compaction
-(informational-only, cannot block). Writes `.aidlc-recovery.md` breadcrumb
+`PreCompact` hook validates `amadeus-state.md` structure before compaction
+(informational-only, cannot block). Writes `.amadeus-recovery.md` breadcrumb
 with last validated state (stage, timestamp). On resume, the conductor compares
 breadcrumb with state file to detect compaction-related corruption.
 
 ### Corrupted State File Recovery
 
-If `aidlc-state.md` exists but cannot be parsed:
-1. Backup to `aidlc-state.md.bak`
+If `amadeus-state.md` exists but cannot be parsed:
+1. Backup to `amadeus-state.md.bak`
 2. Scan `<record>/` for artifacts to determine actual completion:
    - RE analysis files -> RE stages complete
    - Requirement docs -> requirements complete
@@ -664,7 +664,7 @@ Affect prior stages:
 1. Identify affected prior stages
 2. Present impact analysis via `AskUserQuestion`
 3. If approved, re-run affected stages in order
-4. Update `aidlc-state.md`
+4. Update `amadeus-state.md`
 
 ### Scope Changes
 
@@ -673,7 +673,7 @@ New requirements or scope-level modifications:
 2. Return to Requirements Analysis (2.3) or Delivery Planning (2.8)
 3. Re-plan from that point
 4. If change affects stage selection (e.g., `poc` -> `feature`), update scope
-   in `aidlc-state.md`
+   in `amadeus-state.md`
 
 ### Unit Changes
 
@@ -852,7 +852,7 @@ investigation before marking complete.
 |------|--------|
 | Current-unit only | Pass only current unit's design artifacts |
 | Summarize inception | 1-2 line summary per inception artifact with path; subagent Reads if needed |
-| Always include | Agent persona, knowledge files, `aidlc-state.md`, task instructions |
+| Always include | Agent persona, knowledge files, `amadeus-state.md`, task instructions |
 | Cap knowledge files | Max 3 most relevant; list others by path |
 
 ### Failure Recovery
@@ -905,14 +905,14 @@ approval gate:
 
 1. **Diary**: the agent maintains a per-stage `memory.md` (Interpretations /
    Deviations / Tradeoffs / Open questions) as it works.
-2. **Surface**: `aidlc-learnings.ts surface --slug <slug>` reads the diary and
+2. **Surface**: `amadeus-learnings.ts surface --slug <slug>` reads the diary and
    emits structured candidates — the LLM does not re-parse or classify.
 3. **Confirm**: the conductor renders the candidates; the user picks which to
    keep and, for free-text additions, picks the heading that derives the
    destination.
 4. **Admission check**: each kept learning is checked against `org.md`'s
    matching section; a contradiction is surfaced to revise / skip / escalate.
-5. **Persist**: `aidlc-learnings.ts persist` writes each confirmed learning as a practice to
+5. **Persist**: `amadeus-learnings.ts persist` writes each confirmed learning as a practice to
    `aidlc/spaces/<space>/memory/{project,team}.md` (and, for a sensor-binding
    learning, installs the manifest + stage `sensors:` import in one locked
    transaction), emitting `RULE_LEARNED` / `SENSOR_PROPOSED`.
@@ -936,11 +936,11 @@ Ritual, which is `stage-protocol.md` Section 13)*
 
 - After last stage of each phase is approved
 - Before first stage of next phase begins
-- On demand via `/aidlc --status`
+- On demand via `/amadeus --status`
 
 ### Process
 
-1. Read methodology from `.claude/knowledge/aidlc-shared/verification.md`
+1. Read methodology from `.claude/knowledge/amadeus-shared/verification.md`
 2. Run phase-specific traceability checks
 3. Write results to `<record>/verification/[phase-boundary]-verification.md`
 4. If failed: present issues (missing links, orphaned artifacts,

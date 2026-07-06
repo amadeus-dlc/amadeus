@@ -62,7 +62,7 @@
 **Fire id**: auth0001
 **Sensor ID**: linter
 **Stage slug**: code-generation
-**Output path**: .aidlc/worktrees/bolt-auth/aidlc-docs/construction/code-generation/output.md
+**Output path**: .aidlc/worktrees/bolt-auth/amadeus-docs/construction/code-generation/output.md
 
 ---
 
@@ -72,7 +72,7 @@
 **Fire id**: auth0001
 **Sensor ID**: linter
 **Stage slug**: code-generation
-**Output path**: .aidlc/worktrees/bolt-auth/aidlc-docs/construction/code-generation/output.md
+**Output path**: .aidlc/worktrees/bolt-auth/amadeus-docs/construction/code-generation/output.md
 **Duration ms**: 100
 
 ---
@@ -83,7 +83,7 @@
 **Fire id**: cart0002
 **Sensor ID**: type-check
 **Stage slug**: code-generation
-**Output path**: .aidlc/worktrees/bolt-cart/aidlc-docs/construction/code-generation/output.md
+**Output path**: .aidlc/worktrees/bolt-cart/amadeus-docs/construction/code-generation/output.md
 
 ---
 
@@ -93,8 +93,8 @@
 **Fire id**: cart0002
 **Sensor ID**: type-check
 **Stage slug**: code-generation
-**Output path**: .aidlc/worktrees/bolt-cart/aidlc-docs/construction/code-generation/output.md
-**Detail path**: .aidlc/worktrees/bolt-cart/aidlc-docs/.aidlc-sensors/code-generation/type-check-cart0002.md
+**Output path**: .aidlc/worktrees/bolt-cart/amadeus-docs/construction/code-generation/output.md
+**Detail path**: .aidlc/worktrees/bolt-cart/amadeus-docs/.amadeus-sensors/code-generation/type-check-cart0002.md
 **Findings count**: 2
 
 ---
@@ -105,7 +105,7 @@
 **Fire id**: pnt00003
 **Sensor ID**: required-sections
 **Stage slug**: code-generation
-**Output path**: aidlc-docs/construction/code-generation/parent-output.md
+**Output path**: amadeus-docs/construction/code-generation/parent-output.md
 
 ---
 
@@ -115,7 +115,7 @@
 **Fire id**: pnt00003
 **Sensor ID**: required-sections
 **Stage slug**: code-generation
-**Output path**: aidlc-docs/construction/code-generation/parent-output.md
+**Output path**: amadeus-docs/construction/code-generation/parent-output.md
 **Duration ms**: 80
 
 ---

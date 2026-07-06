@@ -1,11 +1,11 @@
 // t147-kiro-hook-adapter: the Kiro stdin shim normalizes live-captured
 // payloads into the core hooks' contract.
 //
-// covers: file:hooks/aidlc-stop.ts, file:hooks/aidlc-session-start.ts, file:hooks/aidlc-sync-statusline.ts, file:hooks/aidlc-log-subagent.ts
+// covers: file:hooks/amadeus-stop.ts, file:hooks/amadeus-session-start.ts, file:hooks/amadeus-sync-statusline.ts, file:hooks/amadeus-log-subagent.ts
 //
 // WHAT. Each case pipes a fixture from tests/fixtures/kiro-hook-payloads/
 // (field-verbatim captures off kiro-cli 2.6.1 — findings.md §0.2) into
-// `bun dist/kiro/.kiro/hooks/aidlc-kiro-adapter.ts <target>` inside a
+// `bun dist/kiro/.kiro/hooks/amadeus-kiro-adapter.ts <target>` inside a
 // scratch project that has an active workflow state, then asserts the
 // observable core-hook effect:
 //   stop          → {"decision":"block"} when the engine says work remains;
@@ -34,7 +34,7 @@ import {
 import { hostname, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { birthIntent } from "../../core/tools/aidlc-lib.ts";
+import { birthIntent } from "../../core/tools/amadeus-lib.ts";
 import {
   DEFAULT_RECORD_DIR,
   DEFAULT_SPACE,
@@ -52,7 +52,7 @@ const FIXTURES = JSON.parse(
 
 // P9 per-intent layout: the core hooks the Kiro adapter shims to resolve state
 // via stateFilePath() and the audit trail via auditFilePath() — under the active
-// intent's record, not the flat aidlc-docs/ root. So the scratch project seeds
+// intent's record, not the flat amadeus-docs/ root. So the scratch project seeds
 // the per-intent workspace shell + the state fixture into the default record (so
 // the active-intent cursor resolves) + the resolved audit SHARD (pinned clone-id
 // so the log-subagent shard gate passes and reads are deterministic).
@@ -100,7 +100,7 @@ function scratchProject(withState: boolean): string {
     );
     // The resolved audit shard (pinned clone-id) so the log-subagent shard gate
     // passes and the trail seeds the "# AI-DLC Audit Log" header.
-    writeFileSync(join(dir, "aidlc", ".aidlc-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+    writeFileSync(join(dir, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
     const auditDir = seededAuditDir(dir);
     mkdirSync(auditDir, { recursive: true });
     writeFileSync(join(auditDir, pinnedShardName()), "# AI-DLC Audit Log\n");
@@ -131,7 +131,7 @@ function runAdapter(
 ): { stdout: string; code: number } {
   const r = spawnSync(
     "bun",
-    [join(projectDir, ".kiro", "hooks", "aidlc-kiro-adapter.ts"), target],
+    [join(projectDir, ".kiro", "hooks", "amadeus-kiro-adapter.ts"), target],
     {
       cwd: projectDir,
       input: typeof payload === "string" ? payload : JSON.stringify(payload),
@@ -215,7 +215,7 @@ describe("t147 Kiro hook adapter (live-captured payload fixtures)", () => {
       expect(r.code).toBe(0);
       const audit = readAudit(dir);
       expect(audit).toContain("SUBAGENT_COMPLETED");
-      expect(audit).toContain("aidlc-developer-agent");
+      expect(audit).toContain("amadeus-developer-agent");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -246,7 +246,7 @@ describe("t147 Kiro hook adapter (live-captured payload fixtures)", () => {
     // hook's per-session→intent STAMP is written (the session→intent record).
     // Proof: birth an intent (live cursor resolves a uuid), fire session-start
     // with a session_id in the payload, and assert the stamp file
-    // aidlc/.aidlc-sessions/<session_id> was written with that uuid. Without
+    // aidlc/.amadeus-sessions/<session_id> was written with that uuid. Without
     // the forwarded session_id the core hook's `if (sessionId)` block is inert.
     const dir = scratchProject(true);
     try {
@@ -255,7 +255,7 @@ describe("t147 Kiro hook adapter (live-captured payload fixtures)", () => {
       const r = runAdapter(dir, "session-start", { ...(FIXTURES.agentSpawn as object), session_id: sid });
       expect(r.code).toBe(0);
       expect(r.stdout).toContain("AIDLC WORKFLOW ACTIVE");
-      const stampPath = join(dir, "aidlc", ".aidlc-sessions", sid);
+      const stampPath = join(dir, "aidlc", ".amadeus-sessions", sid);
       expect(existsSync(stampPath)).toBe(true);
       expect(readFileSync(stampPath, "utf-8").trim()).toBe(born.uuid);
     } finally {
@@ -281,7 +281,7 @@ describe("t147 Kiro hook adapter (live-captured payload fixtures)", () => {
         source: "resume", // even a resume-shaped payload is coerced to startup
       });
       expect(first.code).toBe(0);
-      const stampPath = join(dir, "aidlc", ".aidlc-sessions", sid);
+      const stampPath = join(dir, "aidlc", ".amadeus-sessions", sid);
       expect(readFileSync(stampPath, "utf-8").trim()).toBe(a.uuid);
       // Move the live cursor to B — a genuine drift A→B.
       birthIntent(dir, "intent-b", "default");
@@ -321,10 +321,10 @@ describe("t147 Kiro hook adapter (live-captured payload fixtures)", () => {
 
   // --- Stop-hook run-mode cap on Kiro (issue #365/#367 cross-harness coverage) ---
   //
-  // Kiro's stop adapter (case "stop", aidlc-kiro-adapter.ts:303-314) synthesizes
+  // Kiro's stop adapter (case "stop", amadeus-kiro-adapter.ts:303-314) synthesizes
   // {hook_event_name:"Stop", stop_hook_active:false} with NO transcript_path. So
   // the core hook's conversational carve-out (tier 3) is structurally inert on
-  // Kiro: the RUN-MODE-AWARE no-progress cap (blockCap, aidlc-stop.ts:122-137) is
+  // Kiro: the RUN-MODE-AWARE no-progress cap (blockCap, amadeus-stop.ts:122-137) is
   // the ONLY release path for a chatting / pausing human. These two tests pin
   // that contract deterministically:
   //   - interactive (no autonomy field) -> cap 2: a 2nd identical no-progress
@@ -332,7 +332,7 @@ describe("t147 Kiro hook adapter (live-captured payload fixtures)", () => {
   //   - autonomous Construction -> cap 8: still blocks on call 3 (an unattended
   //     run keeps the loop alive; only a real hang ever hits 8).
   // The per-project guard counter persists under the active record's
-  // .aidlc-stop-hook/block-count.json (stopHookDir, aidlc-lib.ts:1620), so the
+  // .amadeus-stop-hook/block-count.json (stopHookDir, amadeus-lib.ts:1620), so the
   // SAME scratch project is reused across the repeated calls - consecutive
   // no-progress blocks at one unchanging signature, which is exactly what the
   // counter measures.
@@ -340,15 +340,15 @@ describe("t147 Kiro hook adapter (live-captured payload fixtures)", () => {
   /** Run the kiro adapter stop target with CLAUDE_CODE_STOP_HOOK_BLOCK_CAP
    *  explicitly REMOVED, so the mode-aware default cap applies regardless of the
    *  test runner's environment (a leaked override would mask the contract). The
-   *  adapter itself never sets the var (verified: aidlc-kiro-adapter.ts builds
+   *  adapter itself never sets the var (verified: amadeus-kiro-adapter.ts builds
    *  {hook_event_name,stop_hook_active} only), and the core hook reads it from
-   *  the inherited process env (aidlc-stop.ts:123). */
+   *  the inherited process env (amadeus-stop.ts:123). */
   function runStopNoCapEnv(projectDir: string): { stdout: string; code: number } {
     const env = { ...process.env, CLAUDE_PROJECT_DIR: projectDir };
     delete (env as Record<string, string | undefined>).CLAUDE_CODE_STOP_HOOK_BLOCK_CAP;
     const r = spawnSync(
       "bun",
-      [join(projectDir, ".kiro", "hooks", "aidlc-kiro-adapter.ts"), "stop"],
+      [join(projectDir, ".kiro", "hooks", "amadeus-kiro-adapter.ts"), "stop"],
       {
         cwd: projectDir,
         // The kiro adapter ignores stdin for the stop target (it synthesizes the
@@ -400,7 +400,7 @@ describe("t147 Kiro hook adapter (live-captured payload fixtures)", () => {
     try {
       expect(process.env.CLAUDE_CODE_STOP_HOOK_BLOCK_CAP).toBeUndefined();
       // Inject the autonomy field as a bullet line in ## Current Status (getField
-      // matches `- **Field**: value`, aidlc-lib.ts:1913). The base fixture has no
+      // matches `- **Field**: value`, amadeus-lib.ts:1913). The base fixture has no
       // such field; adding it flips defaultBlockCap to 8 without changing the
       // engine's pending directive (Current Stage is unchanged).
       const statePath = seededStateFile(dir);

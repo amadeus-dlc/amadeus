@@ -1,6 +1,6 @@
-// covers: function:appendAuditEntry, function:appendAuditEntryUnlocked, function:handleAppend, cli:aidlc-audit(append-error,append-json,append-raw)
+// covers: function:appendAuditEntry, function:appendAuditEntryUnlocked, function:handleAppend, cli:amadeus-audit(append-error,append-json,append-raw)
 //
-// t18 — aidlc-audit.ts audit-append behaviour. Migrated from
+// t18 — amadeus-audit.ts audit-append behaviour. Migrated from
 // tests/unit/t18-tool-audit.sh (13 TAP assertions, 16 bun spawns).
 // Mechanism: none (import the tool's exported functions and call them in
 // process; zero LLM, zero tokens). Three CLI-shell contracts that exercise
@@ -8,7 +8,7 @@
 // are kept as Bun.spawnSync env-seam cases (flagged inline) so no guarantee
 // is lost.
 //
-// Source under test (dist/claude/.claude/tools/aidlc-audit.ts):
+// Source under test (dist/claude/.claude/tools/amadeus-audit.ts):
 //   :199 appendAuditEntry(eventType, fields, projectDir)
 //          => { appended: true; event: string; timestamp: string }
 //          - throws Error on invalid event type (before any disk side effect)
@@ -21,13 +21,13 @@
 //   :277 handleAppendRaw(heading, body, projectDir): void   (NOT exported — CLI only)
 //
 // File-format contract written by appendAuditEntry / appendAuditEntryUnlocked
-// (aidlc-audit.ts:239-257), exercised below against the real bytes on disk:
+// (amadeus-audit.ts:239-257), exercised below against the real bytes on disk:
 //   - first write to a missing file prepends "# AI-DLC Audit Log\n"
 //     (ensureAuditFile, :174)
 //   - each entry: "\n## <heading>\n**Timestamp**: <ts>\n**Event**: <type>\n"
 //     then one "**<key>**: <value>\n" per field, then "\n---\n"
 //   - heading is EVENT_HEADINGS[eventType] || eventType (:108, :239)
-//   - timestamp is isoTimestamp(): YYYY-MM-DDTHH:MM:SSZ (aidlc-lib.ts:1441)
+//   - timestamp is isoTimestamp(): YYYY-MM-DDTHH:MM:SSZ (amadeus-lib.ts:1441)
 //
 // Test-design note (house style): assert the OBSERVABLE behavioural contract
 // the .sh asserted — return values, thrown errors, and the literal bytes
@@ -57,20 +57,20 @@ import { fileURLToPath } from "node:url";
 import {
   appendAuditEntry,
   handleAppend,
-} from "../../dist/claude/.claude/tools/aidlc-audit.ts";
-import { auditFilePath, readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-audit.ts";
+import { auditFilePath, readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const TOOL = fileURLToPath(
-  new URL("../../dist/claude/.claude/tools/aidlc-audit.ts", import.meta.url),
+  new URL("../../dist/claude/.claude/tools/amadeus-audit.ts", import.meta.url),
 );
 
-// P9: the flat aidlc-docs/audit.md is retired. With no per-intent record seeded,
+// P9: the flat amadeus-docs/audit.md is retired. With no per-intent record seeded,
 // appendAuditEntry resolves the bare SPACE record root's per-clone shard
 // (auditFilePath, which ensureAuditFile mkdir -p's on first write). A bare temp
 // dir suffices — the shell is created lazily by the first append. Each test gets
 // a fresh dir and tears it down.
 function makeProject(): string {
-  return mkdtempSync(join(tmpdir(), "aidlc-t18-"));
+  return mkdtempSync(join(tmpdir(), "amadeus-t18-"));
 }
 
 // The in-process clone-id is memoized in THIS process, so the shard
@@ -247,7 +247,7 @@ describe("appendAuditEntry() — event-type heading + validation (in-process)", 
 //
 // They are kept as spawns deliberately (env-seam), preserving the exact
 // guarantees the .sh had for these three rows.
-describe("aidlc-audit CLI shell (Bun.spawnSync env seam)", () => {
+describe("amadeus-audit CLI shell (Bun.spawnSync env seam)", () => {
   test("append CLI emits error JSON on stderr for an invalid event [.sh test 6 — CLI half]", () => {
     withProject((proj) => {
       const r = Bun.spawnSync({

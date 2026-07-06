@@ -4,7 +4,7 @@
 // branch (§5-C render row, §7 Phase 3), proven through the hook bytes and a REAL
 // terminal render.
 //
-// The branch under test (aidlc-statusline.ts:54-58, contextColor): the right side
+// The branch under test (amadeus-statusline.ts:54-58, contextColor): the right side
 // paints "ctx:N%" wrapped in an SGR colour escape chosen by the context-window
 // usage — green (\x1b[32m) < 50%, yellow (\x1b[33m) >= 50%, red (\x1b[31m) >= 75%.
 //
@@ -133,7 +133,7 @@ describe("t-tui-render statusline COLOUR branch (live turn populates ctx:%, macO
 
         // Prove the product hook's colour branch directly: with a synthetic low
         // context percentage it emits the green SGR wrapper around the ctx token.
-        const hook = join(destClaude, "hooks", "aidlc-statusline.ts");
+        const hook = join(destClaude, "hooks", "amadeus-statusline.ts");
         const hookOut = runStatuslineHook(hook, sandbox, 4);
         expect(hookOut.rc).toBe(0);
         expect(hookOut.stdout).toMatch(new RegExp(`${ESC}\\[32mctx:4%${ESC}\\[0m`));

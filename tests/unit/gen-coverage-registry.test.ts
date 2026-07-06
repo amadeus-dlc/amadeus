@@ -243,10 +243,10 @@ describe("--check freshness diff (the ratchet mechanism)", () => {
         REPO_ROOT,
         "dist", "claude",
         ".claude",
-        "aidlc-common",
+        "amadeus-common",
         "stages",
       ),
-      join(srcRoot, "dist", "claude", ".claude", "aidlc-common", "stages"),
+      join(srcRoot, "dist", "claude", ".claude", "amadeus-common", "stages"),
       { recursive: true },
     );
     const registry = join(root, ".coverage-registry.json");
@@ -256,7 +256,7 @@ describe("--check freshness diff (the ratchet mechanism)", () => {
       "dist", "claude",
       ".claude",
       "tools",
-      "aidlc-audit.ts",
+      "amadeus-audit.ts",
     );
     return { root, srcRoot, registry, ratchet, auditPath };
   }
@@ -334,7 +334,7 @@ describe("--check freshness diff (the ratchet mechanism)", () => {
     try {
       expect(genInto(t).status).toBe(0);
 
-      // Add a fake case to aidlc-audit.ts's entry switch (switch(subcommand)).
+      // Add a fake case to amadeus-audit.ts's entry switch (switch(subcommand)).
       // The first case is `case "append": {`; inject a sibling before it.
       const audit = readFileSync(t.auditPath, "utf-8");
       const injected = audit.replace(
@@ -578,7 +578,7 @@ describe("committed coverage registry is fresh (the live CI ratchet)", () => {
 // Until milestone 3, mechanism came from the filename SEGMENT (t17.cli -> cli). milestone 3
 // makes it the SET read from the drivers the body actually CALLS (refactor doc
 // §2): driveAidlc( -> sdk, a tui-drive.ts spawn -> tui, and a shipped-binary
-// subprocess (claude -p, a bun/node spawn of an aidlc-*.ts tool, or a bash
+// subprocess (claude -p, a bun/node spawn of an amadeus-*.ts tool, or a bash
 // spawn of run-tests.sh) -> cli. These tests pin three properties:
 //
 //   (a) THREE KNOWN-ANSWER FIXTURES — body wins over the segment; the codeView
@@ -601,7 +601,7 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
       "// covers: audit:STAGE_STARTED",
       'import { driveAidlc } from "../harness/sdk-drive.ts";',
       "test('x', async () => {",
-      '  const r = await driveAidlc("/aidlc bugfix");',
+      '  const r = await driveAidlc("/amadeus bugfix");',
       "  expect(r).toBeDefined();",
       "});",
     ].join("\n");
@@ -619,11 +619,11 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     // job is the narrower one: a //-comment whose text contains "/*" never
     // suppresses cli derivation.
     const src = [
-      "// covers: subcommand:aidlc-state:show",
+      "// covers: subcommand:amadeus-state:show",
       'import { spawnSync } from "node:child_process";',
       "// matches tests/fixtures/**/*.md  (a glob with /* in a // comment)",
       "const BUN = process.execPath;",
-      'const TOOL = "../../dist/claude/.claude/tools/aidlc-state.ts";',
+      'const TOOL = "../../dist/claude/.claude/tools/amadeus-state.ts";',
       'test("x", () => {',
       '  const r = spawnSync(BUN, [TOOL, "show"], { encoding: "utf-8" });',
       "  expect(r.status).toBe(0);",
@@ -643,10 +643,10 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     // cli. (Verified: this source derives cli under HEAD and none under the old
     // indexOf form, so it distinguishes the two.)
     const src = [
-      "// covers: subcommand:aidlc-state:show",
+      "// covers: subcommand:amadeus-state:show",
       'import { spawnSync } from "node:child_process";',
       "const BUN = process.execPath;",
-      'const u = "https://example.com/aidlc"; const r = spawnSync(BUN, ["../../dist/claude/.claude/tools/aidlc-state.ts", "show"]);',
+      'const u = "https://example.com/amadeus"; const r = spawnSync(BUN, ["../../dist/claude/.claude/tools/amadeus-state.ts", "show"]);',
       "expect(r.status).toBe(0);",
     ].join("\n");
     expect(mechanismsOf("t99.none.test.ts", src)).toEqual(["cli"]);
@@ -657,11 +657,11 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     // so a glob-like string value cannot open a phantom block comment that
     // swallows the spawn between it and a later "*/"-bearing string.
     const src = [
-      "// covers: subcommand:aidlc-state:show",
+      "// covers: subcommand:amadeus-state:show",
       'import { spawnSync } from "node:child_process";',
       "const BUN = process.execPath;",
       'const pat = "glob /* not a comment";',
-      'const TOOL = "../../dist/claude/.claude/tools/aidlc-state.ts";',
+      'const TOOL = "../../dist/claude/.claude/tools/amadeus-state.ts";',
       '  const r = spawnSync(BUN, [TOOL, "show"], { encoding: "utf-8" });',
       'const close = "and */ still not a comment";',
       "expect(r.status).toBe(0);",
@@ -723,7 +723,7 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
   //
   // MAINTENANCE (read before you touch this): this pin is a deliberate manual
   // ratchet. When a later PR adds or rewrites a DETERMINISTIC test that spawns an
-  // aidlc-*.ts tool / a hook / run-tests.sh under the bun-or-node runtime (milestone 4's
+  // amadeus-*.ts tool / a hook / run-tests.sh under the bun-or-node runtime (milestone 4's
   // floor rewrites and milestone 5's .sh->bun ports will do exactly this), that file is a
   // new none->cli member and this test WILL red. That red is correct — add the
   // new file's tests/-relative path to this array (the failure message prints the

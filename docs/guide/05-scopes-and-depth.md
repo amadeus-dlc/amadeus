@@ -87,7 +87,7 @@ See [Workshop Mode](workshop-mode.md) for the multi-developer manual recipe and 
 
 ## Scope Routing Table
 
-Authoritative data lives in the `.claude/scopes/aidlc-<name>.md` files (scope identity) plus each stage's `scopes:` frontmatter (membership), compiled into `.claude/tools/data/scope-grid.json`. Run `bun .claude/tools/aidlc-utility.ts scope-table` for the live compiled table (and `bun .claude/tools/aidlc-utility.ts help` for the user-facing one-liners).
+Authoritative data lives in the `.claude/scopes/amadeus-<name>.md` files (scope identity) plus each stage's `scopes:` frontmatter (membership), compiled into `.claude/tools/data/scope-grid.json`. Run `bun .claude/tools/amadeus-utility.ts scope-table` for the live compiled table (and `bun .claude/tools/amadeus-utility.ts help` for the user-facing one-liners).
 
 | Scope | EXECUTE / Total | Depth | Test Strategy | Use Case |
 |-------|-----------------|-------|---------------|----------|
@@ -111,7 +111,7 @@ Authoritative data lives in the `.claude/scopes/aidlc-<name>.md` files (scope id
 You don't have to specify a scope explicitly. Describe what you want, and the orchestrator detects the appropriate scope from keywords:
 
 ```
-/aidlc Build a REST API for inventory management
+/amadeus Build a REST API for inventory management
 ```
 
 The engine analyzes your intent against keyword patterns:
@@ -142,25 +142,25 @@ Confirm to proceed, or reply with a different scope (or `compose`) to course-cor
 
 ## The Adaptive Composer
 
-When no stock scope clearly fits (rich prose, no keyword hit, or a keyword buried in a long description), `/aidlc` offers to COMPOSE a tailored plan instead of silently defaulting to `feature`. You can also force it:
+When no stock scope clearly fits (rich prose, no keyword hit, or a keyword buried in a long description), `/amadeus` offers to COMPOSE a tailored plan instead of silently defaulting to `feature`. You can also force it:
 
 ```
-/aidlc compose "harden the deployment pipeline and add observability"
-/aidlc-compose "same thing, as a typeable shortcut"
-/aidlc compose --report sonar.json     # compose from a scan report
-/aidlc --new-scope "..."               # force a custom scope even on a stock match
+/amadeus compose "harden the deployment pipeline and add observability"
+/amadeus-compose "same thing, as a typeable shortcut"
+/amadeus compose --report sonar.json     # compose from a scan report
+/amadeus --new-scope "..."               # force a custom scope even on a stock match
 ```
 
 The composer agent reads your task and the workspace scan (brownfield/greenfield, languages), then proposes the EXECUTE/SKIP grid that fits, with a reason for every skipped stage. You approve, edit, or reject at a gate; nothing is written and no workflow starts before an explicit approval. On approve:
 
 - If the proposal MATCHED a stock scope, the workflow births on that scope directly (a scan report full of code-level findings usually routes to `bugfix` or `security-patch` this way).
-- For a CUSTOM grid, the composer authors a real scope (a `scopes/aidlc-<name>.md` plus a `scope-grid.json` entry) and the workflow births on it in the same turn. The composed scope resolves like any stock scope afterwards (`/aidlc --scope <name>`), and it survives a graph recompile: `aidlc-graph.ts compile` folds composed grid entries back into the regenerated `scope-grid.json` rather than rebuilding the grid from stage frontmatter alone.
+- For a CUSTOM grid, the composer authors a real scope (a `scopes/amadeus-<name>.md` plus a `scope-grid.json` entry) and the workflow births on it in the same turn. The composed scope resolves like any stock scope afterwards (`/amadeus --scope <name>`), and it survives a graph recompile: `amadeus-graph.ts compile` folds composed grid entries back into the regenerated `scope-grid.json` rather than rebuilding the grid from stage frontmatter alone.
 
 **Keyword hygiene:** composed scopes ship with `keywords: []`, so a one-off plan never participates in keyword auto-detection. Making a composed scope inferable for future prompts is an explicit question at the gate, never a side effect.
 
-**In-flight recompose:** mid-workflow, `/aidlc compose` proposes re-shaping the PENDING stages of the running workflow - skip what you no longer need, add back a pending stage you realize you need. Flips apply only to pending, ahead-of-cursor stages (completed and in-progress stages are frozen), are validated so no remaining stage is starved of a required input, and land through the deterministic `recompose` verb under the audit lock with a `RECOMPOSED` audit event. The first EXECUTE stage of Construction (the walking-skeleton gate anchor) cannot be flipped.
+**In-flight recompose:** mid-workflow, `/amadeus compose` proposes re-shaping the PENDING stages of the running workflow - skip what you no longer need, add back a pending stage you realize you need. Flips apply only to pending, ahead-of-cursor stages (completed and in-progress stages are frozen), are validated so no remaining stage is starved of a required input, and land through the deterministic `recompose` verb under the audit lock with a `RECOMPOSED` audit event. The first EXECUTE stage of Construction (the walking-skeleton gate anchor) cannot be flipped.
 
-You do not need the literal verb: plain chat like "can we skip market research? we already know this market" is recognized mid-workflow as a reshape request and routed through the same gate and the same `recompose` verb. When you name the stages yourself ("drop market-research and team-formation"), the conductor may present the gate directly without dispatching the composer agent - the approval gate and the validation are identical either way. On Kiro and Codex the literal `/aidlc compose "<request>"` verb remains the documented reliable path.
+You do not need the literal verb: plain chat like "can we skip market research? we already know this market" is recognized mid-workflow as a reshape request and routed through the same gate and the same `recompose` verb. When you name the stages yourself ("drop market-research and team-formation"), the conductor may present the gate directly without dispatching the composer agent - the approval gate and the validation are identical either way. On Kiro and Codex the literal `/amadeus compose "<request>"` verb remains the documented reliable path.
 
 ---
 
@@ -188,9 +188,9 @@ You can change the depth at three points:
 
 1. **Via the `--depth` CLI flag** — override depth at invocation time:
    ```
-   /aidlc --depth comprehensive
-   /aidlc --scope bugfix --depth standard
-   /aidlc --stage code-generation --depth minimal
+   /amadeus --depth comprehensive
+   /amadeus --scope bugfix --depth standard
+   /amadeus --stage code-generation --depth minimal
    ```
 2. **At scope confirmation** — when the orchestrator confirms the detected scope, reply with `--depth <level>` instead of just confirming
 3. **At any approval gate** — request a different depth level as part of your feedback
@@ -210,23 +210,23 @@ You can request different depth or test strategy at any approval gate.
 ### Explicit scope
 
 ```
-/aidlc feature
-/aidlc bugfix
-/aidlc enterprise
+/amadeus feature
+/amadeus bugfix
+/amadeus enterprise
 ```
 
 ### Scope with description
 
 ```
-/aidlc bugfix Fix the login timeout issue
-/aidlc poc Build a quick prototype for the search feature
+/amadeus bugfix Fix the login timeout issue
+/amadeus poc Build a quick prototype for the search feature
 ```
 
 ### Override scope with utility command
 
 ```
-/aidlc --scope bugfix
-/aidlc --scope enterprise --stage code-generation
+/amadeus --scope bugfix
+/amadeus --scope enterprise --stage code-generation
 ```
 
 The `--scope` flag is composable with `--stage`, `--phase`, and `--depth` for jump operations.
@@ -234,9 +234,9 @@ The `--scope` flag is composable with `--stage`, `--phase`, and `--depth` for ju
 ### Override depth
 
 ```
-/aidlc --depth minimal
-/aidlc --scope bugfix --depth comprehensive
-/aidlc --scope enterprise --depth standard --stage code-generation
+/amadeus --depth minimal
+/amadeus --scope bugfix --depth comprehensive
+/amadeus --scope enterprise --depth standard --stage code-generation
 ```
 
 The `--depth` flag overrides the scope's default depth level. Valid values: `minimal`, `standard`, `comprehensive` (case-insensitive).
@@ -244,8 +244,8 @@ The `--depth` flag overrides the scope's default depth level. Valid values: `min
 ### Override test strategy
 
 ```
-/aidlc --test-strategy minimal
-/aidlc --depth standard --test-strategy minimal
+/amadeus --test-strategy minimal
+/amadeus --depth standard --test-strategy minimal
 ```
 
 The `--test-strategy` flag overrides the test strategy independently of depth. See the full explanation in [The 3 Test Strategy Levels](#the-3-test-strategy-levels) below.
@@ -307,13 +307,13 @@ You can change the test strategy at three points:
 
 1. **Via the `--test-strategy` CLI flag** — override at invocation time:
    ```
-   /aidlc --test-strategy minimal
-   /aidlc --depth standard --test-strategy minimal
-   /aidlc --scope bugfix --test-strategy comprehensive
+   /amadeus --test-strategy minimal
+   /amadeus --depth standard --test-strategy minimal
+   /amadeus --scope bugfix --test-strategy comprehensive
    ```
 2. **Mid-workflow** — change test strategy on an active workflow:
    ```
-   /aidlc --test-strategy comprehensive
+   /amadeus --test-strategy comprehensive
    ```
 3. **At any approval gate** — request a different test strategy as part of your feedback
 
@@ -352,6 +352,6 @@ When in doubt, start with `feature` — it includes all 32 stages, and you can s
 
 - [Phases and Stages](04-phases-and-stages.md) — what each stage does
 - [Agents](06-agents.md) — which agents participate in which scopes
-- [Skills and Runner Commands](17-skills.md) — the one-word `/aidlc-<scope>` runners for bugfix, feature, mvp, and security-patch
+- [Skills and Runner Commands](17-skills.md) — the one-word `/amadeus-<scope>` runners for bugfix, feature, mvp, and security-patch
 - [CLI Commands](12-cli-commands.md) — full command reference
 - [Glossary](glossary.md) — terminology reference

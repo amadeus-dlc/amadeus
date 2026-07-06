@@ -1,22 +1,22 @@
-// covers: subcommand:aidlc-utility:doctor
+// covers: subcommand:amadeus-utility:doctor
 //
 // CLI-contract port of tests/integration/t104-doctor-rule-drift.sh (TAP plan 6),
 // mechanism = cli. Equal-or-stronger migration: every .sh assertion that
-// shelled out to `bun aidlc-utility.ts doctor --project-dir <p>` against
+// shelled out to `bun amadeus-utility.ts doctor --project-dir <p>` against
 // AIDLC_RULES_DIR fixtures is preserved by SPAWNING the real CLI via
 // node:child_process spawnSync (BUN + the tool .ts path), asserting on the
 // combined stdout+stderr the tool writes (the .sh ran `2>&1 || true`) — the
 // PROCESS boundary. The contract under test is the deterministic-tool half of
-// T2: doctor surfaces same-`##`-heading overlap between aidlc-org.md's
+// T2: doctor surfaces same-`##`-heading overlap between amadeus-org.md's
 // POPULATED headings and team/project(-learnings) files as an advisory `✓`
 // row, quoting the org sentence inline. The contradiction VERDICT is the
 // orchestrator-LLM's at observation time — doctor never blocks on it.
 //
 // SPAWN (not in-process): the handler is `handleDoctor(projectDir)` which
-// terminates with `process.exit(failed > 0 ? 1 : 0)` (aidlc-utility.ts:1385)
+// terminates with `process.exit(failed > 0 ? 1 : 0)` (amadeus-utility.ts:1385)
 // and writes its report via `process.stdout.write` (:1373). The rule-drift row
 // is only observable on that stdout, and the AIDLC_RULES_DIR / AIDLC_STAGE_GRAPH
-// fixture-isolation seams (aidlc-graph.ts:160-162) are evaluated inside the
+// fixture-isolation seams (amadeus-graph.ts:160-162) are evaluated inside the
 // subprocess. An in-process twin would lose the env-seam isolation and the
 // process.exit shell the .sh's `|| true` is written around. spawnCount = all.
 //
@@ -28,15 +28,15 @@
 // at exit 1. (We DO capture status to mirror the `|| true` semantics.)
 //
 // FIXTURE DISCIPLINE (mirrors the .sh's per-case mktemp -d rules dir + a fresh
-// mktemp -d project with aidlc-docs/, both rm -rf'd):
+// mktemp -d project with amadeus-docs/, both rm -rf'd):
 //   - Each case writes its rules fixture (the relocated method files org.md /
 //     team.md / project.md, neutral names) into a FRESH temp dir handed
 //     to the tool via AIDLC_RULES_DIR. Byte-for-byte the .sh heredocs.
-//   - The project dir is a FRESH temp dir with aidlc-docs/ (toPortablePath so
+//   - The project dir is a FRESH temp dir with amadeus-docs/ (toPortablePath so
 //     audit.md the tool may append round-trips on Windows). doctor reads no
 //     audit.md content here — the assertion surface is stdout — but the dir
-//     must exist so doctor's aidlc-docs checks don't crash, exactly as the .sh
-//     did `mkdir -p "$proj/aidlc-docs"`.
+//     must exist so doctor's amadeus-docs checks don't crash, exactly as the .sh
+//     did `mkdir -p "$proj/amadeus-docs"`.
 //   - AIDLC_STAGE_GRAPH points at the shipped stage-graph.json (the .sh's
 //     SEED_GRAPH) so the unrelated graph-backed doctor checks resolve.
 //   - NOTHING is written under tests/fixtures/**; all dirs cleaned in afterAll.
@@ -76,7 +76,7 @@ import { toPortablePath } from "../harness/fixtures.ts";
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const AIDLC_SRC = join(REPO_ROOT, "dist", "claude", ".claude");
-const UTIL = join(AIDLC_SRC, "tools", "aidlc-utility.ts");
+const UTIL = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
 const SEED_GRAPH = join(AIDLC_SRC, "tools", "data", "stage-graph.json");
 
 const tempDirs: string[] = [];
@@ -87,7 +87,7 @@ afterAll(() => {
 
 /** Fresh temp dir registered for afterAll teardown (mirrors the .sh mktemp -d). */
 function mkTemp(tag: string): string {
-  const d = toPortablePath(mkdtempSync(join(tmpdir(), `aidlc-t104-${tag}-`)));
+  const d = toPortablePath(mkdtempSync(join(tmpdir(), `amadeus-t104-${tag}-`)));
   tempDirs.push(d);
   return d;
 }
@@ -110,7 +110,7 @@ interface DoctorResult {
 }
 
 /**
- * run_doctor (t104:37-45): a fresh project dir with aidlc-docs/, then
+ * run_doctor (t104:37-45): a fresh project dir with amadeus-docs/, then
  * `AIDLC_RULES_DIR=<rd> AIDLC_STAGE_GRAPH=<seed> bun UTIL doctor --project-dir <proj>`
  * captured 2>&1. The .sh swallows the exit code with `|| true` (bare temp
  * projects fail unrelated hook/settings checks); we capture it for parity but
@@ -118,7 +118,7 @@ interface DoctorResult {
  */
 function runDoctor(rd: string): DoctorResult {
   const proj = mkTemp("proj");
-  mkdirSync(join(proj, "aidlc-docs"), { recursive: true });
+  mkdirSync(join(proj, "amadeus-docs"), { recursive: true });
   const res = spawnSync(BUN, [UTIL, "doctor", "--project-dir", proj], {
     encoding: "utf-8",
     env: {
@@ -138,7 +138,7 @@ function driftLine(out: string): string {
   return out.split("\n").find((l) => l.includes("Rule drift:")) ?? "";
 }
 
-describe("t104 aidlc-utility doctor — rule-drift row (migrated from t104-doctor-rule-drift.sh, plan 6)", () => {
+describe("t104 amadeus-utility doctor — rule-drift row (migrated from t104-doctor-rule-drift.sh, plan 6)", () => {
   // ===========================================================================
   // N=1 drift fixture: org ## Testing Posture + team ## Testing Posture with
   // contradicting content. P6: a learning IS a practice (no `*-learnings.md`
@@ -163,7 +163,7 @@ describe("t104 aidlc-utility doctor — rule-drift row (migrated from t104-docto
     const r = runDoctor(rulesDir(DRIFT_RULES));
     // STRONGER than the .sh's three independent greps: assert all three appear
     // on the SAME rendered drift line, in the tool's `<file> ## <heading> ⇄
-    // org "<sentence>"` detail format (aidlc-utility.ts:1273).
+    // org "<sentence>"` detail format (amadeus-utility.ts:1273).
     const line = driftLine(r.out);
     expect(line).toContain("team.md");
     expect(line).toContain("Testing Posture");
@@ -175,7 +175,7 @@ describe("t104 aidlc-utility doctor — rule-drift row (migrated from t104-docto
   test("3: drift row prefixed ✓ (advisory pass — does NOT push failed)", () => {
     const r = runDoctor(rulesDir(DRIFT_RULES));
     // The tool prefixes a pass row with `✓  ` (✓ + two spaces,
-    // aidlc-utility.ts:1361); a fail row would carry `✗  ` (:1364).
+    // amadeus-utility.ts:1361); a fail row would carry `✗  ` (:1364).
     // Mirrors the .sh `grep -q "^✓"` on the drift line.
     expect(driftLine(r.out).startsWith("✓  ")).toBe(true);
   }, 30000);
@@ -199,7 +199,7 @@ describe("t104 aidlc-utility doctor — rule-drift row (migrated from t104-docto
 
   // ===========================================================================
   // Case 5 — Org-absent fixture → informational pass, no crash.
-  // team-only ## Testing Posture with no aidlc-org.md to compare against.
+  // team-only ## Testing Posture with no amadeus-org.md to compare against.
   // ===========================================================================
   test("5: org-absent fixture → informational pass", () => {
     const r = runDoctor(
@@ -211,7 +211,7 @@ describe("t104 aidlc-utility doctor — rule-drift row (migrated from t104-docto
     const line = driftLine(r.out);
     expect(line).toContain("Rule drift: org rules absent (informational)");
     // STRONGER than the .sh (which only grepped the label): the informational
-    // row is also an advisory pass (aidlc-utility.ts:1239), so it carries ✓.
+    // row is also an advisory pass (amadeus-utility.ts:1239), so it carries ✓.
     expect(line.startsWith("✓  ")).toBe(true);
   }, 30000);
 
@@ -232,7 +232,7 @@ describe("t104 aidlc-utility doctor — rule-drift row (migrated from t104-docto
     );
     // STRONGER: both the unique fixture token and the N=1 headline land on the
     // same rendered drift line — the quoted sentence is sourced from the
-    // fixture org, not the shipped aidlc-org.md.
+    // fixture org, not the shipped amadeus-org.md.
     const line = driftLine(r.out);
     expect(line).toContain("UNIQUEFIXTURETOKEN");
     expect(line).toContain(

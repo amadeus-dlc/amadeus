@@ -2,9 +2,9 @@
 
 > **Agent deep dive** · [User Guide](../00-introduction.md) › [Agents](../06-agents.md) › [deep dives](README.md) · Technical reference: [architect-agent](../../reference/agents/architect-agent.md)
 
-The aidlc-architect-agent is your solutions architect. It translates requirements into robust system architectures, produces Architecture Decision Records (ADRs), designs domain models, and decomposes projects into implementable units of work. It thinks in patterns and trade-offs, producing designs that developers can implement directly.
+The amadeus-architect-agent is your solutions architect. It translates requirements into robust system architectures, produces Architecture Decision Records (ADRs), designs domain models, and decomposes projects into implementable units of work. It thinks in patterns and trade-offs, producing designs that developers can implement directly.
 
-The aidlc-architect-agent leads the most stages of any single agent in the lifecycle — six in total — spanning Ideation, Inception, and Construction. It is the primary design authority and runs on the Opus model, along with the seven other high-judgment agents. Only delivery, pipeline-deploy, and operations run on Sonnet because their output is dominantly templated.
+The amadeus-architect-agent leads the most stages of any single agent in the lifecycle — six in total — spanning Ideation, Inception, and Construction. It is the primary design authority and runs on the Opus model, along with the seven other high-judgment agents. Only delivery, pipeline-deploy, and operations run on Sonnet because their output is dominantly templated.
 
 ## Stages Led
 
@@ -17,7 +17,7 @@ The aidlc-architect-agent leads the most stages of any single agent in the lifec
 | 3.2 NFR Requirements | Construction | Non-functional requirements with measurable targets (per unit) |
 | 3.3 NFR Design | Construction | Technical approaches for caching, resilience, security (per unit) |
 
-It also leads the synthesis step of stage 2.1 (Reverse Engineering), where it receives code scan results from the aidlc-developer-agent and produces the 9 architectural artifacts.
+It also leads the synthesis step of stage 2.1 (Reverse Engineering), where it receives code scan results from the amadeus-developer-agent and produces the 9 architectural artifacts.
 
 ## Stages Supported
 
@@ -29,11 +29,11 @@ It also leads the synthesis step of stage 2.1 (Reverse Engineering), where it re
 
 ## What to Expect
 
-When the aidlc-architect-agent is active, it focuses on boundaries, patterns, and trade-offs. It asks about existing system constraints, technology preferences, scalability requirements, and operational concerns. It produces structured design documents with explicit decision rationale, component diagrams described in markdown, and ADRs for every significant choice.
+When the amadeus-architect-agent is active, it focuses on boundaries, patterns, and trade-offs. It asks about existing system constraints, technology preferences, scalability requirements, and operational concerns. It produces structured design documents with explicit decision rationale, component diagrams described in markdown, and ADRs for every significant choice.
 
 ## How It Collaborates
 
-The aidlc-architect-agent receives requirements from the aidlc-product-agent and code scan results from the aidlc-developer-agent. It works with the aidlc-aws-platform-agent on AWS service mapping, the aidlc-devsecops-agent on secure design, and the aidlc-compliance-agent on regulatory constraints. Its outputs (unit specs, API contracts, NFR targets) are consumed by the aidlc-developer-agent, aidlc-quality-agent, and aidlc-aws-platform-agent.
+The amadeus-architect-agent receives requirements from the amadeus-product-agent and code scan results from the amadeus-developer-agent. It works with the amadeus-aws-platform-agent on AWS service mapping, the amadeus-devsecops-agent on secure design, and the amadeus-compliance-agent on regulatory constraints. Its outputs (unit specs, API contracts, NFR targets) are consumed by the amadeus-developer-agent, amadeus-quality-agent, and amadeus-aws-platform-agent.
 
 ## Key Principles
 

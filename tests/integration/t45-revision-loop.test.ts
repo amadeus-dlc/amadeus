@@ -1,21 +1,21 @@
-// covers: cli:aidlc-state(gate-start,reject,revise,approve), function:handleGateStart, function:handleReject, function:handleRevise, function:handleApprove
+// covers: cli:amadeus-state(gate-start,reject,revise,approve), function:handleGateStart, function:handleReject, function:handleRevise, function:handleApprove
 //
 // t45 — revision-loop on a gated stage. Migrated from
 // tests/integration/t45-revision-loop.sh (TAP plan 10).
 //
 // Mechanism: cli. The subject is the gate -> reject -> revise -> gate cycle
-// driven end-to-end across multiple `aidlc-state.ts` subcommand invocations,
+// driven end-to-end across multiple `amadeus-state.ts` subcommand invocations,
 // asserted against (a) the checkbox / Revision Count fields it writes to
-// aidlc-state.md and (b) the cumulative audit trail it appends to audit.md.
+// amadeus-state.md and (b) the cumulative audit trail it appends to audit.md.
 // Each transition is a CLI subcommand that terminates with process.exit on a
-// state-machine guard failure (validateSlugInState, aidlc-state.ts:661) and
+// state-machine guard failure (validateSlugInState, amadeus-state.ts:661) and
 // writes its event row via the audit lock — a PROCESS boundary. An in-process
 // twin would lose the multi-invocation accumulation seam (each transition
 // re-reads state + appends one locked audit block) and the exit-code contract
 // the .sh's `set -e` relied on. So we SPAWN the real tool via the BUN runtime
 // against the .ts path (spawnSync(BUN, [STATE, ...])), exactly as the .sh did.
 //
-// Source under test (dist/claude/.claude/tools/aidlc-state.ts):
+// Source under test (dist/claude/.claude/tools/amadeus-state.ts):
 //   :677 handleGateStart(slug) — [-] -> [?]; emits STAGE_AWAITING_APPROVAL
 //   :811 handleReject(slug, --feedback) — [?] -> [R]; increments Revision Count
 //          (:825-828); emits GATE_REJECTED + STAGE_REVISING (:837-842)
@@ -35,7 +35,7 @@
 //   - Revision Count is the `- **Revision Count**: N` field line.
 //   - audit.md event rows carry the RAW event type on the `**Event**: <TYPE>`
 //     line (the multi-word EVENT_HEADINGS value goes on the `## ` heading,
-//     aidlc-audit.ts:117-139,254); count_event greps the **Event** line.
+//     amadeus-audit.ts:117-139,254); count_event greps the **Event** line.
 //
 // Old TAP -> new test parity (1:1, every .sh assertion -> a named test):
 //   .sh assert 1  (Revision Count=1 after first reject)        -> "cycle 1: reject increments Revision Count to 1"
@@ -68,15 +68,15 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const UTIL = join(AIDLC_SRC, "tools", "aidlc-utility.ts");
-const STATE = join(AIDLC_SRC, "tools", "aidlc-state.ts");
+const UTIL = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
+const STATE = join(AIDLC_SRC, "tools", "amadeus-state.ts");
 
 const SLUG = "requirements-analysis";
 
 let proj: string;
 
 // P4: intent-birth writes state into the born intent's per-intent record dir
-// (aidlc/spaces/<space>/intents/<slug>-<id8>/), not the flat aidlc-docs/. After
+// (aidlc/spaces/<space>/intents/<slug>-<id8>/), not the flat amadeus-docs/. After
 // the init the active-intent cursor points at the born record, so every later
 // gate-start/reject/revise/approve (default-resolving the active intent)
 // reads/writes THAT record — recordDirOf follows the cursor and resolves it for
@@ -91,16 +91,16 @@ function recordDirOf(p: string): string {
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();
-    if (rec && existsSync(join(intentsDir, rec, "aidlc-state.md"))) {
+    if (rec && existsSync(join(intentsDir, rec, "amadeus-state.md"))) {
       return join(intentsDir, rec);
     }
   }
-  return join(p, "aidlc-docs");
+  return join(p, "amadeus-docs");
 }
 
 // Audit is written as per-clone shards under <record>/audit/<host>-<pid>.md
 // (Stage B). Concatenate every shard for a content read; fall back to the flat
-// aidlc-docs/audit.md for a seeded-flat / pre-migration project.
+// amadeus-docs/audit.md for a seeded-flat / pre-migration project.
 function readAudit(p: string): string {
   const auditDir = join(recordDirOf(p), "audit");
   if (existsSync(auditDir)) {
@@ -109,23 +109,23 @@ function readAudit(p: string): string {
       .map((f) => readFileSync(join(auditDir, f), "utf-8"))
       .join("\n");
   }
-  const flat = join(p, "aidlc-docs", "audit.md");
+  const flat = join(p, "amadeus-docs", "audit.md");
   return existsSync(flat) ? readFileSync(flat, "utf-8") : "";
 }
 
-/** Run an aidlc-state.ts subcommand against the project; assert exit 0. */
+/** Run an amadeus-state.ts subcommand against the project; assert exit 0. */
 function state(args: string[]): void {
   const r = spawnSync(BUN, [STATE, ...args, "--project-dir", proj], {
     encoding: "utf-8",
   });
   expect(
     r.status,
-    `aidlc-state ${args.join(" ")} should exit 0; stderr=${r.stderr ?? ""}`,
+    `amadeus-state ${args.join(" ")} should exit 0; stderr=${r.stderr ?? ""}`,
   ).toBe(0);
 }
 
 function readState(): string {
-  return readFileSync(join(recordDirOf(proj), "aidlc-state.md"), "utf-8");
+  return readFileSync(join(recordDirOf(proj), "amadeus-state.md"), "utf-8");
 }
 
 /** The Revision Count field value (`- **Revision Count**: N`). */

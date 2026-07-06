@@ -1,7 +1,7 @@
 ---
 id: well-formed
 kind: deterministic
-command: bun .claude/tools/aidlc-sensor.ts fire well-formed
+command: bun .claude/tools/amadeus-sensor.ts fire well-formed
 applies_to:
   all_stages: true
 default_severity: advisory

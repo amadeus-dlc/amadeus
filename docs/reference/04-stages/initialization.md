@@ -2,13 +2,13 @@
 
 ## Phase Overview
 
-The Initialization phase is the first of five phases in the AI-DLC workflow. It runs stages 0.1 through 0.3, **birthing the intent** — minting its record dir at `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/` (written `<record>/` below) with state files, directory scaffolding, workspace classification, and routing configuration. There is no separate scaffold command: the workspace shell ships pre-built in `dist/<harness>/`, and the engine auto-births the first intent on the first `/aidlc` (or when you describe what to build).
+The Initialization phase is the first of five phases in the AI-DLC workflow. It runs stages 0.1 through 0.3, **birthing the intent** — minting its record dir at `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/` (written `<record>/` below) with state files, directory scaffolding, workspace classification, and routing configuration. There is no separate scaffold command: the workspace shell ships pre-built in `dist/<harness>/`, and the engine auto-births the first intent on the first `/amadeus` (or when you describe what to build).
 
 All 3 stages in this phase execute for EVERY scope — there are no conditional stages. All stages auto-proceed with no approval gates.
 
 The welcome message is rendered at session start via the `companyAnnouncements` entry in `settings.json`. It is not a stage — no stage file, no audit event, no checkbox.
 
-All three stages run inside a single deterministic `bun .claude/tools/aidlc-utility.ts intent-birth --scope <scope>` call that completes in well under a second. The conductor creates 3 tasks in the sidebar (Workspace Scaffold, Workspace Detection, State Init) for observability, then marks them all completed once the tool returns.
+All three stages run inside a single deterministic `bun .claude/tools/amadeus-utility.ts intent-birth --scope <scope>` call that completes in well under a second. The conductor creates 3 tasks in the sidebar (Workspace Scaffold, Workspace Detection, State Init) for observability, then marks them all completed once the tool returns.
 
 ## Scope-Driven Stage Inclusion
 
@@ -64,7 +64,7 @@ All three stages run inside a single deterministic `bun .claude/tools/aidlc-util
 
 ### Notes
 - Idempotent — skips directories and files that already exist
-- Runs inside `aidlc-utility intent-birth`, not via LLM
+- Runs inside `amadeus-utility intent-birth`, not via LLM
 
 ---
 
@@ -97,7 +97,7 @@ All three stages run inside a single deterministic `bun .claude/tools/aidlc-util
 - `WORKSPACE_SCANNED` audit event capturing the scan result
 
 ### Notes
-- Runs as a deterministic scanner inside `aidlc-utility intent-birth`. No LLM subagent dispatch.
+- Runs as a deterministic scanner inside `amadeus-utility intent-birth`. No LLM subagent dispatch.
 - Symbolic links are not followed (cycle protection via `lstatSync`)
 - Excludes `.claude/`, `<record>/`, `node_modules/`, `.git/`, `dist/`, `build/`, `.next/`, `target/`, `vendor/`
 - `package.json` with only `devDependencies` is treated as tooling/scaffolding and does not alone cause brownfield classification
@@ -120,24 +120,24 @@ All three stages run inside a single deterministic `bun .claude/tools/aidlc-util
 1. Read state template
 2. Apply scope mapping + depth + test strategy
 3. For greenfield, mark `reverse-engineering` SKIP
-4. Write full `<record>/aidlc-state.md` with the first post-init stage set to `[-]`
+4. Write full `<record>/amadeus-state.md` with the first post-init stage set to `[-]`
 5. Append `STAGE_STARTED` + `WORKSPACE_INITIALISED` + `STAGE_COMPLETED` events
 
 ### Inputs
 - Workspace classification from workspace-detection (same tool call)
 - Scope configuration (from `--scope` flag or `poc` default)
 - Depth / test-strategy overrides if passed
-- State template from `.claude/knowledge/aidlc-shared/state-template.md`
+- State template from `.claude/knowledge/amadeus-shared/state-template.md`
 
 ### Outputs
-- `<record>/aidlc-state.md` (fully populated)
+- `<record>/amadeus-state.md` (fully populated)
 - `WORKSPACE_INITIALISED` audit event
 
 ### Notes
 - Brownfield projects route to reverse-engineering (Stage 2.1)
 - Greenfield projects route to the first non-initialization stage (intent-capture for feature/poc; requirements-analysis for bugfix/refactor; practices-discovery for workshop, since workshop skips all of Ideation and reverse-engineering is downgraded to SKIP on greenfield)
-- When invoked from `/aidlc-init` (the explicit birth packaging), the orchestrator stops after this stage
-- When invoked from workflow start (`/aidlc <scope>` or describing what to build), the orchestrator continues into the first post-init stage
+- When invoked from `/amadeus-init` (the explicit birth packaging), the orchestrator stops after this stage
+- When invoked from workflow start (`/amadeus <scope>` or describing what to build), the orchestrator continues into the first post-init stage
 
 ---
 
@@ -147,13 +147,13 @@ There is no re-init flag. Birthing the first intent runs once per intent; the
 workspace shell itself ships pre-built and is never re-scaffolded. To start over,
 birth a new intent (each gets its own `<record>/`), or — for a clean slate —
 archive the active intent's record dir under `aidlc/spaces/<space>/intents/` and
-let the engine birth a fresh one. A second `/aidlc` over an existing intent
+let the engine birth a fresh one. A second `/amadeus` over an existing intent
 resumes it rather than re-initialising.
 
 ## Notes
 
 - All 3 stages auto-proceed — no approval gates in the Initialization phase
-- All stages update the statusline via `Current Stage` in `aidlc-state.md`
+- All stages update the statusline via `Current Stage` in `amadeus-state.md`
 - All stages update state checkboxes (`[ ]` → `[x]`) and append audit events directly from the tool
 - The Initialization → Ideation phase transition has no governance boundary check
 

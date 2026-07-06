@@ -1,6 +1,6 @@
-// covers: subcommand:aidlc-utility:doctor
+// covers: subcommand:amadeus-utility:doctor
 //
-// t22.sdk.test.ts — SDK port of t22-integration-doctor.sh (drives /aidlc --doctor).
+// t22.sdk.test.ts — SDK port of t22-integration-doctor.sh (drives /amadeus --doctor).
 //
 // WHY THIS PORT EXISTS. The .sh asserted on `$CLAUDE_OUTPUT` — the assistant's
 // reworded prose rendering of the doctor report. Tests 1-7 and 9 grepped that
@@ -11,8 +11,8 @@
 // drifts run-to-run. That is the CLASS-1 prose flake: the contract is real,
 // but the surface (LLM prose) is non-deterministic.
 //
-// THE DETERMINISTIC SURFACE. /aidlc --doctor runs a deterministic bun tool
-// (handleDoctor in aidlc-utility.ts) whose stdout is fixed bytes. The SDK
+// THE DETERMINISTIC SURFACE. /amadeus --doctor runs a deterministic bun tool
+// (handleDoctor in amadeus-utility.ts) whose stdout is fixed bytes. The SDK
 // surfaces those bytes VERBATIM in the Bash tool_result, before the LLM
 // rewords them — the calibration (sdk-drive.calibration.test.ts CALIBRATION 2)
 // proved the doctor block is byte-stable across runs and carries the exact
@@ -20,20 +20,20 @@
 // tool_result via assertToolResultContains: same contract, stable surface.
 //
 // The known-answer label strings are READ from the shipped doctor handler
-// (dist/claude/.claude/tools/aidlc-utility.ts handleDoctor), NOT guessed:
+// (dist/claude/.claude/tools/amadeus-utility.ts handleDoctor), NOT guessed:
 //   - header literal:     "AI-DLC Health Check"               (utility.ts:1355)
 //   - bun check label:    "bun installed (required ...)"      (utility.ts:336)
 //   - hook check label:   "<hook>.ts present"                 (utility.ts:356)
 //   - settings label:     "settings.json present"            (utility.ts:365)
 //   - shell-ready label:  "workspace shell ready"            (utility.ts:597; P4: the
-//                         old "aidlc-docs/ directory exists" row was retired — auto-birth
-//                         needs no scaffolded aidlc-docs/, so doctor checks the SHIPPED SHELL
+//                         old "amadeus-docs/ directory exists" row was retired — auto-birth
+//                         needs no scaffolded amadeus-docs/, so doctor checks the SHIPPED SHELL
 //                         (.claude/ + aidlc/spaces/default/memory/) instead)
 //   - footer shape:       "N passed, M failed"               (utility.ts:1371)
 //   - audit event:        "HEALTH_CHECKED"                    (utility.ts:1376)
 //
 // MECHANISM. New file = .sdk.test.ts (mechanism `sdk`, rank 2). The covered
-// unit `aidlc-utility doctor` is minMechanism `cli` (rank 1); sdk satisfies
+// unit `amadeus-utility doctor` is minMechanism `cli` (rank 1); sdk satisfies
 // cli (2 >= 1), so the covers claim is honoured by the guarantee-principle
 // gate. The .sh is retired (this .sdk.test.ts replaces it at equal-or-stronger
 // fidelity — every deterministic .sh assertion is re-expressed on a stable
@@ -53,7 +53,7 @@ import {
 import { driveAidlc, readAuditEvents } from "../harness/sdk-drive.ts";
 
 // ---------------------------------------------------------------------------
-// Timeout budget. A multi-tool /aidlc --doctor turn on Opus/Bedrock takes
+// Timeout budget. A multi-tool /amadeus --doctor turn on Opus/Bedrock takes
 // minutes. Honour the suite's AIDLC_TEST_TIMEOUT convention (seconds; the .sh
 // set it to 600). Drive aborts a hair before bun kills the test so a stuck
 // run surfaces a partial DriveResult to diagnose rather than an opaque hang.
@@ -65,14 +65,14 @@ const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
 // Known-answer doctor strings, read from the shipped handler (see header).
 const DOCTOR_HEADER = "AI-DLC Health Check";
 const DOCTOR_BUN_LABEL = "bun installed (required for CLI tools and hooks)";
-const DOCTOR_HOOK_LABEL = "aidlc-audit-logger.ts present";
+const DOCTOR_HOOK_LABEL = "amadeus-audit-logger.ts present";
 // handleDoctor emits a separate `${h}.ts present` line per hook (utility.ts:356);
 // the .sh checked BOTH audit-logger (tests 1,4) AND session-start (tests 2,5),
 // so we assert each hook label independently — proving the substring presence of
 // one does not prove the other.
-const DOCTOR_HOOK_LABEL_2 = "aidlc-session-start.ts present";
+const DOCTOR_HOOK_LABEL_2 = "amadeus-session-start.ts present";
 const DOCTOR_SETTINGS_LABEL = "settings.json present";
-// P4: the "aidlc-docs/ directory exists" row was retired. Doctor now checks the
+// P4: the "amadeus-docs/ directory exists" row was retired. Doctor now checks the
 // SHIPPED workspace shell (.claude/ + aidlc/spaces/default/memory/) — the row
 // label substring is "workspace shell ready" (utility.ts:597), and its
 // remediation fix is "copy the workspace shell from `dist/claude/`" (utility.ts:598).
@@ -80,7 +80,7 @@ const DOCTOR_SHELL_LABEL = "workspace shell ready";
 const DOCTOR_SHELL_FIX = "copy the workspace shell from";
 const STOP_AFTER_DOCTOR = { toolName: "Bash", resultIncludes: DOCTOR_HEADER } as const;
 
-describe("t22 /aidlc --doctor (SDK port)", () => {
+describe("t22 /amadeus --doctor (SDK port)", () => {
   // -------------------------------------------------------------------------
   // With state + audit. Re-expresses .sh tests 1-9 deterministically.
   //
@@ -111,7 +111,7 @@ describe("t22 /aidlc --doctor (SDK port)", () => {
       try {
         const auditBefore = readAuditEvents(proj) ?? [];
 
-        const r = await driveAidlc("/aidlc --doctor", {
+        const r = await driveAidlc("/amadeus --doctor", {
           projectDir: proj,
           timeoutMs: DRIVE_TIMEOUT_MS,
           stopAfterToolResult: STOP_AFTER_DOCTOR,
@@ -166,8 +166,8 @@ describe("t22 /aidlc --doctor (SDK port)", () => {
   // Without the shipped shell. Re-expresses .sh test 10 (already deterministic),
   // migrated to the P4 readiness row.
   //
-  // P4 retired the "aidlc-docs/ directory exists" row: with auto-birth there is
-  // no scaffolded aidlc-docs/ to verify. Readiness is the SHIPPED SHELL — the
+  // P4 retired the "amadeus-docs/ directory exists" row: with auto-birth there is
+  // no scaffolded amadeus-docs/ to verify. Readiness is the SHIPPED SHELL — the
   // harness engine dir (.claude/) AND the default space's memory dir
   // (aidlc/spaces/default/memory/) BOTH present (utility.ts:586-599). The row
   // PASSes only when both exist; remove the default memory dir so the
@@ -190,10 +190,10 @@ describe("t22 /aidlc --doctor (SDK port)", () => {
         const memoryDir = join(proj, "aidlc", "spaces", "default", "memory");
         rmSync(memoryDir, { recursive: true, force: true });
         expect(existsSync(memoryDir)).toBe(false);
-        // And aidlc-docs/ is absent too (noAidlcDocs), so nothing masks the failure.
-        expect(readdirSync(proj)).not.toContain("aidlc-docs");
+        // And amadeus-docs/ is absent too (noAidlcDocs), so nothing masks the failure.
+        expect(readdirSync(proj)).not.toContain("amadeus-docs");
 
-        const r = await driveAidlc("/aidlc --doctor", {
+        const r = await driveAidlc("/amadeus --doctor", {
           projectDir: proj,
           timeoutMs: DRIVE_TIMEOUT_MS,
           stopAfterToolResult: STOP_AFTER_DOCTOR,

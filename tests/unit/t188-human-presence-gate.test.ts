@@ -1,4 +1,4 @@
-// covers: cli:aidlc-state(approve,gate-start), cli:aidlc-log(answer), cli:aidlc-audit(append), function:handleApprove, function:handleGateStart, function:handleAnswer, function:humanActedSinceGate, function:humanActedSinceLastAnswer, function:hasOpenGate, function:isAutonomousMode, function:humanPresenceGuardDisabled, file:hooks/aidlc-mint-presence.ts
+// covers: cli:amadeus-state(approve,gate-start), cli:amadeus-log(answer), cli:amadeus-audit(append), function:handleApprove, function:handleGateStart, function:handleAnswer, function:humanActedSinceGate, function:humanActedSinceLastAnswer, function:hasOpenGate, function:isAutonomousMode, function:humanPresenceGuardDisabled, file:hooks/amadeus-mint-presence.ts
 //
 // t188 - human-presence approval gate (ledger-event design).
 //
@@ -30,10 +30,10 @@
 // guard.
 //
 // Source under test (dist/claude/.claude/tools/):
-//   aidlc-state.ts handleApprove (presence check, then GATE_APPROVED is the next
+//   amadeus-state.ts handleApprove (presence check, then GATE_APPROVED is the next
 //     gate's freshness boundary - no separate consume step),
-//   aidlc-log.ts handleAnswer (the interview-path twin),
-//   aidlc-audit.ts append (records the HUMAN_TURN event the mint hook emits).
+//   amadeus-log.ts handleAnswer (the interview-path twin),
+//   amadeus-audit.ts append (records the HUMAN_TURN event the mint hook emits).
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -47,12 +47,12 @@ import {
   seedStateFile,
 } from "../harness/fixtures.ts";
 import { readFileSync, writeFileSync } from "node:fs";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath;
-const STATE = join(AIDLC_SRC, "tools", "aidlc-state.ts");
-const LOG = join(AIDLC_SRC, "tools", "aidlc-log.ts");
-const AUDIT = join(AIDLC_SRC, "tools", "aidlc-audit.ts");
+const STATE = join(AIDLC_SRC, "tools", "amadeus-state.ts");
+const LOG = join(AIDLC_SRC, "tools", "amadeus-log.ts");
+const AUDIT = join(AIDLC_SRC, "tools", "amadeus-audit.ts");
 const MID_IDEATION = "state-mid-ideation.md"; // Current Stage: feasibility
 
 // Drive a state subcommand with the PRESENCE guard ENABLED (clear the suite's
@@ -69,7 +69,7 @@ function guarded(proj: string, args: string[]): { rc: number; out: string } {
   return { rc: r.status ?? -1, out: `${r.stdout ?? ""}${r.stderr ?? ""}` };
 }
 
-// Drive an aidlc-log subcommand with the same guard posture.
+// Drive an amadeus-log subcommand with the same guard posture.
 function guardedLog(proj: string, args: string[]): { rc: number; out: string } {
   const env = { ...process.env };
   env.AIDLC_SKIP_ARTIFACT_GUARD = "1";
@@ -260,7 +260,7 @@ describe("t188: human-presence approval gate (ledger-event design)", () => {
   // empty-ledger fallback is a guarantee of the predicate, exercised here in-process.
   test("F: humanActedSinceGate fails OPEN on an empty ledger", async () => {
     const { humanActedSinceGate } = await import(
-      "../../dist/claude/.claude/tools/aidlc-lib.ts"
+      "../../dist/claude/.claude/tools/amadeus-lib.ts"
     );
     // proj here has a seeded state file but no audit shard (no event emitted yet).
     expect(humanActedSinceGate(proj)).toBe(true);
@@ -275,7 +275,7 @@ describe("t188: human-presence approval gate (ledger-event design)", () => {
   // HUMAN_TURN in the current shard.
   test("G: an old resolution in a lexically-later shard does not mask a fresh HUMAN_TURN", async () => {
     const { humanActedSinceGate, auditShardDir } = await import(
-      "../../dist/claude/.claude/tools/aidlc-lib.ts"
+      "../../dist/claude/.claude/tools/amadeus-lib.ts"
     );
     // Fresh HUMAN_TURN lands in this clone's shard via the real appender.
     recordHumanTurn(proj);
@@ -300,7 +300,7 @@ describe("t188: human-presence approval gate (ledger-event design)", () => {
   describe("hasOpenGate (state-file [?] predicate for the preToolUse floors)", () => {
     test("false with no state / no [?]; true once a stage awaits approval", async () => {
       const { hasOpenGate } = await import(
-        "../../dist/claude/.claude/tools/aidlc-lib.ts"
+        "../../dist/claude/.claude/tools/amadeus-lib.ts"
       );
       expect(hasOpenGate(null)).toBe(false);
       const before = readFileSync(seededStateFile(proj), "utf-8");
@@ -319,7 +319,7 @@ describe("t188: human-presence approval gate (ledger-event design)", () => {
   });
 
   // --- handleAnswer twin (interview path) ------------------------------------
-  describe("handleAnswer twin (aidlc-log answer)", () => {
+  describe("handleAnswer twin (amadeus-log answer)", () => {
     test("REFUSES to record an answer when the ledger has events but no HUMAN_TURN", () => {
       const slug = field(proj, "Current Stage");
       guarded(proj, ["gate-start", slug]); // ledger non-empty, no HUMAN_TURN

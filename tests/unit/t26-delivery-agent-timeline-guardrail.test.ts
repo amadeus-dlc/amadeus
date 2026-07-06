@@ -1,4 +1,4 @@
-// covers: file:aidlc-common/stages/inception/delivery-planning.md, file:agents/aidlc-delivery-agent.md, file:knowledge/aidlc-delivery-agent/workflow-planning-guide.md
+// covers: file:amadeus-common/stages/inception/delivery-planning.md, file:agents/amadeus-delivery-agent.md, file:knowledge/amadeus-delivery-agent/workflow-planning-guide.md
 //
 // t26 — Content guardrail: the shipped delivery-planning SURFACE must not use
 // human-timeline framing. Migrated from
@@ -20,9 +20,9 @@
 // fixtures.ts:42) and read each .md in-process.
 //
 // Subject under test (dist/claude/.claude/...):
-//   - aidlc-common/stages/inception/delivery-planning.md  (the stage spec)
-//   - agents/aidlc-delivery-agent.md                       (the persona)
-//   - knowledge/aidlc-delivery-agent/workflow-planning-guide.md (the guide)
+//   - amadeus-common/stages/inception/delivery-planning.md  (the stage spec)
+//   - agents/amadeus-delivery-agent.md                       (the persona)
+//   - knowledge/amadeus-delivery-agent/workflow-planning-guide.md (the guide)
 //
 // FORBIDDEN alternation (verbatim from the .sh, L11), matched
 // case-insensitively, same as the .sh's `grep -Ei`:
@@ -43,7 +43,7 @@
 // .sh rows maps to a named test() and is strengthened to 6 term-checks. A final
 // test re-counts to pin the plan):
 //   .sh L21-29 (delivery-planning.md no human-timeline framing) -> "delivery-planning.md has no human-timeline framing"
-//   .sh L21-29 (aidlc-delivery-agent.md no human-timeline framing) -> "aidlc-delivery-agent.md has no human-timeline framing"
+//   .sh L21-29 (amadeus-delivery-agent.md no human-timeline framing) -> "amadeus-delivery-agent.md has no human-timeline framing"
 //   .sh L21-29 (workflow-planning-guide.md no human-timeline framing) -> "workflow-planning-guide.md has no human-timeline framing"
 //   .sh L19    plan 3                                            -> "covers EXACTLY 3 delivery-surface files (TAP plan parity)"
 
@@ -55,11 +55,11 @@ import { AIDLC_SRC } from "../harness/fixtures.ts";
 // AIDLC_SRC === <repo>/dist/claude/.claude — the same tree the .sh resolved.
 // Each entry: [human-readable basename for the test name, path relative to AIDLC_SRC].
 const FILES: ReadonlyArray<readonly [string, string]> = [
-  ["delivery-planning.md", "aidlc-common/stages/inception/delivery-planning.md"],
-  ["aidlc-delivery-agent.md", "agents/aidlc-delivery-agent.md"],
+  ["delivery-planning.md", "amadeus-common/stages/inception/delivery-planning.md"],
+  ["amadeus-delivery-agent.md", "agents/amadeus-delivery-agent.md"],
   [
     "workflow-planning-guide.md",
-    "knowledge/aidlc-delivery-agent/workflow-planning-guide.md",
+    "knowledge/amadeus-delivery-agent/workflow-planning-guide.md",
   ],
 ] as const;
 

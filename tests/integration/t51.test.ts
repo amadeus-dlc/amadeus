@@ -1,11 +1,11 @@
-// covers: subcommand:aidlc-state:approve
+// covers: subcommand:amadeus-state:approve
 //
 // CLI-contract port of tests/integration/t51-bugfix-event-parity.sh (TAP plan 15),
 // mechanism = cli. End-to-end event-parity walk of the bugfix scope on a
 // greenfield project, driven entirely by SPAWNING the real binaries via
-// node:child_process spawnSync — `aidlc-utility.ts init` to bootstrap, then
-// `aidlc-state.ts gate-start` / `aidlc-state.ts approve` per gated stage. The
-// covers id pins `subcommand:aidlc-state:approve` because `approve` is the
+// node:child_process spawnSync — `amadeus-utility.ts init` to bootstrap, then
+// `amadeus-state.ts gate-start` / `amadeus-state.ts approve` per gated stage. The
+// covers id pins `subcommand:amadeus-state:approve` because `approve` is the
 // load-bearing driver: it owns the end-to-end transition (GATE_APPROVED +
 // STAGE_COMPLETED, then delegates to handleAdvance / handleCompleteWorkflow for
 // the phase-boundary and workflow-completion events). Every count asserted here
@@ -14,7 +14,7 @@
 // MECHANISM: spawn (the .sh shelled out to `bun "$UTIL" init` and `bun "$STATE"
 // gate-start|approve`; we reproduce that exact PROCESS boundary). The contract
 // under test is the audit.md the tools write across the full walk plus the
-// terminal aidlc-state.md, so it stays a spawn — an in-process twin would lose
+// terminal amadeus-state.md, so it stays a spawn — an in-process twin would lose
 // the cross-tool init->gate-start->approve sequencing the audit stream encodes.
 //
 // FIXTURE DISCIPLINE (mirrors the .sh's create_test_project + cleanup_test_project):
@@ -60,12 +60,12 @@ import { cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const TOOLS = join(REPO_ROOT, "dist", "claude", ".claude", "tools");
-const UTIL = join(TOOLS, "aidlc-utility.ts");
-const STATE = join(TOOLS, "aidlc-state.ts");
+const UTIL = join(TOOLS, "amadeus-utility.ts");
+const STATE = join(TOOLS, "amadeus-state.ts");
 
 // P4: init births a per-intent record (aidlc/spaces/<space>/intents/<slug>-<id8>/);
-// state lands at <record>/aidlc-state.md and audit in per-clone shards under
-// <record>/audit/<host>-<pid>.md, NOT the flat aidlc-docs/. The active-intent
+// state lands at <record>/amadeus-state.md and audit in per-clone shards under
+// <record>/audit/<host>-<pid>.md, NOT the flat amadeus-docs/. The active-intent
 // cursor follows the born record, so the whole gate-start/approve walk resolves
 // to it. Fall back to flat for a not-yet-born project. The event stream + final
 // checkbox state are unchanged — only the LOCATION moved.
@@ -78,13 +78,13 @@ function recordDirOf(p: string): string {
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();
-    if (rec && existsSync(join(intentsDir, rec, "aidlc-state.md"))) {
+    if (rec && existsSync(join(intentsDir, rec, "amadeus-state.md"))) {
       return join(intentsDir, rec);
     }
   }
-  return join(p, "aidlc-docs");
+  return join(p, "amadeus-docs");
 }
-const statePath = (p: string): string => join(recordDirOf(p), "aidlc-state.md");
+const statePath = (p: string): string => join(recordDirOf(p), "amadeus-state.md");
 // Audit is sharded under <record>/audit/<host>-<pid>.md; concat every shard for
 // a content read, falling back to the flat audit.md for a not-yet-born project.
 function readAudit(p: string): string {
@@ -95,7 +95,7 @@ function readAudit(p: string): string {
       .map((f) => readFileSync(join(auditDir, f), "utf-8"))
       .join("\n");
   }
-  const flat = join(p, "aidlc-docs", "audit.md");
+  const flat = join(p, "amadeus-docs", "audit.md");
   return existsSync(flat) ? readFileSync(flat, "utf-8") : "";
 }
 

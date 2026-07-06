@@ -5,7 +5,7 @@
 // Test harness / dev-only tooling. Lives in tests/harness/ beside its SDK
 // sibling sdk-drive.ts (logic vs render), assert.ts, and fixtures.ts — NOT in
 // the shipped dist/claude/.claude/tools/ distributable. (Relocated from
-// the repo-root tools/aidlc-tui-drive.ts spike; the aidlc- prefix is dropped to
+// the repo-root tools/amadeus-tui-drive.ts spike; the amadeus- prefix is dropped to
 // match sdk-drive.ts.)
 //
 // This is the deterministic half of the harness ("three concerns, three
@@ -20,7 +20,7 @@
 //                    server, so each subcommand invocation (start/send/capture/
 //                    wait/kill) is a fresh process that re-attaches to the
 //                    server-side session by name. Proven; byte-for-byte the
-//                    behaviour of the original tools/aidlc-tui-drive.ts spike.
+//                    behaviour of the original tools/amadeus-tui-drive.ts spike.
 //
 //   win32          → node-pty backend, spawned UNDER NODE (never bun — node-pty
 //                    input wedges under bun on Windows, microsoft/node-pty #748;
@@ -90,7 +90,7 @@
 //                                          --project-dir; a `*` globs one segment)
 //                                          exists & is non-empty — e.g. a stage's
 //                                          intent-statement or filled questions file.
-//            --until-state-field <n=re>    STOP when aidlc-state.md's `- **<n>**:`
+//            --until-state-field <n=re>    STOP when amadeus-state.md's `- **<n>**:`
 //                                          line value matches /re/ — e.g.
 //                                          `Status=Completed`.
 //            (neither)                     STOP on the practices-affirmation
@@ -355,7 +355,7 @@ interface Backend {
 // AIDLC_TUI_TMUX_SOCKET if a test needs its own server. The socket name is stable
 // across the per-subcommand driver invocations (start/send/capture/kill are
 // separate processes that must reach the SAME server), so it is NOT per-PID.
-const TMUX_SOCKET = process.env.AIDLC_TUI_TMUX_SOCKET || "aidlc-tui";
+const TMUX_SOCKET = process.env.AIDLC_TUI_TMUX_SOCKET || "amadeus-tui";
 
 function tmux(args: string[]): { code: number; stdout: string; stderr: string } {
   // `-L <socket>` MUST precede the tmux command; it selects the private server.
@@ -902,7 +902,7 @@ function cmdKill(backend: Backend, a: Args): void {
 // deadlock. Disk is the terminator; the screen only tells us WHEN to press Enter.
 // ---------------------------------------------------------------------------
 
-// Read the active intent record's aidlc-state.md and report whether practices affirmation has
+// Read the active intent record's amadeus-state.md and report whether practices affirmation has
 // committed. The DIGIT-ANCHORED same-line regex is load-bearing: a greedy
 // `\s*(\S.*)` bleeds past an EMPTY field into the next heading
 // (`## Scope Configuration`), a false-positive that bailed a run at 57s during
@@ -939,7 +939,7 @@ function affirmedOnDisk(projectDir: string): boolean {
 // is given, so existing callers are unchanged):
 //   --until-file <relpath>          terminate when this file exists & is non-empty
 //                                   (a glob segment `*` matches within one dir level)
-//   --until-state-field <name=re>   terminate when aidlc-state.md's
+//   --until-state-field <name=re>   terminate when amadeus-state.md's
 //                                   `- **<name>**:` line matches the regex <re>
 //   (none)                          terminate on the practices-affirmation timestamp
 type Terminator = { describe: string; done: () => boolean };
@@ -1054,7 +1054,7 @@ function makeTerminator(projectDir: string, a: Args): Terminator {
 //
 // We match the caret ONLY when it precedes a numbered option (`❯ 1.` / `> 1.`), which
 // is what AUQ paints on its highlighted row. This is the load-bearing reason a bare
-// `>` is SAFE here: the claude input prompt line is also `>` (`> /aidlc feature`,
+// `>` is SAFE here: the claude input prompt line is also `>` (`> /amadeus feature`,
 // `> `), but it is NEVER followed by `<digit>.`, so it cannot satisfy this pattern.
 // Anchored per-line so the prompt elsewhere on screen can't bleed in.
 const AUQ_CARET_OPTION = /^\s*(?:❯|>)\s+\d+\.\s/m;

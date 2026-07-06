@@ -25,8 +25,8 @@
 // Request changes path, stage-protocol.md:24), so it could never exercise this.
 //
 // THE METAMORPHIC RELATION (asserted as on-disk DATA, never on prose):
-//   CLEAN   = terminal aidlc-state.md after a run that APPROVES every gate.
-//   REVISED = terminal aidlc-state.md after an identical run whose FIRST approval
+//   CLEAN   = terminal amadeus-state.md after a run that APPROVES every gate.
+//   REVISED = terminal amadeus-state.md after an identical run whose FIRST approval
 //             gate is REJECTED once (Down+Enter = "Request changes") then, on the
 //             re-presented gate, approved — every later gate approved too.
 //   INVARIANT: CLEAN and REVISED agree on Scope, Lifecycle Phase, and the set of
@@ -43,13 +43,13 @@
 // SOURCE-PINNED FACTS (verify-never-guess):
 //   - gate options exactly {Approve(1), Request changes(2)} (stage-protocol.md:41-42,
 //     165-167); option 1 is the highlighted Recommended default.
-//   - selecting "Request changes" -> aidlc-state.ts handleReject (:769): emits
+//   - selecting "Request changes" -> amadeus-state.ts handleReject (:769): emits
 //     GATE_REJECTED + STAGE_REVISING, marks [?]->[R], Revision Count++ (:786).
 //     The orchestrator then re-runs the stage and re-presents the SAME gate.
 //   - bugfix scope: Ideation entirely SKIP; first post-init EXECUTE gate is
 //     requirements-analysis on a brownfield workspace (reverse-engineering runs
-//     first; scope-mapping.json "bugfix" + aidlc-utility.ts greenfield downgrade).
-//   - Completed counter == `- [x]` grid count (aidlc-state.ts:256-258 sync); the
+//     first; scope-mapping.json "bugfix" + amadeus-utility.ts greenfield downgrade).
+//   - Completed counter == `- [x]` grid count (amadeus-state.ts:256-258 sync); the
 //     terminator + the cross-run comparison both read this field.
 //   - the AUQ gate footer + caret signal is gridHasMenu (tui-drive.ts; `❯` on
 //     tmux, `>` on Windows ConPTY — platform-invariant).
@@ -185,7 +185,7 @@ interface Terminal {
   rawState: string;
 }
 
-/** Read the comparable terminal fields off the post-run aidlc-state.md. */
+/** Read the comparable terminal fields off the post-run amadeus-state.md. */
 function readTerminal(sandbox: string): Terminal {
   const md = readFileSync(stateFilePathFor(sandbox), "utf8");
   const scope = /\*\*Scope\*\*:[ \t]*(\S+)/.exec(md)?.[1];
@@ -251,7 +251,7 @@ function launchBugfix(session: string, sandbox: string): void {
     "--session",
     session,
     "--keys",
-    "/aidlc --scope bugfix the todo checkbox state is not persisted after page reload",
+    "/amadeus --scope bugfix the todo checkbox state is not persisted after page reload",
     "--literal",
     "--no-enter",
   ]);
@@ -307,7 +307,7 @@ describe("t-tui-t139 revision-loop idempotency (reject->approve == clean approve
           // finding 2026-06-07), then approves the re-presented gate and every
           // later gate to the SAME Completed milestone. The reject fires
           // handleReject (GATE_REJECTED + STAGE_REVISING + Revision Count++,
-          // aidlc-state.ts:769,786). Tail the grid for the render proof while it
+          // amadeus-state.ts:769,786). Tail the grid for the render proof while it
           // runs (mirrors t50's pollTimer). The answer-gate's own backstops are
           // HANG-only; pass is the on-disk Completed>=5 terminator, never the clock.
           pollTimer = setInterval(() => {
@@ -329,7 +329,7 @@ describe("t-tui-t139 revision-loop idempotency (reject->approve == clean approve
           // Without this, a run that silently approved everything would make the
           // comparison a tautology (two clean runs trivially match). Revision Count
           // > 0 is the on-disk proof the reject->revise cycle fired (handleReject
-          // increments it, aidlc-state.ts:786). The audit pair is asserted via the
+          // increments it, amadeus-state.ts:786). The audit pair is asserted via the
           // state too: a nonzero Revision Count is set ONLY by handleReject.
           expect(revised.revisionCount).toBeGreaterThan(0);
 

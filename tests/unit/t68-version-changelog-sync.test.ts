@@ -1,4 +1,4 @@
-// covers: subcommand:aidlc-utility:version
+// covers: subcommand:amadeus-utility:version
 //
 // Port of tests/unit/t68-version-changelog-sync.sh (TAP plan 6).
 // Mechanism = mixed: five of the six checks are deterministic text/filesystem
@@ -9,22 +9,22 @@
 // the derived mechanism is mixed.
 //
 // COVERS HEADER: the .sh carried NO `# covers:` header. Of its six checks,
-// five guard repo metadata consistency (CHANGELOG.md ⇄ aidlc-version.ts ⇄
+// five guard repo metadata consistency (CHANGELOG.md ⇄ amadeus-version.ts ⇄
 // README.md) and join to no enumerated unit class. The sixth (test 5) is the
 // only one that exercises a shipped unit: it invokes the wired `version`
-// subcommand of aidlc-utility.ts and asserts its exact stdout. That subcommand
-// (`aidlc-utility version`, registry minMechanism=cli) was UNCOVERED in the
-// registry; this twin claims it via `subcommand:aidlc-utility:version` (the
+// subcommand of amadeus-utility.ts and asserts its exact stdout. That subcommand
+// (`amadeus-utility version`, registry minMechanism=cli) was UNCOVERED in the
+// registry; this twin claims it via `subcommand:amadeus-utility:version` (the
 // colon form gen-coverage-registry.ts:952 accepts, joining to unitId
-// "aidlc-utility version"). The five metadata-guard checks contribute no
+// "amadeus-utility version"). The five metadata-guard checks contribute no
 // enumerated-unit claim, exactly as the .sh contributed none.
 //
 // SUBJECT / SOURCE UNDER TEST:
-//   - dist/claude/.claude/tools/aidlc-version.ts:4
+//   - dist/claude/.claude/tools/amadeus-version.ts:4
 //       export const AIDLC_VERSION = "<N.N.N>";  (single source of truth)
 //   - CHANGELOG.md (repo root): reverse-chronological `## [N.N.N] - DATE`
 //       headings + matching `[N.N.N]:` link references at the bottom.
-//   - dist/claude/.claude/tools/aidlc-utility.ts:
+//   - dist/claude/.claude/tools/amadeus-utility.ts:
 //       :54 imports AIDLC_VERSION; :173 handleVersion() writes
 //       `aidlc ${AIDLC_VERSION}\n` to stdout; :2823 the `version` subcommand
 //       dispatches to it. A renamed constant, broken import, or switch-case
@@ -37,7 +37,7 @@
 // `grep -cE` counts the .sh ran. None needs a spawned tool; we read the same
 // bytes and compute the same invariants in-process. Test 5 is the one
 // process-boundary contract: it asserts the CLI's stdout, so it spawns the
-// real aidlc-utility.ts via the bun runtime (the same env seam the .sh's
+// real amadeus-utility.ts via the bun runtime (the same env seam the .sh's
 // `bun "$UTILITY_TS" version` used), preserving that guarantee unweakened.
 //
 // Old TAP -> new test parity (1:1, every .sh assertion -> a named test()):
@@ -49,10 +49,10 @@
 //        -> "the latest version appears as a CHANGELOG heading"
 //   .sh test 4 (heading-count == link-ref-count, both > 0)  [REPURPOSED]
 //        -> "## [N.N.N] headings are unique (no duplicate / post-rebase dupe)"
-//   .sh test 5 (bun aidlc-utility.ts version prints 'aidlc <CL_VERSION>')
+//   .sh test 5 (bun amadeus-utility.ts version prints 'aidlc <CL_VERSION>')
 //        -> "wired CLI `version` subcommand prints 'aidlc <CHANGELOG version>'"
 //   .sh test 6 (README badge matches version.ts)
-//        -> "README.md version badge matches aidlc-version.ts"
+//        -> "README.md version badge matches amadeus-version.ts"
 //
 // CHANGELOG LINK-REF POLICY CHANGE (v0.6.9): the bottom-of-file `[N.N.N]:`
 // link references were REMOVED. They shipped as broken `OWNER/REPO` scaffold
@@ -79,8 +79,8 @@ import { join } from "node:path";
 import { AIDLC_SRC, REPO_ROOT } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const VERSION_TS = join(AIDLC_SRC, "tools", "aidlc-version.ts");
-const UTILITY_TS = join(AIDLC_SRC, "tools", "aidlc-utility.ts");
+const VERSION_TS = join(AIDLC_SRC, "tools", "amadeus-version.ts");
+const UTILITY_TS = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
 const CHANGELOG = join(REPO_ROOT, "CHANGELOG.md");
 const README = join(REPO_ROOT, "README.md");
 
@@ -149,7 +149,7 @@ describe("t68 version/CHANGELOG/README sync (migrated from t68-version-changelog
     expect(dupes).toEqual([]);
   });
 
-  // .sh test 5: CLI wiring — `bun aidlc-utility.ts version` prints
+  // .sh test 5: CLI wiring — `bun amadeus-utility.ts version` prints
   // `aidlc <CL_VERSION>`. This is the ONE process-boundary (cli) assertion:
   // catches a renamed constant, broken import, switch-case typo, or missing
   // version.ts. Spawn the real tool through the bun runtime (env seam).
@@ -165,7 +165,7 @@ describe("t68 version/CHANGELOG/README sync (migrated from t68-version-changelog
   // .sh test 6: README shields.io badge matches version.ts. A release that
   // bumps version.ts but forgets the badge ships a wrong public number
   // (the v0.5.0 release missed exactly this).
-  test("README.md version badge matches aidlc-version.ts [.sh test 6]", () => {
+  test("README.md version badge matches amadeus-version.ts [.sh test 6]", () => {
     const tsVersion = versionAssignments()[0];
     const src = readFileSync(README, "utf-8");
     // Same extraction the .sh ran: between `badge/version-` and `-blue`.

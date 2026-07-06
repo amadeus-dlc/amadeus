@@ -1,24 +1,24 @@
-// covers: hook:aidlc-stop
+// covers: hook:amadeus-stop
 //
-// Behavioural contract for the Stop hook `aidlc-stop.ts` — the framework's
+// Behavioural contract for the Stop hook `amadeus-stop.ts` — the framework's
 // FIRST flow-altering hook. Migrated from tests/integration/t121-stop-hook-enforce.sh
 // (originally TAP plan 13; now 16 named tests — the original 13 .sh assertions
 // plus the three (e) human-wait carve-out cases added with that feature).
 // Mechanism: cli. The hook's entire contract lives on the
 // PROCESS boundary — it reads Claude Code JSON off stdin, resolves the project
-// via CLAUDE_PROJECT_DIR, spawns a sub-engine (`aidlc-orchestrate.ts next`)
+// via CLAUDE_PROJECT_DIR, spawns a sub-engine (`amadeus-orchestrate.ts next`)
 // via Bun.spawnSync, and answers by writing {"decision":"block",...} to stdout
 // (or nothing) and exiting 0. There is no exported function to call in-process;
 // the seam is the spawn, stdin, env, stdout, exit code, and the on-disk guard
 // file. So like the .sh we spawn the REAL hook with a MOCK engine placed at
-// <proj>/.claude/tools/aidlc-orchestrate.ts whose emitted directive `kind` is
+// <proj>/.claude/tools/amadeus-orchestrate.ts whose emitted directive `kind` is
 // driven by MOCK_KIND. This isolates the hook's block/done/guard logic from
 // engine correctness (the engine has its own corpus in t114/t118).
 //
-// Source under test (dist/claude/.claude/hooks/aidlc-stop.ts):
+// Source under test (dist/claude/.claude/hooks/amadeus-stop.ts):
 //   :97  allowStop()       — emit nothing, exit 0 (the precedent non-blocking pattern)
 //   :104 blockStop(reason) — console.log({decision:"block",reason}); exit 0
-//   :129 guardFilePath()   — aidlc-docs/.aidlc-stop-hook/block-count.json
+//   :129 guardFilePath()   — amadeus-docs/.amadeus-stop-hook/block-count.json
 //   :137 progressSignature(state) — `${Current-Stage}::${audit-line-count}`
 //   :204 decideBlock(state, stopHookActive) — the no-progress counter + cap logic:
 //          - sameSignature  → nextCount = prior.count + 1
@@ -29,7 +29,7 @@
 //          unparseable) fails OPEN (allow)
 //   :298 continuationReason(kind, stage) — names "pending step", the kind, the
 //          forwarding-loop steps; phrased as continuation, never override-shaped
-//   :314 isTTY → allowStop; :321 no aidlc-state.md → allowStop; :356 done →
+//   :314 isTTY → allowStop; :321 no amadeus-state.md → allowStop; :356 done →
 //          resetGuard + allowStop; :336 garbage stdin → stopHookActive=false (no crash)
 //   blockCap() :122 (CLAUDE_CODE_STOP_HOOK_BLOCK_CAP overrides); the default is
 //          now RUN-MODE aware (defaultBlockCap :131): 8 for autonomous
@@ -52,12 +52,12 @@
 //   .sh (c1) cap8 + stop_hook_active releases -> "(c1) counter at default cap (8) + stop_hook_active releases (no block)"
 //   .sh (c2) block,block,RELEASE,RELEASE       -> "(c2) no-progress streak (cap 3) flips at the cap and stays released"
 //   .sh (c3) progress resets streak to 1      -> "(c3) progress (stage pivot) resets the no-progress streak to 1"
-//   .sh (d) RC=0 with no state file           -> "(d) no aidlc-state.md exits 0"
+//   .sh (d) RC=0 with no state file           -> "(d) no amadeus-state.md exits 0"
 //   .sh (d) no-op outside AIDLC => empty       -> "(d) no active workflow emits nothing (non-AIDLC session never blocked)"
 //   .sh robustness (3 fail-open sub-cases)    -> "garbage stdin + unparseable engine output fail OPEN"
 //
 // NEW (no .sh predecessor) — the tier-1 human-wait carve-out. The hook reads
-// the current stage's checkbox state (exported parseCheckboxes, aidlc-lib.ts
+// the current stage's checkbox state (exported parseCheckboxes, amadeus-lib.ts
 // :587) and ALLOWS the stop when it is positively [?]/[R], so an interactive
 // gate / Request-Changes pause no longer spams the forwarding-loop nudge:
 //   (e) [?] awaiting-approval -> ALLOW (run-stage pending, but human-wait)
@@ -69,9 +69,9 @@
 // (Claude / Codex) and ALLOWS when the human's last prompt was answered with NO
 // workflow-engine call; the default block cap is 2 interactive / 8 autonomous:
 //   (f) Claude chat transcript (TEXT-only answer)        -> ALLOW (conversational)
-//   (f) Claude transcript + aidlc-orchestrate Bash call  -> BLOCK (engine engaged)
+//   (f) Claude transcript + amadeus-orchestrate Bash call  -> BLOCK (engine engaged)
 //   (f) Codex rollout chat transcript                    -> ALLOW (codex reader)
-//   (f) Codex rollout + function_call aidlc-orchestrate  -> BLOCK
+//   (f) Codex rollout + function_call amadeus-orchestrate  -> BLOCK
 //   (f) chat transcript under autonomous Construction    -> BLOCK (carve-out off)
 //   (f) autonomous cap is 8 (count 2 + stop_hook_active) -> BLOCK (not interactive 2)
 //   (f) transcript_path -> nonexistent file              -> BLOCK (fail-closed, count 1)
@@ -113,12 +113,12 @@ const HOOK_TS = join(
   "claude",
   ".claude",
   "hooks",
-  "aidlc-stop.ts",
+  "amadeus-stop.ts",
 );
 
 // P9 per-intent layout: the stop hook reads state (stateFilePath), the audit
 // (auditFilePath — its own resolved shard, for the progress-signature length),
-// the guard counter (stopHookDir → <record>/.aidlc-stop-hook/block-count.json),
+// the guard counter (stopHookDir → <record>/.amadeus-stop-hook/block-count.json),
 // and the current stage's memory/questions dir (<record>/<phase>/<slug>/). All
 // re-root under the active intent's record. We PIN the clone-id so the hook
 // (subprocess) and progressSig (in-process) resolve the SAME audit shard.
@@ -152,12 +152,12 @@ function seedShell(proj: string): void {
     )}\n`,
     "utf-8",
   );
-  writeFileSync(join(proj, "aidlc", ".aidlc-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(proj, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
 }
 
 // The stop-hook guard counter, re-rooted under the record (stopHookDir).
 function guardFilePath(proj: string): string {
-  return join(seededRecordDir(proj), ".aidlc-stop-hook", "block-count.json");
+  return join(seededRecordDir(proj), ".amadeus-stop-hook", "block-count.json");
 }
 
 const tempDirs: string[] = [];
@@ -169,7 +169,7 @@ afterAll(() => {
 // The MOCK engine, byte-for-byte the .sh's heredoc: emit one directive of
 // kind=$MOCK_KIND. `done` carries the terminal shape; `__nonzero__` simulates
 // an engine that fails to answer (non-zero exit, no directive). The hook
-// spawns this via join(projectDir, ".claude/tools/aidlc-orchestrate.ts").
+// spawns this via join(projectDir, ".claude/tools/amadeus-orchestrate.ts").
 const MOCK_ENGINE = `// t121 mock engine: emit one directive of kind=$MOCK_KIND.
 const kind = process.env.MOCK_KIND ?? "run-stage";
 if (kind === "done") {
@@ -189,11 +189,11 @@ process.exit(0);
  *  stop hook's state/audit/guard/memory paths resolve under the record). Mirrors
  *  make_project (.sh). */
 function makeProject(): string {
-  const proj = mkdtempSync(join(tmpdir(), "aidlc-t121-"));
+  const proj = mkdtempSync(join(tmpdir(), "amadeus-t121-"));
   tempDirs.push(proj);
   mkdirSync(join(proj, ".claude", "tools"), { recursive: true });
   writeFileSync(
-    join(proj, ".claude", "tools", "aidlc-orchestrate.ts"),
+    join(proj, ".claude", "tools", "amadeus-orchestrate.ts"),
     MOCK_ENGINE,
     "utf-8",
   );
@@ -223,7 +223,7 @@ function seedActive(proj: string, slug = "requirements-analysis"): void {
  * given state — the shape the tier-1 human-wait carve-out reads. `marker` is the
  * raw checkbox glyph ("?" awaiting-approval, "R" revising, "-" in-progress); the
  * row matches parseCheckboxes' `^- \[([ xSR?-])\] (\S+)\s*—\s*(.*)$` grammar
- * (aidlc-lib.ts:589 — note the em-dash). seedActive's stateless shape (no rows)
+ * (amadeus-lib.ts:589 — note the em-dash). seedActive's stateless shape (no rows)
  * remains the default the 13 legacy assertions use, which is exactly why they
  * stay green: parseCheckboxes returns [] and the carve-out cannot trigger.
  */
@@ -244,8 +244,8 @@ function seedActiveWithCheckbox(
 /**
  * Seed an active workflow at [-] in-progress for the tier-2 pending-question
  * carve-out. Writes Lifecycle Phase (so the hook can derive the stage dir
- * `aidlc-docs/<phase-lowercase>/<slug>/`, mirroring memoryPathFor in
- * aidlc-orchestrate.ts:353) and a `[-]` checkbox row. Options:
+ * `amadeus-docs/<phase-lowercase>/<slug>/`, mirroring memoryPathFor in
+ * amadeus-orchestrate.ts:353) and a `[-]` checkbox row. Options:
  *   - `questions`: if given, writes `<slug>-questions.md` in the stage dir with
  *     this body (a blank `[Answer]:` tag = a pending question; an answered one
  *     = resolved). Omit to seed NO questions file.
@@ -282,22 +282,22 @@ function seedInProgressWithQuestions(
  * Write a harness transcript file under the project for the tier-3
  * conversational carve-out, and return its absolute path. The hook reads it off
  * the Stop payload's `transcript_path` and classifies the ending turn
- * (transcriptIsConversational, aidlc-stop.ts:490). Two formats:
+ * (transcriptIsConversational, amadeus-stop.ts:490). Two formats:
  *   - "claude": message-shaped JSONL. A genuine human prompt is
  *     `{type:"user",message:{role:"user",content:"..."}}` (string or a [{type:"text"}]
  *     array; a [{type:"tool_result"}] array is NOT a human prompt). An assistant
  *     turn is `{type:"assistant",message:{role:"assistant",content:[...]}}`; an
- *     engine call is a `tool_use` Bash running aidlc-orchestrate/aidlc-state.
+ *     engine call is a `tool_use` Bash running amadeus-orchestrate/amadeus-state.
  *   - "codex": rollout JSONL, `{type:"response_item",payload:{...}}`. A human
  *     prompt is `payload:{type:"message",role:"user",content:[{type:"input_text"}]}`;
  *     an engine call is `payload:{type:"function_call",name:"Bash",arguments:"<json>"}`.
  * The file basename matters for codex: the hook picks the codex reader ONLY when
- * the path ends in `rollout-*.jsonl` (aidlc-stop.ts:721), so the codex variant is
+ * the path ends in `rollout-*.jsonl` (amadeus-stop.ts:721), so the codex variant is
  * written as `rollout-<stamp>.jsonl` and the claude variant as `transcript.jsonl`.
  *
  * `engineCall`: when false the assistant answers the human with TEXT only (a
  * conversational turn -> ALLOW); when true the assistant runs an
- * aidlc-orchestrate Bash call after the human prompt (engine engaged -> BLOCK).
+ * amadeus-orchestrate Bash call after the human prompt (engine engaged -> BLOCK).
  */
 function seedTranscript(
   proj: string,
@@ -320,7 +320,7 @@ function seedTranscript(
               {
                 type: "tool_use",
                 name: "Bash",
-                input: { command: "bun .claude/tools/aidlc-orchestrate.ts next" },
+                input: { command: "bun .claude/tools/amadeus-orchestrate.ts next" },
               },
             ],
           },
@@ -352,7 +352,7 @@ function seedTranscript(
             type: "function_call",
             name: "Bash",
             arguments: JSON.stringify({
-              command: "bun .codex/tools/aidlc-orchestrate.ts next",
+              command: "bun .codex/tools/amadeus-orchestrate.ts next",
             }),
           },
         })
@@ -379,15 +379,15 @@ function seedTranscript(
  * isMeta re-prompt, an engine call with a specific command, plain text, ...).
  *
  * Entry kinds (the hook's transcriptIsConversational classifies them via
- * isEngineToolCall, aidlc-stop.ts:474/508):
+ * isEngineToolCall, amadeus-stop.ts:474/508):
  *   - {kind:"human", text}        a genuine human prompt (the anchor the hook
  *                                 answers; string content).
  *   - {kind:"text"}               an assistant TEXT-only turn (no engine call).
  *   - {kind:"bash", command}      an assistant turn that runs a Bash tool with
  *                                 `command`; the hook routes the command string
  *                                 through isEngineToolCall (read-only `--status`
- *                                 / `aidlc-utility` are NOT engagement; a bare
- *                                 `next` / `report` / `aidlc-state approve` ARE).
+ *                                 / `amadeus-utility` are NOT engagement; a bare
+ *                                 `next` / `report` / `amadeus-state approve` ARE).
  *   - {kind:"meta", text}         a `type:"user"` entry with `isMeta:true`
  *                                 (Claude only): the Stop hook's own injected
  *                                 continuation, which the classifier must SKIP
@@ -398,7 +398,7 @@ function seedTranscript(
  *                                 "Stop hook feedback:" content prefix.
  *
  * Mirrors seedTranscript's file-naming contract: the codex variant is written as
- * `rollout-*.jsonl` (so the hook picks the codex reader, aidlc-stop.ts:792); the
+ * `rollout-*.jsonl` (so the hook picks the codex reader, amadeus-stop.ts:792); the
  * claude variant as `transcript.jsonl`.
  */
 type TranscriptEntry =
@@ -564,7 +564,7 @@ function runHook(
 /**
  * The hook's progress signature for a project — Current Stage + audit line
  * count — so a test can seed the counter at the matching key. Mirrors the
- * .sh's progress_sig (and aidlc-stop.ts:137 progressSignature).
+ * .sh's progress_sig (and amadeus-stop.ts:137 progressSignature).
  */
 function progressSig(proj: string): string {
   const s = readFileSync(seededStateFile(proj), "utf-8");
@@ -590,7 +590,7 @@ function guardCount(proj: string): number | null {
   }
 }
 
-describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t121-stop-hook-enforce.sh, plan 13 + 3 human-wait carve-out cases)", () => {
+describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from t121-stop-hook-enforce.sh, plan 13 + 3 human-wait carve-out cases)", () => {
   // =========================================================================
   // (a) Pending directive -> BLOCK + re-fed via reason. The block event MUST
   //     actually fire (§6-E non-golden).
@@ -607,7 +607,7 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
     seedActive(proj, "requirements-analysis");
     const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     // STRONGER than the .sh's substring grep: parse the JSON and assert the
-    // exact decision field shape blockStop() writes (aidlc-stop.ts:105).
+    // exact decision field shape blockStop() writes (amadeus-stop.ts:105).
     const parsed = JSON.parse(r.out) as { decision?: string; reason?: string };
     expect(parsed.decision).toBe("block");
     expect(typeof parsed.reason).toBe("string");
@@ -631,9 +631,9 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
     seedActive(proj, "requirements-analysis");
     const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     const reason = (JSON.parse(r.out) as { reason: string }).reason;
-    // Security property (aidlc-stop.ts:22-27): re-feeds the loop (names the
+    // Security property (amadeus-stop.ts:22-27): re-feeds the loop (names the
     // engine), NEVER an override-shaped instruction.
-    expect(reason).toContain("aidlc-orchestrate");
+    expect(reason).toContain("amadeus-orchestrate");
     expect(/ignore|override|disregard|bypass/i.test(reason)).toBe(false);
   }, 30000);
 
@@ -671,7 +671,7 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
     const proj = makeProject();
     seedActive(proj, "requirements-analysis");
     // Pre-seed a no-progress streak; a parked allow must clear it.
-    mkdirSync(join(seededRecordDir(proj), ".aidlc-stop-hook"), { recursive: true });
+    mkdirSync(join(seededRecordDir(proj), ".amadeus-stop-hook"), { recursive: true });
     writeFileSync(
       guardFilePath(proj),
       JSON.stringify({ signature: "requirements-analysis::1", count: 5 }),
@@ -705,7 +705,7 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
   test("(c1) recursion guard at ceiling exits 0", () => {
     const proj = makeProject();
     seedActive(proj, "requirements-analysis");
-    mkdirSync(join(seededRecordDir(proj), ".aidlc-stop-hook"), {
+    mkdirSync(join(seededRecordDir(proj), ".amadeus-stop-hook"), {
       recursive: true,
     });
     const sig = progressSig(proj);
@@ -721,7 +721,7 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
   test("(c1) counter at default cap (8) + stop_hook_active:true releases (no block) — session NOT trapped", () => {
     const proj = makeProject();
     seedActive(proj, "requirements-analysis");
-    mkdirSync(join(seededRecordDir(proj), ".aidlc-stop-hook"), {
+    mkdirSync(join(seededRecordDir(proj), ".amadeus-stop-hook"), {
       recursive: true,
     });
     const sig = progressSig(proj);
@@ -784,8 +784,8 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
   // =========================================================================
   // (d) No-op outside AIDLC — no state file -> exit 0, no block.
   // =========================================================================
-  test("(d) no aidlc-state.md exits 0", () => {
-    const proj = makeProject(); // NO seedActive => no aidlc-state.md
+  test("(d) no amadeus-state.md exits 0", () => {
+    const proj = makeProject(); // NO seedActive => no amadeus-state.md
     const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     expect(r.rc).toBe(0);
   }, 30000);
@@ -916,12 +916,12 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
   // =========================================================================
   // (f) TIER-3 CONVERSATIONAL CARVE-OUT (issue #365 broader reading): when the
   // ending turn answered the human's most recent prompt with NO workflow-engine
-  // engagement (no aidlc-orchestrate / aidlc-state call since that prompt) the
+  // engagement (no amadeus-orchestrate / amadeus-state call since that prompt) the
   // human was just chatting mid-workflow, so the hook ALLOWS the stop even
   // though the engine still returns a pending run-stage. The signal is the
   // harness transcript (Claude / Codex deliver `transcript_path` on the Stop
   // payload). Strictly gated and fail-CLOSED (isConversationalStop,
-  // aidlc-stop.ts:599): an engine call in the responding turn, autonomous
+  // amadeus-stop.ts:599): an engine call in the responding turn, autonomous
   // Construction, an unreadable / missing transcript, or no human prompt found
   // all fall through to the cap-bounded block. It only ever ALLOWS.
   // =========================================================================
@@ -940,7 +940,7 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
     expect(r.out).toBe(""); // allowed (the turn was conversational)
   }, 30000);
 
-  test("(f) Claude transcript with an aidlc-orchestrate Bash call after the prompt still BLOCKS (engine was engaged)", () => {
+  test("(f) Claude transcript with an amadeus-orchestrate Bash call after the prompt still BLOCKS (engine was engaged)", () => {
     const proj = makeProject();
     seedActive(proj, "requirements-analysis");
     // Same human prompt, but the responding turn ran the engine -> a mid-loop
@@ -959,7 +959,7 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
     const proj = makeProject();
     seedActive(proj, "requirements-analysis");
     // The codex reader is selected only when the path ends in rollout-*.jsonl
-    // (aidlc-stop.ts:721); seedTranscript names the codex variant accordingly.
+    // (amadeus-stop.ts:721); seedTranscript names the codex variant accordingly.
     const tp = seedTranscript(proj, { format: "codex", engineCall: false });
     const r = runHook(
       proj,
@@ -970,7 +970,7 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
     expect(r.out).toBe("");
   }, 30000);
 
-  test("(f) Codex rollout with a function_call aidlc-orchestrate after the prompt still BLOCKS", () => {
+  test("(f) Codex rollout with a function_call amadeus-orchestrate after the prompt still BLOCKS", () => {
     const proj = makeProject();
     seedActive(proj, "requirements-analysis");
     const tp = seedTranscript(proj, { format: "codex", engineCall: true });
@@ -1006,7 +1006,7 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
     // an interactive run would have RELEASED at 2. This pins the run-mode-aware
     // default: the autonomous cap is genuinely 8, not 2.
     seedInProgressWithQuestions(proj, { autonomy: "autonomous" });
-    mkdirSync(join(seededRecordDir(proj), ".aidlc-stop-hook"), {
+    mkdirSync(join(seededRecordDir(proj), ".amadeus-stop-hook"), {
       recursive: true,
     });
     const sig = progressSig(proj);
@@ -1045,7 +1045,7 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
   // (g) RUN-MODE-AWARE DEFAULT BLOCK CAP: with no CLAUDE_CODE_STOP_HOOK_BLOCK_CAP
   // override the default cap is now run-mode aware: 2 for an INTERACTIVE run,
   // 8 for `Construction Autonomy Mode: autonomous` (AUTONOMOUS_BLOCK_CAP=8,
-  // INTERACTIVE_BLOCK_CAP=2, aidlc-stop.ts:136-137). A human who pauses or chats
+  // INTERACTIVE_BLOCK_CAP=2, amadeus-stop.ts:136-137). A human who pauses or chats
   // is released after a single nudge; an unattended autonomous run keeps the
   // long ceiling. No env var, no transcript, purely the no-progress streak.
   // =========================================================================
@@ -1110,21 +1110,21 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
   // conversational carve-out, pinned deterministically against the real hook:
   //
   //   1. READ-ONLY ENGINE QUERIES are NOT workflow engagement. isEngineToolCall
-  //      (aidlc-stop.ts:474) returns FALSE for `--status` / `--doctor` / `--help`
-  //      / `--version` / `aidlc-orchestrate next --status` and ANY aidlc-utility
-  //      call, even though they name aidlc-orchestrate/aidlc-state. It returns
+  //      (amadeus-stop.ts:474) returns FALSE for `--status` / `--doctor` / `--help`
+  //      / `--version` / `amadeus-orchestrate next --status` and ANY amadeus-utility
+  //      call, even though they name amadeus-orchestrate/amadeus-state. It returns
   //      TRUE only for loop-advancing / state-mutating calls: bare
-  //      `aidlc-orchestrate next`, `aidlc-orchestrate report`, and `aidlc-state`
+  //      `amadeus-orchestrate next`, `amadeus-orchestrate report`, and `amadeus-state`
   //      with approve/advance/finalize/complete-workflow/gate-start/checkbox/
   //      park/unpark/set. So a chat turn whose conductor ANSWERED with a
   //      read-only query stays conversational (ALLOW); a turn that ran a
   //      loop-advancing / mutating call then bailed BLOCKS.
   //   2. The hook's OWN injected continuation is NOT a human prompt. Claude
   //      records it as a `type:"user"` entry with `isMeta:true` whose content
-  //      starts "Stop hook feedback:" (aidlc-stop.ts:546,564). The classifier
+  //      starts "Stop hook feedback:" (amadeus-stop.ts:546,564). The classifier
   //      SKIPS it (by isMeta AND by the content prefix) so the human-prompt
   //      anchor stays the human's, not the hook's. Codex has no isMeta, so the
-  //      content guard alone excludes it there (aidlc-stop.ts:605).
+  //      content guard alone excludes it there (amadeus-stop.ts:605).
   //
   // Each case uses a FRESH makeProject() (so the per-project no-progress counter
   // starts at 0 and a BLOCK is a real first block at the interactive cap of 2,
@@ -1132,7 +1132,7 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
   // =========================================================================
 
   // --- (h.1) read-only engine queries are conversational (ALLOW) ---
-  test("(h) chat + read-only `aidlc-orchestrate next --status` after the human prompt allows the stop", () => {
+  test("(h) chat + read-only `amadeus-orchestrate next --status` after the human prompt allows the stop", () => {
     const proj = makeProject();
     seedActive(proj, "requirements-analysis");
     // A chatting human asks "what stage am I on?"; the conductor answers with a
@@ -1140,7 +1140,7 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
     // the turn is still conversational.
     const tp = seedTranscriptEntries(proj, "claude", [
       { kind: "human", text: "what stage am I on?" },
-      { kind: "bash", command: "bun .claude/tools/aidlc-orchestrate.ts next --status" },
+      { kind: "bash", command: "bun .claude/tools/amadeus-orchestrate.ts next --status" },
       { kind: "text" },
     ]);
     const r = runHook(
@@ -1152,14 +1152,14 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
     expect(r.out).toBe(""); // allowed: read-only query is not engagement
   }, 30000);
 
-  test("(h) chat + `aidlc-utility status` after the human prompt allows the stop", () => {
+  test("(h) chat + `amadeus-utility status` after the human prompt allows the stop", () => {
     const proj = makeProject();
     seedActive(proj, "requirements-analysis");
-    // aidlc-utility names neither aidlc-orchestrate nor aidlc-state, so
+    // amadeus-utility names neither amadeus-orchestrate nor amadeus-state, so
     // isEngineToolCall returns false at its first gate (:483): not engagement.
     const tp = seedTranscriptEntries(proj, "claude", [
       { kind: "human", text: "show me the workflow status" },
-      { kind: "bash", command: "bun .claude/tools/aidlc-utility.ts status" },
+      { kind: "bash", command: "bun .claude/tools/amadeus-utility.ts status" },
     ]);
     const r = runHook(
       proj,
@@ -1170,13 +1170,13 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
     expect(r.out).toBe("");
   }, 30000);
 
-  test("(h) chat + `aidlc-orchestrate --doctor` / `--help` / `--version` each allow the stop", () => {
+  test("(h) chat + `amadeus-orchestrate --doctor` / `--help` / `--version` each allow the stop", () => {
     for (const flag of ["--doctor", "--help", "--version"]) {
       const proj = makeProject(); // fresh per flag: counter starts at 0
       seedActive(proj, "requirements-analysis");
       const tp = seedTranscriptEntries(proj, "claude", [
         { kind: "human", text: "is the workflow healthy?" },
-        { kind: "bash", command: `bun .claude/tools/aidlc-orchestrate.ts ${flag}` },
+        { kind: "bash", command: `bun .claude/tools/amadeus-orchestrate.ts ${flag}` },
       ]);
       const r = runHook(
         proj,
@@ -1189,14 +1189,14 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
   }, 30000);
 
   // --- (h.1) loop-advancing / mutating calls are engagement (BLOCK) ---
-  test("(h) engaged: bare `aidlc-orchestrate next` after the human prompt BLOCKS", () => {
+  test("(h) engaged: bare `amadeus-orchestrate next` after the human prompt BLOCKS", () => {
     const proj = makeProject();
     seedActive(proj, "requirements-analysis");
     // A bare `next` (no read-only flag) fetches the next directive to act on;
     // that IS engagement, so a conductor that ran it then bailed must be nudged.
     const tp = seedTranscriptEntries(proj, "claude", [
       { kind: "human", text: "continue" },
-      { kind: "bash", command: "bun .claude/tools/aidlc-orchestrate.ts next" },
+      { kind: "bash", command: "bun .claude/tools/amadeus-orchestrate.ts next" },
     ]);
     const r = runHook(
       proj,
@@ -1207,7 +1207,7 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
   }, 30000);
 
-  test("(h) engaged: `aidlc-orchestrate report --stage x --result approved` BLOCKS", () => {
+  test("(h) engaged: `amadeus-orchestrate report --stage x --result approved` BLOCKS", () => {
     const proj = makeProject();
     seedActive(proj, "requirements-analysis");
     const tp = seedTranscriptEntries(proj, "claude", [
@@ -1215,7 +1215,7 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
       {
         kind: "bash",
         command:
-          "bun .claude/tools/aidlc-orchestrate.ts report --stage requirements-analysis --result approved",
+          "bun .claude/tools/amadeus-orchestrate.ts report --stage requirements-analysis --result approved",
       },
     ]);
     const r = runHook(
@@ -1227,12 +1227,12 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
   }, 30000);
 
-  test("(h) engaged: `aidlc-state approve foo` BLOCKS", () => {
+  test("(h) engaged: `amadeus-state approve foo` BLOCKS", () => {
     const proj = makeProject();
     seedActive(proj, "requirements-analysis");
     const tp = seedTranscriptEntries(proj, "claude", [
       { kind: "human", text: "approve it" },
-      { kind: "bash", command: "bun .claude/tools/aidlc-state.ts approve foo" },
+      { kind: "bash", command: "bun .claude/tools/amadeus-state.ts approve foo" },
     ]);
     const r = runHook(
       proj,
@@ -1257,10 +1257,10 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
     // past the first next and the engaged run could be misread as chat.
     const tp = seedTranscriptEntries(proj, "claude", [
       { kind: "human", text: "continue" },
-      { kind: "bash", command: "bun .claude/tools/aidlc-orchestrate.ts next" },
+      { kind: "bash", command: "bun .claude/tools/amadeus-orchestrate.ts next" },
       { kind: "text" },
       { kind: "meta", text: "Stop hook feedback: The AIDLC workflow has a pending step." },
-      { kind: "bash", command: "bun .claude/tools/aidlc-orchestrate.ts next" },
+      { kind: "bash", command: "bun .claude/tools/amadeus-orchestrate.ts next" },
     ]);
     const r = runHook(
       proj,
@@ -1294,14 +1294,14 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
   }, 30000);
 
   // --- (h) Codex-format equivalents (read-only ALLOW + bare-next BLOCK) ---
-  test("(h) Codex: chat + read-only `aidlc-orchestrate next --status` allows the stop", () => {
+  test("(h) Codex: chat + read-only `amadeus-orchestrate next --status` allows the stop", () => {
     const proj = makeProject();
     seedActive(proj, "requirements-analysis");
     // The codex reader routes the function_call arguments through isEngineToolCall
-    // too (aidlc-stop.ts:639), so the read-only exemption holds across formats.
+    // too (amadeus-stop.ts:639), so the read-only exemption holds across formats.
     const tp = seedTranscriptEntries(proj, "codex", [
       { kind: "human", text: "what stage am I on?" },
-      { kind: "bash", command: "bun .codex/tools/aidlc-orchestrate.ts next --status" },
+      { kind: "bash", command: "bun .codex/tools/amadeus-orchestrate.ts next --status" },
     ]);
     const r = runHook(
       proj,
@@ -1312,12 +1312,12 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
     expect(r.out).toBe("");
   }, 30000);
 
-  test("(h) Codex: engaged bare `aidlc-orchestrate next` BLOCKS", () => {
+  test("(h) Codex: engaged bare `amadeus-orchestrate next` BLOCKS", () => {
     const proj = makeProject();
     seedActive(proj, "requirements-analysis");
     const tp = seedTranscriptEntries(proj, "codex", [
       { kind: "human", text: "continue" },
-      { kind: "bash", command: "bun .codex/tools/aidlc-orchestrate.ts next" },
+      { kind: "bash", command: "bun .codex/tools/amadeus-orchestrate.ts next" },
     ]);
     const r = runHook(
       proj,
@@ -1330,25 +1330,25 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
 
   // =========================================================================
   // (i) CLASSIFIER-LEAK REGRESSIONS (commit e9b6e48). Three precision fixes to
-  // isEngineToolCall (aidlc-stop.ts:474) / isEngineEngagementSegment (:507) /
+  // isEngineToolCall (amadeus-stop.ts:474) / isEngineEngagementSegment (:507) /
   // isInjectedHookFeedback (:542), all closing 'wrong-allow' leaks an adversarial
   // review of the tier-3 conversational carve-out found. They could let an
   // engine-engaged turn be misread as chat (ALLOW) when it should BLOCK:
   //
   //   1. PRECEDENCE - a command is split on shell separators (&& || ; | newline)
-  //      and each segment judged on its own (aidlc-stop.ts:489). A read-only flag
+  //      and each segment judged on its own (amadeus-stop.ts:489). A read-only flag
   //      (--status/--doctor/--help/--version) now exempts ONLY the segment it
-  //      appears in, so a chained `... --status && aidlc-orchestrate report ...`,
+  //      appears in, so a chained `... --status && amadeus-orchestrate report ...`,
   //      or a `report --reason '...--status...'` whose --status is inside an
   //      argument, is ENGAGEMENT (BLOCK), not exempt.
-  //   2. MISSED COMMANDS - aidlc-jump / aidlc-bolt / aidlc-swarm (conductor-run,
-  //      state-mutating) and aidlc-state skip/reject/revise/resume now count as
-  //      engagement (:525,:531); an unrecognised aidlc-* verb fails TOWARD
-  //      engagement (BLOCK). A read-only `aidlc-bolt --help` stays chat (ALLOW).
+  //   2. MISSED COMMANDS - amadeus-jump / amadeus-bolt / amadeus-swarm (conductor-run,
+  //      state-mutating) and amadeus-state skip/reject/revise/resume now count as
+  //      engagement (:525,:531); an unrecognised amadeus-* verb fails TOWARD
+  //      engagement (BLOCK). A read-only `amadeus-bolt --help` stays chat (ALLOW).
   //   3. CODEX RAW CONTINUATION - the hook's own injected nudge is excluded from
   //      human-prompt detection not just by the Claude "Stop hook feedback:"
   //      wrapper but also by the RAW continuationReason body ("The AIDLC workflow
-  //      has a pending step" + "forwarding loop"; aidlc-stop.ts:546-548), in BOTH
+  //      has a pending step" + "forwarding loop"; amadeus-stop.ts:546-548), in BOTH
   //      readers. So an engine-engaged turn whose last user entry is that raw
   //      nudge (no wrapper) still BLOCKS - the nudge must not reset the human
   //      anchor.
@@ -1359,10 +1359,10 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
   // =========================================================================
 
   // --- (i.1) PRECEDENCE: per-segment judgement of chained / argument-embedded flags ---
-  test("(i) chained `aidlc-utility --status && aidlc-orchestrate report` after the human prompt BLOCKS (per-segment precedence)", () => {
+  test("(i) chained `amadeus-utility --status && amadeus-orchestrate report` after the human prompt BLOCKS (per-segment precedence)", () => {
     const proj = makeProject();
     seedActive(proj, "requirements-analysis");
-    // The read-only --status is in the FIRST segment (aidlc-utility, not even an
+    // The read-only --status is in the FIRST segment (amadeus-utility, not even an
     // engine verb); the SECOND segment runs a mutating `report`. Pre-fix the
     // line-level --status wrongly exempted the whole chain; now each segment is
     // judged on its own, so the report segment is engagement -> BLOCK.
@@ -1371,7 +1371,7 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
       {
         kind: "bash",
         command:
-          "bun .claude/tools/aidlc-utility.ts --status && bun .claude/tools/aidlc-orchestrate.ts report --stage requirements-analysis --result approved",
+          "bun .claude/tools/amadeus-utility.ts --status && bun .claude/tools/amadeus-orchestrate.ts report --stage requirements-analysis --result approved",
       },
     ]);
     const r = runHook(
@@ -1383,7 +1383,7 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
   }, 30000);
 
-  test("(i) `aidlc-orchestrate report --reason \"checked --status earlier\"` BLOCKS (flag inside an argument is not an exemption)", () => {
+  test("(i) `amadeus-orchestrate report --reason \"checked --status earlier\"` BLOCKS (flag inside an argument is not an exemption)", () => {
     const proj = makeProject();
     seedActive(proj, "requirements-analysis");
     // The --status token only appears INSIDE the --reason argument of a single
@@ -1394,7 +1394,7 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
       {
         kind: "bash",
         command:
-          'bun .claude/tools/aidlc-orchestrate.ts report --stage requirements-analysis --result approved --reason "checked --status earlier"',
+          'bun .claude/tools/amadeus-orchestrate.ts report --stage requirements-analysis --result approved --reason "checked --status earlier"',
       },
     ]);
     const r = runHook(
@@ -1407,14 +1407,14 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
   }, 30000);
 
   // --- (i.2) MISSED COMMANDS: jump / state-skip count as engagement; bolt --help does not ---
-  test("(i) engaged: `aidlc-jump.ts execute application-design` after the human prompt BLOCKS", () => {
+  test("(i) engaged: `amadeus-jump.ts execute application-design` after the human prompt BLOCKS", () => {
     const proj = makeProject();
     seedActive(proj, "requirements-analysis");
-    // aidlc-jump moves the pointer (state-mutating); pre-fix it was not in the
+    // amadeus-jump moves the pointer (state-mutating); pre-fix it was not in the
     // engagement set, so a jump-then-bail was misread as chat. Now it BLOCKS.
     const tp = seedTranscriptEntries(proj, "claude", [
       { kind: "human", text: "jump ahead" },
-      { kind: "bash", command: "bun .claude/tools/aidlc-jump.ts execute application-design" },
+      { kind: "bash", command: "bun .claude/tools/amadeus-jump.ts execute application-design" },
     ]);
     const r = runHook(
       proj,
@@ -1425,14 +1425,14 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
   }, 30000);
 
-  test("(i) engaged: `aidlc-state.ts skip foo` after the human prompt BLOCKS", () => {
+  test("(i) engaged: `amadeus-state.ts skip foo` after the human prompt BLOCKS", () => {
     const proj = makeProject();
     seedActive(proj, "requirements-analysis");
-    // skip is a state-mutating aidlc-state verb newly recognised as engagement
-    // (aidlc-stop.ts:525); a skip-then-bail must be nudged.
+    // skip is a state-mutating amadeus-state verb newly recognised as engagement
+    // (amadeus-stop.ts:525); a skip-then-bail must be nudged.
     const tp = seedTranscriptEntries(proj, "claude", [
       { kind: "human", text: "skip this one" },
-      { kind: "bash", command: "bun .claude/tools/aidlc-state.ts skip foo" },
+      { kind: "bash", command: "bun .claude/tools/amadeus-state.ts skip foo" },
     ]);
     const r = runHook(
       proj,
@@ -1443,15 +1443,15 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
   }, 30000);
 
-  test("(i) read-only `aidlc-bolt.ts --help` after a chat prompt allows the stop (read-only verb is not engagement)", () => {
+  test("(i) read-only `amadeus-bolt.ts --help` after a chat prompt allows the stop (read-only verb is not engagement)", () => {
     const proj = makeProject();
     seedActive(proj, "requirements-analysis");
-    // The complement to the engagement cases: aidlc-bolt is in the engagement
-    // set, but a read-only --help on it is NOT engagement (aidlc-stop.ts:530), so
+    // The complement to the engagement cases: amadeus-bolt is in the engagement
+    // set, but a read-only --help on it is NOT engagement (amadeus-stop.ts:530), so
     // a chatting human who asked about bolt and got --help stays conversational.
     const tp = seedTranscriptEntries(proj, "claude", [
       { kind: "human", text: "how does bolt work?" },
-      { kind: "bash", command: "bun .claude/tools/aidlc-bolt.ts --help" },
+      { kind: "bash", command: "bun .claude/tools/amadeus-bolt.ts --help" },
     ]);
     const r = runHook(
       proj,
@@ -1463,7 +1463,7 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
   }, 30000);
 
   // --- (i.3) CODEX RAW CONTINUATION: the raw nudge body must not reset the human anchor ---
-  // The hook's continuationReason body (aidlc-stop.ts:781-792) is excluded from
+  // The hook's continuationReason body (amadeus-stop.ts:781-792) is excluded from
   // human-prompt detection by isInjectedHookFeedback's RAW-body branch
   // (:546-548): starts "The AIDLC workflow has a pending step" AND contains
   // "forwarding loop". So a turn that engaged the engine (bare `next` after the
@@ -1473,7 +1473,7 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
   // engaged run would be misread as chat (wrong ALLOW).
   const RAW_NUDGE =
     "The AIDLC workflow has a pending step (a run-stage directive). " +
-    "You haven't finished the forwarding loop yet. Run `bun .claude/tools/aidlc-orchestrate.ts next`, " +
+    "You haven't finished the forwarding loop yet. Run `bun .claude/tools/amadeus-orchestrate.ts next`, " +
     "act on the directive it emits, then report.";
 
   test("(i) Claude: a RAW continuation body (no 'Stop hook feedback:' wrapper) does NOT reset the human anchor; the engaged turn still BLOCKS", () => {
@@ -1485,7 +1485,7 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
     // "continue" with the engine call after it -> NOT conversational -> BLOCK.
     const tp = seedTranscriptEntries(proj, "claude", [
       { kind: "human", text: "continue" },
-      { kind: "bash", command: "bun .claude/tools/aidlc-orchestrate.ts next" },
+      { kind: "bash", command: "bun .claude/tools/amadeus-orchestrate.ts next" },
       { kind: "userText", text: RAW_NUDGE },
     ]);
     const r = runHook(
@@ -1501,10 +1501,10 @@ describe("t121 aidlc-stop hook — forwarding-loop enforcement (migrated from t1
     const proj = makeProject();
     seedActive(proj, "requirements-analysis");
     // The codex reader applies the same isInjectedHookFeedback raw-body guard
-    // (aidlc-stop.ts:652), so the raw nudge is excluded there too.
+    // (amadeus-stop.ts:652), so the raw nudge is excluded there too.
     const tp = seedTranscriptEntries(proj, "codex", [
       { kind: "human", text: "continue" },
-      { kind: "bash", command: "bun .codex/tools/aidlc-orchestrate.ts next" },
+      { kind: "bash", command: "bun .codex/tools/amadeus-orchestrate.ts next" },
       { kind: "userText", text: RAW_NUDGE },
     ]);
     const r = runHook(

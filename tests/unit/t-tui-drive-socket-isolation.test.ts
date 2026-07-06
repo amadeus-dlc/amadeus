@@ -10,7 +10,7 @@
 // live session is attached to. Server-level resource pressure from the live tui
 // tier (or a kill targeting a stale name) could then take down the session the
 // developer was working in (observed: crashes that needed a restart). The fix
-// routes every tmux call through a private `-L aidlc-tui` socket. This test pins
+// routes every tmux call through a private `-L amadeus-tui` socket. This test pins
 // that: a regression that drops the `-L` flag re-exposes the developer's session,
 // so it must fail loudly and deterministically — no claude, no tmux, no tokens.
 //

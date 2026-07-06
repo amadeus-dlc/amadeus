@@ -1,4 +1,4 @@
-// covers: subcommand:aidlc-runtime:fragment-fork, subcommand:aidlc-runtime:fragment-merge
+// covers: subcommand:amadeus-runtime:fragment-fork, subcommand:amadeus-runtime:fragment-merge
 //
 // bun:test port of tests/unit/t96-runtime-fragment-primitives.sh (TAP plan 14),
 // mechanism = cli. Faithful migration, not a rewrite: every .sh assertion is a
@@ -7,12 +7,12 @@
 //
 // SPAWN vs IN-PROCESS split: ALL 14 .sh assertions cross the process boundary —
 // the .sh asserts on $? (exit code), captured stdout, and captured stderr of
-// `bun aidlc-runtime.ts [--project-dir <pd>] <subcommand> ...`. There are NO
+// `bun amadeus-runtime.ts [--project-dir <pd>] <subcommand> ...`. There are NO
 // pure-function assertions in the source (the byte-equal-copy and hash checks
 // are done by reading files / shasum AFTER the spawn, observing the tool's
 // side-effects, not by calling a function in-process). So this is a pure .cli
 // file with zero in-process function units. As a .cli-mechanism file it
-// legitimately credits the `aidlc-runtime fragment-fork` + `aidlc-runtime
+// legitimately credits the `amadeus-runtime fragment-fork` + `amadeus-runtime
 // fragment-merge` subcommand units (minMechanism: cli) that a .none twin could
 // not.
 //
@@ -34,7 +34,7 @@
 //
 // FIXTURE DISCIPLINE: each case builds a self-contained temp project via
 // createTestProject() + seedStateFile() (the .ts analogues of the .sh's
-// make_project, which cp'd state-construction.md into aidlc-docs/) and removes
+// make_project, which cp'd state-construction.md into amadeus-docs/) and removes
 // it after. The runtime-graph.json + .aidlc/worktrees/bolt-<slug>/ layout is
 // test-specific so it is written inline (the .sh wrote it inline too). NOTHING
 // is written under tests/fixtures/**.
@@ -53,7 +53,7 @@ import {
   seededRecordDir,
 } from "../harness/fixtures.ts";
 
-// Main runtime-graph path under the seeded per-intent record (was flat aidlc-docs/).
+// Main runtime-graph path under the seeded per-intent record (was flat amadeus-docs/).
 function mainGraphPath(proj: string): string {
   return join(seededRecordDir(proj), "runtime-graph.json");
 }
@@ -66,7 +66,7 @@ const TOOL = join(
   "dist", "claude",
   ".claude",
   "tools",
-  "aidlc-runtime.ts",
+  "amadeus-runtime.ts",
 );
 
 // Mirrors the .sh's GRAPH literal — the exact bytes written to main
@@ -79,10 +79,10 @@ const GRAPH =
 let projDir = "";
 
 // make_project analogue (t96-runtime-fragment-primitives.sh:68-86):
-//   - fresh temp project with aidlc-docs/aidlc-state.md seeded from
+//   - fresh temp project with amadeus-docs/amadeus-state.md seeded from
 //     state-construction.md (createTestProject + seedStateFile).
-//   - mainGraph !== null  -> write main aidlc-docs/runtime-graph.json bytes.
-//   - slug !== null       -> pre-create .aidlc/worktrees/bolt-<slug>/aidlc-docs/
+//   - mainGraph !== null  -> write main amadeus-docs/runtime-graph.json bytes.
+//   - slug !== null       -> pre-create .aidlc/worktrees/bolt-<slug>/amadeus-docs/
 //     and byte-copy main state into it (simulating what state-fork populates).
 function makeProject(slug: string | null, mainGraph: string | null): string {
   const proj = createTestProject();
@@ -92,13 +92,13 @@ function makeProject(slug: string | null, mainGraph: string | null): string {
   }
   if (slug !== null) {
     // The worktree mirror carries the SAME relative record dir as the main
-    // checkout (aidlc/spaces/default/intents/<record>/), not a flat aidlc-docs/.
+    // checkout (aidlc/spaces/default/intents/<record>/), not a flat amadeus-docs/.
     const wtDocs = wtRecordDir(proj, slug);
     mkdirSync(wtDocs, { recursive: true });
     // state-fork byte-copies main state to worktree — simulate that.
     writeFileSync(
-      join(wtDocs, "aidlc-state.md"),
-      readFileSync(join(seededRecordDir(proj), "aidlc-state.md")),
+      join(wtDocs, "amadeus-state.md"),
+      readFileSync(join(seededRecordDir(proj), "amadeus-state.md")),
     );
   }
   return proj;
@@ -211,7 +211,7 @@ describe("t96 fragment-fork worktree-missing guard", () => {
 
     expect(r.rc).not.toBe(0);
     expect(r.err).toContain("worktree directory not found");
-    expect(r.err).toContain("run aidlc-worktree create first");
+    expect(r.err).toContain("run amadeus-worktree create first");
   });
 });
 
@@ -311,7 +311,7 @@ describe("t96 --help listing", () => {
 
     expect(helpOut).toContain("fragment-fork --slug");
     expect(helpOut).toContain("fragment-merge --slug");
-    expect(helpOut).toContain("Called by aidlc-bolt");
+    expect(helpOut).toContain("Called by amadeus-bolt");
   });
 });
 
@@ -329,9 +329,9 @@ describe("t96 unknown subcommand", () => {
 describe("t96 --project-dir plumbing (B1)", () => {
   test("pre-strip works in spawnSibling-style invocation order", () => {
     // Verify the spawnSibling-style invocation order works:
-    //   bun aidlc-runtime.ts --project-dir <pd> fragment-fork --slug <slug>
+    //   bun amadeus-runtime.ts --project-dir <pd> fragment-fork --slug <slug>
     // (--project-dir BEFORE the subcommand, mirroring spawnSibling at
-    // aidlc-bolt.ts:79-103). runRuntime already injects --project-dir first.
+    // amadeus-bolt.ts:79-103). runRuntime already injects --project-dir first.
     projDir = makeProject("auth", GRAPH);
     const wtFrag = wtFragmentPath(projDir, "auth");
     const r = runRuntime(projDir, "fragment-fork", "--slug", "auth");

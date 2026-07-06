@@ -17,14 +17,14 @@ This chapter covers common issues and their solutions, organized by symptom.
 | Symptom | Quick Fix |
 |---------|-----------|
 | No audit entries appearing | Verify `bun` is installed and on PATH |
-| State file corrupted | Run `/aidlc --doctor`, compare against state template |
-| Stuck at approval gate | Type your response; use `/aidlc --stage <target>` to jump past it |
-| Context compacted mid-session | Run `/aidlc` to resume from checkpoint |
+| State file corrupted | Run `/amadeus --doctor`, compare against state template |
+| Stuck at approval gate | Type your response; use `/amadeus --stage <target>` to jump past it |
+| Context compacted mid-session | Run `/amadeus` to resume from checkpoint |
 | Audit log too large | Rename to `audit-YYYY-MM.md`; a fresh one is created automatically |
 | Hooks appear to hang | Remove stale lock dirs from system temp directory (see below) |
-| Statusline shows "ready" | Check `aidlc-state.md` has a `**Lifecycle Phase**` field |
-| Statusline not appearing | Verify `bun` is on PATH and `settings.json` `statusLine.command` references `aidlc-statusline.ts` |
-| Subagent timed out | Run `/aidlc` to retry or run the stage inline |
+| Statusline shows "ready" | Check `amadeus-state.md` has a `**Lifecycle Phase**` field |
+| Statusline not appearing | Verify `bun` is on PATH and `settings.json` `statusLine.command` references `amadeus-statusline.ts` |
+| Subagent timed out | Run `/amadeus` to retry or run the stage inline |
 
 ---
 
@@ -34,7 +34,7 @@ This chapter covers common issues and their solutions, organized by symptom.
 
 ### `bun` not installed or not on PATH
 
-All 11 TypeScript hooks (`aidlc-mint-presence.ts`, `aidlc-audit-logger.ts`, `aidlc-sensor-fire.ts`, `aidlc-runtime-compile.ts`, `aidlc-log-subagent.ts`, `aidlc-stop.ts`, `aidlc-validate-state.ts`, `aidlc-sync-statusline.ts`, `aidlc-session-start.ts`, `aidlc-session-end.ts`, `aidlc-statusline.ts`) require `bun`. If `bun` is missing or not on PATH for non-interactive shells, these hooks will not fire.
+All 11 TypeScript hooks (`amadeus-mint-presence.ts`, `amadeus-audit-logger.ts`, `amadeus-sensor-fire.ts`, `amadeus-runtime-compile.ts`, `amadeus-log-subagent.ts`, `amadeus-stop.ts`, `amadeus-validate-state.ts`, `amadeus-sync-statusline.ts`, `amadeus-session-start.ts`, `amadeus-session-end.ts`, `amadeus-statusline.ts`) require `bun`. If `bun` is missing or not on PATH for non-interactive shells, these hooks will not fire.
 
 ```bash
 # macOS / Linux
@@ -62,18 +62,18 @@ Hooks are registered project-wide in `.claude/settings.json` (as of v0.6.0; earl
 
 ### State file missing
 
-The state file is created during Initialization or when a scope is provided to `/aidlc`.
+The state file is created during Initialization or when a scope is provided to `/amadeus`.
 
-- Run `/aidlc --status` to confirm no workflow is active
-- Run `/aidlc` or `/aidlc <scope>` to start a fresh workflow
+- Run `/amadeus --status` to confirm no workflow is active
+- Run `/amadeus` or `/amadeus <scope>` to start a fresh workflow
 
 ### State file corrupted
 
 The `validate-state.ts` hook checks for two required sections on every compaction: `## Stage Progress` and `## Current Status`. To manually repair:
 
-1. Open the active intent's `aidlc-state.md` (under `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`)
+1. Open the active intent's `amadeus-state.md` (under `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`)
 2. Verify these sections exist: Project Information, Scope Configuration, Workspace State, Stage Progress, Current Status, Session Resume Point
-3. Compare against the template at `.claude/knowledge/aidlc-shared/state-template.md`
+3. Compare against the template at `.claude/knowledge/amadeus-shared/state-template.md`
 4. Restore missing sections from the template, filling in values from the `audit/` shard history
 
 ---
@@ -93,7 +93,7 @@ The framework follows a built-in retry protocol:
 
 ### Manual recovery
 
-Re-run `/aidlc` — it detects the `[-]` (in-progress) state and offers to resume or redo the stage. Check the `audit/` shards for the error entry to understand what failed.
+Re-run `/amadeus` — it detects the `[-]` (in-progress) state and offers to resume or redo the stage. Check the `audit/` shards for the error entry to understand what failed.
 
 ---
 
@@ -114,7 +114,7 @@ After 3 revision cycles on the same stage, a third option appears: **Accept as-i
 
 ### Skipping a stage
 
-Use `/aidlc --stage <target>` to jump to a different stage. Intervening stages will be marked `[S]` (skipped) in the state file.
+Use `/amadeus --stage <target>` to jump to a different stage. Intervening stages will be marked `[S]` (skipped) in the state file.
 
 ---
 
@@ -124,14 +124,14 @@ Use `/aidlc --stage <target>` to jump to a different stage. Intervening stages w
 
 ### What is preserved
 
-All record-dir artifacts, `aidlc-state.md`, the `audit/` shards, and `.aidlc-recovery.md` persist on disk. Only in-memory conversation context and partial in-progress work not yet written to files is lost.
+All record-dir artifacts, `amadeus-state.md`, the `audit/` shards, and `.amadeus-recovery.md` persist on disk. Only in-memory conversation context and partial in-progress work not yet written to files is lost.
 
 ### How to recover
 
-Run `/aidlc` after compaction. The framework:
+Run `/amadeus` after compaction. The framework:
 
-1. Reads `aidlc-state.md` to load workflow position
-2. Compares `.aidlc-recovery.md` against the state file — warns if they differ
+1. Reads `amadeus-state.md` to load workflow position
+2. Compares `.amadeus-recovery.md` against the state file — warns if they differ
 3. Offers four resume options
 
 If the recovery breadcrumb warns about a mismatch, choose **Redo current stage** to safely re-execute the stage that was in progress during compaction.
@@ -149,7 +149,7 @@ If the recovery breadcrumb warns about a mismatch, choose **Redo current stage**
 mv audit/<host>-<clone>.md audit-archive/<host>-<clone>-2026-02.md
 ```
 
-The next `/aidlc` invocation (or any hook-triggered write) creates a fresh shard. All audit content is safe to archive — the engine does not read the `audit/` shards for routing decisions.
+The next `/amadeus` invocation (or any hook-triggered write) creates a fresh shard. All audit content is safe to archive — the engine does not read the `audit/` shards for routing decisions.
 
 ### Git considerations
 
@@ -167,22 +167,22 @@ The audit hooks use `mkdir`-based locking (via `lib.ts`) to prevent concurrent w
 
 ```bash
 # macOS / Linux
-ls -la /tmp/.aidlc-*
+ls -la /tmp/.amadeus-*
 
 # Windows (PowerShell)
-Get-ChildItem $env:TEMP -Filter ".aidlc-*"
+Get-ChildItem $env:TEMP -Filter ".amadeus-*"
 ```
 
-Lock directories are named `.aidlc-audit-<hash>.lock` and `.aidlc-subagent-<hash>.lock` inside the system temp directory.
+Lock directories are named `.amadeus-audit-<hash>.lock` and `.amadeus-subagent-<hash>.lock` inside the system temp directory.
 
 ### Clearing stale locks
 
 ```bash
 # macOS / Linux
-rm -rf /tmp/.aidlc-audit-*.lock /tmp/.aidlc-subagent-*.lock
+rm -rf /tmp/.amadeus-audit-*.lock /tmp/.amadeus-subagent-*.lock
 
 # Windows (PowerShell)
-Remove-Item "$env:TEMP\.aidlc-audit-*.lock", "$env:TEMP\.aidlc-subagent-*.lock" -Recurse -Force
+Remove-Item "$env:TEMP\.amadeus-audit-*.lock", "$env:TEMP\.amadeus-subagent-*.lock" -Recurse -Force
 ```
 
 Safe to run at any time when no AI-DLC workflow is actively executing. Locks are transient and recreated on each hook invocation.
@@ -193,9 +193,9 @@ Safe to run at any time when no AI-DLC workflow is actively executing. Locks are
 
 ### Shows "ready" when workflow is active
 
-The statusline reads the `**Lifecycle Phase**` field from `aidlc-state.md`. If that field is missing or empty, it falls back to `[AIDLC] ready`.
+The statusline reads the `**Lifecycle Phase**` field from `amadeus-state.md`. If that field is missing or empty, it falls back to `[AIDLC] ready`.
 
-**Fix:** Run `/aidlc --doctor` to check state file integrity. Verify the `## Current Status` section contains a `**Lifecycle Phase**` entry.
+**Fix:** Run `/amadeus --doctor` to check state file integrity. Verify the `## Current Status` section contains a `**Lifecycle Phase**` entry.
 
 ### Shows stale data
 
@@ -203,7 +203,7 @@ Expected behavior — the statusline updates when the state file is next written
 
 ### Not appearing at all
 
-1. `bun` not on PATH -- the statusline is invoked as `bun .claude/hooks/aidlc-statusline.ts`
+1. `bun` not on PATH -- the statusline is invoked as `bun .claude/hooks/amadeus-statusline.ts`
 2. Missing `settings.json` block -- verify the `statusLine` configuration exists
 3. No state file -- the statusline correctly shows `[AIDLC] ready` when no workflow is active
 
@@ -214,12 +214,12 @@ Expected behavior — the statusline updates when the state file is next written
 The `--doctor` utility command validates your setup. Run it whenever something seems wrong:
 
 ```
-/aidlc --doctor
+/amadeus --doctor
 ```
 
 It checks: prerequisite (`bun`), hook availability (every hook `settings.json` wires — all 11 framework hooks — must exist in `.claude/hooks/`, and a wired-but-missing hook fails loudly), project structure (`settings.json`), workspace shell readiness (`.claude/` + `aidlc/spaces/default/memory/`), state/audit consistency, hook heartbeats, graph integrity (no cycles, every graph entry has a file), scope validation across all 9 scopes, stage schema + graph references, and keyword overlap across scopes. It also surfaces two advisory rows that always pass (they never change the exit code): **Rule drift** (team/project rules that overlap a populated org-policy heading, flagged for contradiction review) and **Paired sensor coverage** (rules carrying a `pairing:` whose named Sensor resolves to a stage). Exits 0 on full pass, 1 on any failure; the report writes to stdout either way. `--doctor` is **read-only**: on a fresh shell with no intent yet it creates nothing — safe to run before the first intent is born, as the first thing you try when something seems off. Once an intent exists it records a `HEALTH_CHECKED` (and `GUARDRAIL_LOADED`) audit row.
 
-See [CLI Commands](12-cli-commands.md#aidlc---doctor--health-check) for full details on what each check validates and how to fix failures.
+See [CLI Commands](12-cli-commands.md#amadeus---doctor--health-check) for full details on what each check validates and how to fix failures.
 
 ---
 

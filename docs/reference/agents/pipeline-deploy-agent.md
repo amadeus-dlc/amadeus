@@ -1,10 +1,10 @@
-# aidlc-pipeline-deploy-agent -- Technical Reference
+# amadeus-pipeline-deploy-agent -- Technical Reference
 
 ## Identity
 
 | Field | Value |
 |-------|-------|
-| Name | aidlc-pipeline-deploy-agent |
+| Name | amadeus-pipeline-deploy-agent |
 | Model Override | sonnet |
 | Allowed Claude Code Tools | Read, Edit, Write, Glob, Grep, Bash, AskUserQuestion |
 | Disallowed Claude Code Tools | Task |
@@ -35,16 +35,16 @@ stages.
 
 | Source | Artifacts |
 |--------|-----------|
-| aidlc-developer-agent | Buildable source code, test suites, build scripts |
-| aidlc-quality-agent | Test requirements, quality gate definitions |
-| aidlc-aws-platform-agent | Environment endpoints, infrastructure outputs, secrets |
+| amadeus-developer-agent | Buildable source code, test suites, build scripts |
+| amadeus-quality-agent | Test requirements, quality gate definitions |
+| amadeus-aws-platform-agent | Environment endpoints, infrastructure outputs, secrets |
 
 ### Hands Off To
 
 | Target | Artifacts |
 |--------|-----------|
-| aidlc-operations-agent | Deployed services for observability setup and monitoring |
-| aidlc-quality-agent | Deployment artifacts for performance validation |
+| amadeus-operations-agent | Deployed services for observability setup and monitoring |
+| amadeus-quality-agent | Deployment artifacts for performance validation |
 
 ---
 
@@ -52,7 +52,7 @@ stages.
 
 ### Methodology (Tier 1)
 
-Path: `.claude/knowledge/aidlc-pipeline-deploy-agent/`
+Path: `.claude/knowledge/amadeus-pipeline-deploy-agent/`
 
 | File | Content |
 |------|---------|
@@ -62,7 +62,7 @@ Path: `.claude/knowledge/aidlc-pipeline-deploy-agent/`
 
 ### Team (Tier 2)
 
-Path: `aidlc/knowledge/aidlc-pipeline-deploy-agent/` (the space-level knowledge dir; user-managed)
+Path: `aidlc/knowledge/amadeus-pipeline-deploy-agent/` (the space-level knowledge dir; user-managed)
 
 A space-level directory the team creates when it has content (the engine ships `aidlc/knowledge/` empty). Populated by the team with project-specific
 deployment context such as existing pipeline configurations, deployment
@@ -73,6 +73,6 @@ runbooks, or release approval workflows.
 ## Cross-References
 
 - [Agent Reference Overview](README.md)
-- [Agent Guide: aidlc-pipeline-deploy-agent](../../guide/agents/pipeline-deploy-agent.md)
+- [Agent Guide: amadeus-pipeline-deploy-agent](../../guide/agents/pipeline-deploy-agent.md)
 - [Stage Documentation](../04-stages/)
-- Source: [`dist/claude/.claude/agents/aidlc-pipeline-deploy-agent.md`](../../../dist/claude/.claude/agents/aidlc-pipeline-deploy-agent.md)
+- Source: [`dist/claude/.claude/agents/amadeus-pipeline-deploy-agent.md`](../../../dist/claude/.claude/agents/amadeus-pipeline-deploy-agent.md)

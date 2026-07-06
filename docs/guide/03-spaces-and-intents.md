@@ -34,7 +34,7 @@ my-project/
 │
 ├── .claude/                      THE ENGINE — tools, hooks, skills, agents.
 │                                 (or .kiro/ / .codex/ — the one harness-specific dir)
-│                                 You never browse this; it just runs /aidlc.
+│                                 You never browse this; it just runs /amadeus.
 │
 ├── aidlc/                        EVERYTHING AI-DLC — neutral, browsable, committed to git
 │   ├── active-space              ← cursor: which space you're in (gitignored, per-user)
@@ -57,7 +57,7 @@ my-project/
 │       │       ├── intents.json    the registry: every intent + its scope/repos/status
 │       │       ├── 260620-inventory-api/        ✓ a completed intent
 │       │       └── 260624-export-bug/           ◷ an in-flight intent
-│       │           ├── aidlc-state.md             where this intent is in the lifecycle
+│       │           ├── amadeus-state.md             where this intent is in the lifecycle
 │       │           ├── audit/                     the decision trail
 │       │           └── inception/requirements-analysis/requirements.md   …artifacts
 │       │
@@ -102,7 +102,7 @@ You never create an intent with a special command. The first time you describe
 work, the engine **auto-births** an intent for you:
 
 ```
-/aidlc Build a REST API for inventory management
+/amadeus Build a REST API for inventory management
 ```
 
 On a fresh workspace this mints the intent, creates its record dir at
@@ -116,7 +116,7 @@ unrelated bug needs attention. You don't archive anything or run an init command
 you just describe the new work:
 
 ```
-/aidlc Fix the timeout on the export endpoint
+/amadeus Fix the timeout on the export endpoint
 ```
 
 When an intent is already active, AI-DLC recognizes that this is *new, unrelated*
@@ -144,16 +144,16 @@ distinct.
 List the intents in your space, then switch to one by name (its slug):
 
 ```
-/aidlc intent                     List all intents in the active space
-/aidlc intent export-bug          Switch the active intent to "export-bug"
+/amadeus intent                     List all intents in the active space
+/amadeus intent export-bug          Switch the active intent to "export-bug"
 ```
 
-Switching moves the `active-intent` cursor. The next `/aidlc` resumes that intent
+Switching moves the `active-intent` cursor. The next `/amadeus` resumes that intent
 right where it stopped — same stage, same state, same audit trail. You can carry
 any number of intents at once and move between them freely; each is an independent
 run.
 
-> Bare `/aidlc intent` is read-only — it just lists. Add `--json` for
+> Bare `/amadeus intent` is read-only — it just lists. Add `--json` for
 > machine-readable output. See [CLI Commands](12-cli-commands.md) for the full
 > flag reference.
 
@@ -175,9 +175,9 @@ purely additive: a new `spaces/<name>/` of the identical shape appears beside
 Create, list, and switch spaces with verbs that mirror the intent verbs exactly:
 
 ```
-/aidlc space                      List all spaces
-/aidlc space-create payments-team Create a new space, seeded from the framework baseline
-/aidlc space payments-team        Switch the active space to "payments-team"
+/amadeus space                      List all spaces
+/amadeus space-create payments-team Create a new space, seeded from the framework baseline
+/amadeus space payments-team        Switch the active space to "payments-team"
 ```
 
 A newly created space starts with the framework's default method (`org.md`) and
@@ -239,11 +239,11 @@ repo. Two kinds of file are deliberately **gitignored** instead:
 
 | Gitignored (per-user, machine-local) | Why |
 |---|---|
-| `aidlc/active-space`, `…/intents/active-intent` | Cursors — "where am I right now." Committing them would dirty the tree on every `/aidlc` and have teammates fight over the cursor on each switch. |
-| `…/intents/<id>/runtime-graph.json`, `.aidlc-*`, `aidlc/.aidlc-sessions/` | Derived, machine-local runtime state. |
+| `aidlc/active-space`, `…/intents/active-intent` | Cursors — "where am I right now." Committing them would dirty the tree on every `/amadeus` and have teammates fight over the cursor on each switch. |
+| `…/intents/<id>/runtime-graph.json`, `.amadeus-*`, `aidlc/.amadeus-sessions/` | Derived, machine-local runtime state. |
 
 Everything else under a space — `memory/**`, `knowledge/**`, `codekb/**`,
-`intents.json`, each record's `aidlc-state.md`, `audit/` shards, and artifacts — is
+`intents.json`, each record's `amadeus-state.md`, `audit/` shards, and artifacts — is
 committed. The rule of thumb: **cursors and runtime scratch are local; the shared
 work is committed.**
 

@@ -12,7 +12,7 @@
 // re-check disk): disk is the terminator, never the screen (§1.1).
 //
 // What it proves on the SHIPPED tree:
-//   - `/aidlc bugfix <description>` on a fresh BROWNFIELD workspace detects
+//   - `/amadeus bugfix <description>` on a fresh BROWNFIELD workspace detects
 //     brownfield, skips Ideation (bugfix scope), and runs Initialization +
 //     early Inception with real keystroke-answered gates,
 //   - state: scope=bugfix, Project Type=Brownfield, Completed >= 5 and ==
@@ -28,7 +28,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import * as os from "node:os";
 import { join } from "node:path";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { stateFilePathFor } from "../harness/sdk-drive.ts";
 import { cleanupTuiProject, KIRO_SRC, setupTuiProject } from "../harness/tui-fixtures.ts";
 
@@ -93,7 +93,7 @@ function completedCount(sandbox: string): number {
 
 describe("t-tui-kiro-bugfix-scope (brownfield bugfix journey, numbered-prose gates)", () => {
   test.skipIf(SKIP_REASON !== null)(
-    `kiro: /aidlc bugfix advances past init into Inception with real answered gates${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
+    `kiro: /amadeus bugfix advances past init into Inception with real answered gates${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
     async () => {
       const session = `aidlc_tui_kiro_bf_${process.pid}`;
       const sandbox = setupTuiProject({
@@ -127,7 +127,7 @@ describe("t-tui-kiro-bugfix-scope (brownfield bugfix journey, numbered-prose gat
 
         send(
           session,
-          "/aidlc bugfix Fix the duplicate-todo bug when adding items quickly",
+          "/amadeus bugfix Fix the duplicate-todo bug when adding items quickly",
         );
 
         // Gate loop: idle ⇒ answer "1" ⇒ re-check disk, until Completed >= 5

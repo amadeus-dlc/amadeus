@@ -1,10 +1,10 @@
-// covers: subcommand:aidlc-bolt:dispatch-event, subcommand:aidlc-utility:init, audit:MERGE_DISPATCH_INVOKED, scope:bugfix
+// covers: subcommand:amadeus-bolt:dispatch-event, subcommand:amadeus-utility:init, audit:MERGE_DISPATCH_INVOKED, scope:bugfix
 //
 // bun:test port of tests/e2e/t65-construction-worktrees-bugfix.sh (TAP
 // plan 4). Mechanism = MIXED: two of the four assertions are pure compiled-data
 // reads (scope-grid.json, in-process require — mechanism none); the other two
-// drive the REAL shipped tools across the process boundary (aidlc-utility init
-// scaffolds the v7 state, aidlc-bolt dispatch-event emits the audit row —
+// drive the REAL shipped tools across the process boundary (amadeus-utility init
+// scaffolds the v7 state, amadeus-bolt dispatch-event emits the audit row —
 // mechanism cli). Each assertion targets the surface the .sh actually probed.
 //
 // SUBJECT: the v0.4.0 milestone 13 Construction-worktrees per-scope contract for the
@@ -22,11 +22,11 @@
 //       (incremental scopes still build code) and
 //       bugfix.stages["practices-discovery"] === "SKIP" (incremental scopes
 //       don't rebuild practices each workflow).
-//   dist/claude/.claude/tools/aidlc-utility.ts
+//   dist/claude/.claude/tools/amadeus-utility.ts
 //     :2048 init's state template (State Version 7) writes the v0.4.0 fields
 //       `- **Worktree Path**:` (:2057) and `- **Bolt Refs**:` (:2058) used by
 //       Construction worktrees + practices-discovery.
-//   dist/claude/.claude/tools/aidlc-bolt.ts
+//   dist/claude/.claude/tools/amadeus-bolt.ts
 //     :660 handleDispatchEvent — `dispatch-event --event MERGE_DISPATCH_INVOKED
 //       --slug <slug> --practices-excerpt <text>` emits a MERGE_DISPATCH_INVOKED
 //       audit row carrying `**Bolt slug**: <slug>` and a Practices section
@@ -55,7 +55,7 @@
 //     template, not a stale fixture.
 //
 // FIXTURE DISCIPLINE (mirrors the .sh's setup_construction_project: a greenfield-
-// stub integration project + `aidlc-utility init --force --scope bugfix`, then
+// stub integration project + `amadeus-utility init --force --scope bugfix`, then
 // cleanup_test_project): the cli assertions share ONE freshly-scaffolded +
 // inited project (beforeAll), torn down in afterAll. The data assertions read
 // the shipped scope-grid.json directly and need no project. NOTHING is written
@@ -75,12 +75,12 @@ import {
 // aidlc/spaces/<space>/intents/<slug>-<id8>/ and audit is SHARDED per clone
 // under <record>/audit/. Read state through the resolved record dir and audit
 // through the shipped merge helper (default-resolves the active intent, falls
-// back to flat aidlc-docs for a not-yet-born project).
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+// back to flat amadeus-docs for a not-yet-born project).
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath; // the bun running this test
-const UTIL = join(AIDLC_SRC, "tools", "aidlc-utility.ts");
-const BOLT = join(AIDLC_SRC, "tools", "aidlc-bolt.ts");
+const UTIL = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
+const BOLT = join(AIDLC_SRC, "tools", "amadeus-bolt.ts");
 const SCOPE_GRID = join(AIDLC_SRC, "tools", "data", "scope-grid.json");
 
 // The compiled scope grid is the runtime source of truth for per-scope stage
@@ -93,8 +93,8 @@ const grid: ScopeGrid = JSON.parse(readFileSync(SCOPE_GRID, "utf-8"));
 const SCOPE = "bugfix";
 
 // P4: resolve the born intent's record dir from the active-space + active-intent
-// cursors (a record dir is the one holding aidlc-state.md), falling back to the
-// flat aidlc-docs/ layout for a not-yet-born project.
+// cursors (a record dir is the one holding amadeus-state.md), falling back to the
+// flat amadeus-docs/ layout for a not-yet-born project.
 function recordDirOf(p: string): string {
   const spaceCursor = join(p, "aidlc", "active-space");
   const space = existsSync(spaceCursor)
@@ -104,11 +104,11 @@ function recordDirOf(p: string): string {
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();
-    if (rec && existsSync(join(intentsDir, rec, "aidlc-state.md"))) {
+    if (rec && existsSync(join(intentsDir, rec, "amadeus-state.md"))) {
       return join(intentsDir, rec);
     }
   }
-  return join(p, "aidlc-docs");
+  return join(p, "amadeus-docs");
 }
 
 describe("t65 Construction-worktrees per-scope contract — bugfix (migrated from t65-construction-worktrees-bugfix.sh, plan 4)", () => {
@@ -133,7 +133,7 @@ describe("t65 Construction-worktrees per-scope contract — bugfix (migrated fro
   // CLI assertions (mechanism cli): one shared inited bugfix project.
   // Mirrors setup_construction_project("bugfix"):
   //   setup_integration_project --with-greenfield-stub
-  //   bun aidlc-utility init --project-dir <p> --force --scope bugfix
+  //   bun amadeus-utility init --project-dir <p> --force --scope bugfix
   // ===========================================================================
   let proj: string;
 
@@ -147,7 +147,7 @@ describe("t65 Construction-worktrees per-scope contract — bugfix (migrated fro
     );
     if (init.status !== 0) {
       throw new Error(
-        `aidlc-utility init failed (exit ${init.status}): ${init.stderr ?? ""}${init.stdout ?? ""}`,
+        `amadeus-utility init failed (exit ${init.status}): ${init.stderr ?? ""}${init.stdout ?? ""}`,
       );
     }
   });
@@ -175,7 +175,7 @@ describe("t65 Construction-worktrees per-scope contract — bugfix (migrated fro
       { encoding: "utf-8" },
     );
     // The tool exits 0 and prints the { emitted, slug } JSON contract
-    // (aidlc-bolt.ts:683). STRONGER than the .sh, which swallowed exit/output.
+    // (amadeus-bolt.ts:683). STRONGER than the .sh, which swallowed exit/output.
     expect(r.status).toBe(0);
     const printed = JSON.parse((r.stdout ?? "").trim());
     expect(printed.emitted).toBe("MERGE_DISPATCH_INVOKED");
@@ -196,16 +196,16 @@ describe("t65 Construction-worktrees per-scope contract — bugfix (migrated fro
   });
 
   test("4 (cli): init writes v7 state with v0.4.0 Worktree Path + Bolt Refs fields [.sh grep Worktree Path && Bolt Refs]", () => {
-    // The .sh grepped the init-produced aidlc-state.md for both "Worktree Path"
+    // The .sh grepped the init-produced amadeus-state.md for both "Worktree Path"
     // and "Bolt Refs". Read the REAL state file (not a fixture).
     const state = readFileSync(
-      join(recordDirOf(proj), "aidlc-state.md"),
+      join(recordDirOf(proj), "amadeus-state.md"),
       "utf-8",
     );
     const lines = state.split("\n");
     // STRONGER than a bare substring grep: each field appears as a Project
     // Information bullet line `- **<field>**:` (the template at
-    // aidlc-utility.ts:2057-2058), not merely as prose somewhere in the file.
+    // amadeus-utility.ts:2057-2058), not merely as prose somewhere in the file.
     expect(lines.some((l) => l.startsWith("- **Worktree Path**:"))).toBe(true);
     expect(lines.some((l) => l.startsWith("- **Bolt Refs**:"))).toBe(true);
     // Pin the template version that introduced these fields, proving they came

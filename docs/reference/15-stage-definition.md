@@ -10,7 +10,7 @@ a stage *does*.
 
 Contributors read this to understand the format. When writing or editing a
 stage file, refer to the authoritative contract at
-`dist/claude/.claude/aidlc-common/protocols/stage-definition.md`. That file is
+`dist/claude/.claude/amadeus-common/protocols/stage-definition.md`. That file is
 the canonical spec — this chapter adds narrative and "when to use" guidance.
 
 ---
@@ -56,7 +56,7 @@ which artifacts a stage produces while editing its prose.
 ```
 ┌─────────┐         ┌──────────────────┐         ┌──────────────────┐         ┌──────────────────┐
 │ Edit    │  ───→   │ Pre-commit hook  │  ───→   │ stage-graph.json │  ───→   │ loadStageGraph() │
-│ stage   │         │ aidlc-graph      │         │ (build artifact, │         │ (runtime,        │
+│ stage   │         │ amadeus-graph      │         │ (build artifact, │         │ (runtime,        │
 │ .md YAML│         │ compile          │         │  checked in)     │         │  unchanged)      │
 └─────────┘         └──────────────────┘         └──────────────────┘         └──────────────────┘
      │                                                                                 ▲
@@ -69,7 +69,7 @@ which artifacts a stage produces while editing its prose.
 The YAML is authoritative. The JSON is a build artifact. CI enforces the
 relationship.
 
-`aidlc-graph compile` and `compile --check` ship as CLI subcommands (milestone 9);
+`amadeus-graph compile` and `compile --check` ship as CLI subcommands (milestone 9);
 run compile manually after editing stage YAML, and CI enforces `compile
 --check` to catch drift. A pre-commit hook that automates this is deferred
 to a later PR. `stage-graph.json` is a compiled artifact — do not edit it
@@ -128,7 +128,7 @@ the record dir (the only place the path resolver writes them). So a "do the
 produces exist?" check is satisfied by a `code-generation` stage that wrote its
 `code-generation-plan.md` and `code-summary.md` but never emitted a line of
 actual code (issue #366). `workspace_requires: true` closes that gap: the
-stage-completion artifact guard (`aidlc-state.ts` approve/advance/finalize/
+stage-completion artifact guard (`amadeus-state.ts` approve/advance/finalize/
 complete-workflow) additionally requires evidence of real source work outside
 the `aidlc/` workspace tree and the harness directory before the stage may
 complete.
@@ -213,7 +213,7 @@ Dispatch mechanism, three values:
 Note: multi-agent execution today is expressed via `support_agents`. The
 conductor invokes the lead agent first, then each supporter in turn with
 the lead's output as context (see
-`dist/claude/.claude/aidlc-common/protocols/stage-protocol.md:611`). Agents do
+`dist/claude/.claude/amadeus-common/protocols/stage-protocol.md:611`). Agents do
 not invoke each other — only the conductor delegates. `agent-team` is
 specifically for the future case where direct inter-agent messaging is
 needed, not the general "multiple agents touch the stage" case.
@@ -227,11 +227,11 @@ fallthrough on enum extension is a known foot-gun.
 
 The lead agent owns the stage. The lead's persona (skills, knowledge, tool
 allowlist) is loaded at stage start. Support agents add perspective — a
-stage might lead with `aidlc-product-agent` for requirements work but load
-`aidlc-delivery-agent` as support for capacity reality-checking.
+stage might lead with `amadeus-product-agent` for requirements work but load
+`amadeus-delivery-agent` as support for capacity reality-checking.
 
 Both fields validate dynamically against `.claude/agents/*.md` via
-`loadAgents()` (introduced in milestone 3) — `aidlc-graph.ts compile` passes the
+`loadAgents()` (introduced in milestone 3) — `amadeus-graph.ts compile` passes the
 discovered agent slugs into `validateStageFrontmatter`, so a `lead_agent` or
 `support_agents` value naming an agent with no matching file fails the
 compile loudly (`lead_agent "<name>" has no matching .claude/agents/*.md`)
@@ -248,7 +248,7 @@ frontmatter. See
 Optional. `reviewer` names a quality-gate agent invoked after the stage body
 produces its artifacts and before the approval gate (see [Stage
 Protocol](04-stage-protocol.md)). Two reviewers ship today —
-`aidlc-product-lead-agent` and `aidlc-architecture-reviewer-agent` — and the
+`amadeus-product-lead-agent` and `amadeus-architecture-reviewer-agent` — and the
 compile validates the value against the discovered agent roster the same way
 `lead_agent` is validated.
 
@@ -285,7 +285,7 @@ file, add the required frontmatter, and the helpers pick it up at runtime.
 ## Worked example
 
 The canonical example is `scope-definition`. The normative YAML block lives
-in `dist/claude/.claude/aidlc-common/protocols/stage-definition.md` — refer
+in `dist/claude/.claude/amadeus-common/protocols/stage-definition.md` — refer
 there rather than duplicating here.
 
 The example encodes, in structured form, what today's prose describes:
@@ -300,7 +300,7 @@ The example encodes, in structured form, what today's prose describes:
   missing-producer check fails.
 - `produces: [scope-document, intent-backlog, scope-definition-questions]`
   is the forward edge — other stages looking for "who produces
-  `scope-document`?" find this one via `aidlc-graph.ts producersOf()`.
+  `scope-document`?" find this one via `amadeus-graph.ts producersOf()`.
 - No `for_each` field — `scope-definition` runs once per workflow.
 
 ---
@@ -331,8 +331,8 @@ else. Most stage files already use `## Steps` as their first body heading.
 milestone 7 shipped `parseStageFrontmatter` and `emitStageFrontmatter` in
 `lib.ts` — YAML-only, no prose back-compat path. milestone 8 migrated all 31
 stage files to YAML frontmatter in a single atomic change. milestone 9 expanded
-`aidlc-graph.ts` to compile the YAML into `stage-graph.json` and added
-`compile --check` as the CI drift guard. Running `bun aidlc-graph.ts
+`amadeus-graph.ts` to compile the YAML into `stage-graph.json` and added
+`compile --check` as the CI drift guard. Running `bun amadeus-graph.ts
 compile --check` on a clean tree exits 0; editing any stage YAML without
 recompiling the JSON exits 1 with a clear message.
 
@@ -384,7 +384,7 @@ replaces the `Reserved` marker with the real emitter path.
 
 ## Cross-references
 
-- `dist/claude/.claude/aidlc-common/protocols/stage-definition.md` — the
+- `dist/claude/.claude/amadeus-common/protocols/stage-definition.md` — the
   authoritative spec this chapter narrates.
 - [Stage Protocol](04-stage-protocol.md) — runtime execution behaviour.
 - [Agent System](05-agent-system.md) — parallel YAML-first contract for

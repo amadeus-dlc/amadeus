@@ -1,32 +1,32 @@
-// covers: subcommand:aidlc-worktree:info, subcommand:aidlc-bolt:fail
+// covers: subcommand:amadeus-worktree:info, subcommand:amadeus-bolt:fail
 //
 // CLI-contract port of tests/e2e/t11-halt-and-ask-retry-correlation.sh
 // (TAP plan 6), mechanism = cli. The .sh pins the round-4 final-pass-critic
 // concern that retry-then-fail must NOT mutate the rendered worktree path:
-// `aidlc-worktree info --slug r` must return the SAME path across multiple
+// `amadeus-worktree info --slug r` must return the SAME path across multiple
 // BOLT_FAILED emissions for the same slug, with exactly ONE WORKTREE_CREATED
 // in the audit (Retry re-runs in place per SKILL.md's per-Bolt loop — the
-// orchestrator does NOT call `aidlc-worktree create` again on retry).
+// orchestrator does NOT call `amadeus-worktree create` again on retry).
 //
 // Flow (mirrors the .sh setup at l34-72):
 //   create worktree (slug r) → fail #1 → info → fail #2 (same slug, no new
 //   create) → info → assert path identical + audit invariants.
 //
 // MECHANISM: this is a .cli twin — every observable is taken at the PROCESS
-// boundary. `aidlc-worktree info` parses the latest WORKTREE_CREATED audit
+// boundary. `amadeus-worktree info` parses the latest WORKTREE_CREATED audit
 // block, writes JSON to STDOUT via console.log, and process.exit(1)s on a
-// miss (aidlc-worktree.ts:672-723). `aidlc-bolt fail` emits a BOLT_FAILED
-// audit row through appendAuditEntry (aidlc-bolt.ts:457-483). `aidlc-worktree
+// miss (amadeus-worktree.ts:672-723). `amadeus-bolt fail` emits a BOLT_FAILED
+// audit row through appendAuditEntry (amadeus-bolt.ts:457-483). `amadeus-worktree
 // create` runs REAL `git worktree add` after the audit-of-intent emit
-// (aidlc-worktree.ts:156-214). The retry-in-place invariant + the on-disk
+// (amadeus-worktree.ts:156-214). The retry-in-place invariant + the on-disk
 // audit accumulation are genuine side-effects of running the real binaries
 // against real git; an in-process twin would lose the process-exit seam and
 // the multi-spawn audit-accumulation contract. So SPAWN the real tools via
 // spawnSync(BUN, [TOOL, ...]) and assert on the audit.md bytes + the info JSON.
 //
-// FIXTURE: aidlc-worktree.ts asserts it runs from the main checkout
-// (assertNotSiblingWorktree, aidlc-worktree.ts:162) and runs real git, so the
-// case needs an ACTUAL git repo on `main` with one commit plus an aidlc-docs/
+// FIXTURE: amadeus-worktree.ts asserts it runs from the main checkout
+// (assertNotSiblingWorktree, amadeus-worktree.ts:162) and runs real git, so the
+// case needs an ACTUAL git repo on `main` with one commit plus an amadeus-docs/
 // dir. setupWorktreeFixture (tests/harness/fixtures.ts) builds exactly that;
 // the tools are spawned with cwd = the fixture so `git rev-parse
 // --show-toplevel` resolves to the main checkout. cleanupWorktreeFixture
@@ -67,8 +67,8 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const WT_TOOL = join(AIDLC_SRC, "tools", "aidlc-worktree.ts");
-const BOLT_TOOL = join(AIDLC_SRC, "tools", "aidlc-bolt.ts");
+const WT_TOOL = join(AIDLC_SRC, "tools", "amadeus-worktree.ts");
+const BOLT_TOOL = join(AIDLC_SRC, "tools", "amadeus-bolt.ts");
 
 const SLUG = "r";
 
@@ -111,7 +111,7 @@ function eventCount(p: string, event: string): number {
     .filter((l) => l === `**Event**: ${event}`).length;
 }
 
-/** Parse the `path` field out of `aidlc-worktree info`'s JSON stdout. */
+/** Parse the `path` field out of `amadeus-worktree info`'s JSON stdout. */
 function infoPath(res: CliResult): string {
   return JSON.parse(res.stdout.trim()).path as string;
 }
@@ -124,7 +124,7 @@ beforeAll(() => {
   fixture = setupWorktreeFixture();
   // Seed a state file into the default record so the active-intent cursor
   // resolves and the WORKTREE_CREATED/BOLT_FAILED audit lands in the per-intent
-  // record (the fixture's record is stateless; without aidlc-state.md the cursor
+  // record (the fixture's record is stateless; without amadeus-state.md the cursor
   // is rejected and the audit lands at the bare space root).
   writeFileSync(seededStateFile(fixture), "- **Current Stage**: code-generation\n", "utf-8");
 
@@ -145,7 +145,7 @@ beforeAll(() => {
   info1 = run(WT_TOOL, ["info", "--slug", SLUG], fixture);
 
   // --- Retry semantics: re-run inside the EXISTING worktree. The
-  //     orchestrator does NOT call `aidlc-worktree create` again on retry
+  //     orchestrator does NOT call `amadeus-worktree create` again on retry
   //     (SKILL.md per-Bolt loop). Failure 2: same slug, same worktree. ---
   run(
     BOLT_TOOL,

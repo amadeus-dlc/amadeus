@@ -1,9 +1,9 @@
-// covers: subcommand:aidlc-worktree:create
+// covers: subcommand:amadeus-worktree:create
 //
 // CLI-contract port of tests/e2e/t02-worktree-create.sh (TAP plan 15),
-// mechanism = cli. The .sh drives `aidlc-worktree.ts create` — the subcommand
+// mechanism = cli. The .sh drives `amadeus-worktree.ts create` — the subcommand
 // that runs a REAL `git worktree add` after an audit-first WORKTREE_CREATED
-// emit. The covers UNIT credited is subcommand:aidlc-worktree:create (a
+// emit. The covers UNIT credited is subcommand:amadeus-worktree:create (a
 // still-uncovered subcommand as of this migration).
 //
 // MECHANISM: this is a .cli file, so every observable is taken at the PROCESS
@@ -13,9 +13,9 @@
 // stdout-JSON contract ('"emitted":"WORKTREE_CREATED"') and the real
 // git-worktree-add side effect the .sh relies on.
 //
-// FIXTURE: aidlc-worktree.ts asserts it runs from the main checkout
-// (assertNotSiblingWorktree, aidlc-worktree.ts:101) and runs real git, so each
-// case needs an ACTUAL git repo on `main` with one commit plus an aidlc-docs/
+// FIXTURE: amadeus-worktree.ts asserts it runs from the main checkout
+// (assertNotSiblingWorktree, amadeus-worktree.ts:101) and runs real git, so each
+// case needs an ACTUAL git repo on `main` with one commit plus an amadeus-docs/
 // dir. setupWorktreeFixture (tests/harness/fixtures.ts, ported this migration
 // from tests/lib/worktree-helpers.sh) builds exactly that; the tool is spawned
 // with cwd = the fixture so its `git rev-parse --show-toplevel` resolves to the
@@ -57,7 +57,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const TOOL = join(AIDLC_SRC, "tools", "aidlc-worktree.ts");
+const TOOL = join(AIDLC_SRC, "tools", "amadeus-worktree.ts");
 
 const fixtures: string[] = [];
 afterAll(() => {
@@ -66,7 +66,7 @@ afterAll(() => {
 
 /** Fresh git-repo fixture on `main` with the per-intent workspace shell. Seed a
  *  state file into the default record so the active-intent cursor resolves (the
- *  fixture seeds a STATELESS record; without aidlc-state.md the cursor is rejected
+ *  fixture seeds a STATELESS record; without amadeus-state.md the cursor is rejected
  *  and the WORKTREE_CREATED audit lands at the bare space root, not the record).
  *  Registered for cleanup. */
 function freshFixture(): string {
@@ -82,7 +82,7 @@ interface CliResult {
   stdout: string;
 }
 
-/** Spawn `bun aidlc-worktree.ts create ... --project-dir <p>` from cwd=<p>. */
+/** Spawn `bun amadeus-worktree.ts create ... --project-dir <p>` from cwd=<p>. */
 function create(p: string, args: string[]): CliResult {
   const res = spawnSync(BUN, [TOOL, "create", ...args, "--project-dir", p], {
     cwd: p,
@@ -118,7 +118,7 @@ function boltSlugRows(p: string): string[] {
   return out;
 }
 
-describe("t02 aidlc-worktree create (migrated from t02-worktree-create.sh, plan 15)", () => {
+describe("t02 amadeus-worktree create (migrated from t02-worktree-create.sh, plan 15)", () => {
   test("1-5: create happy path — exit 0, emits WORKTREE_CREATED, real git worktree on bolt-<slug>", () => {
     const p = freshFixture();
     const r = create(p, ["--slug", "demo", "--base", "main"]);

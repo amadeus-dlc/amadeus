@@ -1,4 +1,4 @@
-// covers: subcommand:aidlc-utility:intent-birth, file:skills/aidlc/SKILL.md
+// covers: subcommand:amadeus-utility:intent-birth, file:skills/amadeus/SKILL.md
 //
 // t176-new-work-offer-second-intent.test.ts — the P4 OFFER beat (sdk).
 //
@@ -9,7 +9,7 @@
 // already active, describing a GENUINELY NEW, UNRELATED piece of work prompts
 // the orchestrator to OFFER a second intent (you confirm), rather than blindly
 // advancing the active intent. RECOGNISING new-work + phrasing the offer is
-// conductor PROSE (knowledge→LLM, in skills/aidlc/SKILL.md); on CONFIRM the prose
+// conductor PROSE (knowledge→LLM, in skills/amadeus/SKILL.md); on CONFIRM the prose
 // routes through `next --new-intent`, so the read-only engine emits the SAME
 // birth directive the fresh-start path does (carrying the `--label` seam) rather
 // than the conductor hand-building intent-birth. Either way it can only be
@@ -19,7 +19,7 @@
 // Journey (one interactive run):
 //   seed:      ONE active intent mid-ideation (subject: a widget feature) +
 //              its registry row (createTestProject's default record carries it).
-//   drive:     `/aidlc "<a clearly unrelated new piece of work>"`.
+//   drive:     `/amadeus "<a clearly unrelated new piece of work>"`.
 //   conductor: recognises the input is NEW-WORK (not a continuation of the
 //              widget intent), OFFERS a second intent via AskUserQuestion (the
 //              answerScript confirms YES), then runs `intent-birth` and re-enters
@@ -46,7 +46,7 @@
 // confirm is deterministic; a model that ignores that pin fails SAFE (the
 // fallback misses → no birth → (b)+(c) RED), never a false green.
 //
-// It SPENDS TOKENS — driveAidlc drives the real /aidlc on Opus/Bedrock. The run
+// It SPENDS TOKENS — driveAidlc drives the real /amadeus on Opus/Bedrock. The run
 // stops the instant the birth tool-result lands (stopAfterToolResult), so no
 // stage body of the new intent is executed. Gated on claude-CLI presence
 // (run-tests.ts:274 — the file calls driveAidlc(), so claude-gate.ts marks it
@@ -60,7 +60,7 @@ import {
   setupIntegrationProject,
 } from "../harness/fixtures.ts";
 import { driveAidlc } from "../harness/sdk-drive.ts";
-import { readIntentRegistry } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readIntentRegistry } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // Timeout budget — same convention as t143/t71: honour AIDLC_TEST_TIMEOUT and
 // abort the drive a hair early so a stuck run surfaces a partial DriveResult.
@@ -68,7 +68,7 @@ const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "600", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 600) * 1000;
 const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
 
-// Verbatim birth stdout summary (aidlc-utility.ts handleIntentBirth :2400) — the
+// Verbatim birth stdout summary (amadeus-utility.ts handleIntentBirth :2400) — the
 // deterministic surface that proves the offer was CONFIRMED and the birth ran.
 const INIT_STATE_SUMMARY = "State initialized:";
 const STOP_AFTER_BIRTH = { toolName: "Bash", resultIncludes: INIT_STATE_SUMMARY } as const;
@@ -110,7 +110,7 @@ describe("t176 P4 new-work offer (orchestrator offers a 2nd intent, sdk live)", 
         // Sanity: exactly one intent before the run.
         expect(readIntentRegistry(proj).length).toBe(1);
 
-        const r = await driveAidlc(`/aidlc "${NEW_WORK}"`, {
+        const r = await driveAidlc(`/amadeus "${NEW_WORK}"`, {
           projectDir: proj,
           answerScript: CONFIRM_OFFER,
           timeoutMs: DRIVE_TIMEOUT_MS,

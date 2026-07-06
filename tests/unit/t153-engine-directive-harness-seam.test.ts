@@ -7,17 +7,17 @@
 //
 // WHY THIS GUARD EXISTS. The deterministic engine emits `print` directives whose
 // `message` tells the conductor to run a tool, e.g.
-//   `Run \`bun ${harnessDir()}/tools/aidlc-utility.ts init --scope ...\` ...`
+//   `Run \`bun ${harnessDir()}/tools/amadeus-utility.ts init --scope ...\` ...`
 // The .ts tools are BYTE-COPIED into every harness dist (dist/claude/.claude/,
 // dist/kiro/.kiro/, dist/codex/.codex/) — harnessDir() resolves the right tree
-// at RUN time. A directive that hardcodes `bun .claude/tools/aidlc-*.ts` instead
+// at RUN time. A directive that hardcodes `bun .claude/tools/amadeus-*.ts` instead
 // would ship verbatim into the Kiro and Codex trees and tell their conductors to
 // run a tool at a path that does not exist there — the workflow-birth /
 // scope-change / config-change / jump directives would fail on 2 of 3 harnesses.
 //
 // This is the exact CRIT-class seam bug the dist-unified review found for the
 // rules dir (rulesSubdir). The merge-endgame re-homed v0.6.8's birthPrintDirective
-// into core/, where main's original hardcoded `.claude/tools/aidlc-utility.ts`;
+// into core/, where main's original hardcoded `.claude/tools/amadeus-utility.ts`;
 // the port rewrote it to `${harnessDir()}/tools/...`. This test is the
 // determinism mechanism that proves no such literal re-enters a directive string
 // — t146 guards the SAME leak in core/*.md prose; this guards core/*.ts directives.
@@ -25,7 +25,7 @@
 // SCOPE (deliberately narrow — avoids the ~59 legitimate `.claude/` literals in
 // core .ts that are comments, error text naming the literal Claude tree, install
 // instructions like `dist/claude/.claude/settings.json`, and the example
-// directive-shape fixtures in aidlc-directive.ts). The dangerous form is
+// directive-shape fixtures in amadeus-directive.ts). The dangerous form is
 // specifically a SHELL COMMAND that runs a harness tool: `bun <harness>/tools/`.
 
 import { describe, expect, test } from "bun:test";

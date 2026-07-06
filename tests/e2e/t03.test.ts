@@ -1,11 +1,11 @@
-// covers: subcommand:aidlc-worktree:merge
+// covers: subcommand:amadeus-worktree:merge
 //
 // CLI-contract port of tests/e2e/t03-worktree-merge.sh (TAP plan 13),
-// mechanism = cli. The .sh drives `aidlc-worktree.ts merge` — the subcommand
+// mechanism = cli. The .sh drives `amadeus-worktree.ts merge` — the subcommand
 // that runs a REAL `git merge --squash` (and rebase) after an audit-first
 // WORKTREE_MERGED emit, then either cleans up the worktree (success) or
 // preserves it (conflict). The covers UNIT credited is
-// subcommand:aidlc-worktree:merge.
+// subcommand:amadeus-worktree:merge.
 //
 // MECHANISM: this is a .cli file, so every observable is taken at the PROCESS
 // boundary — SPAWN the real binary via spawnSync (BUN + the tool .ts path) and
@@ -14,9 +14,9 @@
 // stdout-JSON contract ('"emitted":"WORKTREE_MERGED"', the conflict envelope)
 // and the real git-merge / git-worktree-remove side effects the .sh relies on.
 //
-// FIXTURE: aidlc-worktree.ts asserts it runs from the main checkout
-// (assertNotSiblingWorktree, aidlc-worktree.ts:101) and runs real git, so each
-// case needs an ACTUAL git repo on `main` with one commit plus an aidlc-docs/
+// FIXTURE: amadeus-worktree.ts asserts it runs from the main checkout
+// (assertNotSiblingWorktree, amadeus-worktree.ts:101) and runs real git, so each
+// case needs an ACTUAL git repo on `main` with one commit plus an amadeus-docs/
 // dir. setupWorktreeFixture (tests/harness/fixtures.ts) builds exactly that;
 // the tool is spawned with cwd = the fixture so its HEAD / rev-parse resolves
 // to the main checkout (the merge subcommand's defensive HEAD check requires
@@ -64,7 +64,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const TOOL = join(AIDLC_SRC, "tools", "aidlc-worktree.ts");
+const TOOL = join(AIDLC_SRC, "tools", "amadeus-worktree.ts");
 
 // Force a non-interactive editor so any unexpected `git commit` without
 // `--no-edit` fails loudly instead of hanging (mirrors the .sh's EDITOR=false).
@@ -84,7 +84,7 @@ afterAll(() => {
 
 /** Fresh git-repo fixture on `main` with the per-intent workspace shell. Seed a
  *  state file into the default record so the active-intent cursor resolves (the
- *  fixture's record is stateless; without aidlc-state.md the cursor is rejected
+ *  fixture's record is stateless; without amadeus-state.md the cursor is rejected
  *  and the WORKTREE_MERGED audit lands at the bare space root, not the record).
  *  Registered for cleanup. */
 function freshFixture(): string {
@@ -100,7 +100,7 @@ interface CliResult {
   stdout: string;
 }
 
-/** Spawn `bun aidlc-worktree.ts <sub> ... --project-dir <p>` from cwd=<p>. */
+/** Spawn `bun amadeus-worktree.ts <sub> ... --project-dir <p>` from cwd=<p>. */
 function tool(p: string, args: string[]): CliResult {
   const res = spawnSync(BUN, [TOOL, ...args, "--project-dir", p], {
     cwd: p,
@@ -146,7 +146,7 @@ function hasMergedAudit(p: string, slug: string): boolean {
   );
 }
 
-describe("t03 aidlc-worktree merge (migrated from t03-worktree-merge.sh, plan 13)", () => {
+describe("t03 amadeus-worktree merge (migrated from t03-worktree-merge.sh, plan 13)", () => {
   test("1-3: squash merge happy path — exit 0, emits WORKTREE_MERGED, worktree removed", () => {
     const p = freshFixture();
     expect(tool(p, ["create", "--slug", "demo", "--base", "main"]).status).toBe(0);

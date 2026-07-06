@@ -1,7 +1,7 @@
-// covers: subcommand:aidlc-state:set, subcommand:aidlc-state:reject, subcommand:aidlc-state:approve, subcommand:aidlc-state:skip, subcommand:aidlc-state:set-skeleton-stance, function:withAuditLock, function:holdsAuditLock
+// covers: subcommand:amadeus-state:set, subcommand:amadeus-state:reject, subcommand:amadeus-state:approve, subcommand:amadeus-state:skip, subcommand:amadeus-state:set-skeleton-stance, function:withAuditLock, function:holdsAuditLock
 //
 // t145 — C2b lost-update safety: the 11 state read-modify-write handlers in
-// aidlc-state.ts now hold the audit lock across their whole read→decide→
+// amadeus-state.ts now hold the audit lock across their whole read→decide→
 // emit-audit→write critical section (withAuditLock), so concurrent writers
 // can't clobber each other's updates. Mechanism: cli (process-boundary).
 //
@@ -11,7 +11,7 @@
 // the handlers N times would be strictly serial and could NEVER exercise the
 // inter-process race the fix addresses. So this twin SPAWNS the real tool
 // concurrently (Bun.spawn + Promise.all), exactly how Claude Code's swarm
-// referee, parallel Bolts, and hooks drive aidlc-state.ts from many processes.
+// referee, parallel Bolts, and hooks drive amadeus-state.ts from many processes.
 // Same approach as t33-hook-concurrency (audit-logger lock contention).
 //
 // THE BUG (pre-C2b): each handler did an UNLOCKED read-modify-write —
@@ -23,18 +23,18 @@
 // read and the write see one snapshot under one lock.
 //
 // SOURCE UNDER TEST:
-//   dist/claude/.claude/tools/aidlc-state.ts — handleSet / handleReject /
+//   dist/claude/.claude/tools/amadeus-state.ts — handleSet / handleReject /
 //     handleApprove / handleSkip / handleSetSkeletonStance (+ the rest of the
 //     11) now open with `withAuditLock(pd, () => { ... })`.
-//   dist/claude/.claude/tools/aidlc-lib.ts:withAuditLock — reentrant per-pd
+//   dist/claude/.claude/tools/amadeus-lib.ts:withAuditLock — reentrant per-pd
 //     audit lock (the OS mutex is mkdir-based, so cross-process contention
 //     serialises through EEXIST + the retry budget).
-//   dist/claude/.claude/tools/aidlc-lib.ts:holdsAuditLock — the in-lock signal
+//   dist/claude/.claude/tools/amadeus-lib.ts:holdsAuditLock — the in-lock signal
 //     emitAudit() branches on to pick appendAuditEntryUnlocked (held lock) vs
 //     appendAuditEntry (no lock), so an in-transaction emit can't self-deadlock.
 //
 // FIXTURE DISCIPLINE: each test gets a fresh createTestProject() (temp dir with
-// aidlc-docs/) seeded by a REAL `aidlc-utility init --scope bugfix` run, so the
+// amadeus-docs/) seeded by a REAL `amadeus-utility init --scope bugfix` run, so the
 // state file is the genuine v7 template the handlers expect (Revision Count,
 // checkbox slugs, Scope, the lot). cleanup rm -rf's the temp dir; the audit
 // lock lives under tmpdir() and is asserted-then-removed (afterEach safety).
@@ -50,18 +50,18 @@ import {
 import {
   auditLockDir,
   getField,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
-const STATE_TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "aidlc-state.ts");
-const UTIL_TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "aidlc-utility.ts");
+const STATE_TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-state.ts");
+const UTIL_TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-utility.ts");
 
 let proj: string;
 
 // P4: init now BIRTHS a per-intent record — state lands at
-// aidlc/spaces/<space>/intents/<slug>-<id8>/aidlc-state.md and audit at
-// <record>/audit/<host>-<clone>.md (per-clone shards), NOT the flat aidlc-docs/.
+// aidlc/spaces/<space>/intents/<slug>-<id8>/amadeus-state.md and audit at
+// <record>/audit/<host>-<clone>.md (per-clone shards), NOT the flat amadeus-docs/.
 // Resolve the born record from the active-space + active-intent cursors (flat
 // fallback for a not-yet-born project). The concurrency under test is unchanged
 // — the per-intent lock serialises the concurrent writers exactly as before.
@@ -74,14 +74,14 @@ function recordDirOf(p: string): string {
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();
-    if (rec && existsSync(join(intentsDir, rec, "aidlc-state.md"))) {
+    if (rec && existsSync(join(intentsDir, rec, "amadeus-state.md"))) {
       return join(intentsDir, rec);
     }
   }
-  return join(p, "aidlc-docs");
+  return join(p, "amadeus-docs");
 }
 function statePath(p: string): string {
-  return join(recordDirOf(p), "aidlc-state.md");
+  return join(recordDirOf(p), "amadeus-state.md");
 }
 function readState(p: string): string {
   return readFileSync(statePath(p), "utf-8");
@@ -98,7 +98,7 @@ function readAudit(p: string): string {
       return shards.map((f) => readFileSync(join(auditDir, f), "utf-8")).join("\n");
     }
   }
-  const flat = join(p, "aidlc-docs", "audit.md");
+  const flat = join(p, "amadeus-docs", "audit.md");
   return existsSync(flat) ? readFileSync(flat, "utf-8") : "";
 }
 /** Count occurrences of an "**Event**: <type>" line across the audit shards. */
@@ -281,7 +281,7 @@ describe("t145 C2b state-lock lost-update safety (mechanism cli — parallel spa
   // ---------------------------------------------------------------------------
   // TEST 6 — concurrent `reject` on ONE gate-held [?] stage. reject is the
   // handler the source comment itself flags as the canonical lost-update case
-  // (aidlc-state.ts handleReject: "two concurrent rejects must not both read N
+  // (amadeus-state.ts handleReject: "two concurrent rejects must not both read N
   // and both write N+1"): it validates the stage is [?]/[-], increments Revision
   // Count (a read-modify-write of a counter), and flips the stage to [R], all
   // under one withAuditLock. With the lock these N transactions serialise on the
@@ -294,7 +294,7 @@ describe("t145 C2b state-lock lost-update safety (mechanism cli — parallel spa
   //
   // This is the direct reject-path analogue of test 1 (which drives Revision
   // Count only via handleSet's +1 branch, a DIFFERENT handler under a different
-  // lock). t145's covers: header claims aidlc-state:reject — this is the test
+  // lock). t145's covers: header claims amadeus-state:reject — this is the test
   // body that earns that claim.
   // ---------------------------------------------------------------------------
   test("concurrent reject on one gate-held stage — exactly one rejection, no lost/duplicated increment", async () => {

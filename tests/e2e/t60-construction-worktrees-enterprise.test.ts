@@ -1,4 +1,4 @@
-// covers: data:scope-grid.json(enterprise), cli:aidlc-bolt(dispatch-event), cli:aidlc-utility(init)
+// covers: data:scope-grid.json(enterprise), cli:amadeus-bolt(dispatch-event), cli:amadeus-utility(init)
 //
 // t60 — Construction worktrees per scope, ENTERPRISE (v0.4.0 milestone 13).
 // Migrated from tests/e2e/t60-construction-worktrees-enterprise.sh
@@ -8,12 +8,12 @@
 // assert_dispatch_event_runs_for_scope); three inline in the .sh body.
 //
 // Mechanism: cli. The .sh's surviving assertions exercise PROCESS-boundary
-// seams — the `aidlc-bolt dispatch-event` subcommand (audit emission via
-// process), the `aidlc-utility init` subcommand (writes aidlc-state.md), and
+// seams — the `amadeus-bolt dispatch-event` subcommand (audit emission via
+// process), the `amadeus-utility init` subcommand (writes amadeus-state.md), and
 // the shipped scope-grid.json data file the orchestrator reads at runtime. The
 // dispatch-event/init contracts are observable only on disk after the spawned
-// tool runs (audit.md rows, aidlc-state.md fields); the .sh shelled out to
-// `bun aidlc-bolt.ts ...` / `bun aidlc-utility.ts init ...` exactly so. We
+// tool runs (audit.md rows, amadeus-state.md fields); the .sh shelled out to
+// `bun amadeus-bolt.ts ...` / `bun amadeus-utility.ts init ...` exactly so. We
 // preserve that by SPAWNING the real tools via the bun runtime against the .ts
 // paths (the milestone 3 broadened-cli arm). The grid read is a JSON.parse of the same
 // shipped file the .sh `require()`d — a structural data check, kept cli-tier
@@ -24,14 +24,14 @@
 //     maps code-generation=EXECUTE and practices-discovery=EXECUTE (read at
 //     test time; the runtime source of truth, the transpose of per-stage
 //     `scopes:` frontmatter — milestone 12 retired scope-mapping.json).
-//   - dispatch-event: aidlc-bolt.ts:660 handleDispatchEvent. Three literal
+//   - dispatch-event: amadeus-bolt.ts:660 handleDispatchEvent. Three literal
 //     emit cases (t48 emitter-pairing). MERGE_DISPATCH_INVOKED (:670) requires
 //     --practices-excerpt; emits {Bolt slug, Practices section excerpt}.
 //     MERGE_DISPATCH_RETURNED (:686) requires --strategy/--target/--confidence/
 //     --notes; emits {Bolt slug, Strategy, Target branch, Confidence, Notes}.
 //     Each emits via appendAuditEntry → audit.md, then prints
 //     {"emitted":<EVENT>,"slug":<slug>} to stdout. Emit-only: no state mutation.
-//   - init: aidlc-utility.ts:1720 handleInit → writeStateFile (:2103). The v7
+//   - init: amadeus-utility.ts:1720 handleInit → writeStateFile (:2103). The v7
 //     state template (:2049-2059) carries State Version 7 plus the three
 //     v0.4.0 fields: **Worktree Path**, **Bolt Refs**, **Practices Affirmed
 //     Timestamp**. setup_construction_project ran `init --force --scope <s>`.
@@ -80,12 +80,12 @@ import {
 // aidlc/spaces/<space>/intents/<slug>-<id8>/ and audit is SHARDED per clone
 // under <record>/audit/. Read state through the resolved record dir and audit
 // through the shipped merge helper (default-resolves the active intent, falls
-// back to flat aidlc-docs for a not-yet-born project).
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+// back to flat amadeus-docs for a not-yet-born project).
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath; // the bun running this test
-const BOLT = join(AIDLC_SRC, "tools", "aidlc-bolt.ts");
-const UTIL = join(AIDLC_SRC, "tools", "aidlc-utility.ts");
+const BOLT = join(AIDLC_SRC, "tools", "amadeus-bolt.ts");
+const UTIL = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
 const SCOPE_GRID = join(AIDLC_SRC, "tools", "data", "scope-grid.json");
 
 const SCOPE = "enterprise";
@@ -98,15 +98,15 @@ afterEach(() => {
 });
 
 /**
- * setup_construction_project (helper :39): a bare temp project with aidlc-docs/,
- * then `aidlc-utility init --force --scope <scope>` so aidlc-state.md exists
+ * setup_construction_project (helper :39): a bare temp project with amadeus-docs/,
+ * then `amadeus-utility init --force --scope <scope>` so amadeus-state.md exists
  * (both the orchestrator and dispatch-event probe that path). We spawn the real
- * init tool, exactly as the helper shelled out to `bun aidlc-utility.ts init`.
+ * init tool, exactly as the helper shelled out to `bun amadeus-utility.ts init`.
  */
 function setupConstructionProject(scope: string): string {
   const proj = createTestProject();
   projects.push(proj);
-  mkdirSync(join(proj, "aidlc-docs"), { recursive: true });
+  mkdirSync(join(proj, "amadeus-docs"), { recursive: true });
   const r = spawnSync(
     BUN,
     [UTIL, "init", "--project-dir", proj, "--force", "--scope", scope],
@@ -114,7 +114,7 @@ function setupConstructionProject(scope: string): string {
   );
   if (r.status !== 0) {
     throw new Error(
-      `aidlc-utility init --scope ${scope} failed (exit ${r.status}): ${r.stderr || r.stdout}`,
+      `amadeus-utility init --scope ${scope} failed (exit ${r.status}): ${r.stderr || r.stdout}`,
     );
   }
   return proj;
@@ -132,8 +132,8 @@ function gridStageMode(scope: string, stage: string): string {
 }
 
 // P4: resolve the born intent's record dir from the active-space + active-intent
-// cursors (a record dir is the one holding aidlc-state.md), falling back to the
-// flat aidlc-docs/ layout for a not-yet-born project.
+// cursors (a record dir is the one holding amadeus-state.md), falling back to the
+// flat amadeus-docs/ layout for a not-yet-born project.
 function recordDirOf(p: string): string {
   const spaceCursor = join(p, "aidlc", "active-space");
   const space = existsSync(spaceCursor)
@@ -143,15 +143,15 @@ function recordDirOf(p: string): string {
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();
-    if (rec && existsSync(join(intentsDir, rec, "aidlc-state.md"))) {
+    if (rec && existsSync(join(intentsDir, rec, "amadeus-state.md"))) {
       return join(intentsDir, rec);
     }
   }
-  return join(p, "aidlc-docs");
+  return join(p, "amadeus-docs");
 }
 
 function statePath(proj: string): string {
-  return join(recordDirOf(proj), "aidlc-state.md");
+  return join(recordDirOf(proj), "amadeus-state.md");
 }
 
 /** Merged audit-shard text for the born intent (P4 shards audit per clone). */
@@ -209,7 +209,7 @@ describe("t60 Construction worktrees per scope — enterprise (cli)", () => {
       ],
       { encoding: "utf-8" },
     );
-    // Clean exit + the emit-only stdout contract (aidlc-bolt.ts:683).
+    // Clean exit + the emit-only stdout contract (amadeus-bolt.ts:683).
     expect(r.status).toBe(0);
     const parsed = JSON.parse((r.stdout ?? "").trim());
     expect(parsed.emitted).toBe("MERGE_DISPATCH_INVOKED");
@@ -251,7 +251,7 @@ describe("t60 Construction worktrees per scope — enterprise (cli)", () => {
         "--strategy", "squash",
         "--target", "main",
         "--confidence", "0.9",
-        "--notes", "trunk-based per rules/aidlc-team.md",
+        "--notes", "trunk-based per rules/amadeus-team.md",
         "--project-dir", proj,
       ],
       { encoding: "utf-8" },
@@ -262,7 +262,7 @@ describe("t60 Construction worktrees per scope — enterprise (cli)", () => {
     expect(parsed.slug).toBe(slug);
 
     // STRONGER: the RETURNED block carries the slug + Strategy/Target/Confidence
-    // fields co-located (aidlc-bolt.ts:698-704), not merely the event name.
+    // fields co-located (amadeus-bolt.ts:698-704), not merely the event name.
     const block = blockForEvent(proj, "MERGE_DISPATCH_RETURNED");
     expect(block).toContain("**Event**: MERGE_DISPATCH_RETURNED");
     expect(block).toContain(`**Bolt slug**: ${slug}`);

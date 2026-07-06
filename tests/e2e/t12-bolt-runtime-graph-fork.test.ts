@@ -1,39 +1,39 @@
-// covers: subcommand:aidlc-bolt:start, subcommand:aidlc-bolt:complete, subcommand:aidlc-bolt:abort, subcommand:aidlc-worktree:discard, subcommand:aidlc-runtime:fragment-fork, subcommand:aidlc-runtime:fragment-merge, subcommand:aidlc-runtime:compile
+// covers: subcommand:amadeus-bolt:start, subcommand:amadeus-bolt:complete, subcommand:amadeus-bolt:abort, subcommand:amadeus-worktree:discard, subcommand:amadeus-runtime:fragment-fork, subcommand:amadeus-runtime:fragment-merge, subcommand:amadeus-runtime:compile
 //
 // CLI-contract port of tests/e2e/t12-bolt-runtime-graph-fork.sh (TAP plan
 // 9), mechanism = cli. The .sh carried no `# covers:` header; the units credited
 // here are the ones its body actually drives end-to-end — the runtime-graph
 // fragment fork/merge triad as it rides on the Bolt-worktree lifecycle:
-//   - aidlc-bolt start --worktree   (forks state + audit + fragment)
-//   - aidlc-bolt complete --merge   (merges state + audit + removes fragment)
-//   - aidlc-bolt abort [--discard]  (the abort subcommand — UNCOVERED in the
+//   - amadeus-bolt start --worktree   (forks state + audit + fragment)
+//   - amadeus-bolt complete --merge   (merges state + audit + removes fragment)
+//   - amadeus-bolt abort [--discard]  (the abort subcommand — UNCOVERED in the
 //                                    registry as of this migration)
-//   - aidlc-worktree discard        (transitive fragment cleanup, defense-in-depth)
-//   - aidlc-runtime fragment-fork / fragment-merge (the fragment primitives the
+//   - amadeus-worktree discard        (transitive fragment cleanup, defense-in-depth)
+//   - amadeus-runtime fragment-fork / fragment-merge (the fragment primitives the
 //                                    bolt tool delegates to)
-//   - aidlc-runtime compile         (the instances[]/L5-threshold detection that
+//   - amadeus-runtime compile         (the instances[]/L5-threshold detection that
 //                                    rebuilds main runtime-graph.json post-merge)
 //
 // MECHANISM = cli (every observable is a PROCESS-boundary contract):
 //   - the success-JSON the bolt tool prints to stdout carries the literal
 //     `RUNTIME_GRAPH_FORKED` / `RUNTIME_GRAPH_MERGED` tokens in its
-//     `forked: [...]` / `merged: [...]` arrays  [aidlc-bolt.ts:293,:443]
+//     `forked: [...]` / `merged: [...]` arrays  [amadeus-bolt.ts:293,:443]
 //   - the fragment file on disk at
-//     <wt>/aidlc-docs/runtime-graph.json  [aidlc-runtime.ts:1097,:1179]
+//     <wt>/amadeus-docs/runtime-graph.json  [amadeus-runtime.ts:1097,:1179]
 //   - the worktree directory removed by the real `git worktree remove`
-//     dispatched inside aidlc-worktree discard  [aidlc-worktree.ts:455-519]
+//     dispatched inside amadeus-worktree discard  [amadeus-worktree.ts:455-519]
 //   - the compiled main runtime-graph.json's instances[] (presence + alphabetical
-//     ordering)  [aidlc-runtime.ts:452-551]
-//   `aidlc-bolt start --worktree` itself spawns sibling subprocesses
-//   (aidlc-state fork, aidlc-audit audit-fork, aidlc-runtime fragment-fork) via
-//   spawnSync (aidlc-bolt.ts:89-116) — an in-process twin would lose the very
+//     ordering)  [amadeus-runtime.ts:452-551]
+//   `amadeus-bolt start --worktree` itself spawns sibling subprocesses
+//   (amadeus-state fork, amadeus-audit audit-fork, amadeus-runtime fragment-fork) via
+//   spawnSync (amadeus-bolt.ts:89-116) — an in-process twin would lose the very
 //   cross-process fork/merge dance under test. So every scenario SPAWNS the real
 //   binaries (BUN + the .ts path) against a genuine git fixture, exactly the
 //   .sh's shape. spawnCount = all.
 //
-// FIXTURE (mirrors make_bolt_fixture, t12:57-76): aidlc-worktree create runs a
+// FIXTURE (mirrors make_bolt_fixture, t12:57-76): amadeus-worktree create runs a
 // real `git worktree add` and asserts it is invoked from the main checkout
-// (assertNotSiblingWorktree, aidlc-worktree.ts:101) — so each scenario needs an
+// (assertNotSiblingWorktree, amadeus-worktree.ts:101) — so each scenario needs an
 // actual git repo on `main` with one commit, a Construction-phase state file
 // (state-construction.md gives the phase/scope that lets Bolt operations run),
 // a present-but-empty audit.md, and the framework .gitignore set so worktree
@@ -60,7 +60,7 @@
 //          -> "c.1 abort --discard: worktree + fragment gone transitively"
 //   (c.2) abort without --discard: worktree + fragment preserved
 //          -> "c.2 abort (no --discard): worktree + fragment preserved"
-//   (c.3) manual aidlc-worktree discard: fragment removed transitively
+//   (c.3) manual amadeus-worktree discard: fragment removed transitively
 //          -> "c.3 manual worktree discard: fragment removed transitively"
 //
 // STRONGER than the .sh in places: (a.1)/(a.2)/(b.*) assert the bolt tool exited
@@ -89,10 +89,10 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const WORKTREE_TOOL = join(AIDLC_SRC, "tools", "aidlc-worktree.ts");
-const BOLT_TOOL = join(AIDLC_SRC, "tools", "aidlc-bolt.ts");
-const RUNTIME_TOOL = join(AIDLC_SRC, "tools", "aidlc-runtime.ts");
-const AUDIT_TOOL = join(AIDLC_SRC, "tools", "aidlc-audit.ts");
+const WORKTREE_TOOL = join(AIDLC_SRC, "tools", "amadeus-worktree.ts");
+const BOLT_TOOL = join(AIDLC_SRC, "tools", "amadeus-bolt.ts");
+const RUNTIME_TOOL = join(AIDLC_SRC, "tools", "amadeus-runtime.ts");
+const AUDIT_TOOL = join(AIDLC_SRC, "tools", "amadeus-audit.ts");
 
 const fixtures: string[] = [];
 afterAll(() => {
@@ -132,7 +132,7 @@ function wtFragment(proj: string, slug: string): string {
   );
 }
 
-/** Worktree directory for a Bolt slug (worktreePath, aidlc-lib.ts:148). */
+/** Worktree directory for a Bolt slug (worktreePath, amadeus-lib.ts:148). */
 function wtDir(proj: string, slug: string): string {
   return join(proj, ".aidlc", "worktrees", `bolt-${slug}`);
 }
@@ -161,10 +161,10 @@ function makeBoltFixture(): string {
     join(proj, ".gitignore"),
     [
       "aidlc/active-space",
-      "aidlc/.aidlc-clone-id",
+      "aidlc/.amadeus-clone-id",
       "aidlc/spaces/*/intents/active-intent",
       "aidlc/spaces/*/intents/*/runtime-graph.json",
-      "aidlc/spaces/*/intents/*/.aidlc-*",
+      "aidlc/spaces/*/intents/*/.amadeus-*",
       "aidlc/spaces/*/intents/*/audit/",
       "",
     ].join("\n"),
@@ -189,7 +189,7 @@ function makeBoltFixture(): string {
 function boltStartWorktree(proj: string, slug: string): CliResult {
   const create = run(WORKTREE_TOOL, ["create", "--slug", slug, "--base", "main"], proj);
   if (create.status !== 0) {
-    throw new Error(`aidlc-worktree create --slug ${slug} failed: ${create.out}`);
+    throw new Error(`amadeus-worktree create --slug ${slug} failed: ${create.out}`);
   }
   return run(
     BOLT_TOOL,
@@ -227,12 +227,12 @@ function appendAudit(proj: string, event: string, fields: string[][]): void {
   for (const [k, v] of fields) args.push("--field", `${k}=${v}`);
   const r = run(AUDIT_TOOL, args, proj);
   if (r.status !== 0) {
-    throw new Error(`aidlc-audit append ${event} failed: ${r.out}`);
+    throw new Error(`amadeus-audit append ${event} failed: ${r.out}`);
   }
 }
 
 /** Read the compiled main runtime-graph.json's code-generation stage row (under
- *  the per-intent record now, not flat aidlc-docs/). */
+ *  the per-intent record now, not flat amadeus-docs/). */
 function codeGenStage(proj: string): Record<string, unknown> | null {
   const p = join(seededRecordDir(proj), "runtime-graph.json");
   if (!existsSync(p)) return null;
@@ -274,7 +274,7 @@ describe("t12 (a) single-Bolt round-trip (migrated from t12-bolt-runtime-graph-f
     // Seed WORKFLOW_STARTED + STAGE_STARTED + STAGE_COMPLETED so compile has a
     // code-generation stage row to inspect. The single Bolt's STATE_FORKED row
     // pre-dates this STAGE_STARTED window AND slugsInWindow.size < 2 anyway, so
-    // the parent stays single-instance (aidlc-runtime.ts:479).
+    // the parent stays single-instance (amadeus-runtime.ts:479).
     appendAudit(proj, "WORKFLOW_STARTED", [
       ["Workflow ID", "t12-1bolt"],
       ["Scope", "feature"],
@@ -357,7 +357,7 @@ describe("t12 (b) 3-Bolt parallel batch + deterministic merge ordering", () => {
     const instances = (cg?.instances ?? null) as Array<{ bolt: string }> | null;
     expect(instances).not.toBeNull();
     // Alphabetical by Bolt slug regardless of the user's merge order
-    // (aidlc-runtime.ts:485-486).
+    // (amadeus-runtime.ts:485-486).
     expect((instances ?? []).map((i) => i.bolt)).toEqual(["auth", "cart", "pay"]);
   }, 120000);
 });
@@ -393,13 +393,13 @@ describe("t12 (c) abort-discard leaves no orphan fragments", () => {
     expect(existsSync(wtFragment(proj, "kept"))).toBe(true);
   }, 60000);
 
-  test("c.3 manual aidlc-worktree discard: fragment removed transitively (defense-in-depth)", () => {
+  test("c.3 manual amadeus-worktree discard: fragment removed transitively (defense-in-depth)", () => {
     const proj = makeBoltFixture();
     boltStartWorktree(proj, "kept");
     boltAbort(proj, "kept", false); // preserve first
     expect(existsSync(wtFragment(proj, "kept"))).toBe(true);
 
-    // Manual aidlc-worktree discard cleans up the orphan fragment transitively
+    // Manual amadeus-worktree discard cleans up the orphan fragment transitively
     // via git worktree remove (the defense-in-depth fallback when
     // fragment-merge wasn't called).
     const discard = run(WORKTREE_TOOL, ["discard", "--slug", "kept"], proj);

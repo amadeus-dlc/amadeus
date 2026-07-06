@@ -1,35 +1,35 @@
-// covers: subcommand:aidlc-audit:audit-fork, subcommand:aidlc-audit:audit-merge
+// covers: subcommand:amadeus-audit:audit-fork, subcommand:amadeus-audit:audit-merge
 //
 // CLI-contract port of tests/e2e/t07-audit-fork-merge.sh (TAP plan 31),
-// mechanism = cli. The .sh drives the `aidlc-audit.ts audit-fork` /
+// mechanism = cli. The .sh drives the `amadeus-audit.ts audit-fork` /
 // `audit-merge` primitives — the Bolt-worktree audit fork→merge pair. Both
 // subcommands are still UNCOVERED in tests/.coverage-registry.json as of this
-// migration; the credited units are subcommand:aidlc-audit:audit-fork and
-// subcommand:aidlc-audit:audit-merge.
+// migration; the credited units are subcommand:amadeus-audit:audit-fork and
+// subcommand:amadeus-audit:audit-merge.
 //
 // MECHANISM = cli (every observable is a PROCESS-boundary contract):
 //   - exit code (handleAuditFork/Merge call jsonError → process.exit(1), or
-//     jsonSuccess and fall off the end → exit 0)              [aidlc-audit.ts:205-208]
+//     jsonSuccess and fall off the end → exit 0)              [amadeus-audit.ts:205-208]
 //   - stdout JSON ('"emitted":"AUDIT_FORKED"', '"entries_merged":0')  [:424,:620]
 //   - stderr error strings ("main audit not found", "prefix-hash", "Failed to
 //     acquire audit lock", the slug-length message)            [:368,:520-529,:556,:312]
 //   - the literal bytes the tool copies / appends to audit.md on disk
 //   - the AIDLC_AUDIT_LOCK_RETRIES / _RETRY_MS env-var seam            [:548-555]
-//   - the planted-mkdir-lock contention path (auditLockDir = md5(projectDir)[0:8]) [aidlc-lib.ts:512-514]
+//   - the planted-mkdir-lock contention path (auditLockDir = md5(projectDir)[0:8]) [amadeus-lib.ts:512-514]
 //   - the chmod-readonly post-emit failure path → ERROR_LOGGED [fork-emitted:<ts>]  [:407-422]
 // An in-process twin would lose the process.exit shell, the env seam, the
 // JSON-on-stdout contract, and the cross-process lock contention the .sh
 // proves. So every case SPAWNS the real binary (BUN + the .ts path) and the
-// audit-fork/merge prerequisites use the real `aidlc-worktree.ts create`
+// audit-fork/merge prerequisites use the real `amadeus-worktree.ts create`
 // subcommand against a genuine git fixture — exactly the .sh's shape.
 //
-// FIXTURE (mirrors make_fixture, t07:53-61): aidlc-audit audit-fork resolves a
+// FIXTURE (mirrors make_fixture, t07:53-61): amadeus-audit audit-fork resolves a
 // worktree via worktreePath(projectDir, slug) = <proj>/.aidlc/worktrees/bolt-<slug>
-// (aidlc-lib.ts:148) and refuses if the dir is absent (aidlc-audit.ts:371). The
-// worktree is created with the real `aidlc-worktree.ts create` subcommand, which
+// (amadeus-lib.ts:148) and refuses if the dir is absent (amadeus-audit.ts:371). The
+// worktree is created with the real `amadeus-worktree.ts create` subcommand, which
 // runs `git worktree add` and asserts it is invoked from the main checkout
 // (assertNotSiblingWorktree). So each case needs an actual git repo on `main`
-// with one commit + an aidlc-docs/ dir + a seeded audit.md and state file. The
+// with one commit + an amadeus-docs/ dir + a seeded audit.md and state file. The
 // .sh built this with setup_worktree_fixture + a seeded state-mid-ideation.md +
 // `printf "# AI-DLC Audit Log\n" > audit.md`; setupWorktreeFixture
 // (tests/harness/fixtures.ts) + seedStateFile + a one-line audit.md replicate it
@@ -51,8 +51,8 @@
 //   B1.1 empty-delta merge exits 0                          -> "B1 empty-delta" expect 1
 //   B1.2 reports entries_merged=0                           -> "B1 empty-delta" expect 2
 //   B1.3 appends exactly one --- block to main              -> "B1 empty-delta" expect 3
-//   B2.1 worktree aidlc-docs/ absent pre-fork               -> "B2 mkdir -p" expect 1
-//   B2.2 fork created <wt>/aidlc-docs/audit.md              -> "B2 mkdir -p" expect 2
+//   B2.1 worktree amadeus-docs/ absent pre-fork               -> "B2 mkdir -p" expect 1
+//   B2.2 fork created <wt>/amadeus-docs/audit.md              -> "B2 mkdir -p" expect 2
 //   B3.1 fork exits non-zero, main audit missing            -> "B3 missing main audit" expect 1
 //   B3.2 error names "main audit not found"                 -> "B3 missing main audit" expect 2
 //   B4.1 merge exits non-zero, prefix edited                -> "B4 prefix-hash" expect 1
@@ -102,7 +102,7 @@ import {
 // P4: the lock dir is keyed on the COMPOSITE identity (projectDir + intent |
 // __workspace__ sentinel), not bare projectDir — import the real resolver so the
 // planted-lock bucket matches the one audit-merge actually acquires.
-import { auditLockDir as realAuditLockDir } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { auditLockDir as realAuditLockDir } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // A FIXED clone-id token seeded into every clone (main + each worktree) so the
 // per-clone audit shard is deterministic and SINGLE: the main shard the header
@@ -123,12 +123,12 @@ function shardName(): string {
  *  shard name is deterministic and shared with the main checkout. */
 function seedCloneId(cloneRoot: string): void {
   mkdirSync(join(cloneRoot, "aidlc"), { recursive: true });
-  writeFileSync(join(cloneRoot, "aidlc", ".aidlc-clone-id"), `${FIXED_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(cloneRoot, "aidlc", ".amadeus-clone-id"), `${FIXED_CLONE_ID}\n`, "utf-8");
 }
 
 const BUN = process.execPath;
-const AUDIT_TOOL = join(AIDLC_SRC, "tools", "aidlc-audit.ts");
-const WORKTREE_TOOL = join(AIDLC_SRC, "tools", "aidlc-worktree.ts");
+const AUDIT_TOOL = join(AIDLC_SRC, "tools", "amadeus-audit.ts");
+const WORKTREE_TOOL = join(AIDLC_SRC, "tools", "amadeus-worktree.ts");
 
 const fixtures: string[] = [];
 afterAll(() => {
@@ -178,9 +178,9 @@ function runAudit(args: string[], env?: Record<string, string>): CliResult {
   return { status: res.status ?? -1, out: `${stdout}${res.stderr ?? ""}`, stdout };
 }
 
-/** Real `aidlc-worktree.ts create` — the same prerequisite the .sh ran. After
+/** Real `amadeus-worktree.ts create` — the same prerequisite the .sh ran. After
  *  the real create, seed the SAME fixed clone-id into the worktree so a
- *  worktree-side `aidlc-audit append` lands in the SAME shard audit-fork copied
+ *  worktree-side `amadeus-audit append` lands in the SAME shard audit-fork copied
  *  (audit-merge reads only that one shard's post-fork delta). */
 function createWorktree(p: string, slug: string): void {
   const res = spawnSync(
@@ -190,7 +190,7 @@ function createWorktree(p: string, slug: string): void {
   );
   if ((res.status ?? -1) !== 0) {
     throw new Error(
-      `aidlc-worktree create --slug ${slug} failed: ${res.stderr ?? res.stdout ?? `exit ${res.status}`}`,
+      `amadeus-worktree create --slug ${slug} failed: ${res.stderr ?? res.stdout ?? `exit ${res.status}`}`,
     );
   }
   seedCloneId(wtDir(p, slug));
@@ -219,7 +219,7 @@ function makeFixture(): string {
   mkdirSync(seededAuditDir(p), { recursive: true });
   writeFileSync(auditPath(p), "# AI-DLC Audit Log\n", "utf-8");
   // COMMIT the record (state) so the git worktree (branched from main) carries
-  // it and resolves the SAME intent — a worktree-side `aidlc-audit append`
+  // it and resolves the SAME intent — a worktree-side `amadeus-audit append`
   // (which can't take --intent and reads the worktree's own cursor) then lands
   // in the record, the same shard audit-fork copied. The cursors + audit shards +
   // clone-id stay gitignored (per-user / machine-local); the worktree resolves
@@ -228,10 +228,10 @@ function makeFixture(): string {
     join(p, ".gitignore"),
     [
       "aidlc/active-space",
-      "aidlc/.aidlc-clone-id",
+      "aidlc/.amadeus-clone-id",
       "aidlc/spaces/*/intents/active-intent",
       "aidlc/spaces/*/intents/*/runtime-graph.json",
-      "aidlc/spaces/*/intents/*/.aidlc-*",
+      "aidlc/spaces/*/intents/*/.amadeus-*",
       "aidlc/spaces/*/intents/*/audit/",
       "",
     ].join("\n"),
@@ -376,7 +376,7 @@ describe("t07 Phase B — edge cases", () => {
   test("B2: missing worktree audit shard is mkdir -p'd at fork", () => {
     const p = makeFixture();
     createWorktree(p, "e2");
-    // B2.1: aidlc-worktree create does NOT scaffold the audit shard in the
+    // B2.1: amadeus-worktree create does NOT scaffold the audit shard in the
     // worktree mirror (the audit/ dir is gitignored, so the fork branch lacks it).
     const wtAuditDir = join(
       wtDir(p, "e2"),

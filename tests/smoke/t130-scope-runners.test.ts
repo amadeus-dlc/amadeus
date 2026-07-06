@@ -2,9 +2,9 @@
 //
 // Structural-conformance port of tests/smoke/t130-scope-runners.sh (TAP plan
 // 24), mechanism = mixed. The .sh carried NO `# covers:` header (its subject is
-// the GENERATED scope-runner skills, and aidlc-runner-gen.ts enumerates no
+// the GENERATED scope-runner skills, and amadeus-runner-gen.ts enumerates no
 // registry unit of its own — confirmed: tests/.coverage-registry.json has no
-// function/subcommand id for aidlc-runner-gen). So this twin credits the four
+// function/subcommand id for amadeus-runner-gen). So this twin credits the four
 // `scope:` units it genuinely exercises — bugfix / feature / mvp / security-patch,
 // the FIRST_BATCH the generator ships a runner for (the same four registered
 // scope units the feature-tier t130 twin credits; this smoke twin co-covers them
@@ -17,20 +17,20 @@
 //   a CURATED subset (a non-batch scope ships no runner), and the generator emits
 //   a runner for a freshly-dropped scope file with no code change. Concretely,
 //   per runner (5 checks x 4 scopes = 20):
-//     (a) skills/aidlc-<scope>/SKILL.md exists,
-//     (b) its frontmatter `name` == the dir name `aidlc-<scope>`,
+//     (a) skills/amadeus-<scope>/SKILL.md exists,
+//     (b) its frontmatter `name` == the dir name `amadeus-<scope>`,
 //     (c) a `description:` field is present,
 //     (d) it carries NO `hooks:` block (the six spine hooks live project-wide in
 //         settings.json post-move — Fork 2->B; a runner inherits, never copies),
 //     (e) the body is within the 500-line Agent-Skills ceiling.
 //   Plus 4 more: (f) bugfix's shell drives the engine with `--scope bugfix`,
-//   (g) `aidlc-runner-gen.ts scopes --check` is drift-clean, (h) a non-batch
+//   (g) `amadeus-runner-gen.ts scopes --check` is drift-clean, (h) a non-batch
 //   scope (`refactor`) has no runner dir, (i) the generator emits a runner for a
 //   newly-dropped scope file via the AIDLC_SCOPES_DIR + `--all --out` env seams.
 //
 // MECHANISM = mixed (body-derived, milestone 3):
 //   - The structural conformance + curated-subset checks read the SHIPPED
-//     skills/aidlc-<scope>/SKILL.md bytes in process AND import the generator's
+//     skills/amadeus-<scope>/SKILL.md bytes in process AND import the generator's
 //     exported renderRunner / discoverScopes / FIRST_BATCH to assert the rendered
 //     contract directly (mechanism none — zero process spawn). STRONGER than the
 //     .sh's grep-on-disk: the frontmatter-name, description-present, no-hooks, and
@@ -38,20 +38,20 @@
 //     generator's own render output, so a drift between the two also fails here.
 //   - Two checks are genuine PROCESS / ENV seams that must be SPAWNED (mechanism
 //     cli): the drift-guard EXIT CODE (`scopes --check` exits 0 iff in sync,
-//     aidlc-runner-gen.ts:476/474) and the env-seam GENERATION (`AIDLC_SCOPES_DIR`
+//     amadeus-runner-gen.ts:476/474) and the env-seam GENERATION (`AIDLC_SCOPES_DIR`
 //     points the reader at an isolated tree, `--out` points the writer at an
 //     isolated skills dir, :315/:449) — both are the SAME shipped tool the .sh
 //     shelled out to (`bun GEN scopes …`). An in-process twin would lose the
 //     process.exit drift contract and the env-seam isolation. spawnsShippedTool.
 //
-// SOURCE UNDER TEST (dist/claude/.claude/tools/aidlc-runner-gen.ts):
+// SOURCE UNDER TEST (dist/claude/.claude/tools/amadeus-runner-gen.ts):
 //   :307 FIRST_BATCH = ["bugfix","feature","mvp","security-patch"] — the curated
 //        set that ships a typeable runner; every other scope runs via --scope.
 //   :384 renderRunner(scope, description) — emits the SKILL.md body: `name:
-//        aidlc-<scope>` frontmatter, a `description: >` folded block, NO `hooks:`
-//        block, and the `aidlc-orchestrate.ts next --scope <scope>` forwarding
-//        loop. Spec-conformant: name == dir == aidlc-<scope> (:391).
-//   :364 discoverScopes() — reads `.claude/scopes/aidlc-*.md` (AIDLC_SCOPES_DIR
+//        amadeus-<scope>` frontmatter, a `description: >` folded block, NO `hooks:`
+//        block, and the `amadeus-orchestrate.ts next --scope <scope>` forwarding
+//        loop. Spec-conformant: name == dir == amadeus-<scope> (:391).
+//   :364 discoverScopes() — reads `.claude/scopes/amadeus-*.md` (AIDLC_SCOPES_DIR
 //        seam, :315), keyed by frontmatter `name`.
 //   :447 handleScopes — `--check` (drift guard, exits 1 with a diff on drift,
 //        :474) / `--all` (emit a runner per shipped scope, resolveBatch :429) /
@@ -61,11 +61,11 @@
 // expect()-bearing assertions here, several STRONGER via on-disk+render
 // co-assertion). plan 24 = (5 per-runner checks x 4 scopes = 20) + 4 standalone:
 //   .sh "<scope>: SKILL.md exists"                  -> per-scope "SKILL.md exists"
-//   .sh "<scope>: frontmatter name == dir"          -> per-scope "name == aidlc-<scope>"
+//   .sh "<scope>: frontmatter name == dir"          -> per-scope "name == amadeus-<scope>"
 //   .sh "<scope>: has description"                  -> per-scope "description present"
 //   .sh "<scope>: carries no hooks: block"          -> per-scope "no hooks: block"
 //   .sh "<scope>: body <= 500 lines"                -> per-scope "body <= 500 lines"
-//   .sh "aidlc-bugfix: shell drives --scope bugfix" -> "bugfix runner drives the engine with --scope bugfix"
+//   .sh "amadeus-bugfix: shell drives --scope bugfix" -> "bugfix runner drives the engine with --scope bugfix"
 //   .sh "scopes --check is drift-clean"             -> CLI "scopes --check exits 0 on the shipped tree"
 //   .sh "non-batch scope (refactor) has no runner"  -> "non-batch scope refactor ships no runner dir"
 //   .sh "generator emits a runner for a new scope"  -> CLI "AIDLC_SCOPES_DIR + --all --out emits a runner for a dropped scope file"
@@ -86,20 +86,20 @@ import {
   discoverScopes,
   FIRST_BATCH,
   renderRunner,
-} from "../../dist/claude/.claude/tools/aidlc-runner-gen.ts";
+} from "../../dist/claude/.claude/tools/amadeus-runner-gen.ts";
 
 const BUN = process.execPath; // the bun running this test
 const SKILLS_DIR = join(AIDLC_SRC, "skills");
-const GEN = join(AIDLC_SRC, "tools", "aidlc-runner-gen.ts");
+const GEN = join(AIDLC_SRC, "tools", "amadeus-runner-gen.ts");
 
-// The first batch the generator ships (mirrors aidlc-runner-gen.ts FIRST_BATCH,
+// The first batch the generator ships (mirrors amadeus-runner-gen.ts FIRST_BATCH,
 // :307). Read from the exported constant so a batch change can never drift the
 // test out from under the tool — the .sh hard-coded the same four names.
 const BATCH = [...FIRST_BATCH];
 
-/** The shipped runner SKILL.md path for one scope (skills/aidlc-<scope>/SKILL.md). */
+/** The shipped runner SKILL.md path for one scope (skills/amadeus-<scope>/SKILL.md). */
 function runnerPath(scope: string): string {
-  return join(SKILLS_DIR, `aidlc-${scope}`, "SKILL.md");
+  return join(SKILLS_DIR, `amadeus-${scope}`, "SKILL.md");
 }
 
 /** The frontmatter `name:` scalar (mirrors the .sh's bun -e frontmatter parse at :32-39). */
@@ -128,7 +128,7 @@ describe("t130 scope-runners — structural conformance of the shipped first-bat
   // fails (the .sh only grepped the on-disk file).
   // ===========================================================================
   for (const scope of BATCH) {
-    const dir = `aidlc-${scope}`;
+    const dir = `amadeus-${scope}`;
 
     test(`${dir}: SKILL.md exists [.sh per-scope test a]`, () => {
       expect(existsSync(runnerPath(scope))).toBe(true);
@@ -136,7 +136,7 @@ describe("t130 scope-runners — structural conformance of the shipped first-bat
 
     test(`${dir}: frontmatter name == dir name [.sh per-scope test b]`, () => {
       const body = readFileSync(runnerPath(scope), "utf-8");
-      // .sh: got_name == "aidlc-$scope".
+      // .sh: got_name == "amadeus-$scope".
       expect(frontmatterName(body)).toBe(dir);
       // STRONGER: the generator's own render agrees (name == dir, :391).
       const rendered = renderRunner(scope, DISCOVERED[scope]?.description ?? "");
@@ -171,14 +171,14 @@ describe("t130 scope-runners — structural conformance of the shipped first-bat
   // ===========================================================================
   // The shell drives the engine with the baked scope (1 test).
   // Spot-check bugfix carries the engine forwarding-loop call with its scope —
-  // the .sh's substring grep for "aidlc-orchestrate.ts next --scope bugfix".
+  // the .sh's substring grep for "amadeus-orchestrate.ts next --scope bugfix".
   // ===========================================================================
-  test("aidlc-bugfix: shell drives the engine with --scope bugfix [.sh test f]", () => {
+  test("amadeus-bugfix: shell drives the engine with --scope bugfix [.sh test f]", () => {
     const body = readFileSync(runnerPath("bugfix"), "utf-8");
-    expect(body).toContain("aidlc-orchestrate.ts next --scope bugfix");
+    expect(body).toContain("amadeus-orchestrate.ts next --scope bugfix");
     // STRONGER: the generator renders the same forwarding-loop call.
     const rendered = renderRunner("bugfix", DISCOVERED.bugfix?.description ?? "");
-    expect(rendered).toContain("aidlc-orchestrate.ts next --scope bugfix");
+    expect(rendered).toContain("amadeus-orchestrate.ts next --scope bugfix");
   });
 
   // ===========================================================================
@@ -196,11 +196,11 @@ describe("t130 scope-runners — structural conformance of the shipped first-bat
 
   // ===========================================================================
   // Negative — a non-batch scope ships no runner (1 test). `refactor` is a
-  // shipped scope (.claude/scopes/aidlc-refactor.md) but NOT in FIRST_BATCH, so
+  // shipped scope (.claude/scopes/amadeus-refactor.md) but NOT in FIRST_BATCH, so
   // it must run via `--scope`, never a runner. Pins runners as a curated subset.
   // ===========================================================================
   test("non-batch scope (refactor) has no runner — runs via --scope [.sh test h]", () => {
-    // .sh: assert_file_not_exists skills/aidlc-refactor/SKILL.md.
+    // .sh: assert_file_not_exists skills/amadeus-refactor/SKILL.md.
     expect(existsSync(runnerPath("refactor"))).toBe(false);
     // STRONGER: refactor IS a discovered scope (so its absence is a deliberate
     // curation, not a missing scope file) and it is genuinely NOT in FIRST_BATCH.
@@ -224,7 +224,7 @@ describe("t130 scope-runners — structural conformance of the shipped first-bat
     // Byte-for-byte the .sh's hotfix heredoc (:82-92): a leaner-than-bugfix
     // urgent-patch scope file with a name/description the generator reads.
     writeFileSync(
-      join(tmpScopes, "aidlc-hotfix.md"),
+      join(tmpScopes, "amadeus-hotfix.md"),
       [
         "---",
         "name: hotfix",
@@ -249,11 +249,11 @@ describe("t130 scope-runners — structural conformance of the shipped first-bat
     expect(r.status).toBe(0);
 
     // .sh: the runner file exists AND drives `next --scope hotfix`.
-    const emitted = join(tmpOut, "aidlc-hotfix", "SKILL.md");
+    const emitted = join(tmpOut, "amadeus-hotfix", "SKILL.md");
     expect(existsSync(emitted)).toBe(true);
     const emittedBody = readFileSync(emitted, "utf-8");
     expect(emittedBody).toContain("next --scope hotfix");
     // STRONGER: the emitted runner is spec-conformant (name == dir) too.
-    expect(frontmatterName(emittedBody)).toBe("aidlc-hotfix");
+    expect(frontmatterName(emittedBody)).toBe("amadeus-hotfix");
   }, 30000);
 });

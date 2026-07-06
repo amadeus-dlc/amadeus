@@ -1,10 +1,10 @@
-# aidlc-product-agent -- Technical Reference
+# amadeus-product-agent -- Technical Reference
 
 ## Identity
 
 | Field | Value |
 |-------|-------|
-| Name | aidlc-product-agent |
+| Name | amadeus-product-agent |
 | Model Override | opus |
 | Allowed Claude Code Tools | Read, Edit, Write, Glob, Grep, WebSearch, AskUserQuestion |
 | Disallowed Claude Code Tools | Task |
@@ -41,16 +41,16 @@
 |--------|-----------|
 | User/stakeholder input | Raw business needs, domain knowledge, project descriptions |
 | Existing documentation | Prior artifacts, legacy system documentation |
-| aidlc-operations-agent | Operational feedback from production for next Ideation cycle (closes the lifecycle loop) |
+| amadeus-operations-agent | Operational feedback from production for next Ideation cycle (closes the lifecycle loop) |
 
 ### Hands Off To
 
 | Target | Artifacts |
 |--------|-----------|
-| aidlc-architect-agent | Validated requirements for system design and decomposition |
-| aidlc-developer-agent | Story specifications for code generation |
-| aidlc-quality-agent | Acceptance criteria for test case design |
-| aidlc-delivery-agent | Prioritized backlog for delivery planning |
+| amadeus-architect-agent | Validated requirements for system design and decomposition |
+| amadeus-developer-agent | Story specifications for code generation |
+| amadeus-quality-agent | Acceptance criteria for test case design |
+| amadeus-delivery-agent | Prioritized backlog for delivery planning |
 
 ---
 
@@ -58,7 +58,7 @@
 
 ### Methodology (Tier 1)
 
-Path: `.claude/knowledge/aidlc-product-agent/`
+Path: `.claude/knowledge/amadeus-product-agent/`
 
 | File | Content |
 |------|---------|
@@ -72,7 +72,7 @@ Path: `.claude/knowledge/aidlc-product-agent/`
 
 ### Team (Tier 2)
 
-Path: `aidlc/knowledge/aidlc-product-agent/` (the space-level knowledge dir; user-managed)
+Path: `aidlc/knowledge/amadeus-product-agent/` (the space-level knowledge dir; user-managed)
 
 A space-level directory the team creates when it has content (the engine ships `aidlc/knowledge/` empty). Populated by the team with project-specific
 product knowledge such as existing personas, market research, domain glossaries,
@@ -83,6 +83,6 @@ or stakeholder communication preferences.
 ## Cross-References
 
 - [Agent Reference Overview](README.md)
-- [Agent Guide: aidlc-product-agent](../../guide/agents/product-agent.md)
+- [Agent Guide: amadeus-product-agent](../../guide/agents/product-agent.md)
 - [Stage Documentation](../04-stages/)
-- Source: [`dist/claude/.claude/agents/aidlc-product-agent.md`](../../../dist/claude/.claude/agents/aidlc-product-agent.md)
+- Source: [`dist/claude/.claude/agents/amadeus-product-agent.md`](../../../dist/claude/.claude/agents/amadeus-product-agent.md)

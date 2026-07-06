@@ -1,10 +1,10 @@
-// covers: hook:aidlc-session-start
+// covers: hook:amadeus-session-start
 //
 // t169 — the P8 RESUME REBIND. A conversation works ONE intent, but the
 // active-intent CURSOR is durable + shared across sessions. So resuming an
 // A-chat after the cursor moved to B would silently inject B's context (vision
 // §3, the central multi-space hazard). The fix is a per-session→intent stamp at
-// aidlc/.aidlc-sessions/<session_id>:
+// aidlc/.amadeus-sessions/<session_id>:
 //   - On a STARTED-class event, session-start STAMPS the working intent's UUID
 //     keyed by session_id.
 //   - On RESUMED, if the stamped UUID differs from the live cursor AND still
@@ -18,7 +18,7 @@
 // none reachable by importing a function. So this twin SPAWNS the real shipped
 // hook the same way Claude Code's SessionStart drives it (same pattern as t10).
 //
-// SEEDING: birthIntent() (aidlc-lib.ts) mints two real per-intent records in
+// SEEDING: birthIntent() (amadeus-lib.ts) mints two real per-intent records in
 // space "default" and sets the active-intent cursor; setActiveIntentCursor()
 // moves the cursor between the START fire and the RESUME fire to simulate the
 // drift. The hook gates on stateFilePath existing, which birthIntent satisfies
@@ -30,7 +30,7 @@ import { join } from "node:path";
 import {
   birthIntent,
   setActiveIntentCursor,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   AIDLC_SRC,
   cleanupTestProject,
@@ -38,7 +38,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const HOOK = join(AIDLC_SRC, "hooks", "aidlc-session-start.ts");
+const HOOK = join(AIDLC_SRC, "hooks", "amadeus-session-start.ts");
 
 let proj: string;
 beforeEach(() => {
@@ -97,7 +97,7 @@ describe("t169 session-start resume rebind (mechanism cli — spawned hook + cur
     expect(resumed.context).toContain("was working auth-service");
     expect(resumed.context).toContain("active intent is export-bug");
     // The offer names the cursor-correction command, not a session rebuild.
-    expect(resumed.context).toContain("/aidlc intent auth-service");
+    expect(resumed.context).toContain("/amadeus intent auth-service");
     expect(resumed.context).toContain("never rebuilds the conversation");
     void b;
   });
@@ -124,9 +124,9 @@ describe("t169 session-start resume rebind (mechanism cli — spawned hook + cur
   test("flat-legacy project (no per-intent record) never offers a rebind", () => {
     // No birth — the project is flat-legacy (activeIntentUuid → null). Seed a
     // flat state file so the hook passes its no-state gate, then fire resume.
-    mkdirSync(join(proj, "aidlc-docs"), { recursive: true });
+    mkdirSync(join(proj, "amadeus-docs"), { recursive: true });
     writeFileSync(
-      join(proj, "aidlc-docs", "aidlc-state.md"),
+      join(proj, "amadeus-docs", "amadeus-state.md"),
       "# AI-DLC State Tracking\n## Current Status\n- **Lifecycle Phase**: IDEATION\n",
       "utf-8",
     );

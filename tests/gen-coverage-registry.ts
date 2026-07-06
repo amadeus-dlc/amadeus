@@ -15,7 +15,7 @@
 // gap. Coverage cannot silently rot because the universe is recomputed from
 // source on every CI run.
 //
-// THE FRESHNESS-DIFF IDIOM (borrowed from aidlc-graph.ts compile/export
+// THE FRESHNESS-DIFF IDIOM (borrowed from amadeus-graph.ts compile/export
 // --check, :1127 / :1142). `--check` regenerates the registry in memory, diffs
 // it against the committed tests/.coverage-registry.json, and exits 1 with the
 // diff on any mismatch. Same shape as the proven stage-graph drift guard.
@@ -56,7 +56,7 @@ import { fileURLToPath } from "node:url";
 const __FILE_DIR = dirname(fileURLToPath(import.meta.url));
 const TESTS_DIR = __FILE_DIR;
 
-// ENV-VAR SEAMS (mirrors aidlc-graph.ts's AIDLC_EXPORT_FIXTURE pattern, :1172).
+// ENV-VAR SEAMS (mirrors amadeus-graph.ts's AIDLC_EXPORT_FIXTURE pattern, :1172).
 // Tests point these at a temp tree to PROVE the ratchet: copy the shipped
 // source, inject a fake new audit event / subcommand, and run `--check` against
 // the temp roots + temp committed baselines without mutating real source.
@@ -73,7 +73,7 @@ const TOOLS_DIR = join(
   "tools",
 );
 const HOOKS_DIR = join(REPO_ROOT, "dist", "claude", ".claude", "hooks");
-const STATUSLINE_PATH = join(HOOKS_DIR, "aidlc-statusline.ts");
+const STATUSLINE_PATH = join(HOOKS_DIR, "amadeus-statusline.ts");
 const LEGACY_STAGES_DIR = join(
   REPO_ROOT,
   "dist", "claude",
@@ -86,18 +86,18 @@ const COMMON_STAGES_DIR = join(
   REPO_ROOT,
   "dist", "claude",
   ".claude",
-  "aidlc-common",
+  "amadeus-common",
   "stages",
 );
 const STAGES_DIR = existsSync(COMMON_STAGES_DIR) ? COMMON_STAGES_DIR : LEGACY_STAGES_DIR;
 const STAGES_SOURCE_ROOT = existsSync(COMMON_STAGES_DIR)
-  ? "dist/claude/.claude/aidlc-common/stages"
-  : "dist/claude/.claude/skills/aidlc/stages";
+  ? "dist/claude/.claude/amadeus-common/stages"
+  : "dist/claude/.claude/skills/amadeus/stages";
 const SCOPE_MAPPING_PATH = join(TOOLS_DIR, "data", "scope-mapping.json");
 const SCOPE_GRID_PATH = join(TOOLS_DIR, "data", "scope-grid.json");
-const AUDIT_PATH = join(TOOLS_DIR, "aidlc-audit.ts");
-const LIB_PATH = join(TOOLS_DIR, "aidlc-lib.ts");
-const GRAPH_PATH = join(TOOLS_DIR, "aidlc-graph.ts");
+const AUDIT_PATH = join(TOOLS_DIR, "amadeus-audit.ts");
+const LIB_PATH = join(TOOLS_DIR, "amadeus-lib.ts");
+const GRAPH_PATH = join(TOOLS_DIR, "amadeus-graph.ts");
 
 const REGISTRY_PATH =
   process.env.AIDLC_COVERAGE_REGISTRY ?? join(TESTS_DIR, ".coverage-registry.json");
@@ -118,7 +118,7 @@ const RATCHET_PATH =
 //   none — pure in-process: import the fn / spawn a deterministic CLI tool
 //          against a temp dir. Zero LLM, zero tokens. (t106-t114 are .none.)
 //   cli  — exercises a tool's argv dispatch as a spawned subprocess.
-//   sdk  — drives the real /aidlc through the Claude Agent SDK (spends tokens;
+//   sdk  — drives the real /amadeus through the Claude Agent SDK (spends tokens;
 //          the harness calibration tier).
 //   tui  — drives the real terminal UI (tmux). Strongest; observes rendering.
 //
@@ -226,7 +226,7 @@ export interface RegistryRow {
 // ---------------------------------------------------------------------------
 // CLI tool descriptors. Each names the dispatch construct the parser must read.
 //   kind "object"  -> a `const <anchor>: ... = { key: ..., "k-2": ... }` table
-//                     (aidlc-graph COMMANDS, aidlc-runtime SUBCOMMANDS).
+//                     (amadeus-graph COMMANDS, amadeus-runtime SUBCOMMANDS).
 //   kind "switch"  -> the entry `switch (<switchVar>) { case "x": }` inside
 //                     main(). switchVar disambiguates the entry dispatch from
 //                     nested sub-switches (state.ts has practices-event + lookup
@@ -248,18 +248,18 @@ interface ToolDescriptor {
 }
 
 export const TOOL_DESCRIPTORS: readonly ToolDescriptor[] = [
-  { file: "aidlc-state.ts", kind: "switch", anchor: "subcommand" },
-  { file: "aidlc-audit.ts", kind: "switch", anchor: "subcommand" },
-  { file: "aidlc-bolt.ts", kind: "switch", anchor: "subcommand" },
-  { file: "aidlc-jump.ts", kind: "switch", anchor: "subcommand" },
-  { file: "aidlc-log.ts", kind: "switch", anchor: "subcommand" },
-  { file: "aidlc-worktree.ts", kind: "switch", anchor: "subcommand" },
-  { file: "aidlc-validate.ts", kind: "switch", anchor: "subcommand" },
-  { file: "aidlc-learnings.ts", kind: "switch", anchor: "cmd" },
-  { file: "aidlc-sensor.ts", kind: "switch", anchor: "cmd" },
-  { file: "aidlc-utility.ts", kind: "switch", anchor: "subcommand" },
-  { file: "aidlc-graph.ts", kind: "object", anchor: "COMMANDS" },
-  { file: "aidlc-runtime.ts", kind: "object", anchor: "SUBCOMMANDS" },
+  { file: "amadeus-state.ts", kind: "switch", anchor: "subcommand" },
+  { file: "amadeus-audit.ts", kind: "switch", anchor: "subcommand" },
+  { file: "amadeus-bolt.ts", kind: "switch", anchor: "subcommand" },
+  { file: "amadeus-jump.ts", kind: "switch", anchor: "subcommand" },
+  { file: "amadeus-log.ts", kind: "switch", anchor: "subcommand" },
+  { file: "amadeus-worktree.ts", kind: "switch", anchor: "subcommand" },
+  { file: "amadeus-validate.ts", kind: "switch", anchor: "subcommand" },
+  { file: "amadeus-learnings.ts", kind: "switch", anchor: "cmd" },
+  { file: "amadeus-sensor.ts", kind: "switch", anchor: "cmd" },
+  { file: "amadeus-utility.ts", kind: "switch", anchor: "subcommand" },
+  { file: "amadeus-graph.ts", kind: "object", anchor: "COMMANDS" },
+  { file: "amadeus-runtime.ts", kind: "object", anchor: "SUBCOMMANDS" },
 ];
 
 // ===========================================================================
@@ -399,7 +399,7 @@ function countDepthOneKeys(body: string): number {
 export function enumerateSubcommands(): Unit[] {
   const units: Unit[] = [];
   for (const d of TOOL_DESCRIPTORS) {
-    const toolName = basename(d.file, ".ts"); // aidlc-state
+    const toolName = basename(d.file, ".ts"); // amadeus-state
     for (const sub of subcommandsForTool(d)) {
       units.push({
         unitClass: "subcommand",
@@ -412,7 +412,7 @@ export function enumerateSubcommands(): Unit[] {
   return units;
 }
 
-/** VALID_EVENT_TYPES Set members in aidlc-audit.ts (~:19). Read the Set body
+/** VALID_EVENT_TYPES Set members in amadeus-audit.ts (~:19). Read the Set body
  *  fresh; pull every quoted UPPER_SNAKE literal. */
 export function enumerateAuditEvents(): Unit[] {
   const src = readFileSync(AUDIT_PATH, "utf-8");
@@ -438,7 +438,7 @@ export function enumerateAuditEvents(): Unit[] {
     unitClass: "audit" as const,
     unitId: id,
     minMechanism: MIN_MECHANISM.audit,
-    source: "dist/claude/.claude/tools/aidlc-audit.ts",
+    source: "dist/claude/.claude/tools/amadeus-audit.ts",
   }));
 }
 
@@ -477,7 +477,7 @@ export function enumerateStages(): Unit[] {
   return units;
 }
 
-/** Hook units: every aidlc-*.ts under hooks/. */
+/** Hook units: every amadeus-*.ts under hooks/. */
 export function enumerateHooks(): Unit[] {
   return readdirSync(HOOKS_DIR)
     .filter((f) => f.endsWith(".ts"))
@@ -490,7 +490,7 @@ export function enumerateHooks(): Unit[] {
 }
 
 /** RENDER-SURFACE units: the distinct render branches of the statusline hook
- *  (dist/claude/.claude/hooks/aidlc-statusline.ts). Each branch can break
+ *  (dist/claude/.claude/hooks/amadeus-statusline.ts). Each branch can break
  *  independently and only a PAINTED terminal shows it, so each is its own unit
  *  at minMechanism `tui` (D-TUI-5: 6 units, not one coarse "statusline-render").
  *
@@ -529,7 +529,7 @@ export function enumerateRenderSurfaces(): Unit[] {
       // the universe (which would let a regressed branch pass as covered).
       throw new Error(
         `render-surface enumerator: anchor "${anchor}" for unit "${id}" not ` +
-          `found in aidlc-statusline.ts — the render branch was renamed or ` +
+          `found in amadeus-statusline.ts — the render branch was renamed or ` +
           `removed. Update RENDER_SURFACE_ANCHORS in gen-coverage-registry.ts.`,
       );
     }
@@ -537,13 +537,13 @@ export function enumerateRenderSurfaces(): Unit[] {
       unitClass: "render-surface",
       unitId: id,
       minMechanism: MIN_MECHANISM["render-surface"],
-      source: "dist/claude/.claude/hooks/aidlc-statusline.ts",
+      source: "dist/claude/.claude/hooks/amadeus-statusline.ts",
     });
   }
   return units;
 }
 
-/** Exported lib functions from aidlc-lib.ts + aidlc-graph.ts. Matches a
+/** Exported lib functions from amadeus-lib.ts + amadeus-graph.ts. Matches a
  *  top-level `export function|const|class|async function NAME`. unitId is
  *  `function:NAME` so it joins to the `function:NAME` covers-IDs t106-t111 use. */
 export function enumerateExportedFunctions(): Unit[] {
@@ -551,8 +551,8 @@ export function enumerateExportedFunctions(): Unit[] {
   const re =
     /^export\s+(?:async\s+function|function|const|class)\s+([A-Za-z_][A-Za-z0-9_]*)/gm;
   for (const [path, rel] of [
-    [LIB_PATH, "dist/claude/.claude/tools/aidlc-lib.ts"],
-    [GRAPH_PATH, "dist/claude/.claude/tools/aidlc-graph.ts"],
+    [LIB_PATH, "dist/claude/.claude/tools/amadeus-lib.ts"],
+    [GRAPH_PATH, "dist/claude/.claude/tools/amadeus-graph.ts"],
   ] as const) {
     const src = readFileSync(path, "utf-8");
     for (const m of src.matchAll(re)) {
@@ -652,7 +652,7 @@ export function mechanismOfTestFile(fileName: string): Mechanism {
  *    - spawns `tui-drive.ts` .... adds `tui` (the painted-terminal driver)
  *    - shipped-surface spawn .... adds `cli` (the literal shipped binary): `claude -p`,
  *                                 a runtime (`BUN`/`process.execPath`/`"bun"`/`"node"`)
- *                                 spawn whose argv targets an `aidlc-*.ts` tool, or a
+ *                                 spawn whose argv targets an `amadeus-*.ts` tool, or a
  *                                 `bash`/`execFileSync("bash")` spawn of `run-tests.sh`
  *  Scanning the code view (not the raw source) is what makes "match the CALL /
  *  SPAWN expression, never a bare mention" true: the t118 lesson (it references
@@ -681,7 +681,7 @@ export function mechanismsOf(fileName: string, src: string): Mechanism[] {
   if (/\bdriveAidlc\s*\(/.test(code)) found.add("sdk");
   // tui — spawning the painted-terminal driver by its filename (in code, not an import).
   if (/tui-drive\.ts/.test(code)) found.add("tui");
-  // cli — driving a shipped binary as a subprocess (claude -p, an aidlc-*.ts tool
+  // cli — driving a shipped binary as a subprocess (claude -p, an amadeus-*.ts tool
   // under the bun/node runtime, or run-tests.sh under bash). See drivesCliSurface.
   if (drivesCliSurface(code)) found.add("cli");
 
@@ -694,7 +694,7 @@ export function mechanismsOf(fileName: string, src: string): Mechanism[] {
 }
 
 /** The subset of driver signals that require a usable Claude substrate at run
- *  time. `cli` is intentionally split: spawning `bun aidlc-*.ts` is
+ *  time. `cli` is intentionally split: spawning `bun amadeus-*.ts` is
  *  deterministic, while `claude -p` / `claude --print` needs live auth. */
 export function claudeDependenciesOf(_fileName: string, src: string): ClaudeDependency[] {
   const code = codeView(src);
@@ -714,15 +714,15 @@ export function claudeDependenciesOf(_fileName: string, src: string): ClaudeDepe
  *        stay {tui} and never spuriously gain {cli}.)
  *    2. A RUNTIME spawn — `spawnSync`/`spawn`/`execSync`/`execFileSync`/`Bun.spawn*`
  *       whose runtime is `BUN` / `process.execPath` / a literal `"bun"` or `"node"` —
- *       whose argv targets an `aidlc-*.ts` tool. The tool is matched whether it is an
- *       inline string literal (`spawnSync(BUN,["…/aidlc-state.ts"])`) OR a const bound
- *       to one (`const GRAPH_TS = join(TOOLS_DIR,"aidlc-graph.ts"); spawnSync(BUN,[GRAPH_TS,…])`),
+ *       whose argv targets an `amadeus-*.ts` tool. The tool is matched whether it is an
+ *       inline string literal (`spawnSync(BUN,["…/amadeus-state.ts"])`) OR a const bound
+ *       to one (`const GRAPH_TS = join(TOOLS_DIR,"amadeus-graph.ts"); spawnSync(BUN,[GRAPH_TS,…])`),
  *       since the const definition survives in the code view (imports/comments are stripped,
- *       but a `const X = "…aidlc-*.ts"` is real code).
+ *       but a `const X = "…amadeus-*.ts"` is real code).
  *    3. A `bash` spawn (`spawnSync("bash",…)` / `execFileSync("bash",…)`) of `run-tests.sh`.
  *
- *  WHY gate on a real spawn and not a bare `aidlc-*.ts` mention: 12 deterministic floor
- *  tests reference a tool ONLY through a multi-line `import { … } from "…/aidlc-lib.ts"`
+ *  WHY gate on a real spawn and not a bare `amadeus-*.ts` mention: 12 deterministic floor
+ *  tests reference a tool ONLY through a multi-line `import { … } from "…/amadeus-lib.ts"`
  *  whose path lands on a CONTINUATION line the import-strip misses — they call the lib
  *  IN-PROCESS and must stay {none}. Requiring (spawn primitive ∧ runtime ∧ shipped target)
  *  keeps every such import-only test out of cli. */
@@ -730,9 +730,9 @@ function drivesCliSurface(code: string): boolean {
   // 1. claude in print mode (NOT --version).
   if (drivesClaudePrintSurface(code)) return true;
 
-  // The shipped targets: an aidlc-*.ts tool, or the run-tests.sh runner — as a
+  // The shipped targets: an amadeus-*.ts tool, or the run-tests.sh runner — as a
   // string literal anywhere in the code view (inline arg OR a `const X = "…"` def).
-  const hasAidlcToolLiteral = /["'][^"']*\baidlc-[A-Za-z0-9_-]+\.ts["']/.test(code);
+  const hasAidlcToolLiteral = /["'][^"']*\bamadeus-[A-Za-z0-9_-]+\.ts["']/.test(code);
   const hasRunnerLiteral = /["'][^"']*\brun-tests\.sh["']/.test(code);
   if (!hasAidlcToolLiteral && !hasRunnerLiteral) return false;
 
@@ -774,7 +774,7 @@ function drivesClaudePrintSurface(code: string): boolean {
  *  first, so a `//` line comment whose text merely CONTAINED the substring `/*`
  *  (e.g. a `tests/fixtures/**` glob, t38.cli:64) was treated as a block-comment
  *  OPENER and paired with a downstream block-close, silently SWALLOWING the real
- *  code in between — including the `const TOOL = join(..., "aidlc-*.ts")` spawn
+ *  code in between — including the `const TOOL = join(..., "amadeus-*.ts")` spawn
  *  site the mechanism scan needs. Stripping `//` lines first removes that trigger
  *  so the block pass only ever sees genuine block comments. */
 export function codeView(src: string): string {
@@ -945,7 +945,7 @@ export function discoverClaims(): DiscoveredClaim[] {
  *    audit    -> `audit:EVENT`
  *    scope    -> `scope:key`
  *    stage    -> `stage:<phase>/<slug>` OR `stage:<slug>`
- *    hook     -> `hook:aidlc-x`
+ *    hook     -> `hook:amadeus-x`
  *    subcommand -> `subcommand:<tool> <sub>` OR `subcommand:<tool>:<sub>`
  *    render-surface -> `render-surface:<id>`
  *  We index units by every claim-form they could legitimately be referenced by.

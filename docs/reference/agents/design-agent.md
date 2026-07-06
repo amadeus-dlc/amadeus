@@ -1,10 +1,10 @@
-# aidlc-design-agent -- Technical Reference
+# amadeus-design-agent -- Technical Reference
 
 ## Identity
 
 | Field | Value |
 |-------|-------|
-| Name | aidlc-design-agent |
+| Name | amadeus-design-agent |
 | Model Override | opus |
 | Allowed Claude Code Tools | Read, Edit, Write, Glob, Grep, WebSearch, AskUserQuestion |
 | Disallowed Claude Code Tools | Task |
@@ -35,15 +35,15 @@
 
 | Source | Artifacts |
 |--------|-----------|
-| aidlc-product-agent | User stories, personas, intent, user journey context |
-| aidlc-architect-agent | Component design constraints, technology limitations affecting UI |
+| amadeus-product-agent | User stories, personas, intent, user journey context |
+| amadeus-architect-agent | Component design constraints, technology limitations affecting UI |
 
 ### Hands Off To
 
 | Target | Artifacts |
 |--------|-----------|
-| aidlc-developer-agent | Interaction specifications for implementation, component specs |
-| aidlc-quality-agent | UX acceptance criteria for testing, accessibility requirements |
+| amadeus-developer-agent | Interaction specifications for implementation, component specs |
+| amadeus-quality-agent | UX acceptance criteria for testing, accessibility requirements |
 
 ---
 
@@ -51,7 +51,7 @@
 
 ### Methodology (Tier 1)
 
-Path: `.claude/knowledge/aidlc-design-agent/`
+Path: `.claude/knowledge/amadeus-design-agent/`
 
 | File | Content |
 |------|---------|
@@ -63,7 +63,7 @@ Path: `.claude/knowledge/aidlc-design-agent/`
 
 ### Team (Tier 2)
 
-Path: `aidlc/knowledge/aidlc-design-agent/` (the space-level knowledge dir; user-managed)
+Path: `aidlc/knowledge/amadeus-design-agent/` (the space-level knowledge dir; user-managed)
 
 A space-level directory the team creates when it has content (the engine ships `aidlc/knowledge/` empty). Populated by the team with project-specific
 design assets such as existing design systems, brand guidelines, typography
@@ -74,6 +74,6 @@ rules, or component libraries.
 ## Cross-References
 
 - [Agent Reference Overview](README.md)
-- [Agent Guide: aidlc-design-agent](../../guide/agents/design-agent.md)
+- [Agent Guide: amadeus-design-agent](../../guide/agents/design-agent.md)
 - [Stage Documentation](../04-stages/)
-- Source: [`dist/claude/.claude/agents/aidlc-design-agent.md`](../../../dist/claude/.claude/agents/aidlc-design-agent.md)
+- Source: [`dist/claude/.claude/agents/amadeus-design-agent.md`](../../../dist/claude/.claude/agents/amadeus-design-agent.md)

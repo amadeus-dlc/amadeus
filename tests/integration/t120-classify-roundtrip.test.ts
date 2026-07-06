@@ -1,4 +1,4 @@
-// covers: subcommand:aidlc-orchestrate:next, subcommand:aidlc-orchestrate:report
+// covers: subcommand:amadeus-orchestrate:next, subcommand:amadeus-orchestrate:report
 //
 // CLI-contract port of tests/integration/t120-classify-roundtrip.sh (TAP plan 19),
 // mechanism = cli. The walking-skeleton classify round-trip: the ONE knowledge
@@ -17,20 +17,20 @@
 // The engine still owns the transition — only a typed stance ever crosses back in.
 //
 // Why SPAWN (not in-process): every .sh step shells out to the engine binary
-// `bun aidlc-orchestrate.ts next|report` over a seeded state fixture and diffs
+// `bun amadeus-orchestrate.ts next|report` over a seeded state fixture and diffs
 // the emitted directive JSON on stdout / the `Skeleton Stance` field
-// aidlc-state.ts writes to disk through report's `set-skeleton-stance` spawn.
+// amadeus-state.ts writes to disk through report's `set-skeleton-stance` spawn.
 // The contract under test IS the subprocess boundary plus that file side effect;
-// an in-process twin would lose the report → aidlc-state.ts subprocess seam and
+// an in-process twin would lose the report → amadeus-state.ts subprocess seam and
 // the directive-on-stdout shell the .sh's `2>&1` captures. It NEVER calls a
 // model — the conductor's prose-classify step is the LLM's job (proven in the
 // prose-orchestrator workflow tier); this corpus is the deterministic mirror of
 // the ENGINE half of the round-trip. Mirrors the t118.cli.test.ts harness.
 //
-// Source under test (dist/claude/.claude/tools/aidlc-orchestrate.ts):
+// Source under test (dist/claude/.claude/tools/amadeus-orchestrate.ts):
 //   :715 computeGate(node, scope, stateContent): GateValue
 //          - skeleton-gate stage + NO stance recorded → GATE_UNRESOLVED
-//            (= "unresolved", aidlc-directive.ts:37) — the round-trip sentinel
+//            (= "unresolved", amadeus-directive.ts:37) — the round-trip sentinel
 //          - skeleton-gate stage + stance recorded   → resolveSkeletonGate(...)
 //          - every other EXECUTE stage               → true
 //   :534 resolveSkeletonGate(stance, scope): boolean — true for on/off/scope-
@@ -42,10 +42,10 @@
 //          - no state file             → error `No workflow state found ...`
 //          - off the skeleton-gate stage → error `... is not the skeleton-gate
 //            stage for scope "<scope>" ...`
-//          - valid + parked on skeleton stage → spawns aidlc-state.ts
+//          - valid + parked on skeleton stage → spawns amadeus-state.ts
 //            set-skeleton-stance, then emits a `print` (re-run next)
 //
-// The DETERMINED gate is `true` for every stance (aidlc-orchestrate.ts:534-553):
+// The DETERMINED gate is `true` for every stance (amadeus-orchestrate.ts:534-553):
 // per the verified resolution prose (SKILL.md:655-720), skeleton-on always-gates
 // Bolt 1, and skeleton-off runs Bolt 1 as a regular Bolt whose batch gate is
 // still presented (Construction Autonomy Mode unset → gated until the post-Bolt-1
@@ -100,8 +100,8 @@ import {
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const TOOLS = join(REPO_ROOT, "dist", "claude", ".claude", "tools");
-const ORCHESTRATE = join(TOOLS, "aidlc-orchestrate.ts");
-const STATE = join(TOOLS, "aidlc-state.ts");
+const ORCHESTRATE = join(TOOLS, "amadeus-orchestrate.ts");
+const STATE = join(TOOLS, "amadeus-state.ts");
 
 // The skeleton-gate stage for the fixture's scope (feature): the first
 // Construction EXECUTE stage. Frozen here; matches firstInScopeStageOfPhase(
@@ -142,7 +142,7 @@ function projWithState(fixtureName: string): string {
   return p;
 }
 
-/** Fresh CLEAN temp project — aidlc-docs/ exists, no state file (negative 3). */
+/** Fresh CLEAN temp project — amadeus-docs/ exists, no state file (negative 3). */
 function cleanProj(): string {
   const p = createTestProject();
   tempDirs.push(p);
@@ -150,7 +150,7 @@ function cleanProj(): string {
 }
 
 // P9: state lives in the seeded per-intent record the subprocess resolves via
-// the active-intent cursor (the flat aidlc-docs/ root is retired).
+// the active-intent cursor (the flat amadeus-docs/ root is retired).
 const statePath = (p: string): string => seededStateFile(p);
 
 // Parse the single directive JSON the engine emits on stdout (the .sh's
@@ -205,7 +205,7 @@ describe("t120 walking-skeleton classify round-trip (migrated from t120-classify
         "--project-dir",
         p,
       ]);
-      // aidlc-state.ts set-skeleton-stance writes `**Skeleton Stance**: <s>`
+      // amadeus-state.ts set-skeleton-stance writes `**Skeleton Stance**: <s>`
       // (mirrors the .sh's assert_grep '\*\*Skeleton Stance\*\*: <stance>').
       const body = readFileSync(statePath(p), "utf-8");
       expect(body.includes(`**Skeleton Stance**: ${stance}`)).toBe(true);
@@ -301,7 +301,7 @@ describe("t120 walking-skeleton classify round-trip (migrated from t120-classify
 
   // ===========================================================================
   // Negative path 3: stance reported with no state file → error (2).
-  // cleanProj makes aidlc-docs/ but NO aidlc-state.md — there is nothing to
+  // cleanProj makes amadeus-docs/ but NO amadeus-state.md — there is nothing to
   // record a stance for (handleSkeletonStanceReport, :1655).
   // ===========================================================================
   test("negative: stance with no state file → error carrying the verbatim no-state wording", () => {

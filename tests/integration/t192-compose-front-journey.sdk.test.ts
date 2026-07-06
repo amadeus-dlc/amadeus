@@ -1,18 +1,18 @@
-// covers: file:skills/aidlc/SKILL.md, file:agents/aidlc-composer-agent.md
+// covers: file:skills/amadeus/SKILL.md, file:agents/amadeus-composer-agent.md
 //
 // t192-compose-front-journey.sdk.test.ts - the P2 front-composer journey (sdk).
 //
 // t189 proved dispatch-to-gate (P0: no write before approval). This test
 // proves the P2 half: on APPROVE, the conductor's composer block drives the
-// write + the same-turn birth - the whole front arc in ONE /aidlc invocation:
+// write + the same-turn birth - the whole front arc in ONE /amadeus invocation:
 //
-//   drive:     `/aidlc compose "<task no stock scope fits>"` on a fresh project.
+//   drive:     `/amadeus compose "<task no stock scope fits>"` on a fresh project.
 //   conductor: dispatches the composer -> proposal -> approve/edit/reject gate
 //              (the answerScript approves) -> the composer writes the two
 //              scope files -> the conductor continues into intent-birth with
-//              the composed scope - NO second /aidlc invocation.
-//   disk:      a composed scopes/aidlc-<name>.md + a scope-grid.json entry
-//              exist; a born intent's aidlc-state.md carries the composed
+//              the composed scope - NO second /amadeus invocation.
+//   disk:      a composed scopes/amadeus-<name>.md + a scope-grid.json entry
+//              exist; a born intent's amadeus-state.md carries the composed
 //              scope; the composed scope ships keywords: [] (the hygiene
 //              default - inferability is an explicit gate choice, never a
 //              compose side effect).
@@ -35,7 +35,7 @@
 // that still routes to stock fails (c) loudly - a signal to tighten the
 // prompt, never a false green.
 //
-// It SPENDS TOKENS - driveAidlc drives the real /aidlc on Opus/Bedrock. Gated
+// It SPENDS TOKENS - driveAidlc drives the real /amadeus on Opus/Bedrock. Gated
 // on claude-CLI presence (driveAidlc marks it SDK-dependent).
 
 import { describe, expect, test } from "bun:test";
@@ -75,7 +75,7 @@ const STOCK_SCOPES = new Set([
   "security-patch", "workshop",
 ]);
 
-describe("t192 front composer journey (/aidlc compose -> approve -> write -> birth, sdk live)", () => {
+describe("t192 front composer journey (/amadeus compose -> approve -> write -> birth, sdk live)", () => {
   test(
     "approve drives the two-file scope write and the same-turn birth on the composed scope",
     async () => {
@@ -88,7 +88,7 @@ describe("t192 front composer journey (/aidlc compose -> approve -> write -> bir
         const gridPath = join(proj, ".claude", "tools", "data", "scope-grid.json");
         expect(readdirSync(scopesDir).filter((f) => f.endsWith(".md")).length).toBe(9);
 
-        const r = await driveAidlc(`/aidlc compose "${TASK}"`, {
+        const r = await driveAidlc(`/amadeus compose "${TASK}"`, {
           projectDir: proj,
           answerScript: APPROVE_ALL,
           timeoutMs: DRIVE_TIMEOUT_MS,
@@ -98,12 +98,12 @@ describe("t192 front composer journey (/aidlc compose -> approve -> write -> bir
         // (a) the gate fired - the approve/edit/reject turn-stop.
         expect(r.askedQuestions.length).toBeGreaterThanOrEqual(1);
 
-        // (b) the birth ran in the SAME drive (one /aidlc invocation).
+        // (b) the birth ran in the SAME drive (one /amadeus invocation).
         assertToolResultContains(r, "Bash", INIT_STATE_SUMMARY);
 
         // (c) BOTH scope files landed: a 10th .md + a 10th grid key.
         const scopeFiles = readdirSync(scopesDir).filter(
-          (f) => f.startsWith("aidlc-") && f.endsWith(".md"),
+          (f) => f.startsWith("amadeus-") && f.endsWith(".md"),
         );
         expect(scopeFiles.length).toBe(10);
         const grid = JSON.parse(readFileSync(gridPath, "utf-8")) as Record<
@@ -124,13 +124,13 @@ describe("t192 front composer journey (/aidlc compose -> approve -> write -> bir
           : "default";
         const intentsDir = join(proj, "aidlc", "spaces", space, "intents");
         const rec = readFileSync(join(intentsDir, "active-intent"), "utf-8").trim();
-        const state = readFileSync(join(intentsDir, rec, "aidlc-state.md"), "utf-8");
+        const state = readFileSync(join(intentsDir, rec, "amadeus-state.md"), "utf-8");
         expect(state).toContain(`- **Scope**: ${composedName}`);
 
         // (e) keyword hygiene: the composed .md ships keywords: [] (no
         // keyword entries - inferability is an explicit gate choice).
         const composedMd = readFileSync(
-          join(scopesDir, `aidlc-${composedName}.md`),
+          join(scopesDir, `amadeus-${composedName}.md`),
           "utf-8",
         );
         const fm = composedMd.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? "";

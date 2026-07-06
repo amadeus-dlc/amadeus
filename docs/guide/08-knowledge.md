@@ -10,13 +10,13 @@ AI-DLC uses a two-tier knowledge system that lets agents draw on both methodolog
 flowchart TD
     subgraph TIER1["Tier 1: Methodology Knowledge"]
         direction TB
-        MK_SHARED[".claude/knowledge/aidlc-shared/\n(shared principles)"]
+        MK_SHARED[".claude/knowledge/amadeus-shared/\n(shared principles)"]
         MK_AGENT[".claude/knowledge/<agent>/\n(agent-specific methodology)"]
     end
 
     subgraph TIER2["Tier 2: Team Knowledge"]
         direction TB
-        TK_SHARED["aidlc/knowledge/aidlc-shared/\n(team-wide standards, optional)"]
+        TK_SHARED["aidlc/knowledge/amadeus-shared/\n(team-wide standards, optional)"]
         TK_AGENT["aidlc/knowledge/<agent>/\n(team agent-specific, optional)"]
     end
 
@@ -50,16 +50,16 @@ Ships with the framework. Contains shared principles and per-agent methodology r
 
 ```
 .claude/knowledge/
-├── aidlc-shared/                       # Loaded by every agent
+├── amadeus-shared/                       # Loaded by every agent
 │   ├── ai-dlc-principles.md        # Core methodology principles
 │   ├── audit-format.md             # 68-event audit taxonomy
 │   ├── brownfield.md               # Brownfield safeguards and reverse-engineering guidance
 │   ├── knowledge-readme-template.md # Optional README template a team can copy into Tier 2
 │   ├── state-template.md           # State file schema
 │   └── verification.md             # Phase boundary verification rules
-├── aidlc-architect-agent/                 # Loaded when aidlc-architect-agent is active
-├── aidlc-developer-agent/                 # Loaded when aidlc-developer-agent is active
-├── aidlc-product-agent/                   # Loaded when aidlc-product-agent is active
+├── amadeus-architect-agent/                 # Loaded when amadeus-architect-agent is active
+├── amadeus-developer-agent/                 # Loaded when amadeus-developer-agent is active
+├── amadeus-product-agent/                   # Loaded when amadeus-product-agent is active
 └── ...                              # One directory per agent
 ```
 
@@ -69,20 +69,20 @@ Ships with the framework. Contains shared principles and per-agent methodology r
 
 **Location:** the active space — `aidlc/knowledge/` (shorthand for `aidlc/spaces/<space>/knowledge/`)
 
-User-managed. Contains your company-specific standards, policies, and conventions. It is a sibling of the space's `memory/`, `codekb/`, and `intents/` — so team knowledge accumulates across every intent in the space, not inside any one intent's record. It is **free-form and empty at bootstrap**: the engine just creates the empty `aidlc/knowledge/` directory on your first `/aidlc`. There is no fixed file set and no mandated structure. The convention below — an `aidlc-shared/` directory plus one per agent — is what the agent personas look for, so create the subdirectories you want as you go:
+User-managed. Contains your company-specific standards, policies, and conventions. It is a sibling of the space's `memory/`, `codekb/`, and `intents/` — so team knowledge accumulates across every intent in the space, not inside any one intent's record. It is **free-form and empty at bootstrap**: the engine just creates the empty `aidlc/knowledge/` directory on your first `/amadeus`. There is no fixed file set and no mandated structure. The convention below — an `amadeus-shared/` directory plus one per agent — is what the agent personas look for, so create the subdirectories you want as you go:
 
 ```
 aidlc/knowledge/                  # empty at bootstrap; create the subdirs you need
-├── aidlc-shared/                 # if present, loaded by every agent
+├── amadeus-shared/                 # if present, loaded by every agent
 │   ├── company-coding-standards.md
 │   └── company-architecture-principles.md
-├── aidlc-architect-agent/           # if present, loaded when aidlc-architect-agent is active
+├── amadeus-architect-agent/           # if present, loaded when amadeus-architect-agent is active
 │   └── company-architecture-patterns.md
-├── aidlc-developer-agent/           # if present, loaded when aidlc-developer-agent is active
+├── amadeus-developer-agent/           # if present, loaded when amadeus-developer-agent is active
 │   └── company-coding-conventions.md
-├── aidlc-devsecops-agent/           # if present, loaded when aidlc-devsecops-agent is active
+├── amadeus-devsecops-agent/           # if present, loaded when amadeus-devsecops-agent is active
 │   └── company-security-policy.md
-├── aidlc-quality-agent/             # if present, loaded when aidlc-quality-agent is active
+├── amadeus-quality-agent/             # if present, loaded when amadeus-quality-agent is active
 │   └── company-testing-standards.md
 └── ...                        # add a directory per agent only if you have content for it
 ```
@@ -95,12 +95,12 @@ Place your company-specific files in the appropriate `aidlc/knowledge/` director
 
 ### Team-wide standards (loaded by all agents)
 
-Add to `aidlc/knowledge/aidlc-shared/`:
+Add to `aidlc/knowledge/amadeus-shared/`:
 
 ```
-aidlc/knowledge/aidlc-shared/company-coding-standards.md
-aidlc/knowledge/aidlc-shared/company-architecture-principles.md
-aidlc/knowledge/aidlc-shared/naming-conventions.md
+aidlc/knowledge/amadeus-shared/company-coding-standards.md
+aidlc/knowledge/amadeus-shared/company-architecture-principles.md
+aidlc/knowledge/amadeus-shared/naming-conventions.md
 ```
 
 ### Agent-specific standards (loaded only when that agent is active)
@@ -109,34 +109,34 @@ Add to `aidlc/knowledge/<agent-name>/`:
 
 | Directory | Example Files |
 |-----------|--------------|
-| `knowledge/aidlc-architect-agent/` | Architecture patterns, ADR templates, design principles |
-| `knowledge/aidlc-developer-agent/` | Coding conventions, framework guides, API patterns |
-| `knowledge/aidlc-devsecops-agent/` | Security policies, threat model templates, scanning rules |
-| `knowledge/aidlc-quality-agent/` | Testing standards, coverage thresholds, performance criteria |
-| `knowledge/aidlc-aws-platform-agent/` | AWS account structure, CDK conventions, tagging policies |
-| `knowledge/aidlc-compliance-agent/` | Regulatory requirements, data classification, audit standards |
-| `knowledge/aidlc-operations-agent/` | SLO definitions, incident procedures, monitoring standards |
-| `knowledge/aidlc-product-agent/` | Product strategy, persona definitions, prioritization frameworks |
-| `knowledge/aidlc-design-agent/` | Design system, accessibility standards, UX guidelines |
-| `knowledge/aidlc-delivery-agent/` | Sprint templates, capacity models, estimation guidelines |
-| `knowledge/aidlc-pipeline-deploy-agent/` | CI/CD patterns, deployment checklists, rollback procedures |
+| `knowledge/amadeus-architect-agent/` | Architecture patterns, ADR templates, design principles |
+| `knowledge/amadeus-developer-agent/` | Coding conventions, framework guides, API patterns |
+| `knowledge/amadeus-devsecops-agent/` | Security policies, threat model templates, scanning rules |
+| `knowledge/amadeus-quality-agent/` | Testing standards, coverage thresholds, performance criteria |
+| `knowledge/amadeus-aws-platform-agent/` | AWS account structure, CDK conventions, tagging policies |
+| `knowledge/amadeus-compliance-agent/` | Regulatory requirements, data classification, audit standards |
+| `knowledge/amadeus-operations-agent/` | SLO definitions, incident procedures, monitoring standards |
+| `knowledge/amadeus-product-agent/` | Product strategy, persona definitions, prioritization frameworks |
+| `knowledge/amadeus-design-agent/` | Design system, accessibility standards, UX guidelines |
+| `knowledge/amadeus-delivery-agent/` | Sprint templates, capacity models, estimation guidelines |
+| `knowledge/amadeus-pipeline-deploy-agent/` | CI/CD patterns, deployment checklists, rollback procedures |
 
 ### Where the directories come from
 
-The team creates them. On your first `/aidlc` the engine creates the empty space-level `aidlc/knowledge/` directory — and nothing inside it. There is no scaffold command, no seeded per-agent subdirectories, and no guidance READMEs. The `aidlc-shared/` and per-agent subdirectories are a convention the agent personas look for; create the ones you have content for. Match the agent slug exactly (`aidlc-architect-agent/`, not `architect/`) — a typo'd directory name is silently ignored.
+The team creates them. On your first `/amadeus` the engine creates the empty space-level `aidlc/knowledge/` directory — and nothing inside it. There is no scaffold command, no seeded per-agent subdirectories, and no guidance READMEs. The `amadeus-shared/` and per-agent subdirectories are a convention the agent personas look for; create the ones you have content for. Match the agent slug exactly (`amadeus-architect-agent/`, not `architect/`) — a typo'd directory name is silently ignored.
 
 ---
 
 ## Worked Example: Adding Your First Knowledge File
 
-Say your team uses Amazon API Gateway with a specific pattern — authorizer Lambdas in front of every route, a request-validation JSON schema, and a standard response envelope. You want the aidlc-architect-agent to default to that pattern whenever it designs a new API.
+Say your team uses Amazon API Gateway with a specific pattern — authorizer Lambdas in front of every route, a request-validation JSON schema, and a standard response envelope. You want the amadeus-architect-agent to default to that pattern whenever it designs a new API.
 
-**Step 1 — Create the knowledge directory you need.** On your first `/aidlc` the engine creates an empty `aidlc/knowledge/` directory. There is no per-agent scaffold and no seeded READMEs, so create the agent subdirectory yourself — here, `aidlc/knowledge/aidlc-architect-agent/`. Match the agent slug exactly.
+**Step 1 — Create the knowledge directory you need.** On your first `/amadeus` the engine creates an empty `aidlc/knowledge/` directory. There is no per-agent scaffold and no seeded READMEs, so create the agent subdirectory yourself — here, `aidlc/knowledge/amadeus-architect-agent/`. Match the agent slug exactly.
 
 **Step 2 — Create a focused knowledge file in the right agent directory:**
 
 ```
-aidlc/knowledge/aidlc-architect-agent/api-gateway-standards.md
+aidlc/knowledge/amadeus-architect-agent/api-gateway-standards.md
 ```
 
 Filename rules:
@@ -168,15 +168,15 @@ Error responses follow:
   { "error": { "code": "<short-code>", "message": "<human-readable>" }, "requestId": "<uuid>" }
 ```
 
-**Step 4 — Run a workflow.** On the next `/aidlc` invocation, the aidlc-architect-agent loads this file automatically at stage start (step 5 in the loading order below). No configuration, no CLI flags, no registration — the file's presence is the registration.
+**Step 4 — Run a workflow.** On the next `/amadeus` invocation, the amadeus-architect-agent loads this file automatically at stage start (step 5 in the loading order below). No configuration, no CLI flags, no registration — the file's presence is the registration.
 
 **Common mistakes to avoid:**
 
 | Wrong | Right |
 |-------|-------|
-| Editing `.claude/agents/aidlc-architect-agent.md` | Add a file under `aidlc/knowledge/aidlc-architect-agent/` |
-| Editing `.claude/knowledge/aidlc-architect-agent/architecture-guide.md` | Add a file under `aidlc/knowledge/aidlc-architect-agent/` |
-| Putting everything in `knowledge/aidlc-shared/` | Use agent-specific directories unless the standard truly applies to all 11 agents |
+| Editing `.claude/agents/amadeus-architect-agent.md` | Add a file under `aidlc/knowledge/amadeus-architect-agent/` |
+| Editing `.claude/knowledge/amadeus-architect-agent/architecture-guide.md` | Add a file under `aidlc/knowledge/amadeus-architect-agent/` |
+| Putting everything in `knowledge/amadeus-shared/` | Use agent-specific directories unless the standard truly applies to all 11 agents |
 | One large `company-standards.md` covering API, auth, data, and logging | Split into `api-gateway-standards.md`, `auth-standards.md`, etc. |
 
 ---
@@ -191,7 +191,7 @@ Before a team rolls knowledge out, confirm the agent is actually seeing the file
 What team knowledge are you using for this stage?
 ```
 
-The agent lists the Tier 2 files it loaded. If your file is missing, check the filename extension is `.md` and the directory matches the agent name exactly (e.g. `aidlc-architect-agent/`, not `architect/`).
+The agent lists the Tier 2 files it loaded. If your file is missing, check the filename extension is `.md` and the directory matches the agent name exactly (e.g. `amadeus-architect-agent/`, not `architect/`).
 
 **Option 2 — Check the audit trail for the agent.** Every stage start emits a `STAGE_STARTED` audit event recording the stage and its lead agent. After running a stage, inspect:
 
@@ -204,10 +204,10 @@ Find the most recent `STAGE_STARTED` entry for your stage and confirm the **Agen
 **Option 3 — Run a fast workflow to smoke-test.** For a lightweight end-to-end check, use a small scope that exercises the target agent:
 
 ```
-/aidlc poc Prototype a new inventory API
+/amadeus poc Prototype a new inventory API
 ```
 
-The aidlc-architect-agent runs during Application Design; any Tier 2 file it loaded will influence its output visibly (in our example, the generated architecture should reference API Gateway with a Lambda authorizer).
+The amadeus-architect-agent runs during Application Design; any Tier 2 file it loaded will influence its output visibly (in our example, the generated architecture should reference API Gateway with a Lambda authorizer).
 
 ---
 
@@ -217,7 +217,7 @@ Knowledge files are not fire-and-forget. As standards evolve, the vault of team 
 
 ### Updating an existing file
 
-Edit the file in place. Knowledge reloads at every stage start, so the next `/aidlc` invocation picks up the change. No restart, no cache, no registration.
+Edit the file in place. Knowledge reloads at every stage start, so the next `/amadeus` invocation picks up the change. No restart, no cache, no registration.
 
 ### Removing outdated knowledge
 
@@ -240,11 +240,11 @@ Smaller focused files are easier to update, easier to review, and less likely to
 If a standard originally written for one agent turns out to apply across the team, move it up:
 
 ```
-aidlc/knowledge/aidlc-architect-agent/naming-conventions.md
-  →  aidlc/knowledge/aidlc-shared/naming-conventions.md
+aidlc/knowledge/amadeus-architect-agent/naming-conventions.md
+  →  aidlc/knowledge/amadeus-shared/naming-conventions.md
 ```
 
-The `aidlc-shared/` directory is loaded by every agent (step 4 in the loading order).
+The `amadeus-shared/` directory is loaded by every agent (step 4 in the loading order).
 
 ### Review cadence
 
@@ -291,7 +291,7 @@ sequenceDiagram
     Note over G: resolved org → team → project → phase → stage chain
     G-->>O: Rules loaded (resolved chain)
 
-    O->>SM: Step 2: Load .claude/knowledge/aidlc-shared/
+    O->>SM: Step 2: Load .claude/knowledge/amadeus-shared/
     Note over SM: Shared methodology principles
     SM-->>O: Shared knowledge loaded
 
@@ -299,7 +299,7 @@ sequenceDiagram
     Note over AM: Agent-specific methodology
     AM-->>O: Agent methodology loaded
 
-    O->>TK: Step 4: Load aidlc/knowledge/aidlc-shared/
+    O->>TK: Step 4: Load aidlc/knowledge/amadeus-shared/
     Note over TK: Team shared knowledge (if exists)
     TK-->>O: Team knowledge loaded
 
@@ -319,9 +319,9 @@ sequenceDiagram
 | Step | Source | What Loads | Priority |
 |------|--------|-----------|----------|
 | 1 | `aidlc/spaces/<space>/memory/` | The resolved org → team → project → phase → stage rule chain | Behavioral rules — every applicable rule loads (strict-additive) |
-| 2 | `.claude/knowledge/aidlc-shared/` | Shared methodology principles | Framework-level defaults |
+| 2 | `.claude/knowledge/amadeus-shared/` | Shared methodology principles | Framework-level defaults |
 | 3 | `.claude/knowledge/<agent>/` | Agent-specific methodology | Agent expertise |
-| 4 | `aidlc/knowledge/aidlc-shared/` | Team-wide standards | Your company defaults |
+| 4 | `aidlc/knowledge/amadeus-shared/` | Team-wide standards | Your company defaults |
 | 5 | `aidlc/knowledge/<agent>/` | Team agent-specific standards | Your company + agent expertise |
 | 6 | Prior stage artifacts | Outputs from earlier stages | Runtime context |
 
@@ -341,7 +341,7 @@ Each file should cover one topic. Prefer many small files over one large file �
 
 ### Use the shared directory for cross-cutting concerns
 
-Standards that apply to all agents (naming conventions, coding style, commit message format) go in `knowledge/aidlc-shared/`. Standards specific to a domain (architecture patterns, security policies) go in the agent directory.
+Standards that apply to all agents (naming conventions, coding style, commit message format) go in `knowledge/amadeus-shared/`. Standards specific to a domain (architecture patterns, security policies) go in the agent directory.
 
 ### Review knowledge before workflows
 
@@ -357,7 +357,7 @@ If you want to **constrain** how the agent applies a methodology principle, add 
 
 ### Name the directories to match the agent slug
 
-The space-level `aidlc/knowledge/` directory is empty at bootstrap — you create the `aidlc-shared/` and per-agent subdirectories yourself as you accumulate standards. The directory name must match the agent slug exactly (e.g. `aidlc-architect-agent/`, not `architect/`); a typo'd name is silently ignored because the loader walks the agent's own directory by name and finds nothing.
+The space-level `aidlc/knowledge/` directory is empty at bootstrap — you create the `amadeus-shared/` and per-agent subdirectories yourself as you accumulate standards. The directory name must match the agent slug exactly (e.g. `amadeus-architect-agent/`, not `architect/`); a typo'd name is silently ignored because the loader walks the agent's own directory by name and finds nothing.
 
 ---
 

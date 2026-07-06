@@ -1,27 +1,27 @@
-// covers: subcommand:aidlc-bolt:start
+// covers: subcommand:amadeus-bolt:start
 //
 // t46 — parallel-bolt concurrency. Migrated from
 // tests/integration/t46-parallel-bolt.sh (TAP plan 5). The .sh forked 5
-// concurrent `bun aidlc-bolt.ts start` OS processes racing on a single
+// concurrent `bun amadeus-bolt.ts start` OS processes racing on a single
 // audit.md and proved the cross-process audit lock prevents lost writes /
 // half-writes / separator corruption, all under a wall-clock ceiling.
 //
 // Mechanism: cli (REQUIRED — not none). The guarantee under test is
 // CROSS-PROCESS serialisation of audit.md appends. The lock is a real
-// filesystem mkdir-EEXIST lock (aidlc-lib.ts:517-534 acquireAuditLock:
+// filesystem mkdir-EEXIST lock (amadeus-lib.ts:517-534 acquireAuditLock:
 // `mkdirSync(lockDir)` with 50×100ms retries), and only separate OS
 // processes exercise it — an in-process loop would share one Bun runtime,
-// trip the AUDIT_LOCK_DEPTH reentrancy counter (aidlc-lib.ts:567), and prove
-// nothing about concurrency. So the twin SPAWNS 5 real `bun aidlc-bolt.ts
+// trip the AUDIT_LOCK_DEPTH reentrancy counter (amadeus-lib.ts:567), and prove
+// nothing about concurrency. So the twin SPAWNS 5 real `bun amadeus-bolt.ts
 // start` processes via Bun.spawn and races them, exactly as the .sh forked
 // `bun "$BOLT" start ... &`. spawnCount = all.
 //
 // Source under test:
-//   dist/claude/.claude/tools/aidlc-bolt.ts
+//   dist/claude/.claude/tools/amadeus-bolt.ts
 //     :149 handleStart — validates --name/--batch, then emitAudit("BOLT_STARTED",
 //          { "Bolt names": <name>, "Batch number": <batch>,
 //            "Walking skeleton": <bool> }) via appendAuditEntry (:197).
-//   dist/claude/.claude/tools/aidlc-audit.ts
+//   dist/claude/.claude/tools/amadeus-audit.ts
 //     :214 appendAuditEntry — acquireAuditLock → appendAuditEntryUnlocked →
 //          releaseAuditLock (the locked critical section each process enters).
 //     :254 heading = EVENT_HEADINGS["BOLT_STARTED"] = "Bolt Started" (:153);
@@ -29,7 +29,7 @@
 //          BOLT_STARTED\n**Bolt names**: <name>\n...\n\n---\n".
 //
 // Fixture discipline (mirrors the .sh): a fresh temp project with an
-// aidlc-docs/ dir, seeded with audit-sample.md (3 `---` separators) + a
+// amadeus-docs/ dir, seeded with audit-sample.md (3 `---` separators) + a
 // mid-ideation state file so any accidental error path lands cleanly. Torn
 // down in afterEach. Nothing written under tests/fixtures/**.
 //
@@ -67,7 +67,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const BOLT = join(AIDLC_SRC, "tools", "aidlc-bolt.ts");
+const BOLT = join(AIDLC_SRC, "tools", "amadeus-bolt.ts");
 
 interface RaceResult {
   proj: string;
@@ -92,7 +92,7 @@ function readAllShards(proj: string): string {
 let current: { proj: string } | null = null;
 
 /**
- * Fork 5 concurrent `bun aidlc-bolt.ts start --name bolt-<i> --batch 1
+ * Fork 5 concurrent `bun amadeus-bolt.ts start --name bolt-<i> --batch 1
  * --walking-skeleton false` processes against one audit.md (mirrors the .sh's
  * `for i in 1..5; bun "$BOLT" start ... &` + wait). Returns the post-race
  * bytes + wall-clock elapsed. Uses Bun.spawn (async, non-blocking launch) so
@@ -113,7 +113,7 @@ async function raceFiveBolts(): Promise<RaceResult> {
   // clone-id and a first-run mint race could split the 5 writes across two shards
   // — non-deterministic. The lock contention this test asserts is unchanged.
   mkdirSync(join(proj, "aidlc"), { recursive: true });
-  writeFileSync(join(proj, "aidlc", ".aidlc-clone-id"), "cccccccccccc\n", "utf-8");
+  writeFileSync(join(proj, "aidlc", ".amadeus-clone-id"), "cccccccccccc\n", "utf-8");
 
   const start = Date.now();
   const procs = [1, 2, 3, 4, 5].map((i) =>
@@ -156,7 +156,7 @@ afterEach(() => {
   current = null;
 });
 
-describe("t46 parallel-bolt — 5 racing aidlc-bolt start processes (migrated from t46-parallel-bolt.sh, plan 5)", () => {
+describe("t46 parallel-bolt — 5 racing amadeus-bolt start processes (migrated from t46-parallel-bolt.sh, plan 5)", () => {
   test("completes under the 10s lock-timeout ceiling [.sh 1]", () => {
     // Lock retry budget is 50×100ms = 5s max wait per process; with 5 racing,
     // worst case the last waits ~500ms. The .sh ceilinged at 10s to catch real

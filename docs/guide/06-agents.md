@@ -12,11 +12,11 @@ Rather than dozens of narrow specialists (which recreates waterfall handoff chai
 
 In human software teams, a mob of 3-5 people covers an entire feature from requirements through deployment. Each person brings a broad skill set spanning several specialties. AI-DLC mirrors this model:
 
-- **Each agent covers a whole domain across many tasks.** The aidlc-architect-agent handles feasibility, application design, units generation, functional design, NFR requirements, and NFR design — six stages across three phases. A narrow specialist model would require six separate agents with nearly identical knowledge bases.
+- **Each agent covers a whole domain across many tasks.** The amadeus-architect-agent handles feasibility, application design, units generation, functional design, NFR requirements, and NFR design — six stages across three phases. A narrow specialist model would require six separate agents with nearly identical knowledge bases.
 
-- **Fewer agents means fewer handoffs.** Every agent boundary is a potential information loss point. When the same aidlc-architect-agent leads both Application Design and Functional Design, it retains context naturally instead of requiring an explicit handoff artifact.
+- **Fewer agents means fewer handoffs.** Every agent boundary is a potential information loss point. When the same amadeus-architect-agent leads both Application Design and Functional Design, it retains context naturally instead of requiring an explicit handoff artifact.
 
-- **Support roles enable collaboration without proliferation.** Rather than creating a "security-reviewer-agent" and a "compliance-reviewer-agent" and a "cost-reviewer-agent," the aidlc-devsecops-agent and aidlc-compliance-agent participate as support agents in stages led by others. On an inline stage (every multi-agent stage in the shipped graph) the conductor adopts each support agent as a persona in its own context rather than dispatching it as a `Task`; `Task` is reserved for `mode: subagent` stages. Either way the conductor performs every delegation — agents never invoke each other.
+- **Support roles enable collaboration without proliferation.** Rather than creating a "security-reviewer-agent" and a "compliance-reviewer-agent" and a "cost-reviewer-agent," the amadeus-devsecops-agent and amadeus-compliance-agent participate as support agents in stages led by others. On an inline stage (every multi-agent stage in the shipped graph) the conductor adopts each support agent as a persona in its own context rather than dispatching it as a `Task`; `Task` is reserved for `mode: subagent` stages. Either way the conductor performs every delegation — agents never invoke each other.
 
 - **Knowledge loading is per-agent.** Each agent loads methodology knowledge from `.claude/knowledge/<agent-name>/` and team knowledge from the space-level `aidlc/knowledge/<agent-name>/` (if the team created it). Fewer agents means fewer knowledge directories to manage and fewer opportunities for contradictory guidance.
 
@@ -30,17 +30,17 @@ The following diagram shows how agents exchange information during a workflow. S
 flowchart TD
     ORCH(["SKILL.md (Conductor)"])
 
-    PA["aidlc-product-agent\n(Product Manager)"]
-    DA["aidlc-design-agent\n(UX Designer)"]
-    DLA["aidlc-delivery-agent\n(Delivery Manager)"]
-    AA["aidlc-architect-agent\n(Solutions Architect)"]
-    AWSA["aidlc-aws-platform-agent\n(AWS Platform)"]
-    CA["aidlc-compliance-agent\n(Compliance)"]
-    DSA["aidlc-devsecops-agent\n(DevSecOps)"]
-    DEVA["aidlc-developer-agent\n(Developer)"]
-    QA["aidlc-quality-agent\n(QA Engineer)"]
-    PDA["aidlc-pipeline-deploy-agent\n(Pipeline & Deploy)"]
-    OA["aidlc-operations-agent\n(SRE)"]
+    PA["amadeus-product-agent\n(Product Manager)"]
+    DA["amadeus-design-agent\n(UX Designer)"]
+    DLA["amadeus-delivery-agent\n(Delivery Manager)"]
+    AA["amadeus-architect-agent\n(Solutions Architect)"]
+    AWSA["amadeus-aws-platform-agent\n(AWS Platform)"]
+    CA["amadeus-compliance-agent\n(Compliance)"]
+    DSA["amadeus-devsecops-agent\n(DevSecOps)"]
+    DEVA["amadeus-developer-agent\n(Developer)"]
+    QA["amadeus-quality-agent\n(QA Engineer)"]
+    PDA["amadeus-pipeline-deploy-agent\n(Pipeline & Deploy)"]
+    OA["amadeus-operations-agent\n(SRE)"]
 
     ORCH -->|delegates| PA
     ORCH -->|delegates| DA
@@ -79,7 +79,7 @@ flowchart TD
     style AA fill:#bbdefb,stroke:#1565c0
 ```
 
-<!-- Text fallback: The SKILL.md conductor delegates to all 11 agents. Key flows: aidlc-product-agent sends requirements/stories to aidlc-architect-agent, who sends specs to aidlc-developer-agent. aidlc-developer-agent sends code to aidlc-quality-agent, who sends test results back. aidlc-aws-platform-agent provisions infrastructure for aidlc-pipeline-deploy-agent, who deploys for aidlc-operations-agent. The feedback loop: aidlc-operations-agent sends operational insights back to aidlc-product-agent, closing the cycle. -->
+<!-- Text fallback: The SKILL.md conductor delegates to all 11 agents. Key flows: amadeus-product-agent sends requirements/stories to amadeus-architect-agent, who sends specs to amadeus-developer-agent. amadeus-developer-agent sends code to amadeus-quality-agent, who sends test results back. amadeus-aws-platform-agent provisions infrastructure for amadeus-pipeline-deploy-agent, who deploys for amadeus-operations-agent. The feedback loop: amadeus-operations-agent sends operational insights back to amadeus-product-agent, closing the cycle. -->
 
 ---
 
@@ -89,112 +89,112 @@ flowchart TD
 
 Each agent below has a **deep-dive page** — its full responsibilities, the stages it leads and supports, and the knowledge it loads. The [agent deep-dive index](agents/README.md) lists all 11; the per-agent links are inline under each heading.
 
-### [aidlc-product-agent](agents/product-agent.md)
+### [amadeus-product-agent](agents/product-agent.md)
 
 **Domain:** Requirements, user stories, scope, market research
 
-The aidlc-product-agent acts as the product manager and business analyst. It captures intent, conducts market research, defines scope, elicits requirements, and produces user stories. It is the most active agent in the Ideation and Inception phases.
+The amadeus-product-agent acts as the product manager and business analyst. It captures intent, conducts market research, defines scope, elicits requirements, and produces user stories. It is the most active agent in the Ideation and Inception phases.
 
 - **Leads:** intent-capture, market-research, scope-definition, requirements-analysis, user-stories
 - **Supports:** rough-mockups, approval-handoff, refined-mockups
 - **Special tools:** WebSearch (for market research)
 
-### [aidlc-design-agent](agents/design-agent.md)
+### [amadeus-design-agent](agents/design-agent.md)
 
 **Domain:** UX/UI design, wireframes, interaction design, accessibility
 
-The aidlc-design-agent creates wireframes, mockups, and interaction specifications. It works closely with the aidlc-product-agent on user-facing features and with the aidlc-developer-agent to ensure designs are implementable.
+The amadeus-design-agent creates wireframes, mockups, and interaction specifications. It works closely with the amadeus-product-agent on user-facing features and with the amadeus-developer-agent to ensure designs are implementable.
 
 - **Leads:** rough-mockups, refined-mockups
 - **Supports:** user-stories, application-design
 - **Special tools:** WebSearch (for design research)
 
-### [aidlc-delivery-agent](agents/delivery-agent.md)
+### [amadeus-delivery-agent](agents/delivery-agent.md)
 
 **Domain:** Team formation, capacity planning, delivery sequencing
 
-The aidlc-delivery-agent acts as the engineering manager. It assesses team capacity, forms the mob composition, plans delivery sequencing, and manages phase handoffs.
+The amadeus-delivery-agent acts as the engineering manager. It assesses team capacity, forms the mob composition, plans delivery sequencing, and manages phase handoffs.
 
 - **Leads:** team-formation, approval-handoff, delivery-planning
 - **Supports:** scope-definition, units-generation
 - **Special tools:** None beyond the shared set
 
-### [aidlc-architect-agent](agents/architect-agent.md)
+### [amadeus-architect-agent](agents/architect-agent.md)
 
 **Domain:** Application design, domain modelling, NFRs, component decomposition
 
-The aidlc-architect-agent is the central design authority. It has the broadest stage involvement (9 stages across 3 phases) and runs on the opus model — alongside seven other high-judgment agents (product, design, developer, quality, devsecops, compliance, aws-platform). Only delivery, pipeline-deploy, and operations run on sonnet, because their output is dominantly templated planning, CI/CD YAML, and runbook scaffolding.
+The amadeus-architect-agent is the central design authority. It has the broadest stage involvement (9 stages across 3 phases) and runs on the opus model — alongside seven other high-judgment agents (product, design, developer, quality, devsecops, compliance, aws-platform). Only delivery, pipeline-deploy, and operations run on sonnet, because their output is dominantly templated planning, CI/CD YAML, and runbook scaffolding.
 
 - **Leads:** feasibility, application-design, units-generation, functional-design, nfr-requirements, nfr-design
 - **Supports:** intent-capture, reverse-engineering (synthesis), delivery-planning
 
-### [aidlc-aws-platform-agent](agents/aws-platform-agent.md)
+### [amadeus-aws-platform-agent](agents/aws-platform-agent.md)
 
 **Domain:** AWS infrastructure, CDK/CloudFormation, cost optimization
 
-The aidlc-aws-platform-agent designs infrastructure, provisions environments, and optimizes costs. It has Bash access for running AWS CLI and CDK commands.
+The amadeus-aws-platform-agent designs infrastructure, provisions environments, and optimizes costs. It has Bash access for running AWS CLI and CDK commands.
 
 - **Leads:** infrastructure-design, environment-provisioning
 - **Supports:** feasibility, application-design, nfr-design, feedback-optimization
 - **Special tools:** Bash (for `aws`, `cdk` commands)
 
-### [aidlc-compliance-agent](agents/compliance-agent.md)
+### [amadeus-compliance-agent](agents/compliance-agent.md)
 
 **Domain:** Regulatory scanning, data classification, risk assessment
 
-The aidlc-compliance-agent operates purely in an advisory capacity — it has no lead stages. It feeds regulatory constraints into stages led by other agents, particularly the aidlc-architect-agent and aidlc-devsecops-agent.
+The amadeus-compliance-agent operates purely in an advisory capacity — it has no lead stages. It feeds regulatory constraints into stages led by other agents, particularly the amadeus-architect-agent and amadeus-devsecops-agent.
 
 - **Leads:** None (support only)
 - **Supports:** feasibility, nfr-requirements, infrastructure-design, environment-provisioning
 - **Special tools:** WebSearch (for regulatory research)
 
-### [aidlc-devsecops-agent](agents/devsecops-agent.md)
+### [amadeus-devsecops-agent](agents/devsecops-agent.md)
 
 **Domain:** Threat modelling, security scanning, DevSecOps pipelines
 
-The aidlc-devsecops-agent reviews designs for security, defines security requirements, and integrates security into CI/CD pipelines. Like the aidlc-compliance-agent, it operates in a support role.
+The amadeus-devsecops-agent reviews designs for security, defines security requirements, and integrates security into CI/CD pipelines. Like the amadeus-compliance-agent, it operates in a support role.
 
 - **Leads:** None (support only)
 - **Supports:** practices-discovery, nfr-requirements, infrastructure-design, build-and-test, environment-provisioning
 - **Special tools:** Bash (for security scanning)
 
-### [aidlc-developer-agent](agents/developer-agent.md)
+### [amadeus-developer-agent](agents/developer-agent.md)
 
 **Domain:** Code implementation, code analysis, workspace detection
 
-The aidlc-developer-agent spans three phases — from reverse engineering in Inception through deployment support in Operation. It runs code scans of existing codebases and generates implementation code.
+The amadeus-developer-agent spans three phases — from reverse engineering in Inception through deployment support in Operation. It runs code scans of existing codebases and generates implementation code.
 
 - **Leads:** reverse-engineering (code scan), code-generation
 - **Supports:** practices-discovery, functional-design, deployment-execution
 
-Workspace detection (workspace-detection) used to be a subagent of the aidlc-developer-agent; it now runs deterministically inside `aidlc-utility init` using rule-based file and manifest detection.
+Workspace detection (workspace-detection) used to be a subagent of the amadeus-developer-agent; it now runs deterministically inside `amadeus-utility init` using rule-based file and manifest detection.
 - **Special tools:** Bash (for build and run commands)
 
-### [aidlc-quality-agent](agents/quality-agent.md)
+### [amadeus-quality-agent](agents/quality-agent.md)
 
 **Domain:** Test strategy, test generation, performance validation
 
-The aidlc-quality-agent defines test strategy, generates test suites, validates quality gates, and runs performance testing.
+The amadeus-quality-agent defines test strategy, generates test suites, validates quality gates, and runs performance testing.
 
 - **Leads:** build-and-test, performance-validation
 - **Supports:** practices-discovery, nfr-requirements
 - **Special tools:** Bash (for test execution)
 
-### [aidlc-pipeline-deploy-agent](agents/pipeline-deploy-agent.md)
+### [amadeus-pipeline-deploy-agent](agents/pipeline-deploy-agent.md)
 
 **Domain:** CI/CD pipelines, deployment strategy, release execution
 
-The aidlc-pipeline-deploy-agent configures CI/CD pipelines, plans deployment strategy, and executes releases with rollback capabilities.
+The amadeus-pipeline-deploy-agent configures CI/CD pipelines, plans deployment strategy, and executes releases with rollback capabilities.
 
 - **Leads:** practices-discovery, ci-pipeline, deployment-pipeline, deployment-execution
 - **Supports:** None
 - **Special tools:** Bash (for pipeline and deployment commands)
 
-### [aidlc-operations-agent](agents/operations-agent.md)
+### [amadeus-operations-agent](agents/operations-agent.md)
 
 **Domain:** Observability, incident response, SLO tracking, feedback loops
 
-The aidlc-operations-agent sets up monitoring, defines incident response procedures, and closes the lifecycle loop by feeding operational insights back to the aidlc-product-agent for the next iteration.
+The amadeus-operations-agent sets up monitoring, defines incident response procedures, and closes the lifecycle loop by feeding operational insights back to the amadeus-product-agent for the next iteration.
 
 - **Leads:** observability-setup, incident-response, feedback-optimization
 - **Supports:** performance-validation
@@ -208,24 +208,24 @@ This table shows which agents are active in which phases, and whether they serve
 
 | Agent | Phase 0 | Phase 1 | Phase 2 | Phase 3 | Phase 4 |
 |-------|---------|---------|---------|---------|---------|
-| aidlc-product-agent | — | L (intent-capture, market-research, scope-definition), S (rough-mockups, approval-handoff) | L (requirements-analysis, user-stories), S (refined-mockups) | — | — |
-| aidlc-design-agent | — | L (rough-mockups) | L (refined-mockups), S (user-stories, application-design) | — | — |
-| aidlc-delivery-agent | — | L (team-formation, approval-handoff), S (scope-definition) | L (delivery-planning), S (units-generation) | — | — |
-| aidlc-architect-agent | — | L (feasibility), S (intent-capture) | L (application-design, units-generation), S (reverse-engineering, delivery-planning) | L (functional-design, nfr-requirements, nfr-design) | — |
-| aidlc-aws-platform-agent | — | S (feasibility) | S (application-design) | L (infrastructure-design), S (nfr-design) | L (environment-provisioning), S (feedback-optimization) |
-| aidlc-compliance-agent | — | S (feasibility) | — | S (nfr-requirements, infrastructure-design) | S (environment-provisioning) |
-| aidlc-devsecops-agent | — | — | S (practices-discovery) | S (nfr-requirements, infrastructure-design, build-and-test) | S (environment-provisioning) |
-| aidlc-developer-agent | — | — | L (reverse-engineering), S (practices-discovery) | L (code-generation), S (functional-design) | S (deployment-execution) |
-| aidlc-quality-agent | — | — | S (practices-discovery) | L (build-and-test), S (nfr-requirements) | L (performance-validation) |
-| aidlc-pipeline-deploy-agent | — | — | L (practices-discovery) | L (ci-pipeline) | L (deployment-pipeline, deployment-execution) |
-| aidlc-operations-agent | — | — | — | — | L (observability-setup, incident-response, feedback-optimization) |
+| amadeus-product-agent | — | L (intent-capture, market-research, scope-definition), S (rough-mockups, approval-handoff) | L (requirements-analysis, user-stories), S (refined-mockups) | — | — |
+| amadeus-design-agent | — | L (rough-mockups) | L (refined-mockups), S (user-stories, application-design) | — | — |
+| amadeus-delivery-agent | — | L (team-formation, approval-handoff), S (scope-definition) | L (delivery-planning), S (units-generation) | — | — |
+| amadeus-architect-agent | — | L (feasibility), S (intent-capture) | L (application-design, units-generation), S (reverse-engineering, delivery-planning) | L (functional-design, nfr-requirements, nfr-design) | — |
+| amadeus-aws-platform-agent | — | S (feasibility) | S (application-design) | L (infrastructure-design), S (nfr-design) | L (environment-provisioning), S (feedback-optimization) |
+| amadeus-compliance-agent | — | S (feasibility) | — | S (nfr-requirements, infrastructure-design) | S (environment-provisioning) |
+| amadeus-devsecops-agent | — | — | S (practices-discovery) | S (nfr-requirements, infrastructure-design, build-and-test) | S (environment-provisioning) |
+| amadeus-developer-agent | — | — | L (reverse-engineering), S (practices-discovery) | L (code-generation), S (functional-design) | S (deployment-execution) |
+| amadeus-quality-agent | — | — | S (practices-discovery) | L (build-and-test), S (nfr-requirements) | L (performance-validation) |
+| amadeus-pipeline-deploy-agent | — | — | L (practices-discovery) | L (ci-pipeline) | L (deployment-pipeline, deployment-execution) |
+| amadeus-operations-agent | — | — | — | — | L (observability-setup, incident-response, feedback-optimization) |
 
 ### Observations
 
-- The **aidlc-architect-agent** has the broadest involvement (9 stages across 3 phases). It runs on opus, as do seven other high-judgment agents; only **aidlc-delivery-agent**, **aidlc-pipeline-deploy-agent**, and **aidlc-operations-agent** run on sonnet
-- The **aidlc-developer-agent** spans 3 phases: Inception, Construction, and Operation
-- The **aidlc-compliance-agent** and **aidlc-devsecops-agent** operate purely in support roles, participating in stages led by others
-- The **aidlc-operations-agent** closes the lifecycle loop by feeding insights back to the aidlc-product-agent
+- The **amadeus-architect-agent** has the broadest involvement (9 stages across 3 phases). It runs on opus, as do seven other high-judgment agents; only **amadeus-delivery-agent**, **amadeus-pipeline-deploy-agent**, and **amadeus-operations-agent** run on sonnet
+- The **amadeus-developer-agent** spans 3 phases: Inception, Construction, and Operation
+- The **amadeus-compliance-agent** and **amadeus-devsecops-agent** operate purely in support roles, participating in stages led by others
+- The **amadeus-operations-agent** closes the lifecycle loop by feeding insights back to the amadeus-product-agent
 
 ---
 
@@ -236,8 +236,8 @@ Every agent inherits the **full session toolset** — all of Claude Code's built
 | Tool | Expected to exercise it |
 |------|-------------|
 | Read, Edit, Write, Glob, Grep, AskUserQuestion | All 11 agents |
-| Bash | aidlc-aws-platform-agent, aidlc-devsecops-agent, aidlc-developer-agent, aidlc-quality-agent, aidlc-pipeline-deploy-agent, aidlc-operations-agent |
-| WebSearch | aidlc-product-agent, aidlc-design-agent, aidlc-compliance-agent |
+| Bash | amadeus-aws-platform-agent, amadeus-devsecops-agent, amadeus-developer-agent, amadeus-quality-agent, amadeus-pipeline-deploy-agent, amadeus-operations-agent |
+| WebSearch | amadeus-product-agent, amadeus-design-agent, amadeus-compliance-agent |
 | Task | None (blocked on every agent via `disallowedTools: Task`) |
 
 To genuinely narrow a persona, add an optional `tools:` allowlist to its frontmatter — but doing so drops inherited MCP access unless the fully-qualified `mcp__<server>__<tool>` ids are also listed. This implementation ships no such restrictions today.
@@ -258,12 +258,12 @@ challenge it, representing the customer (or the review board) at the gate.
 
 | Reviewer | Reviews | Runs on |
 |----------|---------|---------|
-| `aidlc-product-lead-agent` | Requirements, user stories, and UX/mockup artifacts — completeness, business alignment, testability | sonnet |
-| `aidlc-architecture-reviewer-agent` | Technical design artifacts — soundness, implementability, broken cross-references, unachievable NFR targets | sonnet |
+| `amadeus-product-lead-agent` | Requirements, user stories, and UX/mockup artifacts — completeness, business alignment, testability | sonnet |
+| `amadeus-architecture-reviewer-agent` | Technical design artifacts — soundness, implementability, broken cross-references, unachievable NFR targets | sonnet |
 
 ## The Composer Agent
 
-One more agent sits outside both groups: `aidlc-composer-agent`, the adaptive-workflows composer. The conductor dispatches it on a compose request (`/aidlc compose`, a compose offer on a cold start, `--report`, or `--new-scope`). It reads the task and the workspace scan, proposes the EXECUTE/SKIP stage grid with a per-SKIP rationale, and - only after your approval at the gate - authors the composed scope (front/report) or proposes pending-stage flips the deterministic `recompose` verb applies (in-flight). Its persona is deliberately keep-biased: it justifies presence and interrogates absence, never strips stages to "go faster". See [Scopes and Depth - The Adaptive Composer](05-scopes-and-depth.md#the-adaptive-composer).
+One more agent sits outside both groups: `amadeus-composer-agent`, the adaptive-workflows composer. The conductor dispatches it on a compose request (`/amadeus compose`, a compose offer on a cold start, `--report`, or `--new-scope`). It reads the task and the workspace scan, proposes the EXECUTE/SKIP stage grid with a per-SKIP rationale, and - only after your approval at the gate - authors the composed scope (front/report) or proposes pending-stage flips the deterministic `recompose` verb applies (in-flight). Its persona is deliberately keep-biased: it justifies presence and interrogates absence, never strips stages to "go faster". See [Scopes and Depth - The Adaptive Composer](05-scopes-and-depth.md#the-adaptive-composer).
 
 A reviewer fires only when a stage declares a `reviewer:` field. Today the product
 lead reviews `rough-mockups`, `refined-mockups`, `requirements-analysis`, and

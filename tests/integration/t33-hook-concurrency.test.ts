@@ -1,4 +1,4 @@
-// covers: hook:aidlc-audit-logger, function:appendAuditEntry, function:acquireAuditLock, function:releaseAuditLock
+// covers: hook:amadeus-audit-logger, function:appendAuditEntry, function:acquireAuditLock, function:releaseAuditLock
 //
 // t33 — audit-logger lock contention under parallel writes. Migrated from
 // tests/integration/t33-hook-concurrency.sh (TAP plan 8). Mechanism: cli.
@@ -15,32 +15,32 @@
 // PostToolUse(Write|Edit) drives it from settings.json.
 //
 // SOURCE UNDER TEST:
-//   dist/claude/.claude/hooks/aidlc-audit-logger.ts — PostToolUse(Write|Edit).
+//   dist/claude/.claude/hooks/amadeus-audit-logger.ts — PostToolUse(Write|Edit).
 //     - resolves projectDir from CLAUDE_PROJECT_DIR (resolveProjectDirFromHook,
-//       aidlc-lib.ts:116).
+//       amadeus-lib.ts:116).
 //     - reads PostToolUse JSON on stdin; only logs writes whose file_path
-//       includes "aidlc-docs/" (:47) AND only when audit.md already exists
-//       (:55). A Write to a NET-NEW file under aidlc-docs/ (statSync throws →
+//       includes "amadeus-docs/" (:47) AND only when audit.md already exists
+//       (:55). A Write to a NET-NEW file under amadeus-docs/ (statSync throws →
 //       catch → isNew=true, :87-90) emits ARTIFACT_CREATED via appendAuditEntry
 //       (:95) with fields Tool / File / Context.
-//   dist/claude/.claude/tools/aidlc-audit.ts:214 appendAuditEntry — acquires
+//   dist/claude/.claude/tools/amadeus-audit.ts:214 appendAuditEntry — acquires
 //     the audit lock (acquireAuditLock), appends one block, then releases it
 //     (releaseAuditLock) in a finally (:225-233). The block format is
 //     "\n## <heading>\n**Timestamp**: ...\n**Event**: ...\n<fields>\n---\n".
-//   dist/claude/.claude/tools/aidlc-lib.ts:512 auditLockDir(projectDir) =
-//     join(tmpdir(), `.aidlc-audit-${md5(projectDir).slice(0,8)}.lock`); the
+//   dist/claude/.claude/tools/amadeus-lib.ts:512 auditLockDir(projectDir) =
+//     join(tmpdir(), `.amadeus-audit-${md5(projectDir).slice(0,8)}.lock`); the
 //     mkdir-based mutex (acquireAuditLock :517, releaseAuditLock :536). The .sh
 //     recomputed this dir by hand (md5sum | cut -c1-8); here we ask the source
 //     for it via auditLockDir() — equivalent and self-checking.
 //
 // FIXTURE DISCIPLINE (mirrors the .sh's create_test_project + seed_audit_file):
-//   - createTestProject() -> a fresh temp dir with aidlc-docs/.
+//   - createTestProject() -> a fresh temp dir with amadeus-docs/.
 //   - seedAuditFile() -> copies tests/fixtures/audit-sample.md to
-//     aidlc-docs/audit.md, which carries exactly ONE ARTIFACT_CREATED block
+//     amadeus-docs/audit.md, which carries exactly ONE ARTIFACT_CREATED block
 //     (INITIAL_ENTRIES = 1, verified against the fixture). The hook self-gates
 //     on audit.md existing, so seeding it is the precondition for the emit.
 //   - The hook is spawned at the SHIPPED source path (AIDLC_SRC/hooks/...),
-//     exactly like the .sh's `$AIDLC_SRC/hooks/aidlc-audit-logger.ts`; no
+//     exactly like the .sh's `$AIDLC_SRC/hooks/amadeus-audit-logger.ts`; no
 //     copied skeleton is needed because audit-logger imports appendAuditEntry
 //     directly (no re-spawn of a project-local tool).
 //   - cleanupTestProject() rm -rf's the temp project; the lock dir lives under
@@ -78,10 +78,10 @@ import {
   auditLockDir,
   docsRoot,
   readAllAuditShards,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath; // the bun running this test
-const HOOK = join(AIDLC_SRC, "hooks", "aidlc-audit-logger.ts");
+const HOOK = join(AIDLC_SRC, "hooks", "amadeus-audit-logger.ts");
 
 // P9 per-intent layout: the audit trail is a DIR of per-clone shards. We PIN one
 // clone-id on disk so all five parallel processes resolve the SAME shard — that
@@ -116,7 +116,7 @@ function eventCount(body: string, type: string): number {
 
 /**
  * Fire N audit-logger hooks IN PARALLEL against the same project, each fed a
- * PostToolUse(Write) JSON for a distinct net-new aidlc-docs/ artifact path.
+ * PostToolUse(Write) JSON for a distinct net-new amadeus-docs/ artifact path.
  * Mirrors the .sh's `for i in 1..5; do echo {...} | bun "$HOOK" & done; wait`.
  * Uses Bun.spawn (async) + Promise.all so all five processes are launched
  * before any is awaited — genuine inter-process lock contention, not serial.
@@ -155,7 +155,7 @@ describe("t33 audit-logger lock contention under parallel writes (mechanism cli 
     // all five processes resolve + append to this single shard (the audit-logger's
     // "shard exists" gate passes for each). audit-sample.md carries exactly one
     // ARTIFACT_CREATED block (INITIAL_ENTRIES = 1).
-    writeFileSync(join(proj, "aidlc", ".aidlc-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+    writeFileSync(join(proj, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
     const auditDir = seededAuditDir(proj);
     mkdirSync(auditDir, { recursive: true });
     copyFileSync(join(FIXTURES_DIR, "audit-sample.md"), join(auditDir, pinnedShardName()));
@@ -225,8 +225,8 @@ describe("t33 audit-logger lock contention under parallel writes (mechanism cli 
   test("the mkdir audit lock is released after all writes complete [.sh test 8]", async () => {
     await fireParallel(proj, 5);
     // .sh test 8 recomputed the lock dir by hand: md5sum(projectDir) | cut -c1-8
-    // under ${TMPDIR:-/tmp}/.aidlc-audit-<hash>.lock. We ask the SOURCE for the
-    // exact same dir via auditLockDir() (aidlc-lib.ts:512) — equivalent and
+    // under ${TMPDIR:-/tmp}/.amadeus-audit-<hash>.lock. We ask the SOURCE for the
+    // exact same dir via auditLockDir() (amadeus-lib.ts:512) — equivalent and
     // self-checking. appendAuditEntry's finally releases the lock after each
     // append, so once every process has exited the dir must be gone.
     const lockDir = auditLockDir(proj);

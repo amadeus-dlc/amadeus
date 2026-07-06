@@ -1,4 +1,4 @@
-// covers: subcommand:aidlc-orchestrate:next, subcommand:aidlc-utility:intent-birth, function:intentPickPromptIfRecordsExist, function:birthPrintDirective, function:listIntents, function:activeSpace
+// covers: subcommand:amadeus-orchestrate:next, subcommand:amadeus-utility:intent-birth, function:intentPickPromptIfRecordsExist, function:birthPrintDirective, function:listIntents, function:activeSpace
 //
 // Mechanism: cli (spawned dist tools) — birth + `next` run end-to-end the way
 // the conductor runs them.
@@ -12,7 +12,7 @@
 // intent over the existing ones, violating "auto-birth fires only on ZERO
 // intents". The fix: before birthing, consult listIntents over the active
 // space; if intents EXIST but none is flagged active, emit an `ask` directive
-// that lists them and asks the human to pick one via `/aidlc intent <slug>`,
+// that lists them and asks the human to pick one via `/amadeus intent <slug>`,
 // instead of the birth `print`. The zero-intent case STILL births unchanged.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
@@ -23,12 +23,12 @@ import {
   createTestProject,
   removeWorkspaceRecord,
 } from "../harness/fixtures.ts";
-import { readIntentRegistry } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readIntentRegistry } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath;
 const REPO_ROOT = join(import.meta.dir, "..", "..");
-const UTIL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "aidlc-utility.ts");
-const ORCH = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "aidlc-orchestrate.ts");
+const UTIL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-utility.ts");
+const ORCH = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-orchestrate.ts");
 
 let proj: string;
 beforeEach(() => {
@@ -79,7 +79,7 @@ const cursorPath = (p: string, space = "default"): string =>
   join(intentsDir(p, space), "active-intent");
 const recordDirs = (p: string, space = "default"): string[] =>
   readdirSync(intentsDir(p, space)).filter((d) =>
-    existsSync(join(intentsDir(p, space), d, "aidlc-state.md")),
+    existsSync(join(intentsDir(p, space), d, "amadeus-state.md")),
   );
 
 describe("t171 birth gate consults the intent registry (Blocker B1)", () => {
@@ -109,10 +109,10 @@ describe("t171 birth gate consults the intent registry (Blocker B1)", () => {
       expect(d.kind).not.toBe("print");
       expect(d.kind).toBe("ask");
       expect(d.message ?? "").not.toContain("intent-birth");
-      // It prompts to pick an existing intent by slug via `/aidlc intent <slug>`.
-      expect(d.question).toContain("/aidlc intent <slug>");
+      // It prompts to pick an existing intent by slug via `/amadeus intent <slug>`.
+      expect(d.question).toContain("/amadeus intent <slug>");
       // The two existing intent slugs are named in the prompt. The engine lists
-      // the registry `slug` values (aidlc-orchestrate.ts intentPickPrompt →
+      // the registry `slug` values (amadeus-orchestrate.ts intentPickPrompt →
       // intents.map(i => i.slug)), NOT the dir names — so derive the expected
       // slugs from the registry, not by stripping the (now date-prefixed, no-hex)
       // dir name. These births passed no description, so each slug is its scope
@@ -131,7 +131,7 @@ describe("t171 birth gate consults the intent registry (Blocker B1)", () => {
       const d = JSON.parse(r.stdout.trim());
       expect(d.kind).toBe("ask");
       expect(d.message ?? "").not.toContain("intent-birth");
-      expect(d.question).toContain("/aidlc intent <slug>");
+      expect(d.question).toContain("/amadeus intent <slug>");
       expect(recordDirs(proj).length).toBe(2); // no duplicate born
     });
   });

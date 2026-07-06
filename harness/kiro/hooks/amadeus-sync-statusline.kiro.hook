@@ -1,0 +1,1 @@
+{"version":"1.0.0","enabled":true,"name":"amadeus-sync-statusline","description":"Syncs amadeus-state.md on spec task status transitions.","when":{"type":"postToolUse","toolTypes":["spec"]},"then":{"type":"runCommand","command":"bun .kiro/hooks/amadeus-kiro-adapter.ts state-sync"}}

@@ -34,25 +34,25 @@ file-format parallel for stage definitions lives at
 Sensor manifests live at:
 
 ```
-dist/claude/.claude/sensors/aidlc-<id>.md
+dist/claude/.claude/sensors/amadeus-<id>.md
 ```
 
-Every framework-shipped manifest carries the `aidlc-` filename prefix
+Every framework-shipped manifest carries the `amadeus-` filename prefix
 (matching the broader framework-file convention). The frontmatter `id:`
-field MUST equal the filename stem with the `aidlc-` prefix removed and
+field MUST equal the filename stem with the `amadeus-` prefix removed and
 the `.md` suffix stripped:
 
 | Filename | Required `id:` |
 |---|---|
-| `aidlc-required-sections.md` | `required-sections` |
-| `aidlc-linter.md` | `linter` |
+| `amadeus-required-sections.md` | `required-sections` |
+| `amadeus-linter.md` | `linter` |
 
 The filename↔id rule is enforced by `tests/unit/t86-sensor-manifest-schema.sh`.
-The `aidlc-` prefix is **mandatory for all sensors, including custom
+The `amadeus-` prefix is **mandatory for all sensors, including custom
 user-shipped ones**: the compile resolver discovers manifests with
-`SENSOR_FILE_REGEX = /^aidlc-([a-z][a-z0-9-]*)\.md$/` (`loadSensors` in
-`aidlc-graph.ts`), so any file without the prefix is silently skipped and never
-binds to a stage. Name a custom sensor `aidlc-<id>.md` and set `id: <id>`.
+`SENSOR_FILE_REGEX = /^amadeus-([a-z][a-z0-9-]*)\.md$/` (`loadSensors` in
+`amadeus-graph.ts`), so any file without the prefix is silently skipped and never
+binds to a stage. Name a custom sensor `amadeus-<id>.md` and set `id: <id>`.
 
 ---
 
@@ -69,11 +69,11 @@ on the stage side via the stage's frontmatter `sensors:` field (see
 ---
 id: required-sections                       # required
 kind: deterministic                          # required
-command: bun .claude/tools/aidlc-sensor-required-sections.ts   # required
+command: bun .claude/tools/amadeus-sensor-required-sections.ts   # required
 default_severity: advisory                   # required
 description: Checks that stage output ...    # required
 category: document-shape                     # optional
-matches: "**/{aidlc-docs,intents}/**"                  # optional capability filter
+matches: "**/{amadeus-docs,intents}/**"                  # optional capability filter
 input_schema:                                # optional
   output_path: string
   stage_slug: string
@@ -90,9 +90,9 @@ timeout_seconds: 5                           # optional
 
 | Field | Required | Type | Notes |
 |---|---|---|---|
-| `id` | ✓ | kebab-case string | Equals filename stem minus `aidlc-` prefix; cross-referenced from rule files' `pairing:` field (see [Rule System](08-rule-system.md)). |
+| `id` | ✓ | kebab-case string | Equals filename stem minus `amadeus-` prefix; cross-referenced from rule files' `pairing:` field (see [Rule System](08-rule-system.md)). |
 | `kind` | ✓ | enum | Only `deterministic` is accepted today; `llm` reserved for the v0.11.0 LLM-dispatch chapter. See [`kind` enum](#kind-enum) below. |
-| `command` | ✓ | string | Canonical invocation prefix — each shipped sensor names its own per-sensor script (e.g. `bun .claude/tools/aidlc-sensor-required-sections.ts`). The dispatcher (`aidlc-sensor.ts`) appends `--stage <slug>` plus the file flag matching the sensor's input shape: `--output-path <path>` for document sensors, `--file-path <path>` for the code sensors (`linter`, `type-check`). |
+| `command` | ✓ | string | Canonical invocation prefix — each shipped sensor names its own per-sensor script (e.g. `bun .claude/tools/amadeus-sensor-required-sections.ts`). The dispatcher (`amadeus-sensor.ts`) appends `--stage <slug>` plus the file flag matching the sensor's input shape: `--output-path <path>` for document sensors, `--file-path <path>` for the code sensors (`linter`, `type-check`). |
 | `default_severity` | ✓ | enum | Only `advisory` is accepted today; `blocking` reserved for the future ralph-driver work. |
 | `description` | ✓ | string | One-line human description. |
 | `category` | optional | string | Free-form descriptive label (the four shipped manifests use `document-shape` and `code-quality`; not a closed enum). |
@@ -133,7 +133,7 @@ node. Authoring direction is locality-of-reference — open a stage file
 and you see exactly which checks fire when the stage runs.
 
 ```yaml
-# dist/claude/.claude/aidlc-common/stages/construction/code-generation.md
+# dist/claude/.claude/amadeus-common/stages/construction/code-generation.md
 ---
 slug: code-generation
 phase: construction
@@ -149,10 +149,10 @@ outputs: ...
 
 `sensors:` is a list of bare ids — the ids match each manifest's
 frontmatter `id:` field, which (per the filename↔id contract) equals the
-filename stem minus the `aidlc-` prefix. The compile resolver:
+filename stem minus the `amadeus-` prefix. The compile resolver:
 
 1. Walks `dist/claude/.claude/sensors/`, parses every
-   `aidlc-<id>.md` manifest.
+   `amadeus-<id>.md` manifest.
 2. Indexes manifests by id for O(1) lookup at resolution time.
 3. For each stage, looks each declared import id up; throws on unknown
    (loud failure at compile, not silent at fire time).
@@ -161,7 +161,7 @@ filename stem minus the `aidlc-` prefix. The compile resolver:
 5. Emits the per-stage resolved array on the canonical
    `data/stage-graph.json` (FIELD_ORDER pinned: after `rules_in_context`).
 
-The runtime PostToolUse hook (`aidlc-sensor-fire.ts`) reads
+The runtime PostToolUse hook (`amadeus-sensor-fire.ts`) reads
 `sensors_applicable` off the graph node — never re-opens the manifest.
 `matches` is
 compile-snapshotted: a manifest edit during the workflow does NOT
@@ -195,14 +195,14 @@ the PostToolUse hook at fire time, not by the resolver at compile time.
 
 | Manifest | `matches` |
 |---|---|
-| `aidlc-required-sections.md` | `**/{aidlc-docs,intents}/**` |
-| `aidlc-upstream-coverage.md` | `**/{aidlc-docs,intents}/**` |
-| `aidlc-linter.md` | `**/*.{ts,js}` |
-| `aidlc-type-check.md` | `**/*.{ts,tsx}` |
+| `amadeus-required-sections.md` | `**/{amadeus-docs,intents}/**` |
+| `amadeus-upstream-coverage.md` | `**/{amadeus-docs,intents}/**` |
+| `amadeus-linter.md` | `**/*.{ts,js}` |
+| `amadeus-type-check.md` | `**/*.{ts,tsx}` |
 
 `matches` **is** the fire filter — it is not optional in practice. The hook
 compares the path being written against the glob and fires only on a match;
-an entry **without** a `matches` glob never fires at all (`aidlc-sensor-fire.ts`:
+an entry **without** a `matches` glob never fires at all (`amadeus-sensor-fire.ts`:
 `if (!entry.matches) continue`). All four shipped manifests therefore declare
 one — the two document-shape sensors scope to the artifact tree (the shipped
 manifests carry the `matches` value shown above), the two
@@ -216,10 +216,10 @@ to — there is no "fires on everything" mode.
 
 ### Cross-references between rules and sensors
 
-Rule files use `pairing: aidlc-required-sections` (with the `aidlc-`
+Rule files use `pairing: amadeus-required-sections` (with the `amadeus-`
 prefix) to feed-forward into a sensor; the sensor manifest's `id:` is
 `required-sections` (no prefix). The doctor coverage check normalises
-by stripping the `aidlc-` prefix from the rule's `pairing:` value
+by stripping the `amadeus-` prefix from the rule's `pairing:` value
 before matching against the manifest `id`.
 
 ---
@@ -240,7 +240,7 @@ single-valued.
 
 The manifest's `command:` is the **canonical invocation prefix**, not
 the full argv — each shipped sensor names its own per-sensor script. The
-dispatcher (`aidlc-sensor.ts`) appends runtime context at fire time: always
+dispatcher (`amadeus-sensor.ts`) appends runtime context at fire time: always
 `--stage <stage-slug>`, then the file flag matching the sensor's input shape —
 `--output-path <file>` for document sensors, `--file-path <file>` for the code
 sensors (`linter`, `type-check`):
@@ -253,14 +253,14 @@ sensors (`linter`, `type-check`):
 So a manifest with:
 
 ```yaml
-command: bun .claude/tools/aidlc-sensor-required-sections.ts
+command: bun .claude/tools/amadeus-sensor-required-sections.ts
 ```
 
 invoked against `requirements-analysis` writing the requirements artifact in the
 intent's record dir is dispatched as:
 
 ```
-bun .claude/tools/aidlc-sensor-required-sections.ts \
+bun .claude/tools/amadeus-sensor-required-sections.ts \
   --stage requirements-analysis \
   --output-path aidlc/spaces/default/intents/260624-inventory-api/inception/requirements-analysis/requirements.md
 ```
@@ -273,11 +273,11 @@ appends them; the manifest stays a pure capability descriptor.
 ## Gate-ritual handoff (surface stdout / selections-file in)
 
 The §13 learning gate is tool-as-actor. The round-trip between the
-deterministic tool (`aidlc-learnings.ts`) and the conductor (the live
-`/aidlc` session) has two legs, with a knowledge step and a judgement
+deterministic tool (`amadeus-learnings.ts`) and the conductor (the live
+`/amadeus` session) has two legs, with a knowledge step and a judgement
 step between them:
 
-1. **`surface` (stdout).** `bun .claude/tools/aidlc-learnings.ts surface
+1. **`surface` (stdout).** `bun .claude/tools/amadeus-learnings.ts surface
    --slug <stage-slug>` reads the stage's `memory.md` and prints structured
    JSON: `candidates[]` (one per non-blank Interpretation / Deviation /
    Tradeoff entry, each carrying `id`, `source_heading`, `ts`, `summary`,
@@ -302,8 +302,8 @@ step between them:
    user-override path). Only conflict-clear or user-escalated selections
    proceed. Sensor manifests have no org-section analogue and skip the check.
 4. **`persist` (selections-file in).** The conductor writes the kept
-   selections to `<record>/.aidlc-learnings/<slug>-selections.json` (in the intent's record dir)
-   (gitignored) and calls `bun .claude/tools/aidlc-learnings.ts persist
+   selections to `<record>/.amadeus-learnings/<slug>-selections.json` (in the intent's record dir)
+   (gitignored) and calls `bun .claude/tools/amadeus-learnings.ts persist
    --slug <slug> --selections-json <path>`. The tool is the deterministic
    writer — it never judges conflicts; it routes each learning as a practice to
    `aidlc/spaces/<space>/memory/{project,team}.md` and, for a sensor selection, does the
@@ -320,7 +320,7 @@ same JSON without re-prompting the human (content-presence idempotency via a
 
 When a sensor proposal is confirmed at the gate, the gate-ritual tool
 scaffolds a new **project-tier** manifest at
-`<project>/.claude/sensors/aidlc-<id>.md` — never the shipped framework
+`<project>/.claude/sensors/amadeus-<id>.md` — never the shipped framework
 distribution (a per-project learning loop must not mutate the framework;
 framework-distribution paths are rejected). Fields default to:
 
@@ -328,7 +328,7 @@ framework-distribution paths are rejected). Fields default to:
 |---|---|---|
 | `id` | derived from user free-text (kebab-case it) | |
 | `kind` | `deterministic` | sole accepted value today |
-| `command` | `bun .claude/tools/aidlc-sensor-<id>.ts` | placeholder per-sensor script; user updates to the script that implements the check |
+| `command` | `bun .claude/tools/amadeus-sensor-<id>.ts` | placeholder per-sensor script; user updates to the script that implements the check |
 | `default_severity` | `advisory` | sole accepted value today |
 | `description` | from user free-text | |
 | `category` | `""` | user fills if desired |
@@ -346,11 +346,11 @@ is the one sanctioned stage-frontmatter edit: it grows the import list
 / `## Learn` body.
 
 The four shipped manifests illustrate the variation these defaults
-later evolve into: `aidlc-required-sections.md` and
-`aidlc-upstream-coverage.md` use `timeout_seconds: 5` with their
+later evolve into: `amadeus-required-sections.md` and
+`amadeus-upstream-coverage.md` use `timeout_seconds: 5` with their
 artifact-tree `matches` glob (the value shown in the `matches` table above);
-`aidlc-linter.md` uses `30` with `matches: "**/*.{ts,js}"`;
-`aidlc-type-check.md` uses `60` with `matches: "**/*.{ts,tsx}"`.
+`amadeus-linter.md` uses `30` with `matches: "**/*.{ts,js}"`;
+`amadeus-type-check.md` uses `60` with `matches: "**/*.{ts,tsx}"`.
 
 ---
 

@@ -1,7 +1,7 @@
 // t146-core-hygiene: core/ prose carries the {{HARNESS_DIR}} token, never a raw
 // harness-dir path literal — except a small, named carve-out set.
 //
-// covers: file:core/aidlc-common/protocols/stage-protocol.md
+// covers: file:core/amadeus-common/protocols/stage-protocol.md
 //
 // WHAT. The dist-unified keystone (MR-1) made core/ harness-neutral: every
 // path that names the harness directory in .md prose is written
@@ -37,7 +37,7 @@ function isCarvedOut(relPath: string, line: string): boolean {
   // workspace-detection's three-dir enumeration: the line names .kiro/ and
   // .codex/ alongside .claude/, so it is harness-enumerating, not a path.
   if (
-    relPath === "aidlc-common/stages/initialization/workspace-detection.md" &&
+    relPath === "amadeus-common/stages/initialization/workspace-detection.md" &&
     line.includes(".kiro/") &&
     line.includes(".codex/")
   ) {
@@ -45,7 +45,7 @@ function isCarvedOut(relPath: string, line: string): boolean {
   }
   // stage-protocol's Claude-Code-specific CWD-drift example.
   if (
-    relPath === "aidlc-common/protocols/stage-protocol.md" &&
+    relPath === "amadeus-common/protocols/stage-protocol.md" &&
     line.includes("$CLAUDE_PROJECT_DIR/.claude/tools/")
   ) {
     return true;

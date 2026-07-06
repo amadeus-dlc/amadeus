@@ -1,19 +1,19 @@
-// covers: subcommand:aidlc-utility:init
+// covers: subcommand:amadeus-utility:init
 //
 // CLI-contract port of tests/integration/t39-per-scope-phase-sequence.sh (TAP
 // plan 27), mechanism = cli. Equal-or-stronger migration: the .sh is a
 // data-driven sweep over all 9 canonical scopes (enterprise, feature, mvp,
 // poc, bugfix, refactor, infra, security-patch, workshop), running `bun
-// aidlc-utility.ts init --scope <s> --project-dir <p>` once per
+// amadeus-utility.ts init --scope <s> --project-dir <p>` once per
 // scope and asserting 3 observables per scope (27 total). Every one of those
 // observables is preserved here by SPAWNING the real CLI via
 // node:child_process spawnSync (BUN + the tool .ts path) and asserting on the
 // audit.md PHASE_STARTED/PHASE_SKIPPED rows the tool writes + the
-// aidlc-state.md `## Phase Progress` section it writes — the PROCESS boundary
+// amadeus-state.md `## Phase Progress` section it writes — the PROCESS boundary
 // plus those file effects. An in-process handleInit() twin would lose the
 // init-time process side effects the .sh's grep-on-disk arm relies on.
 //
-// The contract under test is aidlc-utility.ts's init handler (lines
+// The contract under test is amadeus-utility.ts's init handler (lines
 // 1717-2158): at init it emits exactly one PHASE_STARTED{Phase:
 // initialization} (line 1791), one PHASE_SKIPPED per phase the scope excludes
 // entirely (no EXECUTE stages — line 1804), and — when the first post-init
@@ -21,7 +21,7 @@
 // init→first-phase handoff (line 2130). It writes the `## Phase Progress`
 // block (lines 2036-2042) with each phase tagged Active/Pending/Skipped
 // (phaseStatus, line 2028). The audit row shape is `**Event**: <TYPE>` at
-// line start (aidlc-audit.ts:258), exactly what the .sh greps.
+// line start (amadeus-audit.ts:258), exactly what the .sh greps.
 //
 // EQUAL-OR-STRONGER PARITY (per the .sh's 3 `ok` lines per scope):
 //   - .sh assertion 1  grep -qE '^\*\*Event\*\*: PHASE_STARTED'  -> here:
@@ -49,7 +49,7 @@
 // (createTestProject, which toPortablePath-converts on Windows so the
 // state.md / audit.md the tool writes via forward-slash path helpers
 // round-trip when read back). No seed is needed — init bootstraps audit.md +
-// aidlc-state.md from scratch (aidlc-utility.ts:1766/2099), matching the .sh,
+// amadeus-state.md from scratch (amadeus-utility.ts:1766/2099), matching the .sh,
 // which created bare projects and let init populate both. All temp dirs
 // cleaned in afterAll. Nothing is written under tests/fixtures/**.
 
@@ -67,7 +67,7 @@ const UTIL = join(
   "claude",
   ".claude",
   "tools",
-  "aidlc-utility.ts",
+  "amadeus-utility.ts",
 );
 
 const tempDirs: string[] = [];
@@ -78,7 +78,7 @@ afterAll(() => {
 
 // P4: intent-birth (the back-compat target of `init`) writes state into the
 // born intent's per-intent record dir (aidlc/spaces/<space>/intents/<slug>-<id8>/),
-// not the flat aidlc-docs/, and audit into per-clone shards under
+// not the flat amadeus-docs/, and audit into per-clone shards under
 // <record>/audit/<host>-<pid>.md. Resolve the record dir from the active-space +
 // active-intent cursors, falling back to the flat layout for a not-yet-born /
 // seeded-flat project. The PHASE_STARTED/PHASE_SKIPPED rows + `## Phase Progress`
@@ -92,17 +92,17 @@ function recordDirOf(p: string): string {
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();
-    if (rec && existsSync(join(intentsDir, rec, "aidlc-state.md"))) {
+    if (rec && existsSync(join(intentsDir, rec, "amadeus-state.md"))) {
       return join(intentsDir, rec);
     }
   }
-  return join(p, "aidlc-docs");
+  return join(p, "amadeus-docs");
 }
 const statePath = (p: string): string =>
-  join(recordDirOf(p), "aidlc-state.md");
+  join(recordDirOf(p), "amadeus-state.md");
 // Audit is written as per-clone shards under <record>/audit/<host>-<pid>.md.
 // Concatenate every shard for a content read; fall back to the flat
-// aidlc-docs/audit.md for a seeded-flat / pre-migration project.
+// amadeus-docs/audit.md for a seeded-flat / pre-migration project.
 function readAudit(p: string): string {
   const auditDir = join(recordDirOf(p), "audit");
   if (existsSync(auditDir)) {
@@ -111,7 +111,7 @@ function readAudit(p: string): string {
       .map((f) => readFileSync(join(auditDir, f), "utf-8"))
       .join("\n");
   }
-  const flat = join(p, "aidlc-docs", "audit.md");
+  const flat = join(p, "amadeus-docs", "audit.md");
   return existsSync(flat) ? readFileSync(flat, "utf-8") : "";
 }
 
@@ -121,7 +121,7 @@ interface InitResult {
 }
 
 /**
- * Spawn `bun aidlc-utility.ts init --scope <scope> --project-dir <p>`.
+ * Spawn `bun amadeus-utility.ts init --scope <scope> --project-dir <p>`.
  * Mirrors the .sh's
  *   AIDLC_WORKFLOW_INTENT="phase sequence test" bun "$UTIL" init --scope ...
  * The .sh exported AIDLC_WORKFLOW_INTENT defensively (the tool does not read
@@ -143,7 +143,7 @@ function runInit(scope: string, p: string): InitResult {
 /**
  * Count audit blocks with `**Event**: <ev>` at line start in audit CONTENT
  * (shard-concat). Mirrors the .sh's `grep -cE '^\*\*Event\*\*: <ev>'`
- * (aidlc-audit.ts:258 writes the row at column 0 of its line).
+ * (amadeus-audit.ts:258 writes the row at column 0 of its line).
  */
 function auditEventCount(content: string, ev: string): number {
   const re = new RegExp(`^\\*\\*Event\\*\\*: ${ev}$`);
@@ -178,7 +178,7 @@ function skippedPhases(content: string): string[] {
 /**
  * Read the status of a phase from the state file's `## Phase Progress`
  * section. The tool writes lines like `- **Ideation**: Skipped`
- * (aidlc-utility.ts:2036-2042). Mirrors the .sh's
+ * (amadeus-utility.ts:2036-2042). Mirrors the .sh's
  *   grep -qE "^- \*\*$phase_cap\*\*: Skipped$"
  * but returns the actual status string so we can assert the full enum
  * (Active / Pending / Skipped), not just the Skipped predicate.
@@ -194,7 +194,7 @@ function phaseProgressStatus(file: string, phaseCap: string): string {
 }
 
 // Capitalize a lowercase phase slug the way the state file renders it
-// (aidlc-utility.ts:2037-2041: "Ideation", "Operation", ...). Mirrors the
+// (amadeus-utility.ts:2037-2041: "Ideation", "Operation", ...). Mirrors the
 // .sh's `${excluded:0:1}|upper${excluded:1}`.
 const cap = (phase: string): string =>
   phase.charAt(0).toUpperCase() + phase.slice(1);
@@ -228,7 +228,7 @@ const SCOPES = [
   "workshop",
 ] as const;
 
-describe("t39 aidlc-utility init — per-scope phase sequence (migrated from t39-per-scope-phase-sequence.sh, plan 27)", () => {
+describe("t39 amadeus-utility init — per-scope phase sequence (migrated from t39-per-scope-phase-sequence.sh, plan 27)", () => {
   for (const scope of SCOPES) {
     const excluded = EXPECTED_SKIPPED[scope];
 
@@ -272,7 +272,7 @@ describe("t39 aidlc-utility init — per-scope phase sequence (migrated from t39
           expect(phaseProgressStatus(s, cap(phase))).toBe("Skipped");
         }
         // STRONGER (the .sh never checked the Init row): Initialization is
-        // always Active at init time (aidlc-utility.ts:2029). We deliberately
+        // always Active at init time (amadeus-utility.ts:2029). We deliberately
         // do NOT assert the non-excluded post-init phases are non-Skipped: the
         // PHASE_SKIPPED audit count (driven by stagesInScope) and the Phase
         // Progress status (driven by the depth-adjustedMapping, line 2032)

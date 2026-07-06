@@ -1,4 +1,4 @@
-// covers: subcommand:aidlc-utility:recompose, function:setStageSuffix
+// covers: subcommand:amadeus-utility:recompose, function:setStageSuffix
 // covers: audit:RECOMPOSED
 //
 // t194 - the P4 in-flight recompose matrix (adaptive workflows).
@@ -63,7 +63,7 @@ function recordDirOf(proj: string): string {
   const rec = readFileSync(join(intentsDir, "active-intent"), "utf-8").trim();
   return join(intentsDir, rec);
 }
-const statePathOf = (proj: string): string => join(recordDirOf(proj), "aidlc-state.md");
+const statePathOf = (proj: string): string => join(recordDirOf(proj), "amadeus-state.md");
 const readState = (proj: string): string => readFileSync(statePathOf(proj), "utf-8");
 
 function auditText(proj: string): string {
@@ -85,7 +85,7 @@ afterAll(() => {
 function bornProject(scope = "feature"): string {
   const proj = setupIntegrationProject({ noAidlcDocs: true, stripEnvScope: true });
   tempDirs.push(proj);
-  const r = run(proj, "aidlc-utility.ts", ["intent-birth", "--scope", scope]);
+  const r = run(proj, "amadeus-utility.ts", ["intent-birth", "--scope", scope]);
   expect(r.status).toBe(0);
   return proj;
 }
@@ -95,14 +95,14 @@ describe("t194 recompose - flips land as suffix edits and the router honours the
     const proj = bornProject();
     const before = readState(proj);
     expect(before).toMatch(/- \[ \] market-research — EXECUTE/);
-    const r = run(proj, "aidlc-utility.ts", ["recompose", "--skip", "market-research"]);
+    const r = run(proj, "amadeus-utility.ts", ["recompose", "--skip", "market-research"]);
     expect(r.status).toBe(0);
     const after = readState(proj);
     // Suffix flipped, checkbox marker still pending.
     expect(after).toMatch(/- \[ \] market-research — SKIP/);
     // The router (via lookup next-stage, now state-aware) walks around it:
     // after intent-capture the next stage is NOT market-research.
-    const next = run(proj, "aidlc-state.ts", ["lookup", "next-stage", "intent-capture", "feature"]);
+    const next = run(proj, "amadeus-state.ts", ["lookup", "next-stage", "intent-capture", "feature"]);
     expect(next.status).toBe(0);
     expect(next.out.trim()).toBe("feasibility");
   });
@@ -111,18 +111,18 @@ describe("t194 recompose - flips land as suffix edits and the router honours the
     const proj = bornProject("bugfix");
     // bugfix's grid SKIPs user-stories; born state carries the SKIP suffix.
     expect(readState(proj)).toMatch(/- \[ \] user-stories — SKIP/);
-    const r = run(proj, "aidlc-utility.ts", ["recompose", "--add", "user-stories"]);
+    const r = run(proj, "amadeus-utility.ts", ["recompose", "--add", "user-stories"]);
     expect(r.status).toBe(0);
     expect(readState(proj)).toMatch(/- \[ \] user-stories — EXECUTE/);
     // ADD-direction routing: after requirements-analysis the walk reaches the
     // promoted stage instead of skipping to code-generation.
-    const next = run(proj, "aidlc-state.ts", ["lookup", "next-stage", "requirements-analysis", "bugfix"]);
+    const next = run(proj, "amadeus-state.ts", ["lookup", "next-stage", "requirements-analysis", "bugfix"]);
     expect(next.out.trim()).toBe("user-stories");
   });
 
   test("RECOMPOSED audit event lands with the flip lists", () => {
     const proj = bornProject();
-    run(proj, "aidlc-utility.ts", ["recompose", "--skip", "market-research,team-formation"]);
+    run(proj, "amadeus-utility.ts", ["recompose", "--skip", "market-research,team-formation"]);
     const audit = auditText(proj);
     expect(audit).toContain("**Event**: RECOMPOSED");
     expect(audit).toContain("market-research, team-formation");
@@ -139,7 +139,7 @@ describe("t194 recompose - flips land as suffix edits and the router honours the
     const birthRow = rowOf(readState(proj));
     expect(birthRow).toContain("(reverse-engineering — greenfield)");
 
-    const skip = run(proj, "aidlc-utility.ts", ["recompose", "--skip", "market-research"]);
+    const skip = run(proj, "amadeus-utility.ts", ["recompose", "--skip", "market-research"]);
     expect(skip.status).toBe(0);
     const midRow = rowOf(readState(proj));
     // The untouched birth annotation survives the flip verbatim, and the
@@ -147,7 +147,7 @@ describe("t194 recompose - flips land as suffix edits and the router honours the
     expect(midRow).toContain("(reverse-engineering — greenfield)");
     expect(midRow).toContain("1.2 (market-research)");
 
-    const add = run(proj, "aidlc-utility.ts", ["recompose", "--add", "market-research"]);
+    const add = run(proj, "amadeus-utility.ts", ["recompose", "--add", "market-research"]);
     expect(add.status).toBe(0);
     expect(rowOf(readState(proj))).toBe(birthRow);
   });
@@ -156,14 +156,14 @@ describe("t194 recompose - flips land as suffix edits and the router honours the
     const proj = bornProject();
     const before = readState(proj);
     const totalBefore = Number(/- \*\*Total Stages\*\*: (\d+)/.exec(before)?.[1]);
-    run(proj, "aidlc-utility.ts", ["recompose", "--skip", "market-research"]);
+    run(proj, "amadeus-utility.ts", ["recompose", "--skip", "market-research"]);
     const after = readState(proj);
     const totalAfter = Number(/- \*\*Total Stages\*\*: (\d+)/.exec(after)?.[1]);
     expect(totalAfter).toBe(totalBefore - 1);
     expect(after).toMatch(/- \*\*Stages to Skip\*\*: .*market-research/);
     // --status counts against the recomposed plan (the static-grid divergence
     // this P4 closed): total in the progress line drops by 1 too.
-    const status = run(proj, "aidlc-utility.ts", ["status"]);
+    const status = run(proj, "amadeus-utility.ts", ["status"]);
     expect(status.status).toBe(0);
     const m = /Progress: (\d+)\/(\d+)/.exec(status.out) ?? /(\d+)\/(\d+) stages/.exec(status.out);
     if (m) {
@@ -179,7 +179,7 @@ describe("t194 recompose - flips land as suffix edits and the router honours the
 describe("t194 recompose - rejections", () => {
   test("starved SKIP rejected by the strict validator with the producer named", () => {
     const proj = bornProject();
-    const r = run(proj, "aidlc-utility.ts", ["recompose", "--skip", "application-design"]);
+    const r = run(proj, "amadeus-utility.ts", ["recompose", "--skip", "application-design"]);
     expect(r.status).not.toBe(0);
     expect(r.out).toContain("Strict (recompose) mode");
     expect(r.out).toContain("application-design");
@@ -187,14 +187,14 @@ describe("t194 recompose - rejections", () => {
 
   test("frozen-stage flips rejected: [x] completed and behind-cursor", () => {
     const proj = bornProject();
-    const rx = run(proj, "aidlc-utility.ts", ["recompose", "--skip", "state-init"]);
+    const rx = run(proj, "amadeus-utility.ts", ["recompose", "--skip", "state-init"]);
     expect(rx.status).not.toBe(0);
     expect(rx.out).toContain("not pending");
   });
 
   test("skeleton-gate anchor flip rejected (first EXECUTE stage of Construction)", () => {
     const proj = bornProject();
-    const r = run(proj, "aidlc-utility.ts", ["recompose", "--skip", "functional-design"]);
+    const r = run(proj, "amadeus-utility.ts", ["recompose", "--skip", "functional-design"]);
     expect(r.status).not.toBe(0);
     expect(r.out).toContain("walking-skeleton gate");
   });
@@ -204,7 +204,7 @@ describe("t194 recompose - rejections", () => {
     // sits ahead of it in the grid. Promoting it would silently relocate the
     // walking-skeleton gate anchor, so the ADD must reject like the SKIP does.
     const proj = bornProject("bugfix");
-    const r = run(proj, "aidlc-utility.ts", ["recompose", "--add", "functional-design"]);
+    const r = run(proj, "amadeus-utility.ts", ["recompose", "--add", "functional-design"]);
     expect(r.status).not.toBe(0);
     expect(r.out).toContain("walking-skeleton gate anchor");
     // And the state file is untouched by the rejection.
@@ -218,7 +218,7 @@ describe("t194 recompose - rejections", () => {
     const terminal = readFileSync(sp, "utf-8").replace(/- \*\*Status\*\*: Running/, "- **Status**: Completed");
     expect(terminal).toContain("- **Status**: Completed");
     writeFileSync(sp, terminal, "utf-8");
-    const r = run(proj, "aidlc-utility.ts", ["recompose", "--skip", "market-research"]);
+    const r = run(proj, "amadeus-utility.ts", ["recompose", "--skip", "market-research"]);
     expect(r.status).not.toBe(0);
     expect(r.out).toContain("not Running");
     expect(readState(proj)).toBe(terminal);
@@ -226,17 +226,17 @@ describe("t194 recompose - rejections", () => {
 
   test("unknown slug, overlap, and empty flips all reject", () => {
     const proj = bornProject();
-    expect(run(proj, "aidlc-utility.ts", ["recompose", "--skip", "no-such-stage"]).status).not.toBe(0);
+    expect(run(proj, "amadeus-utility.ts", ["recompose", "--skip", "no-such-stage"]).status).not.toBe(0);
     expect(
-      run(proj, "aidlc-utility.ts", ["recompose", "--skip", "market-research", "--add", "market-research"]).status,
+      run(proj, "amadeus-utility.ts", ["recompose", "--skip", "market-research", "--add", "market-research"]).status,
     ).not.toBe(0);
-    expect(run(proj, "aidlc-utility.ts", ["recompose"]).status).not.toBe(0);
+    expect(run(proj, "amadeus-utility.ts", ["recompose"]).status).not.toBe(0);
   });
 
   test("OFF path is inert: a rejected recompose leaves the state file byte-identical", () => {
     const proj = bornProject();
     const before = readState(proj);
-    run(proj, "aidlc-utility.ts", ["recompose", "--skip", "functional-design"]);
+    run(proj, "amadeus-utility.ts", ["recompose", "--skip", "functional-design"]);
     expect(readState(proj)).toBe(before);
   });
 });
@@ -244,16 +244,16 @@ describe("t194 recompose - rejections", () => {
 describe("t194 recompose - the jump readers honour the recomposed plan", () => {
   test("jump target validation: a recompose-SKIPped stage is refused, a promoted one allowed", () => {
     const proj = bornProject();
-    run(proj, "aidlc-utility.ts", ["recompose", "--skip", "market-research"]);
+    run(proj, "amadeus-utility.ts", ["recompose", "--skip", "market-research"]);
     // resolve refuses the suffix-SKIPped target (was grid-EXECUTE).
-    const refuse = run(proj, "aidlc-jump.ts", ["resolve", "--stage", "market-research"]);
+    const refuse = run(proj, "amadeus-jump.ts", ["resolve", "--stage", "market-research"]);
     expect(refuse.status).not.toBe(0);
     expect(refuse.out).toContain("skipped for scope");
     // The promoted direction: bugfix project, ADD a grid-SKIP stage, then
     // resolve targets it successfully.
     const proj2 = bornProject("bugfix");
-    run(proj2, "aidlc-utility.ts", ["recompose", "--add", "user-stories"]);
-    const allow = run(proj2, "aidlc-jump.ts", ["resolve", "--stage", "user-stories"]);
+    run(proj2, "amadeus-utility.ts", ["recompose", "--add", "user-stories"]);
+    const allow = run(proj2, "amadeus-jump.ts", ["resolve", "--stage", "user-stories"]);
     expect(allow.status).toBe(0);
     const body = JSON.parse(allow.out) as { target_slug: string; valid: boolean };
     expect(body.target_slug).toBe("user-stories");
@@ -262,11 +262,11 @@ describe("t194 recompose - the jump readers honour the recomposed plan", () => {
 
   test("ADD-then-jump consistency: a forward jump marks the promoted stage [S] like any on-plan stage", () => {
     const proj = bornProject("bugfix");
-    run(proj, "aidlc-utility.ts", ["recompose", "--add", "user-stories"]);
+    run(proj, "amadeus-utility.ts", ["recompose", "--add", "user-stories"]);
     // Jump forward over the promoted stage to code-generation: the forward
     // loop must mark IN-FLIGHT intermediates [S] against the EFFECTIVE plan.
     // First put the cursor at requirements-analysis (jump execute redo-shape).
-    const jr = run(proj, "aidlc-jump.ts", [
+    const jr = run(proj, "amadeus-jump.ts", [
       "execute", "--target", "code-generation", "--direction", "forward",
     ]);
     expect(jr.status).toBe(0);
@@ -279,10 +279,10 @@ describe("t194 recompose - the jump readers honour the recomposed plan", () => {
 
   test("backward jump resets a promoted stage's [S/x] like any on-plan stage", () => {
     const proj = bornProject("bugfix");
-    run(proj, "aidlc-utility.ts", ["recompose", "--add", "user-stories"]);
-    run(proj, "aidlc-jump.ts", ["execute", "--target", "code-generation", "--direction", "forward"]);
+    run(proj, "amadeus-utility.ts", ["recompose", "--add", "user-stories"]);
+    run(proj, "amadeus-jump.ts", ["execute", "--target", "code-generation", "--direction", "forward"]);
     expect(readState(proj)).toMatch(/- \[S\] user-stories — EXECUTE/);
-    const back = run(proj, "aidlc-jump.ts", [
+    const back = run(proj, "amadeus-jump.ts", [
       "execute", "--target", "requirements-analysis", "--direction", "backward",
     ]);
     expect(back.status).toBe(0);

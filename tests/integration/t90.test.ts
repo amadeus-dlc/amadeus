@@ -1,8 +1,8 @@
-// covers: subcommand:aidlc-runtime:compile
+// covers: subcommand:amadeus-runtime:compile
 //
 // CLI-contract port of tests/integration/t90-runtime-compile.sh (TAP plan 29),
 // mechanism = cli. Equal-fidelity migration: every .sh assertion that
-// shelled out to `bun aidlc-runtime.ts compile ...` (and one `read ...`
+// shelled out to `bun amadeus-runtime.ts compile ...` (and one `read ...`
 // at case 14) is preserved by SPAWNING the real CLI via node:child_process
 // spawnSync, asserting on res.status / res.stdout+stderr and the file
 // effects the tool writes (runtime-graph.json + the MEMORY_EMPTY rows it
@@ -56,12 +56,12 @@ import { toPortablePath } from "../harness/fixtures.ts";
 import {
   auditFilePath,
   readAllAuditShards,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // P9: with no intent cursor seeded, the compile tool resolves the BARE space
 // record root (docsRoot -> spaceRecordRoot) at aidlc/spaces/default/intents/.
 // State, runtime-graph, per-stage memory, and the per-clone audit SHARD all
-// live under it (the flat aidlc-docs/ root is retired — there is no fallback).
+// live under it (the flat amadeus-docs/ root is retired — there is no fallback).
 const RECORD_REL = join("aidlc", "spaces", "default", "intents");
 function recordRoot(proj: string): string {
   return join(proj, RECORD_REL);
@@ -75,7 +75,7 @@ const RUNTIME_TS = join(
   "claude",
   ".claude",
   "tools",
-  "aidlc-runtime.ts",
+  "amadeus-runtime.ts",
 );
 
 const tempDirs: string[] = [];
@@ -109,12 +109,12 @@ function runRead(proj: string, slug: string): SpawnResult {
 
 /**
  * make_project (t90:36-45): fresh temp project with the given audit.md +
- * aidlc-state.md under aidlc-docs/. toPortablePath: the tool resolves
+ * amadeus-state.md under amadeus-docs/. toPortablePath: the tool resolves
  * audit/graph paths through forward-slash helpers, so on Windows the raw
  * mktemp path can't round-trip — mirrors createTestProject (fixtures.ts).
  */
 function makeProject(audit: string, state: string): string {
-  const proj = toPortablePath(mkdtempSync(join(tmpdir(), "aidlc-t90-")));
+  const proj = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-t90-")));
   tempDirs.push(proj);
   mkdirSync(recordRoot(proj), { recursive: true });
   // Seed the DETERMINISTIC audit shard the compile tool resolves
@@ -123,13 +123,13 @@ function makeProject(audit: string, state: string): string {
   const shard = auditFilePath(proj);
   mkdirSync(dirname(shard), { recursive: true });
   writeFileSync(shard, audit, "utf-8");
-  writeFileSync(join(recordRoot(proj), "aidlc-state.md"), state, "utf-8");
+  writeFileSync(join(recordRoot(proj), "amadeus-state.md"), state, "utf-8");
   return proj;
 }
 
 /** Bare temp project with the record shell but no state/audit (case 8). */
 function makeBareProject(): string {
-  const proj = toPortablePath(mkdtempSync(join(tmpdir(), "aidlc-t90-")));
+  const proj = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-t90-")));
   tempDirs.push(proj);
   mkdirSync(recordRoot(proj), { recursive: true });
   return proj;
@@ -163,7 +163,7 @@ function memoryEmptyCount(proj: string): number {
 }
 
 /**
- * The .sh writes per-stage memory.md under aidlc-docs/<phase>/<slug>/; P9
+ * The .sh writes per-stage memory.md under amadeus-docs/<phase>/<slug>/; P9
  * reroots that under the bare space record root. intent-capture lives in the
  * ideation phase (stage-graph.json).
  */
@@ -181,17 +181,17 @@ const STATE_FEATURE = ["- **Scope**: feature", "- **Current Stage**: scope-defin
 );
 
 // Synthetic single-stage pair, field shapes copied EXACTLY from
-// handleSingleReport's spawnAuditAppend calls (aidlc-orchestrate.ts):
+// handleSingleReport's spawnAuditAppend calls (amadeus-orchestrate.ts):
 // STAGE_STARTED carries Stage + Agent + Workflow; STAGE_COMPLETED carries
 // Stage + Details + Workflow. The Workflow value is the synthetic
 // `single-stage:<slug>` id that marks the pair as belonging to NO main
-// workflow. application-design (inception, aidlc-architect-agent per
+// workflow. application-design (inception, amadeus-architect-agent per
 // stage-graph.json) is deliberately UNRELATED to the main workflow's slugs.
 const SINGLE_STAGE_PAIR = `## Stage Start
 **Timestamp**: 2026-05-27T10:20:00Z
 **Event**: STAGE_STARTED
 **Stage**: application-design
-**Agent**: aidlc-architect-agent
+**Agent**: amadeus-architect-agent
 **Workflow**: single-stage:application-design
 
 ---
@@ -211,7 +211,7 @@ const AUDIT_ONE_APPROVED = `## Workflow Start
 **Timestamp**: 2026-05-27T10:00:00Z
 **Event**: WORKFLOW_STARTED
 **Scope**: feature
-**Request**: /aidlc feature
+**Request**: /amadeus feature
 
 ---
 
@@ -219,7 +219,7 @@ const AUDIT_ONE_APPROVED = `## Workflow Start
 **Timestamp**: 2026-05-27T10:01:00Z
 **Event**: STAGE_STARTED
 **Stage**: intent-capture
-**Agent**: aidlc-product-agent
+**Agent**: amadeus-product-agent
 
 ---
 
@@ -232,7 +232,7 @@ const AUDIT_ONE_APPROVED = `## Workflow Start
 ---
 `;
 
-describe("t90 aidlc-runtime compile — CLI contract (migrated from t90-runtime-compile.sh, plan 29)", () => {
+describe("t90 amadeus-runtime compile — CLI contract (migrated from t90-runtime-compile.sh, plan 29)", () => {
   // --- Case 1: one approved stage -> one approved row + memory_entries 1 ---
   test("1: one approved stage -> outcome approved, memory_entries 1", () => {
     const proj = makeProject(AUDIT_ONE_APPROVED, STATE_FEATURE);
@@ -257,7 +257,7 @@ describe("t90 aidlc-runtime compile — CLI contract (migrated from t90-runtime-
 **Timestamp**: 2026-05-27T10:01:00Z
 **Event**: STAGE_STARTED
 **Stage**: intent-capture
-**Agent**: aidlc-product-agent
+**Agent**: amadeus-product-agent
 
 ---
 `;
@@ -281,7 +281,7 @@ describe("t90 aidlc-runtime compile — CLI contract (migrated from t90-runtime-
 **Timestamp**: 2026-05-27T10:01:00Z
 **Event**: STAGE_STARTED
 **Stage**: intent-capture
-**Agent**: aidlc-product-agent
+**Agent**: amadeus-product-agent
 
 ---
 
@@ -296,7 +296,7 @@ describe("t90 aidlc-runtime compile — CLI contract (migrated from t90-runtime-
 **Timestamp**: 2026-05-27T10:10:00Z
 **Event**: STAGE_STARTED
 **Stage**: intent-capture
-**Agent**: aidlc-product-agent
+**Agent**: amadeus-product-agent
 
 ---
 `;
@@ -374,7 +374,7 @@ describe("t90 aidlc-runtime compile — CLI contract (migrated from t90-runtime-
 **Timestamp**: 2026-05-27T10:01:00Z
 **Event**: STAGE_STARTED
 **Stage**: intent-capture
-**Agent**: aidlc-product-agent
+**Agent**: amadeus-product-agent
 
 ---
 
@@ -382,7 +382,7 @@ describe("t90 aidlc-runtime compile — CLI contract (migrated from t90-runtime-
 **Timestamp**: 2026-05-27T10:01:00Z
 **Event**: STAGE_STARTED
 **Stage**: scope-definition
-**Agent**: aidlc-product-agent
+**Agent**: amadeus-product-agent
 
 ---
 
@@ -424,7 +424,7 @@ describe("t90 aidlc-runtime compile — CLI contract (migrated from t90-runtime-
 **Timestamp**: 2026-05-27T08:01:00Z
 **Event**: STAGE_STARTED
 **Stage**: intent-capture
-**Agent**: aidlc-product-agent
+**Agent**: amadeus-product-agent
 
 ---
 
@@ -446,7 +446,7 @@ describe("t90 aidlc-runtime compile — CLI contract (migrated from t90-runtime-
 **Timestamp**: 2026-05-27T10:01:00Z
 **Event**: STAGE_STARTED
 **Stage**: intent-capture
-**Agent**: aidlc-product-agent
+**Agent**: amadeus-product-agent
 
 ---
 `;
@@ -472,7 +472,7 @@ describe("t90 aidlc-runtime compile — CLI contract (migrated from t90-runtime-
 **Timestamp**: 2024-01-01T10:01:00Z
 **Event**: STAGE_STARTED
 **Stage**: intent-capture
-**Agent**: aidlc-product-agent
+**Agent**: amadeus-product-agent
 
 ---
 
@@ -512,7 +512,7 @@ describe("t90 aidlc-runtime compile — CLI contract (migrated from t90-runtime-
 **Timestamp**: ${newCompleted}
 **Event**: STAGE_STARTED
 **Stage**: intent-capture
-**Agent**: aidlc-product-agent
+**Agent**: amadeus-product-agent
 
 ---
 
@@ -547,7 +547,7 @@ describe("t90 aidlc-runtime compile — CLI contract (migrated from t90-runtime-
           started_at: null,
           completed_at: null,
           agent: null,
-          memory_path: "aidlc-docs/construction/code-generation/memory.md",
+          memory_path: "amadeus-docs/construction/code-generation/memory.md",
           memory_entries: null,
           memory_breakdown: null,
           sensor_firings: [],
@@ -560,7 +560,7 @@ describe("t90 aidlc-runtime compile — CLI contract (migrated from t90-runtime-
               started_at: "2024-01-01T11:00:00Z",
               completed_at: null,
               memory_path:
-                ".aidlc/worktrees/bolt-auth-flow/aidlc-docs/construction/code-generation/memory.md",
+                ".aidlc/worktrees/bolt-auth-flow/amadeus-docs/construction/code-generation/memory.md",
               memory_entries: 2,
               memory_breakdown: {
                 interpretations: 1,
@@ -606,7 +606,7 @@ describe("t90 aidlc-runtime compile — CLI contract (migrated from t90-runtime-
   });
 
   // --- Case 16: rows WITHOUT a Workflow field are main-workflow rows ---
-  // Main-workflow STAGE_* rows (aidlc-state.ts emitters) carry NO Workflow
+  // Main-workflow STAGE_* rows (amadeus-state.ts emitters) carry NO Workflow
   // field — the filter must be absence-tolerant, only skipping values that
   // start with `single-stage:`. AUDIT_ONE_APPROVED's rows have no Workflow
   // field and must keep pairing (guards against an over-eager filter that

@@ -1,10 +1,10 @@
-# aidlc-operations-agent -- Technical Reference
+# amadeus-operations-agent -- Technical Reference
 
 ## Identity
 
 | Field | Value |
 |-------|-------|
-| Name | aidlc-operations-agent |
+| Name | amadeus-operations-agent |
 | Model Override | sonnet |
 | Allowed Claude Code Tools | Read, Edit, Write, Glob, Grep, Bash, AskUserQuestion |
 | Disallowed Claude Code Tools | Task |
@@ -24,7 +24,7 @@
 ### Support Stages
 
 None. The stage graph records `support_agents: []` for performance-validation
-(4.6) — that stage is led by the aidlc-quality-agent. The operational telemetry
+(4.6) — that stage is led by the amadeus-quality-agent. The operational telemetry
 and baselines this agent stands up in observability-setup (4.4) feed performance
 validation informally, but operations is not a formal support agent on 4.6.
 
@@ -36,15 +36,15 @@ validation informally, but operations is not a formal support agent on 4.6.
 
 | Source | Artifacts |
 |--------|-----------|
-| aidlc-aws-platform-agent | Provisioned infrastructure, CloudWatch namespaces, scaling policies |
-| aidlc-pipeline-deploy-agent | Deployed services, deployment metadata |
+| amadeus-aws-platform-agent | Provisioned infrastructure, CloudWatch namespaces, scaling policies |
+| amadeus-pipeline-deploy-agent | Deployed services, deployment metadata |
 
 ### Hands Off To
 
 | Target | Artifacts |
 |--------|-----------|
-| aidlc-product-agent | Operational feedback for next Ideation cycle (closes the lifecycle loop) |
-| aidlc-architect-agent | Architectural improvement recommendations based on production observations |
+| amadeus-product-agent | Operational feedback for next Ideation cycle (closes the lifecycle loop) |
+| amadeus-architect-agent | Architectural improvement recommendations based on production observations |
 | Orchestrator | Feedback report for iteration planning |
 
 ---
@@ -53,7 +53,7 @@ validation informally, but operations is not a formal support agent on 4.6.
 
 ### Methodology (Tier 1)
 
-Path: `.claude/knowledge/aidlc-operations-agent/`
+Path: `.claude/knowledge/amadeus-operations-agent/`
 
 | File | Content |
 |------|---------|
@@ -64,7 +64,7 @@ Path: `.claude/knowledge/aidlc-operations-agent/`
 
 ### Team (Tier 2)
 
-Path: `aidlc/knowledge/aidlc-operations-agent/` (the space-level knowledge dir; user-managed)
+Path: `aidlc/knowledge/amadeus-operations-agent/` (the space-level knowledge dir; user-managed)
 
 A space-level directory the team creates when it has content (the engine ships `aidlc/knowledge/` empty). Populated by the team with project-specific
 operational context such as existing runbooks, on-call schedules, SLO targets,
@@ -75,6 +75,6 @@ or monitoring dashboards.
 ## Cross-References
 
 - [Agent Reference Overview](README.md)
-- [Agent Guide: aidlc-operations-agent](../../guide/agents/operations-agent.md)
+- [Agent Guide: amadeus-operations-agent](../../guide/agents/operations-agent.md)
 - [Stage Documentation](../04-stages/)
-- Source: [`dist/claude/.claude/agents/aidlc-operations-agent.md`](../../../dist/claude/.claude/agents/aidlc-operations-agent.md)
+- Source: [`dist/claude/.claude/agents/amadeus-operations-agent.md`](../../../dist/claude/.claude/agents/amadeus-operations-agent.md)

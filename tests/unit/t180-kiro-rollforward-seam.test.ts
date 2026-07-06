@@ -1,24 +1,24 @@
 // t180-kiro-rollforward-seam: deterministic coverage for the two halves of the
 // Kiro read-only/navigation roll-forward seam in
-// harness/kiro/hooks/aidlc-kiro-adapter.ts (shipped as
-// dist/kiro/.kiro/hooks/aidlc-kiro-adapter.ts):
+// harness/kiro/hooks/amadeus-kiro-adapter.ts (shipped as
+// dist/kiro/.kiro/hooks/amadeus-kiro-adapter.ts):
 //
 //   verb-intercept (userPromptSubmit) — bumps the per-turn counter
-//     aidlc/.aidlc-turn-counter EVERY turn, and on a TERMINAL command
-//     (read-only flag / workspace verb) stamps aidlc/.aidlc-readonly-latch
+//     aidlc/.amadeus-turn-counter EVERY turn, and on a TERMINAL command
+//     (read-only flag / workspace verb) stamps aidlc/.amadeus-readonly-latch
 //     {turn,flag,source,ts} + writes the SYSTEM dispatch relay to stdout.
 //   pretool-block (preToolUse) — the hard floor: a TRULY BARE advancing
-//     `aidlc-orchestrate.ts next` while the latch is fresh-for-this-turn
+//     `amadeus-orchestrate.ts next` while the latch is fresh-for-this-turn
 //     (latch.turn === counter) → exit 2 (Kiro BLOCK). Any deliberate move
 //     (advancing flag), a stale latch, or no latch at all → exit 0 (inert).
 //
-// covers: file:harness/kiro/hooks/aidlc-kiro-adapter.ts
+// covers: file:harness/kiro/hooks/amadeus-kiro-adapter.ts
 //
 // WHY SUBPROCESS. The seam IS a subprocess shim — it reads/writes files under
-// <cwd>/aidlc/ and signals Kiro purely via stdout + exit code. In-process
+// <cwd>/amadeus/ and signals Kiro purely via stdout + exit code. In-process
 // testing would bypass the exact surface being contracted. No live LLM: the
 // verb-intercept args are recovered deterministically from the expanded prompt
-// body (the `aidlc-orchestrate.ts next <ARGS>` forwarding anchor), and
+// body (the `amadeus-orchestrate.ts next <ARGS>` forwarding anchor), and
 // pretool-block reads only the counter/latch files we seed.
 
 import { describe, expect, test } from "bun:test";
@@ -31,7 +31,7 @@ import { fileURLToPath } from "node:url";
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const KIRO_TREE = join(REPO_ROOT, "dist", "kiro", ".kiro");
 
-// A scratch project: the .kiro tree (so verb-intercept's aidlc-utility.ts
+// A scratch project: the .kiro tree (so verb-intercept's amadeus-utility.ts
 // subprocess + the adapter path resolve) + an empty aidlc/ roof. The seam
 // writes the counter/latch under aidlc/ itself.
 function scratchProject(): string {
@@ -46,7 +46,7 @@ function runAdapter(
   target: string,
   payload: unknown,
 ): { stdout: string; code: number } {
-  const r = spawnSync("bun", [join(projectDir, ".kiro", "hooks", "aidlc-kiro-adapter.ts"), target], {
+  const r = spawnSync("bun", [join(projectDir, ".kiro", "hooks", "amadeus-kiro-adapter.ts"), target], {
     cwd: projectDir,
     input: typeof payload === "string" ? payload : JSON.stringify(payload),
     encoding: "utf-8",
@@ -57,14 +57,14 @@ function runAdapter(
 }
 
 // Build an expanded-prompt body carrying the forwarding-loop anchor the seam
-// recovers args from: `… aidlc-orchestrate.ts next <ARGS>` inside a backtick
+// recovers args from: `… amadeus-orchestrate.ts next <ARGS>` inside a backtick
 // code span (exactly what Kiro substitutes $ARGUMENTS into).
 function promptWithNext(args: string): string {
-  return `Step 1: run \`bun .kiro/tools/aidlc-orchestrate.ts next ${args}\` and relay the output.`;
+  return `Step 1: run \`bun .kiro/tools/amadeus-orchestrate.ts next ${args}\` and relay the output.`;
 }
 
-const counterPath = (dir: string) => join(dir, "aidlc", ".aidlc-turn-counter");
-const latchPath = (dir: string) => join(dir, "aidlc", ".aidlc-readonly-latch");
+const counterPath = (dir: string) => join(dir, "aidlc", ".amadeus-turn-counter");
+const latchPath = (dir: string) => join(dir, "aidlc", ".amadeus-readonly-latch");
 
 describe("t180 verb-intercept turn-clock + read-only/nav latch", () => {
   test("1: read-only flag (--status) bumps counter to 1 and stamps the read-only-flag latch", () => {
@@ -74,7 +74,7 @@ describe("t180 verb-intercept turn-clock + read-only/nav latch", () => {
       expect(r.code).toBe(0);
       // SYSTEM dispatch relay is on stdout (conductor relays, never advances).
       expect(r.stdout).toContain("SYSTEM (deterministic harness dispatch)");
-      expect(r.stdout).toContain("/aidlc --status");
+      expect(r.stdout).toContain("/amadeus --status");
       // Turn-clock bumped to 1.
       expect(existsSync(counterPath(dir))).toBe(true);
       expect(readFileSync(counterPath(dir), "utf-8").trim()).toBe("1");
@@ -142,7 +142,7 @@ describe("t180 pretool-block roll-forward backstop (exit-code contract)", () => 
       );
     }
   }
-  const BARE_NEXT = "bun .kiro/tools/aidlc-orchestrate.ts next";
+  const BARE_NEXT = "bun .kiro/tools/amadeus-orchestrate.ts next";
 
   test("4: fresh latch (turn===counter) + bare advancing next → exit 2 (BLOCK)", () => {
     const dir = scratchProject();

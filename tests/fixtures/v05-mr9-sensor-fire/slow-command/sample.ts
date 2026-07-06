@@ -1,7 +1,7 @@
 // slow-command fixture for t92 group F defensive sub-case.
 //
 // This file is the `--output-path` argument; the manifest's `command:`
-// for this case points at the existing `aidlc-sensor-stub-slow.ts`
+// for this case points at the existing `amadeus-sensor-stub-slow.ts`
 // stub copied next to the dispatcher (which sleeps 5s, exceeding the
 // manifest's 1s timeout_seconds). The dispatcher SIGTERMs the stub at
 // the timeout window and emits SENSOR_BUDGET_OVERRIDE.

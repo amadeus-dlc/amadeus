@@ -70,7 +70,7 @@ See [docs/reference/09-testing.md § Cross-Platform Coverage](../docs/reference/
 
 When adding a new test, pick the next free integer from the appropriate level (smoke, unit, integration, e2e) and drop a `t<NN>[-description].test.ts` file under that level directory — the runner discovers it, so there is no registry row to add. Don't gap-fill skipped numbers from prior MRs; contiguous numbering keeps the suite readable.
 
-If two parallel MRs both pick the same number, the second to merge rebases and renumbers to the next free integer in the same level. Because the suite is all-TypeScript there is no TAP `plan N` and no hand-maintained registry row to keep in lockstep: a rename touches the on-disk filename and the file's own `covers:`/header line, then `bun tests/gen-coverage-registry.ts` refreshes the machine-checked index. `tests/integration/t55-test-suite-drift.test.ts` is now a stale-path / version-marker sweep (plus the legacy `aidlc-claude-code/` guard) over `tests/`, `docs/`, and the framework tree — it catches a rename that left a dangling path reference behind.
+If two parallel MRs both pick the same number, the second to merge rebases and renumbers to the next free integer in the same level. Because the suite is all-TypeScript there is no TAP `plan N` and no hand-maintained registry row to keep in lockstep: a rename touches the on-disk filename and the file's own `covers:`/header line, then `bun tests/gen-coverage-registry.ts` refreshes the machine-checked index. `tests/integration/t55-test-suite-drift.test.ts` is now a stale-path / version-marker sweep (plus the legacy `amadeus-claude-code/` guard) over `tests/`, `docs/`, and the framework tree — it catches a rename that left a dangling path reference behind.
 
 ## Quick Reference
 

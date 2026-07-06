@@ -1,8 +1,8 @@
-// covers: subcommand:aidlc-utility:config-change, audit:TEST_STRATEGY_CHANGED
+// covers: subcommand:amadeus-utility:config-change, audit:TEST_STRATEGY_CHANGED
 //
 // t28-integration-test-strategy.test.ts — SDK-harness port of
 // tests/integration/t28-integration-test-strategy.sh (plan 6). Drives the real
-// /aidlc --test-strategy / --depth through the Claude Agent SDK and asserts
+// /amadeus --test-strategy / --depth through the Claude Agent SDK and asserts
 // ONLY on deterministic surfaces — never on assistantText. Mechanism `sdk` is
 // DERIVED from the driveAidlc() call below (Phase 0 derive-by-driver), so the
 // filename carries no mechanism segment.
@@ -25,7 +25,7 @@
 //   A1 STATE_A grep 'Test Strategy.*Minimal'  -> assertStateField "Test Strategy" === "Minimal"
 //                                                 (config-change setField, utility.ts:2389; VALID_TEST_STRATEGIES, utility.ts:68-72)
 //   A2 AUDIT_A grep 'TEST_STRATEGY_CHANGED'    -> assertAuditEvent "TEST_STRATEGY_CHANGED"
-//                                                 (appendAuditEvent, utility.ts:2406; VALID_EVENT_TYPES, aidlc-audit.ts:60)
+//                                                 (appendAuditEvent, utility.ts:2406; VALID_EVENT_TYPES, amadeus-audit.ts:60)
 //   B1 CLAUDE_OUTPUT contains "Unknown test    -> UNPORTABLE to a deterministic SDK surface (LLM-prose
 //      strategy"                                  validation by SKILL.md:114). Deterministic equivalent
 //                                                  (CLI die() -> stderr, utility.ts:2373) is covered by
@@ -39,17 +39,17 @@
 //                                                  same single-event guarantee the .sh's grep -c gave)
 //
 // Known-answer literals (read from the SHIPPED handler, not guessed):
-//   - config-change dispatch:  SKILL.md:124-127 -> `bun .claude/tools/aidlc-utility.ts config-change`
+//   - config-change dispatch:  SKILL.md:124-127 -> `bun .claude/tools/amadeus-utility.ts config-change`
 //                              with EXACTLY the extracted --depth / --test-strategy flags
 //   - "Test Strategy" / "Depth" state fields:  config-change setField (utility.ts:2386,2389),
 //                              normalised via VALID_DEPTHS / VALID_TEST_STRATEGIES (utility.ts:62-72:
 //                              "standard"->"Standard", "minimal"->"Minimal")
 //   - TEST_STRATEGY_CHANGED audit event:  appendAuditEvent (utility.ts:2406), written as
-//                              `**Event**: TEST_STRATEGY_CHANGED` (aidlc-audit.ts:258), parsed by
+//                              `**Event**: TEST_STRATEGY_CHANGED` (amadeus-audit.ts:258), parsed by
 //                              readAuditEvents (sdk-drive.ts)
 //   - P4 layout note:          config-change does NOT migrate the flat seed (only intent-birth
-//                              migrates, aidlc-utility.ts:2022). The withState seed stays at the
-//                              flat aidlc-docs/ layout, so assertStateField (r.stateFile) /
+//                              migrates, amadeus-utility.ts:2022). The withState seed stays at the
+//                              flat amadeus-docs/ layout, so assertStateField (r.stateFile) /
 //                              assertAuditEvent (r.auditEvents) resolve it via sdk-drive's
 //                              per-intent readers' flat fallback — no hardcoded flat path here.
 //   - state-mid-ideation fixture seeds Depth=Standard, Test Strategy=Standard (state-mid-ideation.md:17-18)
@@ -63,7 +63,7 @@
 // audit-sample fixture seeds NO TEST_STRATEGY_CHANGED / DEPTH_CHANGED
 // (audit-sample.md), so both counts measure only this run's contribution.
 //
-// It SPENDS TOKENS — each driveAidlc drives the real /aidlc on Opus/Bedrock.
+// It SPENDS TOKENS — each driveAidlc drives the real /amadeus on Opus/Bedrock.
 // Generous per-test timeout so a hung canUseTool fails LOUD via bun:test.
 
 import { describe, expect, test } from "bun:test";
@@ -85,8 +85,8 @@ const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 600) * 1000;
 const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
 
 // Known-answer literals from the SHIPPED handler / seeded fixture (see header).
-const STRATEGY_EVENT = "TEST_STRATEGY_CHANGED"; // utility.ts:2406, aidlc-audit.ts:60
-const DEPTH_EVENT = "DEPTH_CHANGED"; // utility.ts:2400, aidlc-audit.ts:59
+const STRATEGY_EVENT = "TEST_STRATEGY_CHANGED"; // utility.ts:2406, amadeus-audit.ts:60
+const DEPTH_EVENT = "DEPTH_CHANGED"; // utility.ts:2400, amadeus-audit.ts:59
 // VALID_TEST_STRATEGIES["minimal"] -> "Minimal"; VALID_DEPTHS["standard"] ->
 // "Standard" (utility.ts:62-72). The fixture seeds both as Standard.
 const STRATEGY_MINIMAL = "Minimal";
@@ -101,7 +101,7 @@ function countAuditEvent(events: string[] | undefined, event: string): number {
   return (events ?? []).filter((e) => e === event).length;
 }
 
-describe("t28 /aidlc --test-strategy / --depth config-change (sdk)", () => {
+describe("t28 /amadeus --test-strategy / --depth config-change (sdk)", () => {
   // -------------------------------------------------------------------------
   // Test A — --test-strategy minimal changes the strategy on existing state.
   //
@@ -119,7 +119,7 @@ describe("t28 /aidlc --test-strategy / --depth config-change (sdk)", () => {
         withAudit: true,
       });
       try {
-        const r = await driveAidlc("/aidlc --test-strategy minimal", {
+        const r = await driveAidlc("/amadeus --test-strategy minimal", {
           projectDir: proj,
           timeoutMs: DRIVE_TIMEOUT_MS,
           stopAfterToolResult: STOP_AFTER_STRATEGY_CHANGE,
@@ -161,7 +161,7 @@ describe("t28 /aidlc --test-strategy / --depth config-change (sdk)", () => {
       });
       try {
         const r = await driveAidlc(
-          "/aidlc --depth standard --test-strategy minimal",
+          "/amadeus --depth standard --test-strategy minimal",
           {
             projectDir: proj,
             timeoutMs: DRIVE_TIMEOUT_MS,
@@ -207,7 +207,7 @@ describe("t28 /aidlc --test-strategy / --depth config-change (sdk)", () => {
   // Per the iron rule, asserting on assistantText would be a prose flake, so we
   // do NOT. The deterministic equivalent — config-change --test-strategy extreme
   // -> stderr "Unknown test strategy", exit 1 (utility.ts:2373 die() ->
-  // emitError -> aidlc-lib.ts:1545) — is ALREADY covered at the CLI tier by
+  // emitError -> amadeus-lib.ts:1545) — is ALREADY covered at the CLI tier by
   // tests/unit/t27.cli.test.ts. This arm is recorded in the port's `unportable`
   // findings rather than weakened to a prose check.
   // -------------------------------------------------------------------------

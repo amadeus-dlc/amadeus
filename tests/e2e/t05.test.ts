@@ -1,13 +1,13 @@
-// covers: subcommand:aidlc-worktree:create
+// covers: subcommand:amadeus-worktree:create
 //
 // CLI-contract port of tests/e2e/t05-worktree-audit-first.sh (TAP plan 7),
-// mechanism = cli. The .sh drives `aidlc-worktree.ts create` to prove the
+// mechanism = cli. The .sh drives `amadeus-worktree.ts create` to prove the
 // audit-first invariant: the WORKTREE_CREATED audit-of-intent row lands BEFORE
 // the real `git worktree add` (so a kill-9 in between surfaces as a phantom
 // row doctor reconciles), AND a pre-git failure (read-only audit.md) exits
 // non-zero WITHOUT touching git or the audit. The covers UNIT credited is
-// subcommand:aidlc-worktree:create — the create subcommand whose ordering
-// guarantee is the whole point of this test (aidlc-worktree.ts:181-202).
+// subcommand:amadeus-worktree:create — the create subcommand whose ordering
+// guarantee is the whole point of this test (amadeus-worktree.ts:181-202).
 //
 // MECHANISM: this is a .cli file, so every observable is taken at the PROCESS
 // boundary — SPAWN the real binary via spawnSync (BUN + the tool .ts path) and
@@ -16,14 +16,14 @@
 // side-effects of running the actual binary against real git; an in-process
 // twin would lose them.
 //
-// FIXTURE: aidlc-worktree.ts asserts it runs from the main checkout
-// (assertNotSiblingWorktree, aidlc-worktree.ts:101) and runs real git, so each
-// case needs an ACTUAL git repo on `main` with one commit plus an aidlc-docs/
+// FIXTURE: amadeus-worktree.ts asserts it runs from the main checkout
+// (assertNotSiblingWorktree, amadeus-worktree.ts:101) and runs real git, so each
+// case needs an ACTUAL git repo on `main` with one commit plus an amadeus-docs/
 // dir. setupWorktreeFixture (tests/harness/fixtures.ts) builds exactly that;
 // the tool is spawned with cwd = the fixture so `git rev-parse
 // --show-toplevel` resolves to the main checkout. Each case ALSO seeds
-// aidlc-docs/aidlc-state.md (from the state-mid-ideation.md fixture) because
-// emitError (aidlc-lib.ts:1513) only appends ERROR_LOGGED when
+// amadeus-docs/amadeus-state.md (from the state-mid-ideation.md fixture) because
+// emitError (amadeus-lib.ts:1513) only appends ERROR_LOGGED when
 // existsSync(stateFilePath) is true — without the state file the ERROR_LOGGED
 // row is silently skipped per emitError's best-effort policy, exactly as the
 // .sh's comment (lines 13-15) explains. cleanupWorktreeFixture restores perms
@@ -76,7 +76,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const TOOL = join(AIDLC_SRC, "tools", "aidlc-worktree.ts");
+const TOOL = join(AIDLC_SRC, "tools", "amadeus-worktree.ts");
 
 const fixtures: string[] = [];
 afterAll(() => {
@@ -99,9 +99,9 @@ afterAll(() => {
 });
 
 /**
- * Fresh git-repo fixture on `main` + aidlc-docs/, with a seeded state file so
+ * Fresh git-repo fixture on `main` + amadeus-docs/, with a seeded state file so
  * emitError's existsSync(stateFilePath) guard passes (mirrors the .sh's `cp
- * state-mid-ideation.md ... aidlc-state.md`). Registered for cleanup.
+ * state-mid-ideation.md ... amadeus-state.md`). Registered for cleanup.
  */
 function freshFixture(): string {
   const p = setupWorktreeFixture();
@@ -117,7 +117,7 @@ interface CliResult {
   out: string; // combined stdout+stderr (mirrors the .sh's 2>&1)
 }
 
-/** Spawn `bun aidlc-worktree.ts create ... --project-dir <p>` from cwd=<p>. */
+/** Spawn `bun amadeus-worktree.ts create ... --project-dir <p>` from cwd=<p>. */
 function create(p: string, args: string[]): CliResult {
   const res = spawnSync(BUN, [TOOL, "create", ...args, "--project-dir", p], {
     cwd: p,
@@ -153,7 +153,7 @@ const auditText = (p: string): string => {
  */
 function readonlyEnforced(): boolean {
   if (process.platform === "win32") return false;
-  const probe = join(FIXTURES_DIR, "..", `.aidlc-t05-probe-${process.pid}`);
+  const probe = join(FIXTURES_DIR, "..", `.amadeus-t05-probe-${process.pid}`);
   try {
     mkdirSync(probe, { recursive: true });
     chmodSync(probe, 0o555);
@@ -177,7 +177,7 @@ function readonlyEnforced(): boolean {
   }
 }
 
-describe("t05 aidlc-worktree create audit-first (migrated from t05-worktree-audit-first.sh, plan 7)", () => {
+describe("t05 amadeus-worktree create audit-first (migrated from t05-worktree-audit-first.sh, plan 7)", () => {
   test(
     "1: Part A — read-only audit.md ⇒ exit non-zero pre-git, no worktree dir, audit unmutated",
     () => {
@@ -247,7 +247,7 @@ describe("t05 aidlc-worktree create audit-first (migrated from t05-worktree-audi
       // B3: ERROR_LOGGED appended after git failed.
       expect(after).toContain("ERROR_LOGGED");
       // B4: the ERROR_LOGGED Error field carries [slug=demo] for doctor
-      // correlation (errorWithSlug, aidlc-worktree.ts:810).
+      // correlation (errorWithSlug, amadeus-worktree.ts:810).
       expect(after).toContain("[slug=demo]");
     },
     30000,

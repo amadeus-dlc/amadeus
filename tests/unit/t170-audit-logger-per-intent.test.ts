@@ -1,14 +1,14 @@
-// covers: hook:aidlc-audit-logger
+// covers: hook:amadeus-audit-logger
 //
 // t170 — the P8 fix to the audit-logger GATE. Pre-workspace-move the hook gated
-// artifact logging on `file.includes("aidlc-docs/")` (aidlc-audit-logger.ts:49).
+// artifact logging on `file.includes("amadeus-docs/")` (amadeus-audit-logger.ts:49).
 // After the record re-roots per intent
 // (aidlc/spaces/<space>/intents/<slug>-<id8>/<phase>/<stage>/…), that path no
-// longer contains "aidlc-docs/", so the old gate DROPPED every ARTIFACT_CREATED/
+// longer contains "amadeus-docs/", so the old gate DROPPED every ARTIFACT_CREATED/
 // UPDATED on the new layout (the review minor this fixes). The gate now resolves
 // the active intent's record root via docsRoot() and logs writes under it. P9
-// RETIRED the transitional flat "aidlc-docs/" substring fallback — a write under
-// a flat aidlc-docs/ tree is no longer logged (last test pins that end state).
+// RETIRED the transitional flat "amadeus-docs/" substring fallback — a write under
+// a flat amadeus-docs/ tree is no longer logged (last test pins that end state).
 //
 // WHY CLI: the SUBJECT is a hook (top-level run + process.exit gates + stdin),
 // spawned exactly as PostToolUse drives it — the same twin pattern as t07.
@@ -26,7 +26,7 @@ import { join } from "node:path";
 import {
   birthIntent,
   docsRoot,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   AIDLC_SRC,
   cleanupTestProject,
@@ -34,7 +34,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const HOOK = join(AIDLC_SRC, "hooks", "aidlc-audit-logger.ts");
+const HOOK = join(AIDLC_SRC, "hooks", "amadeus-audit-logger.ts");
 
 let proj: string;
 beforeEach(() => {
@@ -72,7 +72,7 @@ function pinnedShardName(): string {
 }
 
 /** Birth an intent and create the audit shard the HOOK will resolve, returning
- *  the audit DIR + record root. The clone-id token (aidlc/.aidlc-clone-id) is
+ *  the audit DIR + record root. The clone-id token (aidlc/.amadeus-clone-id) is
  *  PINNED on disk so the freshly-spawned hook subprocess (which reads the token
  *  from disk, not the test process's memoized one) resolves a predictable shard
  *  name — we create exactly that shard so the hook's "shard exists" gate (:57)
@@ -81,7 +81,7 @@ function pinnedShardName(): string {
 function seedIntentWithShard(p: string, slug: string): { auditDir: string; recordRoot: string } {
   const born = birthIntent(p, slug, "default", "feature");
   // Pin the clone-id BEFORE the hook runs (the hook reads it from disk).
-  writeFileSync(join(p, "aidlc", ".aidlc-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(p, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
   const auditDir = join(docsRoot(p), "audit");
   mkdirSync(auditDir, { recursive: true });
   writeFileSync(join(auditDir, pinnedShardName()), "", "utf-8");
@@ -108,7 +108,7 @@ describe("t170 audit-logger per-intent gate (mechanism cli — spawned hook)", (
   test("logs an ARTIFACT_CREATED for a write under the per-intent record dir", () => {
     const { auditDir, recordRoot } = seedIntentWithShard(proj, "auth-service");
     // A stage artifact under the re-rooted record dir — NOT containing
-    // "aidlc-docs/". The old gate dropped this; the new gate logs it.
+    // "amadeus-docs/". The old gate dropped this; the new gate logs it.
     const artifact = join(recordRoot, "construction", "functional-design", "design.md");
     const rc = fire(proj, "Write", artifact);
     expect(rc).toBe(0);
@@ -139,16 +139,16 @@ describe("t170 audit-logger per-intent gate (mechanism cli — spawned hook)", (
     expect(readShards(auditDir)).toBe(before);
   });
 
-  test("a write under the flat aidlc-docs/ tree is NOT logged (P9 — no flat-legacy fallback)", () => {
-    // P9 retired the transitional `file.includes("aidlc-docs/")` gate. The
+  test("a write under the flat amadeus-docs/ tree is NOT logged (P9 — no flat-legacy fallback)", () => {
+    // P9 retired the transitional `file.includes("amadeus-docs/")` gate. The
     // logger now fires ONLY for writes under the per-intent record root. A write
-    // under a flat aidlc-docs/ tree no longer matches, so nothing is logged.
+    // under a flat amadeus-docs/ tree no longer matches, so nothing is logged.
     const { auditDir } = seedIntentWithShard(proj, "legacy");
     const before = readShards(auditDir);
-    const rc = fire(proj, "Write", join(proj, "aidlc-docs", "ideation", "feasibility", "f.md"));
+    const rc = fire(proj, "Write", join(proj, "amadeus-docs", "ideation", "feasibility", "f.md"));
     expect(rc).toBe(0); // advisory: the hook still exits clean
     // No flat audit.md is created, and the per-intent shard is unchanged.
-    expect(existsSync(join(proj, "aidlc-docs", "audit.md"))).toBe(false);
+    expect(existsSync(join(proj, "amadeus-docs", "audit.md"))).toBe(false);
     expect(readShards(auditDir)).toBe(before);
   });
 });

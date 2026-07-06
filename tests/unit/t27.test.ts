@@ -1,11 +1,11 @@
-// covers: subcommand:aidlc-utility:init, subcommand:aidlc-utility:status, subcommand:aidlc-utility:scope-change, subcommand:aidlc-utility:set-status, subcommand:aidlc-utility:config-change, subcommand:aidlc-utility:doctor, subcommand:aidlc-utility:detect-scope, subcommand:aidlc-utility:resolve-env-scope
+// covers: subcommand:amadeus-utility:init, subcommand:amadeus-utility:status, subcommand:amadeus-utility:scope-change, subcommand:amadeus-utility:set-status, subcommand:amadeus-utility:config-change, subcommand:amadeus-utility:doctor, subcommand:amadeus-utility:detect-scope, subcommand:amadeus-utility:resolve-env-scope
 //
 // CLI-contract port of tests/unit/t27-tool-utility.sh (TAP plan 81),
 // mechanism = cli. Equal-or-stronger migration: every .sh assertion that
-// shelled out to `bun aidlc-utility.ts <sub> ...` is preserved by SPAWNING
+// shelled out to `bun amadeus-utility.ts <sub> ...` is preserved by SPAWNING
 // the real CLI via node:child_process spawnSync (BUN + the tool .ts path),
 // asserting on res.status / res.stdout / res.stderr exactly as the .sh
-// asserted on $? / stdout / stderr, plus on the aidlc-state.md and audit.md
+// asserted on $? / stdout / stderr, plus on the amadeus-state.md and audit.md
 // the tool writes — the PROCESS boundary, not in-process handle* calls. An
 // in-process twin would lose every exit-code half the .sh relies on (the
 // tool's die() path is emitError -> process.exit(1); doctor's report ends in
@@ -28,7 +28,7 @@
 //   - .sh T6-T8   status shows IDEATION / Feasibility / feature  -> Test 6-8.
 //   - .sh T9      status md5 unchanged                            -> Test 9:
 //       byte-for-byte readFileSync before/after equality (STRONGER than md5).
-//   - .sh T10-T12 doctor mentions aidlc-statusline / audit-logger / settings
+//   - .sh T10-T12 doctor mentions amadeus-statusline / audit-logger / settings
 //       -> Test 10-12 (same observable; absorbs the non-zero exit like || true).
 //   - .sh T13     doctor appends to audit.md (size grows)         -> Test 13:
 //       byte-length grows (same) + HEALTH_CHECKED count === 1 (STRONGER).
@@ -113,8 +113,8 @@ import {
 
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
-const TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "aidlc-utility.ts");
-const STATE_TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "aidlc-state.ts");
+const TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-utility.ts");
+const STATE_TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-state.ts");
 const STATE_FIXTURE = join(FIXTURES_DIR, "state-mid-ideation.md");
 
 const tempDirs: string[] = [];
@@ -129,7 +129,7 @@ interface CliResult {
   stdout: string;
 }
 
-/** Spawn `bun aidlc-utility.ts <args...> --project-dir <p>`. Mirrors `bun "$TOOL" ...`. */
+/** Spawn `bun amadeus-utility.ts <args...> --project-dir <p>`. Mirrors `bun "$TOOL" ...`. */
 function util(args: string[], p?: string, env?: Record<string, string>): CliResult {
   const finalArgs = p ? [TOOL, ...args, "--project-dir", p] : [TOOL, ...args];
   const res = spawnSync(BUN, finalArgs, {
@@ -163,7 +163,7 @@ function stripScope(overrides?: Record<string, string>): Record<string, string> 
 }
 
 // P4: intent-birth writes state into the born intent's per-intent record dir
-// (aidlc/spaces/<space>/intents/<slug>-<id8>/), not the flat aidlc-docs/. Resolve
+// (aidlc/spaces/<space>/intents/<slug>-<id8>/), not the flat amadeus-docs/. Resolve
 // the record dir from the active-space + active-intent cursors, falling back to
 // the flat layout for a not-yet-born / seeded-flat project (the many state-seeding
 // cases below never call init, so they stay flat).
@@ -176,11 +176,11 @@ function recordDirOf(p: string): string {
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();
-    if (rec && existsSync(join(intentsDir, rec, "aidlc-state.md"))) {
+    if (rec && existsSync(join(intentsDir, rec, "amadeus-state.md"))) {
       return join(intentsDir, rec);
     }
   }
-  return join(p, "aidlc-docs");
+  return join(p, "amadeus-docs");
 }
 // SPACE-level domain-knowledge dir (sibling of intents), resolved off the same
 // active-space cursor recordDirOf uses.
@@ -191,7 +191,7 @@ function spaceKnowledgeOf(p: string): string {
     : "default";
   return join(p, "aidlc", "spaces", space, "knowledge");
 }
-const statePath = (p: string): string => join(recordDirOf(p), "aidlc-state.md");
+const statePath = (p: string): string => join(recordDirOf(p), "amadeus-state.md");
 // The DETERMINISTIC per-clone audit shard a spawned utility resolves (the fixture
 // pins the clone-id). seedAuditFile() writes here too, so seed/append/check all
 // agree on one file. Single-shard tests (size growth, one-event count) target it.
@@ -258,10 +258,10 @@ function installedProj(mutate?: (claudeDir: string) => void): string {
   return p;
 }
 
-/** Fresh empty mktemp dir with NO aidlc-docs/ (mirrors the .sh's `mktemp -d`). */
+/** Fresh empty mktemp dir with NO amadeus-docs/ (mirrors the .sh's `mktemp -d`). */
 function emptyDir(): string {
   const base = process.env.TMPDIR || tmpdir();
-  const p = toPortablePath(mkdtempSync(join(base, "aidlc-test-")));
+  const p = toPortablePath(mkdtempSync(join(base, "amadeus-test-")));
   tempDirs.push(p);
   return p;
 }
@@ -327,7 +327,7 @@ function stateField(p: string, field: string): string {
 // subcommand unit, but preserved for parity)
 // ============================================================
 
-describe("t27 aidlc-utility help (migrated from t27-tool-utility.sh, plan 81)", () => {
+describe("t27 amadeus-utility help (migrated from t27-tool-utility.sh, plan 81)", () => {
   test("1-4: help contains AI-DLC, --status, enterprise, all 8 scopes", () => {
     const r = util(["help"]);
     expect(r.stdout).toContain("AI-DLC");
@@ -359,10 +359,10 @@ describe("t27 aidlc-utility help (migrated from t27-tool-utility.sh, plan 81)", 
 });
 
 // ============================================================
-// status (covers: subcommand:aidlc-utility:status)
+// status (covers: subcommand:amadeus-utility:status)
 // ============================================================
 
-describe("t27 aidlc-utility status", () => {
+describe("t27 amadeus-utility status", () => {
   test("5: status without state shows no-active message", () => {
     const p = bareProj();
     const r = util(["status"], p);
@@ -420,16 +420,16 @@ describe("t27 aidlc-utility status", () => {
 });
 
 // ============================================================
-// doctor (covers: subcommand:aidlc-utility:doctor)
+// doctor (covers: subcommand:amadeus-utility:doctor)
 // ============================================================
 
-describe("t27 aidlc-utility doctor", () => {
-  test("10-12: doctor mentions aidlc-statusline, audit-logger, settings", () => {
+describe("t27 amadeus-utility doctor", () => {
+  test("10-12: doctor mentions amadeus-statusline, audit-logger, settings", () => {
     // Hook rows now derive from settings.json's wired hooks (the contract), so
     // the project needs a real .claude/ for those labels to render.
     const p = installedProj();
     const r = util(["doctor"], p);
-    expect(r.stdout).toContain("aidlc-statusline");
+    expect(r.stdout).toContain("amadeus-statusline");
     expect(r.stdout).toContain("audit-logger");
     expect(r.stdout).toContain("settings");
   });
@@ -440,7 +440,7 @@ describe("t27 aidlc-utility doctor", () => {
   // what makes the emit fire.
   test("13: doctor appends to the audit shard when it exists (size grows, exactly one HEALTH_CHECKED)", () => {
     // Seed state + audit so the intent record RESOLVES (the active-intent cursor
-    // only binds a record that has aidlc-state.md) — an initialized project, the
+    // only binds a record that has amadeus-state.md) — an initialized project, the
     // audit-exists arm of the cold-safe gate.
     const p = stateAuditProj();
     const before = statSync(auditPath(p)).size;
@@ -453,8 +453,8 @@ describe("t27 aidlc-utility doctor", () => {
 
   // COLD-SAFE contract (#4): on a project with NO audit.md, --doctor is
   // read-only — it prints the health report (exit code aside) but creates
-  // neither aidlc-docs/audit.md nor any audit side effect. bareProj() makes
-  // aidlc-docs/ but NOT audit.md, so this is the pristine arm. The README
+  // neither amadeus-docs/audit.md nor any audit side effect. bareProj() makes
+  // amadeus-docs/ but NOT audit.md, so this is the pristine arm. The README
   // onboarding runs --doctor before --init, so doctor must scaffold nothing.
   test("13b: doctor on a project without audit.md creates nothing (cold-safe / read-only)", () => {
     const p = bareProj();
@@ -475,16 +475,16 @@ describe("t27 aidlc-utility doctor", () => {
     const p = installedProj();
     const r = util(["doctor"], p);
     for (const hook of [
-      "aidlc-audit-logger",
-      "aidlc-sync-statusline",
-      "aidlc-validate-state",
-      "aidlc-log-subagent",
-      "aidlc-session-start",
-      "aidlc-session-end",
-      "aidlc-statusline",
-      "aidlc-runtime-compile", // previously missing
-      "aidlc-sensor-fire", // previously missing
-      "aidlc-stop", // previously missing (the flow-altering Stop hook)
+      "amadeus-audit-logger",
+      "amadeus-sync-statusline",
+      "amadeus-validate-state",
+      "amadeus-log-subagent",
+      "amadeus-session-start",
+      "amadeus-session-end",
+      "amadeus-statusline",
+      "amadeus-runtime-compile", // previously missing
+      "amadeus-sensor-fire", // previously missing
+      "amadeus-stop", // previously missing (the flow-altering Stop hook)
     ]) {
       // A wired-and-present hook renders a passing "✓  <hook>.ts present" row.
       expect(r.stdout).toContain(`${hook}.ts present`);
@@ -494,21 +494,21 @@ describe("t27 aidlc-utility doctor", () => {
   // FINDING #1 (review): the hook check must FLAG a wired-but-missing hook, not
   // silently drop it. The expected roster comes from settings.json (the
   // contract) while presence is probed against .claude/hooks/, so the two
-  // genuinely diverge: deleting aidlc-stop.ts from a project whose settings.json
-  // still wires it produces a loud "✗  aidlc-stop.ts present" failure row. (The
+  // genuinely diverge: deleting amadeus-stop.ts from a project whose settings.json
+  // still wires it produces a loud "✗  amadeus-stop.ts present" failure row. (The
   // pre-redesign derive-from-the-hooks-dir approach could not catch this — a
   // missing hook simply wasn't enumerated, so it was never reported.)
   test("12c: doctor flags a settings.json-wired hook that is missing on disk", () => {
     const p = installedProj((claudeDir) => {
-      rmSync(join(claudeDir, "hooks", "aidlc-stop.ts"));
+      rmSync(join(claudeDir, "hooks", "amadeus-stop.ts"));
     });
     const r = util(["doctor"], p);
     // The missing hook is named with the ✗ failure marker, not silently absent.
-    expect(r.stdout).toContain("✗  aidlc-stop.ts present");
+    expect(r.stdout).toContain("✗  amadeus-stop.ts present");
     // And doctor exits non-zero (a failed check), so CI/scripts see the breakage.
     expect(r.status).not.toBe(0);
     // Sibling hooks that ARE present still pass — only the deleted one fails.
-    expect(r.stdout).toContain("✓  aidlc-audit-logger.ts present");
+    expect(r.stdout).toContain("✓  amadeus-audit-logger.ts present");
   });
 
   // FINDING #1 corollary: when settings.json is absent the hook CONTRACT cannot
@@ -542,15 +542,15 @@ describe("t27 aidlc-utility doctor", () => {
 });
 
 // ============================================================
-// init (covers: subcommand:aidlc-utility:init)
+// init (covers: subcommand:amadeus-utility:init)
 // ============================================================
 
-describe("t27 aidlc-utility init", () => {
-  test("14: init creates aidlc-state.md, audit shard dir, and knowledge/ directory", () => {
+describe("t27 amadeus-utility init", () => {
+  test("14: init creates amadeus-state.md, audit shard dir, and knowledge/ directory", () => {
     const p = emptyDir();
     util(["init", "--scope", "poc"], p);
     // P4: birth writes a per-intent record (state + audit shards), not the flat
-    // aidlc-docs/ trio. (Domain knowledge is SPACE-level, asserted below.)
+    // amadeus-docs/ trio. (Domain knowledge is SPACE-level, asserted below.)
     expect(existsSync(statePath(p))).toBe(true);
     // Audit is now a SHARD DIR (<record>/audit/<host>-<pid>.md), not a single file.
     const auditDir = join(recordDirOf(p), "audit");
@@ -584,7 +584,7 @@ describe("t27 aidlc-utility init", () => {
     // Two intent record dirs now exist under the default space.
     const intentsDir = join(p, "aidlc", "spaces", "default", "intents");
     const records = readdirSync(intentsDir).filter((d) =>
-      existsSync(join(intentsDir, d, "aidlc-state.md")),
+      existsSync(join(intentsDir, d, "amadeus-state.md")),
     );
     expect(records.length).toBe(2);
   });
@@ -621,10 +621,10 @@ describe("t27 aidlc-utility init", () => {
 });
 
 // ============================================================
-// scope-change (covers: subcommand:aidlc-utility:scope-change)
+// scope-change (covers: subcommand:amadeus-utility:scope-change)
 // ============================================================
 
-describe("t27 aidlc-utility scope-change", () => {
+describe("t27 amadeus-utility scope-change", () => {
   /** Seed state, flip Scope to poc (the .sh's sed_i), seed audit. */
   function pocStateAuditProj(minimalDepth = false): string {
     const p = stateAuditProj();
@@ -689,10 +689,10 @@ describe("t27 aidlc-utility scope-change", () => {
 });
 
 // ============================================================
-// set-status (covers: subcommand:aidlc-utility:set-status)
+// set-status (covers: subcommand:amadeus-utility:set-status)
 // ============================================================
 
-describe("t27 aidlc-utility set-status", () => {
+describe("t27 amadeus-utility set-status", () => {
   test("25: set-status updates Lifecycle Phase to IDEATION", () => {
     const p = stateProj();
     util(["set-status", "--stage", "feasibility"], p);
@@ -705,10 +705,10 @@ describe("t27 aidlc-utility set-status", () => {
     expect(stateField(p, "Current Stage")).toBe("feasibility");
   });
 
-  test("27: set-status derives Active Agent from graph (aidlc-architect-agent)", () => {
+  test("27: set-status derives Active Agent from graph (amadeus-architect-agent)", () => {
     const p = stateProj();
     util(["set-status", "--stage", "feasibility"], p);
-    expect(stateField(p, "Active Agent")).toBe("aidlc-architect-agent");
+    expect(stateField(p, "Active Agent")).toBe("amadeus-architect-agent");
   });
 
   test("28: set-status marks checkbox [-]", () => {
@@ -747,10 +747,10 @@ describe("t27 aidlc-utility set-status", () => {
 });
 
 // ============================================================
-// config-change (covers: subcommand:aidlc-utility:config-change)
+// config-change (covers: subcommand:amadeus-utility:config-change)
 // ============================================================
 
-describe("t27 aidlc-utility config-change", () => {
+describe("t27 amadeus-utility config-change", () => {
   test("38: config-change updates Depth to Minimal", () => {
     const p = stateAuditProj();
     util(["config-change", "--depth", "minimal"], p);
@@ -868,10 +868,10 @@ describe("t27 aidlc-utility config-change", () => {
 });
 
 // ============================================================
-// detect-scope (covers: subcommand:aidlc-utility:detect-scope)
+// detect-scope (covers: subcommand:amadeus-utility:detect-scope)
 // ============================================================
 
-describe("t27 aidlc-utility detect-scope", () => {
+describe("t27 amadeus-utility detect-scope", () => {
   test("65: detect-scope emits exactly one SCOPE_DETECTED + JSON ack", () => {
     const p = bareProj();
     util(["init", "--scope", "bugfix"], p);
@@ -898,10 +898,10 @@ describe("t27 aidlc-utility detect-scope", () => {
 });
 
 // ============================================================
-// resolve-env-scope (covers: subcommand:aidlc-utility:resolve-env-scope)
+// resolve-env-scope (covers: subcommand:amadeus-utility:resolve-env-scope)
 // ============================================================
 
-describe("t27 aidlc-utility resolve-env-scope", () => {
+describe("t27 amadeus-utility resolve-env-scope", () => {
   test("62: resolve-env-scope with unset env prints nothing and exits 0", () => {
     const r = util(["resolve-env-scope"]); // util() strips AWS_AIDLC_DEFAULT_SCOPE
     expect(r.status).toBe(0);

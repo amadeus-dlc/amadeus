@@ -1,4 +1,4 @@
-// covers: file:skills/aidlc/SKILL.md, file:settings.json
+// covers: file:skills/amadeus/SKILL.md, file:settings.json
 //
 // t06 — orchestrator SKILL.md frontmatter + the v0.6.0 hooks-move contract.
 // Migrated from tests/unit/t06-skill-frontmatter.sh (TAP plan 9, 9 assertions,
@@ -19,23 +19,23 @@
 // contract here; t131 covers the firing behaviour.
 //
 // Files under test (read from the shipped tree, AIDLC_SRC = dist/claude/.claude):
-//   skills/aidlc/SKILL.md  — YAML frontmatter delimited by the first two `---`
+//   skills/amadeus/SKILL.md  — YAML frontmatter delimited by the first two `---`
 //     lines (SKILL.md:1-14). Fields asserted: name, description, user-invocable;
 //     the absence of a top-level `hooks:` key in that block.
 //   settings.json          — the project-wide hook registration. PostToolUse
-//     Write|Edit matcher carries aidlc-audit-logger.ts; PreCompact carries
-//     aidlc-validate-state.ts; SubagentStop carries aidlc-log-subagent.ts.
+//     Write|Edit matcher carries amadeus-audit-logger.ts; PreCompact carries
+//     amadeus-validate-state.ts; SubagentStop carries amadeus-log-subagent.ts.
 //
 // Old TAP -> new test parity (1:1, every .sh assertion -> a named test()):
-//   .sh 1  assert_grep SKILL  "^name: aidlc"                  -> "frontmatter declares name: aidlc"
+//   .sh 1  assert_grep SKILL  "^name: amadeus"                  -> "frontmatter declares name: amadeus"
 //   .sh 2  assert_grep SKILL  "^description:"                 -> "frontmatter carries a description field"
 //   .sh 3  assert_grep SKILL  "^user-invocable: true"         -> "frontmatter is user-invocable: true"
 //   .sh 4  assert_not_grep SKILL "^hooks:"                    -> "frontmatter carries NO hooks: block (moved to settings.json)"
-//   .sh 5  assert_grep SETTINGS "aidlc-audit-logger.ts"       -> "settings.json registers aidlc-audit-logger.ts"
+//   .sh 5  assert_grep SETTINGS "amadeus-audit-logger.ts"       -> "settings.json registers amadeus-audit-logger.ts"
 //   .sh 6  assert_grep SETTINGS "\"PostToolUse\""             -> "settings.json registers a PostToolUse hook block"
 //   .sh 7  assert_grep SETTINGS "\"PreCompact\""              -> "settings.json registers a PreCompact hook block"
-//   .sh 8  assert_grep SETTINGS "aidlc-validate-state.ts"     -> "settings.json references aidlc-validate-state.ts"
-//   .sh 9  assert_grep SETTINGS "aidlc-log-subagent.ts"       -> "settings.json references aidlc-log-subagent.ts"
+//   .sh 8  assert_grep SETTINGS "amadeus-validate-state.ts"     -> "settings.json references amadeus-validate-state.ts"
+//   .sh 9  assert_grep SETTINGS "amadeus-log-subagent.ts"       -> "settings.json references amadeus-log-subagent.ts"
 //
 // Equal-or-stronger: each .sh did a whole-file grep. The twin instead parses
 // the frontmatter block and the settings JSON, so the field/key checks are
@@ -99,11 +99,11 @@ function commandsForEvent(event: string): string[] {
 
 describe("t06 SKILL.md frontmatter (migrated from t06-skill-frontmatter.sh, plan 9)", () => {
   // --- SKILL.md frontmatter (.sh tests 1-4) --------------------------------
-  test("frontmatter declares name: aidlc [.sh 1]", () => {
-    // STRONGER than `grep ^name: aidlc`: the value is read from inside the
+  test("frontmatter declares name: amadeus [.sh 1]", () => {
+    // STRONGER than `grep ^name: amadeus`: the value is read from inside the
     // frontmatter block and matched exactly.
     const nameLine = frontmatterLines().find((l) => /^name:/.test(l));
-    expect(nameLine).toBe("name: aidlc");
+    expect(nameLine).toBe("name: amadeus");
   });
 
   test("frontmatter carries a description field [.sh 2]", () => {
@@ -124,33 +124,33 @@ describe("t06 SKILL.md frontmatter (migrated from t06-skill-frontmatter.sh, plan
   });
 
   // --- settings.json hook registration (.sh tests 5-9) ---------------------
-  test("settings.json registers aidlc-audit-logger.ts on PostToolUse [.sh 5 + 6]", () => {
-    // .sh 5: aidlc-audit-logger.ts appears; .sh 6: a PostToolUse block exists.
+  test("settings.json registers amadeus-audit-logger.ts on PostToolUse [.sh 5 + 6]", () => {
+    // .sh 5: amadeus-audit-logger.ts appears; .sh 6: a PostToolUse block exists.
     // STRONGER: the audit-logger command is bound to the PostToolUse event
     // (the .sh only proved each appears SOMEWHERE in the file independently).
     const postCmds = commandsForEvent("PostToolUse");
     expect(postCmds.length).toBeGreaterThan(0); // PostToolUse block present (.sh 6)
     expect(
-      postCmds.some((c) => c.includes("aidlc-audit-logger.ts")),
+      postCmds.some((c) => c.includes("amadeus-audit-logger.ts")),
     ).toBe(true); // audit-logger registered there (.sh 5)
   });
 
-  test("settings.json registers aidlc-validate-state.ts on PreCompact [.sh 7 + 8]", () => {
-    // .sh 7: a PreCompact block exists; .sh 8: aidlc-validate-state.ts appears.
+  test("settings.json registers amadeus-validate-state.ts on PreCompact [.sh 7 + 8]", () => {
+    // .sh 7: a PreCompact block exists; .sh 8: amadeus-validate-state.ts appears.
     // STRONGER: validate-state is the PreCompact hook (not just present).
     const preCompactCmds = commandsForEvent("PreCompact");
     expect(preCompactCmds.length).toBeGreaterThan(0); // PreCompact block present (.sh 7)
     expect(
-      preCompactCmds.some((c) => c.includes("aidlc-validate-state.ts")),
+      preCompactCmds.some((c) => c.includes("amadeus-validate-state.ts")),
     ).toBe(true); // validate-state registered there (.sh 8)
   });
 
-  test("settings.json registers aidlc-log-subagent.ts on SubagentStop [.sh 9]", () => {
+  test("settings.json registers amadeus-log-subagent.ts on SubagentStop [.sh 9]", () => {
     // STRONGER: log-subagent is the SubagentStop hook, the event that owns it
     // (the .sh only proved the filename appears anywhere in settings.json).
     const subagentCmds = commandsForEvent("SubagentStop");
     expect(
-      subagentCmds.some((c) => c.includes("aidlc-log-subagent.ts")),
+      subagentCmds.some((c) => c.includes("amadeus-log-subagent.ts")),
     ).toBe(true);
   });
 });

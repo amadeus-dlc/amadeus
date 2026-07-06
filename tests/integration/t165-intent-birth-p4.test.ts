@@ -1,4 +1,4 @@
-// covers: subcommand:aidlc-utility:intent-birth, subcommand:aidlc-utility:intent, subcommand:aidlc-utility:space, subcommand:aidlc-utility:space-create, function:birthIntent, function:listSpaces, function:listIntents, function:slugify, function:updateIntentStatus, function:migrateFlatLayout, function:resolveBirthRepoSet, function:discoverSiblingRepos
+// covers: subcommand:amadeus-utility:intent-birth, subcommand:amadeus-utility:intent, subcommand:amadeus-utility:space, subcommand:amadeus-utility:space-create, function:birthIntent, function:listSpaces, function:listIntents, function:slugify, function:updateIntentStatus, function:migrateFlatLayout, function:resolveBirthRepoSet, function:discoverSiblingRepos
 //
 // Mechanism: cli (spawned dist tools) + in-process pure-function asserts.
 // P4 — retire the user-facing --init; the engine auto-births the first intent
@@ -31,12 +31,12 @@ import {
   readIntentRegistry,
   slugify,
   updateIntentStatus,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath;
 const REPO_ROOT = join(import.meta.dir, "..", "..");
-const UTIL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "aidlc-utility.ts");
-const ORCH = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "aidlc-orchestrate.ts");
+const UTIL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-utility.ts");
+const ORCH = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-orchestrate.ts");
 
 let proj: string;
 beforeEach(() => {
@@ -93,12 +93,12 @@ describe("t164 auto-birth (intent-birth) on an empty workspace", () => {
     const r = util(["intent-birth", "--scope", "poc"]);
     expect(r.status).toBe(0);
     const records = readdirSync(intentsDir(proj)).filter((d) =>
-      existsSync(join(intentsDir(proj), d, "aidlc-state.md")),
+      existsSync(join(intentsDir(proj), d, "amadeus-state.md")),
     );
     expect(records.length).toBe(1);
     // The born record carries a full state file routed to the first post-init
     // stage (not just the bind stub).
-    const state = readFileSync(join(intentsDir(proj), records[0], "aidlc-state.md"), "utf-8");
+    const state = readFileSync(join(intentsDir(proj), records[0], "amadeus-state.md"), "utf-8");
     expect(state).toContain("## Current Status");
     expect(state).toContain("- **Scope**: poc");
     // The registry carries the in-flight row.
@@ -224,7 +224,7 @@ describe("t164 concurrent-birth integrity", () => {
 
     // Two distinct record dirs.
     const records = readdirSync(intentsDir(proj)).filter((d) =>
-      existsSync(join(intentsDir(proj), d, "aidlc-state.md")),
+      existsSync(join(intentsDir(proj), d, "amadeus-state.md")),
     );
     expect(records.length).toBe(2);
     expect(new Set(records).size).toBe(2);
@@ -251,7 +251,7 @@ describe("t164 new-work-while-active", () => {
     expect(second).not.toBe(first);
   });
 
-  test("bare /aidlc resumes the active intent (happy path, not a birth)", () => {
+  test("bare /amadeus resumes the active intent (happy path, not a birth)", () => {
     expect(util(["intent-birth", "--scope", "feature"]).status).toBe(0);
     // With state present, `next` resolves the happy path — never a birth print.
     const r = next([]);
@@ -412,7 +412,7 @@ describe("t164 doctor readiness against the shipped shell", () => {
     const r = util(["doctor"]);
     expect(r.out).toContain("workspace shell ready");
     // The readiness row must NOT reference the retired --init.
-    expect(r.out).not.toContain("run `/aidlc --init`");
+    expect(r.out).not.toContain("run `/amadeus --init`");
   });
 
   test("a project missing the default memory dir fails the shell-ready row", () => {
@@ -432,16 +432,16 @@ describe("t164 doctor readiness against the shipped shell", () => {
 });
 
 // ============================================================
-// Migration wiring: a flat aidlc-docs/ project migrates on first birth + git-rm
+// Migration wiring: a flat amadeus-docs/ project migrates on first birth + git-rm
 // ============================================================
 describe("t164 migration wiring (flat → per-intent on first birth)", () => {
   test("intent-birth migrates a flat project, git-rm's the flat tree, and is a no-op re-run", () => {
-    // Seed a flat (pre-workspace) project: aidlc-docs/aidlc-state.md present, no
+    // Seed a flat (pre-workspace) project: amadeus-docs/amadeus-state.md present, no
     // intent record, no .migrated marker.
-    const flat = join(proj, "aidlc-docs");
+    const flat = join(proj, "amadeus-docs");
     mkdirSync(flat, { recursive: true });
     writeFileSync(
-      join(flat, "aidlc-state.md"),
+      join(flat, "amadeus-state.md"),
       "# AI-DLC State Tracking\n## Project Information\n- **Scope**: feature\n- **Project**: Legacy App\n",
       "utf-8",
     );
@@ -453,23 +453,23 @@ describe("t164 migration wiring (flat → per-intent on first birth)", () => {
     // Migration moved the flat state into a per-intent record (NOT a second
     // freshly-minted intent on top).
     const records = readdirSync(intentsDir(proj)).filter((d) =>
-      existsSync(join(intentsDir(proj), d, "aidlc-state.md")),
+      existsSync(join(intentsDir(proj), d, "amadeus-state.md")),
     );
     expect(records.length).toBe(1);
     // The migrated record carries the flat project's state (Project field).
-    const migrated = readFileSync(join(intentsDir(proj), records[0], "aidlc-state.md"), "utf-8");
+    const migrated = readFileSync(join(intentsDir(proj), records[0], "amadeus-state.md"), "utf-8");
     expect(migrated).toContain("Legacy App");
     // The .migrated marker was written (idempotency key).
     expect(existsSync(join(proj, "aidlc", ".migrated"))).toBe(true);
     // The flat tree was removed from the working tree post-move (git-rm step).
-    expect(existsSync(join(flat, "aidlc-state.md"))).toBe(false);
+    expect(existsSync(join(flat, "amadeus-state.md"))).toBe(false);
 
     // No-op re-run: a second birth does NOT re-migrate (marker present) — it
     // births a fresh second intent instead.
     const r2 = util(["intent-birth", "--scope", "poc"]);
     expect(r2.status).toBe(0);
     const records2 = readdirSync(intentsDir(proj)).filter((d) =>
-      existsSync(join(intentsDir(proj), d, "aidlc-state.md")),
+      existsSync(join(intentsDir(proj), d, "amadeus-state.md")),
     );
     expect(records2.length).toBe(2);
   });

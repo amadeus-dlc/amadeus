@@ -1,13 +1,13 @@
-// covers: subcommand:aidlc-utility:init, scope:bugfix
+// covers: subcommand:amadeus-utility:init, scope:bugfix
 //
 // t59-workflow-depth-override.test.ts — SDK-harness port of
 // tests/e2e/t59-workflow-depth-override.sh (plan 6). Drives the real
-// `/aidlc --init --scope bugfix --depth comprehensive` through the Claude Agent SDK on
+// `/amadeus --init --scope bugfix --depth comprehensive` through the Claude Agent SDK on
 // a fresh brownfield project and asserts ONLY on deterministic surfaces — the
 // init tool's verbatim stdout, the on-disk state fields, and the parsed audit
 // events — NEVER on assistantText.
 //
-// ⛔ TRAP 2 (no headless auto-approve). The .sh drove `/aidlc bugfix --depth
+// ⛔ TRAP 2 (no headless auto-approve). The .sh drove `/amadeus bugfix --depth
 // comprehensive` to completion and asserted on the FINAL state under a headless
 // auto-approve mode the refactor kills. That mode is NOT load-bearing for THIS
 // test's subject - the depth override lands at explicit init (the init tool writes
@@ -27,9 +27,9 @@
 // surface is THIS file's: `--depth comprehensive` overriding the bugfix scope's
 // Minimal default at init, asserted on the Depth state field the init tool writes.
 //
-// THE JOURNEY (verified against the SHIPPED tool). `/aidlc --init --scope bugfix
-// --depth comprehensive` on a fresh `--no-aidlc-docs` brownfield project routes
-// through `aidlc-utility.ts init --scope bugfix --depth comprehensive` (SKILL.md).
+// THE JOURNEY (verified against the SHIPPED tool). `/amadeus --init --scope bugfix
+// --depth comprehensive` on a fresh `--no-amadeus-docs` brownfield project routes
+// through `amadeus-utility.ts init --scope bugfix --depth comprehensive` (SKILL.md).
 // handleInit
 // validates the depth (utility.ts:1731-1733, die on unknown), computes
 // effectiveDepth = VALID_DEPTHS["comprehensive"] = "Comprehensive" (utility.ts:1941),
@@ -39,7 +39,7 @@
 //
 // ASSERTION MAP (.sh test -> deterministic SDK surface, equal-or-stronger):
 //   1 state file created
-//       -> r.stateFile !== undefined (sdk-drive reads aidlc-state.md off disk).
+//       -> r.stateFile !== undefined (sdk-drive reads amadeus-state.md off disk).
 //   2 depth comprehensive overrides bugfix default (Minimal)
 //       -> readStateField(state,"Depth") === "Comprehensive" (utility.ts:2064).
 //          Stronger than the .sh's `grep "Depth.*Comprehensive"` — exact field
@@ -61,16 +61,16 @@
 //       -> the state contains [x] for workspace-scaffold/workspace-detection/state-init.
 //
 // Known-answer literals (read from the SHIPPED tool, not guessed):
-//   - init dispatch with depth:  SKILL.md -> `aidlc-utility.ts init --scope bugfix --depth comprehensive`
-//   - depth validation:          aidlc-utility.ts:1731-1733
-//   - effectiveDepth mapping:    aidlc-utility.ts:1941-1943 (VALID_DEPTHS comprehensive -> "Comprehensive")
-//   - Depth state field:         aidlc-utility.ts:2064
-//   - Scope state field:         aidlc-utility.ts:2049
-//   - State initialized summary: aidlc-utility.ts:2154 ("State initialized: ... <depth> depth")
-//   - WORKFLOW_STARTED emit:     aidlc-utility.ts:1784
-//   - init-stage [x] markers:    aidlc-utility.ts:1995-1998
+//   - init dispatch with depth:  SKILL.md -> `amadeus-utility.ts init --scope bugfix --depth comprehensive`
+//   - depth validation:          amadeus-utility.ts:1731-1733
+//   - effectiveDepth mapping:    amadeus-utility.ts:1941-1943 (VALID_DEPTHS comprehensive -> "Comprehensive")
+//   - Depth state field:         amadeus-utility.ts:2064
+//   - Scope state field:         amadeus-utility.ts:2049
+//   - State initialized summary: amadeus-utility.ts:2154 ("State initialized: ... <depth> depth")
+//   - WORKFLOW_STARTED emit:     amadeus-utility.ts:1784
+//   - init-stage [x] markers:    amadeus-utility.ts:1995-1998
 //
-// It SPENDS TOKENS — driveAidlc drives the real /aidlc on Opus/Bedrock.
+// It SPENDS TOKENS — driveAidlc drives the real /amadeus on Opus/Bedrock.
 // Generous per-test timeout; the driver aborts a hair early so a stuck run
 // surfaces a partial DriveResult, not a hang.
 
@@ -99,7 +99,7 @@ const INIT_STATE_SUMMARY = "State initialized:"; // utility.ts:2154
 const STOP_AFTER_INIT = { toolName: "Bash", resultIncludes: INIT_STATE_SUMMARY } as const;
 const INIT_STAGES = ["workspace-scaffold", "workspace-detection", "state-init"];
 
-describe("t59 /aidlc --init --scope bugfix --depth comprehensive depth override (sdk)", () => {
+describe("t59 /amadeus --init --scope bugfix --depth comprehensive depth override (sdk)", () => {
   // -------------------------------------------------------------------------
   // Fresh brownfield project: the depth override lands at explicit init. We assert
   // the Depth state field is Comprehensive (overriding bugfix's Minimal default),
@@ -115,7 +115,7 @@ describe("t59 /aidlc --init --scope bugfix --depth comprehensive depth override 
       });
       try {
         const r = await driveAidlc(
-          `/aidlc --init --scope ${SCOPE} --depth comprehensive`,
+          `/amadeus --init --scope ${SCOPE} --depth comprehensive`,
           {
             projectDir: proj,
             answerScript: "default",

@@ -1,6 +1,6 @@
 // covers: function:compileStageGraph
 //
-// t110 — compileStageGraph() in dist/claude/.claude/tools/aidlc-graph.ts:884.
+// t110 — compileStageGraph() in dist/claude/.claude/tools/amadeus-graph.ts:884.
 // Mechanism: none (pure-ish: reads the shipped stage files + rules + sensors
 // off disk, deterministic transform, zero LLM, zero tokens). Lives under
 // tests/integration/ because it composes the whole stages tree (31+ YAML
@@ -10,8 +10,8 @@
 // What this guarantees that t66 does NOT: t66 exercises the topo/consumer
 // graph queries; it never asserts that re-compiling the stage graph from the
 // YAML source reproduces the SHIPPED stage-graph.json byte-for-byte. That is
-// the `aidlc-graph.ts compile --check` contract — the CI drift guard at
-// aidlc-graph.ts:1063 (runCompileCheck) / :1127 (the `compile --check` CLI
+// the `amadeus-graph.ts compile --check` contract — the CI drift guard at
+// amadeus-graph.ts:1063 (runCompileCheck) / :1127 (the `compile --check` CLI
 // branch). This file pins that contract in-process.
 //
 // The `compile --check` comparison, transcribed from the source so the test
@@ -45,7 +45,7 @@
 //
 // Source-path discipline: compileStageGraph() and stageGraphPath() honour the
 // AIDLC_STAGE_GRAPH / AIDLC_STAGES_DIR / AIDLC_RULES_DIR / AIDLC_SENSORS_DIR
-// env seams (aidlc-graph.ts:144-167). To exercise the SHIPPED default layout
+// env seams (amadeus-graph.ts:144-167). To exercise the SHIPPED default layout
 // we clear those seams before importing the module and reset the lib.ts graph
 // cache, so both the compile and the on-disk read resolve to the default
 // DATA_DIR / DEFAULT_STAGES_DIR locations.
@@ -67,10 +67,10 @@ delete process.env.AIDLC_SENSORS_DIR;
 import {
   __resetGraphCache,
   compileStageGraph,
-} from "../../dist/claude/.claude/tools/aidlc-graph.ts";
+} from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 
 // Drop any graph the lib.ts loader may have cached under a prior env state, so
-// compileStageGraph()'s bootstrap (loadStageGraph, aidlc-graph.ts:888) reads
+// compileStageGraph()'s bootstrap (loadStageGraph, amadeus-graph.ts:888) reads
 // the default shipped stage-graph.json afresh.
 __resetGraphCache();
 
@@ -78,7 +78,7 @@ __resetGraphCache();
 // default (DATA_DIR/stage-graph.json). Resolved relative to this test file via
 // import.meta.dir so the read is cwd-independent. We read the raw UTF-8 bytes
 // (string) and compare with strict === — mirroring runCompileCheck's
-// `json === onDisk` at aidlc-graph.ts:1066.
+// `json === onDisk` at amadeus-graph.ts:1066.
 const SHIPPED_GRAPH_PATH = join(
   import.meta.dir,
   "..",
@@ -93,7 +93,7 @@ const SHIPPED_GRAPH_RAW = readFileSync(SHIPPED_GRAPH_PATH, "utf-8");
 
 describe("compileStageGraph() golden-master (compile --check contract)", () => {
   test("recompiles BYTE-FOR-BYTE identical to the shipped stage-graph.json", () => {
-    // The load-bearing assertion. This is precisely what `aidlc-graph.ts
+    // The load-bearing assertion. This is precisely what `amadeus-graph.ts
     // compile --check` enforces in CI (runCompileCheck, :1063-1071): compile
     // from the YAML stage files in-process, then assert the emitted `.json`
     // string equals the committed artifact on disk, byte for byte. Any drift
@@ -105,7 +105,7 @@ describe("compileStageGraph() golden-master (compile --check contract)", () => {
   });
 
   test("emits the canonical single trailing newline (no double / missing \\n)", () => {
-    // canonicalStageGraphJson appends exactly one "\n" (aidlc-graph.ts:867),
+    // canonicalStageGraphJson appends exactly one "\n" (amadeus-graph.ts:867),
     // and `compile --check` does a strict byte compare — so the on-disk file
     // must end with a single newline, no more, no less. process.stdout.write
     // vs console.log byte-parity (see the `export` handler comment at :1160)

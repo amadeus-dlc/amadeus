@@ -2,7 +2,7 @@
   "session_id": "t94-fixture-write",
   "tool_name": "Write",
   "tool_input": {
-    "file_path": "/proj/aidlc-docs/inception/requirements-analysis/intent.md",
+    "file_path": "/proj/amadeus-docs/inception/requirements-analysis/intent.md",
     "content": "## Goal\n\nSomething.\n\n## Scope\n\nElse.\n"
   },
   "tool_response": {

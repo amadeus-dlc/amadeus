@@ -8,7 +8,7 @@
 // concurrency-coverage debt — NOT a pre-fix↔post-fix discriminator (see HONESTY).
 //
 // WHY CLI (process-boundary, not in-process): the subject IS concurrency — the
-// reaper steal (aidlc-lib.ts reapStaleLock) only fires when independent OS
+// reaper steal (amadeus-lib.ts reapStaleLock) only fires when independent OS
 // processes race to reclaim the SAME stale lock dir. bun:test runs serially
 // inside one process, so an in-process loop could never overlap two reapers'
 // decide→steal windows. This twin adds the missing real-concurrency dimension.
@@ -32,7 +32,7 @@
 // regression (e.g. dropping the mkdir/rename arbitration). The CAS fix is
 // defense-in-depth for the unobservable window, documented in reapStaleLock.
 //
-// SOURCE UNDER TEST (dist/claude/.claude/tools/aidlc-lib.ts):
+// SOURCE UNDER TEST (dist/claude/.claude/tools/amadeus-lib.ts):
 //   reapStaleLock — CAS steal (rename-first, verify-moved-stamp, restore-on-miss).
 //   acquireAuditLock — mkdir-or-reap loop that calls it.
 //
@@ -44,11 +44,11 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { auditLockDir } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { auditLockDir } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath;
 const REPO_ROOT = join(import.meta.dir, "..", "..");
-const LIB = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "aidlc-lib.ts");
+const LIB = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-lib.ts");
 
 // Per-intent bucket the contenders race on (a concrete intent so auditLockDir
 // keys a per-intent dir; the sentinel would work too — the reaper logic is
@@ -101,7 +101,7 @@ function seedStaleLock(): string {
 }
 
 beforeEach(() => {
-  proj = mkdtempSync(join(tmpdir(), "aidlc-t163-"));
+  proj = mkdtempSync(join(tmpdir(), "amadeus-t163-"));
   driver = join(proj, "reap-driver.ts");
   writeFileSync(driver, DRIVER_SRC(LIB, proj, INTENT, SPACE), "utf-8");
 });

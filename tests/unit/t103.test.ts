@@ -1,4 +1,4 @@
-// covers: subcommand:aidlc-utility:doctor
+// covers: subcommand:amadeus-utility:doctor
 //
 // CLI-contract port of tests/unit/t103-doctor-rule-drift-coverage.sh (TAP
 // plan 19), mechanism = cli. The .sh exercised two surfaces, both via the
@@ -6,12 +6,12 @@
 // PROCESS boundary (node:child_process spawnSync of the bun executable):
 //
 //   (A) doctor's rule-drift + paired-coverage advisory rows (the credited
-//       subcommand unit `subcommand:aidlc-utility:doctor`). Driven by
-//       spawning `bun aidlc-utility.ts doctor --project-dir <proj>` with
+//       subcommand unit `subcommand:amadeus-utility:doctor`). Driven by
+//       spawning `bun amadeus-utility.ts doctor --project-dir <proj>` with
 //       AIDLC_RULES_DIR / AIDLC_STAGE_GRAPH pointed at inline fixtures, then
 //       grepping the health-check stdout exactly as the .sh's run_doctor +
 //       `grep -q` did. doctor's handleDoctor process.exit(failed>0?1:0)
-//       (aidlc-utility.ts:1385) means a clean fixture exits 0 and a fixture
+//       (amadeus-utility.ts:1385) means a clean fixture exits 0 and a fixture
 //       that trips an unrelated check exits 1; the .sh swallowed that with
 //       `|| true`, so we assert on the advisory LABEL lines (the observable
 //       under test) and never pin doctor's exit code — same as the .sh.
@@ -27,7 +27,7 @@
 //       nonzero half (case 2b) that the .sh's `RC=$?` arm relies on.
 //
 // EQUAL-OR-STRONGER PARITY (every .sh `ok` / assert maps to an expect()):
-//   - case 1   loadRules().frontmatter.pairing == "aidlc-foo"   -> test 1
+//   - case 1   loadRules().frontmatter.pairing == "amadeus-foo"   -> test 1
 //       (same observable: the surfaced pairing value).
 //   - case 2a  validateRuleFrontmatter feedforward-only -> "ok" -> test 2a
 //       (exit 0 + "ok" on stdout).
@@ -50,11 +50,11 @@
 //   - case 7   empty org headings -> no overlap (N=0)            -> test 7.
 //   - case 8   team heading absent from org -> no overlap        -> test 8.
 //   - case 9   project.md participates in drift walk             -> test 9.
-//   - case 10  aidlc-required-sections resolves -> 1/1 paired    -> test 10.
-//   - case 11  aidlc-ghost unpaired -> 0/1 + unpaired detail     -> test 11
+//   - case 10  amadeus-required-sections resolves -> 1/1 paired    -> test 10.
+//   - case 11  amadeus-ghost unpaired -> 0/1 + unpaired detail     -> test 11
 //       (3 grep conditions preserved).
 //   - case 12  feedforward-only counts in X, not denominator     -> test 12.
-//   - case 13  aidlc-upstream-coverage strips + resolves -> 1/1  -> test 13.
+//   - case 13  amadeus-upstream-coverage strips + resolves -> 1/1  -> test 13.
 //   - case 14  no pairing rules -> "no sensor-bound rules" branch -> test 14.
 //   - case 15  drift+coverage labels byte-identical across runs  -> test 15
 //       (two runs, label-only grep, equality + non-empty — STRONGER: also
@@ -68,7 +68,7 @@
 // run_doctor's throwaway project dir + `rm -rf`): each case builds a FRESH
 // temp rules dir (mkdtempSync) and, for doctor cases, a FRESH temp project
 // dir (toPortablePath-wrapped so a native-Windows path round-trips through the
-// tool's forward-slash path helpers). projDir() creates aidlc-docs/ but no
+// tool's forward-slash path helpers). projDir() creates amadeus-docs/ but no
 // audit.md, and as of v0.6.10 --doctor is cold-safe: with no pre-existing
 // audit.md it emits neither GUARDRAIL_LOADED nor HEALTH_CHECKED and writes no
 // files. This suite asserts only doctor's STDOUT (the paired-coverage + rule-
@@ -87,9 +87,9 @@ import { toPortablePath } from "../harness/fixtures.ts";
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const AIDLC_SRC = join(REPO_ROOT, "dist", "claude", ".claude");
-const GRAPH_TS = join(AIDLC_SRC, "tools", "aidlc-graph.ts");
-const RULE_SCHEMA_TS = join(AIDLC_SRC, "tools", "aidlc-rule-schema.ts");
-const UTIL = join(AIDLC_SRC, "tools", "aidlc-utility.ts");
+const GRAPH_TS = join(AIDLC_SRC, "tools", "amadeus-graph.ts");
+const RULE_SCHEMA_TS = join(AIDLC_SRC, "tools", "amadeus-rule-schema.ts");
+const UTIL = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
 const SEED_GRAPH = join(AIDLC_SRC, "tools", "data", "stage-graph.json");
 
 const tempDirs: string[] = [];
@@ -103,7 +103,7 @@ afterAll(() => {
 
 /** Fresh temp rules dir holding the given files (name -> contents). */
 function rulesDir(files: Record<string, string>): string {
-  const dir = mkdtempSync(join(tmpdir(), "aidlc-t103-rd-"));
+  const dir = mkdtempSync(join(tmpdir(), "amadeus-t103-rd-"));
   tempDirs.push(dir);
   for (const [name, body] of Object.entries(files)) {
     writeFileSync(join(dir, name), body, "utf-8");
@@ -111,11 +111,11 @@ function rulesDir(files: Record<string, string>): string {
   return dir;
 }
 
-/** Fresh temp project dir with an empty aidlc-docs/ (mirrors run_doctor's mktemp -d + mkdir aidlc-docs). */
+/** Fresh temp project dir with an empty amadeus-docs/ (mirrors run_doctor's mktemp -d + mkdir amadeus-docs). */
 function projDir(): string {
-  const p = toPortablePath(mkdtempSync(join(tmpdir(), "aidlc-t103-proj-")));
+  const p = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-t103-proj-")));
   tempDirs.push(p);
-  mkdirSync(join(p, "aidlc-docs"), { recursive: true });
+  mkdirSync(join(p, "amadeus-docs"), { recursive: true });
   return p;
 }
 
@@ -126,7 +126,7 @@ interface CliResult {
 }
 
 /**
- * run_doctor (t103.sh:189-198): spawn the real `bun aidlc-utility.ts doctor
+ * run_doctor (t103.sh:189-198): spawn the real `bun amadeus-utility.ts doctor
  * --project-dir <proj>` with AIDLC_RULES_DIR + AIDLC_STAGE_GRAPH pointed at
  * the fixture. Returns combined stdout+stderr. doctor's exit code is NOT
  * asserted on (the .sh absorbed it with `|| true`); the advisory label lines
@@ -172,7 +172,7 @@ const lit = (p: string): string => JSON.stringify(p);
 describe("t103 loader primitives (migrated from t103-doctor-rule-drift-coverage.sh, plan 19)", () => {
   test("case 1: loadRules() surfaces frontmatter.pairing", () => {
     const rd = rulesDir({
-      "org.md": "---\npairing: aidlc-foo\n---\n\n# Org rule\n",
+      "org.md": "---\npairing: amadeus-foo\n---\n\n# Org rule\n",
     });
     const r = runBunEval(
       `import { loadRules } from ${lit(GRAPH_TS)};\n` +
@@ -181,7 +181,7 @@ describe("t103 loader primitives (migrated from t103-doctor-rule-drift-coverage.
       { AIDLC_RULES_DIR: rd },
     );
     expect(r.status).toBe(0);
-    expect(r.stdout.trim().split("\n").pop()).toBe("aidlc-foo");
+    expect(r.stdout.trim().split("\n").pop()).toBe("amadeus-foo");
   });
 
   test("case 2a: feedforward-only passes validation (exit 0, ok)", () => {
@@ -201,7 +201,7 @@ describe("t103 loader primitives (migrated from t103-doctor-rule-drift-coverage.
     );
     // .sh asserted RC != 0. STRONGER: the thrown diagnostic text is asserted too.
     expect(r.status).not.toBe(0);
-    expect(r.out).toContain('pairing must be "feedforward-only" or start with "aidlc-"');
+    expect(r.out).toContain('pairing must be "feedforward-only" or start with "amadeus-"');
   });
 
   // --- case 3 — parseRuleHeadings (via RuleFile.headings): splits A/B; skips
@@ -250,7 +250,7 @@ describe("t103 loader primitives (migrated from t103-doctor-rule-drift-coverage.
     const rd = rulesDir({
       "org.md":
         "# Org\n\n## Corrections\n\n<!-- Self-learning loop appends here. -->\n" +
-        "<!-- Use aidlc-team.md to record team-wide overrides; aidlc-project.md\n" +
+        "<!-- Use amadeus-team.md to record team-wide overrides; amadeus-project.md\n" +
         "     to record project-specific deviations. The loaders merge org -> team\n" +
         "     -> project at session start. -->\n",
     });
@@ -281,7 +281,7 @@ describe("t103 loader primitives (migrated from t103-doctor-rule-drift-coverage.
 });
 
 // ============================================================
-// (A) doctor rule-drift detection — spawned `bun aidlc-utility.ts doctor`.
+// (A) doctor rule-drift detection — spawned `bun amadeus-utility.ts doctor`.
 // ============================================================
 
 describe("t103 doctor rule-drift (migrated from t103-doctor-rule-drift-coverage.sh, plan 19)", () => {
@@ -345,37 +345,37 @@ describe("t103 doctor rule-drift (migrated from t103-doctor-rule-drift-coverage.
 });
 
 // ============================================================
-// (A) doctor paired-coverage detection — spawned `bun aidlc-utility.ts doctor`.
+// (A) doctor paired-coverage detection — spawned `bun amadeus-utility.ts doctor`.
 // ============================================================
 
 describe("t103 doctor paired-coverage (migrated from t103-doctor-rule-drift-coverage.sh, plan 19)", () => {
-  test("case 10: aidlc-required-sections resolves -> 1/1 paired", () => {
+  test("case 10: amadeus-required-sections resolves -> 1/1 paired", () => {
     const rd = rulesDir({
       "org.md":
-        "---\npairing: aidlc-required-sections\n---\n\n# Org rule with a sensor binding\n",
+        "---\npairing: amadeus-required-sections\n---\n\n# Org rule with a sensor binding\n",
     });
     expect(runDoctor(rd).out).toContain(
       "Paired sensor coverage: 1/1 guardrails paired (0 feedforward-only)",
     );
   });
 
-  test("case 11: aidlc-ghost unpaired -> 0/1 + unpaired detail", () => {
+  test("case 11: amadeus-ghost unpaired -> 0/1 + unpaired detail", () => {
     const rd = rulesDir({
       "org.md":
-        "---\npairing: aidlc-ghost\n---\n\n# Org rule binding a non-existent sensor\n",
+        "---\npairing: amadeus-ghost\n---\n\n# Org rule binding a non-existent sensor\n",
     });
     const out = runDoctor(rd).out;
     expect(out).toContain(
       "Paired sensor coverage: 0/1 guardrails paired (0 feedforward-only)",
     );
     expect(out).toContain("unpaired:");
-    expect(out).toContain("aidlc-ghost (no stage binds it)");
+    expect(out).toContain("amadeus-ghost (no stage binds it)");
   });
 
   test("case 12: feedforward-only counts in X, not in the M-X denominator", () => {
     const rd = rulesDir({
       "org.md":
-        "---\npairing: aidlc-required-sections\n---\n\n# Org rule with a sensor binding\n",
+        "---\npairing: amadeus-required-sections\n---\n\n# Org rule with a sensor binding\n",
       "team.md":
         "---\npairing: feedforward-only\n---\n\n# Team rule that needs no sensor\n",
     });
@@ -384,10 +384,10 @@ describe("t103 doctor paired-coverage (migrated from t103-doctor-rule-drift-cove
     );
   });
 
-  test("case 13: aidlc-upstream-coverage strips to bare id and resolves", () => {
+  test("case 13: amadeus-upstream-coverage strips to bare id and resolves", () => {
     const rd = rulesDir({
       "org.md":
-        "---\npairing: aidlc-upstream-coverage\n---\n\n# Org rule binding the upstream-coverage sensor by aidlc- prefixed name\n",
+        "---\npairing: amadeus-upstream-coverage\n---\n\n# Org rule binding the upstream-coverage sensor by amadeus- prefixed name\n",
     });
     expect(runDoctor(rd).out).toContain(
       "Paired sensor coverage: 1/1 guardrails paired (0 feedforward-only)",
@@ -415,7 +415,7 @@ describe("t103 doctor determinism", () => {
   test("case 15: drift+coverage labels are byte-identical across runs", () => {
     const files = {
       "org.md":
-        "---\npairing: aidlc-required-sections\n---\n\n# Org\n\n## Testing Posture\n\nWe require 80% line coverage.\n",
+        "---\npairing: amadeus-required-sections\n---\n\n# Org\n\n## Testing Posture\n\nWe require 80% line coverage.\n",
       // P6: a learning IS a practice (no `*-learnings.md` slot) — team.md is the
       // team-scoped surface the drift walk reads.
       "team.md":

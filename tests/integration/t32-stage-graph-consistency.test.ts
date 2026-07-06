@@ -12,21 +12,21 @@
 // Here we import it in-process and read the same three static surfaces the
 // .sh inspected (no argv / exit-code / stdout / audit.md seam to cross):
 //   - SKILL.md                              (the Stage Graph table)
-//   - aidlc-common/stages/<phase>/<slug>.md (the stage files + their YAML)
+//   - amadeus-common/stages/<phase>/<slug>.md (the stage files + their YAML)
 //   - agents/<lead_agent>.md                (the agent files)
 // Zero LLM, zero tokens, zero spawns.
 //
 // Source under test:
-//   - dist/claude/.claude/skills/aidlc/SKILL.md
+//   - dist/claude/.claude/skills/amadeus/SKILL.md
 //       `## Stage Graph` table: | Slug | # | Stage | Phase | Execution |
 //       Lead Agent | Support Agents | Mode |  (the .sh's sed/grep/tail -n +3
 //       row extraction is reproduced exactly below).
-//   - dist/claude/.claude/tools/aidlc-lib.ts:982 parseStageFrontmatter(raw)
+//   - dist/claude/.claude/tools/amadeus-lib.ts:982 parseStageFrontmatter(raw)
 //       => Record<string, unknown>; pulls scalar `execution:` / `lead_agent:`
 //       from the `---...---` YAML block (ARRAY_KEYS excludes them, so both
 //       arrive as the scalar string the table column must equal).
-//   - dist/claude/.claude/aidlc-common/stages/<phase>/<slug>.md  (stage files)
-//   - dist/claude/.claude/agents/aidlc-<role>-agent.md           (agent files)
+//   - dist/claude/.claude/amadeus-common/stages/<phase>/<slug>.md  (stage files)
+//   - dist/claude/.claude/agents/amadeus-<role>-agent.md           (agent files)
 //
 // Old TAP -> new test parity (every .sh assertion family preserved, several
 // STRONGER — the .sh emitted one `ok` per row/file; the twin keeps the same
@@ -53,10 +53,10 @@ import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { AIDLC_SRC } from "../harness/fixtures.ts";
-import { parseStageFrontmatter } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { parseStageFrontmatter } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const SKILL = join(AIDLC_SRC, "skills", "aidlc", "SKILL.md");
-const STAGES_DIR = join(AIDLC_SRC, "aidlc-common", "stages");
+const STAGES_DIR = join(AIDLC_SRC, "amadeus-common", "stages");
 const AGENTS_DIR = join(AIDLC_SRC, "agents");
 
 /** A parsed Stage Graph table row (the columns the .sh read off `|`-split). */

@@ -8,7 +8,7 @@
 //
 // WHY THE GATE LOOP DIFFERS FROM THE CLAUDE TWIN: on Kiro there is no
 // AskUserQuestion widget — the Kiro question-rendering annex
-// (dist/kiro/.kiro/skills/aidlc/question-rendering.md) renders every structured
+// (dist/kiro/.kiro/skills/amadeus/question-rendering.md) renders every structured
 // question as NUMBERED PROSE OPTIONS with the recommended option FIRST, answered
 // by typing a number. So instead of tui-drive's answer-gate primitive (which
 // arrow-navigates menus), this test runs a simple driver-side loop:
@@ -18,7 +18,7 @@
 //     (= the recommended option / Approve, per the annex's recommended-first
 //     rule and the protocol's Approve-first approval template).
 // Disk is the terminator, never the screen (§1.1) — identical discipline to the
-// Claude twin: `Last Completed Stage == intent-capture` in aidlc-state.md, the
+// Claude twin: `Last Completed Stage == intent-capture` in amadeus-state.md, the
 // field the approve tool writes atomically with GATE_APPROVED+STAGE_COMPLETED.
 //
 // "1" IS ALWAYS A SAFE ANSWER: every rendering this loop can meet is either the
@@ -56,7 +56,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import * as os from "node:os";
 import { join } from "node:path";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { seededRecordDir, seededStateFile } from "../harness/fixtures.ts";
 import { cleanupTuiProject, KIRO_SRC, setupTuiProject } from "../harness/tui-fixtures.ts";
 
@@ -201,7 +201,7 @@ describe("t-tui-kiro-intent-capture (numbered-prose gates on the shipped dist/ki
         // in $ARGUMENTS so the stage skips its free-text "what to build?" ask.
         send(
           session,
-          "/aidlc --stage intent-capture Build a simple React todo app",
+          "/amadeus --stage intent-capture Build a simple React todo app",
           true,
         );
 

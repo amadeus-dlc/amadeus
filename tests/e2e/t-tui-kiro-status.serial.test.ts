@@ -1,11 +1,11 @@
-// covers: file:skills/aidlc/SKILL.md
+// covers: file:skills/amadeus/SKILL.md
 //
-// t-tui-kiro-status.serial.test.ts — drive `/aidlc --status` through a REAL
+// t-tui-kiro-status.serial.test.ts — drive `/amadeus --status` through a REAL
 // `kiro-cli chat` TUI on the shipped dist/kiro tree, both with and without an
 // active workflow. The Kiro twin of the t20 sdk-driver contract (status is
 // read-only: it reports the state fields and mutates NOTHING), exercised
 // through the print-directive arm of the forwarding loop:
-//   next --status → {"kind":"print", message: run aidlc-utility status …}
+//   next --status → {"kind":"print", message: run amadeus-utility status …}
 //   conductor runs the named tool and prints its output, then STOPS.
 //
 // Cheap by design: one engine roundtrip per case, no gates, no artifacts —
@@ -95,7 +95,7 @@ function launch(session: string, sandbox: string): void {
   expect(waitFor(session, "ask a question or describe a task", 60000, 600)).toBe(true);
 }
 function submitStatus(session: string): void {
-  drive(["send", "--session", session, "--keys", "/aidlc --status", "--literal", "--no-enter"]);
+  drive(["send", "--session", session, "--keys", "/amadeus --status", "--literal", "--no-enter"]);
   drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
 }
 
@@ -119,7 +119,7 @@ describe("t-tui-kiro-status (read-only status through the Kiro print-directive a
         // surface those strings in the pane. NOTE: the status tool renders the
         // stage DISPLAY name ("Requirements Analysis"), not the slug — it prints
         // `Current Stage:  ${stageDisplay}` from the graph entry's `name`
-        // (aidlc-utility.ts:347 / :267-282), so we wait on the display name, the
+        // (amadeus-utility.ts:347 / :267-282), so we wait on the display name, the
         // same calibration lesson the ACP twin (t-acp-kiro-utilities) encodes.
         expect(waitFor(session, "Requirements Analysis", 240000, 0)).toBe(true);
         expect(waitFor(session, "feature", 30000, 0)).toBe(true);
@@ -142,7 +142,7 @@ describe("t-tui-kiro-status (read-only status through the Kiro print-directive a
         launch(session, sandbox);
         submitStatus(session);
         // The engine's no-state status path prints the utility's exact wording
-        // (aidlc-utility.ts:186, verified live): "No active AI-DLC workflow".
+        // (amadeus-utility.ts:186, verified live): "No active AI-DLC workflow".
         expect(waitFor(session, "No active AI-DLC workflow", 240000, 0)).toBe(true);
         // And it must NOT scaffold: status is read-only even with no state. The
         // seeded record was stripped (noAidlcDocs); status births nothing, so the

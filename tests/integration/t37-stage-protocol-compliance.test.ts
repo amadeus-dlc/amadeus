@@ -1,4 +1,4 @@
-// covers: doc:aidlc-common/protocols/stage-protocol.md, doc:aidlc-common/conductor.md, doc:aidlc-common/stages, doc:knowledge/aidlc-shared/state-template.md, doc:SKILL.md(routing)
+// covers: doc:amadeus-common/protocols/stage-protocol.md, doc:amadeus-common/conductor.md, doc:amadeus-common/stages, doc:knowledge/amadeus-shared/state-template.md, doc:SKILL.md(routing)
 //
 // t37 — cross-file stage-protocol compliance. Migrated from the bash TAP test
 // tests/integration/t37-stage-protocol-compliance.sh (plan 75). The subject is a
@@ -19,21 +19,21 @@
 // zero subprocess, zero tokens.
 //
 // Source under test (paths relative to AIDLC_SRC = dist/claude/.claude):
-//   aidlc-common/protocols/stage-protocol.md
+//   amadeus-common/protocols/stage-protocol.md
 //     :15  "## 1. Approval Gates" — names the 3 init stages as exempt
 //     "### Silent bookkeeping writes" — names **Current Stage** / **Lifecycle
 //          Phase** / **Active Agent** / **In Progress** / **Completed** fields
 //     "[S]" — documents the skipped-via-jump checkbox state
 //     "### Multi-agent stages:" — forbids Task() for inline support agents,
 //          reserves Task for `mode: subagent`
-//   aidlc-common/conductor.md — mirrors the inline-support-agent guidance
+//   amadeus-common/conductor.md — mirrors the inline-support-agent guidance
 //          (forbids Task for inline support agents; reserves Task for
 //          `directive.mode == "subagent"`)
-//   aidlc-common/stages/<phase>/<slug>.md — 32 stage files; all reference
+//   amadeus-common/stages/<phase>/<slug>.md — 32 stage files; all reference
 //          "stage-protocol"
-//   knowledge/aidlc-shared/state-template.md — the 7 required ## sections
-//   knowledge/aidlc-<agent>-agent/ — one knowledge dir per agents/*.md file
-//   skills/aidlc/SKILL.md "## Routing" — mandates all 3 protocol files
+//   knowledge/amadeus-shared/state-template.md — the 7 required ## sections
+//   knowledge/amadeus-<agent>-agent/ — one knowledge dir per agents/*.md file
+//   skills/amadeus/SKILL.md "## Routing" — mandates all 3 protocol files
 // Fixtures (tests/fixtures, via FIXTURES_DIR):
 //   state-mid-ideation.md — section structure + [x]/[-]/[ ] checkbox notation
 //   state-jumped.md       — [S] skipped-via-jump notation
@@ -77,12 +77,12 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
 import { AIDLC_SRC, FIXTURES_DIR } from "../harness/fixtures.ts";
 
-const PROTOCOL = join(AIDLC_SRC, "aidlc-common", "protocols", "stage-protocol.md");
-const CONDUCTOR = join(AIDLC_SRC, "aidlc-common", "conductor.md");
-const STAGES_DIR = join(AIDLC_SRC, "aidlc-common", "stages");
+const PROTOCOL = join(AIDLC_SRC, "amadeus-common", "protocols", "stage-protocol.md");
+const CONDUCTOR = join(AIDLC_SRC, "amadeus-common", "conductor.md");
+const STAGES_DIR = join(AIDLC_SRC, "amadeus-common", "stages");
 const AGENTS_DIR = join(AIDLC_SRC, "agents");
 const KNOWLEDGE_DIR = join(AIDLC_SRC, "knowledge");
-const STATE_TEMPLATE = join(AIDLC_SRC, "knowledge", "aidlc-shared", "state-template.md");
+const STATE_TEMPLATE = join(AIDLC_SRC, "knowledge", "amadeus-shared", "state-template.md");
 const SKILL = join(AIDLC_SRC, "skills", "aidlc", "SKILL.md");
 
 // The .sh treated these three as exempt-from-protocol-reference (orchestrator

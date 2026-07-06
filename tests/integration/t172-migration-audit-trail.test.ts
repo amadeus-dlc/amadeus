@@ -1,11 +1,11 @@
-// covers: function:migrateFlatLayout, function:auditShards, function:readAllAuditShards, function:auditShardDir, function:auditShardName, subcommand:aidlc-utility:intent-birth
+// covers: function:migrateFlatLayout, function:auditShards, function:readAllAuditShards, function:auditShardDir, function:auditShardName, subcommand:amadeus-utility:intent-birth
 //
 // Mechanism: cli (spawned dist intent-birth) + in-process pure-function asserts
 // against the dist lib audit readers.
 //
 // Blocker B2 regression — migration must PRESERVE the pre-migration audit trail.
 // The flat→per-intent migration (migrateFlatLayout) used to blind-copy the flat
-// `aidlc-docs/audit.md` FILE to `<record>/audit.md`, where it sat ORPHANED: the
+// `amadeus-docs/audit.md` FILE to `<record>/audit.md`, where it sat ORPHANED: the
 // audit readers (auditShards/readAllAuditShards) glob the `<record>/audit/` DIR,
 // and the flat-fallback only fires when the record dir is absent (never, post-
 // migration). So the WORKFLOW_STARTED/STAGE history was on disk but invisible to
@@ -29,11 +29,11 @@ import {
   activeIntent,
   auditShards,
   readAllAuditShards,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath;
 const REPO_ROOT = join(import.meta.dir, "..", "..");
-const UTIL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "aidlc-utility.ts");
+const UTIL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-utility.ts");
 
 let proj: string;
 beforeEach(() => {
@@ -84,12 +84,12 @@ const FLAT_AUDIT = [
 
 describe("t172 migration preserves the pre-migration audit trail (B2)", () => {
   test("intent-birth relocates the flat audit.md into the shard layout so its events stay readable", () => {
-    // Seed a flat (pre-workspace) project: aidlc-docs/aidlc-state.md (with a
-    // Project field) + a POPULATED aidlc-docs/audit.md (real event blocks).
-    const flat = join(proj, "aidlc-docs");
+    // Seed a flat (pre-workspace) project: amadeus-docs/amadeus-state.md (with a
+    // Project field) + a POPULATED amadeus-docs/audit.md (real event blocks).
+    const flat = join(proj, "amadeus-docs");
     mkdirSync(flat, { recursive: true });
     writeFileSync(
-      join(flat, "aidlc-state.md"),
+      join(flat, "amadeus-state.md"),
       "# AI-DLC State Tracking\n## Project Information\n- **Scope**: feature\n- **Project**: Legacy App\n",
       "utf-8",
     );
@@ -101,7 +101,7 @@ describe("t172 migration preserves the pre-migration audit trail (B2)", () => {
 
     // One migrated record carrying the flat state.
     const records = readdirSync(intentsDir(proj)).filter((d) =>
-      existsSync(join(intentsDir(proj), d, "aidlc-state.md")),
+      existsSync(join(intentsDir(proj), d, "amadeus-state.md")),
     );
     expect(records.length).toBe(1);
     const recordDirName = records[0];
@@ -135,11 +135,11 @@ describe("t172 migration preserves the pre-migration audit trail (B2)", () => {
 
     // --- migration still works end-to-end ---
     // Migrated state carries the flat Project field.
-    expect(readFileSync(join(record, "aidlc-state.md"), "utf-8")).toContain("Legacy App");
+    expect(readFileSync(join(record, "amadeus-state.md"), "utf-8")).toContain("Legacy App");
     // .migrated marker exists (idempotency key).
     expect(existsSync(join(proj, "aidlc", ".migrated"))).toBe(true);
     // The flat tree was git-rm'd from the working tree post-move.
-    expect(existsSync(join(flat, "aidlc-state.md"))).toBe(false);
+    expect(existsSync(join(flat, "amadeus-state.md"))).toBe(false);
     expect(existsSync(join(flat, "audit.md"))).toBe(false);
   });
 });

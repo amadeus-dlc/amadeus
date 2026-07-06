@@ -2,13 +2,13 @@
 //
 // t113 — Directive schema + validator. Migrated from the bash TAP test
 // tests/unit/t113-directive-schema.sh (plan 30). The original spawned `bun -e`
-// once per case, importing validateDirective from aidlc-directive.ts and
+// once per case, importing validateDirective from amadeus-directive.ts and
 // stringifying the ValidationResult as "VALID" / "INVALID:<errors joined by |>"
 // so bash could grep it. The module is a PURE contract — "no emit, no consume,
-// reads/writes NO state, no I/O" (aidlc-directive.ts:9) — so every one of the
+// reads/writes NO state, no I/O" (amadeus-directive.ts:9) — so every one of the
 // 30 behavioural assertions can be exercised in-process by importing and
 // CALLING validateDirective directly. The .ts file does have an
-// `if (import.meta.main)` CLI self-check (aidlc-directive.ts:396), but the .sh
+// `if (import.meta.main)` CLI self-check (amadeus-directive.ts:396), but the .sh
 // never drives the CLI seam — it always imports validateDirective via `bun -e`.
 // So this is a `.none.test.ts` (mechanism = none): pure function calls, zero
 // subprocess, zero LLM, zero tokens.
@@ -33,7 +33,7 @@ import { describe, expect, test } from "bun:test";
 import {
   type Directive,
   validateDirective,
-} from "../../dist/claude/.claude/tools/aidlc-directive.ts";
+} from "../../dist/claude/.claude/tools/amadeus-directive.ts";
 
 // --- Well-formed fixtures, one per kind (mirror t113-directive-schema.sh:18-56) ---
 // Fresh object per call so a `delete`/spread in one case can't bleed into another.
@@ -43,16 +43,16 @@ function runStage(): Record<string, unknown> {
     kind: "run-stage",
     stage: "application-design",
     phase: "inception",
-    lead_agent: "aidlc-architect-agent",
-    support_agents: ["aidlc-aws-platform-agent", "aidlc-design-agent"],
+    lead_agent: "amadeus-architect-agent",
+    support_agents: ["amadeus-aws-platform-agent", "amadeus-design-agent"],
     mode: "inline",
     gate: true,
-    memory_path: "aidlc-docs/inception/application-design/memory.md",
-    consumes: ["aidlc-docs/inception/requirements/requirements.md"],
-    produces: ["aidlc-docs/inception/application-design/decisions.md"],
-    rules_in_context: ["aidlc-org.md", "aidlc-team.md"],
+    memory_path: "amadeus-docs/inception/application-design/memory.md",
+    consumes: ["amadeus-docs/inception/requirements/requirements.md"],
+    produces: ["amadeus-docs/inception/application-design/decisions.md"],
+    rules_in_context: ["amadeus-org.md", "amadeus-team.md"],
     sensors_applicable: ["required-sections"],
-    stage_file: ".claude/skills/aidlc/stages/inception/application-design.md",
+    stage_file: ".claude/skills/amadeus/stages/inception/application-design.md",
   };
 }
 
@@ -61,18 +61,18 @@ function dispatchSubagent(): Record<string, unknown> {
     kind: "dispatch-subagent",
     stage: "code-generation",
     phase: "construction",
-    lead_agent: "aidlc-developer-agent",
-    support_agents: ["aidlc-quality-agent"],
+    lead_agent: "amadeus-developer-agent",
+    support_agents: ["amadeus-quality-agent"],
     mode: "subagent",
     gate: false,
-    memory_path: "aidlc-docs/construction/auth/code-generation/memory.md",
+    memory_path: "amadeus-docs/construction/auth/code-generation/memory.md",
     consumes: [
-      "aidlc-docs/construction/auth/functional-design/functional-design.md",
+      "amadeus-docs/construction/auth/functional-design/functional-design.md",
     ],
-    produces: ["aidlc-docs/construction/auth/code-generation/code-manifest.md"],
-    rules_in_context: ["aidlc-org.md"],
+    produces: ["amadeus-docs/construction/auth/code-generation/code-manifest.md"],
+    rules_in_context: ["amadeus-org.md"],
     sensors_applicable: ["linter"],
-    stage_file: ".claude/skills/aidlc/stages/construction/code-generation.md",
+    stage_file: ".claude/skills/amadeus/stages/construction/code-generation.md",
     worker: "code-generation",
   };
 }
@@ -86,7 +86,7 @@ function presentGate(): Record<string, unknown> {
     kind: "present-gate",
     stage: "application-design",
     phase: "inception",
-    memory_path: "aidlc-docs/inception/application-design/memory.md",
+    memory_path: "amadeus-docs/inception/application-design/memory.md",
   };
 }
 
@@ -178,7 +178,7 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
     const r = validateDirective(runStage());
     expect(r.valid).toBe(true);
     // narrowed by valid===true; data aliases the input per the validator's
-    // documented trust boundary (aidlc-directive.ts:281-288).
+    // documented trust boundary (amadeus-directive.ts:281-288).
     const data = (r as { valid: true; data: Directive }).data;
     expect(data.kind).toBe("run-stage");
   });
@@ -297,11 +297,11 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
   // ============================================================
   // The engine emits gate:"unresolved" for the one Construction skeleton stage
   // it cannot pre-classify; the conductor resolves it on the round trip
-  // (aidlc-directive.ts:31, :65, GATE_UNRESOLVED at :37). checkGate (:373-389)
+  // (amadeus-directive.ts:31, :65, GATE_UNRESOLVED at :37). checkGate (:373-389)
   // accepts boolean OR the exact sentinel string and rejects every other string
   // so a typo'd sentinel surfaces loudly rather than being acted on as a
   // deferred gate. conductor_persona is the optional D-E delivery field
-  // (aidlc-directive.ts:75-80, :100-101), validated by checkOptionalString
+  // (amadeus-directive.ts:75-80, :100-101), validated by checkOptionalString
   // (:393-403) — absent is fine, present-and-string is VALID, present-and-non-
   // string is rejected.
 
@@ -368,7 +368,7 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
     expect(
       errs({
         ...runStage(),
-        reviewer: "aidlc-architecture-reviewer-agent",
+        reviewer: "amadeus-architecture-reviewer-agent",
         reviewer_max_iterations: 3,
       }),
     ).toBe("VALID");
@@ -384,7 +384,7 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
     expect(
       errs({
         ...runStage(),
-        reviewer: "aidlc-architecture-reviewer-agent",
+        reviewer: "amadeus-architecture-reviewer-agent",
         reviewer_max_iterations: "two",
       }),
     ).toContain(
@@ -404,8 +404,8 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
       errs({
         ...runStage(),
         consumes_absent: [
-          { path: "aidlc-docs/inception/units-generation/unit-of-work.md", expected: true },
-          { path: "aidlc-docs/inception/requirements/requirements.md", expected: false },
+          { path: "amadeus-docs/inception/units-generation/unit-of-work.md", expected: true },
+          { path: "amadeus-docs/inception/requirements/requirements.md", expected: false },
         ],
       }),
     ).toBe("VALID");

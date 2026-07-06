@@ -1,7 +1,7 @@
 // covers: function:parseCheckboxes
 //
 // t107 — property-based floor test for parseCheckboxes() in
-// dist/claude/.claude/tools/aidlc-lib.ts:449.
+// dist/claude/.claude/tools/amadeus-lib.ts:449.
 //
 // WHY THIS EXISTS. parseCheckboxes drives every checkbox state transition
 // in the orchestrator (countCheckboxes, the state-table render at
@@ -25,10 +25,10 @@ import {
   CHECKBOX_MAP,
   type CheckboxState,
   parseCheckboxes,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // The em-dash separator the regex requires: U+2014 (bytes e2 80 94),
-// confirmed against aidlc-lib.ts:451. Spelled out so a literal swap to a
+// confirmed against amadeus-lib.ts:451. Spelled out so a literal swap to a
 // hyphen-minus in the source would surface here.
 const EMDASH = "—";
 expect(EMDASH).toBe("—");

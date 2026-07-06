@@ -1,15 +1,15 @@
-// covers: hook:aidlc-session-end, function:appendAuditEntry
+// covers: hook:amadeus-session-end, function:appendAuditEntry
 //
-// t30 — aidlc-session-end.ts SessionEnd hook behaviour. Migrated from
+// t30 — amadeus-session-end.ts SessionEnd hook behaviour. Migrated from
 // tests/unit/t30-hook-session-end.sh (TAP plan 7). Mechanism: cli.
 //
 // WHY CLI (process-boundary, not in-process): the SUBJECT is a hook, not a
-// pure function. aidlc-session-end.ts (dist/claude/.claude/hooks/) runs at
+// pure function. amadeus-session-end.ts (dist/claude/.claude/hooks/) runs at
 // module top level on import and TERMINATES the process:
 //   :19  projectDir = resolveProjectDirFromHook(import.meta.url)
 //   :22  if (!existsSync(stateFilePath(projectDir))) process.exit(0)
 //          — the "no active workflow" no-op gate (no heartbeat, no audit)
-//   :25-27 mkdir aidlc-docs/.aidlc-hooks-health + write session-end.last
+//   :25-27 mkdir amadeus-docs/.amadeus-hooks-health + write session-end.last
 //          heartbeat (only reached when state IS present)
 //   :32-45 reason defaults to "unknown"; if stdin is not a TTY it reads
 //          Bun.stdin.text(), JSON.parses it, and pulls raw.reason when the
@@ -25,19 +25,19 @@
 // settings.json: `Bun.spawnSync({ cmd: [BUN, HOOK], stdin: <json bytes>,
 // env: {…CLAUDE_PROJECT_DIR} })`. Same pattern as t07 (audit-logger hook twin).
 //
-// appendAuditEntry's on-disk block format (aidlc-audit.ts): the SESSION_ENDED
+// appendAuditEntry's on-disk block format (amadeus-audit.ts): the SESSION_ENDED
 // event maps to the "## Session End" heading and renders each field as a
 // "**<key>**: <value>" line — so { Reason: "logout" } becomes
 // "**Reason**: logout". Asserted below against the real bytes on disk.
 //
 // FIXTURE DISCIPLINE (mirrors the .sh's create_test_project + seed_state_file +
 // seed_audit_file + cleanup_test_project, one fresh project per case):
-//   - createTestProject() -> a fresh temp dir with aidlc-docs/.
+//   - createTestProject() -> a fresh temp dir with amadeus-docs/.
 //   - seedStateFile(proj, state-mid-ideation.md) -> the canonical "active
 //     workflow" signal the hook gates on (MID_IDEATION in the .sh, the same
 //     fixture bytes).
 //   - seedAuditFile() -> copies tests/fixtures/audit-sample.md to
-//     aidlc-docs/audit.md (the precondition for the emit; appendAuditEntry
+//     amadeus-docs/audit.md (the precondition for the emit; appendAuditEntry
 //     appends to it).
 //   - cleanupTestProject() rm -rf's each temp project. Nothing written under
 //     tests/fixtures/**.
@@ -73,7 +73,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const HOOK = join(AIDLC_SRC, "hooks", "aidlc-session-end.ts");
+const HOOK = join(AIDLC_SRC, "hooks", "amadeus-session-end.ts");
 const MID_IDEATION = join(FIXTURES_DIR, "state-mid-ideation.md");
 
 let proj: string;
@@ -103,7 +103,7 @@ function readAudit(p: string): string {
 }
 
 function heartbeatPath(p: string): string {
-  return join(seededRecordDir(p), ".aidlc-hooks-health", "session-end.last");
+  return join(seededRecordDir(p), ".amadeus-hooks-health", "session-end.last");
 }
 
 interface FireResult {
@@ -169,7 +169,7 @@ describe("t30 session-end SessionEnd hook (mechanism cli — spawned hook + stdi
   test("no-op when state file absent (audit unchanged) [.sh test 3]", () => {
     // createTestProject made no state file, so the hook hits its :22 no-op gate
     // and exits 0 before any heartbeat or audit write — the same precondition
-    // the .sh set up by `rm -f aidlc-state.md`.
+    // the .sh set up by `rm -f amadeus-state.md`.
     expect(existsSync(statePath(proj))).toBe(false);
     seedAuditFile(proj);
     const before = readAudit(proj);
@@ -213,7 +213,7 @@ describe("t30 session-end SessionEnd hook (mechanism cli — spawned hook + stdi
   test("no heartbeat when state file absent [.sh test 7]", () => {
     // No state file (createTestProject seeds none), and no audit.md either —
     // the hook's :22 gate fires before mkdir/heartbeat. Mirrors the .sh's
-    // rm -f state + rm -rf .aidlc-hooks-health precondition.
+    // rm -f state + rm -rf .amadeus-hooks-health precondition.
     expect(existsSync(statePath(proj))).toBe(false);
     fire('{"reason":"logout"}', proj);
     expect(existsSync(heartbeatPath(proj))).toBe(false);

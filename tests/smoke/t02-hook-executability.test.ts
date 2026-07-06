@@ -25,16 +25,16 @@
 // project CLAUDE.md and t01-file-structure.sh:20-29 enumerate.
 //
 // Old TAP -> new test parity (1:1, one test() per .sh assert_file_exists row):
-//   .sh:11 aidlc-audit-logger.ts present    -> "hook present: aidlc-audit-logger.ts"
-//   .sh:12 aidlc-sensor-fire.ts present     -> "hook present: aidlc-sensor-fire.ts"
-//   .sh:13 aidlc-sync-statusline.ts present -> "hook present: aidlc-sync-statusline.ts"
-//   .sh:14 aidlc-runtime-compile.ts present -> "hook present: aidlc-runtime-compile.ts"
-//   .sh:15 aidlc-validate-state.ts present  -> "hook present: aidlc-validate-state.ts"
-//   .sh:16 aidlc-log-subagent.ts present    -> "hook present: aidlc-log-subagent.ts"
-//   .sh:17 aidlc-session-start.ts present   -> "hook present: aidlc-session-start.ts"
-//   .sh:18 aidlc-session-end.ts present     -> "hook present: aidlc-session-end.ts"
-//   .sh:19 aidlc-statusline.ts present      -> "hook present: aidlc-statusline.ts"
-//   .sh:20 aidlc-stop.ts present (Stop hook)-> "hook present: aidlc-stop.ts"
+//   .sh:11 amadeus-audit-logger.ts present    -> "hook present: amadeus-audit-logger.ts"
+//   .sh:12 amadeus-sensor-fire.ts present     -> "hook present: amadeus-sensor-fire.ts"
+//   .sh:13 amadeus-sync-statusline.ts present -> "hook present: amadeus-sync-statusline.ts"
+//   .sh:14 amadeus-runtime-compile.ts present -> "hook present: amadeus-runtime-compile.ts"
+//   .sh:15 amadeus-validate-state.ts present  -> "hook present: amadeus-validate-state.ts"
+//   .sh:16 amadeus-log-subagent.ts present    -> "hook present: amadeus-log-subagent.ts"
+//   .sh:17 amadeus-session-start.ts present   -> "hook present: amadeus-session-start.ts"
+//   .sh:18 amadeus-session-end.ts present     -> "hook present: amadeus-session-end.ts"
+//   .sh:19 amadeus-statusline.ts present      -> "hook present: amadeus-statusline.ts"
+//   .sh:20 amadeus-stop.ts present (Stop hook)-> "hook present: amadeus-stop.ts"
 
 import { describe, expect, test } from "bun:test";
 import { existsSync, statSync } from "node:fs";
@@ -47,18 +47,18 @@ const HOOKS_DIR = join(AIDLC_SRC, "hooks");
 // mint-presence hook added after the migration. All .ts, run via bun — the .sh
 // title notes no executable bit is needed.
 const HOOKS = [
-  "aidlc-audit-logger.ts",
-  "aidlc-sensor-fire.ts",
-  "aidlc-sync-statusline.ts",
-  "aidlc-runtime-compile.ts",
-  "aidlc-validate-state.ts",
-  "aidlc-log-subagent.ts",
-  "aidlc-session-start.ts",
-  "aidlc-session-end.ts",
-  "aidlc-statusline.ts",
-  "aidlc-stop.ts",
+  "amadeus-audit-logger.ts",
+  "amadeus-sensor-fire.ts",
+  "amadeus-sync-statusline.ts",
+  "amadeus-runtime-compile.ts",
+  "amadeus-validate-state.ts",
+  "amadeus-log-subagent.ts",
+  "amadeus-session-start.ts",
+  "amadeus-session-end.ts",
+  "amadeus-statusline.ts",
+  "amadeus-stop.ts",
   // Records a HUMAN_TURN on UserPromptSubmit.
-  "aidlc-mint-presence.ts",
+  "amadeus-mint-presence.ts",
 ] as const;
 
 describe("t02 hook presence — shipped dist/claude/.claude/hooks (migrated from t02-hook-executability.sh, plan 10)", () => {

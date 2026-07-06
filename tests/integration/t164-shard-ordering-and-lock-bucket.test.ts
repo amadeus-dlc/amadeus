@@ -1,4 +1,4 @@
-// covers: subcommand:aidlc-worktree:verify, subcommand:aidlc-worktree:info, subcommand:aidlc-state:fork, function:findAllEvents
+// covers: subcommand:amadeus-worktree:verify, subcommand:amadeus-worktree:info, subcommand:amadeus-state:fork, function:findAllEvents
 //
 // t164 — Stage B FIX 2 + FIX 1a regression, against REAL tools on a per-intent
 // layout. Mechanism: cli (process-boundary).
@@ -6,7 +6,7 @@
 // TWO independent residual-MAJOR closures share this file (both per-intent,
 // multi-shard concerns; one fixture style):
 //
-//   PART A — FIX 2 (findLatestEvent multi-shard ORDERING). aidlc-worktree's
+//   PART A — FIX 2 (findLatestEvent multi-shard ORDERING). amadeus-worktree's
 //   verify/info pick the "latest" WORKTREE_* block for a slug from the
 //   readAllAuditShards buffer. That buffer concatenates per-clone shards in
 //   FILENAME (lexical) order, NOT time order. The pre-fix findLatestEvent walked
@@ -29,8 +29,8 @@
 //   land in Bolt Refs (serialized, no clobber).
 //
 // SOURCE UNDER TEST (dist/claude/.claude/tools/):
-//   aidlc-worktree.ts findLatestEvent → findAllEvents (max-timestamp selection).
-//   aidlc-state.ts handleFork (resolvedIntent threaded to withAuditLock + writes).
+//   amadeus-worktree.ts findLatestEvent → findAllEvents (max-timestamp selection).
+//   amadeus-state.ts handleFork (resolvedIntent threaded to withAuditLock + writes).
 //
 // FIXTURE DISCIPLINE: per-test temp project with a hand-seeded per-intent layout
 // (no git needed — verify/info are read-only, fork uses --target-dir). Audit
@@ -42,12 +42,12 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FIXTURES_DIR } from "../harness/fixtures.ts";
-import { auditLockDir } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { auditLockDir } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath;
 const REPO_ROOT = join(import.meta.dir, "..", "..");
-const WORKTREE_TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "aidlc-worktree.ts");
-const STATE_TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "aidlc-state.ts");
+const WORKTREE_TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-worktree.ts");
+const STATE_TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-state.ts");
 
 const SPACE = "default";
 const RECORD = "auth-aaaaaaaa";
@@ -68,7 +68,7 @@ function seedLayout(): void {
   const intentsDir = join(proj, "aidlc", "spaces", SPACE, "intents");
   mkdirSync(join(intentsDir, RECORD), { recursive: true });
   const stateBody = readFileSync(join(FIXTURES_DIR, "state-construction.md"), "utf-8");
-  writeFileSync(join(intentsDir, RECORD, "aidlc-state.md"), stateBody, "utf-8");
+  writeFileSync(join(intentsDir, RECORD, "amadeus-state.md"), stateBody, "utf-8");
   writeFileSync(join(proj, "aidlc", "active-space"), `${SPACE}\n`, "utf-8");
   writeFileSync(join(intentsDir, "active-intent"), `${RECORD}\n`, "utf-8");
 }
@@ -112,7 +112,7 @@ function runIn(tool: string, args: string[]): { status: number; stdout: string; 
 }
 
 beforeEach(() => {
-  proj = mkdtempSync(join(tmpdir(), "aidlc-t164-"));
+  proj = mkdtempSync(join(tmpdir(), "amadeus-t164-"));
   seedLayout();
 });
 
@@ -210,7 +210,7 @@ describe("t164 PART B — omitted-intent fork serializes with an explicit-intent
     // Both slugs are present in the SINGLE main state file under the record. A
     // lost update (pre-fix) leaves exactly one (the second writer clobbered the
     // first's Bolt Refs append against a stale snapshot).
-    const mainState = readFileSync(join(recordPath(), "aidlc-state.md"), "utf-8");
+    const mainState = readFileSync(join(recordPath(), "amadeus-state.md"), "utf-8");
     const refsLine = mainState.split("\n").find((l) => l.startsWith("- **Bolt Refs**:")) ?? "";
     expect(refsLine).toContain("slug-omitted");
     expect(refsLine).toContain("slug-explicit");

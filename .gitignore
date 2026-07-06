@@ -7,9 +7,9 @@ node_modules/
 ._*
 
 # Generated AI-DLC artifacts (recreated by workflow runs / doctor)
-dist/claude/aidlc-docs/
-dist/kiro/aidlc-docs/
-dist/codex/aidlc-docs/
+dist/claude/amadeus-docs/
+dist/kiro/amadeus-docs/
+dist/codex/amadeus-docs/
 
 # Sample/test projects
 dist/claude/todo-app/

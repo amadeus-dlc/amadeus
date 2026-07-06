@@ -1,7 +1,7 @@
-// covers: subcommand:aidlc-swarm:prepare, subcommand:aidlc-swarm:check, subcommand:aidlc-swarm:finalize, audit:SWARM_STARTED, audit:SWARM_DEGRADED, audit:SWARM_UNIT_CONVERGED, audit:SWARM_UNIT_FAILED, audit:SWARM_BATON_RETURNED, audit:SWARM_COMPLETED
+// covers: subcommand:amadeus-swarm:prepare, subcommand:amadeus-swarm:check, subcommand:amadeus-swarm:finalize, audit:SWARM_STARTED, audit:SWARM_DEGRADED, audit:SWARM_UNIT_CONVERGED, audit:SWARM_UNIT_FAILED, audit:SWARM_BATON_RETURNED, audit:SWARM_COMPLETED
 //
 // CLI-contract port of tests/e2e/t134-swarm-referee.sh (TAP plan 13),
-// mechanism = cli. The .sh exercises aidlc-swarm.ts — the STATELESS convergence
+// mechanism = cli. The .sh exercises amadeus-swarm.ts — the STATELESS convergence
 // REFEREE the conductor consults — over REAL git worktrees, with the test (like
 // the .sh) playing the conductor: it drives prepare/check/finalize directly and
 // stages each worktree's on-disk state the way a worker would (or wouldn't)
@@ -10,7 +10,7 @@
 //
 // MECHANISM = cli (NOT none): every observable the .sh asserts is at the PROCESS
 // boundary — process.exit codes, the JSON envelope on stdout, and audit.md bytes
-// — and the tool itself spawns child processes (git worktree add, aidlc-bolt,
+// — and the tool itself spawns child processes (git worktree add, amadeus-bolt,
 // the bash check command). An in-process twin would lose the real
 // git-worktree side effect, the audit emit, the genuine `git diff --quiet HEAD`
 // anti-tamper baseline, and the exit-2-baton-returns shell the .sh keys on. So
@@ -18,9 +18,9 @@
 // res.status / res.stdout and the on-disk audit, exactly as the .sh did with
 // run_ref. spawnCount = all 13 cases.
 //
-// Source under test (dist/claude/.claude/tools/aidlc-swarm.ts):
-//   - handlePrepare (:296): forks a worktree per unit via aidlc-worktree create
-//     + aidlc-bolt start --worktree; emits SWARM_STARTED once (:328) and
+// Source under test (dist/claude/.claude/tools/amadeus-swarm.ts):
+//   - handlePrepare (:296): forks a worktree per unit via amadeus-worktree create
+//     + amadeus-bolt start --worktree; emits SWARM_STARTED once (:328) and
 //     SWARM_DEGRADED first when --degraded-from is given (:325). Exits 2 if any
 //     fork failed (:386), else 0.
 //   - handleCheck (:391): stateless single-unit verdict via verdictFor (:162) —
@@ -43,7 +43,7 @@
 //
 // FIXTURE (mirrors make_swarm_fixture, t134.sh:80-95): a real git repo on
 // `main` (setupWorktreeFixture, ported from tests/lib/worktree-helpers.sh)
-// seeded into Construction phase — aidlc-docs/aidlc-state.md from
+// seeded into Construction phase — amadeus-docs/amadeus-state.md from
 // state-construction.md + a fresh audit.md — with the framework .gitignore so
 // `git worktree add` does not byte-copy audit.md / runtime-graph.json into the
 // child, then `commit --amend` so the worktree fork carries the gitignore at
@@ -88,7 +88,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const SWARM_TOOL = join(AIDLC_SRC, "tools", "aidlc-swarm.ts");
+const SWARM_TOOL = join(AIDLC_SRC, "tools", "amadeus-swarm.ts");
 
 const fixtures: string[] = [];
 afterAll(() => {
@@ -118,10 +118,10 @@ function makeSwarmFixture(): string {
     join(proj, ".gitignore"),
     [
       "aidlc/active-space",
-      "aidlc/.aidlc-clone-id",
+      "aidlc/.amadeus-clone-id",
       "aidlc/spaces/*/intents/active-intent",
       "aidlc/spaces/*/intents/*/runtime-graph.json",
-      "aidlc/spaces/*/intents/*/.aidlc-*",
+      "aidlc/spaces/*/intents/*/.amadeus-*",
       "aidlc/spaces/*/intents/*/audit/",
       "",
     ].join("\n"),
@@ -145,7 +145,7 @@ function makeSwarmFixture(): string {
   return proj;
 }
 
-/** The per-unit worktree path the tool derives (aidlc-lib worktreePath). */
+/** The per-unit worktree path the tool derives (amadeus-lib worktreePath). */
 function wtPath(proj: string, slug: string): string {
   return join(proj, ".aidlc", "worktrees", `bolt-${slug}`);
 }

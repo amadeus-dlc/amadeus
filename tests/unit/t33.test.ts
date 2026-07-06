@@ -1,13 +1,13 @@
-// covers: subcommand:aidlc-bolt:start, subcommand:aidlc-bolt:complete, subcommand:aidlc-bolt:fail, subcommand:aidlc-bolt:set-autonomy
+// covers: subcommand:amadeus-bolt:start, subcommand:amadeus-bolt:complete, subcommand:amadeus-bolt:fail, subcommand:amadeus-bolt:set-autonomy
 //
 // bun:test port of tests/unit/t33-tool-bolt.sh (TAP plan 25), mechanism = cli.
 // Faithful 1:1 migration: each of the 25 .sh assertions is preserved at
 // equal-or-stronger fidelity by SPAWNING the real CLI via node:child_process
 // spawnSync(BUN, [TOOL, sub, ...args]) and asserting on the PROCESS boundary —
 // exit code (res.status), stdout/stderr (combined like the .sh's `2>&1`), and
-// the on-disk aidlc-docs/audit.md / aidlc-state.md the tool mutates.
+// the on-disk amadeus-docs/audit.md / amadeus-state.md the tool mutates.
 //
-// aidlc-bolt is IDEMPOTENCY/AUDIT-SENSITIVE: start/complete/fail/set-autonomy
+// amadeus-bolt is IDEMPOTENCY/AUDIT-SENSITIVE: start/complete/fail/set-autonomy
 // WRITE audit rows. Every case gets a FRESH temp project so audit state never
 // bleeds between cases. The .sh's per-case create_test_project +
 // seed_audit_file is mirrored exactly.
@@ -37,7 +37,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -46,7 +46,7 @@ import {
   seedStateFile,
 } from "../harness/fixtures.ts";
 
-// P9 per-intent layout: the flat aidlc-docs/ root is retired. Bolt's audit lands
+// P9 per-intent layout: the flat amadeus-docs/ root is retired. Bolt's audit lands
 // in a per-clone shard under the record (or the bare space record root when no
 // state seeds a resolvable cursor); state lives in the active intent's record.
 // We PIN a deterministic clone-id on disk so every SPAWNED bolt invocation in a
@@ -57,7 +57,7 @@ const PINNED_CLONE_ID = "testcloneid33";
 /** createTestProject + pin the clone-id (so spawned tools share one audit shard). */
 function mkProj(): string {
   const p = createTestProject();
-  writeFileSync(join(p, "aidlc", ".aidlc-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(p, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
   return p;
 }
 
@@ -69,7 +69,7 @@ const TOOL = join(
   "dist", "claude",
   ".claude",
   "tools",
-  "aidlc-bolt.ts",
+  "amadeus-bolt.ts",
 );
 
 interface RunResult {

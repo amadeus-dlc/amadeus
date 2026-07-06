@@ -34,7 +34,7 @@ worth holding the whole picture before you touch any one knob.
 | The **convergence check** the swarm trusts | you, the harness engineer | your project's own build/test command + a protected spec (data + project config) |
 | The actual autonomy **grant** for this project | the human | the ladder prompt at runtime |
 | The swarm **driver** selection | the operator | the `AIDLC_USE_SWARM` environment variable |
-| The convergence **verdict**, merge-back, and audit | a tool | `aidlc-swarm.ts` (code → Developer Reference) |
+| The convergence **verdict**, merge-back, and audit | a tool | `amadeus-swarm.ts` (code → Developer Reference) |
 
 The three rows marked "you" are the body of this chapter. The other three are
 covered because you need to understand the runtime your data shapes, but you
@@ -58,7 +58,7 @@ demands. The shipped default lives in the org rule you author at
 - After Bolt 1 ships, the **ladder prompt** fires once: "How should the
   remaining Bolts run?" with two options, continue autonomously or gate every
   Bolt. The chosen answer persists as `Construction Autonomy Mode` in
-  the intent's `aidlc-state.md` (under its record dir).
+  the intent's `amadeus-state.md` (under its record dir).
 
 You shape this posture the same way you shape any rule, through the
 strict-additive layers from [Rules and the Learning Loop](05-rules-and-the-loop.md):
@@ -108,7 +108,7 @@ heading, opposite recommendation.
 The swarm fans work out across Units, so the question "what can run at once?"
 is decided upstream, in inception, by the `units-generation` stage. That stage
 produces `unit-of-work-dependency.md`
-(`core/aidlc-common/stages/inception/units-generation.md`
+(`core/amadeus-common/stages/inception/units-generation.md`
 declares `produces: unit-of-work-dependency`), and inside that artifact a
 required fenced `yaml` edge block lists every Unit with its `depends_on` list.
 
@@ -213,7 +213,7 @@ shapes.
 Both drivers run the same five per-Unit stages and converge against the same
 project check. The difference is purely how the parallel work is dispatched. The
 runaway backstop lives in the harness's **Stop-hook ceiling**
-(`core/hooks/aidlc-stop.ts`, the `blockCap()` / `defaultBlockCap()` pair, exposed
+(`core/hooks/amadeus-stop.ts`, the `blockCap()` / `defaultBlockCap()` pair, exposed
 as `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`), outside the swarm tool itself. On this
 autonomous-Construction path the default ceiling is **8 blocks** (the interactive
 default is 2; an explicit `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` overrides both). The
@@ -222,7 +222,7 @@ driver seam contract is in
 
 One judgment never moves with the driver: a failure **always halts and
 re-engages the human**, regardless of autonomy mode, per
-`aidlc-common/protocols/stage-protocol.md:125` ("Halt-and-ask on failure"). When
+`amadeus-common/protocols/stage-protocol.md:125` ("Halt-and-ask on failure"). When
 the referee's `finalize` returns its exit-2 envelope, the conductor takes the
 baton back to a human. Hands-off mode removes the happy-path gates while keeping
 the failure halt loud.
@@ -239,11 +239,11 @@ or your project config. You shape Construction without touching code.
 The swarm's machinery is code, and shaping it is the Developer Reference's
 territory:
 
-- **The referee** `aidlc-swarm.ts` — the stateless `prepare` / `check` /
+- **The referee** `amadeus-swarm.ts` — the stateless `prepare` / `check` /
   `finalize` subcommands that fork worktrees, run the verdict, re-verify every
   claimed Unit before merge (the lying-conductor guard), serialise the
   merge-back, and emit the six `SWARM_*` audit events.
-- **The engine** `aidlc-orchestrate.ts` — the deterministic `next` / `report`
+- **The engine** `amadeus-orchestrate.ts` — the deterministic `next` / `report`
   router that decides when a Construction batch is eligible for the swarm.
 - **The Bolt-DAG parser** — the compile step that reads the edge block into
   `runtime-graph.json`.

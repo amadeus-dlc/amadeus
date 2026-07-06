@@ -1,9 +1,9 @@
-// covers: file:aidlc-common/stages/construction/build-and-test.md, file:aidlc-common/stages/construction/ci-pipeline.md, file:aidlc-common/stages/construction/code-generation.md, file:aidlc-common/stages/construction/functional-design.md, file:aidlc-common/stages/construction/infrastructure-design.md, file:aidlc-common/stages/construction/nfr-design.md, file:aidlc-common/stages/construction/nfr-requirements.md, file:aidlc-common/stages/ideation/approval-handoff.md, file:aidlc-common/stages/ideation/feasibility.md, file:aidlc-common/stages/ideation/intent-capture.md, file:aidlc-common/stages/ideation/market-research.md, file:aidlc-common/stages/ideation/rough-mockups.md, file:aidlc-common/stages/ideation/scope-definition.md, file:aidlc-common/stages/ideation/team-formation.md, file:aidlc-common/stages/inception/application-design.md, file:aidlc-common/stages/inception/delivery-planning.md, file:aidlc-common/stages/inception/practices-discovery.md, file:aidlc-common/stages/inception/refined-mockups.md, file:aidlc-common/stages/inception/requirements-analysis.md, file:aidlc-common/stages/inception/reverse-engineering.md, file:aidlc-common/stages/inception/units-generation.md, file:aidlc-common/stages/inception/user-stories.md, file:aidlc-common/stages/initialization/state-init.md, file:aidlc-common/stages/initialization/workspace-detection.md, file:aidlc-common/stages/initialization/workspace-scaffold.md, file:aidlc-common/stages/operation/deployment-execution.md, file:aidlc-common/stages/operation/deployment-pipeline.md, file:aidlc-common/stages/operation/environment-provisioning.md, file:aidlc-common/stages/operation/feedback-optimization.md, file:aidlc-common/stages/operation/incident-response.md, file:aidlc-common/stages/operation/observability-setup.md, file:aidlc-common/stages/operation/performance-validation.md
+// covers: file:amadeus-common/stages/construction/build-and-test.md, file:amadeus-common/stages/construction/ci-pipeline.md, file:amadeus-common/stages/construction/code-generation.md, file:amadeus-common/stages/construction/functional-design.md, file:amadeus-common/stages/construction/infrastructure-design.md, file:amadeus-common/stages/construction/nfr-design.md, file:amadeus-common/stages/construction/nfr-requirements.md, file:amadeus-common/stages/ideation/approval-handoff.md, file:amadeus-common/stages/ideation/feasibility.md, file:amadeus-common/stages/ideation/intent-capture.md, file:amadeus-common/stages/ideation/market-research.md, file:amadeus-common/stages/ideation/rough-mockups.md, file:amadeus-common/stages/ideation/scope-definition.md, file:amadeus-common/stages/ideation/team-formation.md, file:amadeus-common/stages/inception/application-design.md, file:amadeus-common/stages/inception/delivery-planning.md, file:amadeus-common/stages/inception/practices-discovery.md, file:amadeus-common/stages/inception/refined-mockups.md, file:amadeus-common/stages/inception/requirements-analysis.md, file:amadeus-common/stages/inception/reverse-engineering.md, file:amadeus-common/stages/inception/units-generation.md, file:amadeus-common/stages/inception/user-stories.md, file:amadeus-common/stages/initialization/state-init.md, file:amadeus-common/stages/initialization/workspace-detection.md, file:amadeus-common/stages/initialization/workspace-scaffold.md, file:amadeus-common/stages/operation/deployment-execution.md, file:amadeus-common/stages/operation/deployment-pipeline.md, file:amadeus-common/stages/operation/environment-provisioning.md, file:amadeus-common/stages/operation/feedback-optimization.md, file:amadeus-common/stages/operation/incident-response.md, file:amadeus-common/stages/operation/observability-setup.md, file:amadeus-common/stages/operation/performance-validation.md
 //
 // t87 — shipped stage-file COMPARTMENT-HEADER contract. Migrated from
 // tests/unit/t87-stage-compartment-headers.sh (TAP plan 64 — 2 distinct
-// assertions per stage file across the 32 stages under aidlc-common/stages/).
-// The .sh resolved STAGES_DIR = $AIDLC_SRC/aidlc-common/stages and, for every
+// assertions per stage file across the 32 stages under amadeus-common/stages/).
+// The .sh resolved STAGES_DIR = $AIDLC_SRC/amadeus-common/stages and, for every
 // *.md in every phase subdir, asserted that BOTH a "## Sensors" and a
 // "## Learn" H2 heading appear OUTSIDE fenced code blocks. (The .sh's header
 // line called these "compartments"; a heading inside a triple-backtick fence
@@ -21,7 +21,7 @@
 // form the sibling structural twins use (t01-file-structure.test.ts,
 // t04-agent-frontmatter.test.ts). The registry joins on these ids.
 //
-// Subject under test (dist/claude/.claude/aidlc-common/stages/<phase>/<slug>.md):
+// Subject under test (dist/claude/.claude/amadeus-common/stages/<phase>/<slug>.md):
 //   - Each stage file MUST contain a line that is EXACTLY "## Sensors", outside
 //     any triple-backtick fenced code block (the Sensors compartment — where the
 //     stage declares its "sensors:" bindings narrative).
@@ -56,10 +56,10 @@ import { AIDLC_SRC } from "../harness/fixtures.ts";
 
 // AIDLC_SRC === <repo>/dist/claude/.claude — the same tree the .sh resolved as
 // STAGES_DIR's grandparent.
-const STAGES_DIR = join(AIDLC_SRC, "aidlc-common", "stages");
+const STAGES_DIR = join(AIDLC_SRC, "amadeus-common", "stages");
 
 /**
- * Discover every stage .md under aidlc-common/stages/<phase>/, the SAME walk
+ * Discover every stage .md under amadeus-common/stages/<phase>/, the SAME walk
  * the .sh did (its nested globs: for phase_dir in STAGES_DIR/*; for stage_file
  * in phase_dir/*.md). Discovery, not a hard-coded list, so a newly-added stage
  * is automatically held to the contract (and counted by the plan-parity test).

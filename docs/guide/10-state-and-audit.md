@@ -4,9 +4,9 @@ AI-DLC maintains two persistent files that together provide full traceability fr
 
 ---
 
-## State File (`aidlc-state.md`)
+## State File (`amadeus-state.md`)
 
-Each intent has its own state file at `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/aidlc-state.md` (under the intent's record dir) — the single source of truth for that intent's workflow progress. The engine reads the active intent's state file on every session start to determine what has been completed, what is in progress, and what comes next.
+Each intent has its own state file at `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/amadeus-state.md` (under the intent's record dir) — the single source of truth for that intent's workflow progress. The engine reads the active intent's state file on every session start to determine what has been completed, what is in progress, and what comes next.
 
 ### What it contains
 
@@ -34,7 +34,7 @@ Stage progress uses a six-state checkbox notation:
 | `[x]` | Completed |
 | `[S]` | Skipped (scope-excluded, cut via `skip`, or bypassed via `--stage`/`--phase` jump) |
 
-Stages transition through `[ ]` → `[-]` → `[?]` → `[x]` on the happy path. When you reject at the gate, the stage moves to `[R]` while it's revised, back to `[?]` when ready, and finally to `[x]` on approval. `/aidlc --status` reads the checkbox and tells you who's blocking — "Awaiting your approval on \<stage\>" for `[?]`, "Revising \<stage\> (revision N of 3)" for `[R]`.
+Stages transition through `[ ]` → `[-]` → `[?]` → `[x]` on the happy path. When you reject at the gate, the stage moves to `[R]` while it's revised, back to `[?]` when ready, and finally to `[x]` on approval. `/amadeus --status` reads the checkbox and tells you who's blocking — "Awaiting your approval on \<stage\>" for `[?]`, "Revising \<stage\> (revision N of 3)" for `[R]`.
 
 For the canonical state-machine reference (transition tables, audit-event emitters), see [Developer Reference: State Machine](../reference/12-state-machine.md).
 
@@ -160,7 +160,7 @@ The state file and audit trail serve complementary purposes:
 | **Session resume** | Primary source for determining where to continue | Provides the original project description and decision context |
 | **Git policy** | Commit to version control | Commit (per-clone shards under `audit/`; no merge conflicts) |
 
-The orchestrator uses `aidlc-state.md` for all routing decisions. It does not read the `audit/` shards for routing. The audit trail is a traceability record that lets you trace every decision from intent through to production.
+The orchestrator uses `amadeus-state.md` for all routing decisions. It does not read the `audit/` shards for routing. The audit trail is a traceability record that lets you trace every decision from intent through to production.
 
 If the state file is corrupted, you can reconstruct it from the audit trail by reviewing `STAGE_STARTED` and `STAGE_COMPLETED` events. See [Troubleshooting](15-troubleshooting.md) for repair instructions.
 

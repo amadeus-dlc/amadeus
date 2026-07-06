@@ -1,17 +1,17 @@
-// covers: aidlc-graph:loadSensors, aidlc-graph:resolveSensorsForStage,
-//         aidlc-graph:compileStageGraph (sensors_applicable resolution),
-//         aidlc-graph:canonicalStageGraphJson (FIELD_ORDER pin + determinism),
-//         aidlc-graph CLI `compile` / `compile --check` exit-code shell
+// covers: amadeus-graph:loadSensors, amadeus-graph:resolveSensorsForStage,
+//         amadeus-graph:compileStageGraph (sensors_applicable resolution),
+//         amadeus-graph:canonicalStageGraphJson (FIELD_ORDER pin + determinism),
+//         amadeus-graph CLI `compile` / `compile --check` exit-code shell
 //         (Bun.spawnSync env-seam — process.exit boundary only)
 //
 // Bun migration of tests/integration/t89-compile-sensors-applicable.sh (plan 22).
-// The .sh spawned `bun aidlc-graph.ts compile` 11 times and inspected the
+// The .sh spawned `bun amadeus-graph.ts compile` 11 times and inspected the
 // written stage-graph.json with jq. This port IMPORTS the tool and calls
 // compileStageGraph()/loadSensors()/resolveSensorsForStage() directly, then
 // asserts the SAME observable behaviour off the returned { json, stages }.
 //
 // Surface tested (mirrors the .sh header):
-//   - loadSensors() walks AIDLC_SENSORS_DIR, anchored by aidlc-<id>.md.
+//   - loadSensors() walks AIDLC_SENSORS_DIR, anchored by amadeus-<id>.md.
 //   - resolveSensorsForStage looks each stage.sensors[] id up; throws on unknown.
 //   - matches is copied verbatim from the manifest into the resolved entry.
 //   - Manifests without matches produce entries with no matches field.
@@ -34,7 +34,7 @@
 //
 // PARITY NOTE (verified, not assumed): the .sh comment for case 5 claims
 // "schema rejects matches:''". The empty-matches fixture ships ONLY
-// aidlc-linter.md; parseSensorManifest drops matches:"" at parse time
+// amadeus-linter.md; parseSensorManifest drops matches:"" at parse time
 // (scalarField returns "" -> `if (matches !== "")` omits it), so the manifest
 // validates fine as a no-matches manifest. compile actually fails on the SAME
 // unknown-id resolution path as the unknown-id fixture (real stages import
@@ -62,15 +62,15 @@ import {
   type GraphStage,
   loadSensors,
   resolveSensorsForStage,
-} from "../../dist/claude/.claude/tools/aidlc-graph.ts";
-import { parseSensorManifest } from "../../dist/claude/.claude/tools/aidlc-sensor-schema.ts";
+} from "../../dist/claude/.claude/tools/amadeus-graph.ts";
+import { parseSensorManifest } from "../../dist/claude/.claude/tools/amadeus-sensor-schema.ts";
 
 const TOOLS_DIR = join(import.meta.dir, "..", "..", "dist", "claude", ".claude", "tools");
-const GRAPH_TS = join(TOOLS_DIR, "aidlc-graph.ts");
+const GRAPH_TS = join(TOOLS_DIR, "amadeus-graph.ts");
 const SEED_GRAPH = join(TOOLS_DIR, "data", "stage-graph.json");
 const FIXTURES = join(import.meta.dir, "..", "fixtures", "v05-mr7b-sensor-resolution");
 const REAL_STAGES = join(
-  import.meta.dir, "..", "..", "dist", "claude", ".claude", "aidlc-common", "stages",
+  import.meta.dir, "..", "..", "dist", "claude", ".claude", "amadeus-common", "stages",
 );
 
 const BUN = process.execPath; // the bun binary running this test
@@ -144,7 +144,7 @@ describe("t89 sensors_applicable resolution (in-process compileStageGraph)", () 
   test("basic-import: first sensor id+path correct", () => {
     const { stages } = compileWithSensors(join(FIXTURES, "basic-import"));
     const first = stageBySlug(stages, "code-generation").sensors_applicable[0];
-    expect(`${first.id}|${first.path}`).toBe("linter|.claude/sensors/aidlc-linter.md");
+    expect(`${first.id}|${first.path}`).toBe("linter|.claude/sensors/amadeus-linter.md");
   });
 
   // Case 3 (.sh:72-75): matches glob copied verbatim from the manifest.
@@ -183,7 +183,7 @@ describe("t89 sensors_applicable resolution (in-process compileStageGraph)", () 
   test("empty-matches: parseSensorManifest drops matches:\"\" (no matches key)", () => {
     const raw =
       '---\nid: linter\nkind: deterministic\n' +
-      'command: bun .claude/tools/aidlc-sensor.ts fire linter\n' +
+      'command: bun .claude/tools/amadeus-sensor.ts fire linter\n' +
       'default_severity: advisory\ndescription: d\nmatches: ""\n---\n';
     const m = parseSensorManifest(raw);
     expect(Object.hasOwn(m, "matches")).toBe(false);
@@ -296,7 +296,7 @@ describe("t89 sensors_applicable resolution (in-process compileStageGraph)", () 
       copyFileSync(join(FIXTURES, "basic-import", f), join(dir, f));
     }
 
-    const linterPath = join(dir, "aidlc-linter.md");
+    const linterPath = join(dir, "amadeus-linter.md");
     const before = compileWithSensors(dir);
     const beforeGlob = stageBySlug(before.stages, "code-generation").sensors_applicable.find(
       (s) => s.id === "linter",
@@ -415,7 +415,7 @@ describe("t89 CLI exit-code shell (Bun.spawnSync env-seam)", () => {
     expect(seed.status).toBe(0);
 
     // Edit the linter manifest's matches glob; --check should now fail.
-    const linterPath = join(dir, "aidlc-linter.md");
+    const linterPath = join(dir, "amadeus-linter.md");
     const orig = readFileSync(linterPath, "utf-8");
     writeFileSync(linterPath, orig.replace('"**/*.{ts,js}"', '"**/*.{ts,js,jsx}"'));
 

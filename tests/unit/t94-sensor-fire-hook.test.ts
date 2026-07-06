@@ -1,11 +1,11 @@
-// covers: hook:aidlc-sensor-fire
+// covers: hook:amadeus-sensor-fire
 //
 // t94 — unit-level behavioural contract for the PostToolUse sensor-fire hook:
 // every GUARD and EARLY-EXIT branch of its 12-step flow. Migrated from
 // tests/unit/t94-sensor-fire-hook-unit.sh (TAP plan 18). The .sh carried NO
 // `# covers:` header; its subject is the shipped hook
-// dist/claude/.claude/hooks/aidlc-sensor-fire.ts, whose registry unit is
-// `hook:aidlc-sensor-fire` (the same id t95 and t131 credit). t94 is the
+// dist/claude/.claude/hooks/amadeus-sensor-fire.ts, whose registry unit is
+// `hook:amadeus-sensor-fire` (the same id t95 and t131 credit). t94 is the
 // guard/early-exit half (no-spawn proofs + heartbeat placement); t95 is the
 // dispatch/timeout/heartbeat-advance half — complementary subjects, one hook.
 //
@@ -13,27 +13,27 @@
 // script that reads PostToolUse JSON off stdin, resolves CLAUDE_PROJECT_DIR,
 // and terminates with process.exit (hook :53,:63,:67,:74,:85,:90,:98,:104,
 // :123,:166,:177,:180,:185,:269). Its whole contract is process-boundary
-// side-effects: it spawns `bun <proj>/.claude/tools/aidlc-sensor.ts fire <id>
+// side-effects: it spawns `bun <proj>/.claude/tools/amadeus-sensor.ts fire <id>
 // --stage <slug> --output-path <path>` per matching sensor (hook :195-222) and
 // touches the heartbeat sensor-fire.last (hook :134-139). None of that is
 // observable in-process, so every case SPAWNS the real hook via the bun runtime
 // (spawnSync, input: JSON) and asserts on the exit code + the bytes/existence
 // the subprocess leaves behind. spawnCount = all.
 //
-// "No spawn" is proven the same way the .sh proved it: a STUB aidlc-sensor.ts at
-// <proj>/.claude/tools/aidlc-sensor.ts (the exact path the hook joins at :195)
+// "No spawn" is proven the same way the .sh proved it: a STUB amadeus-sensor.ts at
+// <proj>/.claude/tools/amadeus-sensor.ts (the exact path the hook joins at :195)
 // records its argv to T94_SPAWN_LOG. The hook's only spawn target is that path,
 // so the ABSENCE of the log file after a hook run is positive proof the per-entry
 // dispatch loop never fired. The heartbeat file (sensor-fire.last) under
-// aidlc-docs/.aidlc-hooks-health/ is checked directly on disk.
+// amadeus-docs/.amadeus-hooks-health/ is checked directly on disk.
 //
-// SOURCE UNDER TEST (dist/claude/.claude/hooks/aidlc-sensor-fire.ts):
+// SOURCE UNDER TEST (dist/claude/.claude/hooks/amadeus-sensor-fire.ts):
 //   :53      TTY guard — process.stdin.isTTY -> exit 0.
 //   :59-67   stdin parse — malformed JSON / non-hook-shaped input -> exit 0.
 //   :73-74   empty tool_input.file_path -> exit 0.
-//   :81-86   recursion guard — path under aidlc-docs/.aidlc-sensors/ -> exit 0.
+//   :81-86   recursion guard — path under amadeus-docs/.amadeus-sensors/ -> exit 0.
 //   :90      pre-init guard — no audit.md -> exit 0 (BEFORE heartbeat).
-//   :98      state-existence guard — no aidlc-state.md -> exit 0 (BEFORE heartbeat).
+//   :98      state-existence guard — no amadeus-state.md -> exit 0 (BEFORE heartbeat).
 //   :134-139 heartbeat (G3) — writes isoTimestamp() to sensor-fire.last. Placed
 //            AFTER the state guard but BEFORE the active-stage/graph guards,
 //            so it IS written for the "valid-but-no-fire" cases (missing graph,
@@ -45,12 +45,12 @@
 //   :196-199 G1 glob filter — `if (!entry.matches) continue` then
 //            new Bun.Glob(entry.matches).match(filePath) -> a non-matching path
 //            and an entry with no `matches` field both skip the spawn.
-//   loadGraph() honours the AIDLC_STAGE_GRAPH env-var seam (aidlc-graph.ts:160-162)
+//   loadGraph() honours the AIDLC_STAGE_GRAPH env-var seam (amadeus-graph.ts:160-162)
 //   — the seam the synthetic-graph / missing-graph cases inject through.
 //
 // FIXTURE DISCIPLINE (mirrors make_project / make_project_active, .sh:56-104): a
-// fresh temp project with aidlc-docs/, .claude/tools/ + a per-test STUB
-// aidlc-sensor.ts at <proj>/.claude/tools/aidlc-sensor.ts (records argv to
+// fresh temp project with amadeus-docs/, .claude/tools/ + a per-test STUB
+// amadeus-sensor.ts at <proj>/.claude/tools/amadeus-sensor.ts (records argv to
 // T94_SPAWN_LOG). Synthetic stage-graph fixtures are written to temp files and
 // injected via AIDLC_STAGE_GRAPH. All temp dirs cleaned in afterAll; nothing
 // under tests/fixtures/**.
@@ -60,11 +60,11 @@
 //   .sh case 1  TTY/empty-stdin guard -> exit 0               -> "TTY/empty-stdin guard exits 0"
 //   .sh case 2  malformed JSON -> exit 0, no spawn            -> "malformed JSON stdin exits 0 with no spawn"
 //   .sh case 3  valid payload + applicable sensors -> spawn   -> "valid payload + applicable sensors fires the dispatcher"
-//   .sh case 4  recursion guard (.aidlc-sensors/) -> no spawn -> "recursion guard skips writes under .aidlc-sensors/"
+//   .sh case 4  recursion guard (.amadeus-sensors/) -> no spawn -> "recursion guard skips writes under .amadeus-sensors/"
 //   .sh case 5  empty file_path -> no spawn                   -> "empty file_path -> no spawn"
 //   .sh case 6  non-aidlc path -> no glob match -> no spawn   -> "non-aidlc path -> no glob match -> no spawn"
 //   .sh case 7  no audit.md -> exit 0, no heartbeat, no spawn -> "no audit.md -> exit 0, no heartbeat, no spawn"
-//   .sh case 8  no state.md (audit present) -> no heartbeat   -> "no aidlc-state.md -> exit 0, no heartbeat (guard precedes heartbeat)"
+//   .sh case 8  no state.md (audit present) -> no heartbeat   -> "no amadeus-state.md -> exit 0, no heartbeat (guard precedes heartbeat)"
 //   .sh cases 9a/9b (Test Run Mode sensor-fire skip) were DROPPED per #369.
 //   .sh case 10 non-matching path -> heartbeat written        -> "non-matching path -> continues; heartbeat written, no spawn (path filter)"
 //   .sh case 11 heartbeat carries an ISO timestamp            -> "heartbeat file carries an ISO timestamp"
@@ -100,7 +100,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const HOOK = join(AIDLC_SRC, "hooks", "aidlc-sensor-fire.ts");
+const HOOK = join(AIDLC_SRC, "hooks", "amadeus-sensor-fire.ts");
 const FRAMEWORK_GRAPH = join(AIDLC_SRC, "tools", "data", "stage-graph.json");
 
 // ISO-8601-ish prefix the .sh grepped for: YYYY-MM-DDThh:mm:ss... (isoTimestamp
@@ -113,15 +113,15 @@ afterAll(() => {
   for (const d of tempDirs) cleanupTestProject(d);
 });
 
-// P9 per-intent layout: the flat aidlc-docs/ root is retired. The sensor-fire
+// P9 per-intent layout: the flat amadeus-docs/ root is retired. The sensor-fire
 // hook's active-workflow gate resolves state via stateFilePath() and the audit
 // trail via auditFilePath() — both under the active intent's record. So a
 // fixture seeds state into the record (so the cursor resolves) and, for the
 // active-workflow projects, the resolved audit SHARD (pinned clone-id) so the
 // audit gate at :100 passes. The heartbeat/skipped files land under the record's
-// .aidlc-hooks-health/. The sensor `matches` glob in the FRAMEWORK graph is still
-// `**/aidlc-docs/**` (core data, unchanged), so the artifact file_path the hook
-// fires on stays an aidlc-docs/ path — only the state/audit/health roots moved.
+// .amadeus-hooks-health/. The sensor `matches` glob in the FRAMEWORK graph is still
+// `**/amadeus-docs/**` (core data, unchanged), so the artifact file_path the hook
+// fires on stays an amadeus-docs/ path — only the state/audit/health roots moved.
 const PINNED_CLONE_ID = "testcloneid94";
 function pinnedShardName(): string {
   const host =
@@ -134,7 +134,7 @@ function pinnedShardName(): string {
 }
 
 // Stub dispatcher (.sh:66-81): record argv to T94_SPAWN_LOG and exit 0. Written
-// to <proj>/.claude/tools/aidlc-sensor.ts — the path the hook joins at :195 — so
+// to <proj>/.claude/tools/amadeus-sensor.ts — the path the hook joins at :195 — so
 // the real hook spawns OUR stub, and the log file's ABSENCE proves "no spawn".
 const STUB_DISPATCHER = `// @ts-nocheck
 // t94 stub dispatcher: capture argv to T94_SPAWN_LOG and exit 0.
@@ -158,11 +158,11 @@ function makeProject(): string {
   tempDirs.push(proj);
   mkdirSync(join(proj, ".claude", "tools"), { recursive: true });
   writeFileSync(
-    join(proj, ".claude", "tools", "aidlc-sensor.ts"),
+    join(proj, ".claude", "tools", "amadeus-sensor.ts"),
     STUB_DISPATCHER,
     "utf-8",
   );
-  writeFileSync(join(proj, "aidlc", ".aidlc-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(proj, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
   return proj;
 }
 
@@ -190,7 +190,7 @@ function makeProjectActive(): string {
   return proj;
 }
 
-/** Write a minimal aidlc-state.md into the record (the .sh's heredocs). Seeding
+/** Write a minimal amadeus-state.md into the record (the .sh's heredocs). Seeding
  *  state is what makes the active-intent cursor resolve to the record. */
 function seedState(proj: string, body: string): void {
   mkdirSync(seededRecordDir(proj), { recursive: true });
@@ -209,7 +209,7 @@ function spawnLogPath(proj: string): string {
   return join(proj, ".spawn.log");
 }
 function heartbeatPath(proj: string): string {
-  return join(seededRecordDir(proj), ".aidlc-hooks-health", "sensor-fire.last");
+  return join(seededRecordDir(proj), ".amadeus-hooks-health", "sensor-fire.last");
 }
 
 interface HookRun {
@@ -244,12 +244,12 @@ function runHook(
   return { status: res.status ?? -1 };
 }
 
-// A path under the stage's artifact tree that the aidlc-docs glob matches.
+// A path under the stage's artifact tree that the amadeus-docs glob matches.
 function inceptionMd(proj: string): string {
-  return join(proj, "aidlc-docs", "inception", "x.md");
+  return join(proj, "amadeus-docs", "inception", "x.md");
 }
 
-describe("t94 aidlc-sensor-fire hook — guards + early exits (migrated from t94-sensor-fire-hook-unit.sh, plan 18)", () => {
+describe("t94 amadeus-sensor-fire hook — guards + early exits (migrated from t94-sensor-fire-hook-unit.sh, plan 18)", () => {
   // ===========================================================================
   // Step 2-5 — input guards.
   // ===========================================================================
@@ -294,11 +294,11 @@ describe("t94 aidlc-sensor-fire hook — guards + early exits (migrated from t94
   test("valid payload + applicable sensors fires the dispatcher [.sh case 3]", () => {
     const proj = makeProjectActive();
     // requirements-analysis carries two md-glob sensors (required-sections,
-    // upstream-coverage) in the framework graph; an aidlc-docs/**/*.md write
-    // matches **/aidlc-docs/** for both.
+    // upstream-coverage) in the framework graph; an amadeus-docs/**/*.md write
+    // matches **/amadeus-docs/** for both.
     const filePath = join(
       proj,
-      "aidlc-docs",
+      "amadeus-docs",
       "inception",
       "requirements-analysis",
       "intent.md",
@@ -324,12 +324,12 @@ describe("t94 aidlc-sensor-fire hook — guards + early exits (migrated from t94
     ]);
   });
 
-  test("recursion guard skips writes under .aidlc-sensors/ [.sh case 4]", () => {
+  test("recursion guard skips writes under .amadeus-sensors/ [.sh case 4]", () => {
     const proj = makeProjectActive();
     const filePath = join(
       proj,
-      "aidlc-docs",
-      ".aidlc-sensors",
+      "amadeus-docs",
+      ".amadeus-sensors",
       "foo",
       "bar.md",
     );
@@ -358,7 +358,7 @@ describe("t94 aidlc-sensor-fire hook — guards + early exits (migrated from t94
 
   test("non-aidlc path -> no glob match -> no spawn [.sh case 6]", () => {
     const proj = makeProjectActive();
-    // A path outside aidlc-docs/ never matches **/aidlc-docs/**, so the per-entry
+    // A path outside amadeus-docs/ never matches **/amadeus-docs/**, so the per-entry
     // dispatch loop `continue`s on both applicable sensors (:199).
     const r = runHook(proj, join(tmpdir(), "scratch-not-aidlc", "notes.txt"));
     expect(r.status).toBe(0);
@@ -379,7 +379,7 @@ describe("t94 aidlc-sensor-fire hook — guards + early exits (migrated from t94
     expect(existsSync(spawnLogPath(proj))).toBe(false);
   });
 
-  test("no aidlc-state.md -> exit 0, no heartbeat (guard precedes heartbeat) [.sh case 8]", () => {
+  test("no amadeus-state.md -> exit 0, no heartbeat (guard precedes heartbeat) [.sh case 8]", () => {
     const proj = makeProject();
     // audit.md present but state.md absent -> hook :98 exits before the heartbeat.
     seedAudit(proj);
@@ -493,7 +493,7 @@ describe("t94 aidlc-sensor-fire hook — guards + early exits (migrated from t94
           name: "Requirements Analysis",
           phase: "inception",
           execution: "ALWAYS",
-          lead_agent: "aidlc-product-agent",
+          lead_agent: "amadeus-product-agent",
           support_agents: [],
           mode: "inline",
           produces: [],
@@ -505,7 +505,7 @@ describe("t94 aidlc-sensor-fire hook — guards + early exits (migrated from t94
           sensors_applicable: [
             {
               id: "no-matches-sensor",
-              path: ".claude/sensors/aidlc-no-matches-sensor.md",
+              path: ".claude/sensors/amadeus-no-matches-sensor.md",
             },
           ],
         },

@@ -1,8 +1,8 @@
-// covers: subcommand:aidlc-utility:init, scope:bugfix
+// covers: subcommand:amadeus-utility:init, scope:bugfix
 //
 // t55-workflow-init-then-resume.test.ts — SDK-harness port of
 // tests/e2e/t55-workflow-init-then-resume.sh (plan 8). Drives TWO real
-// sequential SDK turns — `/aidlc --init` then `/aidlc --scope bugfix` — against
+// sequential SDK turns — `/amadeus --init` then `/amadeus --scope bugfix` — against
 // ONE fresh project and asserts ONLY on deterministic surfaces (the on-disk
 // state-file fields/stage markers across both turns, the audit growth) — NEVER on
 // assistantText. The subject is SESSION CONTINUITY: the 2nd turn RESUMES from the
@@ -26,9 +26,9 @@
 // left to assert. Dropping it here loses no coverage: the field is gone from
 // the engine entirely.
 //
-// THE JOURNEY (verified against the SHIPPED tool). Turn 1 `/aidlc --init` on a
-// fresh `--no-aidlc-docs` project writes aidlc-state.md with the 3 init stages [x]
-// + audit WORKFLOW_STARTED/init events. Turn 2 `/aidlc --scope bugfix` on the
+// THE JOURNEY (verified against the SHIPPED tool). Turn 1 `/amadeus --init` on a
+// fresh `--no-amadeus-docs` project writes amadeus-state.md with the 3 init stages [x]
+// + audit WORKFLOW_STARTED/init events. Turn 2 `/amadeus --scope bugfix` on the
 // now-stateful project resumes (no re-init — init would refuse without --force):
 // the 1st turn's init [x] markers persist, and the audit grows with the 2nd
 // session's events. (We use the explicit `--scope bugfix` flag rather than a bare
@@ -55,12 +55,12 @@
 //
 // Known-answer literals (read from the SHIPPED tool, not guessed):
 //   - --init / --scope dispatch:  SKILL.md (init / known-scope routing)
-//   - re-init refusal on state:   aidlc-utility.ts:1746 (resume, not re-init, in turn 2)
-//   - init-stage [x] markers:     aidlc-utility.ts:1995-1998
-//   - State initialized summary:  aidlc-utility.ts:2154
+//   - re-init refusal on state:   amadeus-utility.ts:1746 (resume, not re-init, in turn 2)
+//   - init-stage [x] markers:     amadeus-utility.ts:1995-1998
+//   - State initialized summary:  amadeus-utility.ts:2154
 //   - explicit --scope wins:      SKILL.md:105
 //
-// It SPENDS TOKENS — driveAidlc drives the real /aidlc on Opus/Bedrock TWICE.
+// It SPENDS TOKENS — driveAidlc drives the real /amadeus on Opus/Bedrock TWICE.
 // Known LLM-tier flake + one of the slowest (memory) — re-run alone if loaded.
 // Generous per-test timeout covering both turns; the driver aborts a hair early
 // so a stuck run surfaces a partial DriveResult, not a hang.
@@ -93,7 +93,7 @@ const INIT_STATE_SUMMARY = "State initialized:"; // utility.ts:2154
 const STOP_AFTER_INIT = { toolName: "Bash", resultIncludes: INIT_STATE_SUMMARY } as const;
 const INIT_STAGES = ["workspace-scaffold", "workspace-detection", "state-init"];
 
-describe("t55 /aidlc birth (--scope bugfix) then resume continuity (sdk)", () => {
+describe("t55 /amadeus birth (--scope bugfix) then resume continuity (sdk)", () => {
   // -------------------------------------------------------------------------
   // Two sequential turns against one fresh project: turn 1 births the workflow
   // from a scope (P4 retired --init — a scope on a clean workspace auto-births),
@@ -106,20 +106,20 @@ describe("t55 /aidlc birth (--scope bugfix) then resume continuity (sdk)", () =>
       const proj = setupIntegrationProject({ noAidlcDocs: true });
       try {
         // P4: birth writes per-intent — state at the active intent's record dir
-        // (aidlc/spaces/<space>/intents/<slug>-<id8>/aidlc-state.md) and audit as
-        // per-clone shards under <record>/audit/, NOT the flat aidlc-docs/. Resolve
+        // (aidlc/spaces/<space>/intents/<slug>-<id8>/amadeus-state.md) and audit as
+        // per-clone shards under <record>/audit/, NOT the flat amadeus-docs/. Resolve
         // both lazily (the cursors only exist after birth) via the record-aware
         // harness helpers, which fall back to flat for a not-yet-born project.
         const statePath = () => stateFilePathFor(proj);
         const auditDir = () => auditDirFor(proj);
 
-        // ---- Turn 1: /aidlc --scope bugfix (BIRTH the workflow) ----
-        // P4 retired `/aidlc --init`: on a fresh workspace the engine auto-births
+        // ---- Turn 1: /amadeus --scope bugfix (BIRTH the workflow) ----
+        // P4 retired `/amadeus --init`: on a fresh workspace the engine auto-births
         // the first intent from a resolved scope (the old --init had no scope and
         // now errors directing the user to a scope/description). A named scope on a
         // clean workspace NAMES intent-birth, which scaffolds state + marks the 3
         // init stages [x] — the birth this journey starts from.
-        const r1 = await driveAidlc("/aidlc --scope bugfix", {
+        const r1 = await driveAidlc("/amadeus --scope bugfix", {
           projectDir: proj,
           answerScript: "default",
           timeoutMs: DRIVE_TIMEOUT_MS,
@@ -141,11 +141,11 @@ describe("t55 /aidlc birth (--scope bugfix) then resume continuity (sdk)", () =>
         const initEventCount = eventsAfterInit.length;
         expect(initEventCount).toBeGreaterThan(0);
 
-        // ---- Turn 2: /aidlc --scope bugfix (RESUME from the init state) ----
+        // ---- Turn 2: /amadeus --scope bugfix (RESUME from the init state) ----
         // A --scope on an already-stateful project resumes (init refuses re-init
         // without --force, utility.ts:1746). Stop at the first orchestrator
         // directive (run-stage) so we don't chase the LLM-paced continuation.
-        const r2 = await driveAidlc("/aidlc --scope bugfix", {
+        const r2 = await driveAidlc("/amadeus --scope bugfix", {
           projectDir: proj,
           answerScript: "default",
           timeoutMs: DRIVE_TIMEOUT_MS,

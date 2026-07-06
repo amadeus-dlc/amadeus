@@ -1,4 +1,4 @@
-// covers: cli:aidlc-bolt(complete-merge,abort-discard), cli:aidlc-runtime(compile), cli:aidlc-worktree(create), cli:aidlc-audit(append), function:auditLockDir
+// covers: cli:amadeus-bolt(complete-merge,abort-discard), cli:amadeus-runtime(compile), cli:amadeus-worktree(create), cli:amadeus-audit(append), function:auditLockDir
 //
 // t49 — Integration: Bolt fork/merge for runtime-graph + parallel instances[]
 // + failure-mode coverage (v0.5.0 milestone 11). Migrated from
@@ -7,37 +7,37 @@
 // body exercises end-to-end.
 //
 // Mechanism: cli. This is a full real-tool flow — it drives `git worktree`,
-// `aidlc-worktree create`, `aidlc-bolt start --worktree`, `aidlc-bolt complete
-// --merge`, `aidlc-bolt abort --discard`, and `aidlc-runtime compile` as real
-// subprocesses, then asserts on the file side-effects (aidlc-docs/audit.md,
-// aidlc-docs/runtime-graph.json) and process boundaries (exit codes, stderr
+// `amadeus-worktree create`, `amadeus-bolt start --worktree`, `amadeus-bolt complete
+// --merge`, `amadeus-bolt abort --discard`, and `amadeus-runtime compile` as real
+// subprocesses, then asserts on the file side-effects (amadeus-docs/audit.md,
+// amadeus-docs/runtime-graph.json) and process boundaries (exit codes, stderr
 // envelopes). An in-process twin would lose the spawn chain
 // handleComplete -> spawnSibling(state-merge) -> spawnSibling(audit-merge) ->
 // spawnSibling(fragment-merge) that every failure-ordering assertion depends
 // on, and the AIDLC_AUDIT_LOCK_RETRIES env-seam (case 6). So everything stays
 // spawned, exactly as the .sh ran it. spawnCount = all.
 //
-// IMPORTANT cwd contract (same as the .sh, t49:99-126): aidlc-worktree.ts's
-// assertNotSiblingWorktree (aidlc-worktree.ts:101-121) checks
+// IMPORTANT cwd contract (same as the .sh, t49:99-126): amadeus-worktree.ts's
+// assertNotSiblingWorktree (amadeus-worktree.ts:101-121) checks
 // `git rev-parse --show-toplevel` against `git rev-parse --git-common-dir`'s
 // parent — i.e. against CWD, not --project-dir. Running from this test's cwd
 // would trip the sibling-worktree refusal. So every worktree/bolt spawn runs
 // with `cwd: proj` (the .sh did `(cd "$1" && bun ... )`).
 //
 // Source under test:
-//   - dist/claude/.claude/tools/aidlc-bolt.ts handleComplete (:307) — the
+//   - dist/claude/.claude/tools/amadeus-bolt.ts handleComplete (:307) — the
 //     merge chain ordering: BOLT_COMPLETED emit (:354) → state-merge (:371) →
 //     audit-merge (:390) → fragment-merge (:412). Each step's failure calls
 //     failBolt (BOLT_FAILED recovery row) + failJson (envelope + exit 1).
-//   - aidlc-bolt.ts handleAbort (:498) — abort --discard tears down the
+//   - amadeus-bolt.ts handleAbort (:498) — abort --discard tears down the
 //     worktree then emits BOLT_FAILED (Reason: aborted).
-//   - aidlc-runtime.ts compile populator (:401-551) — instances[] detection
+//   - amadeus-runtime.ts compile populator (:401-551) — instances[] detection
 //     (≥2 distinct Bolt slug STATE_FORKED rows in window), alphabetical sort
 //     (:486), per-instance outcome (STATE_MERGED→approved, else BOLT_FAILED→
 //     failed, else pending, :504-508), parent rollup (anyFailed→failed,
 //     :527), per-instance sensor_firings:[] forward-noted gap (:518).
-//   - aidlc-lib.ts auditLockDir (:512) — md5(projectDir).slice(0,8) prefixed
-//     `.aidlc-audit-` + `.lock` under tmpdir; the directory whose presence
+//   - amadeus-lib.ts auditLockDir (:512) — md5(projectDir).slice(0,8) prefixed
+//     `.amadeus-audit-` + `.lock` under tmpdir; the directory whose presence
 //     case 6 plants to force a lock-acquire failure.
 //
 // Old TAP -> new test parity (1:1, every .sh `ok` -> a named test()):
@@ -72,9 +72,9 @@ import {
   DEFAULT_SPACE,
   FIXTURES_DIR,
 } from "../harness/fixtures.ts";
-import { auditLockDir } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { auditLockDir } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
-// The per-intent record dir the inline git project seeds (was flat aidlc-docs/).
+// The per-intent record dir the inline git project seeds (was flat amadeus-docs/).
 function recordDir(proj: string): string {
   return join(proj, "aidlc", "spaces", DEFAULT_SPACE, "intents", DEFAULT_RECORD_DIR);
 }
@@ -91,10 +91,10 @@ function readMainAudit(proj: string): string {
 }
 
 const BUN = process.execPath; // the bun running this test
-const WORKTREE_TOOL = join(AIDLC_SRC, "tools", "aidlc-worktree.ts");
-const BOLT_TOOL = join(AIDLC_SRC, "tools", "aidlc-bolt.ts");
-const RUNTIME_TOOL = join(AIDLC_SRC, "tools", "aidlc-runtime.ts");
-const AUDIT_TOOL = join(AIDLC_SRC, "tools", "aidlc-audit.ts");
+const WORKTREE_TOOL = join(AIDLC_SRC, "tools", "amadeus-worktree.ts");
+const BOLT_TOOL = join(AIDLC_SRC, "tools", "amadeus-bolt.ts");
+const RUNTIME_TOOL = join(AIDLC_SRC, "tools", "amadeus-runtime.ts");
+const AUDIT_TOOL = join(AIDLC_SRC, "tools", "amadeus-audit.ts");
 
 const tempProjects: string[] = [];
 
@@ -199,7 +199,7 @@ const fragPath = (proj: string, slug: string): string =>
  * make_proj (t49:68-97). Returns the canonical project root.
  */
 function makeProj(): string {
-  let proj = mkdtempSync(join(process.env.TMPDIR || tmpdir(), "aidlc-t49-"));
+  let proj = mkdtempSync(join(process.env.TMPDIR || tmpdir(), "amadeus-t49-"));
   try {
     proj = realpathSync(proj);
   } catch {
@@ -215,7 +215,7 @@ function makeProj(): string {
   git(["init", "-q"]);
   git(["symbolic-ref", "HEAD", "refs/heads/main"]);
   writeFileSync(join(proj, "README.md"), "seed\n");
-  // Seed the PER-INTENT workspace layout (the flat aidlc-docs/ root is retired).
+  // Seed the PER-INTENT workspace layout (the flat amadeus-docs/ root is retired).
   // The record state + intents.json are COMMITTED so the git worktree (branched
   // from main) carries them; the active-intent cursor + audit shards / runtime
   // graph stay gitignored (per-user / machine-local), so a worktree resolves the
@@ -224,7 +224,7 @@ function makeProj(): string {
   mkdirSync(recordDir(proj), { recursive: true });
   mkdirSync(join(proj, "aidlc", "spaces", DEFAULT_SPACE, "memory"), { recursive: true });
   writeFileSync(
-    join(recordDir(proj), "aidlc-state.md"),
+    join(recordDir(proj), "amadeus-state.md"),
     readFileSync(join(FIXTURES_DIR, "state-construction.md"), "utf-8"),
   );
   writeFileSync(
@@ -247,10 +247,10 @@ function makeProj(): string {
     join(proj, ".gitignore"),
     [
       "aidlc/active-space",
-      "aidlc/.aidlc-clone-id",
+      "aidlc/.amadeus-clone-id",
       "aidlc/spaces/*/intents/active-intent",
       "aidlc/spaces/*/intents/*/runtime-graph.json",
-      "aidlc/spaces/*/intents/*/.aidlc-*",
+      "aidlc/spaces/*/intents/*/.amadeus-*",
       "aidlc/spaces/*/intents/*/audit/",
       "",
     ].join("\n"),
@@ -318,29 +318,29 @@ describe("t49 Bolt fork/merge runtime-graph + failure modes (migrated from t49-b
     const payWt = join(batchProj, ".aidlc", "worktrees", "bolt-pay");
     // Pin the worktree append to the SAME per-clone shard audit-fork wrote (and
     // audit-merge later reads): copy the MAIN clone-id token into the worktree's
-    // gitignored aidlc/.aidlc-clone-id so auditShardName(payWt) resolves the
+    // gitignored aidlc/.amadeus-clone-id so auditShardName(payWt) resolves the
     // main-token shard. Without this the worktree mints its OWN clone-id → the
     // SENSOR rows land in a sibling shard audit-merge never reads, and the rows
     // never reach main (audit-merge merges only the single main-token shard's
     // post-fork delta). This is the per-clone-shard analog of the old flat layout,
     // where the worktree had ONE audit.md both the fork-copy and the append shared.
     const mainCloneId = readFileSync(
-      join(batchProj, "aidlc", ".aidlc-clone-id"),
+      join(batchProj, "aidlc", ".amadeus-clone-id"),
       "utf-8",
     );
     mkdirSync(join(payWt, "aidlc"), { recursive: true });
-    writeFileSync(join(payWt, "aidlc", ".aidlc-clone-id"), mainCloneId, "utf-8");
+    writeFileSync(join(payWt, "aidlc", ".amadeus-clone-id"), mainCloneId, "utf-8");
     auditAppend(payWt, "SENSOR_FIRED", [
       ["Sensor", "required-sections"],
       ["Stage", "code-generation"],
-      ["Output path", "aidlc-docs/some-output.md"],
+      ["Output path", "amadeus-docs/some-output.md"],
       ["Bolt slug", "pay"],
     ]);
     auditAppend(payWt, "SENSOR_FAILED", [
       ["Sensor", "required-sections"],
       ["Stage", "code-generation"],
-      ["Output path", "aidlc-docs/some-output.md"],
-      ["Detail path", "aidlc-docs/.aidlc-sensors/required-sections-fail.txt"],
+      ["Output path", "amadeus-docs/some-output.md"],
+      ["Detail path", "amadeus-docs/.amadeus-sensors/required-sections-fail.txt"],
       ["Bolt slug", "pay"],
     ]);
 
@@ -437,7 +437,7 @@ describe("t49 Bolt fork/merge runtime-graph + failure modes (migrated from t49-b
     expect(wtCreate(proj, "solo").status).toBe(0);
     expect(boltStart(proj, "solo").status).toBe(0);
 
-    // Plant the exact lock-dir path aidlc-lib.ts auditLockDir() computes. The
+    // Plant the exact lock-dir path amadeus-lib.ts auditLockDir() computes. The
     // merge keys the PER-INTENT bucket (the active-intent cursor resolves the lone
     // seeded record), NOT the workspace sentinel — they hash to distinct dirs, so
     // a sentinel lock would not block the per-intent state-merge. STRONGER than the

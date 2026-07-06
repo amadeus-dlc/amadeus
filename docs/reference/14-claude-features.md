@@ -19,10 +19,10 @@ harness parameter. Add a column when you port to a new harness.
 
 | AI-DLC Concept | Claude Code | Kiro CLI | Codex CLI |
 |----------------|-------------|----------|-----------|
-| **Orchestrator entry** (`/aidlc` + runners) | Skills (`/aidlc`) | Skills (`/aidlc`) | Skills (`$aidlc`) |
+| **Orchestrator entry** (`/amadeus` + runners) | Skills (`/amadeus`) | Skills (`/amadeus`) | Skills (`$amadeus`) |
 | **Agent personas** (11 domain experts) | `.claude/agents/*.md` | `.kiro/agents/*.json` + persona `.md` | `.agents/` TOMLs |
-| **Automation** (audit, state, tracking) | Hooks via `settings.json` | Hooks via `agents/aidlc.json` | Hooks via `.codex/hooks.json` (one adapter) |
-| **Standing rules** (the layer chain) | `aidlc/spaces/<space>/memory/` (via `.claude/rules/aidlc.md` @-import stub) | `aidlc/spaces/<space>/memory/` (via Kiro resources glob) | `aidlc/spaces/<space>/memory/` (via `AIDLC_RULES_DIR`) |
+| **Automation** (audit, state, tracking) | Hooks via `settings.json` | Hooks via `agents/amadeus.json` | Hooks via `.codex/hooks.json` (one adapter) |
+| **Standing rules** (the layer chain) | `aidlc/spaces/<space>/memory/` (via `.claude/rules/amadeus.md` @-import stub) | `aidlc/spaces/<space>/memory/` (via Kiro resources glob) | `aidlc/spaces/<space>/memory/` (via `AIDLC_RULES_DIR`) |
 | **Project onboarding doc** | `CLAUDE.md` | `AGENTS.md` | `AGENTS.md` |
 | **Permissions / config** | `.claude/settings.json` | `.kiro/settings/cli.json` + agent config | `.codex/config.toml` (+ Starlark `rules/`) |
 
@@ -49,11 +49,11 @@ primitives in the table above; where a mechanic is Claude-only (the
 
 ### SKILL.md as Entry Point
 
-The orchestrator lives at `.claude/skills/aidlc/SKILL.md`. Users invoke it with the `/aidlc` command. The file uses YAML frontmatter to declare metadata:
+The orchestrator lives at `.claude/skills/amadeus/SKILL.md`. Users invoke it with the `/amadeus` command. The file uses YAML frontmatter to declare metadata:
 
 ```yaml
 ---
-name: aidlc
+name: amadeus
 description: >
   AI-DLC workflow orchestrator. Start, resume, or manage an AI-driven
   development lifecycle.
@@ -66,12 +66,12 @@ The orchestrator's frontmatter carries no `hooks:` block. As of v0.6.0 every fra
 
 | Field | Purpose |
 |-------|---------|
-| `name` | Registers the skill as `/aidlc` in Claude Code's command system |
+| `name` | Registers the skill as `/amadeus` in Claude Code's command system |
 | `description` | Displayed in skill discovery and help text |
-| `argument-hint` | Placeholder text shown after `/aidlc` to indicate accepted arguments |
+| `argument-hint` | Placeholder text shown after `/amadeus` to indicate accepted arguments |
 | `user-invocable` | Set to `true` so the user can trigger it directly |
 
-The body of SKILL.md is a thin forwarding loop — the conductor. It calls the orchestration engine (`aidlc-orchestrate next`), acts on the typed directive it returns (run a stage, ask a question, fan out a swarm), reports the outcome (`report`), and repeats. The between-stage decisions — session detection, scope-to-stage mapping, the stage graph, routing, and stage advancement — live in the engine and the compiled data it reads (`tools/data/stage-graph.json`, `scope-grid.json`), not in this file. See [Engine and Skill System](17-skill-system.md).
+The body of SKILL.md is a thin forwarding loop — the conductor. It calls the orchestration engine (`amadeus-orchestrate next`), acts on the typed directive it returns (run a stage, ask a question, fan out a swarm), reports the outcome (`report`), and repeats. The between-stage decisions — session detection, scope-to-stage mapping, the stage graph, routing, and stage advancement — live in the engine and the compiled data it reads (`tools/data/stage-graph.json`, `scope-grid.json`), not in this file. See [Engine and Skill System](17-skill-system.md).
 
 ### Project-Wide Hooks
 
@@ -79,7 +79,7 @@ All framework hooks are registered project-wide in `settings.json` (the workflow
 
 ### Companion Files
 
-SKILL.md references two companion file sets in `.claude/skills/aidlc/`:
+SKILL.md references two companion file sets in `.claude/skills/amadeus/`:
 
 - **`stage-protocol.md`** -- Mandatory protocol for all 32 stages (approval gates, question formatting, audit logging rules, completion messages, phase-boundary verification).
 - **Stage files** in `stages/initialization/`, `stages/ideation/`, `stages/inception/`, `stages/construction/`, `stages/operation/` -- 32 individual stage definitions.
@@ -106,10 +106,10 @@ The conductor delegates to a separate Claude instance via the Claude Code Task t
 
 | Stage | Claude Code Subagent Type | Agent | Reason |
 |-------|---------------------------|-------|--------|
-| 2.1 Reverse Engineering | `aidlc-developer-agent` then `aidlc-architect-agent` (two-step) | aidlc-developer-agent + aidlc-architect-agent | Deep code analysis produces large intermediate output |
-| 3.5 Code Generation | `aidlc-developer-agent` | aidlc-developer-agent | Code writing benefits from clean context focused on the unit specification |
+| 2.1 Reverse Engineering | `amadeus-developer-agent` then `amadeus-architect-agent` (two-step) | amadeus-developer-agent + amadeus-architect-agent | Deep code analysis produces large intermediate output |
+| 3.5 Code Generation | `amadeus-developer-agent` | amadeus-developer-agent | Code writing benefits from clean context focused on the unit specification |
 
-Workspace detection (0.2) used to be a subagent; it now runs deterministically inside `aidlc-utility init`.
+Workspace detection (0.2) used to be a subagent; it now runs deterministically inside `amadeus-utility init`.
 
 ### Model Overrides
 
@@ -124,7 +124,7 @@ Workspace detection (0.2) used to be a subagent; it now runs deterministically i
 
 ### The layered rule files
 
-This implementation reads behavioral rules from the space memory layer at `aidlc/spaces/<space>/memory/`, pulled into Claude's context via the `.claude/rules/aidlc.md` @-import stub. One file per layer of the inheritance chain:
+This implementation reads behavioral rules from the space memory layer at `aidlc/spaces/<space>/memory/`, pulled into Claude's context via the `.claude/rules/amadeus.md` @-import stub. One file per layer of the inheritance chain:
 
 ```
 aidlc/spaces/<space>/memory/
@@ -140,17 +140,17 @@ aidlc/spaces/<space>/memory/
 
 Each file carries topical `##` headings (Way of Working, Testing Posture, Deployment, Code Style, Forbidden, Mandated, and so on). At workflow start the compile resolver walks the chain **org → team → project → phase → stage** and bakes the resolved rule set onto each stage's graph node. The model is **strict-additive**: every applicable rule from every layer appears in the agent's context simultaneously — a narrower layer never silently overrides a broader one. A rule that would *contradict* a broader-scope rule is rejected at the admission gate when it is written, not reconciled at runtime. The authoritative layout, scope derivation, and conflict semantics are in [Rule System](08-rule-system.md).
 
-**Why the org/team files stay lean:** Claude Code loads the space memory files (via the `.claude/rules/aidlc.md` @-import stub) into each conversation, including non-AI-DLC ones. Keeping the shipped layers to concise, topical structure avoids polluting regular development sessions. Detailed methodology that the upstream specification places in rules instead lives in `.claude/knowledge/aidlc-shared/` or in SKILL.md and stage-protocol.md, loaded only when `/aidlc` is active.
+**Why the org/team files stay lean:** Claude Code loads the space memory files (via the `.claude/rules/amadeus.md` @-import stub) into each conversation, including non-AI-DLC ones. Keeping the shipped layers to concise, topical structure avoids polluting regular development sessions. Detailed methodology that the upstream specification places in rules instead lives in `.claude/knowledge/amadeus-shared/` or in SKILL.md and stage-protocol.md, loaded only when `/amadeus` is active.
 
 ### The Learning Loop
 
 The rule files are not static — the v0.5.0 learning loop turns an in-workflow correction into a standing rule for next time. The division of labor is deliberate: the LLM's only job is to write observations to the stage's `memory.md` diary while the stage runs (Interpretations / Deviations / Tradeoffs / Open questions). Everything else is a deterministic tool or a human decision:
 
 1. **Diary (LLM).** During the stage, observations accumulate in the intent's record dir at `<record>/<phase>/<stage>/memory.md` (`<record>/` = `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`).
-2. **Surface (tool).** At the approval gate, `aidlc-learnings.ts surface` reads the diary and emits structured candidates — the LLM does not re-parse or classify.
+2. **Surface (tool).** At the approval gate, `amadeus-learnings.ts surface` reads the diary and emits structured candidates — the LLM does not re-parse or classify.
 3. **Confirm (human).** The conductor renders the candidates; you pick which to keep and, for free-text additions, pick the single heading that derives the destination.
 4. **Admission check (knowledge).** Each kept learning is checked against `org.md`'s matching section; a contradiction is surfaced for you to revise, skip, or escalate.
-5. **Persist (tool).** `aidlc-learnings.ts persist` writes each confirmed learning as a practice to `aidlc/spaces/<space>/memory/{project,team}.md` as dated entries and, for a sensor-binding learning, installs the manifest plus the stage `sensors:` import inside one locked transaction. It emits `RULE_LEARNED` / `SENSOR_PROPOSED`.
+5. **Persist (tool).** `amadeus-learnings.ts persist` writes each confirmed learning as a practice to `aidlc/spaces/<space>/memory/{project,team}.md` as dated entries and, for a sensor-binding learning, installs the manifest plus the stage `sensors:` import inside one locked transaction. It emits `RULE_LEARNED` / `SENSOR_PROPOSED`.
 
 The user-facing walk-through (with a worked example) is in [Rules and the Learning Loop](../guide/09-rules-and-the-learning-loop.md); the harness-engineer authoring angle is in [Rules and the Learning Loop](../harness-engineering/05-rules-and-the-loop.md).
 
@@ -169,19 +169,19 @@ The user-facing walk-through (with a worked example) is in [Rules and the Learni
 | Prerequisites | `bun` (only runtime dependency); `mkdir`-based locking |
 | AI-DLC Structure | Skill, agent, rules, knowledge, and hook locations |
 | Conventions | Artifacts go to the intent's record dir under `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`; application code goes to workspace root |
-| Session Resumption | Check for `aidlc-state.md` on startup, offer resume options |
+| Session Resumption | Check for `amadeus-state.md` on startup, offer resume options |
 | Git Integration | Commit policy (see below) |
 
 ### Git Integration
 
 ```
 Commit: aidlc/ workspace (memory layer, intents registry, per-intent
-        aidlc-state.md, audit/ shards, and stage artifacts)
+        amadeus-state.md, audit/ shards, and stage artifacts)
 Gitignore:
   - aidlc/active-space, aidlc/spaces/*/intents/active-intent  (per-user cursors)
-  - aidlc/.aidlc-clone-id, aidlc/.aidlc-sessions/             (machine-local)
+  - aidlc/.amadeus-clone-id, aidlc/.amadeus-sessions/             (machine-local)
   - aidlc/spaces/*/intents/*/runtime-graph.json              (re-derivable)
-  - aidlc/spaces/*/intents/*/.aidlc-*                          (incl. .aidlc-recovery.md)
+  - aidlc/spaces/*/intents/*/.amadeus-*                          (incl. .amadeus-recovery.md)
 ```
 
 The audit trail is committed as **per-clone shards** (`audit/<host>-<clone>.md`): each clone appends to its own shard, so concurrent appends never git-conflict. Per-user session cursors and machine-local derived state are ignored.
@@ -212,7 +212,7 @@ Without this, Claude Code would prompt "Allow this tool?" on each first use, dis
 ```json
 "statusLine": {
   "type": "command",
-  "command": "bun $CLAUDE_PROJECT_DIR/.claude/hooks/aidlc-statusline.ts"
+  "command": "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-statusline.ts"
 }
 ```
 
@@ -226,20 +226,20 @@ Runs periodically (not just on tool use) to keep the terminal status current.
     "matcher": "",
     "hooks": [{
       "type": "command",
-      "command": "bun $CLAUDE_PROJECT_DIR/.claude/hooks/aidlc-session-start.ts"
+      "command": "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-session-start.ts"
     }]
   }],
   "SessionEnd": [{
     "matcher": "",
     "hooks": [{
       "type": "command",
-      "command": "bun $CLAUDE_PROJECT_DIR/.claude/hooks/aidlc-session-end.ts"
+      "command": "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-session-end.ts"
     }]
   }]
 }
 ```
 
-Registered in `settings.json` (project-wide) — as are all framework hooks since the v0.6.0 hooks-move. Session lifecycle events must be project-wide regardless, because they fire before `/aidlc` activates and after it exits: `session-start.ts` injects resume context, `session-end.ts` emits `SESSION_ENDED` for audit completeness.
+Registered in `settings.json` (project-wide) — as are all framework hooks since the v0.6.0 hooks-move. Session lifecycle events must be project-wide regardless, because they fire before `/amadeus` activates and after it exits: `session-start.ts` injects resume context, `session-end.ts` emits `SESSION_ENDED` for audit completeness.
 
 ### Personal Settings Override
 
@@ -335,8 +335,8 @@ An MCP server appearing in the session is a function of `.mcp.json` plus availab
 |---------|---------|---------------|------|
 | CLAUDE.md | `.claude/CLAUDE.md` | Every conversation | Bootstrap: structure, prerequisites, conventions |
 | Settings | `.claude/settings.json` | Every conversation | Pre-approve Claude Code tools |
-| Rules | `aidlc/spaces/<space>/memory/*.md` (via `.claude/rules/aidlc.md` @-stub) | Every conversation | Minimal guardrails; self-learning corrections |
-| Skill | `.claude/skills/aidlc/SKILL.md` | On `/aidlc` invocation | Orchestrator: session, scope, stage graph, delegation |
+| Rules | `aidlc/spaces/<space>/memory/*.md` (via `.claude/rules/amadeus.md` @-stub) | Every conversation | Minimal guardrails; self-learning corrections |
+| Skill | `.claude/skills/amadeus/SKILL.md` | On `/amadeus` invocation | Orchestrator: session, scope, stage graph, delegation |
 | Workflow-spine hooks | `.claude/settings.json` | Always on; self-gate when no workflow | PostToolUse, PreCompact, SubagentStop, Stop |
 | Agents (inline) | `.claude/agents/*.md` | Persona activation | 30 of 32 stages: conductor adopts agent persona |
 | Agents (subagent) | `.claude/agents/*.md` | Task tool delegation | 2 stages (2.1, 3.5): isolated execution |
@@ -344,12 +344,12 @@ An MCP server appearing in the session is a function of `.mcp.json` plus availab
 | Knowledge (Tier 2) | space-level `aidlc/knowledge/` (sibling of `intents/`) | Persona activation (steps 4-5) | Team-managed customization |
 | Stage protocol | `stage-protocol.md` | Every stage execution | Mandatory behavioral contract |
 | Stage files | `stages/**/*.md` | Engine routing | 32 individual stage definitions |
-| State file | `aidlc-state.md` | Session start + throughout | Persistent workflow state |
+| State file | `amadeus-state.md` | Session start + throughout | Persistent workflow state |
 | Audit file | `audit.md` | Throughout execution | Append-only audit trail |
 
 ### Loading Sequence
 
-When a user runs `/aidlc feature`:
+When a user runs `/amadeus feature`:
 
 ```
 1.  CLAUDE.md loads              (every conversation)
@@ -358,16 +358,16 @@ When a user runs `/aidlc feature`:
 2a. SessionStart hook fires      (settings.json -- if session resume)
 3.  memory/ rules load            (every conversation)
 4.  SKILL.md activates           (skill invocation -- the conductor)
-5.  Conductor calls the engine   (`aidlc-orchestrate next $ARGUMENTS`)
+5.  Conductor calls the engine   (`amadeus-orchestrate next $ARGUMENTS`)
 6.  Engine reads state + graph   (decides the move, emits a typed directive)
 7.  Conductor acts on directive  (run-stage: load agent .md + knowledge, run the body)
 8.  Stage executes               (stage work)
 9.  Hooks fire as needed         (Claude Code tool calls, compaction, subagent stop)
-10. Conductor reports the outcome (`aidlc-orchestrate report` -- commits state)
+10. Conductor reports the outcome (`amadeus-orchestrate report` -- commits state)
 11. Loop back to step 5          (next directive) until the engine emits `done`
 ```
 
-Steps 1-2a happen for every conversation, even non-AI-DLC ones — and because every hook is registered project-wide in `settings.json` (not on skill activation), the deterministic spine is in place before `/aidlc` is ever invoked; each hook self-gates to a no-op when no workflow is active. Step 3 loads the rule layers. Steps 4 onward set up and drive the workflow only when the user invokes `/aidlc`; steps 5-11 repeat once per directive — the engine, not SKILL.md, decides what each iteration does.
+Steps 1-2a happen for every conversation, even non-AI-DLC ones — and because every hook is registered project-wide in `settings.json` (not on skill activation), the deterministic spine is in place before `/amadeus` is ever invoked; each hook self-gates to a no-op when no workflow is active. Step 3 loads the rule layers. Steps 4 onward set up and drive the workflow only when the user invokes `/amadeus`; steps 5-11 repeat once per directive — the engine, not SKILL.md, decides what each iteration does.
 
 ---
 

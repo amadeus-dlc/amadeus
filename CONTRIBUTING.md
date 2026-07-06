@@ -48,7 +48,7 @@ Before submitting a PR, verify:
 - You ran `bun scripts/package.ts` and committed the regenerated `dist/` trees alongside your source change.
 - `bun scripts/package.ts --check` reports no drift.
 - `bun tests/run-tests.ts` passes (see [Testing](docs/reference/09-testing.md)).
-- User-visible changes bump `core/tools/aidlc-version.ts`, the README version badge, and add a matching `CHANGELOG.md` entry in the same commit (see the Changelog Policy in [`AGENTS.md`](AGENTS.md)).
+- User-visible changes bump `core/tools/amadeus-version.ts`, the README version badge, and add a matching `CHANGELOG.md` entry in the same commit (see the Changelog Policy in [`AGENTS.md`](AGENTS.md)).
 - Stale stage names, paths, or flags do not remain in examples, docs, or generated output (grep `docs/` and `README.md` when renaming anything).
 
 ## Testing Changes

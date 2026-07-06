@@ -2,13 +2,13 @@
 //
 // In-process port of tests/integration/t88-compile-rules-in-context.sh (TAP plan
 // 11), mechanism = none. The .sh exercised the rules_in_context resolution
-// half of `aidlc-graph compile` by SHELLING OUT to `bun aidlc-graph.ts
+// half of `amadeus-graph compile` by SHELLING OUT to `bun amadeus-graph.ts
 // compile` (discarding stdout) and then reading the rules_in_context arrays
 // back out of the written stage-graph.json with jq. The contract under test
 // is the PURE function compileStageGraph() — it has no process.exit shell of
 // its own (the CLI `compile` handler wraps it; runCompileCheck() likewise
 // just compares its json output to disk). compileStageGraph is exported
-// (aidlc-graph.ts:889) and reads its inputs through the documented env-var
+// (amadeus-graph.ts:889) and reads its inputs through the documented env-var
 // seams (AIDLC_RULES_DIR -> rulesDir, AIDLC_STAGE_GRAPH -> bootstrap source),
 // so every behavioural contract migrates to a direct in-process call. This
 // is the .none mechanism: import the pure function, drive it via the env
@@ -24,10 +24,10 @@
 // The two cases that depended on the CLI's exit code (case 9 `--check` drift,
 // case 10 bad-pairing fail) are NOT CLI-arg-parsing behaviour: `--check`'s
 // drift signal is exactly `compileStageGraph().json !== <on-disk graph>`
-// (runCompileCheck, aidlc-graph.ts:1068-1076) — reproduced here by comparing
+// (runCompileCheck, amadeus-graph.ts:1068-1076) — reproduced here by comparing
 // the function output to a temp graph file we wrote a prior compile to; and
 // the bad-pairing "exit 1" is a `throw` out of loadRules ->
-// validateRuleFrontmatter (aidlc-rule-schema.ts:71-76) that compileStageGraph
+// validateRuleFrontmatter (amadeus-rule-schema.ts:71-76) that compileStageGraph
 // propagates — asserted here with expect(...).toThrow. Both observables
 // (drift detected / compile rejects) are preserved without a subprocess.
 //
@@ -77,7 +77,7 @@
 // (case 8's drift edit, case 10's bad-pairing file) and the empty-dir case
 // (case 7) build throwaway temp dirs under tmpdir(), cleaned in afterAll —
 // nothing is written under tests/fixtures/**. __resetGraphCache() is called
-// before each compile (the documented test seam, aidlc-graph.ts:179) because
+// before each compile (the documented test seam, amadeus-graph.ts:179) because
 // loadStageGraph caches per-process; loadRules itself is uncached and re-walks
 // AIDLC_RULES_DIR every call, so the fixture swap is always honoured.
 
@@ -94,7 +94,7 @@ import {
   __resetGraphCache,
   compileStageGraph,
   type GraphStage,
-} from "../../dist/claude/.claude/tools/aidlc-graph.ts";
+} from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const FIXTURES = join(
@@ -154,7 +154,7 @@ afterEach(() => {
 /**
  * compile_with_fixture (t88:51-60): point AIDLC_RULES_DIR at a fixture dir,
  * reset caches, and return the compiled { json, stages }. Mirrors the .sh's
- * `bun aidlc-graph.ts compile` + read-back, but in-process against the real
+ * `bun amadeus-graph.ts compile` + read-back, but in-process against the real
  * return value.
  */
 function compileWithRulesDir(dir: string): {
@@ -220,7 +220,7 @@ describe("t88 compileStageGraph rules_in_context resolution (migrated from t88-c
     const init = stages.filter((s) => s.phase === "initialization");
     expect(init.length).toBeGreaterThan(0);
     expect(init.every((s) => s.rules_in_context.length === 3)).toBe(true);
-    // STRONGER: the phase rule (aidlc-phase-construction.md) must NOT attach to
+    // STRONGER: the phase rule (amadeus-phase-construction.md) must NOT attach to
     // initialization stages — assert phase scope is absent.
     expect(init.every((s) => !scopesOf(s).includes("phase"))).toBe(true);
   });
@@ -237,21 +237,21 @@ describe("t88 compileStageGraph rules_in_context resolution (migrated from t88-c
 
   // --- Case 8: zero-rules ---------------------------------------------------
   test("7: zero-rules -> every stage gets rules_in_context []", () => {
-    // Empty temp dir == no aidlc-*.md files == loadRules returns []. (The .sh
+    // Empty temp dir == no amadeus-*.md files == loadRules returns []. (The .sh
     // pointed at a non-existent FIXTURES/zero-rules path; an empty existing dir
     // is the same observable — no rule files matched.)
-    const empty = mkTemp("aidlc-t88-zero-");
+    const empty = mkTemp("amadeus-t88-zero-");
     const { stages } = compileWithRulesDir(empty);
     expect(stages.every((s) => s.rules_in_context.length === 0)).toBe(true);
   });
 
   // --- Case 9: --check round-trip detects rule-file edits ------------------
   test("8: --check semantics -> adding a rule after compile produces drift", () => {
-    // Reproduces runCompileCheck (aidlc-graph.ts:1068-1076): drift == the
+    // Reproduces runCompileCheck (amadeus-graph.ts:1068-1076): drift == the
     // freshly-compiled json differs from the on-disk graph. Compile org-only,
     // write that json to a temp graph file (stands in for stage-graph.json on
     // disk), then add a team rule to a WRITABLE rules dir and recompile.
-    const rulesDir = mkTemp("aidlc-t88-check-rules-");
+    const rulesDir = mkTemp("amadeus-t88-check-rules-");
     cpSync(join(FIXTURES, "org-only", "org.md"), join(rulesDir, "org.md"));
 
     const first = compileWithRulesDir(rulesDir);
@@ -284,11 +284,11 @@ describe("t88 compileStageGraph rules_in_context resolution (migrated from t88-c
 
   // --- Case 8 (bad pairing): schema rejection ------------------------------
   test("10: invalid pairing value fails compile (throws, names file + diagnostic)", () => {
-    // pairing must be "feedforward-only" or start with "aidlc-". A bare
-    // "garbage" token fails validateRuleFrontmatter (aidlc-rule-schema.ts:71),
+    // pairing must be "feedforward-only" or start with "amadeus-". A bare
+    // "garbage" token fails validateRuleFrontmatter (amadeus-rule-schema.ts:71),
     // and the throw propagates out of compileStageGraph -> loadRules. The .sh
     // observed exit 1; in-process we observe the throw + its message.
-    const badRules = mkTemp("aidlc-t88-bad-pairing-");
+    const badRules = mkTemp("amadeus-t88-bad-pairing-");
     writeFileSync(
       join(badRules, "org.md"),
       "---\npairing: garbage\n---\n\n# Org rule with invalid pairing\n",
@@ -306,7 +306,7 @@ describe("t88 compileStageGraph rules_in_context resolution (migrated from t88-c
     const { stages } = compileWithRulesDir(join(FIXTURES, "bom-frontmatter"));
     const construction = stages.filter((s) => s.phase === "construction");
     expect(construction.length).toBeGreaterThan(0);
-    // BOM (EF BB BF) on aidlc-phase-construction.md must be stripped so its
+    // BOM (EF BB BF) on amadeus-phase-construction.md must be stripped so its
     // frontmatter parses and the phase rule attaches to every construction
     // stage. (.sh: every construction stage's scope set contains "phase".)
     expect(

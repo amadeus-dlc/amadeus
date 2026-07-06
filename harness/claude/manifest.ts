@@ -25,33 +25,33 @@ const manifest: HarnessManifest = {
   // The method ("memory") is NO LONGER a core dir projected into the harness
   // tree — it relocated to the workspace-root aidlc/spaces/default/memory/ (one
   // hand-editable copy, emitted by the packager's memory step), read by Claude
-  // via the .claude/rules/aidlc.md @-stub (a harnessFile). The rulesRename
-  // machinery (steering/aidlc-rules) still rewrites the <harness>/rules/ prose
+  // via the .claude/rules/amadeus.md @-stub (a harnessFile). The rulesRename
+  // machinery (steering/amadeus-rules) still rewrites the <harness>/rules/ prose
   // mentions other core files carry, so it stays.
   coreDirs: [
     { src: "tools", dst: "tools" },
-    { src: "aidlc-common", dst: "aidlc-common" },
+    { src: "amadeus-common", dst: "amadeus-common" },
     { src: "knowledge", dst: "knowledge" },
     { src: "sensors", dst: "sensors" },
     { src: "scopes", dst: "scopes" },
     { src: "agents", dst: "agents" },
     { src: "hooks", dst: "hooks" },
     // The three harness-neutral session skills ship in-tree under skills/.
-    { src: "skills/aidlc-session-cost", dst: "skills/aidlc-session-cost" },
-    { src: "skills/aidlc-replay", dst: "skills/aidlc-replay" },
-    { src: "skills/aidlc-outcomes-pack", dst: "skills/aidlc-outcomes-pack" },
+    { src: "skills/amadeus-session-cost", dst: "skills/amadeus-session-cost" },
+    { src: "skills/amadeus-replay", dst: "skills/amadeus-replay" },
+    { src: "skills/amadeus-outcomes-pack", dst: "skills/amadeus-outcomes-pack" },
   ],
 
   // Authored harness surfaces copied verbatim (with token substitution on .md)
   // from harness/claude/<src> → <harnessDir>/<dst>.
   harnessFiles: [
-    { src: "skills/aidlc/SKILL.md", dst: "skills/aidlc/SKILL.md" },
-    { src: "skills/aidlc/question-rendering.md", dst: "skills/aidlc/question-rendering.md" },
-    // The AIDLC method @-import stub: .claude/rules/aidlc.md pulls the relocated
+    { src: "skills/amadeus/SKILL.md", dst: "skills/amadeus/SKILL.md" },
+    { src: "skills/amadeus/question-rendering.md", dst: "skills/amadeus/question-rendering.md" },
+    // The AIDLC method @-import stub: .claude/rules/amadeus.md pulls the relocated
     // method (aidlc/spaces/default/memory/*) into Claude's ambient context by
     // reference (explicit @-imports, no copy). The rules/ dir is no longer a
     // core projection — this stub is the only file in it.
-    { src: "rules-aidlc.md", dst: "rules/aidlc.md" },
+    { src: "rules-aidlc.md", dst: "rules/amadeus.md" },
     { src: "settings.json", dst: "settings.json" },
     { src: "settings.local.json.example", dst: "settings.local.json.example" },
     // Project-root install files (beside .claude/, not inside it). A user copies

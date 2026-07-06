@@ -1,8 +1,8 @@
-// covers: subcommand:aidlc-utility:init, audit:WORKFLOW_STARTED
+// covers: subcommand:amadeus-utility:init, audit:WORKFLOW_STARTED
 //
 // t54-workflow-audit-completeness.test.ts — SDK-harness port of
 // tests/e2e/t54-workflow-audit-completeness.sh (plan 10). Drives the real
-// `/aidlc --init --scope bugfix` on a fresh project through the Claude Agent SDK and
+// `/amadeus --init --scope bugfix` on a fresh project through the Claude Agent SDK and
 // asserts ONLY on deterministic surfaces — the on-disk audit.md structure (the
 // AI-DLC Audit Log header, the canonical **Event**:/**Timestamp**: field shapes,
 // the `---` block separators, ISO timestamps, no duplicate SESSION_STARTED) and
@@ -11,7 +11,7 @@
 // ⛔ TRAP 2 (no headless auto-approve). This twin's subject is "audit trail
 // COMPLETENESS: structure, timestamps, no duplicates":
 // the audit.md STRUCTURE is written DETERMINISTICALLY by explicit init + the
-// audit emitter (aidlc-audit.ts block format), BEFORE any gate. So this twin
+// audit emitter (amadeus-audit.ts block format), BEFORE any gate. So this twin
 // drives the init turn, stops the instant the init stdout lands, and asserts the
 // audit STRUCTURE on the landed file.
 //
@@ -20,18 +20,18 @@
 // longer emits, so there is nothing to assert. Dropping it here loses NO real
 // coverage: the field is gone from the engine entirely.
 //
-// THE JOURNEY (verified against the SHIPPED tool). `/aidlc --init --scope
-// bugfix` on a fresh `--no-aidlc-docs` project routes through
-// `aidlc-utility.ts init --scope bugfix` (SKILL.md). init bootstraps audit.md
+// THE JOURNEY (verified against the SHIPPED tool). `/amadeus --init --scope
+// bugfix` on a fresh `--no-amadeus-docs` project routes through
+// `amadeus-utility.ts init --scope bugfix` (SKILL.md). init bootstraps audit.md
 // with the `# AI-DLC Audit Log`
 // header (utility.ts:1777), then appends WORKFLOW_STARTED + the init-phase events
 // (PHASE_STARTED, STAGE_STARTED/COMPLETED ×3, WORKSPACE_*), each a canonical
-// aidlc-audit block (## heading / **Timestamp**: / **Event**: / fields / `---`).
+// amadeus-audit block (## heading / **Timestamp**: / **Event**: / fields / `---`).
 //
 // ASSERTION MAP (.sh test -> deterministic SDK surface, equal-or-stronger):
 //   1 audit file exists            -> the per-intent audit shard text is non-empty
 //                                     (P4 shards audit under <record>/audit/; read
-//                                     via readAuditText, NOT flat aidlc-docs/audit.md).
+//                                     via readAuditText, NOT flat amadeus-docs/audit.md).
 //   2 audit > 200 bytes            -> the merged audit-shard text length > 200.
 //   3 >= 3 STAGE_COMPLETED entries -> the parsed auditEvents carry >= 3
 //                                     STAGE_COMPLETED (the 3 init stages complete
@@ -55,13 +55,13 @@
 //       -> assertAuditEvent(r,"WORKFLOW_STARTED").
 //
 // Known-answer literals (read from the SHIPPED tool, not guessed):
-//   - init dispatch:            SKILL.md -> `aidlc-utility.ts init --scope bugfix`
-//   - audit header bootstrap:   aidlc-utility.ts:1777 ("# AI-DLC Audit Log")
-//   - no bootstrap SESSION_STARTED: aidlc-utility.ts:1770-1774
-//   - WORKFLOW_STARTED emit:    aidlc-utility.ts:1784
-//   - audit block shape:        aidlc-audit.ts (## heading / **Timestamp**: / **Event**: / --- )
+//   - init dispatch:            SKILL.md -> `amadeus-utility.ts init --scope bugfix`
+//   - audit header bootstrap:   amadeus-utility.ts:1777 ("# AI-DLC Audit Log")
+//   - no bootstrap SESSION_STARTED: amadeus-utility.ts:1770-1774
+//   - WORKFLOW_STARTED emit:    amadeus-utility.ts:1784
+//   - audit block shape:        amadeus-audit.ts (## heading / **Timestamp**: / **Event**: / --- )
 //
-// It SPENDS TOKENS — driveAidlc drives the real /aidlc on Opus/Bedrock.
+// It SPENDS TOKENS — driveAidlc drives the real /amadeus on Opus/Bedrock.
 // Generous per-test timeout; the driver aborts a hair early so a stuck run
 // surfaces a partial DriveResult, not a hang.
 
@@ -90,7 +90,7 @@ function countEvent(events: string[], event: string): number {
   return events.filter((e) => e === event).length;
 }
 
-describe("t54 /aidlc --init --scope bugfix audit completeness (sdk)", () => {
+describe("t54 /amadeus --init --scope bugfix audit completeness (sdk)", () => {
   // -------------------------------------------------------------------------
   // Fresh project: the audit.md structure lands at explicit init. Assert the header,
   // canonical field shapes, separators, ISO timestamps, no duplicate
@@ -101,7 +101,7 @@ describe("t54 /aidlc --init --scope bugfix audit completeness (sdk)", () => {
     async () => {
       const proj = setupIntegrationProject({ noAidlcDocs: true });
       try {
-        const r = await driveAidlc("/aidlc --init --scope bugfix", {
+        const r = await driveAidlc("/amadeus --init --scope bugfix", {
           projectDir: proj,
           answerScript: "default",
           timeoutMs: DRIVE_TIMEOUT_MS,
@@ -109,7 +109,7 @@ describe("t54 /aidlc --init --scope bugfix audit completeness (sdk)", () => {
         });
 
         // P4: audit is SHARDED per clone under <record>/audit/ (the active
-        // intent's record dir), NOT the flat aidlc-docs/audit.md. readAuditText
+        // intent's record dir), NOT the flat amadeus-docs/audit.md. readAuditText
         // resolves the born intent and concatenates its shards.
         const auditRaw = readAuditText(proj);
 

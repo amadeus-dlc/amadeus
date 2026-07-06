@@ -86,9 +86,9 @@ describe("t151 onboarding skeleton — a new harness gets a complete doc for fre
     //    empty — the doc never ships a visible {{SLOT:...}} marker, whether the
     //    slot sits on its own line or mid-line.
     const sk = "# T {{SLOT:inline}} x\n\n{{SLOT:lone}}\nbody {{INVOKE}}\n";
-    const out = renderOnboarding(sk, { invoke: "/aidlc", slots: {} });
+    const out = renderOnboarding(sk, { invoke: "/amadeus", slots: {} });
     expect(out).not.toContain("{{SLOT:");
-    expect(out).toContain("body /aidlc"); // invoke substituted
+    expect(out).toContain("body /amadeus"); // invoke substituted
     expect(out).toContain("# T  x"); // inline slot blanked in place
 
     // B) The defensive completeness guard: if the invoke value itself smuggles a

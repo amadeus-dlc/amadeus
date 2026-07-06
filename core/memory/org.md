@@ -1,7 +1,7 @@
 # Org-Level Rules
 
-> Framework defaults. Read in order with aidlc-team.md and
-> aidlc-project.md; later layers override.
+> Framework defaults. Read in order with amadeus-team.md and
+> amadeus-project.md; later layers override.
 
 ## Way of Working
 
@@ -39,7 +39,7 @@ Bolt runs like any other — there's nothing to bootstrap.
 After Bolt 1 ships (when it runs), the orchestrator fires the **ladder
 prompt**: "How should the remaining Bolts run?" Options: continue
 autonomously, gate every Bolt. The team picks per project. The choice
-persists as `Construction Autonomy Mode` in `aidlc-state.md`.
+persists as `Construction Autonomy Mode` in `amadeus-state.md`.
 
 ## Testing Posture
 
@@ -55,7 +55,7 @@ Until then, our default per scope is:
 - `poc`, `refactor`, `workshop` → existing test suite remains green;
   no new test floor required.
 
-Override at `aidlc-team.md` if the team commits to a stricter posture.
+Override at `amadeus-team.md` if the team commits to a stricter posture.
 
 ## Deployment
 
@@ -96,7 +96,7 @@ linter doesn't already cover it.
 ## Corrections
 
 <!-- Self-learning loop appends here. -->
-<!-- Use aidlc-team.md to record team-wide overrides; aidlc-project.md
+<!-- Use amadeus-team.md to record team-wide overrides; amadeus-project.md
      to record project-specific deviations. The loaders merge org → team
      → project at session start; each layer replaces fields the layer
      above set; missing fields fall through. -->

@@ -1,4 +1,4 @@
-// covers: subcommand:aidlc-orchestrate:next, subcommand:aidlc-orchestrate:report
+// covers: subcommand:amadeus-orchestrate:next, subcommand:amadeus-orchestrate:report
 //
 // CLI-contract test for issue #368, the engine drives per-unit `for_each`
 // iteration for the inline per-unit Construction stages. mechanism = cli.
@@ -16,15 +16,15 @@
 // directive (zero behaviour change). A deterministic coverage guard on the
 // approve path refuses an early approve while units remain.
 //
-// SOURCE UNDER TEST (dist/claude/.claude/tools/aidlc-orchestrate.ts):
+// SOURCE UNDER TEST (dist/claude/.claude/tools/amadeus-orchestrate.ts):
 //   - orderedUnits / unitCovered / nextUncoveredUnit / emitPerUnitRunStage /
 //     emitForSlug, the per-unit iteration core, wired into BOTH handleNext call
 //     sites after tryEmitSwarm returns false.
 //   - the §3d coverage guard in handleReport (refuses approve while >1 uncovered).
-//   - aidlc-directive.ts, the optional `unit` field on RunStageDirective.
+//   - amadeus-directive.ts, the optional `unit` field on RunStageDirective.
 // NONE are exported (the tool has zero exports), so the behaviour is observable
 // only on the JSON directive the spawned engine emits to stdout, MECHANISM =
-// cli: SPAWN `bun aidlc-orchestrate.ts next|report` and assert on the parsed
+// cli: SPAWN `bun amadeus-orchestrate.ts next|report` and assert on the parsed
 // directive, the SAME process boundary t116 (emit/parse) and t135 (bolt_dag
 // seeding) drive.
 //
@@ -58,7 +58,7 @@ import {
 resetAidlcEnv();
 
 const BUN = process.execPath; // the bun running this test
-const ORCH = join(AIDLC_SRC, "tools", "aidlc-orchestrate.ts");
+const ORCH = join(AIDLC_SRC, "tools", "amadeus-orchestrate.ts");
 
 // The record-relative prefix every resolved per-unit path is rooted at, the
 // active intent's record dir (relativeRecordDir over the seeded default intent).
@@ -209,7 +209,7 @@ function seedProject(current: string, skeletonStance?: string): string {
   return proj;
 }
 
-/** Run `aidlc-orchestrate.ts next` and parse the emitted directive. */
+/** Run `amadeus-orchestrate.ts next` and parse the emitted directive. */
 function runNext(proj: string): Directive {
   const r = spawnSync(BUN, [ORCH, "next", "--project-dir", proj], {
     encoding: "utf-8",
@@ -228,7 +228,7 @@ function runNext(proj: string): Directive {
   }
 }
 
-/** Run `aidlc-orchestrate.ts report ...` and parse the emitted directive. */
+/** Run `amadeus-orchestrate.ts report ...` and parse the emitted directive. */
 function runReport(proj: string, args: string[]): Directive {
   const r = spawnSync(BUN, [ORCH, "report", ...args, "--project-dir", proj], {
     encoding: "utf-8",

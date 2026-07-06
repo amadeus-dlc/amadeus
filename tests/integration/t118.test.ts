@@ -1,29 +1,29 @@
-// covers: subcommand:aidlc-jump:resolve
+// covers: subcommand:amadeus-jump:resolve
 //
 // CLI-contract port of tests/integration/t118-engine-differential.sh (TAP plan 27),
 // mechanism = cli. The differential corpus: cross-component, multi-step
-// next/report sequences across the v0.6.0 engine (aidlc-orchestrate.ts) for the
+// next/report sequences across the v0.6.0 engine (amadeus-orchestrate.ts) for the
 // 7 SPECIAL PATHS the prose orchestrator handles today, plus 3 true
 // cross-component WALKS — with NO MODEL IN THE LOOP. Every step SPAWNS the real
-// engine binary `bun aidlc-orchestrate.ts next|report` (and the sibling tools
-// `bun aidlc-jump.ts resolve` / `bun aidlc-state.ts gate-start`) over a seeded
+// engine binary `bun amadeus-orchestrate.ts next|report` (and the sibling tools
+// `bun amadeus-jump.ts resolve` / `bun amadeus-state.ts gate-start`) over a seeded
 // fixture and diffs the emitted directive / the audit.md the tool writes against
 // a frozen golden — the PROCESS boundary (exit codes, stdout JSON, file effects),
 // never an in-process call.
 //
 // Why spawn (not in-process): the .sh shells out to FOUR binaries per walk and
 // asserts on (a) the directive JSON each emits on stdout, (b) the STAGE_STARTED
-// rows aidlc-state.ts appends to audit.md through report's
+// rows amadeus-state.ts appends to audit.md through report's
 // dispatcher, and (c) the no-state-created side effect of --init. The contract is
 // the subprocess boundary plus those side effects; an in-process twin would lose
-// the report-dispatcher → aidlc-state.ts subprocess seam the corpus exists to pin.
+// the report-dispatcher → amadeus-state.ts subprocess seam the corpus exists to pin.
 //
-// COVERS UNIT: the covers id is subcommand:aidlc-jump:resolve — the corpus's load-
+// COVERS UNIT: the covers id is subcommand:amadeus-jump:resolve — the corpus's load-
 // bearing claim is engine-vs-tool AGREEMENT on jump DIRECTION. The engine
-// DELEGATES forward/backward/redo to `aidlc-jump.ts resolve` (it does not re-derive
+// DELEGATES forward/backward/redo to `amadeus-jump.ts resolve` (it does not re-derive
 // the comparison); special paths 1-3 each fire `resolve` and assert its
-// `"direction"` field, which is exactly what crediting subcommand:aidlc-jump
-// resolve pins. (Colon form — the space form `subcommand:aidlc-jump resolve` is
+// `"direction"` field, which is exactly what crediting subcommand:amadeus-jump
+// resolve pins. (Colon form — the space form `subcommand:amadeus-jump resolve` is
 // truncated at the space and credits nothing.)
 //
 // EQUAL-OR-STRONGER PARITY (every .sh assert -> one expect()-bearing test()):
@@ -40,7 +40,7 @@
 //   SP4 resume (2): kind==="ask"; out contains "existing workflow was found".
 //   SP5 birth (P4: --init retired, engine names intent-birth):
 //     - (a) named scope on a clean workspace -> kind==="print" naming
-//       intent-birth + NO aidlc-state.md created by next (read-only — mutation
+//       intent-birth + NO amadeus-state.md created by next (read-only — mutation
 //       stays conductor-side).
 //     - (b) named scope over existing state -> NOT a birth (no intent-birth
 //       print; the old --force re-init guard is gone).
@@ -75,7 +75,7 @@
 // FIXTURE DISCIPLINE (mirrors the .sh's create_test_project + seed_state_file +
 // cleanup_test_project per case): each case uses a FRESH temp project dir
 // (createTestProject, toPortablePath-converted on Windows so audit.md — written
-// by aidlc-state.ts via toPosix(auditFilePath) — round-trips when read back),
+// by amadeus-state.ts via toPosix(auditFilePath) — round-trips when read back),
 // seeded from the same on-disk fixtures the .sh used (state-mid-ideation.md,
 // state-jumped.md, state-pre-workspace-detection.md, state-construction-bolt1.md).
 // Nothing is written under tests/fixtures/**. All temp dirs cleaned in afterAll.
@@ -98,9 +98,9 @@ import {
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const TOOLS = join(REPO_ROOT, "dist", "claude", ".claude", "tools");
-const ORCHESTRATE = join(TOOLS, "aidlc-orchestrate.ts");
-const JUMP = join(TOOLS, "aidlc-jump.ts");
-const STATE = join(TOOLS, "aidlc-state.ts");
+const ORCHESTRATE = join(TOOLS, "amadeus-orchestrate.ts");
+const JUMP = join(TOOLS, "amadeus-jump.ts");
+const STATE = join(TOOLS, "amadeus-state.ts");
 
 // Clear leaked AWS_AIDLC_DEFAULT_SCOPE so scope resolves from the state file
 // (mirrors the .sh's reset_aidlc_env at line 54).
@@ -145,7 +145,7 @@ function cleanProj(): string {
   return p;
 }
 
-// P9 per-intent layout. seedStateFile writes the record's aidlc-state.md; the
+// P9 per-intent layout. seedStateFile writes the record's amadeus-state.md; the
 // audit lands in the record's per-clone shard dir (deterministic — the fixture
 // pins the clone-id). statePath is the record's state file; readAudit globs the
 // shard dir.
@@ -177,14 +177,14 @@ function eventCount(p: string, ev: string): number {
 }
 
 // ============================================================
-// Special path 1: JUMP FORWARD — engine DELEGATES direction to aidlc-jump.ts
-// resolve; corpus pins engine-vs-tool agreement (covers subcommand:aidlc-jump resolve).
+// Special path 1: JUMP FORWARD — engine DELEGATES direction to amadeus-jump.ts
+// resolve; corpus pins engine-vs-tool agreement (covers subcommand:amadeus-jump resolve).
 // ============================================================
 
-describe("t118 differential corpus — engine vs aidlc-jump resolve (migrated from t118-engine-differential.sh, plan 24)", () => {
+describe("t118 differential corpus — engine vs amadeus-jump resolve (migrated from t118-engine-differential.sh, plan 24)", () => {
   // A WITH-STATE jump is a MUTATION (mark intervening [S], emit STAGE_JUMPED,
   // pivot Current Stage) the conductor commits, so `next --stage <fp>` emits a
-  // `print` naming `aidlc-jump.ts execute` carrying the resolved target +
+  // `print` naming `amadeus-jump.ts execute` carrying the resolved target +
   // direction, NOT a run-stage (the v0.6.0 engine cutover; pre-cutover this
   // emitted run-stage directly, producing ZERO state change — the regression
   // t24/t25/t26/t56/t57 caught). The corpus still pins engine-vs-tool agreement
@@ -209,7 +209,7 @@ describe("t118 differential corpus — engine vs aidlc-jump resolve (migrated fr
     expect(JSON.parse(res.stdout.trim()).direction).toBe("forward");
   });
 
-  // SP1-exec: a forward `aidlc-jump.ts execute` does NOT auto-terminate the
+  // SP1-exec: a forward `amadeus-jump.ts execute` does NOT auto-terminate the
   // workflow (issue #369: the test-run forward-jump terminal-stop branch was
   // removed; a forward jump now ALWAYS lands Running). The deterministic guard
   // the deleted t54-compaction-and-test-run.test.ts used to carry - its SDK twin
@@ -339,7 +339,7 @@ describe("t118 differential corpus — engine vs aidlc-jump resolve (migrated fr
   });
 
   // ============================================================
-  // Special path 7: NORMAL GATE - report drives aidlc-state.ts approve through
+  // Special path 7: NORMAL GATE - report drives amadeus-state.ts approve through
   // the report dispatcher; the gate closes (kind==="done"). The --test-run
   // round-trip that used to sit here was removed with the test-run mechanism
   // (#369); this control proves the normal gate path is observable, not a no-op.

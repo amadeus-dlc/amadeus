@@ -1,7 +1,7 @@
 // harness/codex/onboarding.fills.ts — Codex CLI's onboarding-doc fills.
 // Rendered with core/templates/onboarding.md by scripts/onboarding.ts inside
 // emit.ts into dist/codex/AGENTS.md (project root). emit() applies the
-// {{HARNESS_DIR}} → .codex substitution + rules/ → aidlc-rules/ rename itself.
+// {{HARNESS_DIR}} → .codex substitution + rules/ → amadeus-rules/ rename itself.
 //
 // This RETIRES the old read-CLAUDE.md + regex-rewrite path: Codex no longer
 // derives its onboarding doc from Claude's, so Claude prose can no longer leak
@@ -11,25 +11,25 @@
 import type { OnboardingFills } from "../../scripts/onboarding.ts";
 
 const fills: OnboardingFills = {
-  invoke: "$aidlc",
+  invoke: "$amadeus",
   slots: {
     title_block: `# AI-DLC on Codex CLI
 
 This project uses AI-DLC (AI-Driven Development Life Cycle) under the OpenAI
 Codex CLI harness (minimum version 0.139.0). Invoke the orchestrator skill with
-\`$aidlc\` (or \`/skills\` → aidlc) followed by a scope or project description.
+\`$amadeus\` (or \`/skills\` → aidlc) followed by a scope or project description.
 The deterministic engine, state machine, audit log, and referee are
 byte-identical to every other harness distribution; only the shell differs. Run
-\`$aidlc --status\` for progress, \`$aidlc --help\` for usage, \`$aidlc intent\`
-to list intents, \`$aidlc --doctor\` to validate setup, and
-\`$aidlc --stage <slug>\` / \`--phase <name>\` / \`--depth <level>\` /
-\`--test-strategy <level>\` for the usual overrides. Run \`$aidlc compose
+\`$amadeus --status\` for progress, \`$amadeus --help\` for usage, \`$amadeus intent\`
+to list intents, \`$amadeus --doctor\` to validate setup, and
+\`$amadeus --stage <slug>\` / \`--phase <name>\` / \`--depth <level>\` /
+\`--test-strategy <level>\` for the usual overrides. Run \`$amadeus compose
 "<task>"\` to have the adaptive composer propose a tailored EXECUTE/SKIP plan
 (up front, from a scan report via \`--report <path>\`, or mid-workflow to
 re-shape the pending stages - every proposal stops at an approve/edit/reject
 gate).`,
 
-    prereq_bullets: `- **Codex CLI ≥ 0.139.0**: earlier releases do not surface the real agent role in subagent hook payloads and do not resolve hyphenated agent TOMLs. \`$aidlc --doctor\` enforces the pin. Check with \`codex --version\`.
+    prereq_bullets: `- **Codex CLI ≥ 0.139.0**: earlier releases do not surface the real agent role in subagent hook payloads and do not resolve hyphenated agent TOMLs. \`$amadeus --doctor\` enforces the pin. Check with \`codex --version\`.
 - **bun**: Required for CLI tools and hook scripts (state management, audit logging, jump orchestration). Install via \`curl -fsSL https://bun.sh/install | bash\`. On Windows: \`npm install -g bun\` or \`powershell -c "irm bun.sh/install.ps1 | iex"\`. \`bun\` must be on your PATH for the non-interactive shells the harness spawns — these source \`~/.zshenv\` (zsh) or \`~/.bashrc\` (bash), NOT \`~/.zshrc\`.
 - **Model provider**: The shipped \`.codex/config.toml\` defaults to **Amazon Bedrock** — the orchestrator on \`openai.gpt-5.5\`, agents on \`openai.gpt-5.4\` (the D-7 model map). Set your AWS profile/region under \`[model_providers.amazon-bedrock.aws]\` (shipped defaults \`profile = "default"\`, \`region = "us-east-1"\`); you need Bedrock model access and AWS credentials on the default SDK credential chain. For OpenAI auth instead, comment out \`model_provider\` and the \`[model_providers]\` block. Note: \`web_search\` is unavailable on Bedrock, so the market-research stage degrades gracefully.
 - **MCP servers (optional)**: Codex reads MCP server definitions from \`[mcp_servers.<name>]\` tables in \`config.toml\` (project \`.codex/config.toml\` or \`~/.codex/config.toml\`). The shipped config declares none — add the servers you need there. Credentials flow through your environment; a server you have no credentials for is simply unavailable and never blocks a workflow.`,
@@ -48,7 +48,7 @@ gate).`,
 This is the same AI-DLC core that ships to every harness, rendered onto Codex CLI. On Codex:
 
 - **Gates** render as structured questions via the \`request_user_input\` tool when the shipped config flags enable it, with a numbered-prose fallback otherwise. Gate semantics live in the engine either way.
-- **No custom statusline and no welcome message**: workflow position rides the \`update_plan\` tool and \`$aidlc --status\`.
+- **No custom statusline and no welcome message**: workflow position rides the \`update_plan\` tool and \`$amadeus --status\`.
 - **Git under the sandbox**: \`workspace-write\` keeps \`.git\` read-only in-sandbox; interactive sessions auto-escalate and \`.codex/rules/default.rules\` pre-allows \`git worktree\`/\`commit\`/\`add\`. Headless runs need \`writable_roots\` (template in the shipped \`config.toml\`).
 - **Swarm floor** is \`codex exec\`-per-unit workers; \`AIDLC_USE_SWARM=1\` has no Workflow tool here and loud-degrades (\`SWARM_DEGRADED\`).
 - **Session lifecycle**: Codex has no SessionEnd event (an unclosed session is reconciled as an inferred \`SESSION_ENDED\` at the next start); the Codex-only PostCompact event re-injects the workflow mission after compaction.

@@ -13,7 +13,7 @@ export type DirMap = { src: string; dst: string };
 
 /**
  * An authored harness file copied from harness/<name>/<src> into the dist tree.
- * By default <dst> is relative to <harnessDir>/ (e.g. .kiro/skills/aidlc/SKILL.md).
+ * By default <dst> is relative to <harnessDir>/ (e.g. .kiro/skills/amadeus/SKILL.md).
  * Set projectRoot:true to land it at the dist tree ROOT instead, beside the
  * harness dir (e.g. dist/kiro/AGENTS.md) — Kiro/Codex put AGENTS.md there.
  */
@@ -81,7 +81,7 @@ export type HarnessManifest = {
    * core-projected .md files - the seam for a harness-NATIVE frontmatter
    * field that must not ship to other harnesses, declared as manifest DATA
    * instead of forking the whole core file. `file` is the harness-relative
-   * output path (e.g. "agents/aidlc-composer-agent.md"). The packager errors
+   * output path (e.g. "agents/amadeus-composer-agent.md"). The packager errors
    * on an unmatched file (typo guard), a missing frontmatter block, and a
    * key the core file already declares (so core later adding the key is a
    * loud conflict, never a silent double). Example: the Kiro IDE resolves a
@@ -95,7 +95,7 @@ export type HarnessManifest = {
    * null when the harness generates it elsewhere (codex, via emit) or ships none.
    */
   onboarding?: OnboardingSpec | null;
-  /** Rename core's rules/ dir to this (kiro: "steering", codex: "aidlc-rules", claude: null). */
+  /** Rename core's rules/ dir to this (kiro: "steering", codex: "amadeus-rules", claude: null). */
   rulesRename: string | null;
   /** Authored files allowed inside generated/copied dirs (skip the orphan scan). */
   authoredExempt: RegExp[];

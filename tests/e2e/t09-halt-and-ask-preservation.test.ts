@@ -1,12 +1,12 @@
-// covers: subcommand:aidlc-bolt:fail, subcommand:aidlc-worktree:create, subcommand:aidlc-worktree:info, audit:BOLT_FAILED
+// covers: subcommand:amadeus-bolt:fail, subcommand:amadeus-worktree:create, subcommand:amadeus-worktree:info, audit:BOLT_FAILED
 //
 // CLI-contract port of tests/e2e/t09-halt-and-ask-preservation.sh (TAP
 // plan 8), mechanism = cli. The .sh pins the v0.4.0 milestone 12 halt-and-ask
 // PRESERVATION invariant: on a simulated Bolt failure, the
 // aborted/skipped Bolt's worktree STAYS ON DISK for inspection unless the user
-// explicitly discards. `aidlc-bolt fail` (orchestrator-emitted, code-gen
+// explicitly discards. `amadeus-bolt fail` (orchestrator-emitted, code-gen
 // returned an error) is the no-side-effect verb — it emits BOLT_FAILED and
-// NOTHING else; the only verb that tears a worktree down is `aidlc-bolt abort
+// NOTHING else; the only verb that tears a worktree down is `amadeus-bolt abort
 // --discard` (covered by the sibling t10).
 //
 // MECHANISM: this is a .test.ts on the cli arm — every observable is taken at
@@ -18,25 +18,25 @@
 // proof rests on.
 //
 // Source under test:
-//   - dist/claude/.claude/tools/aidlc-worktree.ts handleCreate (:156) — runs a
+//   - dist/claude/.claude/tools/amadeus-worktree.ts handleCreate (:156) — runs a
 //     REAL `git worktree add` after an audit-first WORKTREE_CREATED emit
 //     (:186), so the worktree dir lands at .aidlc/worktrees/bolt-<slug>.
-//   - dist/claude/.claude/tools/aidlc-bolt.ts handleFail (:457) — emits
+//   - dist/claude/.claude/tools/amadeus-bolt.ts handleFail (:457) — emits
 //     BOLT_FAILED with `Failed Bolt`, `Error summary`, and (when --slug given)
-//     a `Bolt slug` field (:467-469). It does NOT spawn aidlc-worktree, NEVER
+//     a `Bolt slug` field (:467-469). It does NOT spawn amadeus-worktree, NEVER
 //     emits WORKTREE_DISCARDED, and touches no disk beyond the audit append —
-//     THIS is the preservation guarantee (comment block aidlc-bolt.ts:22-24,
+//     THIS is the preservation guarantee (comment block amadeus-bolt.ts:22-24,
 //     493-497: "halt-and-ask preserves the worktree by default").
-//   - dist/claude/.claude/tools/aidlc-worktree.ts handleInfo (:672) — reads the
+//   - dist/claude/.claude/tools/amadeus-worktree.ts handleInfo (:672) — reads the
 //     latest WORKTREE_CREATED block for the slug and prints {"path":...} JSON;
 //     it resolves the live path EVEN AFTER the failure (the create block is
 //     still the latest WORKTREE_CREATED, untouched by fail).
 //
-// FIXTURE: aidlc-worktree.ts runs real git and asserts it is invoked from the
-// main checkout (assertNotSiblingWorktree, aidlc-worktree.ts:101). So the
-// fixture is an ACTUAL git repo on `main` with one commit plus aidlc-docs/ —
+// FIXTURE: amadeus-worktree.ts runs real git and asserts it is invoked from the
+// main checkout (assertNotSiblingWorktree, amadeus-worktree.ts:101). So the
+// fixture is an ACTUAL git repo on `main` with one commit plus amadeus-docs/ —
 // setupWorktreeFixture (tests/harness/fixtures.ts, ported from
-// tests/lib/worktree-helpers.sh). The .sh additionally `mkdir -p aidlc-docs`;
+// tests/lib/worktree-helpers.sh). The .sh additionally `mkdir -p amadeus-docs`;
 // the fixture already creates it. cleanupWorktreeFixture prunes child worktrees
 // then rm -rf's the parent. Nothing is written under tests/fixtures/**.
 //
@@ -77,8 +77,8 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const WT_TOOL = join(AIDLC_SRC, "tools", "aidlc-worktree.ts");
-const BOLT_TOOL = join(AIDLC_SRC, "tools", "aidlc-bolt.ts");
+const WT_TOOL = join(AIDLC_SRC, "tools", "amadeus-worktree.ts");
+const BOLT_TOOL = join(AIDLC_SRC, "tools", "amadeus-bolt.ts");
 
 const fixtures: string[] = [];
 afterAll(() => {
@@ -88,7 +88,7 @@ afterAll(() => {
 /** Fresh git-repo fixture on `main` with the per-intent workspace shell. Seed a
  *  state file into the default record so the active-intent cursor resolves and
  *  the WORKTREE_CREATED/BOLT_FAILED audit lands in the record (the fixture's
- *  record is stateless; without aidlc-state.md the cursor is rejected and the
+ *  record is stateless; without amadeus-state.md the cursor is rejected and the
  *  audit lands at the bare space root). Registered for cleanup. */
 function freshFixture(): string {
   const p = setupWorktreeFixture();
@@ -158,7 +158,7 @@ function comparableWorktreePath(path: string): string {
 
 describe("t09 halt-and-ask preserves the worktree on Bolt failure (migrated from t09-halt-and-ask-preservation.sh, plan 8)", () => {
   // The .sh shares ONE fixture across all 8 assertions: create a worktree for
-  // slug x, then `aidlc-bolt fail --slug x`, then probe. We mirror that with a
+  // slug x, then `amadeus-bolt fail --slug x`, then probe. We mirror that with a
   // module-scoped fixture built once in setup, asserted across the cases below.
   let p: string;
 
@@ -172,7 +172,7 @@ describe("t09 halt-and-ask preserves the worktree on Bolt failure (migrated from
     expect(eventCount(p, "WORKTREE_CREATED")).toBe(1);
   }, 30000);
 
-  test("fail: aidlc-bolt fail --slug x emits BOLT_FAILED with the Bolt slug field [.sh A3, A4]", () => {
+  test("fail: amadeus-bolt fail --slug x emits BOLT_FAILED with the Bolt slug field [.sh A3, A4]", () => {
     const f = run(p, BOLT_TOOL, [
       "fail",
       "--name",
@@ -202,7 +202,7 @@ describe("t09 halt-and-ask preserves the worktree on Bolt failure (migrated from
     expect(eventCount(p, "WORKTREE_DISCARDED")).toBe(0);
   }, 30000);
 
-  test("info: aidlc-worktree info --slug x resolves the live path even after the failure [.sh A8]", () => {
+  test("info: amadeus-worktree info --slug x resolves the live path even after the failure [.sh A8]", () => {
     const i = run(p, WT_TOOL, ["info", "--slug", "x"]);
     // The .sh only checked the `"path":` substring; assert exit 0 too, and that
     // the resolved path is the live bolt-x worktree dir (the create block is

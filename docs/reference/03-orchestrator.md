@@ -1,6 +1,6 @@
 # Orchestrator
 
-Orchestration is split across two pieces. A deterministic **engine** (`aidlc-orchestrate.ts`, subcommands `next`/`report`/`park`) owns every between-stage decision - scope determination, stage routing, jump resolution, resume and init guards, gate status, and workflow completion - and emits a typed **directive** on each `next`. The **conductor** (`.claude/skills/aidlc/SKILL.md`, invoked via `/aidlc`) is a thin forwarding loop that acts on each directive - running the named stage, asking the human a question, fanning out a swarm - and reports the outcome with `report`. SKILL.md is not the control plane: the routing decisions live in the engine and the compiled data it reads (`tools/data/stage-graph.json`, `tools/data/scope-grid.json`), while SKILL.md owns execution quality inside the move the engine names.
+Orchestration is split across two pieces. A deterministic **engine** (`amadeus-orchestrate.ts`, subcommands `next`/`report`/`park`) owns every between-stage decision - scope determination, stage routing, jump resolution, resume and init guards, gate status, and workflow completion - and emits a typed **directive** on each `next`. The **conductor** (`.claude/skills/amadeus/SKILL.md`, invoked via `/amadeus`) is a thin forwarding loop that acts on each directive - running the named stage, asking the human a question, fanning out a swarm - and reports the outcome with `report`. SKILL.md is not the control plane: the routing decisions live in the engine and the compiled data it reads (`tools/data/stage-graph.json`, `tools/data/scope-grid.json`), while SKILL.md owns execution quality inside the move the engine names.
 
 This chapter documents the workflow behaviour from the conductor's side — entry points, session management, scope-to-stage mapping, the stage execution and advancement protocol, and the deliberate deviations. For the engine internals — the `next`/`report` contract, the typed directive union, the conductor persona, plural skills, scope shape, and the swarm referee — see [Engine and Skill System](17-skill-system.md). For user-facing command usage, see the [User Guide -- CLI Commands](../guide/12-cli-commands.md).
 
@@ -30,20 +30,20 @@ This chapter documents the workflow behaviour from the conductor's side — entr
 
 The conductor passes `$ARGUMENTS` to the engine's first `next` verbatim — it never pre-parses them. The engine parses the flags and freeform text and resolves which of the invocation patterns below applies, emitting the matching directive. The patterns are engine-resolved inputs, not conductor-side branches.
 
-### `/aidlc [scope]` -- Explicit Scope
+### `/amadeus [scope]` -- Explicit Scope
 
 When the argument matches one of the 9 known scopes (`enterprise`, `feature`, `mvp`, `poc`, `bugfix`, `refactor`, `infra`, `security-patch`, `workshop`):
 
-An explicitly named scope on a fresh workspace (no intent yet — no `aidlc-state.md` under `aidlc/spaces/*/intents/*/`) **births the first intent**: the engine's `next` emits a run-then-continue `print` directive naming `aidlc-utility.ts intent-birth --scope <scope>` (threading any `--depth` / `--test-strategy` flags onto the named command); the conductor runs it and re-runs `next` to land on the first stage. Both naming shapes — the bare positional (`/aidlc bugfix`) and the explicit flag (`/aidlc --scope bugfix`) — emit the identical birth print. Describing what to build (`/aidlc "build the auth service"`) also births. A bare `/aidlc` with no explicitly named scope and no description does NOT birth (an env- or default-resolved scope is not a birth signal); it emits the no-state error directing the user to describe what to build or name a scope.
+An explicitly named scope on a fresh workspace (no intent yet — no `amadeus-state.md` under `aidlc/spaces/*/intents/*/`) **births the first intent**: the engine's `next` emits a run-then-continue `print` directive naming `amadeus-utility.ts intent-birth --scope <scope>` (threading any `--depth` / `--test-strategy` flags onto the named command); the conductor runs it and re-runs `next` to land on the first stage. Both naming shapes — the bare positional (`/amadeus bugfix`) and the explicit flag (`/amadeus --scope bugfix`) — emit the identical birth print. Describing what to build (`/amadeus "build the auth service"`) also births. A bare `/amadeus` with no explicitly named scope and no description does NOT birth (an env- or default-resolved scope is not a birth signal); it emits the no-state error directing the user to describe what to build or name a scope.
 
 1. Reads guardrails from `aidlc/spaces/<space>/memory/`.
 2. Asks the user "What would you like to build?"
 3. Determines stages to execute per the Scope-to-Stage Mapping.
-4. Executes the Initialization phase (workspace-scaffold, workspace-detection, state-init) as a single deterministic `aidlc-utility init` call. The welcome message is rendered at session start via `companyAnnouncements` in `settings.json`.
+4. Executes the Initialization phase (workspace-scaffold, workspace-detection, state-init) as a single deterministic `amadeus-utility init` call. The welcome message is rendered at session start via `companyAnnouncements` in `settings.json`.
 5. Creates stage-level tasks for all in-scope stages. The first stage is set to `in_progress`; the rest are `pending`. Stages not in scope get no task at all.
 6. Begins the first post-initialization stage.
 
-### `/aidlc [freeform]` -- AI Scope Detection
+### `/amadeus [freeform]` -- AI Scope Detection
 
 When the argument is freeform text (not a known scope keyword):
 
@@ -59,28 +59,28 @@ When the argument is freeform text (not a known scope keyword):
 3. Disambiguation rule: if the text contains BOTH a scope keyword AND a longer project description (more than 5 words), the match is treated as incidental and the COMPOSE OFFER fires instead of a silent default.
 4. On a clear keyword match, confirms with the user: `Starting a "[scope]" workflow for: "[text]". Confirm to proceed, name a different scope, or say "compose" for a tailored plan.`
 5. On no match / rich prose, offers the adaptive composer: the composer agent proposes an EXECUTE/SKIP grid for the task, human-gated (see the compose surfaces below).
-6. On confirmation, proceeds as with an explicit scope. The original freeform text is stored as `Initial Intent` in `aidlc-state.md`.
+6. On confirmation, proceeds as with an explicit scope. The original freeform text is stored as `Initial Intent` in `amadeus-state.md`.
 7. If the user overrides the detected scope, uses the user's chosen scope instead.
 
-### `/aidlc compose` -- The Adaptive Composer
+### `/amadeus compose` -- The Adaptive Composer
 
 The compose surfaces (a leading `compose` verb, `--new-scope`, or `--report <path>`) make the engine emit a composer-dispatch `print` instead of a scope confirm. The verb is deliberately NOT a workspace verb (workspace verbs are terminal utility commands the Kiro seam runs off-band; compose is workflow work the conductor dispatches). Two modes split on the state file:
 
-1. **Front / report (no workflow yet):** the conductor dispatches `aidlc-composer-agent`, which runs the read-only `detect --json` scan, reads the stock scopes, and returns a structured proposal (`mode matched|custom`, the grid, per-SKIP rationale) validated by `aidlc-graph.ts validate-grid`. The conductor renders the approve/edit/reject gate; on approve a stock match births directly, a custom grid is authored as scope data (`scopes/aidlc-<name>.md` + a `scope-grid.json` entry, `keywords: []` by default) and the birth continues in the same turn.
-2. **In-flight (workflow running):** the composer proposes SKIP/un-SKIP flips for PENDING, ahead-of-cursor stages. The conductor writes the pending-proposal marker (`aidlc/.aidlc-compose-pending`) before the gate (the Stop hook honours it as a turn-stop signal); on approve it runs `aidlc-utility.ts recompose --skip <slugs> --add <slugs>`, which flips the plan suffixes under the audit lock, strict-validates against new starvation, rebuilds the derived fields, and emits `RECOMPOSED`. Detection is chat-first: the conductor's pre-forward judgment step (the same one that spots new-work) classifies a plain-chat reshape request ("can we skip market research?") and routes it as `next compose "<their words>"` rather than forwarding it verbatim (a verbatim forward would fall through to Branch 10 and run the current stage). When the request names specific stages imperatively, the conductor may skip the composer dispatch and present the gate itself, running `recompose` directly on approve - sound because the verb rejects starved/frozen/behind-cursor/skeleton-gate flips no matter who calls it; the human gate and the marker discipline are identical on both paths.
+1. **Front / report (no workflow yet):** the conductor dispatches `amadeus-composer-agent`, which runs the read-only `detect --json` scan, reads the stock scopes, and returns a structured proposal (`mode matched|custom`, the grid, per-SKIP rationale) validated by `amadeus-graph.ts validate-grid`. The conductor renders the approve/edit/reject gate; on approve a stock match births directly, a custom grid is authored as scope data (`scopes/amadeus-<name>.md` + a `scope-grid.json` entry, `keywords: []` by default) and the birth continues in the same turn.
+2. **In-flight (workflow running):** the composer proposes SKIP/un-SKIP flips for PENDING, ahead-of-cursor stages. The conductor writes the pending-proposal marker (`aidlc/.amadeus-compose-pending`) before the gate (the Stop hook honours it as a turn-stop signal); on approve it runs `amadeus-utility.ts recompose --skip <slugs> --add <slugs>`, which flips the plan suffixes under the audit lock, strict-validates against new starvation, rebuilds the derived fields, and emits `RECOMPOSED`. Detection is chat-first: the conductor's pre-forward judgment step (the same one that spots new-work) classifies a plain-chat reshape request ("can we skip market research?") and routes it as `next compose "<their words>"` rather than forwarding it verbatim (a verbatim forward would fall through to Branch 10 and run the current stage). When the request names specific stages imperatively, the conductor may skip the composer dispatch and present the gate itself, running `recompose` directly on approve - sound because the verb rejects starved/frozen/behind-cursor/skeleton-gate flips no matter who calls it; the human gate and the marker discipline are identical on both paths.
 
-### `/aidlc --status` -- Progress Check
+### `/amadeus --status` -- Progress Check
 
 Read-only command that inspects the current workflow without advancing it:
 
-1. Reads the active intent's `aidlc-state.md` (under `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`).
+1. Reads the active intent's `amadeus-state.md` (under `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`).
 2. Displays: current phase, current stage, completion percentage, pending decisions, and active agent.
 3. If verification is needed, runs the phase boundary check per stage-protocol-governance.md section 13.
 4. Does NOT advance the workflow -- strictly read-only.
 
-### `/aidlc --stage <id>` / `/aidlc --phase <name>` -- Jump to Stage/Phase
+### `/amadeus --stage <id>` / `/amadeus --phase <name>` -- Jump to Stage/Phase
 
-Jumps directly to a specific stage or phase. Supports both forward and backward jumps. The engine resolves the target, validates scope membership, and computes the jump direction; it emits a run-then-continue `print` directive naming the `aidlc-jump.ts execute` tool. The conductor runs that tool and re-runs `next` — it does not resolve or validate the jump itself. The numbered steps below describe what the jump computation (engine + tool) performs.
+Jumps directly to a specific stage or phase. Supports both forward and backward jumps. The engine resolves the target, validates scope membership, and computes the jump direction; it emits a run-then-continue `print` directive naming the `amadeus-jump.ts execute` tool. The conductor runs that tool and re-runs `next` — it does not resolve or validate the jump itself. The numbered steps below describe what the jump computation (engine + tool) performs.
 
 **Forward jump** (target is ahead of current position):
 1. Resolves target: `--stage` accepts a slug (`code-generation`) or display number (`3.5`). `--phase` accepts a name (`construction`) or number (`3`), resolves to the first in-scope stage of that phase.
@@ -98,35 +98,35 @@ Jumps directly to a specific stage or phase. Supports both forward and backward 
 
 Composable with `--scope` (to set/override scope), `--depth` (to override depth level), and `--test-strategy` (to override test volume).
 
-### `/aidlc --scope <scope>` -- Set/Override Scope
+### `/amadeus --scope <scope>` -- Set/Override Scope
 
-Sets the workflow scope. When used alone (`/aidlc --scope bugfix`), behaves like `/aidlc bugfix`. When combined with `--stage` or `--phase`, provides the scope for jump operations. Can be combined with `--depth` and `--test-strategy` to override defaults.
+Sets the workflow scope. When used alone (`/amadeus --scope bugfix`), behaves like `/amadeus bugfix`. When combined with `--stage` or `--phase`, provides the scope for jump operations. Can be combined with `--depth` and `--test-strategy` to override defaults.
 
-### `/aidlc --depth <level>` -- Override Depth
+### `/amadeus --depth <level>` -- Override Depth
 
 Overrides the depth level (minimal, standard, comprehensive). When used alone, updates the active workflow's depth. When combined with `--scope`, overrides the new scope's default. Logs a `DEPTH_CHANGED` audit event for standalone changes.
 
-### `/aidlc --test-strategy <level>` -- Override Test Strategy
+### `/amadeus --test-strategy <level>` -- Override Test Strategy
 
 Overrides the test volume strategy (minimal, standard, comprehensive) independently of depth. Defaults to the current depth when not specified. Allows combinations like `--depth standard --test-strategy minimal` for full artifacts with minimal testing. Logs a `TEST_STRATEGY_CHANGED` audit event for standalone changes.
 
 ### Intent birth -- the Initialization phase
 
-There is no separate scaffold command (the earlier `init` flag was retired; the workspace shell ships pre-built in `dist/<harness>/`). The three Initialization stages (workspace-scaffold, workspace-detection, state-init) run deterministically inside `aidlc-utility intent-birth` — auto-invoked on the first `/aidlc` (or `/aidlc <description>`), or explicitly via the `/aidlc-init` packaging. Birth mints the intent's record dir at `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/` with state initialised, scope routing applied, and the workflow positioned at the first post-Initialization stage:
+There is no separate scaffold command (the earlier `init` flag was retired; the workspace shell ships pre-built in `dist/<harness>/`). The three Initialization stages (workspace-scaffold, workspace-detection, state-init) run deterministically inside `amadeus-utility intent-birth` — auto-invoked on the first `/amadeus` (or `/amadeus <description>`), or explicitly via the `/amadeus-init` packaging. Birth mints the intent's record dir at `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/` with state initialised, scope routing applied, and the workflow positioned at the first post-Initialization stage:
 
 1. Creates the record dir tree (idempotent -- skips existing directories/files): the `audit/` shard dir, stage artifact directories (empty), and the verification directory.
 2. Creates the empty space-level `aidlc/knowledge/` directory (a sibling of the space's `intents/`). It is free-form with no fixed file set — birth seeds no per-agent subdirectories and no READMEs; the team adds files itself.
-3. Scans the workspace and writes the intent's `aidlc-state.md` with the actual phase (e.g., `IDEATION` for `--scope feature`), the resolved scope, and the stage plan derived from the compiled scope grid (`scope-grid.json`, the transpose of each stage's `scopes:` frontmatter).
+3. Scans the workspace and writes the intent's `amadeus-state.md` with the actual phase (e.g., `IDEATION` for `--scope feature`), the resolved scope, and the stage plan derived from the compiled scope grid (`scope-grid.json`, the transpose of each stage's `scopes:` frontmatter).
 4. Emits the full event sequence: `WORKFLOW_STARTED`, `WORKSPACE_SCAFFOLDED`, `WORKSPACE_SCANNED`, `WORKSPACE_INITIALISED`, `PHASE_STARTED` for the first executing phase, `STAGE_STARTED` + `STAGE_COMPLETED` for each Initialization stage, plus `PHASE_SKIPPED` events for any phases the scope skips.
-5. Auto-births only on a workspace with zero intents; with intents already present and no active cursor, the engine prompts the user to pick one (`/aidlc intent <slug>`) rather than birthing a duplicate. There is no re-init flag.
-6. When birth was reached via the auto-birth print, the conductor re-runs `next` and continues into the first post-Initialization stage; the explicit `/aidlc-init` packaging stops after Initialization so the user invokes `/aidlc` again to begin interactively.
+5. Auto-births only on a workspace with zero intents; with intents already present and no active cursor, the engine prompts the user to pick one (`/amadeus intent <slug>`) rather than birthing a duplicate. There is no re-init flag.
+6. When birth was reached via the auto-birth print, the conductor re-runs `next` and continues into the first post-Initialization stage; the explicit `/amadeus-init` packaging stops after Initialization so the user invokes `/amadeus` again to begin interactively.
 
 ### Resume (State File Exists)
 
-When the active intent's `aidlc-state.md` exists and the user invokes `/aidlc`, the engine's `next` detects the existing state, runs the resume/recovery guard, and emits an `ask` directive carrying the resume-options question. The conductor renders it via `AskUserQuestion` and feeds the choice back on `report --user-input`. The conductor does not branch on state-file existence itself; the guard logic below runs in the engine:
+When the active intent's `amadeus-state.md` exists and the user invokes `/amadeus`, the engine's `next` detects the existing state, runs the resume/recovery guard, and emits an `ask` directive carrying the resume-options question. The conductor renders it via `AskUserQuestion` and feeds the choice back on `report --user-input`. The conductor does not branch on state-file existence itself; the guard logic below runs in the engine:
 
 1. The engine reads the state file and prepares a status summary.
-2. It checks for `.aidlc-recovery.md` (in the intent's record dir). If it exists, it compares its "Current stage" field with `aidlc-state.md` to detect possible compaction-related state corruption.
+2. It checks for `.amadeus-recovery.md` (in the intent's record dir). If it exists, it compares its "Current stage" field with `amadeus-state.md` to detect possible compaction-related state corruption.
 3. It emits the `ask` directive with the resume options; the conductor renders them via `AskUserQuestion`.
 4. On the answer, the conductor recreates stage-level tasks matching the current workflow state.
 
@@ -136,15 +136,15 @@ When the active intent's `aidlc-state.md` exists and the user invokes `/aidlc`, 
 
 ### Session Resume Flow
 
-The branching below is the **engine's** `next` decision logic — the argument, init, and state-file checks all run inside `aidlc-orchestrate next`, which emits one directive (status `print`, scaffold `print`, an `ask` for the resume menu, or a `run-stage` to begin work). The conductor's own flow is just the forwarding loop: call `next`, act on the directive, `report`, repeat.
+The branching below is the **engine's** `next` decision logic — the argument, init, and state-file checks all run inside `amadeus-orchestrate next`, which emits one directive (status `print`, scaffold `print`, an `ask` for the resume menu, or a `run-stage` to begin work). The conductor's own flow is just the forwarding loop: call `next`, act on the directive, `report`, repeat.
 
 ```mermaid
 flowchart TD
-    START(["/aidlc invoked"])
+    START(["/amadeus invoked"])
     ARG_CHECK{"Arguments\nprovided?"}
     STATUS_CHECK{"Argument =\n--status?"}
     STATE_EXISTS{"Active intent\nexists?"}
-    RECOVERY_CHECK{".aidlc-recovery.md\nexists?"}
+    RECOVERY_CHECK{".amadeus-recovery.md\nexists?"}
     CORRUPTION{"State matches\nrecovery file?"}
     WARN["Warn user about\npossible corruption"]
 
@@ -195,7 +195,7 @@ flowchart TD
 
 ### State File Schema
 
-The state file at `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/aidlc-state.md` (the intent's record dir) is created from the template at `.claude/knowledge/aidlc-shared/state-template.md`. It uses State Version 7 and contains:
+The state file at `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/amadeus-state.md` (the intent's record dir) is created from the template at `.claude/knowledge/amadeus-shared/state-template.md`. It uses State Version 7 and contains:
 
 | Section | Contents |
 |---------|----------|
@@ -220,7 +220,7 @@ The Construction phase section is special: it runs Bolt by Bolt (see [Constructi
 
 ### Recovery Breadcrumb
 
-The recovery breadcrumb (`.aidlc-recovery.md` in the intent's record dir) is written by the `validate-state.ts` PreCompact hook. It records a snapshot of the workflow's last known-good state before context compaction occurs.
+The recovery breadcrumb (`.amadeus-recovery.md` in the intent's record dir) is written by the `validate-state.ts` PreCompact hook. It records a snapshot of the workflow's last known-good state before context compaction occurs.
 
 On session resume, the orchestrator compares the breadcrumb's "Current stage" with the state file's "Current Stage". If they differ, it warns the user that compaction may have caused state corruption. This is important because PreCompact hooks are informational-only and cannot block compaction.
 
@@ -228,7 +228,7 @@ On session resume, the orchestrator compares the breadcrumb's "Current stage" wi
 
 When a state file is detected, the orchestrator presents four options:
 
-**1. Resume from last checkpoint** -- Continues from the in-progress stage. Reads `aidlc-state.md` to determine completed/in-progress/not-started stages. Recreates stage tasks matching current state.
+**1. Resume from last checkpoint** -- Continues from the in-progress stage. Reads `amadeus-state.md` to determine completed/in-progress/not-started stages. Recreates stage tasks matching current state.
 
 **2. Redo current stage** -- Discards partial artifacts for the current stage and re-runs it. Deletes the artifact directory entirely, resets the state checkbox to `[ ]`, and re-executes from scratch.
 
@@ -259,7 +259,7 @@ The scope determines which of the 32 stages execute and at what depth. Stages no
 
 ### Complete Mapping
 
-Authoritative data lives in the `.claude/scopes/aidlc-<name>.md` files plus each stage's `scopes:` frontmatter, compiled into `.claude/tools/data/scope-grid.json`. Run `bun .claude/tools/aidlc-utility.ts scope-table` for the live compiled counts.
+Authoritative data lives in the `.claude/scopes/amadeus-<name>.md` files plus each stage's `scopes:` frontmatter, compiled into `.claude/tools/data/scope-grid.json`. Run `bun .claude/tools/amadeus-utility.ts scope-table` for the live compiled counts.
 
 | Scope | Stages Included | EXECUTE / Total | Depth | Test Strategy |
 |---|---|---|---|---|
@@ -310,7 +310,7 @@ sequenceDiagram
     participant A as Agent (.md)
     participant K as Knowledge (6 steps)
     participant U as User
-    participant S as aidlc-state.md
+    participant S as amadeus-state.md
     participant AU as audit/ shard
 
     O->>SF: 1. Read stage file
@@ -364,10 +364,10 @@ Subagent stages delegate work to a separate Claude Code task via the Claude Code
 
 | Stage | Claude Code Subagent Type | Agent | Reason |
 |-------|---------------------------|-------|--------|
-| 2.1 Reverse Engineering | `aidlc-developer-agent` then `aidlc-architect-agent` (two-step) | aidlc-developer-agent + aidlc-architect-agent | Deep code analysis produces large intermediate output |
-| 3.5 Code Generation | `aidlc-developer-agent` | aidlc-developer-agent | Code writing benefits from clean context focused on unit specification |
+| 2.1 Reverse Engineering | `amadeus-developer-agent` then `amadeus-architect-agent` (two-step) | amadeus-developer-agent + amadeus-architect-agent | Deep code analysis produces large intermediate output |
+| 3.5 Code Generation | `amadeus-developer-agent` | amadeus-developer-agent | Code writing benefits from clean context focused on unit specification |
 
-Workspace detection (0.2) used to be a subagent. It is now a deterministic rule-based scanner inside `aidlc-utility init` — rules are documented in `aidlc-common/stages/initialization/workspace-detection.md`.
+Workspace detection (0.2) used to be a subagent. It is now a deterministic rule-based scanner inside `amadeus-utility init` — rules are documented in `amadeus-common/stages/initialization/workspace-detection.md`.
 
 The 6-step process:
 
@@ -404,10 +404,10 @@ Per-Bolt structure:
 
 1. Collect questions for stages 3.1–3.4 across the Bolt's Units in QUESTION-ONLY mode. Single answers gate.
 2. Generate design artifacts for stages 3.1–3.4 in ARTIFACT-ONLY mode.
-3. Dispatch stage 3.5 Code Generation per Unit via the Task tool (`subagent_type="aidlc-developer-agent"`). The per-Unit approval gate inside `code-generation.md` is **suppressed** by the orchestrator.
+3. Dispatch stage 3.5 Code Generation per Unit via the Task tool (`subagent_type="amadeus-developer-agent"`). The per-Unit approval gate inside `code-generation.md` is **suppressed** by the orchestrator.
 4. Present a single Bolt-level (or batch-level) approval gate.
 
-The first Bolt in `bolt-plan.md` is the **walking skeleton** — its gate is always presented regardless of autonomy mode. Immediately after the walking-skeleton gate approves, the orchestrator fires the **ladder prompt** exactly once per workflow, records `Construction Autonomy Mode: autonomous|gated` in `aidlc-state.md`, and emits `AUTONOMY_MODE_SET`. Remaining Bolts honour that mode.
+The first Bolt in `bolt-plan.md` is the **walking skeleton** — its gate is always presented regardless of autonomy mode. Immediately after the walking-skeleton gate approves, the orchestrator fires the **ladder prompt** exactly once per workflow, records `Construction Autonomy Mode: autonomous|gated` in `amadeus-state.md`, and emits `AUTONOMY_MODE_SET`. Remaining Bolts honour that mode.
 
 Bolts eligible to run in parallel (dependency prerequisites satisfied, no mutual dependency) form a **batch**. The orchestrator executes questions/design per-Bolt sequentially within the batch, then dispatches stage 3.5 Code Generation in parallel by issuing **N `Task` calls in a single assistant message**. The framework spawns N subagent sessions concurrently; results arrive in the orchestrator's next turn. A single batch-level gate covers all Bolts in the batch. Audit log ties parallel Bolts together via the `Batch` field on `BOLT_STARTED`/`BOLT_COMPLETED`.
 
@@ -448,13 +448,13 @@ sequenceDiagram
 
 <!-- Text fallback: The orchestrator reads bolt-plan.md and the dependency DAG. It runs Bolt A as the walking skeleton, the user approves the gate, and the ladder prompt fires once. User picks "Continue autonomously", orchestrator writes Construction Autonomy Mode and emits AUTONOMY_MODE_SET. For Bolts B and C (eligible in parallel), the orchestrator issues both Task calls in a single message; the framework runs them concurrently; the orchestrator receives both results in the next turn and emits BOLT_COMPLETED for each with a shared Batch field. No gate because autonomy mode is autonomous — a failure would still halt. Once all Bolts are done, 3.6 and 3.7 run once at the end. -->
 
-State and audit safety under parallel dispatch: `aidlc-audit.ts` uses mkdir-based locking so concurrent appends are safe. `aidlc-state.ts advance` is not locked, but the orchestrator serialises state writes naturally — it only writes after Task results return, not during. No state-race risk.
+State and audit safety under parallel dispatch: `amadeus-audit.ts` uses mkdir-based locking so concurrent appends are safe. `amadeus-state.ts advance` is not locked, but the orchestrator serialises state writes naturally — it only writes after Task results return, not during. No state-race risk.
 
 ---
 
 ## Stage Advancement Protocol
 
-State transitions are tool-owned. The orchestrator decides when to advance; `aidlc-state.ts` commands handle the state-file update + audit emission atomically. See [State Machine](12-state-machine.md) for the canonical workflow / phase / stage state diagrams and full audit-event taxonomy.
+State transitions are tool-owned. The orchestrator decides when to advance; `amadeus-state.ts` commands handle the state-file update + audit emission atomically. See [State Machine](12-state-machine.md) for the canonical workflow / phase / stage state diagrams and full audit-event taxonomy.
 
 ### Stage Lifecycle
 
@@ -486,26 +486,26 @@ The state tool owns every transition above. The orchestrator never writes checkb
 
 1. **Run completion verification** - check artifacts exist on disk, guardrails respected. This is a correctness check, not a state transition. This is also enforced deterministically: `approve` refuses a gated stage whose declared `produces` artifacts are missing (unless `AIDLC_SKIP_ARTIFACT_GUARD=1`), so a stage cannot be marked complete without its outputs (#366). Per-unit Construction stages are verified by the swarm referee instead.
 
-2. **Enter the gate** (optional): `bun .claude/tools/aidlc-state.ts gate-start <slug>`. Marks `[-]` → `[?]`, emits `STAGE_AWAITING_APPROVAL`, makes `/aidlc --status` show "Awaiting your approval on \<stage\>". If skipped, the engine's `report` / `reject` paths backfill the missing `STAGE_AWAITING_APPROVAL` row (tagged `Recovered=true`) before recording the outcome.
+2. **Enter the gate** (optional): `bun .claude/tools/amadeus-state.ts gate-start <slug>`. Marks `[-]` → `[?]`, emits `STAGE_AWAITING_APPROVAL`, makes `/amadeus --status` show "Awaiting your approval on \<stage\>". If skipped, the engine's `report` / `reject` paths backfill the missing `STAGE_AWAITING_APPROVAL` row (tagged `Recovered=true`) before recording the outcome.
 
 3. **Present the approval gate** (AskUserQuestion).
 
 4. **Record the user's response**:
-   - **Approve** -> `bun .claude/tools/aidlc-orchestrate.ts report --stage <slug> --result approved --user-input "<exact choice>"`. Emits any missing gate row, then `GATE_APPROVED` + `STAGE_COMPLETED`, and advances. Refuses with a missing-produced-artifact error if the stage's `produces` outputs are absent.
-   - **Request Changes** → `bun .claude/tools/aidlc-state.ts reject <slug> --feedback "<text>"`. Emits `GATE_REJECTED` + `STAGE_REVISING`, marks `[?]` → `[R]`, increments Revision Count.
-   - After re-running work for a `[R]` stage, call `bun .claude/tools/aidlc-state.ts revise <slug>` to re-enter the gate (emits a fresh `STAGE_AWAITING_APPROVAL`, marks `[R]` → `[?]`).
+   - **Approve** -> `bun .claude/tools/amadeus-orchestrate.ts report --stage <slug> --result approved --user-input "<exact choice>"`. Emits any missing gate row, then `GATE_APPROVED` + `STAGE_COMPLETED`, and advances. Refuses with a missing-produced-artifact error if the stage's `produces` outputs are absent.
+   - **Request Changes** → `bun .claude/tools/amadeus-state.ts reject <slug> --feedback "<text>"`. Emits `GATE_REJECTED` + `STAGE_REVISING`, marks `[?]` → `[R]`, increments Revision Count.
+   - After re-running work for a `[R]` stage, call `bun .claude/tools/amadeus-state.ts revise <slug>` to re-enter the gate (emits a fresh `STAGE_AWAITING_APPROVAL`, marks `[R]` → `[?]`).
 
-5. **Advance to the next stage**: `bun .claude/tools/aidlc-state.ts advance <slug>`. The tool derives the next in-scope stage from the state file's EXECUTE/SKIP suffix (set by `init`) plus the compiled scope grid (`scope-grid.json`). Marks `[x]` on completed, `[-]` on next, updates Current Stage / Lifecycle Phase / Active Agent / Next Stage / Last Completed Stage / Last Updated / Completed count, and emits `STAGE_STARTED` for the next stage. At a phase boundary it additionally emits `PHASE_COMPLETED` + `PHASE_VERIFIED` + `PHASE_STARTED` atomically.
+5. **Advance to the next stage**: `bun .claude/tools/amadeus-state.ts advance <slug>`. The tool derives the next in-scope stage from the state file's EXECUTE/SKIP suffix (set by `init`) plus the compiled scope grid (`scope-grid.json`). Marks `[x]` on completed, `[-]` on next, updates Current Stage / Lifecycle Phase / Active Agent / Next Stage / Last Completed Stage / Last Updated / Completed count, and emits `STAGE_STARTED` for the next stage. At a phase boundary it additionally emits `PHASE_COMPLETED` + `PHASE_VERIFIED` + `PHASE_STARTED` atomically.
 
    The tool is idempotent — replaying `advance <slug>` a second time returns `{replay: true}` without re-emitting events.
 
-6. **If this was the last in-scope stage**: `bun .claude/tools/aidlc-state.ts complete-workflow <slug>`. Marks `[x]`, sets Status=Completed, emits `PHASE_COMPLETED` + `PHASE_VERIFIED` + `WORKFLOW_COMPLETED`. Present a completion summary.
+6. **If this was the last in-scope stage**: `bun .claude/tools/amadeus-state.ts complete-workflow <slug>`. Marks `[x]`, sets Status=Completed, emits `PHASE_COMPLETED` + `PHASE_VERIFIED` + `WORKFLOW_COMPLETED`. Present a completion summary.
 
 7. **Transition tasks**: mark the old task `completed`, set the new task `in_progress` with `activeForm: "Running <Next Stage> [slug]"`. The `[slug]` suffix triggers the PostToolUse hook that syncs statusline fields.
 
 ### Phase Boundary Verification
 
-At phase transitions (init→ideation / inception / …, ideation→inception, inception→construction, construction→operation), `advance` emits PHASE_COMPLETED + PHASE_VERIFIED + PHASE_STARTED. The orchestrator is responsible for running the traceability check from `.claude/knowledge/aidlc-shared/verification.md` BEFORE calling `advance` — if verification fails, surface the issues to the user and do not advance.
+At phase transitions (init→ideation / inception / …, ideation→inception, inception→construction, construction→operation), `advance` emits PHASE_COMPLETED + PHASE_VERIFIED + PHASE_STARTED. The orchestrator is responsible for running the traceability check from `.claude/knowledge/amadeus-shared/verification.md` BEFORE calling `advance` — if verification fails, surface the issues to the user and do not advance.
 
 ---
 
@@ -521,7 +521,7 @@ Tasks are created at the stage level -- one task per stage in scope. Tasks exist
 
 Tasks are created in phase batches:
 
-- **INITIALIZATION**: All Initialization stage tasks (workspace-scaffold, workspace-detection, state-init) created before `aidlc-utility init` runs. The tool completes all three stages in one call; tasks flip to completed after the tool returns.
+- **INITIALIZATION**: All Initialization stage tasks (workspace-scaffold, workspace-detection, state-init) created before `amadeus-utility init` runs. The tool completes all three stages in one call; tasks flip to completed after the tool returns.
 - **IDEATION**: All Ideation stage tasks created before stage 1.1 begins.
 - **INCEPTION**: All Inception stage tasks created before stage 2.1 begins.
 - **CONSTRUCTION**: Tasks created based on the execution plan from Delivery Planning. Per-unit stage tasks are created for each unit, plus cross-cutting tasks.
@@ -556,7 +556,7 @@ The task MUST be `in_progress` for the `activeForm` spinner to display. This upd
 
 ## Deliberate Deviations
 
-The following intentional differences from the upstream `aidlc-workflows/` reference and the v2 framework spec are documented in SKILL.md and stage-protocol.md to prevent future "fix" attempts.
+The following intentional differences from the upstream `amadeus-workflows/` reference and the v2 framework spec are documented in SKILL.md and stage-protocol.md to prevent future "fix" attempts.
 
 | # | Deviation | Reference | Implementation | Rationale |
 |---|-----------|-----------|----------------|-----------|
@@ -572,12 +572,12 @@ The following intentional differences from the upstream `aidlc-workflows/` refer
 | 10 | Audit log formats | Single format | Three additional: Error, Recovery, Change Request | Post-hoc analysis |
 | 11 | Tri-mode question flow | File-based only | "Guide me" / "I'll edit the file" / "Chat" | Accommodates different preferences |
 | 12 | Delivery Planning | Workflow Planning (stage selector) | Renamed; adds work breakdown analysis | More actionable Construction planning |
-| 13 | State file naming | `state.md` | `aidlc-state.md` | Hooks hardcode path; changing breaks scripts |
+| 13 | State file naming | `state.md` | `amadeus-state.md` | Hooks hardcode path; changing breaks scripts |
 | 14 | Minimal rules | Multiple rule files | Only guardrails (~35 lines) | Avoids context bloat in non-AI-DLC conversations |
-| 15 | Scope-to-stage mapping location | In rules | File-authored: `.claude/scopes/aidlc-<name>.md` (identity) + per-stage `scopes:` frontmatter (membership), transposed at compile into `scope-grid.json` (the runtime source the engine reads) | Scope is a file-authored primitive; no `scope-mapping.json`, no SKILL.md-resident routing |
+| 15 | Scope-to-stage mapping location | In rules | File-authored: `.claude/scopes/amadeus-<name>.md` (identity) + per-stage `scopes:` frontmatter (membership), transposed at compile into `scope-grid.json` (the runtime source the engine reads) | Scope is a file-authored primitive; no `scope-mapping.json`, no SKILL.md-resident routing |
 | 16 | Agent tool access | Scoped restrictions | Binary: full Bash or none | Claude Code doesn't support scoped tool restrictions |
 | 17 | No nested delegation | Agents can delegate | All agents have `disallowedTools: Task` | Prevents cascading subagent chains |
-| 18 | Flat agent location | `.claude/agents/aidlc/*.md` | `.claude/agents/*.md` | Matches Claude Code standard discovery |
+| 18 | Flat agent location | `.claude/agents/amadeus/*.md` | `.claude/agents/*.md` | Matches Claude Code standard discovery |
 | 19 | Agent memory | `memory: project` defined | Omitted | Not a supported Claude Code frontmatter field |
 | 20 | Design-agent support additions | 1.6, 2.5 only | Added as support to 2.4, 2.6 | UX-informed development |
 
@@ -595,14 +595,14 @@ When a Claude Code Task tool call fails:
 
 ### State Corruption Recovery
 
-If `aidlc-state.md` exists but cannot be parsed:
+If `amadeus-state.md` exists but cannot be parsed:
 
-1. Create a backup (`aidlc-state.md.bak`).
+1. Create a backup (`amadeus-state.md.bak`).
 2. Scan the intent's record dir for artifact evidence to determine which stages actually completed.
 3. Rebuild the state file from artifact evidence.
 4. Inform the user: "State file was corrupted. Rebuilt from artifacts. Please verify."
 
-If `.aidlc-recovery.md` disagrees with `aidlc-state.md` on resume, warn the user of possible compaction-related corruption.
+If `.amadeus-recovery.md` disagrees with `amadeus-state.md` on resume, warn the user of possible compaction-related corruption.
 
 ### Missing Artifact Recovery
 
@@ -642,35 +642,35 @@ Complete reference of all 32 stages with execution metadata. The welcome message
 | 0.1 | Workspace Scaffold | Initialization | ALWAYS | (orchestrator) | -- | inline |
 | 0.2 | Workspace Detection | Initialization | ALWAYS | (orchestrator) | -- | inline |
 | 0.3 | State Initialization | Initialization | ALWAYS | (orchestrator) | -- | inline |
-| 1.1 | Intent Capture & Framing | Ideation | ALWAYS | aidlc-product-agent | aidlc-architect-agent | inline |
-| 1.2 | Market Research | Ideation | CONDITIONAL | aidlc-product-agent | -- | inline |
-| 1.3 | Feasibility & Constraints | Ideation | CONDITIONAL | aidlc-architect-agent | aidlc-aws-platform-agent, aidlc-compliance-agent | inline |
-| 1.4 | Scope Definition | Ideation | ALWAYS | aidlc-product-agent | aidlc-delivery-agent | inline |
-| 1.5 | Team Formation | Ideation | CONDITIONAL | aidlc-delivery-agent | -- | inline |
-| 1.6 | Rough Mockups | Ideation | CONDITIONAL | aidlc-design-agent | aidlc-product-agent | inline |
-| 1.7 | Approval & Handoff | Ideation | ALWAYS | aidlc-delivery-agent | aidlc-product-agent | inline |
-| 2.1 | Reverse Engineering | Inception | CONDITIONAL | aidlc-developer-agent | aidlc-architect-agent | subagent (aidlc-developer-agent → aidlc-architect-agent) |
-| 2.2 | Practices Discovery | Inception | CONDITIONAL | aidlc-pipeline-deploy-agent | aidlc-quality-agent, aidlc-developer-agent, aidlc-devsecops-agent | inline |
-| 2.3 | Requirements Analysis | Inception | ALWAYS | aidlc-product-agent | -- | inline |
-| 2.4 | User Stories | Inception | CONDITIONAL | aidlc-product-agent | aidlc-design-agent | inline |
-| 2.5 | Refined Mockups | Inception | CONDITIONAL | aidlc-design-agent | aidlc-product-agent | inline |
-| 2.6 | Application Design | Inception | CONDITIONAL | aidlc-architect-agent | aidlc-aws-platform-agent, aidlc-design-agent | inline |
-| 2.7 | Units Generation | Inception | ALWAYS | aidlc-architect-agent | aidlc-delivery-agent | inline |
-| 2.8 | Delivery Planning | Inception | ALWAYS | aidlc-delivery-agent | aidlc-architect-agent | inline |
-| 3.1 | Functional Design | Construction | CONDITIONAL | aidlc-architect-agent | aidlc-developer-agent | inline |
-| 3.2 | NFR Requirements | Construction | CONDITIONAL | aidlc-architect-agent | aidlc-devsecops-agent, aidlc-compliance-agent, aidlc-quality-agent | inline |
-| 3.3 | NFR Design | Construction | CONDITIONAL | aidlc-architect-agent | aidlc-aws-platform-agent | inline |
-| 3.4 | Infrastructure Design | Construction | CONDITIONAL | aidlc-aws-platform-agent | aidlc-devsecops-agent, aidlc-compliance-agent | inline |
-| 3.5 | Code Generation | Construction | ALWAYS | aidlc-developer-agent | -- | subagent (aidlc-developer-agent) |
-| 3.6 | Build and Test | Construction | ALWAYS | aidlc-quality-agent | aidlc-devsecops-agent | inline |
-| 3.7 | CI Pipeline | Construction | CONDITIONAL | aidlc-pipeline-deploy-agent | -- | inline |
-| 4.1 | Deployment Pipeline | Operation | CONDITIONAL | aidlc-pipeline-deploy-agent | -- | inline |
-| 4.2 | Environment Provisioning | Operation | CONDITIONAL | aidlc-aws-platform-agent | aidlc-devsecops-agent, aidlc-compliance-agent | inline |
-| 4.3 | Deployment Execution | Operation | CONDITIONAL | aidlc-pipeline-deploy-agent | aidlc-developer-agent | inline |
-| 4.4 | Observability Setup | Operation | CONDITIONAL | aidlc-operations-agent | -- | inline |
-| 4.5 | Incident Response | Operation | CONDITIONAL | aidlc-operations-agent | -- | inline |
-| 4.6 | Performance Validation | Operation | CONDITIONAL | aidlc-quality-agent | -- | inline |
-| 4.7 | Feedback & Optimization | Operation | CONDITIONAL | aidlc-operations-agent | aidlc-aws-platform-agent | inline |
+| 1.1 | Intent Capture & Framing | Ideation | ALWAYS | amadeus-product-agent | amadeus-architect-agent | inline |
+| 1.2 | Market Research | Ideation | CONDITIONAL | amadeus-product-agent | -- | inline |
+| 1.3 | Feasibility & Constraints | Ideation | CONDITIONAL | amadeus-architect-agent | amadeus-aws-platform-agent, amadeus-compliance-agent | inline |
+| 1.4 | Scope Definition | Ideation | ALWAYS | amadeus-product-agent | amadeus-delivery-agent | inline |
+| 1.5 | Team Formation | Ideation | CONDITIONAL | amadeus-delivery-agent | -- | inline |
+| 1.6 | Rough Mockups | Ideation | CONDITIONAL | amadeus-design-agent | amadeus-product-agent | inline |
+| 1.7 | Approval & Handoff | Ideation | ALWAYS | amadeus-delivery-agent | amadeus-product-agent | inline |
+| 2.1 | Reverse Engineering | Inception | CONDITIONAL | amadeus-developer-agent | amadeus-architect-agent | subagent (amadeus-developer-agent → amadeus-architect-agent) |
+| 2.2 | Practices Discovery | Inception | CONDITIONAL | amadeus-pipeline-deploy-agent | amadeus-quality-agent, amadeus-developer-agent, amadeus-devsecops-agent | inline |
+| 2.3 | Requirements Analysis | Inception | ALWAYS | amadeus-product-agent | -- | inline |
+| 2.4 | User Stories | Inception | CONDITIONAL | amadeus-product-agent | amadeus-design-agent | inline |
+| 2.5 | Refined Mockups | Inception | CONDITIONAL | amadeus-design-agent | amadeus-product-agent | inline |
+| 2.6 | Application Design | Inception | CONDITIONAL | amadeus-architect-agent | amadeus-aws-platform-agent, amadeus-design-agent | inline |
+| 2.7 | Units Generation | Inception | ALWAYS | amadeus-architect-agent | amadeus-delivery-agent | inline |
+| 2.8 | Delivery Planning | Inception | ALWAYS | amadeus-delivery-agent | amadeus-architect-agent | inline |
+| 3.1 | Functional Design | Construction | CONDITIONAL | amadeus-architect-agent | amadeus-developer-agent | inline |
+| 3.2 | NFR Requirements | Construction | CONDITIONAL | amadeus-architect-agent | amadeus-devsecops-agent, amadeus-compliance-agent, amadeus-quality-agent | inline |
+| 3.3 | NFR Design | Construction | CONDITIONAL | amadeus-architect-agent | amadeus-aws-platform-agent | inline |
+| 3.4 | Infrastructure Design | Construction | CONDITIONAL | amadeus-aws-platform-agent | amadeus-devsecops-agent, amadeus-compliance-agent | inline |
+| 3.5 | Code Generation | Construction | ALWAYS | amadeus-developer-agent | -- | subagent (amadeus-developer-agent) |
+| 3.6 | Build and Test | Construction | ALWAYS | amadeus-quality-agent | amadeus-devsecops-agent | inline |
+| 3.7 | CI Pipeline | Construction | CONDITIONAL | amadeus-pipeline-deploy-agent | -- | inline |
+| 4.1 | Deployment Pipeline | Operation | CONDITIONAL | amadeus-pipeline-deploy-agent | -- | inline |
+| 4.2 | Environment Provisioning | Operation | CONDITIONAL | amadeus-aws-platform-agent | amadeus-devsecops-agent, amadeus-compliance-agent | inline |
+| 4.3 | Deployment Execution | Operation | CONDITIONAL | amadeus-pipeline-deploy-agent | amadeus-developer-agent | inline |
+| 4.4 | Observability Setup | Operation | CONDITIONAL | amadeus-operations-agent | -- | inline |
+| 4.5 | Incident Response | Operation | CONDITIONAL | amadeus-operations-agent | -- | inline |
+| 4.6 | Performance Validation | Operation | CONDITIONAL | amadeus-quality-agent | -- | inline |
+| 4.7 | Feedback & Optimization | Operation | CONDITIONAL | amadeus-operations-agent | amadeus-aws-platform-agent | inline |
 
 **Execution key:**
 - ALWAYS: Executes for all scopes that include this stage.
@@ -678,13 +678,13 @@ Complete reference of all 32 stages with execution metadata. The welcome message
 
 **Mode key:**
 - `inline`: Runs in the orchestrator conversation. User can interact.
-- `subagent (<agent-name>)`: Delegated via Claude Code Task tool with `subagent_type` set to the named agent (e.g., `aidlc-developer-agent`). The subagent inherits the full session toolset unless narrowed by an optional `tools:` allowlist in the agent's frontmatter; `disallowedTools: Task` is the only shipped restriction.
+- `subagent (<agent-name>)`: Delegated via Claude Code Task tool with `subagent_type` set to the named agent (e.g., `amadeus-developer-agent`). The subagent inherits the full session toolset unless narrowed by an optional `tools:` allowlist in the agent's frontmatter; `disallowedTools: Task` is the only shipped restriction.
 
 ---
 
 ## Appendix B: Hook Reference
 
-The framework hooks are registered project-wide in `settings.json` (the v0.6.0 hooks-move; they self-gate when no workflow is active). Three of them are detailed below. The rest, including `aidlc-sensor-fire.ts`, `aidlc-sync-statusline.ts`, and `aidlc-runtime-compile.ts`, are covered in [Hooks and Tools](06-hooks-and-tools.md), which carries the authoritative hook list and full source-level documentation for all of them.
+The framework hooks are registered project-wide in `settings.json` (the v0.6.0 hooks-move; they self-gate when no workflow is active). Three of them are detailed below. The rest, including `amadeus-sensor-fire.ts`, `amadeus-sync-statusline.ts`, and `amadeus-runtime-compile.ts`, are covered in [Hooks and Tools](06-hooks-and-tools.md), which carries the authoritative hook list and full source-level documentation for all of them.
 
 ### PostToolUse: audit-logger.ts
 
@@ -697,7 +697,7 @@ The framework hooks are registered project-wide in `settings.json` (the v0.6.0 h
 
 - **Matcher**: (empty -- matches all compaction events)
 - **Trigger**: Before Claude Code performs context compaction.
-- **Behavior**: Exits silently if no state file exists. Validates `aidlc-state.md` contains "Stage Progress" and "Current Status" sections. Writes `.aidlc-recovery.md` breadcrumb.
+- **Behavior**: Exits silently if no state file exists. Validates `amadeus-state.md` contains "Stage Progress" and "Current Status" sections. Writes `.amadeus-recovery.md` breadcrumb.
 
 ### SubagentStop: log-subagent.ts
 

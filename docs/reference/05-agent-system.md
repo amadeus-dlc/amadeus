@@ -16,7 +16,7 @@ Every agent file must include this YAML frontmatter:
 
 ```yaml
 ---
-name: aidlc-architect-agent               # Agent identifier (matches filename without .md)
+name: amadeus-architect-agent               # Agent identifier (matches filename without .md)
 description: >                      # Brief role summary (shown in Claude Code agent list)
   System architect responsible for application design,
   NFR design, and component decomposition.
@@ -76,15 +76,15 @@ Every agent *can* reach Bash and WebSearch by inheritance; the table records whi
 
 | Tool | Expected to exercise it |
 |------|---------------------|
-| Bash | aidlc-aws-platform-agent, aidlc-devsecops-agent, aidlc-developer-agent, aidlc-quality-agent, aidlc-pipeline-deploy-agent, aidlc-operations-agent |
-| WebSearch | aidlc-product-agent, aidlc-design-agent, aidlc-compliance-agent |
+| Bash | amadeus-aws-platform-agent, amadeus-devsecops-agent, amadeus-developer-agent, amadeus-quality-agent, amadeus-pipeline-deploy-agent, amadeus-operations-agent |
+| WebSearch | amadeus-product-agent, amadeus-design-agent, amadeus-compliance-agent |
 
 ### Model Overrides
 
 | Model | Agents |
 |-------|--------|
-| opus | aidlc-architect-agent, aidlc-product-agent, aidlc-design-agent, aidlc-developer-agent, aidlc-quality-agent, aidlc-devsecops-agent, aidlc-compliance-agent, aidlc-aws-platform-agent |
-| sonnet | aidlc-delivery-agent, aidlc-pipeline-deploy-agent, aidlc-operations-agent |
+| opus | amadeus-architect-agent, amadeus-product-agent, amadeus-design-agent, amadeus-developer-agent, amadeus-quality-agent, amadeus-devsecops-agent, amadeus-compliance-agent, amadeus-aws-platform-agent |
+| sonnet | amadeus-delivery-agent, amadeus-pipeline-deploy-agent, amadeus-operations-agent |
 
 The default is opus. An agent uses sonnet only when its output is dominantly templated or pattern-following (delivery plans, CI/CD YAML, observability/runbook scaffolding) and the methodology is already encoded in knowledge files.
 
@@ -105,22 +105,22 @@ Opus is used for any agent whose work involves high-judgment, multi-constraint r
 
 | Agent | Bash | WebSearch | Opus Model | Lead Stages | Support Stages | Total |
 |-------|------|-----------|------------|-------------|----------------|-------|
-| aidlc-product-agent | No | Yes | Yes | 5 | 3 | 8 |
-| aidlc-design-agent | No | Yes | Yes | 2 | 2 | 4 |
-| aidlc-delivery-agent | No | No | No | 3 | 2 | 5 |
-| aidlc-architect-agent | No | No | Yes | 6 | 3 | 9 |
-| aidlc-aws-platform-agent | Yes | No | Yes | 2 | 4 | 6 |
-| aidlc-compliance-agent | No | Yes | Yes | 0 | 4 | 4 |
-| aidlc-devsecops-agent | Yes | No | Yes | 0 | 5 | 5 |
-| aidlc-developer-agent | Yes | No | Yes | 2 | 3 | 5 |
-| aidlc-quality-agent | Yes | No | Yes | 2 | 2 | 4 |
-| aidlc-pipeline-deploy-agent | Yes | No | No | 4 | 0 | 4 |
-| aidlc-operations-agent | Yes | No | No | 3 | 0 | 3 |
+| amadeus-product-agent | No | Yes | Yes | 5 | 3 | 8 |
+| amadeus-design-agent | No | Yes | Yes | 2 | 2 | 4 |
+| amadeus-delivery-agent | No | No | No | 3 | 2 | 5 |
+| amadeus-architect-agent | No | No | Yes | 6 | 3 | 9 |
+| amadeus-aws-platform-agent | Yes | No | Yes | 2 | 4 | 6 |
+| amadeus-compliance-agent | No | Yes | Yes | 0 | 4 | 4 |
+| amadeus-devsecops-agent | Yes | No | Yes | 0 | 5 | 5 |
+| amadeus-developer-agent | Yes | No | Yes | 2 | 3 | 5 |
+| amadeus-quality-agent | Yes | No | Yes | 2 | 2 | 4 |
+| amadeus-pipeline-deploy-agent | Yes | No | No | 4 | 0 | 4 |
+| amadeus-operations-agent | Yes | No | No | 3 | 0 | 3 |
 
 **Observations:**
-- aidlc-architect-agent has the broadest stage involvement (9 stages across 3 phases).
+- amadeus-architect-agent has the broadest stage involvement (9 stages across 3 phases).
 - Eight of 11 agents run on opus; the three sonnet agents (delivery, pipeline-deploy, operations) handle dominantly templated planning, CI/CD, and runbook work.
-- aidlc-compliance-agent operates purely in an advisory capacity (4 support stages, no lead stages).
+- amadeus-compliance-agent operates purely in an advisory capacity (4 support stages, no lead stages).
 - Six of 11 agents have Bash access, all in roles that need CLI interaction.
 - Three agents have WebSearch access for research tasks.
 
@@ -130,17 +130,17 @@ Opus is used for any agent whose work involves high-judgment, multi-constraint r
 
 | Agent | Init (0) | Ideation (1) | Inception (2) | Construction (3) | Operation (4) |
 |-------|----------|--------------|---------------|-------------------|---------------|
-| aidlc-product-agent | -- | L (intent-capture, market-research, scope-definition), S (rough-mockups, approval-handoff) | L (requirements-analysis, user-stories), S (refined-mockups) | -- | -- |
-| aidlc-design-agent | -- | L (rough-mockups) | L (refined-mockups), S (user-stories, application-design) | -- | -- |
-| aidlc-delivery-agent | -- | L (team-formation, approval-handoff), S (scope-definition) | L (delivery-planning), S (units-generation) | -- | -- |
-| aidlc-architect-agent | -- | L (feasibility), S (intent-capture) | L (application-design, units-generation), S (reverse-engineering, delivery-planning) | L (functional-design, nfr-requirements, nfr-design) | -- |
-| aidlc-aws-platform-agent | -- | S (feasibility) | S (application-design) | L (infrastructure-design), S (nfr-design) | L (environment-provisioning), S (feedback-optimization) |
-| aidlc-compliance-agent | -- | S (feasibility) | -- | S (nfr-requirements, infrastructure-design) | S (environment-provisioning) |
-| aidlc-devsecops-agent | -- | -- | S (practices-discovery) | S (nfr-requirements, infrastructure-design, build-and-test) | S (environment-provisioning) |
-| aidlc-developer-agent | -- | -- | L (reverse-engineering), S (practices-discovery) | L (code-generation), S (functional-design) | S (deployment-execution) |
-| aidlc-quality-agent | -- | -- | S (practices-discovery) | L (build-and-test), S (nfr-requirements) | L (performance-validation) |
-| aidlc-pipeline-deploy-agent | -- | -- | L (practices-discovery) | L (ci-pipeline) | L (deployment-pipeline, deployment-execution) |
-| aidlc-operations-agent | -- | -- | -- | -- | L (observability-setup, incident-response, feedback-optimization) |
+| amadeus-product-agent | -- | L (intent-capture, market-research, scope-definition), S (rough-mockups, approval-handoff) | L (requirements-analysis, user-stories), S (refined-mockups) | -- | -- |
+| amadeus-design-agent | -- | L (rough-mockups) | L (refined-mockups), S (user-stories, application-design) | -- | -- |
+| amadeus-delivery-agent | -- | L (team-formation, approval-handoff), S (scope-definition) | L (delivery-planning), S (units-generation) | -- | -- |
+| amadeus-architect-agent | -- | L (feasibility), S (intent-capture) | L (application-design, units-generation), S (reverse-engineering, delivery-planning) | L (functional-design, nfr-requirements, nfr-design) | -- |
+| amadeus-aws-platform-agent | -- | S (feasibility) | S (application-design) | L (infrastructure-design), S (nfr-design) | L (environment-provisioning), S (feedback-optimization) |
+| amadeus-compliance-agent | -- | S (feasibility) | -- | S (nfr-requirements, infrastructure-design) | S (environment-provisioning) |
+| amadeus-devsecops-agent | -- | -- | S (practices-discovery) | S (nfr-requirements, infrastructure-design, build-and-test) | S (environment-provisioning) |
+| amadeus-developer-agent | -- | -- | L (reverse-engineering), S (practices-discovery) | L (code-generation), S (functional-design) | S (deployment-execution) |
+| amadeus-quality-agent | -- | -- | S (practices-discovery) | L (build-and-test), S (nfr-requirements) | L (performance-validation) |
+| amadeus-pipeline-deploy-agent | -- | -- | L (practices-discovery) | L (ci-pipeline) | L (deployment-pipeline, deployment-execution) |
+| amadeus-operations-agent | -- | -- | -- | -- | L (observability-setup, incident-response, feedback-optimization) |
 
 L = Lead, S = Support
 
@@ -150,9 +150,9 @@ L = Lead, S = Support
 
 Agent display names and example knowledge files are authoritative in each agent's `.md` frontmatter via the `display_name` and `examples` fields — no TypeScript edits required. See [Contributing: Adding an Agent](11-contributing.md#adding-an-agent) for the full recipe (required frontmatter fields, verification steps, and what validates automatically vs. manually). Quick summary of the steps:
 
-1. Create `core/agents/{name}-agent.md` with the required frontmatter: `name`, `display_name`, `examples`, `description`, `disallowedTools` (including `Task`), `modelOverride`. An optional `tools:` allowlist narrows the inherited toolset; omit it to inherit the full session toolset. `loadAgents()` in `core/tools/aidlc-lib.ts` discovers the file on next invocation.
+1. Create `core/agents/{name}-agent.md` with the required frontmatter: `name`, `display_name`, `examples`, `description`, `disallowedTools` (including `Task`), `modelOverride`. An optional `tools:` allowlist narrows the inherited toolset; omit it to inherit the full session toolset. `loadAgents()` in `core/tools/amadeus-lib.ts` discovers the file on next invocation.
 2. Add knowledge files to `core/knowledge/{name}-agent/`
-3. Add the agent to the stage files (`core/aidlc-common/stages/`) where it participates — set `lead_agent` / `support_agents` in each stage's frontmatter. The compiled `tools/data/stage-graph.json` is GENERATED from that frontmatter by `bun scripts/package.ts`; never hand-edit it (the `package.ts --check` drift guard fails CI on a hand-edited dist).
+3. Add the agent to the stage files (`core/amadeus-common/stages/`) where it participates — set `lead_agent` / `support_agents` in each stage's frontmatter. The compiled `tools/data/stage-graph.json` is GENERATED from that frontmatter by `bun scripts/package.ts`; never hand-edit it (the `package.ts --check` drift guard fails CI on a hand-edited dist).
 4. Regenerate the distributions: `bun scripts/package.ts` (then `--check` to confirm no drift)
 5. Add the agent→examples row to the hand-maintained knowledge tables (the space-level team-knowledge dir is `aidlc/knowledge/{name}-agent/`, created by the team when it has content — the engine does not scaffold it)
 6. Update tests: smoke tests for file existence, feature tests for stage-agent cross-references
@@ -163,7 +163,7 @@ Agent display names and example knowledge files are authoritative in each agent'
 - **Change tools**: Add or edit a `tools:` allowlist in frontmatter to narrow the agent; omit it to inherit the full session toolset. A `tools:` list drops inherited MCP tools unless the `mcp__<server>__<tool>` ids are also listed.
 - **Change model**: Edit `modelOverride` to `opus` or `sonnet`.
 - **Change behavior**: Edit the markdown body sections (responsibilities, principles).
-- **Change stage assignments**: Edit both the agent file (Stages Owned section) and the relevant stage files (`core/aidlc-common/stages/`), then regenerate with `bun scripts/package.ts` — the compiled stage graph is derived from stage frontmatter, never hand-edited.
+- **Change stage assignments**: Edit both the agent file (Stages Owned section) and the relevant stage files (`core/amadeus-common/stages/`), then regenerate with `bun scripts/package.ts` — the compiled stage graph is derived from stage frontmatter, never hand-edited.
 
 ---
 

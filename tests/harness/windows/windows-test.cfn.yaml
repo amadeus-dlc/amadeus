@@ -69,7 +69,7 @@ Resources:
                 Resource: "*"
       Tags:
         - Key: Project
-          Value: aidlc-test-harness
+          Value: amadeus-test-harness
 
   WindowsTestInstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -90,7 +90,7 @@ Resources:
         - Key: Name
           Value: !Sub "${AWS::StackName}-sg"
         - Key: Project
-          Value: aidlc-test-harness
+          Value: amadeus-test-harness
 
   WindowsTestInstance:
     Type: AWS::EC2::Instance
@@ -105,7 +105,7 @@ Resources:
         - Key: Name
           Value: !Sub "${AWS::StackName}-windows"
         - Key: Project
-          Value: aidlc-test-harness
+          Value: amadeus-test-harness
       UserData:
         Fn::Base64: !Sub |
           <powershell>
@@ -124,15 +124,15 @@ Resources:
           }
 
           New-Item -ItemType Directory -Force -Path "${ProjectDir}" | Out-Null
-          New-Item -ItemType Directory -Force -Path "C:\Windows\Temp\aidlc-bootstrap" | Out-Null
+          New-Item -ItemType Directory -Force -Path "C:\Windows\Temp\amadeus-bootstrap" | Out-Null
 
-          $gitInstaller = "C:\Windows\Temp\aidlc-bootstrap\git-for-windows.exe"
+          $gitInstaller = "C:\Windows\Temp\amadeus-bootstrap\git-for-windows.exe"
           Invoke-WebRequest -Uri "${GitForWindowsInstallerUrl}" -OutFile $gitInstaller
           Start-Process -FilePath $gitInstaller -ArgumentList "/VERYSILENT","/NORESTART","/NOCANCEL","/SP-" -Wait
           Add-MachinePath "C:\Program Files\Git\bin"
           Add-MachinePath "C:\Program Files\Git\usr\bin"
 
-          $nodeInstaller = "C:\Windows\Temp\aidlc-bootstrap\node.msi"
+          $nodeInstaller = "C:\Windows\Temp\amadeus-bootstrap\node.msi"
           Invoke-WebRequest -Uri "${NodeMsiUrl}" -OutFile $nodeInstaller
           Start-Process -FilePath "msiexec.exe" -ArgumentList "/i","$nodeInstaller","/qn","/norestart" -Wait
           Add-MachinePath "C:\Program Files\nodejs"

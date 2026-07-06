@@ -54,7 +54,7 @@ import {
   activeSpace,
   codekbRepoName,
   relativeCodekbDir,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "1200", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 1200) * 1000;
@@ -75,7 +75,7 @@ const RE_STEMS = [
   "reverse-engineering-timestamp",
 ];
 
-/** Every markdown path under <proj>/aidlc, relative to proj (posix slashes),
+/** Every markdown path under <proj>/amadeus, relative to proj (posix slashes),
  *  excluding the copied .claude/ distributable. Used to scan WHERE the RE
  *  subagent wrote, so the negative (nothing in the record dir) is observable. */
 function allAidlcMarkdown(proj: string): string[] {
@@ -120,11 +120,11 @@ describe("t183 codekb placement re-verify (sdk) — RE artifacts land at the eng
       try {
         sedReplaceInFile(
           seededStateFile(proj),
-          "- **Project Root**: /tmp/aidlc-test",
+          "- **Project Root**: /tmp/amadeus-test",
           `- **Project Root**: ${proj}`,
         );
 
-        const r = await driveAidlc("/aidlc", {
+        const r = await driveAidlc("/amadeus", {
           projectDir: proj,
           // Resume on the orientation gate; approve (optionIndex 0) on every later
           // gate. The RE approval gate is the moment the 9 artifacts have landed.

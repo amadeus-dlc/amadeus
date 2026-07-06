@@ -1,17 +1,17 @@
-// covers: cli:aidlc-runtime(summary), contract:session-skills-summary-seam
+// covers: cli:amadeus-runtime(summary), contract:session-skills-summary-seam
 //
 // CLI-contract port of tests/integration/t111-session-skills-contract.sh (TAP plan
 // 10), mechanism = cli. The .sh has NO `# covers:` header line; its subject is
 // the behavioural seam between the three read-only session skills and the
-// `aidlc-runtime.ts summary --json` data plane they consume. (The unrelated
+// `amadeus-runtime.ts summary --json` data plane they consume. (The unrelated
 // tests/unit/t111.none.test.ts is a DIFFERENT subject — the audit-append core —
 // and is ignored per the same-number-different-tier rule.)
 //
 // WHAT IS UNDER TEST
-//   1. `aidlc-runtime.ts summary --json` emits the 8 top-level keys the skills'
+//   1. `amadeus-runtime.ts summary --json` emits the 8 top-level keys the skills'
 //      render templates depend on (workflow_id, scope, duration_minutes, stages,
 //      by_phase, memory, sensors, learnings). Source shape: RuntimeSummary
-//      (dist/claude/.claude/tools/aidlc-runtime.ts:880-905), produced by
+//      (dist/claude/.claude/tools/amadeus-runtime.ts:880-905), produced by
 //      summarize() (:907-979) and printed by handleSummary (:1282-1295) under
 //      `--json` as JSON.stringify(summary, null, 2).
 //   2. FORWARD drift: every dotted JSON field the three skills cite resolves in
@@ -21,7 +21,7 @@
 //      the skills forget to surface).
 //
 // SOURCE UNDER TEST
-//   - Tool:  dist/claude/.claude/tools/aidlc-runtime.ts
+//   - Tool:  dist/claude/.claude/tools/amadeus-runtime.ts
 //       summarize / renderSummary are MODULE-PRIVATE (no `export`), and the
 //       emitted JSON is only observable on the `summary --json` STDOUT after a
 //       `compile` materialises runtime-graph.json. handleSummary terminates the
@@ -31,9 +31,9 @@
 //       `bun "$RUNTIME_TS" summary --json`). An in-process import cannot reach
 //       summarize() at all.
 //   - Skills (read off disk, the same files the .sh grepped):
-//       dist/claude/.claude/skills/aidlc-session-cost/SKILL.md
-//       dist/claude/.claude/skills/aidlc-replay/SKILL.md
-//       dist/claude/.claude/skills/aidlc-outcomes-pack/SKILL.md
+//       dist/claude/.claude/skills/amadeus-session-cost/SKILL.md
+//       dist/claude/.claude/skills/amadeus-replay/SKILL.md
+//       dist/claude/.claude/skills/amadeus-outcomes-pack/SKILL.md
 //
 // DRIFT-CHECK PARITY (the .sh's bash pipelines reproduced in TS, byte-faithful):
 //   EMITTED   = JSON leaf scalar paths, with concrete phase names collapsed to
@@ -73,24 +73,24 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { AIDLC_SRC, toPortablePath } from "../harness/fixtures.ts";
-import { auditFilePath } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { auditFilePath } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // P9: with no intent cursor seeded, compile/summary resolve the BARE space
 // record root (docsRoot -> spaceRecordRoot) at aidlc/spaces/default/intents/.
 // State, runtime-graph, per-stage memory, and the per-clone audit SHARD all
-// live under it (the flat aidlc-docs/ root is retired — there is no fallback).
+// live under it (the flat amadeus-docs/ root is retired — there is no fallback).
 const RECORD_REL = join("aidlc", "spaces", "default", "intents");
 function recordRoot(proj: string): string {
   return join(proj, RECORD_REL);
 }
 
 const BUN = process.execPath; // the bun running this test
-const RUNTIME_TS = join(AIDLC_SRC, "tools", "aidlc-runtime.ts");
+const RUNTIME_TS = join(AIDLC_SRC, "tools", "amadeus-runtime.ts");
 const SKILLS_DIR = join(AIDLC_SRC, "skills");
 const SKILL_FILES = [
-  join(SKILLS_DIR, "aidlc-session-cost", "SKILL.md"),
-  join(SKILLS_DIR, "aidlc-replay", "SKILL.md"),
-  join(SKILLS_DIR, "aidlc-outcomes-pack", "SKILL.md"),
+  join(SKILLS_DIR, "amadeus-session-cost", "SKILL.md"),
+  join(SKILLS_DIR, "amadeus-replay", "SKILL.md"),
+  join(SKILLS_DIR, "amadeus-outcomes-pack", "SKILL.md"),
 ];
 
 const tempDirs: string[] = [];
@@ -104,7 +104,7 @@ afterAll(() => {
  * `compile`. Returns the project dir (registered for afterAll teardown).
  */
 function buildSyntheticProject(): string {
-  const proj = toPortablePath(mkdtempSync(join(tmpdir(), "aidlc-t111-")));
+  const proj = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-t111-")));
   tempDirs.push(proj);
   mkdirSync(join(recordRoot(proj), "ideation", "intent-capture"), {
     recursive: true,
@@ -126,7 +126,7 @@ function buildSyntheticProject(): string {
       "**Timestamp**: 2026-05-27T10:01:00Z",
       "**Event**: STAGE_STARTED",
       "**Stage**: intent-capture",
-      "**Agent**: aidlc-product-agent",
+      "**Agent**: amadeus-product-agent",
       "",
       "---",
       "",
@@ -142,7 +142,7 @@ function buildSyntheticProject(): string {
     "utf-8",
   );
   writeFileSync(
-    join(recordRoot(proj), "aidlc-state.md"),
+    join(recordRoot(proj), "amadeus-state.md"),
     "- **Scope**: feature\n- **Current Stage**: intent-capture\n",
     "utf-8",
   );

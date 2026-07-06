@@ -1,4 +1,4 @@
-// covers: file:skills/aidlc/SKILL.md
+// covers: file:skills/amadeus/SKILL.md
 //
 // t-exec-codex-compose-front.serial.test.ts - the INTERACTIVE front-compose
 // journey on Codex, expressed in the driver's native turn shape plus the one
@@ -9,7 +9,7 @@
 // beats-1-2 aidlc probe); artefacts under
 // tmp/adaptive-workflows/spike-codex-resume/.
 //
-//   beat 1:  codex exec `/aidlc compose "<task>"` - the conductor dispatches
+//   beat 1:  codex exec `/amadeus compose "<task>"` - the conductor dispatches
 //            the composer, renders the proposal, and ends the turn AT the
 //            approve/edit/reject gate as numbered prose (`request_user_input`
 //            returns {} in exec mode, so the SKILL.md numbered-prose arm
@@ -23,7 +23,7 @@
 //            Either way: gate before write, nothing on disk.
 //   beat 2:  codex exec resume --last "Approve" - same session (asserted via
 //            the stderr session id), the conductor completes the write +
-//            birth arc: intent record, aidlc-state.md, WORKFLOW_STARTED
+//            birth arc: intent record, amadeus-state.md, WORKFLOW_STARTED
 //            audited.
 //
 // Deliberately JOURNEY-LEVEL: the composed scope's NAME is the model's
@@ -124,7 +124,7 @@ function setupCodexProject(): { proj: string; home: string; root: string } {
       `region = "${AWS_REGION}"`,
       ``,
       `[shell_environment_policy]`,
-      `set = { AIDLC_RULES_DIR = ".codex/aidlc-rules" }`,
+      `set = { AIDLC_RULES_DIR = ".codex/amadeus-rules" }`,
       ``,
       `[projects."${proj}"]`,
       `trust_level = "trusted"`,
@@ -163,7 +163,7 @@ const sessionIdOf = (stderr: string): string | undefined =>
 function intentRecords(proj: string): string[] {
   const dir = join(proj, "aidlc", "spaces", "default", "intents");
   if (!existsSync(dir)) return [];
-  // Dot-dirs are hook plumbing (the Stop hook's .aidlc-hooks-health
+  // Dot-dirs are hook plumbing (the Stop hook's .amadeus-hooks-health
   // heartbeat lands here on every turn), not intent records.
   return readdirSync(dir, { withFileTypes: true })
     .filter((e) => e.isDirectory() && !e.name.startsWith("."))
@@ -182,7 +182,7 @@ describe("t-exec-codex-compose-front - interactive compose over exec + exec resu
         const b1 = codexTurn(
           proj,
           home,
-          'Use the $aidlc skill to run: /aidlc compose "add a rate limiter middleware to an existing Express API"',
+          'Use the $amadeus skill to run: /amadeus compose "add a rate limiter middleware to an existing Express API"',
         );
         expect(b1.rc).toBe(0);
         const b1Session = sessionIdOf(b1.stderr);
@@ -219,7 +219,7 @@ describe("t-exec-codex-compose-front - interactive compose over exec + exec resu
         const records = intentRecords(proj);
         expect(records.length).toBe(1);
         const rec = join(proj, "aidlc", "spaces", "default", "intents", records[0]);
-        const state = readFileSync(join(rec, "aidlc-state.md"), "utf-8");
+        const state = readFileSync(join(rec, "amadeus-state.md"), "utf-8");
         expect(state).toContain("# AI-DLC State Tracking");
         const auditDir = join(rec, "audit");
         const audit = readdirSync(auditDir)

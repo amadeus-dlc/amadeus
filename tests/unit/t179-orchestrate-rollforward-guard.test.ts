@@ -1,10 +1,10 @@
-// covers: subcommand:aidlc-orchestrate:next, file:harness/kiro/hooks/aidlc-kiro-adapter.ts
+// covers: subcommand:amadeus-orchestrate:next, file:harness/kiro/hooks/amadeus-kiro-adapter.ts
 //
-// SUBJECT: Branch 0 of aidlc-orchestrate.ts handleNext (~:887-929) — the
+// SUBJECT: Branch 0 of amadeus-orchestrate.ts handleNext (~:887-929) — the
 // turn-scoped no-op-next guard (the Kiro roll-forward defense). On Kiro the
-// userPromptSubmit seam (harness/kiro/hooks/aidlc-kiro-adapter.ts) runs a
-// read-only/navigation command off-band, bumps aidlc/.aidlc-turn-counter, and
-// stamps aidlc/.aidlc-readonly-latch ({turn,flag,source,ts}) with the CURRENT
+// userPromptSubmit seam (harness/kiro/hooks/amadeus-kiro-adapter.ts) runs a
+// read-only/navigation command off-band, bumps aidlc/.amadeus-turn-counter, and
+// stamps aidlc/.amadeus-readonly-latch ({turn,flag,source,ts}) with the CURRENT
 // turn. The seam cannot block the turn, so the conductor relays the output and
 // may STILL fire a bare advancing `next`, rolling the active workflow forward.
 // Branch 0 catches that: BEFORE any state inspection, a TRULY BARE advancing
@@ -16,7 +16,7 @@
 // This is the DETERMINISTIC regression guard for that branch: reverting Branch 0
 // leaves the live-gated e2e green but FAILS test 1 here (a fresh-latch bare
 // `next` would route to run-stage instead of done). Unit tier — no LLM, no
-// network. Spawns the engine exactly like t114 (bun aidlc-orchestrate.ts next
+// network. Spawns the engine exactly like t114 (bun amadeus-orchestrate.ts next
 // ... --project-dir <proj>), seeds the per-intent fixture, parses the directive
 // JSON off stdout.
 //
@@ -27,12 +27,12 @@
 //   4  counter=N, latch{turn:N}  next --single ...  -> NOT done       (single exempts Branch 0 — the Phase-1 parity fix)
 //   5  NO counter/latch files     bare next        -> NOT done        (guard inert on the Claude/Codex path)
 //
-// Source cites (core/tools/aidlc-orchestrate.ts):
+// Source cites (core/tools/amadeus-orchestrate.ts):
 //   :900 the exemption gate — Branch 0 runs ONLY when none of readOnly/
 //        workspaceVerb/stage/phase/scope/intent/resume/depth/testStrategy/
 //        single is set (so --status and --single both skip it).
-//   :910 reads aidlc/.aidlc-turn-counter (integer); absent -> counter stays -1.
-//   :914 reads aidlc/.aidlc-readonly-latch (JSON {turn,flag,source}).
+//   :910 reads aidlc/.amadeus-turn-counter (integer); absent -> counter stays -1.
+//   :914 reads aidlc/.amadeus-readonly-latch (JSON {turn,flag,source}).
 //   :922 fires {kind:"done"} only when counter>=0 AND latchTurn===counter.
 
 import { afterEach, beforeAll, describe, expect, test } from "bun:test";
@@ -49,7 +49,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const TOOL = join(AIDLC_SRC, "tools", "aidlc-orchestrate.ts");
+const TOOL = join(AIDLC_SRC, "tools", "amadeus-orchestrate.ts");
 
 const MID_IDEATION = join(FIXTURES_DIR, "state-mid-ideation.md");
 
@@ -58,7 +58,7 @@ interface RunResult {
   out: string; // combined stdout+stderr (mirrors t114's 2>&1)
 }
 
-// Run `bun aidlc-orchestrate.ts next <args> --project-dir <proj>` — identical
+// Run `bun amadeus-orchestrate.ts next <args> --project-dir <proj>` — identical
 // spawn convention to t114's runNext.
 function runNext(proj: string, args: string[]): RunResult {
   const res = spawnSync(BUN, [TOOL, "next", ...args, "--project-dir", proj], {
@@ -71,14 +71,14 @@ function runNext(proj: string, args: string[]): RunResult {
 }
 
 // Stamp the per-turn counter + the read-only latch the Kiro seam writes, at the
-// SAME paths the engine reads (resolveProjectDir(--project-dir)/aidlc/...). The
-// latch JSON shape matches aidlc-kiro-adapter.ts:137 ({turn,flag,source,ts}).
+// SAME paths the engine reads (resolveProjectDir(--project-dir)/amadeus/...). The
+// latch JSON shape matches amadeus-kiro-adapter.ts:137 ({turn,flag,source,ts}).
 function seedLatch(proj: string, counter: number, latchTurn: number): void {
   const aidlc = join(proj, "aidlc");
   mkdirSync(aidlc, { recursive: true }); // already created by the fixture; idempotent
-  writeFileSync(join(aidlc, ".aidlc-turn-counter"), `${counter}\n`, "utf-8");
+  writeFileSync(join(aidlc, ".amadeus-turn-counter"), `${counter}\n`, "utf-8");
   writeFileSync(
-    join(aidlc, ".aidlc-readonly-latch"),
+    join(aidlc, ".amadeus-readonly-latch"),
     `${JSON.stringify({ turn: latchTurn, flag: "status", source: "read-only-flag", ts: Date.now() })}\n`,
     "utf-8",
   );

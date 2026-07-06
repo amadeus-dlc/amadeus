@@ -13,18 +13,18 @@
 //   dist/claude/.claude/CLAUDE.md — its "## AI-DLC Structure" section
 //   enumerates the user-visible .claude/ surfaces. Wave-1 (milestone 2) flattened
 //   practices/ + rules/ into a single flat rules/ dir, renamed
-//   aidlc-knowledge/ -> knowledge/, and v0.5.0 added the sensors/ surface.
+//   amadeus-knowledge/ -> knowledge/, and v0.5.0 added the sensors/ surface.
 //   This test pins that the shipped doc reflects that layout: no legacy
 //   nested/removed/renamed paths, the new sensors/ surface named, and a new
-//   flat-rules filename (aidlc-org) named as a positive anchor.
+//   flat-rules filename (amadeus-org) named as a positive anchor.
 //
 // Old TAP -> new test parity (1:1, every .sh assertion -> a named test()):
 //   .sh test 1 (distributable CLAUDE.md exists)                   -> "the shipped CLAUDE.md exists"
-//   .sh test 2 (flat rules/ — no rules/aidlc/guardrails nested)   -> "describes a flat .claude/rules/ layout (no nested rules/aidlc/guardrails)"
+//   .sh test 2 (flat rules/ — no rules/amadeus/guardrails nested)   -> "describes a flat .claude/rules/ layout (no nested rules/amadeus/guardrails)"
 //   .sh test 3 (no removed .claude/practices/ path)               -> "does not reference the removed .claude/practices/ path"
-//   .sh test 4 (no legacy .claude/aidlc-knowledge/ parent)        -> "does not reference the legacy aidlc-knowledge/ parent"
+//   .sh test 4 (no legacy .claude/amadeus-knowledge/ parent)        -> "does not reference the legacy amadeus-knowledge/ parent"
 //   .sh test 5 (mentions .claude/sensors/ surface)                -> "mentions the .claude/sensors/ surface"
-//   .sh test 6 (mentions a new flat-rules filename: aidlc-org)    -> "mentions the aidlc-org rule file (positive layout anchor)"
+//   .sh test 6 (mentions a new flat-rules filename: amadeus-org)    -> "mentions the amadeus-org rule file (positive layout anchor)"
 //
 // Equal-or-stronger: the .sh used `grep -q` (presence/absence, boolean). The
 // twin asserts the same boolean facts AND tightens the negative cases to an
@@ -61,10 +61,10 @@ describe("distributable CLAUDE.md describes the post-Wave-1 .claude/ layout", ()
     expect(existsSync(CLAUDE_MD)).toBe(true);
   });
 
-  test("describes a flat .claude/rules/ layout (no nested rules/aidlc/guardrails) [.sh test 2]", () => {
+  test("describes a flat .claude/rules/ layout (no nested rules/amadeus/guardrails) [.sh test 2]", () => {
     // milestone 2 flattened the rules tree; the legacy nested guardrails path must be
-    // gone. .sh: grep -q "\.claude/rules/aidlc/guardrails" => must NOT match.
-    expect(countOccurrences(readClaudeMd(), ".claude/rules/aidlc/guardrails")).toBe(0);
+    // gone. .sh: grep -q "\.claude/rules/amadeus/guardrails" => must NOT match.
+    expect(countOccurrences(readClaudeMd(), ".claude/rules/amadeus/guardrails")).toBe(0);
   });
 
   test("does not reference the removed .claude/practices/ path [.sh test 3]", () => {
@@ -72,10 +72,10 @@ describe("distributable CLAUDE.md describes the post-Wave-1 .claude/ layout", ()
     expect(countOccurrences(readClaudeMd(), ".claude/practices")).toBe(0);
   });
 
-  test("does not reference the legacy aidlc-knowledge/ parent [.sh test 4]", () => {
-    // aidlc-knowledge/ renamed to knowledge/ in milestone 2.
-    // .sh: grep -q "\.claude/aidlc-knowledge".
-    expect(countOccurrences(readClaudeMd(), ".claude/aidlc-knowledge")).toBe(0);
+  test("does not reference the legacy amadeus-knowledge/ parent [.sh test 4]", () => {
+    // amadeus-knowledge/ renamed to knowledge/ in milestone 2.
+    // .sh: grep -q "\.claude/amadeus-knowledge".
+    expect(countOccurrences(readClaudeMd(), ".claude/amadeus-knowledge")).toBe(0);
   });
 
   test("mentions the .claude/sensors/ surface [.sh test 5]", () => {
@@ -91,8 +91,8 @@ describe("distributable CLAUDE.md describes the post-Wave-1 .claude/ layout", ()
     // deleted the whole Rules bullet can't pass tests 2-5 silently. The workspace
     // refactor relocated the rule files off `.claude/rules/` to the space memory
     // layer `aidlc/spaces/<space>/memory/` (neutral names org.md/team.md/project.md),
-    // read via the `.claude/rules/aidlc.md` @-import stub — so the positive anchor
-    // is the relocated path + the neutral `org.md` filename, not the old `aidlc-org`.
+    // read via the `.claude/rules/amadeus.md` @-import stub — so the positive anchor
+    // is the relocated path + the neutral `org.md` filename, not the old `amadeus-org`.
     const body = readClaudeMd();
     expect(countOccurrences(body, "aidlc/spaces/<space>/memory/")).toBeGreaterThanOrEqual(1);
     expect(body.includes("org.md")).toBe(true);

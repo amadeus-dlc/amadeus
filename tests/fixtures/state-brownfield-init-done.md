@@ -6,7 +6,7 @@
 - **Scope**: bugfix
 - **Start Date**: 2025-07-15T10:00:00Z
 - **State Version**: 7
-- **Active Agent**: aidlc-developer-agent
+- **Active Agent**: amadeus-developer-agent
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**:
@@ -18,7 +18,7 @@
 - **Test Strategy**: Minimal
 
 ## Workspace State
-- **Project Root**: /tmp/aidlc-test
+- **Project Root**: /tmp/amadeus-test
 - **Languages**: TypeScript
 - **Frameworks**: React, Vite
 - **Build System**: npm
@@ -94,5 +94,5 @@ Per unit: [unit-name]
 
 ## Session Resume Point
 - **Last Completed Stage**: state-init
-- **Next Action**: Begin reverse engineering with aidlc-developer-agent
+- **Next Action**: Begin reverse engineering with amadeus-developer-agent
 - **Pending Artifacts**: none

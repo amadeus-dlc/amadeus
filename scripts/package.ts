@@ -16,7 +16,7 @@
 //      token substitution on .md.
 //   3. COMPILE the stage graph into the assembled tree (emits harness-correct
 //      stage-graph.json + scope-grid.json — compiled data lives only in dist).
-//   4. GENERATE runners into the assembled tree by composing aidlc-runner-gen's
+//   4. GENERATE runners into the assembled tree by composing amadeus-runner-gen's
 //      exported render fns under AIDLC_HARNESS_DIR (the proven codex idiom, now
 //      uniform for all three harnesses).
 //   5. EMIT via harness/<name>/emit.ts if the manifest declares one (codex only
@@ -28,7 +28,7 @@
 // `$CLAUDE_PROJECT_DIR on Claude Code` note) never carried the token, so they
 // pass through untouched.
 //
-// --check is the freshness-diff idiom (aidlc-graph.ts compile --check): build
+// --check is the freshness-diff idiom (amadeus-graph.ts compile --check): build
 // each tree into a temp dir, diff byte-for-byte against the committed dist/,
 // exit 1 with the offending paths on any drift. dist/ stays committed; this
 // guard fails CI when someone hand-edits a dist or forgets to regenerate.
@@ -80,7 +80,7 @@ function substituteToken(s: string, harnessDir: string): string {
 }
 
 // Rewrite in-prose `<harnessDir>/rules/` → `<harnessDir>/<rulesRename>/` for a
-// harness that renames its rules dir (kiro: steering, codex: aidlc-rules).
+// harness that renames its rules dir (kiro: steering, codex: amadeus-rules).
 // Anchored on the post-substitution harness-dir form so it can't touch an
 // unrelated `rules/` mention — the proven STEERING_RENAME step from the spike
 // packagers. No-op when rulesRename is null (claude).
@@ -160,7 +160,7 @@ const HARNESS_DATA = "tools/data/harness.json";
 // (identical bytes on every harness — neutral filenames, no {{HARNESS_DIR}}
 // token), so the source dir + the dist destination are constants here, not
 // per-manifest. The authored source already carries the renamed/nested layout
-// (core/rules/aidlc-org.md → core/memory/org.md; flat aidlc-phase-<p>.md →
+// (core/rules/amadeus-org.md → core/memory/org.md; flat amadeus-phase-<p>.md →
 // core/memory/phases/<p>.md) — the per-file rename map is realized by that move,
 // so the packager copies the tree verbatim. The destination sits at the
 // WORKSPACE ROOT (beside the harness dir), under the always-present `default`
@@ -174,21 +174,21 @@ const MEMORY_DST = join("aidlc", "spaces", "default", "memory");
 // INSIDE the engine dir at <harnessDir>/tools/data/memory-seed/, mirroring how
 // tools/data/templates ships (an engine-bundled, copy-out-at-runtime data dir
 // resolved relative to the running tool — see frameworkTemplatesDir/DATA_DIR in
-// aidlc-graph.ts). This lets an ENGINE-ONLY install (a user who copies only
+// amadeus-graph.ts). This lets an ENGINE-ONLY install (a user who copies only
 // dist/<h>/.<engine>/ and NOT the sibling aidlc/ shell) self-heal: the first
-// /aidlc seeds aidlc/spaces/default/memory/ from this bundled copy if (and only
+// /amadeus seeds aidlc/spaces/default/memory/ from this bundled copy if (and only
 // if) it is absent (see ensureWorkspaceDirs). The sibling MEMORY_DST shell STILL
 // ships for normal installs — this is an additive fallback, not a replacement.
 const MEMORY_SEED_DST = join("tools", "data", "memory-seed");
 
 // The active-space CURSOR shipped as part of the workspace shell (SEED). It
 // lives at aidlc/active-space (ABOVE spaces/, not inside memory/) and holds the
-// name of the space the next /aidlc resolves against. Ships pointed at the
+// name of the space the next /amadeus resolves against. Ships pointed at the
 // always-present "default" space so a fresh copy resolves with zero ceremony.
 // NOTE: it is GITIGNORED in the user's workspace (a per-user session cursor,
 // vision 5.1 - teammates legitimately point at different spaces at once), yet
 // dist must SHIP it as part of the shell. The two reconcile: the dist
-// .gitignore ignores aidlc/active-space for the END USER (their first /aidlc
+// .gitignore ignores aidlc/active-space for the END USER (their first /amadeus
 // cursor-write stays untracked), while OUR repo commits the shipped pointer
 // once (git add -f on the seed commit) - after which it is tracked and the
 // gitignore is moot for that path here, exactly like a shipped default .env.
@@ -207,7 +207,7 @@ function writeHarnessData(treeRoot: string, m: HarnessManifest): void {
 }
 
 // Emit the method ("memory") tree at the WORKSPACE ROOT of the dist tree
-// (dist/<name>/aidlc/spaces/default/memory/), copying core/memory/ verbatim with
+// (dist/<name>/amadeus/spaces/default/memory/), copying core/memory/ verbatim with
 // the standard .md token transform (a no-op on the neutral method files, which
 // carry no {{HARNESS_DIR}} token). Returns the absolute paths it wrote so
 // checkHarness can byte-diff them (they live OUTSIDE <harnessDir>, like the
@@ -229,7 +229,7 @@ function emitMemory(outRoot: string, harnessDir: string, rulesRename: string | n
 
 // Engine-only-install self-heal: emit the SAME core/memory/ tree a SECOND time,
 // INSIDE the engine dir at <treeRoot>/tools/data/memory-seed/, so an engine-only
-// install carries the method content with it (the first /aidlc copies it out via
+// install carries the method content with it (the first /amadeus copies it out via
 // ensureWorkspaceDirs/frameworkMemorySeedDir). Mirrors emitMemory's transform
 // (a no-op on the neutral method files) but writes into treeRoot (the harness
 // engine dir), so the normal in-harness walk + byte-diff covers it — no
@@ -247,7 +247,7 @@ function emitMemorySeed(treeRoot: string, harnessDir: string, rulesRename: strin
 
 // Emit the active-space CURSOR (aidlc/active-space -> "default") into the dist
 // tree, as part of the workspace shell (SEED). Lives at the dist root beside
-// the harness dir (dist/<name>/aidlc/active-space), OUTSIDE <harnessDir>, like
+// the harness dir (dist/<name>/amadeus/active-space), OUTSIDE <harnessDir>, like
 // the memory tree and projectRoot harness files. Returns the absolute path it
 // wrote so checkHarness can byte-diff + orphan-scan it. Harness-neutral: same
 // pointer value for every harness (the resolver follows it identically). The
@@ -359,7 +359,7 @@ function buildTree(m: HarnessManifest, outRoot: string, seedFrom: string): strin
   }
 
   // 2c. Emit the relocated method ("memory") tree at the workspace root
-  //     (dist/<name>/aidlc/spaces/default/memory/). MUST run before compile —
+  //     (dist/<name>/amadeus/spaces/default/memory/). MUST run before compile —
   //     the compile step's loadRules resolves rules_in_context from this tree
   //     (AIDLC_RULES_DIR points there below), so it has to exist first.
   const memoryDir = join(outRoot, MEMORY_DST);
@@ -372,7 +372,7 @@ function buildTree(m: HarnessManifest, outRoot: string, seedFrom: string): strin
 
   // 2e. Engine-only-install self-heal: bundle the SAME method content INSIDE the
   //     engine dir at <harnessDir>/tools/data/memory-seed/, so an engine-only
-  //     install (no sibling aidlc/ shell) can self-heal — the first /aidlc copies
+  //     install (no sibling aidlc/ shell) can self-heal — the first /amadeus copies
   //     it out via ensureWorkspaceDirs. Inside <harnessDir>, so the in-harness
   //     walk byte-diffs it under --check (no outsideHarness entry).
   emitMemorySeed(treeRoot, harnessDir, m.rulesRename);
@@ -395,11 +395,11 @@ function buildTree(m: HarnessManifest, outRoot: string, seedFrom: string): strin
   // override the robust choice. The renameRulesInCompiledData backstop still
   // runs for renamed-rules harnesses to normalize any residual <dir>/rules/
   // prose-path that a future code path might emit (guarded no-op today).
-  runTool(treeRoot, ["tools/aidlc-graph.ts", "compile"], memoryDir);
+  runTool(treeRoot, ["tools/amadeus-graph.ts", "compile"], memoryDir);
   if (m.rulesRename) renameRulesInCompiledData(treeRoot, harnessDir, m.rulesRename);
 
   // 3b. Emit tools/data/harness.json — the runtime's open-set source of truth
-  //     for the rules-subdir rename. rulesSubdir() (aidlc-lib.ts) reads it so a
+  //     for the rules-subdir rename. rulesSubdir() (amadeus-lib.ts) reads it so a
   //     real install of a rename-rules harness resolves its rule dir with ZERO
   //     core edits (the rename is manifest data, not a hardcoded map). Derived
   //     purely from the manifest, so unseeded; written into the same tools/data/
@@ -407,14 +407,14 @@ function buildTree(m: HarnessManifest, outRoot: string, seedFrom: string): strin
   //     like any other generated file.
   writeHarnessData(treeRoot, m);
 
-  // 4. Generate runners by composing aidlc-runner-gen's CLIs against the
+  // 4. Generate runners by composing amadeus-runner-gen's CLIs against the
   //    assembled tree (write + scopes). AIDLC_HARNESS_DIR steers harnessDir()
   //    so generated prose names the correct dir; AIDLC_SRC roots the tree.
   //    Codex skips this — it ships no <harnessDir>/skills/; emit() composes the
   //    whole skill set into .agents/skills/ instead.
   if (!m.skipRunnerGen) {
-    runTool(treeRoot, ["tools/aidlc-runner-gen.ts", "write"]);
-    runTool(treeRoot, ["tools/aidlc-runner-gen.ts", "scopes"]);
+    runTool(treeRoot, ["tools/amadeus-runner-gen.ts", "write"]);
+    runTool(treeRoot, ["tools/amadeus-runner-gen.ts", "scopes"]);
   }
 
   // 5. Per-shell emissions (codex only today). Returns the absolute paths it
@@ -439,7 +439,7 @@ function buildTree(m: HarnessManifest, outRoot: string, seedFrom: string): strin
 // Run an in-tree tool (bun <treeRoot>/<rel> ...) with the harness env seams set
 // so the tool resolves the assembled tree and interpolates the right harness dir.
 // `rulesDirAbs` (absolute) points loadRules at the emitted method tree
-// (dist/<name>/aidlc/spaces/default/memory/) so rules_in_context is populated at
+// (dist/<name>/amadeus/spaces/default/memory/) so rules_in_context is populated at
 // compile time — every harness needs it now that the method lives at the
 // workspace root, not inside <harnessDir>.
 function runTool(treeRoot: string, args: string[], rulesDirAbs?: string | null): void {
@@ -501,7 +501,7 @@ function writeHarness(name: string): void {
   const treeRoot = join(distDir, m.harnessDir);
   // Stash the committed compiled-data seed before the clean sweep so compile
   // can bootstrap its number/name mappings (the seed survives the regenerate).
-  const seedStash = mkdtempSync(join(tmpdir(), `aidlc-seed-${name}-`));
+  const seedStash = mkdtempSync(join(tmpdir(), `amadeus-seed-${name}-`));
   try {
     for (const rel of COMPILED_DATA) {
       const src = join(treeRoot, rel);
@@ -513,7 +513,7 @@ function writeHarness(name: string): void {
     }
     // Clean sweep the harness dir so removed core files don't linger.
     if (existsSync(treeRoot)) rmSync(treeRoot, { recursive: true, force: true });
-    // Also sweep the workspace-root method tree (dist/<name>/aidlc/) so a
+    // Also sweep the workspace-root method tree (dist/<name>/amadeus/) so a
     // removed/renamed memory file (e.g. a dropped phase rule) doesn't linger
     // beside the freshly emitted one — the harness-dir sweep above misses it.
     const memoryRoot = join(distDir, "aidlc");
@@ -531,7 +531,7 @@ function writeHarness(name: string): void {
 function checkHarness(name: string): string[] {
   const m = loadManifest(name);
   const committed = join(REPO_ROOT, "dist", name, m.harnessDir);
-  const tmp = mkdtempSync(join(tmpdir(), `aidlc-pkg-${name}-`));
+  const tmp = mkdtempSync(join(tmpdir(), `amadeus-pkg-${name}-`));
   const problems: string[] = [];
   try {
     // Seed compile from the committed tree (untouched under --check).
@@ -584,7 +584,7 @@ function checkHarness(name: string): string[] {
     // out-of-harness file the build produced (emit output + the memory tree), so
     // a committed file under these roots that the build DIDN'T produce is a
     // stale orphan — e.g. a removed phase rule still committed under
-    // dist/<name>/aidlc/spaces/default/memory/phases/.
+    // dist/<name>/amadeus/spaces/default/memory/phases/.
     for (const sub of [".agents", "aidlc"]) {
       const dir = join(committedDistRoot, sub);
       if (!existsSync(dir)) continue;

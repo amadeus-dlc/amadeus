@@ -1,11 +1,11 @@
-// covers: subcommand:aidlc-orchestrate:next, file:skills/aidlc/SKILL.md
+// covers: subcommand:amadeus-orchestrate:next, file:skills/amadeus/SKILL.md
 //
 // bun:test port of tests/unit/t114-orchestrate-next.sh (TAP plan 27),
 // mechanism = cli. Faithful, equal-or-stronger migration of the
-// aidlc-orchestrate.ts `next` CLI-contract test.
+// amadeus-orchestrate.ts `next` CLI-contract test.
 //
 // SUBJECT: `next` is the read-only orchestration engine handler
-// (aidlc-orchestrate.ts:785 handleNext). It reads workflow state + the compiled
+// (amadeus-orchestrate.ts:785 handleNext). It reads workflow state + the compiled
 // stage graph and emits EXACTLY ONE validated directive (JSON) to stdout via
 // `console.log(JSON.stringify(...))` (:147), mutating no workflow state. The
 // table drives it over the existing state fixtures and asserts (state + args) →
@@ -15,11 +15,11 @@
 // regression guards for the SKILL.md cutover. Unit tier — no LLM, no model.
 //
 // SPAWN (not in-process): the whole contract is the argv-dispatch / process
-// boundary of aidlc-orchestrate.ts. `handleNext` is NOT exported (internal,
+// boundary of amadeus-orchestrate.ts. `handleNext` is NOT exported (internal,
 // reached only through `main()` at :1965 via the `next` case at :1984). The
 // directive lands on stdout through `console.log`; errors land through the
 // composed sibling tools the non-happy-path branches shell out to
-// (aidlc-jump.ts resolve/execute, aidlc-utility.ts resolve-env-scope /
+// (amadeus-jump.ts resolve/execute, amadeus-utility.ts resolve-env-scope /
 // init — none importable, all spawned). An in-process twin
 // would forfeit both the stdout-JSON seam AND the real-tool composition the
 // branches depend on. So all `next` invocations stay spawns. Mirrors the .sh's
@@ -56,7 +56,7 @@
 // (The .sh's tests 15-19 exercised the now-removed --test-run / Test Run Mode
 // mechanism and were dropped with it; issue #369.)
 //
-// Source cites (dist/claude/.claude/tools/aidlc-orchestrate.ts):
+// Source cites (dist/claude/.claude/tools/amadeus-orchestrate.ts):
 //   :785 handleNext — the read-only branch ladder.
 //   :793 Branch 1  --status/--version -> print.
 //   :804 Branch 2  --stage + --phase -> "Cannot use --stage and --phase together".
@@ -64,7 +64,7 @@
 //   :858 Branch 3b UNCONDITIONAL invalid --scope -> "Unknown scope ...".
 //   :873 Branch 4  env source -> shells resolve-env-scope -> verbatim "Invalid AWS_AIDLC_DEFAULT_SCOPE ...".
 //   :934 Branch 5  scope-change print ("scope-change --scope <s>").
-//  :1034 Branch 7  --stage/--phase jump -> emitJumpDirective; with-state -> print "aidlc-jump.ts execute --target ... --direction ...".
+//  :1034 Branch 7  --stage/--phase jump -> emitJumpDirective; with-state -> print "amadeus-jump.ts execute --target ... --direction ...".
 //  :1116 Branch 10 happy path -> run-stage for the in-flight current stage.
 //   :754 computeGate -> gate:true for every EXECUTE stage except initialization (the gate axis is NOT the execution axis).
 
@@ -82,8 +82,8 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const TOOL = join(AIDLC_SRC, "tools", "aidlc-orchestrate.ts");
-const STATE = join(AIDLC_SRC, "tools", "aidlc-state.ts");
+const TOOL = join(AIDLC_SRC, "tools", "amadeus-orchestrate.ts");
+const STATE = join(AIDLC_SRC, "tools", "amadeus-state.ts");
 const SKILL_MD = join(AIDLC_SRC, "skills", "aidlc", "SKILL.md");
 
 const MID_IDEATION = join(FIXTURES_DIR, "state-mid-ideation.md");
@@ -95,7 +95,7 @@ interface RunResult {
   out: string; // combined stdout+stderr (mirrors the .sh's 2>&1)
 }
 
-// Run `bun aidlc-orchestrate.ts next <args> --project-dir <proj>`. `extraEnv`
+// Run `bun amadeus-orchestrate.ts next <args> --project-dir <proj>`. `extraEnv`
 // layers onto a COPY of process.env (used for the env-scope precedence cases —
 // AWS_AIDLC_DEFAULT_SCOPE is set in the spawn env only, never the test process).
 function runNext(
@@ -147,7 +147,7 @@ describe("t114 happy path: in-flight current stage -> run-stage", () => {
   test("3: run-stage carries lead_agent from the graph node", () => {
     proj = createTestProject();
     seedStateFile(proj, MID_IDEATION);
-    expect(runNext(proj, []).out).toContain('"lead_agent":"aidlc-architect-agent"');
+    expect(runNext(proj, []).out).toContain('"lead_agent":"amadeus-architect-agent"');
   });
 
   test("4: brownfield bugfix active stage -> run-stage reverse-engineering", () => {
@@ -195,7 +195,7 @@ describe("t114 scope precedence + validation", () => {
   });
 
   test("8: invalid env scope -> verbatim AWS_AIDLC_DEFAULT_SCOPE error", () => {
-    // The env path validates by composing `aidlc-utility.ts resolve-env-scope`,
+    // The env path validates by composing `amadeus-utility.ts resolve-env-scope`,
     // which owns the canonical `Invalid AWS_AIDLC_DEFAULT_SCOPE "..."` wording.
     proj = createTestProject();
     const out = runNext(proj, [], {
@@ -236,14 +236,14 @@ describe("t114 with-state jump -> execute print", () => {
     // state-mid-ideation is feature scope, Current Stage=feasibility; --phase
     // construction resolves forward to functional-design. A jump against an
     // existing workflow is a MUTATION, and `next` is read-only — so the engine
-    // emits a `print` naming `aidlc-jump.ts execute`, carrying the tool-resolved
+    // emits a `print` naming `amadeus-jump.ts execute`, carrying the tool-resolved
     // target + direction.
     proj = createTestProject();
     seedStateFile(proj, MID_IDEATION);
     const out = runNext(proj, ["--phase", "construction"]).out;
     expect(out).toContain('"kind":"print"');
     expect(out).toContain(
-      "aidlc-jump.ts execute --target functional-design --direction forward",
+      "amadeus-jump.ts execute --target functional-design --direction forward",
     );
   });
 });
@@ -295,42 +295,42 @@ describe("t114 cutover: no --args swallow", () => {
 // Workspace navigation verbs route through the conductor (Branch 1b). A LEADING
 // space/space-create/intent token is the explicit "cd" between teams/intents
 // (workspace-vision §3). It dispatches BEFORE any state inspection and maps to a
-// TERMINAL print naming the deterministic aidlc-utility.ts handler, so the
+// TERMINAL print naming the deterministic amadeus-utility.ts handler, so the
 // engine never treats it as freeform new-work text that advances the active
 // intent (the bug this fixes). The handler itself branches list-vs-switch on the
 // <name> arg, so the engine just passes args[1] through when present.
 // ===========================================================================
 describe("t114 workspace verbs -> terminal print naming the handler", () => {
-  test("20: `space teamB` -> print naming aidlc-utility.ts space teamB (switch, not freeform)", () => {
+  test("20: `space teamB` -> print naming amadeus-utility.ts space teamB (switch, not freeform)", () => {
     proj = createTestProject();
     const out = runNext(proj, ["space", "teamB"]).out;
     expect(out).toContain('"kind":"print"');
-    expect(out).toContain("aidlc-utility.ts space teamB");
+    expect(out).toContain("amadeus-utility.ts space teamB");
     // It must NOT be misread as a new-work freeform intent that advances state.
     expect(out).not.toContain('"kind":"run-stage"');
   });
 
-  test("21: bare `space` (no arg) -> print naming aidlc-utility.ts space (read-only listing)", () => {
+  test("21: bare `space` (no arg) -> print naming amadeus-utility.ts space (read-only listing)", () => {
     proj = createTestProject();
     const out = runNext(proj, ["space"]).out;
     expect(out).toContain('"kind":"print"');
-    expect(out).toContain("aidlc-utility.ts space");
+    expect(out).toContain("amadeus-utility.ts space");
     // No trailing name arg leaks into the directive.
-    expect(out).not.toContain("aidlc-utility.ts space ");
+    expect(out).not.toContain("amadeus-utility.ts space ");
   });
 
-  test("22: `intent some-slug` -> print naming aidlc-utility.ts intent some-slug", () => {
+  test("22: `intent some-slug` -> print naming amadeus-utility.ts intent some-slug", () => {
     proj = createTestProject();
     const out = runNext(proj, ["intent", "some-slug"]).out;
     expect(out).toContain('"kind":"print"');
-    expect(out).toContain("aidlc-utility.ts intent some-slug");
+    expect(out).toContain("amadeus-utility.ts intent some-slug");
   });
 
-  test("23: `space-create teamB` -> print naming aidlc-utility.ts space-create teamB", () => {
+  test("23: `space-create teamB` -> print naming amadeus-utility.ts space-create teamB", () => {
     proj = createTestProject();
     const out = runNext(proj, ["space-create", "teamB"]).out;
     expect(out).toContain('"kind":"print"');
-    expect(out).toContain("aidlc-utility.ts space-create teamB");
+    expect(out).toContain("amadeus-utility.ts space-create teamB");
   });
 
   test("24: REGRESSION -- freeform containing 'space' NOT as leading token stays freeform (i===0 guard)", () => {
@@ -339,13 +339,13 @@ describe("t114 workspace verbs -> terminal print naming the handler", () => {
     // space-switch print naming the workspace handler.
     proj = createTestProject();
     const out = runNext(proj, ["add", "a", "settings", "space"]).out;
-    expect(out).not.toContain("aidlc-utility.ts space");
+    expect(out).not.toContain("amadeus-utility.ts space");
   });
 });
 
 // ===========================================================================
 // Parked workflow (#367) - the persisted-field branch the Stop hook relies on.
-// `park` writes the marker via aidlc-state.ts; a PLAIN `next` then re-emits the
+// `park` writes the marker via amadeus-state.ts; a PLAIN `next` then re-emits the
 // `parked` directive (Branch 2.5). Explicit re-entry self-disables it, and a
 // stale marker (Current Stage moved past Parked At Stage) is ignored.
 // ===========================================================================

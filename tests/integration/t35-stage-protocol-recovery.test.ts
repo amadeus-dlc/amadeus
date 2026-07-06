@@ -1,9 +1,9 @@
-// covers: doc:aidlc-common/protocols/stage-protocol-recovery.md
+// covers: doc:amadeus-common/protocols/stage-protocol-recovery.md
 //
 // t35 — Stage protocol recovery & change-handling structural validation.
 // Migrated from tests/integration/t35-stage-protocol-recovery.sh (TAP plan 34).
 // The .sh had no `# covers:` header; its subject is the shipped doc
-//   dist/claude/.claude/aidlc-common/protocols/stage-protocol-recovery.md
+//   dist/claude/.claude/amadeus-common/protocols/stage-protocol-recovery.md
 // so the covers id is `doc:<relative-path>`.
 //
 // Mechanism: none. This is a pure structural check of a shipped markdown file:
@@ -13,7 +13,7 @@
 // cross. There is no tool/function under test; the artefact IS the contract.
 //
 // Source under test (read verbatim, byte cites against the file as shipped):
-//   dist/claude/.claude/aidlc-common/protocols/stage-protocol-recovery.md
+//   dist/claude/.claude/amadeus-common/protocols/stage-protocol-recovery.md
 //     :8   "## 6. Error Recovery"            (§6 top-level section)
 //     :164 "## 7. Change Handling"           (§7 top-level section)
 //     :4   "supplement to `stage-protocol.md`" (parent-protocol reference)
@@ -23,8 +23,8 @@
 //     :53-99 the five phase resume-context headings (INITIALIZATION … OPERATION)
 //     :59,74,101 the ideation/inception/operation artefact-dir cites
 //     :117 "### Corrupted state file recovery"
-//     :119 "aidlc-state.md.bak" backup-before-recovery
-//     :121 "Rebuild `aidlc-state.md` from artifact evidence"
+//     :119 "amadeus-state.md.bak" backup-before-recovery
+//     :121 "Rebuild `amadeus-state.md` from artifact evidence"
 //     :129 "### Missing artifact recovery"
 //     :138 "### Error Severity Levels"
 //     :144-147 the Critical/High/Medium/Low severity rows (High/Medium/Low are
@@ -32,7 +32,7 @@
 //     :149 "**Escalation guidelines:**"
 //     :111 "### Context compaction"
 //     :112 "PreCompact hook"
-//     :115 ".aidlc-recovery.md" recovery breadcrumb
+//     :115 ".amadeus-recovery.md" recovery breadcrumb
 //     :197,201,207,213 the Minor/Major/Scope/Archive change-handling subsections
 //     :168 "### New reference material supplied mid-stage"
 //     :171 "evidence/input for the current stage, never a routing"
@@ -58,7 +58,7 @@
 //   .sh 12 (inception artifacts dir)      -> "resume references <record>/inception/"
 //   .sh 13 (operation artifacts dir)      -> "resume references <record>/operation/"
 //   .sh 14 (### Corrupted state recovery) -> "corrupted state file recovery subsection exists"
-//   .sh 15 (aidlc-state.md.bak)           -> "creates aidlc-state.md.bak backup before recovery"
+//   .sh 15 (amadeus-state.md.bak)           -> "creates amadeus-state.md.bak backup before recovery"
 //   .sh 16 (Rebuild...artifact evidence)  -> "rebuilds state from artifact evidence"
 //   .sh 17 (### Missing artifact recovery)-> "missing artifact recovery subsection exists"
 //   .sh 18 (### Error Severity Levels)    -> "error severity levels subsection exists"
@@ -69,7 +69,7 @@
 //   .sh 23 (Escalation guidelines)        -> "escalation guidelines defined"
 //   .sh 24 (### Context compaction)       -> "context compaction subsection exists"
 //   .sh 25 (PreCompact hook)              -> "references the PreCompact hook"
-//   .sh 26 (.aidlc-recovery.md)           -> "references the .aidlc-recovery.md breadcrumb"
+//   .sh 26 (.amadeus-recovery.md)           -> "references the .amadeus-recovery.md breadcrumb"
 //   .sh 27 (### Minor changes)            -> "change handling: minor changes subsection"
 //   .sh 28 (### Major changes)            -> "change handling: major changes subsection"
 //   .sh 29 (### Scope changes)            -> "change handling: scope changes subsection"
@@ -86,7 +86,7 @@ import { AIDLC_SRC } from "../harness/fixtures.ts";
 
 const RECOVERY_PATH = join(
   AIDLC_SRC,
-  "aidlc-common",
+  "amadeus-common",
   "protocols",
   "stage-protocol-recovery.md",
 );
@@ -152,7 +152,7 @@ describe("§6 Error Recovery — session resume + context loading", () => {
   });
 
   test("resume references <record>/ideation/ [.sh 11]", () => {
-    // Rerooted: flat aidlc-docs/<phase>/ -> per-intent <record>/<phase>/. The
+    // Rerooted: flat amadeus-docs/<phase>/ -> per-intent <record>/<phase>/. The
     // resume prose now loads `<record>/ideation/` artifacts (recovery.md:61).
     expect(recovery).toContain("<record>/ideation/");
   });
@@ -173,8 +173,8 @@ describe("§6 Error Recovery — corrupted state + missing artifact recovery", (
     expect(recovery).toContain("### Corrupted state file recovery");
   });
 
-  test("creates aidlc-state.md.bak backup before recovery [.sh 15]", () => {
-    expect(recovery).toContain("aidlc-state.md.bak");
+  test("creates amadeus-state.md.bak backup before recovery [.sh 15]", () => {
+    expect(recovery).toContain("amadeus-state.md.bak");
   });
 
   test("rebuilds state from artifact evidence [.sh 16]", () => {
@@ -223,8 +223,8 @@ describe("§6 Error Recovery — context compaction", () => {
     expect(recovery).toContain("PreCompact hook");
   });
 
-  test("references the .aidlc-recovery.md breadcrumb [.sh 26]", () => {
-    expect(recovery).toContain(".aidlc-recovery.md");
+  test("references the .amadeus-recovery.md breadcrumb [.sh 26]", () => {
+    expect(recovery).toContain(".amadeus-recovery.md");
   });
 });
 

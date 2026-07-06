@@ -1,7 +1,7 @@
-// covers: subcommand:aidlc-jump:execute, audit:STAGE_JUMPED
+// covers: subcommand:amadeus-jump:execute, audit:STAGE_JUMPED
 //
 // t-acp-kiro-jump.serial.test.ts — Kiro ACP port of the t25 backward-jump
-// contract: from a mid-INCEPTION seeded state, `/aidlc --phase ideation`
+// contract: from a mid-INCEPTION seeded state, `/amadeus --phase ideation`
 // resolves to a BACKWARD jump targeting intent-capture (first in-scope
 // ideation stage for scope=feature), the jump tool's stdout carries the
 // known-answer JSON fields, and the audit's STAGE_JUMPED block lands with
@@ -23,7 +23,7 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { seededStateFile } from "../harness/fixtures.ts";
 import { driveKiroAcp } from "../harness/kiro-acp-drive.ts";
 import { cleanupTuiProject, KIRO_SRC, setupTuiProject } from "../harness/tui-fixtures.ts";
@@ -65,15 +65,15 @@ describe("t-acp-kiro-jump (backward phase jump over ACP; t26-class flake policy 
       try {
         const r = await driveKiroAcp({
           projectDir: proj,
-          prompt: "/aidlc --phase ideation",
+          prompt: "/amadeus --phase ideation",
           timeoutMs: DRIVE_TIMEOUT_MS,
-          stopAfterToolTitle: /aidlc-jump\.ts/,
+          stopAfterToolTitle: /amadeus-jump\.ts/,
         });
 
         // The jump tool ran and its verbatim stdout carries the known-answer
         // resolution fields. Match the stable title stem — titles are
         // display-truncated (probe-verified), so 'execute' may be cut.
-        const jumpCall = r.toolCalls.find((t) => t.title.includes("aidlc-jump.ts"));
+        const jumpCall = r.toolCalls.find((t) => t.title.includes("amadeus-jump.ts"));
         expect(jumpCall).toBeDefined();
         const out = jumpCall!.output.join("");
         expect(out).toContain(JUMP_TARGET_JSON);

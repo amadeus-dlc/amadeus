@@ -11,7 +11,7 @@ never hand-edit it (the drift guard fails CI).
 
 - **Codex CLI ≥ 0.139.0** — earlier releases do not surface the real agent
   role in subagent hook payloads and do not resolve hyphenated agent TOMLs.
-  `/aidlc --doctor` enforces the pin. Check with `codex --version`.
+  `/amadeus --doctor` enforces the pin. Check with `codex --version`.
 - **bun** — same requirement as the Claude harness; every tool and hook runs
   via bun.
 - **A model provider** — the shipped `config.toml` defaults to **Amazon
@@ -29,14 +29,14 @@ never hand-edit it (the drift guard fails CI).
    ```bash
    cp -r dist/codex/.codex/  your-project/.codex/
    cp -r dist/codex/.agents/ your-project/.agents/
-   cp -r dist/codex/aidlc/   your-project/aidlc/      # the workspace shell (spaces/default/memory) — a sibling of .codex/, not inside it
+   cp -r dist/codex/amadeus/   your-project/amadeus/      # the workspace shell (spaces/default/memory) — a sibling of .codex/, not inside it
    cp dist/codex/AGENTS.md   your-project/AGENTS.md   # or merge into yours
    ```
 
    The `aidlc/` directory is the workspace shell — it ships the pre-built
    `aidlc/spaces/default/memory/` method tree the engine reads. It is a
    **sibling** of `.codex/`, so copy it separately (or copy the whole
-   `dist/codex/` tree at once). `$aidlc --doctor` fails its "workspace shell
+   `dist/codex/` tree at once). `$amadeus --doctor` fails its "workspace shell
    ready" check if it is missing.
 
 2. Apply the `.gitignore` entries from the shipped `AGENTS.md` § "Git
@@ -62,15 +62,15 @@ never hand-edit it (the drift guard fails CI).
    (or keep it project-level — trusted projects read it). Verify with:
 
    ```bash
-   bun .codex/tools/aidlc-utility.ts doctor
+   bun .codex/tools/amadeus-utility.ts doctor
    ```
 
 ## Use
 
-Invoke the orchestrator with `$aidlc` (or `/skills` → aidlc) followed by a
-scope or description — same commands as the Claude harness (`$aidlc --status`,
-`$aidlc --help`, …). Stage runners are explicit-only:
-`$aidlc-application-design`, `$aidlc-bugfix`, etc. (they are excluded from
+Invoke the orchestrator with `$amadeus` (or `/skills` → aidlc) followed by a
+scope or description — same commands as the Claude harness (`$amadeus --status`,
+`$amadeus --help`, …). Stage runners are explicit-only:
+`$amadeus-application-design`, `$amadeus-bugfix`, etc. (they are excluded from
 implicit skill matching so 37 runner descriptions don't pollute the index).
 
 ## Harness differences vs Claude Code
@@ -79,7 +79,7 @@ implicit skill matching so 37 runner descriptions don't pollute the index).
   flags enable it, with a numbered-prose fallback otherwise (answer with a
   number or free text). Gate semantics live in the engine either way.
 - **No custom statusline** — workflow position rides the `update_plan` tool
-  (the `task-progress` statusline item) and `$aidlc --status`.
+  (the `task-progress` statusline item) and `$amadeus --status`.
 - **Git under the sandbox**: `workspace-write` keeps `.git` read-only
   in-sandbox by design. Interactive sessions auto-escalate, and the shipped
   `.codex/rules/default.rules` pre-allows `git worktree`/`commit`/`add`.
@@ -118,7 +118,7 @@ bun scripts/package.ts --check        # CI drift guard (every harness)
 Core `.ts` files are byte-identical to their `core/tools/` and `core/hooks/`
 sources (pinned by `tests/unit/t150-codex-packaging.test.ts`); prose carries the
 `{{HARNESS_DIR}}` token the packager substitutes to `.codex` (plus the
-`rules/` → `aidlc-rules/` rename), the one permitted transform class. The live
+`rules/` → `amadeus-rules/` rename), the one permitted transform class. The live
 end-to-end journey is `tests/e2e/t-exec-codex-status.serial.test.ts` (gate:
 `AIDLC_CODEX_EXEC_LIVE=1`).
 

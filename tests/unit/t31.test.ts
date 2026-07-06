@@ -1,19 +1,19 @@
-// covers: subcommand:aidlc-log:decision, subcommand:aidlc-log:answer
+// covers: subcommand:amadeus-log:decision, subcommand:amadeus-log:answer
 //
 // CLI-contract port of tests/unit/t31-tool-log.sh (TAP plan 21),
 // mechanism = cli. Equal-or-stronger migration: every .sh assertion that
-// shelled out to `bun aidlc-log.ts decision|answer ...` is preserved by
+// shelled out to `bun amadeus-log.ts decision|answer ...` is preserved by
 // SPAWNING the real CLI via node:child_process spawnSync (BUN + the tool
 // .ts path), asserting on res.status / res.stdout / res.stderr exactly as
 // the .sh asserted on $? / stdout, plus on the audit.md the tool writes —
 // the PROCESS boundary, not in-process handleDecision/handleAnswer calls.
 // An in-process twin would lose the exit-code half the .sh relies on for
 // every invalid-arg case (the tool's error() path is process.exit(1) via
-// emitError, aidlc-lib.ts:1546) AND the JSON-ack-to-stdout half.
+// emitError, amadeus-lib.ts:1546) AND the JSON-ack-to-stdout half.
 //
 // SUBCOMMAND UNITS: this .cli file credits BOTH subcommand units the .sh
-// exercises — `aidlc-log decision` (covers KEY subcommand:aidlc-log
-// decision) and `aidlc-log answer` (covers KEY subcommand:aidlc-log
+// exercises — `amadeus-log decision` (covers KEY subcommand:amadeus-log
+// decision) and `amadeus-log answer` (covers KEY subcommand:amadeus-log
 // answer). The tool's only two subcommands; both are fired here.
 //
 // PARITY NOTES (every .sh `ok` line maps to an expect() below; several are
@@ -78,7 +78,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, readdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -89,7 +89,7 @@ import {
 
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
-const TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "aidlc-log.ts");
+const TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-log.ts");
 
 const tempDirs: string[] = [];
 
@@ -99,11 +99,11 @@ afterAll(() => {
 
 // Every emit-success case runs against a workspace with a RESOLVABLE active
 // intent — createTestProject seeds the per-intent record dir + active-intent
-// cursor, but the cursor only resolves once an aidlc-state.md exists in that
-// record (activeIntent gates on the state file, aidlc-lib.ts). So we seed one.
-// aidlc-log refuses to emit when no active workflow resolves (the null-intent
+// cursor, but the cursor only resolves once an amadeus-state.md exists in that
+// record (activeIntent gates on the state file, amadeus-lib.ts). So we seed one.
+// amadeus-log refuses to emit when no active workflow resolves (the null-intent
 // guard — see the "no active workflow" describe block below), which is exactly
-// the path aidlc-log is exercised on: orchestrator-called mid-stage, after a
+// the path amadeus-log is exercised on: orchestrator-called mid-stage, after a
 // workflow exists. With a real active intent the appended shard lands UNDER the
 // per-intent record (…/intents/<record>/audit/<clone>.md), never the bare space
 // root; readAllAuditShards globs every shard and merges by timestamp.
@@ -120,7 +120,7 @@ interface CliResult {
   stdout: string;
 }
 
-/** Spawn `bun aidlc-log.ts <args...> --project-dir <p>`. Mirrors `bun "$TOOL" ...`. */
+/** Spawn `bun amadeus-log.ts <args...> --project-dir <p>`. Mirrors `bun "$TOOL" ...`. */
 function log(args: string[], p: string): CliResult {
   const res = spawnSync(BUN, [TOOL, ...args, "--project-dir", p], {
     encoding: "utf-8",
@@ -182,10 +182,10 @@ function fileContains(body: string, needle: string): boolean {
 }
 
 // ============================================================
-// decision subcommand (covers: subcommand:aidlc-log decision)
+// decision subcommand (covers: subcommand:amadeus-log decision)
 // ============================================================
 
-describe("t31 aidlc-log decision (migrated from t31-tool-log.sh, plan 21)", () => {
+describe("t31 amadeus-log decision (migrated from t31-tool-log.sh, plan 21)", () => {
   test("1: decision emits DECISION_RECORDED", () => {
     const p = proj();
     const r = log(["decision", "--stage", "feasibility", "--decision", "Pick a framework"], p);
@@ -277,10 +277,10 @@ describe("t31 aidlc-log decision (migrated from t31-tool-log.sh, plan 21)", () =
 });
 
 // ============================================================
-// answer subcommand (covers: subcommand:aidlc-log answer)
+// answer subcommand (covers: subcommand:amadeus-log answer)
 // ============================================================
 
-describe("t31 aidlc-log answer (migrated from t31-tool-log.sh, plan 21)", () => {
+describe("t31 amadeus-log answer (migrated from t31-tool-log.sh, plan 21)", () => {
   test("9: answer emits QUESTION_ANSWERED", () => {
     const p = proj();
     const r = log(["answer", "--stage", "feasibility", "--details", "User chose React"], p);
@@ -325,7 +325,7 @@ describe("t31 aidlc-log answer (migrated from t31-tool-log.sh, plan 21)", () => 
 // (.sh Test 14)
 // ============================================================
 
-describe("t31 aidlc-log dispatch", () => {
+describe("t31 amadeus-log dispatch", () => {
   test("14: unknown subcommand exits 1", () => {
     const p = proj();
     const r = log(["bogus"], p);
@@ -335,16 +335,16 @@ describe("t31 aidlc-log dispatch", () => {
 });
 
 // ============================================================
-// Null-resolved-intent guard: aidlc-log refuses to emit (and never drops a
+// Null-resolved-intent guard: amadeus-log refuses to emit (and never drops a
 // shard into the BARE space record root) when no active workflow resolves.
 //
-// WHY this matters: aidlc-log threads no --intent/--space, so it relies on
+// WHY this matters: amadeus-log threads no --intent/--space, so it relies on
 // default resolution. On a fresh shell (no record) or a >1-intent workspace
 // with no active-intent cursor, activeIntent() → null and the path helpers
 // collapse to the bare aidlc/spaces/<space>/intents/ root. An unguarded emit
 // would write a state/audit shard DIRECTLY there, breaking the invariant that
-// no aidlc-state.md / audit/ ever lives in the bare intents root (aidlc-lib.ts).
-// aidlc-log was the lone emitter missing the "no active workflow → clean error"
+// no amadeus-state.md / audit/ ever lives in the bare intents root (amadeus-lib.ts).
+// amadeus-log was the lone emitter missing the "no active workflow → clean error"
 // guard every other emitter has (the hooks no-op via existsSync(stateFilePath);
 // emitError gates on the same check). Mirrors that.
 //
@@ -354,9 +354,9 @@ describe("t31 aidlc-log dispatch", () => {
 // resolve to null), so the no-record case is the representative test.
 // ============================================================
 
-describe("t31 aidlc-log null-intent guard", () => {
+describe("t31 amadeus-log null-intent guard", () => {
   // The bare space record root: aidlc/spaces/default/intents/. A guarded emit
-  // must leave NO aidlc-state.md and NO audit/ dir directly under it.
+  // must leave NO amadeus-state.md and NO audit/ dir directly under it.
   function bareIntentsRootEntries(p: string): string[] {
     const root = intentsDirOf(p);
     if (!existsSync(root)) return [];
@@ -380,7 +380,7 @@ describe("t31 aidlc-log null-intent guard", () => {
     const entries = bareIntentsRootEntries(p);
     // removeWorkspaceRecord rm's the whole intents dir; a guarded emit must not
     // recreate it with a stray state file or audit shard directly inside it.
-    expect(entries).not.toContain("aidlc-state.md");
+    expect(entries).not.toContain("amadeus-state.md");
     expect(entries).not.toContain("audit");
   });
 
@@ -398,7 +398,7 @@ describe("t31 aidlc-log null-intent guard", () => {
     removeWorkspaceRecord(p);
     log(["answer", "--stage", "feasibility", "--details", "User chose React"], p);
     const entries = bareIntentsRootEntries(p);
-    expect(entries).not.toContain("aidlc-state.md");
+    expect(entries).not.toContain("amadeus-state.md");
     expect(entries).not.toContain("audit");
   });
 });

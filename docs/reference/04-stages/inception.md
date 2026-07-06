@@ -28,7 +28,7 @@ off to Construction.
 
 The phase contains a mix of inline and subagent
 execution modes, including a two-step subagent delegation at Stage 2.1
-(aidlc-developer-agent for the code scan, then aidlc-architect-agent for the synthesis)
+(amadeus-developer-agent for the code scan, then amadeus-architect-agent for the synthesis)
 and a parallel multi-agent dispatch at Stage 2.2 (Practices Discovery).
 
 **Key characteristics of the Inception phase:**
@@ -37,8 +37,8 @@ and a parallel multi-agent dispatch at Stage 2.2 (Practices Discovery).
   that uses subagent delegation, followed by a methodology-discovery stage
   (2.2 Practices Discovery) that uses parallel multi-agent dispatch, then six
   inline analysis and design stages.
-- Stage 2.1 uses a two-step subagent pattern: aidlc-developer-agent scans the code,
-  then aidlc-architect-agent synthesizes the scan into 9 structured artifacts. It
+- Stage 2.1 uses a two-step subagent pattern: amadeus-developer-agent scans the code,
+  then amadeus-architect-agent synthesizes the scan into 9 structured artifacts. It
   has an always-rerun policy for brownfield projects.
 - Stage 2.2 dispatches four agents in parallel (pipeline-deploy, quality,
   developer, devsecops) for evidence-scan on brownfield, then runs interview
@@ -75,14 +75,14 @@ and a parallel multi-agent dispatch at Stage 2.2 (Practices Discovery).
 
 | Stage | Name                   | Condition   | Lead Agent             | Support Agents                                       | Mode                             |
 |-------|------------------------|-------------|------------------------|------------------------------------------------------|----------------------------------|
-| 2.1   | Reverse Engineering    | CONDITIONAL | aidlc-developer-agent        | aidlc-architect-agent                                      | subagent (aidlc-developer-agent → aidlc-architect-agent, 2-step) |
-| 2.2   | Practices Discovery    | CONDITIONAL | aidlc-pipeline-deploy-agent  | aidlc-quality-agent, aidlc-developer-agent, aidlc-devsecops-agent      | inline (parallel multi-Task on brownfield) |
-| 2.3   | Requirements Analysis  | ALWAYS      | aidlc-product-agent          | --                                                   | inline                           |
-| 2.4   | User Stories           | CONDITIONAL | aidlc-product-agent          | aidlc-design-agent                                         | inline                           |
-| 2.5   | Refined Mockups        | CONDITIONAL | aidlc-design-agent           | aidlc-product-agent                                        | inline                           |
-| 2.6   | Application Design     | CONDITIONAL | aidlc-architect-agent        | aidlc-aws-platform-agent, aidlc-design-agent               | inline                           |
-| 2.7   | Units Generation       | ALWAYS      | aidlc-architect-agent        | aidlc-delivery-agent                                       | inline                           |
-| 2.8   | Delivery Planning      | ALWAYS      | aidlc-delivery-agent         | aidlc-architect-agent                                      | inline                           |
+| 2.1   | Reverse Engineering    | CONDITIONAL | amadeus-developer-agent        | amadeus-architect-agent                                      | subagent (amadeus-developer-agent → amadeus-architect-agent, 2-step) |
+| 2.2   | Practices Discovery    | CONDITIONAL | amadeus-pipeline-deploy-agent  | amadeus-quality-agent, amadeus-developer-agent, amadeus-devsecops-agent      | inline (parallel multi-Task on brownfield) |
+| 2.3   | Requirements Analysis  | ALWAYS      | amadeus-product-agent          | --                                                   | inline                           |
+| 2.4   | User Stories           | CONDITIONAL | amadeus-product-agent          | amadeus-design-agent                                         | inline                           |
+| 2.5   | Refined Mockups        | CONDITIONAL | amadeus-design-agent           | amadeus-product-agent                                        | inline                           |
+| 2.6   | Application Design     | CONDITIONAL | amadeus-architect-agent        | amadeus-aws-platform-agent, amadeus-design-agent               | inline                           |
+| 2.7   | Units Generation       | ALWAYS      | amadeus-architect-agent        | amadeus-delivery-agent                                       | inline                           |
+| 2.8   | Delivery Planning      | ALWAYS      | amadeus-delivery-agent         | amadeus-architect-agent                                      | inline                           |
 
 ---
 
@@ -95,16 +95,16 @@ and a parallel multi-agent dispatch at Stage 2.2 (Practices Discovery).
 | Phase            | Inception                                                              |
 | Stage #          | 2.1                                                                    |
 | Condition        | CONDITIONAL -- brownfield detected; always rerun for freshness         |
-| Lead Agent       | aidlc-developer-agent                                                        |
-| Support Agents   | aidlc-architect-agent                                                        |
-| Mode             | subagent (two-step: aidlc-developer-agent then aidlc-architect-agent)              |
+| Lead Agent       | amadeus-developer-agent                                                        |
+| Support Agents   | amadeus-architect-agent                                                        |
+| Mode             | subagent (two-step: amadeus-developer-agent then amadeus-architect-agent)              |
 | Completion Emoji | (uses stage-protocol.md completion template)                           |
 
 ### Purpose
 
 Reverse Engineering performs a comprehensive analysis of the existing codebase
 for brownfield projects. It uses a two-step subagent delegation pattern:
-first, the aidlc-developer-agent scans the entire codebase; then, the aidlc-architect-agent
+first, the amadeus-developer-agent scans the entire codebase; then, the amadeus-architect-agent
 synthesizes the scan results into 9 structured artifacts. These artifacts
 provide the technical foundation that all subsequent Inception and Construction
 stages build upon.
@@ -115,19 +115,19 @@ artifacts reflect the current state of the codebase, not a stale snapshot.
 
 ### Inputs
 
-- `<record>/aidlc-state.md` (project type confirmation)
+- `<record>/amadeus-state.md` (project type confirmation)
 
 ### Steps
 
-1. **Check Conditions** -- Read `<record>/aidlc-state.md` to confirm the
+1. **Check Conditions** -- Read `<record>/amadeus-state.md` to confirm the
    project type is brownfield. If the project is not brownfield, skip this
-   stage and update `aidlc-state.md` with skip reason.
+   stage and update `amadeus-state.md` with skip reason.
 
-2. **Developer Code Scan** -- Delegate to Task tool with the aidlc-developer-agent
-   subagent (`subagent_type="aidlc-developer-agent"`). Include aidlc-developer-agent persona from
-   `agents/aidlc-developer-agent.md` and knowledge from
-   `.claude/knowledge/aidlc-developer-agent/` in the delegation prompt.
-   Include workspace state from `aidlc-state.md` as context.
+2. **Developer Code Scan** -- Delegate to Task tool with the amadeus-developer-agent
+   subagent (`subagent_type="amadeus-developer-agent"`). Include amadeus-developer-agent persona from
+   `agents/amadeus-developer-agent.md` and knowledge from
+   `.claude/knowledge/amadeus-developer-agent/` in the delegation prompt.
+   Include workspace state from `amadeus-state.md` as context.
 
    The developer scans the entire codebase for:
    - All packages, modules, and their purposes
@@ -141,18 +141,18 @@ artifacts reflect the current state of the codebase, not a stale snapshot.
    Developer returns structured scan results following the Developer Code Scan
    Template in `templates/re-artifacts.md`.
 
-3. **Architect Synthesis** -- Delegate to Task tool with the aidlc-architect-agent
-   subagent (`subagent_type="aidlc-architect-agent"`). Include aidlc-architect-agent persona from
-   `agents/aidlc-architect-agent.md` and knowledge from
-   `.claude/knowledge/aidlc-architect-agent/` in the delegation prompt. Pass
+3. **Architect Synthesis** -- Delegate to Task tool with the amadeus-architect-agent
+   subagent (`subagent_type="amadeus-architect-agent"`). Include amadeus-architect-agent persona from
+   `agents/amadeus-architect-agent.md` and knowledge from
+   `.claude/knowledge/amadeus-architect-agent/` in the delegation prompt. Pass
    the complete developer scan results as context. Include workspace state from
-   `aidlc-state.md`.
+   `amadeus-state.md`.
 
    The architect synthesizes scan results into the 9 output artifacts (see
    Outputs below).
 
 4. **Update State** -- Mark Reverse Engineering as `[x]` completed in
-   `<record>/aidlc-state.md`. Update current stage and next stage.
+   `<record>/amadeus-state.md`. Update current stage and next stage.
 
 5. **Present Completion & Request Approval** -- Display completion summary
    of all 9 artifacts produced. Standard approval gate: Approve (continue to
@@ -185,8 +185,8 @@ Standard 2-option gate: **Approve** (continue to Requirements Analysis) /
   projects even when prior artifacts exist. This is a deliberate deviation from
   the upstream reference, documented in SKILL.md's "Deliberate Deviations"
   section.
-- **Two-step subagent pattern:** The aidlc-developer-agent performs the raw code
-  scan, then the aidlc-architect-agent synthesizes the scan into structured
+- **Two-step subagent pattern:** The amadeus-developer-agent performs the raw code
+  scan, then the amadeus-architect-agent synthesizes the scan into structured
   artifacts. This separation ensures the scan is thorough (developer
   perspective) and the synthesis is architecturally informed (architect
   perspective).
@@ -211,8 +211,8 @@ Standard 2-option gate: **Approve** (continue to Requirements Analysis) /
 | Phase            | Inception                                                              |
 | Stage #          | 2.2                                                                    |
 | Condition        | CONDITIONAL -- always rerun for freshness on EXECUTE scopes            |
-| Lead Agent       | aidlc-pipeline-deploy-agent                                                  |
-| Support Agents   | aidlc-quality-agent, aidlc-developer-agent, aidlc-devsecops-agent                        |
+| Lead Agent       | amadeus-pipeline-deploy-agent                                                  |
+| Support Agents   | amadeus-quality-agent, amadeus-developer-agent, amadeus-devsecops-agent                        |
 | Mode             | inline (with parallel multi-Task dispatch on brownfield)               |
 | Completion Emoji | (uses stage-protocol.md completion template)                           |
 
@@ -231,13 +231,13 @@ put words in the team's mouth in its own harness config.
 
 ### Inputs
 
-- `<record>/aidlc-state.md` (project type)
+- `<record>/amadeus-state.md` (project type)
 - Brownfield only: reverse-engineering's 9 artifacts (business-overview,
   architecture, code-structure, api-documentation, component-inventory,
   technology-stack, dependencies, code-quality-assessment,
   reverse-engineering-timestamp)
 - `aidlc/spaces/<space>/memory/org.md` (greenfield default suggestions)
-- `.claude/knowledge/aidlc-pipeline-deploy-agent/branching-strategies.md` (lead-agent KB)
+- `.claude/knowledge/amadeus-pipeline-deploy-agent/branching-strategies.md` (lead-agent KB)
 
 ### Outputs
 
@@ -260,12 +260,12 @@ On affirmation, content is promoted to:
 
 ### Steps
 
-1. Check conditions: read `aidlc-state.md` to classify greenfield vs brownfield.
+1. Check conditions: read `amadeus-state.md` to classify greenfield vs brownfield.
    Brownfield runs Step 2; greenfield skips it.
 2. **Discover (brownfield only)** -- the conductor issues four parallel `Task`
-   invocations in a single assistant message: aidlc-pipeline-deploy-agent
-   (branching), aidlc-quality-agent (testing posture), aidlc-developer-agent (code patterns),
-   aidlc-devsecops-agent (CI/security). Each agent reads its own KB, scans evidence,
+   invocations in a single assistant message: amadeus-pipeline-deploy-agent
+   (branching), amadeus-quality-agent (testing posture), amadeus-developer-agent (code patterns),
+   amadeus-devsecops-agent (CI/security). Each agent reads its own KB, scans evidence,
    returns a finding. The conductor collects all four findings before proceeding.
 3. **Interview (always)** -- AskUserQuestion for evidence-gaps. Brownfield: ask
    only the gaps. Greenfield: ask all five practice areas with `org.md` defaults
@@ -283,7 +283,7 @@ On affirmation, content is promoted to:
 
 ### Notes
 
-- The `replaceSection` helper in `.claude/tools/aidlc-lib.ts` was added in milestone 8
+- The `replaceSection` helper in `.claude/tools/amadeus-lib.ts` was added in milestone 8
   specifically to support the team.md cross-row promotion (the existing
   `appendUnderHeading` accumulates duplicates across re-runs).
 - `org.md` and `team.md` share one Title Case heading set
@@ -303,7 +303,7 @@ On affirmation, content is promoted to:
 | Phase            | Inception                                                              |
 | Stage #          | 2.3                                                                    |
 | Condition        | ALWAYS -- depth adapts to complexity                                   |
-| Lead Agent       | aidlc-product-agent                                                          |
+| Lead Agent       | amadeus-product-agent                                                          |
 | Support Agents   | (none)                                                                 |
 | Mode             | inline                                                                 |
 | Completion Emoji | :mag:                                                                  |
@@ -329,9 +329,9 @@ large scope with significant unknowns.
 
 ### Steps
 
-1. **Load Agent Personas** -- Load aidlc-product-agent persona from
-   `agents/aidlc-product-agent.md` and knowledge from
-   `.claude/knowledge/aidlc-product-agent/`.
+1. **Load Agent Personas** -- Load amadeus-product-agent persona from
+   `agents/amadeus-product-agent.md` and knowledge from
+   `.claude/knowledge/amadeus-product-agent/`.
 
 2. **Load Prior Context** -- If brownfield: read RE artifacts from
    `<record>/inception/reverse-engineering/`. Read user's project
@@ -401,7 +401,7 @@ large scope with significant unknowns.
     - Open questions -- remaining uncertainties for later stages
 
 11. **Update State** -- Mark Requirements Analysis as `[x]` completed in
-    `<record>/aidlc-state.md`. Update current and next stage.
+    `<record>/amadeus-state.md`. Update current and next stage.
 
 12. **Present Completion & Request Approval** -- Display completion message
     with :mag: emoji and review path. The approval gate has two variants:
@@ -409,7 +409,7 @@ large scope with significant unknowns.
     **If User Stories is set to SKIP in the execution state:** 3-option gate:
     Approve / Request Changes / Add User Stories (include the currently
     skipped User Stories stage). If "Add User Stories" is selected, update
-    `aidlc-state.md` to mark User Stories as pending execution.
+    `amadeus-state.md` to mark User Stories as pending execution.
 
     **If User Stories is NOT set to SKIP:** Standard 2-option gate: Approve /
     Request Changes.
@@ -456,8 +456,8 @@ Conditional gate format:
 | Phase            | Inception                                                              |
 | Stage #          | 2.4                                                                    |
 | Condition        | CONDITIONAL -- execute for user-facing features, multiple personas, complex business logic, or cross-team work |
-| Lead Agent       | aidlc-product-agent                                                          |
-| Support Agents   | aidlc-design-agent                                                           |
+| Lead Agent       | amadeus-product-agent                                                          |
+| Support Agents   | amadeus-design-agent                                                           |
 | Mode             | inline                                                                 |
 | Completion Emoji | :books:                                                                |
 
@@ -469,7 +469,7 @@ structure: PART 1 creates a story plan with clarifying questions, and PART 2
 generates the actual stories and personas. The plan and stories are presented
 together at the completion gate for combined review.
 
-The aidlc-design-agent provides supporting perspective on user experience. This is a
+The amadeus-design-agent provides supporting perspective on user experience. This is a
 deliberate addition not in the upstream reference, documented in SKILL.md's
 "Deliberate Deviations" section.
 
@@ -481,11 +481,11 @@ deliberate addition not in the upstream reference, documented in SKILL.md's
 
 ### Steps
 
-1. **Load Agent Personas** -- Load aidlc-product-agent persona from
-   `agents/aidlc-product-agent.md` and knowledge from
-   `.claude/knowledge/aidlc-product-agent/`. Load aidlc-design-agent persona from
-   `agents/aidlc-design-agent.md` and knowledge from
-   `.claude/knowledge/aidlc-design-agent/` for supporting perspective on user
+1. **Load Agent Personas** -- Load amadeus-product-agent persona from
+   `agents/amadeus-product-agent.md` and knowledge from
+   `.claude/knowledge/amadeus-product-agent/`. Load amadeus-design-agent persona from
+   `agents/amadeus-design-agent.md` and knowledge from
+   `.claude/knowledge/amadeus-design-agent/` for supporting perspective on user
    experience.
 
 2. **Validate User Stories Are Needed** -- Assess whether user stories add
@@ -499,7 +499,7 @@ deliberate addition not in the upstream reference, documented in SKILL.md's
    documenting: decision (Execute or Skip), rationale, factors considered,
    key value areas (if executing) or alternative coverage (if skipping).
 
-   If skipping, update `aidlc-state.md` with skip reason and proceed to next
+   If skipping, update `amadeus-state.md` with skip reason and proceed to next
    stage.
 
 3. **Load Prior Context** -- Read
@@ -557,7 +557,7 @@ deliberate addition not in the upstream reference, documented in SKILL.md's
    - INVEST compliance notes
 
 9. **Update State** -- Mark User Stories as `[x]` completed in
-   `<record>/aidlc-state.md`. Update current and next stage.
+   `<record>/amadeus-state.md`. Update current and next stage.
 
 10. **Present Completion & Request Approval** -- Display completion message
     with :books: emoji, summary of personas and stories produced, and review
@@ -592,7 +592,7 @@ Changes**.
   stage is skipped, to document the rationale.
 - Stories produced here are consumed by Refined Mockups (2.5), Application
   Design (2.6), Units Generation (2.7), and Delivery Planning (2.8).
-- The aidlc-design-agent support is a deliberate addition for UX-informed
+- The amadeus-design-agent support is a deliberate addition for UX-informed
   development, noted in SKILL.md's Deliberate Deviations section.
 
 ---
@@ -606,8 +606,8 @@ Changes**.
 | Phase            | Inception                                                              |
 | Stage #          | 2.5                                                                    |
 | Condition        | CONDITIONAL -- skip for non-UI, API-only, or infrastructure-only initiatives |
-| Lead Agent       | aidlc-design-agent                                                           |
-| Support Agents   | aidlc-product-agent (validates against stories)                              |
+| Lead Agent       | amadeus-design-agent                                                           |
+| Support Agents   | amadeus-product-agent (validates against stories)                              |
 | Mode             | inline                                                                 |
 | Completion Emoji | :art:                                                                  |
 
@@ -634,9 +634,9 @@ This stage is typically skipped if Stage 1.6 (Rough Mockups) was also skipped.
 
 ### Steps
 
-1. **Load Agent Personas** -- Load aidlc-design-agent persona from
-   `agents/aidlc-design-agent.md` and knowledge from
-   `.claude/knowledge/aidlc-design-agent/`.
+1. **Load Agent Personas** -- Load amadeus-design-agent persona from
+   `agents/amadeus-design-agent.md` and knowledge from
+   `.claude/knowledge/amadeus-design-agent/`.
 
 2. **Load Prior Context** -- Read rough mockups from
    `<record>/ideation/rough-mockups/` (if exists). Read user stories from
@@ -666,7 +666,7 @@ This stage is typically skipped if Stage 1.6 (Rough Mockups) was also skipped.
    For non-UI initiatives, create API developer experience specification.
 
 6. **Update State** -- Mark 2.5 Refined Mockups as `[x]` completed in
-   `<record>/aidlc-state.md`.
+   `<record>/amadeus-state.md`.
 
 7. **Present Completion & Request Approval** -- Display completion message
    with :art: emoji. Standard approval gate (Approve / Request Changes).
@@ -708,8 +708,8 @@ Standard 2-option gate: **Approve** / **Request Changes**.
 | Phase            | Inception                                                              |
 | Stage #          | 2.6                                                                    |
 | Condition        | CONDITIONAL -- execute when new components or services are needed; skip for modifications to existing components only |
-| Lead Agent       | aidlc-architect-agent                                                        |
-| Support Agents   | aidlc-aws-platform-agent, aidlc-design-agent                                |
+| Lead Agent       | amadeus-architect-agent                                                        |
+| Support Agents   | amadeus-aws-platform-agent, amadeus-design-agent                                |
 | Mode             | inline                                                                 |
 | Completion Emoji | :building_construction:                                                |
 
@@ -721,8 +721,8 @@ relationships, and architecture decision records (ADRs). It translates
 requirements and user stories into a concrete technical design that guides
 Construction.
 
-The aidlc-aws-platform-agent provides supporting perspective on AWS service mapping.
-The aidlc-design-agent support is also noted in SKILL.md's Deliberate Deviations
+The amadeus-aws-platform-agent provides supporting perspective on AWS service mapping.
+The amadeus-design-agent support is also noted in SKILL.md's Deliberate Deviations
 section for UX-informed architecture.
 
 The `decisions.md` artifact (ADRs) is a deliberate addition not present in the
@@ -737,16 +737,16 @@ upstream reference, documented in SKILL.md's "Deliberate Deviations" section.
 
 ### Steps
 
-1. **Load Agent Personas** -- Load aidlc-architect-agent persona from
-   `agents/aidlc-architect-agent.md` and knowledge from
-   `.claude/knowledge/aidlc-architect-agent/`. Load aidlc-aws-platform-agent persona
-   from `agents/aidlc-aws-platform-agent.md` and knowledge from
-   `.claude/knowledge/aidlc-aws-platform-agent/` for AWS service mapping.
+1. **Load Agent Personas** -- Load amadeus-architect-agent persona from
+   `agents/amadeus-architect-agent.md` and knowledge from
+   `.claude/knowledge/amadeus-architect-agent/`. Load amadeus-aws-platform-agent persona
+   from `agents/amadeus-aws-platform-agent.md` and knowledge from
+   `.claude/knowledge/amadeus-aws-platform-agent/` for AWS service mapping.
 
 2. **Load Prior Context** -- Read requirements, user stories (if produced),
    and RE artifacts (if brownfield, especially architecture.md,
    component-inventory.md, dependencies.md). Scope context comes from
-   `<record>/aidlc-state.md`.
+   `<record>/amadeus-state.md`.
 
 3. **Create Design Plan with Questions** -- Create
    `<record>/inception/application-design/application-design-questions.md`
@@ -769,7 +769,7 @@ upstream reference, documented in SKILL.md's "Deliberate Deviations" section.
    below).
 
 6. **Update State** -- Mark Application Design as `[x]` completed in
-   `<record>/aidlc-state.md`. Update current and next stage.
+   `<record>/amadeus-state.md`. Update current and next stage.
 
 7. **Present Completion & Request Approval** -- Display completion message
    with :building_construction: emoji, summary of design artifacts, key
@@ -828,8 +828,8 @@ Special 3-option gate:
 | Phase            | Inception                                                              |
 | Stage #          | 2.7                                                                    |
 | Condition        | ALWAYS -- produces the dependency DAG that Stage 2.8 consumes for Bolt sequencing; travels with 2.8 in the compiled scope grid |
-| Lead Agent       | aidlc-architect-agent                                                        |
-| Support Agents   | aidlc-delivery-agent                                                         |
+| Lead Agent       | amadeus-architect-agent                                                        |
+| Support Agents   | amadeus-delivery-agent                                                         |
 | Mode             | inline                                                                 |
 | Completion Emoji | :wrench:                                                               |
 
@@ -870,17 +870,17 @@ actual unit artifacts.
 
 **PART 1: Planning**
 
-1. **Load Agent Personas** -- Load aidlc-architect-agent persona from
-   `agents/aidlc-architect-agent.md` and knowledge from
-   `.claude/knowledge/aidlc-architect-agent/`. Load aidlc-delivery-agent persona
-   from `agents/aidlc-delivery-agent.md` and knowledge from
-   `.claude/knowledge/aidlc-delivery-agent/` for feasibility validation and
+1. **Load Agent Personas** -- Load amadeus-architect-agent persona from
+   `agents/amadeus-architect-agent.md` and knowledge from
+   `.claude/knowledge/amadeus-architect-agent/`. Load amadeus-delivery-agent persona
+   from `agents/amadeus-delivery-agent.md` and knowledge from
+   `.claude/knowledge/amadeus-delivery-agent/` for feasibility validation and
    prioritization.
 
 2. **Load Prior Context** -- Read all artifacts from
    `<record>/inception/application-design/` (all 5 files). Read
    requirements. Read user stories (if produced). Scope context comes from
-   `<record>/aidlc-state.md`.
+   `<record>/amadeus-state.md`.
 
 3. **Create Decomposition Plan with Questions** -- Create
    `<record>/inception/units-generation/units-generation-questions.md` with
@@ -912,7 +912,7 @@ actual unit artifacts.
    generate the 3 output artifacts (see Outputs below).
 
 7. **Update State** -- Mark Units Generation as `[x]` completed in
-   `<record>/aidlc-state.md`. Update current and next stage. Record unit
+   `<record>/amadeus-state.md`. Update current and next stage. Record unit
    list for the Construction phase phased construction flow.
 
 8. **Present Completion & Request Approval** -- Display completion message
@@ -960,7 +960,7 @@ Standard 2-option gate: **Approve** (continue to Construction phase) /
   path through the DAG weighted by risk, value, and learning.
 - The story map provides traceability: every user story must be assigned to at
   least one Unit, and every Unit must have at least one story.
-- The aidlc-delivery-agent provides feasibility validation and prioritization input,
+- The amadeus-delivery-agent provides feasibility validation and prioritization input,
   ensuring the decomposition is practical from a delivery perspective.
 
 ---
@@ -974,8 +974,8 @@ Standard 2-option gate: **Approve** (continue to Construction phase) /
 | Phase            | Inception                                                              |
 | Stage #          | 2.8                                                                    |
 | Condition        | ALWAYS -- capstone Inception stage                                     |
-| Lead Agent       | aidlc-delivery-agent                                                         |
-| Support Agents   | aidlc-architect-agent (validates build order against architecture dependencies) |
+| Lead Agent       | amadeus-delivery-agent                                                         |
+| Support Agents   | amadeus-architect-agent (validates build order against architecture dependencies) |
 | Mode             | inline                                                                 |
 | Completion Emoji | :calendar:                                                             |
 
@@ -1004,7 +1004,7 @@ Construction.
 
 **Important distinction:** This stage plans Bolt sequencing. It does NOT
 decide which AI-DLC stages to run or at what depth -- that is handled by the
-`/aidlc` skill's scope selection.
+`/amadeus` skill's scope selection.
 
 ### Inputs
 
@@ -1020,9 +1020,9 @@ All Inception phase artifacts:
 
 ### Steps
 
-1. **Load Agent Personas** -- Load aidlc-delivery-agent persona from
-   `agents/aidlc-delivery-agent.md` and knowledge from
-   `.claude/knowledge/aidlc-delivery-agent/`. Load aidlc-architect-agent for build
+1. **Load Agent Personas** -- Load amadeus-delivery-agent persona from
+   `agents/amadeus-delivery-agent.md` and knowledge from
+   `.claude/knowledge/amadeus-delivery-agent/`. Load amadeus-architect-agent for build
    order validation.
 
 2. **Load Prior Context** -- Read all Inception phase artifacts: requirements,
@@ -1047,7 +1047,7 @@ All Inception phase artifacts:
    Follows stage-protocol.md question flow.
 
 4. **Collect and Analyze Answers** -- Validate that the chosen Bolt
-   sequence respects 2.7's dependency DAG (with aidlc-architect-agent input).
+   sequence respects 2.7's dependency DAG (with amadeus-architect-agent input).
    Flag any deviation from topological order so it can be justified in the
    rationale artifact.
 
@@ -1072,7 +1072,7 @@ All Inception phase artifacts:
    - Write results to `<record>/verification/phase-check-inception.md`
 
 7. **Update State** -- Mark 2.8 Delivery Planning as `[x]` completed in
-   `<record>/aidlc-state.md`. Update Lifecycle Phase to CONSTRUCTION.
+   `<record>/amadeus-state.md`. Update Lifecycle Phase to CONSTRUCTION.
 
 8. **Present Completion & Request Approval** -- Display completion message
    with :calendar: emoji. Approval gate: Approve (proceed to Construction) /
@@ -1123,12 +1123,12 @@ Changes**. The user can override stage inclusion/exclusion at this gate.
   team allocation, and risk rationale.
 - The bolt plan defines a confidence-building sequence. Each Bolt has
   defined Units of Work, a Definition of Done, and a confidence hypothesis.
-- The aidlc-architect-agent validates that the proposed Bolt sequence respects
+- The amadeus-architect-agent validates that the proposed Bolt sequence respects
   dependencies defined in the component-dependency and
   unit-of-work-dependency artifacts.
 - Team allocation draws from the Team Formation artifacts (Stage 1.5) if
   they exist; when 1.5 is SKIP (mvp, workshop), all Bolts are executed by
-  aidlc-developer-agent (AI).
+  amadeus-developer-agent (AI).
 
 ---
 
@@ -1194,10 +1194,10 @@ narrative.
 
 ### Cross-References
 
-- **Orchestrator**: `dist/claude/.claude/skills/aidlc/SKILL.md` --
+- **Orchestrator**: `dist/claude/.claude/skills/amadeus/SKILL.md` --
   Routing logic, scope-to-stage mapping, stage graph, Construction flow
   definition
-- **Stage Protocol**: `dist/claude/.claude/aidlc-common/protocols/stage-protocol.md`
+- **Stage Protocol**: `dist/claude/.claude/amadeus-common/protocols/stage-protocol.md`
   -- Approval gates, question format, completion messages, and the §13 Learnings
   Ritual. Phase boundary verification lives in
   `stage-protocol-governance.md` §13.
@@ -1206,5 +1206,5 @@ narrative.
 - **Construction Phase**: Construction stages execute per the delivery plan
   produced by Stage 2.8
 - **Deliberate Deviations**: SKILL.md documents intentional differences from
-  the upstream reference, including the always-rerun RE policy, aidlc-design-agent
+  the upstream reference, including the always-rerun RE policy, amadeus-design-agent
   support additions, ADR artifacts, and the Delivery Planning expansion

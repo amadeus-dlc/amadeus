@@ -138,27 +138,27 @@ work, once, behind the 2.7 approval gate) is what keeps the hook-fired
 ## 3. Compile lifecycle
 
 The compile is invoked by the PostToolUse Bash hook
-(`.claude/hooks/aidlc-runtime-compile.ts`) on every transition-class
+(`.claude/hooks/amadeus-runtime-compile.ts`) on every transition-class
 audit emit. The hook fires on every `Bash` tool call from the
 conductor and filters cheaply:
 
-1. **Command filter** — only `bun .claude/tools/aidlc-(state|jump|bolt|utility).ts`
-   invocations get past the early exit. `aidlc-runtime.ts` is excluded
-   (recursion guard); `aidlc-log.ts` emits only chatty in-stage events;
-   `aidlc-worktree.ts` emits only WORKTREE_* events.
+1. **Command filter** — only `bun .claude/tools/amadeus-(state|jump|bolt|utility).ts`
+   invocations get past the early exit. `amadeus-runtime.ts` is excluded
+   (recursion guard); `amadeus-log.ts` emits only chatty in-stage events;
+   `amadeus-worktree.ts` emits only WORKTREE_* events.
 2. **Audit-existence guard** — exit if the intent's `audit/` shard doesn't exist yet.
-3. **Heartbeat** — write `<record>/.aidlc-hooks-health/runtime-compile.last`
+3. **Heartbeat** — write `<record>/.amadeus-hooks-health/runtime-compile.last`
    for doctor's silent-hook detection.
 4. **Last-3-block tail-read** — split `audit.md` on `\n---\n`, take the
    last 3 entries.
 5. **Event-class filter** — match
    `**Event**: (GATE_APPROVED|STAGE_STARTED|STAGE_AWAITING_APPROVAL|AUDIT_MERGED|WORKFLOW_COMPLETED)`
    against any of the 3 blocks. Exit on no match.
-6. **Dispatch** — `spawnSync("bun", [".claude/tools/aidlc-runtime.ts", "compile", ...])`.
+6. **Dispatch** — `spawnSync("bun", [".claude/tools/amadeus-runtime.ts", "compile", ...])`.
 
 `WORKFLOW_COMPLETED` is in the transition set so the final-stage
 approve fires the compile. `handleCompleteWorkflow` at
-`aidlc-state.ts:575-593` emits 4 audit rows — STAGE_COMPLETED +
+`amadeus-state.ts:575-593` emits 4 audit rows — STAGE_COMPLETED +
 PHASE_COMPLETED + PHASE_VERIFIED + WORKFLOW_COMPLETED — and the last 3
 of those are `PHASE_COMPLETED + PHASE_VERIFIED + WORKFLOW_COMPLETED`.
 (On the approve path the STAGE_COMPLETED is suppressed because approve
@@ -170,7 +170,7 @@ never record the final stage as approved.
 The compile itself walks the full audit log (so the result is
 event-sourced, not transition-incremental), pairs `STAGE_STARTED` with
 the next `STAGE_COMPLETED` for the same slug, reads each stage's
-memory.md via `parseMemoryHeadings()` from `aidlc-lib.ts`, and writes
+memory.md via `parseMemoryHeadings()` from `amadeus-lib.ts`, and writes
 the artefact atomically via `writeFileAtomic` inside `withAuditLock`.
 
 ---
@@ -192,7 +192,7 @@ Three outcome values: `"approved" | "failed" | "pending"`.
   underlying `BOLT_FAILED` event has no Construction-stage scope
   outside the instances-bearing path.
 
-Re-jump handling: `/aidlc --stage <slug>` re-emits `STAGE_STARTED` for
+Re-jump handling: `/amadeus --stage <slug>` re-emits `STAGE_STARTED` for
 an already-completed slug. The audit log carries
 `STAGE_STARTED@T1, STAGE_COMPLETED@T2, STAGE_STARTED@T3`. Pairing rule
 matches `STARTED@T1` with `COMPLETED@T2` → would yield approved, but
@@ -203,13 +203,13 @@ with `started_at: T3, completed_at: null`.
 Single-stage exclusion: a `--single` stage-runner run commits its
 `STAGE_STARTED`/`STAGE_COMPLETED` pair under a synthetic
 `**Workflow**: single-stage:<slug>` id (audit-only; see
-`aidlc-orchestrate.ts` `handleSingleReport`). The pairing skips any
+`amadeus-orchestrate.ts` `handleSingleReport`). The pairing skips any
 `STAGE_*` row whose `Workflow` field starts with `single-stage:` —
 those rows belong to no main workflow, so they never create or
 complete a row in the main `runtime-graph.json` (and therefore never
 inflate `summary` counts). Main-workflow `STAGE_*` rows carry no
 `Workflow` field; absence means the row is kept. The same exclusion
-applies to `aidlc-state.ts`'s `hasStageAuditEvent` dedup check, so a
+applies to `amadeus-state.ts`'s `hasStageAuditEvent` dedup check, so a
 single run's `STAGE_COMPLETED` cannot suppress the main workflow's own
 completion emission for the same slug.
 
@@ -219,7 +219,7 @@ completion emission for the same slug.
 
 `MEMORY_EMPTY` audit rows are emitted by the compile (the only
 emitter — `audit-format.md:171` registers
-`tools/aidlc-runtime.ts compile`) when a stage row meets ALL of:
+`tools/amadeus-runtime.ts compile`) when a stage row meets ALL of:
 
 - `outcome === "approved"` (pending rows do not emit — see §6 below)
 - `memory_entries === 0` (file exists, zero entries under the four
@@ -313,7 +313,7 @@ v0.6.0 `--resume`, which will need this carve-out.
 A workflow with parallel Bolts crashing mid-batch had no per-Bolt
 recovery seam in milestone 8 — the schema reserved `instances?` but compile
 only wrote single-instance rows on main, and worktrees never received
-a runtime-graph fragment. Closed in v0.5.0 by `aidlc-runtime.ts
+a runtime-graph fragment. Closed in v0.5.0 by `amadeus-runtime.ts
 fragment-fork` (Bolt start) and `fragment-merge` (Bolt complete
 --merge), and by the compile populator extension that emits
 `BoltInstance[]` when audit shows ≥ 2 distinct slugs in a
@@ -323,7 +323,7 @@ The per-Bolt fragment is dead-on-arrival in v0.5.0 (no v0.5.0 reader
 of the worktree's record-dir `runtime-graph.json`). v0.6.0 `--resume`
 should treat the fragment as a hint, with main's post-merge
 runtime-graph as canonical, and additionally check for orphaned
-worktrees per `aidlc-bolt.ts` to surface a recovery prompt for those.
+worktrees per `amadeus-bolt.ts` to surface a recovery prompt for those.
 
 ---
 
@@ -331,10 +331,10 @@ worktrees per `aidlc-bolt.ts` to surface a recovery prompt for those.
 
 ```bash
 # Walk audit + memory.md, write runtime-graph.json (invoked by hook).
-bun .claude/tools/aidlc-runtime.ts compile
+bun .claude/tools/amadeus-runtime.ts compile
 
 # Print one stage row from runtime-graph.json (debug/test surface).
-bun .claude/tools/aidlc-runtime.ts read <stage-slug>
+bun .claude/tools/amadeus-runtime.ts read <stage-slug>
 
 # Print deterministic aggregates over runtime-graph.json: stage/phase
 # outcome tallies, memory-entry counts by category, sensor 4-state
@@ -342,18 +342,18 @@ bun .claude/tools/aidlc-runtime.ts read <stage-slug>
 # session skills (session-cost, replay, outcomes-pack) consume the
 # --json shape so every number they render comes from here, not from
 # LLM-side counting.
-bun .claude/tools/aidlc-runtime.ts summary [--json]
+bun .claude/tools/amadeus-runtime.ts summary [--json]
 
 # Byte-copy main runtime-graph.json into a Bolt's worktree fragment
-# (one-shot; called by `aidlc-bolt start --worktree`). No audit emit —
+# (one-shot; called by `amadeus-bolt start --worktree`). No audit emit —
 # the fragment lifecycle rides on STATE_FORKED + AUDIT_FORKED.
-bun .claude/tools/aidlc-runtime.ts fragment-fork --slug <kebab-slug>
+bun .claude/tools/amadeus-runtime.ts fragment-fork --slug <kebab-slug>
 
 # Remove the worktree fragment (idempotent; called by
-# `aidlc-bolt complete --merge`). No audit emit — the fragment
+# `amadeus-bolt complete --merge`). No audit emit — the fragment
 # lifecycle rides on STATE_MERGED + AUDIT_MERGED. Main's runtime-graph
 # is rebuilt event-source by the post-Bash compile hook on AUDIT_MERGED.
-bun .claude/tools/aidlc-runtime.ts fragment-merge --slug <kebab-slug>
+bun .claude/tools/amadeus-runtime.ts fragment-merge --slug <kebab-slug>
 ```
 
 All subcommands accept `--project-dir <path>` to override the standard
@@ -367,7 +367,7 @@ exists for tests and debugging.
 ## 9. Why hook-driven, not LLM-tool-coupled
 
 Earlier plan revisions proposed inserting `spawnSibling(...,
-"aidlc-runtime.ts compile", ...)` calls inside `handleApprove` /
+"amadeus-runtime.ts compile", ...)` calls inside `handleApprove` /
 `handleAdvance` / `handleComplete --merge`. That approach violates the
 load-bearing tenet documented in
 [Plane Architecture](02-plane-architecture.md):
@@ -379,13 +379,13 @@ load-bearing tenet documented in
 Runtime-graph compile is data-plane substrate that must be observable
 from outside any specific session. Coupling it to LLM-invoked tools
 means LLM omission breaks the determinism guarantee — if the
-conductor forgets to call `aidlc-orchestrate.ts report --stage <slug> --result approved` after a human
+conductor forgets to call `amadeus-orchestrate.ts report --stage <slug> --result approved` after a human
 clicks Approve, the audit row never appends AND the compile never
 fires; runtime-graph silently lags, recovery substrate is corrupt.
 
 The PostToolUse Bash hook fires on the conductor's actual
 subprocess invocation regardless of what the LLM does next. The
-audit-emit-side seam (`bun aidlc-(state|jump|bolt|utility).ts`) is
+audit-emit-side seam (`bun amadeus-(state|jump|bolt|utility).ts`) is
 the deterministic anchor.
 
 ---
@@ -416,8 +416,8 @@ The per-Bolt runtime-graph fragment file lives at
 `<worktree>/<record>/runtime-graph.json`, gitignored, mirroring
 main's location. Its lifecycle is:
 
-1. **Fork on Bolt start.** `aidlc-bolt start --worktree --slug <slug>`
-   delegates to `aidlc-runtime fragment-fork --slug <slug>` after
+1. **Fork on Bolt start.** `amadeus-bolt start --worktree --slug <slug>`
+   delegates to `amadeus-runtime fragment-fork --slug <slug>` after
    state-fork + audit-fork. Single-read protocol: `readFileSync` once
    into a buffer, `writeFileSync` from the buffer to the fragment
    path, hash the same buffer for the stdout envelope. Closes the
@@ -432,22 +432,22 @@ main's location. Its lifecycle is:
    that were active at this Bolt's audit-fork instant; later-starting
    siblings won't appear in the fragment because the worktree's audit
    is a snapshot at fork time.
-3. **Merge on Bolt complete.** `aidlc-bolt complete --merge --slug
-   <slug>` delegates to `aidlc-runtime fragment-merge --slug <slug>`
+3. **Merge on Bolt complete.** `amadeus-bolt complete --merge --slug
+   <slug>` delegates to `amadeus-runtime fragment-merge --slug <slug>`
    after state-merge + audit-merge. fragment-merge hashes the
    fragment for stdout observability, `unlinkSync`'s it, and emits a
    JSON envelope. After the parent Bash invocation returns, the
    compile hook re-fires on main and rebuilds main's runtime-graph
    with `instances[]` populated for the just-merged slug.
-4. **Defense-in-depth removal.** `aidlc-worktree merge` and
-   `aidlc-worktree discard` both call `git worktree remove`, which
+4. **Defense-in-depth removal.** `amadeus-worktree merge` and
+   `amadeus-worktree discard` both call `git worktree remove`, which
    transitively removes the fragment. fragment-merge's explicit
    removal pairs with the implicit cleanup as a defense-in-depth
    pattern, mirroring how state-merge and `git worktree remove`
    already pair on the state side.
 5. **Failure modes.** `fragment-fork` failures (worktree-missing,
    fragment-already-exists, byte-copy IO error, spawn timeout) cause
-   `aidlc-bolt` to emit `BOLT_FAILED` with a `Reason: fragment-fork-*`
+   `amadeus-bolt` to emit `BOLT_FAILED` with a `Reason: fragment-fork-*`
    field for doctor attribution (`fragment-fork-failed` for IO / guard
    errors; `fragment-fork-timeout` for spawn SIGTERM); state-fork +
    audit-fork are NOT rolled back (each emitted its own audit row

@@ -10,7 +10,7 @@
 // and that WORKFLOW_COMPLETED is dead-last and fires EXACTLY ONCE. Every
 // downstream consumer (the statusline, resume, CI gates, doctor) reads the
 // audit tail to decide "is this workflow done?"; if a refactor reordered the
-// emits in handleCompleteWorkflow (aidlc-state.ts:573-596) — e.g. moved the
+// emits in handleCompleteWorkflow (amadeus-state.ts:573-596) — e.g. moved the
 // WORKFLOW_COMPLETED emit before PHASE_VERIFIED, or dropped the
 // alreadyMarkedCompleted guard so the final STAGE_COMPLETED doubled — the
 // counts could still look plausible while the SEQUENCE lied about what
@@ -19,7 +19,7 @@
 // + a single gate<stage ordering pair, but not the four-event terminal tail
 // nor what a past-the-end approve does. This pins both.
 //
-// SOURCE (aidlc-state.ts):
+// SOURCE (amadeus-state.ts):
 //   - handleApprove (:675) validates the slug is `awaiting-approval` (:685),
 //     flips it to [x], emits GATE_APPROVED + STAGE_COMPLETED (:703-708), then
 //     auto-advances: nextInScopeStage -> handleAdvance, OR (final stage)
@@ -54,7 +54,7 @@
 //     would not break (it asserts only the approve seam).
 //
 // TECHNIQUE: invariant. Drive the SHORTEST scope (bugfix, 6 EXECUTE stages) from
-// init to completion with NO claude — `aidlc-utility.ts init` to bootstrap, then
+// init to completion with NO claude — `amadeus-utility.ts init` to bootstrap, then
 // gate-start -> approve per remaining stage (approve auto-advances; the final
 // approve reaches handleCompleteWorkflow). Same seam t51 uses. Then parse the
 // resulting audit.md and assert on the FILE bytes (never prose). bugfix has 3
@@ -71,10 +71,10 @@ import {
 } from "../harness/fixtures.ts";
 // P4: audit is sharded per clone under the born intent's record; read the
 // merged shards via the shipped helper (default-resolves the active intent).
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
-const UTIL = join(AIDLC_SRC, "tools", "aidlc-utility.ts");
-const STATE = join(AIDLC_SRC, "tools", "aidlc-state.ts");
+const UTIL = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
+const STATE = join(AIDLC_SRC, "tools", "amadeus-state.ts");
 
 // Spawn a state/utility subcommand via the SAME bun that runs this test
 // (process.execPath), cwd-independent. Mirrors t51's `bun "$STATE" ...` calls.
@@ -105,7 +105,7 @@ function walkStage(slug: string, proj: string): void {
 }
 
 // Each audit block carries `**Timestamp**: <iso>` + `**Event**: <TYPE>`
-// (aidlc-audit.ts). P4 shards audit per clone, so a multi-spawn drive lands its
+// (amadeus-audit.ts). P4 shards audit per clone, so a multi-spawn drive lands its
 // blocks across several shards; readAllAuditShards concatenates them (block
 // boundaries preserved) but cross-shard order is by clone-id filename, NOT
 // chronology. So parse (timestamp, event) per block and STABLE-sort by timestamp
@@ -194,7 +194,7 @@ describe("complete-workflow terminal-event ordering (bugfix, no claude)", () => 
     // the duplicate lands at index -5 (...STAGE_COMPLETED, STAGE_COMPLETED,
     // PHASE_COMPLETED, PHASE_VERIFIED, WORKFLOW_COMPLETED), leaving the last
     // four bytes unchanged. Dropping the alreadyMarkedCompleted guard
-    // (aidlc-state.ts:574) produces exactly that doubling. Assert that no two
+    // (amadeus-state.ts:574) produces exactly that doubling. Assert that no two
     // STAGE_COMPLETED events are adjacent ANYWHERE in the trail — the final
     // approve's STAGE_COMPLETED must not be re-emitted by handleCompleteWorkflow.
     const adjacentDup = seq.some(
@@ -245,7 +245,7 @@ describe("complete-workflow idempotency: re-running the final approve emits no s
     const stageCompletedBefore = countEvent(before, "STAGE_COMPLETED");
 
     // Re-run approve on the (now [x]) final stage. handleApprove's
-    // validateSlugInState (aidlc-state.ts:685) requires 'awaiting-approval';
+    // validateSlugInState (amadeus-state.ts:685) requires 'awaiting-approval';
     // the slug is 'completed', so this MUST fail WITHOUT reaching the terminal
     // sequence — the realistic orchestrator-replay idempotency contract.
     const replay = run(
@@ -266,8 +266,8 @@ describe("complete-workflow idempotency: re-running the final approve emits no s
     expect(countEvent(after, "STAGE_COMPLETED")).toBe(stageCompletedBefore);
 
     // REAL behaviour of the failed replay (asserted, not assumed): the error
-    // path routes through error() -> emitError (aidlc-state.ts:1709 ->
-    // aidlc-lib.ts:1473), which appends exactly ONE ERROR_LOGGED row. So the
+    // path routes through error() -> emitError (amadeus-state.ts:1709 ->
+    // amadeus-lib.ts:1473), which appends exactly ONE ERROR_LOGGED row. So the
     // trail GREW by one event and the new dead-last event is ERROR_LOGGED, NOT
     // a second WORKFLOW_COMPLETED. Pinning this guards a future regression
     // where a failed past-the-end approve falls through to the terminal emits.

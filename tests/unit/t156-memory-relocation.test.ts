@@ -4,14 +4,14 @@
 //
 // WHAT. The AIDLC method (the layered practice files org/team/project + the
 // per-phase phases/<phase>.md) relocated OUT of the per-harness rule dir
-// (.claude/rules / .kiro/steering / .codex/aidlc-rules, all carrying aidlc-*.md
+// (.claude/rules / .kiro/steering / .codex/amadeus-rules, all carrying amadeus-*.md
 // names) to ONE hand-editable source of truth at the workspace root —
 // aidlc/spaces/default/memory/ — with neutral filenames. Each harness reads it
 // by its OWN native include (no copy, no drift):
-//   - Claude  → .claude/rules/aidlc.md @-import stub → @../../aidlc/spaces/
+//   - Claude  → .claude/rules/amadeus.md @-import stub → @../../amadeus/spaces/
 //               default/memory/<file> (explicit @-lines; Claude @-imports do
 //               NOT glob — verified against code.claude.com/docs memory.md).
-//   - Kiro    → agent JSON resources glob file://aidlc/spaces/default/memory/**/*.md
+//   - Kiro    → agent JSON resources glob file://amadeus/spaces/default/memory/**/*.md
 //   - Codex   → AGENTS.md auto-merge + AIDLC_RULES_DIR seam + orchestrator
 //               @-mention (the static seam is asserted here; the LIVE @-mention
 //               probe lives in the gated e2e tests/e2e/
@@ -44,12 +44,12 @@ import { join } from "node:path";
 import {
   __resetGraphCache,
   loadRules,
-} from "../../dist/claude/.claude/tools/aidlc-graph.ts";
+} from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 import { REPO_ROOT } from "../harness/fixtures.ts";
 
 const tempDirs: string[] = [];
 function mkTemp(tag: string): string {
-  const d = mkdtempSync(join(tmpdir(), `aidlc-t156-${tag}-`));
+  const d = mkdtempSync(join(tmpdir(), `amadeus-t156-${tag}-`));
   tempDirs.push(d);
   return d;
 }
@@ -186,14 +186,14 @@ describe("t156 method relocation to aidlc/spaces/default/memory/ + per-harness i
       "phases/operation.md",
     ];
     for (const f of memFiles) {
-      expect(stub, `stub @-line for ${f}`).toContain(`@../../aidlc/spaces/default/memory/${f}`);
+      expect(stub, `stub @-line for ${f}`).toContain(`@../../amadeus/spaces/default/memory/${f}`);
     }
     // And CLAUDE.md imports the stub (top of the reference chain).
     const claudeMd = readFileSync(
       join(REPO_ROOT, "dist", "claude", ".claude", "CLAUDE.md"),
       "utf-8",
     );
-    expect(claudeMd).toContain("@.claude/rules/aidlc.md");
+    expect(claudeMd).toContain("@.claude/rules/amadeus.md");
     // The old per-harness rule layer no longer ships (only the stub remains).
     const rulesDirFiles = readdirSync(
       join(REPO_ROOT, "dist", "claude", ".claude", "rules"),
@@ -230,7 +230,7 @@ describe("t156 method relocation to aidlc/spaces/default/memory/ + per-harness i
         if (!json.resources) continue;
         checkedAgents++;
         expect(json.resources, `${h}/${f} resources → relocated memory`).toContain(
-          "file://aidlc/spaces/default/memory/**/*.md",
+          "file://amadeus/spaces/default/memory/**/*.md",
         );
         // The old steering glob is gone from `resources` (note: `.kiro/steering/**`
         // may legitimately remain in fs_write.allowedPaths — that is a write
@@ -260,8 +260,8 @@ describe("t156 method relocation to aidlc/spaces/default/memory/ + per-harness i
       "utf-8",
     );
     expect(config).toContain('AIDLC_RULES_DIR = "aidlc/spaces/default/memory"');
-    // .codex/aidlc-rules/ (the old per-harness copy) is gone.
-    expect(existsSync(join(REPO_ROOT, "dist", "codex", ".codex", "aidlc-rules"))).toBe(false);
+    // .codex/amadeus-rules/ (the old per-harness copy) is gone.
+    expect(existsSync(join(REPO_ROOT, "dist", "codex", ".codex", "amadeus-rules"))).toBe(false);
     // The root AGENTS.md (Codex's directory-merge surface) ships.
     expect(existsSync(join(REPO_ROOT, "dist", "codex", "AGENTS.md"))).toBe(true);
   });
@@ -282,11 +282,11 @@ describe("t156 method relocation to aidlc/spaces/default/memory/ + per-harness i
           continue;
         }
         const rel = full.slice(REPO_ROOT.length + 1);
-        // A method file (org/team/project.md) or a flat aidlc-phase-*.md / a
+        // A method file (org/team/project.md) or a flat amadeus-phase-*.md / a
         // phases/<p>.md that is NOT under core/memory/ is a second copy.
         const isMethodTop = METHOD_BASENAMES.has(e.name);
-        const isLegacyPhase = /^aidlc-phase-[a-z][a-z0-9-]*\.md$/.test(e.name);
-        const isLegacyLayer = /^aidlc-(org|team|project)\.md$/.test(e.name);
+        const isLegacyPhase = /^amadeus-phase-[a-z][a-z0-9-]*\.md$/.test(e.name);
+        const isLegacyLayer = /^amadeus-(org|team|project)\.md$/.test(e.name);
         const underCoreMemory = rel.startsWith("core/memory/");
         if ((isMethodTop && !underCoreMemory) || isLegacyPhase || isLegacyLayer) {
           offenders.push(rel);

@@ -1,10 +1,10 @@
-// covers: subcommand:aidlc-orchestrate:next, subcommand:aidlc-swarm:prepare, subcommand:aidlc-swarm:finalize, audit:SWARM_STARTED, audit:SWARM_COMPLETED, audit:SWARM_BATON_RETURNED
+// covers: subcommand:amadeus-orchestrate:next, subcommand:amadeus-swarm:prepare, subcommand:amadeus-swarm:finalize, audit:SWARM_STARTED, audit:SWARM_COMPLETED, audit:SWARM_BATON_RETURNED
 //
 // CLI-contract port of tests/integration/t135-invoke-swarm.sh (TAP plan 8),
 // mechanism = cli. The .sh proves invoke-swarm end-to-end across TWO real
 // process surfaces, deterministically (no live model):
 //
-//   (1,2,7) THE ENGINE — `bun aidlc-orchestrate.ts next`. A Construction-phase
+//   (1,2,7) THE ENGINE — `bun amadeus-orchestrate.ts next`. A Construction-phase
 //     project parked at code-generation (in-flight) with a runtime-graph.json
 //     carrying a bolt_dag batch. With `Construction Autonomy Mode: autonomous`
 //     the engine emits {"kind":"invoke-swarm","units":[...]} naming the batch;
@@ -13,11 +13,11 @@
 //     where code-generation IS the walking-skeleton gate stage — the engine
 //     NEVER swarms even with autonomy granted (Bolt 1 is always human-gated).
 //
-//   (3-6) THE REFEREE — `bun aidlc-swarm.ts prepare|finalize` over a real git
+//   (3-6) THE REFEREE — `bun amadeus-swarm.ts prepare|finalize` over a real git
 //     worktree fixture, with THIS TEST playing the conductor (no `claude -p`
 //     worker, no AIDLC_SWARM_CLAUDE_BIN). prepare a 2-unit batch, stage only
 //     `win`'s impl on disk, then finalize claiming BOTH — `lose` is re-verified
-//     red (the lying-conductor guard, aidlc-swarm.ts handleFinalize:~430) and
+//     red (the lying-conductor guard, amadeus-swarm.ts handleFinalize:~430) and
 //     refused the merge. Assert the three batch-level audit events
 //     SWARM_STARTED (prepare) / SWARM_COMPLETED / SWARM_BATON_RETURNED
 //     (finalize) all land in audit.md, and the mixed batch returns the baton
@@ -26,11 +26,11 @@
 //
 // SPAWN (not in-process): every assertion is on a PROCESS boundary the .sh was
 // built around. The engine's directive is JSON on stdout from a tool that calls
-// `process.exit` after `emit()` (aidlc-orchestrate.ts emit:139); the referee's
+// `process.exit` after `emit()` (amadeus-orchestrate.ts emit:139); the referee's
 // audit rows are bytes written to audit.md by `appendAuditEntry` invoked inside
 // the spawned `prepare`/`finalize` subprocesses, and the exit code (2 = baton
 // returns) is `process.exit(failedCount > 0 ? 2 : 0)` (handleFinalize tail).
-// The referee also forks REAL git worktrees (aidlc-worktree + aidlc-bolt start
+// The referee also forks REAL git worktrees (amadeus-worktree + amadeus-bolt start
 // --worktree) — that needs an actual git repo on `main`, which only exists in
 // the spawned process's cwd. An in-process twin would lose the git-fork +
 // process.exit + cross-tool composition seams the .sh verifies. spawnCount =
@@ -43,7 +43,7 @@
 // NOT equal-or-stronger. Test 5 asserts the event fires AND names `lose`.
 //
 // FIXTURE DISCIPLINE (mirrors the .sh):
-//   - Engine cases: createTestProject() (a temp dir with aidlc-docs/), seeded
+//   - Engine cases: createTestProject() (a temp dir with amadeus-docs/), seeded
 //     from tests/fixtures/state-construction.md with Current Stage pivoted to
 //     code-generation, a bolt_dag runtime-graph.json written, and the autonomy
 //     / scope line edited per case. Torn down per case (cleanupTestProject).
@@ -84,8 +84,8 @@ import {
 resetAidlcEnv();
 
 const BUN = process.execPath; // the bun running this test
-const TOOL = join(AIDLC_SRC, "tools", "aidlc-orchestrate.ts");
-const SWARM_TOOL = join(AIDLC_SRC, "tools", "aidlc-swarm.ts");
+const TOOL = join(AIDLC_SRC, "tools", "amadeus-orchestrate.ts");
+const SWARM_TOOL = join(AIDLC_SRC, "tools", "amadeus-swarm.ts");
 
 // ---------------------------------------------------------------------------
 // Engine-side helpers (cases 1, 2, 7).
@@ -161,7 +161,7 @@ interface Directive {
   [k: string]: unknown;
 }
 
-/** Run `aidlc-orchestrate.ts next` against the project and parse the directive. */
+/** Run `amadeus-orchestrate.ts next` against the project and parse the directive. */
 function runNext(proj: string): { directive: Directive; raw: string } {
   const r = spawnSync(BUN, [TOOL, "next", "--project-dir", proj], {
     encoding: "utf-8",
@@ -204,10 +204,10 @@ function setupReferee(): void {
     join(proj, ".gitignore"),
     [
       "aidlc/active-space",
-      "aidlc/.aidlc-clone-id",
+      "aidlc/.amadeus-clone-id",
       "aidlc/spaces/*/intents/active-intent",
       "aidlc/spaces/*/intents/*/runtime-graph.json",
-      "aidlc/spaces/*/intents/*/.aidlc-*",
+      "aidlc/spaces/*/intents/*/.amadeus-*",
       "aidlc/spaces/*/intents/*/audit/",
       "",
     ].join("\n"),

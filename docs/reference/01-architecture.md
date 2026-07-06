@@ -1,6 +1,6 @@
 # Architecture
 
-> **Source**: Derived from the engine and conductor (`.claude/tools/aidlc-orchestrate.ts` and `.claude/skills/aidlc/SKILL.md`) and surrounding files.
+> **Source**: Derived from the engine and conductor (`.claude/tools/amadeus-orchestrate.ts` and `.claude/skills/amadeus/SKILL.md`) and surrounding files.
 
 ## Overview
 
@@ -58,12 +58,12 @@ graph LR
 **Agents** (`agents/*.md`) -- Eleven flat agent files, each defining a domain-expert persona with role, responsibilities, stage ownership, collaboration patterns, Claude Code tools, and knowledge loading order. All have `disallowedTools: Task` -- only the conductor delegates.
 
 **Knowledge** (`knowledge/`) -- Two-tier methodology reference:
-- `aidlc-shared/` -- Principles, verification, brownfield safeguards, **audit event taxonomy** (canonical event registry), state template
-- `aidlc-<agent>-agent/` -- Per-agent methodology files (architecture patterns, testing strategies, etc.)
+- `amadeus-shared/` -- Principles, verification, brownfield safeguards, **audit event taxonomy** (canonical event registry), state template
+- `amadeus-<agent>-agent/` -- Per-agent methodology files (architecture patterns, testing strategies, etc.)
 
-**Skills** (`skills/aidlc/`) -- The orchestrator entry point (`SKILL.md`), stage protocol files (`stage-protocol.md`, `stage-protocol-recovery.md`, `stage-protocol-governance.md`), and 32 stage files across 5 phase directories (`stages/initialization/`, `stages/ideation/`, `stages/inception/`, `stages/construction/`, `stages/operation/`).
+**Skills** (`skills/amadeus/`) -- The orchestrator entry point (`SKILL.md`), stage protocol files (`stage-protocol.md`, `stage-protocol-recovery.md`, `stage-protocol-governance.md`), and 32 stage files across 5 phase directories (`stages/initialization/`, `stages/ideation/`, `stages/inception/`, `stages/construction/`, `stages/operation/`).
 
-**Hooks** (`hooks/`) -- Framework hooks for audit emission (PostToolUse on Write/Edit), session lifecycle (SessionStart, SessionEnd), state sync (PostToolUse on TaskUpdate), state validation (PreCompact), subagent tracking (SubagentStop), and statusline rendering. All framework files prefixed `aidlc-*.ts`.
+**Hooks** (`hooks/`) -- Framework hooks for audit emission (PostToolUse on Write/Edit), session lifecycle (SessionStart, SessionEnd), state sync (PostToolUse on TaskUpdate), state validation (PreCompact), subagent tracking (SubagentStop), and statusline rendering. All framework files prefixed `amadeus-*.ts`.
 
 ## Configuration Layers
 
@@ -89,7 +89,7 @@ Crossing the two axes gives four quadrants. Three are populated; one is intentio
 |  | Framework-authored | Team-authored |
 |---|---|---|
 | **Loaded continuously** (harness config) | `.claude/skills/`, `.claude/agents/`, `.claude/knowledge/`, `aidlc/spaces/<space>/memory/org.md`, `aidlc/spaces/<space>/memory/phases/*.md`, `.claude/scopes/`, `.claude/tools/data/scope-grid.json`, `.claude/tools/data/stage-graph.json` | `aidlc/spaces/<space>/memory/team.md`, `aidlc/spaces/<space>/memory/project.md` |
-| **Per-workflow artefact** | *(empty by design)* | `<record>/aidlc-state.md`, `<record>/audit/*.md` (per-clone shards), `<record>/<phase>/<stage>/*.md`, `.aidlc/worktrees/bolt-*/` |
+| **Per-workflow artefact** | *(empty by design)* | `<record>/amadeus-state.md`, `<record>/audit/*.md` (per-clone shards), `<record>/<phase>/<stage>/*.md`, `.aidlc/worktrees/bolt-*/` |
 
 The framework doesn't produce per-workflow artefacts because such outputs would have to ship with the distribution — which makes them framework-authored harness config, not per-workflow output. The empty cell is the routing rule's signature, not a gap.
 
@@ -107,16 +107,16 @@ Worked examples:
 - *"We always squash-merge to main"* — project-specific (other teams use rebase) and loaded continuously (the conductor reads it on every Bolt merge). Goes to `aidlc/spaces/<space>/memory/team.md`.
 - *"ALWAYS use Result<T,E> in service layer; NEVER throw"* — project-specific and loaded continuously (agents read it on every code-gen). Goes to `aidlc/spaces/<space>/memory/project.md`.
 - *"Trunk-based development is the recommended branching strategy"* — same for every project (framework opinion) and loaded continuously (read at delivery-planning). Goes to `aidlc/spaces/<space>/memory/org.md`.
-- *"The 5 common branching strategies and their trade-offs"* — same for every project (framework reference) and loaded continuously (aidlc-pipeline-deploy-agent reads when discovering branching strategy). Goes to `.claude/knowledge/aidlc-pipeline-deploy-agent/branching-strategies.md`.
+- *"The 5 common branching strategies and their trade-offs"* — same for every project (framework reference) and loaded continuously (amadeus-pipeline-deploy-agent reads when discovering branching strategy). Goes to `.claude/knowledge/amadeus-pipeline-deploy-agent/branching-strategies.md`.
 - *"This run's requirements analysis"* — project-specific and per-workflow (each run produces fresh analysis). Goes to `<record>/inception/requirements-analysis/`.
-- *"Bolt-1's worktree state mid-Construction"* — project-specific and per-workflow (regenerated each Bolt). Goes to the Bolt worktree's copy of the record dir, `.aidlc/worktrees/bolt-1/<record>/aidlc-state.md`.
+- *"Bolt-1's worktree state mid-Construction"* — project-specific and per-workflow (regenerated each Bolt). Goes to the Bolt worktree's copy of the record dir, `.aidlc/worktrees/bolt-1/<record>/amadeus-state.md`.
 
 ### Sub-categories of harness config (top row)
 
 The top row partitions further by **form of content**:
 
 - **Framework harness mechanics** → frontmatter / JSON. Workflow ordering, stage definitions, artifact production, gate semantics. Read by tools deterministically. Lives in `.claude/skills/`, `.claude/tools/data/`.
-- **Framework domain reference** → agent KB prose under `.claude/knowledge/aidlc-<agent>-agent/`. The menu of options for a domain (the 5 branching strategies, the deployment patterns, the testing methodologies). Read by the owning agent when it needs the menu.
+- **Framework domain reference** → agent KB prose under `.claude/knowledge/amadeus-<agent>-agent/`. The menu of options for a domain (the 5 branching strategies, the deployment patterns, the testing methodologies). Read by the owning agent when it needs the menu.
 - **Framework methodology defaults** → prose at `aidlc/spaces/<space>/memory/org.md`. What the framework recommends until a team affirms otherwise. Written in the team's voice (because if the team doesn't override, the org defaults *are* the team's voice).
 - **Team practices** → prose at `aidlc/spaces/<space>/memory/team.md`. The team's selection — "this is how we work", populated by practices-discovery's affirmation gate. Read by agents at decision points (delivery-planning reads branching strategy; the conductor reads walking-skeleton stance in `SKILL.md`).
 - **Project overrides** → prose at `aidlc/spaces/<space>/memory/project.md`. Project-specific corrections that override team and org defaults; also populated by practices-discovery's affirmation gate.
@@ -127,7 +127,7 @@ The top row partitions further by **form of content**:
 Two cases that look like configuration but aren't:
 
 - **Per-workflow analysis outputs.** Reverse-engineering's 9 brownfield artifacts (`code-structure.md`, `architecture.md`, etc.) describe *this* run's codebase scan. They live in `<record>/inception/reverse-engineering/`, not in `.claude/`. They re-run on each workflow.
-- **Run-state.** The `aidlc-state.md` file is per-workflow truth-of-now. It belongs in the intent's record dir, not in `.claude/`. Same for the `audit/` shards.
+- **Run-state.** The `amadeus-state.md` file is per-workflow truth-of-now. It belongs in the intent's record dir, not in `.claude/`. Same for the `audit/` shards.
 
 ### Cross-row promotion — the practices-discovery exception
 
@@ -158,13 +158,13 @@ If any of the three is false, default to per-workflow-only.
 
 ## Execution Models
 
-**Inline stages** -- The conductor reads the lead agent's flat file (e.g., `agents/aidlc-architect-agent.md`) and knowledge from `knowledge/[agent]/` for persona framing, then executes the stage directly in conversation. This allows real-time user interaction: asking questions, resolving ambiguity, and iterating on artifacts before approval.
+**Inline stages** -- The conductor reads the lead agent's flat file (e.g., `agents/amadeus-architect-agent.md`) and knowledge from `knowledge/[agent]/` for persona framing, then executes the stage directly in conversation. This allows real-time user interaction: asking questions, resolving ambiguity, and iterating on artifacts before approval.
 
-Most stages use inline execution, including all three Initialization stages (Workspace Scaffold, Workspace Detection, State Init — all run deterministically inside `aidlc-utility init`), all Ideation stages (Intent Capture, Market Research, Feasibility, Scope Definition, Team Formation, Rough Mockups, Approval & Handoff), most Inception stages (Practices Discovery, Requirements Analysis, User Stories, Refined Mockups, Application Design, Units Generation, Delivery Planning), most Construction stages (Functional Design, NFR Requirements, NFR Design, Infrastructure Design, Build and Test, CI Pipeline), and all Operation stages. Note: Build and Test (3.6) runs once after all units are complete, not per-unit.
+Most stages use inline execution, including all three Initialization stages (Workspace Scaffold, Workspace Detection, State Init — all run deterministically inside `amadeus-utility init`), all Ideation stages (Intent Capture, Market Research, Feasibility, Scope Definition, Team Formation, Rough Mockups, Approval & Handoff), most Inception stages (Practices Discovery, Requirements Analysis, User Stories, Refined Mockups, Application Design, Units Generation, Delivery Planning), most Construction stages (Functional Design, NFR Requirements, NFR Design, Infrastructure Design, Build and Test, CI Pipeline), and all Operation stages. Note: Build and Test (3.6) runs once after all units are complete, not per-unit.
 
 **Subagent stages** -- The conductor prepares context (prior artifacts, project description, workspace findings) and delegates to a Claude Code Task tool subagent. The subagent executes autonomously and returns a structured summary. This is used for stages that benefit from focused, independent work without user interaction during execution. If a subagent call fails, the conductor retries once with a reduced-context prompt, then offers the user inline execution or skip-and-revisit as fallback options.
 
-Stages using subagent execution: Reverse Engineering (2.1, two-step delegation — aidlc-developer-agent for the code scan then aidlc-architect-agent for the synthesis) and Code Generation (3.5, aidlc-developer-agent subagent). Workspace Detection (0.2) runs deterministically inline inside `aidlc-utility init`, not as a subagent.
+Stages using subagent execution: Reverse Engineering (2.1, two-step delegation — amadeus-developer-agent for the code scan then amadeus-architect-agent for the synthesis) and Code Generation (3.5, amadeus-developer-agent subagent). Workspace Detection (0.2) runs deterministically inline inside `amadeus-utility init`, not as a subagent.
 
 ```mermaid
 flowchart LR
@@ -192,9 +192,9 @@ flowchart LR
     subgraph TWOSTEP["Mode 3: Subagent (two-step RE)"]
         direction TB
         TS1["Conductor reads\nRE stage file"]
-        TS2["Task: aidlc-developer-agent\ncode scan"]
+        TS2["Task: amadeus-developer-agent\ncode scan"]
         TS3["Developer returns\nscan results"]
-        TS4["Task: aidlc-architect-agent\nsynthesis"]
+        TS4["Task: amadeus-architect-agent\nsynthesis"]
         TS5["Architect produces\n9 artifacts"]
         TS6["Conductor presents\ncompletion + approval"]
         TS1 --> TS2 --> TS3 --> TS4 --> TS5 --> TS6
@@ -258,7 +258,7 @@ surface per CLI; `bun scripts/package.ts` regenerates the committed,
 drift-guarded `dist/<harness>/` trees:
 
 ```
-core/                  # hand-authored, harness-neutral (tools, aidlc-common,
+core/                  # hand-authored, harness-neutral (tools, amadeus-common,
                        #   agents, rules, scopes, sensors, knowledge, hooks,
                        #   3 session skills); prose uses the {{HARNESS_DIR}} token
 harness/<name>/        # per-CLI surface: manifest.ts + orchestrator skill +
@@ -271,7 +271,7 @@ dist/<harness>/        # GENERATED + committed: claude/.claude, kiro/.kiro,
 ```
 
 `core/` `.ts` is byte-copied untransformed; the runtime `harnessDir()` seam
-(`core/tools/aidlc-lib.ts`) derives the harness dir from the shipped layout at
+(`core/tools/amadeus-lib.ts`) derives the harness dir from the shipped layout at
 execution time — open-set, from the tool's own path rather than a hardcoded
 list, so a new harness needs no edit here — and its rules-dir rename ships
 per-tree in a generated `tools/data/harness.json` the `rulesSubdir()` seam
@@ -288,36 +288,36 @@ dist/claude/.claude/
 +-- CLAUDE.md
 +-- settings.json
 +-- hooks/
-|   +-- aidlc-audit-logger.ts
-|   +-- aidlc-sync-statusline.ts
-|   +-- aidlc-validate-state.ts
-|   +-- aidlc-log-subagent.ts
-|   +-- aidlc-session-start.ts
-|   +-- aidlc-session-end.ts
-|   +-- aidlc-statusline.ts
+|   +-- amadeus-audit-logger.ts
+|   +-- amadeus-sync-statusline.ts
+|   +-- amadeus-validate-state.ts
+|   +-- amadeus-log-subagent.ts
+|   +-- amadeus-session-start.ts
+|   +-- amadeus-session-end.ts
+|   +-- amadeus-statusline.ts
 +-- rules/
-|   +-- aidlc.md                  # @-import stub -> ../../aidlc/spaces/<space>/memory/ (NOT a copy; re-pointed in place on `space` switch)
+|   +-- aidlc.md                  # @-import stub -> ../../amadeus/spaces/<space>/memory/ (NOT a copy; re-pointed in place on `space` switch)
 +-- agents/
-|   +-- aidlc-product-agent.md
-|   +-- aidlc-design-agent.md
-|   +-- aidlc-delivery-agent.md
-|   +-- aidlc-architect-agent.md
-|   +-- aidlc-aws-platform-agent.md
-|   +-- aidlc-compliance-agent.md
-|   +-- aidlc-devsecops-agent.md
-|   +-- aidlc-developer-agent.md
-|   +-- aidlc-quality-agent.md
-|   +-- aidlc-pipeline-deploy-agent.md
-|   +-- aidlc-operations-agent.md
+|   +-- amadeus-product-agent.md
+|   +-- amadeus-design-agent.md
+|   +-- amadeus-delivery-agent.md
+|   +-- amadeus-architect-agent.md
+|   +-- amadeus-aws-platform-agent.md
+|   +-- amadeus-compliance-agent.md
+|   +-- amadeus-devsecops-agent.md
+|   +-- amadeus-developer-agent.md
+|   +-- amadeus-quality-agent.md
+|   +-- amadeus-pipeline-deploy-agent.md
+|   +-- amadeus-operations-agent.md
 +-- knowledge/
-|   +-- aidlc-shared/
+|   +-- amadeus-shared/
 |   |   +-- ai-dlc-principles.md
 |   |   +-- verification.md
 |   |   +-- brownfield.md
 |   |   +-- audit-format.md
 |   |   +-- state-template.md
 |   |   +-- knowledge-readme-template.md
-|   +-- aidlc-product-agent/
+|   +-- amadeus-product-agent/
 |   |   +-- requirements-guide.md
 |   |   +-- product-guide.md
 |   |   +-- functional-design-guide.md
@@ -325,14 +325,14 @@ dist/claude/.claude/
 |   |   +-- prioritization-frameworks.md
 |   |   +-- user-story-patterns.md
 |   |   +-- market-research-methods.md
-|   +-- aidlc-architect-agent/
+|   +-- amadeus-architect-agent/
 |   |   +-- architecture-guide.md
 |   |   +-- nfr-design-guide.md
 |   |   +-- ddd-patterns.md
 |   |   +-- architecture-patterns.md
 |   |   +-- nfr-design-patterns.md
 |   |   +-- adr-template.md
-|   +-- aidlc-developer-agent/
+|   +-- amadeus-developer-agent/
 |   |   +-- code-analysis-guide.md
 |   |   +-- code-generation-guide.md
 |   |   +-- code-generation-patterns.md
@@ -407,7 +407,7 @@ aidlc/                                    # neutral, harness-independent, commit
             +-- active-intent              # cursor: active intent record dir (gitignored, per-user)
             +-- intents.json               # the registry: [{ uuid, slug, dirName, scope, repos, status }]
             +-- <YYMMDD>-<label>/          # one record dir per intent (date-prefixed, short kebab label; UUIDv7 carries identity in intents.json)
-                +-- aidlc-state.md          # per-intent workflow state
+                +-- amadeus-state.md          # per-intent workflow state
                 +-- audit/<host>-<clone>.md # per-clone audit shards (glob-and-merge by timestamp)
                 +-- <phase>/<stage>/*.md    # artifacts + the per-stage memory.md diary
 ```
@@ -416,19 +416,19 @@ aidlc/                                    # neutral, harness-independent, commit
 missing cursor falls back to a default):
 
 - **Space** — `aidlc/active-space`, precedence `explicit arg > cursor > "default"`
-  (`DEFAULT_SPACE`, `core/tools/aidlc-lib.ts:285`; resolver `activeSpace()`,
-  `aidlc-lib.ts:354-366`). `listSpaces()` always reports `default` even with
-  nothing on disk (`aidlc-lib.ts:713-728`).
+  (`DEFAULT_SPACE`, `core/tools/amadeus-lib.ts:285`; resolver `activeSpace()`,
+  `amadeus-lib.ts:354-366`). `listSpaces()` always reports `default` even with
+  nothing on disk (`amadeus-lib.ts:713-728`).
 - **Intent** — `aidlc/spaces/<space>/intents/active-intent`, precedence
-  `explicit arg > cursor (if it names a real record holding aidlc-state.md) >
-  lone-intent > null` (`activeIntent`, `aidlc-lib.ts:411-435`). A `null` intent
+  `explicit arg > cursor (if it names a real record holding amadeus-state.md) >
+  lone-intent > null` (`activeIntent`, `amadeus-lib.ts:411-435`). A `null` intent
   means "no record yet" — the signal the orchestrator uses to auto-birth the
   first intent.
 
-The path helpers — `intentsDir`, `knowledgeDir`, `codekbDir` (`aidlc-lib.ts`),
-and `memoryDirFor` (`aidlc-graph.ts:234`) — all default their space argument to
+The path helpers — `intentsDir`, `knowledgeDir`, `codekbDir` (`amadeus-lib.ts`),
+and `memoryDirFor` (`amadeus-graph.ts:234`) — all default their space argument to
 `activeSpace(projectDir)`, so AI-DLC's own resolvers follow the cursor; switching
-spaces with `/aidlc space <name>` also
+spaces with `/amadeus space <name>` also
 re-points each harness-native rule include (the Claude `@`-import stub described
 above, Kiro's resources glob, Codex's rules dir) at the switched space's
 `memory/`. At `default` the re-point is a byte-identical no-op, so a single-team
@@ -436,10 +436,10 @@ committed tree never churns.
 
 **Committed vs gitignored.** `aidlc/` is checked in so a team shares its work.
 The split (`harness/claude/dot-gitignore:34-54`): the two cursors
-(`active-space`, `active-intent`), per-clone runtime (`.aidlc-clone-id`,
-`.aidlc-sessions/`), and derived state (`runtime-graph.json`, `.aidlc-*` under a
+(`active-space`, `active-intent`), per-clone runtime (`.amadeus-clone-id`,
+`.amadeus-sessions/`), and derived state (`runtime-graph.json`, `.amadeus-*` under a
 record) are **gitignored**; the method (`memory/**`), knowledge (`knowledge/**`,
-`codekb/**`), the `intents.json` registry, each record's `aidlc-state.md`, the
+`codekb/**`), the `intents.json` registry, each record's `amadeus-state.md`, the
 `audit/` shards, and artifacts are **committed**. Audit is committed as per-clone
 shards (`audit/<host>-<clone>.md`) precisely so git never has to merge concurrent
 appends — there is intentionally no `merge=union` attribute.
@@ -452,7 +452,7 @@ appends — there is intentionally no `merge=union` attribute.
 
 3. **Two-step Reverse Engineering** -- Reverse Engineering uses a developer subagent for code scanning, then an architect subagent for synthesis. This is necessary because subagents cannot spawn subagents in Claude Code. The conductor acts as the bridge, passing the developer's code scan results to the architect for synthesis into a coherent architectural model.
 
-4. **State tracking via aidlc-state.md** -- A single markdown state file tracks stage completion, current status, workspace context, scope configuration, execution plan, and runtime state (revision counts). The stage protocol defines the update pattern once; each stage updates it as its final step. A PostToolUse hook validates the state file structure after each write. Stage-level task IDs are resolved at runtime via `TaskList` (matching by subject like "Inception - Requirements Analysis") rather than stored in the state file -- this is more robust after context compaction since it reflects actual task system state.
+4. **State tracking via amadeus-state.md** -- A single markdown state file tracks stage completion, current status, workspace context, scope configuration, execution plan, and runtime state (revision counts). The stage protocol defines the update pattern once; each stage updates it as its final step. A PostToolUse hook validates the state file structure after each write. Stage-level task IDs are resolved at runtime via `TaskList` (matching by subject like "Inception - Requirements Analysis") rather than stored in the state file -- this is more robust after context compaction since it reflects actual task system state.
 
 5. **Stage protocol as shared contract** -- All 32 stages follow `stage-protocol.md` for approval gates, question format (tri-mode: Guide Me / Edit File / Chat), completion messages, state tracking, error recovery, change handling, the §13 Learnings Ritual, and phase boundary verification. This ensures consistent behavior across all stages without repeating instructions in each stage file.
 
@@ -460,15 +460,15 @@ appends — there is intentionally no `merge=union` attribute.
 
 7. **Flat agent files** -- Each agent is a single `.md` file in `agents/` (not a subdirectory with `agent.md` + `knowledge/`). This simplifies the structure and makes agents discoverable. Methodology knowledge lives separately in `knowledge/[agent]/`.
 
-8. **Scope-driven adaptive depth** -- Nine named scopes (enterprise, feature, mvp, poc, bugfix, refactor, infra, security-patch, workshop) plus auto-detect determine which stages execute and at what depth. Each scope is a `.claude/scopes/aidlc-<name>.md` file (identity); membership is a per-stage `scopes:` frontmatter tag, transposed at compile into the EXECUTE/SKIP grid (`.claude/tools/data/scope-grid.json`, authoritative) and compiled into a summary table in SKILL.md (informational). NL keyword→scope inference reads each scope's `keywords` from its `.md` frontmatter. The user can override at any approval gate.
+8. **Scope-driven adaptive depth** -- Nine named scopes (enterprise, feature, mvp, poc, bugfix, refactor, infra, security-patch, workshop) plus auto-detect determine which stages execute and at what depth. Each scope is a `.claude/scopes/amadeus-<name>.md` file (identity); membership is a per-stage `scopes:` frontmatter tag, transposed at compile into the EXECUTE/SKIP grid (`.claude/tools/data/scope-grid.json`, authoritative) and compiled into a summary table in SKILL.md (informational). NL keyword→scope inference reads each scope's `keywords` from its `.md` frontmatter. The user can override at any approval gate.
 
-9. **Minimal rules** -- Only guardrails (~35 lines total) live in the space memory layer (`aidlc/spaces/<space>/memory/`, pulled in via the `.claude/rules/aidlc.md` @-import stub). Everything else (verification, brownfield safeguards, audit format, adaptive patterns) lives in `knowledge/aidlc-shared/` or is embedded in SKILL.md/stage-protocol.md. This prevents context bloat in non-AI-DLC conversations since rules are always loaded.
+9. **Minimal rules** -- Only guardrails (~35 lines total) live in the space memory layer (`aidlc/spaces/<space>/memory/`, pulled in via the `.claude/rules/amadeus.md` @-import stub). Everything else (verification, brownfield safeguards, audit format, adaptive patterns) lives in `knowledge/amadeus-shared/` or is embedded in SKILL.md/stage-protocol.md. This prevents context bloat in non-AI-DLC conversations since rules are always loaded.
 
-10. **Self-learning loop** -- When a human corrects agent behavior, the correction can become a persistent Rule. The §13 Learnings Ritual (tool-as-actor: `aidlc-learnings.ts` surfaces and persists; the user confirms) writes each confirmed learning as a practice into the space memory layer — `aidlc/spaces/<space>/memory/project.md` (default), one-click promote to `memory/team.md` — or scaffolds a Sensor, applying on the next workflow's compile. See [Rule System](08-rule-system.md).
+10. **Self-learning loop** -- When a human corrects agent behavior, the correction can become a persistent Rule. The §13 Learnings Ritual (tool-as-actor: `amadeus-learnings.ts` surfaces and persists; the user confirms) writes each confirmed learning as a practice into the space memory layer — `aidlc/spaces/<space>/memory/project.md` (default), one-click promote to `memory/team.md` — or scaffolds a Sensor, applying on the next workflow's compile. See [Rule System](08-rule-system.md).
 
 11. **Phase boundary verification** -- Traceability checks run automatically at phase transitions (Initialization->Ideation auto-proceed, Ideation->Inception, Inception->Construction, Construction->Operation). This catches missing requirements-to-design links, orphaned artifacts, and inconsistencies before downstream stages build on incomplete foundations.
 
-12. **Hook-based audit logging** -- A PostToolUse hook on Write/Edit operations automatically logs artifact creation and modification to the intent's `audit/` shards. A PreCompact hook validates state file structure before context compaction. A SubagentStop hook logs subagent completions. The 68-event taxonomy (defined in `knowledge/aidlc-shared/audit-format.md`; see [State Machine](12-state-machine.md) for the emitter registry) enables post-hoc analysis -- key events include `STAGE_STARTED`, `STAGE_COMPLETED`, `DECISION_RECORDED`, `SCOPE_CHANGED`, and `RULE_LEARNED`.
+12. **Hook-based audit logging** -- A PostToolUse hook on Write/Edit operations automatically logs artifact creation and modification to the intent's `audit/` shards. A PreCompact hook validates state file structure before context compaction. A SubagentStop hook logs subagent completions. The 68-event taxonomy (defined in `knowledge/amadeus-shared/audit-format.md`; see [State Machine](12-state-machine.md) for the emitter registry) enables post-hoc analysis -- key events include `STAGE_STARTED`, `STAGE_COMPLETED`, `DECISION_RECORDED`, `SCOPE_CHANGED`, and `RULE_LEARNED`.
 
 13. **No nested delegation** -- The conductor (SKILL.md) performs every agent Task call. Agents never invoke each other or spawn subagents. This keeps the delegation graph flat and debuggable.
 

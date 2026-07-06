@@ -18,7 +18,7 @@
 - **Test Strategy**: Standard
 
 ## Workspace State
-- **Project Root**: /tmp/aidlc-test
+- **Project Root**: /tmp/amadeus-test
 - **Languages**: —
 - **Frameworks**: —
 - **Build System**: —

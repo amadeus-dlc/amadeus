@@ -6,7 +6,7 @@
 - **Scope**: feature
 - **Start Date**: 2025-06-15T10:30:00Z
 - **State Version**: 7
-- **Active Agent**: aidlc-architect-agent
+- **Active Agent**: amadeus-architect-agent
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**:

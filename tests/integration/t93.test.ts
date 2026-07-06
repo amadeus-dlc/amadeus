@@ -1,8 +1,8 @@
-// covers: subcommand:aidlc-sensor:list
+// covers: subcommand:amadeus-sensor:list
 //
 // CLI-contract port of tests/integration/t93-sensor-list-describe.sh (TAP plan 12),
 // mechanism = cli. Equal-or-stronger migration: every .sh assertion that
-// shelled out to `bun aidlc-sensor.ts list|describe|--help|-h` (or bare, no
+// shelled out to `bun amadeus-sensor.ts list|describe|--help|-h` (or bare, no
 // subcommand) is preserved by SPAWNING the real CLI via node:child_process
 // spawnSync (BUN + the tool .ts path), asserting on res.status / res.stdout /
 // res.stderr exactly as the .sh asserted on $? / 2>&1 stdout. The contract is
@@ -14,13 +14,13 @@
 // READ-ONLY SURFACE (mirrors the .sh's "no temp project setup needed"): list /
 // describe / --help all run against the framework's shipped sensors dir
 // (dist/claude/.claude/sensors/), resolved by loadSensors() as
-// __FILE_DIR/../sensors (aidlc-graph.ts:168) — independent of cwd, so no temp
+// __FILE_DIR/../sensors (amadeus-graph.ts:168) — independent of cwd, so no temp
 // project, no fixtures, no audit.md. This port therefore writes NOTHING to disk
 // and seeds nothing; it doubles as a forward-check that the 4 shipped manifests
 // stay parseable, exactly as the .sh comment (t93:17-19) states.
 //
-// COVERS ID: this .cli file credits the `aidlc-sensor list` subcommand unit
-// (covers KEY subcommand:aidlc-sensor:list, COLON form). The .sh also drives
+// COVERS ID: this .cli file credits the `amadeus-sensor list` subcommand unit
+// (covers KEY subcommand:amadeus-sensor:list, COLON form). The .sh also drives
 // `describe` and `--help`/`-h`, asserted here for stronger parity, but the
 // registry-credited unit for this port is `list` per the assigned covers line.
 //
@@ -36,7 +36,7 @@
 //       ids === ["linter","required-sections","type-check","upstream-coverage"]
 //       (same sentinel set, exact).
 //   - .sh Case 5  describe required-sections: id, kind=deterministic,
-//       command, default_severity=advisory, matches: **/{aidlc-docs,intents}/**  -> Test 5:
+//       command, default_severity=advisory, matches: **/{amadeus-docs,intents}/**  -> Test 5:
 //       all five field lines asserted (STRONGER: the .sh grep'd 5 anchored
 //       lines; here each is an exact line-membership check plus we also assert
 //       the description line, which the .sh's handleDescribe contract emits).
@@ -45,9 +45,9 @@
 //   - .sh Case 8  describe type-check: id, matches: **/*.{ts,tsx}, command  -> Test 8.
 //   - .sh Case 9  describe <unknown-id> exits !=0 + "unknown sensor id" hint -> Test 9:
 //       res.status === 1 (STRONGER than the .sh's `-ne 0`) + the hint asserted.
-//   - .sh Case 10 --help prints "Usage: aidlc-sensor" + list/describe/fire   -> Test 10.
+//   - .sh Case 10 --help prints "Usage: amadeus-sensor" + list/describe/fire   -> Test 10.
 //   - .sh Case 11 -h prints the same usage banner                           -> Test 11.
-//   - .sh Case 12 no subcommand exits !=0 + "Usage: aidlc-sensor"           -> Test 12:
+//   - .sh Case 12 no subcommand exits !=0 + "Usage: amadeus-sensor"           -> Test 12:
 //       res.status === 1 (STRONGER) + the usage hint asserted.
 //
 // 12 .sh asserts -> 12 expect()-bearing test() cases here, one observable each.
@@ -64,7 +64,7 @@ const TOOL = join(
   "claude",
   ".claude",
   "tools",
-  "aidlc-sensor.ts",
+  "amadeus-sensor.ts",
 );
 
 interface CliResult {
@@ -73,7 +73,7 @@ interface CliResult {
   stdout: string;
 }
 
-/** Spawn `bun aidlc-sensor.ts <args...>`. Mirrors `bun "$SENSOR_TS" ...` 2>&1. */
+/** Spawn `bun amadeus-sensor.ts <args...>`. Mirrors `bun "$SENSOR_TS" ...` 2>&1. */
 function sensor(...args: string[]): CliResult {
   const res = spawnSync(BUN, [TOOL, ...args], { encoding: "utf-8" });
   const stdout = res.stdout ?? "";
@@ -86,7 +86,7 @@ function sensor(...args: string[]): CliResult {
 
 /**
  * Parse `list` stdout into rows of [id, kind, description]. handleList emits
- * one tab-separated row per sensor (aidlc-sensor.ts:145-147); the .sh counted
+ * one tab-separated row per sensor (amadeus-sensor.ts:145-147); the .sh counted
  * rows via `grep -c '\t'` and split columns via `awk -F'\t'`. We split the same
  * way, dropping any trailing blank line.
  */
@@ -105,10 +105,10 @@ const EXPECTED_IDS = [
 ];
 
 // ============================================================
-// list subcommand (covers: subcommand:aidlc-sensor:list)
+// list subcommand (covers: subcommand:amadeus-sensor:list)
 // ============================================================
 
-describe("t93 aidlc-sensor list (migrated from t93-sensor-list-describe.sh, plan 12)", () => {
+describe("t93 amadeus-sensor list (migrated from t93-sensor-list-describe.sh, plan 12)", () => {
   test("1: list emits exactly 4 framework sensors", () => {
     const r = sensor("list");
     expect(r.status).toBe(0); // STRONGER: .sh discarded $? on list; we pin clean exit
@@ -142,13 +142,13 @@ describe("t93 aidlc-sensor list (migrated from t93-sensor-list-describe.sh, plan
 // describe subcommand (stronger-parity coverage of the .sh's describe cases)
 // ============================================================
 
-describe("t93 aidlc-sensor describe (migrated from t93-sensor-list-describe.sh, plan 12)", () => {
+describe("t93 amadeus-sensor describe (migrated from t93-sensor-list-describe.sh, plan 12)", () => {
   /** Line-membership against the describe stdout (mirrors `grep -q '^<line>$'`). */
   function hasLine(out: string, line: string): boolean {
     return out.split("\n").includes(line);
   }
 
-  test("5: describe required-sections lists canonical fields incl. matches: **/{aidlc-docs,intents}/**", () => {
+  test("5: describe required-sections lists canonical fields incl. matches: **/{amadeus-docs,intents}/**", () => {
     const r = sensor("describe", "required-sections");
     expect(r.status).toBe(0);
     expect(hasLine(r.out, "id: required-sections")).toBe(true);
@@ -156,24 +156,24 @@ describe("t93 aidlc-sensor describe (migrated from t93-sensor-list-describe.sh, 
     expect(
       hasLine(
         r.out,
-        "command: bun .claude/tools/aidlc-sensor-required-sections.ts",
+        "command: bun .claude/tools/amadeus-sensor-required-sections.ts",
       ),
     ).toBe(true);
     expect(hasLine(r.out, "default_severity: advisory")).toBe(true);
-    expect(hasLine(r.out, "matches: **/{aidlc-docs,intents}/**")).toBe(true);
+    expect(hasLine(r.out, "matches: **/{amadeus-docs,intents}/**")).toBe(true);
   });
 
-  test("6: describe upstream-coverage lists canonical fields incl. matches: **/{aidlc-docs,intents}/**", () => {
+  test("6: describe upstream-coverage lists canonical fields incl. matches: **/{amadeus-docs,intents}/**", () => {
     const r = sensor("describe", "upstream-coverage");
     expect(r.status).toBe(0);
     expect(hasLine(r.out, "id: upstream-coverage")).toBe(true);
     expect(
       hasLine(
         r.out,
-        "command: bun .claude/tools/aidlc-sensor-upstream-coverage.ts",
+        "command: bun .claude/tools/amadeus-sensor-upstream-coverage.ts",
       ),
     ).toBe(true);
-    expect(hasLine(r.out, "matches: **/{aidlc-docs,intents}/**")).toBe(true);
+    expect(hasLine(r.out, "matches: **/{amadeus-docs,intents}/**")).toBe(true);
   });
 
   test("7: describe linter includes matches: **/*.{ts,js} and canonical fields", () => {
@@ -182,7 +182,7 @@ describe("t93 aidlc-sensor describe (migrated from t93-sensor-list-describe.sh, 
     expect(hasLine(r.out, "id: linter")).toBe(true);
     expect(hasLine(r.out, "matches: **/*.{ts,js}")).toBe(true);
     expect(
-      hasLine(r.out, "command: bun .claude/tools/aidlc-sensor-linter.ts"),
+      hasLine(r.out, "command: bun .claude/tools/amadeus-sensor-linter.ts"),
     ).toBe(true);
   });
 
@@ -192,7 +192,7 @@ describe("t93 aidlc-sensor describe (migrated from t93-sensor-list-describe.sh, 
     expect(hasLine(r.out, "id: type-check")).toBe(true);
     expect(hasLine(r.out, "matches: **/*.{ts,tsx}")).toBe(true);
     expect(
-      hasLine(r.out, "command: bun .claude/tools/aidlc-sensor-type-check.ts"),
+      hasLine(r.out, "command: bun .claude/tools/amadeus-sensor-type-check.ts"),
     ).toBe(true);
   });
 
@@ -207,10 +207,10 @@ describe("t93 aidlc-sensor describe (migrated from t93-sensor-list-describe.sh, 
 // Help / dispatch (the .sh's --help, -h, and no-subcommand cases)
 // ============================================================
 
-describe("t93 aidlc-sensor help + dispatch (migrated from t93-sensor-list-describe.sh, plan 12)", () => {
+describe("t93 amadeus-sensor help + dispatch (migrated from t93-sensor-list-describe.sh, plan 12)", () => {
   test("10: --help prints usage covering all 3 subcommands", () => {
     const r = sensor("--help");
-    expect(r.out).toContain("Usage: aidlc-sensor");
+    expect(r.out).toContain("Usage: amadeus-sensor");
     expect(r.out).toContain("list");
     expect(r.out).toContain("describe");
     expect(r.out).toContain("fire");
@@ -218,12 +218,12 @@ describe("t93 aidlc-sensor help + dispatch (migrated from t93-sensor-list-descri
 
   test("11: -h prints the same usage banner", () => {
     const r = sensor("-h");
-    expect(r.out).toContain("Usage: aidlc-sensor");
+    expect(r.out).toContain("Usage: amadeus-sensor");
   });
 
   test("12: no subcommand exits 1 with a usage hint", () => {
     const r = sensor();
     expect(r.status).toBe(1); // STRONGER: .sh asserted `-ne 0`; main()'s no-cmd arm exits 1
-    expect(r.out).toContain("Usage: aidlc-sensor");
+    expect(r.out).toContain("Usage: amadeus-sensor");
   });
 });

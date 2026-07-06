@@ -12,13 +12,13 @@ A workflow may span multiple harness sessions. AI-DLC persists all progress to d
 
 ## Resume Flow
 
-When you run `/aidlc` and the active intent's `aidlc-state.md` (under its record dir) exists from a previous session, AI-DLC presents a status summary and offers four resume options.
+When you run `/amadeus` and the active intent's `amadeus-state.md` (under its record dir) exists from a previous session, AI-DLC presents a status summary and offers four resume options.
 
 ```mermaid
 flowchart TD
-    START(["/aidlc invoked"])
-    STATE_EXISTS{"aidlc-state.md\nexists?"}
-    RECOVERY_CHECK{".aidlc-recovery.md\nexists?"}
+    START(["/amadeus invoked"])
+    STATE_EXISTS{"amadeus-state.md\nexists?"}
+    RECOVERY_CHECK{".amadeus-recovery.md\nexists?"}
     CORRUPTION{"State matches\nrecovery file?"}
     WARN["Warn about possible\nstate corruption"]
     RESUME_MENU["Resume Options"]
@@ -49,7 +49,7 @@ flowchart TD
     style WARN fill:#ffcdd2,stroke:#c62828
 ```
 
-<!-- Text fallback: /aidlc invoked. If state file exists, check for recovery file. If recovery file exists and stage doesn't match state, warn about possible corruption. Then show four resume options. If no state file exists, start a new workflow with scope detection. -->
+<!-- Text fallback: /amadeus invoked. If state file exists, check for recovery file. If recovery file exists and stage doesn't match state, warn about possible corruption. Then show four resume options. If no state file exists, start a new workflow with scope detection. -->
 
 ### Four resume options
 
@@ -64,13 +64,13 @@ flowchart TD
 
 ## Recovery Breadcrumb
 
-Before Claude Code compacts conversation context, the `validate-state.ts` hook writes a hidden recovery file at `.aidlc-recovery.md` in the active intent's record dir. This file contains:
+Before Claude Code compacts conversation context, the `validate-state.ts` hook writes a hidden recovery file at `.amadeus-recovery.md` in the active intent's record dir. This file contains:
 
 - Timestamp of the last validation
-- Current stage name (extracted from `aidlc-state.md`)
+- Current stage name (extracted from `amadeus-state.md`)
 - State file validity status
 
-On the next `/aidlc` invocation, AI-DLC compares `.aidlc-recovery.md` against `aidlc-state.md`. If the "Current stage" fields differ, it warns you about possible state corruption from context compaction.
+On the next `/amadeus` invocation, AI-DLC compares `.amadeus-recovery.md` against `amadeus-state.md`. If the "Current stage" fields differ, it warns you about possible state corruption from context compaction.
 
 ---
 
@@ -83,13 +83,13 @@ Claude Code automatically summarizes earlier conversation context when the conte
 | Preserved | Lost |
 |-----------|------|
 | All record-dir artifacts (files on disk) | In-memory conversation context (prior discussion) |
-| `aidlc-state.md` (stage progress, scope, project info) | Partial in-progress work not yet written to files |
+| `amadeus-state.md` (stage progress, scope, project info) | Partial in-progress work not yet written to files |
 | `audit/` shards (full history of decisions and actions) | Task IDs (rebuilt from state file on resume) |
-| `.aidlc-recovery.md` (stage checkpoint) | Agent persona context (reloaded from agent files) |
+| `.amadeus-recovery.md` (stage checkpoint) | Agent persona context (reloaded from agent files) |
 
 ### How to recover after compaction
 
-1. Run `/aidlc` — AI-DLC reads the state file and offers resume options
+1. Run `/amadeus` — AI-DLC reads the state file and offers resume options
 2. If the recovery breadcrumb warns about a mismatch, choose **Redo current stage** to re-execute the stage that was in progress during compaction
 3. If no warning appears, choose **Resume from last checkpoint** to continue normally
 
@@ -104,8 +104,8 @@ You can jump forward or backward in the workflow using utility commands.
 ### Jump to a specific stage
 
 ```
-/aidlc --stage code-generation
-/aidlc --stage 3.5
+/amadeus --stage code-generation
+/amadeus --stage 3.5
 ```
 
 When jumping forward, stages between the current position and the target are marked `[S]` (skipped). The orchestrator warns you about:
@@ -119,8 +119,8 @@ When jumping backward, the target stage is reset to `[ ]` (not started) and re-e
 ### Jump to the start of a phase
 
 ```
-/aidlc --phase construction
-/aidlc --phase 3
+/amadeus --phase construction
+/amadeus --phase 3
 ```
 
 This jumps to the first stage of the specified phase. The same warnings about skipped stages and artifact invalidation apply.
@@ -130,7 +130,7 @@ This jumps to the first stage of the specified phase. The same warnings about sk
 For projects without a state file, you can combine `--stage` or `--phase` with `--scope`:
 
 ```
-/aidlc --stage code-generation --scope bugfix
+/amadeus --stage code-generation --scope bugfix
 ```
 
 This creates a new workflow with the specified scope and jumps directly to the target stage.
@@ -143,18 +143,18 @@ Three read-only skills report on the current workflow without changing it. Each 
 
 | Skill | What it does | Output |
 |-------|--------------|--------|
-| `/aidlc-session-cost` | Prints a deterministic cost view — duration, stage outcomes, memory entries, sensor firings, learnings captured | Terminal only |
-| `/aidlc-replay` | Renders a readable session narrative for stakeholders who weren't in the room — what was decided and why | Terminal only |
-| `/aidlc-outcomes-pack` | Generates a handover document so the team can own and continue the system without re-running the workflow | Writes `OUTCOMES.md` |
+| `/amadeus-session-cost` | Prints a deterministic cost view — duration, stage outcomes, memory entries, sensor firings, learnings captured | Terminal only |
+| `/amadeus-replay` | Renders a readable session narrative for stakeholders who weren't in the room — what was decided and why | Terminal only |
+| `/amadeus-outcomes-pack` | Generates a handover document so the team can own and continue the system without re-running the workflow | Writes `OUTCOMES.md` |
 
-**They are read-only.** None advances the workflow stage pointer, and none emits an audit event, so they are safe to run at any point — including mid-stage. `/aidlc-session-cost` and `/aidlc-replay` print to the terminal and write nothing; `/aidlc-outcomes-pack` is the only one that writes a file (`OUTCOMES.md` at the workspace root).
+**They are read-only.** None advances the workflow stage pointer, and none emits an audit event, so they are safe to run at any point — including mid-stage. `/amadeus-session-cost` and `/amadeus-replay` print to the terminal and write nothing; `/amadeus-outcomes-pack` is the only one that writes a file (`OUTCOMES.md` at the workspace root).
 
-**Every number they report comes straight from the data plane.** Each skill reads its figures from `bun .claude/tools/aidlc-runtime.ts summary --json` — the materialised view over `runtime-graph.json`. The skills never estimate or recount; the prose around the numbers (the narrative, the decision rationale) is the only part synthesised from the audit trail and artefacts. There is deliberately no token estimate — the old file-size-to-token heuristic was guesswork and has been removed.
+**Every number they report comes straight from the data plane.** Each skill reads its figures from `bun .claude/tools/amadeus-runtime.ts summary --json` — the materialised view over `runtime-graph.json`. The skills never estimate or recount; the prose around the numbers (the narrative, the decision rationale) is the only part synthesised from the audit trail and artefacts. There is deliberately no token estimate — the old file-size-to-token heuristic was guesswork and has been removed.
 
 ```
-/aidlc-session-cost      # quick "where are we" snapshot, any time
-/aidlc-replay            # narrate the session for async review
-/aidlc-outcomes-pack     # at workflow close — write the handover doc
+/amadeus-session-cost      # quick "where are we" snapshot, any time
+/amadeus-replay            # narrate the session for async review
+/amadeus-outcomes-pack     # at workflow close — write the handover doc
 ```
 
 Each skill needs a compiled `runtime-graph.json` to read. If you run one before a workflow has started its first stage, it prints a short "no session data yet" note and stops.
@@ -164,7 +164,7 @@ Each skill needs a compiled `runtime-graph.json` to read. If you run one before 
 ## Next Steps
 
 - [State Tracking and Audit Trail](10-state-and-audit.md) — State file structure and checkpoint notation
-- [Skills and Runner Commands](17-skills.md) — The read-only session views (`/aidlc-session-cost`, `/aidlc-replay`, `/aidlc-outcomes-pack`) and the runner family
+- [Skills and Runner Commands](17-skills.md) — The read-only session views (`/amadeus-session-cost`, `/amadeus-replay`, `/amadeus-outcomes-pack`) and the runner family
 - [CLI Commands](12-cli-commands.md) — Full reference for `--stage`, `--phase`, and other flags
 - [Troubleshooting](15-troubleshooting.md) — Compaction recovery and state corruption
 - [Glossary](glossary.md) — Definitions for compaction, recovery breadcrumb, session

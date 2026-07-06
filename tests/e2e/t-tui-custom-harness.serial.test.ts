@@ -41,7 +41,7 @@
 // error mode live in the deterministic sibling (t-custom-harness-compile,
 // tests/integration/, no tokens). What was UNBUILT — and what THIS file proves —
 // is the "the agent actually SEES the custom harness in a REAL run" half: a grep
-// across the suite for "seed a custom scope/sensor/rule then drive /aidlc to
+// across the suite for "seed a custom scope/sensor/rule then drive /amadeus to
 // prove the agent picks it up" returned zero tests.
 //
 // THE SURFACES it proves the agent sees in a real run, each as DETERMINISTIC
@@ -53,9 +53,9 @@
 //      EXECUTE in the scope, so init routes straight to it (the reachability
 //      keystone — see the fixture header).
 //   2. CUSTOM SENSOR FIRES — tui: answering the stage gate(s) by keystroke makes
-//      the orchestrator write a produced artefact under aidlc-docs/, which trips
+//      the orchestrator write a produced artefact under amadeus-docs/, which trips
 //      the custom sensor's matches glob while a custom stage is active ->
-//      SENSOR_FIRED audit row + a detail dir under aidlc-docs/.aidlc-sensors/.
+//      SENSOR_FIRED audit row + a detail dir under amadeus-docs/.amadeus-sensors/.
 //      (This is provable only by a real human-driven run that actually answers
 //      the gate so the artefact lands, which is the point.)
 //   3. CUSTOM RULE REACHES THE AGENT — two ways, both data: (a) the compiled
@@ -77,22 +77,22 @@
 //
 // FINDING F1 (verified, surfaced — not softened). A custom scope is NOT
 // recognized by NAME in freeform dispatch: detect-scope keyword-matches the
-// `keywords[]` list, not the scope KEY, so `/aidlc data-migration ...` as
+// `keywords[]` list, not the scope KEY, so `/amadeus data-migration ...` as
 // freeform returns the default `feature` scope, NOT data-migration. The
-// deterministic setup path is `aidlc-utility.ts init --scope data-migration`;
+// deterministic setup path is `amadeus-utility.ts init --scope data-migration`;
 // the live halves then resume that custom-scope state.
 //
 // SOURCE-PINNED FACTS (verify-never-guess; each read off disk before coding):
 //   - custom harness recipe + reachability (init auto-completes init-phase
 //     stages; the custom head stage must be the lowest non-init number to become
 //     firstPostInit): tests/harness/custom-harness.ts header + its constants.
-//   - lead_agent appears in the run-stage directive from aidlc-orchestrate.ts,
+//   - lead_agent appears in the run-stage directive from amadeus-orchestrate.ts,
 //     populated directly from stage-graph.json.
 //   - init records Scope + routes to firstPostInit + Lifecycle Phase=INCEPTION:
-//     aidlc-utility.ts:2087-2112 (verified: init --scope data-migration writes
+//     amadeus-utility.ts:2087-2112 (verified: init --scope data-migration writes
 //     Lifecycle Phase: INCEPTION, Current Stage: schema-snapshot).
-//   - SENSOR_FIRED event string + detail path: aidlc-sensor.ts:296 / :268-270.
-//   - statusline raw-slug fallback: aidlc-statusline.ts:220.
+//   - SENSOR_FIRED event string + detail path: amadeus-sensor.ts:296 / :268-270.
+//   - statusline raw-slug fallback: amadeus-statusline.ts:220.
 //   - F1 freeform vs --scope dispatch: SKILL.md:110 (--scope) vs detect-scope.
 //
 // IRON RULE: a surface that fails here is a real FINDING about whether the
@@ -132,7 +132,7 @@ import {
   SNAPSHOT_STAGE_PHASE,
   SNAPSHOT_STAGE_SLUG,
 } from "../harness/custom-harness.ts";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { driveAidlc, recordDirFor, stateFilePathFor } from "../harness/sdk-drive.ts";
 import { resolveWinNode } from "../harness/tui-drive.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
@@ -255,7 +255,7 @@ describe("t-tui-custom-harness (the {sdk,tui} two-driver journey)", () => {
 
   // -------------------------------------------------------------------------
   // SURFACE 4 (STATUSLINE), seeded-state, NO tokens. Drive a real init for the
-  // custom scope so aidlc-state.md carries Current Stage = schema-snapshot (the
+  // custom scope so amadeus-state.md carries Current Stage = schema-snapshot (the
   // same deterministic state a workflow run reaches), launch claude, and prove
   // the painted statusline renders the custom stage's raw slug AND the custom
   // agent display name derived from the temp .claude/agents file. Mirrors
@@ -269,7 +269,7 @@ describe("t-tui-custom-harness (the {sdk,tui} two-driver journey)", () => {
       try {
         const init = spawnSync(
           "bun",
-          [join(proj, ".claude", "tools", "aidlc-utility.ts"), "init", "--scope", CUSTOM_SCOPE],
+          [join(proj, ".claude", "tools", "amadeus-utility.ts"), "init", "--scope", CUSTOM_SCOPE],
           { cwd: proj, encoding: "utf8", env: { ...process.env, CLAUDE_PROJECT_DIR: proj } },
         );
         expect(init.status).toBe(0);
@@ -345,7 +345,7 @@ describe("t-tui-custom-harness (the {sdk,tui} two-driver journey)", () => {
     async () => {
       const sdkProj = setupTuiProject({ customHarness: true });
       try {
-        const r = await driveAidlc(`/aidlc --init --scope ${CUSTOM_SCOPE}`, {
+        const r = await driveAidlc(`/amadeus --init --scope ${CUSTOM_SCOPE}`, {
           projectDir: sdkProj,
           timeoutMs: DRIVE_TIMEOUT_MS,
           stopAfterToolResult: {
@@ -377,11 +377,11 @@ describe("t-tui-custom-harness (the {sdk,tui} two-driver journey)", () => {
   );
 
   // ===================== sdk directive journey (agent delegation) =========
-  // Start from a deterministic init state, then drive plain `/aidlc` through
+  // Start from a deterministic init state, then drive plain `/amadeus` through
   // the SDK just far enough to capture the engine's run-stage directive. The
   // directive is the data seam: lead_agent must be the custom agent slug, proving
   // the custom stage actually delegates to the custom persona instead of falling
-  // back to orchestrator. Use `/aidlc`, not `/aidlc --resume`: the latter is a
+  // back to orchestrator. Use `/amadeus`, not `/amadeus --resume`: the latter is a
   // separate human resume-menu journey covered by the tui half below, while this
   // probe is about the next-stage directive seam. The no-error guard prevents a
   // recovered run from masking conductor/state errors before the directive.
@@ -392,11 +392,11 @@ describe("t-tui-custom-harness (the {sdk,tui} two-driver journey)", () => {
       try {
         const init = spawnSync(
           "bun",
-          [join(sdkProj, ".claude", "tools", "aidlc-utility.ts"), "init", "--scope", CUSTOM_SCOPE],
+          [join(sdkProj, ".claude", "tools", "amadeus-utility.ts"), "init", "--scope", CUSTOM_SCOPE],
           { cwd: sdkProj, encoding: "utf8", env: { ...process.env, CLAUDE_PROJECT_DIR: sdkProj } },
         );
         expect(init.status).toBe(0);
-        const r = await driveAidlc("/aidlc", {
+        const r = await driveAidlc("/amadeus", {
           projectDir: sdkProj,
           timeoutMs: DRIVE_TIMEOUT_MS,
           stopAfterToolResult: {
@@ -433,7 +433,7 @@ describe("t-tui-custom-harness (the {sdk,tui} two-driver journey)", () => {
   // ===================== tui journey (surfaces 2 + 3b + 4-in-motion + chain) ===
   // Drive the REAL claude TUI through BOTH custom-stage gates by KEYSTROKE.
   // Answering makes the orchestrator write each produced artefact
-  // under aidlc-docs/ — those writes trip the custom sensor while a custom stage
+  // under amadeus-docs/ — those writes trip the custom sensor while a custom stage
   // is active (SENSOR_FIRED), the artefacts cite the custom rule marker (the rule
   // reached the agent), and reaching the migration-strategy artefact proves the
   // produce->consume chain ran in order. Terminate on the terminal artefact,
@@ -446,7 +446,7 @@ describe("t-tui-custom-harness (the {sdk,tui} two-driver journey)", () => {
       try {
         const init = spawnSync(
           "bun",
-          [join(tuiProj, ".claude", "tools", "aidlc-utility.ts"), "init", "--scope", CUSTOM_SCOPE],
+          [join(tuiProj, ".claude", "tools", "amadeus-utility.ts"), "init", "--scope", CUSTOM_SCOPE],
           { cwd: tuiProj, encoding: "utf8", env: { ...process.env, CLAUDE_PROJECT_DIR: tuiProj } },
         );
         expect(init.status).toBe(0);
@@ -485,7 +485,7 @@ describe("t-tui-custom-harness (the {sdk,tui} two-driver journey)", () => {
           "--session",
           session,
           "--keys",
-          "/aidlc --resume",
+          "/amadeus --resume",
           "--literal",
           "--no-enter",
         ]);
@@ -521,13 +521,13 @@ describe("t-tui-custom-harness (the {sdk,tui} two-driver journey)", () => {
 
         // --- SURFACE 2: the custom sensor fired on the artefact write(s) ------
         // The custom sensor is wired to BOTH stages and its matches glob covers
-        // the aidlc-docs tree, so each stage's artefact write trips it: SENSOR_FIRED
+        // the amadeus-docs tree, so each stage's artefact write trips it: SENSOR_FIRED
         // is the deterministic proof the harness engineer's custom sensor ran in a
         // real execution, and this is the FIRST live driver of that
         // audit event.
         //
-        // FINDING (verified against aidlc-sensor.ts:267-271 + :319-326 + :581 — NOT
-        // softened): a sensor's DETAIL FILE under aidlc-docs/.aidlc-sensors/<stage>/
+        // FINDING (verified against amadeus-sensor.ts:267-271 + :319-326 + :581 — NOT
+        // softened): a sensor's DETAIL FILE under amadeus-docs/.amadeus-sensors/<stage>/
         // is written ONLY when the sensor FAILS (the "Detail path" audit field is
         // likewise emitted only in the SENSOR_FAILED branch). The reused
         // required-sections sensor PASSES on these well-formed artefacts (they carry

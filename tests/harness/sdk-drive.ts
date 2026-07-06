@@ -1,8 +1,8 @@
 // sdk-drive.ts — the SDK harness driver.
 //
 // One reusable module that collapses the three proven spike probes
-// (tools/aidlc-sdk-probe.ts, aidlc-sdk-workflow-probe.ts,
-// aidlc-sdk-toolout-probe.ts) into a single `driveAidlc()` call.
+// (tools/amadeus-sdk-probe.ts, amadeus-sdk-workflow-probe.ts,
+// amadeus-sdk-toolout-probe.ts) into a single `driveAidlc()` call.
 //
 // This is a MEASURING INSTRUMENT. It will be calibrated by an independent
 // agent in the next stage before any test trusts it. Its job is to run a
@@ -18,21 +18,21 @@
 //     For AskUserQuestion we answer by returning
 //     { behavior: 'allow', updatedInput: { ...input, answers } } where
 //     `answers` maps each question's `question` text -> chosen option label.
-//     (aidlc-sdk-probe.ts:28-44, aidlc-sdk-workflow-probe.ts:27-48,
+//     (amadeus-sdk-probe.ts:28-44, amadeus-sdk-workflow-probe.ts:27-48,
 //      sdk.d.ts:188 CanUseTool, :1997 PermissionResult)
 //   - assistant text arrives in msg.type === 'assistant', content blocks of
-//     type 'text'. (aidlc-sdk-probe.ts:51-53)
+//     type 'text'. (amadeus-sdk-probe.ts:51-53)
 //   - tool_result blocks arrive as a SYNTHETIC msg.type === 'user' message;
 //     ToolResult.content is BYTE-IDENTICAL to the tool's stdout before the
 //     LLM rewords it (the --doctor md5 was stable x3 in the spike).
-//     (aidlc-sdk-toolout-probe.ts:25-44, sdk.d.ts:3742 SDKUserMessage)
+//     (amadeus-sdk-toolout-probe.ts:25-44, sdk.d.ts:3742 SDKUserMessage)
 //   - the terminal event is msg.type === 'result', subtype 'success' or one
 //     of the error subtypes; is_error + permission_denials live there.
 //     (sdk.d.ts:3477 SDKResultMessage = SDKResultSuccess | SDKResultError)
 //
-// Paths the helpers read are the SHIPPED paths from aidlc-lib.ts:
-//   - state:  <projectDir>/aidlc-docs/aidlc-state.md   (aidlc-lib.ts:137)
-//   - audit:  <projectDir>/aidlc-docs/audit.md         (aidlc-lib.ts:141)
+// Paths the helpers read are the SHIPPED paths from amadeus-lib.ts:
+//   - state:  <projectDir>/amadeus-docs/amadeus-state.md   (amadeus-lib.ts:137)
+//   - audit:  <projectDir>/amadeus-docs/audit.md         (amadeus-lib.ts:141)
 
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -121,9 +121,9 @@ export interface DriveResult {
   assistantText: string;
   /** The SDK's terminal result event, or undefined if the stream never ended. */
   resultEvent: ResultEvent | undefined;
-  /** Contents of aidlc-docs/aidlc-state.md after the run, if it exists. */
+  /** Contents of amadeus-docs/amadeus-state.md after the run, if it exists. */
   stateFile?: string;
-  /** Audit event-type strings parsed from aidlc-docs/audit.md, in file order. */
+  /** Audit event-type strings parsed from amadeus-docs/audit.md, in file order. */
   auditEvents?: string[];
   /** Every AskUserQuestion menu seen + how it was answered. */
   askedQuestions: CapturedAskUserQuestion[];
@@ -231,7 +231,7 @@ export interface DriveOptions {
   answerScript?: AnswerScript;
   /**
    * Project directory the SDK runs in. Sets Options.cwd so the SDK picks up
-   * .claude/ + aidlc-docs/ from there (per the workflow probe's cwd note).
+   * .claude/ + amadeus-docs/ from there (per the workflow probe's cwd note).
    * Also where the state/audit helpers read from. Default: process.cwd().
    */
   projectDir?: string;
@@ -400,12 +400,12 @@ function writeSdkTrace(
  * run_claude shell fixture.
  *
  * @example
- *   const r = await driveAidlc("/aidlc --doctor", { projectDir: proj });
+ *   const r = await driveAidlc("/amadeus --doctor", { projectDir: proj });
  *   assertResultOk(r);
  *   assertToolResultContains(r, "Bash", "AI-DLC Health Check");
  *
  * @example  scripted gates
- *   const r = await driveAidlc("/aidlc workshop Build a todo app", {
+ *   const r = await driveAidlc("/amadeus workshop Build a todo app", {
  *     projectDir: proj,
  *     answerScript: { kind: "sequence", specs: [{ label: "Greenfield" }] },
  *   });
@@ -670,7 +670,7 @@ export async function driveAidlc(
 // ---------------------------------------------------------------------------
 // tool_result content extraction (byte-identical to tool stdout).
 //
-// Mirrors aidlc-sdk-toolout-probe.ts:32-40: content is either a plain string
+// Mirrors amadeus-sdk-toolout-probe.ts:32-40: content is either a plain string
 // or an array of { type, text } blocks. We join text blocks in order. No
 // trimming or normalization — the bytes must survive intact.
 // ---------------------------------------------------------------------------
@@ -689,14 +689,14 @@ export function extractToolResultText(content: unknown): string {
 // File readers — follow the workspace layout the engine writes.
 //
 // P4 — birth writes per-intent: state lands at
-// aidlc/spaces/<space>/intents/<slug>-<id8>/aidlc-state.md and audit at
-// <record>/audit/<host>-<pid>.md (per-clone shards), NOT the flat aidlc-docs/.
+// aidlc/spaces/<space>/intents/<slug>-<id8>/amadeus-state.md and audit at
+// <record>/audit/<host>-<pid>.md (per-clone shards), NOT the flat amadeus-docs/.
 // These readers resolve the active intent's record from the active-space +
 // active-intent cursors, falling back to the flat layout for a not-yet-born
 // (pre-migration) project so the readers stay correct in both worlds.
 // ---------------------------------------------------------------------------
 
-/** The active intent's record dir, or the flat aidlc-docs/ when none resolves. */
+/** The active intent's record dir, or the flat amadeus-docs/ when none resolves. */
 export function recordDirFor(projectDir: string): string {
   const spaceCursor = join(projectDir, "aidlc", "active-space");
   const space = existsSync(spaceCursor)
@@ -706,17 +706,17 @@ export function recordDirFor(projectDir: string): string {
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf8").trim();
-    if (rec && existsSync(join(intentsDir, rec, "aidlc-state.md"))) {
+    if (rec && existsSync(join(intentsDir, rec, "amadeus-state.md"))) {
       return join(intentsDir, rec);
     }
   }
-  return join(projectDir, "aidlc-docs");
+  return join(projectDir, "amadeus-docs");
 }
 
 /** The SPACE-level domain-knowledge dir: aidlc/spaces/<space>/knowledge —
  *  a sibling of intents/ (NOT per-intent). The knowledge relocation (b29ced6)
  *  moved this out of each intent's record so domain knowledge accumulates
- *  across the whole space; the engine ensures it at birth (aidlc-utility.ts
+ *  across the whole space; the engine ensures it at birth (amadeus-utility.ts
  *  ensureWorkspaceDirs → knowledgeDir, lib.ts). Resolves the active space from
  *  the same cursor recordDirFor reads, defaulting to "default". */
 export function spaceKnowledgeDirFor(projectDir: string): string {
@@ -729,7 +729,7 @@ export function spaceKnowledgeDirFor(projectDir: string): string {
 
 /** Absolute path to the state file the framework writes (per-intent record). */
 export function stateFilePathFor(projectDir: string): string {
-  return join(recordDirFor(projectDir), "aidlc-state.md");
+  return join(recordDirFor(projectDir), "amadeus-state.md");
 }
 
 /** Absolute path to the audit SHARD DIR the framework writes (per-clone shards). */
@@ -741,7 +741,7 @@ export function auditDirFor(projectDir: string): string {
  * Back-compat single-file audit path for live tests that `readFileSync` the
  * audit log directly. P4 shards audit per clone under <record>/audit/; a
  * single-process live test produces exactly ONE shard, so return its path (or
- * the flat aidlc-docs/audit.md when present — a pre-migration project). Prefer
+ * the flat amadeus-docs/audit.md when present — a pre-migration project). Prefer
  * readAuditEvents()/readAuditText() for multi-shard correctness.
  */
 export function auditFilePathFor(projectDir: string): string {
@@ -751,7 +751,7 @@ export function auditFilePathFor(projectDir: string): string {
     if (shards.length > 0) return join(dir, shards[0]);
   }
   // Pre-migration flat layout, or no shard yet — the flat audit.md path.
-  return join(projectDir, "aidlc-docs", "audit.md");
+  return join(projectDir, "amadeus-docs", "audit.md");
 }
 
 /** Concatenated text of every audit shard (or "" when none). */
@@ -763,11 +763,11 @@ export function readAuditText(projectDir: string): string {
       return shards.map((f) => readFileSync(join(dir, f), "utf8")).join("\n");
     }
   }
-  const flat = join(projectDir, "aidlc-docs", "audit.md");
+  const flat = join(projectDir, "amadeus-docs", "audit.md");
   return existsSync(flat) ? readFileSync(flat, "utf8") : "";
 }
 
-/** Read aidlc-state.md verbatim, or undefined if absent. */
+/** Read amadeus-state.md verbatim, or undefined if absent. */
 export function readStateFile(projectDir: string): string | undefined {
   const p = stateFilePathFor(projectDir);
   return existsSync(p) ? readFileSync(p, "utf8") : undefined;
@@ -775,9 +775,9 @@ export function readStateFile(projectDir: string): string | undefined {
 
 /**
  * Parse the audit log into an ordered list of event-type strings. Each audit
- * block carries a `**Event**: <TYPE>` line (aidlc-audit.ts:246); we extract
+ * block carries a `**Event**: <TYPE>` line (amadeus-audit.ts:246); we extract
  * those across every per-clone shard under <record>/audit/, OR the flat
- * aidlc-docs/audit.md for a not-yet-born (pre-migration) project. Returns
+ * amadeus-docs/audit.md for a not-yet-born (pre-migration) project. Returns
  * undefined when no audit exists at all. (P4: audit is sharded per clone, but a
  * flat legacy/seeded project keeps one audit.md until migration — readAuditText
  * handles both.)

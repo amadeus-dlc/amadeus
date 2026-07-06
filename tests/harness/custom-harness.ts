@@ -39,16 +39,16 @@
 //
 // EVERY shape below was verified against the shipped sources before coding
 // (the "shipped shapes ARE the spec" discipline):
-//   - scope metadata/routing shape .... scopes/aidlc-bugfix.md +
-//     aidlc-common/stages/* `scopes:` frontmatter transposed into scope-grid
-//   - stage frontmatter required set .. tools/aidlc-stage-schema.ts:75-88
+//   - scope metadata/routing shape .... scopes/amadeus-bugfix.md +
+//     amadeus-common/stages/* `scopes:` frontmatter transposed into scope-grid
+//   - stage frontmatter required set .. tools/amadeus-stage-schema.ts:75-88
 //     (REQUIRED_FIELDS: slug,phase,execution,condition,lead_agent,support_agents,
 //      mode,produces,consumes,requires_stage,inputs,outputs; sensors OPTIONAL at
 //      :90; the presence check that emits "missing required field" is at :142)
 //   - consumes[] authoring shape ...... a list of { artifact, required } maps
 //     (verified against the shipped market-research.md frontmatter)
-//   - sensor manifest shape ........... sensors/aidlc-required-sections.md +
-//     aidlc-sensor-schema.ts (id,kind,command,default_severity,description,
+//   - sensor manifest shape ........... sensors/amadeus-required-sections.md +
+//     amadeus-sensor-schema.ts (id,kind,command,default_severity,description,
 //     matches?; NO applies_to — that's a fossil)
 //   - stage-graph seeding ............. compileStageGraph harvests {number,name}
 //     from existing JSON for known slugs; a NEW slug is AUTO-SEEDED (next free
@@ -57,16 +57,16 @@
 //     that satisfy the edge-local invariant below, auto-seed would append them
 //     at the end of their phase, which is fine for leaf stages but not for the
 //     hand-chosen ordering this fixture asserts.
-//   - agent lookup ................... aidlc-graph.ts compile calls loadAgents()
+//   - agent lookup ................... amadeus-graph.ts compile calls loadAgents()
 //     and validates lead_agent/support_agents against the copied .claude/agents/
 //     directory; the custom agent must be written before stage compile.
-//   - edge-local invariant ............ aidlc-graph.ts:996 (every requires_stage
+//   - edge-local invariant ............ amadeus-graph.ts:996 (every requires_stage
 //     dep must be LOWER-numbered than the stage; numericStageOrder :877-882
 //     splits on "." and parseInts each part, so 2.05 sorts AFTER 2.1 —
 //     parseInt("05")=5 > parseInt("1")=1. The two stages are 2.0 and 2.9; the
 //     shipped inception stages 2.1-2.8 are SKIP in this scope, so the only live
 //     edge is 2.0->2.9, and numericStageOrder("2.0","2.9") < 0 satisfies it.)
-//   - reachability .................... aidlc-utility.ts:1995-2002 + :2179 —
+//   - reachability .................... amadeus-utility.ts:1995-2002 + :2179 —
 //     init marks every initialization-phase stage [x] complete and
 //     determineFirstPostInitStage SKIPS init-phase stages, so a custom stage
 //     must be a NON-init stage AND the lowest-numbered non-init EXECUTE in its
@@ -75,15 +75,15 @@
 //     Current Stage=schema-snapshot. migration-plan (2.9) is reached after
 //     schema-snapshot's gate.
 //   - sensor->stage binding ........... stage frontmatter `sensors: [<id>]` only
-//     (aidlc-graph.ts:497 resolveSensorsForStage); manifest `matches:` glob is
-//     the fire filter (aidlc-sensor-fire.ts:198)
+//     (amadeus-graph.ts:497 resolveSensorsForStage); manifest `matches:` glob is
+//     the fire filter (amadeus-sensor-fire.ts:198)
 //
 // The recipe was proven end-to-end in a throwaway project: compile succeeds,
-// `aidlc-graph scope data-migration` routes exactly [workspace-scaffold,
+// `amadeus-graph scope data-migration` routes exactly [workspace-scaffold,
 // workspace-detection, state-init, schema-snapshot, migration-plan], a real
 // `init --scope data-migration` writes Current Stage=schema-snapshot, and the
 // compiled schema-snapshot node carries schema-validator in sensors_applicable +
-// aidlc-project.md in rules_in_context.
+// amadeus-project.md in rules_in_context.
 
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -104,7 +104,7 @@ export const CUSTOM_SCOPE = "data-migration";
 
 /** The custom AGENT slug. It is a real agent file under .claude/agents/ in the
  *  temp project, then the custom stages bind lead_agent to this slug. */
-export const CUSTOM_AGENT_SLUG = "aidlc-data-migration-agent";
+export const CUSTOM_AGENT_SLUG = "amadeus-data-migration-agent";
 export const CUSTOM_AGENT_DISPLAY = "Data Migration Agent";
 
 /** The custom KNOWLEDGE file the custom agent must read. The marker is present
@@ -122,7 +122,7 @@ export const CUSTOM_KNOWLEDGE_MARKER =
  *  stage. The activity: capture the source database's schema. Lives in INCEPTION
  *  at 2.0 (sorts before reverse-engineering 2.1). Placement is load-bearing for
  *  reachability: init auto-completes every init-phase stage and
- *  determineFirstPostInitStage (aidlc-utility.ts:2179) skips them, so the custom
+ *  determineFirstPostInitStage (amadeus-utility.ts:2179) skips them, so the custom
  *  head stage must be NON-init; as the scope's lowest-numbered non-init EXECUTE
  *  it becomes firstPostInit -> init writes `Current Stage: schema-snapshot`.
  *  Edge-local invariant holds: numericStageOrder("0.3","2.0") < 0, so requiring
@@ -135,7 +135,7 @@ export const SNAPSHOT_STAGE_PHASE = "inception";
 /** The artefact the schema-snapshot stage PRODUCES: an inventory of the source
  *  database's tables/columns to migrate. Distinct from the stage slug (shipped
  *  convention: stage = activity, artefact = deliverable). The migration-plan
- *  stage consumes this — the join-up. Its write under aidlc-docs/ trips the
+ *  stage consumes this — the join-up. Its write under amadeus-docs/ trips the
  *  custom sensor's glob. */
 export const SNAPSHOT_ARTIFACT = "source-schema";
 
@@ -156,7 +156,7 @@ export const PLAN_STAGE_PHASE = "inception";
  *  consumed source-schema. */
 export const PLAN_ARTIFACT = "migration-strategy";
 
-/** The custom SENSOR id (manifest at sensors/aidlc-<id>.md, wired via each
+/** The custom SENSOR id (manifest at sensors/amadeus-<id>.md, wired via each
  *  stage's `sensors: [<id>]` frontmatter). Reuses the shipped required-sections
  *  command — a deterministic markdown-shape check that emits SENSOR_FIRED on a
  *  matching write — so the fire is provable without inventing a tool. */
@@ -267,7 +267,7 @@ normalization and cutover sequencing.
 
 On activation, load knowledge in this order:
 1. \`.claude/rules/\` -- standing guardrails and project rules
-2. \`.claude/knowledge/aidlc-shared/\` -- shared methodology
+2. \`.claude/knowledge/amadeus-shared/\` -- shared methodology
 3. \`${CUSTOM_KNOWLEDGE_REF}\` -- custom migration playbook for this fixture
 4. \`aidlc/knowledge/${CUSTOM_AGENT_SLUG}/\` -- team-owned custom knowledge, if present
 
@@ -304,12 +304,12 @@ the active agent context.
 }
 
 /** Add the custom scope metadata file. Scope names are discovered from
- *  .claude/scopes/aidlc-*.md, while routing is derived from stage `scopes:`
+ *  .claude/scopes/amadeus-*.md, while routing is derived from stage `scopes:`
  *  frontmatter during compile. */
 function seedScopeFile(claude: string): void {
   const dir = join(claude, "scopes");
   mkdirSync(dir, { recursive: true });
-  const p = join(dir, `aidlc-${CUSTOM_SCOPE}.md`);
+  const p = join(dir, `amadeus-${CUSTOM_SCOPE}.md`);
   const body = `---
 name: ${CUSTOM_SCOPE}
 depth: Minimal
@@ -333,7 +333,7 @@ trio, then the custom schema-snapshot and migration-plan stages.
  *  compile transposes those five memberships into EXECUTE cells and every other
  *  stage to SKIP. */
 function seedScopeRouting(claude: string): void {
-  const initDir = join(claude, "aidlc-common", "stages", "initialization");
+  const initDir = join(claude, "amadeus-common", "stages", "initialization");
   for (const slug of ["workspace-scaffold", "workspace-detection", "state-init"]) {
     ensureStageListsCustomScope(join(initDir, `${slug}.md`));
   }
@@ -355,7 +355,7 @@ function ensureStageListsCustomScope(stageFile: string): void {
 }
 
 /** Pre-seed the {slug, number, name} stage-graph rows the compiler needs to
- *  bootstrap new stages (aidlc-graph.ts:944-952). The rest of each node is
+ *  bootstrap new stages (amadeus-graph.ts:944-952). The rest of each node is
  *  recomputed from the stage YAML at compile; the rules_in_context /
  *  sensors_applicable arrays are filled by the compile resolvers. */
 function seedStageGraphRows(claude: string): void {
@@ -409,14 +409,14 @@ function seedStageGraphRows(claude: string): void {
 }
 
 /** Write both custom stage files. Each frontmatter carries every REQUIRED field
- *  (aidlc-stage-schema.ts:75-88), declares the artefact it PRODUCES, joins the
+ *  (amadeus-stage-schema.ts:75-88), declares the artefact it PRODUCES, joins the
  *  graph via requires_stage, and imports the custom sensor. The `## Steps` body
- *  tells the orchestrator to write the produced artefact under aidlc-docs/ — the
+ *  tells the orchestrator to write the produced artefact under amadeus-docs/ — the
  *  write that trips the sensor while the stage is active — and to cite the
  *  custom rule marker in it. The migration-plan stage declares the
  *  produce->consume chain by consuming source-schema. */
 function seedStageFiles(claude: string): void {
-  const snapshotDir = join(claude, "aidlc-common", "stages", SNAPSHOT_STAGE_PHASE);
+  const snapshotDir = join(claude, "amadeus-common", "stages", SNAPSHOT_STAGE_PHASE);
   mkdirSync(snapshotDir, { recursive: true });
   const snapshotBody = `---
 slug: ${SNAPSHOT_STAGE_SLUG}
@@ -472,13 +472,13 @@ custom knowledge file.
 
 ### Step 2: Update state
 
-Mark ${SNAPSHOT_STAGE_SLUG} as \`[x]\` completed in \`aidlc-docs/aidlc-state.md\`
+Mark ${SNAPSHOT_STAGE_SLUG} as \`[x]\` completed in \`amadeus-docs/amadeus-state.md\`
 and present the standard approval gate.
 
 ## Sensors
 
 This stage imports the custom \`${CUSTOM_SENSOR_ID}\` sensor, which fires on the
-artefact write in Step 1 (its \`matches:\` glob covers the aidlc-docs tree).
+artefact write in Step 1 (its \`matches:\` glob covers the amadeus-docs tree).
 
 ## Learn
 
@@ -486,7 +486,7 @@ artefact write in Step 1 (its \`matches:\` glob covers the aidlc-docs tree).
 `;
   writeFileSync(join(snapshotDir, `${SNAPSHOT_STAGE_SLUG}.md`), snapshotBody);
 
-  const planDir = join(claude, "aidlc-common", "stages", PLAN_STAGE_PHASE);
+  const planDir = join(claude, "amadeus-common", "stages", PLAN_STAGE_PHASE);
   mkdirSync(planDir, { recursive: true });
   const planBody = `---
 slug: ${PLAN_STAGE_SLUG}
@@ -533,13 +533,13 @@ include the \`Knowledge marker\` value from the custom knowledge file.
 
 ### Step 3: Update state
 
-Mark ${PLAN_STAGE_SLUG} as \`[x]\` completed in \`aidlc-docs/aidlc-state.md\`
+Mark ${PLAN_STAGE_SLUG} as \`[x]\` completed in \`amadeus-docs/amadeus-state.md\`
 and present the standard approval gate.
 
 ## Sensors
 
 This stage imports the custom \`${CUSTOM_SENSOR_ID}\` sensor, which fires on the
-artefact write in Step 2 (its \`matches:\` glob covers the aidlc-docs tree).
+artefact write in Step 2 (its \`matches:\` glob covers the amadeus-docs tree).
 
 ## Learn
 
@@ -550,17 +550,17 @@ artefact write in Step 2 (its \`matches:\` glob covers the aidlc-docs tree).
 
 /** Write the custom sensor manifest. Reuses the shipped required-sections
  *  command (a deterministic markdown-shape check) so the fire is real without
- *  inventing a tool. Manifest shape matches sensors/aidlc-required-sections.md:
+ *  inventing a tool. Manifest shape matches sensors/amadeus-required-sections.md:
  *  id/kind/command/default_severity/description/matches — NO applies_to. */
 function seedSensorManifest(claude: string): void {
-  const p = join(claude, "sensors", `aidlc-${CUSTOM_SENSOR_ID}.md`);
+  const p = join(claude, "sensors", `amadeus-${CUSTOM_SENSOR_ID}.md`);
   const body = `---
 id: ${CUSTOM_SENSOR_ID}
 kind: deterministic
-command: bun .claude/tools/aidlc-sensor-required-sections.ts
+command: bun .claude/tools/amadeus-sensor-required-sections.ts
 default_severity: advisory
 description: Phase-5 custom sensor — validates the data-migration artefact's section shape on every write under the intent record while a custom stage is active
-matches: "**/{aidlc-docs,intents}/**"
+matches: "**/{amadeus-docs,intents}/**"
 input_schema:
   output_path: string
   stage_slug: string
@@ -585,7 +585,7 @@ sensors_applicable).
 /** Add the custom rule bullet to the project method layer under ## Mandated. The
  *  rule FILE path is already in every stage's rules_in_context (project rules
  *  attach universally); this seeds the unique-marker CONTENT the agent reads.
- *  The method relocated (P5) from <harness>/rules/aidlc-project.md to the
+ *  The method relocated (P5) from <harness>/rules/amadeus-project.md to the
  *  workspace-root aidlc/spaces/default/memory/project.md (neutral name), so seed
  *  it there — `claude` is <proj>/.claude, the method sits beside it. */
 function seedProjectRule(claude: string): void {
@@ -601,12 +601,12 @@ function seedProjectRule(claude: string): void {
   writeFileSync(p, text);
 }
 
-/** Run the project's own copied aidlc-graph.ts compile so the runtime graph
+/** Run the project's own copied amadeus-graph.ts compile so the runtime graph
  *  picks up the custom stages/scope/sensor/rule. Runs the COPIED tool (not the
  *  source) so resolveProjectDir derives the temp project from the script path
  *  — exactly the path a real install takes. Throws on non-zero exit. */
 function compileGraph(proj: string, claude: string): void {
-  const tool = join(claude, "tools", "aidlc-graph.ts");
+  const tool = join(claude, "tools", "amadeus-graph.ts");
   const res = spawnSync("bun", [tool, "compile"], {
     cwd: proj,
     encoding: "utf8",
@@ -614,7 +614,7 @@ function compileGraph(proj: string, claude: string): void {
   });
   if (res.status !== 0) {
     throw new Error(
-      `seedCustomHarness: aidlc-graph compile failed (exit ${res.status}).\n` +
+      `seedCustomHarness: amadeus-graph compile failed (exit ${res.status}).\n` +
         `stdout: ${res.stdout}\nstderr: ${res.stderr}`,
     );
   }

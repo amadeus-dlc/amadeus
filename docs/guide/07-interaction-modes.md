@@ -65,7 +65,7 @@ The default approval gate presents two options:
   (2) Request Changes — Provide revision feedback
 ```
 
-- **Approve** marks the stage as completed, updates `aidlc-state.md`, shows a progress line, and advances to the next stage
+- **Approve** marks the stage as completed, updates `amadeus-state.md`, shows a progress line, and advances to the next stage
 - **Request Changes** lets you provide specific feedback; the agent revises its work and re-presents the approval gate
 
 The gate requires a real human acknowledgement: typing a prompt or answering an `AskUserQuestion` widget records a human turn (a `HUMAN_TURN` event) in the audit ledger, and the approve (and any clarifying-question answer) refuses unless one was recorded since the last gate resolution, so a model running on autopilot cannot fabricate an approval with no human having acted since. On a harness whose gate widget does not record a human turn, type a short message once (for example "approve") so one is on record. (On a harness whose ledger has no human turn yet, the gate fails open and does not require this.)
@@ -91,7 +91,7 @@ flowchart TD
     REVISION_COUNT{"Revision\ncycle >= 3?"}
     NOTE_2ND["After 2nd revision:\nnote that escape hatch\nactivates next cycle"]
 
-    UPDATE_STATE["Update aidlc-state.md:\nmark stage as completed"]
+    UPDATE_STATE["Update amadeus-state.md:\nmark stage as completed"]
     PROGRESS["Display progress line:\nN/total overall"]
     NEXT_STAGE["Proceed to next stage"]
 
@@ -179,8 +179,8 @@ Beyond the approval gate, you have additional navigation options:
 
 | Command | Effect |
 |---------|--------|
-| `/aidlc --stage <name>` | Jump to a specific stage (intervening stages marked `[S]`) |
-| `/aidlc --phase <name>` | Jump to the start of a phase |
+| `/amadeus --stage <name>` | Jump to a specific stage (intervening stages marked `[S]`) |
+| `/amadeus --phase <name>` | Jump to the start of a phase |
 
 See [Session Management](11-session-management.md) and [CLI Commands](12-cli-commands.md) for details.
 

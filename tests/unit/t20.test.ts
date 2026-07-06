@@ -1,10 +1,10 @@
-// covers: subcommand:aidlc-utility:init
+// covers: subcommand:amadeus-utility:init
 //
 // CLI-contract port of tests/unit/t20-unit-workspace-scanner.sh (TAP plan 21),
 // mechanism = cli. The .sh exercises the DETERMINISTIC workspace scanner that
-// runs INSIDE `aidlc-utility init`: it scaffolds a temp project, shells out to
-// `bun aidlc-utility.ts init --scope poc --project-dir <p>`, then greps the
-// emitted aidlc-docs/aidlc-state.md for the scanner's classification fields
+// runs INSIDE `amadeus-utility init`: it scaffolds a temp project, shells out to
+// `bun amadeus-utility.ts init --scope poc --project-dir <p>`, then greps the
+// emitted amadeus-docs/amadeus-state.md for the scanner's classification fields
 // (Project Type / Languages / Frameworks / Build System), plus the --force /
 // orphan-warning / .DS_Store-filter contract on re-init. Every assertion is an
 // observable of the `init` subcommand at the PROCESS boundary, so this stays a
@@ -15,13 +15,13 @@
 // stderr stream (cases 20-21). detectWorkspace IS exported, but the .sh asserts
 // the full init pipeline (scan -> state write + audit), which is the contract.
 //
-// SUBCOMMAND UNIT: credits subcommand:aidlc-utility:init — the single
+// SUBCOMMAND UNIT: credits subcommand:amadeus-utility:init — the single
 // subcommand the .sh fires (init, with and without --force). The covers id uses
-// the COLON form (subcommand:aidlc-utility:init), never the space form which the
+// the COLON form (subcommand:amadeus-utility:init), never the space form which the
 // claim parser truncates at the space.
 //
 // EQUAL-OR-STRONGER PARITY: the .sh used `assert_grep "$STATE" '<pattern>'`
-// (substring presence in aidlc-state.md). In-process we extract the EXACT field
+// (substring presence in amadeus-state.md). In-process we extract the EXACT field
 // value from the state file (stateField) and assert equality where the field is
 // fully determined — STRONGER than a substring grep — and use a contains check
 // only where the .sh itself only pinned a substring (Languages/Frameworks lists,
@@ -80,7 +80,7 @@ const TOOL = join(
   "claude",
   ".claude",
   "tools",
-  "aidlc-utility.ts",
+  "amadeus-utility.ts",
 );
 
 const tempDirs: string[] = [];
@@ -89,7 +89,7 @@ afterAll(() => {
   for (const d of tempDirs) cleanupTestProject(d);
 });
 
-/** Fresh bare temp project (createTestProject scaffolds an empty aidlc-docs/). */
+/** Fresh bare temp project (createTestProject scaffolds an empty amadeus-docs/). */
 function proj(): string {
   const p = createTestProject();
   tempDirs.push(p);
@@ -103,7 +103,7 @@ interface CliResult {
   stdout: string;
 }
 
-/** Spawn `bun aidlc-utility.ts init --scope poc --project-dir <p> [extra...]`. Mirrors `bun "$TOOL" init ...`. */
+/** Spawn `bun amadeus-utility.ts init --scope poc --project-dir <p> [extra...]`. Mirrors `bun "$TOOL" init ...`. */
 function init(p: string, ...extra: string[]): CliResult {
   const res = spawnSync(
     BUN,
@@ -116,7 +116,7 @@ function init(p: string, ...extra: string[]): CliResult {
 }
 
 // P4: intent-birth writes state into the born intent's per-intent record dir
-// (aidlc/spaces/<space>/intents/<slug>-<id8>/), not the flat aidlc-docs/. Resolve
+// (aidlc/spaces/<space>/intents/<slug>-<id8>/), not the flat amadeus-docs/. Resolve
 // the record dir from the active-space + active-intent cursors, falling back to
 // the flat layout for a not-yet-born project.
 function recordDirOf(p: string): string {
@@ -128,13 +128,13 @@ function recordDirOf(p: string): string {
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();
-    if (rec && existsSync(join(intentsDir, rec, "aidlc-state.md"))) {
+    if (rec && existsSync(join(intentsDir, rec, "amadeus-state.md"))) {
       return join(intentsDir, rec);
     }
   }
-  return join(p, "aidlc-docs");
+  return join(p, "amadeus-docs");
 }
-const statePath = (p: string): string => join(recordDirOf(p), "aidlc-state.md");
+const statePath = (p: string): string => join(recordDirOf(p), "amadeus-state.md");
 // Audit is written as per-clone shards under <record>/audit/<host>-<pid>.md
 // (Stage B). Concatenate every shard for a content read.
 function readAudit(p: string): string {
@@ -147,7 +147,7 @@ function readAudit(p: string): string {
 }
 
 /**
- * Exact value of a `- **<key>**: <value>` field from aidlc-state.md. The state
+ * Exact value of a `- **<key>**: <value>` field from amadeus-state.md. The state
  * file writes scanner fields as bullet lines (e.g. `- **Project Type**: Greenfield`,
  * `- **Languages**: TypeScript, JavaScript`). The .sh grepped the bare
  * `**Project Type**: Greenfield` substring; here we project the exact value so
@@ -205,7 +205,7 @@ python = "^3.11"
 
 const APP_TSX = "export const App = () => <div>hi</div>;\n";
 
-describe("t20 aidlc-utility init — workspace scanner (migrated from t20-unit-workspace-scanner.sh, plan 21)", () => {
+describe("t20 amadeus-utility init — workspace scanner (migrated from t20-unit-workspace-scanner.sh, plan 21)", () => {
   // --- .sh Test 1-2: empty directory -> Greenfield, Unknown languages ---
   test("1: empty dir classified Greenfield", () => {
     const p = proj();
@@ -370,7 +370,7 @@ describe("t20 aidlc-utility init — workspace scanner (migrated from t20-unit-w
     // Two intent record dirs now exist under the default space.
     const intentsDir = join(p, "aidlc", "spaces", "default", "intents");
     const records = readdirSync(intentsDir).filter((d) =>
-      existsSync(join(intentsDir, d, "aidlc-state.md")),
+      existsSync(join(intentsDir, d, "amadeus-state.md")),
     );
     expect(records.length).toBe(2);
 

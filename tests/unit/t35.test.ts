@@ -2,23 +2,23 @@
 //
 // CLI-contract port of tests/unit/t35-tool-recovery-completed.sh (TAP plan 11),
 // mechanism = cli. Equal-or-stronger migration: every .sh assertion that
-// shelled out to `bun aidlc-state.ts acknowledge-compaction|resume ...` is
+// shelled out to `bun amadeus-state.ts acknowledge-compaction|resume ...` is
 // preserved by SPAWNING the real CLI via node:child_process spawnSync (BUN +
 // the tool .ts path + --project-dir <p>), asserting on res.status / res.stdout
 // + res.stderr exactly as the .sh asserted on $? / grep, plus on the audit.md
 // the tool writes — the PROCESS boundary, not in-process handler calls. An
 // in-process twin would lose the exit-code half (Tests 5-8 rely on the tool's
-// error() -> emitError -> process.exit(1) shell, aidlc-lib.ts:1546) AND the
+// error() -> emitError -> process.exit(1) shell, amadeus-lib.ts:1546) AND the
 // resume-JSON-to-stdout half (Test 9).
 //
 // AUDIT EVENT UNIT: this .cli file credits the RECOVERY_COMPLETED audit event
 // (covers KEY audit:RECOVERY_COMPLETED). The tool emits it via emitAudit(pd,
-// "RECOVERY_COMPLETED", {Choice, "Current Stage"}) at aidlc-state.ts:990; the
+// "RECOVERY_COMPLETED", {Choice, "Current Stage"}) at amadeus-state.ts:990; the
 // audit block renders `## Recovery Completed` / `**Event**: RECOVERY_COMPLETED`
 // / `**Choice**: <c>` / `**Current Stage**: <s>` per EVENT_HEADINGS
-// (aidlc-audit.ts:150) + appendAuditEntryUnlocked (aidlc-audit.ts:256-267).
+// (amadeus-audit.ts:150) + appendAuditEntryUnlocked (amadeus-audit.ts:256-267).
 //
-// CONTRACT (aidlc-state.ts handleAcknowledgeCompaction:942-998 +
+// CONTRACT (amadeus-state.ts handleAcknowledgeCompaction:942-998 +
 // handleResume:872-932):
 //   - acknowledge-compaction --choice <continue|review|restart> emits
 //     RECOVERY_COMPLETED ONLY when a SESSION_COMPACTED is pending (i.e. no
@@ -78,7 +78,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { appendFileSync, copyFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -95,7 +95,7 @@ const STATE = join(
   "claude",
   ".claude",
   "tools",
-  "aidlc-state.ts",
+  "amadeus-state.ts",
 );
 const STATE_MID_IDEATION = join(
   REPO_ROOT,
@@ -110,7 +110,7 @@ afterAll(() => {
   for (const d of tempDirs) cleanupTestProject(d);
 });
 
-// P9: the flat aidlc-docs/audit.md is retired. seed_state_file seeds the default
+// P9: the flat amadeus-docs/audit.md is retired. seed_state_file seeds the default
 // intent's record so the active-intent cursor resolves; the baseline trail is
 // planted in a shard named `0-seed.md` under the record's audit/ DIR. The name
 // is LOW-SORTING (digit '0' precedes any hostname slug) so readAllAuditShards —
@@ -132,7 +132,7 @@ interface CliResult {
   stdout: string;
 }
 
-/** Spawn `bun aidlc-state.ts <args...> --project-dir <p>`. Mirrors `bun "$STATE" ...`. */
+/** Spawn `bun amadeus-state.ts <args...> --project-dir <p>`. Mirrors `bun "$STATE" ...`. */
 function state(args: string[], p: string): CliResult {
   const res = spawnSync(BUN, [STATE, ...args, "--project-dir", p], {
     encoding: "utf-8",
@@ -318,7 +318,7 @@ describe("t35 acknowledge-compaction -> RECOVERY_COMPLETED (migrated from t35-to
     const ack = state(["acknowledge-compaction", "--choice", "continue"], p);
     expect(ack.status).toBe(0);
     // RECOVERY_COMPLETED is in handleResume's detection-exclusion regex
-    // (aidlc-state.ts:908), so the pending window closes.
+    // (amadeus-state.ts:908), so the pending window closes.
     const r = state(["resume"], p);
     expect(r.status).toBe(0); // STRONGER: .sh swallowed $? with `|| true`
     // STRONGER: parse the real JSON object the tool prints, not a substring grep.

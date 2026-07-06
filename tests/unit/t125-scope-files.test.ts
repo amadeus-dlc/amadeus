@@ -1,55 +1,55 @@
-// covers: function:validScopes, function:loadScopeMetadata, function:loadScopeMapping, function:scalarField, cli:aidlc-utility(detect-scope)
+// covers: function:validScopes, function:loadScopeMetadata, function:loadScopeMapping, function:scalarField, cli:amadeus-utility(detect-scope)
 //
 // t125 — scope files: validScopes() + scope metadata derive from
-// .claude/scopes/aidlc-<name>.md presence (milestone 12). Migrated from
+// .claude/scopes/amadeus-<name>.md presence (milestone 12). Migrated from
 // tests/unit/t125-scope-files.sh (TAP plan 10, 13 bun spawns).
 //
-// A scope is authored as one .claude/scopes/aidlc-<name>.md file
+// A scope is authored as one .claude/scopes/amadeus-<name>.md file
 // (frontmatter name/depth/keywords/description[/testStrategy], prose body).
 // Dropping a file makes the scope valid with no code change; removing one
 // drops it. depth/keywords/description come from the .md frontmatter; the
 // EXECUTE/SKIP grid comes from the compiled scope-grid.json (the transpose).
 //
 // Mechanism: MIXED.
-//   * tests 1-8, 10 import the real loader functions from aidlc-lib.ts and
+//   * tests 1-8, 10 import the real loader functions from amadeus-lib.ts and
 //     assert in-process (mechanism none) — these are pure structural reads of
 //     the shipped .claude/scopes/*.md frontmatter + scope-grid.json. The
 //     dropped-file dynamics (7, 8) drive the AIDLC_SCOPES_DIR env-seam in
-//     process: the loader reads it at CALL time (aidlc-lib.ts:713-715), so a
+//     process: the loader reads it at CALL time (amadeus-lib.ts:713-715), so a
 //     set-env + _resetScopeMappingForTests() reload exercises the exact
 //     fixture seam the .sh drove through child `bun -e` invocations — without
 //     the spawn overhead. This is STRONGER than the .sh: it asserts the
 //     derived ScopeDefinition shape (stages map present) too, not just the name.
-//   * test 9 SPAWNS the real `aidlc-utility.ts detect-scope --from-text` CLI
+//   * test 9 SPAWNS the real `amadeus-utility.ts detect-scope --from-text` CLI
 //     (mechanism cli) — the SCOPE_DETECTED audit-emit + the keyword resolution
 //     of a dropped scope's .md is a process-boundary contract (appendAuditEvent
-//     -> appendAuditEntry writes audit.md; aidlc-utility.ts:2767). The dropped
+//     -> appendAuditEntry writes audit.md; amadeus-utility.ts:2767). The dropped
 //     scope is resolved end-to-end through validScopes()/inferScopeFromText in
 //     a real process with AIDLC_SCOPES_DIR pointed at the sandbox scopes dir.
 //
 // Source under test:
-//   dist/claude/.claude/tools/aidlc-lib.ts
+//   dist/claude/.claude/tools/amadeus-lib.ts
 //     :713 scopesDir()           — AIDLC_SCOPES_DIR ?? <pkg>/../scopes (call-time)
 //     :760 loadScopeMetadata()   — reads name/depth/keywords/description/
-//                                   testStrategy from each aidlc-*.md frontmatter
+//                                   testStrategy from each amadeus-*.md frontmatter
 //     :802 loadScopeMapping()    — merges scope-grid.json (.stages) + .md metadata
 //     :854 _resetScopeMappingForTests() — clears the metadata/mapping/validScopes caches
 //     :872 validScopes()         — Object.keys(loadScopeMapping()).sort()
 //     :932 scalarField(fm, key)  — zero-dep frontmatter scalar parser
-//   dist/claude/.claude/tools/aidlc-graph.ts
+//   dist/claude/.claude/tools/amadeus-graph.ts
 //     :209 loadScopeGrid()       — the compiled EXECUTE/SKIP grid (grid columns)
-//   dist/claude/.claude/tools/aidlc-utility.ts
+//   dist/claude/.claude/tools/amadeus-utility.ts
 //     :2703 handleDetectScope()  — --from-text resolves via inferScopeFromText,
 //                                   emits SCOPE_DETECTED with **Detected scope**: <s>
 //
 // Old TAP -> new test parity (1:1, every .sh assertion -> a named test()):
-//   .sh test 1  (9 shipped scope files)                     -> "exactly 9 shipped aidlc-*.md scope files exist"
+//   .sh test 1  (9 shipped scope files)                     -> "exactly 9 shipped amadeus-*.md scope files exist"
 //   .sh test 2  (frontmatter name == filename stem)          -> "every shipped scope file's frontmatter name == its slug"
 //   .sh test 3  (validScopes() == 9 names, alphabetical)     -> "validScopes() == the 9 .md-derived names, alphabetical"
 //   .sh test 4  (loadScopeMetadata bugfix depth/kw/desc)     -> "loadScopeMetadata reads bugfix depth/keywords/description from .md"
 //   .sh test 5  (workshop testStrategy override)             -> "loadScopeMetadata reads workshop's testStrategy override from .md"
 //   .sh test 6  (loadScopeMapping poc derived fields)        -> "loadScopeMapping poc depth/keywords/description derive from .md"
-//   .sh test 7  (dropping a new .md makes it valid)          -> "dropping aidlc-dropscope.md makes 'dropscope' a valid scope (no code change)"
+//   .sh test 7  (dropping a new .md makes it valid)          -> "dropping amadeus-dropscope.md makes 'dropscope' a valid scope (no code change)"
 //   .sh test 8  (isolated dir with one file -> one scope)    -> "isolated AIDLC_SCOPES_DIR with one file yields exactly that scope"
 //   .sh test 9  (detect-scope --from-text resolves keyword)  -> "detect-scope --from-text resolves a dropped scope's keyword from its .md (CLI audit)"
 //   .sh test 10 (grid columns subset of authored .md names)  -> "every scope-grid column has a matching .claude/scopes/*.md file"
@@ -73,8 +73,8 @@ import {
   scalarField,
   validScopes,
   _resetScopeMappingForTests,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
-import { loadScopeGrid } from "../../dist/claude/.claude/tools/aidlc-graph.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { loadScopeGrid } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 import {
   cleanupTestProject,
   seededAuditShard,
@@ -87,7 +87,7 @@ const REPO_ROOT = join(import.meta.dir, "..", "..");
 const AIDLC_SRC = join(REPO_ROOT, "dist", "claude", ".claude");
 const SCOPES_DIR = join(AIDLC_SRC, "scopes");
 const UTIL = fileURLToPath(
-  new URL("../../dist/claude/.claude/tools/aidlc-utility.ts", import.meta.url),
+  new URL("../../dist/claude/.claude/tools/amadeus-utility.ts", import.meta.url),
 );
 
 // The 9 scopes the framework ships, alphabetical — the .sh's hard-coded
@@ -127,9 +127,9 @@ afterEach(() => {
 });
 
 describe("shipped scope files — frontmatter + derived metadata (in-process)", () => {
-  test("exactly 9 shipped aidlc-*.md scope files exist [.sh test 1]", () => {
+  test("exactly 9 shipped amadeus-*.md scope files exist [.sh test 1]", () => {
     const files = readdirSync(SCOPES_DIR).filter(
-      (f) => f.startsWith("aidlc-") && f.endsWith(".md"),
+      (f) => f.startsWith("amadeus-") && f.endsWith(".md"),
     );
     expect(files.length).toBe(9);
   });
@@ -138,10 +138,10 @@ describe("shipped scope files — frontmatter + derived metadata (in-process)", 
     // STRONGER than the .sh's accumulate-then-compare: assert each file
     // individually so a mismatch names the offending slug.
     const files = readdirSync(SCOPES_DIR)
-      .filter((f) => f.startsWith("aidlc-") && f.endsWith(".md"))
+      .filter((f) => f.startsWith("amadeus-") && f.endsWith(".md"))
       .sort();
     for (const f of files) {
-      const slug = basename(f, ".md").replace(/^aidlc-/, "");
+      const slug = basename(f, ".md").replace(/^amadeus-/, "");
       const raw = readFileSync(join(SCOPES_DIR, f), "utf-8");
       const m = raw.match(/^---\r?\n([\s\S]*?)\r?\n---/);
       expect(m).not.toBeNull();
@@ -186,7 +186,7 @@ describe("shipped scope files — frontmatter + derived metadata (in-process)", 
     const gridCols = Object.keys(loadScopeGrid()).sort();
     const fileNames = readdirSync(SCOPES_DIR)
       .filter((f) => f.endsWith(".md"))
-      .map((f) => f.replace(/^aidlc-/, "").replace(/\.md$/, ""))
+      .map((f) => f.replace(/^amadeus-/, "").replace(/\.md$/, ""))
       .sort();
     const orphanCols = gridCols.filter((c) => !fileNames.includes(c));
     // Every authored grid column must be backed by a scope .md file.
@@ -197,7 +197,7 @@ describe("shipped scope files — frontmatter + derived metadata (in-process)", 
 // ---------------------------------------------------------------------------
 // Dropped-file dynamics — the AIDLC_SCOPES_DIR seam (tests 7, 8 in-process;
 // test 9 spawns the real CLI). The seam is read at call time
-// (aidlc-lib.ts:713), so set-env + _resetScopeMappingForTests() reloads the
+// (amadeus-lib.ts:713), so set-env + _resetScopeMappingForTests() reloads the
 // scope set from a fixture dir within this same process.
 // ---------------------------------------------------------------------------
 describe("dropped-file scope dynamics (AIDLC_SCOPES_DIR seam)", () => {
@@ -211,7 +211,7 @@ describe("dropped-file scope dynamics (AIDLC_SCOPES_DIR seam)", () => {
     for (const p of projects.splice(0)) cleanupTestProject(p);
   });
 
-  test("dropping aidlc-dropscope.md makes 'dropscope' a valid scope (no code change) [.sh test 7]", () => {
+  test("dropping amadeus-dropscope.md makes 'dropscope' a valid scope (no code change) [.sh test 7]", () => {
     // Mirror the .sh sandbox: a full integration project, then drop a NEW
     // scope .md into its .claude/scopes/ and point the loader at that dir.
     const proj = setupIntegrationProject({
@@ -220,7 +220,7 @@ describe("dropped-file scope dynamics (AIDLC_SCOPES_DIR seam)", () => {
     });
     projects.push(proj);
     const projScopes = join(proj, ".claude", "scopes");
-    writeFileSync(join(projScopes, "aidlc-dropscope.md"), DROPSCOPE_MD, "utf-8");
+    writeFileSync(join(projScopes, "amadeus-dropscope.md"), DROPSCOPE_MD, "utf-8");
 
     process.env.AIDLC_SCOPES_DIR = projScopes;
     _resetScopeMappingForTests();
@@ -233,11 +233,11 @@ describe("dropped-file scope dynamics (AIDLC_SCOPES_DIR seam)", () => {
   });
 
   test("isolated AIDLC_SCOPES_DIR with one file yields exactly that scope [.sh test 8]", () => {
-    // An isolated dir holding ONLY aidlc-dropscope.md: validScopes() must
+    // An isolated dir holding ONLY amadeus-dropscope.md: validScopes() must
     // collapse to exactly that one scope (proves removing files drops scopes).
-    const iso = mkdtempSync(join(tmpdir(), "aidlc-t125-iso-"));
+    const iso = mkdtempSync(join(tmpdir(), "amadeus-t125-iso-"));
     tempDirs.push(iso);
-    writeFileSync(join(iso, "aidlc-dropscope.md"), DROPSCOPE_MD, "utf-8");
+    writeFileSync(join(iso, "amadeus-dropscope.md"), DROPSCOPE_MD, "utf-8");
 
     process.env.AIDLC_SCOPES_DIR = iso;
     _resetScopeMappingForTests();
@@ -247,7 +247,7 @@ describe("dropped-file scope dynamics (AIDLC_SCOPES_DIR seam)", () => {
 
   test("detect-scope --from-text resolves a dropped scope's keyword from its .md (CLI audit) [.sh test 9]", () => {
     // Process-boundary contract: the dropped scope's keyword resolves through
-    // a REAL aidlc-utility detect-scope run with AIDLC_SCOPES_DIR pointed at
+    // a REAL amadeus-utility detect-scope run with AIDLC_SCOPES_DIR pointed at
     // the sandbox scopes dir, and the SCOPE_DETECTED audit row names it.
     // P9: detect-scope's appendAuditEvent writes into the ACTIVE INTENT's audit
     // shard; KEEP the seeded record (no noAidlcDocs) and seed state so the
@@ -261,7 +261,7 @@ describe("dropped-file scope dynamics (AIDLC_SCOPES_DIR seam)", () => {
       "utf-8",
     );
     const projScopes = join(proj, ".claude", "scopes");
-    writeFileSync(join(projScopes, "aidlc-dropscope.md"), DROPSCOPE_MD, "utf-8");
+    writeFileSync(join(projScopes, "amadeus-dropscope.md"), DROPSCOPE_MD, "utf-8");
 
     const res = spawnSync(
       BUN,

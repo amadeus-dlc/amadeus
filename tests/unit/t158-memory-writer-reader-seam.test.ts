@@ -1,10 +1,10 @@
-// covers: subcommand:aidlc-learnings:persist
+// covers: subcommand:amadeus-learnings:persist
 //
 // t158 — memory writer/reader ROUND-TRIP (P6 closed the P5 seam).
 //
 // P5 relocated the METHOD reader: loadRules()/rulesDir() now read the workspace
 // tree aidlc/spaces/default/memory/ (neutral names org/team/project.md). In
-// Stage A the learnings WRITER (aidlc-learnings.ts learningsFilePath() →
+// Stage A the learnings WRITER (amadeus-learnings.ts learningsFilePath() →
 // persist) still targeted the OLD harness rule dir, so a confirmed learning
 // landed where the relocated reader could no longer see it — a SILENT LOSS.
 // This file was a `test.failing` tripwire guarding that window.
@@ -17,7 +17,7 @@
 // persist a team-scoped learning → the resolver (loadRules, pointed at the
 // relocated memory dir) sees the practice line under its heading.
 //
-// Mechanism: cli (spawnSync of the shipped aidlc-learnings.ts persist) +
+// Mechanism: cli (spawnSync of the shipped amadeus-learnings.ts persist) +
 // in-process import of memoryDirFor (the reader-root oracle) + loadRules (the
 // resolver). No LLM.
 
@@ -28,10 +28,10 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { AIDLC_SRC, toPortablePath } from "../harness/fixtures.ts";
-import { loadRules, memoryDirFor } from "../../dist/claude/.claude/tools/aidlc-graph.ts";
+import { loadRules, memoryDirFor } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 
 const BUN = process.execPath;
-const TOOL = join(AIDLC_SRC, "tools", "aidlc-learnings.ts");
+const TOOL = join(AIDLC_SRC, "tools", "amadeus-learnings.ts");
 
 const tempDirs: string[] = [];
 let savedRulesDir: string | undefined;
@@ -50,8 +50,8 @@ afterEach(() => {
 // routing target) — so the round-trip reads back a practice the writer
 // appended under an existing heading.
 function seedProject(root: string): void {
-  mkdirSync(join(root, "aidlc-docs", "inception", "user-stories"), { recursive: true });
-  mkdirSync(join(root, ".claude", "aidlc-common", "stages", "inception"), { recursive: true });
+  mkdirSync(join(root, "amadeus-docs", "inception", "user-stories"), { recursive: true });
+  mkdirSync(join(root, ".claude", "amadeus-common", "stages", "inception"), { recursive: true });
   const memDir = memoryDirFor(root); // the relocated reader root
   mkdirSync(memDir, { recursive: true });
 
@@ -65,12 +65,12 @@ function seedProject(root: string): void {
   );
 
   writeFileSync(
-    join(root, "aidlc-docs", "aidlc-state.md"),
+    join(root, "amadeus-docs", "amadeus-state.md"),
     "# AI-DLC State Tracking\n- **Current Stage**: user-stories\n- **Scope**: feature\n",
     "utf-8",
   );
   writeFileSync(
-    join(root, "aidlc-docs", "runtime-graph.json"),
+    join(root, "amadeus-docs", "runtime-graph.json"),
     JSON.stringify({
       workflow_id: "w1",
       scope: "feature",
@@ -78,20 +78,20 @@ function seedProject(root: string): void {
       stages: [
         {
           stage_slug: "user-stories",
-          memory_path: "aidlc-docs/inception/user-stories/memory.md",
+          memory_path: "amadeus-docs/inception/user-stories/memory.md",
         },
       ],
     }),
     "utf-8",
   );
   writeFileSync(
-    join(root, ".claude", "aidlc-common", "stages", "inception", "user-stories.md"),
+    join(root, ".claude", "amadeus-common", "stages", "inception", "user-stories.md"),
     [
       "---",
       "slug: user-stories",
       "phase: inception",
       "execution: ALWAYS",
-      "lead_agent: aidlc-product-agent",
+      "lead_agent: amadeus-product-agent",
       "support_agents: []",
       "inputs: foo",
       "outputs: bar",
@@ -169,7 +169,7 @@ describe("t158 memory writer/reader round-trip (P6 closed the P5 seam)", () => {
   // rule dir — the practice lands in the method file the resolver reads.
   test("learnings writer lands under the relocated reader root", () => {
     savedRulesDir = process.env.AIDLC_RULES_DIR;
-    const root = toPortablePath(mkdtempSync(join(tmpdir(), "aidlc-t158-")));
+    const root = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-t158-")));
     tempDirs.push(root);
     seedProject(root);
 
@@ -186,14 +186,14 @@ describe("t158 memory writer/reader round-trip (P6 closed the P5 seam)", () => {
     expect(writtenUnderReader.length).toBeGreaterThan(0);
     expect(mdFilesUnder(readerRoot).some((p) => p.includes("learnings"))).toBe(false);
     // The OLD harness rules dir was never written (it isn't even created).
-    expect(existsSync(join(root, ".claude", "rules", "aidlc-team-learnings.md"))).toBe(false);
+    expect(existsSync(join(root, ".claude", "rules", "amadeus-team-learnings.md"))).toBe(false);
   });
 
   // The full round-trip: persist → loadRules (the resolver) reads the practice
   // line back out of the relocated team.md under its heading.
   test("round-trip: persisted learning is visible to the resolver (loadRules)", () => {
     savedRulesDir = process.env.AIDLC_RULES_DIR;
-    const root = toPortablePath(mkdtempSync(join(tmpdir(), "aidlc-t158b-")));
+    const root = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-t158b-")));
     tempDirs.push(root);
     seedProject(root);
 

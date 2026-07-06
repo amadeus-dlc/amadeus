@@ -127,7 +127,7 @@ describe("t-tui-preflight (terminal substrate capability gate)", () => {
     }`,
     () => {
       const session = `aidlc_tui_preflight_${process.pid}`;
-      const sandbox = mkdtempSync(join(tmpdir(), "aidlc-tui-preflight-"));
+      const sandbox = mkdtempSync(join(tmpdir(), "amadeus-tui-preflight-"));
       try {
         // 1) start the known-answer target in a fixed-size session.
         const started = drive([

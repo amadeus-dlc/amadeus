@@ -12,10 +12,10 @@ directory structure, per-artifact descriptions, lifecycle, and git policy.
 
 ```
 aidlc/spaces/<space>/intents/<YYMMDD>-<label>/   # one record dir per intent
-  aidlc-state.md                    # Workflow state (commit)
+  amadeus-state.md                    # Workflow state (commit)
   audit/                            # Audit trail — per-clone shards (commit)
     <host>-<clone>.md               # this clone's shard; readers glob + merge by timestamp
-  .aidlc-recovery.md                # Recovery breadcrumb (gitignore)
+  .amadeus-recovery.md                # Recovery breadcrumb (gitignore)
   runtime-graph.json                # Execution telemetry view (gitignore)
 
   verification/                     # Phase boundary checks (commit)
@@ -76,7 +76,7 @@ aidlc/spaces/<space>/intents/<YYMMDD>-<label>/   # one record dir per intent
 level — `aidlc/spaces/<space>/knowledge/` (a sibling of `intents/`) — so it
 accumulates across every intent in the space rather than being trapped in one
 intent's record. The engine creates it empty; the team adds free-form files
-under an optional `aidlc-shared/` and per-agent subdirectories. See
+under an optional `amadeus-shared/` and per-agent subdirectories. See
 [Knowledge](08-knowledge.md).
 
 **Per-stage memory diary.** Each executed stage also keeps a committed
@@ -135,8 +135,8 @@ flowchart LR
 
 | Stage | Artifacts | Notes |
 |-------|-----------|-------|
-| 0.1 Workspace Scaffold | `scaffold-report.md` | Deterministic (runs inside `aidlc-utility init`) |
-| 0.2 Workspace Detection | `workspace-findings.md`, updates `aidlc-state.md` | Deterministic rule-based scanner |
+| 0.1 Workspace Scaffold | `scaffold-report.md` | Deterministic (runs inside `amadeus-utility init`) |
+| 0.2 Workspace Detection | `workspace-findings.md`, updates `amadeus-state.md` | Deterministic rule-based scanner |
 | 0.3 State Init | `state-init-summary.md` | Deterministic |
 
 The welcome message is rendered at session start via `companyAnnouncements` in `settings.json` — it is not a stage and produces no artifact.
@@ -218,12 +218,12 @@ cursors and machine-local derived state are ignored.
 
 | Commit | Gitignore |
 |--------|-----------|
-| `aidlc-state.md` | `aidlc/active-space`, `intents/active-intent` (per-user cursors) |
-| `audit/*.md` (per-clone shards) | `.aidlc-recovery.md` and other `intents/*/.aidlc-*` (transient breadcrumbs) |
+| `amadeus-state.md` | `aidlc/active-space`, `intents/active-intent` (per-user cursors) |
+| `audit/*.md` (per-clone shards) | `.amadeus-recovery.md` and other `intents/*/.amadeus-*` (transient breadcrumbs) |
 | All stage artifacts | `runtime-graph.json` (re-derivable from the audit shards) |
-| `verification/` phase check results | `aidlc/.aidlc-clone-id` (names this clone's shard; must stay machine-local) |
-| Space-level `aidlc/knowledge/` team knowledge files | `aidlc/.aidlc-sessions/` (per-conversation session→intent map) |
-| Per-stage `memory.md` diaries; space `memory/` layer | `.aidlc-hooks-health/`, `.aidlc-sensors/` (heartbeats, advisory findings) |
+| `verification/` phase check results | `aidlc/.amadeus-clone-id` (names this clone's shard; must stay machine-local) |
+| Space-level `aidlc/knowledge/` team knowledge files | `aidlc/.amadeus-sessions/` (per-conversation session→intent map) |
+| Per-stage `memory.md` diaries; space `memory/` layer | `.amadeus-hooks-health/`, `.amadeus-sensors/` (heartbeats, advisory findings) |
 
 ---
 

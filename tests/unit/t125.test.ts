@@ -13,7 +13,7 @@
 // t125 — audit-first atomicity invariant sweep.
 // (Renumbered from t114 at the v0.5.12 reconcile to clear main's v0.6.0 unit
 // t114-orchestrate-next.sh; same-tier ID collision.)
-// Mechanism: none (Bun.spawnSync of aidlc-state.ts against a temp project on
+// Mechanism: none (Bun.spawnSync of amadeus-state.ts against a temp project on
 // disk; zero LLM, zero tokens). Technique: invariant sweep + EISDIR fault
 // injection.
 //
@@ -32,8 +32,8 @@
 // handler is caught, not just in fork/approve.
 //
 // FAULT INJECTION (reused verbatim from t17 Test 65, ~line 620). The seeded
-// audit.md FILE is replaced by a DIRECTORY at the same path. aidlc-audit.ts
-// appends via appendFileSync(path, block) (aidlc-audit.ts:257); ensureAuditFile
+// audit.md FILE is replaced by a DIRECTORY at the same path. amadeus-audit.ts
+// appends via appendFileSync(path, block) (amadeus-audit.ts:257); ensureAuditFile
 // (:174) sees existsSync(path) === true for the directory and returns it
 // unchanged, so appendFileSync throws EISDIR. This is uid-independent — "append
 // to a directory" is a kernel-enforced type error, not a permission check, so
@@ -68,7 +68,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join, resolve } from "node:path";
-import { auditFilePath } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { auditFilePath } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -84,14 +84,14 @@ const TOOL = join(
   "dist", "claude",
   ".claude",
   "tools",
-  "aidlc-state.ts"
+  "amadeus-state.ts"
 );
 const FIXTURES = join(REPO_ROOT, "tests", "fixtures");
 const BUN = process.execPath; // the bun binary running this test
 
 // --- Helpers ---------------------------------------------------------------
 
-// P9 per-intent layout: the flat aidlc-docs/ root is retired. The state file
+// P9 per-intent layout: the flat amadeus-docs/ root is retired. The state file
 // lives in the active intent's record (seedStateFile seeds it so the cursor
 // resolves for the spawned tool), and the audit trail is a per-clone SHARD under
 // the record's audit/ dir. We PIN a deterministic clone-id so the shard path the
@@ -100,10 +100,10 @@ const BUN = process.execPath; // the bun binary running this test
 // path only needs the state file to exist).
 const PINNED_CLONE_ID = "testcloneid125";
 function pinClone(proj: string): void {
-  writeFileSync(join(proj, "aidlc", ".aidlc-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(proj, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
 }
 
-// Seed a fresh temp project: aidlc-state.md from a fixture into the default
+// Seed a fresh temp project: amadeus-state.md from a fixture into the default
 // record (so the active-intent cursor resolves). Returns the project dir.
 function seedProject(stateFixture: string): string {
   const proj = createTestProject();
@@ -143,7 +143,7 @@ function readState(proj: string): string {
   return readFileSync(statePath(proj), "utf-8");
 }
 
-// Run aidlc-state.ts with --project-dir injected. Returns the exit status.
+// Run amadeus-state.ts with --project-dir injected. Returns the exit status.
 function runState(proj: string, args: string[]): number {
   const r = spawnSync(
     BUN,
@@ -346,7 +346,7 @@ describe("t125 harness preconditions", () => {
     // No temp dirs persist — each test cleans its own in finally.
   });
 
-  test("aidlc-state.ts and required fixtures are present", () => {
+  test("amadeus-state.ts and required fixtures are present", () => {
     expect(existsSync(TOOL)).toBe(true);
     expect(existsSync(join(FIXTURES, "state-mid-ideation.md"))).toBe(true);
     expect(existsSync(join(FIXTURES, "state-completed.md"))).toBe(true);

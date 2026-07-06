@@ -68,16 +68,16 @@ Phases execute sequentially. At each phase boundary (except Initialization → I
 
 **Purpose:** Bootstrap the workspace — scaffold the docs directory, detect the workspace, and initialize state. The welcome message is shown at session start via the `companyAnnouncements` entry in `settings.json` (not a stage).
 
-Initialization stages run **automatically** without approval gates. All three execute inside a single deterministic tool call (`aidlc-utility init`) that completes in well under a second.
+Initialization stages run **automatically** without approval gates. All three execute inside a single deterministic tool call (`amadeus-utility init`) that completes in well under a second.
 
 | # | Stage | Lead | Key Artifacts | Condition |
 |---|-------|------|---------------|-----------|
 | 0.1 | Workspace Scaffold | orchestrator | first intent's record dir (`aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`) | ALWAYS |
-| 0.2 | Workspace Detection | orchestrator | `aidlc-state.md` (workspace state) | ALWAYS |
-| 0.3 | State Initialization | orchestrator | `aidlc-state.md`, `audit/` shards | ALWAYS |
+| 0.2 | Workspace Detection | orchestrator | `amadeus-state.md` (workspace state) | ALWAYS |
+| 0.3 | State Initialization | orchestrator | `amadeus-state.md`, `audit/` shards | ALWAYS |
 
 **Execution notes:**
-- All three stages run inline inside `aidlc-utility init` — no LLM subagent delegation, no per-stage prompt.
+- All three stages run inline inside `amadeus-utility init` — no LLM subagent delegation, no per-stage prompt.
 - Workspace detection is a rule-based scanner (file extensions, known config filenames, package manifests).
 - No user interaction is needed during this phase.
 
@@ -89,13 +89,13 @@ Initialization stages run **automatically** without approval gates. All three ex
 
 ```mermaid
 flowchart TD
-    S11["1.1 Intent Capture & Framing\n(aidlc-product-agent)"]
-    S12["1.2 Market Research\n(aidlc-product-agent)"]
-    S13["1.3 Feasibility & Constraints\n(aidlc-architect-agent)"]
-    S14["1.4 Scope Definition\n(aidlc-product-agent)"]
-    S15["1.5 Team Formation\n(aidlc-delivery-agent)"]
-    S16["1.6 Rough Mockups\n(aidlc-design-agent)"]
-    S17["1.7 Approval & Handoff\n(aidlc-delivery-agent)"]
+    S11["1.1 Intent Capture & Framing\n(amadeus-product-agent)"]
+    S12["1.2 Market Research\n(amadeus-product-agent)"]
+    S13["1.3 Feasibility & Constraints\n(amadeus-architect-agent)"]
+    S14["1.4 Scope Definition\n(amadeus-product-agent)"]
+    S15["1.5 Team Formation\n(amadeus-delivery-agent)"]
+    S16["1.6 Rough Mockups\n(amadeus-design-agent)"]
+    S17["1.7 Approval & Handoff\n(amadeus-delivery-agent)"]
     VG1{{"Verification Gate:\nIdeation → Inception"}}
 
     S11 ==>|ALWAYS| S12
@@ -124,13 +124,13 @@ flowchart TD
 
 | # | Stage | Lead | Supporting | Key Artifacts | Condition |
 |---|-------|------|-----------|---------------|-----------|
-| 1.1 | Intent Capture & Framing | aidlc-product-agent | aidlc-architect-agent | Intent statement, stakeholder map | ALWAYS |
-| 1.2 | Market Research | aidlc-product-agent | — | Competitive analysis, build-vs-buy | CONDITIONAL |
-| 1.3 | Feasibility & Constraints | aidlc-architect-agent | aidlc-aws-platform-agent, aidlc-compliance-agent | Feasibility assessment, constraint register, RAID log | CONDITIONAL |
-| 1.4 | Scope Definition | aidlc-product-agent | aidlc-delivery-agent | Scope definition, intent backlog | ALWAYS |
-| 1.5 | Team Formation | aidlc-delivery-agent | — | Team assessment, mob composition plan | CONDITIONAL |
-| 1.6 | Rough Mockups | aidlc-design-agent | aidlc-product-agent | Wireframes, user flows, concept deck | CONDITIONAL |
-| 1.7 | Approval & Handoff | aidlc-delivery-agent | aidlc-product-agent | Initiative brief, decision log | ALWAYS |
+| 1.1 | Intent Capture & Framing | amadeus-product-agent | amadeus-architect-agent | Intent statement, stakeholder map | ALWAYS |
+| 1.2 | Market Research | amadeus-product-agent | — | Competitive analysis, build-vs-buy | CONDITIONAL |
+| 1.3 | Feasibility & Constraints | amadeus-architect-agent | amadeus-aws-platform-agent, amadeus-compliance-agent | Feasibility assessment, constraint register, RAID log | CONDITIONAL |
+| 1.4 | Scope Definition | amadeus-product-agent | amadeus-delivery-agent | Scope definition, intent backlog | ALWAYS |
+| 1.5 | Team Formation | amadeus-delivery-agent | — | Team assessment, mob composition plan | CONDITIONAL |
+| 1.6 | Rough Mockups | amadeus-design-agent | amadeus-product-agent | Wireframes, user flows, concept deck | CONDITIONAL |
+| 1.7 | Approval & Handoff | amadeus-delivery-agent | amadeus-product-agent | Initiative brief, decision log | ALWAYS |
 
 **Stage colors:** Green = ALWAYS (runs for every scope). Yellow = CONDITIONAL (skipped for some scopes).
 
@@ -143,15 +143,15 @@ flowchart TD
 ```mermaid
 flowchart TD
     S21{{"`**2.1 Reverse Engineering**
-    (aidlc-developer-agent + aidlc-architect-agent)
+    (amadeus-developer-agent + amadeus-architect-agent)
     subagent: two-step`"}}
-    S2P["2.2 Practices Discovery\n(aidlc-pipeline-deploy-agent)"]
-    S22["2.3 Requirements Analysis\n(aidlc-product-agent)"]
-    S23["2.4 User Stories\n(aidlc-product-agent)"]
-    S24["2.5 Refined Mockups\n(aidlc-design-agent)"]
-    S25["2.6 Application Design\n(aidlc-architect-agent)"]
-    S26["2.7 Units Generation\n(aidlc-architect-agent)"]
-    S27["2.8 Delivery Planning\n(aidlc-delivery-agent)"]
+    S2P["2.2 Practices Discovery\n(amadeus-pipeline-deploy-agent)"]
+    S22["2.3 Requirements Analysis\n(amadeus-product-agent)"]
+    S23["2.4 User Stories\n(amadeus-product-agent)"]
+    S24["2.5 Refined Mockups\n(amadeus-design-agent)"]
+    S25["2.6 Application Design\n(amadeus-architect-agent)"]
+    S26["2.7 Units Generation\n(amadeus-architect-agent)"]
+    S27["2.8 Delivery Planning\n(amadeus-delivery-agent)"]
     VG2{{"Verification Gate:\nInception → Construction"}}
 
     BF_CHECK{"Brownfield?\n(from Initialization 0.3)"}
@@ -195,16 +195,16 @@ flowchart TD
 
 | # | Stage | Lead | Supporting | Key Artifacts | Condition |
 |---|-------|------|-----------|---------------|-----------|
-| 2.1 | Reverse Engineering | aidlc-developer-agent | aidlc-architect-agent | 9 RE artifacts | Brownfield projects |
-| 2.2 | Practices Discovery | aidlc-pipeline-deploy-agent | aidlc-quality-agent, aidlc-developer-agent, aidlc-devsecops-agent | `team-practices.md`, `discovered-rules.md`, `evidence.md` (promoted to `aidlc/spaces/<space>/memory/team.md` / `memory/project.md` on affirmation) | CONDITIONAL |
-| 2.3 | Requirements Analysis | aidlc-product-agent | — | `requirements.md` | ALWAYS |
-| 2.4 | User Stories | aidlc-product-agent | aidlc-design-agent | `stories.md`, `personas.md` | User-facing features |
-| 2.5 | Refined Mockups | aidlc-design-agent | aidlc-product-agent | Hi-fi mockups, interaction spec | UI projects |
-| 2.6 | Application Design | aidlc-architect-agent | aidlc-aws-platform-agent, aidlc-design-agent | App design artifacts, ADRs | Per execution plan |
-| 2.7 | Units Generation | aidlc-architect-agent | aidlc-delivery-agent | `unit-of-work.md`, `unit-of-work-dependency.md` (DAG), `unit-of-work-story-map.md` | ALWAYS |
-| 2.8 | Delivery Planning | aidlc-delivery-agent | aidlc-architect-agent | `bolt-plan.md`, `team-allocation.md`, `risk-and-sequencing-rationale.md`, `external-dependency-map.md` | ALWAYS |
+| 2.1 | Reverse Engineering | amadeus-developer-agent | amadeus-architect-agent | 9 RE artifacts | Brownfield projects |
+| 2.2 | Practices Discovery | amadeus-pipeline-deploy-agent | amadeus-quality-agent, amadeus-developer-agent, amadeus-devsecops-agent | `team-practices.md`, `discovered-rules.md`, `evidence.md` (promoted to `aidlc/spaces/<space>/memory/team.md` / `memory/project.md` on affirmation) | CONDITIONAL |
+| 2.3 | Requirements Analysis | amadeus-product-agent | — | `requirements.md` | ALWAYS |
+| 2.4 | User Stories | amadeus-product-agent | amadeus-design-agent | `stories.md`, `personas.md` | User-facing features |
+| 2.5 | Refined Mockups | amadeus-design-agent | amadeus-product-agent | Hi-fi mockups, interaction spec | UI projects |
+| 2.6 | Application Design | amadeus-architect-agent | amadeus-aws-platform-agent, amadeus-design-agent | App design artifacts, ADRs | Per execution plan |
+| 2.7 | Units Generation | amadeus-architect-agent | amadeus-delivery-agent | `unit-of-work.md`, `unit-of-work-dependency.md` (DAG), `unit-of-work-story-map.md` | ALWAYS |
+| 2.8 | Delivery Planning | amadeus-delivery-agent | amadeus-architect-agent | `bolt-plan.md`, `team-allocation.md`, `risk-and-sequencing-rationale.md`, `external-dependency-map.md` | ALWAYS |
 
-**Key behavior:** Stage 2.1 runs as a **subagent** using the two-step Reverse Engineering pattern — first an aidlc-developer-agent code scan, then an aidlc-architect-agent synthesis. It only executes for brownfield (existing codebase) projects.
+**Key behavior:** Stage 2.1 runs as a **subagent** using the two-step Reverse Engineering pattern — first an amadeus-developer-agent code scan, then an amadeus-architect-agent synthesis. It only executes for brownfield (existing codebase) projects.
 
 ---
 
@@ -241,8 +241,8 @@ flowchart TD
 
     MORE{"More Bolts?"}
 
-    S36["3.6 Build and Test\n(aidlc-quality-agent)\nALWAYS — once"]
-    S37["3.7 CI Pipeline\n(aidlc-pipeline-deploy-agent)\nCONDITIONAL — once"]
+    S36["3.6 Build and Test\n(amadeus-quality-agent)\nALWAYS — once"]
+    S37["3.7 CI Pipeline\n(amadeus-pipeline-deploy-agent)\nCONDITIONAL — once"]
     VG3{{"Verification Gate:\nConstruction → Operation"}}
 
     START --> READ --> BOLT1 --> GATE1 --> LADDER
@@ -301,7 +301,7 @@ flowchart LR
 
 <!-- Text fallback: Bolt A (walking skeleton) runs first, followed by its gate and the ladder prompt. When B and C both depend only on A, they form a parallel batch that executes concurrently. A single batch-level gate covers both Bolts (or is skipped if the user chose "Continue autonomously"). -->
 
-The conductor (the live `/aidlc` session) dispatches parallel Bolts by issuing multiple `Task` calls in a single turn — Claude Code's built-in parallelism runs the Code Generation stage for each Bolt concurrently. Question collection and design-artifact generation still run per-Bolt (they're cheap, and question answers have to be serialized through the user anyway).
+The conductor (the live `/amadeus` session) dispatches parallel Bolts by issuing multiple `Task` calls in a single turn — Claude Code's built-in parallelism runs the Code Generation stage for each Bolt concurrently. Question collection and design-artifact generation still run per-Bolt (they're cheap, and question answers have to be serialized through the user anyway).
 
 ### Halt-and-ask on failure
 
@@ -314,19 +314,19 @@ Failures always stop Construction, even in autonomous mode. That's the one place
 
 | # | Stage | Lead | Supporting | Key Artifacts | Runs |
 |---|-------|------|-----------|---------------|------|
-| 3.1 | Functional Design | aidlc-architect-agent | aidlc-developer-agent | `business-logic-model.md`, `business-rules.md` | Per Bolt (CONDITIONAL by execution plan) |
-| 3.2 | NFR Requirements | aidlc-architect-agent | aidlc-devsecops-agent, aidlc-compliance-agent, aidlc-quality-agent | Security, performance, reliability NFRs | Per Bolt (CONDITIONAL) |
-| 3.3 | NFR Design | aidlc-architect-agent | aidlc-aws-platform-agent | NFR design specifications | Per Bolt (CONDITIONAL) |
-| 3.4 | Infrastructure Design | aidlc-aws-platform-agent | aidlc-devsecops-agent, aidlc-compliance-agent | Infrastructure specifications, IaC designs | Per Bolt (CONDITIONAL) |
-| 3.5 | Code Generation | aidlc-developer-agent | — | Application code + code docs | Per Bolt (ALWAYS, per Unit within the Bolt) |
-| 3.6 | Build and Test | aidlc-quality-agent | aidlc-devsecops-agent | Test results, quality report | ALWAYS, once at end |
-| 3.7 | CI Pipeline | aidlc-pipeline-deploy-agent | — | CI config, quality gates | CONDITIONAL, once at end |
+| 3.1 | Functional Design | amadeus-architect-agent | amadeus-developer-agent | `business-logic-model.md`, `business-rules.md` | Per Bolt (CONDITIONAL by execution plan) |
+| 3.2 | NFR Requirements | amadeus-architect-agent | amadeus-devsecops-agent, amadeus-compliance-agent, amadeus-quality-agent | Security, performance, reliability NFRs | Per Bolt (CONDITIONAL) |
+| 3.3 | NFR Design | amadeus-architect-agent | amadeus-aws-platform-agent | NFR design specifications | Per Bolt (CONDITIONAL) |
+| 3.4 | Infrastructure Design | amadeus-aws-platform-agent | amadeus-devsecops-agent, amadeus-compliance-agent | Infrastructure specifications, IaC designs | Per Bolt (CONDITIONAL) |
+| 3.5 | Code Generation | amadeus-developer-agent | — | Application code + code docs | Per Bolt (ALWAYS, per Unit within the Bolt) |
+| 3.6 | Build and Test | amadeus-quality-agent | amadeus-devsecops-agent | Test results, quality report | ALWAYS, once at end |
+| 3.7 | CI Pipeline | amadeus-pipeline-deploy-agent | — | CI config, quality gates | CONDITIONAL, once at end |
 
 **Key behaviors:**
 
 - Within each Bolt, questions for stages 3.1–3.4 are collected in a single interactive pass across the Bolt's Units before any artifacts generate. A single Bolt-level answers gate confirms all answers before design artifacts begin.
 - The per-Unit approval gate inside `stages/construction/code-generation.md` is **suppressed by the conductor** during normal Bolt execution. A single Bolt-level (or batch-level) gate replaces it.
-- The ladder prompt fires exactly once per workflow — after the walking-skeleton gate. Your answer is recorded as `Construction Autonomy Mode` in `aidlc-state.md` and honoured on session resume.
+- The ladder prompt fires exactly once per workflow — after the walking-skeleton gate. Your answer is recorded as `Construction Autonomy Mode` in `amadeus-state.md` and honoured on session resume.
 - Parallel batches require multiple `Task`-capable subagent slots to be available — see [Agents](06-agents.md) for concurrency constraints.
 
 ---
@@ -337,13 +337,13 @@ Failures always stop Construction, even in autonomous mode. That's the one place
 
 ```mermaid
 flowchart TD
-    S41["4.1 Deployment Pipeline\n(aidlc-pipeline-deploy-agent)"]
-    S42["4.2 Environment Provisioning\n(aidlc-aws-platform-agent)"]
-    S43["4.3 Deployment Execution\n(aidlc-pipeline-deploy-agent)"]
-    S44["4.4 Observability Setup\n(aidlc-operations-agent)"]
-    S45["4.5 Incident Response\n(aidlc-operations-agent)"]
-    S46["4.6 Performance Validation\n(aidlc-quality-agent)"]
-    S47["4.7 Feedback & Optimization\n(aidlc-operations-agent)"]
+    S41["4.1 Deployment Pipeline\n(amadeus-pipeline-deploy-agent)"]
+    S42["4.2 Environment Provisioning\n(amadeus-aws-platform-agent)"]
+    S43["4.3 Deployment Execution\n(amadeus-pipeline-deploy-agent)"]
+    S44["4.4 Observability Setup\n(amadeus-operations-agent)"]
+    S45["4.5 Incident Response\n(amadeus-operations-agent)"]
+    S46["4.6 Performance Validation\n(amadeus-quality-agent)"]
+    S47["4.7 Feedback & Optimization\n(amadeus-operations-agent)"]
 
     S41 -.->|CONDITIONAL| S42
     S42 -.->|CONDITIONAL| S43
@@ -370,13 +370,13 @@ flowchart TD
 
 | # | Stage | Lead | Supporting | Key Artifacts | Condition |
 |---|-------|------|-----------|---------------|-----------|
-| 4.1 | Deployment Pipeline | aidlc-pipeline-deploy-agent | — | CD config, deployment strategy, rollback runbook | CONDITIONAL |
-| 4.2 | Environment Provisioning | aidlc-aws-platform-agent | aidlc-devsecops-agent, aidlc-compliance-agent | Environment inventory, validation report | CONDITIONAL |
-| 4.3 | Deployment Execution | aidlc-pipeline-deploy-agent | aidlc-developer-agent | Deployment log, smoke tests, health checks | CONDITIONAL |
-| 4.4 | Observability Setup | aidlc-operations-agent | — | Dashboards, alarms, SLO config | CONDITIONAL |
-| 4.5 | Incident Response | aidlc-operations-agent | — | SSM runbooks, incident plan, escalation matrix | CONDITIONAL |
-| 4.6 | Performance Validation | aidlc-quality-agent | — | Load test results, NFR validation matrix | CONDITIONAL |
-| 4.7 | Feedback & Optimization | aidlc-operations-agent | aidlc-aws-platform-agent | SLO report, cost analysis, feedback loop doc | CONDITIONAL |
+| 4.1 | Deployment Pipeline | amadeus-pipeline-deploy-agent | — | CD config, deployment strategy, rollback runbook | CONDITIONAL |
+| 4.2 | Environment Provisioning | amadeus-aws-platform-agent | amadeus-devsecops-agent, amadeus-compliance-agent | Environment inventory, validation report | CONDITIONAL |
+| 4.3 | Deployment Execution | amadeus-pipeline-deploy-agent | amadeus-developer-agent | Deployment log, smoke tests, health checks | CONDITIONAL |
+| 4.4 | Observability Setup | amadeus-operations-agent | — | Dashboards, alarms, SLO config | CONDITIONAL |
+| 4.5 | Incident Response | amadeus-operations-agent | — | SSM runbooks, incident plan, escalation matrix | CONDITIONAL |
+| 4.6 | Performance Validation | amadeus-quality-agent | — | Load test results, NFR validation matrix | CONDITIONAL |
+| 4.7 | Feedback & Optimization | amadeus-operations-agent | amadeus-aws-platform-agent | SLO report, cost analysis, feedback loop doc | CONDITIONAL |
 
 **Key behaviors:**
 - All 7 stages are **conditional** — the entire phase may be skipped for `mvp`, `poc`, `bugfix`, and `refactor` scopes
@@ -402,7 +402,7 @@ If verification fails, the conductor reports the issues and asks whether to proc
 
 | Mode | Stages | User Interaction | Description |
 |------|--------|-----------------|-------------|
-| Inline (auto-proceed) | 0.1, 0.2, 0.3 | None | Run deterministically inside `aidlc-utility init`, no approval gate |
+| Inline (auto-proceed) | 0.1, 0.2, 0.3 | None | Run deterministically inside `amadeus-utility init`, no approval gate |
 | Inline | All other stages | Full | Agent works in conversation, approval gate at end |
 | Subagent (simple) | 3.5 | Approval gate only | Code generation runs in background |
 | Subagent (two-step) | 2.1 | Approval gate only | Developer scan + architect synthesis |

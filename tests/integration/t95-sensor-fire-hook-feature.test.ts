@@ -1,18 +1,18 @@
-// covers: hook:aidlc-sensor-fire
+// covers: hook:amadeus-sensor-fire
 //
 // t95 — behavioural contract for the PostToolUse sensor-fire hook end-to-end.
 // Migrated from tests/integration/t95-sensor-fire-hook-feature.sh (TAP plan 19).
 // The .sh carried NO `# covers:` header; its subject is the shipped hook
-// dist/claude/.claude/hooks/aidlc-sensor-fire.ts, whose registry unit is
-// `hook:aidlc-sensor-fire` (the same id t131 credits).
+// dist/claude/.claude/hooks/amadeus-sensor-fire.ts, whose registry unit is
+// `hook:amadeus-sensor-fire` (the same id t131 credits).
 //
 // Mechanism: cli. A hook has no in-process arg surface — Claude Code drives it
 // by piping PostToolUse JSON on stdin with CLAUDE_PROJECT_DIR set, exactly as
 // settings.json wires it. The hook's whole contract is process-boundary
-// side-effects: it spawns `bun <proj>/.claude/tools/aidlc-sensor.ts fire <id>
+// side-effects: it spawns `bun <proj>/.claude/tools/amadeus-sensor.ts fire <id>
 // --stage <slug> --output-path <path>` per matching sensor (hook :195-222),
 // records hook-level drops via recordHookDrop to
-// aidlc-docs/.aidlc-hooks-health/sensor-fire.drops (hook :238-257, lib.ts:1554),
+// amadeus-docs/.amadeus-hooks-health/sensor-fire.drops (hook :238-257, lib.ts:1554),
 // and touches the heartbeat sensor-fire.last (hook :134-139). (The
 // sensor-fire.skipped accounting under the old test-run mode was removed per
 // #369.) None of that is
@@ -20,7 +20,7 @@
 // (spawnSync, input: JSON) and asserts on the bytes / mtimes / exit code the
 // subprocess leaves behind. spawnCount = all.
 //
-// SOURCE UNDER TEST (dist/claude/.claude/hooks/aidlc-sensor-fire.ts):
+// SOURCE UNDER TEST (dist/claude/.claude/hooks/amadeus-sensor-fire.ts):
 //   :43-44 SUBPROCESS_TIMEOUT_MS = Number(env.AIDLC_SENSOR_TIMEOUT_MS) || 90_000
 //          — the env-var seam the timeout case overrides (no source patch).
 //   (The old test-run-mode skip that appended to sensor-fire.skipped was removed
@@ -33,12 +33,12 @@
 //   :235-257 timeout (SIGTERM/ETIMEDOUT) -> recordHookDrop "...subprocess killed
 //          by SIGTERM (timeout)"; non-zero exit -> recordHookDrop "...dispatcher
 //          exit <n>...". Always exit 0 (G5 advisory, :269).
-//   loadGraph() honours AIDLC_STAGE_GRAPH (aidlc-graph.ts:160-162) — the seam
+//   loadGraph() honours AIDLC_STAGE_GRAPH (amadeus-graph.ts:160-162) — the seam
 //   the synthetic-graph cases inject through.
 //
 // FIXTURE DISCIPLINE (mirrors make_project / make_project_active, t95:90-110):
-// a fresh temp project with aidlc-docs/, .claude/tools/, .claude/hooks/, and a
-// per-test MOCK aidlc-sensor.ts at <proj>/.claude/tools/aidlc-sensor.ts (the
+// a fresh temp project with amadeus-docs/, .claude/tools/, .claude/hooks/, and a
+// per-test MOCK amadeus-sensor.ts at <proj>/.claude/tools/amadeus-sensor.ts (the
 // exact path the hook joins at :195) that records its argv to T95_SPAWN_LOG and
 // exits per T95_STUB_MODE (pass | fail-exit-1 | slow). Synthetic stage-graph
 // fixtures are written to temp files and injected via AIDLC_STAGE_GRAPH. All
@@ -91,14 +91,14 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const HOOK = join(AIDLC_SRC, "hooks", "aidlc-sensor-fire.ts");
+const HOOK = join(AIDLC_SRC, "hooks", "amadeus-sensor-fire.ts");
 
 // P9 per-intent layout: the sensor-fire hook's active-workflow gate resolves
 // state via stateFilePath() and the audit trail via auditFilePath() — under the
 // active intent's record. The FRAMEWORK sensor `matches` glob was widened to
-// `**/{aidlc-docs,intents}/**` (the per-intent record arm + the legacy aidlc-docs
+// `**/{amadeus-docs,intents}/**` (the per-intent record arm + the legacy amadeus-docs
 // arm for a pre-migration project), so a trigger fires from EITHER a legacy
-// aidlc-docs/ path OR a per-intent intents/<record>/ path (see C1a vs C1a-intents).
+// amadeus-docs/ path OR a per-intent intents/<record>/ path (see C1a vs C1a-intents).
 const PINNED_CLONE_ID = "testcloneid95";
 function pinnedShardName(): string {
   const host =
@@ -117,7 +117,7 @@ afterAll(() => {
 });
 
 // The mock dispatcher (t95:60-88): records argv to T95_SPAWN_LOG and exits per
-// T95_STUB_MODE. Written to <proj>/.claude/tools/aidlc-sensor.ts — the path the
+// T95_STUB_MODE. Written to <proj>/.claude/tools/amadeus-sensor.ts — the path the
 // hook joins at :195 — so the real hook spawns OUR stub.
 const MOCK_DISPATCHER = `// @ts-nocheck
 // t95 mock dispatcher: record argv and exit per T95_STUB_MODE.
@@ -151,11 +151,11 @@ function makeProject(): string {
   mkdirSync(join(proj, ".claude", "tools"), { recursive: true });
   mkdirSync(join(proj, ".claude", "hooks"), { recursive: true });
   writeFileSync(
-    join(proj, ".claude", "tools", "aidlc-sensor.ts"),
+    join(proj, ".claude", "tools", "amadeus-sensor.ts"),
     MOCK_DISPATCHER,
     "utf-8",
   );
-  writeFileSync(join(proj, "aidlc", ".aidlc-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(proj, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
   return proj;
 }
 
@@ -189,7 +189,7 @@ function synthGraph(proj: string, slug: string, applicable: SynthSensor[]): stri
     name: "Synthetic Stage",
     phase: "construction",
     execution: "ALWAYS",
-    lead_agent: "aidlc-developer-agent",
+    lead_agent: "amadeus-developer-agent",
     support_agents: [],
     mode: "inline",
     produces: [],
@@ -261,7 +261,7 @@ function spawnArgvs(proj: string): string[][] {
 }
 
 function dropsPath(proj: string): string {
-  return join(seededRecordDir(proj), ".aidlc-hooks-health", "sensor-fire.drops");
+  return join(seededRecordDir(proj), ".amadeus-hooks-health", "sensor-fire.drops");
 }
 
 describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — spawnSync)", () => {
@@ -269,20 +269,20 @@ describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — 
     const proj = makeProjectActive("requirements-analysis");
     const r = runHook(
       proj,
-      join(proj, "aidlc-docs", "inception", "requirements-analysis", "intent.md"),
+      join(proj, "amadeus-docs", "inception", "requirements-analysis", "intent.md"),
     );
     expect(r.status).toBe(0);
     // requirements-analysis ships required-sections + upstream-coverage, both
-    // with matches: **/{aidlc-docs,intents}/** — two should fire.
+    // with matches: **/{amadeus-docs,intents}/** — two should fire.
     expect(spawnArgvs(proj).length).toBe(2);
   }, 30000);
 
-  test("C1a-intents: a write under the per-intent record dir fires the 2 markdown sensors (the {aidlc-docs,intents} glob's intents arm) [P9 layout]", () => {
-    // GUARDS the sensor-glob fix: the framework glob is **/{aidlc-docs,intents}/**.
-    // C1a drives the legacy aidlc-docs/ arm; on the per-intent layout the real
+  test("C1a-intents: a write under the per-intent record dir fires the 2 markdown sensors (the {amadeus-docs,intents} glob's intents arm) [P9 layout]", () => {
+    // GUARDS the sensor-glob fix: the framework glob is **/{amadeus-docs,intents}/**.
+    // C1a drives the legacy amadeus-docs/ arm; on the per-intent layout the real
     // write path is under aidlc/spaces/<space>/intents/<record>/, which matches
     // ONLY via the new `intents` arm. Without this case a regression of that arm
-    // (e.g. reverting to **/aidlc-docs/**) leaves C1a green while the sensors go
+    // (e.g. reverting to **/amadeus-docs/**) leaves C1a green while the sensors go
     // silent on every real workflow — the exact dead-glob bug P9 fixed.
     const proj = makeProjectActive("requirements-analysis");
     const r = runHook(
@@ -297,7 +297,7 @@ describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — 
     const proj = makeProjectActive("requirements-analysis");
     runHook(
       proj,
-      join(proj, "aidlc-docs", "inception", "requirements-analysis", "intent.md"),
+      join(proj, "amadeus-docs", "inception", "requirements-analysis", "intent.md"),
     );
     const argv = spawnArgvs(proj)[0];
     // STRONGER than the .sh's substring grep: "fire" is the argv element right
@@ -309,7 +309,7 @@ describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — 
     const proj = makeProjectActive("requirements-analysis");
     runHook(
       proj,
-      join(proj, "aidlc-docs", "inception", "requirements-analysis", "intent.md"),
+      join(proj, "amadeus-docs", "inception", "requirements-analysis", "intent.md"),
     );
     const argv = spawnArgvs(proj)[0];
     // STRONGER: the flag and its value are adjacent (ordered pair), not merely
@@ -323,7 +323,7 @@ describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — 
     const proj = makeProjectActive("requirements-analysis");
     const fp = join(
       proj,
-      "aidlc-docs",
+      "amadeus-docs",
       "inception",
       "requirements-analysis",
       "intent.md",
@@ -340,20 +340,20 @@ describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — 
   test("C2a: stage with 2 matching sensors_applicable -> 2 spawns [.sh test 5]", () => {
     const proj = makeProjectActive("synthetic-multi");
     const graph = synthGraph(proj, "synthetic-multi", [
-      { id: "sensor-a", path: ".claude/sensors/aidlc-a.md", matches: "**/aidlc-docs/**" },
-      { id: "sensor-b", path: ".claude/sensors/aidlc-b.md", matches: "**/aidlc-docs/**" },
+      { id: "sensor-a", path: ".claude/sensors/amadeus-a.md", matches: "**/amadeus-docs/**" },
+      { id: "sensor-b", path: ".claude/sensors/amadeus-b.md", matches: "**/amadeus-docs/**" },
     ]);
-    runHook(proj, join(proj, "aidlc-docs", "foo.md"), { graph });
+    runHook(proj, join(proj, "amadeus-docs", "foo.md"), { graph });
     expect(spawnArgvs(proj).length).toBe(2);
   }, 30000);
 
   test("C2b: spawns preserve sensors_applicable order (sensor-a before sensor-b) [.sh test 6]", () => {
     const proj = makeProjectActive("synthetic-multi");
     const graph = synthGraph(proj, "synthetic-multi", [
-      { id: "sensor-a", path: ".claude/sensors/aidlc-a.md", matches: "**/aidlc-docs/**" },
-      { id: "sensor-b", path: ".claude/sensors/aidlc-b.md", matches: "**/aidlc-docs/**" },
+      { id: "sensor-a", path: ".claude/sensors/amadeus-a.md", matches: "**/amadeus-docs/**" },
+      { id: "sensor-b", path: ".claude/sensors/amadeus-b.md", matches: "**/amadeus-docs/**" },
     ]);
-    runHook(proj, join(proj, "aidlc-docs", "foo.md"), { graph });
+    runHook(proj, join(proj, "amadeus-docs", "foo.md"), { graph });
     const argvs = spawnArgvs(proj);
     // argv[3] is the sensor id (after bun, sensor.ts, "fire").
     expect(argvs[0][3]).toBe("sensor-a");
@@ -363,10 +363,10 @@ describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — 
 
 describe("t95 sensor-fire hook — multi-glob filtering at the stage level (mechanism cli — spawnSync)", () => {
   const CODE_STAGE: SynthSensor[] = [
-    { id: "linter", path: ".claude/sensors/aidlc-linter.md", matches: "**/*.{ts,js}" },
-    { id: "type-check", path: ".claude/sensors/aidlc-type-check.md", matches: "**/*.{ts,tsx}" },
-    { id: "required-sections", path: ".claude/sensors/aidlc-required-sections.md", matches: "**/aidlc-docs/**" },
-    { id: "upstream-coverage", path: ".claude/sensors/aidlc-upstream-coverage.md", matches: "**/aidlc-docs/**" },
+    { id: "linter", path: ".claude/sensors/amadeus-linter.md", matches: "**/*.{ts,js}" },
+    { id: "type-check", path: ".claude/sensors/amadeus-type-check.md", matches: "**/*.{ts,tsx}" },
+    { id: "required-sections", path: ".claude/sensors/amadeus-required-sections.md", matches: "**/amadeus-docs/**" },
+    { id: "upstream-coverage", path: ".claude/sensors/amadeus-upstream-coverage.md", matches: "**/amadeus-docs/**" },
   ];
 
   test("C3a: TS write at a code stage -> only linter + type-check fire (markdown filtered) [.sh test 7]", () => {
@@ -390,7 +390,7 @@ describe("t95 sensor-fire hook — multi-glob filtering at the stage level (mech
   test("C3c: markdown write at the same stage -> only the 2 markdown sensors fire (code filtered) [.sh test 9]", () => {
     const proj = makeProjectActive("code-generation-syn");
     const graph = synthGraph(proj, "code-generation-syn", CODE_STAGE);
-    runHook(proj, join(proj, "aidlc-docs", "foo.md"), { graph });
+    runHook(proj, join(proj, "amadeus-docs", "foo.md"), { graph });
     const ids = spawnArgvs(proj).map((a) => a[3]);
     expect(spawnArgvs(proj).length).toBe(2);
     // STRONGER than the .sh count-only check: assert WHICH two fired.
@@ -403,20 +403,20 @@ describe("t95 sensor-fire hook — multi-glob filtering at the stage level (mech
   test("C4a: mixed-glob stage on a .md write -> only the md sensor fires [.sh test 10]", () => {
     const proj = makeProjectActive("glob-mixed");
     const graph = synthGraph(proj, "glob-mixed", [
-      { id: "sensor-md-only", path: ".claude/sensors/aidlc-md.md", matches: "**/aidlc-docs/**" },
-      { id: "sensor-ts-only", path: ".claude/sensors/aidlc-ts.md", matches: "**/*.{ts}" },
+      { id: "sensor-md-only", path: ".claude/sensors/amadeus-md.md", matches: "**/amadeus-docs/**" },
+      { id: "sensor-ts-only", path: ".claude/sensors/amadeus-ts.md", matches: "**/*.{ts}" },
     ]);
-    runHook(proj, join(proj, "aidlc-docs", "x.md"), { graph });
+    runHook(proj, join(proj, "amadeus-docs", "x.md"), { graph });
     expect(spawnArgvs(proj).length).toBe(1);
   }, 30000);
 
   test("C4b: the single spawned id is sensor-md-only (not sensor-ts-only) [.sh test 11]", () => {
     const proj = makeProjectActive("glob-mixed");
     const graph = synthGraph(proj, "glob-mixed", [
-      { id: "sensor-md-only", path: ".claude/sensors/aidlc-md.md", matches: "**/aidlc-docs/**" },
-      { id: "sensor-ts-only", path: ".claude/sensors/aidlc-ts.md", matches: "**/*.{ts}" },
+      { id: "sensor-md-only", path: ".claude/sensors/amadeus-md.md", matches: "**/amadeus-docs/**" },
+      { id: "sensor-ts-only", path: ".claude/sensors/amadeus-ts.md", matches: "**/*.{ts}" },
     ]);
-    runHook(proj, join(proj, "aidlc-docs", "x.md"), { graph });
+    runHook(proj, join(proj, "amadeus-docs", "x.md"), { graph });
     expect(spawnArgvs(proj)[0][3]).toBe("sensor-md-only");
   }, 30000);
 });
@@ -428,7 +428,7 @@ describe("t95 sensor-fire hook — error recovery is advisory (always exit 0) (m
     // 5000ms (T95_STUB_MODE=slow) so the spawn is SIGTERM'd.
     const r = runHook(
       proj,
-      join(proj, "aidlc-docs", "inception", "requirements-analysis", "intent.md"),
+      join(proj, "amadeus-docs", "inception", "requirements-analysis", "intent.md"),
       { mode: "slow", timeoutMs: "2000" },
     );
     expect(r.status).toBe(0);
@@ -438,7 +438,7 @@ describe("t95 sensor-fire hook — error recovery is advisory (always exit 0) (m
     const proj = makeProjectActive("requirements-analysis");
     runHook(
       proj,
-      join(proj, "aidlc-docs", "inception", "requirements-analysis", "intent.md"),
+      join(proj, "amadeus-docs", "inception", "requirements-analysis", "intent.md"),
       { mode: "slow", timeoutMs: "2000" },
     );
     // The failure event must ACTUALLY FIRE (§6-E): the drops file exists and
@@ -452,7 +452,7 @@ describe("t95 sensor-fire hook — error recovery is advisory (always exit 0) (m
     const proj = makeProjectActive("requirements-analysis");
     const r = runHook(
       proj,
-      join(proj, "aidlc-docs", "inception", "requirements-analysis", "intent.md"),
+      join(proj, "amadeus-docs", "inception", "requirements-analysis", "intent.md"),
       { mode: "fail-exit-1" },
     );
     expect(r.status).toBe(0);
@@ -462,7 +462,7 @@ describe("t95 sensor-fire hook — error recovery is advisory (always exit 0) (m
     const proj = makeProjectActive("requirements-analysis");
     runHook(
       proj,
-      join(proj, "aidlc-docs", "inception", "requirements-analysis", "intent.md"),
+      join(proj, "amadeus-docs", "inception", "requirements-analysis", "intent.md"),
       { mode: "fail-exit-1" },
     );
     // The failure event must ACTUALLY FIRE (§6-E): the drop names the non-zero
@@ -481,7 +481,7 @@ describe("t95 sensor-fire hook — error recovery is advisory (always exit 0) (m
       tool_input: {
         file_path: join(
           proj,
-          "aidlc-docs",
+          "amadeus-docs",
           "inception",
           "requirements-analysis",
           "intent.md",
@@ -510,13 +510,13 @@ describe("t95 sensor-fire hook — heartbeat & skipped-file accounting (mechanis
     const proj = makeProjectActive("requirements-analysis");
     const fp = join(
       proj,
-      "aidlc-docs",
+      "amadeus-docs",
       "inception",
       "requirements-analysis",
       "intent.md",
     );
     runHook(proj, fp);
-    const hb = join(seededRecordDir(proj), ".aidlc-hooks-health", "sensor-fire.last");
+    const hb = join(seededRecordDir(proj), ".amadeus-hooks-health", "sensor-fire.last");
     expect(existsSync(hb)).toBe(true);
     const m1 = statSync(hb).mtimeMs;
     Bun.sleepSync(1100); // isoTimestamp() has second granularity; advance > 1s.

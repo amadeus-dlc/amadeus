@@ -27,13 +27,13 @@
 // SOURCE-PINNED FACTS (verify-never-guess):
 //   - scope grid: dist/claude/.claude/tools/data/scope-grid.json (read at test
 //     time; "security-patch".stages maps each of the 32 stages to EXECUTE|SKIP).
-//   - STAGE_STARTED is emitted for EXECUTE stages ONLY (aidlc-utility.ts init
-//     stages + aidlc-state.ts advance); a SKIP stage gets a `[ ] <slug> — SKIP`
+//   - STAGE_STARTED is emitted for EXECUTE stages ONLY (amadeus-utility.ts init
+//     stages + amadeus-state.ts advance); a SKIP stage gets a `[ ] <slug> — SKIP`
 //     state row and NO STAGE_STARTED block (audit-format.md:33; the t53 thesis,
 //     here generalised across the derived SKIP set).
 //   - the audit STAGE_STARTED `**Stage**:` field names the slug (audit-format.md:33).
 //   - greenfield downgrades reverse-engineering EXECUTE->SKIP at runtime
-//     (aidlc-utility.ts) — a stage that is EXECUTE in the mapping but SKIP at
+//     (amadeus-utility.ts) — a stage that is EXECUTE in the mapping but SKIP at
 //     runtime on greenfield. We run on a greenfield project and EXCLUDE
 //     reverse-engineering from the positive "EXECUTE stages did start" control so
 //     the runtime downgrade can't red the test; it's irrelevant to the SKIP
@@ -128,12 +128,12 @@ describe("t138 scope-exclusion counts (metamorphic invariant, sdk)", () => {
 
       const proj = setupIntegrationProject({ noAidlcDocs: true });
       try {
-        // `/aidlc <scope>` on a no-state project is a pinned no-state error
+        // `/amadeus <scope>` on a no-state project is a pinned no-state error
         // (t118), so this journey first performs the explicit human move for a
         // new scoped workflow. The invariant remains the full-workflow audit
         // check below; we just avoid measuring the model's recovery strategy.
         const init = await driveAidlc(
-          `/aidlc --init --scope ${SCOPE}`,
+          `/amadeus --init --scope ${SCOPE}`,
           {
             projectDir: proj,
             timeoutMs: Math.min(120_000, DRIVE_TIMEOUT_MS),
@@ -146,7 +146,7 @@ describe("t138 scope-exclusion counts (metamorphic invariant, sdk)", () => {
         assertToolResultContains(init, "Bash", "State initialized:");
         expect(init.stateFile).toContain(`- **Scope**: ${SCOPE}`);
 
-        const r = await driveAidlc(`/aidlc ${SCOPE}`, {
+        const r = await driveAidlc(`/amadeus ${SCOPE}`, {
           projectDir: proj,
           timeoutMs: DRIVE_TIMEOUT_MS,
         });
@@ -169,7 +169,7 @@ describe("t138 scope-exclusion counts (metamorphic invariant, sdk)", () => {
         // POSITIVE CONTROL: the init EXECUTE stages DID start (the surface is
         // real, not silently empty). reverse-engineering is excluded — it is
         // EXECUTE in the mapping but downgraded to SKIP at runtime on greenfield
-        // (aidlc-utility.ts), so asserting it started would be wrong on this
+        // (amadeus-utility.ts), so asserting it started would be wrong on this
         // greenfield project. The 3 init stages always EXECUTE for every scope.
         const initExecute = execute.filter((s) =>
           ["workspace-scaffold", "workspace-detection", "state-init"].includes(s),

@@ -1,19 +1,19 @@
-// covers: cli:aidlc-runner-gen(check,write)
+// covers: cli:amadeus-runner-gen(check,write)
 //
 // Drift-guard port of tests/unit/t129-stage-runner-drift.sh (TAP plan 7),
 // mechanism = cli. The .sh carried NO `# covers:` header (its subject is the
-// GENERATED stage-runner skills, and aidlc-runner-gen.ts enumerates NO registry
+// GENERATED stage-runner skills, and amadeus-runner-gen.ts enumerates NO registry
 // unit of its own — confirmed: gen-coverage-registry.ts's TOOL_DESCRIPTORS does
-// not list aidlc-runner-gen, and tests/.coverage-registry.json has zero
-// aidlc-runner-gen rows). So, exactly like the sibling t130-scope-runners twin
+// not list amadeus-runner-gen, and tests/.coverage-registry.json has zero
+// amadeus-runner-gen rows). So, exactly like the sibling t130-scope-runners twin
 // did for the SCOPE-runner half of the same tool, this twin credits the runner
 // surface it genuinely drives — the `check` (drift guard) and `write`
-// (regenerate) subcommands of aidlc-runner-gen.ts — rather than inventing a join
+// (regenerate) subcommands of amadeus-runner-gen.ts — rather than inventing a join
 // target. The registry harmlessly ignores the id (no enumerated unit); the
 // coverage it preserves is the .sh's exact behavioural guarantee, below.
 //
 // WHAT THE .sh PROVED (t129-stage-runner-drift.sh:1-19 prose + the 7 asserts):
-//   The set of `skills/aidlc-<stage>/` runner dirs is EXACTLY the RUNNABLE
+//   The set of `skills/amadeus-<stage>/` runner dirs is EXACTLY the RUNNABLE
 //   compiled stage-slug set (the 29 non-initialization stages) — no stage missing
 //   its runner, no orphan runner for a stage the graph dropped. The 29 runners are
 //   GENERATED from the compiled graph, so without this guard a stage added to the
@@ -25,7 +25,7 @@
 //         INDEPENDENT pure cross-check (derive both sets without trusting the tool);
 //     (2) the count is exactly 29 (32 compiled stages minus the 3 bootstrap init
 //         stages, which ship no per-stage runner — the init phase is the single
-//         /aidlc-init wrapper);
+//         /amadeus-init wrapper);
 //     (3) the generator's own `check` exits 0 on the shipped (in-sync) tree;
 //     (4) the guard CATCHES a missing runner: delete one runner dir -> `check`
 //         exits 1 AND names it ("MISSING …");
@@ -40,12 +40,12 @@
 // case). Both negatives drive the real exit-1 path below.
 //
 // MECHANISM = cli (body-derived, milestone 3): the SPAWNED shipped tool is load-bearing.
-//   - aidlc-runner-gen.ts resolves SKILLS_DIR off its OWN module location
+//   - amadeus-runner-gen.ts resolves SKILLS_DIR off its OWN module location
 //     (TOOLS_DIR/../skills, :66-67), so an in-process handleWrite()/handleCheck()
 //     would MUTATE the SHIPPED tree. That is exactly why the .sh runs write/check
 //     against a SANDBOX copy of .claude/ (setup_integration_project). The
 //     missing/orphan/regen cases REQUIRE a sandboxed copy with its OWN
-//     aidlc-runner-gen.ts, driven via a subprocess.
+//     amadeus-runner-gen.ts, driven via a subprocess.
 //   - The drift verdict IS a process.exit contract: handleCheck() console.logs the
 //     MISSING/ORPHAN diff then process.exit(1) (:287-294); it returns (exit 0) on
 //     sync (:281-285). The exit code is only observable on the spawned binary —
@@ -53,13 +53,13 @@
 //   The two independent cross-checks (tests 1 + 2) read stage-graph.json off disk
 //   in-process — they do NOT spawn and do NOT touch the shipped tree (the .sh did
 //   the identical pure-bash cross-check), so the suite still proves set-equality
-//   WITHOUT trusting aidlc-runner-gen.ts.
+//   WITHOUT trusting amadeus-runner-gen.ts.
 //
-// SOURCE UNDER TEST (dist/claude/.claude/tools/aidlc-runner-gen.ts):
+// SOURCE UNDER TEST (dist/claude/.claude/tools/amadeus-runner-gen.ts):
 //   :88  isRunnableStage(node) — node.phase !== "initialization" (the 29 runnable
 //        stages; init stages are bootstrap and ship no per-stage runner).
-//   :214 handleWrite() — (re)generate one skills/aidlc-<slug>/SKILL.md per runnable
-//        stage + the single /aidlc-init wrapper; PRUNE stale init-stage runners.
+//   :214 handleWrite() — (re)generate one skills/amadeus-<slug>/SKILL.md per runnable
+//        stage + the single /amadeus-init wrapper; PRUNE stale init-stage runners.
 //   :244 isRunnerSkill(path) — on-disk runner SIGNATURE: SKILL.md body carries the
 //        `--stage` + `--single` markers (so an orphan is detectable by body, not by
 //        compiled-set membership — non-runner skills + scope-runners are never
@@ -105,13 +105,13 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const GEN = join(AIDLC_SRC, "tools", "aidlc-runner-gen.ts");
+const GEN = join(AIDLC_SRC, "tools", "amadeus-runner-gen.ts");
 const SKILLS_DIR = join(AIDLC_SRC, "skills");
 const STAGE_GRAPH = join(AIDLC_SRC, "tools", "data", "stage-graph.json");
 
 // ---------------------------------------------------------------------------
 // Independent cross-check helpers — derive BOTH sets WITHOUT trusting
-// aidlc-runner-gen.ts (mirrors the .sh's pure-bash cross-check at :44-58). The
+// amadeus-runner-gen.ts (mirrors the .sh's pure-bash cross-check at :44-58). The
 // `check` subcommand under test re-derives them through the tool; these read the
 // raw stage-graph.json and the on-disk skills dir directly so set-equality is
 // proven independent of the very tool the negative cases drive.
@@ -133,13 +133,13 @@ function compiledRunnableSlugs(): string[] {
 }
 
 /** The on-disk runner slugs whose slug is a RUNNABLE compiled slug, sorted — the
- *  .sh's ON_DISK set: every skills/aidlc-<slug>/ dir with a SKILL.md whose slug is
+ *  .sh's ON_DISK set: every skills/amadeus-<slug>/ dir with a SKILL.md whose slug is
  *  a compiled runnable stage. Independent of isRunnerSkill (the .sh kept any
- *  aidlc-<slug>/ dir present in COMPILED), so this is a pure second source. */
+ *  amadeus-<slug>/ dir present in COMPILED), so this is a pure second source. */
 function onDiskRunnableSlugs(compiledSet: Set<string>): string[] {
   const found: string[] = [];
   for (const slug of compiledSet) {
-    if (existsSync(join(SKILLS_DIR, `aidlc-${slug}`, "SKILL.md"))) {
+    if (existsSync(join(SKILLS_DIR, `amadeus-${slug}`, "SKILL.md"))) {
       found.push(slug);
     }
   }
@@ -150,7 +150,7 @@ function onDiskRunnableSlugs(compiledSet: Set<string>): string[] {
 // Sandbox driver — the negative + regen cases (tests 4/5/6) MUST NOT touch the
 // shipped tree (handleWrite/handleCheck are hard-pinned to SKILLS_DIR), so they
 // run against a setupIntegrationProject copy of .claude/, exactly as the .sh did
-// (PROJ=$(setup_integration_project --no-aidlc-docs); bun "$GEN_SANDBOX" …).
+// (PROJ=$(setup_integration_project --no-amadeus-docs); bun "$GEN_SANDBOX" …).
 // ---------------------------------------------------------------------------
 
 interface SandboxRun {
@@ -168,12 +168,12 @@ function newSandbox(): { proj: string; gen: string; skills: string } {
   sandboxes.push(proj);
   return {
     proj,
-    gen: join(proj, ".claude", "tools", "aidlc-runner-gen.ts"),
+    gen: join(proj, ".claude", "tools", "amadeus-runner-gen.ts"),
     skills: join(proj, ".claude", "skills"),
   };
 }
 
-/** Run a sandbox aidlc-runner-gen subcommand, capturing status + combined output. */
+/** Run a sandbox amadeus-runner-gen subcommand, capturing status + combined output. */
 function runGen(gen: string, args: string[]): SandboxRun {
   const r = spawnSync(BUN, [gen, ...args], { encoding: "utf-8" });
   return { status: r.status ?? -1, out: `${r.stdout ?? ""}${r.stderr ?? ""}` };
@@ -186,7 +186,7 @@ describe("t129 stage-runner drift guard (migrated from t129-stage-runner-drift.s
   // .sh's newline-joined string compare: assert the sorted element arrays are
   // deeply equal (every slug present on both sides, none extra).
   // ===========================================================================
-  test("shipped skills/aidlc-<stage>/ set == compiled runnable slug list [.sh test 1]", () => {
+  test("shipped skills/amadeus-<stage>/ set == compiled runnable slug list [.sh test 1]", () => {
     const compiled = compiledRunnableSlugs();
     const onDisk = onDiskRunnableSlugs(new Set(compiled));
     expect(onDisk).toEqual(compiled);
@@ -214,7 +214,7 @@ describe("t129 stage-runner drift guard (migrated from t129-stage-runner-drift.s
   // Spawn the SHIPPED tool (read-only; `check` never writes). STRONGER than the
   // .sh's exit-0-only assertion: also pin the in-sync headline + the 29 count.
   // ===========================================================================
-  test("aidlc-runner-gen check exits 0 on the shipped in-sync tree [.sh test 3]", () => {
+  test("amadeus-runner-gen check exits 0 on the shipped in-sync tree [.sh test 3]", () => {
     const r = runGen(GEN, ["check"]);
     expect(r.status).toBe(0);
     expect(r.out).toContain("in sync with the compiled stage graph");
@@ -230,8 +230,8 @@ describe("t129 stage-runner drift guard (migrated from t129-stage-runner-drift.s
     const { gen, skills } = newSandbox();
     const victim = "code-generation";
     // Precondition: the victim runner exists in the fresh sandbox.
-    expect(existsSync(join(skills, `aidlc-${victim}`, "SKILL.md"))).toBe(true);
-    rmSync(join(skills, `aidlc-${victim}`), { recursive: true, force: true });
+    expect(existsSync(join(skills, `amadeus-${victim}`, "SKILL.md"))).toBe(true);
+    rmSync(join(skills, `amadeus-${victim}`), { recursive: true, force: true });
 
     const r = runGen(gen, ["check"]);
     // The drift-guard FAILURE event actually fired: exit 1, MISSING diagnostic.
@@ -251,7 +251,7 @@ describe("t129 stage-runner drift guard (migrated from t129-stage-runner-drift.s
   test("check exits 1 and names an ORPHAN runner for a slug not in the graph [.sh test 6]", () => {
     const { gen, skills } = newSandbox();
     const orphanSlug = "not-a-real-stage";
-    const orphanDir = join(skills, `aidlc-${orphanSlug}`);
+    const orphanDir = join(skills, `amadeus-${orphanSlug}`);
     mkdirSync(orphanDir, { recursive: true });
     // Byte-for-byte the .sh's orphan heredoc: a realistic stage-runner left behind
     // after its stage was dropped — it carries the `--stage <slug> --single`
@@ -260,12 +260,12 @@ describe("t129 stage-runner drift guard (migrated from t129-stage-runner-drift.s
       join(orphanDir, "SKILL.md"),
       [
         "---",
-        `name: aidlc-${orphanSlug}`,
+        `name: amadeus-${orphanSlug}`,
         "description: orphan runner for a stage that does not exist in the graph",
         "---",
         "# orphan",
         "",
-        `Drives \`bun .claude/tools/aidlc-orchestrate.ts next --stage ${orphanSlug} --single\`.`,
+        `Drives \`bun .claude/tools/amadeus-orchestrate.ts next --stage ${orphanSlug} --single\`.`,
         "",
       ].join("\n"),
       "utf-8",
@@ -288,12 +288,12 @@ describe("t129 stage-runner drift guard (migrated from t129-stage-runner-drift.s
   test("write regenerates the runner set and check returns to exit 0 [.sh test 7]", () => {
     const { gen, skills } = newSandbox();
     // Drift it two ways: delete a real runner AND add an orphan runner.
-    rmSync(join(skills, "aidlc-functional-design"), { recursive: true, force: true });
-    const orphanDir = join(skills, "aidlc-stale-dropped-stage");
+    rmSync(join(skills, "amadeus-functional-design"), { recursive: true, force: true });
+    const orphanDir = join(skills, "amadeus-stale-dropped-stage");
     mkdirSync(orphanDir, { recursive: true });
     writeFileSync(
       join(orphanDir, "SKILL.md"),
-      "---\nname: aidlc-stale-dropped-stage\ndescription: stale\n---\n# stale\nDrives `--stage stale-dropped-stage --single`.\n",
+      "---\nname: amadeus-stale-dropped-stage\ndescription: stale\n---\n# stale\nDrives `--stage stale-dropped-stage --single`.\n",
       "utf-8",
     );
     // Sanity: drift is genuinely red before regeneration.
@@ -314,15 +314,15 @@ describe("t129 stage-runner drift guard (migrated from t129-stage-runner-drift.s
   }, 60000);
 
   // ===========================================================================
-  // Test 7 — the /aidlc-init wrapper routes a freeform description via the
+  // Test 7 — the /amadeus-init wrapper routes a freeform description via the
   // `--arguments` FLAG, not a bare $ARGUMENTS positional. intent-birth reads the
   // description from `--arguments` (handleIntentBirth, flags.arguments), so a
   // runner that forwarded $ARGUMENTS verbatim would silently DROP the description
   // (only a recognized flag like --scope would survive). Pin the shipped init
   // SKILL.md so a regression to the old verbatim-forward shape is caught.
   // ===========================================================================
-  test("the /aidlc-init runner routes a freeform description via --arguments, not bare $ARGUMENTS", () => {
-    const initSkill = readFileSync(join(SKILLS_DIR, "aidlc-init", "SKILL.md"), "utf-8");
+  test("the /amadeus-init runner routes a freeform description via --arguments, not bare $ARGUMENTS", () => {
+    const initSkill = readFileSync(join(SKILLS_DIR, "amadeus-init", "SKILL.md"), "utf-8");
     // It names the --arguments flag for the description text.
     expect(initSkill).toContain("--arguments");
     // And it no longer forwards $ARGUMENTS verbatim to intent-birth (the bug).

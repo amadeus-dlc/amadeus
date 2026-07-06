@@ -1,11 +1,11 @@
-// covers: file:skills/aidlc/SKILL.md, file:tools/aidlc-audit.ts, file:knowledge/aidlc-shared/audit-format.md, file:knowledge/aidlc-shared/state-template.md, file:aidlc-common/protocols/stage-protocol.md, file:aidlc-common/stages/construction/code-generation.md
+// covers: file:skills/amadeus/SKILL.md, file:tools/amadeus-audit.ts, file:knowledge/amadeus-shared/audit-format.md, file:knowledge/amadeus-shared/state-template.md, file:amadeus-common/protocols/stage-protocol.md, file:amadeus-common/stages/construction/code-generation.md
 //
 // In-process port of tests/integration/t47-construction-bolts.sh (TAP plan 12),
 // mechanism = none. The .sh is a Construction Bolt-by-Bolt vocabulary check: it
 // greps the SHIPPED implementation files for the durable anchors of the Bolt
 // vocabulary that survived the engine cutover — the retired "Construction Phase
 // N" sub-step labels (must be GONE from SKILL.md), the four Bolt audit events
-// registered in aidlc-audit.ts, the BOLT_STARTED row in audit-format.md, the
+// registered in amadeus-audit.ts, the BOLT_STARTED row in audit-format.md, the
 // Construction Autonomy Mode state field in state-template.md, the stage-protocol
 // Glossary entry tying a Bolt to stages 3.1-3.5 (with 3.6/3.7 once at the end),
 // and the orchestrator-managed gating note in code-generation.md.
@@ -22,7 +22,7 @@
 // touched a function, a CLI tool, argv, exit codes, or a process boundary.
 // gen-coverage-registry derives mechanism from the DRIVERS a test body calls
 // (milestone 3): this twin calls NO driver (no driveAidlc, no tui-drive.ts, no spawn of
-// an aidlc-*.ts tool or run-tests.sh), so its derived set is the deterministic
+// an amadeus-*.ts tool or run-tests.sh), so its derived set is the deterministic
 // `none` floor — matching the t34 / t14 / t43 / t44 content-structure family.
 // Every assertion is readFileSync + a string / regex check on the real bytes of
 // the shipped files, the same observable the .sh's grep asserted.
@@ -34,17 +34,17 @@
 // no temp project, no teardown — there is no mutable surface.
 //
 // Source under test (read fresh each run):
-//   dist/claude/.claude/skills/aidlc/SKILL.md                                (SKILL_MD)
-//   dist/claude/.claude/tools/aidlc-audit.ts                                 (AUDIT_TS)
+//   dist/claude/.claude/skills/amadeus/SKILL.md                                (SKILL_MD)
+//   dist/claude/.claude/tools/amadeus-audit.ts                                 (AUDIT_TS)
 //     :68-71 VALID_EVENT_TYPES registers BOLT_STARTED / BOLT_COMPLETED /
 //            BOLT_FAILED / AUTONOMY_MODE_SET
-//   dist/claude/.claude/knowledge/aidlc-shared/audit-format.md               (AUDIT_FORMAT)
+//   dist/claude/.claude/knowledge/amadeus-shared/audit-format.md               (AUDIT_FORMAT)
 //     :109 documents the BOLT_STARTED row
-//   dist/claude/.claude/knowledge/aidlc-shared/state-template.md             (STATE_TEMPLATE)
+//   dist/claude/.claude/knowledge/amadeus-shared/state-template.md             (STATE_TEMPLATE)
 //     :93 **Construction Autonomy Mode**: [unset/autonomous/gated]
-//   dist/claude/.claude/aidlc-common/protocols/stage-protocol.md             (STAGE_PROTOCOL)
+//   dist/claude/.claude/amadeus-common/protocols/stage-protocol.md             (STAGE_PROTOCOL)
 //     :716 Glossary **Bolt** row: stages 3.1-3.5; 3.6 & 3.7 run once after all Bolts
-//   dist/claude/.claude/aidlc-common/stages/construction/code-generation.md  (CODE_GEN)
+//   dist/claude/.claude/amadeus-common/stages/construction/code-generation.md  (CODE_GEN)
 //     :176 "orchestrator-managed gating" / "suppressed by the orchestrator" note
 //
 // Old TAP -> new test parity (1:1; the .sh's plan was 12):
@@ -52,7 +52,7 @@
 //                   one per N, each asserting SKILL.md does NOT contain the label
 //                   (the failure-event half of this guard: the label being
 //                    REINTRODUCED must make the test go red).
-//   .sh tests 5-8  (aidlc-audit.ts registers the 4 Bolt events)-> 4 tests, one
+//   .sh tests 5-8  (amadeus-audit.ts registers the 4 Bolt events)-> 4 tests, one
 //                   per event, each asserting the quoted event literal is present.
 //                   STRONGER: assert it lands in the VALID_EVENT_TYPES array, not
 //                   merely anywhere in the file.
@@ -72,25 +72,25 @@ const SKILL_MD = readFileSync(
   "utf-8",
 );
 const AUDIT_TS = readFileSync(
-  join(AIDLC_SRC, "tools", "aidlc-audit.ts"),
+  join(AIDLC_SRC, "tools", "amadeus-audit.ts"),
   "utf-8",
 );
 const AUDIT_FORMAT = readFileSync(
-  join(AIDLC_SRC, "knowledge", "aidlc-shared", "audit-format.md"),
+  join(AIDLC_SRC, "knowledge", "amadeus-shared", "audit-format.md"),
   "utf-8",
 );
 const STATE_TEMPLATE = readFileSync(
-  join(AIDLC_SRC, "knowledge", "aidlc-shared", "state-template.md"),
+  join(AIDLC_SRC, "knowledge", "amadeus-shared", "state-template.md"),
   "utf-8",
 );
 const STAGE_PROTOCOL = readFileSync(
-  join(AIDLC_SRC, "aidlc-common", "protocols", "stage-protocol.md"),
+  join(AIDLC_SRC, "amadeus-common", "protocols", "stage-protocol.md"),
   "utf-8",
 );
 const CODE_GEN = readFileSync(
   join(
     AIDLC_SRC,
-    "aidlc-common",
+    "amadeus-common",
     "stages",
     "construction",
     "code-generation.md",
@@ -113,7 +113,7 @@ describe("t47 Construction Bolt vocabulary (migrated from t47-construction-bolts
   }
 
   // =========================================================================
-  // Tests 5-8 — the four Bolt audit events are registered in aidlc-audit.ts.
+  // Tests 5-8 — the four Bolt audit events are registered in amadeus-audit.ts.
   // The .sh grepped for the quoted event literal `"<EVENT>"`. STRONGER here:
   // assert each event literal lands inside the VALID_EVENT_TYPES array (the
   // registry the validator gates on), not merely anywhere in the file.
@@ -133,7 +133,7 @@ describe("t47 Construction Bolt vocabulary (migrated from t47-construction-bolts
     "BOLT_FAILED",
     "AUTONOMY_MODE_SET",
   ] as const) {
-    test(`aidlc-audit.ts registers ${event} in VALID_EVENT_TYPES`, () => {
+    test(`amadeus-audit.ts registers ${event} in VALID_EVENT_TYPES`, () => {
       // .sh: grep -q "\"<EVENT>\"" — the quoted literal is present.
       expect(AUDIT_TS.includes(`"${event}"`)).toBe(true);
       // STRONGER: it is a member of the VALID_EVENT_TYPES array specifically.

@@ -1,21 +1,21 @@
-// covers: subcommand:aidlc-utility:doctor
+// covers: subcommand:amadeus-utility:doctor
 //
 // CLI-contract port of tests/unit/t84-doctor-stale-branch.sh (TAP plan 5),
 // mechanism = cli. Equal-or-stronger migration: every .sh assertion that
-// shelled out to `bun aidlc-utility.ts doctor --project-dir <p>` and grepped
+// shelled out to `bun amadeus-utility.ts doctor --project-dir <p>` and grepped
 // the stdout report is preserved by SPAWNING the real CLI via
 // node:child_process spawnSync (BUN + the tool .ts path), asserting on the
 // combined stdout+stderr the tool writes (2>&1 in the .sh) — the PROCESS
 // boundary. handleDoctor ends in process.exit(failed > 0 ? 1 : 0)
-// (aidlc-utility.ts:1385) and writes its report to process.stdout
-// (aidlc-utility.ts:1373), so an in-process twin would lose the exit-code
+// (amadeus-utility.ts:1385) and writes its report to process.stdout
+// (amadeus-utility.ts:1373), so an in-process twin would lose the exit-code
 // half AND the rendered-report half the .sh's `2>&1` grep relies on.
 //
-// CONTRACT under test — Check 2 "stale branches" (aidlc-utility.ts:672-731):
+// CONTRACT under test — Check 2 "stale branches" (amadeus-utility.ts:672-731):
 // walks `git branch --list 'bolt-*'`; flags any `bolt-<slug>` branch whose
 // worktree dir (`.aidlc/worktrees/bolt-<slug>`, lib.ts worktreePath:155-157)
 // is gone AND no terminal WORKTREE_MERGED / WORKTREE_DISCARDED audit row
-// landed for that slug (slugTerminated, aidlc-utility.ts:551-560, keyed on
+// landed for that slug (slugTerminated, amadeus-utility.ts:551-560, keyed on
 // `**Bolt slug**: <slug>` via findAllEvents). Three label shapes are pinned:
 //   - not a git repo : "Stale branches: 0 observed (not a git repo)" (:691)
 //   - clean / live   : "Stale branches: 0 (<N> bolt-* observed)"      (:715)
@@ -75,7 +75,7 @@ const UTIL = join(
   "claude",
   ".claude",
   "tools",
-  "aidlc-utility.ts",
+  "amadeus-utility.ts",
 );
 const STATE_FIXTURE = join(
   REPO_ROOT,
@@ -96,7 +96,7 @@ interface DoctorResult {
   out: string;
 }
 
-/** Spawn `bun aidlc-utility.ts doctor --project-dir <p>`. Mirrors `bun "$UTIL" doctor --project-dir "$PROJ" 2>&1`. */
+/** Spawn `bun amadeus-utility.ts doctor --project-dir <p>`. Mirrors `bun "$UTIL" doctor --project-dir "$PROJ" 2>&1`. */
 function doctor(p: string): DoctorResult {
   const res = spawnSync(BUN, [UTIL, "doctor", "--project-dir", p], {
     encoding: "utf-8",
@@ -171,12 +171,12 @@ function appendAudit(p: string, body: string): void {
   writeFileSync(f, `${readFileSync(f, "utf-8")}\n${body}\n\n---\n`, "utf-8");
 }
 
-describe("t84 aidlc-utility doctor — Check 2 stale branches (migrated from t84-doctor-stale-branch.sh, plan 5)", () => {
+describe("t84 amadeus-utility doctor — Check 2 stale branches (migrated from t84-doctor-stale-branch.sh, plan 5)", () => {
   // --- Test 1: not a git repo -> skip silently with informational pass ---
   test("1: stale-branch check skips silently when not a git repo", () => {
     const p = proj();
     // No initGitRepo: `git -C <p> branch --list 'bolt-*'` exits non-zero ->
-    // the not-a-git-repo informational pass arm (aidlc-utility.ts:689-691).
+    // the not-a-git-repo informational pass arm (amadeus-utility.ts:689-691).
     const r = doctor(p);
     expect(r.out).toContain("Stale branches: 0 observed (not a git repo)");
   });
@@ -199,7 +199,7 @@ describe("t84 aidlc-utility doctor — Check 2 stale branches (migrated from t84
     expect(r.out).toContain("Stale branches: 1 drift");
     expect(r.out).toContain("stalefoo");
     // STRONGER than the .sh (which `|| true`-swallowed $?): a stale drift is a
-    // doctor failure -> non-zero exit (aidlc-utility.ts:1385).
+    // doctor failure -> non-zero exit (amadeus-utility.ts:1385).
     expect(r.status).toBe(1);
   });
 

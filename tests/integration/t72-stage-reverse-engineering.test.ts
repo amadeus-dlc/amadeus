@@ -2,7 +2,7 @@
 //
 // t72-stage-reverse-engineering.test.ts — SDK-harness port of
 // tests/integration/t72-stage-reverse-engineering.sh (plan 15). Drives the real
-// `/aidlc` from a state fixture already parked on reverse-engineering through
+// `/amadeus` from a state fixture already parked on reverse-engineering through
 // the Claude Agent SDK and asserts ONLY on deterministic surfaces — the on-disk RE artifact
 // scaffold, the state fields the stage wrote, and the SDK's captured gate — NEVER
 // on assistantText.
@@ -21,7 +21,7 @@
 // THE JOURNEY (verified against the SHIPPED stage). Seed state-brownfield-init-done
 // (Lifecycle Phase=INCEPTION, Current Stage=reverse-engineering [-] in-progress,
 // Scope=bugfix, Completed=3) + the brownfield-todo stub (a React/Vite/TypeScript Todo
-// app). Plain `/aidlc` resumes that current stage directly; jump routing for
+// app). Plain `/amadeus` resumes that current stage directly; jump routing for
 // `--stage` is covered by t25/t26. The RE stage: step 2 delegates a developer
 // code scan, step 3 the architect synthesises 9 artifacts into the SPACE-LEVEL
 // per-repo codekb store aidlc/spaces/<space>/codekb/<repo>/ (the dir codekb-path
@@ -78,7 +78,7 @@ import {
   setupIntegrationProject,
 } from "../harness/fixtures.ts";
 import { driveAidlc, readStateField } from "../harness/sdk-drive.ts";
-import { activeSpace } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { activeSpace } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // The space-level per-repo codekb dir the RE stage now writes into
 // (aidlc/spaces/<space>/codekb/<repo>/ — the codekb-determinism placement fix).
@@ -124,7 +124,7 @@ const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
 const TARGET_SLUG = "reverse-engineering";
 const TARGET_PHASE = "INCEPTION";
 
-describe("t72 /aidlc reverse-engineering brownfield (sdk)", () => {
+describe("t72 /amadeus reverse-engineering brownfield (sdk)", () => {
   // -------------------------------------------------------------------------
   // Brownfield project seeded at init-done with RE next. Drive the RE stage and
   // STOP when its approval gate renders — the moment the 9 artifacts + the state
@@ -141,14 +141,14 @@ describe("t72 /aidlc reverse-engineering brownfield (sdk)", () => {
       });
       try {
         // P9: state lives in the seeded per-intent record the RE stage resolves
-        // via the active-intent cursor (the flat aidlc-docs/ root is retired).
+        // via the active-intent cursor (the flat amadeus-docs/ root is retired).
         sedReplaceInFile(
           seededStateFile(proj),
-          "- **Project Root**: /tmp/aidlc-test",
+          "- **Project Root**: /tmp/amadeus-test",
           `- **Project Root**: ${proj}`,
         );
 
-        const r = await driveAidlc("/aidlc", {
+        const r = await driveAidlc("/amadeus", {
           projectDir: proj,
           // Stop the instant the RE approval gate renders — the artifacts + state
           // update precede it (reverse-engineering.md steps 3-4 before step 5), so

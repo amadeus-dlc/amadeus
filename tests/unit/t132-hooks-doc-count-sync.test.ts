@@ -1,4 +1,4 @@
-// covers: doc:docs/reference/06-hooks-and-tools.md(hook-scope-count), file:settings.json, file:hooks/aidlc-*.ts
+// covers: doc:docs/reference/06-hooks-and-tools.md(hook-scope-count), file:settings.json, file:hooks/amadeus-*.ts
 //
 // t132 — Doc-count drift guard for the hook-scope sentence in
 // docs/reference/06-hooks-and-tools.md. Migrated from
@@ -14,7 +14,7 @@
 // JSON.parse settings.json directly.)
 //
 // Subject (three ground-truth sources cross-checked against the doc prose):
-//   A. dist/claude/.claude/hooks/aidlc-*.ts          — the hook scripts on disk
+//   A. dist/claude/.claude/hooks/amadeus-*.ts          — the hook scripts on disk
 //   B. dist/claude/.claude/settings.json             — the `hooks` block command
 //        count + the top-level `statusLine` key (1 when present)
 //   C. docs/reference/06-hooks-and-tools.md           — the count-words in the
@@ -31,7 +31,7 @@
 // re-drift it away from ground truth.
 //
 // Old TAP -> new test parity (1:1, every .sh assertion -> a named test()):
-//   .sh test 1  assert_gt DISK_COUNT 0                        -> "ground truth A: hooks/aidlc-*.ts exist on disk"
+//   .sh test 1  assert_gt DISK_COUNT 0                        -> "ground truth A: hooks/amadeus-*.ts exist on disk"
 //   .sh test 2  assert_eq SETTINGS_STATUSLINE_COUNT 1         -> "ground truth B: settings.json registers exactly 1 statusLine hook"
 //   .sh test 3  assert_eq SETTINGS_TOTAL DISK_COUNT           -> "ground truth cross-check: settings total == disk files"
 //   .sh test 4  doc three count-words parse cleanly           -> "doc: the three count-words parse cleanly (sentence not reworded)"
@@ -49,11 +49,11 @@ const HOOKS_DIR = join(AIDLC_SRC, "hooks");
 const SETTINGS = join(AIDLC_SRC, "settings.json");
 const DOC = join(REPO_ROOT, "docs", "reference", "06-hooks-and-tools.md");
 
-// --- Ground truth A: hook scripts on disk (hooks/aidlc-*.ts) -----------------
-// The .sh did `ls -1 "$HOOKS_DIR"/aidlc-*.ts | wc -l`.
+// --- Ground truth A: hook scripts on disk (hooks/amadeus-*.ts) -----------------
+// The .sh did `ls -1 "$HOOKS_DIR"/amadeus-*.ts | wc -l`.
 function diskHookCount(): number {
   return readdirSync(HOOKS_DIR).filter(
-    (f) => f.startsWith("aidlc-") && f.endsWith(".ts"),
+    (f) => f.startsWith("amadeus-") && f.endsWith(".ts"),
   ).length;
 }
 
@@ -118,7 +118,7 @@ const DOC_BLOCK = word2int(DOC_BLOCK_WORD);
 
 describe("t132 hook-scope doc-count drift guard (migrated from t132-hooks-doc-count-sync.sh, plan 8)", () => {
   // --- Ground truth A ---
-  test("1: ground truth A — hooks/aidlc-*.ts exist on disk [.sh test 1]", () => {
+  test("1: ground truth A — hooks/amadeus-*.ts exist on disk [.sh test 1]", () => {
     expect(diskHookCount()).toBeGreaterThan(0);
   });
 

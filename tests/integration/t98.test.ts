@@ -1,8 +1,8 @@
-// covers: subcommand:aidlc-runtime:compile
+// covers: subcommand:amadeus-runtime:compile
 //
 // CLI-contract port of tests/integration/t98-sensor-firings-populator.sh (TAP
 // plan 16), mechanism = cli. Equal-or-stronger migration: every .sh
-// assertion that shelled out to `bun aidlc-runtime.ts --project-dir <p>
+// assertion that shelled out to `bun amadeus-runtime.ts --project-dir <p>
 // compile` and then projected a scalar out of the written runtime-graph.json
 // via a `bun -e` JSON.parse is preserved by SPAWNING the real CLI via
 // node:child_process spawnSync (BUN + the tool .ts path) and asserting on the
@@ -15,8 +15,8 @@
 // re-compile-byte-equal half (case 8, which hashes the written file) and the
 // process boundary the .sh's `run_compile` relies on.
 //
-// SUBCOMMAND UNIT: this .cli file credits `aidlc-runtime compile` (covers KEY
-// subcommand:aidlc-runtime:compile, COLON form). compile is the only
+// SUBCOMMAND UNIT: this .cli file credits `amadeus-runtime compile` (covers KEY
+// subcommand:amadeus-runtime:compile, COLON form). compile is the only
 // subcommand the .sh fires; every case runs it.
 //
 // PARITY NOTES (every .sh `ok` line maps to an expect()-bearing test() below;
@@ -71,14 +71,14 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { toPortablePath } from "../harness/fixtures.ts";
-import { auditFilePath } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { auditFilePath } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // P9: with no intent cursor seeded, compile resolves the BARE space record root
 // (docsRoot -> spaceRecordRoot) at aidlc/spaces/default/intents/. State,
 // runtime-graph, and the per-clone audit SHARD live under it (the flat
-// aidlc-docs/ root is retired — there is no fallback). The detail_path strings
+// amadeus-docs/ root is retired — there is no fallback). The detail_path strings
 // asserted below are read VERBATIM from the read-only audit fixtures, so they
-// keep their recorded aidlc-docs/ values (compile echoes the recorded row).
+// keep their recorded amadeus-docs/ values (compile echoes the recorded row).
 const RECORD_REL = join("aidlc", "spaces", "default", "intents");
 function recordRoot(proj: string): string {
   return join(proj, RECORD_REL);
@@ -92,7 +92,7 @@ const RUNTIME_TS = join(
   "claude",
   ".claude",
   "tools",
-  "aidlc-runtime.ts",
+  "amadeus-runtime.ts",
 );
 const STATE_FIXTURE = join(REPO_ROOT, "tests", "fixtures", "state-construction.md");
 const FIXTURES_DIR = join(REPO_ROOT, "tests", "fixtures", "v05-mr12-learnings");
@@ -114,7 +114,7 @@ const graphPath = (proj: string): string =>
 
 /**
  * make_project_with_audit (t98:66-78): fresh temp project carrying the shared
- * state-construction.md as aidlc-state.md plus the given audit fixture, both
+ * state-construction.md as amadeus-state.md plus the given audit fixture, both
  * under the bare space record root. toPortablePath wraps the mktemp path so the
  * runtime-graph.json the tool writes round-trips on native Windows
  * (forward-slash path helpers). `auditFixturePath` is an absolute path to a
@@ -123,11 +123,11 @@ const graphPath = (proj: string): string =>
  * mutation).
  */
 function makeProjectWithAudit(auditFixturePath: string): string {
-  const proj = toPortablePath(mkdtempSync(join(tmpdir(), "aidlc-t98f-")));
+  const proj = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-t98f-")));
   tempDirs.push(proj);
   const rec = recordRoot(proj);
   mkdirSync(rec, { recursive: true });
-  writeFileSync(join(rec, "aidlc-state.md"), readFileSync(STATE_FIXTURE), "utf-8");
+  writeFileSync(join(rec, "amadeus-state.md"), readFileSync(STATE_FIXTURE), "utf-8");
   const shard = auditFilePath(proj);
   mkdirSync(dirname(shard), { recursive: true });
   writeFileSync(shard, readFileSync(auditFixturePath), "utf-8");
@@ -207,7 +207,7 @@ describe("t98 sensor_firings pairing (migrated from t98-sensor-firings-populator
     // STRONGER (S1): the .sh only checked detail_path != "null"/"" — assert the
     // exact path the sensor-failed row carried.
     expect(f?.detail_path).toBe(
-      "aidlc-docs/.aidlc-sensors/code-generation/linter-bbbb0002.md",
+      "amadeus-docs/.amadeus-sensors/code-generation/linter-bbbb0002.md",
     );
   });
 
@@ -283,7 +283,7 @@ describe("t98 four-parallel fire_id pairing", () => {
     // STRONGER (S2): the failed pairing carries its own detail_path even though
     // its terminal row interleaved after two later PASSED rows by spawn duration.
     expect(byFireId(sf, "fire0002")?.detail_path).toBe(
-      "aidlc-docs/.aidlc-sensors/code-generation/upstream-coverage-fire0002.md",
+      "amadeus-docs/.amadeus-sensors/code-generation/upstream-coverage-fire0002.md",
     );
   });
 });

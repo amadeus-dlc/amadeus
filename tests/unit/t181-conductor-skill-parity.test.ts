@@ -1,7 +1,7 @@
 // covers: conductor-skill:per-harness-freshness
 //
 // t181 — PER-HARNESS CONDUCTOR-SKILL FRESHNESS GATE. Mechanism: none
-// (readFileSync over harness/*/skills/aidlc/SKILL.md, zero spawn, zero LLM, zero
+// (readFileSync over harness/*/skills/amadeus/SKILL.md, zero spawn, zero LLM, zero
 // tokens). Technique: deterministic closed predicate, harness list derived FROM
 // DISK (mirrors t156 §7's readdirSync+filter+floor idiom — never a hardcoded
 // [claude,kiro,codex] triple, so a NEW harness tree is auto-covered).
@@ -9,12 +9,12 @@
 // WHY THIS EXISTS (the P11 "RESOLVE (2)" obligation): the workspace refactor
 // (per-intent layout, --init retirement, intent/space verbs, multi-repo --repo,
 // the "offer a second intent" conductor prose) updated every authored conductor
-// SKILL — EXCEPT harness/kiro-ide/skills/aidlc/SKILL.md, which was a stale fork
+// SKILL — EXCEPT harness/kiro-ide/skills/amadeus/SKILL.md, which was a stale fork
 // byte-identical to kiro CLI's SKILL at origin/v2 and never re-synced across the
 // 43-commit stack. It shipped GREEN because NO test reads a per-harness conductor
 // SKILL: `package.ts --check` only proves dist==authored, so a self-consistent-
 // but-stale authored SKILL passes. This gate closes that hole in BOTH directions:
-//   (a) NEGATIVE — the retired `/aidlc --init` command (a bare `--init` flag
+//   (a) NEGATIVE — the retired `/amadeus --init` command (a bare `--init` flag
 //       token; `git init`/`npm init` are NOT the aidlc command, same predicate as
 //       t174) must be ABSENT from every shipped conductor SKILL.
 //   (b) POSITIVE — the workspace-anchor vocabulary (`intent-birth`, `--repo`,
@@ -25,7 +25,7 @@
 // All four authored SKILLs (claude, codex, kiro, kiro-ide) carry the full
 // vocabulary today and none carry a bare `--init`, so the POSITIVE set needs no
 // per-harness carve-out — codex included. The gate asserts the shipped AUTHORED
-// surface (harness/<h>/skills/aidlc/SKILL.md), the FIRST surface that defines a
+// surface (harness/<h>/skills/amadeus/SKILL.md), the FIRST surface that defines a
 // harness's orchestrator vocabulary; dist is its byte-parity-guarded copy (t148/
 // package.ts --check), so gating the authored source covers every tree.
 
@@ -37,13 +37,13 @@ import { REPO_ROOT } from "../harness/fixtures.ts";
 const HARNESS_DIR = join(REPO_ROOT, "harness");
 
 /** Authored conductor SKILLs, repo-root-relative (posix), derived FROM DISK:
- *  every harness/<h>/ that ships skills/aidlc/SKILL.md. Disk-derivation (not a
+ *  every harness/<h>/ that ships skills/amadeus/SKILL.md. Disk-derivation (not a
  *  hardcoded list) means a newly-added harness tree is covered automatically and
  *  cannot escape the gate by being absent from a static triple. */
 function harnessSkills(): string[] {
   return readdirSync(HARNESS_DIR)
     .filter((h) => existsSync(join(HARNESS_DIR, h, "skills", "aidlc", "SKILL.md")))
-    .map((h) => `harness/${h}/skills/aidlc/SKILL.md`)
+    .map((h) => `harness/${h}/skills/amadeus/SKILL.md`)
     .sort();
 }
 
@@ -68,10 +68,10 @@ describe("t181 per-harness conductor-SKILL freshness gate (P11 RESOLVE-2)", () =
     // trees the positive/negative scans below would vacuously pass. Pin the
     // known four so a regression that hides a tree (or empties harness/) trips.
     expect(skills).toEqual([
-      "harness/claude/skills/aidlc/SKILL.md",
-      "harness/codex/skills/aidlc/SKILL.md",
-      "harness/kiro-ide/skills/aidlc/SKILL.md",
-      "harness/kiro/skills/aidlc/SKILL.md",
+      "harness/claude/skills/amadeus/SKILL.md",
+      "harness/codex/skills/amadeus/SKILL.md",
+      "harness/kiro-ide/skills/amadeus/SKILL.md",
+      "harness/kiro/skills/amadeus/SKILL.md",
     ]);
   });
 

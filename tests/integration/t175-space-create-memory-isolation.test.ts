@@ -1,4 +1,4 @@
-// covers: subcommand:aidlc-utility:space-create, function:handleSpaceCreate
+// covers: subcommand:amadeus-utility:space-create, function:handleSpaceCreate
 //
 // t175 — the P9 vision §11 NON-NEGOTIABLE that the existing space-create coverage
 // (t164/t165) leaves unpinned: a freshly created space's memory is ISOLATED from
@@ -10,7 +10,7 @@
 // isolation (the leak the §11 promise forbids) + that a new intent born in the
 // space reads the space's OWN live memory, not default's.
 //
-// Mechanism: cli (spawn aidlc-utility space-create / space / intent-birth) +
+// Mechanism: cli (spawn amadeus-utility space-create / space / intent-birth) +
 // on-disk content reads. Zero LLM, zero tokens — deterministic.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
@@ -20,7 +20,7 @@ import { cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
 const REPO_ROOT = join(import.meta.dir, "..", "..");
-const UTIL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "aidlc-utility.ts");
+const UTIL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-utility.ts");
 
 let proj: string;
 beforeEach(() => {

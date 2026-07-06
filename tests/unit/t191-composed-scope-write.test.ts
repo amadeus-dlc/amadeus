@@ -1,8 +1,8 @@
-// covers: function:inferScopeFromText, function:validScopes, subcommand:aidlc-utility:intent-birth
+// covers: function:inferScopeFromText, function:validScopes, subcommand:amadeus-utility:intent-birth
 //
 // t191 - the P2 composed-scope write contract (adaptive workflows).
 //
-// The front composer authors TWO files after approval - scopes/aidlc-<name>.md
+// The front composer authors TWO files after approval - scopes/amadeus-<name>.md
 // + a scope-grid.json entry - and the runtime honors them at the next
 // invocation with zero recompile (spike A). This test pins the deterministic
 // half of that contract plus the KEYWORD-HYGIENE rule the review made a
@@ -38,7 +38,7 @@ import {
 const BUN = process.execPath;
 
 const utilityIn = (proj: string): string =>
-  join(proj, ".claude", "tools", "aidlc-utility.ts");
+  join(proj, ".claude", "tools", "amadeus-utility.ts");
 
 // Resolve the born record's state file via the active-space/intent cursors
 // (the t60 recordDirOf pattern).
@@ -52,7 +52,7 @@ function statePath(proj: string): string {
   const rec = existsSync(intentCursor)
     ? readFileSync(intentCursor, "utf-8").trim()
     : "";
-  return join(intentsDir, rec, "aidlc-state.md");
+  return join(intentsDir, rec, "amadeus-state.md");
 }
 
 // Author a composed scope the way the composer writes it: the .md into the
@@ -70,7 +70,7 @@ function authorComposedScope(
       ? `keywords:\n${opts.keywords.map((k) => `  - ${k}`).join("\n")}`
       : "keywords: []";
   writeFileSync(
-    join(proj, ".claude", "scopes", `aidlc-${name}.md`),
+    join(proj, ".claude", "scopes", `amadeus-${name}.md`),
     `---\nname: ${name}\ndepth: Minimal\n${kw}\ndescription: composed by t191\n---\n\n# ${name}\n`,
     "utf-8",
   );

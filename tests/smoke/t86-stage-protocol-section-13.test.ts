@@ -1,4 +1,4 @@
-// covers: doc:aidlc-common/protocols/stage-protocol.md(section-13), doc:knowledge/aidlc-shared/audit-format.md(MEMORY_EMPTY), doc:docs/reference/12-state-machine.md(MEMORY_EMPTY), data:aidlc-audit.ts(VALID_EVENT_TYPES), doc:skills/aidlc/SKILL.md(run-stage-gate-branch), function:appendAuditEntry
+// covers: doc:amadeus-common/protocols/stage-protocol.md(section-13), doc:knowledge/amadeus-shared/audit-format.md(MEMORY_EMPTY), doc:docs/reference/12-state-machine.md(MEMORY_EMPTY), data:amadeus-audit.ts(VALID_EVENT_TYPES), doc:skills/amadeus/SKILL.md(run-stage-gate-branch), function:appendAuditEntry
 //
 // t86 — pins stage-protocol §13 (Learnings Ritual) prose + the MEMORY_EMPTY
 // audit-event registration + the SKILL.md run-stage-gate-branch wiring that
@@ -11,36 +11,36 @@
 //   * stage-protocol.md / audit-format.md / 12-state-machine.md / SKILL.md ->
 //     read the real bytes in-process and assert the literal contract
 //     (mechanism none — a structural/prose check, the same surface grep hit).
-//   * the MEMORY_EMPTY registration in aidlc-audit.ts is STRENGTHENED beyond the
+//   * the MEMORY_EMPTY registration in amadeus-audit.ts is STRENGTHENED beyond the
 //     .sh's `grep '"MEMORY_EMPTY"'`: the tool's `VALID_EVENT_TYPES` Set is a
-//     module-private const (NOT exported, aidlc-audit.ts:19), so we exercise the
+//     module-private const (NOT exported, amadeus-audit.ts:19), so we exercise the
 //     real validity gate by SPAWNING the CLI `append MEMORY_EMPTY` and proving it
 //     is ACCEPTED (exit 0, appended:true) rather than rejected. That spawn proves
 //     the literal IS registered in the live Set, not merely present as source
 //     text — equal-or-stronger. (mechanism cli for that one case.)
 //
 // Source under test (paths resolved from AIDLC_SRC / REPO_ROOT, fixtures.ts):
-//   dist/claude/.claude/aidlc-common/protocols/stage-protocol.md
+//   dist/claude/.claude/amadeus-common/protocols/stage-protocol.md
 //     :848  `## 13. Learnings Ritual`
 //     :872-875 four canonical memory.md headings (**Interpretations**,
 //             **Deviations**, **Tradeoffs**, **Open questions**)
 //     :860-861,921 two-surface learnings routing + `sensors: frontmatter` +
 //             `matches:` capability glob; the `applies_to` fossil is GONE
 //     :935  `### Why stage files stay immutable`
-//   dist/claude/.claude/tools/aidlc-audit.ts
+//   dist/claude/.claude/tools/amadeus-audit.ts
 //     :19,:101  VALID_EVENT_TYPES Set contains "MEMORY_EMPTY"
 //     :214  appendAuditEntry(eventType, fields, projectDir) — throws on an
 //           event NOT in VALID_EVENT_TYPES (the in-proc validity proof for the
 //           well-known control event we append alongside)
-//   dist/claude/.claude/knowledge/aidlc-shared/audit-format.md
+//   dist/claude/.claude/knowledge/amadeus-shared/audit-format.md
 //     :167,:171  `MEMORY_EMPTY` registry rows
 //   docs/reference/12-state-machine.md
 //     :314,:318  `MEMORY_EMPTY` taxonomy rows
-//   dist/claude/.claude/skills/aidlc/SKILL.md
+//   dist/claude/.claude/skills/amadeus/SKILL.md
 //     :65  `### Branching a \`run-stage\` on its gate` (the wiring's new home
 //          after the engine cutover; the old `## Stage Advancement` section's
 //          transition prose is now the engine's `report` job)
-//     the gated run-stage branch calls `aidlc-learnings.ts surface` AND
+//     the gated run-stage branch calls `amadeus-learnings.ts surface` AND
 //          `persist` unconditionally (the "Unless in test-run mode" guard and
 //          the Test-Run block were removed per #369).
 //
@@ -49,7 +49,7 @@
 //   .sh test 2 (four canonical headings)            -> "§13 documents all four canonical memory.md headings (bolded)"
 //   .sh test 3 (two-surface routing, no applies_to) -> "§13 routes via two-surface learnings + sensors: frontmatter bind, applies_to fossil gone"
 //   .sh test 4 (MEMORY_EMPTY in three sources)      -> "MEMORY_EMPTY registered in audit-format.md + 12-state-machine.md (prose)"
-//                                                      + STRONGER "aidlc-audit CLI accepts MEMORY_EMPTY (registered in the live VALID_EVENT_TYPES Set)"
+//                                                      + STRONGER "amadeus-audit CLI accepts MEMORY_EMPTY (registered in the live VALID_EVENT_TYPES Set)"
 //   .sh test 5 ('Why stage files stay immutable')   -> "§13 carries the 'Why stage files stay immutable' invariant H3"
 //   .sh test 6 (SKILL.md wires the §13 gate)        -> "SKILL.md run-stage gate branch wires the §13 gate (surface + persist, unconditional)"
 //   .sh test 7 (Test-Run block declares skip) was dropped per #369: the SKILL.md
@@ -62,16 +62,16 @@ import { join } from "node:path";
 import { AIDLC_SRC, cleanupTestProject, createTestProject, REPO_ROOT, seededAuditDir, seedStateFile } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const AUDIT_TOOL = join(AIDLC_SRC, "tools", "aidlc-audit.ts");
+const AUDIT_TOOL = join(AIDLC_SRC, "tools", "amadeus-audit.ts");
 
 const STAGE_PROTOCOL = join(
   AIDLC_SRC,
-  "aidlc-common",
+  "amadeus-common",
   "protocols",
   "stage-protocol.md",
 );
-const AUDIT_TS = join(AIDLC_SRC, "tools", "aidlc-audit.ts");
-const AUDIT_MD = join(AIDLC_SRC, "knowledge", "aidlc-shared", "audit-format.md");
+const AUDIT_TS = join(AIDLC_SRC, "tools", "amadeus-audit.ts");
+const AUDIT_MD = join(AIDLC_SRC, "knowledge", "amadeus-shared", "audit-format.md");
 const STATE_MACHINE = join(REPO_ROOT, "docs", "reference", "12-state-machine.md");
 const SKILL = join(AIDLC_SRC, "skills", "aidlc", "SKILL.md");
 
@@ -132,8 +132,8 @@ describe("t86 stage-protocol §13 + MEMORY_EMPTY + SKILL.md gate wiring (migrate
     // The applies_to routing fossil must be fully gone from the protocol.
     expect(body.includes("applies_to")).toBe(false);
     // The parallel dated-log surface is gone — no `*-learnings.md` destination.
-    expect(body.includes("aidlc-project-learnings.md")).toBe(false);
-    expect(body.includes("aidlc-team-learnings.md")).toBe(false);
+    expect(body.includes("amadeus-project-learnings.md")).toBe(false);
+    expect(body.includes("amadeus-team-learnings.md")).toBe(false);
   });
 
   // --- .sh test 5 (declared before 4's CLI half for prose grouping) --------
@@ -149,22 +149,22 @@ describe("t86 stage-protocol §13 + MEMORY_EMPTY + SKILL.md gate wiring (migrate
     // The .sh grepped the literal `MEMORY_EMPTY` in backticks in both docs.
     expect(read(AUDIT_MD).includes("`MEMORY_EMPTY`")).toBe(true);
     expect(read(STATE_MACHINE).includes("`MEMORY_EMPTY`")).toBe(true);
-    // Source-text presence in aidlc-audit.ts too (the .sh's third grep); the
+    // Source-text presence in amadeus-audit.ts too (the .sh's third grep); the
     // CLI case below proves it is actually live in the runtime Set.
     expect(read(AUDIT_TS).includes('"MEMORY_EMPTY"')).toBe(true);
   });
 
   // --- .sh test 4 (data half: STRONGER than the .sh's source grep) ---------
-  test("aidlc-audit CLI accepts MEMORY_EMPTY (registered in the live VALID_EVENT_TYPES Set) [.sh test 4 — data half, STRONGER]", () => {
-    // VALID_EVENT_TYPES is a module-private const (aidlc-audit.ts:19), so we
+  test("amadeus-audit CLI accepts MEMORY_EMPTY (registered in the live VALID_EVENT_TYPES Set) [.sh test 4 — data half, STRONGER]", () => {
+    // VALID_EVENT_TYPES is a module-private const (amadeus-audit.ts:19), so we
     // exercise the real validity gate: an event NOT in the Set causes
     // appendAuditEntry to throw and the CLI to exit non-zero with an error JSON
     // (the t18 contract). MEMORY_EMPTY MUST be accepted — exit 0, appended:true.
     // createTestProject seeds the per-intent record + active-intent cursor;
-    // seedStateFile writes the record's aidlc-state.md so the cursor RESOLVES
+    // seedStateFile writes the record's amadeus-state.md so the cursor RESOLVES
     // (the active-intent cursor only binds a record that has state). Then a bare
-    // `aidlc-audit append` lands in <record>/audit/<host>-<clone>.md (P9 — no flat
-    // aidlc-docs/audit.md). Read the appended event back off the shard dir.
+    // `amadeus-audit append` lands in <record>/audit/<host>-<clone>.md (P9 — no flat
+    // amadeus-docs/audit.md). Read the appended event back off the shard dir.
     const proj = createTestProject();
     seedStateFile(proj, "state-mid-ideation.md");
     try {
@@ -197,13 +197,13 @@ describe("t86 stage-protocol §13 + MEMORY_EMPTY + SKILL.md gate wiring (migrate
 
   // --- .sh test 6 ----------------------------------------------------------
   test("SKILL.md run-stage gate branch wires the §13 gate (surface + persist, unconditional) [.sh test 6]", () => {
-    // §13's prose (tests 1-5) and the aidlc-learnings.ts tool can both be
+    // §13's prose (tests 1-5) and the amadeus-learnings.ts tool can both be
     // perfect while the orchestrator never CALLS the gate. This pins the one
     // place that makes it run — deleting it would be a silent feature-death.
     const span = gateBranchSpan(read(SKILL));
     expect(span.length).toBeGreaterThan(0); // the heading must exist
-    expect(/aidlc-learnings\.ts surface/.test(span)).toBe(true);
-    expect(/aidlc-learnings\.ts persist/.test(span)).toBe(true);
+    expect(/amadeus-learnings\.ts surface/.test(span)).toBe(true);
+    expect(/amadeus-learnings\.ts persist/.test(span)).toBe(true);
     // The ritual is now UNCONDITIONAL: the test-run guard was removed per #369.
   });
 

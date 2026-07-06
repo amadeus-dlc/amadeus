@@ -1,8 +1,8 @@
-// covers: subcommand:aidlc-sensor:fire, audit:SENSOR_FAILED
+// covers: subcommand:amadeus-sensor:fire, audit:SENSOR_FAILED
 //
 // CLI-contract port of tests/integration/t92-sensor-fire.sh (TAP plan 43),
 // mechanism = cli. Equal-fidelity migration: every .sh assertion that
-// shelled out to `bun aidlc-sensor.ts fire ...` is preserved by SPAWNING
+// shelled out to `bun amadeus-sensor.ts fire ...` is preserved by SPAWNING
 // the real CLI via node:child_process (spawnSync / spawn), asserting on
 // res.status / res.stdout / res.stderr exactly as the .sh asserted on
 // $? / stdout. The contract under test is the PROCESS boundary plus the
@@ -25,8 +25,8 @@
 // target -> per-file clean PASS, gate keys on allErrors not the filtered
 // errors).
 //
-// SUBCOMMAND UNIT: this .cli file credits the `aidlc-sensor fire`
-// subcommand unit (covers KEY subcommand:aidlc-sensor:fire). `list` and
+// SUBCOMMAND UNIT: this .cli file credits the `amadeus-sensor fire`
+// subcommand unit (covers KEY subcommand:amadeus-sensor:fire). `list` and
 // `describe` are NOT exercised by t92 (the .sh only fires), so they are
 // NOT claimed.
 //
@@ -63,14 +63,14 @@ import {
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { toPortablePath } from "../harness/fixtures.ts";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // P9: with no intent cursor seeded, the sensor dispatcher resolves the BARE
 // space record root (docsRoot -> spaceRecordRoot) at aidlc/spaces/default/
 // intents/ for BOTH the per-clone audit SHARD (audit/<host>-<clone>.md) and the
-// detail tree (.aidlc-sensors/<stage>/...) — the flat aidlc-docs/ root is retired.
+// detail tree (.amadeus-sensors/<stage>/...) — the flat amadeus-docs/ root is retired.
 // The SENSED output files still live wherever the test writes them (e.g.
-// aidlc-docs/test.md), so the dispatcher's project-relative `Output path` field
+// amadeus-docs/test.md), so the dispatcher's project-relative `Output path` field
 // is unchanged. Audit reads go through readAllAuditShards (the subprocess mints
 // its own clone-id, distinct from the test process's memoized one, so read the
 // whole audit/ dir rather than a single memoized shard path).
@@ -84,7 +84,7 @@ const RP = "aidlc/spaces/default/intents";
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const TOOLS_DIR = join(REPO_ROOT, "dist", "claude", ".claude", "tools");
-const SENSOR_TS = join(TOOLS_DIR, "aidlc-sensor.ts");
+const SENSOR_TS = join(TOOLS_DIR, "amadeus-sensor.ts");
 const STUBS_DIR = join(REPO_ROOT, "tests", "fixtures", "v05-mr9-sensor-fire", "scripts");
 const FIXTURES_ROOT = join(REPO_ROOT, "tests", "fixtures", "v05-mr9-sensor-fire");
 
@@ -99,24 +99,24 @@ const FIXTURES_ROOT = join(REPO_ROOT, "tests", "fixtures", "v05-mr9-sensor-fire"
 // real-sensor tests (Group B/C, no AIDLC_SENSORS_DIR) leave it unset and the
 // dispatcher resolves the shipped per-sensor scripts from dist/ as in production.
 // Dispatcher-resolved stubs: named in fork manifests, resolved via the
-// AIDLC_SENSOR_SCRIPT_DIR seam from STUB_SCRIPT_DIR. aidlc-sensor-lock-exit.ts is
+// AIDLC_SENSOR_SCRIPT_DIR seam from STUB_SCRIPT_DIR. amadeus-sensor-lock-exit.ts is
 // NOT here — it is a direct-spawn helper (never named in a manifest) that imports
-// the real withAuditLock, so it needs to sit beside aidlc-lib.ts; it gets its own
+// the real withAuditLock, so it needs to sit beside amadeus-lib.ts; it gets its own
 // temp shim (LOCK_EXIT_SHIM) that imports lib by absolute path.
 const STUB_NAMES = [
-  "aidlc-sensor-stub-pass.ts",
-  "aidlc-sensor-stub-fail.ts",
-  "aidlc-sensor-stub-127.ts",
-  "aidlc-sensor-stub-exit2.ts",
-  "aidlc-sensor-stub-bad.ts",
-  "aidlc-sensor-stub-slow.ts",
+  "amadeus-sensor-stub-pass.ts",
+  "amadeus-sensor-stub-fail.ts",
+  "amadeus-sensor-stub-127.ts",
+  "amadeus-sensor-stub-exit2.ts",
+  "amadeus-sensor-stub-bad.ts",
+  "amadeus-sensor-stub-slow.ts",
 ];
-const ARGV_STUB = "aidlc-sensor-stub-argv.ts";
+const ARGV_STUB = "amadeus-sensor-stub-argv.ts";
 // Isolated dir holding the stub per-sensor scripts (populated in beforeAll).
-const STUB_SCRIPT_DIR = mkdtempSync(join(tmpdir(), "aidlc-t92-stubs-"));
+const STUB_SCRIPT_DIR = mkdtempSync(join(tmpdir(), "amadeus-t92-stubs-"));
 // Direct-spawn lock-orphan helper: a temp shim importing the real withAuditLock
 // by absolute path (so it resolves outside dist/, no shipped-tree mutation).
-const LOCK_EXIT_SHIM = join(STUB_SCRIPT_DIR, "aidlc-sensor-lock-exit-shim.ts");
+const LOCK_EXIT_SHIM = join(STUB_SCRIPT_DIR, "amadeus-sensor-lock-exit-shim.ts");
 const tempDirs: string[] = [STUB_SCRIPT_DIR];
 
 beforeAll(() => {
@@ -124,9 +124,9 @@ beforeAll(() => {
     copyFileSync(join(STUBS_DIR, name), join(STUB_SCRIPT_DIR, name));
   }
   // Lock-orphan helper: import withAuditLock from the real lib by ABSOLUTE path
-  // (the fixture's own `./aidlc-lib.ts` relative import only resolves when copied
+  // (the fixture's own `./amadeus-lib.ts` relative import only resolves when copied
   // beside the shipped lib — we avoid that dist/ mutation with an absolute import).
-  const realLib = join(TOOLS_DIR, "aidlc-lib.ts");
+  const realLib = join(TOOLS_DIR, "amadeus-lib.ts");
   writeFileSync(
     LOCK_EXIT_SHIM,
     [
@@ -171,15 +171,15 @@ afterAll(() => {
 
 // --- Helpers (TS analogues of the .sh helpers) ---
 
-/** make_proj (t92-sensor-fire.sh:104-110): fresh temp project + aidlc-docs/. */
+/** make_proj (t92-sensor-fire.sh:104-110): fresh temp project + amadeus-docs/. */
 function makeProj(): string {
   // toPortablePath (cygpath -m on win32, no-op elsewhere): mkdtempSync yields a
   // path form native Windows bun can't round-trip as CLAUDE_PROJECT_DIR. The
   // tool writes audit.md via toPosix(auditFilePath) (forward-slash), so without
   // this the test reads back the raw form and finds 0 SENSOR_FIRED rows even
   // though the fire succeeded. Mirrors createTestProject() (harness/fixtures.ts).
-  const proj = toPortablePath(mkdtempSync(join(tmpdir(), "aidlc-t92-proj-")));
-  mkdirSync(join(proj, "aidlc-docs"), { recursive: true });
+  const proj = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-t92-proj-")));
+  mkdirSync(join(proj, "amadeus-docs"), { recursive: true });
   tempDirs.push(proj);
   return proj;
 }
@@ -194,7 +194,7 @@ function makeForkSensors(
   matches = "",
   timeout = 5,
 ): string {
-  const dir = mkdtempSync(join(tmpdir(), "aidlc-t92-sensors-"));
+  const dir = mkdtempSync(join(tmpdir(), "amadeus-t92-sensors-"));
   tempDirs.push(dir);
   const lines = [
     "---",
@@ -211,7 +211,7 @@ function makeForkSensors(
   lines.push("---");
   lines.push("# stub");
   lines.push("");
-  writeFileSync(join(dir, `aidlc-${id}.md`), lines.join("\n"), "utf-8");
+  writeFileSync(join(dir, `amadeus-${id}.md`), lines.join("\n"), "utf-8");
   return dir;
 }
 
@@ -307,7 +307,7 @@ interface SpawnResult {
 }
 
 /**
- * Spawn `aidlc-sensor.ts fire ...` synchronously, combining stdout+stderr
+ * Spawn `amadeus-sensor.ts fire ...` synchronously, combining stdout+stderr
  * like the .sh's `2>&1`. `env` overrides are merged onto process.env
  * (CLAUDE_PROJECT_DIR / AIDLC_SENSORS_DIR / AIDLC_T92_ARGV_OUT). cwd is
  * left at the test's cwd to match the .sh, where --output-path is always
@@ -355,13 +355,13 @@ describe("t92 Group A: argv validation (exit 1, no audit emit)", () => {
   let argvProj = "";
   beforeAll(() => {
     argvProj = makeProj();
-    writeFileSync(join(argvProj, "aidlc-docs", "test.md"), "stub\n", "utf-8");
+    writeFileSync(join(argvProj, "amadeus-docs", "test.md"), "stub\n", "utf-8");
   });
   const E = (): Record<string, string> => ({ CLAUDE_PROJECT_DIR: argvProj });
 
   test("1: fire with no positional id -> exit 1 + clear error", () => {
     const r = fire(
-      ["--stage", "intent-capture", "--output-path", join(argvProj, "aidlc-docs", "test.md")],
+      ["--stage", "intent-capture", "--output-path", join(argvProj, "amadeus-docs", "test.md")],
       E(),
     );
     expect(r.rc).not.toBe(0);
@@ -370,7 +370,7 @@ describe("t92 Group A: argv validation (exit 1, no audit emit)", () => {
 
   test("2: fire with unknown sensor id -> exit 1 + known-ids hint", () => {
     const r = fire(
-      ["no-such-sensor", "--stage", "intent-capture", "--output-path", join(argvProj, "aidlc-docs", "test.md")],
+      ["no-such-sensor", "--stage", "intent-capture", "--output-path", join(argvProj, "amadeus-docs", "test.md")],
       E(),
     );
     expect(r.rc).not.toBe(0);
@@ -379,7 +379,7 @@ describe("t92 Group A: argv validation (exit 1, no audit emit)", () => {
 
   test("3: fire without --stage -> exit 1 + clear error", () => {
     const r = fire(
-      ["required-sections", "--output-path", join(argvProj, "aidlc-docs", "test.md")],
+      ["required-sections", "--output-path", join(argvProj, "amadeus-docs", "test.md")],
       E(),
     );
     expect(r.rc).not.toBe(0);
@@ -388,7 +388,7 @@ describe("t92 Group A: argv validation (exit 1, no audit emit)", () => {
 
   test("4: fire with unknown stage slug -> exit 1 + known-stages hint", () => {
     const r = fire(
-      ["required-sections", "--stage", "no-such-stage", "--output-path", join(argvProj, "aidlc-docs", "test.md")],
+      ["required-sections", "--stage", "no-such-stage", "--output-path", join(argvProj, "amadeus-docs", "test.md")],
       E(),
     );
     expect(r.rc).not.toBe(0);
@@ -403,7 +403,7 @@ describe("t92 Group A: argv validation (exit 1, no audit emit)", () => {
 
   test("6: fire with output-path missing on disk -> exit 1 + clear error", () => {
     const r = fire(
-      ["required-sections", "--stage", "intent-capture", "--output-path", "/var/empty/definitely-missing-aidlc-t92.md"],
+      ["required-sections", "--stage", "intent-capture", "--output-path", "/var/empty/definitely-missing-amadeus-t92.md"],
       E(),
     );
     expect(r.rc).not.toBe(0);
@@ -413,7 +413,7 @@ describe("t92 Group A: argv validation (exit 1, no audit emit)", () => {
   test("7: fire with matches-rejection -> exit 1 + clear error", () => {
     // linter ships matches=**/*.{ts,js}; firing it on a .md is rejected pre-lock.
     const r = fire(
-      ["linter", "--stage", "code-generation", "--output-path", join(argvProj, "aidlc-docs", "test.md")],
+      ["linter", "--stage", "code-generation", "--output-path", join(argvProj, "amadeus-docs", "test.md")],
       E(),
     );
     expect(r.rc).not.toBe(0);
@@ -452,8 +452,8 @@ function runPassedMdReal(
   // with backslash separators, so split("/") returns the whole path as one
   // element and join(proj, ..., <abs-path>) yields C:\...\C:\... (ENOENT).
   const outname = basename(fixtureMd);
-  copyFileSync(fixtureMd, join(proj, "aidlc-docs", outname));
-  fire([id, "--stage", stage, "--output-path", join(proj, "aidlc-docs", outname)], {
+  copyFileSync(fixtureMd, join(proj, "amadeus-docs", outname));
+  fire([id, "--stage", stage, "--output-path", join(proj, "amadeus-docs", outname)], {
     CLAUDE_PROJECT_DIR: proj,
   });
   const f = proj;
@@ -464,7 +464,7 @@ function runPassedMdReal(
     firedId: auditField(f, "SENSOR_FIRED", "Fire id"),
     passedId: auditField(f, "SENSOR_PASSED", "Fire id"),
     path: auditField(f, "SENSOR_PASSED", "Output path"),
-    detailExists: existsSync(join(recordRoot(proj), ".aidlc-sensors")),
+    detailExists: existsSync(join(recordRoot(proj), ".amadeus-sensors")),
     outname,
   };
 }
@@ -501,7 +501,7 @@ function runPassedTsReal(
     passedId: auditField(f, "SENSOR_PASSED", "Fire id"),
     path: auditField(f, "SENSOR_PASSED", "Output path"),
     note: auditField(f, "SENSOR_PASSED", "Note"),
-    detailExists: existsSync(join(recordRoot(proj), ".aidlc-sensors")),
+    detailExists: existsSync(join(recordRoot(proj), ".amadeus-sensors")),
     subdir,
   };
 }
@@ -519,7 +519,7 @@ describe("t92 Group B: PASSED real round-trip per sensor", () => {
     expect(r.firedId).toBe(r.passedId);
     expect(isInteger(r.dur)).toBe(true);
     expect(r.detailExists).toBe(false);
-    expect(r.path).toBe(`aidlc-docs/${r.outname}`);
+    expect(r.path).toBe(`amadeus-docs/${r.outname}`);
   });
 
   test("10: upstream-coverage — passing markdown, intent-capture (consumes:[]) -> PASSED", () => {
@@ -534,7 +534,7 @@ describe("t92 Group B: PASSED real round-trip per sensor", () => {
     expect(r.firedId).toBe(r.passedId);
     expect(isInteger(r.dur)).toBe(true);
     expect(r.detailExists).toBe(false);
-    expect(r.path).toBe(`aidlc-docs/${r.outname}`);
+    expect(r.path).toBe(`amadeus-docs/${r.outname}`);
   });
 
   // linter spawns the real eslint binary (manifest timeout_seconds=30); the
@@ -583,8 +583,8 @@ function runFailedMdReal(
   // with backslash separators, so split("/") returns the whole path as one
   // element and join(proj, ..., <abs-path>) yields C:\...\C:\... (ENOENT).
   const outname = basename(fixtureMd);
-  copyFileSync(fixtureMd, join(proj, "aidlc-docs", outname));
-  fire([id, "--stage", stage, "--output-path", join(proj, "aidlc-docs", outname)], {
+  copyFileSync(fixtureMd, join(proj, "amadeus-docs", outname));
+  fire([id, "--stage", stage, "--output-path", join(proj, "amadeus-docs", outname)], {
     CLAUDE_PROJECT_DIR: proj,
   });
   const f = proj;
@@ -600,9 +600,9 @@ function runFailedMdReal(
   expect(firedId).not.toBe("");
   expect(firedId).toBe(failedId);
   expect(findings).toBe(expectedFindings);
-  expect(detailPath).toBe(`${RP}/.aidlc-sensors/${stage}/${id}-${firedId}.md`);
+  expect(detailPath).toBe(`${RP}/.amadeus-sensors/${stage}/${id}-${firedId}.md`);
   expect(existsSync(join(proj, detailPath))).toBe(true);
-  expect(path).toBe(`aidlc-docs/${outname}`);
+  expect(path).toBe(`amadeus-docs/${outname}`);
 }
 
 /** run_failed_ts_real (t92-sensor-fire.sh:458-490). */
@@ -632,7 +632,7 @@ function runFailedTsReal(
   expect(firedId).not.toBe("");
   expect(firedId).toBe(failedId);
   expect(findings).toBe(expectedFindings);
-  expect(detailPath).toBe(`${RP}/.aidlc-sensors/${stage}/${id}-${firedId}.md`);
+  expect(detailPath).toBe(`${RP}/.amadeus-sensors/${stage}/${id}-${firedId}.md`);
   expect(existsSync(join(proj, detailPath))).toBe(true);
   expect(path).toBe(`${subdir}/sample.ts`);
 }
@@ -675,9 +675,9 @@ describe("t92 Group C: FAILED real round-trip per sensor", () => {
 
 function runToolUnavailable(id: string, stage: string, matches: string): void {
   const proj = makeProj();
-  writeFileSync(join(proj, "aidlc-docs", "output.ts"), "stub\n", "utf-8");
-  const sensorsDir = makeForkSensors(id, "bun .claude/tools/aidlc-sensor-stub-127.ts", matches);
-  fire([id, "--stage", stage, "--output-path", join(proj, "aidlc-docs", "output.ts")], {
+  writeFileSync(join(proj, "amadeus-docs", "output.ts"), "stub\n", "utf-8");
+  const sensorsDir = makeForkSensors(id, "bun .claude/tools/amadeus-sensor-stub-127.ts", matches);
+  fire([id, "--stage", stage, "--output-path", join(proj, "amadeus-docs", "output.ts")], {
     CLAUDE_PROJECT_DIR: proj,
     AIDLC_SENSORS_DIR: sensorsDir,
   });
@@ -704,9 +704,9 @@ describe("t92 Group D: tool-unavailable (exit 127 -> PASSED Note)", () => {
 describe("t92 Group E: script-error fall-through", () => {
   test("19: exit 2 -> Note=script-error: exit-2", () => {
     const proj = makeProj();
-    writeFileSync(join(proj, "aidlc-docs", "test.md"), "stub\n", "utf-8");
-    const sensors = makeForkSensors("required-sections", "bun .claude/tools/aidlc-sensor-stub-exit2.ts");
-    fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "aidlc-docs", "test.md")], {
+    writeFileSync(join(proj, "amadeus-docs", "test.md"), "stub\n", "utf-8");
+    const sensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-exit2.ts");
+    fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "amadeus-docs", "test.md")], {
       CLAUDE_PROJECT_DIR: proj,
       AIDLC_SENSORS_DIR: sensors,
     });
@@ -715,9 +715,9 @@ describe("t92 Group E: script-error fall-through", () => {
 
   test("20: garbage stdout -> Note=script-error: bad-output", () => {
     const proj = makeProj();
-    writeFileSync(join(proj, "aidlc-docs", "test.md"), "stub\n", "utf-8");
-    const sensors = makeForkSensors("required-sections", "bun .claude/tools/aidlc-sensor-stub-bad.ts");
-    fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "aidlc-docs", "test.md")], {
+    writeFileSync(join(proj, "amadeus-docs", "test.md"), "stub\n", "utf-8");
+    const sensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-bad.ts");
+    fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "amadeus-docs", "test.md")], {
       CLAUDE_PROJECT_DIR: proj,
       AIDLC_SENSORS_DIR: sensors,
     });
@@ -728,11 +728,11 @@ describe("t92 Group E: script-error fall-through", () => {
     // Pre-create the per-stage detail dir as a regular FILE so the
     // dispatcher's mkdirSync(detailDir, {recursive:true}) throws ENOTDIR.
     const proj = makeProj();
-    writeFileSync(join(proj, "aidlc-docs", "test.md"), "stub\n", "utf-8");
-    mkdirSync(join(recordRoot(proj), ".aidlc-sensors"), { recursive: true });
-    writeFileSync(join(recordRoot(proj), ".aidlc-sensors", "intent-capture"), "block\n", "utf-8");
-    const sensors = makeForkSensors("required-sections", "bun .claude/tools/aidlc-sensor-stub-fail.ts");
-    fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "aidlc-docs", "test.md")], {
+    writeFileSync(join(proj, "amadeus-docs", "test.md"), "stub\n", "utf-8");
+    mkdirSync(join(recordRoot(proj), ".amadeus-sensors"), { recursive: true });
+    writeFileSync(join(recordRoot(proj), ".amadeus-sensors", "intent-capture"), "block\n", "utf-8");
+    const sensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-fail.ts");
+    fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "amadeus-docs", "test.md")], {
       CLAUDE_PROJECT_DIR: proj,
       AIDLC_SENSORS_DIR: sensors,
     });
@@ -749,9 +749,9 @@ describe("t92 Group E: script-error fall-through", () => {
 describe("t92 Group F: budget override (timeout -> SENSOR_BUDGET_OVERRIDE)", () => {
   test("22: stub-slow + timeout=1 -> BUDGET_OVERRIDE, layer=registry, cap=1, observed>=1", () => {
     const proj = makeProj();
-    writeFileSync(join(proj, "aidlc-docs", "test.md"), "stub\n", "utf-8");
-    const sensors = makeForkSensors("required-sections", "bun .claude/tools/aidlc-sensor-stub-slow.ts", "", 1);
-    fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "aidlc-docs", "test.md")], {
+    writeFileSync(join(proj, "amadeus-docs", "test.md"), "stub\n", "utf-8");
+    const sensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-slow.ts", "", 1);
+    fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "amadeus-docs", "test.md")], {
       CLAUDE_PROJECT_DIR: proj,
       AIDLC_SENSORS_DIR: sensors,
     });
@@ -768,7 +768,7 @@ describe("t92 Group F: budget override (timeout -> SENSOR_BUDGET_OVERRIDE)", () 
     const proj = makeProj();
     mkdirSync(join(proj, "slow-command"), { recursive: true });
     copyFileSync(join(FIXTURES_ROOT, "slow-command", "sample.ts"), join(proj, "slow-command", "sample.ts"));
-    const sensors = makeForkSensors("required-sections", "bun .claude/tools/aidlc-sensor-stub-slow.ts", "", 1);
+    const sensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-slow.ts", "", 1);
     fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "slow-command", "sample.ts")], {
       CLAUDE_PROJECT_DIR: proj,
       AIDLC_SENSORS_DIR: sensors,
@@ -793,12 +793,12 @@ describe("t92 Group F: budget override (timeout -> SENSOR_BUDGET_OVERRIDE)", () 
 describe("t92 Group G: concurrency invariants", () => {
   test("24: 5 parallel fires -> 5 FIRED + 5 PASSED, all 5 Fire ids paired twice", async () => {
     const proj = makeProj();
-    writeFileSync(join(proj, "aidlc-docs", "test.md"), "stub\n", "utf-8");
-    const sensors = makeForkSensors("required-sections", "bun .claude/tools/aidlc-sensor-stub-pass.ts");
+    writeFileSync(join(proj, "amadeus-docs", "test.md"), "stub\n", "utf-8");
+    const sensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-pass.ts");
     await Promise.all(
       [1, 2, 3, 4, 5].map(() =>
         fireAsync(
-          ["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "aidlc-docs", "test.md")],
+          ["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "amadeus-docs", "test.md")],
           { CLAUDE_PROJECT_DIR: proj, AIDLC_SENSORS_DIR: sensors },
         ),
       ),
@@ -820,14 +820,14 @@ describe("t92 Group G: concurrency invariants", () => {
 
   test("25: lock-released-across-spawn — fast PASSED lands during slow's spawn window", async () => {
     const proj = makeProj();
-    writeFileSync(join(proj, "aidlc-docs", "test.md"), "stub\n", "utf-8");
-    const slowSensors = makeForkSensors("required-sections", "bun .claude/tools/aidlc-sensor-stub-slow.ts", "", 10);
-    const fastSensors = makeForkSensors("linter", "bun .claude/tools/aidlc-sensor-stub-pass.ts", "**/*.{ts,js}");
-    const tsFile = join(proj, "aidlc-docs", "code.ts");
+    writeFileSync(join(proj, "amadeus-docs", "test.md"), "stub\n", "utf-8");
+    const slowSensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-slow.ts", "", 10);
+    const fastSensors = makeForkSensors("linter", "bun .claude/tools/amadeus-sensor-stub-pass.ts", "**/*.{ts,js}");
+    const tsFile = join(proj, "amadeus-docs", "code.ts");
     writeFileSync(tsFile, "stub\n", "utf-8");
     // Start the slow fire (sleeps 5s) in the background.
     const slowDone = fireAsync(
-      ["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "aidlc-docs", "test.md")],
+      ["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "amadeus-docs", "test.md")],
       { CLAUDE_PROJECT_DIR: proj, AIDLC_SENSORS_DIR: slowSensors },
     );
     // Wait for slow's FIRED row to land — the deterministic "slow holds the
@@ -870,7 +870,7 @@ describe("t92 Group G: concurrency invariants", () => {
 
   test("26: lock-orphan recovery — process.exit(1)-inside-lock -> next fire fast (no retry burn)", async () => {
     const proj = makeProj();
-    writeFileSync(join(proj, "aidlc-docs", "test.md"), "stub\n", "utf-8");
+    writeFileSync(join(proj, "amadeus-docs", "test.md"), "stub\n", "utf-8");
     // Invoke the lock-exit helper directly (it imports withAuditLock and
     // process.exit(1)s while holding the lock). Expect exit code 1.
     const lockExit = spawnSync(BUN, [LOCK_EXIT_SHIM, proj], {
@@ -878,8 +878,8 @@ describe("t92 Group G: concurrency invariants", () => {
     });
     const lockRc = lockExit.status ?? -1;
     const start = Date.now();
-    const sensors = makeForkSensors("required-sections", "bun .claude/tools/aidlc-sensor-stub-pass.ts");
-    fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "aidlc-docs", "test.md")], {
+    const sensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-pass.ts");
+    fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "amadeus-docs", "test.md")], {
       CLAUDE_PROJECT_DIR: proj,
       AIDLC_SENSORS_DIR: sensors,
     });
@@ -899,13 +899,13 @@ function runDetailShape(id: string, stage: string, matches = ""): void {
   const proj = makeProj();
   let outname = "output.md";
   if (id === "linter" || id === "type-check") outname = "output.ts";
-  writeFileSync(join(proj, "aidlc-docs", outname), "stub\n", "utf-8");
-  const sensors = makeForkSensors(id, "bun .claude/tools/aidlc-sensor-stub-fail.ts", matches);
-  fire([id, "--stage", stage, "--output-path", join(proj, "aidlc-docs", outname)], {
+  writeFileSync(join(proj, "amadeus-docs", outname), "stub\n", "utf-8");
+  const sensors = makeForkSensors(id, "bun .claude/tools/amadeus-sensor-stub-fail.ts", matches);
+  fire([id, "--stage", stage, "--output-path", join(proj, "amadeus-docs", outname)], {
     CLAUDE_PROJECT_DIR: proj,
     AIDLC_SENSORS_DIR: sensors,
   });
-  const detailDir = join(recordRoot(proj), ".aidlc-sensors", stage);
+  const detailDir = join(recordRoot(proj), ".amadeus-sensors", stage);
   // Find the single <id>-*.md detail file.
   const firedId = auditField(proj, "SENSOR_FAILED", "Fire id");
   const detail = join(detailDir, `${id}-${firedId}.md`);
@@ -944,15 +944,15 @@ describe("t92 Group H: detail-file body shape per sensor", () => {
 describe("t92 Group I: detail-file collision-free", () => {
   test("31: 2 FAILED fires -> 2 distinct Fire-id-keyed detail paths", () => {
     const proj = makeProj();
-    writeFileSync(join(proj, "aidlc-docs", "test.md"), "stub\n", "utf-8");
-    const sensors = makeForkSensors("required-sections", "bun .claude/tools/aidlc-sensor-stub-fail.ts");
+    writeFileSync(join(proj, "amadeus-docs", "test.md"), "stub\n", "utf-8");
+    const sensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-fail.ts");
     for (let i = 0; i < 2; i++) {
-      fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "aidlc-docs", "test.md")], {
+      fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "amadeus-docs", "test.md")], {
         CLAUDE_PROJECT_DIR: proj,
         AIDLC_SENSORS_DIR: sensors,
       });
     }
-    const detailDir = join(recordRoot(proj), ".aidlc-sensors", "intent-capture");
+    const detailDir = join(recordRoot(proj), ".amadeus-sensors", "intent-capture");
     // List required-sections-*.md files in the detail dir.
     const files: string[] = existsSync(detailDir)
       ? readdirSync(detailDir).filter((n) => /^required-sections-.*\.md$/.test(n))
@@ -971,9 +971,9 @@ describe("t92 Group J: audit-row required fields per event type", () => {
   let jProj = "";
   beforeAll(() => {
     jProj = makeProj();
-    writeFileSync(join(jProj, "aidlc-docs", "test.md"), "stub\n", "utf-8");
-    const sensors = makeForkSensors("required-sections", "bun .claude/tools/aidlc-sensor-stub-pass.ts");
-    fire(["required-sections", "--stage", "intent-capture", "--output-path", join(jProj, "aidlc-docs", "test.md")], {
+    writeFileSync(join(jProj, "amadeus-docs", "test.md"), "stub\n", "utf-8");
+    const sensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-pass.ts");
+    fire(["required-sections", "--stage", "intent-capture", "--output-path", join(jProj, "amadeus-docs", "test.md")], {
       CLAUDE_PROJECT_DIR: jProj,
       AIDLC_SENSORS_DIR: sensors,
     });
@@ -996,9 +996,9 @@ describe("t92 Group J: audit-row required fields per event type", () => {
 
   test("34: SENSOR_FAILED — 8 fields including Detail path + Findings count (integer)", () => {
     const proj = makeProj();
-    writeFileSync(join(proj, "aidlc-docs", "test.md"), "stub\n", "utf-8");
-    const sensors = makeForkSensors("required-sections", "bun .claude/tools/aidlc-sensor-stub-fail.ts");
-    fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "aidlc-docs", "test.md")], {
+    writeFileSync(join(proj, "amadeus-docs", "test.md"), "stub\n", "utf-8");
+    const sensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-fail.ts");
+    fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "amadeus-docs", "test.md")], {
       CLAUDE_PROJECT_DIR: proj,
       AIDLC_SENSORS_DIR: sensors,
     });
@@ -1010,9 +1010,9 @@ describe("t92 Group J: audit-row required fields per event type", () => {
 
   test("35: SENSOR_BUDGET_OVERRIDE — 9 fields (+Cap layer/value, Observed value)", () => {
     const proj = makeProj();
-    writeFileSync(join(proj, "aidlc-docs", "test.md"), "stub\n", "utf-8");
-    const sensors = makeForkSensors("required-sections", "bun .claude/tools/aidlc-sensor-stub-slow.ts", "", 1);
-    fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "aidlc-docs", "test.md")], {
+    writeFileSync(join(proj, "amadeus-docs", "test.md"), "stub\n", "utf-8");
+    const sensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-slow.ts", "", 1);
+    fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "amadeus-docs", "test.md")], {
       CLAUDE_PROJECT_DIR: proj,
       AIDLC_SENSORS_DIR: sensors,
     });
@@ -1030,7 +1030,7 @@ describe("t92 Group J: audit-row required fields per event type", () => {
 // ============================================================
 
 function assertManifestCommandResolves(id: string): void {
-  const manifest = join(REPO_ROOT, "dist", "claude", ".claude", "sensors", `aidlc-${id}.md`);
+  const manifest = join(REPO_ROOT, "dist", "claude", ".claude", "sensors", `amadeus-${id}.md`);
   const text = readFileSync(manifest, "utf-8");
   const cmdLine = text.split("\n").find((l) => l.startsWith("command:")) ?? "";
   const cmd = cmdLine.replace(/^command:\s*/, "");
@@ -1069,8 +1069,8 @@ describe("t92 Group K: manifest command resolves next to dispatcher", () => {
 
 function assertNoFiredBeforeLock(args: string[]): void {
   const proj = makeProj();
-  writeFileSync(join(proj, "aidlc-docs", "test.md"), "stub\n", "utf-8");
-  fire(args.map((a) => (a === "__OUT__" ? join(proj, "aidlc-docs", "test.md") : a)), {
+  writeFileSync(join(proj, "amadeus-docs", "test.md"), "stub\n", "utf-8");
+  fire(args.map((a) => (a === "__OUT__" ? join(proj, "amadeus-docs", "test.md") : a)), {
     CLAUDE_PROJECT_DIR: proj,
   });
   const f = proj;
@@ -1113,10 +1113,10 @@ describe("t92 Group L: validation order (no SENSOR_FIRED pre-lock)", () => {
 describe("t92 Group M: upstream-coverage --consumes resolution", () => {
   test("43: stage.consumes[].artifact resolved via loadGraph() and passed to script", () => {
     const proj = makeProj();
-    writeFileSync(join(proj, "aidlc-docs", "test.md"), "stub\n", "utf-8");
-    const sensors = makeForkSensors("upstream-coverage", "bun .claude/tools/aidlc-sensor-stub-argv.ts");
+    writeFileSync(join(proj, "amadeus-docs", "test.md"), "stub\n", "utf-8");
+    const sensors = makeForkSensors("upstream-coverage", "bun .claude/tools/amadeus-sensor-stub-argv.ts");
     const argvOut = join(proj, "argv.json");
-    fire(["upstream-coverage", "--stage", "market-research", "--output-path", join(proj, "aidlc-docs", "test.md")], {
+    fire(["upstream-coverage", "--stage", "market-research", "--output-path", join(proj, "amadeus-docs", "test.md")], {
       CLAUDE_PROJECT_DIR: proj,
       AIDLC_SENSORS_DIR: sensors,
       AIDLC_T92_ARGV_OUT: argvOut,
@@ -1135,7 +1135,7 @@ describe("t92 Group M: upstream-coverage --consumes resolution", () => {
 // Group N — type-check status gate (1): tsc exited non-zero but
 // parseTscOutput found ZERO diagnostics (a config-load failure), so the
 // sensor must route to script-error: exit-2 rather than a false clean
-// PASS. Regression guard for aidlc-sensor-type-check.ts's status gate
+// PASS. Regression guard for amadeus-sensor-type-check.ts's status gate
 // (v0.5.16). Inputs are built inline (no committed fixture): a tsconfig
 // whose `include` points at a non-existent file makes tsc exit 2 with a
 // TS18003 "No inputs were found" line that carries NO (line,col)
@@ -1159,7 +1159,7 @@ describe("t92 Group N: type-check status gate (config-load failure)", () => {
     );
     writeFileSync(
       join(proj, sub, "package.json"),
-      `${JSON.stringify({ name: "aidlc-t92-config-error", type: "module", private: true })}\n`,
+      `${JSON.stringify({ name: "amadeus-t92-config-error", type: "module", private: true })}\n`,
       "utf-8",
     );
     fire(["type-check", "--stage", "code-generation", "--output-path", join(proj, sub, "sample.ts")], {
@@ -1178,7 +1178,7 @@ describe("t92 Group N: type-check status gate (config-load failure)", () => {
 // non-zero because a DIFFERENT file in the project has a genuine type
 // error, but NONE of those diagnostics fall on --file-path. The sensor
 // post-filters to the target (the documented cross-file known limitation
-// in aidlc-sensor-type-check.ts), so the target must still get a per-file
+// in amadeus-sensor-type-check.ts), so the target must still get a per-file
 // clean PASS (Note=""), NOT script-error. Regression guard: the status
 // gate must key on allErrors (whole-project parse), never on the filtered
 // `errors` — an earlier draft keyed on `errors` and wrongly turned every
@@ -1204,7 +1204,7 @@ describe("t92 Group O: type-check status gate (cross-file errors, none for targe
     );
     writeFileSync(
       join(proj, sub, "package.json"),
-      `${JSON.stringify({ name: "aidlc-t92-cross-file", type: "module", private: true })}\n`,
+      `${JSON.stringify({ name: "amadeus-t92-cross-file", type: "module", private: true })}\n`,
       "utf-8",
     );
     fire(["type-check", "--stage", "code-generation", "--output-path", join(proj, sub, "sample.ts")], {

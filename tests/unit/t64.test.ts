@@ -15,7 +15,7 @@
 // env-seam Bun.spawnSync case retained.
 //
 // Sources read for this port:
-//   dist/claude/.claude/tools/aidlc-lib.ts
+//   dist/claude/.claude/tools/amadeus-lib.ts
 //     :882 parseStageFrontmatter(raw: string): Record<string, unknown>
 //          throws "parseStageFrontmatter expected string, got <type>" on
 //          non-string (:886); throws "Stage file missing YAML frontmatter
@@ -25,7 +25,7 @@
 //     objectListField (:1242) throws "Malformed consumes[] entry ..."
 //          (:1286) and "Blank line not allowed inside consumes[] block ..."
 //          (:1264).
-//   dist/claude/.claude/tools/aidlc-stage-schema.ts
+//   dist/claude/.claude/tools/amadeus-stage-schema.ts
 //     :108 validateStageFrontmatter(obj) => { valid, data } | { valid,
 //          errors }. "slug must be kebab-case" (:333 via checkSlugPattern),
 //          "consumes[i].artifact must be kebab-case" (:196), reserved-key
@@ -43,8 +43,8 @@ import { describe, expect, test } from "bun:test";
 import {
   emitStageFrontmatter,
   parseStageFrontmatter,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
-import { validateStageFrontmatter } from "../../dist/claude/.claude/tools/aidlc-stage-schema.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { validateStageFrontmatter } from "../../dist/claude/.claude/tools/amadeus-stage-schema.ts";
 
 // --- Helpers mirroring the .sh's bun -e wrappers, but in-process. ---
 
@@ -88,9 +88,9 @@ slug: scope-definition
 phase: ideation
 execution: ALWAYS
 condition: Always executes
-lead_agent: aidlc-product-agent
+lead_agent: amadeus-product-agent
 support_agents:
-  - aidlc-delivery-agent
+  - amadeus-delivery-agent
 mode: inline
 produces:
   - scope-document
@@ -103,7 +103,7 @@ consumes:
 requires_stage:
   - intent-capture
 inputs: Intent statement
-outputs: aidlc-docs/ideation/scope-definition/scope-document.md
+outputs: amadeus-docs/ideation/scope-definition/scope-document.md
 ---
 
 # body
@@ -129,9 +129,9 @@ const SCALAR_FIX = `---
 slug: test
 phase: ideation
 condition: unquoted value with spaces
-lead_agent: "aidlc-product-agent"
+lead_agent: "amadeus-product-agent"
 inputs: value with trailing space
-outputs: "aidlc-docs/path/CONDITIONAL: file.md"
+outputs: "amadeus-docs/path/CONDITIONAL: file.md"
 support_agents: []
 produces: []
 consumes: []
@@ -146,7 +146,7 @@ slug: test
 phase: ideation
 execution: ALWAYS
 condition: "true"
-lead_agent: aidlc-product-agent
+lead_agent: amadeus-product-agent
 support_agents: []
 mode: inline
 produces: []
@@ -162,7 +162,7 @@ slug: test
 phase: ideation
 execution: ALWAYS
 condition: x
-lead_agent: aidlc-product-agent
+lead_agent: amadeus-product-agent
 mode: inline
 support_agents: []
 produces: []
@@ -178,7 +178,7 @@ slug: test
 phase: ideation
 execution: ALWAYS
 condition: x
-lead_agent: aidlc-product-agent
+lead_agent: amadeus-product-agent
 mode: inline
 support_agents:
   - a
@@ -197,7 +197,7 @@ slug: test
 phase: ideation
 execution: ALWAYS
 condition: x
-lead_agent: aidlc-product-agent
+lead_agent: amadeus-product-agent
 mode: inline
 support_agents: []
 consumes: []
@@ -212,7 +212,7 @@ slug: test
 phase: ideation
 execution: ALWAYS
 condition: x
-lead_agent: aidlc-product-agent
+lead_agent: amadeus-product-agent
 mode: inline
 support_agents: []
 produces: []
@@ -230,7 +230,7 @@ slug: test
 phase: ideation
 execution: ALWAYS
 condition: x
-lead_agent: aidlc-product-agent
+lead_agent: amadeus-product-agent
 mode: inline
 support_agents: []
 produces: []
@@ -251,7 +251,7 @@ slug: test
 phase: ideation
 execution: ALWAYS
 condition: x
-lead_agent: aidlc-product-agent
+lead_agent: amadeus-product-agent
 support_agents: []
 mode: inline
 produces: []
@@ -271,7 +271,7 @@ slug: test
 phase: ideation
 execution: ALWAYS
 condition: x
-lead_agent: aidlc-product-agent
+lead_agent: amadeus-product-agent
 mode: inline
 inputs: a
 outputs: b
@@ -283,7 +283,7 @@ slug: test
 phase: ideation
 execution: ALWAYS
 condition: x
-lead_agent: aidlc-product-agent
+lead_agent: amadeus-product-agent
 mode: inline
 support_agents: []
 produces: []
@@ -301,7 +301,7 @@ slug: test
 phase: ideation
 execution: ALWAYS
 condition: x
-lead_agent: aidlc-product-agent
+lead_agent: amadeus-product-agent
 mode: inline
 support_agents: []
 produces: []
@@ -319,7 +319,7 @@ slug: test
 phase: construction
 execution: ALWAYS
 condition: x
-lead_agent: aidlc-developer-agent
+lead_agent: amadeus-developer-agent
 mode: inline
 for_each: unit-of-work
 support_agents: []
@@ -336,11 +336,11 @@ slug: test
 phase: construction
 execution: CONDITIONAL
 condition: x
-lead_agent: aidlc-developer-agent
+lead_agent: amadeus-developer-agent
 mode: subagent
 for_each: unit-of-work
 support_agents:
-  - aidlc-quality-agent
+  - amadeus-quality-agent
 produces:
   - code
 consumes:
@@ -359,14 +359,14 @@ slug: test
 phase: construction
 execution: ALWAYS
 condition: x
-lead_agent: aidlc-developer-agent
+lead_agent: amadeus-developer-agent
 support_agents: []
 mode: inline
 produces: []
 consumes: []
 requires_stage: []
 inputs: some: prefix
-outputs: "aidlc-docs/CONDITIONAL: file.md"
+outputs: "amadeus-docs/CONDITIONAL: file.md"
 ---
 `;
 
@@ -375,7 +375,7 @@ slug: Test-Stage
 phase: ideation
 execution: ALWAYS
 condition: x
-lead_agent: aidlc-product-agent
+lead_agent: amadeus-product-agent
 mode: inline
 support_agents: []
 produces: []
@@ -391,7 +391,7 @@ slug: test
 phase: ideation
 execution: ALWAYS
 condition: x
-lead_agent: aidlc-product-agent
+lead_agent: amadeus-product-agent
 mode: inline
 support_agents: []
 produces: []
@@ -412,7 +412,7 @@ slug: test
 phase: ideation
 execution: ALWAYS
 condition: x
-lead_agent: aidlc-product-agent
+lead_agent: amadeus-product-agent
 mode: inline
 support_agents: []
 produces: []
@@ -431,7 +431,7 @@ slug: test
 phase: ideation
 execution: ALWAYS
 condition: x
-lead_agent: aidlc-product-agent
+lead_agent: amadeus-product-agent
 mode: inline
 support_agents: []
 produces: []
@@ -452,7 +452,7 @@ slug: test
 phase: ideation
 execution: ALWAYS
 condition: ""
-lead_agent: aidlc-product-agent
+lead_agent: amadeus-product-agent
 mode: inline
 support_agents: []
 produces: []
@@ -472,9 +472,9 @@ slug: test
 phase: inception
 execution: ALWAYS
 condition: x
-lead_agent: aidlc-product-agent
+lead_agent: amadeus-product-agent
 mode: inline
-reviewer: aidlc-product-lead-agent
+reviewer: amadeus-product-lead-agent
 reviewer_max_iterations: 2
 support_agents: []
 produces: []
@@ -566,13 +566,13 @@ describe("scalar parsing", () => {
   test("double-quoted scalar strips quotes", () => {
     // .sh: "double-quoted scalar strips quotes"
     const obj = parseStageFrontmatter(SCALAR_FIX) as Record<string, unknown>;
-    expect(obj.lead_agent).toBe("aidlc-product-agent");
+    expect(obj.lead_agent).toBe("amadeus-product-agent");
   });
 
   test("scalar containing colon parses when quoted", () => {
     // .sh: "scalar containing colon parses when quoted"
     const obj = parseStageFrontmatter(SCALAR_FIX) as Record<string, unknown>;
-    expect(obj.outputs).toBe("aidlc-docs/path/CONDITIONAL: file.md");
+    expect(obj.outputs).toBe("amadeus-docs/path/CONDITIONAL: file.md");
   });
 
   test('quoted "true" in scalar stays string type', () => {
@@ -757,7 +757,7 @@ describe("reviewer fields parse/emit (V1)", () => {
   test("reviewer stays a string", () => {
     const obj = parseStageFrontmatter(REVIEWER) as Record<string, unknown>;
     expect(typeof obj.reviewer).toBe("string");
-    expect(obj.reviewer).toBe("aidlc-product-lead-agent");
+    expect(obj.reviewer).toBe("amadeus-product-lead-agent");
   });
 
   test("emitted cap is an unquoted number that re-parses as a number", () => {

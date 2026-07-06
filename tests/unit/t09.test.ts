@@ -1,10 +1,10 @@
-// covers: hook:aidlc-log-subagent
+// covers: hook:amadeus-log-subagent
 //
 // Port of tests/unit/t09-hook-log-subagent.sh (TAP plan 8), mechanism = none.
-// The unit under test is a HOOK — aidlc-log-subagent.ts, the SubagentStop hook
+// The unit under test is a HOOK — amadeus-log-subagent.ts, the SubagentStop hook
 // that emits SUBAGENT_COMPLETED. Hooks are mechanism=none: they receive a
 // Claude Code JSON payload on stdin and resolve the project dir from the
-// CLAUDE_PROJECT_DIR env var (aidlc-lib.ts:114-116). There is no exported pure
+// CLAUDE_PROJECT_DIR env var (amadeus-lib.ts:114-116). There is no exported pure
 // function to import — the hook's contract is "JSON on stdin + env -> audit row
 // + heartbeat file + clean exit". So every .sh assertion is preserved by
 // SPAWNING the hook via node:child_process spawnSync with controlled stdin and
@@ -12,7 +12,7 @@
 // bun "$HOOK"`. We assert on res.status (the .sh's $? in tests 3 + 5) and on the
 // audit.md / heartbeat the hook writes (the .sh's assert_grep / assert_file_exists).
 //
-// AUDIT-ROW SHAPE (aidlc-log-subagent.ts:40-58 + aidlc-audit.ts:256-267): the
+// AUDIT-ROW SHAPE (amadeus-log-subagent.ts:40-58 + amadeus-audit.ts:256-267): the
 // hook calls appendAuditEntry("SUBAGENT_COMPLETED", fields, projectDir) where
 // fields = { "Agent Type": agentType, ["Agent ID"]: agentId?, Message: msg? }.
 // appendAuditEntryUnlocked renders each as `**<key>**: <value>` under a
@@ -23,7 +23,7 @@
 //
 // SEED BASELINE (load-bearing for parity strength). The .sh seeds audit-sample.md
 // (fixtures.sh seed_audit_file) which ALREADY CONTAINS one SUBAGENT_COMPLETED
-// block whose Agent Type is `aidlc-developer-agent` (audit-sample.md:19-26). So
+// block whose Agent Type is `amadeus-developer-agent` (audit-sample.md:19-26). So
 // the .sh's bare `assert_grep "SUBAGENT_COMPLETED"` / `assert_grep "developer"` /
 // `assert_grep "architect"` would PASS off the seed alone for some of them. To be
 // EQUAL-OR-STRONGER, the event-presence cases here COUNT SUBAGENT_COMPLETED blocks
@@ -45,9 +45,9 @@
 //   - .sh Test 3  no audit.md -> exits silently, audit.md NOT created  -> Test 3:
 //       res.status === 0 (the hook's process.exit(0), STRONGER than the .sh which
 //       only checked the file's absence) + audit.md still absent.
-//   - .sh Test 4  assert_file_exists .aidlc-hooks-health/log-subagent.last -> Test 4:
+//   - .sh Test 4  assert_file_exists .amadeus-hooks-health/log-subagent.last -> Test 4:
 //       heartbeat file exists (same observable) + STRONGER: its contents are an
-//       ISO timestamp (the hook writes isoTimestamp(), aidlc-log-subagent.ts:24).
+//       ISO timestamp (the hook writes isoTimestamp(), amadeus-log-subagent.ts:24).
 //   - .sh Test 5  empty stdin -> exit 0 ($RC == 0)                     -> Test 5:
 //       res.status === 0 (same observable) + STRONGER: audit.md byte-unchanged
 //       (empty stdin -> JSON.parse("") throws -> process.exit(0) BEFORE any
@@ -99,7 +99,7 @@ const HOOK = join(
   "claude",
   ".claude",
   "hooks",
-  "aidlc-log-subagent.ts",
+  "amadeus-log-subagent.ts",
 );
 
 const tempDirs: string[] = [];
@@ -135,7 +135,7 @@ function proj(seed = true): string {
   const p = createTestProject();
   tempDirs.push(p);
   seedStateFile(p, join(FIXTURES_DIR, "state-mid-ideation.md"));
-  writeFileSync(join(p, "aidlc", ".aidlc-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(p, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
   if (seed) {
     const auditDir = seededAuditDir(p);
     mkdirSync(auditDir, { recursive: true });
@@ -149,7 +149,7 @@ function proj(seed = true): string {
 
 const auditDirOf = (p: string): string => seededAuditDir(p);
 const heartbeatPath = (p: string): string =>
-  join(seededRecordDir(p), ".aidlc-hooks-health", "log-subagent.last");
+  join(seededRecordDir(p), ".amadeus-hooks-health", "log-subagent.last");
 
 /** Concatenate every shard (sorted) — the settled per-intent audit read. */
 function readShards(p: string): string {
@@ -174,7 +174,7 @@ interface HookResult {
 /**
  * Spawn the hook with `payload` on stdin and CLAUDE_PROJECT_DIR=p. Mirrors the
  * .sh's `echo '<json>' | CLAUDE_PROJECT_DIR=<p> bun "$HOOK" 2>/dev/null`. The
- * hook resolves the project dir from CLAUDE_PROJECT_DIR first (aidlc-lib.ts:116),
+ * hook resolves the project dir from CLAUDE_PROJECT_DIR first (amadeus-lib.ts:116),
  * so the absolute hook path never shadows it.
  */
 function runHook(payload: string, p: string): HookResult {
@@ -234,7 +234,7 @@ function bodyContains(body: string, needle: string): boolean {
   return body.includes(needle);
 }
 
-describe("t09 aidlc-log-subagent hook (migrated from t09-hook-log-subagent.sh, plan 8)", () => {
+describe("t09 amadeus-log-subagent hook (migrated from t09-hook-log-subagent.sh, plan 8)", () => {
   test("1: logs subagent completion as SUBAGENT_COMPLETED event", () => {
     const p = proj();
     const before = subagentCompletedCount(readShards(p)); // seed baseline = 1

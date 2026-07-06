@@ -1,25 +1,25 @@
-// covers: subcommand:aidlc-utility:help
+// covers: subcommand:amadeus-utility:help
 //
 // t23.test.ts — SDK-harness port of tests/integration/t23-integration-help.sh
-// (plan 6). Drives the real /aidlc --help through the Claude Agent SDK and
+// (plan 6). Drives the real /amadeus --help through the Claude Agent SDK and
 // asserts ONLY on deterministic surfaces — never on assistantText.
 //
 // WHY THIS PORT EXISTS. The .sh split the contract in two BECAUSE it had no
 // deterministic handle on the routed path:
-//   - Part A (tests 1-5) ran `bun aidlc-utility.ts help` OUT OF BAND (no LLM)
+//   - Part A (tests 1-5) ran `bun amadeus-utility.ts help` OUT OF BAND (no LLM)
 //     and grepped that side-channel stdout for AI-DLC / --status / --init /
-//     --doctor / enterprise. Substantive, but it never touched the /aidlc
+//     --doctor / enterprise. Substantive, but it never touched the /amadeus
 //     --help path a user actually invokes. (P4: --init is RETIRED from the help;
 //     test 3 is re-expressed as the new intent/space verbs + a --init/--force
 //     absence guard — see the assertion map below.)
-//   - Part B (test 6) ran `/aidlc --help` through Claude Code but asserted
+//   - Part B (test 6) ran `/amadeus --help` through Claude Code but asserted
 //     ONLY exit-0, deliberately NOT on content — its own header (lines 10-14)
 //     says Opus "sometimes runs the tool internally and gives a short summary
 //     instead of echoing the full text". That is the CLASS-1 prose flake: the
 //     contract is real but the LLM's rendering is non-deterministic.
 //
 // THE DETERMINISTIC SURFACE. SKILL.md:67,72 routes `--help` to
-// `bun .claude/tools/aidlc-utility.ts help` via Bash and prints its stdout
+// `bun .claude/tools/amadeus-utility.ts help` via Bash and prints its stdout
 // VERBATIM. The SDK surfaces that Bash tool_result BYTE-IDENTICAL to the
 // tool's stdout, before the LLM rewords it (the same surface t20/t22 use). So
 // every Part-A grep is re-expressed against the Bash tool_result on the path a
@@ -35,11 +35,11 @@
 //                                 are ABSENT (mirrors tests/integration/t31-help.test.ts).
 //   4 OUTPUT contains --doctor  -> Bash tool_result contains "--doctor"  (HELP_TEXT_TAIL Utilities line, utility.ts:118)
 //   5 OUTPUT contains enterprise-> Bash tool_result contains "enterprise"(scope line rendered from scope-mapping.json via renderHelpText, utility.ts:144-158; key utility.ts data/scope-mapping.json:2)
-//   6 /aidlc --help exits 0     -> resultEvent.is_error === false        (SDK terminal event — handleHelp is a single stdout write + exit-0 by construction, utility.ts:165-167)
+//   6 /amadeus --help exits 0     -> resultEvent.is_error === false        (SDK terminal event — handleHelp is a single stdout write + exit-0 by construction, utility.ts:165-167)
 //
 // Re STRONGER-THAN-.sh: the .sh asserted the 5 literals on Part A's out-of-band
 // tool run and only exit-0 on Part B's routed run. This file asserts the same 5
-// literals on the ROUTED /aidlc --help path's deterministic Bash tool_result
+// literals on the ROUTED /amadeus --help path's deterministic Bash tool_result
 // (so a regression where dispatch stopped running the tool, or the tool stopped
 // emitting a section, is now caught on the user-facing path) PLUS the clean
 // terminal. assertToolResultContains refuses to pass vacuously if Bash never
@@ -53,14 +53,14 @@
 //   - "--doctor"    HELP_TEXT_TAIL Utilities block                     (utility.ts:118)
 //   - "enterprise"  scope name padded into a scope line by renderHelpText
 //                   (utility.ts:158), sourced from data/scope-mapping.json:2
-//   - --help dispatch: SKILL.md:67,72 -> `bun .claude/tools/aidlc-utility.ts help` via Bash, stdout verbatim
+//   - --help dispatch: SKILL.md:67,72 -> `bun .claude/tools/amadeus-utility.ts help` via Bash, stdout verbatim
 //
 // MECHANISM. Plain t23.test.ts — mechanism `sdk` is DERIVED from the driveAidlc(
-// call (Phase 0), no filename segment. The covered unit `aidlc-utility help` is
+// call (Phase 0), no filename segment. The covered unit `amadeus-utility help` is
 // minMechanism `cli` (rank 1); sdk (rank 2) satisfies cli (2 >= 1), so the
 // covers claim is honoured by the guarantee-principle gate.
 //
-// It SPENDS TOKENS — driveAidlc drives the real /aidlc on Opus/Bedrock.
+// It SPENDS TOKENS — driveAidlc drives the real /amadeus on Opus/Bedrock.
 // Generous per-test timeout so a hung canUseTool fails LOUD via bun:test.
 
 import { describe, expect, test } from "bun:test";
@@ -93,22 +93,22 @@ const HELP_DOCTOR = "--doctor"; // Utilities block, utility.ts:118
 const HELP_ENTERPRISE = "enterprise"; // scope line, scope-mapping.json:2 via renderHelpText
 const STOP_AFTER_HELP = { toolName: "Bash", resultIncludes: HELP_HEADER } as const;
 
-describe("t23 /aidlc --help (sdk)", () => {
+describe("t23 /amadeus --help (sdk)", () => {
   // -------------------------------------------------------------------------
-  // /aidlc --help routes to the deterministic help CLI via Bash and prints its
+  // /amadeus --help routes to the deterministic help CLI via Bash and prints its
   // stdout verbatim. Re-expresses .sh Part A (tests 1-5) on the ROUTED path's
   // Bash tool_result, plus .sh test 6 (exit-0) as a clean SDK terminal event.
   //
   // The .sh ran the tool out of band for the content greps; here the content
   // literals are asserted on the tool_result the orchestrator actually produced
-  // when routing /aidlc --help — strictly stronger coverage of the user path.
+  // when routing /amadeus --help — strictly stronger coverage of the user path.
   // -------------------------------------------------------------------------
   test(
     "help routes to the help CLI and its verbatim stdout carries every advertised section",
     async () => {
       const proj = setupIntegrationProject({ noAidlcDocs: true });
       try {
-        const r = await driveAidlc("/aidlc --help", {
+        const r = await driveAidlc("/amadeus --help", {
           projectDir: proj,
           timeoutMs: DRIVE_TIMEOUT_MS,
           stopAfterToolResult: STOP_AFTER_HELP,
@@ -140,7 +140,7 @@ describe("t23 /aidlc --help (sdk)", () => {
         // .sh test 5 (a scope name rendered from scope-mapping.json):
         assertToolResultContains(r, "Bash", HELP_ENTERPRISE);
 
-        // .sh test 6: /aidlc --help exits 0. Re-expressed on the non-error
+        // .sh test 6: /amadeus --help exits 0. Re-expressed on the non-error
         // Bash tool_result, then the driver aborts immediately so the model
         // cannot spend turns after the deterministic help contract is proven.
         const helpCall = r.toolResults.find(

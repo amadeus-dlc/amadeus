@@ -1,4 +1,4 @@
-// covers: subcommand:aidlc-orchestrate:next, subcommand:aidlc-utility:detect
+// covers: subcommand:amadeus-orchestrate:next, subcommand:amadeus-utility:detect
 // covers: function:classifyTerminalCommand
 //
 // t198 - the P0 compose surfaces (adaptive workflows):
@@ -11,7 +11,7 @@
 //     flags.intent - the spike-F trap), and both force the composer dispatch.
 //   - compose is NOT in WORKSPACE_VERBS / classifyTerminalCommand: on Kiro the
 //     verb-intercept hook classifies every leading terminal verb and runs it
-//     off-band as an aidlc-utility subcommand + arms the roll-forward latch. A
+//     off-band as an amadeus-utility subcommand + arms the roll-forward latch. A
 //     compose entry there would spawn a nonexistent subcommand and neuter the
 //     same-turn birth `next` - so classifyTerminalCommand(["compose", ...])
 //     must stay null (the Kiro-adapter regression pin).
@@ -39,11 +39,11 @@ import {
   resetAidlcEnv,
   seedStateFile,
 } from "../harness/fixtures.ts";
-import { classifyTerminalCommand } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { classifyTerminalCommand } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath;
-const ORCH = join(AIDLC_SRC, "tools", "aidlc-orchestrate.ts");
-const UTIL = join(AIDLC_SRC, "tools", "aidlc-utility.ts");
+const ORCH = join(AIDLC_SRC, "tools", "amadeus-orchestrate.ts");
+const UTIL = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
 
 const MID_IDEATION = join(FIXTURES_DIR, "state-mid-ideation.md");
 
@@ -87,7 +87,7 @@ afterEach(() => {
 // ===========================================================================
 // The Kiro verb-intercept regression pin (review trap 1). compose must never
 // classify as a terminal command - a WORKSPACE_VERBS entry would make the Kiro
-// hook run `aidlc-utility.ts compose` off-band and arm the roll-forward latch.
+// hook run `amadeus-utility.ts compose` off-band and arm the roll-forward latch.
 // ===========================================================================
 describe("t198 compose is NOT a terminal command (Kiro seam regression)", () => {
   test("classifyTerminalCommand null for compose in every arg shape", () => {
@@ -116,7 +116,7 @@ describe("t198 cold-start compose surfaces -> composer dispatch", () => {
     proj = createTestProject();
     const d = directiveOf(runNext(proj, ["compose", "fix the token bug"]).out);
     expect(d.kind).toBe("print");
-    expect(String(d.message)).toContain("aidlc-composer-agent");
+    expect(String(d.message)).toContain("amadeus-composer-agent");
     expect(String(d.message)).toContain("fix the token bug");
     // Front mode, not in-flight: no state file exists.
     expect(String(d.message)).not.toContain("RUNNING workflow");
@@ -138,7 +138,7 @@ describe("t198 cold-start compose surfaces -> composer dispatch", () => {
       runNext(proj, ["--new-scope", "build a payment reconciliation service"]).out,
     );
     expect(d.kind).toBe("print");
-    expect(String(d.message)).toContain("aidlc-composer-agent");
+    expect(String(d.message)).toContain("amadeus-composer-agent");
     expect(String(d.message)).toContain("--new-scope");
     expect(String(d.message)).toContain("SYNTHESIZE");
   });
@@ -161,7 +161,7 @@ describe("t198 mid-flow compose -> in-flight dispatch, not an advance", () => {
     seedStateFile(proj, MID_IDEATION);
     const d = directiveOf(runNext(proj, ["compose"]).out);
     expect(d.kind).toBe("print");
-    expect(String(d.message)).toContain("aidlc-composer-agent");
+    expect(String(d.message)).toContain("amadeus-composer-agent");
     expect(String(d.message)).toContain("RUNNING workflow");
     // The counterfactual: a guard-less engine routes this to the current
     // run-stage. Pin the absence.

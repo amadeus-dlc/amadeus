@@ -13,7 +13,7 @@
 // in-process (resolved from the harness's AIDLC_SRC, the same
 // dist/claude/.claude root the .sh reached via $CLAUDE_DIR) and asserts. Zero
 // LLM, zero tokens, zero subprocess. The ONE in-repo import — FIRST_BATCH from
-// aidlc-runner-gen.ts — is a pure exported constant, not a spawn (the .sh
+// amadeus-runner-gen.ts — is a pure exported constant, not a spawn (the .sh
 // hardcoded the same four scope-runner names in SCOPE_RUNNER_SKILLS; importing
 // the constant is STRONGER: it tracks the generator's source of truth so a
 // FIRST_BATCH edit flows into this guard automatically).
@@ -21,12 +21,12 @@
 // Subject under test (the shipped skill set + each SKILL.md):
 //   dist/claude/.claude/skills/<skill>/SKILL.md — for the DERIVED expected set:
 //     - 4 base skills (orchestrator + 3 read-only session skills)
-//     - the generator's FIRST_BATCH scope-runners (aidlc-runner-gen.ts:307,
+//     - the generator's FIRST_BATCH scope-runners (amadeus-runner-gen.ts:307,
 //       imported here, not hardcoded)
-//     - one aidlc-<slug> per RUNNABLE compiled stage (every stage whose
+//     - one amadeus-<slug> per RUNNABLE compiled stage (every stage whose
 //       phase !== "initialization", read from tools/data/stage-graph.json
 //       exactly as the .sh's `bun -e` did — the array of stage records)
-//     - the single /aidlc-init phase wrapper
+//     - the single /amadeus-init phase wrapper
 //   Each conformant SKILL.md must: exist; carry frontmatter `name:` equal to
 //   the dir name; carry a `description:` line; carry NO `hooks:` block (Fork
 //   2→B moved the deterministic spine project-wide into settings.json); and
@@ -41,7 +41,7 @@
 //
 // Old TAP -> new test parity (1:1, no guarantee dropped; several STRONGER):
 //   .sh test 1 (dir-count: shipped set == base 4 + 4 scope-runners +
-//       29 stage-runners + aidlc-init, sorted assert_eq)
+//       29 stage-runners + amadeus-init, sorted assert_eq)
 //         -> "shipped skill set == derived expected set (sorted, exact)"
 //            STRONGER: asserts the two sorted arrays equal element-by-element
 //            (toEqual), not just the joined string the .sh compared.
@@ -67,7 +67,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { AIDLC_SRC } from "../harness/fixtures.ts";
-import { FIRST_BATCH } from "../../dist/claude/.claude/tools/aidlc-runner-gen.ts";
+import { FIRST_BATCH } from "../../dist/claude/.claude/tools/amadeus-runner-gen.ts";
 
 const SKILLS_DIR = join(AIDLC_SRC, "skills");
 const STAGE_GRAPH = join(AIDLC_SRC, "tools", "data", "stage-graph.json");
@@ -75,17 +75,17 @@ const STAGE_GRAPH = join(AIDLC_SRC, "tools", "data", "stage-graph.json");
 // --- The four base skills (orchestrator + the three read-only session skills).
 const BASE_SKILLS = [
   "aidlc",
-  "aidlc-outcomes-pack",
-  "aidlc-replay",
-  "aidlc-session-cost",
+  "amadeus-outcomes-pack",
+  "amadeus-replay",
+  "amadeus-session-cost",
 ];
 
 // --- The first-batch generated scope-runner dirs. IMPORTED from the generator
-// (aidlc-runner-gen.ts FIRST_BATCH), not hardcoded — the .sh hardcoded the same
+// (amadeus-runner-gen.ts FIRST_BATCH), not hardcoded — the .sh hardcoded the same
 // four in SCOPE_RUNNER_SKILLS; tracking the constant is the stronger contract.
-const SCOPE_RUNNER_SKILLS = FIRST_BATCH.map((s) => `aidlc-${s}`);
+const SCOPE_RUNNER_SKILLS = FIRST_BATCH.map((s) => `amadeus-${s}`);
 
-// --- One aidlc-<slug> per RUNNABLE compiled stage, derived from the graph the
+// --- One amadeus-<slug> per RUNNABLE compiled stage, derived from the graph the
 // same way the .sh's `bun -e` did: read tools/data/stage-graph.json (the array
 // of stage records), keep every stage whose phase !== "initialization".
 interface StageRecord {
@@ -95,14 +95,14 @@ interface StageRecord {
 const graph: StageRecord[] = JSON.parse(readFileSync(STAGE_GRAPH, "utf-8"));
 const RUNNER_SKILLS = graph
   .filter((s) => s.phase !== "initialization")
-  .map((s) => `aidlc-${s.slug}`);
+  .map((s) => `amadeus-${s.slug}`);
 
-// --- The init-phase runner: a single /aidlc-init wrapper over `/aidlc --init`.
-const INIT_RUNNER_SKILL = "aidlc-init";
+// --- The init-phase runner: a single /amadeus-init wrapper over `/amadeus --init`.
+const INIT_RUNNER_SKILL = "amadeus-init";
 
-// --- The composer shortcut: a single /aidlc-compose wrapper over
-// `/aidlc compose ...` (the adaptive composer's typeable entry).
-const COMPOSE_RUNNER_SKILL = "aidlc-compose";
+// --- The composer shortcut: a single /amadeus-compose wrapper over
+// `/amadeus compose ...` (the adaptive composer's typeable entry).
+const COMPOSE_RUNNER_SKILL = "amadeus-compose";
 
 const EXPECTED_SKILLS = [
   ...BASE_SKILLS,

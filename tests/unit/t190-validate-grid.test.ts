@@ -1,4 +1,4 @@
-// covers: function:validateGrid, function:validateScope, subcommand:aidlc-graph:validate-grid
+// covers: function:validateGrid, function:validateScope, subcommand:amadeus-graph:validate-grid
 //
 // t190 - the P1 arbitrary-grid validator (adaptive workflows).
 //
@@ -44,11 +44,11 @@ import { join } from "node:path";
 import {
   validateGrid,
   validateScope,
-} from "../../dist/claude/.claude/tools/aidlc-graph.ts";
+} from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 import { AIDLC_SRC } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const GRAPH_TOOL = join(AIDLC_SRC, "tools", "aidlc-graph.ts");
+const GRAPH_TOOL = join(AIDLC_SRC, "tools", "amadeus-graph.ts");
 
 // A minimal fixture graph for the cases the REAL graph cannot express:
 // a TRUE orphan (ghost-artifact has no producer anywhere) and a required
@@ -100,7 +100,7 @@ afterEach(() => {
 });
 
 function writeFixture(): { graphPath: string; dir: string } {
-  tmp = mkdtempSync(join(tmpdir(), "aidlc-t190-"));
+  tmp = mkdtempSync(join(tmpdir(), "amadeus-t190-"));
   const graphPath = join(tmp, "stage-graph.json");
   writeFileSync(graphPath, JSON.stringify(FIXTURE_GRAPH, null, 2), "utf-8");
   return { graphPath, dir: tmp };

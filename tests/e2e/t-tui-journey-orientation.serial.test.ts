@@ -1,4 +1,4 @@
-// covers: hook:aidlc-statusline
+// covers: hook:amadeus-statusline
 //
 // t-tui-journey-orientation.serial.test.ts — the RENDER-HALF of the P10 / Stage E
 // workspace journey (the logic-half rides the SDK·ACP·exec drivers in
@@ -23,12 +23,12 @@
 //     `secondSpace` fixture variant (tui-fixtures.ts).
 //
 // HARNESS MATRIX — Claude TUI ONLY, by surface limitation (stated, not faked):
-//   The orientation prefix is the aidlc-statusline.ts hook, wired ONLY through
+//   The orientation prefix is the amadeus-statusline.ts hook, wired ONLY through
 //   Claude Code's settings.json `statusLine` key (dist/claude/.claude/
 //   settings.json). Kiro has NO statusline surface at all — dist/kiro/AGENTS.md
-//   and harness/kiro/skills/aidlc/SKILL.md both state "there is no statusline;
-//   use /aidlc --status and the progress lines at gates", and dist/kiro ships
-//   aidlc-statusline.ts but nothing invokes it as a status row. Codex likewise
+//   and harness/kiro/skills/amadeus/SKILL.md both state "there is no statusline;
+//   use /amadeus --status and the progress lines at gates", and dist/kiro ships
+//   amadeus-statusline.ts but nothing invokes it as a status row. Codex likewise
 //   has no statusline host (and no TUI surface — tui-drive.ts has zero codex
 //   awareness). So the render-half statusline-orientation matrix is Claude-only:
 //   there is no Kiro/Codex statusline pane to scrape. A Kiro-TUI sibling was NOT
@@ -128,7 +128,7 @@ function captureOrientationStatusline(): string {
   // renders `default · fixture · IDEATION …`. No prompt, no tokens.
   const sandbox = setupTuiProject({ withState: "state-mid-ideation.md", secondSpace: true });
   try {
-    // The statusLine key is what wires aidlc-statusline.ts into the TUI; a copy
+    // The statusLine key is what wires amadeus-statusline.ts into the TUI; a copy
     // that dropped it would render no [AIDLC] line at all.
     expect(readFileSync(join(sandbox, ".claude", "settings.json"), "utf8")).toContain(
       '"statusLine"',

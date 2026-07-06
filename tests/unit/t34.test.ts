@@ -2,25 +2,25 @@
 //
 // CLI-contract port of tests/unit/t34-tool-error-logged.sh (TAP plan 11),
 // mechanism = cli. Equal-or-stronger migration: every .sh assertion that
-// shelled out to `bun aidlc-state.ts|aidlc-log.ts|aidlc-jump.ts|aidlc-bolt.ts
+// shelled out to `bun amadeus-state.ts|amadeus-log.ts|amadeus-jump.ts|amadeus-bolt.ts
 // <bad-args> --project-dir <p>` is preserved by SPAWNING the real CLI via
 // node:child_process spawnSync (BUN + the tool .ts path), asserting on
 // res.status / res.stderr exactly as the .sh asserted on $?, plus on the
 // audit.md the tool writes through emitError -> appendAuditEntry. The
 // contract under test is the PROCESS boundary (every tool CLI's error()
-// helper routes through emitError, aidlc-lib.ts:1504-1547, which appends one
+// helper routes through emitError, amadeus-lib.ts:1504-1547, which appends one
 // ERROR_LOGGED block to the active workflow's audit.md best-effort, no-ops if
 // no state file exists, and exits 1). An in-process emitError twin would lose
 // the process.exit(1) half (Test 5) AND the cross-process recursion-guard
 // behaviour (Test 11: the guard is process-local, so two fresh processes must
 // yield two rows) — so all cases stay spawn-based.
 //
-// AUDIT-ROW SHAPE (confirmed against aidlc-audit.ts:256-267 emitter +
-// aidlc-lib.ts:1528-1538 field map): emitError writes a block whose lines are
+// AUDIT-ROW SHAPE (confirmed against amadeus-audit.ts:256-267 emitter +
+// amadeus-lib.ts:1528-1538 field map): emitError writes a block whose lines are
 //   **Event**: ERROR_LOGGED
-//   **Tool**: <tool>            (e.g. aidlc-state)
+//   **Tool**: <tool>            (e.g. amadeus-state)
 //   **Command**: <tool> <argv>  (process.argv.slice(2).join(" "), built from the
-//                                FULL argv — confirmed aidlc-state.ts:1713 — so the
+//                                FULL argv — confirmed amadeus-state.ts:1713 — so the
 //                                trailing --project-dir <p> survives into the row;
 //                                main() at :106-110 splices only its own local args
 //                                copy, NOT process.argv)
@@ -32,13 +32,13 @@
 //       errorLoggedCount(audit) === 1 (STRONGER: exact count against a seeded
 //       baseline that contains ZERO ERROR_LOGGED rows, not a bare presence
 //       grep) + res.status === 1 + JSON error on stderr.
-//   - .sh Test 2  assert_grep "**Tool**: aidlc-state"           -> Test 2:
-//       auditField(ERROR_LOGGED,"Tool") === "aidlc-state" (STRONGER: exact
+//   - .sh Test 2  assert_grep "**Tool**: amadeus-state"           -> Test 2:
+//       auditField(ERROR_LOGGED,"Tool") === "amadeus-state" (STRONGER: exact
 //       field value scoped to the ERROR_LOGGED block, not a file-wide grep).
-//   - .sh Test 3  **Command**: aidlc-state bogus-cmd            -> Test 3:
-//       auditField "Command" startsWith "aidlc-state bogus-cmd" (the .sh grep
+//   - .sh Test 3  **Command**: amadeus-state bogus-cmd            -> Test 3:
+//       auditField "Command" startsWith "amadeus-state bogus-cmd" (the .sh grep
 //       was UNANCHORED; error() builds Command from the FULL argv so the row is
-//       "aidlc-state bogus-cmd --project-dir <p>", matched on its prefix).
+//       "amadeus-state bogus-cmd --project-dir <p>", matched on its prefix).
 //       STRONGER: block-scoped + also asserts --project-dir survives into the row.
 //   - .sh Test 4  **Error**: Unknown subcommand                 -> Test 4:
 //       auditField "Error" startsWith "Unknown subcommand" (STRONGER: exact
@@ -47,20 +47,20 @@
 //       res.status === 1 (same observable).
 //   - .sh Test 6  no state file -> audit.md NOT created         -> Test 6:
 //       existsSync(audit) === false after a bogus command in a project with
-//       aidlc-docs/ but no state file and no audit.md (same observable, the
+//       amadeus-docs/ but no state file and no audit.md (same observable, the
 //       no-op path of emitError's existsSync(stateFile) guard).
-//   - .sh Test 7  aidlc-log error **Tool**: aidlc-log           -> Test 7:
-//       auditField "Tool" === "aidlc-log" (STRONGER, exact) + count===1.
-//   - .sh Test 8  aidlc-jump error **Tool**: aidlc-jump         -> Test 8:
-//       auditField "Tool" === "aidlc-jump" (STRONGER, exact) + count===1.
-//   - .sh Test 9  aidlc-bolt error **Tool**: aidlc-bolt         -> Test 9:
-//       auditField "Tool" === "aidlc-bolt" (STRONGER, exact) + count===1.
+//   - .sh Test 7  amadeus-log error **Tool**: amadeus-log           -> Test 7:
+//       auditField "Tool" === "amadeus-log" (STRONGER, exact) + count===1.
+//   - .sh Test 8  amadeus-jump error **Tool**: amadeus-jump         -> Test 8:
+//       auditField "Tool" === "amadeus-jump" (STRONGER, exact) + count===1.
+//   - .sh Test 9  amadeus-bolt error **Tool**: amadeus-bolt         -> Test 9:
+//       auditField "Tool" === "amadeus-bolt" (STRONGER, exact) + count===1.
 //   - .sh Test 11 two invocations -> two ERROR_LOGGED entries   -> Test 11:
 //       errorLoggedCount === 2 after two fresh spawns (process-local guard
 //       does not over-guard across processes) (same observable).
 //   - .sh Test 12 ERROR_LOGGED survives taxonomy validation     -> Test 12:
 //       errorLoggedCount === 1 (the row actually lands; regression guard for
-//       ERROR_LOGGED's presence in VALID_EVENT_TYPES, aidlc-audit.ts:65)
+//       ERROR_LOGGED's presence in VALID_EVENT_TYPES, amadeus-audit.ts:65)
 //       (same observable) + STRONGER: assert the surfaced JSON error on stderr
 //       so the swallowed-write path can't pass on a missing row alone.
 //
@@ -80,7 +80,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -90,10 +90,10 @@ import {
 
 const BUN = process.execPath; // the bun running this test
 const TOOLS_DIR = join(REPO_ROOT, "dist", "claude", ".claude", "tools");
-const STATE = join(TOOLS_DIR, "aidlc-state.ts");
-const LOG = join(TOOLS_DIR, "aidlc-log.ts");
-const JUMP = join(TOOLS_DIR, "aidlc-jump.ts");
-const BOLT = join(TOOLS_DIR, "aidlc-bolt.ts");
+const STATE = join(TOOLS_DIR, "amadeus-state.ts");
+const LOG = join(TOOLS_DIR, "amadeus-log.ts");
+const JUMP = join(TOOLS_DIR, "amadeus-jump.ts");
+const BOLT = join(TOOLS_DIR, "amadeus-bolt.ts");
 
 // The .sh seeds every audit-emitting case with this state fixture (its
 // existence is what flips emitError from no-op to emit).
@@ -105,7 +105,7 @@ afterAll(() => {
   for (const d of tempDirs) cleanupTestProject(d);
 });
 
-// P9: the flat aidlc-docs/audit.md is retired. seed_state_file seeds the default
+// P9: the flat amadeus-docs/audit.md is retired. seed_state_file seeds the default
 // intent's record so emitError's existsSync(stateFilePath) gate passes and the
 // active-intent cursor resolves; emitError's appendAuditEntry then CREATES its
 // own per-clone shard under that record (no audit-seed needed). The SPAWNED tool
@@ -185,11 +185,11 @@ function auditField(body: string, ev: string, key: string): string {
 }
 
 // ============================================================
-// aidlc-state — the primary emitError driver (.sh Tests 1-6, 11, 12)
+// amadeus-state — the primary emitError driver (.sh Tests 1-6, 11, 12)
 // ============================================================
 
 describe("t34 ERROR_LOGGED via emitError (migrated from t34-tool-error-logged.sh, plan 11)", () => {
-  test("1: aidlc-state bogus-cmd emits exactly one ERROR_LOGGED", () => {
+  test("1: amadeus-state bogus-cmd emits exactly one ERROR_LOGGED", () => {
     const p = seededProj();
     const r = run(STATE, ["bogus-cmd"], p);
     // STRONGER than the .sh presence grep: exact count against a zero-baseline seed.
@@ -198,25 +198,25 @@ describe("t34 ERROR_LOGGED via emitError (migrated from t34-tool-error-logged.sh
     expect(r.stderr).toContain('"error"'); // JSON error on stderr (emitError, lib.ts:1545)
   });
 
-  test("2: ERROR_LOGGED has Tool=aidlc-state", () => {
+  test("2: ERROR_LOGGED has Tool=amadeus-state", () => {
     const p = seededProj();
     run(STATE, ["bogus-cmd"], p);
-    expect(auditField(readAllAuditShards(p), "ERROR_LOGGED", "Tool")).toBe("aidlc-state");
+    expect(auditField(readAllAuditShards(p), "ERROR_LOGGED", "Tool")).toBe("amadeus-state");
   });
 
   test("3: ERROR_LOGGED Command starts with the failing invocation", () => {
     const p = seededProj();
     run(STATE, ["bogus-cmd"], p);
-    // .sh grepped '**Command**: aidlc-state bogus-cmd' — an UNANCHORED substring
-    // match. error() (aidlc-state.ts:1713) builds the Command from the FULL
+    // .sh grepped '**Command**: amadeus-state bogus-cmd' — an UNANCHORED substring
+    // match. error() (amadeus-state.ts:1713) builds the Command from the FULL
     // process.argv.slice(2), which still carries the trailing --project-dir <p>
     // (main() splices only its own local args copy, NOT process.argv). So the
-    // recorded Command is "aidlc-state bogus-cmd --project-dir <p>", which the
+    // recorded Command is "amadeus-state bogus-cmd --project-dir <p>", which the
     // .sh's unanchored grep matched on its prefix. STRONGER than the file-wide
     // grep: this assert is block-scoped to the ERROR_LOGGED entry, and pins the
-    // exact "aidlc-state bogus-cmd" prefix + that --project-dir survives into the row.
+    // exact "amadeus-state bogus-cmd" prefix + that --project-dir survives into the row.
     const command = auditField(readAllAuditShards(p), "ERROR_LOGGED", "Command");
-    expect(command).toStartWith("aidlc-state bogus-cmd");
+    expect(command).toStartWith("amadeus-state bogus-cmd");
     expect(command).toContain("--project-dir");
   });
 
@@ -266,32 +266,32 @@ describe("t34 ERROR_LOGGED via emitError (migrated from t34-tool-error-logged.sh
 });
 
 // ============================================================
-// Cross-tool: aidlc-log / aidlc-jump / aidlc-bolt all route their
+// Cross-tool: amadeus-log / amadeus-jump / amadeus-bolt all route their
 // error() helper through the same emitError (.sh Tests 7-9).
 // ============================================================
 
 describe("t34 emitError is shared across tool CLIs", () => {
-  test("7: aidlc-log error routes through emitError (Tool=aidlc-log)", () => {
+  test("7: amadeus-log error routes through emitError (Tool=amadeus-log)", () => {
     const p = seededProj();
     run(LOG, ["bogus"], p);
     expect(errorLoggedCount(readAllAuditShards(p))).toBe(1);
-    expect(auditField(readAllAuditShards(p), "ERROR_LOGGED", "Tool")).toBe("aidlc-log");
+    expect(auditField(readAllAuditShards(p), "ERROR_LOGGED", "Tool")).toBe("amadeus-log");
   });
 
-  test("8: aidlc-jump error routes through emitError (Tool=aidlc-jump)", () => {
+  test("8: amadeus-jump error routes through emitError (Tool=amadeus-jump)", () => {
     const p = seededProj();
-    // `preview` is not a valid aidlc-jump subcommand (valid: resolve, execute,
-    // aidlc-jump.ts:65) — so the unknown-subcommand error() fires, regardless
-    // of the --to flag. Mirrors the .sh's `aidlc-jump preview --to non-existent-slug`.
+    // `preview` is not a valid amadeus-jump subcommand (valid: resolve, execute,
+    // amadeus-jump.ts:65) — so the unknown-subcommand error() fires, regardless
+    // of the --to flag. Mirrors the .sh's `amadeus-jump preview --to non-existent-slug`.
     run(JUMP, ["preview", "--to", "non-existent-slug"], p);
     expect(errorLoggedCount(readAllAuditShards(p))).toBe(1);
-    expect(auditField(readAllAuditShards(p), "ERROR_LOGGED", "Tool")).toBe("aidlc-jump");
+    expect(auditField(readAllAuditShards(p), "ERROR_LOGGED", "Tool")).toBe("amadeus-jump");
   });
 
-  test("9: aidlc-bolt error routes through emitError (Tool=aidlc-bolt)", () => {
+  test("9: amadeus-bolt error routes through emitError (Tool=amadeus-bolt)", () => {
     const p = seededProj();
     run(BOLT, ["bogus"], p);
     expect(errorLoggedCount(readAllAuditShards(p))).toBe(1);
-    expect(auditField(readAllAuditShards(p), "ERROR_LOGGED", "Tool")).toBe("aidlc-bolt");
+    expect(auditField(readAllAuditShards(p), "ERROR_LOGGED", "Tool")).toBe("amadeus-bolt");
   });
 });

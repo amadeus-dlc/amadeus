@@ -3,7 +3,7 @@
 Two complete walkthroughs showing AI-DLC in action: a bugfix and a feature. Each demonstrates the command invocation, stage progression, approval gates, and artifact output.
 
 > **Harness note.** These transcripts are recorded on **Claude Code**, so they show
-> its surfaces — `/aidlc`, and subagent stages dispatched via `Task` calls. The
+> its surfaces — `/amadeus`, and subagent stages dispatched via `Task` calls. The
 > stage flow, gates, and artifacts are identical on every harness; only the
 > dispatch mechanic differs (Kiro uses its `subagent` tool, Codex uses `codex exec`
 > workers). See [Running on other harnesses](harnesses/README.md).
@@ -17,7 +17,7 @@ This example fixes a null pointer exception in a user profile API. The **bugfix*
 ### Invocation
 
 ```
-/aidlc bugfix
+/amadeus bugfix
 ```
 
 The conductor asks what you want to fix:
@@ -35,24 +35,24 @@ You respond:
 | 0.1 | Workspace Scaffold | Initialization | orchestrator | inline (auto-proceed) |
 | 0.2 | Workspace Detection | Initialization | orchestrator | inline (auto-proceed) |
 | 0.3 | State Init | Initialization | orchestrator | inline (auto-proceed) |
-| 2.1 | Reverse Engineering | Inception | aidlc-developer-agent + aidlc-architect-agent | subagent |
-| 2.3 | Requirements Analysis | Inception | aidlc-product-agent | inline |
-| 3.5 | Code Generation | Construction | aidlc-developer-agent | subagent |
-| 3.6 | Build and Test | Construction | aidlc-quality-agent | inline |
+| 2.1 | Reverse Engineering | Inception | amadeus-developer-agent + amadeus-architect-agent | subagent |
+| 2.3 | Requirements Analysis | Inception | amadeus-product-agent | inline |
+| 3.5 | Code Generation | Construction | amadeus-developer-agent | subagent |
+| 3.6 | Build and Test | Construction | amadeus-quality-agent | inline |
 
 ### Initialization (stages 0.1-0.3) — auto-proceed
 
-The 3 Initialization stages run as a single deterministic tool call (`aidlc-utility init`) in well under a second, without user interaction:
+The 3 Initialization stages run as a single deterministic tool call (`amadeus-utility init`) in well under a second, without user interaction:
 
 - **0.1 Workspace Scaffold** — Auto-births the first intent and creates its record dir at `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/` (written `<record>/` below) — `<YYMMDD>` is a compact UTC date prefix so records sort chronologically, and `<label>` is the conductor's short kebab-case essence of the request; the canonical id is a UUIDv7 carried in the `intents.json` registry row
 - **0.2 Workspace Detection** — Rule-based scan identifies Java 17, Spring Boot 3.2, Maven, brownfield project
-- **0.3 State Init** — Initializes `aidlc-state.md` with scope `bugfix`, depth `Minimal`, and the domain stages marked for execution
+- **0.3 State Init** — Initializes `amadeus-state.md` with scope `bugfix`, depth `Minimal`, and the domain stages marked for execution
 
 > Progress: 3/7 overall | 3/3 INITIALIZATION stages complete. Next: Reverse Engineering
 
 ### Stage 2.1 — Reverse Engineering
 
-A two-step subagent scans the codebase: first a aidlc-developer-agent code scan, then an aidlc-architect-agent synthesis. Produces 9 artifacts in `<record>/inception/reverse-engineering/`:
+A two-step subagent scans the codebase: first a amadeus-developer-agent code scan, then an amadeus-architect-agent synthesis. Produces 9 artifacts in `<record>/inception/reverse-engineering/`:
 
 | Artifact | Contents |
 |----------|----------|
@@ -78,7 +78,7 @@ You select **Approve**.
 
 ### Stage 2.3 — Requirements Analysis
 
-The aidlc-product-agent persona loads and creates clarifying questions at `<record>/inception/requirements-analysis/requirements-analysis-questions.md`:
+The amadeus-product-agent persona loads and creates clarifying questions at `<record>/inception/requirements-analysis/requirements-analysis-questions.md`:
 
 ```markdown
 ## Q1: Bug Severity Classification
@@ -109,7 +109,7 @@ The conductor generates `requirements.md` with 3 functional requirements (null h
 
 ### Stage 3.5 — Code Generation
 
-The conductor creates a code generation plan, then delegates to a aidlc-developer-agent subagent:
+The conductor creates a code generation plan, then delegates to a amadeus-developer-agent subagent:
 
 **Plan:**
 1. Fix `ProfileSerializer.serialize()` to handle null `display_name`
@@ -128,7 +128,7 @@ You approve the plan. The subagent implements all 4 steps:
 
 ### Stage 3.6 — Build and Test
 
-The aidlc-quality-agent runs the build and tests:
+The amadeus-quality-agent runs the build and tests:
 
 ```
 mvn clean compile        # BUILD SUCCESS
@@ -144,7 +144,7 @@ Results captured in `<record>/construction/build-and-test/test-results.md`: 89 t
 
 ```
 aidlc/spaces/default/intents/260624-null-display-fix/
-  aidlc-state.md              # All 7 stages marked [x]
+  amadeus-state.md              # All 7 stages marked [x]
   audit/                      # Full decision trail (per-clone shards)
   inception/
     reverse-engineering/       # 9 RE artifacts
@@ -167,7 +167,7 @@ Application code in workspace root:
 2. **Minimal depth** — brief, targeted artifacts; only the questions needed to define the fix
 3. **Subagent delegation** — heavy work (RE, code gen) runs in subprocesses while you approve
 4. **Full audit trail** — every decision logged with ISO timestamps
-5. **Session resume** — if interrupted at any point, `/aidlc` detects the in-progress state
+5. **Session resume** — if interrupted at any point, `/amadeus` detects the in-progress state
 
 ---
 
@@ -178,7 +178,7 @@ This example builds a notification service for a task management application. Th
 ### Invocation
 
 ```
-/aidlc feature
+/amadeus feature
 ```
 
 > **What would you like to build?**
@@ -187,15 +187,15 @@ This example builds a notification service for a task management application. Th
 
 ### Initialization (stages 0.1-0.3) — auto-proceed
 
-The 3 Initialization stages run automatically inside `aidlc-utility init`. Workspace Detection identifies: TypeScript, Node.js 20, Express, PostgreSQL, brownfield project with existing task and user services.
+The 3 Initialization stages run automatically inside `amadeus-utility init`. Workspace Detection identifies: TypeScript, Node.js 20, Express, PostgreSQL, brownfield project with existing task and user services.
 
 > Progress: 3/32 overall | Scope: feature, Depth: Standard
 
 ### Ideation Phase (stages 1.1-1.7)
 
-**Stage 1.1 — Intent Capture** (aidlc-product-agent)
+**Stage 1.1 — Intent Capture** (amadeus-product-agent)
 
-The aidlc-product-agent captures your intent and produces `intent-statement.md` and `stakeholder-map.md`. Questions focus on target users, notification channels, and priority:
+The amadeus-product-agent captures your intent and produces `intent-statement.md` and `stakeholder-map.md`. Questions focus on target users, notification channels, and priority:
 
 ```
 Q1: Which notification channels are in scope?
@@ -208,11 +208,11 @@ X. Other
 
 You answer B (in-app + email). After approval, the stage produces a structured intent statement linking notification types to user triggers.
 
-**Stage 1.4 — Scope Definition** (aidlc-product-agent)
+**Stage 1.4 — Scope Definition** (amadeus-product-agent)
 
 Defines scope boundaries: in-scope (3 trigger types, user preferences, email digest), out-of-scope (push notifications, SMS, real-time WebSocket). Produces `scope-document.md` and `intent-backlog.md` with prioritized items.
 
-**Stage 1.7 — Approval & Handoff** (aidlc-delivery-agent)
+**Stage 1.7 — Approval & Handoff** (amadeus-delivery-agent)
 
 Compiles the initiative brief aggregating all Ideation outputs. Phase boundary verification confirms intent-to-scope traceability.
 
@@ -224,17 +224,17 @@ Compiles the initiative brief aggregating all Ideation outputs. Phase boundary v
 
 Two-step scan of the existing codebase. Identifies the existing service structure, database schema, and API patterns that the notification service must integrate with.
 
-**Stage 2.2 — Practices Discovery** (aidlc-pipeline-deploy-agent)
+**Stage 2.2 — Practices Discovery** (amadeus-pipeline-deploy-agent)
 
-The aidlc-pipeline-deploy-agent leads this stage, with aidlc-quality-agent, aidlc-developer-agent, and aidlc-devsecops-agent supporting. Because this is a brownfield project, it consumes the Reverse Engineering artifacts to infer the team's existing practices — test framework and coverage conventions, CI/lint setup, branching and review norms. Produces `team-practices.md`, `discovered-rules.md`, and `evidence.md`. On affirmation, the discovered practices are promoted into `aidlc/spaces/<space>/memory/team.md` and `aidlc/spaces/<space>/memory/project.md` so downstream stages honour them.
+The amadeus-pipeline-deploy-agent leads this stage, with amadeus-quality-agent, amadeus-developer-agent, and amadeus-devsecops-agent supporting. Because this is a brownfield project, it consumes the Reverse Engineering artifacts to infer the team's existing practices — test framework and coverage conventions, CI/lint setup, branching and review norms. Produces `team-practices.md`, `discovered-rules.md`, and `evidence.md`. On affirmation, the discovered practices are promoted into `aidlc/spaces/<space>/memory/team.md` and `aidlc/spaces/<space>/memory/project.md` so downstream stages honour them.
 
-**Stage 2.3 — Requirements Analysis** (aidlc-product-agent)
+**Stage 2.3 — Requirements Analysis** (amadeus-product-agent)
 
 Produces 12 functional requirements (notification triggers, preference CRUD, email rendering, digest scheduling) and 5 non-functional requirements (delivery latency < 5s, email retry, preference storage). Questions drill into edge cases: what happens when email delivery fails? How frequently should digests run?
 
-**Stage 2.6 — Application Design** (aidlc-architect-agent)
+**Stage 2.6 — Application Design** (amadeus-architect-agent)
 
-The aidlc-architect-agent designs the notification service architecture:
+The amadeus-architect-agent designs the notification service architecture:
 
 - **Components**: NotificationService, PreferenceService, EmailRenderer, DigestScheduler
 - **API contracts**: REST endpoints for preference management, internal event handlers for triggers
@@ -242,7 +242,7 @@ The aidlc-architect-agent designs the notification service architecture:
 
 Produces `components.md`, `services.md`, `decisions.md`.
 
-**Stage 2.7 — Units Generation** (aidlc-architect-agent)
+**Stage 2.7 — Units Generation** (amadeus-architect-agent)
 
 Decomposes into 3 units of work:
 
@@ -252,7 +252,7 @@ Decomposes into 3 units of work:
 
 Produces `unit-of-work.md` with dependency map: notification-core first, then preferences and email in parallel.
 
-**Stage 2.8 — Delivery Planning** (aidlc-delivery-agent)
+**Stage 2.8 — Delivery Planning** (amadeus-delivery-agent)
 
 Bolt sequence: Bolt 1 ships notification-core (walking skeleton — proves the event-handler pipeline end-to-end). Bolt 2 ships notification-preferences and notification-email in parallel. Per-Bolt DoDs captured in `bolt-plan.md`; WSJF-style rationale in `risk-and-sequencing-rationale.md`; external SES/SQS dependencies mapped in `external-dependency-map.md`. Phase boundary verification confirms requirements-to-architecture alignment.
 
@@ -264,7 +264,7 @@ Construction runs **Bolt by Bolt** per the 2.8 plan. The first Bolt is the walki
 
 **Bolt 1: notification-core** — walking skeleton (always gated)
 
-This Bolt is the end-to-end slice that proves the event-handler pipeline works: a notification event arrives on the internal handler, lands in storage, and surfaces on the in-app delivery endpoint. The conductor opens it with a single round of questions across 3.1–3.4 for notification-core, then generates all design artifacts, then delegates code generation to a aidlc-developer-agent subagent.
+This Bolt is the end-to-end slice that proves the event-handler pipeline works: a notification event arrives on the internal handler, lands in storage, and surfaces on the in-app delivery endpoint. The conductor opens it with a single round of questions across 3.1–3.4 for notification-core, then generates all design artifacts, then delegates code generation to a amadeus-developer-agent subagent.
 
 - **3.1 Functional Design** — Domain entities (Notification, NotificationEvent), business rules (deduplication, rate limiting)
 - **3.5 Code Generation** — Event handler, notification repository, in-app delivery endpoint. 3 source files, 4 test files.
@@ -281,7 +281,7 @@ The walking skeleton shipped. How should the remaining Bolts run?
     Present an approval gate after each Bolt (or parallel batch).
 ```
 
-You've seen the shape work, so you pick **Continue autonomously**. The conductor records `Construction Autonomy Mode: autonomous` in `aidlc-state.md` and emits `AUTONOMY_MODE_SET`.
+You've seen the shape work, so you pick **Continue autonomously**. The conductor records `Construction Autonomy Mode: autonomous` in `amadeus-state.md` and emits `AUTONOMY_MODE_SET`.
 
 **Bolt 2: notification-preferences + notification-email** — parallel batch
 
@@ -304,16 +304,16 @@ Bolt notification-preferences succeeded. Bolt notification-email failed during c
 Options:
   ▸ Retry         Re-run notification-email from code generation.
   ▸ Skip          Mark notification-email skipped and continue. Dependent Bolts may also fail.
-  ▸ Abort         Stop Construction. Resume via /aidlc --stage code-generation.
+  ▸ Abort         Stop Construction. Resume via /amadeus --stage code-generation.
 ```
 
 You'd pick **Retry**, fix the mock setup, and only notification-email re-runs. Preferences is already `[x]` complete.
 
-**Stage 3.6 — Build and Test** (aidlc-quality-agent, runs once after all Bolts)
+**Stage 3.6 — Build and Test** (amadeus-quality-agent, runs once after all Bolts)
 
 Generates build instructions, runs the full test suite across all 3 Units: 47 tests pass, 0 failures, 78% coverage.
 
-**Stage 3.7 — CI Pipeline** (aidlc-pipeline-deploy-agent)
+**Stage 3.7 — CI Pipeline** (amadeus-pipeline-deploy-agent)
 
 Configures CI pipeline with lint, build, test, and security scan stages. Quality gates: coverage >= 75%, no critical vulnerabilities.
 

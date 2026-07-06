@@ -6,7 +6,7 @@
 // above it: if a calibration here cannot confirm the planted truth, the whole
 // SDK E2E tier is untrustworthy.
 //
-// It SPENDS TOKENS — it drives the real /aidlc through the Claude Agent SDK
+// It SPENDS TOKENS — it drives the real /amadeus through the Claude Agent SDK
 // (SDK 0.3.158, Opus on Bedrock; env inherited from the sandbox). Each test
 // carries a generous per-test timeout so a hung canUseTool fails LOUD (the
 // bun:test timeout fires) rather than hanging the runner forever.
@@ -38,7 +38,7 @@ import {
 } from "./sdk-drive.ts";
 
 // ---------------------------------------------------------------------------
-// Timeout budget. A multi-tool /aidlc turn on Opus/Bedrock can take minutes.
+// Timeout budget. A multi-tool /amadeus turn on Opus/Bedrock can take minutes.
 // Honour the suite's AIDLC_TEST_TIMEOUT convention (seconds; see the t2x
 // integration tests, which set it to 600 for doctor/jump). The bun:test
 // per-test cap is that value; the driver's own abort fires a hair earlier so a
@@ -54,22 +54,22 @@ const DRIVE_TIMEOUT_MS = Math.max(60_000, TEST_TIMEOUT_MS - 15_000);
 // ---------------------------------------------------------------------------
 // CALIBRATION 2 known-answer strings — read from the SHIPPED doctor handler so
 // they are REAL, not guessed. Source: dist/claude/.claude/tools/
-// aidlc-utility.ts handleDoctor():
+// amadeus-utility.ts handleDoctor():
 //   - header literal:           "AI-DLC Health Check\n"            (utility.ts:1355)
 //   - separator rule:           "─".repeat(37)                (utility.ts:1356)
 //   - check #1 label:           "bun installed (required ...)"     (utility.ts:336)
 //   - hook label shape:         "<hook>.ts present"                (utility.ts:356, hooks :343-351)
 //   - settings label:           "settings.json present"           (utility.ts:365)
-//   - aidlc-docs label:         "aidlc-docs/ directory exists"     (utility.ts:396)
-// The spike's aidlc-sdk-toolout-probe.ts proved these exact strings appear in
+//   - amadeus-docs label:         "amadeus-docs/ directory exists"     (utility.ts:396)
+// The spike's amadeus-sdk-toolout-probe.ts proved these exact strings appear in
 // the tool_result (and unreliably in prose) — we re-prove it through the driver.
 // ---------------------------------------------------------------------------
 const DOCTOR_HEADER = "AI-DLC Health Check";
 const DOCTOR_RULE = "─".repeat(37); // 37 box-drawing horizontals
 const DOCTOR_BUN_LABEL = "bun installed (required for CLI tools and hooks)";
-const DOCTOR_HOOK_LABEL = "aidlc-audit-logger.ts present";
+const DOCTOR_HOOK_LABEL = "amadeus-audit-logger.ts present";
 const DOCTOR_SETTINGS_LABEL = "settings.json present";
-const DOCTOR_DOCS_LABEL = "aidlc-docs/ directory exists";
+const DOCTOR_DOCS_LABEL = "amadeus-docs/ directory exists";
 
 // ---------------------------------------------------------------------------
 
@@ -78,7 +78,7 @@ describe("sdk-drive calibration (known-answer)", () => {
   // CALIBRATION 1 — canUseTool fires for AskUserQuestion.
   //   harness-instrument:sdk-drive-canusetool
   //
-  // Planted truth: a seeded in-progress workflow + /aidlc --resume MUST pose
+  // Planted truth: a seeded in-progress workflow + /amadeus --resume MUST pose
   // the resume gate (an AskUserQuestion), and the driver's canUseTool MUST
   // answer it (capturing it in askedQuestions) — NOT let it be auto-denied the
   // way headless `claude -p` does. This is a boundary smoke, not a workflow
@@ -94,7 +94,7 @@ describe("sdk-drive calibration (known-answer)", () => {
         withAudit: true,
       });
       try {
-        const r = await driveAidlc("/aidlc --resume", {
+        const r = await driveAidlc("/amadeus --resume", {
           projectDir: proj,
           timeoutMs: DRIVE_TIMEOUT_MS,
           stopAfterAskUserQuestion: true,
@@ -143,7 +143,7 @@ describe("sdk-drive calibration (known-answer)", () => {
   // CALIBRATION 2 — tool_result is BYTE-IDENTICAL to the tool's stdout.
   //   harness-instrument:sdk-drive-toolresult-byte-identity
   //
-  // Planted truth: /aidlc --doctor runs a deterministic bun tool whose stdout
+  // Planted truth: /amadeus --doctor runs a deterministic bun tool whose stdout
   // is fixed bytes (the spike saw md5 553308ac... x3). The driver MUST surface
   // those exact bytes in toolResults — the tool's stdout, NOT the assistant's
   // prose rendering. We assert the literal strings (read from the shipped
@@ -160,7 +160,7 @@ describe("sdk-drive calibration (known-answer)", () => {
       const projA = setupIntegrationProject();
       const projB = setupIntegrationProject();
       try {
-        const rA = await driveAidlc("/aidlc --doctor", {
+        const rA = await driveAidlc("/amadeus --doctor", {
           projectDir: projA,
           timeoutMs: DRIVE_TIMEOUT_MS,
         });
@@ -202,7 +202,7 @@ describe("sdk-drive calibration (known-answer)", () => {
         // labels, counts, footer) must be identical. The structural asserts
         // above already prove the instrument carries the tool's verbatim bytes;
         // this proves it does so STABLY for the deterministic portion.
-        const rB = await driveAidlc("/aidlc --doctor", {
+        const rB = await driveAidlc("/amadeus --doctor", {
           projectDir: projB,
           timeoutMs: DRIVE_TIMEOUT_MS,
         });
@@ -221,7 +221,7 @@ describe("sdk-drive calibration (known-answer)", () => {
   // CALIBRATION 3 — a SCRIPTED non-default answer reaches the model.
   //   harness-instrument:sdk-drive-scripted-answer
   //
-  // Planted truth: on a seeded in-progress workflow, /aidlc --resume poses the
+  // Planted truth: on a seeded in-progress workflow, /amadeus --resume poses the
   // resume gate. Its DEFAULT (option 1) is "Resume from last checkpoint". We
   // script the NON-default "Start fresh" option and stop immediately after the
   // AskUserQuestion tool_result arrives. That tool_result is the synthetic user
@@ -249,7 +249,7 @@ describe("sdk-drive calibration (known-answer)", () => {
         withAudit: true,
       });
       try {
-        const r = await driveAidlc("/aidlc --resume", {
+        const r = await driveAidlc("/amadeus --resume", {
           projectDir: proj,
           timeoutMs: DRIVE_TIMEOUT_MS,
           stopAfterAskUserQuestion: true,

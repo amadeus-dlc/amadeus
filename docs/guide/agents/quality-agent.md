@@ -2,9 +2,9 @@
 
 > **Agent deep dive** · [User Guide](../00-introduction.md) › [Agents](../06-agents.md) › [deep dives](README.md) · Technical reference: [quality-agent](../../reference/agents/quality-agent.md)
 
-The aidlc-quality-agent is your QA engineer and performance specialist. It defines test strategy, generates test suites (unit, integration, contract, security), validates coverage against acceptance criteria, designs and executes load tests, and validates non-functional requirement targets. It ensures every implemented unit meets its acceptance criteria and the overall system meets quality gates.
+The amadeus-quality-agent is your QA engineer and performance specialist. It defines test strategy, generates test suites (unit, integration, contract, security), validates coverage against acceptance criteria, designs and executes load tests, and validates non-functional requirement targets. It ensures every implemented unit meets its acceptance criteria and the overall system meets quality gates.
 
-The aidlc-quality-agent leads two stages — one in Construction and one in Operation — and supports two additional stages. It has Bash access for running build tools, test commands, and performance testing utilities.
+The amadeus-quality-agent leads two stages — one in Construction and one in Operation — and supports two additional stages. It has Bash access for running build tools, test commands, and performance testing utilities.
 
 ## Stages Led
 
@@ -22,13 +22,13 @@ The aidlc-quality-agent leads two stages — one in Construction and one in Oper
 
 ## What to Expect
 
-When the aidlc-quality-agent is active, it generates build instructions and test suites, then executes them against the implemented code. During Build and Test, it runs the project's build system, executes unit tests, integration tests, and any additional test types appropriate for the project. It reports pass/fail results, coverage metrics, and quality gate status.
+When the amadeus-quality-agent is active, it generates build instructions and test suites, then executes them against the implemented code. During Build and Test, it runs the project's build system, executes unit tests, integration tests, and any additional test types appropriate for the project. It reports pass/fail results, coverage metrics, and quality gate status.
 
 During Performance Validation in the Operation phase, it designs and executes load tests, validates NFR targets (latency percentiles, throughput, availability), and produces an NFR validation matrix comparing targets to actuals.
 
 ## How It Collaborates
 
-The aidlc-quality-agent receives user stories with acceptance criteria from the aidlc-product-agent, NFR targets from the aidlc-architect-agent, and implemented code from the aidlc-developer-agent. It works with the aidlc-devsecops-agent on security test requirements and the aidlc-pipeline-deploy-agent on CI integration. Its test results and performance baselines are handed off to the aidlc-operations-agent.
+The amadeus-quality-agent receives user stories with acceptance criteria from the amadeus-product-agent, NFR targets from the amadeus-architect-agent, and implemented code from the amadeus-developer-agent. It works with the amadeus-devsecops-agent on security test requirements and the amadeus-pipeline-deploy-agent on CI integration. Its test results and performance baselines are handed off to the amadeus-operations-agent.
 
 ## Key Principles
 

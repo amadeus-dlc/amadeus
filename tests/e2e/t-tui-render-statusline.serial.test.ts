@@ -5,7 +5,7 @@
 // AI-DLC statusline (§5-C render row, §7 Phase 1), driven SEEDED-STATE in a REAL
 // terminal with ZERO Bedrock tokens.
 //
-// These four branches all paint from ONE seeded per-intent aidlc-state.md, so a
+// These four branches all paint from ONE seeded per-intent amadeus-state.md, so a
 // SINGLE launched TUI capture proves all four — one assertion-focus per unit:
 //   - statusline-phase-bar  : progressBar(done,total) draws the 10-cell ▓/░ grid.
 //                             Seeded mid-ideation = 2 done / 7 total IDEATION
@@ -13,7 +13,7 @@
 //   - statusline-counter    : the "done/total" appended after the bar -> "2/7".
 //   - statusline-stage-name : STAGE_DISPLAY["feasibility"]="Feasibility", seeded
 //                             Current Stage=feasibility -> "> Feasibility".
-//   - statusline-align      : printLine() (aidlc-statusline.ts:174-187) joins the
+//   - statusline-align      : printLine() (amadeus-statusline.ts:174-187) joins the
 //                             left status to the right side (model, and ctx:% on a
 //                             live turn). In production the statusline hook runs
 //                             with PIPED stdout, so process.stdout.columns is
@@ -129,7 +129,7 @@ function captureWorkflowStatusline(): string {
   // line. Purely state-driven — no prompt, no tokens.
   const sandbox = setupTuiProject({ withState: "state-mid-ideation.md" });
   try {
-    // The statusLine key is what wires aidlc-statusline.ts into the TUI; a copy
+    // The statusLine key is what wires amadeus-statusline.ts into the TUI; a copy
     // that dropped it would render no [AIDLC] line at all.
     expect(
       readFileSync(join(sandbox, ".claude", "settings.json"), "utf8"),

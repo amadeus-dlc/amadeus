@@ -41,10 +41,10 @@
 //       * tertiary check    -> t48:201-230 (DELETED_EVENTS incl. JUMP_AUTO_STOPPED)
 //       * pairing check     -> t48:232-312 (check_pairing handleApprove ...)
 //       * md-md check       -> t48:314-335 (audit-format.md ⇄ 12-state-machine.md)
-//   - dist/claude/.claude/tools/aidlc-state.ts
+//   - dist/claude/.claude/tools/amadeus-state.ts
 //       * emitAudit(pd, "GATE_APPROVED", gateFields)        :745  (injection 1 target)
 //       * function handleApprove(args: string[]): void      :717  (injection 4 target)
-//   - dist/claude/.claude/knowledge/aidlc-shared/audit-format.md
+//   - dist/claude/.claude/knowledge/amadeus-shared/audit-format.md
 //       * | `ARTIFACT_REUSED` | ... | row                   :82   (injection 5 target)
 //   - docs/reference/12-state-machine.md retains ARTIFACT_REUSED :228 (drift partner)
 //
@@ -87,7 +87,7 @@ afterAll(() => {
  * + the lib/ it sources). Mirrors the .sh's mkdir+cp -R of exactly these three.
  */
 function makeSandbox(): string {
-  const sb = mkdtempSync(join(tmpdir(), "aidlc-t52-sandbox-"));
+  const sb = mkdtempSync(join(tmpdir(), "amadeus-t52-sandbox-"));
   tempDirs.push(sb);
   cpSync(join(REPO_ROOT, "dist", "claude"), join(sb, "dist", "claude"), {
     recursive: true,
@@ -138,8 +138,8 @@ function notOkLines(out: string): string[] {
   return out.split("\n").filter((l: string) => /\(fail\)/.test(l));
 }
 
-const STATE_TS = join("tools", "aidlc-state.ts");
-const AUDIT_FORMAT = join("knowledge", "aidlc-shared", "audit-format.md");
+const STATE_TS = join("tools", "amadeus-state.ts");
+const AUDIT_FORMAT = join("knowledge", "amadeus-shared", "audit-format.md");
 
 describe("t52 — meta-test on t48 drift detection (migrated from t52-drift-meta-validation.sh, plan 5)", () => {
   // A clean sandbox: t48 against an UNMUTATED copy. Used as the baseline so each

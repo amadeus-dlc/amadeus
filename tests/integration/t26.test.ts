@@ -1,7 +1,7 @@
-// covers: subcommand:aidlc-jump:execute
+// covers: subcommand:amadeus-jump:execute
 //
 // t26.test.ts — SDK-harness port of tests/integration/t26-integration-backward-jump.sh
-// (TAP plan 8). Drives the real `/aidlc --stage intent-capture`
+// (TAP plan 8). Drives the real `/amadeus --stage intent-capture`
 // through the Claude Agent SDK from a CONSTRUCTION-phase state and asserts ONLY
 // on deterministic surfaces (the jump tool's verbatim stdout JSON in the Bash
 // tool_result, parsed audit events, raw audit-file bytes, and the NOW-STABLE
@@ -9,7 +9,7 @@
 //
 // SIBLING NOTE. t25.test.ts is the SAME backward-to-intent-capture journey via
 // `--phase ideation`; this is the `--stage intent-capture` twin. Both route
-// through `aidlc-jump.ts execute --direction backward`. The phase-vs-stage
+// through `amadeus-jump.ts execute --direction backward`. The phase-vs-stage
 // dispatch differs in resolution only (--stage resolves the literal slug
 // directly; --phase routes through firstInScopeStageOfPhase, jump.ts:121-136);
 // the EXECUTE emission and every deterministic surface below are identical.
@@ -27,8 +27,8 @@
 // Stage=functional-design, Scope=feature, Completed=20. `--stage intent-capture`
 // resolves directly to intent-capture (graph stage 1.1), whose display order is
 // BEFORE functional-design (index 18), so direction = backward
-// (aidlc-jump.ts:143-145). The SKILL.md Stage/Phase Jump handler routes this
-// through `aidlc-jump.ts execute --direction backward`, which atomically:
+// (amadeus-jump.ts:143-145). The SKILL.md Stage/Phase Jump handler routes this
+// through `amadeus-jump.ts execute --direction backward`, which atomically:
 //   - resets target + downstream EXECUTE stages [x]/[-]/[S] -> [ ] (jump.ts:268-285),
 //   - sets target intent-capture -> [-] in-progress (jump.ts:295),
 //   - rewrites Lifecycle Phase=IDEATION, Current Stage=intent-capture,
@@ -41,7 +41,7 @@
 //   - appends STAGE_JUMPED with Direction=BACKWARD / Source=functional-design /
 //     Target=intent-capture / Scope=feature (jump.ts:374-380),
 //   - appends STAGE_STARTED for the target (Stage=intent-capture,
-//     Agent=aidlc-product-agent; jump.ts:386-390).
+//     Agent=amadeus-product-agent; jump.ts:386-390).
 // The run STOPS at the jump target: the live probe observed
 // subtype=success, is_error=false, ~286s, 37 turns, and a STABLE final state
 // (Lifecycle Phase=IDEATION, Current Stage=intent-capture, In Progress=
@@ -107,7 +107,7 @@
 // one AskUserQuestion gate; answerScript stays "default" (option 1) and the run
 // still stops stable at intent-capture — this is a §5-A2 LOGIC journey (an sdk port).
 //
-// It SPENDS TOKENS — driveAidlc drives the real /aidlc on Opus/Bedrock (~286s).
+// It SPENDS TOKENS — driveAidlc drives the real /amadeus on Opus/Bedrock (~286s).
 // Re-run alone if the suite is under load.
 
 import { describe, expect, test } from "bun:test";
@@ -149,7 +149,7 @@ const AUDIT_TARGET_LINE = `**Target**: ${TARGET_STAGE}`; // jump.ts:377 Target f
 const AUDIT_DIRECTION_LINE = "**Direction**: BACKWARD"; // jump.ts:375 direction.toUpperCase()
 const AUDIT_TIMESTAMP_PREFIX = "**Timestamp**:"; // audit.ts:257, on every block
 
-describe("t26 /aidlc --stage intent-capture backward jump (sdk)", () => {
+describe("t26 /amadeus --stage intent-capture backward jump (sdk)", () => {
   // -------------------------------------------------------------------------
   // From CONSTRUCTION, `--stage intent-capture` is a backward jump. This sdk
   // test asserts ONLY the deterministic jump EMISSION — the tool's own stdout
@@ -169,7 +169,7 @@ describe("t26 /aidlc --stage intent-capture backward jump (sdk)", () => {
         // Precondition: the seed truly starts at CONSTRUCTION / Completed=20, so
         // the jump genuinely crosses backward (no vacuous pass on a pre-seeded
         // ideation state). Read straight off the seeded file. P4: the jump tool
-        // does NOT migrate (only intent-birth does, aidlc-utility.ts:2022) — the
+        // does NOT migrate (only intent-birth does, amadeus-utility.ts:2022) — the
         // seed stays at the flat layout, so stateFilePathFor resolves it via the
         // flat fallback (no intent born yet).
         const seedState = readFileSync(stateFilePathFor(proj), "utf8");
@@ -182,7 +182,7 @@ describe("t26 /aidlc --stage intent-capture backward jump (sdk)", () => {
         // The backward jump lands at the target and STOPS. answerScript "default"
         // answers the single landing gate with option 1; the run still stops
         // stable at intent-capture (verified by tmp/phase2/probe-t26-stage.ts).
-        const r = await driveAidlc("/aidlc --stage intent-capture", {
+        const r = await driveAidlc("/amadeus --stage intent-capture", {
           projectDir: proj,
           answerScript: "default",
           timeoutMs: DRIVE_TIMEOUT_MS,
@@ -217,7 +217,7 @@ describe("t26 /aidlc --stage intent-capture backward jump (sdk)", () => {
         // POST-RUN LIVE STATE IS NOT ASSERTED (deliberate). The .sh's test-8 read
         // final-state Current Stage / In Progress / Status / Completed and the
         // x-checkbox count off the FINAL file. Those are a MOVING TARGET: a
-        // jump leaves Status=Running (aidlc-jump.ts:309, a jump never
+        // jump leaves Status=Running (amadeus-jump.ts:309, a jump never
         // terminates), and SKILL.md:255 step 13c then has the
         // orchestrator "Enter Stage Advancement. Normal workflow continues." So the
         // LLM keeps running the workflow after the jump and may advance Current

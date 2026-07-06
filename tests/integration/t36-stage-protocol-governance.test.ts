@@ -5,7 +5,7 @@
 //
 // The .sh carried NO `# covers:` header (it claims no enumerated tool unit);
 // it is a pure structural meta-test that the shipped governance protocol
-// (dist/claude/.claude/aidlc-common/protocols/stage-protocol-governance.md)
+// (dist/claude/.claude/amadeus-common/protocols/stage-protocol-governance.md)
 // carries §13 Phase Boundary Verification, names the three valid phase-
 // transition stage pairs, references the verification knowledge file, and
 // has SHED the dead guardrail-learning model (superseded by the §13 Learnings
@@ -21,13 +21,13 @@
 // existsSync and asserts in-process.
 //
 // Subject under test (the shipped, real bytes — no temp project, no tool):
-//   - dist/claude/.claude/aidlc-common/protocols/stage-protocol-governance.md
+//   - dist/claude/.claude/amadeus-common/protocols/stage-protocol-governance.md
 //     (GOVERNANCE; AIDLC_SRC-relative — the .sh's
-//      "$AIDLC_SRC/aidlc-common/protocols/stage-protocol-governance.md")
-//   - dist/claude/.claude/aidlc-common/stages/<phase>/<slug>.md
+//      "$AIDLC_SRC/amadeus-common/protocols/stage-protocol-governance.md")
+//   - dist/claude/.claude/amadeus-common/stages/<phase>/<slug>.md
 //     (STAGES_DIR; the boundary stage files, found by walking each phase dir
 //      exactly as the .sh's nested `for phase_dir in "$STAGES_DIR"/*/` loop)
-//   - dist/claude/.claude/knowledge/aidlc-shared/verification.md
+//   - dist/claude/.claude/knowledge/amadeus-shared/verification.md
 //     (KNOWLEDGE_DIR; the verification methodology the governance file points at)
 //
 // Behavioural contract verified against the shipped file
@@ -60,7 +60,7 @@
 //   .sh 11 (Construction→Operation boundary pair)          -> "names the three phase-transition stage pairs" (sub-expect, STRONGER: same line)
 //   .sh 12-17 (6 boundary stages exist as files)           -> "every boundary stage exists as a file under STAGES_DIR" (sub-expect per slug; STRONGER: pins the resolved phase dir)
 //   .sh 18 (references verification.md knowledge file)     -> "references the verification.md knowledge file"
-//   .sh 19 (verification.md exists on disk)                -> "verification.md exists on disk under aidlc-shared"
+//   .sh 19 (verification.md exists on disk)                -> "verification.md exists on disk under amadeus-shared"
 //
 // STRONGER than the original where called out:
 //   - .sh 9/10/11 grepped "A.*B" (A and B somewhere, A before B). The twin
@@ -80,12 +80,12 @@ import { AIDLC_SRC } from "../harness/fixtures.ts";
 // Mirrors the .sh's three path anchors (t36.sh:9-11).
 const GOVERNANCE_PATH = join(
   AIDLC_SRC,
-  "aidlc-common",
+  "amadeus-common",
   "protocols",
   "stage-protocol-governance.md",
 );
-const STAGES_DIR = join(AIDLC_SRC, "aidlc-common", "stages");
-const KNOWLEDGE_DIR = join(AIDLC_SRC, "knowledge", "aidlc-shared");
+const STAGES_DIR = join(AIDLC_SRC, "amadeus-common", "stages");
+const KNOWLEDGE_DIR = join(AIDLC_SRC, "knowledge", "amadeus-shared");
 
 const GOVERNANCE = readFileSync(GOVERNANCE_PATH, "utf-8");
 const GOVERNANCE_LINES = GOVERNANCE.split("\n");
@@ -180,7 +180,7 @@ describe("t36 — verification knowledge file", () => {
     expect(GOVERNANCE.includes("verification.md")).toBe(true);
   });
 
-  test("verification.md exists on disk under aidlc-shared [.sh 19]", () => {
+  test("verification.md exists on disk under amadeus-shared [.sh 19]", () => {
     expect(existsSync(join(KNOWLEDGE_DIR, "verification.md"))).toBe(true);
   });
 });

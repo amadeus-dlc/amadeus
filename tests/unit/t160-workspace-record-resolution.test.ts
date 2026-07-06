@@ -5,10 +5,10 @@
 // (the resolvers + migration are pure-ish lib functions; no LLM, no process
 // boundary needed). The path helpers re-root the whole record tree per intent —
 // aidlc/spaces/<space>/intents/<slug>-<id8>/ — when a new-layout intent resolves,
-// and fall back to the flat aidlc-docs/ root otherwise (so a pre-workspace
+// and fall back to the flat amadeus-docs/ root otherwise (so a pre-workspace
 // project keeps working until migrated).
 //
-// SOURCE UNDER TEST (dist/claude/.claude/tools/aidlc-lib.ts):
+// SOURCE UNDER TEST (dist/claude/.claude/tools/amadeus-lib.ts):
 //   activeSpace/activeIntent/recordDir/relativeRecordDir — the selectors.
 //   stateFilePath/auditFilePath/auditShards/readAllAuditShards — re-rooted paths.
 //   uuidv7/slugify/idSuffix — intent identity.
@@ -36,30 +36,30 @@ import {
   slugify,
   stateFilePath,
   uuidv7,
-} from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { cleanupTestProject, createTestProject, removeWorkspaceRecord } from "../harness/fixtures.ts";
 
 let proj: string;
 
 /** Seed a SEED-style workspace shell (aidlc/active-space + spaces/default/ but
- *  NO intents dir / record) — exactly what dist/<harness>/aidlc/ ships. */
+ *  NO intents dir / record) — exactly what dist/<harness>/amadeus/ ships. */
 function seedShell(p: string, space = "default"): void {
   mkdirSync(join(p, "aidlc", "spaces", space, "memory"), { recursive: true });
   writeFileSync(join(p, "aidlc", "active-space"), `${space}\n`, "utf-8");
 }
 
-/** Seed a per-intent record (aidlc/spaces/<space>/intents/<dir>/aidlc-state.md). */
+/** Seed a per-intent record (aidlc/spaces/<space>/intents/<dir>/amadeus-state.md). */
 function seedIntent(p: string, dir: string, space = "default"): void {
   const recDir = join(p, "aidlc", "spaces", space, "intents", dir);
   mkdirSync(recDir, { recursive: true });
-  writeFileSync(join(recDir, "aidlc-state.md"), "- **Current Stage**: requirements-analysis\n", "utf-8");
+  writeFileSync(join(recDir, "amadeus-state.md"), "- **Current Stage**: requirements-analysis\n", "utf-8");
 }
 
-/** Seed a flat legacy project (aidlc-docs/aidlc-state.md). createTestProject
- *  already makes aidlc-docs/; this writes the state file. */
+/** Seed a flat legacy project (amadeus-docs/amadeus-state.md). createTestProject
+ *  already makes amadeus-docs/; this writes the state file. */
 function seedFlat(p: string): void {
-  mkdirSync(join(p, "aidlc-docs"), { recursive: true });
-  writeFileSync(join(p, "aidlc-docs", "aidlc-state.md"), "- **Current Stage**: requirements-analysis\n- **Workflow**: Build Auth Service\n", "utf-8");
+  mkdirSync(join(p, "amadeus-docs"), { recursive: true });
+  writeFileSync(join(p, "amadeus-docs", "amadeus-state.md"), "- **Current Stage**: requirements-analysis\n- **Workflow**: Build Auth Service\n", "utf-8");
 }
 
 beforeEach(() => {
@@ -145,7 +145,7 @@ describe("t160 selectors — space + intent resolution", () => {
     expect(activeIntent(proj, "default", "auth-aaaaaaaa")).toBe("auth-aaaaaaaa");
   });
 
-  test("listIntentDirs returns only dirs holding aidlc-state.md, sorted", () => {
+  test("listIntentDirs returns only dirs holding amadeus-state.md, sorted", () => {
     seedShell(proj);
     seedIntent(proj, "zeta-22222222");
     seedIntent(proj, "alpha-11111111");
@@ -156,14 +156,14 @@ describe("t160 selectors — space + intent resolution", () => {
 });
 
 describe("t160 path re-root — per-intent layout vs bare space root (P9 end state)", () => {
-  test("no intent resolves → bare space record root (no flat aidlc-docs/ fallback)", () => {
+  test("no intent resolves → bare space record root (no flat amadeus-docs/ fallback)", () => {
     seedShell(proj); // a SEED shell, no intent born yet
     expect(recordDir(proj)).toBeNull();
     expect(relativeRecordDir(proj)).toBeNull();
     // End state: resolves under the bare space record root, NEVER the flat root.
     const intentsRoot = join(proj, "aidlc", "spaces", "default", "intents");
-    expect(stateFilePath(proj)).toBe(join(intentsRoot, "aidlc-state.md"));
-    expect(stateFilePath(proj)).not.toBe(join(proj, "aidlc-docs", "aidlc-state.md"));
+    expect(stateFilePath(proj)).toBe(join(intentsRoot, "amadeus-state.md"));
+    expect(stateFilePath(proj)).not.toBe(join(proj, "amadeus-docs", "amadeus-state.md"));
     expect(auditFilePath(proj)).toBe(join(intentsRoot, "audit", auditShardName(proj)));
   });
 
@@ -172,7 +172,7 @@ describe("t160 path re-root — per-intent layout vs bare space root (P9 end sta
     seedIntent(proj, "auth-deadbeef");
     expect(recordDir(proj)).toBe(join(proj, "aidlc", "spaces", "default", "intents", "auth-deadbeef"));
     expect(relativeRecordDir(proj)).toBe("aidlc/spaces/default/intents/auth-deadbeef");
-    expect(stateFilePath(proj)).toBe(join(proj, "aidlc", "spaces", "default", "intents", "auth-deadbeef", "aidlc-state.md"));
+    expect(stateFilePath(proj)).toBe(join(proj, "aidlc", "spaces", "default", "intents", "auth-deadbeef", "amadeus-state.md"));
     // audit is a per-clone shard under audit/
     expect(auditFilePath(proj)).toBe(join(proj, "aidlc", "spaces", "default", "intents", "auth-deadbeef", "audit", auditShardName(proj)));
   });
@@ -182,7 +182,7 @@ describe("t160 path re-root — per-intent layout vs bare space root (P9 end sta
     seedIntent(proj, "x-11111111", "team-b");
     seedIntent(proj, "y-22222222", "team-b");
     expect(stateFilePath(proj, "y-22222222", "team-b")).toBe(
-      join(proj, "aidlc", "spaces", "team-b", "intents", "y-22222222", "aidlc-state.md"),
+      join(proj, "aidlc", "spaces", "team-b", "intents", "y-22222222", "amadeus-state.md"),
     );
   });
 });
@@ -237,7 +237,7 @@ describe("t160 flat-layout migration — crash-safe, idempotent", () => {
     // ("build auth service" → "build-auth-service", ≤24 chars so it survives whole).
     expect(r.intentDirName).toMatch(/^\d{6}-build-auth-service$/);
     // The state moved into the per-intent record.
-    const newState = join(intentsDir(proj, "default"), r.intentDirName, "aidlc-state.md");
+    const newState = join(intentsDir(proj, "default"), r.intentDirName, "amadeus-state.md");
     expect(existsSync(newState)).toBe(true);
     expect(readFileSync(newState, "utf-8")).toContain("Current Stage");
     // The registry got the entry — and stores the dirName verbatim (the readers
@@ -250,19 +250,19 @@ describe("t160 flat-layout migration — crash-safe, idempotent", () => {
     // The marker is written.
     expect(existsSync(migratedMarkerPath(proj))).toBe(true);
     // The source flat tree is NOT deleted (the caller git-rm's it; lib never rmSync's it).
-    expect(existsSync(join(proj, "aidlc-docs", "aidlc-state.md"))).toBe(true);
-    expect(r.movedFrom).toBe(join(proj, "aidlc-docs"));
+    expect(existsSync(join(proj, "amadeus-docs", "amadeus-state.md"))).toBe(true);
+    expect(r.movedFrom).toBe(join(proj, "amadeus-docs"));
   });
 
-  test("relocates the flat aidlc-docs/knowledge/ tree to SPACE-level knowledge/, not into the record", () => {
+  test("relocates the flat amadeus-docs/knowledge/ tree to SPACE-level knowledge/, not into the record", () => {
     seedShell(proj);
     seedFlat(proj);
     // A migrating team's accumulated domain knowledge lived flat under
-    // aidlc-docs/knowledge/. Seed both the shared overlay and a per-agent dir.
-    mkdirSync(join(proj, "aidlc-docs", "knowledge", "aidlc-shared"), { recursive: true });
-    writeFileSync(join(proj, "aidlc-docs", "knowledge", "aidlc-shared", "company-standards.md"), "# Standards\n", "utf-8");
-    mkdirSync(join(proj, "aidlc-docs", "knowledge", "aidlc-architect-agent"), { recursive: true });
-    writeFileSync(join(proj, "aidlc-docs", "knowledge", "aidlc-architect-agent", "patterns.md"), "# Patterns\n", "utf-8");
+    // amadeus-docs/knowledge/. Seed both the shared overlay and a per-agent dir.
+    mkdirSync(join(proj, "amadeus-docs", "knowledge", "amadeus-shared"), { recursive: true });
+    writeFileSync(join(proj, "amadeus-docs", "knowledge", "amadeus-shared", "company-standards.md"), "# Standards\n", "utf-8");
+    mkdirSync(join(proj, "amadeus-docs", "knowledge", "amadeus-architect-agent"), { recursive: true });
+    writeFileSync(join(proj, "amadeus-docs", "knowledge", "amadeus-architect-agent", "patterns.md"), "# Patterns\n", "utf-8");
 
     const res = migrateFlatLayout(proj);
     expect(res).not.toBeNull();
@@ -270,8 +270,8 @@ describe("t160 flat-layout migration — crash-safe, idempotent", () => {
 
     // Knowledge landed at the SPACE level (a sibling of intents), with content intact.
     const spaceKnowledge = join(proj, "aidlc", "spaces", "default", "knowledge");
-    expect(existsSync(join(spaceKnowledge, "aidlc-shared", "company-standards.md"))).toBe(true);
-    expect(existsSync(join(spaceKnowledge, "aidlc-architect-agent", "patterns.md"))).toBe(true);
+    expect(existsSync(join(spaceKnowledge, "amadeus-shared", "company-standards.md"))).toBe(true);
+    expect(existsSync(join(spaceKnowledge, "amadeus-architect-agent", "patterns.md"))).toBe(true);
     // It is NOT trapped inside the per-intent record.
     const record = join(intentsDir(proj, "default"), r.intentDirName);
     expect(existsSync(join(record, "knowledge"))).toBe(false);
@@ -282,21 +282,21 @@ describe("t160 flat-layout migration — crash-safe, idempotent", () => {
     seedFlat(proj);
     // A space that already has its own knowledge (e.g. seeded by a prior intent).
     const spaceKnowledge = join(proj, "aidlc", "spaces", "default", "knowledge");
-    mkdirSync(join(spaceKnowledge, "aidlc-shared"), { recursive: true });
-    writeFileSync(join(spaceKnowledge, "aidlc-shared", "existing.md"), "# Existing\n", "utf-8");
-    // The flat tree brings a NEW per-agent dir AND a same-named aidlc-shared/ with a new file.
-    mkdirSync(join(proj, "aidlc-docs", "knowledge", "aidlc-shared"), { recursive: true });
-    writeFileSync(join(proj, "aidlc-docs", "knowledge", "aidlc-shared", "incoming.md"), "# Incoming\n", "utf-8");
-    mkdirSync(join(proj, "aidlc-docs", "knowledge", "aidlc-developer-agent"), { recursive: true });
-    writeFileSync(join(proj, "aidlc-docs", "knowledge", "aidlc-developer-agent", "conv.md"), "# Conv\n", "utf-8");
+    mkdirSync(join(spaceKnowledge, "amadeus-shared"), { recursive: true });
+    writeFileSync(join(spaceKnowledge, "amadeus-shared", "existing.md"), "# Existing\n", "utf-8");
+    // The flat tree brings a NEW per-agent dir AND a same-named amadeus-shared/ with a new file.
+    mkdirSync(join(proj, "amadeus-docs", "knowledge", "amadeus-shared"), { recursive: true });
+    writeFileSync(join(proj, "amadeus-docs", "knowledge", "amadeus-shared", "incoming.md"), "# Incoming\n", "utf-8");
+    mkdirSync(join(proj, "amadeus-docs", "knowledge", "amadeus-developer-agent"), { recursive: true });
+    writeFileSync(join(proj, "amadeus-docs", "knowledge", "amadeus-developer-agent", "conv.md"), "# Conv\n", "utf-8");
 
     expect(migrateFlatLayout(proj)).not.toBeNull();
     // Pre-existing content survives (merge, not clobber)...
-    expect(existsSync(join(spaceKnowledge, "aidlc-shared", "existing.md"))).toBe(true);
-    // ...AND the incoming content merged into the same aidlc-shared/ dir...
-    expect(existsSync(join(spaceKnowledge, "aidlc-shared", "incoming.md"))).toBe(true);
+    expect(existsSync(join(spaceKnowledge, "amadeus-shared", "existing.md"))).toBe(true);
+    // ...AND the incoming content merged into the same amadeus-shared/ dir...
+    expect(existsSync(join(spaceKnowledge, "amadeus-shared", "incoming.md"))).toBe(true);
     // ...AND the new per-agent dir landed.
-    expect(existsSync(join(spaceKnowledge, "aidlc-developer-agent", "conv.md"))).toBe(true);
+    expect(existsSync(join(spaceKnowledge, "amadeus-developer-agent", "conv.md"))).toBe(true);
   });
 
   test("knowledge relocation is committed by the SAME atomic rename — a crash before the marker re-fires cleanly (no stranded knowledge)", () => {
@@ -306,17 +306,17 @@ describe("t160 flat-layout migration — crash-safe, idempotent", () => {
     // no marker, with flat knowledge present; the re-run must still relocate it.
     seedShell(proj);
     seedFlat(proj);
-    mkdirSync(join(proj, "aidlc-docs", "knowledge", "aidlc-shared"), { recursive: true });
-    writeFileSync(join(proj, "aidlc-docs", "knowledge", "aidlc-shared", "k.md"), "# K\n", "utf-8");
+    mkdirSync(join(proj, "amadeus-docs", "knowledge", "amadeus-shared"), { recursive: true });
+    writeFileSync(join(proj, "amadeus-docs", "knowledge", "amadeus-shared", "k.md"), "# K\n", "utf-8");
     mkdirSync(intentsDir(proj, "default"), { recursive: true }); // crashed-parent artifact
     expect(needsFlatMigration(proj)).toBe(true);
 
     expect(migrateFlatLayout(proj)).not.toBeNull();
     const spaceKnowledge = join(proj, "aidlc", "spaces", "default", "knowledge");
-    expect(existsSync(join(spaceKnowledge, "aidlc-shared", "k.md"))).toBe(true);
+    expect(existsSync(join(spaceKnowledge, "amadeus-shared", "k.md"))).toBe(true);
     expect(existsSync(migratedMarkerPath(proj))).toBe(true);
     // The flat source is untouched (the caller git-rm's it).
-    expect(existsSync(join(proj, "aidlc-docs", "knowledge", "aidlc-shared", "k.md"))).toBe(true);
+    expect(existsSync(join(proj, "amadeus-docs", "knowledge", "amadeus-shared", "k.md"))).toBe(true);
   });
 
   test("idempotency keys on the .migrated marker ALONE — re-run is a no-op", () => {
@@ -345,7 +345,7 @@ describe("t160 flat-layout migration — crash-safe, idempotent", () => {
     const res = migrateFlatLayout(proj);
     expect(res).not.toBeNull();
     // The source survived the crashed-then-completed run.
-    expect(existsSync(join(proj, "aidlc-docs", "aidlc-state.md"))).toBe(true);
+    expect(existsSync(join(proj, "amadeus-docs", "amadeus-state.md"))).toBe(true);
     expect(existsSync(migratedMarkerPath(proj))).toBe(true);
   });
 
@@ -359,7 +359,7 @@ describe("t160 flat-layout migration — crash-safe, idempotent", () => {
 
   test("a fresh SEED shell with no flat state needs no migration", () => {
     seedShell(proj);
-    rmSync(join(proj, "aidlc-docs"), { recursive: true, force: true });
+    rmSync(join(proj, "amadeus-docs"), { recursive: true, force: true });
     expect(needsFlatMigration(proj)).toBe(false);
     expect(migrateFlatLayout(proj)).toBeNull();
   });

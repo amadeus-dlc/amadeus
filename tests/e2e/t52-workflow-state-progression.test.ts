@@ -1,8 +1,8 @@
-// covers: subcommand:aidlc-utility:init, scope:bugfix
+// covers: subcommand:amadeus-utility:init, scope:bugfix
 //
 // t52-workflow-state-progression.test.ts — SDK-harness port of
 // tests/e2e/t52-workflow-state-progression.sh (plan 10). Drives the real
-// `/aidlc --init --scope bugfix` on a fresh project through the Claude Agent SDK and
+// `/amadeus --init --scope bugfix` on a fresh project through the Claude Agent SDK and
 // asserts ONLY on deterministic surfaces — the on-disk state-file structure +
 // fields the init tool wrote, and the framework's counter↔checkbox invariant —
 // NEVER on assistantText.
@@ -12,7 +12,7 @@
 // under a headless auto-approve mode the refactor kills. The .sh's subject is
 // "state file INTEGRITY: checkbox counts, stage ordering, field updates" — and the
 // state file's STRUCTURE + all its fields are written DETERMINISTICALLY by
-// explicit init (`aidlc-utility.ts init`, the State-Version-7 template,
+// explicit init (`amadeus-utility.ts init`, the State-Version-7 template,
 // utility.ts:2044-2097), BEFORE any gate. So this sdk twin drives the init turn,
 // stops the instant the init stdout lands, and asserts the deterministic state STRUCTURE + the
 // counter↔checkbox invariant on the landed file. The FULL multi-stage progression
@@ -23,10 +23,10 @@
 // progression lives in the tui tier; state INTEGRITY at the deterministic init
 // landing lives here.
 //
-// THE JOURNEY (verified against the SHIPPED tool). `/aidlc --init --scope
-// bugfix` on a fresh `--no-aidlc-docs` project routes through
-// `aidlc-utility.ts init --scope bugfix` (SKILL.md), which writes the full
-// State-Version-7 aidlc-state.md: the 3
+// THE JOURNEY (verified against the SHIPPED tool). `/amadeus --init --scope
+// bugfix` on a fresh `--no-amadeus-docs` project routes through
+// `amadeus-utility.ts init --scope bugfix` (SKILL.md), which writes the full
+// State-Version-7 amadeus-state.md: the 3
 // init stages marked [x], every other in-scope stage [ ], the Completed counter
 // synced to the [x] count, and the Lifecycle Phase / Status / Last Updated /
 // Active Agent / State Version fields. Init STOPs (print-terminal).
@@ -35,7 +35,7 @@
 //   1 state file exists            -> r.stateFile !== undefined (off disk).
 //   4 Completed counter == [x] count
 //       -> parse the Completed field + count `- [x]` rows; assert EQUAL. This is
-//          the framework integrity invariant (aidlc-state syncs them) — the .sh's
+//          the framework integrity invariant (amadeus-state syncs them) — the .sh's
 //          core "state integrity" assertion, preserved exactly.
 //   5 no [x] appears after [-] (ordering preserved)
 //       -> on disk: the last `- [x]` row index is BEFORE the first `- [-]` row
@@ -52,13 +52,13 @@
 //       a populated field (asserted via test 3's surface as "present + non-empty").
 //
 // Known-answer literals (read from the SHIPPED tool, not guessed):
-//   - init dispatch:           SKILL.md -> `aidlc-utility.ts init --scope bugfix`
-//   - State-Version-7 template: aidlc-utility.ts:2044-2097 (all the fields above)
-//   - State Version literal 7:  aidlc-utility.ts:2051
-//   - init-stage [x] markers:   aidlc-utility.ts:1995-1998
-//   - State initialized summary: aidlc-utility.ts:2154
+//   - init dispatch:           SKILL.md -> `amadeus-utility.ts init --scope bugfix`
+//   - State-Version-7 template: amadeus-utility.ts:2044-2097 (all the fields above)
+//   - State Version literal 7:  amadeus-utility.ts:2051
+//   - init-stage [x] markers:   amadeus-utility.ts:1995-1998
+//   - State initialized summary: amadeus-utility.ts:2154
 //
-// It SPENDS TOKENS — driveAidlc drives the real /aidlc on Opus/Bedrock.
+// It SPENDS TOKENS — driveAidlc drives the real /amadeus on Opus/Bedrock.
 // Generous per-test timeout; the driver aborts a hair early so a stuck run
 // surfaces a partial DriveResult, not a hang.
 
@@ -87,7 +87,7 @@ function completedCount(stateText: string): number {
   return (stateText.match(/^- \[x\]/gm) ?? []).length;
 }
 
-describe("t52 /aidlc --init --scope bugfix state-file integrity (sdk)", () => {
+describe("t52 /amadeus --init --scope bugfix state-file integrity (sdk)", () => {
   // -------------------------------------------------------------------------
   // Fresh project: the full State-Version-7 file lands at explicit init. Assert its
   // structure (counter↔checkbox invariant, ordering, every field) on the landed
@@ -98,7 +98,7 @@ describe("t52 /aidlc --init --scope bugfix state-file integrity (sdk)", () => {
     async () => {
       const proj = setupIntegrationProject({ noAidlcDocs: true });
       try {
-        const r = await driveAidlc("/aidlc --init --scope bugfix", {
+        const r = await driveAidlc("/amadeus --init --scope bugfix", {
           projectDir: proj,
           answerScript: "default",
           timeoutMs: DRIVE_TIMEOUT_MS,

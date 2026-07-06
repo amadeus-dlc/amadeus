@@ -1,11 +1,11 @@
-// covers: subcommand:aidlc-worktree:create
+// covers: subcommand:amadeus-worktree:create
 //
 // CLI-contract port of tests/e2e/t06-worktree-sibling-rejection.sh (TAP
-// plan 3), mechanism = cli. The .sh drives `aidlc-worktree.ts create` from
+// plan 3), mechanism = cli. The .sh drives `amadeus-worktree.ts create` from
 // INSIDE a sibling worktree to prove the tool's pre-audit
-// assertNotSiblingWorktree guard (aidlc-worktree.ts:101-121, called at
+// assertNotSiblingWorktree guard (amadeus-worktree.ts:101-121, called at
 // :162 before any audit emit) rejects the call. The covers UNIT credited is
-// subcommand:aidlc-worktree:create — the same subcommand t02 covers, here
+// subcommand:amadeus-worktree:create — the same subcommand t02 covers, here
 // exercised on its sibling-rejection branch.
 //
 // MECHANISM: this is a .cli file, so every observable is taken at the PROCESS
@@ -15,12 +15,12 @@
 // not reproduce the `git rev-parse --show-toplevel` resolution that drives the
 // main-checkout-vs-sibling comparison.
 //
-// FIXTURE: aidlc-worktree.ts resolves the main checkout from process cwd, so
+// FIXTURE: amadeus-worktree.ts resolves the main checkout from process cwd, so
 // the .sh builds a REAL sibling worktree under
 // <fixture>/.claude/worktrees/dev-slug (via `git worktree add -b dev-branch`)
 // and runs the tool with cwd = that sibling. setupWorktreeFixture
 // (tests/harness/fixtures.ts) builds the parent git repo on `main` with one
-// commit + aidlc-docs/; we add the sibling inline with spawnSync("git", ...)
+// commit + amadeus-docs/; we add the sibling inline with spawnSync("git", ...)
 // exactly as the .sh did. cleanupWorktreeFixture prunes child worktrees then
 // rm -rf's the parent. Nothing is written under tests/fixtures/**.
 //
@@ -47,14 +47,14 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const TOOL = join(AIDLC_SRC, "tools", "aidlc-worktree.ts");
+const TOOL = join(AIDLC_SRC, "tools", "amadeus-worktree.ts");
 
 const fixtures: string[] = [];
 afterAll(() => {
   for (const f of fixtures) cleanupWorktreeFixture(f);
 });
 
-/** Fresh git-repo fixture on `main` + aidlc-docs/, registered for cleanup. */
+/** Fresh git-repo fixture on `main` + amadeus-docs/, registered for cleanup. */
 function freshFixture(): string {
   const p = setupWorktreeFixture();
   fixtures.push(p);
@@ -84,7 +84,7 @@ interface CliResult {
   out: string; // combined stdout+stderr (mirrors the .sh's 2>&1)
 }
 
-/** Spawn `bun aidlc-worktree.ts create ... --project-dir <p>` from cwd=<cwd>. */
+/** Spawn `bun amadeus-worktree.ts create ... --project-dir <p>` from cwd=<cwd>. */
 function create(cwd: string, projectDir: string, args: string[]): CliResult {
   const res = spawnSync(
     BUN,
@@ -122,12 +122,12 @@ function boltSlugRows(dir: string): string[] {
 const wtPath = (dir: string, slug: string): string =>
   join(dir, ".aidlc", "worktrees", `bolt-${slug}`);
 
-describe("t06 aidlc-worktree sibling rejection (migrated from t06-worktree-sibling-rejection.sh, plan 3)", () => {
+describe("t06 amadeus-worktree sibling rejection (migrated from t06-worktree-sibling-rejection.sh, plan 3)", () => {
   test("1-3: create from inside a sibling worktree is rejected pre-audit with the main-checkout error", () => {
     const fixture = freshFixture();
     const sibling = addSibling(fixture);
 
-    // Run aidlc-worktree create from INSIDE the sibling worktree.
+    // Run amadeus-worktree create from INSIDE the sibling worktree.
     const r = create(sibling, sibling, ["--slug", "demo", "--base", "main"]);
 
     expect(r.status).not.toBe(0); // T1

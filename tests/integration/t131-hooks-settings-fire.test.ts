@@ -1,4 +1,4 @@
-// covers: hook:aidlc-audit-logger, hook:aidlc-sensor-fire, hook:aidlc-sync-statusline, hook:aidlc-runtime-compile, hook:aidlc-validate-state, hook:aidlc-log-subagent, hook:aidlc-stop
+// covers: hook:amadeus-audit-logger, hook:amadeus-sensor-fire, hook:amadeus-sync-statusline, hook:amadeus-runtime-compile, hook:amadeus-validate-state, hook:amadeus-log-subagent, hook:amadeus-stop
 //
 // t131 — the hooks move (Fork 2→B). Migrated from
 // tests/integration/t131-hooks-settings-fire.sh (TAP plan 16). With the six
@@ -27,32 +27,32 @@
 //
 // SOURCE UNDER TEST:
 //   dist/claude/.claude/settings.json — the hooks: block (lines 32-121).
-//       PostToolUse Write|Edit -> aidlc-audit-logger.ts + aidlc-sensor-fire.ts;
-//       PostToolUse TaskUpdate -> aidlc-sync-statusline.ts; PostToolUse Bash ->
-//       aidlc-runtime-compile.ts; PreCompact -> aidlc-validate-state.ts;
-//       SubagentStop -> aidlc-log-subagent.ts; Stop -> aidlc-stop.ts.
-//   dist/claude/.claude/skills/aidlc/SKILL.md — frontmatter no longer carries
+//       PostToolUse Write|Edit -> amadeus-audit-logger.ts + amadeus-sensor-fire.ts;
+//       PostToolUse TaskUpdate -> amadeus-sync-statusline.ts; PostToolUse Bash ->
+//       amadeus-runtime-compile.ts; PreCompact -> amadeus-validate-state.ts;
+//       SubagentStop -> amadeus-log-subagent.ts; Stop -> amadeus-stop.ts.
+//   dist/claude/.claude/skills/amadeus/SKILL.md — frontmatter no longer carries
 //       a `^hooks:` line.
-//   dist/claude/.claude/hooks/aidlc-audit-logger.ts — PostToolUse Write|Edit.
-//       Self-gates: only logs writes to aidlc-docs/ (:47) AND only when
+//   dist/claude/.claude/hooks/amadeus-audit-logger.ts — PostToolUse Write|Edit.
+//       Self-gates: only logs writes to amadeus-docs/ (:47) AND only when
 //       audit.md already exists (:55, "Don't auto-create audit.md"). Inside a
-//       workflow (audit.md present) a Write under aidlc-docs/ -> appendAuditEntry
+//       workflow (audit.md present) a Write under amadeus-docs/ -> appendAuditEntry
 //       (:95) appends one ARTIFACT_CREATED/UPDATED row.
-//   dist/claude/.claude/hooks/aidlc-runtime-compile.ts — PostToolUse Bash.
-//       Self-gates: command must match aidlc-(state|jump|bolt|utility).ts (:61-64)
+//   dist/claude/.claude/hooks/amadeus-runtime-compile.ts — PostToolUse Bash.
+//       Self-gates: command must match amadeus-(state|jump|bolt|utility).ts (:61-64)
 //       AND audit.md must exist (:68). On a GATE_APPROVED-tail audit it dispatches
-//       `bun run <proj>/.claude/tools/aidlc-runtime.ts compile` (:106-111), which
-//       writes aidlc-docs/runtime-graph.json.
+//       `bun run <proj>/.claude/tools/amadeus-runtime.ts compile` (:106-111), which
+//       writes amadeus-docs/runtime-graph.json.
 //   Project-dir resolution: resolveProjectDirFromHook honours CLAUDE_PROJECT_DIR
-//       first (aidlc-lib.ts:116).
+//       first (amadeus-lib.ts:116).
 //
 // FIXTURE DISCIPLINE — replicate the .sh's make_workflow (t131:76-85) EXACTLY:
-// a fresh temp project with aidlc-docs/ + a self-contained .claude/ skeleton
-// holding the three tool files (aidlc-runtime.ts, aidlc-lib.ts, aidlc-audit.ts)
+// a fresh temp project with amadeus-docs/ + a self-contained .claude/ skeleton
+// holding the three tool files (amadeus-runtime.ts, amadeus-lib.ts, amadeus-audit.ts)
 // + data/stage-graph.json + the two driven hooks copied in, plus a minimal
-// aidlc-state.md ("- **Scope**: bugfix"). The COPY (not symlink) matters: the
-// runtime-compile hook spawns <proj>/.claude/tools/aidlc-runtime.ts, whose
-// aidlc-lib.ts resolves data/stage-graph.json relative to its own location —
+// amadeus-state.md ("- **Scope**: bugfix"). The COPY (not symlink) matters: the
+// runtime-compile hook spawns <proj>/.claude/tools/amadeus-runtime.ts, whose
+// amadeus-lib.ts resolves data/stage-graph.json relative to its own location —
 // the data file must sit beside the copied lib for the compile to read it.
 // mkdtempSync + toPortablePath (Windows path round-trip). Nothing is written
 // under tests/fixtures/**; all temp dirs cleaned in afterAll.
@@ -91,7 +91,7 @@ import {
 } from "node:fs";
 import { hostname } from "node:os";
 import { join } from "node:path";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/aidlc-lib.ts";
+import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   AIDLC_SRC,
   cleanupTestProject,
@@ -188,54 +188,54 @@ describe("t131 hooks-move registration (settings.json + SKILL.md, mechanism none
 
   test("R2: audit-logger registered on PostToolUse [.sh test 2]", () => {
     expect(
-      eventHasHook(readSettings(), "PostToolUse", "aidlc-audit-logger.ts"),
+      eventHasHook(readSettings(), "PostToolUse", "amadeus-audit-logger.ts"),
     ).toBe(true);
   });
 
   test("R3: sensor-fire registered on PostToolUse [.sh test 3]", () => {
     expect(
-      eventHasHook(readSettings(), "PostToolUse", "aidlc-sensor-fire.ts"),
+      eventHasHook(readSettings(), "PostToolUse", "amadeus-sensor-fire.ts"),
     ).toBe(true);
   });
 
   test("R4: sync-statusline registered on PostToolUse [.sh test 4]", () => {
     expect(
-      eventHasHook(readSettings(), "PostToolUse", "aidlc-sync-statusline.ts"),
+      eventHasHook(readSettings(), "PostToolUse", "amadeus-sync-statusline.ts"),
     ).toBe(true);
   });
 
   test("R5: runtime-compile registered on PostToolUse [.sh test 5]", () => {
     expect(
-      eventHasHook(readSettings(), "PostToolUse", "aidlc-runtime-compile.ts"),
+      eventHasHook(readSettings(), "PostToolUse", "amadeus-runtime-compile.ts"),
     ).toBe(true);
   });
 
   test("R6: validate-state registered on PreCompact [.sh test 6]", () => {
     expect(
-      eventHasHook(readSettings(), "PreCompact", "aidlc-validate-state.ts"),
+      eventHasHook(readSettings(), "PreCompact", "amadeus-validate-state.ts"),
     ).toBe(true);
   });
 
   test("R7: log-subagent registered on SubagentStop [.sh test 7]", () => {
     expect(
-      eventHasHook(readSettings(), "SubagentStop", "aidlc-log-subagent.ts"),
+      eventHasHook(readSettings(), "SubagentStop", "amadeus-log-subagent.ts"),
     ).toBe(true);
   });
 
   test("R8: stop registered on Stop [.sh test 8]", () => {
-    expect(eventHasHook(readSettings(), "Stop", "aidlc-stop.ts")).toBe(true);
+    expect(eventHasHook(readSettings(), "Stop", "amadeus-stop.ts")).toBe(true);
   });
 
   test("R9: audit-logger matcher is Write|Edit [.sh test 9]", () => {
     // .sh: assert_eq WE_MATCHER "Write|Edit". The matcher belongs to the
     // PostToolUse group that carries the audit-logger command.
     expect(
-      matcherForHook(readSettings(), "PostToolUse", "aidlc-audit-logger.ts"),
+      matcherForHook(readSettings(), "PostToolUse", "amadeus-audit-logger.ts"),
     ).toBe("Write|Edit");
     // STRONGER: runtime-compile (the other PostToolUse seam under test) sits in
     // a Bash-matcher group, distinct from the Write|Edit group.
     expect(
-      matcherForHook(readSettings(), "PostToolUse", "aidlc-runtime-compile.ts"),
+      matcherForHook(readSettings(), "PostToolUse", "amadeus-runtime-compile.ts"),
     ).toBe("Bash");
   });
 
@@ -257,7 +257,7 @@ describe("t131 hooks-move registration (settings.json + SKILL.md, mechanism none
 /**
  * make_workflow (t131:76-85): a fresh temp project with a self-contained
  * .claude/ skeleton (the three tools + data/stage-graph.json + the two driven
- * hooks copied in), aidlc-docs/, and a minimal aidlc-state.md. `withState`
+ * hooks copied in), amadeus-docs/, and a minimal amadeus-state.md. `withState`
  * controls whether the state file is seeded (the .sh's make_workflow seeds it;
  * the bare self-gate project omits it).
  */
@@ -266,17 +266,17 @@ function makeProject(withState: boolean): string {
   tempDirs.push(proj);
   mkdirSync(join(proj, ".claude", "tools", "data"), { recursive: true });
   mkdirSync(join(proj, ".claude", "hooks"), { recursive: true });
-  for (const t of ["aidlc-runtime.ts", "aidlc-lib.ts", "aidlc-audit.ts"]) {
+  for (const t of ["amadeus-runtime.ts", "amadeus-lib.ts", "amadeus-audit.ts"]) {
     copyFileSync(join(SRC_TOOLS, t), join(proj, ".claude", "tools", t));
   }
   copyFileSync(
     join(SRC_TOOLS, "data", "stage-graph.json"),
     join(proj, ".claude", "tools", "data", "stage-graph.json"),
   );
-  for (const h of ["aidlc-audit-logger.ts", "aidlc-runtime-compile.ts"]) {
+  for (const h of ["amadeus-audit-logger.ts", "amadeus-runtime-compile.ts"]) {
     copyFileSync(join(SRC_HOOKS, h), join(proj, ".claude", "hooks", h));
   }
-  writeFileSync(join(proj, "aidlc", ".aidlc-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(proj, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
   if (withState) {
     // State into the record so the active-intent cursor resolves → the hooks
     // anchor under the record (docsRoot/auditFilePath/runtimeGraphPath).
@@ -287,9 +287,9 @@ function makeProject(withState: boolean): string {
 }
 
 const auditLoggerHook = (proj: string): string =>
-  join(proj, ".claude", "hooks", "aidlc-audit-logger.ts");
+  join(proj, ".claude", "hooks", "amadeus-audit-logger.ts");
 const runtimeCompileHook = (proj: string): string =>
-  join(proj, ".claude", "hooks", "aidlc-runtime-compile.ts");
+  join(proj, ".claude", "hooks", "amadeus-runtime-compile.ts");
 const graphPath = (proj: string): string =>
   join(seededRecordDir(proj), "runtime-graph.json");
 
@@ -369,7 +369,7 @@ describe("t131 spine fires inside a workflow (mechanism cli — spawnSync)", () 
       tool_name: "Bash",
       tool_input: {
         command:
-          "bun .claude/tools/aidlc-state.ts approve --stage requirements-analysis",
+          "bun .claude/tools/amadeus-state.ts approve --stage requirements-analysis",
       },
     });
     const r = runHook(runtimeCompileHook(proj), proj, json);
@@ -379,12 +379,12 @@ describe("t131 spine fires inside a workflow (mechanism cli — spawnSync)", () 
 });
 
 describe("t131 spine self-gates to a no-op outside a workflow (mechanism cli — spawnSync)", () => {
-  // No aidlc-state.md, no audit.md: every hook must exit 0 and write nothing.
+  // No amadeus-state.md, no audit.md: every hook must exit 0 and write nothing.
   test("S1: outside a workflow -> audit-logger exits 0 (self-gate) [.sh test 13]", () => {
     const proj = makeProject(false);
     const json = JSON.stringify({
       tool_name: "Write",
-      tool_input: { file_path: join(proj, "aidlc-docs", "inception", "x.md") },
+      tool_input: { file_path: join(proj, "amadeus-docs", "inception", "x.md") },
     });
     const r = runHook(auditLoggerHook(proj), proj, json);
     expect(r.status).toBe(0);
@@ -394,7 +394,7 @@ describe("t131 spine self-gates to a no-op outside a workflow (mechanism cli —
     const proj = makeProject(false);
     const json = JSON.stringify({
       tool_name: "Write",
-      tool_input: { file_path: join(proj, "aidlc-docs", "inception", "x.md") },
+      tool_input: { file_path: join(proj, "amadeus-docs", "inception", "x.md") },
     });
     runHook(auditLoggerHook(proj), proj, json);
     // The "don't auto-create the audit trail" guard (hook :73) holds: no shard.
@@ -407,7 +407,7 @@ describe("t131 spine self-gates to a no-op outside a workflow (mechanism cli —
       tool_name: "Bash",
       tool_input: {
         command:
-          "bun .claude/tools/aidlc-state.ts approve --stage requirements-analysis",
+          "bun .claude/tools/amadeus-state.ts approve --stage requirements-analysis",
       },
     });
     const r = runHook(runtimeCompileHook(proj), proj, json);
@@ -420,7 +420,7 @@ describe("t131 spine self-gates to a no-op outside a workflow (mechanism cli —
       tool_name: "Bash",
       tool_input: {
         command:
-          "bun .claude/tools/aidlc-state.ts approve --stage requirements-analysis",
+          "bun .claude/tools/amadeus-state.ts approve --stage requirements-analysis",
       },
     });
     runHook(runtimeCompileHook(proj), proj, json);
