@@ -619,3 +619,27 @@
 ---
 
 <!-- relocation-note: 本 record は Issue #526 の全面 rename により aidlc/spaces/... から amadeus/spaces/... へ git mv で移設された（2026-07-06T04:51:30Z）。状態ファイルは aidlc-state.md から amadeus-state.md へ、内部マーカーは .aidlc-* から .amadeus-* へ改名。これ以前のイベント本文中の旧 path 言及は移設前の歴史的記録であり遡及編集しない。 -->
+
+## Error Logged
+**Timestamp**: 2026-07-06T04:56:33Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-utility
+**Command**: amadeus-utility --help
+**Error**: Usage: amadeus-utility <help|version|status|doctor|intent-birth|intent|space|space-create|codekb-path|detect|recompose|scope-change|config-change|set-status|detect-scope|resolve-env-scope|scope-table> [--project-dir <path>] [--scope <scope>] [--json]
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T05:04:18Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a5b5f418aafb89f44
+**Message**: ## Review\n\n**Verdict: READY**\n\n以下に実測根拠と所見を示す。\n\n---\n\n### AC 充足（7 行）\n\n**AC-1**: `ls aidlc` は `No such file or directory`（実測）。`git log --follow amadeus/spaces/default/memory/team.md` はコミット b2f817ff（renam
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T05:04:18Z
+**Event**: HUMAN_TURN
+
+---
