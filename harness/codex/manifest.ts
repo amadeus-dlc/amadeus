@@ -1,7 +1,7 @@
 // harness/codex/manifest.ts — the Codex CLI distribution row.
 //
 // Projects core/ into dist/codex/.codex/ (rules → amadeus-rules, D-10) and defers
-// every codex-specific surface to emit.ts (config.toml, hooks.json, trust-seed,
+// every codex-specific surface to emit.ts (config.toml.example, hooks.json.example, trust-seed,
 // AGENTS.md, 11 agent TOMLs, the .agents/skills/ tree). Mirrors the proven
 // package-codex.ts spike, generalized onto the unified packager.
 //

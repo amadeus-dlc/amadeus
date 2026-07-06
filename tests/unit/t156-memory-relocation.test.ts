@@ -190,7 +190,7 @@ describe("t156 method relocation to aidlc/spaces/default/memory/ + per-harness i
     }
     // And CLAUDE.md imports the stub (top of the reference chain).
     const claudeMd = readFileSync(
-      join(REPO_ROOT, "dist", "claude", ".claude", "CLAUDE.md"),
+      join(REPO_ROOT, "dist", "claude", ".claude", "CLAUDE.md.example"),
       "utf-8",
     );
     expect(claudeMd).toContain("@.claude/rules/amadeus.md");
@@ -256,7 +256,7 @@ describe("t156 method relocation to aidlc/spaces/default/memory/ + per-harness i
     // 2026-06-24, codex-cli 0.139.0 on Bedrock; the earlier spike's exit-124
     // hang is resolved). So the seam is no longer doc-verified-only.
     const config = readFileSync(
-      join(REPO_ROOT, "dist", "codex", ".codex", "config.toml"),
+      join(REPO_ROOT, "dist", "codex", ".codex", "config.toml.example"),
       "utf-8",
     );
     expect(config).toContain('AMADEUS_RULES_DIR = "aidlc/spaces/default/memory"');

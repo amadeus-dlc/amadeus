@@ -48,7 +48,7 @@ interface RunResult {
 
 function runUtil(proj: string, ...args: string[]): RunResult {
   const env = { ...process.env };
-  delete env.AWS_AMADEUS_DEFAULT_SCOPE;
+  delete env.AMADEUS_DEFAULT_SCOPE;
   const r = spawnSync(BUN, [UTIL, ...args, "--project-dir", proj], { encoding: "utf-8", env });
   return { status: r.status ?? -1, out: `${r.stdout ?? ""}${r.stderr ?? ""}`, stdout: r.stdout ?? "" };
 }

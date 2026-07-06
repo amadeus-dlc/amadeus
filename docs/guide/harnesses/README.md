@@ -16,7 +16,7 @@ Pick your harness:
 | **Claude Code** | `/amadeus` | Covered throughout the [User Guide](../00-introduction.md) (its examples run on Claude Code); install in [Getting Started](../01-getting-started.md). |
 | **Kiro IDE** | `/amadeus` | [Running AI-DLC on Kiro IDE](kiro-ide.md) — prerequisites (Opus 4.8), install, hooks, what's different on Kiro. |
 | **Kiro CLI** (≥ 2.6) | `/amadeus` | [Running AI-DLC on Kiro CLI](kiro-cli.md) — prerequisites, install, what's different on Kiro. |
-| **Codex CLI** (≥ 0.139.0) | `$amadeus` | [AI-DLC on Codex CLI](codex-cli.md) — prerequisites, trust pre-seed, Bedrock config, the git-repo requirement. |
+| **Codex CLI** (≥ 0.139.0) | `$amadeus` | [AI-DLC on Codex CLI](codex-cli.md) — prerequisites, trust pre-seed, provider config, the git-repo requirement. |
 
 AI-DLC on Kiro (IDE or CLI) works best with **Claude Opus 4.8**, which requires a **paid Kiro plan**.
 

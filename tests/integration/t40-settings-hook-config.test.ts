@@ -1,11 +1,11 @@
 // covers: hook:amadeus-session-start, hook:amadeus-statusline
 //
-// t40 — settings.json hook/statusline/permissions wiring + the
+// t40 — settings.json.example hook/statusline/permissions wiring + the
 // settings.local.json.example override stub. Migrated from
 // tests/integration/t40-settings-hook-config.sh (TAP plan 6).
 //
 // Mechanism: none. Every assertion reads a STATIC shipped JSON file
-// (dist/claude/.claude/settings.json and settings.local.json.example) and
+// (dist/claude/.claude/settings.json.example and settings.local.json.example) and
 // inspects its parsed structure IN-PROCESS — zero LLM, zero subprocess, zero
 // tokens. The .sh used `jq` / `grep` against the same two files on disk; here
 // the data is the file's bytes, so we read + JSON.parse and assert the parsed
@@ -13,7 +13,7 @@
 // for the relocated hooks: settings.json is where Claude Code learns which hook
 // fires on which event, and which command renders the statusline.
 //
-// SOURCE UNDER TEST (dist/claude/.claude/settings.json):
+// SOURCE UNDER TEST (dist/claude/.claude/settings.json.example):
 //   :32-43  hooks.SessionStart -> one group, matcher "", one hook command
 //           "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-session-start.ts"
 //   :18-21  statusLine.type == "command",
@@ -46,7 +46,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
-const SETTINGS = join(AMADEUS_SRC, "settings.json");
+const SETTINGS = join(AMADEUS_SRC, "settings.json.example");
 const SETTINGS_LOCAL_EXAMPLE = join(AMADEUS_SRC, "settings.local.json.example");
 
 interface HookEntry {
@@ -63,12 +63,12 @@ interface Settings {
   permissions?: { allow?: string[] };
 }
 
-/** Read + parse the static shipped settings.json. */
+/** Read + parse the static shipped settings.json.example. */
 function readSettings(): Settings {
   return JSON.parse(readFileSync(SETTINGS, "utf-8")) as Settings;
 }
 
-describe("t40 settings.json hook/statusline/permissions config (migrated from t40-settings-hook-config.sh, plan 6, mechanism none)", () => {
+describe("t40 settings.json.example hook/statusline/permissions config", () => {
   test("T1: hooks.SessionStart is a non-empty array [.sh test 1]", () => {
     // .sh: assert_grep SETTINGS '"SessionStart"'. STRONGER: the key parses to an
     // array carrying at least one hook group, not merely a substring present.

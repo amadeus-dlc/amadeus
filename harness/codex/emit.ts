@@ -53,24 +53,14 @@ function emitHooksJson(): string {
   return JSON.stringify({ hooks }, null, 2) + "\n";
 }
 
-function emitConfigToml(): string {
-  return `# dist/codex shipped config — copy into the project's .codex/config.toml
-# (trusted projects) or merge into ~/.codex/config.toml.
+function emitConfigTomlExample(): string {
+  return `# dist/codex shipped config example — copy to .codex/config.toml only
+# when this project should own Codex config. Existing config.toml must not be
+# overwritten by installers or self-promotion.
 #
-# Model: D-7 map (orchestrator opus-class -> gpt-5.5; agent sonnet-class ->
-# gpt-5.4). D-9: Amazon Bedrock is the shipped default provider (web_search is
-# unavailable there; the market-research stage degrades gracefully). For
-# OpenAI-auth setups, comment out model_provider and the [model_providers]
-# block.
-model = "openai.gpt-5.5"
-model_provider = "amazon-bedrock"
-model_context_window = 1000000
-model_reasoning_effort = "high"
-
-[model_providers.amazon-bedrock.aws]
-# Set to your AWS profile/region with Bedrock model access.
-profile = "default"
-region = "us-east-1"
+# Model/provider: intentionally not pinned here. Codex uses the user's normal
+# configured default provider and model. Put personal model/provider overrides in
+# ~/.codex/config.toml or add project-local settings deliberately.
 
 # The AIDLC method (the markdown rule layers: org/team/project + phases/) now
 # lives at the workspace root under aidlc/spaces/<space>/memory/ — the single
@@ -202,10 +192,6 @@ function emitTrustSeed(): string {
 }
 
 // --- Agent transposition: 13 persona .md → .codex/agents/*.toml -------------
-const D7_MODEL_MAP: Record<string, string> = {
-  opus: "openai.gpt-5.5",
-  sonnet: "openai.gpt-5.4",
-};
 
 function parseAgentMd(raw: string): { fm: Record<string, string>; body: string } {
   const m = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
@@ -269,12 +255,10 @@ export default function emit(ctx: EmitContext): EmitResult {
     const { fm, body } = parseAgentMd(raw);
     const name = fm.name ?? "";
     const description = (fm.description ?? "").replace(/\s+/g, " ").trim();
-    const model = D7_MODEL_MAP[fm.modelOverride ?? ""] ?? D7_MODEL_MAP.opus;
     const instructions = rewriteProse(body);
     return (
       `name = "${name}"\n` +
       `description = "${description.replace(/"/g, '\\"')}"\n` +
-      `model = "${model}"\n` +
       `developer_instructions = ${tomlMultiline(instructions.trim())}\n`
     );
   }
@@ -310,8 +294,8 @@ export default function emit(ctx: EmitContext): EmitResult {
   const emissions: Array<{ path: string; content: () => string }> = [];
 
   // codex-only config + wiring + trust + AGENTS.md
-  emissions.push({ path: join(DCODEX, "hooks.json"), content: emitHooksJson });
-  emissions.push({ path: join(DCODEX, "config.toml"), content: emitConfigToml });
+  emissions.push({ path: join(DCODEX, "hooks.json.example"), content: emitHooksJson });
+  emissions.push({ path: join(DCODEX, "config.toml.example"), content: emitConfigTomlExample });
   emissions.push({ path: join(DCODEX, "rules", "default.rules"), content: emitDefaultRules });
   emissions.push({ path: join(DCODEX, "trust-seed.toml"), content: emitTrustSeed });
   emissions.push({ path: join(distRoot, "AGENTS.md"), content: emitAgentsMd });

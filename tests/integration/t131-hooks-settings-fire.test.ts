@@ -102,7 +102,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const SETTINGS = join(AMADEUS_SRC, "settings.json");
+const SETTINGS = join(AMADEUS_SRC, "settings.json.example");
 const SKILL = join(AMADEUS_SRC, "skills", "amadeus", "SKILL.md");
 const SRC_TOOLS = join(AMADEUS_SRC, "tools");
 const SRC_HOOKS = join(AMADEUS_SRC, "hooks");

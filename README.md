@@ -89,7 +89,7 @@ On Windows, use *either* PowerShell *or* CMD, not both — your prompt shows `PS
 > [!TIP]
 > bun has to be on the PATH that *non-interactive* shells see, since that's what a harness uses to run a hook or tool. Those shells read `~/.zshenv` (zsh) or `~/.bashrc` (bash), not `~/.zshrc` — but the bun installer writes to `~/.zshrc`. So if `which bun` works in your terminal yet the harness can't find bun, copy the `BUN_INSTALL`/`PATH` export into `~/.zshenv` (or `~/.bashrc` for bash and Git Bash).
 
-Every harness runs on **AWS Bedrock**, so set Bedrock up before your first run — enable model access in your AWS account and make sure the harness can see working AWS credentials. Each harness section below has the specifics.
+Harnesses use the model/provider already configured in the CLI you run them from. This repository does not pin Claude Code or Codex to a specific provider by default; put provider/model overrides in your user-level tool config or an explicit project-local override when your team needs one.
 
 ### Install a harness
 
@@ -173,6 +173,8 @@ curl -fsSL https://claude.ai/install.cmd -o install.cmd && install.cmd && del in
 # Copy the implementation (engine + the workspace shell sibling), then launch
 cp -r dist/claude/.claude/ your-project/.claude/
 cp -r dist/claude/amadeus/   your-project/amadeus/     # the workspace shell — a sibling of .claude/, not inside it
+cp -n your-project/.claude/CLAUDE.md.example your-project/.claude/CLAUDE.md
+cp -n your-project/.claude/settings.json.example your-project/.claude/settings.json
 cd your-project && claude
 ```
 
@@ -185,7 +187,7 @@ Then, inside the Claude Code session:
 /amadeus Build a task management API with user authentication   # start a workflow
 ```
 
-The shipped `.claude/settings.json` runs on **AWS Bedrock** (`AWS_REGION=us-east-1`, Fable/Opus/Sonnet/Haiku pinned). Before your first run, enable Anthropic model access in your AWS account and have AWS credentials on your SDK credential chain — see [Getting Started § AWS Bedrock Setup](docs/guide/01-getting-started.md#aws-bedrock-setup) for the model-access form, IAM policy, credential options, and how to change the region. The full prerequisites table, PATH troubleshooting, and Bedrock configuration are in [Getting Started](docs/guide/01-getting-started.md).
+The shipped `.claude/settings.json.example` does not pin a provider or model; Claude Code uses your normal configured defaults. Copy it to `.claude/settings.json` only when the project does not already have one. Put personal overrides in `.claude/settings.local.json` or your user-level Claude Code settings. The full prerequisites table and PATH troubleshooting are in [Getting Started](docs/guide/01-getting-started.md).
 
 </details>
 
@@ -198,7 +200,7 @@ The shipped `.claude/settings.json` runs on **AWS Bedrock** (`AWS_REGION=us-east
 codex --version   # confirm ≥ 0.139.0
 ```
 
-The shipped `config.toml` runs on **Amazon Bedrock**; set your AWS profile and region in the bedrock provider block.
+The shipped `config.toml.example` does not pin a provider or model; Codex uses your normal configured defaults. Copy it to `.codex/config.toml` only when the project does not already have one. Put provider/model choices in `~/.codex/config.toml` or add project-local settings deliberately.
 
 **2. Set up your project** (which must be a **git repository** — Codex only discovers a project `.codex/hooks.json` inside one):
 
@@ -207,6 +209,8 @@ cp -r dist/codex/.codex/  your-project/.codex/
 cp -r dist/codex/.agents/ your-project/.agents/
 cp -r dist/codex/amadeus/   your-project/amadeus/      # the workspace shell — a sibling of .codex/, not inside it
 cp dist/codex/AGENTS.md   your-project/AGENTS.md   # or merge into yours
+cp -n your-project/.codex/config.toml.example your-project/.codex/config.toml
+cp -n your-project/.codex/hooks.json.example your-project/.codex/hooks.json
 ```
 
 The `aidlc/` shell ships the pre-built `aidlc/spaces/default/memory/` method tree the engine reads; `$amadeus --doctor` fails its "workspace shell ready" check without it.
@@ -248,7 +252,7 @@ amadeus-claude/
 │       # prose names the harness dir with the {{HARNESS_DIR}} token — substituted at packaging
 │
 ├── harness/                    # thin per-harness authored surfaces — small, divergent by design
-│   ├── claude/                 #   manifest.ts · orchestrator skill · settings.json · onboarding fills
+│   ├── claude/                 #   manifest.ts · orchestrator skill · settings.json.example · onboarding fills
 │   ├── kiro-ide/               #   manifest.ts · orchestrator · agent JSONs · .kiro.hook files · settings · onboarding fills
 │   ├── kiro/                   #   manifest.ts · orchestrator · agent JSONs · settings · onboarding fills (CLI — agent-JSON hooks)
 │   └── codex/                  #   manifest.ts · emit.ts (Codex-only emissions) · orchestrator · hooks adapter
@@ -284,6 +288,8 @@ bun scripts/package.ts            # regenerate every dist/<harness>/ from core/ 
 bun scripts/package.ts <name>     # regenerate one harness (e.g. claude, kiro-ide, codex)
 npm run dist:check               # byte-parity drift guard (run in CI)
 bun scripts/package.ts --check    # byte-parity drift guard (run in CI)
+npm run promote:self              # update this repo's project-local .claude/.codex self install
+npm run promote:self:check        # drift guard for the project-local self install
 ```
 
 Adding a whole new harness? See [Porting to a New Harness](docs/harness-engineering/09-porting-to-a-new-harness.md). The authoritative build reference is the [Contributing Guide](docs/reference/11-contributing.md#development-workflow).
@@ -307,7 +313,7 @@ Most first-run trouble is one of these; each harness guide covers the rest.
 | --- | --- | --- |
 | `which bun` works in your terminal, but the harness can't find bun | all | bun isn't on the non-interactive PATH. Copy the `BUN_INSTALL`/`PATH` export into `~/.zshenv` (zsh) or `~/.bashrc` (bash/Git Bash) — see the tip under [Quick Start](#quick-start). |
 | `/amadeus --doctor` reports a Codex CLI version below 0.139.0 | Codex | Upgrade to Codex CLI 0.139.0 or later. Older releases break subagent attribution and hyphenated agent TOML resolution. |
-| Bedrock calls fail with `AccessDenied` or a model-not-found error | Claude, Codex | Enable model access for the harness's configured models in your AWS account and put working credentials on your SDK chain. Confirm `AWS_REGION` is a region where you enabled them. |
+| Model/provider calls fail with auth or model-not-found errors | Claude, Codex | Confirm your CLI's configured provider credentials and model access. If you intentionally use a project-local provider override, verify that file is present and matches your account or organization setup. |
 | Hooks never fire (no audit rows, no gates) | Codex | Trust the hooks: run `bun scripts/package.ts codex trust --project <dir>`, or start one TUI session and choose "Trust all." Untrusted hooks never run. |
 | Skills or rules don't take effect after you copy a new `dist/` | all | Start a fresh session — harnesses load skills, agents, and rules at session start. |
 

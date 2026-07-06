@@ -15,7 +15,7 @@ AI-DLC is designed to adapt to your team's needs. This chapter covers settings o
 
 ## Settings Overrides (`settings.local.json`)
 
-The shared `.claude/settings.json` ships with the framework and is committed to version control. To override settings for your local environment without affecting the team, create a personal overrides file:
+The distribution ships `.claude/settings.json.example`; copy it to `.claude/settings.json` only when the project does not already have one. To override settings for your local environment without affecting the team, create a personal overrides file:
 
 ```bash
 cp .claude/settings.local.json.example .claude/settings.local.json
@@ -31,17 +31,15 @@ This file is listed in `.gitignore` so your personal changes are never committed
 
 ## Per-Project Default Scope
 
-When every workflow in a project should start at the same scope — for example, a workshop where all participants should run `workshop` — set `AWS_AMADEUS_DEFAULT_SCOPE` in the `env` block of `.claude/settings.json` (the shipped file already has this set to `workshop`):
+When every workflow in a project should start at the same scope — for example, a workshop where all participants should run `workshop` — set `AMADEUS_DEFAULT_SCOPE` in the `env` block of `.claude/settings.json` or your local settings override:
 
 ```json
 {
   "env": {
-    "AWS_AMADEUS_DEFAULT_SCOPE": "workshop"
+    "AMADEUS_DEFAULT_SCOPE": "workshop"
   }
 }
 ```
-
-> The shipped `env` block also contains Bedrock model IDs (`CLAUDE_CODE_USE_BEDROCK`, `ANTHROPIC_DEFAULT_OPUS_MODEL`, etc.). Those are listed separately — the example above only shows the scope key for clarity.
 
 With this set, bare `/amadeus` invocations use `workshop` as the default scope. Participants don't need to remember `/amadeus workshop` on every run. The env var is read at workflow initialization only; once the intent's `amadeus-state.md` exists (under its record dir), the state file is authoritative and env changes don't affect an in-flight workflow.
 
@@ -49,7 +47,7 @@ With this set, bare `/amadeus` invocations use `workshop` as the default scope. 
 
 1. Explicit CLI flag: `/amadeus feature` or `/amadeus --scope bugfix` wins.
 2. Keyword detection in freeform text: `/amadeus fix the login bug` still maps to `bugfix`. Users can override the detected scope at the existing confirmation prompt.
-3. `AWS_AMADEUS_DEFAULT_SCOPE` env var from `.claude/settings.json`.
+3. `AMADEUS_DEFAULT_SCOPE` env var from `.claude/settings.json`.
 4. Hard-coded fallback (`poc` at intent birth, `feature` for unmatched freeform).
 
 **Valid values:** `enterprise`, `feature`, `mvp`, `poc`, `bugfix`, `refactor`, `infra`, `security-patch`, `workshop`. An invalid value errors at invocation time with a clear message. Teams can define additional scopes by dropping a `.claude/scopes/amadeus-<name>.md` file and tagging the member stages' `scopes:` lists — see [Contributing: Adding a Scope](../reference/11-contributing.md#adding-a-scope). Teams can also define additional agents in `.claude/agents/` — see [Contributing: Adding an Agent](../reference/11-contributing.md#adding-an-agent).
@@ -57,10 +55,10 @@ With this set, bare `/amadeus` invocations use `workshop` as the default scope. 
 **Verifying the config:** run `/amadeus --doctor` to confirm the env var is set and valid:
 
 ```
-✓  AWS_AMADEUS_DEFAULT_SCOPE=workshop (valid)
+✓  AMADEUS_DEFAULT_SCOPE=workshop (valid)
 ```
 
-**Init notice:** when the env default is applied, the orchestrator prints a one-line notice at workflow start (`Using scope=<value> from AWS_AMADEUS_DEFAULT_SCOPE (.claude/settings.json)`) so the scope source is visible at the moment it takes effect.
+**Init notice:** when the env default is applied, the orchestrator prints a one-line notice at workflow start (`Using scope=<value> from AMADEUS_DEFAULT_SCOPE (.claude/settings.json)`) so the scope source is visible at the moment it takes effect.
 
 Why only scope and not depth or test-strategy? Each scope already declares its own depth and test-strategy defaults (workshop → Standard depth, Minimal test strategy). Setting the scope cascades those automatically. If you need to override either, pass `--depth` or `--test-strategy` on the CLI.
 

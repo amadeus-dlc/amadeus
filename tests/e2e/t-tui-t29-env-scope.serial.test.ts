@@ -1,6 +1,6 @@
 // covers: scope:feature
 //
-// t-tui-t29-env-scope.serial.tui.test.ts — the AWS_AMADEUS_DEFAULT_SCOPE
+// t-tui-t29-env-scope.serial.tui.test.ts — the AMADEUS_DEFAULT_SCOPE
 // project-default-scope mechanism, driven through a REAL claude TUI (Pattern A:
 // "landed + rendered", §5-A1 / spec §"TWO DRIVING PATTERNS"). A keystroke port
 // of tests/integration/t29-integration-env-scope.sh, which auto-approved gates so
@@ -19,11 +19,11 @@
 //     without a scope-disambiguation gate; the bare known-scope token wins over the
 //     settings default in the live TUI path.
 //   - Case error (invalid env value errors, writes NO state): the env block is
-//     rewritten to `AWS_AMADEUS_DEFAULT_SCOPE: "bogus"`; the orchestrator's step-0
+//     rewritten to `AMADEUS_DEFAULT_SCOPE: "bogus"`; the orchestrator's step-0
 //     resolve-env-scope (SKILL.md:100-108) prints the canonical
-//     `Invalid AWS_AMADEUS_DEFAULT_SCOPE` error and STOPS without creating state.
+//     `Invalid AMADEUS_DEFAULT_SCOPE` error and STOPS without creating state.
 //     .sh assertions ported: rendered output contains "Invalid
-//     AWS_AMADEUS_DEFAULT_SCOPE"; no intent is born and no per-intent state is written.
+//     AMADEUS_DEFAULT_SCOPE"; no intent is born and no per-intent state is written.
 //
 // The render value-add the headless .sh (and the SDK path) cannot see: the
 // captured pane shows the workflow statusline left `[AIDLC] ready` and painted a
@@ -44,10 +44,10 @@
 //   (tui-drive.ts:271-283) and sets NO `update-environment` / `setenv` / `-e`
 //   env on the session, so the test PROCESS's shell env is NOT forwarded to the
 //   claude child (tmux new-session inherits the tmux *server* environment, not
-//   the spawning client's). The .sh's mechanism — `export AWS_AMADEUS_DEFAULT_SCOPE=...`
+//   the spawning client's). The .sh's mechanism — `export AMADEUS_DEFAULT_SCOPE=...`
 //   in the shell before run_claude — therefore does NOT translate to the TUI.
 //   So this port drives the env scope the way a REAL user does and the way
-//   SKILL.md:108 describes ("workshop facilitators set AWS_AMADEUS_DEFAULT_SCOPE
+//   SKILL.md:108 describes ("workshop facilitators set AMADEUS_DEFAULT_SCOPE
 //   once in .claude/settings.json env block"): through the project's
 //   `.claude/settings.json` `env` block, which Claude Code reliably injects into
 //   its own process. This is MORE faithful to the production surface than the
@@ -219,7 +219,7 @@ function skipReason(): string | null {
 }
 const SKIP_REASON = skipReason();
 
-// Set AWS_AMADEUS_DEFAULT_SCOPE in the project's shipped settings.json env block —
+// Set AMADEUS_DEFAULT_SCOPE in the project's shipped settings.json env block —
 // the production env-scope channel Claude Code injects into its own process (the
 // FINDING above explains why this, not a shell export). The shipped block already
 // pins `workshop`; pass `null` to leave it as shipped (Case A / override), or a
@@ -228,7 +228,7 @@ function setSettingsEnvScope(projectDir: string, value: string): void {
   const settingsPath = join(projectDir, ".claude", "settings.json");
   const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
   settings.env = settings.env ?? {};
-  settings.env.AWS_AMADEUS_DEFAULT_SCOPE = value;
+  settings.env.AMADEUS_DEFAULT_SCOPE = value;
   writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
 }
 
@@ -262,9 +262,9 @@ function launchReady(session: string, projectDir: string): void {
   expect(waitFor(session, "\\[AIDLC\\].*ready", 45000, 800)).toBe(true);
 }
 
-describe("t-tui-t29 env-scope (AWS_AMADEUS_DEFAULT_SCOPE seeds new-workflow scope on disk)", () => {
+describe("t-tui-t29 env-scope (AMADEUS_DEFAULT_SCOPE seeds new-workflow scope on disk)", () => {
   // --- Case A: bare command does not bootstrap solely from env default -------
-  // v0.6.1's read-only engine uses AWS_AMADEUS_DEFAULT_SCOPE for scope resolution
+  // v0.6.1's read-only engine uses AMADEUS_DEFAULT_SCOPE for scope resolution
   // once a command carries an init/jump/freeform target, but a bare `/amadeus` on a
   // no-state project is intentionally not enough to mutate. The live trace
   // proves the TUI renders the no-state guidance and writes no state file.
@@ -402,9 +402,9 @@ describe("t-tui-t29 env-scope (AWS_AMADEUS_DEFAULT_SCOPE seeds new-workflow scop
   // The env block is rewritten to `bogus` (the TUI equivalent of the .sh's
   // --strip-env-scope + shell export of an invalid value — see the FINDING).
   // resolve-env-scope (SKILL.md:100-108) prints the canonical
-  // `Invalid AWS_AMADEUS_DEFAULT_SCOPE` error and STOPS; no state file is created.
+  // `Invalid AMADEUS_DEFAULT_SCOPE` error and STOPS; no state file is created.
   test.skipIf(SKIP_REASON !== null)(
-    `invalid env value (AWS_AMADEUS_DEFAULT_SCOPE=bogus) errors and writes no state${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
+    `invalid env value (AMADEUS_DEFAULT_SCOPE=bogus) errors and writes no state${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
     () => {
       const session = `aidlc_tui_t29_bogus_${process.pid}`;
       const proj = setupTuiProject({ noAidlcDocs: true });
@@ -418,12 +418,12 @@ describe("t-tui-t29 env-scope (AWS_AMADEUS_DEFAULT_SCOPE seeds new-workflow scop
         drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
 
         // Rendered: the canonical error text appears in the pane. The orchestrator
-        // prints `Invalid AWS_AMADEUS_DEFAULT_SCOPE "bogus". Valid scopes: ...` and
+        // prints `Invalid AMADEUS_DEFAULT_SCOPE "bogus". Valid scopes: ...` and
         // STOPs (amadeus-utility.ts:2798). The literal substring is the .sh's
         // assert_contains target (line 58); it must paint VERBATIM.
-        expect(waitFor(session, "Invalid AWS_AMADEUS_DEFAULT_SCOPE", 240000, 0)).toBe(true);
+        expect(waitFor(session, "Invalid AMADEUS_DEFAULT_SCOPE", 240000, 0)).toBe(true);
         const pane = drive(["capture", "--session", session]).stdout;
-        expect(pane).toContain("Invalid AWS_AMADEUS_DEFAULT_SCOPE");
+        expect(pane).toContain("Invalid AMADEUS_DEFAULT_SCOPE");
 
         // Deterministic NO-WRITE ON DISK (the .sh's Case C state-absence check,
         // line 59-63): the invalid env scope must not create the state file. The

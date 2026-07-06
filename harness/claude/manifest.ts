@@ -52,24 +52,19 @@ const manifest: HarnessManifest = {
     // reference (explicit @-imports, no copy). The rules/ dir is no longer a
     // core projection — this stub is the only file in it.
     { src: "rules-amadeus.md", dst: "rules/amadeus.md" },
-    { src: "settings.json", dst: "settings.json" },
+    { src: "settings.json.example", dst: "settings.json.example" },
     { src: "settings.local.json.example", dst: "settings.local.json.example" },
     // Project-root install files (beside .claude/, not inside it). A user copies
     // `dist/claude/` wholesale, so these ship at the dist root. Authored here
-    // (not core/) because they are Claude-Code-specific: .mcp.json is the
-    // Claude MCP-server registry (Kiro/Codex configure MCP differently and ship
-    // none), and the .gitignore names `.claude/settings.local.json`. projectRoot
-    // routes them to dist/claude/<dst> and brings them under the --check drift
-    // guard (checkHarness diffs every projectRoot file). dot-gitignore is the
+    // (not core/) because they are Claude-Code-specific; dot-gitignore is the
     // authored name so it does not act as a live ignore inside harness/claude/.
-    { src: ".mcp.json", dst: ".mcp.json", projectRoot: true },
     { src: "dot-gitignore", dst: ".gitignore", projectRoot: true },
   ],
 
-  // The onboarding doc (CLAUDE.md) renders from the shared skeleton
+  // The onboarding doc template (CLAUDE.md.example) renders from the shared skeleton
   // core/templates/onboarding.md with Claude's fills, then the standard
   // {{HARNESS_DIR}} → .claude transform. Single source across every harness.
-  onboarding: { dst: "CLAUDE.md", fills: onboardingFills },
+  onboarding: { dst: "CLAUDE.md.example", fills: onboardingFills },
 
   // Claude renames no core dir.
   rulesRename: null,

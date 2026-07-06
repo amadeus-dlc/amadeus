@@ -230,7 +230,7 @@ describe("t-tui-t50-bugfix-scope (answering gates advances bugfix lifecycle on d
         // --- submit the bugfix workflow command --------------------------------
         // Use the EXPLICIT `--scope bugfix` flag, not the bare freeform `bugfix`
         // keyword. The shipped distributable settings.json pins
-        // AWS_AMADEUS_DEFAULT_SCOPE=workshop, so a bare freeform `/amadeus bugfix ...`
+        // AMADEUS_DEFAULT_SCOPE=workshop, so a bare freeform `/amadeus bugfix ...`
         // is a freeform-vs-env CONFLICT: SKILL.md step 0 (:105) only skips env
         // substitution when `$ARGUMENTS` already contains the literal `--scope`
         // token, so the bare keyword triggers a 3-way scope disambiguation gate at

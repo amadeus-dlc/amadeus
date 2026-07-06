@@ -14,11 +14,11 @@ never hand-edit it (the drift guard fails CI).
   `/amadeus --doctor` enforces the pin. Check with `codex --version`.
 - **bun** — same requirement as the Claude harness; every tool and hook runs
   via bun.
-- **A model provider** — the shipped `config.toml` defaults to **Amazon
-  Bedrock** (`openai.gpt-5.5`; agents on `openai.gpt-5.4`). Set the AWS
-  profile/region in `[model_providers.amazon-bedrock.aws]`. For OpenAI auth,
-  comment out the provider lines. Note: `web_search` is unavailable on
-  Bedrock; the market-research stage degrades gracefully.
+- **A model provider** — Codex uses your normal configured provider and model.
+  The shipped project `config.toml.example` does not pin either one. Copy it to
+  `.codex/config.toml` only when the project does not already have one. Put
+  provider/model choices in `~/.codex/config.toml`, or add project-local
+  overrides deliberately if your team wants this project to force a specific runtime.
 
 ## Install
 
@@ -31,6 +31,8 @@ never hand-edit it (the drift guard fails CI).
    cp -r dist/codex/.agents/ your-project/.agents/
    cp -r dist/codex/amadeus/   your-project/amadeus/      # the workspace shell (spaces/default/memory) — a sibling of .codex/, not inside it
    cp dist/codex/AGENTS.md   your-project/AGENTS.md   # or merge into yours
+   cp -n your-project/.codex/config.toml.example your-project/.codex/config.toml
+   cp -n your-project/.codex/hooks.json.example your-project/.codex/hooks.json
    ```
 
    The `aidlc/` directory is the workspace shell — it ships the pre-built
@@ -56,10 +58,11 @@ never hand-edit it (the drift guard fails CI).
 
    appends ready-to-paste `[hooks.state]` entries for `$CODEX_HOME/config.toml`
    (the hash covers the hook identity, not the path — the printed entries are
-   exact for the shipped `hooks.json`).
+   exact for `hooks.json` created from the shipped `hooks.json.example`).
 
-4. Merge the shipped `.codex/config.toml` into your `~/.codex/config.toml`
-   (or keep it project-level — trusted projects read it). Verify with:
+4. Keep `.codex/config.toml` project-level only when the project intentionally
+   owns Codex settings; otherwise keep provider/model choices in
+   `~/.codex/config.toml`. Verify with:
 
    ```bash
    bun .codex/tools/amadeus-utility.ts doctor
@@ -85,7 +88,7 @@ implicit skill matching so 37 runner descriptions don't pollute the index).
   `.codex/rules/default.rules` pre-allows `git worktree`/`commit`/`add`.
   Headless runs (CI, exec workers) need
   `writable_roots = ["<main repo>/.git"]` — template in the shipped
-  `config.toml` (linked worktrees resolve into `<main>/.git/worktrees/*`,
+  `config.toml.example` template (linked worktrees resolve into `<main>/.git/worktrees/*`,
   so it must be the main repo's `.git`).
 - **Swarm floor = `codex exec` workers** — one headless worker per
   Construction unit in its Bolt worktree (always `< /dev/null`), with the
@@ -106,7 +109,7 @@ implicit skill matching so 37 runner descriptions don't pollute the index).
 - **MCP servers**: Codex reads MCP definitions from `[mcp_servers.<name>]`
   tables in `config.toml` (project `.codex/config.toml` or `~/.codex/config.toml`)
   — add the servers you need there. The shipped config declares **none** (the
-  Claude harness ships five via `.mcp.json`; Codex ships zero by default).
+  Claude and Codex both ship zero project MCP servers by default).
 
 ## Regenerating
 

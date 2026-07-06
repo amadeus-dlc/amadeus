@@ -253,55 +253,18 @@ cp .claude/settings.local.json.example .claude/settings.local.json
 
 ## MCP Servers
 
-### .mcp.json as the Server Registry
+### Project MCP Registry
 
-This implementation declares its Model Context Protocol (MCP) servers in `.mcp.json` at the project root, beside `.claude/` rather than inside it. The file maps server names to their transport and launch configuration:
-
-```json
-{
-  "mcpServers": {
-    "context7": {
-      "type": "http",
-      "url": "https://mcp.context7.com/mcp",
-      "headers": {
-        "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY}"
-      }
-    },
-    "aws-mcp": {
-      "command": "uvx",
-      "args": [
-        "mcp-proxy-for-aws@latest",
-        "https://aws-mcp.us-east-1.api.aws/mcp",
-        "--metadata",
-        "AWS_REGION=us-east-1"
-      ]
-    },
-    "aws-pricing": { "command": "uvx", "args": ["awslabs.aws-pricing-mcp-server@latest"] },
-    "aws-iac": { "command": "uvx", "args": ["awslabs.aws-iac-mcp-server@latest"] },
-    "aws-serverless": { "command": "uvx", "args": ["awslabs.aws-serverless-mcp-server@latest"] }
-  }
-}
-```
-
-The five shipped servers cover the integrations the framework's agents reach for:
-
-| Server | Transport | Auth | Purpose |
-|--------|-----------|------|---------|
-| `context7` | HTTP | `${CONTEXT7_API_KEY}` env passthrough | Library/SDK documentation lookups |
-| `aws-mcp` | `uvx` (`mcp-proxy-for-aws@latest`, `AWS_REGION=us-east-1`) | Standard AWS credential chain | AWS API access |
-| `aws-pricing` | `uvx` (`awslabs.aws-pricing-mcp-server@latest`) | AWS credential chain | AWS pricing |
-| `aws-iac` | `uvx` (`awslabs.aws-iac-mcp-server@latest`) | AWS credential chain | Infrastructure-as-code tooling |
-| `aws-serverless` | `uvx` (`awslabs.aws-serverless-mcp-server@latest`) | AWS credential chain | Serverless tooling |
-
-The registry carries only environment-variable placeholders — no committed secrets. Credentials flow through your shell: `context7` reads `CONTEXT7_API_KEY` from the environment, and the four `uvx`-launched AWS servers authenticate against your standard AWS credential chain (install `uv`/`uvx` via `curl -fsSL https://astral.sh/uv/install.sh | sh`). A server you have no credentials for is simply unavailable to the session and never blocks a workflow.
-
-`.mcp.json` lives at the project root because that is the path Claude Code reads for project-scoped MCP servers. This implementation currently ships as a `.claude/` directory copy rather than a Claude Code plugin, but the project-root `.mcp.json` placement is also the canonical plugin location, so the registry is plugin-portable without change.
+The Claude Code distribution does not ship a project `.mcp.json` by default.
+When a project needs MCP servers, declare them in the normal Claude Code
+project or user MCP configuration. Credentials should flow through your
+environment or personal settings; do not commit secrets to the project.
 
 ### Provisioning and Inheritance
 
 The access model is provisioning followed by inheritance, with no grant step between them:
 
-1. **Declare once.** Servers are listed in `.mcp.json` at the project root.
+1. **Declare once.** Servers are listed in the project or user MCP config.
 2. **Provision to the session.** Claude Code starts the declared servers and exposes their tools to the session as `mcp__<server>__<tool>` ids.
 3. **Inherit everywhere.** Subagents inherit all session MCP tools by default. Every AI-DLC agent — whether running inline or as a delegated subagent (stages 2.1, 3.5) — reaches every declared server.
 
@@ -323,9 +286,9 @@ The spike also surfaced a separate frontmatter footgun: `allowedTools` is **not*
 The two configuration files answer different questions and do not overlap:
 
 - `.claude/settings.json` `permissions.allow` pre-approves *built-in Claude Code tools* (Read, Edit, Write, Bash, Glob, Grep, Task, WebSearch) so the session does not prompt on first use (see [Settings](#settings) above). It says nothing about MCP servers.
-- `.mcp.json` declares *which MCP servers exist* and how to launch them. Provisioning and inheritance are governed by Claude Code's MCP layer, not by `settings.json`.
+- The project or user MCP config declares *which MCP servers exist* and how to launch them. Provisioning and inheritance are governed by Claude Code's MCP layer, not by `settings.json`.
 
-An MCP server appearing in the session is a function of `.mcp.json` plus available credentials, not of any `settings.json` allow-list entry. Per-agent narrowing, when it is wired, lives in the agent's `tools:` frontmatter — not in `settings.json` and not in `.mcp.json`.
+An MCP server appearing in the session is a function of MCP config plus available credentials, not of any `settings.json` allow-list entry. Per-agent narrowing, when it is wired, lives in the agent's `tools:` frontmatter — not in `settings.json`.
 
 ---
 

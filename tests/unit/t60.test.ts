@@ -382,11 +382,11 @@ describe("t60 valid-scopes derived from .claude/scopes/*.md (migrated from t60-v
   });
 
   // --- Test 6: doctor invalid env-scope fix hint derives from .claude/scopes/ ---
-  test("6: doctor fix hint for invalid AWS_AMADEUS_DEFAULT_SCOPE lists fixture-scope", () => {
+  test("6: doctor fix hint for invalid AMADEUS_DEFAULT_SCOPE lists fixture-scope", () => {
     const proj = freshProject();
     setupFixtureScope(proj);
     const r = run(utilityIn(proj), ["doctor", "--project-dir", proj], {
-      AWS_AMADEUS_DEFAULT_SCOPE: "still-bogus",
+      AMADEUS_DEFAULT_SCOPE: "still-bogus",
     });
     // doctor reports the invalid env-scope row with a fix line enumerating the
     // valid scopes — fixture-scope among them. (Doctor exits non-zero when any

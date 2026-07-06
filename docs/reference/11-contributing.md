@@ -14,7 +14,7 @@ Contributions to this implementation are welcome. This guide covers prerequisite
 - **bun** -- Required for all CLI tools and all 11 hooks. Install via `curl -fsSL https://bun.sh/install | bash`. On Windows: `npm install -g bun` or `powershell -c "irm bun.sh/install.ps1 | iex"`. Must be on PATH for non-interactive shells (`~/.zshenv` for zsh, `~/.bashrc` for bash / Git Bash on Windows).
 - **timeout** (GNU coreutils) -- Required by the test suite for LLM test timeouts (L2/L3). Pre-installed on Linux. macOS: `brew install coreutils` then add gnubin to PATH: `export PATH="/opt/homebrew/opt/coreutils/libexec/gnubin:$PATH"` (in `~/.zshenv` or `~/.zshrc`).
 - **Bash** -- Optional for the POSIX compatibility wrapper (`tests/run-tests.sh`). The primary test runner is `bun tests/run-tests.ts`; at runtime, none of the distributable hooks require Bash.
-- **Bedrock access** -- Required for running live integration and e2e tests (L2/L3). Not needed for L1 protocol tests.
+- **Live model-provider access** -- Required for running live integration and e2e tests (L2/L3). Not needed for L1 protocol tests.
 
 ## Repository Structure
 
@@ -22,6 +22,7 @@ Contributions to this implementation are welcome. This guide covers prerequisite
 core/                # Hand-authored, harness-neutral source (tools, stages, agents, rules, knowledge, hooks)
 harness/<name>/      # Per-harness authored surfaces (manifest, orchestrator skill, settings/config; e.g. claude/, kiro/, codex/)
 scripts/package.ts   # The build: regenerates dist/<harness>/ from core/ + harness/ (`npm run dist`, `--check` drift-guards it)
+scripts/promote-self.ts # Project-local dogfood install: promotes generated Claude/Codex surfaces into .claude/.codex/.agents + amadeus/spaces/default
 dist/<harness>/      # GENERATED distributables (claude/.claude/, kiro/.kiro/ + AGENTS.md, codex/) — never hand-edit; run the packager
 tests/               # All-TypeScript test suite (t*.test.ts, run via bun)
 docs/                # Documentation
@@ -38,12 +39,13 @@ For the full architecture, see [reference/01-architecture.md](01-architecture.md
 2. **Read the architecture** -- [reference/01-architecture.md](01-architecture.md) explains the execution model, agent delegation, and hook system
 3. **Understand the entry points** -- the deterministic engine `core/tools/amadeus-orchestrate.ts` (`next` / `report`) owns routing; the conductor `harness/claude/skills/amadeus/SKILL.md` is a thin forwarding loop that acts on its directives. For the normative engine / directive / conductor / swarm contract see [The Skill System](17-skill-system.md)
 4. **Make changes** -- Edit the harness-neutral source in `core/` (tools, stages, agents, hooks, rules, knowledge) or a harness surface in `harness/<name>/` (the orchestrator skill, settings). Then run `npm run dist` to regenerate `dist/` — never hand-edit `dist/`, the drift guard (`npm run dist:check` / `package.ts --check`) will fail CI
-5. **Test** -- Run `bun tests/run-tests.ts` before submitting
-6. **Submit** -- Open a PR against `main`
+5. **Promote locally when dogfooding** -- Run `npm run promote:self` to refresh this repository's project-local `.claude/`, `.codex/`, `.agents/`, `CLAUDE.md`, and `amadeus/spaces/default/memory/` from the generated harness output; `npm run promote:self:check` drift-guards that self install
+6. **Test** -- Run `bun tests/run-tests.ts` before submitting
+7. **Submit** -- Open a PR against `main`
 
 ## Testing
 
-The suite is entirely TypeScript (`t*.test.ts`, run via `bun`) across four levels — `smoke`, `unit`, `integration`, `e2e` — that map onto the three-layer pyramid (smoke + unit = L1 Protocol, integration = L2 Stage, e2e = L3 Acceptance). L1 runs locally with no dependencies; the live integration and e2e files require the `claude` CLI tool (and Bedrock creds) and skip cleanly when it is absent.
+The suite is entirely TypeScript (`t*.test.ts`, run via `bun`) across four levels — `smoke`, `unit`, `integration`, `e2e` — that map onto the three-layer pyramid (smoke + unit = L1 Protocol, integration = L2 Stage, e2e = L3 Acceptance). L1 runs locally with no dependencies; the live integration and e2e files require the relevant CLI tool plus working model-provider credentials, and skip cleanly when that substrate is absent.
 
 **Quick reference:**
 
@@ -130,7 +132,7 @@ A scope is authored as a file (its identity) plus a per-stage membership tag. Th
 
 4. **Verify the scope resolves** — `bun core/tools/amadeus-utility.ts init --scope hotfix --project-dir /tmp/scope-smoke` should succeed and produce a state file with `Scope: hotfix`.
 
-5. **Verify `doctor` accepts it as an env default** — `AWS_AMADEUS_DEFAULT_SCOPE=hotfix bun amadeus-utility.ts doctor` should report the env var as valid.
+5. **Verify `doctor` accepts it as an env default** — `AMADEUS_DEFAULT_SCOPE=hotfix bun amadeus-utility.ts doctor` should report the env var as valid.
 
 6. **Verify keyword inference** (if `keywords` populated) — `bun amadeus-utility.ts detect-scope --from-text --input "urgent customer issue" --project-dir /tmp/scope-smoke` should return `{"scope":"hotfix","source":"keyword","matches":["urgent"]}`.
 
@@ -144,7 +146,7 @@ A scope is authored as a file (its identity) plus a per-stage membership tag. Th
 
 - `validScopes().has("hotfix")` returns `true` the moment the `.claude/scopes/amadeus-hotfix.md` file lands — every validation site uses this helper.
 - Error messages list the new scope in alphabetical order without any code changes.
-- `/amadeus --doctor` treats `AWS_AMADEUS_DEFAULT_SCOPE=hotfix` as valid.
+- `/amadeus --doctor` treats `AMADEUS_DEFAULT_SCOPE=hotfix` as valid.
 - `amadeus-utility scope-change --scope hotfix` on an in-flight workflow accepts the new scope.
 - The transpose drift guard: `amadeus-graph compile --check` fails the build if a stage's `scopes:` tag was edited without recompiling `scope-grid.json`. SKILL.md's compiled scope-table has its own `--check` drift guard (t67).
 - Keyword detection for freeform `/amadeus <text>` invocations reads each scope's `keywords` from its `.claude/scopes/*.md` frontmatter. Custom scopes with their own NL triggers auto-detect as soon as the `keywords` list is populated (no SKILL.md change needed). Users can still pass `--scope hotfix` explicitly to bypass inference.

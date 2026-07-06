@@ -46,7 +46,7 @@ import { join } from "node:path";
 import { AMADEUS_SRC, REPO_ROOT } from "../harness/fixtures.ts";
 
 const HOOKS_DIR = join(AMADEUS_SRC, "hooks");
-const SETTINGS = join(AMADEUS_SRC, "settings.json");
+const SETTINGS = join(AMADEUS_SRC, "settings.json.example");
 const DOC = join(REPO_ROOT, "docs", "reference", "06-hooks-and-tools.md");
 
 // --- Ground truth A: hook scripts on disk (hooks/amadeus-*.ts) -----------------

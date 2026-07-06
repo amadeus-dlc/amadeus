@@ -35,12 +35,10 @@ async function resolveProjectDir(input: Input): Promise<string> {
 function abbreviateModel(modelId: string): string {
   if (!modelId) return "";
   let short = modelId;
-  let prefix = "";
-  // Bedrock inference-profile prefixes: regional (us./eu./apac.) or global.
-  const bedrockPrefix = short.match(/^(?:us|eu|apac|global)\.anthropic\./);
-  if (bedrockPrefix) {
-    prefix = "BR:";
-    short = short.slice(bedrockPrefix[0].length);
+  // Provider profile prefixes: regional (us./eu./apac.) or global.
+  const providerProfilePrefix = short.match(/^(?:us|eu|apac|global)\.anthropic\./);
+  if (providerProfilePrefix) {
+    short = short.slice(providerProfilePrefix[0].length);
   }
   // Strip claude- prefix, -vN version, -YYYYMMDD date, :N suffix
   short = short
@@ -48,7 +46,7 @@ function abbreviateModel(modelId: string): string {
     .replace(/-v\d+/, "")
     .replace(/-\d{8}/, "")
     .replace(/:\d+$/, "");
-  return prefix + short;
+  return short;
 }
 
 function contextColor(pct: number): string {

@@ -120,7 +120,7 @@
 //     one fixture serves all 9 scopes — same single-fixture rationale as the
 //     .sh. All temp dirs cleaned in afterAll.
 //   - resetAidlcEnv() runs first (mirrors the .sh's reset_aidlc_env): scope is
-//     partly resolved from AWS_AMADEUS_DEFAULT_SCOPE, so a developer's exported
+//     partly resolved from AMADEUS_DEFAULT_SCOPE, so a developer's exported
 //     value must not shadow the seeded fixtures. Each spawn also passes a clean
 //     env with that var deleted so the seeded Scope field is authoritative.
 //   - NOTHING is written under tests/fixtures/**.
@@ -162,7 +162,7 @@ const JUMP_TOOL = join(
 const tempDirs: string[] = [];
 
 beforeAll(() => {
-  // Mirror the .sh's reset_aidlc_env — a stray AWS_AMADEUS_DEFAULT_SCOPE export
+  // Mirror the .sh's reset_aidlc_env — a stray AMADEUS_DEFAULT_SCOPE export
   // would shadow the seeded fixture Scope on the precedence ladder.
   resetAidlcEnv();
 });
@@ -171,13 +171,13 @@ afterAll(() => {
   for (const d of tempDirs) cleanupTestProject(d);
 });
 
-// A clean env for every spawn: drop AWS_AMADEUS_DEFAULT_SCOPE so the seeded
+// A clean env for every spawn: drop AMADEUS_DEFAULT_SCOPE so the seeded
 // fixture Scope field (state > flag > env > default) always wins, regardless
 // of the developer's shell. Mirrors the .sh sourcing reset_aidlc_env before
 // the corpus runs.
 function cleanEnv(): NodeJS.ProcessEnv {
   const env = { ...process.env };
-  delete env.AWS_AMADEUS_DEFAULT_SCOPE;
+  delete env.AMADEUS_DEFAULT_SCOPE;
   return env;
 }
 

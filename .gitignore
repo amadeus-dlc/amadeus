@@ -1,6 +1,4 @@
 node_modules/
-.claude/CLAUDE.md
-.claude/settings.json
 .claude/settings.local.json
 .env
 .DS_Store
@@ -24,12 +22,23 @@ tests/logs/
 # Anchored to repo root; distinct from .claude/worktrees above which is
 # the framework-development worktree convention.
 /.aidlc/
+/.amadeus/
 
 # Local scratch — explainers, throwaway HTML, etc. (claude writes explainers here)
 tmp/
 
 # Local Claude Code memory (personal project preferences, not checked in)
 CLAUDE.local.md
+
+# Amadeus self-development runtime state. The shared method and artifacts under
+# amadeus/spaces/** are committed; per-user cursors and machine-local runtime
+# state are not.
+amadeus/active-space
+amadeus/spaces/*/intents/active-intent
+amadeus/.amadeus-clone-id
+amadeus/.amadeus-sessions/
+amadeus/spaces/*/intents/*/runtime-graph.json
+amadeus/spaces/*/intents/*/.amadeus-*
 
 # Local-only — pins shfmt formatting to project style via a local
 # auto-format tool. Not committed; contributors who do not use it do not need it.

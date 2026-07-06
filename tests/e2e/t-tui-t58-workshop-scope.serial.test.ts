@@ -64,7 +64,7 @@
 // "known scope" path (:329-339), which does NOT render a scope-confirmation gate
 // (that gate is the FREEFORM-text path, :341-362, "confirmation is mandatory for
 // all freeform inputs"). The shipped settings.json env default
-// `AWS_AMADEUS_DEFAULT_SCOPE: "workshop"` (line 23) AGREES with the keyword, so even
+// `AMADEUS_DEFAULT_SCOPE: "workshop"` (line 23) AGREES with the keyword, so even
 // the env-substitution path (SKILL.md:103-106) synthesizes `--scope workshop` with
 // NO conflict — no feature-vs-workshop disambiguation. EITHER interpretation lands
 // workshop. The journey is LLM-mediated, so if a residual scope-confirm menu DOES

@@ -2743,7 +2743,7 @@ export const MERGE_SUCCEEDED_TAG_REGEX = /\[merge-succeeded:([^\]]+)\]/;
 //
 // Block separator is the same `\n---\n` amadeus-audit.ts uses on emit.
 // Normalises CRLF → LF before splitting so audits authored or edited on
-// Windows (Bun's PRE_REQ env per dist/claude/.claude/CLAUDE.md) parse
+// Windows (Bun's PRE_REQ env per dist/claude/.claude/CLAUDE.md.example) parse
 // the same as Unix audits. Without this, `\r\n---\r\n` doesn't match the
 // `\n---\n` separator and every block past the first looks merged into one
 // — silently masking every drift class.
