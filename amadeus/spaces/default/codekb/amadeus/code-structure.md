@@ -15,4 +15,5 @@
 | `harness/codex/` | Codex ハーネス差分層（Phase 1 = 契約 README + provenance。skill 別 agents/openai.yaml の正準は source skills 側、Phase 2 で正準化予定 = #552） |
 | `lints/` | public-type-file と ts-complexity |
 | `amadeus-contracts/` | skill 境界・条件・委譲の契約カタログ |
-| `docs/amadeus/` | lifecycle 契約（state / scopes ほか）と設計文書。言語方針（PR #536）: `*.md` が英語正文、`*.ja.md` が日本語版の併置形式（`extension-guide.md / extension-guide.ja.md` など） |
+| `docs/amadeus/` | lifecycle 契約（state / scopes ほか）と設計文書。言語方針（PR #536）: `*.md` が英語正文、`*.ja.md` が日本語版の併置形式（`extension-guide.md / extension-guide.ja.md` など）。lifecycle/ も #575 で英語正 + `.ja.md` 併置へ移行済み。docs/adr は #525（PR #580）で退役（有効判断は extension-guide / lifecycle/overview へ移設） |
+| `docs/guide/` | 利用者ガイド（#533、PR #578 で新設。index + 番号付き章、英語正 + `.ja.md` 併置。lifecycle/overview の節見出しへアンカー参照を持つ） |

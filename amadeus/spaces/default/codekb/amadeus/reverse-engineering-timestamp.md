@@ -16,8 +16,15 @@
 
 注記（rebase 時の時系列 union）: #578 の docs/guide について、後発 merge の 260706-guide-ops 09:40 更新（下の前回記録）は codekb 記述対象外と判断したが、当方は code-structure のトップレベル行変更（docs/guide 新設・docs/adr 削除）として追記を維持した（実ツリーの構造変化のため）。
 
-## 前回（2026-07-06T09:40:00Z、1aed7eb1..620beb5e = guide-ops）の記録
 
+## 前回（2026-07-06T10:20:00Z、620beb5e..6894aee9 = docs-consistency）の記録
+
+- 解析時刻: 2026-07-06T10:20:00Z（UTC）
+- 対象コミット: 6894aee9（origin/main = PR #580 merge 後）
+- 解析方式: 差分更新（620beb5e..6894aee9 = PR #580 = docs/adr 退役 + 語彙正準化。code-structure の docs/amadeus 行へ退役を注記。#580 分の code-structure 反映は後発の 260706-persona-loading 10:50 更新（上の最新記録）にも含まれ、内容は同旨で重複なし = rebase 時の時系列 union）
+- 実施 Intent: `260706-docs-consistency`（reverse-engineering、メイン直接処理）
+
+## 前回（2026-07-06T09:40:00Z、1aed7eb1..620beb5e = guide-ops）の記録
 - 解析時刻: 2026-07-06T09:40:00Z（UTC）
 - 対象コミット: 620beb5e（origin/main = PR #578 merge 後）
 - 解析方式: 差分更新（1aed7eb1..620beb5e = PR #570 = #554 model overlay、#577 = #573 doctor 誘導修正、#578 = docs/guide 新設。docs 以外の実質増分は #554 / #577）

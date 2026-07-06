@@ -2,6 +2,8 @@
 
 この文書は、Issue #394 の判断として、AI-DLC v2 の Operation phase skill を Amadeus DLC で対象外にする理由と境界を定義する。
 
+**位置づけ注記**：本文書は #394 時点の判断記録である。Operation の現在地は 3 層で記述される。scope-grid は Operation ステージを scope 別に宣言し（CONDITIONAL 採用 = AMADEUS.md）、現行の `amadeus-validator` は scope によらず全 workspace で Operation ステージに `[S]` を要求し（実行は将来採用。下の「Entry Point for Future Adoption」を参照）、default space はさらに workspace steering（`memory/phases/operation.md`）で Operation を対象外と定める。理由節（成果物契約・gate・validator・PR 境界）は steering 判断の根拠として引き続き有効である。
+
 参照元は次である。
 
 - リポジトリ: https://github.com/awslabs/aidlc-workflows/tree/v2
@@ -10,11 +12,13 @@
 
 ## 判断
 
-Amadeus DLC は、Operation phase を現在の対象外として維持する。
+Issue #394 の時点で、Amadeus DLC は Operation phase を対象外として維持していた。
 
-record の scaffold（`operation/` ディレクトリ）と Stage Progress の 7 行だけを持ち、いずれの stage も実行対象にしない。Stage Progress は常に `[S]`（`SKIP: out of Amadeus scope`）にする。
+当時は、record の scaffold（`operation/` ディレクトリ）と Stage Progress の 7 行だけを持っていた。#394 時点で、Amadeus はいずれの Operation stage も実行対象から外し、各行を `[S]`（`SKIP: out of Amadeus scope`）として記録していた。
 
-Operation skill の追加や取り込みは行わない。
+当時、Operation skill の追加や取り込みは行っていなかった。
+
+対象外の現行の根拠は、冒頭の位置づけ注記と [Lifecycle Contract Overview](lifecycle/overview.ja.md) が扱う。
 
 ## 対象外にする理由
 
@@ -34,7 +38,7 @@ Amadeus DLC の承認は、stage gate と phase PR・Bolt PR の人間 merge で
 
 `amadeus-validator` は、配布先ユーザー環境で `amadeus/` の構造を機械検証する契約であり、`pass` は「実行時に参照できる最低限の構造条件の充足」を意味する。
 
-デプロイ結果や監視設定といった実環境状態の検証手段を validator は持たない。Operation を対象に含めると、`pass` の意味が構造条件の充足から逸脱する。
+デプロイ結果や監視設定といった実環境状態の検証手段を validator は持たない。Operation を対象に含めると、`pass` の意味が構造条件の充足から逸脱する。このため現行実装は scope によらず全 workspace で Operation ステージに `[S]` を要求しており、この解除は下の将来採用の一部である。
 
 ### PR 境界の観点
 

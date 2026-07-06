@@ -26,7 +26,7 @@ Each PR states the following in its description:
 | 1 | #391 Handling the reviewer designation | Semantic-change judgment | How reviewer is handled affects the vocabulary of a stage skill's approval, confirmation, and rejection. | List the AI-DLC v2 stages that designate a reviewer, and decide per stage whether Amadeus DLC runs the reviewer or maps it to an existing artifact confirmation. Does not include implementing any reviewer agent. |
 | 2 | #393 Mapping sensor and Learn | Semantic-change judgment | Sensor and Learn, like the reviewer judgment in #391, concern confirmation before and after stage completion and the recording of insights. | Map each sensor's verification target to `amadeus-validator`, build and test, or stage-specific artifacts. Specify where Learn is recorded — `memory.md`, `decisions.md`, `traceability.md`, or `grillings`. Does not include adding a mechanism equivalent to `.amadeus-sensors/`. |
 | 3 | #392 Build and Test failure handling | Semantic-change judgment | Build and Test's failure handling inherits the confirmation and insight-recording boundaries decided in #391 and #393. | Decide whether to keep the current halt-and-ask and Code Generation separation of responsibilities, or align with AI-DLC v2. If kept, record the reason in the lifecycle docs and the skill. Does not include implementing automatic retry of fixes. |
-| 4 | #394 Reason Operation phase is out of scope | Boundary clarification | Operation phase is currently out of Amadeus DLC's scope, and it is natural to document the boundary after the Construction-level judgments in #391, #392, and #393. | Explain the reason Operation phase is out of scope, from the viewpoints of the artifact contract, gate, validator, and PR boundary. Does not include adding or adopting any Operation skill. |
+| 4 | #394 Reason Operation phase is out of scope | Boundary clarification | At the time of #394, Operation phase was treated as out of Amadeus DLC's scope, and it was natural to document the boundary after the Construction-level judgments in #391, #392, and #393 (see [AI-DLC v2 Operation Phase Boundary](aidlc-v2-operation-phase-boundary.md) for the current two-layer structure). | Explain the reason Operation phase is out of scope, from the viewpoints of the artifact contract, gate, validator, and PR boundary. Does not include adding or adopting any Operation skill. |
 
 ## PR Description Requirements per Issue
 
@@ -35,7 +35,7 @@ Each PR states the following in its description:
 | #391 | The list of AI-DLC v2 stages that designate a reviewer. How each stage is handled on the Amadeus DLC side. The reason for not adopting the reviewer and the verification means used instead. |
 | #393 | The verification target for each sensor. Where Learn is recorded. The reason for not adopting a given sensor or Learn item. |
 | #392 | The contract that Build and Test's failure handling follows. What is retained in `build-test-results.md` (upstream: `test-results.md`). The relationship to the Bolt gate. |
-| #394 | The reason Operation phase is currently out of scope. The list of AI-DLC v2 Operation skills and how Amadeus handles them. A separate Issue or roadmap for handling it in the future. |
+| #394 | The reason Operation phase was treated as out of scope at the time of #394. The list of AI-DLC v2 Operation skills and how Amadeus handles them. A separate Issue or roadmap for handling it in the future. |
 
 ## Verification Commands
 

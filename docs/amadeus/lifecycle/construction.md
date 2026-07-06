@@ -218,7 +218,7 @@ Produces the deployment architecture, infrastructure services, monitoring, and C
 
 ### Notes
 
-Because Amadeus excludes the Operation phase, a human performs the deployment execution based on this stage's design artifacts.
+Because the default space's steering keeps Operation out of scope, a human performs the deployment execution based on this stage's design artifacts.
 
 ## Stage 3.5: Code Generation
 

@@ -2,6 +2,8 @@
 
 This document defines, as the judgment for Issue #394, the reason and the boundary for treating AI-DLC v2's Operation phase skills as out of scope in Amadeus DLC.
 
+**Positioning note**: This document is a record of the judgment made at the time of #394. The current state of Operation is described by three layers: the scope-grid declares Operation stages per scope (CONDITIONAL adoption per AMADEUS.md); the current `amadeus-validator` requires `[S]` for every Operation stage in every workspace regardless of scope — executing Operation is a future adoption (see "Entry Point for Future Adoption" below); and the default space additionally treats Operation as out of scope via workspace steering (`memory/phases/operation.md`). The reasoning sections below (artifact contract, gate, validator, PR boundary) remain valid as the basis for that steering judgment.
+
 References:
 
 - Repository: https://github.com/awslabs/aidlc-workflows/tree/v2
@@ -10,11 +12,13 @@ References:
 
 ## Decision
 
-Amadeus DLC keeps Operation phase out of scope for now.
+At the time of Issue #394, Amadeus DLC kept Operation phase out of scope.
 
-It carries only the record's scaffold (the `operation/` directory) and the 7 lines of Stage Progress; it does not treat any stage as an execution target. Stage Progress is always `[S]` (`SKIP: out of Amadeus scope`).
+At that time, it carried only the record's scaffold (the `operation/` directory) and the 7 lines of Stage Progress. At the time of #394, Amadeus kept every Operation stage out of its execution scope, recording each as `[S]` (`SKIP: out of Amadeus scope`).
 
-Amadeus does not add or adopt any Operation skill.
+At that time, Amadeus had not added or adopted any Operation skill.
+
+The current basis for the default space's out-of-scope treatment is described in the positioning note above and in [Lifecycle Contract Overview](lifecycle/overview.md).
 
 ## Reasons for Being Out of Scope
 
@@ -34,7 +38,7 @@ Approving a deployment execution or an incident response cannot be expressed thr
 
 `amadeus-validator` is a contract that mechanically verifies `amadeus/`'s structure in the distributed user's environment, and its `pass` means "the minimum structural conditions referenceable at execution time are satisfied."
 
-The validator has no means to verify real-environment state such as deployment results or monitoring configuration. Including Operation in its scope would change the meaning of `pass` from structural-condition satisfaction.
+The validator has no means to verify real-environment state such as deployment results or monitoring configuration. Including Operation in its scope would change the meaning of `pass` from structural-condition satisfaction. Accordingly, the current implementation requires `[S]` for every Operation stage in every workspace regardless of scope; lifting this is part of the future adoption below.
 
 ### PR boundary viewpoint
 

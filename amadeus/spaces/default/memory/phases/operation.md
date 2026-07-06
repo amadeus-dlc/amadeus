@@ -4,7 +4,7 @@
 
 ## 適用範囲の注記
 
-Amadeus 本体開発（default space）は Operation phase を対象外にしており、全 scope で Operation ステージは SKIP される（docs/amadeus/lifecycle/scopes.md）。
+Amadeus 本体開発（default space）は、この steering 自身の判断として Operation phase を対象外にする。scope-grid 上は enterprise / feature 等が Operation ステージを持つため、該当 scope の Intent では各ステージを理由付き skip（SKIP: out of Amadeus scope）で処理する。
 この文書は、将来 Operation を実行する workspace 構成が現れた場合の最小防護規定として置く。
 
 ## Safety

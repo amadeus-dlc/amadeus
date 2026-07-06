@@ -106,4 +106,5 @@ Issue #395 の完了証拠は、対応 PR の merge または明示的な Issue 
 
 - [Language Policy](language-policy.ja.md)
 - [AI-DLC v2 Difference Response Plan](aidlc-v2-difference-response-plan.ja.md)
-- [Skill Englishization Rollout Plan](skill-englishization-rollout-plan.ja.md)
+
+段階的英語化計画（旧 rollout plan、#402）は完了し #562 で退役した。42 skill の SKILL.md は英語化済みで、日本語残存はユーザー向け質問例文・日本語出力フォーマット・テンプレートフィールド名引用の正当な維持対象 3 件だけである。検証は `grep` による日本語文字の横断走査で行い、経緯は git 履歴（`git log -- docs/amadeus/skill-englishization-rollout-plan.md`）を参照する。
