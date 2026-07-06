@@ -5,6 +5,11 @@
 - [AI-DLC v2 Scopes and Depth](https://github.com/awslabs/aidlc-workflows/blob/v2/docs/guide/05-scopes-and-depth.md)
 - [AI-DLC v2 Scope Definitions](https://github.com/awslabs/aidlc-workflows/tree/v2/core/scopes)
 
+## Inputs
+
+本文書はステージ単位の文書ではないため、ステージ契約の Inputs 表（[overview.md](overview.md) の「ステージ契約の I/O 記法」）は適用しない。
+本文書が入力として参照する契約は、エンジンの scope 定義（`.agents/amadeus/scopes/amadeus-<scope>.md`。1 scope 1 ファイル）と、各 stage 定義の実行条件（`execution` / `condition`）である。
+
 ## Scope 適応
 
 **Scope 適応**：Intent の性質に応じて、実行するステージ集合と depth を縮退させる仕組みである。
@@ -108,7 +113,7 @@ v2 のコンパイル済み scope grid（bugfix 7/32、refactor 8/32、poc 8/32 
 |---|---|
 | 2.3 Requirements Analysis（security-patch の場合） | 3.2 NFR Requirements が要求の捕捉を兼ね、`security-requirements.md` を要求の定義元にする。 |
 | 2.6 Application Design | Reverse Engineering の `architecture.md` と `component-inventory.md` を構造の材料にする。greenfield では `requirements.md` から直接 Unit 境界を判断する。 |
-| 2.7 Units Generation | Intent 全体を単一の暗黙 Unit として扱う。Unit の記述は Intent のモジュールファイルと `requirements.md` で代替する。 |
+| 2.7 Units Generation | Intent 全体を単一の暗黙 Unit として扱う。Unit の記述は `requirements.md` で代替する。 |
 | 2.8 Delivery Planning | Intent 全体を単一の暗黙 Bolt として扱う。walking skeleton ゲートはその Bolt に適用する。 |
 | 3.1 Functional Design | `requirements.md` と Reverse Engineering の成果物を設計の材料にする。 |
 | 3.2 NFR Requirements | 3.3 NFR Design と 3.4 Infrastructure Design は実行しない（3.3 の Condition が保証する）。 |

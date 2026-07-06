@@ -392,5 +392,13 @@
     "scope": "bugfix",
     "repos": [],
     "status": "complete"
+  },
+  {
+    "uuid": "019f3600-b179-7c7d-9b58-56201d6b934d",
+    "slug": "lifecycle-inputs",
+    "dirName": "260706-lifecycle-inputs",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete"
   }
 ]
