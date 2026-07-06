@@ -5,7 +5,7 @@
 ## 執筆の規則
 
 - BR-1: 本文は Amadeus の実体（skill、`.agents/amadeus/` エンジン、installer、実在するコマンドと path）から書き起こす。上流 docs/guide は構成の参考に留め、翻訳・転載をしない（NFR-2。合否 = 逐語一致 0 件）。構成を参考にした旨は index の About に明記する。
-- BR-2: コマンド例・出力例は隔離 workspace の実実行結果だけを貼る（NFR-1。コピペで動くこと）。長い出力は無関係部を「…」で省略し、省略した旨を明記する（questions Q2）。
+- BR-2: コマンド例・出力例は隔離 workspace で実際に実行した結果だけを貼る（NFR-1。コピペで動くこと）。長い出力は無関係部を「…」で省略し、省略した旨を明記する（questions Q2）。
 - BR-3: 契約・仕様の詳細はガイドに複製せず、docs/amadeus（契約の正）へリンクで委ねる（engineer1 の留意。#521 で観測した陳腐化の轍を踏まない）。数値（32 stages 等）を書く場合は実体（stage-graph.json）で照合する。
 - BR-4: 英語 `*.md` = 正、`*.ja.md` = 併置。リンクは Cross-linking rules（en → .md、ja → 対訳実在分は .ja.md）。日本語版は japanese-tech-writing 規範（NFR-3）。
 

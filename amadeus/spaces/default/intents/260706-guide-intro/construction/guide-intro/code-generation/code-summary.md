@@ -14,7 +14,7 @@
 | 02 | Your First Workflow | 7 / 7 |
 
 - 執筆は subagent 2 体並行（A = index + 00、B = 01 + 02）。上流 docs/guide の本文は開いていない（構成参考の旨は index の About に明記）。
-- 掲載した全コマンド・出力は隔離 workspace（installer 導入 → intent-birth → next → status → birth 後 doctor）の実実行結果。subagent B が全 code block を実測ログと byte 照合。一時パスは `<workspace>` へ置換し明記、省略は「…」で明示。
+- 掲載した全コマンド・出力は隔離 workspace（installer 導入 → intent-birth → next → status → birth 後 doctor）で実際に実行した結果。subagent B が全 code block を実測ログと byte 照合。一時パスは `<workspace>` へ置換し明記、省略は「…」で明示。
 - 01 章は導入直後の doctor 1 fail（workspace shell ready）を正直に記載し、#573 の pending 注記を付した。02 章で birth 後に全 pass へ解消する実測（追加採取）を掲載。
 
 ### 既存文書への最小行追記（3 対）
