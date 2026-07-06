@@ -2,18 +2,18 @@
 
 This document defines, as the judgment for Issue #401, the response order and PR boundaries for #391, #392, #393, and #394, which handle differences from AI-DLC v2.
 
-It builds on Issue #395's [Skill Language Policy](skill-language-policy.md) and Issue #400's englishization of representative skills.
+It builds on Issue #395's [Skill Language Policy](skill-language-policy.md) and Issue #400's English conversion of representative skills.
 
 ## Policy
 
-Response to differences from AI-DLC v2 splits englishization PRs from semantic-change PRs.
+Response to differences from AI-DLC v2 splits English-conversion PRs from semantic-change PRs.
 
 Contracts specific to Amadeus DLC are not dropped merely to confirm correspondence with AI-DLC v2.
 
 Each PR states the following in its description:
 
 - The target Issue.
-- Whether it is englishization only, or includes a semantic change.
+- Whether it is an English-only conversion, or includes a semantic change.
 - The items adopted from AI-DLC v2.
 - The items retained as Amadeus DLC's intentional differences.
 - How the source skill and its promoted counterpart are synchronized.
@@ -34,7 +34,7 @@ Each PR states the following in its description:
 |---|---|
 | #391 | The list of AI-DLC v2 stages that designate a reviewer. How each stage is handled on the Amadeus DLC side. The reason for not adopting the reviewer and the verification means used instead. |
 | #393 | The verification target for each sensor. Where Learn is recorded. The reason for not adopting a given sensor or Learn item. |
-| #392 | The contract that Build and Test's failure handling follows. What is retained in `test-results.md`. The relationship to the Bolt gate. |
+| #392 | The contract that Build and Test's failure handling follows. What is retained in `build-test-results.md` (upstream: `test-results.md`). The relationship to the Bolt gate. |
 | #394 | The reason Operation phase is currently out of scope. The list of AI-DLC v2 Operation skills and how Amadeus handles them. A separate Issue or roadmap for handling it in the future. |
 
 ## Verification Commands
@@ -59,9 +59,9 @@ When multiple skills are changed, synchronize every changed source skill through
 
 Do not mix #391, #392, #393, and #394 with #402, which handles the phased englishization of the remaining skills.
 
-However, when a PR for #391 through #394 updates a target skill, that PR may also bring only the `SKILL.md` files it touches into the already-englishized style.
+However, when a PR for #391 through #394 updates a target skill, that PR may also bring only the `SKILL.md` files it touches into the already-converted English style.
 
-Even then, the PR description explains the englishization part and the semantic-change part separately.
+Even then, the PR description explains the English-conversion part and the semantic-change part separately.
 
 ## Completion Condition for #401
 

@@ -77,5 +77,5 @@ reviewer を採用しない代わりの検証手段は次である。
 ## 関連文書
 
 - [AI-DLC v2 Difference Response Plan](aidlc-v2-difference-response-plan.ja.md)
-- [Skill Language Policy](skill-language-policy.md)
+- [Skill Language Policy](skill-language-policy.ja.md)
 - [Skill Englishization Rollout Plan](skill-englishization-rollout-plan.md)

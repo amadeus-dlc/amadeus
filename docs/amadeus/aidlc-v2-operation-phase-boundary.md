@@ -34,7 +34,7 @@ Approving a deployment execution or an incident response cannot be expressed thr
 
 `amadeus-validator` is a contract that mechanically verifies `amadeus/`'s structure in the distributed user's environment, and its `pass` means "the minimum structural conditions referenceable at execution time are satisfied."
 
-The validator has no means to verify real-environment state such as deployment results or monitoring configuration. Including Operation in its scope would make `pass` deviate from meaning structural-condition satisfaction.
+The validator has no means to verify real-environment state such as deployment results or monitoring configuration. Including Operation in its scope would change the meaning of `pass` from structural-condition satisfaction.
 
 ### PR boundary viewpoint
 
@@ -50,9 +50,9 @@ Operation's execution unit is a release or an operational event, and it does not
 | Environment Provisioning | Out of scope. Deployment architecture design up to Stage 3.4's `deployment-architecture.md` is handled. Actual provisioning is not handled. |
 | Deployment Execution | Out of scope. It is the execution act itself and has no corresponding design artifact. |
 | Observability Setup | Out of scope. Design of monitoring items and notifications up to Stage 3.4's `monitoring-design.md` is handled. Actual configuration is not handled. |
-| Incident Response | Out of scope. Learnings from an incident can be captured through `amadeus-history-review` and `amadeus-learning-review`'s classification, which take Issues, PRs, and CI results as input. The response work itself is not handled. |
+| Incident Response | Out of scope. Learnings from an incident can be captured through the §13 learnings ritual (`amadeus-learnings.ts`), taking Issues, PRs, and CI results as input. The response work itself is not handled. |
 | Performance Validation | Out of scope. Performance requirements and design are handled by Stage 3.2 NFR Requirements and 3.3 NFR Design; test-execution records are handled by Build and Test's `performance-test-instructions.md` and `build-test-results.md`. Verification in a real environment is not handled. |
-| Feedback & Optimization | Out of scope. The intake for feedback is the `amadeus` Intake's merge judgment and the scope backlog, plus history / learning review. Improvement work is filed as a new Intent. |
+| Feedback & Optimization | Out of scope. The intake for feedback is the `amadeus` Intake's merge judgment and the scope backlog, plus the §13 learnings ritual. Improvement work is filed as a new Intent. |
 
 ## Entry Point for Future Adoption
 

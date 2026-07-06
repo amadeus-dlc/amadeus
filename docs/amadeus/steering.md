@@ -11,7 +11,7 @@ Space is not a phase of Amadeus DLC.
 
 Space is the foundation that aligns the purpose, policy, knowledge, terminology, actors, external systems, and Intent list shared across the whole workspace before work proceeds into Ideation, Inception, and Construction. It corresponds to AI-DLC v2's space memory.
 
-Space scaffolding is owned by the engine: the workspace-scaffold initialization stage (0.1) creates this Space (`amadeus/spaces/<space>/`), greenfield or brownfield, and the `space` / `space-create` utility verbs list, switch to, and create Spaces.
+Space scaffolding is owned by the engine: the workspace-scaffold initialization stage (0.1) creates this Space (`amadeus/spaces/<space>/`) for both greenfield and brownfield workspaces, and the `space` / `space-create` utility verbs list, switch to, and create Spaces.
 
 Treating Amadeus itself as the target workspace is also handled as brownfield. There is no dedicated self-development steering mode: the engine inspects the existing materials and the existing `amadeus/` tree, then fills in only the Space artifacts that are missing.
 

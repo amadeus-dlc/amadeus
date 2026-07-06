@@ -5,6 +5,7 @@
 The non-adoption judgment this document made about the sensor execution mechanism and the learnings ritual's deterministic tool was changed to adoption by D004 of Intent `260704-v2-parity-completion`.
 Issue #393's non-adoption judgment explicitly stated it would be reconsidered "once a decision confirms including a hook-execution runtime," and the adaptive-copy strategy for upstream's TS engine (D001) satisfied that reconsideration condition.
 The inspection setup now combines upstream's sensors (copied per engine, checked immediately at stage completion) with `amadeus-validator` (checked persistently, across the whole workspace).
+The body below preserves the Issue #393 judgment as a historical record; read it under this note. The `amadeus-history-review` / `amadeus-learning-review` skills it references were later retired — the §13 learnings ritual (`amadeus-learnings.ts`) owns that role today.
 The body below retains the judgment as of Issue #393 as a historical record.
 
 This document defines, as the judgment for Issue #393, which Amadeus DLC artifacts and verifications the sensor and Learn (the learnings ritual and `memory.md`) found in AI-DLC v2's stage definitions map to.
@@ -15,7 +16,7 @@ References:
 - Reference commit: `d341522e1491db4884e9127004c3882365229218`
 - Sensor declaration: each stage definition's frontmatter `sensors:`; Learn: `core/amadeus-common/protocols/stage-protocol.md` §13
 
-## Decision
+## Decision (Issue #393 — Superseded by D004)
 
 Amadeus DLC does not adopt the sensor execution mechanism (inspection output to `.amadeus-sensors/`, the sensor-fire hook) or the learnings ritual's deterministic tool (the equivalent of `amadeus-learnings.ts`).
 
@@ -57,7 +58,7 @@ Amadeus DLC's recording destinations are as follows.
 | Tracking per artifact | The phase's `traceability.md`. Confirmed at the phase boundary by the `amadeus` entry point. |
 | Surfacing and settling candidates (the learnings ritual) | `amadeus-history-review` (reading and extracting from past artifacts) and `amadeus-learning-review` (classification). `steering_knowledge_candidate` connects to the Space's `memory/` and `knowledge/`; `domain_map_candidate` and `context_map_candidate` connect to the Domain Map and Context Map; `follow_up_issue_candidate` and `follow_up_intent_candidate` connect to filing an Issue or an Intent. None of these auto-promotes; each goes through human judgment. |
 
-## Items Not Adopted, and Why
+## Items Not Adopted at the Time, and Why (Superseded by D004)
 
 | Item | Reason |
 |---|---|
