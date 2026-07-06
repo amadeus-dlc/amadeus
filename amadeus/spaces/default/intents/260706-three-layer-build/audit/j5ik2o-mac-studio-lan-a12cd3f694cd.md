@@ -155,3 +155,49 @@
 **Options**: delegated-approval
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-06T09:08:44Z
+**Event**: HUMAN_TURN
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-06T09:08:44Z
+**Event**: DECISION_RECORDED
+**Stage**: reverse-engineering
+**Decision**: reverse-engineering の gate 承認（中継承認定型文の転記、auto 委任適用。承認経路: 人間の #572 実行指示（2026-07-06 18:20 JST）+ 包括委任（04:07 JST）→ leader 内容確認（2026-07-06 18:30 JST）→ engineer1。受信直後に HUMAN_TURN mint 済み）。承認要旨: scope = refactor の採用（engine の freeform 解決 bugfix を decision 記録付きで補正 — 全 skill 移動 + build.ts 新設の実態に合致）と、codekb 差分更新（1aed7eb1..9232a9c7 の 4 PR、stub なし直接解決）を承認。次ステージへ進行可
+**Options**: approve,request-changes
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-06T09:08:44Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: reverse-engineering
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-06T09:08:44Z
+**Event**: GATE_APPROVED
+**Stage**: reverse-engineering
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-06T09:08:44Z
+**Event**: STAGE_COMPLETED
+**Stage**: reverse-engineering
+**Details**: Stage Reverse Engineering approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-06T09:08:44Z
+**Event**: STAGE_STARTED
+**Stage**: requirements-analysis
+**Agent**: amadeus-product-agent
+
+---
