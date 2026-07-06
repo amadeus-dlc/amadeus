@@ -456,5 +456,13 @@
     "scope": "bugfix",
     "repos": [],
     "status": "complete"
+  },
+  {
+    "uuid": "019f365d-f457-7593-9176-0ffe221ff0c5",
+    "slug": "guide-intro",
+    "dirName": "260706-guide-intro",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete"
   }
 ]

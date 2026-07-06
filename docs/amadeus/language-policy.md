@@ -6,7 +6,7 @@ Issue #509 established this policy so that the ongoing englishization of the exi
 
 ## Scope
 
-This policy governs `docs/amadeus/*.md` and their `*.ja.md` counterparts.
+This policy governs `docs/amadeus/*.md` and their `*.ja.md` counterparts. The user guide under `docs/guide/` follows the same pairing, synchronization, and cross-linking rules (Issue #533).
 
 It does not govern `amadeus/**/*.md`, Markdown generated from templates, `.kiro/specs/**/*.md`, `openspec/**/*.md`, or user-facing gate wording — those remain Japanese per [AMADEUS.md](../../AMADEUS.md)'s 作業言語 (working language) section, which this policy does not change.
 

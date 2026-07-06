@@ -141,6 +141,7 @@ npm run validate:workspace -- <workspace> <YYMMDD>-<label>
 ## Documentation
 
 - agent 共通入口: [AMADEUS.md](AMADEUS.md)
+- 利用者ガイド: [docs/guide/index.ja.md](docs/guide/index.ja.md)
 - skill 言語方針: [docs/amadeus/skill-language-policy.ja.md](docs/amadeus/skill-language-policy.ja.md)
 - `docs/amadeus/` の言語方針: [docs/amadeus/language-policy.ja.md](docs/amadeus/language-policy.ja.md)
 - ライフサイクル契約（5 phase 32 ステージ、scope、state スキーマ）:

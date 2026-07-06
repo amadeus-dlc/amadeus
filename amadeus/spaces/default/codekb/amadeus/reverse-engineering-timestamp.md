@@ -21,12 +21,26 @@
 - PR #565（harness/codex 新設 + openai.yaml 38 件 + scanRoots 追加 = #552）: 新しいトップレベル層 harness/ が誕生。更新 2 docs = code-structure.md（harness/codex/ 行の新設）、component-inventory.md（Codex guard 行の新設）。
 - 変更なし 7 docs: business-overview / architecture / api-documentation / technology-stack / dependencies / code-quality-assessment（#559 の修正は既存の記述粒度で吸収済み）/ timestamp（本更新の対象）。
 
+## 前回（2026-07-06T07:50:00Z、9dd93f50..3366cd69）の記録
+
+- 解析時刻: 2026-07-06T07:50:00Z（UTC）
+- 対象コミット: 3366cd69（origin/main = PR #563 merge 後）
+- 解析方式: 差分更新（9dd93f50..3366cd69 = PR #559 / #561 / #563 の 3 PR。#561 / #563 は docs-only）
+- 実施 Intent: `260706-guide-intro`（reverse-engineering ステージ）
+
+| artifact | 変更内容 |
+|---|---|
+| architecture.md | 検証（reference-resolution）行へ #548（PR #559）の RE produces 共有 codekb 直接解決を追記（stub 必須の前提が変わったため。同旨は並行 Intent 260706-runtime-graph-registrati の 06:52 更新にも反映され、現行本文は両者の統合） |
+| その他 8 docs | 影響なし（PR #559 の残り = log-subagent 完了ガードと agent_type 既定（#555）、complete-workflow の Scope 二重読み解消は hooks / エンジン内部の細部で、codekb の記述粒度では既存記述が引き続き正確。#561 / #563 は docs-only） |
+
 ## 前回（2026-07-06T06:52:00Z、9dd93f50..29f3122c）の記録
 
 - 解析時刻: 2026-07-06T06:52:00Z（UTC）
 - 対象コミット: 29f3122c（origin/main = PR #559 merge 後）
 - 解析方式: 差分更新（9dd93f50..29f3122c = PR #559 エンジン整合 3 bug のみ。complete-workflow の末尾 skip 整合と next の none 解決 = api-documentation、hooks 完了ガードと validator codekb 直接解決 = architecture を外科的に更新）
 - 実施 Intent: `260706-runtime-graph-registrati`（reverse-engineering、メイン直接処理）
+
+## 前回（2026-07-06T06:05:00Z、c50a0fe5..9dd93f50）の記録
 
 - 解析時刻: 2026-07-06T06:05:00Z（UTC）
 - 対象コミット: 9dd93f50（origin/main = PR #553 merge 後）

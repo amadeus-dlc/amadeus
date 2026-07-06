@@ -2,6 +2,8 @@
 
 This guide answers a recurring question for anyone operating Amadeus DLC on their own workspace: when you need to extend or steer the lifecycle, what under `amadeus/spaces/<space>/` (or, for a handful of Amadeus-specific points, outside it) should you edit, and may you edit it by hand?
 
+If you are new to Amadeus, start with the [User Guide](../guide/index.md) (installation and your first workflow) before extending anything.
+
 ## Scaling principle
 
 A stage definition carries only WHAT it does: its declared `phase`, its `produces`, and the stage protocol prose that describes its purpose. It does not carry HOW the work should be done for a specific team or project — that comes from the Space's `memory/` files, resolved and injected at compile time.
