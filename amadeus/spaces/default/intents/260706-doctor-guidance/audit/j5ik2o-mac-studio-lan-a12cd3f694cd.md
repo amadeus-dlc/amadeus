@@ -155,3 +155,49 @@
 **Options**: delegated-approval
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-06T08:26:05Z
+**Event**: HUMAN_TURN
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-06T08:26:05Z
+**Event**: DECISION_RECORDED
+**Stage**: reverse-engineering
+**Decision**: reverse-engineering の gate 承認（中継承認定型文の転記、auto 委任適用。承認経路: 人間の包括委任（2026-07-06 04:07 JST）→ leader 内容確認（2026-07-06 17:28 JST）→ engineer1。受信直後に HUMAN_TURN mint 済み）。承認要旨: codekb 差分更新（4 PR 分の外科的追記、stub なし直接解決）、validator pass、engineer5 との接触面調整（ガイド先行 PR + 注記簡素化はどちらが拾っても可）を承認。requirements-analysis へ進行可
+**Options**: approve,request-changes
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-06T08:26:05Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: reverse-engineering
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-06T08:26:05Z
+**Event**: GATE_APPROVED
+**Stage**: reverse-engineering
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-06T08:26:05Z
+**Event**: STAGE_COMPLETED
+**Stage**: reverse-engineering
+**Details**: Stage Reverse Engineering approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-06T08:26:05Z
+**Event**: STAGE_STARTED
+**Stage**: requirements-analysis
+**Agent**: amadeus-product-agent
+
+---
