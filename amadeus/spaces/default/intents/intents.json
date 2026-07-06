@@ -488,5 +488,13 @@
     "scope": "refactor",
     "repos": [],
     "status": "in_progress"
+  },
+  {
+    "uuid": "019f36c7-4db4-7b2a-9fd2-3affcdf4df1f",
+    "slug": "guide-ops",
+    "dirName": "260706-guide-ops",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete"
   }
 ]

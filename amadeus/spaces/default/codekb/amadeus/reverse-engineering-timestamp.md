@@ -2,6 +2,23 @@
 
 ## 差分更新の記録（最新）
 
+- 解析時刻: 2026-07-06T09:40:00Z（UTC）
+- 対象コミット: 620beb5e（origin/main = PR #578 merge 後）
+- 解析方式: 差分更新（1aed7eb1..620beb5e = PR #570 = #554 model overlay、#577 = #573 doctor 誘導修正、#578 = docs/guide 新設。docs 以外の実質増分は #554 / #577）
+- 実施 Intent: `260706-guide-ops`（reverse-engineering ステージ）
+
+| artifact | 変更内容 |
+|---|---|
+| component-inventory.md | eval 31→32、model-overlay 系 9 系列（#554）を追記 |
+| code-structure.md | eval 31→32、model-overlay（overrides.json + apply CLI）を dev-scripts 行へ追記 |
+| api-documentation.md | doctor へ overlay 乖離検査（#554）と fresh install 誘導（#573）を追記 |
+| その他 6 docs | 影響なし（#578 は docs/guide 新設で codekb 記述対象外。#554 の agents 2 ファイルの modelOverride 変更は component 粒度では既存記述が正確） |
+
+注記（rebase 時の時系列 union）: component-inventory の model-overlay 記述は、後発の 260706-adr-vocab 08:40 更新（10 系列 37+ 検査）を正として採用し、本更新側の 9 系列表記を破棄した。
+同注記の追記: api-documentation の #573 記述は、後発の 260706-three-layer-build 09:10 更新（doctor 2 状態分離）を正として採用し、本更新側の表記を破棄した。
+
+## 前回（2026-07-06T09:10:00Z、1aed7eb1..9232a9c7 = three-layer-build）の記録
+
 - 解析時刻: 2026-07-06T09:10:00Z（UTC）
 - 対象コミット: 9232a9c7（origin/main = PR #577 merge 後）
 - 解析方式: 差分更新（1aed7eb1..9232a9c7。rebase 時の時系列 union 補正: #564 分は 260706-adr-vocab の 08:40 更新を正とし当方分を破棄、#574 = codekb 更新 PR 自体・#575 = docs のみで影響なし。当方の有効残差分は #577 = doctor 2 状態分離を api-documentation の utility 行へ、installer info 行を component-inventory へ追記した 2 件）

@@ -29,8 +29,11 @@ Amadeus 自体を開発する人向けではなく、自分のプロジェクト
 | 00 | [Introduction](00-introduction.ja.md) | 執筆済み |
 | 01 | [Getting Started](01-getting-started.ja.md) | 執筆済み |
 | 02 | [Your First Workflow](02-first-workflow.ja.md) | 執筆済み |
+| 06 | [Agents](06-agents.ja.md) | 執筆済み |
+| 07 | [Interaction Modes](07-interaction-modes.ja.md) | 執筆済み |
+| 12 | [CLI Commands](12-cli-commands.ja.md) | 執筆済み |
 
-以下は導入 3 章より先の章である。
+以下はまだ執筆していない章である。
 それぞれ [#533](https://github.com/amadeus-dlc/amadeus/issues/533) の子 Issue が対応を追跡する。
 いずれも未執筆であり、章番号とタイトルは子 Issue 着手時に確定する仮のものである。
 
@@ -39,13 +42,10 @@ Amadeus 自体を開発する人向けではなく、自分のプロジェクト
 | 03 | Spaces and Intents | [#567](https://github.com/amadeus-dlc/amadeus/issues/567) | 未執筆 |
 | 04 | Phases and Stages | [#567](https://github.com/amadeus-dlc/amadeus/issues/567) | 未執筆 |
 | 05 | Scopes and Depth | [#567](https://github.com/amadeus-dlc/amadeus/issues/567) | 未執筆 |
-| 06 | Agents | [#568](https://github.com/amadeus-dlc/amadeus/issues/568) | 未執筆 |
-| 07 | Interaction Modes | [#568](https://github.com/amadeus-dlc/amadeus/issues/568) | 未執筆 |
 | 08 | Knowledge | [#569](https://github.com/amadeus-dlc/amadeus/issues/569) | 未執筆 |
 | 09 | Rules and the Learning Loop | [#569](https://github.com/amadeus-dlc/amadeus/issues/569) | 未執筆 |
 | 10 | State and Audit | [#569](https://github.com/amadeus-dlc/amadeus/issues/569) | 未執筆 |
 | 11 | Session Management | [#570](https://github.com/amadeus-dlc/amadeus/issues/570) | 未執筆 |
-| 12 | CLI Commands | [#568](https://github.com/amadeus-dlc/amadeus/issues/568) | 未執筆 |
 | 13 | Customization | [#570](https://github.com/amadeus-dlc/amadeus/issues/570) | 未執筆 |
 | 14 | Artifacts Reference | [#570](https://github.com/amadeus-dlc/amadeus/issues/570) | 未執筆 |
 | 15 | Troubleshooting | [#570](https://github.com/amadeus-dlc/amadeus/issues/570) | 未執筆 |
