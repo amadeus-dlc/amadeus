@@ -23,21 +23,21 @@ Read the introductory arc in numeric order:
 | 00 | [Introduction](00-introduction.md) | Available |
 | 01 | [Getting Started](01-getting-started.md) | Available |
 | 02 | [Your First Workflow](02-first-workflow.md) | Available |
+| 06 | [Agents](06-agents.md) | Available |
+| 07 | [Interaction Modes](07-interaction-modes.md) | Available |
+| 12 | [CLI Commands](12-cli-commands.md) | Available |
 
-The chapters below extend the guide past the introductory arc. Each is tracked by a child issue of [#533](https://github.com/amadeus-dlc/amadeus/issues/533); none is written yet, and the numbering and titles are provisional until its child issue is picked up.
+The chapters below extend the guide further. Each is tracked by a child issue of [#533](https://github.com/amadeus-dlc/amadeus/issues/533); none is written yet, and the numbering and titles are provisional until its child issue is picked up.
 
 | # | Working title | Tracking issue | Status |
 |---|---|---|---|
 | 03 | Spaces and Intents | [#567](https://github.com/amadeus-dlc/amadeus/issues/567) | Not yet written |
 | 04 | Phases and Stages | [#567](https://github.com/amadeus-dlc/amadeus/issues/567) | Not yet written |
 | 05 | Scopes and Depth | [#567](https://github.com/amadeus-dlc/amadeus/issues/567) | Not yet written |
-| 06 | Agents | [#568](https://github.com/amadeus-dlc/amadeus/issues/568) | Not yet written |
-| 07 | Interaction Modes | [#568](https://github.com/amadeus-dlc/amadeus/issues/568) | Not yet written |
 | 08 | Knowledge | [#569](https://github.com/amadeus-dlc/amadeus/issues/569) | Not yet written |
 | 09 | Rules and the Learning Loop | [#569](https://github.com/amadeus-dlc/amadeus/issues/569) | Not yet written |
 | 10 | State and Audit | [#569](https://github.com/amadeus-dlc/amadeus/issues/569) | Not yet written |
 | 11 | Session Management | [#570](https://github.com/amadeus-dlc/amadeus/issues/570) | Not yet written |
-| 12 | CLI Commands | [#568](https://github.com/amadeus-dlc/amadeus/issues/568) | Not yet written |
 | 13 | Customization | [#570](https://github.com/amadeus-dlc/amadeus/issues/570) | Not yet written |
 | 14 | Artifacts Reference | [#570](https://github.com/amadeus-dlc/amadeus/issues/570) | Not yet written |
 | 15 | Troubleshooting | [#570](https://github.com/amadeus-dlc/amadeus/issues/570) | Not yet written |
