@@ -67,5 +67,5 @@ Operation phase の採用は、この文書の更新だけでは行わない。
 ## 関連文書
 
 - [AI-DLC v2 Difference Response Plan](aidlc-v2-difference-response-plan.ja.md)
-- [Lifecycle Contract Overview](lifecycle/overview.md)
+- [Lifecycle Contract Overview](lifecycle/overview.ja.md)
 - [Skill Language Policy](skill-language-policy.ja.md)（維持する契約に Operation phase の対象外境界を含む）

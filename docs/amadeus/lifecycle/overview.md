@@ -1,182 +1,182 @@
 # Amadeus Lifecycle Contract Overview
 
-## 位置づけ
+## Positioning
 
-この文書群は、[Issue #369](https://github.com/amadeus-dlc/amadeus/issues/369) で確定した v2 互換ライフサイクルの目標契約である。
+This document family is the target contract for the v2-compatible lifecycle established by [Issue #369](https://github.com/amadeus-dlc/amadeus/issues/369).
 
-AI-DLC v2（[awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows) の `v2` ブランチ）の Ideation、Inception、Construction の仕様を、意味論互換で Amadeus に実装するための契約を定義する。
+It defines the contract for implementing AI-DLC v2's ([awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows), `v2` branch) Ideation, Inception, and Construction specifications in Amadeus with semantic compatibility.
 
-旧モデルの段階別契約（docs/amadeus/stages/）は、#369 の退役 wave で本契約に置き換えて削除した。Space の契約は [steering.md](../steering.md) を参照する。
-置き換えまでの間、稼働中の skill は旧契約に従い、#369 の実装作業は本契約に従う。
+The legacy model's per-stage contracts (`docs/amadeus/stages/`) were replaced by this contract and removed in #369's retirement wave. The Space contract is described in [steering.md](../steering.md).
+Until the replacement, running skills follow the legacy contract, and #369's implementation work follows this contract.
 
-## 互換方針
+## Compatibility policy
 
-互換の対象は仕様と意味論である。
+Compatibility applies to specification and semantics.
 
-次を v2 と一致させる。
+The following are kept aligned with v2:
 
-- ステージの責務、実行条件（ALWAYS / CONDITIONAL）、入出力成果物の意味。
-- Intake の判定（合流既定、人間承認付き birth 提案）。
-- Scope 適応（scope によるステージ集合の縮退と depth）。
-- ゲートの状態機械（ステージ承認、Bolt ゲート、revision loop）。
-- 質問プロトコルの成果物（questions ファイルと回答記録）。
+- Stage responsibilities, execution conditions (ALWAYS / CONDITIONAL), and the meaning of input and output artifacts.
+- Intake's determination (default to merge, birth proposal with human approval).
+- Scope adaptation (stage-set reduction and depth by scope).
+- The gate state machine (stage approval, Bolt gates, revision loop).
+- Question protocol artifacts (questions files and recorded answers).
 
-次は Amadeus 流の表現を維持する。
+The following keep Amadeus's own expression:
 
-- 成果物は日本語 Markdown で書く。
-- Intent の記録は record ディレクトリ（`intents/<YYMMDD>-<label>/`）で配置し、正準台帳は `intents.json` が持つ。
-- 状態は record 直下の `amadeus-state.md`（Stage Progress checkbox）と `audit/audit.md`（イベント）で管理する。
-- 構造検証は `amadeus-validator` が担う。
-- 質問の提示は `amadeus-grilling` のプロトコル（一問ずつ、推奨回答付き）で行う。
-- phase 境界と Bolt 完了の人間ゲートは PR と人間 merge で行う。
+- Artifacts are written in Japanese Markdown.
+- Intent records are laid out in record directories (`intents/<YYMMDD>-<label>/`); the canonical ledger is held by `intents.json`.
+- State is managed by `amadeus-state.md` (Stage Progress checkboxes) and `audit/audit.md` (events), directly under the record.
+- Structural validation is owned by `amadeus-validator`.
+- Questions are presented through the `amadeus-grilling` protocol (one at a time, with a recommended answer).
+- The human gate at phase boundaries and Bolt completion is done through a PR and a human merge.
 
-## Intent の定義と受理条件
+## Intent definition and acceptance criteria
 
-**Intent**：独立して完了判断でき、観測可能な成功基準を持つアウトカムであり、ライフサイクル 1 周分の作業単位である。
+**Intent**: an outcome whose completion can be judged independently and that has observable success criteria; the unit of work for one turn of the lifecycle.
 
-Intent の受理条件は次の 3 つの定性条件である。
+An Intent's acceptance criteria are the following three qualitative conditions.
 
-1. 観測可能な成功基準を持つ。技術 Intent の場合は、保存すべき振る舞い（preserve 条件）と観測可能な改善指標を持つ。
-2. 独立して完了判断できる。
-3. 既存 Intent のアウトカムに属さない。
+1. It has observable success criteria. For a technical Intent, this includes behavior to preserve (preserve conditions) and an observable improvement metric.
+2. Its completion can be judged independently.
+3. It does not belong to an existing Intent's outcome.
 
-Unit 数や Bolt 数のような数値目安は受理条件にしない。
-Ideation 時点の Unit 数と Bolt 数は実測できない予測値であり、検証可能な条件にならないためである。
+Numeric proxies such as a Unit count or a Bolt count are not acceptance criteria.
+The Unit count and Bolt count at Ideation time are unmeasured projections and cannot become verifiable conditions.
 
-受理条件を満たさない入力は拒否しない。
-質問でガイドし、成功基準を言語化できれば受理し、既存 Intent の成功条件の一部であれば合流へ導く。
-これは v2 の Principle 2（Every Intent Starts Ambiguous）に対応する。
+An input that does not meet the acceptance criteria is not rejected.
+It is guided by questions; it is accepted once its success criteria can be articulated, and it is routed to a merge if it belongs to an existing Intent's success conditions.
+This corresponds to v2's Principle 2 (Every Intent Starts Ambiguous).
 
 ## Intake
 
-**Intake**：単一入口が入力を受けたときに最初に行う判定である。
+**Intake**: the determination the single entry point makes first when it receives an input.
 
-Intake は次の順で判定する。
+Intake determines in the following order.
 
-1. 継続判定。入力がアクティブな Intent または既存 Intent の続きであれば、その Intent の次ステージへ進む。判定に迷う場合は継続とみなす（v2 の Default to CONTINUATION）。
-2. 合流判定。入力が既存 Intent のアウトカムに属する新しい作業であれば、その Intent のスコープバックログへの追加を提案する。
-3. 受理条件の確認。新しいアウトカムに見える入力は、受理条件 3 つを確認する。満たさない場合は質問でガイドする。
-4. scope 推定。入力のキーワードから scope を推定する。推定できない場合、またはテーマ記述とみなせる長さの入力は `feature` を既定にする。
-5. birth 提案。新しい Intent の作成は、推定した scope を明示した提案として人間に確認する。人間の明示的な承認なしに Intent を作らない（v2 の never auto-birth）。
+1. Continuation check. If the input is an active Intent or a continuation of an existing Intent, it proceeds to that Intent's next stage. When the determination is unclear, it is treated as a continuation (v2's Default to CONTINUATION).
+2. Merge check. If the input is new work that belongs to an existing Intent's outcome, adding it to that Intent's scope backlog is proposed.
+3. Acceptance criteria check. An input that looks like a new outcome is checked against the three acceptance criteria. If it does not meet them, it is guided by questions.
+4. Scope estimation. Scope is estimated from the input's keywords. When it cannot be estimated, or when the input is only long enough to be a theme description, `feature` is the default.
+5. Birth proposal. Creating a new Intent is confirmed with the human as a proposal that states the estimated scope explicitly. An Intent is never created without the human's explicit approval (v2's never auto-birth).
 
-Intake は Intent の規模を数値で判定しない。
-1 回の入力から生まれる Intent は最大 1 個であり、テーマ内の残りの作業はスコープバックログが受け皿になる。
+Intake does not judge an Intent's size numerically.
+At most one Intent is born from a single input, and the scope backlog is the receiving point for the remaining work within the theme.
 
-## 単一入口とルーティング
+## Single entry point and routing
 
-ライフサイクルの公開入口は単一 skill である。
+The lifecycle's public entry point is a single skill.
 
-公開入口は Intake を行い、対象 record の `amadeus-state.md` を読み、scope とステージ進行状態から次に実行するステージを解決し、対応する内部 skill を呼び出す。
+The public entry point performs Intake, reads the target record's `amadeus-state.md`, resolves the next stage to run from the scope and stage progress state, and invokes the corresponding internal skill.
 
-ユーザーは phase やステージを選ばない。
-phase とステージの解決は入口の責務である。
+The user does not choose a phase or a stage.
+Resolving the phase and the stage is the entry point's responsibility.
 
-中断した Intent は、次の入口呼び出しで `amadeus-state.md` の Session Resume Point から再開する。
+An interrupted Intent resumes from `amadeus-state.md`'s Session Resume Point on the next entry-point invocation.
 
-補助入口は独立したまま維持する。
-`amadeus-grilling`、`amadeus-domain-modeling`、`amadeus-validator` は本契約の対象外である。
+Auxiliary entries remain independent.
+`amadeus-grilling`, `amadeus-domain-modeling`, and `amadeus-validator` are out of scope for this contract.
 
-## Phase 構成
+## Phase structure
 
-ライフサイクルは Initialization、Ideation、Inception、Construction、Operation の 5 phase から成る。
+The lifecycle consists of five phases: Initialization, Ideation, Inception, Construction, and Operation.
 
-**Initialization**：Stage 0.1 Workspace Scaffold、0.2 Workspace Detection、0.3 State Initialization の 3 ステージを持つ。全 scope が実行対象にし、承認ゲートを持たない。人間が Birth 提案を承認した直後に、単一入口が直接実行して record を作る。
+**Initialization**: has three stages — Stage 0.1 Workspace Scaffold, 0.2 Workspace Detection, and 0.3 State Initialization. All scopes run it, and it has no approval gate. The single entry point runs it directly and creates the record immediately after the human approves the Birth proposal.
 
-**Ideation**、**Inception**、**Construction** は、それぞれ [ideation.md](ideation.md)、[inception.md](inception.md)、[construction.md](construction.md) が定義するステージを持つ。
+**Ideation**, **Inception**, and **Construction** each have the stages defined by [ideation.md](ideation.md), [inception.md](inception.md), and [construction.md](construction.md) respectively.
 
-**Operation**：v2 の 7 ステージに対応する record の scaffold だけを持つ。Amadeus はいずれのステージも実行対象にせず、Stage Progress は常に `[S]`（`SKIP: out of Amadeus scope`）にする。対象外にする理由（成果物契約、gate、validator、PR 境界）と本家 Operation skill の扱いは [AI-DLC v2 Operation Phase Boundary](../aidlc-v2-operation-phase-boundary.md) に従う。
+**Operation**: has only the record scaffold corresponding to v2's 7 stages. Amadeus does not run any of its stages, and Stage Progress is always `[S]` (`SKIP: out of Amadeus scope`). The reason it is out of scope (artifact contracts, gates, validator, PR boundary) and the treatment of the upstream Operation skills follow [AI-DLC v2 Operation Phase Boundary](../aidlc-v2-operation-phase-boundary.md).
 
-## スコープバックログ
+## Scope backlog
 
-**スコープバックログ**：Intent の対象外にした作業と将来の作業候補を、優先度付きの proto-Unit として保持する成果物である。
+**Scope backlog**: the artifact that holds work excluded from an Intent's scope and future work candidates as prioritized proto-Units.
 
-スコープバックログは Stage 1.4 Scope Definition が `intent-backlog.md` として作る。
+The scope backlog is created by Stage 1.4 Scope Definition as `intent-backlog.md`.
 
-「今回やらないもの」の受け皿はスコープバックログであり、将来 Intent の予約席を作らない。
-バックログ項目は、後続の Units Generation で Unit 候補として評価されるか、Intake の合流判定の照合先になる。
+The scope backlog is the receiving point for "what we are not doing this time," and it does not reserve a seat for a future Intent.
+Backlog items are either evaluated as Unit candidates in the later Units Generation, or used as the matching target for Intake's merge check.
 
-## ゲート契約
+## Gate contract
 
-ゲートは 3 層で構成する。
+Gates consist of three layers.
 
-**ステージゲート**：各ステージの完了時に、会話内で人間の承認を得るゲートである。
-承認の選択肢は Approve と Request Changes を基本にする。
-Ideation と Inception のステージだけ、スキップ済みステージの追加を第 3 の選択肢にできる。
-同じステージで Request Changes が 3 回続いた場合は、Accept as-is を選択肢に追加する。
-ゲートを提示したターンでは回答を待ち、承認なしに次へ進まない。
-承認は `GATE_APPROVED` イベントとして `audit/audit.md` に記録する。
+**Stage gate**: the gate that obtains human approval in-conversation at the completion of each stage.
+The approval options are basically Approve and Request Changes.
+Only Ideation and Inception stages can offer adding a skipped stage back in as a third option.
+If Request Changes occurs three times in a row on the same stage, Accept as-is is added as an option.
+On the turn the gate is presented, the entry point waits for an answer and does not proceed without approval.
+Approval is recorded in `audit/audit.md` as a `GATE_APPROVED` event.
 
-**Bolt ゲート**：Construction の Bolt 実行に適用するゲートである。
-最初の Bolt（walking skeleton）は、設計成果物と生成コードをまとめて必ず人間が承認する。
-walking skeleton の承認直後に、残りの Bolt を自律実行するかゲートを続けるかを一度だけ確認する（ladder 提案）。
-自律実行中も、失敗時は停止して人間に確認する（halt-and-ask）。
+**Bolt gate**: the gate that applies to Construction's Bolt execution.
+The first Bolt (walking skeleton) always has its design artifacts and generated code approved by a human together.
+Immediately after the walking skeleton's approval, whether to run the remaining Bolts autonomously or to keep gating is confirmed once (the ladder proposal).
+Even during autonomous execution, on failure it stops and confirms with the human (halt-and-ask).
 
-**phase ゲート**：phase 境界（Ideation 完了、Inception 完了）と Bolt 完了は PR と人間 merge で確定する。
-ステージごとに PR を作らない。
-PR の単位を phase と Bolt に限定することで、ステージ承認の往復を会話内に収め、PR 往復のコストを抑える。
+**Phase gate**: phase boundaries (Ideation complete, Inception complete) and Bolt completion are finalized through a PR and a human merge.
+A PR is not created per stage.
+Limiting the PR unit to phases and Bolts keeps stage-approval round trips within the conversation and holds down the cost of PR round trips.
 
-## 質問プロトコル
+## Question protocol
 
-各ステージは、確認が必要な論点を questions ファイル（`<stage-slug>-questions.md`）として stage ディレクトリに残す。
+Each stage leaves points that need confirmation as a questions file (`<stage-slug>-questions.md`) in the stage directory.
 
-質問の提示は `amadeus-grilling` のプロトコルに従う。
-一問ずつ提示し、各質問に推奨回答を添え、回答を待つ。
-回答は questions ファイルに記録する。
-成果物の意味や後続判断に影響する確定判断は、Grilling Decision Trail にも記録する。
+Presenting questions follows the `amadeus-grilling` protocol.
+Questions are presented one at a time, each with a recommended answer attached, and the entry point waits for an answer.
+Answers are recorded in the questions file.
+A confirmed decision that affects an artifact's meaning or a later determination is also recorded in the Grilling Decision Trail.
 
-質問の量は depth を目安にする。
+The volume of questions is guided by depth.
 
-| Depth | 1 ステージあたりの目安 |
+| Depth | Guideline per stage |
 |---|---|
-| Minimal | 2〜4 問 |
-| Standard | 5〜8 問 |
-| Comprehensive | 8〜12 問以上 |
+| Minimal | 2-4 questions |
+| Standard | 5-8 questions |
+| Comprehensive | 8-12+ questions |
 
-目安は上限ではない。
-曖昧さと矛盾の解消は depth に関わらず必須である。
-phase が進むほど質問は減り、Construction では質問を例外扱いにする。
+The guideline is not a ceiling.
+Resolving ambiguity and contradiction is mandatory regardless of depth.
+Questions decrease as the phase progresses, and Construction treats questions as an exception.
 
-## 成果物配置
+## Artifact layout
 
-Amadeus の成果物は `amadeus/` 配下に置く。
-Space の成果物は `amadeus/spaces/<space>/` に置き、Intent の成果物はその配下の `intents/` に置く。
+Amadeus artifacts are placed under `amadeus/`.
+Space artifacts are placed under `amadeus/spaces/<space>/`, and Intent artifacts are placed under that Space's `intents/`.
 
 ```text
 amadeus/
-  active-space                        # カーソル（gitignore、現在の Space 名を指す。なければ default）
+  active-space                        # cursor (gitignored; points to the current Space name; default if absent)
   spaces/
     default/
       memory/
-        org.md                       # 組織既定
-        team.md                      # チームの働き方（org.md を上書き）
-        project.md                   # プロジェクト固有の判断材料（team.md を上書き）
-        phases/                      # phase 別の補足（任意）
-        templates/                   # プロジェクト固有のテンプレート上書き（任意）
+        org.md                       # organizational defaults
+        team.md                      # team working conventions (overrides org.md)
+        project.md                   # project-specific judgment criteria (overrides team.md)
+        phases/                      # phase-specific supplements (optional)
+        templates/                   # project-specific template overrides (optional)
       knowledge/
         glossary.md
         actors.md
         external-systems.md
         background.md
-        domain-map.md                # 採用済みまたは廃止済みの Subdomain と Bounded Context の索引
-        context-map.md               # 採用済みまたは廃止済みのコンテキスト間依存の索引
-        event-storming/              # Intent 作成前の Event Storming
+        domain-map.md                # index of adopted or retired Subdomains and Bounded Contexts
+        context-map.md               # index of adopted or retired cross-context dependencies
+        event-storming/              # Event Storming performed before Intent creation
       codekb/
-        <repo>/                      # コードベース知識（v2 の codekb。brownfield で作る）
+        <repo>/                      # codebase knowledge (v2's codekb; created in brownfield)
       intents/
-        active-intent                # カーソル（gitignore、Intake の継続判定が読む）
-        intents.json                 # レジストリ（正準台帳。uuid、slug、dirName、scope、repos、status）
+        active-intent                # cursor (gitignored; read by Intake's continuation check)
+        intents.json                 # registry (the canonical ledger; uuid, slug, dirName, scope, repos, status)
         <YYMMDD>-<label>/            # record
-          amadeus-state.md             # Stage Progress、Phase Progress ほか（状態の唯一の持ち主）
+          amadeus-state.md             # Stage Progress, Phase Progress, and more (the sole owner of state)
           verification/
           audit/
-            audit.md                 # 追記専用のゲート・遷移イベント
+            audit.md                 # append-only gate and transition events
           initialization/
             <stage-slug>/
           ideation/
-            <stage-slug>/            # ステージごとの成果物、<stage-slug>-questions.md、memory.md
-            decisions.md             # phase の判断（decision-log 相当）
-            traceability.md          # Amadeus 拡張
-            grillings.md             # Grilling Decision Trail 索引
+            <stage-slug>/            # per-stage artifacts, <stage-slug>-questions.md, memory.md
+            decisions.md             # phase decisions (equivalent to a decision log)
+            traceability.md          # Amadeus extension
+            grillings.md             # Grilling Decision Trail index
             grillings/
           inception/
             <stage-slug>/
@@ -186,108 +186,108 @@ amadeus/
             grillings/
           construction/
             <unit-id>-<slug>/
-              <stage-slug>/          # Unit 単位ステージ（3.1〜3.5）の成果物
+              <stage-slug>/          # artifacts of per-Unit stages (3.1-3.5)
             bolts/
-              <bolt-id>-<slug>/      # Bolt 実行記録（build-and-test、pr.md）
-            ci-pipeline/             # Intent 単位（3.7）
+              <bolt-id>-<slug>/      # Bolt execution record (build-and-test, pr.md)
+            ci-pipeline/             # per-Intent (3.7)
             decisions.md
             traceability.md
             grillings.md
             grillings/
           operation/
-            <stage-slug>/           # v2 の 7 ステージ分の scaffold。Amadeus は実行対象にしない
+            <stage-slug>/           # scaffold for v2's 7 stages; Amadeus does not run them
 ```
 
-Intent のモジュールファイル（`<dirName>.md`）と `intents.md` 索引は GD009 で廃止した。
-v2 の intent-statement に対応する内容（目的、対象、成功条件、契機、範囲）は、Stage 1.1 が作る `ideation/intent-capture/intent-statement.md` が持つ。
-人間向けの Intent 一覧が必要な場合は、正準台帳 `intents.json` から都度生成する。
+The Intent module file (`<dirName>.md`) and the `intents.md` index were retired (GD009).
+The content corresponding to v2's intent-statement (purpose, target, success conditions, trigger, scope) is held by `ideation/intent-capture/intent-statement.md`, created by Stage 1.1.
+When a human-readable Intent list is needed, it is generated on demand from the canonical ledger `intents.json`.
 
-コードベース知識（v2 の codekb）は Intent をまたいで再利用するため、Space の `codekb/<repo>/` に置く。
+Codebase knowledge (v2's codekb) is reused across Intents, so it is placed under the Space's `codekb/<repo>/`.
 
-## ステージ契約の I/O 記法
+## Stage contract I/O notation
 
-phase 別文書（[ideation.md](ideation.md)、[inception.md](inception.md)、[construction.md](construction.md)）の各ステージは、`### Inputs` と `### Outputs` を対で持つ。
-本節は Inputs 表の記法の正である。
+Each stage in the per-phase documents ([ideation.md](ideation.md), [inception.md](inception.md), [construction.md](construction.md)) has a paired `### Inputs` and `### Outputs`.
+This section is the authority for the Inputs table's notation.
 
-### Inputs 表の形式
+### Inputs table format
 
-Inputs 表は次の 3 列で書く。
+The Inputs table is written with the following three columns.
 
-| 列 | 意味 | 英語化後のラベル |
+| Column | Meaning | Label after englishization |
 |---|---|---|
-| Artifact | ステージが読む入力の名称（成果物の record 相対 path、workspace / Space の既存参照、Intake 由来の入力）。実在を確認できた入力だけを書く。 | Artifact |
-| 必須 | `必須` / `任意` / `条件付き（条件名）` / `必須（<ステージ名> 実行時）` のいずれか。 | Required（値は Required / Optional / Conditional (condition) / Required (when <stage> runs)） |
-| 供給元 | 産出ステージ番号（`Stage N.M`）、`Intake`、`workspace`、`Space` のいずれか。 | Source |
+| Artifact | The name of an input the stage reads (a record-relative path of an artifact, an existing workspace / Space reference, or an input from Intake). Only inputs whose existence has been confirmed are written. | Artifact |
+| Required | One of `Required` / `Optional` / `Conditional (condition name)` / `Required (when <stage name> runs)`. | Required (values are Required / Optional / Conditional (condition) / Required (when <stage> runs)) |
+| Source | The producing stage number (`Stage N.M`), `Intake`, `workspace`, or `Space`. | Source |
 
-供給元の意味は次のとおりである。
+The meanings of Source's values are as follows.
 
-| 値 | 意味 |
+| Value | Meaning |
 |---|---|
-| Stage N.M | 当該ステージの Outputs が供給する。 |
-| Intake | Intake の birth 提案と承認内容が供給する。 |
-| workspace | workspace の既存状態（codekb、既存リポジトリ）が供給する。 |
-| Space | Space の共有資産（`memory/team.md` など）が供給する。 |
+| Stage N.M | Supplied by that stage's Outputs. |
+| Intake | Supplied by Intake's birth proposal and approval content. |
+| workspace | Supplied by the workspace's existing state (codekb, existing repositories). |
+| Space | Supplied by the Space's shared assets (`memory/team.md`, and so on). |
 
-複数の供給元は読点で列挙し、代替の供給元は `または` で書く（例: `Stage 2.4、2.5`、`Stage 1.1 または Intake`）。
+Multiple sources are listed with a comma, and alternative sources are written with "or" (for example, `Stage 2.4, 2.5`, `Stage 1.1 or Intake`).
 
-### エンジン実態との対応
+### Correspondence with engine reality
 
-Inputs 表の一次実測源は、エンジンの stage 定義（`.agents/amadeus/amadeus-common/stages/<phase>/<slug>.md`）の frontmatter `consumes`（`artifact` / `required` / `conditional_on`）である。
-`conditional_on` は `条件付き（条件名）` に対応する（例: `条件付き（brownfield）`）。
-upstream-coverage sensor は `consumes` の純粋な派生であり、独立した実測源にしない。
-文書とエンジンの記述が乖離した場合は、エンジン実態を正として文書を補正する。
+The primary measured source for the Inputs table is the engine's stage definition frontmatter `consumes` (`artifact` / `required` / `conditional_on`) under `.agents/amadeus/amadeus-common/stages/<phase>/<slug>.md`.
+`conditional_on` corresponds to `Conditional (condition name)` (for example, `Conditional (brownfield)`).
+The upstream-coverage sensor is a pure derivative of `consumes` and is not treated as an independent measured source.
+When the document and the engine's description diverge, the document is corrected against the engine's actual behavior.
 
-### 供給元ステージが CONDITIONAL の場合
+### When the source stage is CONDITIONAL
 
-frontmatter の `required: true` は「供給元ステージが実行された場合に必須」を意味し、供給元ステージ自体の実行条件（`execution: CONDITIONAL`、scope による SKIP）を含まない。
-供給元ステージが CONDITIONAL、または scope により SKIP され得る場合、必須値は `必須（<ステージ名> 実行時）` と書く（例: `必須（Application Design 実行時）`）。
-scope 縮退時の入力代替は [scopes.md](scopes.md) の「縮退時の入力代替」を参照する。
+The frontmatter's `required: true` means "required if the source stage ran," and it does not include the source stage's own execution condition (`execution: CONDITIONAL`, SKIP by scope).
+When the source stage is CONDITIONAL, or can be SKIPped by scope, the required value is written as `Required (when <stage name> runs)` (for example, `Required (when Application Design runs)`).
+For input substitution on scope reduction, see "Input substitution on reduction" in [scopes.md](scopes.md).
 
-### phase 共通入力
+### Phase-common inputs
 
-全ステージが共通に読む steering/memory 参照（`org.md`、`team.md`、`project.md`、`phases/<phase>.md` = エンジンの rules_in_context）は、各ステージの Inputs 表に繰り返さず、各 phase 文書の Phase Overview に 1 回だけ書く。
+Steering/memory references common to all stages (`org.md`, `team.md`, `project.md`, `phases/<phase>.md` — the engine's rules_in_context) are not repeated in each stage's Inputs table; they are written once in each phase document's Phase Overview.
 
-### 実在しない入力の禁止
+### No inputs that do not exist
 
-Inputs に書けるのは、上記の実測源で実在を確認できた成果物と参照だけである。
-推測で入力を書かない。
+Only artifacts and references whose existence has been confirmed against the measured sources above may be written in Inputs.
+No input is written from speculation.
 
-## v2 との構造差分
+## Structural differences from v2
 
-v2 の state machine、ディレクトリ構造、Initialization、audit trail、Intent registry は構造一致で採用する。
-意味論互換の範囲で、次の Amadeus 独自成果物だけを意図的な差分として持つ。
+v2's state machine, directory structure, Initialization, audit trail, and Intent registry are adopted with structural parity.
+Within the range of semantic compatibility, only the following Amadeus-specific artifacts are kept as intentional differences.
 
-| 項目 | v2 | Amadeus | 理由 |
+| Item | v2 | Amadeus | Reason |
 |---|---|---|---|
-| 質問の確定記録 | 質問ファイルへの一括記入または対話 | grilling プロトコルと Grilling Decision Trail（`grillings.md`、`grillings/`） | 一問ずつ、推奨回答付きの既存契約と、確定判断の追跡成果物を維持する。 |
-| 監査証跡の補完 | `audit/audit.md` のイベントだけ | `audit/audit.md` に加えて `traceability.md`（成果物の追跡）と `decisions.md`（phase の判断） | イベント列とは別に、成果物単位の追跡と判断の要約を維持する。 |
-| 成果物の言語 | 英語 Markdown | 日本語 Markdown | 日本語規範（一文ごとに改行、段落は空行区切り）で成果物を書く。 |
-| reviewer | stage 定義の `reviewer` と `reviewer_max_iterations` による gate 前の独立 sub-agent レビュー | stage gate の人間承認、phase PR と Bolt PR のレビューと CI、`amadeus-validator` へ写像 | 本家でも最終判断は人間に残るため、承認境界を変えずに gate 契約へ寄せる。詳細は [AI-DLC v2 Reviewer Mapping](../aidlc-v2-reviewer-mapping.md)。 |
-| sensor | stage 定義の `sensors:` による決定論的検査（`.amadeus-sensors/` へ出力） | `required-sections` と `upstream-coverage` は `amadeus-validator` と `traceability.md` へ、`linter` と `type-check` は Build and Test の記録と PR の CI へ写像 | 配布契約に hook 実行基盤を追加しない。詳細は [AI-DLC v2 Sensor and Learn Mapping](../aidlc-v2-sensor-learn-mapping.md)。 |
-| Learn | `memory.md` の 4 見出しと learnings ritual による harness への定着 | 各 stage の `memory.md`（同じ 4 観点）、`decisions.md`、`traceability.md`、Grilling Decision Trail へ写像 | 定着は自動化せず人間 gate を経る。詳細は [AI-DLC v2 Sensor and Learn Mapping](../aidlc-v2-sensor-learn-mapping.md)。 |
-| Build and Test の失敗時処理 | 診断と修正を最大 2 回試み、解決できない場合に記録して gate へ進む | 実装修正を行わず、失敗時は halt-and-ask で即座に人間へ確認し、修正は Code Generation の責務として扱う | 記録の真実性と Bolt gate の承認対象を保つ。詳細は [AI-DLC v2 Build and Test Failure Handling](../aidlc-v2-build-and-test-failure-handling.md)。 |
-| Operation phase | 7 stage を実行対象に含む | record の scaffold と Stage Progress の `[S]` 行だけを持ち、実行対象にしない | 成果物契約、gate、validator、PR 境界が実環境への作用を扱わないため。詳細は [AI-DLC v2 Operation Phase Boundary](../aidlc-v2-operation-phase-boundary.md)。 |
+| Recording confirmed questions | Bulk entry into a questions file, or a dialogue | The grilling protocol and the Grilling Decision Trail (`grillings.md`, `grillings/`) | Keeps the existing contract of one question at a time with a recommended answer, and keeps an artifact that tracks confirmed decisions. |
+| Supplementing the audit trail | Only events in `audit/audit.md` | `traceability.md` (artifact tracking) and `decisions.md` (phase decisions), in addition to `audit/audit.md` | Keeps per-artifact tracking and a decision summary separate from the event stream. |
+| Artifact language | English Markdown | Japanese Markdown | Artifacts are written under the Japanese norm (one sentence per line, paragraphs separated by a blank line). |
+| reviewer | An independent sub-agent review before the gate, driven by the stage definition's `reviewer` and `reviewer_max_iterations` | Human approval at the stage gate, phase PR and Bolt PR review and CI, mapped to `amadeus-validator` | The final decision remains with a human upstream too, so this maps to the gate contract without changing the approval boundary. See [AI-DLC v2 Reviewer Mapping](../aidlc-v2-reviewer-mapping.md) for detail. |
+| sensor | Deterministic checks via the stage definition's `sensors:` (output to `.amadeus-sensors/`) | `required-sections` and `upstream-coverage` map to `amadeus-validator` and `traceability.md`; `linter` and `type-check` map to the Build and Test record and the PR's CI | Does not add a hook execution substrate to the distribution contract. See [AI-DLC v2 Sensor and Learn Mapping](../aidlc-v2-sensor-learn-mapping.md) for detail. |
+| Learn | Fixation into the harness through `memory.md`'s 4 headings and the learnings ritual | Mapped to each stage's `memory.md` (the same 4 perspectives), `decisions.md`, `traceability.md`, and the Grilling Decision Trail | Fixation is not automated and goes through a human gate. See [AI-DLC v2 Sensor and Learn Mapping](../aidlc-v2-sensor-learn-mapping.md) for detail. |
+| Build and Test failure handling | Attempts diagnosis and fixes up to 2 times, and proceeds to the gate with a record if unresolved | Makes no implementation fix; on failure, halt-and-ask confirms with a human immediately, and the fix is treated as Code Generation's responsibility | Preserves the record's truthfulness and the Bolt gate's approval target. See [AI-DLC v2 Build and Test Failure Handling](../aidlc-v2-build-and-test-failure-handling.md) for detail. |
+| Operation phase | Includes 7 stages to run | Has only the record scaffold and the Stage Progress `[S]` rows; does not run them | Because artifact contracts, gates, validator, and the PR boundary do not handle effects on a real environment. See [AI-DLC v2 Operation Phase Boundary](../aidlc-v2-operation-phase-boundary.md) for detail. |
 
-## 旧契約からの主な変更
+## Major changes from the legacy contract
 
-| 旧契約 | 本契約 |
+| Legacy contract | This contract |
 |---|---|
-| `amadeus-discovery`（事前の Intent 候補分割） | 退役。Intake の合流判定とスコープバックログが置き換える。 |
-| phase 別公開入口（`amadeus-ideation` など） | 退役。単一入口に統合する。 |
-| use-cases ステージ | 退役。user-stories と Functional Design が担う。 |
-| `ideation/scope.md` | `scope-definition/scope-document.md` と `intent-backlog.md` が置き換える。 |
-| `ideation/ideation.md` | `feasibility/feasibility-assessment.md` と `constraint-register.md` が置き換える。 |
-| `ideation/mocks/*.puml` | `rough-mockups/wireframes.md` と `user-flow.md` が置き換える。図は PlantUML または Mermaid で内包できる。 |
-| `inception/acceptance.md` | 退役。受け入れ条件は `requirements.md` の各要求に内包する。 |
-| Unit Design Brief（`units/<unit-id>/design.md`） | 退役。Application Design と Functional Design が置き換える。 |
-| `inception/bolts.md` | `delivery-planning/bolt-plan.md` が置き換える。 |
-| Bolt preparation の `tasks.md` | `code-generation/code-generation-plan.md` が置き換える。 |
-| ステージごとの phase PR | phase 境界と Bolt 完了だけを PR にする。 |
+| `amadeus-discovery` (pre-splitting of Intent candidates) | Retired. Intake's merge check and the scope backlog replace it. |
+| Per-phase public entry points (`amadeus-ideation`, and so on) | Retired. Consolidated into the single entry point. |
+| use-cases stage | Retired. user-stories and Functional Design take over. |
+| `ideation/scope.md` | Replaced by `scope-definition/scope-document.md` and `intent-backlog.md`. |
+| `ideation/ideation.md` | Replaced by `feasibility/feasibility-assessment.md` and `constraint-register.md`. |
+| `ideation/mocks/*.puml` | Replaced by `rough-mockups/wireframes.md` and `user-flow.md`. Diagrams can be embedded in PlantUML or Mermaid. |
+| `inception/acceptance.md` | Retired. Acceptance criteria are embedded in each requirement in `requirements.md`. |
+| Unit Design Brief (`units/<unit-id>/design.md`) | Retired. Application Design and Functional Design replace it. |
+| `inception/bolts.md` | Replaced by `delivery-planning/bolt-plan.md`. |
+| Bolt preparation's `tasks.md` | Replaced by `code-generation/code-generation-plan.md`. |
+| A phase PR per stage | Only phase boundaries and Bolt completion become PRs. |
 
-## 文書構成
+## Document map
 
-- [scopes.md](scopes.md)：scope、depth、scope とステージの対応表。
-- [ideation.md](ideation.md)：Ideation 7 ステージの契約。
-- [inception.md](inception.md)：Inception 8 ステージの契約。
-- [construction.md](construction.md)：Construction 7 ステージの契約。
-- [state.md](state.md)：`amadeus-state.md` の構造とステージ状態機械。
+- [scopes.md](scopes.md): scope, depth, and the scope-to-stage mapping table.
+- [ideation.md](ideation.md): the contract for Ideation's 7 stages.
+- [inception.md](inception.md): the contract for Inception's 8 stages.
+- [construction.md](construction.md): the contract for Construction's 7 stages.
+- [state.md](state.md): `amadeus-state.md`'s structure and the stage state machine.

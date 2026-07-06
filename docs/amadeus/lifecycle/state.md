@@ -1,162 +1,162 @@
 # State Reference
 
-## AI-DLC v2 Reference
+## AI-DLC v2 reference
 
 - [AI-DLC v2 State Machine](https://github.com/awslabs/aidlc-workflows/blob/v2/docs/reference/12-state-machine.md)
 - [AI-DLC v2 State Template](https://github.com/awslabs/aidlc-workflows/blob/v2/core/knowledge/amadeus-shared/state-template.md)
 - [AI-DLC v2 Audit Format](https://github.com/awslabs/aidlc-workflows/blob/v2/core/knowledge/amadeus-shared/audit-format.md)
 
-vendored copy は `skills/amadeus/references/aidlc-v2/` に置く。
-準拠判定は vendored copy との構造一致で行う。
+The vendored copy lives at `skills/amadeus/references/aidlc-v2/`.
+Compliance is judged by structural match against the vendored copy.
 
 ## Inputs
 
-本文書はステージ単位の文書ではないため、ステージ契約の Inputs 表（[overview.md](overview.md) の「ステージ契約の I/O 記法」）は適用しない。
-本文書が入力として参照する契約は、record 直下の `amadeus-state.md`（状態の唯一の持ち主）、record の `audit/`（追記専用イベント）、Space の `intents/intents.json`（正準台帳）である。
+This document is not a per-stage document, so the stage contract's Inputs table ([overview.md](overview.md)'s "Stage contract I/O notation") does not apply.
+The contracts this document references as input are the record's top-level `amadeus-state.md` (the sole owner of state), the record's `audit/` (append-only events), and the Space's `intents/intents.json` (the canonical ledger).
 
-## 責務
+## Responsibilities
 
-Intent の実行状態は、record 直下の `amadeus-state.md` が唯一の持ち主である。
-構造とラベルは v2 の state template をそのまま使う。
+The Intent's execution state has exactly one owner: the record's top-level `amadeus-state.md`.
+Its structure and labels are the v2 state template, used as-is.
 
-承認と遷移の履歴は、record の `audit/audit.md` が追記専用イベントとして持つ。
-Intent の正準 ID と一覧は、Space の `intents/intents.json`（registry）が持つ。
+Approval and transition history belongs to the record's `audit/audit.md`, as append-only events.
+The Intent's canonical ID and its listing belong to the Space's `intents/intents.json` (the registry).
 
-単一入口は `amadeus-state.md` を読んで次に実行するステージを解決する。
-`amadeus-validator` は `amadeus-state.md`、`audit/`、`intents.json` と成果物の整合を検証する。
+The single entry point reads `amadeus-state.md` to resolve which stage runs next.
+`amadeus-validator` verifies consistency between `amadeus-state.md`, `audit/`, `intents.json`, and the artifacts.
 
-状態の更新は、判断を skill が行い、記録の形式をこの契約が固定する。
+Skills make the judgment calls behind a state update; this contract fixes only the recording format.
 
-## `amadeus-state.md` の構造
+## `amadeus-state.md` structure
 
-v2 state template のセクション構成をそのまま使う。
+The section structure follows the v2 state template as-is.
 
-| セクション | 持つもの |
+| Section | Holds |
 |---|---|
-| `Project Information` | Project、Project Type（Greenfield / Brownfield）、Scope、Start Date、State Version（7）、Active Agent、Worktree Path、Bolt Refs、Practices Affirmed Timestamp |
-| `Scope Configuration` | Stages to Execute、Stages to Skip、Depth（Minimal / Standard / Comprehensive） |
-| `Workspace State` | Project Root、Languages、Frameworks、Build System（0.2 Workspace Detection の結果） |
-| `Execution Plan Summary` | Total Stages、Completed、In Progress |
+| `Project Information` | Project, Project Type (Greenfield / Brownfield), Scope, Start Date, State Version (7), Active Agent, Worktree Path, Bolt Refs, Practices Affirmed Timestamp |
+| `Scope Configuration` | Stages to Execute, Stages to Skip, Depth (Minimal / Standard / Comprehensive) |
+| `Workspace State` | Project Root, Languages, Frameworks, Build System (the result of 0.2 Workspace Detection) |
+| `Execution Plan Summary` | Total Stages, Completed, In Progress |
 | `Runtime State` | Revision Count |
-| `Phase Progress` | 5 phase の状態（Pending / Active / Verified / Skipped） |
-| `Stage Progress` | 全 32 stage の checkbox。phase ごとの `### <PHASE> PHASE` 小見出しで区切る |
-| `Current Status` | Lifecycle Phase、Current Stage、Next Stage、Status（Running / Completed）、Construction Autonomy Mode（unset / autonomous / gated）、Last Updated |
-| `Session Resume Point` | Last Completed Stage、Next Action、Pending Artifacts |
+| `Phase Progress` | The state of the 5 phases (Pending / Active / Verified / Skipped) |
+| `Stage Progress` | Checkboxes for all 32 stages, divided by a `### <PHASE> PHASE` subheading per phase |
+| `Current Status` | Lifecycle Phase, Current Stage, Next Stage, Status (Running / Completed), Construction Autonomy Mode (unset / autonomous / gated), Last Updated |
+| `Session Resume Point` | Last Completed Stage, Next Action, Pending Artifacts |
 
-読み書きは、セクション見出し、チェックリスト行（`- [x] <stage-slug>` 形式）、フィールド行（`**Key**: value` 形式）だけを対象にする。
-書き込みは対象行の置換だけで行い、セクションの順序と未知の行を保存する。
-parse 契約の実装は `skills/amadeus-validator/validator/aidlc-state-contract.ts` に置き、単一入口と validator が共有する。
+Reading and writing are scoped to section headings, checklist lines (the `- [x] <stage-slug>` form), and field lines (the `**Key**: value` form) only.
+A write replaces only the target line; it preserves the section order and any unknown lines.
+The parse contract is implemented in `skills/amadeus-validator/validator/aidlc-state-contract.ts`, shared by the single entry point and the validator.
 
-## ステージ状態
+## Stage state
 
-ステージ状態は Stage Progress の checkbox で表す。語彙は v2 の 6 種である。
+Stage state is expressed by the Stage Progress checkbox. The vocabulary is the v2 set of 6.
 
-| checkbox | 状態名 | 意味 |
+| checkbox | State name | Meaning |
 |---|---|---|
-| `[ ]` | Pending | 未着手。 |
-| `[-]` | Active | 実行中。 |
-| `[?]` | AwaitingApproval | 作業完了、ゲート待ち。人間の応答が唯一のブロッカー。 |
-| `[R]` | Revising | ゲートで差し戻され、修正中。 |
-| `[x]` | Completed | 承認済みで完了。 |
-| `[S]` | Skipped | scope または Condition により実行対象外。 |
+| `[ ]` | Pending | Not started. |
+| `[-]` | Active | In progress. |
+| `[?]` | AwaitingApproval | Work complete, waiting at the gate. A human response is the only blocker. |
+| `[R]` | Revising | Sent back at the gate; under revision. |
+| `[x]` | Completed | Approved and complete. |
+| `[S]` | Skipped | Out of execution scope per scope or a Condition. |
 
-checkbox 行の注記（` — ` 区切り）には、実行対象なら `EXECUTE`、対象外なら `SKIP: <理由>` を書く。
-Operation の 7 stage は Amadeus の実行対象外であり、常に `[S]`（`SKIP: out of Amadeus scope`）にする。
+The checkbox line's annotation (after the ` — ` separator) reads `EXECUTE` when the stage is in scope, or `SKIP: <reason>` when it is not.
+Operation's 7 stages are out of Amadeus's execution scope and are always `[S]` (`SKIP: out of Amadeus scope`).
 
-状態遷移は次に限る。
+State transitions are limited to the following.
 
-- `[ ]` から `[-]`。ステージ開始。
-- `[-]` から `[?]`。成果物を作りゲートを提示。
-- `[?]` から `[x]`。人間が承認。
-- `[?]` から `[R]`。人間が差し戻し。
-- `[R]` から `[?]`。修正後に再提示。
-- `[ ]`、`[-]`、`[R]` から `[S]`。Condition の判定または人間の指示。
+- `[ ]` to `[-]`. Stage starts.
+- `[-]` to `[?]`. Artifacts are produced and the gate is presented.
+- `[?]` to `[x]`. A human approves.
+- `[?]` to `[R]`. A human sends it back.
+- `[R]` to `[?]`. Re-presented after revision.
+- `[ ]`, `[-]`, or `[R]` to `[S]`. A Condition evaluation or human instruction.
 
-`[?]` と `[R]` を分けることで、再開時の挙動を区別する。
-`[R]` で再開した場合は、ステージを最初からやり直さず、前回の成果物と差し戻し理由を提示してから修正に入る。
+Separating `[?]` from `[R]` distinguishes resume behavior.
+When resuming from `[R]`, the stage does not restart from scratch — it presents the prior artifact and the reason it was sent back before entering revision.
 
-Unit 単位ステージ（Construction 3.1〜3.5）は、CONSTRUCTION PHASE の小見出し配下を `Per unit: <unit>` ブロックで Unit ごとに繰り返す。
+Unit-scoped stages (Construction 3.1-3.5) repeat, under the CONSTRUCTION PHASE subheading, one `Per unit: <unit>` block per Unit.
 
-## 承認と履歴（audit）
+## Approval and history (audit)
 
-承認記録は `amadeus-state.md` に持たず、`audit/audit.md` のイベントが持つ。
-entry の形式とイベント名は v2 の audit format に従い、追記だけを行う。
+Approval records are not held in `amadeus-state.md`; they belong to events in `audit/audit.md`.
+Entry format and event names follow the v2 audit format, and only appends are made.
 
-| 記録 | イベント |
+| Record | Event |
 |---|---|
-| ステージのゲート提示 | `STAGE_AWAITING_APPROVAL` |
-| 人間の承認（会話内ゲート） | `GATE_APPROVED`（User Input をそのまま記録）と `STAGE_COMPLETED` |
-| 人間の差し戻し | `GATE_REJECTED`（Feedback をそのまま記録）と `STAGE_REVISING` |
-| Condition または scope による skip | `STAGE_SKIPPED` |
-| phase 境界（phase PR の merge） | `PHASE_VERIFIED`（Details に PR の URL） |
-| 全ステージ SKIP の phase の通過 | `PHASE_SKIPPED` |
-| Bolt の開始と完了 | `BOLT_STARTED`、`BOLT_COMPLETED`（Details に Bolt PR の URL） |
-| ladder 提案の回答 | `AUTONOMY_MODE_SET` |
-| Intent の開始と完了 | `WORKFLOW_STARTED`、`WORKFLOW_COMPLETED` |
+| Stage gate presented | `STAGE_AWAITING_APPROVAL` |
+| Human approval (in-conversation gate) | `GATE_APPROVED` (records the User Input verbatim) and `STAGE_COMPLETED` |
+| Human rejection | `GATE_REJECTED` (records the Feedback verbatim) and `STAGE_REVISING` |
+| Skip by Condition or scope | `STAGE_SKIPPED` |
+| Phase boundary (phase PR merge) | `PHASE_VERIFIED` (Details holds the PR URL) |
+| Passage of a phase with all stages skipped | `PHASE_SKIPPED` |
+| Bolt start and completion | `BOLT_STARTED`, `BOLT_COMPLETED` (Details holds the Bolt PR URL) |
+| Response to a ladder proposal | `AUTONOMY_MODE_SET` |
+| Intent start and completion | `WORKFLOW_STARTED`, `WORKFLOW_COMPLETED` |
 
-ステージゲートは会話内、phase ゲートと Bolt ゲートの確定は PR と人間 merge を基本にする。
-Request Changes が 3 回続いた後の Accept as-is による完了は、`GATE_APPROVED` に Accept as-is である旨を含めて記録し、判断を phase の `decisions.md` に記録する。
+Stage gates default to in-conversation; phase gate and Bolt gate confirmation default to a PR and its human merge.
+Completion via Accept-as-is after 3 consecutive rounds of Request Changes is recorded in `GATE_APPROVED` by noting that it is an Accept-as-is, with the judgment recorded in the phase's `decisions.md`.
 
-## 台帳と PR 断面
+## Ledger and PR snapshots
 
-`amadeus-state.md` と `audit/audit.md` は追記型の生きた台帳であり、phase PR や Bolt PR の断面ごとに状態を巻き戻さない。
-ここでの台帳は Intent の進行記録を指し、「カーソルとレジストリ」節の正準台帳（`intents.json`）とは別の対象である。
-この扱いは、org.md の「audit の記録済みイベントを書き換えない」という禁止事項と整合する。
+`amadeus-state.md` and `audit/audit.md` are a live, append-only ledger; they do not roll state back to match each phase PR's or Bolt PR's snapshot.
+The ledger here refers to the Intent's progress record — a distinct object from the canonical ledger (`intents.json`) in the "Cursor and registry" section below.
+This treatment is consistent with org.md's prohibition against rewriting recorded audit events.
 
-各 phase PR / Bolt PR に含めるのは当該 phase / Bolt の成果物ディレクトリだけであり、台帳ファイル（`amadeus-state.md`、`audit/`）は常に最新断面を含む。
-したがって PR の diff 上、台帳が「その PR に含まれない未来または過去の状態」を含むのは正常である。
+Each phase PR / Bolt PR includes only that phase's / Bolt's artifact directory; the ledger files (`amadeus-state.md`, `audit/`) always carry the latest snapshot.
+So it is normal for the ledger, in a PR's diff, to include "future or past state not part of that PR."
 
-resume と検証は、特定 PR の断面ではなく台帳全体を読む。
-audit の `BOLT_COMPLETED` などのイベントも含めて参照する。
+Resume and verification read the whole ledger, not a specific PR's snapshot.
+This includes referencing audit events such as `BOLT_COMPLETED`.
 
-レビューで「台帳が PR 断面と一致しない」という指摘を受けた場合は、この節または [Issue #477](https://github.com/amadeus-dlc/amadeus/issues/477) へのリンク 1 つで応答し、スレッドを resolve してよい。
-PR 説明へ貼れる定型 1 行は次のとおりである。
+If a review raises "the ledger doesn't match the PR snapshot," you may respond with a single link to this section or to [Issue #477](https://github.com/amadeus-dlc/amadeus/issues/477) and resolve the thread.
+A stock line you can paste into a PR description:
 
 ```
-台帳ファイル（amadeus-state.md / audit）は生きた台帳であり PR 断面と一致しません。docs/amadeus/lifecycle/state.md の「台帳と PR 断面」を参照。
+The ledger files (amadeus-state.md / audit) are a live ledger and do not match the PR snapshot. See "Ledger and PR snapshots" in docs/amadeus/lifecycle/state.md.
 ```
 
-Phase Progress の自動更新は [Issue #464](https://github.com/amadeus-dlc/amadeus/issues/464) を解決した [PR #479](https://github.com/amadeus-dlc/amadeus/pull/479) でエンジンに実装済みであり、その挙動は次の「phase 遷移」節の記述が正である。
-同 PR は phase 境界で `verification/phase-check-<phase>.md` の存在も要求するようになった（要求条件としての文書化は「検証」節の検証項目に含める整理を #464 の後続で行う）。
+Phase Progress's automatic update was already implemented in the engine by [PR #479](https://github.com/amadeus-dlc/amadeus/pull/479), which resolved [Issue #464](https://github.com/amadeus-dlc/amadeus/issues/464); its behavior is authoritative per the "Phase transitions" section below.
+The same PR also made the presence of `verification/phase-check-<phase>.md` a requirement at phase boundaries (documenting it as a requirement item under the "Verification" section's checklist is follow-up work for #464).
 
-## phase 遷移
+## Phase transitions
 
-phase は Initialization、Ideation、Inception、Construction の順に進む。
-Operation は record の scaffold だけを持ち、実行対象にしない。
+Phases proceed in the order Initialization, Ideation, Inception, Construction.
+Operation holds only the record's scaffold and is out of execution scope.
 
-実行したステージが 1 つ以上ある phase は、実行対象ステージがすべて `[x]` または `[S]` になり、phase PR が merge された時点で、`PHASE_VERIFIED` を記録して Phase Progress を `Verified` にし、次の phase へ遷移する。
+A phase with one or more executed stages records `PHASE_VERIFIED`, sets Phase Progress to `Verified`, and transitions to the next phase once all in-scope stages are `[x]` or `[S]` and the phase PR is merged.
 
-scope が phase 内の全ステージを SKIP にする場合、その phase は成果物と phase PR を作らずに通過し、`PHASE_SKIPPED` を記録して Phase Progress を `Skipped` にする。
-例として bugfix は Ideation の全ステージが SKIP であり、Intake の Birth 承認を根拠に Ideation を `Skipped` にして、直接 Inception のステージへ進む。
+When scope skips every stage within a phase, that phase passes through without producing artifacts or a phase PR: it records `PHASE_SKIPPED` and sets Phase Progress to `Skipped`.
+For example, bugfix skips every Ideation stage; on the strength of Intake's Birth approval, it sets Ideation to `Skipped` and proceeds directly to Inception's stages.
 
-Construction phase PR の merge 後は、Current Status の `Status` を `Completed` にし、`WORKFLOW_COMPLETED` を記録し、registry の `status` を `completed` にする。
+After the Construction phase PR merges, Current Status's `Status` is set to `Completed`, `WORKFLOW_COMPLETED` is recorded, and the registry's `status` is set to `completed`.
 
-中断する Intent は `WORKFLOW_PARKED` を記録し、再開時に `WORKFLOW_UNPARKED` を記録して Session Resume Point から再開する。
+A parked Intent records `WORKFLOW_PARKED`; on resume, it records `WORKFLOW_UNPARKED` and resumes from the Session Resume Point.
 
-## カーソルとレジストリ
+## Cursor and registry
 
-**カーソル**：`amadeus/active-space` が現在の Space を、`amadeus/spaces/<space>/intents/active-intent` が現在作業中の record の dirName を指す。
-カーソルは作業者ローカルの状態であり、gitignore にする。
-Intake の継続判定は、まずカーソルの指す Intent と入力を照合する。
+**Cursor**: `amadeus/active-space` points to the current Space, and `amadeus/spaces/<space>/intents/active-intent` points to the dirName of the record currently being worked on.
+The cursor is worker-local state and is gitignored.
+Intake's continuation judgment first matches the cursor's Intent against the input.
 
-**レジストリ**：`amadeus/spaces/<space>/intents/intents.json` は全 Intent の正準台帳である。
-各行は `{uuid, slug, dirName, scope, repos, status}` を持つ。
-`uuid` は UUIDv7 であり、衝突しない正準 ID である。
-`dirName` は record ディレクトリ名（`<YYMMDD>-<label>` 形式）であり、同日同名の衝突は末尾の連番（`-2`、`-3`）で区別する。
+**Registry**: `amadeus/spaces/<space>/intents/intents.json` is the canonical ledger of all Intents.
+Each entry holds `{uuid, slug, dirName, scope, repos, status}`.
+`uuid` is a UUIDv7, a collision-free canonical ID.
+`dirName` is the record directory name (the `<YYMMDD>-<label>` form); same-day, same-name collisions are distinguished by a trailing sequence number (`-2`, `-3`).
 
-**索引**：`intents.md` 索引は GD009 で廃止した。
-人間向けの Intent 一覧が必要な場合は、正準台帳 `intents.json` から都度生成する（[overview.md](overview.md) を参照）。
+**Index**: the `intents.md` index was retired (GD009).
+When a human-facing Intent listing is needed, generate it on demand from the canonical ledger `intents.json` (see [overview.md](overview.md)).
 
-補足: #369 の確定判断 3（state.json を状態の持ち主にする）と確定判断 4（UUIDv7 を採用しない）は、v2 完全準拠（Issue #387、GD001〜GD003）でこの契約に上書きされた。
+Note: #369's confirmed decision 3 (making state.json the owner of state) and confirmed decision 4 (not adopting UUIDv7) were superseded by this contract under full v2 compliance (Issue #387, GD001-GD003).
 
-## 検証
+## Verification
 
-`amadeus-validator` は少なくとも次を検証する。
+`amadeus-validator` verifies at least the following.
 
-- `amadeus-state.md` が v2 state template の全セクションと State Version 7 を持つ。
-- Stage Progress に全 32 stage の行があり、checkbox が既知の語彙である。
-- scope の実行対象外のステージと Operation の全ステージが `[S]` である。
-- `[x]` のステージに、契約が必須とする成果物と `STAGE_COMPLETED` イベントが存在する。
-- 必須入力の供給ステージが `[S]` の場合、後続ステージが [scopes.md](scopes.md) の縮退時の入力代替に従っている。
-- 先行 phase の Phase Progress が `Verified` または `Skipped` であり、対応する `PHASE_VERIFIED` / `PHASE_SKIPPED` イベントが存在する。
-- `intents.json` の各行が UUIDv7 と `<YYMMDD>-<label>` 形式の dirName を持ち、record ディレクトリと 1:1 に対応する。
+- `amadeus-state.md` has every section of the v2 state template and State Version 7.
+- Stage Progress has a row for all 32 stages, and each checkbox is a known vocabulary item.
+- Stages out of scope's execution scope, and all of Operation's stages, are `[S]`.
+- A `[x]` stage has the artifacts the contract requires, and a `STAGE_COMPLETED` event exists.
+- When a required input's supplying stage is `[S]`, downstream stages follow the input substitution on reduction in [scopes.md](scopes.md).
+- The preceding phase's Phase Progress is `Verified` or `Skipped`, and the corresponding `PHASE_VERIFIED` / `PHASE_SKIPPED` event exists.
+- Each entry in `intents.json` has a UUIDv7 and a dirName in the `<YYMMDD>-<label>` form, corresponding 1:1 with a record directory.

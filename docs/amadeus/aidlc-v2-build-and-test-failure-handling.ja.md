@@ -73,4 +73,4 @@ Build and Test は実装修正を行わない。
 - [AI-DLC v2 Difference Response Plan](aidlc-v2-difference-response-plan.ja.md)
 - [AI-DLC v2 Reviewer Mapping](aidlc-v2-reviewer-mapping.ja.md)
 - [AI-DLC v2 Sensor and Learn Mapping](aidlc-v2-sensor-learn-mapping.ja.md)
-- [Lifecycle Construction](lifecycle/construction.md)
+- [Lifecycle Construction](lifecycle/construction.ja.md)

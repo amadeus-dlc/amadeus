@@ -6,40 +6,40 @@
 
 ## Phase Overview
 
-Inception phase は、既存コードの理解、チームプラクティスの発見、要求、ストーリー、アプリケーション設計、Unit の依存 DAG、Bolt 計画を作る phase である。
+The Inception phase produces an understanding of the existing code, discovers team practices, and builds requirements, stories, application design, the Unit dependency DAG, and the Bolt plan.
 
-Inception は、要求からトポロジ（Unit と依存）までを確定し、実行順序の経済判断（何を先に出荷するか）を Delivery Planning に分離する。
+Inception settles everything from requirements through topology (Units and their dependencies), and separates the economic sequencing decision (what to ship first) into Delivery Planning.
 
-この phase では、Domain Model の詳細、実装、テスト実行を扱わない。
+This phase does not handle Domain Model detail, implementation, or test execution.
 
-phase 共通入力として、全ステージが steering/memory 参照（`org.md`、`team.md`、`project.md`、`phases/inception.md` = エンジンの rules_in_context）を読む。
-各ステージの Inputs 表にはこの共通入力を繰り返さない（記法は [overview.md](overview.md) の「ステージ契約の I/O 記法」を参照）。
+As a phase-common input, every stage reads the steering/memory references (`org.md`, `team.md`, `project.md`, `phases/inception.md` — the engine's rules_in_context).
+This common input is not repeated in each stage's Inputs table (for the notation, see "Stage contract I/O notation" in [overview.md](overview.md)).
 
-phase 完了は Inception 成果物の PR と人間 merge で確定する。
+Phase completion is finalized by a PR of the Inception artifacts and a human merge.
 
-## Execution 判定基準
+## Execution criteria
 
-`Execution` と `Condition` の判定は [overview.md](overview.md) と [scopes.md](scopes.md) に従う。
+The determination of `Execution` and `Condition` follows [overview.md](overview.md) and [scopes.md](scopes.md).
 
-brownfield とは、変更対象の既存コードがある状態を指す。
-brownfield 条件の入力は、greenfield では要求しない。
+brownfield refers to a state where existing code for the change target already exists.
+Inputs conditioned on brownfield are not required in greenfield.
 
-既存成果物がある場合は、再作成ではなく点検または補修で充足してよい。
+When an existing artifact already exists, it may be satisfied by inspection or repair rather than recreation.
 
 ## Stage Summary Table
 
 | Stage | Name | Execution | Condition | Lead Skill | Outputs |
 |---|---|---|---|---|---|
-| 2.1 | Reverse Engineering | CONDITIONAL | brownfield の場合。鮮度維持のため毎回再実行 | `amadeus-inception-reverse-engineering` | `codekb/<repo>/` の 9 成果物 |
-| 2.2 | Practices Discovery | CONDITIONAL | 鮮度維持のため毎回再実行。brownfield は証拠から、greenfield は質問で発見 | `amadeus-inception-practices-discovery` | `team-practices.md`、`discovered-rules.md`、`evidence.md` |
-| 2.3 | Requirements Analysis | ALWAYS | scope が実行対象にする場合は必ず実行 | `amadeus-inception-requirements-analysis` | `requirements.md` |
-| 2.4 | User Stories | CONDITIONAL | 利用者向け機能、複数ペルソナ、複雑な業務ロジック、チーム横断がある場合 | `amadeus-inception-user-stories` | `stories.md`、`personas.md`、`user-stories-assessment.md` |
-| 2.5 | Refined Mockups | CONDITIONAL | UI があり Ideation で rough mockups を作った場合 | `amadeus-inception-refined-mockups` | `mockups.md`、`interaction-spec.md` ほか |
-| 2.6 | Application Design | CONDITIONAL | 新しいコンポーネントやサービスの設計が必要な場合 | `amadeus-inception-application-design` | `components.md`、`services.md` ほか |
-| 2.7 | Units Generation | ALWAYS | scope が実行対象にする場合は必ず実行 | `amadeus-inception-units-generation` | `unit-of-work.md`、`unit-of-work-dependency.md`、`unit-of-work-story-map.md` |
-| 2.8 | Delivery Planning | ALWAYS | scope が実行対象にする場合は必ず実行 | `amadeus-inception-delivery-planning` | `bolt-plan.md` ほか |
+| 2.1 | Reverse Engineering | CONDITIONAL | When brownfield. Re-run every time to keep it fresh | `amadeus-inception-reverse-engineering` | 9 artifacts under `codekb/<repo>/` |
+| 2.2 | Practices Discovery | CONDITIONAL | Re-run every time to keep it fresh. Discovered from evidence in brownfield, from questions in greenfield | `amadeus-inception-practices-discovery` | `team-practices.md`, `discovered-rules.md`, `evidence.md` |
+| 2.3 | Requirements Analysis | ALWAYS | Always runs when scope targets it for execution | `amadeus-inception-requirements-analysis` | `requirements.md` |
+| 2.4 | User Stories | CONDITIONAL | When there is user-facing functionality, multiple personas, complex business logic, or cross-team work | `amadeus-inception-user-stories` | `stories.md`, `personas.md`, `user-stories-assessment.md` |
+| 2.5 | Refined Mockups | CONDITIONAL | When there is a UI and Ideation produced rough mockups | `amadeus-inception-refined-mockups` | `mockups.md`, `interaction-spec.md`, and more |
+| 2.6 | Application Design | CONDITIONAL | When designing new components or services is needed | `amadeus-inception-application-design` | `components.md`, `services.md`, and more |
+| 2.7 | Units Generation | ALWAYS | Always runs when scope targets it for execution | `amadeus-inception-units-generation` | `unit-of-work.md`, `unit-of-work-dependency.md`, `unit-of-work-story-map.md` |
+| 2.8 | Delivery Planning | ALWAYS | Always runs when scope targets it for execution | `amadeus-inception-delivery-planning` | `bolt-plan.md`, and more |
 
-各ステージは、確認した論点と回答を stage ディレクトリの `<stage-slug>-questions.md` に記録する。
+Each stage records the points it confirmed and their answers in the stage directory's `<stage-slug>-questions.md`.
 
 ## Stage 2.1: Reverse Engineering
 
@@ -50,40 +50,40 @@ brownfield 条件の入力は、greenfield では要求しない。
 | Stage | 2.1 |
 | Phase | Inception |
 | Execution | CONDITIONAL |
-| Condition | brownfield の場合に実行する。鮮度維持のため毎回再実行する。greenfield では実行しない |
+| Condition | Runs when brownfield. Re-runs every time to keep it fresh. Does not run in greenfield |
 | Lead Skill | `amadeus-inception-reverse-engineering` |
-| Mode | internal（subagent 委譲可） |
+| Mode | internal (delegable to a subagent) |
 | v2 Source | [reverse-engineering.md](https://github.com/awslabs/aidlc-workflows/blob/v2/core/amadeus-common/stages/inception/reverse-engineering.md) |
 
 ### Purpose
 
-既存コードベースを解析し、業務概要、アーキテクチャ、コード構造、API、コンポーネント一覧、技術スタック、依存、品質評価を記録する。
+Analyzes the existing codebase and records the business overview, architecture, code structure, API, component inventory, technology stack, dependencies, and quality assessment.
 
 ### Inputs
 
-| Artifact | 必須 | 供給元 |
+| Artifact | Required | Source |
 |---|---|---|
-| 対象リポジトリのコード | 必須 | workspace |
+| Code of the target repository | Required | workspace |
 
 ### Outputs
 
-| Artifact | Description | v2 対応 |
+| Artifact | Description | v2 Counterpart |
 |---|---|---|
-| `codekb/<repo>/business-overview.md` | 業務概要 | business-overview |
-| `codekb/<repo>/architecture.md` | アーキテクチャ | architecture |
-| `codekb/<repo>/code-structure.md` | コード構造 | code-structure |
-| `codekb/<repo>/api-documentation.md` | API 文書 | api-documentation |
-| `codekb/<repo>/component-inventory.md` | コンポーネント一覧 | component-inventory |
-| `codekb/<repo>/technology-stack.md` | 技術スタック | technology-stack |
-| `codekb/<repo>/dependencies.md` | 依存関係 | dependencies |
-| `codekb/<repo>/code-quality-assessment.md` | 品質評価 | code-quality-assessment |
-| `codekb/<repo>/timestamp.md` | 解析時刻と鮮度 | reverse-engineering-timestamp |
-| `inception/reverse-engineering/memory.md` | stage 実行の学習記録（Interpretations、Deviations、Tradeoffs、Open questions） | memory |
+| `codekb/<repo>/business-overview.md` | Business overview | business-overview |
+| `codekb/<repo>/architecture.md` | Architecture | architecture |
+| `codekb/<repo>/code-structure.md` | Code structure | code-structure |
+| `codekb/<repo>/api-documentation.md` | API documentation | api-documentation |
+| `codekb/<repo>/component-inventory.md` | Component inventory | component-inventory |
+| `codekb/<repo>/technology-stack.md` | Technology stack | technology-stack |
+| `codekb/<repo>/dependencies.md` | Dependencies | dependencies |
+| `codekb/<repo>/code-quality-assessment.md` | Quality assessment | code-quality-assessment |
+| `codekb/<repo>/timestamp.md` | Analysis time and freshness | reverse-engineering-timestamp |
+| `inception/reverse-engineering/memory.md` | Learning record of stage execution (Interpretations, Deviations, Tradeoffs, Open questions) | memory |
 
 ### Notes
 
-成果物は Intent 配下ではなく Space の `codekb/<repo>/` 配下に置き、Intent をまたいで再利用する。
-旧契約の `inception/codebase-analysis.md` はこのステージの成果物へ移る。
+The artifacts are placed under the Space's `codekb/<repo>/`, not under the Intent, and are reused across Intents.
+The legacy contract's `inception/codebase-analysis.md` moves to this stage's artifacts.
 
 ## Stage 2.2: Practices Discovery
 
@@ -94,38 +94,38 @@ brownfield 条件の入力は、greenfield では要求しない。
 | Stage | 2.2 |
 | Phase | Inception |
 | Execution | CONDITIONAL |
-| Condition | 鮮度維持のため毎回再実行する。brownfield は証拠と Reverse Engineering 成果物から発見し、greenfield は構造化質問で確認する |
+| Condition | Re-runs every time to keep it fresh. Discovered from evidence and Reverse Engineering's artifacts in brownfield, confirmed through structured questions in greenfield |
 | Lead Skill | `amadeus-inception-practices-discovery` |
 | Mode | internal |
 | v2 Source | [practices-discovery.md](https://github.com/awslabs/aidlc-workflows/blob/v2/core/amadeus-common/stages/inception/practices-discovery.md) |
 
 ### Purpose
 
-チームの開発プラクティス（ブランチ戦略、テスト方針、デプロイ、品質基準）を発見し、証拠付きで記録する。
+Discovers the team's development practices (branch strategy, test policy, deployment, quality standards) and records them with evidence.
 
-人間が確認したプラクティスは Space の `memory/team.md` へ昇格し、以後の Intent が参照する。
+Practices confirmed by a human are promoted into the Space's `memory/team.md`, and subsequent Intents reference them.
 
 ### Inputs
 
-| Artifact | 必須 | 供給元 |
+| Artifact | Required | Source |
 |---|---|---|
-| `codekb/<repo>/` の成果物 | 条件付き（brownfield） | Stage 2.1 |
-| Space の既存 `memory/team.md` | 任意 | Space |
+| Artifacts under `codekb/<repo>/` | Conditional (brownfield) | Stage 2.1 |
+| The Space's existing `memory/team.md` | Optional | Space |
 
 ### Outputs
 
-| Artifact | Description | v2 対応 |
+| Artifact | Description | v2 Counterpart |
 |---|---|---|
-| `inception/practices-discovery/team-practices.md` | 発見したプラクティス | team-practices |
-| `inception/practices-discovery/discovered-rules.md` | ルール候補 | discovered-rules |
-| `inception/practices-discovery/evidence.md` | 発見の根拠 | evidence |
-| `inception/practices-discovery/practices-discovery-timestamp.md` | 発見時刻と鮮度 | practices-discovery-timestamp |
-| `inception/practices-discovery/memory.md` | stage 実行の学習記録（Interpretations、Deviations、Tradeoffs、Open questions） | memory |
+| `inception/practices-discovery/team-practices.md` | Discovered practices | team-practices |
+| `inception/practices-discovery/discovered-rules.md` | Candidate rules | discovered-rules |
+| `inception/practices-discovery/evidence.md` | Grounds for the discovery | evidence |
+| `inception/practices-discovery/practices-discovery-timestamp.md` | Discovery time and freshness | practices-discovery-timestamp |
+| `inception/practices-discovery/memory.md` | Learning record of stage execution (Interpretations, Deviations, Tradeoffs, Open questions) | memory |
 
 ### Notes
 
-昇格先は Space の `memory/team.md` である。
-昇格は人間の承認を要する。
+The promotion target is the Space's `memory/team.md`.
+Promotion requires human approval.
 
 ## Stage 2.3: Requirements Analysis
 
@@ -136,40 +136,40 @@ brownfield 条件の入力は、greenfield では要求しない。
 | Stage | 2.3 |
 | Phase | Inception |
 | Execution | ALWAYS |
-| Condition | scope が実行対象にする場合は必ず実行する。深さは depth に従う |
+| Condition | Always runs when scope targets it for execution. Depth follows depth |
 | Lead Skill | `amadeus-inception-requirements-analysis` |
 | Mode | internal |
 | v2 Source | [requirements-analysis.md](https://github.com/awslabs/aidlc-workflows/blob/v2/core/amadeus-common/stages/inception/requirements-analysis.md) |
 
 ### Purpose
 
-Intent を検証可能な要求へ落とす。
-各要求は識別子と受け入れ条件を持ち、成功条件から追跡できるようにする。
+Breaks the Intent down into verifiable requirements.
+Each requirement has an identifier and acceptance criteria, and can be traced back to the success conditions.
 
 ### Inputs
 
-| Artifact | 必須 | 供給元 |
+| Artifact | Required | Source |
 |---|---|---|
-| record の audit shard にある user project description | 必須 | Intake |
-| `intent-statement.md` | 任意 | Stage 1.1 |
-| `scope-document.md` | 任意 | Stage 1.4 |
-| `codekb/<repo>/` の成果物 | 条件付き（brownfield） | Stage 2.1 |
-| `team-practices.md` | 任意 | Stage 2.2 |
+| user project description in the record's audit shard | Required | Intake |
+| `intent-statement.md` | Optional | Stage 1.1 |
+| `scope-document.md` | Optional | Stage 1.4 |
+| Artifacts under `codekb/<repo>/` | Conditional (brownfield) | Stage 2.1 |
+| `team-practices.md` | Optional | Stage 2.2 |
 
 ### Outputs
 
-| Artifact | Description | v2 対応 |
+| Artifact | Description | v2 Counterpart |
 |---|---|---|
-| `inception/requirements-analysis/requirements.md` | 要求一覧。各要求に識別子と受け入れ条件を含める | requirements |
-| `inception/requirements-analysis/requirements-analysis-questions.md` | 確認した質問と回答 | requirements-analysis-questions |
-| `inception/requirements-analysis/memory.md` | stage 実行の学習記録（Interpretations、Deviations、Tradeoffs、Open questions） | memory |
+| `inception/requirements-analysis/requirements.md` | Requirement list. Each requirement includes an identifier and acceptance criteria | requirements |
+| `inception/requirements-analysis/requirements-analysis-questions.md` | Confirmed questions and answers | requirements-analysis-questions |
+| `inception/requirements-analysis/memory.md` | Learning record of stage execution (Interpretations, Deviations, Tradeoffs, Open questions) | memory |
 
 ### Notes
 
-受け入れ条件は各要求に内包する。
-旧契約の `inception/acceptance.md` は退役し、独立した成果物にしない。
-要求が多い場合は `requirements/<requirement-id>.md` へ分割してよい。
-その場合も `requirements.md` を一覧として維持する。
+Acceptance criteria are embedded in each requirement.
+The legacy contract's `inception/acceptance.md` is retired and is not made a separate artifact.
+When there are many requirements, they may be split into `requirements/<requirement-id>.md`.
+Even then, `requirements.md` is kept as the list.
 
 ## Stage 2.4: User Stories
 
@@ -180,36 +180,36 @@ Intent を検証可能な要求へ落とす。
 | Stage | 2.4 |
 | Phase | Inception |
 | Execution | CONDITIONAL |
-| Condition | 利用者向け機能、複数ペルソナ、複雑な業務ロジック、チーム横断の作業がある場合に実行する。純粋なリファクタリング、単発のバグ修正、インフラのみの変更、開発者ツールでは実行しない |
+| Condition | Runs when there is user-facing functionality, multiple personas, complex business logic, or cross-team work. Does not run for pure refactoring, a one-off bug fix, an infrastructure-only change, or developer tooling |
 | Lead Skill | `amadeus-inception-user-stories` |
 | Mode | internal |
 | v2 Source | [user-stories.md](https://github.com/awslabs/aidlc-workflows/blob/v2/core/amadeus-common/stages/inception/user-stories.md) |
 
 ### Purpose
 
-要求を人間アクターの価値表現へ落とし、ペルソナを整理する。
+Breaks requirements down into value statements for human actors, and organizes personas.
 
 ### Inputs
 
-| Artifact | 必須 | 供給元 |
+| Artifact | Required | Source |
 |---|---|---|
-| `requirements.md` | 必須 | Stage 2.3 |
-| `business-overview.md`、`component-inventory.md` | 条件付き（brownfield） | Stage 2.1 |
-| `team-practices.md` | 任意 | Stage 2.2 |
+| `requirements.md` | Required | Stage 2.3 |
+| `business-overview.md`, `component-inventory.md` | Conditional (brownfield) | Stage 2.1 |
+| `team-practices.md` | Optional | Stage 2.2 |
 
 ### Outputs
 
-| Artifact | Description | v2 対応 |
+| Artifact | Description | v2 Counterpart |
 |---|---|---|
-| `inception/user-stories/stories.md` | ユーザーストーリー一覧 | stories |
-| `inception/user-stories/personas.md` | ペルソナ | personas |
-| `inception/user-stories/user-stories-assessment.md` | ストーリーの充足評価 | user-stories-assessment |
-| `inception/user-stories/memory.md` | stage 実行の学習記録（Interpretations、Deviations、Tradeoffs、Open questions） | memory |
+| `inception/user-stories/stories.md` | User story list | stories |
+| `inception/user-stories/personas.md` | Personas | personas |
+| `inception/user-stories/user-stories-assessment.md` | Story sufficiency assessment | user-stories-assessment |
+| `inception/user-stories/memory.md` | Learning record of stage execution (Interpretations, Deviations, Tradeoffs, Open questions) | memory |
 
 ### Notes
 
-旧契約の use-cases ステージは退役する。
-アクターとシステムの相互作用の具体化は、このステージと Construction の Functional Design が担う。
+The legacy contract's use-cases stage is retired.
+Detailing actor-system interactions is handled by this stage and by Construction's Functional Design.
 
 ## Stage 2.5: Refined Mockups
 
@@ -220,34 +220,34 @@ Intent を検証可能な要求へ落とす。
 | Stage | 2.5 |
 | Phase | Inception |
 | Execution | CONDITIONAL |
-| Condition | UI があり、Ideation で rough mockups を作った場合に実行する。API は相互作用図を精緻化する |
+| Condition | Runs when there is a UI and Ideation produced rough mockups. For an API, it refines the interaction diagram |
 | Lead Skill | `amadeus-inception-refined-mockups` |
 | Mode | internal |
 | v2 Source | [refined-mockups.md](https://github.com/awslabs/aidlc-workflows/blob/v2/core/amadeus-common/stages/inception/refined-mockups.md) |
 
 ### Purpose
 
-rough mockups を、要求とストーリーに対応づけた詳細モックへ精緻化する。
+Refines the rough mockups into detailed mocks mapped to requirements and stories.
 
 ### Inputs
 
-| Artifact | 必須 | 供給元 |
+| Artifact | Required | Source |
 |---|---|---|
-| `wireframes.md`、`user-flow.md` | 必須（Rough Mockups 実行時） | Stage 1.6 |
-| `requirements.md` | 必須 | Stage 2.3 |
-| `stories.md` | 任意 | Stage 2.4 |
-| `team-practices.md` | 任意 | Stage 2.2 |
+| `wireframes.md`, `user-flow.md` | Required (when Rough Mockups runs) | Stage 1.6 |
+| `requirements.md` | Required | Stage 2.3 |
+| `stories.md` | Optional | Stage 2.4 |
+| `team-practices.md` | Optional | Stage 2.2 |
 
 ### Outputs
 
-| Artifact | Description | v2 対応 |
+| Artifact | Description | v2 Counterpart |
 |---|---|---|
-| `inception/refined-mockups/mockups.md` | 詳細モック | mockups |
-| `inception/refined-mockups/interaction-spec.md` | 相互作用仕様 | interaction-spec |
-| `inception/refined-mockups/design-system-mapping.md` | デザインシステム対応 | design-system-mapping |
-| `inception/refined-mockups/accessibility-checklist.md` | アクセシビリティ確認 | accessibility-checklist |
-| `inception/refined-mockups/refined-mockups-questions.md` | 確認した質問と回答 | refined-mockups-questions |
-| `inception/refined-mockups/memory.md` | stage 実行の学習記録（Interpretations、Deviations、Tradeoffs、Open questions） | memory |
+| `inception/refined-mockups/mockups.md` | Detailed mocks | mockups |
+| `inception/refined-mockups/interaction-spec.md` | Interaction specification | interaction-spec |
+| `inception/refined-mockups/design-system-mapping.md` | Design system mapping | design-system-mapping |
+| `inception/refined-mockups/accessibility-checklist.md` | Accessibility check | accessibility-checklist |
+| `inception/refined-mockups/refined-mockups-questions.md` | Confirmed questions and answers | refined-mockups-questions |
+| `inception/refined-mockups/memory.md` | Learning record of stage execution (Interpretations, Deviations, Tradeoffs, Open questions) | memory |
 
 ## Stage 2.6: Application Design
 
@@ -258,41 +258,41 @@ rough mockups を、要求とストーリーに対応づけた詳細モックへ
 | Stage | 2.6 |
 | Phase | Inception |
 | Execution | CONDITIONAL |
-| Condition | 新しいコンポーネントやサービスが必要な場合、またはサービス層の設計が必要な場合に実行する。既存コンポーネントの修正だけの場合は実行しない |
+| Condition | Runs when new components or services are needed, or when service-layer design is needed. Does not run when only fixing existing components |
 | Lead Skill | `amadeus-inception-application-design` |
 | Mode | internal |
 | v2 Source | [application-design.md](https://github.com/awslabs/aidlc-workflows/blob/v2/core/amadeus-common/stages/inception/application-design.md) |
 
 ### Purpose
 
-要求とストーリーから、コンポーネント、メソッド境界、サービス、依存関係を設計する。
+Designs components, method boundaries, services, and dependencies from requirements and stories.
 
-Unit 境界の材料になるアーキテクチャをここで確定する。
+Settles here the architecture that becomes the material for Unit boundaries.
 
 ### Inputs
 
-| Artifact | 必須 | 供給元 |
+| Artifact | Required | Source |
 |---|---|---|
-| `requirements.md` | 必須 | Stage 2.3 |
-| `stories.md` | 任意 | Stage 2.4 |
-| `architecture.md`、`component-inventory.md` | 条件付き（brownfield） | Stage 2.1 |
-| `team-practices.md` | 任意 | Stage 2.2 |
+| `requirements.md` | Required | Stage 2.3 |
+| `stories.md` | Optional | Stage 2.4 |
+| `architecture.md`, `component-inventory.md` | Conditional (brownfield) | Stage 2.1 |
+| `team-practices.md` | Optional | Stage 2.2 |
 
 ### Outputs
 
-| Artifact | Description | v2 対応 |
+| Artifact | Description | v2 Counterpart |
 |---|---|---|
-| `inception/application-design/components.md` | コンポーネント一覧と責務 | components |
-| `inception/application-design/component-methods.md` | コンポーネントのメソッド境界 | component-methods |
-| `inception/application-design/services.md` | サービス設計 | services |
-| `inception/application-design/component-dependency.md` | コンポーネント依存 | component-dependency |
-| `inception/application-design/decisions.md` | 設計判断 | decisions |
-| `inception/application-design/memory.md` | stage 実行の学習記録（Interpretations、Deviations、Tradeoffs、Open questions） | memory |
+| `inception/application-design/components.md` | Component list and responsibilities | components |
+| `inception/application-design/component-methods.md` | Component method boundaries | component-methods |
+| `inception/application-design/services.md` | Service design | services |
+| `inception/application-design/component-dependency.md` | Component dependencies | component-dependency |
+| `inception/application-design/decisions.md` | Design decisions | decisions |
+| `inception/application-design/memory.md` | Learning record of stage execution (Interpretations, Deviations, Tradeoffs, Open questions) | memory |
 
 ### Notes
 
-`application-design/decisions.md` はこのステージの設計判断を扱い、phase 直下の `inception/decisions.md`（phase の確定判断）とは分ける。
-旧契約の Unit Design Brief はこのステージと Functional Design が置き換える。
+`application-design/decisions.md` handles this stage's design decisions, and is kept separate from `inception/decisions.md` directly under the phase (the phase's confirmed decisions).
+The legacy contract's Unit Design Brief is replaced by this stage and by Functional Design.
 
 ## Stage 2.7: Units Generation
 
@@ -303,45 +303,45 @@ Unit 境界の材料になるアーキテクチャをここで確定する。
 | Stage | 2.7 |
 | Phase | Inception |
 | Execution | ALWAYS |
-| Condition | scope が実行対象にする場合は必ず実行する。2.8 Delivery Planning と対で実行する |
+| Condition | Always runs when scope targets it for execution. Runs paired with 2.8 Delivery Planning |
 | Lead Skill | `amadeus-inception-units-generation` |
 | Mode | internal |
 | v2 Source | [units-generation.md](https://github.com/awslabs/aidlc-workflows/blob/v2/core/amadeus-common/stages/inception/units-generation.md) |
 
 ### Purpose
 
-Application Design と要求から、Unit と依存 DAG を生成する。
+Generates Units and the dependency DAG from Application Design and the requirements.
 
-このステージはトポロジ（Unit の境界と依存）だけを作る。
-実装順序、critical path の推奨、経済的な順序付けは扱わない。
-それらは Stage 2.8 Delivery Planning の責務である。
+This stage produces only the topology (Unit boundaries and dependencies).
+It does not handle implementation order, critical-path recommendations, or economic sequencing.
+Those are Stage 2.8 Delivery Planning's responsibility.
 
-Unit の境界戦略（サービス別、機能別、ドメイン別、デプロイ対象別）と粒度（粗い、細かい）は、構造化質問で人間に確認する。
+The Unit boundary strategy (by service, by feature, by domain, by deployment target) and granularity (coarse, fine) are confirmed with a human through structured questions.
 
 ### Inputs
 
-| Artifact | 必須 | 供給元 |
+| Artifact | Required | Source |
 |---|---|---|
-| `components.md`、`component-methods.md`、`services.md`、`component-dependency.md`、`decisions.md` | 必須（Application Design 実行時） | Stage 2.6 |
-| `requirements.md` | 必須 | Stage 2.3 |
-| `stories.md` | 任意 | Stage 2.4 |
+| `components.md`, `component-methods.md`, `services.md`, `component-dependency.md`, `decisions.md` | Required (when Application Design runs) | Stage 2.6 |
+| `requirements.md` | Required | Stage 2.3 |
+| `stories.md` | Optional | Stage 2.4 |
 
-Application Design を実行しなかった場合は、[scopes.md](scopes.md) の縮退時の入力代替に従い、Reverse Engineering の成果物または `requirements.md` から Unit 境界を判断する。
+When Application Design did not run, follow the input substitution on reduction in [scopes.md](scopes.md), and judge Unit boundaries from Reverse Engineering's artifacts or from `requirements.md`.
 
 ### Outputs
 
-| Artifact | Description | v2 対応 |
+| Artifact | Description | v2 Counterpart |
 |---|---|---|
-| `inception/units-generation/unit-of-work.md` | Unit 一覧 | unit-of-work |
-| `inception/units-generation/unit-of-work-dependency.md` | Unit の依存 DAG | unit-of-work-dependency |
-| `inception/units-generation/unit-of-work-story-map.md` | Unit とストーリーの対応。stories がある場合のみ | unit-of-work-story-map |
-| `inception/units-generation/memory.md` | stage 実行の学習記録（Interpretations、Deviations、Tradeoffs、Open questions） | memory |
+| `inception/units-generation/unit-of-work.md` | Unit list | unit-of-work |
+| `inception/units-generation/unit-of-work-dependency.md` | Unit dependency DAG | unit-of-work-dependency |
+| `inception/units-generation/unit-of-work-story-map.md` | Unit-to-story correspondence. Only when stories exist | unit-of-work-story-map |
+| `inception/units-generation/memory.md` | Learning record of stage execution (Interpretations, Deviations, Tradeoffs, Open questions) | memory |
 
 ### Notes
 
-スコープバックログの項目は、このステージで Unit 候補として評価する。
-Unit が多い場合は `units/<unit-id>-<slug>.md` へ分割してよい。
-その場合も `unit-of-work.md` を一覧として維持する。
+Scope backlog items are evaluated as Unit candidates in this stage.
+When there are many Units, they may be split into `units/<unit-id>-<slug>.md`.
+Even then, `unit-of-work.md` is kept as the list.
 
 ## Stage 2.8: Delivery Planning
 
@@ -352,47 +352,47 @@ Unit が多い場合は `units/<unit-id>-<slug>.md` へ分割してよい。
 | Stage | 2.8 |
 | Phase | Inception |
 | Execution | ALWAYS |
-| Condition | scope が実行対象にする場合は必ず実行する。Inception の最終ステージとして Construction の実行計画を作る |
+| Condition | Always runs when scope targets it for execution. As Inception's final stage, it produces Construction's execution plan |
 | Lead Skill | `amadeus-inception-delivery-planning` |
 | Mode | internal |
 | v2 Source | [delivery-planning.md](https://github.com/awslabs/aidlc-workflows/blob/v2/core/amadeus-common/stages/inception/delivery-planning.md) |
 
 ### Purpose
 
-Unit の依存 DAG に対して経済的な順序付けを行い、Bolt 計画を作る。
+Applies economic sequencing to the Unit dependency DAG and produces the Bolt plan.
 
-Bolt の束ね方（Unit 1 個ずつ、関連 Unit の束、Unit をまたぐ薄いスライス）は構造化質問で人間に確認する。
-最初の Bolt は、アーキテクチャを貫通する最小スライス（walking skeleton）にする。
+How Bolts are bundled (one Unit at a time, a bundle of related Units, a thin slice spanning Units) is confirmed with a human through structured questions.
+The first Bolt is the smallest slice that cuts through the architecture (a walking skeleton).
 
-各 Bolt には Definition of Done と、その Bolt の出荷が何を証明するか（confidence hypothesis）を付ける。
+Each Bolt is given a Definition of Done and a statement of what shipping that Bolt proves (a confidence hypothesis).
 
 ### Inputs
 
-| Artifact | 必須 | 供給元 |
+| Artifact | Required | Source |
 |---|---|---|
-| `unit-of-work.md`、`unit-of-work-dependency.md` | 必須 | Stage 2.7 |
-| `unit-of-work-story-map.md` | 任意 | Stage 2.7 |
-| `requirements.md` | 必須 | Stage 2.3 |
-| `components.md` | 必須（Application Design 実行時） | Stage 2.6 |
-| `stories.md`、`mockups.md` | 任意 | Stage 2.4、2.5 |
-| `team-practices.md` | 任意 | Stage 2.2 |
+| `unit-of-work.md`, `unit-of-work-dependency.md` | Required | Stage 2.7 |
+| `unit-of-work-story-map.md` | Optional | Stage 2.7 |
+| `requirements.md` | Required | Stage 2.3 |
+| `components.md` | Required (when Application Design runs) | Stage 2.6 |
+| `stories.md`, `mockups.md` | Optional | Stage 2.4, 2.5 |
+| `team-practices.md` | Optional | Stage 2.2 |
 
 ### Outputs
 
-| Artifact | Description | v2 対応 |
+| Artifact | Description | v2 Counterpart |
 |---|---|---|
-| `inception/delivery-planning/bolt-plan.md` | Bolt 一覧、Unit の束ね、実行順序、Definition of Done、confidence hypothesis | bolt-plan |
-| `inception/delivery-planning/team-allocation.md` | Bolt への担当割り当て。チームがある場合のみ | team-allocation |
-| `inception/delivery-planning/risk-and-sequencing-rationale.md` | 順序付けの根拠とリスク | risk-and-sequencing-rationale |
-| `inception/delivery-planning/external-dependency-map.md` | 外部依存の対応 | external-dependency-map |
-| `inception/delivery-planning/delivery-planning-questions.md` | 確認した質問と回答 | delivery-planning-questions |
-| `inception/delivery-planning/memory.md` | stage 実行の学習記録（Interpretations、Deviations、Tradeoffs、Open questions） | memory |
+| `inception/delivery-planning/bolt-plan.md` | Bolt list, Unit bundling, execution order, Definition of Done, confidence hypothesis | bolt-plan |
+| `inception/delivery-planning/team-allocation.md` | Assignment of owners to Bolts. Only when a team exists | team-allocation |
+| `inception/delivery-planning/risk-and-sequencing-rationale.md` | Rationale for sequencing and risks | risk-and-sequencing-rationale |
+| `inception/delivery-planning/external-dependency-map.md` | External dependency mapping | external-dependency-map |
+| `inception/delivery-planning/delivery-planning-questions.md` | Confirmed questions and answers | delivery-planning-questions |
+| `inception/delivery-planning/memory.md` | Learning record of stage execution (Interpretations, Deviations, Tradeoffs, Open questions) | memory |
 
 ### Notes
 
-旧契約の `inception/bolts.md` と `bolts/<bolt-id>-<slug>.md` は `bolt-plan.md` が置き換える。
-Bolt が多い場合は `bolts/<bolt-id>-<slug>.md` へ分割してよい。
+The legacy contract's `inception/bolts.md` and `bolts/<bolt-id>-<slug>.md` are replaced by `bolt-plan.md`.
+When there are many Bolts, they may be split into `bolts/<bolt-id>-<slug>.md`.
 
-このステージの承認後、Inception 成果物を phase PR にまとめ、人間 merge で phase 完了を確定する。
-phase の `decisions.md` と `traceability.md` は phase PR までに確定する。
-`PHASE_VERIFIED` イベントの追記と Phase Progress の更新は merge 後に行う。
+After this stage's approval, the Inception artifacts are gathered into a phase PR, and phase completion is finalized by a human merge.
+The phase's `decisions.md` and `traceability.md` are settled by the phase PR.
+Appending the `PHASE_VERIFIED` event and updating Phase Progress happen after the merge.
