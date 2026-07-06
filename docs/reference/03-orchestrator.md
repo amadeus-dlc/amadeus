@@ -6,7 +6,7 @@ This chapter documents the workflow behaviour from the conductor's side — entr
 
 > **Ownership note.** Throughout this chapter, the behaviours described — argument resolution, scope detection, jump validation, resume branching — are computed by the **engine** on each `next` and delivered to the conductor as a directive. Where older prose said "the orchestrator does X," read it as "the engine decides X and emits a directive; the conductor carries it out." The decision logic is deterministic tool code, never SKILL.md prose.
 
-> **Path convention.** Each intent's state, audit trail, and artifacts live under its **record dir** — `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`, written `<record>/` below. The audit trail is a directory of per-clone shards under `<record>/audit/`, not a single file.
+> **Path convention.** Each intent's state, audit trail, and artifacts live under its **record dir** — `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`, written `<record>/` below. The audit trail is a directory of per-clone shards under `<record>/audit/`, not a single file.
 
 ---
 
@@ -34,9 +34,9 @@ The conductor passes `$ARGUMENTS` to the engine's first `next` verbatim — it n
 
 When the argument matches one of the 9 known scopes (`enterprise`, `feature`, `mvp`, `poc`, `bugfix`, `refactor`, `infra`, `security-patch`, `workshop`):
 
-An explicitly named scope on a fresh workspace (no intent yet — no `amadeus-state.md` under `aidlc/spaces/*/intents/*/`) **births the first intent**: the engine's `next` emits a run-then-continue `print` directive naming `amadeus-utility.ts intent-birth --scope <scope>` (threading any `--depth` / `--test-strategy` flags onto the named command); the conductor runs it and re-runs `next` to land on the first stage. Both naming shapes — the bare positional (`/amadeus bugfix`) and the explicit flag (`/amadeus --scope bugfix`) — emit the identical birth print. Describing what to build (`/amadeus "build the auth service"`) also births. A bare `/amadeus` with no explicitly named scope and no description does NOT birth (an env- or default-resolved scope is not a birth signal); it emits the no-state error directing the user to describe what to build or name a scope.
+An explicitly named scope on a fresh workspace (no intent yet — no `amadeus-state.md` under `amadeus/spaces/*/intents/*/`) **births the first intent**: the engine's `next` emits a run-then-continue `print` directive naming `amadeus-utility.ts intent-birth --scope <scope>` (threading any `--depth` / `--test-strategy` flags onto the named command); the conductor runs it and re-runs `next` to land on the first stage. Both naming shapes — the bare positional (`/amadeus bugfix`) and the explicit flag (`/amadeus --scope bugfix`) — emit the identical birth print. Describing what to build (`/amadeus "build the auth service"`) also births. A bare `/amadeus` with no explicitly named scope and no description does NOT birth (an env- or default-resolved scope is not a birth signal); it emits the no-state error directing the user to describe what to build or name a scope.
 
-1. Reads guardrails from `aidlc/spaces/<space>/memory/`.
+1. Reads guardrails from `amadeus/spaces/<space>/memory/`.
 2. Asks the user "What would you like to build?"
 3. Determines stages to execute per the Scope-to-Stage Mapping.
 4. Executes the Initialization phase (workspace-scaffold, workspace-detection, state-init) as a single deterministic `amadeus-utility init` call. The welcome message is rendered at session start via `companyAnnouncements` in `settings.json`.
@@ -47,7 +47,7 @@ An explicitly named scope on a fresh workspace (no intent yet — no `amadeus-st
 
 When the argument is freeform text (not a known scope keyword):
 
-1. Reads guardrails from `aidlc/spaces/<space>/memory/`.
+1. Reads guardrails from `amadeus/spaces/<space>/memory/`.
 2. Analyzes the intent against keyword patterns:
    - "fix" / "bug" / "broken" maps to `bugfix`
    - "refactor" / "clean up" / "simplify" maps to `refactor`
@@ -67,13 +67,13 @@ When the argument is freeform text (not a known scope keyword):
 The compose surfaces (a leading `compose` verb, `--new-scope`, or `--report <path>`) make the engine emit a composer-dispatch `print` instead of a scope confirm. The verb is deliberately NOT a workspace verb (workspace verbs are terminal utility commands the Kiro seam runs off-band; compose is workflow work the conductor dispatches). Two modes split on the state file:
 
 1. **Front / report (no workflow yet):** the conductor dispatches `amadeus-composer-agent`, which runs the read-only `detect --json` scan, reads the stock scopes, and returns a structured proposal (`mode matched|custom`, the grid, per-SKIP rationale) validated by `amadeus-graph.ts validate-grid`. The conductor renders the approve/edit/reject gate; on approve a stock match births directly, a custom grid is authored as scope data (`scopes/amadeus-<name>.md` + a `scope-grid.json` entry, `keywords: []` by default) and the birth continues in the same turn.
-2. **In-flight (workflow running):** the composer proposes SKIP/un-SKIP flips for PENDING, ahead-of-cursor stages. The conductor writes the pending-proposal marker (`aidlc/.amadeus-compose-pending`) before the gate (the Stop hook honours it as a turn-stop signal); on approve it runs `amadeus-utility.ts recompose --skip <slugs> --add <slugs>`, which flips the plan suffixes under the audit lock, strict-validates against new starvation, rebuilds the derived fields, and emits `RECOMPOSED`. Detection is chat-first: the conductor's pre-forward judgment step (the same one that spots new-work) classifies a plain-chat reshape request ("can we skip market research?") and routes it as `next compose "<their words>"` rather than forwarding it verbatim (a verbatim forward would fall through to Branch 10 and run the current stage). When the request names specific stages imperatively, the conductor may skip the composer dispatch and present the gate itself, running `recompose` directly on approve - sound because the verb rejects starved/frozen/behind-cursor/skeleton-gate flips no matter who calls it; the human gate and the marker discipline are identical on both paths.
+2. **In-flight (workflow running):** the composer proposes SKIP/un-SKIP flips for PENDING, ahead-of-cursor stages. The conductor writes the pending-proposal marker (`amadeus/.amadeus-compose-pending`) before the gate (the Stop hook honours it as a turn-stop signal); on approve it runs `amadeus-utility.ts recompose --skip <slugs> --add <slugs>`, which flips the plan suffixes under the audit lock, strict-validates against new starvation, rebuilds the derived fields, and emits `RECOMPOSED`. Detection is chat-first: the conductor's pre-forward judgment step (the same one that spots new-work) classifies a plain-chat reshape request ("can we skip market research?") and routes it as `next compose "<their words>"` rather than forwarding it verbatim (a verbatim forward would fall through to Branch 10 and run the current stage). When the request names specific stages imperatively, the conductor may skip the composer dispatch and present the gate itself, running `recompose` directly on approve - sound because the verb rejects starved/frozen/behind-cursor/skeleton-gate flips no matter who calls it; the human gate and the marker discipline are identical on both paths.
 
 ### `/amadeus --status` -- Progress Check
 
 Read-only command that inspects the current workflow without advancing it:
 
-1. Reads the active intent's `amadeus-state.md` (under `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`).
+1. Reads the active intent's `amadeus-state.md` (under `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`).
 2. Displays: current phase, current stage, completion percentage, pending decisions, and active agent.
 3. If verification is needed, runs the phase boundary check per stage-protocol-governance.md section 13.
 4. Does NOT advance the workflow -- strictly read-only.
@@ -112,10 +112,10 @@ Overrides the test volume strategy (minimal, standard, comprehensive) independen
 
 ### Intent birth -- the Initialization phase
 
-There is no separate scaffold command (the earlier `init` flag was retired; the workspace shell ships pre-built in `dist/<harness>/`). The three Initialization stages (workspace-scaffold, workspace-detection, state-init) run deterministically inside `amadeus-utility intent-birth` — auto-invoked on the first `/amadeus` (or `/amadeus <description>`), or explicitly via the `/amadeus-init` packaging. Birth mints the intent's record dir at `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/` with state initialised, scope routing applied, and the workflow positioned at the first post-Initialization stage:
+There is no separate scaffold command (the earlier `init` flag was retired; the workspace shell ships pre-built in `dist/<harness>/`). The three Initialization stages (workspace-scaffold, workspace-detection, state-init) run deterministically inside `amadeus-utility intent-birth` — auto-invoked on the first `/amadeus` (or `/amadeus <description>`), or explicitly via the `/amadeus-init` packaging. Birth mints the intent's record dir at `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/` with state initialised, scope routing applied, and the workflow positioned at the first post-Initialization stage:
 
 1. Creates the record dir tree (idempotent -- skips existing directories/files): the `audit/` shard dir, stage artifact directories (empty), and the verification directory.
-2. Creates the empty space-level `aidlc/knowledge/` directory (a sibling of the space's `intents/`). It is free-form with no fixed file set — birth seeds no per-agent subdirectories and no READMEs; the team adds files itself.
+2. Creates the empty space-level `amadeus/knowledge/` directory (a sibling of the space's `intents/`). It is free-form with no fixed file set — birth seeds no per-agent subdirectories and no READMEs; the team adds files itself.
 3. Scans the workspace and writes the intent's `amadeus-state.md` with the actual phase (e.g., `IDEATION` for `--scope feature`), the resolved scope, and the stage plan derived from the compiled scope grid (`scope-grid.json`, the transpose of each stage's `scopes:` frontmatter).
 4. Emits the full event sequence: `WORKFLOW_STARTED`, `WORKSPACE_SCAFFOLDED`, `WORKSPACE_SCANNED`, `WORKSPACE_INITIALISED`, `PHASE_STARTED` for the first executing phase, `STAGE_STARTED` + `STAGE_COMPLETED` for each Initialization stage, plus `PHASE_SKIPPED` events for any phases the scope skips.
 5. Auto-births only on a workspace with zero intents; with intents already present and no active cursor, the engine prompts the user to pick one (`/amadeus intent <slug>`) rather than birthing a duplicate. There is no re-init flag.
@@ -195,7 +195,7 @@ flowchart TD
 
 ### State File Schema
 
-The state file at `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/amadeus-state.md` (the intent's record dir) is created from the template at `.claude/knowledge/amadeus-shared/state-template.md`. It uses State Version 7 and contains:
+The state file at `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/amadeus-state.md` (the intent's record dir) is created from the template at `.claude/knowledge/amadeus-shared/state-template.md`. It uses State Version 7 and contains:
 
 | Section | Contents |
 |---------|----------|
@@ -234,7 +234,7 @@ When a state file is detected, the orchestrator presents four options:
 
 **3. Jump to stage** -- Presents the full stage list for the user to select. Warns about invalidation of downstream artifacts.
 
-**4. Start fresh** -- Archives the active intent's record dir under `aidlc/spaces/<space>/intents/` after explicit confirmation, then births a new intent.
+**4. Start fresh** -- Archives the active intent's record dir under `amadeus/spaces/<space>/intents/` after explicit confirmation, then births a new intent.
 
 ### Session Resume Context Loading
 

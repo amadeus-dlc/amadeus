@@ -100,10 +100,10 @@ describe("t196 in-flight recompose journey (/amadeus compose mid-workflow, sdk l
         expect(after).toMatch(/- \*\*Stages to Skip\*\*: .*market-research/);
 
         // RECOMPOSED audited.
-        const space = existsSync(join(proj, "aidlc", "active-space"))
-          ? readFileSync(join(proj, "aidlc", "active-space"), "utf-8").trim() || "default"
+        const space = existsSync(join(proj, "amadeus", "active-space"))
+          ? readFileSync(join(proj, "amadeus", "active-space"), "utf-8").trim() || "default"
           : "default";
-        const intentsDir = join(proj, "aidlc", "spaces", space, "intents");
+        const intentsDir = join(proj, "amadeus", "spaces", space, "intents");
         const rec = readFileSync(join(intentsDir, "active-intent"), "utf-8").trim();
         const auditDir = join(intentsDir, rec, "audit");
         const audit = readdirSync(auditDir)

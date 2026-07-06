@@ -3,7 +3,7 @@
 // t182 — codekb placement (deterministic, no-LLM). The fast-tier guard for the
 // codekb-determinism effort: it pins the SPACE-LEVEL placement the engine now
 // resolves for the reverse-engineering stage's artifacts —
-// `aidlc/spaces/<space>/codekb/<repo>/` — at three layers, with ZERO tokens.
+// `amadeus/spaces/<space>/codekb/<repo>/` — at three layers, with ZERO tokens.
 //
 //   1. The PURE lib helpers (imported in-process from the shipped dist tree):
 //      relativeCodekbDir / codekbDir compose the space-level per-repo dir, and
@@ -92,10 +92,10 @@ const childEnv = (): NodeJS.ProcessEnv => {
 // 1. The PURE lib helpers — space-level shape (imported in-process).
 // ============================================================================
 describe("t182 codekb lib helpers — space-level per-repo placement", () => {
-  test("relativeCodekbDir(proj, repo, space) === aidlc/spaces/<space>/codekb/<repo>", () => {
+  test("relativeCodekbDir(proj, repo, space) === amadeus/spaces/<space>/codekb/<repo>", () => {
     const proj = freshProject();
     expect(relativeCodekbDir(proj, "repo-x", DEFAULT_SPACE)).toBe(
-      `aidlc/spaces/${DEFAULT_SPACE}/codekb/repo-x`,
+      `amadeus/spaces/${DEFAULT_SPACE}/codekb/repo-x`,
     );
   });
 
@@ -108,7 +108,7 @@ describe("t182 codekb lib helpers — space-level per-repo placement", () => {
   test("relativeCodekbDir defaults the space to the active-space cursor (default)", () => {
     const proj = freshProject(); // the fixture cursor is `default`
     expect(relativeCodekbDir(proj, "repo-x")).toBe(
-      `aidlc/spaces/${DEFAULT_SPACE}/codekb/repo-x`,
+      `amadeus/spaces/${DEFAULT_SPACE}/codekb/repo-x`,
     );
   });
 
@@ -146,14 +146,14 @@ describe("t182 codekb lib helpers — space-level per-repo placement", () => {
 //    what relativeCodekbDir composes; honours --repo and --json.
 // ============================================================================
 describe("t182 codekb-path verb — prints the space-level per-repo dir", () => {
-  test("codekb-path --repo <name> prints aidlc/spaces/<space>/codekb/<repo>/", () => {
+  test("codekb-path --repo <name> prints amadeus/spaces/<space>/codekb/<repo>/", () => {
     const proj = freshProject();
     const res = spawnSync(BUN, [UTILITY, "codekb-path", "--project-dir", proj, "--repo", "svc"], {
       encoding: "utf-8",
       env: childEnv(),
     });
     expect(res.status).toBe(0);
-    expect(res.stdout.trim()).toBe(`aidlc/spaces/${DEFAULT_SPACE}/codekb/svc/`);
+    expect(res.stdout.trim()).toBe(`amadeus/spaces/${DEFAULT_SPACE}/codekb/svc/`);
   });
 
   test("codekb-path --json carries {space, repo, dir} matching relativeCodekbDir", () => {
@@ -182,7 +182,7 @@ describe("t182 codekb-path verb — prints the space-level per-repo dir", () => 
     });
     expect(res.status).toBe(0);
     expect(res.stdout.trim()).toBe(
-      `aidlc/spaces/${DEFAULT_SPACE}/codekb/${basename(proj)}/`,
+      `amadeus/spaces/${DEFAULT_SPACE}/codekb/${basename(proj)}/`,
     );
   });
 });
@@ -234,7 +234,7 @@ function emitReverseEngineering(): { dir: RunStageDirective; proj: string } {
 }
 
 describe("t182 isCodekb resolver — reverse-engineering artifacts land under space-level codekb", () => {
-  test("every reverse-engineering produces resolves under aidlc/spaces/<space>/codekb/<repo>/ (NOT the record dir)", () => {
+  test("every reverse-engineering produces resolves under amadeus/spaces/<space>/codekb/<repo>/ (NOT the record dir)", () => {
     const { dir, proj } = emitReverseEngineering();
     // 0 recorded repos → the resolver keys codekbRepoName = basename(proj).
     const codekbPrefix = `${relativeCodekbDir(proj, basename(proj), DEFAULT_SPACE)}/`;
@@ -263,7 +263,7 @@ describe("t182 isCodekb resolver — reverse-engineering artifacts land under sp
 // the `repos` array on that lone row.
 // ---------------------------------------------------------------------------
 function rewriteIntentRepos(proj: string, repos: string[]): void {
-  const regPath = join(proj, "aidlc", "spaces", DEFAULT_SPACE, "intents", "intents.json");
+  const regPath = join(proj, "amadeus", "spaces", DEFAULT_SPACE, "intents", "intents.json");
   const rows = JSON.parse(readFileSync(regPath, "utf-8")) as Array<Record<string, unknown>>;
   rows[0].repos = repos;
   writeFileSync(regPath, `${JSON.stringify(rows, null, 2)}\n`, "utf-8");

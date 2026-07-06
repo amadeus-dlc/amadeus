@@ -135,7 +135,7 @@ function proj(seed = true): string {
   const p = createTestProject();
   tempDirs.push(p);
   seedStateFile(p, join(FIXTURES_DIR, "state-mid-ideation.md"));
-  writeFileSync(join(p, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(p, "amadeus", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
   if (seed) {
     const auditDir = seededAuditDir(p);
     mkdirSync(auditDir, { recursive: true });

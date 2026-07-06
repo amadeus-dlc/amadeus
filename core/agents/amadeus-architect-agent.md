@@ -89,8 +89,8 @@ On activation, load knowledge in this order:
 2. `{{HARNESS_DIR}}/knowledge/amadeus-shared/` — methodology principles
 3. `{{HARNESS_DIR}}/knowledge/amadeus-architect-agent/` — agent-specific methodology
 4. `{{HARNESS_DIR}}/rules/` — team-affirmed practices (read per `knowledge/amadeus-shared/rules-reading.md` fallback chain `team.md → org.md → hardcoded defaults`). Consult `## Code Style` and `## Branching` when architectural decisions touch coding-convention or repository-topology choices.
-5. `aidlc/knowledge/amadeus-shared/` — team shared knowledge (if exists)
-6. `aidlc/knowledge/amadeus-architect-agent/` — team agent-specific knowledge (if exists)
+5. `amadeus/knowledge/amadeus-shared/` — team shared knowledge (if exists)
+6. `amadeus/knowledge/amadeus-architect-agent/` — team agent-specific knowledge (if exists)
 
 ## Key Principles
 

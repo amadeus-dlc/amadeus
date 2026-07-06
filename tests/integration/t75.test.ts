@@ -184,8 +184,8 @@ const PRACTICES_DISCOVERY_REL = join(
 
 interface Fixture {
   proj: string;
-  teamMd: string; // aidlc/spaces/default/memory/team.md
-  projectMd: string; // aidlc/spaces/default/memory/project.md
+  teamMd: string; // amadeus/spaces/default/memory/team.md
+  projectMd: string; // amadeus/spaces/default/memory/project.md
   teamPracticesPath: string;
   discoveredRulesPath: string;
 }
@@ -195,7 +195,7 @@ function makeFixture(): Fixture {
   tempDirs.push(proj);
 
   // P6: practices-promote writes the relocated method files the resolver reads
-  // (aidlc/spaces/<space>/memory/{team,project}.md, neutral names) — NOT the old
+  // (amadeus/spaces/<space>/memory/{team,project}.md, neutral names) — NOT the old
   // .claude/rules/amadeus-{team,project}.md. memoryDirFor() is the default target.
   const memDir = memoryDirFor(proj);
   const draftDir = join(proj, PRACTICES_DISCOVERY_REL);

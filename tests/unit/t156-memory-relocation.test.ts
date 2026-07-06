@@ -6,12 +6,12 @@
 // per-phase phases/<phase>.md) relocated OUT of the per-harness rule dir
 // (.claude/rules / .kiro/steering / .codex/amadeus-rules, all carrying amadeus-*.md
 // names) to ONE hand-editable source of truth at the workspace root —
-// aidlc/spaces/default/memory/ — with neutral filenames. Each harness reads it
+// amadeus/spaces/default/memory/ — with neutral filenames. Each harness reads it
 // by its OWN native include (no copy, no drift):
-//   - Claude  → .claude/rules/amadeus.md @-import stub → @../../aidlc/spaces/
+//   - Claude  → .claude/rules/amadeus.md @-import stub → @../../amadeus/spaces/
 //               default/memory/<file> (explicit @-lines; Claude @-imports do
 //               NOT glob — verified against code.claude.com/docs memory.md).
-//   - Kiro    → agent JSON resources glob file://aidlc/spaces/default/memory/**/*.md
+//   - Kiro    → agent JSON resources glob file://amadeus/spaces/default/memory/**/*.md
 //   - Codex   → AGENTS.md auto-merge + AMADEUS_RULES_DIR seam + orchestrator
 //               @-mention (the static seam is asserted here; the LIVE @-mention
 //               probe lives in the gated e2e tests/e2e/
@@ -79,7 +79,7 @@ function seedMemoryTree(files: Record<string, string>): string {
   return dir;
 }
 
-describe("t156 method relocation to aidlc/spaces/default/memory/ + per-harness include (P5)", () => {
+describe("t156 method relocation to amadeus/spaces/default/memory/ + per-harness include (P5)", () => {
   // === (1) resolver reads the RENAMED + NESTED source ======================
   test("1: loadRules reads neutral org/team/project + nested phases/<p>.md", () => {
     seedMemoryTree({
@@ -92,9 +92,9 @@ describe("t156 method relocation to aidlc/spaces/default/memory/ + per-harness i
     const byScope = rules.map((r) => r.scope).sort();
     expect(byScope).toEqual(["org", "phase", "project", "team"]);
     // The display paths are harness-neutral and point at the relocated tree.
-    expect(rules.map((r) => r.path)).toContain("aidlc/spaces/default/memory/org.md");
+    expect(rules.map((r) => r.path)).toContain("amadeus/spaces/default/memory/org.md");
     const phase = rules.find((r) => r.scope === "phase");
-    expect(phase?.path).toBe("aidlc/spaces/default/memory/phases/construction.md");
+    expect(phase?.path).toBe("amadeus/spaces/default/memory/phases/construction.md");
     expect(phase?.phase).toBe("construction");
   });
 
@@ -141,7 +141,7 @@ describe("t156 method relocation to aidlc/spaces/default/memory/ + per-harness i
 
   // === (2) 3-WAY native-include resolution in the shipped dist trees ======
   const MEM = (harness: string) =>
-    join(REPO_ROOT, "dist", harness, "aidlc", "spaces", "default", "memory");
+    join(REPO_ROOT, "dist", harness, "amadeus", "spaces", "default", "memory");
 
   test("5: every harness ships the relocated method tree at the workspace root", () => {
     // All four shipped harnesses, kiro-ide included — it ships the workspace shell
@@ -186,7 +186,7 @@ describe("t156 method relocation to aidlc/spaces/default/memory/ + per-harness i
       "phases/operation.md",
     ];
     for (const f of memFiles) {
-      expect(stub, `stub @-line for ${f}`).toContain(`@../../aidlc/spaces/default/memory/${f}`);
+      expect(stub, `stub @-line for ${f}`).toContain(`@../../amadeus/spaces/default/memory/${f}`);
     }
     // And CLAUDE.md imports the stub (top of the reference chain).
     const claudeMd = readFileSync(
@@ -230,7 +230,7 @@ describe("t156 method relocation to aidlc/spaces/default/memory/ + per-harness i
         if (!json.resources) continue;
         checkedAgents++;
         expect(json.resources, `${h}/${f} resources → relocated memory`).toContain(
-          "file://aidlc/spaces/default/memory/**/*.md",
+          "file://amadeus/spaces/default/memory/**/*.md",
         );
         // The old steering glob is gone from `resources` (note: `.kiro/steering/**`
         // may legitimately remain in fs_write.allowedPaths — that is a write
@@ -250,7 +250,7 @@ describe("t156 method relocation to aidlc/spaces/default/memory/ + per-harness i
     // This asserts the STATIC seam here (unit tier, zero tokens): the resolver
     // env override re-points at the relocated tree, and the root AGENTS.md ships
     // for auto-merge. The LIVE empirical probe — that `codex exec` actually
-    // resolves an @aidlc/spaces/default/memory/<file> mention and pulls its
+    // resolves an @amadeus/spaces/default/memory/<file> mention and pulls its
     // content into context — now lives in the gated e2e test
     // tests/e2e/t-exec-codex-memory-include.serial.test.ts (verified green
     // 2026-06-24, codex-cli 0.139.0 on Bedrock; the earlier spike's exit-124
@@ -259,7 +259,7 @@ describe("t156 method relocation to aidlc/spaces/default/memory/ + per-harness i
       join(REPO_ROOT, "dist", "codex", ".codex", "config.toml.example"),
       "utf-8",
     );
-    expect(config).toContain('AMADEUS_RULES_DIR = "aidlc/spaces/default/memory"');
+    expect(config).toContain('AMADEUS_RULES_DIR = "amadeus/spaces/default/memory"');
     // .codex/amadeus-rules/ (the old per-harness copy) is gone.
     expect(existsSync(join(REPO_ROOT, "dist", "codex", ".codex", "amadeus-rules"))).toBe(false);
     // The root AGENTS.md (Codex's directory-merge surface) ships.

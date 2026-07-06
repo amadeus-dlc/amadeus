@@ -62,7 +62,7 @@ const ORCH = join(AMADEUS_SRC, "tools", "amadeus-orchestrate.ts");
 
 // The record-relative prefix every resolved per-unit path is rooted at, the
 // active intent's record dir (relativeRecordDir over the seeded default intent).
-const RP = `aidlc/spaces/${DEFAULT_SPACE}/intents/${DEFAULT_RECORD_DIR}`;
+const RP = `amadeus/spaces/${DEFAULT_SPACE}/intents/${DEFAULT_RECORD_DIR}`;
 
 // functional-design's produces[] (verified frontmatter), the artifacts that
 // constitute a unit's coverage for that stage.
@@ -512,7 +512,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     setAutonomous(proj);
     // First batch (alpha) merged its artifacts; beta (batch 2) not yet.
     coverUnit(proj, "alpha", "code-generation", CG_PRODUCES);
-    // The swarm wrote real source for batch 1 outside the aidlc/ tree, so the
+    // The swarm wrote real source for batch 1 outside the amadeus/ tree, so the
     // #366 workspace_requires guard (code-generation is a code-producing stage)
     // sees source work and lets the approve through. Orthogonal to the per-unit
     // coverage guard under test; without it the approve is refused for "no source

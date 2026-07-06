@@ -17,7 +17,7 @@ function usage(): never {
   process.stderr.write(
     [
       "Usage:",
-      "  bun tests/harness/windows/sync.ts [--stack-name NAME | --instance-id i-...] [--region REGION] [--dest C:\\aidlc] [REF]",
+      "  bun tests/harness/windows/sync.ts [--stack-name NAME | --instance-id i-...] [--region REGION] [--dest C:\\amadeus] [REF]",
       "",
       "REF defaults to HEAD. Instance and stack may also come from AMADEUS_WINDOWS_INSTANCE_ID",
       "or AMADEUS_WINDOWS_STACK_NAME. Run from the repo root.",
@@ -33,7 +33,7 @@ function parse(argv: string[]): Cli {
     stackName: process.env.AMADEUS_WINDOWS_STACK_NAME,
     region: process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-east-1",
     ref: "HEAD",
-    dest: "C:\\aidlc",
+    dest: "C:\\amadeus",
   };
   const positional: string[] = [];
   for (let i = 0; i < argv.length; i++) {

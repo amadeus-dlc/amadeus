@@ -70,7 +70,7 @@ describe("t161 keying invariants", () => {
   test("intent-omitted does NOT resolve activeIntent() (stable even with intents on disk)", () => {
     // auditLockIdentity for the omitted case is a pure sentinel — it must not
     // read the project's active-intent (at birth there is no active intent).
-    // Calling it against a bogus pd that has no aidlc/ dir must not throw and must
+    // Calling it against a bogus pd that has no amadeus/ dir must not throw and must
     // return the sentinel bucket.
     expect(() => auditLockIdentity("/nonexistent/path/xyz")).not.toThrow();
     expect(auditLockIdentity("/nonexistent/path/xyz")).toContain(WORKSPACE_LOCK_SENTINEL);
@@ -174,10 +174,10 @@ describe("t161 stale-lock reaper", () => {
     // Build a real per-intent layout on disk so detectLeakedLocks enumerates it.
     const realPd = join(tmpdir(), `amadeus-t161-detect-${process.pid}`);
     rmSync(realPd, { recursive: true, force: true });
-    const recDir = join(realPd, "aidlc", "spaces", "default", "intents", "auth-deadbeef");
+    const recDir = join(realPd, "amadeus", "spaces", "default", "intents", "auth-deadbeef");
     mkdirSync(recDir, { recursive: true });
     writeFileSync(join(recDir, "amadeus-state.md"), "- **Current Stage**: x\n", "utf-8");
-    writeFileSync(join(realPd, "aidlc", "active-space"), "default\n", "utf-8");
+    writeFileSync(join(realPd, "amadeus", "active-space"), "default\n", "utf-8");
     // Stamp a DEAD-owner lock on that intent's bucket.
     const lockDir = auditLockDir(realPd, "auth-deadbeef", "default");
     mkdirSync(lockDir, { recursive: true });

@@ -32,7 +32,7 @@
 //   .sh T1  discard exits 0                                   -> Test "1-4" (same)
 //   .sh T2  stdout '"emitted":"WORKTREE_DISCARDED"'            -> Test "1-4" (same)
 //   .sh T3  discard removed the worktree dir (! -d bolt-demo)  -> Test "1-4" (same:
-//           existsSync(.aidlc/worktrees/bolt-demo) === false)
+//           existsSync(.amadeus/worktrees/bolt-demo) === false)
 //   .sh T4  second discard on gone slug exits 0 (idempotent)   -> Test "1-4" (same)
 //   .sh T5  list exits 0                                       -> Test "5-7" (same)
 //   .sh T6  list includes '"slug":"listed"'                    -> Test "5-7" (same)
@@ -97,7 +97,7 @@ function wt(p: string, args: string[]): CliResult {
 }
 
 const wtPath = (p: string, slug: string): string =>
-  join(p, ".aidlc", "worktrees", `bolt-${slug}`);
+  join(p, ".amadeus", "worktrees", `bolt-${slug}`);
 
 /** True iff a local branch ref exists in the fixture repo. */
 function branchExists(p: string, branch: string): boolean {

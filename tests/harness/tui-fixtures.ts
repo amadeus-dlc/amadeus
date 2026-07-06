@@ -52,12 +52,12 @@ export const KIRO_SRC = join(REPO_ROOT, "dist", "kiro", ".kiro");
 // for IDE-shaped tests.
 export const KIRO_IDE_SRC = join(REPO_ROOT, "dist", "kiro-ide", ".kiro");
 const FIXTURES_DIR = join(REPO_ROOT, "tests", "fixtures");
-// The per-harness memory shell (aidlc/spaces/default/memory) ships beside the
+// The per-harness memory shell (amadeus/spaces/default/memory) ships beside the
 // engine tree; copy it so the resolver finds the rule layers, mirroring
 // setupIntegrationProject's AMADEUS_MEMORY_SRC copy.
-const CLAUDE_MEMORY_SRC = join(REPO_ROOT, "dist", "claude", "aidlc");
-const KIRO_MEMORY_SRC = join(REPO_ROOT, "dist", "kiro", "aidlc");
-const KIRO_IDE_MEMORY_SRC = join(REPO_ROOT, "dist", "kiro-ide", "aidlc");
+const CLAUDE_MEMORY_SRC = join(REPO_ROOT, "dist", "claude", "amadeus");
+const KIRO_MEMORY_SRC = join(REPO_ROOT, "dist", "kiro", "amadeus");
+const KIRO_IDE_MEMORY_SRC = join(REPO_ROOT, "dist", "kiro-ide", "amadeus");
 
 /** Seed the per-intent workspace shell into a TUI fixture project: the default
  *  intent record + cursors + registry + pinned clone-id (mirrors fixtures.ts
@@ -65,8 +65,8 @@ const KIRO_IDE_MEMORY_SRC = join(REPO_ROOT, "dist", "kiro-ide", "aidlc");
 function seedTuiWorkspaceShell(proj: string, space = DEFAULT_SPACE): void {
   const intentsDir = intentsDirOf(proj, space);
   mkdirSync(seededRecordDir(proj, space), { recursive: true });
-  writeFileSync(join(proj, "aidlc", ".amadeus-clone-id"), `${FIXTURE_CLONE_ID}\n`, "utf-8");
-  writeFileSync(join(proj, "aidlc", "active-space"), `${space}\n`, "utf-8");
+  writeFileSync(join(proj, "amadeus", ".amadeus-clone-id"), `${FIXTURE_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(proj, "amadeus", "active-space"), `${space}\n`, "utf-8");
   writeFileSync(join(intentsDir, "active-intent"), `${DEFAULT_RECORD_DIR}\n`, "utf-8");
   writeFileSync(
     join(intentsDir, "intents.json"),
@@ -126,7 +126,7 @@ export interface TuiProjectOptions {
    */
   customHarness?: boolean;
   /**
-   * Seed a NON-default second space (a sibling dir under aidlc/spaces/) so the
+   * Seed a NON-default second space (a sibling dir under amadeus/spaces/) so the
    * statusline orientation prefix paints its `<space> ·` segment. The prefix
    * builder suppresses that segment until listSpaces().length > 1
    * (amadeus-statusline.ts orientationPrefix → listSpaces(projectDir).length > 1),
@@ -163,19 +163,19 @@ export function setupTuiProject(opts: TuiProjectOptions = {}): string {
 
   // 1. Copy the distributable (dest must NOT pre-exist or cp nests it — same
   //    caveat the inline render tests note). Harness selects the dist tree.
-  //    Also copy the sibling aidlc/ memory shell so the resolver finds the rule
+  //    Also copy the sibling amadeus/ memory shell so the resolver finds the rule
   //    layers (the engine tree under .claude/.kiro does NOT include it).
   if (opts.harness === "kiro") {
     cpSync(KIRO_SRC, join(proj, ".kiro"), { recursive: true });
     cpSync(join(KIRO_SRC, "..", "AGENTS.md"), join(proj, "AGENTS.md"));
-    if (existsSync(KIRO_MEMORY_SRC)) cpSync(KIRO_MEMORY_SRC, join(proj, "aidlc"), { recursive: true });
+    if (existsSync(KIRO_MEMORY_SRC)) cpSync(KIRO_MEMORY_SRC, join(proj, "amadeus"), { recursive: true });
   } else if (opts.harness === "kiro-ide") {
-    // The Kiro IDE install shape — same .kiro + AGENTS.md + aidlc/ as Kiro CLI,
+    // The Kiro IDE install shape — same .kiro + AGENTS.md + amadeus/ as Kiro CLI,
     // but from dist/kiro-ide/ so the .kiro.hook files the IDE reads (mint + block)
     // ride along (dist/kiro/.kiro/hooks ships none).
     cpSync(KIRO_IDE_SRC, join(proj, ".kiro"), { recursive: true });
     cpSync(join(KIRO_IDE_SRC, "..", "AGENTS.md"), join(proj, "AGENTS.md"));
-    if (existsSync(KIRO_IDE_MEMORY_SRC)) cpSync(KIRO_IDE_MEMORY_SRC, join(proj, "aidlc"), { recursive: true });
+    if (existsSync(KIRO_IDE_MEMORY_SRC)) cpSync(KIRO_IDE_MEMORY_SRC, join(proj, "amadeus"), { recursive: true });
   } else {
     cpSync(AMADEUS_SRC, join(proj, ".claude"), { recursive: true });
     const claudeMdExample = join(proj, ".claude", "CLAUDE.md.example");
@@ -184,7 +184,7 @@ export function setupTuiProject(opts: TuiProjectOptions = {}): string {
     const settingsExample = join(proj, ".claude", "settings.json.example");
     const settings = join(proj, ".claude", "settings.json");
     if (!existsSync(settings) && existsSync(settingsExample)) cpSync(settingsExample, settings);
-    if (existsSync(CLAUDE_MEMORY_SRC)) cpSync(CLAUDE_MEMORY_SRC, join(proj, "aidlc"), { recursive: true });
+    if (existsSync(CLAUDE_MEMORY_SRC)) cpSync(CLAUDE_MEMORY_SRC, join(proj, "amadeus"), { recursive: true });
   }
 
   // 2. Seed the per-intent workspace shell (default record + cursors), then write
@@ -272,7 +272,7 @@ export function setupTuiProject(opts: TuiProjectOptions = {}): string {
 }
 
 /** Seed a NON-default space as an additive sibling of identical shape: copy the
- *  default space's memory shell into aidlc/spaces/<name>/ so listSpaces() reports
+ *  default space's memory shell into amadeus/spaces/<name>/ so listSpaces() reports
  *  it as a real space (>1 → the orientation prefix's space token paints). The
  *  active-space cursor is NOT touched — `default` stays active, so its seeded
  *  record remains the active intent the orientation prefix renders. */
@@ -280,7 +280,7 @@ function seedSecondSpace(proj: string, name: string): void {
   if (name === DEFAULT_SPACE) {
     throw new Error(`seedSecondSpace: a second space must be non-default, got "${name}"`);
   }
-  const spacesRoot = join(proj, "aidlc", "spaces");
+  const spacesRoot = join(proj, "amadeus", "spaces");
   const defaultMemory = join(spacesRoot, DEFAULT_SPACE, "memory");
   const targetMemory = join(spacesRoot, name, "memory");
   if (existsSync(defaultMemory)) {

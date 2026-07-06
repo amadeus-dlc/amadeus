@@ -87,7 +87,7 @@ describe("t189 composer dispatch (/amadeus compose, sdk live)", () => {
         expect(r.askedQuestions.length).toBeGreaterThanOrEqual(1);
 
         // (d) NOTHING landed on disk before approval. No birth:
-        const intentsDir = join(proj, "aidlc", "spaces", "default", "intents");
+        const intentsDir = join(proj, "amadeus", "spaces", "default", "intents");
         const intentDirs = existsSync(intentsDir)
           ? readdirSync(intentsDir).filter((d) => !d.startsWith("."))
           : [];

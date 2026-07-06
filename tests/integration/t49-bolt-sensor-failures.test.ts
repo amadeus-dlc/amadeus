@@ -76,7 +76,7 @@ import { auditLockDir } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // The per-intent record dir the inline git project seeds (was flat amadeus-docs/).
 function recordDir(proj: string): string {
-  return join(proj, "aidlc", "spaces", DEFAULT_SPACE, "intents", DEFAULT_RECORD_DIR);
+  return join(proj, "amadeus", "spaces", DEFAULT_SPACE, "intents", DEFAULT_RECORD_DIR);
 }
 // Concatenate every main audit shard (audit/*.md) for the seeded record.
 function readMainAudit(proj: string): string {
@@ -100,7 +100,7 @@ const tempProjects: string[] = [];
 
 afterAll(() => {
   for (const p of tempProjects) {
-    // Each project hosts real `git worktree` children under .aidlc/worktrees/;
+    // Each project hosts real `git worktree` children under .amadeus/worktrees/;
     // their git metadata blocks a plain rm -rf, so prune them first (mirrors
     // the harness's cleanupWorktreeFixture). Then drop the per-project audit
     // lock dir (TMPDIR-level, outside the project) and rm -rf the tree. This is
@@ -181,10 +181,10 @@ function auditAppend(dir: string, event: string, fields: [string, string][]): vo
 const fragPath = (proj: string, slug: string): string =>
   join(
     proj,
-    ".aidlc",
+    ".amadeus",
     "worktrees",
     `bolt-${slug}`,
-    "aidlc",
+    "amadeus",
     "spaces",
     DEFAULT_SPACE,
     "intents",
@@ -220,9 +220,9 @@ function makeProj(): string {
   // from main) carries them; the active-intent cursor + audit shards / runtime
   // graph stay gitignored (per-user / machine-local), so a worktree resolves the
   // lone seeded record by lone-intent fallback.
-  const intentsDir = join(proj, "aidlc", "spaces", DEFAULT_SPACE, "intents");
+  const intentsDir = join(proj, "amadeus", "spaces", DEFAULT_SPACE, "intents");
   mkdirSync(recordDir(proj), { recursive: true });
-  mkdirSync(join(proj, "aidlc", "spaces", DEFAULT_SPACE, "memory"), { recursive: true });
+  mkdirSync(join(proj, "amadeus", "spaces", DEFAULT_SPACE, "memory"), { recursive: true });
   writeFileSync(
     join(recordDir(proj), "amadeus-state.md"),
     readFileSync(join(FIXTURES_DIR, "state-construction.md"), "utf-8"),
@@ -241,17 +241,17 @@ function makeProj(): string {
       2,
     )}\n`,
   );
-  writeFileSync(join(proj, "aidlc", "active-space"), `${DEFAULT_SPACE}\n`);
+  writeFileSync(join(proj, "amadeus", "active-space"), `${DEFAULT_SPACE}\n`);
   writeFileSync(join(intentsDir, "active-intent"), `${DEFAULT_RECORD_DIR}\n`);
   writeFileSync(
     join(proj, ".gitignore"),
     [
-      "aidlc/active-space",
-      "aidlc/.amadeus-clone-id",
-      "aidlc/spaces/*/intents/active-intent",
-      "aidlc/spaces/*/intents/*/runtime-graph.json",
-      "aidlc/spaces/*/intents/*/.amadeus-*",
-      "aidlc/spaces/*/intents/*/audit/",
+      "amadeus/active-space",
+      "amadeus/.amadeus-clone-id",
+      "amadeus/spaces/*/intents/active-intent",
+      "amadeus/spaces/*/intents/*/runtime-graph.json",
+      "amadeus/spaces/*/intents/*/.amadeus-*",
+      "amadeus/spaces/*/intents/*/audit/",
       "",
     ].join("\n"),
   );
@@ -315,21 +315,21 @@ describe("t49 Bolt fork/merge runtime-graph + failure modes (migrated from t49-b
     // Simulate the milestone 10 hook + milestone 9 dispatcher: a SENSOR_FIRED + SENSOR_FAILED
     // pair written to pay's WORKTREE audit. Direct-append (deterministic) so we
     // verify the audit-merge + compile propagation, not any sensor predicate.
-    const payWt = join(batchProj, ".aidlc", "worktrees", "bolt-pay");
+    const payWt = join(batchProj, ".amadeus", "worktrees", "bolt-pay");
     // Pin the worktree append to the SAME per-clone shard audit-fork wrote (and
     // audit-merge later reads): copy the MAIN clone-id token into the worktree's
-    // gitignored aidlc/.amadeus-clone-id so auditShardName(payWt) resolves the
+    // gitignored amadeus/.amadeus-clone-id so auditShardName(payWt) resolves the
     // main-token shard. Without this the worktree mints its OWN clone-id → the
     // SENSOR rows land in a sibling shard audit-merge never reads, and the rows
     // never reach main (audit-merge merges only the single main-token shard's
     // post-fork delta). This is the per-clone-shard analog of the old flat layout,
     // where the worktree had ONE audit.md both the fork-copy and the append shared.
     const mainCloneId = readFileSync(
-      join(batchProj, "aidlc", ".amadeus-clone-id"),
+      join(batchProj, "amadeus", ".amadeus-clone-id"),
       "utf-8",
     );
-    mkdirSync(join(payWt, "aidlc"), { recursive: true });
-    writeFileSync(join(payWt, "aidlc", ".amadeus-clone-id"), mainCloneId, "utf-8");
+    mkdirSync(join(payWt, "amadeus"), { recursive: true });
+    writeFileSync(join(payWt, "amadeus", ".amadeus-clone-id"), mainCloneId, "utf-8");
     auditAppend(payWt, "SENSOR_FIRED", [
       ["Sensor", "required-sections"],
       ["Stage", "code-generation"],

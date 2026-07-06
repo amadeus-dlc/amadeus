@@ -54,7 +54,7 @@
 //     byte the heredocs the .sh wrote.
 //   - Bolt Refs are set via sedReplaceInFile, the TS port of the .sh's sed_i on
 //     the `- **Bolt Refs**:` state line.
-//   - Worktree dirs are mkdir'd under <proj>/.aidlc/worktrees/bolt-<slug>/,
+//   - Worktree dirs are mkdir'd under <proj>/.amadeus/worktrees/bolt-<slug>/,
 //     the same layout Check 1/3/4 walk.
 //   - Every temp dir is torn down in afterEach (cleanupTestProject).
 //
@@ -130,17 +130,17 @@ function appendAudit(proj: string, body: string): void {
 /**
  * The bare-space worktree record root the doctor's Check 3/4 resolve when no
  * recordPrefix is threaded: worktreeStateFilePath/worktreeAuditFilePath fall back
- * to relativeSpaceRecordPrefix() = aidlc/spaces/default/intents. So the worktree
+ * to relativeSpaceRecordPrefix() = amadeus/spaces/default/intents. So the worktree
  * state file lives at <wt>/amadeus/spaces/default/intents/amadeus-state.md and the
  * worktree audit shard under <wt>/amadeus/spaces/default/intents/audit/.
  */
 function wtRecordRoot(proj: string, slug: string): string {
   return join(
     proj,
-    ".aidlc",
+    ".amadeus",
     "worktrees",
     `bolt-${slug}`,
-    "aidlc",
+    "amadeus",
     "spaces",
     DEFAULT_SPACE,
     "intents",
@@ -154,10 +154,10 @@ function wtRecordRoot(proj: string, slug: string): string {
  *  on-disk token. (The lib's auditShardName is memoized per-process, so calling
  *  it from the test process is unreliable across cases; replicate the algorithm.) */
 function seedWtAuditShard(proj: string, slug: string, contents: string): void {
-  const wtRoot = join(proj, ".aidlc", "worktrees", `bolt-${slug}`);
-  mkdirSync(join(wtRoot, "aidlc"), { recursive: true });
+  const wtRoot = join(proj, ".amadeus", "worktrees", `bolt-${slug}`);
+  mkdirSync(join(wtRoot, "amadeus"), { recursive: true });
   const token = "ffffffffffff";
-  writeFileSync(join(wtRoot, "aidlc", ".amadeus-clone-id"), `${token}\n`, "utf-8");
+  writeFileSync(join(wtRoot, "amadeus", ".amadeus-clone-id"), `${token}\n`, "utf-8");
   const host =
     hostname()
       .toLowerCase()
@@ -169,9 +169,9 @@ function seedWtAuditShard(proj: string, slug: string, contents: string): void {
   writeFileSync(join(auditDir, `${host}-${token}.md`), contents, "utf-8");
 }
 
-/** mkdir -p <proj>/.aidlc/worktrees/bolt-<slug>[/<bare-space-record-root>] */
+/** mkdir -p <proj>/.amadeus/worktrees/bolt-<slug>[/<bare-space-record-root>] */
 function mkWorktree(proj: string, slug: string, withDocs = false): string {
-  const dir = join(proj, ".aidlc", "worktrees", `bolt-${slug}`);
+  const dir = join(proj, ".amadeus", "worktrees", `bolt-${slug}`);
   mkdirSync(withDocs ? wtRecordRoot(proj, slug) : dir, { recursive: true });
   return dir;
 }

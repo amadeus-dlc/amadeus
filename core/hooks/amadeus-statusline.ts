@@ -1,4 +1,4 @@
-// Status line: Display aidlc workflow position in the terminal status area
+// Status line: Display amadeus workflow position in the terminal status area
 // Registered via statusLine setting in settings.json
 // Invoked via: bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-statusline.ts
 import { existsSync, readFileSync } from "node:fs";

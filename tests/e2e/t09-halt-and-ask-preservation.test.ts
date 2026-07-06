@@ -20,7 +20,7 @@
 // Source under test:
 //   - dist/claude/.claude/tools/amadeus-worktree.ts handleCreate (:156) — runs a
 //     REAL `git worktree add` after an audit-first WORKTREE_CREATED emit
-//     (:186), so the worktree dir lands at .aidlc/worktrees/bolt-<slug>.
+//     (:186), so the worktree dir lands at .amadeus/worktrees/bolt-<slug>.
 //   - dist/claude/.claude/tools/amadeus-bolt.ts handleFail (:457) — emits
 //     BOLT_FAILED with `Failed Bolt`, `Error summary`, and (when --slug given)
 //     a `Bolt slug` field (:467-469). It does NOT spawn amadeus-worktree, NEVER
@@ -114,7 +114,7 @@ function run(p: string, tool: string, args: string[]): CliResult {
 }
 
 const wtDir = (p: string, slug: string): string =>
-  join(p, ".aidlc", "worktrees", `bolt-${slug}`);
+  join(p, ".amadeus", "worktrees", `bolt-${slug}`);
 
 /** Concatenate every audit shard (audit/*.md) for the seeded record. */
 function auditBody(p: string): string {

@@ -689,7 +689,7 @@ export function extractToolResultText(content: unknown): string {
 // File readers — follow the workspace layout the engine writes.
 //
 // P4 — birth writes per-intent: state lands at
-// aidlc/spaces/<space>/intents/<slug>-<id8>/amadeus-state.md and audit at
+// amadeus/spaces/<space>/intents/<slug>-<id8>/amadeus-state.md and audit at
 // <record>/audit/<host>-<pid>.md (per-clone shards), NOT the flat amadeus-docs/.
 // These readers resolve the active intent's record from the active-space +
 // active-intent cursors, falling back to the flat layout for a not-yet-born
@@ -698,11 +698,11 @@ export function extractToolResultText(content: unknown): string {
 
 /** The active intent's record dir, or the flat amadeus-docs/ when none resolves. */
 export function recordDirFor(projectDir: string): string {
-  const spaceCursor = join(projectDir, "aidlc", "active-space");
+  const spaceCursor = join(projectDir, "amadeus", "active-space");
   const space = existsSync(spaceCursor)
     ? readFileSync(spaceCursor, "utf8").trim() || "default"
     : "default";
-  const intentsDir = join(projectDir, "aidlc", "spaces", space, "intents");
+  const intentsDir = join(projectDir, "amadeus", "spaces", space, "intents");
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf8").trim();
@@ -713,18 +713,18 @@ export function recordDirFor(projectDir: string): string {
   return join(projectDir, "amadeus-docs");
 }
 
-/** The SPACE-level domain-knowledge dir: aidlc/spaces/<space>/knowledge —
+/** The SPACE-level domain-knowledge dir: amadeus/spaces/<space>/knowledge —
  *  a sibling of intents/ (NOT per-intent). The knowledge relocation (b29ced6)
  *  moved this out of each intent's record so domain knowledge accumulates
  *  across the whole space; the engine ensures it at birth (amadeus-utility.ts
  *  ensureWorkspaceDirs → knowledgeDir, lib.ts). Resolves the active space from
  *  the same cursor recordDirFor reads, defaulting to "default". */
 export function spaceKnowledgeDirFor(projectDir: string): string {
-  const spaceCursor = join(projectDir, "aidlc", "active-space");
+  const spaceCursor = join(projectDir, "amadeus", "active-space");
   const space = existsSync(spaceCursor)
     ? readFileSync(spaceCursor, "utf8").trim() || "default"
     : "default";
-  return join(projectDir, "aidlc", "spaces", space, "knowledge");
+  return join(projectDir, "amadeus", "spaces", space, "knowledge");
 }
 
 /** Absolute path to the state file the framework writes (per-intent record). */

@@ -85,11 +85,11 @@ import {
 import { toPortablePath } from "../harness/fixtures.ts";
 
 // P9: with no intent cursor seeded, compile resolves the BARE space record root
-// (docsRoot -> spaceRecordRoot) at aidlc/spaces/default/intents/. State,
+// (docsRoot -> spaceRecordRoot) at amadeus/spaces/default/intents/. State,
 // runtime-graph, the per-stage memory.md, and the per-clone audit SHARD all
 // live under it (the flat amadeus-docs/ root is retired — there is no fallback);
 // compile reads each stage's memory.md at the bare-space-prefixed memory_path.
-const RECORD_REL = join("aidlc", "spaces", "default", "intents");
+const RECORD_REL = join("amadeus", "spaces", "default", "intents");
 function recordRoot(proj: string): string {
   return join(proj, RECORD_REL);
 }

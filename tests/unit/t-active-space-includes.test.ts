@@ -4,7 +4,7 @@
 // active-space cursor (gap #1, the (A) ambient channel).
 //
 // WHAT. `repointHarnessIncludes(projectDir, space)` surgically re-points each
-// harness's native rule include at `aidlc/spaces/<space>/memory/` — Claude's
+// harness's native rule include at `amadeus/spaces/<space>/memory/` — Claude's
 // @-import stub, Kiro's agents/*.json `resources` glob, Codex's config.toml
 // AMADEUS_RULES_DIR. The includes stay COMMITTED (each carries load-bearing engine
 // wiring beyond the include); only the pointer SEGMENT is rewritten in place, so
@@ -70,12 +70,12 @@ function freshRoot(): string {
 // have a default to fall back to) and set the active-space cursor.
 function seedSpaces(root: string, cursor?: string): void {
   for (const sp of ["default", "teamB"]) {
-    mkdirSync(join(root, "aidlc", "spaces", sp, "memory", "phases"), { recursive: true });
-    writeFileSync(join(root, "aidlc", "spaces", sp, "memory", "org.md"), `# org ${sp}\n`);
+    mkdirSync(join(root, "amadeus", "spaces", sp, "memory", "phases"), { recursive: true });
+    writeFileSync(join(root, "amadeus", "spaces", sp, "memory", "org.md"), `# org ${sp}\n`);
   }
   if (cursor !== undefined) {
-    mkdirSync(join(root, "aidlc"), { recursive: true });
-    writeFileSync(join(root, "aidlc", "active-space"), `${cursor}\n`);
+    mkdirSync(join(root, "amadeus"), { recursive: true });
+    writeFileSync(join(root, "amadeus", "active-space"), `${cursor}\n`);
   }
 }
 
@@ -103,8 +103,8 @@ describe("t-active-space-includes: Claude @-stub", () => {
     expect(atLines.length).toBe(7);
     expect(atLines.every((l) => l.includes("/teamB/memory/"))).toBe(true);
     expect(atLines.some((l) => l.includes("/default/memory/"))).toBe(false);
-    expect(after).toContain("@../../aidlc/spaces/teamB/memory/org.md");
-    expect(after).toContain("@../../aidlc/spaces/teamB/memory/phases/operation.md");
+    expect(after).toContain("@../../amadeus/spaces/teamB/memory/org.md");
+    expect(after).toContain("@../../amadeus/spaces/teamB/memory/phases/operation.md");
     // The comment header (non-@ lines) is preserved — same total line count.
     expect(after.split("\n").length).toBe(before.split("\n").length);
   });
@@ -158,7 +158,7 @@ describe("t-active-space-includes: Kiro agents/*.json resources glob", () => {
     expect(written.length).toBe(5);
     expect(written.every((p) => p.startsWith(".kiro/agents/") && p.endsWith(".json"))).toBe(true);
     const conductor = JSON.parse(readFileSync(join(root, ".kiro", "agents", "amadeus.json"), "utf-8"));
-    expect(conductor.resources).toContain("file://aidlc/spaces/teamB/memory/**/*.md");
+    expect(conductor.resources).toContain("file://amadeus/spaces/teamB/memory/**/*.md");
     expect(conductor.resources.some((r: string) => r.includes("/default/memory/"))).toBe(false);
     // Other resource entries preserved.
     expect(conductor.resources).toContain("file://AGENTS.md");
@@ -207,8 +207,8 @@ describe("t-active-space-includes: Codex config.toml AMADEUS_RULES_DIR", () => {
     const written = repointHarnessIncludes(root, "teamB");
     expect(written).toEqual([".codex/config.toml"]);
     const cfg = readFileSync(join(root, ".codex", "config.toml"), "utf-8");
-    expect(cfg).toContain('AMADEUS_RULES_DIR = "aidlc/spaces/teamB/memory"');
-    expect(cfg).not.toContain('AMADEUS_RULES_DIR = "aidlc/spaces/default/memory"');
+    expect(cfg).toContain('AMADEUS_RULES_DIR = "amadeus/spaces/teamB/memory"');
+    expect(cfg).not.toContain('AMADEUS_RULES_DIR = "amadeus/spaces/default/memory"');
     // Engine config preserved (the load-bearing reason config.toml stays committed).
     expect(cfg).not.toContain("model_provider");
     expect(cfg).toContain("sandbox_mode");

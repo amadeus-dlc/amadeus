@@ -80,7 +80,7 @@
 //      parse miss falls through to the cap-bounded block. It only ever ALLOWS;
 //      it can never block more.
 //
-// No-op outside AIDLC. The frontmatter Stop matcher scopes this to the `aidlc`
+// No-op outside AIDLC. The frontmatter Stop matcher scopes this to the `amadeus`
 // skill, but we defend here too: with no active workflow (no amadeus-state.md
 // under the project dir) we exit 0 immediately. A non-AIDLC session is NEVER
 // blocked. Any unexpected error also falls through to allow the stop — failing
@@ -447,7 +447,7 @@ function isPendingQuestionStop(stateContent: string): boolean {
 // and would block the turn - shoving the conductor back into stage execution
 // mid-compose and abandoning the gate (the mid-workflow trap class, reopened
 // for compose). POSITIVE-CONFIRMATION: the conductor writes the marker file
-// `aidlc/.amadeus-compose-pending` before presenting the gate (the engine's
+// `amadeus/.amadeus-compose-pending` before presenting the gate (the engine's
 // compose dispatch print instructs it) and deletes it on approve/reject, the
 // same disk-signal discipline as tier-2's <slug>-questions.md. AUTONOMY GUARD:
 // never fires under autonomous Construction (an unattended run has no human to
@@ -459,7 +459,7 @@ function isPendingComposeStop(stateContent: string): boolean {
     if (getField(stateContent, "Construction Autonomy Mode")?.trim() === "autonomous") {
       return false; // autonomy guard - keep the loop alive
     }
-    return existsSync(join(projectDir, "aidlc", ".amadeus-compose-pending"));
+    return existsSync(join(projectDir, "amadeus", ".amadeus-compose-pending"));
   } catch {
     return false;
   }
@@ -966,7 +966,7 @@ if (isPendingComposeStop(stateContent)) {
   recordHookDrop(
     projectDir,
     HOOK_NAME,
-    "an in-flight compose proposal is pending human approval (aidlc/.amadeus-compose-pending present); allowing the stop (pending-compose carve-out)",
+    "an in-flight compose proposal is pending human approval (amadeus/.amadeus-compose-pending present); allowing the stop (pending-compose carve-out)",
   );
   allowStop();
 }

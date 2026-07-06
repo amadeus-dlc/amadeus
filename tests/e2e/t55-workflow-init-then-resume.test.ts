@@ -106,7 +106,7 @@ describe("t55 /amadeus birth (--scope bugfix) then resume continuity (sdk)", () 
       const proj = setupIntegrationProject({ noAidlcDocs: true });
       try {
         // P4: birth writes per-intent — state at the active intent's record dir
-        // (aidlc/spaces/<space>/intents/<slug>-<id8>/amadeus-state.md) and audit as
+        // (amadeus/spaces/<space>/intents/<slug>-<id8>/amadeus-state.md) and audit as
         // per-clone shards under <record>/audit/, NOT the flat amadeus-docs/. Resolve
         // both lazily (the cursors only exist after birth) via the record-aware
         // harness helpers, which fall back to flat for a not-yet-born project.

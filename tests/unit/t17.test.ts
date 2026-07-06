@@ -110,16 +110,16 @@ function runInit(proj: string, scope: string): RunResult {
 }
 
 // P4: intent-birth (which runInit triggers) writes state into the born intent's
-// per-intent record dir (aidlc/spaces/<space>/intents/<slug>-<id8>/), not the flat
+// per-intent record dir (amadeus/spaces/<space>/intents/<slug>-<id8>/), not the flat
 // amadeus-docs/. Resolve the record dir from the active-space + active-intent
 // cursors, falling back to the flat layout for a seeded-flat project (the many
 // seedStateFile cases never call runInit, so they stay flat).
 function recordDirOf(proj: string): string {
-  const spaceCursor = join(proj, "aidlc", "active-space");
+  const spaceCursor = join(proj, "amadeus", "active-space");
   const space = existsSync(spaceCursor)
     ? readFileSync(spaceCursor, "utf-8").trim() || "default"
     : "default";
-  const intentsDir = join(proj, "aidlc", "spaces", space, "intents");
+  const intentsDir = join(proj, "amadeus", "spaces", space, "intents");
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();

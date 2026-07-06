@@ -3,7 +3,7 @@
 // t170 — the P8 fix to the audit-logger GATE. Pre-workspace-move the hook gated
 // artifact logging on `file.includes("amadeus-docs/")` (amadeus-audit-logger.ts:49).
 // After the record re-roots per intent
-// (aidlc/spaces/<space>/intents/<slug>-<id8>/<phase>/<stage>/…), that path no
+// (amadeus/spaces/<space>/intents/<slug>-<id8>/<phase>/<stage>/…), that path no
 // longer contains "amadeus-docs/", so the old gate DROPPED every ARTIFACT_CREATED/
 // UPDATED on the new layout (the review minor this fixes). The gate now resolves
 // the active intent's record root via docsRoot() and logs writes under it. P9
@@ -72,7 +72,7 @@ function pinnedShardName(): string {
 }
 
 /** Birth an intent and create the audit shard the HOOK will resolve, returning
- *  the audit DIR + record root. The clone-id token (aidlc/.amadeus-clone-id) is
+ *  the audit DIR + record root. The clone-id token (amadeus/.amadeus-clone-id) is
  *  PINNED on disk so the freshly-spawned hook subprocess (which reads the token
  *  from disk, not the test process's memoized one) resolves a predictable shard
  *  name — we create exactly that shard so the hook's "shard exists" gate (:57)
@@ -81,7 +81,7 @@ function pinnedShardName(): string {
 function seedIntentWithShard(p: string, slug: string): { auditDir: string; recordRoot: string } {
   const born = birthIntent(p, slug, "default", "feature");
   // Pin the clone-id BEFORE the hook runs (the hook reads it from disk).
-  writeFileSync(join(p, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(p, "amadeus", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
   const auditDir = join(docsRoot(p), "audit");
   mkdirSync(auditDir, { recursive: true });
   writeFileSync(join(auditDir, pinnedShardName()), "", "utf-8");

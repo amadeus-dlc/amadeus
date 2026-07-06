@@ -8,7 +8,7 @@
 //   - spawn `kiro-cli acp --agent <name> [--trust-all-tools]` in the project
 //     cwd; `initialize` (protocolVersion 1) returns agentInfo + capabilities.
 //   - `session/new {cwd, mcpServers: []}` returns {sessionId, modes:{...}} —
-//     modes.currentModeId is the ACTIVE AGENT (proved the shipped `aidlc`
+//     modes.currentModeId is the ACTIVE AGENT (proved the shipped `amadeus`
 //     agent loads: availableModes listed our delegation targets).
 //   - `session/prompt {sessionId, prompt:[{type:"text",text}]}` runs ONE full
 //     agentic turn; the reply resolves with {stopReason} when the turn ends.
@@ -310,16 +310,16 @@ export class AcpSession {
 }
 
 // P4: birth writes the workflow record per-intent — state at
-// aidlc/spaces/<space>/intents/<slug>-<id8>/amadeus-state.md, audit as per-clone
+// amadeus/spaces/<space>/intents/<slug>-<id8>/amadeus-state.md, audit as per-clone
 // shards at <record>/audit/<host>-<clone>.md — NOT the flat amadeus-docs/. Resolve
 // the born record from the active-space + active-intent cursors, falling back to
 // the flat layout for a not-yet-born (pre-migration) fixture.
 function recordDirOf(projectDir: string): string {
-  const spaceCursor = join(projectDir, "aidlc", "active-space");
+  const spaceCursor = join(projectDir, "amadeus", "active-space");
   const space = existsSync(spaceCursor)
     ? readFileSync(spaceCursor, "utf-8").trim() || "default"
     : "default";
-  const intentsDir = join(projectDir, "aidlc", "spaces", space, "intents");
+  const intentsDir = join(projectDir, "amadeus", "spaces", space, "intents");
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();

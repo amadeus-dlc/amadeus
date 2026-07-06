@@ -111,8 +111,8 @@ if (target === "verb-intercept") {
   let turn = 0;
   try {
     const cwd = kiro.cwd ?? process.cwd();
-    mkdirSync(join(cwd, "aidlc"), { recursive: true });
-    const cp = join(cwd, "aidlc", ".amadeus-turn-counter");
+    mkdirSync(join(cwd, "amadeus"), { recursive: true });
+    const cp = join(cwd, "amadeus", ".amadeus-turn-counter");
     turn = existsSync(cp)
       ? (Number.parseInt(readFileSync(cp, "utf-8").trim(), 10) || 0) + 1
       : 1;
@@ -150,12 +150,12 @@ if (target === "verb-intercept") {
   if (cmd.source === "read-only-flag" || cmd.source === "workspace-verb") {
     try {
       const cwd = kiro.cwd ?? process.cwd();
-      mkdirSync(join(cwd, "aidlc"), { recursive: true });
+      mkdirSync(join(cwd, "amadeus"), { recursive: true });
       const flag = cmd.source === "read-only-flag"
         ? cmd.subcommand
         : (cmd.arg ? cmd.subcommand + " " + cmd.arg : cmd.subcommand);
       writeFileSync(
-        join(cwd, "aidlc", ".amadeus-readonly-latch"),
+        join(cwd, "amadeus", ".amadeus-readonly-latch"),
         JSON.stringify({ turn, flag, source: cmd.source, ts: Date.now() }) + "\n",
         "utf-8",
       );
@@ -175,7 +175,7 @@ if (target === "verb-intercept") {
 // --- pretool-block: the preToolUse roll-forward backstop (matcher: execute_bash) ---
 //
 // Defense-in-depth behind the engine done-guard. The verb-intercept seam above
-// handles a read-only/nav command off-band and stamps aidlc/.amadeus-readonly-latch
+// handles a read-only/nav command off-band and stamps amadeus/.amadeus-readonly-latch
 // with the current turn counter; the engine's `next` then emits `done` for a bare
 // advancing next this same turn. But Kiro's userPromptSubmit can only INJECT, not
 // block — so if the live conductor retries a bare `next` past the engine's `done`,
@@ -213,12 +213,12 @@ if (target === "pretool-block") {
   let counter = -1;
   let latchTurn = -2;
   try {
-    const cp = join(cwd, "aidlc", ".amadeus-turn-counter");
+    const cp = join(cwd, "amadeus", ".amadeus-turn-counter");
     if (existsSync(cp)) {
       const n = Number.parseInt(readFileSync(cp, "utf-8").trim(), 10);
       if (Number.isFinite(n)) counter = n;
     }
-    const lp = join(cwd, "aidlc", ".amadeus-readonly-latch");
+    const lp = join(cwd, "amadeus", ".amadeus-readonly-latch");
     if (existsSync(lp)) {
       const r = JSON.parse(readFileSync(lp, "utf-8")) as { turn?: number };
       if (typeof r.turn === "number") latchTurn = r.turn;

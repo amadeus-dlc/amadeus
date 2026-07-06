@@ -76,10 +76,10 @@ import { AMADEUS_SRC, toPortablePath } from "../harness/fixtures.ts";
 import { auditFilePath } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // P9: with no intent cursor seeded, compile/summary resolve the BARE space
-// record root (docsRoot -> spaceRecordRoot) at aidlc/spaces/default/intents/.
+// record root (docsRoot -> spaceRecordRoot) at amadeus/spaces/default/intents/.
 // State, runtime-graph, per-stage memory, and the per-clone audit SHARD all
 // live under it (the flat amadeus-docs/ root is retired — there is no fallback).
-const RECORD_REL = join("aidlc", "spaces", "default", "intents");
+const RECORD_REL = join("amadeus", "spaces", "default", "intents");
 function recordRoot(proj: string): string {
   return join(proj, RECORD_REL);
 }

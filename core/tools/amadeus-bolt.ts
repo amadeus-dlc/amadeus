@@ -593,7 +593,7 @@ function handleAbort(args: string[]): void {
 //
 // HOLD-MERGE invariant tooling. Sets / clears the `Merge-Held` field in
 // the per-Bolt forked state file at
-// `<projectDir>/.aidlc/worktrees/bolt-<slug>/amadeus-docs/amadeus-state.md`.
+// `<projectDir>/.amadeus/worktrees/bolt-<slug>/amadeus-docs/amadeus-state.md`.
 // Idempotent — re-running hold-merge on an already-held Bolt or
 // release-merge on an unheld Bolt succeeds without error. The field is
 // inserted under `## Project Information` on first hold-merge so the

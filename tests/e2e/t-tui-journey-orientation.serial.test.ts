@@ -120,7 +120,7 @@ const ABSENT_REASON = absentReason();
 // Launch the claude TUI on the >1-space + active-intent fixture and return the
 // captured pane once the orientation-bearing workflow statusline has painted.
 function captureOrientationStatusline(): string {
-  const session = `aidlc_tui_journey_orient_${process.pid}`;
+  const session = `amadeus_tui_journey_orient_${process.pid}`;
   // setupTuiProject seeds the per-intent shell (default space's record + cursors)
   // and writes the mid-ideation state into it; secondSpace seeds a non-default
   // sibling space so listSpaces().length > 1 and the orientation prefix paints

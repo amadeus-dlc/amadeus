@@ -168,7 +168,7 @@ describe("t-tui-t24 stage-jump (forward --stage lands on disk + re-renders statu
   test.skipIf(SKIP_REASON !== null)(
     `forward jump to approval-handoff lands STAGE_JUMPED + re-renders "> Approval & Handoff"${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
     async () => {
-      const session = `aidlc_tui_t24_${process.pid}`;
+      const session = `amadeus_tui_t24_${process.pid}`;
       // Mirror setup_integration_project --with-state state-mid-ideation.md
       // --with-audit (t24.sh:17). Seeded mid-IDEATION at Current Stage=feasibility
       // with 5 completed [x] stages; audit.md seeded so the jump appends to it.

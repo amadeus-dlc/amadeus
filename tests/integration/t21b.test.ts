@@ -14,7 +14,7 @@
 // That whole guard is GONE. The user-facing --init/--force are retired; a
 // workspace now holds MANY intents, so a SECOND birth (naming a scope again)
 // SUCCEEDS and mints a SECOND intent record under
-// aidlc/spaces/default/intents/ — there is no "already exists" rejection and no
+// amadeus/spaces/default/intents/ — there is no "already exists" rejection and no
 // --force. This file is rewritten to the NEW contract: drive a scope twice and
 // prove the second birth adds a distinct, second intent record + a fresh
 // WORKFLOW_STARTED, without clobbering the first. (Mirrors tests/unit/t20.test.ts
@@ -94,7 +94,7 @@ const STOP_AFTER_BIRTH = { toolName: "Bash", resultIncludes: INIT_STATE_SUMMARY 
 const WORKFLOW_STARTED = "WORKFLOW_STARTED";
 
 const intentsDir = (proj: string, space = "default"): string =>
-  join(proj, "aidlc", "spaces", space, "intents");
+  join(proj, "amadeus", "spaces", space, "intents");
 
 /** The intent record dirs (dirs holding an amadeus-state.md) under the default space. */
 function recordDirs(proj: string): string[] {

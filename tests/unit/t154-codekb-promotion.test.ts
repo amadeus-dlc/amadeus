@@ -6,9 +6,9 @@
 // `amadeus-docs/inception/reverse-engineering/` to the durable per-repo code
 // knowledge base, and re-pointed its verified downstream consumers to read from
 // the new location. The codekb-determinism placement fix then made that store
-// SPACE-SCOPED — `aidlc/spaces/<active-space>/codekb/<repo>/` (a sibling of
+// SPACE-SCOPED — `amadeus/spaces/<active-space>/codekb/<repo>/` (a sibling of
 // intents/), the dir the `codekb-path` tool resolves — so the prose now names
-// the space-level literal and the bare `aidlc/codekb/<repo>/` form is gone.
+// the space-level literal and the bare `amadeus/codekb/<repo>/` form is gone.
 //
 // Mechanism: none. We read the shipped dist/claude stage .md files in-process
 // (the same AMADEUS_SRC tree t05/t87 resolve) and parse frontmatter via the
@@ -19,7 +19,7 @@
 // stage-document layer (where the RE agent reads its write destination and the
 // consumers read their upstream path).
 //
-// CONTRACT under test (path literal = `aidlc/spaces/<active-space>/codekb/<repo>/`):
+// CONTRACT under test (path literal = `amadeus/spaces/<active-space>/codekb/<repo>/`):
 //   1. RE stage `outputs:` names the space-level codekb path and KEEPS its 9 .md
 //      artifact filenames (the filenames `amadeus-validate outputs` cross-checks
 //      against the body prose, amadeus-validate.ts:51-94 — t45's invariant).
@@ -37,7 +37,7 @@
 //      RE-read prose at the space-level codekb path.
 //   6. NO stage file retains the old RE output directory literal
 //      `amadeus-docs/inception/reverse-engineering/` NOR the bare
-//      `aidlc/codekb/<repo>/` form anywhere.
+//      `amadeus/codekb/<repo>/` form anywhere.
 
 import { describe, expect, test } from "bun:test";
 import { readFileSync, readdirSync, statSync } from "node:fs";
@@ -56,17 +56,17 @@ const STAGES_DIR = join(AMADEUS_SRC, "amadeus-common", "stages");
 const KNOWLEDGE_DIR = join(AMADEUS_SRC, "knowledge");
 
 // The codekb store is a SPACE-LEVEL sibling of intents/ — the engine resolves it
-// to `aidlc/spaces/<space>/codekb/<repo>/` and the stage prose names it with the
+// to `amadeus/spaces/<space>/codekb/<repo>/` and the stage prose names it with the
 // `<active-space>` token (the live cursor a literal can't hard-code). The RE
 // stage + its consumers carry THIS literal, deferring the concrete dir to the
-// `codekb-path` tool. (Was the bare `aidlc/codekb/<repo>/` before the
+// `codekb-path` tool. (Was the bare `amadeus/codekb/<repo>/` before the
 // codekb-determinism placement fix; the bare form must no longer appear, asserted
 // by NO_BARE_CODEKB_PATH below.)
-const NEW_CODEKB_PATH = "aidlc/spaces/<active-space>/codekb/<repo>/";
+const NEW_CODEKB_PATH = "amadeus/spaces/<active-space>/codekb/<repo>/";
 const OLD_RE_OUTPUT_PATH = "amadeus-docs/inception/reverse-engineering/";
 // The bare workspace-root form the placement fix replaced — it must NOT survive
 // in any stage prose now that codekb is space-scoped.
-const NO_BARE_CODEKB_PATH = "aidlc/codekb/<repo>/";
+const NO_BARE_CODEKB_PATH = "amadeus/codekb/<repo>/";
 
 // The 9 RE artifact filenames the stage produces — kept inside the `outputs:`
 // parens so amadeus-validate's filename-vs-body cross-check (t45) still passes.
@@ -90,7 +90,7 @@ function stageFrontmatter(phase: string, slug: string): Record<string, unknown> 
   return parseStageFrontmatter(stageBody(phase, slug)) as Record<string, unknown>;
 }
 
-describe("t154 codekb promotion — RE outputs land at aidlc/spaces/<active-space>/codekb/<repo>/", () => {
+describe("t154 codekb promotion — RE outputs land at amadeus/spaces/<active-space>/codekb/<repo>/", () => {
   // ── 1: RE stage outputs re-pointed, filenames preserved ──────────────────
   test("reverse-engineering `outputs:` names the space-level codekb path (not the old buried path)", () => {
     const fm = stageFrontmatter("inception", "reverse-engineering");
@@ -107,7 +107,7 @@ describe("t154 codekb promotion — RE outputs land at aidlc/spaces/<active-spac
   });
 
   // ── 2: RE body prose writes to the space-level codekb dir ────────────────
-  test("reverse-engineering body prose writes artifacts to aidlc/spaces/<active-space>/codekb/<repo>/", () => {
+  test("reverse-engineering body prose writes artifacts to amadeus/spaces/<active-space>/codekb/<repo>/", () => {
     const body = stageBody("inception", "reverse-engineering");
     // The prose names the space-level store (backtick-wrapped) and defers the
     // concrete dir to `codekb-path`; neither the old record path nor the bare
@@ -130,7 +130,7 @@ describe("t154 codekb promotion — RE outputs land at aidlc/spaces/<active-spac
     expect(fm.requires_stage as string[]).toContain("reverse-engineering");
   });
 
-  test("requirements-analysis RE-read prose resolves aidlc/codekb/<repo>/ (not the old path)", () => {
+  test("requirements-analysis RE-read prose resolves amadeus/codekb/<repo>/ (not the old path)", () => {
     const body = stageBody("inception", "requirements-analysis");
     expect(body).toContain(`Read RE artifacts from \`${NEW_CODEKB_PATH}\``);
     expect(body).not.toContain(OLD_RE_OUTPUT_PATH);
@@ -142,13 +142,13 @@ describe("t154 codekb promotion — RE outputs land at aidlc/spaces/<active-spac
   });
 
   // ── 5: prose consumers re-pointed ────────────────────────────────────────
-  test("user-stories RE-read prose resolves aidlc/codekb/<repo>/ (not the old path)", () => {
+  test("user-stories RE-read prose resolves amadeus/codekb/<repo>/ (not the old path)", () => {
     const body = stageBody("inception", "user-stories");
     expect(body).toContain(`Read relevant RE artifacts from \`${NEW_CODEKB_PATH}\``);
     expect(body).not.toContain(OLD_RE_OUTPUT_PATH);
   });
 
-  test("nfr-requirements RE-read prose resolves aidlc/codekb/<repo>/ (not the old path)", () => {
+  test("nfr-requirements RE-read prose resolves amadeus/codekb/<repo>/ (not the old path)", () => {
     const body = stageBody("construction", "nfr-requirements");
     expect(body).toContain(`reverse engineering artifacts from \`${NEW_CODEKB_PATH}\``);
     expect(body).not.toContain(OLD_RE_OUTPUT_PATH);
@@ -156,9 +156,9 @@ describe("t154 codekb promotion — RE outputs land at aidlc/spaces/<active-spac
 
   // ── 6: no stage file retains the OLD RE output dir NOR the bare codekb form ──
   // Sweep every shipped stage .md for BOTH retired literals: the pre-promotion
-  // record-dir path AND the bare workspace-root `aidlc/codekb/<repo>/` the
+  // record-dir path AND the bare workspace-root `amadeus/codekb/<repo>/` the
   // codekb-determinism placement fix replaced with the space-scoped form.
-  test("no shipped stage .md retains the old amadeus-docs/inception/reverse-engineering/ NOR the bare aidlc/codekb/<repo>/ path", () => {
+  test("no shipped stage .md retains the old amadeus-docs/inception/reverse-engineering/ NOR the bare amadeus/codekb/<repo>/ path", () => {
     const oldOffenders: string[] = [];
     const bareOffenders: string[] = [];
     for (const phase of readdirSync(STAGES_DIR).sort()) {
@@ -178,10 +178,10 @@ describe("t154 codekb promotion — RE outputs land at aidlc/spaces/<active-spac
 
   // ── 7: the bare codekb form must not survive in the KNOWLEDGE tree either ──
   // RE artifact templates (amadeus-developer-agent/re-artifacts.md) are live
-  // knowledge the RE stage reads; the bare `aidlc/codekb/<repo>/` shorthand
+  // knowledge the RE stage reads; the bare `amadeus/codekb/<repo>/` shorthand
   // previously lingered here because test 6 swept only stages. Walk the whole
   // knowledge tree (nested per-agent) so the space-scoped contract holds there too.
-  test("no shipped knowledge .md retains the bare aidlc/codekb/<repo>/ path", () => {
+  test("no shipped knowledge .md retains the bare amadeus/codekb/<repo>/ path", () => {
     const offenders: string[] = [];
     const walk = (dir: string): void => {
       for (const entry of readdirSync(dir).sort()) {

@@ -15,7 +15,7 @@
 //
 // Source under test (dist/claude/.claude/tools/amadeus-orchestrate.ts):
 //   :619 resolveArtifactPath(name, owner, unit)
-//          - codekb owner: aidlc/spaces/<space>/codekb/<repo>/<name>.md (the
+//          - codekb owner: amadeus/spaces/<space>/codekb/<repo>/<name>.md (the
 //            isCodekb arm — fires for produces[] AND consumes[] of a codekb stage
 //            like reverse-engineering, dropping the per-intent record tail).
 //          - non-per-unit: amadeus-docs/<owner.phase>/<owner.slug>/<name>.md
@@ -107,18 +107,18 @@ const FIXTURES_DIR = join(REPO_ROOT, "tests", "fixtures");
 // intent's record dir (relativeRecordDir). The fixtures seed one default intent,
 // so the record prefix is deterministic. Every expected directive path below is
 // rooted here (was the flat `amadeus-docs/` prefix pre-P9).
-const RP = `aidlc/spaces/${DEFAULT_SPACE}/intents/${DEFAULT_RECORD_DIR}`;
+const RP = `amadeus/spaces/${DEFAULT_SPACE}/intents/${DEFAULT_RECORD_DIR}`;
 
 // The reverse-engineering stage's artifacts live in the SPACE-LEVEL codekb store
-// (`aidlc/spaces/<space>/codekb/<repo>/`), NOT under any intent's record dir —
+// (`amadeus/spaces/<space>/codekb/<repo>/`), NOT under any intent's record dir —
 // the codekb-determinism placement fix (isCodekb resolver branch). A consume of
 // an RE-produced artifact therefore resolves under this prefix keyed by the
 // repo NAME, which for these no-repo fixtures is basename(projectDir) (a dynamic
 // temp dir name). We assert the SPACE PREFIX + artifact filename rather than the
 // full path so the assertion is robust to the per-emit temp basename.
-const CODEKB_PREFIX = `aidlc/spaces/${DEFAULT_SPACE}/codekb/`;
+const CODEKB_PREFIX = `amadeus/spaces/${DEFAULT_SPACE}/codekb/`;
 
-// reset_aidlc_env (t116 sources fixtures.sh): clear AMADEUS_DEFAULT_SCOPE so
+// reset_amadeus_env (t116 sources fixtures.sh): clear AMADEUS_DEFAULT_SCOPE so
 // the fixture's own scope drives stages-in-scope, not a leaked shell export.
 resetAidlcEnv();
 
@@ -222,8 +222,8 @@ describe("t116 brownfield application-design (migrated from t116-directive-path-
         `${RP}/inception/requirements-analysis/requirements.md`,
         `${RP}/inception/user-stories/stories.md`,
         `${RP}/inception/practices-discovery/team-practices.md`,
-        `aidlc/spaces/${DEFAULT_SPACE}/codekb/${basename(proj)}/architecture.md`,
-        `aidlc/spaces/${DEFAULT_SPACE}/codekb/${basename(proj)}/component-inventory.md`,
+        `amadeus/spaces/${DEFAULT_SPACE}/codekb/${basename(proj)}/architecture.md`,
+        `amadeus/spaces/${DEFAULT_SPACE}/codekb/${basename(proj)}/component-inventory.md`,
       ];
       for (const rel of rels) {
         const abs = join(proj, ...rel.split("/"));
@@ -265,7 +265,7 @@ describe("t116 brownfield application-design (migrated from t116-directive-path-
   // .sh test 4: conditional_on:brownfield consume 'architecture' is PRESENT for a
   // Brownfield project and — because reverse-engineering is its PRODUCER and RE
   // is a codekb stage — resolves under the SPACE-LEVEL codekb store
-  // (`aidlc/spaces/<space>/codekb/<repo>/architecture.md`), NOT the per-intent
+  // (`amadeus/spaces/<space>/codekb/<repo>/architecture.md`), NOT the per-intent
   // record dir and NOT the consuming application-design dir (the isCodekb
   // resolver branch, codekb-determinism placement fix).
   test("4: brownfield consume 'architecture' → space-level codekb/<repo>/architecture.md (codekb-keyed)", () => {

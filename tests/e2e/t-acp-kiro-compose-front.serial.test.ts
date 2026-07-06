@@ -126,11 +126,11 @@ describe("t-acp-kiro compose front journey (live Kiro ACP)", () => {
         expect(composed).toBeDefined();
 
         // The born state froze the composed scope.
-        const spaceCursor = join(root, "aidlc", "active-space");
+        const spaceCursor = join(root, "amadeus", "active-space");
         const space = existsSync(spaceCursor)
           ? readFileSync(spaceCursor, "utf-8").trim() || "default"
           : "default";
-        const intentsDir = join(root, "aidlc", "spaces", space, "intents");
+        const intentsDir = join(root, "amadeus", "spaces", space, "intents");
         const rec = readFileSync(join(intentsDir, "active-intent"), "utf-8").trim();
         const state = readFileSync(join(intentsDir, rec, "amadeus-state.md"), "utf-8");
         expect(state).toContain(`- **Scope**: ${composed}`);

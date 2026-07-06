@@ -67,7 +67,7 @@
 // (createTestProject, which toPortablePath-converts on Windows so any path the
 // tool round-trips through JSON survives). seedStateFile copies the named
 // fixture to amadeus-docs/amadeus-state.md exactly as seed_state_file did. All temp
-// dirs cleaned in afterAll. resetAidlcEnv() (reset_aidlc_env) clears
+// dirs cleaned in afterAll. resetAidlcEnv() (reset_amadeus_env) clears
 // AMADEUS_DEFAULT_SCOPE so a developer's exported value can't shadow the
 // fixtures; the env-scope case (t10) sets it explicitly in the spawn env only.
 
@@ -91,7 +91,7 @@ const ORCH = join(TOOLS_DIR, "amadeus-orchestrate.ts");
 const JUMP = join(TOOLS_DIR, "amadeus-jump.ts");
 const FIXTURES_DIR = join(REPO_ROOT, "tests", "fixtures");
 
-// reset_aidlc_env (t117:29): clear AMADEUS_DEFAULT_SCOPE so the env-scope
+// reset_amadeus_env (t117:29): clear AMADEUS_DEFAULT_SCOPE so the env-scope
 // precedence rung is empty by default; the env-scope case overrides per-spawn.
 resetAidlcEnv();
 

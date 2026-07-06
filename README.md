@@ -52,7 +52,7 @@ Ad-hoc AI coding works until the project gets real. Then context drifts between 
 | **Kiro IDE** | `dist/kiro-ide/.kiro/` + `dist/kiro-ide/amadeus/` → `<project>/` (+ `dist/kiro-ide/AGENTS.md`) | `/amadeus` | [Quick Start](#quick-start) below + [Running AI-DLC on Kiro IDE](docs/guide/harnesses/kiro-ide.md). |
 | **Kiro CLI** (≥ 2.6) | `dist/kiro/.kiro/` + `dist/kiro/amadeus/` → `<project>/` (+ `dist/kiro/AGENTS.md`) | `/amadeus` | [Quick Start](#quick-start) below + [Running AI-DLC on Kiro CLI](docs/guide/harnesses/kiro-cli.md). |
 | **Claude Code** | `dist/claude/.claude/` + `dist/claude/amadeus/` → `<project>/` | `/amadeus` | [Quick Start](#quick-start) below + [Getting Started](docs/guide/01-getting-started.md). |
-| **Codex CLI** (≥ 0.139.0) | `dist/codex/` → `<project>/` (`.codex/` + `.agents/` + `aidlc/` + `AGENTS.md`) | `$amadeus` (or `/skills` → amadeus) | [Quick Start](#quick-start) below + [AI-DLC on Codex CLI](docs/guide/harnesses/codex-cli.md). |
+| **Codex CLI** (≥ 0.139.0) | `dist/codex/` → `<project>/` (`.codex/` + `.agents/` + `amadeus/` + `AGENTS.md`) | `$amadeus` (or `/skills` → amadeus) | [Quick Start](#quick-start) below + [AI-DLC on Codex CLI](docs/guide/harnesses/codex-cli.md). |
 
 The deterministic engine — state machine, audit log, and the referee that coordinates parallel agents — is byte-identical across every harness; only the shell differs. Each section in the [Quick Start](#quick-start) installs one harness end to end, and its guide above goes deeper on prerequisites and differences.
 
@@ -108,7 +108,7 @@ cp -r dist/kiro-ide/amadeus your-project/amadeus        # the workspace shell �
 cp dist/kiro-ide/AGENTS.md your-project/AGENTS.md   # merge if you already have one
 ```
 
-The `aidlc/` shell ships the pre-built `aidlc/spaces/default/memory/` method tree the engine reads; `/amadeus --doctor` fails its "workspace shell ready" check without it.
+The `amadeus/` shell ships the pre-built `amadeus/spaces/default/memory/` method tree the engine reads; `/amadeus --doctor` fails its "workspace shell ready" check without it.
 
 Open `your-project/` in Kiro IDE. The install ships `.kiro/settings/cli.json` with `chat.defaultAgent` set to `amadeus` and registers the framework hooks as `.kiro/hooks/*.kiro.hook` files (the IDE's hook mechanism). In the chat panel, run `/amadeus --doctor` to verify, then `/amadeus <description>` to start.
 
@@ -136,7 +136,7 @@ cp dist/kiro/AGENTS.md your-project/AGENTS.md   # merge if you already have one
 cd your-project && kiro-cli chat
 ```
 
-The `aidlc/` shell ships the pre-built `aidlc/spaces/default/memory/` method tree the engine reads; `/amadeus --doctor` fails its "workspace shell ready" check without it.
+The `amadeus/` shell ships the pre-built `amadeus/spaces/default/memory/` method tree the engine reads; `/amadeus --doctor` fails its "workspace shell ready" check without it.
 
 The install ships `.kiro/settings/cli.json` with `chat.defaultAgent` set to `amadeus`, so `/amadeus` is active by default. Inside the session, run `/amadeus --doctor` to verify, then `/amadeus <description>` to start. The [Kiro CLI guide](docs/guide/harnesses/kiro-cli.md) has the full prerequisites and harness differences.
 
@@ -178,7 +178,7 @@ cp -n your-project/.claude/settings.json.example your-project/.claude/settings.j
 cd your-project && claude
 ```
 
-The `aidlc/` shell ships the pre-built `aidlc/spaces/default/memory/` method tree the engine reads; `/amadeus --doctor` fails its "workspace shell ready" check without it.
+The `amadeus/` shell ships the pre-built `amadeus/spaces/default/memory/` method tree the engine reads; `/amadeus --doctor` fails its "workspace shell ready" check without it.
 
 Then, inside the Claude Code session:
 
@@ -213,7 +213,7 @@ cp -n your-project/.codex/config.toml.example your-project/.codex/config.toml
 cp -n your-project/.codex/hooks.json.example your-project/.codex/hooks.json
 ```
 
-The `aidlc/` shell ships the pre-built `aidlc/spaces/default/memory/` method tree the engine reads; `$amadeus --doctor` fails its "workspace shell ready" check without it.
+The `amadeus/` shell ships the pre-built `amadeus/spaces/default/memory/` method tree the engine reads; `$amadeus --doctor` fails its "workspace shell ready" check without it.
 
 After copying, apply the `.gitignore` entries from the shipped `AGENTS.md` before your first workflow, pre-seed hook trust, then verify:
 

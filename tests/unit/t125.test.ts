@@ -100,7 +100,7 @@ const BUN = process.execPath; // the bun binary running this test
 // path only needs the state file to exist).
 const PINNED_CLONE_ID = "testcloneid125";
 function pinClone(proj: string): void {
-  writeFileSync(join(proj, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(proj, "amadeus", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
 }
 
 // Seed a fresh temp project: amadeus-state.md from a fixture into the default

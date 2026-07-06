@@ -121,8 +121,8 @@ const ABSENT_REASON = absentReason();
 // startup for no extra coverage — the three branches paint from ONE seeded
 // state, so one capture is the faithful observation. Returns the captured pane.
 function captureWorkflowStatusline(): string {
-  const session = `aidlc_tui_render_sl_${process.pid}`;
-  // setupTuiProject copies the distributable + sibling aidlc/ memory shell,
+  const session = `amadeus_tui_render_sl_${process.pid}`;
+  // setupTuiProject copies the distributable + sibling amadeus/ memory shell,
   // seeds the per-intent workspace shell, and writes the mid-ideation fixture
   // into the active intent's record. With state present the hook paints the
   // WORKFLOW line (phase + bar + counter + stage), not the no-workflow "ready"

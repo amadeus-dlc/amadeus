@@ -262,7 +262,7 @@ conductor runs the same forwarding loop as \`/amadeus\`.
    bun ${harnessDir()}/tools/amadeus-orchestrate.ts next compose $ARGUMENTS
    \`\`\`
 
-2. Act on the directive exactly as the \`aidlc\` skill's forwarding loop
+2. Act on the directive exactly as the \`amadeus\` skill's forwarding loop
    describes (the composer-dispatch print names the composer agent; render
    its proposal and hold the approve/edit/reject gate). From here the flow IS
    the \`/amadeus\` flow - continue its loop until the directive says stop.
@@ -305,7 +305,7 @@ function handleWrite(): string[] {
 // `amadeus-orchestrate next --stage <slug> --single`. Identifying runners by this
 // body marker — NOT by compiled-set membership — is what lets the drift guard see
 // ORPHANS: a `skills/amadeus-<slug>/` dir that drives `--single` but whose slug is
-// no longer a compiled stage. Non-runner skills (aidlc, amadeus-replay,
+// no longer a compiled stage. Non-runner skills (amadeus, amadeus-replay,
 // amadeus-session-cost, amadeus-outcomes-pack, and the scope-runners, which drive
 // `--scope` not `--stage`) carry no `--stage … --single` marker, so they are
 // never mistaken for stage-runners and never flagged.

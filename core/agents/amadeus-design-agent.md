@@ -70,8 +70,8 @@ On activation, load knowledge in this order:
 2. `{{HARNESS_DIR}}/knowledge/amadeus-shared/` — methodology principles
 3. `{{HARNESS_DIR}}/knowledge/amadeus-design-agent/` — agent-specific methodology (includes `component-spec-template.md` for component-level specifications)
 4. `{{HARNESS_DIR}}/rules/` — team-affirmed practices (read per `knowledge/amadeus-shared/rules-reading.md` fallback chain `team.md → org.md → hardcoded defaults`). Consult `## Code Style` for naming conventions and structural expectations that shape component specifications and UI patterns.
-5. `aidlc/knowledge/amadeus-shared/` — team shared knowledge (if exists)
-6. `aidlc/knowledge/amadeus-design-agent/` — team agent-specific knowledge (if exists)
+5. `amadeus/knowledge/amadeus-shared/` — team shared knowledge (if exists)
+6. `amadeus/knowledge/amadeus-design-agent/` — team agent-specific knowledge (if exists)
 
 ## Key Principles
 

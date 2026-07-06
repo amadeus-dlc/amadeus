@@ -120,10 +120,10 @@ function run(tool: string, args: string[], proj: string): CliResult {
 function wtFragment(proj: string, slug: string): string {
   return join(
     proj,
-    ".aidlc",
+    ".amadeus",
     "worktrees",
     `bolt-${slug}`,
-    "aidlc",
+    "amadeus",
     "spaces",
     DEFAULT_SPACE,
     "intents",
@@ -134,7 +134,7 @@ function wtFragment(proj: string, slug: string): string {
 
 /** Worktree directory for a Bolt slug (worktreePath, amadeus-lib.ts:148). */
 function wtDir(proj: string, slug: string): string {
-  return join(proj, ".aidlc", "worktrees", `bolt-${slug}`);
+  return join(proj, ".amadeus", "worktrees", `bolt-${slug}`);
 }
 
 /**
@@ -160,12 +160,12 @@ function makeBoltFixture(): string {
   writeFileSync(
     join(proj, ".gitignore"),
     [
-      "aidlc/active-space",
-      "aidlc/.amadeus-clone-id",
-      "aidlc/spaces/*/intents/active-intent",
-      "aidlc/spaces/*/intents/*/runtime-graph.json",
-      "aidlc/spaces/*/intents/*/.amadeus-*",
-      "aidlc/spaces/*/intents/*/audit/",
+      "amadeus/active-space",
+      "amadeus/.amadeus-clone-id",
+      "amadeus/spaces/*/intents/active-intent",
+      "amadeus/spaces/*/intents/*/runtime-graph.json",
+      "amadeus/spaces/*/intents/*/.amadeus-*",
+      "amadeus/spaces/*/intents/*/audit/",
       "",
     ].join("\n"),
     "utf-8",

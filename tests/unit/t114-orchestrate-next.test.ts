@@ -33,7 +33,7 @@
 // createTestProject() + seedStateFile() (the .ts analogues of fixtures.sh's
 // create_test_project / seed_state_file), torn down in afterEach. resetAidlcEnv()
 // clears AMADEUS_DEFAULT_SCOPE so a developer's exported value can't shadow the
-// fixtures — exactly the .sh's top-of-file reset_aidlc_env. The env-precedence
+// fixtures — exactly the .sh's top-of-file reset_amadeus_env. The env-precedence
 // cases pass AMADEUS_DEFAULT_SCOPE in the spawn env only (never the test
 // process env). NOTHING is written under tests/fixtures/**.
 //

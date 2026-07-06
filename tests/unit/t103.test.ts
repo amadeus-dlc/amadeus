@@ -298,7 +298,7 @@ describe("t103 doctor rule-drift (migrated from t103-doctor-rule-drift-coverage.
     // .sh grepped three substrings; STRONGER — the exact "1 ... overlap" count
     // string is asserted whole, plus the participating file + heading.
     expect(out).toContain("Rule drift: 1 team/project rule(s) overlap org policy");
-    // Display path is the harness-neutral aidlc/spaces/default/memory/<file>
+    // Display path is the harness-neutral amadeus/spaces/default/memory/<file>
     // (P5 relocation); assert the neutral basename.
     expect(out).toContain("team.md");
     expect(out).toContain("Testing Posture");
@@ -339,7 +339,7 @@ describe("t103 doctor rule-drift (migrated from t103-doctor-rule-drift-coverage.
     });
     const out = runDoctor(rd).out;
     expect(out).toContain("Rule drift: 1 team/project rule(s) overlap org policy");
-    // Display path is aidlc/spaces/default/memory/<file> (P5 relocation).
+    // Display path is amadeus/spaces/default/memory/<file> (P5 relocation).
     expect(out).toContain("project.md");
   });
 });

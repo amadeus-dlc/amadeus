@@ -71,9 +71,9 @@ function pinnedShardName(): string {
  *  + registry) into an arbitrary dir. Mirrors fixtures.ts seedWorkspaceShell. */
 function seedShell(dir: string): void {
   const intentsDir = intentsDirOf(dir, DEFAULT_SPACE);
-  mkdirSync(join(dir, "aidlc", "spaces", DEFAULT_SPACE, "memory"), { recursive: true });
+  mkdirSync(join(dir, "amadeus", "spaces", DEFAULT_SPACE, "memory"), { recursive: true });
   mkdirSync(seededRecordDir(dir), { recursive: true });
-  writeFileSync(join(dir, "aidlc", "active-space"), `${DEFAULT_SPACE}\n`, "utf-8");
+  writeFileSync(join(dir, "amadeus", "active-space"), `${DEFAULT_SPACE}\n`, "utf-8");
   writeFileSync(join(intentsDir, "active-intent"), `${DEFAULT_RECORD_DIR}\n`, "utf-8");
   writeFileSync(
     join(intentsDir, "intents.json"),
@@ -100,7 +100,7 @@ function scratchProject(withState: boolean): string {
     );
     // The resolved audit shard (pinned clone-id) so the log-subagent shard gate
     // passes and the trail seeds the "# AI-DLC Audit Log" header.
-    writeFileSync(join(dir, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+    writeFileSync(join(dir, "amadeus", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
     const auditDir = seededAuditDir(dir);
     mkdirSync(auditDir, { recursive: true });
     writeFileSync(join(auditDir, pinnedShardName()), "# AI-DLC Audit Log\n");
@@ -246,7 +246,7 @@ describe("t147 Kiro hook adapter (live-captured payload fixtures)", () => {
     // hook's per-session→intent STAMP is written (the session→intent record).
     // Proof: birth an intent (live cursor resolves a uuid), fire session-start
     // with a session_id in the payload, and assert the stamp file
-    // aidlc/.amadeus-sessions/<session_id> was written with that uuid. Without
+    // amadeus/.amadeus-sessions/<session_id> was written with that uuid. Without
     // the forwarded session_id the core hook's `if (sessionId)` block is inert.
     const dir = scratchProject(true);
     try {
@@ -255,7 +255,7 @@ describe("t147 Kiro hook adapter (live-captured payload fixtures)", () => {
       const r = runAdapter(dir, "session-start", { ...(FIXTURES.agentSpawn as object), session_id: sid });
       expect(r.code).toBe(0);
       expect(r.stdout).toContain("AIDLC WORKFLOW ACTIVE");
-      const stampPath = join(dir, "aidlc", ".amadeus-sessions", sid);
+      const stampPath = join(dir, "amadeus", ".amadeus-sessions", sid);
       expect(existsSync(stampPath)).toBe(true);
       expect(readFileSync(stampPath, "utf-8").trim()).toBe(born.uuid);
     } finally {
@@ -281,7 +281,7 @@ describe("t147 Kiro hook adapter (live-captured payload fixtures)", () => {
         source: "resume", // even a resume-shaped payload is coerced to startup
       });
       expect(first.code).toBe(0);
-      const stampPath = join(dir, "aidlc", ".amadeus-sessions", sid);
+      const stampPath = join(dir, "amadeus", ".amadeus-sessions", sid);
       expect(readFileSync(stampPath, "utf-8").trim()).toBe(a.uuid);
       // Move the live cursor to B — a genuine drift A→B.
       birthIntent(dir, "intent-b", "default");

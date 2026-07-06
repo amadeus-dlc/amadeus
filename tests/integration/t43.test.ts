@@ -24,7 +24,7 @@
 // FIXTURE DISCIPLINE: the inputs are the REAL committed stage files under
 // dist/claude/.claude/skills/amadeus/stages/<phase>/<slug>.md, read-only —
 // exactly the files the .sh's find_stage_file() walked ($AMADEUS_SRC/skills/
-// aidlc/stages). Nothing is written; nothing under tests/fixtures/** is touched.
+// amadeus/stages). Nothing is written; nothing under tests/fixtures/** is touched.
 // The .sh hard-coded the lifecycle STAGE_ORDER and the per-phase stage lists;
 // those lists are reproduced verbatim here so the same stages are asserted.
 //
@@ -229,7 +229,7 @@ describe("inception stages declare their per-intent record dir in outputs", () =
   // reverse-engineering was PROMOTED out of the inception artifact tree to the
   // durable per-repo code knowledge base (P0 codekb promotion), which the
   // codekb-determinism placement fix then made SPACE-scoped
-  // (aidlc/spaces/<active-space>/codekb/<repo>/), so it is asserted separately
+  // (amadeus/spaces/<active-space>/codekb/<repo>/), so it is asserted separately
   // below; the other inception stages declare their own artifacts under the
   // engine-resolved record dir.
   for (const slug of ["requirements-analysis", "application-design"]) {
@@ -240,12 +240,12 @@ describe("inception stages declare their per-intent record dir in outputs", () =
     });
   }
 
-  test("reverse-engineering outputs to the space-level per-repo codekb (aidlc/spaces/<active-space>/codekb/<repo>/), not the inception record dir", () => {
+  test("reverse-engineering outputs to the space-level per-repo codekb (amadeus/spaces/<active-space>/codekb/<repo>/), not the inception record dir", () => {
     const v = out("reverse-engineering");
     expect(v).not.toBeNull();
     // The codekb-determinism placement fix made the per-repo codekb store
     // SPACE-scoped (a sibling of intents/), the dir `codekb-path` resolves.
-    expect(v!).toContain("aidlc/spaces/<active-space>/codekb/<repo>/");
+    expect(v!).toContain("amadeus/spaces/<active-space>/codekb/<repo>/");
     // Post-reroot the inception artifact tree is the per-intent <record>/inception/;
     // RE must NOT write there (it lives in the durable codekb instead).
     expect(v!).not.toContain("<record>/inception/");

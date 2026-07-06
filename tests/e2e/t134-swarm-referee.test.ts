@@ -48,7 +48,7 @@
 // `git worktree add` does not byte-copy audit.md / runtime-graph.json into the
 // child, then `commit --amend` so the worktree fork carries the gitignore at
 // HEAD. The per-unit worktree path is the tool's deterministic
-// worktreePath(proj, slug) = <proj>/.aidlc/worktrees/bolt-<slug>. Nothing is
+// worktreePath(proj, slug) = <proj>/.amadeus/worktrees/bolt-<slug>. Nothing is
 // written under tests/fixtures/**; cleanupWorktreeFixture prunes children then
 // rm -rf's each parent in afterAll.
 //
@@ -117,12 +117,12 @@ function makeSwarmFixture(): string {
   writeFileSync(
     join(proj, ".gitignore"),
     [
-      "aidlc/active-space",
-      "aidlc/.amadeus-clone-id",
-      "aidlc/spaces/*/intents/active-intent",
-      "aidlc/spaces/*/intents/*/runtime-graph.json",
-      "aidlc/spaces/*/intents/*/.amadeus-*",
-      "aidlc/spaces/*/intents/*/audit/",
+      "amadeus/active-space",
+      "amadeus/.amadeus-clone-id",
+      "amadeus/spaces/*/intents/active-intent",
+      "amadeus/spaces/*/intents/*/runtime-graph.json",
+      "amadeus/spaces/*/intents/*/.amadeus-*",
+      "amadeus/spaces/*/intents/*/audit/",
       "",
     ].join("\n"),
   );
@@ -147,7 +147,7 @@ function makeSwarmFixture(): string {
 
 /** The per-unit worktree path the tool derives (amadeus-lib worktreePath). */
 function wtPath(proj: string, slug: string): string {
-  return join(proj, ".aidlc", "worktrees", `bolt-${slug}`);
+  return join(proj, ".amadeus", "worktrees", `bolt-${slug}`);
 }
 
 interface RefResult {

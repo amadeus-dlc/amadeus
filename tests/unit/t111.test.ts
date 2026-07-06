@@ -41,7 +41,7 @@ const tmpRoots: string[] = [];
 // Make a fresh project dir. The source's ensureAuditFile() will lazily create
 // the per-intent audit SHARD dir + shard (seeded "# AI-DLC Audit Log\n") on
 // first append, so a bare dir is a valid project. With no intent resolved the
-// shard lands under the bare space record root (aidlc/spaces/default/intents/
+// shard lands under the bare space record root (amadeus/spaces/default/intents/
 // audit/<host>-<clone>.md — see auditFilePath). `seedAuditMd` lets a case
 // pre-seed THAT shard the way the source expects when it wants to assert the
 // seed survives.

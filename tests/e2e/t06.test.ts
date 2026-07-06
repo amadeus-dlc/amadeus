@@ -120,7 +120,7 @@ function boltSlugRows(dir: string): string[] {
 }
 
 const wtPath = (dir: string, slug: string): string =>
-  join(dir, ".aidlc", "worktrees", `bolt-${slug}`);
+  join(dir, ".amadeus", "worktrees", `bolt-${slug}`);
 
 describe("t06 amadeus-worktree sibling rejection (migrated from t06-worktree-sibling-rejection.sh, plan 3)", () => {
   test("1-3: create from inside a sibling worktree is rejected pre-audit with the main-checkout error", () => {

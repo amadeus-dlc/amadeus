@@ -121,8 +121,8 @@ describe("t-tui-render statusline COLOUR branch (live turn populates ctx:%, macO
   test.skipIf(SKIP_REASON !== null)(
     `statusline-colour emits green SGR and the live TUI renders ctx:N%${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
     () => {
-      const session = `aidlc_tui_render_colour_${process.pid}`;
-      // setupTuiProject copies the distributable + sibling aidlc/ memory shell,
+      const session = `amadeus_tui_render_colour_${process.pid}`;
+      // setupTuiProject copies the distributable + sibling amadeus/ memory shell,
       // seeds the per-intent workspace shell, and writes the mid-ideation fixture
       // into the active intent's record so the statusline hook resolves it.
       const sandbox = setupTuiProject({ withState: "state-mid-ideation.md" });

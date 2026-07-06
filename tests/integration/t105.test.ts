@@ -83,11 +83,11 @@ import {
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // P9: with no intent cursor seeded, doctor's appendAuditEvent resolves the BARE
-// space record root's per-clone audit SHARD (auditFilePath -> aidlc/spaces/
+// space record root's per-clone audit SHARD (auditFilePath -> amadeus/spaces/
 // default/intents/audit/<host>-<clone>.md) — the flat amadeus-docs/audit.md is
 // retired. Seed + read THAT shard. The single-clone fixture means the shard is
 // the whole trail (no merge needed).
-const RECORD_REL = join("aidlc", "spaces", "default", "intents");
+const RECORD_REL = join("amadeus", "spaces", "default", "intents");
 function recordRoot(proj: string): string {
   return join(proj, RECORD_REL);
 }
@@ -286,10 +286,10 @@ describe("t105 doctor paired-coverage + GUARDRAIL_LOADED (migrated from t105-doc
   test("2: unpaired ghost rule surfaces in the coverage detail", () => {
     const r = ensureCov();
     // The rule display path is harness-neutral now (the method relocated to
-    // aidlc/spaces/default/memory/), so the unpaired detail names the team
+    // amadeus/spaces/default/memory/), so the unpaired detail names the team
     // layer by its neutral path.
     expect(r.out).toContain(
-      "unpaired: aidlc/spaces/default/memory/team.md → amadeus-ghost (no stage binds it)",
+      "unpaired: amadeus/spaces/default/memory/team.md → amadeus-ghost (no stage binds it)",
     );
   });
 

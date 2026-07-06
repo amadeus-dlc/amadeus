@@ -56,7 +56,7 @@
 //     amadeus-docs/audit.md (the precondition for the audit-emitting hooks).
 //   - state-file cases write the SAME state bytes the .sh heredoc'd, including
 //     the injection tokens embedded in field values (Phase/Stage).
-//   - tests 7-10 used a project dir whose NAME contains spaces ("aidlc test
+//   - tests 7-10 used a project dir whose NAME contains spaces ("amadeus test
 //     space"); reproduced via mkdtemp with a spaced prefix.
 //   - cleanupTestProject() rm -rf's each temp project. Nothing written under
 //     tests/fixtures/**.
@@ -139,9 +139,9 @@ function pinnedShardName(): string {
  *  hand-rolled dir whose NAME carries spaces. Mirrors fixtures.ts seedWorkspaceShell. */
 function seedShell(proj: string, space = DEFAULT_SPACE): void {
   const intentsDir = intentsDirOf(proj, space);
-  mkdirSync(join(proj, "aidlc", "spaces", space, "memory"), { recursive: true });
+  mkdirSync(join(proj, "amadeus", "spaces", space, "memory"), { recursive: true });
   mkdirSync(join(intentsDir, DEFAULT_RECORD_DIR), { recursive: true });
-  writeFileSync(join(proj, "aidlc", "active-space"), `${space}\n`, "utf-8");
+  writeFileSync(join(proj, "amadeus", "active-space"), `${space}\n`, "utf-8");
   writeFileSync(join(intentsDir, "active-intent"), `${DEFAULT_RECORD_DIR}\n`, "utf-8");
   writeFileSync(
     join(intentsDir, "intents.json"),
@@ -157,7 +157,7 @@ function seedShell(proj: string, space = DEFAULT_SPACE): void {
 /** Pin the clone-id + create the resolved empty audit shard so the audit-emitting
  *  hooks' "shard exists" gate passes. Returns the audit DIR. */
 function seedAuditShard(proj: string): string {
-  writeFileSync(join(proj, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(proj, "amadeus", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
   const auditDir = seededAuditDir(proj);
   mkdirSync(auditDir, { recursive: true });
   writeFileSync(join(auditDir, pinnedShardName()), "", "utf-8");
@@ -231,7 +231,7 @@ function writeJson(filePath: string): string {
 // workspace shell. Returned dirs are tracked and torn down in afterEach.
 const spacedDirs: string[] = [];
 function makeSpacedProject(): string {
-  const proj = mkdtempSync(join(tmpdir(), "aidlc test space "));
+  const proj = mkdtempSync(join(tmpdir(), "amadeus test space "));
   seedShell(proj);
   spacedDirs.push(proj);
   return proj;

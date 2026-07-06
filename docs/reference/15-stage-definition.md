@@ -130,7 +130,7 @@ produces exist?" check is satisfied by a `code-generation` stage that wrote its
 actual code (issue #366). `workspace_requires: true` closes that gap: the
 stage-completion artifact guard (`amadeus-state.ts` approve/advance/finalize/
 complete-workflow) additionally requires evidence of real source work outside
-the `aidlc/` workspace tree and the harness directory before the stage may
+the `amadeus/` workspace tree and the harness directory before the stage may
 complete.
 
 How "source work" is detected depends on the workspace:
@@ -141,7 +141,7 @@ How "source work" is detected depends on the workspace:
   clause means commit-then-approve (a clean working tree, code in the last
   commit) still passes, closing the clean-tree false-block from #366 Update 3.
 - **Non-git workspace** (or any git error) - the guard falls back to a shell-free
-  filesystem-existence check: at least one file must exist outside the `aidlc/`
+  filesystem-existence check: at least one file must exist outside the `amadeus/`
   workspace tree and the harness dirs.
 
 Today only `code-generation` declares it (it is the one stage whose body writes

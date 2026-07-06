@@ -4,13 +4,13 @@
 // finalizes the Codex method-include seam t156 test 8 could only DOC-VERIFY.
 //
 // WHAT t156 left open. The AIDLC method ("memory") relocated to the workspace
-// root at aidlc/spaces/default/memory/, read by each harness via its own native
+// root at amadeus/spaces/default/memory/, read by each harness via its own native
 // include. For Claude (@-import) and Kiro (resources glob) t156 probes the seam
 // directly; for Codex it asserted only the STATIC wiring (the AMADEUS_RULES_DIR
 // value in config.toml + the shipped AGENTS.md) and flagged the include
 // "untested" because an early spike's `codex exec` hung at exit 124. This test
 // closes that gap: it drives the SHIPPED dist/codex tree through `codex exec`
-// and proves Codex resolves an @aidlc/spaces/default/memory/<file> mention to
+// and proves Codex resolves an @amadeus/spaces/default/memory/<file> mention to
 // the relocated tree and pulls its content into context.
 //
 // MECHANISM. A unique sentinel string is injected into the active space's
@@ -18,7 +18,7 @@
 // @-path and echo the sentinel. The sentinel appearing in the model's final
 // message proves the relocated method tree is reachable and loadable by Codex's
 // native file-reference mechanism — the vision's "Codex pulls the method in via
-// an @aidlc/spaces/<space>/memory/… mention" claim, live.
+// an @amadeus/spaces/<space>/memory/… mention" claim, live.
 //
 // LIVE GATE: requires AMADEUS_CODEX_EXEC_LIVE=1 + a codex >= 0.139.0 binary
 // (AMADEUS_CODEX_BIN or PATH) + AWS creds for the Bedrock profile in
@@ -73,7 +73,7 @@ function skipReason(): string | null {
 }
 const SKIP_REASON = skipReason();
 
-// A scratch install of the SHIPPED dist/codex tree (incl. the aidlc/ workspace
+// A scratch install of the SHIPPED dist/codex tree (incl. the amadeus/ workspace
 // shell), git-initialized + trusted, with a scratch CODEX_HOME pointed at the
 // Bedrock provider. The sentinel is appended to the active space's org.md so a
 // successful read proves the relocated method tree is reachable.
@@ -88,9 +88,9 @@ function setupCodexProject(): { proj: string; home: string; root: string } {
   cpSync(join(CODEX_DIST, ".agents"), join(proj, ".agents"), { recursive: true });
   cpSync(join(CODEX_DIST, "AGENTS.md"), join(proj, "AGENTS.md"));
   // The workspace shell ships in dist/codex; the method tree is its org/team/
-  // project + phases/ under aidlc/spaces/default/memory/.
-  cpSync(join(CODEX_DIST, "aidlc"), join(proj, "aidlc"), { recursive: true });
-  const orgMd = join(proj, "aidlc", "spaces", "default", "memory", "org.md");
+  // project + phases/ under amadeus/spaces/default/memory/.
+  cpSync(join(CODEX_DIST, "amadeus"), join(proj, "amadeus"), { recursive: true });
+  const orgMd = join(proj, "amadeus", "spaces", "default", "memory", "org.md");
   if (!existsSync(orgMd)) throw new Error(`shipped method file missing: ${orgMd}`);
   appendFileSync(
     orgMd,
@@ -146,14 +146,14 @@ function execCodex(proj: string, home: string, prompt: string): { rc: number; ou
 
 describe("t-exec-codex-memory-include — Codex resolves the relocated method tree via @-mention (closes t156 test 8)", () => {
   test.skipIf(SKIP_REASON !== null)(
-    `@aidlc/spaces/default/memory/org.md is reachable and its content loads into context${SKIP_REASON ? ` [SKIP: ${SKIP_REASON}]` : ""}`,
+    `@amadeus/spaces/default/memory/org.md is reachable and its content loads into context${SKIP_REASON ? ` [SKIP: ${SKIP_REASON}]` : ""}`,
     () => {
       const { proj, home, root } = setupCodexProject();
       try {
         const r = execCodex(
           proj,
           home,
-          `Read @aidlc/spaces/default/memory/org.md and tell me the project secret codeword stated in its Probe Sentinel section. Answer with just the codeword.`,
+          `Read @amadeus/spaces/default/memory/org.md and tell me the project secret codeword stated in its Probe Sentinel section. Answer with just the codeword.`,
         );
         expect(r.rc).toBe(0);
         // The sentinel's only on-disk home is the relocated org.md — its

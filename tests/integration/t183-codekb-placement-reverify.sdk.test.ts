@@ -4,7 +4,7 @@
 // the codekb-determinism effort: drive the REAL reverse-engineering stage through
 // the Claude Agent SDK and ASSERT (not merely observe — the spike probe was
 // observational) that the RE subagent wrote its 9 artifacts to the
-// ENGINE-RESOLVED space-level codekb dir, `aidlc/spaces/<space>/codekb/<repo>/`,
+// ENGINE-RESOLVED space-level codekb dir, `amadeus/spaces/<space>/codekb/<repo>/`,
 // the directory the read-only `codekb-path` tool prints — and NOT into the
 // per-intent record dir / intent-slug tree.
 //
@@ -100,13 +100,13 @@ function allAidlcMarkdown(proj: string): string[] {
       else if (name.endsWith(".md")) out.push(relative(proj, p).split("\\").join("/"));
     }
   };
-  walk(join(proj, "aidlc"));
+  walk(join(proj, "amadeus"));
   return out;
 }
 
 describe("t183 codekb placement re-verify (sdk) — RE artifacts land at the engine-resolved space-level codekb", () => {
   test(
-    "reverse-engineering writes its 9 artifacts to aidlc/spaces/<space>/codekb/<repo>/, NONE in the record dir",
+    "reverse-engineering writes its 9 artifacts to amadeus/spaces/<space>/codekb/<repo>/, NONE in the record dir",
     async () => {
       const proj = setupIntegrationProject({
         withState: "state-brownfield-init-done.md",

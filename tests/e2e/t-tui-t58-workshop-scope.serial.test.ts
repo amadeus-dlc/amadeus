@@ -215,7 +215,7 @@ describe("t-tui-t58 workshop-scope (skips Ideation, runs Inception+ at Standard/
   test.skipIf(SKIP_REASON !== null)(
     `workshop scope routing skips Ideation + lands Inception/Construction/Operation on disk${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
     async () => {
-      const session = `aidlc_tui_t58_${process.pid}`;
+      const session = `amadeus_tui_t58_${process.pid}`;
       // --no-amadeus-docs: a brand-new workspace the journey scaffolds itself (the
       // .sh's `setup_integration_project --no-amadeus-docs`). Use an explicit
       // `--scope workshop` flag so this test exercises the workshop lifecycle,

@@ -114,8 +114,8 @@ describe("t-tui-workshop (answering AUQ gates advances disk state)", () => {
   test.skipIf(SKIP_REASON !== null)(
     `workshop run-through commits affirmation on disk${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
     async () => {
-      const session = `aidlc_tui_workshop_${process.pid}`;
-      // setupTuiProject copies the distributable AND the sibling aidlc/ memory
+      const session = `amadeus_tui_workshop_${process.pid}`;
+      // setupTuiProject copies the distributable AND the sibling amadeus/ memory
       // shell (the rule layers live there post-P5) and seeds the per-intent
       // workspace shell; noAidlcDocs strips the seeded record so the live
       // `/amadeus --scope workshop` auto-births its own intent (the `ready`
@@ -246,11 +246,11 @@ describe("t-tui-workshop (answering AUQ gates advances disk state)", () => {
         expect(gateApproved).toBeGreaterThanOrEqual(1);
 
         // The method relocated (P5/fe7f470) from .claude/rules/amadeus-team.md to
-        // the harness-neutral workspace-root aidlc/spaces/default/memory/team.md
+        // the harness-neutral workspace-root amadeus/spaces/default/memory/team.md
         // (neutral basename, no amadeus- prefix). Affirmation writes the section
         // there via memoryDirFor (amadeus-state.ts:1346-1352).
         const teamRules = readFileSync(
-          join(sandbox, "aidlc", "spaces", "default", "memory", "team.md"),
+          join(sandbox, "amadeus", "spaces", "default", "memory", "team.md"),
           "utf8",
         );
         // The shipped template ships `## Way of Working` EMPTY; affirmation

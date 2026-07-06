@@ -17,7 +17,7 @@ workflow, see [Rules and the Learning Loop](../guide/09-rules-and-the-learning-l
 in the User Guide.
 
 > **Path convention.** `<record>/` below = the active intent's record dir,
-> `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/` (a compact UTC date prefix
+> `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/` (a compact UTC date prefix
 > plus a short kebab-case label, so record dirs sort chronologically; the
 > canonical id is the UUIDv7 stored in the `intents.json` registry row). Note the two document-shape
 > sensors' `matches` glob in the shipped manifests still carries the legacy
@@ -262,7 +262,7 @@ intent's record dir is dispatched as:
 ```
 bun .claude/tools/amadeus-sensor-required-sections.ts \
   --stage requirements-analysis \
-  --output-path aidlc/spaces/default/intents/260624-inventory-api/inception/requirements-analysis/requirements.md
+  --output-path amadeus/spaces/default/intents/260624-inventory-api/inception/requirements-analysis/requirements.md
 ```
 
 The manifest does not encode the per-fire flags. The dispatcher
@@ -306,7 +306,7 @@ step between them:
    (gitignored) and calls `bun .claude/tools/amadeus-learnings.ts persist
    --slug <slug> --selections-json <path>`. The tool is the deterministic
    writer — it never judges conflicts; it routes each learning as a practice to
-   `aidlc/spaces/<space>/memory/{project,team}.md` and, for a sensor selection, does the
+   `amadeus/spaces/<space>/memory/{project,team}.md` and, for a sensor selection, does the
    two-write install (manifest + originating stage `sensors:` frontmatter)
    inside one `withAuditLock`, then emits `RULE_LEARNED` / `SENSOR_PROPOSED`.
 

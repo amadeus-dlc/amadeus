@@ -31,7 +31,7 @@
 // under tests/fixtures/**.
 //
 // PLATFORM GATE: Part A chmods audit.md to 0444 (read-only file) and Part B
-// chmods .aidlc/worktrees to 0555 (read-only dir). Native Windows ignores both
+// chmods .amadeus/worktrees to 0555 (read-only dir). Native Windows ignores both
 // modes, so the write-failure these provoke cannot occur there. Mirroring the
 // .sh's POSIX assumption (it runs `set -euo pipefail` on bash) and t76's
 // readonly-probe precedent, Part B is gated behind a runtime read-only-dir
@@ -89,7 +89,7 @@ afterAll(() => {
       /* best-effort */
     }
     try {
-      const wt = join(f, ".aidlc", "worktrees");
+      const wt = join(f, ".amadeus", "worktrees");
       if (existsSync(wt)) chmodSync(wt, 0o755);
     } catch {
       /* best-effort */
@@ -130,7 +130,7 @@ function create(p: string, args: string[]): CliResult {
 }
 
 const wtPath = (p: string, slug: string): string =>
-  join(p, ".aidlc", "worktrees", `bolt-${slug}`);
+  join(p, ".amadeus", "worktrees", `bolt-${slug}`);
 
 /** Concatenate every audit shard (audit/*.md) for the seeded record. */
 const auditText = (p: string): string => {
@@ -230,8 +230,8 @@ describe("t05 amadeus-worktree create audit-first (migrated from t05-worktree-au
       // pre-audit existsSync(wtPath) only checks the LEAF (bolt-demo, absent),
       // so the audit emit succeeds; then `git worktree add` fails because it
       // can't mkdir the leaf under the read-only parent (the .sh: mkdir -p
-      // .aidlc/worktrees; chmod 0555).
-      const worktreesDir = join(p, ".aidlc", "worktrees");
+      // .amadeus/worktrees; chmod 0555).
+      const worktreesDir = join(p, ".amadeus", "worktrees");
       mkdirSync(worktreesDir, { recursive: true });
       chmodSync(worktreesDir, 0o555);
 

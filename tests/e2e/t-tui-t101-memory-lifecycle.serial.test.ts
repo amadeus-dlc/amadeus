@@ -175,7 +175,7 @@ describe("t-tui-t101 (memory.md start→approval lifecycle through a driven gate
   test.skipIf(SKIP_REASON !== null)(
     `approval-handoff stage creates a faithful memory.md and renders its gate${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
     async () => {
-      const session = `aidlc_tui_t101_${process.pid}`;
+      const session = `amadeus_tui_t101_${process.pid}`;
       // Mirror the .sh setup: mid-ideation state + seeded audit, target the
       // approval-handoff gate stage (a lightweight gate, ideation phase — the
       // t24 timeout-avoidance choice).

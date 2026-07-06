@@ -86,9 +86,9 @@ function pinnedShardName(): string {
  *  fixtures.ts seedWorkspaceShell). */
 function seedShell(dir: string): void {
   const intentsDir = intentsDirOf(dir, DEFAULT_SPACE);
-  mkdirSync(join(dir, "aidlc", "spaces", DEFAULT_SPACE, "memory"), { recursive: true });
+  mkdirSync(join(dir, "amadeus", "spaces", DEFAULT_SPACE, "memory"), { recursive: true });
   mkdirSync(seededRecordDir(dir), { recursive: true });
-  writeFileSync(join(dir, "aidlc", "active-space"), `${DEFAULT_SPACE}\n`, "utf-8");
+  writeFileSync(join(dir, "amadeus", "active-space"), `${DEFAULT_SPACE}\n`, "utf-8");
   writeFileSync(join(intentsDir, "active-intent"), `${DEFAULT_RECORD_DIR}\n`, "utf-8");
   writeFileSync(
     join(intentsDir, "intents.json"),
@@ -114,7 +114,7 @@ function scratchProject(withState: boolean): string {
       seededStateFile(dir),
       readFileSync(join(REPO_ROOT, "tests", "fixtures", "state-brownfield-feature.md"), "utf-8"),
     );
-    writeFileSync(join(dir, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+    writeFileSync(join(dir, "amadeus", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
     const auditDir = seededAuditDir(dir);
     mkdirSync(auditDir, { recursive: true });
     writeFileSync(join(auditDir, pinnedShardName()), "# AI-DLC Audit Log\n");
@@ -236,9 +236,9 @@ describe("t149 Codex hook adapter (live-captured payload fixtures)", () => {
   test("4: apply_patch Add File under the intent record lands ARTIFACT_CREATED in the audit", () => {
     const dir = scratchProject(true);
     try {
-      const recordPrefix = `aidlc/spaces/${DEFAULT_SPACE}/intents/${DEFAULT_RECORD_DIR}`;
+      const recordPrefix = `amadeus/spaces/${DEFAULT_SPACE}/intents/${DEFAULT_RECORD_DIR}`;
       const remapped = remapApplyPatchPaths(
-        FIXTURES.postToolUse_applyPatch_aidlcDocs,
+        FIXTURES.postToolUse_applyPatch_amadeusDocs,
         recordPrefix,
       );
       const r = runAdapter(dir, "audit-and-sensors", withCwd(remapped, dir));
@@ -375,7 +375,7 @@ describe("t149 Codex hook adapter (live-captured payload fixtures)", () => {
     // `source`, so the core hook's P8 stamp/rebind path is reachable. Proof:
     // birth an intent (so the live cursor resolves a uuid), fire startup with
     // the fixture session_id, and assert the per-session stamp file
-    // aidlc/.amadeus-sessions/<session_id> was WRITTEN with that uuid. Without
+    // amadeus/.amadeus-sessions/<session_id> was WRITTEN with that uuid. Without
     // the forwarded session_id the core hook's `if (sessionId)` block is inert
     // and no stamp file appears.
     const dir = scratchProject(true);
@@ -384,7 +384,7 @@ describe("t149 Codex hook adapter (live-captured payload fixtures)", () => {
       const sid = String(FIXTURES.sessionStart.session_id);
       const r = runAdapter(dir, "session-start", withCwd(FIXTURES.sessionStart, dir));
       expect(r.code).toBe(0);
-      const stampPath = join(dir, "aidlc", ".amadeus-sessions", sid);
+      const stampPath = join(dir, "amadeus", ".amadeus-sessions", sid);
       expect(existsSync(stampPath)).toBe(true);
       expect(readFileSync(stampPath, "utf-8").trim()).toBe(born.uuid);
     } finally {
@@ -404,7 +404,7 @@ describe("t149 Codex hook adapter (live-captured payload fixtures)", () => {
       // Stamp the session to A via a startup fire (the core hook stamps the
       // live cursor's uuid — currently A).
       runAdapter(dir, "session-start", withCwd({ ...FIXTURES.sessionStart, source: "startup" }, dir));
-      const stampPath = join(dir, "aidlc", ".amadeus-sessions", sid);
+      const stampPath = join(dir, "amadeus", ".amadeus-sessions", sid);
       expect(readFileSync(stampPath, "utf-8").trim()).toBe(a.uuid);
       // Move the live cursor to B (the drift the resume must detect).
       birthIntent(dir, "intent-b", "default");

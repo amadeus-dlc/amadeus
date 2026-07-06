@@ -32,7 +32,7 @@
 //     persist  — one withAuditLock body (decide-inside-lock). Appends a
 //                        practice line under
 //                        the orchestrator-routed heading in the relocated
-//                        {project,team}.md (aidlc/spaces/<space>/memory/ via
+//                        {project,team}.md (amadeus/spaces/<space>/memory/ via
 //                        memoryDirFor — a learning IS a practice, vision §6; the
 //                        heading is ensure-exists) keyed by a `cid:<slug>:<id>`
 //                        marker, emits RULE_LEARNED. Two-write sensor bind:
@@ -99,7 +99,7 @@ import { memoryDirFor } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 // the flat amadeus-docs/, retired). State, runtime-graph, the per-stage memory,
 // and the per-clone audit shard all live under it; the runtime-graph memory_path
 // is record-relative so surface's join(projectDir, memRel) finds the file.
-const RP = `aidlc/spaces/${DEFAULT_SPACE}/intents/${DEFAULT_RECORD_DIR}`;
+const RP = `amadeus/spaces/${DEFAULT_SPACE}/intents/${DEFAULT_RECORD_DIR}`;
 
 const BUN = process.execPath; // the bun running this test
 const TOOLS = join(AMADEUS_SRC, "tools");
@@ -207,7 +207,7 @@ function countLines(file: string, needle: string): number {
 
 // A confirmed learning is a practice (vision §6): persist appends a practice
 // line into the relocated method file the resolver reads — {project,team}.md
-// under aidlc/spaces/<space>/memory/ (via memoryDirFor()) — not a parallel
+// under amadeus/spaces/<space>/memory/ (via memoryDirFor()) — not a parallel
 // `*-learnings.md` log.
 function projectPractices(pd: string): string {
   return join(memoryDirFor(pd), "project.md");

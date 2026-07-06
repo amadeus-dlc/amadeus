@@ -22,7 +22,7 @@ harness parameter. Add a column when you port to a new harness.
 | **Orchestrator entry** (`/amadeus` + runners) | Skills (`/amadeus`) | Skills (`/amadeus`) | Skills (`$amadeus`) |
 | **Agent personas** (11 domain experts) | `.claude/agents/*.md` | `.kiro/agents/*.json` + persona `.md` | `.agents/` TOMLs |
 | **Automation** (audit, state, tracking) | Hooks via `settings.json` | Hooks via `agents/amadeus.json` | Hooks via `.codex/hooks.json` (one adapter) |
-| **Standing rules** (the layer chain) | `aidlc/spaces/<space>/memory/` (via `.claude/rules/amadeus.md` @-import stub) | `aidlc/spaces/<space>/memory/` (via Kiro resources glob) | `aidlc/spaces/<space>/memory/` (via `AMADEUS_RULES_DIR`) |
+| **Standing rules** (the layer chain) | `amadeus/spaces/<space>/memory/` (via `.claude/rules/amadeus.md` @-import stub) | `amadeus/spaces/<space>/memory/` (via Kiro resources glob) | `amadeus/spaces/<space>/memory/` (via `AMADEUS_RULES_DIR`) |
 | **Project onboarding doc** | `CLAUDE.md` | `AGENTS.md` | `AGENTS.md` |
 | **Permissions / config** | `.claude/settings.json` | `.kiro/settings/cli.json` + agent config | `.codex/config.toml` (+ Starlark `rules/`) |
 
@@ -124,10 +124,10 @@ Workspace detection (0.2) used to be a subagent; it now runs deterministically i
 
 ### The layered rule files
 
-This implementation reads behavioral rules from the space memory layer at `aidlc/spaces/<space>/memory/`, pulled into Claude's context via the `.claude/rules/amadeus.md` @-import stub. One file per layer of the inheritance chain:
+This implementation reads behavioral rules from the space memory layer at `amadeus/spaces/<space>/memory/`, pulled into Claude's context via the `.claude/rules/amadeus.md` @-import stub. One file per layer of the inheritance chain:
 
 ```
-aidlc/spaces/<space>/memory/
+amadeus/spaces/<space>/memory/
 ├── org.md                        # framework defaults (shipped)
 ├── team.md                       # this team's affirmed practices
 ├── project.md                    # this project's specialization
@@ -146,11 +146,11 @@ Each file carries topical `##` headings (Way of Working, Testing Posture, Deploy
 
 The rule files are not static — the v0.5.0 learning loop turns an in-workflow correction into a standing rule for next time. The division of labor is deliberate: the LLM's only job is to write observations to the stage's `memory.md` diary while the stage runs (Interpretations / Deviations / Tradeoffs / Open questions). Everything else is a deterministic tool or a human decision:
 
-1. **Diary (LLM).** During the stage, observations accumulate in the intent's record dir at `<record>/<phase>/<stage>/memory.md` (`<record>/` = `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`).
+1. **Diary (LLM).** During the stage, observations accumulate in the intent's record dir at `<record>/<phase>/<stage>/memory.md` (`<record>/` = `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`).
 2. **Surface (tool).** At the approval gate, `amadeus-learnings.ts surface` reads the diary and emits structured candidates — the LLM does not re-parse or classify.
 3. **Confirm (human).** The conductor renders the candidates; you pick which to keep and, for free-text additions, pick the single heading that derives the destination.
 4. **Admission check (knowledge).** Each kept learning is checked against `org.md`'s matching section; a contradiction is surfaced for you to revise, skip, or escalate.
-5. **Persist (tool).** `amadeus-learnings.ts persist` writes each confirmed learning as a practice to `aidlc/spaces/<space>/memory/{project,team}.md` as dated entries and, for a sensor-binding learning, installs the manifest plus the stage `sensors:` import inside one locked transaction. It emits `RULE_LEARNED` / `SENSOR_PROPOSED`.
+5. **Persist (tool).** `amadeus-learnings.ts persist` writes each confirmed learning as a practice to `amadeus/spaces/<space>/memory/{project,team}.md` as dated entries and, for a sensor-binding learning, installs the manifest plus the stage `sensors:` import inside one locked transaction. It emits `RULE_LEARNED` / `SENSOR_PROPOSED`.
 
 The user-facing walk-through (with a worked example) is in [Rules and the Learning Loop](../guide/09-rules-and-the-learning-loop.md); the harness-engineer authoring angle is in [Rules and the Learning Loop](../harness-engineering/05-rules-and-the-loop.md).
 
@@ -168,20 +168,21 @@ The user-facing walk-through (with a worked example) is in [Rules and the Learni
 |---------|----------|
 | Prerequisites | `bun` (only runtime dependency); `mkdir`-based locking |
 | AI-DLC Structure | Skill, agent, rules, knowledge, and hook locations |
-| Conventions | Artifacts go to the intent's record dir under `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`; application code goes to workspace root |
+| Conventions | Artifacts go to the intent's record dir under `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`; application code goes to workspace root |
 | Session Resumption | Check for `amadeus-state.md` on startup, offer resume options |
 | Git Integration | Commit policy (see below) |
 
 ### Git Integration
 
 ```
-Commit: aidlc/ workspace (memory layer, intents registry, per-intent
+Commit: amadeus/ workspace (memory layer, intents registry, per-intent
         amadeus-state.md, audit/ shards, and stage artifacts)
 Gitignore:
-  - aidlc/active-space, aidlc/spaces/*/intents/active-intent  (per-user cursors)
-  - aidlc/.amadeus-clone-id, aidlc/.amadeus-sessions/             (machine-local)
-  - aidlc/spaces/*/intents/*/runtime-graph.json              (re-derivable)
-  - aidlc/spaces/*/intents/*/.amadeus-*                          (incl. .amadeus-recovery.md)
+  - amadeus/active-space, amadeus/spaces/*/intents/active-intent  (per-user cursors)
+  - amadeus/.amadeus-clone-id, amadeus/.amadeus-sessions/             (machine-local)
+  - amadeus/spaces/*/intents/*/runtime-graph.json              (re-derivable)
+  - amadeus/spaces/*/intents/*/.amadeus-*                          (incl. .amadeus-recovery.md)
+  - amadeus/spaces/*/intents/.amadeus-*                        (no-intent fallback root)
 ```
 
 The audit trail is committed as **per-clone shards** (`audit/<host>-<clone>.md`): each clone appends to its own shard, so concurrent appends never git-conflict. Per-user session cursors and machine-local derived state are ignored.
@@ -298,13 +299,13 @@ An MCP server appearing in the session is a function of MCP config plus availabl
 |---------|---------|---------------|------|
 | CLAUDE.md | `.claude/CLAUDE.md` | Every conversation | Bootstrap: structure, prerequisites, conventions |
 | Settings | `.claude/settings.json` | Every conversation | Pre-approve Claude Code tools |
-| Rules | `aidlc/spaces/<space>/memory/*.md` (via `.claude/rules/amadeus.md` @-stub) | Every conversation | Minimal guardrails; self-learning corrections |
+| Rules | `amadeus/spaces/<space>/memory/*.md` (via `.claude/rules/amadeus.md` @-stub) | Every conversation | Minimal guardrails; self-learning corrections |
 | Skill | `.claude/skills/amadeus/SKILL.md` | On `/amadeus` invocation | Orchestrator: session, scope, stage graph, delegation |
 | Workflow-spine hooks | `.claude/settings.json` | Always on; self-gate when no workflow | PostToolUse, PreCompact, SubagentStop, Stop |
 | Agents (inline) | `.claude/agents/*.md` | Persona activation | 30 of 32 stages: conductor adopts agent persona |
 | Agents (subagent) | `.claude/agents/*.md` | Task tool delegation | 2 stages (2.1, 3.5): isolated execution |
 | Knowledge (Tier 1) | `.claude/knowledge/` | Persona activation (steps 2-3) | 56 methodology reference files |
-| Knowledge (Tier 2) | space-level `aidlc/knowledge/` (sibling of `intents/`) | Persona activation (steps 4-5) | Team-managed customization |
+| Knowledge (Tier 2) | space-level `amadeus/knowledge/` (sibling of `intents/`) | Persona activation (steps 4-5) | Team-managed customization |
 | Stage protocol | `stage-protocol.md` | Every stage execution | Mandatory behavioral contract |
 | Stage files | `stages/**/*.md` | Engine routing | 32 individual stage definitions |
 | State file | `amadeus-state.md` | Session start + throughout | Persistent workflow state |

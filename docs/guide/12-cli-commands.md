@@ -158,21 +158,21 @@ If no state file exists, the framework treats this as a new workflow and asks fo
 ### Initialization — automatic, no command
 
 There is no scaffold command. The shipped `dist/<harness>/` workspace shell
-arrives pre-built (the `.claude/` engine plus `aidlc/spaces/default/memory/`),
+arrives pre-built (the `.claude/` engine plus `amadeus/spaces/default/memory/`),
 and the engine **auto-births** the first intent on your first `/amadeus` (or when
 you describe what to build). Birth runs the three Initialization stages
 (Workspace Scaffold, Workspace Detection, State Init) as a single deterministic
 tool call: it creates the intent's record dir at
-`aidlc/spaces/<space>/intents/<YYMMDD>-<label>/` (the `audit/` shard dir, the
+`amadeus/spaces/<space>/intents/<YYMMDD>-<label>/` (the `audit/` shard dir, the
 per-phase artifact dirs, `verification/`) and the empty space-level
-`aidlc/knowledge/` directory, runs a rule-based workspace scan, and writes that
+`amadeus/knowledge/` directory, runs a rule-based workspace scan, and writes that
 intent's `amadeus-state.md` with the scope plan.
 It logs the init-sequence events (`WORKFLOW_STARTED`, `WORKSPACE_SCAFFOLDED`,
 `WORKSPACE_SCANNED`, `WORKSPACE_INITIALISED`, plus per-stage
 `STAGE_STARTED`/`STAGE_COMPLETED`). Naming a scope (`/amadeus --scope feature`)
 seeds the initial scope; absent one it defaults to `poc`. To add team knowledge
-or guardrails before the first run, edit the shipped `aidlc/spaces/default/memory/`
-files; the space-level `aidlc/knowledge/` directory is created (empty) once the
+or guardrails before the first run, edit the shipped `amadeus/spaces/default/memory/`
+files; the space-level `amadeus/knowledge/` directory is created (empty) once the
 first intent exists, and you add free-form files to it from there.
 
 The welcome message is rendered at session start via the `companyAnnouncements`
@@ -223,7 +223,7 @@ Validate that all of this implementation's prerequisites, configuration, and sta
 | Prerequisites | `bun` is installed and on PATH |
 | Hook presence | Every hook `settings.json` wires (its `hooks` blocks + the `statusLine` command — all 11 framework hooks) exists in `.claude/hooks/`; a wired-but-missing hook fails loudly. Sourcing the expected roster from `settings.json` means adding a hook there auto-checks it |
 | Project structure | `.claude/settings.json` exists (file presence only, no content validation) |
-| Workspace shell | `.claude/` + `aidlc/spaces/default/memory/` are present (the shipped shell) |
+| Workspace shell | `.claude/` + `amadeus/spaces/default/memory/` are present (the shipped shell) |
 | Env scope | `AMADEUS_DEFAULT_SCOPE` (if set) names a valid scope |
 | Hook heartbeats | `.amadeus-hooks-health/` contains recent timestamps from hook executions |
 | State drift | the active intent's `amadeus-state.md` matches the last `WORKFLOW_COMPLETED` in the audit |
@@ -250,7 +250,7 @@ Validate that all of this implementation's prerequisites, configuration, and sta
 ✓ amadeus-statusline.ts present
 ✓ settings.json present
 ✓ AMADEUS_DEFAULT_SCOPE (unset — no project default)
-✓ workspace shell ready (.claude/ + aidlc/spaces/default/memory/)
+✓ workspace shell ready (.claude/ + amadeus/spaces/default/memory/)
 ✓ Hook heartbeats: not yet fired (first workflow stage will populate)
 ✓ State matches last audit event (no drift)
 ✓ Cycle detection: 0 cycles
@@ -459,7 +459,7 @@ bun .claude/tools/amadeus-sensor.ts list
 bun .claude/tools/amadeus-sensor.ts describe required-sections
 bun .claude/tools/amadeus-sensor.ts fire required-sections \
   --stage requirements-analysis \
-  --output-path aidlc/spaces/default/intents/<YYMMDD>-<label>/inception/requirements-analysis/requirements.md
+  --output-path amadeus/spaces/default/intents/<YYMMDD>-<label>/inception/requirements-analysis/requirements.md
 ```
 
 ### `amadeus-learnings` — the learning-gate tool
@@ -469,7 +469,7 @@ This is the deterministic half of the §13 learning gate. After a stage is appro
 | Subcommand | What it does |
 |------------|--------------|
 | `surface --slug <stage-slug>` | Read the just-approved stage's `memory.md` and print structured candidates (Interpretations, Deviations, Tradeoffs) plus any parked open questions. Read-only |
-| `persist --slug <stage-slug> --selections-json <path>` | Write the confirmed learnings (a confirmed learning is a practice) to the space memory layer — `aidlc/spaces/<space>/memory/project.md` / `memory/team.md` (and, for a Sensor-binding learning, scaffold and bind a project-tier Sensor), emitting `RULE_LEARNED` / `SENSOR_PROPOSED` |
+| `persist --slug <stage-slug> --selections-json <path>` | Write the confirmed learnings (a confirmed learning is a practice) to the space memory layer — `amadeus/spaces/<space>/memory/project.md` / `memory/team.md` (and, for a Sensor-binding learning, scaffold and bind a project-tier Sensor), emitting `RULE_LEARNED` / `SENSOR_PROPOSED` |
 
 Confirmed learnings apply on the next workflow, not the current one.
 

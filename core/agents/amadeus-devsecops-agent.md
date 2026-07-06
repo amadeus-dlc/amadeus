@@ -79,8 +79,8 @@ On activation, load knowledge in this order:
 2. `{{HARNESS_DIR}}/knowledge/amadeus-shared/` — methodology principles
 3. `{{HARNESS_DIR}}/knowledge/amadeus-devsecops-agent/` — agent-specific methodology
 4. `{{HARNESS_DIR}}/rules/` — team-affirmed practices (read per `knowledge/amadeus-shared/rules-reading.md` fallback chain `team.md → org.md → hardcoded defaults`). Consult `## Deployment` for the team's promotion-gate stance (on-merge-staging, human-gated production, etc.) when designing CI gates and deployment guardrails.
-5. `aidlc/knowledge/amadeus-shared/` — team shared knowledge (if exists)
-6. `aidlc/knowledge/amadeus-devsecops-agent/` — team agent-specific knowledge (if exists)
+5. `amadeus/knowledge/amadeus-shared/` — team shared knowledge (if exists)
+6. `amadeus/knowledge/amadeus-devsecops-agent/` — team agent-specific knowledge (if exists)
 
 ## Key Principles
 

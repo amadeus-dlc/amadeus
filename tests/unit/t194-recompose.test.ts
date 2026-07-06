@@ -58,8 +58,8 @@ function run(
 }
 
 function recordDirOf(proj: string): string {
-  const space = readFileSync(join(proj, "aidlc", "active-space"), "utf-8").trim() || "default";
-  const intentsDir = join(proj, "aidlc", "spaces", space, "intents");
+  const space = readFileSync(join(proj, "amadeus", "active-space"), "utf-8").trim() || "default";
+  const intentsDir = join(proj, "amadeus", "spaces", space, "intents");
   const rec = readFileSync(join(intentsDir, "active-intent"), "utf-8").trim();
   return join(intentsDir, rec);
 }

@@ -455,7 +455,7 @@ function handleDoctor(projectDir: string): void {
         fix: "restore .claude/settings.json (copy from `dist/claude/.claude/settings.json.example`)",
       });
     } else if (expectedHooks.length === 0) {
-      // settings.json parsed but wires no aidlc hooks — also loud (a stripped
+      // settings.json parsed but wires no amadeus hooks — also loud (a stripped
       // settings.json that lost its hooks block is a real misconfiguration).
       results.push({
         pass: false,
@@ -625,7 +625,7 @@ function handleDoctor(projectDir: string): void {
   const shellReady = existsSync(harnessEngineDir) && existsSync(defaultMemoryDir);
   results.push({
     pass: shellReady,
-    label: `workspace shell ready (${harnessDir()}/ + aidlc/spaces/default/memory/)`,
+    label: `workspace shell ready (${harnessDir()}/ + amadeus/spaces/default/memory/)`,
     fix: `copy the workspace shell from \`dist/${harnessDir().replace(/^\./, "")}/\` into your project root`,
   });
 
@@ -816,7 +816,7 @@ function handleDoctor(projectDir: string): void {
   // ---------------------------------------------------------------------------
   // Check 1 — Orphan worktrees
   //
-  // Walk `.aidlc/worktrees/bolt-*/` directories on disk; cross-reference each
+  // Walk `.amadeus/worktrees/bolt-*/` directories on disk; cross-reference each
   // against:
   //   (a) main state's Bolt Refs (active fork → ✓)
   //   (b) audit WORKTREE_DISCARDED / WORKTREE_MERGED (terminated → orphan dir)
@@ -827,7 +827,7 @@ function handleDoctor(projectDir: string): void {
   // or absent — the issue 75 line 215 "fail-clean on no-worktrees" guarantee.
   // ---------------------------------------------------------------------------
   try {
-    const worktreesDir = join(projectDir, ".aidlc", "worktrees");
+    const worktreesDir = join(projectDir, ".amadeus", "worktrees");
     let observed = 0;
     let activeForks = 0;
     let preservedByAbort = 0;
@@ -912,7 +912,7 @@ function handleDoctor(projectDir: string): void {
         );
       }
       label = `Orphan worktrees: ${orphanActive.length + cleanupOrphans.length} drift`;
-      fix = `${parts.join("; ")}. Inspect and remove via 'amadeus-worktree discard --slug <slug>' or 'rm -rf .aidlc/worktrees/bolt-<slug>'.`;
+      fix = `${parts.join("; ")}. Inspect and remove via 'amadeus-worktree discard --slug <slug>' or 'rm -rf .amadeus/worktrees/bolt-<slug>'.`;
     }
     results.push({ pass, label, fix });
   } catch (e) {
@@ -987,14 +987,14 @@ function handleDoctor(projectDir: string): void {
   // ---------------------------------------------------------------------------
   // Check 3 — Orphan state files (paired with STATE_FORKED slug-tag)
   //
-  // Walk `.aidlc/worktrees/*/amadeus-docs/amadeus-state.md`; each found state file
+  // Walk `.amadeus/worktrees/*/amadeus-docs/amadeus-state.md`; each found state file
   // must map to a slug in main's Bolt Refs (active fork) OR pair with a
   // WORKTREE_DISCARDED audit row (pre-discard). Anything else is post-fork
   // drift — STATE_FORKED emitted, slug added to Bolt Refs, but state-write or
   // STATE_MERGED never landed.
   // ---------------------------------------------------------------------------
   try {
-    const worktreesDir = join(projectDir, ".aidlc", "worktrees");
+    const worktreesDir = join(projectDir, ".amadeus", "worktrees");
     const orphan: string[] = [];
     let observed = 0;
 
@@ -1484,7 +1484,7 @@ function handleDoctor(projectDir: string): void {
 
   // Rule drift (advisory, always pass:true) — surface team/project rule files
   // whose `##` headings overlap a POPULATED heading in the org layer
-  // (aidlc/spaces/default/memory/org.md), quoting the org sentence inline so
+  // (amadeus/spaces/default/memory/org.md), quoting the org sentence inline so
   // the orchestrator-LLM can review for contradiction at observation time. A
   // learning is a practice (vision §6) — it lands in team.md / project.md, so
   // those two scopes are the whole team/project surface the walk reads.
@@ -2057,17 +2057,17 @@ function ensureWorkspaceDirs(projectDir: string): void {
   // <harness>/knowledge/ (untouched). Lazy ensure-exists — never SEED.
   mkdirSync(knowledgeDir(projectDir), { recursive: true });
   // Engine-only-install self-heal: recover an ENGINE-ONLY install. Normally the
-  // workspace shell (aidlc/spaces/default/memory/) ships as a SIBLING of the
+  // workspace shell (amadeus/spaces/default/memory/) ships as a SIBLING of the
   // engine dir (the packager's emitMemory → MEMORY_DST), so a complete dist/
   // copy already carries it and the lines below leave it untouched. But a user
   // who copies ONLY the harness engine dir (e.g. dist/kiro/.kiro/) and NOT the
-  // sibling aidlc/ shell lands with NO default-space method tree → doctor's
+  // sibling amadeus/ shell lands with NO default-space method tree → doctor's
   // "workspace shell ready" check fails and the rule resolver loads zero rules.
   // To recover, seed the default-space memory tree from the copy the packager
   // bundled INSIDE the engine at tools/data/memory-seed/ (frameworkMemorySeedDir,
   // mirroring the tools/data/templates pattern) — but ONLY if the default tree is
   // ABSENT. The existsSync guard makes this strictly idempotent: a normal install
-  // that copied aidlc/ already has the dir, so the seed never fires and the
+  // that copied amadeus/ already has the dir, so the seed never fires and the
   // committed default tree never churns (preserving the "default tree never
   // churns" invariant). This is a deliberate, GUARDED exception to the
   // "never SEED" rule the rest of this function follows.
@@ -2706,7 +2706,7 @@ function handleCodekbPath(projectDir: string, flags: Record<string, string>): vo
 }
 
 // `detect [--json]` - read-only. Runs the workspace scan (detectWorkspace) on
-// the bare project dir - it needs no aidlc/ workspace; it scans the app root -
+// the bare project dir - it needs no amadeus/ workspace; it scans the app root -
 // and prints projectType (Greenfield/Brownfield), languages, frameworks, and
 // buildSystem. ALSO prints the resolved scope-registry paths (scopesDir +
 // scopeGridPath): those are module-relative to the installed tool, which a

@@ -21,7 +21,7 @@ tests/logs/
 # AIDLC runtime state (Construction worktrees + future runtime artefacts).
 # Anchored to repo root; distinct from .claude/worktrees above which is
 # the framework-development worktree convention.
-/.aidlc/
+/.amadeus/
 /.amadeus/
 
 # Local scratch — explainers, throwaway HTML, etc. (claude writes explainers here)
@@ -39,6 +39,9 @@ amadeus/.amadeus-clone-id
 amadeus/.amadeus-sessions/
 amadeus/spaces/*/intents/*/runtime-graph.json
 amadeus/spaces/*/intents/*/.amadeus-*
+# No-intent fallback root: before the first intent is born, hooks write their
+# health beats to spaces/<space>/intents/ directly.
+amadeus/spaces/*/intents/.amadeus-*
 
 # Local-only — pins shfmt formatting to project style via a local
 # auto-format tool. Not committed; contributors who do not use it do not need it.

@@ -119,16 +119,16 @@ const utilityIn = (proj: string): string => toolIn(proj, "amadeus-utility.ts");
 const fixtureScopeFile = (proj: string): string =>
   join(proj, ".claude", "scopes", "amadeus-fixture-scope.md");
 
-// P4: init births a per-intent record (aidlc/spaces/<space>/intents/<slug>-<id8>/)
+// P4: init births a per-intent record (amadeus/spaces/<space>/intents/<slug>-<id8>/)
 // and writes amadeus-state.md there, not the flat amadeus-docs/. Resolve the record
 // dir from the active-space + active-intent cursors, falling back to the flat
 // layout for a seeded-flat project (Test 5 seeds flat state and never inits).
 function recordDirOf(proj: string): string {
-  const spaceCursor = join(proj, "aidlc", "active-space");
+  const spaceCursor = join(proj, "amadeus", "active-space");
   const space = existsSync(spaceCursor)
     ? readFileSync(spaceCursor, "utf-8").trim() || "default"
     : "default";
-  const intentsDir = join(proj, "aidlc", "spaces", space, "intents");
+  const intentsDir = join(proj, "amadeus", "spaces", space, "intents");
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();

@@ -41,7 +41,7 @@ const manifest: HarnessManifest = {
   harnessFiles: [
     { src: "hooks/amadeus-codex-adapter.ts", dst: "hooks/amadeus-codex-adapter.ts" },
     // Project-root .gitignore (beside .codex/, not inside it) — re-rooted under
-    // aidlc/spaces/* for the workspace layout (SEED): cursors + machine-local
+    // amadeus/spaces/* for the workspace layout (SEED): cursors + machine-local
     // runtime ignored, the shared work (memory/codekb/registry/state/audit
     // shards/artifacts) committed. Net-new for Codex — it shipped none before.
     // Authored as dot-gitignore so it does not act as a live ignore inside

@@ -20,7 +20,7 @@
 //
 // SEEDING the per-intent workspace layout: birthIntent() (amadeus-lib.ts) is the
 // real deterministic primitive that mints a record dir under
-// aidlc/spaces/<space>/intents/<slug>-<id8>/, appends the intents.json row, and
+// amadeus/spaces/<space>/intents/<slug>-<id8>/, appends the intents.json row, and
 // sets the active-intent cursor — exactly the on-disk shape activeIntent()/
 // listIntents()/orientationPrefix() read. We seed through it (not by hand) so
 // the test tracks the real layout, then overwrite the record's amadeus-state.md

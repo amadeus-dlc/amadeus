@@ -80,7 +80,7 @@ Configuration in this repo partitions along **two orthogonal axes**, not one.
 ### Axis 2 — when is it consumed?
 
 - **Loaded continuously (harness configuration)** — read at session start; available to every stage in every workflow run in this workspace. Lives under `.claude/`.
-- **Per-workflow artefact** — produced by a specific stage as output, read by later stages as input. Lives under the intent's record dir (`aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`, written `<record>/` below). Re-produced on each workflow run.
+- **Per-workflow artefact** — produced by a specific stage as output, read by later stages as input. Lives under the intent's record dir (`amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`, written `<record>/` below). Re-produced on each workflow run.
 
 ### The four quadrants
 
@@ -88,8 +88,8 @@ Crossing the two axes gives four quadrants. Three are populated; one is intentio
 
 |  | Framework-authored | Team-authored |
 |---|---|---|
-| **Loaded continuously** (harness config) | `.claude/skills/`, `.claude/agents/`, `.claude/knowledge/`, `aidlc/spaces/<space>/memory/org.md`, `aidlc/spaces/<space>/memory/phases/*.md`, `.claude/scopes/`, `.claude/tools/data/scope-grid.json`, `.claude/tools/data/stage-graph.json` | `aidlc/spaces/<space>/memory/team.md`, `aidlc/spaces/<space>/memory/project.md` |
-| **Per-workflow artefact** | *(empty by design)* | `<record>/amadeus-state.md`, `<record>/audit/*.md` (per-clone shards), `<record>/<phase>/<stage>/*.md`, `.aidlc/worktrees/bolt-*/` |
+| **Loaded continuously** (harness config) | `.claude/skills/`, `.claude/agents/`, `.claude/knowledge/`, `amadeus/spaces/<space>/memory/org.md`, `amadeus/spaces/<space>/memory/phases/*.md`, `.claude/scopes/`, `.claude/tools/data/scope-grid.json`, `.claude/tools/data/stage-graph.json` | `amadeus/spaces/<space>/memory/team.md`, `amadeus/spaces/<space>/memory/project.md` |
+| **Per-workflow artefact** | *(empty by design)* | `<record>/amadeus-state.md`, `<record>/audit/*.md` (per-clone shards), `<record>/<phase>/<stage>/*.md`, `.amadeus/worktrees/bolt-*/` |
 
 The framework doesn't produce per-workflow artefacts because such outputs would have to ship with the distribution — which makes them framework-authored harness config, not per-workflow output. The empty cell is the routing rule's signature, not a gap.
 
@@ -104,12 +104,12 @@ When a new concern arrives, two questions resolve where it goes:
 
 Worked examples:
 
-- *"We always squash-merge to main"* — project-specific (other teams use rebase) and loaded continuously (the conductor reads it on every Bolt merge). Goes to `aidlc/spaces/<space>/memory/team.md`.
-- *"ALWAYS use Result<T,E> in service layer; NEVER throw"* — project-specific and loaded continuously (agents read it on every code-gen). Goes to `aidlc/spaces/<space>/memory/project.md`.
-- *"Trunk-based development is the recommended branching strategy"* — same for every project (framework opinion) and loaded continuously (read at delivery-planning). Goes to `aidlc/spaces/<space>/memory/org.md`.
+- *"We always squash-merge to main"* — project-specific (other teams use rebase) and loaded continuously (the conductor reads it on every Bolt merge). Goes to `amadeus/spaces/<space>/memory/team.md`.
+- *"ALWAYS use Result<T,E> in service layer; NEVER throw"* — project-specific and loaded continuously (agents read it on every code-gen). Goes to `amadeus/spaces/<space>/memory/project.md`.
+- *"Trunk-based development is the recommended branching strategy"* — same for every project (framework opinion) and loaded continuously (read at delivery-planning). Goes to `amadeus/spaces/<space>/memory/org.md`.
 - *"The 5 common branching strategies and their trade-offs"* — same for every project (framework reference) and loaded continuously (amadeus-pipeline-deploy-agent reads when discovering branching strategy). Goes to `.claude/knowledge/amadeus-pipeline-deploy-agent/branching-strategies.md`.
 - *"This run's requirements analysis"* — project-specific and per-workflow (each run produces fresh analysis). Goes to `<record>/inception/requirements-analysis/`.
-- *"Bolt-1's worktree state mid-Construction"* — project-specific and per-workflow (regenerated each Bolt). Goes to the Bolt worktree's copy of the record dir, `.aidlc/worktrees/bolt-1/<record>/amadeus-state.md`.
+- *"Bolt-1's worktree state mid-Construction"* — project-specific and per-workflow (regenerated each Bolt). Goes to the Bolt worktree's copy of the record dir, `.amadeus/worktrees/bolt-1/<record>/amadeus-state.md`.
 
 ### Sub-categories of harness config (top row)
 
@@ -117,9 +117,9 @@ The top row partitions further by **form of content**:
 
 - **Framework harness mechanics** → frontmatter / JSON. Workflow ordering, stage definitions, artifact production, gate semantics. Read by tools deterministically. Lives in `.claude/skills/`, `.claude/tools/data/`.
 - **Framework domain reference** → agent KB prose under `.claude/knowledge/amadeus-<agent>-agent/`. The menu of options for a domain (the 5 branching strategies, the deployment patterns, the testing methodologies). Read by the owning agent when it needs the menu.
-- **Framework methodology defaults** → prose at `aidlc/spaces/<space>/memory/org.md`. What the framework recommends until a team affirms otherwise. Written in the team's voice (because if the team doesn't override, the org defaults *are* the team's voice).
-- **Team practices** → prose at `aidlc/spaces/<space>/memory/team.md`. The team's selection — "this is how we work", populated by practices-discovery's affirmation gate. Read by agents at decision points (delivery-planning reads branching strategy; the conductor reads walking-skeleton stance in `SKILL.md`).
-- **Project overrides** → prose at `aidlc/spaces/<space>/memory/project.md`. Project-specific corrections that override team and org defaults; also populated by practices-discovery's affirmation gate.
+- **Framework methodology defaults** → prose at `amadeus/spaces/<space>/memory/org.md`. What the framework recommends until a team affirms otherwise. Written in the team's voice (because if the team doesn't override, the org defaults *are* the team's voice).
+- **Team practices** → prose at `amadeus/spaces/<space>/memory/team.md`. The team's selection — "this is how we work", populated by practices-discovery's affirmation gate. Read by agents at decision points (delivery-planning reads branching strategy; the conductor reads walking-skeleton stance in `SKILL.md`).
+- **Project overrides** → prose at `amadeus/spaces/<space>/memory/project.md`. Project-specific corrections that override team and org defaults; also populated by practices-discovery's affirmation gate.
 - **Guardrails** (`## Forbidden`, `## Mandated`, `## Corrections` sections) — present in `org.md`, `team.md`, and `project.md`. Corrective rules for agents — `ALWAYS X`, `NEVER Y`. Loaded into agent context continuously.
 
 ### What not to put in `.claude/` directly
@@ -134,7 +134,7 @@ Two cases that look like configuration but aren't:
 Most stages write to one row. A few stages write to both, with the cross-row write gated by team affirmation. **Practices-discovery (Inception 2.2) is the only stage that does this.** Its outputs are:
 
 - `<record>/inception/practices-discovery/team-practices.md` — per-workflow audit trail (bottom row).
-- On affirmation, content is copied to the space memory layer — `aidlc/spaces/<space>/memory/team.md` AND `memory/project.md` — team-authored harness config (top-right cell).
+- On affirmation, content is copied to the space memory layer — `amadeus/spaces/<space>/memory/team.md` AND `memory/project.md` — team-authored harness config (top-right cell).
 
 The audit-trail copy proves what was affirmed in this run; the `.claude/` copy becomes the team's standing configuration that every future workflow loads.
 
@@ -296,7 +296,7 @@ dist/claude/.claude/
 |   +-- amadeus-session-end.ts
 |   +-- amadeus-statusline.ts
 +-- rules/
-|   +-- amadeus.md                # @-import stub -> ../../aidlc/spaces/<space>/memory/ (NOT a copy; re-pointed in place on `space` switch)
+|   +-- amadeus.md                # @-import stub -> ../../amadeus/spaces/<space>/memory/ (NOT a copy; re-pointed in place on `space` switch)
 +-- agents/
 |   +-- amadeus-product-agent.md
 |   +-- amadeus-design-agent.md
@@ -341,7 +341,7 @@ dist/claude/.claude/
 |   |   +-- re-artifacts.md
 |   +-- [... 8 more agent knowledge dirs]
 +-- skills/
-    +-- aidlc/
+    +-- amadeus/
         +-- SKILL.md
         +-- stage-protocol.md
         +-- stage-protocol-recovery.md
@@ -390,13 +390,13 @@ dist/claude/.claude/
 
 The tree above is the **engine** — harness-specific, never browsed by the user.
 Everything the engine *reads and writes at runtime* lives in a separate, neutral
-`aidlc/` directory at the project root, organized as a two-level container:
+`amadeus/` directory at the project root, organized as a two-level container:
 **space → intent**. (For the end-user orientation, see the User Guide's
 [Spaces and Intents](../guide/03-spaces-and-intents.md); this section is the
 data model the engine resolves against.)
 
 ```
-aidlc/                                    # neutral, harness-independent, committed to git
+amadeus/                                    # neutral, harness-independent, committed to git
 +-- active-space                          # cursor: active space name (gitignored, per-user)
 +-- spaces/
     +-- default/                          # one space per team; "default" is auto-resolved
@@ -415,11 +415,11 @@ aidlc/                                    # neutral, harness-independent, commit
 **Resolution.** Two per-user cursors select context; neither ever errors (a
 missing cursor falls back to a default):
 
-- **Space** — `aidlc/active-space`, precedence `explicit arg > cursor > "default"`
+- **Space** — `amadeus/active-space`, precedence `explicit arg > cursor > "default"`
   (`DEFAULT_SPACE`, `core/tools/amadeus-lib.ts:285`; resolver `activeSpace()`,
   `amadeus-lib.ts:354-366`). `listSpaces()` always reports `default` even with
   nothing on disk (`amadeus-lib.ts:713-728`).
-- **Intent** — `aidlc/spaces/<space>/intents/active-intent`, precedence
+- **Intent** — `amadeus/spaces/<space>/intents/active-intent`, precedence
   `explicit arg > cursor (if it names a real record holding amadeus-state.md) >
   lone-intent > null` (`activeIntent`, `amadeus-lib.ts:411-435`). A `null` intent
   means "no record yet" — the signal the orchestrator uses to auto-birth the
@@ -434,7 +434,7 @@ above, Kiro's resources glob, Codex's rules dir) at the switched space's
 `memory/`. At `default` the re-point is a byte-identical no-op, so a single-team
 committed tree never churns.
 
-**Committed vs gitignored.** `aidlc/` is checked in so a team shares its work.
+**Committed vs gitignored.** `amadeus/` is checked in so a team shares its work.
 The split (`harness/claude/dot-gitignore:34-54`): the two cursors
 (`active-space`, `active-intent`), per-clone runtime (`.amadeus-clone-id`,
 `.amadeus-sessions/`), and derived state (`runtime-graph.json`, `.amadeus-*` under a
@@ -456,15 +456,15 @@ appends — there is intentionally no `merge=union` attribute.
 
 5. **Stage protocol as shared contract** -- All 32 stages follow `stage-protocol.md` for approval gates, question format (tri-mode: Guide Me / Edit File / Chat), completion messages, state tracking, error recovery, change handling, the §13 Learnings Ritual, and phase boundary verification. This ensures consistent behavior across all stages without repeating instructions in each stage file.
 
-6. **Two-tier knowledge architecture** -- Methodology knowledge ships with the framework in `knowledge/` (shared principles + per-agent methodology). User-managed team knowledge lives at the space level in `aidlc/knowledge/` (a sibling of the space's `intents/`), created empty by the engine and populated by the team. This separates framework upgrades from team customization.
+6. **Two-tier knowledge architecture** -- Methodology knowledge ships with the framework in `knowledge/` (shared principles + per-agent methodology). User-managed team knowledge lives at the space level in `amadeus/knowledge/` (a sibling of the space's `intents/`), created empty by the engine and populated by the team. This separates framework upgrades from team customization.
 
 7. **Flat agent files** -- Each agent is a single `.md` file in `agents/` (not a subdirectory with `agent.md` + `knowledge/`). This simplifies the structure and makes agents discoverable. Methodology knowledge lives separately in `knowledge/[agent]/`.
 
 8. **Scope-driven adaptive depth** -- Nine named scopes (enterprise, feature, mvp, poc, bugfix, refactor, infra, security-patch, workshop) plus auto-detect determine which stages execute and at what depth. Each scope is a `.claude/scopes/amadeus-<name>.md` file (identity); membership is a per-stage `scopes:` frontmatter tag, transposed at compile into the EXECUTE/SKIP grid (`.claude/tools/data/scope-grid.json`, authoritative) and compiled into a summary table in SKILL.md (informational). NL keyword→scope inference reads each scope's `keywords` from its `.md` frontmatter. The user can override at any approval gate.
 
-9. **Minimal rules** -- Only guardrails (~35 lines total) live in the space memory layer (`aidlc/spaces/<space>/memory/`, pulled in via the `.claude/rules/amadeus.md` @-import stub). Everything else (verification, brownfield safeguards, audit format, adaptive patterns) lives in `knowledge/amadeus-shared/` or is embedded in SKILL.md/stage-protocol.md. This prevents context bloat in non-AI-DLC conversations since rules are always loaded.
+9. **Minimal rules** -- Only guardrails (~35 lines total) live in the space memory layer (`amadeus/spaces/<space>/memory/`, pulled in via the `.claude/rules/amadeus.md` @-import stub). Everything else (verification, brownfield safeguards, audit format, adaptive patterns) lives in `knowledge/amadeus-shared/` or is embedded in SKILL.md/stage-protocol.md. This prevents context bloat in non-AI-DLC conversations since rules are always loaded.
 
-10. **Self-learning loop** -- When a human corrects agent behavior, the correction can become a persistent Rule. The §13 Learnings Ritual (tool-as-actor: `amadeus-learnings.ts` surfaces and persists; the user confirms) writes each confirmed learning as a practice into the space memory layer — `aidlc/spaces/<space>/memory/project.md` (default), one-click promote to `memory/team.md` — or scaffolds a Sensor, applying on the next workflow's compile. See [Rule System](08-rule-system.md).
+10. **Self-learning loop** -- When a human corrects agent behavior, the correction can become a persistent Rule. The §13 Learnings Ritual (tool-as-actor: `amadeus-learnings.ts` surfaces and persists; the user confirms) writes each confirmed learning as a practice into the space memory layer — `amadeus/spaces/<space>/memory/project.md` (default), one-click promote to `memory/team.md` — or scaffolds a Sensor, applying on the next workflow's compile. See [Rule System](08-rule-system.md).
 
 11. **Phase boundary verification** -- Traceability checks run automatically at phase transitions (Initialization->Ideation auto-proceed, Ideation->Inception, Inception->Construction, Construction->Operation). This catches missing requirements-to-design links, orphaned artifacts, and inconsistencies before downstream stages build on incomplete foundations.
 

@@ -23,7 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 
-# AI-DLC — the committed-vs-ignored split (workspace layout, re-rooted under aidlc/).
+# AI-DLC — the committed-vs-ignored split (workspace layout, re-rooted under amadeus/).
 # Rule of thumb (vision §5.1): per-user session CURSORS and machine-local
 # runtime/derived state are ignored; everything that is the shared work —
 # method, registry, state, AUDIT (per-clone shards), artifacts — is committed.
@@ -31,29 +31,33 @@ dist-ssr
 # Per-user session cursors — ignored (two teammates legitimately point at
 # different spaces/intents at once; committing them would dirty the tree on
 # every /amadeus and have teammates fight over the cursor on each switch).
-aidlc/active-space
-aidlc/spaces/*/intents/active-intent
+amadeus/active-space
+amadeus/spaces/*/intents/active-intent
 #
 # Machine-local runtime / derived — ignored (regenerated per machine).
 # The clone-id token names this clone's audit shard; it MUST stay machine-local
 # (gitignored) or every clone from a commit would share a shard and git-conflict.
-aidlc/.amadeus-clone-id
+amadeus/.amadeus-clone-id
 # Per-turn roll-forward guard (Kiro): a turn counter + a read-only/nav latch the
 # userPromptSubmit seam stamps and the engine done-guard / preToolUse backstop
 # read. Per-machine runtime, never shared truth.
-aidlc/.amadeus-turn-counter
-aidlc/.amadeus-readonly-latch
+amadeus/.amadeus-turn-counter
+amadeus/.amadeus-readonly-latch
 # Per-conversation session→intent map (resume rebind, P8): per-user runtime
 # state keyed by Claude Code session_id, never shared truth.
-aidlc/.amadeus-sessions/
-aidlc/spaces/*/intents/*/runtime-graph.json
-aidlc/spaces/*/intents/*/.amadeus-*
+amadeus/.amadeus-sessions/
+amadeus/spaces/*/intents/*/runtime-graph.json
+amadeus/spaces/*/intents/*/.amadeus-*
+# Same machine-local scratch at the no-intent fallback root: before the first
+# intent is born, hooks write their health beats to spaces/<space>/intents/
+# directly (docsRoot falls back when no record dir exists yet).
+amadeus/spaces/*/intents/.amadeus-*
 #
 # COMMITTED (NOT ignored, listed here for the record — do NOT add ignore rules
-# for these): aidlc/spaces/*/memory/** · aidlc/spaces/*/codekb/** ·
-# aidlc/spaces/*/intents/intents.json · aidlc/spaces/*/intents/*/amadeus-state.md ·
-# aidlc/spaces/*/intents/*/audit/*.md (the audit trail, committed as PER-CLONE
+# for these): amadeus/spaces/*/memory/** · amadeus/spaces/*/codekb/** ·
+# amadeus/spaces/*/intents/intents.json · amadeus/spaces/*/intents/*/amadeus-state.md ·
+# amadeus/spaces/*/intents/*/audit/*.md (the audit trail, committed as PER-CLONE
 # SHARDS: each machine appends to audit/<host>-<clone>.md so git never merges
 # concurrent appends — there is intentionally NO .gitattributes merge=union,
 # which was proven to corrupt the multi-line audit blocks) ·
-# aidlc/spaces/*/intents/*/<phase>/<stage>/*.md (artifacts + diary).
+# amadeus/spaces/*/intents/*/<phase>/<stage>/*.md (artifacts + diary).

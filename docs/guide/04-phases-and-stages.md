@@ -72,7 +72,7 @@ Initialization stages run **automatically** without approval gates. All three ex
 
 | # | Stage | Lead | Key Artifacts | Condition |
 |---|-------|------|---------------|-----------|
-| 0.1 | Workspace Scaffold | orchestrator | first intent's record dir (`aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`) | ALWAYS |
+| 0.1 | Workspace Scaffold | orchestrator | first intent's record dir (`amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`) | ALWAYS |
 | 0.2 | Workspace Detection | orchestrator | `amadeus-state.md` (workspace state) | ALWAYS |
 | 0.3 | State Initialization | orchestrator | `amadeus-state.md`, `audit/` shards | ALWAYS |
 
@@ -196,7 +196,7 @@ flowchart TD
 | # | Stage | Lead | Supporting | Key Artifacts | Condition |
 |---|-------|------|-----------|---------------|-----------|
 | 2.1 | Reverse Engineering | amadeus-developer-agent | amadeus-architect-agent | 9 RE artifacts | Brownfield projects |
-| 2.2 | Practices Discovery | amadeus-pipeline-deploy-agent | amadeus-quality-agent, amadeus-developer-agent, amadeus-devsecops-agent | `team-practices.md`, `discovered-rules.md`, `evidence.md` (promoted to `aidlc/spaces/<space>/memory/team.md` / `memory/project.md` on affirmation) | CONDITIONAL |
+| 2.2 | Practices Discovery | amadeus-pipeline-deploy-agent | amadeus-quality-agent, amadeus-developer-agent, amadeus-devsecops-agent | `team-practices.md`, `discovered-rules.md`, `evidence.md` (promoted to `amadeus/spaces/<space>/memory/team.md` / `memory/project.md` on affirmation) | CONDITIONAL |
 | 2.3 | Requirements Analysis | amadeus-product-agent | — | `requirements.md` | ALWAYS |
 | 2.4 | User Stories | amadeus-product-agent | amadeus-design-agent | `stories.md`, `personas.md` | User-facing features |
 | 2.5 | Refined Mockups | amadeus-design-agent | amadeus-product-agent | Hi-fi mockups, interaction spec | UI projects |

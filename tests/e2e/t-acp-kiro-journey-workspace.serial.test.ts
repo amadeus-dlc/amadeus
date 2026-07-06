@@ -13,7 +13,7 @@
 // and NEVER the inferred scope (the conductor infers a new intent's scope from the
 // new-work text — non-deterministic; the invariants below do not depend on it).
 //
-// ALL FIVE beats drive through the PRODUCTION `aidlc` conductor (live-verified on
+// ALL FIVE beats drive through the PRODUCTION `amadeus` conductor (live-verified on
 // this branch, kiro-cli 2.7.0):
 //
 //   * Beats 1-3. Beat 3 (birth a 2nd intent alongside active A) is the conductor's
@@ -28,7 +28,7 @@
 //     was byte-unchanged.
 //
 //   * Beats 4-5 (space-create teamB · switch · birth into teamB · switch back) now
-//     ALSO drive through the production `aidlc` conductor — the d44828b engine fix
+//     ALSO drive through the production `amadeus` conductor — the d44828b engine fix
 //     routes the workspace navigation verbs through `next`: a LEADING
 //     `space`/`space-create`/`intent` token (parseNextFlags amadeus-orchestrate.ts:276,
 //     WORKSPACE_VERBS:146) maps to a TERMINAL print directive naming
@@ -107,16 +107,16 @@ const SKIP_REASON = skipReason();
 
 // Count the per-repo codekb artifacts the RE stage wrote, tolerant of WHERE the
 // stage chose to anchor the store. The stage prose authoritatively targets the
-// workspace-root store `aidlc/codekb/<repo>/` (reverse-engineering.md:111), but the
+// workspace-root store `amadeus/codekb/<repo>/` (reverse-engineering.md:111), but the
 // live LLM occasionally writes to the SPACE-scoped sibling
-// `aidlc/spaces/<space>/codekb/<repo>/` instead (the same path family — codekb is a
+// `amadeus/spaces/<space>/codekb/<repo>/` instead (the same path family — codekb is a
 // space-level sibling of intents per the vision). Either location is a valid
 // per-repo codekb store for this beat's promise ("per-repo multi-repo codekb"), so
 // accept BOTH; only the absence of any per-repo store is a real failure.
 function codekbFiles(root: string, repo: string): string[] {
   const candidates = [
-    join(root, "aidlc", "codekb", repo),
-    join(root, "aidlc", "spaces", activeSpace(root), "codekb", repo),
+    join(root, "amadeus", "codekb", repo),
+    join(root, "amadeus", "spaces", activeSpace(root), "codekb", repo),
   ];
   for (const dir of candidates) {
     try {
@@ -203,15 +203,15 @@ describe("t-acp-kiro-journey-workspace (live ACP multi-repo·intent·space journ
     async () => {
       const journey = setupWorkspaceJourney("kiro");
       const root = journey.root;
-      // Beats 1-2 share ONE live `aidlc`-conductor ACP session (keepAlive). Beat 3
-      // opens a FRESH `aidlc` session (`offer`) — DELIBERATE: beat 2's RE `--single`
+      // Beats 1-2 share ONE live `amadeus`-conductor ACP session (keepAlive). Beat 3
+      // opens a FRESH `amadeus` session (`offer`) — DELIBERATE: beat 2's RE `--single`
       // run is cancelled mid-gate by stopAfterToolTitle (the conductor's IN-TURN
       // forwarding loop never voluntarily ends), which leaves THAT session "inside"
       // the RE stage; reusing it for beat 3 made the conductor resume the RE gate
       // (learnings ritual + memory.md edit) instead of parsing the new-work prose,
       // so `intent --json` never ran and the turn overran (live-verified). A fresh
       // session reads the workspace clean off disk (A active, RE'd), recognises the
-      // new-work prose, and renders the offer. Beats 4-5 open a THIRD fresh `aidlc`
+      // new-work prose, and renders the offer. Beats 4-5 open a THIRD fresh `amadeus`
       // session (`space`) for the same reason: beat 3's `offer` session is cancelled
       // mid-birth, so reusing it would resume that birth rather than parse the new
       // `/amadeus space-create` prompt. Each space verb is a terminal print directive
@@ -248,7 +248,7 @@ describe("t-acp-kiro-journey-workspace (live ACP multi-repo·intent·space journ
         expect(reg1[0].status).toBe("in-flight");
         const recordA = activeRecordDir(root);
         expect(recordA).toBeDefined();
-        const recordADir = join(root, "aidlc", "spaces", "default", "intents", recordA as string);
+        const recordADir = join(root, "amadeus", "spaces", "default", "intents", recordA as string);
 
         // --- Beat 2: per-repo codekb for both siblings (cheaper variant) ------
         // The RE stage writes both repos' codekb. Drive it and cancel the moment
@@ -328,9 +328,9 @@ describe("t-acp-kiro-journey-workspace (live ACP multi-repo·intent·space journ
           timeoutMs: VERB_DRIVE_MS,
           keepAlive: true,
         });
-        const teamBMemory = join(root, "aidlc", "spaces", TEAM_B_SLUG, "memory");
+        const teamBMemory = join(root, "amadeus", "spaces", TEAM_B_SLUG, "memory");
         const defaultOrg = readFileSync(
-          join(root, "aidlc", "spaces", "default", "memory", "org.md"),
+          join(root, "amadeus", "spaces", "default", "memory", "org.md"),
           "utf-8",
         );
         expect(readFileSync(join(teamBMemory, "org.md"), "utf-8")).toBe(defaultOrg);
@@ -338,8 +338,8 @@ describe("t-acp-kiro-journey-workspace (live ACP multi-repo·intent·space journ
         expect(readFileSync(join(teamBMemory, "project.md"), "utf-8")).toBe("# Project overrides\n");
         // space-create (#5) provisions the full space shape incl. the codekb/ +
         // knowledge/ siblings (with .gitkeep floors), matching default.
-        expect(existsSync(join(root, "aidlc", "spaces", TEAM_B_SLUG, "knowledge"))).toBe(true);
-        expect(existsSync(join(root, "aidlc", "spaces", TEAM_B_SLUG, "codekb"))).toBe(true);
+        expect(existsSync(join(root, "amadeus", "spaces", TEAM_B_SLUG, "knowledge"))).toBe(true);
+        expect(existsSync(join(root, "amadeus", "spaces", TEAM_B_SLUG, "codekb"))).toBe(true);
 
         // 4b: switch to teamB (terminal verb — seam-dispatched, drive to end_turn).
         await driveKiroAcp({
@@ -366,7 +366,7 @@ describe("t-acp-kiro-journey-workspace (live ACP multi-repo·intent·space journ
         });
         expect(listIntents(root, TEAM_B_SLUG).length).toBe(1);
         expect(listIntents(root, "default").length).toBe(2);
-        expect(existsSync(join(root, "aidlc", "spaces", TEAM_B_SLUG, "knowledge"))).toBe(true);
+        expect(existsSync(join(root, "amadeus", "spaces", TEAM_B_SLUG, "knowledge"))).toBe(true);
 
         // --- Beat 5: back to default; A still resumable ----------------------
         // `space default` is a terminal verb — seam-dispatched, drive to end_turn.

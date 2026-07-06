@@ -24,13 +24,13 @@
 // app). Plain `/amadeus` resumes that current stage directly; jump routing for
 // `--stage` is covered by t25/t26. The RE stage: step 2 delegates a developer
 // code scan, step 3 the architect synthesises 9 artifacts into the SPACE-LEVEL
-// per-repo codekb store aidlc/spaces/<space>/codekb/<repo>/ (the dir codekb-path
+// per-repo codekb store amadeus/spaces/<space>/codekb/<repo>/ (the dir codekb-path
 // resolves — reverse-engineering.md step 3), step 4 updates state, step 5 renders
 // the AskUserQuestion approval gate. We stop at step 5.
 //
 // ASSERTION MAP (.sh test -> deterministic SDK surface, equal-or-stronger):
 //   1 RE directory created
-//       -> existsSync(aidlc/spaces/<space>/codekb/<repo>/) on disk (codekbReDir).
+//       -> existsSync(amadeus/spaces/<space>/codekb/<repo>/) on disk (codekbReDir).
 //   2 RE dir has >= 4 .md artifacts
 //       -> readdirSync(reDir).filter(.md).length > 3 (the .sh's assert_gt 3).
 //   6 at least one RE artifact > 200 bytes
@@ -81,14 +81,14 @@ import { driveAidlc, readStateField } from "../harness/sdk-drive.ts";
 import { activeSpace } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // The space-level per-repo codekb dir the RE stage now writes into
-// (aidlc/spaces/<space>/codekb/<repo>/ — the codekb-determinism placement fix).
+// (amadeus/spaces/<space>/codekb/<repo>/ — the codekb-determinism placement fix).
 // This single-repo brownfield fixture records NO repos row, so the engine keys
 // the store by basename(projectDir) (codekbRepoName's 0-repo case). Tolerant of
 // the bare workspace-root form too (the live RE subagent occasionally writes
 // there), mirroring the t-acp-kiro / journey codekbFiles helpers.
 function codekbReDir(proj: string): string {
-  const spaceScoped = join(proj, "aidlc", "spaces", activeSpace(proj), "codekb", basename(proj));
-  const bare = join(proj, "aidlc", "codekb", basename(proj));
+  const spaceScoped = join(proj, "amadeus", "spaces", activeSpace(proj), "codekb", basename(proj));
+  const bare = join(proj, "amadeus", "codekb", basename(proj));
   return existsSync(spaceScoped) ? spaceScoped : bare;
 }
 

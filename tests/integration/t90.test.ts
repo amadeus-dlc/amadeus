@@ -59,10 +59,10 @@ import {
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // P9: with no intent cursor seeded, the compile tool resolves the BARE space
-// record root (docsRoot -> spaceRecordRoot) at aidlc/spaces/default/intents/.
+// record root (docsRoot -> spaceRecordRoot) at amadeus/spaces/default/intents/.
 // State, runtime-graph, per-stage memory, and the per-clone audit SHARD all
 // live under it (the flat amadeus-docs/ root is retired — there is no fallback).
-const RECORD_REL = join("aidlc", "spaces", "default", "intents");
+const RECORD_REL = join("amadeus", "spaces", "default", "intents");
 function recordRoot(proj: string): string {
   return join(proj, RECORD_REL);
 }
@@ -556,11 +556,11 @@ describe("t90 amadeus-runtime compile — CLI contract (migrated from t90-runtim
           instances: [
             {
               bolt: "auth-flow",
-              worktree: ".aidlc/worktrees/bolt-auth-flow/",
+              worktree: ".amadeus/worktrees/bolt-auth-flow/",
               started_at: "2024-01-01T11:00:00Z",
               completed_at: null,
               memory_path:
-                ".aidlc/worktrees/bolt-auth-flow/amadeus-docs/construction/code-generation/memory.md",
+                ".amadeus/worktrees/bolt-auth-flow/amadeus-docs/construction/code-generation/memory.md",
               memory_entries: 2,
               memory_breakdown: {
                 interpretations: 1,

@@ -11,9 +11,9 @@
 // `intent-birth` move and the conductor runs
 // `bun .claude/tools/amadeus-utility.ts intent-birth --scope <scope> ...`. Birth no
 // longer scaffolds a flat amadeus-docs/ tree — it writes PER-INTENT: state at
-// aidlc/spaces/<space>/intents/<slug>-<id8>/amadeus-state.md, audit as per-clone
+// amadeus/spaces/<space>/intents/<slug>-<id8>/amadeus-state.md, audit as per-clone
 // shards under <record>/audit/, and the per-phase artifact dirs under that
-// record. (Domain knowledge is SPACE-level — aidlc/spaces/<space>/knowledge/, a
+// record. (Domain knowledge is SPACE-level — amadeus/spaces/<space>/knowledge/, a
 // sibling of intents — not a record subdir.) The State-Version-7 template + the
 // birth audit events are
 // unchanged (birth still writes them) — only the LOCATION moved (per-intent) and
@@ -48,7 +48,7 @@
 //   4 "[x] workspace-scaffold"          -> state file contains "[x] workspace-scaffold" (init marker)
 //   5 "[x] workspace-detection"         -> state file contains "[x] workspace-detection"  (init phase always [x])
 //   6 "[x] state-init"                  -> state file contains "[x] state-init"
-//   7 knowledge/ directory exists       -> statSync(aidlc/spaces/default/knowledge).isDirectory()
+//   7 knowledge/ directory exists       -> statSync(amadeus/spaces/default/knowledge).isDirectory()
 //                                          (SPACE-level domain-knowledge dir, ensureWorkspaceDirs → knowledgeDir)
 //
 // STRENGTHENINGS over the .sh (equal-or-stronger, never weaker):
@@ -89,18 +89,18 @@ import {
 import { driveAidlc, readStateField } from "../harness/sdk-drive.ts";
 
 // P4: birth writes the workflow record PER-INTENT under
-// aidlc/spaces/<space>/intents/<slug>-<id8>/ (state, audit/ shards, per-phase
+// amadeus/spaces/<space>/intents/<slug>-<id8>/ (state, audit/ shards, per-phase
 // dirs), NOT the flat amadeus-docs/. (Domain knowledge is SPACE-level — a sibling
-// of intents at aidlc/spaces/<space>/knowledge/, not in the record.) Resolve the
+// of intents at amadeus/spaces/<space>/knowledge/, not in the record.) Resolve the
 // born record from the
 // active-space + active-intent cursors (flat fallback for a not-yet-born project).
 // Mirrors sdk-drive's recordDirFor and tests/integration/t-custom-harness-compile.ts.
 function recordDirOf(proj: string): string {
-  const spaceCursor = join(proj, "aidlc", "active-space");
+  const spaceCursor = join(proj, "amadeus", "active-space");
   const space = existsSync(spaceCursor)
     ? readFileSync(spaceCursor, "utf8").trim() || "default"
     : "default";
-  const intentsDir = join(proj, "aidlc", "spaces", space, "intents");
+  const intentsDir = join(proj, "amadeus", "spaces", space, "intents");
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf8").trim();
@@ -151,7 +151,7 @@ describe("t21 /amadeus workflow birth (sdk)", () => {
         // clean birth on an empty workspace (NOT a migration; needsFlatMigration
         // is false with no flat state).
         expect(existsSync(join(proj, "amadeus-docs"))).toBe(false);
-        expect(existsSync(join(proj, "aidlc", "spaces", "default", "intents"))).toBe(false);
+        expect(existsSync(join(proj, "amadeus", "spaces", "default", "intents"))).toBe(false);
 
         const r = await driveAidlc('/amadeus --scope poc "build a todo app"', {
           projectDir: proj,
@@ -208,11 +208,11 @@ describe("t21 /amadeus workflow birth (sdk)", () => {
 
         // .sh test 7: knowledge/ directory created. statSync proves it is a
         // DIRECTORY, not merely a present path. Birth ensures the SPACE-level
-        // domain-knowledge dir aidlc/spaces/<space>/knowledge/ (ensureWorkspaceDirs
+        // domain-knowledge dir amadeus/spaces/<space>/knowledge/ (ensureWorkspaceDirs
         // → knowledgeDir, utility.ts) — a sibling of intents that accumulates
         // across every intent in the space, NOT a per-intent record subdir and
         // NOT the old flat amadeus-docs/knowledge/.
-        const knowledgeDir = join(proj, "aidlc", "spaces", "default", "knowledge");
+        const knowledgeDir = join(proj, "amadeus", "spaces", "default", "knowledge");
         expect(existsSync(knowledgeDir)).toBe(true);
         expect(statSync(knowledgeDir).isDirectory()).toBe(true);
 

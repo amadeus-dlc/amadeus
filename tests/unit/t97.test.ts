@@ -75,7 +75,7 @@ import { memoryDirFor } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 
 // P6: a confirmed learning IS a practice (vision §6) — persist appends it
 // under the routed heading in the relocated method files {project,team}.md
-// (aidlc/spaces/<space>/memory/ via memoryDirFor), not a `*-learnings.md` log.
+// (amadeus/spaces/<space>/memory/ via memoryDirFor), not a `*-learnings.md` log.
 function projectPractices(pd: string): string {
   return join(memoryDirFor(pd), "project.md");
 }
@@ -188,12 +188,12 @@ afterEach(() => {
 });
 
 // P9: with no intent cursor seeded, the tool resolves the BARE space record
-// root (docsRoot -> spaceRecordRoot) at aidlc/spaces/default/intents/. State,
+// root (docsRoot -> spaceRecordRoot) at amadeus/spaces/default/intents/. State,
 // runtime-graph, audit, and the per-stage memory all live under it (the flat
 // amadeus-docs/ root is retired — there is no fallback). mkproj seeds that tree;
 // the runtime-graph memory_path is the record-relative path the tool resolves
 // via join(projectDir, memRel).
-const RECORD_REL = join("aidlc", "spaces", "default", "intents");
+const RECORD_REL = join("amadeus", "spaces", "default", "intents");
 function recordRoot(pd: string): string {
   return join(pd, RECORD_REL);
 }
@@ -219,7 +219,7 @@ function mkproj(name: string): string {
   writeFileSync(
     join(recordRoot(pd), "runtime-graph.json"),
     `{ "workflow_id": "w1", "scope": "feature", "started_at": "2026-05-28T13:00:00Z",
-  "stages": [ { "stage_slug": "user-stories", "memory_path": "aidlc/spaces/default/intents/inception/user-stories/memory.md" } ] }
+  "stages": [ { "stage_slug": "user-stories", "memory_path": "amadeus/spaces/default/intents/inception/user-stories/memory.md" } ] }
 `,
     "utf-8",
   );

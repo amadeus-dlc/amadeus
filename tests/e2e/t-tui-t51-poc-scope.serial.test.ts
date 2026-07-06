@@ -153,7 +153,7 @@ describe("t-tui-t51-poc-scope (answering gates advances poc Ideation on disk)", 
   test.skipIf(SKIP_REASON !== null)(
     `poc run-through produces the intent-capture artifact + > 6 completed stages on disk${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
     async () => {
-      const session = `aidlc_tui_t51_poc_${process.pid}`;
+      const session = `amadeus_tui_t51_poc_${process.pid}`;
       // greenfieldStub + noAidlcDocs: a brand-new greenfield workspace the poc
       // workflow scaffolds itself (mirrors the .sh's
       // setup_integration_project --no-amadeus-docs --with-greenfield-stub).

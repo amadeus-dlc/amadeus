@@ -1,15 +1,15 @@
 {
-  "_comment": "Docs legacy-ref allowlist gate (t174). The gate scans docs/**/*.md + core/templates/*.md + each harness/<h>/skills/amadeus/SKILL.md (derived FROM DISK) and FAILS unless every surviving retired-token line is pinned here by exact file + line text, with the pinned count <= ceiling. FOUR retired-token lanes: (1) `amadeus-docs` — the flat record layout relocated to aidlc/spaces/<space>/intents/<slug>-<id8>/; (2) bare `--init` — the retired amadeus command; (3) dotted rules dirs `.claude/rules/` | `.kiro/steering/` | `.codex/amadeus-rules/` — the method/rules layer relocated to aidlc/spaces/<space>/memory/ (graph.ts MEMORY_SEGMENTS), so these survive ONLY in native-include prose (the `.claude/rules/amadeus.md` @-import stub, the Kiro `.kiro/steering/` resources glob, the packager rename narrative); (4) `*-learnings.md` filename — learnings collapsed into practices in memory/{team,project}.md (amadeus-learnings.ts), so there are ZERO legitimate survivors. EXCLUDES dist/** (generated; package.ts --check proves parity) and core/amadeus-common/** (the engine-parsed stage tree's amadeus-docs reroot is a separate deferred sweep). Adding an entry requires a visible diff here; blanket-allowlisting trips the ceiling. See docs/reference/07-sensor-system.md, docs/reference/14-claude-features.md, docs/harness-engineering/06-sensors.md.",
+  "_comment": "Docs legacy-ref allowlist gate (t174). The gate scans docs/**/*.md + core/templates/*.md + each harness/<h>/skills/amadeus/SKILL.md (derived FROM DISK) and FAILS unless every surviving retired-token line is pinned here by exact file + line text, with the pinned count <= ceiling. FOUR retired-token lanes: (1) `amadeus-docs` — the flat record layout relocated to amadeus/spaces/<space>/intents/<slug>-<id8>/; (2) bare `--init` — the retired amadeus command; (3) dotted rules dirs `.claude/rules/` | `.kiro/steering/` | `.codex/amadeus-rules/` — the method/rules layer relocated to amadeus/spaces/<space>/memory/ (graph.ts MEMORY_SEGMENTS), so these survive ONLY in native-include prose (the `.claude/rules/amadeus.md` @-import stub, the Kiro `.kiro/steering/` resources glob, the packager rename narrative); (4) `*-learnings.md` filename — learnings collapsed into practices in memory/{team,project}.md (amadeus-learnings.ts), so there are ZERO legitimate survivors. EXCLUDES dist/** (generated; package.ts --check proves parity) and core/amadeus-common/** (the engine-parsed stage tree's amadeus-docs reroot is a separate deferred sweep). Adding an entry requires a visible diff here; blanket-allowlisting trips the ceiling. See docs/reference/07-sensor-system.md, docs/reference/14-claude-features.md, docs/harness-engineering/06-sensors.md.",
   "ceiling": 14,
   "allowed": [
     {
       "file": "docs/reference/14-claude-features.md",
-      "text": "| **Standing rules** (the layer chain) | `aidlc/spaces/<space>/memory/` (via `.claude/rules/amadeus.md` @-import stub) | `aidlc/spaces/<space>/memory/` (via Kiro resources glob) | `aidlc/spaces/<space>/memory/` (via `AMADEUS_RULES_DIR`) |",
+      "text": "| **Standing rules** (the layer chain) | `amadeus/spaces/<space>/memory/` (via `.claude/rules/amadeus.md` @-import stub) | `amadeus/spaces/<space>/memory/` (via Kiro resources glob) | `amadeus/spaces/<space>/memory/` (via `AMADEUS_RULES_DIR`) |",
       "why": "native-include mapping: names the .claude/rules/amadeus.md @-import stub that pulls the relocated memory tree (correct, not stale)"
     },
     {
       "file": "docs/reference/14-claude-features.md",
-      "text": "This implementation reads behavioral rules from the space memory layer at `aidlc/spaces/<space>/memory/`, pulled into Claude's context via the `.claude/rules/amadeus.md` @-import stub. One file per layer of the inheritance chain:",
+      "text": "This implementation reads behavioral rules from the space memory layer at `amadeus/spaces/<space>/memory/`, pulled into Claude's context via the `.claude/rules/amadeus.md` @-import stub. One file per layer of the inheritance chain:",
       "why": "names the .claude/rules/amadeus.md @-import stub (the native include, correct)"
     },
     {
@@ -19,12 +19,12 @@
     },
     {
       "file": "docs/reference/14-claude-features.md",
-      "text": "| Rules | `aidlc/spaces/<space>/memory/*.md` (via `.claude/rules/amadeus.md` @-stub) | Every conversation | Minimal guardrails; self-learning corrections |",
+      "text": "| Rules | `amadeus/spaces/<space>/memory/*.md` (via `.claude/rules/amadeus.md` @-stub) | Every conversation | Minimal guardrails; self-learning corrections |",
       "why": "names the .claude/rules/amadeus.md @-import stub (the native include, correct)"
     },
     {
       "file": "docs/reference/01-architecture.md",
-      "text": "9. **Minimal rules** -- Only guardrails (~35 lines total) live in the space memory layer (`aidlc/spaces/<space>/memory/`, pulled in via the `.claude/rules/amadeus.md` @-import stub). Everything else (verification, brownfield safeguards, audit format, adaptive patterns) lives in `knowledge/amadeus-shared/` or is embedded in SKILL.md/stage-protocol.md. This prevents context bloat in non-AI-DLC conversations since rules are always loaded.",
+      "text": "9. **Minimal rules** -- Only guardrails (~35 lines total) live in the space memory layer (`amadeus/spaces/<space>/memory/`, pulled in via the `.claude/rules/amadeus.md` @-import stub). Everything else (verification, brownfield safeguards, audit format, adaptive patterns) lives in `knowledge/amadeus-shared/` or is embedded in SKILL.md/stage-protocol.md. This prevents context bloat in non-AI-DLC conversations since rules are always loaded.",
       "why": "names the .claude/rules/amadeus.md @-import stub (the native include, correct)"
     },
     {

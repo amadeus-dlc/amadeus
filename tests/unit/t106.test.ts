@@ -6,9 +6,9 @@
 //
 // Source (dist/claude/.claude/tools/amadeus-lib.ts), P9 end state — NO flat
 // amadeus-docs/ fallback. With no intent record on disk, both builders resolve
-// under the BARE SPACE record root (aidlc/spaces/<space>/intents/):
-//   stateFilePath(d) => join(d, "aidlc/spaces/default/intents", "amadeus-state.md")
-//   auditFilePath(d) => join(d, "aidlc/spaces/default/intents", "audit", "<host>-<clone>.md")
+// under the BARE SPACE record root (amadeus/spaces/<space>/intents/):
+//   stateFilePath(d) => join(d, "amadeus/spaces/default/intents", "amadeus-state.md")
+//   auditFilePath(d) => join(d, "amadeus/spaces/default/intents", "audit", "<host>-<clone>.md")
 // (audit is now a per-clone SHARD under audit/, not a single audit.md.)
 //
 // Why this file exists: both builders are one-character-typo-fragile. A silent
@@ -29,15 +29,15 @@ import { describe, expect, test } from "bun:test";
 import { isAbsolute, join } from "node:path";
 import { auditFilePath, stateFilePath } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
-// A known native-absolute projectDir with NO on-disk aidlc/ record — so the
+// A known native-absolute projectDir with NO on-disk amadeus/ record — so the
 // helpers resolve the bare space record root. Native paths, so pin POSIX
 // literals on POSIX and Windows literals on Windows.
 const IS_WINDOWS = process.platform === "win32";
 const SEP = IS_WINDOWS ? "\\" : "/";
-const PROJ = IS_WINDOWS ? "C:\\Users\\aidlc\\myproject" : "/home/user/myproject";
+const PROJ = IS_WINDOWS ? "C:\\Users\\amadeus\\myproject" : "/home/user/myproject";
 
 // The bare space record root the no-intent fallback resolves to.
-const INTENTS_ROOT = join(PROJ, "aidlc", "spaces", "default", "intents");
+const INTENTS_ROOT = join(PROJ, "amadeus", "spaces", "default", "intents");
 const EXPECTED_STATE = join(INTENTS_ROOT, "amadeus-state.md");
 const EXPECTED_STATE_SUFFIX = `intents${SEP}amadeus-state.md`;
 const EXPECTED_AUDIT_DIR = join(INTENTS_ROOT, "audit");

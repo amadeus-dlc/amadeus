@@ -22,7 +22,7 @@
 **Event**: RULE_LEARNED
 **Stage**: user-stories
 **Candidate-ID**: c1
-**Destination**: aidlc/spaces/default/memory/project.md
+**Destination**: amadeus/spaces/default/memory/project.md
 **Heading**: ## Testing Posture
 **Source**: orchestrator
 
@@ -33,7 +33,7 @@
 **Event**: RULE_LEARNED
 **Stage**: user-stories
 **Candidate-ID**: c3
-**Destination**: aidlc/spaces/default/memory/project.md
+**Destination**: amadeus/spaces/default/memory/project.md
 **Heading**: ## Corrections
 **Source**: orchestrator
 
@@ -44,7 +44,7 @@
 **Event**: RULE_LEARNED
 **Stage**: user-stories
 **Candidate-ID**: free_text_1
-**Destination**: aidlc/spaces/default/memory/project.md
+**Destination**: amadeus/spaces/default/memory/project.md
 **Heading**: ## Corrections
 **Source**: user_addition
 

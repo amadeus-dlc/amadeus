@@ -96,7 +96,7 @@ function hasBoltBranch(proj: string, repoName: string, slug: string): boolean {
 }
 
 const worktreeDir = (proj: string, slug: string): string =>
-  join(proj, ".aidlc", "worktrees", `bolt-${slug}`);
+  join(proj, ".amadeus", "worktrees", `bolt-${slug}`);
 
 describe("t166 P7 multi-repo construction — --repo anchors the worktree to the sibling repo", () => {
   // ===========================================================================

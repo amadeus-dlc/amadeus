@@ -269,7 +269,7 @@ describe("t-tui-t139 revision-loop idempotency (reject->approve == clean approve
       // ===================================================================
       // RUN 1 — CLEAN: approve every gate, drive to the Completed milestone.
       // ===================================================================
-      const cleanSession = `aidlc_tui_t139_clean_${process.pid}`;
+      const cleanSession = `amadeus_tui_t139_clean_${process.pid}`;
       const cleanSandbox = setupTuiProject({ brownfieldStub: true, noAidlcDocs: true });
       let revisedSession = "";
       let revisedSandbox = "";
@@ -290,7 +290,7 @@ describe("t-tui-t139 revision-loop idempotency (reject->approve == clean approve
         // RUN 2 — REVISED: reject the FIRST approval gate once (Down+Enter =
         // "Request changes"), then approve the rest to the same milestone.
         // ===================================================================
-        revisedSession = `aidlc_tui_t139_revised_${process.pid}`;
+        revisedSession = `amadeus_tui_t139_revised_${process.pid}`;
         revisedSandbox = setupTuiProject({ brownfieldStub: true, noAidlcDocs: true });
 
         // Render value-add: prove a gate painted at least once during the run.

@@ -12,8 +12,8 @@ const fills: OnboardingFills = {
 <!--
   The @-line above pulls the AIDLC method into Claude's ambient context. It is
   the first hop of a reference chain (NOT a copy): CLAUDE.md → @.claude/rules/
-  amadeus.md → @../../aidlc/spaces/default/memory/*.md. The method is authored ONCE
-  at the workspace root under aidlc/spaces/default/memory/ (org/team/project +
+  amadeus.md → @../../amadeus/spaces/default/memory/*.md. The method is authored ONCE
+  at the workspace root under amadeus/spaces/default/memory/ (org/team/project +
   phases/), so edit it there, never in .claude/rules/amadeus.md. Verified resolving
   (G1 PASS) — see tmp/workspace-vision/at-import-spike/RESULTS.md.
 -->
@@ -37,7 +37,7 @@ This project uses AI-DLC (AI-Driven Development Life Cycle) for structured devel
 
     sections_before_resumption: `## AI-DLC Method (imported)
 
-The AI-DLC method — the layered practice files (\`org.md\`, \`team.md\`, \`project.md\`, and the per-phase \`phases/<phase>.md\`) — is authored once at the workspace root under \`aidlc/spaces/default/memory/\` and imported into Claude's ambient context by reference (the \`@{{HARNESS_DIR}}/rules/amadeus.md\` import at the top of this file), never copied. That stub \`@\`-imports each method file from \`aidlc/spaces/default/memory/\`; Claude resolves the nested chain. Edit the method there — it is the single hand-editable source of truth, identical on every harness. (AI-DLC's own stage resolver reads the same tree directly, so each stage is method-correct without this ambient import.)
+The AI-DLC method — the layered practice files (\`org.md\`, \`team.md\`, \`project.md\`, and the per-phase \`phases/<phase>.md\`) — is authored once at the workspace root under \`amadeus/spaces/default/memory/\` and imported into Claude's ambient context by reference (the \`@{{HARNESS_DIR}}/rules/amadeus.md\` import at the top of this file), never copied. That stub \`@\`-imports each method file from \`amadeus/spaces/default/memory/\`; Claude resolves the nested chain. Edit the method there — it is the single hand-editable source of truth, identical on every harness. (AI-DLC's own stage resolver reads the same tree directly, so each stage is method-correct without this ambient import.)
 `,
 
     sections_after_resumption: "",

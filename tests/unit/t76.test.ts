@@ -92,7 +92,7 @@
 // for the cases that read audit row COUNTS — starts from the bare
 // "# AI-DLC Audit Log\n" header so post-fire counts are unambiguous (the .sh
 // did NOT seed audit-sample.md here; it used a bare header). Worktree dirs are
-// created under <proj>/.aidlc/worktrees/bolt-<slug>/ exactly as mk_worktree_dir
+// created under <proj>/.amadeus/worktrees/bolt-<slug>/ exactly as mk_worktree_dir
 // did. All temp dirs cleaned in afterAll, plus a best-effort chmod-restore +
 // lock-dir rmdir to mirror the .sh's cleanup_all trap.
 
@@ -136,7 +136,7 @@ afterAll(() => {
     // Mirror cleanup_all: restore perms on any chmod'd worktree dir, drop a
     // leftover lock dir, then remove the project tree.
     try {
-      const wt = join(d, ".aidlc", "worktrees");
+      const wt = join(d, ".amadeus", "worktrees");
       if (existsSync(wt)) chmodSync(wt, 0o755);
     } catch {
       /* best-effort */
@@ -177,7 +177,7 @@ function state(proj: string, ...args: string[]): CliResult {
 }
 
 // MAIN record paths — the per-intent workspace layout the fixture seeds
-// (aidlc/spaces/default/intents/<record>/…). State is one file; audit is a
+// (amadeus/spaces/default/intents/<record>/…). State is one file; audit is a
 // per-clone SHARD DIR (readers glob audit/*.md).
 const statePath = (p: string): string => seededStateFile(p);
 const auditDir = (p: string): string => seededAuditDir(p);
@@ -185,15 +185,15 @@ const auditDir = (p: string): string => seededAuditDir(p);
 // the audit/ dir (the readers glob *.md, so one shard reads back as the trail).
 const auditPath = (p: string): string => join(seededAuditDir(p), "fixture.md");
 // The worktree mirror carries the SAME relative record dir as the main checkout
-// (relativeRecordDir → aidlc/spaces/default/intents/<record>), so the forked
+// (relativeRecordDir → amadeus/spaces/default/intents/<record>), so the forked
 // state lands at <wt>/amadeus/spaces/default/intents/<record>/amadeus-state.md.
 const wtRecordDir = (p: string, slug: string): string =>
   join(
     p,
-    ".aidlc",
+    ".amadeus",
     "worktrees",
     `bolt-${slug}`,
-    "aidlc",
+    "amadeus",
     "spaces",
     DEFAULT_SPACE,
     "intents",
@@ -241,9 +241,9 @@ function makeFixture(): string {
   return proj;
 }
 
-/** mk_worktree_dir: mkdir -p <proj>/.aidlc/worktrees/bolt-<slug>. */
+/** mk_worktree_dir: mkdir -p <proj>/.amadeus/worktrees/bolt-<slug>. */
 function mkWorktreeDir(proj: string, slug: string): void {
-  mkdirSync(join(proj, ".aidlc", "worktrees", `bolt-${slug}`), {
+  mkdirSync(join(proj, ".amadeus", "worktrees", `bolt-${slug}`), {
     recursive: true,
   });
 }

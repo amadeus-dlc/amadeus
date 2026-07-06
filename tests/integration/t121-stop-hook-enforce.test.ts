@@ -139,9 +139,9 @@ function pinnedShardPath(proj: string): string {
  *  seedWorkspaceShell). */
 function seedShell(proj: string): void {
   const intentsDir = intentsDirOf(proj, DEFAULT_SPACE);
-  mkdirSync(join(proj, "aidlc", "spaces", DEFAULT_SPACE, "memory"), { recursive: true });
+  mkdirSync(join(proj, "amadeus", "spaces", DEFAULT_SPACE, "memory"), { recursive: true });
   mkdirSync(seededRecordDir(proj), { recursive: true });
-  writeFileSync(join(proj, "aidlc", "active-space"), `${DEFAULT_SPACE}\n`, "utf-8");
+  writeFileSync(join(proj, "amadeus", "active-space"), `${DEFAULT_SPACE}\n`, "utf-8");
   writeFileSync(join(intentsDir, "active-intent"), `${DEFAULT_RECORD_DIR}\n`, "utf-8");
   writeFileSync(
     join(intentsDir, "intents.json"),
@@ -152,7 +152,7 @@ function seedShell(proj: string): void {
     )}\n`,
     "utf-8",
   );
-  writeFileSync(join(proj, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(proj, "amadeus", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
 }
 
 // The stop-hook guard counter, re-rooted under the record (stopHookDir).

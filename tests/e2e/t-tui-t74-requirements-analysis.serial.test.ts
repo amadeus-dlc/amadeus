@@ -167,7 +167,7 @@ describe("t-tui-t74-requirements-analysis (answering AUQ gates commits the requi
   test.skipIf(SKIP_REASON !== null)(
     `requirements-analysis run-through writes requirements.md + advances state on disk${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
     async () => {
-      const session = `aidlc_tui_t74_${process.pid}`;
+      const session = `amadeus_tui_t74_${process.pid}`;
       // Mirror the .sh setup_integration_project: brownfield Todo app, mid-inception
       // state (Current Stage == requirements-analysis, a redo jump), 4 pre-seeded
       // RE artefacts, and a seeded audit.md the workflow appends to.

@@ -3,7 +3,7 @@
 // t155 — TPL: the template-override layer (one file, two readers).
 //
 // The template-override layer lets a team author one file per output artifact
-// at aidlc/memory/templates/<artifact>.md, read by TWO consumers keyed off the
+// at amadeus/memory/templates/<artifact>.md, read by TWO consumers keyed off the
 // output filename stem: the agent (fills the skeleton — knowledge, exercised by
 // the stage-protocol clause, not a tool) and the required-sections sensor
 // (verifies the `##` headings — determinism, exercised here). Whole-doc,
@@ -62,7 +62,7 @@ afterAll(() => {
 });
 
 // A fresh temp workspace: an output dir, the TEAM templates dir (the override
-// source aidlc/memory/templates/), and the FRAMEWORK-default templates dir (the
+// source amadeus/memory/templates/), and the FRAMEWORK-default templates dir (the
 // engine-shipped middle tier). Torn down in afterAll.
 function makeWorkspace(): {
   root: string;
@@ -74,7 +74,7 @@ function makeWorkspace(): {
   root = toPortablePath(root);
   tempDirs.push(root);
   const outDir = join(root, "out");
-  const templatesDir = join(root, "aidlc", "memory", "templates");
+  const templatesDir = join(root, "amadeus", "memory", "templates");
   const frameworkDir = join(root, "framework-templates");
   mkdirSync(outDir, { recursive: true });
   mkdirSync(templatesDir, { recursive: true });
@@ -441,7 +441,7 @@ describe("t155 template-override sensor branch (cli, spawnSync)", () => {
 
   test("the dispatcher default templates dir matches where the packager SHIPS the floor", () => {
     // AMADEUS_SRC = <repo>/dist/claude/.claude; the shipped tree's workspace root
-    // is its parent (<repo>/dist/claude), where aidlc/ is emitted.
+    // is its parent (<repo>/dist/claude), where amadeus/ is emitted.
     const shippedWorkspaceRoot = join(AMADEUS_SRC, "..");
     const dispatcherDefault = memoryTemplatesDir(shippedWorkspaceRoot);
     // The default the dispatcher computes must point at a real shipped dir...

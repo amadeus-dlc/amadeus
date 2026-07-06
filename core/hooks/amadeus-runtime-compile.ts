@@ -65,11 +65,11 @@ const command: string = parsed.tool_input?.command ?? "";
 //    `amadeus-orchestrate.ts report` is included because the conductor calls it
 //    as the public transition surface; the state-tool emit happens in its
 //    subprocess, which PostToolUse cannot see as a separate Bash command.
-const aidlcTransitionTool = /\bbun\b.*\.(?:claude|kiro|codex)\/tools\/amadeus-(state|jump|bolt|utility)\.ts\b/;
-const aidlcOrchestrateReport = /\bbun\b.*\.(?:claude|kiro|codex)\/tools\/amadeus-orchestrate\.ts\b.*\breport\b/;
-const aidlcRuntimeRef = /\bbun\b.*\.(?:claude|kiro|codex)\/tools\/amadeus-runtime\.ts\b/;
-if (aidlcRuntimeRef.test(command)) process.exit(0);
-if (!aidlcTransitionTool.test(command) && !aidlcOrchestrateReport.test(command)) process.exit(0);
+const amadeusTransitionTool = /\bbun\b.*\.(?:claude|kiro|codex)\/tools\/amadeus-(state|jump|bolt|utility)\.ts\b/;
+const amadeusOrchestrateReport = /\bbun\b.*\.(?:claude|kiro|codex)\/tools\/amadeus-orchestrate\.ts\b.*\breport\b/;
+const amadeusRuntimeRef = /\bbun\b.*\.(?:claude|kiro|codex)\/tools\/amadeus-runtime\.ts\b/;
+if (amadeusRuntimeRef.test(command)) process.exit(0);
+if (!amadeusTransitionTool.test(command) && !amadeusOrchestrateReport.test(command)) process.exit(0);
 
 // 4. Audit read — across EVERY per-clone shard of the ACTIVE intent, NOT this
 //    hook process's own PID/clone shard. The state tool that wrote the

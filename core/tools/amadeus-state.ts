@@ -69,16 +69,16 @@ function isCheckboxState(s: string): s is CheckboxState {
 }
 
 // Top-level dirs the artifact guard treats as "not source code" - the whole
-// `aidlc/` workspace tree holds the per-intent records + planning artifacts +
+// `amadeus/` workspace tree holds the per-intent records + planning artifacts +
 // memory + codekb, the harness dirs hold the framework, .git is VCS. (On v2 the
-// flat `amadeus-docs/` root is gone - every record lives under aidlc/spaces/...,
-// so skipping `aidlc` skips all planning docs.) Used by workspaceHasSourceFile
+// flat `amadeus-docs/` root is gone - every record lives under amadeus/spaces/...,
+// so skipping `amadeus` skips all planning docs.) Used by workspaceHasSourceFile
 // (the top-level dir skip) and isNonDocPath (the git first-segment skip).
 // Declared at module top (not beside verifyStageArtifacts) because the command
 // dispatch runs at top level: a const declared lower in the file would be in
 // its temporal dead zone when an approve/advance dispatch calls the guard.
 const HARNESS_DOC_DIRS = new Set([
-  "aidlc",
+  "amadeus",
   ".claude",
   ".kiro",
   ".codex",
@@ -532,10 +532,10 @@ function handleCount(args: string[]): void {
 //
 // V2 PATH RE-AUTHOR (workspace refactor #429): the flat `amadeus-docs/<phase>/<slug>/`
 // layout is gone - a stage's produces[] artifacts now live under the ACTIVE
-// intent's per-intent record dir (`aidlc/spaces/<space>/intents/<slug>-<id8>/
+// intent's per-intent record dir (`amadeus/spaces/<space>/intents/<slug>-<id8>/
 // <phase>/<stage>/`), per-unit Construction artifacts under that record's
 // `construction/<unit>/<stage>/`, and codekb stages (reverse-engineering) under
-// the space-level `aidlc/spaces/<space>/codekb/<repo>/`. This guard resolves
+// the space-level `amadeus/spaces/<space>/codekb/<repo>/`. This guard resolves
 // against those live seams (recordDir / codekbDir), mirroring
 // resolveArtifactPath in amadeus-orchestrate.ts so the two cannot drift on shape.
 //
@@ -543,7 +543,7 @@ function handleCount(args: string[]): void {
 //   1. produces-existence - a stage that declares produces[] must have at least
 //      one of them on disk. Empty-produces stages (init phase) are exempt.
 //   2. workspace_requires - a code-producing stage (frontmatter flag) must also
-//      have a real file OUTSIDE the aidlc/ workspace tree and the harness dir.
+//      have a real file OUTSIDE the amadeus/ workspace tree and the harness dir.
 //      Catches the code-generation case where only the two markdown produces[]
 //      docs were written but no actual source code (issue #366 Update 2).
 //
@@ -623,7 +623,7 @@ function producesArtifactsExist(
 }
 
 // True when any non-doc file exists in the workspace - a file outside the
-// aidlc/ workspace tree and the harness dirs. Bounded shallow walk (one level
+// amadeus/ workspace tree and the harness dirs. Bounded shallow walk (one level
 // into each top-level dir is enough to detect src/<file>); avoids a full
 // recursive scan.
 function workspaceHasSourceFile(pd: string): boolean {
@@ -669,7 +669,7 @@ function dirHasFile(dir: string): boolean {
 
 // A git-reported path (status --porcelain or diff --name-only output) counts as
 // "source work" when its FIRST segment is not a harness/doc dir - i.e. it is a
-// real workspace file (src/..., a root file), not an aidlc/ planning doc or
+// real workspace file (src/..., a root file), not an amadeus/ planning doc or
 // framework file. Mirrors HARNESS_DOC_DIRS, the same set the FS walk skips.
 function isNonDocPath(p: string): boolean {
   const rel = p.trim().replace(/^"|"$/g, ""); // git -z not used; strip any quoting
@@ -780,7 +780,7 @@ function verifyStageArtifacts(
   if (stage.workspace_requires && !workspaceHasWork(pd)) {
     error(
       `Refusing to complete "${stage.slug}": it is a code-producing stage ` +
-        `(workspace_requires) but no source work is evident outside the aidlc/ ` +
+        `(workspace_requires) but no source work is evident outside the amadeus/ ` +
         `workspace tree. In a git workspace this means no uncommitted change and no ` +
         `code in the last commit; otherwise no source file exists. Planning docs alone ` +
         `do not satisfy ${stage.name} - write the code to the workspace.`
@@ -1761,7 +1761,7 @@ function handlePracticesEvent(args: string[]): void {
 // Cross-row promotion of affirmed practices into the team-authored method
 // files. Reads two draft files from amadeus-docs/inception/practices-discovery/
 // and applies them deterministically to the relocated method files the
-// resolver reads (aidlc/spaces/<space>/memory/, neutral names):
+// resolver reads (amadeus/spaces/<space>/memory/, neutral names):
 //
 //   memory/team.md ........... replaceSection × 5 (Way of Working,
 //                              Walking Skeleton, Testing Posture,
@@ -1805,7 +1805,7 @@ function handlePracticesPromote(args: string[]): void {
 
   const pd = resolveProjectDir(projectDir);
   // The affirmed practices land in the relocated method files the resolver
-  // reads — team.md / project.md under aidlc/spaces/<space>/memory/ (neutral
+  // reads — team.md / project.md under amadeus/spaces/<space>/memory/ (neutral
   // names, no `amadeus-` prefix). memoryDirFor() derives the path from the SAME
   // MEMORY_SEGMENTS loadRules() reads from, so this writer and the reader can
   // never drift (P5 relocated the reader; P6 closes the seam here). --target-dir
@@ -2197,7 +2197,7 @@ function handleFork(args: string[]): void {
   lockSpace = space;
 
   // target-dir lets tests point fork at a fixture worktree-parent. Defaults
-  // to the project's .aidlc/worktrees/bolt-<slug>/ via worktreePath().
+  // to the project's .amadeus/worktrees/bolt-<slug>/ via worktreePath().
   const wtPath = flags["target-dir"] ?? worktreePath(pd, slug);
 
   if (!existsSync(wtPath)) {

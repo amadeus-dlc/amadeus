@@ -84,7 +84,7 @@ describe("t72 info: hit returns expected JSON", () => {
 **Timestamp**: 2026-05-18T10:00:00Z
 **Event**: WORKTREE_CREATED
 **Bolt slug**: bolt-onboarding
-**Worktree path**: /tmp/proj/.aidlc/worktrees/bolt-onboarding
+**Worktree path**: /tmp/proj/.amadeus/worktrees/bolt-onboarding
 **Branch name**: bolt-onboarding
 **Base branch**: main
 
@@ -99,7 +99,7 @@ describe("t72 info: hit returns expected JSON", () => {
   });
   test("info JSON includes path", () => {
     expect(runInfo("bolt-onboarding").out).toContain(
-      '"path":"/tmp/proj/.aidlc/worktrees/bolt-onboarding"',
+      '"path":"/tmp/proj/.amadeus/worktrees/bolt-onboarding"',
     );
   });
   test("info JSON includes branch_name", () => {

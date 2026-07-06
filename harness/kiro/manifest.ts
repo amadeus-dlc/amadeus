@@ -54,7 +54,7 @@ const manifest: HarnessManifest = {
     { src: "hooks/amadeus-kiro-adapter.ts", dst: "hooks/amadeus-kiro-adapter.ts" },
     { src: "settings/cli.json", dst: "settings/cli.json" },
     // Project-root .gitignore (beside .kiro/, not inside it) — re-rooted under
-    // aidlc/spaces/* for the workspace layout (SEED): cursors + machine-local
+    // amadeus/spaces/* for the workspace layout (SEED): cursors + machine-local
     // runtime ignored, the shared work (memory/codekb/registry/state/audit
     // shards/artifacts) committed. Net-new for Kiro — it shipped none before.
     // Authored as dot-gitignore so it does not act as a live ignore inside

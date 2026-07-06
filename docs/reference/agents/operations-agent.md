@@ -64,9 +64,9 @@ Path: `.claude/knowledge/amadeus-operations-agent/`
 
 ### Team (Tier 2)
 
-Path: `aidlc/knowledge/amadeus-operations-agent/` (the space-level knowledge dir; user-managed)
+Path: `amadeus/knowledge/amadeus-operations-agent/` (the space-level knowledge dir; user-managed)
 
-A space-level directory the team creates when it has content (the engine ships `aidlc/knowledge/` empty). Populated by the team with project-specific
+A space-level directory the team creates when it has content (the engine ships `amadeus/knowledge/` empty). Populated by the team with project-specific
 operational context such as existing runbooks, on-call schedules, SLO targets,
 or monitoring dashboards.
 

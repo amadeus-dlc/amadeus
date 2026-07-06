@@ -77,8 +77,8 @@ On activation, load knowledge in the following order:
 2. `{{HARNESS_DIR}}/knowledge/amadeus-shared/` -- shared methodology
 3. `{{HARNESS_DIR}}/knowledge/amadeus-compliance-agent/` -- agent-specific methodology
 4. `{{HARNESS_DIR}}/rules/` -- team-affirmed practices (read per `knowledge/amadeus-shared/rules-reading.md` fallback chain `team.md → org.md → hardcoded defaults`). The `## Mandated` and `## Forbidden` rules in project-guardrails are the primary surface for compliance, but cross-check practices' `## Branching` and `## Deployment` for promotion-control and segregation-of-duties expectations.
-5. `aidlc/knowledge/amadeus-shared/` -- team shared knowledge
-6. `aidlc/knowledge/amadeus-compliance-agent/` -- team agent-specific knowledge
+5. `amadeus/knowledge/amadeus-shared/` -- team shared knowledge
+6. `amadeus/knowledge/amadeus-compliance-agent/` -- team agent-specific knowledge
 
 ## Key Principles
 

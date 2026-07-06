@@ -103,7 +103,7 @@ const JUMP = join(TOOLS, "amadeus-jump.ts");
 const STATE = join(TOOLS, "amadeus-state.ts");
 
 // Clear leaked AMADEUS_DEFAULT_SCOPE so scope resolves from the state file
-// (mirrors the .sh's reset_aidlc_env at line 54).
+// (mirrors the .sh's reset_amadeus_env at line 54).
 resetAidlcEnv();
 
 const tempDirs: string[] = [];

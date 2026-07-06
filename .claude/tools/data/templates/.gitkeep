@@ -3,7 +3,7 @@
 # This dir is the framework-shipped, READ-ONLY default tier in the templates
 # resolution order (vision §10):
 #
-#   1. team template      aidlc/spaces/<space>/memory/templates/<artifact>.md   (override)
+#   1. team template      amadeus/spaces/<space>/memory/templates/<artifact>.md   (override)
 #   2. framework default   <harness>/tools/data/templates/<artifact>.md          (THIS dir)
 #   3. else                the generic >=2-H2 floor                              (fallthrough)
 #
@@ -12,7 +12,7 @@
 # its own template, OR a later PR drops a default <artifact>.md here). Resolution
 # falls through gracefully when this dir holds only this marker.
 #
-# Distinct from the TEAM override dir (aidlc/spaces/<space>/memory/templates/,
+# Distinct from the TEAM override dir (amadeus/spaces/<space>/memory/templates/,
 # via memoryTemplatesDir()): that one a team hand-authors and it WINS over this
 # default. This one ships with the engine and is never edited by a user.
 #

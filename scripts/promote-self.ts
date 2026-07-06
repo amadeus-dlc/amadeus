@@ -23,7 +23,6 @@ type Mode = "check" | "apply";
 type ManagedDir = {
   src: string;
   dst: string;
-  transform?: boolean;
 };
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -37,9 +36,9 @@ const noBuild = argv.includes("--no-build");
 // runtime, so promoting the shipped seed over it would clobber user content.
 // The engine seeds it from the bundled copy only when it is missing.
 const managedDirs: ManagedDir[] = [
-  { src: "dist/claude/.claude", dst: ".claude", transform: true },
-  { src: "dist/codex/.codex", dst: ".codex", transform: true },
-  { src: "dist/codex/.agents", dst: ".agents", transform: true },
+  { src: "dist/claude/.claude", dst: ".claude" },
+  { src: "dist/codex/.codex", dst: ".codex" },
+  { src: "dist/codex/.agents", dst: ".agents" },
 ];
 
 const managedFiles = new Map<string, Buffer>([
@@ -103,29 +102,9 @@ function isPreserved(rel: string): boolean {
   );
 }
 
-function isTextPath(rel: string): boolean {
-  return /\.(md|ts|json|toml|rules|txt|ya?ml|gitignore)$/i.test(rel) || !rel.includes(".");
-}
-
-function projectLocalTransform(rel: string, bytes: Buffer): Buffer {
-  if (!isTextPath(rel)) return bytes;
-  let text = bytes.toString("utf-8");
-  text = text
-    .replaceAll("@aidlc/", "@amadeus/")
-    .replaceAll("file://aidlc/", "file://amadeus/")
-    .replaceAll("aidlc\\/", "amadeus\\/")
-    .replaceAll(".aidlc", ".amadeus")
-    .replaceAll('"aidlc"', '"amadeus"')
-    .replaceAll("'aidlc'", "'amadeus'")
-    .replaceAll("`aidlc`", "`amadeus`")
-    .replace(/(?<![A-Za-z0-9_-])aidlc\//g, "amadeus/")
-    .replace(/\baidlc\b/g, "amadeus");
-  return Buffer.from(text, "utf-8");
-}
-
 function buildExpected(): Map<string, Buffer> {
   const expected = new Map(managedFiles);
-  for (const { src, dst, transform } of managedDirs) {
+  for (const { src, dst } of managedDirs) {
     const srcAbs = join(REPO_ROOT, src);
     if (!existsSync(srcAbs)) {
       throw new Error(`missing source directory: ${src}`);
@@ -133,8 +112,7 @@ function buildExpected(): Map<string, Buffer> {
     for (const file of walk(srcAbs)) {
       const relFromSrc = normalizeRel(relative(srcAbs, file));
       const dstRel = normalizeRel(join(dst, relFromSrc));
-      const raw = readFileSync(file);
-      expected.set(dstRel, transform ? projectLocalTransform(dstRel, raw) : raw);
+      expected.set(dstRel, readFileSync(file));
     }
   }
   return expected;

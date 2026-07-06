@@ -3,7 +3,7 @@
 // t158 — memory writer/reader ROUND-TRIP (P6 closed the P5 seam).
 //
 // P5 relocated the METHOD reader: loadRules()/rulesDir() now read the workspace
-// tree aidlc/spaces/default/memory/ (neutral names org/team/project.md). In
+// tree amadeus/spaces/default/memory/ (neutral names org/team/project.md). In
 // Stage A the learnings WRITER (amadeus-learnings.ts learningsFilePath() →
 // persist) still targeted the OLD harness rule dir, so a confirmed learning
 // landed where the relocated reader could no longer see it — a SILENT LOSS.

@@ -24,7 +24,7 @@
 // subcommand against a genuine git fixture — exactly the .sh's shape.
 //
 // FIXTURE (mirrors make_fixture, t07:53-61): amadeus-audit audit-fork resolves a
-// worktree via worktreePath(projectDir, slug) = <proj>/.aidlc/worktrees/bolt-<slug>
+// worktree via worktreePath(projectDir, slug) = <proj>/.amadeus/worktrees/bolt-<slug>
 // (amadeus-lib.ts:148) and refuses if the dir is absent (amadeus-audit.ts:371). The
 // worktree is created with the real `amadeus-worktree.ts create` subcommand, which
 // runs `git worktree add` and asserts it is invoked from the main checkout
@@ -122,8 +122,8 @@ function shardName(): string {
 /** Seed a fixed clone-id into a clone (main proj or a worktree) so its audit
  *  shard name is deterministic and shared with the main checkout. */
 function seedCloneId(cloneRoot: string): void {
-  mkdirSync(join(cloneRoot, "aidlc"), { recursive: true });
-  writeFileSync(join(cloneRoot, "aidlc", ".amadeus-clone-id"), `${FIXED_CLONE_ID}\n`, "utf-8");
+  mkdirSync(join(cloneRoot, "amadeus"), { recursive: true });
+  writeFileSync(join(cloneRoot, "amadeus", ".amadeus-clone-id"), `${FIXED_CLONE_ID}\n`, "utf-8");
 }
 
 const BUN = process.execPath;
@@ -148,13 +148,13 @@ afterAll(() => {
 // written here so audit-fork copies it and audit-merge hashes/extends it.
 const auditPath = (p: string): string => join(seededAuditDir(p), shardName());
 const wtDir = (p: string, slug: string): string =>
-  join(p, ".aidlc", "worktrees", `bolt-${slug}`);
+  join(p, ".amadeus", "worktrees", `bolt-${slug}`);
 // The worktree mirror's per-clone audit shard — carries the SAME relative record
 // dir AND (via the seeded fixed clone-id) the SAME shard name as the main checkout.
 const wtAuditPath = (p: string, slug: string): string =>
   join(
     wtDir(p, slug),
-    "aidlc",
+    "amadeus",
     "spaces",
     DEFAULT_SPACE,
     "intents",
@@ -227,12 +227,12 @@ function makeFixture(): string {
   writeFileSync(
     join(p, ".gitignore"),
     [
-      "aidlc/active-space",
-      "aidlc/.amadeus-clone-id",
-      "aidlc/spaces/*/intents/active-intent",
-      "aidlc/spaces/*/intents/*/runtime-graph.json",
-      "aidlc/spaces/*/intents/*/.amadeus-*",
-      "aidlc/spaces/*/intents/*/audit/",
+      "amadeus/active-space",
+      "amadeus/.amadeus-clone-id",
+      "amadeus/spaces/*/intents/active-intent",
+      "amadeus/spaces/*/intents/*/runtime-graph.json",
+      "amadeus/spaces/*/intents/*/.amadeus-*",
+      "amadeus/spaces/*/intents/*/audit/",
       "",
     ].join("\n"),
   );
@@ -380,7 +380,7 @@ describe("t07 Phase B — edge cases", () => {
     // worktree mirror (the audit/ dir is gitignored, so the fork branch lacks it).
     const wtAuditDir = join(
       wtDir(p, "e2"),
-      "aidlc",
+      "amadeus",
       "spaces",
       DEFAULT_SPACE,
       "intents",
@@ -520,7 +520,7 @@ describe("t07 Phase B — edge cases", () => {
     writeFileSync(
       join(
         wtDir(p, "erro"),
-        "aidlc",
+        "amadeus",
         "spaces",
         DEFAULT_SPACE,
         "intents",

@@ -82,7 +82,7 @@ export function assertToolCalled(result: DriveResult, toolName: string): void {
  * Assert the audit log recorded an event of type `event` (e.g. "STATE_FORKED").
  * Reads result.auditEvents, which sdk-drive parsed from the `**Event**:` lines of
  * the audit trail — P4: the per-intent shards under
- * aidlc/spaces/<space>/intents/<slug>-<id8>/audit/, or the flat amadeus-docs/audit.md
+ * amadeus/spaces/<space>/intents/<slug>-<id8>/audit/, or the flat amadeus-docs/audit.md
  * for a pre-migration fixture (sdk-drive's readAuditEvents resolves both). Fails
  * clearly when no audit was written.
  */

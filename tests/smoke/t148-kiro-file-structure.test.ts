@@ -39,14 +39,14 @@ describe("t148 dist/kiro file structure", () => {
     }
   });
 
-  test("ships the method ('memory') tree at the workspace root aidlc/spaces/default/memory/", () => {
+  test("ships the method ('memory') tree at the workspace root amadeus/spaces/default/memory/", () => {
     // The AIDLC method relocated OUT of the harness dir (the old .kiro/steering/
-    // rule layers) to the workspace root under aidlc/spaces/default/memory/ — one
+    // rule layers) to the workspace root under amadeus/spaces/default/memory/ — one
     // hand-editable source of truth, identical on every harness, read by Kiro via
-    // the agent JSON `resources` globs (file://aidlc/spaces/default/memory/**/*.md).
+    // the agent JSON `resources` globs (file://amadeus/spaces/default/memory/**/*.md).
     // It sits beside .kiro/, so resolve from KIRO, not K.
     const mem = (...parts: string[]) =>
-      join(KIRO, "aidlc", "spaces", "default", "memory", ...parts);
+      join(KIRO, "amadeus", "spaces", "default", "memory", ...parts);
     for (const f of ["org.md", "team.md", "project.md"]) {
       expect(existsSync(mem(f))).toBe(true);
     }

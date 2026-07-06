@@ -196,7 +196,7 @@ const SKIP_REASON = skipReason();
 // `ready`) so we KNOW the override lands against a live workflow row. Returns the
 // session name + project path; the caller drives the slash command and cleans up.
 function bootSeededWorkflow(tag: string): { session: string; proj: string } {
-  const session = `aidlc_tui_t27_${tag}_${process.pid}`;
+  const session = `amadeus_tui_t27_${tag}_${process.pid}`;
   const proj = setupTuiProject({ withState: "state-mid-ideation.md", withAudit: true });
   // launch
   expect(

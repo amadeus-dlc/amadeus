@@ -2,7 +2,7 @@
 
 This document contains all Mermaid diagrams that visualize the AI-DLC (AI-Driven Development Life Cycle) methodology. Each section includes a brief explanation followed by a rendered diagram. These diagrams are derived from the engine and conductor (`amadeus-orchestrate.ts` + `SKILL.md`), stage protocol (`stage-protocol.md`), stage files, and agent definitions.
 
-> **Note:** These diagrams are also embedded inline in their relevant reference chapters. This file serves as a consolidated index of all diagrams in one place. `<record>/` in the diagrams below = the active intent's record dir, `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`.
+> **Note:** These diagrams are also embedded inline in their relevant reference chapters. This file serves as a consolidated index of all diagrams in one place. `<record>/` in the diagrams below = the active intent's record dir, `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`.
 >
 > - Diagrams 1 and 7: [Architecture](01-architecture.md)
 > - Diagram 8: [Orchestrator](03-orchestrator.md) -- Session Management section
@@ -246,7 +246,7 @@ flowchart TD
 
 ## 6. Agent Collaboration Map
 
-The AI-DLC system uses 11 domain-expert agents. The conductor (SKILL.md) performs each agent invocation as the engine directs; agents never invoke each other directly. Information flows between agents through artifacts stored in the intent's record dir (`aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`). The diagram below shows the primary information flows between agents, culminating in the feedback loop from amadeus-operations-agent back to amadeus-product-agent.
+The AI-DLC system uses 11 domain-expert agents. The conductor (SKILL.md) performs each agent invocation as the engine directs; agents never invoke each other directly. Information flows between agents through artifacts stored in the intent's record dir (`amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`). The diagram below shows the primary information flows between agents, culminating in the feedback loop from amadeus-operations-agent back to amadeus-product-agent.
 
 ```mermaid
 flowchart TD
@@ -431,7 +431,7 @@ sequenceDiagram
     participant TAK as Team Agent Knowledge
     participant PA as Prior Artifacts
 
-    O->>G: Step 1: Load aidlc/spaces/<space>/memory/
+    O->>G: Step 1: Load amadeus/spaces/<space>/memory/
     Note over G: org.md + team.md + project.md + phases/<phase>.md
     G-->>O: Rules loaded (strict-additive — all layers present)
 
@@ -443,11 +443,11 @@ sequenceDiagram
     Note over AM: Agent-specific methodology
     AM-->>O: Agent methodology loaded
 
-    O->>TK: Step 4: Load aidlc/knowledge/amadeus-shared/
+    O->>TK: Step 4: Load amadeus/knowledge/amadeus-shared/
     Note over TK: Team shared knowledge (if exists)
     TK-->>O: Team knowledge loaded
 
-    O->>TAK: Step 5: Load aidlc/knowledge/[agent-name]/
+    O->>TAK: Step 5: Load amadeus/knowledge/[agent-name]/
     Note over TAK: Team agent-specific knowledge (if exists)
     TAK-->>O: Team agent knowledge loaded
 

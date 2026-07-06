@@ -17,7 +17,7 @@
 //      UUIDv7, status "in-flight".
 //   2. (cheaper variant the card sanctions) a reverse-engineering stage writes a
 //      per-repo codekb artifact into the space-level codekb store for repo-a +
-//      repo-b (aidlc/spaces/<space>/codekb/<repo>/ — the codekb-determinism
+//      repo-b (amadeus/spaces/<space>/codekb/<repo>/ — the codekb-determinism
 //      placement fix; codekbFiles tolerates the bare workspace-root form too) —
 //      WITHOUT driving the full worktree-forking swarm (the most fragile/expensive
 //      beat, which combines badly with the in-turn forwarding loop). Asserted:
@@ -122,14 +122,14 @@ function birthToolPrompt(scope: string, args: string): string {
 
 /** Read every codekb artifact filename for a repo, tolerant of WHERE the store
  *  anchors. The engine NOW resolves the per-repo codekb to the SPACE-LEVEL
- *  sibling of intents/ (aidlc/spaces/<space>/codekb/<repo>/ — the
+ *  sibling of intents/ (amadeus/spaces/<space>/codekb/<repo>/ — the
  *  codekb-determinism placement fix), but the live RE subagent occasionally still
- *  writes to the bare workspace-root form aidlc/codekb/<repo>/. Either is a valid
+ *  writes to the bare workspace-root form amadeus/codekb/<repo>/. Either is a valid
  *  per-repo store for this beat's promise; accept BOTH, only absence is a fail. */
 function codekbFiles(root: string, repo: string): string[] {
   const candidates = [
-    join(root, "aidlc", "spaces", activeSpace(root), "codekb", repo),
-    join(root, "aidlc", "codekb", repo),
+    join(root, "amadeus", "spaces", activeSpace(root), "codekb", repo),
+    join(root, "amadeus", "codekb", repo),
   ];
   for (const dir of candidates) {
     try {
@@ -208,7 +208,7 @@ describe("t-journey-workspace (live SDK multi-repo·intent·space journey)", () 
         // --- Step 2: per-repo codekb written for BOTH siblings (cheaper variant)
         // Drive a reverse-engineering pass over the recorded repo set; the stage
         // writes its artifacts to the space-level codekb store per repo
-        // (aidlc/spaces/<space>/codekb/<repo>/ — RE stage prose defers the dir to
+        // (amadeus/spaces/<space>/codekb/<repo>/ — RE stage prose defers the dir to
         // the codekb-path tool). We drive only as far as the per-repo codekb
         // landing — NOT the swarm.
         await driveAidlc(
@@ -233,7 +233,7 @@ describe("t-journey-workspace (live SDK multi-repo·intent·space journey)", () 
         // noise that is NOT a collision. The collision the vision forbids is B's
         // BIRTH bleeding into A; that surfaces as a SECOND WORKFLOW_STARTED in A's
         // shard, which we guard directly via workflowStartedCount().
-        const recordADir = join(root, "aidlc", "spaces", "default", "intents", recordA as string);
+        const recordADir = join(root, "amadeus", "spaces", "default", "intents", recordA as string);
         const stateABefore = readFileSync(join(recordADir, "amadeus-state.md"), "utf-8");
         expect(workflowStartedCount(recordADir)).toBe(1);
 
@@ -280,10 +280,10 @@ describe("t-journey-workspace (live SDK multi-repo·intent·space journey)", () 
           answerScript: "default",
           timeoutMs: VERB_DRIVE_MS,
         });
-        const teamBMemory = join(root, "aidlc", "spaces", TEAM_B_SLUG, "memory");
+        const teamBMemory = join(root, "amadeus", "spaces", TEAM_B_SLUG, "memory");
         // org.md copied from default's baseline.
         const defaultOrg = readFileSync(
-          join(root, "aidlc", "spaces", "default", "memory", "org.md"),
+          join(root, "amadeus", "spaces", "default", "memory", "org.md"),
           "utf-8",
         );
         expect(readFileSync(join(teamBMemory, "org.md"), "utf-8")).toBe(defaultOrg);
@@ -294,7 +294,7 @@ describe("t-journey-workspace (live SDK multi-repo·intent·space journey)", () 
         // space-create (#5) provisions the FULL space shape — memory/ + intents/
         // PLUS the codekb/ and knowledge/ siblings (with .gitkeep floors) — so a
         // new space matches default's committed shape immediately (vision §11.2).
-        const teamBRoot = join(root, "aidlc", "spaces", TEAM_B_SLUG);
+        const teamBRoot = join(root, "amadeus", "spaces", TEAM_B_SLUG);
         expect(existsSync(join(teamBRoot, "knowledge"))).toBe(true);
         expect(existsSync(join(teamBRoot, "knowledge", ".gitkeep"))).toBe(true);
         expect(existsSync(join(teamBRoot, "codekb"))).toBe(true);
@@ -329,7 +329,7 @@ describe("t-journey-workspace (live SDK multi-repo·intent·space journey)", () 
         expect(readIntentRegistry(root, "default").length).toBe(2);
         // The space-level knowledge/ dir appeared at FIRST BIRTH into teamB (lazy
         // ensure-exists), not at space-create.
-        expect(existsSync(join(root, "aidlc", "spaces", TEAM_B_SLUG, "knowledge"))).toBe(true);
+        expect(existsSync(join(root, "amadeus", "spaces", TEAM_B_SLUG, "knowledge"))).toBe(true);
 
         // --- Step 5: switch back to default; intent A still resumable ---------
         // Same plain conductor-routed switch as beat 4, back the other way.

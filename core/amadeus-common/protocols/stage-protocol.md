@@ -585,8 +585,8 @@ Each stage specifies its lead and supporting agents. To load a persona:
 1. `{{HARNESS_DIR}}/rules/` — organization and project guardrails (always)
 2. `{{HARNESS_DIR}}/knowledge/amadeus-shared/` — shared methodology principles
 3. `{{HARNESS_DIR}}/knowledge/[agent-name]/` — agent-specific methodology
-4. `aidlc/knowledge/amadeus-shared/` — team shared knowledge (if exists)
-5. `aidlc/knowledge/[agent-name]/` — team agent-specific knowledge (if exists)
+4. `amadeus/knowledge/amadeus-shared/` — team shared knowledge (if exists)
+5. `amadeus/knowledge/[agent-name]/` — team agent-specific knowledge (if exists)
 6. Prior stage artifacts as required by the current stage
 
 ### For inline stages:
@@ -739,7 +739,7 @@ Before creating any artifact file, validate:
 
 ### Template overrides
 Before writing artifact `X` (keyed by the output filename stem — artifact `X` writes to `X.md`), resolve its template in this order, override-before-default, first hit wins:
-1. **team template** — `aidlc/spaces/<space>/memory/templates/X.md` (the active space's hand-authored override);
+1. **team template** — `amadeus/spaces/<space>/memory/templates/X.md` (the active space's hand-authored override);
 2. **framework default** — the engine-shipped default `X.md` *if one ships* (none ship at GA, so this normally misses);
 3. **else** — no template: follow the stage's existing prose.
 
@@ -894,7 +894,7 @@ The ritual is **tool-as-actor**: a deterministic tool (`amadeus-learnings.ts`) d
 
 **The harness IS mutable.** A confirmed learning IS a practice — it writes to one of two surfaces:
 
-- `aidlc/spaces/<space>/memory/project.md` (default) or `aidlc/spaces/<space>/memory/team.md` — appended as a practice line under the fitting topical heading (e.g. `## Corrections`, `## Testing Posture`, `## Forbidden`), one click to widen a candidate from project to team. These are the SAME method files the resolver reads; there is no parallel `*-learnings.md` surface, no fractional override tier, and no org tier (no widen-to-org path). History of what was learned lives in the audit shards + the per-stage diary, not a rolling dated file.
+- `amadeus/spaces/<space>/memory/project.md` (default) or `amadeus/spaces/<space>/memory/team.md` — appended as a practice line under the fitting topical heading (e.g. `## Corrections`, `## Testing Posture`, `## Forbidden`), one click to widen a candidate from project to team. These are the SAME method files the resolver reads; there is no parallel `*-learnings.md` surface, no fractional override tier, and no org tier (no widen-to-org path). History of what was learned lives in the audit shards + the per-stage diary, not a rolling dated file.
 - `{{HARNESS_DIR}}/sensors/amadeus-<id>.md` — for verification checks. A project-tier manifest with a `matches:` capability glob, bound to the originating stage by appending its id to that stage's `sensors:` frontmatter list.
 
 Next time the stage runs, the resolved rules and the bound sensor load automatically at compile — the stage runs better without anyone having edited the stage file's body.

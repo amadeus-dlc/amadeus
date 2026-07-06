@@ -2,7 +2,7 @@
   .claude/rules/amadeus.md — the AIDLC method @-import stub (NOT a copy).
 
   The AIDLC method (the layered practice files: org/team/project + phase rules)
-  is authored ONCE at the workspace root under aidlc/spaces/default/memory/ —
+  is authored ONCE at the workspace root under amadeus/spaces/default/memory/ —
   the single hand-editable source of truth, identical on every harness. This
   file is a REFERENCE, not a copy: it pulls that method into Claude's ambient
   context via @-imports so casual chat (outside an AIDLC stage) sees the
@@ -20,14 +20,14 @@
   space. At `default` the re-point is a byte-identical no-op. (AIDLC's own stage
   resolver follows the active-space cursor directly and never needs this stub.)
 
-  Edit the METHOD at aidlc/spaces/default/memory/*, never here. If a new method
+  Edit the METHOD at amadeus/spaces/default/memory/*, never here. If a new method
   file is added there, add a matching @-line below.
 -->
 
-@../../aidlc/spaces/default/memory/org.md
-@../../aidlc/spaces/default/memory/team.md
-@../../aidlc/spaces/default/memory/project.md
-@../../aidlc/spaces/default/memory/phases/ideation.md
-@../../aidlc/spaces/default/memory/phases/inception.md
-@../../aidlc/spaces/default/memory/phases/construction.md
-@../../aidlc/spaces/default/memory/phases/operation.md
+@../../amadeus/spaces/default/memory/org.md
+@../../amadeus/spaces/default/memory/team.md
+@../../amadeus/spaces/default/memory/project.md
+@../../amadeus/spaces/default/memory/phases/ideation.md
+@../../amadeus/spaces/default/memory/phases/inception.md
+@../../amadeus/spaces/default/memory/phases/construction.md
+@../../amadeus/spaces/default/memory/phases/operation.md

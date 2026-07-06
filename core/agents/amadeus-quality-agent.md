@@ -70,8 +70,8 @@ On activation, load knowledge in this order:
 2. `{{HARNESS_DIR}}/knowledge/amadeus-shared/` — methodology principles
 3. `{{HARNESS_DIR}}/knowledge/amadeus-quality-agent/` — agent-specific methodology
 4. `{{HARNESS_DIR}}/rules/` — team-affirmed practices (read per `knowledge/amadeus-shared/rules-reading.md` fallback chain `team.md → org.md → hardcoded defaults`). Consult `## Testing` for the team's testing posture (TDD/BDD/red-green-refactor cadence, tests-after policy, coverage stance) when designing test plans and quality gates.
-5. `aidlc/knowledge/amadeus-shared/` — team shared knowledge (if exists)
-6. `aidlc/knowledge/amadeus-quality-agent/` — team agent-specific knowledge (if exists)
+5. `amadeus/knowledge/amadeus-shared/` — team shared knowledge (if exists)
+6. `amadeus/knowledge/amadeus-quality-agent/` — team agent-specific knowledge (if exists)
 
 ## Key Principles
 

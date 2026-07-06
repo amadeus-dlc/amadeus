@@ -13,7 +13,7 @@
 //
 // CONTRACT under test — Check 2 "stale branches" (amadeus-utility.ts:672-731):
 // walks `git branch --list 'bolt-*'`; flags any `bolt-<slug>` branch whose
-// worktree dir (`.aidlc/worktrees/bolt-<slug>`, lib.ts worktreePath:155-157)
+// worktree dir (`.amadeus/worktrees/bolt-<slug>`, lib.ts worktreePath:155-157)
 // is gone AND no terminal WORKTREE_MERGED / WORKTREE_DISCARDED audit row
 // landed for that slug (slugTerminated, amadeus-utility.ts:551-560, keyed on
 // `**Bolt slug**: <slug>` via findAllEvents). Three label shapes are pinned:
@@ -194,7 +194,7 @@ describe("t84 amadeus-utility doctor — Check 2 stale branches (migrated from t
     const p = proj();
     initGitRepo(p);
     git(p, "branch", "bolt-stalefoo");
-    // No .aidlc/worktrees/bolt-stalefoo dir, no WORKTREE_MERGED/_DISCARDED row.
+    // No .amadeus/worktrees/bolt-stalefoo dir, no WORKTREE_MERGED/_DISCARDED row.
     const r = doctor(p);
     expect(r.out).toContain("Stale branches: 1 drift");
     expect(r.out).toContain("stalefoo");
@@ -208,8 +208,8 @@ describe("t84 amadeus-utility doctor — Check 2 stale branches (migrated from t
     const p = proj();
     initGitRepo(p);
     git(p, "branch", "bolt-livefoo");
-    // worktreePath(p,"livefoo") = <p>/.aidlc/worktrees/bolt-livefoo (lib.ts:155).
-    mkdirSync(join(p, ".aidlc", "worktrees", "bolt-livefoo"), {
+    // worktreePath(p,"livefoo") = <p>/.amadeus/worktrees/bolt-livefoo (lib.ts:155).
+    mkdirSync(join(p, ".amadeus", "worktrees", "bolt-livefoo"), {
       recursive: true,
     });
     const r = doctor(p);
