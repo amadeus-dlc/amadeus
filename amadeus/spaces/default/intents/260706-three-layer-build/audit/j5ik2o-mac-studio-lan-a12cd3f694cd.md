@@ -2153,3 +2153,12 @@
 **Context**: construction > code-generation > memory.md
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T12:38:40Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: afab6c75d3baa5271
+**Message**: 作業ツリーはクリーン。B002 の全ステップが完了した。\n\n---\n\n## B002 完了報告\n\n### コミット履歴（B002 分）\n\n| コミット | 内容 |\n|---|---|\n| `0e9a58c2` | `git mv` restructure: `skills/` → `core/`、エンジン正準 → `core/`、`openai.yaml` → `harness/codex/` 
+
+---
