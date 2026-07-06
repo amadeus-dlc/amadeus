@@ -6,7 +6,7 @@
 
 全体成果物では、少なくとも次を対象にする。
 
-- `aidlc`
+- `amadeus`
 - `amadeus/spaces`
 - `amadeus/spaces/<space>`
 - `amadeus/spaces/<space>/memory`

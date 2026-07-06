@@ -163,7 +163,9 @@
       "README.md",
       "README.ja.md",
       "CLAUDE.md",
-      ".gitignore"
+      ".gitignore",
+      "CONTRIBUTING.md",
+      "CONTRIBUTING.ja.md"
     ],
     "excludePaths": [
       "dev-scripts/data/parity-map.json",
@@ -177,7 +179,8 @@
       "aidlc/",
       "aidlc-state.md",
       ".aidlc-",
-      "/aidlc "
+      "/aidlc ",
+      "`aidlc`"
     ],
     "allow": [
       {
