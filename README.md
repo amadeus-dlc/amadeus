@@ -77,6 +77,23 @@ bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspac
 
 To update, re-run the same install command against the same workspace. It is idempotent: replaced content converges to the same result, and the hooks merge never creates duplicate entries.
 
+The installer records what it installed in `<workspace>/.amadeus-install.json` (source commit, install time, and a sha256 hash per installed file). On an update it three-way compares each file — the recorded hash, the new distribution, and what is currently on disk:
+
+- Unmodified files converge to the new distribution as before.
+- A file you have modified is never silently overwritten: it is backed up to `<workspace>/.amadeus-install-backup/<install-time>/<same relative path>` first, then replaced, and every backup is listed in the run's output. Re-apply your changes from the backup if you still need them (the installer does not merge).
+- A file recorded in the manifest but deleted on disk is restored (and counted in the output).
+- On the first update over a pre-manifest install, any file that differs from the new distribution is conservatively treated as modified and backed up.
+
+To see which version is installed:
+
+```sh
+bun run scripts/amadeus-install.ts --target <workspace> --version-info
+```
+
+It prints the installed source commit, install time, and tracked-file count, and exits non-zero when no manifest exists (so CI can branch with `--version-info || <install>`).
+
+Known limitation: skills you add under your own `amadeus*`-prefixed directory names are treated as stale distribution skills and removed on update (their customized files are backed up first). Use a non-`amadeus` prefix for your own skills.
+
 ## Usage
 
 Amadeus is used through agent skills.

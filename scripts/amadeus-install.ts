@@ -155,7 +155,30 @@ function readInstallManifest(target: string): InstallManifest | null {
       `repair or remove ${manifestPath}, then re-run (a removed manifest falls back to the conservative bootstrap path)`
     );
   }
-  return parsed as InstallManifest;
+  const manifest = parsed as InstallManifest;
+  // SEC(#543)-2: the target-side manifest is user-writable and therefore
+  // untrusted — every recorded relPath is validated BEFORE any use (its keys
+  // flow into backup/removal paths in B002). POSIX-only execution is assumed;
+  // the drive-letter check is a belt-and-braces rejection of foreign content.
+  for (const relPath of Object.keys(manifest.files ?? {})) {
+    assertSafeRelPath(relPath, manifestPath);
+  }
+  return manifest;
+}
+
+function assertSafeRelPath(relPath: string, manifestPath: string): void {
+  const segments = relPath.split("/");
+  const bad =
+    relPath.startsWith("/") ||
+    /^[A-Za-z]:/.test(relPath) ||
+    relPath.includes("\\") ||
+    segments.some((s) => s === ".." || s === "");
+  if (bad) {
+    throw new InstallError(
+      `unsafe path in ${manifestPath}: "${relPath}"`,
+      `repair or remove ${manifestPath}, then re-run (a removed manifest falls back to the conservative bootstrap path)`
+    );
+  }
 }
 
 function writeInstallManifest(target: string, sourceCommit: string, files: Record<string, string>): void {
@@ -185,16 +208,98 @@ function resolveSourceCommit(srcRoot: string): string {
 }
 
 // TrackedWriter (AD-2): the single entry point for every tracked write.
-// B001 keeps the 3-way judge frozen to plain overwrite (behaviour-compatible
-// with the pre-#543 full replace); B002 enables the judge/backup quadrants.
+// B002 activates the 3-way judge (functional-design judge table, incl. the
+// global precedence rule) and the backup-then-overwrite strategy. REL(#543)-2:
+// the backup completes BEFORE the overwrite; a backup failure aborts via
+// InstallError without touching the file.
 class InstallRecorder {
   readonly files: Record<string, string> = {};
-  constructor(readonly target: string) {}
+  readonly backedUp: string[] = [];
+  readonly obsoleteBackedUp: string[] = [];
+  readonly restored: string[] = [];
+  private backupTimeDir: string | null = null;
+  constructor(
+    readonly target: string,
+    readonly recorded: Record<string, string>
+  ) {}
+
+  private backupDirAbs(): string {
+    if (this.backupTimeDir === null) {
+      this.backupTimeDir = new Date().toISOString().replace(/\.\d{3}Z$/, "Z").replace(/:/g, "-");
+    }
+    return join(this.target, INSTALL_BACKUP_DIR, this.backupTimeDir);
+  }
+
+  backupDirRel(): string | null {
+    return this.backupTimeDir === null ? null : `${INSTALL_BACKUP_DIR}/${this.backupTimeDir}/`;
+  }
+
+  // REL(#543)-2: write the backup copy first; only then may the caller write.
+  private backup(relPath: string, currentContent: Buffer): void {
+    try {
+      const abs = join(this.backupDirAbs(), relPath);
+      mkdirSync(dirname(abs), { recursive: true });
+      writeFileSync(abs, currentContent);
+    } catch (e) {
+      throw new InstallError(
+        `failed to back up customized file "${relPath}": ${errorMessage(e)}`,
+        "check disk space / permissions on the target, then re-run (the customized file was NOT overwritten)"
+      );
+    }
+  }
+
   trackedWrite(relPath: string, content: string | Buffer): void {
     const abs = join(this.target, relPath);
+    const newHash = sha256Of(content);
+
+    let currentContent: Buffer | null = null;
+    try {
+      currentContent = readFileSync(abs);
+    } catch {
+      currentContent = null;
+    }
+    const currentHash = currentContent === null ? null : sha256Of(currentContent);
+
+    // Global precedence rule: already identical to the new distribution →
+    // record and skip the write (prevents double-backup after a mid-failure).
+    if (currentHash === newHash) {
+      this.files[relPath] = newHash;
+      return;
+    }
+
+    const recordedHash = this.recorded[relPath] ?? null;
+    if (currentContent === null) {
+      if (recordedHash !== null) this.restored.push(relPath);
+      // recorded-null + current-null = plain creation (no announcement).
+    } else if (recordedHash === null || currentHash !== recordedHash) {
+      // Customized (or unjudgeable = conservative bootstrap): back up first.
+      this.backup(relPath, currentContent);
+      this.backedUp.push(relPath);
+    }
+    // recorded present and currentHash === recordedHash → plain overwrite.
+
     mkdirSync(dirname(abs), { recursive: true });
     writeFileSync(abs, content);
-    this.files[relPath] = sha256Of(content);
+    this.files[relPath] = newHash;
+  }
+
+  // Obsolete handling (FR-2.6): a target-side file absent from the new
+  // distribution. Customized or unjudgeable content is backed up before
+  // removal; a pristine file converges away silently.
+  judgeObsolete(relPath: string, contentAbs: string): void {
+    let currentContent: Buffer | null = null;
+    try {
+      currentContent = readFileSync(contentAbs);
+    } catch {
+      return;
+    }
+    const currentHash = sha256Of(currentContent);
+    const recordedHash = this.recorded[relPath] ?? null;
+    if (recordedHash === null || currentHash !== recordedHash) {
+      this.backup(relPath, currentContent);
+      this.backedUp.push(relPath);
+      this.obsoleteBackedUp.push(relPath);
+    }
   }
 }
 
@@ -217,14 +322,17 @@ function enumerateDistFiles(rootAbs: string, relPrefix = ""): string[] {
   return out;
 }
 
-// Removal pass shared by engine dirs and skills (ObsoleteScanner shell).
-// B001: unconditional removal of target-side files absent from the dist set
-// (same convergence as the old rm→cp full replace), plus bottom-up removal of
-// directories emptied by it. B002 adds the customized→backup judgment here.
-function removeAbsentFiles(targetRootAbs: string, distRelSet: Set<string>): void {
+// Removal pass shared by engine dirs and skills (ObsoleteScanner, FR-2.6).
+// A target-side file absent from the dist set is judged via the recorder:
+// customized (or unjudgeable) content is backed up first, a pristine file
+// converges away. Directories emptied by the pass are removed bottom-up
+// (BR-13's !existsSync semantics).
+function removeAbsentFiles(targetRootAbs: string, rootRel: string, distRelSet: Set<string>, rec: InstallRecorder): void {
   if (!existsSync(targetRootAbs)) return;
   const walk = (relPrefix: string): void => {
-    for (const name of readdirSync(join(targetRootAbs, relPrefix))) {
+    // .sort(): deterministic, OS-independent enumeration so the backed-up
+    // listing order is reproducible (matches enumerateDistFiles).
+    for (const name of readdirSync(join(targetRootAbs, relPrefix)).sort()) {
       const rel = relPrefix === "" ? name : `${relPrefix}/${name}`;
       const abs = join(targetRootAbs, rel);
       const st = lstatSync(abs);
@@ -232,6 +340,7 @@ function removeAbsentFiles(targetRootAbs: string, distRelSet: Set<string>): void
         walk(rel);
         if (readdirSync(abs).length === 0) rmSync(abs, { recursive: true, force: true });
       } else if (!distRelSet.has(rel)) {
+        rec.judgeObsolete(`${rootRel}/${rel}`, abs);
         rmSync(abs, { force: true });
       }
     }
@@ -339,7 +448,7 @@ function copyEngine(src: string, target: string, rec: InstallRecorder): void {
       for (const rel of rels) {
         rec.trackedWrite(`${destRel}/${rel}`, readFileSync(join(srcPath, rel)));
       }
-      removeAbsentFiles(join(target, ".agents", "amadeus", dir), new Set(rels));
+      removeAbsentFiles(join(target, ".agents", "amadeus", dir), destRel, new Set(rels), rec);
     } catch (e) {
       throw new InstallError(
         `failed to copy engine dir "${dir}": ${errorMessage(e)}`,
@@ -375,22 +484,23 @@ function copySkills(src: string, target: string, rec: InstallRecorder): void {
             .filter((name) => statSync(join(srcRoot, name)).isDirectory())
         : [];
       const targetNames = readdirSync(targetRoot).filter((name) => name.startsWith(MANIFEST.skillsGlobPrefix));
-      // Removal pass (ObsoleteScanner shell): stale amadeus* skill dirs no
-      // longer in the source are dropped wholesale (BR-13; unconditional in
-      // B001, judged in B002).
+      const relPosix = rel.split("\\").join("/");
+      // Removal pass (ObsoleteScanner): stale amadeus* skill dirs no longer
+      // in the source are removed with per-file judgment (FR-2.6 — customized
+      // files are backed up first), then the dir itself is dropped (BR-13).
       for (const name of targetNames) {
         if (!sourceNames.includes(name)) {
+          removeAbsentFiles(join(targetRoot, name), `${relPosix}/${name}`, new Set(), rec);
           rmSync(join(targetRoot, name), { recursive: true, force: true });
         }
       }
-      const relPosix = rel.split("\\").join("/");
       for (const name of sourceNames) {
         const skillSrc = join(srcRoot, name);
         const rels = enumerateDistFiles(skillSrc);
         for (const fileRel of rels) {
           rec.trackedWrite(`${relPosix}/${name}/${fileRel}`, readFileSync(join(skillSrc, fileRel)));
         }
-        removeAbsentFiles(join(targetRoot, name), new Set(rels));
+        removeAbsentFiles(join(targetRoot, name), `${relPosix}/${name}`, new Set(rels), rec);
       }
     } catch (e) {
       throw new InstallError(
@@ -711,28 +821,51 @@ function main(): void {
     console.log("amadeus-install: no previous manifest — treating differing files as customized (conservative bootstrap)");
   }
 
-  const rec = new InstallRecorder(target);
+  const rec = new InstallRecorder(target, previous?.files ?? {});
 
-  runStep(1, "engine", () => {
-    copyEngine(src, target, rec);
-    placeAmadeusMd(src, target, rec);
-    return `.agents/amadeus/ (${MANIFEST.engineDirs.length} dirs, replaced)`;
-  });
+  // FR-2.3: each step's detail carries the counts of backups/restores that
+  // happened inside it; the end-of-run summary lists every backed-up path.
+  const stepCounts = (fn: () => string): string => {
+    // Count rule (mockups.md): obsolete backups are summary-only — the step
+    // detail counts copy-stage backups exclusively, so the obsolete deltas
+    // are subtracted out.
+    const b0 = rec.backedUp.length - rec.obsoleteBackedUp.length;
+    const r0 = rec.restored.length;
+    const base = fn();
+    const parts: string[] = [];
+    const b = rec.backedUp.length - rec.obsoleteBackedUp.length - b0;
+    const r = rec.restored.length - r0;
+    if (b > 0) parts.push(`${b} customized backed up`);
+    if (r > 0) parts.push(`${r} deleted restored`);
+    return parts.length > 0 ? `${base} (${parts.join(", ")})` : base;
+  };
 
-  runStep(2, "skills", () => {
-    copySkills(src, target, rec);
-    return ".claude/skills/amadeus*, .agents/skills/amadeus* (replaced)";
-  });
+  runStep(1, "engine", () =>
+    stepCounts(() => {
+      copyEngine(src, target, rec);
+      placeAmadeusMd(src, target, rec);
+      return `.agents/amadeus/ (${MANIFEST.engineDirs.length} dirs, replaced)`;
+    })
+  );
+
+  runStep(2, "skills", () =>
+    stepCounts(() => {
+      copySkills(src, target, rec);
+      return ".claude/skills/amadeus*, .agents/skills/amadeus* (replaced)";
+    })
+  );
 
   runStep(3, "symlinks", () => {
     relinkClaude(target);
     return `.claude/{${MANIFEST.claudeSymlinks.join(",")}} (recreated)`;
   });
 
-  runStep(4, "settings", () => {
-    const result = mergeSettings(target, MANIFEST.hooksWiring, rec);
-    return `.claude/settings.json (hooks merged: ${result.total} entries, ${result.duplicates} duplicates)`;
-  });
+  runStep(4, "settings", () =>
+    stepCounts(() => {
+      const result = mergeSettings(target, MANIFEST.hooksWiring, rec);
+      return `.claude/settings.json (hooks merged: ${result.total} entries, ${result.duplicates} duplicates)`;
+    })
+  );
 
   process.stdout.write(`[5/5] ${"smoke".padEnd(14)}`);
   // REL-3: the smoke step must go through the same error shaping as steps 1-4.
@@ -757,6 +890,20 @@ function main(): void {
     // learns the next step instead of never seeing the discarded output.
     if (output.includes("workspace shell pending first workflow")) {
       console.log("note: workspace shell is seeded at your first /amadeus workflow (known state on a fresh install)");
+    }
+    // FR-2.3 summary: header count = total backups = number of listing lines;
+    // the obsolete inner-count and restored lines appear only when non-zero.
+    if (rec.backedUp.length > 0) {
+      console.log(`amadeus-install: ${rec.backedUp.length} customized file(s) backed up to ${rec.backupDirRel() ?? ""}`);
+      for (const rel of rec.backedUp) {
+        console.log(`amadeus-install:   backed up: ${rel}`);
+      }
+      if (rec.obsoleteBackedUp.length > 0) {
+        console.log(`amadeus-install: ${rec.obsoleteBackedUp.length} of the above is obsolete (removed from the new distribution)`);
+      }
+    }
+    if (rec.restored.length > 0) {
+      console.log(`amadeus-install: ${rec.restored.length} deleted file(s) restored (per manifest)`);
     }
     // REL(#543)-1 / FR-1.3: the manifest is written exactly once, only after
     // every step (including smoke) succeeded — a failed install is never

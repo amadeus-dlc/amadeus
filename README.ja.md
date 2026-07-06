@@ -77,6 +77,23 @@ bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspac
 
 更新は同じコマンドを同じ workspace に対して再実行するだけです。冪等であり、置換対象は同じ結果へ収束し、hooks のマージも重複を生みません。
 
+インストーラは導入内容を `<workspace>/.amadeus-install.json`（配布元 commit、導入時刻、ファイルごとの sha256）に記録します。更新時は各ファイルを 3-way 比較（記録ハッシュ / 新配布物 / 導入先の現状）します。
+
+- 未改変のファイルは従来どおり新配布物へ収束します。
+- あなたが改変したファイルは無言で上書きされません: まず `<workspace>/.amadeus-install-backup/<導入時刻>/<同じ相対パス>` へ退避してから置き換え、退避したファイルはすべて実行時の出力に列挙されます。必要な変更は退避物から自分で再適用してください（インストーラはマージしません）。
+- manifest に記録されているのに導入先から削除されていたファイルは再作成されます（件数を出力します）。
+- manifest がまだ無い環境（旧版導入）への最初の更新では、新配布物と異なるファイルをすべて改変とみなして保守的に退避します。
+
+導入されている版の確認:
+
+```sh
+bun run scripts/amadeus-install.ts --target <workspace> --version-info
+```
+
+配布元 commit・導入時刻・追跡ファイル数を 1 行で表示します。manifest が無い場合は非 0 で終了するため、CI では `--version-info || <導入>` の形で分岐できます。
+
+既知の限界: 自作 skill を `amadeus*` で始まる名前で置くと、配布物に無い stale skill として更新時に削除されます（改変ファイルは先に退避されます）。自作 skill には `amadeus` 以外の接頭辞を使ってください。
+
 ## Usage
 
 Amadeus は agent skill を通じて使います。

@@ -39,3 +39,7 @@ result
 
 # 個人ローカル設定（agmsg 等の絶対パスを含むためコミットしない）
 /.claude/settings.local.json
+
+# amadeus-install (Issue #543): self-install artifacts must never be committed
+.amadeus-install.json
+.amadeus-install-backup/

@@ -1643,3 +1643,76 @@
 **Event**: HUMAN_TURN
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-06T11:21:04Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T11:21:21Z
+**Event**: HUMAN_TURN
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-06T11:21:21Z
+**Event**: DECISION_RECORDED
+**Stage**: code-generation
+**Decision**: B001-manifest-skeleton の Bolt gate を承認する（中継承認定型文の受信 2026-07-06T11:21:00Z）。承認経路: 人間（j5ik2o、2026-07-06 04:07 JST の包括委任。Maintainer 確認 21:35 JST）→ leader → engineer2。運用更新の記録: walking skeleton の人間承認は Bolt PR の merge に一本化し、事前の Bolt gate は auto 中継とする（#572 B001 = PR #584 と同運用。practices-discovery / delivery-planning の個別確認注意はこの運用へ更新）。承認要旨: manifest 基盤、ファイル単位化（AD-7、3-way 凍結 = 従来互換）、--version-info、eval 305/305、§12a READY を承認。B001 complete → B002 へ進んでよい。
+
+---
+
+## Bolt Completed
+**Timestamp**: 2026-07-06T11:21:21Z
+**Event**: BOLT_COMPLETED
+**Bolt names**: B001-manifest-skeleton
+**Batch number**: 1
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-06T11:21:21Z
+**Event**: BOLT_STARTED
+**Bolt names**: B002-threeway-backup
+**Batch number**: 2
+**Walking skeleton**: false
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T11:27:57Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T11:36:56Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: afbbcbf6892d0fe0d
+**Message**: ## Review\n\n**判定: NOT-READY**\n\n検証環境: `bun dev-scripts/evals/installer/check.ts` → 340/340 ok、`npx tsc --noEmit` → エラーなし。ただし、eval が拾っていない設計契約違反を実機再現で1件確認した（下記 1）。\n\n### 所見\n\n**1. [高] ステップ行 detail に「廃止ファイル
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T11:36:56Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T11:43:08Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: ab3bc051954103cf3
+**Message**: tscはクリーン。以上で3件の修正すべてを再検証できた。\n\n## Review\n\n**検証結果**\n\n1. eval再実行: `bun run dev-scripts/evals/installer/check.ts` → 342/342 GREEN（FAIL 0件）。`npm run test:all` も exit 0。\n2. 手動シナリオ「obsolete-only」（廃止ファイルのみが改変
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T11:43:08Z
+**Event**: HUMAN_TURN
+
+---

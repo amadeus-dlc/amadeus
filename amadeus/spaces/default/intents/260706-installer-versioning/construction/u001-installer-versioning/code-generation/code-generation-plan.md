@@ -15,8 +15,8 @@
 | 7 | main 結線（previous install / bootstrap / unknown 告知、smoke 成功後のみ manifest 書き出し = REL(#543)-1） | B001 | 完了 |
 | 8 | eval GREEN（新規 26 + 既存 274 = 300 全件）+ tsc + test:all exit 0 | B001 | 完了 |
 | 9 | §12a review（B001） | B001 | 実施中 |
-| 10 | ThreeWayJudge 有効化 + BackupWriter + scanObsolete 判定 + 告知集計 + settings 特則 | B002 | pending |
-| 11 | README 英日 + 既知の限界注記 + 自己導入除外確認 | B002 | pending |
+| 10 | ThreeWayJudge 有効化 + BackupWriter + scanObsolete 判定 + 告知集計 + settings 特則 | B002 | 完了 |
+| 11 | README 英日 + 既知の限界注記 + 自己導入除外確認（.gitignore + 走査 grep） | B002 | 完了 |
 
 ## 検証方法
 
