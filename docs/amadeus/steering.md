@@ -7,69 +7,64 @@
 
 ## Positioning
 
-Space は、Amadeus DLC の phase ではない。
+Space is not a phase of Amadeus DLC.
 
-Space は、Ideation、Inception、Construction へ進む前に、workspace 全体で共有する目的、方針、知識、用語、アクター、外部システム、Intent 一覧をそろえる基盤である。
-AI-DLC v2 の space memory に相当する。
+Space is the foundation that aligns the purpose, policy, knowledge, terminology, actors, external systems, and Intent list shared across the whole workspace before work proceeds into Ideation, Inception, and Construction. It corresponds to AI-DLC v2's space memory.
 
-`amadeus-steering` は、この Space（`amadeus/spaces/<space>/`）を greenfield または brownfield で作成、点検、補修する公開入口である。
+Space scaffolding is owned by the engine: the workspace-scaffold initialization stage (0.1) creates this Space (`amadeus/spaces/<space>/`), greenfield or brownfield, and the `space` / `space-create` utility verbs list, switch to, and create Spaces.
 
-Amadeus 自身を対象 workspace にする場合も brownfield として扱う。
-自己開発専用の steering mode は作らず、既存資料と既存 `amadeus/` を点検して、欠けている Space 成果物だけを補う。
+Treating Amadeus itself as the target workspace is also handled as brownfield. There is no dedicated self-development steering mode: the engine inspects the existing materials and the existing `amadeus/` tree, then fills in only the Space artifacts that are missing.
 
-Space は、設計判断の管理元ではない。
-Domain Map と Context Map は、Space の初期化では空の索引として作り、内容は Construction の承認済み成果物（Functional Design の反映候補の採用判断）から更新する。
+Space does not own design decisions. The Domain Map and Context Map start as empty indexes at Space initialization; their content is updated only from Construction's approved artifacts (adoption decisions surfaced as Functional Design reflection candidates).
 
 ## Responsibility
 
-`amadeus-steering` は、作業場所の初期文脈と初期化に必要な成果物だけを扱う。
+Space scaffolding handles only the workspace's initial context and the artifacts its initialization requires.
 
-個別 Intent のライフサイクル成果物は作らない。
-個別 Intent が必要になった場合は、単一入口 `amadeus` の Intake に渡す。
+It does not create the lifecycle artifacts of an individual Intent. When an individual Intent is needed, it hands off to the single entry point `amadeus`'s Intake.
 
-`amadeus-steering` は、Subdomain、Bounded Context、コンテキスト間依存、詳細な Domain Model、契約の採用判断を作らない。
-これらは対象ステージの成果物、判断、追跡、承認に基づいて後続ステージで扱う。
+Space scaffolding does not make adoption decisions for Subdomains, Bounded Contexts, cross-context dependencies, detailed Domain Models, or contracts. Later stages handle those, based on the target stage's artifacts, decisions, traceability, and approvals.
 
-## 成果物
+## Artifacts
 
 | Artifact | Description |
 |---|---|
-| `memory/org.md` | Amadeus DLC の組織既定 |
-| `memory/team.md` | チームの働き方（org.md を上書き） |
-| `memory/project.md` | プロジェクト固有の判断材料（team.md を上書き） |
-| `memory/phases/` | phase 別の補足（任意） |
-| `memory/templates/` | プロジェクト固有のテンプレート上書き（任意） |
-| `knowledge/glossary.md` | Amadeus DLC 全体の用語集 |
-| `knowledge/actors.md` | アクター一覧 |
-| `knowledge/external-systems.md` | 外部システム一覧 |
-| `knowledge/background.md` | 背景、前提、未確認事項 |
-| `knowledge/domain-map.md` | 採用済みまたは廃止済みの Subdomain と Bounded Context の索引（初期化時は空） |
-| `knowledge/context-map.md` | 採用済みまたは廃止済みのコンテキスト間依存の索引（初期化時は空） |
-| `knowledge/event-storming/` | Intent 作成前の Event Storming |
-| `codekb/<repo>/` | コードベース知識（v2 の codekb）。brownfield で作る任意ディレクトリ |
-| `intents/intents.json` | Intent registry（正準台帳）。初期化時は空の `[]` |
-| `intents/intents.md` | Intent 一覧（`IndexGenerate.ts` の生成物） |
-| `intents/active-intent` | カーソル（gitignore）。値は Initialization が書く |
-| `intents/<dirName>.md` と `intents/<dirName>/`（record） | 個別 Intent の成果物。Initialization が作る |
+| `memory/org.md` | Amadeus DLC's organizational defaults |
+| `memory/team.md` | Team working conventions (overrides `org.md`) |
+| `memory/project.md` | Project-specific judgment criteria (overrides `team.md`) |
+| `memory/phases/` | Phase-specific supplements (optional) |
+| `memory/templates/` | Project-specific template overrides (optional) |
+| `knowledge/glossary.md` | Glossary for Amadeus DLC as a whole |
+| `knowledge/actors.md` | Actor list |
+| `knowledge/external-systems.md` | External system list |
+| `knowledge/background.md` | Background, assumptions, and open questions |
+| `knowledge/domain-map.md` | Index of adopted or retired Subdomains and Bounded Contexts (empty at initialization) |
+| `knowledge/context-map.md` | Index of adopted or retired cross-context dependencies (empty at initialization) |
+| `knowledge/event-storming/` | Event Storming performed before Intent creation |
+| `codekb/<repo>/` | Codebase knowledge (v2's codekb); an optional directory created in brownfield |
+| `intents/intents.json` | Intent registry (the canonical ledger); empty `[]` at initialization. A human-readable list is generated from it on demand (the `intents.md` index is retired — GD009) |
+| `intents/active-intent` | Cursor (gitignored); Initialization writes its value |
+| `intents/<dirName>/` (record) | Artifacts of an individual Intent; created by Initialization |
 
-## 自己開発 bootstrap
+## Self-Development Bootstrap
 
-自己開発 bootstrap では、初回 `amadeus/` が採用対象ではなく bootstrap 用になる場合がある。
-昇格済み skill で Space を作り直す場合は、作り直し前の Space を `.amadeus-snapshots/previous/` に退避し、退避版は git 管理外で直近1世代だけ保持する。
-差分確認の採用判断だけを、採用対象 Space の既存成果物（自己開発 cycle 全体なら `knowledge/background.md`、特定 Intent の再生成なら対象 phase の `decisions.md`）に要約する。
-この扱いは `amadeus-steering` の実行モードに依存しない。
+In self-development bootstrap, the initial `amadeus/` may serve as a bootstrap rather than the adoption target.
+
+When a promoted skill recreates the Space, the pre-recreation Space is evacuated to `.amadeus-snapshots/previous/`; the evacuated copy stays outside git and retains only the most recent generation.
+
+Only the adoption decision from the diff review is summarized into the adoption target Space's existing artifacts — `knowledge/background.md` for a full self-development cycle, or the target phase's `decisions.md` for a single Intent's regeneration.
+
+This handling does not depend on how the Space scaffolding is executed.
 
 ## Notes
 
-AI-DLC v2 の Initialization（Stage 0.1〜0.3）は、単一入口 `amadeus` が Birth 承認の直後に直接実行し、Intent record の scaffold と `amadeus-state.md` を作る。
-Intent Record の内容の具体化は、続く Ideation の Stage 1.1 Intent Capture & Framing に置く。
+AI-DLC v2's Initialization (Stage 0.1–0.3) runs directly: the single entry point `amadeus` executes it immediately after Birth approval, creating the Intent record scaffold and `amadeus-state.md`. Filling in the Intent Record's content is the responsibility of the following Ideation Stage 1.1, Intent Capture & Framing.
 
-`amadeus-steering` は、個別 Intent の record ではなく Space（`amadeus/spaces/<space>/`）の共有基盤を作る点で、Initialization とは範囲が異なる。
-Space の `memory/`、`knowledge/`、`intents/` の器は `amadeus-steering` が用意し、個別 Intent の record は Initialization が作る。
+Space scaffolding differs in scope from the per-Intent part of Initialization: it builds the shared foundation of the Space (`amadeus/spaces/<space>/`), not an individual Intent's record. It prepares the containers for the Space's `memory/`, `knowledge/`, and `intents/`; Initialization creates the record for each individual Intent.
 
 ## Cross-References
 
 - [Lifecycle Overview](lifecycle/overview.md)
 - [Ideation Phase Stages](lifecycle/ideation.md)
-- [ADR 0002: Intent Phase Directory Layout を採用する](../adr/0002-intent-phase-directory-layout.md)
-- [Extension Guide](extension-guide.md) — `memory/`、`knowledge/`、`codekb/` などの拡張ポイントの使い分けと人間編集の可否
+- [ADR 0002: Adopt the Intent Phase Directory Layout](../adr/0002-intent-phase-directory-layout.md)
+- [Extension Guide](extension-guide.md) — which extension point among `memory/`, `knowledge/`, `codekb/`, and others to use, and whether humans may edit it directly
