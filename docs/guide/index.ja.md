@@ -19,8 +19,8 @@ Amadeus 自体を開発する人向けではなく、自分のプロジェクト
 導入の一連（3 章）は番号順に読む。
 
 1. [00 — Introduction](00-introduction.ja.md)：Amadeus DLC とは何か、どう動くか、AI-DLC v2 とどう関係するかを扱う。
-2. 01 — Getting Started：workspace へのエンジン導入と、導入後の検証を扱う。
-3. 02 — First Workflow：Birth から完了までの 1 Intent の実行を扱う。
+2. [01 — Getting Started](01-getting-started.ja.md)：workspace へのエンジン導入と、導入後の検証を扱う。
+3. [02 — Your First Workflow](02-first-workflow.ja.md)：birth、最初のエンジン directive、状態と成果物の置き場所を扱う。
 
 ## 章一覧
 

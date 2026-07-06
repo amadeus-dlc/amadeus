@@ -13,8 +13,8 @@ This guide follows the same language convention as `docs/amadeus/`: each chapter
 Read the introductory arc in numeric order:
 
 1. [00 — Introduction](00-introduction.md) — what Amadeus DLC is, how it runs, and how it relates to AI-DLC v2.
-2. 01 — Getting Started — installing the engine into a workspace and verifying the install.
-3. 02 — First Workflow — running a single Intent from Birth to completion.
+2. [01 — Getting Started](01-getting-started.md) — installing the engine into a workspace and verifying the install.
+3. [02 — Your First Workflow](02-first-workflow.md) — birth, the first engine directive, and where state and artifacts land.
 
 ## Chapters
 

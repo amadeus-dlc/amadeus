@@ -7,7 +7,7 @@ AI-DLC v2（[awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows
 
 作業は **Intent** を単位に組み立てる。
 Intent は、独立して完了判断でき、観測可能な成功基準を持つアウトカムである。
-Intent は Ideation、Inception、Construction を進み、Operation を使う workspace ではさらに Operation へ進む。
+Intent は Ideation、Inception、Construction を進む。Operation ステージを含む scope では、さらに Operation へ進む（どの scope がどのステージを実行するかは [scopes 契約](../amadeus/lifecycle/scopes.md)が定義する）。
 契約全体（stage の責務、入出力、その裏にある状態機械）は [Lifecycle Contract Overview](../amadeus/lifecycle/overview.md) が定義する。
 
 各 stage の完了と各 gate の判断は、Intent 自身の record 配下に audit イベントとして記録する。
@@ -64,6 +64,5 @@ skill 名、tool の path、CLI トークンは、`aidlc` の代わりに `amade
 
 ## 次に読むもの
 
-導入の一連における次章は、自分の workspace へエンジンを導入し、導入結果を検証する内容を扱う。
-この章はまだ公開していない。
-先に進む前に、ガイドの[目次](index.ja.md)で章の状態を確認する。
+次章の [Getting Started](01-getting-started.ja.md) は、自分の workspace へエンジンを導入し、導入結果を検証する内容を扱う。
+各章の状態は、ガイドの[目次](index.ja.md)で確認できる。

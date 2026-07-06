@@ -2,7 +2,7 @@
 
 ## What is Amadeus DLC
 
-Amadeus DLC is a lifecycle contract for AI-assisted software development, semantically compatible with AI-DLC v2 (the `v2` branch of [awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows)). Work is organized around an **Intent**: an independently completable outcome with an observable success criterion. An Intent moves through Ideation, Inception, and Construction, and, in workspaces that use it, Operation. The full contract — stage responsibilities, inputs and outputs, and the state machine behind it — is defined in the [Lifecycle Contract Overview](../amadeus/lifecycle/overview.md).
+Amadeus DLC is a lifecycle contract for AI-assisted software development, semantically compatible with AI-DLC v2 (the `v2` branch of [awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows)). Work is organized around an **Intent**: an independently completable outcome with an observable success criterion. An Intent moves through Ideation, Inception, and Construction; scopes that include them also run the Operation stages (which scopes execute which stages is defined in the [scopes contract](../amadeus/lifecycle/scopes.md)). The full contract — stage responsibilities, inputs and outputs, and the state machine behind it — is defined in the [Lifecycle Contract Overview](../amadeus/lifecycle/overview.md).
 
 Every stage completion and every gate decision is recorded as an audit event under the Intent's own record. Each stage gate, and each Construction Bolt gate, waits for an explicit human decision before the work advances. The day-to-day stage work is agent-driven, but what ships stays under human control.
 
@@ -38,4 +38,4 @@ Beyond naming, where Amadeus's actual feature set diverges from upstream is stil
 
 ## Next steps
 
-The next chapter in the introductory arc installs the engine into your own workspace and verifies the install. It has not been published yet — check the guide [index](index.md) for current chapter status before continuing.
+The next chapter, [Getting Started](01-getting-started.md), installs the engine into your own workspace and verifies the install. The guide [index](index.md) tracks the status of every chapter.

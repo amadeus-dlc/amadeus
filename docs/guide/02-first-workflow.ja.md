@@ -21,7 +21,14 @@ skill は、渡された directive をそのまま実行するだけである。
 Intake が自由記述の入力を分類し、独立して完了判断できる新しいアウトカムに見える場合だけ、エンジンが **birth**（Intent の作成）を提案する。
 birth の前に人間の承認を得ることは必須であり、エンジンが自動で birth することはない。
 承認が得られると、skill は承認された scope と説明を渡して `intent-birth` を実行する。
-次は、その同じコマンドを直接実行した結果である。
+
+本章のコマンドはすべて、対象 workspace のルートで実行する。[Getting Started](01-getting-started.ja.md) の導入作業を終えた Amadeus の clone ディレクトリではなく、導入先へ移動してから進める。
+
+```sh
+cd <workspace>
+```
+
+次は、その同じ birth コマンドを直接実行した結果である。
 
 ```sh
 bun .agents/amadeus/tools/amadeus-utility.ts intent-birth --scope poc --arguments "Add a hello command to my CLI" --label "hello-command"
@@ -60,7 +67,7 @@ bun .agents/amadeus/tools/amadeus-orchestrate.ts next
 ```
 
 エンジンは、ちょうど 1 個の directive を JSON で返す。
-次は、この Intent に対する実物である。
+次は、この Intent に対する実物である。完全な JSON ドキュメントではなく、途中で切った抜粋として示す。
 `conductor_persona` フィールド（毎セッション最初の directive に載る、実行品質に関する長大な固定文書）は省略した。
 下記の抜粋は、実測ログ自体がその直前で途切れている箇所で切れている。
 
@@ -137,6 +144,7 @@ Next Stage:     reverse-engineering
 
 これは poc scope がコンパイルした 7 stage の計画である。
 Initialization の 3 stage は birth 時に自動で実行済みであり、残る 4 stage（この scope の Ideation、Inception、Construction の該当分）がまだ先にある。
+いま目の前にある作業は `Current Stage` であり、`Next Stage` は現在の stage が完了した後に続く stage を示す。
 `Completion` と `Phase Progress` の bar は、同じ stage 数から導出する。
 `Current Stage` と `Last Completed` は、実行の途中でも `/amadeus` がいつでも示す、同じ 1 組のフィールドである。
 
@@ -157,6 +165,6 @@ stage ごとの成果物名まで含む record 全体の配置は [Lifecycle Con
 
 ## 次に読むもの
 
-本章では、1 個の Intent を command level で最初から最後まで扱った。
+本章では、Intent の最初の数手を command level で扱った。birth、最初のエンジン directive、状態と成果物の置き場所である。残りの stage を完了まで進める作業は、conductor loop（`/amadeus`）が gate ごとに担う。
 本ガイドは、この導入の一連より先へ続く。公開済みの章と全体の一覧は[ガイドの目次](index.ja.md)を参照する。
 導入済みの workspace をステアリングまたは拡張する場合（新しい scope、独自 stage、エンジン変更など）は、[拡張ガイド](../amadeus/extension-guide.ja.md)を参照する。

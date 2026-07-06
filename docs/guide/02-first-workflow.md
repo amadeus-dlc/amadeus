@@ -8,7 +8,15 @@ This chapter does not narrate a `/amadeus` chat session. Instead it runs the eng
 
 ## Birth: creating your first Intent
 
-Inside `/amadeus`, an Intent is never created directly: Intake classifies your freeform input, and the engine proposes a **birth** only when the input looks like a new, independently completable outcome. Human approval before birth is mandatory — the engine never auto-births. Once approved, the skill runs `intent-birth` with the approved scope and description. This is that same command, run directly:
+Inside `/amadeus`, an Intent is never created directly: Intake classifies your freeform input, and the engine proposes a **birth** only when the input looks like a new, independently completable outcome. Human approval before birth is mandatory — the engine never auto-births. Once approved, the skill runs `intent-birth` with the approved scope and description.
+
+Every command in this chapter is run from the root of your target workspace — the directory you installed into, not the Amadeus clone that [Getting Started](01-getting-started.md) left you in:
+
+```sh
+cd <workspace>
+```
+
+This is that same birth command, run directly:
 
 ```sh
 bun .agents/amadeus/tools/amadeus-utility.ts intent-birth --scope poc --arguments "Add a hello command to my CLI" --label "hello-command"
@@ -44,7 +52,7 @@ With the Intent born, ask the engine what to do next:
 bun .agents/amadeus/tools/amadeus-orchestrate.ts next
 ```
 
-The engine returns exactly one directive as JSON. Here is the real one for this Intent (its `conductor_persona` field — a long, fixed block of execution-quality guidance carried on the first directive of every session — is omitted; the capture below is cut immediately before it, at the point where the trimmed source log itself stops):
+The engine returns exactly one directive as JSON. Here is the real one for this Intent, shown as an abridged excerpt rather than a complete JSON document (its `conductor_persona` field — a long, fixed block of execution-quality guidance carried on the first directive of every session — is omitted; the capture below is cut immediately before it, at the point where the trimmed source log itself stops):
 
 ```json
 {
@@ -108,7 +116,7 @@ Last Completed: state-init
 Next Stage:     reverse-engineering
 ```
 
-This is the poc scope's compiled 7-stage plan: the 3 Initialization stages ran automatically at birth, and the remaining 4 stages (this scope's Ideation, Inception, and Construction subset) are still ahead. `Completion` and the `Phase Progress` bars both derive from the same stage count; `Current Stage` and `Last Completed` are always the same field pair `/amadeus` shows you at any point mid-run.
+This is the poc scope's compiled 7-stage plan: the 3 Initialization stages ran automatically at birth, and the remaining 4 stages (this scope's Ideation, Inception, and Construction subset) are still ahead. `Current Stage` is the work in front of you now; `Next Stage` names the stage that follows once the current one completes. `Completion` and the `Phase Progress` bars both derive from the same stage count; `Current Stage` and `Last Completed` are always the same field pair `/amadeus` shows you at any point mid-run.
 
 ## Gates and audit
 
@@ -120,4 +128,4 @@ Everything this Intent produces lands under its own record, `amadeus/spaces/defa
 
 ## Next steps
 
-This chapter covered one Intent end to end at the command level. The guide continues past this introductory arc — see the [guide index](index.md) for the full chapter list and what has been published so far. To steer or extend an installed workspace — new scopes, custom stages, engine changes — see the [Extension Guide](../amadeus/extension-guide.md).
+This chapter covered the first steps of an Intent at the command level — birth, the first engine directive, and where state and artifacts land. Running the remaining stages to completion happens through the conductor loop (`/amadeus`), gate by gate. The guide continues past this introductory arc — see the [guide index](index.md) for the full chapter list and what has been published so far. To steer or extend an installed workspace — new scopes, custom stages, engine changes — see the [Extension Guide](../amadeus/extension-guide.md).
