@@ -2,6 +2,13 @@
 
 ## 差分更新の記録（最新）
 
+- 解析時刻: 2026-07-06T05:44:48Z（UTC）
+- 対象コミット: 9dd93f50（origin/main = PR #553 merge 後）
+- 解析方式: 差分更新（c50a0fe5..9dd93f50 = PR #553 全面 rename のみ。挙動不変のため、名前空間再定義 1 行と rename-leftovers の役割記述だけを更新。path 表記は #553 内で更新済み）
+- 実施 Intent: `260706-engine-consistency`（reverse-engineering、メイン直接処理）
+
+## 前回（2026-07-06T04:04:37Z、33c40271..c50a0fe5）の記録
+
 - 解析時刻: 2026-07-06T04:04:37Z（UTC）
 - 対象コミット: c50a0fe5（origin/main = PR #550 merge 後）
 - 解析方式: 差分更新（33c40271..c50a0fe5 の非 aidlc 変更 17 ファイル = PR #544/#545/#546/#549/#550）

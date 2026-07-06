@@ -208,6 +208,53 @@ check("audit shard（<host>-<clone>.md）が作られている", shardName !== u
 const shardText = readFileSync(join(auditDir, shardName!), "utf8");
 check("audit shard に ERROR_LOGGED が記録されている", shardText.includes("**Event**: ERROR_LOGGED"), shardText.slice(-500));
 
+
+// ---- 6. #547: 末尾 skip 連続の workflow を complete-workflow で閉じたときの整合 ----
+// feature scope を birth し、build-and-test までを completed、ci-pipeline と
+// Operation の EXECUTE ステージを [S] にした状態（PR #546 の実測形）で
+// complete-workflow を呼ぶ。期待: Current Stage / Next Stage = none、
+// 全 [S] の phase（operation）の Phase Progress = Skipped、PHASE_SKIPPED が
+// audit に記録され、手動整合なしで validator が pass する。
+
+{
+  const ws547 = mkdtempSync(join(tmpdir(), "engine-e2e-547-"));
+  cleanups.push(ws547);
+  for (const dir of ENGINE_DIRS) {
+    cpSync(join(root, ".agents/amadeus", dir), join(ws547, ".agents/amadeus", dir), { recursive: true });
+  }
+  const util547 = join(ws547, ".agents/amadeus/tools/amadeus-utility.ts");
+  const state547 = join(ws547, ".agents/amadeus/tools/amadeus-state.ts");
+  runExpectSuccess(
+    ["bun", util547, "intent-birth", "--scope", "feature", "--arguments", "trailing skip fixture", "--label", "trail skip"],
+    ws547
+  );
+  const record547 = join(ws547, "amadeus/spaces/default/intents");
+  const dir547 = readdirSync(record547).find((n) => n.includes("trail-skip"));
+  check("(#547) fixture record が誕生する", dir547 !== undefined, readdirSync(record547).join(", "));
+  const statePath547 = join(record547, dir547!, "amadeus-state.md");
+  // build-and-test までの EXECUTE を completed、ci-pipeline と operation の EXECUTE を [S] へ
+  const doneSlugs = ["intent-capture", "market-research", "feasibility", "scope-definition", "team-formation", "rough-mockups", "approval-handoff", "reverse-engineering", "practices-discovery", "requirements-analysis", "user-stories", "refined-mockups", "application-design", "units-generation", "delivery-planning", "functional-design", "nfr-requirements", "nfr-design", "infrastructure-design", "code-generation", "build-and-test"];
+  for (const s of doneSlugs) {
+    run(["bun", state547, "checkbox", `${s}=completed`], ws547);
+  }
+  for (const s of ["ci-pipeline", "deployment-pipeline", "environment-provisioning", "deployment-execution", "observability-setup", "incident-response", "performance-validation", "feedback-optimization"]) {
+    run(["bun", state547, "checkbox", `${s}=skipped`], ws547);
+  }
+  // phase-check（inception / construction）を置いて complete-workflow の境界要求を満たす
+  mkdirSync(join(record547, dir547!, "verification"), { recursive: true });
+  for (const ph of ["ideation", "inception", "construction"]) {
+    writeFileSync(join(record547, dir547!, "verification", `phase-check-${ph}.md`), `# Phase Check — ${ph}\n\n## 検査\n\n- fixture\n\n## 結果\n\n- pass\n`);
+  }
+  const doneRes = run(["bun", state547, "complete-workflow", "build-and-test", "--reason", "eval-547"], ws547);
+  check("(#547) complete-workflow が exit 0", doneRes.exitCode === 0, doneRes.stderr.slice(0, 300));
+  const st = readFileSync(statePath547, "utf8");
+  check("(#547) Current Stage が none", /\*\*Current Stage\*\*: none/.test(st), st.match(/\*\*Current Stage\*\*: [^\n]*/)?.[0] ?? "");
+  check("(#547) Operation phase が Skipped", /\*\*Operation\*\*: Skipped/.test(st), st.match(/\*\*Operation\*\*: [^\n]*/)?.[0] ?? "");
+  const shard547 = readdirSync(join(record547, dir547!, "audit")).find((n) => n.endsWith(".md") && n !== "audit.md");
+  const audit547 = readFileSync(join(record547, dir547!, "audit", shard547!), "utf8");
+  check("(#547) PHASE_SKIPPED (operation) が audit に記録される", /\*\*Event\*\*: PHASE_SKIPPED[\s\S]{0,80}operation/.test(audit547), audit547.slice(-600));
+}
+
 // ---- cleanup ----
 
 for (const dir of cleanups) rmSync(dir, { recursive: true, force: true });

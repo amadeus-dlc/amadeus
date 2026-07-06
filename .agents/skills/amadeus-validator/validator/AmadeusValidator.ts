@@ -844,6 +844,7 @@ class AmadeusValidator {
         failRow: (target, condition, evidence) => this.failRow(target, condition, evidence),
         checkFile: (path, condition) => this.checkFile(path, condition),
         readOptional: (path) => (this.isFile(this.absolute(path)) ? this.read(path) : undefined),
+        listDir: (path) => this.listDirNames(path),
       },
       { base, dirName: intentId, stateText, auditText, legacy, auditShardExists },
     );
@@ -1700,6 +1701,14 @@ class AmadeusValidator {
 
   private cleanLinkTarget(target: string): string {
     return cleanMarkdownLinkTarget(target);
+  }
+
+  private listDirNames(path: string): string[] {
+    const abs = this.absolute(path);
+    if (!this.isDirectory(abs)) return [];
+    return readdirSync(abs, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
   }
 
   private isFile(path: string): boolean {

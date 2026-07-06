@@ -14,3 +14,4 @@
 - 2026-07-06T01:20:00Z: 2a0a784b..7829d99a の差分駆動増分更新（Intent `260706-readme-refresh`。PR #536 は docs-only のため codekb 9 docs への影響なし。詳細は reverse-engineering-timestamp.md）。
 - 2026-07-06T01:53:29Z: 2a0a784b..33c40271 の差分駆動増分更新（Intent `260706-rename-lint-fixes`。PR #536/#539/#542 = docs 言語方針・Adaptive Workflows 2.2.0・parity-baseline 再生成を反映。詳細は reverse-engineering-timestamp.md）。
 - 2026-07-06T04:04:37Z: 33c40271..c50a0fe5 の差分駆動増分更新（Intent `260706-full-rename`。PR #544/#545/#546/#549/#550 = no-stub-compat rule、audit-format 設計境界節、pr-gate-discipline.md 新設、README 刷新、rename 漏れ 2 件 + linter sensor 2 段検出。eval 数 29→31、sensors 行の新設を反映。詳細は reverse-engineering-timestamp.md）。
+- 2026-07-06T05:44:48Z: c50a0fe5..9dd93f50 の差分駆動増分更新（Intent `260706-engine-consistency`。PR #553 = 全面 rename #526 を反映: 名前空間再定義 1 行と検出器記述。codekb 本文の path 表記は #553 自身が更新済み）。
