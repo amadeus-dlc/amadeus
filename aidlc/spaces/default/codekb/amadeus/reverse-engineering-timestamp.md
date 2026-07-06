@@ -2,6 +2,20 @@
 
 ## 差分更新の記録（最新）
 
+- 解析時刻: 2026-07-06T04:04:37Z（UTC）
+- 対象コミット: c50a0fe5（origin/main = PR #550 merge 後）
+- 解析方式: 差分更新（33c40271..c50a0fe5 の非 aidlc 変更 17 ファイル = PR #544/#545/#546/#549/#550）
+- 実施 Intent: `260706-full-rename`（reverse-engineering ステージ、Maintainer 指示によるメイン直接処理）
+
+| artifact | 変更内容 |
+|---|---|
+| code-structure.md | evals 29→31（rename-leftovers / linter-sensor 追記） |
+| component-inventory.md | evals 29→31、sensors 行を新設（linter sensor の 2 段検出 #538） |
+| code-quality-assessment.md | eval 数 29→31 |
+| その他 6 docs | 影響なし（#545/#546/#549 は knowledge 文書・README の追加更新で、codekb の記述対象に乖離を生じない） |
+
+## 前回（2026-07-06T01:53:29Z、2a0a784b..33c40271）の記録
+
 - 解析時刻: 2026-07-06T01:53:29Z（UTC）
 - 対象コミット: 33c40271（HEAD、branch: eng1/issue-537-538-540-bugfix）
 - 解析方式: 差分更新（2a0a784b..33c40271 の非 aidlc 変更 = PR #536/#539/#542 の 3 PR）

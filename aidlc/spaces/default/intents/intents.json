@@ -376,5 +376,13 @@
     "scope": "bugfix",
     "repos": [],
     "status": "complete"
+  },
+  {
+    "uuid": "019f3597-d0b4-745c-87de-bc7ec4cdfd99",
+    "slug": "full-rename",
+    "dirName": "260706-full-rename",
+    "scope": "refactor",
+    "repos": [],
+    "status": "in_progress"
   }
 ]

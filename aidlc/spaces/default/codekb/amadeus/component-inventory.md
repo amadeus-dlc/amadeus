@@ -18,7 +18,8 @@
 | skill contract | `amadeus-contracts/`、`dev-scripts/{generate,check}-amadeus-contracts.ts` | skill 境界・条件・委譲の生成と検査 |
 | promote-skill | `dev-scripts/promote-skill.ts` | source → 昇格先の唯一の同期手段 |
 | parity | `dev-scripts/parity-check.ts` + `dev-scripts/data/parity-{map,baseline}.json` | 上流（b67798c3 = AI-DLC v2 2.2.0 Adaptive Workflows）との適応差分の追跡。意図的適応は engineFileExceptions へ宣言 |
-| eval 群 | `dev-scripts/evals/`（29 種） | 隔離 workspace で実 CLI を駆動する決定論的検証（engine-e2e、hooks、kanban、validator ほか。新規 4 種: `docs-codekb-guards`＝codekb repo キーの worktree 名漏れ回帰検査 #498、`installer`＝配布インストーラの実 CLI 検証 #451、`pdm-scope`＝`pdm` scope の空 Construction e2e #429、`persist-cid-metamain`＝learnings persist の cid 衝突と import 副作用の回帰検査 #504/#507） |
+| sensors | `.agents/amadeus/sensors/`（4 種） | gate 時の決定論的検査。linter sensor は 2 段検出（workspace の lint:check script 優先 → eslint フォールバック → 不在時 quiet PASS、#538）で実 lint rule を gate に効かせる |
+| eval 群 | `dev-scripts/evals/`（31 種） | 隔離 workspace で実 CLI を駆動する決定論的検証（engine-e2e、hooks、kanban、validator ほか。新規 4 種: `docs-codekb-guards`＝codekb repo キーの worktree 名漏れ回帰検査 #498、`installer`＝配布インストーラの実 CLI 検証 #451、`pdm-scope`＝`pdm` scope の空 Construction e2e #429、`persist-cid-metamain`＝learnings persist の cid 衝突と import 副作用の回帰検査 #504/#507） |
 | kanban 可視化 | `dev-scripts/kanban/`、`dev-scripts/kanban-sync.ts` | Projects v2 への一方向鏡（repo 内限定の暫定機構 = #470） |
 | lints | `lints/` | public type file / ts-complexity |
 
