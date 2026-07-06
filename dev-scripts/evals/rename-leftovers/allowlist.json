@@ -174,7 +174,7 @@
       "dev-scripts/generate-parity-baseline.ts"
     ],
     "tokens": [
-      "aidlc/spaces",
+      "aidlc/",
       "aidlc-state.md",
       ".aidlc-",
       "/aidlc "

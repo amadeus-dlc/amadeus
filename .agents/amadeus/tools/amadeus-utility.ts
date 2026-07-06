@@ -2113,13 +2113,13 @@ function ensureWorkspaceDirs(projectDir: string): void {
   // engine dir (the packager's emitMemory → MEMORY_DST), so a complete dist/
   // copy already carries it and the lines below leave it untouched. But a user
   // who copies ONLY the harness engine dir (e.g. dist/kiro/.kiro/) and NOT the
-  // sibling aidlc/ shell lands with NO default-space method tree → doctor's
+  // sibling amadeus/ shell lands with NO default-space method tree → doctor's
   // "workspace shell ready" check fails and the rule resolver loads zero rules.
   // To recover, seed the default-space memory tree from the copy the packager
   // bundled INSIDE the engine at tools/data/memory-seed/ (frameworkMemorySeedDir,
   // mirroring the tools/data/templates pattern) — but ONLY if the default tree is
   // ABSENT. The existsSync guard makes this strictly idempotent: a normal install
-  // that copied aidlc/ already has the dir, so the seed never fires and the
+  // that copied amadeus/ already has the dir, so the seed never fires and the
   // committed default tree never churns (preserving the "default tree never
   // churns" invariant). This is a deliberate, GUARDED exception to the
   // "never SEED" rule the rest of this function follows.
@@ -2770,7 +2770,7 @@ function handleCodekbPath(projectDir: string, flags: Record<string, string>): vo
 }
 
 // `detect [--json]` - read-only. Runs the workspace scan (detectWorkspace) on
-// the bare project dir - it needs no aidlc/ workspace; it scans the app root -
+// the bare project dir - it needs no amadeus/ workspace; it scans the app root -
 // and prints projectType (Greenfield/Brownfield), languages, frameworks, and
 // buildSystem. ALSO prints the resolved scope-registry paths (scopesDir +
 // scopeGridPath): those are module-relative to the installed tool, which a

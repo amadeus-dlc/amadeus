@@ -3,7 +3,7 @@
 // pdm-scope eval（Issue #429）。
 //
 // Construction を持たない pdm scope が実 CLI で成立することを、隔離 temp
-// workspace で検証する。LLM を呼ばず、本番 aidlc/ を変更しない。
+// workspace で検証する。LLM を呼ばず、本番 amadeus/ を変更しない。
 // 成功時・失敗時ともに temp workspace を片付ける。
 //
 // (a) intent-birth --scope pdm が成功し、最初の post-init stage が

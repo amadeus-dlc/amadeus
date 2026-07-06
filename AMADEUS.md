@@ -13,7 +13,7 @@
 - Amadeus skill の `SKILL.md` と TS スクリプトは英語必須である（詳細は [Skill Language Policy](docs/amadeus/skill-language-policy.md) を参照）。
 - `docs/amadeus/*.md` は英語を正とし、`*.ja.md` を日本語版として併置する。この対象は「返答、仕様、調査メモ、検証結果は日本語で書く」および「記述系成果物…日本語を維持する」の対象外である（詳細は [Language Policy](docs/amadeus/language-policy.md) を参照）。
 - 記述系成果物（要求、設計、計画などの本文）とユーザー向け gate 文言は日本語を維持する。
-- `aidlc/**/*.md`、テンプレートから生成される Markdown、`.kiro/specs/**/*.md`、`openspec/**/*.md` は日本語で書く。
+- `amadeus/**/*.md`、テンプレートから生成される Markdown、`.kiro/specs/**/*.md`、`openspec/**/*.md` は日本語で書く。
 
 ## Project Context
 
@@ -27,7 +27,7 @@
 ### Space
 
 Space は、複数 Intent で共有する方法（`memory/`）、ドメイン知識（`knowledge/`）、コードベース知識（`codekb/`）、Intent の記録（`intents/`）を扱う。
-このリポジトリの root `aidlc/` は、Amadeus 本体開発用の workspace である。
+このリポジトリの root `amadeus/` は、Amadeus 本体開発用の workspace である。
 
 ### Intent record
 
@@ -72,8 +72,8 @@ Construction では、Spec、`.kiro/specs/**`、`openspec/**` を作らない。
 
 ## Validation
 
-`amadeus-validator` は、`aidlc/` 配下のファイル更新を検知して自動起動しない。
-`aidlc/` 配下の成果物を作成または更新した場合は、作業後に明示的に実行する。
+`amadeus-validator` は、`amadeus/` 配下のファイル更新を検知して自動起動しない。
+`amadeus/` 配下の成果物を作成または更新した場合は、作業後に明示的に実行する。
 対象 record の dirName が分かる場合は、対象 Intent も指定して検証する。
 
 構造検証は次で行う。
@@ -89,7 +89,7 @@ bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . <YYMMDD
 ```
 
 「実際に動く実行結果の検証」は、エンジン sandbox e2e（`npm run test:it:engine-e2e`）で行う。
-sandbox e2e は決定論的であり、LLM を呼ばず、本番 `aidlc/` を変更しない。
+sandbox e2e は決定論的であり、LLM を呼ばず、本番 `amadeus/` を変更しない。
 
 Skill 昇格の確認は、必要に応じて `dev-scripts/promote-skill.ts` を使う。
 昇格先に `evals/` や開発用ファイルを混ぜない。

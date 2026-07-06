@@ -3,7 +3,7 @@
 // rulesdir-resolve eval（Issue #491）。
 //
 // amadeus-graph.ts compile の rules 解決を、隔離 temp workspace で実体パスの
-// 実 CLI を駆動して検証する。LLM を呼ばず、本番 aidlc/ を変更しない。
+// 実 CLI を駆動して検証する。LLM を呼ばず、本番 amadeus/ を変更しない。
 // 片付けは成功・失敗共通。
 //
 // (a) R101/R102: 実体パス（.agents/amadeus/tools/amadeus-graph.ts）からの compile で

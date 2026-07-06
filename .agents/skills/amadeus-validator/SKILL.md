@@ -6,7 +6,7 @@ description: >-
   Decision Trail, Domain Map, Context Map, Upstream/Downstream, Organization
   Pattern, Integration Pattern, and Construction artifacts without depending
   on repo root development scripts, or after creating or updating artifacts
-  under `aidlc/`.
+  under `amadeus/`.
 ---
 
 # amadeus-validator
@@ -23,11 +23,11 @@ Development Validator.
 ## Invocation Contract
 
 This skill has no mechanism to auto-start by detecting file updates under
-`aidlc/`.
+`amadeus/`.
 Do not assume file watching, Git hooks, editor extensions, or external
 automation.
 
-When an agent creates or updates artifacts under `aidlc/`, use this skill
+When an agent creates or updates artifacts under `amadeus/`, use this skill
 explicitly after the work to validate. If the target Intent directory name is
 known, also specify the target Intent when validating.
 
@@ -105,7 +105,7 @@ Do not fill in a missing reference source by guessing.
 
 Confirm at least the following.
 
-- The Amadeus artifact root is `aidlc/`, and the target Space exists under
+- The Amadeus artifact root is `amadeus/`, and the target Space exists under
   `amadeus/spaces/`.
 - `amadeus/spaces/<space>/memory/org.md`, `amadeus/spaces/<space>/memory/team.md`,
   and `amadeus/spaces/<space>/memory/project.md` exist.

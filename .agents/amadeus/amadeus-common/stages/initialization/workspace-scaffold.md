@@ -41,13 +41,13 @@ MANDATORY: Follow stage-protocol.md for state tracking and audit logging.
 ### Step 2: Ensure the Space Knowledge Directory
 
 Ensure-exists the space-level domain-knowledge directory
-`amadeus/spaces/<space>/knowledge/` (shorthand `aidlc/knowledge/`). It is
+`amadeus/spaces/<space>/knowledge/` (shorthand `amadeus/knowledge/`). It is
 **free-form and empty at bootstrap** — no fixed file set, no per-agent
 subdirectories, no seeded READMEs. A team adds its own markdown here over time;
 the directory is a sibling of `memory/`, `codekb/`, and `intents/`, so domain
 knowledge accumulates across every intent in the space rather than being trapped
 in one intent's record. The agent personas read team knowledge from
-`aidlc/knowledge/amadeus-shared/` and `aidlc/knowledge/<agent>/` if those exist —
+`amadeus/knowledge/amadeus-shared/` and `amadeus/knowledge/<agent>/` if those exist —
 the team creates them; birth does not. (The engine's per-agent METHODOLOGY
 knowledge ships separately and read-only under `.claude/knowledge/`.)
 

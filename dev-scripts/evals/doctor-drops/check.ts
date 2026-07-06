@@ -4,7 +4,7 @@
 //
 // doctor が .amadeus-hooks-health/*.drops を読んで hook の静かな失敗を表面化する
 // ことを、隔離 temp workspace で実 CLI を駆動して検証する。LLM を呼ばず、
-// 本番 aidlc/ を変更しない。成功時・失敗時ともに temp workspace を片付ける。
+// 本番 amadeus/ を変更しない。成功時・失敗時ともに temp workspace を片付ける。
 //
 // (a) R004: .drops が無い場合、doctor の出力に drops 行は現れない（後方互換）。
 // (b) R001: .drops がある hook は「hook 名 + 件数 + 最新の時刻と理由」の fail 行で

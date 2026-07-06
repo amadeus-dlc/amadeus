@@ -28,7 +28,7 @@ npm run test:it:promote-skill
 
 ## 言語
 
-- `aidlc/**/*.md`、`skills/amadeus*/templates/**/*.md`、`.agents/skills/amadeus*/templates/**/*.md` は日本語で書く。
+- `amadeus/**/*.md`、`skills/amadeus*/templates/**/*.md`、`.agents/skills/amadeus*/templates/**/*.md` は日本語で書く。
 - `skills/amadeus*/SKILL.md`、`.agents/skills/amadeus*/SKILL.md`、および `skills/amadeus*/**/*.ts`、`.agents/skills/amadeus*/**/*.ts` は英語必須である（詳細は [Skill Language Policy](../../docs/amadeus/skill-language-policy.md) を参照）。
 - 英語必須の対象でも、生成される Amadeus DLC 成果物、テンプレート由来の Markdown、ユーザー向け gate 文言は日本語のまま維持する。
 - 英語で下書きしてから日本語へ翻訳しない。
@@ -56,7 +56,7 @@ npm run test:it:promote-skill
 
 「実際に動く実行結果の検証」は、example snapshot ではなくエンジン sandbox e2e（`dev-scripts/evals/engine-e2e/check.ts`）で行う。
 sandbox e2e は決定論的であり、LLM を呼ばない。
-一時ディレクトリへ `.agents/amadeus/{tools,amadeus-common,sensors,scopes,agents,knowledge}` をコピーした隔離 workspace を作り、本番 `aidlc/` を変更しない。
+一時ディレクトリへ `.agents/amadeus/{tools,amadeus-common,sensors,scopes,agents,knowledge}` をコピーした隔離 workspace を作り、本番 `amadeus/` を変更しない。
 
 sandbox e2e は、`intent-birth` による record 生成、`amadeus-orchestrate.ts next` の run-stage directive 発行、produces 不在時の完了拒否、human presence 未充足時の承認拒否、audit shard の自動生成を確認する。
 sandbox e2e は、成功時も失敗時も一時ディレクトリを片付ける。
@@ -74,7 +74,7 @@ repo 全体の標準検証は次で実行する。
 npm run test:all
 ```
 
-`aidlc/` 成果物を作成または更新した場合は、次で構造検証する。
+`amadeus/` 成果物を作成または更新した場合は、次で構造検証する。
 
 ```sh
 bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspace>

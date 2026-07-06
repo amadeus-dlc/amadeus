@@ -2,7 +2,7 @@
 
 ## 対象
 
-`<space>` は `aidlc/active-space`（存在すればその中身、なければ `default`）で解決する。
+`<space>` は `amadeus/active-space`（存在すればその中身、なければ `default`）で解決する。
 
 全体成果物では、少なくとも次を対象にする。
 

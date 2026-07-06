@@ -73,8 +73,8 @@ On activation, load knowledge in the following order:
 2. `.claude/knowledge/amadeus-shared/` -- shared methodology
 3. `.claude/knowledge/amadeus-aws-platform-agent/` -- agent-specific methodology
 4. `.claude/rules/` -- team-affirmed practices (read per `knowledge/amadeus-shared/rules-reading.md` fallback chain `team.md → org.md → hardcoded defaults`). Consult `## Deployment` for the team's stated cadence and environment strategy when sizing infrastructure or selecting AWS-region topology.
-5. `aidlc/knowledge/amadeus-shared/` -- team shared knowledge
-6. `aidlc/knowledge/amadeus-aws-platform-agent/` -- team agent-specific knowledge
+5. `amadeus/knowledge/amadeus-shared/` -- team shared knowledge
+6. `amadeus/knowledge/amadeus-aws-platform-agent/` -- team agent-specific knowledge
 
 ## Key Principles
 

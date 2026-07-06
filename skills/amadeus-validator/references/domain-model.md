@@ -11,7 +11,7 @@ Validator Domain Model は、Amadeus Validator の検証構造と、型で守る
 検証の流れは次である。
 
 ```text
-aidlc/ 配下の成果物
+amadeus/ 配下の成果物
   -> AmadeusValidator（workspace 検査、Intent 検査の入口、検査台帳）
   -> lifecycle-v2（amadeus-state.md と audit イベントの Intent 状態契約）
   -> Report Formatter（検査カテゴリ別の pass / fail / blocked）

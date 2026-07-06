@@ -130,7 +130,7 @@ Construction phase PR の merge 後は、Current Status の `Status` を `Comple
 
 ## カーソルとレジストリ
 
-**カーソル**：`aidlc/active-space` が現在の Space を、`amadeus/spaces/<space>/intents/active-intent` が現在作業中の record の dirName を指す。
+**カーソル**：`amadeus/active-space` が現在の Space を、`amadeus/spaces/<space>/intents/active-intent` が現在作業中の record の dirName を指す。
 カーソルは作業者ローカルの状態であり、gitignore にする。
 Intake の継続判定は、まずカーソルの指す Intent と入力を照合する。
 

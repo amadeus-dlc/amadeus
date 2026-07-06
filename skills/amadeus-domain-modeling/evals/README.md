@@ -28,7 +28,7 @@
 | `capture-unresolved-term` | 完了 | 未確定語を domain-notes.md にだけ記録する。 | `/tmp/amadeus-domain-modeling-eval.766VOu/capture-unresolved-term/repo` |
 | `promote-shared-glossary-term` | 完了 | 確定共有用語を glossary.md に追加し、CONTEXT.md は触らない。 | `/tmp/amadeus-domain-modeling-eval.766VOu/promote-shared-glossary-term/repo` |
 | `promote-intent-model-element` | 完了 | Unit 固有の model element は Construction Functional Design 候補として扱い、必要なら `inception/traceability.md` を整合する。 | `/tmp/amadeus-domain-modeling-eval.766VOu/promote-intent-model-element/repo` |
-| `missing-amadeus-root` | 完了 | `aidlc/` がなければ停止し、`amadeus` 入口での Space 初期化を案内する（旧記述の amadeus-steering は退役済み）。 | `/tmp/amadeus-domain-modeling-eval.766VOu/missing-amadeus-root/output.md` |
+| `missing-amadeus-root` | 完了 | `amadeus/` がなければ停止し、`amadeus` 入口での Space 初期化を案内する（旧記述の amadeus-steering は退役済み）。 | `/tmp/amadeus-domain-modeling-eval.766VOu/missing-amadeus-root/output.md` |
 
 ## 再実行コマンド
 

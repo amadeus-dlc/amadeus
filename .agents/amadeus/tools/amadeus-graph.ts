@@ -250,7 +250,7 @@ function workspaceRootForRules(): string {
 /** The harness-neutral DISPLAY path baked into each RuleResolution — the
  *  workspace-relative location of a method file (e.g. "amadeus/spaces/default/
  *  memory/org.md"). Replaces the old per-harness "<harness>/<rulesSubdir>/<f>"
- *  display form: the method now lives at the neutral aidlc/ roof, identical on
+ *  display form: the method now lives at the neutral amadeus/ roof, identical on
  *  every harness, so the baked path is harness-neutral too. `rel` is the file's
  *  sub-path under memory/ (e.g. "org.md" or "phases/construction.md"). */
 function memoryDisplayPath(rel: string): string {
@@ -301,7 +301,7 @@ export function frameworkTemplatesDir(): string {
  *  core/memory/ tree copied INSIDE the engine at <harness>/tools/data/memory-seed/
  *  by the packager (mirrors frameworkTemplatesDir's tools/data/templates). It
  *  exists so an ENGINE-ONLY install (a user who copies only the harness engine
- *  dir, NOT the sibling aidlc/ workspace shell) can self-heal: the first /amadeus
+ *  dir, NOT the sibling amadeus/ workspace shell) can self-heal: the first /amadeus
  *  copies this OUT to amadeus/spaces/default/memory/ via ensureWorkspaceDirs IF that
  *  default tree is absent. Resolved relative to THIS tool's location (DATA_DIR),
  *  like frameworkTemplatesDir, so it is harness-correct on every harness.
@@ -428,9 +428,9 @@ export interface RuleFile {
   headings: Map<string, string>;
 }
 
-// Filename anchors for the relocated method tree (aidlc/memory/). The layered
+// Filename anchors for the relocated method tree (amadeus/memory/). The layered
 // practice files are top-level (org/team/project, plain neutral names — no
-// `aidlc-` prefix now that they live under the neutral aidlc/ roof); the
+// `aidlc-` prefix now that they live under the neutral amadeus/ roof); the
 // phase-scoped files are nested under phases/<phase>.md. A confirmed learning
 // is a practice (vision §6) — it lands in team.md / project.md directly, so
 // there is no `*-learnings.md` slot and no fractional override tier. Anything
@@ -438,7 +438,7 @@ export interface RuleFile {
 // `team-overrides.md`, per 08-rule-system.md.
 const RULE_FILE_REGEX = /^(org|team|project)\.md$/;
 // Phase rule files live in phases/<phase>.md (the flat aidlc-phase-<phase>.md
-// scheme moved under a nested phases/ dir in the aidlc/memory/ relocation).
+// scheme moved under a nested phases/ dir in the amadeus/memory/ relocation).
 const PHASE_RULES_SUBDIR = "phases";
 const PHASE_FILE_REGEX = /^([a-z][a-z0-9-]*)\.md$/;
 
@@ -520,7 +520,7 @@ export function loadRules(): RuleFile[] {
   if (!existsSync(dir)) return [];
 
   // Each candidate: the absolute on-disk path to read, the display sub-path
-  // (relative to aidlc/memory/, e.g. "org.md" or "phases/construction.md")
+  // (relative to amadeus/memory/, e.g. "org.md" or "phases/construction.md")
   // baked into the RuleResolution, the resolved scope, and the phase name when
   // scope === "phase". The method tree is shallow: top-level layered files plus
   // one nested phases/ dir, so the walk is two explicit reads (no recursion).

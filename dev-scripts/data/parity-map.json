@@ -618,6 +618,24 @@
       "prefix": "aidlc/.",
       "replacement": "amadeus/.",
       "rule": "全面 rename（#526）Commit B: workspace root 直下のドットファイル参照（aidlc/.aidlc-sessions 等）。マーカー rule（.aidlc-）適用後の残余を root 側で写像する（順序依存を round-trip 検証済み）。"
+    },
+    {
+      "kind": "engine-dir",
+      "prefix": "aidlc/knowledge",
+      "replacement": "amadeus/knowledge",
+      "rule": "全面 rename（#526）merge 前所見: agent persona の knowledge 参照。broad aidlc/ 写像は URL（amadeus-dlc/amadeus/…）誤爆リスクがあるため具体形で追加。"
+    },
+    {
+      "kind": "engine-dir",
+      "prefix": "aidlc/active-space",
+      "replacement": "amadeus/active-space",
+      "rule": "全面 rename（#526）merge 前所見 1: validator の Space cursor 参照。"
+    },
+    {
+      "kind": "engine-dir",
+      "prefix": "aidlc/",
+      "replacement": "amadeus/",
+      "rule": "全面 rename（#526）merge 前所見 2 対応: workspace root の broad 写像（prose の aidlc/ roof 等）。specific 写像（spaces / knowledge / active-space / . 系）が先行処理し、本 rule は残余を担う。検査対象に amadeus-dlc/amadeus URL を含むファイルが存在しないことを実測確認済み（誤爆なし）。"
     }
   ],
   "checkedEngineDirectories": [

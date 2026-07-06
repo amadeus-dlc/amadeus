@@ -22,7 +22,7 @@
     {
       "id": 4,
       "name": "missing-amadeus-root",
-      "prompt": "aidlc/ がない repo で、見つかった用語を glossary に追加して。",
+      "prompt": "amadeus/ がない repo で、見つかった用語を glossary に追加して。",
       "expected_output": "作業を止め、amadeus-steering を案内する。CONTEXT.md や docs/adr に代替記録しない。"
     }
   ]

@@ -114,7 +114,7 @@ export const skillContracts = [
       },
     ],
     readBoundary: {
-      allowed: ["aidlc/**", "検証対象の関連成果物"],
+      allowed: ["amadeus/**", "検証対象の関連成果物"],
       prohibited: ["秘密情報", "検証対象外 workspace"],
     },
     writeBoundary: {

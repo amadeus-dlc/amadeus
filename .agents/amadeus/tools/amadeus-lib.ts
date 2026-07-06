@@ -270,7 +270,7 @@ export function toPosix(p: string): string {
 // The record (state · audit · artifacts · diary) re-roots per INTENT under a
 // per-team SPACE: `amadeus/spaces/<space>/intents/<slug>-<id8>/…`. Two cursors
 // pick the active space/intent, both GITIGNORED (per-user, not shared truth):
-//   - `aidlc/active-space`                            → the active space
+//   - `amadeus/active-space`                            → the active space
 //   - `amadeus/spaces/<space>/intents/active-intent`    → that space's active intent
 //
 // Resolution precedence (vision §5):
@@ -358,7 +358,7 @@ function workspaceRoot(projectDir: string): string {
   return join(projectDir, "amadeus");
 }
 
-// The active space for this project. Reads the `aidlc/active-space` cursor;
+// The active space for this project. Reads the `amadeus/active-space` cursor;
 // defaults to "default". NEVER throws — the default space is always valid even
 // when nothing is on disk yet (the resolver tolerates an absent space dir).
 export function activeSpace(projectDir: string): string {
@@ -697,7 +697,7 @@ function flatStateSource(projectDir: string): string {
 
 export const MIGRATED_MARKER = ".migrated";
 
-// The marker path: `aidlc/.migrated` (workspace-level, committed, idempotency key).
+// The marker path: `amadeus/.migrated` (workspace-level, committed, idempotency key).
 export function migratedMarkerPath(projectDir: string): string {
   return join(workspaceRoot(projectDir), MIGRATED_MARKER);
 }
@@ -750,7 +750,7 @@ export interface IntentRegistryEntry {
   status: string;
   // Issue #499: a docs-only declaration exempts a workspace_requires stage's
   // completion guard (verifyStageArtifacts in amadeus-state.ts) from requiring
-  // source work outside aidlc/ — for Intents whose produces are entirely
+  // source work outside amadeus/ — for Intents whose produces are entirely
   // record-internal documents. Written only via setIntentDocsOnly (never hand-
   // edited); a declaration with empty/missing evidence is invalid (see
   // docsOnlyDeclaration).
@@ -1600,14 +1600,14 @@ export function normalizeWorktreeSlug(slug: string): string {
 }
 
 export function worktreePath(projectDir: string, boltSlug: string): string {
-  return join(projectDir, ".aidlc", "worktrees", `bolt-${normalizeWorktreeSlug(boltSlug)}`);
+  return join(projectDir, ".amadeus", "worktrees", `bolt-${normalizeWorktreeSlug(boltSlug)}`);
 }
 
 // --- Multi-repo: repos are siblings of the workspace ----------------------------
 //
 // In the workspace model the projectDir is the WORKSPACE roof (`my-workspace/`),
 // which is NOT itself a git repo. Code repos are its immediate children
-// (`my-workspace/repo-a/`, `my-workspace/repo-b/`) — siblings of `aidlc/` and the
+// (`my-workspace/repo-a/`, `my-workspace/repo-b/`) — siblings of `amadeus/` and the
 // engine dir (vision §7). An intent records the repos it touches in its
 // intents.json row (`repos`); construction targets a specific one. P7 decouples
 // "the repo to operate on" from "the single projectDir": before P7 the worktree

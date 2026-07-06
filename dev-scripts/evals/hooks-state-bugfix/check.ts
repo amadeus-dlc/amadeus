@@ -5,7 +5,7 @@
 // エンジン実 CLI（amadeus-utility.ts intent-birth、amadeus-state.ts advance /
 // complete-workflow）と hook 実スクリプト（amadeus-mint-presence.ts、
 // amadeus-stop.ts）を、隔離 temp workspace で駆動して 4 観点を決定論的に検証する。
-// LLM を呼ばず、本番 aidlc/ を変更しない。成功時・失敗時ともに temp workspace を
+// LLM を呼ばず、本番 amadeus/ を変更しない。成功時・失敗時ともに temp workspace を
 // 片付ける。
 //
 // (a) R001: phase 境界通過後、amadeus-state.md の Phase Progress の該当 phase が

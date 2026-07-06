@@ -817,3 +817,12 @@
 **Details**: Scope: refactor, 8 stages completed
 
 ---
+
+## Decision Recorded
+**Timestamp**: 2026-07-06T05:21:34Z
+**Event**: DECISION_RECORDED
+**Stage**: build-and-test
+**Decision**: PR #553 の merge 前対応（クロスモデルレビュー所見。検出者 = codex-reviewer / GPT-5.5、leader 経由で受領・所見 1 は leader 裏取り済み）。(1) [Med] validator space-paths.ts が aidlc/active-space を読む実バグ（非 default Space が無言で default へフォールバック）→ 修正 + 写像追加。(2) [Med] 検出器のトークンが狭く所見 1 をすり抜けた構造原因 → aidlc/ 前方一致へ広域化（TDD: RED で所見 1 + 追加の実面 = agent persona 22 ファイルの aidlc/knowledge 参照・contracts catalog・lib の .aidlc/worktrees root・stage prose 等 124 violation を検出 → 全数修正 → GREEN）。(3) [Low] README/AMADEUS.md の旧 root 記述 → 修正。写像は計 12 系統になり broad aidlc/ の URL 誤爆なしを実測確認。クロスモデルレビュー試行の実績として記録
+**Options**: fixed-on-pr
+
+---

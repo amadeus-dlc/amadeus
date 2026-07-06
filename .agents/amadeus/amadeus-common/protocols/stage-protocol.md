@@ -590,8 +590,8 @@ Each stage specifies its lead and supporting agents. To load a persona:
 1. `.claude/rules/` — organization and project guardrails (always)
 2. `.claude/knowledge/amadeus-shared/` — shared methodology principles
 3. `.claude/knowledge/[agent-name]/` — agent-specific methodology
-4. `aidlc/knowledge/amadeus-shared/` — team shared knowledge (if exists)
-5. `aidlc/knowledge/[agent-name]/` — team agent-specific knowledge (if exists)
+4. `amadeus/knowledge/amadeus-shared/` — team shared knowledge (if exists)
+5. `amadeus/knowledge/[agent-name]/` — team agent-specific knowledge (if exists)
 6. Prior stage artifacts as required by the current stage
 
 ### For inline stages:

@@ -25,7 +25,7 @@ Ask questions rigorously. However, do not make increasing the number of
 questions an end in itself.
 
 Ask only about points that cannot proceed without the user's judgment.
-Confirm anything answerable from the codebase, artifacts under `aidlc/`,
+Confirm anything answerable from the codebase, artifacts under `amadeus/`,
 existing documents, or the existing conversation yourself, without asking.
 
 ## How to Ask Questions
@@ -59,7 +59,7 @@ investigate first.
 
 Examples of investigation targets:
 
-- `aidlc/`
+- `amadeus/`
 - `README.md`
 - `AGENTS.md`
 - `AMADEUS.md`
@@ -155,7 +155,7 @@ When grilling becomes prolonged and it is safer to continue in a separate
 conversation unit, use `handoff` as an operational aid.
 
 `handoff` is not an Amadeus DLC artifact. Place the handoff document you
-create in the OS temporary directory, not under `aidlc/`.
+create in the OS temporary directory, not under `amadeus/`.
 
 Keep confirmed decisions in the Grilling Decision Trail. Write in `handoff`
 only the references needed to resume in the next conversation unit.

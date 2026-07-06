@@ -3,7 +3,7 @@
 // workspace-detect eval（Issue #459）。
 //
 // workspace-detection の brownfield / 言語判定を、隔離 temp workspace で実 CLI
-//（intent-birth の出力）を駆動して検証する。LLM を呼ばず、本番 aidlc/ を変更しない。
+//（intent-birth の出力）を駆動して検証する。LLM を呼ばず、本番 amadeus/ を変更しない。
 // 成功時・失敗時ともに temp workspace を片付ける。
 //
 // (a) R001/R002: 定型外配置（dev-scripts/ 配下の .ts）のコードベースが

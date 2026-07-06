@@ -4,7 +4,7 @@
 //
 // amadeus-jump.ts execute の phase 境界が #479 の契約（PHASE_VERIFIED ⇔
 // Phase Progress 更新 ⇔ phase-check 存在）に従うことを、隔離 temp workspace で
-// エンジン実 CLI を駆動して検証する。LLM を呼ばず、本番 aidlc/ を変更しない。
+// エンジン実 CLI を駆動して検証する。LLM を呼ばず、本番 amadeus/ を変更しない。
 // 成功時・失敗時ともに temp workspace を片付ける。
 //
 // (a) R002: 実行済み（[x]）ステージのある phase を forward jump で閉じるとき、

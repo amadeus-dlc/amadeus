@@ -4,7 +4,7 @@
 //
 // amadeus-orchestrate.ts の error directive / 未捕捉例外が ERROR_LOGGED として
 // audit へ best-effort 記録されることを、隔離 temp workspace で実 CLI を駆動して
-// 検証する。LLM を呼ばず、本番 aidlc/ を変更しない。片付けは成功・失敗共通。
+// 検証する。LLM を呼ばず、本番 amadeus/ を変更しない。片付けは成功・失敗共通。
 //
 // (a) R001: workflow がある状態で next が error directive を返すと、stdout の
 //     directive 契約は不変のまま、audit に ERROR_LOGGED が追記される。

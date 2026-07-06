@@ -10,7 +10,7 @@
 ## 1. ワークスペースレベル(intent横断・スペース単位)
 
 ```
-aidlc/
+amadeus/
 ├── active-space                    # アクティブスペースのカーソル(gitignore, per-user)
 ├── .migrated                       # v1平置きレイアウトからの移行済みマーカー
 ├── .amadeus-clone-id                 # このクローンの監査シャード名(gitignore, machine-local)
@@ -129,17 +129,17 @@ aidlc/
 
 | コミット | gitignore |
 |---|---|
-| `amadeus-state.md` | `aidlc/active-space`, `intents/active-intent`(per-userカーソル) |
+| `amadeus-state.md` | `amadeus/active-space`, `intents/active-intent`(per-userカーソル) |
 | `audit/*.md`(per-cloneシャード) | `.amadeus-recovery.md` 等の `intents/*/.amadeus-*`(一時ブレッドクラム) |
 | 全ステージ成果物 | `runtime-graph.json`(監査シャードから再導出可能) |
-| `verification/` フェーズ検証結果 | `aidlc/.amadeus-clone-id`(machine-local) |
-| スペースレベル `knowledge/` | `aidlc/.amadeus-sessions/` |
+| `verification/` フェーズ検証結果 | `amadeus/.amadeus-clone-id`(machine-local) |
+| スペースレベル `knowledge/` | `amadeus/.amadeus-sessions/` |
 | ステージごと `memory.md` 日誌、スペース `memory/` 層 | `.amadeus-hooks-health/`, `.amadeus-sensors/` |
 
 ---
 
 ## 4. 補足
 
-- **コードはrecord dirに入らない**。`aidlc/` は method / state / audit / artifacts のみで、生成コードはワークスペースのコードリポジトリ(単一repoならプロジェクト直下、マルチrepoなら兄弟ディレクトリ)へ。intentが触るrepoは誕生時に `intents.json` の `repos` 行に記録。
+- **コードはrecord dirに入らない**。`amadeus/` は method / state / audit / artifacts のみで、生成コードはワークスペースのコードリポジトリ(単一repoならプロジェクト直下、マルチrepoなら兄弟ディレクトリ)へ。intentが触るrepoは誕生時に `intents.json` の `repos` 行に記録。
 - ライフサイクル: 生成 → 承認ゲートでレビュー → コミット → 下流ステージが消費 → フェーズ境界で検証(traceabilityチェック)。
 - センサー失敗の詳細は `<record>/.amadeus-sensors/<stage-slug>/<sensor>-<iso>.md` に出力される(gitignore)。

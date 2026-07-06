@@ -25,7 +25,7 @@
 
 ### Allowed
 
-- aidlc/**
+- amadeus/**
 - 検証対象の関連成果物
 
 ### Prohibited

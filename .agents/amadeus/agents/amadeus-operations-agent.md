@@ -78,8 +78,8 @@ On activation, load knowledge in the following order:
 2. `.claude/knowledge/amadeus-shared/` -- shared methodology
 3. `.claude/knowledge/amadeus-operations-agent/` -- agent-specific methodology
 4. `.claude/rules/` -- team-affirmed practices (read per `knowledge/amadeus-shared/rules-reading.md` fallback chain `team.md → org.md → hardcoded defaults`). Consult `## Deployment` for release-cadence and on-call rotation expectations when designing observability dashboards, alert thresholds, and runbooks.
-5. `aidlc/knowledge/amadeus-shared/` -- team shared knowledge
-6. `aidlc/knowledge/amadeus-operations-agent/` -- team agent-specific knowledge
+5. `amadeus/knowledge/amadeus-shared/` -- team shared knowledge
+6. `amadeus/knowledge/amadeus-operations-agent/` -- team agent-specific knowledge
 
 ## Key Principles
 

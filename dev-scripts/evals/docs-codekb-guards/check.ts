@@ -6,7 +6,7 @@
 // worktree から呼ばれたときに worktree ディレクトリ名（例: "engineer3"）を
 // codekb repo キーへ漏らし、codekb/<worktree-name>/ が worktree ごとに分裂する
 // バグ（FR-1）の回帰検査。実 CLI（amadeus-utility.ts codekb-path）を隔離
-// temp workspace で駆動する。LLM を呼ばず、本番 aidlc/ を変更しない。成功時・
+// temp workspace で駆動する。LLM を呼ばず、本番 amadeus/ を変更しない。成功時・
 // 失敗時ともに temp ディレクトリを片付ける。
 //
 // - FR-1.1: main 側 checkout + linked worktree の両方から、repo キーが常に
@@ -135,7 +135,7 @@ try {
   // greenfield sandbox, so requirements-analysis is the only stage between
   // INITIALIZATION and code-generation. The produces are committed so the
   // workspace_requires guard decides against a clean git tree with no real source
-  // file anywhere outside aidlc/ — exactly the docs-only shape FR-2 exists for.
+  // file anywhere outside amadeus/ — exactly the docs-only shape FR-2 exists for.
 
   const b002Base = join(base, "b002-guard");
   mkdirSync(b002Base, { recursive: true });

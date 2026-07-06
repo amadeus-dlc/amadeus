@@ -110,7 +110,7 @@ Use `amadeus` or the auxiliary entrypoints as the public entrypoints unless the 
 
 For Amadeus source changes, check both `skills/amadeus-*` and `.agents/skills/amadeus-*`; keep promoted artifacts aligned through the repository promotion flow.
 
-The repository root keeps `aidlc/` as the workspace for Amadeus's own development.
+The repository root keeps `amadeus/` as the workspace for Amadeus's own development.
 
 ### Typical Flow
 
@@ -157,7 +157,7 @@ npm run validate:workspace -- <workspace> <YYMMDD>-<label>
 
 ## Boundaries
 
-- `aidlc/` is the workspace root in a target workspace; each Space (`amadeus/spaces/<space>/`, default `default`) holds `memory/`, `knowledge/`, `codekb/`, and `intents/`.
+- `amadeus/` is the workspace root in a target workspace; each Space (`amadeus/spaces/<space>/`, default `default`) holds `memory/`, `knowledge/`, `codekb/`, and `intents/`.
   In this repository root, it is limited to the workspace for Amadeus's own development.
 - The canonical Intent ledger is `amadeus/spaces/<space>/intents/intents.json` (UUIDv7 per entry); Intent directory names follow `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`.
 - New Intents are born only through the `amadeus` Intake with explicit human approval; work that belongs to an existing Intent's outcome goes to that Intent's scope backlog instead of becoming a new Intent.

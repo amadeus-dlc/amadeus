@@ -8,7 +8,7 @@ Issue #509 は、既存 15 ファイルの英語化（#515〜#523）が参照で
 
 この方針は `docs/amadeus/*.md` とその対訳である `*.ja.md` を対象とする。
 
-`aidlc/**/*.md`、テンプレートから生成される Markdown、`.kiro/specs/**/*.md`、`openspec/**/*.md`、ユーザー向け gate 文言は対象外である。これらは [AMADEUS.md](../../AMADEUS.md) の「作業言語」節に従い日本語のまま維持し、この方針はその扱いを変えない。
+`amadeus/**/*.md`、テンプレートから生成される Markdown、`.kiro/specs/**/*.md`、`openspec/**/*.md`、ユーザー向け gate 文言は対象外である。これらは [AMADEUS.md](../../AMADEUS.md) の「作業言語」節に従い日本語のまま維持し、この方針はその扱いを変えない。
 
 skill の言語（`SKILL.md`、TS スクリプト）も対象外である。これらは [skill-language-policy.md](skill-language-policy.md) が扱う（後述の「skill-language-policy との関係」を参照）。
 

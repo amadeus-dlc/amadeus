@@ -72,7 +72,7 @@ function isCheckboxState(s: string): s is CheckboxState {
 }
 
 // Top-level dirs the artifact guard treats as "not source code" - the whole
-// `aidlc/` workspace tree holds the per-intent records + planning artifacts +
+// `amadeus/` workspace tree holds the per-intent records + planning artifacts +
 // memory + codekb, the harness dirs hold the framework, .git is VCS. (On v2 the
 // flat `aidlc-docs/` root is gone - every record lives under amadeus/spaces/...,
 // so skipping `amadeus` skips all planning docs.) Used by workspaceHasSourceFile
@@ -686,7 +686,7 @@ function handleCount(args: string[]): void {
 //   1. produces-existence - a stage that declares produces[] must have at least
 //      one of them on disk. Empty-produces stages (init phase) are exempt.
 //   2. workspace_requires - a code-producing stage (frontmatter flag) must also
-//      have a real file OUTSIDE the aidlc/ workspace tree and the harness dir.
+//      have a real file OUTSIDE the amadeus/ workspace tree and the harness dir.
 //      Catches the code-generation case where only the two markdown produces[]
 //      docs were written but no actual source code (issue #366 Update 2).
 //
@@ -766,7 +766,7 @@ function producesArtifactsExist(
 }
 
 // True when any non-doc file exists in the workspace - a file outside the
-// aidlc/ workspace tree and the harness dirs. Bounded shallow walk (one level
+// amadeus/ workspace tree and the harness dirs. Bounded shallow walk (one level
 // into each top-level dir is enough to detect src/<file>); avoids a full
 // recursive scan.
 function workspaceHasSourceFile(pd: string): boolean {
@@ -812,7 +812,7 @@ function dirHasFile(dir: string): boolean {
 
 // A git-reported path (status --porcelain or diff --name-only output) counts as
 // "source work" when its FIRST segment is not a harness/doc dir - i.e. it is a
-// real workspace file (src/..., a root file), not an aidlc/ planning doc or
+// real workspace file (src/..., a root file), not an amadeus/ planning doc or
 // framework file. Mirrors HARNESS_DOC_DIRS, the same set the FS walk skips.
 function isNonDocPath(p: string): boolean {
   const rel = p.trim().replace(/^"|"$/g, ""); // git -z not used; strip any quoting
@@ -938,7 +938,7 @@ function verifyStageArtifacts(
     } else {
       error(
         `Refusing to complete "${stage.slug}": it is a code-producing stage ` +
-          `(workspace_requires) but no source work is evident outside the aidlc/ ` +
+          `(workspace_requires) but no source work is evident outside the amadeus/ ` +
           `workspace tree. In a git workspace this means no uncommitted change and no ` +
           `code in the last commit; otherwise no source file exists. Planning docs alone ` +
           `do not satisfy ${stage.name} - write the code to the workspace. If this Intent's ` +

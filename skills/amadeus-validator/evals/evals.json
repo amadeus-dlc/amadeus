@@ -3,7 +3,7 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "この workspace の `aidlc/` 全体を Amadeus Validator で検証して。Intent ディレクトリ名は指定しない。",
+      "prompt": "この workspace の `amadeus/` 全体を Amadeus Validator で検証して。Intent ディレクトリ名は指定しない。",
       "expected_output": "Bun が使えることを確認し、skill 同梱の `validator/AmadeusValidator.ts` を使って全体成果物だけを検証する。repo root の scripts や package scripts を実行時検証入口にしない。",
       "files": []
     },

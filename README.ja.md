@@ -110,7 +110,7 @@ skill は Amadeus DLC への関わり方で分類します。
 
 Amadeus の source を変更する場合は、`skills/amadeus-*` と `.agents/skills/amadeus-*` の両方を確認し、昇格先成果物はリポジトリの昇格手順でそろえます。
 
-このリポジトリでは、root `aidlc/` を Amadeus 本体開発用の workspace として扱います。
+このリポジトリでは、root `amadeus/` を Amadeus 本体開発用の workspace として扱います。
 
 ### Typical Flow
 
@@ -157,7 +157,7 @@ npm run validate:workspace -- <workspace> <YYMMDD>-<label>
 
 ## Boundaries
 
-- `aidlc/` は対象 workspace の成果物ルートです。
+- `amadeus/` は対象 workspace の成果物ルートです。
   このリポジトリ root では、Amadeus 本体開発用の workspace に限定して扱います。
 - Space（既定は `amadeus/spaces/default/`）は、`memory/`、`knowledge/`、`codekb/`、`intents/` を持ちます。
 - 正準台帳は `amadeus/spaces/<space>/intents/intents.json`（UUIDv7）です。Intent ディレクトリ名は `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/` に従います。
