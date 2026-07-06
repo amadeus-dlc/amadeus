@@ -555,3 +555,56 @@
 **Event**: HUMAN_TURN
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-06T04:30:28Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T04:30:42Z
+**Event**: HUMAN_TURN
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-06T04:30:42Z
+**Event**: DECISION_RECORDED
+**Stage**: functional-design
+**Decision**: functional-design の gate 承認（中継承認定型文の転記、auto 委任適用。承認経路: 人間の包括委任（2026-07-06 04:07 JST）→ leader 内容確認（2026-07-06 13:32 JST）→ engineer1。受信直後に HUMAN_TURN mint 済み）。承認要旨: 3 段 commit 構成（A 表記面 + v2 互換再定義 → B 原子的移設 1 commit → C 検出反転 + pin 更新、各段 test:all green）、写像 4 系統（往復可逆の機械検証、.aidlc-* 前方一致は reviewer 実測に基づく）、installer eval の意味論的更新、hooks 競合対策・自己参照 audit の時系列 union、reviewer READY（反復 2）を承認。code-generation へ進行可
+**Options**: approve,request-changes
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-06T04:30:42Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: functional-design
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-06T04:30:42Z
+**Event**: GATE_APPROVED
+**Stage**: functional-design
+**User Input**: leader 中継承認（auto 委任、leader 内容確認 2026-07-06 13:32 JST）
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-06T04:30:42Z
+**Event**: STAGE_COMPLETED
+**Stage**: functional-design
+**Details**: Stage Functional Design approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-06T04:30:42Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Agent**: amadeus-developer-agent
+
+---
