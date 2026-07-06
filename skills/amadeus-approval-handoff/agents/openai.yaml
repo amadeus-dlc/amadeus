@@ -1,0 +1,6 @@
+# Adapted from awslabs/aidlc-workflows dist/codex/.agents/skills/aidlc-approval-handoff/agents/openai.yaml
+# Upstream baseline: b67798c37c71855271b70882a33f47890d41f212
+# Mapping: aidlc-approval-handoff -> amadeus-approval-handoff (skillNameMapping prefix rule)
+# Guard: prevents implicit skill invocation on Codex (see harness/codex/README.md)
+policy:
+  allow_implicit_invocation: false

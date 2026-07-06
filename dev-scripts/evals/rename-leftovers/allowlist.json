@@ -155,6 +155,7 @@
       ".agents/amadeus",
       ".agents/skills",
       "skills",
+      "harness",
       "dev-scripts",
       "scripts",
       "lints",

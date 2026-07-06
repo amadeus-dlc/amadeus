@@ -4058,3 +4058,215 @@
 **Message**: ## Review\n\n**判定: READY**（軽微な指摘あり。実装前にすり合わせを推奨するが、architect への差し戻しを要するレベルの矛盾・欠落はない）\n\n### 検証した事実（コードベース照合）\n\n- `dev-scripts/data/parity-map.json` の `skillNameMapping` は `{ prefix: "aidlc", replacement: "
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-06T06:51:21Z
+**Event**: HUMAN_TURN
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-06T06:51:21Z
+**Event**: DECISION_RECORDED
+**Stage**: functional-design
+**Decision**: functional-design gate 承認（種別: 人間承認。承認経路: 人間 → leader → engineer4、auto 委任適用）。leader の中継承認定型文（agmsg 2026-07-06T06:51:07Z 受信）による。承認者: j5ik2o（Maintainer）。承認日時: 2026-07-06 04:07 JST の包括委任に基づく（leader 内容確認 2026-07-06 16:22 JST）。承認要旨: walking skeleton stance（feature 既定 = B001 が skeleton、Bolt gate は人間個別確認の予告どおり）と設計成果物 5 件（7 段直列パイプライン、不変規則 6 件、reviewer READY + 軽微 3 件反映）を承認。code-generation（B001 実装）へ進んでよい。B001 の Bolt gate 到達時は報告して人間確認を待つ。HUMAN_TURN は本定型文の受信を根拠に mint した（ピア回答では mint していない）。
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-06T06:51:21Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: functional-design
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-06T06:51:21Z
+**Event**: GATE_APPROVED
+**Stage**: functional-design
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-06T06:51:21Z
+**Event**: STAGE_COMPLETED
+**Stage**: functional-design
+**Details**: Stage Functional Design approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-06T06:51:21Z
+**Event**: STAGE_STARTED
+**Stage**: nfr-requirements
+**Agent**: amadeus-architect-agent
+
+---
+
+## Stage Skip
+**Timestamp**: 2026-07-06T06:51:38Z
+**Event**: STAGE_SKIPPED
+**Stage**: nfr-requirements
+**Reason**: CONDITIONAL 条件不成立: 性能・セキュリティ・スケーラビリティ要件なし（静的な設定ファイルと文書の取り込みで実行時特性を持たない）。技術スタックは既定（Bun + TypeScript + 既存 tooling、変更なし = 設計確定 Q3）。requirements.md の NFR-1〜3（再現性・純正性・最小変更）は取り込み品質の要求であり、本ステージが扱う実行時 NFR ではない。
+
+---
+
+## Stage Skip
+**Timestamp**: 2026-07-06T06:51:45Z
+**Event**: STAGE_SKIPPED
+**Stage**: nfr-design
+**Reason**: CONDITIONAL 条件不成立: nfr-requirements を skip したため（stage condition の「Skip if NFR Requirements was skipped」に該当）。
+
+---
+
+## Stage Skip
+**Timestamp**: 2026-07-06T06:51:55Z
+**Event**: STAGE_SKIPPED
+**Stage**: infrastructure-design
+**Reason**: CONDITIONAL 条件不成立: インフラ変更なし（クラウドリソース・デプロイアーキテクチャの対象が存在しない。配備モデルは「埋め込み」= 既存 installer 経路のまま、unit-of-work で確定済み）。
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T06:59:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 51cd2200
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260706-harness-codex/construction/u001-harness-codex/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T06:59:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 51cd2200
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260706-harness-codex/construction/u001-harness-codex/code-generation/code-generation-plan.md
+**Duration ms**: 46
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T06:59:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0229fe07
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260706-harness-codex/construction/u001-harness-codex/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-06T06:59:36Z
+**Event**: SENSOR_FAILED
+**Fire id**: 0229fe07
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260706-harness-codex/construction/u001-harness-codex/code-generation/code-generation-plan.md
+**Detail path**: amadeus/spaces/default/intents/260706-harness-codex/.amadeus-sensors/code-generation/upstream-coverage-0229fe07.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T06:59:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0482a690
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260706-harness-codex/construction/u001-harness-codex/code-generation/code-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T06:59:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0482a690
+**Sensor ID**: required-sections
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260706-harness-codex/construction/u001-harness-codex/code-generation/code-summary.md
+**Duration ms**: 44
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T06:59:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0ea2cef5
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260706-harness-codex/construction/u001-harness-codex/code-generation/code-summary.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-06T06:59:36Z
+**Event**: SENSOR_FAILED
+**Fire id**: 0ea2cef5
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260706-harness-codex/construction/u001-harness-codex/code-generation/code-summary.md
+**Detail path**: amadeus/spaces/default/intents/260706-harness-codex/.amadeus-sensors/code-generation/upstream-coverage-0ea2cef5.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T06:59:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 44f851ac
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260706-harness-codex/construction/u001-harness-codex/code-generation/code-generation-plan.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T06:59:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 44f851ac
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260706-harness-codex/construction/u001-harness-codex/code-generation/code-generation-plan.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T06:59:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4e5de4a5
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260706-harness-codex/construction/u001-harness-codex/code-generation/code-summary.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T06:59:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4e5de4a5
+**Sensor ID**: upstream-coverage
+**Stage slug**: code-generation
+**Output path**: amadeus/spaces/default/intents/260706-harness-codex/construction/u001-harness-codex/code-generation/code-summary.md
+**Duration ms**: 44
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T07:07:23Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: ab29470cb28876365
+**Message**: ## Review\n\n**判定: READY**\n\n### 検証した事実（すべて実測。設計・要求・実装の3点照合済み）\n\n**1. 38件の新規 `agents/openai.yaml`（source + promoted）**\n- `skills/amadeus-*/agents/openai.yaml` 新規38件、`.agents/skills/amadeus-*/agents/openai
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T07:07:23Z
+**Event**: HUMAN_TURN
+
+---
