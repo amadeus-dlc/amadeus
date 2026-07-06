@@ -46,7 +46,7 @@ const textContracts: TextContract[] = [
     ],
   },
   {
-    path: "skills/amadeus-domain-modeling/SKILL.md",
+    path: "core/skills/amadeus-domain-modeling/SKILL.md",
     promotedPath: ".agents/skills/amadeus-domain-modeling/SKILL.md",
     includes: [
       "amadeus/spaces/<space>/knowledge/domain-map.md",
@@ -65,7 +65,7 @@ const textContracts: TextContract[] = [
     ],
   },
   {
-    path: "skills/amadeus-validator/SKILL.md",
+    path: "core/skills/amadeus-validator/SKILL.md",
     promotedPath: ".agents/skills/amadeus-validator/SKILL.md",
     includes: [
       "## Validation Results and Learning Candidates",
@@ -163,12 +163,12 @@ function escapeRegExp(value: string): string {
 
 
 for (const [skill, contract] of Object.entries(targetSkills)) {
-  const skillMd = join(root, "skills", skill, "SKILL.md");
+  const skillMd = join(root, "core/skills", skill, "SKILL.md");
   assertFile(skillMd);
   for (const needle of contract.skillText) assertTextIncludes(skillMd, needle);
 
   for (const [relative, headings] of Object.entries(contract.files)) {
-    const source = join(root, "skills", skill, relative);
+    const source = join(root, "core/skills", skill, relative);
     const promoted = join(root, ".agents/skills", skill, relative);
     assertFile(source);
     assertFile(promoted);
@@ -177,12 +177,12 @@ for (const [skill, contract] of Object.entries(targetSkills)) {
   }
 
   for (const relative of contract.absentFiles ?? []) {
-    assertFileMissing(join(root, "skills", skill, relative));
+    assertFileMissing(join(root, "core/skills", skill, relative));
     assertFileMissing(join(root, ".agents/skills", skill, relative));
   }
 
   for (const [relative, needles] of Object.entries(contract.textExcludes ?? {})) {
-    const source = join(root, "skills", skill, relative);
+    const source = join(root, "core/skills", skill, relative);
     const promoted = join(root, ".agents/skills", skill, relative);
     assertFile(source);
     assertFile(promoted);
@@ -211,7 +211,7 @@ const tmp = mkdtempSync(join(tmpdir(), "amadeus-template-promotion"));
 const agentsRoot = join(tmp, ".agents/skills");
 for (const skill of Object.keys(targetSkills)) {
   run(["bun", "run", "dev-scripts/promote-skill.ts", skill, "--agents-root", agentsRoot]);
-  run(["diff", "-qr", `skills/${skill}/templates`, join(agentsRoot, skill, "templates")]);
+  run(["diff", "-qr", `core/skills/${skill}/templates`, join(agentsRoot, skill, "templates")]);
 }
 
 console.log("amadeus template eval: ok");

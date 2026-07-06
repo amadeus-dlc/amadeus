@@ -6,7 +6,7 @@
 
 - Codex は skill を `<project>/.agents/skills/` で発見する（上流 awslabs/aidlc-workflows の harness/codex/emit.ts 冒頭コメントに準拠）。
 - 各 skill の `agents/openai.yaml` は Codex 向けの guard であり、`policy: allow_implicit_invocation: false` により skill の暗黙起動を禁止する。skill の起動は明示的な入口（`/amadeus` など）に限られる。
-- openai.yaml の正準は source `skills/amadeus-*/agents/openai.yaml` に置き、`dev-scripts/promote-skill.ts` の昇格で `.agents/skills/` へ反映する（promote は skill ディレクトリを丸ごと置換するため、実行時側だけに置いたファイルは昇格で消える。Issue #552 の設計確定 Q6 = B）。
+- openai.yaml の正準は `harness/codex/skills/amadeus-*/agents/openai.yaml` に置き、`dev-scripts/promote-skill.ts` の昇格で `.agents/skills/` へ反映する（promote は skill ディレクトリを丸ごと置換するため、実行時側だけに置いたファイルは昇格で消える。Issue #552 の設計確定 Q6 = B）。
 
 ## Phase 1 時点の役割（本ディレクトリ）
 

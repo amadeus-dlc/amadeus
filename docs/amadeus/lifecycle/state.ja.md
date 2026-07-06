@@ -6,7 +6,7 @@
 - [AI-DLC v2 State Template](https://github.com/awslabs/aidlc-workflows/blob/v2/core/knowledge/amadeus-shared/state-template.md)
 - [AI-DLC v2 Audit Format](https://github.com/awslabs/aidlc-workflows/blob/v2/core/knowledge/amadeus-shared/audit-format.md)
 
-vendored copy は `skills/amadeus/references/aidlc-v2/` に置く。
+vendored copy は `core/skills/amadeus/references/aidlc-v2/` に置く。
 準拠判定は vendored copy との構造一致で行う。
 
 ## Inputs
@@ -45,7 +45,7 @@ v2 state template のセクション構成をそのまま使う。
 
 読み書きは、セクション見出し、チェックリスト行（`- [x] <stage-slug>` 形式）、フィールド行（`**Key**: value` 形式）だけを対象にする。
 書き込みは対象行の置換だけで行い、セクションの順序と未知の行を保存する。
-parse 契約の実装は `skills/amadeus-validator/validator/aidlc-state-contract.ts` に置き、単一入口と validator が共有する。
+parse 契約の実装は `core/skills/amadeus-validator/validator/aidlc-state-contract.ts` に置き、単一入口と validator が共有する。
 
 ## ステージ状態
 

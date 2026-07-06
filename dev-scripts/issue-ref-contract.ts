@@ -34,7 +34,7 @@ function skillIssues(root: string, skillName: string, base: string): string[] {
 export function issueRefContractIssues(root: string): string[] {
   const issues: string[] = [];
   for (const skillName of issueInputSkills) {
-    issues.push(...skillIssues(root, skillName, "skills"));
+    issues.push(...skillIssues(root, skillName, "core/skills"));
     issues.push(...skillIssues(root, skillName, promotedRoot));
   }
   return issues;

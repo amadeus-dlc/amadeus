@@ -25,9 +25,9 @@ D001（本家 `dist/claude/` からの適応コピー戦略）により、Amadeu
 
 | 対象 | 扱い |
 |---|---|
-| `skills/amadeus*/SKILL.md` | 英語必須である。 |
+| `core/skills/amadeus*/SKILL.md` | 英語必須である。 |
 | `.agents/skills/amadeus*/SKILL.md` | source skill から昇格フローで反映する場合に英語で反映する。 |
-| `skills/amadeus*/**/*.ts`、`.agents/skills/amadeus*/**/*.ts` | 英語必須である。ただし、成果物として出力する日本語文字列（gate 文言、検証結果の条件・根拠テキストなど）は対象外とする。 |
+| `core/skills/amadeus*/**/*.ts`、`.agents/skills/amadeus*/**/*.ts` | 英語必須である。ただし、成果物として出力する日本語文字列（gate 文言、検証結果の条件・根拠テキストなど）は対象外とする。 |
 | `agents/openai.yaml` | `SKILL.md` の frontmatter description を変更した場合に、必要に応じて更新する。 |
 
 ## 日本語を維持する対象
@@ -35,7 +35,7 @@ D001（本家 `dist/claude/` からの適応コピー戦略）により、Amadeu
 | 対象 | 理由 |
 |---|---|
 | `amadeus/**/*.md` | Amadeus DLC 成果物は日本語 Markdown として扱うため。 |
-| `skills/amadeus*/templates/**/*.md` | 生成される成果物の言語を日本語に保つため。 |
+| `core/skills/amadeus*/templates/**/*.md` | 生成される成果物の言語を日本語に保つため。 |
 | `.agents/skills/amadeus*/templates/**/*.md` | 昇格先でも生成される成果物の言語を日本語に保つため。 |
 | `.kiro/specs/**/*.md` | workspace ルールで日本語生成を要求しているため。 |
 | `openspec/**/*.md` | workspace ルールで日本語生成を要求しているため。 |

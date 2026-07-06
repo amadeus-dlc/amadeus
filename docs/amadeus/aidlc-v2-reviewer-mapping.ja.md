@@ -63,7 +63,7 @@ Amadeus DLC では、この動作を次へ対応させる。
 
 reviewer を採用しない代わりの検証手段は次である。
 
-- `amadeus-validator` による成果物の構造検証（起動条件と検証範囲は `skills/amadeus-validator/SKILL.md` に従う）。
+- `amadeus-validator` による成果物の構造検証（起動条件と検証範囲は `core/skills/amadeus-validator/SKILL.md` に従う）。
 - phase PR と Bolt PR の CI（`npm run test:all`）と人間レビュー。
 - Build and Test（Stage 3.6）による build とテストの実行記録（Code Generation の成果物に対して）。
 

@@ -34,6 +34,6 @@ A document that has not yet been paired (pending #515–#523) is still Japanese-
 
 ## Relation to skill-language-policy
 
-[skill-language-policy.md](skill-language-policy.md) governs the language of Amadeus skill sources: `SKILL.md` files and TypeScript scripts under `skills/amadeus*/` and `.agents/skills/amadeus*/`.
+[skill-language-policy.md](skill-language-policy.md) governs the language of Amadeus skill sources: `SKILL.md` files and TypeScript scripts under `core/skills/amadeus*/` and `.agents/skills/amadeus*/`.
 
 This document governs the language of `docs/amadeus/` documents themselves. The two policies do not overlap: a skill's `SKILL.md` is English-required regardless of this policy, and a `docs/amadeus/` document's canonical-language pairing is unaffected by skill-language-policy.

@@ -136,23 +136,23 @@ function writeSkillTree(
     includeCodexAnnex: boolean;
   },
 ): void {
-  mkdirSync(join(fixtureRoot, "skills/amadeus/references"), { recursive: true });
-  writeFileSync(join(fixtureRoot, "skills/amadeus/SKILL.md"), conductorText);
-  writeFileSync(join(fixtureRoot, "skills/amadeus/references/question-rendering.md"), options.annexText);
+  mkdirSync(join(fixtureRoot, "core/skills/amadeus/references"), { recursive: true });
+  writeFileSync(join(fixtureRoot, "core/skills/amadeus/SKILL.md"), conductorText);
+  writeFileSync(join(fixtureRoot, "core/skills/amadeus/references/question-rendering.md"), options.annexText);
   if (options.includeCodexAnnex) {
     writeFileSync(
-      join(fixtureRoot, "skills/amadeus/references/question-rendering-codex.md"),
+      join(fixtureRoot, "core/skills/amadeus/references/question-rendering-codex.md"),
       options.codexAnnexText,
     );
   }
 
   if (options.withGrillingSkill) {
-    mkdirSync(join(fixtureRoot, "skills/amadeus-grilling/references"), { recursive: true });
-    writeFileSync(join(fixtureRoot, "skills/amadeus-grilling/references/engine-bridge.md"), bridgeText);
+    mkdirSync(join(fixtureRoot, "core/skills/amadeus-grilling/references"), { recursive: true });
+    writeFileSync(join(fixtureRoot, "core/skills/amadeus-grilling/references/engine-bridge.md"), bridgeText);
   }
 
-  mkdirSync(join(fixtureRoot, "skills/amadeus-foo"), { recursive: true });
-  writeFileSync(join(fixtureRoot, "skills/amadeus-foo/SKILL.md"), options.stageSkillText);
+  mkdirSync(join(fixtureRoot, "core/skills/amadeus-foo"), { recursive: true });
+  writeFileSync(join(fixtureRoot, "core/skills/amadeus-foo/SKILL.md"), options.stageSkillText);
 
   if (options.withPromotedCopies) {
     mkdirSync(join(fixtureRoot, ".agents/skills/amadeus/references"), { recursive: true });
@@ -230,9 +230,9 @@ const wrongOrderAnnex = makeFixture({
 expectIssue(runExpectFailure(checkCommand, wrongOrderAnnex), "mode selection order must be", "annex wrong mode order");
 
 // annex の engine-bridge 参照が相対パスの階層を誤っている場合は fail する
-// (question-rendering.md は skills/amadeus/references/ にあるため、
-// skills/amadeus-grilling/ へ戻るには `../../` が必要 — `../` では
-// skills/amadeus/amadeus-grilling/... という存在しないパスになる)。
+// (question-rendering.md は core/skills/amadeus/references/ にあるため、
+// core/skills/amadeus-grilling/ へ戻るには `../../` が必要 — `../` では
+// core/skills/amadeus/amadeus-grilling/... という存在しないパスになる)。
 const brokenAnnexPath = makeFixture({
   annexText: [
     "# Question Rendering — Claude Code harness annex",
@@ -259,7 +259,7 @@ expectIssue(
 const missingCodexAnnex = makeFixture({ includeCodexAnnex: false });
 expectIssue(
   runExpectFailure(checkCommand, missingCodexAnnex),
-  "missing file: skills/amadeus/references/question-rendering-codex.md",
+  "missing file: core/skills/amadeus/references/question-rendering-codex.md",
   "missing codex annex file",
 );
 

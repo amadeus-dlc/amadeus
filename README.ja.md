@@ -121,11 +121,11 @@ skill は Amadeus DLC への関わり方で分類します。
 
 | family | 内部 skill |
 |---|---|
-| ステージ実行 skill（ライフサイクル各ステージに 1 個、`amadeus-<stage>`、29 個） | エンジンから呼ばれる、または単独実行する 1 ステージ分のパッケージ。全ステージ対応表は [skills/amadeus/references/stage-catalog.md](skills/amadeus/references/stage-catalog.md) を参照します。 |
+| ステージ実行 skill（ライフサイクル各ステージに 1 個、`amadeus-<stage>`、29 個） | エンジンから呼ばれる、または単独実行する 1 ステージ分のパッケージ。全ステージ対応表は [core/skills/amadeus/references/stage-catalog.md](core/skills/amadeus/references/stage-catalog.md) を参照します。 |
 | scope / composer shortcut | `amadeus-bugfix`、`amadeus-feature`、`amadeus-mvp`、`amadeus-security-patch`、`amadeus-init`、`amadeus-compose` |
 | 読み取り専用ユーティリティ | `amadeus-outcomes-pack`、`amadeus-replay`、`amadeus-session-cost` |
 
-Amadeus の source を変更する場合は、`skills/amadeus-*` と `.agents/skills/amadeus-*` の両方を確認し、昇格先成果物はリポジトリの昇格手順でそろえます。
+Amadeus の source を変更する場合は、`core/skills/amadeus-*` と `.agents/skills/amadeus-*` の両方を確認し、昇格先成果物はリポジトリの昇格手順でそろえます。
 
 このリポジトリでは、root `amadeus/` を Amadeus 本体開発用の workspace として扱います。
 

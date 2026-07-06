@@ -150,7 +150,7 @@ const { skillName, options } = parseOptions(process.argv.slice(2));
 ensureSafeSkillName(skillName);
 
 const root = process.cwd();
-const source = resolve(root, "skills", skillName);
+const source = resolve(root, "core/skills", skillName);
 const destination = resolve(root, options.agentsRoot, skillName);
 
 if (!isDirectory(source)) fail(`missing source skill: ${source}`);

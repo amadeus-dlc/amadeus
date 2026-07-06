@@ -33,9 +33,9 @@ export const skillContracts = [
   {
     skillId: "amadeus-grilling",
     skillName: "amadeus-grilling",
-    sourcePaths: ["skills/amadeus-grilling/SKILL.md", ".agents/skills/amadeus-grilling/SKILL.md"],
+    sourcePaths: ["core/skills/amadeus-grilling/SKILL.md", ".agents/skills/amadeus-grilling/SKILL.md"],
     generatedReferencePaths: [
-      "skills/amadeus-grilling/references/skill-contract.md",
+      "core/skills/amadeus-grilling/references/skill-contract.md",
       ".agents/skills/amadeus-grilling/references/skill-contract.md",
     ],
     prerequisites: [
@@ -86,9 +86,9 @@ export const skillContracts = [
   {
     skillId: "amadeus-validator",
     skillName: "amadeus-validator",
-    sourcePaths: ["skills/amadeus-validator/SKILL.md", ".agents/skills/amadeus-validator/SKILL.md"],
+    sourcePaths: ["core/skills/amadeus-validator/SKILL.md", ".agents/skills/amadeus-validator/SKILL.md"],
     generatedReferencePaths: [
-      "skills/amadeus-validator/references/skill-contract.md",
+      "core/skills/amadeus-validator/references/skill-contract.md",
       ".agents/skills/amadeus-validator/references/skill-contract.md",
     ],
     prerequisites: [

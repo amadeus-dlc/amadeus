@@ -9,7 +9,7 @@ A stage loads its agent's persona one of two ways, depending on the stage's exec
 - **Inline stages** — the conductor reads the lead agent's file directly into its own context for role framing, then works the stage from that agent's perspective. A multi-agent stage layers each support agent's file the same way before synthesizing a result.
 - **Subagent stages** — the conductor issues a Task call naming the agent, and the harness loads that agent's persona automatically at the sub-agent boundary; the persona text is not injected into the prompt by hand.
 
-Each stage's execution mode is declared in its own stage definition (its frontmatter) and summarized per stage in the [Stage Catalog](../../skills/amadeus/references/stage-catalog.md); this chapter only covers how the persona is loaded once that mode is known.
+Each stage's execution mode is declared in its own stage definition (its frontmatter) and summarized per stage in the [Stage Catalog](../../core/skills/amadeus/references/stage-catalog.md); this chapter only covers how the persona is loaded once that mode is known.
 
 ## The 14 agents
 
@@ -38,7 +38,7 @@ The composer agent (`amadeus-composer-agent`) is dispatched by the `/amadeus com
 
 ## Where agents are declared
 
-Each stage definition (`.agents/amadeus/amadeus-common/stages/<phase>/<slug>.md`) declares its own `lead_agent`, an optional `support_agents` list, and an optional `reviewer` in frontmatter — this is the single source of truth for which agent does which stage. This chapter does not reproduce that mapping. For the full stage list, see the [Stage Catalog](../../skills/amadeus/references/stage-catalog.md); for the stage contract those fields participate in (inputs, outputs, gates), see the [Lifecycle Contract Overview](../amadeus/lifecycle/overview.md).
+Each stage definition (`.agents/amadeus/amadeus-common/stages/<phase>/<slug>.md`) declares its own `lead_agent`, an optional `support_agents` list, and an optional `reviewer` in frontmatter — this is the single source of truth for which agent does which stage. This chapter does not reproduce that mapping. For the full stage list, see the [Stage Catalog](../../core/skills/amadeus/references/stage-catalog.md); for the stage contract those fields participate in (inputs, outputs, gates), see the [Lifecycle Contract Overview](../amadeus/lifecycle/overview.md).
 
 ## Next steps
 

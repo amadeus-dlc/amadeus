@@ -56,8 +56,8 @@ const completeContractText = [
 const missingContractText = ["# amadeus", "", "No Issue-reference contract here.", ""].join("\n");
 
 function writeSkillTree(fixtureRoot: string, text: string, withPromotedCopy: boolean): void {
-  mkdirSync(join(fixtureRoot, "skills/amadeus"), { recursive: true });
-  writeFileSync(join(fixtureRoot, "skills/amadeus/SKILL.md"), text);
+  mkdirSync(join(fixtureRoot, "core/skills/amadeus"), { recursive: true });
+  writeFileSync(join(fixtureRoot, "core/skills/amadeus/SKILL.md"), text);
   if (withPromotedCopy) {
     mkdirSync(join(fixtureRoot, ".agents/skills/amadeus"), { recursive: true });
     writeFileSync(join(fixtureRoot, ".agents/skills/amadeus/SKILL.md"), text);

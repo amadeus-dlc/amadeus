@@ -6,12 +6,12 @@
 
 - Space: 対象 workspace の `amadeus/spaces/<space>/`（既定は `default`。`memory/`、`knowledge/`、`codekb/`、`intents/`）
 - Intent record: `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`
-- Skill sources: `skills/amadeus*/`
+- Skill sources: `core/skills/amadeus*/`
 - Promoted skills: `.agents/skills/amadeus*/`
 
 ## Skill 昇格
 
-`skills/amadeus*/` を `.agents/skills/amadeus*/` へ反映する場合は、必ず `dev-scripts/promote-skill.ts` を使う。
+`core/skills/amadeus*/` を `.agents/skills/amadeus*/` へ反映する場合は、必ず `dev-scripts/promote-skill.ts` を使う。
 手動の `cp`、`rsync`、エディタ操作で昇格先を直接同期しない。
 
 既存の昇格先を更新する場合は、次を使う。
@@ -28,8 +28,8 @@ npm run test:it:promote-skill
 
 ## 言語
 
-- `amadeus/**/*.md`、`skills/amadeus*/templates/**/*.md`、`.agents/skills/amadeus*/templates/**/*.md` は日本語で書く。
-- `skills/amadeus*/SKILL.md`、`.agents/skills/amadeus*/SKILL.md`、および `skills/amadeus*/**/*.ts`、`.agents/skills/amadeus*/**/*.ts` は英語必須である（詳細は [Skill Language Policy](../../docs/amadeus/skill-language-policy.md) を参照）。
+- `amadeus/**/*.md`、`core/skills/amadeus*/templates/**/*.md`、`.agents/skills/amadeus*/templates/**/*.md` は日本語で書く。
+- `core/skills/amadeus*/SKILL.md`、`.agents/skills/amadeus*/SKILL.md`、および `core/skills/amadeus*/**/*.ts`、`.agents/skills/amadeus*/**/*.ts` は英語必須である（詳細は [Skill Language Policy](../../docs/amadeus/skill-language-policy.md) を参照）。
 - 英語必須の対象でも、生成される Amadeus DLC 成果物、テンプレート由来の Markdown、ユーザー向け gate 文言は日本語のまま維持する。
 - 英語で下書きしてから日本語へ翻訳しない。
 - `.kiro/specs/**/*.md` と `openspec/**/*.md` を作る場合も日本語で書く。

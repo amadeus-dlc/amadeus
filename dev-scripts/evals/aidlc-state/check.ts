@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 // aidlc-state-contract の検証。
-// vendored の v2 state template（skills/amadeus/references/aidlc-v2/state-template.md）を
+// vendored の v2 state template（core/skills/amadeus/references/aidlc-v2/state-template.md）を
 // parse でき、行置換の更新が対象行以外を保存することを確認する。
 
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
@@ -32,7 +32,7 @@ function check(name: string, condition: boolean, evidence: string): void {
 
 // --- 1. vendored template を parse できる ---
 
-const templateText = readFileSync(join(root, "skills/amadeus/references/aidlc-v2/state-template.md"), "utf8");
+const templateText = readFileSync(join(root, "core/skills/amadeus/references/aidlc-v2/state-template.md"), "utf8");
 const template = parseAidlcState(templateText);
 
 check(

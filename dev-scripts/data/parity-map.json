@@ -1,5 +1,6 @@
 {
   "baselineCommit": "fde1e1af7aae16f4c4defc991abaa3877ee2ac26",
+  "skillsSourceDir": "core/skills",
   "skillNameMapping": {
     "prefix": "aidlc",
     "replacement": "amadeus",

@@ -5,7 +5,7 @@
 
 ## Source Paths
 
-- `skills/amadeus-grilling/SKILL.md`
+- `core/skills/amadeus-grilling/SKILL.md`
 - `.agents/skills/amadeus-grilling/SKILL.md`
 
 ## Prerequisites

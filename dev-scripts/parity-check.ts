@@ -58,6 +58,7 @@ type ParityMap = {
   relocations: Relocation[];
   missingSkillExceptions?: string[];
   engineFileExceptions?: string[];
+  skillsSourceDir?: string;
 };
 
 function fail(message: string): never {
@@ -171,7 +172,7 @@ function checkSkills(root: string, baseline: ParityBaseline, map: ParityMap): st
     const mappedName = mapSkillName(upstreamName, map.skillNameMapping);
     if (exceptions.has(mappedName)) continue;
 
-    const sourcePath = join(root, "skills", mappedName);
+    const sourcePath = join(root, map.skillsSourceDir ?? "skills", mappedName);
     const promotedPath = join(root, ".agents/skills", mappedName);
     if (!existsSync(sourcePath)) issues.push(`skill 欠落: skills/${mappedName}（upstream: ${upstreamName}）`);
     if (!existsSync(promotedPath)) issues.push(`skill 欠落: .agents/skills/${mappedName}（upstream: ${upstreamName}）`);

@@ -3558,7 +3558,7 @@ export function canonicalScopeTableRegion(table: string): string {
 function skillMdPath(): string {
   return (
     process.env.AIDLC_SKILL_MD_PATH ??
-    join(TOOLS_DIR, "..", "..", "..", "skills", "amadeus", "SKILL.md")
+    join(TOOLS_DIR, "..", "..", "skills", "amadeus", "SKILL.md")
   );
 }
 

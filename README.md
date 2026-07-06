@@ -121,11 +121,11 @@ Use `amadeus` or the auxiliary entrypoints as the public entrypoints unless the 
 
 | Family | Internal skills |
 |---|---|
-| Stage runners (one per lifecycle stage, `amadeus-<stage>`, 29 skills) | Single-stage packaging invoked by the engine or run standalone; see [skills/amadeus/references/stage-catalog.md](skills/amadeus/references/stage-catalog.md) for the full stage-to-skill mapping. |
+| Stage runners (one per lifecycle stage, `amadeus-<stage>`, 29 skills) | Single-stage packaging invoked by the engine or run standalone; see [core/skills/amadeus/references/stage-catalog.md](core/skills/amadeus/references/stage-catalog.md) for the full stage-to-skill mapping. |
 | Scope and composer shortcuts | `amadeus-bugfix`, `amadeus-feature`, `amadeus-mvp`, `amadeus-security-patch`, `amadeus-init`, `amadeus-compose` |
 | Read-only utilities | `amadeus-outcomes-pack`, `amadeus-replay`, `amadeus-session-cost` |
 
-For Amadeus source changes, check both `skills/amadeus-*` and `.agents/skills/amadeus-*`; keep promoted artifacts aligned through the repository promotion flow.
+For Amadeus source changes, check both `core/skills/amadeus-*` and `.agents/skills/amadeus-*`; keep promoted artifacts aligned through the repository promotion flow.
 
 The repository root keeps `amadeus/` as the workspace for Amadeus's own development.
 

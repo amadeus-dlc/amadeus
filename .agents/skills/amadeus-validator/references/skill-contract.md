@@ -5,7 +5,7 @@
 
 ## Source Paths
 
-- `skills/amadeus-validator/SKILL.md`
+- `core/skills/amadeus-validator/SKILL.md`
 - `.agents/skills/amadeus-validator/SKILL.md`
 
 ## Prerequisites

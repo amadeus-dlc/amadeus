@@ -2,7 +2,7 @@
 
 ## The conductor loop
 
-Inside Claude Code, you drive Amadeus DLC by typing `/amadeus`, optionally followed by a freeform description of what you want to build — for example `/amadeus "Add a hello command to my CLI"`. Everything that follows is the `amadeus` skill running one small, fixed loop against the engine: ask `amadeus-orchestrate.ts next` what to do, do exactly that one thing, `report` the outcome, and repeat until the engine says the workflow is done. The engine — not the skill — decides Intake, scope, stage order, and when a gate applies; the skill only carries out the directive it is handed. The full contract for this loop lives in [skills/amadeus/SKILL.md](../../skills/amadeus/SKILL.md) ("The Forwarding Loop").
+Inside Claude Code, you drive Amadeus DLC by typing `/amadeus`, optionally followed by a freeform description of what you want to build — for example `/amadeus "Add a hello command to my CLI"`. Everything that follows is the `amadeus` skill running one small, fixed loop against the engine: ask `amadeus-orchestrate.ts next` what to do, do exactly that one thing, `report` the outcome, and repeat until the engine says the workflow is done. The engine — not the skill — decides Intake, scope, stage order, and when a gate applies; the skill only carries out the directive it is handed. The full contract for this loop lives in [core/skills/amadeus/SKILL.md](../../core/skills/amadeus/SKILL.md) ("The Forwarding Loop").
 
 This chapter does not narrate a `/amadeus` chat session. Instead it runs the engine's own commands directly — the same commands the skill runs on your behalf — so you can see exactly what the engine returns before trusting the skill to run the loop for you.
 

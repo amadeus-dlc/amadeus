@@ -40,10 +40,10 @@ function runExpectFailure(command: string[], cwd = root): [string, string] {
 }
 
 function amadeusSkills(): string[] {
-  return readdirSync(join(root, "skills"))
+  return readdirSync(join(root, "core/skills"))
     .filter(
       (entry) =>
-        (entry === "amadeus" || entry.startsWith("amadeus-")) && statSync(join(root, "skills", entry)).isDirectory(),
+        (entry === "amadeus" || entry.startsWith("amadeus-")) && statSync(join(root, "core/skills", entry)).isDirectory(),
     )
     .sort();
 }
@@ -95,7 +95,7 @@ run(["bun", "run", "dev-scripts/promote-skill.ts", "amadeus-validator", "--dry-r
 runExpectFailure(["bun", "run", "dev-scripts/promote-skill.ts", "amadeus-grilling"]);
 
 for (const skill of policyManagedInternalSkills()) {
-  for (const base of ["skills", ".agents/skills"]) {
+  for (const base of ["harness/codex/skills", ".agents/skills"]) {
     const metadataPath = join(root, base, skill, "agents/openai.yaml");
     if (!existsSync(metadataPath)) fail(`missing Codex metadata for internal skill: ${relative(root, metadataPath)}`);
     const metadata = parseCodexMetadata(metadataPath, await Bun.file(metadataPath).text());

@@ -26,7 +26,7 @@ Amadeus ships 42 skills across five groups:
 - 6 shortcuts: the scope entry skills, the composer, and the whole-Initialization runner.
 - 3 read-only utility skills: `amadeus-replay`, `amadeus-session-cost`, and `amadeus-outcomes-pack`.
 
-The full stage-to-runner mapping is maintained in the [Stage Catalog](../../skills/amadeus/references/stage-catalog.md); this guide does not duplicate it.
+The full stage-to-runner mapping is maintained in the [Stage Catalog](../../core/skills/amadeus/references/stage-catalog.md); this guide does not duplicate it.
 
 ## Relationship to AI-DLC v2
 

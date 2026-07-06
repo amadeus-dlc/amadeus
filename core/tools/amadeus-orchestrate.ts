@@ -1,5 +1,5 @@
 // The orchestration engine — the deterministic "what's next?" answerer that
-// stands BESIDE the prose orchestrator (skills/amadeus/SKILL.md), not inside it.
+// stands BESIDE the prose orchestrator (core/skills/amadeus/SKILL.md), not inside it.
 // Nothing in SKILL.md calls this file yet; it is exercised only by its own
 // unit tests until the differential corpus proves it emits the same directive
 // sequence the prose orchestrator produces today. Framework behaviour is

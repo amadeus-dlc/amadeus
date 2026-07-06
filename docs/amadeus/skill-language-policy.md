@@ -25,9 +25,9 @@ An englishization pull request states clearly the boundary between translation c
 
 | Target | Treatment |
 |---|---|
-| `skills/amadeus*/SKILL.md` | English-required. |
+| `core/skills/amadeus*/SKILL.md` | English-required. |
 | `.agents/skills/amadeus*/SKILL.md` | Reflected in English when propagated from the source skill through the promotion flow. |
-| `skills/amadeus*/**/*.ts`, `.agents/skills/amadeus*/**/*.ts` | English-required. Japanese strings emitted as artifacts (gate wording, the condition and rationale text of verification results, and the like) are out of scope. |
+| `core/skills/amadeus*/**/*.ts`, `.agents/skills/amadeus*/**/*.ts` | English-required. Japanese strings emitted as artifacts (gate wording, the condition and rationale text of verification results, and the like) are out of scope. |
 | `agents/openai.yaml` | Updated as needed when the `SKILL.md` frontmatter description changes. |
 
 ## Targets that stay Japanese
@@ -35,7 +35,7 @@ An englishization pull request states clearly the boundary between translation c
 | Target | Reason |
 |---|---|
 | `amadeus/**/*.md` | Amadeus DLC artifacts are treated as Japanese Markdown. |
-| `skills/amadeus*/templates/**/*.md` | Keeps the language of generated artifacts Japanese. |
+| `core/skills/amadeus*/templates/**/*.md` | Keeps the language of generated artifacts Japanese. |
 | `.agents/skills/amadeus*/templates/**/*.md` | Keeps the language of generated artifacts Japanese at the promoted destination too. |
 | `.kiro/specs/**/*.md` | Workspace rules require Japanese generation. |
 | `openspec/**/*.md` | Workspace rules require Japanese generation. |
