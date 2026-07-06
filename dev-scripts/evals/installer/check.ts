@@ -39,7 +39,7 @@ import { join, relative, resolve } from "node:path";
 
 // Import the installer's own manifest + pure transform — the eval verifies
 // them against reality rather than re-declaring its own expectations.
-import { MANIFEST, transformAmadeusMd } from "../../../scripts/amadeus-install";
+import { MANIFEST, transformAmadeusMd, reverseModelOverlay } from "../../../scripts/amadeus-install";
 
 const root = resolve(import.meta.dir, "../../..");
 const installerPath = join(root, "scripts", "amadeus-install.ts");
@@ -204,6 +204,52 @@ for (const prefix of MANIFEST.amadeusMd.removeBlocks) {
   ok(
     "FR-3.1 README.ja.md documents the installer command, doctor verification, and re-run-to-update",
     /scripts\/amadeus-install\.ts/.test(readmeJaText) && /doctor/.test(readmeJaText) && /amadeus:install/.test(readmeJaText)
+  );
+}
+
+// ---------------------------------------------------------------------------
+// FR579 — model overlay reverse transform, unit-level branches via the
+// exported pure function (Issue #579, Intent 260706-overlay-reverse). Mirrors
+// #554 parity's normalizeModelOverlay conservative rule (dev-scripts/parity-
+// check.ts lines 233-252): transform only when base is recorded AND the
+// actual value is in the managed set (declared model ∪ declared fallback
+// target); otherwise copy as-is (no silent mutation, FR-1.2/FR-1.3).
+// ---------------------------------------------------------------------------
+
+{
+  const declaredOverlay = {
+    agents: { "foo-agent": { model: "haiku", base: "opus" } },
+    fallbacks: { haiku: "sonnet" },
+  };
+  const contentWith = (value: string) => `---\nname: foo-agent\nmodelOverride: ${value}\n---\nbody\n`;
+
+  ok(
+    "FR579-1.2 declared agent + actual = declared model -> base written",
+    reverseModelOverlay(contentWith("haiku"), "foo-agent", declaredOverlay).includes("modelOverride: opus")
+  );
+  ok(
+    "FR579-1.2 declared agent + actual = declared fallback target -> base written",
+    reverseModelOverlay(contentWith("sonnet"), "foo-agent", declaredOverlay).includes("modelOverride: opus")
+  );
+  ok(
+    "FR579-1.2 declared agent + actual NOT in managed set -> unchanged",
+    reverseModelOverlay(contentWith("opus"), "foo-agent", declaredOverlay) === contentWith("opus")
+  );
+
+  const noBaseOverlay = { agents: { "foo-agent": { model: "haiku" } }, fallbacks: { haiku: "sonnet" } };
+  ok(
+    "FR579-1.2 base undefined (bootstrap window) -> unchanged",
+    reverseModelOverlay(contentWith("haiku"), "foo-agent", noBaseOverlay) === contentWith("haiku")
+  );
+
+  ok(
+    "FR579-1.1 agent not declared in overlay -> unchanged",
+    reverseModelOverlay(contentWith("haiku"), "other-agent", declaredOverlay) === contentWith("haiku")
+  );
+
+  ok(
+    "FR579-1.3 overlay null (declaration missing, fail-open) -> unchanged",
+    reverseModelOverlay(contentWith("haiku"), "foo-agent", null) === contentWith("haiku")
   );
 }
 
@@ -399,6 +445,73 @@ try {
       isSymlink = false;
     }
     ok(`FR-2.3 .claude/${name} symlink still correct after second run`, isSymlink && linkTarget === join("..", ".agents", "amadeus", name), linkTarget);
+  }
+
+  // ---- FR579 — model overlay reverse transform against the REAL source
+  // (this repo, which has the #554 fable overlay applied) + FR-3 manifest /
+  // 3-way-judge integration (Issue #579, Intent 260706-overlay-reverse). ----
+  {
+    const architectRel = ".agents/amadeus/agents/amadeus-architect-agent.md";
+    const designRel = ".agents/amadeus/agents/amadeus-design-agent.md";
+    const developerRel = ".agents/amadeus/agents/amadeus-developer-agent.md";
+    const architectPath = join(ws, architectRel);
+    const designPath = join(ws, designRel);
+    const developerPath = join(ws, developerRel);
+
+    const architectText = readFileSync(architectPath, "utf-8");
+    const designText = readFileSync(designPath, "utf-8");
+    ok(
+      "FR579-2.1 distributed amadeus-architect-agent.md carries modelOverride: opus (overlay base)",
+      /^modelOverride:\s*opus\s*$/m.test(architectText),
+      architectText
+    );
+    ok(
+      "FR579-2.1 distributed amadeus-architect-agent.md does not carry modelOverride: fable (dev-only override)",
+      !/^modelOverride:\s*fable\s*$/m.test(architectText),
+      architectText
+    );
+    ok(
+      "FR579-2.1 distributed amadeus-design-agent.md carries modelOverride: opus (overlay base)",
+      /^modelOverride:\s*opus\s*$/m.test(designText),
+      designText
+    );
+    ok(
+      "FR579-2.1 distributed amadeus-design-agent.md does not carry modelOverride: fable (dev-only override)",
+      !/^modelOverride:\s*fable\s*$/m.test(designText),
+      designText
+    );
+    ok(
+      "FR579-2.2 non-overlay agent md (amadeus-developer-agent.md) is byte-identical to source",
+      readFileSync(developerPath, "utf-8") === readFileSync(join(root, developerRel), "utf-8")
+    );
+
+    // FR-3.1 — the manifest hash is the sha256 of the WRITTEN (reverse-
+    // transformed) content, not the source's raw (fable) content.
+    const manifestForOverlay = JSON.parse(readFileSync(join(ws, ".amadeus-install.json"), "utf-8")) as {
+      files: Record<string, string>;
+    };
+    const { createHash } = await import("node:crypto");
+    const architectActualHash = createHash("sha256").update(readFileSync(architectPath)).digest("hex");
+    ok(
+      "FR579-3.1 manifest hash for amadeus-architect-agent.md matches the sha256 of the WRITTEN (reverse-transformed) content",
+      manifestForOverlay.files[architectRel] === architectActualHash,
+      `manifest=${manifestForOverlay.files[architectRel]} actual=${architectActualHash}`
+    );
+
+    // FR-3.2 — a second install run must report the overlay-declared agent md
+    // in the "unchanged = skip" quadrant: no backup line, no backup copy.
+    ok(
+      "FR579-3.2 second install run reports no backup for the overlay-declared agent md",
+      !install2.stdout.includes(`backed up: ${architectRel}`),
+      install2.stdout
+    );
+    const backupRootOverlay = join(ws, ".amadeus-install-backup");
+    const backupDirsOverlay = existsSync(backupRootOverlay) ? readdirSync(backupRootOverlay) : [];
+    const architectBackedUp = backupDirsOverlay.some((dir) => existsSync(join(backupRootOverlay, dir, architectRel)));
+    ok(
+      "FR579-3.2 no backup copy of the overlay-declared agent md exists under .amadeus-install-backup/",
+      !architectBackedUp
+    );
   }
 
   // ---- FR-2.13 — amadeus/ untouchable across both installs ----

@@ -8,7 +8,7 @@
 | `.agents/amadeus/{hooks,scopes,agents,sensors,knowledge,amadeus-common}/` | hooks 11、scope 定義（1 scope 1 ファイル）、agent persona、sensor 実装、共有 knowledge、stage 定義 |
 | `core/skills/`（42）/ `.agents/skills/`（45） | source skill と昇格先。昇格先には source 外の運用 skill（gh-issue-organizer、japanese-tech-writing、skill-forge）を含む。`core/skills/amadeus-compose/`（Adaptive Workflows 2.2.0 で追加）を含む |
 | `dev-scripts/` | promote-skill、parity-check、contracts、kanban（sync CLI + hooks）、evals/（32 種の決定論的検証。rename-leftovers = 旧名（aidlc 系）残存の恒久検出器（#526 で検出反転、データ駆動 allowlist）、linter-sensor = 2 段検出の隔離 workspace 検査 #538、model-overlay = overlay 宣言（data/model-overrides.json + apply-model-overrides.ts）の適用・parity 逆変換の検査 #554 を含む） |
-| `scripts/` | 配布用インストーラ `amadeus-install.ts`（`.agents/amadeus/` とその skill を対象 workspace へコピーする唯一の配布手段。#451） |
+| `scripts/` | 配布用インストーラ `amadeus-install.ts`（`.agents/amadeus/` とその skill を対象 workspace へコピーする唯一の配布手段。#451。#543 で導入 manifest `.amadeus-install.json`（sha256 全数記録）、`--version-info`、sha256 3-way 判定 + 集中退避 dir `.amadeus-install-backup/<導入時刻>/` への退避型更新、コピーのファイル単位化を追加。#579 で agents/*.md の modelOverride を overlay base 値へ逆変換して配布） |
 | `mise.toml` | node = "24" を宣言するランタイムバージョン管理設定 |
 | `docs/guide/` | 利用者ガイド（上流同名 path。番号付き章 = #533、契約文書の docs/amadeus と責務分離） |
 | `amadeus/spaces/<space>/journal/` | Intent 横断の調整記録（第三の space 成果物。日次ファイル + 契約 README = #557） |

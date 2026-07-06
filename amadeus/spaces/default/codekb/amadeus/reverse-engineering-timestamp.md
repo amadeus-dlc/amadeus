@@ -2,6 +2,19 @@
 
 ## 差分更新の記録（最新）
 
+- 解析時刻: 2026-07-06T12:25:00Z（UTC）
+- 対象コミット: 6e82899a（origin/main = PR #587 merge 後）
+- 解析方式: 差分更新（0d6d492f..6e82899a のうち未反映分 = PR #583/#585/#586/#587。#584（#572 three-layer B001 = dev-scripts/build.ts）と #586 の codekb 反映は各 Intent が自己記録済み）
+- 実施 Intent: `260706-overlay-reverse`（reverse-engineering、conductor 直接処理 = bug 最優先の速度要件）
+
+### 差分の内容と codekb への影響
+
+- PR #587（installer versioning #543 = 当方）: component-inventory の installer 行と eval 群行、code-structure の scripts/ 行を更新（導入 manifest、--version-info、sha256 3-way 退避、ファイル単位コピー、installer eval 353 assertion）。
+- PR #583（guide-ops #568）/ PR #585（persona-loading #582 = stage-protocol.md の persona 読み込み規定整合）/ PR #586（docs-consistency #562/#576）: docs / knowledge 文言中心で既存記述粒度で吸収。
+- 変更なし: business-overview / architecture / technology-stack / dependencies / code-quality-assessment。
+
+## 前回（2026-07-06T10:50:00Z、0075f931..0d6d492f = persona-loading）の記録
+
 - 解析時刻: 2026-07-06T10:50:00Z（UTC）
 - 対象コミット: 0d6d492f（origin/main = PR #581 merge 後）
 - 解析方式: 差分更新（0075f931..0d6d492f のうち未反映分 = PR #575/#577/#578/#580/#581。#574 分は 260706-feature-diff の 07:58 更新で反映済み。rebase 時の時系列 union 補正: #577 の api-documentation / component-inventory への追記は 260706-three-layer-build の 09:10 更新（下の前回記録）を正とし、当方の「既存記述粒度で吸収 = 差分なし」判断はそれ以外の文言差分に限定して維持）

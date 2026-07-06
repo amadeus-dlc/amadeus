@@ -33,6 +33,7 @@ import {
 } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, join, resolve } from "node:path";
+import { readModelOverrideLine, setModelOverrideLine } from "../dev-scripts/apply-model-overrides";
 
 // ---------------------------------------------------------------------------
 // Manifest — the single declarative source for what gets installed (FR-1.10).
@@ -431,6 +432,57 @@ function preflight(target: string): void {
 }
 
 // ---------------------------------------------------------------------------
+// Model overlay reverse transform (Issue #579, Intent 260706-overlay-
+// reverse). The dev repo may have the #554 model overlay applied (e.g.
+// amadeus-architect-agent.md carrying `modelOverride: fable`), which must
+// never ship to users who may not have access to that model — the
+// distributed copy always carries the overlay's declared BASE value.
+// ---------------------------------------------------------------------------
+
+const MODEL_OVERRIDE_OVERLAY_RELATIVE_PATH = "dev-scripts/data/model-overrides.json";
+
+export type ModelOverlayAgentEntry = { model: string; base?: string };
+export type ModelOverlay = { agents: Record<string, ModelOverlayAgentEntry>; fallbacks: Record<string, string> };
+
+// FR(#579)-1.3: fail-open. An absent, unreadable, or malformed overlay
+// declaration in the source must never fail the install — it just means no
+// agent gets a reverse transform (copy everything as-is).
+function loadModelOverlay(src: string): ModelOverlay | null {
+  try {
+    return JSON.parse(readFileSync(join(src, MODEL_OVERRIDE_OVERLAY_RELATIVE_PATH), "utf-8")) as ModelOverlay;
+  } catch {
+    return null;
+  }
+}
+
+// Reverse-transforms a distributed agent md's `modelOverride` line to the
+// overlay's base value. Reuses the line-parse/replace helpers already
+// exported by dev-scripts/apply-model-overrides.ts (tested there) and
+// reimplements only the managed-value-set judgement, mirroring #554 parity's
+// normalizeModelOverlay conservative rule (dev-scripts/parity-check.ts lines
+// 233-252, FR(#579)-1.2): transform ONLY when base is recorded AND the actual
+// value is in the managed set (declared model ∪ declared fallback target).
+// Any other case (agent not declared, base not yet recorded, actual value
+// unmanaged, or an unparsable modelOverride line) copies the content as-is —
+// no silent mutation.
+export function reverseModelOverlay(content: string, agentName: string, overlay: ModelOverlay | null): string {
+  if (!overlay) return content;
+  const entry = overlay.agents[agentName];
+  if (!entry || entry.base === undefined) return content;
+  try {
+    const actual = readModelOverrideLine(content);
+    const fallbackTarget = overlay.fallbacks[entry.model];
+    const managed = new Set(fallbackTarget ? [entry.model, fallbackTarget] : [entry.model]);
+    if (managed.has(actual)) {
+      return setModelOverrideLine(content, entry.base);
+    }
+  } catch {
+    // modelOverride line unreadable — copy as-is (no silent mutation).
+  }
+  return content;
+}
+
+// ---------------------------------------------------------------------------
 // copyEngine (component-methods.md). Full replace of the 7 .agents/amadeus/
 // subdirectories (FR-1.2, BR-13).
 // ---------------------------------------------------------------------------
@@ -440,13 +492,27 @@ function preflight(target: string): void {
 // file's sha256 for the install manifest while preserving the old
 // convergence semantics (B001 keeps the judge frozen to plain overwrite).
 function copyEngine(src: string, target: string, rec: InstallRecorder): void {
+  // FR(#579)-3.1: loaded once per run; content is reverse-transformed BEFORE
+  // being handed to rec.trackedWrite, so the manifest hash is automatically
+  // the sha256 of the written (transformed) content.
+  const modelOverlay = loadModelOverlay(src);
   for (const dir of MANIFEST.engineDirs) {
     const srcPath = join(src, ".agents", "amadeus", dir);
     const destRel = `.agents/amadeus/${dir}`;
     try {
       const rels = enumerateDistFiles(srcPath);
       for (const rel of rels) {
-        rec.trackedWrite(`${destRel}/${rel}`, readFileSync(join(srcPath, rel)));
+        let content: string | Buffer = readFileSync(join(srcPath, rel));
+        // FR(#579)-1.1: the utf-8 round-trip is gated on the overlay actually
+        // declaring this agent — undeclared agent md files ship as raw bytes
+        // (no decode/encode side effects on files the transform never touches).
+        if (dir === "agents" && rel.endsWith(".md")) {
+          const agentName = rel.slice(0, -".md".length);
+          if (modelOverlay?.agents[agentName]) {
+            content = reverseModelOverlay(content.toString("utf-8"), agentName, modelOverlay);
+          }
+        }
+        rec.trackedWrite(`${destRel}/${rel}`, content);
       }
       removeAbsentFiles(join(target, ".agents", "amadeus", dir), destRel, new Set(rels), rec);
     } catch (e) {
