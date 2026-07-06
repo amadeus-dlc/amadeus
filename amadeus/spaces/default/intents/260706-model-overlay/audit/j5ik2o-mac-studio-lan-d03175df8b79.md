@@ -2276,3 +2276,21 @@
 **Details**: Scope: refactor, 8 stages completed
 
 ---
+
+## Error Logged
+**Timestamp**: 2026-07-06T08:28:26Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state --help
+**Error**: Unknown subcommand: --help. Valid: get, set, set-skeleton-stance, checkbox, count, advance, finalize, complete-workflow, gate-start, approve, reject, revise, skip, resume, acknowledge-compaction, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, park, unpark, declare-docs-only
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-06T08:28:35Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-utility
+**Command**: amadeus-utility
+**Error**: Usage: amadeus-utility <help|version|status|doctor|intent-birth|intent|space|space-create|codekb-path|detect|recompose|scope-change|config-change|set-status|detect-scope|resolve-env-scope|scope-table> [--project-dir <path>] [--scope <scope>] [--json]
+
+---

@@ -2,13 +2,19 @@
 
 ## 差分更新の記録（最新）
 
+- 解析時刻: 2026-07-06T08:40:00Z（UTC）
+- 対象コミット: 0075f931（origin/main = PR #564 merge 後）
+- 解析方式: 差分更新（1aed7eb1..0075f931 = PR #564 model overlay のみ = component-inventory / architecture / api-documentation へ外科的追記、eval 数 31→32 実測補正。#566 分は下の 260706-doctor-guidance の 08:30 更新が、#561/#563/#565 分は 260706-feature-diff の 07:58 更新が反映済みのため対象外へ補正 = rebase 時の時系列 union）
+- 実施 Intent: `260706-adr-vocab`（reverse-engineering、メイン直接処理）
+
+## 前回（2026-07-06T08:30:00Z、29f3122c..1aed7eb1 = doctor-guidance）の記録
+
 - 解析時刻: 2026-07-06T08:30:00Z（UTC）
 - 対象コミット: 1aed7eb1（origin/main = PR #566 merge 後）
 - 解析方式: 差分更新（29f3122c..1aed7eb1。並行 Intent 260706-feature-diff の 07:58 更新 = 9dd93f50..b452f4fb と一部重複し、本更新の実質増分は #566 = runtime-compile の path alternation + surface 自己修復 → architecture の hooks 行と api-documentation の surface 行へ追記。#565 の architecture skills 行への追記も本更新で実施 = feature-diff 側は code-structure / component-inventory を更新しており相補）
 - 実施 Intent: `260706-doctor-guidance`（reverse-engineering、メイン直接処理）
 
 ## 前回（2026-07-06T07:58:00Z、9dd93f50..b452f4fb = feature-diff）の記録
-
 - 解析時刻: 2026-07-06T07:58:00Z（UTC）
 - 対象コミット: b452f4fb（origin/main = PR #565 merge 後）
 - 解析方式: 差分更新（9dd93f50..b452f4fb = PR #559/#561/#563/#565 の 4 PR、非 amadeus 変更 115 ファイル）

@@ -464,5 +464,13 @@
     "scope": "refactor",
     "repos": [],
     "status": "complete"
+  },
+  {
+    "uuid": "019f368b-5578-7269-9b14-dbe9189a59b1",
+    "slug": "adr-vocab",
+    "dirName": "260706-adr-vocab",
+    "scope": "refactor",
+    "repos": [],
+    "status": "in_progress"
   }
 ]
