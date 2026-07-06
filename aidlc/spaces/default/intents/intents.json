@@ -333,5 +333,16 @@
     "scope": "refactor",
     "repos": [],
     "status": "complete"
+  },
+  {
+    "uuid": "019f34f9-6a57-7eb4-a4f0-f0e7524b0a9c",
+    "slug": "no-stub-lint",
+    "dirName": "260706-no-stub-lint",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      528
+    ]
   }
 ]
