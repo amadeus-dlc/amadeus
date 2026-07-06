@@ -512,5 +512,13 @@
     "scope": "refactor",
     "repos": [],
     "status": "complete"
+  },
+  {
+    "uuid": "019f36a1-1125-72a9-a77e-e9bc12b5803e",
+    "slug": "installer-versioning",
+    "dirName": "260706-installer-versioning",
+    "scope": "feature",
+    "repos": [],
+    "status": "complete"
   }
 ]

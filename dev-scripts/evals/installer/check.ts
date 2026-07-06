@@ -737,6 +737,257 @@ ok("FR-2.8 temp workspace removed", !existsSync(ws));
   }
 }
 
+// ---------------------------------------------------------------------------
+// FR(#543) B001 — versioned manifest + --version-info (walking skeleton).
+// Issue #543, Intent 260706-installer-versioning. Assertions added BEFORE the
+// implementation (TDD RED), per FR-5.1 (a)(e) and eval-case-design.md.
+// ---------------------------------------------------------------------------
+
+{
+  const wsV = makeWorkspace();
+  try {
+    const first = run(["bun", installerPath, "--target", wsV], root);
+    ok("FR543-a install exits 0", first.exitCode === 0);
+
+    const manifestPath = join(wsV, ".amadeus-install.json");
+    ok("FR543-a1 manifest exists", existsSync(manifestPath));
+
+    let manifest: { installedAt?: string; sourceCommit?: string; hashAlgorithm?: string; files?: Record<string, string> } = {};
+    let parsed = false;
+    try {
+      manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
+      parsed = true;
+    } catch {
+      parsed = false;
+    }
+    ok("FR543-a1 manifest parses as JSON", parsed);
+    ok("FR543-a1 manifest has exactly 4 keys", parsed && Object.keys(manifest).length === 4);
+    ok("FR543-a5 installedAt is ISO 8601 UTC", typeof manifest.installedAt === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(manifest.installedAt ?? ""));
+    ok("FR543-a5 sourceCommit is 40-hex or unknown", manifest.sourceCommit === "unknown" || /^[0-9a-f]{40}$/.test(manifest.sourceCommit ?? ""));
+    ok("FR543-a hashAlgorithm is sha256", manifest.hashAlgorithm === "sha256");
+
+    const files = manifest.files ?? {};
+    const fileKeys = Object.keys(files);
+    ok("FR543-a files is non-empty", fileKeys.length > 0);
+    ok("FR543-a4 files keys are sorted", JSON.stringify(fileKeys) === JSON.stringify([...fileKeys].sort()));
+    ok("FR543-a3 manifest excludes itself", !fileKeys.includes(".amadeus-install.json"));
+    ok("FR543-a3 manifest excludes backup dir", fileKeys.every((k) => !k.startsWith(".amadeus-install-backup/")));
+
+    // FR543-a2 — every recorded hash matches the real installed content.
+    const { createHash } = await import("node:crypto");
+    let hashMismatches = 0;
+    for (const [rel, expected] of Object.entries(files)) {
+      const abs = join(wsV, rel);
+      if (!existsSync(abs)) {
+        hashMismatches++;
+        continue;
+      }
+      const actual = createHash("sha256").update(readFileSync(abs)).digest("hex");
+      if (actual !== expected) hashMismatches++;
+    }
+    ok("FR543-a2 all recorded hashes match installed content", hashMismatches === 0, `${hashMismatches} mismatch(es) of ${fileKeys.length}`);
+    // Coverage spot: AMADEUS.md (post-transform) and a skills file are tracked.
+    ok("FR543-a3 AMADEUS.md tracked", fileKeys.includes("AMADEUS.md"));
+    ok("FR543-a3 an engine tool tracked", fileKeys.some((k) => k.startsWith(".agents/amadeus/tools/")));
+    ok("FR543-a3 a skills file tracked", fileKeys.some((k) => k.startsWith(".agents/skills/amadeus")));
+    ok("FR543-a3 settings.json tracked", fileKeys.includes(".claude/settings.json"));
+
+    // FR543-e — --version-info.
+    const vi = run(["bun", installerPath, "--target", wsV, "--version-info"], root);
+    ok("FR543-e1 version-info exits 0", vi.exitCode === 0);
+    const c8 = (manifest.sourceCommit ?? "").slice(0, 8) || "unknown";
+    ok("FR543-e1 version-info prints commit prefix", vi.stdout.includes(`installed commit ${manifest.sourceCommit === "unknown" ? "unknown" : c8}`));
+    ok("FR543-e1 version-info prints files tracked count", vi.stdout.includes(`${fileKeys.length} files tracked`));
+
+    // FR543-e4 — previous install found on second run.
+    const second = run(["bun", installerPath, "--target", wsV], root);
+    ok("FR543-e4 re-install exits 0", second.exitCode === 0);
+    ok("FR543-e4 previous install found line", second.stdout.includes("previous install found (commit "));
+  } finally {
+    rmSync(wsV, { recursive: true, force: true });
+  }
+
+  // FR543-e2 — manifest missing: exit 1 + fix hint on stderr.
+  const wsNo = makeWorkspace();
+  try {
+    const vi = run(["bun", installerPath, "--target", wsNo, "--version-info"], root);
+    ok("FR543-e2 version-info without manifest exits 1", vi.exitCode === 1);
+    ok("FR543-e2 no-manifest message on stderr", vi.stderr.includes("no install manifest found"));
+    ok("FR543-e2 fix hint present", vi.stderr.includes("fix:"));
+  } finally {
+    rmSync(wsNo, { recursive: true, force: true });
+  }
+
+  // FR543-e3 — --version-info without --target: usage error.
+  const alone = run(["bun", installerPath, "--version-info"], root);
+  ok("FR543-e3 version-info alone exits 1", alone.exitCode === 1);
+  ok("FR543-e3 version-info alone prints usage", alone.stderr.includes("Usage:"));
+
+  // FR543 corrupt-manifest path (§12a B001 finding 1): a broken
+  // .amadeus-install.json aborts BOTH the install and --version-info with an
+  // InstallError fix line, and is left untouched.
+  const wsCorrupt = makeWorkspace();
+  try {
+    writeFileSync(join(wsCorrupt, ".amadeus-install.json"), "{not json", "utf-8");
+    const inst = run(["bun", installerPath, "--target", wsCorrupt], root);
+    ok("FR543 corrupt manifest: install exits 1", inst.exitCode === 1);
+    ok("FR543 corrupt manifest: install prints fix", inst.stderr.includes("fix:") && inst.stderr.includes("cannot parse"));
+    ok("FR543 corrupt manifest: file untouched", readFileSync(join(wsCorrupt, ".amadeus-install.json"), "utf-8") === "{not json");
+    const vi = run(["bun", installerPath, "--target", wsCorrupt, "--version-info"], root);
+    ok("FR543 corrupt manifest: version-info exits 1", vi.exitCode === 1);
+    ok("FR543 corrupt manifest: version-info prints fix", vi.stderr.includes("fix:"));
+  } finally {
+    rmSync(wsCorrupt, { recursive: true, force: true });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// FR(#543) B002 — 3-way judge + backup-then-overwrite + obsolete handling.
+// Assertions added BEFORE the implementation (TDD RED), per FR-5.1
+// (b)(c)(d)(f)(g)(h)(i) + sec-1 and eval-case-design.md.
+// ---------------------------------------------------------------------------
+
+{
+  const ws = makeWorkspace();
+  try {
+    const first = run(["bun", installerPath, "--target", ws], root);
+    ok("FR543-B002 initial install exits 0", first.exitCode === 0);
+
+    const manifestPath = join(ws, ".amadeus-install.json");
+    const backupRoot = join(ws, ".amadeus-install-backup");
+
+    // b-1/b-2/f — customize a tracked engine file, re-run: backed up then
+    // overwritten, announced with matching counts.
+    const customizedRel = ".agents/amadeus/tools/amadeus-state.ts";
+    const customizedAbs = join(ws, customizedRel);
+    const distContent = readFileSync(customizedAbs, "utf-8");
+    writeFileSync(customizedAbs, "// customized by user\n", "utf-8");
+
+    const second = run(["bun", installerPath, "--target", ws], root);
+    ok("FR543-b re-install with customization exits 0", second.exitCode === 0);
+    ok("FR543-b file overwritten back to dist content", readFileSync(customizedAbs, "utf-8") === distContent);
+    ok("FR543-b2 summary header present", /amadeus-install: 1 customized file\(s\) backed up to \.amadeus-install-backup\//.test(second.stdout));
+    ok("FR543-b2 backed up listing line", second.stdout.includes(`backed up: ${customizedRel}`));
+    const backupDirs = existsSync(backupRoot) ? readdirSync(backupRoot) : [];
+    ok("FR543-b backup time-dir exists", backupDirs.length === 1);
+    const backedUpFile = join(backupRoot, backupDirs[0] ?? "", customizedRel);
+    ok("FR543-b backup content is the customized version", existsSync(backedUpFile) && readFileSync(backedUpFile, "utf-8") === "// customized by user\n");
+    // f — step detail carries the count.
+    ok("FR543-f step detail mentions backup count", /\[1\/5\] engine .*1 customized backed up/.test(second.stdout));
+
+    // g-1 — manifest still excludes the backup dir after a backup happened.
+    const m2 = JSON.parse(readFileSync(manifestPath, "utf-8")) as { files: Record<string, string> };
+    ok("FR543-g1 manifest excludes backup dir after backup", Object.keys(m2.files).every((k) => !k.startsWith(".amadeus-install-backup/")));
+
+    // c-1/d-1 — clean re-run: no backup lines, no new backup dirs, manifest stable.
+    const manifestBefore = readFileSync(manifestPath, "utf-8").replace(/"installedAt": "[^"]+"/, "");
+    const third = run(["bun", installerPath, "--target", ws], root);
+    ok("FR543-d idempotent re-run exits 0", third.exitCode === 0);
+    ok("FR543-c1 no backup lines on clean re-run", !third.stdout.includes("backed up"));
+    ok("FR543-d no new backup dirs", (existsSync(backupRoot) ? readdirSync(backupRoot) : []).length === 1);
+    const manifestAfter = readFileSync(manifestPath, "utf-8").replace(/"installedAt": "[^"]+"/, "");
+    ok("FR543-d manifest stable modulo installedAt", manifestBefore === manifestAfter);
+
+    // c-2 — delete a tracked file, re-run: restored + announced.
+    rmSync(customizedAbs, { force: true });
+    const fourth = run(["bun", installerPath, "--target", ws], root);
+    ok("FR543-c2 re-install after deletion exits 0", fourth.exitCode === 0);
+    ok("FR543-c2 file restored", existsSync(customizedAbs));
+    ok("FR543-c2 restored count line", /amadeus-install: 1 deleted file\(s\) restored \(per manifest\)/.test(fourth.stdout));
+
+    // h-1/h-2 — obsolete handling: a target-side file under a managed root
+    // that is absent from the dist and (h-1) customized per the recorded
+    // hash, or (h-2) recorded as unmodified. Simulate by planting files and
+    // matching manifest entries.
+    const obsoleteCustomRel = ".agents/amadeus/tools/zz-obsolete-custom.ts";
+    const obsoleteCleanRel = ".agents/amadeus/tools/zz-obsolete-clean.ts";
+    writeFileSync(join(ws, obsoleteCustomRel), "// user changed this\n", "utf-8");
+    writeFileSync(join(ws, obsoleteCleanRel), "// pristine obsolete\n", "utf-8");
+    const { createHash } = await import("node:crypto");
+    const m3 = JSON.parse(readFileSync(manifestPath, "utf-8")) as { files: Record<string, string>; [k: string]: unknown };
+    m3.files[obsoleteCustomRel] = "0".repeat(64); // recorded hash ≠ current → customized
+    m3.files[obsoleteCleanRel] = createHash("sha256").update("// pristine obsolete\n").digest("hex"); // recorded = current → unmodified
+    writeFileSync(manifestPath, JSON.stringify(m3, null, 2), "utf-8");
+
+    const fifth = run(["bun", installerPath, "--target", ws], root);
+    ok("FR543-h re-install exits 0", fifth.exitCode === 0);
+    // Count rule (§12a B002 finding 1): obsolete backups are announced in the
+    // summary ONLY — the copy-stage step details must not count them. This
+    // run has zero copy-stage customizations, so no step line may claim any.
+    ok("FR543-h step details exclude obsolete backups", !/\[\d\/5\].*customized backed up/.test(fifth.stdout));
+    ok("FR543-h1 customized obsolete removed", !existsSync(join(ws, obsoleteCustomRel)));
+    ok("FR543-h2 clean obsolete removed", !existsSync(join(ws, obsoleteCleanRel)));
+    const dirsAfterObsolete = readdirSync(backupRoot);
+    const newestDir = dirsAfterObsolete.sort().at(-1) ?? "";
+    ok("FR543-h1 customized obsolete backed up", existsSync(join(backupRoot, newestDir, obsoleteCustomRel)));
+    ok("FR543-h2 clean obsolete NOT backed up", !existsSync(join(backupRoot, newestDir, obsoleteCleanRel)));
+    ok("FR543-h obsolete inner-count line", /amadeus-install: 1 of the above is obsolete \(removed from the new distribution\)/.test(fifth.stdout));
+
+    // i-1 — global precedence rule: recorded hash wrong but current = dist →
+    // skipped (no backup). Simulates the mid-failure→rerun state.
+    const m4 = JSON.parse(readFileSync(manifestPath, "utf-8")) as { files: Record<string, string>; [k: string]: unknown };
+    m4.files[customizedRel] = "f".repeat(64); // stale recorded hash; current file = dist
+    writeFileSync(manifestPath, JSON.stringify(m4, null, 2), "utf-8");
+    const dirCountBefore = readdirSync(backupRoot).length;
+    const sixth = run(["bun", installerPath, "--target", ws], root);
+    ok("FR543-i rerun exits 0", sixth.exitCode === 0);
+    ok("FR543-i no backup when current equals dist (global precedence)", readdirSync(backupRoot).length === dirCountBefore && !sixth.stdout.includes("customized file(s) backed up"));
+
+    // sec-1 — hostile manifest path rejected before any use. Backslash is
+    // rejected too (belt-and-braces beyond the POSIX-only assumption).
+    const mBs = JSON.parse(readFileSync(manifestPath, "utf-8")) as { files: Record<string, string>; [k: string]: unknown };
+    mBs.files["evil\\path.txt"] = "0".repeat(64);
+    writeFileSync(manifestPath, JSON.stringify(mBs, null, 2), "utf-8");
+    const bsRun = run(["bun", installerPath, "--target", ws], root);
+    ok("FR543-sec1 backslash path exits 1", bsRun.exitCode === 1);
+    // restore a clean manifest before the traversal case
+    delete mBs.files["evil\\path.txt"];
+    writeFileSync(manifestPath, JSON.stringify(mBs, null, 2), "utf-8");
+    const m5 = JSON.parse(readFileSync(manifestPath, "utf-8")) as { files: Record<string, string>; [k: string]: unknown };
+    m5.files["../evil.txt"] = "0".repeat(64);
+    writeFileSync(manifestPath, JSON.stringify(m5, null, 2), "utf-8");
+    const seventh = run(["bun", installerPath, "--target", ws], root);
+    ok("FR543-sec1 hostile path exits 1", seventh.exitCode === 1);
+    ok("FR543-sec1 fix line present", seventh.stderr.includes("fix:"));
+    ok("FR543-sec1 nothing written outside target", !existsSync(join(ws, "..", "evil.txt")));
+  } finally {
+    rmSync(ws, { recursive: true, force: true });
+  }
+
+  // AD-6 — settings.json: user-added hook survives; customized settings is
+  // backed up before the merge is re-applied.
+  const wsS = makeWorkspace();
+  try {
+    const first = run(["bun", installerPath, "--target", wsS], root);
+    ok("FR543-AD6 initial install exits 0", first.exitCode === 0);
+    const settingsPath = join(wsS, ".claude", "settings.json");
+    const settings = JSON.parse(readFileSync(settingsPath, "utf-8")) as { hooks: Record<string, { matcher: string; hooks: { type: string; command: string }[] }[]>; [k: string]: unknown };
+    settings.hooks["SessionStart"] = settings.hooks["SessionStart"] ?? [];
+    settings.hooks["SessionStart"].push({ matcher: "", hooks: [{ type: "command", command: "echo user-own-hook" }] });
+    writeFileSync(settingsPath, JSON.stringify(settings, null, 2), "utf-8");
+    const second = run(["bun", installerPath, "--target", wsS], root);
+    ok("FR543-AD6 re-install exits 0", second.exitCode === 0);
+    const after = readFileSync(settingsPath, "utf-8");
+    ok("FR543-AD6 user hook preserved by merge", after.includes("user-own-hook"));
+    // A user-ADDED hook leaves merge(current) === current, so the global
+    // precedence rule correctly skips (no churn backup on every run).
+    ok("FR543-AD6 no backup when merge equals current", !second.stdout.includes("backed up: .claude/settings.json"));
+
+    // A user-REMOVED amadeus wiring entry makes merge(current) ≠ current:
+    // the customized settings is backed up, then the merge restores wiring.
+    const s2 = JSON.parse(readFileSync(settingsPath, "utf-8")) as { hooks: Record<string, { matcher: string; hooks: { type: string; command: string }[] }[]>; [k: string]: unknown };
+    s2.hooks["Stop"] = [];
+    writeFileSync(settingsPath, JSON.stringify(s2, null, 2), "utf-8");
+    const third = run(["bun", installerPath, "--target", wsS], root);
+    ok("FR543-AD6 re-install after wiring removal exits 0", third.exitCode === 0);
+    ok("FR543-AD6 customized settings backed up before re-merge", third.stdout.includes("backed up: .claude/settings.json"));
+    ok("FR543-AD6 wiring restored by merge", readFileSync(settingsPath, "utf-8").includes("amadeus-stop.ts"));
+    ok("FR543-AD6 user hook still preserved", readFileSync(settingsPath, "utf-8").includes("user-own-hook"));
+  } finally {
+    rmSync(wsS, { recursive: true, force: true });
+  }
+}
+
 if (failures > 0) {
   console.error(`installer eval: ${failures} failure(s)`);
   process.exit(1);
