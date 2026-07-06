@@ -38,7 +38,7 @@
 //      hook ALLOWED the turn to end rather than trapping it.
 // We assert on toolResults (verbatim tool stdout) + resultEvent + on-disk state,
 // NEVER on assistantText (the LLM's reworded prose). The driver writes an ndjson
-// trace to tests/logs/<stamp>/sdk-drive-<pid>.ndjson when AIDLC_TEST_DEBUG=true.
+// trace to tests/logs/<stamp>/sdk-drive-<pid>.ndjson when AMADEUS_TEST_DEBUG=true.
 //
 // It SPENDS TOKENS: driveAidlc drives the real conductor on Opus/Bedrock. Gated
 // PURELY on the claude CLI (calling driveAidlc marks the file SDK-dependent via
@@ -55,7 +55,7 @@ import {
 } from "../harness/fixtures.ts";
 import { driveAidlc, readStateField } from "../harness/sdk-drive.ts";
 
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "1200", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "1200", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 1200) * 1000;
 const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
 

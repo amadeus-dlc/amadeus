@@ -7,8 +7,8 @@
 // Mechanism: none. The subject is a STATIC shipped file — the orchestrator
 // SKILL.md (dist/claude/.claude/skills/amadeus/SKILL.md). The .sh did 15
 // grep / grep -v assertions against its bytes; the equal-or-stronger TS twin
-// reads the SAME file in-process (via AIDLC_SRC from tests/harness/fixtures.ts,
-// the TS port of fixtures.sh's $AIDLC_SRC) and asserts on its content. No
+// reads the SAME file in-process (via AMADEUS_SRC from tests/harness/fixtures.ts,
+// the TS port of fixtures.sh's $AMADEUS_SRC) and asserts on its content. No
 // spawn, no LLM, no tokens — a structural file-content contract.
 //
 // Subject / history (verbatim from the .sh header, t41:2-22):
@@ -53,11 +53,11 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
-// The .sh resolved $AIDLC_SRC/skills/amadeus/SKILL.md from fixtures.sh; AIDLC_SRC
+// The .sh resolved $AMADEUS_SRC/skills/amadeus/SKILL.md from fixtures.sh; AMADEUS_SRC
 // here is the TS port of that same path (fixtures.ts:42).
-const SKILL_PATH = join(AIDLC_SRC, "skills", "aidlc", "SKILL.md");
+const SKILL_PATH = join(AMADEUS_SRC, "skills", "amadeus", "SKILL.md");
 const SKILL = readFileSync(SKILL_PATH, "utf-8");
 
 describe("t41 SKILL.md forwarding-loop contract (migrated from t41-jump-flag-validation.sh, plan 15)", () => {

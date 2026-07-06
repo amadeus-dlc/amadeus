@@ -103,7 +103,7 @@ function readAudit(p: string): string {
 function runInit(proj: string): void {
   const res = spawnSync(BUN, [UTIL, "init", "--scope", "bugfix", "--project-dir", proj], {
     encoding: "utf-8",
-    env: { ...process.env, AIDLC_WORKFLOW_INTENT: "bugfix parity test" },
+    env: { ...process.env, AMADEUS_WORKFLOW_INTENT: "bugfix parity test" },
   });
   if ((res.status ?? -1) !== 0) {
     throw new Error(`init failed (status ${res.status}): ${res.stdout ?? ""}${res.stderr ?? ""}`);

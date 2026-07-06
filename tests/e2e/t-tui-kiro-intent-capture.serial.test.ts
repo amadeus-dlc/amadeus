@@ -40,7 +40,7 @@
 //     off it; audit has STAGE_COMPLETED for intent-capture.
 //
 // COST: spends real Kiro credits (minutes of LLM turns on the `auto` model).
-// Gated behind AIDLC_KIRO_TUI_LIVE=1; tmux / kiro-cli / kiro auth / dist-kiro
+// Gated behind AMADEUS_KIRO_TUI_LIVE=1; tmux / kiro-cli / kiro auth / dist-kiro
 // absence each SKIP with a reason — never a hollow pass. macOS/Linux only
 // (tmux backend); there is no Windows kiro-cli path in this suite today.
 //
@@ -63,7 +63,7 @@ import { cleanupTuiProject, KIRO_SRC, setupTuiProject } from "../harness/tui-fix
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const IS_WIN = os.platform() === "win32";
 
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "2400", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "2400", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
 
 interface Run {
@@ -105,8 +105,8 @@ const IDLE_PATTERN = "ask a question or describe a task";
 
 // ABSENT / opt-in gating, token guard first (mirrors the Claude twin).
 function skipReason(): string | null {
-  if (process.env.AIDLC_KIRO_TUI_LIVE !== "1") {
-    return "set AIDLC_KIRO_TUI_LIVE=1 to run the live Kiro intent-capture journey (uses Kiro credits)";
+  if (process.env.AMADEUS_KIRO_TUI_LIVE !== "1") {
+    return "set AMADEUS_KIRO_TUI_LIVE=1 to run the live Kiro intent-capture journey (uses Kiro credits)";
   }
   if (IS_WIN) return "kiro TUI journey is tmux-backend only (no Windows kiro-cli path)";
   if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
@@ -191,9 +191,9 @@ describe("t-tui-kiro-intent-capture (numbered-prose gates on the shipped dist/ki
           drive(["send", "--session", session, "--keys", "Down", "--no-enter"]);
           drive(["send", "--session", session, "--keys", "Enter", "--no-enter"]);
         }
-        // Wait for the idle input footer + the aidlc agent in the statusbar —
+        // Wait for the idle input footer + the amadeus agent in the statusbar —
         // proves the workspace default-agent activation on the shipped tree.
-        expect(waitFor(session, "aidlc", 60000, 400)).toBe(true);
+        expect(waitFor(session, "amadeus", 60000, 400)).toBe(true);
         expect(waitFor(session, IDLE_PATTERN, 60000, 600)).toBe(true);
 
         // --- submit the stage-jump with the build description -----------------

@@ -20,7 +20,7 @@
 //   - tests/fixtures/state-mid-ideation.md          (FIXTURES_DIR-relative)
 //   - tests/fixtures/state-initialization-done.md    (FIXTURES_DIR-relative)
 //   - dist/claude/.claude/knowledge/amadeus-shared/state-template.md  (the TEMPLATE
-//     the .sh resolved via `cd .../amadeus-shared && pwd`/state-template.md, AIDLC_SRC-relative)
+//     the .sh resolved via `cd .../amadeus-shared && pwd`/state-template.md, AMADEUS_SRC-relative)
 //
 // The .sh resolved the template path but never asserted against it directly
 // (it spot-checked the fixtures and noted in a comment that the headings ARE
@@ -53,7 +53,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC, FIXTURES_DIR } from "../harness/fixtures.ts";
+import { AMADEUS_SRC, FIXTURES_DIR } from "../harness/fixtures.ts";
 
 const MID = readFileSync(join(FIXTURES_DIR, "state-mid-ideation.md"), "utf-8");
 const INIT = readFileSync(
@@ -64,7 +64,7 @@ const INIT = readFileSync(
 // dist/claude/.claude/knowledge/amadeus-shared/state-template.md — the real
 // structure the fixtures are meant to mirror.
 const TEMPLATE = readFileSync(
-  join(AIDLC_SRC, "knowledge", "amadeus-shared", "state-template.md"),
+  join(AMADEUS_SRC, "knowledge", "amadeus-shared", "state-template.md"),
   "utf-8",
 );
 

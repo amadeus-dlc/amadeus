@@ -6,8 +6,8 @@
 // Mechanism: none. The .sh shelled out to `wc -l` against a static shipped
 // file; there is no tool / process seam under test — the subject IS the line
 // count of dist/claude/.claude/skills/amadeus/SKILL.md. So the twin reads that
-// file in-process (resolved from the harness's AIDLC_SRC, the same
-// dist/claude/.claude root the .sh reached via $AIDLC_SRC) and counts lines.
+// file in-process (resolved from the harness's AMADEUS_SRC, the same
+// dist/claude/.claude root the .sh reached via $AMADEUS_SRC) and counts lines.
 // Zero LLM, zero tokens, zero subprocess.
 //
 // Subject under test (the shipped orchestrator skill):
@@ -39,11 +39,11 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
-// AIDLC_SRC = <repo>/dist/claude/.claude — the same root the .sh reached via
-// $AIDLC_SRC. The orchestrator skill sits at skills/amadeus/SKILL.md beneath it.
-const SKILL_MD = join(AIDLC_SRC, "skills", "aidlc", "SKILL.md");
+// AMADEUS_SRC = <repo>/dist/claude/.claude — the same root the .sh reached via
+// $AMADEUS_SRC. The orchestrator skill sits at skills/amadeus/SKILL.md beneath it.
+const SKILL_MD = join(AMADEUS_SRC, "skills", "amadeus", "SKILL.md");
 
 // The Agent Skills spec ceiling the .sh pinned via `assert_lt LINES 501`
 // (strict-less-than 501 === `<= 500` for an integer line count).

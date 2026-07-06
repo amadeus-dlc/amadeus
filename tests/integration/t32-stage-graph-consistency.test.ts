@@ -52,12 +52,12 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 import { parseStageFrontmatter } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
-const SKILL = join(AIDLC_SRC, "skills", "aidlc", "SKILL.md");
-const STAGES_DIR = join(AIDLC_SRC, "amadeus-common", "stages");
-const AGENTS_DIR = join(AIDLC_SRC, "agents");
+const SKILL = join(AMADEUS_SRC, "skills", "amadeus", "SKILL.md");
+const STAGES_DIR = join(AMADEUS_SRC, "amadeus-common", "stages");
+const AGENTS_DIR = join(AMADEUS_SRC, "agents");
 
 /** A parsed Stage Graph table row (the columns the .sh read off `|`-split). */
 interface GraphRow {

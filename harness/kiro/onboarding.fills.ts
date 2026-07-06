@@ -31,7 +31,7 @@ This is the same AI-DLC core that ships to every harness — one deterministic e
 
 - Approval gates and questions render as **numbered prose options** (no structured-question widget); the questions FILE with \`[Answer]:\` tags remains the source of truth.
 - There is **no statusline** and **no welcome message**; use \`/amadeus --status\` and the progress lines at gates.
-- Construction swarm runs as **subagent fan-out only** (\`AIDLC_USE_SWARM=1\` is a loud no-op).
+- Construction swarm runs as **subagent fan-out only** (\`AMADEUS_USE_SWARM=1\` is a loud no-op).
 - Session-end and pre-compaction audit events (\`SESSION_ENDED\`, \`SESSION_COMPACTED\`) are not emitted — Kiro has no hooks for those moments.
 - **MCP servers**: none ship, and the Kiro MCP config mechanism is not configured here (the Claude distribution ships five; Kiro ships zero today).
 - A workflow's \`aidlc/\` workspace tree is harness-neutral: a project can move between Claude Code and Kiro CLI installs (supported but untested — keep both \`.claude/\` and \`.kiro/\` in sync via the framework's packaging if you do this).

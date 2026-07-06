@@ -56,16 +56,16 @@ import { fileURLToPath } from "node:url";
 const __FILE_DIR = dirname(fileURLToPath(import.meta.url));
 const TESTS_DIR = __FILE_DIR;
 
-// ENV-VAR SEAMS (mirrors amadeus-graph.ts's AIDLC_EXPORT_FIXTURE pattern, :1172).
+// ENV-VAR SEAMS (mirrors amadeus-graph.ts's AMADEUS_EXPORT_FIXTURE pattern, :1172).
 // Tests point these at a temp tree to PROVE the ratchet: copy the shipped
 // source, inject a fake new audit event / subcommand, and run `--check` against
 // the temp roots + temp committed baselines without mutating real source.
-//   AIDLC_COVERAGE_SRC_ROOT  — repo root containing dist/claude/ (source)
-//   AIDLC_COVERAGE_TESTS_DIR — dir containing the test tiers to scan for claims
-//   AIDLC_COVERAGE_REGISTRY  — committed .coverage-registry.json to diff against
-//   AIDLC_COVERAGE_RATCHET   — committed .coverage-ratchet.json to ratchet against
-const REPO_ROOT = process.env.AIDLC_COVERAGE_SRC_ROOT ?? join(TESTS_DIR, "..");
-const CLAIMS_TESTS_DIR = process.env.AIDLC_COVERAGE_TESTS_DIR ?? TESTS_DIR;
+//   AMADEUS_COVERAGE_SRC_ROOT  — repo root containing dist/claude/ (source)
+//   AMADEUS_COVERAGE_TESTS_DIR — dir containing the test tiers to scan for claims
+//   AMADEUS_COVERAGE_REGISTRY  — committed .coverage-registry.json to diff against
+//   AMADEUS_COVERAGE_RATCHET   — committed .coverage-ratchet.json to ratchet against
+const REPO_ROOT = process.env.AMADEUS_COVERAGE_SRC_ROOT ?? join(TESTS_DIR, "..");
+const CLAIMS_TESTS_DIR = process.env.AMADEUS_COVERAGE_TESTS_DIR ?? TESTS_DIR;
 const TOOLS_DIR = join(
   REPO_ROOT,
   "dist", "claude",
@@ -79,7 +79,7 @@ const LEGACY_STAGES_DIR = join(
   "dist", "claude",
   ".claude",
   "skills",
-  "aidlc",
+  "amadeus",
   "stages",
 );
 const COMMON_STAGES_DIR = join(
@@ -100,9 +100,9 @@ const LIB_PATH = join(TOOLS_DIR, "amadeus-lib.ts");
 const GRAPH_PATH = join(TOOLS_DIR, "amadeus-graph.ts");
 
 const REGISTRY_PATH =
-  process.env.AIDLC_COVERAGE_REGISTRY ?? join(TESTS_DIR, ".coverage-registry.json");
+  process.env.AMADEUS_COVERAGE_REGISTRY ?? join(TESTS_DIR, ".coverage-registry.json");
 const RATCHET_PATH =
-  process.env.AIDLC_COVERAGE_RATCHET ?? join(TESTS_DIR, ".coverage-ratchet.json");
+  process.env.AMADEUS_COVERAGE_RATCHET ?? join(TESTS_DIR, ".coverage-ratchet.json");
 // tests/coverage-exclusions.json is reviewer-facing documentation of legit
 // L-CODE exclusions (import.meta.main shims, process.exit terminals, external-
 // binary spawn sites). This UNIT-surface generator does not read it — units are

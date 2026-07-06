@@ -40,13 +40,13 @@ import {
   stateFilePath,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const HOOK = join(AIDLC_SRC, "hooks", "amadeus-statusline.ts");
+const HOOK = join(AMADEUS_SRC, "hooks", "amadeus-statusline.ts");
 
 let proj: string;
 

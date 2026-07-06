@@ -34,8 +34,8 @@ describe("t152 Windows portability guard", () => {
 
   test("run-all.ps1 runs --all through Bun and forces live Windows TUI env", () => {
     const ps = readFileSync(join(WINDOWS, "run-all.ps1"), "utf8");
-    expect(ps).toContain('$env:AIDLC_NODE_BIN = $NodeExe');
-    expect(ps).toContain('$env:AIDLC_TUI_LIVE = "1"');
+    expect(ps).toContain('$env:AMADEUS_NODE_BIN = $NodeExe');
+    expect(ps).toContain('$env:AMADEUS_TUI_LIVE = "1"');
     expect(ps).toContain('-ArgumentList @("tests/run-tests.ts", "--all", "--debug", "-P", "$Parallel")');
     expect(ps).toContain("$Runner = Start-Process");
     expect(ps).toContain("exit $Runner.ExitCode");
@@ -65,7 +65,7 @@ describe("t152 Windows portability guard", () => {
     }
     expect(read("tests/harness/windows/ssm-run.ts")).toContain("--stack-name");
     expect(read("tests/harness/windows/ssm-run.ts")).toContain("executionTimeout");
-    expect(read("tests/harness/windows/sync.ts")).toContain("AIDLC_WINDOWS_STACK_NAME");
+    expect(read("tests/harness/windows/sync.ts")).toContain("AMADEUS_WINDOWS_STACK_NAME");
   });
 
   test("Windows path separators are normalized at harness and sensor boundaries", () => {

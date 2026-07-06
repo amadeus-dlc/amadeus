@@ -75,10 +75,10 @@ import { driveAidlc, readAuditEvents, readAuditText } from "../harness/sdk-drive
 
 // ---------------------------------------------------------------------------
 // Timeout budget. Explicit init on Opus/Bedrock is a few minutes; honour the
-// AIDLC_TEST_TIMEOUT convention. The driver aborts ~15s before bun's per-test
+// AMADEUS_TEST_TIMEOUT convention. The driver aborts ~15s before bun's per-test
 // cap so a stuck run surfaces a partial DriveResult to diagnose.
 // ---------------------------------------------------------------------------
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "600", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "600", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 600) * 1000;
 const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
 

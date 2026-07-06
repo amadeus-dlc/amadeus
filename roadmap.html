@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AI-DLC Workflows 2.0 — Roadmap &amp; Gaps</title>
+<title>Amadeus-DLC Workflows 1.0 — Roadmap &amp; Gaps</title>
 <style>
   :root {
     --fg: #0f172a;
@@ -196,17 +196,17 @@
   <!-- HERO -->
   <div class="hero">
     <p class="eyebrow">North Star · Functional Goals</p>
-    <h1>AI-DLC Workflows 2.0 — Roadmap &amp; Gaps</h1>
-    <p class="lead">Delivery against the seven 2.0 North Star goals — organized as a <b>semver release ladder</b>:
-    the in-flight hardening lands on the <code style="background:rgba(255,255,255,.18);color:#fff">2.0.x</code> patch line,
-    and <b>each major feature steps the minor</b> (<code style="background:rgba(255,255,255,.18);color:#fff">2.x.0</code>).
-    2.0 ships as <b>GA Preview</b>; <b>full GA lands at 2.3.0</b>, once per-intent workspace, adaptive workflows, and reviewer-as-
+    <h1>Amadeus-DLC Workflows 1.0 — Roadmap &amp; Gaps</h1>
+    <p class="lead">Delivery against the seven 1.0 North Star goals — organized as a <b>semver release ladder</b>:
+    the in-flight hardening lands on the <code style="background:rgba(255,255,255,.18);color:#fff">1.0.x</code> patch line,
+    and <b>each major feature steps the minor</b> (<code style="background:rgba(255,255,255,.18);color:#fff">1.x.0</code>).
+    1.0 ships as <b>GA Preview</b>; <b>full GA lands at 1.3.0</b>, once per-intent workspace, adaptive workflows, and reviewer-as-
     workflows are all in place. The North Star serves two needs at once: low-effort configurability for customers, and cross-harness reusability
     for us — one hand-authored <code style="background:rgba(255,255,255,.18);color:#fff">core/</code>, projected to Claude, Kiro CLI, Kiro IDE, and Codex.</p>
     <div class="chips">
-      <span class="chip">GA Preview <b>v2 @ 2.0.2</b></span>
-      <span class="chip">Next minor <b>2.1.0 — per-intent workspace</b></span>
-      <span class="chip">Full GA <b>2.3.0</b></span>
+      <span class="chip">GA Preview <b>v1 @ 1.0.2</b></span>
+      <span class="chip">Next minor <b>1.1.0 — per-intent workspace</b></span>
+      <span class="chip">Full GA <b>1.3.0</b></span>
       <span class="chip">Harnesses <b>Claude · Kiro CLI · Kiro IDE · Codex</b></span>
       <span class="chip">32 stages · 13 agents · 9 scopes · 4 sensors</span>
     </div>
@@ -215,8 +215,8 @@
   <!-- LEGEND -->
   <h2 class="section">Status legend</h2>
   <div class="legend">
-    <div class="card"><span class="badge shipped"><span class="d"></span>Shipped</span><span class="txt"><b>On the v2 branch today</b><span>Merged and live in <code>core/</code>.</span></span></div>
-    <div class="card"><span class="badge inflight"><span class="d"></span>In flight</span><span class="txt"><b>Active branch / worktree / PR</b><span>Code exists, but not yet on <code>v2</code>.</span></span></div>
+    <div class="card"><span class="badge shipped"><span class="d"></span>Shipped</span><span class="txt"><b>On the v1 branch today</b><span>Merged and live in <code>core/</code>.</span></span></div>
+    <div class="card"><span class="badge inflight"><span class="d"></span>In flight</span><span class="txt"><b>Active branch / worktree / PR</b><span>Code exists, but not yet on <code>v1</code>.</span></span></div>
     <div class="card"><span class="badge partial"><span class="d"></span>Partial</span><span class="txt"><b>Foundation shipped</b><span>The North Star intent is not fully met.</span></span></div>
     <div class="card"><span class="badge planned"><span class="d"></span>Planned</span><span class="txt"><b>Designed or filed only</b><span>No code built yet.</span></span></div>
   </div>
@@ -228,67 +228,67 @@
     <thead><tr><th>Version</th><th>Major feature</th><th>Goal(s)</th><th>Status</th></tr></thead>
     <tbody>
       <tr>
-        <td><span class="ver patch">2.0.0–2.0.2</span></td>
-        <td><span class="feat">2.0 GA Preview</span><span class="desc">Reviewer mechanism · multi-harness <code>core/</code> · 13 agents</span></td>
+        <td><span class="ver patch">1.0.0–1.0.2</span></td>
+        <td><span class="feat">1.0 GA Preview</span><span class="desc">Reviewer mechanism · multi-harness <code>core/</code> · 13 agents</span></td>
         <td>1, 4</td><td><span class="badge shipped"><span class="d"></span>Shipped</span></td>
       </tr>
       <tr>
-        <td><span class="ver patch">2.0.x</span></td>
+        <td><span class="ver patch">1.0.x</span></td>
         <td><span class="feat">Hardening</span><span class="desc">Reviewer harness wiring · field validation · stop-hook integrity</span></td>
         <td>1, 2, 4, 5</td><td><span class="badge inflight"><span class="d"></span>In flight</span></td>
       </tr>
       <tr class="highlight">
-        <td><span class="ver patch">2.1.0</span></td>
+        <td><span class="ver patch">1.1.0</span></td>
         <td><span class="feat">Per-intent workspace</span><span class="desc">Spaces · intents · multi-repo · space-level knowledge</span></td>
         <td>7</td><td><span class="badge inflight"><span class="d"></span>In flight</span></td>
       </tr>
       <tr class="highlight">
-        <td><span class="ver now">2.2.0</span></td>
-        <td><span class="feat">Adaptive workflows</span><span class="desc">Dynamic stage composition (the composer under /amadeus) · scale-in triage · in-flight recompose (per-unit iteration landed in 2.1.2)</span></td>
+        <td><span class="ver now">1.2.0</span></td>
+        <td><span class="feat">Adaptive workflows</span><span class="desc">Dynamic stage composition (the composer under /amadeus) · scale-in triage · in-flight recompose (per-unit iteration landed in 1.1.2)</span></td>
         <td>3</td><td><span class="badge shipped"><span class="d"></span>Shipped</span></td>
       </tr>
       <tr>
-        <td><span class="ver patch">2.3.0</span></td>
+        <td><span class="ver patch">1.3.0</span></td>
         <td><span class="feat">Reviewer-as-verifier <span class="ver now">Full GA</span></span><span class="desc">Domain-aware validation tools · token budget · adversarial framing; completes the GA bar (per-intent + adaptive + reviewer)</span></td>
         <td>4</td><td><span class="badge inflight"><span class="d"></span>In flight</span></td>
       </tr>
       <tr>
-        <td><span class="ver patch">2.4.0</span></td>
+        <td><span class="ver patch">1.4.0</span></td>
         <td><span class="feat">Three-role ensemble</span><span class="desc">Owner → Contributor → Reviewer · configurable collaboration patterns</span></td>
         <td>1</td><td><span class="badge planned"><span class="d"></span>Planned</span></td>
       </tr>
       <tr>
-        <td><span class="ver patch">2.5.0</span></td>
+        <td><span class="ver patch">1.5.0</span></td>
         <td><span class="feat">Governed cyclic flows</span><span class="desc">Cross-stage backward edges</span></td>
         <td>5</td><td><span class="badge planned"><span class="d"></span>Planned</span></td>
       </tr>
       <tr>
-        <td><span class="ver patch">2.6.0</span></td>
+        <td><span class="ver patch">1.6.0</span></td>
         <td><span class="feat">Progressive enrichment</span><span class="desc">In-place artefact enrichment · ADRs</span></td>
         <td>6</td><td><span class="badge planned"><span class="d"></span>Planned</span></td>
       </tr>
     </tbody>
   </table>
-  <div class="card note"><span class="label">Versioning convention</span>Per <code>AGENTS.md</code> changelog policy, patch versions accumulate through a release-prep cycle and a minor cut consolidates them. Here <code>2.0.x</code> carries the current hardening; <code>2.1.0</code> is the first <i>major feature</i> cut, and each subsequent major feature gets its own <code>2.x.0</code>. <b>2.0 is GA Preview; full GA is declared at <code>2.3.0</code></b>, the point at which per-intent workspace (2.1.0), adaptive workflows (2.2.0), and reviewer-as-verifier (2.3.0) are all in place. Version assignments are a planning proposal, not yet reflected in <code>core/tools/amadeus-version.ts</code>.</div>
+  <div class="card note"><span class="label">Versioning convention</span>Per <code>AGENTS.md</code> changelog policy, patch versions accumulate through a release-prep cycle and a minor cut consolidates them. Here <code>1.0.x</code> carries the current hardening; <code>1.1.0</code> is the first <i>major feature</i> cut, and each subsequent major feature gets its own <code>1.x.0</code>. <b>1.0 is GA Preview; full GA is declared at <code>1.3.0</code></b>, the point at which per-intent workspace (1.1.0), adaptive workflows (1.2.0), and reviewer-as-verifier (1.3.0) are all in place. Version assignments are a planning proposal, not yet reflected in <code>core/tools/amadeus-version.ts</code>.</div>
 
   <!-- SCORECARD -->
   <h2 class="section">Goal → version map</h2>
   <table class="score">
     <thead><tr><th>#</th><th>North Star goal</th><th>Status</th><th>Lands in</th></tr></thead>
     <tbody>
-      <tr><td class="num">1</td><td><a href="#g1">Mimic what we practice in the real world</a></td><td><span class="badge partial"><span class="d"></span>Partial</span></td><td><span class="ver patch">2.0.x</span> <span class="ver">2.4.0</span></td></tr>
-      <tr><td class="num">2</td><td><a href="#g2">Customization of behaviour</a></td><td><span class="badge shipped"><span class="d"></span>Shipped</span></td><td><span class="ver patch">2.0.x</span></td></tr>
-      <tr><td class="num">3</td><td><a href="#g3">Adaptiveness of workflows</a></td><td><span class="badge shipped"><span class="d"></span>Shipped</span></td><td><span class="ver now">2.2.0</span></td></tr>
-      <tr><td class="num">4</td><td><a href="#g4">Verifier as a true adversary</a></td><td><span class="badge partial"><span class="d"></span>Partial</span> <span class="badge inflight"><span class="d"></span>In flight</span></td><td><span class="ver patch">2.0.x</span> <span class="ver patch">2.3.0</span></td></tr>
-      <tr><td class="num">5</td><td><a href="#g5">Support for cyclic, directional flows</a></td><td><span class="badge partial"><span class="d"></span>Partial</span></td><td><span class="ver patch">2.0.x</span> <span class="ver">2.5.0</span></td></tr>
-      <tr><td class="num">6</td><td><a href="#g6">Preserve artefact traceability</a></td><td><span class="badge partial"><span class="d"></span>Partial</span></td><td><span class="ver">2.6.0</span></td></tr>
-      <tr><td class="num">7</td><td><a href="#g7">Organizational, not project-local, repository</a></td><td><span class="badge inflight"><span class="d"></span>In flight</span></td><td><span class="ver patch">2.1.0</span></td></tr>
+      <tr><td class="num">1</td><td><a href="#g1">Mimic what we practice in the real world</a></td><td><span class="badge partial"><span class="d"></span>Partial</span></td><td><span class="ver patch">1.0.x</span> <span class="ver">1.4.0</span></td></tr>
+      <tr><td class="num">2</td><td><a href="#g2">Customization of behaviour</a></td><td><span class="badge shipped"><span class="d"></span>Shipped</span></td><td><span class="ver patch">1.0.x</span></td></tr>
+      <tr><td class="num">3</td><td><a href="#g3">Adaptiveness of workflows</a></td><td><span class="badge shipped"><span class="d"></span>Shipped</span></td><td><span class="ver now">1.2.0</span></td></tr>
+      <tr><td class="num">4</td><td><a href="#g4">Verifier as a true adversary</a></td><td><span class="badge partial"><span class="d"></span>Partial</span> <span class="badge inflight"><span class="d"></span>In flight</span></td><td><span class="ver patch">1.0.x</span> <span class="ver patch">1.3.0</span></td></tr>
+      <tr><td class="num">5</td><td><a href="#g5">Support for cyclic, directional flows</a></td><td><span class="badge partial"><span class="d"></span>Partial</span></td><td><span class="ver patch">1.0.x</span> <span class="ver">1.5.0</span></td></tr>
+      <tr><td class="num">6</td><td><a href="#g6">Preserve artefact traceability</a></td><td><span class="badge partial"><span class="d"></span>Partial</span></td><td><span class="ver">1.6.0</span></td></tr>
+      <tr><td class="num">7</td><td><a href="#g7">Organizational, not project-local, repository</a></td><td><span class="badge inflight"><span class="d"></span>In flight</span></td><td><span class="ver patch">1.1.0</span></td></tr>
     </tbody>
   </table>
 
   <!-- GOALS -->
   <h2 class="section">The seven goals</h2>
-  <p class="lede">Each goal lists what is shipped on <code>v2</code>, what is in flight, and the residual gap to the North Star — with source citations.</p>
+  <p class="lede">Each goal lists what is shipped on <code>v1</code>, what is in flight, and the residual gap to the North Star — with source citations.</p>
 
   <!-- GOAL 1 -->
   <div class="goal" id="g1">
@@ -297,7 +297,7 @@
 
     <p style="margin:0 0 6px; color:#475569; font-size:14px;">The three roles map almost one-to-one onto fields that already exist on every stage:</p>
     <table class="map">
-      <thead><tr><th>North Star role</th><th>v2 mechanism</th><th>Example</th></tr></thead>
+      <thead><tr><th>North Star role</th><th>v1 mechanism</th><th>Example</th></tr></thead>
       <tbody>
         <tr><td><b>Owner</b> (PM)</td><td><code>lead_agent</code> — writes the primary artifact</td><td><span class="mono">application-design → architect-agent</span></td></tr>
         <tr><td><b>Collaborators</b> (Devs, QA)</td><td><code>support_agents[]</code> — added perspectives</td><td><span class="mono">feasibility → aws-platform + compliance</span></td></tr>
@@ -320,7 +320,7 @@
       </ul>
     </div>
     <div class="lane">
-      <h4><span class="d gap"></span>Gap to North Star <span class="ver">2.4.0</span></h4>
+      <h4><span class="d gap"></span>Gap to North Star <span class="ver">1.4.0</span></h4>
       <ul class="items">
         <li class="l-plan"><b>Collaborators aren't independent contributors.</b> On <code>inline</code> mode (every multi-agent stage shipped), a support agent is "a voice you adopt, not a subagent you dispatch" — one model speaking in multiple registers, not separate participants reasoning independently.</li>
         <li class="l-plan"><b>The collaboration pattern isn't a configurable knob.</b> The shape is fixed (lead → inline support → optional reviewer loop); "pipeline / swarm / review-loop / mob" is not a per-stage selectable ensemble model.</li>
@@ -363,9 +363,9 @@
     <div class="lane">
       <h4><span class="d gap"></span>Gap to North Star</h4>
       <ul class="items">
-        <li class="l-ship"><b>Dynamic stage composition</b> shipped in 2.2.0: the composer agent under <code>/amadeus</code> reads the task and proposes the EXECUTE/SKIP grid (front, report, and in-flight recompose), human-gated with a strict dependency validator. <span class="src">core/agents/amadeus-composer-agent.md · amadeus-orchestrate.ts (compose dispatch) · amadeus-utility.ts (recompose)</span></li>
-        <li class="l-ship"><b>Scale-in from an external report</b> shipped in 2.2.0: <code>/amadeus compose --report &lt;path&gt;</code> triages findings into auto-fixable vs human-decision and routes to a compact fix-and-ship grid.</li>
-        <li class="l-ship">Per-unit iteration landed in 2.1.2 (engine-driven <code>for_each</code> loop).</li>
+        <li class="l-ship"><b>Dynamic stage composition</b> shipped in 1.2.0: the composer agent under <code>/amadeus</code> reads the task and proposes the EXECUTE/SKIP grid (front, report, and in-flight recompose), human-gated with a strict dependency validator. <span class="src">core/agents/amadeus-composer-agent.md · amadeus-orchestrate.ts (compose dispatch) · amadeus-utility.ts (recompose)</span></li>
+        <li class="l-ship"><b>Scale-in from an external report</b> shipped in 1.2.0: <code>/amadeus compose --report &lt;path&gt;</code> triages findings into auto-fixable vs human-decision and routes to a compact fix-and-ship grid.</li>
+        <li class="l-ship">Per-unit iteration landed in 1.1.2 (engine-driven <code>for_each</code> loop).</li>
         <li class="l-plan">Boundary auto-assessment: the composer runs when INVOKED (or offered on a cold start); the engine does not yet self-assess at every stage boundary whether to propose a recompose. Deliberate: mid-flow re-shaping stays human-initiated.</li>
       </ul>
     </div>
@@ -390,7 +390,7 @@
       </ul>
     </div>
     <div class="lane">
-      <h4><span class="d gap"></span>Gap to North Star <span class="ver patch">2.2.0</span></h4>
+      <h4><span class="d gap"></span>Gap to North Star <span class="ver patch">1.2.0</span></h4>
       <ul class="items">
         <li class="l-plan"><b>Budget by tokens, not just iterations.</b> Today the cap is iteration count; North Star calls for a token/iteration budget.</li>
         <li class="l-plan"><b>Reviewer runs domain-aware validation tools</b> (validate-domain-model / entities / rules) against explicit contracts &amp; schemas — designed, not built. <span class="src">wip/unified-feature-requirements.md (Feature 2)</span></li>
@@ -411,7 +411,7 @@
       </ul>
     </div>
     <div class="lane">
-      <h4><span class="d fly"></span>In flight <span class="ver patch">2.0.x</span> — loop-integrity / HITL hardening</h4>
+      <h4><span class="d fly"></span>In flight <span class="ver patch">1.0.x</span> — loop-integrity / HITL hardening</h4>
       <ul class="items">
         <li class="l-fly">Stop-hook infinite-block loop.</li>
         <li class="l-fly">Approve has no artifact verification.</li>
@@ -419,7 +419,7 @@
       </ul>
     </div>
     <div class="lane">
-      <h4><span class="d gap"></span>Gap to North Star <span class="ver">2.5.0</span></h4>
+      <h4><span class="d gap"></span>Gap to North Star <span class="ver">1.5.0</span></h4>
       <ul class="items">
         <li class="l-plan"><b>Cross-stage backward edges.</b> The stage graph is a strict acyclic DAG (cycles rejected at compile); a downstream stage exposing an upstream gap cannot trigger an engine-managed return to that upstream stage. <code>requires_stage</code> is forward-only.</li>
       </ul>
@@ -437,7 +437,7 @@
       </ul>
     </div>
     <div class="lane">
-      <h4><span class="d gap"></span>Gap to North Star <span class="ver">2.6.0</span></h4>
+      <h4><span class="d gap"></span>Gap to North Star <span class="ver">1.6.0</span></h4>
       <ul class="items">
         <li class="l-plan"><b>True progressive enrichment</b> — downstream stages enriching the <i>same</i> upstream artefact in place vs. emitting a linked-but-separate file — is partial.</li>
         <li class="l-plan">Per-stage traceability enforcement as a deterministic JSON sensor.</li>
@@ -453,13 +453,13 @@
     <div class="goal-head"><span class="goal-num">7</span><h3>Organizational, Not Project-Local, Artefact Repository</h3><span class="badge inflight"><span class="d"></span>In flight</span></div>
     <blockquote>A shared org knowledge layer (<code>/org-ai-kb</code>, <code>/amadeus-docs</code>) spanning multiple projects, intents, and repositories without artefacts overwriting each other; reverse-engineered knowledge versioned and discoverable across teams. Scenarios: multi-repo intent; Day-2 second intent; concurrent intents in one codebase; greenfield needing brownfield knowledge; mixed; brownfield multi-repo.</blockquote>
     <div class="lane">
-      <h4><span class="d gap"></span>Today (v2)</h4>
+      <h4><span class="d gap"></span>Today (v1)</h4>
       <ul class="items">
         <li class="l-plan">Project-local, flat, <b>single-intent</b> <code>amadeus-docs/</code> tree; <code>--init --force</code> wipes prior state. No spaces / intents / multi-repo. <span class="src">core/tools/amadeus-lib.ts</span></li>
       </ul>
     </div>
     <div class="lane">
-      <h4><span class="d fly"></span>In flight <span class="ver patch">2.1.0</span> — the major effort: <code>feature/workspace-anchor</code> (+34 commits)</h4>
+      <h4><span class="d fly"></span>In flight <span class="ver patch">1.1.0</span> — the major effort: <code>feature/workspace-anchor</code> (+34 commits)</h4>
       <ul class="items">
         <li class="l-fly"><b>Spaces + intents model</b>: <code>aidlc/spaces/&lt;space&gt;/intents/&lt;slug&gt;-&lt;id8&gt;/</code>; retire <code>--init</code> for auto-birth; <code>intent</code>/<code>space</code> list/switch/create verbs.</li>
         <li class="l-fly"><b>Multiple concurrent intents</b> in one codebase; orchestrator offers a 2nd intent on unrelated new work.</li>
@@ -468,34 +468,34 @@
         <li class="l-fly"><b>Shared org-KB layer</b>: knowledge and reverse-engineered artefacts live in a clonable, team-scoped <code>org-ai-kb/&lt;team&gt;/</code> repo that compounds across intents and is shareable across teams. <span class="src">wip/unified-feature-requirements.md (Feature 1 — org-ai-kb)</span></li>
       </ul>
     </div>
-    <div class="card note"><span class="label">Coverage</span>The workspace-anchor design (<code>wip/unified-feature-requirements.md</code>, Feature 1 / P0) addresses all six North Star scenarios — multi-repo, Day-2, concurrent intents, greenfield-needing-brownfield, mixed, brownfield multi-repo — and the shared org-KB layer, so Goal 7 lands wholly in <code>2.1.0</code>.</div>
+    <div class="card note"><span class="label">Coverage</span>The workspace-anchor design (<code>wip/unified-feature-requirements.md</code>, Feature 1 / P0) addresses all six North Star scenarios — multi-repo, Day-2, concurrent intents, greenfield-needing-brownfield, mixed, brownfield multi-repo — and the shared org-KB layer, so Goal 7 lands wholly in <code>1.1.0</code>.</div>
   </div>
 
   <!-- RELEASE NOTES -->
   <h2 class="section">Release notes — per minor</h2>
-  <p class="lede">What each cut delivers, in order. <code>2.0.x</code> is the current hardening line; <code>2.1.0</code> onward is one major feature per minor.</p>
+  <p class="lede">What each cut delivers, in order. <code>1.0.x</code> is the current hardening line; <code>1.1.0</code> onward is one major feature per minor.</p>
 
   <div class="rel">
-    <div class="card"><span class="label">2.0.x — Hardening · in flight · current line</span>Corrections and small features on the 2.0 GA Preview baseline; no architectural change. Reviewer wired across all harnesses; reviewer field validation (landed); stop-hook loop integrity; stage-level rules layer. <span class="goalref">G1 G2 G4 G5</span></div>
+    <div class="card"><span class="label">1.0.x — Hardening · in flight · current line</span>Corrections and small features on the 1.0 GA Preview baseline; no architectural change. Reviewer wired across all harnesses; reviewer field validation (landed); stop-hook loop integrity; stage-level rules layer. <span class="goalref">G1 G2 G4 G5</span></div>
 
-    <div class="card hl"><span class="label">2.1.0 — Per-intent workspace · next minor</span>The workspace replaces the project as the anchor. Spaces hold multiple coexisting intents; an intent can span multiple repos; domain knowledge and practices live in a shared, clonable, team-scoped org-KB (<code>org-ai-kb/&lt;team&gt;/</code>) that compounds across intents and is shareable across teams; audit is sharded per-intent (no merge conflicts); flat <code>amadeus-docs/</code> projects auto-migrate. Wholly delivers Goal 7 — all six scenarios plus the org-KB layer. <span class="src">feature/workspace-anchor</span> <span class="goalref">G7</span></div>
+    <div class="card hl"><span class="label">1.1.0 — Per-intent workspace · next minor</span>The workspace replaces the project as the anchor. Spaces hold multiple coexisting intents; an intent can span multiple repos; domain knowledge and practices live in a shared, clonable, team-scoped org-KB (<code>org-ai-kb/&lt;team&gt;/</code>) that compounds across intents and is shareable across teams; audit is sharded per-intent (no merge conflicts); flat <code>amadeus-docs/</code> projects auto-migrate. Wholly delivers Goal 7 — all six scenarios plus the org-KB layer. <span class="src">feature/workspace-anchor</span> <span class="goalref">G7</span></div>
 
-    <div class="card hl"><span class="label">2.2.0 - Adaptive workflows · shipped</span>Stage composition stops being hard-wired: a composer agent under <code>/amadeus</code> reads the task (prompt, scan report, or the running workflow), proposes the EXECUTE/SKIP grid that fits, and after human approval authors it as a scope (front/report) or flips pending stages in place (in-flight recompose, under the audit lock with a strict starved-input validator). Scale-in triages external reports (e.g. SonarQube) into a compact fix-and-ship run. Per-unit <code>for_each</code> iteration landed earlier in 2.1.2. <span class="goalref">G3</span></div>
+    <div class="card hl"><span class="label">1.2.0 - Adaptive workflows · shipped</span>Stage composition stops being hard-wired: a composer agent under <code>/amadeus</code> reads the task (prompt, scan report, or the running workflow), proposes the EXECUTE/SKIP grid that fits, and after human approval authors it as a scope (front/report) or flips pending stages in place (in-flight recompose, under the audit lock with a strict starved-input validator). Scale-in triages external reports (e.g. SonarQube) into a compact fix-and-ship run. Per-unit <code>for_each</code> iteration landed earlier in 1.1.2. <span class="goalref">G3</span></div>
 
-    <div class="card"><span class="label">2.3.0 - Reviewer-as-verifier · Full GA</span>Promotes the reviewer from advisory to a true adversary: domain-aware validation tools (validate-domain-model / entities / rules) checking against explicit contracts and schemas; a token/iteration budget governing the self-heal loop; reviewer prompted to refute, not confirm. <b>This cut declares full GA</b>: per-intent workspace (2.1.0), adaptive workflows (2.2.0), and reviewer-as-verifier are then all in place. <span class="goalref">G4</span></div>
+    <div class="card"><span class="label">1.3.0 - Reviewer-as-verifier · Full GA</span>Promotes the reviewer from advisory to a true adversary: domain-aware validation tools (validate-domain-model / entities / rules) checking against explicit contracts and schemas; a token/iteration budget governing the self-heal loop; reviewer prompted to refute, not confirm. <b>This cut declares full GA</b>: per-intent workspace (1.1.0), adaptive workflows (1.2.0), and reviewer-as-verifier are then all in place. <span class="goalref">G4</span></div>
 
-    <div class="card"><span class="label">2.4.0 — Three-role ensemble</span>Owner → <b>Contributor</b> → Reviewer: contributors become independent subagents (not inline voices), and the collaboration pattern (pipeline / swarm / review-loop / mob) becomes a per-stage selectable knob. <span class="goalref">G1</span></div>
+    <div class="card"><span class="label">1.4.0 — Three-role ensemble</span>Owner → <b>Contributor</b> → Reviewer: contributors become independent subagents (not inline voices), and the collaboration pattern (pipeline / swarm / review-loop / mob) becomes a per-stage selectable knob. <span class="goalref">G1</span></div>
 
-    <div class="card"><span class="label">2.5.0 — Governed cyclic flows</span>Controlled, directional backward edges across stages: a downstream stage that exposes an upstream gap can trigger a governed return to that upstream stage, within the engine (not just a human re-init). <span class="goalref">G5</span></div>
+    <div class="card"><span class="label">1.5.0 — Governed cyclic flows</span>Controlled, directional backward edges across stages: a downstream stage that exposes an upstream gap can trigger a governed return to that upstream stage, within the engine (not just a human re-init). <span class="goalref">G5</span></div>
 
-    <div class="card"><span class="label">2.6.0 — Progressive enrichment</span>Downstream stages enrich the <i>same</i> upstream artefact in place rather than emitting linked-but-separate files; ADRs become a core design artefact. <span class="goalref">G6</span></div>
+    <div class="card"><span class="label">1.6.0 — Progressive enrichment</span>Downstream stages enrich the <i>same</i> upstream artefact in place rather than emitting linked-but-separate files; ADRs become a core design artefact. <span class="goalref">G6</span></div>
   </div>
 
   <footer>
-    <p>Verification basis: file/line references cited against <code>core/</code> on <code>v2</code> (v2.0.2); branch positions from
-    <code>git worktree list</code> and <code>git rev-list --count v2..&lt;branch&gt;</code>.
+    <p>Verification basis: file/line references cited against <code>core/</code> on <code>v1</code> (v1.0.2); branch positions from
+    <code>git worktree list</code> and <code>git rev-list --count v1..&lt;branch&gt;</code>.
     Design intent for unbuilt items: <code>wip/unified-feature-requirements.md</code>.</p>
-    <p>Source goals: AI-DLC Workflows 2.0 North Star Functional Goals.</p>
+    <p>Source goals: Amadeus-DLC Workflows 1.0 North Star Functional Goals.</p>
   </footer>
 
 </div>

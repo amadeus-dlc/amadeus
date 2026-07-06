@@ -2,7 +2,7 @@
 //
 // The swarm fires only under human-granted Construction autonomy, inside a live
 // Claude Code session. That session — the conductor — owns the fan-out (N parallel
-// Task calls, or an inline Dynamic Workflow when AIDLC_USE_SWARM=1) and the retry
+// Task calls, or an inline Dynamic Workflow when AMADEUS_USE_SWARM=1) and the retry
 // loop. A bun subprocess cannot issue Task calls, so the worker-dispatch layer is
 // NOT here. What lives here is everything that must be deterministic: the
 // convergence verdict, the anti-tamper guard, the serialised merge-back, the audit
@@ -23,9 +23,9 @@
 //       The anti-tamper baseline is each worktree's OWN git fork (HEAD) — nothing
 //       is stored; check/finalize re-derive the pristine bytes with `git diff
 //       --quiet HEAD`. Runs before any worker, so it cannot fold into check.
-//       --degraded-from records a loud downgrade (AIDLC_USE_SWARM=1 but the
+//       --degraded-from records a loud downgrade (AMADEUS_USE_SWARM=1 but the
 //       Workflow tool was unavailable, so the conductor ran the subagent floor):
-//       emits SWARM_DEGRADED. The driver-SELECTION read (AIDLC_USE_SWARM) is
+//       emits SWARM_DEGRADED. The driver-SELECTION read (AMADEUS_USE_SWARM) is
 //       conductor-side — this tool only learns a degrade happened via the flag.
 //   check <unit> --check-cmd <cmd> [--test-file <path>]
 //       Stateless single-unit verdict: the project's check command (exit 0 = green,
@@ -241,7 +241,7 @@ function emitSwarmStarted(
   );
 }
 
-// Loud-degrade: AIDLC_USE_SWARM=1 was requested but the Workflow tool was
+// Loud-degrade: AMADEUS_USE_SWARM=1 was requested but the Workflow tool was
 // unavailable, so the conductor ran the subagent floor. The referee makes the
 // substrate difference invisible to convergence, but the downgrade is recorded.
 function emitSwarmDegraded(pd: string, batch: string, requested: DriverName): void {
@@ -359,7 +359,7 @@ function handlePrepare(rest: string[]): void {
       : String(units.length);
 
   // Record a loud downgrade BEFORE the batch-start row, if the conductor reports
-  // one. The driver-selection read (AIDLC_USE_SWARM) is conductor-side; the tool
+  // one. The driver-selection read (AMADEUS_USE_SWARM) is conductor-side; the tool
   // only learns a degrade happened via this flag.
   if (flags["degraded-from"]) {
     const requested = flags["degraded-from"] as DriverName;

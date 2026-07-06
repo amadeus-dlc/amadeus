@@ -42,9 +42,9 @@
 //                        Idempotent (row+line both present → no-op, :463) + recovery
 //                        (row present, line gone → re-write only, skip emit, :467-487).
 //   dist/claude/.claude/tools/amadeus-graph.ts
-//     compile  (:1293) — recompiles stage-graph.json (AIDLC_STAGE_GRAPH seam,
-//                        :154-162) from stage YAML (AIDLC_STAGES_DIR) + sensors
-//                        (AIDLC_SENSORS_DIR); the newly-bound `sensors:` import
+//     compile  (:1293) — recompiles stage-graph.json (AMADEUS_STAGE_GRAPH seam,
+//                        :154-162) from stage YAML (AMADEUS_STAGES_DIR) + sensors
+//                        (AMADEUS_SENSORS_DIR); the newly-bound `sensors:` import
 //                        resolves into the stage node's sensors_applicable[] (:131-133).
 //   dist/claude/.claude/tools/amadeus-sensor-schema.ts
 //     parseSensorManifest (:54) — extracts {id, matches, ...} from manifest YAML.
@@ -82,7 +82,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   createTestProject,
   DEFAULT_RECORD_DIR,
   DEFAULT_SPACE,
@@ -102,7 +102,7 @@ import { memoryDirFor } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 const RP = `aidlc/spaces/${DEFAULT_SPACE}/intents/${DEFAULT_RECORD_DIR}`;
 
 const BUN = process.execPath; // the bun running this test
-const TOOLS = join(AIDLC_SRC, "tools");
+const TOOLS = join(AMADEUS_SRC, "tools");
 const LEARNINGS_TS = join(TOOLS, "amadeus-learnings.ts");
 const GRAPH_TS = join(TOOLS, "amadeus-graph.ts");
 const SEED_GRAPH = join(TOOLS, "data", "stage-graph.json");
@@ -122,7 +122,7 @@ afterAll(() => {
 function mkproj(): string {
   const pd = createTestProject();
   projects.push(pd);
-  cpSync(AIDLC_SRC, join(pd, ".claude"), { recursive: true });
+  cpSync(AMADEUS_SRC, join(pd, ".claude"), { recursive: true });
   mkdirSync(join(seededRecordDir(pd), "inception", "user-stories"), { recursive: true });
   writeFileSync(
     seededStateFile(pd),
@@ -320,8 +320,8 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
   // ===========================================================================
   // Case 3 — sensor proposal → project-tier manifest + frontmatter bind →
   // compile binds. Drives the parseSensorManifest in-proc check + a real
-  // `amadeus-graph compile` against the AIDLC_STAGES_DIR / AIDLC_SENSORS_DIR /
-  // AIDLC_STAGE_GRAPH seam, exactly as the .sh did.
+  // `amadeus-graph compile` against the AMADEUS_STAGES_DIR / AMADEUS_SENSORS_DIR /
+  // AMADEUS_STAGE_GRAPH seam, exactly as the .sh did.
   // ===========================================================================
   function seedSensorProposal(pd: string): string {
     const sel = join(pd, "sel3.json");
@@ -353,7 +353,7 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
   test("Case 3: project-tier manifest parses + carries matches glob [.sh 7]", () => {
     const pd = mkproj();
     const sel = seedSensorProposal(pd);
-    const r = persist(pd, sel, "user-stories", { AIDLC_STAGES_DIR: STAGES_DIR_OF(pd) });
+    const r = persist(pd, sel, "user-stories", { AMADEUS_STAGES_DIR: STAGES_DIR_OF(pd) });
     expect(r.status).toBe(0);
     const manifest = join(SENSORS_DIR_OF(pd), "amadeus-acceptance-format.md");
     expect(existsSync(manifest)).toBe(true);
@@ -368,7 +368,7 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
     const pd = mkproj();
     const sel = seedSensorProposal(pd);
     expect(
-      persist(pd, sel, "user-stories", { AIDLC_STAGES_DIR: STAGES_DIR_OF(pd) }).status,
+      persist(pd, sel, "user-stories", { AMADEUS_STAGES_DIR: STAGES_DIR_OF(pd) }).status,
     ).toBe(0);
     // Recompile against the project's stage tree (now carrying the bound
     // `sensors:` import) + the project's sensors dir, writing to a private graph.
@@ -378,9 +378,9 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
       encoding: "utf-8",
       env: {
         ...process.env,
-        AIDLC_STAGES_DIR: STAGES_DIR_OF(pd),
-        AIDLC_SENSORS_DIR: SENSORS_DIR_OF(pd),
-        AIDLC_STAGE_GRAPH: sg,
+        AMADEUS_STAGES_DIR: STAGES_DIR_OF(pd),
+        AMADEUS_SENSORS_DIR: SENSORS_DIR_OF(pd),
+        AMADEUS_STAGE_GRAPH: sg,
       },
     });
     expect(c.status).toBe(0);
@@ -400,7 +400,7 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
     const pd = mkproj();
     const sel = seedSensorProposal(pd);
     expect(
-      persist(pd, sel, "user-stories", { AIDLC_STAGES_DIR: STAGES_DIR_OF(pd) }).status,
+      persist(pd, sel, "user-stories", { AMADEUS_STAGES_DIR: STAGES_DIR_OF(pd) }).status,
     ).toBe(0);
     const audit = readAudit(pd);
     // Extract the SENSOR_PROPOSED block (the .sh's awk span) and assert the
@@ -573,7 +573,7 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
   // ===========================================================================
   test("§13 rewrite carries zero sensor-protocol.md / applies_to / pre-v3 PR-doctor fossils [.sh 16]", () => {
     const sp = join(
-      AIDLC_SRC,
+      AMADEUS_SRC,
       "amadeus-common",
       "protocols",
       "stage-protocol.md",

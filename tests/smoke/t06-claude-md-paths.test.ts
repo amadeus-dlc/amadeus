@@ -6,7 +6,7 @@
 // Mechanism: none. The .sh shelled out to `grep` against a static shipped
 // file; there is no tool / process seam under test — the subject IS the bytes
 // of dist/claude/.claude/CLAUDE.md. So the twin reads that file in-process
-// (resolved from the harness's AIDLC_SRC, the same dist/claude/.claude root)
+// (resolved from the harness's AMADEUS_SRC, the same dist/claude/.claude root)
 // and asserts on its contents. Zero LLM, zero tokens, zero subprocess.
 //
 // Subject under test (the shipped user-facing CLAUDE.md, NOT this repo's):
@@ -36,11 +36,11 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
-// AIDLC_SRC = <repo>/dist/claude/.claude — the same root the .sh reached via
+// AMADEUS_SRC = <repo>/dist/claude/.claude — the same root the .sh reached via
 // $SCRIPT_DIR/../../dist/claude/.claude. The shipped CLAUDE.md sits at its top.
-const CLAUDE_MD = join(AIDLC_SRC, "CLAUDE.md");
+const CLAUDE_MD = join(AMADEUS_SRC, "CLAUDE.md");
 
 function readClaudeMd(): string {
   return readFileSync(CLAUDE_MD, "utf-8");

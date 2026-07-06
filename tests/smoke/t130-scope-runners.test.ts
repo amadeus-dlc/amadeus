@@ -26,7 +26,7 @@
 //   Plus 4 more: (f) bugfix's shell drives the engine with `--scope bugfix`,
 //   (g) `amadeus-runner-gen.ts scopes --check` is drift-clean, (h) a non-batch
 //   scope (`refactor`) has no runner dir, (i) the generator emits a runner for a
-//   newly-dropped scope file via the AIDLC_SCOPES_DIR + `--all --out` env seams.
+//   newly-dropped scope file via the AMADEUS_SCOPES_DIR + `--all --out` env seams.
 //
 // MECHANISM = mixed (body-derived, milestone 3):
 //   - The structural conformance + curated-subset checks read the SHIPPED
@@ -38,7 +38,7 @@
 //     generator's own render output, so a drift between the two also fails here.
 //   - Two checks are genuine PROCESS / ENV seams that must be SPAWNED (mechanism
 //     cli): the drift-guard EXIT CODE (`scopes --check` exits 0 iff in sync,
-//     amadeus-runner-gen.ts:476/474) and the env-seam GENERATION (`AIDLC_SCOPES_DIR`
+//     amadeus-runner-gen.ts:476/474) and the env-seam GENERATION (`AMADEUS_SCOPES_DIR`
 //     points the reader at an isolated tree, `--out` points the writer at an
 //     isolated skills dir, :315/:449) — both are the SAME shipped tool the .sh
 //     shelled out to (`bun GEN scopes …`). An in-process twin would lose the
@@ -51,7 +51,7 @@
 //        amadeus-<scope>` frontmatter, a `description: >` folded block, NO `hooks:`
 //        block, and the `amadeus-orchestrate.ts next --scope <scope>` forwarding
 //        loop. Spec-conformant: name == dir == amadeus-<scope> (:391).
-//   :364 discoverScopes() — reads `.claude/scopes/amadeus-*.md` (AIDLC_SCOPES_DIR
+//   :364 discoverScopes() — reads `.claude/scopes/amadeus-*.md` (AMADEUS_SCOPES_DIR
 //        seam, :315), keyed by frontmatter `name`.
 //   :447 handleScopes — `--check` (drift guard, exits 1 with a diff on drift,
 //        :474) / `--all` (emit a runner per shipped scope, resolveBatch :429) /
@@ -68,7 +68,7 @@
 //   .sh "amadeus-bugfix: shell drives --scope bugfix" -> "bugfix runner drives the engine with --scope bugfix"
 //   .sh "scopes --check is drift-clean"             -> CLI "scopes --check exits 0 on the shipped tree"
 //   .sh "non-batch scope (refactor) has no runner"  -> "non-batch scope refactor ships no runner dir"
-//   .sh "generator emits a runner for a new scope"  -> CLI "AIDLC_SCOPES_DIR + --all --out emits a runner for a dropped scope file"
+//   .sh "generator emits a runner for a new scope"  -> CLI "AMADEUS_SCOPES_DIR + --all --out emits a runner for a dropped scope file"
 
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -81,7 +81,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 import {
   discoverScopes,
   FIRST_BATCH,
@@ -89,8 +89,8 @@ import {
 } from "../../dist/claude/.claude/tools/amadeus-runner-gen.ts";
 
 const BUN = process.execPath; // the bun running this test
-const SKILLS_DIR = join(AIDLC_SRC, "skills");
-const GEN = join(AIDLC_SRC, "tools", "amadeus-runner-gen.ts");
+const SKILLS_DIR = join(AMADEUS_SRC, "skills");
+const GEN = join(AMADEUS_SRC, "tools", "amadeus-runner-gen.ts");
 
 // The first batch the generator ships (mirrors amadeus-runner-gen.ts FIRST_BATCH,
 // :307). Read from the exported constant so a batch change can never drift the
@@ -211,12 +211,12 @@ describe("t130 scope-runners — structural conformance of the shipped first-bat
   // ===========================================================================
   // Generator emits a runner for a newly-dropped scope file (1 test, mechanism
   // cli + env seam). Drop a fixture scope into an isolated tree, point the
-  // generator at it with AIDLC_SCOPES_DIR + `--all --out <isolated>`, and confirm
+  // generator at it with AMADEUS_SCOPES_DIR + `--all --out <isolated>`, and confirm
   // it emits the runner driving that scope. Proves "add a scope file -> generator
   // emits its runner" with no code change. Both env seams are evaluated inside
   // the subprocess (:315 reader, :449 writer), so this is spawned.
   // ===========================================================================
-  test("AIDLC_SCOPES_DIR + --all --out emits a runner for a dropped scope file (no code change) [.sh test i]", () => {
+  test("AMADEUS_SCOPES_DIR + --all --out emits a runner for a dropped scope file (no code change) [.sh test i]", () => {
     const tmpScopes = mkdtempSync(join(tmpdir(), "t130-scopes-"));
     const tmpOut = mkdtempSync(join(tmpdir(), "t130-out-"));
     tempDirs.push(tmpScopes, tmpOut);
@@ -242,7 +242,7 @@ describe("t130 scope-runners — structural conformance of the shipped first-bat
 
     const r = spawnSync(BUN, [GEN, "scopes", "--all", "--out", tmpOut], {
       encoding: "utf-8",
-      env: { ...process.env, AIDLC_SCOPES_DIR: tmpScopes },
+      env: { ...process.env, AMADEUS_SCOPES_DIR: tmpScopes },
     });
     // The .sh swallowed the exit code (`|| true`) and only checked the artefacts;
     // STRONGER: a successful generation exits 0.

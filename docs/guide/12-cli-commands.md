@@ -3,7 +3,7 @@
 All AI-DLC commands start with the orchestrator invocation. This chapter is a complete reference for every invocation pattern and flag.
 
 > **Invocation prefix differs by harness.** On Claude Code and Kiro IDE you type
-> `/amadeus`; on Codex CLI it is `$amadeus` (or `/skills` → aidlc). The flags and
+> `/amadeus`; on Codex CLI it is `$amadeus` (or `/skills` → amadeus). The flags and
 > behaviour below are identical either way — only the prefix changes. The examples
 > use `/amadeus`; substitute `$amadeus` on Codex. See [Running on Codex CLI](harnesses/codex-cli.md).
 
@@ -224,7 +224,7 @@ Validate that all of this implementation's prerequisites, configuration, and sta
 | Hook presence | Every hook `settings.json` wires (its `hooks` blocks + the `statusLine` command — all 11 framework hooks) exists in `.claude/hooks/`; a wired-but-missing hook fails loudly. Sourcing the expected roster from `settings.json` means adding a hook there auto-checks it |
 | Project structure | `.claude/settings.json` exists (file presence only, no content validation) |
 | Workspace shell | `.claude/` + `aidlc/spaces/default/memory/` are present (the shipped shell) |
-| Env scope | `AWS_AIDLC_DEFAULT_SCOPE` (if set) names a valid scope |
+| Env scope | `AWS_AMADEUS_DEFAULT_SCOPE` (if set) names a valid scope |
 | Hook heartbeats | `.amadeus-hooks-health/` contains recent timestamps from hook executions |
 | State drift | the active intent's `amadeus-state.md` matches the last `WORKFLOW_COMPLETED` in the audit |
 | Cycle detection | `stage-graph.json` has no cycles |
@@ -249,7 +249,7 @@ Validate that all of this implementation's prerequisites, configuration, and sta
 ✓ amadeus-session-end.ts present
 ✓ amadeus-statusline.ts present
 ✓ settings.json present
-✓ AWS_AIDLC_DEFAULT_SCOPE (unset — no project default)
+✓ AWS_AMADEUS_DEFAULT_SCOPE (unset — no project default)
 ✓ workspace shell ready (.claude/ + aidlc/spaces/default/memory/)
 ✓ Hook heartbeats: not yet fired (first workflow stage will populate)
 ✓ State matches last audit event (no drift)
@@ -402,7 +402,7 @@ See [Scopes, Depth, and Test Strategy](05-scopes-and-depth.md#the-3-test-strateg
 
 ### `/amadeus --version` — Framework version
 
-Print the framework version (`aidlc <X.Y.Z>`) and exit. Read-only — works without a workflow and never prompts to resume one.
+Print the framework version (`amadeus <X.Y.Z>`) and exit. Read-only — works without a workflow and never prompts to resume one.
 
 **Syntax:**
 
@@ -505,7 +505,7 @@ All three are read-only — no stage advance, no audit emit — and source every
 
 ## Environment Variables
 
-### `AWS_AIDLC_DEFAULT_SCOPE`
+### `AWS_AMADEUS_DEFAULT_SCOPE`
 
 Pre-set the default scope for a project. Read from `.claude/settings.json` `env` block at workflow initialization.
 
@@ -514,14 +514,14 @@ Pre-set the default scope for a project. Read from `.claude/settings.json` `env`
 ```json
 {
   "env": {
-    "AWS_AIDLC_DEFAULT_SCOPE": "workshop"
+    "AWS_AMADEUS_DEFAULT_SCOPE": "workshop"
   }
 }
 ```
 
 **Valid values:** `enterprise`, `feature`, `mvp`, `poc`, `bugfix`, `refactor`, `infra`, `security-patch`, `workshop`.
 
-**Precedence:** explicit CLI flag > keyword detection > `AWS_AIDLC_DEFAULT_SCOPE` > hard-coded fallback.
+**Precedence:** explicit CLI flag > keyword detection > `AWS_AMADEUS_DEFAULT_SCOPE` > hard-coded fallback.
 
 **Scope of effect:** applies at workflow initialization only. Once the intent's `amadeus-state.md` exists, the state file is authoritative. See [Customization § Per-Project Default Scope](13-customization.md#per-project-default-scope) for the full walkthrough.
 

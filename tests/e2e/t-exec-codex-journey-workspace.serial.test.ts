@@ -26,9 +26,9 @@
 //   4. `/amadeus space-create teamB` → `/amadeus space teamB` → birth there; no leak.
 //   5. `/amadeus space default` → A still resumable.
 //
-// LIVE GATE: requires AIDLC_CODEX_EXEC_LIVE=1 + a codex >= 0.139.0 binary
-// (AIDLC_CODEX_BIN or PATH) + AWS creds for the Bedrock profile in
-// AIDLC_CODEX_AWS_PROFILE (default "codex"). Skips cleanly otherwise. Serial.
+// LIVE GATE: requires AMADEUS_CODEX_EXEC_LIVE=1 + a codex >= 0.139.0 binary
+// (AMADEUS_CODEX_BIN or PATH) + AWS creds for the Bedrock profile in
+// AMADEUS_CODEX_AWS_PROFILE (default "codex"). Skips cleanly otherwise. Serial.
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -47,9 +47,9 @@ import {
 } from "../harness/fixtures.ts";
 
 const CODEX_DIST = join(REPO_ROOT, "dist", "codex");
-const CODEX_BIN = process.env.AIDLC_CODEX_BIN ?? "codex";
-const AWS_PROFILE = process.env.AIDLC_CODEX_AWS_PROFILE ?? "codex";
-const AWS_REGION = process.env.AIDLC_CODEX_AWS_REGION ?? "us-east-2";
+const CODEX_BIN = process.env.AMADEUS_CODEX_BIN ?? "codex";
+const AWS_PROFILE = process.env.AMADEUS_CODEX_AWS_PROFILE ?? "codex";
+const AWS_REGION = process.env.AMADEUS_CODEX_AWS_REGION ?? "us-east-2";
 
 // A multi-spawn live journey. codex exec is the slowest harness — even a "cheap"
 // verb spawn can run several minutes when the model reasons before invoking the
@@ -57,7 +57,7 @@ const AWS_REGION = process.env.AIDLC_CODEX_AWS_REGION ?? "us-east-2";
 // reverse-engineering codekb spawn (9 artifacts × 2 repos) is the heaviest single
 // beat in the suite. Budget the whole journey at 4200s, give each verb spawn a
 // generous cap, and the codekb spawn the lion's share. Flaky-LLM-tier (watched).
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "4200", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "4200", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 4200) * 1000;
 const VERB_EXEC_MS = 420_000;
 const CODEKB_EXEC_MS = Math.max(1_500_000, TEST_TIMEOUT_MS - 6 * VERB_EXEC_MS);
@@ -91,10 +91,10 @@ function codexVersionOk(): boolean {
 }
 
 function skipReason(): string | null {
-  if (process.env.AIDLC_CODEX_EXEC_LIVE !== "1") {
-    return "set AIDLC_CODEX_EXEC_LIVE=1 to run the live codex-exec workspace journey (uses Bedrock)";
+  if (process.env.AMADEUS_CODEX_EXEC_LIVE !== "1") {
+    return "set AMADEUS_CODEX_EXEC_LIVE=1 to run the live codex-exec workspace journey (uses Bedrock)";
   }
-  if (!codexVersionOk()) return `codex >= 0.139.0 not found (AIDLC_CODEX_BIN=${CODEX_BIN})`;
+  if (!codexVersionOk()) return `codex >= 0.139.0 not found (AMADEUS_CODEX_BIN=${CODEX_BIN})`;
   if (!existsSync(CODEX_DIST)) return `distributable missing: ${CODEX_DIST}`;
   return null;
 }
@@ -137,7 +137,7 @@ function setupCodexJourney(): WorkspaceJourney {
       `region = "${AWS_REGION}"`,
       ``,
       `[shell_environment_policy]`,
-      `set = { AIDLC_RULES_DIR = ".codex/amadeus-rules" }`,
+      `set = { AMADEUS_RULES_DIR = ".codex/amadeus-rules" }`,
       ``,
       `[projects."${root}"]`,
       `trust_level = "trusted"`,

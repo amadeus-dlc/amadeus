@@ -17,7 +17,7 @@
     "file://.kiro/agents/amadeus-architecture-reviewer-agent.md",
     "file://.kiro/knowledge/amadeus-architecture-reviewer-agent/*.md",
     "file://.kiro/knowledge/amadeus-shared/*.md",
-    "file://amadeus/spaces/default/memory/**/*.md"
+    "file://aidlc/spaces/default/memory/**/*.md"
   ],
   "hooks": {},
   "model": "claude-opus-4.8"

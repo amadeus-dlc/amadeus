@@ -21,12 +21,12 @@
 //
 // SUBJECT / SOURCE UNDER TEST:
 //   - dist/claude/.claude/tools/amadeus-version.ts:4
-//       export const AIDLC_VERSION = "<N.N.N>";  (single source of truth)
+//       export const AMADEUS_VERSION = "<N.N.N>";  (single source of truth)
 //   - CHANGELOG.md (repo root): reverse-chronological `## [N.N.N] - DATE`
 //       headings + matching `[N.N.N]:` link references at the bottom.
 //   - dist/claude/.claude/tools/amadeus-utility.ts:
-//       :54 imports AIDLC_VERSION; :173 handleVersion() writes
-//       `aidlc ${AIDLC_VERSION}\n` to stdout; :2823 the `version` subcommand
+//       :54 imports AMADEUS_VERSION; :173 handleVersion() writes
+//       `amadeus ${AMADEUS_VERSION}\n` to stdout; :2823 the `version` subcommand
 //       dispatches to it. A renamed constant, broken import, or switch-case
 //       typo would break this seam.
 //   - README.md:5 shields.io badge
@@ -41,16 +41,16 @@
 // `bun "$UTILITY_TS" version` used), preserving that guarantee unweakened.
 //
 // Old TAP -> new test parity (1:1, every .sh assertion -> a named test()):
-//   .sh test 1 (extracted exactly one non-empty AIDLC_VERSION)
-//        -> "version.ts declares exactly one AIDLC_VERSION assignment"
-//   .sh test 2 (AIDLC_VERSION matches latest CHANGELOG heading)
-//        -> "AIDLC_VERSION matches the latest CHANGELOG heading"
+//   .sh test 1 (extracted exactly one non-empty AMADEUS_VERSION)
+//        -> "version.ts declares exactly one AMADEUS_VERSION assignment"
+//   .sh test 2 (AMADEUS_VERSION matches latest CHANGELOG heading)
+//        -> "AMADEUS_VERSION matches the latest CHANGELOG heading"
 //   .sh test 3 ([N.N.N]: link reference present)  [SUPERSEDED — see below]
 //        -> "the latest version appears as a CHANGELOG heading"
 //   .sh test 4 (heading-count == link-ref-count, both > 0)  [REPURPOSED]
 //        -> "## [N.N.N] headings are unique (no duplicate / post-rebase dupe)"
-//   .sh test 5 (bun amadeus-utility.ts version prints 'aidlc <CL_VERSION>')
-//        -> "wired CLI `version` subcommand prints 'aidlc <CHANGELOG version>'"
+//   .sh test 5 (bun amadeus-utility.ts version prints 'amadeus <CL_VERSION>')
+//        -> "wired CLI `version` subcommand prints 'amadeus <CHANGELOG version>'"
 //   .sh test 6 (README badge matches version.ts)
 //        -> "README.md version badge matches amadeus-version.ts"
 //
@@ -76,21 +76,21 @@ import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC, REPO_ROOT } from "../harness/fixtures.ts";
+import { AMADEUS_SRC, REPO_ROOT } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const VERSION_TS = join(AIDLC_SRC, "tools", "amadeus-version.ts");
-const UTILITY_TS = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
+const VERSION_TS = join(AMADEUS_SRC, "tools", "amadeus-version.ts");
+const UTILITY_TS = join(AMADEUS_SRC, "tools", "amadeus-utility.ts");
 const CHANGELOG = join(REPO_ROOT, "CHANGELOG.md");
 const README = join(REPO_ROOT, "README.md");
 
 const SEMVER = /[0-9]+\.[0-9]+\.[0-9]+/;
 
-/** All `AIDLC_VERSION = "N.N.N"` literals in version.ts (defends against a
+/** All `AMADEUS_VERSION = "N.N.N"` literals in version.ts (defends against a
  *  merge-conflict marker leaving two assignments — the .sh's `head -1` + count). */
 function versionAssignments(): string[] {
   const src = readFileSync(VERSION_TS, "utf-8");
-  return [...src.matchAll(/AIDLC_VERSION = "([0-9]+\.[0-9]+\.[0-9]+)"/g)].map(
+  return [...src.matchAll(/AMADEUS_VERSION = "([0-9]+\.[0-9]+\.[0-9]+)"/g)].map(
     (m) => m[1],
   );
 }
@@ -115,15 +115,15 @@ function changelogLinkRefs(): string[] {
 
 describe("t68 version/CHANGELOG/README sync (migrated from t68-version-changelog-sync.sh, plan 6)", () => {
   // .sh test 1: extracted exactly one non-empty version from version.ts.
-  test("version.ts declares exactly one AIDLC_VERSION assignment [.sh test 1]", () => {
+  test("version.ts declares exactly one AMADEUS_VERSION assignment [.sh test 1]", () => {
     const assigns = versionAssignments();
     expect(assigns.length).toBe(1);
     expect(assigns[0]).toMatch(SEMVER);
     expect(assigns[0].length).toBeGreaterThan(0);
   });
 
-  // .sh test 2: AIDLC_VERSION matches the FIRST (latest) CHANGELOG heading.
-  test("AIDLC_VERSION matches the latest CHANGELOG heading [.sh test 2]", () => {
+  // .sh test 2: AMADEUS_VERSION matches the FIRST (latest) CHANGELOG heading.
+  test("AMADEUS_VERSION matches the latest CHANGELOG heading [.sh test 2]", () => {
     const tsVersion = versionAssignments()[0];
     const latestHeading = changelogHeadings()[0];
     expect(tsVersion).toBe(latestHeading);
@@ -133,7 +133,7 @@ describe("t68 version/CHANGELOG/README sync (migrated from t68-version-changelog
   // (link refs were removed in v0.6.9 — see the header note). Test 2 already
   // binds version.ts == latest heading; here we assert that version is present
   // in the parsed heading set (the canonical pin), not as a raw substring.
-  test("the latest AIDLC_VERSION appears as a CHANGELOG heading [.sh test 3, superseded]", () => {
+  test("the latest AMADEUS_VERSION appears as a CHANGELOG heading [.sh test 3, superseded]", () => {
     const tsVersion = versionAssignments()[0];
     expect(changelogHeadings()).toContain(tsVersion);
   });
@@ -150,16 +150,16 @@ describe("t68 version/CHANGELOG/README sync (migrated from t68-version-changelog
   });
 
   // .sh test 5: CLI wiring — `bun amadeus-utility.ts version` prints
-  // `aidlc <CL_VERSION>`. This is the ONE process-boundary (cli) assertion:
+  // `amadeus <CL_VERSION>`. This is the ONE process-boundary (cli) assertion:
   // catches a renamed constant, broken import, switch-case typo, or missing
   // version.ts. Spawn the real tool through the bun runtime (env seam).
-  test("wired CLI `version` subcommand prints 'aidlc <CHANGELOG version>' [.sh test 5]", () => {
+  test("wired CLI `version` subcommand prints 'amadeus <CHANGELOG version>' [.sh test 5]", () => {
     const clVersion = changelogHeadings()[0];
     const res = spawnSync(BUN, [UTILITY_TS, "version"], { encoding: "utf-8" });
     expect(res.status).toBe(0);
-    // handleVersion() writes `aidlc ${AIDLC_VERSION}\n`; the .sh compared the
-    // trimmed stdout to "aidlc $CL_VERSION".
-    expect((res.stdout ?? "").trim()).toBe(`aidlc ${clVersion}`);
+    // handleVersion() writes `amadeus ${AMADEUS_VERSION}\n`; the .sh compared the
+    // trimmed stdout to "amadeus $CL_VERSION".
+    expect((res.stdout ?? "").trim()).toBe(`amadeus ${clVersion}`);
   }, 30000);
 
   // .sh test 6: README shields.io badge matches version.ts. A release that

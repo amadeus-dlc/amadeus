@@ -12,8 +12,8 @@
 // handleDoctor() itself calls process.exit, so it cannot be invoked in-process
 // without killing the test runner. So all doctor cases (1-17) stay spawns.
 //
-// The .sh injected broken graphs / scope-mappings via the AIDLC_STAGE_GRAPH /
-// AIDLC_SCOPE_MAPPING env seams (amadeus-lib.ts:702-708) that loadStageGraph /
+// The .sh injected broken graphs / scope-mappings via the AMADEUS_STAGE_GRAPH /
+// AMADEUS_SCOPE_MAPPING env seams (amadeus-lib.ts:702-708) that loadStageGraph /
 // loadScopeMapping read at call time. We replicate that — fixture JSON written
 // to a temp file, path passed through the spawn env — so the sad-path cases
 // fire against a deterministic broken graph, never the real shipped data.
@@ -150,7 +150,7 @@ interface DoctorResult {
 
 /**
  * Spawn `bun amadeus-utility.ts doctor --project-dir <p>`, optionally with the
- * AIDLC_STAGE_GRAPH / AIDLC_SCOPE_MAPPING env seams pointed at fixture files.
+ * AMADEUS_STAGE_GRAPH / AMADEUS_SCOPE_MAPPING env seams pointed at fixture files.
  * Mirrors the .sh's `[ENV=...] bun "$UTIL" doctor --project-dir "$PROJ" 2>&1 || true`.
  */
 function doctor(p: string, env: Record<string, string> = {}): DoctorResult {
@@ -290,7 +290,7 @@ describe("t37 amadeus-utility doctor — graph-level checks", () => {
         },
       ]),
     );
-    const r = doctor(p, { AIDLC_STAGE_GRAPH: graph });
+    const r = doctor(p, { AMADEUS_STAGE_GRAPH: graph });
     expect(r.out).toContain("cycle(s) found");
     expect(r.status).toBe(1); // STRONGER: failing check exits 1
   });
@@ -324,7 +324,7 @@ describe("t37 amadeus-utility doctor — graph-level checks", () => {
         },
       ]),
     );
-    const r = doctor(p, { AIDLC_STAGE_GRAPH: graph });
+    const r = doctor(p, { AMADEUS_STAGE_GRAPH: graph });
     expect(r.out).toContain("no file on disk");
     expect(r.status).toBe(1);
   });
@@ -371,8 +371,8 @@ describe("t37 amadeus-utility doctor — graph-level checks", () => {
       }),
     );
     const r = doctor(p, {
-      AIDLC_STAGE_GRAPH: graph,
-      AIDLC_SCOPE_MAPPING: mapping,
+      AMADEUS_STAGE_GRAPH: graph,
+      AMADEUS_SCOPE_MAPPING: mapping,
     });
     expect(r.out).toContain("scopes have errors");
     expect(r.status).toBe(1);
@@ -417,7 +417,7 @@ describe("t37 amadeus-utility doctor — graph-level checks", () => {
         },
       ]),
     );
-    const r = doctor(p, { AIDLC_STAGE_GRAPH: graph });
+    const r = doctor(p, { AMADEUS_STAGE_GRAPH: graph });
     expect(r.out).toContain("broken reference");
     expect(r.status).toBe(1);
   });
@@ -447,7 +447,7 @@ describe("t37 amadeus-utility doctor — graph-level checks", () => {
         },
       }),
     );
-    const r = doctor(p, { AIDLC_SCOPE_MAPPING: mapping });
+    const r = doctor(p, { AMADEUS_SCOPE_MAPPING: mapping });
     // Mirrors grep -E "Keyword overlap: [0-9]* conflict".
     expect(r.out).toMatch(/Keyword overlap: [0-9]* conflict/);
     expect(r.status).toBe(1);

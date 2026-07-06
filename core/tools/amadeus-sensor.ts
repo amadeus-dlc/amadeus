@@ -129,8 +129,8 @@ function dispatchError(msg: string): never {
 // projectDir doesn't carry a .claude/tools/ tree, AND in production where
 // it does. Sibling resolution mirrors amadeus-bolt.ts:84.
 //
-// AIDLC_SENSOR_SCRIPT_DIR overrides the resolution directory — the script
-// seam mirroring AIDLC_SENSORS_DIR for manifests. Tests that exercise stub
+// AMADEUS_SENSOR_SCRIPT_DIR overrides the resolution directory — the script
+// seam mirroring AMADEUS_SENSORS_DIR for manifests. Tests that exercise stub
 // per-sensor scripts point it at an isolated temp dir so they NEVER copy
 // stubs into the shipped dist/.../tools/ tree (which both pollutes the
 // version-controlled artifact on a crashed run and makes concurrent test
@@ -148,7 +148,7 @@ function resolveScriptPath(command: string): string {
 	// string without a non-null assertion.
 	const parts = tsToken.split("/");
 	const basename = parts[parts.length - 1];
-	const scriptDir = process.env.AIDLC_SENSOR_SCRIPT_DIR ?? __FILE_DIR;
+	const scriptDir = process.env.AMADEUS_SENSOR_SCRIPT_DIR ?? __FILE_DIR;
 	return join(scriptDir, basename);
 }
 
@@ -386,7 +386,7 @@ function handleFire(args: string[]): void {
 	// Eligibility = the `produces` artifact names that are NOT questions/timestamp
 	// markers (the stem==artifact key is unsound for those non-prose files). The
 	// script applies a resolved template only when the output stem ∈ this set.
-	// AIDLC_TEMPLATES_DIR is a test/relocation seam mirroring AIDLC_RULES_DIR;
+	// AMADEUS_TEMPLATES_DIR is a test/relocation seam mirroring AMADEUS_RULES_DIR;
 	// the default lookup is the workspace method tree's templates/ dir —
 	// <projectDir>/amadeus/spaces/<space>/memory/templates — derived via
 	// memoryTemplatesDir() from the SAME MEMORY_SEGMENTS the rules resolver +
@@ -395,7 +395,7 @@ function handleFire(args: string[]): void {
 	if (id === "required-sections") {
 		const eligible = templateEligibleArtifacts(stageNode.produces ?? []);
 		const templatesDir =
-			process.env.AIDLC_TEMPLATES_DIR ?? memoryTemplatesDir(projectDir);
+			process.env.AMADEUS_TEMPLATES_DIR ?? memoryTemplatesDir(projectDir);
 		scriptArgs.push("--templates-dir", templatesDir);
 		scriptArgs.push("--template-eligible", eligible.join(","));
 		// §10 MIDDLE branch: the framework-default templates dir (engine-shipped,

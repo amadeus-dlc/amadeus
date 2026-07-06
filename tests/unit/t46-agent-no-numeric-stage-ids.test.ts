@@ -12,8 +12,8 @@
 // bytes — does each agent persona avoid digit.dot.digit stage IDs, and do its
 // "Stages Owned" slugs all resolve in stage-graph.json? No process boundary, no
 // argv/exit/stdout seam, no LLM, zero tokens. We resolve the same tree the .sh
-// resolved (AGENTS_DIR = AIDLC_SRC/agents, STAGE_GRAPH =
-// AIDLC_SRC/tools/data/stage-graph.json — fixtures.ts:42) and read + parse each
+// resolved (AGENTS_DIR = AMADEUS_SRC/agents, STAGE_GRAPH =
+// AMADEUS_SRC/tools/data/stage-graph.json — fixtures.ts:42) and read + parse each
 // file in-process. The .sh shelled out to grep/awk/jq purely to inspect static
 // files; there is no process-boundary contract to preserve, so the equal-or-
 // stronger port is in-process (the .sh even SKIPped entirely when jq was
@@ -56,12 +56,12 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
-// AIDLC_SRC === <repo>/dist/claude/.claude — the same tree the .sh resolved as
+// AMADEUS_SRC === <repo>/dist/claude/.claude — the same tree the .sh resolved as
 // AGENTS_DIR's parent and STAGE_GRAPH's grandparent.
-const AGENTS_DIR = join(AIDLC_SRC, "agents");
-const STAGE_GRAPH = join(AIDLC_SRC, "tools", "data", "stage-graph.json");
+const AGENTS_DIR = join(AMADEUS_SRC, "agents");
+const STAGE_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 
 // The 11 domain-expert agents, in the order the .sh's `AGENTS=` list named them
 // (.sh L24).

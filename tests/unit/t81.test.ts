@@ -108,7 +108,7 @@ interface CliResult {
 
 /**
  * Spawn `bun amadeus-state.ts practices-event <args...> --project-dir <p>`.
- * Mirrors the .sh STATE_TOOL invocation (`bun $AIDLC_SRC/tools/amadeus-state.ts
+ * Mirrors the .sh STATE_TOOL invocation (`bun $AMADEUS_SRC/tools/amadeus-state.ts
  * practices-event ... --project-dir "$PROJ"`).
  */
 function practicesEvent(args: string[], p: string): CliResult {

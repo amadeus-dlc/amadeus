@@ -8,7 +8,7 @@
 //   (A) doctor's rule-drift + paired-coverage advisory rows (the credited
 //       subcommand unit `subcommand:amadeus-utility:doctor`). Driven by
 //       spawning `bun amadeus-utility.ts doctor --project-dir <proj>` with
-//       AIDLC_RULES_DIR / AIDLC_STAGE_GRAPH pointed at inline fixtures, then
+//       AMADEUS_RULES_DIR / AMADEUS_STAGE_GRAPH pointed at inline fixtures, then
 //       grepping the health-check stdout exactly as the .sh's run_doctor +
 //       `grep -q` did. doctor's handleDoctor process.exit(failed>0?1:0)
 //       (amadeus-utility.ts:1385) means a clean fixture exits 0 and a fixture
@@ -21,7 +21,7 @@
 //       parseRuleHeadings, and validateRuleFrontmatter's accept/reject).
 //       The .sh drove these through `bun -e '<import + console.log>'`. Since
 //       the target is .cli.test.ts, the mechanism stays a SPAWN: we spawn
-//       `bun -e <script>` (the real bun binary) with AIDLC_RULES_DIR set, and
+//       `bun -e <script>` (the real bun binary) with AMADEUS_RULES_DIR set, and
 //       assert on its stdout / exit code — the identical process boundary the
 //       .sh used. An in-process import would lose the validate-throws-exits-
 //       nonzero half (case 2b) that the .sh's `RC=$?` arm relies on.
@@ -40,7 +40,7 @@
 //       (the .sh folded both into one `ok`; kept as one test with two
 //       expect()s — STRONGER, each sub-condition pinned separately).
 //   - case 4   multi-line-comment-only heading reads empty       -> test 4.
-//   - case 5   .headings populated from AIDLC_RULES_DIR fixture  -> test 5
+//   - case 5   .headings populated from AMADEUS_RULES_DIR fixture  -> test 5
 //       (proves the read seam: doctor/loadRules reads fixture bodies, not
 //        the shipped rules).
 //   - case 6   org+team ## Testing Posture overlap -> 1 candidate
@@ -86,11 +86,11 @@ import { toPortablePath } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
-const AIDLC_SRC = join(REPO_ROOT, "dist", "claude", ".claude");
-const GRAPH_TS = join(AIDLC_SRC, "tools", "amadeus-graph.ts");
-const RULE_SCHEMA_TS = join(AIDLC_SRC, "tools", "amadeus-rule-schema.ts");
-const UTIL = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
-const SEED_GRAPH = join(AIDLC_SRC, "tools", "data", "stage-graph.json");
+const AMADEUS_SRC = join(REPO_ROOT, "dist", "claude", ".claude");
+const GRAPH_TS = join(AMADEUS_SRC, "tools", "amadeus-graph.ts");
+const RULE_SCHEMA_TS = join(AMADEUS_SRC, "tools", "amadeus-rule-schema.ts");
+const UTIL = join(AMADEUS_SRC, "tools", "amadeus-utility.ts");
+const SEED_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 
 const tempDirs: string[] = [];
 
@@ -127,7 +127,7 @@ interface CliResult {
 
 /**
  * run_doctor (t103.sh:189-198): spawn the real `bun amadeus-utility.ts doctor
- * --project-dir <proj>` with AIDLC_RULES_DIR + AIDLC_STAGE_GRAPH pointed at
+ * --project-dir <proj>` with AMADEUS_RULES_DIR + AMADEUS_STAGE_GRAPH pointed at
  * the fixture. Returns combined stdout+stderr. doctor's exit code is NOT
  * asserted on (the .sh absorbed it with `|| true`); the advisory label lines
  * on stdout are the observable.
@@ -138,8 +138,8 @@ function runDoctor(rulesDirPath: string, stageGraph: string = SEED_GRAPH): CliRe
     encoding: "utf-8",
     env: {
       ...process.env,
-      AIDLC_RULES_DIR: rulesDirPath,
-      AIDLC_STAGE_GRAPH: stageGraph,
+      AMADEUS_RULES_DIR: rulesDirPath,
+      AMADEUS_STAGE_GRAPH: stageGraph,
     },
   });
   const stdout = res.stdout ?? "";
@@ -166,7 +166,7 @@ const lit = (p: string): string => JSON.stringify(p);
 
 // ============================================================
 // (B) rule-loader primitives — the seams doctor's drift/coverage build on.
-// Driven via `bun -e` spawn (the real binary), AIDLC_RULES_DIR-isolated.
+// Driven via `bun -e` spawn (the real binary), AMADEUS_RULES_DIR-isolated.
 // ============================================================
 
 describe("t103 loader primitives (migrated from t103-doctor-rule-drift-coverage.sh, plan 19)", () => {
@@ -178,7 +178,7 @@ describe("t103 loader primitives (migrated from t103-doctor-rule-drift-coverage.
       `import { loadRules } from ${lit(GRAPH_TS)};\n` +
         `const r = loadRules().find(x => x.scope === "org");\n` +
         `console.log(r.frontmatter.pairing);`,
-      { AIDLC_RULES_DIR: rd },
+      { AMADEUS_RULES_DIR: rd },
     );
     expect(r.status).toBe(0);
     expect(r.stdout.trim().split("\n").pop()).toBe("amadeus-foo");
@@ -223,7 +223,7 @@ describe("t103 loader primitives (migrated from t103-doctor-rule-drift-coverage.
         `console.log("NOFENCE=" + (a.includes("fenced content") ? "0" : "1"));\n` +
         `console.log("NOQUOTE=" + (a.includes("blockquote") ? "0" : "1"));\n` +
         `console.log("NOCOMMENT=" + (a.includes("single-line comment") ? "0" : "1"));`,
-      { AIDLC_RULES_DIR: rd },
+      { AMADEUS_RULES_DIR: rd },
     );
   }
 
@@ -259,12 +259,12 @@ describe("t103 loader primitives (migrated from t103-doctor-rule-drift-coverage.
         `const r = loadRules().find(x => x.scope === "org");\n` +
         `const c = (r.headings.get("Corrections") ?? "").trim();\n` +
         `console.log("EMPTY=" + (c === "" ? "1" : "0"));`,
-      { AIDLC_RULES_DIR: rd },
+      { AMADEUS_RULES_DIR: rd },
     );
     expect(r.out).toContain("EMPTY=1");
   });
 
-  test("case 5: .headings populated from AIDLC_RULES_DIR fixture (read seam)", () => {
+  test("case 5: .headings populated from AMADEUS_RULES_DIR fixture (read seam)", () => {
     const rd = rulesDir({
       "org.md":
         "# Org\n\n## Testing Posture\n\nA unique fixture sentence that does not appear in shipped rules.\n",
@@ -274,7 +274,7 @@ describe("t103 loader primitives (migrated from t103-doctor-rule-drift-coverage.
         `const r = loadRules().find(x => x.scope === "org");\n` +
         `const tp = r.headings.get("Testing Posture") ?? "";\n` +
         `console.log(tp.includes("unique fixture sentence") ? "FIXTURE=1" : "FIXTURE=0");`,
-      { AIDLC_RULES_DIR: rd },
+      { AMADEUS_RULES_DIR: rd },
     );
     expect(r.out).toContain("FIXTURE=1");
   });

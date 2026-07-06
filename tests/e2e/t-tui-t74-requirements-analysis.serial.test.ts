@@ -68,10 +68,10 @@
 // REACHABILITY: a full requirements-analysis run is several minutes of real LLM
 // turns plus two gate round-trips; the per-gate/overall timeouts are HANG
 // BACKSTOPS (answer-gate errors loud, never "concludes done"). The .sh ran with
-// AIDLC_TEST_TIMEOUT=900; this honours the same convention.
+// AMADEUS_TEST_TIMEOUT=900; this honours the same convention.
 //
 // COST: spends real Bedrock tokens (minutes-long LLM turns). Gated behind
-// AIDLC_TUI_LIVE=1 so a bare `--e2e` on a laptop SKIPs it; tmux/claude/
+// AMADEUS_TUI_LIVE=1 so a bare `--e2e` on a laptop SKIPs it; tmux/claude/
 // distributable absence also SKIPs with a reason — never a hollow pass.
 //
 // SPAWN, not import (D-TUI-7): runs under bun, spawns tui-drive.ts (node on
@@ -93,7 +93,7 @@ import { seededRecordDir, seededStateFile } from "../harness/fixtures.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
-const AIDLC_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
+const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 const IS_WIN = os.platform() === "win32";
 // node on Windows (#748), resolved because the box's node is off PATH; the .ts
 // entrypoint needs --experimental-strip-types under node < 22.18. bun elsewhere
@@ -105,11 +105,11 @@ const WIN_NODE = IS_WIN ? resolveWinNode() : null;
 const DRIVE_BIN = IS_WIN ? (WIN_NODE as string) : process.execPath;
 const DRIVE_PREFIX = IS_WIN ? ["--experimental-strip-types", DRIVER] : [DRIVER];
 
-// Honour the suite's AIDLC_TEST_TIMEOUT convention (seconds; the .sh set 900 and
+// Honour the suite's AMADEUS_TEST_TIMEOUT convention (seconds; the .sh set 900 and
 // the integration tier sets 600). A full requirements-analysis run-through is
 // several minutes of real LLM turns plus two gates, so the bun:test cap is
 // generous.
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "2400", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "2400", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
 
 interface Run {
@@ -137,11 +137,11 @@ function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: 
   );
 }
 
-// ABSENT / opt-in gating. The token guard AIDLC_TUI_LIVE=1 is checked FIRST so a
+// ABSENT / opt-in gating. The token guard AMADEUS_TUI_LIVE=1 is checked FIRST so a
 // bare --e2e (no live opt-in) reports a clear skip reason, not a substrate miss.
 function skipReason(): string | null {
-  if (process.env.AIDLC_TUI_LIVE !== "1") {
-    return "set AIDLC_TUI_LIVE=1 to run the live requirements-analysis journey (uses Bedrock tokens)";
+  if (process.env.AMADEUS_TUI_LIVE !== "1") {
+    return "set AMADEUS_TUI_LIVE=1 to run the live requirements-analysis journey (uses Bedrock tokens)";
   }
   if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";
@@ -158,7 +158,7 @@ function skipReason(): string | null {
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
   }
-  if (!existsSync(AIDLC_SRC)) return `distributable missing: ${AIDLC_SRC}`;
+  if (!existsSync(AMADEUS_SRC)) return `distributable missing: ${AMADEUS_SRC}`;
   return null;
 }
 const SKIP_REASON = skipReason();

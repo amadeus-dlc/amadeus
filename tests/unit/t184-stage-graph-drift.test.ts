@@ -6,8 +6,8 @@
 // silently never executed. This suite proves the guardrail that surfaces that:
 //
 //   1. function:stageGraphDrift (amadeus-graph.ts) -- the deterministic two-source
-//      set-difference, in-process, driven through the AIDLC_STAGE_GRAPH +
-//      AIDLC_STAGES_DIR seams so both sources point at a temp tree. Proves BOTH
+//      set-difference, in-process, driven through the AMADEUS_STAGE_GRAPH +
+//      AMADEUS_STAGES_DIR seams so both sources point at a temp tree. Proves BOTH
 //      directions (graph->disk missingFiles, disk->graph uncompiledStages) AND the
 //      in-sync zero case.
 //   2. subcommand:amadeus-utility:doctor -- the disk->graph drift surfaces as an
@@ -29,7 +29,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   REPO_ROOT,
   seedStateFile,
@@ -40,8 +40,8 @@ const BUN = process.execPath; // the bun running this test
 
 // In-process helper under test, plus the shipped sources for the seam runs.
 import { compileStageGraph, stageGraphDrift } from "../../core/tools/amadeus-graph.ts";
-const STAGE_GRAPH = join(AIDLC_SRC, "tools", "data", "stage-graph.json");
-const STAGES_DIR = join(AIDLC_SRC, "amadeus-common", "stages");
+const STAGE_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
+const STAGES_DIR = join(AMADEUS_SRC, "amadeus-common", "stages");
 const MID_IDEATION = join(REPO_ROOT, "tests", "fixtures", "state-mid-ideation.md");
 
 // A realistic custom stage file: valid-enough frontmatter, dropped into a phase
@@ -111,33 +111,33 @@ describe("t184 stage-graph drift detection (issue #364)", () => {
   // ===========================================================================
   describe("function:stageGraphDrift (in-process, via env seams)", () => {
     test("the shipped tree is in sync: no drift in either direction", () => {
-      const prevG = process.env.AIDLC_STAGE_GRAPH;
-      const prevS = process.env.AIDLC_STAGES_DIR;
+      const prevG = process.env.AMADEUS_STAGE_GRAPH;
+      const prevS = process.env.AMADEUS_STAGES_DIR;
       try {
-        process.env.AIDLC_STAGE_GRAPH = STAGE_GRAPH;
-        process.env.AIDLC_STAGES_DIR = STAGES_DIR;
+        process.env.AMADEUS_STAGE_GRAPH = STAGE_GRAPH;
+        process.env.AMADEUS_STAGES_DIR = STAGES_DIR;
         const d = stageGraphDrift();
         expect(d.missingFiles).toEqual([]);
         expect(d.uncompiledStages).toEqual([]);
       } finally {
-        if (prevG === undefined) delete process.env.AIDLC_STAGE_GRAPH;
-        else process.env.AIDLC_STAGE_GRAPH = prevG;
-        if (prevS === undefined) delete process.env.AIDLC_STAGES_DIR;
-        else process.env.AIDLC_STAGES_DIR = prevS;
+        if (prevG === undefined) delete process.env.AMADEUS_STAGE_GRAPH;
+        else process.env.AMADEUS_STAGE_GRAPH = prevG;
+        if (prevS === undefined) delete process.env.AMADEUS_STAGES_DIR;
+        else process.env.AMADEUS_STAGES_DIR = prevS;
       }
     });
 
     test("disk->graph: a stage file not in the graph appears in uncompiledStages", () => {
       // Copy the shipped stages into a temp tree, add one uncompiled stage, and
-      // point AIDLC_STAGES_DIR at the copy while the graph stays the shipped one.
+      // point AMADEUS_STAGES_DIR at the copy while the graph stays the shipped one.
       const tmp = join(
         REPO_ROOT,
         "tests",
         "fixtures",
         `.t184-stages-${process.pid}`,
       );
-      const prevG = process.env.AIDLC_STAGE_GRAPH;
-      const prevS = process.env.AIDLC_STAGES_DIR;
+      const prevG = process.env.AMADEUS_STAGE_GRAPH;
+      const prevS = process.env.AMADEUS_STAGES_DIR;
       try {
         rmSync(tmp, { recursive: true, force: true });
         // Cheap copy: only the construction phase dir (the helper globs all
@@ -149,16 +149,16 @@ describe("t184 stage-graph drift detection (issue #364)", () => {
           CUSTOM_STAGE_MD,
           "utf-8",
         );
-        process.env.AIDLC_STAGE_GRAPH = STAGE_GRAPH;
-        process.env.AIDLC_STAGES_DIR = tmp;
+        process.env.AMADEUS_STAGE_GRAPH = STAGE_GRAPH;
+        process.env.AMADEUS_STAGES_DIR = tmp;
         const d = stageGraphDrift();
         expect(d.uncompiledStages).toContain(CUSTOM_SLUG);
       } finally {
         rmSync(tmp, { recursive: true, force: true });
-        if (prevG === undefined) delete process.env.AIDLC_STAGE_GRAPH;
-        else process.env.AIDLC_STAGE_GRAPH = prevG;
-        if (prevS === undefined) delete process.env.AIDLC_STAGES_DIR;
-        else process.env.AIDLC_STAGES_DIR = prevS;
+        if (prevG === undefined) delete process.env.AMADEUS_STAGE_GRAPH;
+        else process.env.AMADEUS_STAGE_GRAPH = prevG;
+        if (prevS === undefined) delete process.env.AMADEUS_STAGES_DIR;
+        else process.env.AMADEUS_STAGES_DIR = prevS;
       }
     });
 
@@ -170,23 +170,23 @@ describe("t184 stage-graph drift detection (issue #364)", () => {
         "fixtures",
         `.t184-empty-${process.pid}`,
       );
-      const prevG = process.env.AIDLC_STAGE_GRAPH;
-      const prevS = process.env.AIDLC_STAGES_DIR;
+      const prevG = process.env.AMADEUS_STAGE_GRAPH;
+      const prevS = process.env.AMADEUS_STAGES_DIR;
       try {
         rmSync(tmp, { recursive: true, force: true });
         mkdirSync(tmp, { recursive: true });
-        process.env.AIDLC_STAGE_GRAPH = STAGE_GRAPH;
-        process.env.AIDLC_STAGES_DIR = tmp;
+        process.env.AMADEUS_STAGE_GRAPH = STAGE_GRAPH;
+        process.env.AMADEUS_STAGES_DIR = tmp;
         const d = stageGraphDrift();
         expect(d.missingFiles.length).toBeGreaterThan(0);
         // Result is sorted, deterministic.
         expect(d.missingFiles).toEqual([...d.missingFiles].sort());
       } finally {
         rmSync(tmp, { recursive: true, force: true });
-        if (prevG === undefined) delete process.env.AIDLC_STAGE_GRAPH;
-        else process.env.AIDLC_STAGE_GRAPH = prevG;
-        if (prevS === undefined) delete process.env.AIDLC_STAGES_DIR;
-        else process.env.AIDLC_STAGES_DIR = prevS;
+        if (prevG === undefined) delete process.env.AMADEUS_STAGE_GRAPH;
+        else process.env.AMADEUS_STAGE_GRAPH = prevG;
+        if (prevS === undefined) delete process.env.AMADEUS_STAGES_DIR;
+        else process.env.AMADEUS_STAGES_DIR = prevS;
       }
     });
 
@@ -198,7 +198,7 @@ describe("t184 stage-graph drift detection (issue #364)", () => {
       // frontmatter `phase:` field — so this stage carries fully valid, schema-
       // passing frontmatter (a canonical `phase: construction`) and the only
       // anomaly is the bogus directory it lives in. Driven through the
-      // AIDLC_STAGES_DIR seam at a temp tree.
+      // AMADEUS_STAGES_DIR seam at a temp tree.
       const validStageMd = [
         "---",
         "slug: bogus-phase-stage",
@@ -225,8 +225,8 @@ describe("t184 stage-graph drift detection (issue #364)", () => {
         "fixtures",
         `.t184-bogusphase-${process.pid}`,
       );
-      const prevG = process.env.AIDLC_STAGE_GRAPH;
-      const prevS = process.env.AIDLC_STAGES_DIR;
+      const prevG = process.env.AMADEUS_STAGE_GRAPH;
+      const prevS = process.env.AMADEUS_STAGES_DIR;
       try {
         rmSync(tmp, { recursive: true, force: true });
         // A bogus (non-canonical) phase directory with one new stage .md. The
@@ -238,15 +238,15 @@ describe("t184 stage-graph drift detection (issue #364)", () => {
           validStageMd,
           "utf-8",
         );
-        process.env.AIDLC_STAGE_GRAPH = STAGE_GRAPH;
-        process.env.AIDLC_STAGES_DIR = tmp;
+        process.env.AMADEUS_STAGE_GRAPH = STAGE_GRAPH;
+        process.env.AMADEUS_STAGES_DIR = tmp;
         expect(() => compileStageGraph()).toThrow(/unknown phase directory/);
       } finally {
         rmSync(tmp, { recursive: true, force: true });
-        if (prevG === undefined) delete process.env.AIDLC_STAGE_GRAPH;
-        else process.env.AIDLC_STAGE_GRAPH = prevG;
-        if (prevS === undefined) delete process.env.AIDLC_STAGES_DIR;
-        else process.env.AIDLC_STAGES_DIR = prevS;
+        if (prevG === undefined) delete process.env.AMADEUS_STAGE_GRAPH;
+        else process.env.AMADEUS_STAGE_GRAPH = prevG;
+        if (prevS === undefined) delete process.env.AMADEUS_STAGES_DIR;
+        else process.env.AMADEUS_STAGES_DIR = prevS;
       }
     });
   });

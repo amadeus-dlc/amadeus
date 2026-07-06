@@ -29,13 +29,13 @@
 //     resolveSensorsForStage declared-order, withAuditLock reentrancy (2).
 //   MUST STAY SPAWN (process.exit / module-load env read / CLI stdout / parallel-process):
 //     plan-identity parity (9 scopes via `state lookup stages-in-scope` byte-exact),
-//     AIDLC_GRAPH_RESOLVE=1 `resolve <scope> --stdout` cutover parity (9 scopes byte-exact
+//     AMADEUS_GRAPH_RESOLVE=1 `resolve <scope> --stdout` cutover parity (9 scopes byte-exact
 //       vs mr9-parity fixtures) + the gate (no flag -> exit 1, stderr), env-seam read,
 //     nextInScopeStage walk parity (9 scopes via `lookup next-stage`),
 //     firstInScopeStageOfPhase parity (9 scopes x 5 phases via `lookup first-in-phase`),
-//     AIDLC_STAGE_GRAPH env-override-honoured-by-rewired-stagesInScope,
+//     AMADEUS_STAGE_GRAPH env-override-honoured-by-rewired-stagesInScope,
 //     compile --check drift (clean->0 / mutated->1 / restore->0),
-//     AIDLC_RULES_DIR populate-from-disk + --check drift, AIDLC_SENSORS_DIR populate +
+//     AMADEUS_RULES_DIR populate-from-disk + --check drift, AMADEUS_SENSORS_DIR populate +
 //     --check drift, designer export byte-identical-to-golden + counts + determinism +
 //     env-seam + export --check, concurrency (two PARALLEL compiles serialise byte-equal).
 //   GREP-THE-SOURCE (port as readFileSync + includes / regex count):
@@ -83,9 +83,9 @@ const TOOLS_DIR = join(import.meta.dir, "..", "..", "dist", "claude", ".claude",
 const GRAPH_TS = join(TOOLS_DIR, "amadeus-graph.ts");
 const STATE_TS = join(TOOLS_DIR, "amadeus-state.ts");
 const SEED_GRAPH = join(TOOLS_DIR, "data", "stage-graph.json");
-const AIDLC_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
-const REAL_STAGES = join(AIDLC_SRC, "amadeus-common", "stages");
-const REAL_SENSORS = join(AIDLC_SRC, "sensors");
+const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
+const REAL_STAGES = join(AMADEUS_SRC, "amadeus-common", "stages");
+const REAL_SENSORS = join(AMADEUS_SRC, "sensors");
 const PARITY_DIR = join(import.meta.dir, "..", "fixtures", "mr9-parity");
 const EXPORT_FIXTURE = join(import.meta.dir, "..", "fixtures", "designer-export", "export.json");
 
@@ -105,7 +105,7 @@ const SCOPES = [
 const PHASES = ["initialization", "ideation", "inception", "construction", "operation"] as const;
 
 // --- env-seam + cache harness (mirrors the .sh per-case env discipline) -------
-// compileStageGraph()/loadGraph()/loadSensors() read AIDLC_* env at call time.
+// compileStageGraph()/loadGraph()/loadSensors() read AMADEUS_* env at call time.
 // __resetGraphCache() before each test so the module-level _graph cache cannot
 // leak a fixture between cases. Nothing in-process WRITES the real graph.
 beforeEach(() => {
@@ -453,10 +453,10 @@ describe("t66 plan-identity parity (spawnSync CLI-boundary: 9 scopes)", () => {
 });
 
 // =============================================================================
-// AIDLC_GRAPH_RESOLVE=1 resolve cutover parity — byte-exact for 9 scopes
+// AMADEUS_GRAPH_RESOLVE=1 resolve cutover parity — byte-exact for 9 scopes
 // (.sh:407-415, 9 assertions). MUST STAY SPAWN: this is an ENV-GATED CLI
 // subcommand whose entire subject is a process-boundary seam — a FRESH process
-// must (a) read AIDLC_GRAPH_RESOLVE at module/handler time to lift the gate and
+// must (a) read AMADEUS_GRAPH_RESOLVE at module/handler time to lift the gate and
 // (b) emit the {slug, phase, action} plan to stdout. resolvePlanForScope() is
 // importable, but the .sh assertion proves the `resolve <scope> --stdout` CLI
 // path (env read + stdout byte-shape), so spawnSync the real tool.
@@ -477,11 +477,11 @@ describe("t66 plan-identity parity (spawnSync CLI-boundary: 9 scopes)", () => {
 // trailing-newline byte-shape and exit 0.
 // =============================================================================
 
-describe("t66 AIDLC_GRAPH_RESOLVE=1 resolve cutover parity (spawnSync env-gated CLI)", () => {
+describe("t66 AMADEUS_GRAPH_RESOLVE=1 resolve cutover parity (spawnSync env-gated CLI)", () => {
   for (const scope of SCOPES) {
     test(`resolve parity (frontmatter-derived grid == legacy): ${scope} byte-exact`, () => {
       const res = spawnSync(BUN, [GRAPH_TS, "resolve", scope, "--stdout"], {
-        env: { ...process.env, AIDLC_GRAPH_RESOLVE: "1" },
+        env: { ...process.env, AMADEUS_GRAPH_RESOLVE: "1" },
         encoding: "utf8",
       });
       // Gate lifted -> the resolve handler runs and exits 0 (the .sh ran with
@@ -504,18 +504,18 @@ describe("t66 AIDLC_GRAPH_RESOLVE=1 resolve cutover parity (spawnSync env-gated 
 
   // The env gate is the whole reason `resolve` ships behind a flag — prove it
   // FIRES (the failure event, not just the happy path): without
-  // AIDLC_GRAPH_RESOLVE=1 the handler must exit 1 with the rollout-gate message
+  // AMADEUS_GRAPH_RESOLVE=1 the handler must exit 1 with the rollout-gate message
   // on stderr and emit NO plan to stdout. STRONGER than the .sh (which only ever
   // ran the flag-set happy path, redirecting stderr to /dev/null).
-  test("resolve is gated behind AIDLC_GRAPH_RESOLVE=1 (no flag -> exit 1, stderr, no stdout)", () => {
+  test("resolve is gated behind AMADEUS_GRAPH_RESOLVE=1 (no flag -> exit 1, stderr, no stdout)", () => {
     const env = { ...process.env };
-    delete (env as Record<string, string | undefined>).AIDLC_GRAPH_RESOLVE;
+    delete (env as Record<string, string | undefined>).AMADEUS_GRAPH_RESOLVE;
     const res = spawnSync(BUN, [GRAPH_TS, "resolve", "feature", "--stdout"], {
       env,
       encoding: "utf8",
     });
     expect(res.status).toBe(1);
-    expect(res.stderr).toContain("AIDLC_GRAPH_RESOLVE=1");
+    expect(res.stderr).toContain("AMADEUS_GRAPH_RESOLVE=1");
     expect(res.stdout.trim()).toBe("");
   });
 });
@@ -640,15 +640,15 @@ describe("t66 circular import (in-process)", () => {
 });
 
 // =============================================================================
-// AIDLC_STAGE_GRAPH env override honoured post-rewire (.sh:550-594, 1 assertion)
+// AMADEUS_STAGE_GRAPH env override honoured post-rewire (.sh:550-594, 1 assertion)
 // MUST STAY SPAWN: the assertion's whole point is that a FRESH process reads
-// AIDLC_STAGE_GRAPH at module load and stagesInScope() reflects the injected file.
+// AMADEUS_STAGE_GRAPH at module load and stagesInScope() reflects the injected file.
 // In-process the module is already loaded with the real graph cached, so this is a
 // genuine module-load env-read boundary -> spawnSync.
 // =============================================================================
 
-describe("t66 AIDLC_STAGE_GRAPH env override (spawnSync env-seam)", () => {
-  test("AIDLC_STAGE_GRAPH env override honoured by rewired stagesInScope", () => {
+describe("t66 AMADEUS_STAGE_GRAPH env override (spawnSync env-seam)", () => {
+  test("AMADEUS_STAGE_GRAPH env override honoured by rewired stagesInScope", () => {
     const dir = mkdtempSync(join(tmpdir(), "t66-stagegraph-"));
     scratch.push(dir);
     const fixture = join(dir, "fixture-graph.json");
@@ -705,7 +705,7 @@ describe("t66 AIDLC_STAGE_GRAPH env override (spawnSync env-seam)", () => {
          const r = stagesInScope('enterprise');
          console.log(r.length + ':' + r.map(x => x.slug).join(','));`,
       ],
-      { env: { ...process.env, AIDLC_STAGE_GRAPH: fixture }, encoding: "utf8" },
+      { env: { ...process.env, AMADEUS_STAGE_GRAPH: fixture }, encoding: "utf8" },
     );
     expect((res.stdout + res.stderr).trim()).toBe("2:workspace-scaffold,state-init");
   });
@@ -950,7 +950,7 @@ describe("t66 compile error hardening (in-process + source grep)", () => {
 describe("t66 compile --check drift (spawnSync CLI exit-code)", () => {
   test("clean -> 0, mutated -> 1, restore -> 0", () => {
     const graph = seedGraphCopy();
-    const env = { ...process.env, AIDLC_STAGE_GRAPH: graph };
+    const env = { ...process.env, AMADEUS_STAGE_GRAPH: graph };
 
     // Clean -> exit 0
     const clean = spawnSync(BUN, [GRAPH_TS, "compile", "--check"], { env, encoding: "utf8" });
@@ -990,7 +990,7 @@ describe("t66 canonical emitter pin (in-process)", () => {
 // Designer export (.sh:885-955, 9 assertions)
 // MUST STAY SPAWN: the strongest assertion compares the CLI `export` stdout to the
 // golden fixture byte-for-byte (process-boundary stdout contract); the env-seam group
-// proves a FRESH process reads AIDLC_STAGE_GRAPH + AIDLC_SCOPE_MAPPING at module load;
+// proves a FRESH process reads AMADEUS_STAGE_GRAPH + AMADEUS_SCOPE_MAPPING at module load;
 // export --check exits via process.exit. The golden at tests/fixtures/designer-export/
 // export.json is READ only, never written.
 // =============================================================================
@@ -1027,8 +1027,8 @@ describe("t66 designer export (spawnSync CLI-boundary)", () => {
     expect(a).toBe(b);
   });
 
-  // .sh:910-949 — Group D: env-seam for AIDLC_STAGE_GRAPH + AIDLC_SCOPE_MAPPING (2 assertions)
-  test("env-seam: AIDLC_STAGE_GRAPH + AIDLC_SCOPE_MAPPING swap produce fixture-only export", () => {
+  // .sh:910-949 — Group D: env-seam for AMADEUS_STAGE_GRAPH + AMADEUS_SCOPE_MAPPING (2 assertions)
+  test("env-seam: AMADEUS_STAGE_GRAPH + AMADEUS_SCOPE_MAPPING swap produce fixture-only export", () => {
     const dir = mkdtempSync(join(tmpdir(), "t66-export-seam-"));
     scratch.push(dir);
     const fixtureGraph = join(dir, "fixture-graph.json");
@@ -1072,7 +1072,7 @@ describe("t66 designer export (spawnSync CLI-boundary)", () => {
       ),
     );
     const res = spawnSync(BUN, [GRAPH_TS, "export"], {
-      env: { ...process.env, AIDLC_STAGE_GRAPH: fixtureGraph, AIDLC_SCOPE_MAPPING: fixtureScopes },
+      env: { ...process.env, AMADEUS_STAGE_GRAPH: fixtureGraph, AMADEUS_SCOPE_MAPPING: fixtureScopes },
       encoding: "utf8",
     });
     const out = JSON.parse(res.stdout) as { stages: unknown[]; scopes: Record<string, unknown> };
@@ -1104,10 +1104,10 @@ describe("t66 rules_in_context resolution (in-process + spawnSync seams)", () =>
     expect(keys.indexOf("rules_in_context")).toBe(keys.indexOf("outputs") + 1);
   });
 
-  // .sh:987-997 — canonical emitter pin: rules_in_context populates from AIDLC_RULES_DIR.
-  // MUST STAY SPAWN: two FRESH compile processes each reading AIDLC_RULES_DIR at module
+  // .sh:987-997 — canonical emitter pin: rules_in_context populates from AMADEUS_RULES_DIR.
+  // MUST STAY SPAWN: two FRESH compile processes each reading AMADEUS_RULES_DIR at module
   // load; the populated-vs-empty hashes must differ (env-seam read boundary).
-  test("canonical emitter pin: rules_in_context populates from AIDLC_RULES_DIR", () => {
+  test("canonical emitter pin: rules_in_context populates from AMADEUS_RULES_DIR", () => {
     const popRules = mkdtempSync(join(tmpdir(), "t66-rules-pop-"));
     const emptyRules = mkdtempSync(join(tmpdir(), "t66-rules-empty-"));
     scratch.push(popRules, emptyRules);
@@ -1117,11 +1117,11 @@ describe("t66 rules_in_context resolution (in-process + spawnSync seams)", () =>
     const graphA = seedGraphCopy();
     const graphB = seedGraphCopy();
     spawnSync(BUN, [GRAPH_TS, "compile"], {
-      env: { ...process.env, AIDLC_RULES_DIR: popRules, AIDLC_STAGE_GRAPH: graphA },
+      env: { ...process.env, AMADEUS_RULES_DIR: popRules, AMADEUS_STAGE_GRAPH: graphA },
       encoding: "utf8",
     });
     spawnSync(BUN, [GRAPH_TS, "compile"], {
-      env: { ...process.env, AIDLC_RULES_DIR: emptyRules, AIDLC_STAGE_GRAPH: graphB },
+      env: { ...process.env, AMADEUS_RULES_DIR: emptyRules, AMADEUS_STAGE_GRAPH: graphB },
       encoding: "utf8",
     });
     const hashPop = sha256(readFileSync(graphA, "utf8"));
@@ -1129,13 +1129,13 @@ describe("t66 rules_in_context resolution (in-process + spawnSync seams)", () =>
     expect(hashPop).not.toBe(hashEmpty);
   });
 
-  // .sh:1000-1009 — compile --check detects rule-file drift via AIDLC_RULES_DIR.
+  // .sh:1000-1009 — compile --check detects rule-file drift via AMADEUS_RULES_DIR.
   // MUST STAY SPAWN: compile then --check (process.exit boundary) after adding a rule.
-  test("compile --check detects rule-file drift via AIDLC_RULES_DIR", () => {
+  test("compile --check detects rule-file drift via AMADEUS_RULES_DIR", () => {
     const rules = mkdtempSync(join(tmpdir(), "t66-rules-drift-"));
     scratch.push(rules);
     const graph = seedGraphCopy();
-    const env = { ...process.env, AIDLC_RULES_DIR: rules, AIDLC_STAGE_GRAPH: graph };
+    const env = { ...process.env, AMADEUS_RULES_DIR: rules, AMADEUS_STAGE_GRAPH: graph };
     writeFileSync(join(rules, "org.md"), "# initial org rule\n");
     spawnSync(BUN, [GRAPH_TS, "compile"], { env, encoding: "utf8" });
     writeFileSync(join(rules, "team.md"), "# team rule added after compile\n");
@@ -1149,11 +1149,11 @@ describe("t66 rules_in_context resolution (in-process + spawnSync seams)", () =>
     const graphD = seedGraphCopy();
     const graphE = seedGraphCopy();
     spawnSync(BUN, [GRAPH_TS, "compile"], {
-      env: { ...process.env, AIDLC_STAGE_GRAPH: graphD },
+      env: { ...process.env, AMADEUS_STAGE_GRAPH: graphD },
       encoding: "utf8",
     });
     spawnSync(BUN, [GRAPH_TS, "compile"], {
-      env: { ...process.env, AIDLC_STAGE_GRAPH: graphE },
+      env: { ...process.env, AMADEUS_STAGE_GRAPH: graphE },
       encoding: "utf8",
     });
     expect(sha256(readFileSync(graphD, "utf8"))).toBe(sha256(readFileSync(graphE, "utf8")));
@@ -1167,12 +1167,12 @@ describe("t66 rules_in_context resolution (in-process + spawnSync seams)", () =>
     const parallel = seedGraphCopy();
     // Serial baseline.
     spawnSync(BUN, [GRAPH_TS, "compile"], {
-      env: { ...process.env, AIDLC_STAGE_GRAPH: serial },
+      env: { ...process.env, AMADEUS_STAGE_GRAPH: serial },
       encoding: "utf8",
     });
     const serialHash = sha256(readFileSync(serial, "utf8"));
     // Two parallel compiles against the same file.
-    const env = { ...process.env, AIDLC_STAGE_GRAPH: parallel };
+    const env = { ...process.env, AMADEUS_STAGE_GRAPH: parallel };
     const p1 = Bun.spawn([BUN, GRAPH_TS, "compile"], { env, stdout: "ignore", stderr: "ignore" });
     const p2 = Bun.spawn([BUN, GRAPH_TS, "compile"], { env, stdout: "ignore", stderr: "ignore" });
     await Promise.all([p1.exited, p2.exited]);
@@ -1197,11 +1197,11 @@ describe("t66 sensors_applicable resolution (in-process + spawnSync seams)", () 
     expect(keys.indexOf("sensors_applicable")).toBe(keys.indexOf("rules_in_context") + 1);
   });
 
-  // .sh:1074-1101 — AIDLC_SENSORS_DIR seam: populated dir yields a graph.
-  // MUST STAY SPAWN: a FRESH compile reading AIDLC_STAGES_DIR + AIDLC_SENSORS_DIR at
+  // .sh:1074-1101 — AMADEUS_SENSORS_DIR seam: populated dir yields a graph.
+  // MUST STAY SPAWN: a FRESH compile reading AMADEUS_STAGES_DIR + AMADEUS_SENSORS_DIR at
   // module load; the seam is the populated-dir-produces-a-graph fact. Rebuild the
   // single-stage init tree + probe-sensor heredoc via cpSync + writeFileSync.
-  test("AIDLC_SENSORS_DIR seam: populated dir yields a graph", () => {
+  test("AMADEUS_SENSORS_DIR seam: populated dir yields a graph", () => {
     const stagesInit = mkdtempSync(join(tmpdir(), "t66-sensors-stages-"));
     const sensorsPop = mkdtempSync(join(tmpdir(), "t66-sensors-pop-"));
     scratch.push(stagesInit, sensorsPop);
@@ -1225,25 +1225,25 @@ description: Probe sensor for canonical-emitter test
     spawnSync(BUN, [GRAPH_TS, "compile"], {
       env: {
         ...process.env,
-        AIDLC_STAGES_DIR: stagesInit,
-        AIDLC_SENSORS_DIR: sensorsPop,
-        AIDLC_STAGE_GRAPH: graphS1,
+        AMADEUS_STAGES_DIR: stagesInit,
+        AMADEUS_SENSORS_DIR: sensorsPop,
+        AMADEUS_STAGE_GRAPH: graphS1,
       },
       encoding: "utf8",
     });
-    // Non-empty graph file -> the AIDLC_SENSORS_DIR seam wired through.
+    // Non-empty graph file -> the AMADEUS_SENSORS_DIR seam wired through.
     expect(readFileSync(graphS1, "utf8").length).toBeGreaterThan(0);
   });
 
-  // .sh:1106-1116 — compile --check detects sensor-manifest drift via AIDLC_SENSORS_DIR.
+  // .sh:1106-1116 — compile --check detects sensor-manifest drift via AMADEUS_SENSORS_DIR.
   // MUST STAY SPAWN: compile then --check (process.exit boundary) after editing a
   // manifest's matches glob. Use the REAL sensor set so real stage imports resolve.
-  test("compile --check detects sensor-manifest drift via AIDLC_SENSORS_DIR", () => {
+  test("compile --check detects sensor-manifest drift via AMADEUS_SENSORS_DIR", () => {
     const sensorsDrift = mkdtempSync(join(tmpdir(), "t66-sensors-drift-"));
     scratch.push(sensorsDrift);
     cpSync(REAL_SENSORS, sensorsDrift, { recursive: true });
     const graphS3 = seedGraphCopy();
-    const env = { ...process.env, AIDLC_SENSORS_DIR: sensorsDrift, AIDLC_STAGE_GRAPH: graphS3 };
+    const env = { ...process.env, AMADEUS_SENSORS_DIR: sensorsDrift, AMADEUS_STAGE_GRAPH: graphS3 };
     spawnSync(BUN, [GRAPH_TS, "compile"], { env, encoding: "utf8" });
     // Edit the linter manifest's matches glob; --check should now fail.
     const linterPath = join(sensorsDrift, "amadeus-linter.md");
@@ -1259,11 +1259,11 @@ description: Probe sensor for canonical-emitter test
     const graphS4 = seedGraphCopy();
     const graphS5 = seedGraphCopy();
     spawnSync(BUN, [GRAPH_TS, "compile"], {
-      env: { ...process.env, AIDLC_STAGE_GRAPH: graphS4 },
+      env: { ...process.env, AMADEUS_STAGE_GRAPH: graphS4 },
       encoding: "utf8",
     });
     spawnSync(BUN, [GRAPH_TS, "compile"], {
-      env: { ...process.env, AIDLC_STAGE_GRAPH: graphS5 },
+      env: { ...process.env, AMADEUS_STAGE_GRAPH: graphS5 },
       encoding: "utf8",
     });
     expect(sha256(readFileSync(graphS4, "utf8"))).toBe(sha256(readFileSync(graphS5, "utf8")));

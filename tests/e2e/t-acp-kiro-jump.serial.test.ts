@@ -28,7 +28,7 @@ import { seededStateFile } from "../harness/fixtures.ts";
 import { driveKiroAcp } from "../harness/kiro-acp-drive.ts";
 import { cleanupTuiProject, KIRO_SRC, setupTuiProject } from "../harness/tui-fixtures.ts";
 
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "900", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "900", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 900) * 1000;
 const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
 
@@ -39,8 +39,8 @@ const AUDIT_TARGET_LINE = `**Target**: ${TARGET_STAGE}`;
 const AUDIT_DIRECTION_LINE = "**Direction**: BACKWARD";
 
 function skipReason(): string | null {
-  if (process.env.AIDLC_KIRO_ACP_LIVE !== "1") {
-    return "set AIDLC_KIRO_ACP_LIVE=1 to run the live Kiro ACP jump contract (uses Kiro credits)";
+  if (process.env.AMADEUS_KIRO_ACP_LIVE !== "1") {
+    return "set AMADEUS_KIRO_ACP_LIVE=1 to run the live Kiro ACP jump contract (uses Kiro credits)";
   }
   if (spawnSync("kiro-cli", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "kiro-cli not found";

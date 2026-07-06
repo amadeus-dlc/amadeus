@@ -81,7 +81,7 @@ import {
 // over two repos. Budget it like the other multi-stage live journeys (2400s
 // default), and split the budget so the cheap deterministic-verb beats get a
 // modest cap while the heavy codekb beat gets the lion's share.
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "2400", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "2400", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
 // Per-beat caps (a fresh SDK session each): the verb beats finish in one or two
 // tool round-trips; the reverse-engineering codekb beat fans 9 artifacts × 2

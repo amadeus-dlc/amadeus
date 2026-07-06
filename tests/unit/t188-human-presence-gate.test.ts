@@ -21,11 +21,11 @@
 //     precedes the last resolution (-> refused).
 //   - fail-open when the ledger has NO events at all (presence not tracked yet).
 //
-// CRITICAL test-harness note: run-tests.ts sets AIDLC_SKIP_HUMAN_PRESENCE_GUARD=1
+// CRITICAL test-harness note: run-tests.ts sets AMADEUS_SKIP_HUMAN_PRESENCE_GUARD=1
 // for the whole suite (so the ~81 approve/advance tests keep passing). This test
 // re-enables enforcement by DELETING that var from the spawned tool's env -
 // otherwise it would be testing the bypass, not the guard. It KEEPS
-// AIDLC_SKIP_ARTIFACT_GUARD=1 set, because the artifact guard is a separate
+// AMADEUS_SKIP_ARTIFACT_GUARD=1 set, because the artifact guard is a separate
 // chokepoint these bare fixtures do not satisfy; this test isolates the presence
 // guard.
 //
@@ -39,7 +39,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
   resetAidlcEnv,
@@ -50,9 +50,9 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath;
-const STATE = join(AIDLC_SRC, "tools", "amadeus-state.ts");
-const LOG = join(AIDLC_SRC, "tools", "amadeus-log.ts");
-const AUDIT = join(AIDLC_SRC, "tools", "amadeus-audit.ts");
+const STATE = join(AMADEUS_SRC, "tools", "amadeus-state.ts");
+const LOG = join(AMADEUS_SRC, "tools", "amadeus-log.ts");
+const AUDIT = join(AMADEUS_SRC, "tools", "amadeus-audit.ts");
 const MID_IDEATION = "state-mid-ideation.md"; // Current Stage: feasibility
 
 // Drive a state subcommand with the PRESENCE guard ENABLED (clear the suite's
@@ -60,8 +60,8 @@ const MID_IDEATION = "state-mid-ideation.md"; // Current Stage: feasibility
 // chokepoint these bare fixtures don't satisfy). Returns exit code + output.
 function guarded(proj: string, args: string[]): { rc: number; out: string } {
   const env = { ...process.env };
-  env.AIDLC_SKIP_ARTIFACT_GUARD = "1";
-  delete env.AIDLC_SKIP_HUMAN_PRESENCE_GUARD;
+  env.AMADEUS_SKIP_ARTIFACT_GUARD = "1";
+  delete env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
   const r = spawnSync(BUN, [STATE, ...args, "--project-dir", proj], {
     encoding: "utf-8",
     env,
@@ -72,8 +72,8 @@ function guarded(proj: string, args: string[]): { rc: number; out: string } {
 // Drive an amadeus-log subcommand with the same guard posture.
 function guardedLog(proj: string, args: string[]): { rc: number; out: string } {
   const env = { ...process.env };
-  env.AIDLC_SKIP_ARTIFACT_GUARD = "1";
-  delete env.AIDLC_SKIP_HUMAN_PRESENCE_GUARD;
+  env.AMADEUS_SKIP_ARTIFACT_GUARD = "1";
+  delete env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
   const r = spawnSync(BUN, [LOG, ...args, "--project-dir", proj], {
     encoding: "utf-8",
     env,

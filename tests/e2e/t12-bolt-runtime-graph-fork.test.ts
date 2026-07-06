@@ -77,7 +77,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   DEFAULT_RECORD_DIR,
   DEFAULT_SPACE,
   cleanupWorktreeFixture,
@@ -89,10 +89,10 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const WORKTREE_TOOL = join(AIDLC_SRC, "tools", "amadeus-worktree.ts");
-const BOLT_TOOL = join(AIDLC_SRC, "tools", "amadeus-bolt.ts");
-const RUNTIME_TOOL = join(AIDLC_SRC, "tools", "amadeus-runtime.ts");
-const AUDIT_TOOL = join(AIDLC_SRC, "tools", "amadeus-audit.ts");
+const WORKTREE_TOOL = join(AMADEUS_SRC, "tools", "amadeus-worktree.ts");
+const BOLT_TOOL = join(AMADEUS_SRC, "tools", "amadeus-bolt.ts");
+const RUNTIME_TOOL = join(AMADEUS_SRC, "tools", "amadeus-runtime.ts");
+const AUDIT_TOOL = join(AMADEUS_SRC, "tools", "amadeus-audit.ts");
 
 const fixtures: string[] = [];
 afterAll(() => {

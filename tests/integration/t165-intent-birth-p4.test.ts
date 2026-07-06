@@ -59,7 +59,7 @@ interface Run {
 }
 function util(args: string[], p = proj, extraEnv: Record<string, string> = {}): Run {
   const env = { ...process.env, ...extraEnv };
-  delete env.AWS_AIDLC_DEFAULT_SCOPE;
+  delete env.AWS_AMADEUS_DEFAULT_SCOPE;
   const r = Bun.spawnSync({
     cmd: [BUN, UTIL, ...args, "--project-dir", p],
     stdout: "pipe",
@@ -71,7 +71,7 @@ function util(args: string[], p = proj, extraEnv: Record<string, string> = {}): 
 }
 function next(args: string[], p = proj): Run {
   const env = { ...process.env };
-  delete env.AWS_AIDLC_DEFAULT_SCOPE;
+  delete env.AWS_AMADEUS_DEFAULT_SCOPE;
   const r = Bun.spawnSync({
     cmd: [BUN, ORCH, "next", ...args, "--project-dir", p],
     stdout: "pipe",
@@ -210,7 +210,7 @@ describe("t164 concurrent-birth integrity", () => {
     // the intents.json append, so the second sees the first's row — both births
     // land distinct uuids + dirs, and intents.json carries BOTH (no lost write).
     const env = { ...process.env };
-    delete env.AWS_AIDLC_DEFAULT_SCOPE;
+    delete env.AWS_AMADEUS_DEFAULT_SCOPE;
     const spawnBirth = (scope: string) =>
       Bun.spawn({
         cmd: [BUN, UTIL, "intent-birth", "--scope", scope, "--project-dir", proj],

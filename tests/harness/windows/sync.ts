@@ -19,8 +19,8 @@ function usage(): never {
       "Usage:",
       "  bun tests/harness/windows/sync.ts [--stack-name NAME | --instance-id i-...] [--region REGION] [--dest C:\\aidlc] [REF]",
       "",
-      "REF defaults to HEAD. Instance and stack may also come from AIDLC_WINDOWS_INSTANCE_ID",
-      "or AIDLC_WINDOWS_STACK_NAME. Run from the repo root.",
+      "REF defaults to HEAD. Instance and stack may also come from AMADEUS_WINDOWS_INSTANCE_ID",
+      "or AMADEUS_WINDOWS_STACK_NAME. Run from the repo root.",
       "",
     ].join("\n"),
   );
@@ -29,8 +29,8 @@ function usage(): never {
 
 function parse(argv: string[]): Cli {
   const out: Cli = {
-    instanceId: process.env.AIDLC_WINDOWS_INSTANCE_ID,
-    stackName: process.env.AIDLC_WINDOWS_STACK_NAME,
+    instanceId: process.env.AMADEUS_WINDOWS_INSTANCE_ID,
+    stackName: process.env.AMADEUS_WINDOWS_STACK_NAME,
     region: process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-east-1",
     ref: "HEAD",
     dest: "C:\\aidlc",

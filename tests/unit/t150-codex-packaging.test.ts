@@ -83,7 +83,7 @@ describe("t150 dist/codex packaging parity + drift guard", () => {
     // The AIDLC method ("memory") no longer ships under .codex/amadeus-rules/ (the
     // old D-10 rename target). It relocated OUT of the harness dir to the
     // workspace root — one hand-editable copy, neutral filenames, identical
-    // across harnesses. Reached via AGENTS.md auto-merge + AIDLC_RULES_DIR.
+    // across harnesses. Reached via AGENTS.md auto-merge + AMADEUS_RULES_DIR.
     const memoryDir = join(REPO_ROOT, "dist", "codex", "aidlc", "spaces", "default", "memory");
     const memoryTop = readdirSync(memoryDir);
     expect(memoryTop).toContain("org.md");
@@ -98,7 +98,7 @@ describe("t150 dist/codex packaging parity + drift guard", () => {
     // The resolver seam re-points at the relocated method (relative to the
     // workspace root, where codex runs), NOT the old .codex/amadeus-rules.
     const config = readFileSync(join(CODEX_DST, "config.toml"), "utf-8");
-    expect(config).toContain('AIDLC_RULES_DIR = "aidlc/spaces/default/memory"');
+    expect(config).toContain('AMADEUS_RULES_DIR = "aidlc/spaces/default/memory"');
     // The compiled graph's rule display paths are harness-neutral now.
     const graph = readFileSync(join(CODEX_DST, "tools", "data", "stage-graph.json"), "utf-8");
     expect(graph).toContain('"aidlc/spaces/default/memory/org.md"');

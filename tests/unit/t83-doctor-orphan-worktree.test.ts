@@ -82,7 +82,7 @@ import { hostname } from "node:os";
 import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   DEFAULT_SPACE,
   FIXTURES_DIR,
   cleanupTestProject,
@@ -95,7 +95,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const UTIL = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
+const UTIL = join(AMADEUS_SRC, "tools", "amadeus-utility.ts");
 const STATE_FIXTURE = join(FIXTURES_DIR, "state-mid-ideation.md");
 
 // Every project dir registered here is torn down after each test (mirrors the

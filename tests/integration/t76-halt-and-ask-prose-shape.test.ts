@@ -52,23 +52,23 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
 // The three shipped artefacts (the .sh's $PROTO / $BRANCH / $PDAGENT).
 const PROTO_PATH = join(
-  AIDLC_SRC,
+  AMADEUS_SRC,
   "amadeus-common",
   "protocols",
   "stage-protocol.md",
 );
 const BRANCH_PATH = join(
-  AIDLC_SRC,
+  AMADEUS_SRC,
   "knowledge",
   "amadeus-pipeline-deploy-agent",
   "branching-strategies.md",
 );
 const PDAGENT_PATH = join(
-  AIDLC_SRC,
+  AMADEUS_SRC,
   "agents",
   "amadeus-pipeline-deploy-agent.md",
 );

@@ -121,11 +121,11 @@ import {
 
 // ---------------------------------------------------------------------------
 // Timeout budget — a backward-jump turn re-runs the target stage on Opus, so
-// honour the suite's AIDLC_TEST_TIMEOUT convention (the .sh mirror t26 set it
+// honour the suite's AMADEUS_TEST_TIMEOUT convention (the .sh mirror t26 set it
 // to 600s; t57.sh used the suite default). The driver aborts a hair before bun
 // kills the test so a stuck run surfaces a partial DriveResult, not a hang.
 // ---------------------------------------------------------------------------
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "600", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "600", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 600) * 1000;
 const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
 

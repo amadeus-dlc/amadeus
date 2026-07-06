@@ -28,9 +28,9 @@
 // Subject under test:
 //   - dist/claude/.mcp.json — the public MCP registry (the .sh's $MCP_JSON,
 //     resolved here as REPO_ROOT/dist/claude/.mcp.json; .mcp.json is a SIBLING
-//     of .claude/, not under AIDLC_SRC).
+//     of .claude/, not under AMADEUS_SRC).
 //   - dist/claude/.claude/agents/amadeus-<agent>-agent.md — the eleven personas
-//     (the .sh's $AGENTS_DIR; AIDLC_SRC/agents here).
+//     (the .sh's $AGENTS_DIR; AMADEUS_SRC/agents here).
 //
 // Test-design note (house style): assert the OBSERVABLE shipped contract the .sh
 // asserted — registry shape, per-server config fields, placeholder-only secrets,
@@ -64,13 +64,13 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC, REPO_ROOT } from "../harness/fixtures.ts";
+import { AMADEUS_SRC, REPO_ROOT } from "../harness/fixtures.ts";
 
 // $MCP_JSON: dist/claude/.mcp.json — a SIBLING of .claude/, so resolve from
-// REPO_ROOT/dist/claude, not from AIDLC_SRC (=.../dist/claude/.claude).
+// REPO_ROOT/dist/claude, not from AMADEUS_SRC (=.../dist/claude/.claude).
 const MCP_JSON = join(REPO_ROOT, "dist", "claude", ".mcp.json");
 // $AGENTS_DIR: dist/claude/.claude/agents.
-const AGENTS_DIR = join(AIDLC_SRC, "agents");
+const AGENTS_DIR = join(AMADEUS_SRC, "agents");
 
 // The 11 domain-expert agents, in the order the .sh's `AGENTS=` list named them.
 const AGENTS = [

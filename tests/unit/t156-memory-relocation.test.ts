@@ -8,23 +8,23 @@
 // names) to ONE hand-editable source of truth at the workspace root —
 // aidlc/spaces/default/memory/ — with neutral filenames. Each harness reads it
 // by its OWN native include (no copy, no drift):
-//   - Claude  → .claude/rules/amadeus.md @-import stub → @../../amadeus/spaces/
+//   - Claude  → .claude/rules/amadeus.md @-import stub → @../../aidlc/spaces/
 //               default/memory/<file> (explicit @-lines; Claude @-imports do
 //               NOT glob — verified against code.claude.com/docs memory.md).
-//   - Kiro    → agent JSON resources glob file://amadeus/spaces/default/memory/**/*.md
-//   - Codex   → AGENTS.md auto-merge + AIDLC_RULES_DIR seam + orchestrator
+//   - Kiro    → agent JSON resources glob file://aidlc/spaces/default/memory/**/*.md
+//   - Codex   → AGENTS.md auto-merge + AMADEUS_RULES_DIR seam + orchestrator
 //               @-mention (the static seam is asserted here; the LIVE @-mention
 //               probe lives in the gated e2e tests/e2e/
 //               t-exec-codex-memory-include.serial.test.ts — green 2026-06-24).
 //
 // Three contracts land here:
 //   (1) RESOLVER reads the renamed source + tolerates empty team/project stubs
-//       (in-process loadRules via the AIDLC_RULES_DIR seam against a fixture
+//       (in-process loadRules via the AMADEUS_RULES_DIR seam against a fixture
 //       laid out as the relocated tree: org/team/project.md + phases/<p>.md).
 //   (2) 3-WAY native-include resolution in the shipped dist trees: the Claude
 //       @-stub resolves the relocated path (packaging/parity); the Kiro globs
 //       point at the active space; the Codex static seam is wired
-//       (AIDLC_RULES_DIR + AGENTS.md). The Codex LIVE @-mention probe is the
+//       (AMADEUS_RULES_DIR + AGENTS.md). The Codex LIVE @-mention probe is the
 //       gated e2e t-exec-codex-memory-include.serial.test.ts (no token probe
 //       here — unit tier stays zero-LLM).
 //   (3) THE ONE-COPY INVARIANT: exactly one HAND-EDITABLE rule copy exists
@@ -56,17 +56,17 @@ function mkTemp(tag: string): string {
 
 let savedRulesDir: string | undefined;
 beforeEach(() => {
-  savedRulesDir = process.env.AIDLC_RULES_DIR;
+  savedRulesDir = process.env.AMADEUS_RULES_DIR;
 });
 afterEach(() => {
-  if (savedRulesDir === undefined) delete process.env.AIDLC_RULES_DIR;
-  else process.env.AIDLC_RULES_DIR = savedRulesDir;
+  if (savedRulesDir === undefined) delete process.env.AMADEUS_RULES_DIR;
+  else process.env.AMADEUS_RULES_DIR = savedRulesDir;
   __resetGraphCache();
   for (const d of tempDirs.splice(0)) rmSync(d, { recursive: true, force: true });
 });
 
 /** Build a relocated method tree (the new layout) under a temp dir and point
- *  the resolver at it via AIDLC_RULES_DIR. Returns the dir. */
+ *  the resolver at it via AMADEUS_RULES_DIR. Returns the dir. */
 function seedMemoryTree(files: Record<string, string>): string {
   const dir = mkTemp("mem");
   for (const [rel, body] of Object.entries(files)) {
@@ -74,7 +74,7 @@ function seedMemoryTree(files: Record<string, string>): string {
     mkdirSync(join(p, ".."), { recursive: true });
     writeFileSync(p, body, "utf-8");
   }
-  process.env.AIDLC_RULES_DIR = dir;
+  process.env.AMADEUS_RULES_DIR = dir;
   __resetGraphCache();
   return dir;
 }
@@ -134,7 +134,7 @@ describe("t156 method relocation to aidlc/spaces/default/memory/ + per-harness i
 
   // === (1d) tolerate an absent method dir (returns []) ====================
   test("4: an absent method dir resolves to [] (zero-rules edge case)", () => {
-    process.env.AIDLC_RULES_DIR = join(mkTemp("gone"), "does-not-exist");
+    process.env.AMADEUS_RULES_DIR = join(mkTemp("gone"), "does-not-exist");
     __resetGraphCache();
     expect(loadRules()).toEqual([]);
   });
@@ -169,7 +169,7 @@ describe("t156 method relocation to aidlc/spaces/default/memory/ + per-harness i
 
   test("6: Claude @-stub resolves the relocated path (every method file has an @-line)", () => {
     const stub = readFileSync(
-      join(REPO_ROOT, "dist", "claude", ".claude", "rules", "aidlc.md"),
+      join(REPO_ROOT, "dist", "claude", ".claude", "rules", "amadeus.md"),
       "utf-8",
     );
     // Claude @-imports name an explicit file each (no glob), resolve relative to
@@ -186,7 +186,7 @@ describe("t156 method relocation to aidlc/spaces/default/memory/ + per-harness i
       "phases/operation.md",
     ];
     for (const f of memFiles) {
-      expect(stub, `stub @-line for ${f}`).toContain(`@../../amadeus/spaces/default/memory/${f}`);
+      expect(stub, `stub @-line for ${f}`).toContain(`@../../aidlc/spaces/default/memory/${f}`);
     }
     // And CLAUDE.md imports the stub (top of the reference chain).
     const claudeMd = readFileSync(
@@ -198,7 +198,7 @@ describe("t156 method relocation to aidlc/spaces/default/memory/ + per-harness i
     const rulesDirFiles = readdirSync(
       join(REPO_ROOT, "dist", "claude", ".claude", "rules"),
     );
-    expect(rulesDirFiles).toEqual(["aidlc.md"]);
+    expect(rulesDirFiles).toEqual(["amadeus.md"]);
   });
 
   test("7: EVERY Kiro-family agent resources glob points at the active space's memory tree (not the now-empty steering dir)", () => {
@@ -230,7 +230,7 @@ describe("t156 method relocation to aidlc/spaces/default/memory/ + per-harness i
         if (!json.resources) continue;
         checkedAgents++;
         expect(json.resources, `${h}/${f} resources → relocated memory`).toContain(
-          "file://amadeus/spaces/default/memory/**/*.md",
+          "file://aidlc/spaces/default/memory/**/*.md",
         );
         // The old steering glob is gone from `resources` (note: `.kiro/steering/**`
         // may legitimately remain in fs_write.allowedPaths — that is a write
@@ -246,7 +246,7 @@ describe("t156 method relocation to aidlc/spaces/default/memory/ + per-harness i
     expect(checkedAgents).toBeGreaterThanOrEqual(10);
   });
 
-  test("8: Codex include is wired (AIDLC_RULES_DIR seam + AGENTS.md)", () => {
+  test("8: Codex include is wired (AMADEUS_RULES_DIR seam + AGENTS.md)", () => {
     // This asserts the STATIC seam here (unit tier, zero tokens): the resolver
     // env override re-points at the relocated tree, and the root AGENTS.md ships
     // for auto-merge. The LIVE empirical probe — that `codex exec` actually
@@ -259,7 +259,7 @@ describe("t156 method relocation to aidlc/spaces/default/memory/ + per-harness i
       join(REPO_ROOT, "dist", "codex", ".codex", "config.toml"),
       "utf-8",
     );
-    expect(config).toContain('AIDLC_RULES_DIR = "aidlc/spaces/default/memory"');
+    expect(config).toContain('AMADEUS_RULES_DIR = "aidlc/spaces/default/memory"');
     // .codex/amadeus-rules/ (the old per-harness copy) is gone.
     expect(existsSync(join(REPO_ROOT, "dist", "codex", ".codex", "amadeus-rules"))).toBe(false);
     // The root AGENTS.md (Codex's directory-merge surface) ships.

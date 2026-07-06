@@ -52,10 +52,10 @@
 //       obsolete). STRONGER: also pins gridCount === mdCount === rendered rows
 //       === 9 (triangulate the rendered table against BOTH shipped surfaces).
 //   §4 --check clean exit 0 on real SKILL.md (1 assert) -> Test 9: res.status===0
-//       (no AIDLC_SKILL_MD_PATH override -> the shipped SKILL.md).
+//       (no AMADEUS_SKILL_MD_PATH override -> the shipped SKILL.md).
 //   §5 --check exit 1 on drifted SKILL.md (2 asserts) -> Tests 10-11: copy the
 //       real SKILL.md to a temp file, sed the bugfix row to bogus, point
-//       AIDLC_SKILL_MD_PATH at it; res.status===1 (Test 10) + stderr contains
+//       AMADEUS_SKILL_MD_PATH at it; res.status===1 (Test 10) + stderr contains
 //       "out of date" (Test 11). Never mutates the real SKILL.md (env seam).
 //   §6 --check exit 1 on missing markers (1 assert) -> Test 12: marker-less temp
 //       file -> res.status===1 AND stderr "missing scope-table markers"
@@ -92,7 +92,7 @@
 // audit-emitting case uses a FRESH temp project dir (createTestProject, which
 // toPortablePath-converts on Windows so audit.md — written by the tool via the
 // forward-slash audit helper — round-trips when read back). The drift/nomark
-// SKILL.md fixtures are mkdtemp'd temp FILES driven through AIDLC_SKILL_MD_PATH
+// SKILL.md fixtures are mkdtemp'd temp FILES driven through AMADEUS_SKILL_MD_PATH
 // so the shipped SKILL.md is never touched. All temp dirs/files cleaned in
 // afterAll. NOTHING is written under tests/fixtures/**.
 
@@ -126,7 +126,7 @@ const SKILL = join(
   "claude",
   ".claude",
   "skills",
-  "aidlc",
+  "amadeus",
   "SKILL.md",
 );
 const SCOPE_GRID = join(
@@ -186,10 +186,10 @@ interface CliResult {
   out: string; // combined stdout+stderr (mirrors the .sh's 2>&1)
 }
 
-/** Spawn `bun amadeus-utility.ts <args...>`. Optional AIDLC_SKILL_MD_PATH env seam. */
+/** Spawn `bun amadeus-utility.ts <args...>`. Optional AMADEUS_SKILL_MD_PATH env seam. */
 function util(args: string[], skillMdPath?: string): CliResult {
   const env = { ...process.env };
-  if (skillMdPath !== undefined) env.AIDLC_SKILL_MD_PATH = skillMdPath;
+  if (skillMdPath !== undefined) env.AMADEUS_SKILL_MD_PATH = skillMdPath;
   const res = spawnSync(BUN, [TOOL, ...args], { encoding: "utf-8", env });
   const stdout = res.stdout ?? "";
   const stderr = res.stderr ?? "";
@@ -356,13 +356,13 @@ describe("t67 scope-table emission (migrated from t67-scope-table.sh §1-3)", ()
 
 describe("t67 scope-table --check drift guard (migrated from t67 §4-6)", () => {
   test("9: --check on clean SKILL.md exits 0", () => {
-    // No AIDLC_SKILL_MD_PATH override -> the shipped SKILL.md.
+    // No AMADEUS_SKILL_MD_PATH override -> the shipped SKILL.md.
     const r = util(["scope-table", "--check"]);
     expect(r.status).toBe(0);
   });
 
   test("10: --check exits 1 on drifted SKILL.md", () => {
-    // Sandbox via AIDLC_SKILL_MD_PATH — never mutate the real SKILL.md.
+    // Sandbox via AMADEUS_SKILL_MD_PATH — never mutate the real SKILL.md.
     const drift = join(mkdtempSync(join(tmpdir(), "t67-drift-")), "skill.md");
     tempFiles.push(drift);
     let raw = readFileSync(SKILL, "utf-8");

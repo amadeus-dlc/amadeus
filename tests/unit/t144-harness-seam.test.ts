@@ -6,7 +6,7 @@
 // WHAT. MR-1 of the dist/codex port widens the kiro harness seam with
 // ".codex": HARNESS_DIRS = [".claude", ".kiro", ".codex"]. This test pins the
 // documented resolution ladder for BOTH seam functions, for all three dirs:
-//   harnessDir():        AIDLC_HARNESS_DIR env → script-path derivation
+//   harnessDir():        AMADEUS_HARNESS_DIR env → script-path derivation
 //                        (<project>/<harness>/tools) → CWD probe (.claude
 //                        first) → ".claude" fallback.
 //   resolveProjectDir(): explicit arg → CLAUDE_PROJECT_DIR → script-path
@@ -70,7 +70,7 @@ function evalLib(
       cwd: opts.cwd ?? REPO_ROOT,
       env: {
         ...process.env,
-        AIDLC_HARNESS_DIR: undefined,
+        AMADEUS_HARNESS_DIR: undefined,
         CLAUDE_PROJECT_DIR: undefined,
         ...opts.env,
       } as NodeJS.ProcessEnv,
@@ -94,9 +94,9 @@ describe("t144 codex harness seam — harnessDir + resolveProjectDir ladder ×3 
     }
   });
 
-  test("2: AIDLC_HARNESS_DIR env seam overrides derivation for every dir", () => {
+  test("2: AMADEUS_HARNESS_DIR env seam overrides derivation for every dir", () => {
     for (const h of [".claude", ".kiro", ".codex"]) {
-      expect(evalLib(CLAUDE_LIB, "harnessDir()", { env: { AIDLC_HARNESS_DIR: h } })).toBe(h);
+      expect(evalLib(CLAUDE_LIB, "harnessDir()", { env: { AMADEUS_HARNESS_DIR: h } })).toBe(h);
     }
   });
 
@@ -201,15 +201,15 @@ describe("t144 codex harness seam — harnessDir + resolveProjectDir ladder ×3 
     }
   });
 
-  test("8: rulesSubdir honors AIDLC_HARNESS_DIR and the AIDLC_RULES_SUBDIR override", () => {
-    // The AIDLC_HARNESS_DIR test seam pins the harness without a tree on disk and
+  test("8: rulesSubdir honors AMADEUS_HARNESS_DIR and the AMADEUS_RULES_SUBDIR override", () => {
+    // The AMADEUS_HARNESS_DIR test seam pins the harness without a tree on disk and
     // out-ranks any shipped harness.json (so "pretend .kiro" yields "steering").
-    expect(evalLib(CLAUDE_LIB, "rulesSubdir()", { env: { AIDLC_HARNESS_DIR: ".kiro" } })).toBe("steering");
-    expect(evalLib(CLAUDE_LIB, "rulesSubdir()", { env: { AIDLC_HARNESS_DIR: ".codex" } })).toBe("amadeus-rules");
-    // ...and the explicit AIDLC_RULES_SUBDIR override wins (fixture seam).
+    expect(evalLib(CLAUDE_LIB, "rulesSubdir()", { env: { AMADEUS_HARNESS_DIR: ".kiro" } })).toBe("steering");
+    expect(evalLib(CLAUDE_LIB, "rulesSubdir()", { env: { AMADEUS_HARNESS_DIR: ".codex" } })).toBe("amadeus-rules");
+    // ...and the explicit AMADEUS_RULES_SUBDIR override wins (fixture seam).
     expect(
       evalLib(CLAUDE_LIB, "rulesSubdir()", {
-        env: { AIDLC_HARNESS_DIR: ".kiro", AIDLC_RULES_SUBDIR: "custom-rules" },
+        env: { AMADEUS_HARNESS_DIR: ".kiro", AMADEUS_RULES_SUBDIR: "custom-rules" },
       }),
     ).toBe("custom-rules");
   });

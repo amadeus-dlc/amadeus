@@ -2,7 +2,7 @@
 //
 // CLI-contract port of tests/unit/t63-tool-graph.sh (TAP plan 14),
 // mechanism = cli. Equal-or-stronger migration: every .sh assertion that
-// shelled out to `bun amadeus-graph.ts artifacts` (with the AIDLC_STAGE_GRAPH
+// shelled out to `bun amadeus-graph.ts artifacts` (with the AMADEUS_STAGE_GRAPH
 // fixture-injection env-var seam — lib.ts:702-703 / amadeus-graph.ts:153-155)
 // is preserved by SPAWNING the real CLI via node:child_process spawnSync
 // (BUN + the tool .ts path), asserting on res.status / res.stdout / res.stderr
@@ -70,8 +70,8 @@
 //
 // FIXTURE DISCIPLINE (mirrors the .sh's `mktemp -d` + per-fixture heredoc +
 // `trap rm -rf` cleanup): the five graph fixtures are written to a FRESH temp
-// dir (mkdtempSync) in beforeAll, each injected via AIDLC_STAGE_GRAPH on the
-// spawn's env (exactly the .sh's `AIDLC_STAGE_GRAPH=... bun "$TOOL" artifacts`).
+// dir (mkdtempSync) in beforeAll, each injected via AMADEUS_STAGE_GRAPH on the
+// spawn's env (exactly the .sh's `AMADEUS_STAGE_GRAPH=... bun "$TOOL" artifacts`).
 // Nothing is written under tests/fixtures/**. The temp dir is removed in
 // afterAll. The fixture JSON bytes are copied verbatim from the .sh heredocs
 // (lines 23-56) so the graph shapes round-trip identically. No project dir /
@@ -95,7 +95,7 @@ const TOOL = join(
   "amadeus-graph.ts",
 );
 
-// --- Fixtures — written to a temp dir, injected via AIDLC_STAGE_GRAPH ---
+// --- Fixtures — written to a temp dir, injected via AMADEUS_STAGE_GRAPH ---
 // Bytes copied verbatim from t63-tool-graph.sh:23-56.
 
 let fixtureDir: string;
@@ -148,14 +148,14 @@ interface CliResult {
 }
 
 /**
- * Spawn `bun amadeus-graph.ts artifacts` with an optional AIDLC_STAGE_GRAPH
+ * Spawn `bun amadeus-graph.ts artifacts` with an optional AMADEUS_STAGE_GRAPH
  * fixture injected on the env. Mirrors the .sh's
- * `AIDLC_STAGE_GRAPH="$FIXTURE_DIR/<f>" bun "$TOOL" artifacts 2>&1`.
+ * `AMADEUS_STAGE_GRAPH="$FIXTURE_DIR/<f>" bun "$TOOL" artifacts 2>&1`.
  */
 function graph(args: string[], stageGraph?: string): CliResult {
   const env = { ...process.env };
-  if (stageGraph) env.AIDLC_STAGE_GRAPH = stageGraph;
-  else delete env.AIDLC_STAGE_GRAPH;
+  if (stageGraph) env.AMADEUS_STAGE_GRAPH = stageGraph;
+  else delete env.AMADEUS_STAGE_GRAPH;
   const res = spawnSync(BUN, [TOOL, ...args], { encoding: "utf-8", env });
   const stdout = res.stdout ?? "";
   const stderr = res.stderr ?? "";
@@ -236,7 +236,7 @@ describe("t63 amadeus-graph artifacts — CLI contract (migrated from t63-tool-g
     `;
     const res = spawnSync(BUN, ["-e", script], {
       encoding: "utf-8",
-      env: { ...process.env, AIDLC_STAGE_GRAPH: fx("union.json") },
+      env: { ...process.env, AMADEUS_STAGE_GRAPH: fx("union.json") },
     });
     const out = `${res.stdout ?? ""}${res.stderr ?? ""}`;
     expect(out.trim()).toBe("same-ref");

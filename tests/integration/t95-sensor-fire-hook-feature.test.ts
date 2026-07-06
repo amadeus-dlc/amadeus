@@ -21,7 +21,7 @@
 // subprocess leaves behind. spawnCount = all.
 //
 // SOURCE UNDER TEST (dist/claude/.claude/hooks/amadeus-sensor-fire.ts):
-//   :43-44 SUBPROCESS_TIMEOUT_MS = Number(env.AIDLC_SENSOR_TIMEOUT_MS) || 90_000
+//   :43-44 SUBPROCESS_TIMEOUT_MS = Number(env.AMADEUS_SENSOR_TIMEOUT_MS) || 90_000
 //          — the env-var seam the timeout case overrides (no source patch).
 //   (The old test-run-mode skip that appended to sensor-fire.skipped was removed
 //          per #369.)
@@ -33,7 +33,7 @@
 //   :235-257 timeout (SIGTERM/ETIMEDOUT) -> recordHookDrop "...subprocess killed
 //          by SIGTERM (timeout)"; non-zero exit -> recordHookDrop "...dispatcher
 //          exit <n>...". Always exit 0 (G5 advisory, :269).
-//   loadGraph() honours AIDLC_STAGE_GRAPH (amadeus-graph.ts:160-162) — the seam
+//   loadGraph() honours AMADEUS_STAGE_GRAPH (amadeus-graph.ts:160-162) — the seam
 //   the synthetic-graph cases inject through.
 //
 // FIXTURE DISCIPLINE (mirrors make_project / make_project_active, t95:90-110):
@@ -41,7 +41,7 @@
 // per-test MOCK amadeus-sensor.ts at <proj>/.claude/tools/amadeus-sensor.ts (the
 // exact path the hook joins at :195) that records its argv to T95_SPAWN_LOG and
 // exits per T95_STUB_MODE (pass | fail-exit-1 | slow). Synthetic stage-graph
-// fixtures are written to temp files and injected via AIDLC_STAGE_GRAPH. All
+// fixtures are written to temp files and injected via AMADEUS_STAGE_GRAPH. All
 // temp dirs cleaned in afterAll; nothing under tests/fixtures/**.
 //
 // Old TAP -> new test parity (1:1, 19 .sh asserts -> 19 expect()-bearing test()):
@@ -82,7 +82,7 @@ import {
 import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
   seededAuditDir,
@@ -91,7 +91,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const HOOK = join(AIDLC_SRC, "hooks", "amadeus-sensor-fire.ts");
+const HOOK = join(AMADEUS_SRC, "hooks", "amadeus-sensor-fire.ts");
 
 // P9 per-intent layout: the sensor-fire hook's active-workflow gate resolves
 // state via stateFilePath() and the audit trail via auditFilePath() — under the
@@ -109,7 +109,7 @@ function pinnedShardName(): string {
       .slice(0, 48) || "host";
   return `${host}-${PINNED_CLONE_ID}.md`;
 }
-const FRAMEWORK_GRAPH = join(AIDLC_SRC, "tools", "data", "stage-graph.json");
+const FRAMEWORK_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 
 const tempDirs: string[] = [];
 afterAll(() => {
@@ -212,8 +212,8 @@ interface HookRun {
 
 /**
  * run_hook_with (t95:112-128): pipe PostToolUse Write JSON on stdin with
- * CLAUDE_PROJECT_DIR, AIDLC_STAGE_GRAPH, T95_SPAWN_LOG, T95_STUB_MODE and the
- * optional AIDLC_SENSOR_TIMEOUT_MS seam set, against the real hook.
+ * CLAUDE_PROJECT_DIR, AMADEUS_STAGE_GRAPH, T95_SPAWN_LOG, T95_STUB_MODE and the
+ * optional AMADEUS_SENSOR_TIMEOUT_MS seam set, against the real hook.
  */
 function runHook(
   proj: string,
@@ -231,11 +231,11 @@ function runHook(
   const env: Record<string, string> = {
     ...(process.env as Record<string, string>),
     CLAUDE_PROJECT_DIR: proj,
-    AIDLC_STAGE_GRAPH: opts.graph ?? FRAMEWORK_GRAPH,
+    AMADEUS_STAGE_GRAPH: opts.graph ?? FRAMEWORK_GRAPH,
     T95_SPAWN_LOG: join(proj, ".spawn.log"),
     T95_STUB_MODE: opts.mode ?? "pass",
   };
-  if (opts.timeoutMs !== undefined) env.AIDLC_SENSOR_TIMEOUT_MS = opts.timeoutMs;
+  if (opts.timeoutMs !== undefined) env.AMADEUS_SENSOR_TIMEOUT_MS = opts.timeoutMs;
   const res = spawnSync(BUN, [HOOK], {
     input: json,
     encoding: "utf-8",
@@ -424,7 +424,7 @@ describe("t95 sensor-fire hook — multi-glob filtering at the stage level (mech
 describe("t95 sensor-fire hook — error recovery is advisory (always exit 0) (mechanism cli — spawnSync)", () => {
   test("C5a: hook exits 0 even when the subprocess times out (G5 advisory) [.sh test 12]", () => {
     const proj = makeProjectActive("requirements-analysis");
-    // AIDLC_SENSOR_TIMEOUT_MS=2000 overrides the 90s default; the stub sleeps
+    // AMADEUS_SENSOR_TIMEOUT_MS=2000 overrides the 90s default; the stub sleeps
     // 5000ms (T95_STUB_MODE=slow) so the spawn is SIGTERM'd.
     const r = runHook(
       proj,
@@ -494,7 +494,7 @@ describe("t95 sensor-fire hook — error recovery is advisory (always exit 0) (m
       env: {
         ...(process.env as Record<string, string>),
         CLAUDE_PROJECT_DIR: proj,
-        AIDLC_STAGE_GRAPH: FRAMEWORK_GRAPH,
+        AMADEUS_STAGE_GRAPH: FRAMEWORK_GRAPH,
         T95_SPAWN_LOG: join(proj, ".spawn.log"),
         T95_STUB_MODE: "pass",
       },

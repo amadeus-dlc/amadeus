@@ -14,7 +14,7 @@
 //   - stderr error strings ("main audit not found", "prefix-hash", "Failed to
 //     acquire audit lock", the slug-length message)            [:368,:520-529,:556,:312]
 //   - the literal bytes the tool copies / appends to audit.md on disk
-//   - the AIDLC_AUDIT_LOCK_RETRIES / _RETRY_MS env-var seam            [:548-555]
+//   - the AMADEUS_AUDIT_LOCK_RETRIES / _RETRY_MS env-var seam            [:548-555]
 //   - the planted-mkdir-lock contention path (auditLockDir = md5(projectDir)[0:8]) [amadeus-lib.ts:512-514]
 //   - the chmod-readonly post-emit failure path → ERROR_LOGGED [fork-emitted:<ts>]  [:407-422]
 // An in-process twin would lose the process.exit shell, the env seam, the
@@ -89,7 +89,7 @@ import {
 import { hostname } from "node:os";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   DEFAULT_RECORD_DIR,
   DEFAULT_SPACE,
   cleanupWorktreeFixture,
@@ -127,8 +127,8 @@ function seedCloneId(cloneRoot: string): void {
 }
 
 const BUN = process.execPath;
-const AUDIT_TOOL = join(AIDLC_SRC, "tools", "amadeus-audit.ts");
-const WORKTREE_TOOL = join(AIDLC_SRC, "tools", "amadeus-worktree.ts");
+const AUDIT_TOOL = join(AMADEUS_SRC, "tools", "amadeus-audit.ts");
+const WORKTREE_TOOL = join(AMADEUS_SRC, "tools", "amadeus-worktree.ts");
 
 const fixtures: string[] = [];
 afterAll(() => {
@@ -487,7 +487,7 @@ describe("t07 Phase B — edge cases", () => {
     try {
       const merge = runAudit(
         ["audit-merge", "--slug", "timeout", "--project-dir", p],
-        { AIDLC_AUDIT_LOCK_RETRIES: "2", AIDLC_AUDIT_LOCK_RETRY_MS: "50" },
+        { AMADEUS_AUDIT_LOCK_RETRIES: "2", AMADEUS_AUDIT_LOCK_RETRY_MS: "50" },
       );
       expect(merge.status).not.toBe(0); // B6 (rc)
       expect(merge.out).toContain("Failed to acquire audit lock"); // B6 (message)

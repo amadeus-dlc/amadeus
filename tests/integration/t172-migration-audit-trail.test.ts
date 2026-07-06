@@ -49,7 +49,7 @@ interface Run {
 }
 function util(args: string[], p = proj): Run {
   const env = { ...process.env };
-  delete env.AWS_AIDLC_DEFAULT_SCOPE;
+  delete env.AWS_AMADEUS_DEFAULT_SCOPE;
   const r = Bun.spawnSync({
     cmd: [BUN, UTIL, ...args, "--project-dir", p],
     stdout: "pipe",

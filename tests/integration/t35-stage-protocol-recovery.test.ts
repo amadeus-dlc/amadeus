@@ -82,10 +82,10 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
 const RECOVERY_PATH = join(
-  AIDLC_SRC,
+  AMADEUS_SRC,
   "amadeus-common",
   "protocols",
   "stage-protocol-recovery.md",

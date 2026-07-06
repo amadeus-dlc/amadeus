@@ -15,10 +15,62 @@ const prefix = "amadeus-";
 const commandName = prefix.replace(/-$/, "");
 const commonDirName = `${prefix}common`;
 const knownPrefixes = [
-  ["aidlc", "-"].join(""),
+  ["ai", "dlc", "-"].join(""),
   ["amadeus", "-"].join(""),
 ] as const;
 const forbiddenPrefixes = knownPrefixes.filter((known) => known !== prefix);
+const previousCommandName = ["ai", "dlc"].join("");
+const previousEnvPrefix = ["AI", "DLC", "_"].join("");
+const forbiddenToolSurfaces = [
+  {
+    label: "legacy skill discovery name",
+    pattern: new RegExp(`/skills\`?\\s*(?:→|->)\\s*${previousCommandName}`),
+  },
+  {
+    label: "legacy Kiro agent config name",
+    pattern: new RegExp(`${previousCommandName}\\.json`),
+  },
+  {
+    label: "legacy skill path",
+    pattern: new RegExp(`skills/${previousCommandName}`),
+  },
+  {
+    label: "legacy skill path segments",
+    pattern: new RegExp(`["']skills["'],\\s*["']${previousCommandName}["']`),
+  },
+  {
+    label: "legacy rules source filename",
+    pattern: new RegExp(`rules-${previousCommandName}`),
+  },
+  {
+    label: "legacy Claude rules stub filename",
+    pattern: new RegExp(`${previousCommandName}\\.md`),
+  },
+  {
+    label: "legacy Kiro default agent",
+    pattern: new RegExp(`chat\\.defaultAgent[^\\n]*${previousCommandName}`),
+  },
+  {
+    label: "legacy agent name",
+    pattern: new RegExp(`"name"\\s*:\\s*"${previousCommandName}"`),
+  },
+  {
+    label: "legacy direct invocation name",
+    pattern: new RegExp(`@${previousCommandName}(?!/)`),
+  },
+  {
+    label: "legacy CLI version output",
+    pattern: new RegExp(`${previousCommandName} <`),
+  },
+  {
+    label: "legacy log prefix",
+    pattern: new RegExp(`\\[${previousCommandName}\\]`),
+  },
+  {
+    label: "legacy environment variable prefix",
+    pattern: new RegExp(`${previousEnvPrefix}[A-Z0-9_]+`),
+  },
+] as const;
 
 function trackedAuthoredFiles(): string[] {
   const res = spawnSync("git", ["ls-files", "-z"], {
@@ -56,6 +108,18 @@ describe("authored source naming prefix contract", () => {
         if (body.includes(Buffer.from(forbidden))) {
           offenders.push(`${file}: content contains ${forbidden}`);
         }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  test("tracked authored file paths and contents do not retain legacy tool surfaces", () => {
+    const offenders: string[] = [];
+    for (const file of trackedAuthoredFiles()) {
+      const body = readFileSync(join(REPO_ROOT, file), "utf-8");
+      for (const { label, pattern } of forbiddenToolSurfaces) {
+        if (pattern.test(file)) offenders.push(`${file}: path contains ${label}`);
+        if (pattern.test(body)) offenders.push(`${file}: content contains ${label}`);
       }
     }
     expect(offenders).toEqual([]);

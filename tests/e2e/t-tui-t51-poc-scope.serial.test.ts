@@ -52,7 +52,7 @@
 // not on a specific domain word.
 //
 // COST: spends real Bedrock tokens (minutes-long LLM turns across Initialization +
-// Ideation). Gated behind AIDLC_TUI_LIVE=1 so a bare `--e2e` on a laptop SKIPs it;
+// Ideation). Gated behind AMADEUS_TUI_LIVE=1 so a bare `--e2e` on a laptop SKIPs it;
 // tmux/claude/distributable absence (and Windows node/node-pty resolvability) also
 // SKIP with a reason — never a hollow pass.
 //
@@ -72,7 +72,7 @@ import { gridHasMenu, resolveWinNode } from "../harness/tui-drive.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
-const AIDLC_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
+const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 const IS_WIN = os.platform() === "win32";
 // node on Windows (#748), resolved because the box's node is off PATH; the .ts
 // entrypoint needs --experimental-strip-types under node < 22.18. bun elsewhere
@@ -94,8 +94,8 @@ const DRIVE_PREFIX = IS_WIN ? ["--experimental-strip-types", DRIVER] : [DRIVER];
 // Windows box) so LLM-turn variance never clips a legitimately-working run. A tight
 // per-journey budget is exactly what we DON'T want — it false-fires on a slow
 // platform (the t101 900s clip). If this backstop fires, that is a real hang
-// FINDING, not a knob to turn. AIDLC_TEST_TIMEOUT (seconds) overrides per run.
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "2400", 10);
+// FINDING, not a knob to turn. AMADEUS_TEST_TIMEOUT (seconds) overrides per run.
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "2400", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
 
 interface Run {
@@ -123,11 +123,11 @@ function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: 
   );
 }
 
-// ABSENT / opt-in gating. The token guard AIDLC_TUI_LIVE=1 is checked FIRST so a
+// ABSENT / opt-in gating. The token guard AMADEUS_TUI_LIVE=1 is checked FIRST so a
 // bare --e2e (no live opt-in) reports a clear skip reason, not a substrate miss.
 function skipReason(): string | null {
-  if (process.env.AIDLC_TUI_LIVE !== "1") {
-    return "set AIDLC_TUI_LIVE=1 to run the live poc journey (uses Bedrock tokens)";
+  if (process.env.AMADEUS_TUI_LIVE !== "1") {
+    return "set AMADEUS_TUI_LIVE=1 to run the live poc journey (uses Bedrock tokens)";
   }
   if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";
@@ -144,7 +144,7 @@ function skipReason(): string | null {
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
   }
-  if (!existsSync(AIDLC_SRC)) return `distributable missing: ${AIDLC_SRC}`;
+  if (!existsSync(AMADEUS_SRC)) return `distributable missing: ${AMADEUS_SRC}`;
   return null;
 }
 const SKIP_REASON = skipReason();
@@ -194,7 +194,7 @@ describe("t-tui-t51-poc-scope (answering gates advances poc Ideation on disk)", 
         // scope word; send literally with no auto-Enter, then Enter as a named key
         // (the template's exact two-step, robust for slash commands).
         // Use EXPLICIT `--scope poc`, not bare freeform `poc`. The shipped
-        // settings.json pins AWS_AIDLC_DEFAULT_SCOPE=workshop, so bare `/amadeus poc`
+        // settings.json pins AWS_AMADEUS_DEFAULT_SCOPE=workshop, so bare `/amadeus poc`
         // is a freeform-vs-env CONFLICT (poc vs workshop) → a scope disambiguation
         // gate at workflow START that stalls the phase-wait below (the t50 finding,
         // 2026-06-06). `--scope poc` wins silently+gatelessly (SKILL.md:105 explicit

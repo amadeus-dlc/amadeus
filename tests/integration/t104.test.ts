@@ -3,7 +3,7 @@
 // CLI-contract port of tests/integration/t104-doctor-rule-drift.sh (TAP plan 6),
 // mechanism = cli. Equal-or-stronger migration: every .sh assertion that
 // shelled out to `bun amadeus-utility.ts doctor --project-dir <p>` against
-// AIDLC_RULES_DIR fixtures is preserved by SPAWNING the real CLI via
+// AMADEUS_RULES_DIR fixtures is preserved by SPAWNING the real CLI via
 // node:child_process spawnSync (BUN + the tool .ts path), asserting on the
 // combined stdout+stderr the tool writes (the .sh ran `2>&1 || true`) — the
 // PROCESS boundary. The contract under test is the deterministic-tool half of
@@ -15,7 +15,7 @@
 // SPAWN (not in-process): the handler is `handleDoctor(projectDir)` which
 // terminates with `process.exit(failed > 0 ? 1 : 0)` (amadeus-utility.ts:1385)
 // and writes its report via `process.stdout.write` (:1373). The rule-drift row
-// is only observable on that stdout, and the AIDLC_RULES_DIR / AIDLC_STAGE_GRAPH
+// is only observable on that stdout, and the AMADEUS_RULES_DIR / AMADEUS_STAGE_GRAPH
 // fixture-isolation seams (amadeus-graph.ts:160-162) are evaluated inside the
 // subprocess. An in-process twin would lose the env-seam isolation and the
 // process.exit shell the .sh's `|| true` is written around. spawnCount = all.
@@ -31,13 +31,13 @@
 // mktemp -d project with amadeus-docs/, both rm -rf'd):
 //   - Each case writes its rules fixture (the relocated method files org.md /
 //     team.md / project.md, neutral names) into a FRESH temp dir handed
-//     to the tool via AIDLC_RULES_DIR. Byte-for-byte the .sh heredocs.
+//     to the tool via AMADEUS_RULES_DIR. Byte-for-byte the .sh heredocs.
 //   - The project dir is a FRESH temp dir with amadeus-docs/ (toPortablePath so
 //     audit.md the tool may append round-trips on Windows). doctor reads no
 //     audit.md content here — the assertion surface is stdout — but the dir
 //     must exist so doctor's amadeus-docs checks don't crash, exactly as the .sh
 //     did `mkdir -p "$proj/amadeus-docs"`.
-//   - AIDLC_STAGE_GRAPH points at the shipped stage-graph.json (the .sh's
+//   - AMADEUS_STAGE_GRAPH points at the shipped stage-graph.json (the .sh's
 //     SEED_GRAPH) so the unrelated graph-backed doctor checks resolve.
 //   - NOTHING is written under tests/fixtures/**; all dirs cleaned in afterAll.
 //
@@ -75,9 +75,9 @@ import { toPortablePath } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
-const AIDLC_SRC = join(REPO_ROOT, "dist", "claude", ".claude");
-const UTIL = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
-const SEED_GRAPH = join(AIDLC_SRC, "tools", "data", "stage-graph.json");
+const AMADEUS_SRC = join(REPO_ROOT, "dist", "claude", ".claude");
+const UTIL = join(AMADEUS_SRC, "tools", "amadeus-utility.ts");
+const SEED_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 
 const tempDirs: string[] = [];
 
@@ -111,7 +111,7 @@ interface DoctorResult {
 
 /**
  * run_doctor (t104:37-45): a fresh project dir with amadeus-docs/, then
- * `AIDLC_RULES_DIR=<rd> AIDLC_STAGE_GRAPH=<seed> bun UTIL doctor --project-dir <proj>`
+ * `AMADEUS_RULES_DIR=<rd> AMADEUS_STAGE_GRAPH=<seed> bun UTIL doctor --project-dir <proj>`
  * captured 2>&1. The .sh swallows the exit code with `|| true` (bare temp
  * projects fail unrelated hook/settings checks); we capture it for parity but
  * assert on stdout, where the always-pass rule-drift row renders.
@@ -123,8 +123,8 @@ function runDoctor(rd: string): DoctorResult {
     encoding: "utf-8",
     env: {
       ...process.env,
-      AIDLC_RULES_DIR: rd,
-      AIDLC_STAGE_GRAPH: SEED_GRAPH,
+      AMADEUS_RULES_DIR: rd,
+      AMADEUS_STAGE_GRAPH: SEED_GRAPH,
     },
   });
   return {
@@ -217,7 +217,7 @@ describe("t104 amadeus-utility doctor — rule-drift row (migrated from t104-doc
 
   // ===========================================================================
   // Case 6 — Fixture isolation: the fixture's ## Testing Posture (NOT the
-  // shipped rules') drives N=1. Proves AIDLC_RULES_DIR + the .headings read
+  // shipped rules') drives N=1. Proves AMADEUS_RULES_DIR + the .headings read
   // seam are honoured end-to-end — a sentence existing ONLY in the fixture is
   // what gets quoted. org + project both carry ## Testing Posture.
   // ===========================================================================

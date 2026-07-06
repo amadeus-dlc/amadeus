@@ -92,7 +92,7 @@ interface RunResult {
 
 /**
  * Spawn `bash tests/run-tests.sh <args>` and capture combined stdout+stderr and
- * the exit status. AIDLC_T05_CHILD is left untouched: the .sh self-recursion
+ * the exit status. AMADEUS_T05_CHILD is left untouched: the .sh self-recursion
  * guard is moot here because this twin never lands inside a smoke run of itself
  * (it scopes smoke to t06-claude-md-paths, which does not re-invoke the runner).
  */
@@ -434,19 +434,19 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
     expect(leftoverMeta.length).toBe(0);
   }, PER_TEST_TIMEOUT);
 
-  test("--all --debug defaults live TUI coverage unless AIDLC_TUI_LIVE is explicit", () => {
+  test("--all --debug defaults live TUI coverage unless AMADEUS_TUI_LIVE is explicit", () => {
     const defaulted = run(
       ["--all", "--debug", "--filter", "t01-helpers"],
-      { AIDLC_TUI_LIVE: undefined },
+      { AMADEUS_TUI_LIVE: undefined },
     );
     expect(defaulted.status).toBe(0);
-    expect(defaulted.out).toContain("Live TUI coverage: AIDLC_TUI_LIVE=1 (defaulted");
+    expect(defaulted.out).toContain("Live TUI coverage: AMADEUS_TUI_LIVE=1 (defaulted");
 
     const explicitOff = run(
       ["--all", "--debug", "--filter", "NO_SUCH_T05_TEST"],
-      { AIDLC_TUI_LIVE: "0" },
+      { AMADEUS_TUI_LIVE: "0" },
     );
     expect(explicitOff.status).toBe(0);
-    expect(explicitOff.out).toContain("Live TUI coverage: AIDLC_TUI_LIVE=0 (explicit");
+    expect(explicitOff.out).toContain("Live TUI coverage: AMADEUS_TUI_LIVE=0 (explicit");
   }, PER_TEST_TIMEOUT);
 });

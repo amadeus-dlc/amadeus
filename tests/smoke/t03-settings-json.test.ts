@@ -27,9 +27,9 @@
 // JSON.parse throws on malformed JSON exactly as `jq empty` failed.
 //
 // FIXTURE DISCIPLINE: the input is the REAL committed shipped file at
-// dist/claude/.claude/settings.json, read-only, resolved through AIDLC_SRC from
+// dist/claude/.claude/settings.json, read-only, resolved through AMADEUS_SRC from
 // tests/harness/fixtures.ts (the same anchor the .sh's $SETTINGS pointed at —
-// fixtures resolves AIDLC_SRC to <repo>/dist/claude/.claude). NOTHING is written;
+// fixtures resolves AMADEUS_SRC to <repo>/dist/claude/.claude). NOTHING is written;
 // no temp project, no teardown — there is no mutable surface.
 //
 // Source under test (read fresh, parsed once at module load):
@@ -65,9 +65,9 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
-const SETTINGS_PATH = join(AIDLC_SRC, "settings.json");
+const SETTINGS_PATH = join(AMADEUS_SRC, "settings.json");
 const RAW = readFileSync(SETTINGS_PATH, "utf-8");
 
 // .sh test 1: `jq empty "$SETTINGS"` succeeded => valid JSON. JSON.parse throws

@@ -40,7 +40,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
   FIXTURES_DIR,
@@ -49,7 +49,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const TOOL = join(AIDLC_SRC, "tools", "amadeus-orchestrate.ts");
+const TOOL = join(AMADEUS_SRC, "tools", "amadeus-orchestrate.ts");
 
 const MID_IDEATION = join(FIXTURES_DIR, "state-mid-ideation.md");
 

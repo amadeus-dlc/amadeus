@@ -79,7 +79,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   DEFAULT_RECORD_DIR,
   DEFAULT_SPACE,
   cleanupTestProject,
@@ -92,8 +92,8 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const BOLT = join(AIDLC_SRC, "tools", "amadeus-bolt.ts");
-const WT_TOOL = join(AIDLC_SRC, "tools", "amadeus-worktree.ts");
+const BOLT = join(AMADEUS_SRC, "tools", "amadeus-bolt.ts");
+const WT_TOOL = join(AMADEUS_SRC, "tools", "amadeus-worktree.ts");
 
 const tempDirs: string[] = [];
 

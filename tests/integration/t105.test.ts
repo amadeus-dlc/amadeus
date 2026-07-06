@@ -3,8 +3,8 @@
 // CLI-contract port of tests/integration/t105-doctor-paired-coverage.sh (TAP
 // plan 6), mechanism = cli. Drives the REAL `/amadeus --doctor` handler by
 // SPAWNING the utility CLI via node:child_process spawnSync (BUN +
-// amadeus-utility.ts) against AIDLC_RULES_DIR fixtures and the seed
-// stage-graph (AIDLC_STAGE_GRAPH), exactly as the .sh's run_doctor helper
+// amadeus-utility.ts) against AMADEUS_RULES_DIR fixtures and the seed
+// stage-graph (AMADEUS_STAGE_GRAPH), exactly as the .sh's run_doctor helper
 // did (t105:41-47). The contract under test is the PROCESS boundary plus
 // the side effect the tool writes — the paired-coverage advisory row on
 // stdout and the GUARDRAIL_LOADED block appended to amadeus-docs/audit.md.
@@ -21,7 +21,7 @@
 //   **Scope**: all
 //   **Path**: .claude/rules/
 //   **Rule count**: <N>   (N = pairedRules.length = loadRules() count over
-//                          AIDLC_RULES_DIR)
+//                          AMADEUS_RULES_DIR)
 // Emitted once per doctor run, in BOTH the needing>0 branch and the
 // needing==0 (no-sensor-bound) branch (utility.ts:1335-1352 — the emit sits
 // AFTER the branch and always fires).
@@ -65,8 +65,8 @@
 // project + rm -rf): each runDoctor() builds a FRESH temp project
 // (toPortablePath-wrapped so the audit.md the tool writes via forward-slash
 // helpers round-trips when read back on Windows — mirrors createTestProject)
-// and points AIDLC_RULES_DIR at a FRESH temp rules dir written inline. The
-// seed stage-graph (AIDLC_STAGE_GRAPH = dist .../data/stage-graph.json) is the
+// and points AMADEUS_RULES_DIR at a FRESH temp rules dir written inline. The
+// seed stage-graph (AMADEUS_STAGE_GRAPH = dist .../data/stage-graph.json) is the
 // shipped graph whose sensors_applicable carries required-sections /
 // upstream-coverage — exactly the .sh's SEED_GRAPH. NOTHING is written under
 // tests/fixtures/**; all temp dirs cleaned in afterAll.
@@ -94,9 +94,9 @@ function recordRoot(proj: string): string {
 
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
-const AIDLC_SRC = join(REPO_ROOT, "dist", "claude", ".claude");
-const UTIL = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
-const SEED_GRAPH = join(AIDLC_SRC, "tools", "data", "stage-graph.json");
+const AMADEUS_SRC = join(REPO_ROOT, "dist", "claude", ".claude");
+const UTIL = join(AMADEUS_SRC, "tools", "amadeus-utility.ts");
+const SEED_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 
 const tempDirs: string[] = [];
 
@@ -112,7 +112,7 @@ interface DoctorResult {
 
 /**
  * run_doctor (t105:41-47): fresh project dir (survives the call so the test
- * reads amadeus-docs/audit.md), AIDLC_RULES_DIR + AIDLC_STAGE_GRAPH env, spawn
+ * reads amadeus-docs/audit.md), AMADEUS_RULES_DIR + AMADEUS_STAGE_GRAPH env, spawn
  * `bun amadeus-utility.ts doctor --project-dir <proj>` capturing stdout+stderr.
  * doctor process.exit(1)s on any failed check; the .sh swallowed that with
  * `|| true`, so the rc is captured but not asserted (advisory row + audit
@@ -138,8 +138,8 @@ function runDoctor(rulesDir: string): DoctorResult {
     encoding: "utf-8",
     env: {
       ...process.env,
-      AIDLC_RULES_DIR: rulesDir,
-      AIDLC_STAGE_GRAPH: SEED_GRAPH,
+      AMADEUS_RULES_DIR: rulesDir,
+      AMADEUS_STAGE_GRAPH: SEED_GRAPH,
     },
   });
   return {

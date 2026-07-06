@@ -44,7 +44,7 @@ import { dirname, join } from "node:path";
 
 // --- Debug trace (parity with sdk-drive.ts) ---------------------------------
 //
-// sdk-drive.ts writes a per-event ndjson trace under AIDLC_TEST_LOG_DIR when
+// sdk-drive.ts writes a per-event ndjson trace under AMADEUS_TEST_LOG_DIR when
 // the runner is in --debug mode, so a failed (or timed-out) SDK turn can be
 // reconstructed after the fact. The ACP driver historically wrote NOTHING and
 // spawned `kiro-cli acp` with stderr:"ignore", so a `session/prompt` timeout
@@ -54,9 +54,9 @@ import { dirname, join } from "node:path";
 // permission, result, timeout, end) plus the spawned process's stderr lands in
 // `kiro-acp-drive-<pid>.ndjson`, the ACP analogue of sdk-drive's trace.
 function acpTracePath(): string | undefined {
-  if (process.env.AIDLC_ACP_TRACE_FILE) return process.env.AIDLC_ACP_TRACE_FILE;
-  if (process.env.AIDLC_TEST_DEBUG === "true" && process.env.AIDLC_TEST_LOG_DIR) {
-    return join(process.env.AIDLC_TEST_LOG_DIR, `kiro-acp-drive-${process.pid}.ndjson`);
+  if (process.env.AMADEUS_ACP_TRACE_FILE) return process.env.AMADEUS_ACP_TRACE_FILE;
+  if (process.env.AMADEUS_TEST_DEBUG === "true" && process.env.AMADEUS_TEST_LOG_DIR) {
+    return join(process.env.AMADEUS_TEST_LOG_DIR, `kiro-acp-drive-${process.pid}.ndjson`);
   }
   return undefined;
 }
@@ -106,7 +106,7 @@ export interface AcpDriveResult {
 export interface AcpDriveOptions {
   projectDir: string;
   prompt: string;
-  /** Agent name; default "aidlc" (the shipped conductor). */
+  /** Agent name; default "amadeus" (the shipped conductor). */
   agent?: string;
   /** Pass --trust-all-tools (default true — journeys are about the workflow,
    *  not permission dialogs; set false to exercise request_permission). */
@@ -369,13 +369,13 @@ function parseAuditEvents(projectDir: string): string[] | undefined {
 export async function driveKiroAcp(opts: AcpDriveOptions): Promise<AcpDriveResult> {
   const timeoutMs = opts.timeoutMs ?? 240_000;
   const session =
-    opts.session ?? new AcpSession(opts.projectDir, opts.agent ?? "aidlc", opts.trustAllTools ?? true);
+    opts.session ?? new AcpSession(opts.projectDir, opts.agent ?? "amadeus", opts.trustAllTools ?? true);
 
   const trace = session.tracePath;
   writeAcpTrace(trace, "start", {
     prompt: opts.prompt,
     projectDir: opts.projectDir,
-    agent: opts.agent ?? "aidlc",
+    agent: opts.agent ?? "amadeus",
     trustAllTools: opts.trustAllTools ?? true,
     timeoutMs,
     reusedSession: opts.session !== undefined,

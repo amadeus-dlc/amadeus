@@ -19,7 +19,7 @@
 //
 // Path layout (mirrors fixtures.sh:5-8, resolved from tests/harness/):
 //   REPO_ROOT    = tests/harness/../..            (the worktree root)
-//   AIDLC_SRC    = <REPO_ROOT>/dist/claude/.claude
+//   AMADEUS_SRC    = <REPO_ROOT>/dist/claude/.claude
 //   FIXTURES_DIR = <REPO_ROOT>/tests/fixtures
 
 import { execFileSync, spawnSync } from "node:child_process";
@@ -41,7 +41,7 @@ import { seedCustomHarness } from "./custom-harness.ts";
 
 const HARNESS_DIR = dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = join(HARNESS_DIR, "..", "..");
-export const AIDLC_SRC = join(REPO_ROOT, "dist", "claude", ".claude");
+export const AMADEUS_SRC = join(REPO_ROOT, "dist", "claude", ".claude");
 
 // The per-intent WORKSPACE layout the fixtures seed (P9 — the flat amadeus-docs/
 // layout is retired). A fixture project gets a SEED-style shell (aidlc/active-space
@@ -75,7 +75,7 @@ export const FIXTURE_CLONE_ID = "fixturecloneid01";
 // .claude/ so the resolver's default (join(<harness>/tools, "..", "..",
 // aidlc/spaces/default/memory)) finds the rule layers. (NOTE: P5 copies the
 // shipped method tree as-is; P9 owns the full per-intent fixture re-root.)
-export const AIDLC_MEMORY_SRC = join(REPO_ROOT, "dist", "claude", "aidlc");
+export const AMADEUS_MEMORY_SRC = join(REPO_ROOT, "dist", "claude", "aidlc");
 export const FIXTURES_DIR = join(REPO_ROOT, "tests", "fixtures");
 
 const RETRYABLE_RM_CODES = new Set(["EBUSY", "ENOTEMPTY", "EPERM"]);
@@ -86,7 +86,7 @@ const RETRYABLE_RM_CODES = new Set(["EBUSY", "ENOTEMPTY", "EPERM"]);
  * reset_aidlc_env (fixtures.sh:16-18).
  */
 export function resetAidlcEnv(): void {
-  delete process.env.AWS_AIDLC_DEFAULT_SCOPE;
+  delete process.env.AWS_AMADEUS_DEFAULT_SCOPE;
 }
 
 /**
@@ -398,7 +398,7 @@ export interface IntegrationProjectOptions {
   withAudit?: boolean;
   /** Remove the scaffolded intent record + cursor (test the no-workspace path). */
   noAidlcDocs?: boolean;
-  /** Strip AWS_AIDLC_DEFAULT_SCOPE from the copied settings.json so shell env wins. */
+  /** Strip AWS_AMADEUS_DEFAULT_SCOPE from the copied settings.json so shell env wins. */
   stripEnvScope?: boolean;
   /** Drop in the greenfield-todo stub project. */
   withGreenfieldStub?: boolean;
@@ -435,12 +435,12 @@ export function setupIntegrationProject(
   opts: IntegrationProjectOptions = {},
 ): string {
   const proj = createTestProject();
-  cpSync(AIDLC_SRC, join(proj, ".claude"), { recursive: true });
+  cpSync(AMADEUS_SRC, join(proj, ".claude"), { recursive: true });
   // Copy the relocated method tree (aidlc/spaces/default/memory/) to the project
   // root beside .claude/ — the resolver reads the rule layers from there now
   // (P5 relocation). Absent in a tree built before P5, so guard it.
-  if (existsSync(AIDLC_MEMORY_SRC)) {
-    cpSync(AIDLC_MEMORY_SRC, join(proj, "aidlc"), { recursive: true });
+  if (existsSync(AMADEUS_MEMORY_SRC)) {
+    cpSync(AMADEUS_MEMORY_SRC, join(proj, "aidlc"), { recursive: true });
   }
 
   if (opts.withState) seedStateFile(proj, opts.withState);
@@ -453,11 +453,11 @@ export function setupIntegrationProject(
   if (opts.stripEnvScope) {
     const settings = join(proj, ".claude", "settings.json");
     if (existsSync(settings)) {
-      // Drop the line carrying "AWS_AIDLC_DEFAULT_SCOPE": ... — mirrors the
-      // sed_i '/"AWS_AIDLC_DEFAULT_SCOPE":/d' delete in --strip-env-scope.
+      // Drop the line carrying "AWS_AMADEUS_DEFAULT_SCOPE": ... — mirrors the
+      // sed_i '/"AWS_AMADEUS_DEFAULT_SCOPE":/d' delete in --strip-env-scope.
       const kept = readFileSync(settings, "utf8")
         .split("\n")
-        .filter((l) => !l.includes('"AWS_AIDLC_DEFAULT_SCOPE":'))
+        .filter((l) => !l.includes('"AWS_AMADEUS_DEFAULT_SCOPE":'))
         .join("\n");
       writeFileSync(settings, kept);
     }
@@ -544,7 +544,7 @@ export function setupIntegrationProject(
 // ============================================================================
 
 /** Per-harness dist source paths for the journey shell. Reuses the same dist
- *  trees the other fixtures copy (AIDLC_SRC / KIRO_SRC / the codex shell). */
+ *  trees the other fixtures copy (AMADEUS_SRC / KIRO_SRC / the codex shell). */
 const CLAUDE_DIST = join(REPO_ROOT, "dist", "claude");
 const KIRO_DIST = join(REPO_ROOT, "dist", "kiro");
 const CODEX_DIST = join(REPO_ROOT, "dist", "codex");
@@ -635,12 +635,12 @@ export function setupWorkspaceJourney(harness: JourneyHarness = "claude"): Works
 }
 
 /** Remove a workspace-journey root. Mirrors the codex test's rmSync(root) and
- *  cleanupTuiProject's AIDLC_KEEP_TEMP escape hatch (a timed-out live journey
+ *  cleanupTuiProject's AMADEUS_KEEP_TEMP escape hatch (a timed-out live journey
  *  otherwise leaves nothing under a random mkdtemp name to inspect). */
 export function cleanupWorkspaceJourney(journey: WorkspaceJourney | undefined): void {
   if (!journey?.root) return;
-  if (process.env.AIDLC_KEEP_TEMP === "1") {
-    process.stderr.write(`[fixtures] AIDLC_KEEP_TEMP=1 — preserved ${journey.root}\n`);
+  if (process.env.AMADEUS_KEEP_TEMP === "1") {
+    process.stderr.write(`[fixtures] AMADEUS_KEEP_TEMP=1 — preserved ${journey.root}\n`);
     return;
   }
   if (existsSync(journey.root)) removeTreeWithRetry(journey.root);

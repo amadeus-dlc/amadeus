@@ -55,23 +55,23 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
 // The three shipped artefacts (the .sh's $PR / $BS / $AGENT).
 const PR_PATH = join(
-  AIDLC_SRC,
+  AMADEUS_SRC,
   "knowledge",
   "amadeus-shared",
   "rules-reading.md",
 );
 const BS_PATH = join(
-  AIDLC_SRC,
+  AMADEUS_SRC,
   "knowledge",
   "amadeus-pipeline-deploy-agent",
   "branching-strategies.md",
 );
 const AGENT_PATH = join(
-  AIDLC_SRC,
+  AMADEUS_SRC,
   "agents",
   "amadeus-pipeline-deploy-agent.md",
 );

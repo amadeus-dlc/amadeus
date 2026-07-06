@@ -79,7 +79,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   FIXTURES_DIR,
   cleanupWorktreeFixture,
   seededAuditDir,
@@ -88,7 +88,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const SWARM_TOOL = join(AIDLC_SRC, "tools", "amadeus-swarm.ts");
+const SWARM_TOOL = join(AMADEUS_SRC, "tools", "amadeus-swarm.ts");
 
 const fixtures: string[] = [];
 afterAll(() => {

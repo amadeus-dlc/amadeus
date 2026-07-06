@@ -21,7 +21,7 @@
 //     actually landed).
 //
 // COST: the long Kiro journey (the Claude twin budgets 2400s). Gated behind
-// AIDLC_KIRO_TUI_LIVE=1 with skip-reasons; tmux-backend only.
+// AMADEUS_KIRO_TUI_LIVE=1 with skip-reasons; tmux-backend only.
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -35,7 +35,7 @@ import { cleanupTuiProject, KIRO_SRC, setupTuiProject } from "../harness/tui-fix
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const IS_WIN = os.platform() === "win32";
 
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "2400", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "2400", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
 
 function drive(args: string[]): { rc: number; stdout: string } {
@@ -65,8 +65,8 @@ function send(session: string, keys: string): void {
 const IDLE_PATTERN = "ask a question or describe a task";
 
 function skipReason(): string | null {
-  if (process.env.AIDLC_KIRO_TUI_LIVE !== "1") {
-    return "set AIDLC_KIRO_TUI_LIVE=1 to run the live Kiro bugfix journey (uses Kiro credits)";
+  if (process.env.AMADEUS_KIRO_TUI_LIVE !== "1") {
+    return "set AMADEUS_KIRO_TUI_LIVE=1 to run the live Kiro bugfix journey (uses Kiro credits)";
   }
   if (IS_WIN) return "kiro TUI journey is tmux-backend only (no Windows kiro-cli path)";
   if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) return "tmux not found";

@@ -75,12 +75,12 @@ import {
 import { driveAidlc } from "../harness/sdk-drive.ts";
 
 // ---------------------------------------------------------------------------
-// Timeout budget — honour the suite's AIDLC_TEST_TIMEOUT convention (seconds;
-// the .sh set AIDLC_TEST_TIMEOUT=600). The bun:test per-test cap is that value;
+// Timeout budget — honour the suite's AMADEUS_TEST_TIMEOUT convention (seconds;
+// the .sh set AMADEUS_TEST_TIMEOUT=600). The bun:test per-test cap is that value;
 // the driver's own abort fires ~15s earlier so a stuck canUseTool surfaces as a
 // clear harness failure (no result event) rather than an opaque test-timeout.
 // ---------------------------------------------------------------------------
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "600", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "600", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 600) * 1000;
 const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
 

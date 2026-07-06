@@ -28,7 +28,7 @@
 // Sandbox: setupIntegrationProject({ noAidlcDocs, stripEnvScope }) — the TS
 // port of `setup_integration_project --no-amadeus-docs --strip-env-scope`
 // (fixtures.ts :269) — copies the shipped dist/claude/.claude/ into
-// <proj>/.claude and strips AWS_AIDLC_DEFAULT_SCOPE so the explicit --scope
+// <proj>/.claude and strips AWS_AMADEUS_DEFAULT_SCOPE so the explicit --scope
 // wins. The custom slug is injected as EXECUTE into a dropped fixture scope
 // (mirrors t60's scope-injection) so the stage is in-scope.
 //

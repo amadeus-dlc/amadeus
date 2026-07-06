@@ -17,7 +17,7 @@ const fills: OnboardingFills = {
 
 This project uses AI-DLC (AI-Driven Development Life Cycle) under the OpenAI
 Codex CLI harness (minimum version 0.139.0). Invoke the orchestrator skill with
-\`$amadeus\` (or \`/skills\` → aidlc) followed by a scope or project description.
+\`$amadeus\` (or \`/skills\` → amadeus) followed by a scope or project description.
 The deterministic engine, state machine, audit log, and referee are
 byte-identical to every other harness distribution; only the shell differs. Run
 \`$amadeus --status\` for progress, \`$amadeus --help\` for usage, \`$amadeus intent\`
@@ -50,9 +50,9 @@ This is the same AI-DLC core that ships to every harness, rendered onto Codex CL
 - **Gates** render as structured questions via the \`request_user_input\` tool when the shipped config flags enable it, with a numbered-prose fallback otherwise. Gate semantics live in the engine either way.
 - **No custom statusline and no welcome message**: workflow position rides the \`update_plan\` tool and \`$amadeus --status\`.
 - **Git under the sandbox**: \`workspace-write\` keeps \`.git\` read-only in-sandbox; interactive sessions auto-escalate and \`.codex/rules/default.rules\` pre-allows \`git worktree\`/\`commit\`/\`add\`. Headless runs need \`writable_roots\` (template in the shipped \`config.toml\`).
-- **Swarm floor** is \`codex exec\`-per-unit workers; \`AIDLC_USE_SWARM=1\` has no Workflow tool here and loud-degrades (\`SWARM_DEGRADED\`).
+- **Swarm floor** is \`codex exec\`-per-unit workers; \`AMADEUS_USE_SWARM=1\` has no Workflow tool here and loud-degrades (\`SWARM_DEGRADED\`).
 - **Session lifecycle**: Codex has no SessionEnd event (an unclosed session is reconciled as an inferred \`SESSION_ENDED\` at the next start); the Codex-only PostCompact event re-injects the workflow mission after compaction.
-- **The AIDLC method** (the layered practice files \`org.md\`, \`team.md\`, \`project.md\`, and the per-phase \`phases/<phase>.md\`) lives once at the workspace root under \`aidlc/spaces/default/memory/\` — the single hand-editable source of truth, identical on every harness, NOT a per-harness copy. Codex auto-merges the root \`AGENTS.md\` and the orchestrator injects an \`@aidlc/spaces/default/memory/…\` prompt mention to pull specific method files into context on demand; AI-DLC's own stage resolver reads the same tree directly (via the \`AIDLC_RULES_DIR\` seam in the shipped \`config.toml\`). Edit the method there, never under \`.codex/\`. (\`.codex/rules/default.rules\` remains Codex's native Starlark permission-rules file — distinct from the AIDLC method, and the two must not collide.)
+- **The AIDLC method** (the layered practice files \`org.md\`, \`team.md\`, \`project.md\`, and the per-phase \`phases/<phase>.md\`) lives once at the workspace root under \`aidlc/spaces/default/memory/\` — the single hand-editable source of truth, identical on every harness, NOT a per-harness copy. Codex auto-merges the root \`AGENTS.md\` and the orchestrator injects an \`@aidlc/spaces/default/memory/…\` prompt mention to pull specific method files into context on demand; AI-DLC's own stage resolver reads the same tree directly (via the \`AMADEUS_RULES_DIR\` seam in the shipped \`config.toml\`). Edit the method there, never under \`.codex/\`. (\`.codex/rules/default.rules\` remains Codex's native Starlark permission-rules file — distinct from the AIDLC method, and the two must not collide.)
 `,
 
     sections_after_resumption: "",

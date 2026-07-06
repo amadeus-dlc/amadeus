@@ -170,21 +170,21 @@ const __FILE_DIR = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__FILE_DIR, "data");
 const DEFAULT_STAGES_DIR = join(__FILE_DIR, "..", "amadeus-common", "stages");
 
-/** Resolve the stages directory. AIDLC_STAGES_DIR env-var seam mirrors
- *  AIDLC_RULES_DIR + AIDLC_SENSORS_DIR so t89's fixture-driven import
+/** Resolve the stages directory. AMADEUS_STAGES_DIR env-var seam mirrors
+ *  AMADEUS_RULES_DIR + AMADEUS_SENSORS_DIR so t89's fixture-driven import
  *  tests can isolate from the real stages tree (e.g., zero-sensors
  *  scenarios where no stage may declare any imports). Evaluated at call
  *  time. */
 function stagesDir(): string {
-  return process.env.AIDLC_STAGES_DIR ?? DEFAULT_STAGES_DIR;
+  return process.env.AMADEUS_STAGES_DIR ?? DEFAULT_STAGES_DIR;
 }
 
 /** Resolve the stage-graph.json path. Mirrors lib.ts:loadStageGraph()'s
- *  AIDLC_STAGE_GRAPH env-var seam (lib.ts:295-296) so tests can point both
+ *  AMADEUS_STAGE_GRAPH env-var seam (lib.ts:295-296) so tests can point both
  *  loader and compile-check at a temp file. Evaluated at call time so tests
  *  that set/unset the env mid-process see the change. */
 function stageGraphPath(): string {
-  return process.env.AIDLC_STAGE_GRAPH ?? join(DATA_DIR, "stage-graph.json");
+  return process.env.AMADEUS_STAGE_GRAPH ?? join(DATA_DIR, "stage-graph.json");
 }
 
 // The relocated method ("memory") is harness-neutral and lives at the
@@ -198,7 +198,7 @@ function stageGraphPath(): string {
 //     to `default`. rules_in_context is frozen into stage-graph.json at PACKAGE
 //     time (compileStageGraph) pointed at default; it is a list of display PATHS,
 //     not rule content, so it is correct to ship default-pinned and is never
-//     re-resolved at runtime. AIDLC_RULES_DIR still overrides rulesDir() outright.
+//     re-resolved at runtime. AMADEUS_RULES_DIR still overrides rulesDir() outright.
 //   • The PROJECT family — memoryDirFor()/memoryTemplatesDir() — FOLLOWS the
 //     active-space cursor. These feed the learnings/practices WRITERS and the
 //     templates sensor — the load-bearing channel for a non-default space — so a
@@ -217,13 +217,13 @@ function memorySegmentsForSpace(space: string): string[] {
 }
 
 /** Resolve the method ("memory") directory — the single source of truth for
- *  the layered practices (org/team/project + phases/). AIDLC_RULES_DIR env-var
- *  seam mirrors AIDLC_STAGE_GRAPH so t88's fixture-driven inheritance tests can
+ *  the layered practices (org/team/project + phases/). AMADEUS_RULES_DIR env-var
+ *  seam mirrors AMADEUS_STAGE_GRAPH so t88's fixture-driven inheritance tests can
  *  isolate from the real tree. Evaluated at call time. The default resolves the
  *  workspace-root aidlc/spaces/default/memory/ relative to this tool's location
  *  (<ws>/<harness>/tools/ → up two to the workspace root). */
 function rulesDir(): string {
-  return process.env.AIDLC_RULES_DIR ?? join(__FILE_DIR, "..", "..", ...MEMORY_SEGMENTS);
+  return process.env.AMADEUS_RULES_DIR ?? join(__FILE_DIR, "..", "..", ...MEMORY_SEGMENTS);
 }
 
 /** The harness-neutral DISPLAY path baked into each RuleResolution — the
@@ -270,10 +270,10 @@ export function memoryTemplatesDir(projectDir: string, space?: string): string {
  *  for every space — it's the baseline a team optionally overrides per-space via
  *  `memoryTemplatesDir`). The framework ships zero default files at GA, so this
  *  dir resolves but holds only a marker → the sensor's middle branch misses and
- *  falls through to the floor. AIDLC_FRAMEWORK_TEMPLATES_DIR is a test/relocation
- *  seam mirroring AIDLC_TEMPLATES_DIR. */
+ *  falls through to the floor. AMADEUS_FRAMEWORK_TEMPLATES_DIR is a test/relocation
+ *  seam mirroring AMADEUS_TEMPLATES_DIR. */
 export function frameworkTemplatesDir(): string {
-  return process.env.AIDLC_FRAMEWORK_TEMPLATES_DIR ?? join(DATA_DIR, "templates");
+  return process.env.AMADEUS_FRAMEWORK_TEMPLATES_DIR ?? join(DATA_DIR, "templates");
 }
 
 /** Engine-only-install self-heal: the ENGINE-BUNDLED method ("memory") seed — the
@@ -284,24 +284,24 @@ export function frameworkTemplatesDir(): string {
  *  copies this OUT to aidlc/spaces/default/memory/ via ensureWorkspaceDirs IF that
  *  default tree is absent. Resolved relative to THIS tool's location (DATA_DIR),
  *  like frameworkTemplatesDir, so it is harness-correct on every harness.
- *  AIDLC_MEMORY_SEED_DIR is a test/relocation seam mirroring AIDLC_FRAMEWORK_TEMPLATES_DIR. */
+ *  AMADEUS_MEMORY_SEED_DIR is a test/relocation seam mirroring AMADEUS_FRAMEWORK_TEMPLATES_DIR. */
 export function frameworkMemorySeedDir(): string {
-  return process.env.AIDLC_MEMORY_SEED_DIR ?? join(DATA_DIR, "memory-seed");
+  return process.env.AMADEUS_MEMORY_SEED_DIR ?? join(DATA_DIR, "memory-seed");
 }
 
-/** Resolve the sensors directory. AIDLC_SENSORS_DIR env-var seam mirrors
- *  AIDLC_RULES_DIR so t89's fixture-driven import tests can isolate from
+/** Resolve the sensors directory. AMADEUS_SENSORS_DIR env-var seam mirrors
+ *  AMADEUS_RULES_DIR so t89's fixture-driven import tests can isolate from
  *  the real .claude/sensors/ tree. Evaluated at call time. */
 function sensorsDir(): string {
-  return process.env.AIDLC_SENSORS_DIR ?? join(__FILE_DIR, "..", "sensors");
+  return process.env.AMADEUS_SENSORS_DIR ?? join(__FILE_DIR, "..", "sensors");
 }
 
 /** Resolve the compiled scope-grid.json path. Mirrors stageGraphPath()'s
- *  AIDLC_STAGE_GRAPH seam: AIDLC_SCOPE_GRID lets the parity/transpose tests
+ *  AMADEUS_STAGE_GRAPH seam: AMADEUS_SCOPE_GRID lets the parity/transpose tests
  *  point `compile --check` at a tempfile without touching the real grid.
  *  Evaluated at call time so tests that set/unset mid-process see it. */
 function scopeGridPath(): string {
-  return process.env.AIDLC_SCOPE_GRID ?? join(DATA_DIR, "scope-grid.json");
+  return process.env.AMADEUS_SCOPE_GRID ?? join(DATA_DIR, "scope-grid.json");
 }
 
 let _graph: GraphStage[] | null = null;
@@ -309,8 +309,8 @@ let _artifactsRegistry: ReadonlySet<string> | null = null;
 let _scopeGrid: ScopeGrid | null = null;
 
 /** Reset all module-level caches. Test-only — used when fixture
- *  injection via AIDLC_STAGE_GRAPH swaps the backing file mid-process.
- *  Also resets lib.ts's scope-mapping cache (AIDLC_SCOPE_MAPPING env-seam)
+ *  injection via AMADEUS_STAGE_GRAPH swaps the backing file mid-process.
+ *  Also resets lib.ts's scope-mapping cache (AMADEUS_SCOPE_MAPPING env-seam)
  *  because the export consumer reads both graph and scope-mapping in one
  *  call; resetting only the local cache leaves a stale scope view. */
 export function __resetGraphCache(): void {
@@ -328,12 +328,12 @@ export function __resetGraphCache(): void {
  *  so callers never see a hard ENOENT for a derivable artifact. */
 export function loadScopeGrid(): ScopeGrid {
   if (_scopeGrid !== null) return _scopeGrid;
-  // When the AIDLC_SCOPE_MAPPING JSON-fixture seam is active, the grid must
+  // When the AMADEUS_SCOPE_MAPPING JSON-fixture seam is active, the grid must
   // come from that SAME fixture's `.stages` slices, not the real compiled
   // grid — otherwise the injected scope set (validScopes) and the grid
   // diverge. loadScopeMapping() already reads the fixture under the seam, so
   // project its `.stages` into the grid shape.
-  if (process.env.AIDLC_SCOPE_MAPPING) {
+  if (process.env.AMADEUS_SCOPE_MAPPING) {
     const mapping = loadScopeMapping();
     const grid: ScopeGrid = {};
     for (const [name, def] of Object.entries(mapping)) {
@@ -403,7 +403,7 @@ export interface RuleFile {
   // `## <heading>` -> concatenated body text, surfaced from the same `raw`
   // loadRules() already reads. The doctor rule-drift check reads this
   // directly (single walking surface) instead of re-reading from `path`
-  // (a relative DISPLAY path that would miss the AIDLC_RULES_DIR fixture).
+  // (a relative DISPLAY path that would miss the AMADEUS_RULES_DIR fixture).
   headings: Map<string, string>;
 }
 
@@ -1302,7 +1302,7 @@ export function numericStageOrder(a: string, b: string): number {
  *    caller (the doctor) can label the in-sync case without a second
  *    loadStageGraph() call.
  *
- *  Honours the AIDLC_STAGES_DIR (stagesDir) and AIDLC_STAGE_GRAPH
+ *  Honours the AMADEUS_STAGES_DIR (stagesDir) and AMADEUS_STAGE_GRAPH
  *  (loadStageGraph) seams so a test can point both sources at a temp tree. */
 export function stageGraphDrift(): {
   missingFiles: string[];
@@ -1793,11 +1793,11 @@ const COMMANDS: Record<string, Handler> = {
     // resolve <scope> — emit the active scope's plan (.amadeus-plan.json) to
     // the project dir. The plan is the EXECUTE/SKIP slice for the scope,
     // derived from the compiled grid (the same transpose runtime reads).
-    // Feature-flagged via AIDLC_GRAPH_RESOLVE=1 so it ships
+    // Feature-flagged via AMADEUS_GRAPH_RESOLVE=1 so it ships
     // behind a gate until the orchestrator opts into engine-side resolution.
-    if (process.env.AIDLC_GRAPH_RESOLVE !== "1") {
+    if (process.env.AMADEUS_GRAPH_RESOLVE !== "1") {
       console.error(
-        "amadeus-graph resolve is gated behind AIDLC_GRAPH_RESOLVE=1 (rollout flag)."
+        "amadeus-graph resolve is gated behind AMADEUS_GRAPH_RESOLVE=1 (rollout flag)."
       );
       process.exit(1);
     }
@@ -1805,7 +1805,7 @@ const COMMANDS: Record<string, Handler> = {
     const plan = resolvePlanForScope(scope);
     const pd = resolveProjectDir();
     const outPath =
-      process.env.AIDLC_PLAN_PATH ?? planFilePath(pd);
+      process.env.AMADEUS_PLAN_PATH ?? planFilePath(pd);
     const planJson = `${JSON.stringify(plan, null, 2)}\n`;
     if (args.includes("--stdout")) {
       process.stdout.write(planJson);
@@ -1847,7 +1847,7 @@ const COMMANDS: Record<string, Handler> = {
  *  without mutating the real fixture. Repo-root is 4 levels up from
  *  dist/claude/.claude/tools/ (tools → .claude → claude → dist → root). */
 function exportFixturePath(): string {
-  const envPath = process.env.AIDLC_EXPORT_FIXTURE;
+  const envPath = process.env.AMADEUS_EXPORT_FIXTURE;
   if (envPath) return envPath;
   const repoRoot = join(__FILE_DIR, "..", "..", "..", "..");
   return join(repoRoot, "tests", "fixtures", "designer-export", "export.json");
@@ -1876,7 +1876,7 @@ Common forms:
                                        --keywords rejects keywords an existing scope claims)
   amadeus-graph compile                  Regenerate stage-graph.json + scope-grid.json from YAML
   amadeus-graph compile --check          CI drift guard (exit 1 on mismatch)
-  amadeus-graph resolve <name>           Emit .amadeus-plan.json for a scope (AIDLC_GRAPH_RESOLVE=1)
+  amadeus-graph resolve <name>           Emit .amadeus-plan.json for a scope (AMADEUS_GRAPH_RESOLVE=1)
   amadeus-graph export                   Emit designer-facing bundle (stdout)
   amadeus-graph export --check           CI drift guard against fixture
 

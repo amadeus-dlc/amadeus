@@ -62,9 +62,9 @@ import {
 import { driveAidlc } from "../harness/sdk-drive.ts";
 import { readIntentRegistry } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
-// Timeout budget — same convention as t143/t71: honour AIDLC_TEST_TIMEOUT and
+// Timeout budget — same convention as t143/t71: honour AMADEUS_TEST_TIMEOUT and
 // abort the drive a hair early so a stuck run surfaces a partial DriveResult.
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "600", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "600", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 600) * 1000;
 const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
 

@@ -34,8 +34,8 @@ function usage(): never {
       "",
       "Defaults:",
       "  --region: AWS_REGION / AWS_DEFAULT_REGION / us-east-1",
-      "  --instance-id: AIDLC_WINDOWS_INSTANCE_ID",
-      "  --stack-name: AIDLC_WINDOWS_STACK_NAME",
+      "  --instance-id: AMADEUS_WINDOWS_INSTANCE_ID",
+      "  --stack-name: AMADEUS_WINDOWS_STACK_NAME",
       "",
     ].join("\n"),
   );
@@ -44,8 +44,8 @@ function usage(): never {
 
 function parse(argv: string[]): Cli {
   const out: Cli = {
-    instanceId: process.env.AIDLC_WINDOWS_INSTANCE_ID,
-    stackName: process.env.AIDLC_WINDOWS_STACK_NAME,
+    instanceId: process.env.AMADEUS_WINDOWS_INSTANCE_ID,
+    stackName: process.env.AMADEUS_WINDOWS_STACK_NAME,
     region: process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-east-1",
     timeoutSeconds: 1800,
     pollSeconds: 5,
@@ -94,7 +94,7 @@ export function instanceIdForStack(stackName: string, region: string): string {
 export function resolveInstanceId(cli: Pick<Cli, "instanceId" | "stackName" | "region">): string {
   if (cli.instanceId) return cli.instanceId;
   if (cli.stackName) return instanceIdForStack(cli.stackName, cli.region);
-  throw new Error("provide --instance-id, --stack-name, AIDLC_WINDOWS_INSTANCE_ID, or AIDLC_WINDOWS_STACK_NAME");
+  throw new Error("provide --instance-id, --stack-name, AMADEUS_WINDOWS_INSTANCE_ID, or AMADEUS_WINDOWS_STACK_NAME");
 }
 
 export function sendPowerShell(

@@ -61,15 +61,15 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
   resetAidlcEnv,
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const UTIL = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
-const STATE = join(AIDLC_SRC, "tools", "amadeus-state.ts");
+const UTIL = join(AMADEUS_SRC, "tools", "amadeus-utility.ts");
+const STATE = join(AMADEUS_SRC, "tools", "amadeus-state.ts");
 
 const SLUG = "requirements-analysis";
 
@@ -168,7 +168,7 @@ beforeAll(() => {
   const init = spawnSync(
     BUN,
     [UTIL, "init", "--scope", "bugfix", "--project-dir", proj],
-    { encoding: "utf-8", env: { ...process.env, AIDLC_WORKFLOW_INTENT: "revision loop test" } },
+    { encoding: "utf-8", env: { ...process.env, AMADEUS_WORKFLOW_INTENT: "revision loop test" } },
   );
   expect(init.status, `init stderr=${init.stderr ?? ""}`).toBe(0);
 

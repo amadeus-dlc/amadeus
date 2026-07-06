@@ -28,9 +28,9 @@
 // the shipped files, the same observable the .sh's grep asserted.
 //
 // FIXTURE DISCIPLINE: the inputs are the REAL committed shipped files under
-// dist/claude/.claude/, read-only, resolved through AIDLC_SRC from
-// tests/harness/fixtures.ts (the same anchor the .sh's $AIDLC_SRC pointed at —
-// fixtures resolves AIDLC_SRC to <repo>/dist/claude/.claude). NOTHING is written;
+// dist/claude/.claude/, read-only, resolved through AMADEUS_SRC from
+// tests/harness/fixtures.ts (the same anchor the .sh's $AMADEUS_SRC pointed at —
+// fixtures resolves AMADEUS_SRC to <repo>/dist/claude/.claude). NOTHING is written;
 // no temp project, no teardown — there is no mutable surface.
 //
 // Source under test (read fresh each run):
@@ -64,32 +64,32 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
 // The six shipped files the .sh's path vars pointed at.
 const SKILL_MD = readFileSync(
-  join(AIDLC_SRC, "skills", "aidlc", "SKILL.md"),
+  join(AMADEUS_SRC, "skills", "amadeus", "SKILL.md"),
   "utf-8",
 );
 const AUDIT_TS = readFileSync(
-  join(AIDLC_SRC, "tools", "amadeus-audit.ts"),
+  join(AMADEUS_SRC, "tools", "amadeus-audit.ts"),
   "utf-8",
 );
 const AUDIT_FORMAT = readFileSync(
-  join(AIDLC_SRC, "knowledge", "amadeus-shared", "audit-format.md"),
+  join(AMADEUS_SRC, "knowledge", "amadeus-shared", "audit-format.md"),
   "utf-8",
 );
 const STATE_TEMPLATE = readFileSync(
-  join(AIDLC_SRC, "knowledge", "amadeus-shared", "state-template.md"),
+  join(AMADEUS_SRC, "knowledge", "amadeus-shared", "state-template.md"),
   "utf-8",
 );
 const STAGE_PROTOCOL = readFileSync(
-  join(AIDLC_SRC, "amadeus-common", "protocols", "stage-protocol.md"),
+  join(AMADEUS_SRC, "amadeus-common", "protocols", "stage-protocol.md"),
   "utf-8",
 );
 const CODE_GEN = readFileSync(
   join(
-    AIDLC_SRC,
+    AMADEUS_SRC,
     "amadeus-common",
     "stages",
     "construction",

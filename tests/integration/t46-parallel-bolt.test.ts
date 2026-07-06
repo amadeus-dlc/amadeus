@@ -56,7 +56,7 @@ import {
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
   FIXTURES_DIR,
@@ -67,7 +67,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const BOLT = join(AIDLC_SRC, "tools", "amadeus-bolt.ts");
+const BOLT = join(AMADEUS_SRC, "tools", "amadeus-bolt.ts");
 
 interface RaceResult {
   proj: string;

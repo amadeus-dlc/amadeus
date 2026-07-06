@@ -10,7 +10,7 @@
 // (dist/claude/.claude/hooks/). The .sh asserted each of the 10 framework hooks
 // is present as a regular file — a pure structural check with zero LLM, zero
 // tokens, zero process boundary. We assert it in-process with statSync().isFile()
-// against the same dist tree the .sh resolved (AIDLC_SRC from the fixtures
+// against the same dist tree the .sh resolved (AMADEUS_SRC from the fixtures
 // harness == <REPO_ROOT>/dist/claude/.claude, the .sh's
 // "$SCRIPT_DIR/../../dist/claude/.claude").
 //
@@ -39,9 +39,9 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
-const HOOKS_DIR = join(AIDLC_SRC, "hooks");
+const HOOKS_DIR = join(AMADEUS_SRC, "hooks");
 
 // The framework hooks, in the .sh's row order (t02:11-20) plus the
 // mint-presence hook added after the migration. All .ts, run via bun — the .sh

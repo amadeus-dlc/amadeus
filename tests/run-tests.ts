@@ -241,8 +241,8 @@ let cleanupLogDir = false;
 if (args.verbose) {
   logDir = join(SCRIPT_DIR, "logs", utcStamp());
   mkdirSync(logDir, { recursive: true });
-  process.env.AIDLC_TEST_VERBOSE = "true";
-  process.env.AIDLC_TEST_LOG_DIR = logDir;
+  process.env.AMADEUS_TEST_VERBOSE = "true";
+  process.env.AMADEUS_TEST_LOG_DIR = logDir;
   process.stdout.write(`Verbose mode: logging to ${logDir}\n`);
 } else {
   logDir = mkdtempSync(join(process.env.TMPDIR || tmpdir(), "amadeus-run-tests."));
@@ -253,19 +253,19 @@ const resultsDir = join(logDir, "_results");
 mkdirSync(resultsDir, { recursive: true });
 
 if (args.debug) {
-  process.env.AIDLC_TEST_DEBUG = "true";
+  process.env.AMADEUS_TEST_DEBUG = "true";
   process.stdout.write(`Debug driver traces: ${logDir}/{sdk,tui,kiro-acp}-drive-*.ndjson\n`);
 }
 
 if (args.fullProfile && args.debug) {
-  if (process.env.AIDLC_TUI_LIVE === undefined) {
-    process.env.AIDLC_TUI_LIVE = "1";
+  if (process.env.AMADEUS_TUI_LIVE === undefined) {
+    process.env.AMADEUS_TUI_LIVE = "1";
     process.stdout.write(
-      "Live TUI coverage: AIDLC_TUI_LIVE=1 (defaulted by --all/--release --debug; set AIDLC_TUI_LIVE=0 to keep live TUI skips)\n",
+      "Live TUI coverage: AMADEUS_TUI_LIVE=1 (defaulted by --all/--release --debug; set AMADEUS_TUI_LIVE=0 to keep live TUI skips)\n",
     );
   } else {
     process.stdout.write(
-      `Live TUI coverage: AIDLC_TUI_LIVE=${process.env.AIDLC_TUI_LIVE} (explicit; --all/--release --debug did not override it)\n`,
+      `Live TUI coverage: AMADEUS_TUI_LIVE=${process.env.AMADEUS_TUI_LIVE} (explicit; --all/--release --debug did not override it)\n`,
     );
   }
 }
@@ -484,9 +484,9 @@ async function runBunTestFile(file: string, parallelMode = false): Promise<void>
   // exercise real enforcement.
   const env: NodeJS.ProcessEnv = {
     ...process.env,
-    AIDLC_TEST_NAME: base,
-    AIDLC_SKIP_ARTIFACT_GUARD: "1",
-    AIDLC_SKIP_HUMAN_PRESENCE_GUARD: "1",
+    AMADEUS_TEST_NAME: base,
+    AMADEUS_SKIP_ARTIFACT_GUARD: "1",
+    AMADEUS_SKIP_HUMAN_PRESENCE_GUARD: "1",
   };
   process.stdout.write(`\n=== START ${base} ===\n`);
 

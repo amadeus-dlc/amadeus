@@ -15,7 +15,7 @@
 //
 //   (3-6) THE REFEREE — `bun amadeus-swarm.ts prepare|finalize` over a real git
 //     worktree fixture, with THIS TEST playing the conductor (no `claude -p`
-//     worker, no AIDLC_SWARM_CLAUDE_BIN). prepare a 2-unit batch, stage only
+//     worker, no AMADEUS_SWARM_CLAUDE_BIN). prepare a 2-unit batch, stage only
 //     `win`'s impl on disk, then finalize claiming BOTH — `lose` is re-verified
 //     red (the lying-conductor guard, amadeus-swarm.ts handleFinalize:~430) and
 //     refused the merge. Assert the three batch-level audit events
@@ -68,7 +68,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   cleanupWorktreeFixture,
   createTestProject,
@@ -84,8 +84,8 @@ import {
 resetAidlcEnv();
 
 const BUN = process.execPath; // the bun running this test
-const TOOL = join(AIDLC_SRC, "tools", "amadeus-orchestrate.ts");
-const SWARM_TOOL = join(AIDLC_SRC, "tools", "amadeus-swarm.ts");
+const TOOL = join(AMADEUS_SRC, "tools", "amadeus-orchestrate.ts");
+const SWARM_TOOL = join(AMADEUS_SRC, "tools", "amadeus-swarm.ts");
 
 // ---------------------------------------------------------------------------
 // Engine-side helpers (cases 1, 2, 7).

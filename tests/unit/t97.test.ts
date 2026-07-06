@@ -208,7 +208,7 @@ function mkproj(name: string): string {
   const pd = join(tmpRoot, name);
   mkdirSync(join(recordRoot(pd), "inception", "user-stories"), { recursive: true });
   mkdirSync(join(pd, ".claude", "rules"), { recursive: true });
-  mkdirSync(join(pd, ".claude", "skills", "aidlc", "stages", "inception"), {
+  mkdirSync(join(pd, ".claude", "skills", "amadeus", "stages", "inception"), {
     recursive: true,
   });
   writeFileSync(
@@ -224,7 +224,7 @@ function mkproj(name: string): string {
     "utf-8",
   );
   writeFileSync(
-    join(pd, ".claude", "skills", "aidlc", "stages", "inception", "user-stories.md"),
+    join(pd, ".claude", "skills", "amadeus", "stages", "inception", "user-stories.md"),
     `---
 slug: user-stories
 phase: inception
@@ -248,7 +248,7 @@ outputs: bar
 }
 
 // Spawn the real CLI. Mirrors the .sh's `bun "$LEARNINGS_TS" <sub> ...` — env
-// (incl. an optional AIDLC_STAGES_DIR seam) is layered onto process.env.
+// (incl. an optional AMADEUS_STAGES_DIR seam) is layered onto process.env.
 function runCli(
   args: string[],
   opts: { env?: Record<string, string>; cwd?: string } = {},
@@ -517,13 +517,13 @@ describe("t97 persist (cli, idempotency-sensitive)", () => {
     );
     runCli(
       ["persist", "--slug", "user-stories", "--selections-json", sel, "--project-dir", pd],
-      { env: { AIDLC_STAGES_DIR: join(pd, ".claude", "skills", "aidlc", "stages") } },
+      { env: { AMADEUS_STAGES_DIR: join(pd, ".claude", "skills", "amadeus", "stages") } },
     );
     expect(
       readFile(join(pd, ".claude", "sensors", "amadeus-acceptance-format.md")),
     ).toContain("matches:");
     const stageMd = readFile(
-      join(pd, ".claude", "skills", "aidlc", "stages", "inception", "user-stories.md"),
+      join(pd, ".claude", "skills", "amadeus", "stages", "inception", "user-stories.md"),
     );
     expect(/acceptance-format$/m.test(stageMd)).toBe(true);
   });

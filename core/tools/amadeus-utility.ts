@@ -89,7 +89,7 @@ import {
   rulesSubdir,
 } from "./amadeus-lib.ts";
 import { validateStageFrontmatter } from "./amadeus-stage-schema.ts";
-import { AIDLC_VERSION } from "./amadeus-version.ts";
+import { AMADEUS_VERSION } from "./amadeus-version.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -229,7 +229,7 @@ function handleHelp(): void {
 // ---------------------------------------------------------------------------
 
 function handleVersion(): void {
-  process.stdout.write(`aidlc ${AIDLC_VERSION}\n`);
+  process.stdout.write(`amadeus ${AMADEUS_VERSION}\n`);
 }
 
 // ---------------------------------------------------------------------------
@@ -498,11 +498,11 @@ function handleDoctor(projectDir: string): void {
   }
 
   // 4. Harness wiring config present. Claude Code: settings.json (hooks +
-  // permissions live there). Kiro CLI: the aidlc agent config (hooks +
+  // permissions live there). Kiro CLI: the amadeus agent config (hooks +
   // permissions live there) plus settings/cli.json (activation). Codex CLI:
   // config.toml + hooks.json (the hook wiring) + rules/default.rules (permissions).
   if (harness === ".kiro") {
-    const agentPath = join(projectDir, harness, "agents", "aidlc.json");
+    const agentPath = join(projectDir, harness, "agents", "amadeus.json");
     results.push({
       pass: existsSync(agentPath),
       label: "agents/amadeus.json present (hook + permission wiring)",
@@ -585,25 +585,25 @@ function handleDoctor(projectDir: string): void {
     });
   }
 
-  // 4a. AWS_AIDLC_DEFAULT_SCOPE env var — project-default scope from settings.json env.
+  // 4a. AWS_AMADEUS_DEFAULT_SCOPE env var — project-default scope from settings.json env.
   // Only observable inside a Claude Code session (where settings.json env is exposed
   // to Bash invocations). When doctor is invoked directly via bun, the env is unset
   // and we report "unset — no project default" as a pass.
-  const envScope = (process.env.AWS_AIDLC_DEFAULT_SCOPE || "").trim();
+  const envScope = (process.env.AWS_AMADEUS_DEFAULT_SCOPE || "").trim();
   if (envScope === "") {
     results.push({
       pass: true,
-      label: "AWS_AIDLC_DEFAULT_SCOPE (unset — no project default)",
+      label: "AWS_AMADEUS_DEFAULT_SCOPE (unset — no project default)",
     });
   } else if (validScopes().has(envScope)) {
     results.push({
       pass: true,
-      label: `AWS_AIDLC_DEFAULT_SCOPE=${envScope} (valid)`,
+      label: `AWS_AMADEUS_DEFAULT_SCOPE=${envScope} (valid)`,
     });
   } else {
     results.push({
       pass: false,
-      label: `AWS_AIDLC_DEFAULT_SCOPE=${envScope} (invalid)`,
+      label: `AWS_AMADEUS_DEFAULT_SCOPE=${envScope} (invalid)`,
       fix: `valid values: ${[...validScopes()].join(", ")}`,
     });
   }
@@ -1496,7 +1496,7 @@ function handleDoctor(projectDir: string): void {
   //
   // Read seam: heading bodies come from loadRules().headings (surfaced from
   // the same `raw` loadRules reads under rulesDir(), honouring
-  // AIDLC_RULES_DIR), never a second read from the relative .path.
+  // AMADEUS_RULES_DIR), never a second read from the relative .path.
   try {
     const rules = loadRules();
     const org = rules.find(
@@ -2653,7 +2653,7 @@ function handleIntent(projectDir: string, positional: string[], flags: Record<st
 // cursor). Switching a space does TWO per-user writes: move the gitignored
 // active-space cursor, then SURGICALLY repoint the harness-native rule includes
 // in place so the next turn loads the switched space's method (the ambient
-// channel — Claude @-stub / Kiro resources glob / Codex AIDLC_RULES_DIR). Both
+// channel — Claude @-stub / Kiro resources glob / Codex AMADEUS_RULES_DIR). Both
 // are per-user: the cursor is gitignored, and the include re-point is a no-op at
 // `default` (so a single-team user never dirties the committed tree). Switching
 // to a non-existent space errors (use space-create). --json on the bare list
@@ -3388,7 +3388,7 @@ export function findScopeByKeyword(kw: string): string[] {
 // byte-compares the current SKILL.md region against the rendered output
 // and exits 1 on drift. Mirrors amadeus-graph.ts compile / compile --check.
 //
-// AIDLC_SKILL_MD_PATH env-seam lets t67 sandbox --check against a
+// AMADEUS_SKILL_MD_PATH env-seam lets t67 sandbox --check against a
 // fixture SKILL.md (so drift tests never mutate the real file).
 
 const SCOPE_TABLE_BEGIN =
@@ -3425,8 +3425,8 @@ export function canonicalScopeTableRegion(table: string): string {
 
 function skillMdPath(): string {
   return (
-    process.env.AIDLC_SKILL_MD_PATH ??
-    join(TOOLS_DIR, "..", "skills", "aidlc", "SKILL.md")
+    process.env.AMADEUS_SKILL_MD_PATH ??
+    join(TOOLS_DIR, "..", "skills", "amadeus", "SKILL.md")
   );
 }
 
@@ -3593,7 +3593,7 @@ function handleDetectScope(
 }
 
 // ---------------------------------------------------------------------------
-// resolve-env-scope — validate AWS_AIDLC_DEFAULT_SCOPE and emit its value
+// resolve-env-scope — validate AWS_AMADEUS_DEFAULT_SCOPE and emit its value
 //
 // The orchestrator's step 0 in SKILL.md calls this to resolve the env default
 // deterministically. Behavior:
@@ -3610,13 +3610,13 @@ function handleDetectScope(
 // ---------------------------------------------------------------------------
 
 function handleResolveEnvScope(): void {
-  const envScope = (process.env.AWS_AIDLC_DEFAULT_SCOPE || "").trim();
+  const envScope = (process.env.AWS_AMADEUS_DEFAULT_SCOPE || "").trim();
   if (envScope === "") {
     return; // unset — no output, exit 0
   }
   if (!validScopes().has(envScope)) {
     die(
-      `Invalid AWS_AIDLC_DEFAULT_SCOPE "${envScope}". Valid scopes: ${[...validScopes()].join(", ")}.`
+      `Invalid AWS_AMADEUS_DEFAULT_SCOPE "${envScope}". Valid scopes: ${[...validScopes()].join(", ")}.`
     );
   }
   process.stdout.write(`scope=${envScope}\n`);

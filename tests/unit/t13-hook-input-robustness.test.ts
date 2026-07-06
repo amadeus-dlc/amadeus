@@ -94,7 +94,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
   DEFAULT_RECORD_DIR,
@@ -106,13 +106,13 @@ import {
 
 const BUN = process.execPath; // the bun running this test
 
-const HOOK_AUDIT = join(AIDLC_SRC, "hooks", "amadeus-audit-logger.ts");
-const HOOK_VALIDATE = join(AIDLC_SRC, "hooks", "amadeus-validate-state.ts");
-const HOOK_SESSION = join(AIDLC_SRC, "hooks", "amadeus-session-start.ts");
-const HOOK_STATUS = join(AIDLC_SRC, "hooks", "amadeus-statusline.ts");
-const HOOK_SUBAGENT = join(AIDLC_SRC, "hooks", "amadeus-log-subagent.ts");
-const HOOK_SENSOR = join(AIDLC_SRC, "hooks", "amadeus-sensor-fire.ts");
-const HOOK_RUNTIME = join(AIDLC_SRC, "hooks", "amadeus-runtime-compile.ts");
+const HOOK_AUDIT = join(AMADEUS_SRC, "hooks", "amadeus-audit-logger.ts");
+const HOOK_VALIDATE = join(AMADEUS_SRC, "hooks", "amadeus-validate-state.ts");
+const HOOK_SESSION = join(AMADEUS_SRC, "hooks", "amadeus-session-start.ts");
+const HOOK_STATUS = join(AMADEUS_SRC, "hooks", "amadeus-statusline.ts");
+const HOOK_SUBAGENT = join(AMADEUS_SRC, "hooks", "amadeus-log-subagent.ts");
+const HOOK_SENSOR = join(AMADEUS_SRC, "hooks", "amadeus-sensor-fire.ts");
+const HOOK_RUNTIME = join(AMADEUS_SRC, "hooks", "amadeus-runtime-compile.ts");
 
 // P9 per-intent layout: the audit-logger now gates on the file_path being UNDER
 // the active intent's record root (docsRoot()), not on a bare "amadeus-docs/"

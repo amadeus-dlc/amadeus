@@ -19,7 +19,7 @@
 //   5. The SUBCOMMAND CROSS-CHECK (anti-rot guard b) holds for real source:
 //      the structured parser count equals the independent dispatch-site count.
 //
-// The injection tests use the AIDLC_COVERAGE_* env-var seams to redirect the
+// The injection tests use the AMADEUS_COVERAGE_* env-var seams to redirect the
 // source root + committed-baseline paths at a temp tree — the real shipped
 // source and the real tests/.coverage-registry.json are NEVER mutated.
 
@@ -156,7 +156,7 @@ describe("guarantee-principle gate (mechanism >= minMechanism)", () => {
           encoding: "utf-8",
           env: {
             ...process.env,
-            AIDLC_COVERAGE_TESTS_DIR: tmp,
+            AMADEUS_COVERAGE_TESTS_DIR: tmp,
           },
         },
       );
@@ -193,7 +193,7 @@ describe("guarantee-principle gate (mechanism >= minMechanism)", () => {
       );
       const res = spawnSync(process.execPath, [TOOL, "--print"], {
         encoding: "utf-8",
-        env: { ...process.env, AIDLC_COVERAGE_TESTS_DIR: tmp },
+        env: { ...process.env, AMADEUS_COVERAGE_TESTS_DIR: tmp },
       });
       expect(res.status).toBe(0);
       const doc = JSON.parse(res.stdout);
@@ -268,9 +268,9 @@ describe("--check freshness diff (the ratchet mechanism)", () => {
       encoding: "utf-8",
       env: {
         ...process.env,
-        AIDLC_COVERAGE_SRC_ROOT: t.srcRoot,
-        AIDLC_COVERAGE_REGISTRY: t.registry,
-        AIDLC_COVERAGE_RATCHET: t.ratchet,
+        AMADEUS_COVERAGE_SRC_ROOT: t.srcRoot,
+        AMADEUS_COVERAGE_REGISTRY: t.registry,
+        AMADEUS_COVERAGE_RATCHET: t.ratchet,
       },
     });
   }
@@ -280,9 +280,9 @@ describe("--check freshness diff (the ratchet mechanism)", () => {
       encoding: "utf-8",
       env: {
         ...process.env,
-        AIDLC_COVERAGE_SRC_ROOT: t.srcRoot,
-        AIDLC_COVERAGE_REGISTRY: t.registry,
-        AIDLC_COVERAGE_RATCHET: t.ratchet,
+        AMADEUS_COVERAGE_SRC_ROOT: t.srcRoot,
+        AMADEUS_COVERAGE_REGISTRY: t.registry,
+        AMADEUS_COVERAGE_RATCHET: t.ratchet,
       },
     });
   }
@@ -383,8 +383,8 @@ describe("ratchet anti-regression (covered count cannot silently drop)", () => {
         encoding: "utf-8",
         env: {
           ...process.env,
-          AIDLC_COVERAGE_REGISTRY: registry,
-          AIDLC_COVERAGE_RATCHET: ratchet,
+          AMADEUS_COVERAGE_REGISTRY: registry,
+          AMADEUS_COVERAGE_RATCHET: ratchet,
         },
       });
       expect(gen.status).toBe(0);
@@ -401,8 +401,8 @@ describe("ratchet anti-regression (covered count cannot silently drop)", () => {
         encoding: "utf-8",
         env: {
           ...process.env,
-          AIDLC_COVERAGE_REGISTRY: registry,
-          AIDLC_COVERAGE_RATCHET: ratchet,
+          AMADEUS_COVERAGE_REGISTRY: registry,
+          AMADEUS_COVERAGE_RATCHET: ratchet,
         },
       });
       expect(chk.status).toBe(1);
@@ -556,7 +556,7 @@ describe("committed coverage registry is fresh (the live CI ratchet)", () => {
     const chk = spawnSync(process.execPath, [TOOL, "--check"], {
       encoding: "utf-8",
       cwd: REPO_ROOT,
-      // NO AIDLC_COVERAGE_* overrides — this checks the genuine on-disk registry.
+      // NO AMADEUS_COVERAGE_* overrides — this checks the genuine on-disk registry.
     });
     if (chk.status !== 0) {
       // Surface the drift diff so the failure is self-explaining: the fix is

@@ -24,9 +24,9 @@
 // of the shipped docs, the same observable the .sh's grep / sed asserted.
 //
 // FIXTURE DISCIPLINE: the inputs are the REAL committed shipped files under
-// dist/claude/.claude/, read-only, resolved through AIDLC_SRC from
-// tests/harness/fixtures.ts (the same anchor the .sh's $AIDLC_SRC pointed at —
-// fixtures resolves AIDLC_SRC to <repo>/dist/claude/.claude). NOTHING is written; no temp
+// dist/claude/.claude/, read-only, resolved through AMADEUS_SRC from
+// tests/harness/fixtures.ts (the same anchor the .sh's $AMADEUS_SRC pointed at —
+// fixtures resolves AMADEUS_SRC to <repo>/dist/claude/.claude). NOTHING is written; no temp
 // project, no teardown — there is no mutable surface.
 //
 // Source under test (read fresh each run):
@@ -80,17 +80,17 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
 // The two shipped documents the .sh's $PROTOCOL / $STATE_TEMPLATE pointed at.
 const PROTOCOL_PATH = join(
-  AIDLC_SRC,
+  AMADEUS_SRC,
   "amadeus-common",
   "protocols",
   "stage-protocol.md",
 );
 const STATE_TEMPLATE_PATH = join(
-  AIDLC_SRC,
+  AMADEUS_SRC,
   "knowledge",
   "amadeus-shared",
   "state-template.md",

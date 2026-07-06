@@ -7,7 +7,7 @@
   Sets only the environment the framework + harness actually require on Windows
   (docs/guide/01-getting-started.md prerequisites + docs/reference/09-testing.md e2e
   mechanism), then invokes `bun test` on the chosen file. The driver itself spawns
-  under node on Windows (node-pty wedges under bun, #748) via the AIDLC_NODE_BIN the
+  under node on Windows (node-pty wedges under bun, #748) via the AMADEUS_NODE_BIN the
   test reads; bun is only the test runner.
 
   Deliberately does NOT set NODE_PATH. node-pty + @xterm/headless are resolved from the
@@ -23,7 +23,7 @@
   The synced project tree. Default C:\aidlc.
 
 .PARAMETER TimeoutS
-  AIDLC_TEST_TIMEOUT (seconds)  -  the hang-backstop the tests read, NOT a budget.
+  AMADEUS_TEST_TIMEOUT (seconds)  -  the hang-backstop the tests read, NOT a budget.
   Default 900.
 
 .EXAMPLE
@@ -59,12 +59,12 @@ Write-Output "=== running e2e test: $testFile (timeout ${TimeoutS}s) ==="
 # --- Environment (documented prerequisites; NODE_PATH intentionally UNSET) ---------
 # claude + bun on PATH (statusline hook shells `bun`; claude is the TUI under test).
 $env:Path = "$ClaudeDir;C:\bun\bin;" + $env:Path
-# node is off PATH on this box -> the driver reads AIDLC_NODE_BIN to spawn under node.
-$env:AIDLC_NODE_BIN = $NodeExe
+# node is off PATH on this box -> the driver reads AMADEUS_NODE_BIN to spawn under node.
+$env:AMADEUS_NODE_BIN = $NodeExe
 # tui live opt-in + hang-backstop (seconds). The journey terminates on the on-disk
 # artifact; this only ever fires as a loud backstop, never as a pass/fail budget.
-$env:AIDLC_TUI_LIVE = "1"
-$env:AIDLC_TEST_TIMEOUT = "$TimeoutS"
+$env:AMADEUS_TUI_LIVE = "1"
+$env:AMADEUS_TEST_TIMEOUT = "$TimeoutS"
 # Bedrock routing (the shipped settings.json defaults; region required).
 $env:CLAUDE_CODE_USE_BEDROCK = "1"
 $env:AWS_REGION = "us-east-1"

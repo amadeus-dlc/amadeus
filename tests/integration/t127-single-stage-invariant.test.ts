@@ -65,7 +65,7 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
   seedAuditFile,
@@ -74,8 +74,8 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const TOOL = join(AIDLC_SRC, "tools", "amadeus-orchestrate.ts");
-const STATE_TOOL = join(AIDLC_SRC, "tools", "amadeus-state.ts");
+const TOOL = join(AMADEUS_SRC, "tools", "amadeus-orchestrate.ts");
+const STATE_TOOL = join(AMADEUS_SRC, "tools", "amadeus-state.ts");
 const STATE_FIXTURE = "state-mid-ideation.md";
 
 const projects: string[] = [];

@@ -44,10 +44,10 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
-const SETTINGS = join(AIDLC_SRC, "settings.json");
-const SETTINGS_LOCAL_EXAMPLE = join(AIDLC_SRC, "settings.local.json.example");
+const SETTINGS = join(AMADEUS_SRC, "settings.json");
+const SETTINGS_LOCAL_EXAMPLE = join(AMADEUS_SRC, "settings.local.json.example");
 
 interface HookEntry {
   type?: string;

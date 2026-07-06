@@ -59,16 +59,16 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC, REPO_ROOT } from "../harness/fixtures.ts";
+import { AMADEUS_SRC, REPO_ROOT } from "../harness/fixtures.ts";
 
 const DOC = join(REPO_ROOT, "docs", "reference", "12-state-machine.md");
-const TOOLS_DIR = join(AIDLC_SRC, "tools");
-const HOOKS_DIR = join(AIDLC_SRC, "hooks");
+const TOOLS_DIR = join(AMADEUS_SRC, "tools");
+const HOOKS_DIR = join(AMADEUS_SRC, "hooks");
 const AUDIT_TS = join(TOOLS_DIR, "amadeus-audit.ts");
 const STATE_TS = join(TOOLS_DIR, "amadeus-state.ts");
 const UTIL_TS = join(TOOLS_DIR, "amadeus-utility.ts");
-const AUDIT_FORMAT = join(AIDLC_SRC, "knowledge", "amadeus-shared", "audit-format.md");
-const SKILLS_DIR = join(AIDLC_SRC, "skills", "aidlc");
+const AUDIT_FORMAT = join(AMADEUS_SRC, "knowledge", "amadeus-shared", "audit-format.md");
+const SKILLS_DIR = join(AMADEUS_SRC, "skills", "amadeus");
 
 const EMITTERS = "(emitAudit|appendAuditEntry|appendAuditEntryUnlocked|appendAuditEvent)";
 
@@ -175,7 +175,7 @@ describe("t48 audit event-emitter drift (migrated from t48-audit-event-emitters.
         continue;
       }
       for (const rel of emitters) {
-        const abs = join(AIDLC_SRC, rel);
+        const abs = join(AMADEUS_SRC, rel);
         if (!existsSync(abs)) {
           failures.push(`${event} -> ${rel}: file not found`);
           continue;

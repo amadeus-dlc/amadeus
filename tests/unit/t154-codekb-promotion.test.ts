@@ -11,7 +11,7 @@
 // the space-level literal and the bare `aidlc/codekb/<repo>/` form is gone.
 //
 // Mechanism: none. We read the shipped dist/claude stage .md files in-process
-// (the same AIDLC_SRC tree t05/t87 resolve) and parse frontmatter via the
+// (the same AMADEUS_SRC tree t05/t87 resolve) and parse frontmatter via the
 // public parseStageFrontmatter (amadeus-lib.ts:1161). No process boundary, no
 // argv/exit/stdout seam, no live agent. The runtime artifact-path RESOLVER
 // (amadeus-orchestrate.ts resolveArtifactPath/resolveConsumePath) is a SEPARATE
@@ -42,18 +42,18 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 import { parseStageFrontmatter } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
-// AIDLC_SRC === <repo>/dist/claude/.claude — the shipped tree (fixtures.ts:42),
+// AMADEUS_SRC === <repo>/dist/claude/.claude — the shipped tree (fixtures.ts:42),
 // the same one t05/t87 read. Assert on the DIST output so a stale dist (a core
 // edit not re-packaged) is caught here as well as by `package.ts --check`.
-const STAGES_DIR = join(AIDLC_SRC, "amadeus-common", "stages");
+const STAGES_DIR = join(AMADEUS_SRC, "amadeus-common", "stages");
 // Knowledge tree (per-agent reference docs). RE artifact templates live here
 // (amadeus-developer-agent/re-artifacts.md), so the bare-codekb sweep must cover
 // it too — a stale shorthand here is live knowledge the RE stage reads, and it
 // previously escaped because the sweep was stages-only.
-const KNOWLEDGE_DIR = join(AIDLC_SRC, "knowledge");
+const KNOWLEDGE_DIR = join(AMADEUS_SRC, "knowledge");
 
 // The codekb store is a SPACE-LEVEL sibling of intents/ — the engine resolves it
 // to `aidlc/spaces/<space>/codekb/<repo>/` and the stage prose names it with the

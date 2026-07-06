@@ -28,12 +28,12 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC, cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
+import { AMADEUS_SRC, cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const UTIL = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
-const WT_TOOL = join(AIDLC_SRC, "tools", "amadeus-worktree.ts");
-const SWARM_TOOL = join(AIDLC_SRC, "tools", "amadeus-swarm.ts");
+const UTIL = join(AMADEUS_SRC, "tools", "amadeus-utility.ts");
+const WT_TOOL = join(AMADEUS_SRC, "tools", "amadeus-worktree.ts");
+const SWARM_TOOL = join(AMADEUS_SRC, "tools", "amadeus-swarm.ts");
 
 const tempDirs: string[] = [];
 afterAll(() => {
@@ -48,7 +48,7 @@ interface RunResult {
 
 function runUtil(proj: string, ...args: string[]): RunResult {
   const env = { ...process.env };
-  delete env.AWS_AIDLC_DEFAULT_SCOPE;
+  delete env.AWS_AMADEUS_DEFAULT_SCOPE;
   const r = spawnSync(BUN, [UTIL, ...args, "--project-dir", proj], { encoding: "utf-8", env });
   return { status: r.status ?? -1, out: `${r.stdout ?? ""}${r.stderr ?? ""}`, stdout: r.stdout ?? "" };
 }

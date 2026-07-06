@@ -22,7 +22,7 @@
 //     if (json === onDisk) return;                              // :1066 — STRICT ===
 //     ... process.exit(1)
 //   }
-//   stageGraphPath() = process.env.AIDLC_STAGE_GRAPH
+//   stageGraphPath() = process.env.AMADEUS_STAGE_GRAPH
 //                      ?? join(DATA_DIR, "stage-graph.json");   // :152-153
 //   DATA_DIR = join(__FILE_DIR, "data");                        // :136
 // So the shipped default location is
@@ -44,7 +44,7 @@
 // exit 1 in CI.
 //
 // Source-path discipline: compileStageGraph() and stageGraphPath() honour the
-// AIDLC_STAGE_GRAPH / AIDLC_STAGES_DIR / AIDLC_RULES_DIR / AIDLC_SENSORS_DIR
+// AMADEUS_STAGE_GRAPH / AMADEUS_STAGES_DIR / AMADEUS_RULES_DIR / AMADEUS_SENSORS_DIR
 // env seams (amadeus-graph.ts:144-167). To exercise the SHIPPED default layout
 // we clear those seams before importing the module and reset the lib.ts graph
 // cache, so both the compile and the on-disk read resolve to the default
@@ -57,12 +57,12 @@ import { join } from "node:path";
 // Clear the fixture-injection env seams BEFORE the module under test is
 // imported / first invoked, so stageGraphPath(), stagesDir(), rulesDir() and
 // sensorsDir() all resolve to their shipped defaults (the `compile --check`
-// production path). Set in the harness, a stray AIDLC_STAGE_GRAPH would point
+// production path). Set in the harness, a stray AMADEUS_STAGE_GRAPH would point
 // the compare at a fixture and silently invalidate this golden-master.
-delete process.env.AIDLC_STAGE_GRAPH;
-delete process.env.AIDLC_STAGES_DIR;
-delete process.env.AIDLC_RULES_DIR;
-delete process.env.AIDLC_SENSORS_DIR;
+delete process.env.AMADEUS_STAGE_GRAPH;
+delete process.env.AMADEUS_STAGES_DIR;
+delete process.env.AMADEUS_RULES_DIR;
+delete process.env.AMADEUS_SENSORS_DIR;
 
 import {
   __resetGraphCache,

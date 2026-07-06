@@ -75,7 +75,7 @@ region = "us-east-1"
 # The AIDLC method (the markdown rule layers: org/team/project + phases/) now
 # lives at the workspace root under aidlc/spaces/<space>/memory/ — the single
 # hand-editable source of truth, identical on every harness (NOT a per-harness
-# copy under .codex/). The AIDLC_RULES_DIR seam below ships pointed at the
+# copy under .codex/). The AMADEUS_RULES_DIR seam below ships pointed at the
 # always-present default space; /amadeus space <name> re-points it IN PLACE so
 # the next session's resolver follows the active space (a byte-identical no-op at
 # default). Codex also auto-merges the root AGENTS.md and the orchestrator
@@ -83,7 +83,7 @@ region = "us-east-1"
 # method files into context on demand. (.codex/rules/ remains Codex's native
 # Starlark permission-rules dir — D-10 — distinct from the AIDLC method.)
 [shell_environment_policy]
-set = { AIDLC_RULES_DIR = "aidlc/spaces/default/memory" }
+set = { AMADEUS_RULES_DIR = "aidlc/spaces/default/memory" }
 
 # Sandbox: workspace-write keeps <workspace>/.git read-only BY DESIGN;
 # interactive sessions escalate (deny -> approve -> retry unsandboxed) and the
@@ -280,13 +280,13 @@ export default function emit(ctx: EmitContext): EmitResult {
   }
 
   // --- Skill packaging into .agents/skills/ ----------------------------------
-  // Compose runner-gen's render fns under AIDLC_HARNESS_DIR=.codex. Load the
+  // Compose runner-gen's render fns under AMADEUS_HARNESS_DIR=.codex. Load the
   // module FROM THE ASSEMBLED DIST TREE (.codex/tools/) — the packager's
   // compile step already wrote .codex/tools/data/stage-graph.json there, and
   // runner-gen resolves its graph + scopes relative to its own location. (core/
   // carries no compiled JSON, so requiring it from coreRoot would fail.)
   const IMPLICIT_GUARD = "policy:\n  allow_implicit_invocation: false\n";
-  process.env.AIDLC_HARNESS_DIR = ".codex";
+  process.env.AMADEUS_HARNESS_DIR = ".codex";
   const gen = require(join(DCODEX, "tools", "amadeus-runner-gen.ts")) as {
     runnableStages: () => Array<{ slug: string }>;
     renderStageRunner: (node: { slug: string }) => string;

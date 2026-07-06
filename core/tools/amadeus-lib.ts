@@ -140,7 +140,7 @@ let _harnessDir: string | null = null;
 export function harnessDir(): string {
   // Env read at call time (not cached) so tests can flip it between bun
   // invocations — same pattern as stageGraphPath() below.
-  if (process.env.AIDLC_HARNESS_DIR) return process.env.AIDLC_HARNESS_DIR;
+  if (process.env.AMADEUS_HARNESS_DIR) return process.env.AMADEUS_HARNESS_DIR;
   if (_harnessDir === null) _harnessDir = deriveHarnessDir();
   return _harnessDir;
 }
@@ -158,8 +158,8 @@ export function harnessDir(): string {
 // The rename is a fact only the harness MANIFEST knows, so the packager emits
 // it per-tree into tools/data/harness.json ({"rulesSubdir": "..."}) — the
 // open-set source of truth: a new harness ships its own harness.json and needs
-// no edit here. Resolution: AIDLC_RULES_SUBDIR env seam (fixtures) →
-// AIDLC_HARNESS_DIR test-seam map (so "pretend to be .kiro" yields "steering"
+// no edit here. Resolution: AMADEUS_RULES_SUBDIR env seam (fixtures) →
+// AMADEUS_HARNESS_DIR test-seam map (so "pretend to be .kiro" yields "steering"
 // without a .kiro tree on disk) → the shipped harness.json (the real-install
 // rung) → KNOWN_RULES_SUBDIR dev-fallback map → "rules". Returns the LAST path
 // segment only (e.g. "steering"); callers join it under harnessDir().
@@ -186,12 +186,12 @@ function shippedRulesSubdir(): string | null {
 }
 
 export function rulesSubdir(): string {
-  if (process.env.AIDLC_RULES_SUBDIR) return process.env.AIDLC_RULES_SUBDIR;
-  // Test seam: AIDLC_HARNESS_DIR pins the harness without a tree on disk, so it
+  if (process.env.AMADEUS_RULES_SUBDIR) return process.env.AMADEUS_RULES_SUBDIR;
+  // Test seam: AMADEUS_HARNESS_DIR pins the harness without a tree on disk, so it
   // must out-rank the physically-shipped harness.json (which reflects THIS lib
   // copy's tree). Real installs don't set it and fall to the shipped value.
-  if (process.env.AIDLC_HARNESS_DIR) {
-    return KNOWN_RULES_SUBDIR[process.env.AIDLC_HARNESS_DIR] ?? "rules";
+  if (process.env.AMADEUS_HARNESS_DIR) {
+    return KNOWN_RULES_SUBDIR[process.env.AMADEUS_HARNESS_DIR] ?? "rules";
   }
   return shippedRulesSubdir() ?? KNOWN_RULES_SUBDIR[harnessDir()] ?? "rules";
 }
@@ -2034,7 +2034,7 @@ export function isAutonomousMode(stateContent: string | null): boolean {
 // dedicated guard test clears it), and it is the documented bypass for
 // synthetic CI runs that drive approve/answer against bare fixtures.
 export function humanPresenceGuardDisabled(): boolean {
-  return process.env.AIDLC_SKIP_HUMAN_PRESENCE_GUARD === "1";
+  return process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD === "1";
 }
 
 export function setField(content: string, field: string, value: string): string {
@@ -2256,13 +2256,13 @@ export const WORKSPACE_LOCK_SENTINEL = "__workspace__";
 
 // Default stale-lock age threshold (ms). A lock whose owner is still alive but
 // whose stamp is older than this is treated as leaked (a wedged holder). Tunable
-// via AIDLC_LOCK_STALE_MS for tests/ops. Conservative by default (10 min) so a
+// via AMADEUS_LOCK_STALE_MS for tests/ops. Conservative by default (10 min) so a
 // genuinely slow-but-live holder is never robbed on liveness alone — the PID
 // liveness check reclaims a dead owner immediately regardless of age.
 export const DEFAULT_LOCK_STALE_MS = 10 * 60 * 1000;
 
 function lockStaleMs(): number {
-  const raw = process.env.AIDLC_LOCK_STALE_MS;
+  const raw = process.env.AMADEUS_LOCK_STALE_MS;
   if (raw) {
     const n = Number(raw);
     if (Number.isFinite(n) && n > 0) return n;
@@ -2364,9 +2364,9 @@ function reapSuffix(): string {
 // this grace (it is a live process mid-acquire) — only an unstamped dir OLDER
 // than the grace is treated as a genuine leak (e.g. a SIGKILL between mkdir and
 // stamp). Generous relative to the mkdir→write gap, tiny relative to the stale
-// threshold. Tunable via AIDLC_LOCK_UNSTAMPED_GRACE_MS.
+// threshold. Tunable via AMADEUS_LOCK_UNSTAMPED_GRACE_MS.
 function unstampedGraceMs(): number {
-  const raw = process.env.AIDLC_LOCK_UNSTAMPED_GRACE_MS;
+  const raw = process.env.AMADEUS_LOCK_UNSTAMPED_GRACE_MS;
   if (raw) {
     const n = Number(raw);
     if (Number.isFinite(n) && n > 0) return n;
@@ -2801,37 +2801,37 @@ let _scopeMapping: Record<string, ScopeDefinition> | null = null;
 
 // Override paths for fixture injection in tests. Read at call time (not
 // module load) so tests can mutate env vars between bun invocations
-// while still sharing a process in rare cases. AIDLC_STAGE_GRAPH pattern
-// matches AIDLC_PROJECT_DIR in resolveProjectDir() above.
+// while still sharing a process in rare cases. AMADEUS_STAGE_GRAPH pattern
+// matches AMADEUS_PROJECT_DIR in resolveProjectDir() above.
 function stageGraphPath(): string {
-  return process.env.AIDLC_STAGE_GRAPH ?? join(DATA_DIR, "stage-graph.json");
+  return process.env.AMADEUS_STAGE_GRAPH ?? join(DATA_DIR, "stage-graph.json");
 }
 
 // Exported so the read-only `detect` verb can TELL the composer agent where
 // the runtime scope registry lives (the paths are module-relative to the
 // installed tool, which a prose agent cannot derive itself).
 export function scopeGridPath(): string {
-  return process.env.AIDLC_SCOPE_GRID ?? join(DATA_DIR, "scope-grid.json");
+  return process.env.AMADEUS_SCOPE_GRID ?? join(DATA_DIR, "scope-grid.json");
 }
 
 // scope-mapping.json is retired. It survives ONLY as a test
-// fixture seam: when AIDLC_SCOPE_MAPPING is set, loadScopeMapping() reads
+// fixture seam: when AMADEUS_SCOPE_MAPPING is set, loadScopeMapping() reads
 // that JSON file verbatim (preserving fixture-injection tests + the
 // designer-export env-seam). With the var unset there is no JSON on disk —
 // the mapping is derived from the compiled scope-grid.json (the EXECUTE/SKIP
 // transpose) + the .claude/scopes/*.md frontmatter (depth/keywords/etc.).
 function scopeMappingPath(): string | null {
-  return process.env.AIDLC_SCOPE_MAPPING ?? null;
+  return process.env.AMADEUS_SCOPE_MAPPING ?? null;
 }
 
-// .claude/scopes/ holds one amadeus-<name>.md per scope. AIDLC_SCOPES_DIR
-// env-var seam mirrors AIDLC_SENSORS_DIR / AIDLC_RULES_DIR so fixture tests
+// .claude/scopes/ holds one amadeus-<name>.md per scope. AMADEUS_SCOPES_DIR
+// env-var seam mirrors AMADEUS_SENSORS_DIR / AMADEUS_RULES_DIR so fixture tests
 // can point the scope-metadata loader at an isolated tree. Evaluated at call
 // time so tests that set/unset mid-process see the change.
 // Exported for the same reason as scopeGridPath: `detect --json` prints it so
 // the composer agent is told the authoritative write target per harness.
 export function scopesDir(): string {
-  return process.env.AIDLC_SCOPES_DIR ?? join(dirname(fileURLToPath(import.meta.url)), "..", "scopes");
+  return process.env.AMADEUS_SCOPES_DIR ?? join(dirname(fileURLToPath(import.meta.url)), "..", "scopes");
 }
 
 export function loadStageGraph(): StageEntry[] {
@@ -2841,8 +2841,8 @@ export function loadStageGraph(): StageEntry[] {
   try {
     raw = readFileSync(p, "utf-8");
   } catch (err) {
-    const hint = process.env.AIDLC_STAGE_GRAPH
-      ? `AIDLC_STAGE_GRAPH points to ${p}; unset it to use the default.`
+    const hint = process.env.AMADEUS_STAGE_GRAPH
+      ? `AMADEUS_STAGE_GRAPH points to ${p}; unset it to use the default.`
       : "Reinstall the framework or re-run setup to restore the data file.";
     throw new Error(
       `Stage graph not readable at ${p}: ${errorMessage(err)}. ${hint}`
@@ -2942,7 +2942,7 @@ export function loadScopeMetadata(): Record<string, ScopeMetadata> {
 // shape so every existing consumer (the EXECUTE/SKIP `.stages` map, the
 // keyword/depth/description reads) keeps working unchanged after the JSON
 // source-of-truth is retired. Two sources:
-//   - AIDLC_SCOPE_MAPPING set  → read that JSON file verbatim (test seam).
+//   - AMADEUS_SCOPE_MAPPING set  → read that JSON file verbatim (test seam).
 //   - unset (the shipped path) → merge the compiled scope-grid.json
 //     (.stages) with the .claude/scopes/*.md frontmatter (depth/keywords/
 //     description/testStrategy). Scope set = the .md files present.
@@ -2958,7 +2958,7 @@ export function loadScopeMapping(): Record<string, ScopeDefinition> {
     } catch (err) {
       throw new Error(
         `Scope mapping not readable at ${jsonPath}: ${errorMessage(err)}. ` +
-          `AIDLC_SCOPE_MAPPING points to ${jsonPath}; unset it to derive from .claude/scopes/.`
+          `AMADEUS_SCOPE_MAPPING points to ${jsonPath}; unset it to derive from .claude/scopes/.`
       );
     }
     let parsed: Record<string, ScopeDefinition>;
@@ -2995,7 +2995,7 @@ export function loadScopeMapping(): Record<string, ScopeDefinition> {
 }
 
 // Reset caches so fixture-swapping tests can reload from a different
-// AIDLC_SCOPE_MAPPING / AIDLC_STAGE_GRAPH path within the same bun
+// AMADEUS_SCOPE_MAPPING / AMADEUS_STAGE_GRAPH path within the same bun
 // process. Mirrors the precedent set by amadeus-graph.ts __resetGraphCache.
 export function _resetScopeMappingForTests(): void {
   _scopeMapping = null;
@@ -3011,7 +3011,7 @@ export function _resetStageGraphForTests(): void {
 // loadScopeMapping's metadata source). Dropping a new amadeus-<name>.md file
 // automatically flows through every tool that validates scope arguments —
 // no code change. Sorted alphabetically so error-message enumeration is
-// deterministic regardless of file-read order. (Under the AIDLC_SCOPE_MAPPING
+// deterministic regardless of file-read order. (Under the AMADEUS_SCOPE_MAPPING
 // test seam the names come from the injected JSON keys instead.)
 let _validScopes: ReadonlySet<string> | null = null;
 

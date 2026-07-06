@@ -42,7 +42,7 @@ const HARNESS_DIR = join(REPO_ROOT, "harness");
  *  cannot escape the gate by being absent from a static triple. */
 function harnessSkills(): string[] {
   return readdirSync(HARNESS_DIR)
-    .filter((h) => existsSync(join(HARNESS_DIR, h, "skills", "aidlc", "SKILL.md")))
+    .filter((h) => existsSync(join(HARNESS_DIR, h, "skills", "amadeus", "SKILL.md")))
     .map((h) => `harness/${h}/skills/amadeus/SKILL.md`)
     .sort();
 }

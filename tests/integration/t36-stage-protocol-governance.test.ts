@@ -22,8 +22,8 @@
 //
 // Subject under test (the shipped, real bytes — no temp project, no tool):
 //   - dist/claude/.claude/amadeus-common/protocols/stage-protocol-governance.md
-//     (GOVERNANCE; AIDLC_SRC-relative — the .sh's
-//      "$AIDLC_SRC/amadeus-common/protocols/stage-protocol-governance.md")
+//     (GOVERNANCE; AMADEUS_SRC-relative — the .sh's
+//      "$AMADEUS_SRC/amadeus-common/protocols/stage-protocol-governance.md")
 //   - dist/claude/.claude/amadeus-common/stages/<phase>/<slug>.md
 //     (STAGES_DIR; the boundary stage files, found by walking each phase dir
 //      exactly as the .sh's nested `for phase_dir in "$STAGES_DIR"/*/` loop)
@@ -75,17 +75,17 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
 // Mirrors the .sh's three path anchors (t36.sh:9-11).
 const GOVERNANCE_PATH = join(
-  AIDLC_SRC,
+  AMADEUS_SRC,
   "amadeus-common",
   "protocols",
   "stage-protocol-governance.md",
 );
-const STAGES_DIR = join(AIDLC_SRC, "amadeus-common", "stages");
-const KNOWLEDGE_DIR = join(AIDLC_SRC, "knowledge", "amadeus-shared");
+const STAGES_DIR = join(AMADEUS_SRC, "amadeus-common", "stages");
+const KNOWLEDGE_DIR = join(AMADEUS_SRC, "knowledge", "amadeus-shared");
 
 const GOVERNANCE = readFileSync(GOVERNANCE_PATH, "utf-8");
 const GOVERNANCE_LINES = GOVERNANCE.split("\n");

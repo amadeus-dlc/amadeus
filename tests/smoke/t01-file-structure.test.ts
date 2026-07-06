@@ -8,8 +8,8 @@
 // Mechanism: none. This is a pure structural check — does each shipped path
 // exist on disk under the distributable .claude/ tree? No process boundary, no
 // argv/exit/stdout seam, no LLM, zero tokens. We resolve the same tree the .sh
-// resolved via the harness's AIDLC_SRC (= <repo>/dist/claude/.claude,
-// fixtures.ts:42) and assert existsSync() in-process. AIDLC_SRC is the TS
+// resolved via the harness's AMADEUS_SRC (= <repo>/dist/claude/.claude,
+// fixtures.ts:42) and assert existsSync() in-process. AMADEUS_SRC is the TS
 // canonical for the .sh's `cd .../dist/claude/.claude && pwd` CLAUDE_DIR.
 //
 // Subject under test: the shipped layout of dist/claude/.claude/ — the bytes a
@@ -37,18 +37,18 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
-// AIDLC_SRC === <repo>/dist/claude/.claude — the same tree the .sh resolved as
+// AMADEUS_SRC === <repo>/dist/claude/.claude — the same tree the .sh resolved as
 // CLAUDE_DIR. Resolve every shipped path relative to it.
-const at = (...parts: string[]): string => join(AIDLC_SRC, ...parts);
+const at = (...parts: string[]): string => join(AMADEUS_SRC, ...parts);
 
 // The method ("memory") relocated OUT of the harness dir to the workspace root
 // under aidlc/spaces/default/memory/ (one hand-editable source of truth, read
 // by Claude via the .claude/rules/amadeus.md @-stub). It sits beside .claude/, so
-// resolve it from AIDLC_SRC's parent (the dist/claude/ root).
+// resolve it from AMADEUS_SRC's parent (the dist/claude/ root).
 const mem = (...parts: string[]): string =>
-  join(AIDLC_SRC, "..", "aidlc", "spaces", "default", "memory", ...parts);
+  join(AMADEUS_SRC, "..", "aidlc", "spaces", "default", "memory", ...parts);
 
 // The 14 agents (11 original domain-expert personas + the two reviewer
 // personas product-lead and architecture-reviewer + the adaptive-workflows
@@ -130,7 +130,7 @@ const STAGES: Record<string, readonly string[]> = {
 
 describe("t01 — shipped-tree file-structure invariant (mechanism: none)", () => {
   test("ships skills/amadeus/SKILL.md [.sh L12]", () => {
-    expect(existsSync(at("skills", "aidlc", "SKILL.md"))).toBe(true);
+    expect(existsSync(at("skills", "amadeus", "SKILL.md"))).toBe(true);
   });
 
   test("ships the 3 stage-protocol spine files [.sh L15-17]", () => {
@@ -242,7 +242,7 @@ describe("t01 — shipped-tree file-structure invariant (mechanism: none)", () =
     // @-stub, which ships in its place.
     expect(existsSync(mem("org.md"))).toBe(true);
     expect(existsSync(mem("project.md"))).toBe(true);
-    expect(existsSync(at("rules", "aidlc.md"))).toBe(true);
+    expect(existsSync(at("rules", "amadeus.md"))).toBe(true);
   });
 
   test("ships the user-facing CLAUDE.md [.sh L74]", () => {
@@ -258,7 +258,7 @@ describe("t01 — shipped-tree file-structure invariant (mechanism: none)", () =
   // .sh enforced.
   test("asserts EXACTLY 67 shipped paths (TAP plan 63 + 2 reviewer agents + 1 presence hook + the composer) [.sh L9]", () => {
     const paths: string[] = [
-      at("skills", "aidlc", "SKILL.md"), // 1
+      at("skills", "amadeus", "SKILL.md"), // 1
       at("amadeus-common", "protocols", "stage-protocol.md"), // 2
       at("amadeus-common", "protocols", "stage-protocol-recovery.md"), // 3
       at("amadeus-common", "protocols", "stage-protocol-governance.md"), // 4

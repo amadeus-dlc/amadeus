@@ -42,10 +42,10 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { AIDLC_SRC, toPortablePath } from "../harness/fixtures.ts";
+import { AMADEUS_SRC, toPortablePath } from "../harness/fixtures.ts";
 // Import the function unit from the SHIPPED tree (dist), the same tree the
 // spawned SENSOR script runs from — so the in-process unit and the cli boundary
-// agree on exactly what ships. AIDLC_SRC = <REPO_ROOT>/dist/claude/.claude, so
+// agree on exactly what ships. AMADEUS_SRC = <REPO_ROOT>/dist/claude/.claude, so
 // from tests/unit/ that is ../../dist/claude/.claude/tools/amadeus-graph.ts.
 import {
 	memoryTemplatesDir,
@@ -54,7 +54,7 @@ import {
 import { existsSync, readdirSync } from "node:fs";
 
 const BUN = process.execPath; // the bun running this test
-const SENSOR = join(AIDLC_SRC, "tools", "amadeus-sensor-required-sections.ts");
+const SENSOR = join(AMADEUS_SRC, "tools", "amadeus-sensor-required-sections.ts");
 
 const tempDirs: string[] = [];
 afterAll(() => {
@@ -440,9 +440,9 @@ describe("t155 template-override sensor branch (cli, spawnSync)", () => {
   });
 
   test("the dispatcher default templates dir matches where the packager SHIPS the floor", () => {
-    // AIDLC_SRC = <repo>/dist/claude/.claude; the shipped tree's workspace root
+    // AMADEUS_SRC = <repo>/dist/claude/.claude; the shipped tree's workspace root
     // is its parent (<repo>/dist/claude), where aidlc/ is emitted.
-    const shippedWorkspaceRoot = join(AIDLC_SRC, "..");
+    const shippedWorkspaceRoot = join(AMADEUS_SRC, "..");
     const dispatcherDefault = memoryTemplatesDir(shippedWorkspaceRoot);
     // The default the dispatcher computes must point at a real shipped dir...
     expect(existsSync(dispatcherDefault)).toBe(true);

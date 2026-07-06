@@ -18,7 +18,7 @@
 // SKILL.md frontmatter and INTO settings.json. The registration is the
 // contract here; t131 covers the firing behaviour.
 //
-// Files under test (read from the shipped tree, AIDLC_SRC = dist/claude/.claude):
+// Files under test (read from the shipped tree, AMADEUS_SRC = dist/claude/.claude):
 //   skills/amadeus/SKILL.md  — YAML frontmatter delimited by the first two `---`
 //     lines (SKILL.md:1-14). Fields asserted: name, description, user-invocable;
 //     the absence of a top-level `hooks:` key in that block.
@@ -48,10 +48,10 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
-const SKILL = join(AIDLC_SRC, "skills", "aidlc", "SKILL.md");
-const SETTINGS = join(AIDLC_SRC, "settings.json");
+const SKILL = join(AMADEUS_SRC, "skills", "amadeus", "SKILL.md");
+const SETTINGS = join(AMADEUS_SRC, "settings.json");
 
 /**
  * Extract the YAML frontmatter block — the lines BETWEEN the first two `---`

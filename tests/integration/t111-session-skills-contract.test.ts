@@ -72,7 +72,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { AIDLC_SRC, toPortablePath } from "../harness/fixtures.ts";
+import { AMADEUS_SRC, toPortablePath } from "../harness/fixtures.ts";
 import { auditFilePath } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // P9: with no intent cursor seeded, compile/summary resolve the BARE space
@@ -85,8 +85,8 @@ function recordRoot(proj: string): string {
 }
 
 const BUN = process.execPath; // the bun running this test
-const RUNTIME_TS = join(AIDLC_SRC, "tools", "amadeus-runtime.ts");
-const SKILLS_DIR = join(AIDLC_SRC, "skills");
+const RUNTIME_TS = join(AMADEUS_SRC, "tools", "amadeus-runtime.ts");
+const SKILLS_DIR = join(AMADEUS_SRC, "skills");
 const SKILL_FILES = [
   join(SKILLS_DIR, "amadeus-session-cost", "SKILL.md"),
   join(SKILLS_DIR, "amadeus-replay", "SKILL.md"),

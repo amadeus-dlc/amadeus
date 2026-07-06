@@ -100,7 +100,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
   FIXTURES_DIR,
@@ -134,7 +134,7 @@ function util(args: string[], p?: string, env?: Record<string, string>): CliResu
   const finalArgs = p ? [TOOL, ...args, "--project-dir", p] : [TOOL, ...args];
   const res = spawnSync(BUN, finalArgs, {
     encoding: "utf-8",
-    // reset_aidlc_env: strip AWS_AIDLC_DEFAULT_SCOPE from the parent env so a
+    // reset_aidlc_env: strip AWS_AMADEUS_DEFAULT_SCOPE from the parent env so a
     // developer's shell default cannot shadow the tests (fixtures.sh:28-30).
     env: stripScope(env),
   });
@@ -152,13 +152,13 @@ function state(args: string[], p: string): CliResult {
   return { status: res.status ?? -1, out: `${stdout}${res.stderr ?? ""}`, stdout };
 }
 
-/** Build an env with AWS_AIDLC_DEFAULT_SCOPE removed, optionally layering overrides. */
+/** Build an env with AWS_AMADEUS_DEFAULT_SCOPE removed, optionally layering overrides. */
 function stripScope(overrides?: Record<string, string>): Record<string, string> {
   const base: Record<string, string> = {};
   for (const [k, v] of Object.entries(process.env)) {
     if (v !== undefined) base[k] = v;
   }
-  delete base.AWS_AIDLC_DEFAULT_SCOPE;
+  delete base.AWS_AMADEUS_DEFAULT_SCOPE;
   return { ...base, ...(overrides ?? {}) };
 }
 
@@ -253,7 +253,7 @@ function bareProj(): string {
  */
 function installedProj(mutate?: (claudeDir: string) => void): string {
   const p = bareProj();
-  cpSync(AIDLC_SRC, join(p, ".claude"), { recursive: true });
+  cpSync(AMADEUS_SRC, join(p, ".claude"), { recursive: true });
   if (mutate) mutate(join(p, ".claude"));
   return p;
 }
@@ -522,22 +522,22 @@ describe("t27 amadeus-utility doctor", () => {
     expect(r.status).not.toBe(0);
   });
 
-  test("59: doctor reports AWS_AIDLC_DEFAULT_SCOPE unset", () => {
+  test("59: doctor reports AWS_AMADEUS_DEFAULT_SCOPE unset", () => {
     const p = bareProj();
     const r = util(["doctor"], p); // env stripped of the var by util()
-    expect(r.stdout).toContain("AWS_AIDLC_DEFAULT_SCOPE (unset");
+    expect(r.stdout).toContain("AWS_AMADEUS_DEFAULT_SCOPE (unset");
   });
 
-  test("60: doctor reports AWS_AIDLC_DEFAULT_SCOPE=workshop as valid", () => {
+  test("60: doctor reports AWS_AMADEUS_DEFAULT_SCOPE=workshop as valid", () => {
     const p = bareProj();
-    const r = util(["doctor"], p, { AWS_AIDLC_DEFAULT_SCOPE: "workshop" });
-    expect(r.stdout).toContain("AWS_AIDLC_DEFAULT_SCOPE=workshop (valid)");
+    const r = util(["doctor"], p, { AWS_AMADEUS_DEFAULT_SCOPE: "workshop" });
+    expect(r.stdout).toContain("AWS_AMADEUS_DEFAULT_SCOPE=workshop (valid)");
   });
 
-  test("61: doctor reports AWS_AIDLC_DEFAULT_SCOPE=bogus as invalid", () => {
+  test("61: doctor reports AWS_AMADEUS_DEFAULT_SCOPE=bogus as invalid", () => {
     const p = bareProj();
-    const r = util(["doctor"], p, { AWS_AIDLC_DEFAULT_SCOPE: "bogus" });
-    expect(r.stdout).toContain("AWS_AIDLC_DEFAULT_SCOPE=bogus (invalid)");
+    const r = util(["doctor"], p, { AWS_AMADEUS_DEFAULT_SCOPE: "bogus" });
+    expect(r.stdout).toContain("AWS_AMADEUS_DEFAULT_SCOPE=bogus (invalid)");
   });
 });
 
@@ -903,21 +903,21 @@ describe("t27 amadeus-utility detect-scope", () => {
 
 describe("t27 amadeus-utility resolve-env-scope", () => {
   test("62: resolve-env-scope with unset env prints nothing and exits 0", () => {
-    const r = util(["resolve-env-scope"]); // util() strips AWS_AIDLC_DEFAULT_SCOPE
+    const r = util(["resolve-env-scope"]); // util() strips AWS_AMADEUS_DEFAULT_SCOPE
     expect(r.status).toBe(0);
     // .sh asserted $OUT (combined 2>&1) is empty.
     expect(r.out).toBe("");
   });
 
   test("63: resolve-env-scope with valid env prints scope= line and exits 0", () => {
-    const r = util(["resolve-env-scope"], undefined, { AWS_AIDLC_DEFAULT_SCOPE: "workshop" });
+    const r = util(["resolve-env-scope"], undefined, { AWS_AMADEUS_DEFAULT_SCOPE: "workshop" });
     expect(r.status).toBe(0);
     expect(r.out).toContain("scope=workshop");
   });
 
   test("64: resolve-env-scope with invalid env exits 1 with canonical error", () => {
-    const r = util(["resolve-env-scope"], undefined, { AWS_AIDLC_DEFAULT_SCOPE: "bogus" });
+    const r = util(["resolve-env-scope"], undefined, { AWS_AMADEUS_DEFAULT_SCOPE: "bogus" });
     expect(r.status).toBe(1);
-    expect(r.out).toContain("Invalid AWS_AIDLC_DEFAULT_SCOPE");
+    expect(r.out).toContain("Invalid AWS_AMADEUS_DEFAULT_SCOPE");
   });
 });

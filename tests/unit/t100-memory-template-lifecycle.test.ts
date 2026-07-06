@@ -65,7 +65,7 @@ import { copyFileSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseMemoryHeadings } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
   DEFAULT_SPACE,
@@ -83,9 +83,9 @@ resetAidlcEnv();
 const RP = `aidlc/spaces/${DEFAULT_SPACE}/intents`;
 
 const BUN = process.execPath; // the bun running this test
-const TOOL = join(AIDLC_SRC, "tools", "amadeus-state.ts");
+const TOOL = join(AMADEUS_SRC, "tools", "amadeus-state.ts");
 const TEMPLATE = join(
-  AIDLC_SRC,
+  AMADEUS_SRC,
   "knowledge",
   "amadeus-shared",
   "memory-template.md",

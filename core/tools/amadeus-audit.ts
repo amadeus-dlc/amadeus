@@ -600,14 +600,14 @@ function handleAuditMerge(args: string[], projectDir: string): void {
 
   // Acquire outer lock with extended budget for parallel-Bolt contention.
   // Defaults: 200 retries × 100ms = 20s, sized for N=4-8 contention. The
-  // AIDLC_AUDIT_LOCK_RETRIES env var lets tests dial this down so the
+  // AMADEUS_AUDIT_LOCK_RETRIES env var lets tests dial this down so the
   // lock-timeout failure path is testable without 20-second waits.
   const lockRetries = parseInt(
-    process.env.AIDLC_AUDIT_LOCK_RETRIES ?? "200",
+    process.env.AMADEUS_AUDIT_LOCK_RETRIES ?? "200",
     10,
   );
   const lockRetryMs = parseInt(
-    process.env.AIDLC_AUDIT_LOCK_RETRY_MS ?? "100",
+    process.env.AMADEUS_AUDIT_LOCK_RETRY_MS ?? "100",
     10,
   );
   if (!acquireAuditLock(projectDir, lockRetries, lockRetryMs, intent, space)) {

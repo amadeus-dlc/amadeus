@@ -23,7 +23,7 @@
 //
 // FIXTURE DISCIPLINE: the inputs are the REAL committed stage files under
 // dist/claude/.claude/skills/amadeus/stages/<phase>/<slug>.md, read-only —
-// exactly the files the .sh's find_stage_file() walked ($AIDLC_SRC/skills/
+// exactly the files the .sh's find_stage_file() walked ($AMADEUS_SRC/skills/
 // aidlc/stages). Nothing is written; nothing under tests/fixtures/** is touched.
 // The .sh hard-coded the lifecycle STAGE_ORDER and the per-phase stage lists;
 // those lists are reproduced verbatim here so the same stages are asserted.
@@ -43,7 +43,7 @@ import { join } from "node:path";
 import { parseStageFrontmatter } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // --- Paths --------------------------------------------------------------------
-// Mirrors the .sh's STAGES_DIR="$AIDLC_SRC/skills/amadeus/stages".
+// Mirrors the .sh's STAGES_DIR="$AMADEUS_SRC/skills/amadeus/stages".
 const STAGES_DIR = join(
   import.meta.dir,
   "..",

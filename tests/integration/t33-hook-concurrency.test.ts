@@ -39,8 +39,8 @@
 //     amadeus-docs/audit.md, which carries exactly ONE ARTIFACT_CREATED block
 //     (INITIAL_ENTRIES = 1, verified against the fixture). The hook self-gates
 //     on audit.md existing, so seeding it is the precondition for the emit.
-//   - The hook is spawned at the SHIPPED source path (AIDLC_SRC/hooks/...),
-//     exactly like the .sh's `$AIDLC_SRC/hooks/amadeus-audit-logger.ts`; no
+//   - The hook is spawned at the SHIPPED source path (AMADEUS_SRC/hooks/...),
+//     exactly like the .sh's `$AMADEUS_SRC/hooks/amadeus-audit-logger.ts`; no
 //     copied skeleton is needed because audit-logger imports appendAuditEntry
 //     directly (no re-spawn of a project-local tool).
 //   - cleanupTestProject() rm -rf's the temp project; the lock dir lives under
@@ -67,7 +67,7 @@ import { copyFileSync, existsSync, mkdirSync, rmdirSync, writeFileSync } from "n
 import { hostname } from "node:os";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
   FIXTURES_DIR,
@@ -81,7 +81,7 @@ import {
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath; // the bun running this test
-const HOOK = join(AIDLC_SRC, "hooks", "amadeus-audit-logger.ts");
+const HOOK = join(AMADEUS_SRC, "hooks", "amadeus-audit-logger.ts");
 
 // P9 per-intent layout: the audit trail is a DIR of per-clone shards. We PIN one
 // clone-id on disk so all five parallel processes resolve the SAME shard — that

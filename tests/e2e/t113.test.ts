@@ -65,7 +65,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
 } from "../harness/fixtures.ts";
@@ -73,8 +73,8 @@ import {
 // merged shards via the shipped helper (default-resolves the active intent).
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
-const UTIL = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
-const STATE = join(AIDLC_SRC, "tools", "amadeus-state.ts");
+const UTIL = join(AMADEUS_SRC, "tools", "amadeus-utility.ts");
+const STATE = join(AMADEUS_SRC, "tools", "amadeus-state.ts");
 
 // Spawn a state/utility subcommand via the SAME bun that runs this test
 // (process.execPath), cwd-independent. Mirrors t51's `bun "$STATE" ...` calls.
@@ -141,7 +141,7 @@ function driveBugfixToCompletion(): { proj: string } {
     UTIL,
     ["init", "--scope", "bugfix"],
     proj,
-    { AIDLC_WORKFLOW_INTENT: "t113 terminal-ordering test" },
+    { AMADEUS_WORKFLOW_INTENT: "t113 terminal-ordering test" },
   );
   expect(init.status).toBe(0);
 

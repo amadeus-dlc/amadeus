@@ -33,7 +33,7 @@
 //     (spawn, exit 1 iff invalid).
 //
 // Mechanism: MIXED - in-process imports for the library cases (none), spawns
-// for the CLI exit-code rows (cli). Fixture graphs ride the AIDLC_STAGE_GRAPH
+// for the CLI exit-code rows (cli). Fixture graphs ride the AMADEUS_STAGE_GRAPH
 // env seam exactly like t124/t103.
 
 import { afterEach, describe, expect, test } from "bun:test";
@@ -45,10 +45,10 @@ import {
   validateGrid,
   validateScope,
 } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const GRAPH_TOOL = join(AIDLC_SRC, "tools", "amadeus-graph.ts");
+const GRAPH_TOOL = join(AMADEUS_SRC, "tools", "amadeus-graph.ts");
 
 // A minimal fixture graph for the cases the REAL graph cannot express:
 // a TRUE orphan (ghost-artifact has no producer anywhere) and a required
@@ -201,7 +201,7 @@ describe("t190 validate-grid CLI - fixture graph (TRUE orphan, conditional_on)",
     const proposal = join(dir, "p.json");
     writeFileSync(proposal, JSON.stringify({ alpha: "EXECUTE", beta: "EXECUTE" }), "utf-8");
     for (const extra of [[], ["--strict"]]) {
-      const r = runValidateGrid(proposal, extra, { AIDLC_STAGE_GRAPH: graphPath });
+      const r = runValidateGrid(proposal, extra, { AMADEUS_STAGE_GRAPH: graphPath });
       expect(r.rc).toBe(1);
       expect(r.out).toContain("no stage in the graph produces it");
     }
@@ -220,13 +220,13 @@ describe("t190 validate-grid CLI - fixture graph (TRUE orphan, conditional_on)",
     const green = runValidateGrid(
       proposal,
       ["--strict", "--project-type", "greenfield"],
-      { AIDLC_STAGE_GRAPH: graphPath },
+      { AMADEUS_STAGE_GRAPH: graphPath },
     );
     expect(green.rc).toBe(0);
     const brown = runValidateGrid(
       proposal,
       ["--strict", "--project-type", "brownfield"],
-      { AIDLC_STAGE_GRAPH: graphPath },
+      { AMADEUS_STAGE_GRAPH: graphPath },
     );
     expect(brown.rc).toBe(1);
     expect(brown.out).toContain("Strict (recompose) mode");
@@ -240,7 +240,7 @@ describe("t190 validate-grid CLI - fixture graph (TRUE orphan, conditional_on)",
       JSON.stringify({ stages: { alpha: "EXECUTE", gamma: "SKIP" } }),
       "utf-8",
     );
-    const r = runValidateGrid(proposal, [], { AIDLC_STAGE_GRAPH: graphPath });
+    const r = runValidateGrid(proposal, [], { AMADEUS_STAGE_GRAPH: graphPath });
     expect(r.rc).toBe(0);
     const body = JSON.parse(r.out) as { valid: boolean };
     expect(body.valid).toBe(true);
@@ -261,7 +261,7 @@ describe("t190 validate-grid CLI - fixture graph (TRUE orphan, conditional_on)",
 // ===========================================================================
 describe("t190 validate-grid --keywords - collision check", () => {
   // A mapping fixture with two scopes claiming known keywords, riding the
-  // AIDLC_SCOPE_MAPPING seam (fresh process per spawn, no cache leak).
+  // AMADEUS_SCOPE_MAPPING seam (fresh process per spawn, no cache leak).
   const MAPPING = {
     bugfix: {
       depth: "Minimal",
@@ -274,7 +274,7 @@ describe("t190 validate-grid --keywords - collision check", () => {
   function seamEnv(dir: string): Record<string, string> {
     const mappingPath = join(dir, "mapping.json");
     writeFileSync(mappingPath, JSON.stringify(MAPPING), "utf-8");
-    return { AIDLC_SCOPE_MAPPING: mappingPath };
+    return { AMADEUS_SCOPE_MAPPING: mappingPath };
   }
 
   test("a colliding keyword is a hard error naming both the keyword and the incumbent scope", () => {
@@ -282,7 +282,7 @@ describe("t190 validate-grid --keywords - collision check", () => {
     const proposal = join(dir, "p.json");
     writeFileSync(proposal, JSON.stringify({ alpha: "EXECUTE" }), "utf-8");
     const r = runValidateGrid(proposal, ["--keywords", "fix,tune-up"], {
-      AIDLC_STAGE_GRAPH: graphPath,
+      AMADEUS_STAGE_GRAPH: graphPath,
       ...seamEnv(dir),
     });
     expect(r.rc).toBe(1);
@@ -300,7 +300,7 @@ describe("t190 validate-grid --keywords - collision check", () => {
     const proposal = join(dir, "p.json");
     writeFileSync(proposal, JSON.stringify({ alpha: "EXECUTE" }), "utf-8");
     const r = runValidateGrid(proposal, ["--keywords", "FIX"], {
-      AIDLC_STAGE_GRAPH: graphPath,
+      AMADEUS_STAGE_GRAPH: graphPath,
       ...seamEnv(dir),
     });
     expect(r.rc).toBe(1);
@@ -312,7 +312,7 @@ describe("t190 validate-grid --keywords - collision check", () => {
     const proposal = join(dir, "p.json");
     writeFileSync(proposal, JSON.stringify({ alpha: "EXECUTE" }), "utf-8");
     const r = runValidateGrid(proposal, ["--keywords", "pipeline,observability"], {
-      AIDLC_STAGE_GRAPH: graphPath,
+      AMADEUS_STAGE_GRAPH: graphPath,
       ...seamEnv(dir),
     });
     expect(r.rc).toBe(0);
@@ -325,7 +325,7 @@ describe("t190 validate-grid --keywords - collision check", () => {
     const { graphPath, dir } = writeFixture();
     const proposal = join(dir, "p.json");
     writeFileSync(proposal, JSON.stringify({ alpha: "EXECUTE" }), "utf-8");
-    const env = { AIDLC_STAGE_GRAPH: graphPath, ...seamEnv(dir) };
+    const env = { AMADEUS_STAGE_GRAPH: graphPath, ...seamEnv(dir) };
     const without = runValidateGrid(proposal, [], env);
     const withEmptyGrant = runValidateGrid(proposal, ["--keywords", ""], env);
     expect(without.rc).toBe(0);
@@ -339,7 +339,7 @@ describe("t190 validate-grid --keywords - collision check", () => {
     const proposal = join(dir, "p.json");
     writeFileSync(proposal, JSON.stringify({ alpha: "EXECUTE" }), "utf-8");
     const r = runValidateGrid(proposal, ["--keywords"], {
-      AIDLC_STAGE_GRAPH: graphPath,
+      AMADEUS_STAGE_GRAPH: graphPath,
       ...seamEnv(dir),
     });
     expect(r.rc).toBe(1);
@@ -352,7 +352,7 @@ describe("t190 validate-grid --keywords - collision check", () => {
     const proposal = join(dir, "p.json");
     writeFileSync(proposal, JSON.stringify({ beta: "EXECUTE" }), "utf-8");
     const r = runValidateGrid(proposal, ["--keywords", "bug"], {
-      AIDLC_STAGE_GRAPH: graphPath,
+      AMADEUS_STAGE_GRAPH: graphPath,
       ...seamEnv(dir),
     });
     expect(r.rc).toBe(1);

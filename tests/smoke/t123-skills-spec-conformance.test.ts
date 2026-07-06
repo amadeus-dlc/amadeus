@@ -10,7 +10,7 @@
 // SKILL.md. The .sh sourced lib/tap.sh and shelled to `bun -e` only to PARSE
 // (read the graph, extract the frontmatter `name`); it never invoked an aidlc
 // tool as a process-boundary contract. So the twin reads the same static files
-// in-process (resolved from the harness's AIDLC_SRC, the same
+// in-process (resolved from the harness's AMADEUS_SRC, the same
 // dist/claude/.claude root the .sh reached via $CLAUDE_DIR) and asserts. Zero
 // LLM, zero tokens, zero subprocess. The ONE in-repo import — FIRST_BATCH from
 // amadeus-runner-gen.ts — is a pure exported constant, not a spawn (the .sh
@@ -66,15 +66,15 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 import { FIRST_BATCH } from "../../dist/claude/.claude/tools/amadeus-runner-gen.ts";
 
-const SKILLS_DIR = join(AIDLC_SRC, "skills");
-const STAGE_GRAPH = join(AIDLC_SRC, "tools", "data", "stage-graph.json");
+const SKILLS_DIR = join(AMADEUS_SRC, "skills");
+const STAGE_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 
 // --- The four base skills (orchestrator + the three read-only session skills).
 const BASE_SKILLS = [
-  "aidlc",
+  "amadeus",
   "amadeus-outcomes-pack",
   "amadeus-replay",
   "amadeus-session-cost",

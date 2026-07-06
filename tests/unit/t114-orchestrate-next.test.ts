@@ -32,9 +32,9 @@
 // FIXTURE DISCIPLINE: each case builds a fresh temp project via
 // createTestProject() + seedStateFile() (the .ts analogues of fixtures.sh's
 // create_test_project / seed_state_file), torn down in afterEach. resetAidlcEnv()
-// clears AWS_AIDLC_DEFAULT_SCOPE so a developer's exported value can't shadow the
+// clears AWS_AMADEUS_DEFAULT_SCOPE so a developer's exported value can't shadow the
 // fixtures — exactly the .sh's top-of-file reset_aidlc_env. The env-precedence
-// cases pass AWS_AIDLC_DEFAULT_SCOPE in the spawn env only (never the test
+// cases pass AWS_AMADEUS_DEFAULT_SCOPE in the spawn env only (never the test
 // process env). NOTHING is written under tests/fixtures/**.
 //
 // Old TAP -> new test parity (1:1, every .sh assertion -> a named test()):
@@ -43,9 +43,9 @@
 //   .sh 3  run-stage carries lead_agent off the node       -> "3: run-stage carries lead_agent from the graph node"
 //   .sh 4  brownfield bugfix active stage                  -> "4: brownfield bugfix active stage -> run-stage reverse-engineering"
 //   .sh 5  invalid --scope errors over valid state (x2)    -> "5: invalid --scope errors unconditionally over valid state" (kind:error + Unknown scope)
-//   .sh 6  --scope flag beats env                          -> "6: --scope flag beats AWS_AIDLC_DEFAULT_SCOPE env"
+//   .sh 6  --scope flag beats env                          -> "6: --scope flag beats AWS_AMADEUS_DEFAULT_SCOPE env"
 //   .sh 7  env beats default                               -> "7: env scope beats default (poc resolved)"
-//   .sh 8  invalid env scope -> canonical env message      -> "8: invalid env scope -> verbatim AWS_AIDLC_DEFAULT_SCOPE error"
+//   .sh 8  invalid env scope -> canonical env message      -> "8: invalid env scope -> verbatim AWS_AMADEUS_DEFAULT_SCOPE error"
 //   .sh 9  --status -> print                               -> "9: --status -> print directive (read-only dispatch)"
 //   .sh 10 --version -> print                              -> "10: --version -> print directive (terminal read-only)"
 //   .sh 11 --stage+--phase -> error                        -> "11: mutually-exclusive --stage+--phase -> error directive"
@@ -62,7 +62,7 @@
 //   :804 Branch 2  --stage + --phase -> "Cannot use --stage and --phase together".
 //   :822 Branch 3  --init -> print naming the scaffold cmd.
 //   :858 Branch 3b UNCONDITIONAL invalid --scope -> "Unknown scope ...".
-//   :873 Branch 4  env source -> shells resolve-env-scope -> verbatim "Invalid AWS_AIDLC_DEFAULT_SCOPE ...".
+//   :873 Branch 4  env source -> shells resolve-env-scope -> verbatim "Invalid AWS_AMADEUS_DEFAULT_SCOPE ...".
 //   :934 Branch 5  scope-change print ("scope-change --scope <s>").
 //  :1034 Branch 7  --stage/--phase jump -> emitJumpDirective; with-state -> print "amadeus-jump.ts execute --target ... --direction ...".
 //  :1116 Branch 10 happy path -> run-stage for the in-flight current stage.
@@ -73,7 +73,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
   FIXTURES_DIR,
@@ -82,9 +82,9 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const TOOL = join(AIDLC_SRC, "tools", "amadeus-orchestrate.ts");
-const STATE = join(AIDLC_SRC, "tools", "amadeus-state.ts");
-const SKILL_MD = join(AIDLC_SRC, "skills", "aidlc", "SKILL.md");
+const TOOL = join(AMADEUS_SRC, "tools", "amadeus-orchestrate.ts");
+const STATE = join(AMADEUS_SRC, "tools", "amadeus-state.ts");
+const SKILL_MD = join(AMADEUS_SRC, "skills", "amadeus", "SKILL.md");
 
 const MID_IDEATION = join(FIXTURES_DIR, "state-mid-ideation.md");
 const BROWNFIELD_INIT_DONE = join(FIXTURES_DIR, "state-brownfield-init-done.md");
@@ -97,7 +97,7 @@ interface RunResult {
 
 // Run `bun amadeus-orchestrate.ts next <args> --project-dir <proj>`. `extraEnv`
 // layers onto a COPY of process.env (used for the env-scope precedence cases —
-// AWS_AIDLC_DEFAULT_SCOPE is set in the spawn env only, never the test process).
+// AWS_AMADEUS_DEFAULT_SCOPE is set in the spawn env only, never the test process).
 function runNext(
   proj: string,
   args: string[],
@@ -172,14 +172,14 @@ describe("t114 scope precedence + validation", () => {
     expect(out).toContain("Unknown scope");
   });
 
-  test("6: --scope flag beats AWS_AIDLC_DEFAULT_SCOPE env", () => {
+  test("6: --scope flag beats AWS_AMADEUS_DEFAULT_SCOPE env", () => {
     // No state file. An invalid env scope would error IF env won; a valid --scope
     // flag must take precedence, yielding a run-stage with no error.
     proj = createTestProject();
     const out = runNext(
       proj,
       ["--scope", "bugfix", "--stage", "requirements-analysis"],
-      { AWS_AIDLC_DEFAULT_SCOPE: "bogusscope" },
+      { AWS_AMADEUS_DEFAULT_SCOPE: "bogusscope" },
     ).out;
     expect(out).toContain('"kind":"run-stage"');
   });
@@ -189,19 +189,19 @@ describe("t114 scope precedence + validation", () => {
     // The default (feature) is never reached because env supplied a valid scope.
     proj = createTestProject();
     const out = runNext(proj, ["--stage", "intent-capture"], {
-      AWS_AIDLC_DEFAULT_SCOPE: "poc",
+      AWS_AMADEUS_DEFAULT_SCOPE: "poc",
     }).out;
     expect(out).toContain('"stage":"intent-capture"');
   });
 
-  test("8: invalid env scope -> verbatim AWS_AIDLC_DEFAULT_SCOPE error", () => {
+  test("8: invalid env scope -> verbatim AWS_AMADEUS_DEFAULT_SCOPE error", () => {
     // The env path validates by composing `amadeus-utility.ts resolve-env-scope`,
-    // which owns the canonical `Invalid AWS_AIDLC_DEFAULT_SCOPE "..."` wording.
+    // which owns the canonical `Invalid AWS_AMADEUS_DEFAULT_SCOPE "..."` wording.
     proj = createTestProject();
     const out = runNext(proj, [], {
-      AWS_AIDLC_DEFAULT_SCOPE: "frobnicate",
+      AWS_AMADEUS_DEFAULT_SCOPE: "frobnicate",
     }).out;
-    expect(out).toContain("Invalid AWS_AIDLC_DEFAULT_SCOPE");
+    expect(out).toContain("Invalid AWS_AMADEUS_DEFAULT_SCOPE");
   });
 });
 
@@ -260,7 +260,7 @@ describe("t114 gate axis != execution axis", () => {
     // so intent-capture (an ideation stage) MUST carry gate:true.
     proj = createTestProject();
     const out = runNext(proj, ["--stage", "intent-capture"], {
-      AWS_AIDLC_DEFAULT_SCOPE: "poc",
+      AWS_AMADEUS_DEFAULT_SCOPE: "poc",
     }).out;
     expect(out).toContain('"gate":true');
   });
@@ -285,7 +285,7 @@ describe("t114 cutover: no --args swallow", () => {
     // it does NOT fall through to a bare next ("run current stage").
     proj = createTestProject();
     const out = runNext(proj, ["--stage", "nonexistent-stage"], {
-      AWS_AIDLC_DEFAULT_SCOPE: "poc",
+      AWS_AMADEUS_DEFAULT_SCOPE: "poc",
     }).out;
     expect(out).toContain("Unknown stage");
   });

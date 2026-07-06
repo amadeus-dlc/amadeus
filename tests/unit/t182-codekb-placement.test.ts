@@ -55,7 +55,7 @@ const UTILITY = join(TOOLS, "amadeus-utility.ts");
 const ORCH = join(TOOLS, "amadeus-orchestrate.ts");
 const FIXTURES_DIR = join(REPO_ROOT, "tests", "fixtures");
 
-// Clear AWS_AIDLC_DEFAULT_SCOPE so a leaked shell export can't shadow the fixture
+// Clear AWS_AMADEUS_DEFAULT_SCOPE so a leaked shell export can't shadow the fixture
 // scope (the same reset t116 does).
 resetAidlcEnv();
 
@@ -84,7 +84,7 @@ function seedRecordedIntent(): string {
 
 const childEnv = (): NodeJS.ProcessEnv => {
   const e = { ...process.env };
-  delete e.AWS_AIDLC_DEFAULT_SCOPE;
+  delete e.AWS_AMADEUS_DEFAULT_SCOPE;
   return e;
 };
 

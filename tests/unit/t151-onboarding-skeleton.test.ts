@@ -54,12 +54,12 @@ describe("t151 onboarding skeleton — a new harness gets a complete doc for fre
     // slot gets a value (some empty — intentional omission). This is exactly what
     // a porter writes: one fills file, no skeleton edit.
     const fooFills: OnboardingFills = {
-      invoke: "@aidlc",
+      invoke: "@amadeus",
       slots: Object.fromEntries(
         declaredSlots(SKELETON).map((name) => [
           name,
           name === "title_block"
-            ? "# Project Name\n\nThis project uses AI-DLC on the Foo CLI harness. Run `@aidlc` to begin."
+            ? "# Project Name\n\nThis project uses AI-DLC on the Foo CLI harness. Run `@amadeus` to begin."
             : name === "prereq_bullets"
               ? "- **Foo CLI**: install per its docs.\n- **bun**: required for the tools."
               : "", // every other slot intentionally omitted for this minimal harness
@@ -76,7 +76,7 @@ describe("t151 onboarding skeleton — a new harness gets a complete doc for fre
       expect(rendered).toContain(section);
     }
     // The invoke command was substituted everywhere.
-    expect(rendered).toContain("@aidlc");
+    expect(rendered).toContain("@amadeus");
     // Nothing was forgotten: no slot/invoke/harness-dir marker survives.
     expect(noLeftoverMarkers(rendered)).toBeNull();
   });

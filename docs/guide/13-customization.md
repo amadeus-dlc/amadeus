@@ -31,12 +31,12 @@ This file is listed in `.gitignore` so your personal changes are never committed
 
 ## Per-Project Default Scope
 
-When every workflow in a project should start at the same scope — for example, a workshop where all participants should run `workshop` — set `AWS_AIDLC_DEFAULT_SCOPE` in the `env` block of `.claude/settings.json` (the shipped file already has this set to `workshop`):
+When every workflow in a project should start at the same scope — for example, a workshop where all participants should run `workshop` — set `AWS_AMADEUS_DEFAULT_SCOPE` in the `env` block of `.claude/settings.json` (the shipped file already has this set to `workshop`):
 
 ```json
 {
   "env": {
-    "AWS_AIDLC_DEFAULT_SCOPE": "workshop"
+    "AWS_AMADEUS_DEFAULT_SCOPE": "workshop"
   }
 }
 ```
@@ -49,7 +49,7 @@ With this set, bare `/amadeus` invocations use `workshop` as the default scope. 
 
 1. Explicit CLI flag: `/amadeus feature` or `/amadeus --scope bugfix` wins.
 2. Keyword detection in freeform text: `/amadeus fix the login bug` still maps to `bugfix`. Users can override the detected scope at the existing confirmation prompt.
-3. `AWS_AIDLC_DEFAULT_SCOPE` env var from `.claude/settings.json`.
+3. `AWS_AMADEUS_DEFAULT_SCOPE` env var from `.claude/settings.json`.
 4. Hard-coded fallback (`poc` at intent birth, `feature` for unmatched freeform).
 
 **Valid values:** `enterprise`, `feature`, `mvp`, `poc`, `bugfix`, `refactor`, `infra`, `security-patch`, `workshop`. An invalid value errors at invocation time with a clear message. Teams can define additional scopes by dropping a `.claude/scopes/amadeus-<name>.md` file and tagging the member stages' `scopes:` lists — see [Contributing: Adding a Scope](../reference/11-contributing.md#adding-a-scope). Teams can also define additional agents in `.claude/agents/` — see [Contributing: Adding an Agent](../reference/11-contributing.md#adding-an-agent).
@@ -57,10 +57,10 @@ With this set, bare `/amadeus` invocations use `workshop` as the default scope. 
 **Verifying the config:** run `/amadeus --doctor` to confirm the env var is set and valid:
 
 ```
-✓  AWS_AIDLC_DEFAULT_SCOPE=workshop (valid)
+✓  AWS_AMADEUS_DEFAULT_SCOPE=workshop (valid)
 ```
 
-**Init notice:** when the env default is applied, the orchestrator prints a one-line notice at workflow start (`Using scope=<value> from AWS_AIDLC_DEFAULT_SCOPE (.claude/settings.json)`) so the scope source is visible at the moment it takes effect.
+**Init notice:** when the env default is applied, the orchestrator prints a one-line notice at workflow start (`Using scope=<value> from AWS_AMADEUS_DEFAULT_SCOPE (.claude/settings.json)`) so the scope source is visible at the moment it takes effect.
 
 Why only scope and not depth or test-strategy? Each scope already declares its own depth and test-strategy defaults (workshop → Standard depth, Minimal test strategy). Setting the scope cascades those automatically. If you need to override either, pass `--depth` or `--test-strategy` on the CLI.
 

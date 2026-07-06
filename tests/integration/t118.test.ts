@@ -102,7 +102,7 @@ const ORCHESTRATE = join(TOOLS, "amadeus-orchestrate.ts");
 const JUMP = join(TOOLS, "amadeus-jump.ts");
 const STATE = join(TOOLS, "amadeus-state.ts");
 
-// Clear leaked AWS_AIDLC_DEFAULT_SCOPE so scope resolves from the state file
+// Clear leaked AWS_AMADEUS_DEFAULT_SCOPE so scope resolves from the state file
 // (mirrors the .sh's reset_aidlc_env at line 54).
 resetAidlcEnv();
 

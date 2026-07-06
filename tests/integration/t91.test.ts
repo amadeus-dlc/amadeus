@@ -48,12 +48,12 @@
 //        WORKFLOW_COMPLETED) -> graph written via WORKFLOW_COMPLETED          -> T2.
 //   .sh Case 2b STAGE_AWAITING_APPROVAL in last-3 (gate-start refresh) ->
 //        graph written                                                        -> T3.
-//   .sh Case 3  non-aidlc Bash (git status) -> NO graph (2 asserts: no graph
+//   .sh Case 3  non-amadeus Bash (git status) -> NO graph (2 asserts: no graph
 //        AND no heartbeat — cheap exit before heartbeat)                       -> T4 + T5.
 //   .sh Case 4  amadeus-runtime.ts -> recursion-guarded, no graph              -> T6.
 //   .sh Case 4b composite `amadeus-runtime.ts compile && amadeus-state.ts approve`
 //        -> explicit reject fires first, no graph                             -> T7.
-//   .sh Case 5  aidlc Bash but no transition in last-3 (QUESTION_ANSWERED /
+//   .sh Case 5  amadeus Bash but no transition in last-3 (QUESTION_ANSWERED /
 //        DECISION_RECORDED / ARTIFACT_UPDATED) -> no graph (T8) BUT heartbeat
 //        still written (T9 — the filter passed, only the event-class failed).
 //   .sh Case 6  empty stdin -> exit 0 (T10) + no graph (T11).
@@ -378,15 +378,15 @@ describe("t91 amadeus-runtime-compile hook (migrated from t91-runtime-compile-ho
     expect(existsSync(graphPath(p))).toBe(true);
   }, 30000);
 
-  // --- Case 3: non-aidlc Bash (git status) -> no dispatch + no heartbeat ---
-  test("4: non-aidlc Bash -> no compile dispatched", () => {
+  // --- Case 3: non-amadeus Bash (git status) -> no dispatch + no heartbeat ---
+  test("4: non-amadeus Bash -> no compile dispatched", () => {
     const p = makeProject();
     writeFileSync(auditPath(p), AUDIT_GATE_APPROVED, "utf-8");
     runHook(p, payload("git status"));
     expect(existsSync(graphPath(p))).toBe(false);
   }, 30000);
 
-  test("5: non-aidlc Bash -> cheap exit before heartbeat (no heartbeat file)", () => {
+  test("5: non-amadeus Bash -> cheap exit before heartbeat (no heartbeat file)", () => {
     const p = makeProject();
     writeFileSync(auditPath(p), AUDIT_GATE_APPROVED, "utf-8");
     runHook(p, payload("git status"));
@@ -415,7 +415,7 @@ describe("t91 amadeus-runtime-compile hook (migrated from t91-runtime-compile-ho
     expect(existsSync(graphPath(p))).toBe(false);
   }, 30000);
 
-  // --- Case 5: aidlc Bash but no transition in last 3 ---------------------
+  // --- Case 5: amadeus Bash but no transition in last 3 --------------------
   test("8: no transition in last-3 -> no compile dispatched", () => {
     const p = makeProject();
     writeFileSync(auditPath(p), AUDIT_NO_TRANSITION, "utf-8");

@@ -113,11 +113,11 @@ const RE_STEMS = [
 ];
 
 // ---------------------------------------------------------------------------
-// Timeout budget — the .sh set AIDLC_TEST_TIMEOUT=900 (RE is a HEAVY multi-agent
+// Timeout budget — the .sh set AMADEUS_TEST_TIMEOUT=900 (RE is a HEAVY multi-agent
 // stage). Honour it. The driver aborts ~15s before bun's per-test cap so a stuck
 // run surfaces a partial DriveResult to diagnose rather than an opaque hang.
 // ---------------------------------------------------------------------------
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "900", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "900", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 900) * 1000;
 const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
 

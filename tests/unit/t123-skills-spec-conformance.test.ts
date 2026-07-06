@@ -12,8 +12,8 @@
 // shelled to `bun -e` ONLY to PARSE (read the stage graph; run the frontmatter
 // extractor); it never invoked an aidlc tool as a process-boundary contract.
 // So the twin reads the same static files in-process (resolved from the
-// harness's AIDLC_SRC, the same dist/claude/.claude root the .sh reached via
-// $AIDLC_SRC) and asserts. Zero LLM, zero tokens, zero subprocess. The ONE
+// harness's AMADEUS_SRC, the same dist/claude/.claude root the .sh reached via
+// $AMADEUS_SRC) and asserts. Zero LLM, zero tokens, zero subprocess. The ONE
 // in-repo import — FIRST_BATCH from amadeus-runner-gen.ts — is a pure exported
 // constant, not a spawn (the .sh hardcoded the same four scope-runner names in
 // SCOPE_RUNNER_SKILLS; importing the constant is STRONGER: it tracks the
@@ -79,11 +79,11 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 import { FIRST_BATCH } from "../../dist/claude/.claude/tools/amadeus-runner-gen.ts";
 
-const SKILLS_DIR = join(AIDLC_SRC, "skills");
-const STAGE_GRAPH = join(AIDLC_SRC, "tools", "data", "stage-graph.json");
+const SKILLS_DIR = join(AMADEUS_SRC, "skills");
+const STAGE_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 
 // --- The four base skills (orchestrator + the three read-only session skills).
 const BASE_SKILLS = [

@@ -41,7 +41,7 @@
 // COST: launches the claude TUI but submits NO prompt — it reaches the workflow
 // statusline purely from the seeded per-intent state file (state-mid-ideation),
 // spending NO Bedrock tokens, exactly like t-tui-render-statusline. Still gated
-// on AIDLC_TUI_LIVE (the watched live-TUI tier) + tmux + claude + the
+// on AMADEUS_TUI_LIVE (the watched live-TUI tier) + tmux + claude + the
 // distributable; absent any of those it SKIPs with a reason — never a hollow
 // pass. (P10 hazard: the live-TUI legs are flaky-by-nature; re-run a flake ~5x
 // watched before calling it red.)
@@ -56,7 +56,7 @@ import { existsSync, readFileSync } from "node:fs";
 import * as os from "node:os";
 import { join } from "node:path";
 import { resolveWinNode } from "../harness/tui-drive.ts";
-import { AIDLC_SRC, cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
+import { AMADEUS_SRC, cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const FIXTURE = join(import.meta.dir, "..", "fixtures", "state-mid-ideation.md");
@@ -91,13 +91,13 @@ function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: 
   );
 }
 
-// Gate: the watched live-TUI tier (AIDLC_TUI_LIVE) + the substrate. On POSIX the
+// Gate: the watched live-TUI tier (AMADEUS_TUI_LIVE) + the substrate. On POSIX the
 // substrate is tmux; claude is needed on every platform; the distributable +
 // the fixture must be present. A creds-less / binary-less machine SKIPs with a
 // reason — never a hard fail (the P10 live-leg posture).
 function absentReason(): string | null {
-  if (process.env.AIDLC_TUI_LIVE !== "1") {
-    return "set AIDLC_TUI_LIVE=1 to run the live Claude TUI orientation render (watched tier)";
+  if (process.env.AMADEUS_TUI_LIVE !== "1") {
+    return "set AMADEUS_TUI_LIVE=1 to run the live Claude TUI orientation render (watched tier)";
   }
   if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";
@@ -111,7 +111,7 @@ function absentReason(): string | null {
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
   }
-  if (!existsSync(AIDLC_SRC)) return `distributable missing: ${AIDLC_SRC}`;
+  if (!existsSync(AMADEUS_SRC)) return `distributable missing: ${AMADEUS_SRC}`;
   if (!existsSync(FIXTURE)) return `fixture missing: ${FIXTURE}`;
   return null;
 }

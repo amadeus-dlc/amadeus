@@ -114,7 +114,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
   FIXTURES_DIR,
@@ -124,8 +124,8 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const UTIL = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
-const STATE = join(AIDLC_SRC, "tools", "amadeus-state.ts");
+const UTIL = join(AMADEUS_SRC, "tools", "amadeus-utility.ts");
+const STATE = join(AMADEUS_SRC, "tools", "amadeus-state.ts");
 
 resetAidlcEnv();
 
@@ -224,7 +224,7 @@ interface CliResult {
 }
 
 /**
- * `AIDLC_WORKFLOW_INTENT=chaos bun amadeus-utility.ts init --scope bugfix
+ * `AMADEUS_WORKFLOW_INTENT=chaos bun amadeus-utility.ts init --scope bugfix
  * --project-dir <p>` (t47:43-44 / 86-87 / 131-132). Mirrors the
  * .sh's init verbatim.
  */
@@ -234,7 +234,7 @@ function init(p: string): CliResult {
     [UTIL, "init", "--scope", "bugfix", "--project-dir", p],
     {
       encoding: "utf-8",
-      env: { ...process.env, AIDLC_WORKFLOW_INTENT: "chaos" },
+      env: { ...process.env, AMADEUS_WORKFLOW_INTENT: "chaos" },
     },
   );
   return {

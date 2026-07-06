@@ -15,7 +15,7 @@
 //   auditLockDir(pd, intent?, space?) / auditLockIdentity — per-intent + sentinel.
 //   acquireAuditLock(pd, retries, ms, intent?, space?) — stamps owner.json, reaps.
 //   releaseAuditLock / withAuditLock — composite-keyed depth + exit handlers.
-//   WORKSPACE_LOCK_SENTINEL / DEFAULT_LOCK_STALE_MS (AIDLC_LOCK_STALE_MS env).
+//   WORKSPACE_LOCK_SENTINEL / DEFAULT_LOCK_STALE_MS (AMADEUS_LOCK_STALE_MS env).
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
@@ -133,18 +133,18 @@ describe("t161 stale-lock reaper", () => {
 
   test("a live-but-OVER-AGE lock is reclaimed", () => {
     // Owner = THIS process (alive), but the stamp is far older than the threshold.
-    process.env.AIDLC_LOCK_STALE_MS = "1000"; // 1s threshold
+    process.env.AMADEUS_LOCK_STALE_MS = "1000"; // 1s threshold
     try {
       stampOwner(process.pid, 60_000); // 60s old → over-age
       expect(acquireAuditLock(PD, 0, 1, INTENT, "default")).toBe(true);
       releaseAuditLock(PD, INTENT, "default");
     } finally {
-      delete process.env.AIDLC_LOCK_STALE_MS;
+      delete process.env.AMADEUS_LOCK_STALE_MS;
     }
   });
 
   test("a live, UNDER-AGE holder is NEVER robbed", () => {
-    process.env.AIDLC_LOCK_STALE_MS = "600000"; // 10min threshold
+    process.env.AMADEUS_LOCK_STALE_MS = "600000"; // 10min threshold
     try {
       stampOwner(process.pid, 0); // alive + fresh
       // 0 retries: the reaper must REFUSE to reclaim → acquire fails.
@@ -152,7 +152,7 @@ describe("t161 stale-lock reaper", () => {
     } finally {
       // The lock dir is "held" by the fake stamp; clean it.
       rmSync(auditLockDir(PD, INTENT, "default"), { recursive: true, force: true });
-      delete process.env.AIDLC_LOCK_STALE_MS;
+      delete process.env.AMADEUS_LOCK_STALE_MS;
     }
   });
 

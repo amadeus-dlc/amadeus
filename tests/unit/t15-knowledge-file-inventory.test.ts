@@ -4,7 +4,7 @@
 // tests/unit/t15-knowledge-file-inventory.sh (the .sh declared no `# covers:`
 // header; these file: ids name the shipped knowledge tree the .sh inventoried).
 //
-// The .sh resolved KNOWLEDGE_DIR = $AIDLC_SRC/knowledge and made a dynamic
+// The .sh resolved KNOWLEDGE_DIR = $AMADEUS_SRC/knowledge and made a dynamic
 // TAP plan of `11 (per-agent existence) + 11 (per-agent counts) + 7 (shared
 // specific files) + TOTAL_FILES (every .md non-empty)`. TOTAL_FILES is
 // `find KNOWLEDGE_DIR -name '*.md' -type f | wc -l`, measured = 56 this session,
@@ -13,9 +13,9 @@
 // Mechanism: none. This is a pure structural / on-disk check — directory
 // membership, file counts, and file sizes under the distributable knowledge/
 // tree. No process boundary, no argv/exit/stdout seam, no LLM, zero tokens. We
-// resolve the same tree the .sh resolved via the harness's AIDLC_SRC
+// resolve the same tree the .sh resolved via the harness's AMADEUS_SRC
 // (= <repo>/dist/claude/.claude, fixtures.ts:42) — the TS canonical for the
-// .sh's KNOWLEDGE_DIR=$AIDLC_SRC/knowledge — and assert in-process with
+// .sh's KNOWLEDGE_DIR=$AMADEUS_SRC/knowledge — and assert in-process with
 // existsSync / statSync / a recursive .md walk.
 //
 // Subject under test: the shipped knowledge/ corpus of dist/claude/.claude/ —
@@ -48,11 +48,11 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
-// AIDLC_SRC === <repo>/dist/claude/.claude — the same tree the .sh resolved.
+// AMADEUS_SRC === <repo>/dist/claude/.claude — the same tree the .sh resolved.
 // KNOWLEDGE_DIR is its knowledge/ subtree.
-const KNOWLEDGE_DIR = join(AIDLC_SRC, "knowledge");
+const KNOWLEDGE_DIR = join(AMADEUS_SRC, "knowledge");
 
 // The 11 agent knowledge dirs, in the order the .sh's AGENT_NAMES listed them
 // (.sh L10), each paired with the exact .md count the .sh asserted (.sh L29-39).

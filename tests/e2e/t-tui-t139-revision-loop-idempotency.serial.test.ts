@@ -57,7 +57,7 @@
 // SERIAL (.serial. in the filename): two full back-to-back TUI run-throughs in one
 // test, each its own claude session, sequential. SPENDS REAL TOKENS (two bugfix
 // workflows on Opus/Bedrock — the heaviest journey in the §5-D set). Gated behind
-// AIDLC_TUI_LIVE=1; tmux/claude/distributable/Windows-node absence SKIP with a
+// AMADEUS_TUI_LIVE=1; tmux/claude/distributable/Windows-node absence SKIP with a
 // reason — never a hollow pass.
 //
 // SPAWN, not import (D-TUI-7): runs under bun, spawns tui-drive.ts as a subprocess
@@ -75,7 +75,7 @@ import { gridHasMenu, resolveWinNode } from "../harness/tui-drive.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
-const AIDLC_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
+const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 const IS_WIN = os.platform() === "win32";
 const WIN_NODE = IS_WIN ? resolveWinNode() : null;
 const DRIVE_BIN = IS_WIN ? (WIN_NODE as string) : process.execPath;
@@ -83,7 +83,7 @@ const DRIVE_PREFIX = IS_WIN ? ["--experimental-strip-types", DRIVER] : [DRIVER];
 
 // Two full run-throughs back-to-back. The bun:test cap is the hard ceiling; each
 // run's pass condition is its on-disk Completed milestone, not the clock.
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "2400", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "2400", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
 // Each run gets ~half the overall ceiling as its answer-gate hang-backstop; they
 // run sequentially so neither alone needs the full budget.
@@ -119,8 +119,8 @@ function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: 
 }
 
 function skipReason(): string | null {
-  if (process.env.AIDLC_TUI_LIVE !== "1") {
-    return "set AIDLC_TUI_LIVE=1 to run the live revision-loop journey (uses Bedrock tokens — two run-throughs)";
+  if (process.env.AMADEUS_TUI_LIVE !== "1") {
+    return "set AMADEUS_TUI_LIVE=1 to run the live revision-loop journey (uses Bedrock tokens — two run-throughs)";
   }
   if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";
@@ -134,7 +134,7 @@ function skipReason(): string | null {
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
   }
-  if (!existsSync(AIDLC_SRC)) return `distributable missing: ${AIDLC_SRC}`;
+  if (!existsSync(AMADEUS_SRC)) return `distributable missing: ${AMADEUS_SRC}`;
   return null;
 }
 const SKIP_REASON = skipReason();
@@ -242,7 +242,7 @@ function launchBugfix(session: string, sandbox: string): void {
   expect(waitFor(session, "\\[AIDLC\\].*ready", 45000, 800)).toBe(true);
 
   // Explicit `--scope bugfix` (not the bare keyword) so the shipped
-  // AWS_AIDLC_DEFAULT_SCOPE=workshop env-default does NOT trigger a scope-
+  // AWS_AMADEUS_DEFAULT_SCOPE=workshop env-default does NOT trigger a scope-
   // disambiguation gate at START (the t50 lesson, SKILL.md:105 "explicit CLI flag
   // wins"). The trailing description satisfies the step-6 "what to build?" prompt
   // up front (answer-gate can't type free text).

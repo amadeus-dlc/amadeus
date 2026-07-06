@@ -1,12 +1,12 @@
 // amadeus-includes.ts — the harness-native rule-include re-pointer.
 //
-// The AIDLC method (the layered practice files org/team/project + phase rules)
+// The AI-DLC method (the layered practice files org/team/project + phase rules)
 // lives ONCE at the workspace root under aidlc/spaces/<space>/memory/. Each
 // harness reads it via its OWN native include, evaluated by the CLI *before*
 // AIDLC's engine runs:
 //   • Claude — an @-import stub at <harness>/rules/amadeus.md naming each method file.
 //   • Kiro / Kiro-IDE — a `resources` glob in each agents/*.json.
-//   • Codex — the AIDLC_RULES_DIR env var in config.toml.
+//   • Codex — the AMADEUS_RULES_DIR env var in config.toml.
 //
 // These surfaces stay COMMITTED (each carries load-bearing engine wiring beyond
 // the include — Kiro's agent JSON holds the conductor prompt + hook block,
@@ -47,7 +47,7 @@ function spaceMemoryRel(space: string): string {
   return `aidlc/spaces/${space}/memory`;
 }
 
-// A prior-space memory path inside a Claude @-line: `@<dots>/amadeus/spaces/<X>/memory/<file>`.
+// A prior-space memory path inside a Claude @-line: `@<dots>/aidlc/spaces/<X>/memory/<file>`.
 // Captures the leading `@` + any relative `../` prefix (group 1) and the file
 // sub-path under memory/ (group 2) so only the `spaces/<X>` segment is swapped.
 const CLAUDE_AT_LINE = /^(@(?:\.\.\/)*)aidlc\/spaces\/[^/]+\/memory\/(.+)$/;
@@ -82,7 +82,7 @@ function repointKiroAgentResources(raw: string, space: string): string | null {
   const target = `file://${spaceMemoryRel(space)}/**/*.md`;
   let changed = false;
   const rewritten = json.resources.map((r) => {
-    if (typeof r === "string" && /^file:\/\/amadeus\/spaces\/[^/]+\/memory\/\*\*\/\*\.md$/.test(r)) {
+    if (typeof r === "string" && /^file:\/\/aidlc\/spaces\/[^/]+\/memory\/\*\*\/\*\.md$/.test(r)) {
       if (r !== target) changed = true;
       return target;
     }
@@ -94,12 +94,12 @@ function repointKiroAgentResources(raw: string, space: string): string | null {
   return `${JSON.stringify(json, null, 2)}\n`;
 }
 
-/** Rewrite the AIDLC_RULES_DIR value in a Codex config.toml to the given space's
+/** Rewrite the AMADEUS_RULES_DIR value in a Codex config.toml to the given space's
  *  memory dir, preserving the rest of the file verbatim. Returns null when the
  *  line is absent or already correct. */
 function repointCodexConfig(raw: string, space: string): string | null {
   const target = spaceMemoryRel(space);
-  const re = /(AIDLC_RULES_DIR\s*=\s*")aidlc\/spaces\/[^"]*\/memory(")/;
+  const re = /(AMADEUS_RULES_DIR\s*=\s*")aidlc\/spaces\/[^"]*\/memory(")/;
   if (!re.test(raw)) return null;
   const next = raw.replace(re, `$1${target}$2`);
   return next === raw ? null : next;
@@ -145,11 +145,11 @@ export function repointHarnessIncludes(projectDir: string, space?: string): stri
   const written: string[] = [];
 
   if (harness === ".claude") {
-    const stubPath = join(harnessRoot, "rules", "aidlc.md");
+    const stubPath = join(harnessRoot, "rules", "amadeus.md");
     if (existsSync(stubPath)) {
       const raw = readSafe(stubPath);
       if (raw !== null) {
-        repointFile(stubPath, join(harness, "rules", "aidlc.md"), raw, sp, repointClaudeStub, written);
+        repointFile(stubPath, join(harness, "rules", "amadeus.md"), raw, sp, repointClaudeStub, written);
       }
     }
     return written;

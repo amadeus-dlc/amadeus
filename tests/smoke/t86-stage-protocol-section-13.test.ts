@@ -19,7 +19,7 @@
 //     the literal IS registered in the live Set, not merely present as source
 //     text — equal-or-stronger. (mechanism cli for that one case.)
 //
-// Source under test (paths resolved from AIDLC_SRC / REPO_ROOT, fixtures.ts):
+// Source under test (paths resolved from AMADEUS_SRC / REPO_ROOT, fixtures.ts):
 //   dist/claude/.claude/amadeus-common/protocols/stage-protocol.md
 //     :848  `## 13. Learnings Ritual`
 //     :872-875 four canonical memory.md headings (**Interpretations**,
@@ -59,21 +59,21 @@ import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC, cleanupTestProject, createTestProject, REPO_ROOT, seededAuditDir, seedStateFile } from "../harness/fixtures.ts";
+import { AMADEUS_SRC, cleanupTestProject, createTestProject, REPO_ROOT, seededAuditDir, seedStateFile } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const AUDIT_TOOL = join(AIDLC_SRC, "tools", "amadeus-audit.ts");
+const AUDIT_TOOL = join(AMADEUS_SRC, "tools", "amadeus-audit.ts");
 
 const STAGE_PROTOCOL = join(
-  AIDLC_SRC,
+  AMADEUS_SRC,
   "amadeus-common",
   "protocols",
   "stage-protocol.md",
 );
-const AUDIT_TS = join(AIDLC_SRC, "tools", "amadeus-audit.ts");
-const AUDIT_MD = join(AIDLC_SRC, "knowledge", "amadeus-shared", "audit-format.md");
+const AUDIT_TS = join(AMADEUS_SRC, "tools", "amadeus-audit.ts");
+const AUDIT_MD = join(AMADEUS_SRC, "knowledge", "amadeus-shared", "audit-format.md");
 const STATE_MACHINE = join(REPO_ROOT, "docs", "reference", "12-state-machine.md");
-const SKILL = join(AIDLC_SRC, "skills", "aidlc", "SKILL.md");
+const SKILL = join(AMADEUS_SRC, "skills", "amadeus", "SKILL.md");
 
 function read(path: string): string {
   return readFileSync(path, "utf-8");
