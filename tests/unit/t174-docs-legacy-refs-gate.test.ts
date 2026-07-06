@@ -22,7 +22,7 @@
 // `**/{amadeus-docs,intents}/**` carries the `amadeus-docs` substring.
 //
 // `--init` token: every amadeus-command `--init` reference is retired; `git init`/
-// `npm init` are NOT the aidlc command, so the scanner only flags a bare `--init`
+// `npm init` are NOT the amadeus command, so the scanner only flags a bare `--init`
 // token (a hyphen-led flag), never an `<word> init` shell command.
 
 import { describe, expect, test } from "bun:test";
@@ -90,7 +90,7 @@ function listDocs(dir: string): string[] {
 }
 
 /** A surviving legacy-ref occurrence: a docs line carrying `amadeus-docs` OR a bare
- *  `--init` flag token (the retired aidlc command — NOT `git init`/`npm init`). */
+ *  `--init` flag token (the retired amadeus command — NOT `git init`/`npm init`). */
 interface Occurrence {
   file: string;
   line: number;
@@ -108,7 +108,7 @@ function scanOccurrences(): Occurrence[] {
       // A bare `--init` flag token: `--init` not preceded by another flag char.
       const hasInit = /(^|[^-\w])--init\b/.test(line);
       // Retired rules-DIR tokens (the dotted per-harness rules dirs). The method
-      // tree relocated to `aidlc/spaces/<space>/memory/` (graph.ts MEMORY_SEGMENTS);
+      // tree relocated to `amadeus/spaces/<space>/memory/` (graph.ts MEMORY_SEGMENTS);
       // the dotted dirs survive ONLY in native-include prose (the `.claude/rules/
       // amadeus.md` @-import stub mentions, the Kiro `.kiro/steering/` resources glob,
       // the packager rename narrative) — those are pinned in the fixture.

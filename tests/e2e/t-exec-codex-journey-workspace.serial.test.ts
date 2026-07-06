@@ -166,16 +166,16 @@ function execCodex(
 }
 
 // The engine resolves the per-repo codekb store to the SPACE-LEVEL sibling of
-// intents (aidlc/spaces/<space>/codekb/<repo>/ - the dir codekb-path prints, the
+// intents (amadeus/spaces/<space>/codekb/<repo>/ - the dir codekb-path prints, the
 // codekb-determinism placement fix), but the live RE subagent occasionally still
-// writes the bare workspace-root form aidlc/codekb/<repo>/. Either is a valid
+// writes the bare workspace-root form amadeus/codekb/<repo>/. Either is a valid
 // per-repo store for this beat's promise; accept BOTH, only absence is a fail
 // (matching the SDK t-journey-workspace.sdk sibling helper verbatim, and the ACP
 // t-acp-kiro-journey-workspace sibling modulo candidate order).
 function codekbFiles(root: string, repo: string): string[] {
   const candidates = [
-    join(root, "aidlc", "spaces", activeSpace(root), "codekb", repo),
-    join(root, "aidlc", "codekb", repo),
+    join(root, "amadeus", "spaces", activeSpace(root), "codekb", repo),
+    join(root, "amadeus", "codekb", repo),
   ];
   for (const dir of candidates) {
     try {
@@ -249,7 +249,7 @@ describe("t-exec-codex-journey-workspace (live codex-exec multi-repo·intent·sp
         expect(codekbFiles(root, "repo-a").length).toBeGreaterThan(0);
         expect(codekbFiles(root, "repo-b").length).toBeGreaterThan(0);
 
-        const recordADir = join(root, "aidlc", "spaces", "default", "intents", recordA as string);
+        const recordADir = join(root, "amadeus", "spaces", "default", "intents", recordA as string);
         const stateABefore = readFileSync(join(recordADir, "amadeus-state.md"), "utf-8");
         expect(workflowStartedCount(recordADir)).toBe(1);
 
@@ -269,9 +269,9 @@ describe("t-exec-codex-journey-workspace (live codex-exec multi-repo·intent·sp
         // --- Step 4: non-default space, no learnings leak --------------------
         const r4 = execCodex(root, home, `Use the $amadeus skill to run: /amadeus space-create teamB`);
         expect(r4.rc).toBe(0);
-        const teamBMemory = join(root, "aidlc", "spaces", TEAM_B_SLUG, "memory");
+        const teamBMemory = join(root, "amadeus", "spaces", TEAM_B_SLUG, "memory");
         const defaultOrg = readFileSync(
-          join(root, "aidlc", "spaces", "default", "memory", "org.md"),
+          join(root, "amadeus", "spaces", "default", "memory", "org.md"),
           "utf-8",
         );
         expect(readFileSync(join(teamBMemory, "org.md"), "utf-8")).toBe(defaultOrg);
@@ -279,8 +279,8 @@ describe("t-exec-codex-journey-workspace (live codex-exec multi-repo·intent·sp
         expect(readFileSync(join(teamBMemory, "project.md"), "utf-8")).toBe("# Project overrides\n");
         // space-create (#5) provisions the full space shape incl. the codekb/ +
         // knowledge/ siblings (with .gitkeep floors), matching default.
-        expect(existsSync(join(root, "aidlc", "spaces", TEAM_B_SLUG, "knowledge"))).toBe(true);
-        expect(existsSync(join(root, "aidlc", "spaces", TEAM_B_SLUG, "codekb"))).toBe(true);
+        expect(existsSync(join(root, "amadeus", "spaces", TEAM_B_SLUG, "knowledge"))).toBe(true);
+        expect(existsSync(join(root, "amadeus", "spaces", TEAM_B_SLUG, "codekb"))).toBe(true);
 
         const r4b = execCodex(root, home, `Use the $amadeus skill to run: /amadeus space teamB`);
         expect(r4b.rc).toBe(0);
@@ -290,7 +290,7 @@ describe("t-exec-codex-journey-workspace (live codex-exec multi-repo·intent·sp
         expect(r4c.rc).toBe(0);
         expect(readIntentRegistry(root, TEAM_B_SLUG).length).toBe(1);
         expect(readIntentRegistry(root, "default").length).toBe(2);
-        expect(existsSync(join(root, "aidlc", "spaces", TEAM_B_SLUG, "knowledge"))).toBe(true);
+        expect(existsSync(join(root, "amadeus", "spaces", TEAM_B_SLUG, "knowledge"))).toBe(true);
 
         // --- Step 5: back to default; A still resumable ----------------------
         const r5 = execCodex(root, home, `Use the $amadeus skill to run: /amadeus space default`);

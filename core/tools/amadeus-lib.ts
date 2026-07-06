@@ -267,10 +267,10 @@ export function toPosix(p: string): string {
 // --- Workspace selectors: space + intent ---------------------------------------
 //
 // The record (state · audit · artifacts · diary) re-roots per INTENT under a
-// per-team SPACE: `aidlc/spaces/<space>/intents/<slug>-<id8>/…`. Two cursors
+// per-team SPACE: `amadeus/spaces/<space>/intents/<slug>-<id8>/…`. Two cursors
 // pick the active space/intent, both GITIGNORED (per-user, not shared truth):
-//   - `aidlc/active-space`                            → the active space
-//   - `aidlc/spaces/<space>/intents/active-intent`    → that space's active intent
+//   - `amadeus/active-space`                            → the active space
+//   - `amadeus/spaces/<space>/intents/active-intent`    → that space's active intent
 //
 // Resolution precedence (vision §5):
 //   space:  explicit arg > active-space pointer > "default" (NEVER errors).
@@ -279,7 +279,7 @@ export function toPosix(p: string): string {
 // NULL RESOLUTION (P9 end state — no flat root). When NO intent record resolves
 // (activeIntent() → null: a fresh SEED shell before auto-birth, or a flat project
 // still awaiting migration), the absolute path helpers resolve to the bare SPACE
-// record root (aidlc/spaces/<space>/intents/ — see spaceRecordRoot). No
+// record root (amadeus/spaces/<space>/intents/ — see spaceRecordRoot). No
 // amadeus-state.md ever lives directly there, so existence-gated consumers
 // (loadStateFileIfPresent) read "no workflow yet" and the orchestrator
 // births/errors. The ONLY surviving flat `amadeus-docs` read is the one-time
@@ -351,13 +351,13 @@ export function classifyTerminalCommand(args: string[]): TerminalCommand | null 
   return null;
 }
 
-// `aidlc/` — the harness-neutral workspace roof (memory · codekb · knowledge ·
+// `amadeus/` — the harness-neutral workspace roof (memory · codekb · knowledge ·
 // intents live under spaces/<space>/ here; the engine stays in <harness>/).
 function workspaceRoot(projectDir: string): string {
-  return join(projectDir, "aidlc");
+  return join(projectDir, "amadeus");
 }
 
-// The active space for this project. Reads the `aidlc/active-space` cursor;
+// The active space for this project. Reads the `amadeus/active-space` cursor;
 // defaults to "default". NEVER throws — the default space is always valid even
 // when nothing is on disk yet (the resolver tolerates an absent space dir).
 export function activeSpace(projectDir: string): string {
@@ -371,13 +371,13 @@ export function activeSpace(projectDir: string): string {
   return DEFAULT_SPACE;
 }
 
-// `aidlc/spaces/<space>/intents` — the intent registry + record root.
+// `amadeus/spaces/<space>/intents` — the intent registry + record root.
 export function intentsDir(projectDir: string, space?: string): string {
   const sp = space ?? activeSpace(projectDir);
   return join(workspaceRoot(projectDir), "spaces", sp, "intents");
 }
 
-// `aidlc/spaces/<space>/knowledge` — SPACE DOMAIN knowledge (durable, free-form,
+// `amadeus/spaces/<space>/knowledge` — SPACE DOMAIN knowledge (durable, free-form,
 // team-authored, empty at bootstrap). A space-level sibling of memory/codekb/
 // intents (vision §"Spaces": "its own memory, codekb, knowledge, and intent
 // record") — NOT per-intent: domain knowledge accumulates across every intent in
@@ -441,7 +441,7 @@ export function activeIntent(
 }
 
 // The absolute RECORD directory for an intent:
-// `aidlc/spaces/<space>/intents/<slug>-<id8>/`. Returns null when no intent
+// `amadeus/spaces/<space>/intents/<slug>-<id8>/`. Returns null when no intent
 // resolves, signalling the bare-space-root resolution in the path helpers.
 export function recordDir(
   projectDir: string,
@@ -455,7 +455,7 @@ export function recordDir(
 }
 
 // Relative record-dir prefix for the engine's agent-consumed artifact/diary
-// paths: `aidlc/spaces/<space>/intents/<slug>-<id8>` with forward slashes
+// paths: `amadeus/spaces/<space>/intents/<slug>-<id8>` with forward slashes
 // regardless of host OS (portable across worktrees). Returns null → the engine
 // resolvers resolve the bare space-relative record prefix
 // (relativeSpaceRecordPrefix). The space + intent come from the active cursors
@@ -470,12 +470,12 @@ export function relativeRecordDir(
   const sp = space ?? activeSpace(projectDir);
   const slug = activeIntent(projectDir, sp, intent);
   if (slug === null) return null;
-  return `aidlc/spaces/${sp}/intents/${slug}`;
+  return `amadeus/spaces/${sp}/intents/${slug}`;
 }
 
-// `aidlc/spaces/<space>/codekb/<repo>/` — the durable per-repo code
+// `amadeus/spaces/<space>/codekb/<repo>/` — the durable per-repo code
 // knowledge base, a space-level sibling of memory/knowledge/intents (vision
-// §Spaces; committed glob aidlc/spaces/*/codekb/**). NOT per-intent: it is keyed
+// §Spaces; committed glob amadeus/spaces/*/codekb/**). NOT per-intent: it is keyed
 // by repo and shared across every intent in the space, so it must NOT carry the
 // intents/<slug> tail. Mirrors knowledgeDir's space-aware shape.
 export function codekbDir(projectDir: string, repo: string, space?: string): string {
@@ -489,7 +489,7 @@ export function codekbDir(projectDir: string, repo: string, space?: string): str
 // pinned to the default space).
 export function relativeCodekbDir(projectDir: string, repo: string, space?: string): string {
   const sp = space ?? activeSpace(projectDir);
-  return `aidlc/spaces/${sp}/codekb/${repo}`;
+  return `amadeus/spaces/${sp}/codekb/${repo}`;
 }
 
 // The deterministic repo NAME for codekb keying (NOT the intent slug):
@@ -503,7 +503,7 @@ export function codekbRepoName(projectDir: string, space?: string): string {
   return repos.length === 1 ? repos[0] : basename(projectDir);
 }
 
-// The bare SPACE record root: `aidlc/spaces/<space>/intents/`. The absolute path
+// The bare SPACE record root: `amadeus/spaces/<space>/intents/`. The absolute path
 // helpers resolve here when no intent record exists (activeIntent → null) — a
 // fresh SEED shell before auto-birth, or a flat project still awaiting migration.
 // No amadeus-state.md ever lives directly here, so existence-gated readers
@@ -520,7 +520,7 @@ function spaceRecordRoot(projectDir: string, space?: string): string {
 // single-string limitation the old flat relative prefix had — not a regression;
 // a non-default space threads relativeRecordDir explicitly).
 export function relativeSpaceRecordPrefix(space: string = DEFAULT_SPACE): string {
-  return `aidlc/spaces/${space}/intents`;
+  return `amadeus/spaces/${space}/intents`;
 }
 
 // --- Intent identity: UUIDv7 + slugify ----------------------------------------
@@ -641,11 +641,11 @@ export function resolveUniqueIntentDir(intentsRoot: string, base: string): strin
 // blockers shaped the design (vision plan P1 migration box):
 //
 //  (1) DETECTION keys on a signal SEED does NOT ship: a flat `amadeus-docs/
-//      amadeus-state.md` present AND no `aidlc/spaces/*/intents/*/amadeus-state.md`
-//      record yet AND no `.migrated` marker. (SEED ships `aidlc/spaces/default/`,
+//      amadeus-state.md` present AND no `amadeus/spaces/*/intents/*/amadeus-state.md`
+//      record yet AND no `.migrated` marker. (SEED ships `amadeus/spaces/default/`,
 //      so "no spaces dir" would never fire and would orphan the legacy tree.)
 //  (2) IDEMPOTENCY keys on the `.migrated` marker ALONE (written LAST), never on
-//      `aidlc/spaces/` existence — a crash after the parent mkdir but before the
+//      `amadeus/spaces/` existence — a crash after the parent mkdir but before the
 //      move completes must re-detect and re-stage from the untouched original.
 //
 // MECHANISM (all inside withAuditLock on the WORKSPACE bucket): mint a UUIDv7;
@@ -675,7 +675,7 @@ function flatStateSource(projectDir: string): string {
 
 export const MIGRATED_MARKER = ".migrated";
 
-// The marker path: `aidlc/.migrated` (workspace-level, committed, idempotency key).
+// The marker path: `amadeus/.migrated` (workspace-level, committed, idempotency key).
 export function migratedMarkerPath(projectDir: string): string {
   return join(workspaceRoot(projectDir), MIGRATED_MARKER);
 }
@@ -696,7 +696,7 @@ export function needsFlatMigration(projectDir: string): boolean {
 }
 
 // True iff any space already holds an intent record (a `<dir>/amadeus-state.md`).
-// Scans aidlc/spaces/*/intents/*/amadeus-state.md WITHOUT relying on the registry.
+// Scans amadeus/spaces/*/intents/*/amadeus-state.md WITHOUT relying on the registry.
 export function anyIntentRecordExists(projectDir: string): boolean {
   const spacesRoot = join(workspaceRoot(projectDir), "spaces");
   let spaces: string[];
@@ -762,7 +762,7 @@ export function appendIntentToRegistry(
   writeFileAtomic(path, `${JSON.stringify(list, null, 2)}\n`);
 }
 
-// The `aidlc/spaces` root — the parent of every space dir. Sole helper so the
+// The `amadeus/spaces` root — the parent of every space dir. Sole helper so the
 // "what spaces exist?" scan and the intent-record scan agree on one location.
 export function spacesRoot(projectDir: string): string {
   return join(workspaceRoot(projectDir), "spaces");
@@ -790,7 +790,7 @@ export function readIntentRegistry(projectDir: string, space?: string): IntentRe
 // listSpaces()/listIntents() are the single shared readers the verb handlers,
 // the auto-birth gate, the resume-rebind, and the statusline all call (P4
 // query-layer box). Pure reads — they never mutate. A space exists iff its dir
-// is present under aidlc/spaces/; an intent's authoritative row is the
+// is present under amadeus/spaces/; an intent's authoritative row is the
 // registry, joined with the on-disk record presence.
 
 export interface SpaceInfo {
@@ -798,7 +798,7 @@ export interface SpaceInfo {
   active: boolean;
 }
 
-// Enumerate the spaces (dir names under aidlc/spaces/), sorted, each flagged
+// Enumerate the spaces (dir names under amadeus/spaces/), sorted, each flagged
 // active per the active-space cursor. "default" is always reported even when no
 // spaces dir exists yet (the resolver treats it as always-valid — activeSpace()
 // returns it), so the listing never claims zero spaces on a fresh shell.
@@ -898,8 +898,8 @@ export function setActiveSpaceCursor(projectDir: string, name: string): void {
 // B's context (the central multi-space hazard, vision §3). The fix is a tiny
 // per-user, machine-local map: at session START stamp the working intent's UUID
 // keyed by session_id; on RESUME, compare the stamped UUID to the live cursor
-// and OFFER a rebind on mismatch. The map lives at `aidlc/.amadeus-sessions/`
-// (gitignored — see dot-gitignore `aidlc/.amadeus-sessions/`): it is per-user
+// and OFFER a rebind on mismatch. The map lives at `amadeus/.amadeus-sessions/`
+// (gitignored — see dot-gitignore `amadeus/.amadeus-sessions/`): it is per-user
 // runtime state, never shared truth. The intent record itself is the durable,
 // harness-neutral artifact; the session merely enriches the cursor on resume.
 export const SESSIONS_DIR = ".amadeus-sessions";
@@ -908,7 +908,7 @@ function sessionsDir(projectDir: string): string {
   return join(workspaceRoot(projectDir), SESSIONS_DIR);
 }
 
-// The per-session record file: `aidlc/.amadeus-sessions/<session-id>`. The
+// The per-session record file: `amadeus/.amadeus-sessions/<session-id>`. The
 // session id is normalised to the slug shape so a host-supplied id can never
 // escape the sessions dir (path traversal / separators); an empty id yields "".
 function sessionRecordPath(projectDir: string, sessionId: string): string {
@@ -950,8 +950,8 @@ export function writeSessionIntentUuid(projectDir: string, sessionId: string, uu
 // has no session_id, so it cannot re-stamp the live session's record on its own.
 // This marker is the bridge: the hook writes it on EVERY fire (so it always names
 // the live conversation), and the switch tool reads it to learn which session to
-// re-stamp. Lives beside the per-session records under `aidlc/.amadeus-sessions/`
-// (gitignored — dot-gitignore `aidlc/.amadeus-sessions/`): per-user runtime state.
+// re-stamp. Lives beside the per-session records under `amadeus/.amadeus-sessions/`
+// (gitignored — dot-gitignore `amadeus/.amadeus-sessions/`): per-user runtime state.
 export const CURRENT_SESSION_FILE = ".current-session";
 
 function currentSessionPath(projectDir: string): string {
@@ -1270,8 +1270,8 @@ export function auditFilePath(projectDir: string, intent?: string, space?: strin
   return join(dir, "audit", auditShardName(projectDir));
 }
 
-// The clone-id token file: `aidlc/.amadeus-clone-id`. Workspace-level,
-// machine-local, GITIGNORED (see the `aidlc/.amadeus-*` rule) so it never travels
+// The clone-id token file: `amadeus/.amadeus-clone-id`. Workspace-level,
+// machine-local, GITIGNORED (see the `amadeus/.amadeus-*` rule) so it never travels
 // in a commit — that is what makes the token DISTINCT across clones (a fresh
 // checkout has no token file and mints its own). The shard name below embeds
 // this token, so every process IN one clone resolves the SAME shard while two
@@ -1284,7 +1284,7 @@ function cloneIdPath(projectDir: string): string {
 }
 
 // The stable per-CLONE token (not per-process). Read from the gitignored
-// `aidlc/.amadeus-clone-id` file when present; minted (12 hex chars from a v4
+// `amadeus/.amadeus-clone-id` file when present; minted (12 hex chars from a v4
 // uuid — no Math.random) and persisted on first use otherwise. Stable WITHIN a
 // clone across processes (the fork subprocess and the merge subprocess both
 // read the same file → the same shard), DISTINCT across clones (each clone
@@ -1479,14 +1479,14 @@ export function readAllAuditShards(projectDir: string, intent?: string, space?: 
 }
 
 export function worktreePath(projectDir: string, boltSlug: string): string {
-  return join(projectDir, ".aidlc", "worktrees", `bolt-${boltSlug}`);
+  return join(projectDir, ".amadeus", "worktrees", `bolt-${boltSlug}`);
 }
 
 // --- Multi-repo: repos are siblings of the workspace ----------------------------
 //
 // In the workspace model the projectDir is the WORKSPACE roof (`my-workspace/`),
 // which is NOT itself a git repo. Code repos are its immediate children
-// (`my-workspace/repo-a/`, `my-workspace/repo-b/`) — siblings of `aidlc/` and the
+// (`my-workspace/repo-a/`, `my-workspace/repo-b/`) — siblings of `amadeus/` and the
 // engine dir (vision §7). An intent records the repos it touches in its
 // intents.json row (`repos`); construction targets a specific one. P7 decouples
 // "the repo to operate on" from "the single projectDir": before P7 the worktree
@@ -1517,12 +1517,12 @@ export function isGitRepoDir(dir: string): boolean {
 }
 
 // Workspace-internal child dirs that are never code repos — excluded from sibling
-// auto-discovery so the engine dir / the aidlc roof / VCS metadata never count as
+// auto-discovery so the engine dir / the amadeus roof / VCS metadata never count as
 // a repo. The harness dirs are open-set (isHarnessDirName), checked separately.
 const NON_REPO_WORKSPACE_DIRS = new Set([
-  "aidlc",
+  "amadeus",
   ".git",
-  ".aidlc",
+  ".amadeus",
   "node_modules",
 ]);
 
@@ -1655,7 +1655,7 @@ export function resolveConstructionRepo(
 // --- Record-tree data-path family ---------------------------------------------
 //
 // Single chokepoint for every path under the project's record tree. Each helper
-// resolves the per-intent RECORD dir (aidlc/spaces/<sp>/intents/<slug>-<id8>/)
+// resolves the per-intent RECORD dir (amadeus/spaces/<sp>/intents/<slug>-<id8>/)
 // when an intent exists, else the bare space record root (spaceRecordRoot) — the
 // P9 end state has no flat `amadeus-docs/` root, so the whole tree stays on ONE
 // root per intent (state split across two roots is meaningless). The
@@ -1671,7 +1671,7 @@ export function resolveConstructionRepo(
 // via relativeRecordDir() threaded from the engine instead.
 
 // The record-tree ROOT for a project: the per-intent record dir when an intent
-// resolves, else the bare space record root (aidlc/spaces/<sp>/intents/). Every
+// resolves, else the bare space record root (amadeus/spaces/<sp>/intents/). Every
 // family helper below joins under this so the whole tree moves with the intent in
 // lockstep. Stays total (never throws) so the hooks that call the family at
 // module top on a pre-birth shell don't crash.
@@ -1759,7 +1759,7 @@ export function unitDependencyPath(projectDir: string, intent?: string, space?: 
 //
 // A Bolt worktree is a git worktree of the project, so it carries its OWN mirror
 // of the record tree at the SAME relative layout as the main checkout: the
-// per-intent record dir (aidlc/spaces/<sp>/intents/<slug>-<id8>/) when the Bolt
+// per-intent record dir (amadeus/spaces/<sp>/intents/<slug>-<id8>/) when the Bolt
 // forks from an intent, else the bare space record root. These take an
 // ALREADY-RESOLVED worktree base dir (the output of worktreePath, or an
 // audit-recorded path), not projectDir, plus an optional `recordPrefix` — the
@@ -1988,7 +1988,7 @@ export function writeStateFile(projectDir: string, content: string, intent?: str
   // front when the target exists but is not writable.
   if (existsSync(path)) accessSync(path, fsConstants.W_OK);
   // Ensure the record dir's parent chain exists before the atomic write — a
-  // per-intent record dir's parents (aidlc/spaces/<sp>/intents/<slug>-<id8>/)
+  // per-intent record dir's parents (amadeus/spaces/<sp>/intents/<slug>-<id8>/)
   // may not exist yet on first write; the flat fallback's amadeus-docs/ is created
   // by the init scaffolder, but mkdir-recursive is idempotent so it's safe for
   // both layouts.

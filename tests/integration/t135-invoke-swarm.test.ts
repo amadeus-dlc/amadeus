@@ -203,12 +203,12 @@ function setupReferee(): void {
   writeFileSync(
     join(proj, ".gitignore"),
     [
-      "aidlc/active-space",
-      "aidlc/.amadeus-clone-id",
-      "aidlc/spaces/*/intents/active-intent",
-      "aidlc/spaces/*/intents/*/runtime-graph.json",
-      "aidlc/spaces/*/intents/*/.amadeus-*",
-      "aidlc/spaces/*/intents/*/audit/",
+      "amadeus/active-space",
+      "amadeus/.amadeus-clone-id",
+      "amadeus/spaces/*/intents/active-intent",
+      "amadeus/spaces/*/intents/*/runtime-graph.json",
+      "amadeus/spaces/*/intents/*/.amadeus-*",
+      "amadeus/spaces/*/intents/*/audit/",
       "",
     ].join("\n"),
   );
@@ -228,7 +228,7 @@ function setupReferee(): void {
 
   // Conductor step 2: the worker for `win` converged (writes win.txt); `lose`
   // did not. This test stages win's impl directly — no model.
-  const winWorktree = join(proj, ".aidlc", "worktrees", "bolt-win");
+  const winWorktree = join(proj, ".amadeus", "worktrees", "bolt-win");
   if (existsSync(winWorktree)) {
     writeFileSync(join(winWorktree, "win.txt"), "done\n");
   }

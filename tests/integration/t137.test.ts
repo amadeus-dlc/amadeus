@@ -142,18 +142,18 @@ function proj(): string {
 }
 
 // P4: intent-birth writes state into the born intent's per-intent record dir
-// (aidlc/spaces/<space>/intents/<slug>-<id8>/) and audit into per-clone SHARDS
+// (amadeus/spaces/<space>/intents/<slug>-<id8>/) and audit into per-clone SHARDS
 // under <record>/audit/<host>-<pid>.md — not the flat amadeus-docs/ trio. After
 // init the active-intent cursor points at the born record, so the later
 // state-tool calls (gate-start/advance/acknowledge-compaction) read/write THAT
 // record. recordDirOf follows the cursor and falls back to flat for F3 (which
 // hand-seeds a flat corrupted state.md and never births a record).
 function recordDirOf(p: string): string {
-  const spaceCursor = join(p, "aidlc", "active-space");
+  const spaceCursor = join(p, "amadeus", "active-space");
   const space = existsSync(spaceCursor)
     ? readFileSync(spaceCursor, "utf-8").trim() || "default"
     : "default";
-  const intentsDir = join(p, "aidlc", "spaces", space, "intents");
+  const intentsDir = join(p, "amadeus", "spaces", space, "intents");
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();

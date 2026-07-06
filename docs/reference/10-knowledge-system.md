@@ -10,7 +10,7 @@ AI-DLC uses a two-tier knowledge system that separates framework methodology fro
 
 **Tier 1: Methodology knowledge** (`.claude/knowledge/`) -- Ships with the framework. Contains shared principles and per-agent methodology references. Updated when upgrading the framework. Read-only during workflow execution.
 
-**Tier 2: Team knowledge** (the active space — `aidlc/knowledge/`, shorthand for `aidlc/spaces/<space>/knowledge/`) -- User-managed. Contains company-specific standards, policies, and conventions. A sibling of the space's `memory/`, `codekb/`, and `intents/`, so it accumulates across every intent in the space. Free-form and empty at bootstrap: the engine creates the empty `aidlc/knowledge/` directory on the first `/amadeus` and seeds nothing inside it. There is no fixed file set.
+**Tier 2: Team knowledge** (the active space — `amadeus/knowledge/`, shorthand for `amadeus/spaces/<space>/knowledge/`) -- User-managed. Contains company-specific standards, policies, and conventions. A sibling of the space's `memory/`, `codekb/`, and `intents/`, so it accumulates across every intent in the space. Free-form and empty at bootstrap: the engine creates the empty `amadeus/knowledge/` directory on the first `/amadeus` and seeds nothing inside it. There is no fixed file set.
 
 ### Tier 1 Structure
 
@@ -50,10 +50,10 @@ AI-DLC uses a two-tier knowledge system that separates framework methodology fro
 
 ### Tier 2 Structure
 
-Empty at bootstrap. The engine creates the bare `aidlc/knowledge/` directory and nothing inside it — no README, no per-agent subdirectories. The `amadeus-shared/` and per-agent directories below are the convention the agent personas look for; the team creates the ones it has content for.
+Empty at bootstrap. The engine creates the bare `amadeus/knowledge/` directory and nothing inside it — no README, no per-agent subdirectories. The `amadeus-shared/` and per-agent directories below are the convention the agent personas look for; the team creates the ones it has content for.
 
 ```
-aidlc/knowledge/                    # empty at bootstrap; team-created subdirs
+amadeus/knowledge/                    # empty at bootstrap; team-created subdirs
 +-- amadeus-shared/                   # optional — loaded by every agent if present
 |   +-- (user-added files)
 +-- amadeus-product-agent/            # optional — loaded when that agent is active
@@ -77,7 +77,7 @@ sequenceDiagram
     participant TAK as Team Agent Knowledge
     participant PA as Prior Artifacts
 
-    O->>G: Step 1: Load aidlc/spaces/<space>/memory/
+    O->>G: Step 1: Load amadeus/spaces/<space>/memory/
     Note over G: org.md + team.md + project.md + phases/<phase>.md
     G-->>O: Rules loaded (strict-additive — all layers present)
 
@@ -89,11 +89,11 @@ sequenceDiagram
     Note over AM: Agent-specific methodology
     AM-->>O: Agent methodology loaded
 
-    O->>TK: Step 4: Load aidlc/knowledge/amadeus-shared/
+    O->>TK: Step 4: Load amadeus/knowledge/amadeus-shared/
     Note over TK: Team shared knowledge (if exists)
     TK-->>O: Team knowledge loaded
 
-    O->>TAK: Step 5: Load aidlc/knowledge/[agent-name]/
+    O->>TAK: Step 5: Load amadeus/knowledge/[agent-name]/
     Note over TAK: Team agent-specific knowledge (if exists)
     TAK-->>O: Team agent knowledge loaded
 
@@ -106,11 +106,11 @@ sequenceDiagram
 
 | Step | Source | Tier | Managed By | Loaded |
 |------|--------|------|-----------|--------|
-| 1 | `aidlc/spaces/<space>/memory/` | -- | Framework + self-learning | First |
+| 1 | `amadeus/spaces/<space>/memory/` | -- | Framework + self-learning | First |
 | 2 | `.claude/knowledge/amadeus-shared/` | 1 | Framework | Early |
 | 3 | `.claude/knowledge/[agent]/` | 1 | Framework | Early |
-| 4 | `aidlc/knowledge/amadeus-shared/` | 2 | Team | Mid |
-| 5 | `aidlc/knowledge/[agent]/` | 2 | Team | Mid |
+| 4 | `amadeus/knowledge/amadeus-shared/` | 2 | Team | Mid |
+| 5 | `amadeus/knowledge/[agent]/` | 2 | Team | Mid |
 | 6 | Prior stage artifacts | -- | Dynamic | Last |
 
 > **Note:** Steps 1-5 are agent knowledge loading (defined in each agent file). Step 6 (prior stage artifacts) is context added by the orchestrator at runtime, not a file-loading step.
@@ -128,7 +128,7 @@ sequenceDiagram
 
 ### Knowledge README Template
 
-`.claude/knowledge/amadeus-shared/knowledge-readme-template.md` ships an optional README template a team can copy into its Tier 2 directories to document them. The engine does not scaffold or seed it — the space-level `aidlc/knowledge/` directory is created empty, and the team adds whatever it wants. The template explains:
+`.claude/knowledge/amadeus-shared/knowledge-readme-template.md` ships an optional README template a team can copy into its Tier 2 directories to document them. The engine does not scaffold or seed it — the space-level `amadeus/knowledge/` directory is created empty, and the team adds whatever it wants. The template explains:
 
 - What types of files to add for that agent
 - Examples of common customization files
@@ -147,14 +147,14 @@ Add company-specific files to the team knowledge directories:
 
 ```bash
 # Team-wide standards (loaded by all agents)
-aidlc/knowledge/amadeus-shared/company-coding-standards.md
-aidlc/knowledge/amadeus-shared/company-architecture-principles.md
+amadeus/knowledge/amadeus-shared/company-coding-standards.md
+amadeus/knowledge/amadeus-shared/company-architecture-principles.md
 
 # Agent-specific standards (loaded only when that agent is active)
-aidlc/knowledge/amadeus-architect-agent/company-architecture-patterns.md
-aidlc/knowledge/amadeus-devsecops-agent/company-security-policy.md
-aidlc/knowledge/amadeus-developer-agent/company-coding-conventions.md
-aidlc/knowledge/amadeus-quality-agent/company-testing-standards.md
+amadeus/knowledge/amadeus-architect-agent/company-architecture-patterns.md
+amadeus/knowledge/amadeus-devsecops-agent/company-security-policy.md
+amadeus/knowledge/amadeus-developer-agent/company-coding-conventions.md
+amadeus/knowledge/amadeus-quality-agent/company-testing-standards.md
 ```
 
 Files are loaded automatically when the agent is activated (steps 4-5 of the loading order). No configuration changes needed. Any `.md` file placed in a directory is loaded.

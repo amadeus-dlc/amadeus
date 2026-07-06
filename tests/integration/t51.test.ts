@@ -63,18 +63,18 @@ const TOOLS = join(REPO_ROOT, "dist", "claude", ".claude", "tools");
 const UTIL = join(TOOLS, "amadeus-utility.ts");
 const STATE = join(TOOLS, "amadeus-state.ts");
 
-// P4: init births a per-intent record (aidlc/spaces/<space>/intents/<slug>-<id8>/);
+// P4: init births a per-intent record (amadeus/spaces/<space>/intents/<slug>-<id8>/);
 // state lands at <record>/amadeus-state.md and audit in per-clone shards under
 // <record>/audit/<host>-<pid>.md, NOT the flat amadeus-docs/. The active-intent
 // cursor follows the born record, so the whole gate-start/approve walk resolves
 // to it. Fall back to flat for a not-yet-born project. The event stream + final
 // checkbox state are unchanged — only the LOCATION moved.
 function recordDirOf(p: string): string {
-  const spaceCursor = join(p, "aidlc", "active-space");
+  const spaceCursor = join(p, "amadeus", "active-space");
   const space = existsSync(spaceCursor)
     ? readFileSync(spaceCursor, "utf-8").trim() || "default"
     : "default";
-  const intentsDir = join(p, "aidlc", "spaces", space, "intents");
+  const intentsDir = join(p, "amadeus", "spaces", space, "intents");
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();

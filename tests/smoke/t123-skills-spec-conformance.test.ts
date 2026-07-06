@@ -8,7 +8,7 @@
 // Mechanism: none. There is no tool / process / argv seam under test — the
 // subject IS the on-disk shape of the shipped skill set and the bytes of each
 // SKILL.md. The .sh sourced lib/tap.sh and shelled to `bun -e` only to PARSE
-// (read the graph, extract the frontmatter `name`); it never invoked an aidlc
+// (read the graph, extract the frontmatter `name`); it never invoked an amadeus
 // tool as a process-boundary contract. So the twin reads the same static files
 // in-process (resolved from the harness's AMADEUS_SRC, the same
 // dist/claude/.claude root the .sh reached via $CLAUDE_DIR) and asserts. Zero

@@ -28,15 +28,15 @@ framework upgrade. Anything you add there disappears the next time the team
 pulls a new version.
 
 **Tier 2 — team knowledge** is yours. It lives at the space level under
-`aidlc/knowledge/` (shorthand for `aidlc/spaces/<space>/knowledge/`), a sibling
+`amadeus/knowledge/` (shorthand for `amadeus/spaces/<space>/knowledge/`), a sibling
 of the space's `memory/`, `codekb/`, and `intents/` — so it accumulates across
 every intent in the space rather than being trapped in one intent's record. It
 holds your company-specific standards, policies, and conventions. The framework
-never overwrites it; the engine just creates the empty `aidlc/knowledge/`
+never overwrites it; the engine just creates the empty `amadeus/knowledge/`
 directory on the first `/amadeus` and leaves the contents to you. This is the
 directory you populate. (Standing practices the framework should *enforce* —
 rather than reference material an agent weighs — live in the space's memory
-layer at `aidlc/spaces/<space>/memory/` instead.)
+layer at `amadeus/spaces/<space>/memory/` instead.)
 
 The two-tier split is the same data-versus-code line the rest of this guide
 rests on, applied to knowledge: the framework owns its methodology, you own
@@ -49,19 +49,19 @@ full directory shapes for both tiers are in
 ## Team-wide versus agent-specific placement
 
 Tier 2 follows the agent layout by convention: a `amadeus-shared/` directory plus
-one directory per agent, all under the space-level `aidlc/knowledge/`. Where you
+one directory per agent, all under the space-level `amadeus/knowledge/`. Where you
 drop a file decides which agents load it.
 
 | Placement | Loaded by | Use it for |
 |-----------|-----------|------------|
-| `aidlc/knowledge/amadeus-shared/` | **every** agent, on every stage | cross-cutting standards — naming conventions, commit format, the project's domain glossary |
-| `aidlc/knowledge/<agent>-agent/` | **only** that agent, only when it's the active lead | domain context for one role — architecture patterns for the architect, security policy for devsecops |
+| `amadeus/knowledge/amadeus-shared/` | **every** agent, on every stage | cross-cutting standards — naming conventions, commit format, the project's domain glossary |
+| `amadeus/knowledge/<agent>-agent/` | **only** that agent, only when it's the active lead | domain context for one role — architecture patterns for the architect, security policy for devsecops |
 
 The directory name must match the agent slug exactly — `amadeus-architect-agent/`,
 not `architect/`. A typo in the directory name is the most common reason a
 file is silently ignored: the framework walks the agent's own directory by
 name, finds nothing, and moves on without an error. The engine does not create
-these subdirectories for you — `aidlc/knowledge/` is empty at bootstrap (see
+these subdirectories for you — `amadeus/knowledge/` is empty at bootstrap (see
 below), so you create each directory yourself with the exact slug.
 
 Reach for `amadeus-shared/` only when a standard genuinely applies across all 11
@@ -84,11 +84,11 @@ right directory is the registration. When a stage begins, the conductor
 loads context in a fixed six-step order, and your Tier 2 files come in at steps
 4 and 5:
 
-1. Rules — the resolved `aidlc/spaces/<space>/memory/` chain (loaded first)
+1. Rules — the resolved `amadeus/spaces/<space>/memory/` chain (loaded first)
 2. Tier 1 shared methodology — `.claude/knowledge/amadeus-shared/`
 3. Tier 1 agent methodology — `.claude/knowledge/<agent>-agent/`
-4. **Tier 2 team shared** — `aidlc/knowledge/amadeus-shared/`
-5. **Tier 2 team agent-specific** — `aidlc/knowledge/<agent>-agent/`
+4. **Tier 2 team shared** — `amadeus/knowledge/amadeus-shared/`
+5. **Tier 2 team agent-specific** — `amadeus/knowledge/<agent>-agent/`
 6. Prior stage artifacts — outputs the current stage declares it consumes
 
 Steps 4 and 5 only fire if the directories exist and contain files, which is
@@ -130,9 +130,9 @@ when reviewing, it's knowledge.
 | Example: API Gateway standards, a domain glossary | Example: "Never log PII", "All data access goes through the repository layer" |
 
 So a document describing how your team designs APIs is knowledge: drop it in
-`aidlc/knowledge/amadeus-architect-agent/`. A non-negotiable like "every
+`amadeus/knowledge/amadeus-architect-agent/`. A non-negotiable like "every
 architecture decision must record at least two alternatives" is a rule: it
-belongs in the space memory layer (`aidlc/spaces/<space>/memory/`), where the framework will hold the agent to it. For
+belongs in the space memory layer (`amadeus/spaces/<space>/memory/`), where the framework will hold the agent to it. For
 authoring rules across the layer chain and letting the learning loop promote
 corrections into them, see
 [Rules and the Learning Loop](05-rules-and-the-loop.md). The User Guide's
@@ -144,7 +144,7 @@ more examples.
 ## Where the Tier 2 tree comes from
 
 The team builds it. On the first `/amadeus` the engine creates a single empty
-directory — `aidlc/knowledge/` — and stops there. It does not scaffold a tree,
+directory — `amadeus/knowledge/` — and stops there. It does not scaffold a tree,
 create per-agent subdirectories, or seed any READMEs. The Tier 2 layout
 (`amadeus-shared/` plus one directory per agent) is the convention the personas
 look for, not a structure the engine writes; you create the directories you have
@@ -162,7 +162,7 @@ optional template you can copy in by hand —
 A note on the boundary with the rest of this guide: the agent directories you
 populate here are the same ones an agent declares in its persona file. When you
 [add an agent](03-adding-an-agent.md), its Tier 2 knowledge directory is
-`aidlc/knowledge/<new-agent-slug>/` — a directory the team creates, loaded at
+`amadeus/knowledge/<new-agent-slug>/` — a directory the team creates, loaded at
 the same steps 4 and 5. The mental model from the
 [overview](00-overview.md) holds: the stage names the agent and the agent
 reads the knowledge, and you shape all of it by editing data rather than
@@ -174,20 +174,20 @@ writing code.
 
 Everything above assumes one team. When **more than one team shares a project**,
 AI-DLC keeps each team's method, knowledge, and record in its own **space** — a
-`aidlc/spaces/<name>/` of identical shape (`memory/`, `knowledge/`, `codekb/`,
-`intents/`). The `aidlc/knowledge/` shorthand you've been using throughout this
-chapter is really `aidlc/spaces/<active-space>/knowledge/`; with a single team
+`amadeus/spaces/<name>/` of identical shape (`memory/`, `knowledge/`, `codekb/`,
+`intents/`). The `amadeus/knowledge/` shorthand you've been using throughout this
+chapter is really `amadeus/spaces/<active-space>/knowledge/`; with a single team
 that active space is always `default` and the distinction never surfaces. (The
 [User Guide's Spaces and Intents chapter](../guide/03-spaces-and-intents.md) is
 the end-user orientation; this section is the harness-engineering angle.)
 
 What this means for the knowledge and rules you author:
 
-- **Team knowledge is per-space.** The `aidlc/knowledge/amadeus-<agent>-agent/`
+- **Team knowledge is per-space.** The `amadeus/knowledge/amadeus-<agent>-agent/`
   files you populate live inside one space. A second team gets its own empty
   `knowledge/` tree to fill — your files do not leak across the boundary, and
   theirs do not dilute your agents' context.
-- **The method layer is per-space too.** The rules in `aidlc/spaces/<space>/memory/`
+- **The method layer is per-space too.** The rules in `amadeus/spaces/<space>/memory/`
   (`org.md` → `team.md` → `project.md`) resolve within the active space. A new
   space is seeded from the framework baseline — `org.md` copied in, fresh empty
   `team.md` / `project.md` — so a new team starts from the framework's defaults

@@ -341,7 +341,7 @@ describe("t31 amadeus-log dispatch", () => {
 // WHY this matters: amadeus-log threads no --intent/--space, so it relies on
 // default resolution. On a fresh shell (no record) or a >1-intent workspace
 // with no active-intent cursor, activeIntent() → null and the path helpers
-// collapse to the bare aidlc/spaces/<space>/intents/ root. An unguarded emit
+// collapse to the bare amadeus/spaces/<space>/intents/ root. An unguarded emit
 // would write a state/audit shard DIRECTLY there, breaking the invariant that
 // no amadeus-state.md / audit/ ever lives in the bare intents root (amadeus-lib.ts).
 // amadeus-log was the lone emitter missing the "no active workflow → clean error"
@@ -355,7 +355,7 @@ describe("t31 amadeus-log dispatch", () => {
 // ============================================================
 
 describe("t31 amadeus-log null-intent guard", () => {
-  // The bare space record root: aidlc/spaces/default/intents/. A guarded emit
+  // The bare space record root: amadeus/spaces/default/intents/. A guarded emit
   // must leave NO amadeus-state.md and NO audit/ dir directly under it.
   function bareIntentsRootEntries(p: string): string[] {
     const root = intentsDirOf(p);

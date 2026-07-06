@@ -63,9 +63,9 @@ Path: `.claude/knowledge/amadeus-quality-agent/`
 
 ### Team (Tier 2)
 
-Path: `aidlc/knowledge/amadeus-quality-agent/` (the space-level knowledge dir; user-managed)
+Path: `amadeus/knowledge/amadeus-quality-agent/` (the space-level knowledge dir; user-managed)
 
-A space-level directory the team creates when it has content (the engine ships `aidlc/knowledge/` empty). Populated by the team with project-specific
+A space-level directory the team creates when it has content (the engine ships `amadeus/knowledge/` empty). Populated by the team with project-specific
 QA context such as existing test frameworks, coverage targets, performance
 baselines, or quality gate thresholds.
 

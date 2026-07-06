@@ -4,8 +4,8 @@
 // dist/kiro/.kiro/hooks/amadeus-kiro-adapter.ts):
 //
 //   verb-intercept (userPromptSubmit) — bumps the per-turn counter
-//     aidlc/.amadeus-turn-counter EVERY turn, and on a TERMINAL command
-//     (read-only flag / workspace verb) stamps aidlc/.amadeus-readonly-latch
+//     amadeus/.amadeus-turn-counter EVERY turn, and on a TERMINAL command
+//     (read-only flag / workspace verb) stamps amadeus/.amadeus-readonly-latch
 //     {turn,flag,source,ts} + writes the SYSTEM dispatch relay to stdout.
 //   pretool-block (preToolUse) — the hard floor: a TRULY BARE advancing
 //     `amadeus-orchestrate.ts next` while the latch is fresh-for-this-turn
@@ -32,12 +32,12 @@ const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const KIRO_TREE = join(REPO_ROOT, "dist", "kiro", ".kiro");
 
 // A scratch project: the .kiro tree (so verb-intercept's amadeus-utility.ts
-// subprocess + the adapter path resolve) + an empty aidlc/ roof. The seam
-// writes the counter/latch under aidlc/ itself.
+// subprocess + the adapter path resolve) + an empty amadeus/ roof. The seam
+// writes the counter/latch under amadeus/ itself.
 function scratchProject(): string {
   const dir = mkdtempSync(join(tmpdir(), "t180-"));
   cpSync(KIRO_TREE, join(dir, ".kiro"), { recursive: true });
-  mkdirSync(join(dir, "aidlc"), { recursive: true });
+  mkdirSync(join(dir, "amadeus"), { recursive: true });
   return dir;
 }
 
@@ -63,8 +63,8 @@ function promptWithNext(args: string): string {
   return `Step 1: run \`bun .kiro/tools/amadeus-orchestrate.ts next ${args}\` and relay the output.`;
 }
 
-const counterPath = (dir: string) => join(dir, "aidlc", ".amadeus-turn-counter");
-const latchPath = (dir: string) => join(dir, "aidlc", ".amadeus-readonly-latch");
+const counterPath = (dir: string) => join(dir, "amadeus", ".amadeus-turn-counter");
+const latchPath = (dir: string) => join(dir, "amadeus", ".amadeus-readonly-latch");
 
 describe("t180 verb-intercept turn-clock + read-only/nav latch", () => {
   test("1: read-only flag (--status) bumps counter to 1 and stamps the read-only-flag latch", () => {
@@ -131,7 +131,7 @@ describe("t180 verb-intercept turn-clock + read-only/nav latch", () => {
 });
 
 describe("t180 pretool-block roll-forward backstop (exit-code contract)", () => {
-  // Seed the counter + latch under aidlc/ directly; pretool-block reads them.
+  // Seed the counter + latch under amadeus/ directly; pretool-block reads them.
   function seedClock(dir: string, counter: number, latchTurn: number | null): void {
     writeFileSync(counterPath(dir), `${counter}\n`, "utf-8");
     if (latchTurn !== null) {
@@ -183,7 +183,7 @@ describe("t180 pretool-block roll-forward backstop (exit-code contract)", () => 
   test("7: NO latch files + bare next → exit 0 (fail-open / inert)", () => {
     const dir = scratchProject();
     try {
-      // aidlc/ exists but no counter and no latch were ever written.
+      // amadeus/ exists but no counter and no latch were ever written.
       const r = runAdapter(dir, "pretool-block", { tool_input: { command: BARE_NEXT }, cwd: dir });
       expect(r.code).toBe(0);
     } finally {

@@ -67,7 +67,7 @@ import {
   setupIntegrationProject,
 } from "../harness/fixtures.ts";
 // P4: init BIRTHS a per-intent record; state lives under
-// aidlc/spaces/<space>/intents/<slug>-<id8>/ and audit is SHARDED per clone
+// amadeus/spaces/<space>/intents/<slug>-<id8>/ and audit is SHARDED per clone
 // under <record>/audit/. Read state through the resolved record dir and audit
 // through the shipped merge helper (default-resolves the active intent, falls
 // back to flat amadeus-docs for a not-yet-born project).
@@ -109,11 +109,11 @@ afterAll(() => {
 // cursors (a record dir is the one holding amadeus-state.md), falling back to the
 // flat amadeus-docs/ layout for a not-yet-born project. Copied verbatim from t63.
 function recordDirOf(p: string): string {
-  const spaceCursor = join(p, "aidlc", "active-space");
+  const spaceCursor = join(p, "amadeus", "active-space");
   const space = existsSync(spaceCursor)
     ? readFileSync(spaceCursor, "utf-8").trim() || "default"
     : "default";
-  const intentsDir = join(p, "aidlc", "spaces", space, "intents");
+  const intentsDir = join(p, "amadeus", "spaces", space, "intents");
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();

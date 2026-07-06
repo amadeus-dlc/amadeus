@@ -578,7 +578,7 @@ function handleDiscard(args: string[]): void {
 // Usage: amadeus-worktree list
 //
 // Filters `git worktree list --porcelain` output to entries that are AIDLC
-// Bolt worktrees: parent path is `<projectDir>/.aidlc/worktrees/` AND the
+// Bolt worktrees: parent path is `<projectDir>/.amadeus/worktrees/` AND the
 // basename starts with `bolt-`. Both conditions are required so an
 // unrelated worktree someone happens to name `bolt-other` outside our
 // namespace doesn't masquerade as a Bolt. Read-only — no audit emission.
@@ -586,7 +586,7 @@ function handleList(_args: string[]): void {
   // No assertNotSiblingWorktree here — list is read-only and useful from
   // anywhere. Run from current cwd's git context.
   const pd = resolveProjectDir(projectDir);
-  const boltsDir = pathKey(resolve(pd, ".aidlc", "worktrees"));
+  const boltsDir = pathKey(resolve(pd, ".amadeus", "worktrees"));
 
   const r = runGit(["worktree", "list", "--porcelain"]);
   if (!r.ok) {

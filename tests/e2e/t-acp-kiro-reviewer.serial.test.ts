@@ -2,12 +2,12 @@
 //
 // t-acp-kiro-reviewer.serial.test.ts — LIVE proof that the §12a reviewer step
 // fires on the Kiro harness: a reviewer-declaring stage driven over ACP through
-// the production `aidlc` conductor ends with the reviewer's `## Review` verdict
+// the production `amadeus` conductor ends with the reviewer's `## Review` verdict
 // appended to the primary artifact on disk.
 //
 // WHY THIS TEST EXISTS. The reviewer mechanism has three Kiro-side wiring
 // contracts (conductor `subagent.trustedAgents` includes the two reviewer
-// slugs; the reviewer agents' `fs_write` is capped to the `aidlc/spaces/**`
+// slugs; the reviewer agents' `fs_write` is capped to the `amadeus/spaces/**`
 // workspace; the SKILL.md gate flow names the §12a step). All three are pinned
 // deterministically by dist parity, but until this test NO live check proved a
 // Kiro conductor actually runs the reviewer sub-agent end-to-end — the live
@@ -39,7 +39,7 @@
 //   - `<record>/inception/requirements-analysis/requirements.md` exists and
 //     carries a `## Review` section with a READY / NOT-READY verdict — the
 //     §12a contract (stage-protocol.md "Reviewer executes"), landing under
-//     `aidlc/spaces/**` (the tree the reviewer's write cap names).
+//     `amadeus/spaces/**` (the tree the reviewer's write cap names).
 //   - No root-level `amadeus-docs/` appears: the retired flat layout must not
 //     be resurrected by a reviewer pointed at a dead path.
 //   - Some tool call in the turn references the reviewer agent slug — the
@@ -175,7 +175,7 @@ describe("t-acp-kiro-reviewer (live §12a reviewer fires on the shipped dist/kir
         }
 
         // §12a on disk: the artifact exists under the per-intent record
-        // (aidlc/spaces/** — the tree the reviewer's write grant names) and
+        // (amadeus/spaces/** — the tree the reviewer's write grant names) and
         // carries the appended ## Review verdict.
         expect(existsSync(requirementsPath(proj))).toBe(true);
         const artifact = readFileSync(requirementsPath(proj), "utf-8");

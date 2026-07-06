@@ -6,7 +6,7 @@
 // continues the SAME recorded session (same session id, same rollout file,
 // full context), so a gate that ends turn 1 can be answered by a scripted
 // turn 2. Spike-proven 2026-07-02 (three-turn echo continuity + a full live
-// beats-1-2 aidlc probe); artefacts under
+// beats-1-2 amadeus probe); artefacts under
 // tmp/adaptive-workflows/spike-codex-resume/.
 //
 //   beat 1:  codex exec `/amadeus compose "<task>"` - the conductor dispatches
@@ -163,7 +163,7 @@ const sessionIdOf = (stderr: string): string | undefined =>
   /session id:\s*([0-9a-f-]{36})/i.exec(stderr)?.[1];
 
 function intentRecords(proj: string): string[] {
-  const dir = join(proj, "aidlc", "spaces", "default", "intents");
+  const dir = join(proj, "amadeus", "spaces", "default", "intents");
   if (!existsSync(dir)) return [];
   // Dot-dirs are hook plumbing (the Stop hook's .amadeus-hooks-health
   // heartbeat lands here on every turn), not intent records.
@@ -208,7 +208,7 @@ describe("t-exec-codex-compose-front - interactive compose over exec + exec resu
         // Nothing written before approval: no state file, no intent record.
         expect(intentRecords(proj)).toEqual([]);
         expect(
-          existsSync(join(proj, "aidlc", "spaces", "default", "intents", "active-intent")),
+          existsSync(join(proj, "amadeus", "spaces", "default", "intents", "active-intent")),
         ).toBe(false);
 
         // Beat 2: answer the gate in the SAME session.
@@ -220,7 +220,7 @@ describe("t-exec-codex-compose-front - interactive compose over exec + exec resu
         // The approve completed the write + birth arc on disk.
         const records = intentRecords(proj);
         expect(records.length).toBe(1);
-        const rec = join(proj, "aidlc", "spaces", "default", "intents", records[0]);
+        const rec = join(proj, "amadeus", "spaces", "default", "intents", records[0]);
         const state = readFileSync(join(rec, "amadeus-state.md"), "utf-8");
         expect(state).toContain("# AI-DLC State Tracking");
         const auditDir = join(rec, "audit");

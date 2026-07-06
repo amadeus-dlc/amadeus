@@ -35,15 +35,15 @@ The three initialization stages run deterministically inside `amadeus-utility in
 
 ### Stage 0.1: Workspace Scaffold
 
-The framework births the first intent and creates its record dir at `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/` (the `<space>` is `default` unless you use a named space):
+The framework births the first intent and creates its record dir at `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/` (the `<space>` is `default` unless you use a named space):
 
 ```
 Intent born — record dir scaffolded:
-  aidlc/spaces/default/intents/<YYMMDD>-<label>/initialization/   (3 stage artifact dirs)
-  aidlc/spaces/default/intents/<YYMMDD>-<label>/ideation/         (7 stage artifact dirs)
+  amadeus/spaces/default/intents/<YYMMDD>-<label>/initialization/   (3 stage artifact dirs)
+  amadeus/spaces/default/intents/<YYMMDD>-<label>/ideation/         (7 stage artifact dirs)
   ...
 Space-level dirs ensured:
-  aidlc/spaces/default/knowledge/                             (team knowledge — empty; you add files)
+  amadeus/spaces/default/knowledge/                             (team knowledge — empty; you add files)
 ```
 
 ### Stage 0.2: Workspace Detection
@@ -234,10 +234,10 @@ sequenceDiagram
 
 ## Artifacts Produced
 
-By the end of a `feature`-scoped workflow, the intent's record dir (`aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`) contains:
+By the end of a `feature`-scoped workflow, the intent's record dir (`amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`) contains:
 
 ```
-aidlc/spaces/<space>/intents/<YYMMDD>-<label>/
+amadeus/spaces/<space>/intents/<YYMMDD>-<label>/
 ├── amadeus-state.md          # Workflow state (all stages marked [x])
 ├── audit/                  # Full decision audit trail (per-clone shards, merged by timestamp)
 ├── ideation/               # Intent, market research, scope, mockups
@@ -247,7 +247,7 @@ aidlc/spaces/<space>/intents/<YYMMDD>-<label>/
 └── verification/           # Phase boundary verification reports
 ```
 
-(Team knowledge lives one level up, at the space level in `aidlc/spaces/<space>/knowledge/` — a sibling of `intents/` — so it accumulates across every intent. Team-affirmed practices and learnings live alongside it in the space's memory layer at `aidlc/spaces/<space>/memory/`, where they likewise persist across intents.)
+(Team knowledge lives one level up, at the space level in `amadeus/spaces/<space>/knowledge/` — a sibling of `intents/` — so it accumulates across every intent. Team-affirmed practices and learnings live alongside it in the space's memory layer at `amadeus/spaces/<space>/memory/`, where they likewise persist across intents.)
 
 ---
 

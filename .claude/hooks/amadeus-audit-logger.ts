@@ -80,11 +80,11 @@ let context: string;
 if (underRecord && fileNorm.length > recordRoot.length) {
   context = fileNorm.slice(recordRoot.length + 1).replace(/\//g, " > ");
 } else {
-  const aidlcIdxPosix = file.indexOf("amadeus-docs/");
-  const aidlcIdxWin = file.indexOf("amadeus-docs\\");
-  const aidlcIdx = aidlcIdxPosix >= 0 ? aidlcIdxPosix : aidlcIdxWin;
-  context = aidlcIdx >= 0
-    ? file.slice(aidlcIdx + "amadeus-docs/".length).replace(/[/\\]/g, " > ")
+  const amadeusIdxPosix = file.indexOf("amadeus-docs/");
+  const amadeusIdxWin = file.indexOf("amadeus-docs\\");
+  const amadeusIdx = amadeusIdxPosix >= 0 ? amadeusIdxPosix : amadeusIdxWin;
+  context = amadeusIdx >= 0
+    ? file.slice(amadeusIdx + "amadeus-docs/".length).replace(/[/\\]/g, " > ")
     : file;
 }
 

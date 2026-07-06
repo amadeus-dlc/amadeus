@@ -59,7 +59,7 @@
 //      (This is provable only by a real human-driven run that actually answers
 //      the gate so the artefact lands, which is the point.)
 //   3. CUSTOM RULE REACHES THE AGENT — two ways, both data: (a) the compiled
-//      stage-graph node carries aidlc/spaces/default/memory/project.md in
+//      stage-graph node carries amadeus/spaces/default/memory/project.md in
 //      rules_in_context AND that file carries the unique custom-rule marker (the
 //      compile-baked half, proven here + in the deterministic sibling); (b) the
 //      live artefact the agent writes CITES the marker (runtime evidence the
@@ -238,13 +238,13 @@ describe("t-tui-custom-harness (the {sdk,tui} two-driver journey)", () => {
       expect(node).toBeDefined();
       const rulePaths = (node?.rules_in_context ?? []).map((r) => r.path);
       // The method relocated (P5/fe7f470) to the harness-neutral workspace-root
-      // aidlc/spaces/default/memory/ tree (neutral basenames). The compile bakes
+      // amadeus/spaces/default/memory/ tree (neutral basenames). The compile bakes
       // the neutral display path; verified against the actual emitted array
       // ["…/org.md","…/team.md","…/project.md","…/phases/inception.md"].
-      expect(rulePaths).toContain("aidlc/spaces/default/memory/project.md");
+      expect(rulePaths).toContain("amadeus/spaces/default/memory/project.md");
       // the project rule FILE carries the unique custom-rule marker
       const rule = readFileSync(
-        join(proj, "aidlc", "spaces", "default", "memory", "project.md"),
+        join(proj, "amadeus", "spaces", "default", "memory", "project.md"),
         "utf8",
       );
       expect(rule).toContain(CUSTOM_RULE_MARKER);
@@ -264,7 +264,7 @@ describe("t-tui-custom-harness (the {sdk,tui} two-driver journey)", () => {
   test.skipIf(SKIP_REASON !== null)(
     `statusline renders "> ${SNAPSHOT_STAGE_SLUG} -- ${CUSTOM_AGENT_DISPLAY}"${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
     () => {
-      const session = `aidlc_he_statusline_${process.pid}`;
+      const session = `amadeus_he_statusline_${process.pid}`;
       const proj = setupTuiProject({ customHarness: true });
       try {
         const init = spawnSync(
@@ -441,7 +441,7 @@ describe("t-tui-custom-harness (the {sdk,tui} two-driver journey)", () => {
   test.skipIf(SKIP_REASON !== null)(
     `[tui] the agent runs the chained custom stages, fires the sensor + cites the rule${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
     async () => {
-      const session = `aidlc_he_journey_${process.pid}`;
+      const session = `amadeus_he_journey_${process.pid}`;
       const tuiProj = setupTuiProject({ customHarness: true });
       try {
         const init = spawnSync(

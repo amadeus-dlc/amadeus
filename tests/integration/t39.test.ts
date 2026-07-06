@@ -77,18 +77,18 @@ afterAll(() => {
 });
 
 // P4: intent-birth (the back-compat target of `init`) writes state into the
-// born intent's per-intent record dir (aidlc/spaces/<space>/intents/<slug>-<id8>/),
+// born intent's per-intent record dir (amadeus/spaces/<space>/intents/<slug>-<id8>/),
 // not the flat amadeus-docs/, and audit into per-clone shards under
 // <record>/audit/<host>-<pid>.md. Resolve the record dir from the active-space +
 // active-intent cursors, falling back to the flat layout for a not-yet-born /
 // seeded-flat project. The PHASE_STARTED/PHASE_SKIPPED rows + `## Phase Progress`
 // content are unchanged — only the LOCATION moved (per-intent, sharded).
 function recordDirOf(p: string): string {
-  const spaceCursor = join(p, "aidlc", "active-space");
+  const spaceCursor = join(p, "amadeus", "active-space");
   const space = existsSync(spaceCursor)
     ? readFileSync(spaceCursor, "utf-8").trim() || "default"
     : "default";
-  const intentsDir = join(p, "aidlc", "spaces", space, "intents");
+  const intentsDir = join(p, "amadeus", "spaces", space, "intents");
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();

@@ -36,7 +36,7 @@
 //                          (so BOLT_FAILED only lands when discard succeeded)
 //   dist/claude/.claude/tools/amadeus-worktree.ts :156 create / :455 discard
 //   dist/claude/.claude/tools/amadeus-lib.ts :148 worktreePath ->
-//                          <projectDir>/.aidlc/worktrees/bolt-<slug>
+//                          <projectDir>/.amadeus/worktrees/bolt-<slug>
 //
 // Old TAP -> new test parity (1:1, every .sh assertion -> a named test()):
 //   .sh T1  start --worktree exits 0                  -> "L1: start --worktree exits 0"
@@ -58,7 +58,7 @@
 //     precedes every fork row and BOLT_COMPLETED precedes every merge row,
 //     not just an equality on the tail window.
 //   - T2/T3 also assert the forked files live under the canonical
-//     .aidlc/worktrees/bolt-<slug>/amadeus-docs/ path (worktreePath contract).
+//     .amadeus/worktrees/bolt-<slug>/amadeus-docs/ path (worktreePath contract).
 //   - T8 asserts Reason=aborted is block-scoped to the BOLT_FAILED row.
 //
 // FIXTURE DISCIPLINE (mirrors the .sh's setup_lifecycle_project per lifecycle:
@@ -147,17 +147,17 @@ function gitInitMain(proj: string): void {
   git(proj, "commit", "-q", "-m", "init", "--allow-empty");
 }
 
-/** worktreePath contract: <proj>/.aidlc/worktrees/bolt-<slug>. */
+/** worktreePath contract: <proj>/.amadeus/worktrees/bolt-<slug>. */
 function worktreeDir(proj: string, slug: string): string {
-  return join(proj, ".aidlc", "worktrees", `bolt-${slug}`);
+  return join(proj, ".amadeus", "worktrees", `bolt-${slug}`);
 }
 
 /** The worktree mirror's per-intent record dir — carries the SAME relative
- *  record dir as the main checkout (aidlc/spaces/default/intents/<record>/). */
+ *  record dir as the main checkout (amadeus/spaces/default/intents/<record>/). */
 function wtRecordDir(proj: string, slug: string): string {
   return join(
     worktreeDir(proj, slug),
-    "aidlc",
+    "amadeus",
     "spaces",
     DEFAULT_SPACE,
     "intents",
@@ -250,7 +250,7 @@ describe("t78 amadeus-bolt per-Bolt worktree lifecycle (migrated from t78-bolt-w
 
     test("L1: forked worktree state file exists [.sh T2]", () => {
       // STRONGER: the forked state file lands under the canonical worktree mirror
-      // record (aidlc/spaces/default/intents/<record>/) — the worktreePath contract.
+      // record (amadeus/spaces/default/intents/<record>/) — the worktreePath contract.
       expect(existsSync(join(wtRecordDir(proj, slug), "amadeus-state.md"))).toBe(true);
     });
 

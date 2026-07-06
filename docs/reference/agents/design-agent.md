@@ -63,9 +63,9 @@ Path: `.claude/knowledge/amadeus-design-agent/`
 
 ### Team (Tier 2)
 
-Path: `aidlc/knowledge/amadeus-design-agent/` (the space-level knowledge dir; user-managed)
+Path: `amadeus/knowledge/amadeus-design-agent/` (the space-level knowledge dir; user-managed)
 
-A space-level directory the team creates when it has content (the engine ships `aidlc/knowledge/` empty). Populated by the team with project-specific
+A space-level directory the team creates when it has content (the engine ships `amadeus/knowledge/` empty). Populated by the team with project-specific
 design assets such as existing design systems, brand guidelines, typography
 rules, or component libraries.
 

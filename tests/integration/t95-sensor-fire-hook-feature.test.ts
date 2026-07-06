@@ -155,7 +155,7 @@ function makeProject(): string {
     MOCK_DISPATCHER,
     "utf-8",
   );
-  writeFileSync(join(proj, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(proj, "amadeus", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
   return proj;
 }
 
@@ -280,7 +280,7 @@ describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — 
   test("C1a-intents: a write under the per-intent record dir fires the 2 markdown sensors (the {amadeus-docs,intents} glob's intents arm) [P9 layout]", () => {
     // GUARDS the sensor-glob fix: the framework glob is **/{amadeus-docs,intents}/**.
     // C1a drives the legacy amadeus-docs/ arm; on the per-intent layout the real
-    // write path is under aidlc/spaces/<space>/intents/<record>/, which matches
+    // write path is under amadeus/spaces/<space>/intents/<record>/, which matches
     // ONLY via the new `intents` arm. Without this case a regression of that arm
     // (e.g. reverting to **/amadeus-docs/**) leaves C1a green while the sensors go
     // silent on every real workflow — the exact dead-glob bug P9 fixed.

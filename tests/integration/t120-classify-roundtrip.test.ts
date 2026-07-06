@@ -110,7 +110,7 @@ const SKELETON_STAGE = "functional-design";
 
 // Scope is resolved partly from AMADEUS_DEFAULT_SCOPE — start from a known
 // clean env so a developer's exported value can't shadow the seeded fixture.
-// Mirrors the .sh's reset_aidlc_env (line 68).
+// Mirrors the .sh's reset_amadeus_env (line 68).
 resetAidlcEnv();
 
 const tempDirs: string[] = [];

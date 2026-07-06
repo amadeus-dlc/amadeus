@@ -91,7 +91,7 @@ function run(tool: string, args: string[], cwd: string): CliResult {
 }
 
 const wtPath = (p: string): string =>
-  join(p, ".aidlc", "worktrees", `bolt-${SLUG}`);
+  join(p, ".amadeus", "worktrees", `bolt-${SLUG}`);
 /** Concatenate every audit shard (audit/*.md) for the seeded record. */
 const auditText = (p: string): string => {
   const dir = seededAuditDir(p);
@@ -167,7 +167,7 @@ describe("t11 halt-and-ask retry correlation (migrated from t11-halt-and-ask-ret
     const p1 = infoPath(info1);
     expect(typeof p1).toBe("string");
     expect(p1.length).toBeGreaterThan(0);
-    expect(p1.endsWith(join(".aidlc", "worktrees", `bolt-${SLUG}`))).toBe(true);
+    expect(p1.endsWith(join(".amadeus", "worktrees", `bolt-${SLUG}`))).toBe(true);
   });
 
   test("2: info returns the SAME path across retry attempts [.sh test 2]", () => {
@@ -188,7 +188,7 @@ describe("t11 halt-and-ask retry correlation (migrated from t11-halt-and-ask-ret
   });
 
   test("5: worktree preserved on disk across multiple failures [.sh test 5]", () => {
-    // .sh: assert_dir_exists .aidlc/worktrees/bolt-r — preservation invariant:
+    // .sh: assert_dir_exists .amadeus/worktrees/bolt-r — preservation invariant:
     // failure (halt-and-ask default) never tears the worktree down.
     expect(existsSync(wtPath(fixture))).toBe(true);
   });

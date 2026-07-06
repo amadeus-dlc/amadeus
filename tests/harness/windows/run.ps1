@@ -20,7 +20,7 @@
   or a full relative path under tests/e2e. Default "preflight" (no Bedrock tokens).
 
 .PARAMETER ProjectDir
-  The synced project tree. Default C:\aidlc.
+  The synced project tree. Default C:\amadeus.
 
 .PARAMETER TimeoutS
   AMADEUS_TEST_TIMEOUT (seconds)  -  the hang-backstop the tests read, NOT a budget.
@@ -32,7 +32,7 @@
 #>
 param(
   [string]$Test = "preflight",
-  [string]$ProjectDir = "C:\aidlc",
+  [string]$ProjectDir = "C:\amadeus",
   [int]$TimeoutS = 900
 )
 $ErrorActionPreference = "Continue"   # let bun own the exit code; don't abort on a test red

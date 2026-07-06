@@ -74,7 +74,7 @@ function next(args: string[], p = proj): Run {
 }
 
 const intentsDir = (p: string, space = "default"): string =>
-  join(p, "aidlc", "spaces", space, "intents");
+  join(p, "amadeus", "spaces", space, "intents");
 const cursorPath = (p: string, space = "default"): string =>
   join(intentsDir(p, space), "active-intent");
 const recordDirs = (p: string, space = "default"): string[] =>

@@ -12,10 +12,10 @@
 //
 // V2 PATH NOTE: the workspace refactor (#429) removed the flat amadeus-docs/
 // layout. A stage's produces[] artifacts now live under the ACTIVE intent's
-// per-intent record dir (aidlc/spaces/<space>/intents/<slug>-<id8>/<phase>/
+// per-intent record dir (amadeus/spaces/<space>/intents/<slug>-<id8>/<phase>/
 // <stage>/), per-unit Construction artifacts under that record's
 // construction/<unit>/<stage>/, and codekb stages (reverse-engineering) under
-// the space-level aidlc/spaces/<space>/codekb/<repo>/. This test seeds those
+// the space-level amadeus/spaces/<space>/codekb/<repo>/. This test seeds those
 // live seams via seededRecordDir, NOT a flat amadeus-docs/ tree.
 //
 // Source under test (dist/claude/.claude/tools/amadeus-state.ts):
@@ -26,7 +26,7 @@
 //        <space>/codekb/<repo>/ for codekb stages). Empty-produces stages
 //        vacuously pass.
 //     2. workspace_requires - a code-producing stage (frontmatter flag, set on
-//        code-generation) must ALSO have a file outside the aidlc/ workspace
+//        code-generation) must ALSO have a file outside the amadeus/ workspace
 //        tree + harness dirs (issue #366 Update 2: docs-only code-generation
 //        must not pass).
 //   Bypass: AMADEUS_SKIP_ARTIFACT_GUARD=1 (env).
@@ -88,7 +88,7 @@ function writeRecordDoc(proj: string, rel: string): void {
   writeFileSync(full, "# stub\n\n## A\n\n## B\n");
 }
 
-// Write a file at the workspace root (outside the aidlc/ tree + harness dirs).
+// Write a file at the workspace root (outside the amadeus/ tree + harness dirs).
 function writeWorkspaceFile(proj: string, rel: string): void {
   const full = join(proj, rel);
   mkdirSync(join(full, ".."), { recursive: true });
@@ -205,9 +205,9 @@ describe("t185: stage-completion artifact guard (#366)", () => {
       expect(r.out).toContain("workspace_requires");
     });
 
-    test("PASSES code-generation once real source exists outside aidlc/", () => {
+    test("PASSES code-generation once real source exists outside amadeus/", () => {
       stageCodeGenDocsOnly();
-      writeWorkspaceFile(proj, "src/auth/login.ts"); // outside aidlc/ + harness
+      writeWorkspaceFile(proj, "src/auth/login.ts"); // outside amadeus/ + harness
       guarded(proj, ["gate-start", "code-generation"]);
       const r = guarded(proj, ["approve", "code-generation", "--user-input", "ok"]);
       expect(r.rc).toBe(0);
@@ -217,7 +217,7 @@ describe("t185: stage-completion artifact guard (#366)", () => {
   // --- Layer 1 (codekb placement): reverse-engineering -----------------------
   //
   // V2-specific: codekb stages (reverse-engineering) write their produces[] to
-  // the space-level aidlc/spaces/<space>/codekb/<repo>/ dir, NOT a per-intent
+  // the space-level amadeus/spaces/<space>/codekb/<repo>/ dir, NOT a per-intent
   // record dir. The guard must resolve THAT placement, else it false-refuses a
   // real reverse-engineering approval. (The old flat-path design had no codekb
   // concept; this case did not exist in the reference t154.)
@@ -226,7 +226,7 @@ describe("t185: stage-completion artifact guard (#366)", () => {
       // basename(proj) is codekbRepoName's default when the intent records no
       // repos (the fixture records none) - the same key the tool resolves.
       const repo = proj.split("/").filter(Boolean).pop() ?? "repo";
-      const dir = join(proj, "aidlc", "spaces", "default", "codekb", repo);
+      const dir = join(proj, "amadeus", "spaces", "default", "codekb", repo);
       mkdirSync(dir, { recursive: true });
       writeFileSync(join(dir, `${name}.md`), "# stub\n");
     }
@@ -258,7 +258,7 @@ describe("t185: stage-completion artifact guard (#366)", () => {
   // instead asks git "was there real source work?" - an uncommitted/untracked
   // non-doc change, OR a non-doc path in the last commit (so commit-then-approve
   // still passes; #366 Update 3's clean-tree false-block is closed). "Non-doc" =
-  // first path segment not in the aidlc/ workspace tree + harness dirs.
+  // first path segment not in the amadeus/ workspace tree + harness dirs.
   describe("workspace_requires git-aware (code-generation in a git repo)", () => {
     const UNIT = "user-auth";
 
@@ -292,10 +292,10 @@ describe("t185: stage-completion artifact guard (#366)", () => {
       git(["add", "-A"]);
       git(["commit", "-q", "-m", "baseline brownfield code"]);
       // This session: only the code-gen planning docs (no new code), then commit
-      // ONLY the aidlc/ docs so the working tree is clean and the last commit is
+      // ONLY the amadeus/ docs so the working tree is clean and the last commit is
       // doc-only.
       stageCodeGenDocsOnly();
-      git(["add", "aidlc"]);
+      git(["add", "amadeus"]);
       git(["commit", "-q", "-m", "code-gen planning docs only"]);
       const r = approveCodeGen();
       expect(r.rc).not.toBe(0);

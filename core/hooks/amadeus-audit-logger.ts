@@ -48,7 +48,7 @@ const auditFileValue = file.replace(/\\/g, "/");
 const fileNorm = auditFileValue; // forward-slash form for all path matching below
 
 // Only log writes to the active intent's RECORD tree. The record re-roots per
-// intent (aidlc/spaces/<space>/intents/<slug>-<id8>/…), so a bare
+// intent (amadeus/spaces/<space>/intents/<slug>-<id8>/…), so a bare
 // `includes("amadeus-docs/")` gate would DROP every artifact write on the workspace
 // layout. docsRoot() resolves that per-intent root when an intent is active, else
 // the bare space record root — the write is logged iff it lands under that root.
@@ -80,11 +80,11 @@ let context: string;
 if (underRecord && fileNorm.length > recordRoot.length) {
   context = fileNorm.slice(recordRoot.length + 1).replace(/\//g, " > ");
 } else {
-  const aidlcIdxPosix = file.indexOf("amadeus-docs/");
-  const aidlcIdxWin = file.indexOf("amadeus-docs\\");
-  const aidlcIdx = aidlcIdxPosix >= 0 ? aidlcIdxPosix : aidlcIdxWin;
-  context = aidlcIdx >= 0
-    ? file.slice(aidlcIdx + "amadeus-docs/".length).replace(/[/\\]/g, " > ")
+  const amadeusIdxPosix = file.indexOf("amadeus-docs/");
+  const amadeusIdxWin = file.indexOf("amadeus-docs\\");
+  const amadeusIdx = amadeusIdxPosix >= 0 ? amadeusIdxPosix : amadeusIdxWin;
+  context = amadeusIdx >= 0
+    ? file.slice(amadeusIdx + "amadeus-docs/".length).replace(/[/\\]/g, " > ")
     : file;
 }
 

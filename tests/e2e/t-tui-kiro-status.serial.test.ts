@@ -103,7 +103,7 @@ describe("t-tui-kiro-status (read-only status through the Kiro print-directive a
   test.skipIf(SKIP_REASON !== null)(
     `with state: status surfaces the seeded fields and mutates nothing${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
     () => {
-      const session = `aidlc_tui_kiro_st1_${process.pid}`;
+      const session = `amadeus_tui_kiro_st1_${process.pid}`;
       const sandbox = setupTuiProject({
         harness: "kiro",
         withState: "state-brownfield-feature.md",
@@ -136,7 +136,7 @@ describe("t-tui-kiro-status (read-only status through the Kiro print-directive a
   test.skipIf(SKIP_REASON !== null)(
     `no state: status reports no active workflow and scaffolds nothing${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
     () => {
-      const session = `aidlc_tui_kiro_st2_${process.pid}`;
+      const session = `amadeus_tui_kiro_st2_${process.pid}`;
       const sandbox = setupTuiProject({ harness: "kiro", noAidlcDocs: true });
       try {
         launch(session, sandbox);

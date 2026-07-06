@@ -110,7 +110,7 @@ function wt(p: string, sub: string, args: string[]): CliResult {
 }
 
 const wtPath = (p: string, slug: string): string =>
-  join(p, ".aidlc", "worktrees", `bolt-${slug}`);
+  join(p, ".amadeus", "worktrees", `bolt-${slug}`);
 /** Concatenate every audit shard (audit/*.md) for the seeded record. */
 const auditText = (p: string): string => {
   const dir = seededAuditDir(p);

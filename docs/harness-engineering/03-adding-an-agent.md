@@ -114,7 +114,7 @@ you get an agent that exists and never runs.
   `.claude/agents/` on the next invocation and derives the metadata map. No code
   edit, no registration step — the file's presence is the registration. From
   this point the statusline can render its display name, and the team can add
-  standards under its space-level `aidlc/knowledge/<slug>-agent/` directory.
+  standards under its space-level `amadeus/knowledge/<slug>-agent/` directory.
 - **Stage binding makes it active.** A stage names its lead and support agents
   by slug in its frontmatter `lead_agent` / `support_agents` fields (compiled
   into `.claude/tools/data/stage-graph.json`). Until some stage references your
@@ -127,8 +127,8 @@ live in [Adding a Stage](02-adding-a-stage.md).
 
 Each agent also pairs with a knowledge directory you author at
 `core/knowledge/amadeus-<slug>-agent/` (framework methodology) and an optional team
-overlay at the space level, `aidlc/knowledge/<slug>-agent/` (your standards). The
-space-level `aidlc/knowledge/` directory is free-form and empty at bootstrap; the
+overlay at the space level, `amadeus/knowledge/<slug>-agent/` (your standards). The
+space-level `amadeus/knowledge/` directory is free-form and empty at bootstrap; the
 team creates the per-agent subdirectory when it has content — the engine does not
 scaffold it. The two-tier knowledge workflow is covered in
 [Team knowledge](07-team-knowledge.md).
@@ -155,9 +155,9 @@ Mirroring the reference recipe, here is the workflow end to end.
    [Adding a Stage](02-adding-a-stage.md#4-compile-so-stage-graphjson-regenerates)).
    This is the step that makes it active.
 4. **Document the team-knowledge directory** — note that a team adds its
-   standards under the space-level `aidlc/knowledge/<slug>-agent/`. The engine
+   standards under the space-level `amadeus/knowledge/<slug>-agent/`. The engine
    does not create this directory; the team creates it when it has content (the
-   space's `aidlc/knowledge/` is free-form and empty at bootstrap).
+   space's `amadeus/knowledge/` is free-form and empty at bootstrap).
 5. **Update the hand-maintained doc tables** — the Phase Participation matrix
    and the agent→examples table do not regenerate themselves (see what does NOT
    validate, below).
@@ -175,7 +175,7 @@ one, see [Agent System: How to Modify an Agent](../reference/05-agent-system.md#
   the missing field.
 - Agents are returned alphabetically sorted by slug, so discovery order is
   identical on every platform.
-- Intent birth creates the empty space-level `aidlc/knowledge/` directory; it
+- Intent birth creates the empty space-level `amadeus/knowledge/` directory; it
   does not seed per-agent subdirectories or READMEs.
 - The statusline renders the display name from the derived metadata.
 
@@ -186,7 +186,7 @@ one, see [Agent System: How to Modify an Agent](../reference/05-agent-system.md#
   and activation are separate steps.
 - **Knowledge-file existence.** `examples` are suggested filenames documented in
   the agent→examples table — nothing creates or checks them. You place the real
-  content under `aidlc/knowledge/<slug>-agent/` (the space-level knowledge dir).
+  content under `amadeus/knowledge/<slug>-agent/` (the space-level knowledge dir).
 - **The hand-maintained doc tables.** The Phase Participation matrix in
   [Agent System](../reference/05-agent-system.md#phase-participation) and the
   agent→examples table in the knowledge README template are edited by hand.

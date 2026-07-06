@@ -44,7 +44,7 @@ You respond:
 
 The 3 Initialization stages run as a single deterministic tool call (`amadeus-utility init`) in well under a second, without user interaction:
 
-- **0.1 Workspace Scaffold** — Auto-births the first intent and creates its record dir at `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/` (written `<record>/` below) — `<YYMMDD>` is a compact UTC date prefix so records sort chronologically, and `<label>` is the conductor's short kebab-case essence of the request; the canonical id is a UUIDv7 carried in the `intents.json` registry row
+- **0.1 Workspace Scaffold** — Auto-births the first intent and creates its record dir at `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/` (written `<record>/` below) — `<YYMMDD>` is a compact UTC date prefix so records sort chronologically, and `<label>` is the conductor's short kebab-case essence of the request; the canonical id is a UUIDv7 carried in the `intents.json` registry row
 - **0.2 Workspace Detection** — Rule-based scan identifies Java 17, Spring Boot 3.2, Maven, brownfield project
 - **0.3 State Init** — Initializes `amadeus-state.md` with scope `bugfix`, depth `Minimal`, and the domain stages marked for execution
 
@@ -143,7 +143,7 @@ Results captured in `<record>/construction/build-and-test/test-results.md`: 89 t
 ### End state
 
 ```
-aidlc/spaces/default/intents/260624-null-display-fix/
+amadeus/spaces/default/intents/260624-null-display-fix/
   amadeus-state.md              # All 7 stages marked [x]
   audit/                      # Full decision trail (per-clone shards)
   inception/
@@ -226,7 +226,7 @@ Two-step scan of the existing codebase. Identifies the existing service structur
 
 **Stage 2.2 — Practices Discovery** (amadeus-pipeline-deploy-agent)
 
-The amadeus-pipeline-deploy-agent leads this stage, with amadeus-quality-agent, amadeus-developer-agent, and amadeus-devsecops-agent supporting. Because this is a brownfield project, it consumes the Reverse Engineering artifacts to infer the team's existing practices — test framework and coverage conventions, CI/lint setup, branching and review norms. Produces `team-practices.md`, `discovered-rules.md`, and `evidence.md`. On affirmation, the discovered practices are promoted into `aidlc/spaces/<space>/memory/team.md` and `aidlc/spaces/<space>/memory/project.md` so downstream stages honour them.
+The amadeus-pipeline-deploy-agent leads this stage, with amadeus-quality-agent, amadeus-developer-agent, and amadeus-devsecops-agent supporting. Because this is a brownfield project, it consumes the Reverse Engineering artifacts to infer the team's existing practices — test framework and coverage conventions, CI/lint setup, branching and review norms. Produces `team-practices.md`, `discovered-rules.md`, and `evidence.md`. On affirmation, the discovered practices are promoted into `amadeus/spaces/<space>/memory/team.md` and `amadeus/spaces/<space>/memory/project.md` so downstream stages honour them.
 
 **Stage 2.3 — Requirements Analysis** (amadeus-product-agent)
 

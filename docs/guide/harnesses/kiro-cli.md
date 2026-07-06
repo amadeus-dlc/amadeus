@@ -26,8 +26,8 @@ cp -r dist/kiro/amadeus your-project/amadeus       # the workspace shell (spaces
 cp dist/kiro/AGENTS.md your-project/AGENTS.md   # merge if you already have one
 ```
 
-The `aidlc/` directory is the workspace shell — it ships the pre-built
-`aidlc/spaces/default/memory/` method tree the engine reads. It is a **sibling**
+The `amadeus/` directory is the workspace shell — it ships the pre-built
+`amadeus/spaces/default/memory/` method tree the engine reads. It is a **sibling**
 of `.kiro/`, so copy it separately (or copy the whole `dist/kiro/` tree at once).
 `/amadeus --doctor` fails its "workspace shell ready" check if it is missing.
 
@@ -73,11 +73,11 @@ runner skills are installed.
 | MCP servers | None shipped by default | None shipped, and the Kiro MCP config mechanism is not yet documented here |
 
 Everything else — state machine, audit trail, artifacts under the intent
-record dirs (`aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`), the learnings
+record dirs (`amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`), the learnings
 ritual, sensors, scopes, depth/test-strategy — behaves identically, because it
 IS identical: the same tools run from `.kiro/tools/`.
 
-A project's `aidlc/` workspace is harness-neutral. Moving a project between
+A project's `amadeus/` workspace is harness-neutral. Moving a project between
 harnesses (or running both side by side) is supported-but-untested; `/amadeus
 --doctor` will warn if it detects a conflicting harness setup with an active workflow.
 

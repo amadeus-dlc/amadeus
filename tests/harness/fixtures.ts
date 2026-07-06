@@ -8,7 +8,7 @@
 //                                                     amadeus-docs/)
 //   - seed_state_file        -> seedStateFile()
 //   - seed_audit_file        -> seedAuditFile()
-//   - reset_aidlc_env        -> resetAidlcEnv()
+//   - reset_amadeus_env        -> resetAidlcEnv()
 //   - cleanup_test_project   -> cleanupTestProject()
 //   - setup_integration_project -> setupIntegrationProject()
 //   - sed_i                  -> sedReplaceInFile() (portable in-place edit)
@@ -44,7 +44,7 @@ export const REPO_ROOT = join(HARNESS_DIR, "..", "..");
 export const AMADEUS_SRC = join(REPO_ROOT, "dist", "claude", ".claude");
 
 // The per-intent WORKSPACE layout the fixtures seed (P9 — the flat amadeus-docs/
-// layout is retired). A fixture project gets a SEED-style shell (aidlc/active-space
+// layout is retired). A fixture project gets a SEED-style shell (amadeus/active-space
 // + spaces/default/) plus ONE default intent record so the path helpers resolve
 // the record dir rather than the bare space root. The slug is fixed + SLUG_RE-valid
 // and the id8 is all-hex so it matches the `<slug>-<id8>` record-dir shape. Tests
@@ -64,18 +64,18 @@ export const DEFAULT_INTENT_UUID = "00000000-0000-7000-8000-000000000001";
 const DEFAULT_RECORD_ID8 = DEFAULT_INTENT_UUID.replace(/-/g, "").slice(-16);
 export const DEFAULT_RECORD_DIR = `fixture-${DEFAULT_RECORD_ID8}`;
 // A FIXED per-clone audit-shard token seeded into every fixture project's
-// gitignored aidlc/.amadeus-clone-id. Pinning it makes the audit shard a spawned
+// gitignored amadeus/.amadeus-clone-id. Pinning it makes the audit shard a spawned
 // tool resolves (auditShardName = `<host>-<clone>.md`) DETERMINISTIC, so a test
 // that pre-seeds a shard header or reads back a specific shard agrees with the
 // subprocess. On a real project the token is minted + gitignored per clone; a
 // fixture wants it stable across the test process and the tools it spawns.
 export const FIXTURE_CLONE_ID = "fixturecloneid01";
 // The relocated method ("memory") ships at the dist tree ROOT (beside .claude/),
-// at aidlc/spaces/default/memory/. A fixture project must copy this alongside
+// at amadeus/spaces/default/memory/. A fixture project must copy this alongside
 // .claude/ so the resolver's default (join(<harness>/tools, "..", "..",
-// aidlc/spaces/default/memory)) finds the rule layers. (NOTE: P5 copies the
+// amadeus/spaces/default/memory)) finds the rule layers. (NOTE: P5 copies the
 // shipped method tree as-is; P9 owns the full per-intent fixture re-root.)
-export const AMADEUS_MEMORY_SRC = join(REPO_ROOT, "dist", "claude", "aidlc");
+export const AMADEUS_MEMORY_SRC = join(REPO_ROOT, "dist", "claude", "amadeus");
 export const FIXTURES_DIR = join(REPO_ROOT, "tests", "fixtures");
 
 const RETRYABLE_RM_CODES = new Set(["EBUSY", "ENOTEMPTY", "EPERM"]);
@@ -83,7 +83,7 @@ const RETRYABLE_RM_CODES = new Set(["EBUSY", "ENOTEMPTY", "EPERM"]);
 /**
  * Unset AIDLC-related env vars that a developer's shell (or a prior test) may
  * have leaked, so fixture-defined defaults aren't shadowed. Mirrors
- * reset_aidlc_env (fixtures.sh:16-18).
+ * reset_amadeus_env (fixtures.sh:16-18).
  */
 export function resetAidlcEnv(): void {
   delete process.env.AMADEUS_DEFAULT_SCOPE;
@@ -91,7 +91,7 @@ export function resetAidlcEnv(): void {
 
 /**
  * Create a bare temp project dir seeded with the per-intent workspace shell
- * (aidlc/active-space + spaces/default/ + one default intent record). Mirrors
+ * (amadeus/active-space + spaces/default/ + one default intent record). Mirrors
  * create_test_project (fixtures.sh:20-33). On Windows (Git Bash / MSYS) the
  * raw mktemp path is a POSIX path native Bun cannot resolve; cygpath -m
  * rewrites it to an absolute Windows path with forward slashes that both Git
@@ -126,7 +126,7 @@ export function createTestProject(): string {
  * The absolute intents dir for a space: `<proj>/amadeus/spaces/<space>/intents`.
  */
 export function intentsDirOf(proj: string, space = DEFAULT_SPACE): string {
-  return join(proj, "aidlc", "spaces", space, "intents");
+  return join(proj, "amadeus", "spaces", space, "intents");
 }
 
 /**
@@ -177,13 +177,13 @@ export function seededAuditShard(proj: string, space = DEFAULT_SPACE): string {
  */
 function seedWorkspaceShell(proj: string, space = DEFAULT_SPACE): void {
   const intentsDir = intentsDirOf(proj, space);
-  mkdirSync(join(proj, "aidlc", "spaces", space, "memory"), { recursive: true });
+  mkdirSync(join(proj, "amadeus", "spaces", space, "memory"), { recursive: true });
   mkdirSync(seededRecordDir(proj, space), { recursive: true });
   // Pin the per-clone audit-shard token so a spawned tool's shard is
   // deterministic (see FIXTURE_CLONE_ID / seededAuditShard).
-  writeFileSync(join(proj, "aidlc", ".amadeus-clone-id"), `${FIXTURE_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(proj, "amadeus", ".amadeus-clone-id"), `${FIXTURE_CLONE_ID}\n`, "utf-8");
   // The cursors (per-user, gitignored on a real project) + the canonical registry.
-  writeFileSync(join(proj, "aidlc", "active-space"), `${space}\n`, "utf-8");
+  writeFileSync(join(proj, "amadeus", "active-space"), `${space}\n`, "utf-8");
   writeFileSync(join(intentsDir, "active-intent"), `${DEFAULT_RECORD_DIR}\n`, "utf-8");
   writeFileSync(
     join(intentsDir, "intents.json"),
@@ -327,7 +327,7 @@ export function setupWorktreeFixture(): string {
   git(["-c", "user.email=t@x", "-c", "user.name=t", "commit", "-qm", "init"]);
   // Seed the per-intent workspace shell + default record so the data-path
   // helpers (and the worktree-mirror resolution that threads relativeRecordDir)
-  // anchor under aidlc/spaces/default/intents/<record>/ instead of a flat
+  // anchor under amadeus/spaces/default/intents/<record>/ instead of a flat
   // amadeus-docs/ tree.
   seedWorkspaceShell(proj);
   return proj;
@@ -446,11 +446,11 @@ export function setupIntegrationProject(
   if (!existsSync(settings) && existsSync(settingsExample)) {
     cpSync(settingsExample, settings);
   }
-  // Copy the relocated method tree (aidlc/spaces/default/memory/) to the project
+  // Copy the relocated method tree (amadeus/spaces/default/memory/) to the project
   // root beside .claude/ — the resolver reads the rule layers from there now
   // (P5 relocation). Absent in a tree built before P5, so guard it.
   if (existsSync(AMADEUS_MEMORY_SRC)) {
-    cpSync(AMADEUS_MEMORY_SRC, join(proj, "aidlc"), { recursive: true });
+    cpSync(AMADEUS_MEMORY_SRC, join(proj, "amadeus"), { recursive: true });
   }
 
   if (opts.withState) seedStateFile(proj, opts.withState);
@@ -548,7 +548,7 @@ export function setupIntegrationProject(
 //
 // Harness-parameterized so all three logic drivers (Claude SDK · Kiro ACP ·
 // Codex exec) reuse ONE fixture: each copies the shipped dist/<harness>/ shell
-// (engine dir + the sibling aidlc/ memory shell) into the root, exactly as
+// (engine dir + the sibling amadeus/ memory shell) into the root, exactly as
 // setupIntegrationProject / setupTuiProject / setupCodexProject do.
 // ============================================================================
 
@@ -562,7 +562,7 @@ export type JourneyHarness = "claude" | "kiro" | "codex";
 
 export interface WorkspaceJourney {
   /** The tmp workspace root (canonical realpath) — the project dir every driver
-   *  points the engine at (--project-dir / spawn cwd). The aidlc/ roof + the
+   *  points the engine at (--project-dir / spawn cwd). The amadeus/ roof + the
    *  harness engine dir live directly under here; the sibling repos are children. */
   root: string;
   /** Sibling repo dirs (immediate children of root), git-init'd with one commit
@@ -594,7 +594,7 @@ function gitInit(dir: string, seedFile: string): void {
 
 /**
  * Scaffold a multi-repo workspace journey root and return its paths. Copies the
- * shipped dist/<harness>/ shell (engine dir + the sibling aidlc/ memory shell)
+ * shipped dist/<harness>/ shell (engine dir + the sibling amadeus/ memory shell)
  * into a fresh os.tmpdir() root, then git-init's two sibling repos (repo-a,
  * repo-b) as immediate children so discoverSiblingRepos finds them sorted. Does
  * NOT auto-birth an intent — the journey's step 1 does that live; the shell ships
@@ -610,19 +610,19 @@ export function setupWorkspaceJourney(harness: JourneyHarness = "claude"): Works
   const home = join(root, ".home");
   mkdirSync(home, { recursive: true });
 
-  // 1. Copy the shipped harness shell: the engine dir + the sibling aidlc/ memory
+  // 1. Copy the shipped harness shell: the engine dir + the sibling amadeus/ memory
   //    shell (all three dist trees ship dist/<h>/amadeus/{active-space,spaces/default}).
   if (harness === "kiro") {
     cpSync(join(KIRO_DIST, ".kiro"), join(root, ".kiro"), { recursive: true });
     cpSync(join(KIRO_DIST, "AGENTS.md"), join(root, "AGENTS.md"));
-    cpSync(join(KIRO_DIST, "aidlc"), join(root, "aidlc"), { recursive: true });
+    cpSync(join(KIRO_DIST, "amadeus"), join(root, "amadeus"), { recursive: true });
   } else if (harness === "codex") {
     cpSync(join(CODEX_DIST, ".codex"), join(root, ".codex"), { recursive: true });
     cpSync(join(root, ".codex", "config.toml.example"), join(root, ".codex", "config.toml"));
     cpSync(join(root, ".codex", "hooks.json.example"), join(root, ".codex", "hooks.json"));
     cpSync(join(CODEX_DIST, ".agents"), join(root, ".agents"), { recursive: true });
     cpSync(join(CODEX_DIST, "AGENTS.md"), join(root, "AGENTS.md"));
-    cpSync(join(CODEX_DIST, "aidlc"), join(root, "aidlc"), { recursive: true });
+    cpSync(join(CODEX_DIST, "amadeus"), join(root, "amadeus"), { recursive: true });
   } else {
     cpSync(join(CLAUDE_DIST, ".claude"), join(root, ".claude"), { recursive: true });
     const claudeMdExample = join(root, ".claude", "CLAUDE.md.example");
@@ -631,13 +631,13 @@ export function setupWorkspaceJourney(harness: JourneyHarness = "claude"): Works
     const settingsExample = join(root, ".claude", "settings.json.example");
     const settings = join(root, ".claude", "settings.json");
     if (!existsSync(settings) && existsSync(settingsExample)) cpSync(settingsExample, settings);
-    cpSync(join(CLAUDE_DIST, "aidlc"), join(root, "aidlc"), { recursive: true });
+    cpSync(join(CLAUDE_DIST, "amadeus"), join(root, "amadeus"), { recursive: true });
   }
 
   // Pin the per-clone audit-shard token (gitignored on a real project) so any
   // shard a spawned tool writes is deterministic — same posture as the per-intent
   // fixtures (FIXTURE_CLONE_ID / seededAuditShard).
-  writeFileSync(join(root, "aidlc", ".amadeus-clone-id"), `${FIXTURE_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(root, "amadeus", ".amadeus-clone-id"), `${FIXTURE_CLONE_ID}\n`, "utf-8");
 
   // 2. Two git-init'd sibling repos as immediate children of the root, each with a
   //    tiny source file so a reverse-engineering scan has real content and the

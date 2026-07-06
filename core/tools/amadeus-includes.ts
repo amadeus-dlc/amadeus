@@ -1,7 +1,7 @@
 // amadeus-includes.ts — the harness-native rule-include re-pointer.
 //
 // The AI-DLC method (the layered practice files org/team/project + phase rules)
-// lives ONCE at the workspace root under aidlc/spaces/<space>/memory/. Each
+// lives ONCE at the workspace root under amadeus/spaces/<space>/memory/. Each
 // harness reads it via its OWN native include, evaluated by the CLI *before*
 // AIDLC's engine runs:
 //   • Claude — an @-import stub at <harness>/rules/amadeus.md naming each method file.
@@ -13,7 +13,7 @@
 // Codex's config.toml holds model/provider/sandbox config — so they cannot be
 // gitignored+generated without a fresh-clone chicken-and-egg). They ship pointed
 // at the `default` space. `repointHarnessIncludes(projectDir, space)` does a
-// SURGICAL in-place rewrite of ONLY the `aidlc/spaces/<X>/memory` pointer
+// SURGICAL in-place rewrite of ONLY the `amadeus/spaces/<X>/memory` pointer
 // segment, leaving every other byte untouched. Identical treatment for all three
 // harnesses — no file is created, regenerated whole, or special-cased.
 //
@@ -40,17 +40,17 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { activeSpace, harnessDir, writeFileAtomic } from "./amadeus-lib.ts";
 
-/** Workspace-relative POSIX memory path for a space: `aidlc/spaces/<space>/memory`.
+/** Workspace-relative POSIX memory path for a space: `amadeus/spaces/<space>/memory`.
  *  POSIX separators — these strings live in include files read identically on
  *  every OS. */
 function spaceMemoryRel(space: string): string {
-  return `aidlc/spaces/${space}/memory`;
+  return `amadeus/spaces/${space}/memory`;
 }
 
-// A prior-space memory path inside a Claude @-line: `@<dots>/aidlc/spaces/<X>/memory/<file>`.
+// A prior-space memory path inside a Claude @-line: `@<dots>/amadeus/spaces/<X>/memory/<file>`.
 // Captures the leading `@` + any relative `../` prefix (group 1) and the file
 // sub-path under memory/ (group 2) so only the `spaces/<X>` segment is swapped.
-const CLAUDE_AT_LINE = /^(@(?:\.\.\/)*)aidlc\/spaces\/[^/]+\/memory\/(.+)$/;
+const CLAUDE_AT_LINE = /^(@(?:\.\.\/)*)amadeus\/spaces\/[^/]+\/memory\/(.+)$/;
 
 /** Rewrite every method @-import line in a Claude stub to the given space,
  *  preserving the relative prefix, the named file, the comment header, and all
@@ -82,7 +82,7 @@ function repointKiroAgentResources(raw: string, space: string): string | null {
   const target = `file://${spaceMemoryRel(space)}/**/*.md`;
   let changed = false;
   const rewritten = json.resources.map((r) => {
-    if (typeof r === "string" && /^file:\/\/aidlc\/spaces\/[^/]+\/memory\/\*\*\/\*\.md$/.test(r)) {
+    if (typeof r === "string" && /^file:\/\/amadeus\/spaces\/[^/]+\/memory\/\*\*\/\*\.md$/.test(r)) {
       if (r !== target) changed = true;
       return target;
     }
@@ -99,7 +99,7 @@ function repointKiroAgentResources(raw: string, space: string): string | null {
  *  line is absent or already correct. */
 function repointCodexConfig(raw: string, space: string): string | null {
   const target = spaceMemoryRel(space);
-  const re = /(AMADEUS_RULES_DIR\s*=\s*")aidlc\/spaces\/[^"]*\/memory(")/;
+  const re = /(AMADEUS_RULES_DIR\s*=\s*")amadeus\/spaces\/[^"]*\/memory(")/;
   if (!re.test(raw)) return null;
   const next = raw.replace(re, `$1${target}$2`);
   return next === raw ? null : next;
@@ -130,7 +130,7 @@ function repointFile(
 }
 
 /** Surgically repoint the active harness's native rule include(s) at the given
- *  space's method tree (`aidlc/spaces/<space>/memory/`). Idempotent — a no-op
+ *  space's method tree (`amadeus/spaces/<space>/memory/`). Idempotent — a no-op
  *  when the surfaces already point at `space` (so a `default`-cursor single-team
  *  user never dirties the committed tree). Touches ONLY the surfaces of the
  *  harness resolved from `harnessDir()`.

@@ -172,31 +172,31 @@ const HARNESS_DATA = "tools/data/harness.json";
 // per-harness native include points at it (Claude @-stub, Kiro resources glob,
 // Codex AGENTS.md/@-mention) — one copy, no drift.
 const MEMORY_SRC = "memory";
-const MEMORY_DST = join("aidlc", "spaces", "default", "memory");
+const MEMORY_DST = join("amadeus", "spaces", "default", "memory");
 
 // Engine-only-install self-heal: the SAME method content (core/memory/) ALSO emitted
 // INSIDE the engine dir at <harnessDir>/tools/data/memory-seed/, mirroring how
 // tools/data/templates ships (an engine-bundled, copy-out-at-runtime data dir
 // resolved relative to the running tool — see frameworkTemplatesDir/DATA_DIR in
 // amadeus-graph.ts). This lets an ENGINE-ONLY install (a user who copies only
-// dist/<h>/.<engine>/ and NOT the sibling aidlc/ shell) self-heal: the first
-// /amadeus seeds aidlc/spaces/default/memory/ from this bundled copy if (and only
+// dist/<h>/.<engine>/ and NOT the sibling amadeus/ shell) self-heal: the first
+// /amadeus seeds amadeus/spaces/default/memory/ from this bundled copy if (and only
 // if) it is absent (see ensureWorkspaceDirs). The sibling MEMORY_DST shell STILL
 // ships for normal installs — this is an additive fallback, not a replacement.
 const MEMORY_SEED_DST = join("tools", "data", "memory-seed");
 
 // The active-space CURSOR shipped as part of the workspace shell (SEED). It
-// lives at aidlc/active-space (ABOVE spaces/, not inside memory/) and holds the
+// lives at amadeus/active-space (ABOVE spaces/, not inside memory/) and holds the
 // name of the space the next /amadeus resolves against. Ships pointed at the
 // always-present "default" space so a fresh copy resolves with zero ceremony.
 // NOTE: it is GITIGNORED in the user's workspace (a per-user session cursor,
 // vision 5.1 - teammates legitimately point at different spaces at once), yet
 // dist must SHIP it as part of the shell. The two reconcile: the dist
-// .gitignore ignores aidlc/active-space for the END USER (their first /amadeus
+// .gitignore ignores amadeus/active-space for the END USER (their first /amadeus
 // cursor-write stays untracked), while OUR repo commits the shipped pointer
 // once (git add -f on the seed commit) - after which it is tracked and the
 // gitignore is moot for that path here, exactly like a shipped default .env.
-const ACTIVE_SPACE_REL = join("aidlc", "active-space");
+const ACTIVE_SPACE_REL = join("amadeus", "active-space");
 const ACTIVE_SPACE_VALUE = "default\n";
 
 // Write tools/data/harness.json from manifest data. Today it carries just the
@@ -249,7 +249,7 @@ function emitMemorySeed(treeRoot: string, harnessDir: string, rulesRename: strin
   }
 }
 
-// Emit the active-space CURSOR (aidlc/active-space -> "default") into the dist
+// Emit the active-space CURSOR (amadeus/active-space -> "default") into the dist
 // tree, as part of the workspace shell (SEED). Lives at the dist root beside
 // the harness dir (dist/<name>/amadeus/active-space), OUTSIDE <harnessDir>, like
 // the memory tree and projectRoot harness files. Returns the absolute path it
@@ -369,14 +369,14 @@ function buildTree(m: HarnessManifest, outRoot: string, seedFrom: string): strin
   const memoryDir = join(outRoot, MEMORY_DST);
   outsideHarness.push(...emitMemory(outRoot, harnessDir, m.rulesRename));
 
-  // 2d. Emit the active-space cursor (aidlc/active-space -> "default") — part of
+  // 2d. Emit the active-space cursor (amadeus/active-space -> "default") — part of
   //     the shipped shell so a fresh copy resolves the default space with no
   //     ceremony (SEED). Outside <harnessDir>, like the memory tree.
   outsideHarness.push(emitActiveSpace(outRoot));
 
   // 2e. Engine-only-install self-heal: bundle the SAME method content INSIDE the
   //     engine dir at <harnessDir>/tools/data/memory-seed/, so an engine-only
-  //     install (no sibling aidlc/ shell) can self-heal — the first /amadeus copies
+  //     install (no sibling amadeus/ shell) can self-heal — the first /amadeus copies
   //     it out via ensureWorkspaceDirs. Inside <harnessDir>, so the in-harness
   //     walk byte-diffs it under --check (no outsideHarness entry).
   emitMemorySeed(treeRoot, harnessDir, m.rulesRename);
@@ -392,7 +392,7 @@ function buildTree(m: HarnessManifest, outRoot: string, seedFrom: string): strin
   seedCompiledData(treeRoot, seedFrom);
   // Point loadRules at the emitted method tree via AMADEUS_RULES_DIR so
   // rules_in_context is populated at compile time. The method now lives at the
-  // workspace-root aidlc/spaces/default/memory/ (NOT inside <harnessDir>), so
+  // workspace-root amadeus/spaces/default/memory/ (NOT inside <harnessDir>), so
   // every harness — claude included — needs the seam set; the resolver's own
   // default would resolve relative to the in-tree tools/ dir, which points at
   // the same place, but the assembled tmp tree under --check makes the explicit
@@ -520,7 +520,7 @@ function writeHarness(name: string): void {
     // Also sweep the workspace-root method tree (dist/<name>/amadeus/) so a
     // removed/renamed memory file (e.g. a dropped phase rule) doesn't linger
     // beside the freshly emitted one — the harness-dir sweep above misses it.
-    const memoryRoot = join(distDir, "aidlc");
+    const memoryRoot = join(distDir, "amadeus");
     if (existsSync(memoryRoot)) rmSync(memoryRoot, { recursive: true, force: true });
     buildTree(m, distDir, seedStash);
     console.log(`[${name}] regenerated dist/${name}/${m.harnessDir}`);
@@ -584,12 +584,12 @@ function checkHarness(name: string): string[] {
         problems.push(`DIFFERS: ${name}/${rel}`);
     }
     // Orphan scan over out-of-harness dirs the build owns (codex emit's
-    // .agents/; the method tree at aidlc/). committedEmitSet holds every
+    // .agents/; the method tree at amadeus/). committedEmitSet holds every
     // out-of-harness file the build produced (emit output + the memory tree), so
     // a committed file under these roots that the build DIDN'T produce is a
     // stale orphan — e.g. a removed phase rule still committed under
     // dist/<name>/amadeus/spaces/default/memory/phases/.
-    for (const sub of [".agents", "aidlc"]) {
+    for (const sub of [".agents", "amadeus"]) {
       const dir = join(committedDistRoot, sub);
       if (!existsSync(dir)) continue;
       for (const f of walk(dir)) {

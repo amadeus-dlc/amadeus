@@ -694,7 +694,7 @@ describe("t66 AMADEUS_STAGE_GRAPH env override (spawnSync env-seam)", () => {
     // Forward-slash the import specifier: this path is interpolated into a
     // `bun -e` source string, and on native Windows join() yields backslashes
     // that the eval parser eats as escape sequences (\t -> TAB, \c, \d ...),
-    // mangling the path to "C:aidlc...distclaude.claude<TAB>ools...". bun/node
+    // mangling the path to "C:amadeus...distclaude.claude<TAB>ools...". bun/node
     // accept forward-slash specifiers on every OS; no-op on macOS/Linux.
     const libImport = join(TOOLS_DIR, "amadeus-lib.ts").replace(/\\/g, "/");
     const res = spawnSync(

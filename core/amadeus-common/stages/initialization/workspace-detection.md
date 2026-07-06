@@ -40,7 +40,7 @@ MANDATORY: Follow stage-protocol.md for state tracking and audit logging.
 
 ### Step 2: Scan Workspace
 
-The scanner walks the project directory one level deep plus known source directories (`src/`, `app/`, `lib/`, `pages/`, `components/`, `tests/`), excluding the harness directories (`.claude/`, `.kiro/`, `.codex/`), `aidlc/`, `node_modules/`, `.git/`, `dist/`, `build/`, `.next/`, `target/`, `vendor/`.
+The scanner walks the project directory one level deep plus known source directories (`src/`, `app/`, `lib/`, `pages/`, `components/`, `tests/`), excluding the harness directories (`.claude/`, `.kiro/`, `.codex/`), `amadeus/`, `node_modules/`, `.git/`, `dist/`, `build/`, `.next/`, `target/`, `vendor/`.
 
 Scan signals:
 - Directory structure (top-level and key subdirectories)
@@ -53,7 +53,7 @@ Scan signals:
 
 **Exclude from analysis** (framework scaffolding, not application code):
 - The harness directory (`.claude/`, `.kiro/`, or `.codex/`) — AI-DLC framework files (skills, agents, hooks, tools, knowledge)
-- `aidlc/` — AI-DLC workspace root (the space tree at `aidlc/spaces/<space>/...`)
+- `amadeus/` — AI-DLC workspace root (the space tree at `amadeus/spaces/<space>/...`)
 - `node_modules/`, `.git/`
 
 ### Step 3: Detect Project Type
@@ -72,7 +72,7 @@ Classify based on the scanner's evidence:
 - No package manifest, OR manifest with only scaffolding/dev tooling
 - No application source directories
 
-Does NOT make a project brownfield: README, .gitignore, LICENSE, editor configs, empty directories, CI/CD boilerplate without application code, the harness directory (`.claude/`, `.kiro/`, or `.codex/`, AI-DLC framework), `aidlc/` directory (AI-DLC workspace artifacts).
+Does NOT make a project brownfield: README, .gitignore, LICENSE, editor configs, empty directories, CI/CD boilerplate without application code, the harness directory (`.claude/`, `.kiro/`, or `.codex/`, AI-DLC framework), `amadeus/` directory (AI-DLC workspace artifacts).
 
 ### Step 4: Verify Classification
 

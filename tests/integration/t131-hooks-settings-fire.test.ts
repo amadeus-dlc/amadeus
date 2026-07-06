@@ -2,7 +2,7 @@
 //
 // t131 — the hooks move (Fork 2→B). Migrated from
 // tests/integration/t131-hooks-settings-fire.sh (TAP plan 16). With the six
-// workflow-spine hooks relocated from aidlc/SKILL.md frontmatter into
+// workflow-spine hooks relocated from amadeus/SKILL.md frontmatter into
 // project-wide settings.json, this proves two halves:
 //
 //   (1) REGISTRATION (mechanism none) — settings.json (a static JSON file) is
@@ -10,7 +10,7 @@
 //       audit-logger + sensor-fire on PostToolUse(Write|Edit), sync-statusline
 //       on PostToolUse(TaskUpdate), runtime-compile on PostToolUse(Bash),
 //       validate-state on PreCompact, log-subagent on SubagentStop, stop on
-//       Stop; and aidlc/SKILL.md no longer carries a `hooks:` frontmatter block
+//       Stop; and amadeus/SKILL.md no longer carries a `hooks:` frontmatter block
 //       (the move removed it entirely). The .sh shelled `bun -e` JSON.parse
 //       passes; here we read + JSON.parse the same files IN-PROCESS — no LLM,
 //       no subprocess, the data is on disk.
@@ -239,7 +239,7 @@ describe("t131 hooks-move registration (settings.json + SKILL.md, mechanism none
     ).toBe("Bash");
   });
 
-  test("R10: aidlc/SKILL.md carries no hooks: block (moved to settings.json) [.sh test 10]", () => {
+  test("R10: amadeus/SKILL.md carries no hooks: block (moved to settings.json) [.sh test 10]", () => {
     // .sh: assert_not_grep SKILL "^hooks:". Match the exact anchored pattern.
     const skill = readFileSync(SKILL, "utf-8");
     const hasHooksLine = skill
@@ -276,7 +276,7 @@ function makeProject(withState: boolean): string {
   for (const h of ["amadeus-audit-logger.ts", "amadeus-runtime-compile.ts"]) {
     copyFileSync(join(SRC_HOOKS, h), join(proj, ".claude", "hooks", h));
   }
-  writeFileSync(join(proj, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(proj, "amadeus", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
   if (withState) {
     // State into the record so the active-intent cursor resolves → the hooks
     // anchor under the record (docsRoot/auditFilePath/runtimeGraphPath).

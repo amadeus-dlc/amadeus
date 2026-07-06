@@ -172,7 +172,7 @@ describe("t-tui-t73-intent-capture (answering the stage gate produces artifacts 
   test.skipIf(SKIP_REASON !== null)(
     `intent-capture jump commits intent-statement + answered questions on disk${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
     async () => {
-      const session = `aidlc_tui_t73_${process.pid}`;
+      const session = `amadeus_tui_t73_${process.pid}`;
       // Seed EXACTLY as the .sh: state at init-done (intent-capture next/current),
       // greenfield stub (drives workspace-detection to Greenfield), audit present.
       const sandbox = setupTuiProject({

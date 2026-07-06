@@ -55,7 +55,7 @@ const RECORD = "auth-aaaaaaaa";
 let proj: string;
 
 function recordPath(): string {
-  return join(proj, "aidlc", "spaces", SPACE, "intents", RECORD);
+  return join(proj, "amadeus", "spaces", SPACE, "intents", RECORD);
 }
 function shardDir(): string {
   return join(recordPath(), "audit");
@@ -65,11 +65,11 @@ function shardDir(): string {
  *  a record dir with the genuine v7 construction-stage state file (it carries
  *  the Worktree Path + Bolt Refs fields handleFork's setFieldStrict requires). */
 function seedLayout(): void {
-  const intentsDir = join(proj, "aidlc", "spaces", SPACE, "intents");
+  const intentsDir = join(proj, "amadeus", "spaces", SPACE, "intents");
   mkdirSync(join(intentsDir, RECORD), { recursive: true });
   const stateBody = readFileSync(join(FIXTURES_DIR, "state-construction.md"), "utf-8");
   writeFileSync(join(intentsDir, RECORD, "amadeus-state.md"), stateBody, "utf-8");
-  writeFileSync(join(proj, "aidlc", "active-space"), `${SPACE}\n`, "utf-8");
+  writeFileSync(join(proj, "amadeus", "active-space"), `${SPACE}\n`, "utf-8");
   writeFileSync(join(intentsDir, "active-intent"), `${RECORD}\n`, "utf-8");
 }
 

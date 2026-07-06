@@ -60,7 +60,7 @@ function util(args: string[], p = proj): Run {
 }
 
 const intentsDir = (p: string, space = "default"): string =>
-  join(p, "aidlc", "spaces", space, "intents");
+  join(p, "amadeus", "spaces", space, "intents");
 
 // A populated flat audit.md with two REAL event blocks in the exact on-disk
 // shape appendAuditEntryUnlocked writes: `\n## <heading>\n**Timestamp**: ...\n
@@ -137,7 +137,7 @@ describe("t172 migration preserves the pre-migration audit trail (B2)", () => {
     // Migrated state carries the flat Project field.
     expect(readFileSync(join(record, "amadeus-state.md"), "utf-8")).toContain("Legacy App");
     // .migrated marker exists (idempotency key).
-    expect(existsSync(join(proj, "aidlc", ".migrated"))).toBe(true);
+    expect(existsSync(join(proj, "amadeus", ".migrated"))).toBe(true);
     // The flat tree was git-rm'd from the working tree post-move.
     expect(existsSync(join(flat, "amadeus-state.md"))).toBe(false);
     expect(existsSync(join(flat, "audit.md"))).toBe(false);

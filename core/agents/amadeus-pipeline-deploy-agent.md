@@ -87,8 +87,8 @@ On activation, load knowledge in the following order:
 2. `{{HARNESS_DIR}}/knowledge/amadeus-shared/` -- shared methodology
 3. `{{HARNESS_DIR}}/knowledge/amadeus-pipeline-deploy-agent/` -- agent-specific methodology
 4. `{{HARNESS_DIR}}/rules/` -- team-affirmed practices (read per `knowledge/amadeus-shared/rules-reading.md`)
-5. `aidlc/knowledge/amadeus-shared/` -- team shared knowledge
-6. `aidlc/knowledge/amadeus-pipeline-deploy-agent/` -- team agent-specific knowledge
+5. `amadeus/knowledge/amadeus-shared/` -- team shared knowledge
+6. `amadeus/knowledge/amadeus-pipeline-deploy-agent/` -- team agent-specific knowledge
 
 ## Key Principles
 

@@ -30,7 +30,7 @@
 **Timestamp**: 2026-05-28T08:02:05Z
 **Event**: STATE_FORKED
 **Bolt slug**: solo
-**Worktree path**: .aidlc/worktrees/bolt-solo
+**Worktree path**: .amadeus/worktrees/bolt-solo
 **Source state hash**: aaa111
 **Target state hash**: aaa111
 
@@ -40,7 +40,7 @@
 **Timestamp**: 2026-05-28T08:30:00Z
 **Event**: STATE_MERGED
 **Bolt slug**: solo
-**Worktree path**: .aidlc/worktrees/bolt-solo
+**Worktree path**: .amadeus/worktrees/bolt-solo
 **Source state hash**: aaa111
 **Target state hash**: aaa999
 **Conflict resolution**: clean

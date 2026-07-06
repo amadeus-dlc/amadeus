@@ -26,7 +26,7 @@
 //   .sh T1  create happy path exits 0                       -> Test "1-5" (same)
 //   .sh T2  stdout contains '"emitted":"WORKTREE_CREATED"'   -> Test "1-5" (same)
 //   .sh T3  audit.md records the slug (Bolt slug.*demo)      -> Test "1-5" (same)
-//   .sh T4  worktree dir exists at .aidlc/worktrees/bolt-demo -> Test "1-5" (same)
+//   .sh T4  worktree dir exists at .amadeus/worktrees/bolt-demo -> Test "1-5" (same)
 //   .sh T5  worktree HEAD is on bolt-<slug>                  -> Test "1-5" (same:
 //           git rev-parse --abbrev-ref HEAD in the worktree == "bolt-demo")
 //   .sh T6  bad slug "Foo_Bar" exits non-zero                -> Test "6-7" (same)
@@ -93,7 +93,7 @@ function create(p: string, args: string[]): CliResult {
 }
 
 const wtPath = (p: string, slug: string): string =>
-  join(p, ".aidlc", "worktrees", `bolt-${slug}`);
+  join(p, ".amadeus", "worktrees", `bolt-${slug}`);
 
 /** Concatenate every audit shard (audit/*.md) for the seeded record — the tool
  *  emits WORKTREE_CREATED into its own per-clone shard. */

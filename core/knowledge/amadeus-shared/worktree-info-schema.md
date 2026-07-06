@@ -26,7 +26,7 @@ The exit-code contract mirrors `verify`'s semantics: non-zero is the halt signal
 ```json
 {
   "slug": "onboarding-wizard",
-  "path": "/Users/dev/project/.aidlc/worktrees/bolt-onboarding-wizard",
+  "path": "/Users/dev/project/.amadeus/worktrees/bolt-onboarding-wizard",
   "branch_name": "bolt-onboarding-wizard",
   "audit_timestamp": "2026-05-18T12:34:56Z",
   "merge_held": false
@@ -36,7 +36,7 @@ The exit-code contract mirrors `verify`'s semantics: non-zero is the halt signal
 Field semantics:
 
 - **`slug`** — echoes the input `--slug` flag verbatim. The slug is the bare kebab-case identifier (e.g. `onboarding-wizard`); the `bolt-` prefix on `path` and `branch_name` is added by `lib.ts:139` `worktreePath()` and the `amadeus-worktree create --slug <slug>` invocation. See SKILL.md per-Bolt loop "Slug derivation" paragraph for the `name → slug` transformation that produced the bare slug. The orchestrator uses this field to confirm correlation, not to pick a different one.
-- **`path`** — absolute filesystem path of the per-Bolt worktree at `<projectDir>/.aidlc/worktrees/bolt-<slug>`, parsed from the most-recent matching `WORKTREE_CREATED`'s `**Worktree path**:` field. The user `cd`s here to inspect a paused Bolt.
+- **`path`** — absolute filesystem path of the per-Bolt worktree at `<projectDir>/.amadeus/worktrees/bolt-<slug>`, parsed from the most-recent matching `WORKTREE_CREATED`'s `**Worktree path**:` field. The user `cd`s here to inspect a paused Bolt.
 - **`branch_name`** — git branch name on which the worktree sits at `bolt-<slug>`, parsed from `**Branch name**:`. Quoted from audit for source-of-truth consistency.
 - **`audit_timestamp`** — ISO 8601 timestamp of the matching `WORKTREE_CREATED` block. Useful for the orchestrator to reason about freshness; not currently surfaced in the AUQ prompt.
 - **`merge_held`** — boolean reflecting the `Merge-Held` field in the per-Bolt forked state at `<path>/amadeus-docs/amadeus-state.md` (`true` only if the file exists AND the field reads `true`; absence resolves to `false`). The orchestrator reads this on resume to decide whether dispatching `amadeus-bolt complete --merge --slug <slug>` is safe. The held state is set by `amadeus-bolt hold-merge --slug <slug>` before a multi-failure halt-and-ask sequence opens and cleared by `amadeus-bolt release-merge --slug <slug>` once all sibling AUQs resolve.
@@ -66,7 +66,7 @@ The orchestrator interpolates `path` and `branch_name` into the structured quest
 If a future surface (Windows PowerShell, mosh, narrow tmux pane) clips long paths in `question`, the documented fallback is to truncate with leading-ellipsis at directory boundaries while preserving the `bolt-<slug>` tail:
 
 ```
-.../project/.aidlc/worktrees/bolt-onboarding-wizard
+.../project/.amadeus/worktrees/bolt-onboarding-wizard
 ```
 
 This fallback is **not currently implemented** — current shipping behaviour assumes graceful wrap. If a regression surfaces, add a `--max-path-display <chars>` flag to `info` and have the orchestrator truncate per the rule above.

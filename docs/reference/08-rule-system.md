@@ -6,10 +6,10 @@ This chapter is the schema-level reference for the v0.5.0 rule system: where rul
 
 ## Layout
 
-Rules live in the space memory layer at `aidlc/spaces/<space>/memory/` (one hand-editable set at the workspace root, read by every harness via its native include — Claude `@`-import stub, Kiro resources glob, Codex `AMADEUS_RULES_DIR`) with neutral scope-named files:
+Rules live in the space memory layer at `amadeus/spaces/<space>/memory/` (one hand-editable set at the workspace root, read by every harness via its native include — Claude `@`-import stub, Kiro resources glob, Codex `AMADEUS_RULES_DIR`) with neutral scope-named files:
 
 ```
-aidlc/spaces/<space>/memory/
+amadeus/spaces/<space>/memory/
 ├── org.md
 ├── team.md
 ├── project.md
@@ -20,7 +20,7 @@ aidlc/spaces/<space>/memory/
     └── operation.md
 ```
 
-The layout consolidates team-authored harness config (formerly in a separate practices namespace) and self-learning guardrails (formerly two-deep) into a single space memory directory at `aidlc/spaces/<space>/memory/`.
+The layout consolidates team-authored harness config (formerly in a separate practices namespace) and self-learning guardrails (formerly two-deep) into a single space memory directory at `amadeus/spaces/<space>/memory/`.
 
 ## Filename-derived scope
 

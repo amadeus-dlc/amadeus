@@ -64,9 +64,9 @@ Path: `.claude/knowledge/amadeus-aws-platform-agent/`
 
 ### Team (Tier 2)
 
-Path: `aidlc/knowledge/amadeus-aws-platform-agent/` (the space-level knowledge dir; user-managed)
+Path: `amadeus/knowledge/amadeus-aws-platform-agent/` (the space-level knowledge dir; user-managed)
 
-A space-level directory the team creates when it has content (the engine ships `aidlc/knowledge/` empty). Populated by the team with project-specific
+A space-level directory the team creates when it has content (the engine ships `amadeus/knowledge/` empty). Populated by the team with project-specific
 infrastructure context such as existing VPC designs, AWS account structure,
 approved service catalog, or cost baselines.
 

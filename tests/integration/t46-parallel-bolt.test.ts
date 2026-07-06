@@ -112,8 +112,8 @@ async function raceFiveBolts(): Promise<RaceResult> {
   // is on one shard file). Without this, the 5 processes would race to MINT the
   // clone-id and a first-run mint race could split the 5 writes across two shards
   // — non-deterministic. The lock contention this test asserts is unchanged.
-  mkdirSync(join(proj, "aidlc"), { recursive: true });
-  writeFileSync(join(proj, "aidlc", ".amadeus-clone-id"), "cccccccccccc\n", "utf-8");
+  mkdirSync(join(proj, "amadeus"), { recursive: true });
+  writeFileSync(join(proj, "amadeus", ".amadeus-clone-id"), "cccccccccccc\n", "utf-8");
 
   const start = Date.now();
   const procs = [1, 2, 3, 4, 5].map((i) =>

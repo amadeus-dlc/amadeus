@@ -63,10 +63,10 @@ import { basename, join } from "node:path";
 import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
 // The phase rule files relocated from <harness>/rules/amadeus-phase-<phase>.md to
-// the workspace-root aidlc/spaces/default/memory/phases/<phase>.md (neutral,
+// the workspace-root amadeus/spaces/default/memory/phases/<phase>.md (neutral,
 // nested). They sit beside .claude/, so resolve PHASES_DIR from AMADEUS_SRC's
 // parent (the dist/claude/ root). STAGES_DIR stays under .claude/.
-const PHASES_DIR = join(AMADEUS_SRC, "..", "aidlc", "spaces", "default", "memory", "phases");
+const PHASES_DIR = join(AMADEUS_SRC, "..", "amadeus", "spaces", "default", "memory", "phases");
 const STAGES_DIR = join(AMADEUS_SRC, "amadeus-common", "stages");
 
 // The four non-initialization phases, in the order the .sh's `for phase in

@@ -162,7 +162,7 @@ function makeProject(): string {
     STUB_DISPATCHER,
     "utf-8",
   );
-  writeFileSync(join(proj, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(proj, "amadeus", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
   return proj;
 }
 
@@ -360,7 +360,7 @@ describe("t94 amadeus-sensor-fire hook — guards + early exits (migrated from t
     const proj = makeProjectActive();
     // A path outside amadeus-docs/ never matches **/amadeus-docs/**, so the per-entry
     // dispatch loop `continue`s on both applicable sensors (:199).
-    const r = runHook(proj, join(tmpdir(), "scratch-not-aidlc", "notes.txt"));
+    const r = runHook(proj, join(tmpdir(), "scratch-not-amadeus", "notes.txt"));
     expect(r.status).toBe(0);
     expect(existsSync(spawnLogPath(proj))).toBe(false);
   });
@@ -410,7 +410,7 @@ describe("t94 amadeus-sensor-fire hook — guards + early exits (migrated from t
 
   test("heartbeat file carries an ISO timestamp [.sh case 11]", () => {
     const proj = makeProjectActive();
-    // Non-aidlc path: passes every guard up to + including the heartbeat write,
+    // Non-amadeus path: passes every guard up to + including the heartbeat write,
     // then no glob match -> no spawn. Heartbeat bytes are the assertion surface.
     runHook(proj, join(tmpdir(), "scratch-hb", "x.txt"));
     const hb = readFileSync(heartbeatPath(proj), "utf-8");

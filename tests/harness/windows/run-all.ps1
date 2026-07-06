@@ -11,16 +11,16 @@
   skipping the token-spending TUI journeys.
 
 .PARAMETER ProjectDir
-  Synced repo directory. Default C:\aidlc.
+  Synced repo directory. Default C:\amadeus.
 
 .PARAMETER Parallel
   Runner parallelism passed to -P. Default 8.
 
 .EXAMPLE
-  powershell -ExecutionPolicy Bypass -File C:\aidlc\tests\harness\windows\run-all.ps1 -ProjectDir C:\aidlc -Parallel 8
+  powershell -ExecutionPolicy Bypass -File C:\amadeus\tests\harness\windows\run-all.ps1 -ProjectDir C:\amadeus -Parallel 8
 #>
 param(
-  [string]$ProjectDir = "C:\aidlc",
+  [string]$ProjectDir = "C:\amadeus",
   [int]$Parallel = 8
 )
 $ErrorActionPreference = "Continue"

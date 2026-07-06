@@ -23,7 +23,7 @@ const manifest: HarnessManifest = {
 
   // core/<src> → <harnessDir>/<dst>. Claude keeps every core dir name as-is.
   // The method ("memory") is NO LONGER a core dir projected into the harness
-  // tree — it relocated to the workspace-root aidlc/spaces/default/memory/ (one
+  // tree — it relocated to the workspace-root amadeus/spaces/default/memory/ (one
   // hand-editable copy, emitted by the packager's memory step), read by Claude
   // via the .claude/rules/amadeus.md @-stub (a harnessFile). The rulesRename
   // machinery (steering/amadeus-rules) still rewrites the <harness>/rules/ prose
@@ -48,7 +48,7 @@ const manifest: HarnessManifest = {
     { src: "skills/amadeus/SKILL.md", dst: "skills/amadeus/SKILL.md" },
     { src: "skills/amadeus/question-rendering.md", dst: "skills/amadeus/question-rendering.md" },
     // The AIDLC method @-import stub: .claude/rules/amadeus.md pulls the relocated
-    // method (aidlc/spaces/default/memory/*) into Claude's ambient context by
+    // method (amadeus/spaces/default/memory/*) into Claude's ambient context by
     // reference (explicit @-imports, no copy). The rules/ dir is no longer a
     // core projection — this stub is the only file in it.
     { src: "rules-amadeus.md", dst: "rules/amadeus.md" },

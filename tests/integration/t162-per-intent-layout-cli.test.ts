@@ -2,7 +2,7 @@
 //
 // t162 — Integration: drive REAL tools against a PER-INTENT (new-layout) project
 // and prove the threaded space+intent selector actually re-roots writes/reads to
-// aidlc/spaces/<sp>/intents/<slug>-<id8>/ — NOT the flat amadeus-docs/ fallback.
+// amadeus/spaces/<sp>/intents/<slug>-<id8>/ — NOT the flat amadeus-docs/ fallback.
 //
 // WHY THIS TEST EXISTS (the test-integrity coverage gap, itself a review MAJOR):
 // when first written, NO CLI-driven test seeded a per-intent layout — the
@@ -19,7 +19,7 @@
 // (<host>-<pid>.md) diverged → merge re-resolved a different shard → existsSync
 // fail → "main audit not found ... run --init first" → every Bolt merge failed on
 // a new-layout project. The fix makes the shard identity PER-CLONE (a stable
-// gitignored aidlc/.amadeus-clone-id token), so both PIDs resolve ONE shard. Case
+// gitignored amadeus/.amadeus-clone-id token), so both PIDs resolve ONE shard. Case
 // "bolt fork+merge round-trips" drives that real two-process fork→merge and
 // asserts it succeeds. Against the pre-fix code it FAILS at complete --merge.
 //
@@ -103,7 +103,7 @@ const DEFAULT_SPACE = "default";
 
 /** Absolute per-intent record dir for a seeded intent. */
 function recordPath(proj: string, recordDir: string): string {
-  return join(proj, "aidlc", "spaces", DEFAULT_SPACE, "intents", recordDir);
+  return join(proj, "amadeus", "spaces", DEFAULT_SPACE, "intents", recordDir);
 }
 
 /** The audit/ shard dir for an intent; [] when absent. */
@@ -130,7 +130,7 @@ function readShards(proj: string, recordDir: string): string {
 
 /**
  * Build a git-init'd project seeded with the NEW (per-intent) layout — NOT flat
- * amadeus-docs/. Seeds: aidlc/active-space cursor, two intent records under
+ * amadeus-docs/. Seeds: amadeus/active-space cursor, two intent records under
  * spaces/default/intents/<record>/amadeus-state.md (construction-stage state), an
  * intents.json registry, and the active-intent cursor pointing at recordA. The
  * record state + intents.json are COMMITTED so the git worktree (branched from
@@ -155,12 +155,12 @@ function makeNewLayoutProj(recordA: string, recordB: string): string {
   writeFileSync(join(proj, "README.md"), "seed\n");
 
   const stateBody = readFileSync(join(FIXTURES_DIR, "state-construction.md"), "utf-8");
-  const intentsDir = join(proj, "aidlc", "spaces", DEFAULT_SPACE, "intents");
+  const intentsDir = join(proj, "amadeus", "spaces", DEFAULT_SPACE, "intents");
   for (const rec of [recordA, recordB]) {
     mkdirSync(join(intentsDir, rec), { recursive: true });
     writeFileSync(join(intentsDir, rec, "amadeus-state.md"), stateBody);
   }
-  mkdirSync(join(proj, "aidlc", "spaces", DEFAULT_SPACE, "memory"), { recursive: true });
+  mkdirSync(join(proj, "amadeus", "spaces", DEFAULT_SPACE, "memory"), { recursive: true });
   // intents.json registry (canonical human list — committed).
   writeFileSync(
     join(intentsDir, "intents.json"),
@@ -175,18 +175,18 @@ function makeNewLayoutProj(recordA: string, recordB: string): string {
     )}\n`,
   );
   // Cursors — gitignored (per-user), so they live on disk but never commit.
-  writeFileSync(join(proj, "aidlc", "active-space"), `${DEFAULT_SPACE}\n`);
+  writeFileSync(join(proj, "amadeus", "active-space"), `${DEFAULT_SPACE}\n`);
   writeFileSync(join(intentsDir, "active-intent"), `${recordA}\n`);
   // Ship the framework split: gitignore cursors + machine-local audit/runtime.
   writeFileSync(
     join(proj, ".gitignore"),
     [
-      "aidlc/active-space",
-      "aidlc/.amadeus-clone-id",
-      "aidlc/spaces/*/intents/active-intent",
-      "aidlc/spaces/*/intents/*/runtime-graph.json",
-      "aidlc/spaces/*/intents/*/.amadeus-*",
-      "aidlc/spaces/*/intents/*/audit/",
+      "amadeus/active-space",
+      "amadeus/.amadeus-clone-id",
+      "amadeus/spaces/*/intents/active-intent",
+      "amadeus/spaces/*/intents/*/runtime-graph.json",
+      "amadeus/spaces/*/intents/*/.amadeus-*",
+      "amadeus/spaces/*/intents/*/audit/",
       "",
     ].join("\n"),
   );

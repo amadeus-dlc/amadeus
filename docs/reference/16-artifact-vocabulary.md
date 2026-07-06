@@ -49,7 +49,7 @@ stages — `intent-capture` and `feasibility` respectively).
 Things that are **not** artifacts in this registry:
 
 - **File paths.** `<record>/ideation/scope-definition/scope-document.md`
-  (where `<record>/` is the intent's record dir, `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`)
+  (where `<record>/` is the intent's record dir, `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`)
   is a filesystem location; the canonical name is `scope-document`. See
   "Filesystem mapping" below.
 - **Filenames.** The on-disk `.md` file and the canonical name don't have
@@ -172,7 +172,7 @@ stage graph + canonical name.
 `component-inventory`, `technology-stack`, `dependencies`,
 `code-quality-assessment`, `reverse-engineering-timestamp`) do **not** resolve
 under the per-intent record dir. They land in the durable, per-repo code
-knowledge base at `aidlc/spaces/<space>/codekb/<repo>/` — a store shared across
+knowledge base at `amadeus/spaces/<space>/codekb/<repo>/` — a store shared across
 every intent in the space, keyed by repo rather than by intent. The path is
 resolved outside the record-relative rule via the `isCodekb` branch in
 `resolveArtifactPath` (`dist/claude/.claude/tools/amadeus-orchestrate.ts`), and

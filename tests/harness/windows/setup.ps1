@@ -20,13 +20,13 @@
   the repo's dev dependencies with npm.
 
 .PARAMETER ProjectDir
-  The synced project tree (where sync.sh deposited the git-archive). Default C:\aidlc.
+  The synced project tree (where sync.sh deposited the git-archive). Default C:\amadeus.
 
 .EXAMPLE
-  powershell -ExecutionPolicy Bypass -File tests\harness\windows\setup.ps1 -ProjectDir C:\aidlc
+  powershell -ExecutionPolicy Bypass -File tests\harness\windows\setup.ps1 -ProjectDir C:\amadeus
 #>
 param(
-  [string]$ProjectDir = "C:\aidlc",
+  [string]$ProjectDir = "C:\amadeus",
   [string]$NodeExe = "C:\Program Files\nodejs\node.exe",
   [string]$NpmCmd = "C:\Program Files\nodejs\npm.cmd",
   [string]$BunExe = "C:\bun\bin\bun.exe",

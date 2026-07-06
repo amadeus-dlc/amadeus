@@ -14,7 +14,7 @@ boundary verification check at Stage 2.8 (Delivery Planning) before handing
 off to Construction.
 
 > **Path convention.** Each workflow's artifacts live under its **intent record
-> dir** — `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/` (where `<space>` is
+> dir** — `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/` (where `<space>` is
 > `default` unless a non-default space is in play, `<YYMMDD>` is a compact UTC
 > date prefix so records sort chronologically, and `<label>` is a short
 > kebab-case essence of the request; same-day collisions get a numeric counter).
@@ -22,7 +22,7 @@ off to Construction.
 > registry row — the dir name is just a human-readable label. Below, `<record>/`
 > is shorthand for that dir; e.g.
 > `<record>/inception/requirements-analysis/requirements.md` expands to
-> `aidlc/spaces/default/intents/<YYMMDD>-<label>/inception/requirements-analysis/requirements.md`.
+> `amadeus/spaces/default/intents/<YYMMDD>-<label>/inception/requirements-analysis/requirements.md`.
 > (Projects created before the per-intent layout used a flat tree; the engine
 > migrates them on first run.)
 
@@ -44,12 +44,12 @@ and a parallel multi-agent dispatch at Stage 2.2 (Practices Discovery).
   developer, devsecops) for evidence-scan on brownfield, then runs interview
   and affirmation gates. On affirmation, content is promoted from
   `<record>/inception/practices-discovery/` to the space's memory layer —
-  `aidlc/spaces/<space>/memory/team.md` and `aidlc/spaces/<space>/memory/project.md` —
+  `amadeus/spaces/<space>/memory/team.md` and `amadeus/spaces/<space>/memory/project.md` —
   the cross-row promotion that makes this stage structurally distinct from every other stage.
 - Stage 2.7 produces `unit-of-work.md`, which defines the units that drive
   the phased construction flow in the Construction phase.
 - Stage 2.8 produces the execution plan that determines which Construction
-  stages run for each unit and in what order. It reads `aidlc/spaces/<space>/memory/team.md`
+  stages run for each unit and in what order. It reads `amadeus/spaces/<space>/memory/team.md`
   for the team's Way of Working (branching), Walking Skeleton stance, and
   Deployment sections.
 - The phase boundary verification at Stage 2.8 validates Requirements to
@@ -224,8 +224,8 @@ walking-skeleton stance, testing posture, deployment cadence, and code-style
 rules from evidence (brownfield) or via AskUserQuestion using `org.md`
 defaults (greenfield), drafts proposals at `<record>/inception/practices-discovery/`,
 and at an affirmation gate **promotes** the affirmed content into team-authored
-harness config: `aidlc/spaces/<space>/memory/team.md` and
-`aidlc/spaces/<space>/memory/project.md`. The affirmation gate is
+harness config: `amadeus/spaces/<space>/memory/team.md` and
+`amadeus/spaces/<space>/memory/project.md`. The affirmation gate is
 what makes the cross-row write legitimate -- without it the framework would
 put words in the team's mouth in its own harness config.
 
@@ -236,7 +236,7 @@ put words in the team's mouth in its own harness config.
   architecture, code-structure, api-documentation, component-inventory,
   technology-stack, dependencies, code-quality-assessment,
   reverse-engineering-timestamp)
-- `aidlc/spaces/<space>/memory/org.md` (greenfield default suggestions)
+- `amadeus/spaces/<space>/memory/org.md` (greenfield default suggestions)
 - `.claude/knowledge/amadeus-pipeline-deploy-agent/branching-strategies.md` (lead-agent KB)
 
 ### Outputs
@@ -253,9 +253,9 @@ Four artifacts written to `<record>/inception/practices-discovery/`:
 
 On affirmation, content is promoted to:
 
-- `aidlc/spaces/<space>/memory/team.md` -- section-replace via `replaceSection` (re-runs
+- `amadeus/spaces/<space>/memory/team.md` -- section-replace via `replaceSection` (re-runs
   overwrite section content rather than accumulate).
-- `aidlc/spaces/<space>/memory/project.md` -- append-under-heading
+- `amadeus/spaces/<space>/memory/project.md` -- append-under-heading
   via `appendUnderHeading` (rules accumulate; date stamps distinguish them).
 
 ### Steps
@@ -274,8 +274,8 @@ On affirmation, content is promoted to:
 5. Affirmation gate -- AskUserQuestion presents both drafts. Options:
    Approve / Edit-then-Approve / Reject-and-rewrite-from-scratch.
 6. Promote (on Approve) -- section-replace the five practice sections in
-   `aidlc/spaces/<space>/memory/team.md`; append rules under `## Mandated` and
-   `## Forbidden` in `aidlc/spaces/<space>/memory/project.md` with date stamps.
+   `amadeus/spaces/<space>/memory/team.md`; append rules under `## Mandated` and
+   `## Forbidden` in `amadeus/spaces/<space>/memory/project.md` with date stamps.
    Atomicity: write `project.md` first, then `team.md`. On failure,
    emit `PRACTICES_OVERRIDE` and abort without recording PRACTICES_AFFIRMED.
 7. Emit `PRACTICES_AFFIRMED`; update state checkbox; update

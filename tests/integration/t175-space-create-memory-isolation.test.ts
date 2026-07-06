@@ -43,7 +43,7 @@ function util(args: string[]): { status: number; stdout: string } {
 }
 
 const memoryOf = (space: string): string =>
-  join(proj, "aidlc", "spaces", space, "memory");
+  join(proj, "amadeus", "spaces", space, "memory");
 
 describe("t175 space-create memory isolation (vision §11 — no learning leak)", () => {
   test("org.md is copied from default; team.md/project.md are fresh stubs that do NOT carry default's promoted practices", () => {
@@ -117,7 +117,7 @@ describe("t175 space-create memory isolation (vision §11 — no learning leak)"
     // the record's space → spaces/research/memory), distinct from default's. The
     // intent record lives under the research space, confirming the per-space root.
     expect(readFileSync(join(memoryOf("research"), "team.md"), "utf-8")).toContain(SPACE_LIVE);
-    expect(existsSync(join(proj, "aidlc", "spaces", "research", "intents"))).toBe(true);
+    expect(existsSync(join(proj, "amadeus", "spaces", "research", "intents"))).toBe(true);
     // default's memory never gained the space's live practice (no cross-space leak).
     const defTeam = join(memoryOf("default"), "team.md");
     if (existsSync(defTeam)) {

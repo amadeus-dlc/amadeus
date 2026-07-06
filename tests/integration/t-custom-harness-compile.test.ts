@@ -89,16 +89,16 @@ function editFile(p: string, fn: (s: string) => string): void {
   writeFileSync(p, fn(readFileSync(p, "utf8")));
 }
 // P4: `init` (→ intent-birth) writes the workflow record per-intent under
-// aidlc/spaces/<space>/intents/<slug>-<id8>/ (state, runtime-graph.json,
+// amadeus/spaces/<space>/intents/<slug>-<id8>/ (state, runtime-graph.json,
 // .amadeus-hooks-health/), NOT the flat amadeus-docs/. Resolve the born record from
 // the active-space + active-intent cursors (flat fallback for a pre-birth/
 // pre-migration project).
 function recordDirOf(proj: string): string {
-  const spaceCursor = join(proj, "aidlc", "active-space");
+  const spaceCursor = join(proj, "amadeus", "active-space");
   const space = existsSync(spaceCursor)
     ? readFileSync(spaceCursor, "utf8").trim() || "default"
     : "default";
-  const intentsDir = join(proj, "aidlc", "spaces", space, "intents");
+  const intentsDir = join(proj, "amadeus", "spaces", space, "intents");
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf8").trim();
@@ -195,12 +195,12 @@ describe("t-custom-harness-compile (deterministic — harness-engineer edits res
       // PHASE rule (phases/inception.md) attaches because the stage's
       // `phase: inception` matches the rule filename — a value NO pre-seed
       // carries, so its presence is airtight proof compile resolved the chain.
-      // The method relocated (P5) to the harness-neutral aidlc/spaces/default/
+      // The method relocated (P5) to the harness-neutral amadeus/spaces/default/
       // memory/ tree, so the display paths are neutral.
       for (const node of [head, tail]) {
         const paths = (node?.rules_in_context ?? []).map((r) => r.path);
-        expect(paths).toContain("aidlc/spaces/default/memory/project.md");
-        expect(paths).toContain("aidlc/spaces/default/memory/phases/inception.md");
+        expect(paths).toContain("amadeus/spaces/default/memory/project.md");
+        expect(paths).toContain("amadeus/spaces/default/memory/phases/inception.md");
       }
 
       // what each stage produces (compile recomputes produces[] from the YAML
@@ -634,8 +634,8 @@ outputs: none
       // tree (the chain writes two different files, both in the sensor's glob
       // territory; the `*` segment is the runtime-minted intent dir).
       expect(SNAPSHOT_OUTPUT_REL).not.toBe(PLAN_OUTPUT_REL);
-      expect(SNAPSHOT_OUTPUT_REL.startsWith(join("aidlc", "spaces", "default", "intents"))).toBe(true);
-      expect(PLAN_OUTPUT_REL.startsWith(join("aidlc", "spaces", "default", "intents"))).toBe(true);
+      expect(SNAPSHOT_OUTPUT_REL.startsWith(join("amadeus", "spaces", "default", "intents"))).toBe(true);
+      expect(PLAN_OUTPUT_REL.startsWith(join("amadeus", "spaces", "default", "intents"))).toBe(true);
     } finally {
       cleanupTestProject(proj);
     }

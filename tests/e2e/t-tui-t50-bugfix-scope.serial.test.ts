@@ -105,13 +105,13 @@ import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 import { activeSpace } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // The space-level per-repo codekb dir the RE stage writes into
-// (aidlc/spaces/<space>/codekb/<repo>/ — the codekb-determinism placement fix).
+// (amadeus/spaces/<space>/codekb/<repo>/ — the codekb-determinism placement fix).
 // This single-repo brownfield sandbox records NO repos row, so the engine keys
 // the store by basename(sandbox) (codekbRepoName's 0-repo case). Tolerant of the
 // bare workspace-root form too, mirroring the journey / t-acp-kiro helpers.
 function codekbReDir(sandbox: string): string {
-  const spaceScoped = join(sandbox, "aidlc", "spaces", activeSpace(sandbox), "codekb", basename(sandbox));
-  const bare = join(sandbox, "aidlc", "codekb", basename(sandbox));
+  const spaceScoped = join(sandbox, "amadeus", "spaces", activeSpace(sandbox), "codekb", basename(sandbox));
+  const bare = join(sandbox, "amadeus", "codekb", basename(sandbox));
   return existsSync(spaceScoped) ? spaceScoped : bare;
 }
 
@@ -190,7 +190,7 @@ describe("t-tui-t50-bugfix-scope (answering gates advances bugfix lifecycle on d
   test.skipIf(SKIP_REASON !== null)(
     `bugfix run-through reaches the post-init milestone (Completed>=5) on disk${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
     async () => {
-      const session = `aidlc_tui_t50_bugfix_${process.pid}`;
+      const session = `amadeus_tui_t50_bugfix_${process.pid}`;
       // brownfieldStub + noAidlcDocs: a brand-new brownfield workspace (a React/Vite
       // Todo app) the bugfix workflow scaffolds itself, driving workspace-detection
       // to Brownfield + reverse-engineering (mirrors the .sh's
@@ -370,7 +370,7 @@ describe("t-tui-t50-bugfix-scope (answering gates advances bugfix lifecycle on d
 
         // .sh test 11: knowledge directory created. The knowledge relocation
         // (b29ced6) moved this from the per-intent record to the SPACE level
-        // (aidlc/spaces/<space>/knowledge — a sibling of intents/), ensured at
+        // (amadeus/spaces/<space>/knowledge — a sibling of intents/), ensured at
         // birth by ensureWorkspaceDirs (amadeus-utility.ts:1975, which runs in the
         // workspace-scaffold init stage for every scope, bugfix included).
         const knowledgeDir = spaceKnowledgeDirFor(sandbox);

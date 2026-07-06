@@ -60,17 +60,17 @@ const UTIL_TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus
 let proj: string;
 
 // P4: init now BIRTHS a per-intent record — state lands at
-// aidlc/spaces/<space>/intents/<slug>-<id8>/amadeus-state.md and audit at
+// amadeus/spaces/<space>/intents/<slug>-<id8>/amadeus-state.md and audit at
 // <record>/audit/<host>-<clone>.md (per-clone shards), NOT the flat amadeus-docs/.
 // Resolve the born record from the active-space + active-intent cursors (flat
 // fallback for a not-yet-born project). The concurrency under test is unchanged
 // — the per-intent lock serialises the concurrent writers exactly as before.
 function recordDirOf(p: string): string {
-  const spaceCursor = join(p, "aidlc", "active-space");
+  const spaceCursor = join(p, "amadeus", "active-space");
   const space = existsSync(spaceCursor)
     ? readFileSync(spaceCursor, "utf-8").trim() || "default"
     : "default";
-  const intentsDir = join(p, "aidlc", "spaces", space, "intents");
+  const intentsDir = join(p, "amadeus", "spaces", space, "intents");
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();

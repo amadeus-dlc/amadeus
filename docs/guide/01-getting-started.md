@@ -65,7 +65,7 @@ cp -r dist/claude/.claude/ your-project/.claude/
 cp -r dist/claude/amadeus/   your-project/amadeus/     # the workspace shell — a sibling of .claude/, not inside it
 ```
 
-The first line copies the engine — the orchestrator, stage files, agent personas, hooks, knowledge files, and default settings. The second copies the **workspace shell**: the pre-built `aidlc/spaces/default/memory/` method tree the engine reads. It ships as a **sibling** of `.claude/` (not inside it), so it must be copied separately — or copy the whole `dist/claude/` tree at once. `/amadeus --doctor` fails its "workspace shell ready" check if `aidlc/spaces/default/memory/` is missing.
+The first line copies the engine — the orchestrator, stage files, agent personas, hooks, knowledge files, and default settings. The second copies the **workspace shell**: the pre-built `amadeus/spaces/default/memory/` method tree the engine reads. It ships as a **sibling** of `.claude/` (not inside it), so it must be copied separately — or copy the whole `dist/claude/` tree at once. `/amadeus --doctor` fails its "workspace shell ready" check if `amadeus/spaces/default/memory/` is missing.
 
 ### Step 2: Navigate to your project
 
@@ -80,26 +80,26 @@ All `/amadeus` commands run relative to the project root.
 ## The Workspace Shell
 
 There is no scaffold step. The distribution you copied in already ships the
-workspace shell — the `.claude/` engine plus a pre-built `aidlc/spaces/default/`
-holding the memory layer (`aidlc/spaces/default/memory/`, where team-affirmed
+workspace shell — the `.claude/` engine plus a pre-built `amadeus/spaces/default/`
+holding the memory layer (`amadeus/spaces/default/memory/`, where team-affirmed
 practices and learnings live). You do not run any init command.
 
 The first time you run `/amadeus` (or describe what to build), the engine
 **auto-births** the first intent into the active space. Each intent gets its own
-record dir at `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`, which holds:
+record dir at `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`, which holds:
 
 - `amadeus-state.md` — the per-intent workflow state
 - `audit/` — the audit trail, written as per-clone shards (`<host>-<clone>.md`)
 - `<phase>/<stage>/...` — the stage artifacts (e.g. `inception/requirements-analysis/requirements.md`)
 
 Team knowledge lives one level up, at the space level —
-`aidlc/spaces/<space>/knowledge/` (a sibling of `intents/`) — so it accumulates
+`amadeus/spaces/<space>/knowledge/` (a sibling of `intents/`) — so it accumulates
 across every intent in the space. The engine creates it empty; you add free-form
 files under an optional `amadeus-shared/` and per-agent subdirectories.
 
 To add [team knowledge](08-knowledge.md) or team practices before your first run,
-edit the shipped `aidlc/spaces/default/memory/` files; the space-level
-`aidlc/knowledge/` directory is created (empty) once your first `/amadeus` runs.
+edit the shipped `amadeus/spaces/default/memory/` files; the space-level
+`amadeus/knowledge/` directory is created (empty) once your first `/amadeus` runs.
 
 For the full picture of the workspace layout — how it holds many intents at once,
 what spaces are for, and the commands to move between them — see
@@ -124,7 +124,7 @@ Run the health check to confirm everything is in place:
 | Prerequisites | `bun` is installed and on `$PATH` |
 | Hook presence | Every hook `settings.json` wires (its `hooks` blocks + the `statusLine` command — all 11 framework hooks) exists in `.claude/hooks/`; a wired-but-missing hook fails loudly. Sourcing the expected roster from `settings.json` means adding a hook there auto-checks it |
 | Project structure | `.claude/settings.json` exists with expected configuration |
-| Workspace shell | `.claude/` + `aidlc/spaces/default/memory/` are present (the shipped shell) |
+| Workspace shell | `.claude/` + `amadeus/spaces/default/memory/` are present (the shipped shell) |
 | State file | the active intent's `amadeus-state.md` matches its audit trail (no drift) |
 | Hook heartbeats | `.amadeus-hooks-health/` contains recent timestamps from hook executions |
 | Graph integrity | No cycles in `stage-graph.json`; every slug has a matching stage file |
@@ -145,7 +145,7 @@ Run the health check to confirm everything is in place:
 ✓ amadeus-statusline.ts present
 ✓ settings.json present
 ✓ AMADEUS_DEFAULT_SCOPE (unset — no project default)
-✓ workspace shell ready (.claude/ + aidlc/spaces/default/memory/)
+✓ workspace shell ready (.claude/ + amadeus/spaces/default/memory/)
 ✓ Hook heartbeats: not yet fired (first workflow stage will populate)
 ✓ State matches last audit event (no drift)
 ✓ Cycle detection: 0 cycles
@@ -164,7 +164,7 @@ Run the health check to confirm everything is in place:
 | Hook not present | Re-copy the `.claude/` directory from the distribution |
 | `settings.json` missing | Create it from the template without overwriting existing config: `cp -n dist/claude/.claude/settings.json.example .claude/settings.json` |
 | Workspace shell missing | Re-copy the workspace shell from `dist/claude/` into your project root |
-| State file issues | Archive the active intent's record dir under `aidlc/spaces/<space>/intents/` and run `/amadeus` to start fresh |
+| State file issues | Archive the active intent's record dir under `amadeus/spaces/<space>/intents/` and run `/amadeus` to start fresh |
 | Graph/scope/schema/keyword failures | The diagnostic reports the specific artifact, slug, or scope name at fault. These indicate authoring drift in `.claude/amadeus-common/stages/` or `.claude/scopes/`; regenerate the compiled graph + scope grid with `bun .claude/tools/amadeus-graph.ts compile` or inspect the named stage/scope directly. |
 
 ---

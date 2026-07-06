@@ -5,7 +5,7 @@
 //
 // Mechanism: cli. Every assertion is a process-boundary contract:
 //   - `hold-merge` / `release-merge` mutate the per-Bolt FORKED state file at
-//     <proj>/.aidlc/worktrees/bolt-<slug>/amadeus-docs/amadeus-state.md and print a
+//     <proj>/.amadeus/worktrees/bolt-<slug>/amadeus-docs/amadeus-state.md and print a
 //     JSON envelope to stdout, then return (handleHoldMerge / handleReleaseMerge,
 //     amadeus-bolt.ts:587-601).
 //   - `complete --merge` refuses with process.exit(1) + a {ok:false,
@@ -34,7 +34,7 @@
 //   :613 isMergeHeld -> getField(content, "Merge-Held") === "true".
 //
 // Forked-state-file path is worktreePath(pd,slug)/amadeus-docs/amadeus-state.md
-// where worktreePath = <pd>/.aidlc/worktrees/bolt-<slug> (amadeus-lib.ts:148).
+// where worktreePath = <pd>/.amadeus/worktrees/bolt-<slug> (amadeus-lib.ts:148).
 //
 // Old TAP -> new test parity (1:1, every .sh assertion -> a named test):
 //   .sh T1  hold-merge sets Merge-Held: true   -> "hold-merge sets `- **Merge-Held**: true` in forked state"
@@ -108,7 +108,7 @@ function setupForkedProject(slug: string): string {
   projects.push(proj);
   seedStateFile(proj, STATE_FIXTURE);
   seedAuditFile(proj);
-  mkdirSync(join(proj, ".aidlc", "worktrees", `bolt-${slug}`), {
+  mkdirSync(join(proj, ".amadeus", "worktrees", `bolt-${slug}`), {
     recursive: true,
   });
   const r = bolt(proj, [
@@ -131,14 +131,14 @@ function setupForkedProject(slug: string): string {
 
 /** The per-Bolt forked state file the hold-merge marker is written into — the
  *  worktree mirror carries the SAME relative record dir as the main checkout
- *  (aidlc/spaces/default/intents/<record>/amadeus-state.md), not flat amadeus-docs/. */
+ *  (amadeus/spaces/default/intents/<record>/amadeus-state.md), not flat amadeus-docs/. */
 function forkedState(proj: string, slug: string): string {
   return join(
     proj,
-    ".aidlc",
+    ".amadeus",
     "worktrees",
     `bolt-${slug}`,
-    "aidlc",
+    "amadeus",
     "spaces",
     DEFAULT_SPACE,
     "intents",

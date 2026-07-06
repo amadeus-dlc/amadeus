@@ -390,7 +390,7 @@ describe("t55 — test-suite metadata drift (migrated from t55-test-suite-drift.
       // ── learnings→practices relocation (docs-freshness sweep) ──
       // The two retired learnings FILES — amadeus-team-learnings.md and
       // amadeus-project-learnings.md — collapsed into the unified practices
-      // written under aidlc/spaces/<space>/memory/{team,project}.md (see
+      // written under amadeus/spaces/<space>/memory/{team,project}.md (see
       // core/tools/amadeus-learnings.ts → memoryDirFor). These concrete filenames
       // have ZERO legitimate survivors anywhere in core/harness/dist/docs — the
       // only on-disk hits are three tests that embed them as negative-match data

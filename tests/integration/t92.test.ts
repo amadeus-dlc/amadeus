@@ -66,7 +66,7 @@ import { toPortablePath } from "../harness/fixtures.ts";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // P9: with no intent cursor seeded, the sensor dispatcher resolves the BARE
-// space record root (docsRoot -> spaceRecordRoot) at aidlc/spaces/default/
+// space record root (docsRoot -> spaceRecordRoot) at amadeus/spaces/default/
 // intents/ for BOTH the per-clone audit SHARD (audit/<host>-<clone>.md) and the
 // detail tree (.amadeus-sensors/<stage>/...) — the flat amadeus-docs/ root is retired.
 // The SENSED output files still live wherever the test writes them (e.g.
@@ -74,12 +74,12 @@ import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.
 // is unchanged. Audit reads go through readAllAuditShards (the subprocess mints
 // its own clone-id, distinct from the test process's memoized one, so read the
 // whole audit/ dir rather than a single memoized shard path).
-const RECORD_REL = join("aidlc", "spaces", "default", "intents");
+const RECORD_REL = join("amadeus", "spaces", "default", "intents");
 function recordRoot(proj: string): string {
   return join(proj, RECORD_REL);
 }
 // Posix record prefix for the relative detail-path audit fields.
-const RP = "aidlc/spaces/default/intents";
+const RP = "amadeus/spaces/default/intents";
 
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");

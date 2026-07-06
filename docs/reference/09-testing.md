@@ -131,14 +131,14 @@ No WSL or Docker is required; the supported validation substrate is native Windo
 
    ```bash
    bun tests/harness/windows/ssm-run.ts --stack-name amadeus-windows-test -- \
-     powershell -ExecutionPolicy Bypass -File C:\aidlc\tests\harness\windows\setup.ps1 -ProjectDir C:\aidlc
+     powershell -ExecutionPolicy Bypass -File C:\amadeus\tests\harness\windows\setup.ps1 -ProjectDir C:\amadeus
    ```
 
 4. Run the Windows `--all` gate with live TUI enabled:
 
    ```bash
    bun tests/harness/windows/ssm-run.ts --stack-name amadeus-windows-test -- \
-     powershell -ExecutionPolicy Bypass -File C:\aidlc\tests\harness\windows\run-all.ps1 -ProjectDir C:\aidlc -Parallel 8
+     powershell -ExecutionPolicy Bypass -File C:\amadeus\tests\harness\windows\run-all.ps1 -ProjectDir C:\amadeus -Parallel 8
    ```
 
 5. Tear down the host:

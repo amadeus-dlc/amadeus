@@ -80,7 +80,7 @@ resetAidlcEnv();
 // (relativeMemoryPath called with no recordPrefix -> relativeSpaceRecordPrefix);
 // the flat amadeus-docs/ prefix is retired. `advance` does not thread the active
 // intent's record dir, so the row carries the bare-space prefix.
-const RP = `aidlc/spaces/${DEFAULT_SPACE}/intents`;
+const RP = `amadeus/spaces/${DEFAULT_SPACE}/intents`;
 
 const BUN = process.execPath; // the bun running this test
 const TOOL = join(AMADEUS_SRC, "tools", "amadeus-state.ts");

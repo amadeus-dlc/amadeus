@@ -19,7 +19,7 @@
     "stop_hook_active": false,
     "last_assistant_message": "first answer"
   },
-  "postToolUse_applyPatch_aidlcDocs": {
+  "postToolUse_applyPatch_amadeusDocs": {
     "session_id": "019eb8e6-d5c4-72e1-8ff5-6f009cdf2f8e",
     "turn_id": "019eb8e6-d646-7e43-935d-86963221cf47",
     "transcript_path": "/tmp/example-project/codex-home/sessions/2026/06/12/rollout-2026-06-12T08-56-36-019eb8e6-d5c4-72e1-8ff5-6f009cdf2f8e.jsonl",

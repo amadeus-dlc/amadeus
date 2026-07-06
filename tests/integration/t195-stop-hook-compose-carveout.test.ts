@@ -7,7 +7,7 @@
 // probe sees the pending run-stage and would BLOCK the turn - shoving the
 // conductor back into stage execution mid-compose (the mid-workflow trap
 // class, reopened for compose). The carve-out is POSITIVE-CONFIRMATION via the
-// marker file `aidlc/.amadeus-compose-pending` the conductor writes before
+// marker file `amadeus/.amadeus-compose-pending` the conductor writes before
 // presenting the gate (the engine's compose dispatch print instructs it) and
 // deletes on approve/reject.
 //
@@ -64,16 +64,16 @@ function makeProject(): string {
   mkdirSync(join(proj, ".claude", "tools"), { recursive: true });
   writeFileSync(join(proj, ".claude", "tools", "amadeus-orchestrate.ts"), MOCK_ENGINE, "utf-8");
   const intentsDir = intentsDirOf(proj, DEFAULT_SPACE);
-  mkdirSync(join(proj, "aidlc", "spaces", DEFAULT_SPACE, "memory"), { recursive: true });
+  mkdirSync(join(proj, "amadeus", "spaces", DEFAULT_SPACE, "memory"), { recursive: true });
   mkdirSync(seededRecordDir(proj), { recursive: true });
-  writeFileSync(join(proj, "aidlc", "active-space"), `${DEFAULT_SPACE}\n`, "utf-8");
+  writeFileSync(join(proj, "amadeus", "active-space"), `${DEFAULT_SPACE}\n`, "utf-8");
   writeFileSync(join(intentsDir, "active-intent"), `${DEFAULT_RECORD_DIR}\n`, "utf-8");
   writeFileSync(
     join(intentsDir, "intents.json"),
     `${JSON.stringify([{ uuid: "00000000-0000-7000-8000-000000000001", slug: "t195", status: "in-flight" }], null, 2)}\n`,
     "utf-8",
   );
-  writeFileSync(join(proj, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(proj, "amadeus", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
   mkdirSync(seededAuditDir(proj), { recursive: true });
   writeFileSync(pinnedShardPath(proj), "audit row 1\n", "utf-8");
   return proj;
@@ -90,7 +90,7 @@ function seedActive(proj: string, opts: { autonomy?: string } = {}): void {
   );
 }
 
-const markerPath = (proj: string): string => join(proj, "aidlc", ".amadeus-compose-pending");
+const markerPath = (proj: string): string => join(proj, "amadeus", ".amadeus-compose-pending");
 
 function runHook(proj: string): { rc: number; out: string } {
   const res = spawnSync(BUN, [HOOK_TS], {

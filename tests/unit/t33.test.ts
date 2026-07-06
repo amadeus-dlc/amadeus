@@ -57,7 +57,7 @@ const PINNED_CLONE_ID = "testcloneid33";
 /** createTestProject + pin the clone-id (so spawned tools share one audit shard). */
 function mkProj(): string {
   const p = createTestProject();
-  writeFileSync(join(p, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(p, "amadeus", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
   return p;
 }
 

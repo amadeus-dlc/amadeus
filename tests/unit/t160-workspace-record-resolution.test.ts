@@ -4,7 +4,7 @@
 // legacy fallback + the one-time crash-safe migration. Mechanism: in-process
 // (the resolvers + migration are pure-ish lib functions; no LLM, no process
 // boundary needed). The path helpers re-root the whole record tree per intent —
-// aidlc/spaces/<space>/intents/<slug>-<id8>/ — when a new-layout intent resolves,
+// amadeus/spaces/<space>/intents/<slug>-<id8>/ — when a new-layout intent resolves,
 // and fall back to the flat amadeus-docs/ root otherwise (so a pre-workspace
 // project keeps working until migrated).
 //
@@ -41,16 +41,16 @@ import { cleanupTestProject, createTestProject, removeWorkspaceRecord } from "..
 
 let proj: string;
 
-/** Seed a SEED-style workspace shell (aidlc/active-space + spaces/default/ but
+/** Seed a SEED-style workspace shell (amadeus/active-space + spaces/default/ but
  *  NO intents dir / record) — exactly what dist/<harness>/amadeus/ ships. */
 function seedShell(p: string, space = "default"): void {
-  mkdirSync(join(p, "aidlc", "spaces", space, "memory"), { recursive: true });
-  writeFileSync(join(p, "aidlc", "active-space"), `${space}\n`, "utf-8");
+  mkdirSync(join(p, "amadeus", "spaces", space, "memory"), { recursive: true });
+  writeFileSync(join(p, "amadeus", "active-space"), `${space}\n`, "utf-8");
 }
 
-/** Seed a per-intent record (aidlc/spaces/<space>/intents/<dir>/amadeus-state.md). */
+/** Seed a per-intent record (amadeus/spaces/<space>/intents/<dir>/amadeus-state.md). */
 function seedIntent(p: string, dir: string, space = "default"): void {
-  const recDir = join(p, "aidlc", "spaces", space, "intents", dir);
+  const recDir = join(p, "amadeus", "spaces", space, "intents", dir);
   mkdirSync(recDir, { recursive: true });
   writeFileSync(join(recDir, "amadeus-state.md"), "- **Current Stage**: requirements-analysis\n", "utf-8");
 }
@@ -120,12 +120,12 @@ describe("t160 selectors — space + intent resolution", () => {
   test("knowledgeDir resolves the SPACE-level knowledge dir for the active (or explicit) space", () => {
     // Space domain knowledge is a sibling of intents under spaces/<space>/, NOT
     // per-intent. Default with no cursor:
-    expect(knowledgeDir(proj)).toBe(join(proj, "aidlc", "spaces", "default", "knowledge"));
+    expect(knowledgeDir(proj)).toBe(join(proj, "amadeus", "spaces", "default", "knowledge"));
     // Explicit space arg overrides:
-    expect(knowledgeDir(proj, "team-b")).toBe(join(proj, "aidlc", "spaces", "team-b", "knowledge"));
+    expect(knowledgeDir(proj, "team-b")).toBe(join(proj, "amadeus", "spaces", "team-b", "knowledge"));
     // And it follows the active-space cursor (must NOT hardcode default):
     seedShell(proj, "team-b");
-    expect(knowledgeDir(proj)).toBe(join(proj, "aidlc", "spaces", "team-b", "knowledge"));
+    expect(knowledgeDir(proj)).toBe(join(proj, "amadeus", "spaces", "team-b", "knowledge"));
   });
 
   test("activeIntent: explicit > cursor > lone-intent > null", () => {
@@ -161,7 +161,7 @@ describe("t160 path re-root — per-intent layout vs bare space root (P9 end sta
     expect(recordDir(proj)).toBeNull();
     expect(relativeRecordDir(proj)).toBeNull();
     // End state: resolves under the bare space record root, NEVER the flat root.
-    const intentsRoot = join(proj, "aidlc", "spaces", "default", "intents");
+    const intentsRoot = join(proj, "amadeus", "spaces", "default", "intents");
     expect(stateFilePath(proj)).toBe(join(intentsRoot, "amadeus-state.md"));
     expect(stateFilePath(proj)).not.toBe(join(proj, "amadeus-docs", "amadeus-state.md"));
     expect(auditFilePath(proj)).toBe(join(intentsRoot, "audit", auditShardName(proj)));
@@ -170,11 +170,11 @@ describe("t160 path re-root — per-intent layout vs bare space root (P9 end sta
   test("new-layout intent (lone) → per-intent record dir", () => {
     seedShell(proj);
     seedIntent(proj, "auth-deadbeef");
-    expect(recordDir(proj)).toBe(join(proj, "aidlc", "spaces", "default", "intents", "auth-deadbeef"));
-    expect(relativeRecordDir(proj)).toBe("aidlc/spaces/default/intents/auth-deadbeef");
-    expect(stateFilePath(proj)).toBe(join(proj, "aidlc", "spaces", "default", "intents", "auth-deadbeef", "amadeus-state.md"));
+    expect(recordDir(proj)).toBe(join(proj, "amadeus", "spaces", "default", "intents", "auth-deadbeef"));
+    expect(relativeRecordDir(proj)).toBe("amadeus/spaces/default/intents/auth-deadbeef");
+    expect(stateFilePath(proj)).toBe(join(proj, "amadeus", "spaces", "default", "intents", "auth-deadbeef", "amadeus-state.md"));
     // audit is a per-clone shard under audit/
-    expect(auditFilePath(proj)).toBe(join(proj, "aidlc", "spaces", "default", "intents", "auth-deadbeef", "audit", auditShardName(proj)));
+    expect(auditFilePath(proj)).toBe(join(proj, "amadeus", "spaces", "default", "intents", "auth-deadbeef", "audit", auditShardName(proj)));
   });
 
   test("explicit intent + space arg overrides resolution", () => {
@@ -182,7 +182,7 @@ describe("t160 path re-root — per-intent layout vs bare space root (P9 end sta
     seedIntent(proj, "x-11111111", "team-b");
     seedIntent(proj, "y-22222222", "team-b");
     expect(stateFilePath(proj, "y-22222222", "team-b")).toBe(
-      join(proj, "aidlc", "spaces", "team-b", "intents", "y-22222222", "amadeus-state.md"),
+      join(proj, "amadeus", "spaces", "team-b", "intents", "y-22222222", "amadeus-state.md"),
     );
   });
 });
@@ -227,7 +227,7 @@ describe("t160 audit shards — per-clone, glob-merge read", () => {
 
 describe("t160 flat-layout migration — crash-safe, idempotent", () => {
   test("migrates a flat project into a per-intent record + writes the marker LAST", () => {
-    seedShell(proj); // SEED ships aidlc/spaces/default/ — migration must still fire
+    seedShell(proj); // SEED ships amadeus/spaces/default/ — migration must still fire
     seedFlat(proj);
     expect(needsFlatMigration(proj)).toBe(true);
     const res = migrateFlatLayout(proj);
@@ -269,7 +269,7 @@ describe("t160 flat-layout migration — crash-safe, idempotent", () => {
     const r = res as NonNullable<typeof res>;
 
     // Knowledge landed at the SPACE level (a sibling of intents), with content intact.
-    const spaceKnowledge = join(proj, "aidlc", "spaces", "default", "knowledge");
+    const spaceKnowledge = join(proj, "amadeus", "spaces", "default", "knowledge");
     expect(existsSync(join(spaceKnowledge, "amadeus-shared", "company-standards.md"))).toBe(true);
     expect(existsSync(join(spaceKnowledge, "amadeus-architect-agent", "patterns.md"))).toBe(true);
     // It is NOT trapped inside the per-intent record.
@@ -281,7 +281,7 @@ describe("t160 flat-layout migration — crash-safe, idempotent", () => {
     seedShell(proj);
     seedFlat(proj);
     // A space that already has its own knowledge (e.g. seeded by a prior intent).
-    const spaceKnowledge = join(proj, "aidlc", "spaces", "default", "knowledge");
+    const spaceKnowledge = join(proj, "amadeus", "spaces", "default", "knowledge");
     mkdirSync(join(spaceKnowledge, "amadeus-shared"), { recursive: true });
     writeFileSync(join(spaceKnowledge, "amadeus-shared", "existing.md"), "# Existing\n", "utf-8");
     // The flat tree brings a NEW per-agent dir AND a same-named amadeus-shared/ with a new file.
@@ -312,7 +312,7 @@ describe("t160 flat-layout migration — crash-safe, idempotent", () => {
     expect(needsFlatMigration(proj)).toBe(true);
 
     expect(migrateFlatLayout(proj)).not.toBeNull();
-    const spaceKnowledge = join(proj, "aidlc", "spaces", "default", "knowledge");
+    const spaceKnowledge = join(proj, "amadeus", "spaces", "default", "knowledge");
     expect(existsSync(join(spaceKnowledge, "amadeus-shared", "k.md"))).toBe(true);
     expect(existsSync(migratedMarkerPath(proj))).toBe(true);
     // The flat source is untouched (the caller git-rm's it).
@@ -339,7 +339,7 @@ describe("t160 flat-layout migration — crash-safe, idempotent", () => {
     // Simulate a crash AFTER the parent mkdir but BEFORE the move/marker: create
     // the intents parent dir + a stray staging dir, NO record, NO marker.
     mkdirSync(intentsDir(proj, "default"), { recursive: true });
-    mkdirSync(join(proj, "aidlc", ".migrate-staging-99999-stale"), { recursive: true });
+    mkdirSync(join(proj, "amadeus", ".migrate-staging-99999-stale"), { recursive: true });
     // Detection still fires (no record, no marker) despite the parent dir existing.
     expect(needsFlatMigration(proj)).toBe(true);
     const res = migrateFlatLayout(proj);
@@ -349,10 +349,10 @@ describe("t160 flat-layout migration — crash-safe, idempotent", () => {
     expect(existsSync(migratedMarkerPath(proj))).toBe(true);
   });
 
-  test("a SEED-shipped aidlc/spaces/default/ does NOT defeat detection", () => {
-    // The blocker: detecting "no aidlc/spaces/ dir" would never fire because SEED
+  test("a SEED-shipped amadeus/spaces/default/ does NOT defeat detection", () => {
+    // The blocker: detecting "no amadeus/spaces/ dir" would never fire because SEED
     // ships it. Detection keys on flat-state-present + no-record + no-marker.
-    seedShell(proj); // ships aidlc/spaces/default/
+    seedShell(proj); // ships amadeus/spaces/default/
     seedFlat(proj);
     expect(needsFlatMigration(proj)).toBe(true);
   });

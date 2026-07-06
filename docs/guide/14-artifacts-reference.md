@@ -1,7 +1,7 @@
 # Artifacts Reference
 
 Every AI-DLC workflow produces artifacts under its **intent record dir** —
-`aidlc/spaces/<space>/intents/<YYMMDD>-<label>/` (where `<space>` is `default`
+`amadeus/spaces/<space>/intents/<YYMMDD>-<label>/` (where `<space>` is `default`
 unless a non-default space is in play, and `<YYMMDD>-<label>` is the intent dir;
 written `<record>/` below). This chapter is a complete reference for the
 directory structure, per-artifact descriptions, lifecycle, and git policy.
@@ -11,7 +11,7 @@ directory structure, per-artifact descriptions, lifecycle, and git policy.
 ## Directory Tree
 
 ```
-aidlc/spaces/<space>/intents/<YYMMDD>-<label>/   # one record dir per intent
+amadeus/spaces/<space>/intents/<YYMMDD>-<label>/   # one record dir per intent
   amadeus-state.md                    # Workflow state (commit)
   audit/                            # Audit trail — per-clone shards (commit)
     <host>-<clone>.md               # this clone's shard; readers glob + merge by timestamp
@@ -73,7 +73,7 @@ aidlc/spaces/<space>/intents/<YYMMDD>-<label>/   # one record dir per intent
 ```
 
 **Team knowledge is not in the record dir.** It lives one level up, at the space
-level — `aidlc/spaces/<space>/knowledge/` (a sibling of `intents/`) — so it
+level — `amadeus/spaces/<space>/knowledge/` (a sibling of `intents/`) — so it
 accumulates across every intent in the space rather than being trapped in one
 intent's record. The engine creates it empty; the team adds free-form files
 under an optional `amadeus-shared/` and per-agent subdirectories. See
@@ -88,7 +88,7 @@ Learnings Ritual at the approval gate. It is never hand-edited. See
 [Rules and the Learning Loop](09-rules-and-the-learning-loop.md) for how
 the diary feeds the learning loop.
 
-**Code lives in sibling repos, not the record dir.** The `aidlc/` tree holds only
+**Code lives in sibling repos, not the record dir.** The `amadeus/` tree holds only
 method, state, audit, and artifacts — never application code. Generated code lands
 in the workspace's **code repos**: in the common single-repo case, the project dir
 itself; in a multi-repo workspace, the sibling repo directories that are immediate
@@ -158,7 +158,7 @@ The welcome message is rendered at session start via `companyAnnouncements` in `
 | Stage | Key Artifacts | Condition |
 |-------|--------------|-----------|
 | 2.1 Reverse Engineering | 9 files including `architecture.md`, `code-structure.md`, `technology-stack.md` | Brownfield only |
-| 2.2 Practices Discovery | `team-practices.md`, `discovered-rules.md`, `evidence.md`, `practices-discovery-timestamp.md` (promoted to the space memory layer — `aidlc/spaces/<space>/memory/team.md` and `memory/project.md` — on affirmation) | Conditional |
+| 2.2 Practices Discovery | `team-practices.md`, `discovered-rules.md`, `evidence.md`, `practices-discovery-timestamp.md` (promoted to the space memory layer — `amadeus/spaces/<space>/memory/team.md` and `memory/project.md` — on affirmation) | Conditional |
 | 2.3 Requirements Analysis | `requirements.md` | Always |
 | 2.4 User Stories | `stories.md`, `personas.md` | User-facing features |
 | 2.5 Refined Mockups | `mockups.md`, `interaction-spec.md`, `accessibility-checklist.md` | UI projects |
@@ -218,11 +218,11 @@ cursors and machine-local derived state are ignored.
 
 | Commit | Gitignore |
 |--------|-----------|
-| `amadeus-state.md` | `aidlc/active-space`, `intents/active-intent` (per-user cursors) |
+| `amadeus-state.md` | `amadeus/active-space`, `intents/active-intent` (per-user cursors) |
 | `audit/*.md` (per-clone shards) | `.amadeus-recovery.md` and other `intents/*/.amadeus-*` / `intents/.amadeus-*` (transient breadcrumbs; the latter is the no-intent fallback root) |
 | All stage artifacts | `runtime-graph.json` (re-derivable from the audit shards) |
-| `verification/` phase check results | `aidlc/.amadeus-clone-id` (names this clone's shard; must stay machine-local) |
-| Space-level `aidlc/knowledge/` team knowledge files | `aidlc/.amadeus-sessions/` (per-conversation session→intent map) |
+| `verification/` phase check results | `amadeus/.amadeus-clone-id` (names this clone's shard; must stay machine-local) |
+| Space-level `amadeus/knowledge/` team knowledge files | `amadeus/.amadeus-sessions/` (per-conversation session→intent map) |
 | Per-stage `memory.md` diaries; space `memory/` layer | `.amadeus-hooks-health/`, `.amadeus-sensors/` (heartbeats, advisory findings) |
 
 ---

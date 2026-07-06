@@ -155,7 +155,7 @@ describe("t-tui-kiro-intent-capture (numbered-prose gates on the shipped dist/ki
   test.skipIf(SKIP_REASON !== null)(
     `kiro: intent-capture journey commits intent-statement + answered questions on disk${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
     async () => {
-      const session = `aidlc_tui_kiro_ic_${process.pid}`;
+      const session = `amadeus_tui_kiro_ic_${process.pid}`;
       const sandbox = setupTuiProject({
         harness: "kiro",
         withState: "state-initialization-done.md",
@@ -164,7 +164,7 @@ describe("t-tui-kiro-intent-capture (numbered-prose gates on the shipped dist/ki
       });
       try {
         // --- launch kiro-cli chat in the seeded sandbox -----------------------
-        // The shipped .kiro/settings/cli.json makes `aidlc` the workspace
+        // The shipped .kiro/settings/cli.json makes `amadeus` the workspace
         // default agent, so a bare chat lands on the conductor (D-5, verified
         // in the Wave 4 smoke). --trust-all-tools: see TRUST POSTURE above.
         expect(

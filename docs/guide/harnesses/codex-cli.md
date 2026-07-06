@@ -35,8 +35,8 @@ never hand-edit it (the drift guard fails CI).
    cp -n your-project/.codex/hooks.json.example your-project/.codex/hooks.json
    ```
 
-   The `aidlc/` directory is the workspace shell — it ships the pre-built
-   `aidlc/spaces/default/memory/` method tree the engine reads. It is a
+   The `amadeus/` directory is the workspace shell — it ships the pre-built
+   `amadeus/spaces/default/memory/` method tree the engine reads. It is a
    **sibling** of `.codex/`, so copy it separately (or copy the whole
    `dist/codex/` tree at once). `$amadeus --doctor` fails its "workspace shell
    ready" check if it is missing.
@@ -102,7 +102,7 @@ implicit skill matching so 37 runner descriptions don't pollute the index).
   writes files via shell heredocs, which bypass the `apply_patch` hook
   matcher — `ARTIFACT_*` rows can be sparse. Interactive TUI sessions (where
   the system prompt mandates `apply_patch`) are the high-fidelity audit mode.
-- **AIDLC rule layers** live at the workspace root under `aidlc/spaces/<space>/memory/` (one hand-editable source, identical on every harness); the `AMADEUS_RULES_DIR` env seam in `config.toml` points the resolver there and the orchestrator injects an `@aidlc/spaces/<space>/memory/...` prompt mention. Codex's native `.codex/rules/` directory holds Starlark permission rules — distinct from the AIDLC method.
+- **AIDLC rule layers** live at the workspace root under `amadeus/spaces/<space>/memory/` (one hand-editable source, identical on every harness); the `AMADEUS_RULES_DIR` env seam in `config.toml` points the resolver there and the orchestrator injects an `@amadeus/spaces/<space>/memory/...` prompt mention. Codex's native `.codex/rules/` directory holds Starlark permission rules — distinct from the AIDLC method.
 - **No welcome message**: the Claude harness renders the Phases/Stages/Scopes
   onboarding banner from `settings.json` `companyAnnouncements` at session start;
   Codex has no equivalent. The session-start path injects resume context only.

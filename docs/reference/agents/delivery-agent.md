@@ -62,9 +62,9 @@ Path: `.claude/knowledge/amadeus-delivery-agent/`
 
 ### Team (Tier 2)
 
-Path: `aidlc/knowledge/amadeus-delivery-agent/` (the space-level knowledge dir; user-managed)
+Path: `amadeus/knowledge/amadeus-delivery-agent/` (the space-level knowledge dir; user-managed)
 
-A space-level directory the team creates when it has content (the engine ships `aidlc/knowledge/` empty). Populated by the team with project-specific
+A space-level directory the team creates when it has content (the engine ships `amadeus/knowledge/` empty). Populated by the team with project-specific
 delivery context such as team conventions, bolt-sizing preferences, or
 organizational capacity constraints.
 

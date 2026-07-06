@@ -10,7 +10,7 @@
 // test — the subject IS the on-disk shape of the shipped skill set and the
 // YAML frontmatter bytes of each SKILL.md. The .sh sourced lib/tap.sh and
 // shelled to `bun -e` ONLY to PARSE (read the stage graph; run the frontmatter
-// extractor); it never invoked an aidlc tool as a process-boundary contract.
+// extractor); it never invoked an amadeus tool as a process-boundary contract.
 // So the twin reads the same static files in-process (resolved from the
 // harness's AMADEUS_SRC, the same dist/claude/.claude root the .sh reached via
 // $AMADEUS_SRC) and asserts. Zero LLM, zero tokens, zero subprocess. The ONE
@@ -87,7 +87,7 @@ const STAGE_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 
 // --- The four base skills (orchestrator + the three read-only session skills).
 const BASE_SKILLS = [
-  "aidlc",
+  "amadeus",
   "amadeus-outcomes-pack",
   "amadeus-replay",
   "amadeus-session-cost",

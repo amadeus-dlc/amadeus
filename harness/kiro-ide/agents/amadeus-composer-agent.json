@@ -31,7 +31,7 @@
     "file://.kiro/agents/amadeus-composer-agent.md",
     "file://.kiro/scopes/*.md",
     "file://.kiro/knowledge/amadeus-shared/*.md",
-    "file://aidlc/spaces/default/memory/**/*.md"
+    "file://amadeus/spaces/default/memory/**/*.md"
   ],
   "hooks": {},
   "model": "claude-opus-4.8"

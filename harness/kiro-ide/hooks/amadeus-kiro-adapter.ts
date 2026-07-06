@@ -74,7 +74,7 @@ if (!process.stdin.isTTY) {
 // Wired by amadeus-mint.kiro.hook (promptSubmit). stdin is empty on Kiro IDE (the
 // race-to-2s above), so this carries NO intent context - but appendAuditEntry
 // resolves the active intent from the on-disk cursor
-// (aidlc/spaces/<space>/intents/active-intent) using only cwd, so the event lands
+// (amadeus/spaces/<space>/intents/active-intent) using only cwd, so the event lands
 // in the correct per-intent shard with no payload. One ledger event per human
 // turn; no marker file, no turn counter. Gated on workflow state existing (same
 // self-gate as the core mint hook) so a prompt in a project that never ran the

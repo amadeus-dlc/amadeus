@@ -17,7 +17,7 @@
 // `Bun.spawnSync({ cmd: [BUN, HOOK], stdin: <json bytes>, env: {…CLAUDE_PROJECT_DIR} })`.
 //
 // WORKSPACE LAYOUT (P9): the flat amadeus-docs/ root is retired. The record
-// re-roots per intent at aidlc/spaces/<space>/intents/<slug>-<id8>/, and the
+// re-roots per intent at amadeus/spaces/<space>/intents/<slug>-<id8>/, and the
 // audit trail is a DIR of per-clone shards (audit/<host>-<clone>.md), not a
 // single audit.md. The hook now logs a write iff its file_path is UNDER the
 // active intent's record root (docsRoot()), and self-gates on its own resolved
@@ -111,7 +111,7 @@ function seedIntentShard(p: string): { auditDir: string; recordRoot: string } {
   // path-derived, so the fixture choice is incidental.
   seedStateFile(p, join(FIXTURES_DIR, "state-construction.md"));
   // Pin the clone-id BEFORE the hook runs (the hook reads it from disk).
-  writeFileSync(join(p, "aidlc", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+  writeFileSync(join(p, "amadeus", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
   const auditDir = seededAuditDir(p);
   mkdirSync(auditDir, { recursive: true });
   writeFileSync(join(auditDir, pinnedShardName()), "", "utf-8");

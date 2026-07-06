@@ -21,7 +21,7 @@ tests/logs/
 # AIDLC runtime state (Construction worktrees + future runtime artefacts).
 # Anchored to repo root; distinct from .claude/worktrees above which is
 # the framework-development worktree convention.
-/.aidlc/
+/.amadeus/
 /.amadeus/
 
 # Local scratch — explainers, throwaway HTML, etc. (claude writes explainers here)

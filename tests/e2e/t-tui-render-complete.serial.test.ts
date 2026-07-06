@@ -89,8 +89,8 @@ describe("t-tui-render statusline COMPLETE sentinel (seeded completed, no tokens
   test.skipIf(ABSENT_REASON !== null)(
     `statusline-complete paints "[AIDLC] COMPLETE [▓▓▓▓▓▓▓▓▓▓]"${ABSENT_REASON ? ` — SKIP: ${ABSENT_REASON}` : ""}`,
     () => {
-      const session = `aidlc_tui_render_complete_${process.pid}`;
-      // setupTuiProject copies the distributable + sibling aidlc/ memory shell,
+      const session = `amadeus_tui_render_complete_${process.pid}`;
+      // setupTuiProject copies the distributable + sibling amadeus/ memory shell,
       // seeds the per-intent workspace shell, and writes the completed fixture
       // into the active intent's record (Status: Completed + OPERATION 7/7 -> the
       // COMPLETE branch fires with a full bar). State-driven; no prompt, no tokens.

@@ -119,7 +119,7 @@ harness-engineer view is what the loop produces and where it lands:
 
 1. **The diary records during the stage.** The conductor (the live `/amadeus`
    session running the active stage) keeps an observation
-   log at `<record>/<phase>/<stage>/memory.md` (under the intent's record dir, `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`), with entries under four
+   log at `<record>/<phase>/<stage>/memory.md` (under the intent's record dir, `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`), with entries under four
    headings — Interpretations, Deviations, Tradeoffs, Open questions. It is
    auto-created and maintained for you; never hand-edit it. Writing the diary is
    the *only* job the language model has in this loop — everything after the stage
@@ -136,14 +136,14 @@ harness-engineer view is what the loop produces and where it lands:
 ### Where a kept learning lands
 
 A confirmed learning *is* a practice: it lands in the same space memory files
-practices-discovery affirms (`aidlc/spaces/<space>/memory/team.md` /
+practices-discovery affirms (`amadeus/spaces/<space>/memory/team.md` /
 `memory/project.md`) — there is no separate `*-learnings.md` surface. The gate
 routes it by topical heading:
 
 | Heading at the gate | Lands in | Audit event |
 |---|---|---|
-| Interpretation / Deviation / Tradeoff | `aidlc/spaces/<space>/memory/project.md` (default) | `RULE_LEARNED` |
-| same, promoted one click | `aidlc/spaces/<space>/memory/team.md` | `RULE_LEARNED` |
+| Interpretation / Deviation / Tradeoff | `amadeus/spaces/<space>/memory/project.md` (default) | `RULE_LEARNED` |
+| same, promoted one click | `amadeus/spaces/<space>/memory/team.md` | `RULE_LEARNED` |
 | Open question | nothing — research items don't promote | — |
 
 The default scope is **project**, the narrowest. A one-click "promote to team"

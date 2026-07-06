@@ -271,7 +271,7 @@ describe("t-tui-t29 env-scope (AMADEUS_DEFAULT_SCOPE seeds new-workflow scope on
   test.skipIf(SKIP_REASON !== null)(
     `bare /amadeus with env default asks for a scope or intent and writes no state${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
     () => {
-      const session = `aidlc_tui_t29_envdef_${process.pid}`;
+      const session = `amadeus_tui_t29_envdef_${process.pid}`;
       const proj = setupTuiProject({ noAidlcDocs: true });
       try {
         // Leave the shipped `workshop` env default in place. It must not by
@@ -319,7 +319,7 @@ describe("t-tui-t29 env-scope (AMADEUS_DEFAULT_SCOPE seeds new-workflow scope on
   test.skipIf(SKIP_REASON !== null)(
     `explicit --scope feature flag wins over env default -> Scope=feature on disk${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
     async () => {
-      const session = `aidlc_tui_t29_override_${process.pid}`;
+      const session = `amadeus_tui_t29_override_${process.pid}`;
       const proj = setupTuiProject({ noAidlcDocs: true });
       try {
         // Shipped `workshop` env default stays; the explicit --scope flag must win.
@@ -370,7 +370,7 @@ describe("t-tui-t29 env-scope (AMADEUS_DEFAULT_SCOPE seeds new-workflow scope on
   test.skipIf(SKIP_REASON !== null)(
     `bare known-scope command (/amadeus feature) bootstraps Scope=feature without a scope disambiguation gate${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
     async () => {
-      const session = `aidlc_tui_t29_disambig_${process.pid}`;
+      const session = `amadeus_tui_t29_disambig_${process.pid}`;
       const proj = setupTuiProject({ noAidlcDocs: true });
       try {
         // Shipped `workshop` env default stays; the known scope positional wins.
@@ -406,7 +406,7 @@ describe("t-tui-t29 env-scope (AMADEUS_DEFAULT_SCOPE seeds new-workflow scope on
   test.skipIf(SKIP_REASON !== null)(
     `invalid env value (AMADEUS_DEFAULT_SCOPE=bogus) errors and writes no state${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
     () => {
-      const session = `aidlc_tui_t29_bogus_${process.pid}`;
+      const session = `amadeus_tui_t29_bogus_${process.pid}`;
       const proj = setupTuiProject({ noAidlcDocs: true });
       try {
         // Rewrite the env block to an invalid value BEFORE launch, so the claude

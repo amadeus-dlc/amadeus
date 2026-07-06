@@ -10,7 +10,7 @@ Section references (e.g., "Protocol Section 1") map to the source file.
 > execution behaviour.
 
 > **Path convention.** Artifacts, state, and the audit trail live under the
-> active intent's **record dir** — `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`,
+> active intent's **record dir** — `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`,
 > written `<record>/` below. The audit trail is a directory of per-clone shards
 > at `<record>/audit/<host>-<clone>.md` (readers glob and merge by timestamp),
 > not a single file.
@@ -768,7 +768,7 @@ brief analysis, skip optional stages:
 | **Planning** | Stages producing markdown artifacts (analysis, questions, design) |
 | **Generation** | Stages producing executable code (Code Generation, Build and Test) |
 | **Artifact** | A versioned markdown file in `<record>/` recording a decision, design, or analysis |
-| **Guardrail** | A learned behavioral rule stored in the space memory layer (`aidlc/spaces/<space>/memory/`) |
+| **Guardrail** | A learned behavioral rule stored in the space memory layer (`amadeus/spaces/<space>/memory/`) |
 | **Approval Gate** | Structured prompt where user approves or requests changes |
 | **Inline Stage** | Stage executing directly in the orchestrator conversation |
 | **Subagent Stage** | Stage delegating execution to a Claude Code Task tool call |
@@ -913,7 +913,7 @@ approval gate:
 4. **Admission check**: each kept learning is checked against `org.md`'s
    matching section; a contradiction is surfaced to revise / skip / escalate.
 5. **Persist**: `amadeus-learnings.ts persist` writes each confirmed learning as a practice to
-   `aidlc/spaces/<space>/memory/{project,team}.md` (and, for a sensor-binding
+   `amadeus/spaces/<space>/memory/{project,team}.md` (and, for a sensor-binding
    learning, installs the manifest + stage `sensors:` import in one locked
    transaction), emitting `RULE_LEARNED` / `SENSOR_PROPOSED`.
 

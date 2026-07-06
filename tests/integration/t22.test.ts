@@ -28,7 +28,7 @@
 //   - shell-ready label:  "workspace shell ready"            (utility.ts:597; P4: the
 //                         old "amadeus-docs/ directory exists" row was retired — auto-birth
 //                         needs no scaffolded amadeus-docs/, so doctor checks the SHIPPED SHELL
-//                         (.claude/ + aidlc/spaces/default/memory/) instead)
+//                         (.claude/ + amadeus/spaces/default/memory/) instead)
 //   - footer shape:       "N passed, M failed"               (utility.ts:1371)
 //   - audit event:        "HEALTH_CHECKED"                    (utility.ts:1376)
 //
@@ -73,7 +73,7 @@ const DOCTOR_HOOK_LABEL = "amadeus-audit-logger.ts present";
 const DOCTOR_HOOK_LABEL_2 = "amadeus-session-start.ts present";
 const DOCTOR_SETTINGS_LABEL = "settings.json present";
 // P4: the "amadeus-docs/ directory exists" row was retired. Doctor now checks the
-// SHIPPED workspace shell (.claude/ + aidlc/spaces/default/memory/) — the row
+// SHIPPED workspace shell (.claude/ + amadeus/spaces/default/memory/) — the row
 // label substring is "workspace shell ready" (utility.ts:597), and its
 // remediation fix is "copy the workspace shell from `dist/claude/`" (utility.ts:598).
 const DOCTOR_SHELL_LABEL = "workspace shell ready";
@@ -169,7 +169,7 @@ describe("t22 /amadeus --doctor (SDK port)", () => {
   // P4 retired the "amadeus-docs/ directory exists" row: with auto-birth there is
   // no scaffolded amadeus-docs/ to verify. Readiness is the SHIPPED SHELL — the
   // harness engine dir (.claude/) AND the default space's memory dir
-  // (aidlc/spaces/default/memory/) BOTH present (utility.ts:586-599). The row
+  // (amadeus/spaces/default/memory/) BOTH present (utility.ts:586-599). The row
   // PASSes only when both exist; remove the default memory dir so the
   // shell-ready row FAILS, the doctor exits non-zero, and the orchestrator's
   // tool-failure handler prints the doctor stdout verbatim. The .sh grepped that
@@ -184,10 +184,10 @@ describe("t22 /amadeus --doctor (SDK port)", () => {
       const proj = setupIntegrationProject({ noAidlcDocs: true });
       try {
         // Break the shipped shell so the readiness row FAILS: setupIntegrationProject
-        // always copies .claude/ + aidlc/spaces/default/memory/ (both present →
+        // always copies .claude/ + amadeus/spaces/default/memory/ (both present →
         // the row would PASS). Removing the default memory dir leaves the row
         // failing on a genuinely-incomplete shell (the dist/ copy was partial).
-        const memoryDir = join(proj, "aidlc", "spaces", "default", "memory");
+        const memoryDir = join(proj, "amadeus", "spaces", "default", "memory");
         rmSync(memoryDir, { recursive: true, force: true });
         expect(existsSync(memoryDir)).toBe(false);
         // And amadeus-docs/ is absent too (noAidlcDocs), so nothing masks the failure.

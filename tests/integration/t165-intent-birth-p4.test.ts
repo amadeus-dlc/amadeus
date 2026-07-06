@@ -83,7 +83,7 @@ function next(args: string[], p = proj): Run {
 }
 
 const intentsDir = (p: string, space = "default"): string =>
-  join(p, "aidlc", "spaces", space, "intents");
+  join(p, "amadeus", "spaces", space, "intents");
 
 // ============================================================
 // Auto-birth on an empty workspace
@@ -182,9 +182,9 @@ describe("t165 P7 intent repo set captured at birth", () => {
   });
 
   test("the engine dir and workspace-internal dirs are excluded from discovery", () => {
-    // SEED ships a harness dir + the aidlc roof; neither is a code repo.
+    // SEED ships a harness dir + the amadeus roof; neither is a code repo.
     mkdirSync(join(proj, ".claude", ".git"), { recursive: true });
-    mkdirSync(join(proj, "aidlc", ".git"), { recursive: true });
+    mkdirSync(join(proj, "amadeus", ".git"), { recursive: true });
     makeRepo(proj, "real-repo");
     const r = util(["intent-birth", "--scope", "feature"]);
     expect(r.status).toBe(0);
@@ -362,7 +362,7 @@ describe("t164 query layer (listSpaces / listIntents + --json)", () => {
     expect(after.spaces.length).toBe(2);
     expect(after.spaces.map((s: { name: string }) => s.name).sort()).toEqual(["default", "payments"]);
     // space-create seeds the new space's memory (org.md copied + fresh stubs).
-    const mem = join(proj, "aidlc", "spaces", "payments", "memory");
+    const mem = join(proj, "amadeus", "spaces", "payments", "memory");
     expect(existsSync(join(mem, "org.md"))).toBe(true);
     expect(existsSync(join(mem, "team.md"))).toBe(true);
     expect(existsSync(join(mem, "project.md"))).toBe(true);
@@ -403,12 +403,12 @@ describe("t164 query layer (listSpaces / listIntents + --json)", () => {
 // Doctor readiness against the shipped shell (P4: no --init artifact)
 // ============================================================
 describe("t164 doctor readiness against the shipped shell", () => {
-  test("a project with .claude/ + aidlc/spaces/default/memory/ passes the shell-ready row", () => {
-    // P9: createTestProject seeds the shell (incl. aidlc/spaces/default/memory/);
+  test("a project with .claude/ + amadeus/spaces/default/memory/ passes the shell-ready row", () => {
+    // P9: createTestProject seeds the shell (incl. amadeus/spaces/default/memory/);
     // add .claude/ so the readiness row has both halves it checks. (mkdir is
     // idempotent — memory/ already exists from the seed.)
     mkdirSync(join(proj, ".claude"), { recursive: true });
-    mkdirSync(join(proj, "aidlc", "spaces", "default", "memory"), { recursive: true });
+    mkdirSync(join(proj, "amadeus", "spaces", "default", "memory"), { recursive: true });
     const r = util(["doctor"]);
     expect(r.out).toContain("workspace shell ready");
     // The readiness row must NOT reference the retired --init.
@@ -418,9 +418,9 @@ describe("t164 doctor readiness against the shipped shell", () => {
   test("a project missing the default memory dir fails the shell-ready row", () => {
     mkdirSync(join(proj, ".claude"), { recursive: true });
     // P9: createTestProject seeds the shipped shell INCLUDING
-    // aidlc/spaces/default/memory/; this case needs it ABSENT so the readiness
+    // amadeus/spaces/default/memory/; this case needs it ABSENT so the readiness
     // row fails. Strip the seeded memory dir.
-    rmSync(join(proj, "aidlc", "spaces", "default", "memory"), {
+    rmSync(join(proj, "amadeus", "spaces", "default", "memory"), {
       recursive: true,
       force: true,
     });
@@ -460,7 +460,7 @@ describe("t164 migration wiring (flat → per-intent on first birth)", () => {
     const migrated = readFileSync(join(intentsDir(proj), records[0], "amadeus-state.md"), "utf-8");
     expect(migrated).toContain("Legacy App");
     // The .migrated marker was written (idempotency key).
-    expect(existsSync(join(proj, "aidlc", ".migrated"))).toBe(true);
+    expect(existsSync(join(proj, "amadeus", ".migrated"))).toBe(true);
     // The flat tree was removed from the working tree post-move (git-rm step).
     expect(existsSync(join(flat, "amadeus-state.md"))).toBe(false);
 

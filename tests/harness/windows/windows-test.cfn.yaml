@@ -27,7 +27,7 @@ Parameters:
     Description: Windows Server 2022 AMI SSM parameter.
   ProjectDir:
     Type: String
-    Default: C:\aidlc
+    Default: C:\amadeus
     Description: Directory where the repo archive is synced before running tests.
   GitForWindowsInstallerUrl:
     Type: String

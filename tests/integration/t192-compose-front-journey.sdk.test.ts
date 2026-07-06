@@ -118,11 +118,11 @@ describe("t192 front composer journey (/amadeus compose -> approve -> write -> b
         expect(Object.keys(grid[composedName as string].stages ?? {}).length).toBeGreaterThan(0);
 
         // (d) the born state froze the COMPOSED scope.
-        const spaceCursor = join(proj, "aidlc", "active-space");
+        const spaceCursor = join(proj, "amadeus", "active-space");
         const space = existsSync(spaceCursor)
           ? readFileSync(spaceCursor, "utf-8").trim() || "default"
           : "default";
-        const intentsDir = join(proj, "aidlc", "spaces", space, "intents");
+        const intentsDir = join(proj, "amadeus", "spaces", space, "intents");
         const rec = readFileSync(join(intentsDir, "active-intent"), "utf-8").trim();
         const state = readFileSync(join(intentsDir, rec, "amadeus-state.md"), "utf-8");
         expect(state).toContain(`- **Scope**: ${composedName}`);

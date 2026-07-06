@@ -71,7 +71,7 @@ describe("t-tui compose front journey (live claude TUI)", () => {
   test.skipIf(SKIP_REASON !== null)(
     `/amadeus compose renders the gate; answering births the composed scope${SKIP_REASON ? ` - SKIP: ${SKIP_REASON}` : ""}`,
     async () => {
-      const session = `aidlc_tui_compose_${process.pid}`;
+      const session = `amadeus_tui_compose_${process.pid}`;
       const sandbox = setupTuiProject({ brownfieldStub: true, noAidlcDocs: true });
       try {
         expect(drive([

@@ -9,7 +9,7 @@
 // own: seeds two repos + the shell correctly" deliverable).
 //
 // It asserts, purely on disk, for each harness:
-//   - the shipped dist/<harness>/ shell landed (engine dir + the aidlc/ memory
+//   - the shipped dist/<harness>/ shell landed (engine dir + the amadeus/ memory
 //     shell with the default space),
 //   - repo-a/.git and repo-b/.git exist as IMMEDIATE children of the root,
 //   - discoverSiblingRepos(root) === ["repo-a","repo-b"] (sorted, deduped — the
@@ -59,11 +59,11 @@ describe("t177 workspace-journey fixture (deterministic, no LLM)", () => {
         const engineDir = join(journey.root, HARNESS_ENGINE_DIR[harness]);
         expect(existsSync(engineDir)).toBe(true);
 
-        // The sibling aidlc/ memory shell landed (the default space's memory),
+        // The sibling amadeus/ memory shell landed (the default space's memory),
         // so the rule-layer resolver finds the method.
-        expect(existsSync(join(journey.root, "aidlc", "spaces", "default", "memory"))).toBe(true);
+        expect(existsSync(join(journey.root, "amadeus", "spaces", "default", "memory"))).toBe(true);
         // The pinned per-clone audit-shard token is in place.
-        expect(existsSync(join(journey.root, "aidlc", ".amadeus-clone-id"))).toBe(true);
+        expect(existsSync(join(journey.root, "amadeus", ".amadeus-clone-id"))).toBe(true);
 
         // repo-a / repo-b are immediate children, each a real git checkout.
         expect(journey.repoA).toBe(join(journey.root, "repo-a"));
@@ -76,7 +76,7 @@ describe("t177 workspace-journey fixture (deterministic, no LLM)", () => {
         expect(existsSync(join(journey.repoB, "main.py"))).toBe(true);
 
         // The exact set birth's discovery would capture: sorted, deduped, with
-        // the engine dir + the aidlc roof excluded.
+        // the engine dir + the amadeus roof excluded.
         expect(discoverSiblingRepos(journey.root)).toEqual(["repo-a", "repo-b"]);
 
         // No intent is pre-born — the journey's step 1 auto-births it live.

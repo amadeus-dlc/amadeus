@@ -136,7 +136,7 @@ if (eventType) {
 // A conversation works ONE intent; the active-intent cursor is durable + shared
 // across sessions. So resuming an A-chat after the cursor moved to B would
 // inject B's context silently (vision §3, the central multi-space hazard). We
-// fix it with a per-session→intent stamp (aidlc/.amadeus-sessions/<id>):
+// fix it with a per-session→intent stamp (amadeus/.amadeus-sessions/<id>):
 //   - On a STARTED-class event, stamp the working intent's UUID for this
 //     session so a later resume can detect a cursor drift.
 //   - On RESUMED, if the stamped UUID differs from the live cursor AND still

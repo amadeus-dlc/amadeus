@@ -99,7 +99,7 @@ describe("t-tui-statusline (statusline renders in a real terminal)", () => {
   test.skipIf(ABSENT_REASON !== null)(
     `[AIDLC] ready paints in the launched TUI${ABSENT_REASON ? ` — SKIP: ${ABSENT_REASON}` : ""}`,
     () => {
-      const session = `aidlc_tui_statusline_${process.pid}`;
+      const session = `amadeus_tui_statusline_${process.pid}`;
       const sandbox = mkdtempSync(join(tmpdir(), "amadeus-tui-statusline-"));
       try {
         // --- step 1: copy the distributable per the README ---------------------

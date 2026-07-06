@@ -30,7 +30,7 @@
 **Timestamp**: 2026-05-28T08:02:05Z
 **Event**: STATE_FORKED
 **Bolt slug**: auth
-**Worktree path**: .aidlc/worktrees/bolt-auth
+**Worktree path**: .amadeus/worktrees/bolt-auth
 **Source state hash**: aaa111
 **Target state hash**: aaa111
 
@@ -40,7 +40,7 @@
 **Timestamp**: 2026-05-28T08:02:15Z
 **Event**: STATE_FORKED
 **Bolt slug**: cart
-**Worktree path**: .aidlc/worktrees/bolt-cart
+**Worktree path**: .amadeus/worktrees/bolt-cart
 **Source state hash**: bbb222
 **Target state hash**: bbb222
 
@@ -50,7 +50,7 @@
 **Timestamp**: 2026-05-28T08:02:25Z
 **Event**: STATE_FORKED
 **Bolt slug**: pay
-**Worktree path**: .aidlc/worktrees/bolt-pay
+**Worktree path**: .amadeus/worktrees/bolt-pay
 **Source state hash**: ccc333
 **Target state hash**: ccc333
 
@@ -62,7 +62,7 @@
 **Fire id**: auth0001
 **Sensor ID**: linter
 **Stage slug**: code-generation
-**Output path**: .aidlc/worktrees/bolt-auth/amadeus-docs/construction/code-generation/output.md
+**Output path**: .amadeus/worktrees/bolt-auth/amadeus-docs/construction/code-generation/output.md
 
 ---
 
@@ -72,7 +72,7 @@
 **Fire id**: auth0001
 **Sensor ID**: linter
 **Stage slug**: code-generation
-**Output path**: .aidlc/worktrees/bolt-auth/amadeus-docs/construction/code-generation/output.md
+**Output path**: .amadeus/worktrees/bolt-auth/amadeus-docs/construction/code-generation/output.md
 **Duration ms**: 100
 
 ---
@@ -83,7 +83,7 @@
 **Fire id**: cart0002
 **Sensor ID**: type-check
 **Stage slug**: code-generation
-**Output path**: .aidlc/worktrees/bolt-cart/amadeus-docs/construction/code-generation/output.md
+**Output path**: .amadeus/worktrees/bolt-cart/amadeus-docs/construction/code-generation/output.md
 
 ---
 
@@ -93,8 +93,8 @@
 **Fire id**: cart0002
 **Sensor ID**: type-check
 **Stage slug**: code-generation
-**Output path**: .aidlc/worktrees/bolt-cart/amadeus-docs/construction/code-generation/output.md
-**Detail path**: .aidlc/worktrees/bolt-cart/amadeus-docs/.amadeus-sensors/code-generation/type-check-cart0002.md
+**Output path**: .amadeus/worktrees/bolt-cart/amadeus-docs/construction/code-generation/output.md
+**Detail path**: .amadeus/worktrees/bolt-cart/amadeus-docs/.amadeus-sensors/code-generation/type-check-cart0002.md
 **Findings count**: 2
 
 ---
@@ -124,7 +124,7 @@
 **Timestamp**: 2026-05-28T08:30:00Z
 **Event**: STATE_MERGED
 **Bolt slug**: auth
-**Worktree path**: .aidlc/worktrees/bolt-auth
+**Worktree path**: .amadeus/worktrees/bolt-auth
 **Source state hash**: aaa111
 **Target state hash**: aaa999
 **Conflict resolution**: clean
@@ -135,7 +135,7 @@
 **Timestamp**: 2026-05-28T08:31:00Z
 **Event**: STATE_MERGED
 **Bolt slug**: cart
-**Worktree path**: .aidlc/worktrees/bolt-cart
+**Worktree path**: .amadeus/worktrees/bolt-cart
 **Source state hash**: bbb222
 **Target state hash**: bbb999
 **Conflict resolution**: clean
@@ -146,7 +146,7 @@
 **Timestamp**: 2026-05-28T08:32:00Z
 **Event**: STATE_MERGED
 **Bolt slug**: pay
-**Worktree path**: .aidlc/worktrees/bolt-pay
+**Worktree path**: .amadeus/worktrees/bolt-pay
 **Source state hash**: ccc333
 **Target state hash**: ccc999
 **Conflict resolution**: clean

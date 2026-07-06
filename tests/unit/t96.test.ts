@@ -35,7 +35,7 @@
 // FIXTURE DISCIPLINE: each case builds a self-contained temp project via
 // createTestProject() + seedStateFile() (the .ts analogues of the .sh's
 // make_project, which cp'd state-construction.md into amadeus-docs/) and removes
-// it after. The runtime-graph.json + .aidlc/worktrees/bolt-<slug>/ layout is
+// it after. The runtime-graph.json + .amadeus/worktrees/bolt-<slug>/ layout is
 // test-specific so it is written inline (the .sh wrote it inline too). NOTHING
 // is written under tests/fixtures/**.
 
@@ -82,7 +82,7 @@ let projDir = "";
 //   - fresh temp project with amadeus-docs/amadeus-state.md seeded from
 //     state-construction.md (createTestProject + seedStateFile).
 //   - mainGraph !== null  -> write main amadeus-docs/runtime-graph.json bytes.
-//   - slug !== null       -> pre-create .aidlc/worktrees/bolt-<slug>/amadeus-docs/
+//   - slug !== null       -> pre-create .amadeus/worktrees/bolt-<slug>/amadeus-docs/
 //     and byte-copy main state into it (simulating what state-fork populates).
 function makeProject(slug: string | null, mainGraph: string | null): string {
   const proj = createTestProject();
@@ -92,7 +92,7 @@ function makeProject(slug: string | null, mainGraph: string | null): string {
   }
   if (slug !== null) {
     // The worktree mirror carries the SAME relative record dir as the main
-    // checkout (aidlc/spaces/default/intents/<record>/), not a flat amadeus-docs/.
+    // checkout (amadeus/spaces/default/intents/<record>/), not a flat amadeus-docs/.
     const wtDocs = wtRecordDir(proj, slug);
     mkdirSync(wtDocs, { recursive: true });
     // state-fork byte-copies main state to worktree — simulate that.
@@ -108,10 +108,10 @@ function makeProject(slug: string | null, mainGraph: string | null): string {
 function wtRecordDir(proj: string, slug: string): string {
   return join(
     proj,
-    ".aidlc",
+    ".amadeus",
     "worktrees",
     `bolt-${slug}`,
-    "aidlc",
+    "amadeus",
     "spaces",
     DEFAULT_SPACE,
     "intents",

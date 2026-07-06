@@ -15,7 +15,7 @@
 // SKILL: `package.ts --check` only proves dist==authored, so a self-consistent-
 // but-stale authored SKILL passes. This gate closes that hole in BOTH directions:
 //   (a) NEGATIVE — the retired `/amadeus --init` command (a bare `--init` flag
-//       token; `git init`/`npm init` are NOT the aidlc command, same predicate as
+//       token; `git init`/`npm init` are NOT the amadeus command, same predicate as
 //       t174) must be ABSENT from every shipped conductor SKILL.
 //   (b) POSITIVE — the workspace-anchor vocabulary (`intent-birth`, `--repo`,
 //       "offer a second intent", "intent and space verbs") must be PRESENT in
@@ -48,7 +48,7 @@ function harnessSkills(): string[] {
 }
 
 // A bare `--init` flag token: `--init` not preceded by another flag char — the
-// retired aidlc command. NOT `git init`/`npm init` (no leading hyphen). Same
+// retired amadeus command. NOT `git init`/`npm init` (no leading hyphen). Same
 // predicate as t174's `--init` scan.
 const BARE_INIT = /(^|[^-\w])--init\b/;
 

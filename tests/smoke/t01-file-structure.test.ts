@@ -44,11 +44,11 @@ import { AMADEUS_SRC } from "../harness/fixtures.ts";
 const at = (...parts: string[]): string => join(AMADEUS_SRC, ...parts);
 
 // The method ("memory") relocated OUT of the harness dir to the workspace root
-// under aidlc/spaces/default/memory/ (one hand-editable source of truth, read
+// under amadeus/spaces/default/memory/ (one hand-editable source of truth, read
 // by Claude via the .claude/rules/amadeus.md @-stub). It sits beside .claude/, so
 // resolve it from AMADEUS_SRC's parent (the dist/claude/ root).
 const mem = (...parts: string[]): string =>
-  join(AMADEUS_SRC, "..", "aidlc", "spaces", "default", "memory", ...parts);
+  join(AMADEUS_SRC, "..", "amadeus", "spaces", "default", "memory", ...parts);
 
 // The 14 agents (11 original domain-expert personas + the two reviewer
 // personas product-lead and architecture-reviewer + the adaptive-workflows
@@ -235,9 +235,9 @@ describe("t01 — shipped-tree file-structure invariant (mechanism: none)", () =
     expect(existsSync(at("knowledge", "amadeus-shared", "state-template.md"))).toBe(true);
   });
 
-  test("ships the org and project method layers at aidlc/spaces/default/memory/ [.sh L70-71]", () => {
+  test("ships the org and project method layers at amadeus/spaces/default/memory/ [.sh L70-71]", () => {
     // The method relocated from .claude/rules/amadeus-{org,project}.md to the
-    // workspace-root aidlc/spaces/default/memory/{org,project}.md (neutral names,
+    // workspace-root amadeus/spaces/default/memory/{org,project}.md (neutral names,
     // one hand-editable copy). The harness reads it via the .claude/rules/amadeus.md
     // @-stub, which ships in its place.
     expect(existsSync(mem("org.md"))).toBe(true);
@@ -270,7 +270,7 @@ describe("t01 — shipped-tree file-structure invariant (mechanism: none)", () =
       at("settings.json.example"), // 62
       at("settings.local.json.example"), // 63
       at("knowledge", "amadeus-shared", "state-template.md"), // 64
-      mem("org.md"), // 65 — method relocated to aidlc/spaces/default/memory/
+      mem("org.md"), // 65 — method relocated to amadeus/spaces/default/memory/
       mem("project.md"), // 66
       at("CLAUDE.md.example"), // 67
     ];

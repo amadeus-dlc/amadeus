@@ -2,7 +2,7 @@
 
 ## Phase Overview
 
-The Initialization phase is the first of five phases in the AI-DLC workflow. It runs stages 0.1 through 0.3, **birthing the intent** — minting its record dir at `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/` (written `<record>/` below) with state files, directory scaffolding, workspace classification, and routing configuration. There is no separate scaffold command: the workspace shell ships pre-built in `dist/<harness>/`, and the engine auto-births the first intent on the first `/amadeus` (or when you describe what to build).
+The Initialization phase is the first of five phases in the AI-DLC workflow. It runs stages 0.1 through 0.3, **birthing the intent** — minting its record dir at `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/` (written `<record>/` below) with state files, directory scaffolding, workspace classification, and routing configuration. There is no separate scaffold command: the workspace shell ships pre-built in `dist/<harness>/`, and the engine auto-births the first intent on the first `/amadeus` (or when you describe what to build).
 
 All 3 stages in this phase execute for EVERY scope — there are no conditional stages. All stages auto-proceed with no approval gates.
 
@@ -49,7 +49,7 @@ All three stages run inside a single deterministic `bun .claude/tools/amadeus-ut
 ### Steps
 1. Create `<record>/` directory if needed
 2. Create stage artifact directories for all 5 phases + `<record>/verification/`
-3. Create the empty space-level `aidlc/knowledge/` directory (free-form; no per-agent subdirs, no READMEs)
+3. Create the empty space-level `amadeus/knowledge/` directory (free-form; no per-agent subdirs, no READMEs)
 4. Create the intent's `audit/` shard dir header + emit `WORKFLOW_STARTED`
 5. Append `STAGE_STARTED` + `WORKSPACE_SCAFFOLDED` + `STAGE_COMPLETED` events
 
@@ -59,7 +59,7 @@ All three stages run inside a single deterministic `bun .claude/tools/amadeus-ut
 ### Outputs
 - `<record>/initialization/`, `ideation/`, `inception/`, `construction/`, `operation/` with stage subdirectories
 - `<record>/verification/`
-- the empty space-level `aidlc/knowledge/` directory (a sibling of the space's `intents/`)
+- the empty space-level `amadeus/knowledge/` directory (a sibling of the space's `intents/`)
 - the intent's `audit/` shard dir (header + session + scaffold events)
 
 ### Notes
@@ -146,7 +146,7 @@ All three stages run inside a single deterministic `bun .claude/tools/amadeus-ut
 There is no re-init flag. Birthing the first intent runs once per intent; the
 workspace shell itself ships pre-built and is never re-scaffolded. To start over,
 birth a new intent (each gets its own `<record>/`), or — for a clean slate —
-archive the active intent's record dir under `aidlc/spaces/<space>/intents/` and
+archive the active intent's record dir under `amadeus/spaces/<space>/intents/` and
 let the engine birth a fresh one. A second `/amadeus` over an existing intent
 resumes it rather than re-initialising.
 

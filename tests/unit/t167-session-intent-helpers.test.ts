@@ -6,7 +6,7 @@
 // per-user session record + the intent registry, so they're directly callable.
 //
 //   - writeSessionIntentUuid / readSessionIntentUuid — the per-conversation
-//     stamp at aidlc/.amadeus-sessions/<session_id>. A round-trip returns the
+//     stamp at amadeus/.amadeus-sessions/<session_id>. A round-trip returns the
 //     stamped uuid; an unstamped session id returns null; a blank session id /
 //     blank uuid is a no-op (never writes a stray file).
 //   - activeIntentUuid — the uuid of the active intent (cursor / lone), or null
@@ -47,7 +47,7 @@ describe("t167 session→intent helpers (mechanism none — pure in-process)", (
 
   test("a blank session id never writes a stray record (no-op)", () => {
     writeSessionIntentUuid(proj, "", "uuid-x");
-    expect(existsSync(join(proj, "aidlc", ".amadeus-sessions"))).toBe(false);
+    expect(existsSync(join(proj, "amadeus", ".amadeus-sessions"))).toBe(false);
   });
 
   test("a blank uuid is a no-op (does not clear/create)", () => {

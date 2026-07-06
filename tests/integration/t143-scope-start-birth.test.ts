@@ -11,7 +11,7 @@
 //           mutating move, never performs it);
 //   conductor: ACTS on the print — runs `amadeus-utility.ts intent-birth --scope bugfix`
 //           and re-enters the loop;
-//   disk:   the born intent's amadeus-state.md (under aidlc/spaces/<space>/intents/
+//   disk:   the born intent's amadeus-state.md (under amadeus/spaces/<space>/intents/
 //           <slug>-<id8>/, resolved by sdk-drive's per-intent readers) lands with
 //           Scope: bugfix and a populated Current Stage — the workflow started.
 //

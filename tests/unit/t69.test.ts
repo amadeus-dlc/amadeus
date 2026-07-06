@@ -11,7 +11,7 @@
 // boundary, argv parsing, or env read to exercise.
 //
 // The .sh's first assertion is a static content-lint of the repo .gitignore
-// (it must carry the anchored `^/\.aidlc/$` entry so a nested `.aidlc/` is not
+// (it must carry the anchored `^/\.amadeus/$` entry so a nested `.amadeus/` is not
 // silently swallowed). That is not a worktreePath() call, but it guards the
 // same primitive's on-disk footprint, so it is ported faithfully as a
 // readFileSync($REPO_ROOT/.gitignore) + per-line regex check.
@@ -25,11 +25,11 @@
 // Sources read for this port:
 //   dist/claude/.claude/tools/amadeus-lib.ts:155
 //     worktreePath(projectDir, boltSlug) =>
-//       join(projectDir, ".aidlc", "worktrees", `bolt-${boltSlug}`)
-//   .gitignore:29  ->  /.aidlc/
+//       join(projectDir, ".amadeus", "worktrees", `bolt-${boltSlug}`)
+//   .gitignore:29  ->  /.amadeus/
 //
 // Parity mapping (.sh assertion -> test below):
-//   1. ".gitignore contains anchored /.aidlc/ entry"        -> describe ".gitignore"
+//   1. ".gitignore contains anchored /.amadeus/ entry"        -> describe ".gitignore"
 //   2. "returns an absolute path when projectDir is absolute" -> isAbsolute check
 //   3. "worktreePath(projectDir,'demo') ends with /bolt-demo" -> ends-with check
 //   4. "does not validate or sanitise the slug (milestone 2 contract)" -> '/' passthrough
@@ -48,15 +48,15 @@ const REPO_ROOT = join(import.meta.dir, "..", "..");
 const PROJ = "/tmp/proj";
 const portablePath = (p: string): string => p.replace(/\\/g, "/");
 
-describe("t69 .gitignore anchored /.aidlc/ entry", () => {
-  // .sh #1: assert_grep "$REPO_ROOT/.gitignore" '^/\.aidlc/$'
-  // Anchored (leading /) so a nested `.aidlc/` (e.g. inside node_modules) is
-  // not silently swallowed. The framework only ever writes .aidlc/ at the repo
+describe("t69 .gitignore anchored /.amadeus/ entry", () => {
+  // .sh #1: assert_grep "$REPO_ROOT/.gitignore" '^/\.amadeus/$'
+  // Anchored (leading /) so a nested `.amadeus/` (e.g. inside node_modules) is
+  // not silently swallowed. The framework only ever writes .amadeus/ at the repo
   // root, alongside .claude/. Ported as a per-line exact-match scan to mirror
   // the grep's line-anchored ^...$ semantics.
-  test("repo .gitignore has an anchored /.aidlc/ line", () => {
+  test("repo .gitignore has an anchored /.amadeus/ line", () => {
     const lines = readFileSync(join(REPO_ROOT, ".gitignore"), "utf-8").split("\n");
-    expect(lines.some((l) => /^\/\.aidlc\/$/.test(l))).toBe(true);
+    expect(lines.some((l) => /^\/\.amadeus\/$/.test(l))).toBe(true);
   });
 });
 

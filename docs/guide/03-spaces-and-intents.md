@@ -20,8 +20,8 @@ When you install AI-DLC you copy its engine into your project — a single
 harness-specific directory (`.claude/` on Claude Code, `.kiro/` on Kiro,
 `.codex/` on Codex). That directory is the *only* part of the layout that
 differs by harness. From then on, everything AI-DLC produces lives under one
-neutral `aidlc/` directory at your project root — organized by *what you're
-working on*, not by which harness you happen to run. You browse `aidlc/`; you
+neutral `amadeus/` directory at your project root — organized by *what you're
+working on*, not by which harness you happen to run. You browse `amadeus/`; you
 never need to open the engine directory.
 
 Here is a complete workspace with two teams and a few intents in flight (the
@@ -36,7 +36,7 @@ my-project/
 │                                 (or .kiro/ / .codex/ — the one harness-specific dir)
 │                                 You never browse this; it just runs /amadeus.
 │
-├── aidlc/                        EVERYTHING AI-DLC — neutral, browsable, committed to git
+├── amadeus/                        EVERYTHING AI-DLC — neutral, browsable, committed to git
 │   ├── active-space              ← cursor: which space you're in (gitignored, per-user)
 │   └── spaces/
 │       ├── default/              ★ the only space most people ever see
@@ -70,7 +70,7 @@ my-project/
 
 Three things are worth pulling out of that tree, because they are the whole idea:
 
-- **`aidlc/spaces/<space>/`** is one team's self-contained world: its method
+- **`amadeus/spaces/<space>/`** is one team's self-contained world: its method
   (`memory/`), its knowledge, its code knowledge, and its record of every intent.
   You get `spaces/default/` for free and, as a solo developer or single team,
   never look past it.
@@ -106,7 +106,7 @@ work, the engine **auto-births** an intent for you:
 ```
 
 On a fresh workspace this mints the intent, creates its record dir at
-`aidlc/spaces/default/intents/260624-inventory-api/`, makes it the active intent,
+`amadeus/spaces/default/intents/260624-inventory-api/`, makes it the active intent,
 and starts the first stage — exactly the run you saw in the previous chapter.
 
 ### Starting a second piece of work
@@ -220,7 +220,7 @@ the right repo automatically.
 
 ```
 my-project/
-├── aidlc/          # the workspace
+├── amadeus/          # the workspace
 ├── checkout-api/   # repo-a   ┐ both auto-discovered as siblings;
 └── checkout-web/   # repo-b   ┘ an intent here can touch either or both
 ```
@@ -233,14 +233,14 @@ An intent that records no repos is the ordinary single-repo case. See
 
 ## What's committed and what's not
 
-`aidlc/` is checked into git so a team **shares** its work — the method, the intent
+`amadeus/` is checked into git so a team **shares** its work — the method, the intent
 registry, each intent's state, audit trail, and artifacts all travel with the
 repo. Two kinds of file are deliberately **gitignored** instead:
 
 | Gitignored (per-user, machine-local) | Why |
 |---|---|
-| `aidlc/active-space`, `…/intents/active-intent` | Cursors — "where am I right now." Committing them would dirty the tree on every `/amadeus` and have teammates fight over the cursor on each switch. |
-| `…/intents/<id>/runtime-graph.json`, `.amadeus-*`, `aidlc/.amadeus-sessions/` | Derived, machine-local runtime state. |
+| `amadeus/active-space`, `…/intents/active-intent` | Cursors — "where am I right now." Committing them would dirty the tree on every `/amadeus` and have teammates fight over the cursor on each switch. |
+| `…/intents/<id>/runtime-graph.json`, `.amadeus-*`, `amadeus/.amadeus-sessions/` | Derived, machine-local runtime state. |
 
 Everything else under a space — `memory/**`, `knowledge/**`, `codekb/**`,
 `intents.json`, each record's `amadeus-state.md`, `audit/` shards, and artifacts — is

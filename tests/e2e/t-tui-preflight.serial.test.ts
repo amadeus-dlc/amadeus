@@ -126,7 +126,7 @@ describe("t-tui-preflight (terminal substrate capability gate)", () => {
       ABSENT_REASON ? ` — SKIP: ${ABSENT_REASON}` : ""
     }`,
     () => {
-      const session = `aidlc_tui_preflight_${process.pid}`;
+      const session = `amadeus_tui_preflight_${process.pid}`;
       const sandbox = mkdtempSync(join(tmpdir(), "amadeus-tui-preflight-"));
       try {
         // 1) start the known-answer target in a fixed-size session.

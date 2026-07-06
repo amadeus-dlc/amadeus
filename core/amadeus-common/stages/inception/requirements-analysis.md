@@ -59,7 +59,7 @@ Load amadeus-product-agent persona from `agents/amadeus-product-agent.md` and kn
 
 ### Step 2: Load Prior Context
 
-- If brownfield: Read RE artifacts from `aidlc/spaces/<active-space>/codekb/<repo>/` (the directory `codekb-path --repo <repo>` prints)
+- If brownfield: Read RE artifacts from `amadeus/spaces/<active-space>/codekb/<repo>/` (the directory `codekb-path --repo <repo>` prints)
 - Read user's project description from `<record>/audit/<host>-<clone>.md`
 
 ### Step 3: Analyze User Request

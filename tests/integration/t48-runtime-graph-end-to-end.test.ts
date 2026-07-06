@@ -96,17 +96,17 @@ interface RuntimeGraphShape {
 let proj = "";
 let firstStage = "";
 
-// P4: init births a per-intent record (aidlc/spaces/<space>/intents/<slug>-<id8>/),
+// P4: init births a per-intent record (amadeus/spaces/<space>/intents/<slug>-<id8>/),
 // and amadeus-runtime compile writes runtime-graph.json + audit shards INSIDE that
 // record, not the flat amadeus-docs/. Resolve the record dir from the active-space
 // + active-intent cursors, falling back to the flat layout for a not-yet-born
 // project. The graph/audit CONTENT is unchanged — only the LOCATION moved.
 function recordDirOf(p: string): string {
-  const spaceCursor = join(p, "aidlc", "active-space");
+  const spaceCursor = join(p, "amadeus", "active-space");
   const space = existsSync(spaceCursor)
     ? readFileSync(spaceCursor, "utf-8").trim() || "default"
     : "default";
-  const intentsDir = join(p, "aidlc", "spaces", space, "intents");
+  const intentsDir = join(p, "amadeus", "spaces", space, "intents");
   const intentCursor = join(intentsDir, "active-intent");
   if (existsSync(intentCursor)) {
     const rec = readFileSync(intentCursor, "utf-8").trim();

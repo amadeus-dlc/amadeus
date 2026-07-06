@@ -36,7 +36,7 @@ interface Flags {
 	stage?: string;
 	outputPath?: string;
 	// Absolute path to the TEAM templates source-of-truth dir
-	// (aidlc/spaces/<space>/memory/templates/) — the OVERRIDE tier. Threaded by
+	// (amadeus/spaces/<space>/memory/templates/) — the OVERRIDE tier. Threaded by
 	// the dispatcher / fire hook, which hold projectDir; the script never
 	// resolves projectDir itself. Absent → no team lookup.
 	templatesDir?: string;

@@ -84,7 +84,7 @@ slow if its job permits.
 ## 3. Mapping to AI-DLC
 
 The mapping is closer than it sounds. (`<record>/` below = the active intent's
-record dir, `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`; the audit trail is a
+record dir, `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`; the audit trail is a
 dir of per-clone shards under `<record>/audit/`.)
 
 | Networking | AI-DLC analog |
@@ -123,7 +123,7 @@ recompile at the next workflow start.
 | State | Lifecycle | Source on disk | Compiled into | Read by |
 |---|---|---|---|---|
 | Stage DAG, scope routing, artifact production | Framework-versioned (changes via framework PR) | Stage frontmatter (`.claude/amadeus-common/stages/*.md`) | `stage-graph.json` | Orchestrator, doctor, designer |
-| **Rules** (prose, prescriptive) | Mutable; framework PR or learning-loop writes | `aidlc/spaces/<space>/memory/<scope>.md` (filename-derived; org/team/project attach to every stage) | `stage-graph.json` per-node `rules_in_context` | Orchestrator (resolved view); Claude Code auto-load reads source for in-context prose |
+| **Rules** (prose, prescriptive) | Mutable; framework PR or learning-loop writes | `amadeus/spaces/<space>/memory/<scope>.md` (filename-derived; org/team/project attach to every stage) | `stage-graph.json` per-node `rules_in_context` | Orchestrator (resolved view); Claude Code auto-load reads source for in-context prose |
 | **Sensors** (manifests, verification checks) | Mutable; framework PR or learning-loop writes (manifest authored once; stages import by id) | `.claude/sensors/amadeus-<id>.md` | `stage-graph.json` per-node `sensors_applicable` | Dispatcher reads resolved list at stage entry; PostToolUse fires from it |
 | Workflow execution telemetry | Per-workflow, accumulating | `audit/` shards · `memory.md` · Bolt forks | `<record>/runtime-graph.json` | Doctor, gate ritual, future cross-workflow observer |
 | Per-stage observation log | Per-stage-run | `<record>/<phase>/<stage>/memory.md` | (no compile — read directly) | Gate ritual at this stage's gate |
@@ -137,7 +137,7 @@ authoring surface; compiled graphs are what runtime reads.
 
 ### One compile, at workflow start
 
-The compile reads stage frontmatter, walks `aidlc/spaces/<space>/memory/` and
+The compile reads stage frontmatter, walks `amadeus/spaces/<space>/memory/` and
 `.claude/sensors/`, attaches universal-default rules by filename
 (`org.md`, `team.md`, `project.md` apply to every
 stage), then looks up each stage's pull imports against the source
@@ -223,10 +223,10 @@ Concretely, each stage node gains two fields:
   "phase": "inception",
   "sensors": ["required-sections", "upstream-coverage"],
   "rules_in_context": [
-    {"path": "aidlc/spaces/default/memory/org.md", "scope": "org"},
-    {"path": "aidlc/spaces/default/memory/team.md", "scope": "team"},
-    {"path": "aidlc/spaces/default/memory/project.md", "scope": "project"},
-    {"path": "aidlc/spaces/default/memory/phases/inception.md", "scope": "phase"}
+    {"path": "amadeus/spaces/default/memory/org.md", "scope": "org"},
+    {"path": "amadeus/spaces/default/memory/team.md", "scope": "team"},
+    {"path": "amadeus/spaces/default/memory/project.md", "scope": "project"},
+    {"path": "amadeus/spaces/default/memory/phases/inception.md", "scope": "phase"}
   ],
   "sensors_applicable": [
     {"id": "required-sections", "path": ".claude/sensors/amadeus-required-sections.md"},

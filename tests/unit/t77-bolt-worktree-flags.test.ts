@@ -44,7 +44,7 @@
 //                       worktree, stdout discarded:false (:555).
 //   :868 failJson     — prints {ok:false,slug,stage,reason,detail} JSON and
 //                       process.exit(1). The five-field halt-and-ask envelope.
-//   amadeus-lib.ts:148 worktreePath(pd,slug) = <pd>/.aidlc/worktrees/bolt-<slug>.
+//   amadeus-lib.ts:148 worktreePath(pd,slug) = <pd>/.amadeus/worktrees/bolt-<slug>.
 //
 // Old TAP -> new test parity (28 .sh assertions; 1:1, several STRONGER):
 //   .sh T1  (start --worktree no --slug exits 1)        -> "start --worktree without --slug exits 1"
@@ -127,7 +127,7 @@ function setupV7Project(withWorktree?: string): string {
   seedStateFile(proj, "state-construction.md");
   seedAuditFile(proj);
   if (withWorktree) {
-    mkdirSync(join(proj, ".aidlc", "worktrees", `bolt-${withWorktree}`), {
+    mkdirSync(join(proj, ".amadeus", "worktrees", `bolt-${withWorktree}`), {
       recursive: true,
     });
   }
@@ -156,10 +156,10 @@ function readAudit(proj: string): string {
 function wtStatePath(proj: string, slug: string): string {
   return join(
     proj,
-    ".aidlc",
+    ".amadeus",
     "worktrees",
     `bolt-${slug}`,
-    "aidlc",
+    "amadeus",
     "spaces",
     DEFAULT_SPACE,
     "intents",
@@ -492,7 +492,7 @@ describe("t77 — abort", () => {
 
   test("default abort (no --discard) preserves the worktree directory [.sh T28]", () => {
     const proj = track(setupV7Project("exp-pres"));
-    const wtDir = join(proj, ".aidlc", "worktrees", "bolt-exp-pres");
+    const wtDir = join(proj, ".amadeus", "worktrees", "bolt-exp-pres");
     mkdirSync(wtDir, { recursive: true });
     writeFileSync(join(wtDir, "file.txt"), "marker");
     runBolt([

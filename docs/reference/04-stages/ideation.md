@@ -16,7 +16,7 @@ CONDITIONAL stages that do not apply to the current scope.
 **Key characteristics of the Ideation phase:**
 
 - Every stage uses inline execution mode (direct conversation with the user).
-- Stages produce artifacts under the intent's record dir at `<record>/ideation/<stage-name>/`, where `<record>` is `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/` (the `audit/` shard dir, the per-stage `memory.md`, and the verification reports live under the same record dir).
+- Stages produce artifacts under the intent's record dir at `<record>/ideation/<stage-name>/`, where `<record>` is `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/` (the `audit/` shard dir, the per-stage `memory.md`, and the verification reports live under the same record dir).
 - All stages except Stage 1.1 depend on outputs from earlier stages.
 - Stage 1.7 runs a phase boundary verification check before handing off to
   Inception.
@@ -83,7 +83,7 @@ as seed context so the stage does not re-ask "what do you want to build?"
 
 - User's project description from `$ARGUMENTS` or the intent's `audit/` shards
 - Existing `<record>/` artifacts from prior sessions (if any)
-- Guardrails from `aidlc/spaces/<space>/memory/`
+- Guardrails from `amadeus/spaces/<space>/memory/`
 
 ### Steps
 

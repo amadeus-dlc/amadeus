@@ -95,7 +95,7 @@ describe("t-tui-kiro-bugfix-scope (brownfield bugfix journey, numbered-prose gat
   test.skipIf(SKIP_REASON !== null)(
     `kiro: /amadeus bugfix advances past init into Inception with real answered gates${SKIP_REASON ? ` — SKIP: ${SKIP_REASON}` : ""}`,
     async () => {
-      const session = `aidlc_tui_kiro_bf_${process.pid}`;
+      const session = `amadeus_tui_kiro_bf_${process.pid}`;
       const sandbox = setupTuiProject({
         harness: "kiro",
         noAidlcDocs: true,

@@ -58,7 +58,7 @@ flowchart TD
 | **Resume from last checkpoint** | Continue from the in-progress or next pending stage. Task sidebar is rebuilt from the state file. | All artifacts, state, audit trail | In-memory conversation context from the prior session |
 | **Redo current stage** | Delete the current stage's artifact directory, reset its checkbox to `[ ]`, and re-execute from scratch. | All other artifacts and state | Current stage's artifacts and partial work |
 | **Jump to stage** | Skip to a specific stage. Warns about skipped stages and potential downstream artifact invalidation. | All existing artifacts | Stages between current and target are marked `[S]` (skipped) |
-| **Start fresh** | Archive the active intent's record dir under `aidlc/spaces/<space>/intents/` (requires your confirmation), then birth a new intent. | Archived copy of all prior artifacts | Active workflow state (a new intent + state file is created) |
+| **Start fresh** | Archive the active intent's record dir under `amadeus/spaces/<space>/intents/` (requires your confirmation), then birth a new intent. | Archived copy of all prior artifacts | Active workflow state (a new intent + state file is created) |
 
 ---
 

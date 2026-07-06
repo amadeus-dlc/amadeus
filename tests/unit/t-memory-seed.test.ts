@@ -2,11 +2,11 @@
 //
 // t-memory-seed — the ENGINE-ONLY-INSTALL self-heal (deterministic, no-LLM,
 // no-network). Pins the additive fallback that recovers a user who copies ONLY
-// the harness engine dir (e.g. dist/kiro/.kiro/) but NOT the sibling aidlc/
-// workspace shell. Normally the shell (aidlc/spaces/default/memory/) ships as a
+// the harness engine dir (e.g. dist/kiro/.kiro/) but NOT the sibling amadeus/
+// workspace shell. Normally the shell (amadeus/spaces/default/memory/) ships as a
 // SIBLING of the engine dir, so a complete dist/ copy already carries the method
 // tree. When it is absent, the first /amadeus — which routes through the engine's
-// intent-birth → ensureWorkspaceDirs — seeds aidlc/spaces/default/memory/ from a
+// intent-birth → ensureWorkspaceDirs — seeds amadeus/spaces/default/memory/ from a
 // copy the packager bundled INSIDE the engine at tools/data/memory-seed/
 // (resolved by frameworkMemorySeedDir, mirroring frameworkTemplatesDir/DATA_DIR).
 //
@@ -14,10 +14,10 @@
 //   (a) THE BUNDLE: the packager emitted the method seed INSIDE the shipped
 //       engine dir, and frameworkMemorySeedDir() resolves to it (in-process, the
 //       `none` floor — a pure relative-to-DATA_DIR path).
-//   (b) THE SELF-HEAL: a temp project with NO aidlc/ shell (engine-only install)
-//       gains a populated aidlc/spaces/default/memory/ after the first birth.
+//   (b) THE SELF-HEAL: a temp project with NO amadeus/ shell (engine-only install)
+//       gains a populated amadeus/spaces/default/memory/ after the first birth.
 //   (c) IDEMPOTENCY: a project whose default memory tree ALREADY exists (a normal
-//       install that copied aidlc/) is left byte-unchanged — the existsSync guard
+//       install that copied amadeus/) is left byte-unchanged — the existsSync guard
 //       skips the seed, so a committed tree never churns.
 //
 // MECHANISM. (a) imports frameworkMemorySeedDir in-process from the shipped dist
@@ -55,7 +55,7 @@ const BUNDLED_SEED = join(
   "memory-seed",
 );
 // Where ensureWorkspaceDirs lands the default-space method tree.
-const DEFAULT_MEMORY_REL = join("aidlc", "spaces", "default", "memory");
+const DEFAULT_MEMORY_REL = join("amadeus", "spaces", "default", "memory");
 
 const tempDirs: string[] = [];
 afterEach(() => {
@@ -95,8 +95,8 @@ describe("t-memory-seed engine-only-install self-heal", () => {
   });
 
   // === (b) THE SELF-HEAL ===================================================
-  test("b: an engine-only install (NO aidlc/ shell) gains a populated default memory tree on first birth", () => {
-    // A bare temp project — the engine-only-install shape: no sibling aidlc/ shell,
+  test("b: an engine-only install (NO amadeus/ shell) gains a populated default memory tree on first birth", () => {
+    // A bare temp project — the engine-only-install shape: no sibling amadeus/ shell,
     // so the default-space method tree is ABSENT before the first /amadeus.
     const proj = mkTemp("heal");
     const defaultMemory = join(proj, DEFAULT_MEMORY_REL);
@@ -118,7 +118,7 @@ describe("t-memory-seed engine-only-install self-heal", () => {
 
   // === (c) IDEMPOTENCY =====================================================
   test("c: an existing default memory tree is left byte-unchanged (guard skips the seed)", () => {
-    // A normal install that copied aidlc/: the default memory tree already exists.
+    // A normal install that copied amadeus/: the default memory tree already exists.
     // Plant a sentinel so we can prove the seed did NOT overwrite it.
     const proj = mkTemp("idemp");
     const defaultMemory = join(proj, DEFAULT_MEMORY_REL);

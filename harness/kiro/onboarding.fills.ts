@@ -15,7 +15,7 @@ This project uses AI-DLC (AI-Driven Development Life Cycle) for structured devel
     prereq_bullets: `- **Kiro CLI ≥ 2.6**: the hooks/skills/agent features this install relies on (stop hook with blocking, preToolUse/postToolUse matchers, \`.kiro/skills/\` slash commands, workspace \`chat.defaultAgent\`) shipped in the 2.x line. Check with \`kiro-cli --version\`.
 - **bun**: Required for the CLI tools and hook scripts (state management, audit logging, orchestration engine). Install via \`curl -fsSL https://bun.sh/install | bash\`. \`bun\` must be on your PATH for the non-interactive shells the harness spawns — these source \`~/.zshenv\` (zsh) or \`~/.bashrc\` (bash), NOT \`~/.zshrc\`.
 - **Activation**: this install ships \`.kiro/settings/cli.json\` setting \`chat.defaultAgent: "amadeus"\`, so a plain \`kiro-cli chat\` in this project uses the AI-DLC agent and \`/amadeus\` just works. **Note: the workspace default takes precedence over any global default agent you have configured.** If you prefer your own default, delete that settings line and start sessions with \`kiro-cli chat --agent amadeus\` instead.
-- **Permissions**: the \`aidlc\` agent pre-approves ONLY \`bun .kiro/tools/*\` shell commands (plus read-only tools); everything else prompts. There is no blanket shell trust. In \`--no-interactive\` runs, tools that would prompt are auto-approved by the harness — prefer interactive sessions for gated workflows.`,
+- **Permissions**: the \`amadeus\` agent pre-approves ONLY \`bun .kiro/tools/*\` shell commands (plus read-only tools); everything else prompts. There is no blanket shell trust. In \`--no-interactive\` runs, tools that would prompt are auto-approved by the harness — prefer interactive sessions for gated workflows.`,
 
     prereq_bullets_tail: "",
 
@@ -34,7 +34,7 @@ This is the same AI-DLC core that ships to every harness — one deterministic e
 - Construction swarm runs as **subagent fan-out only** (\`AMADEUS_USE_SWARM=1\` is a loud no-op).
 - Session-end and pre-compaction audit events (\`SESSION_ENDED\`, \`SESSION_COMPACTED\`) are not emitted — Kiro has no hooks for those moments.
 - **MCP servers**: none ship, and the Kiro MCP config mechanism is not configured here (the Claude distribution ships five; Kiro ships zero today).
-- A workflow's \`aidlc/\` workspace tree is harness-neutral: a project can move between Claude Code and Kiro CLI installs (supported but untested — keep both \`.claude/\` and \`.kiro/\` in sync via the framework's packaging if you do this).
+- A workflow's \`amadeus/\` workspace tree is harness-neutral: a project can move between Claude Code and Kiro CLI installs (supported but untested — keep both \`.claude/\` and \`.kiro/\` in sync via the framework's packaging if you do this).
 `,
 
     sections_after_resumption: "",
