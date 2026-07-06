@@ -23,8 +23,8 @@ rename 漏れ 2 件（#537/#540 = #445 engine-namespace 改名の取りこぼし
   - FR-2.2: sensors 実ファイル走査の回帰検査を FR-1.2 の eval と同居または同型で常設する。
 - FR-3（#538、B003）:
   - FR-3.1: linter sensor の文書記述と実行時挙動を一致させ、SENSOR_FIRED の意味を明確にする（Issue 受け入れ条件）。
-  - FR-3.2: 実現形は候補 1 を基本線に functional-design で確定する（Q4）。設計制約: エンジンは配布物であり、repo 固有パス（`lints/check.ts`）の直書きは「repo の開発用スクリプトを skill の実行時参照として書かない」規則と衝突するため、対象 workspace から機械検出できる汎用機構（例: package.json の `lint:check` script の存在検出 → ラップ、不在なら従来の quiet PASS）を検討する。
-  - FR-3.3: #528 の新 rule（no-stub-compat）が gate 時に自動で効くこと（engineer3 ピア確認済みの効果）を検証で確認する。検証手段（eval の入力・出力仕様。例: no-stub パターンを含む入力で sensor が fail を返すことの隔離 workspace 検査）は、#528 の rule 実装が確定してから functional-design で受け入れ条件として定義する（明示委任。#528 が未 merge のため要求段階では仕様を固定できない）。
+  - FR-3.2: 実現形は候補 1 を基本線に設計確定地点（code-generation-plan.md、bugfix scope のため）で確定する（Q4）。設計制約: エンジンは配布物であり、repo 固有パス（`lints/check.ts`）の直書きは「repo の開発用スクリプトを skill の実行時参照として書かない」規則と衝突するため、対象 workspace から機械検出できる汎用機構（例: package.json の `lint:check` script の存在検出 → ラップ、不在なら従来の quiet PASS）を検討する。
+  - FR-3.3: #528 の新 rule（no-stub-compat）が gate 時に自動で効くこと（engineer3 ピア確認済みの効果）を検証で確認する。検証手段（eval の入力・出力仕様。例: no-stub パターンを含む入力で sensor が fail を返すことの隔離 workspace 検査）は、#528 の rule 実装が確定してから 設計確定地点（bugfix scope は functional-design を持たないため、code-generation の設計節 = code-generation-plan.md）で受け入れ条件として定義する（明示委任。#528 が未 merge のため要求段階では仕様を固定できない）。
 - FR-4（共通）:
   - FR-4.1: エンジン変更は parity-map の engineFileExceptions 宣言（新規または既存 reason の更新）と skills/ 正準ソース反映を伴う。
   - FR-4.2: TDD — 各 Bolt で先に失敗する eval を追加し、RED を確認してから修正する。
@@ -45,7 +45,7 @@ rename 漏れ 2 件（#537/#540 = #445 engine-namespace 改名の取りこぼし
 | 3 | linter sensor の文書と挙動が一致し SENSOR_FIRED の意味が明確で、先に失敗する eval を伴う（#538 AC） | FR-3.1 / FR-3.2 / FR-4.2 |
 | 4 | エンジン変更に parity 宣言と skills/ 正準反映が伴う（#538/#540 AC） | FR-4.1 |
 | 5 | `npm run test:all` pass、validator（260706-rename-lint-fixes 指定）pass | 全要求 |
-| 6 | #528 rule の gate 時有効化の具体的検証仕様（eval の入力・出力）が functional-design で受け入れ条件として定義され、設計 gate で確定している | FR-3.3 |
+| 6 | #528 rule の gate 時有効化の具体的検証仕様（eval の入力・出力）が code-generation-plan.md（bugfix scope の設計確定地点）で受け入れ条件として定義され、code-generation gate で確定している | FR-3.3 |
 
 ## スコープ外
 
