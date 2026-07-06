@@ -504,5 +504,13 @@
     "scope": "bugfix",
     "repos": [],
     "status": "complete"
+  },
+  {
+    "uuid": "019f36eb-5e6a-7e2f-aff7-134be15ccf26",
+    "slug": "docs-consistency",
+    "dirName": "260706-docs-consistency",
+    "scope": "refactor",
+    "repos": [],
+    "status": "in_progress"
   }
 ]
