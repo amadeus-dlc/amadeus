@@ -360,5 +360,13 @@
     "scope": "feature",
     "repos": [],
     "status": "complete"
+  },
+  {
+    "uuid": "019f34f7-fbb5-7f9f-8d45-521ce7c6e3f3",
+    "slug": "pr-gate-discipline",
+    "dirName": "260706-pr-gate-discipline",
+    "scope": "refactor",
+    "repos": [],
+    "status": "in_progress"
   }
 ]

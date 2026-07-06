@@ -9,6 +9,7 @@
 | `amadeus-utility.ts intent-birth / doctor / scope-table / intent` | workflow 誕生、健全性診断（.drops 表面化 = #432 を含む）、scope 表生成 |
 | `amadeus-graph.ts compile` | stage-graph.json / scope-grid.json の生成（rules 解決は構造的 walk-up = #491） |
 | `amadeus-runtime.ts compile` | 対象 Intent の runtime-graph.json 生成（bolt_dag を含む） |
+| `amadeus-learnings.ts persist` | learnings（規則）の永続化。冪等性 key は `cid:<dirName>:<slug>:<candidateId>`（dirName は出所 Intent の record dir 名）。戻り値は `rule_learned`（新規追記）と `already_present`（既存 marker 一致）を分離しており、別 Intent の同名 candidate_id でも marker 衝突による無言 no-op が起きない（#504） |
 | `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <ws> [dirName]` | 配布先で実行できる構造検証 |
 | `npm run test:all` / `npm run kanban:sync` | 標準検証入口 / board 全件同期 |
 | `npm run amadeus:install -- --target <workspace>` / `bun run scripts/amadeus-install.ts --target <workspace>` | エンジンと skill を対象 workspace へ配布インストールする唯一の入口（冪等。#451） |
