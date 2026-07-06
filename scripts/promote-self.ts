@@ -31,15 +31,15 @@ const argv = process.argv.slice(2);
 const mode: Mode = argv.includes("--apply") ? "apply" : "check";
 const noBuild = argv.includes("--no-build");
 
+// amadeus/spaces/default/memory/ is deliberately NOT managed: workspace
+// memory is the hand-edited method source — practices-discovery writes to it
+// and the self-learning loop appends to its ## Corrections sections at
+// runtime, so promoting the shipped seed over it would clobber user content.
+// The engine seeds it from the bundled copy only when it is missing.
 const managedDirs: ManagedDir[] = [
   { src: "dist/claude/.claude", dst: ".claude", transform: true },
   { src: "dist/codex/.codex", dst: ".codex", transform: true },
   { src: "dist/codex/.agents", dst: ".agents", transform: true },
-  {
-    src: "dist/claude/aidlc/spaces/default/memory",
-    dst: "amadeus/spaces/default/memory",
-    transform: true,
-  },
 ];
 
 const managedFiles = new Map<string, Buffer>([
@@ -62,7 +62,7 @@ function usage(): never {
       "usage: bun scripts/promote-self.ts [--check|--apply] [--no-build]",
       "",
       "  --check     verify project-local self install matches generated output (default)",
-      "  --apply     write .claude/, .codex/, .agents/, CLAUDE.md, and amadeus/spaces/default/memory",
+      "  --apply     write .claude/, .codex/, .agents/, and CLAUDE.md",
       "  --no-build  skip the package.ts freshness step",
     ].join("\n"),
   );
