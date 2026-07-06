@@ -728,7 +728,8 @@
     "tools/aidlc-sensor-linter.ts",
     "sensors/aidlc-linter.md",
     "hooks/aidlc-log-subagent.ts",
-    "hooks/aidlc-runtime-compile.ts"
+    "hooks/aidlc-runtime-compile.ts",
+    "knowledge/aidlc-pipeline-deploy-agent/branching-strategies.md"
   ],
   "exceptions": [
     {

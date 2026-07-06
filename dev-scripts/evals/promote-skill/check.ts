@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join, relative, resolve } from "node:path";
 
@@ -110,6 +110,26 @@ const agentsRoot = join(promoteAllRoot, ".agents/skills");
 
 for (const skill of amadeusSkills()) {
   run(["bun", "run", "dev-scripts/promote-skill.ts", skill, "--agents-root", agentsRoot]);
+}
+
+// Harness overlay (後勝ち) — mirror build.ts Step 3 so the temp dir matches
+// the full three-layer build output committed in .agents/skills/.
+// Without this step the diff below would flag every harness/codex openai.yaml.
+{
+  const harnessRoot = join(root, "harness", "codex", "skills");
+  if (existsSync(harnessRoot)) {
+    for (const name of readdirSync(harnessRoot)) {
+      const harnessAgentsDir = join(harnessRoot, name, "agents");
+      if (!existsSync(harnessAgentsDir) || !statSync(harnessAgentsDir).isDirectory()) continue;
+      const dstAgentsDir = join(agentsRoot, name, "agents");
+      mkdirSync(dstAgentsDir, { recursive: true });
+      for (const file of readdirSync(harnessAgentsDir)) {
+        const from = join(harnessAgentsDir, file);
+        const to = join(dstAgentsDir, file);
+        if (statSync(from).isFile()) cpSync(from, to);
+      }
+    }
+  }
 }
 
 const disallowed = listPaths(agentsRoot).filter((path) => {
