@@ -1625,3 +1625,19 @@
 **Details**: Scope: refactor, 8 stages completed
 
 ---
+
+## Decision Recorded
+**Timestamp**: 2026-07-06T08:39:45Z
+**Event**: DECISION_RECORDED
+**Stage**: build-and-test
+**Decision**: #576（overview の「Operation は常に [S]」と scope-grid 実体の矛盾）の扱い: (b) merge 後の #576 対応に委ねる。理由: この矛盾は退役機構への言及のような機械的陳腐化ではなく、契約が何を規定すべきか（scope 別の Operation 表記の正）の内容判断を要する。FR-3.2 の「判断に迷う場合は忠実対訳 + Issue 起案へフォールバック」に該当し、Issue は #576 として起票済み。本 PR は英日とも現行記述の忠実対訳を維持する（実測: 260705-presence-evidence では feature scope の Operation が [ ] EXECUTE で残り手動 skip した = 「常に [S]」と実体が異なることを当方も観測済み。#576 の材料として leader へ共有する）。
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-06T08:42:57Z
+**Event**: DECISION_RECORDED
+**Stage**: build-and-test
+**Decision**: Codex 初見レビュー（FR-4.1(c)、帰属 = reviewer / GPT-5.5、受領 2026-07-06T08:40:46Z）の所見 4 件（High 2 / Low 2）を実測裏取りのうえ全件反映した。High 2 件は翻訳元由来の陳腐化で FR-3.1 の外科修正カーブアウトを発動: (1) audit/audit.md → per-clone audit shard 表現へ 15 箇所（amadeus-lib.ts 1373〜1378 と本 record の audit/ 実体で裏取り）、(2) #369 移行中注記 1 文の削除（英日同時）。Low 2 件は英語版の明瞭化。補正後の決定論検査で 4 ペアの英日一致を維持。High 所見のため leader へ一報する。
+
+---

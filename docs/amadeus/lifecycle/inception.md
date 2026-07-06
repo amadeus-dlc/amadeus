@@ -136,7 +136,7 @@ Promotion requires human approval.
 | Stage | 2.3 |
 | Phase | Inception |
 | Execution | ALWAYS |
-| Condition | Always runs when scope targets it for execution. Depth follows depth |
+| Condition | Always runs when scope targets it for execution. The question depth follows the configured Depth value |
 | Lead Skill | `amadeus-inception-requirements-analysis` |
 | Mode | internal |
 | v2 Source | [requirements-analysis.md](https://github.com/awslabs/aidlc-workflows/blob/v2/core/amadeus-common/stages/inception/requirements-analysis.md) |

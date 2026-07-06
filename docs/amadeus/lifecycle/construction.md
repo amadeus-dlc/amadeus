@@ -299,9 +299,9 @@ Minimal is one test per requirement plus a happy-path floor, Standard verifies c
 |---|---|---|
 | `construction/bolts/<bolt-id>-<slug>/build-instructions.md` | Build procedure | build-instructions |
 | `construction/bolts/<bolt-id>-<slug>/unit-test-instructions.md` | Unit test procedure | unit-test-instructions |
-| `construction/bolts/<bolt-id>-<slug>/integration-test-instructions.md` | Integration test procedure. When run | integration-test-instructions |
-| `construction/bolts/<bolt-id>-<slug>/performance-test-instructions.md` | Performance test procedure. When run | performance-test-instructions |
-| `construction/bolts/<bolt-id>-<slug>/security-test-instructions.md` | Security test procedure. When run | security-test-instructions |
+| `construction/bolts/<bolt-id>-<slug>/integration-test-instructions.md` | Integration test procedure, when integration tests run | integration-test-instructions |
+| `construction/bolts/<bolt-id>-<slug>/performance-test-instructions.md` | Performance test procedure, when performance tests run | performance-test-instructions |
+| `construction/bolts/<bolt-id>-<slug>/security-test-instructions.md` | Security test procedure, when security tests run | security-test-instructions |
 | `construction/bolts/<bolt-id>-<slug>/build-and-test-summary.md` | Build and test summary | build-and-test-summary |
 | `construction/bolts/<bolt-id>-<slug>/build-test-results.md` | Test execution results | build-test-results |
 | `construction/bolts/<bolt-id>-<slug>/memory.md` | Learning record of stage execution (Interpretations, Deviations, Tradeoffs, Open questions) | memory |
@@ -357,4 +357,4 @@ The CI trigger design (push, PR, tag) follows the team practices confirmed by Pr
 
 ### Notes
 
-After all Bolts are complete, the phase's `decisions.md` and `traceability.md` are finalized, and the Intent's completion is recorded in `amadeus-state.md`'s `Status` (`Completed`) and `audit/audit.md`'s `WORKFLOW_COMPLETED`.
+After all Bolts are complete, the phase's `decisions.md` and `traceability.md` are finalized, and the Intent's completion is recorded in `amadeus-state.md`'s `Status` (`Completed`) and the `audit/` shards' `WORKFLOW_COMPLETED`.

@@ -357,4 +357,4 @@ CI のトリガー設計（push、PR、tag）は、Practices Discovery で確認
 
 ### Notes
 
-全 Bolt の完了後、phase の `decisions.md` と `traceability.md` を確定し、Intent の完了を `amadeus-state.md` の `Status`（`Completed`）と `audit/audit.md` の `WORKFLOW_COMPLETED` に記録する。
+全 Bolt の完了後、phase の `decisions.md` と `traceability.md` を確定し、Intent の完了を `amadeus-state.md` の `Status`（`Completed`）と `audit/` の shard の `WORKFLOW_COMPLETED` に記録する。

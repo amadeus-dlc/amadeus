@@ -74,3 +74,16 @@ subagent 間で生じた表記ゆれ 3 種を正規化した。
 ### §12a code-generation 反復 1 の指摘と修正
 
 - [MEDIUM] inception.ja.md の 4 箇所だけがリンクの表示テキストまで .ja.md へ書き換えており、他 5 文書の規約（表示テキストは <name>.md のまま、href だけ .ja.md）と不一致だった。conductor 統一パスがリンク表示テキストの規約を検査対象にしていなかったことが捕捉漏れの原因。4 箇所を href のみ変更へ修正し、規約「ja 版のリンクは表示テキストを <name>.md のまま保ち、href だけを .ja.md にする」を対訳記録の正式規約として明文化した。
+
+## Codex 初見レビュー（FR-4.1(c)、PR #575）の反映 = FR-3 外科修正カーブアウトの発動
+
+2026-07-06T08:40:46Z 受領の所見 4 件（High 2 / Low 2）を実測裏取りのうえ全件反映した（帰属 = reviewer / GPT-5.5）。
+
+| 所見 | 実測裏取り | 補正（英日同時） |
+|---|---|---|
+| [High] `audit/audit.md` は現行エンジンの per-clone audit shard 方式と乖離 | amadeus-lib.ts 1373〜1378 行（shard path 定義と audit/*.md の glob 読み）、本 Intent record 自身の audit/ が shard 1 ファイルのみ | 13 箇所 + 配置ツリー 2 箇所を `audit/` shard（`audit/<host>-<clone>.md`）表現へ補正（overview 4+4、state 3+3、construction 1+1、ツリー EN/JA 各 1） |
+| [High] overview 9〜10 行の #369 移行中注記（「置き換えまでの間、稼働中の skill は旧契約に従い…」）が現在は誤誘導 | Issue #369 は close 済み、旧 docs/amadeus/stages/ は不在 | 当該 1 文を英日とも削除（移行完了後の現在形へ。前文の「#369 の退役 wave で削除した」は維持） |
+| [Low] inception 2.3 Metadata の `Depth follows depth` が循環的 | — | `The question depth follows the configured Depth value` へ（英語版のみ） |
+| [Low] construction の test instruction 3 行の断片的な説明 | — | `Integration test procedure, when integration tests run` 形式へ（英語版のみ） |
+
+補正後の決定論検査を fresh 再実行し、4 ペアとも英日一致を維持（overview は両言語 292 行へ同時減）。High 2 件は翻訳元（日本語原文）由来の陳腐化であり、FR-3.1 の外科修正カーブアウト（言及行のみ、英日同時、節構成不変）として処理した。code-summary.md の「FR-3 発動なし」は本反映で「発動 2 件」へ訂正される。

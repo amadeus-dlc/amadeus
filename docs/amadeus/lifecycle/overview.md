@@ -7,7 +7,6 @@ This document family is the target contract for the v2-compatible lifecycle esta
 It defines the contract for implementing AI-DLC v2's ([awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows), `v2` branch) Ideation, Inception, and Construction specifications in Amadeus with semantic compatibility.
 
 The legacy model's per-stage contracts (`docs/amadeus/stages/`) were replaced by this contract and removed in #369's retirement wave. The Space contract is described in [steering.md](../steering.md).
-Until the replacement, running skills follow the legacy contract, and #369's implementation work follows this contract.
 
 ## Compatibility policy
 
@@ -25,7 +24,7 @@ The following keep Amadeus's own expression:
 
 - Artifacts are written in Japanese Markdown.
 - Intent records are laid out in record directories (`intents/<YYMMDD>-<label>/`); the canonical ledger is held by `intents.json`.
-- State is managed by `amadeus-state.md` (Stage Progress checkboxes) and `audit/audit.md` (events), directly under the record.
+- State is managed by `amadeus-state.md` (Stage Progress checkboxes) and the audit shards under `audit/` (per-clone `audit/<host>-<clone>.md`; events), directly under the record.
 - Structural validation is owned by `amadeus-validator`.
 - Questions are presented through the `amadeus-grilling` protocol (one at a time, with a recommended answer).
 - The human gate at phase boundaries and Bolt completion is done through a PR and a human merge.
@@ -104,7 +103,7 @@ The approval options are basically Approve and Request Changes.
 Only Ideation and Inception stages can offer adding a skipped stage back in as a third option.
 If Request Changes occurs three times in a row on the same stage, Accept as-is is added as an option.
 On the turn the gate is presented, the entry point waits for an answer and does not proceed without approval.
-Approval is recorded in `audit/audit.md` as a `GATE_APPROVED` event.
+Approval is recorded in the `audit/` shards as a `GATE_APPROVED` event.
 
 **Bolt gate**: the gate that applies to Construction's Bolt execution.
 The first Bolt (walking skeleton) always has its design artifacts and generated code approved by a human together.
@@ -169,7 +168,7 @@ amadeus/
           amadeus-state.md             # Stage Progress, Phase Progress, and more (the sole owner of state)
           verification/
           audit/
-            audit.md                 # append-only gate and transition events
+            <host>-<clone>.md        # append-only gate and transition events (per-clone shard)
           initialization/
             <stage-slug>/
           ideation/
@@ -260,7 +259,7 @@ Within the range of semantic compatibility, only the following Amadeus-specific 
 | Item | v2 | Amadeus | Reason |
 |---|---|---|---|
 | Recording confirmed questions | Bulk entry into a questions file, or a dialogue | The grilling protocol and the Grilling Decision Trail (`grillings.md`, `grillings/`) | Keeps the existing contract of one question at a time with a recommended answer, and keeps an artifact that tracks confirmed decisions. |
-| Supplementing the audit trail | Only events in `audit/audit.md` | `traceability.md` (artifact tracking) and `decisions.md` (phase decisions), in addition to `audit/audit.md` | Keeps per-artifact tracking and a decision summary separate from the event stream. |
+| Supplementing the audit trail | Only audit-trail events | `traceability.md` (artifact tracking) and `decisions.md` (phase decisions), in addition to the `audit/` shards | Keeps per-artifact tracking and a decision summary separate from the event stream. |
 | Artifact language | English Markdown | Japanese Markdown | Artifacts are written under the Japanese norm (one sentence per line, paragraphs separated by a blank line). |
 | reviewer | An independent sub-agent review before the gate, driven by the stage definition's `reviewer` and `reviewer_max_iterations` | Human approval at the stage gate, phase PR and Bolt PR review and CI, mapped to `amadeus-validator` | The final decision remains with a human upstream too, so this maps to the gate contract without changing the approval boundary. See [AI-DLC v2 Reviewer Mapping](../aidlc-v2-reviewer-mapping.md) for detail. |
 | sensor | Deterministic checks via the stage definition's `sensors:` (output to `.amadeus-sensors/`) | `required-sections` and `upstream-coverage` map to `amadeus-validator` and `traceability.md`; `linter` and `type-check` map to the Build and Test record and the PR's CI | Does not add a hook execution substrate to the distribution contract. See [AI-DLC v2 Sensor and Learn Mapping](../aidlc-v2-sensor-learn-mapping.md) for detail. |

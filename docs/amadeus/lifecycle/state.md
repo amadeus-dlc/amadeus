@@ -19,7 +19,7 @@ The contracts this document references as input are the record's top-level `amad
 The Intent's execution state has exactly one owner: the record's top-level `amadeus-state.md`.
 Its structure and labels are the v2 state template, used as-is.
 
-Approval and transition history belongs to the record's `audit/audit.md`, as append-only events.
+Approval and transition history belongs to the record's `audit/` shards (per-clone `audit/<host>-<clone>.md`), as append-only events.
 The Intent's canonical ID and its listing belong to the Space's `intents/intents.json` (the registry).
 
 The single entry point reads `amadeus-state.md` to resolve which stage runs next.
@@ -79,7 +79,7 @@ Unit-scoped stages (Construction 3.1-3.5) repeat, under the CONSTRUCTION PHASE s
 
 ## Approval and history (audit)
 
-Approval records are not held in `amadeus-state.md`; they belong to events in `audit/audit.md`.
+Approval records are not held in `amadeus-state.md`; they belong to events in the `audit/` shards.
 Entry format and event names follow the v2 audit format, and only appends are made.
 
 | Record | Event |
@@ -99,7 +99,7 @@ Completion via Accept-as-is after 3 consecutive rounds of Request Changes is rec
 
 ## Ledger and PR snapshots
 
-`amadeus-state.md` and `audit/audit.md` are a live, append-only ledger; they do not roll state back to match each phase PR's or Bolt PR's snapshot.
+`amadeus-state.md` and the `audit/` shards are a live, append-only ledger; they do not roll state back to match each phase PR's or Bolt PR's snapshot.
 The ledger here refers to the Intent's progress record — a distinct object from the canonical ledger (`intents.json`) in the "Cursor and registry" section below.
 This treatment is consistent with org.md's prohibition against rewriting recorded audit events.
 
