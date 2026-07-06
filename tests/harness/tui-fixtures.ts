@@ -178,6 +178,12 @@ export function setupTuiProject(opts: TuiProjectOptions = {}): string {
     if (existsSync(KIRO_IDE_MEMORY_SRC)) cpSync(KIRO_IDE_MEMORY_SRC, join(proj, "aidlc"), { recursive: true });
   } else {
     cpSync(AMADEUS_SRC, join(proj, ".claude"), { recursive: true });
+    const claudeMdExample = join(proj, ".claude", "CLAUDE.md.example");
+    const claudeMd = join(proj, ".claude", "CLAUDE.md");
+    if (!existsSync(claudeMd) && existsSync(claudeMdExample)) cpSync(claudeMdExample, claudeMd);
+    const settingsExample = join(proj, ".claude", "settings.json.example");
+    const settings = join(proj, ".claude", "settings.json");
+    if (!existsSync(settings) && existsSync(settingsExample)) cpSync(settingsExample, settings);
     if (existsSync(CLAUDE_MEMORY_SRC)) cpSync(CLAUDE_MEMORY_SRC, join(proj, "aidlc"), { recursive: true });
   }
 

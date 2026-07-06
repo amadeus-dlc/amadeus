@@ -72,7 +72,7 @@
 // round-trips through JSON survives). seedStateFile copies the named fixture to
 // amadeus-docs/amadeus-state.md, then sedReplaceInFile pivots Current Stage to the
 // target and flips its checkbox to [-]. All temp dirs cleaned in afterAll.
-// resetAidlcEnv() clears AWS_AMADEUS_DEFAULT_SCOPE so a developer's exported value
+// resetAidlcEnv() clears AMADEUS_DEFAULT_SCOPE so a developer's exported value
 // can't shadow the fixture scope. Each fixture is emitted ONCE and the directive
 // reused across its tests (the .sh emitted BF/GF/FD/CG once each too).
 
@@ -118,7 +118,7 @@ const RP = `aidlc/spaces/${DEFAULT_SPACE}/intents/${DEFAULT_RECORD_DIR}`;
 // full path so the assertion is robust to the per-emit temp basename.
 const CODEKB_PREFIX = `aidlc/spaces/${DEFAULT_SPACE}/codekb/`;
 
-// reset_aidlc_env (t116 sources fixtures.sh): clear AWS_AMADEUS_DEFAULT_SCOPE so
+// reset_aidlc_env (t116 sources fixtures.sh): clear AMADEUS_DEFAULT_SCOPE so
 // the fixture's own scope drives stages-in-scope, not a leaked shell export.
 resetAidlcEnv();
 
@@ -172,7 +172,7 @@ function emitFor(
     encoding: "utf-8",
     env: (() => {
       const e = { ...process.env };
-      delete e.AWS_AMADEUS_DEFAULT_SCOPE;
+      delete e.AMADEUS_DEFAULT_SCOPE;
       return e;
     })(),
   });

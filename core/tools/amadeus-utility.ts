@@ -452,7 +452,7 @@ function handleDoctor(projectDir: string): void {
       results.push({
         pass: false,
         label: "Hook contract: settings.json unreadable — cannot verify wired hooks",
-        fix: "restore .claude/settings.json (copy from `dist/claude/.claude/settings.json`)",
+        fix: "restore .claude/settings.json (copy from `dist/claude/.claude/settings.json.example`)",
       });
     } else if (expectedHooks.length === 0) {
       // settings.json parsed but wires no aidlc hooks — also loud (a stripped
@@ -460,7 +460,7 @@ function handleDoctor(projectDir: string): void {
       results.push({
         pass: false,
         label: "Hook contract: settings.json wires no amadeus-*.ts hooks",
-        fix: "restore the hooks block in .claude/settings.json (copy from `dist/claude/.claude/settings.json`)",
+        fix: "restore the hooks block in .claude/settings.json (copy from `dist/claude/.claude/settings.json.example`)",
       });
     } else {
       for (const h of expectedHooks) {
@@ -516,8 +516,8 @@ function handleDoctor(projectDir: string): void {
     });
   } else if (harness === ".codex") {
     for (const [file, what, from] of [
-      ["config.toml", "model/provider/sandbox config", "dist/codex/.codex/config.toml"],
-      ["hooks.json", "hook wiring", "dist/codex/.codex/hooks.json"],
+      ["config.toml", "model/provider/sandbox config", "dist/codex/.codex/config.toml.example"],
+      ["hooks.json", "hook wiring", "dist/codex/.codex/hooks.json.example"],
       ["rules/default.rules", "permission prefix rules", "dist/codex/.codex/rules/default.rules"],
     ] as const) {
       results.push({
@@ -564,7 +564,7 @@ function handleDoctor(projectDir: string): void {
     results.push({
       pass: existsSync(settingsPath),
       label: "settings.json present",
-      fix: "copy from `dist/claude/.claude/settings.json`",
+      fix: "copy from `dist/claude/.claude/settings.json.example`",
     });
   }
 
@@ -585,25 +585,25 @@ function handleDoctor(projectDir: string): void {
     });
   }
 
-  // 4a. AWS_AMADEUS_DEFAULT_SCOPE env var — project-default scope from settings.json env.
+  // 4a. AMADEUS_DEFAULT_SCOPE env var — project-default scope from settings.json env.
   // Only observable inside a Claude Code session (where settings.json env is exposed
   // to Bash invocations). When doctor is invoked directly via bun, the env is unset
   // and we report "unset — no project default" as a pass.
-  const envScope = (process.env.AWS_AMADEUS_DEFAULT_SCOPE || "").trim();
+  const envScope = (process.env.AMADEUS_DEFAULT_SCOPE || "").trim();
   if (envScope === "") {
     results.push({
       pass: true,
-      label: "AWS_AMADEUS_DEFAULT_SCOPE (unset — no project default)",
+      label: "AMADEUS_DEFAULT_SCOPE (unset — no project default)",
     });
   } else if (validScopes().has(envScope)) {
     results.push({
       pass: true,
-      label: `AWS_AMADEUS_DEFAULT_SCOPE=${envScope} (valid)`,
+      label: `AMADEUS_DEFAULT_SCOPE=${envScope} (valid)`,
     });
   } else {
     results.push({
       pass: false,
-      label: `AWS_AMADEUS_DEFAULT_SCOPE=${envScope} (invalid)`,
+      label: `AMADEUS_DEFAULT_SCOPE=${envScope} (invalid)`,
       fix: `valid values: ${[...validScopes()].join(", ")}`,
     });
   }
@@ -3593,7 +3593,7 @@ function handleDetectScope(
 }
 
 // ---------------------------------------------------------------------------
-// resolve-env-scope — validate AWS_AMADEUS_DEFAULT_SCOPE and emit its value
+// resolve-env-scope — validate AMADEUS_DEFAULT_SCOPE and emit its value
 //
 // The orchestrator's step 0 in SKILL.md calls this to resolve the env default
 // deterministically. Behavior:
@@ -3610,13 +3610,13 @@ function handleDetectScope(
 // ---------------------------------------------------------------------------
 
 function handleResolveEnvScope(): void {
-  const envScope = (process.env.AWS_AMADEUS_DEFAULT_SCOPE || "").trim();
+  const envScope = (process.env.AMADEUS_DEFAULT_SCOPE || "").trim();
   if (envScope === "") {
     return; // unset — no output, exit 0
   }
   if (!validScopes().has(envScope)) {
     die(
-      `Invalid AWS_AMADEUS_DEFAULT_SCOPE "${envScope}". Valid scopes: ${[...validScopes()].join(", ")}.`
+      `Invalid AMADEUS_DEFAULT_SCOPE "${envScope}". Valid scopes: ${[...validScopes()].join(", ")}.`
     );
   }
   process.stdout.write(`scope=${envScope}\n`);

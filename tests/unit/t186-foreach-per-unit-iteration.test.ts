@@ -215,7 +215,7 @@ function runNext(proj: string): Directive {
     encoding: "utf-8",
     env: (() => {
       const e = { ...process.env };
-      delete e.AWS_AMADEUS_DEFAULT_SCOPE;
+      delete e.AMADEUS_DEFAULT_SCOPE;
       return e;
     })(),
   });
@@ -234,7 +234,7 @@ function runReport(proj: string, args: string[]): Directive {
     encoding: "utf-8",
     env: (() => {
       const e = { ...process.env };
-      delete e.AWS_AMADEUS_DEFAULT_SCOPE;
+      delete e.AMADEUS_DEFAULT_SCOPE;
       return e;
     })(),
   });

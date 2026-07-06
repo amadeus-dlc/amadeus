@@ -131,9 +131,9 @@ describe("t157 seeded workspace shell + re-rooted .gitignore (SEED)", () => {
       readFileSync(join(REPO_ROOT, "dist", "kiro", ".kiro", "agents", "amadeus.json"), "utf-8"),
     ) as { resources: string[] };
     expect(kiroAgent.resources).toContain("file://aidlc/spaces/default/memory/**/*.md");
-    // Codex: the AMADEUS_RULES_DIR seam in the shipped config.toml + root AGENTS.md.
+    // Codex: the AMADEUS_RULES_DIR seam in the shipped config.toml.example + root AGENTS.md.
     const codexConfig = readFileSync(
-      join(REPO_ROOT, "dist", "codex", ".codex", "config.toml"),
+      join(REPO_ROOT, "dist", "codex", ".codex", "config.toml.example"),
       "utf-8",
     );
     expect(codexConfig).toContain('AMADEUS_RULES_DIR = "aidlc/spaces/default/memory"');

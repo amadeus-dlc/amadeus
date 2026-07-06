@@ -41,7 +41,7 @@
 //             FS   no amadeus-state.md created          -> t8 (file effect)
 //   - .sh T9  OUT  'Cannot use --stage and --phase together' -> t9
 //   - .sh T10 OUT  '"kind":"error"'                   -> t10 (env-scope)
-//             OUT  'Invalid AWS_AMADEUS_DEFAULT_SCOPE'   -> t10 (verbatim)
+//             OUT  'Invalid AMADEUS_DEFAULT_SCOPE'   -> t10 (verbatim)
 //   - .sh T11 OUT  'scope-change --scope mvp'         -> t11 (print names move)
 //   - .sh T12 OUT  'config-change --depth comprehensive' -> t12
 //   - .sh T13 OUT  '"stage":"functional-design"'      -> t13 (phase jump)
@@ -68,7 +68,7 @@
 // tool round-trips through JSON survives). seedStateFile copies the named
 // fixture to amadeus-docs/amadeus-state.md exactly as seed_state_file did. All temp
 // dirs cleaned in afterAll. resetAidlcEnv() (reset_aidlc_env) clears
-// AWS_AMADEUS_DEFAULT_SCOPE so a developer's exported value can't shadow the
+// AMADEUS_DEFAULT_SCOPE so a developer's exported value can't shadow the
 // fixtures; the env-scope case (t10) sets it explicitly in the spawn env only.
 
 import { afterAll, describe, expect, test } from "bun:test";
@@ -91,7 +91,7 @@ const ORCH = join(TOOLS_DIR, "amadeus-orchestrate.ts");
 const JUMP = join(TOOLS_DIR, "amadeus-jump.ts");
 const FIXTURES_DIR = join(REPO_ROOT, "tests", "fixtures");
 
-// reset_aidlc_env (t117:29): clear AWS_AMADEUS_DEFAULT_SCOPE so the env-scope
+// reset_aidlc_env (t117:29): clear AMADEUS_DEFAULT_SCOPE so the env-scope
 // precedence rung is empty by default; the env-scope case overrides per-spawn.
 resetAidlcEnv();
 
@@ -131,7 +131,7 @@ interface CliResult {
 
 /**
  * Spawn `bun <tool> <args...> --project-dir <p>`. Mirrors `bun "$TOOL" ... 2>&1`.
- * `env` overrides ride on top of the cleaned process env (AWS_AMADEUS_DEFAULT_SCOPE
+ * `env` overrides ride on top of the cleaned process env (AMADEUS_DEFAULT_SCOPE
  * already deleted by resetAidlcEnv) so the env-scope case can set just that var.
  */
 function run(
@@ -141,10 +141,10 @@ function run(
   env: Record<string, string> = {},
 ): CliResult {
   const childEnv = { ...process.env, ...env };
-  // Belt-and-braces: unless the case explicitly sets AWS_AMADEUS_DEFAULT_SCOPE,
+  // Belt-and-braces: unless the case explicitly sets AMADEUS_DEFAULT_SCOPE,
   // ensure it is absent in the child env regardless of the parent shell.
-  if (!("AWS_AMADEUS_DEFAULT_SCOPE" in env)) {
-    delete childEnv.AWS_AMADEUS_DEFAULT_SCOPE;
+  if (!("AMADEUS_DEFAULT_SCOPE" in env)) {
+    delete childEnv.AMADEUS_DEFAULT_SCOPE;
   }
   const res = spawnSync(BUN, [tool, ...args, "--project-dir", p], {
     encoding: "utf-8",
@@ -327,16 +327,16 @@ describe("t117 flag-validation, env-scope, scope/config change, phase jump, free
   });
 
   // --- Test 10: env-scope-invalid → error carrying the verbatim substring ---
-  // AWS_AMADEUS_DEFAULT_SCOPE=bogus, no state, no flag → scope source is env; the
+  // AMADEUS_DEFAULT_SCOPE=bogus, no state, no flag → scope source is env; the
   // engine shells out to resolve-env-scope and relays its verbatim message.
-  test("10: env-scope-invalid → error carrying verbatim Invalid AWS_AMADEUS_DEFAULT_SCOPE", () => {
+  test("10: env-scope-invalid → error carrying verbatim Invalid AMADEUS_DEFAULT_SCOPE", () => {
     const p = proj(); // no state seeded
-    const r = next([], p, { AWS_AMADEUS_DEFAULT_SCOPE: "bogus" });
+    const r = next([], p, { AMADEUS_DEFAULT_SCOPE: "bogus" });
     expect(r.out).toContain('"kind":"error"');
-    expect(r.out).toContain("Invalid AWS_AMADEUS_DEFAULT_SCOPE");
+    expect(r.out).toContain("Invalid AMADEUS_DEFAULT_SCOPE");
     const d = directive(r.stdout);
     expect(d.kind).toBe("error");
-    expect(d.message).toContain("Invalid AWS_AMADEUS_DEFAULT_SCOPE");
+    expect(d.message).toContain("Invalid AMADEUS_DEFAULT_SCOPE");
   });
 
   // --- Test 11: scope-change against existing state → print (names the move) ---

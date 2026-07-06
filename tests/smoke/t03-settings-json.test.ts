@@ -1,4 +1,4 @@
-// covers: file:settings.json
+// covers: file:settings.json.example
 //
 // In-process port of tests/smoke/t03-settings-json.sh (TAP plan 16 + Fable pin),
 // mechanism = none. The .sh is a schema-validation check on the SHIPPED
@@ -67,7 +67,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
-const SETTINGS_PATH = join(AMADEUS_SRC, "settings.json");
+const SETTINGS_PATH = join(AMADEUS_SRC, "settings.json.example");
 const RAW = readFileSync(SETTINGS_PATH, "utf-8");
 
 // .sh test 1: `jq empty "$SETTINGS"` succeeded => valid JSON. JSON.parse throws
@@ -82,8 +82,8 @@ interface Settings {
 }
 const settings: Settings = JSON.parse(RAW);
 
-describe("settings.json — JSON validity [.sh test 1]", () => {
-  test("settings.json is valid JSON", () => {
+describe("settings.json.example — JSON validity [.sh test 1]", () => {
+  test("settings.json.example is valid JSON", () => {
     // JSON.parse throws SyntaxError on invalid JSON exactly as `jq empty`
     // returned non-zero; re-parsing inside the assertion makes the contract
     // observable rather than relying on the module-load parse alone.
@@ -126,54 +126,26 @@ describe("statusLine [.sh test 10]", () => {
   });
 });
 
-describe("orchestrator model pin [.sh test 11]", () => {
-  test("model is pinned to opus[1m]", () => {
-    // .sh asserted exact string equality (`[ "$MODEL" = "opus[1m]" ]`).
-    expect(settings.model).toBe("opus[1m]");
-  });
-});
-
-describe("orchestrator reasoning-effort pin", () => {
-  // The shipped default raises reasoning effort to xhigh (the orchestrator runs
-  // a long forwarding loop where deeper reasoning earns its cost). Valid Claude
-  // Code effortLevel tiers: low|medium|high|xhigh|max. Pin xhigh so the default
-  // can't silently regress to high.
-  test("effortLevel is pinned to xhigh", () => {
-    expect(settings.effortLevel).toBe("xhigh");
-  });
-});
-
-describe("Bedrock env block [.sh tests 12-16 + Fable pin]", () => {
+describe("provider/model neutrality", () => {
   const env = settings.env ?? {};
 
-  test("env.CLAUDE_CODE_USE_BEDROCK is 1 [.sh test 12]", () => {
-    expect(env.CLAUDE_CODE_USE_BEDROCK).toBe("1");
+  test("model is not pinned", () => {
+    expect(settings.model).toBeUndefined();
   });
 
-  test("env.AWS_REGION is set [.sh test 13]", () => {
-    // .sh asserted non-empty (`[ -n "$AWS_REGION_VAL" ]`) — Bedrock requires
-    // a region; Claude Code does not read it from ~/.aws.
-    expect(typeof env.AWS_REGION).toBe("string");
-    expect((env.AWS_REGION ?? "").length).toBeGreaterThan(0);
+  test("effortLevel is not pinned", () => {
+    expect(settings.effortLevel).toBeUndefined();
   });
 
-  test("env.ANTHROPIC_DEFAULT_FABLE_MODEL is pinned", () => {
-    expect(env.ANTHROPIC_DEFAULT_FABLE_MODEL).toBe("global.anthropic.claude-fable-5[1m]");
+  test("Bedrock routing env is not pinned", () => {
+    expect(env.CLAUDE_CODE_USE_BEDROCK).toBeUndefined();
+    expect(env.AWS_REGION).toBeUndefined();
   });
 
-  test("env.ANTHROPIC_DEFAULT_OPUS_MODEL is pinned [.sh test 14]", () => {
-    expect(env.ANTHROPIC_DEFAULT_OPUS_MODEL).toBe("global.anthropic.claude-opus-4-8[1m]");
-  });
-
-  test("env.ANTHROPIC_DEFAULT_SONNET_MODEL is pinned [.sh test 15]", () => {
-    expect(env.ANTHROPIC_DEFAULT_SONNET_MODEL).toBe(
-      "global.anthropic.claude-sonnet-4-6[1m]",
-    );
-  });
-
-  test("env.ANTHROPIC_DEFAULT_HAIKU_MODEL is pinned [.sh test 16]", () => {
-    expect(env.ANTHROPIC_DEFAULT_HAIKU_MODEL).toBe(
-      "global.anthropic.claude-haiku-4-5-20251001-v1:0",
-    );
+  test("Anthropic model alias env is not pinned", () => {
+    expect(env.ANTHROPIC_DEFAULT_FABLE_MODEL).toBeUndefined();
+    expect(env.ANTHROPIC_DEFAULT_OPUS_MODEL).toBeUndefined();
+    expect(env.ANTHROPIC_DEFAULT_SONNET_MODEL).toBeUndefined();
+    expect(env.ANTHROPIC_DEFAULT_HAIKU_MODEL).toBeUndefined();
   });
 });

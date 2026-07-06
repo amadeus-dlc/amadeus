@@ -51,7 +51,7 @@ import { join } from "node:path";
 import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
 const SKILL = join(AMADEUS_SRC, "skills", "amadeus", "SKILL.md");
-const SETTINGS = join(AMADEUS_SRC, "settings.json");
+const SETTINGS = join(AMADEUS_SRC, "settings.json.example");
 
 /**
  * Extract the YAML frontmatter block — the lines BETWEEN the first two `---`

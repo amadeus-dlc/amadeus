@@ -97,7 +97,7 @@ describe("t150 dist/codex packaging parity + drift guard", () => {
     expect(nativeRules).toEqual(["default.rules"]);
     // The resolver seam re-points at the relocated method (relative to the
     // workspace root, where codex runs), NOT the old .codex/amadeus-rules.
-    const config = readFileSync(join(CODEX_DST, "config.toml"), "utf-8");
+    const config = readFileSync(join(CODEX_DST, "config.toml.example"), "utf-8");
     expect(config).toContain('AMADEUS_RULES_DIR = "aidlc/spaces/default/memory"');
     // The compiled graph's rule display paths are harness-neutral now.
     const graph = readFileSync(join(CODEX_DST, "tools", "data", "stage-graph.json"), "utf-8");
@@ -106,8 +106,8 @@ describe("t150 dist/codex packaging parity + drift guard", () => {
     expect(graph).not.toContain('".claude/rules/');
   });
 
-  test("5: hooks.json wires only Codex-real events through the adapter (no SessionEnd)", () => {
-    const wiring = JSON.parse(readFileSync(join(CODEX_DST, "hooks.json"), "utf-8")) as {
+  test("5: hooks.json.example wires only Codex-real events through the adapter (no SessionEnd)", () => {
+    const wiring = JSON.parse(readFileSync(join(CODEX_DST, "hooks.json.example"), "utf-8")) as {
       hooks: Record<string, Array<{ matcher?: string; hooks: Array<{ command: string }> }>>;
     };
     expect(Object.keys(wiring.hooks).sort()).toEqual(
@@ -195,7 +195,7 @@ describe("t150 dist/codex packaging parity + drift guard", () => {
     expect(r.status).toBe(0);
     const entries = r.stdout.match(/\[hooks\.state\."[^"]+"\]/g) ?? [];
     // One entry per registered hook group (8 wirings + the 1 PostCompact = 9).
-    const wiring = JSON.parse(readFileSync(join(CODEX_DST, "hooks.json"), "utf-8")) as {
+    const wiring = JSON.parse(readFileSync(join(CODEX_DST, "hooks.json.example"), "utf-8")) as {
       hooks: Record<string, Array<unknown>>;
     };
     const groupCount = Object.values(wiring.hooks).reduce((n, g) => n + g.length, 0);

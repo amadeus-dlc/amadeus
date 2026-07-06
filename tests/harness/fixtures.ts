@@ -86,7 +86,7 @@ const RETRYABLE_RM_CODES = new Set(["EBUSY", "ENOTEMPTY", "EPERM"]);
  * reset_aidlc_env (fixtures.sh:16-18).
  */
 export function resetAidlcEnv(): void {
-  delete process.env.AWS_AMADEUS_DEFAULT_SCOPE;
+  delete process.env.AMADEUS_DEFAULT_SCOPE;
 }
 
 /**
@@ -398,7 +398,7 @@ export interface IntegrationProjectOptions {
   withAudit?: boolean;
   /** Remove the scaffolded intent record + cursor (test the no-workspace path). */
   noAidlcDocs?: boolean;
-  /** Strip AWS_AMADEUS_DEFAULT_SCOPE from the copied settings.json so shell env wins. */
+  /** Strip AMADEUS_DEFAULT_SCOPE from the copied settings.json so shell env wins. */
   stripEnvScope?: boolean;
   /** Drop in the greenfield-todo stub project. */
   withGreenfieldStub?: boolean;
@@ -436,6 +436,16 @@ export function setupIntegrationProject(
 ): string {
   const proj = createTestProject();
   cpSync(AMADEUS_SRC, join(proj, ".claude"), { recursive: true });
+  const claudeMdExample = join(proj, ".claude", "CLAUDE.md.example");
+  const claudeMd = join(proj, ".claude", "CLAUDE.md");
+  if (!existsSync(claudeMd) && existsSync(claudeMdExample)) {
+    cpSync(claudeMdExample, claudeMd);
+  }
+  const settingsExample = join(proj, ".claude", "settings.json.example");
+  const settings = join(proj, ".claude", "settings.json");
+  if (!existsSync(settings) && existsSync(settingsExample)) {
+    cpSync(settingsExample, settings);
+  }
   // Copy the relocated method tree (aidlc/spaces/default/memory/) to the project
   // root beside .claude/ — the resolver reads the rule layers from there now
   // (P5 relocation). Absent in a tree built before P5, so guard it.
@@ -451,13 +461,12 @@ export function setupIntegrationProject(
   }
 
   if (opts.stripEnvScope) {
-    const settings = join(proj, ".claude", "settings.json");
     if (existsSync(settings)) {
-      // Drop the line carrying "AWS_AMADEUS_DEFAULT_SCOPE": ... — mirrors the
-      // sed_i '/"AWS_AMADEUS_DEFAULT_SCOPE":/d' delete in --strip-env-scope.
+      // Drop the line carrying "AMADEUS_DEFAULT_SCOPE": ... — mirrors the
+      // sed_i '/"AMADEUS_DEFAULT_SCOPE":/d' delete in --strip-env-scope.
       const kept = readFileSync(settings, "utf8")
         .split("\n")
-        .filter((l) => !l.includes('"AWS_AMADEUS_DEFAULT_SCOPE":'))
+        .filter((l) => !l.includes('"AMADEUS_DEFAULT_SCOPE":'))
         .join("\n");
       writeFileSync(settings, kept);
     }
@@ -609,11 +618,19 @@ export function setupWorkspaceJourney(harness: JourneyHarness = "claude"): Works
     cpSync(join(KIRO_DIST, "aidlc"), join(root, "aidlc"), { recursive: true });
   } else if (harness === "codex") {
     cpSync(join(CODEX_DIST, ".codex"), join(root, ".codex"), { recursive: true });
+    cpSync(join(root, ".codex", "config.toml.example"), join(root, ".codex", "config.toml"));
+    cpSync(join(root, ".codex", "hooks.json.example"), join(root, ".codex", "hooks.json"));
     cpSync(join(CODEX_DIST, ".agents"), join(root, ".agents"), { recursive: true });
     cpSync(join(CODEX_DIST, "AGENTS.md"), join(root, "AGENTS.md"));
     cpSync(join(CODEX_DIST, "aidlc"), join(root, "aidlc"), { recursive: true });
   } else {
     cpSync(join(CLAUDE_DIST, ".claude"), join(root, ".claude"), { recursive: true });
+    const claudeMdExample = join(root, ".claude", "CLAUDE.md.example");
+    const claudeMd = join(root, ".claude", "CLAUDE.md");
+    if (!existsSync(claudeMd) && existsSync(claudeMdExample)) cpSync(claudeMdExample, claudeMd);
+    const settingsExample = join(root, ".claude", "settings.json.example");
+    const settings = join(root, ".claude", "settings.json");
+    if (!existsSync(settings) && existsSync(settingsExample)) cpSync(settingsExample, settings);
     cpSync(join(CLAUDE_DIST, "aidlc"), join(root, "aidlc"), { recursive: true });
   }
 

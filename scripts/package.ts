@@ -89,13 +89,17 @@ function applyRulesRename(s: string, harnessDir: string, rulesRename: string | n
   return s.replaceAll(`${harnessDir}/rules/`, `${harnessDir}/${rulesRename}/`);
 }
 
+function isMarkdownProsePath(path: string): boolean {
+  return path.endsWith(".md") || path.endsWith(".md.example");
+}
+
 function transform(
   srcPath: string,
   content: Buffer,
   harnessDir: string,
   rulesRename: string | null,
 ): Buffer {
-  if (srcPath.endsWith(".md")) {
+  if (isMarkdownProsePath(srcPath)) {
     let s = substituteToken(content.toString("utf-8"), harnessDir);
     s = applyRulesRename(s, harnessDir, rulesRename);
     return Buffer.from(s, "utf-8");

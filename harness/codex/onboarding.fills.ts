@@ -31,17 +31,17 @@ gate).`,
 
     prereq_bullets: `- **Codex CLI ≥ 0.139.0**: earlier releases do not surface the real agent role in subagent hook payloads and do not resolve hyphenated agent TOMLs. \`$amadeus --doctor\` enforces the pin. Check with \`codex --version\`.
 - **bun**: Required for CLI tools and hook scripts (state management, audit logging, jump orchestration). Install via \`curl -fsSL https://bun.sh/install | bash\`. On Windows: \`npm install -g bun\` or \`powershell -c "irm bun.sh/install.ps1 | iex"\`. \`bun\` must be on your PATH for the non-interactive shells the harness spawns — these source \`~/.zshenv\` (zsh) or \`~/.bashrc\` (bash), NOT \`~/.zshrc\`.
-- **Model provider**: The shipped \`.codex/config.toml\` defaults to **Amazon Bedrock** — the orchestrator on \`openai.gpt-5.5\`, agents on \`openai.gpt-5.4\` (the D-7 model map). Set your AWS profile/region under \`[model_providers.amazon-bedrock.aws]\` (shipped defaults \`profile = "default"\`, \`region = "us-east-1"\`); you need Bedrock model access and AWS credentials on the default SDK credential chain. For OpenAI auth instead, comment out \`model_provider\` and the \`[model_providers]\` block. Note: \`web_search\` is unavailable on Bedrock, so the market-research stage degrades gracefully.
+- **Model provider**: The shipped \`.codex/config.toml.example\` does not pin a provider. Copy it to \`.codex/config.toml\` only when this project does not already have one. Codex uses the user's normal configured default provider and model. Put personal model/provider overrides in \`~/.codex/config.toml\`, or add project-local settings deliberately if your team wants to standardize them.
 - **MCP servers (optional)**: Codex reads MCP server definitions from \`[mcp_servers.<name>]\` tables in \`config.toml\` (project \`.codex/config.toml\` or \`~/.codex/config.toml\`). The shipped config declares none — add the servers you need there. Credentials flow through your environment; a server you have no credentials for is simply unavailable and never blocks a workflow.`,
 
     prereq_bullets_tail: `- **Permissions**: \`.codex/rules/default.rules\` (Starlark prefix rules) pre-allows the deterministic core's exact command prefixes — \`bun .codex/tools/\`, \`bun .codex/hooks/\`, and \`git worktree\`/\`commit\`/\`add\` — so workflows run without per-call prompts. The sandbox is \`workspace-write\`; commands outside the allowlist prompt.
-- **Personal overrides**: Settings in \`~/.codex/config.toml\` merge over the project \`.codex/config.toml\`. Put machine-specific overrides (model, AWS profile/region, environment variables) there to avoid changing the shared project config.`,
+- **Personal overrides**: Settings in \`~/.codex/config.toml\` merge over the project \`.codex/config.toml\`. Put machine-specific overrides there to avoid changing the shared project config.`,
 
     agents_note: `On Codex the agent personas are transposed into \`.agents/\` TOMLs (the conductor reads the persona \`.md\` bodies as prose); the two subagent stages (2.1, 3.5) run as \`codex exec\` workers.`,
 
     structure_extra: "",
 
-    guide_pointer: `The Codex-specific guide (prerequisites, trust pre-seed, Bedrock config, the git-repo requirement) is \`docs/guide/harnesses/codex-cli.md\`.`,
+    guide_pointer: `The Codex-specific guide (prerequisites, trust pre-seed, provider config, the git-repo requirement) is \`docs/guide/harnesses/codex-cli.md\`.`,
 
     sections_before_resumption: `## What's different on this harness
 
@@ -49,10 +49,10 @@ This is the same AI-DLC core that ships to every harness, rendered onto Codex CL
 
 - **Gates** render as structured questions via the \`request_user_input\` tool when the shipped config flags enable it, with a numbered-prose fallback otherwise. Gate semantics live in the engine either way.
 - **No custom statusline and no welcome message**: workflow position rides the \`update_plan\` tool and \`$amadeus --status\`.
-- **Git under the sandbox**: \`workspace-write\` keeps \`.git\` read-only in-sandbox; interactive sessions auto-escalate and \`.codex/rules/default.rules\` pre-allows \`git worktree\`/\`commit\`/\`add\`. Headless runs need \`writable_roots\` (template in the shipped \`config.toml\`).
+- **Git under the sandbox**: \`workspace-write\` keeps \`.git\` read-only in-sandbox; interactive sessions auto-escalate and \`.codex/rules/default.rules\` pre-allows \`git worktree\`/\`commit\`/\`add\`. Headless runs need \`writable_roots\` (template in the shipped \`config.toml.example\`).
 - **Swarm floor** is \`codex exec\`-per-unit workers; \`AMADEUS_USE_SWARM=1\` has no Workflow tool here and loud-degrades (\`SWARM_DEGRADED\`).
 - **Session lifecycle**: Codex has no SessionEnd event (an unclosed session is reconciled as an inferred \`SESSION_ENDED\` at the next start); the Codex-only PostCompact event re-injects the workflow mission after compaction.
-- **The AIDLC method** (the layered practice files \`org.md\`, \`team.md\`, \`project.md\`, and the per-phase \`phases/<phase>.md\`) lives once at the workspace root under \`aidlc/spaces/default/memory/\` — the single hand-editable source of truth, identical on every harness, NOT a per-harness copy. Codex auto-merges the root \`AGENTS.md\` and the orchestrator injects an \`@aidlc/spaces/default/memory/…\` prompt mention to pull specific method files into context on demand; AI-DLC's own stage resolver reads the same tree directly (via the \`AMADEUS_RULES_DIR\` seam in the shipped \`config.toml\`). Edit the method there, never under \`.codex/\`. (\`.codex/rules/default.rules\` remains Codex's native Starlark permission-rules file — distinct from the AIDLC method, and the two must not collide.)
+- **The AIDLC method** (the layered practice files \`org.md\`, \`team.md\`, \`project.md\`, and the per-phase \`phases/<phase>.md\`) lives once at the workspace root under \`aidlc/spaces/default/memory/\` — the single hand-editable source of truth, identical on every harness, NOT a per-harness copy. Codex auto-merges the root \`AGENTS.md\` and the orchestrator injects an \`@aidlc/spaces/default/memory/…\` prompt mention to pull specific method files into context on demand; AI-DLC's own stage resolver reads the same tree directly (via the \`AMADEUS_RULES_DIR\` seam in the shipped \`config.toml.example\`). Edit the method there, never under \`.codex/\`. (\`.codex/rules/default.rules\` remains Codex's native Starlark permission-rules file — distinct from the AIDLC method, and the two must not collide.)
 `,
 
     sections_after_resumption: "",

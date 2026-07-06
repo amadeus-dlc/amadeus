@@ -102,7 +102,7 @@ Authoritative data lives in the `.claude/scopes/amadeus-<name>.md` files (scope 
 | `workshop` | 25 / 32 | Standard | **Minimal** | AI-DLC workshop or training session |
 | (auto-detect) | Varies | Varies | Varies | AI determines from freeform intent |
 
-> **Per-project default scope:** teams can pre-set the default scope for a project by setting `AWS_AMADEUS_DEFAULT_SCOPE` in `.claude/settings.json` — useful for workshops where every participant should start at `workshop` without remembering the flag. See [Customization § Per-Project Default Scope](13-customization.md#per-project-default-scope).
+> **Per-project default scope:** teams can pre-set the default scope for a project by setting `AMADEUS_DEFAULT_SCOPE` in `.claude/settings.json` — useful for workshops where every participant should start at `workshop` without remembering the flag. See [Customization § Per-Project Default Scope](13-customization.md#per-project-default-scope).
 
 ---
 

@@ -49,6 +49,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
   cpSync,
+  existsSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -151,6 +152,12 @@ describe("t80 practices-event --type empty (spawnSync CLI-boundary, parity-only)
     scratch.push(proj);
     mkdirSyncRecursive(join(proj, "amadeus-docs"));
     cpSync(AMADEUS_SRC, join(proj, ".claude"), { recursive: true });
+    const claudeMdExample = join(proj, ".claude", "CLAUDE.md.example");
+    const claudeMd = join(proj, ".claude", "CLAUDE.md");
+    if (!existsSync(claudeMd) && existsSync(claudeMdExample)) cpSync(claudeMdExample, claudeMd);
+    const settingsExample = join(proj, ".claude", "settings.json.example");
+    const settings = join(proj, ".claude", "settings.json");
+    if (!existsSync(settings) && existsSync(settingsExample)) cpSync(settingsExample, settings);
     cpSync(GREENFIELD_STUB, proj, { recursive: true });
     return proj;
   }

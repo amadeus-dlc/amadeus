@@ -123,6 +123,12 @@ function mkproj(): string {
   const pd = createTestProject();
   projects.push(pd);
   cpSync(AMADEUS_SRC, join(pd, ".claude"), { recursive: true });
+  const claudeMdExample = join(pd, ".claude", "CLAUDE.md.example");
+  const claudeMd = join(pd, ".claude", "CLAUDE.md");
+  if (!existsSync(claudeMd) && existsSync(claudeMdExample)) cpSync(claudeMdExample, claudeMd);
+  const settingsExample = join(pd, ".claude", "settings.json.example");
+  const settings = join(pd, ".claude", "settings.json");
+  if (!existsSync(settings) && existsSync(settingsExample)) cpSync(settingsExample, settings);
   mkdirSync(join(seededRecordDir(pd), "inception", "user-stories"), { recursive: true });
   writeFileSync(
     seededStateFile(pd),

@@ -22,112 +22,35 @@ command -v claude >/dev/null && echo "✓ Claude Code installed" || echo "✗ In
 command -v bun    >/dev/null && echo "✓ bun installed"          || echo "✗ Install bun first"
 ```
 
-## AWS Bedrock Setup
+## Model Provider Setup
 
-This implementation ships configured for **AWS Bedrock**. The shipped `.claude/settings.json` sets:
+The shipped Claude Code and Codex configs do not pin a provider or model.
+Amadeus-DLC uses the normal defaults of the harness you run it from:
 
-| Variable | Value | Purpose |
-|----------|-------|---------|
-| `CLAUDE_CODE_USE_BEDROCK` | `1` | Routes Claude Code through Bedrock |
-| `AWS_REGION` | `us-east-1` | Bedrock region — **required**; Claude Code does not read it from `~/.aws`. Override per-region (see below). |
-| `ANTHROPIC_DEFAULT_FABLE_MODEL` | `global.anthropic.claude-fable-5[1m]` | Fable alias for users who opt into `fable`/`fable[1m]` |
-| `ANTHROPIC_DEFAULT_OPUS_MODEL` | `global.anthropic.claude-opus-4-8[1m]` | Orchestrator model (used at `opus[1m]`, the 1M-context variant) |
-| `ANTHROPIC_DEFAULT_SONNET_MODEL` | `global.anthropic.claude-sonnet-4-6[1m]` | Subagent model |
-| `ANTHROPIC_DEFAULT_HAIKU_MODEL` | `global.anthropic.claude-haiku-4-5-20251001-v1:0` | Background/fast tasks (no `[1m]`: Haiku 4.5 is a 200K model with no 1M variant) |
+- Claude Code reads your usual Claude Code account, provider, and model settings.
+- Codex reads your usual `~/.codex/config.toml` and project trust settings.
+- Project-local provider/model overrides are optional and should be added only when your team deliberately wants this project to force a specific runtime.
 
-These model pins use global Bedrock inference profile IDs (the `global.` prefix). The `[1m]` suffix on the Fable, Opus, and Sonnet pins selects the 1M-context variant — so tier-pinned subagents (not just the `opus[1m]` orchestrator) get the 1M window; Claude Code strips the suffix before the model ID reaches Bedrock. You still need to do the AWS-account-side setup once.
-
-### One-time AWS account setup (manual path)
-
-1. **Enable Anthropic model access.** In the [Amazon Bedrock console](https://console.aws.amazon.com/bedrock/), open the **Model catalog**, select each Anthropic model you'll use (Fable, Opus, Sonnet, Haiku), and submit the use-case form. Access is granted immediately. This is required once per AWS account before any model can be invoked. (AWS Organizations can submit once from the management account; approval extends to child accounts.)
-
-2. **Attach the IAM permissions** your role/user needs to invoke models and resolve inference profiles:
-
-   ```json
-   {
-     "Version": "2012-10-17",
-     "Statement": [
-       {
-         "Sid": "AllowModelAndInferenceProfileAccess",
-         "Effect": "Allow",
-         "Action": [
-           "bedrock:InvokeModel",
-           "bedrock:InvokeModelWithResponseStream",
-           "bedrock:ListInferenceProfiles",
-           "bedrock:GetInferenceProfile"
-         ],
-         "Resource": [
-           "arn:aws:bedrock:*:*:inference-profile/*",
-           "arn:aws:bedrock:*:*:application-inference-profile/*",
-           "arn:aws:bedrock:*:*:foundation-model/*"
-         ]
-       }
-     ]
-   }
-   ```
-
-3. **Provide AWS credentials.** Claude Code uses the default AWS SDK credential chain. Any one of:
-
-   ```bash
-   aws configure                         # static access key / secret
-   # — or — an SSO profile:
-   aws sso login --profile <your-profile>
-   export AWS_PROFILE=<your-profile>
-   # — or — credentials already exported in your environment (AWS_ACCESS_KEY_ID, etc.)
-   ```
-
-   Keep secrets out of the shared `settings.json`. Put `AWS_PROFILE` (or other env you don't want to leak) in `.claude/settings.local.json` (gitignored) instead.
-
-4. **Set your region** if it isn't `us-east-1`. The shipped default is `us-east-1`; override it without editing shared config:
-
-   ```bash
-   cp .claude/settings.local.json.example .claude/settings.local.json
-   # then add  "AWS_REGION": "<your-region>"  to the env block
-   ```
-
-   `settings.local.json` takes precedence over `settings.json`. Confirm the model is available in your region with `aws bedrock list-inference-profiles --region <your-region>`.
-
-> **Easier path:** instead of the manual steps above, run `claude`, choose **3rd-party platform → Amazon Bedrock** at the login prompt, and the wizard detects your credentials, region, and accessible models and writes them to your user settings. Re-run `/setup-bedrock` any time to change them. You still complete step 1 (model access) once in the console.
-
-For the authoritative, always-current setup — IAM detail, SSO refresh, inference profiles, troubleshooting — see the AWS guide: **[Claude Code on Amazon Bedrock: Quick Setup Guide](https://community.aws/content/2tXkZKrZzlrlu0KfH8gST5Dkppq/claude-code-on-amazon-bedrock-quick-setup-guide)** and the [Amazon Bedrock documentation](https://docs.aws.amazon.com/bedrock/).
+Keep credentials and personal provider choices out of committed project files.
+For Claude Code, use `.claude/settings.local.json` or user-level settings. For
+Codex, use `~/.codex/config.toml` unless the project intentionally owns a shared
+runtime policy.
 
 ## MCP Servers (optional)
 
-This implementation declares its MCP servers in `.mcp.json` at the project root (beside `.claude/`). Claude Code provisions them to the session, and every AI-DLC agent inherits all of them — so any agent can reach any declared server with no per-agent grant. The shipped `.mcp.json` declares five MCP servers:
-
-| Server | Provides | Transport | Credentials |
-|--------|----------|-----------|-------------|
-| `context7` | Library/SDK documentation lookups | HTTP | `CONTEXT7_API_KEY` from your environment |
-| `aws-mcp` | AWS API access | `uvx` (`mcp-proxy-for-aws@latest`, `AWS_REGION=us-east-1`) | Standard AWS credential chain |
-| `aws-pricing` | AWS pricing queries | `uvx` (`awslabs.aws-pricing-mcp-server@latest`) | AWS credential chain |
-| `aws-iac` | Infrastructure-as-code tooling | `uvx` (`awslabs.aws-iac-mcp-server@latest`) | AWS credential chain |
-| `aws-serverless` | Serverless tooling | `uvx` (`awslabs.aws-serverless-mcp-server@latest`) | AWS credential chain |
-
-### Prerequisites
-
-The four AWS servers launch through `uvx`. Install `uv`/`uvx` once:
-
-```bash
-curl -fsSL https://astral.sh/uv/install.sh | sh
-```
-
-`context7` is an HTTP server and needs no local install. To use it, export an API key:
-
-```bash
-export CONTEXT7_API_KEY=<your-key>
-```
-
-Put `CONTEXT7_API_KEY` (and any other secret env) in `.claude/settings.local.json` (gitignored) rather than the shared `settings.json`. `.mcp.json` itself carries only the env-var placeholder — no secrets are committed.
-
-### What becomes available
-
-The four AWS servers authenticate with the same default AWS SDK credential chain Claude Code already uses for Bedrock (see [AWS Bedrock Setup](#aws-bedrock-setup)). Once `uvx` is installed and AWS credentials resolve, those servers come up automatically; `context7` comes up once `CONTEXT7_API_KEY` is set. Because the servers are inherited at the session level, every agent reaches every declared server — there is no per-agent grant to perform.
+The Claude Code distribution does not ship a project `.mcp.json` by default.
+Add project or user MCP server definitions only when your workflow needs
+external tools or extra context. Claude Code provisions declared servers to the
+session, and every Amadeus-DLC agent inherits those session servers — there is
+no per-agent grant to perform.
 
 > **Restricting an agent (advanced):** inheritance is additive — declaring a server makes it available to all agents, and you cannot grant servers per-agent. To *prevent* a specific agent from using a server, narrow that agent's `tools:` allowlist to the fully-qualified `mcp__<server>__<tool>` ids it may call (a bare `mcp__<server>` token is not honoured). See [Agents](06-agents.md) for how agent tool access works.
 
 ### Not using these?
 
-Missing credentials are not blocking. A server you have no credentials for — no AWS chain, no `CONTEXT7_API_KEY` — is simply unavailable; the workflow runs without it and never stalls waiting on it. To drop a server entirely, remove its entry from `.mcp.json`.
+Missing credentials are not blocking. A server you have no credentials for is
+simply unavailable; the workflow runs without it and never stalls waiting on it.
+To drop a server entirely, remove its entry from your project or user MCP config.
 
 ---
 
@@ -221,7 +144,7 @@ Run the health check to confirm everything is in place:
 ✓ amadeus-session-end.ts present
 ✓ amadeus-statusline.ts present
 ✓ settings.json present
-✓ AWS_AMADEUS_DEFAULT_SCOPE (unset — no project default)
+✓ AMADEUS_DEFAULT_SCOPE (unset — no project default)
 ✓ workspace shell ready (.claude/ + aidlc/spaces/default/memory/)
 ✓ Hook heartbeats: not yet fired (first workflow stage will populate)
 ✓ State matches last audit event (no drift)
@@ -239,7 +162,7 @@ Run the health check to confirm everything is in place:
 |---------|-----|
 | `bun` not installed | Install via `curl -fsSL https://bun.sh/install \| bash`. On Windows: `npm install -g bun` or `powershell -c "irm bun.sh/install.ps1 \| iex"`. Ensure it is on PATH for non-interactive shells. |
 | Hook not present | Re-copy the `.claude/` directory from the distribution |
-| `settings.json` missing | Re-copy from the distribution: `cp dist/claude/.claude/settings.json .claude/settings.json` |
+| `settings.json` missing | Create it from the template without overwriting existing config: `cp -n dist/claude/.claude/settings.json.example .claude/settings.json` |
 | Workspace shell missing | Re-copy the workspace shell from `dist/claude/` into your project root |
 | State file issues | Archive the active intent's record dir under `aidlc/spaces/<space>/intents/` and run `/amadeus` to start fresh |
 | Graph/scope/schema/keyword failures | The diagnostic reports the specific artifact, slug, or scope name at fault. These indicate authoring drift in `.claude/amadeus-common/stages/` or `.claude/scopes/`; regenerate the compiled graph + scope grid with `bun .claude/tools/amadeus-graph.ts compile` or inspect the named stage/scope directly. |
@@ -277,6 +200,8 @@ command -v bun    >/dev/null && echo "✓ bun"          || echo "✗ bun"
 # Install (engine + the workspace shell sibling)
 cp -r dist/claude/.claude/ your-project/.claude/
 cp -r dist/claude/amadeus/   your-project/amadeus/
+cp -n your-project/.claude/CLAUDE.md.example your-project/.claude/CLAUDE.md
+cp -n your-project/.claude/settings.json.example your-project/.claude/settings.json
 
 # Launch Claude Code in your project
 cd your-project && claude
@@ -296,7 +221,7 @@ Inside the Claude Code session:
 
 ## Tool Permissions
 
-The included `.claude/settings.json` pre-approves Claude Code tools (Read, Edit, Write, Bash, Glob, Grep, Task, WebSearch) so workflows run without per-call permission prompts. Review this file before use and adjust to your security requirements.
+The included `.claude/settings.json.example` pre-approves Claude Code tools (Read, Edit, Write, Bash, Glob, Grep, Task, WebSearch) so workflows run without per-call permission prompts after you copy it to `.claude/settings.json`. Review the file before use and adjust to your security requirements.
 
 See [Customization](13-customization.md) for details on modifying tool permissions.
 

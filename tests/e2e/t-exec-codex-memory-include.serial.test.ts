@@ -83,6 +83,8 @@ function setupCodexProject(): { proj: string; home: string; root: string } {
   const home = join(root, "codex-home");
   mkdirSync(home, { recursive: true });
   cpSync(join(CODEX_DIST, ".codex"), join(proj, ".codex"), { recursive: true });
+  cpSync(join(proj, ".codex", "config.toml.example"), join(proj, ".codex", "config.toml"));
+  cpSync(join(proj, ".codex", "hooks.json.example"), join(proj, ".codex", "hooks.json"));
   cpSync(join(CODEX_DIST, ".agents"), join(proj, ".agents"), { recursive: true });
   cpSync(join(CODEX_DIST, "AGENTS.md"), join(proj, "AGENTS.md"));
   // The workspace shell ships in dist/codex; the method tree is its org/team/

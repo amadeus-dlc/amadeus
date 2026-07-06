@@ -198,11 +198,11 @@ describe("t-active-space-includes: Codex config.toml AMADEUS_RULES_DIR", () => {
     const root = freshRoot();
     seedSpaces(root);
     mkdirSync(join(root, ".codex"), { recursive: true });
-    cpSync(distSurface("codex", ".codex", "config.toml"), join(root, ".codex", "config.toml"));
+    cpSync(distSurface("codex", ".codex", "config.toml.example"), join(root, ".codex", "config.toml"));
     return root;
   }
 
-  test("re-points AMADEUS_RULES_DIR to the requested space; preserves model/sandbox/statusline", () => {
+  test("re-points AMADEUS_RULES_DIR to the requested space; preserves sandbox/statusline", () => {
     const root = setup();
     const written = repointHarnessIncludes(root, "teamB");
     expect(written).toEqual([".codex/config.toml"]);
@@ -210,7 +210,7 @@ describe("t-active-space-includes: Codex config.toml AMADEUS_RULES_DIR", () => {
     expect(cfg).toContain('AMADEUS_RULES_DIR = "aidlc/spaces/teamB/memory"');
     expect(cfg).not.toContain('AMADEUS_RULES_DIR = "aidlc/spaces/default/memory"');
     // Engine config preserved (the load-bearing reason config.toml stays committed).
-    expect(cfg).toContain("model_provider");
+    expect(cfg).not.toContain("model_provider");
     expect(cfg).toContain("sandbox_mode");
     expect(cfg).toContain("status_line");
   });

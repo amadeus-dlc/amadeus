@@ -108,7 +108,7 @@ const STATE = join(TOOLS, "amadeus-state.ts");
 // "construction", "feature") and the Bolt-1 fixture's own Current Stage.
 const SKELETON_STAGE = "functional-design";
 
-// Scope is resolved partly from AWS_AMADEUS_DEFAULT_SCOPE — start from a known
+// Scope is resolved partly from AMADEUS_DEFAULT_SCOPE — start from a known
 // clean env so a developer's exported value can't shadow the seeded fixture.
 // Mirrors the .sh's reset_aidlc_env (line 68).
 resetAidlcEnv();

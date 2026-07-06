@@ -107,7 +107,12 @@ describe("t-tui-statusline (statusline renders in a real terminal)", () => {
         // dest .claude must NOT pre-exist or cp nests it — we copy SRC -> <sandbox>/.claude.
         const destClaude = join(sandbox, ".claude");
         cpSync(AMADEUS_SRC, destClaude, { recursive: true });
+        const claudeMdExample = join(destClaude, "CLAUDE.md.example");
+        const claudeMd = join(destClaude, "CLAUDE.md");
+        if (!existsSync(claudeMd) && existsSync(claudeMdExample)) cpSync(claudeMdExample, claudeMd);
+        const settingsExample = join(destClaude, "settings.json.example");
         const settingsPath = join(destClaude, "settings.json");
+        if (!existsSync(settingsPath) && existsSync(settingsExample)) cpSync(settingsExample, settingsPath);
         expect(existsSync(settingsPath)).toBe(true);
         // P0a — the retired spike (git show 4ce826b:tests/spike/t-tui-statusline.sh
         // ~L55) also required settings.json to CARRY the "statusLine" key, not just

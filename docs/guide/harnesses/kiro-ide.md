@@ -92,7 +92,7 @@ You will see a "Run Command Hook" line in chat each time one fires.
 | Subagent stages (2.1, 3.5) | `Task` tool | Kiro `subagent` tool → `amadeus-developer-agent` / `amadeus-architect-agent`; the IDE reads a delegate's tool grants from the agent `.md` frontmatter (`tools:`), injected at packaging - the agent-v1 JSONs are CLI-only |
 | Construction swarm | Parallel `Task` floor, optional ultracode Workflow | Subagent fan-out only; `AMADEUS_USE_SWARM=1` is announced as a no-op |
 | Session audit events | `SESSION_STARTED/RESUMED/ENDED`, `SESSION_COMPACTED` | `SESSION_STARTED` / `SESSION_ENDED` (no pre-compaction event) |
-| MCP servers | Ships 5 (`.mcp.json`: `context7` + four AWS servers) | None shipped |
+| MCP servers | None shipped by default | None shipped |
 
 Everything else — state machine, audit trail, artifacts under the per-intent
 record dir (`aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`), the learnings

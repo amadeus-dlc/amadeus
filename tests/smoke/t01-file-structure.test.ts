@@ -1,4 +1,4 @@
-// covers: file:skills/amadeus/SKILL.md, file:amadeus-common/protocols/stage-protocol.md, file:amadeus-common/protocols/stage-protocol-recovery.md, file:amadeus-common/protocols/stage-protocol-governance.md, file:hooks/amadeus-audit-logger.ts, file:hooks/amadeus-sensor-fire.ts, file:hooks/amadeus-runtime-compile.ts, file:hooks/amadeus-sync-statusline.ts, file:hooks/amadeus-validate-state.ts, file:hooks/amadeus-log-subagent.ts, file:hooks/amadeus-mint-presence.ts, file:hooks/amadeus-session-start.ts, file:hooks/amadeus-session-end.ts, file:hooks/amadeus-statusline.ts, file:hooks/amadeus-stop.ts, file:agents/amadeus-product-agent.md, file:agents/amadeus-design-agent.md, file:agents/amadeus-delivery-agent.md, file:agents/amadeus-architect-agent.md, file:agents/amadeus-aws-platform-agent.md, file:agents/amadeus-compliance-agent.md, file:agents/amadeus-devsecops-agent.md, file:agents/amadeus-developer-agent.md, file:agents/amadeus-quality-agent.md, file:agents/amadeus-pipeline-deploy-agent.md, file:agents/amadeus-operations-agent.md, file:amadeus-common/stages/initialization/workspace-scaffold.md, file:amadeus-common/stages/initialization/workspace-detection.md, file:amadeus-common/stages/initialization/state-init.md, file:amadeus-common/stages/ideation/intent-capture.md, file:amadeus-common/stages/ideation/market-research.md, file:amadeus-common/stages/ideation/feasibility.md, file:amadeus-common/stages/ideation/scope-definition.md, file:amadeus-common/stages/ideation/team-formation.md, file:amadeus-common/stages/ideation/rough-mockups.md, file:amadeus-common/stages/ideation/approval-handoff.md, file:amadeus-common/stages/inception/reverse-engineering.md, file:amadeus-common/stages/inception/practices-discovery.md, file:amadeus-common/stages/inception/requirements-analysis.md, file:amadeus-common/stages/inception/user-stories.md, file:amadeus-common/stages/inception/refined-mockups.md, file:amadeus-common/stages/inception/application-design.md, file:amadeus-common/stages/inception/units-generation.md, file:amadeus-common/stages/inception/delivery-planning.md, file:amadeus-common/stages/construction/functional-design.md, file:amadeus-common/stages/construction/nfr-requirements.md, file:amadeus-common/stages/construction/nfr-design.md, file:amadeus-common/stages/construction/infrastructure-design.md, file:amadeus-common/stages/construction/code-generation.md, file:amadeus-common/stages/construction/build-and-test.md, file:amadeus-common/stages/construction/ci-pipeline.md, file:amadeus-common/stages/operation/deployment-pipeline.md, file:amadeus-common/stages/operation/environment-provisioning.md, file:amadeus-common/stages/operation/deployment-execution.md, file:amadeus-common/stages/operation/observability-setup.md, file:amadeus-common/stages/operation/incident-response.md, file:amadeus-common/stages/operation/performance-validation.md, file:amadeus-common/stages/operation/feedback-optimization.md, file:settings.json, file:settings.local.json.example, file:knowledge/amadeus-shared/state-template.md, file:rules/amadeus-org.md, file:rules/amadeus-project.md, file:CLAUDE.md
+// covers: file:skills/amadeus/SKILL.md, file:amadeus-common/protocols/stage-protocol.md, file:amadeus-common/protocols/stage-protocol-recovery.md, file:amadeus-common/protocols/stage-protocol-governance.md, file:hooks/amadeus-audit-logger.ts, file:hooks/amadeus-sensor-fire.ts, file:hooks/amadeus-runtime-compile.ts, file:hooks/amadeus-sync-statusline.ts, file:hooks/amadeus-validate-state.ts, file:hooks/amadeus-log-subagent.ts, file:hooks/amadeus-mint-presence.ts, file:hooks/amadeus-session-start.ts, file:hooks/amadeus-session-end.ts, file:hooks/amadeus-statusline.ts, file:hooks/amadeus-stop.ts, file:agents/amadeus-product-agent.md, file:agents/amadeus-design-agent.md, file:agents/amadeus-delivery-agent.md, file:agents/amadeus-architect-agent.md, file:agents/amadeus-aws-platform-agent.md, file:agents/amadeus-compliance-agent.md, file:agents/amadeus-devsecops-agent.md, file:agents/amadeus-developer-agent.md, file:agents/amadeus-quality-agent.md, file:agents/amadeus-pipeline-deploy-agent.md, file:agents/amadeus-operations-agent.md, file:amadeus-common/stages/initialization/workspace-scaffold.md, file:amadeus-common/stages/initialization/workspace-detection.md, file:amadeus-common/stages/initialization/state-init.md, file:amadeus-common/stages/ideation/intent-capture.md, file:amadeus-common/stages/ideation/market-research.md, file:amadeus-common/stages/ideation/feasibility.md, file:amadeus-common/stages/ideation/scope-definition.md, file:amadeus-common/stages/ideation/team-formation.md, file:amadeus-common/stages/ideation/rough-mockups.md, file:amadeus-common/stages/ideation/approval-handoff.md, file:amadeus-common/stages/inception/reverse-engineering.md, file:amadeus-common/stages/inception/practices-discovery.md, file:amadeus-common/stages/inception/requirements-analysis.md, file:amadeus-common/stages/inception/user-stories.md, file:amadeus-common/stages/inception/refined-mockups.md, file:amadeus-common/stages/inception/application-design.md, file:amadeus-common/stages/inception/units-generation.md, file:amadeus-common/stages/inception/delivery-planning.md, file:amadeus-common/stages/construction/functional-design.md, file:amadeus-common/stages/construction/nfr-requirements.md, file:amadeus-common/stages/construction/nfr-design.md, file:amadeus-common/stages/construction/infrastructure-design.md, file:amadeus-common/stages/construction/code-generation.md, file:amadeus-common/stages/construction/build-and-test.md, file:amadeus-common/stages/construction/ci-pipeline.md, file:amadeus-common/stages/operation/deployment-pipeline.md, file:amadeus-common/stages/operation/environment-provisioning.md, file:amadeus-common/stages/operation/deployment-execution.md, file:amadeus-common/stages/operation/observability-setup.md, file:amadeus-common/stages/operation/incident-response.md, file:amadeus-common/stages/operation/performance-validation.md, file:amadeus-common/stages/operation/feedback-optimization.md, file:settings.json.example, file:settings.local.json.example, file:knowledge/amadeus-shared/state-template.md, file:rules/amadeus-org.md, file:rules/amadeus-project.md, file:CLAUDE.md.example
 //
 // t01 — shipped-tree file-structure invariant. Migrated from
 // tests/smoke/t01-file-structure.sh (TAP plan 63, 63 distinct file-existence
@@ -226,8 +226,8 @@ describe("t01 — shipped-tree file-structure invariant (mechanism: none)", () =
     expect(total).toBe(32);
   });
 
-  test("ships settings.json and settings.local.json.example [.sh L63-64]", () => {
-    expect(existsSync(at("settings.json"))).toBe(true);
+  test("ships settings.json.example and settings.local.json.example [.sh L63-64]", () => {
+    expect(existsSync(at("settings.json.example"))).toBe(true);
     expect(existsSync(at("settings.local.json.example"))).toBe(true);
   });
 
@@ -245,8 +245,8 @@ describe("t01 — shipped-tree file-structure invariant (mechanism: none)", () =
     expect(existsSync(at("rules", "amadeus.md"))).toBe(true);
   });
 
-  test("ships the user-facing CLAUDE.md [.sh L74]", () => {
-    expect(existsSync(at("CLAUDE.md"))).toBe(true);
+  test("ships the user-facing CLAUDE.md.example [.sh L74]", () => {
+    expect(existsSync(at("CLAUDE.md.example"))).toBe(true);
   });
 
   // TAP-plan parity guard: the .sh declared `plan 63` and made 63
@@ -267,12 +267,12 @@ describe("t01 — shipped-tree file-structure invariant (mechanism: none)", () =
       ...Object.entries(STAGES).flatMap(([phase, stages]) =>
         stages.map((s) => at("amadeus-common", "stages", phase, `${s}.md`)),
       ), // 30-61 (32)
-      at("settings.json"), // 62
+      at("settings.json.example"), // 62
       at("settings.local.json.example"), // 63
       at("knowledge", "amadeus-shared", "state-template.md"), // 64
       mem("org.md"), // 65 — method relocated to aidlc/spaces/default/memory/
       mem("project.md"), // 66
-      at("CLAUDE.md"), // 67
+      at("CLAUDE.md.example"), // 67
     ];
     expect(paths.length).toBe(67);
     // Every one of the 67 must exist — the .sh's full TAP plan, re-proven as a

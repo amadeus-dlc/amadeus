@@ -73,7 +73,7 @@ MCP tools unless you also name the fully-qualified `mcp__<server>__<tool>` ids
 (see the MCP-inheritance note below). Reach for it only when a domain genuinely
 needs a smaller surface; most personas are best left to inherit everything.
 
-**MCP servers are inherited, not granted per agent.** The five MCP servers declared in the project-root `.mcp.json` are provisioned to the session, and every agent inherits all of them automatically — there is no per-agent grant to author. To keep a persona *away* from a server, narrow its `tools:` allowlist to a fully-qualified `mcp__<server>__<tool>` list that omits that server (a bare `mcp__<server>` token is a no-op, not a server-level grant). The inheritance and restriction model is exercised by the `t110` registry-integrity test (see [Testing](../reference/09-testing.md)).
+**MCP servers are inherited, not granted per agent.** Servers declared in the project or user harness config are provisioned to the session, and every agent inherits them automatically — there is no per-agent grant to author. To keep a persona *away* from a server, narrow its `tools:` allowlist to a fully-qualified `mcp__<server>__<tool>` list that omits that server (a bare `mcp__<server>` token is a no-op, not a server-level grant). The inheritance and restriction model is exercised by the `t110` grant-hygiene test (see [Testing](../reference/09-testing.md)).
 
 **`disallowedTools` must include `Task`.** This is not optional. Agents run as
 delegated workers; the conductor (the live `/amadeus` session) performs the `Task`
