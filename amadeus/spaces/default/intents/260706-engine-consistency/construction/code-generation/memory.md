@@ -20,3 +20,4 @@
 ## Open questions
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
 - 2026-07-06T06:11:17Z — SESSION_* 系 hook（session-start / session-end / validate-state）へ完了ガードを広げるかは後続 Issue 候補（FR-3.2 見送り分）。gate 報告に含める。
+- 2026-07-06T06:35:00Z — reviewer 判定 READY（High/Medium なし、Low 3 件）。Low-1（Scope 二重読み）は本 Intent の新規コードのため即修正（phase-skip ループを scope 検証の後段へ移設し `scope` を再利用。eval 再 GREEN 確認）。Low-2（完了後 report のエラーメッセージ）と Low-3（graph 不整合 slug の phase 非紐づけ）は advance finalize 経路由来の既存挙動で PR 範囲外。後続 cleanup 候補として gate 報告に含める。

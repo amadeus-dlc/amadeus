@@ -437,3 +437,69 @@
 **Context**: construction > engine-consistency > code-generation > code-summary.md
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-06T06:19:00Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T06:25:51Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a07d1c562c38466c6
+**Message**: ---\n\n## Review\n\n**判定: READY**\n\n---\n\n### 計測結果（フレッシュ実測）\n\n| 検査 | 結果 |\n|---|---|\n| `bun run dev-scripts/evals/engine-e2e/check.ts` | ok（#547 ケース含む全 25 ok） |\n| `bun run dev-scripts/evals/docs-codekb-guards
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T06:26:26Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6d150c48
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .agents/amadeus/tools/amadeus-state.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T06:26:27Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6d150c48
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .agents/amadeus/tools/amadeus-state.ts
+**Duration ms**: 737
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T06:26:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: 823c1d29
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .agents/amadeus/tools/amadeus-state.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T06:26:27Z
+**Event**: SENSOR_PASSED
+**Fire id**: 823c1d29
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .agents/amadeus/tools/amadeus-state.ts
+**Duration ms**: 443
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-06T06:26:52Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer1/amadeus/spaces/default/intents/260706-engine-consistency/construction/code-generation/memory.md
+**Context**: construction > code-generation > memory.md
+
+---

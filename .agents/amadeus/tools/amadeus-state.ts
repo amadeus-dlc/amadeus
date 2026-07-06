@@ -1335,17 +1335,27 @@ function handleCompleteWorkflow(args: string[]): void {
   // the PHASE_VERIFIED audit emission below (R001, Issue #464).
   content = markPhaseVerified(content, completedStage.phase);
 
+  // 4. Atomic audit emissions. Refuse silent fallback — matches handleAdvance.
+  const scope = getField(content, "Scope");
+  if (!scope) {
+    error(
+      `State file has no Scope field. Refusing to complete workflow — fix the state file first.`
+    );
+  }
+  if (!validScopes().has(scope)) {
+    error(
+      `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`
+    );
+  }
+
   // #547: phases whose planned stages were ALL skipped mid-flow ([S]) never
   // start, so nothing else revisits their Phase Progress — the workflow would
   // close with those phases stuck at Pending and no PHASE_SKIPPED on record
   // (the birth-time PHASE_SKIPPED only covers phases the scope excludes).
   // Mark them Skipped here and queue the audit emission with the others below.
   const checkboxesAtCompletion = parseCheckboxes(content);
-  const scopeForPhases = getField(content, "Scope") ?? "";
   const phaseOfSlug = new Map<string, string>();
-  if (validScopes().has(scopeForPhases)) {
-    for (const s of stagesInScope(scopeForPhases)) phaseOfSlug.set(s.slug, s.phase);
-  }
+  for (const s of stagesInScope(scope)) phaseOfSlug.set(s.slug, s.phase);
   const skippedPhases: string[] = [];
   for (const [phase, field] of Object.entries(PHASE_PROGRESS_FIELD)) {
     if (phase === completedStage.phase) continue;
@@ -1358,19 +1368,6 @@ function handleCompleteWorkflow(args: string[]): void {
       content = setField(content, field, "Skipped");
       skippedPhases.push(phase);
     }
-  }
-
-  // 4. Atomic audit emissions. Refuse silent fallback — matches handleAdvance.
-  const scope = getField(content, "Scope");
-  if (!scope) {
-    error(
-      `State file has no Scope field. Refusing to complete workflow — fix the state file first.`
-    );
-  }
-  if (!validScopes().has(scope)) {
-    error(
-      `State file has invalid Scope "${scope}". Valid scopes: ${[...validScopes()].join(", ")}.`
-    );
   }
   try {
     if (!alreadyMarkedCompleted || !stageCompletedAlreadyAudited) {
