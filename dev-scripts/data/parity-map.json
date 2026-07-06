@@ -519,6 +519,12 @@
     },
     {
       "kind": "cli-token",
+      "prefix": "`aidlc-",
+      "replacement": "`amadeus-",
+      "rule": "backtick テンプレート補間形（`aidlc-${...}`）の bare prefix。runner-gen の runnerDirName / scope-runner dir 構築が対象。cli-token の lookahead により `aidlc-state.md` 等の実名 literal には一致しない（PR #539 Bugbot 指摘 44595ffa の恒久対処、eval C11 で pin）。"
+    },
+    {
+      "kind": "cli-token",
       "prefix": "^aidlc-",
       "replacement": "^amadeus-",
       "rule": "tools/amadeus-rule-schema.ts のコメント（`^aidlc-` 正規表現アンカー記法）と amadeus-utility.ts の `pairing.replace(/^aidlc-/, \"\")` 正規表現リテラルで共有。"

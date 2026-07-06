@@ -2248,3 +2248,46 @@
 **Details**: Scope: refactor, 8 stages completed
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T01:29:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2f347c7e
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: /private/tmp/claude-501/-Users-j5ik2o-Sources-j5ik2o-github-com-amadeus-dlc-amadeus-worktree-engineer1/f018e9f8-30ae-46d4-9940-ea61b100b11e/scratchpad/recopy-honest.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T01:29:46Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2f347c7e
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: /private/tmp/claude-501/-Users-j5ik2o-Sources-j5ik2o-github-com-amadeus-dlc-amadeus-worktree-engineer1/f018e9f8-30ae-46d4-9940-ea61b100b11e/scratchpad/recopy-honest.ts
+**Duration ms**: 42
+**Note**: script-error: exit-1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T01:33:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: 355087c6
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: dev-scripts/evals/parity/check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T01:33:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: 355087c6
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: dev-scripts/evals/parity/check.ts
+**Duration ms**: 768
+
+---

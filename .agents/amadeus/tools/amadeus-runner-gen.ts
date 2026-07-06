@@ -70,10 +70,10 @@ const SKILLS_DIR = join(TOOLS_DIR, "..", "skills");
 // STAGE-RUNNER HALF
 // =========================================================================
 
-// The dir name for a stage's runner skill: `aidlc-<slug>`. The skill `name`
+// The dir name for a stage's runner skill: `amadeus-<slug>`. The skill `name`
 // frontmatter equals the dir name (Agent-Skills-spec invariant t123 asserts).
 function runnerDirName(slug: string): string {
-  return `aidlc-${slug}`;
+  return `amadeus-${slug}`;
 }
 
 // Initialization-phase stages are bootstrap: they have no standalone meaning
@@ -447,11 +447,11 @@ export function discoverScopes(): Record<string, ScopeFront> {
 }
 
 // Render the SKILL.md body for one scope-runner. Spec-conformant frontmatter
-// (`name` == dir name == `aidlc-<scope>`), NO `hooks:` block (the six spine
+// (`name` == dir name == `amadeus-<scope>`), NO `hooks:` block (the six spine
 // hooks live in settings.json project-wide, inherited by every runner), and
 // a ~6-line shell that runs the engine forwarding loop with the scope baked in.
 export function renderRunner(scope: string, description: string): string {
-  const dir = `aidlc-${scope}`;
+  const dir = `amadeus-${scope}`;
   // Normalise the scope's one-line description into a sentence (trailing period)
   // so it reads cleanly when stitched between the lead-in and the packaging note.
   const raw = (description || `Run the AI-DLC workflow with the ${scope} scope`).trim();
@@ -490,7 +490,7 @@ resumes it. To run a different scope, use \`/aidlc --scope <other>\` instead.
 
 // The target SKILL.md path for one scope-runner under a skills dir.
 function scopeRunnerPath(skillsDir: string, scope: string): string {
-  return join(skillsDir, `aidlc-${scope}`, "SKILL.md");
+  return join(skillsDir, `amadeus-${scope}`, "SKILL.md");
 }
 
 // Resolve the batch of scopes to generate: --all → every shipped scope;

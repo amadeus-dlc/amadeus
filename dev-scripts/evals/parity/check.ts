@@ -326,5 +326,46 @@ writeFileSync(
 runExpectFailure(["bun", "run", checker, boundaryBugWorkspace], "aidlc-common/bar.md");
 console.log("parity-check segment-boundary disambiguation guard: ok");
 
+// (C11) 実対応表のデータ被覆: テンプレート補間形（backtick の `aidlc-${...}`）を写像する
+// cli-token 行が実 parity-map.json に存在し、往復（forward → reverse）が可逆であること。
+// 欠けていると、写像後のエンジン成果物が「二重引用符形だけ改名・backtick 形は旧名のまま」の
+// 内部不整合になる（PR #539 Bugbot 指摘 44595ffa: runner-gen の discovery = amadeus- と
+// write = aidlc-${slug} の乖離）。データ（対応表）の退行として pin する。
+{
+  const realMap = JSON.parse(
+    readFileSync(join(root, "dev-scripts/data/parity-map.json"), "utf8"),
+  ) as { nameMappings: { kind: string; prefix: string; replacement: string }[] };
+  const entry = realMap.nameMappings.find(
+    (m) => m.kind === "cli-token" && m.prefix === "`aidlc-" && m.replacement === "`amadeus-",
+  );
+  if (!entry) {
+    fail("parity-map.json に backtick テンプレート補間形の cli-token 行（`aidlc- -> `amadeus-）がない");
+  }
+  // 往復の可逆性: forward で `amadeus-${slug}` になり、reverse で `aidlc-${slug}` へ戻る。
+  // cli-token の lookahead（拡張子・英数ハイフン禁止）により、`aidlc-state.md` のような
+  // 実名 literal には一致しない（次段の非一致検査で pin）。
+  const cliTokenRegex = (from: string) =>
+    new RegExp(
+      `(?<![A-Za-z0-9_-])${from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![A-Za-z0-9_-]|\\.(?:ts|js|md))`,
+      "g",
+    );
+  const fwd = "return `aidlc-${slug}`;".replace(cliTokenRegex(entry.prefix), entry.replacement);
+  if (fwd !== "return `amadeus-${slug}`;") {
+    fail(`backtick cli-token の forward 写像が不正: ${fwd}`);
+  }
+  const back = fwd.replace(cliTokenRegex(entry.replacement), entry.prefix);
+  if (back !== "return `aidlc-${slug}`;") {
+    fail(`backtick cli-token の reverse 写像が不正: ${back}`);
+  }
+  const literalUntouched = "join(dir, `aidlc-state.md`)".replace(
+    cliTokenRegex(entry.prefix),
+    entry.replacement,
+  );
+  if (literalUntouched !== "join(dir, `aidlc-state.md`)") {
+    fail(`backtick cli-token が実名 literal を誤変換: ${literalUntouched}`);
+  }
+  console.log("parity-map backtick template-interpolation coverage: ok");
+}
+
 for (const dir of cleanups) rmSync(dir, { recursive: true, force: true });
 console.log("parity eval: ok");
