@@ -50,7 +50,7 @@ workflow hasn't compiled a graph), print:
 No session data yet.
 
 Session cost becomes available once a workflow has started and its
-first stage transition has compiled runtime-graph.json. Run /aidlc to
+first stage transition has compiled runtime-graph.json. Run /amadeus to
 begin, then re-run /amadeus-session-cost.
 ```
 

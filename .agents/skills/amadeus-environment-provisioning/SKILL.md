@@ -2,7 +2,7 @@
 name: amadeus-environment-provisioning
 description: >
   Run the AI-DLC `environment-provisioning` stage (operation phase) in isolation, without
-  advancing the main workflow. Packages `/aidlc --stage environment-provisioning --single`:
+  advancing the main workflow. Packages `/amadeus --stage environment-provisioning --single`:
   the engine emits one run-stage directive for environment-provisioning and its gate, the
   conductor runs it, then the single-stage run commits a synthetic-id pair and
   stops. The main workflow's Current Stage is never touched.
@@ -13,7 +13,7 @@ user-invocable: true
 # AI-DLC Stage Runner — environment-provisioning
 
 Run the `environment-provisioning` stage on its own. This is opt-in packaging over
-`/aidlc --stage environment-provisioning --single`; the same stage is always reachable via
+`/amadeus --stage environment-provisioning --single`; the same stage is always reachable via
 that flag without this skill.
 
 ## Steps

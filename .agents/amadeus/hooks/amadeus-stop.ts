@@ -939,7 +939,7 @@ if (kind === "done") {
 }
 
 // `parked` -> the workflow was intentionally parked mid-flow (issue #367); a
-// human resumes it later with /aidlc --resume. This is the SUPPORTED
+// human resumes it later with /amadeus --resume. This is the SUPPORTED
 // multi-session exit: allow the turn to end and clear the guard exactly like
 // `done`, so the conductor parks at a clean inter-stage boundary instead of
 // rubber-stamping the remaining stages to force a `done`. Terminal allow only

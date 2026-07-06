@@ -2,7 +2,7 @@
 name: amadeus-units-generation
 description: >
   Run the AI-DLC `units-generation` stage (inception phase) in isolation, without
-  advancing the main workflow. Packages `/aidlc --stage units-generation --single`:
+  advancing the main workflow. Packages `/amadeus --stage units-generation --single`:
   the engine emits one run-stage directive for units-generation and its gate, the
   conductor runs it, then the single-stage run commits a synthetic-id pair and
   stops. The main workflow's Current Stage is never touched.
@@ -13,7 +13,7 @@ user-invocable: true
 # AI-DLC Stage Runner — units-generation
 
 Run the `units-generation` stage on its own. This is opt-in packaging over
-`/aidlc --stage units-generation --single`; the same stage is always reachable via
+`/amadeus --stage units-generation --single`; the same stage is always reachable via
 that flag without this skill.
 
 ## Steps

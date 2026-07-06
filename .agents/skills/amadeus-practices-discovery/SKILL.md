@@ -2,7 +2,7 @@
 name: amadeus-practices-discovery
 description: >
   Run the AI-DLC `practices-discovery` stage (inception phase) in isolation, without
-  advancing the main workflow. Packages `/aidlc --stage practices-discovery --single`:
+  advancing the main workflow. Packages `/amadeus --stage practices-discovery --single`:
   the engine emits one run-stage directive for practices-discovery and its gate, the
   conductor runs it, then the single-stage run commits a synthetic-id pair and
   stops. The main workflow's Current Stage is never touched.
@@ -13,7 +13,7 @@ user-invocable: true
 # AI-DLC Stage Runner — practices-discovery
 
 Run the `practices-discovery` stage on its own. This is opt-in packaging over
-`/aidlc --stage practices-discovery --single`; the same stage is always reachable via
+`/amadeus --stage practices-discovery --single`; the same stage is always reachable via
 that flag without this skill.
 
 ## Steps

@@ -15,7 +15,7 @@
   .claude/rules/ the workspace root is ../../, so the method tree is
   ../../aidlc/spaces/default/memory/. The @-lines below ship pointed at the
   always-present `default` space; this file stays committed (it carries this
-  load-bearing wiring beyond the pointer), and `/aidlc space <name>` re-points
+  load-bearing wiring beyond the pointer), and `/amadeus space <name>` re-points
   these @-lines IN PLACE so the next turn's ambient context follows the active
   space. At `default` the re-point is a byte-identical no-op. (AIDLC's own stage
   resolver follows the active-space cursor directly and never needs this stub.)

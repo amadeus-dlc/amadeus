@@ -2,7 +2,7 @@
 name: amadeus-intent-capture
 description: >
   Run the AI-DLC `intent-capture` stage (ideation phase) in isolation, without
-  advancing the main workflow. Packages `/aidlc --stage intent-capture --single`:
+  advancing the main workflow. Packages `/amadeus --stage intent-capture --single`:
   the engine emits one run-stage directive for intent-capture and its gate, the
   conductor runs it, then the single-stage run commits a synthetic-id pair and
   stops. The main workflow's Current Stage is never touched.
@@ -13,7 +13,7 @@ user-invocable: true
 # AI-DLC Stage Runner — intent-capture
 
 Run the `intent-capture` stage on its own. This is opt-in packaging over
-`/aidlc --stage intent-capture --single`; the same stage is always reachable via
+`/amadeus --stage intent-capture --single`; the same stage is always reachable via
 that flag without this skill.
 
 ## Steps

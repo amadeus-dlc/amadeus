@@ -293,7 +293,7 @@ export const DEFAULT_SPACE = "default";
 
 // --- Terminal-command classification (the deterministic-dispatch seam) ---
 //
-// A small set of `/aidlc` commands are TERMINAL: they map 1:1 to an
+// A small set of `/amadeus` commands are TERMINAL: they map 1:1 to an
 // `amadeus-utility.ts` subcommand that runs a tool, prints its output, and stops —
 // they carry NO workflow work and never advance an intent. The orchestration
 // engine's `next` already routes these to a terminal `print` directive
@@ -328,7 +328,7 @@ export interface TerminalCommand {
   source: "read-only-flag" | "workspace-verb";
 }
 
-// Classify the post-`/aidlc` argument tokens. Returns the terminal command to run
+// Classify the post-`/amadeus` argument tokens. Returns the terminal command to run
 // deterministically, or null when the input is NOT a terminal command (freeform
 // intent text, a --scope/--stage/--phase jump, a config/scope change, birth — all
 // of which carry workflow work and MUST go through the engine + conductor). The
@@ -975,7 +975,7 @@ export function writeSessionIntentUuid(projectDir: string, sessionId: string, uu
 
 // The "current session" marker: a FIXED-name file inside the sessions dir naming
 // the most-recently-active session id. The per-session STAMP above is keyed by
-// session_id (which only the hook sees); a CLI tool like `/aidlc intent <slug>`
+// session_id (which only the hook sees); a CLI tool like `/amadeus intent <slug>`
 // has no session_id, so it cannot re-stamp the live session's record on its own.
 // This marker is the bridge: the hook writes it on EVERY fire (so it always names
 // the live conversation), and the switch tool reads it to learn which session to
@@ -2788,7 +2788,7 @@ export function holdsAuditLock(projectDir: string, intent?: string, space?: stri
 // --- Doctor probe: leaked audit locks ----------------------------------------
 //
 // A leaked lock is a lock dir whose owner is provably dead (ESRCH) OR whose
-// stamp is over the stale threshold. `/aidlc doctor` surfaces it (and, when
+// stamp is over the stale threshold. `/amadeus doctor` surfaces it (and, when
 // clear=true, clears it loudly). We can't enumerate tmpdir() hashes back to
 // projects, so we probe the buckets THIS project would use: the workspace
 // sentinel bucket + every intent record across every space (the same identities

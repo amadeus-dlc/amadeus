@@ -179,7 +179,7 @@ Summary of code produced (files, tests, key decisions), then:
 
 Approval gate: strictly 2-option (Approve / Request Changes).
 
-> **Note — orchestrator-managed gating.** When this stage is invoked by the orchestrator as part of a Bolt (the normal Construction flow), the per-Unit approval gate described above is **suppressed by the orchestrator**. A single Bolt-level gate (or batch-level gate for parallel Bolt batches) covers all Units in the Bolt. The per-Unit gate still exists here for direct-invocation use (e.g., `/aidlc --stage code-generation` re-running a single Unit), and subagents invoked via Task must NOT invoke this gate themselves — the orchestrator owns gate presentation across the batch.
+> **Note — orchestrator-managed gating.** When this stage is invoked by the orchestrator as part of a Bolt (the normal Construction flow), the per-Unit approval gate described above is **suppressed by the orchestrator**. A single Bolt-level gate (or batch-level gate for parallel Bolt batches) covers all Units in the Bolt. The per-Unit gate still exists here for direct-invocation use (e.g., `/amadeus --stage code-generation` re-running a single Unit), and subagents invoked via Task must NOT invoke this gate themselves — the orchestrator owns gate presentation across the batch.
 
 ## Sensors
 

@@ -41,4 +41,4 @@ no standalone meaning.
 
    `--scope` seeds the initial scope (defaults to `poc`); omit `--arguments`
    and `--label` when the user gave no description. Print the tool's output and
-   stop. This does not advance a stage; run `/aidlc` afterwards to continue.
+   stop. This does not advance a stage; run `/amadeus` afterwards to continue.

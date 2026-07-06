@@ -2,7 +2,7 @@
 name: amadeus-nfr-requirements
 description: >
   Run the AI-DLC `nfr-requirements` stage (construction phase) in isolation, without
-  advancing the main workflow. Packages `/aidlc --stage nfr-requirements --single`:
+  advancing the main workflow. Packages `/amadeus --stage nfr-requirements --single`:
   the engine emits one run-stage directive for nfr-requirements and its gate, the
   conductor runs it, then the single-stage run commits a synthetic-id pair and
   stops. The main workflow's Current Stage is never touched.
@@ -13,7 +13,7 @@ user-invocable: true
 # AI-DLC Stage Runner — nfr-requirements
 
 Run the `nfr-requirements` stage on its own. This is opt-in packaging over
-`/aidlc --stage nfr-requirements --single`; the same stage is always reachable via
+`/amadeus --stage nfr-requirements --single`; the same stage is always reachable via
 that flag without this skill.
 
 ## Steps

@@ -2,7 +2,7 @@
 name: amadeus-security-patch
 description: >
   Run the AI-DLC workflow with the security-patch scope baked in — no scope
-  detection. CVE response. Packaging over `/aidlc --scope security-patch`, which works
+  detection. CVE response. Packaging over `/amadeus --scope security-patch`, which works
   without this skill.
 argument-hint: "[description | --status | --stage <slug|#> | --phase <name|#>]"
 user-invocable: true
@@ -11,7 +11,7 @@ user-invocable: true
 # AI-DLC — security-patch scope
 
 Drive the AI-DLC engine with the **security-patch** scope fixed. This is the same
-deterministic forwarding loop the `/aidlc` orchestrator runs, with `--scope
+deterministic forwarding loop the `/amadeus` orchestrator runs, with `--scope
 security-patch` baked into the first `next` so scope detection is skipped. The
 engine owns all routing; the conductor persona arrives on the first directive's
 `conductor_persona` field — adopt it for the whole run.
@@ -31,4 +31,4 @@ question at a time, recommended answer attached, answers written back in
 Pass `$ARGUMENTS` through verbatim after `--scope security-patch`; the engine parses
 any flags (`--status`, `--stage`, …) and the `--scope` from the
 state file always wins on an existing workflow, so re-running a started workflow
-resumes it. To run a different scope, use `/aidlc --scope <other>` instead.
+resumes it. To run a different scope, use `/amadeus --scope <other>` instead.

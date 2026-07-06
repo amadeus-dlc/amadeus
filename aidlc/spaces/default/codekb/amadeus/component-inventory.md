@@ -6,7 +6,7 @@
 |---|---|---|
 | 単一入口 `amadeus` | `skills/amadeus/`、`.agents/skills/amadeus/` | forwarding loop の conductor。routing はエンジンに委譲し、実行品質（persona、質問、diary、gate）を担う |
 | stage skill（32） | `skills/amadeus-<stage>/`（例: `amadeus-intent-capture`、`amadeus-code-generation`） | 上流 38 skill の適応コピー。単独実行用 stage runner（フラットな stage 名。phase prefix 型の命名は存在しない） |
-| scope skill | `skills/amadeus-{feature,bugfix,mvp,...}/`、`skills/amadeus-compose/` | scope 別の入口補助。amadeus-compose は `/aidlc compose` の packaging skill（Adaptive Workflows 2.2.0 追加） |
+| scope skill | `skills/amadeus-{feature,bugfix,mvp,...}/`、`skills/amadeus-compose/` | scope 別の入口補助。amadeus-compose は `/amadeus compose` の packaging skill（Adaptive Workflows 2.2.0 追加） |
 | scope 定義（10） | `.agents/amadeus/scopes/amadeus-*.md`（1 scope 1 ファイル） | 上流 9 scope + Amadeus 独自の `pdm`（企画・要求定義止まりで Construction / Operation を持たない。上流に対応がなく parity 例外宣言 = #429）。`pdm` は engine scope 定義のみで、対応する `skills/amadeus-pdm/` skill package は持たない |
 | installer | `scripts/amadeus-install.ts`（`npm run amadeus:install` / `bun run scripts/amadeus-install.ts --target <workspace>`） | エンジン（`.agents/amadeus/` 7 dir）、`amadeus*` skill、変換済み `AMADEUS.md`、`.claude/*` symlink、hooks wiring を対象 workspace へ配布する唯一の配布手段。冪等（#451） |
 | 補助入口 | `skills/amadeus-grilling/`、`skills/amadeus-domain-modeling/`、`skills/amadeus-validator/` | 一問ずつの確認、ドメインモデリング、構造検証（公開入口はこの 3 個 + amadeus） |

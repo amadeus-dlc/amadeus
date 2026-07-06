@@ -155,7 +155,7 @@ Every stage ends with this 5-part structure:
 
 ### Part 0: Enter the approval gate (mandatory — before presenting completion)
 Before showing the completion message:
-1. Optional before the human prompt: `bun .claude/tools/amadeus-state.ts gate-start <slug>` — marks the stage `[-]` → `[?]` and emits `STAGE_AWAITING_APPROVAL`. The stage is now on-hold waiting for the user; `/aidlc --status` will show "Awaiting your approval on <stage-name>". If this step is missed, the later `report --stage <slug> --result approved` opens the missing gate before approval, and `reject <slug>` likewise backfills it before the rejection (both backfilled rows carry `Recovered: true`).
+1. Optional before the human prompt: `bun .claude/tools/amadeus-state.ts gate-start <slug>` — marks the stage `[-]` → `[?]` and emits `STAGE_AWAITING_APPROVAL`. The stage is now on-hold waiting for the user; `/amadeus --status` will show "Awaiting your approval on <stage-name>". If this step is missed, the later `report --stage <slug> --result approved` opens the missing gate before approval, and `reject <slug>` likewise backfills it before the rejection (both backfilled rows carry `Recovered: true`).
 2. Present Parts 1-3 (announcement, summary, approval question).
 3. Based on the user response:
    - **Approve** → `bun .claude/tools/amadeus-orchestrate.ts report --stage <slug> --result approved --user-input "<exact choice>"`. The engine emits any missing `STAGE_AWAITING_APPROVAL`, then `GATE_APPROVED` + `STAGE_COMPLETED`, and auto-advances to the next in-scope stage (or completes the workflow on the final stage). No separate `advance` call required.
@@ -640,7 +640,7 @@ Create exactly the detail needed — no more, no less. Depth adapts to scope and
 - **Comprehensive** (enterprise): ~8-12+ questions per stage, comprehensive artifacts with deep analysis, all stages execute
 
 The orchestrator determines appropriate depth based on scope selection. Users can override at three points:
-1. Via the `--depth` flag: `/aidlc --scope bugfix --depth comprehensive` or `/aidlc --depth minimal`
+1. Via the `--depth` flag: `/amadeus --scope bugfix --depth comprehensive` or `/amadeus --depth minimal`
 2. At scope confirmation — choose "Change depth"
 3. At any approval gate — request a different depth level
 
@@ -692,9 +692,9 @@ Just as the Nyquist rate is the minimum sampling frequency to reconstruct a sign
 
 **Override syntax:**
 ```
-/aidlc --test-strategy minimal                          Minimal testing for active workflow
-/aidlc --depth standard --test-strategy minimal         Full artifacts, minimal tests
-/aidlc --scope bugfix --test-strategy comprehensive     Bugfix with thorough testing
+/amadeus --test-strategy minimal                          Minimal testing for active workflow
+/amadeus --depth standard --test-strategy minimal         Full artifacts, minimal tests
+/amadeus --scope bugfix --test-strategy comprehensive     Bugfix with thorough testing
 ```
 
 ---

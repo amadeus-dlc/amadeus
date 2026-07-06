@@ -47,9 +47,11 @@ scope 解決、Birth 判定、stage 順序、gate 判定、workflow 完了は、
 
 ステージ skill（`skills/amadeus-<phase>-<stage>/`、`skills/amadeus-<stage>/` など）は、上流 `awslabs/aidlc-workflows`（v2 ブランチ、基準 commit `fde1e1af7aae16f4c4defc991abaa3877ee2ac26`）38 skill の適応コピーである。
 適応点は、skill 名の `amadeus-*` への改名と、質問提示の `amadeus-grilling` プロトコルへの結線に限定する。
-これらは単独実行用の stage runner（例: `/aidlc --stage code-generation --single`）であり、主実行経路はエンジンが持つ。
+これらは単独実行用の stage runner（例: `/amadeus --stage code-generation --single`）であり、主実行経路はエンジンが持つ。
 ステージ skill の一覧は [skills/amadeus/references/stage-catalog.md](skills/amadeus/references/stage-catalog.md) を参照する。
 上流とのパリティは `npm run parity:check` で検査する。
+Amadeus の成果物は、構造・意味論（状態機械、checkbox 語彙、audit イベント、英語ラベル）において上流 AI-DLC v2 と互換である。
+名前空間（workspace ルート、状態ファイル名、コマンド名、内部マーカー）は Amadeus 固有であり、上流との名前対応は `dev-scripts/data/parity-map.json` の nameMappings が機械的に定義する（Issue #526）。
 
 補助入口は次の 3 個である。
 

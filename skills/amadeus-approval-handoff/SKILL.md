@@ -2,7 +2,7 @@
 name: amadeus-approval-handoff
 description: >
   Run the AI-DLC `approval-handoff` stage (ideation phase) in isolation, without
-  advancing the main workflow. Packages `/aidlc --stage approval-handoff --single`:
+  advancing the main workflow. Packages `/amadeus --stage approval-handoff --single`:
   the engine emits one run-stage directive for approval-handoff and its gate, the
   conductor runs it, then the single-stage run commits a synthetic-id pair and
   stops. The main workflow's Current Stage is never touched.
@@ -13,7 +13,7 @@ user-invocable: true
 # AI-DLC Stage Runner — approval-handoff
 
 Run the `approval-handoff` stage on its own. This is opt-in packaging over
-`/aidlc --stage approval-handoff --single`; the same stage is always reachable via
+`/amadeus --stage approval-handoff --single`; the same stage is always reachable via
 that flag without this skill.
 
 ## Steps

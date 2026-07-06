@@ -2,7 +2,7 @@
 name: amadeus-incident-response
 description: >
   Run the AI-DLC `incident-response` stage (operation phase) in isolation, without
-  advancing the main workflow. Packages `/aidlc --stage incident-response --single`:
+  advancing the main workflow. Packages `/amadeus --stage incident-response --single`:
   the engine emits one run-stage directive for incident-response and its gate, the
   conductor runs it, then the single-stage run commits a synthetic-id pair and
   stops. The main workflow's Current Stage is never touched.
@@ -13,7 +13,7 @@ user-invocable: true
 # AI-DLC Stage Runner — incident-response
 
 Run the `incident-response` stage on its own. This is opt-in packaging over
-`/aidlc --stage incident-response --single`; the same stage is always reachable via
+`/amadeus --stage incident-response --single`; the same stage is always reachable via
 that flag without this skill.
 
 ## Steps

@@ -49,7 +49,7 @@ Run `bun .agents/amadeus/tools/amadeus-runtime.ts summary --json`.
 If it exits non-zero (no `runtime-graph.json` yet), print:
 
 ```
-No session data yet — start a workflow with /aidlc before running
+No session data yet — start a workflow with /amadeus before running
 /amadeus-replay.
 ```
 

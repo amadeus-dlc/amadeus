@@ -34,7 +34,7 @@ function resolveActiveProjectDir(explicit?: string): string {
   const pd = resolveProjectDir(explicit);
   if (!existsSync(stateFilePath(pd))) {
     error(
-      'No active workflow — refusing to log an interaction event with no resolvable intent. Start a workflow first by describing what to build (/aidlc "build the auth service"), or switch to an intent (/aidlc intent <name>) if several exist.'
+      'No active workflow — refusing to log an interaction event with no resolvable intent. Start a workflow first by describing what to build (/amadeus "build the auth service"), or switch to an intent (/amadeus intent <name>) if several exist.'
     );
   }
   return pd;

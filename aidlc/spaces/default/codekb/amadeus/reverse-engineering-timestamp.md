@@ -25,7 +25,7 @@
 |---|---|
 | architecture.md | audit イベント総数 70→71（RECOMPOSED 追加）、Adaptive Workflows（composer agent dispatch / recompose / validate-grid / composed scope 共存規約）の 1 文を scope 体系節に追記 |
 | component-inventory.md | agents 13→14（amadeus-composer-agent）、scope skill 行に amadeus-compose（packaging）追記、parity 基準 commit fde1e1af→b67798c3 |
-| api-documentation.md | amadeus-utility.ts に detect --json / recompose 追記、amadeus-graph.ts に validate-grid 追記、/aidlc compose 入口行を新設 |
+| api-documentation.md | amadeus-utility.ts に detect --json / recompose 追記、amadeus-graph.ts に validate-grid 追記、/amadeus compose 入口行を新設 |
 | dependencies.md | 上流基準 fde1e1af→b67798c3（2.2.0 Adaptive Workflows）へ更新 |
 | code-structure.md | skills 数（42/45）と amadeus-compose 追記、docs/amadeus 言語方針（英語正 + ja 併置）を追記 |
 | code-quality-assessment.md | 強み行に parity-baseline 再生成と C11 provenance gap 解消（#542）を追記 |

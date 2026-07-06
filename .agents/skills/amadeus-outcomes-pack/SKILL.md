@@ -49,7 +49,7 @@ If it exits non-zero (no `runtime-graph.json` yet), print:
 
 ```
 No session data yet — an outcomes pack is generated at the close of a
-workflow. Run /aidlc to completion first.
+workflow. Run /amadeus to completion first.
 ```
 
 and STOP. Otherwise keep the parsed JSON for the count fields below.

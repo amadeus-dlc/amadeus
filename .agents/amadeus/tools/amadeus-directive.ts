@@ -201,7 +201,7 @@ export interface DoneDirective {
 }
 
 // parked - the workflow was intentionally parked mid-flow (a human resumes it
-// later via /aidlc --resume). Distinct from `done` (which means "workflow
+// later via /amadeus --resume). Distinct from `done` (which means "workflow
 // complete"): a parked workflow has in-scope stages still pending. The Stop
 // hook treats `parked` as a terminal allow, so the conductor can end its turn
 // at a clean inter-stage boundary instead of rubber-stamping stages to reach
@@ -646,7 +646,7 @@ if (import.meta.main) {
     { kind: "print", message: "AIDLC framework version 0.0.0" },
     { kind: "error", message: 'Unknown scope: "frobnicate"' },
     { kind: "done", reason: "Workflow complete — all in-scope stages approved." },
-    { kind: "parked", reason: 'Workflow parked at "feasibility". Resume with /aidlc --resume.', stage: "feasibility" },
+    { kind: "parked", reason: 'Workflow parked at "feasibility". Resume with /amadeus --resume.', stage: "feasibility" },
     // The classify-round-trip skeleton case: gate is the unresolved sentinel,
     // and the first run-stage of a workflow also carries the conductor persona.
     {

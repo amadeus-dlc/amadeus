@@ -79,7 +79,7 @@ Update aidlc-state.md with the routing decision:
 
 **If invoked from `--init`:**
 - Set Lifecycle Phase to READY
-- Set Current Stage to `workspace initialized — run /aidlc [scope] to start`
+- Set Current Stage to `workspace initialized — run /amadeus [scope] to start`
 - Do NOT continue to the Ideation phase
 
 **If invoked from workflow start:**

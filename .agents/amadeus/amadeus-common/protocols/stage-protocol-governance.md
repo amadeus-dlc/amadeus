@@ -14,7 +14,7 @@ At each phase transition (Ideation→Inception (approval-handoff→reverse-engin
 ### When to verify
 - After the last stage of each phase is approved
 - Before the first stage of the next phase begins
-- On demand if the user requests verification via `/aidlc --status`
+- On demand if the user requests verification via `/amadeus --status`
 
 ### Verification process
 1. Read the verification methodology from `.claude/knowledge/amadeus-shared/verification.md`

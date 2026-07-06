@@ -316,7 +316,7 @@ interface ParsedFlags {
 // out by the caller before this runs; here we read scope/stage/phase/depth/
 // test-strategy, the boolean mode flags (--resume/--single), and detect a
 // read-only utility flag. Any leading non-flag token is the freeform intent
-// (mirrors `/aidlc <freeform description>`). Mirrors the prose orchestrator's
+// (mirrors `/amadeus <freeform description>`). Mirrors the prose orchestrator's
 // flag extraction — the value of a valued flag is the following argv token.
 function parseNextFlags(args: string[]): ParsedFlags {
   const flags: ParsedFlags = {};
@@ -390,7 +390,7 @@ function parseNextFlags(args: string[]): ParsedFlags {
 }
 
 // The workflow-birth print for a resolved scope on a fresh workspace (no intent
-// record yet). A user who described what to build — `/aidlc "build the auth
+// record yet). A user who described what to build — `/amadeus "build the auth
 // service"`, the bare positional `next bugfix`, or `next --scope bugfix` — asked
 // to START a workflow; there is nothing to run until an intent is born, and
 // birth is a mutation, so `next` (read-only) NAMES the move as a
@@ -490,7 +490,7 @@ function composeDispatchDirective(
 // This consults the deterministic query layer (listIntents over the active
 // space) and, when intents EXIST but none is flagged active, NAMES the
 // disambiguation move as an `ask` directive that lists the existing intents and
-// asks the human to pick one via `/aidlc intent <slug>` — instead of birthing.
+// asks the human to pick one via `/amadeus intent <slug>` — instead of birthing.
 // Returns null when birth should proceed unchanged (zero intents in the space,
 // or one already resolved active — the latter only when this is reached with an
 // explicit scope/intent that didn't load a cursor'd state). The engine stays
@@ -511,7 +511,7 @@ function intentPickPromptIfRecordsExist(
   return askDirective(
     `This workspace already has ${intents.length} intent${intents.length === 1 ? "" : "s"}${spaceLabel} but no active intent is selected ` +
       `(the active-intent cursor is per-user and not cloned). ` +
-      `Pick one to work on with \`/aidlc intent <slug>\`: ${list}. ` +
+      `Pick one to work on with \`/amadeus intent <slug>\`: ${list}. ` +
       "Selecting an intent sets the cursor; re-run `next` afterward to continue its workflow.",
   );
 }
@@ -1285,7 +1285,7 @@ function handleNext(args: string[], projectDir: string | undefined): void {
     const currentSlug = (getField(stateContent, "Current Stage") ?? "").trim();
     if (parkedAt.length > 0 && parkedAt === currentSlug) {
       emit(parkedDirective(
-        `Workflow parked at "${parkedAt}". Resume with /aidlc --resume.`,
+        `Workflow parked at "${parkedAt}". Resume with /amadeus --resume.`,
         parkedAt,
       ));
       return;
@@ -1313,7 +1313,7 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   }
 
   // (Branch 3 — the legacy `--init` flag — retired in P4. There is no longer a
-  // user-facing `/aidlc --init`: the workspace shell ships in dist/ (SEED) and
+  // user-facing `/amadeus --init`: the workspace shell ships in dist/ (SEED) and
   // the first intent is BORN, not scaffolded. Birth flows through the
   // birthPrintDirective seam below — Branch 7b/9a name the `intent-birth` move
   // for a resolved scope on a fresh workspace; Branch 8 surfaces the freeform
@@ -1490,7 +1490,7 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   }
 
   // Branch 6 — resume (SKILL.md:292). When the conductor re-enters an existing
-  // workflow (`/aidlc --resume`), the prose presents a resume-choice
+  // workflow (`/amadeus --resume`), the prose presents a resume-choice
   // AskUserQuestion. The engine NEVER calls AskUserQuestion (it is a Bash tool
   // the conductor owns); it emits an `ask` directive carrying the question and
   // STOPS, and the conductor renders it and feeds the answer back via report.
@@ -1521,7 +1521,7 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   }
 
   // Branch 7b — bare KNOWN-SCOPE positional with no workflow yet. A user who
-  // types `/aidlc bugfix` (no `--scope`) named a scope, not freeform intent —
+  // types `/amadeus bugfix` (no `--scope`) named a scope, not freeform intent —
   // but the parser captures any non-`--` token as `flags.intent`, so without
   // this branch the literal scope name would slip into Branch 8 and surface a
   // freeform `ask` defaulting to the wrong scope (Wave-1 audit finding 2). When
@@ -1592,7 +1592,7 @@ function handleNext(args: string[], projectDir: string | undefined): void {
     emit(askDirective(
       `No stock scope clearly fits: "${flags.intent}". ` +
         "I can compose a tailored plan for this task (recommended: reply \"compose\"), " +
-        "or you can name a scope directly (e.g. bugfix, feature, poc; see /aidlc --help for all).",
+        "or you can name a scope directly (e.g. bugfix, feature, poc; see /amadeus --help for all).",
     ));
     return;
   }
@@ -1618,7 +1618,7 @@ function handleNext(args: string[], projectDir: string | undefined): void {
       return;
     }
     // flags.intent here is freeform feature text typed alongside an explicit
-    // --scope (e.g. `/aidlc --scope feature "build the auth service"`) — thread
+    // --scope (e.g. `/amadeus --scope feature "build the auth service"`) — thread
     // it as the born intent's description; a bare `--scope <s>` carries none.
     emit(birthPrintDirective(scope, flags, flags.intent));
     return;
@@ -1630,13 +1630,13 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   // job). Emit a clear error rather than guessing — pure read. The message
   // names the two explicit moves that DO start a workflow; it must not imply
   // the user already made one (the pre-hardening wording told a user who had
-  // just typed `/aidlc <scope>` to type exactly that — circular now that a
+  // just typed `/amadeus <scope>` to type exactly that — circular now that a
   // named scope births).
   if (!stateContent) {
     emit(errorDirective(
       "No workflow state found (no active intent). " +
-        "Start one by describing what to build (/aidlc \"build the auth service\") " +
-        "or by naming a scope (/aidlc --scope <scope>).",
+        "Start one by describing what to build (/amadeus \"build the auth service\") " +
+        "or by naming a scope (/amadeus --scope <scope>).",
     ));
     return;
   }
@@ -2012,7 +2012,7 @@ function emitForSlug(
 // not runnable, relayed with the verbatim skip wording the jump path uses, so the
 // directive stream is identical regardless of entry point).
 const SINGLE_INIT_ERROR =
-  "Cannot run an initialization stage with --single. Initialization is bootstrap (it births the intent + state); it runs automatically when you start a workflow (describe what to build, e.g. /aidlc \"build the auth service\").";
+  "Cannot run an initialization stage with --single. Initialization is bootstrap (it births the intent + state); it runs automatically when you start a workflow (describe what to build, e.g. /amadeus \"build the auth service\").";
 
 function emitSingleRunStage(
   slug: string,
@@ -2024,7 +2024,7 @@ function emitSingleRunStage(
   const node = nodeForSlug(slug);
   if (!node) {
     emit(errorDirective(
-      `Unknown stage "${slug}". Run /aidlc --help for the full list.`,
+      `Unknown stage "${slug}". Run /amadeus --help for the full list.`,
     ));
     return;
   }
@@ -2093,11 +2093,11 @@ function emitSingleRunStage(
 // SKILL.md step 5 (Initialization guard) verbatim: jumping to an initialization
 // stage — or `--phase initialization` — is rejected. Init stages have bootstrap
 // behavior (create the state file, scaffold dirs) that doesn't fit the jump
-// model; the user must run `/aidlc --init`. The guard is prose-only in SKILL.md
+// model; the user must run `/amadeus --init`. The guard is prose-only in SKILL.md
 // (`amadeus-jump.ts resolve` treats init stages as valid targets, returning
 // valid:true), so the engine enforces it here rather than relaying a tool error.
 const INIT_JUMP_ERROR =
-  "Cannot jump to initialization stages. The Initialization phase runs automatically when you start a workflow (describe what to build, e.g. /aidlc \"build the auth service\").";
+  "Cannot jump to initialization stages. The Initialization phase runs automatically when you start a workflow (describe what to build, e.g. /amadeus \"build the auth service\").";
 
 function emitJumpDirective(
   flags: ParsedFlags,
@@ -2186,7 +2186,7 @@ function emitJumpDirective(
   const node = nodeForSlug(stageSlug);
   if (!node) {
     emit(errorDirective(
-      `Unknown stage "${stageSlug}". Run /aidlc --help for the full list.`,
+      `Unknown stage "${stageSlug}". Run /amadeus --help for the full list.`,
     ));
     return;
   }
@@ -2541,7 +2541,7 @@ function handleSingleReport(
   const node = nodeForSlug(flags.stage);
   if (!node) {
     emit(errorDirective(
-      `Unknown stage "${flags.stage}". Run /aidlc --help for the full list.`,
+      `Unknown stage "${flags.stage}". Run /amadeus --help for the full list.`,
     ));
     return;
   }
@@ -2910,7 +2910,7 @@ function handlePark(_args: string[], projectDir: string | undefined): void {
     ? (getField(stateContent, "Parked At Stage") ?? "").trim()
     : "";
   emit(parkedDirective(
-    `Workflow parked at "${parkedAt}". Resume with /aidlc --resume.`,
+    `Workflow parked at "${parkedAt}". Resume with /amadeus --resume.`,
     parkedAt,
   ));
 }

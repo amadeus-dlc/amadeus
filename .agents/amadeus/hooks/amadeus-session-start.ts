@@ -54,7 +54,7 @@ const projectDir = resolveProjectDirFromHook(import.meta.url);
 try {
   repointHarnessIncludes(projectDir, activeSpace(projectDir));
 } catch {
-  // non-fatal — includes self-heal on the next /aidlc / switch / --doctor
+  // non-fatal — includes self-heal on the next /amadeus / switch / --doctor
 }
 
 const stateFile = stateFilePath(projectDir);
@@ -106,7 +106,7 @@ if (!process.stdin.isTTY) {
 
 // Record the live conversation as the "current session" on EVERY fire (startup /
 // resume / clear / compact) — NOT gated on eventType. The hook is the only place
-// that sees session_id; a CLI switch (`/aidlc intent <slug>`) cannot. This marker
+// that sees session_id; a CLI switch (`/amadeus intent <slug>`) cannot. This marker
 // lets the switch tool re-stamp the live session's record so a deliberate
 // in-conversation switch doesn't fire a FALSE rebind nag on resume (see the
 // re-stamp in handleIntent, amadeus-utility.ts). Separate file from the per-session
@@ -162,13 +162,13 @@ if (sessionId) {
       if (was) {
         const live = liveUuid ? findIntentByUuid(projectDir, liveUuid) : null;
         const liveSlug = live ? live.slug : "(none)";
-        // The cursor verb is `/aidlc intent <slug>` (switches within the active
+        // The cursor verb is `/amadeus intent <slug>` (switches within the active
         // space). When the stamped intent lives in another space, prefix the
         // space switch so the rebind command is complete.
         const switchCmd =
           was.space === activeSp
-            ? `/aidlc intent ${was.slug}`
-            : `/aidlc space ${was.space} && /aidlc intent ${was.slug}`;
+            ? `/amadeus intent ${was.slug}`
+            : `/amadeus space ${was.space} && /amadeus intent ${was.slug}`;
         rebindOffer =
           `INTENT REBIND OFFER: This conversation was working ${was.slug}, but the active intent is ${liveSlug}. ` +
           `Switch back to ${was.slug}? [Y/n] — on Yes, run \`${switchCmd}\` to move the cursor; ` +
@@ -225,7 +225,7 @@ ${recovery}${driftNote}On resume: offer the user the standard resume options (Re
 
 FORWARDING-LOOP DISCIPLINE (non-negotiable — the engine owns ALL routing):
 - The engine binary (\`amadeus-orchestrate.ts\`) is the ONLY authority on the next move. You run it, you do EXACTLY what its one directive says, you commit with \`report\`, you repeat. You never re-derive routing yourself.
-- STEP 1 — YOUR VERY FIRST ACTION: take everything the user typed after \`/aidlc\` and append it to the first \`next\` call UNCHANGED. The flags ARE the user's intent; dropping them sends the workflow to the wrong place. \`/aidlc --phase ideation\` → you MUST run \`next --phase ideation\`, never bare \`next\`. \`/aidlc --stage X\` → \`next --stage X\`. \`/aidlc\` alone → \`next\`. Before running that first \`next\`, verify: if the user's message contained \`--phase\`/\`--stage\`/\`--scope\`/\`--depth\`/freeform text, it MUST appear on your \`next\` command — a bare \`next\` when the user gave arguments is a bug.
+- STEP 1 — YOUR VERY FIRST ACTION: take everything the user typed after \`/amadeus\` and append it to the first \`next\` call UNCHANGED. The flags ARE the user's intent; dropping them sends the workflow to the wrong place. \`/amadeus --phase ideation\` → you MUST run \`next --phase ideation\`, never bare \`next\`. \`/amadeus --stage X\` → \`next --stage X\`. \`/amadeus\` alone → \`next\`. Before running that first \`next\`, verify: if the user's message contained \`--phase\`/\`--stage\`/\`--scope\`/\`--depth\`/freeform text, it MUST appear on your \`next\` command — a bare \`next\` when the user gave arguments is a bug.
 - When a directive is \`{kind:"print"}\` whose message names a command to run (e.g. \`amadeus-jump.ts execute ...\`, a scope/config change, or \`init\`): that named command is your IMMEDIATE next tool call. Run THAT EXACT command FIRST. Do NOT run \`next\` again, do NOT read more files, do NOT plan a stage — until the named command has run. Re-running the engine before it is a protocol violation that silently skips the move.`;
 
 // Output additionalContext as JSON

@@ -2,7 +2,7 @@
 name: amadeus-deployment-pipeline
 description: >
   Run the AI-DLC `deployment-pipeline` stage (operation phase) in isolation, without
-  advancing the main workflow. Packages `/aidlc --stage deployment-pipeline --single`:
+  advancing the main workflow. Packages `/amadeus --stage deployment-pipeline --single`:
   the engine emits one run-stage directive for deployment-pipeline and its gate, the
   conductor runs it, then the single-stage run commits a synthetic-id pair and
   stops. The main workflow's Current Stage is never touched.
@@ -13,7 +13,7 @@ user-invocable: true
 # AI-DLC Stage Runner — deployment-pipeline
 
 Run the `deployment-pipeline` stage on its own. This is opt-in packaging over
-`/aidlc --stage deployment-pipeline --single`; the same stage is always reachable via
+`/amadeus --stage deployment-pipeline --single`; the same stage is always reachable via
 that flag without this skill.
 
 ## Steps

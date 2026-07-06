@@ -17,9 +17,9 @@
 // segment, leaving every other byte untouched. Identical treatment for all three
 // harnesses — no file is created, regenerated whole, or special-cased.
 //
-// It runs at two moments: bootstrap (first `/aidlc` / --doctor / SessionStart —
+// It runs at two moments: bootstrap (first `/amadeus` / --doctor / SessionStart —
 // idempotent no-op when the pointer already matches the active space) and on a
-// `/aidlc space <name>` switch (rewrites the pointer to the new space). At the
+// `/amadeus space <name>` switch (rewrites the pointer to the new space). At the
 // `default` space the rewrite is a byte-identical no-op, so a single-team user's
 // committed tree never dirties — only a multi-space switch produces a local
 // (uncommitted, per-user) modification, driven by the gitignored `active-space`
