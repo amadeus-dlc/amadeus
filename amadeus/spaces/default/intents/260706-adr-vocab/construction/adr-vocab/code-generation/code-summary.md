@@ -63,3 +63,8 @@
 - 【是正 1】extension-guide{.md,.ja.md} の「Design lineage」に重複していた ADR 0002 要旨を除去し、承認済み設計（移設先の分離: 0001 = extension-guide、0002 = overview）へ戻した。当初の重複は設計からの未申告逸脱であり、「設計文書と実装内容に食い違いはなかった」という本書の当初申告は不正確だった。
 - 【是正 4】「Ready 化」の追加基準整合: GitHub 一般の "Ready for review" 機能の名称ではなく、本リポジトリの draft PR 運用（2026-07-06 Maintainer 恒常ルール）が定める「人間はいつ merge してもよい」という意思表示の概念として定義した。一般機能名との境界線上にあることは認識しており、次回棚卸しでの再検討候補として明記する（reviewer 指摘の受容）。
 - 【是正 5】スコープ外の残存物: `skills/amadeus/templates/intents/intent-module.md`（+ 昇格先）は退役済み `<dirName>.md` 構造（概要・依存・目標プロファイルの配置）のテンプレートのままであり、本 Intent が CONTEXT.md 側で是正した GD009 契約と矛盾したまま残っている。FR-3 の対象（CONTEXT.md）外のため本 Intent では変更せず、Issue 候補として gate 報告で leader へ申し送る。
+
+## PR レビュー対応の追記（Devin、2026-07-06）
+
+- 【BUG・真正】domain-modeling skill の `intents.md` 残存 2 箇所（67 行 = Space 準備条件、215 行 = 禁止事項）を `intents.json` / Intake 経路へ補正し promote（byte 一致）。横断 grep の GD009 検証対象が CONTEXT.md 限定だったための見落とし。Devin が Resolved を確認済み。
+- 【ANALYSIS】`knowledge/background.md` 7 行の旧名 `aidlc/` → `amadeus/` を補正（FR-3.3 と同種の knowledge 配下 1 語補正。knowledge 全体の横断 grep で他の残存 0 件を確認）。

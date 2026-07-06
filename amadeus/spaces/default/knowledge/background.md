@@ -4,7 +4,7 @@
 
 - Amadeus DLC 自体を Amadeus の仕組みで開発できるようにする。
 - 目的は、Intent 作成後から PR 準備までの手戻りを減らすことである。
-- 自己開発では、実行する側の skill、変更対象の skill、example snapshot、検証対象の `aidlc/` が重なりやすい。
+- 自己開発では、実行する側の skill、変更対象の skill、example snapshot、検証対象の `amadeus/` が重なりやすい。
 
 ## 前提
 
