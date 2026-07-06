@@ -31,6 +31,9 @@ result
 /amadeus/spaces/*/intents/*/.amadeus-*
 /amadeus/spaces/*/intents/.amadeus-hooks-health/
 
+# グローバル gitignore の build/ パターンを無効化（dev-scripts/evals/build/ は eval スクリプト）
+!dev-scripts/evals/build/
+
 # kanban-sync hook の worktree ローカル状態（u003-kanban-hooks）
 /.claude/kanban-sync/
 
