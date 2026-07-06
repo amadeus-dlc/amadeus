@@ -96,10 +96,10 @@ function recordRoot(proj: string): string {
 
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
-const AIDLC_SRC = join(REPO_ROOT, "dist", "claude", ".claude");
-const RUNTIME_TS = join(AIDLC_SRC, "tools", "amadeus-runtime.ts");
+const AMADEUS_SRC = join(REPO_ROOT, "dist", "claude", ".claude");
+const RUNTIME_TS = join(AMADEUS_SRC, "tools", "amadeus-runtime.ts");
 // The SHIPPED milestone 13 template the .sh `cp`s (t102:29).
-const TEMPLATE = join(AIDLC_SRC, "knowledge", "amadeus-shared", "memory-template.md");
+const TEMPLATE = join(AMADEUS_SRC, "knowledge", "amadeus-shared", "memory-template.md");
 
 const tempDirs: string[] = [];
 

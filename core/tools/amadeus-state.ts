@@ -547,13 +547,13 @@ function handleCount(args: string[]): void {
 //      Catches the code-generation case where only the two markdown produces[]
 //      docs were written but no actual source code (issue #366 Update 2).
 //
-// Bypass: AIDLC_SKIP_ARTIFACT_GUARD=1 (env, set by the test runner for synthetic
+// Bypass: AMADEUS_SKIP_ARTIFACT_GUARD=1 (env, set by the test runner for synthetic
 // tiers that drive transitions against bare fixtures).
 // (KNOWN_CODEKB_STAGES is declared at module top alongside HARNESS_DOC_DIRS to
 // dodge the TDZ - the dispatch that calls this guard runs at module load.)
 
 function artifactGuardDisabled(): boolean {
-  return process.env.AIDLC_SKIP_ARTIFACT_GUARD === "1";
+  return process.env.AMADEUS_SKIP_ARTIFACT_GUARD === "1";
 }
 
 // Resolve the directories a stage's produces[] artifacts would live under,
@@ -1308,7 +1308,7 @@ function handleApprove(args: string[]): void {
   // work on disk. Runs BEFORE any mutation so a refusal (error() -> exit) leaves
   // state untouched. The nested handleAdvance / handleCompleteWorkflow below see
   // the slug as already [x] and skip their own guard, so this is the single
-  // enforcement point on the approve path. Bypass via AIDLC_SKIP_ARTIFACT_GUARD.
+  // enforcement point on the approve path. Bypass via AMADEUS_SKIP_ARTIFACT_GUARD.
   // Covers per-unit Construction stages (globs the record's
   // construction/<unit>/<slug>/) and code-producing stages (workspace_requires).
   verifyStageArtifacts(pd, stage);
@@ -1321,7 +1321,7 @@ function handleApprove(args: string[]): void {
   if (isAutonomousMode(content)) {
     // skip the presence check — autonomous Construction has no human at the gate
   } else if (humanPresenceGuardDisabled()) {
-    // skip — suite-wide deterministic off-switch (AIDLC_SKIP_HUMAN_PRESENCE_GUARD)
+    // skip — suite-wide deterministic off-switch (AMADEUS_SKIP_HUMAN_PRESENCE_GUARD)
   } else if (!humanActedSinceGate(pd)) {
     // Ledger-event presence check: refuse unless a HUMAN_TURN event was appended
     // AFTER the last gate resolution (GATE_APPROVED / GATE_REJECTED /

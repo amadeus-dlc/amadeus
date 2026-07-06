@@ -3,7 +3,7 @@
 // t87 — shipped stage-file COMPARTMENT-HEADER contract. Migrated from
 // tests/unit/t87-stage-compartment-headers.sh (TAP plan 64 — 2 distinct
 // assertions per stage file across the 32 stages under amadeus-common/stages/).
-// The .sh resolved STAGES_DIR = $AIDLC_SRC/amadeus-common/stages and, for every
+// The .sh resolved STAGES_DIR = $AMADEUS_SRC/amadeus-common/stages and, for every
 // *.md in every phase subdir, asserted that BOTH a "## Sensors" and a
 // "## Learn" H2 heading appear OUTSIDE fenced code blocks. (The .sh's header
 // line called these "compartments"; a heading inside a triple-backtick fence
@@ -12,7 +12,7 @@
 // Mechanism: none. This is a pure structural check over the shipped bytes —
 // does each stage file expose its two required compartment headings? No process
 // boundary, no argv/exit/stdout seam, no LLM, zero tokens. We resolve the same
-// tree the .sh resolved (AIDLC_SRC = <repo>/dist/claude/.claude, fixtures.ts:42)
+// tree the .sh resolved (AMADEUS_SRC = <repo>/dist/claude/.claude, fixtures.ts:42)
 // and read each .md in-process.
 //
 // The .sh has NO "# covers:" header (line 2 is a plain description). The covers
@@ -52,11 +52,11 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
-// AIDLC_SRC === <repo>/dist/claude/.claude — the same tree the .sh resolved as
+// AMADEUS_SRC === <repo>/dist/claude/.claude — the same tree the .sh resolved as
 // STAGES_DIR's grandparent.
-const STAGES_DIR = join(AIDLC_SRC, "amadeus-common", "stages");
+const STAGES_DIR = join(AMADEUS_SRC, "amadeus-common", "stages");
 
 /**
  * Discover every stage .md under amadeus-common/stages/<phase>/, the SAME walk

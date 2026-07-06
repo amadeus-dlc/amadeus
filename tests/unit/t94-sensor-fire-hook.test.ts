@@ -39,20 +39,20 @@
 //            so it IS written for the "valid-but-no-fire" cases (missing graph,
 //            empty sensors_applicable).
 //   :165-166 active-stage early-exit — missing Current Stage / "none" -> exit 0.
-//   :172-180 stage-graph early-exits — loadGraph() throws (missing AIDLC_STAGE_GRAPH
+//   :172-180 stage-graph early-exits — loadGraph() throws (missing AMADEUS_STAGE_GRAPH
 //            file) -> exit 0; stage slug not in graph -> exit 0.
 //   :184-185 empty sensors_applicable (workspace-scaffold) -> exit 0.
 //   :196-199 G1 glob filter — `if (!entry.matches) continue` then
 //            new Bun.Glob(entry.matches).match(filePath) -> a non-matching path
 //            and an entry with no `matches` field both skip the spawn.
-//   loadGraph() honours the AIDLC_STAGE_GRAPH env-var seam (amadeus-graph.ts:160-162)
+//   loadGraph() honours the AMADEUS_STAGE_GRAPH env-var seam (amadeus-graph.ts:160-162)
 //   — the seam the synthetic-graph / missing-graph cases inject through.
 //
 // FIXTURE DISCIPLINE (mirrors make_project / make_project_active, .sh:56-104): a
 // fresh temp project with amadeus-docs/, .claude/tools/ + a per-test STUB
 // amadeus-sensor.ts at <proj>/.claude/tools/amadeus-sensor.ts (records argv to
 // T94_SPAWN_LOG). Synthetic stage-graph fixtures are written to temp files and
-// injected via AIDLC_STAGE_GRAPH. All temp dirs cleaned in afterAll; nothing
+// injected via AMADEUS_STAGE_GRAPH. All temp dirs cleaned in afterAll; nothing
 // under tests/fixtures/**.
 //
 // Old TAP -> new test parity (the 18 .sh asserts map here, less .sh cases 9a/9b
@@ -62,7 +62,7 @@
 //   .sh case 3  valid payload + applicable sensors -> spawn   -> "valid payload + applicable sensors fires the dispatcher"
 //   .sh case 4  recursion guard (.amadeus-sensors/) -> no spawn -> "recursion guard skips writes under .amadeus-sensors/"
 //   .sh case 5  empty file_path -> no spawn                   -> "empty file_path -> no spawn"
-//   .sh case 6  non-aidlc path -> no glob match -> no spawn   -> "non-aidlc path -> no glob match -> no spawn"
+//   .sh case 6  non-amadeus path -> no glob match -> no spawn   -> "non-amadeus path -> no glob match -> no spawn"
 //   .sh case 7  no audit.md -> exit 0, no heartbeat, no spawn -> "no audit.md -> exit 0, no heartbeat, no spawn"
 //   .sh case 8  no state.md (audit present) -> no heartbeat   -> "no amadeus-state.md -> exit 0, no heartbeat (guard precedes heartbeat)"
 //   .sh cases 9a/9b (Test Run Mode sensor-fire skip) were DROPPED per #369.
@@ -91,7 +91,7 @@ import {
 import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
   seededAuditDir,
@@ -100,8 +100,8 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const HOOK = join(AIDLC_SRC, "hooks", "amadeus-sensor-fire.ts");
-const FRAMEWORK_GRAPH = join(AIDLC_SRC, "tools", "data", "stage-graph.json");
+const HOOK = join(AMADEUS_SRC, "hooks", "amadeus-sensor-fire.ts");
+const FRAMEWORK_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 
 // ISO-8601-ish prefix the .sh grepped for: YYYY-MM-DDThh:mm:ss... (isoTimestamp
 // emits the trailing Z; we anchor on the date+T to match the .sh's
@@ -218,7 +218,7 @@ interface HookRun {
 
 /**
  * run_hook (.sh:109-120): pipe PostToolUse Write JSON on stdin with
- * CLAUDE_PROJECT_DIR, AIDLC_STAGE_GRAPH (defaults to the framework graph), and
+ * CLAUDE_PROJECT_DIR, AMADEUS_STAGE_GRAPH (defaults to the framework graph), and
  * T94_SPAWN_LOG set, against the real hook. The stub dispatcher writes argv to
  * the spawn log; checks read disk afterward.
  */
@@ -237,7 +237,7 @@ function runHook(
     env: {
       ...(process.env as Record<string, string>),
       CLAUDE_PROJECT_DIR: proj,
-      AIDLC_STAGE_GRAPH: graph,
+      AMADEUS_STAGE_GRAPH: graph,
       T94_SPAWN_LOG: spawnLogPath(proj),
     },
   });
@@ -266,7 +266,7 @@ describe("t94 amadeus-sensor-fire hook — guards + early exits (migrated from t
       env: {
         ...(process.env as Record<string, string>),
         CLAUDE_PROJECT_DIR: proj,
-        AIDLC_STAGE_GRAPH: FRAMEWORK_GRAPH,
+        AMADEUS_STAGE_GRAPH: FRAMEWORK_GRAPH,
         T94_SPAWN_LOG: spawnLogPath(proj),
       },
     });
@@ -283,7 +283,7 @@ describe("t94 amadeus-sensor-fire hook — guards + early exits (migrated from t
       env: {
         ...(process.env as Record<string, string>),
         CLAUDE_PROJECT_DIR: proj,
-        AIDLC_STAGE_GRAPH: FRAMEWORK_GRAPH,
+        AMADEUS_STAGE_GRAPH: FRAMEWORK_GRAPH,
         T94_SPAWN_LOG: spawnLogPath(proj),
       },
     });
@@ -348,7 +348,7 @@ describe("t94 amadeus-sensor-fire hook — guards + early exits (migrated from t
       env: {
         ...(process.env as Record<string, string>),
         CLAUDE_PROJECT_DIR: proj,
-        AIDLC_STAGE_GRAPH: FRAMEWORK_GRAPH,
+        AMADEUS_STAGE_GRAPH: FRAMEWORK_GRAPH,
         T94_SPAWN_LOG: spawnLogPath(proj),
       },
     });
@@ -356,7 +356,7 @@ describe("t94 amadeus-sensor-fire hook — guards + early exits (migrated from t
     expect(existsSync(spawnLogPath(proj))).toBe(false);
   });
 
-  test("non-aidlc path -> no glob match -> no spawn [.sh case 6]", () => {
+  test("non-amadeus path -> no glob match -> no spawn [.sh case 6]", () => {
     const proj = makeProjectActive();
     // A path outside amadeus-docs/ never matches **/amadeus-docs/**, so the per-entry
     // dispatch loop `continue`s on both applicable sensors (:199).
@@ -400,7 +400,7 @@ describe("t94 amadeus-sensor-fire hook — guards + early exits (migrated from t
     const proj = makeProject();
     seedAudit(proj);
     seedState(proj, "- **Current Stage**: requirements-analysis\n");
-    // A non-aidlc path passes the active-workflow guard + writes the heartbeat,
+    // A non-amadeus path passes the active-workflow guard + writes the heartbeat,
     // but the glob never matches so no sensor fires.
     const r = runHook(proj, join(tmpdir(), "scratch-no-match", "x.txt"));
     expect(r.status).toBe(0);
@@ -440,12 +440,12 @@ describe("t94 amadeus-sensor-fire hook — guards + early exits (migrated from t
   });
 
   // ===========================================================================
-  // Step 10 — stage-graph early exits (AIDLC_STAGE_GRAPH seam).
+  // Step 10 — stage-graph early exits (AMADEUS_STAGE_GRAPH seam).
   // ===========================================================================
 
   test("missing stage-graph.json -> no spawn, heartbeat still written (G3 placement) [.sh case 14]", () => {
     const proj = makeProjectActive();
-    // loadGraph() throws when the AIDLC_STAGE_GRAPH file does not exist; the hook
+    // loadGraph() throws when the AMADEUS_STAGE_GRAPH file does not exist; the hook
     // catches it and exits 0 (:177). The heartbeat at :134 ran BEFORE the graph
     // read, so it is present — the placement contract.
     const r = runHook(proj, inceptionMd(proj), "/nonexistent/stage-graph.json");

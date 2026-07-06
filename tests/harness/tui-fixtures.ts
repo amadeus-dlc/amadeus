@@ -1,6 +1,6 @@
 // tui-fixtures.ts — shared project seeding for TUI journey tests, the TypeScript
 // mirror of bash setup_integration_project (tests/lib/fixtures.sh:150-198). The
-// render-surface tests inline `cpSync(AIDLC_SRC) + writeFileSync(state)`; the
+// render-surface tests inline `cpSync(AMADEUS_SRC) + writeFileSync(state)`; the
 // JOURNEY tests additionally need the greenfield/brownfield/RE stubs that drive
 // workspace-detection and reverse-engineering — those are fixture-DIRECTORY copies
 // (fixtures.sh:168-173), too much to re-inline per file. This is the one helper.
@@ -45,7 +45,7 @@ import {
 // tests/harness/ -> repo root -> dist/claude/.claude (the shipped distributable).
 const HARNESS_DIR = import.meta.dir;
 const REPO_ROOT = join(HARNESS_DIR, "..", "..");
-export const AIDLC_SRC = join(REPO_ROOT, "dist", "claude", ".claude");
+export const AMADEUS_SRC = join(REPO_ROOT, "dist", "claude", ".claude");
 export const KIRO_SRC = join(REPO_ROOT, "dist", "kiro", ".kiro");
 // The Kiro IDE distributable ships the .kiro.hook files the IDE actually reads
 // (the human-presence mint + block); dist/kiro/.kiro/hooks has none. Seed this tree
@@ -54,7 +54,7 @@ export const KIRO_IDE_SRC = join(REPO_ROOT, "dist", "kiro-ide", ".kiro");
 const FIXTURES_DIR = join(REPO_ROOT, "tests", "fixtures");
 // The per-harness memory shell (aidlc/spaces/default/memory) ships beside the
 // engine tree; copy it so the resolver finds the rule layers, mirroring
-// setupIntegrationProject's AIDLC_MEMORY_SRC copy.
+// setupIntegrationProject's AMADEUS_MEMORY_SRC copy.
 const CLAUDE_MEMORY_SRC = join(REPO_ROOT, "dist", "claude", "aidlc");
 const KIRO_MEMORY_SRC = join(REPO_ROOT, "dist", "kiro", "aidlc");
 const KIRO_IDE_MEMORY_SRC = join(REPO_ROOT, "dist", "kiro-ide", "aidlc");
@@ -177,7 +177,7 @@ export function setupTuiProject(opts: TuiProjectOptions = {}): string {
     cpSync(join(KIRO_IDE_SRC, "..", "AGENTS.md"), join(proj, "AGENTS.md"));
     if (existsSync(KIRO_IDE_MEMORY_SRC)) cpSync(KIRO_IDE_MEMORY_SRC, join(proj, "aidlc"), { recursive: true });
   } else {
-    cpSync(AIDLC_SRC, join(proj, ".claude"), { recursive: true });
+    cpSync(AMADEUS_SRC, join(proj, ".claude"), { recursive: true });
     if (existsSync(CLAUDE_MEMORY_SRC)) cpSync(CLAUDE_MEMORY_SRC, join(proj, "aidlc"), { recursive: true });
   }
 
@@ -299,15 +299,15 @@ function copyDirContents(src: string, dest: string): void {
 
 /** Cleanup helper — rmSync the temp project. Safe on a missing path.
  *
- *  Locatability escape hatch: when `AIDLC_KEEP_TEMP=1` is set, the project is
+ *  Locatability escape hatch: when `AMADEUS_KEEP_TEMP=1` is set, the project is
  *  PRESERVED and its path printed to stderr instead of being removed. A live tui
  *  journey that times out or fails otherwise leaves nothing to inspect (random
  *  mkdtemp name, cleaned in `finally`), so a debugging run sets this to keep the
  *  seeded .claude/, the written artefacts, the audit, and the sensor detail dir
  *  for post-mortem. Green CI never sets it, so normal runs still clean up. */
 export function cleanupTuiProject(proj: string): void {
-  if (process.env.AIDLC_KEEP_TEMP === "1") {
-    if (proj) process.stderr.write(`[tui-fixtures] AIDLC_KEEP_TEMP=1 — preserved ${proj}\n`);
+  if (process.env.AMADEUS_KEEP_TEMP === "1") {
+    if (proj) process.stderr.write(`[tui-fixtures] AMADEUS_KEEP_TEMP=1 — preserved ${proj}\n`);
     return;
   }
   if (proj && existsSync(proj)) rmSync(proj, { recursive: true, force: true });

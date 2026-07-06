@@ -32,7 +32,7 @@ afterEach(() => {
 
 function util(args: string[]): { status: number; stdout: string } {
   const env = { ...process.env };
-  delete env.AWS_AIDLC_DEFAULT_SCOPE;
+  delete env.AWS_AMADEUS_DEFAULT_SCOPE;
   const r = Bun.spawnSync({
     cmd: [BUN, UTIL, ...args, "--project-dir", proj],
     stdout: "pipe",

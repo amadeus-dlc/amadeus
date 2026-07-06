@@ -10,7 +10,7 @@
 // live; it was UNCOVERED) and `audit:WORKSPACE_INITIALISED` (the scope-routing
 // init event). Both clear the audit bar (minMechanism=none) via either driver
 // in the {sdk,tui} set. Per registry-honesty: the SENSOR_FIRED credit is earned
-// ONLY by the AIDLC_TUI_LIVE tui half — regenerate the registry greens-only,
+// ONLY by the AMADEUS_TUI_LIVE tui half — regenerate the registry greens-only,
 // after a watched live green, never on a skipped run.
 //
 // t-tui-custom-harness — the Phase-5 Harness-Engineer journey: the ONE genuine
@@ -100,7 +100,7 @@
 // never softened. Vacuous-pass guards below ensure each surface genuinely fired.
 //
 // COST: the tui half spends real Bedrock tokens (a human-driven run through both
-// custom-stage gates) — gated behind AIDLC_TUI_LIVE=1. The sdk half also spends
+// custom-stage gates) — gated behind AMADEUS_TUI_LIVE=1. The sdk half also spends
 // tokens (driveAidlc runs the orchestrator on Opus/Bedrock). The compile-rule
 // test + the seeded-state statusline capture spend none. Absent
 // tmux/claude/distributable -> SKIP with a reason, never a hollow pass.
@@ -145,7 +145,7 @@ const DRIVE_PREFIX = IS_WIN ? ["--experimental-strip-types", DRIVER] : [DRIVER];
 
 // Wedge-ceiling, never a budget (the timer lesson): one generous cap; pass on
 // the on-disk signal, not the clock. Matches the suite convention.
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "2400", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "2400", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
 const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
 
@@ -174,11 +174,11 @@ function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: 
   );
 }
 
-// ABSENT / opt-in gating, AIDLC_TUI_LIVE first (a bare --e2e run reports the
+// ABSENT / opt-in gating, AMADEUS_TUI_LIVE first (a bare --e2e run reports the
 // clear opt-in reason, not a substrate miss). Mirrors t-tui-workshop.
 function skipReason(): string | null {
-  if (process.env.AIDLC_TUI_LIVE !== "1") {
-    return "set AIDLC_TUI_LIVE=1 to run the live harness-engineer journey (uses Bedrock tokens)";
+  if (process.env.AMADEUS_TUI_LIVE !== "1") {
+    return "set AMADEUS_TUI_LIVE=1 to run the live harness-engineer journey (uses Bedrock tokens)";
   }
   if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";
@@ -221,7 +221,7 @@ describe("t-tui-custom-harness (the {sdk,tui} two-driver journey)", () => {
   // half, proven on disk — the floor the live halves build on. (The full
   // compile/error matrix lives in the deterministic sibling
   // t-custom-harness-compile; this single check keeps the live file
-  // self-grounding without an AIDLC_TUI_LIVE gate.)
+  // self-grounding without an AMADEUS_TUI_LIVE gate.)
   // -------------------------------------------------------------------------
   test("compile bakes the custom rule path into the custom stage node + the rule file carries the marker", () => {
     const proj = setupTuiProject({ customHarness: true });

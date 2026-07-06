@@ -58,7 +58,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   DEFAULT_RECORD_DIR,
   DEFAULT_SPACE,
   cleanupTestProject,
@@ -73,7 +73,7 @@ import {
 resetAidlcEnv();
 
 const BUN = process.execPath; // the bun running this test
-const TOOL = join(AIDLC_SRC, "tools", "amadeus-bolt.ts");
+const TOOL = join(AMADEUS_SRC, "tools", "amadeus-bolt.ts");
 const STATE_FIXTURE = join(FIXTURES_DIR, "state-construction.md");
 
 const projects: string[] = [];

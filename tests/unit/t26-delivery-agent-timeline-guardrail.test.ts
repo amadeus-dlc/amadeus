@@ -4,7 +4,7 @@
 // human-timeline framing. Migrated from
 // tests/unit/t26-delivery-agent-timeline-guardrail.sh (TAP plan 3 — one `ok`
 // per file across the three delivery-surface artefacts). The .sh resolved
-// AIDLC_SRC = dist/claude/.claude (tests/lib/fixtures.sh:7) and, for each of the
+// AMADEUS_SRC = dist/claude/.claude (tests/lib/fixtures.sh:7) and, for each of the
 // three files, grepped (case-insensitive) for a FORBIDDEN alternation; a file
 // passed iff NONE of the patterns matched.
 //
@@ -16,7 +16,7 @@
 // Mechanism: none. This is a pure content/structural check over the shipped
 // bytes — does each delivery-surface artefact stay free of human-timeline
 // framing? No process boundary, no argv/exit/stdout seam, no LLM, zero tokens.
-// We resolve the same tree the .sh resolved (AIDLC_SRC = <repo>/dist/claude/.claude,
+// We resolve the same tree the .sh resolved (AMADEUS_SRC = <repo>/dist/claude/.claude,
 // fixtures.ts:42) and read each .md in-process.
 //
 // Subject under test (dist/claude/.claude/...):
@@ -50,10 +50,10 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
-// AIDLC_SRC === <repo>/dist/claude/.claude — the same tree the .sh resolved.
-// Each entry: [human-readable basename for the test name, path relative to AIDLC_SRC].
+// AMADEUS_SRC === <repo>/dist/claude/.claude — the same tree the .sh resolved.
+// Each entry: [human-readable basename for the test name, path relative to AMADEUS_SRC].
 const FILES: ReadonlyArray<readonly [string, string]> = [
   ["delivery-planning.md", "amadeus-common/stages/inception/delivery-planning.md"],
   ["amadeus-delivery-agent.md", "agents/amadeus-delivery-agent.md"],
@@ -74,7 +74,7 @@ const FORBIDDEN_TERMS = [
   "weeks of effort",
 ] as const;
 
-const srcPath = (rel: string): string => join(AIDLC_SRC, rel);
+const srcPath = (rel: string): string => join(AMADEUS_SRC, rel);
 
 /**
  * Return the 1-based line numbers (and text) where a case-insensitive `term`

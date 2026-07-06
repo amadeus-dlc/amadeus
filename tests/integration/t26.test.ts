@@ -125,12 +125,12 @@ import {
 } from "../harness/sdk-drive.ts";
 
 // ---------------------------------------------------------------------------
-// Timeout budget. The .sh set AIDLC_TEST_TIMEOUT=600. The
+// Timeout budget. The .sh set AMADEUS_TEST_TIMEOUT=600. The
 // backward jump lands + STOPS in ~286s (live probe), so 600s is generous. The
 // driver aborts a hair before bun kills the test so a stuck run surfaces a
 // partial DriveResult to diagnose rather than an opaque hang.
 // ---------------------------------------------------------------------------
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "600", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "600", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 600) * 1000;
 const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
 

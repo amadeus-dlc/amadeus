@@ -64,15 +64,15 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const UTIL = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
-const STATE = join(AIDLC_SRC, "tools", "amadeus-state.ts");
-const RUNTIME = join(AIDLC_SRC, "tools", "amadeus-runtime.ts");
+const UTIL = join(AMADEUS_SRC, "tools", "amadeus-utility.ts");
+const STATE = join(AMADEUS_SRC, "tools", "amadeus-state.ts");
+const RUNTIME = join(AMADEUS_SRC, "tools", "amadeus-runtime.ts");
 
 interface RuntimeStageRow {
   stage_slug: string;
@@ -174,7 +174,7 @@ beforeAll(() => {
   const init = run(
     UTIL,
     ["init", "--scope", "bugfix", "--project-dir", proj],
-    { AIDLC_WORKFLOW_INTENT: "runtime-graph e2e" },
+    { AMADEUS_WORKFLOW_INTENT: "runtime-graph e2e" },
   );
   initOk = init.status === 0;
 

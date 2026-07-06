@@ -45,7 +45,7 @@
 //   - Some tool call in the turn references the reviewer agent slug — the
 //     reviewer ran as a SUB-AGENT invocation, not conductor-inline prose.
 //
-// SPENDS Kiro credits — gated AIDLC_KIRO_ACP_LIVE=1; skip-with-reason when
+// SPENDS Kiro credits — gated AMADEUS_KIRO_ACP_LIVE=1; skip-with-reason when
 // unset OR kiro-cli absent/unauthenticated. Serial: one live ACP session.
 
 import { describe, expect, test } from "bun:test";
@@ -60,7 +60,7 @@ import { cleanupTuiProject, KIRO_SRC, setupTuiProject } from "../harness/tui-fix
 // requirements pass is small but the reviewer invocation adds a second model
 // turn inside the same ACP turn. Budget generously; the disk-condition cancel
 // ends the turn the moment the verdict lands, so green runs never wait it out.
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "1800", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "1800", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 1800) * 1000;
 // Two drive turns share the budget; leave headroom for setup/asserts.
 const DRIVE_MS = Math.max(300_000, Math.floor((TEST_TIMEOUT_MS - 120_000) / 2));
@@ -68,8 +68,8 @@ const DRIVE_MS = Math.max(300_000, Math.floor((TEST_TIMEOUT_MS - 120_000) / 2));
 const REVIEWER_SLUG = "amadeus-product-lead-agent";
 
 function skipReason(): string | null {
-  if (process.env.AIDLC_KIRO_ACP_LIVE !== "1") {
-    return "set AIDLC_KIRO_ACP_LIVE=1 to run the live Kiro ACP reviewer round-trip (uses Kiro credits)";
+  if (process.env.AMADEUS_KIRO_ACP_LIVE !== "1") {
+    return "set AMADEUS_KIRO_ACP_LIVE=1 to run the live Kiro ACP reviewer round-trip (uses Kiro credits)";
   }
   if (spawnSync("kiro-cli", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "kiro-cli not found";
@@ -146,7 +146,7 @@ describe("t-acp-kiro-reviewer (live §12a reviewer fires on the shipped dist/kir
         greenfieldStub: true,
         ideationArtifacts: true,
       });
-      const session = new AcpSession(proj, "aidlc", true);
+      const session = new AcpSession(proj, "amadeus", true);
       try {
         // Self-answer permission is granted for THIS stage only, up front —
         // the ACP driver cannot answer prose-rendered structured questions, so

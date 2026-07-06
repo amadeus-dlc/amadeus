@@ -15,7 +15,7 @@
 // process-boundary rows — `compile` writing scope-grid.json to disk, and
 // `compile --check`'s exit codes on clean / stale / missing grids — drive
 // the real CLI via spawnSync against the BUN runtime, isolated through the
-// AIDLC_STAGE_GRAPH + AIDLC_SCOPE_GRID env seams (amadeus-graph.ts:161-185).
+// AMADEUS_STAGE_GRAPH + AMADEUS_SCOPE_GRID env seams (amadeus-graph.ts:161-185).
 // process.exit(1) on drift (amadeus-graph.ts:1219,1236) is only observable on
 // the spawned process's exit code, so those four stay spawns deliberately.
 //
@@ -33,7 +33,7 @@
 //   :1212 runCompileCheck(): byte-compares both compiled artifacts to disk;
 //          process.exit(1) on stale/missing grid (:1232-1237)
 //   :1293 compile CLI handler: writeFileAtomic(scopeGridPath(), gridJson) (:1308)
-//   :183  scopeGridPath(): AIDLC_SCOPE_GRID ?? data/scope-grid.json (env seam)
+//   :183  scopeGridPath(): AMADEUS_SCOPE_GRID ?? data/scope-grid.json (env seam)
 //
 // Old TAP -> new test parity (1:1, every .sh assertion -> a named test()):
 //   .sh test 1  (transposeScopeGrid is a callable export)        -> "transposeScopeGrid is a callable export"
@@ -63,7 +63,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 import {
   __resetGraphCache,
   canonicalScopeGridJson,
@@ -74,9 +74,9 @@ import {
 } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 
 const BUN = process.execPath; // the bun running this test
-const GRAPH_TOOL = join(AIDLC_SRC, "tools", "amadeus-graph.ts");
-const GRAPH_JSON = join(AIDLC_SRC, "tools", "data", "stage-graph.json");
-const GRID_JSON = join(AIDLC_SRC, "tools", "data", "scope-grid.json");
+const GRAPH_TOOL = join(AMADEUS_SRC, "tools", "amadeus-graph.ts");
+const GRAPH_JSON = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
+const GRID_JSON = join(AMADEUS_SRC, "tools", "data", "scope-grid.json");
 
 // The nine scopes the shipped grid carries — the .sh's hard-coded list.
 const SCOPES = [
@@ -108,7 +108,7 @@ function mkTempPath(tag: string): string {
 }
 
 /**
- * Run `bun amadeus-graph.ts <args>` with AIDLC_STAGE_GRAPH / AIDLC_SCOPE_GRID
+ * Run `bun amadeus-graph.ts <args>` with AMADEUS_STAGE_GRAPH / AMADEUS_SCOPE_GRID
  * pointed at sandbox copies — the .sh's env-isolation seam, so the real
  * shipped grid is never touched. Returns the spawnSync result (status +
  * captured streams).
@@ -118,8 +118,8 @@ function runGraph(args: string[], graphPath: string, gridPath: string) {
     encoding: "utf-8",
     env: {
       ...process.env,
-      AIDLC_STAGE_GRAPH: graphPath,
-      AIDLC_SCOPE_GRID: gridPath,
+      AMADEUS_STAGE_GRAPH: graphPath,
+      AMADEUS_SCOPE_GRID: gridPath,
     },
   });
 }

@@ -16,7 +16,7 @@
 // directly with synthetic context JSON to prove the green SGR branch is alive,
 // then submits a trivial one-word live prompt to prove a user-visible TUI status
 // row renders ctx:N%. COST: a few hundred Bedrock tokens (one tiny turn) — gated
-// behind AIDLC_TUI_LIVE=1.
+// behind AMADEUS_TUI_LIVE=1.
 //
 // PLATFORM SCOPE — macOS only, by harness capability (verified, not a weakness):
 // the colour assertion needs the captured pane to PRESERVE the SGR escape. tmux
@@ -48,14 +48,14 @@ import { resolveWinNode } from "../harness/tui-drive.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
-const AIDLC_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
+const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 const FIXTURE = join(import.meta.dir, "..", "fixtures", "state-mid-ideation.md");
 const IS_WIN = os.platform() === "win32";
 const WIN_NODE = IS_WIN ? resolveWinNode() : null;
 
 // Generous live-turn budget — one tiny turn, but tmux+claude startup + a real
-// Bedrock round-trip. Honour the suite's AIDLC_TEST_TIMEOUT (seconds).
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "2400", 10);
+// Bedrock round-trip. Honour the suite's AMADEUS_TEST_TIMEOUT (seconds).
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "2400", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
 
 interface Run {
@@ -95,12 +95,12 @@ function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: 
   );
 }
 
-// Gating. AIDLC_TUI_LIVE=1 first (this spends tokens). Then the Windows
+// Gating. AMADEUS_TUI_LIVE=1 first (this spends tokens). Then the Windows
 // capability gap: node-pty cannot capture colour escapes, so the colour assertion
 // is unprovable there — SKIP with that reason rather than fake it. Then substrate.
 function skipReason(): string | null {
-  if (process.env.AIDLC_TUI_LIVE !== "1") {
-    return "set AIDLC_TUI_LIVE=1 to run the live colour render (uses Bedrock tokens)";
+  if (process.env.AMADEUS_TUI_LIVE !== "1") {
+    return "set AMADEUS_TUI_LIVE=1 to run the live colour render (uses Bedrock tokens)";
   }
   if (IS_WIN) {
     return "node-pty backend strips colour escapes (#748, tui-drive.ts:398-401) — colour capture is macOS/tmux-only; the product paints colour identically on Windows, only the test harness cannot capture it";
@@ -111,7 +111,7 @@ function skipReason(): string | null {
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
   }
-  if (!existsSync(AIDLC_SRC)) return `distributable missing: ${AIDLC_SRC}`;
+  if (!existsSync(AMADEUS_SRC)) return `distributable missing: ${AMADEUS_SRC}`;
   if (!existsSync(FIXTURE)) return `fixture missing: ${FIXTURE}`;
   return null;
 }

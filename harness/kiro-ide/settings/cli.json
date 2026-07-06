@@ -1,5 +1,5 @@
 {
-  "chat.defaultAgent": "aidlc",
+  "chat.defaultAgent": "amadeus",
   "chat.modelDefaults": {
     "claude-opus-4.8": {
       "output_config": {

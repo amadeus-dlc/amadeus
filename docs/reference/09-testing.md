@@ -104,7 +104,7 @@ bun tests/run-tests.ts [--ci | --all --debug -P 8]
 1. Install `bun`, Node.js, and the Claude Code CLI.
 2. Install Git for Windows if you are running the full suite or the POSIX wrapper compatibility smoke; the native runner path itself does not require Bash.
 3. For e2e TUI tests, install the dev dependencies with npm so node can resolve `node-pty` and `@xterm/headless`.
-4. Set `AIDLC_NODE_BIN` to the concrete `node.exe` path and set `AIDLC_TUI_LIVE=1` for a full acceptance run.
+4. Set `AMADEUS_NODE_BIN` to the concrete `node.exe` path and set `AMADEUS_TUI_LIVE=1` for a full acceptance run.
 5. Run `bun tests/run-tests.ts --all --debug -P 8`.
 
 No WSL or Docker is required; the supported validation substrate is native Windows.
@@ -147,7 +147,7 @@ No WSL or Docker is required; the supported validation substrate is native Windo
    aws cloudformation delete-stack --stack-name amadeus-windows-test
    ```
 
-`run-all.ps1` exports `AIDLC_NODE_BIN` and `AIDLC_TUI_LIVE=1` before invoking `bun tests/run-tests.ts --all --debug -P <N>`, so a green result cannot come from silently skipping the live TUI journeys. It probes the claude binary across `C:\Users\Administrator\.local\bin` and the systemprofile home, since the native installer drops `claude.exe` under whichever user ran the CloudFormation UserData bootstrap (Administrator under EC2Launch v2).
+`run-all.ps1` exports `AMADEUS_NODE_BIN` and `AMADEUS_TUI_LIVE=1` before invoking `bun tests/run-tests.ts --all --debug -P <N>`, so a green result cannot come from silently skipping the live TUI journeys. It probes the claude binary across `C:\Users\Administrator\.local\bin` and the systemprofile home, since the native installer drops `claude.exe` under whichever user ran the CloudFormation UserData bootstrap (Administrator under EC2Launch v2).
 
 The stack defaults to **`c5.4xlarge`** — the proven size for the full `--all -P 8` live run. The e2e tier carries per-test `bun:test` timeouts (the Bolt-worktree lifecycle test lands at ~5.5s of its 5s budget on c5.4xlarge), so a smaller box (e.g. `t3.large`) tips deterministic Bolt/runtime tests into spurious timeouts under parallel load. Shrink the `InstanceType` parameter only when running a lighter tier selection.
 
@@ -292,9 +292,9 @@ To add artifact assertions to an existing e2e workflow test under `tests/e2e/`:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `AIDLC_TEST_TIMEOUT` | `1800` | Per-`claude -p` call timeout in seconds. Set to `0` to disable. |
-| `AIDLC_TUI_SETTING_SOURCES` | `project` | Setting sources injected into live `claude` TUI launches. Use `default` or an empty value only for focused calibration that intentionally includes user/local Claude settings. |
-| `AIDLC_TUI_TRACE_POLL_MS` | `10000` | Minimum interval between `answer_gate_poll` snapshots in TUI NDJSON traces while a long journey is waiting for the next menu or disk terminator. |
+| `AMADEUS_TEST_TIMEOUT` | `1800` | Per-`claude -p` call timeout in seconds. Set to `0` to disable. |
+| `AMADEUS_TUI_SETTING_SOURCES` | `project` | Setting sources injected into live `claude` TUI launches. Use `default` or an empty value only for focused calibration that intentionally includes user/local Claude settings. |
+| `AMADEUS_TUI_TRACE_POLL_MS` | `10000` | Minimum interval between `answer_gate_poll` snapshots in TUI NDJSON traces while a long journey is waiting for the next menu or disk terminator. |
 
 ## CLI Reference
 
@@ -328,12 +328,12 @@ Live SDK and TUI harness drivers default to project-only Claude setting sources.
 That means they load the copied test `.claude/` project settings and hooks while
 excluding developer user-level hooks/settings. This mirrors the installed
 framework surface and prevents local interactive preferences from changing test
-behavior; explicit driver options or `AIDLC_TUI_SETTING_SOURCES` remain the
+behavior; explicit driver options or `AMADEUS_TUI_SETTING_SOURCES` remain the
 escape hatch for calibration.
 
-`--all --debug` (and `--release --debug`) defaults `AIDLC_TUI_LIVE=1` unless the
+`--all --debug` (and `--release --debug`) defaults `AMADEUS_TUI_LIVE=1` unless the
 environment already set it. This makes the "everything with traces" profile run
-the live, token-spending TUI journeys by default; set `AIDLC_TUI_LIVE=0`
+the live, token-spending TUI journeys by default; set `AMADEUS_TUI_LIVE=0`
 explicitly to keep those files on their in-test SKIP path.
 
 ## Parallel Execution

@@ -2,7 +2,7 @@
 //
 // Identical to the Kiro CLI harness (harness/kiro/) EXCEPT:
 //   - Ships .kiro.hook files for hook registration (IDE ignores agent JSON hooks)
-//   - The aidlc.json agent config omits the `hooks` field (dead weight in IDE)
+//   - The amadeus.json agent config omits the `hooks` field (dead weight in IDE)
 //   - Injects a `tools:` frontmatter grant into the delegation-target agent
 //     .md files (frontmatterAdditions below) - the IDE resolves a delegated
 //     subagent's tools from the agent .md frontmatter, not from the agent-v1
@@ -11,7 +11,7 @@
 //     not available" until the grant was added).
 //
 // The CLI harness relies on agent JSON hooks (the `hooks` object inside
-// aidlc.json); the IDE harness relies on .kiro.hook files (the only mechanism
+// amadeus.json); the IDE harness relies on .kiro.hook files (the only mechanism
 // the IDE recognises). Both share the same core, adapter, and TS hook bodies.
 
 import type { HarnessManifest } from "../../scripts/manifest-types.ts";
@@ -36,7 +36,7 @@ const manifest: HarnessManifest = {
   ],
 
   // Authored surfaces: same as CLI but adds .kiro.hook files and omits the
-  // hooks field from aidlc.json.
+  // hooks field from amadeus.json.
   harnessFiles: [
     { src: "skills/amadeus/SKILL.md", dst: "skills/amadeus/SKILL.md" },
     { src: "skills/amadeus/question-rendering.md", dst: "skills/amadeus/question-rendering.md" },

@@ -75,7 +75,7 @@ import { join } from "node:path";
 // Direct in-process import of the pure loader — the KEY covered unit.
 import { loadAgents } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   REPO_ROOT,
   seededStateFile,
@@ -207,7 +207,7 @@ describe("t61 agent-metadata derived from frontmatter (migrated from t61-agent-m
   test("1: no AGENT_KNOWLEDGE/AGENT_DISPLAY literals in tools/ or hooks/", () => {
     const offenders: string[] = [];
     for (const sub of ["tools", "hooks"]) {
-      const dir = join(AIDLC_SRC, sub);
+      const dir = join(AMADEUS_SRC, sub);
       for (const f of readdirSync(dir).filter((n) => n.endsWith(".ts"))) {
         const text = readFileSync(join(dir, f), "utf-8");
         if (/AGENT_KNOWLEDGE|AGENT_DISPLAY/.test(text)) {
@@ -311,5 +311,5 @@ describe("t61 agent-metadata derived from frontmatter (migrated from t61-agent-m
 });
 
 // Touch REPO_ROOT so the import is exercised even if a future refactor drops
-// the other AIDLC_SRC-relative reads (keeps the harness path contract honest).
+// the other AMADEUS_SRC-relative reads (keeps the harness path contract honest).
 void REPO_ROOT;

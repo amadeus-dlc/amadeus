@@ -60,7 +60,7 @@ import { driveAidlc } from "../harness/sdk-drive.ts";
 // The driver aborts ~15s before bun's per-test cap so a stuck turn surfaces a
 // partial DriveResult (resultEvent undefined) rather than an opaque hang.
 // ---------------------------------------------------------------------------
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "180", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "180", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 180) * 1000;
 const DRIVE_TIMEOUT_MS = Math.max(60_000, TEST_TIMEOUT_MS - 15_000);
 const AWS_STS_TIMEOUT_MS = 30_000;

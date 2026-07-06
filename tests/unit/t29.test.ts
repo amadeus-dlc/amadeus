@@ -14,7 +14,7 @@
 // <projectDir>/.claude/tools/amadeus-utility.ts set-status, which rewrites
 // Current Stage / Lifecycle Phase / Active Agent / Status / Last Updated in
 // amadeus-state.md (amadeus-utility.ts:2432-2456). For the hook to find that tool,
-// the .sh symlinks $AIDLC_SRC -> $proj/.claude (create_hook_test_project,
+// the .sh symlinks $AMADEUS_SRC -> $proj/.claude (create_hook_test_project,
 // t29-hook-sync-statusline.sh:25-30). We replicate that symlink here.
 //
 // PARITY MAP (every .sh `ok` -> one expect()-bearing test() case here):
@@ -44,12 +44,12 @@
 //
 // 7 .sh asserts -> 7 expect()-bearing test() cases here. FIXTURE DISCIPLINE
 // mirrors the .sh: each case scaffolds a FRESH temp project (createTestProject)
-// with .claude symlinked to AIDLC_SRC and amadeus-state.md seeded from the shared
+// with .claude symlinked to AMADEUS_SRC and amadeus-state.md seeded from the shared
 // state-mid-ideation.md fixture (seedStateFile). toPortablePath round-trips the
 // path on Windows so the hook's CLAUDE_PROJECT_DIR resolution and the state file
 // it reads back agree. Symlinks are not followed by rmSync's recursive delete
 // of the link node, so cleanupTestProject removes only the temp tree, never the
-// shipped AIDLC_SRC. All temp dirs cleaned in afterAll. Nothing is written under
+// shipped AMADEUS_SRC. All temp dirs cleaned in afterAll. Nothing is written under
 // tests/fixtures/**.
 
 import { afterAll, describe, expect, test } from "bun:test";
@@ -57,7 +57,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
   FIXTURES_DIR,
@@ -67,7 +67,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const HOOK = join(AIDLC_SRC, "hooks", "amadeus-sync-statusline.ts");
+const HOOK = join(AMADEUS_SRC, "hooks", "amadeus-sync-statusline.ts");
 const MID_IDEATION = join(FIXTURES_DIR, "state-mid-ideation.md");
 
 const tempDirs: string[] = [];
@@ -78,13 +78,13 @@ afterAll(() => {
 
 /**
  * create_hook_test_project (t29:25-30): a fresh temp project whose .claude is a
- * symlink to the shipped AIDLC_SRC, so the hook can resolve
+ * symlink to the shipped AMADEUS_SRC, so the hook can resolve
  * <projectDir>/.claude/tools/amadeus-utility.ts. State seeded separately.
  */
 function hookProject(): string {
   const proj = createTestProject();
   tempDirs.push(proj);
-  symlinkSync(AIDLC_SRC, join(proj, ".claude"));
+  symlinkSync(AMADEUS_SRC, join(proj, ".claude"));
   return proj;
 }
 

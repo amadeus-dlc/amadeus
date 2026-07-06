@@ -31,7 +31,7 @@ import { spawnSync } from "node:child_process";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
   FIXTURES_DIR,
@@ -42,8 +42,8 @@ import {
 import { classifyTerminalCommand } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath;
-const ORCH = join(AIDLC_SRC, "tools", "amadeus-orchestrate.ts");
-const UTIL = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
+const ORCH = join(AMADEUS_SRC, "tools", "amadeus-orchestrate.ts");
+const UTIL = join(AMADEUS_SRC, "tools", "amadeus-utility.ts");
 
 const MID_IDEATION = join(FIXTURES_DIR, "state-mid-ideation.md");
 

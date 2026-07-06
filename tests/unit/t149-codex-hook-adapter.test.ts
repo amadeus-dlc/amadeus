@@ -15,7 +15,7 @@
 //   session-start     → {"hookSpecificOutput":{...additionalContext}} (the
 //                       Codex wrapper — core JSON re-wrapped, E1-verified).
 //   audit-and-sensors → apply_patch envelope parsed; an amadeus-docs Add File
-//                       lands ARTIFACT_CREATED in the audit; a non-aidlc
+//                       lands ARTIFACT_CREATED in the audit; a non-amadeus
 //                       file is a no-op.
 //   state-sync        → update_plan in_progress step with "[slug]" suffix
 //                       dispatches set-status (Current Stage updates).
@@ -251,7 +251,7 @@ describe("t149 Codex hook adapter (live-captured payload fixtures)", () => {
     }
   });
 
-  test("5: apply_patch on a non-aidlc file is a clean audit no-op", () => {
+  test("5: apply_patch on a non-amadeus file is a clean audit no-op", () => {
     const dir = scratchProject(true);
     try {
       const r = runAdapter(

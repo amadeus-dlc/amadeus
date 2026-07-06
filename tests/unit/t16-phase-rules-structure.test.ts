@@ -3,9 +3,9 @@
 // t16 — shipped phase-rules file STRUCTURE contract. Migrated from
 // tests/unit/t16-phase-rules-structure.sh (TAP plan 12 — 3 distinct
 // invariants across the 4 phase rule files). The .sh resolved
-//   RULES_DIR  = $AIDLC_SRC/rules
-//   STAGES_DIR = $AIDLC_SRC/amadeus-common/stages
-// where $AIDLC_SRC = <repo>/dist/claude/.claude (fixtures.ts:42), and for
+//   RULES_DIR  = $AMADEUS_SRC/rules
+//   STAGES_DIR = $AMADEUS_SRC/amadeus-common/stages
+// where $AMADEUS_SRC = <repo>/dist/claude/.claude (fixtures.ts:42), and for
 // each of the four non-initialization phases asserted three things:
 //   Part 1 (.sh L17-19): rules/amadeus-phase-<phase>.md EXISTS.
 //   Part 2 (.sh L25-28): that file is NON-EMPTY (wc -c > 0).
@@ -19,7 +19,7 @@
 // shipped bytes — do the four phase rule files exist, carry content, and
 // mention their phase's stages? No process boundary, no argv/exit/stdout
 // seam, no LLM, zero tokens. We resolve the SAME trees the .sh resolved
-// (AIDLC_SRC = <repo>/dist/claude/.claude, fixtures.ts:42), enumerate the
+// (AMADEUS_SRC = <repo>/dist/claude/.claude, fixtures.ts:42), enumerate the
 // real stage `.md` files per phase from disk, and read the real rule-file
 // bytes in-process.
 //
@@ -60,14 +60,14 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
 // The phase rule files relocated from <harness>/rules/amadeus-phase-<phase>.md to
 // the workspace-root aidlc/spaces/default/memory/phases/<phase>.md (neutral,
-// nested). They sit beside .claude/, so resolve PHASES_DIR from AIDLC_SRC's
+// nested). They sit beside .claude/, so resolve PHASES_DIR from AMADEUS_SRC's
 // parent (the dist/claude/ root). STAGES_DIR stays under .claude/.
-const PHASES_DIR = join(AIDLC_SRC, "..", "aidlc", "spaces", "default", "memory", "phases");
-const STAGES_DIR = join(AIDLC_SRC, "amadeus-common", "stages");
+const PHASES_DIR = join(AMADEUS_SRC, "..", "aidlc", "spaces", "default", "memory", "phases");
+const STAGES_DIR = join(AMADEUS_SRC, "amadeus-common", "stages");
 
 // The four non-initialization phases, in the order the .sh's `for phase in
 // ideation inception construction operation` named them. (initialization has

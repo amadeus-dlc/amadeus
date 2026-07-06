@@ -67,9 +67,9 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
-const SKILLS_DIR = join(AIDLC_SRC, "skills");
+const SKILLS_DIR = join(AMADEUS_SRC, "skills");
 
 interface Skill {
   slug: string;

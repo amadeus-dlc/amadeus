@@ -74,13 +74,13 @@
 // the reverse-engineering + requirements-analysis Inception stages). RE is a HEAVY
 // stage (the Phase-2 note measured it > 9 min; on the slow Windows
 // box it ran ~7min+ before its gate painted). The overall answer-gate deadline is
-// the suite-wide UNIFORM wedge-ceiling AIDLC_TEST_TIMEOUT (default 2400s) minus a
+// the suite-wide UNIFORM wedge-ceiling AMADEUS_TEST_TIMEOUT (default 2400s) minus a
 // 30s teardown margin — a generous hang-backstop, NOT a per-stage budget (per-gate
 // defaults to this same deadline now; see tui-drive cmdAnswerGate). REACHABILITY:
 // the journey terminates on the on-disk Completed>=5 signal long before this; if the
 // backstop ever fires that is a genuine hang FINDING (the workflow wedged), never a
 // knob to turn down or a thing to soften. Gated
-// behind AIDLC_TUI_LIVE=1 so a bare `--e2e` on a laptop SKIPs it; tmux/claude/
+// behind AMADEUS_TUI_LIVE=1 so a bare `--e2e` on a laptop SKIPs it; tmux/claude/
 // distributable absence (and Windows node/node-pty resolvability) also SKIP with a
 // reason — never a hollow pass.
 //
@@ -116,7 +116,7 @@ function codekbReDir(sandbox: string): string {
 }
 
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
-const AIDLC_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
+const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 const IS_WIN = os.platform() === "win32";
 // node on Windows (#748), resolved because the box's node is off PATH; the .ts
 // entrypoint needs --experimental-strip-types under node < 22.18. bun elsewhere
@@ -128,11 +128,11 @@ const WIN_NODE = IS_WIN ? resolveWinNode() : null;
 const DRIVE_BIN = IS_WIN ? (WIN_NODE as string) : process.execPath;
 const DRIVE_PREFIX = IS_WIN ? ["--experimental-strip-types", DRIVER] : [DRIVER];
 
-// Honour the suite's AIDLC_TEST_TIMEOUT convention (seconds; the integration tier
+// Honour the suite's AMADEUS_TEST_TIMEOUT convention (seconds; the integration tier
 // sets 600). A bugfix run-through (Initialization + the heavy reverse-engineering
 // stage + requirements-analysis, real LLM turns) is several minutes, so the
 // bun:test cap is generous.
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "2400", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "2400", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
 
 interface Run {
@@ -160,11 +160,11 @@ function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: 
   );
 }
 
-// ABSENT / opt-in gating. The token guard AIDLC_TUI_LIVE=1 is checked FIRST so a
+// ABSENT / opt-in gating. The token guard AMADEUS_TUI_LIVE=1 is checked FIRST so a
 // bare --e2e (no live opt-in) reports a clear skip reason, not a substrate miss.
 function skipReason(): string | null {
-  if (process.env.AIDLC_TUI_LIVE !== "1") {
-    return "set AIDLC_TUI_LIVE=1 to run the live bugfix journey (uses Bedrock tokens)";
+  if (process.env.AMADEUS_TUI_LIVE !== "1") {
+    return "set AMADEUS_TUI_LIVE=1 to run the live bugfix journey (uses Bedrock tokens)";
   }
   if (!IS_WIN && spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) {
     return "tmux not found";
@@ -181,7 +181,7 @@ function skipReason(): string | null {
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
   }
-  if (!existsSync(AIDLC_SRC)) return `distributable missing: ${AIDLC_SRC}`;
+  if (!existsSync(AMADEUS_SRC)) return `distributable missing: ${AMADEUS_SRC}`;
   return null;
 }
 const SKIP_REASON = skipReason();
@@ -230,7 +230,7 @@ describe("t-tui-t50-bugfix-scope (answering gates advances bugfix lifecycle on d
         // --- submit the bugfix workflow command --------------------------------
         // Use the EXPLICIT `--scope bugfix` flag, not the bare freeform `bugfix`
         // keyword. The shipped distributable settings.json pins
-        // AWS_AIDLC_DEFAULT_SCOPE=workshop, so a bare freeform `/amadeus bugfix ...`
+        // AWS_AMADEUS_DEFAULT_SCOPE=workshop, so a bare freeform `/amadeus bugfix ...`
         // is a freeform-vs-env CONFLICT: SKILL.md step 0 (:105) only skips env
         // substitution when `$ARGUMENTS` already contains the literal `--scope`
         // token, so the bare keyword triggers a 3-way scope disambiguation gate at

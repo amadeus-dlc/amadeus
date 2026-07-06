@@ -51,12 +51,12 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
-// AIDLC_SRC === <repo>/dist/claude/.claude — the same root the .sh resolved
-// AUDIT_TS and AUDIT_MD under ($AIDLC_SRC/tools, $AIDLC_SRC/knowledge/...).
-const AUDIT_TS = join(AIDLC_SRC, "tools", "amadeus-audit.ts");
-const AUDIT_MD = join(AIDLC_SRC, "knowledge", "amadeus-shared", "audit-format.md");
+// AMADEUS_SRC === <repo>/dist/claude/.claude — the same root the .sh resolved
+// AUDIT_TS and AUDIT_MD under ($AMADEUS_SRC/tools, $AMADEUS_SRC/knowledge/...).
+const AUDIT_TS = join(AMADEUS_SRC, "tools", "amadeus-audit.ts");
+const AUDIT_MD = join(AMADEUS_SRC, "knowledge", "amadeus-shared", "audit-format.md");
 
 // The canonical baseline pinned by .sh test 7. Bump WITH the source when an
 // event is added (v0.6.0 Wave 4 milestone 16: +SWARM_DEGRADED took this to 67;

@@ -30,7 +30,7 @@
 // plan authorizes an ACP-skip at P2 with re-evaluation at P5 - a red here is
 // a finding to triage, never to paper over.
 //
-// SPENDS Kiro credits - gated AIDLC_KIRO_ACP_LIVE=1; skip-with-reason when
+// SPENDS Kiro credits - gated AMADEUS_KIRO_ACP_LIVE=1; skip-with-reason when
 // unset or kiro-cli absent/unauthenticated. Serial: one live ACP session.
 
 import { describe, expect, test } from "bun:test";
@@ -44,7 +44,7 @@ import {
 } from "../harness/tui-fixtures.ts";
 import { AcpSession, driveKiroAcp } from "../harness/kiro-acp-drive.ts";
 
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "1800", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "1800", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 1800) * 1000;
 // Turn 1 carries the composer dispatch (detect + read scopes + propose);
 // turn 2 carries the write + birth. Split the budget.
@@ -59,8 +59,8 @@ const STOCK_SCOPES = new Set([
 ]);
 
 function skipReason(): string | null {
-  if (process.env.AIDLC_KIRO_ACP_LIVE !== "1") {
-    return "set AIDLC_KIRO_ACP_LIVE=1 to run the live Kiro ACP compose journey (uses Kiro credits)";
+  if (process.env.AMADEUS_KIRO_ACP_LIVE !== "1") {
+    return "set AMADEUS_KIRO_ACP_LIVE=1 to run the live Kiro ACP compose journey (uses Kiro credits)";
   }
   if (spawnSync("kiro-cli", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "kiro-cli not found";
@@ -82,7 +82,7 @@ describe("t-acp-kiro compose front journey (live Kiro ACP)", () => {
         brownfieldStub: true,
         noAidlcDocs: true,
       });
-      const session = new AcpSession(root, "aidlc", true);
+      const session = new AcpSession(root, "amadeus", true);
       try {
         const scopesDir = join(root, ".kiro", "scopes");
         const gridPath = join(root, ".kiro", "tools", "data", "scope-grid.json");

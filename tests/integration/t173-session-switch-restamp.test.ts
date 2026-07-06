@@ -35,14 +35,14 @@ import {
   setActiveIntentCursor,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const HOOK = join(AIDLC_SRC, "hooks", "amadeus-session-start.ts");
-const UTIL = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
+const HOOK = join(AMADEUS_SRC, "hooks", "amadeus-session-start.ts");
+const UTIL = join(AMADEUS_SRC, "tools", "amadeus-utility.ts");
 
 let proj: string;
 beforeEach(() => {

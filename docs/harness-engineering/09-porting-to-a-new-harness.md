@@ -65,7 +65,7 @@ Create `harness/<name>/manifest.ts` exporting a `HarnessManifest`
 - `rulesRename` — the renamed rules dir (`"steering"` | `"amadeus-rules"` | `null`).
   The packager applies it to the copied dir AND to in-prose `<harnessDir>/rules/`
   references AND to the compiled stage-graph rule paths (it sets
-  `AIDLC_RULES_DIR` at compile so `loadRules` finds the renamed dir) AND emits it
+  `AMADEUS_RULES_DIR` at compile so `loadRules` finds the renamed dir) AND emits it
   into a generated `tools/data/harness.json` that the runtime `rulesSubdir()`
   seam reads — so a real install resolves the renamed dir with no hardcoded map.
   This is the seam that makes `rulesRename` purely manifest data: set it here and
@@ -114,7 +114,7 @@ the manifest references that the packager calls with an `EmitContext`
 `config.toml`, `hooks.json`, the hook-trust pre-seed, the `AGENTS.md` merge, the
 agent-TOML transpositions, and the `.agents/skills/` tree (composed from
 `core/tools/amadeus-runner-gen.ts`'s exported render functions under
-`AIDLC_HARNESS_DIR`, never reimplemented). Harnesses whose surfaces are all
+`AMADEUS_HARNESS_DIR`, never reimplemented). Harnesses whose surfaces are all
 authored files (Claude, Kiro) set `emit: null`.
 
 `emit` honors `ctx.check`: under `--check` it diffs its outputs and returns
@@ -136,7 +136,7 @@ carry no token and pass through unchanged — the core-hygiene test
   harness with a manifest automatically.
 - A `<name>` hook-adapter contract test pipes live-captured payloads through the
   adapter and asserts the observable core-hook effect.
-- Live journeys ship as e2e gated on a `skipReason()` (a `AIDLC_<NAME>_*_LIVE=1`
+- Live journeys ship as e2e gated on a `skipReason()` (a `AMADEUS_<NAME>_*_LIVE=1`
   env + the binary present + authenticated) so they skip cleanly in the
   deterministic tier and run green locally before a port merges.
 

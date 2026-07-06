@@ -44,7 +44,7 @@
 //                    — generate/validate SCOPE-runner skills over
 //                      `.claude/scopes/*.md` (FIRST_BATCH, or `--all`).
 //
-// Env seams (mirror amadeus-lib.ts): AIDLC_SCOPES_DIR points the scope-file reader
+// Env seams (mirror amadeus-lib.ts): AMADEUS_SCOPES_DIR points the scope-file reader
 // at an isolated tree; --out points the scope writer at an isolated skills dir.
 
 import {
@@ -381,7 +381,7 @@ export const FIRST_BATCH: readonly string[] = [
 ];
 
 function scopesDir(): string {
-  return process.env.AIDLC_SCOPES_DIR ?? join(TOOLS_DIR, "..", "scopes");
+  return process.env.AMADEUS_SCOPES_DIR ?? join(TOOLS_DIR, "..", "scopes");
 }
 
 function defaultSkillsDir(): string {

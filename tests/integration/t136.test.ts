@@ -239,7 +239,7 @@ beforeAll(() => {
     ],
     {
       encoding: "utf-8",
-      env: { ...process.env, AIDLC_WORKFLOW_INTENT: "revision loop test" },
+      env: { ...process.env, AMADEUS_WORKFLOW_INTENT: "revision loop test" },
     },
   );
   if ((init.status ?? -1) !== 0) {

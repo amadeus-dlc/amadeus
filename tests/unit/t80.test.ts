@@ -60,8 +60,8 @@ import {
   readAllAuditShards,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
-const AIDLC_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
-const STATE_TS = join(AIDLC_SRC, "tools", "amadeus-state.ts");
+const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
+const STATE_TS = join(AMADEUS_SRC, "tools", "amadeus-state.ts");
 const GREENFIELD_STUB = join(import.meta.dir, "..", "fixtures", "greenfield-todo");
 
 const BUN = process.execPath; // the bun binary running this test, for CLI-boundary checks
@@ -150,7 +150,7 @@ describe("t80 practices-event --type empty (spawnSync CLI-boundary, parity-only)
     const proj = mkdtempSync(join(tmpdir(), "t80-proj-"));
     scratch.push(proj);
     mkdirSyncRecursive(join(proj, "amadeus-docs"));
-    cpSync(AIDLC_SRC, join(proj, ".claude"), { recursive: true });
+    cpSync(AMADEUS_SRC, join(proj, ".claude"), { recursive: true });
     cpSync(GREENFIELD_STUB, proj, { recursive: true });
     return proj;
   }

@@ -149,7 +149,7 @@ import { driveAidlc } from "../harness/sdk-drive.ts";
 // DriveResult rather than an opaque hang. Direct hook invocations are bounded
 // at 60s each (the hook spawns the real engine once).
 // ---------------------------------------------------------------------------
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "420", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "420", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 420) * 1000;
 const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
 const HOOK_SPAWN_TIMEOUT_MS = 60_000;

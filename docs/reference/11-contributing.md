@@ -130,11 +130,11 @@ A scope is authored as a file (its identity) plus a per-stage membership tag. Th
 
 4. **Verify the scope resolves** — `bun core/tools/amadeus-utility.ts init --scope hotfix --project-dir /tmp/scope-smoke` should succeed and produce a state file with `Scope: hotfix`.
 
-5. **Verify `doctor` accepts it as an env default** — `AWS_AIDLC_DEFAULT_SCOPE=hotfix bun amadeus-utility.ts doctor` should report the env var as valid.
+5. **Verify `doctor` accepts it as an env default** — `AWS_AMADEUS_DEFAULT_SCOPE=hotfix bun amadeus-utility.ts doctor` should report the env var as valid.
 
 6. **Verify keyword inference** (if `keywords` populated) — `bun amadeus-utility.ts detect-scope --from-text --input "urgent customer issue" --project-dir /tmp/scope-smoke` should return `{"scope":"hotfix","source":"keyword","matches":["urgent"]}`.
 
-7. **Verify plan parity (optional but recommended)** — `AIDLC_GRAPH_RESOLVE=1 bun .claude/tools/amadeus-graph.ts resolve hotfix --stdout` emits the scope's plan; eyeball that the EXECUTE set matches what you tagged.
+7. **Verify plan parity (optional but recommended)** — `AMADEUS_GRAPH_RESOLVE=1 bun .claude/tools/amadeus-graph.ts resolve hotfix --stdout` emits the scope's plan; eyeball that the EXECUTE set matches what you tagged.
 
 8. **Update scope-aware documentation** — `docs/guide/05-scopes-and-depth.md` (full scope reference), `docs/guide/13-customization.md` (valid values list and scope table), and `docs/reference/03-orchestrator.md` (scope-to-stage mapping) all enumerate scopes explicitly. Per the documentation policy at the end of this chapter, update them in the same PR.
 
@@ -144,7 +144,7 @@ A scope is authored as a file (its identity) plus a per-stage membership tag. Th
 
 - `validScopes().has("hotfix")` returns `true` the moment the `.claude/scopes/amadeus-hotfix.md` file lands — every validation site uses this helper.
 - Error messages list the new scope in alphabetical order without any code changes.
-- `/amadeus --doctor` treats `AWS_AIDLC_DEFAULT_SCOPE=hotfix` as valid.
+- `/amadeus --doctor` treats `AWS_AMADEUS_DEFAULT_SCOPE=hotfix` as valid.
 - `amadeus-utility scope-change --scope hotfix` on an in-flight workflow accepts the new scope.
 - The transpose drift guard: `amadeus-graph compile --check` fails the build if a stage's `scopes:` tag was edited without recompiling `scope-grid.json`. SKILL.md's compiled scope-table has its own `--check` drift guard (t67).
 - Keyword detection for freeform `/amadeus <text>` invocations reads each scope's `keywords` from its `.claude/scopes/*.md` frontmatter. Custom scopes with their own NL triggers auto-detect as soon as the `keywords` list is populated (no SKILL.md change needed). Users can still pass `--scope hotfix` explicitly to bypass inference.

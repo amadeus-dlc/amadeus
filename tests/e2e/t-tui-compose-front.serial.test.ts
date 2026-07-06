@@ -16,7 +16,7 @@
 //   - a 10th scope .md + a 10th scope-grid.json key exist (the two-file write),
 //   - the born amadeus-state.md carries the composed (non-stock) scope.
 //
-// SPENDS Claude credits - gated behind AIDLC_TUI_LIVE=1 with skip-reasons;
+// SPENDS Claude credits - gated behind AMADEUS_TUI_LIVE=1 with skip-reasons;
 // tmux-backend only (mirrors t-tui-t50's gating).
 
 import { describe, expect, test } from "bun:test";
@@ -30,7 +30,7 @@ import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
 const IS_WIN = os.platform() === "win32";
 
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "1800", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "1800", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 1800) * 1000;
 
 const TASK =
@@ -55,8 +55,8 @@ function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: 
 }
 
 function skipReason(): string | null {
-  if (process.env.AIDLC_TUI_LIVE !== "1") {
-    return "set AIDLC_TUI_LIVE=1 to run the live compose TUI journey (uses Claude credits)";
+  if (process.env.AMADEUS_TUI_LIVE !== "1") {
+    return "set AMADEUS_TUI_LIVE=1 to run the live compose TUI journey (uses Claude credits)";
   }
   if (IS_WIN) return "compose TUI journey is tmux-backend only";
   if (spawnSync("tmux", ["-V"], { encoding: "utf-8" }).status !== 0) return "tmux not found";

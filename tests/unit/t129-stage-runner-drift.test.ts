@@ -99,15 +99,15 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   setupIntegrationProject,
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const GEN = join(AIDLC_SRC, "tools", "amadeus-runner-gen.ts");
-const SKILLS_DIR = join(AIDLC_SRC, "skills");
-const STAGE_GRAPH = join(AIDLC_SRC, "tools", "data", "stage-graph.json");
+const GEN = join(AMADEUS_SRC, "tools", "amadeus-runner-gen.ts");
+const SKILLS_DIR = join(AMADEUS_SRC, "skills");
+const STAGE_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 
 // ---------------------------------------------------------------------------
 // Independent cross-check helpers — derive BOTH sets WITHOUT trusting

@@ -33,10 +33,10 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { platform } from "node:os";
 import { join } from "node:path";
 
-/** Default launch binary; override via AIDLC_KIRO_IDE_BIN (mirrors AIDLC_CODEX_BIN).
+/** Default launch binary; override via AMADEUS_KIRO_IDE_BIN (mirrors AMADEUS_CODEX_BIN).
  *  macOS-only as written - Kiro.app is a .app bundle, not a PATH command. */
 export const KIRO_IDE_BIN =
-  process.env.AIDLC_KIRO_IDE_BIN ?? "/Applications/Kiro.app/Contents/MacOS/Electron";
+  process.env.AMADEUS_KIRO_IDE_BIN ?? "/Applications/Kiro.app/Contents/MacOS/Electron";
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
@@ -705,12 +705,12 @@ export async function screenshot(t: CdpTarget): Promise<Buffer | null> {
   return s?.data ? Buffer.from(s.data, "base64") : null;
 }
 
-/** SIGKILL the Electron process (drive-unblocked.mjs:166-167). Honour AIDLC_KEEP_TEMP
+/** SIGKILL the Electron process (drive-unblocked.mjs:166-167). Honour AMADEUS_KEEP_TEMP
  *  by leaving it running so a failed live run is inspectable. */
 export function teardown(handle: KiroIdeHandle): void {
-  if (process.env.AIDLC_KEEP_TEMP === "1") {
+  if (process.env.AMADEUS_KEEP_TEMP === "1") {
     process.stderr.write(
-      `[kiro-ide-driver] AIDLC_KEEP_TEMP=1 - Kiro left running on :${handle.port}\n`,
+      `[kiro-ide-driver] AMADEUS_KEEP_TEMP=1 - Kiro left running on :${handle.port}\n`,
     );
     return;
   }

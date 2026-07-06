@@ -83,7 +83,7 @@ if (Test-Path "$ProjectDir\node_modules") {
 # PATH (the documented quirk), so that child build fails "'node' is not recognized".
 # A normal Windows user has node on PATH (the installer adds it), so the faithful
 # setup is to put node's own directory on PATH for the install. This mirrors how the
-# driver reads AIDLC_NODE_BIN for the off-PATH node at run time.
+# driver reads AMADEUS_NODE_BIN for the off-PATH node at run time.
 $NodeDir = Split-Path $NodeExe -Parent
 $env:Path = "$NodeDir;" + $env:Path
 Write-Output "=== npm install (node-pty + @xterm/headless from package.json devDependencies) ==="

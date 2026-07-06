@@ -15,7 +15,7 @@ import {
 function env(settingSources?: string): NodeJS.ProcessEnv {
   return settingSources === undefined
     ? {}
-    : { AIDLC_TUI_SETTING_SOURCES: settingSources };
+    : { AMADEUS_TUI_SETTING_SOURCES: settingSources };
 }
 
 describe("tui-drive setting-source isolation", () => {

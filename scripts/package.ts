@@ -17,7 +17,7 @@
 //   3. COMPILE the stage graph into the assembled tree (emits harness-correct
 //      stage-graph.json + scope-grid.json — compiled data lives only in dist).
 //   4. GENERATE runners into the assembled tree by composing amadeus-runner-gen's
-//      exported render fns under AIDLC_HARNESS_DIR (the proven codex idiom, now
+//      exported render fns under AMADEUS_HARNESS_DIR (the proven codex idiom, now
 //      uniform for all three harnesses).
 //   5. EMIT via harness/<name>/emit.ts if the manifest declares one (codex only
 //      today: config.toml, hooks.json, trust-seed, agent TOMLs, .agents/skills).
@@ -361,7 +361,7 @@ function buildTree(m: HarnessManifest, outRoot: string, seedFrom: string): strin
   // 2c. Emit the relocated method ("memory") tree at the workspace root
   //     (dist/<name>/amadeus/spaces/default/memory/). MUST run before compile —
   //     the compile step's loadRules resolves rules_in_context from this tree
-  //     (AIDLC_RULES_DIR points there below), so it has to exist first.
+  //     (AMADEUS_RULES_DIR points there below), so it has to exist first.
   const memoryDir = join(outRoot, MEMORY_DST);
   outsideHarness.push(...emitMemory(outRoot, harnessDir, m.rulesRename));
 
@@ -386,7 +386,7 @@ function buildTree(m: HarnessManifest, outRoot: string, seedFrom: string): strin
   //    and rewrites harness-correct paths, reproducing the committed JSON
   //    byte-for-byte. The seed is the only authored datum in the compiled file.
   seedCompiledData(treeRoot, seedFrom);
-  // Point loadRules at the emitted method tree via AIDLC_RULES_DIR so
+  // Point loadRules at the emitted method tree via AMADEUS_RULES_DIR so
   // rules_in_context is populated at compile time. The method now lives at the
   // workspace-root aidlc/spaces/default/memory/ (NOT inside <harnessDir>), so
   // every harness — claude included — needs the seam set; the resolver's own
@@ -408,8 +408,8 @@ function buildTree(m: HarnessManifest, outRoot: string, seedFrom: string): strin
   writeHarnessData(treeRoot, m);
 
   // 4. Generate runners by composing amadeus-runner-gen's CLIs against the
-  //    assembled tree (write + scopes). AIDLC_HARNESS_DIR steers harnessDir()
-  //    so generated prose names the correct dir; AIDLC_SRC roots the tree.
+  //    assembled tree (write + scopes). AMADEUS_HARNESS_DIR steers harnessDir()
+  //    so generated prose names the correct dir; AMADEUS_SRC roots the tree.
   //    Codex skips this — it ships no <harnessDir>/skills/; emit() composes the
   //    whole skill set into .agents/skills/ instead.
   if (!m.skipRunnerGen) {
@@ -452,10 +452,10 @@ function runTool(treeRoot: string, args: string[], rulesDirAbs?: string | null):
       : ".claude";
   const env: Record<string, string> = {
     ...process.env,
-    AIDLC_SRC: treeRoot,
-    AIDLC_HARNESS_DIR: harnessDir,
+    AMADEUS_SRC: treeRoot,
+    AMADEUS_HARNESS_DIR: harnessDir,
   };
-  if (rulesDirAbs) env.AIDLC_RULES_DIR = rulesDirAbs;
+  if (rulesDirAbs) env.AMADEUS_RULES_DIR = rulesDirAbs;
   const res = spawnSync("bun", [toolPath, ...rest], {
     cwd: treeRoot,
     env,
@@ -472,7 +472,7 @@ function runTool(treeRoot: string, args: string[], rulesDirAbs?: string | null):
 
 // Defense-in-depth backstop: rewrite any residual "<harnessDir>/rules/" →
 // "<harnessDir>/<rulesRename>/" in the compiled JSON path strings. Since the
-// rulesSubdir() seam landed, compile (run under AIDLC_HARNESS_DIR) emits the
+// rulesSubdir() seam landed, compile (run under AMADEUS_HARNESS_DIR) emits the
 // renamed segment directly, so this normally matches nothing (guarded by the
 // `out !== s` check). It stays as a safety net in case a future code path emits
 // a literal "rules" segment that bypasses the seam. Slash-anchored, so it can

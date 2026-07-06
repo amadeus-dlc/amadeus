@@ -6,7 +6,7 @@
 // analogue — gates are prose, not protocol objects — and the scripted-answer
 // calibration is covered by the multi-turn gate-loop's own journey tests).
 //
-// SPENDS Kiro credits — gated AIDLC_KIRO_ACP_LIVE=1 like the acp tests.
+// SPENDS Kiro credits — gated AMADEUS_KIRO_ACP_LIVE=1 like the acp tests.
 //
 // The calibrations:
 //   1. tool_call_update output is BYTE-FAITHFUL to tool stdout: the doctor
@@ -27,13 +27,13 @@ import { existsSync } from "node:fs";
 import { driveKiroAcp } from "./kiro-acp-drive.ts";
 import { cleanupTuiProject, KIRO_SRC, setupTuiProject } from "./tui-fixtures.ts";
 
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "1200", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "1200", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 1200) * 1000;
 const DRIVE_TIMEOUT_MS = Math.max(60_000, TEST_TIMEOUT_MS - 15_000);
 
 function skipReason(): string | null {
-  if (process.env.AIDLC_KIRO_ACP_LIVE !== "1") {
-    return "set AIDLC_KIRO_ACP_LIVE=1 to run the ACP calibrations (uses Kiro credits)";
+  if (process.env.AMADEUS_KIRO_ACP_LIVE !== "1") {
+    return "set AMADEUS_KIRO_ACP_LIVE=1 to run the ACP calibrations (uses Kiro credits)";
   }
   if (spawnSync("kiro-cli", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "kiro-cli not found";

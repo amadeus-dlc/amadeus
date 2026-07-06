@@ -44,7 +44,7 @@ const projectDir = resolveProjectDirFromHook(import.meta.url);
 // avoid patching the production source tree. `Number(undefined) || N`
 // pattern handles unset / empty / unparseable equally.
 const SUBPROCESS_TIMEOUT_MS =
-  Number(process.env.AIDLC_SENSOR_TIMEOUT_MS) || 90_000;
+  Number(process.env.AMADEUS_SENSOR_TIMEOUT_MS) || 90_000;
 
 // Health-dir for the heartbeat (sensor-fire.last). Read by the future
 // hook-health doctor.
@@ -139,7 +139,7 @@ writeFileSync(
 const firstFiredMarker = join(healthDir, ".first-fired");
 if (!existsSync(firstFiredMarker)) {
   process.stderr.write(
-    "[aidlc] Sensors are now watching this workspace. " +
+    "[amadeus] Sensors are now watching this workspace. " +
       "See the AI-DLC documentation to learn how rules and " +
       "the learning loop work.\n"
   );
@@ -158,7 +158,7 @@ if (!currentStage || currentStage === "none") process.exit(0);
 
 // Step 10 — Stage-graph read (C4). loadGraph() returns GraphStage[]
 // which carries `sensors_applicable: SensorResolution[]`; goes through
-// the AIDLC_STAGE_GRAPH env-var seam (load t94 fixtures via that seam,
+// the AMADEUS_STAGE_GRAPH env-var seam (load t94 fixtures via that seam,
 // not hand-rolled JSON.parse).
 let stageNode: GraphStage | undefined;
 try {

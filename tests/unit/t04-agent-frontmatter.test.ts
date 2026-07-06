@@ -9,7 +9,7 @@
 // Mechanism: none. This is a pure structural/schema check over the shipped
 // bytes — does each agent persona's YAML frontmatter satisfy the registration
 // contract? No process boundary, no argv/exit/stdout seam, no LLM, zero tokens.
-// We resolve the same tree the .sh resolved (AIDLC_SRC = <repo>/dist/claude/.claude,
+// We resolve the same tree the .sh resolved (AMADEUS_SRC = <repo>/dist/claude/.claude,
 // fixtures.ts:42) and read + parse each .md in-process. The .sh's per-line
 // `grep` anchors are replaced with a frontmatter parser that SCOPES every
 // field assertion to the YAML block (between the opening and closing `---`),
@@ -52,11 +52,11 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
-// AIDLC_SRC === <repo>/dist/claude/.claude — the same tree the .sh resolved as
+// AMADEUS_SRC === <repo>/dist/claude/.claude — the same tree the .sh resolved as
 // AGENTS_DIR's parent.
-const AGENTS_DIR = join(AIDLC_SRC, "agents");
+const AGENTS_DIR = join(AMADEUS_SRC, "agents");
 
 // The 11 domain-expert agents, in the order the .sh's `AGENTS=` list named them.
 const AGENTS = [

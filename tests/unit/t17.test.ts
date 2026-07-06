@@ -98,7 +98,7 @@ function runStateBare(args: string[]): RunResult {
 }
 
 // Run the utility init driver. Mirrors
-// `bun "$AIDLC_SRC/tools/amadeus-utility.ts" init --scope <s> --project-dir "$PROJ"`.
+// `bun "$AMADEUS_SRC/tools/amadeus-utility.ts" init --scope <s> --project-dir "$PROJ"`.
 function runInit(proj: string, scope: string): RunResult {
   const res = spawnSync(BUN, [UTILITY, "init", "--scope", scope, "--project-dir", proj], {
     encoding: "utf-8",
@@ -1120,11 +1120,11 @@ describe("t17 approve artifact guard (#366)", () => {
   afterEach(() => cleanupTestProject(proj));
 
   // Drive with the artifact guard ENABLED (the rest of this file rubber-stamps
-  // bare fixtures under the suite-wide AIDLC_SKIP_ARTIFACT_GUARD=1, so clear it
+  // bare fixtures under the suite-wide AMADEUS_SKIP_ARTIFACT_GUARD=1, so clear it
   // here to exercise the real refusal - same pattern as t185's guarded()).
   function guarded(args: string[]): RunResult {
     const env = { ...process.env };
-    delete env.AIDLC_SKIP_ARTIFACT_GUARD;
+    delete env.AMADEUS_SKIP_ARTIFACT_GUARD;
     const res = spawnSync(BUN, [TOOL, ...args, "--project-dir", proj], {
       encoding: "utf-8",
       cwd: proj,

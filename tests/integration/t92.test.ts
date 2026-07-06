@@ -33,8 +33,8 @@
 // FIXTURE DISCIPLINE (diverges from the .sh's stub-copy by design):
 //   - Per-sensor stub scripts under tests/fixtures/v05-mr9-sensor-fire/
 //     scripts/ are copied into an ISOLATED temp dir (STUB_SCRIPT_DIR) and
-//     the dispatcher is pointed at it via the AIDLC_SENSOR_SCRIPT_DIR seam
-//     (mirroring AIDLC_SENSORS_DIR for manifests). The .sh copied stubs
+//     the dispatcher is pointed at it via the AMADEUS_SENSOR_SCRIPT_DIR seam
+//     (mirroring AMADEUS_SENSORS_DIR for manifests). The .sh copied stubs
 //     next to the dispatcher in dist/.../tools/; the seam removes that —
 //     stubs NEVER touch the shipped tree, so a run that dies mid-test
 //     leaves no orphaned stubs in the version-controlled artifact AND
@@ -89,17 +89,17 @@ const STUBS_DIR = join(REPO_ROOT, "tests", "fixtures", "v05-mr9-sensor-fire", "s
 const FIXTURES_ROOT = join(REPO_ROOT, "tests", "fixtures", "v05-mr9-sensor-fire");
 
 // --- Stub setup: write fixture per-sensor scripts into an ISOLATED temp dir
-// and point the dispatcher at it via AIDLC_SENSOR_SCRIPT_DIR (the script seam,
-// mirroring AIDLC_SENSORS_DIR for manifests). We deliberately do NOT copy stubs
+// and point the dispatcher at it via AMADEUS_SENSOR_SCRIPT_DIR (the script seam,
+// mirroring AMADEUS_SENSORS_DIR for manifests). We deliberately do NOT copy stubs
 // into the shipped dist/.../tools/ tree: that both pollutes the version-
 // controlled artifact if a run dies mid-test (orphaned stubs) AND makes
 // concurrent test files race on that shared directory (the -P 8 flake). The
-// fire() helpers below auto-set AIDLC_SENSOR_SCRIPT_DIR whenever a fork manifest
-// (AIDLC_SENSORS_DIR) is in play, so the stub scripts resolve from the temp dir;
-// real-sensor tests (Group B/C, no AIDLC_SENSORS_DIR) leave it unset and the
+// fire() helpers below auto-set AMADEUS_SENSOR_SCRIPT_DIR whenever a fork manifest
+// (AMADEUS_SENSORS_DIR) is in play, so the stub scripts resolve from the temp dir;
+// real-sensor tests (Group B/C, no AMADEUS_SENSORS_DIR) leave it unset and the
 // dispatcher resolves the shipped per-sensor scripts from dist/ as in production.
 // Dispatcher-resolved stubs: named in fork manifests, resolved via the
-// AIDLC_SENSOR_SCRIPT_DIR seam from STUB_SCRIPT_DIR. amadeus-sensor-lock-exit.ts is
+// AMADEUS_SENSOR_SCRIPT_DIR seam from STUB_SCRIPT_DIR. amadeus-sensor-lock-exit.ts is
 // NOT here — it is a direct-spawn helper (never named in a manifest) that imports
 // the real withAuditLock, so it needs to sit beside amadeus-lib.ts; it gets its own
 // temp shim (LOCK_EXIT_SHIM) that imports lib by absolute path.
@@ -144,18 +144,18 @@ beforeAll(() => {
     "utf-8",
   );
   // Inline argv-capture stub used by the upstream-coverage consumes test
-  // (Group M). Writes process.argv as JSON to AIDLC_T92_ARGV_OUT, then
+  // (Group M). Writes process.argv as JSON to AMADEUS_T92_ARGV_OUT, then
   // emits {"pass": true}. Mirrors the .sh heredoc stub (lines 89-100).
   writeFileSync(
     join(STUB_SCRIPT_DIR, ARGV_STUB),
     [
       "// @ts-nocheck",
       "// t92 fixture: argv-capture stub. Writes process.argv to",
-      "// $AIDLC_T92_ARGV_OUT and emits {\"pass\": true}. Used to verify the",
+      "// $AMADEUS_T92_ARGV_OUT and emits {\"pass\": true}. Used to verify the",
       "// dispatcher passes the expected --consumes / --stage / --output-path",
       "// flags through to per-sensor scripts.",
       'import { writeFileSync } from "node:fs";',
-      "const out = process.env.AIDLC_T92_ARGV_OUT;",
+      "const out = process.env.AMADEUS_T92_ARGV_OUT;",
       "if (out) writeFileSync(out, JSON.stringify(process.argv));",
       'process.stdout.write(JSON.stringify({ pass: true }) + "\\n");',
       "process.exit(0);",
@@ -186,7 +186,7 @@ function makeProj(): string {
 
 /**
  * make_fork_sensors (t92-sensor-fire.sh:113-136): write a single fork
- * sensor manifest into a fresh AIDLC_SENSORS_DIR. Returns the dir.
+ * sensor manifest into a fresh AMADEUS_SENSORS_DIR. Returns the dir.
  */
 function makeForkSensors(
   id: string,
@@ -309,17 +309,17 @@ interface SpawnResult {
 /**
  * Spawn `amadeus-sensor.ts fire ...` synchronously, combining stdout+stderr
  * like the .sh's `2>&1`. `env` overrides are merged onto process.env
- * (CLAUDE_PROJECT_DIR / AIDLC_SENSORS_DIR / AIDLC_T92_ARGV_OUT). cwd is
+ * (CLAUDE_PROJECT_DIR / AMADEUS_SENSORS_DIR / AMADEUS_T92_ARGV_OUT). cwd is
  * left at the test's cwd to match the .sh, where --output-path is always
  * absolute so cwd never affects path resolution.
  */
-// A fork manifest (AIDLC_SENSORS_DIR) names a STUB per-sensor script, which
+// A fork manifest (AMADEUS_SENSORS_DIR) names a STUB per-sensor script, which
 // lives in STUB_SCRIPT_DIR — so point the dispatcher's script resolver there.
-// Real-sensor tests pass no AIDLC_SENSORS_DIR; they leave the seam unset and the
+// Real-sensor tests pass no AMADEUS_SENSORS_DIR; they leave the seam unset and the
 // dispatcher resolves the shipped scripts from dist/ as in production.
 function withStubScriptDir(env: Record<string, string>): Record<string, string> {
-  return "AIDLC_SENSORS_DIR" in env
-    ? { AIDLC_SENSOR_SCRIPT_DIR: STUB_SCRIPT_DIR, ...env }
+  return "AMADEUS_SENSORS_DIR" in env
+    ? { AMADEUS_SENSOR_SCRIPT_DIR: STUB_SCRIPT_DIR, ...env }
     : env;
 }
 
@@ -428,7 +428,7 @@ describe("t92 Group A: argv validation (exit 1, no audit emit)", () => {
 // ============================================================
 // Group B — PASSED round-trip per sensor, REAL fixtures (4).
 // (t92-sensor-fire.sh:295-395)
-// Fires the actual shipped per-sensor scripts (AIDLC_SENSORS_DIR unset
+// Fires the actual shipped per-sensor scripts (AMADEUS_SENSORS_DIR unset
 // so the shipped manifests load) against real fixture content.
 // ============================================================
 
@@ -679,7 +679,7 @@ function runToolUnavailable(id: string, stage: string, matches: string): void {
   const sensorsDir = makeForkSensors(id, "bun .claude/tools/amadeus-sensor-stub-127.ts", matches);
   fire([id, "--stage", stage, "--output-path", join(proj, "amadeus-docs", "output.ts")], {
     CLAUDE_PROJECT_DIR: proj,
-    AIDLC_SENSORS_DIR: sensorsDir,
+    AMADEUS_SENSORS_DIR: sensorsDir,
   });
   const f = proj;
   expect(auditEventCount(f, "SENSOR_PASSED")).toBe(1);
@@ -708,7 +708,7 @@ describe("t92 Group E: script-error fall-through", () => {
     const sensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-exit2.ts");
     fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "amadeus-docs", "test.md")], {
       CLAUDE_PROJECT_DIR: proj,
-      AIDLC_SENSORS_DIR: sensors,
+      AMADEUS_SENSORS_DIR: sensors,
     });
     expect(auditField(proj, "SENSOR_PASSED", "Note")).toBe("script-error: exit-2");
   });
@@ -719,7 +719,7 @@ describe("t92 Group E: script-error fall-through", () => {
     const sensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-bad.ts");
     fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "amadeus-docs", "test.md")], {
       CLAUDE_PROJECT_DIR: proj,
-      AIDLC_SENSORS_DIR: sensors,
+      AMADEUS_SENSORS_DIR: sensors,
     });
     expect(auditField(proj, "SENSOR_PASSED", "Note")).toBe("script-error: bad-output");
   });
@@ -734,7 +734,7 @@ describe("t92 Group E: script-error fall-through", () => {
     const sensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-fail.ts");
     fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "amadeus-docs", "test.md")], {
       CLAUDE_PROJECT_DIR: proj,
-      AIDLC_SENSORS_DIR: sensors,
+      AMADEUS_SENSORS_DIR: sensors,
     });
     const note = auditField(proj, "SENSOR_PASSED", "Note");
     expect(note.startsWith("script-error: detail-write-failed")).toBe(true);
@@ -753,7 +753,7 @@ describe("t92 Group F: budget override (timeout -> SENSOR_BUDGET_OVERRIDE)", () 
     const sensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-slow.ts", "", 1);
     fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "amadeus-docs", "test.md")], {
       CLAUDE_PROJECT_DIR: proj,
-      AIDLC_SENSORS_DIR: sensors,
+      AMADEUS_SENSORS_DIR: sensors,
     });
     const f = proj;
     const observed = auditField(f, "SENSOR_BUDGET_OVERRIDE", "Observed value");
@@ -771,7 +771,7 @@ describe("t92 Group F: budget override (timeout -> SENSOR_BUDGET_OVERRIDE)", () 
     const sensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-slow.ts", "", 1);
     fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "slow-command", "sample.ts")], {
       CLAUDE_PROJECT_DIR: proj,
-      AIDLC_SENSORS_DIR: sensors,
+      AMADEUS_SENSORS_DIR: sensors,
     });
     const f = proj;
     const cap = auditField(f, "SENSOR_BUDGET_OVERRIDE", "Cap value");
@@ -799,7 +799,7 @@ describe("t92 Group G: concurrency invariants", () => {
       [1, 2, 3, 4, 5].map(() =>
         fireAsync(
           ["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "amadeus-docs", "test.md")],
-          { CLAUDE_PROJECT_DIR: proj, AIDLC_SENSORS_DIR: sensors },
+          { CLAUDE_PROJECT_DIR: proj, AMADEUS_SENSORS_DIR: sensors },
         ),
       ),
     );
@@ -828,7 +828,7 @@ describe("t92 Group G: concurrency invariants", () => {
     // Start the slow fire (sleeps 5s) in the background.
     const slowDone = fireAsync(
       ["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "amadeus-docs", "test.md")],
-      { CLAUDE_PROJECT_DIR: proj, AIDLC_SENSORS_DIR: slowSensors },
+      { CLAUDE_PROJECT_DIR: proj, AMADEUS_SENSORS_DIR: slowSensors },
     );
     // Wait for slow's FIRED row to land — the deterministic "slow holds the
     // spawn window" anchor. A fixed sleep here assumed sub-200ms process spawn,
@@ -854,7 +854,7 @@ describe("t92 Group G: concurrency invariants", () => {
     // Fast fire starts inside slow's spawn window; await its completion.
     await fireAsync(["linter", "--stage", "code-generation", "--output-path", tsFile], {
       CLAUDE_PROJECT_DIR: proj,
-      AIDLC_SENSORS_DIR: fastSensors,
+      AMADEUS_SENSORS_DIR: fastSensors,
     });
     // Snapshot row order WHILE slow is still running. required-sections has
     // only its FIRED row (1); linter has FIRED+PASSED (2) — proving the slow
@@ -881,7 +881,7 @@ describe("t92 Group G: concurrency invariants", () => {
     const sensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-pass.ts");
     fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "amadeus-docs", "test.md")], {
       CLAUDE_PROJECT_DIR: proj,
-      AIDLC_SENSORS_DIR: sensors,
+      AMADEUS_SENSORS_DIR: sensors,
     });
     const elapsedMs = Date.now() - start;
     expect(lockRc).toBe(1);
@@ -903,7 +903,7 @@ function runDetailShape(id: string, stage: string, matches = ""): void {
   const sensors = makeForkSensors(id, "bun .claude/tools/amadeus-sensor-stub-fail.ts", matches);
   fire([id, "--stage", stage, "--output-path", join(proj, "amadeus-docs", outname)], {
     CLAUDE_PROJECT_DIR: proj,
-    AIDLC_SENSORS_DIR: sensors,
+    AMADEUS_SENSORS_DIR: sensors,
   });
   const detailDir = join(recordRoot(proj), ".amadeus-sensors", stage);
   // Find the single <id>-*.md detail file.
@@ -949,7 +949,7 @@ describe("t92 Group I: detail-file collision-free", () => {
     for (let i = 0; i < 2; i++) {
       fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "amadeus-docs", "test.md")], {
         CLAUDE_PROJECT_DIR: proj,
-        AIDLC_SENSORS_DIR: sensors,
+        AMADEUS_SENSORS_DIR: sensors,
       });
     }
     const detailDir = join(recordRoot(proj), ".amadeus-sensors", "intent-capture");
@@ -975,7 +975,7 @@ describe("t92 Group J: audit-row required fields per event type", () => {
     const sensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-pass.ts");
     fire(["required-sections", "--stage", "intent-capture", "--output-path", join(jProj, "amadeus-docs", "test.md")], {
       CLAUDE_PROJECT_DIR: jProj,
-      AIDLC_SENSORS_DIR: sensors,
+      AMADEUS_SENSORS_DIR: sensors,
     });
   });
 
@@ -1000,7 +1000,7 @@ describe("t92 Group J: audit-row required fields per event type", () => {
     const sensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-fail.ts");
     fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "amadeus-docs", "test.md")], {
       CLAUDE_PROJECT_DIR: proj,
-      AIDLC_SENSORS_DIR: sensors,
+      AMADEUS_SENSORS_DIR: sensors,
     });
     const f = proj;
     expect(auditFieldCount(f, "SENSOR_FAILED")).toBe(8);
@@ -1014,7 +1014,7 @@ describe("t92 Group J: audit-row required fields per event type", () => {
     const sensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-slow.ts", "", 1);
     fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "amadeus-docs", "test.md")], {
       CLAUDE_PROJECT_DIR: proj,
-      AIDLC_SENSORS_DIR: sensors,
+      AMADEUS_SENSORS_DIR: sensors,
     });
     const f = proj;
     expect(auditFieldCount(f, "SENSOR_BUDGET_OVERRIDE")).toBe(9);
@@ -1118,8 +1118,8 @@ describe("t92 Group M: upstream-coverage --consumes resolution", () => {
     const argvOut = join(proj, "argv.json");
     fire(["upstream-coverage", "--stage", "market-research", "--output-path", join(proj, "amadeus-docs", "test.md")], {
       CLAUDE_PROJECT_DIR: proj,
-      AIDLC_SENSORS_DIR: sensors,
-      AIDLC_T92_ARGV_OUT: argvOut,
+      AMADEUS_SENSORS_DIR: sensors,
+      AMADEUS_T92_ARGV_OUT: argvOut,
     });
     expect(existsSync(argvOut)).toBe(true);
     const argv = readFileSync(argvOut, "utf-8");
@@ -1141,7 +1141,7 @@ describe("t92 Group M: upstream-coverage --consumes resolution", () => {
 // TS18003 "No inputs were found" line that carries NO (line,col)
 // coordinate, so PRIMARY_RE matches nothing and allErrors is empty —
 // the exact case the gate fires on. Uses the SHIPPED type-check manifest
-// (AIDLC_SENSORS_DIR unset), exercising the real dispatcher end-to-end.
+// (AMADEUS_SENSORS_DIR unset), exercising the real dispatcher end-to-end.
 // ============================================================
 
 describe("t92 Group N: type-check status gate (config-load failure)", () => {
@@ -1183,7 +1183,7 @@ describe("t92 Group N: type-check status gate (config-load failure)", () => {
 // gate must key on allErrors (whole-project parse), never on the filtered
 // `errors` — an earlier draft keyed on `errors` and wrongly turned every
 // project-wide type error into a script-error for unrelated files. Inputs
-// built inline; SHIPPED type-check manifest (AIDLC_SENSORS_DIR unset).
+// built inline; SHIPPED type-check manifest (AMADEUS_SENSORS_DIR unset).
 // ============================================================
 
 describe("t92 Group O: type-check status gate (cross-file errors, none for target)", () => {

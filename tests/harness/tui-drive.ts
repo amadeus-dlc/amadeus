@@ -170,9 +170,9 @@ function safeTraceName(s: string): string {
 }
 
 function tuiTracePath(session: string): string | undefined {
-  if (process.env.AIDLC_TUI_TRACE_FILE) return process.env.AIDLC_TUI_TRACE_FILE;
-  if (process.env.AIDLC_TEST_DEBUG === "true" && process.env.AIDLC_TEST_LOG_DIR) {
-    return join(process.env.AIDLC_TEST_LOG_DIR, `tui-drive-${safeTraceName(session)}.ndjson`);
+  if (process.env.AMADEUS_TUI_TRACE_FILE) return process.env.AMADEUS_TUI_TRACE_FILE;
+  if (process.env.AMADEUS_TEST_DEBUG === "true" && process.env.AMADEUS_TEST_LOG_DIR) {
+    return join(process.env.AMADEUS_TEST_LOG_DIR, `tui-drive-${safeTraceName(session)}.ndjson`);
   }
   return undefined;
 }
@@ -197,7 +197,7 @@ function writeTuiTrace(
 // `node` is frequently installed yet NOT on PATH (proven on the EC2 box: node
 // v22.14.0 lives at C:\Program Files\nodejs\node.exe but neither bash nor cmd
 // resolve a bare `node`). So we resolve a concrete node binary by trying, in
-// order: an explicit AIDLC_NODE_BIN override, a bare `node` if it is actually on
+// order: an explicit AMADEUS_NODE_BIN override, a bare `node` if it is actually on
 // PATH, then the canonical Program Files install path. Returns the first that
 // exists, or null when node cannot be found anywhere (the caller treats that as
 // a clean capability-ABSENT skip, not a failure).
@@ -213,7 +213,7 @@ export function resolveWinNode(): string | null {
   const onPath =
     spawnSync("node", ["--version"], { encoding: "utf-8" }).status === 0;
   const candidates = [
-    process.env.AIDLC_NODE_BIN,
+    process.env.AMADEUS_NODE_BIN,
     onPath ? "node" : undefined,
     "C:\\Program Files\\nodejs\\node.exe",
   ];
@@ -271,7 +271,7 @@ function hasSettingSourcesArg(command: string[]): boolean {
 }
 
 function tuiSettingSources(env: NodeJS.ProcessEnv = process.env): string | null {
-  const configured = env.AIDLC_TUI_SETTING_SOURCES;
+  const configured = env.AMADEUS_TUI_SETTING_SOURCES;
   const value = configured === undefined
     ? DEFAULT_TUI_SETTING_SOURCES
     : configured.trim();
@@ -282,7 +282,7 @@ function tuiSettingSources(env: NodeJS.ProcessEnv = process.env): string | null 
 /**
  * Keep live TUI runs isolated from developer/user-level Claude settings and
  * hooks by default, mirroring sdk-drive's `settingSources: ["project"]`.
- * Explicit command flags win, and AIDLC_TUI_SETTING_SOURCES=default opts a
+ * Explicit command flags win, and AMADEUS_TUI_SETTING_SOURCES=default opts a
  * focused calibration run back into Claude CLI defaults.
  */
 export function normalizeTuiCommand(
@@ -301,7 +301,7 @@ export function normalizeTuiCommand(
 }
 
 function answerGateTracePollMs(): number {
-  const raw = Number(process.env.AIDLC_TUI_TRACE_POLL_MS ?? DEFAULT_ANSWER_GATE_TRACE_POLL_MS);
+  const raw = Number(process.env.AMADEUS_TUI_TRACE_POLL_MS ?? DEFAULT_ANSWER_GATE_TRACE_POLL_MS);
   if (!Number.isFinite(raw) || raw <= 0) return DEFAULT_ANSWER_GATE_TRACE_POLL_MS;
   return Math.max(1_000, raw);
 }
@@ -352,10 +352,10 @@ interface Backend {
 // private label isolates all harness sessions onto a dedicated server; the serial
 // tui tests share that one private server among themselves (they already run
 // serially), and it can never touch the default server. Override with
-// AIDLC_TUI_TMUX_SOCKET if a test needs its own server. The socket name is stable
+// AMADEUS_TUI_TMUX_SOCKET if a test needs its own server. The socket name is stable
 // across the per-subcommand driver invocations (start/send/capture/kill are
 // separate processes that must reach the SAME server), so it is NOT per-PID.
-const TMUX_SOCKET = process.env.AIDLC_TUI_TMUX_SOCKET || "amadeus-tui";
+const TMUX_SOCKET = process.env.AMADEUS_TUI_TMUX_SOCKET || "amadeus-tui";
 
 function tmux(args: string[]): { code: number; stdout: string; stderr: string } {
   // `-L <socket>` MUST precede the tmux command; it selects the private server.
@@ -471,7 +471,7 @@ const win32Backend: Backend = {
     const nodeBin = resolveWinNode();
     if (!nodeBin) {
       fail(
-        "cannot launch the Windows daemon — node.exe not found (set AIDLC_NODE_BIN " +
+        "cannot launch the Windows daemon — node.exe not found (set AMADEUS_NODE_BIN " +
           "or install node so it is on PATH / at C:\\Program Files\\nodejs). #748: " +
           "the daemon must run under node, never bun.",
       );

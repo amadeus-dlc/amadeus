@@ -42,14 +42,14 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { AIDLC_SRC, FIXTURES_DIR } from "../harness/fixtures.ts";
+import { AMADEUS_SRC, FIXTURES_DIR } from "../harness/fixtures.ts";
 import { auditLockDir } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath;
-const WORKTREE_TOOL = join(AIDLC_SRC, "tools", "amadeus-worktree.ts");
-const BOLT_TOOL = join(AIDLC_SRC, "tools", "amadeus-bolt.ts");
-const STATE_TOOL = join(AIDLC_SRC, "tools", "amadeus-state.ts");
-const AUDIT_TOOL = join(AIDLC_SRC, "tools", "amadeus-audit.ts");
+const WORKTREE_TOOL = join(AMADEUS_SRC, "tools", "amadeus-worktree.ts");
+const BOLT_TOOL = join(AMADEUS_SRC, "tools", "amadeus-bolt.ts");
+const STATE_TOOL = join(AMADEUS_SRC, "tools", "amadeus-state.ts");
+const AUDIT_TOOL = join(AMADEUS_SRC, "tools", "amadeus-audit.ts");
 
 const tempProjects: string[] = [];
 

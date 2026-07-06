@@ -81,11 +81,11 @@ import {
 
 // ---------------------------------------------------------------------------
 // Timeout budget — TWO real turns (init + resume) on Opus/Bedrock; the slowest
-// workflow test per the suite's known-flake notes. Honour the AIDLC_TEST_TIMEOUT
+// workflow test per the suite's known-flake notes. Honour the AMADEUS_TEST_TIMEOUT
 // convention generously. Each turn gets ~half the cap; the driver aborts ~15s
 // before bun's per-test cap so a stuck run surfaces a partial DriveResult.
 // ---------------------------------------------------------------------------
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "1200", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "1200", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 1200) * 1000;
 const DRIVE_TIMEOUT_MS = Math.max(120_000, Math.floor(TEST_TIMEOUT_MS / 2) - 15_000);
 

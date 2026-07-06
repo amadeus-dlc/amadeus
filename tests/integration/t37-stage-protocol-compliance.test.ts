@@ -3,7 +3,7 @@
 // t37 — cross-file stage-protocol compliance. Migrated from the bash TAP test
 // tests/integration/t37-stage-protocol-compliance.sh (plan 75). The subject is a
 // set of CROSS-FILE structural invariants over the shipped tree under
-// dist/claude/.claude (AIDLC_SRC): every stage references the protocol, the
+// dist/claude/.claude (AMADEUS_SRC): every stage references the protocol, the
 // state template carries every required section, fixtures conform to that
 // section structure and to the protocol's checkbox notation, SKILL.md routing
 // mandates all three protocol files, the protocol's silent-bookkeeping section
@@ -12,13 +12,13 @@
 // agents.
 //
 // Mechanism: none. Every assertion is a structural / filesystem inspection of
-// the shipped bytes — read the same files the .sh grepped (via AIDLC_SRC from
+// the shipped bytes — read the same files the .sh grepped (via AMADEUS_SRC from
 // tests/harness/fixtures.ts), assert on their content in process. There is no
 // tool argv / exit-code / stdout seam and no LLM: the .sh used grep/sed only,
 // so the TS twin reads the files with readFileSync and asserts. Zero spawn,
 // zero subprocess, zero tokens.
 //
-// Source under test (paths relative to AIDLC_SRC = dist/claude/.claude):
+// Source under test (paths relative to AMADEUS_SRC = dist/claude/.claude):
 //   amadeus-common/protocols/stage-protocol.md
 //     :15  "## 1. Approval Gates" — names the 3 init stages as exempt
 //     "### Silent bookkeeping writes" — names **Current Stage** / **Lifecycle
@@ -75,15 +75,15 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
-import { AIDLC_SRC, FIXTURES_DIR } from "../harness/fixtures.ts";
+import { AMADEUS_SRC, FIXTURES_DIR } from "../harness/fixtures.ts";
 
-const PROTOCOL = join(AIDLC_SRC, "amadeus-common", "protocols", "stage-protocol.md");
-const CONDUCTOR = join(AIDLC_SRC, "amadeus-common", "conductor.md");
-const STAGES_DIR = join(AIDLC_SRC, "amadeus-common", "stages");
-const AGENTS_DIR = join(AIDLC_SRC, "agents");
-const KNOWLEDGE_DIR = join(AIDLC_SRC, "knowledge");
-const STATE_TEMPLATE = join(AIDLC_SRC, "knowledge", "amadeus-shared", "state-template.md");
-const SKILL = join(AIDLC_SRC, "skills", "aidlc", "SKILL.md");
+const PROTOCOL = join(AMADEUS_SRC, "amadeus-common", "protocols", "stage-protocol.md");
+const CONDUCTOR = join(AMADEUS_SRC, "amadeus-common", "conductor.md");
+const STAGES_DIR = join(AMADEUS_SRC, "amadeus-common", "stages");
+const AGENTS_DIR = join(AMADEUS_SRC, "agents");
+const KNOWLEDGE_DIR = join(AMADEUS_SRC, "knowledge");
+const STATE_TEMPLATE = join(AMADEUS_SRC, "knowledge", "amadeus-shared", "state-template.md");
+const SKILL = join(AMADEUS_SRC, "skills", "amadeus", "SKILL.md");
 
 // The .sh treated these three as exempt-from-protocol-reference (orchestrator
 // handles them) AND lists them as exempt from approval gates.

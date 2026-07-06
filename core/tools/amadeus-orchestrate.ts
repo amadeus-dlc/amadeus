@@ -49,7 +49,7 @@
 // both export zero CLI handlers; they are reachable only by argv dispatch). The
 // engine spawns the subcommand with Bun.spawnSync, inspects its exitCode, and
 // captures its stderr VERBATIM so the user-facing error wording (e.g. the
-// canonical `Invalid AWS_AIDLC_DEFAULT_SCOPE "...". Valid scopes: ...`) is
+// canonical `Invalid AWS_AMADEUS_DEFAULT_SCOPE "...". Valid scopes: ...`) is
 // relayed unchanged rather than reconstructed — reconstruction would drift from
 // the tool the rest of the framework asserts on. The one read-only invariant
 // `next` keeps: it never spawns a subcommand that MUTATES. The jump-direction
@@ -130,7 +130,7 @@ function loadStateFileIfPresent(projectDir: string): string | null {
 }
 
 // The default scope when neither the state file, a --scope flag, nor the
-// AWS_AIDLC_DEFAULT_SCOPE env var supplies one. Mirrors the prose
+// AWS_AMADEUS_DEFAULT_SCOPE env var supplies one. Mirrors the prose
 // orchestrator's freeform-fallback default (SKILL.md detect-scope fallback).
 const DEFAULT_SCOPE = "feature";
 
@@ -202,7 +202,7 @@ function runTool(toolFile: string, args: string[]): ToolRun {
 // Extract the human-facing message from a tool's failure. The shared error
 // helper prints `{"error":"<message>"}` to stderr; we unwrap that envelope so
 // the directive carries the message itself (e.g. the verbatim
-// `Invalid AWS_AIDLC_DEFAULT_SCOPE "...". Valid scopes: ...`) rather than the
+// `Invalid AWS_AMADEUS_DEFAULT_SCOPE "...". Valid scopes: ...`) rather than the
 // JSON wrapper. If stderr is not the expected envelope (an unexpected crash),
 // fall back to the raw stderr so nothing is swallowed.
 function toolErrorMessage(run: ToolRun): string {
@@ -484,7 +484,7 @@ function intentPickPromptIfRecordsExist(
 
 // Resolve the scope by the precedence ladder: state file Scope field wins (an
 // active workflow is authoritative), then an explicit --scope flag, then the
-// AWS_AIDLC_DEFAULT_SCOPE env var, then the default. Returns the resolved scope
+// AWS_AMADEUS_DEFAULT_SCOPE env var, then the default. Returns the resolved scope
 // plus whether it was found in the valid set (an unknown scope is the caller's
 // to turn into an error directive).
 function resolveScope(
@@ -498,7 +498,7 @@ function resolveScope(
   if (flags.scope && flags.scope.length > 0) {
     return { scope: flags.scope, source: "flag" };
   }
-  const envScope = process.env.AWS_AIDLC_DEFAULT_SCOPE;
+  const envScope = process.env.AWS_AMADEUS_DEFAULT_SCOPE;
   if (envScope && envScope.length > 0) {
     return { scope: envScope, source: "env" };
   }
@@ -1293,9 +1293,9 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   }
 
   // Branch 4 — env-scope validation. When the scope was supplied by
-  // AWS_AIDLC_DEFAULT_SCOPE, the canonical validator owns the error wording.
+  // AWS_AMADEUS_DEFAULT_SCOPE, the canonical validator owns the error wording.
   // Shell out to `resolve-env-scope` (a pure read) and relay its VERBATIM
-  // `Invalid AWS_AIDLC_DEFAULT_SCOPE "...". Valid scopes: ...` on a non-zero
+  // `Invalid AWS_AMADEUS_DEFAULT_SCOPE "...". Valid scopes: ...` on a non-zero
   // exit — do NOT reconstruct it via validScopes(), which would drift from the
   // string downstream tests + SKILL.md:101 assert on. This precedes the generic
   // unknown-scope check so the env-specific wording wins for the env source.

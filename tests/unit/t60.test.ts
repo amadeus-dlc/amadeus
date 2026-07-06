@@ -14,7 +14,7 @@
 //
 // ── CURRENT-SURFACE CORRECTION (audit fold-in) ───────────────────────────────
 // An earlier draft of this twin injected `fixture-scope` via a
-// scope-mapping.fixture.json + AIDLC_SCOPE_MAPPING. That env-var is the LEGACY
+// scope-mapping.fixture.json + AMADEUS_SCOPE_MAPPING. That env-var is the LEGACY
 // TEST SEAM: when set, loadScopeMapping() reads the JSON VERBATIM and SKIPS the
 // real derivation (amadeus-lib.ts:805-825). v0.6.0 DELETED scope-mapping.json from
 // the shipped tree (verified absent on disk); the compiled scope-grid.json is now
@@ -24,7 +24,7 @@
 // .claude/scopes/amadeus-fixture-scope.md file and sets NO env var (t60.sh:53-81),
 // exercising the real shipped derivation. This twin now mirrors that EXACTLY:
 // it writes the fixture .md into each temp project's COPIED .claude/scopes/ and
-// never sets AIDLC_SCOPE_MAPPING (it is even deleted from each spawn env so a
+// never sets AMADEUS_SCOPE_MAPPING (it is even deleted from each spawn env so a
 // developer's leaked shell var can't shadow the derivation). Test 0 below pins
 // the current surface (scope-grid.json present, scope-mapping.json gone) so the
 // obsolete old-source path can never silently come back as the seam under test.
@@ -100,7 +100,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   REPO_ROOT,
   seededAuditShard,
@@ -157,7 +157,7 @@ interface CliResult {
 
 /**
  * Spawn `bun <tool.ts> <args...>`, optionally with extra env. Mirrors
- * `bun "$TOOL" ...`. AIDLC_SCOPE_MAPPING is force-DELETED from the child env so
+ * `bun "$TOOL" ...`. AMADEUS_SCOPE_MAPPING is force-DELETED from the child env so
  * the spawn always takes the real .claude/scopes/ derivation path, never the
  * legacy JSON test seam — even if a developer's shell leaks the var.
  */
@@ -170,7 +170,7 @@ function run(
     ...process.env,
     ...env,
   };
-  delete childEnv.AIDLC_SCOPE_MAPPING;
+  delete childEnv.AMADEUS_SCOPE_MAPPING;
   const res = spawnSync(BUN, [tool, ...args], {
     encoding: "utf-8",
     env: childEnv as Record<string, string>,
@@ -189,7 +189,7 @@ function runEval(src: string, env: Record<string, string> = {}): CliResult {
     ...process.env,
     ...env,
   };
-  delete childEnv.AIDLC_SCOPE_MAPPING;
+  delete childEnv.AMADEUS_SCOPE_MAPPING;
   const res = spawnSync(BUN, ["-e", src], {
     encoding: "utf-8",
     env: childEnv as Record<string, string>,
@@ -297,17 +297,17 @@ describe("t60 valid-scopes derived from .claude/scopes/*.md (migrated from t60-v
   // from the shipped tree. Guards against a regression that would resurrect
   // the deleted JSON source-of-truth or remove the compiled grid.
   test("0: shipped tree has scope-grid.json and no scope-mapping.json", () => {
-    const dataDir = join(AIDLC_SRC, "tools", "data");
+    const dataDir = join(AMADEUS_SRC, "tools", "data");
     expect(existsSync(join(dataDir, "scope-grid.json"))).toBe(true);
     expect(existsSync(join(dataDir, "scope-mapping.json"))).toBe(false);
     // The .claude/scopes/*.md set is the scope-NAME source; confirm one of the
     // shipped scope files exists so the derivation has real metadata to read.
-    expect(existsSync(join(AIDLC_SRC, "scopes", "amadeus-feature.md"))).toBe(true);
+    expect(existsSync(join(AMADEUS_SRC, "scopes", "amadeus-feature.md"))).toBe(true);
   });
 
   // --- Test 1: static scan — VALID_SCOPES symbol gone from shipped tools/ ---
   test("1: no VALID_SCOPES references in shipped tools/", () => {
-    const toolsDir = join(AIDLC_SRC, "tools");
+    const toolsDir = join(AMADEUS_SRC, "tools");
     // grep -rE 'VALID_SCOPES' over the shipped tools dir. Use grep so the scan
     // matches the .sh exactly (recursive, all files). Exit 1 == no match.
     const res = spawnSync("grep", ["-rE", "VALID_SCOPES", toolsDir], {
@@ -323,7 +323,7 @@ describe("t60 valid-scopes derived from .claude/scopes/*.md (migrated from t60-v
     // Spawn `bun -e import { validScopes } from <shipped lib.ts>` against the
     // shipped tree (no fixture scope dropped) — exactly the .sh mechanism
     // (t60.sh:46). The fresh process reads .claude/scopes/*.md, no cache.
-    const lib = join(AIDLC_SRC, "tools", "amadeus-lib.ts");
+    const lib = join(AMADEUS_SRC, "tools", "amadeus-lib.ts");
     const r = runEval(
       `import { validScopes } from ${JSON.stringify(lib)}; console.log([...validScopes()].join(","));`,
     );
@@ -382,11 +382,11 @@ describe("t60 valid-scopes derived from .claude/scopes/*.md (migrated from t60-v
   });
 
   // --- Test 6: doctor invalid env-scope fix hint derives from .claude/scopes/ ---
-  test("6: doctor fix hint for invalid AWS_AIDLC_DEFAULT_SCOPE lists fixture-scope", () => {
+  test("6: doctor fix hint for invalid AWS_AMADEUS_DEFAULT_SCOPE lists fixture-scope", () => {
     const proj = freshProject();
     setupFixtureScope(proj);
     const r = run(utilityIn(proj), ["doctor", "--project-dir", proj], {
-      AWS_AIDLC_DEFAULT_SCOPE: "still-bogus",
+      AWS_AMADEUS_DEFAULT_SCOPE: "still-bogus",
     });
     // doctor reports the invalid env-scope row with a fix line enumerating the
     // valid scopes — fixture-scope among them. (Doctor exits non-zero when any

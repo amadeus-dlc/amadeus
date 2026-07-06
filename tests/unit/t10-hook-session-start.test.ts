@@ -84,7 +84,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
   FIXTURES_DIR,
@@ -95,7 +95,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const HOOK = join(AIDLC_SRC, "hooks", "amadeus-session-start.ts");
+const HOOK = join(AMADEUS_SRC, "hooks", "amadeus-session-start.ts");
 const MID_IDEATION = join(FIXTURES_DIR, "state-mid-ideation.md");
 const CONSTRUCTION = join(FIXTURES_DIR, "state-construction.md");
 const OPERATION = join(FIXTURES_DIR, "state-operation.md");

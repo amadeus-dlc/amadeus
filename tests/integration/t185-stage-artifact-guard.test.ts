@@ -29,9 +29,9 @@
 //        code-generation) must ALSO have a file outside the aidlc/ workspace
 //        tree + harness dirs (issue #366 Update 2: docs-only code-generation
 //        must not pass).
-//   Bypass: AIDLC_SKIP_ARTIFACT_GUARD=1 (env).
+//   Bypass: AMADEUS_SKIP_ARTIFACT_GUARD=1 (env).
 //
-// CRITICAL test-harness note: run-tests.ts sets AIDLC_SKIP_ARTIFACT_GUARD=1 for
+// CRITICAL test-harness note: run-tests.ts sets AMADEUS_SKIP_ARTIFACT_GUARD=1 for
 // the whole suite (most state tests rubber-stamp bare fixtures by design). This
 // test re-enables enforcement by DELETING that var from the spawned tool's env
 // - otherwise it would be testing the bypass, not the guard.
@@ -41,7 +41,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
   resetAidlcEnv,
@@ -50,14 +50,14 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const STATE = join(AIDLC_SRC, "tools", "amadeus-state.ts");
+const STATE = join(AMADEUS_SRC, "tools", "amadeus-state.ts");
 const MID_IDEATION = "state-mid-ideation.md"; // Current Stage: feasibility
 
 // Drive a state subcommand with the artifact guard ENABLED (clear the suite's
 // bypass var). Returns exit code + combined output.
 function guarded(proj: string, args: string[]): { rc: number; out: string } {
   const env = { ...process.env };
-  delete env.AIDLC_SKIP_ARTIFACT_GUARD;
+  delete env.AMADEUS_SKIP_ARTIFACT_GUARD;
   const r = spawnSync(BUN, [STATE, ...args, "--project-dir", proj], {
     encoding: "utf-8",
     env,
@@ -67,7 +67,7 @@ function guarded(proj: string, args: string[]): { rc: number; out: string } {
 
 // Same but with the bypass var set - proves the escape hatch.
 function bypassed(proj: string, args: string[]): { rc: number; out: string } {
-  const env = { ...process.env, AIDLC_SKIP_ARTIFACT_GUARD: "1" };
+  const env = { ...process.env, AMADEUS_SKIP_ARTIFACT_GUARD: "1" };
   const r = spawnSync(BUN, [STATE, ...args, "--project-dir", proj], {
     encoding: "utf-8",
     env,
@@ -148,7 +148,7 @@ describe("t185: stage-completion artifact guard (#366)", () => {
     expect(field(proj, "Current Stage")).toBe(slug);
   });
 
-  test("finalize bypasses the guard under AIDLC_SKIP_ARTIFACT_GUARD (no artifacts)", () => {
+  test("finalize bypasses the guard under AMADEUS_SKIP_ARTIFACT_GUARD (no artifacts)", () => {
     const slug = field(proj, "Current Stage");
     guarded(proj, ["checkbox", `${slug}=in-progress`]);
     const r = bypassed(proj, ["finalize", slug]);
@@ -168,7 +168,7 @@ describe("t185: stage-completion artifact guard (#366)", () => {
 
   // --- Bypasses --------------------------------------------------------------
 
-  test("approve bypasses the guard under AIDLC_SKIP_ARTIFACT_GUARD (no artifacts)", () => {
+  test("approve bypasses the guard under AMADEUS_SKIP_ARTIFACT_GUARD (no artifacts)", () => {
     const slug = field(proj, "Current Stage");
     guarded(proj, ["checkbox", `${slug}=in-progress`]);
     guarded(proj, ["gate-start", slug]);
@@ -176,7 +176,7 @@ describe("t185: stage-completion artifact guard (#366)", () => {
     expect(r.rc).toBe(0);
   });
 
-  test("AIDLC_SKIP_ARTIFACT_GUARD=1 bypasses the guard (no artifacts)", () => {
+  test("AMADEUS_SKIP_ARTIFACT_GUARD=1 bypasses the guard (no artifacts)", () => {
     const slug = field(proj, "Current Stage");
     const r = bypassed(proj, ["advance", slug]);
     expect(r.rc).toBe(0);

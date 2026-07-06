@@ -94,11 +94,11 @@ import { driveAidlc, readStateField } from "../harness/sdk-drive.ts";
 // Timeout budget. The .sh inherited run_claude's 1800s default but its own
 // header (lines 4-5) notes the scanner runs in <1s — the birth is a single
 // deterministic Bash dispatch + STOP, not a multi-turn workflow. Honour the
-// suite's AIDLC_TEST_TIMEOUT convention (seconds) with a 300s default that is
+// suite's AMADEUS_TEST_TIMEOUT convention (seconds) with a 300s default that is
 // generous for one Opus turn; the driver aborts ~15s early so a stuck
 // canUseTool surfaces a partial DriveResult instead of an opaque hang.
 // ---------------------------------------------------------------------------
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "300", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "300", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 300) * 1000;
 const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
 

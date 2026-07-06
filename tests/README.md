@@ -23,11 +23,11 @@ unit, and the non-live integration files) need only `bun`; the live journeys add
 | **`bun`** | every level | The runner, all hooks, and all CLI tools are TypeScript run via bun. No jq/sed/awk/Git-Bash dependency. |
 | **`tmux`** | `e2e` live TUI journeys (macOS/Linux) | The `tui-drive.ts` backend drives a real `claude` TUI through a tmux pane. Absent → the live tui tests SKIP with a reason. (On Windows the driver uses a node-pty backend instead — see the Windows runbook.) |
 | **`claude` CLI + AWS/Bedrock creds** | live `integration` + `e2e` files | The SDK/tui drivers spend real Bedrock tokens. The runner's preflight (`tests/integration/t19.test.ts`) gates the live tiers; without the substrate, live files SKIP per-file rather than fail. |
-| **`AIDLC_TUI_LIVE=1`** | the token-spending live TUI journeys | A bare `--e2e` SKIPs them; `--all --debug` sets it by default. Set `AIDLC_TUI_LIVE=0` to force the SKIP path. |
+| **`AMADEUS_TUI_LIVE=1`** | the token-spending live TUI journeys | A bare `--e2e` SKIPs them; `--all --debug` sets it by default. Set `AMADEUS_TUI_LIVE=0` to force the SKIP path. |
 
 So a fresh contributor running `bun tests/run-tests.ts` (the default smoke + unit
 + integration) sees deterministic green with only `bun` installed; the live tui
-journeys SKIP cleanly until `tmux` + `claude` + creds + `AIDLC_TUI_LIVE=1` are
+journeys SKIP cleanly until `tmux` + `claude` + creds + `AMADEUS_TUI_LIVE=1` are
 present, rather than failing silently. For the cross-platform invariance story
 and the Windows substrate, see the runbook below.
 
@@ -111,8 +111,8 @@ bun test tests/smoke/t01-file-structure.test.ts
 Live SDK and TUI drivers default to project-only Claude setting sources. That
 keeps the copied test `.claude/` tree authoritative while excluding developer
 user-level hooks/settings; focused calibration can opt the TUI back into CLI
-defaults with `AIDLC_TUI_SETTING_SOURCES=default`.
+defaults with `AMADEUS_TUI_SETTING_SOURCES=default`.
 
-`--all --debug` defaults `AIDLC_TUI_LIVE=1` so the full debug run includes
-token-spending live TUI journeys. Set `AIDLC_TUI_LIVE=0` explicitly to keep those
+`--all --debug` defaults `AMADEUS_TUI_LIVE=1` so the full debug run includes
+token-spending live TUI journeys. Set `AMADEUS_TUI_LIVE=0` explicitly to keep those
 tests on their in-file SKIP path.

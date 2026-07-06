@@ -22,7 +22,7 @@ harness parameter. Add a column when you port to a new harness.
 | **Orchestrator entry** (`/amadeus` + runners) | Skills (`/amadeus`) | Skills (`/amadeus`) | Skills (`$amadeus`) |
 | **Agent personas** (11 domain experts) | `.claude/agents/*.md` | `.kiro/agents/*.json` + persona `.md` | `.agents/` TOMLs |
 | **Automation** (audit, state, tracking) | Hooks via `settings.json` | Hooks via `agents/amadeus.json` | Hooks via `.codex/hooks.json` (one adapter) |
-| **Standing rules** (the layer chain) | `aidlc/spaces/<space>/memory/` (via `.claude/rules/amadeus.md` @-import stub) | `aidlc/spaces/<space>/memory/` (via Kiro resources glob) | `aidlc/spaces/<space>/memory/` (via `AIDLC_RULES_DIR`) |
+| **Standing rules** (the layer chain) | `aidlc/spaces/<space>/memory/` (via `.claude/rules/amadeus.md` @-import stub) | `aidlc/spaces/<space>/memory/` (via Kiro resources glob) | `aidlc/spaces/<space>/memory/` (via `AMADEUS_RULES_DIR`) |
 | **Project onboarding doc** | `CLAUDE.md` | `AGENTS.md` | `AGENTS.md` |
 | **Permissions / config** | `.claude/settings.json` | `.kiro/settings/cli.json` + agent config | `.codex/config.toml` (+ Starlark `rules/`) |
 

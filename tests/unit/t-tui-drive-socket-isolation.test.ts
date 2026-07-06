@@ -32,9 +32,9 @@ const DRIVER_SRC = readFileSync(
 describe("tui-drive tmux backend runs on a private socket (developer-session safety)", () => {
   test("a private TMUX_SOCKET is defined with a non-empty default", () => {
     // The socket name must default to a concrete private label, overridable via
-    // AIDLC_TUI_TMUX_SOCKET, so the harness never shares the default server.
+    // AMADEUS_TUI_TMUX_SOCKET, so the harness never shares the default server.
     expect(DRIVER_SRC).toMatch(
-      /const\s+TMUX_SOCKET\s*=\s*process\.env\.AIDLC_TUI_TMUX_SOCKET\s*\|\|\s*"[^"]+"/,
+      /const\s+TMUX_SOCKET\s*=\s*process\.env\.AMADEUS_TUI_TMUX_SOCKET\s*\|\|\s*"[^"]+"/,
     );
   });
 

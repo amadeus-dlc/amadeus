@@ -27,17 +27,17 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { AIDLC_SRC, toPortablePath } from "../harness/fixtures.ts";
+import { AMADEUS_SRC, toPortablePath } from "../harness/fixtures.ts";
 import { loadRules, memoryDirFor } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 
 const BUN = process.execPath;
-const TOOL = join(AIDLC_SRC, "tools", "amadeus-learnings.ts");
+const TOOL = join(AMADEUS_SRC, "tools", "amadeus-learnings.ts");
 
 const tempDirs: string[] = [];
 let savedRulesDir: string | undefined;
 afterEach(() => {
-  if (savedRulesDir === undefined) delete process.env.AIDLC_RULES_DIR;
-  else process.env.AIDLC_RULES_DIR = savedRulesDir;
+  if (savedRulesDir === undefined) delete process.env.AMADEUS_RULES_DIR;
+  else process.env.AMADEUS_RULES_DIR = savedRulesDir;
   while (tempDirs.length > 0) {
     const d = tempDirs.pop();
     if (d) rmSync(d, { recursive: true, force: true });
@@ -129,8 +129,8 @@ function seedProject(root: string): void {
 function runPersist(root: string): { status: number; out: string } {
   const env = { ...process.env };
   delete env.CLAUDE_PROJECT_DIR;
-  delete env.AIDLC_STAGES_DIR;
-  delete env.AIDLC_RULES_DIR;
+  delete env.AMADEUS_STAGES_DIR;
+  delete env.AMADEUS_RULES_DIR;
   const res = spawnSync(
     BUN,
     [
@@ -168,7 +168,7 @@ describe("t158 memory writer/reader round-trip (P6 closed the P5 seam)", () => {
   // root, so the resolver sees it. No `*-learnings.md` file, no old harness
   // rule dir — the practice lands in the method file the resolver reads.
   test("learnings writer lands under the relocated reader root", () => {
-    savedRulesDir = process.env.AIDLC_RULES_DIR;
+    savedRulesDir = process.env.AMADEUS_RULES_DIR;
     const root = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-t158-")));
     tempDirs.push(root);
     seedProject(root);
@@ -192,7 +192,7 @@ describe("t158 memory writer/reader round-trip (P6 closed the P5 seam)", () => {
   // The full round-trip: persist → loadRules (the resolver) reads the practice
   // line back out of the relocated team.md under its heading.
   test("round-trip: persisted learning is visible to the resolver (loadRules)", () => {
-    savedRulesDir = process.env.AIDLC_RULES_DIR;
+    savedRulesDir = process.env.AMADEUS_RULES_DIR;
     const root = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-t158b-")));
     tempDirs.push(root);
     seedProject(root);
@@ -200,7 +200,7 @@ describe("t158 memory writer/reader round-trip (P6 closed the P5 seam)", () => {
     expect(runPersist(root).status).toBe(0);
 
     // Point the resolver at the relocated method dir and read it back.
-    process.env.AIDLC_RULES_DIR = memoryDirFor(root);
+    process.env.AMADEUS_RULES_DIR = memoryDirFor(root);
     const rules = loadRules();
     const team = rules.find((rf) => rf.scope === "team");
     expect(team).toBeDefined();

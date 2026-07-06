@@ -134,8 +134,8 @@ describe("t163 reaper steal-race — exactly one process reclaims a stale lock (
     // generous unstamped grace covers the winner's brief mkdir→stamp gap.
     const env = {
       ...process.env,
-      AIDLC_LOCK_STALE_MS: "600000",
-      AIDLC_LOCK_UNSTAMPED_GRACE_MS: "10000",
+      AMADEUS_LOCK_STALE_MS: "600000",
+      AMADEUS_LOCK_UNSTAMPED_GRACE_MS: "10000",
     };
     for (let g = 0; g < GENERATIONS; g++) {
       seedStaleLock();
@@ -175,7 +175,7 @@ describe("t163 reaper steal-race — exactly one process reclaims a stale lock (
       JSON.stringify({ pid: process.pid, startedAtMs: now }),
       "utf-8",
     );
-    const env = { ...process.env, AIDLC_LOCK_STALE_MS: "600000" }; // 10 min
+    const env = { ...process.env, AMADEUS_LOCK_STALE_MS: "600000" }; // 10 min
     const N = 12;
     const procs = Array.from({ length: N }, () =>
       Bun.spawn({ cmd: [BUN, driver], stdout: "pipe", stderr: "ignore", env }),

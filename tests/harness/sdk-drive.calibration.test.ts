@@ -39,13 +39,13 @@ import {
 
 // ---------------------------------------------------------------------------
 // Timeout budget. A multi-tool /amadeus turn on Opus/Bedrock can take minutes.
-// Honour the suite's AIDLC_TEST_TIMEOUT convention (seconds; see the t2x
+// Honour the suite's AMADEUS_TEST_TIMEOUT convention (seconds; see the t2x
 // integration tests, which set it to 600 for doctor/jump). The bun:test
 // per-test cap is that value; the driver's own abort fires a hair earlier so a
 // stuck canUseTool surfaces as a clear harness failure (no result event) and
 // not as a 0-byte hang.
 // ---------------------------------------------------------------------------
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "600", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "600", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 600) * 1000;
 // Drive aborts ~15s before bun kills the test, so we still capture a partial
 // DriveResult to assert against / diagnose, rather than an opaque test-timeout.
@@ -304,7 +304,7 @@ describe("sdk-drive calibration (known-answer)", () => {
           toolName: "Skill",
           input: {},
           toolUseId: "tu_1",
-          resultText: "Launching skill: aidlc",
+          resultText: "Launching skill: amadeus",
           isError: false,
         } satisfies CapturedToolResult,
       ],

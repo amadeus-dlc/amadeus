@@ -51,7 +51,7 @@ const manifest: HarnessManifest = {
     // method (aidlc/spaces/default/memory/*) into Claude's ambient context by
     // reference (explicit @-imports, no copy). The rules/ dir is no longer a
     // core projection — this stub is the only file in it.
-    { src: "rules-aidlc.md", dst: "rules/amadeus.md" },
+    { src: "rules-amadeus.md", dst: "rules/amadeus.md" },
     { src: "settings.json", dst: "settings.json" },
     { src: "settings.local.json.example", dst: "settings.local.json.example" },
     // Project-root install files (beside .claude/, not inside it). A user copies

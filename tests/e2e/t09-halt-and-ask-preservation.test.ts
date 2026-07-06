@@ -69,7 +69,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupWorktreeFixture,
   seededAuditDir,
   seededStateFile,
@@ -77,8 +77,8 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const WT_TOOL = join(AIDLC_SRC, "tools", "amadeus-worktree.ts");
-const BOLT_TOOL = join(AIDLC_SRC, "tools", "amadeus-bolt.ts");
+const WT_TOOL = join(AMADEUS_SRC, "tools", "amadeus-worktree.ts");
+const BOLT_TOOL = join(AMADEUS_SRC, "tools", "amadeus-bolt.ts");
 
 const fixtures: string[] = [];
 afterAll(() => {

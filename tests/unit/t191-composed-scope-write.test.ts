@@ -91,7 +91,7 @@ function run(
   args: string[],
 ): { status: number; out: string } {
   const childEnv: Record<string, string | undefined> = { ...process.env };
-  delete childEnv.AIDLC_SCOPE_MAPPING;
+  delete childEnv.AMADEUS_SCOPE_MAPPING;
   const res = spawnSync(BUN, [utilityIn(proj), ...args, "--project-dir", proj], {
     encoding: "utf-8",
     env: childEnv as Record<string, string>,
@@ -108,7 +108,7 @@ function inferIn(proj: string, input: string): string {
     ],
     {
       encoding: "utf-8",
-      env: { ...process.env, T191_INPUT: input, AIDLC_SCOPE_MAPPING: undefined } as unknown as Record<string, string>,
+      env: { ...process.env, T191_INPUT: input, AMADEUS_SCOPE_MAPPING: undefined } as unknown as Record<string, string>,
     },
   );
   return (res.stdout ?? "").trim();

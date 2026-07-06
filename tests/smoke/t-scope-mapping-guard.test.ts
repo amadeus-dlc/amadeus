@@ -35,7 +35,7 @@ function legacyScopeRouteRefs(root: string): string[] {
 
 describe("scope route fixture guard", () => {
   test("tests/harness has no retired scope routing JSON references", () => {
-    const harnessDir = process.env.AIDLC_SCOPE_MAPPING_GUARD_DIR ?? DEFAULT_HARNESS_DIR;
+    const harnessDir = process.env.AMADEUS_SCOPE_MAPPING_GUARD_DIR ?? DEFAULT_HARNESS_DIR;
     expect(legacyScopeRouteRefs(harnessDir)).toEqual([]);
   });
 });

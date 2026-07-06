@@ -45,7 +45,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
   DEFAULT_RECORD_DIR,
@@ -58,7 +58,7 @@ import {
 resetAidlcEnv();
 
 const BUN = process.execPath; // the bun running this test
-const ORCH = join(AIDLC_SRC, "tools", "amadeus-orchestrate.ts");
+const ORCH = join(AMADEUS_SRC, "tools", "amadeus-orchestrate.ts");
 
 // The record-relative prefix every resolved per-unit path is rooted at, the
 // active intent's record dir (relativeRecordDir over the seeded default intent).
@@ -215,7 +215,7 @@ function runNext(proj: string): Directive {
     encoding: "utf-8",
     env: (() => {
       const e = { ...process.env };
-      delete e.AWS_AIDLC_DEFAULT_SCOPE;
+      delete e.AWS_AMADEUS_DEFAULT_SCOPE;
       return e;
     })(),
   });
@@ -234,7 +234,7 @@ function runReport(proj: string, args: string[]): Directive {
     encoding: "utf-8",
     env: (() => {
       const e = { ...process.env };
-      delete e.AWS_AIDLC_DEFAULT_SCOPE;
+      delete e.AWS_AMADEUS_DEFAULT_SCOPE;
       return e;
     })(),
   });
@@ -517,7 +517,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     // sees source work and lets the approve through. Orthogonal to the per-unit
     // coverage guard under test; without it the approve is refused for "no source
     // work" before reaching the coverage-guard path. (The suite harness also sets
-    // AIDLC_SKIP_ARTIFACT_GUARD, so this only matters when the file runs bare.)
+    // AMADEUS_SKIP_ARTIFACT_GUARD, so this only matters when the file runs bare.)
     mkdirSync(join(proj, "src", "alpha"), { recursive: true });
     writeFileSync(join(proj, "src", "alpha", "index.ts"), "export const x = 1;\n");
     // next emits the swarm directive for the first batch (proves the swarm path).

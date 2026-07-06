@@ -93,7 +93,7 @@ import { hostname } from "node:os";
 import { join } from "node:path";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
   seededAuditDir,
@@ -102,10 +102,10 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const SETTINGS = join(AIDLC_SRC, "settings.json");
-const SKILL = join(AIDLC_SRC, "skills", "aidlc", "SKILL.md");
-const SRC_TOOLS = join(AIDLC_SRC, "tools");
-const SRC_HOOKS = join(AIDLC_SRC, "hooks");
+const SETTINGS = join(AMADEUS_SRC, "settings.json");
+const SKILL = join(AMADEUS_SRC, "skills", "amadeus", "SKILL.md");
+const SRC_TOOLS = join(AMADEUS_SRC, "tools");
+const SRC_HOOKS = join(AMADEUS_SRC, "hooks");
 
 // P9 per-intent layout: the audit-logger + runtime-compile spine resolves state
 // via stateFilePath() and the audit trail via auditFilePath()/readAllAuditShards()

@@ -123,8 +123,8 @@ interface InitResult {
 /**
  * Spawn `bun amadeus-utility.ts init --scope <scope> --project-dir <p>`.
  * Mirrors the .sh's
- *   AIDLC_WORKFLOW_INTENT="phase sequence test" bun "$UTIL" init --scope ...
- * The .sh exported AIDLC_WORKFLOW_INTENT defensively (the tool does not read
+ *   AMADEUS_WORKFLOW_INTENT="phase sequence test" bun "$UTIL" init --scope ...
+ * The .sh exported AMADEUS_WORKFLOW_INTENT defensively (the tool does not read
  * it — grep-verified — but workshop's flow historically needed an intent), so
  * we carry it through the env for byte-for-byte parity.
  */
@@ -134,7 +134,7 @@ function runInit(scope: string, p: string): InitResult {
     [UTIL, "init", "--scope", scope, "--project-dir", p],
     {
       encoding: "utf-8",
-      env: { ...process.env, AIDLC_WORKFLOW_INTENT: "phase sequence test" },
+      env: { ...process.env, AMADEUS_WORKFLOW_INTENT: "phase sequence test" },
     },
   );
   return { status: res.status ?? -1, out: `${res.stdout ?? ""}${res.stderr ?? ""}` };

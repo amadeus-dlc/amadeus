@@ -25,8 +25,8 @@
 // substring/heading is present in the file), expressed in TS.
 //
 // FIXTURE DISCIPLINE: this test reads the SHIPPED stage files under
-// dist/claude/.claude/skills/amadeus/stages/ (resolved via AIDLC_SRC from
-// tests/harness/fixtures.ts, exactly as the .sh resolved $AIDLC_SRC). It writes
+// dist/claude/.claude/skills/amadeus/stages/ (resolved via AMADEUS_SRC from
+// tests/harness/fixtures.ts, exactly as the .sh resolved $AMADEUS_SRC). It writes
 // nothing, mutates nothing, and spawns nothing. The stage set is discovered the
 // same way the .sh did: iterate every phase dir, then every *.md inside it.
 //
@@ -54,9 +54,9 @@ import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseStageFrontmatter } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 
-const STAGES_DIR = join(AIDLC_SRC, "amadeus-common", "stages");
+const STAGES_DIR = join(AMADEUS_SRC, "amadeus-common", "stages");
 
 // Discover every (phase, stage-file) pair the same way the .sh did:
 //   for phase_dir in "$STAGES_DIR"/*/; do

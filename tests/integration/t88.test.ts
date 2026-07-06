@@ -9,7 +9,7 @@
 // its own (the CLI `compile` handler wraps it; runCompileCheck() likewise
 // just compares its json output to disk). compileStageGraph is exported
 // (amadeus-graph.ts:889) and reads its inputs through the documented env-var
-// seams (AIDLC_RULES_DIR -> rulesDir, AIDLC_STAGE_GRAPH -> bootstrap source),
+// seams (AMADEUS_RULES_DIR -> rulesDir, AMADEUS_STAGE_GRAPH -> bootstrap source),
 // so every behavioural contract migrates to a direct in-process call. This
 // is the .none mechanism: import the pure function, drive it via the env
 // seams the .sh already used, assert on the returned { json, stages } object
@@ -69,8 +69,8 @@
 //
 // FIXTURE DISCIPLINE: the resolution fixtures live on disk at
 // tests/fixtures/v05-mr7a-rule-resolution/<case>/ (the .sh's $FIXTURES) —
-// READ ONLY, never mutated. AIDLC_RULES_DIR is pointed at each in turn.
-// AIDLC_STAGE_GRAPH is pointed at the real shipped stage-graph.json (the
+// READ ONLY, never mutated. AMADEUS_RULES_DIR is pointed at each in turn.
+// AMADEUS_STAGE_GRAPH is pointed at the real shipped stage-graph.json (the
 // bootstrap source the .sh copied byte-for-byte into a tempfile so the
 // number/name harvest succeeds — identical contents, so no copy is needed
 // for a read-only bootstrap). The two cases that need a WRITABLE rules dir
@@ -79,7 +79,7 @@
 // nothing is written under tests/fixtures/**. __resetGraphCache() is called
 // before each compile (the documented test seam, amadeus-graph.ts:179) because
 // loadStageGraph caches per-process; loadRules itself is uncached and re-walks
-// AIDLC_RULES_DIR every call, so the fixture swap is always honoured.
+// AMADEUS_RULES_DIR every call, so the fixture swap is always honoured.
 
 import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
@@ -105,7 +105,7 @@ const FIXTURES = join(
 );
 // The bootstrap source: compileStageGraph harvests {number, name} from the
 // existing stage-graph.json. The .sh copied this byte-for-byte into a per-case
-// tempfile (AIDLC_STAGE_GRAPH); for a read-only bootstrap pointing the seam
+// tempfile (AMADEUS_STAGE_GRAPH); for a read-only bootstrap pointing the seam
 // straight at the shipped file is equivalent (compile never writes to it —
 // the CLI `compile` handler does the writeFileAtomic, not the function).
 const SEED_GRAPH = join(
@@ -130,29 +130,29 @@ afterAll(() => {
   for (const d of tempDirs) rmSync(d, { recursive: true, force: true });
 });
 
-// Restore the env between cases so a leaked AIDLC_RULES_DIR / AIDLC_STAGE_GRAPH
+// Restore the env between cases so a leaked AMADEUS_RULES_DIR / AMADEUS_STAGE_GRAPH
 // from one test can't shadow the next (the .sh got fresh env per `bun`
 // subprocess; in-process we manage it explicitly).
 let savedRulesDir: string | undefined;
 let savedStageGraph: string | undefined;
 
 beforeEach(() => {
-  savedRulesDir = process.env.AIDLC_RULES_DIR;
-  savedStageGraph = process.env.AIDLC_STAGE_GRAPH;
+  savedRulesDir = process.env.AMADEUS_RULES_DIR;
+  savedStageGraph = process.env.AMADEUS_STAGE_GRAPH;
   // Bootstrap source is the same shipped graph for every case.
-  process.env.AIDLC_STAGE_GRAPH = SEED_GRAPH;
+  process.env.AMADEUS_STAGE_GRAPH = SEED_GRAPH;
 });
 
 afterEach(() => {
-  if (savedRulesDir === undefined) delete process.env.AIDLC_RULES_DIR;
-  else process.env.AIDLC_RULES_DIR = savedRulesDir;
-  if (savedStageGraph === undefined) delete process.env.AIDLC_STAGE_GRAPH;
-  else process.env.AIDLC_STAGE_GRAPH = savedStageGraph;
+  if (savedRulesDir === undefined) delete process.env.AMADEUS_RULES_DIR;
+  else process.env.AMADEUS_RULES_DIR = savedRulesDir;
+  if (savedStageGraph === undefined) delete process.env.AMADEUS_STAGE_GRAPH;
+  else process.env.AMADEUS_STAGE_GRAPH = savedStageGraph;
   __resetGraphCache();
 });
 
 /**
- * compile_with_fixture (t88:51-60): point AIDLC_RULES_DIR at a fixture dir,
+ * compile_with_fixture (t88:51-60): point AMADEUS_RULES_DIR at a fixture dir,
  * reset caches, and return the compiled { json, stages }. Mirrors the .sh's
  * `bun amadeus-graph.ts compile` + read-back, but in-process against the real
  * return value.
@@ -161,7 +161,7 @@ function compileWithRulesDir(dir: string): {
   json: string;
   stages: GraphStage[];
 } {
-  process.env.AIDLC_RULES_DIR = dir;
+  process.env.AMADEUS_RULES_DIR = dir;
   __resetGraphCache();
   return compileStageGraph();
 }
@@ -294,7 +294,7 @@ describe("t88 compileStageGraph rules_in_context resolution (migrated from t88-c
       "---\npairing: garbage\n---\n\n# Org rule with invalid pairing\n",
       "utf-8",
     );
-    process.env.AIDLC_RULES_DIR = badRules;
+    process.env.AMADEUS_RULES_DIR = badRules;
     __resetGraphCache();
     expect(() => compileStageGraph()).toThrow(/pairing must be/);
     // STRONGER: the error names the offending file path (compile fails loud).

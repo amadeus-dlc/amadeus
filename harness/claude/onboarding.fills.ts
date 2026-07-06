@@ -12,7 +12,7 @@ const fills: OnboardingFills = {
 <!--
   The @-line above pulls the AIDLC method into Claude's ambient context. It is
   the first hop of a reference chain (NOT a copy): CLAUDE.md → @.claude/rules/
-  aidlc.md → @../../amadeus/spaces/default/memory/*.md. The method is authored ONCE
+  amadeus.md → @../../aidlc/spaces/default/memory/*.md. The method is authored ONCE
   at the workspace root under aidlc/spaces/default/memory/ (org/team/project +
   phases/), so edit it there, never in .claude/rules/amadeus.md. Verified resolving
   (G1 PASS) — see tmp/workspace-vision/at-import-spike/RESULTS.md.

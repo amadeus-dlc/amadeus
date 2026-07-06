@@ -66,16 +66,16 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC } from "../harness/fixtures.ts";
+import { AMADEUS_SRC } from "../harness/fixtures.ts";
 import {
   canonicalScopeTableRegion,
   renderScopeTable,
 } from "../../dist/claude/.claude/tools/amadeus-utility.ts";
 
 // --- Shipped artifacts (the SAME files the orchestrator + tool read) --------
-const SKILL_PATH = join(AIDLC_SRC, "skills", "aidlc", "SKILL.md");
-const SCOPE_GRID_PATH = join(AIDLC_SRC, "tools", "data", "scope-grid.json");
-const STAGE_GRAPH_PATH = join(AIDLC_SRC, "tools", "data", "stage-graph.json");
+const SKILL_PATH = join(AMADEUS_SRC, "skills", "amadeus", "SKILL.md");
+const SCOPE_GRID_PATH = join(AMADEUS_SRC, "tools", "data", "scope-grid.json");
+const STAGE_GRAPH_PATH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 
 const BEGIN = "<!-- BEGIN: compiled scope grid";
 const END = "<!-- END: compiled scope grid -->";

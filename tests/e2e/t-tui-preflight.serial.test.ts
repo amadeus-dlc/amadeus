@@ -61,7 +61,7 @@ const WIN_NODE = IS_WIN ? resolveWinNode() : null;
 // The known-answer target — no claude, no tokens. On POSIX a bash printf that
 // holds the pane open; on Windows cmd.exe echoing the sentinel (the calibration
 // proven in the spike). The driver's `start` runs `<cmd...>` after `--`.
-const SENTINEL = "AIDLC_TUI_PREFLIGHT_OK";
+const SENTINEL = "AMADEUS_TUI_PREFLIGHT_OK";
 const TARGET_CMD: string[] = IS_WIN
   ? ["cmd.exe", "/c", `echo ${SENTINEL} & timeout /t 10`]
   : ["bash", "-c", `printf '${SENTINEL}\\n'; sleep 10`];

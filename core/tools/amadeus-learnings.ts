@@ -84,10 +84,10 @@ function sensorManifestPath(projectDir: string, sensorId: string): string {
 }
 
 // Resolve a stage's authored .md file path from its slug. The frontmatter
-// edit (two-write sensor bind) lands here. AIDLC_STAGES_DIR mirrors the
+// edit (two-write sensor bind) lands here. AMADEUS_STAGES_DIR mirrors the
 // graph resolver's seam so tests can point at a fixture stage tree.
 function stagesDir(projectDir: string): string {
-  return process.env.AIDLC_STAGES_DIR ?? join(projectDir, harnessDir(), "amadeus-common", "stages");
+  return process.env.AMADEUS_STAGES_DIR ?? join(projectDir, harnessDir(), "amadeus-common", "stages");
 }
 
 // --- surface ---

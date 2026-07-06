@@ -5,9 +5,9 @@
 .DESCRIPTION
   This is the MR10 Windows invariance entrypoint. It sets the Windows-specific
   environment the TUI backend requires, then invokes `bun tests/run-tests.ts
-  --all --debug -P <N>`. `AIDLC_NODE_BIN` is mandatory because the Windows TUI
+  --all --debug -P <N>`. `AMADEUS_NODE_BIN` is mandatory because the Windows TUI
   driver runs under node (not bun) for node-pty/ConPTY input, and
-  `AIDLC_TUI_LIVE=1` is mandatory so the full run cannot pass by silently
+  `AMADEUS_TUI_LIVE=1` is mandatory so the full run cannot pass by silently
   skipping the token-spending TUI journeys.
 
 .PARAMETER ProjectDir
@@ -50,8 +50,8 @@ Require-Path $BunExe "bun"
 if (-not $ClaudeDir) { throw "MISSING PREREQUISITE: claude CLI not found in any of: $($ClaudeDirCandidates -join '; ')" }
 
 $env:Path = "$ClaudeDir;C:\bun\bin;C:\Program Files\nodejs;C:\Program Files\Git\bin;C:\Program Files\Git\usr\bin;" + $env:Path
-$env:AIDLC_NODE_BIN = $NodeExe
-$env:AIDLC_TUI_LIVE = "1"
+$env:AMADEUS_NODE_BIN = $NodeExe
+$env:AMADEUS_TUI_LIVE = "1"
 $env:CLAUDE_CODE_USE_BEDROCK = "1"
 if (-not $env:AWS_REGION) { $env:AWS_REGION = "us-east-1" }
 Remove-Item Env:\NODE_PATH -ErrorAction SilentlyContinue
@@ -59,8 +59,8 @@ Remove-Item Env:\NODE_PATH -ErrorAction SilentlyContinue
 Set-Location $ProjectDir
 Write-Output "=== AI-DLC Windows --all ==="
 Write-Output "ProjectDir: $ProjectDir"
-Write-Output "AIDLC_NODE_BIN: $env:AIDLC_NODE_BIN"
-Write-Output "AIDLC_TUI_LIVE: $env:AIDLC_TUI_LIVE"
+Write-Output "AMADEUS_NODE_BIN: $env:AMADEUS_NODE_BIN"
+Write-Output "AMADEUS_TUI_LIVE: $env:AMADEUS_TUI_LIVE"
 Write-Output "Parallel: $Parallel"
 Write-Output "=== preflight ==="
 & $BunExe --version

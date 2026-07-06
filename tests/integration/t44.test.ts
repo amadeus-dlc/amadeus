@@ -66,7 +66,7 @@
 // 41 .sh asserts -> 41 expect()-bearing test() cases (10+7+6+7+4+3+1+1+1+1).
 //
 // FIXTURE DISCIPLINE: the .sh read the SHIPPED stage files in place (no temp
-// project, no create_test_project) — STAGES_DIR = $AIDLC_SRC/skills/amadeus/stages.
+// project, no create_test_project) — STAGES_DIR = $AMADEUS_SRC/skills/amadeus/stages.
 // We read the same shipped files under dist/claude/.claude/skills/amadeus/stages.
 // Nothing is written; no temp dirs; no fixtures touched.
 

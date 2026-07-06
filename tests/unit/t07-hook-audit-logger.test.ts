@@ -71,7 +71,7 @@ import { hostname } from "node:os";
 import { join } from "node:path";
 import { docsRoot } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
   FIXTURES_DIR,
@@ -81,7 +81,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const HOOK = join(AIDLC_SRC, "hooks", "amadeus-audit-logger.ts");
+const HOOK = join(AMADEUS_SRC, "hooks", "amadeus-audit-logger.ts");
 
 let proj: string;
 
@@ -257,11 +257,11 @@ describe("t07 audit-logger PostToolUse hook (mechanism cli — spawned hook + st
     const localHook = join(proj, ".claude", "hooks", "amadeus-audit-logger.ts");
     copyFileSync(HOOK, localHook);
     copyFileSync(
-      join(AIDLC_SRC, "tools", "amadeus-lib.ts"),
+      join(AMADEUS_SRC, "tools", "amadeus-lib.ts"),
       join(proj, ".claude", "tools", "amadeus-lib.ts"),
     );
     copyFileSync(
-      join(AIDLC_SRC, "tools", "amadeus-audit.ts"),
+      join(AMADEUS_SRC, "tools", "amadeus-audit.ts"),
       join(proj, ".claude", "tools", "amadeus-audit.ts"),
     );
     fire(writeJson(join(recordRoot, "test.md")), proj, localHook, /* setEnv */ false);

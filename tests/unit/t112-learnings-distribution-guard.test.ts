@@ -58,10 +58,10 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { AIDLC_SRC, toPortablePath } from "../harness/fixtures.ts";
+import { AMADEUS_SRC, toPortablePath } from "../harness/fixtures.ts";
 
 const BUN = process.execPath; // the bun running this test
-const TOOL = join(AIDLC_SRC, "tools", "amadeus-learnings.ts");
+const TOOL = join(AMADEUS_SRC, "tools", "amadeus-learnings.ts");
 
 const tempDirs: string[] = [];
 
@@ -164,14 +164,14 @@ interface PersistResult {
  * Run `bun amadeus-learnings.ts persist --slug user-stories --selections-json
  * <root>/sel.json --project-dir <root>` and capture the exit code + combined
  * output. The .sh ran with `set +e` and read `$?` (it swallows the exit code
- * for the assertion). AIDLC_STAGES_DIR is explicitly removed so the tool's
+ * for the assertion). AMADEUS_STAGES_DIR is explicitly removed so the tool's
  * stagesDir() falls back to <projectDir>/.claude/amadeus-common/stages — the
  * seeded tree — matching the .sh's clean-shell environment (the .sh never
  * exports it).
  */
 function runPersist(root: string): PersistResult {
   const env = { ...process.env };
-  delete env.AIDLC_STAGES_DIR;
+  delete env.AMADEUS_STAGES_DIR;
   delete env.CLAUDE_PROJECT_DIR;
   const res = spawnSync(
     BUN,

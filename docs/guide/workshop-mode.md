@@ -52,7 +52,7 @@ Launch Claude Code in the project (`cd workshop-project && claude`), then birth 
 
 Naming the scope on a fresh workspace births the first intent and stamps `Scope: workshop` and `Default Test Strategy: Minimal` into that intent's `amadeus-state.md`. Push the born intent's state to the shared remote so participants clone a project that already knows it's a workshop.
 
-Per-project default scopes can be set via `AWS_AIDLC_DEFAULT_SCOPE=workshop` in `.claude/settings.json`. With this set, every participant who runs `/amadeus` in a clone gets the workshop routing automatically without remembering the flag — see [Customization § Per-Project Default Scope](13-customization.md#per-project-default-scope).
+Per-project default scopes can be set via `AWS_AMADEUS_DEFAULT_SCOPE=workshop` in `.claude/settings.json`. With this set, every participant who runs `/amadeus` in a clone gets the workshop routing automatically without remembering the flag — see [Customization § Per-Project Default Scope](13-customization.md#per-project-default-scope).
 
 ### Run Inception solo
 

@@ -10,7 +10,7 @@
 //
 // Mirrors the skip-clean conventions of t-tui-kiro-status.serial.test.ts (the
 // closest sibling: live Kiro, opt-in env gate, skipReason() chain, reason in the
-// test title, AIDLC_TEST_TIMEOUT 3rd arg, setupTuiProject + cleanupTuiProject in
+// test title, AMADEUS_TEST_TIMEOUT 3rd arg, setupTuiProject + cleanupTuiProject in
 // finally, disk-only assertions). The ONE structural departure: it drives the
 // Electron app via a bun-native raw-CDP helper (kiro-ide-driver.ts), NOT the tmux
 // tui-drive.ts - Playwright was rejected (see kiro-ide-driver.ts header).
@@ -22,8 +22,8 @@
 // `t-exec-codex-*` and `t-acp-kiro-*` dodge the gate. `.serial.` pins it serial
 // (run-tests.ts:596) so one Kiro.app + one debug port run alone.
 //
-// LIVE: uses real Kiro IDE (Bedrock credits). Gated behind AIDLC_KIRO_IDE_LIVE=1,
-// which does NOT auto-default (only AIDLC_TUI_LIVE self-defaults, run-tests.ts:
+// LIVE: uses real Kiro IDE (Bedrock credits). Gated behind AMADEUS_KIRO_IDE_LIVE=1,
+// which does NOT auto-default (only AMADEUS_TUI_LIVE self-defaults, run-tests.ts:
 // 261-262) - an unset var SKIPS, it never silent-greens. This adds a SIXTH live
 // gate var; per CLAUDE.local.md it must be set EXPLICITLY in any slice command or
 // the test skips green (a false green - it exercises nothing).
@@ -33,9 +33,9 @@
 // chat. The skip is ONE global-state flag (kiroAgent.onboarding.onboardingCompleted);
 // auth is machine-level (NOT in the profile), so a usable seed needs ZERO credentials.
 // We therefore GENERATE a minimal seed from constants at setup (generateKiroIdeSeed) -
-// nothing sensitive is copied or committed. AIDLC_KIRO_IDE_SEED may still point at a
+// nothing sensitive is copied or committed. AMADEUS_KIRO_IDE_SEED may still point at a
 // developer-supplied user-data-dir to override; absent, the generated seed is used. The
-// only remaining gate is a signed-in Kiro.app on a macOS box (the AIDLC_KIRO_IDE_LIVE
+// only remaining gate is a signed-in Kiro.app on a macOS box (the AMADEUS_KIRO_IDE_LIVE
 // gate already implies that), so this no longer needs a hand-built profile.
 //
 // SHAPE OF THE REPRO (constructed, not organic): the fault is intermittent and
@@ -68,7 +68,7 @@ import {
   watchMarkers,
 } from "../harness/kiro-ide-driver.ts";
 
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "2400", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "2400", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
 
 // TEST-GRADE: a per-process port so back-to-back runs never collide on a fixed
@@ -76,10 +76,10 @@ const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
 // via the `.serial.` token, so one process => one port band is enough.
 const PORT = 9400 + (process.pid % 500);
 
-// Optional override: point AIDLC_KIRO_IDE_SEED at a developer-supplied user-data-dir.
+// Optional override: point AMADEUS_KIRO_IDE_SEED at a developer-supplied user-data-dir.
 // Absent (the normal case), the test GENERATES a minimal onboarding-skip seed from
 // constants (no credentials, nothing committed - see header + generateKiroIdeSeed).
-const SEED_OVERRIDE = process.env.AIDLC_KIRO_IDE_SEED ?? "";
+const SEED_OVERRIDE = process.env.AMADEUS_KIRO_IDE_SEED ?? "";
 
 // Build a fresh per-test seed user-data-dir in a temp dir. Kiro mutates the profile
 // in place, so each launch needs its own copy: if an override is supplied we COPY it
@@ -106,18 +106,18 @@ const BLOCKED_SLUG = "code-generation";
 function skipReason(): string | null {
   // Order mirrors t-tui-kiro-status:56-68 - env gate (token/credit guard) first,
   // then platform, then binary, then the shipped distributable. The seed is no longer
-  // a gate: it is generated from constants when AIDLC_KIRO_IDE_SEED is unset.
-  if (process.env.AIDLC_KIRO_IDE_LIVE !== "1") {
-    return "set AIDLC_KIRO_IDE_LIVE=1 to run the live Kiro IDE journey (uses Kiro credits)";
+  // a gate: it is generated from constants when AMADEUS_KIRO_IDE_SEED is unset.
+  if (process.env.AMADEUS_KIRO_IDE_LIVE !== "1") {
+    return "set AMADEUS_KIRO_IDE_LIVE=1 to run the live Kiro IDE journey (uses Kiro credits)";
   }
   if (platform() !== "darwin") {
     return "Kiro IDE driving is macOS-only (launches /Applications/Kiro.app)";
   }
   if (!existsSync(KIRO_IDE_BIN)) {
-    return `Kiro.app not found at ${KIRO_IDE_BIN} (override with AIDLC_KIRO_IDE_BIN)`;
+    return `Kiro.app not found at ${KIRO_IDE_BIN} (override with AMADEUS_KIRO_IDE_BIN)`;
   }
   if (SEED_OVERRIDE && !existsSync(SEED_OVERRIDE)) {
-    return `AIDLC_KIRO_IDE_SEED set but path does not exist: ${SEED_OVERRIDE}`;
+    return `AMADEUS_KIRO_IDE_SEED set but path does not exist: ${SEED_OVERRIDE}`;
   }
   if (!existsSync(KIRO_IDE_SRC)) return `distributable missing: ${KIRO_IDE_SRC}`;
   return null;

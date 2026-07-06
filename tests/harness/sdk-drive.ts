@@ -377,9 +377,9 @@ export function resolveDriveSdkSettings(
 }
 
 function sdkTracePath(): string | undefined {
-  if (process.env.AIDLC_SDK_TRACE_FILE) return process.env.AIDLC_SDK_TRACE_FILE;
-  if (process.env.AIDLC_TEST_DEBUG === "true" && process.env.AIDLC_TEST_LOG_DIR) {
-    return join(process.env.AIDLC_TEST_LOG_DIR, `sdk-drive-${process.pid}.ndjson`);
+  if (process.env.AMADEUS_SDK_TRACE_FILE) return process.env.AMADEUS_SDK_TRACE_FILE;
+  if (process.env.AMADEUS_TEST_DEBUG === "true" && process.env.AMADEUS_TEST_LOG_DIR) {
+    return join(process.env.AMADEUS_TEST_LOG_DIR, `sdk-drive-${process.pid}.ndjson`);
   }
   return undefined;
 }

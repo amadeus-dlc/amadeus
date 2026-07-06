@@ -28,13 +28,13 @@ import {
   docsRoot,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const HOOK = join(AIDLC_SRC, "hooks", "amadeus-audit-logger.ts");
+const HOOK = join(AMADEUS_SRC, "hooks", "amadeus-audit-logger.ts");
 
 let proj: string;
 beforeEach(() => {

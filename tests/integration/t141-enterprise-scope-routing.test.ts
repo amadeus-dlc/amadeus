@@ -27,13 +27,13 @@ import {
 import { driveAidlc, readStateField } from "../harness/sdk-drive.ts";
 
 const SCOPE = "enterprise";
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "900", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "900", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 900) * 1000;
 const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
 
-const AIDLC_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
-const SCOPE_GRID = join(AIDLC_SRC, "tools", "data", "scope-grid.json");
-const STAGE_GRAPH = join(AIDLC_SRC, "tools", "data", "stage-graph.json");
+const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
+const SCOPE_GRID = join(AMADEUS_SRC, "tools", "data", "scope-grid.json");
+const STAGE_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 
 interface StageRow {
   slug: string;

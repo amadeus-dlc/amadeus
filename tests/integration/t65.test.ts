@@ -66,9 +66,9 @@ import {
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { validateStageFrontmatter } from "../../dist/claude/.claude/tools/amadeus-stage-schema.ts";
 
-const AIDLC_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
-const STAGES_DIR = join(AIDLC_SRC, "amadeus-common", "stages");
-const GRAPH_JSON = join(AIDLC_SRC, "tools", "data", "stage-graph.json");
+const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
+const STAGES_DIR = join(AMADEUS_SRC, "amadeus-common", "stages");
+const GRAPH_JSON = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 
 // Mirror the .sh's ARTIFACT_RE for the produces[]-slug-shape check.
 const ARTIFACT_RE = /^[a-z][a-z0-9-]*$/;

@@ -33,7 +33,7 @@ worth holding the whole picture before you touch any one knob.
 | What Units **can** parallelise | you, the harness engineer | the `units-generation` stage and its dependency DAG (data) |
 | The **convergence check** the swarm trusts | you, the harness engineer | your project's own build/test command + a protected spec (data + project config) |
 | The actual autonomy **grant** for this project | the human | the ladder prompt at runtime |
-| The swarm **driver** selection | the operator | the `AIDLC_USE_SWARM` environment variable |
+| The swarm **driver** selection | the operator | the `AMADEUS_USE_SWARM` environment variable |
 | The convergence **verdict**, merge-back, and audit | a tool | `amadeus-swarm.ts` (code → Developer Reference) |
 
 The three rows marked "you" are the body of this chapter. The other three are
@@ -196,7 +196,7 @@ the Unit may merge.
 
 ---
 
-## The driver seam - `AIDLC_USE_SWARM`
+## The driver seam - `AMADEUS_USE_SWARM`
 
 How the swarm physically fans out is selected by an environment variable, and it
 is worth being plain that this is an **operator knob**. It is not a `.claude/`
@@ -204,7 +204,7 @@ data file, and it is not in `settings.json` (it is read conductor-side at fan-ou
 time). You do not author it; you understand it so you know the runtime your data
 shapes.
 
-| `AIDLC_USE_SWARM` | Driver | Behaviour |
+| `AMADEUS_USE_SWARM` | Driver | Behaviour |
 |---|---|---|
 | unset or not `"1"` | subagent floor | The conductor issues N parallel `Task` calls in one message, one per Unit. |
 | `"1"` | inline Dynamic Workflow | The conductor authors a `Workflow` whose JS owns the per-Unit pipeline and the iteration cap. |

@@ -66,7 +66,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   resetAidlcEnv,
   setupIntegrationProject,
@@ -79,9 +79,9 @@ import {
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath; // the bun running this test
-const UTIL = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
-const BOLT = join(AIDLC_SRC, "tools", "amadeus-bolt.ts");
-const SCOPE_GRID = join(AIDLC_SRC, "tools", "data", "scope-grid.json");
+const UTIL = join(AMADEUS_SRC, "tools", "amadeus-utility.ts");
+const BOLT = join(AMADEUS_SRC, "tools", "amadeus-bolt.ts");
+const SCOPE_GRID = join(AMADEUS_SRC, "tools", "data", "scope-grid.json");
 
 // The compiled scope grid is the runtime source of truth for per-scope stage
 // mode (the transpose of every stage's `scopes:` frontmatter). Read once.

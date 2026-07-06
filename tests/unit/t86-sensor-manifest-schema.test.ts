@@ -67,15 +67,15 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { AIDLC_SRC, FIXTURES_DIR } from "../harness/fixtures.ts";
+import { AMADEUS_SRC, FIXTURES_DIR } from "../harness/fixtures.ts";
 import {
   parseSensorManifest,
   validateSensorManifest,
 } from "../../dist/claude/.claude/tools/amadeus-sensor-schema.ts";
 
-// AIDLC_SRC === <repo>/dist/claude/.claude — the same root the .sh resolved
-// SENSORS_DIR under ($AIDLC_SRC/sensors).
-const SENSORS_DIR = join(AIDLC_SRC, "sensors");
+// AMADEUS_SRC === <repo>/dist/claude/.claude — the same root the .sh resolved
+// SENSORS_DIR under ($AMADEUS_SRC/sensors).
+const SENSORS_DIR = join(AMADEUS_SRC, "sensors");
 const NEG_DIR = join(FIXTURES_DIR, "v05-mr3-sensors-dir");
 
 // The 4 framework manifests, keyed by their expected frontmatter id. id MUST

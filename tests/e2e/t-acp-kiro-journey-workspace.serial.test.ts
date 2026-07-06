@@ -53,7 +53,7 @@
 // render-half matrix is Claude only for the statusline surface; the
 // multi-repo/intent/space composition is a logic-half concern proven here.)
 //
-// SPENDS Kiro credits — gated AIDLC_KIRO_ACP_LIVE=1; skip-with-reason when unset
+// SPENDS Kiro credits — gated AMADEUS_KIRO_ACP_LIVE=1; skip-with-reason when unset
 // OR kiro-cli is absent/unauthenticated. Serial: one live ACP session at a time.
 
 import { describe, expect, test } from "bun:test";
@@ -78,7 +78,7 @@ import { KIRO_SRC } from "../harness/tui-fixtures.ts";
 // one turn for many minutes — the longest single turn in the suite. Budget the
 // whole journey at 3600s, give the cheap verb turns a modest cap, and the codekb
 // turn the lion's share.
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "3600", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "3600", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 3600) * 1000;
 const VERB_DRIVE_MS = 300_000;
 const CODEKB_DRIVE_MS = Math.max(1_200_000, TEST_TIMEOUT_MS - 7 * VERB_DRIVE_MS);
@@ -91,8 +91,8 @@ const UUIDV7_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function skipReason(): string | null {
-  if (process.env.AIDLC_KIRO_ACP_LIVE !== "1") {
-    return "set AIDLC_KIRO_ACP_LIVE=1 to run the live Kiro ACP workspace journey (uses Kiro credits)";
+  if (process.env.AMADEUS_KIRO_ACP_LIVE !== "1") {
+    return "set AMADEUS_KIRO_ACP_LIVE=1 to run the live Kiro ACP workspace journey (uses Kiro credits)";
   }
   if (spawnSync("kiro-cli", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "kiro-cli not found";
@@ -217,9 +217,9 @@ describe("t-acp-kiro-journey-workspace (live ACP multi-repo·intent·space journ
       // `/amadeus space-create` prompt. Each space verb is a terminal print directive
       // ("…then stop"), so all of beats 4-5 reuse this ONE keepAlive `space` session
       // (spike-verified: three sequential space verbs run clean on one session).
-      const conductor = new AcpSession(root, "aidlc", true);
-      const offer = new AcpSession(root, "aidlc", true);
-      const space = new AcpSession(root, "aidlc", true);
+      const conductor = new AcpSession(root, "amadeus", true);
+      const offer = new AcpSession(root, "amadeus", true);
+      const space = new AcpSession(root, "amadeus", true);
       try {
         // --- Beat 1: auto-birth A spanning both siblings ---------------------
         // Name the scope explicitly: a bare prose `/amadeus "<desc>"` emits an `ask`

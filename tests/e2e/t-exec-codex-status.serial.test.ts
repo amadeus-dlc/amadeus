@@ -25,9 +25,9 @@
 //   - the engine's print-directive terminal arm (status names no workflow);
 //   - nothing is scaffolded by a read-only utility (no amadeus-docs creature).
 //
-// LIVE GATE: requires AIDLC_CODEX_EXEC_LIVE=1 + a codex >= 0.139.0 binary
-// (AIDLC_CODEX_BIN or PATH) + AWS creds for the Bedrock profile in
-// AIDLC_CODEX_AWS_PROFILE (default "codex"). Skips cleanly otherwise.
+// LIVE GATE: requires AMADEUS_CODEX_EXEC_LIVE=1 + a codex >= 0.139.0 binary
+// (AMADEUS_CODEX_BIN or PATH) + AWS creds for the Bedrock profile in
+// AMADEUS_CODEX_AWS_PROFILE (default "codex"). Skips cleanly otherwise.
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -45,11 +45,11 @@ import { join } from "node:path";
 import { REPO_ROOT } from "../harness/fixtures.ts";
 
 const CODEX_DIST = join(REPO_ROOT, "dist", "codex");
-const CODEX_BIN = process.env.AIDLC_CODEX_BIN ?? "codex";
-const AWS_PROFILE = process.env.AIDLC_CODEX_AWS_PROFILE ?? "codex";
-const AWS_REGION = process.env.AIDLC_CODEX_AWS_REGION ?? "us-east-2";
+const CODEX_BIN = process.env.AMADEUS_CODEX_BIN ?? "codex";
+const AWS_PROFILE = process.env.AMADEUS_CODEX_AWS_PROFILE ?? "codex";
+const AWS_REGION = process.env.AMADEUS_CODEX_AWS_REGION ?? "us-east-2";
 
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "600", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "600", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 600) * 1000;
 
 function codexVersionOk(): boolean {
@@ -61,10 +61,10 @@ function codexVersionOk(): boolean {
 }
 
 function skipReason(): string | null {
-  if (process.env.AIDLC_CODEX_EXEC_LIVE !== "1") {
-    return "set AIDLC_CODEX_EXEC_LIVE=1 to run the live codex-exec journey (uses Bedrock)";
+  if (process.env.AMADEUS_CODEX_EXEC_LIVE !== "1") {
+    return "set AMADEUS_CODEX_EXEC_LIVE=1 to run the live codex-exec journey (uses Bedrock)";
   }
-  if (!codexVersionOk()) return `codex >= 0.139.0 not found (AIDLC_CODEX_BIN=${CODEX_BIN})`;
+  if (!codexVersionOk()) return `codex >= 0.139.0 not found (AMADEUS_CODEX_BIN=${CODEX_BIN})`;
   if (!existsSync(CODEX_DIST)) return `distributable missing: ${CODEX_DIST}`;
   return null;
 }
@@ -109,7 +109,7 @@ function setupCodexProject(): { proj: string; home: string; root: string } {
       `region = "${AWS_REGION}"`,
       ``,
       `[shell_environment_policy]`,
-      `set = { AIDLC_RULES_DIR = ".codex/amadeus-rules" }`,
+      `set = { AMADEUS_RULES_DIR = ".codex/amadeus-rules" }`,
       ``,
       `[projects."${proj}"]`,
       `trust_level = "trusted"`,

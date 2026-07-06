@@ -40,14 +40,14 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupWorktreeFixture,
   seededAuditDir,
   setupWorktreeFixture,
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const TOOL = join(AIDLC_SRC, "tools", "amadeus-worktree.ts");
+const TOOL = join(AMADEUS_SRC, "tools", "amadeus-worktree.ts");
 
 const fixtures: string[] = [];
 afterAll(() => {

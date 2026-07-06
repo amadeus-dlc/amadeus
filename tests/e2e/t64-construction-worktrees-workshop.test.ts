@@ -60,7 +60,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupTestProject,
   setupIntegrationProject,
 } from "../harness/fixtures.ts";
@@ -72,9 +72,9 @@ import {
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath; // the bun running this test
-const BOLT = join(AIDLC_SRC, "tools", "amadeus-bolt.ts");
-const UTILITY = join(AIDLC_SRC, "tools", "amadeus-utility.ts");
-const SCOPE_GRID = join(AIDLC_SRC, "tools", "data", "scope-grid.json");
+const BOLT = join(AMADEUS_SRC, "tools", "amadeus-bolt.ts");
+const UTILITY = join(AMADEUS_SRC, "tools", "amadeus-utility.ts");
+const SCOPE_GRID = join(AMADEUS_SRC, "tools", "data", "scope-grid.json");
 
 const SCOPE = "workshop";
 

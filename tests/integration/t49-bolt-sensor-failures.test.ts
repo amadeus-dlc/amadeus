@@ -14,7 +14,7 @@
 // envelopes). An in-process twin would lose the spawn chain
 // handleComplete -> spawnSibling(state-merge) -> spawnSibling(audit-merge) ->
 // spawnSibling(fragment-merge) that every failure-ordering assertion depends
-// on, and the AIDLC_AUDIT_LOCK_RETRIES env-seam (case 6). So everything stays
+// on, and the AMADEUS_AUDIT_LOCK_RETRIES env-seam (case 6). So everything stays
 // spawned, exactly as the .sh ran it. spawnCount = all.
 //
 // IMPORTANT cwd contract (same as the .sh, t49:99-126): amadeus-worktree.ts's
@@ -67,7 +67,7 @@ import { readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   DEFAULT_RECORD_DIR,
   DEFAULT_SPACE,
   FIXTURES_DIR,
@@ -91,10 +91,10 @@ function readMainAudit(proj: string): string {
 }
 
 const BUN = process.execPath; // the bun running this test
-const WORKTREE_TOOL = join(AIDLC_SRC, "tools", "amadeus-worktree.ts");
-const BOLT_TOOL = join(AIDLC_SRC, "tools", "amadeus-bolt.ts");
-const RUNTIME_TOOL = join(AIDLC_SRC, "tools", "amadeus-runtime.ts");
-const AUDIT_TOOL = join(AIDLC_SRC, "tools", "amadeus-audit.ts");
+const WORKTREE_TOOL = join(AMADEUS_SRC, "tools", "amadeus-worktree.ts");
+const BOLT_TOOL = join(AMADEUS_SRC, "tools", "amadeus-bolt.ts");
+const RUNTIME_TOOL = join(AMADEUS_SRC, "tools", "amadeus-runtime.ts");
+const AUDIT_TOOL = join(AMADEUS_SRC, "tools", "amadeus-audit.ts");
 
 const tempProjects: string[] = [];
 
@@ -456,7 +456,7 @@ describe("t49 Bolt fork/merge runtime-graph + failure modes (migrated from t49-b
 
     let comp: Run;
     try {
-      comp = boltComplete(proj, "solo", { AIDLC_AUDIT_LOCK_RETRIES: "1" });
+      comp = boltComplete(proj, "solo", { AMADEUS_AUDIT_LOCK_RETRIES: "1" });
     } finally {
       rmSync(lockDir, { recursive: true, force: true });
     }

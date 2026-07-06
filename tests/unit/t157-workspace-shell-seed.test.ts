@@ -18,7 +18,7 @@
 //       (§5.1), yet SHIPPED as part of the shell (the dist .gitignore ignores
 //       it for the END USER; our repo commits it once via git add -f).
 //   (4) the per-harness NATIVE INCLUDE that points the CLI at the method tree
-//       (Claude @-stub, Kiro resources glob, Codex AGENTS.md/AIDLC_RULES_DIR) —
+//       (Claude @-stub, Kiro resources glob, Codex AGENTS.md/AMADEUS_RULES_DIR) —
 //       P5 authored these; SEED proves a FRESH COPY resolves through them.
 //
 // Plus the re-rooted .gitignore — now a PER-HARNESS artifact (net-new for
@@ -40,7 +40,7 @@
 //
 // Mechanism: file-inspection over the committed dist trees (zero tokens) +
 // in-process loadRules() against a freshly-copied shell via the documented
-// AIDLC_RULES_DIR seam (no LLM, no subprocess).
+// AMADEUS_RULES_DIR seam (no LLM, no subprocess).
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
@@ -70,11 +70,11 @@ const gitignore = (h: string): string => join(REPO_ROOT, "dist", h, ".gitignore"
 const tempDirs: string[] = [];
 let savedRulesDir: string | undefined;
 beforeEach(() => {
-  savedRulesDir = process.env.AIDLC_RULES_DIR;
+  savedRulesDir = process.env.AMADEUS_RULES_DIR;
 });
 afterEach(() => {
-  if (savedRulesDir === undefined) delete process.env.AIDLC_RULES_DIR;
-  else process.env.AIDLC_RULES_DIR = savedRulesDir;
+  if (savedRulesDir === undefined) delete process.env.AMADEUS_RULES_DIR;
+  else process.env.AMADEUS_RULES_DIR = savedRulesDir;
   __resetGraphCache();
   for (const d of tempDirs.splice(0)) rmSync(d, { recursive: true, force: true });
 });
@@ -122,21 +122,21 @@ describe("t157 seeded workspace shell + re-rooted .gitignore (SEED)", () => {
   test("4: every harness ships its native include pointing at the method tree", () => {
     // Claude: the @-stub at .claude/rules/amadeus.md with explicit @-lines.
     const stub = readFileSync(
-      join(REPO_ROOT, "dist", "claude", ".claude", "rules", "aidlc.md"),
+      join(REPO_ROOT, "dist", "claude", ".claude", "rules", "amadeus.md"),
       "utf-8",
     );
-    expect(stub).toContain("@../../amadeus/spaces/default/memory/org.md");
+    expect(stub).toContain("@../../aidlc/spaces/default/memory/org.md");
     // Kiro: the agent JSON resources glob.
     const kiroAgent = JSON.parse(
-      readFileSync(join(REPO_ROOT, "dist", "kiro", ".kiro", "agents", "aidlc.json"), "utf-8"),
+      readFileSync(join(REPO_ROOT, "dist", "kiro", ".kiro", "agents", "amadeus.json"), "utf-8"),
     ) as { resources: string[] };
-    expect(kiroAgent.resources).toContain("file://amadeus/spaces/default/memory/**/*.md");
-    // Codex: the AIDLC_RULES_DIR seam in the shipped config.toml + root AGENTS.md.
+    expect(kiroAgent.resources).toContain("file://aidlc/spaces/default/memory/**/*.md");
+    // Codex: the AMADEUS_RULES_DIR seam in the shipped config.toml + root AGENTS.md.
     const codexConfig = readFileSync(
       join(REPO_ROOT, "dist", "codex", ".codex", "config.toml"),
       "utf-8",
     );
-    expect(codexConfig).toContain('AIDLC_RULES_DIR = "aidlc/spaces/default/memory"');
+    expect(codexConfig).toContain('AMADEUS_RULES_DIR = "aidlc/spaces/default/memory"');
     expect(existsSync(join(REPO_ROOT, "dist", "codex", "AGENTS.md"))).toBe(true);
   });
 
@@ -167,7 +167,7 @@ describe("t157 seeded workspace shell + re-rooted .gitignore (SEED)", () => {
   test("6: a FRESH COPY of dist/<h>/ resolves the method through the shipped shell", () => {
     // Simulate the install moment: copy the whole dist tree into an empty
     // workspace, then resolve the method the way AIDLC's own resolver does —
-    // point loadRules at the copied shell's memory tree (the AIDLC_RULES_DIR
+    // point loadRules at the copied shell's memory tree (the AMADEUS_RULES_DIR
     // seam is exactly what the packager / a real install set). A ready shell
     // resolves the four-layer chain (org→team→project→phase) with no --init.
     for (const h of HARNESSES) {
@@ -176,7 +176,7 @@ describe("t157 seeded workspace shell + re-rooted .gitignore (SEED)", () => {
       cpSync(join(REPO_ROOT, "dist", h), ws, { recursive: true });
       const copiedMemory = join(ws, "aidlc", "spaces", "default", "memory");
       expect(existsSync(copiedMemory), `${h}: copied shell has the method tree`).toBe(true);
-      process.env.AIDLC_RULES_DIR = copiedMemory;
+      process.env.AMADEUS_RULES_DIR = copiedMemory;
       __resetGraphCache();
       const scopes = loadRules()
         .map((r) => r.scope)

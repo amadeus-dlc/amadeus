@@ -56,7 +56,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  AIDLC_SRC,
+  AMADEUS_SRC,
   cleanupWorktreeFixture,
   seededAuditDir,
   seededStateFile,
@@ -64,7 +64,7 @@ import {
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
-const TOOL = join(AIDLC_SRC, "tools", "amadeus-worktree.ts");
+const TOOL = join(AMADEUS_SRC, "tools", "amadeus-worktree.ts");
 
 // Force a non-interactive editor so any unexpected `git commit` without
 // `--no-edit` fails loudly instead of hanging (mirrors the .sh's EDITOR=false).

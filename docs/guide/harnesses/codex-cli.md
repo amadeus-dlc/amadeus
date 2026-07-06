@@ -67,7 +67,7 @@ never hand-edit it (the drift guard fails CI).
 
 ## Use
 
-Invoke the orchestrator with `$amadeus` (or `/skills` → aidlc) followed by a
+Invoke the orchestrator with `$amadeus` (or `/skills` → amadeus) followed by a
 scope or description — same commands as the Claude harness (`$amadeus --status`,
 `$amadeus --help`, …). Stage runners are explicit-only:
 `$amadeus-application-design`, `$amadeus-bugfix`, etc. (they are excluded from
@@ -89,7 +89,7 @@ implicit skill matching so 37 runner descriptions don't pollute the index).
   so it must be the main repo's `.git`).
 - **Swarm floor = `codex exec` workers** — one headless worker per
   Construction unit in its Bolt worktree (always `< /dev/null`), with the
-  same deterministic referee. `AIDLC_USE_SWARM=1` has no Workflow tool here
+  same deterministic referee. `AMADEUS_USE_SWARM=1` has no Workflow tool here
   and loud-degrades (`SWARM_DEGRADED` is audited).
 - **Session lifecycle**: Codex has no SessionEnd event; an unclosed session
   is reconciled as an inferred `SESSION_ENDED` audit row at the next session
@@ -99,7 +99,7 @@ implicit skill matching so 37 runner descriptions don't pollute the index).
   writes files via shell heredocs, which bypass the `apply_patch` hook
   matcher — `ARTIFACT_*` rows can be sparse. Interactive TUI sessions (where
   the system prompt mandates `apply_patch`) are the high-fidelity audit mode.
-- **AIDLC rule layers** live at the workspace root under `aidlc/spaces/<space>/memory/` (one hand-editable source, identical on every harness); the `AIDLC_RULES_DIR` env seam in `config.toml` points the resolver there and the orchestrator injects an `@aidlc/spaces/<space>/memory/...` prompt mention. Codex's native `.codex/rules/` directory holds Starlark permission rules — distinct from the AIDLC method.
+- **AIDLC rule layers** live at the workspace root under `aidlc/spaces/<space>/memory/` (one hand-editable source, identical on every harness); the `AMADEUS_RULES_DIR` env seam in `config.toml` points the resolver there and the orchestrator injects an `@aidlc/spaces/<space>/memory/...` prompt mention. Codex's native `.codex/rules/` directory holds Starlark permission rules — distinct from the AIDLC method.
 - **No welcome message**: the Claude harness renders the Phases/Stages/Scopes
   onboarding banner from `settings.json` `companyAnnouncements` at session start;
   Codex has no equivalent. The session-start path injects resume context only.
@@ -120,7 +120,7 @@ sources (pinned by `tests/unit/t150-codex-packaging.test.ts`); prose carries the
 `{{HARNESS_DIR}}` token the packager substitutes to `.codex` (plus the
 `rules/` → `amadeus-rules/` rename), the one permitted transform class. The live
 end-to-end journey is `tests/e2e/t-exec-codex-status.serial.test.ts` (gate:
-`AIDLC_CODEX_EXEC_LIVE=1`).
+`AMADEUS_CODEX_EXEC_LIVE=1`).
 
 ## Next steps
 

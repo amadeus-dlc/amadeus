@@ -43,7 +43,7 @@ describe("t148 dist/kiro file structure", () => {
     // The AIDLC method relocated OUT of the harness dir (the old .kiro/steering/
     // rule layers) to the workspace root under aidlc/spaces/default/memory/ — one
     // hand-editable source of truth, identical on every harness, read by Kiro via
-    // the agent JSON `resources` globs (file://amadeus/spaces/default/memory/**/*.md).
+    // the agent JSON `resources` globs (file://aidlc/spaces/default/memory/**/*.md).
     // It sits beside .kiro/, so resolve from KIRO, not K.
     const mem = (...parts: string[]) =>
       join(KIRO, "aidlc", "spaces", "default", "memory", ...parts);
@@ -73,7 +73,7 @@ describe("t148 dist/kiro file structure", () => {
   });
 
   test("conductor agent: allowedCommands-only shell grant (findings 0.9b)", () => {
-    const a = readJson(join(K, "agents", "aidlc.json"));
+    const a = readJson(join(K, "agents", "amadeus.json"));
     const allowed = (a.allowedTools as string[]) ?? [];
     expect(allowed).not.toContain("execute_bash"); // never blanket shell trust
     const ts = a.toolsSettings as Record<string, { allowedCommands?: string[] }>;
@@ -102,7 +102,7 @@ describe("t148 dist/kiro file structure", () => {
         /^---\r?\n([\s\S]*?)\r?\n---/.exec(readFileSync(p, "utf-8"))?.[1] ?? "",
       )?.[1];
     // The delegation-target roster IS the set of hand-authored agent JSONs
-    // (minus the conductor aidlc.json) - derive it from disk so a future
+    // (minus the conductor amadeus.json) - derive it from disk so a future
     // delegate added without a grant reds here instead of shipping toolless
     // (the original field bug). Every delegate gets read+write+shell:
     // builders author artifacts and reviewers append a `## Review` section
@@ -133,7 +133,7 @@ describe("t148 dist/kiro file structure", () => {
   });
 
   test("conductor hooks all route through the adapter", () => {
-    const a = readJson(join(K, "agents", "aidlc.json"));
+    const a = readJson(join(K, "agents", "amadeus.json"));
     const hooks = a.hooks as Record<string, Array<{ command: string; matcher?: string }>>;
     expect(Object.keys(hooks).sort()).toEqual([
       "agentSpawn",
@@ -150,9 +150,9 @@ describe("t148 dist/kiro file structure", () => {
     expect(matchers).toEqual(["execute_bash", "fs_write", "subagent", "todo_list"]);
   });
 
-  test("workspace activation ships chat.defaultAgent=aidlc (D-5)", () => {
+  test("workspace activation ships chat.defaultAgent=amadeus (D-5)", () => {
     const s = readJson(join(K, "settings", "cli.json"));
-    expect(s["chat.defaultAgent"]).toBe("aidlc");
+    expect(s["chat.defaultAgent"]).toBe("amadeus");
   });
 
   test("workspace defaults opus-4.8 to xhigh effort via chat.modelDefaults", () => {
@@ -169,7 +169,7 @@ describe("t148 dist/kiro file structure", () => {
   });
 
   test("kiro skills carry the kiro tool prefix, never the claude one", () => {
-    const skill = readFileSync(join(K, "skills", "aidlc", "SKILL.md"), "utf-8");
+    const skill = readFileSync(join(K, "skills", "amadeus", "SKILL.md"), "utf-8");
     expect(skill).toContain("bun .kiro/tools/");
     expect(skill).not.toContain("bun .claude/tools/");
     expect(skill).not.toContain("AskUserQuestion");

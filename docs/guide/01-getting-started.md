@@ -221,7 +221,7 @@ Run the health check to confirm everything is in place:
 ✓ amadeus-session-end.ts present
 ✓ amadeus-statusline.ts present
 ✓ settings.json present
-✓ AWS_AIDLC_DEFAULT_SCOPE (unset — no project default)
+✓ AWS_AMADEUS_DEFAULT_SCOPE (unset — no project default)
 ✓ workspace shell ready (.claude/ + aidlc/spaces/default/memory/)
 ✓ Hook heartbeats: not yet fired (first workflow stage will populate)
 ✓ State matches last audit event (no drift)

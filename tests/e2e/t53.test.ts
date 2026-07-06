@@ -100,11 +100,11 @@ import { auditFilePathFor, driveAidlc } from "../harness/sdk-drive.ts";
 // ---------------------------------------------------------------------------
 // Timeout budget. `/amadeus bugfix` is live SDK traffic even though the
 // test stops after the deterministic orchestrator directive.
-// Honour the suite's AIDLC_TEST_TIMEOUT convention (seconds; the .sh family
+// Honour the suite's AMADEUS_TEST_TIMEOUT convention (seconds; the .sh family
 // allotted generous workflow budgets). The drive aborts a hair before bun
 // kills the test so a stuck run surfaces a partial DriveResult to diagnose.
 // ---------------------------------------------------------------------------
-const TIMEOUT_S = Number.parseInt(process.env.AIDLC_TEST_TIMEOUT ?? "600", 10);
+const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "600", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 600) * 1000;
 const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
 

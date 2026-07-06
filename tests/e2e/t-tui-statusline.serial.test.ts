@@ -17,7 +17,7 @@
 //
 // COST: this launches the claude TUI but submits NO prompt, so it reaches the
 // `ready` statusline state WITHOUT a Bedrock turn — it spends NO tokens (unlike
-// t-tui-workshop, which is AIDLC_TUI_LIVE-gated). It needs tmux + claude + the
+// t-tui-workshop, which is AMADEUS_TUI_LIVE-gated). It needs tmux + claude + the
 // distributable; absent any of those it SKIPs with a reason.
 //
 // SPAWN, not import (D-TUI-7): runs under bun, spawns tui-drive.ts as a
@@ -34,7 +34,7 @@ import { join } from "node:path";
 import { resolveWinNode } from "../harness/tui-drive.ts";
 
 const DRIVER = join(import.meta.dir, "..", "harness", "tui-drive.ts");
-const AIDLC_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
+const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 const IS_WIN = os.platform() === "win32";
 // node on Windows (#748), resolved because the box's node is off PATH; the .ts
 // entrypoint needs --experimental-strip-types under node < 22.18. bun elsewhere
@@ -90,7 +90,7 @@ function absentReason(): string | null {
   if (spawnSync("claude", ["--version"], { encoding: "utf-8" }).status !== 0) {
     return "claude CLI not found";
   }
-  if (!existsSync(AIDLC_SRC)) return `distributable missing: ${AIDLC_SRC}`;
+  if (!existsSync(AMADEUS_SRC)) return `distributable missing: ${AMADEUS_SRC}`;
   return null;
 }
 const ABSENT_REASON = absentReason();
@@ -106,7 +106,7 @@ describe("t-tui-statusline (statusline renders in a real terminal)", () => {
         // README: `cp -r dist/claude/.claude/ your-project/.claude/`. The
         // dest .claude must NOT pre-exist or cp nests it — we copy SRC -> <sandbox>/.claude.
         const destClaude = join(sandbox, ".claude");
-        cpSync(AIDLC_SRC, destClaude, { recursive: true });
+        cpSync(AMADEUS_SRC, destClaude, { recursive: true });
         const settingsPath = join(destClaude, "settings.json");
         expect(existsSync(settingsPath)).toBe(true);
         // P0a — the retired spike (git show 4ce826b:tests/spike/t-tui-statusline.sh

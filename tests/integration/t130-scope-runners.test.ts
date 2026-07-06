@@ -82,7 +82,7 @@ import {
 
 const BUN = process.execPath; // the bun running this test
 
-// Clear leaked AWS_AIDLC_DEFAULT_SCOPE so the scope resolves from the --scope
+// Clear leaked AWS_AMADEUS_DEFAULT_SCOPE so the scope resolves from the --scope
 // flag / state, not a developer's shell env (parity with the .sh's pure env).
 resetAidlcEnv();
 

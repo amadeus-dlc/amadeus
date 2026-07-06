@@ -11,7 +11,7 @@
 //
 // Mechanism: none (a pure in-process function call, zero subprocess, zero LLM,
 // zero tokens). loadScopeMapping reads the shipped data file at DATA_DIR's
-// default scope-mapping.json (no AIDLC_SCOPE_MAPPING env override set), reads
+// default scope-mapping.json (no AMADEUS_SCOPE_MAPPING env override set), reads
 // no project dir, emits no audit rows, writes nothing — so there is no CLI
 // arg-parse / process.exit shell to keep as a spawn seam. The .sh's `bun -e`
 // inline scripts were just a shell-friendly way to call JSON.parse + filter;
@@ -44,7 +44,7 @@
 //
 // FIXTURE DISCIPLINE: none. loadScopeMapping reads the shipped data file in
 // place; nothing is created, copied, or written under tests/fixtures/** or a
-// temp dir. The .sh likewise read $AIDLC_SRC/tools/data/scope-mapping.json
+// temp dir. The .sh likewise read $AMADEUS_SRC/tools/data/scope-mapping.json
 // directly with no temp project.
 
 import { describe, expect, test } from "bun:test";

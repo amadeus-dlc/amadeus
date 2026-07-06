@@ -58,7 +58,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { AIDLC_SRC, FIXTURES_DIR, toPortablePath } from "../harness/fixtures.ts";
+import { AMADEUS_SRC, FIXTURES_DIR, toPortablePath } from "../harness/fixtures.ts";
 import { auditFilePath } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 // P9: with no intent cursor seeded, the compile tool resolves the BARE space
@@ -71,8 +71,8 @@ function recordRoot(proj: string): string {
 }
 
 const BUN = process.execPath; // the bun running this test
-const RUNTIME = join(AIDLC_SRC, "tools", "amadeus-runtime.ts");
-const SENSOR = join(AIDLC_SRC, "tools", "amadeus-sensor-required-sections.ts");
+const RUNTIME = join(AMADEUS_SRC, "tools", "amadeus-runtime.ts");
+const SENSOR = join(AMADEUS_SRC, "tools", "amadeus-sensor-required-sections.ts");
 const STATE_FIXTURE = join(FIXTURES_DIR, "state-construction.md");
 
 const tempDirs: string[] = [];

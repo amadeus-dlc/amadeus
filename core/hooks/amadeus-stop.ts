@@ -493,7 +493,7 @@ function isPendingComposeStop(stateContent: string): boolean {
 // Fail-closed throughout: any error returns false and the cap-bounded block stands.
 
 // A workflow-engine tool call: a Bash invocation of amadeus-orchestrate/amadeus-state,
-// or a tool whose name itself references aidlc. These are the calls that mean
+// or a tool whose name itself references amadeus. These are the calls that mean
 // "the conductor engaged the workflow this turn"; their presence in the turn
 // that answered the human disqualifies the turn from the conversational carve-out
 // (a conductor that ran the engine and then quit mid-loop must still be nudged).
@@ -505,7 +505,7 @@ function isEngineToolCall(name: string, input: unknown): boolean {
   // The command text to inspect: a Bash/Shell command, or (for harnesses that
   // surface the tool by name) the tool name itself.
   const text = /^(bash|shell|execute_bash)$/i.test(name) ? cmd : name;
-  // Fast reject: no AIDLC engine/state/workspace tool named at all -> not a
+  // Fast reject: no amadeus engine/state/workspace tool named at all -> not a
   // workflow engagement (a chat turn that ran git/cat/ls etc.).
   if (!/amadeus-(orchestrate|state|jump|bolt|swarm)\b/.test(text)) return false;
   // Split on shell separators so a CHAINED command is judged per sub-command,

@@ -11,7 +11,7 @@
 // asserts the SAME observable behaviour off the returned { json, stages }.
 //
 // Surface tested (mirrors the .sh header):
-//   - loadSensors() walks AIDLC_SENSORS_DIR, anchored by amadeus-<id>.md.
+//   - loadSensors() walks AMADEUS_SENSORS_DIR, anchored by amadeus-<id>.md.
 //   - resolveSensorsForStage looks each stage.sensors[] id up; throws on unknown.
 //   - matches is copied verbatim from the manifest into the resolved entry.
 //   - Manifests without matches produce entries with no matches field.
@@ -24,10 +24,10 @@
 //   - FIELD_ORDER places sensors_applicable directly after rules_in_context.
 //
 // MECHANISM SEAMS (identical to the .sh):
-//   - AIDLC_SENSORS_DIR  points loadSensors() at a fixture dir.
-//   - AIDLC_STAGES_DIR   overrides the stage tree (zero-imports case).
-//   - AIDLC_STAGE_GRAPH  is the number/name bootstrap source for compile.
-// In-process we point AIDLC_STAGE_GRAPH at the REAL committed stage-graph.json
+//   - AMADEUS_SENSORS_DIR  points loadSensors() at a fixture dir.
+//   - AMADEUS_STAGES_DIR   overrides the stage tree (zero-imports case).
+//   - AMADEUS_STAGE_GRAPH  is the number/name bootstrap source for compile.
+// In-process we point AMADEUS_STAGE_GRAPH at the REAL committed stage-graph.json
 // (read-only — compileStageGraph reads it for {slug,number,name} but does NOT
 // write; only the CLI `compile` handler writes). __resetGraphCache() runs
 // before every compile so the module-level _graph cache cannot leak a fixture.
@@ -76,8 +76,8 @@ const REAL_STAGES = join(
 const BUN = process.execPath; // the bun binary running this test
 
 // --- env-seam harness -------------------------------------------------------
-// compileStageGraph() reads AIDLC_SENSORS_DIR (+ optionally AIDLC_STAGES_DIR)
-// at call time and AIDLC_STAGE_GRAPH for the number/name bootstrap. Set them,
+// compileStageGraph() reads AMADEUS_SENSORS_DIR (+ optionally AMADEUS_STAGES_DIR)
+// at call time and AMADEUS_STAGE_GRAPH for the number/name bootstrap. Set them,
 // reset the cache, call, then restore env. Mirrors the .sh's per-case env
 // assignment + fresh-tempfile discipline (here we never write, so the real
 // graph is a safe read-only bootstrap).
@@ -105,9 +105,9 @@ function compileWithSensors(fixtureDir: string): {
   json: string;
   stages: GraphStage[];
 } {
-  setEnv("AIDLC_SENSORS_DIR", fixtureDir);
-  setEnv("AIDLC_STAGE_GRAPH", SEED_GRAPH);
-  setEnv("AIDLC_STAGES_DIR", undefined); // real stage tree
+  setEnv("AMADEUS_SENSORS_DIR", fixtureDir);
+  setEnv("AMADEUS_STAGE_GRAPH", SEED_GRAPH);
+  setEnv("AMADEUS_STAGES_DIR", undefined); // real stage tree
   __resetGraphCache();
   return compileStageGraph();
 }
@@ -171,8 +171,8 @@ describe("t89 sensors_applicable resolution (in-process compileStageGraph)", () 
   // PARITY NOTE — the failure is the unknown-id resolution path, not a schema
   // rejection, because matches:"" is dropped at parse time.)
   test("empty-matches: compile throws (maps to .sh exit 1)", () => {
-    setEnv("AIDLC_SENSORS_DIR", join(FIXTURES, "empty-matches"));
-    setEnv("AIDLC_STAGE_GRAPH", SEED_GRAPH);
+    setEnv("AMADEUS_SENSORS_DIR", join(FIXTURES, "empty-matches"));
+    setEnv("AMADEUS_STAGE_GRAPH", SEED_GRAPH);
     __resetGraphCache();
     expect(() => compileStageGraph()).toThrow();
   });
@@ -206,7 +206,7 @@ describe("t89 sensors_applicable resolution (in-process compileStageGraph)", () 
   });
 
   // Case 8 (.sh:103-114): zero-sensors dir + zero-import stages => all [].
-  // Override AIDLC_STAGES_DIR with a temp tree holding only the initialization
+  // Override AMADEUS_STAGES_DIR with a temp tree holding only the initialization
   // phase (every stage there declares sensors: []) and an empty sensors dir.
   test("zero-sensors + zero-imports: every stage gets sensors_applicable: []", () => {
     const stagesRoot = mkdtempSync(join(tmpdir(), "t89-zero-stages-"));
@@ -215,9 +215,9 @@ describe("t89 sensors_applicable resolution (in-process compileStageGraph)", () 
     cpSync(join(REAL_STAGES, "initialization"), join(stagesRoot, "initialization"), {
       recursive: true,
     });
-    setEnv("AIDLC_STAGES_DIR", stagesRoot);
-    setEnv("AIDLC_SENSORS_DIR", sensorsRoot);
-    setEnv("AIDLC_STAGE_GRAPH", SEED_GRAPH);
+    setEnv("AMADEUS_STAGES_DIR", stagesRoot);
+    setEnv("AMADEUS_SENSORS_DIR", sensorsRoot);
+    setEnv("AMADEUS_STAGE_GRAPH", SEED_GRAPH);
     __resetGraphCache();
     const { stages } = compileStageGraph();
     expect(stages.length).toBeGreaterThan(0);
@@ -227,8 +227,8 @@ describe("t89 sensors_applicable resolution (in-process compileStageGraph)", () 
   // Case 9 (.sh:117-128): unknown-id fixture — compile throws and the message
   // names the unknown sensor id. (.sh asserts exit 1 + stderr "unknown sensor id".)
   test("unknown-id: compile throws naming 'unknown sensor id'", () => {
-    setEnv("AIDLC_SENSORS_DIR", join(FIXTURES, "unknown-id"));
-    setEnv("AIDLC_STAGE_GRAPH", SEED_GRAPH);
+    setEnv("AMADEUS_SENSORS_DIR", join(FIXTURES, "unknown-id"));
+    setEnv("AMADEUS_STAGE_GRAPH", SEED_GRAPH);
     __resetGraphCache();
     expect(() => compileStageGraph()).toThrow(/unknown sensor id/);
   });
@@ -237,8 +237,8 @@ describe("t89 sensors_applicable resolution (in-process compileStageGraph)", () 
   // either the duplicate-id guard OR the id<->filename cross-check (whichever
   // loud-failure path fires first under filesystem ordering — both name a path).
   test("duplicate-id: compile throws naming a manifest path", () => {
-    setEnv("AIDLC_SENSORS_DIR", join(FIXTURES, "duplicate-id"));
-    setEnv("AIDLC_STAGE_GRAPH", SEED_GRAPH);
+    setEnv("AMADEUS_SENSORS_DIR", join(FIXTURES, "duplicate-id"));
+    setEnv("AMADEUS_STAGE_GRAPH", SEED_GRAPH);
     __resetGraphCache();
     expect(() => compileStageGraph()).toThrow(
       /duplicate sensor id|must match filename stem/,
@@ -247,16 +247,16 @@ describe("t89 sensors_applicable resolution (in-process compileStageGraph)", () 
 
   // Case 11 (.sh:150-157): id-filename-mismatch — compile throws.
   test("id-filename-mismatch: compile throws", () => {
-    setEnv("AIDLC_SENSORS_DIR", join(FIXTURES, "id-filename-mismatch"));
-    setEnv("AIDLC_STAGE_GRAPH", SEED_GRAPH);
+    setEnv("AMADEUS_SENSORS_DIR", join(FIXTURES, "id-filename-mismatch"));
+    setEnv("AMADEUS_STAGE_GRAPH", SEED_GRAPH);
     __resetGraphCache();
     expect(() => compileStageGraph()).toThrow(/must match filename stem/);
   });
 
   // Case 12 (.sh:160-167): unknown-kind (kind: llm) — compile throws.
   test("unknown-kind: compile rejects kind != deterministic", () => {
-    setEnv("AIDLC_SENSORS_DIR", join(FIXTURES, "unknown-kind"));
-    setEnv("AIDLC_STAGE_GRAPH", SEED_GRAPH);
+    setEnv("AMADEUS_SENSORS_DIR", join(FIXTURES, "unknown-kind"));
+    setEnv("AMADEUS_STAGE_GRAPH", SEED_GRAPH);
     __resetGraphCache();
     expect(() => compileStageGraph()).toThrow(/kind must be "deterministic"/);
   });
@@ -345,7 +345,7 @@ describe("t89 sensors_applicable resolution (in-process compileStageGraph)", () 
   // .sh exercised only transitively through compile): loadSensors() keys by id;
   // resolveSensorsForStage preserves declared order and throws on unknown ids.
   test("loadSensors + resolveSensorsForStage: order preserved, unknown id throws", () => {
-    setEnv("AIDLC_SENSORS_DIR", join(FIXTURES, "basic-import"));
+    setEnv("AMADEUS_SENSORS_DIR", join(FIXTURES, "basic-import"));
     __resetGraphCache();
     const byId = loadSensors();
     expect([...byId.keys()].sort()).toEqual([
@@ -380,7 +380,7 @@ describe("t89 CLI exit-code shell (Bun.spawnSync env-seam)", () => {
     const graph = join(out, "stage-graph.json");
     copyFileSync(SEED_GRAPH, graph);
     const res = spawnSync(BUN, [GRAPH_TS, "compile", ...extraArgs], {
-      env: { ...process.env, AIDLC_SENSORS_DIR: sensorsDir, AIDLC_STAGE_GRAPH: graph },
+      env: { ...process.env, AMADEUS_SENSORS_DIR: sensorsDir, AMADEUS_STAGE_GRAPH: graph },
       encoding: "utf8",
     });
     return { code: res.status ?? -1 };
@@ -409,7 +409,7 @@ describe("t89 CLI exit-code shell (Bun.spawnSync env-seam)", () => {
     for (const f of readdirSync(join(FIXTURES, "basic-import"))) {
       copyFileSync(join(FIXTURES, "basic-import", f), join(dir, f));
     }
-    const env = { ...process.env, AIDLC_SENSORS_DIR: dir, AIDLC_STAGE_GRAPH: graph };
+    const env = { ...process.env, AMADEUS_SENSORS_DIR: dir, AMADEUS_STAGE_GRAPH: graph };
 
     const seed = spawnSync(BUN, [GRAPH_TS, "compile"], { env, encoding: "utf8" });
     expect(seed.status).toBe(0);

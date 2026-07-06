@@ -26,7 +26,7 @@
 // twin resolves its scan roots via tests/harness/fixtures.ts REPO_ROOT
 // (= HARNESS_DIR/../.., harness-relative — NOT cwd). So running the twin from
 // inside the sandbox tree (sandbox/tests/integration/...) makes its
-// REPO_ROOT/AIDLC_SRC resolve to the sandbox — exactly the mutate-and-detect
+// REPO_ROOT/AMADEUS_SRC resolve to the sandbox — exactly the mutate-and-detect
 // contract the .sh got from its cwd-relative REPO_ROOT. We drive the twin with
 // `bun test` and parse bun's `(fail) <name>` rows (whose names carry the
 // check keyword: forward/reverse/tertiary/pairing/md-md) instead of bash TAP
@@ -103,7 +103,7 @@ interface T48Result {
 }
 
 /**
- * Run the t48 twin from the sandbox root so its REPO_ROOT/AIDLC_SRC (resolved
+ * Run the t48 twin from the sandbox root so its REPO_ROOT/AMADEUS_SRC (resolved
  * via tests/harness/fixtures.ts, HARNESS_DIR-relative) point at the sandbox copy.
  * The twin may exit non-zero (a failed check) — we capture status but assert on
  * the combined output (bun writes its pass/fail report to stderr).
