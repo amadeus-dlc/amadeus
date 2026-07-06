@@ -11,6 +11,7 @@
 - 英語の識別子、ファイル名、コマンド名は必要な場合だけ使う。
 - 機械可読・構造的成果物（`aidlc-state.md`、`intents.json`、audit イベント、改名対象のファイル名）は v2 の構造と英語ラベルをそのまま使う。
 - Amadeus skill の `SKILL.md` と TS スクリプトは英語必須である（詳細は [Skill Language Policy](docs/amadeus/skill-language-policy.md) を参照）。
+- `docs/amadeus/*.md` は英語を正とし、`*.ja.md` を日本語版として併置する。この対象は「返答、仕様、調査メモ、検証結果は日本語で書く」および「記述系成果物…日本語を維持する」の対象外である（詳細は [Language Policy](docs/amadeus/language-policy.md) を参照）。
 - 記述系成果物（要求、設計、計画などの本文）とユーザー向け gate 文言は日本語を維持する。
 - `aidlc/**/*.md`、テンプレートから生成される Markdown、`.kiro/specs/**/*.md`、`openspec/**/*.md` は日本語で書く。
 

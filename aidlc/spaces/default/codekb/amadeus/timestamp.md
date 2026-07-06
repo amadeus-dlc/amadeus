@@ -10,3 +10,4 @@
 - 2026-07-05T12:00:00Z: 廃止機構（intents.md 索引、IndexGenerate.ts）の記述を部分補正（PR #495）。
 - 2026-07-05T12:25:00Z: エンジン駆動化・skill 体制・退役機構を反映した全面再解析（PR #496）。
 - 2026-07-05T23:25:37Z: 3049eadf..616d063e の差分駆動増分更新（Intent `260705-persist-cid-metamain`。詳細は reverse-engineering-timestamp.md。engineer1 の #428 側並行更新 503a7aa9 と内容統合済み）。
+- 2026-07-06T00:25:00Z: 616d063e..2a0a784b の差分駆動増分更新（Intent `260706-docs-lang-guide`。PR #531 = #504/#507 のエンジン変更を反映: eval 28→29、cid marker 新形式、import.meta.main ガード。詳細は reverse-engineering-timestamp.md）。
