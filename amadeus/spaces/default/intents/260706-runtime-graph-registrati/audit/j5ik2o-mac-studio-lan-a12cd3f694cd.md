@@ -580,3 +580,55 @@
 **Duration ms**: 466
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-06T07:19:34Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T07:19:46Z
+**Event**: HUMAN_TURN
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-06T07:19:46Z
+**Event**: DECISION_RECORDED
+**Stage**: code-generation
+**Decision**: code-generation の gate 承認（中継承認定型文の転記、auto 委任適用。承認経路: 人間の包括委任（2026-07-06 04:07 JST）→ leader 内容確認（2026-07-06 17:22 JST）→ engineer1。受信直後に HUMAN_TURN mint 済み）。承認要旨: FR-1（compile hook の regex 3 本へ .agents/amadeus の path alternation 追加、TDD 正順 RED→GREEN + 回帰ガード）、FR-2〜3 と reviewer 対応を含む実装 2 commit を承認。build-and-test へ進行可
+**Options**: approve,request-changes
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-06T07:19:56Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-06T07:19:56Z
+**Event**: GATE_APPROVED
+**Stage**: code-generation
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-06T07:19:56Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Details**: Stage Code Generation approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-06T07:19:56Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Agent**: amadeus-quality-agent
+
+---
