@@ -1,57 +1,59 @@
 # Skill Englishization Rollout Plan
 
-この文書は、Issue #402 の判断として、残り Amadeus skill の段階的英語化単位、優先順位、検証コマンドを定義する。
+This document defines, as the decision of Issue #402, the staged englishization units, priority order, and verification commands for the remaining Amadeus skills.
 
-Issue #402 は展開単位の確定で完了するが、親 Issue #399 はこの文書で定義した RU002〜RU006 の実行完了まで閉じない。
+Issue #402 is complete once the rollout units are fixed, but the parent Issue #399 does not close until RU002–RU006 defined in this document are executed to completion.
 
-Issue #395 の [Skill Language Policy](skill-language-policy.md)、Issue #400 の代表 skill 英語化、Issue #401 の [AI-DLC v2 Difference Response Plan](aidlc-v2-difference-response-plan.md) を前提にする。
+It builds on Issue #395's [Skill Language Policy](skill-language-policy.md), Issue #400's englishization of the representative skill, and Issue #401's [AI-DLC v2 Difference Response Plan](aidlc-v2-difference-response-plan.md).
 
-## 方針
+Note: the tables below list skill names as they existed when this plan was written (Issue #402). Several were later renamed to the phase-prefix-free `amadeus-<stage>` form or retired; see [skills/amadeus/references/stage-catalog.md](../../skills/amadeus/references/stage-catalog.md) for the current inventory.
 
-残り skill は一括で英語化しない。
+## Policy
 
-phase または skill family 単位で PR を分ける。
+The remaining skills are not englishized all at once.
 
-各 PR は、翻訳変更、意味変更、昇格フロー、検証結果の境界を PR 説明に明記する。
+Pull requests are split by phase or skill family.
 
-templates、generated Amadeus DLC artifacts、`amadeus/**/*.md`、ユーザー向け gate text は日本語維持対象である。
+Each pull request states clearly, in its description, the boundary between translation changes, semantic changes, the promotion flow, and verification results.
 
-## 現在の基準
+Templates, generated Amadeus DLC artifacts, `amadeus/**/*.md`, and user-facing gate text remain Japanese-retained targets.
 
-| 区分 | skill |
+## Current baseline
+
+| Category | Skill |
 |---|---|
-| 英語化済みの代表 skill | `amadeus-construction-functional-design` |
-| 残り source skill | `skills/amadeus*/SKILL.md` のうち `amadeus-construction-functional-design` を除く 31 件 |
-| 昇格先 | `.agents/skills/amadeus*/SKILL.md` |
+| Representative skill already englishized | `amadeus-construction-functional-design` |
+| Remaining source skills | The 31 files under `skills/amadeus*/SKILL.md` other than `amadeus-construction-functional-design` |
+| Promoted destination | `.agents/skills/amadeus*/SKILL.md` |
 
-## 優先順位
+## Priority order
 
-| 優先 | Rollout Unit | 対象 skill | 先に扱う理由 | 事前条件 |
+| Priority | Rollout Unit | Target skills | Reason for handling first | Precondition |
 |---:|---|---|---|---|
-| 0 | Representative foundation | `amadeus-construction-functional-design` | 小さい土台 PR で英語化、昇格フロー、検証方法を確認済み。 | 完了済み。 |
-| 1 | AI-DLC v2 difference PRs | #391、#393、#392、#394 で触る skill | reviewer、sensor、Learn、Build and Test、Operation phase の判断が、後続英語化の語彙と意味保存に影響するため。 | #401 の順序に従う。 |
-| 2 | Core entrypoints and verification | `amadeus`、`amadeus-steering`、`amadeus-validator` | 以後の stage skill が参照する単一公開入口、Space 初期化、検証の語彙を先にそろえるため。 | #394 の Operation phase 境界判断を反映済みであること。 |
-| 3 | Construction stage skills | `amadeus-construction-nfr-requirements`、`amadeus-construction-nfr-design`、`amadeus-construction-infrastructure-design`、`amadeus-construction-code-generation`、`amadeus-construction-build-and-test`、`amadeus-construction-ci-pipeline` | 代表 skill と同じ phase であり、B001 から B004 の知見を最も直接再利用できるため。 | #391、#393、#392 の判断を反映済みであること。 |
-| 4 | Inception stage skills | `amadeus-inception-reverse-engineering`、`amadeus-inception-practices-discovery`、`amadeus-inception-requirements-analysis`、`amadeus-inception-user-stories`、`amadeus-inception-refined-mockups`、`amadeus-inception-application-design`、`amadeus-inception-units-generation`、`amadeus-inception-delivery-planning` | Construction の入力成果物を作る phase であり、stage 間の用語をまとめてそろえる必要があるため。 | #391 と #393 の判断を反映済みであること。 |
-| 5 | Ideation stage skills | `amadeus-ideation-intent-capture`、`amadeus-ideation-market-research`、`amadeus-ideation-feasibility`、`amadeus-ideation-scope-definition`、`amadeus-ideation-team-formation`、`amadeus-ideation-rough-mockups`、`amadeus-ideation-approval-handoff` | Intent の入口から Inception へ渡す語彙を、Inception との接続後にそろえるため。 | #391 と #393 の判断を反映済みであること。 |
-| 6 | Supporting analysis and review skills | `amadeus-grilling`、`amadeus-domain-grilling`、`amadeus-domain-modeling`、`amadeus-event-storming`、`amadeus-decision-review`、`amadeus-history-review`、`amadeus-learning-review` | phase skill の語彙を固めた後、補助分析と review 系の語彙をそろえるため。 | Core entrypoints and verification の英語化完了。 |
+| 0 | Representative foundation | `amadeus-construction-functional-design` | A small foundation pull request already confirmed englishization, the promotion flow, and the verification method. | Already complete. |
+| 1 | AI-DLC v2 difference PRs | Skills touched by #391, #393, #392, #394 | Decisions on reviewer, sensor, Learn, Build and Test, and the Operation phase affect the vocabulary and meaning preservation of the following englishization work. | Follows the order in #401. |
+| 2 | Core entrypoints and verification | `amadeus`, `amadeus-steering`, `amadeus-validator` | Aligns first the vocabulary of the single public entry point, Space initialization, and verification that later stage skills reference. | The Operation phase boundary decision from #394 has been reflected. |
+| 3 | Construction stage skills | `amadeus-construction-nfr-requirements`, `amadeus-construction-nfr-design`, `amadeus-construction-infrastructure-design`, `amadeus-construction-code-generation`, `amadeus-construction-build-and-test`, `amadeus-construction-ci-pipeline` | Same phase as the representative skill, so the findings from B001 through B004 are most directly reusable. | The decisions from #391, #393, and #392 have been reflected. |
+| 4 | Inception stage skills | `amadeus-inception-reverse-engineering`, `amadeus-inception-practices-discovery`, `amadeus-inception-requirements-analysis`, `amadeus-inception-user-stories`, `amadeus-inception-refined-mockups`, `amadeus-inception-application-design`, `amadeus-inception-units-generation`, `amadeus-inception-delivery-planning` | This phase produces Construction's input artifacts, so the terminology across stages needs to be aligned together. | The decisions from #391 and #393 have been reflected. |
+| 5 | Ideation stage skills | `amadeus-ideation-intent-capture`, `amadeus-ideation-market-research`, `amadeus-ideation-feasibility`, `amadeus-ideation-scope-definition`, `amadeus-ideation-team-formation`, `amadeus-ideation-rough-mockups`, `amadeus-ideation-approval-handoff` | Aligns the vocabulary handed from Intent's entry point to Inception, after the connection with Inception. | The decisions from #391 and #393 have been reflected. |
+| 6 | Supporting analysis and review skills | `amadeus-grilling`, `amadeus-domain-grilling`, `amadeus-domain-modeling`, `amadeus-event-storming`, `amadeus-decision-review`, `amadeus-history-review`, `amadeus-learning-review` | Aligns the vocabulary of supporting analysis and review skills after the phase skills' vocabulary is fixed. | Englishization of Core entrypoints and verification is complete. |
 
-## PR 分割
+## Pull request split
 
-| PR Unit | 変更範囲 | 分割基準 |
+| PR Unit | Change scope | Split criterion |
 |---|---|---|
-| RU001 | AI-DLC v2 difference PRs | #391、#393、#392、#394 の各 Issue で別 PR にする。英語化だけの PR に混ぜない。 |
-| RU002 | Core entrypoints and verification | `amadeus`、`amadeus-steering`、`amadeus-validator` を 1 PR にまとめる。差分が大きい場合は `amadeus` を単独 PR に分ける。 |
-| RU003 | Construction stage skills | Construction stage skills を 1 PR にまとめる。`amadeus-construction-build-and-test` は #392 の判断後に含める。 |
-| RU004 | Inception stage skills | Inception stage skills を 1 PR にまとめる。#391 と #393 の対象になった skill は、それらの PR で更新済みなら差分確認だけにする。 |
-| RU005 | Ideation stage skills | Ideation stage skills を 1 PR にまとめる。`amadeus-ideation-rough-mockups` は #391 と #393 の判断を確認してから含める。 |
-| RU006 | Supporting analysis and review skills | 補助分析と review 系 skill を 1 PR にまとめる。差分が大きい場合は domain 系と review 系に分ける。 |
+| RU001 | AI-DLC v2 difference PRs | A separate pull request per Issue among #391, #393, #392, #394. Not mixed into englishization-only pull requests. |
+| RU002 | Core entrypoints and verification | Bundles `amadeus`, `amadeus-steering`, `amadeus-validator` into one pull request. If the diff is large, split `amadeus` into its own pull request. |
+| RU003 | Construction stage skills | Bundles Construction stage skills into one pull request. Include `amadeus-construction-build-and-test` only after the decision in #392. |
+| RU004 | Inception stage skills | Bundles Inception stage skills into one pull request. For skills that were also targets of #391 and #393, treat this as a diff check only if they were already updated in those pull requests. |
+| RU005 | Ideation stage skills | Bundles Ideation stage skills into one pull request. Include `amadeus-ideation-rough-mockups` only after confirming the decisions in #391 and #393. |
+| RU006 | Supporting analysis and review skills | Bundles supporting analysis and review skills into one pull request. If the diff is large, split into a domain group and a review group. |
 
-2026-07-03 の人間指示（Issue #399 リカバリ）により、RU002〜RU006 は単一リカバリ PR（[PR #417](https://github.com/amadeus-dlc/amadeus/pull/417)）で統合実行した。この判断は対象 Intent の `construction/decisions.md`（CD007）に記録した。RU002〜RU006 の事前条件だった #391〜#394 の判断は未完了のままだが、統合 PR は翻訳だけを行い意味を変えないため衝突しない。#391〜#394 は英語化後の本文に対して継続する。
+Per the human instruction of 2026-07-03 (Issue #399 recovery), RU002–RU006 were executed together in a single recovery pull request ([PR #417](https://github.com/amadeus-dlc/amadeus/pull/417)). This decision is recorded in the target Intent's `construction/decisions.md` (CD007). The preconditions for RU002–RU006 — the decisions from #391–#394 — remain incomplete, but the recovery pull request performs translation only and does not change meaning, so it does not conflict. #391–#394 continue against the post-englishization body text.
 
-## 検証コマンド
+## Verification commands
 
-各英語化 PR は、少なくとも次を実行する。
+Each englishization pull request runs at least the following.
 
 ```sh
 bun run dev-scripts/promote-skill.ts <skill-name> --replace
@@ -61,39 +63,39 @@ bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . 260703-
 git diff --check
 ```
 
-複数 skill を変更する PR では、変更した全 source skill に対して `promote-skill.ts` を実行する。
+For a pull request that changes multiple skills, run `promote-skill.ts` for every changed source skill.
 
-`SKILL.md` の frontmatter description を変更した場合は、同じ skill の `agents/openai.yaml` の更新要否を確認する。
+When the `SKILL.md` frontmatter description changes, check whether the same skill's `agents/openai.yaml` needs updating.
 
-source skill と昇格先 skill の同期確認は、変更した skill ごとに行う。
+Confirm the synchronization between the source skill and the promoted skill for each changed skill.
 
 ## Preservation Pass
 
-各英語化 PR は、変更した skill ごとに次を確認する。
+Each englishization pull request confirms the following for each changed skill.
 
-| 区分 | 確認内容 |
+| Category | What to confirm |
 |---|---|
-| Trigger boundary | skill を起動すべき条件と起動してはいけない条件が変わっていない。 |
-| Stage procedure | checkbox、audit event、gate、skip、resume、halt-and-ask の扱いが変わっていない。 |
-| Artifact contract | 作成または更新できるファイルの一覧と日本語維持対象が変わっていない。 |
-| Knowledge flow | `memory.md`、`decisions.md`、`traceability.md`、`grillings`、Domain Map、Context Map の役割が変わっていない。 |
-| Promotion flow | `.agents/skills/**` は source skill から昇格フローで同期している。 |
-| Metadata | `agents/openai.yaml` の更新要否を確認している。 |
+| Trigger boundary | The conditions under which the skill should and should not fire are unchanged. |
+| Stage procedure | The handling of checkboxes, audit events, gates, skip, resume, and halt-and-ask is unchanged. |
+| Artifact contract | The list of files the skill may create or update, and the Japanese-retained targets, are unchanged. |
+| Knowledge flow | The roles of `memory.md`, `decisions.md`, `traceability.md`, `grillings`, the Domain Map, and the Context Map are unchanged. |
+| Promotion flow | `.agents/skills/**` is synchronized from the source skill through the promotion flow. |
+| Metadata | Whether `agents/openai.yaml` needs updating has been checked. |
 
-## #391 から #394 との衝突回避
+## Avoiding conflicts with #391 through #394
 
-#391、#393、#392、#394 は、英語化単位の PR に混ぜない。
+#391, #393, #392, and #394 are not mixed into englishization-unit pull requests.
 
-ただし、それらの PR で対象 skill を変更する場合、触った `SKILL.md` だけを英語文体へ寄せてもよい。
+However, when a target skill is changed in one of those pull requests, only the touched `SKILL.md` may be moved toward English style.
 
-その場合は PR 説明で、AI-DLC v2 差分対応と英語化部分を分けて説明する。
+In that case, the pull request description explains the AI-DLC v2 difference response and the englishization part separately.
 
-RU002 から RU006 は、該当する #391、#393、#392、#394 の判断が merge 済みであること、または対象外であることを PR 説明に書く。
+RU002 through RU006 state in the pull request description that the corresponding decisions from #391, #393, #392, and #394 have been merged, or that they are out of scope.
 
-## Issue #402 の完了条件
+## Completion condition for Issue #402
 
-Issue #402 は、この文書を含む PR が merge され、残り skill の英語化単位、優先順位、検証コマンド、#391 から #394 との衝突回避を追跡できる状態になった時点で完了とする。
+Issue #402 is complete once the pull request containing this document is merged and the remaining skills' englishization units, priority order, verification commands, and the conflict avoidance with #391 through #394 can be tracked.
 
-残り skill の実際の英語化完了は、Issue #402 の完了条件に含めない。
+The actual completion of englishizing the remaining skills is not included in Issue #402's completion condition.
 
-ただし、残り skill の実際の英語化完了は、Issue #399 の完了条件に含める。
+However, the actual completion of englishizing the remaining skills is included in Issue #399's completion condition.
