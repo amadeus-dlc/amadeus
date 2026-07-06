@@ -448,5 +448,13 @@
     "scope": "refactor",
     "repos": [],
     "status": "complete"
+  },
+  {
+    "uuid": "019f3686-93c4-73dd-a6cb-d2f464bd7694",
+    "slug": "doctor-guidance",
+    "dirName": "260706-doctor-guidance",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "in_progress"
   }
 ]

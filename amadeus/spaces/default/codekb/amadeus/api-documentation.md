@@ -10,6 +10,7 @@
 | `amadeus-graph.ts compile / validate-grid --proposal <path> [--strict] [--project-type <t>]` | stage-graph.json / scope-grid.json の生成（rules 解決は構造的 walk-up = #491）、compose 提案 grid の論理整合検証（`validate-grid`） |
 | `/amadeus compose "<task>"` / `/amadeus compose --report <path>` | amadeus-composer-agent をディスパッチしてカスタム EXECUTE/SKIP grid を提案（Adaptive Workflows 2.2.0）。人間承認後に `recompose` で running workflow へ適用 |
 | `amadeus-runtime.ts compile` | 対象 Intent の runtime-graph.json 生成（bolt_dag を含む） |
+| `amadeus-learnings.ts surface` | §13 candidates の surface。runtime-graph に slug が無い場合は 1 回だけ自動 compile して再解決し、なお不能・compile 失敗時は復旧手順つきエラー（exit 1、無言 fail なし）を出す（#558） |
 | `amadeus-learnings.ts persist` | learnings（規則）の永続化。冪等性 key は `cid:<dirName>:<slug>:<candidateId>`（dirName は出所 Intent の record dir 名）。戻り値は `rule_learned`（新規追記）と `already_present`（既存 marker 一致）を分離しており、別 Intent の同名 candidate_id でも marker 衝突による無言 no-op が起きない（#504） |
 | `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <ws> [dirName]` | 配布先で実行できる構造検証 |
 | `npm run test:all` / `npm run kanban:sync` | 標準検証入口 / board 全件同期 |
