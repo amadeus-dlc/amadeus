@@ -368,5 +368,13 @@
     "scope": "refactor",
     "repos": [],
     "status": "complete"
+  },
+  {
+    "uuid": "019f351e-d3b4-7103-a4a3-2b723078c9e5",
+    "slug": "rename-lint-fixes",
+    "dirName": "260706-rename-lint-fixes",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "in_progress"
   }
 ]

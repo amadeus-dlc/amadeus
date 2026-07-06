@@ -4,7 +4,7 @@
 
 - 決定論的 eval（29 種）が「隔離 workspace + 実 CLI 駆動」で統一され、手書き fixture による不整合の隠蔽を避ける規約が learnings に定着している。
 - 失敗の観測経路が対称に揃っている: ツール CLI とエンジンの ERROR_LOGGED（#431）、hooks の drops + doctor 表面化（#432）、audit の追記型台帳。
-- 上流適応の追跡（parity）と skill 昇格（promote）の機械化により、二重管理の逸脱が検査で捕まる。
+- 上流適応の追跡（parity）と skill 昇格（promote）の機械化により、二重管理の逸脱が検査で捕まる。parity-baseline を純正 clone から再生成し runner-gen を写像一致版へ差し替えることで、backtick 補間形 cli-token など出所が明示できない baseline 行（provenance gap）を解消する運用を確立した（#542 C11）。
 - workspace_requires ガードの docs-only 宣言は audit trail クロスチェック付きで検証される（#499）。宣言の書き込み口を declare-docs-only 1 か所に限定することで、意図しない免除の混入を防ぐ。
 - codekb 採用 stub の参照解決（正本パスの dangling reference 検出）は validator が検査する（#501）。
 - learnings persist の cid marker は Intent 込みの新形式（cid:<dirName>:<stage>:<cN>）で衝突が構造的に解消され、戻り値の rule_learned / already_present 分離でスキップの無言化も解消された（#504）。

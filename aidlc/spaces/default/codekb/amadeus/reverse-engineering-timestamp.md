@@ -2,6 +2,25 @@
 
 ## 差分更新の記録（最新）
 
+- 解析時刻: 2026-07-06T01:53:29Z（UTC）
+- 対象コミット: 33c40271（HEAD、branch: eng1/issue-537-538-540-bugfix）
+- 解析方式: 差分更新（2a0a784b..33c40271 の非 aidlc 変更 = PR #536/#539/#542 の 3 PR）
+- 実施 Intent: `260706-rename-lint-fixes`（reverse-engineering ステージ）
+
+| artifact | 変更内容 |
+|---|---|
+| architecture.md | audit イベント総数 70→71（RECOMPOSED 追加）、Adaptive Workflows（composer agent dispatch / recompose / validate-grid / composed scope 共存規約）の 1 文を scope 体系節に追記 |
+| component-inventory.md | agents 13→14（amadeus-composer-agent）、scope skill 行に amadeus-compose（packaging）追記、parity 基準 commit fde1e1af→b67798c3 |
+| api-documentation.md | amadeus-utility.ts に detect --json / recompose 追記、amadeus-graph.ts に validate-grid 追記、/aidlc compose 入口行を新設 |
+| dependencies.md | 上流基準 fde1e1af→b67798c3（2.2.0 Adaptive Workflows）へ更新 |
+| code-structure.md | skills 数（42/45）と amadeus-compose 追記、docs/amadeus 言語方針（英語正 + ja 併置）を追記 |
+| code-quality-assessment.md | 強み行に parity-baseline 再生成と C11 provenance gap 解消（#542）を追記 |
+| technology-stack.md | 影響なし（変更なし） |
+| business-overview.md | 影響なし（変更なし） |
+| timestamp.md | 更新履歴へ 1 行追記 |
+
+## 前回（2026-07-06T01:20:00Z、2a0a784b..7829d99a）の記録
+
 - 解析時刻: 2026-07-06T01:20:00Z（UTC）
 - 対象コミット: 7829d99a（origin/main = PR #536 merge 後）
 - 解析方式: 差分更新（2a0a784b..7829d99a の非 aidlc 変更 = PR #536 のみ。8 ファイル、+186 行）

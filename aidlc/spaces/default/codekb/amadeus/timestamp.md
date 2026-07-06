@@ -12,3 +12,4 @@
 - 2026-07-05T23:25:37Z: 3049eadf..616d063e の差分駆動増分更新（Intent `260705-persist-cid-metamain`。詳細は reverse-engineering-timestamp.md。engineer1 の #428 側並行更新 503a7aa9 と内容統合済み）。
 - 2026-07-06T00:25:00Z: 616d063e..2a0a784b の差分駆動増分更新（Intent `260706-docs-lang-guide`。PR #531 = #504/#507 のエンジン変更を反映: eval 28→29、cid marker 新形式、import.meta.main ガード。詳細は reverse-engineering-timestamp.md）。
 - 2026-07-06T01:20:00Z: 2a0a784b..7829d99a の差分駆動増分更新（Intent `260706-readme-refresh`。PR #536 は docs-only のため codekb 9 docs への影響なし。詳細は reverse-engineering-timestamp.md）。
+- 2026-07-06T01:53:29Z: 2a0a784b..33c40271 の差分駆動増分更新（Intent `260706-rename-lint-fixes`。PR #536/#539/#542 = docs 言語方針・Adaptive Workflows 2.2.0・parity-baseline 再生成を反映。詳細は reverse-engineering-timestamp.md）。
