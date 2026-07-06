@@ -203,6 +203,8 @@ When a human-readable Intent list is needed, it is generated on demand from the 
 
 Codebase knowledge (v2's codekb) is reused across Intents, so it is placed under the Space's `codekb/<repo>/`.
 
+This phase-directory split (`ideation/`, `inception/`, `construction/`, `operation/` under the record) was adopted 2026-06-29 (formerly ADR 0002, retired #525): rather than flattening all of an Intent's artifacts at the top of its module directory, phase-scoped artifacts are separated so that per-phase ownership, gates, traceability, and validators stay legible. The record root and state-file name that ADR originally referenced were later superseded by #387's full AI-DLC v2 alignment (`amadeus/spaces/<space>/intents/<YYMMDD>-<label>/` and `amadeus-state.md`, both reflected above); the phase-directory decision itself remains in force. See `git log -- docs/adr/0002-intent-phase-directory-layout.md` for the fuller history.
+
 ## Stage contract I/O notation
 
 Each stage in the per-phase documents ([ideation.md](ideation.md), [inception.md](inception.md), [construction.md](construction.md)) has a paired `### Inputs` and `### Outputs`.

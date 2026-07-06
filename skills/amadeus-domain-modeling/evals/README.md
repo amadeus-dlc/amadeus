@@ -11,7 +11,7 @@
 - モデル要素や契約 ID が変わる場合は、対象 Intent の `inception/traceability.md` も整合させる。
 - 曖昧語や衝突語は、この skill 自体が既存の Amadeus 成果物と照合し、必要な確認を行う。
 - 確定した用語、モデル、契約、ドメイン判断は、その場で該当する Amadeus 成果物へ記録する。
-- `CONTEXT.md` と `docs/adr/**` を更新しない。
+- `CONTEXT.md` を更新しない（正準の語彙定義元であり、この skill は workspace 抜粋の `glossary.md` とその同胞だけを扱う）。
 - `requirements.md`、`acceptance.md`、`user-stories.md`、`use-cases.md`、`units.md`、`bolts.md` を作らない。
 - `/amadeus-grilling` を内部で呼び出す前提にしない。
 - `evals.json` が JSON として解釈できる。

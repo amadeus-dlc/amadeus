@@ -153,7 +153,7 @@ npm run validate:workspace -- <workspace> <YYMMDD>-<label>
   - [State](docs/amadeus/lifecycle/state.md)
 - Space reference: [docs/amadeus/steering.ja.md](docs/amadeus/steering.ja.md)
 - 拡張ガイド: [docs/amadeus/extension-guide.ja.md](docs/amadeus/extension-guide.ja.md)
-- Architecture Decision: [docs/adr/](docs/adr/)
+- 判断記録: Intent record の decision、steering の根拠表、`CONTEXT.md`（語彙）が持つ（リポジトリ横断の ADR 体系ではない）
 - AI-DLC 参照資料: [docs/ai-dlc/](docs/ai-dlc/)
 
 ## Boundaries

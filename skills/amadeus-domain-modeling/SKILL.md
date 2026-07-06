@@ -5,7 +5,7 @@ description: >-
   the ubiquitous language, concept boundaries, concrete scenarios, the domain model, contracts, or domain decisions,
   and record the confirmed content into `amadeus/spaces/<space>/knowledge/glossary.md`, `amadeus/spaces/<space>/knowledge/domain-map.md`,
   `amadeus/spaces/<space>/knowledge/context-map.md`, `amadeus/spaces/<space>/intents/<dirName>/domain-notes.md`, Construction Functional Design,
-  or the minimum necessary decision. Do not use this to update the repo's development `CONTEXT.md` or `docs/adr`.
+  or the minimum necessary decision. Do not use this to update the repo's development `CONTEXT.md`; that is the canonical vocabulary source, and this skill only maintains its workspace excerpt (`glossary.md`) and its siblings.
 ---
 
 # amadeus-domain-modeling
@@ -18,7 +18,7 @@ This skill is not just for reading `amadeus/spaces/<space>/knowledge/glossary.md
 It is a skill for pointing out terminology conflicts, sharpening ambiguous words, testing concept relationships with concrete scenarios, and recording the confirmed content into Amadeus artifacts on the spot.
 
 It handles the domain knowledge of the target product recorded under the Space (`amadeus/spaces/<space>/`).
-It does not update `CONTEXT.md` or `docs/adr/**`, which hold development terminology for the Amadeus repo itself.
+It does not update `CONTEXT.md`, which is the canonical vocabulary source for the Amadeus repo's own development terminology; this skill only maintains the workspace excerpt (`glossary.md`) and its siblings (`domain-map.md`, `context-map.md`).
 
 ## File Structure
 
@@ -205,8 +205,7 @@ If there is no basis, do not promote it to a contract; leave it as a candidate i
 
 ## Prohibitions
 
-- Do not update `CONTEXT.md`.
-- Do not create or update `docs/adr/**`.
+- Do not update `CONTEXT.md`. It is the canonical vocabulary source, maintained at Intent gates; this skill only maintains the workspace excerpt (`glossary.md`) and its siblings.
 - Do not mix the repo's development terminology with the target domain terminology handled by the Space (`amadeus/spaces/<space>/`).
 - Do not add unresolved terms to `amadeus/spaces/<space>/knowledge/glossary.md`.
 - Do not use `amadeus/spaces/<space>/knowledge/glossary.md` as a place for specifications, a scratch pad, or implementation decisions.

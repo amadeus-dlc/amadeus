@@ -1518,3 +1518,134 @@
 **Duration ms**: 44
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-06T09:09:42Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T09:09:53Z
+**Event**: HUMAN_TURN
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-06T09:09:54Z
+**Event**: DECISION_RECORDED
+**Stage**: functional-design
+**Decision**: gate 承認の転記（種別: 人間承認。承認経路: 人間の包括委任 → leader 内容確認 → engineer3）: 承認者 j5ik2o（Maintainer）の包括委任（2026-07-06 04:07 JST）に基づき、leader が内容確認（2026-07-06 18:33 JST）のうえ中継（agmsg 2026-07-06T09:09:40Z 受信）。承認要旨: functional-design 成果物 4 件（B001 ADR 退役実施設計 / B002 CONTEXT.md 正準・規約・skill 文面 / B003 GD009 補正 8 記述 + 棚卸し 9 候補 + 横断検証設計、BR-1〜9、変更対象 12 実体、frontend 不適用宣言）と、architecture reviewer 3 反復 READY（F1 は rebase 追従済みの行き違いとして反証決着）を承認。次ステージへ進んでよい。
+**Rationale**: HUMAN_TURN は中継承認定型文の受信直後に mint 済み。
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-06T09:09:54Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: functional-design
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-06T09:09:54Z
+**Event**: GATE_APPROVED
+**Stage**: functional-design
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-06T09:09:54Z
+**Event**: STAGE_COMPLETED
+**Stage**: functional-design
+**Details**: Stage Functional Design approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-06T09:09:54Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Agent**: amadeus-developer-agent
+
+---
+
+## Memory Empty
+**Timestamp**: 2026-07-06T09:09:54Z
+**Event**: MEMORY_EMPTY
+**Stage**: functional-design
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-06T09:22:13Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer3/amadeus/spaces/default/intents/260706-adr-vocab/amadeus-state.md
+**Context**: amadeus-state.md
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-06T09:23:18Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer3/amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/code-generation/code-generation-plan.md
+**Context**: construction > adr-vocab > code-generation > code-generation-plan.md
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-06T09:23:52Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer3/amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/code-generation/code-summary.md
+**Context**: construction > adr-vocab > code-generation > code-summary.md
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T09:25:16Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: a434c175d36ca9879
+**Message**: code-generation ステージの実施が完了した。設計文書（reviewer 3反復READY + gate人間承認済み）どおりB001→B002→B003→横断検証の順で進め、逸脱なく完了した。\n\n## 変更ファイル一覧\n\n**B001（docs/adr 退役）**\n- `docs/amadeus/extension-guide.md` / `.ja.md` — 「## Design l
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T09:25:16Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T09:39:21Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a6ce0e3c338b08d39
+**Message**: # レビュー結果: Intent 260706-adr-vocab code-generation ステージ（iteration 1）\n\n## 総合判定: **NOT-READY**\n\nB001〜B003 の実体的な作業（ADR 退役、語彙の正準・抜粋・同期規約の確立、GD009 補正 8 記述、旧名補正、棚卸し 9 語彙の追加、skill 昇格）はほぼ設計どおり正しく実装されている。しかし、(1
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T09:39:21Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T09:44:55Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a6ce0e3c338b08d39
+**Message**: # レビュー結果: Intent 260706-adr-vocab code-generation ステージ（iteration 2 再レビュー）\n\n## 総合判定: **READY**\n\niteration 1 で指摘した 5 項目すべてについて、実ファイルを再実測し、修正内容が事実と一致することを確認した。新たな不整合の混入も見当たらない。\n\n---\n\n## 是正5項目の解消判定\n\n### 是
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T09:44:55Z
+**Event**: HUMAN_TURN
+
+---
