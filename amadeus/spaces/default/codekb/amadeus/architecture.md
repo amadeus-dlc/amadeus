@@ -14,6 +14,10 @@
 | model overlay | `dev-scripts/apply-model-overrides.ts` + `dev-scripts/data/model-overrides.json`（#554） | project-local な modelOverride 固定（設計系 2 agent → fable）。parity は管理値集合 {model} ∪ {fallbacks[model]} のトークン一致に限り base へ逆変換して比較（管理外値は fail）。doctor が乖離を警告（overlay は任意・fail-open 読み取り、読み取り失敗は「model overlay state unknown」1 行）。promote-skill は実昇格時のみ fail-soft で再適用。配布対象外（installer 許可リスト方式） |
 | 検証（reference-resolution） | `skills/amadeus-validator/` → 昇格先 | completed な reverse-engineering 段の record 成果物が、共有 `amadeus/spaces/<space>/codekb/<repo>/` 配下の正準 `.md` への reference-stub（相対リンク + 採用根拠）である場合、参照先の実在を検査する。ダングリング参照は fail、非 stub（実体成果物）は存在チェックのみで従来どおり（#501）。record stub 不在時は共有 `codekb/<repo>/<artifact>.md` の実在で直接解決する（stub 9 件の作成が不要になった = #548） |
 
+## space 成果物の層
+
+space レベル成果物は memory（判断基準の正）/ knowledge（参照知識）/ codekb（コード知識）/ intents（record 台帳）に、journal（Intent 横断の時系列生ログ、追記専用 + 昇格スタンプ。validator が optional 検査 = #557）が加わり 5 種となった。
+
 ## scope 体系
 
 scope 数は現在 10（bugfix / enterprise / feature / infra / mvp / pdm / poc / refactor / security-patch / workshop）。pdm は Amadeus 独自追加 scope（企画・要求定義止まりで Construction / Operation を持たない。上流パリティ例外 = parity-map engineFileExceptions、Issue #429）。scope とは別に、produces が amadeus/ 内文書だけの Intent に対する docs-only 宣言機構（#499）があり、`amadeus-state.ts declare-docs-only`（非空 evidence 必須、人間承認 audit イベントの実在照合つき）で宣言済みの Intent では workspace_requires ガードのステージ完了拒否が免除される。免除時は GUARD_EXEMPTED が audit へ記録される（audit イベント総数 71）。Adaptive Workflows（上流 2.2.0 = b67798c3）により、amadeus-composer-agent が `/amadeus compose` をトリガーにディスパッチされ、`recompose`（`amadeus-state.ts`）で実行中 workflow の pending ステージ suffix を flip する。`validate-grid`（`amadeus-graph.ts`）が合成 grid の論理整合を検証し、既存 scope の grid と composed scope は暫定 entry として共存する。RECOMPOSED イベントが audit へ記録される。

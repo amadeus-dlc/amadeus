@@ -784,7 +784,7 @@
     },
     {
       "target": "tools/aidlc-learnings.ts（ローカルでは .agents/amadeus/tools/amadeus-learnings.ts）、aidlc-common/protocols/stage-protocol.md（ローカルでは .agents/amadeus/amadeus-common/protocols/stage-protocol.md）",
-      "reason": "Issue #504: learnings persist の cid marker を cid:<dirName>:<stage>:<cN> 形式へ拡張し（既存 marker は不改稿、照合は新形式のみ）、戻り値を appended / already-present に分離して無言 no-op を解消。上流が同修正を取り込んだら解除。 §13 Step 5 の marker 形式記載も新形式（cid:<dirName>:<stage>:<cN>）へ更新した。PR gate 不変条件の最小ポインタを Construction Bolt gates 節末尾へ追記（Issue #534。上流が同等規律を導入したら解除）。"
+      "reason": "Issue #504: learnings persist の cid marker を cid:<dirName>:<stage>:<cN> 形式へ拡張し（既存 marker は不改稿、照合は新形式のみ）、戻り値を appended / already-present に分離して無言 no-op を解消。上流が同修正を取り込んだら解除。 §13 Step 5 の marker 形式記載も新形式（cid:<dirName>:<stage>:<cN>）へ更新した。PR gate 不変条件の最小ポインタを Construction Bolt gates 節末尾へ追記（Issue #534。上流が同等規律を導入したら解除）。persona / knowledge 読み込み規定 3 箇所（§5 For subagent stages、§11 Context budget の Always include 行と Cap knowledge files 行 = 手動注入を前提とするため削除）を実行実体（named agent の自動読込、prompt へ注入しない）へ整合（Issue #582。上流も同旧文言を持つため上流フィードバック候補。上流が同修正を取り込んだら解除）。"
     },
     {
       "target": "tools/aidlc-sensor.ts、tools/aidlc-sensor-required-sections.ts、tools/aidlc-sensor-upstream-coverage.ts、tools/aidlc-swarm.ts、tools/aidlc-validate.ts（ローカルでは .agents/amadeus/tools/amadeus-*.ts）",

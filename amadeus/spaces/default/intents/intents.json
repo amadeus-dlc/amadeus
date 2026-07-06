@@ -496,5 +496,13 @@
     "scope": "refactor",
     "repos": [],
     "status": "complete"
+  },
+  {
+    "uuid": "019f3709-29d8-7c80-a3a6-a087871b0826",
+    "slug": "persona-loading",
+    "dirName": "260706-persona-loading",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "complete"
   }
 ]
