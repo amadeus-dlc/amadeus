@@ -12,7 +12,7 @@
 ## 退役と参照更新の規則
 
 - BR-5: docs/adr は互換 stub・リダイレクトなしで削除する（backward-compatibility ルール。維持対象は docs/backward-compatibility.md 記載分のみで、docs/adr は記載がない）。`adr-template.md`（`.agents/amadeus/knowledge/amadeus-architect-agent/`）は Intent record 内テンプレートであり対象外。
-- BR-6: 参照更新の完全性は横断 grep で検証する。除外は (1) `amadeus/spaces/*/intents/`（record 内の歴史的言及）(2) git 履歴参照として意図的に残す記述（移設先の経緯参照）に限る。
-- BR-7: README.md / README.ja.md と docs/amadeus/lifecycle/overview.md の編集は、engineer5（guide-intro / docs-i18n）との接触面ピア確認（先勝ち + 追従）の回答後に行う。回答が期限内に来ない場合は編集を後回しにし、他の変更から進める。
+- BR-6: 参照更新の完全性は横断 grep で検証する。除外は (1) `amadeus/spaces/*/intents/`（record 内の歴史的言及）(2) git 履歴参照として意図的に残す記述（移設先の経緯参照）(3) `adr-template.md` の一般的な ADR 手引きとしての例示（91 行 `/docs/adr/` — Amadeus 本体の docs/adr への参照ではないため BR-5 どおり不変。reviewer F3）の 3 カテゴリに限る。
+- BR-7: README.md / README.ja.md と docs/amadeus/lifecycle/overview{.md,.ja.md} の編集は、接触面ピア確認（先勝ち + 追従）の回答後に行う。期限は team.md ピア協議と同じ 15 分を流用し、期限内に回答が来ない場合は編集を後回しにして他の変更から進める（reviewer F6）。確認状況: engineer5 = README 非衝突（L144 vs L156、engineer5 先行 → 当方追従）+ overview 見出し不変条件で決着済み。engineer2 = #575 merge 済みで非接触、両言語追記条件で決着済み。`260706-readme-refresh`（README 2 ファイル限定の Intent）は registry で status: complete を確認済みで接触なし（reviewer F4）。
 - BR-8: `amadeus-domain-modeling` skill の変更は source（`skills/`）を正として編集し、`dev-scripts/promote-skill.ts --replace` で昇格、`npm run test:it:promote-skill` で検証する。SKILL.md は英語必須（skill language policy）。「CONTEXT.md を更新しない」という skill の既存制約は維持する。
-- BR-9: lifecycle/overview.md への追記は既存の言語状態（日本語のみ・.ja.md 併置なし）に合わせて日本語で行い、英語化は docs-i18n 側の責務として持ち込まない。extension-guide への追記は英語正 + .ja.md 併置の既存方針に従い両方書く。
+- BR-9: docs/amadeus 配下への追記は英語正 + `.ja.md` 併置の言語方針に従い、extension-guide と lifecycle/overview の両方で英語・日本語の両言語を書く（lifecycle は PR #575 = #515〜520 の merge で英語正へ移行済み。設計当初の「lifecycle は日本語のみ」前提は rebase 追従で解消）。見出し文言は両言語とも変更しない（docs/guide のアンカー参照が依存。engineer5 条件）。

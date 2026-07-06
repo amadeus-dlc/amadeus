@@ -906,3 +906,615 @@
 **Event**: HUMAN_TURN
 
 ---
+
+## Artifact Updated
+**Timestamp**: 2026-07-06T08:53:48Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer3/amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+**Context**: construction > adr-vocab > functional-design > business-logic-model.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T08:53:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 894dcce9
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T08:53:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 894dcce9
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+**Duration ms**: 45
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T08:53:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7d0d91a2
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T08:53:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7d0d91a2
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+**Duration ms**: 47
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-06T08:53:53Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer3/amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-rules.md
+**Context**: construction > adr-vocab > functional-design > business-rules.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T08:53:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 59ac6259
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T08:53:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 59ac6259
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-rules.md
+**Duration ms**: 47
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T08:53:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 547a70c0
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T08:53:53Z
+**Event**: SENSOR_PASSED
+**Fire id**: 547a70c0
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-rules.md
+**Duration ms**: 44
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-06T08:53:56Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer3/amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/domain-entities.md
+**Context**: construction > adr-vocab > functional-design > domain-entities.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T08:53:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4713ee02
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T08:53:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4713ee02
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/domain-entities.md
+**Duration ms**: 66
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T08:53:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9a82c75b
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T08:53:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9a82c75b
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/domain-entities.md
+**Duration ms**: 69
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T09:00:18Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: aed228b5db773f87b
+**Message**: # レビュー結果：260706-adr-vocab functional-design（iteration 1）\n\n## 判定\n\n**NOT-READY**\n\n実測により、設計の前提となる事実誤認が1件（重大）、検証設計の不整合が2件（受け入れ条件を満たせない）見つかった。いずれも実装者が単独で解決できず、設計への差し戻しが必要である。\n\n## 観点別判定\n\n| 観点 | 判定 |\n|---|--
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T09:00:18Z
+**Event**: HUMAN_TURN
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-06T09:00:48Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer3/amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+**Context**: construction > adr-vocab > functional-design > business-logic-model.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:00:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2ae1c94c
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:00:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2ae1c94c
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+**Duration ms**: 52
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:00:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7a404c7d
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:00:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7a404c7d
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+**Duration ms**: 44
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-06T09:00:56Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer3/amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+**Context**: construction > adr-vocab > functional-design > business-logic-model.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:00:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: f2c055af
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:00:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: f2c055af
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+**Duration ms**: 47
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:00:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: b68131b3
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:00:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: b68131b3
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+**Duration ms**: 48
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-06T09:01:04Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer3/amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+**Context**: construction > adr-vocab > functional-design > business-logic-model.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:01:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: b2ae0889
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:01:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: b2ae0889
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:01:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: 63f3d778
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:01:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 63f3d778
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+**Duration ms**: 47
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-06T09:01:22Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer3/amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+**Context**: construction > adr-vocab > functional-design > business-logic-model.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:01:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 92c0c916
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:01:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 92c0c916
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:01:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: eaf9e14e
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:01:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: eaf9e14e
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+**Duration ms**: 44
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T09:04:46Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T09:06:02Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: aed228b5db773f87b
+**Message**: # レビュー結果：260706-adr-vocab functional-design（iteration 2 再レビュー）\n\n## 判定\n\n**NOT-READY**\n\nF1・F3〜F7 は解消を確認した。F2（GD009 矛盾の是正範囲）は、対象範囲の拡大自体は妥当だが、実測の結果、是正案と検証設計に新たな不整合が残っている。この1点のみが残課題であり、iteration 1 の他の指摘より影
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T09:06:02Z
+**Event**: HUMAN_TURN
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-06T09:06:28Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer3/amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+**Context**: construction > adr-vocab > functional-design > business-logic-model.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:06:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: ca013bd8
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:06:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: ca013bd8
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+**Duration ms**: 45
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:06:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: d3f49a4c
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:06:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: d3f49a4c
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+**Duration ms**: 42
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-06T09:06:35Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer3/amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+**Context**: construction > adr-vocab > functional-design > business-logic-model.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:06:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: cb57445e
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:06:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: cb57445e
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+**Duration ms**: 44
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:06:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5e874355
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:06:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5e874355
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+**Duration ms**: 43
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T09:07:59Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: aed228b5db773f87b
+**Message**: # レビュー結果：260706-adr-vocab functional-design（iteration 3 再レビュー、F2 のみ検証）\n\n## 判定\n\n**READY**\n\nF2(a)・F2(b) とも、実測に基づき妥当な形で解消されたと判断した。F1・F3〜F7 は iteration 2 で解消判定済みのため、iteration 3 でも変更なしとして扱う。\n\n## F2(a) の解消判
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T09:08:00Z
+**Event**: HUMAN_TURN
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-06T09:08:12Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer3/amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+**Context**: construction > adr-vocab > functional-design > business-logic-model.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:08:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: a595d967
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:08:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: a595d967
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+**Duration ms**: 44
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:08:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: a20893d0
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:08:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: a20893d0
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/construction/adr-vocab/functional-design/business-logic-model.md
+**Duration ms**: 43
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-06T09:08:51Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer3/amadeus/spaces/default/intents/260706-adr-vocab/verification/phase-check-inception.md
+**Context**: verification > phase-check-inception.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:08:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: 17761e59
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/verification/phase-check-inception.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:08:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: 17761e59
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/verification/phase-check-inception.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T09:08:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7037bd70
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/verification/phase-check-inception.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T09:08:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7037bd70
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260706-adr-vocab/verification/phase-check-inception.md
+**Duration ms**: 44
+
+---

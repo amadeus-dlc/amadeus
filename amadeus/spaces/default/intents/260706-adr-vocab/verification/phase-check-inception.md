@@ -3,6 +3,8 @@
 対象 phase: Inception（refactor scope、実行ステージは reverse-engineering / requirements-analysis）
 検査日: 2026-07-06
 
+上流入力: [requirements.md](../inception/requirements-analysis/requirements.md)、[requirements-analysis-questions.md](../inception/requirements-analysis/requirements-analysis-questions.md)
+
 ## トレーサビリティ
 
 | 連鎖 | 状態 |
