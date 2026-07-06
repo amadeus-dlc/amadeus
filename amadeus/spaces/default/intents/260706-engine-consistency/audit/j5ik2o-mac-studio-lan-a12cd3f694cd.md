@@ -503,3 +503,55 @@
 **Context**: construction > code-generation > memory.md
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-06T06:30:17Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T06:30:39Z
+**Event**: HUMAN_TURN
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-06T06:30:39Z
+**Event**: DECISION_RECORDED
+**Stage**: code-generation
+**Decision**: code-generation の gate 承認（中継承認定型文の転記、auto 委任適用。承認経路: 人間の包括委任（2026-07-06 04:07 JST）→ leader 内容確認（2026-07-06 15:48 JST）→ engineer1。受信直後に HUMAN_TURN mint 済み）。承認要旨: Bolt 3 本の TDD 実装（全 RED 先行）、随伴修正（Current Stage: none 化に伴う next の internal error 潜在バグ = pdm-scope eval (f) の RED 検出による発見と修正、parity 例外 entry 明記）、agent_type 空の副症状修正（unknown 化 + eval）、FR-3.2 の適用範囲実測（log-subagent 適用 / audit-logger と SESSION_* は理由付き見送り、SESSION_* は後続 Issue 候補として leader 受領）、reviewer READY（Low-1 即修正、Low-2/3 は PR 範囲外の整理妥当）、検証全 pass。build-and-test へ進行可。補足: learnings surface の runtime-graph 未登録エラーは再発 2 例目として leader が Issue 起案
+**Options**: approve,request-changes
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-06T06:30:47Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-06T06:30:47Z
+**Event**: GATE_APPROVED
+**Stage**: code-generation
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-06T06:30:47Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Details**: Stage Code Generation approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-06T06:30:47Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Agent**: amadeus-quality-agent
+
+---
