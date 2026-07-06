@@ -2,6 +2,8 @@
 
 この文書は、自分の workspace で Amadeus DLC を運用する人が繰り返し抱く疑問に答える。ライフサイクルを拡張・ステアリングしたいとき、`amadeus/spaces/<space>/` 配下（一部の Amadeus 独自拡張ポイントは workspace の外）の何を編集すればよいか、そして人間が直接手で編集してよいかを扱う。
 
+Amadeus をこれから使い始める場合は、拡張の前に[利用者ガイド](../guide/index.ja.md)（導入と最初の workflow）から読み始める。
+
 ## スケール原理
 
 stage 定義が持つのは「何をやるか」だけである。宣言された `phase`、`produces`、そして stage の目的を説明する stage protocol の本文がそれにあたる。特定のチームやプロジェクトに向けた「どうやるか」は stage 定義には持たせず、Space の `memory/` が担い、compile 時に解決・注入される。

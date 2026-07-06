@@ -141,6 +141,7 @@ npm run validate:workspace -- <workspace> <YYMMDD>-<label>
 ## Documentation
 
 - Agent entrypoint: [AMADEUS.md](AMADEUS.md)
+- User guide: [docs/guide/index.md](docs/guide/index.md)
 - Skill language policy: [docs/amadeus/skill-language-policy.md](docs/amadeus/skill-language-policy.md)
 - Language policy for `docs/amadeus/`: [docs/amadeus/language-policy.md](docs/amadeus/language-policy.md)
 - Lifecycle contract (5 phases, 32 stages, scopes, state schema):
