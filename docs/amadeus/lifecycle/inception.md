@@ -150,6 +150,7 @@ Intent を検証可能な要求へ落とす。
 
 | Artifact | 必須 | 供給元 |
 |---|---|---|
+| record の audit shard にある user project description | 必須 | Intake |
 | `intent-statement.md` | 任意 | Stage 1.1 |
 | `scope-document.md` | 任意 | Stage 1.4 |
 | `codekb/<repo>/` の成果物 | 条件付き（brownfield） | Stage 2.1 |

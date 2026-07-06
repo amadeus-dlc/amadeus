@@ -99,6 +99,17 @@ ideation.md / inception.md / construction.md の Phase Overview へ、rules_in_c
 
 どちらも「理由付き不適用」ではなく「縮退形での適用」とした。Inputs 観点そのものは両文書に意味があり、不適用にする理由がないため。
 
+## reviewer（Codex）初見レビューの反映（PR #561、Bugbot limit の代替 1 巡目）
+
+2026-07-06T07:02:27Z 受領の所見 4 件を実測で裏取りし、すべて反映した。
+
+| 所見 | 裏取りと補正 |
+|---|---|
+| [High] 一次実測源 path が実在しない | `.claude/amadeus-common` は `.agents/amadeus/amadeus-common` への symlink であり、正準 path は `.agents/` 側。overview.md の記法定義を正準 path へ補正した |
+| [Med] Requirements Analysis の Intake 入力が表から欠落 | stage 定義の frontmatter `inputs:` と Step 2 が「record の audit shard にある user project description」を無条件に読むことを実測（requirements-analysis.md 47、63〜64 行）。inception.md 2.3 の Inputs へ `必須 / Intake` の行を追加した。B002 の抽出が `consumes:` だけを対象にし、非構造の `inputs:` 行を見ていなかったことが欠落の原因 |
+| [Med] 実在しない機構への言及 | overview.md の補助入口列挙から退役済み 3 個（domain-grilling、event-storming、steering）を除去（現行の補助入口 3 個 = AMADEUS.md と一致）。Learn 写像行から実在しない `amadeus-history-review` / `amadeus-learning-review` への言及を除去 |
+| [Low] Artifact 列の説明が非成果物入力と矛盾して見える | 列の説明を「成果物の record 相対 path、workspace / Space の既存参照、Intake 由来の入力」へ拡張した |
+
 ### GD009 残存の補正
 
 - scopes.md 縮退時の入力代替表の 2.7 行: 「Unit の記述は Intent のモジュールファイルと `requirements.md` で代替する」→「Unit の記述は `requirements.md` で代替する」（モジュールファイルは GD009 で廃止済み）。

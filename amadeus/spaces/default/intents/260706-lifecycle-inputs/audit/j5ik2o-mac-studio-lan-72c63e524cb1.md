@@ -2116,3 +2116,20 @@
 **Details**: Scope: refactor, 8 stages completed
 
 ---
+
+## Artifact Updated
+**Timestamp**: 2026-07-06T07:04:16Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer2/amadeus/spaces/default/intents/260706-lifecycle-inputs/construction/u001-lifecycle-inputs/code-generation/measurement-correction-log.md
+**Context**: construction > u001-lifecycle-inputs > code-generation > measurement-correction-log.md
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-06T07:04:32Z
+**Event**: DECISION_RECORDED
+**Stage**: build-and-test
+**Decision**: reviewer（Codex / GPT-5.5、Bugbot limit の代替 1 巡目）の所見 4 件（High 1 / Med 2 / Low 1）を実測で裏取りし、すべて反映した（帰属 = reviewer / GPT-5.5、受領 2026-07-06T07:02:27Z）。(1) 記法定義の一次実測源 path を正準の .agents/amadeus/amadeus-common/ へ補正（.claude は symlink）。(2) inception 2.3 へ Intake 供給の audit user project description 行を追加（stage 定義の inputs: 行と Step 2 で実測。consumes: だけを見た B002 抽出の欠落を訂正）。(3) overview の退役済み補助入口 3 個と実在しない review skill 2 個への言及を除去。(4) Artifact 列の説明を非成果物入力を含む形へ拡張。反映は measurement-correction-log.md に記録。High 所見のため leader へも一報する。
+
+---
