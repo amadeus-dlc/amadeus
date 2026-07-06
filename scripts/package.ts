@@ -50,6 +50,7 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import type { HarnessManifest } from "./manifest-types.ts";
 import { renderOnboarding } from "./onboarding.ts";
+import { AMADEUS_VERSION } from "../core/tools/amadeus-version.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const CORE_ROOT = join(REPO_ROOT, "core");
@@ -198,6 +199,17 @@ const MEMORY_SEED_DST = join("tools", "data", "memory-seed");
 // gitignore is moot for that path here, exactly like a shipped default .env.
 const ACTIVE_SPACE_REL = join("amadeus", "active-space");
 const ACTIVE_SPACE_VALUE = "default\n";
+
+// The plain-text version marker shipped at the engine-dir root
+// (<harnessDir>/VERSION). Sourced from core/tools/amadeus-version.ts — the one
+// hand-edited version truth — so a copied install (`cp -r dist/<h>/<harnessDir>/`)
+// carries a human-readable framework version (`cat .claude/VERSION`) without
+// opening tools/amadeus-version.ts or running the CLI.
+const VERSION_FILE = "VERSION";
+
+function writeVersionFile(treeRoot: string): void {
+  writeFileSync(join(treeRoot, VERSION_FILE), `${AMADEUS_VERSION}\n`);
+}
 
 // Write tools/data/harness.json from manifest data. Today it carries just the
 // rules-subdir (the one rename the runtime must know per-tree); the object shape
@@ -410,6 +422,12 @@ function buildTree(m: HarnessManifest, outRoot: string, seedFrom: string): strin
   //     the compile step just created, hence walked + byte-diffed by --check
   //     like any other generated file.
   writeHarnessData(treeRoot, m);
+
+  // 3c. Emit the <harnessDir>/VERSION marker (plain text, one line) so every
+  //     shipped tree — and every install copied from it — states its framework
+  //     version. Same emit-in-buildTree contract as harness.json: regenerated
+  //     every build, walked + byte-diffed by --check.
+  writeVersionFile(treeRoot);
 
   // 4. Generate runners by composing amadeus-runner-gen's CLIs against the
   //    assembled tree (write + scopes). AMADEUS_HARNESS_DIR steers harnessDir()
