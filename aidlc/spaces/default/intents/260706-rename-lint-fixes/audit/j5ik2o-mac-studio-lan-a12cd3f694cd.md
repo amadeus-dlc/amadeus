@@ -1595,3 +1595,74 @@
 **Event**: HUMAN_TURN
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-06T02:55:02Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T02:55:13Z
+**Event**: HUMAN_TURN
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-06T02:55:13Z
+**Event**: DECISION_RECORDED
+**Stage**: code-generation
+**Decision**: code-generation（Bolt 3 本直列）の gate 承認（中継承認定型文の転記、auto 委任適用。承認経路: 人間の包括委任（2026-07-06 04:07 JST）→ leader 内容確認（2026-07-06 11:56 JST）→ engineer1。受信直後に HUMAN_TURN mint 済み）。承認要旨: B001（skillMdPath 修正 = scope-table --check exit 0）、B002（learnings の sensors 解決修正）、B003（linter sensor の 2 段検出化、repo 固有パス直書きなし + sensor 文書一致）、常設 eval 2 本、parity 例外 +2、reviewer READY（所見 2 件反映済み）を承認。build-and-test へ進行可
+**Options**: approve,request-changes
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-06T02:55:13Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Recovered**: true
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-06T02:55:13Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state approve code-generation --user-input leader 中継承認（auto 委任、leader 内容確認 2026-07-06 11:56 JST） --project-dir /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer1
+**Error**: Refusing to complete "code-generation": it is a code-producing stage (workspace_requires) but no source work is evident outside the aidlc/ workspace tree. In a git workspace this means no uncommitted change and no code in the last commit; otherwise no source file exists. Planning docs alone do not satisfy Code Generation - write the code to the workspace. If this Intent's produces are genuinely record-internal documents only, declare it first: amadeus-state.ts declare-docs-only --evidence "<approval reference>".
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-06T02:55:13Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-orchestrate
+**Command**: report --stage code-generation --result approved --user-input leader 中継承認（auto 委任、leader 内容確認 2026-07-06 11:56 JST）
+**Error**: Transition rejected by amadeus-state.ts approve for "code-generation": {"error":"Refusing to complete \"code-generation\": it is a code-producing stage (workspace_requires) but no source work is evident outside the aidlc/ workspace tree. In a git workspace this means no uncommitted change and no code in the last commit; otherwise no source file exists. Planning docs alone do not satisfy Code Generation - write the code to the workspace. If this Intent's produces are genuinely record-internal documents only, declare it first: amadeus-state.ts declare-docs-only --evidence \"<approval reference>\"."}
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-06T02:55:31Z
+**Event**: GATE_APPROVED
+**Stage**: code-generation
+**User Input**: leader 中継承認（auto 委任、leader 内容確認 2026-07-06 11:56 JST）
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-06T02:55:31Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Details**: Stage Code Generation approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-06T02:55:31Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Agent**: amadeus-quality-agent
+
+---
