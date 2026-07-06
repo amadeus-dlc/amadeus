@@ -2,6 +2,13 @@
 
 ## 差分更新の記録（最新）
 
+- 解析時刻: 2026-07-06T09:10:00Z（UTC）
+- 対象コミット: 9232a9c7（origin/main = PR #577 merge 後）
+- 解析方式: 差分更新（1aed7eb1..9232a9c7。rebase 時の時系列 union 補正: #564 分は 260706-adr-vocab の 08:40 更新を正とし当方分を破棄、#574 = codekb 更新 PR 自体・#575 = docs のみで影響なし。当方の有効残差分は #577 = doctor 2 状態分離を api-documentation の utility 行へ、installer info 行を component-inventory へ追記した 2 件）
+- 実施 Intent: `260706-three-layer-build`（reverse-engineering、メイン直接処理）
+
+## 前回（2026-07-06T08:40:00Z、1aed7eb1..0075f931 = adr-vocab）の記録
+
 - 解析時刻: 2026-07-06T08:40:00Z（UTC）
 - 対象コミット: 0075f931（origin/main = PR #564 merge 後）
 - 解析方式: 差分更新（1aed7eb1..0075f931 = PR #564 model overlay のみ = component-inventory / architecture / api-documentation へ外科的追記、eval 数 31→32 実測補正。#566 分は下の 260706-doctor-guidance の 08:30 更新が、#561/#563/#565 分は 260706-feature-diff の 07:58 更新が反映済みのため対象外へ補正 = rebase 時の時系列 union）

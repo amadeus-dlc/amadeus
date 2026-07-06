@@ -1,0 +1,157 @@
+# AI-DLC Audit Log
+
+## Workflow Start
+**Timestamp**: 2026-07-06T09:06:23Z
+**Event**: WORKFLOW_STARTED
+**Scope**: refactor
+**Request**: /amadeus Issue #572 三層化 Phase 2: 手編集の場所を core/ と harness/ へ一本化し、promote-skill を一般化した build.ts で harness 別の生成物を作る。生成物の手編集は検査で検出し、team.md の粒度制約を CI 検証へ置き換える
+
+---
+
+## Phase Start
+**Timestamp**: 2026-07-06T09:06:23Z
+**Event**: PHASE_STARTED
+**Phase**: initialization
+**Stage count**: 3
+**Scope**: refactor
+
+---
+
+## Phase Skip
+**Timestamp**: 2026-07-06T09:06:23Z
+**Event**: PHASE_SKIPPED
+**Phase**: ideation
+**Scope**: refactor
+**Reason**: scope refactor excludes ideation
+
+---
+
+## Phase Skip
+**Timestamp**: 2026-07-06T09:06:23Z
+**Event**: PHASE_SKIPPED
+**Phase**: operation
+**Scope**: refactor
+**Reason**: scope refactor excludes operation
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-06T09:06:23Z
+**Event**: STAGE_STARTED
+**Stage**: workspace-scaffold
+**Agent**: orchestrator
+
+---
+
+## Workspace Scaffolded
+**Timestamp**: 2026-07-06T09:06:23Z
+**Event**: WORKSPACE_SCAFFOLDED
+**Request**: /amadeus Issue #572 三層化 Phase 2: 手編集の場所を core/ と harness/ へ一本化し、promote-skill を一般化した build.ts で harness 別の生成物を作る。生成物の手編集は検査で検出し、team.md の粒度制約を CI 検証へ置き換える
+**Details**: Per-intent artifact dirs + space-level knowledge/ ensured (shell shipped by SEED)
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-06T09:06:23Z
+**Event**: STAGE_COMPLETED
+**Stage**: workspace-scaffold
+**Details**: Per-intent artifact dirs + space-level knowledge/ ensured
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-06T09:06:23Z
+**Event**: STAGE_STARTED
+**Stage**: workspace-detection
+**Agent**: orchestrator
+
+---
+
+## Workspace Scanned
+**Timestamp**: 2026-07-06T09:06:24Z
+**Event**: WORKSPACE_SCANNED
+**Project Type**: Brownfield
+**Languages**: TypeScript
+**Frameworks**: Unknown
+**Build System**: bun (package.json)
+**Details**: Deterministic rule-based scan
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-06T09:06:24Z
+**Event**: STAGE_COMPLETED
+**Stage**: workspace-detection
+**Details**: Classified Brownfield; languages=TypeScript; frameworks=Unknown
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-06T09:06:24Z
+**Event**: STAGE_STARTED
+**Stage**: state-init
+**Agent**: orchestrator
+
+---
+
+## Workspace Initialised
+**Timestamp**: 2026-07-06T09:06:24Z
+**Event**: WORKSPACE_INITIALISED
+**Request**: /amadeus Issue #572 三層化 Phase 2: 手編集の場所を core/ と harness/ へ一本化し、promote-skill を一般化した build.ts で harness 別の生成物を作る。生成物の手編集は検査で検出し、team.md の粒度制約を CI 検証へ置き換える
+**Project Type**: Brownfield
+**Scope**: refactor
+**Languages**: TypeScript
+**Frameworks**: Unknown
+**Build System**: bun (package.json)
+**Details**: 8 stages in scope, routing to reverse-engineering
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-06T09:06:24Z
+**Event**: STAGE_COMPLETED
+**Stage**: state-init
+**Details**: State initialized: refactor scope, 8 stages, routing to reverse-engineering
+
+---
+
+## Phase Completion
+**Timestamp**: 2026-07-06T09:06:24Z
+**Event**: PHASE_COMPLETED
+**From phase**: initialization
+**To phase**: inception
+**Stages completed**: 3
+
+---
+
+## Phase Verification
+**Timestamp**: 2026-07-06T09:06:24Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: initialization → inception
+
+---
+
+## Phase Start
+**Timestamp**: 2026-07-06T09:06:24Z
+**Event**: PHASE_STARTED
+**Phase**: inception
+**Scope**: refactor
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-06T09:06:24Z
+**Event**: STAGE_STARTED
+**Stage**: reverse-engineering
+**Agent**: amadeus-developer-agent
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-06T09:06:24Z
+**Event**: DECISION_RECORDED
+**Stage**: intent-capture
+**Decision**: Intent 化のディスパッチ承認（ディスパッチ定型文の転記）。承認者: j5ik2o（Maintainer）。承認日時: 2026-07-06 18:20 JST（Phase 2 #572 実行の明示指示）。対象 Issue: #572 / scope: refactor（ディスパッチの主候補を採用。engine の freeform keyword 解決は bugfix を返したが、本作業は全 skill 移動 + build.ts 新設の restructure でありディスパッチ候補 refactor が正。feature でも可とされたが、成果物の主体が既存構造の再編成のため refactor を選択）。承認要旨: #572 の Intent 化と実行を承認、engineer1 担当。順序制約: Ideation〜Inception は即並行可 / Construction の restructure は leader へ solo window 要求 → 確定後に最新 origin/main 基点・git mv・1 Bolt / parity と promote 経路の整合は同 Bolt 内。Phase 1 成果（harness/codex = PR #565）を前提にしてよい。walking skeleton の Bolt PR は人間承認。承認経路: 人間 → leader → engineer1
+**Options**: delegated-approval
+
+---
