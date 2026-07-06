@@ -2129,3 +2129,88 @@
 **Reason**: feature scope の全 EXECUTE ステージ完了。ci-pipeline と Operation 7 ステージは中継承認（2026-07-06T11:49:28Z）に基づく理由付き skip。
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T11:55:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: d4aafa12
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/amadeus-install.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T11:55:32Z
+**Event**: SENSOR_PASSED
+**Fire id**: d4aafa12
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/amadeus-install.ts
+**Duration ms**: 771
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T11:55:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: aa715dc3
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/amadeus-install.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-06T11:55:32Z
+**Event**: SENSOR_FAILED
+**Fire id**: aa715dc3
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/amadeus-install.ts
+**Detail path**: amadeus/spaces/default/intents/260706-installer-versioning/.amadeus-sensors/code-generation/type-check-aa715dc3.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T11:55:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1acfeda8
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/amadeus-install.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T11:55:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1acfeda8
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: scripts/amadeus-install.ts
+**Duration ms**: 761
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T11:55:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: bf103dad
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/amadeus-install.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T11:55:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: bf103dad
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: scripts/amadeus-install.ts
+**Duration ms**: 565
+
+---
