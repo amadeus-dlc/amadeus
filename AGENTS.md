@@ -10,6 +10,10 @@
 - 人間の明示的な許可なしに `.coderabbit.yml` / `.coderabbit.yaml` を変更しないこと。
 - `.coderabbit.yml` / `.coderabbit.yaml` の `reviews.path_filters` に書かれた対象はレビューしたり変更しないこと。
 
+## 運用注意
+
+- 上流同期後に model overlay（`dev-scripts/data/model-overrides.json`、Issue #554）の反映を確認する場合は、`npm run parity:check` で乖離を確認してから `npm run models:apply` で再適用すること（この順序を守る。逆順でも管理外の実値は apply が拒否するため drift は握りつぶされないが、乖離の把握は parity:check を先に行う）。
+
 ## Code Guidelines
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.

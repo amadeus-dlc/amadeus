@@ -27,6 +27,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { readModelOverrideLine, setModelOverrideLine } from "./apply-model-overrides";
 
 type ParityBaseline = {
   baselineCommit: string;
@@ -198,8 +199,62 @@ function resolveMappedLocalEnginePath(root: string, upstreamPath: string, map: P
   return resolveLocalEnginePath(root, mapEnginePath(upstreamPath, map.nameMappings), map.relocations);
 }
 
+// dev-scripts/data/model-overrides.json（overlay 宣言、Issue #554）の型。適用側
+// （apply-model-overrides.ts）と同じ形を、parity 側の正規化専用に最小限で持つ。
+type ModelOverlayAgentEntry = { model: string; base?: string };
+type ModelOverlay = { agents: Record<string, ModelOverlayAgentEntry>; fallbacks: Record<string, string> };
+
+// overlay 設定は project-local の開発用ファイルであり parity 対象外（BR-8）。
+// 不在・JSON 破損のどちらでも正規化なしにフォールバックする（fail-open）。
+function loadModelOverlay(root: string): ModelOverlay | null {
+  const path = join(root, "dev-scripts/data/model-overrides.json");
+  if (!existsSync(path)) return null;
+  try {
+    return JSON.parse(readFileSync(path, "utf8")) as ModelOverlay;
+  } catch {
+    return null;
+  }
+}
+
+// overlay 宣言 agent のローカル path -> agent 名の逆引き。
+function modelOverlayLocalPaths(root: string, overlay: ModelOverlay | null): Map<string, string> {
+  const map = new Map<string, string>();
+  if (!overlay) return map;
+  for (const name of Object.keys(overlay.agents)) {
+    map.set(join(root, ".agents/amadeus/agents", `${name}.md`), name);
+  }
+  return map;
+}
+
+// overlay 宣言 agent のファイル内容を、base 記録済みかつ実値が管理値集合
+// （宣言モデル ∪ 宣言済み fallback 先）と一致する場合に限り base へ逆変換する
+// （FR-3.1、BR-9 のトークン一致置換）。base 未記録（bootstrap window）なら
+// 正規化せず、fail 時に付す案内ヒントだけを返す（FR-1.4）。
+function normalizeModelOverlay(
+  content: string,
+  entry: ModelOverlayAgentEntry,
+  fallbacks: Record<string, string>,
+): { content: string; hint?: string } {
+  if (entry.base === undefined) {
+    return { content, hint: "apply 未実行の宣言がある（models:apply を実行）" };
+  }
+  try {
+    const actual = readModelOverrideLine(content);
+    const fallbackTarget = fallbacks[entry.model];
+    const managed = new Set(fallbackTarget ? [entry.model, fallbackTarget] : [entry.model]);
+    if (managed.has(actual)) {
+      return { content: setModelOverrideLine(content, entry.base) };
+    }
+  } catch {
+    // modelOverride 行を読めない場合は正規化せず、そのまま hash 比較に委ねる。
+  }
+  return { content };
+}
+
 function checkEngineFiles(root: string, baseline: ParityBaseline, map: ParityMap): string[] {
   const exceptions = new Set(map.engineFileExceptions ?? []);
+  const overlay = loadModelOverlay(root);
+  const overlayLocalPaths = modelOverlayLocalPaths(root, overlay);
   const issues: string[] = [];
   for (const entry of baseline.engineFiles) {
     if (exceptions.has(entry.path)) continue;
@@ -208,9 +263,17 @@ function checkEngineFiles(root: string, baseline: ParityBaseline, map: ParityMap
       issues.push(`engine ファイル欠落: ${entry.path} -> ${localPath}`);
       continue;
     }
-    const actual = sha256Text(normalizeContent(readFileSync(localPath, "utf8"), map.nameMappings));
+    let raw = readFileSync(localPath, "utf8");
+    let hint = "";
+    const agentName = overlay ? overlayLocalPaths.get(localPath) : undefined;
+    if (overlay && agentName) {
+      const normalized = normalizeModelOverlay(raw, overlay.agents[agentName], overlay.fallbacks);
+      raw = normalized.content;
+      if (normalized.hint) hint = `（${normalized.hint}）`;
+    }
+    const actual = sha256Text(normalizeContent(raw, map.nameMappings));
     if (actual !== entry.sha256) {
-      issues.push(`engine ファイル hash 不一致: ${entry.path}（期待 ${entry.sha256}、実際 ${actual}）`);
+      issues.push(`engine ファイル hash 不一致: ${entry.path}（期待 ${entry.sha256}、実際 ${actual}）${hint}`);
     }
   }
   return issues;

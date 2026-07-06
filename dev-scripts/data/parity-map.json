@@ -801,6 +801,10 @@
     {
       "target": "hooks/aidlc-runtime-compile.ts（command filter へのエンジン tools path 追加 = #558）、tools/aidlc-learnings.ts（surface の runtime-graph 自己修復 + 復旧手順つき fail fast = #558）（ローカルでは .agents/amadeus/hooks/amadeus-runtime-compile.ts、.agents/amadeus/tools/amadeus-learnings.ts）",
       "reason": "Intent 260706-runtime-graph-registrati（Issue #558）のエンジン修正。上流の path 前提（.claude/.kiro/.codex）に .agents/amadeus を追加したローカル固有差分と、surface の自己修復。上流が同等機構を取り込んだら例外を解除する。skills/ にはエンジン tools/hooks の正準コピーが存在しないため反映対象なし。"
+    },
+    {
+      "target": "tools/aidlc-utility.ts（ローカルでは .agents/amadeus/tools/amadeus-utility.ts）",
+      "reason": "Issue #554: model overlay（dev-scripts/data/model-overrides.json、dev-scripts 配下のため parity 対象外）の乖離を doctor に表面化するローカル修正。overlay ファイルは任意・fail-open 読み取り（不在は静かにスキップ、JSON 破損等の読み取り失敗は「model overlay state unknown」の 1 行を残す。BR-7 gate 承認条件）。宣言 agent（amadeus-architect-agent、amadeus-design-agent）の modelOverride が overlay 宣言（fallback 込み）と一致しない場合は警告する。engineFileExceptions は既存宣言（tools/aidlc-utility.ts）を流用し、新規追加はしない。上流に対応のない独自機能であり、恒久的に維持する。"
     }
   ]
 }

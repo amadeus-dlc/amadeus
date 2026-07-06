@@ -1705,6 +1705,57 @@ function handleDoctor(projectDir: string): void {
     });
   }
 
+  // Model overlay drift check (Issue #554, BR-7). dev-scripts/data/model-
+  // overrides.json is a repo-local dev asset never shipped to installed
+  // workspaces (FR-1.3), so a missing overlay file is the normal case for
+  // every real install and is skipped silently (fail-open, no dev-scripts
+  // dependency at runtime). Only a PRESENT-but-unreadable overlay (malformed
+  // JSON, permission error) surfaces a loud one-line warning — the read
+  // failure itself is never fully silent.
+  const modelOverlayPath = join(projectDir, "dev-scripts/data/model-overrides.json");
+  if (existsSync(modelOverlayPath)) {
+    try {
+      const overlay = JSON.parse(readFileSync(modelOverlayPath, "utf-8")) as {
+        agents?: Record<string, { model: string; fallbackApplied?: { to: string } }>;
+        fallbacks?: Record<string, string>;
+      };
+      const overlayAgents = overlay.agents ?? {};
+      let mismatches = 0;
+      for (const [name, entry] of Object.entries(overlayAgents)) {
+        const agentPath = join(projectDir, ".agents/amadeus/agents", `${name}.md`);
+        if (!existsSync(agentPath)) continue;
+        try {
+          const match = readFileSync(agentPath, "utf-8").match(/^modelOverride:\s*(.+)$/m);
+          if (!match) continue;
+          const actual = match[1].trim();
+          const expected = entry.fallbackApplied ? entry.fallbackApplied.to : entry.model;
+          if (actual !== expected) {
+            mismatches += 1;
+            results.push({
+              pass: false,
+              label: `model overlay mismatch: ${name} (actual modelOverride=${actual}, declared=${expected})`,
+              fix: "run `npm run models:apply` (or `npm run models:apply -- --use-fallback --reason <text>` for an intentional fallback)",
+            });
+          }
+        } catch {
+          // per-agent read failure — skip this agent, non-fatal for doctor.
+        }
+      }
+      if (mismatches === 0 && Object.keys(overlayAgents).length > 0) {
+        results.push({
+          pass: true,
+          label: `model overlay: ${Object.keys(overlayAgents).length} agent(s) match declaration`,
+        });
+      }
+    } catch {
+      results.push({
+        pass: false,
+        label: "model overlay state unknown (dev-scripts/data/model-overrides.json unreadable)",
+        fix: "verify dev-scripts/data/model-overrides.json is valid JSON",
+      });
+    }
+  }
+
   // Cold-safe gate: only emit audit when an audit trail already exists. On a
   // pristine project (no audit shard / flat audit.md) doctor prints its health
   // report and creates NOTHING — it stays a pure read-only diagnostic. On an

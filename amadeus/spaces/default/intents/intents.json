@@ -424,5 +424,13 @@
     "scope": "bugfix",
     "repos": [],
     "status": "complete"
+  },
+  {
+    "uuid": "019f35e7-f84a-77a9-a6d9-b5fc1fd98e9f",
+    "slug": "model-overlay",
+    "dirName": "260706-model-overlay",
+    "scope": "refactor",
+    "repos": [],
+    "status": "in_progress"
   }
 ]

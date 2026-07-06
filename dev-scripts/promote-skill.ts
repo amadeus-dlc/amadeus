@@ -2,6 +2,7 @@
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, cpSync, statSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
+import { applyModelOverrides } from "./apply-model-overrides";
 
 const alwaysAllowedFiles = ["SKILL.md", "pyproject.toml", "uv.lock"];
 const alwaysAllowedDirs = ["references", "scripts", "assets", "templates", "agents"];
@@ -181,3 +182,12 @@ if (violations.length > 0) {
 }
 
 console.log(options.dryRun ? "dry-run: ok" : "promote: ok");
+
+// Re-apply the model overlay (Issue #554 FR-2.2) after a real (non dry-run)
+// promotion, so a skill that someday ships agent persona files gets the same
+// modelOverride rewrite as `models:apply`. With the current 2 declared agents
+// living only under .agents/amadeus/agents/ (never inside a skill payload),
+// this call is a no-op forward-compatibility guard today.
+if (!options.dryRun) {
+  applyModelOverrides(root);
+}
