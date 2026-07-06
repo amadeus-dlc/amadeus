@@ -32,7 +32,7 @@ org.md の既定を上書きし、project.md に上書きされる。
 - 作業 branch は最新の `origin/main` を基点に作る。
 - PR merge 後は、最新の `origin/main` に追従してから次の作業 branch を作る。
 - PR 作成前には、対象 Intent の validator と標準検証の結果を記録する。
-- skill 変更 PR は、skill 変更だけで構成することを既定とする。source skill と昇格先成果物の同期は skill 変更の一部であり、常に同一 PR に含める。
+- skill 変更 PR は、skill 変更だけで構成することを既定とする。source skill（`core/skills/<name>/`）を変更したら、`npm run build:check` を実行して生成物が更新されていることを確認する。生成物（`.agents/amadeus/`、`.agents/skills/`）の手編集は `build:check` が検出するため、手動同期は不要である。
 - 他の変更種別を skill 変更と同一 PR に含めてよいのは、分割するとどちらかの PR 単独で検証が fail する不可分な場合だけである。
 - 粒度制約の例外を使う場合は、理由と後続確認先を PR 説明に記録する。記録の型はこの文書の「Git Branching Policy」節の例外記録に合わせる。
 - merge 操作は人間が行う。
