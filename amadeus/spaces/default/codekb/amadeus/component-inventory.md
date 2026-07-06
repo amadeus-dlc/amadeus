@@ -19,10 +19,11 @@
 | promote-skill | `dev-scripts/promote-skill.ts` | source → 昇格先の唯一の同期手段 |
 | parity | `dev-scripts/parity-check.ts` + `dev-scripts/data/parity-{map,baseline}.json` | 上流（b67798c3 = AI-DLC v2 2.2.0 Adaptive Workflows）との適応差分の追跡。意図的適応は engineFileExceptions へ宣言 |
 | sensors | `.agents/amadeus/sensors/`（4 種） | gate 時の決定論的検査。linter sensor は 2 段検出（workspace の lint:check script 優先 → eslint フォールバック → 不在時 quiet PASS、#538）で実 lint rule を gate に効かせる |
-| eval 群 | `dev-scripts/evals/`（31 種） | 隔離 workspace で実 CLI を駆動する決定論的検証（engine-e2e、hooks、kanban、validator ほか。新規 4 種: `docs-codekb-guards`＝codekb repo キーの worktree 名漏れ回帰検査 #498、`installer`＝配布インストーラの実 CLI 検証 #451、`pdm-scope`＝`pdm` scope の空 Construction e2e #429、`persist-cid-metamain`＝learnings persist の cid 衝突と import 副作用の回帰検査 #504/#507） |
+| eval 群 | `dev-scripts/evals/`（32 種） | 隔離 workspace で実 CLI を駆動する決定論的検証（engine-e2e、hooks、kanban、validator ほか。近時追加: `docs-codekb-guards`＝codekb repo キーの worktree 名漏れ回帰検査 #498、`installer`＝配布インストーラの実 CLI 検証 #451、`pdm-scope`＝`pdm` scope の空 Construction e2e #429、`persist-cid-metamain`＝learnings persist の cid 衝突と import 副作用の回帰検査 #504/#507、`model-overlay`＝overlay 機構 10 系列 37+ 検査 #554） |
 | kanban 可視化 | `dev-scripts/kanban/`、`dev-scripts/kanban-sync.ts` | Projects v2 への一方向鏡（repo 内限定の暫定機構 = #470） |
 | Codex guard | `skills/amadeus-*/agents/openai.yaml`（38 件）+ `harness/codex/{README,provenance}.md` | Codex の暗黙起動を禁止する guard と、その取り込み契約・写像・再取り込み手順（上流 dist/codex、基準 b67798c3、#552） |
 | lints | `lints/` | public type file / ts-complexity |
+| model overlay | `dev-scripts/apply-model-overrides.ts` + `dev-scripts/data/model-overrides.json` | project-local な modelOverride 固定（設計系 2 agent → fable、#554）。apply / --check / --use-fallback --reason / --accept-upstream-base。管理外実値は非ゼロ拒否（base 自動更新なし）。parity-check は管理値集合のトークン一致に限り base へ逆変換して比較。doctor が乖離を警告（fail-open、読み取り失敗は 1 行警告）。promote-skill は実昇格時のみ fail-soft で再適用。配布対象外 |
 
 ## 退役済み（参照しない）
 

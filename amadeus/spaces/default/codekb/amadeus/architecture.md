@@ -11,6 +11,7 @@
 | skills | `skills/amadeus*`（source）→ `.agents/skills/`（昇格先） | 単独実行用 stage runner と補助入口。同期は promote-skill.ts のみ。各 skill は agents/openai.yaml（Codex harness 用の適応取り込み = #552 Phase 1）を持ち、harness/codex が新設された（#565） |
 | 台帳 | `intents/intents.json`（registry、正準）+ 各 record の `amadeus-state.md` / `audit/` | `active-intent` が現在対象を示す。人間向け索引は廃止（GD009）。台帳は生きた台帳で PR 断面と一致しない（docs/amadeus/lifecycle/state.md） |
 | 可視化 | `dev-scripts/kanban/` + hooks 結線（#470） | GitHub Projects v2 への一方向鏡（Maintainer 専用の表示鏡） |
+| model overlay | `dev-scripts/apply-model-overrides.ts` + `dev-scripts/data/model-overrides.json`（#554） | project-local な modelOverride 固定（設計系 2 agent → fable）。parity は管理値集合 {model} ∪ {fallbacks[model]} のトークン一致に限り base へ逆変換して比較（管理外値は fail）。doctor が乖離を警告（overlay は任意・fail-open 読み取り、読み取り失敗は「model overlay state unknown」1 行）。promote-skill は実昇格時のみ fail-soft で再適用。配布対象外（installer 許可リスト方式） |
 | 検証（reference-resolution） | `skills/amadeus-validator/` → 昇格先 | completed な reverse-engineering 段の record 成果物が、共有 `amadeus/spaces/<space>/codekb/<repo>/` 配下の正準 `.md` への reference-stub（相対リンク + 採用根拠）である場合、参照先の実在を検査する。ダングリング参照は fail、非 stub（実体成果物）は存在チェックのみで従来どおり（#501）。record stub 不在時は共有 `codekb/<repo>/<artifact>.md` の実在で直接解決する（stub 9 件の作成が不要になった = #548） |
 
 ## scope 体系

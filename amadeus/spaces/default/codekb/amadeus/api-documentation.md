@@ -14,4 +14,5 @@
 | `amadeus-learnings.ts persist` | learnings（規則）の永続化。冪等性 key は `cid:<dirName>:<slug>:<candidateId>`（dirName は出所 Intent の record dir 名）。戻り値は `rule_learned`（新規追記）と `already_present`（既存 marker 一致）を分離しており、別 Intent の同名 candidate_id でも marker 衝突による無言 no-op が起きない（#504） |
 | `bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <ws> [dirName]` | 配布先で実行できる構造検証 |
 | `npm run test:all` / `npm run kanban:sync` | 標準検証入口 / board 全件同期 |
+| `npm run models:apply` / `npm run models:check` | model overlay の適用 / 宣言一致検査（#554）。apply は管理外実値を非ゼロ拒否し、base 更新は `--accept-upstream-base` の明示操作のみ。上流同期後は parity:check → models:apply の順（AGENTS.md 運用注意） |
 | `npm run amadeus:install -- --target <workspace>` / `bun run scripts/amadeus-install.ts --target <workspace>` | エンジンと skill を対象 workspace へ配布インストールする唯一の入口（冪等。#451） |

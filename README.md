@@ -153,7 +153,7 @@ npm run validate:workspace -- <workspace> <YYMMDD>-<label>
   - [State](docs/amadeus/lifecycle/state.md)
 - Space reference: [docs/amadeus/steering.md](docs/amadeus/steering.md)
 - Extension guide: [docs/amadeus/extension-guide.md](docs/amadeus/extension-guide.md)
-- Architecture decisions: [docs/adr/](docs/adr/)
+- Decision records: held by the Intent record's decision log, steering rationale tables, and `CONTEXT.md` (vocabulary) — not a repository-wide ADR series
 - AI-DLC reference material: [docs/ai-dlc/](docs/ai-dlc/)
 
 ## Boundaries
