@@ -156,3 +156,94 @@
 **Note**: script-error: exit-1
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-05T17:49:44Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: aa823dfdcfe9a5438
+**Message**: Bugbotの結果を待って対応して
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-05T17:52:00Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a1eef9d5598f91597
+**Message**: pdmスコープで実際にワークフローを試してみて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-05T17:57:05Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: ab680b19e9d5cc96f
+**Message**: scope-changeの前例をsandbox e2eで実機確認してみて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-05T18:00:27Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: ac971326f87147b64
+**Message**: 3の方針でマージ後に運用実績を観察することにする
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-05T18:07:03Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a60fbd87f18452465
+**Message**: intent-statementのテンプレート上書きでリーンキャンバスを試してみて
+
+---
+
+## Session End
+**Timestamp**: 2026-07-05T18:25:46Z
+**Event**: SESSION_ENDED
+**Reason**: other
+
+---
+
+## Session Start
+**Timestamp**: 2026-07-05T18:41:18Z
+**Event**: SESSION_STARTED
+**Source**: startup
+
+---
+
+## Session End
+**Timestamp**: 2026-07-05T18:42:09Z
+**Event**: SESSION_ENDED
+**Reason**: resume
+
+---
+
+## Session Resume
+**Timestamp**: 2026-07-05T18:42:09Z
+**Event**: SESSION_RESUMED
+**Source**: resume
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-05T18:43:51Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a5f5540f257fa5196
+**Message**: リーンキャンバスのテンプレート上書きを作ってみて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-05T18:49:07Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: adde4b162ec94b5ce
+**Message**: PR #489（pdm scope 追加）の仕掛かり解消が目的で、Bugbot 指摘対応から人間によるマージ、後始末、leader への完了報告まですべて完了しました。現在は engineer1 として待機中で、次のディスパッチや指示を待っています。
+
+---

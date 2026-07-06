@@ -8,7 +8,7 @@
 
 All event names follow `SUBJECT_PAST_VERB` — every event answers "what happened?"
 
-## Event Registry (70 events, 18 categories)
+## Event Registry (71 events, 18 categories)
 
 ### Workflow Lifecycle (4 events)
 
@@ -58,7 +58,7 @@ All event names follow `SUBJECT_PAST_VERB` — every event answers "what happene
 | `WORKSPACE_SCANNED` | Workspace detection done | Timestamp, Project type, Details | `tools/amadeus-utility.ts` handleInit |
 | `WORKSPACE_INITIALISED` | State file created | Timestamp, Details | `tools/amadeus-utility.ts` handleInit |
 
-### Navigation Events (4 events)
+### Navigation Events (5 events)
 
 | Event | When | Required Fields | Emitter |
 |-------|------|-----------------|---------|
@@ -66,6 +66,7 @@ All event names follow `SUBJECT_PAST_VERB` — every event answers "what happene
 | `DEPTH_CHANGED` | `--depth` changed depth level | Timestamp, Old depth, New depth | `tools/amadeus-utility.ts` |
 | `TEST_STRATEGY_CHANGED` | `--test-strategy` changed test strategy | Timestamp, Old strategy, New strategy | `tools/amadeus-utility.ts` |
 | `SCOPE_DETECTED` | Auto-detected from freeform text | Timestamp, Detected scope, Input text, Source, Matched keywords (optional; present when `Source=keyword`) | `tools/amadeus-utility.ts detect-scope` |
+| `RECOMPOSED` | The adaptive composer re-shaped a running workflow's pending stages (suffix flips via `recompose`) | Timestamp, Scope, Stages skipped, Stages added, Stages in Scope | `tools/amadeus-utility.ts recompose` |
 
 ### Interaction Events (4 events)
 

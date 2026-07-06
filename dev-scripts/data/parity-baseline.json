@@ -1,6 +1,6 @@
 {
-  "baselineCommit": "fde1e1af7aae16f4c4defc991abaa3877ee2ac26",
-  "generatedAt": "2026-07-03T19:33:10.209Z",
+  "baselineCommit": "b67798c37c71855271b70882a33f47890d41f212",
+  "generatedAt": "2026-07-06T00:24:20.266Z",
   "engineDirectories": [
     "tools",
     "aidlc-common",
@@ -18,6 +18,7 @@
     "aidlc-build-and-test",
     "aidlc-ci-pipeline",
     "aidlc-code-generation",
+    "aidlc-compose",
     "aidlc-delivery-planning",
     "aidlc-deployment-execution",
     "aidlc-deployment-pipeline",
@@ -66,6 +67,10 @@
     {
       "path": "agents/aidlc-compliance-agent.md",
       "sha256": "64f49faca22478e05db090a88fe25c12ade122ad0987d4b3efdcd6e64cced2d9"
+    },
+    {
+      "path": "agents/aidlc-composer-agent.md",
+      "sha256": "f736c715fa1f30f9b6fb1afe139c9dcc5e505c3873139c61a3ff950f2420b089"
     },
     {
       "path": "agents/aidlc-delivery-agent.md",
@@ -285,7 +290,7 @@
     },
     {
       "path": "hooks/aidlc-stop.ts",
-      "sha256": "71fb8ef269917355b6bbd37392df751947283e54af6fe437552e24d6c63253cc"
+      "sha256": "00cfdd6fb288ed3b1317dd0b1fd7b5850992683f9d1fea96b8eee3b3695d3cb5"
     },
     {
       "path": "hooks/aidlc-sync-statusline.ts",
@@ -342,6 +347,10 @@
     {
       "path": "knowledge/aidlc-compliance-agent/regulatory-frameworks.md",
       "sha256": "6774d09d0814c7af5fc600a8fbe61e35b01cbe947209e532d88d2e43164655b1"
+    },
+    {
+      "path": "knowledge/aidlc-composer-agent/composing.md",
+      "sha256": "e8581bdb7636c473d7de907071ecc2a29cdda1af42654e8b3cfbc40061d7ff67"
     },
     {
       "path": "knowledge/aidlc-delivery-agent/mob-programming-guide.md",
@@ -497,7 +506,7 @@
     },
     {
       "path": "knowledge/aidlc-shared/audit-format.md",
-      "sha256": "4857de4f83ccf8d3b8a9f994053b5f988aa719015a6846fc54e4aeb97cc17013"
+      "sha256": "3b74f4e2c497fb3130ebf6741479d0da417edd94ab4adc9688790fe7f09b0cb2"
     },
     {
       "path": "knowledge/aidlc-shared/brownfield.md",
@@ -581,7 +590,7 @@
     },
     {
       "path": "tools/aidlc-audit.ts",
-      "sha256": "daf5c7b09840bf84631c9eb715f702abc49c863141c6dd9cc50c2fb1226186c8"
+      "sha256": "a537d044719a8e0aee7df4d9ab7b45020128027bd4603ce670ae432f1a658252"
     },
     {
       "path": "tools/aidlc-bolt.ts",
@@ -593,7 +602,7 @@
     },
     {
       "path": "tools/aidlc-graph.ts",
-      "sha256": "e3124da4b02b7f56df855094ac597076329eb096edadf2964436608f1e13c60c"
+      "sha256": "19fcf23dba22f6f540013efc6c8237bacc71ad1d4afae6111eeedaaf68240f31"
     },
     {
       "path": "tools/aidlc-includes.ts",
@@ -601,7 +610,7 @@
     },
     {
       "path": "tools/aidlc-jump.ts",
-      "sha256": "6e4e4adb268a10611d99a012e72223cc8b70172a465f52bac043a96a854ea162"
+      "sha256": "7597acf9b52f4126a81d31c432c1f27568ce449514157774b9fa66b88a8e5eab"
     },
     {
       "path": "tools/aidlc-learnings.ts",
@@ -609,7 +618,7 @@
     },
     {
       "path": "tools/aidlc-lib.ts",
-      "sha256": "1db727c60910f4749044e473cffcd08bff60ecd5dc030081aaf48af305fa54e9"
+      "sha256": "748835acbd63693468275859b2549afae7d58cdcd398a2c0262bff8157bd8c3b"
     },
     {
       "path": "tools/aidlc-log.ts",
@@ -617,7 +626,7 @@
     },
     {
       "path": "tools/aidlc-orchestrate.ts",
-      "sha256": "fa0b32b19c986db997096dd3ccd346ba1a9074a3ff9e108d3d8bbfd10362a4a3"
+      "sha256": "a4759daa296fb6859dfcc3a2422b11f1aa367742ce1bac214d12b0585550cb7b"
     },
     {
       "path": "tools/aidlc-rule-schema.ts",
@@ -625,7 +634,7 @@
     },
     {
       "path": "tools/aidlc-runner-gen.ts",
-      "sha256": "b81da7d53bd8d0df5bed0d76bc067d8f9fbafffc15a25821f73276480878400d"
+      "sha256": "9c871a858f7ca4f57c9bcfb843d8b2b9a3e8170f2d889c5d331f7b75cdc6adc8"
     },
     {
       "path": "tools/aidlc-runtime.ts",
@@ -661,7 +670,7 @@
     },
     {
       "path": "tools/aidlc-state.ts",
-      "sha256": "30c6ca1196223d41391dac2db6421a5cb4082b596967038f3db5637fdbf85ac4"
+      "sha256": "fa62581ef63f7b284a0f90ad436d6c7a7722ddf8e8bf21a324b8f88f3be4485e"
     },
     {
       "path": "tools/aidlc-swarm.ts",
@@ -669,7 +678,7 @@
     },
     {
       "path": "tools/aidlc-utility.ts",
-      "sha256": "4283ead2666816adbf5ea39cbad0a2e0dfc444939490296975bf525afd71a177"
+      "sha256": "1676a50f53de5be5b63589f0a564af9eb5185aa7236e6b0eebe803e83d964c98"
     },
     {
       "path": "tools/aidlc-validate.ts",
@@ -677,7 +686,7 @@
     },
     {
       "path": "tools/aidlc-version.ts",
-      "sha256": "8b07daade4e9d14d89b209e130f3d0121e12ecdcdcd51a8b24672e96a2e8bd98"
+      "sha256": "e7b7e9ba9d2561022f0fb60a98b3422b082c0c197972159b21a1ef88a15f7cf3"
     },
     {
       "path": "tools/aidlc-worktree.ts",

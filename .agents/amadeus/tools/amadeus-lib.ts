@@ -2325,6 +2325,24 @@ export function setCheckbox(
   return content.replace(regex, `$1${marker}$2`);
 }
 
+// The suffix-setter twin of setCheckbox: flips ONE stage line's plan suffix
+// (the em-dash EXECUTE/SKIP tail the router's override channel reads)
+// in either direction, leaving the checkbox marker untouched. setCheckbox owns
+// the marker (run-state); this owns the suffix (the plan) - the two edit
+// disjoint fields of the same line, so recompose and jump compose cleanly.
+// Returns the content unchanged when the slug has no stage line.
+export function setStageSuffix(
+  content: string,
+  slug: string,
+  action: "EXECUTE" | "SKIP"
+): string {
+  const regex = new RegExp(
+    `^(- \\[[ xSR?-]\\] ${escapeRegex(slug)}\\s*—\\s*)(EXECUTE|SKIP)\\b`,
+    "m"
+  );
+  return content.replace(regex, `$1${action}`);
+}
+
 export function countCheckboxes(
   content: string,
   state: CheckboxState
@@ -2912,7 +2930,10 @@ function stageGraphPath(): string {
   return process.env.AIDLC_STAGE_GRAPH ?? join(DATA_DIR, "stage-graph.json");
 }
 
-function scopeGridPath(): string {
+// Exported so the read-only `detect` verb can TELL the composer agent where
+// the runtime scope registry lives (the paths are module-relative to the
+// installed tool, which a prose agent cannot derive itself).
+export function scopeGridPath(): string {
   return process.env.AIDLC_SCOPE_GRID ?? join(DATA_DIR, "scope-grid.json");
 }
 
@@ -2930,7 +2951,9 @@ function scopeMappingPath(): string | null {
 // env-var seam mirrors AIDLC_SENSORS_DIR / AIDLC_RULES_DIR so fixture tests
 // can point the scope-metadata loader at an isolated tree. Evaluated at call
 // time so tests that set/unset mid-process see the change.
-function scopesDir(): string {
+// Exported for the same reason as scopeGridPath: `detect --json` prints it so
+// the composer agent is told the authoritative write target per harness.
+export function scopesDir(): string {
   return process.env.AIDLC_SCOPES_DIR ?? join(dirname(fileURLToPath(import.meta.url)), "..", "scopes");
 }
 

@@ -325,5 +325,13 @@
       509,
       532
     ]
+  },
+  {
+    "uuid": "019f33a1-305f-7539-b83d-c88f8fdc9d0c",
+    "slug": "upstream-sync",
+    "dirName": "260705-upstream-sync",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete"
   }
 ]
