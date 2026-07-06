@@ -8,6 +8,7 @@
 
 ## Deviations
 <!-- example: 2026-05-29T10:14:32Z — skipped the optional caching layer the stage prose suggested; the dataset is small enough that it adds risk -->
+- 2026-07-06 — reviewer iteration 1（NOT-READY）の実測裏取り指摘を受け、FR-2.2 の「no-op 前方互換ガード」特徴付けは不正確だったと判明した（実 I/O が毎回発生し、AGENTS_RELATIVE_DIR が --agents-root を参照しないため skill 同梱 persona への将来適用は原理的に成立しない）。フックは「実昇格（--agents-root == ".agents/skills" かつ非 dry-run）後に固定 path の engine agents へ overlay を再適用する整合ガード。fail-soft（例外時は exit を変えず stderr 警告 1 行）、redirect / dry-run 時はスキップ」へ再定義した。gate 承認で確定する。
 
 ## Tradeoffs
 <!-- example: 2026-05-29T10:14:32Z — picked TDD over BDD this run; the team is unit-first and the domain is well-understood -->

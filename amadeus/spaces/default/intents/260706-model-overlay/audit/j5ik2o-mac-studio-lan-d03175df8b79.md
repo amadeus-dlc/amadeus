@@ -1353,3 +1353,304 @@
 **Event**: HUMAN_TURN
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T06:53:27Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a234626f94ba8e974
+**Message**: Clean — my read-only checks did not touch the working tree. Now I have everything needed to write the review.\n\n## 判定: NOT-READY（条件付き）\n\niteration 1 として、コアの BR-1〜BR-12 実装、eval 9 系列+回帰、parity/doctor 連携は高
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T06:53:27Z
+**Event**: HUMAN_TURN
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T06:55:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: ec3fa43e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/promote-skill.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T06:55:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: ec3fa43e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/promote-skill.ts
+**Duration ms**: 737
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T06:55:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6206a4c9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/promote-skill.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T06:55:38Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6206a4c9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/promote-skill.ts
+**Duration ms**: 637
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T06:56:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: 433d49d5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/model-overlay/check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T06:56:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: 433d49d5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/model-overlay/check.ts
+**Duration ms**: 771
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T06:56:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4bba57bd
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/model-overlay/check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T06:56:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4bba57bd
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/model-overlay/check.ts
+**Duration ms**: 480
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T06:56:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: 83ab23e4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/model-overlay/check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T06:57:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: 83ab23e4
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/model-overlay/check.ts
+**Duration ms**: 760
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T06:57:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2c87be07
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/model-overlay/check.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-06T06:57:00Z
+**Event**: SENSOR_FAILED
+**Fire id**: 2c87be07
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/model-overlay/check.ts
+**Detail path**: amadeus/spaces/default/intents/260706-model-overlay/.amadeus-sensors/code-generation/type-check-2c87be07.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T06:57:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2b3d5d65
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/model-overlay/check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T06:57:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2b3d5d65
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/model-overlay/check.ts
+**Duration ms**: 752
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T06:57:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7038e491
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/model-overlay/check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T06:57:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7038e491
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/model-overlay/check.ts
+**Duration ms**: 505
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-06T06:58:38Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer3/amadeus/spaces/default/intents/260706-model-overlay/construction/code-generation/memory.md
+**Context**: construction > code-generation > memory.md
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-06T06:58:49Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer3/amadeus/spaces/default/intents/260706-model-overlay/construction/model-overlay/code-generation/code-summary.md
+**Context**: construction > model-overlay > code-generation > code-summary.md
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-06T06:58:54Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer3/amadeus/spaces/default/intents/260706-model-overlay/construction/model-overlay/code-generation/code-summary.md
+**Context**: construction > model-overlay > code-generation > code-summary.md
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-06T06:59:07Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer3/amadeus/spaces/default/intents/260706-model-overlay/construction/model-overlay/code-generation/code-summary.md
+**Context**: construction > model-overlay > code-generation > code-summary.md
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-06T06:59:39Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer3/amadeus/spaces/default/intents/260706-model-overlay/construction/model-overlay/code-generation/code-summary.md
+**Context**: construction > model-overlay > code-generation > code-summary.md
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T07:00:56Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: a692a63c3b33ce20b
+**Message**: Clean diff, exactly matching the confirmed fix. Everything is in order.\n\n## まとめ（reviewer iteration 1 対応）\n\n**変更ファイル**（既存commit `686d9c1e` に対する追加差分）\n- `dev-scripts/promote-skill.ts` — フック発火条件を `!options
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T07:00:56Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T07:04:29Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a234626f94ba8e974
+**Message**: 最終確認済み。作業ツリーは iteration 2 の差分のみで、私のレビュー実行による汚染はない（read-only 遵守）。\n\n## 判定: READY\n\niteration 1 で指摘した High 1件・Medium 1件（実質同根の2論点）・Low 1件はすべて解消を確認した。新規の regression やスコープ逸脱も見当たらない。\n\n---\n\n### 必須対応2件の解消判定\n\n**
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T07:04:30Z
+**Event**: HUMAN_TURN
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T07:05:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: e8d5fcdb
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/model-overlay/check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T07:05:01Z
+**Event**: SENSOR_PASSED
+**Fire id**: e8d5fcdb
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/model-overlay/check.ts
+**Duration ms**: 776
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T07:05:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8f6feaa0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/model-overlay/check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T07:05:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8f6feaa0
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/model-overlay/check.ts
+**Duration ms**: 512
+
+---

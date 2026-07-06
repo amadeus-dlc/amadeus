@@ -183,11 +183,21 @@ if (violations.length > 0) {
 
 console.log(options.dryRun ? "dry-run: ok" : "promote: ok");
 
-// Re-apply the model overlay (Issue #554 FR-2.2) after a real (non dry-run)
-// promotion, so a skill that someday ships agent persona files gets the same
-// modelOverride rewrite as `models:apply`. With the current 2 declared agents
-// living only under .agents/amadeus/agents/ (never inside a skill payload),
-// this call is a no-op forward-compatibility guard today.
-if (!options.dryRun) {
-  applyModelOverrides(root);
+// Re-apply the model overlay (Issue #554 FR-2.2) as a consistency guard after
+// a REAL promotion to the actual promoted-skills root. It rewrites the fixed
+// engine agent paths (.agents/amadeus/agents/*.md); it never touches persona
+// files inside a skill payload (AGENTS_RELATIVE_DIR is not derived from
+// --agents-root). It is skipped for --dry-run and for any --agents-root
+// redirect (isolated/test runs), so it never fires against a throwaway
+// destination. A failure here (e.g. BR-10 drift rejection, overlay corruption)
+// must not fail the promotion or an unrelated skill's CI run: it is fail-soft
+// — one stderr warning, exit code unaffected.
+if (!options.dryRun && options.agentsRoot === ".agents/skills") {
+  try {
+    applyModelOverrides(root);
+  } catch (error) {
+    console.error(
+      `warning: model overlay re-apply failed (${error instanceof Error ? error.message : String(error)}). Run \`npm run models:check\`.`,
+    );
+  }
 }

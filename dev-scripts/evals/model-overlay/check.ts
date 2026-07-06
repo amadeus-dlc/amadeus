@@ -20,6 +20,9 @@
 //     でのみ base 更新、BR-10）。
 // (i) 管理値集合に一致しない手編集値が parity で fail する（BR-9、トークン一致
 //     置換の負ケース）。
+// (j) promote-skill.ts の overlay 再適用フック: --agents-root redirect 時は
+//     一切書き込まない（j-i）、実昇格時に drift があっても fail-soft で
+//     exit 0 + stderr 警告 1 行 + base 不変（j-ii、reviewer iteration 1 指摘）。
 
 import { createHash } from "node:crypto";
 import {
@@ -139,6 +142,10 @@ function writeOverlay(
 function readOverlay(ws: string): { agents: Record<string, { model: string; base?: string; fallbackApplied?: { to: string; reason: string } }>; fallbacks: Record<string, string> } {
   return JSON.parse(readFileSync(join(ws, "dev-scripts/data/model-overrides.json"), "utf8"));
 }
+
+// 想定外の例外（ok/run の外で投げられるもの）でも temp workspace を必ず片付ける
+// ため、全系列を try/finally で包む（reviewer iteration 1 の Low 指摘）。
+try {
 
 // ---- (a) --check は宣言未反映を非ゼロ終了で検出する ----
 {
@@ -368,7 +375,88 @@ const DESIGN_REL = ".agents/amadeus/agents/amadeus-design-agent.md";
   );
 }
 
-for (const dir of cleanups) rmSync(dir, { recursive: true, force: true });
+// ---- (j) promote-skill.ts の overlay 再適用フック（reviewer iteration 1 指摘） ----
+
+const promoteScript = join(root, "dev-scripts/promote-skill.ts");
+const PROMOTE_SKILL_NAME = "test-skill";
+
+// promote-skill.ts 自体（skill 昇格 + overlay フック）を駆動する隔離 fixture。
+// cwd = fixture で spawn するため、フック内の applyModelOverrides(root) は
+// fixture 配下の .agents/amadeus/agents/ と dev-scripts/data/model-overrides.json
+// だけに作用し、実 repo には一切触れない。
+function makePromoteFixture(agentModelOverrideValue: string, overlay: unknown): string {
+  const ws = tmpDir("model-overlay-promote-");
+  mkdirSync(join(ws, `skills/${PROMOTE_SKILL_NAME}`), { recursive: true });
+  writeFileSync(join(ws, `skills/${PROMOTE_SKILL_NAME}/SKILL.md`), "# test-skill\n");
+  mkdirSync(join(ws, ".agents/amadeus/agents"), { recursive: true });
+  writeFileSync(join(ws, AGENT_REL_PATH), agentFileContent(agentModelOverrideValue));
+  mkdirSync(join(ws, "dev-scripts/data"), { recursive: true });
+  writeFileSync(join(ws, "dev-scripts/data/model-overrides.json"), `${JSON.stringify(overlay, null, 2)}\n`);
+  return ws;
+}
+
+function runPromote(cwd: string, extraArgs: string[] = []): { exitCode: number; out: string } {
+  const proc = Bun.spawnSync({
+    cmd: ["bun", "run", promoteScript, PROMOTE_SKILL_NAME, ...extraArgs],
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  return { exitCode: proc.exitCode ?? -1, out: new TextDecoder().decode(proc.stdout) + new TextDecoder().decode(proc.stderr) };
+}
+
+// (j-i) --agents-root redirect（隔離実行）ではフックが一切発火せず、engine
+// agent ファイルにも overlay JSON にも書き込みが起きない。fixture を drift
+// 状態（管理外実値）から始めることで、redirect スキップ条件が退行した場合は
+// フックが発火して warning（fail-soft）が stderr に現れるため、warning 不在の
+// 検査が退行を検出する（reviewer iteration 2 の Low 指摘対応）。
+{
+  const overlay = {
+    agents: { [AGENT_NAME]: { model: TARGET_MODEL, base: BASE_MODEL } },
+    fallbacks: { [TARGET_MODEL]: FALLBACK_MODEL },
+  };
+  const ws = makePromoteFixture(UNMANAGED_MODEL, overlay);
+  const beforeAgent = readFileSync(join(ws, AGENT_REL_PATH), "utf8");
+  const beforeOverlay = readFileSync(join(ws, "dev-scripts/data/model-overrides.json"), "utf8");
+
+  const r = runPromote(ws, ["--agents-root", ".agents/skills-redirect"]);
+  ok("(j-i) --agents-root redirect 実行は exit 0", r.exitCode === 0, r.out);
+  ok("(j-i) redirect 実行ではフック自体が発火しない（overlay 警告なし）", !/model overlay/.test(r.out), r.out);
+
+  const afterAgent = readFileSync(join(ws, AGENT_REL_PATH), "utf8");
+  const afterOverlay = readFileSync(join(ws, "dev-scripts/data/model-overrides.json"), "utf8");
+  ok("(j-i) redirect 実行では engine agent ファイルへ書き込まない", beforeAgent === afterAgent, `${beforeAgent}\n---\n${afterAgent}`);
+  ok("(j-i) redirect 実行では overlay JSON へ書き込まない", beforeOverlay === afterOverlay, `${beforeOverlay}\n---\n${afterOverlay}`);
+}
+
+// (j-ii) 実昇格（--agents-root 省略 = ".agents/skills"）で drift 状態（管理外実値）
+// に当たっても、promote は fail-soft（exit 0 + stderr 警告 1 行）で完走し、
+// base は不変のまま（BR-10 の拒否をフックが握りつぶさない）。
+{
+  const overlay = {
+    agents: { [AGENT_NAME]: { model: TARGET_MODEL, base: BASE_MODEL } },
+    fallbacks: { [TARGET_MODEL]: FALLBACK_MODEL },
+  };
+  const ws = makePromoteFixture(UNMANAGED_MODEL, overlay);
+
+  const r = runPromote(ws);
+  ok("(j-ii) drift 状態でも実昇格は exit 0（fail-soft）", r.exitCode === 0, r.out);
+  ok("(j-ii) stderr に warning 1 行が出る", /warning: model overlay re-apply failed/.test(r.out), r.out);
+  ok("(j-ii) warning が models:check の実行を案内する", r.out.includes("models:check"), r.out);
+
+  const overlayAfter = readOverlay(ws);
+  ok("(j-ii) 拒否後も base は不変", overlayAfter.agents[AGENT_NAME].base === BASE_MODEL, JSON.stringify(overlayAfter));
+  const agentAfter = readFileSync(join(ws, AGENT_REL_PATH), "utf8");
+  ok(
+    "(j-ii) 拒否後もファイルは書き換わらない",
+    readModelOverrideLine(agentAfter) === UNMANAGED_MODEL,
+    agentAfter,
+  );
+}
+
+} finally {
+  for (const dir of cleanups) rmSync(dir, { recursive: true, force: true });
+}
 
 if (failures > 0) {
   console.error(`model-overlay eval: ${failures} failure(s)`);
