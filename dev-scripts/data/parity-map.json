@@ -726,7 +726,8 @@
     "aidlc-common/protocols/stage-protocol.md",
     "tools/aidlc-sensor-linter.ts",
     "sensors/aidlc-linter.md",
-    "hooks/aidlc-log-subagent.ts"
+    "hooks/aidlc-log-subagent.ts",
+    "hooks/aidlc-runtime-compile.ts"
   ],
   "exceptions": [
     {
@@ -796,6 +797,10 @@
     {
       "target": "tools/aidlc-state.ts（complete-workflow の Current Stage クリアと Phase Progress Skipped 整合 = #547）、hooks/aidlc-log-subagent.ts（完了済み Intent への SubagentStop 完了ガードと agent_type 空文字の unknown 既定 = #555）、tools/aidlc-orchestrate.ts（next の closed-workflow sentinel \"none\" を done 解決 = #547 随伴）（ローカルでは .agents/amadeus/tools/amadeus-state.ts、.agents/amadeus/tools/amadeus-orchestrate.ts、.agents/amadeus/hooks/amadeus-log-subagent.ts）",
       "reason": "Intent 260706-engine-consistency（Issue #547/#548/#555）のエンジン修正。上流が同修正を取り込んだら例外を解除する。skills/ にはエンジン tools/hooks の正準コピーが存在しないため反映対象なし（validator の #548 修正は skills/amadeus-validator と .agents/skills/amadeus-validator の両側へ反映済み）。"
+    },
+    {
+      "target": "hooks/aidlc-runtime-compile.ts（command filter へのエンジン tools path 追加 = #558）、tools/aidlc-learnings.ts（surface の runtime-graph 自己修復 + 復旧手順つき fail fast = #558）（ローカルでは .agents/amadeus/hooks/amadeus-runtime-compile.ts、.agents/amadeus/tools/amadeus-learnings.ts）",
+      "reason": "Intent 260706-runtime-graph-registrati（Issue #558）のエンジン修正。上流の path 前提（.claude/.kiro/.codex）に .agents/amadeus を追加したローカル固有差分と、surface の自己修復。上流が同等機構を取り込んだら例外を解除する。skills/ にはエンジン tools/hooks の正準コピーが存在しないため反映対象なし。"
     }
   ]
 }

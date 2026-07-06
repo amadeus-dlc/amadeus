@@ -33,8 +33,10 @@
 // comparison is knowledge (orchestrator-LLM); revise/skip/escalate is
 // judgement (user). No LLM call lives in this tool.
 
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { appendAuditEntryUnlocked } from "./amadeus-audit.ts";
 import { memoryDirFor } from "./amadeus-graph.ts";
 import {
@@ -125,32 +127,62 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return v !== null && typeof v === "object";
 }
 
-function readRuntimeStageRow(projectDir: string, slug: string): RuntimeStageRow {
+// Resolve one stage row from runtime-graph.json, or null when the graph is
+// absent, malformed, or lacks the slug — every non-resolution funnels into the
+// caller's self-heal re-compile (a fresh compile rewrites the graph whole, so
+// distinguishing "missing" from "malformed" buys nothing here).
+function tryReadRuntimeStageRow(projectDir: string, slug: string): RuntimeStageRow | null {
   const path = runtimeGraphPath(projectDir);
-  if (!existsSync(path)) {
-    fail(`runtime-graph.json not found: ${path}`, 1);
-  }
+  if (!existsSync(path)) return null;
   let parsed: unknown;
   try {
     parsed = JSON.parse(readFileSync(path, "utf-8"));
-  } catch (e) {
-    fail(`runtime-graph.json is malformed: ${errorMessage(e)}`, 1);
+  } catch {
+    return null;
   }
-  if (!isRecord(parsed)) {
-    fail("runtime-graph.json is malformed: missing stages array", 1);
-  }
-  const stagesRaw: unknown = parsed.stages;
-  if (!Array.isArray(stagesRaw)) {
-    fail("runtime-graph.json is malformed: missing stages array", 1);
-  }
-  const stages: unknown[] = stagesRaw;
-  for (const raw of stages) {
+  if (!isRecord(parsed) || !Array.isArray(parsed.stages)) return null;
+  for (const raw of parsed.stages as unknown[]) {
     if (isRecord(raw) && raw.stage_slug === slug) {
       const memoryPath = typeof raw.memory_path === "string" ? raw.memory_path : undefined;
       return { stage_slug: slug, memory_path: memoryPath };
     }
   }
-  fail(`stage "${slug}" not found in runtime-graph.json`, 1);
+  return null;
+}
+
+function readRuntimeStageRow(projectDir: string, slug: string): RuntimeStageRow {
+  const direct = tryReadRuntimeStageRow(projectDir, slug);
+  if (direct) return direct;
+
+  // #558 self-heal: the PostToolUse compile hook can miss a transition (hooks
+  // are fail-open — a dropped compile leaves the graph stale — and hook-less
+  // contexts like engine-e2e / headless runs never fire it at all). Re-compile
+  // once from the audit log before failing; compile is deterministic and
+  // idempotent, so a redundant run is harmless.
+  const recovery =
+    "Recovery: run `bun .agents/amadeus/tools/amadeus-runtime.ts compile` in the workspace, " +
+    `then verify --slug "${slug}" matches the state file's Current Stage.`;
+  const runtimeTs = fileURLToPath(new URL("./amadeus-runtime.ts", import.meta.url));
+  let result: ReturnType<typeof spawnSync>;
+  try {
+    result = spawnSync("bun", ["run", runtimeTs, "compile", "--project-dir", projectDir], {
+      cwd: projectDir,
+      timeout: 30_000,
+      encoding: "utf-8",
+    });
+  } catch (e) {
+    fail(`stage "${slug}" not found in runtime-graph.json and re-compile failed to spawn: ${errorMessage(e)}. ${recovery}`, 1);
+  }
+  if (result.status !== 0) {
+    fail(
+      `stage "${slug}" not found in runtime-graph.json and re-compile failed (exit ${result.status ?? "signal"}): ` +
+        `${(result.stderr ?? "").toString().slice(0, 300)}. ${recovery}`,
+      1,
+    );
+  }
+  const healed = tryReadRuntimeStageRow(projectDir, slug);
+  if (healed) return healed;
+  fail(`stage "${slug}" not found in runtime-graph.json even after re-compile. ${recovery}`, 1);
 }
 
 // The §13 ritual runs while the just-completed stage is still the Active

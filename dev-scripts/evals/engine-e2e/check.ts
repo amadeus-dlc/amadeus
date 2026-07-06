@@ -255,6 +255,64 @@ check("audit shard に ERROR_LOGGED が記録されている", shardText.include
   check("(#547) PHASE_SKIPPED (operation) が audit に記録される", /\*\*Event\*\*: PHASE_SKIPPED[\s\S]{0,80}operation/.test(audit547), audit547.slice(-600));
 }
 
+// ---- 7. #558: 縮退 scope での learnings surface の自己修復 ----
+// bugfix scope（縮退構成）を birth し、runtime-graph.json を消して「登録漏れ」
+// 状態を作る。(a) surface が手動 compile なしで自動再 compile して成立する。
+// (b) 自動 compile でも解決しない場合（audit shard 破壊で graph に slug が
+// 載らない）は、無言 fail ではなく復旧手順つきエラー（exit 非 0）が出る。
+
+{
+  const ws558 = mkdtempSync(join(tmpdir(), "engine-e2e-558-"));
+  cleanups.push(ws558);
+  for (const dir of ENGINE_DIRS) {
+    cpSync(join(root, ".agents/amadeus", dir), join(ws558, ".agents/amadeus", dir), { recursive: true });
+  }
+  const util558 = join(ws558, ".agents/amadeus/tools/amadeus-utility.ts");
+  const learnings558 = join(ws558, ".agents/amadeus/tools/amadeus-learnings.ts");
+  runExpectSuccess(
+    ["bun", util558, "intent-birth", "--scope", "bugfix", "--arguments", "surface self-heal fixture", "--label", "surface heal"],
+    ws558
+  );
+  const intents558 = join(ws558, "amadeus/spaces/default/intents");
+  const dir558 = readdirSync(intents558).find((n) => n.includes("surface-heal"));
+  check("(#558) fixture record が誕生する", dir558 !== undefined, readdirSync(intents558).join(", "));
+  const graphPath558 = join(intents558, dir558!, "runtime-graph.json");
+  const state558 = readFileSync(join(intents558, dir558!, "amadeus-state.md"), "utf8");
+  const current558 = state558.match(/\*\*Current Stage\*\*: ([^\n]+)/)?.[1]?.trim() ?? "";
+  check("(#558) Current Stage が解決できる", current558.length > 0, state558.slice(0, 200));
+
+  // (a) 登録漏れ状態（graph 不在）からの surface 成立
+  rmSync(graphPath558, { force: true });
+  const surfaceRes = run(["bun", learnings558, "surface", "--slug", current558], ws558);
+  check(
+    "(#558a) 登録漏れ状態から surface が手動 compile なしで成立する（自己修復）",
+    surfaceRes.exitCode === 0,
+    `exit=${surfaceRes.exitCode} stderr=${surfaceRes.stderr.slice(0, 200)}`
+  );
+  check("(#558a) 自己修復で runtime-graph.json が再生成される", existsSync(graphPath558), graphPath558);
+
+  // (b) 自動 compile でも解決しない場合は復旧手順つきエラー（exit 非 0）。
+  // graph を消し、audit shard を STAGE_STARTED を含まない本文へ置き換える —
+  // 再 compile は成功しても current slug の row が graph に載らないため、
+  // 自己修復の再解決が尽きた経路（フォールバックのエラー文言）に入る。
+  rmSync(graphPath558, { force: true });
+  const auditDir558 = join(intents558, dir558!, "audit");
+  for (const shard of readdirSync(auditDir558).filter((n) => n.endsWith(".md"))) {
+    writeFileSync(join(auditDir558, shard), "# audit\n\n---\n\n## Note\n**Timestamp**: 2026-07-06T00:00:00Z\n**Event**: SESSION_STARTED\n\n---\n", "utf8");
+  }
+  const brokenRes = run(["bun", learnings558, "surface", "--slug", current558], ws558);
+  check(
+    "(#558b) 自動 compile でも解決しない場合は exit 非 0（無言 fail なし）",
+    brokenRes.exitCode !== 0,
+    `exit=${brokenRes.exitCode} stdout=${brokenRes.stdout.slice(0, 120)}`
+  );
+  check(
+    "(#558b) エラーに復旧手順（amadeus-runtime.ts compile）が含まれる",
+    /amadeus-runtime\.ts compile/.test(brokenRes.stderr + brokenRes.stdout),
+    (brokenRes.stderr + brokenRes.stdout).slice(0, 300)
+  );
+}
+
 // ---- cleanup ----
 
 for (const dir of cleanups) rmSync(dir, { recursive: true, force: true });
