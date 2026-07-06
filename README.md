@@ -1,15 +1,14 @@
 # Amadeus
 
 Amadeus is a project for operating Amadeus DLC, a lifecycle contract for AI-assisted software development.
-It provides agent skills, templates, validators, and documentation for moving work through Ideation, Inception, Construction, and supporting analysis, with semantics compatible with AI-DLC v2.
+It provides agent skills, templates, validators, and documentation for moving work through Initialization, Ideation, Inception, Construction, and Operation, with semantics compatible with AI-DLC v2.
 
 [English](README.md) | [日本語](README.ja.md)
 
 ## Highlights
 
-- Run the whole lifecycle through the single public entrypoint skill `amadeus`, which handles Intake (continuation by default, human-approved Intent birth, scope estimation) and stage routing driven by `aidlc-state.md`.
-- Adapt ceremony to the work: each scope (`enterprise`, `feature`, `mvp`, `poc`, `bugfix`, `refactor`, `infra`, `security-patch`, `workshop`) executes only its own subset of the 22 stages.
-- Use generated examples under [examples/](examples/) as snapshots of what the skills can produce.
+- Run the whole lifecycle through the single public entrypoint skill `amadeus`, which handles Intake (continuation by default, human-approved Intent birth, scope estimation) and is engine-driven: the engine (`amadeus-orchestrate.ts`'s `next` / `report` forwarding loop) resolves the next stage and hands work to the stage skills, one step at a time.
+- Adapt ceremony to the work: each scope (`enterprise`, `feature`, `mvp`, `poc`, `bugfix`, `refactor`, `infra`, `security-patch`, `workshop`, `pdm`) executes only its own subset of the 32 stages.
 - Keep lifecycle artifacts auditable with explicit stage states, approval evidence, phase gates, Bolt gates, and validation results.
 - Validate Amadeus workspaces and Intent artifacts with the bundled `amadeus-validator`.
 
@@ -29,7 +28,7 @@ bun install
 
 ### Run
 
-Run the full mock-based verification suite.
+Run the full verification suite.
 
 ```sh
 npm run test:all
@@ -88,19 +87,14 @@ The skills are grouped by how they participate in Amadeus DLC.
 `amadeus` is the single public entrypoint for the lifecycle.
 
 It decides whether an input continues an existing Intent, merges into an existing Intent's scope backlog, or proposes the birth of a new Intent (which always requires human approval).
-It then resolves the next stage from the Intent record's `aidlc-state.md` and delegates the actual work to the stage skills.
-
-1. `amadeus-steering` (workspace foundation, run once per workspace)
-2. `amadeus` (Intake and stage routing for every Intent)
+It is engine-driven: the engine resolves the next stage and delegates the actual work to the stage skills, one step at a time, rather than the skill re-deriving stage order from prose.
 
 ### Auxiliary Entrypoints
 
 Use auxiliary entrypoints when work needs additional analysis, domain clarification, or artifact validation.
 
-- `amadeus-event-storming`
 - `amadeus-grilling`
 - `amadeus-domain-modeling`
-- `amadeus-domain-grilling`
 - `amadeus-validator`
 
 ### Internal Skills
@@ -110,13 +104,10 @@ Use `amadeus` or the auxiliary entrypoints as the public entrypoints unless the 
 
 | Family | Internal skills |
 |---|---|
-| Ideation stages (1.1–1.7) | `amadeus-ideation-intent-capture`, `amadeus-ideation-market-research`, `amadeus-ideation-feasibility`, `amadeus-ideation-scope-definition`, `amadeus-ideation-team-formation`, `amadeus-ideation-rough-mockups`, `amadeus-ideation-approval-handoff` |
-| Inception stages (2.1–2.8) | `amadeus-inception-reverse-engineering`, `amadeus-inception-practices-discovery`, `amadeus-inception-requirements-analysis`, `amadeus-inception-user-stories`, `amadeus-inception-refined-mockups`, `amadeus-inception-application-design`, `amadeus-inception-units-generation`, `amadeus-inception-delivery-planning` |
-| Construction stages (3.1–3.7) | `amadeus-construction-functional-design`, `amadeus-construction-nfr-requirements`, `amadeus-construction-nfr-design`, `amadeus-construction-infrastructure-design`, `amadeus-construction-code-generation`, `amadeus-construction-build-and-test`, `amadeus-construction-ci-pipeline` |
-| Decision and learning support | `amadeus-decision-review`, `amadeus-history-review`, `amadeus-learning-review` |
+| Stage runners (one per lifecycle stage, `amadeus-<stage>`, 29 skills) | Single-stage packaging invoked by the engine or run standalone; see [skills/amadeus/references/stage-catalog.md](skills/amadeus/references/stage-catalog.md) for the full stage-to-skill mapping. |
+| Scope and composer shortcuts | `amadeus-bugfix`, `amadeus-feature`, `amadeus-mvp`, `amadeus-security-patch`, `amadeus-init`, `amadeus-compose` |
+| Read-only utilities | `amadeus-outcomes-pack`, `amadeus-replay`, `amadeus-session-cost` |
 
-When reviewing or changing an Amadeus skill, you must use `skill-forge` to check the skill boundary, trigger description, body instructions, eval coverage, and Codex metadata when present.
-For skill change pull requests, this check and a record of its results in the pull request description are required conditions; the definitions live in the workspace's shared practices ([aidlc/spaces/default/memory/team.md](aidlc/spaces/default/memory/team.md)).
 For Amadeus source changes, check both `skills/amadeus-*` and `.agents/skills/amadeus-*`; keep promoted artifacts aligned through the repository promotion flow.
 
 The repository root keeps `aidlc/` as the workspace for Amadeus's own development.
@@ -125,22 +116,15 @@ The repository root keeps `aidlc/` as the workspace for Amadeus's own developmen
 
 | Step | Skill | Purpose |
 |---|---|---|
-| 1 | `amadeus-steering` | Create or inspect the shared workspace foundation. |
-| 2 | `amadeus` | Run Intake for an input: continue or merge into an existing Intent, or propose a new Intent birth with an estimated scope for human approval. |
-| 3 | `amadeus` | Route each following session to the next stage from the Intent record's `aidlc-state.md`, delegating to the stage skills through Ideation, Inception, and Construction; Construction runs Bolt by Bolt with a mandatory human gate on the walking skeleton. |
+| 1 | `amadeus` | Run Intake for an input: continue or merge into an existing Intent, or propose a new Intent birth with an estimated scope for human approval. |
+| 2 | `amadeus` | Route each following session to the next stage, engine-driven, delegating to the stage skills through Ideation, Inception, and Construction; Construction runs Bolt by Bolt with a mandatory human gate on the walking skeleton. |
 
 Auxiliary entrypoints can be used alongside the flow when needed.
-`amadeus-event-storming` maps Domain Events, Processes, Aggregate Candidates, Bounded Context Candidates, and Hotspots as supporting analysis.
-`amadeus-domain-grilling` combines question-driven domain clarification with artifact updates.
+`amadeus-grilling` asks one question at a time to clarify Intent, steering, domain, design boundaries, or execution policy.
+`amadeus-domain-modeling` pins down terminology, ubiquitous language, and domain boundaries, recording confirmed decisions into the workspace's knowledge artifacts.
 `amadeus-validator` validates workspace and Intent artifact structure.
 
 ### Validation
-
-Validate the bundled example snapshots.
-
-```sh
-npm run validate:all
-```
 
 Run the validator against a workspace.
 
@@ -158,8 +142,8 @@ npm run validate:workspace -- <workspace> <YYMMDD>-<label>
 
 - Agent entrypoint: [AMADEUS.md](AMADEUS.md)
 - Skill language policy: [docs/amadeus/skill-language-policy.md](docs/amadeus/skill-language-policy.md)
-- Examples: [examples/](examples/)
-- Lifecycle contract (3 phases, 22 stages, scopes, state schema):
+- Language policy for `docs/amadeus/`: [docs/amadeus/language-policy.md](docs/amadeus/language-policy.md)
+- Lifecycle contract (5 phases, 32 stages, scopes, state schema):
   - [Overview](docs/amadeus/lifecycle/overview.md)
   - [Scopes](docs/amadeus/lifecycle/scopes.md)
   - [Ideation](docs/amadeus/lifecycle/ideation.md)
@@ -175,7 +159,7 @@ npm run validate:workspace -- <workspace> <YYMMDD>-<label>
 
 - `aidlc/` is the workspace root in a target workspace; each Space (`aidlc/spaces/<space>/`, default `default`) holds `memory/`, `knowledge/`, `codekb/`, and `intents/`.
   In this repository root, it is limited to the workspace for Amadeus's own development.
-- Intent directory names must match `aidlc/spaces/<space>/intents/intents.md` and `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`.
+- The canonical Intent ledger is `aidlc/spaces/<space>/intents/intents.json` (UUIDv7 per entry); Intent directory names follow `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`.
 - New Intents are born only through the `amadeus` Intake with explicit human approval; work that belongs to an existing Intent's outcome goes to that Intent's scope backlog instead of becoming a new Intent.
 - Domain findings are placed according to scope: Intent-specific notes go to `domain-notes.md`, adopted boundaries go to `aidlc/spaces/<space>/knowledge/domain-map.md`, adopted context dependencies go to `aidlc/spaces/<space>/knowledge/context-map.md`, Inception relationships go to `inception/traceability.md`, and detailed models and contracts go to Construction Functional Design.
 - Unknown values are recorded as `未確認` instead of being left blank.
