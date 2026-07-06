@@ -742,3 +742,79 @@ if (failures > 0) {
   process.exit(1);
 }
 console.log("installer eval: ok");
+
+// ---------------------------------------------------------------------------
+// #573 — fresh-install guidance. A brand-new target has no
+// amadeus/spaces/default/memory/ until the first intent birth seeds it; that
+// state must read as a known-normal advisory (doctor exit 0, marker line,
+// installer info note), never as a failure with an unactionable dist/ fix.
+// makeFreshWorkspace deliberately skips the memory pre-seed that
+// makeWorkspace() applies (that pre-seed exists only to satisfy the OLD
+// one-shot shell check; existing scenarios keep it and stay behaviourally
+// unchanged).
+// ---------------------------------------------------------------------------
+
+const ADVISORY_MARKER = "workspace shell pending first workflow";
+const INSTALLER_INFO = "note: workspace shell is seeded at your first /amadeus workflow";
+
+function makeFreshWorkspace(): string {
+  return mkdtempSync(join(tmpdir(), "amadeus-installer-eval-fresh-"));
+}
+
+{
+  const wsFresh = makeFreshWorkspace();
+  try {
+    // 導入 → installer 自体が成功し、smoke は fail 表示ではなく info を出す
+    const install = run(["bun", installerPath, "--target", wsFresh], root);
+    ok("#573 fresh install exits 0 (smoke does not fail on unseeded shell)", install.exitCode === 0, `exit=${install.exitCode} stderr=${install.stderr.slice(0, 300)}`);
+    ok(
+      "#573 installer prints the known-state info line",
+      (install.stdout + install.stderr).includes(INSTALLER_INFO),
+      (install.stdout + install.stderr).slice(-400),
+    );
+    ok(
+      "#573 installer does not print 'installed but smoke check failed'",
+      !(install.stdout + install.stderr).includes("installed but smoke check failed"),
+      install.stderr.slice(-300),
+    );
+
+    // doctor 単独 — exit 0 + advisory marker、dist/ 文言なし
+    const doctorPath = join(wsFresh, ".agents", "amadeus", "tools", "amadeus-utility.ts");
+    const doctorFresh = run(["bun", doctorPath, "doctor", "--project-dir", wsFresh], wsFresh);
+    ok("#573 doctor exits 0 on a fresh install (advisory pass)", doctorFresh.exitCode === 0, `exit=${doctorFresh.exitCode}`);
+    ok("#573 doctor output carries the advisory marker", doctorFresh.stdout.includes(ADVISORY_MARKER), doctorFresh.stdout.slice(-400));
+    // dist/ 検査は shell 行に限定する（他検査行の fix 文言に残る dist/ は #573 の
+    // スコープ外で、全 stdout 検査は将来それらが表示される workspace で偽陽性になる）。
+    const freshShellRow = doctorFresh.stdout.match(/[^\n]*workspace shell[^\n]*/)?.[0] ?? "";
+    ok("#573 doctor shell row has no dist/ copy guidance", freshShellRow.length > 0 && !/dist\//.test(freshShellRow), freshShellRow || doctorFresh.stdout.slice(-200));
+
+    // 初回 birth（実 CLI）→ advisory 消滅、fail 0 のまま
+    const birth = run(["bun", join(wsFresh, ".agents/amadeus/tools/amadeus-utility.ts"), "intent-birth", "--scope", "poc", "--arguments", "573 eval", "--label", "573 eval"], wsFresh);
+    ok("#573 first intent-birth succeeds in the fresh target", birth.exitCode === 0, birth.stderr.slice(0, 200));
+    const doctorAfter = run(["bun", doctorPath, "doctor", "--project-dir", wsFresh], wsFresh);
+    ok("#573 doctor still exits 0 after first birth", doctorAfter.exitCode === 0, `exit=${doctorAfter.exitCode}`);
+    ok("#573 advisory marker disappears after first birth", !doctorAfter.stdout.includes(ADVISORY_MARKER), doctorAfter.stdout.slice(-300));
+
+    // FR-3.2: エンジン dir 不在（本物の故障）→ fail + installer 再実行の実行可能誘導。
+    // doctor の shell 検査が見るのは harnessDir()（この target では .claude/）。
+    // .agents/ 側も併せて消し、どの解決でも「導入不完全」になる状態を作る。
+    rmSync(join(wsFresh, ".claude"), { recursive: true, force: true });
+    rmSync(join(wsFresh, ".agents", "amadeus"), { recursive: true, force: true });
+    const doctorBroken = run(["bun", join(root, ".agents/amadeus/tools/amadeus-utility.ts"), "doctor", "--project-dir", wsFresh], wsFresh);
+    ok("#573 doctor fails when the engine dir is missing", doctorBroken.exitCode !== 0, `exit=${doctorBroken.exitCode}`);
+    const shellRow = doctorBroken.stdout.match(/[^\n]*workspace shell[^\n]*/)?.[0] ?? "";
+    ok(
+      "#573 broken-install fix points at re-running the installer (not dist/)",
+      /amadeus-install\.ts/.test(shellRow) && !/dist\//.test(shellRow),
+      shellRow || doctorBroken.stdout.slice(-300),
+    );
+  } finally {
+    rmSync(wsFresh, { recursive: true, force: true });
+  }
+}
+
+if (failures > 0) {
+  console.error(`installer eval: ${failures} failure(s)（#573 追加分）`);
+  process.exit(1);
+}
+console.log("installer eval (#573): ok");

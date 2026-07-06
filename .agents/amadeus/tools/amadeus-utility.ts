@@ -608,26 +608,43 @@ function handleDoctor(projectDir: string): void {
     });
   }
 
-  // 5. Workspace shell ready (P4: no --init artifact to check). With auto-birth
-  // there is no scaffolded aidlc-docs/ to verify; readiness is the SHIPPED SHELL
-  // the user copies from dist/: the harness engine dir (.claude/.kiro/.codex)
-  // present AND the default space's memory dir present (the source of truth the
-  // native include resolves). When both are present the first /amadeus auto-births
-  // with no ceremony; a missing piece means the dist/ copy was incomplete.
+  // 5. Workspace shell ready (P4: no --init artifact to check). Two states
+  // (#573, mirroring the hook-heartbeat fresh-install split below):
+  //   (a) harness engine dir missing → genuinely broken install. The fix must
+  //       be executable — the distribution has no dist/ to copy from, so point
+  //       at re-running the installer (idempotent).
+  //   (b) engine dir present but the default space's memory dir not yet
+  //       seeded → known-normal on a fresh install: the first intent birth
+  //       (workspace-scaffold) seeds it from tools/data/memory-seed/. Pass
+  //       with an advisory label so a brand-new user is guided forward, not
+  //       failed. The label's fixed marker prefix is the contract the
+  //       installer's smoke step greps for — change them together.
   const harnessEngineDir = join(projectDir, harnessDir());
-  // Pin to the DEFAULT space explicitly: readiness is "did the dist/ shell copy
-  // in?", and `default` is the always-shipped space. memoryDirFor() now follows
+  // Pin to the DEFAULT space explicitly: readiness is "did the shell land?",
+  // and `default` is the always-shipped space. memoryDirFor() now follows
   // the active-space cursor, so pass DEFAULT_SPACE to keep this probe checking
   // the shipped baseline rather than a (possibly absent) switched-to space. The
   // harness includes are committed (generated-on-demand only for their pointer),
   // so their presence is not part of shell-readiness.
   const defaultMemoryDir = memoryDirFor(projectDir, DEFAULT_SPACE);
-  const shellReady = existsSync(harnessEngineDir) && existsSync(defaultMemoryDir);
-  results.push({
-    pass: shellReady,
-    label: `workspace shell ready (${harnessDir()}/ + amadeus/spaces/default/memory/)`,
-    fix: `copy the workspace shell from \`dist/${harnessDir().replace(/^\./, "")}/\` into your project root`,
-  });
+  if (!existsSync(harnessEngineDir)) {
+    results.push({
+      pass: false,
+      label: `workspace shell ready (${harnessDir()}/ + amadeus/spaces/default/memory/)`,
+      fix: "re-run the installer: `bun scripts/amadeus-install.ts --target <workspace>` (idempotent)",
+    });
+  } else if (!existsSync(defaultMemoryDir)) {
+    results.push({
+      pass: true,
+      label:
+        "workspace shell pending first workflow — seeded at first intent birth (run your first /amadeus workflow)",
+    });
+  } else {
+    results.push({
+      pass: true,
+      label: `workspace shell ready (${harnessDir()}/ + amadeus/spaces/default/memory/)`,
+    });
+  }
 
   // 6. Hook heartbeats
   // Three states:

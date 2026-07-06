@@ -805,6 +805,10 @@
     {
       "target": "tools/aidlc-utility.ts（ローカルでは .agents/amadeus/tools/amadeus-utility.ts）",
       "reason": "Issue #554: model overlay（dev-scripts/data/model-overrides.json、dev-scripts 配下のため parity 対象外）の乖離を doctor に表面化するローカル修正。overlay ファイルは任意・fail-open 読み取り（不在は静かにスキップ、JSON 破損等の読み取り失敗は「model overlay state unknown」の 1 行を残す。BR-7 gate 承認条件）。宣言 agent（amadeus-architect-agent、amadeus-design-agent）の modelOverride が overlay 宣言（fallback 込み）と一致しない場合は警告する。engineFileExceptions は既存宣言（tools/aidlc-utility.ts）を流用し、新規追加はしない。上流に対応のない独自機能であり、恒久的に維持する。"
+    },
+    {
+      "target": "tools/aidlc-utility.ts（doctor の workspace shell 検査の 2 状態分離 = エンジン dir 不在は installer 再実行誘導で fail、memory 未 seed は固定 marker つき advisory pass = #573）（ローカルでは .agents/amadeus/tools/amadeus-utility.ts。engineFileExceptions 宣言済み）",
+      "reason": "Intent 260706-doctor-guidance（Issue #573）のエンジン修正。scripts/amadeus-install.ts の info 行はリポジトリローカル（上流 parity 対象外）で宣言不要。skills/ にエンジン tools の正準コピーが存在しないため反映対象なし。上流が同等機構を取り込んだら例外を解除する。"
     }
   ]
 }

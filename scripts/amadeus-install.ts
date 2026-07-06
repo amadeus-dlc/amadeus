@@ -545,6 +545,14 @@ function main(): void {
   const { pass, output } = smokeResult;
   if (pass) {
     console.log("doctor check passed");
+    // #573: on a brand-new target the workspace shell is not seeded yet —
+    // doctor reports this as an advisory pass with a fixed marker prefix
+    // (the contract shared with amadeus-utility.ts's shell check; change
+    // them together). Surface it as one info line so the fresh-install user
+    // learns the next step instead of never seeing the discarded output.
+    if (output.includes("workspace shell pending first workflow")) {
+      console.log("note: workspace shell is seeded at your first /amadeus workflow (known state on a fresh install)");
+    }
     console.log('amadeus-install: done. Next: see README "導入後の検証" (doctor / amadeus-validator)');
     process.exit(0);
   }
