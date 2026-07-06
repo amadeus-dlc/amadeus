@@ -2,8 +2,11 @@
 //
 // Owns the linter check itself; the dispatcher (amadeus-sensor.ts) routes a
 // SENSOR fire to this script via the manifest's `command:` field. Self-
-// contained: no imports from sibling tools. Wraps `bunx eslint --format
-// json --max-warnings -1 <path>` and prints the locked stdout JSON shape:
+// contained: no imports from sibling tools. Two detection tiers (Issue #538):
+// a workspace-declared `lint:check` npm script is preferred (wrapped via
+// `bun run lint:check`); otherwise falls back to wrapping `bunx eslint
+// --format json --max-warnings -1 <path>`. Either tier prints the locked
+// stdout JSON shape:
 //
 //   {"pass": <bool>, "errorCount": <n>, "warningCount": <n>,
 //    "violations": [{file, line, column, rule, severity, message}, ...]}
@@ -44,7 +47,7 @@
 //   1   stdout JSON parse failed (dispatcher reclassifies via branch f)
 
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
 interface ESLintMessage {
@@ -136,6 +139,67 @@ function findProjectRoot(filePath: string): string | null {
 		if (parent === dir) return null;
 		dir = parent;
 	}
+}
+
+// --- lint:check script detection (Issue #538) --------------------------------
+
+// First detection tier: a workspace that declares a `lint:check` script in its
+// package.json names its own linter entry point (any harness, not just
+// eslint). Wrapping that script keeps this sensor generic — no
+// workspace-specific paths are hardcoded here — while making gate-time
+// SENSOR fires reflect the project's REAL lint rules. Absent or unreadable
+// package.json falls through to the second tier (eslint detection below).
+function detectLintScript(projectRoot: string): boolean {
+	try {
+		const pkg = JSON.parse(readFileSync(`${projectRoot}/package.json`, "utf-8"));
+		const script = pkg?.scripts?.["lint:check"];
+		return typeof script === "string" && script.length > 0;
+	} catch {
+		return false;
+	}
+}
+
+// Run the workspace's `lint:check` script via the package runner and map its
+// exit code onto the locked stdout JSON shape. Exit 0 = pass; any non-zero
+// exit = one error-severity violation carrying the script's diagnostic output
+// (the harness's own message — e.g. no-stub-compat's allowlist guidance —
+// rides through so the SENSOR detail file shows the fix instructions).
+// A spawn failure (status null: signal kill / timeout) is conservative
+// tool-unavailable, same as the eslint tier.
+function runLintScript(projectRoot: string, filePath: string): never {
+	const result = spawnSync("bun", ["run", "lint:check"], {
+		encoding: "utf-8",
+		timeout: 120_000,
+		cwd: projectRoot,
+	});
+	if (result.status === null) {
+		process.stderr.write("lint-script-unavailable\n");
+		process.exit(127);
+	}
+	const pass = result.status === 0;
+	const output = `${result.stdout ?? ""}${result.stderr ?? ""}`.trim();
+	const violations: Violation[] = pass
+		? []
+		: [
+				{
+					file: filePath,
+					line: 0,
+					column: 0,
+					rule: "lint:check",
+					severity: "error",
+					message:
+						output.slice(0, 4000) || `lint:check exited ${result.status}`,
+				},
+			];
+	const out: SensorOutput = {
+		pass,
+		errorCount: pass ? 0 : 1,
+		warningCount: 0,
+		violations,
+		findings_count: pass ? 0 : 1,
+	};
+	process.stdout.write(`${JSON.stringify(out)}\n`);
+	process.exit(0);
 }
 
 // --- eslint subprocess wrappers ---------------------------------------------
@@ -308,9 +372,14 @@ function main(): void {
 	const projectRoot =
 		findProjectRoot(args.filePath) ?? dirname(resolve(args.filePath));
 
-	// Probe order: tool first (cheap, ~1s for cached bunx), then config
-	// (~1s for --print-config). Both gates feed dispatcher branch b
-	// (PASSED Note=tool-unavailable) on non-zero.
+	// Detection tier 1 (Issue #538): a declared `lint:check` script wraps the
+	// workspace's own lint harness. Never returns when the script exists.
+	if (detectLintScript(projectRoot)) runLintScript(projectRoot, args.filePath);
+
+	// Detection tier 2 (legacy default): eslint. Probe order: tool first
+	// (cheap, ~1s for cached bunx), then config (~1s for --print-config).
+	// Both gates feed dispatcher branch b (PASSED Note=tool-unavailable) on
+	// non-zero.
 	probeEslintAvailable(projectRoot);
 	probeEslintConfig(args.filePath, projectRoot);
 

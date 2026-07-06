@@ -70,3 +70,23 @@ RED 確認は `bun run dev-scripts/evals/rename-leftovers/check.ts` を実装前
 - **B003 実装は本時点で未着手。** requirements.md の NFR-2「B003 の着手は engineer3 の #528 PR の merge 後」に従い意図的に保留している。code-generation-plan.md に設計仕様と AC-6 検証仕様を記録済みであり、AC-6 は設計確定地点（code-generation-plan.md）での充足を要件としているため、実装保留は requirement 違反ではない。#528 merge 後に Step 7→Step 8→Step 9 を実行して本 summary を最終化する。
 
 - **センサーファイル命名の RED は生じなかった。** FR-2.2 の eval (c) 観点は B002 修正前から GREEN だった。これは eval 整備前にセンサーファイルがすでに正しく改名されていたことを意味し、B002 の修正（learnings.ts 側の解決パターン）とは独立した観点である。
+
+## B003 追記（conductor 直接実施、2026-07-06T02:50Z 頃）
+
+| 変更ファイル | 内容 |
+|---|---|
+| `.agents/amadeus/tools/amadeus-sensor-linter.ts` | 2 段検出を実装（detectLintScript / runLintScript = lint:check script 優先、不在なら従来の eslint 検出 → 127 quiet PASS）。ヘッダコメントも更新 |
+| `.agents/amadeus/sensors/amadeus-linter.md` | description と本文を 2 段検出の実挙動へ一致（FR-3.1） |
+| `dev-scripts/evals/linter-sensor/check.ts` | 新設（4 観点、隔離 workspace、no-stub-compat 実 rule fixture 含む = AC Row 6） |
+| `dev-scripts/data/parity-map.json` | engineFileExceptions +2（sensor-linter.ts / linter.md）、exceptions へ理由 entry 追記 |
+| `package.json` | `test:it:linter-sensor` 追加、test:it:all 連鎖へ組み込み |
+
+## 最終検証（2026-07-06T02:50Z 頃、fresh 実行）
+
+| コマンド | 結果 |
+|---|---|
+| `bun run dev-scripts/evals/linter-sensor/check.ts` | 4/4 ok |
+| `bun run dev-scripts/evals/rename-leftovers/check.ts` | ok（B001/B002 分の回帰なし） |
+| `npm run parity:check` | ok（39 skills、199 engine files、b67798c3） |
+| `npm run test:all` | exit 0（linter-sensor / rename-leftovers / no-stub-compat を含む連鎖） |
+| validator（260706-rename-lint-fixes 指定） | pass（不足・矛盾なし） |
