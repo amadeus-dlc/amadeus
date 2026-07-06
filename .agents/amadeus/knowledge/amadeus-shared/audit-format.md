@@ -202,6 +202,51 @@ Hooks that emit events use the same CLI as orchestrator-driven emissions: `bun .
 - No sensitive data (credentials, PII, secrets)
 - Human decisions recorded verbatim — NEVER summarize
 
+## Evidence Verification Boundary (docs-only declaration)
+
+- **What is verified**: reference format and existence of the referenced
+  `DECISION_RECORDED` / `GATE_APPROVED` event in THIS intent's audit shards.
+  `verifyDocsOnlyEvidence` (`tools/amadeus-state.ts`) checks the `--evidence`
+  string against the pattern `<DECISION_RECORDED|GATE_APPROVED> <stage>
+  [detail...]`, then cross-checks that an audit block for that event type and
+  stage actually exists in the intent's audit trail (via
+  `readAllAuditShards`) before `declare-docs-only` is allowed to write the
+  registry's `docsOnly` exemption.
+- **What is deliberately NOT verified**: machine proof that the evidence
+  originated from a human. Presence correlation (checking the evidence
+  against `HUMAN_TURN` timing) was evaluated and rejected — see "Rejected
+  alternatives" below.
+- **Defense lines**:
+  1. The guard's exemption is always audited: when `verifyStageArtifacts`
+     exempts a `workspace_requires` stage because of a `docsOnly`
+     declaration, it emits `GUARD_EXEMPTED` with the referenced evidence, in
+     the same audit trail as the referenced `DECISION_RECORDED` /
+     `GATE_APPROVED` event — so a forged declaration is traceable on audit
+     review.
+  2. The human-operated PR gate is the final defense: merge is always
+     performed by a human (see `team.md`), regardless of what any
+     docs-only declaration claims.
+  3. Multi-agent operation records an approval transcription only upon
+     receipt of a relay-approval fixed phrase (`team.md`, 多体連携の運用) —
+     it does not transcribe on peer-consultation replies.
+- **Rejected alternatives**:
+  - Presence correlation (cross-checking evidence against
+    `humanActedSinceGate`-style `HUMAN_TURN` timing): rejected because it is
+    a double contract-level cost (a new correlation contract plus an
+    extension of the mint discipline to dispatch-receipt time) for limited
+    prevention — it can be piggybacked in an environment with frequent
+    `HUMAN_TURN` mints, and because audit timestamps have second
+    granularity, same-second timestamp ties force window semantics that
+    weaken the intended guarantee rather than sharpen it.
+  - `GATE_APPROVED`-only evidence (disallowing `DECISION_RECORDED`):
+    rejected because it conflicts with the dispatch-transcription operation
+    and is a semantic mismatch with how multi-agent approval is recorded.
+- The `HUMAN_TURN` mint discipline (#497 decision 8) is unchanged by this
+  boundary; presence semantics are not altered.
+- Sources: Issue #506; PR #505 Bugbot review (which prompted this
+  clarification); `DECISION_RECORDED` requirements-analysis, intent
+  260705-presence-evidence, 2026-07-06.
+
 ## Entry Format
 
 ### Standard Format

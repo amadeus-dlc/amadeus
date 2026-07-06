@@ -704,7 +704,7 @@
     },
     {
       "target": "tools/aidlc-state.ts、tools/aidlc-lib.ts、tools/aidlc-audit.ts（ローカルでは .agents/amadeus/tools/amadeus-state.ts、amadeus-lib.ts、amadeus-audit.ts）、knowledge/aidlc-shared/audit-format.md（ローカルでは .agents/amadeus/knowledge/amadeus-shared/audit-format.md）",
-      "reason": "Issue #499: docs 系 Intent と code-generation の workspace_requires ガードの構造的衝突の解消。registry の docsOnly 宣言（amadeus-state.ts declare-docs-only、非空 evidence 必須）で検査を免除し、免除の発動を GUARD_EXEMPTED として audit に記録する（audit-format.md にイベント契約を追記）。宣言なしの拒否経路は従来どおりで #366 型の抜け検出を保全する。上流が同修正を取り込んだら解除。"
+      "reason": "Issue #499: docs 系 Intent と code-generation の workspace_requires ガードの構造的衝突の解消。registry の docsOnly 宣言（amadeus-state.ts declare-docs-only、非空 evidence 必須）で検査を免除し、免除の発動を GUARD_EXEMPTED として audit に記録する（audit-format.md にイベント契約を追記）。宣言なしの拒否経路は従来どおりで #366 型の抜け検出を保全する。上流が同修正を取り込んだら解除。 Issue #506: audit-format.md に Evidence Verification Boundary 節を追加（presence 相関の不採用と防衛線の明文化。人間承認 DECISION_RECORDED requirements-analysis 2026-07-06）。"
     },
     {
       "target": "tools/aidlc-learnings.ts（ローカルでは .agents/amadeus/tools/amadeus-learnings.ts）、aidlc-common/protocols/stage-protocol.md（ローカルでは .agents/amadeus/amadeus-common/protocols/stage-protocol.md）",
