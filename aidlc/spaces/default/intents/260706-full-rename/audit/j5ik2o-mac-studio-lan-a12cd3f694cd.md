@@ -474,3 +474,84 @@
 **Agent**: amadeus-architect-agent
 
 ---
+
+## Artifact Created
+**Timestamp**: 2026-07-06T04:16:11Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer1/aidlc/spaces/default/intents/260706-full-rename/construction/full-rename/functional-design/business-logic-model.md
+**Context**: construction > full-rename > functional-design > business-logic-model.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T04:16:11Z
+**Event**: SENSOR_FIRED
+**Fire id**: a7c06ab8
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260706-full-rename/construction/full-rename/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T04:16:11Z
+**Event**: SENSOR_PASSED
+**Fire id**: a7c06ab8
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260706-full-rename/construction/full-rename/functional-design/business-logic-model.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T04:16:11Z
+**Event**: SENSOR_FIRED
+**Fire id**: 13fc22a8
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260706-full-rename/construction/full-rename/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T04:16:11Z
+**Event**: SENSOR_PASSED
+**Fire id**: 13fc22a8
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: aidlc/spaces/default/intents/260706-full-rename/construction/full-rename/functional-design/business-logic-model.md
+**Duration ms**: 39
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T04:22:59Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a901b222448ec2e87
+**Message**: 必要な実測を完了しました。審査結果を報告します。\n\n---\n\n## Review\n\n**verdict: NOT-READY**\n\n---\n\n### 審査観点 1: Commit A — 逆写像方向の妥当性検証\n\n`parity-check.ts` L152-156 の `normalizeContent` を実測確認した。写像適用は `direction: "reverse"` で `from 
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T04:22:59Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T04:28:51Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a0257e25ff0dfb0b5
+**Message**: 確認が完了しました。\n\n---\n\n## Review\n\n### F-1 の解消確認\n\nbusiness-rules.md の「内部マーカー」行が以下のように修正されています。\n\n- kind 設計: `engine-dir 型（単純前方一致 = new RegExp(escaped, "g")）`\n- 誤爆対策欄: cli-token 型不採用の根拠（lookahead `(?![A-Za-z0-
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T04:28:51Z
+**Event**: HUMAN_TURN
+
+---
