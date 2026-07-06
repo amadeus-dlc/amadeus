@@ -106,4 +106,5 @@ The follow-on Issues #400, #401, and #402 proceed to englishization work or diff
 
 - [Language Policy](language-policy.md)
 - [AI-DLC v2 Difference Response Plan](aidlc-v2-difference-response-plan.md)
-- [Skill Englishization Rollout Plan](skill-englishization-rollout-plan.md)
+
+The staged englishization plan (the former rollout plan, #402) is complete and was retired in #562. All 42 skills' `SKILL.md` files are englishized; the only Japanese that remains is in 3 legitimately retained spots (user-facing question examples, Japanese output format descriptions, and quoted Japanese template field names). Verification is a cross-repo grep for Japanese characters; see git history (`git log -- docs/amadeus/skill-englishization-rollout-plan.md`) for the retirement record.

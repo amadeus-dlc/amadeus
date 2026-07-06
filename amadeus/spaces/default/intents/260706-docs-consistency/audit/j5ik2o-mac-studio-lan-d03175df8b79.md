@@ -1015,3 +1015,191 @@
 **Event**: HUMAN_TURN
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-06T10:49:55Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T10:50:06Z
+**Event**: HUMAN_TURN
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-06T10:50:06Z
+**Event**: DECISION_RECORDED
+**Stage**: functional-design
+**Decision**: gate 承認の転記（種別: 人間承認。承認経路: 人間の包括委任 → leader 内容確認 → engineer3）: 承認者 j5ik2o（Maintainer）の包括委任（2026-07-06 04:07 JST）に基づき、leader が内容確認（2026-07-06 20:52 JST）のうえ中継（agmsg 2026-07-06T10:49:53Z 受信）。承認要旨: 成果物 4 件（B001 = rollout-plan 退役で参照元更新を削除より先に置く順序 + 到達点の skill-language-policy 集約 / B002 = Operation 記述の 2 層構造化 + grep 文字列回避方式の機械化、BR-1〜9、変更対象 10 実体）と、reviewer が requirements の実測漏れ 3 箇所を検出・補完した経過（2 反復 READY）を承認。次ステージへ進んでよい。
+**Rationale**: HUMAN_TURN は中継承認定型文の受信直後に mint 済み。
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-06T10:50:06Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: functional-design
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-06T10:50:06Z
+**Event**: GATE_APPROVED
+**Stage**: functional-design
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-06T10:50:06Z
+**Event**: STAGE_COMPLETED
+**Stage**: functional-design
+**Details**: Stage Functional Design approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-06T10:50:06Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Agent**: amadeus-developer-agent
+
+---
+
+## Memory Empty
+**Timestamp**: 2026-07-06T10:50:06Z
+**Event**: MEMORY_EMPTY
+**Stage**: functional-design
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-06T10:53:46Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-utility
+**Command**: amadeus-utility --status
+**Error**: Usage: amadeus-utility <help|version|status|doctor|intent-birth|intent|space|space-create|codekb-path|detect|recompose|scope-change|config-change|set-status|detect-scope|resolve-env-scope|scope-table> [--project-dir <path>] [--scope <scope>] [--json]
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-06T10:57:07Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer3/amadeus/spaces/default/intents/260706-docs-consistency/amadeus-state.md
+**Context**: amadeus-state.md
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-06T10:57:40Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer3/amadeus/spaces/default/intents/260706-docs-consistency/construction/docs-consistency/code-generation/code-generation-plan.md
+**Context**: construction > docs-consistency > code-generation > code-generation-plan.md
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-06T10:58:10Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer3/amadeus/spaces/default/intents/260706-docs-consistency/construction/docs-consistency/code-generation/code-summary.md
+**Context**: construction > docs-consistency > code-generation > code-summary.md
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T10:58:27Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: ab640b383a0b86b87
+**Message**: ## 実施結果\n\nIntent `260706-docs-consistency` の code-generation ステージ（B001 rollout-plan 退役 + B002 Operation 記述の 2 層構造化）を実施した。\n\n### 変更ファイル一覧\n\n**B001（rollout-plan 退役）**\n- `docs/amadeus/skill-englishization-r
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T10:58:27Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T11:10:03Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a4e8def739034561e
+**Message**: # レビュー結果：Intent 260706-docs-consistency / code-generation ステージ（iteration 1）\n\n## 総合判定：**NOT-READY**\n\n自動検証（`npm run test:all`、validator、NFR-1 の 4 grep）はすべて独立に再実行して pass を確認した。B001・B002 の設計文例との突き合わせも大半は一
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T11:10:04Z
+**Event**: HUMAN_TURN
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-06T11:16:07Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer3/amadeus/spaces/default/intents/260706-docs-consistency/construction/docs-consistency/code-generation/code-summary.md
+**Context**: construction > docs-consistency > code-generation > code-summary.md
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-06T11:16:16Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer3/amadeus/spaces/default/intents/260706-docs-consistency/construction/docs-consistency/code-generation/code-summary.md
+**Context**: construction > docs-consistency > code-generation > code-summary.md
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T11:17:32Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: ab640b383a0b86b87
+**Message**: reviewer iteration 1 の NOT-READY 指摘 3 件への対応が完了した。git commit は行っていない（conductor が実施）。\n\n## 変更ファイル（reviewer iteration 1 対応分）\n\n**指摘 1（HIGH、3層化）**\n- `docs/amadeus/lifecycle/state{.md,.ja.md}` — Stage Progre
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T11:17:32Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T11:22:50Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a4e8def739034561e
+**Message**: ## レビュー結果：Intent 260706-docs-consistency / code-generation ステージ（iteration 2 再レビュー）\n\n## 総合判定：**NOT-READY**\n\niteration 1 で指摘した3件はいずれも意図どおりに対応されており、`state.md`／`state.ja.md` 自体は3箇所が相互に整合し、`amadeus-validat
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T11:22:50Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T11:26:44Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a4e8def739034561e
+**Message**: ## レビュー結果：Intent 260706-docs-consistency / code-generation ステージ（iteration 3 再レビュー・対象はブロッカー1点のみ）\n\n## 総合判定：**READY**\n\n## ブロッカー（iteration2＝boundary文書の3層化漏れ／空約束リンク）の解消判定：**解消**\n\n`docs/amadeus/aidlc-v2-ope
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T11:26:44Z
+**Event**: HUMAN_TURN
+
+---

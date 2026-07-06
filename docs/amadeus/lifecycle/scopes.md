@@ -38,8 +38,8 @@ Because `pdm` does not exist upstream, it is declared as an exception in the ups
 | workshop | Standard | workshop, lab, training | A facilitator-led learning session. Skips Ideation and sets the test level to Minimal. |
 | pdm | Standard | pdm, prd, product-discovery | A PdM Intent that completes within planning, research, and requirements definition. Runs all of Ideation and Inception's requirements-related stages (requirements-analysis, user-stories, refined-mockups); has no Construction onward. Its terminal artifacts are the full PRD set (intent-statement, competitive-analysis, build-vs-buy, scope-document, initiative-brief, requirements, stories, personas, wireframes). |
 
-Because Amadeus excludes the Operation phase, scopes that include Operation stages in v2 (enterprise, feature, infra, security-patch, workshop) have a correspondingly narrower stage set.
-security-patch's deployment-related stages and infra's provisioning-related stages are not in scope for execution in Amadeus; when deployment steps are needed, they are recorded in the Intent's artifacts and left to a human.
+Because the default space's workspace steering treats Operation as out of scope, scopes that include Operation stages (enterprise, feature, infra, security-patch, workshop) are processed in this workspace with a reasoned skip for those stages; the lifecycle contract itself holds the same stage set as v2. The current validator additionally requires `[S]` for every Operation stage in every workspace regardless of scope — executing Operation is a future adoption (see [AI-DLC v2 Operation Phase Boundary](../aidlc-v2-operation-phase-boundary.md)).
+security-patch's deployment-related stages and infra's provisioning-related stages are handled by this reasoned skip; when deployment steps are needed, they are recorded in the Intent's artifacts and left to a human.
 
 ## Scope inference rules
 
@@ -101,7 +101,7 @@ A blank cell means SKIP.
 
 This table was transcribed from each v2 stage definition's `scopes:` declaration.
 The 3 Initialization stages are targeted for execution under every scope and are included in this table.
-The difference from v2's compiled scope grid (bugfix 7/32, refactor 8/32, poc 8/32, etc.) is exactly the 7 Operation stages that Amadeus does not target for execution.
+The compiled scope grid's numbers (bugfix 7/32, refactor 8/32, poc 8/32, etc.) are identical to v2's; the difference is in workspace steering, which processes the Operation stages with a reasoned skip rather than through a stage-count reduction.
 
 ## Input substitution on reduction
 

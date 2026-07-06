@@ -61,7 +61,7 @@ Stage state is expressed by the Stage Progress checkbox. The vocabulary is the v
 | `[S]` | Skipped | Out of execution scope per scope or a Condition. |
 
 The checkbox line's annotation (after the ` — ` separator) reads `EXECUTE` when the stage is in scope, or `SKIP: <reason>` when it is not.
-Operation's 7 stages are out of Amadeus's execution scope and are always `[S]` (`SKIP: out of Amadeus scope`).
+Whether Operation's 7 stages execute is determined by scope (the scope-grid) and workspace steering. The default space treats them as out of scope via steering, and processes the corresponding stages as `[S]` (`SKIP: out of Amadeus scope`). Note the current validator additionally requires `[S]` for all Operation stages in every workspace (executing Operation is a future adoption).
 
 State transitions are limited to the following.
 
@@ -122,7 +122,7 @@ The same PR also made the presence of `verification/phase-check-<phase>.md` a re
 ## Phase transitions
 
 Phases proceed in the order Initialization, Ideation, Inception, Construction.
-Operation holds only the record's scaffold and is out of execution scope.
+Operation stages are declared per scope in the scope-grid (CONDITIONAL adoption), but the current validator requires `[S]` for every Operation stage in every workspace — executing Operation is a future adoption; the default space additionally treats them as out of scope via steering.
 
 A phase with one or more executed stages records `PHASE_VERIFIED`, sets Phase Progress to `Verified`, and transitions to the next phase once all in-scope stages are `[x]` or `[S]` and the phase PR is merged.
 
@@ -155,7 +155,7 @@ Note: #369's confirmed decision 3 (making state.json the owner of state) and con
 
 - `amadeus-state.md` has every section of the v2 state template and State Version 7.
 - Stage Progress has a row for all 32 stages, and each checkbox is a known vocabulary item.
-- Stages out of scope's execution scope, and all of Operation's stages, are `[S]`.
+- Stages out of scope's execution scope, and all of Operation's stages, are `[S]` (executing Operation is a future adoption; see [AI-DLC v2 Operation Phase Boundary](../aidlc-v2-operation-phase-boundary.md)).
 - A `[x]` stage has the artifacts the contract requires, and a `STAGE_COMPLETED` event exists.
 - When a required input's supplying stage is `[S]`, downstream stages follow the input substitution on reduction in [scopes.md](scopes.md).
 - The preceding phase's Phase Progress is `Verified` or `Skipped`, and the corresponding `PHASE_VERIFIED` / `PHASE_SKIPPED` event exists.

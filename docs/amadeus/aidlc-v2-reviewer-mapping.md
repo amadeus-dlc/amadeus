@@ -78,4 +78,3 @@ Reconsider adopting the reviewer in a separate Issue if either of the following 
 
 - [AI-DLC v2 Difference Response Plan](aidlc-v2-difference-response-plan.md)
 - [Skill Language Policy](skill-language-policy.md)
-- [Skill Englishization Rollout Plan](skill-englishization-rollout-plan.md)

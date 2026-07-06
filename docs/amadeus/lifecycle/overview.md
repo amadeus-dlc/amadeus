@@ -83,7 +83,7 @@ The lifecycle consists of five phases: Initialization, Ideation, Inception, Cons
 
 **Ideation**, **Inception**, and **Construction** each have the stages defined by [ideation.md](ideation.md), [inception.md](inception.md), and [construction.md](construction.md) respectively.
 
-**Operation**: has only the record scaffold corresponding to v2's 7 stages. Amadeus does not run any of its stages, and Stage Progress is always `[S]` (`SKIP: out of Amadeus scope`). The reason it is out of scope (artifact contracts, gates, validator, PR boundary) and the treatment of the upstream Operation skills follow [AI-DLC v2 Operation Phase Boundary](../aidlc-v2-operation-phase-boundary.md).
+**Operation**: holds v2's 7 stages, and whether they execute is determined at two layers — scope (the scope-grid; scopes such as enterprise and feature hold the Operation stages as EXECUTE, per AMADEUS.md's CONDITIONAL adoption) and workspace steering (the default space treats Operation as out of scope via `memory/phases/operation.md`, and Intents in a scope that includes Operation are processed with a reasoned skip). The current validator additionally requires `[S]` for every Operation stage in every workspace regardless of scope — executing Operation is a future adoption. The rationale for the default space's treatment (artifact contracts, gates, validator, PR boundary), the validator's current behavior, and the handling of the upstream Operation skills follow [AI-DLC v2 Operation Phase Boundary](../aidlc-v2-operation-phase-boundary.md).
 
 ## Scope backlog
 
@@ -194,7 +194,7 @@ amadeus/
             grillings.md
             grillings/
           operation/
-            <stage-slug>/           # scaffold for v2's 7 stages; Amadeus does not run them
+            <stage-slug>/           # scaffold for v2's 7 stages; run per scope-grid, default space skips via steering
 ```
 
 The Intent module file (`<dirName>.md`) and the `intents.md` index were retired (GD009).
@@ -267,7 +267,7 @@ Within the range of semantic compatibility, only the following Amadeus-specific 
 | sensor | Deterministic checks via the stage definition's `sensors:` (output to `.amadeus-sensors/`) | `required-sections` and `upstream-coverage` map to `amadeus-validator` and `traceability.md`; `linter` and `type-check` map to the Build and Test record and the PR's CI | Does not add a hook execution substrate to the distribution contract. See [AI-DLC v2 Sensor and Learn Mapping](../aidlc-v2-sensor-learn-mapping.md) for detail. |
 | Learn | Fixation into the harness through `memory.md`'s 4 headings and the learnings ritual | Mapped to each stage's `memory.md` (the same 4 perspectives), `decisions.md`, `traceability.md`, and the Grilling Decision Trail | Fixation is not automated and goes through a human gate. See [AI-DLC v2 Sensor and Learn Mapping](../aidlc-v2-sensor-learn-mapping.md) for detail. |
 | Build and Test failure handling | Attempts diagnosis and fixes up to 2 times, and proceeds to the gate with a record if unresolved | Makes no implementation fix; on failure, halt-and-ask confirms with a human immediately, and the fix is treated as Code Generation's responsibility | Preserves the record's truthfulness and the Bolt gate's approval target. See [AI-DLC v2 Build and Test Failure Handling](../aidlc-v2-build-and-test-failure-handling.md) for detail. |
-| Operation phase | Includes 7 stages to run | Has only the record scaffold and the Stage Progress `[S]` rows; does not run them | Because artifact contracts, gates, validator, and the PR boundary do not handle effects on a real environment. See [AI-DLC v2 Operation Phase Boundary](../aidlc-v2-operation-phase-boundary.md) for detail. |
+| Operation phase | Includes 7 stages to run | Adopts the same 7 stages as v2 as CONDITIONAL by scope (scope-grid); the default workspace's steering (`memory/phases/operation.md`) determines the out-of-scope handling | Because whether an in-scope Operation stage executes is determined by workspace steering, not fixed by the artifact contract, gates, validator, or PR boundary alone. See [AI-DLC v2 Operation Phase Boundary](../aidlc-v2-operation-phase-boundary.md) for detail. |
 
 ## Major changes from the legacy contract
 
