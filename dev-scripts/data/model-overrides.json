@@ -1,0 +1,15 @@
+{
+  "agents": {
+    "amadeus-architect-agent": {
+      "model": "fable",
+      "base": "opus"
+    },
+    "amadeus-design-agent": {
+      "model": "fable",
+      "base": "opus"
+    }
+  },
+  "fallbacks": {
+    "fable": "opus"
+  }
+}
