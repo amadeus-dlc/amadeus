@@ -26,7 +26,7 @@ The amadeus-product-agent leads five stages spanning Ideation and Inception. It 
 
 ## What to Expect
 
-When the amadeus-product-agent is active, expect structured questions about your project goals, target users, priorities, and constraints. It uses the tri-mode question flow (Guide Me, Edit File, or Chat) and asks targeted questions to surface ambiguities and fill gaps. It prioritizes ruthlessly — helping you distinguish must-have from nice-to-have.
+When the amadeus-product-agent is active, expect structured questions about your project goals, target users, priorities, and constraints. It uses the interaction-mode question flow (Guide Me, Grill Me, Edit File, or Chat) and asks targeted questions to surface ambiguities and fill gaps. It prioritizes ruthlessly — helping you distinguish must-have from nice-to-have.
 
 ## How It Collaborates
 

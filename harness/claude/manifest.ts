@@ -36,10 +36,11 @@ const manifest: HarnessManifest = {
     { src: "scopes", dst: "scopes" },
     { src: "agents", dst: "agents" },
     { src: "hooks", dst: "hooks" },
-    // The three harness-neutral session skills ship in-tree under skills/.
+    // The four harness-neutral session skills ship in-tree under skills/.
     { src: "skills/amadeus-session-cost", dst: "skills/amadeus-session-cost" },
     { src: "skills/amadeus-replay", dst: "skills/amadeus-replay" },
     { src: "skills/amadeus-outcomes-pack", dst: "skills/amadeus-outcomes-pack" },
+    { src: "skills/amadeus-grilling", dst: "skills/amadeus-grilling" },
   ],
 
   // Authored harness surfaces copied verbatim (with token substitution on .md)

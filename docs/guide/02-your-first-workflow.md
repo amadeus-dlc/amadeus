@@ -84,11 +84,13 @@ The amadeus-product-agent asks you to choose an interaction mode:
 ```
 ▸ Choose interaction mode:
   (1) Guide Me — agent asks structured questions
-  (2) Edit File — write directly to the artifact
-  (3) Chat — freeform discussion
+  (2) Grill Me — one question at a time, in depth, with recommended answers
+  (3) Edit File — write directly to the artifact
+  (4) Chat — freeform discussion
 ```
 
 - **Guide Me** walks you through questions one at a time
+- **Grill Me** interviews you in depth until shared understanding is confirmed
 - **Edit File** opens the artifact for direct editing
 - **Chat** lets you discuss freely; the agent extracts decisions
 
@@ -274,6 +276,6 @@ Throughout the workflow, the terminal status line shows your current position:
 
 - [Spaces and Intents](03-spaces-and-intents.md) — how the workspace holds many runs, and how to start and switch between them
 - [Phases and Stages](04-phases-and-stages.md) — detailed breakdown of all 5 phases and 32 stages
-- [Interaction Modes](07-interaction-modes.md) — Guide Me, Edit File, and Chat explained
+- [Interaction Modes](07-interaction-modes.md) — Guide Me, Grill Me, Edit File, and Chat explained
 - [Session Management](11-session-management.md) — resuming, redoing, and jumping between stages
 - [Glossary](glossary.md) — terminology reference

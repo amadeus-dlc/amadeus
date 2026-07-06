@@ -79,7 +79,7 @@ On the interactive path the conductor holds the loop, because only it can ask th
 
 ## 4. Plural skills, runners, and the shared spine
 
-The orchestrator is one skill among many. Each harness ships a plural set under its skills directory (`<harness-dir>/skills/`, e.g. `dist/claude/.claude/skills/`): the base `amadeus` orchestrator, one **stage-runner** per runnable stage (`amadeus-<slug>`), one **scope-runner** per first-batch scope (`amadeus-<scope>`), the read-only session skills (`amadeus-session-cost`, `amadeus-replay`, `amadeus-outcomes-pack`), and `amadeus-init`. All of the routing-and-execution knowledge lives once in the **shared spine** authored at `core/amadeus-common/` (shipped as `<harness-dir>/amadeus-common/`): the `conductor.md` persona, the `protocols/`, and the 32 stage files under `stages/{initialization,ideation,inception,construction,operation}/`.
+The orchestrator is one skill among many. Each harness ships a plural set under its skills directory (`<harness-dir>/skills/`, e.g. `dist/claude/.claude/skills/`): the base `amadeus` orchestrator, one **stage-runner** per runnable stage (`amadeus-<slug>`), one **scope-runner** per first-batch scope (`amadeus-<scope>`), the read-only session skills (`amadeus-session-cost`, `amadeus-replay`, `amadeus-outcomes-pack`, `amadeus-grilling`), and `amadeus-init`. All of the routing-and-execution knowledge lives once in the **shared spine** authored at `core/amadeus-common/` (shipped as `<harness-dir>/amadeus-common/`): the `conductor.md` persona, the `protocols/`, and the 32 stage files under `stages/{initialization,ideation,inception,construction,operation}/`.
 
 The runner skills are generated, never hand-written, by `tools/amadeus-runner-gen.ts`:
 

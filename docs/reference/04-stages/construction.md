@@ -196,8 +196,8 @@ Strictly 2-option: Approve / Request Changes.
   `<record>/construction/{unit-name}/functional-design/functional-design-questions.md`.
 - frontend-components.md is only produced when the unit includes frontend/UI
   work.
-- All questions use the tri-mode interaction flow (Guide me / I'll edit the
-  file / Chat).
+- All questions use the interaction-mode flow (Guide me / Grill me / I'll
+  edit the file / Chat).
 
 ---
 

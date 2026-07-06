@@ -374,7 +374,7 @@ large scope with significant unknowns.
    A-E options. Every question must end with `X. Other (please specify)` as
    the final option. All `[Answer]:` tags left blank.
 
-   Offer the tri-mode question flow: Guide Me / Edit File / Chat.
+   Offer the interaction-mode question flow: Guide Me / Grill Me / Edit File / Chat.
 
 8. **Collect and Analyze Answers** -- Read the questions file, confirm all
    `[Answer]:` tags are filled. If any are blank, present unanswered questions

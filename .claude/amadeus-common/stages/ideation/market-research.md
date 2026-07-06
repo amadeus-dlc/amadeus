@@ -52,7 +52,7 @@ Create `<record>/ideation/market-research/market-research-questions.md` with que
 - What is the build-vs-buy-vs-partner calculus?
 - What market size or addressable audience are we targeting?
 
-Follow stage-protocol.md question flow (Guide Me / Edit File / Chat).
+Follow stage-protocol.md question flow (Guide Me / Grill Me / Edit File / Chat).
 
 ### Step 4: Collect and Analyze Answers
 

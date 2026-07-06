@@ -19,7 +19,7 @@ Every command this implementation ships is a skill under `.claude/skills/`. They
 - **Scope-runners** — `/amadeus-bugfix`, `/amadeus-feature`, `/amadeus-mvp`, `/amadeus-security-patch`. Same full workflow, with a scope fixed and scope detection skipped.
 - **Stage-runners** — `/amadeus-application-design`, `/amadeus-code-generation`, and 27 more. Run one stage in isolation, never touching your main workflow.
 - **`/amadeus-init`** — birth the first intent (run the whole Initialization phase) in one step; opt-in packaging over the engine's auto-birth.
-- **Session skills** — `/amadeus-session-cost`, `/amadeus-replay`, `/amadeus-outcomes-pack`. Read-only views over a workflow; covered in [Session Management](11-session-management.md).
+- **Session skills** — `/amadeus-session-cost`, `/amadeus-replay`, `/amadeus-outcomes-pack`, `/amadeus-grilling`. Read-only skills usable at any point; the first three are workflow views covered in [Session Management](11-session-management.md), and `/amadeus-grilling` is a standalone grilling interview (see [Interaction Modes](07-interaction-modes.md)).
 
 Everything a runner does is reachable from `/amadeus` with a flag. The runners are packaging — typing `/amadeus-bugfix` and seeing it in your `/` menu is good ergonomics, nothing more. Delete every runner and the shortcuts go; the capability stays, reachable through `/amadeus` flags.
 
@@ -105,6 +105,7 @@ The three bootstrap **initialization** stages ship no stage-runner — birthing 
 | Stage-runner | `/amadeus-application-design`, `/amadeus-code-generation`, … (29 total) | One stage in isolation, never advances your workflow | `/amadeus --stage <slug> --single` |
 | Init wrapper | `/amadeus-init` | Birth the first intent (run Initialization) | `/amadeus` on a fresh workspace |
 | Session views | `/amadeus-session-cost`, `/amadeus-replay`, `/amadeus-outcomes-pack` | Read-only workflow reports | see [Session Management](11-session-management.md) |
+| Grilling interview | `/amadeus-grilling` | Read-only one-question-at-a-time interview about a plan or design | see [Interaction Modes](07-interaction-modes.md) |
 
 There's one stage-runner for every runnable stage in the lifecycle. To see the full set, list your skills directory:
 

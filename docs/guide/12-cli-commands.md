@@ -503,6 +503,8 @@ Three read-only skills surface what `amadeus-runtime summary` reports, wrapped i
 
 All three are read-only — no stage advance, no audit emit — and source every number from `amadeus-runtime summary --json`. See [Session Management § Session Skills](11-session-management.md#session-skills) for the full walkthrough.
 
+A fourth read-only skill, `/amadeus-grilling <file-or-topic>`, runs a one-question-at-a-time grilling interview about a plan or design — workflow optional, terminal only. See [Interaction Modes](07-interaction-modes.md).
+
 ---
 
 ## Environment Variables
