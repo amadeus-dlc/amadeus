@@ -1,108 +1,108 @@
 # Skill Language Policy
 
-この文書は、Amadeus skill の `SKILL.md` と TS スクリプトの言語方針、対象範囲、維持する契約、検証方法を定義する。
+This document defines the language policy, scope, retained contract, and verification method for Amadeus skill `SKILL.md` files and TypeScript scripts.
 
-Issue #395 の判断を後続の #400、#401、#402 で参照できるようにするための基準である。
+It is the basis that the follow-on Issues #400, #401, and #402 reference for Issue #395's decision.
 
-責務分担: 本文書は skill ソース（`SKILL.md`、TS スクリプト）の言語を扱う。`docs/amadeus/` 配下の文書自体の言語（正本と `*.ja.md` 併置）は [Language Policy](language-policy.md) が扱う。
+Responsibility split: this document governs the language of skill sources (`SKILL.md`, TypeScript scripts). The language of `docs/amadeus/` documents themselves (canonical text paired with `*.ja.md`) is governed by [Language Policy](language-policy.md).
 
-段階的英語化ロールアウト（#400、#401、#402、B006〜B009）は完了した。
-Intent `260704-v2-parity-completion` の D003 により、方針は「英語化できる」の条件付き許可から「英語必須」へ改定した。
+The staged englishization rollout (#400, #401, #402, B006–B009) is complete.
+Per Decision D003 of Intent `260704-v2-parity-completion`, the policy has been revised from a conditional "englishization allowed" stance to "English required."
 
-## 方針
+## Policy
 
-Amadeus skill の `SKILL.md` と TS スクリプトは英語必須とする。
+Amadeus skill `SKILL.md` files and TypeScript scripts are English-required.
 
-D001（本家 `dist/claude/` からの適応コピー戦略）により、Amadeus skill は本家英語 skill を最小限の適応点（amadeus-* への改名、amadeus-grilling への結線）だけで保守する。
-日本語で下書きしてから翻訳する運用は、適応コピーとの差分確認を妨げるため取らない。
+Under Decision D001 (the adapted-copy strategy from upstream `dist/claude/`), Amadeus skill maintains the upstream English skills with a minimal set of adaptation points (renaming to `amadeus-*`, wiring into `amadeus-grilling`).
+Drafting in Japanese and then translating is not adopted, because it would obstruct diffing against the adapted copy.
 
-ただし、Amadeus DLC が生成する成果物の言語（記述系成果物本文とユーザー向け gate 文言）は日本語のまま維持する。
+However, the language of artifacts that Amadeus DLC generates (the body of descriptive artifacts and user-facing gate wording) remains Japanese.
 
-英語化は翻訳作業だけとして扱わない。
-英語化 PR では、翻訳変更、意味変更、昇格フロー、検証結果の境界を明示する。
+Englishization is not treated as translation work alone.
+An englishization pull request states clearly the boundary between translation changes, semantic changes, the promotion flow, and verification results.
 
-## 英語必須の対象
+## Targets requiring English
 
-| 対象 | 扱い |
+| Target | Treatment |
 |---|---|
-| `skills/amadeus*/SKILL.md` | 英語必須である。 |
-| `.agents/skills/amadeus*/SKILL.md` | source skill から昇格フローで反映する場合に英語で反映する。 |
-| `skills/amadeus*/**/*.ts`、`.agents/skills/amadeus*/**/*.ts` | 英語必須である。ただし、成果物として出力する日本語文字列（gate 文言、検証結果の条件・根拠テキストなど）は対象外とする。 |
-| `agents/openai.yaml` | `SKILL.md` の frontmatter description を変更した場合に、必要に応じて更新する。 |
+| `skills/amadeus*/SKILL.md` | English-required. |
+| `.agents/skills/amadeus*/SKILL.md` | Reflected in English when propagated from the source skill through the promotion flow. |
+| `skills/amadeus*/**/*.ts`, `.agents/skills/amadeus*/**/*.ts` | English-required. Japanese strings emitted as artifacts (gate wording, the condition and rationale text of verification results, and the like) are out of scope. |
+| `agents/openai.yaml` | Updated as needed when the `SKILL.md` frontmatter description changes. |
 
-## 日本語を維持する対象
+## Targets that stay Japanese
 
-| 対象 | 理由 |
+| Target | Reason |
 |---|---|
-| `amadeus/**/*.md` | Amadeus DLC 成果物は日本語 Markdown として扱うため。 |
-| `skills/amadeus*/templates/**/*.md` | 生成される成果物の言語を日本語に保つため。 |
-| `.agents/skills/amadeus*/templates/**/*.md` | 昇格先でも生成される成果物の言語を日本語に保つため。 |
-| `.kiro/specs/**/*.md` | workspace ルールで日本語生成を要求しているため。 |
-| `openspec/**/*.md` | workspace ルールで日本語生成を要求しているため。 |
-| ユーザー向け gate 文言 | Amadeus の会話と承認判断を日本語で扱うため。 |
+| `amadeus/**/*.md` | Amadeus DLC artifacts are treated as Japanese Markdown. |
+| `skills/amadeus*/templates/**/*.md` | Keeps the language of generated artifacts Japanese. |
+| `.agents/skills/amadeus*/templates/**/*.md` | Keeps the language of generated artifacts Japanese at the promoted destination too. |
+| `.kiro/specs/**/*.md` | Workspace rules require Japanese generation. |
+| `openspec/**/*.md` | Workspace rules require Japanese generation. |
+| User-facing gate wording | Amadeus handles conversation and approval decisions in Japanese. |
 
-## 維持する契約
+## Retained contract
 
-`CONTEXT.md` の canonical name と定義を優先する。
+The canonical name and definition in `CONTEXT.md` take priority.
 
-英語化後の `SKILL.md` でも、Amadeus DLC、Amadeus、Intent、Unit、Bolt、Gate、Traceability、Domain Map、Context Map の意味を変えない。
+Even in an englishized `SKILL.md`, the meaning of Amadeus DLC, Amadeus, Intent, Unit, Bolt, Gate, Traceability, Domain Map, and Context Map does not change.
 
-Amadeus DLC 固有の契約を、AI-DLC v2 との対応確認を理由に削らない。
+Amadeus DLC-specific contracts are not dropped on the grounds of aligning with AI-DLC v2.
 
-維持する契約は次である。
+The retained contract is as follows.
 
-- 単一公開入口 `amadeus`
-- `amadeus/` 配下の成果物配置
-- `amadeus-state.md` による状態管理
-- `amadeus-validator` による構造検証
-- `amadeus-grilling` による質問プロトコル
-- phase PR と Bolt PR による人間 gate
+- The single public entry point `amadeus`
+- Artifact placement under `amadeus/`
+- State management via `amadeus-state.md`
+- Structural verification via `amadeus-validator`
+- The question protocol via `amadeus-grilling`
+- Human gates via phase PRs and Bolt PRs
 
-## 昇格フロー
+## Promotion flow
 
-source skill を変更した場合は、`dev-scripts/promote-skill.ts` を使って昇格先へ反映する。
+When a source skill changes, reflect it to the promoted destination using `dev-scripts/promote-skill.ts`.
 
-昇格先の `.agents/skills/amadeus*/SKILL.md` だけを手作業で変更しない。
+Do not hand-edit only the promoted `.agents/skills/amadeus*/SKILL.md`.
 
-既存の昇格先を更新する場合は次を使う。
+To update an existing promoted destination, use the following.
 
 ```sh
 bun run dev-scripts/promote-skill.ts <skill-name> --replace
 ```
 
-昇格後は、少なくとも次を実行する。
+After promotion, run at least the following.
 
 ```sh
 npm run test:it:promote-skill
 ```
 
-## 検証
+## Verification
 
-Amadeus skill の英語化 PR では、少なくとも次を実行する。
+An Amadeus skill englishization pull request runs at least the following.
 
 ```sh
 npm run test:it:promote-skill
 npm run test:all
 ```
 
-`SKILL.md` の frontmatter description を変更した場合は、`agents/openai.yaml` の更新要否も確認する。
+When the `SKILL.md` frontmatter description changes, also check whether `agents/openai.yaml` needs updating.
 
-PR 説明には次を記録する。
+The pull request description records the following.
 
-- 対象 Issue
-- 対象 Intent
-- 英語化した skill
-- 日本語維持対象を変更していないこと
-- source skill と昇格先 skill の同期方法
-- 実行した検証
+- The target Issue
+- The target Intent
+- Which skills were englishized
+- That Japanese-retained targets were not changed
+- How the source skill and the promoted skill were synchronized
+- Which verifications were run
 
-## 完了証拠
+## Completion evidence
 
-Issue #395 の完了証拠は、対応 PR の merge または明示的な Issue close とする。
+The completion evidence for Issue #395 is the merge of the corresponding pull request or an explicit Issue close.
 
-後続の #400、#401、#402 は、この方針を前提として英語化作業または差分対応順序の判断へ進む。
+The follow-on Issues #400, #401, and #402 proceed to englishization work or difference-response ordering decisions on the premise of this policy.
 
-## 関連文書
+## Related documents
 
 - [Language Policy](language-policy.md)
 - [AI-DLC v2 Difference Response Plan](aidlc-v2-difference-response-plan.md)
