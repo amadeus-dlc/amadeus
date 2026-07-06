@@ -2054,7 +2054,7 @@ export function detectWorkspace(projectDir: string): ScanResult {
 
   // Recurse into every non-excluded, non-dot top-level directory (capped
   // depth). Issue #459: the old walk covered only SCAN_SOURCE_DIRS, so a
-  // codebase whose sources live elsewhere (dev-scripts/, skills/, lints/ —
+  // codebase whose sources live elsewhere (dev-scripts/, core/skills/, lints/ —
   // this very repo) counted zero files and fell through to Greenfield /
   // Unknown. Dot-directories stay excluded — they are config/harness space,
   // and counting them would flip a harness-only empty project to Brownfield.

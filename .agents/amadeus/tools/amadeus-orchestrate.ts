@@ -570,7 +570,7 @@ function memoryPathFor(phase: string, slug: string, recordPrefix: string | null)
 
 // Derive the stage file path from phase + slug (the shipped layout:
 // .claude/amadeus-common/stages/<phase>/<slug>.md — relocated to the shared
-// amadeus-common/ spine, a peer of skills/). Matches the engine design's example
+// amadeus-common/ spine, a peer of core/skills/). Matches the engine design's example
 // directive's stage_file field.
 function stageFileFor(phase: string, slug: string): string {
   return `${harnessDir()}/amadeus-common/stages/${phase}/${slug}.md`;
@@ -579,7 +579,7 @@ function stageFileFor(phase: string, slug: string): string {
 // --- The conductor persona (decision D-E, SPIKE 6) ---
 //
 // The conductor's execution-quality prose lives ONCE at
-// `.claude/amadeus-common/conductor.md` (a root-level peer of skills/). Skills do
+// `.claude/amadeus-common/conductor.md` (a root-level peer of core/skills/). Skills do
 // NOT reference it by path; instead the engine reads it and bakes its contents
 // into the FIRST run-stage directive of a workflow, so the conductor receives
 // its persona in-context with zero per-skill diligence (per the engine design). The file
@@ -1418,7 +1418,7 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   const projectType = projectTypeFrom(stateContent);
 
   // Branch 4b — --single stage-runner mode. A stage-runner skill
-  // (skills/aidlc-<stage>/) drives ONE stage in isolation: `next --stage <slug>
+  // (core/skills/amadeus-<stage>/) drives ONE stage in isolation: `next --stage <slug>
   // --single` emits exactly one run-stage directive for <slug> and STOPS. The
   // load-bearing invariant is the POINTER RULE: a single-stage run NEVER touches
   // the main workflow's `Current Stage`. The with-state jump path (Branch 7) would
