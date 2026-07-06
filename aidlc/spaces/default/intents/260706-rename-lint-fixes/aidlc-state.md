@@ -69,7 +69,7 @@
 - [ ] delivery-planning — SKIP
 
 ### CONSTRUCTION PHASE
-Per unit: [TBD]
+Per unit: rename-lint-fixes
 - [ ] functional-design — SKIP
 - [ ] nfr-requirements — SKIP
 - [ ] nfr-design — SKIP
