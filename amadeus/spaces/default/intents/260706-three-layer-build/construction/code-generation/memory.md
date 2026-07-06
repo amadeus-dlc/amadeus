@@ -18,3 +18,4 @@
 
 ## Open questions
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
+- 2026-07-06T10:55:00Z — B001 reviewer READY（Medium 2 / Low 3）。B002/B003 への申し送り: (M1) stepHarnessOverlay に core スキル整合ガードなし（孤立 harness エントリが部分 skill dir を生成しうる。B002 の restructure 直後に harness と core のセットが揃うため、B002 の eval で ghost エントリ検出を追加）。(M2) overlay fail-soft が不在と実エラー（malformed JSON / drift throw）を区別しない（promote-skill と同パターンだが、B003 の productionization で不在 = skip / 在中エラー = 警告文言の区別を検討）。(L3) 後勝ち証明は BR-16 制約下では「harness 唯一ソース」の確認が正（コメント文言の整理）。(L4) --check は staged-but-uncommitted を検出しない（CI clean checkout では非問題、記録のみ）。(L5) 37 検査の件数は条件分岐で 36 になる経路あり（記述精度、B002 で整理）。
