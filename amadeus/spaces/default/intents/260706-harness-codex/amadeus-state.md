@@ -69,7 +69,7 @@
 - [x] delivery-planning — EXECUTE
 
 ### CONSTRUCTION PHASE
-Per unit: [TBD]
+Per unit: u001-harness-codex
 - [-] functional-design — EXECUTE
 - [ ] nfr-requirements — EXECUTE
 - [ ] nfr-design — EXECUTE

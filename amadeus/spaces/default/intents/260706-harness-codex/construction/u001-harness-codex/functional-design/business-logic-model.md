@@ -10,9 +10,9 @@
 2. **FR-2 写像表生成**: 上流 skill 名一覧へ skillNameMapping の prefix 規則（aidlc-<x> → amadeus-<x>、aidlc → amadeus）を機械適用し、当方 skills/ の実在ディレクトリと交差。結果を 3 区分（取り込み対象 = 両側実在 / 上流のみ = amadeus 対応なし / 当方のみ = 独自 skill）で provenance.md の表にする。
 3. **FR-3 yaml 追加**: 取り込み対象の各 skill に skills/amadeus-<x>/agents/openai.yaml を作成。内容 = 上流実体 + rename 契約適用（guard 内容に名称が含まれない場合は同一）+ provenance コメント 4 行（questions Q2 = A）。
 4. **FR-4 harness/codex 新設**: README.md（ハーネス契約、Phase 1 役割、Phase 2 正準化予定、言語再判定条件）と provenance.md（基準 commit、写像表、適応規則、再取り込み手順、FR-1 照合結果）。
-5. **FR-6.5 検出器追従**: dev-scripts/evals/rename-leftovers/allowlist.json の scanRoots へ "harness" を 1 行追加。
-6. **FR-5 promote 昇格**: 取り込み対象 skill を dev-scripts/promote-skill.ts --replace で昇格。昇格前後の skill dir diff を確認。
-7. **FR-6 検証**: npm run test:all / validator / parity:check / test:it:promote-skill。FR-6.2（parity 非照合）と FR-6.3（言語方針の同期義務が発火しない）の確認を記録。
+5. **FR-6.5 検出器追従**: dev-scripts/evals/rename-leftovers/allowlist.json の `postRenameScan.scanRoots`（ネストキー。トップレベルではない）へ "harness" を 1 行追加。
+6. **FR-5 promote 昇格**: 取り込み対象 skill を dev-scripts/promote-skill.ts --replace で昇格（引数は 1 skill ずつ = positional 1 件制約のため対象件数分ループ実行）。昇格前後の skill dir diff を確認。
+7. **FR-6 検証**: 新設・追加ファイルを git add して追跡済みにしてから実行する（rename-leftovers の検査は git ls-files 走査のため、未追跡のままだと偽陽性 pass になる）。npm run test:all / validator / parity:check / test:it:promote-skill。FR-6.2（parity 非照合）と FR-6.3（言語方針の同期義務が発火しない）の確認を記録。
 
 ## データ変換
 
