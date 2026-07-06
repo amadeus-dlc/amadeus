@@ -2,14 +2,14 @@
 
 ## The four modes
 
-When a stage creates a questions file (`<stage>-questions.md`), the human is offered exactly four ways to answer it, always in this order:
+When a stage creates a questions file (`<stage>-questions.md`), the human is offered four ways to answer it. In Claude Code they render as a four-option choice, in this order:
 
-- **Guide me** — walk through each question interactively, one batch at a time, right in the conversation.
+- **Guide me** — walk through the questions interactively in small batches, right in the conversation.
 - **Grill me** — one question at a time, with a recommended answer attached to each — the `amadeus-grilling` bridge (see [Grill me and the grilling protocol](#grill-me-and-the-grilling-protocol) below).
 - **I'll edit the file** — fill in the answers directly in the questions file, then tell the conductor when you're done.
 - **Chat** — discuss the topic freely; the conductor extracts decisions from the conversation as they emerge.
 
-All four converge on the same place: whatever mode produced it, every answer is written back into the questions file's `[Answer]:` tags, which remain the single authoritative record. A human can also switch modes mid-stage — starting with Guide me and finishing the rest in Chat, for instance. The exact rendering of these four options in a given harness is defined in the [question-rendering annex](../../skills/amadeus/references/question-rendering.md).
+All four converge on the same place: whatever mode produced it, every answer is written back into the questions file's `[Answer]:` tags, which remain the single authoritative record. A human can also switch modes mid-stage — starting with Guide me and finishing the rest in Chat, for instance. The exact rendering of these options depends on the harness and is defined in the [question-rendering annex](../../skills/amadeus/references/question-rendering.md) — in Codex, for instance, three options are listed and Chat is reached through the free-text custom option rather than a dedicated one.
 
 ## Grill me and the grilling protocol
 

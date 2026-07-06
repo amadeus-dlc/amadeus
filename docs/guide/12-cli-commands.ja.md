@@ -20,7 +20,7 @@ AI-DLC — AI-Driven Development Life Cycle
 Usage: /amadeus [command]
 ```
 
-`/amadeus --help`（または `/amadeus --version`）は、この参照全体をいつでも呼び出せる。
+`/amadeus --help` は、この参照全体をいつでも呼び出せる。`/amadeus --version` は framework の版だけを表示する。
 そのため、以下の各節はいつでも自分の端末から 1 コマンドで確認できる。
 
 ## Scopes（scope の読み方）
@@ -72,11 +72,9 @@ Utilities:
 
 この 18 行は、2 つの系統に分かれる。
 
-**read-only 系**：`--status`、`intent`、`space`、`codekb-path`、`--doctor` は workspace を確認するだけであり、エンジンが次に実行する内容を変えない。
-`intent` と `space` は、引数なしなら一覧、名前を渡すなら切り替えになる。
-`--version` と `--help` も、同じ意味で read-only である。
+**read-only 系**：`--status`、引数なしの `intent` と `space`（一覧表示）、`codekb-path`、`--doctor`、`--version`、`--help` は workspace を確認するだけであり、エンジンが次に実行する内容を変えない。
 
-**ワークフロー系**：`compose "<task>"`、`compose --report <path>`、`--new-scope "<task>"`、`--stage <id>`、`--phase <name>`、`--scope <scope>`、`--depth <level>`、`--test-strategy <level>` は、いずれも今後の実行内容を変える。
+**状態・ワークフロー系**：`intent <name>` と `space <name>` は active なカーソルを切り替える。以後の `/amadeus` は切り替え先の intent / space を対象にするため、安全な確認操作としては扱わない。`compose "<task>"`、`compose --report <path>`、`--new-scope "<task>"`、`--stage <id>`、`--phase <name>`、`--scope <scope>`、`--depth <level>`、`--test-strategy <level>` は、いずれも今後の実行内容を変える。
 調整済みの計画を提案する場合もあれば、既存の実行を jump または上書きする場合もある。
 `space-create <name>` は、既存の実行を確認も操作もせず、新しい space を作る点でどちらの系統にも属さない。
 

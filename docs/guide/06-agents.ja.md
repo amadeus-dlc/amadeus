@@ -14,9 +14,9 @@ delegate するのは conductor だけである。
 stage は、実行モードに応じて 2 通りのいずれかでエージェントの persona を読み込む。
 
 - **inline stage**：conductor が lead エージェントのファイルを自分自身のコンテキストへ直接読み込み、その視点で stage を進める。複数エージェントを使う stage では、統合の前に各 support エージェントのファイルも同じ方法で読み込む。
-- **subagent stage**：persona ファイルの内容を、Task tool 呼び出しのコンテキストとして渡す。委譲先の sub-agent 境界も、同じ声を引き継ぐ。
+- **subagent stage**：conductor はエージェント名を指定して Task を呼び出し、harness が sub-agent 境界でそのエージェントの persona を自動で読み込む。persona 本文を prompt へ手動で注入することはない。
 
-stage の実行モードがどう決まるかは [Lifecycle Contract Overview](../amadeus/lifecycle/overview.ja.md) が定義する。
+各 stage の実行モードは、その stage 定義（frontmatter）が宣言し、stage ごとの一覧は [Stage Catalog](../../skills/amadeus/references/stage-catalog.md) が持つ。
 本章が扱うのは、モードが決まったあとに persona をどう読み込むかだけである。
 
 ## 14 個のエージェント

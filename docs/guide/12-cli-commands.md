@@ -14,7 +14,7 @@ AI-DLC — AI-Driven Development Life Cycle
 Usage: /amadeus [command]
 ```
 
-`/amadeus --help` (or `/amadeus --version`) prints this whole reference on demand, so the sections below are always one command away from your own terminal.
+`/amadeus --help` prints this whole reference on demand, so the sections below are always one command away from your own terminal; `/amadeus --version` prints just the framework version.
 
 ## Scopes
 
@@ -60,8 +60,8 @@ Utilities:
 
 These 18 lines split into two clusters:
 
-- **Read-only** — `--status`, `intent`, `space`, `codekb-path`, and `--doctor` only inspect the workspace; none of them changes what the engine runs next. `intent` and `space` with no argument list; with a name, they switch. `--version` and `--help` are read-only in the same sense.
-- **Workflow-changing** — `compose "<task>"`, `compose --report <path>`, `--new-scope "<task>"`, `--stage <id>`, `--phase <name>`, `--scope <scope>`, `--depth <level>`, and `--test-strategy <level>` all change what the workflow does next, whether by proposing a tailored plan or by jumping or overriding the active one. `space-create <name>` sits outside both clusters: it provisions a new space rather than inspecting or steering an existing workflow.
+- **Read-only** — `--status`, `intent` and `space` *with no argument* (they list), `codekb-path`, `--doctor`, `--version`, and `--help` only inspect the workspace; none of them changes what the engine runs next.
+- **State- or workflow-changing** — `intent <name>` and `space <name>` switch the active cursor, so everything `/amadeus` does afterwards targets the switched-to intent or space; treat them as steering commands, not safe inspection. `compose "<task>"`, `compose --report <path>`, `--new-scope "<task>"`, `--stage <id>`, `--phase <name>`, `--scope <scope>`, `--depth <level>`, and `--test-strategy <level>` all change what the workflow does next, whether by proposing a tailored plan or by jumping or overriding the active one. `space-create <name>` provisions a new space.
 
 `--stage` and `--phase` accept the slug or number shown in their own descriptions (e.g. `code-generation` or `3.5`; `construction` or `3`); what the engine does once it receives that jump is the `next`/`report` mechanics covered in [Your First Workflow](02-first-workflow.md), not repeated here.
 

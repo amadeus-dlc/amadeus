@@ -7,9 +7,9 @@ An agent is a persona a stage adopts while it runs — a point of view, not a me
 A stage loads its agent's persona one of two ways, depending on the stage's execution mode:
 
 - **Inline stages** — the conductor reads the lead agent's file directly into its own context for role framing, then works the stage from that agent's perspective. A multi-agent stage layers each support agent's file the same way before synthesizing a result.
-- **Subagent stages** — the persona file's content is passed into the Task tool call as context, so the delegated sub-agent boundary carries the same voice.
+- **Subagent stages** — the conductor issues a Task call naming the agent, and the harness loads that agent's persona automatically at the sub-agent boundary; the persona text is not injected into the prompt by hand.
 
-See the [Lifecycle Contract Overview](../amadeus/lifecycle/overview.md) for how a stage's execution mode is decided; this chapter only covers how the persona is loaded once that mode is known.
+Each stage's execution mode is declared in its own stage definition (its frontmatter) and summarized per stage in the [Stage Catalog](../../skills/amadeus/references/stage-catalog.md); this chapter only covers how the persona is loaded once that mode is known.
 
 ## The 14 agents
 
