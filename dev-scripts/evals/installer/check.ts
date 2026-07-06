@@ -737,6 +737,110 @@ ok("FR-2.8 temp workspace removed", !existsSync(ws));
   }
 }
 
+// ---------------------------------------------------------------------------
+// FR(#543) B001 — versioned manifest + --version-info (walking skeleton).
+// Issue #543, Intent 260706-installer-versioning. Assertions added BEFORE the
+// implementation (TDD RED), per FR-5.1 (a)(e) and eval-case-design.md.
+// ---------------------------------------------------------------------------
+
+{
+  const wsV = makeWorkspace();
+  try {
+    const first = run(["bun", installerPath, "--target", wsV], root);
+    ok("FR543-a install exits 0", first.exitCode === 0);
+
+    const manifestPath = join(wsV, ".amadeus-install.json");
+    ok("FR543-a1 manifest exists", existsSync(manifestPath));
+
+    let manifest: { installedAt?: string; sourceCommit?: string; hashAlgorithm?: string; files?: Record<string, string> } = {};
+    let parsed = false;
+    try {
+      manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
+      parsed = true;
+    } catch {
+      parsed = false;
+    }
+    ok("FR543-a1 manifest parses as JSON", parsed);
+    ok("FR543-a1 manifest has exactly 4 keys", parsed && Object.keys(manifest).length === 4);
+    ok("FR543-a5 installedAt is ISO 8601 UTC", typeof manifest.installedAt === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(manifest.installedAt ?? ""));
+    ok("FR543-a5 sourceCommit is 40-hex or unknown", manifest.sourceCommit === "unknown" || /^[0-9a-f]{40}$/.test(manifest.sourceCommit ?? ""));
+    ok("FR543-a hashAlgorithm is sha256", manifest.hashAlgorithm === "sha256");
+
+    const files = manifest.files ?? {};
+    const fileKeys = Object.keys(files);
+    ok("FR543-a files is non-empty", fileKeys.length > 0);
+    ok("FR543-a4 files keys are sorted", JSON.stringify(fileKeys) === JSON.stringify([...fileKeys].sort()));
+    ok("FR543-a3 manifest excludes itself", !fileKeys.includes(".amadeus-install.json"));
+    ok("FR543-a3 manifest excludes backup dir", fileKeys.every((k) => !k.startsWith(".amadeus-install-backup/")));
+
+    // FR543-a2 — every recorded hash matches the real installed content.
+    const { createHash } = await import("node:crypto");
+    let hashMismatches = 0;
+    for (const [rel, expected] of Object.entries(files)) {
+      const abs = join(wsV, rel);
+      if (!existsSync(abs)) {
+        hashMismatches++;
+        continue;
+      }
+      const actual = createHash("sha256").update(readFileSync(abs)).digest("hex");
+      if (actual !== expected) hashMismatches++;
+    }
+    ok("FR543-a2 all recorded hashes match installed content", hashMismatches === 0, `${hashMismatches} mismatch(es) of ${fileKeys.length}`);
+    // Coverage spot: AMADEUS.md (post-transform) and a skills file are tracked.
+    ok("FR543-a3 AMADEUS.md tracked", fileKeys.includes("AMADEUS.md"));
+    ok("FR543-a3 an engine tool tracked", fileKeys.some((k) => k.startsWith(".agents/amadeus/tools/")));
+    ok("FR543-a3 a skills file tracked", fileKeys.some((k) => k.startsWith(".agents/skills/amadeus")));
+    ok("FR543-a3 settings.json tracked", fileKeys.includes(".claude/settings.json"));
+
+    // FR543-e — --version-info.
+    const vi = run(["bun", installerPath, "--target", wsV, "--version-info"], root);
+    ok("FR543-e1 version-info exits 0", vi.exitCode === 0);
+    const c8 = (manifest.sourceCommit ?? "").slice(0, 8) || "unknown";
+    ok("FR543-e1 version-info prints commit prefix", vi.stdout.includes(`installed commit ${manifest.sourceCommit === "unknown" ? "unknown" : c8}`));
+    ok("FR543-e1 version-info prints files tracked count", vi.stdout.includes(`${fileKeys.length} files tracked`));
+
+    // FR543-e4 — previous install found on second run.
+    const second = run(["bun", installerPath, "--target", wsV], root);
+    ok("FR543-e4 re-install exits 0", second.exitCode === 0);
+    ok("FR543-e4 previous install found line", second.stdout.includes("previous install found (commit "));
+  } finally {
+    rmSync(wsV, { recursive: true, force: true });
+  }
+
+  // FR543-e2 — manifest missing: exit 1 + fix hint on stderr.
+  const wsNo = makeWorkspace();
+  try {
+    const vi = run(["bun", installerPath, "--target", wsNo, "--version-info"], root);
+    ok("FR543-e2 version-info without manifest exits 1", vi.exitCode === 1);
+    ok("FR543-e2 no-manifest message on stderr", vi.stderr.includes("no install manifest found"));
+    ok("FR543-e2 fix hint present", vi.stderr.includes("fix:"));
+  } finally {
+    rmSync(wsNo, { recursive: true, force: true });
+  }
+
+  // FR543-e3 — --version-info without --target: usage error.
+  const alone = run(["bun", installerPath, "--version-info"], root);
+  ok("FR543-e3 version-info alone exits 1", alone.exitCode === 1);
+  ok("FR543-e3 version-info alone prints usage", alone.stderr.includes("Usage:"));
+
+  // FR543 corrupt-manifest path (§12a B001 finding 1): a broken
+  // .amadeus-install.json aborts BOTH the install and --version-info with an
+  // InstallError fix line, and is left untouched.
+  const wsCorrupt = makeWorkspace();
+  try {
+    writeFileSync(join(wsCorrupt, ".amadeus-install.json"), "{not json", "utf-8");
+    const inst = run(["bun", installerPath, "--target", wsCorrupt], root);
+    ok("FR543 corrupt manifest: install exits 1", inst.exitCode === 1);
+    ok("FR543 corrupt manifest: install prints fix", inst.stderr.includes("fix:") && inst.stderr.includes("cannot parse"));
+    ok("FR543 corrupt manifest: file untouched", readFileSync(join(wsCorrupt, ".amadeus-install.json"), "utf-8") === "{not json");
+    const vi = run(["bun", installerPath, "--target", wsCorrupt, "--version-info"], root);
+    ok("FR543 corrupt manifest: version-info exits 1", vi.exitCode === 1);
+    ok("FR543 corrupt manifest: version-info prints fix", vi.stderr.includes("fix:"));
+  } finally {
+    rmSync(wsCorrupt, { recursive: true, force: true });
+  }
+}
+
 if (failures > 0) {
   console.error(`installer eval: ${failures} failure(s)`);
   process.exit(1);

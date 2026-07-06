@@ -20,7 +20,6 @@
 import {
   accessSync,
   constants as fsConstants,
-  cpSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -32,7 +31,8 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { join, resolve } from "node:path";
+import { createHash } from "node:crypto";
+import { dirname, join, resolve } from "node:path";
 
 // ---------------------------------------------------------------------------
 // Manifest — the single declarative source for what gets installed (FR-1.10).
@@ -114,6 +114,129 @@ class InstallError extends Error {
 
 function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
+}
+
+// ---------------------------------------------------------------------------
+// Install manifest (Issue #543, Intent 260706-installer-versioning, B001).
+// REL(#543)-1: written once, at the very end of a fully successful run —
+// never on a mid-run or smoke failure, so a re-run re-judges from the
+// previous state and converges.
+// ---------------------------------------------------------------------------
+
+export const INSTALL_MANIFEST_NAME = ".amadeus-install.json";
+export const INSTALL_BACKUP_DIR = ".amadeus-install-backup";
+
+export type InstallManifest = {
+  installedAt: string;
+  sourceCommit: string;
+  hashAlgorithm: "sha256";
+  files: Record<string, string>;
+};
+
+function sha256Of(content: string | Buffer): string {
+  return createHash("sha256").update(content).digest("hex");
+}
+
+function readInstallManifest(target: string): InstallManifest | null {
+  const manifestPath = join(target, INSTALL_MANIFEST_NAME);
+  if (!existsSync(manifestPath)) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(manifestPath, "utf-8"));
+  } catch (e) {
+    throw new InstallError(
+      `cannot parse ${manifestPath} as JSON: ${errorMessage(e)}`,
+      `repair or remove ${manifestPath}, then re-run (a removed manifest falls back to the conservative bootstrap path)`
+    );
+  }
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new InstallError(
+      `${manifestPath} does not contain a JSON object`,
+      `repair or remove ${manifestPath}, then re-run (a removed manifest falls back to the conservative bootstrap path)`
+    );
+  }
+  return parsed as InstallManifest;
+}
+
+function writeInstallManifest(target: string, sourceCommit: string, files: Record<string, string>): void {
+  const sorted: Record<string, string> = {};
+  for (const key of Object.keys(files).sort()) sorted[key] = files[key];
+  const manifest: InstallManifest = {
+    installedAt: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
+    sourceCommit,
+    hashAlgorithm: "sha256",
+    files: sorted,
+  };
+  writeFileSync(join(target, INSTALL_MANIFEST_NAME), `${JSON.stringify(manifest, null, 2)}\n`, "utf-8");
+}
+
+// SourceCommitResolver. REL(#543)-3: Bun.spawnSync THROWS when git itself is
+// missing from $PATH and returns a non-zero exit when the source is not a git
+// checkout — both fall to "unknown" (announced by the caller).
+function resolveSourceCommit(srcRoot: string): string {
+  try {
+    const result = Bun.spawnSync({ cmd: ["git", "rev-parse", "HEAD"], cwd: srcRoot, stdout: "pipe", stderr: "pipe" });
+    if ((result.exitCode ?? 1) !== 0) return "unknown";
+    const out = new TextDecoder().decode(result.stdout).trim();
+    return /^[0-9a-f]{40}$/.test(out) ? out : "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+// TrackedWriter (AD-2): the single entry point for every tracked write.
+// B001 keeps the 3-way judge frozen to plain overwrite (behaviour-compatible
+// with the pre-#543 full replace); B002 enables the judge/backup quadrants.
+class InstallRecorder {
+  readonly files: Record<string, string> = {};
+  constructor(readonly target: string) {}
+  trackedWrite(relPath: string, content: string | Buffer): void {
+    const abs = join(this.target, relPath);
+    mkdirSync(dirname(abs), { recursive: true });
+    writeFileSync(abs, content);
+    this.files[relPath] = sha256Of(content);
+  }
+}
+
+// DistEnumerator: recursive file enumeration under an ABSOLUTE root.
+// SEC/impl note: uses statSync (NOT lstatSync) for type checks so a symlinked
+// directory entry (this repo's .claude/skills/amadeus* convention) is
+// descended into as a real directory — the per-file equivalent of the old
+// cpSync dereference:true.
+function enumerateDistFiles(rootAbs: string, relPrefix = ""): string[] {
+  const out: string[] = [];
+  for (const name of readdirSync(join(rootAbs, relPrefix)).sort()) {
+    const rel = relPrefix === "" ? name : `${relPrefix}/${name}`;
+    const st = statSync(join(rootAbs, rel));
+    if (st.isDirectory()) {
+      out.push(...enumerateDistFiles(rootAbs, rel));
+    } else if (st.isFile()) {
+      out.push(rel);
+    }
+  }
+  return out;
+}
+
+// Removal pass shared by engine dirs and skills (ObsoleteScanner shell).
+// B001: unconditional removal of target-side files absent from the dist set
+// (same convergence as the old rm→cp full replace), plus bottom-up removal of
+// directories emptied by it. B002 adds the customized→backup judgment here.
+function removeAbsentFiles(targetRootAbs: string, distRelSet: Set<string>): void {
+  if (!existsSync(targetRootAbs)) return;
+  const walk = (relPrefix: string): void => {
+    for (const name of readdirSync(join(targetRootAbs, relPrefix))) {
+      const rel = relPrefix === "" ? name : `${relPrefix}/${name}`;
+      const abs = join(targetRootAbs, rel);
+      const st = lstatSync(abs);
+      if (st.isDirectory()) {
+        walk(rel);
+        if (readdirSync(abs).length === 0) rmSync(abs, { recursive: true, force: true });
+      } else if (!distRelSet.has(rel)) {
+        rmSync(abs, { force: true });
+      }
+    }
+  };
+  walk("");
 }
 
 // ---------------------------------------------------------------------------
@@ -203,14 +326,20 @@ function preflight(target: string): void {
 // subdirectories (FR-1.2, BR-13).
 // ---------------------------------------------------------------------------
 
-function copyEngine(src: string, target: string): void {
+// AD-7 (#543): per-file copy replacing the old rm→cp full replace. The
+// enumerate → trackedWrite → removal-pass structure records every written
+// file's sha256 for the install manifest while preserving the old
+// convergence semantics (B001 keeps the judge frozen to plain overwrite).
+function copyEngine(src: string, target: string, rec: InstallRecorder): void {
   for (const dir of MANIFEST.engineDirs) {
     const srcPath = join(src, ".agents", "amadeus", dir);
-    const destPath = join(target, ".agents", "amadeus", dir);
+    const destRel = `.agents/amadeus/${dir}`;
     try {
-      rmSync(destPath, { recursive: true, force: true });
-      mkdirSync(join(target, ".agents", "amadeus"), { recursive: true });
-      cpSync(srcPath, destPath, { recursive: true, dereference: true });
+      const rels = enumerateDistFiles(srcPath);
+      for (const rel of rels) {
+        rec.trackedWrite(`${destRel}/${rel}`, readFileSync(join(srcPath, rel)));
+      }
+      removeAbsentFiles(join(target, ".agents", "amadeus", dir), new Set(rels));
     } catch (e) {
       throw new InstallError(
         `failed to copy engine dir "${dir}": ${errorMessage(e)}`,
@@ -227,7 +356,13 @@ function copyEngine(src: string, target: string): void {
 // is copied as real, standalone content — not propagated as a symlink.
 // ---------------------------------------------------------------------------
 
-function copySkills(src: string, target: string): void {
+// AD-7 (#543): per-file copy — see copyEngine. The target-side scan is
+// filtered to amadeus* on BOTH sides (the pre-#543 line-240 filter), so
+// non-amadeus neighbours are never compared or removed. Symlinked source
+// entries (this repo's .claude/skills/amadeus* convention) are descended
+// into by enumerateDistFiles' statSync checks — the per-file equivalent of
+// the old cpSync dereference:true.
+function copySkills(src: string, target: string, rec: InstallRecorder): void {
   const skillRoots = [join(".claude", "skills"), join(".agents", "skills")];
   for (const rel of skillRoots) {
     const srcRoot = join(src, rel);
@@ -235,20 +370,27 @@ function copySkills(src: string, target: string): void {
     try {
       mkdirSync(targetRoot, { recursive: true });
       const sourceNames = existsSync(srcRoot)
-        ? readdirSync(srcRoot).filter((name) => name.startsWith(MANIFEST.skillsGlobPrefix))
+        ? readdirSync(srcRoot)
+            .filter((name) => name.startsWith(MANIFEST.skillsGlobPrefix))
+            .filter((name) => statSync(join(srcRoot, name)).isDirectory())
         : [];
       const targetNames = readdirSync(targetRoot).filter((name) => name.startsWith(MANIFEST.skillsGlobPrefix));
-      // Full replace: drop target-only entries no longer in source, then
-      // replace every source-listed entry.
+      // Removal pass (ObsoleteScanner shell): stale amadeus* skill dirs no
+      // longer in the source are dropped wholesale (BR-13; unconditional in
+      // B001, judged in B002).
       for (const name of targetNames) {
         if (!sourceNames.includes(name)) {
           rmSync(join(targetRoot, name), { recursive: true, force: true });
         }
       }
+      const relPosix = rel.split("\\").join("/");
       for (const name of sourceNames) {
-        const destPath = join(targetRoot, name);
-        rmSync(destPath, { recursive: true, force: true });
-        cpSync(join(srcRoot, name), destPath, { recursive: true, dereference: true });
+        const skillSrc = join(srcRoot, name);
+        const rels = enumerateDistFiles(skillSrc);
+        for (const fileRel of rels) {
+          rec.trackedWrite(`${relPosix}/${name}/${fileRel}`, readFileSync(join(skillSrc, fileRel)));
+        }
+        removeAbsentFiles(join(targetRoot, name), new Set(rels));
       }
     } catch (e) {
       throw new InstallError(
@@ -264,7 +406,7 @@ function copySkills(src: string, target: string): void {
 // transformAmadeusMd (FR-1.4, FR-1.8).
 // ---------------------------------------------------------------------------
 
-function placeAmadeusMd(src: string, target: string): void {
+function placeAmadeusMd(src: string, target: string, rec: InstallRecorder): void {
   let raw: string;
   try {
     raw = readFileSync(join(src, "AMADEUS.md"), "utf-8");
@@ -273,7 +415,8 @@ function placeAmadeusMd(src: string, target: string): void {
   }
   const transformed = transformAmadeusMd(raw);
   try {
-    writeFileSync(join(target, "AMADEUS.md"), transformed, "utf-8");
+    // FR(#543)-1.1 / C-7: the manifest records the POST-transform content.
+    rec.trackedWrite("AMADEUS.md", transformed);
   } catch (e) {
     throw new InstallError(
       `failed to write target AMADEUS.md: ${errorMessage(e)}`,
@@ -336,7 +479,7 @@ interface SettingsShape {
   [key: string]: unknown;
 }
 
-function mergeSettings(target: string, wiring: readonly HookWiringEntry[]): { total: number; duplicates: number } {
+function mergeSettings(target: string, wiring: readonly HookWiringEntry[], rec: InstallRecorder): { total: number; duplicates: number } {
   const settingsPath = join(target, ".claude", "settings.json");
 
   let settings: SettingsShape = { hooks: {} };
@@ -407,7 +550,10 @@ function mergeSettings(target: string, wiring: readonly HookWiringEntry[]): { to
   }
 
   try {
-    writeFileSync(settingsPath, JSON.stringify(settings, null, 2), "utf-8");
+    // AD-6 (#543): the "new content" for settings.json is the merge result;
+    // the manifest records the post-merge written content. The pre/post
+    // non-hooks deep-compare below stays OUTSIDE the tracked write.
+    rec.trackedWrite(".claude/settings.json", JSON.stringify(settings, null, 2));
   } catch (e) {
     throw new InstallError(
       `failed to write ${settingsPath}: ${errorMessage(e)}`,
@@ -469,12 +615,15 @@ function dieTargetError(reason: string): never {
   process.exit(1);
 }
 
-function parseTargetArg(argv: string[]): string {
+function parseArgs(argv: string[]): { target: string; versionInfo: boolean } {
   let target: string | undefined;
+  let versionInfo = false;
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--target") {
       target = argv[i + 1];
       i++;
+    } else if (argv[i] === "--version-info") {
+      versionInfo = true;
     } else {
       dieUsage(`unknown argument: ${argv[i]}`);
     }
@@ -482,7 +631,31 @@ function parseTargetArg(argv: string[]): string {
   if (!target) {
     dieUsage("--target <workspace> is required");
   }
-  return target;
+  return { target, versionInfo };
+}
+
+// FR(#543)-3: --version-info. Installed = exit 0 (stdout, one line); manifest
+// missing = exit 1 (stderr + fix hint) — the rpm -q / dpkg -s "not installed
+// is non-zero" convention, so CI can branch with `--version-info || install`.
+function printVersionInfo(target: string): never {
+  let manifest: InstallManifest | null;
+  try {
+    manifest = readInstallManifest(target);
+  } catch (e) {
+    const fix = e instanceof InstallError ? e.fix : "inspect the manifest, then re-run";
+    process.stderr.write(`amadeus-install: ${errorMessage(e)}\n`);
+    process.stderr.write(`  fix: ${fix}\n`);
+    process.exit(1);
+  }
+  if (manifest === null) {
+    process.stderr.write("amadeus-install: no install manifest found (pre-versioning install or not installed)\n");
+    process.stderr.write("  fix: run the install command once — it records a versioned manifest (existing files are backed up if they differ)\n");
+    process.exit(1);
+  }
+  const c8 = manifest.sourceCommit === "unknown" ? "unknown" : manifest.sourceCommit.slice(0, 8);
+  const count = Object.keys(manifest.files ?? {}).length;
+  console.log(`amadeus-install: installed commit ${c8} (installed at ${manifest.installedAt}, ${count} files tracked)`);
+  process.exit(0);
 }
 
 function runStep(n: number, label: string, action: () => string): void {
@@ -501,21 +674,53 @@ function runStep(n: number, label: string, action: () => string): void {
 }
 
 function main(): void {
-  const target = resolve(parseTargetArg(process.argv.slice(2)));
+  const args = parseArgs(process.argv.slice(2));
+  const target = resolve(args.target);
+  if (args.versionInfo) {
+    printVersionInfo(target);
+  }
   preflight(target);
 
   const src = resolve(import.meta.dir, "..");
 
   console.log(`amadeus-install: installing into ${target}`);
 
+  // FR(#543)-1.1: resolve the distribution commit up front; both failure
+  // modes (git absent = throw, not a checkout = non-zero) fall to "unknown".
+  const sourceCommit = resolveSourceCommit(src);
+  if (sourceCommit === "unknown") {
+    console.log('amadeus-install: source commit unknown (not a git checkout) — manifest records "unknown"');
+  }
+
+  // FR(#543)-3.3: previous-install announcement (manifest present), or the
+  // conservative-bootstrap announcement (manifest absent). A corrupt manifest
+  // aborts with the readInstallManifest fix line via runStep-equivalent shaping.
+  let previous: InstallManifest | null = null;
+  try {
+    previous = readInstallManifest(target);
+  } catch (e) {
+    const fix = e instanceof InstallError ? e.fix : "inspect the manifest, then re-run";
+    process.stderr.write(`amadeus-install: ${errorMessage(e)}\n`);
+    process.stderr.write(`  fix: ${fix}\n`);
+    process.exit(1);
+  }
+  if (previous !== null) {
+    const c8 = previous.sourceCommit === "unknown" ? "unknown" : previous.sourceCommit.slice(0, 8);
+    console.log(`amadeus-install: previous install found (commit ${c8}, ${previous.installedAt})`);
+  } else {
+    console.log("amadeus-install: no previous manifest — treating differing files as customized (conservative bootstrap)");
+  }
+
+  const rec = new InstallRecorder(target);
+
   runStep(1, "engine", () => {
-    copyEngine(src, target);
-    placeAmadeusMd(src, target);
+    copyEngine(src, target, rec);
+    placeAmadeusMd(src, target, rec);
     return `.agents/amadeus/ (${MANIFEST.engineDirs.length} dirs, replaced)`;
   });
 
   runStep(2, "skills", () => {
-    copySkills(src, target);
+    copySkills(src, target, rec);
     return ".claude/skills/amadeus*, .agents/skills/amadeus* (replaced)";
   });
 
@@ -525,7 +730,7 @@ function main(): void {
   });
 
   runStep(4, "settings", () => {
-    const result = mergeSettings(target, MANIFEST.hooksWiring);
+    const result = mergeSettings(target, MANIFEST.hooksWiring, rec);
     return `.claude/settings.json (hooks merged: ${result.total} entries, ${result.duplicates} duplicates)`;
   });
 
@@ -552,6 +757,16 @@ function main(): void {
     // learns the next step instead of never seeing the discarded output.
     if (output.includes("workspace shell pending first workflow")) {
       console.log("note: workspace shell is seeded at your first /amadeus workflow (known state on a fresh install)");
+    }
+    // REL(#543)-1 / FR-1.3: the manifest is written exactly once, only after
+    // every step (including smoke) succeeded — a failed install is never
+    // recorded as installed.
+    try {
+      writeInstallManifest(target, sourceCommit, rec.files);
+    } catch (e) {
+      process.stderr.write(`amadeus-install: failed to write ${INSTALL_MANIFEST_NAME}: ${errorMessage(e)}\n`);
+      process.stderr.write("  fix: check disk space / permissions on the target, then re-run (idempotent)\n");
+      process.exit(1);
     }
     console.log('amadeus-install: done. Next: see README "導入後の検証" (doctor / amadeus-validator)');
     process.exit(0);
