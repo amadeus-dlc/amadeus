@@ -2,12 +2,27 @@
 
 ## 差分更新の記録（最新）
 
+- 解析時刻: 2026-07-06T07:58:00Z（UTC）
+- 対象コミット: b452f4fb（origin/main = PR #565 merge 後）
+- 解析方式: 差分更新（9dd93f50..b452f4fb = PR #559/#561/#563/#565 の 4 PR、非 amadeus 変更 115 ファイル）
+- 実施 Intent: `260706-feature-diff`（reverse-engineering ステージ、conductor 直接処理 = #565 の当事者知識と docs 中心差分のため）
+
+### 差分の内容と codekb への影響
+
+- PR #559（エンジン修正 3 件）: Intent 260706-runtime-graph-registrati の同時期増分（9dd93f50..29f3122c）が architecture / api-documentation へ反映済み（下の前回記録を参照）。本増分では追加更新なし。
+- PR #561（lifecycle 契約の I/O 記法定義 + 全ステージ Inputs 実測整合）、PR #563（steering/guide の docs i18n）: docs のみで codekb 記述対象に乖離なし。
+- PR #565（harness/codex 新設 + openai.yaml 38 件 + scanRoots 追加 = #552）: 新しいトップレベル層 harness/ が誕生。更新 2 docs = code-structure.md（harness/codex/ 行の新設）、component-inventory.md（Codex guard 行の新設）。
+- 変更なし 7 docs: business-overview / architecture / api-documentation / technology-stack / dependencies / code-quality-assessment（#559 の修正は既存の記述粒度で吸収済み）/ timestamp（本更新の対象）。
+
+## 前回（2026-07-06T06:05:00Z、c50a0fe5..9dd93f50）の記録
+
+
+## 前回（2026-07-06T06:52:00Z、9dd93f50..29f3122c）の記録
+
 - 解析時刻: 2026-07-06T06:52:00Z（UTC）
 - 対象コミット: 29f3122c（origin/main = PR #559 merge 後）
 - 解析方式: 差分更新（9dd93f50..29f3122c = PR #559 エンジン整合 3 bug のみ。complete-workflow の末尾 skip 整合と next の none 解決 = api-documentation、hooks 完了ガードと validator codekb 直接解決 = architecture を外科的に更新）
 - 実施 Intent: `260706-runtime-graph-registrati`（reverse-engineering、メイン直接処理）
-
-## 前回（2026-07-06T06:05:00Z、c50a0fe5..9dd93f50 の再点検 = docs-i18n）の記録
 
 - 解析時刻: 2026-07-06T06:05:00Z（UTC）
 - 対象コミット: 9dd93f50（origin/main = PR #553 merge 後）
