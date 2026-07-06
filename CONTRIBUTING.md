@@ -107,4 +107,4 @@ If you discover a potential security issue, notify AWS/Amazon Security via the [
 
 ## Licensing
 
-See the [LICENSE](LICENSE) file for our project's licensing. We will ask you to confirm the licensing of your contribution.
+See the [LICENSE-MIT](LICENSE-MIT),[LICENSE-APACHE](LICENSE-APACHE) file for our project's licensing. We will ask you to confirm the licensing of your contribution.
