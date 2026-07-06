@@ -22,7 +22,7 @@ Contributions to this implementation are welcome. This guide covers prerequisite
 core/                # Hand-authored, harness-neutral source (tools, stages, agents, rules, knowledge, hooks)
 harness/<name>/      # Per-harness authored surfaces (manifest, orchestrator skill, settings/config; e.g. claude/, kiro/, codex/)
 scripts/package.ts   # The build: regenerates dist/<harness>/ from core/ + harness/ (`npm run dist`, `--check` drift-guards it)
-scripts/promote-self.ts # Project-local dogfood install: promotes generated Claude/Codex surfaces into .claude/.codex/.agents + amadeus/spaces/default
+scripts/promote-self.ts # Project-local dogfood install: promotes generated Claude/Codex surfaces into .claude/.codex/.agents (workspace memory is never overwritten)
 dist/<harness>/      # GENERATED distributables (claude/.claude/, kiro/.kiro/ + AGENTS.md, codex/) — never hand-edit; run the packager
 tests/               # All-TypeScript test suite (t*.test.ts, run via bun)
 docs/                # Documentation
@@ -39,7 +39,7 @@ For the full architecture, see [reference/01-architecture.md](01-architecture.md
 2. **Read the architecture** -- [reference/01-architecture.md](01-architecture.md) explains the execution model, agent delegation, and hook system
 3. **Understand the entry points** -- the deterministic engine `core/tools/amadeus-orchestrate.ts` (`next` / `report`) owns routing; the conductor `harness/claude/skills/amadeus/SKILL.md` is a thin forwarding loop that acts on its directives. For the normative engine / directive / conductor / swarm contract see [The Skill System](17-skill-system.md)
 4. **Make changes** -- Edit the harness-neutral source in `core/` (tools, stages, agents, hooks, rules, knowledge) or a harness surface in `harness/<name>/` (the orchestrator skill, settings). Then run `npm run dist` to regenerate `dist/` — never hand-edit `dist/`, the drift guard (`npm run dist:check` / `package.ts --check`) will fail CI
-5. **Promote locally when dogfooding** -- Run `npm run promote:self` to refresh this repository's project-local `.claude/`, `.codex/`, `.agents/`, `CLAUDE.md`, and `amadeus/spaces/default/memory/` from the generated harness output; `npm run promote:self:check` drift-guards that self install
+5. **Promote locally when dogfooding** -- Run `npm run promote:self` to refresh this repository's project-local `.claude/`, `.codex/`, `.agents/`, and `CLAUDE.md` from the generated harness output; `npm run promote:self:check` drift-guards that self install. `amadeus/spaces/default/memory/` is intentionally not promoted — workspace memory is hand-edited method source (practices-discovery and the self-learning loop write to it at runtime), so the promoter never overwrites it
 6. **Test** -- Run `bun tests/run-tests.ts` before submitting
 7. **Submit** -- Open a PR against `main`
 

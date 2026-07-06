@@ -8,6 +8,8 @@
 
 このリポジトリの鉄則: 編集するのは `core/`(または `harness/<name>/`)であり、`dist/` は決して手編集しない。編集後は `bun scripts/package.ts` で全 `dist/<harness>/` を再生成し、`bun scripts/package.ts --check`(ドリフトガード、CIでも実行)でパリティを確認してからコミットする。
 
+昇格(セルフインストール): このリポジトリ自身が Amadeus を使って開発する(ドッグフーディング)ため、生成物をリポジトリルートへ昇格する。`bun run promote:self` が `dist/` の生成物から `.claude/`・`.codex/`・`.agents/`・`CLAUDE.md` を更新し、`bun run promote:self:check` がそのパリティをドリフト検査する。`core/` や `harness/` を変更したら dist 再生成に続けて昇格も実行し、同一コミットに含める。なお `amadeus/spaces/default/memory/`(この方法論ファイル群)は昇格の管理対象外 — ワークスペースメモリは手編集ソースであり、practices-discovery と自己学習ループがランタイムに書き込むため、昇格が上書きすることはない。
+
 ファイル・ディレクトリ・コマンド・フラグを追加/削除/改名したときは、`docs/` と `README.md` を grep して古い参照を同一コミット内で更新する。
 
 ## Walking Skeleton
@@ -43,7 +45,7 @@
 
 ## Mandated
 
-- ALWAYS `core/` または `harness/<name>/` を編集したら `bun scripts/package.ts` で dist を再生成して同一コミットに含める
+- ALWAYS `core/` または `harness/<name>/` を編集したら `bun scripts/package.ts` で dist を再生成し、`bun run promote:self` でセルフインストール(`.claude/` / `.codex/` / `.agents/` / `CLAUDE.md`)へ昇格して、両方を同一コミットに含める
 
 ## Corrections
 
