@@ -8,7 +8,7 @@
 |---|---|---|---|
 | 00-introduction | ライフサイクル構造 | `.agents/amadeus/tools/data/stage-graph.json`、`.agents/amadeus/scopes/` | 32 stages、5 phases、10 scopes |
 | 00-introduction | 公開入口と skill 体系 | AMADEUS.md、stage-catalog.md | 入口 = `amadeus` 1 個、補助 3、stage runner 29、shortcut 6、utility 3 |
-| 00-introduction | 上流互換 | AMADEUS.md（構造・意味論互換 + nameMappings） | parity-map nameMappings = kind 10 系統・計 120 件（`dev-scripts/data/parity-map.json` 実測） |
+| 00-introduction | 上流との関係（fork = 適応コピー） | AMADEUS.md（上流 38 skill の適応コピー）、過去 Intent の decision（260704-v2-parity-completion の D001 = 上流 dist/claude からの適応コピー戦略、CD001 = エンジンはバイト無改変コピーで適応は改名 + grilling 結線に限定）、`dev-scripts/data/parity-map.json` | baselineCommit 固定（fde1e1af…）、nameMappings = kind 10 系統・計 120 件（実測）。※当初「上流互換」と書いたが Maintainer レビューで fork（ファイルコピー）の説明へ訂正（PR #578 line comment） |
 | 01-getting-started | 導入コマンド | `scripts/amadeus-install.ts`、package.json | `bun run scripts/amadeus-install.ts --target` / `npm run amadeus:install --` |
 | 01-getting-started | 導入されるもの | installer MANIFEST | engineDirs 7、amadeus* skills（.claude + .agents）、AMADEUS.md、hooks 配線 |
 | 01-getting-started | 検証 | `amadeus-utility.ts doctor`、AmadeusValidator | 導入直後は shell 未 seed で 1 fail（初回 workflow で解消 = 実証済み） |

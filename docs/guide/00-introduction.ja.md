@@ -49,8 +49,10 @@ stage と runner の全対応は [Stage Catalog](../../skills/amadeus/references
 
 ## AI-DLC v2 との関係
 
-Amadeus は、構造と意味論の水準で AI-DLC v2 に追随する。
-stage の責務、実行条件、gate の状態機械、Intake のプロトコルは、上流と一致するよう設計する。
+Amadeus は AI-DLC v2 の適応 fork であり、並行実装ではない。
+エンジンは上流 TS エンジンのバイト無改変コピーであり、ステージ実行 skill は上流 skill の適応ファイルコピーである（基準 commit は `parity-map.json` に固定記録）。
+適応は `amadeus-*` への改名と、質問提示の `amadeus-grilling` への結線に意図的に限定する。
+fork であるため、構造と意味論（stage の責務、実行条件、gate の状態機械、Intake のプロトコル）は、再実装ではなく構成そのものによって上流と揃う。
 
 Amadeus 固有なのは名前空間である。
 skill 名、tool の path、CLI トークンは、`aidlc` の代わりに `amadeus` の prefix を使う（[#526](https://github.com/amadeus-dlc/amadeus/issues/526) の全面 rename）。
