@@ -362,6 +362,39 @@ try {
     b003Fail.stdout.includes(stubCondition) && /fail/i.test(b003Fail.stdout),
     b003Fail.stdout.slice(-1200),
   );
+
+  // --- #548: the validator accepts shared-codekb direct resolution (no record stubs) ---
+  //
+  // Same real record, but with the reverse-engineering record produces (the 9 stub
+  // files) REMOVED. After #498 the engine resolves codekb directly, so the validator
+  // must pass when the canonical files exist under the shared codekb store — without
+  // requiring per-record stub files. Existing stub-carrying records keep passing
+  // (FR-3.1 above stays green).
+
+  const i548Ws = join(base, "i548-validator");
+  mkdirSync(join(i548Ws, "amadeus/spaces/default/intents"), { recursive: true });
+  copyEngine(i548Ws);
+  for (const dir of ["memory", "knowledge", "codekb"]) {
+    const src = join(spaceSrc, dir);
+    if (existsSync(src)) cpSync(src, join(i548Ws, "amadeus/spaces/default", dir), { recursive: true });
+  }
+  writeFileSync(join(i548Ws, "amadeus/spaces/default/intents/intents.json"), `${JSON.stringify(narrowed, null, 2)}\n`);
+  cpSync(
+    join(spaceSrc, "intents/260705-steering-learnings"),
+    join(i548Ws, "amadeus/spaces/default/intents/260705-steering-learnings"),
+    { recursive: true },
+  );
+  // stub 9 件を除去（memory.md は diary のため残す）
+  const i548Re = join(i548Ws, "amadeus/spaces/default/intents/260705-steering-learnings/inception/reverse-engineering");
+  for (const f of readdirSync(i548Re)) {
+    if (f !== "memory.md") rmSync(join(i548Re, f));
+  }
+  const i548Res = run(["bun", validatorSrc, i548Ws, "260705-steering-learnings"], i548Ws);
+  ok(
+    "#548: stub なし（codekb 直接解決）の record で validator が pass する",
+    i548Res.exitCode === 0 && /## 不足または矛盾\n\n- なし/.test(i548Res.stdout),
+    i548Res.stdout.slice(-1200),
+  );
 } finally {
   rmSync(base, { recursive: true, force: true });
 }

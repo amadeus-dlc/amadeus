@@ -20,6 +20,7 @@ type LifecycleV2Context = {
   checkFile: (path: string, condition: string) => void;
   // v2 契約検査（stage 定義ファイルの frontmatter 参照）専用。存在しなければ undefined を返す。
   readOptional: (path: string) => string | undefined;
+  listDir: (path: string) => string[];
 };
 
 type LifecycleV2Input = {
@@ -427,6 +428,24 @@ function checkCompletedArtifactsV2(ctx: LifecycleV2Context, input: LifecycleV2In
     }
     for (const artifact of produces) {
       const artifactPath = `${input.base}/${def.phase}/${stage.slug}/${artifact}.md`;
+      // #548: reverse-engineering の produces は、record 内 stub がなくても共有
+      // codekb store の正本の実在で成立する（#498 でエンジンが codekb 直接解決に
+      // なったことへの追従。stub 付き record は従来どおり = OR 条件の拡張）。
+      if (stage.slug === "reverse-engineering" && ctx.readOptional(artifactPath) === undefined) {
+        const spaceRoot = input.base.replace(/\/intents\/[^/]+$/, "");
+        const codekbRoot = `${spaceRoot}/codekb`;
+        const repo = ctx
+          .listDir(codekbRoot)
+          .find((r) => ctx.readOptional(`${codekbRoot}/${r}/${artifact}.md`) !== undefined);
+        if (repo !== undefined) {
+          ctx.pass(
+            artifactPath,
+            "v2 契約: completed のステージは produces 成果物を持つ",
+            `共有 codekb 直接解決: codekb/${repo}/${artifact}.md（#548）`,
+          );
+          continue;
+        }
+      }
       ctx.checkFile(artifactPath, "v2 契約: completed のステージは produces 成果物を持つ");
       if (stage.slug === "reverse-engineering") {
         checkCodekbAdoptionStub(ctx, artifactPath);
