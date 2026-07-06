@@ -4716,3 +4716,55 @@
 **Reason**: CONDITIONAL 条件不成立: 既存 CI（.github/workflows、npm run test:all を実行）が新規ファイルを検証対象に含む（scanRoots 追加により rename-leftovers も新設 harness/ を走査）。新設・変更すべきパイプラインはない。
 
 ---
+
+## Error Logged
+**Timestamp**: 2026-07-06T07:12:54Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state complete-workflow
+**Error**: Usage: amadeus-state.ts complete-workflow <completed-slug> [--reason <text>]
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-06T07:13:03Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state complete-workflow ci-pipeline --reason 全 in-scope ステージ完了（build-and-test 承認済み、ci-pipeline は条件不成立 skip）。engine next が Workflow complete を返したため完了処理を確定。
+**Error**: Refusing to complete "ci-pipeline": none of its declared artifacts exist under the intent's record directory. The stage protocol requires CI Pipeline to produce output before the gate. Produce the artifacts before completing. (declared: ci-config, quality-gates, ci-pipeline-questions)
+
+---
+
+## Phase Completion
+**Timestamp**: 2026-07-06T07:13:16Z
+**Event**: PHASE_COMPLETED
+**From phase**: construction
+**To phase**: (end)
+**Stages completed**: 15
+
+---
+
+## Phase Skip
+**Timestamp**: 2026-07-06T07:13:16Z
+**Event**: PHASE_SKIPPED
+**Phase**: operation
+**Scope**: feature
+**Reason**: all planned stages skipped before completion
+
+---
+
+## Phase Verification
+**Timestamp**: 2026-07-06T07:13:16Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: construction → end
+
+---
+
+## Workflow Completion
+**Timestamp**: 2026-07-06T07:13:16Z
+**Event**: WORKFLOW_COMPLETED
+**Scope**: feature
+**Details**: Scope: feature, 15 stages completed
+**Reason**: 最終 EXECUTE ステージ = build-and-test（承認済み 07:12:01Z）。ci-pipeline は条件不成立 skip（[S] 記録済み）のため、workflow を完了とする。
+
+---
