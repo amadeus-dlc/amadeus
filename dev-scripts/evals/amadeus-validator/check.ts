@@ -140,6 +140,54 @@ runExpectFailure(
   "`一覧` の表がある",
 );
 
+// ---- journal 契約検査（Issue #557）----
+
+const journalFixtures = join(root, "dev-scripts/evals/amadeus-validator/fixtures/journal");
+
+// (J1) journal/ は optional: 不在の workspace も pass し、任意である旨の skip として現れる。
+const noJournalWorkspace = workspaceCopy();
+runExpectSuccessIncludes(["bun", "run", validator, noJournalWorkspace], "journal は任意である");
+
+// (J2) 実データ（#556 移行分のコピー = エンジン実出力形 fixture）の journal は pass する。
+const happyJournalWorkspace = workspaceCopy();
+cpSync(journalFixtures, join(happyJournalWorkspace, "amadeus/spaces/default/journal"), { recursive: true });
+runExpectSuccessIncludes(["bun", "run", validator, happyJournalWorkspace], "pass");
+
+// (J3) 変異 1: 必須フィールド（昇格）の欠落は fail になる。
+const missingFieldWorkspace = workspaceCopy();
+cpSync(journalFixtures, join(missingFieldWorkspace, "amadeus/spaces/default/journal"), { recursive: true });
+{
+  const daily = join(missingFieldWorkspace, "amadeus/spaces/default/journal/260706.md");
+  const text = readFileSync(daily, "utf8");
+  writeFileSync(daily, text.replace("- 昇格: -\n", ""));
+}
+runExpectFailure(
+  ["bun", "run", validator, missingFieldWorkspace],
+  "必須フィールド",
+);
+
+// (J4) 変異 2: 語彙表にない種別は fail になる。
+const badTypeWorkspace = workspaceCopy();
+cpSync(journalFixtures, join(badTypeWorkspace, "amadeus/spaces/default/journal"), { recursive: true });
+{
+  const daily = join(badTypeWorkspace, "amadeus/spaces/default/journal/260706.md");
+  const text = readFileSync(daily, "utf8");
+  writeFileSync(daily, text.replace("- 種別: 観察", "- 種別: 雑談"));
+}
+runExpectFailure(
+  ["bun", "run", validator, badTypeWorkspace],
+  "種別",
+);
+
+// (J5) 変異 3: journal/ 直下の命名規約違反（README.md と <YYMMDD>.md 以外）は fail になる。
+const badNameWorkspace = workspaceCopy();
+cpSync(journalFixtures, join(badNameWorkspace, "amadeus/spaces/default/journal"), { recursive: true });
+writeFileSync(join(badNameWorkspace, "amadeus/spaces/default/journal/notes.md"), "# メモ\n");
+runExpectFailure(
+  ["bun", "run", validator, badNameWorkspace],
+  "journal",
+);
+
 // ---- v2 ライフサイクル（amadeus-state.md + audit + intents.json）の Intent record 検証 ----
 
 const recordDirName = "260703-fix-login-timeout";

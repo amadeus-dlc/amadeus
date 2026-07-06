@@ -275,6 +275,55 @@ class AmadeusValidator {
     this.checkFile(`${this.space}/knowledge`, "knowledge ディレクトリが存在する", true);
     this.checkOptionalDirectory(`${this.space}/codekb`, "codekb は brownfield で作られる任意ディレクトリである");
     this.checkFile(`${this.space}/intents`, "intents ディレクトリが存在する", true);
+    this.checkJournal();
+  }
+
+  // journal 契約（Issue #557）: journal/ は optional。存在する場合だけ
+  // 最小 3 条件（ファイル命名 / エントリの必須 4 フィールド / 種別語彙）を検査する。
+  private checkJournal(): void {
+    const journalPath = `${this.space}/journal`;
+    if (!this.isDirectory(this.absolute(journalPath))) {
+      this.skipped(journalPath, "journal は任意である（契約 = journal/README.md）", "ディレクトリなし");
+      return;
+    }
+    this.checkedFiles.add(journalPath);
+    this.pass(journalPath, "journal ディレクトリが存在する", "存在を確認");
+
+    const allowedTypes = ["調停", "委任", "体制", "観察"];
+    const entries = readdirSync(this.absolute(journalPath)).sort();
+    for (const entry of entries) {
+      const rel = `${journalPath}/${entry}`;
+      if (entry === "README.md") {
+        this.checkedFiles.add(rel);
+        this.pass(rel, "journal 契約 doc が存在する", "存在を確認");
+        continue;
+      }
+      if (!/^\d{6}\.md$/.test(entry)) {
+        this.failRow(rel, "journal/ 直下は README.md と <YYMMDD>.md のみである（journal 契約）", `許容外のファイル名: ${entry}`);
+        continue;
+      }
+      this.checkedFiles.add(rel);
+      const text = readFileSync(this.absolute(rel), "utf8");
+      const sections = text.split(/^## /m).slice(1);
+      let ok = true;
+      for (const section of sections) {
+        const heading = section.split("\n", 1)[0].trim();
+        for (const field of ["発信者", "種別", "本文", "昇格"]) {
+          if (!new RegExp(`^- ${field}:`, "m").test(section)) {
+            this.failRow(rel, "journal エントリが必須フィールド（発信者・種別・本文・昇格）を持つ", `「${heading}」に ${field} がない`);
+            ok = false;
+          }
+        }
+        const typeMatch = section.match(/^- 種別: *(.+)$/m);
+        if (typeMatch && !allowedTypes.includes(typeMatch[1].trim())) {
+          this.failRow(rel, "journal エントリの種別が語彙表（調停・委任・体制・観察 = 契約 doc と同期）にある", `「${heading}」の種別: ${typeMatch[1].trim()}`);
+          ok = false;
+        }
+      }
+      if (ok) {
+        this.pass(rel, "journal 日次ファイルが契約形式（必須フィールド・種別語彙）を満たす", `${sections.length} エントリ`);
+      }
+    }
   }
 
   private checkOptionalDirectory(path: string, condition: string): void {
