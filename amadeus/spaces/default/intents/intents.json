@@ -440,5 +440,13 @@
     "scope": "refactor",
     "repos": [],
     "status": "complete"
+  },
+  {
+    "uuid": "019f3653-91ef-75cd-ad08-c36ef992e860",
+    "slug": "lifecycle-i18n",
+    "dirName": "260706-lifecycle-i18n",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete"
   }
 ]

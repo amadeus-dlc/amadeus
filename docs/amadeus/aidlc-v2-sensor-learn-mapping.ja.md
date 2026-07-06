@@ -81,4 +81,4 @@ Amadeus DLC 側の記録先は次である。
 
 - [AI-DLC v2 Difference Response Plan](aidlc-v2-difference-response-plan.ja.md)
 - [AI-DLC v2 Reviewer Mapping](aidlc-v2-reviewer-mapping.ja.md)
-- [Lifecycle Contract Overview](lifecycle/overview.md)
+- [Lifecycle Contract Overview](lifecycle/overview.ja.md)
