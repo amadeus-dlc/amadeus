@@ -18,7 +18,7 @@
 - FR-6（record 移設の記録規律）: audit の記録済みイベントは書き換えない。path 言及の扱いは「移設時点の注記を新規追記」で対応する（org.md、ディスパッチ作業指示 6）。
 - FR-7（docs 再定義）: AMADEUS.md・README・docs/amadeus/（言語方針済みの英語正文書は `.md` と `.ja.md` の両方）へ rename を反映し、「構造・意味論は v2 互換、名前空間は Amadeus」の再定義を明文化する（承認要旨 ⑥）。
 - FR-8（検出器の反転）: rename-leftovers eval の allowlist をデータ駆動更新し、旧名（`aidlc/`、`aidlc-state.md`、`/aidlc`、`.aidlc-*`）の残存を検出対象へ反転させる（正当な残存 = 上流参照・parity 写像の prefix 側・歴史的記録の言及は reason つきで許可）。
-- FR-9（examples）: `examples/**/aidlc` snapshot を amadeus/ へ git mv する（内容不変のため md5 provenance は更新しない。Q4）。
+- FR-9（examples）: 該当なし。gate 差し戻しを受けた再実測（2026-07-06、ls examples）で examples/ ディレクトリは現行ツリーに存在しない（退役済み）。project.md の Example snapshot パターン記述が古い残置である可能性を steering 申し送りとする（Q4 は前提が誤っていたため取り下げ）。
 - FR-10（段階 commit）: 機械的 rename → record 移設 → 参照更新 → 検証の段階で commit を分け、各段階で `npm run test:all` を回し、壊れた中間状態を commit しない（PR は単一）。
 
 ## 非機能要求
