@@ -313,5 +313,17 @@
       504,
       507
     ]
+  },
+  {
+    "uuid": "019f34cc-c77f-7285-9282-73702db8bd43",
+    "slug": "docs-lang-guide",
+    "dirName": "260706-docs-lang-guide",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      509,
+      532
+    ]
   }
 ]

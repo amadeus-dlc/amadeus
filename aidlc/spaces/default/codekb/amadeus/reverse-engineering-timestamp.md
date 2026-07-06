@@ -1,5 +1,21 @@
 # reverse-engineering-timestamp：amadeus
 
+## 差分更新の記録（最新）
+
+- 解析時刻: 2026-07-06T00:25:00Z（UTC）
+- 対象コミット: 2a0a784b（origin/main = eng3/issue-509-532-docs 分岐点）
+- 解析方式: 差分更新（616d063e..2a0a784b の非 aidlc 変更 = PR #531 のみ。9 ファイル）
+- 実施 Intent: `260706-docs-lang-guide`（reverse-engineering ステージ）
+
+| artifact | 変更内容 |
+|---|---|
+| component-inventory.md | eval 数 28→29（persist-cid-metamain 追加。新規 4 種の列挙へ更新） |
+| code-structure.md | eval 数 28→29 |
+| code-quality-assessment.md | eval 数 28→29、強み 2 項目追加（#504 = cid 新形式 + 戻り値分離、#507 = import 副作用ゼロ + 回帰走査） |
+| その他 6 docs | 影響なし（変更なし。PR #531 の変更は learnings persist 内部と tools 末尾ガードで、architecture の seam 記述・API 表・依存関係の粒度では既存記述が引き続き正確） |
+
+## 前回（2026-07-05T23:25:37Z、3049eadf..616d063e）の記録
+
 - 解析時刻: 2026-07-05T23:25:37Z
 - 対象コミット: 616d063e（origin/main）
 - 解析方式: 増分更新（差分駆動。フル再解析ではない）

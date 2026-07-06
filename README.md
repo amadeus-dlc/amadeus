@@ -167,6 +167,7 @@ npm run validate:workspace -- <workspace> <YYMMDD>-<label>
   - [Construction](docs/amadeus/lifecycle/construction.md)
   - [State](docs/amadeus/lifecycle/state.md)
 - Space reference: [docs/amadeus/steering.md](docs/amadeus/steering.md)
+- Extension guide: [docs/amadeus/extension-guide.md](docs/amadeus/extension-guide.md)
 - Architecture decisions: [docs/adr/](docs/adr/)
 - AI-DLC reference material: [docs/ai-dlc/](docs/ai-dlc/)
 

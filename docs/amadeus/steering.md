@@ -72,3 +72,4 @@ Space の `memory/`、`knowledge/`、`intents/` の器は `amadeus-steering` が
 - [Lifecycle Overview](lifecycle/overview.md)
 - [Ideation Phase Stages](lifecycle/ideation.md)
 - [ADR 0002: Intent Phase Directory Layout を採用する](../adr/0002-intent-phase-directory-layout.md)
+- [Extension Guide](extension-guide.md) — `memory/`、`knowledge/`、`codekb/` などの拡張ポイントの使い分けと人間編集の可否

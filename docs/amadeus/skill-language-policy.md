@@ -4,6 +4,8 @@
 
 Issue #395 の判断を後続の #400、#401、#402 で参照できるようにするための基準である。
 
+責務分担: 本文書は skill ソース（`SKILL.md`、TS スクリプト）の言語を扱う。`docs/amadeus/` 配下の文書自体の言語（正本と `*.ja.md` 併置）は [Language Policy](language-policy.md) が扱う。
+
 段階的英語化ロールアウト（#400、#401、#402、B006〜B009）は完了した。
 Intent `260704-v2-parity-completion` の D003 により、方針は「英語化できる」の条件付き許可から「英語必須」へ改定した。
 
@@ -102,5 +104,6 @@ Issue #395 の完了証拠は、対応 PR の merge または明示的な Issue 
 
 ## 関連文書
 
+- [Language Policy](language-policy.md)
 - [AI-DLC v2 Difference Response Plan](aidlc-v2-difference-response-plan.md)
 - [Skill Englishization Rollout Plan](skill-englishization-rollout-plan.md)
