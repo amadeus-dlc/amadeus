@@ -219,7 +219,7 @@ cursors and machine-local derived state are ignored.
 | Commit | Gitignore |
 |--------|-----------|
 | `amadeus-state.md` | `aidlc/active-space`, `intents/active-intent` (per-user cursors) |
-| `audit/*.md` (per-clone shards) | `.amadeus-recovery.md` and other `intents/*/.amadeus-*` (transient breadcrumbs) |
+| `audit/*.md` (per-clone shards) | `.amadeus-recovery.md` and other `intents/*/.amadeus-*` / `intents/.amadeus-*` (transient breadcrumbs; the latter is the no-intent fallback root) |
 | All stage artifacts | `runtime-graph.json` (re-derivable from the audit shards) |
 | `verification/` phase check results | `aidlc/.amadeus-clone-id` (names this clone's shard; must stay machine-local) |
 | Space-level `aidlc/knowledge/` team knowledge files | `aidlc/.amadeus-sessions/` (per-conversation session→intent map) |

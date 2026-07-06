@@ -42,5 +42,5 @@ Commit the `aidlc/` workspace tree — the record (state, the per-clone audit sh
 - `aidlc/active-space` and `aidlc/spaces/*/intents/active-intent` (per-user cursors)
 - `aidlc/.amadeus-clone-id` (per-clone audit-shard token) and `aidlc/.amadeus-sessions/`
 - `aidlc/spaces/*/intents/*/runtime-graph.json` (also covers per-Bolt worktree fragments by relative-path glob)
-- `aidlc/spaces/*/intents/*/.amadeus-*` (recovery, hooks-health, sensors scratch)
+- `aidlc/spaces/*/intents/*/.amadeus-*` and `aidlc/spaces/*/intents/.amadeus-*` (recovery, hooks-health, sensors scratch; the second pattern is the no-intent fallback root hooks write to before the first intent is born)
 {{SLOT:gitignore_extra}}

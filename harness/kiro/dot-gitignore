@@ -48,6 +48,10 @@ aidlc/.amadeus-readonly-latch
 aidlc/.amadeus-sessions/
 aidlc/spaces/*/intents/*/runtime-graph.json
 aidlc/spaces/*/intents/*/.amadeus-*
+# Same machine-local scratch at the no-intent fallback root: before the first
+# intent is born, hooks write their health beats to spaces/<space>/intents/
+# directly (docsRoot falls back when no record dir exists yet).
+aidlc/spaces/*/intents/.amadeus-*
 #
 # COMMITTED (NOT ignored, listed here for the record — do NOT add ignore rules
 # for these): aidlc/spaces/*/memory/** · aidlc/spaces/*/codekb/** ·

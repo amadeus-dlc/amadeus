@@ -182,6 +182,7 @@ Gitignore:
   - aidlc/.amadeus-clone-id, aidlc/.amadeus-sessions/             (machine-local)
   - aidlc/spaces/*/intents/*/runtime-graph.json              (re-derivable)
   - aidlc/spaces/*/intents/*/.amadeus-*                          (incl. .amadeus-recovery.md)
+  - aidlc/spaces/*/intents/.amadeus-*                        (no-intent fallback root)
 ```
 
 The audit trail is committed as **per-clone shards** (`audit/<host>-<clone>.md`): each clone appends to its own shard, so concurrent appends never git-conflict. Per-user session cursors and machine-local derived state are ignored.
