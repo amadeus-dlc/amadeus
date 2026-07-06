@@ -89,7 +89,7 @@ Per unit: u001-presence-evidence
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: ci-pipeline
+- **Current Stage**: none
 - **Next Stage**: none
 - **Status**: Completed
 - **Construction Autonomy Mode**: unset
