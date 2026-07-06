@@ -529,3 +529,54 @@
 **Duration ms**: 483
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T07:18:02Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a7ed0b75d754c4c56
+**Message**: 全計測が揃いました。\n\n---\n\n## Review\n\n**判定: READY**\n\n全 eval・型検査・parity が pass。下記 3 件はすべて Low 重大度で、実装ブロッカーなし。\n\n---\n\n### 発見 #1（Low）: regex 偽陽性の表面積が微増する\n\n**ファイル:** `.agents/amadeus/hooks/amadeus-runtime-compile.ts
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T07:18:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 603e2f47
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .agents/amadeus/tools/amadeus-learnings.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T07:18:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 603e2f47
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .agents/amadeus/tools/amadeus-learnings.ts
+**Duration ms**: 762
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T07:18:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4710f1c3
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .agents/amadeus/tools/amadeus-learnings.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T07:18:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4710f1c3
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .agents/amadeus/tools/amadeus-learnings.ts
+**Duration ms**: 466
+
+---

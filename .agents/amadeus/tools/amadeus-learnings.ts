@@ -160,7 +160,7 @@ function readRuntimeStageRow(projectDir: string, slug: string): RuntimeStageRow 
   // once from the audit log before failing; compile is deterministic and
   // idempotent, so a redundant run is harmless.
   const recovery =
-    "Recovery: run `bun .agents/amadeus/tools/amadeus-runtime.ts compile` in the workspace, " +
+    `Recovery: run \`bun ${join(harnessDir(), "tools", "amadeus-runtime.ts")} compile\` in the workspace, ` +
     `then verify --slug "${slug}" matches the state file's Current Stage.`;
   const runtimeTs = fileURLToPath(new URL("./amadeus-runtime.ts", import.meta.url));
   let result: ReturnType<typeof spawnSync>;

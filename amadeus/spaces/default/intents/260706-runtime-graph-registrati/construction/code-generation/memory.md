@@ -17,3 +17,4 @@
 
 ## Open questions
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
+- 2026-07-06T07:20:00Z — reviewer READY（Low 3）。Low-2（復旧ヒントの path ハードコード）は本 Intent の新規コードのため harnessDir() で動的化して即修正（e2e 再 GREEN）。Low-1（regex が文字列リテラル内 path にも match する偽陽性 = 旧 regex からの既存構造限界、発火しても冪等 compile 1 回で無害）と Low-3（#558b の経路を exit code 中間 assert でさらに精密化できる = reviewer が実測で line 185 経路を確認済み）は記録のみ・後続 cleanup 候補。
