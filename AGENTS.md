@@ -1,59 +1,65 @@
-# AI-DLC — one core, many harnesses
+# AGENTS.md
 
-This directory contains a native implementation of the AI-DLC (AI-Driven
-Development Life Cycle) methodology that ships to many CLI harnesses — today
-Claude Code, Kiro CLI, Kiro IDE, and Codex CLI, and any capable CLI you port it to — from
-a single hand-authored source.
+Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
-## Project Structure
+**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
-- `core/` — **The hand-authored, harness-neutral source of truth.** Tools, stages (`amadeus-common/`), agents, memory (the rule/method layer), scopes, sensors, knowledge, hooks, and the 3 session skills. Prose names the harness directory with the `{{HARNESS_DIR}}` token; the packager substitutes `.claude`/`.kiro`/`.codex` per tree.
-- `harness/<name>/` — **The thin per-harness authored surface.** Each holds `manifest.ts` (how to project `core/` into that harness's dist) plus the orchestrator skill and harness-specific files; `harness/codex/` adds `emit.ts` (Codex-only emissions). `claude/`, `kiro/`, `kiro-ide/`, `codex/`.
-- `scripts/package.ts` — **The build entry.** `bun scripts/package.ts` regenerates every `dist/<harness>/`; `bun scripts/package.ts --check` is the byte-parity drift guard (CI tier). `manifest-types.ts` is the shared manifest contract.
-- `dist/<harness>/` — **GENERATED, committed, drift-guarded.** `dist/claude/.claude/`, `dist/kiro/.kiro/` (+ `AGENTS.md`), `dist/kiro-ide/.kiro/` (+ `AGENTS.md`), `dist/codex/` (`.codex/` + `.agents/` + `AGENTS.md`). Never hand-edit — `package.ts --check` fails CI on drift. Users copy `dist/<harness>/` into their project.
-- `tests/` — All-TypeScript test suite (`t*.test.ts`, run via bun), four levels (smoke/unit/integration/e2e). Run `bash tests/run-tests.sh --help` for levels and profiles.
-- `docs/guide/` — User Guide: getting started, workflows, scopes, agents, customization, troubleshooting
-- `docs/harness-engineering/` — Harness Engineer Guide: reshaping AIDLC through configuration (stages, agents, scopes, rules, sensors, knowledge) without code, plus porting AIDLC to a new harness
-- `docs/reference/` — Developer Reference: architecture, orchestrator, stage protocol, hooks, testing, contributing
+## 1. Think Before Coding
 
-## How It Works
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
 
-The hand-authored source lives in `core/` (harness-neutral) + `harness/<name>/`
-(per-CLI surfaces); `bun scripts/package.ts` regenerates the `dist/<harness>/`
-trees. The core uses the same building blocks in every harness:
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them - don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
 
-- **Skills** (`skills/amadeus/`) — Orchestrator (`SKILL.md`), stage protocol, and 32 stage files across 5 phases (initialization, ideation, inception, construction, operation)
-- **Agents** (`agents/`) — 14 `amadeus-<role>-agent.md` files: 11 domain-expert personas (product, design, delivery, architect, aws-platform, compliance, devsecops, developer, quality, pipeline-deploy, operations), 2 review-only agents (product-lead, architecture-reviewer), and the adaptive-workflows composer (amadeus-composer-agent)
-- **Method/rules** (`memory/`) — Layered config in the space memory layer: `org.md` (framework defaults), `team.md` (affirmed practices), `project.md` (project overrides), and `phases/<phase>.md` for ideation/inception/construction/operation
-- **Sensors** (`sensors/`) — Deterministic verification manifests (advisory): `amadeus-required-sections.md`, `amadeus-upstream-coverage.md`, `amadeus-linter.md`, `amadeus-type-check.md`
-- **Knowledge** (`knowledge/`) — Methodology reference. Per-agent under `amadeus-<agent>-agent/`; cross-agent material in `amadeus-shared/`
-- **Tools** (`tools/`) — TypeScript CLI tools, all prefixed `amadeus-*.ts` and run via bun
-- **Hooks** (`hooks/`) — 11 framework hooks, all prefixed `amadeus-*.ts`, covering audit emission, sensor dispatch, runtime-graph compile, session lifecycle, state validation, subagent tracking, statusline rendering, human-presence mint on prompt submit, and forwarding-loop enforcement (the `Stop` hook — the first flow-altering hook)
+## 2. Simplicity First
 
-## Working on This Project
+**Minimum code that solves the problem. Nothing speculative.**
 
-- **Edit `core/` (or `harness/<name>/`), never `dist/`.** `dist/<harness>/` is generated. After editing, run `bun scripts/package.ts` to regenerate and `bun scripts/package.ts --check` to confirm no drift (the CI guard fails on a hand-edited or stale dist).
-- The orchestrator skill (`harness/<name>/skills/amadeus/SKILL.md`) is per-harness; the engine and methodology live in `core/`.
-- `harness/claude/CLAUDE.md` is the user-facing CLAUDE.md that ships in `dist/claude/` — it is NOT this file. Edit it when changing user-facing Claude behavior (commands, prerequisites, conventions); the Kiro/Codex equivalents are each harness's `AGENTS.md` (codex's is emitted from CLAUDE.md by `harness/codex/emit.ts`).
-- "harness" has three senses in this repo: `harness/` (top-level, the per-CLI distribution surfaces — this effort), `docs/harness-engineering/` (the Harness Engineer Guide), and `tests/harness/` (test-suite helper library) — unrelated.
-- See `docs/guide/` (User Guide), `docs/harness-engineering/` (Harness Engineer Guide), and `docs/reference/` (Developer Reference) for full documentation
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
 
-## Test Suite
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
 
-Run `bash tests/run-tests.sh --help` for levels and flags. See `docs/reference/09-testing.md` for full strategy.
+## 3. Surgical Changes
 
-## Utility Handler Checklist
+**Touch only what you must. Clean up only your own mess.**
 
-See `docs/reference/11-contributing.md` § "Adding a Utility Handler" before implementing a new `/amadeus --*` command.
+When editing existing code:
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it - don't delete it.
 
-## Documentation Policy
+When your changes create orphans:
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
 
-IMPORTANT: When adding, removing, or renaming files, directories, commands, or flags — grep `docs/` and `README.md` for stale references and update them in the same commit.
+The test: Every changed line should trace directly to the user's request.
 
-## Changelog Policy
+## 4. Goal-Driven Execution
 
-IMPORTANT: Every user-visible PR bumps `core/tools/amadeus-version.ts` (the authored source; the per-harness `dist/<harness>/.../tools/amadeus-version.ts` copies are regenerated by `bun scripts/package.ts`), bumps the README badge, and adds a matching `## [X.Y.Z] - YYYY-MM-DD` heading + bullet(s) to `CHANGELOG.md` in the same commit. Patch versions accumulate through a release-prep cycle; the eventual minor cut (e.g. `v0.7.0`) consolidates them. Pure doc sweeps, internal refactors, and test-only changes do NOT bump — those live in commit messages and the design notes under `docs/`. The pin in `tests/unit/t68-version-changelog-sync.test.ts` enforces that the shipped `amadeus-version.ts`, the latest `CHANGELOG.md` heading, and the README badge agree.
+**Define success criteria. Loop until verified.**
 
-Each entry follows the shape: `## [N.N.N] - YYYY-MM-DD` heading, one-paragraph summary that includes any upgrade instruction, then a flat bullet list focused on what users actually invoke (commands, flags, errors they see, breaking changes for CI/scripts).
+Transform tasks into verifiable goals:
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
 
-Conflict-trap: when two PRs both bump `amadeus-version.ts` to the same patch number, the second-to-merge resolves by rebasing and re-bumping (e.g. `0.6.5` → `0.6.6`) plus renaming its `## [0.6.5]` heading to match. t68 catches a missed CHANGELOG bullet AND duplicate `## [N.N.N]` headings post-rebase. (CHANGELOG version link references were removed in v0.6.9 — a distributed file should not embed a repository host — so there is no longer a `[N.N.N]:` link reference to keep in sync; t68 guards that none reappear.)
+For multi-step tasks, state a brief plan:
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+```
+
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+---
+
+**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
