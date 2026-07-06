@@ -2,6 +2,22 @@
 
 ## 差分更新の記録（最新）
 
+- 解析時刻: 2026-07-06T10:50:00Z（UTC）
+- 対象コミット: 0d6d492f（origin/main = PR #581 merge 後）
+- 解析方式: 差分更新（0075f931..0d6d492f のうち未反映分 = PR #575/#577/#578/#580/#581。#574 分は 260706-feature-diff の 07:58 更新で反映済み。rebase 時の時系列 union 補正: #577 の api-documentation / component-inventory への追記は 260706-three-layer-build の 09:10 更新（下の前回記録）を正とし、当方の「既存記述粒度で吸収 = 差分なし」判断はそれ以外の文言差分に限定して維持）
+- 実施 Intent: `260706-persona-loading`（reverse-engineering、conductor 直接処理 = bug 最優先の速度要件）
+
+### 差分の内容と codekb への影響
+
+- PR #578（docs/guide 新設 #533）と PR #580（docs/adr 削除・語彙統合 #525/#527/#560）: code-structure のトップレベル記述を更新（docs/guide 行の新設、docs/adr 行の削除）。
+- PR #581（journal 契約 #557 = 当方）: architecture へ space 成果物 5 種の節を新設、code-structure へ journal 行。
+- PR #575（lifecycle i18n）/ PR #577（doctor guidance）: docs / 案内文言中心で既存記述粒度で吸収。
+- 変更なし: business-overview / api-documentation / technology-stack / dependencies / code-quality-assessment / timestamp（本更新対象）。
+
+注記（rebase 時の時系列 union）: #578 の docs/guide について、後発 merge の 260706-guide-ops 09:40 更新（下の前回記録）は codekb 記述対象外と判断したが、当方は code-structure のトップレベル行変更（docs/guide 新設・docs/adr 削除）として追記を維持した（実ツリーの構造変化のため）。
+
+## 前回（2026-07-06T09:40:00Z、1aed7eb1..620beb5e = guide-ops）の記録
+
 - 解析時刻: 2026-07-06T09:40:00Z（UTC）
 - 対象コミット: 620beb5e（origin/main = PR #578 merge 後）
 - 解析方式: 差分更新（1aed7eb1..620beb5e = PR #570 = #554 model overlay、#577 = #573 doctor 誘導修正、#578 = docs/guide 新設。docs 以外の実質増分は #554 / #577）
