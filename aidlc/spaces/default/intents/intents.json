@@ -301,5 +301,17 @@
     "scope": "feature",
     "repos": [],
     "status": "in_progress"
+  },
+  {
+    "uuid": "019f3494-4088-73bb-b960-54b34203a8b2",
+    "slug": "persist-cid-metamain",
+    "dirName": "260705-persist-cid-metamain",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      504,
+      507
+    ]
   }
 ]

@@ -639,7 +639,13 @@
     "aidlc-common/stages/inception/requirements-analysis.md",
     "aidlc-common/stages/inception/user-stories.md",
     "aidlc-common/stages/inception/refined-mockups.md",
-    "tools/data/scope-grid.json"
+    "tools/data/scope-grid.json",
+    "tools/aidlc-sensor.ts",
+    "tools/aidlc-sensor-required-sections.ts",
+    "tools/aidlc-sensor-upstream-coverage.ts",
+    "tools/aidlc-swarm.ts",
+    "tools/aidlc-validate.ts",
+    "aidlc-common/protocols/stage-protocol.md"
   ],
   "exceptions": [
     {
@@ -693,6 +699,14 @@
     {
       "target": "tools/aidlc-state.ts、tools/aidlc-lib.ts、tools/aidlc-audit.ts（ローカルでは .agents/amadeus/tools/amadeus-state.ts、amadeus-lib.ts、amadeus-audit.ts）、knowledge/aidlc-shared/audit-format.md（ローカルでは .agents/amadeus/knowledge/amadeus-shared/audit-format.md）",
       "reason": "Issue #499: docs 系 Intent と code-generation の workspace_requires ガードの構造的衝突の解消。registry の docsOnly 宣言（amadeus-state.ts declare-docs-only、非空 evidence 必須）で検査を免除し、免除の発動を GUARD_EXEMPTED として audit に記録する（audit-format.md にイベント契約を追記）。宣言なしの拒否経路は従来どおりで #366 型の抜け検出を保全する。上流が同修正を取り込んだら解除。"
+    },
+    {
+      "target": "tools/aidlc-learnings.ts（ローカルでは .agents/amadeus/tools/amadeus-learnings.ts）、aidlc-common/protocols/stage-protocol.md（ローカルでは .agents/amadeus/amadeus-common/protocols/stage-protocol.md）",
+      "reason": "Issue #504: learnings persist の cid marker を cid:<dirName>:<stage>:<cN> 形式へ拡張し（既存 marker は不改稿、照合は新形式のみ）、戻り値を appended / already-present に分離して無言 no-op を解消。上流が同修正を取り込んだら解除。 §13 Step 5 の marker 形式記載も新形式（cid:<dirName>:<stage>:<cN>）へ更新した。"
+    },
+    {
+      "target": "tools/aidlc-sensor.ts、tools/aidlc-sensor-required-sections.ts、tools/aidlc-sensor-upstream-coverage.ts、tools/aidlc-swarm.ts、tools/aidlc-validate.ts（ローカルでは .agents/amadeus/tools/amadeus-*.ts）",
+      "reason": "Issue #507: import.meta.main ガードなしの無条件 main() 実行を修正し、import 副作用なしのモジュールロードを可能にした（CLI 挙動は不変）。上流が同修正を取り込んだら解除。"
     }
   ]
 }
