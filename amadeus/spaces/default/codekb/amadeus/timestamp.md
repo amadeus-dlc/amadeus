@@ -16,4 +16,5 @@
 - 2026-07-06T04:04:37Z: 33c40271..c50a0fe5 の差分駆動増分更新（Intent `260706-full-rename`。PR #544/#545/#546/#549/#550 = no-stub-compat rule、audit-format 設計境界節、pr-gate-discipline.md 新設、README 刷新、rename 漏れ 2 件 + linter sensor 2 段検出。eval 数 29→31、sensors 行の新設を反映。詳細は reverse-engineering-timestamp.md）。
 - 2026-07-06T05:44:48Z: c50a0fe5..9dd93f50 の差分駆動増分更新（Intent `260706-engine-consistency`。PR #553 = 全面 rename #526 を反映: 名前空間再定義 1 行と検出器記述。codekb 本文の path 表記は #553 自身が更新済み）。
 - 2026-07-06T06:05:00Z: c50a0fe5..9dd93f50 の差分駆動増分更新（Intent `260706-docs-i18n`。PR #553 = 全面 rename。codekb は #553 内で反映済みのため、残存旧名 1 件（architecture.md の docs-only 宣言説明）の修正のみ。詳細は reverse-engineering-timestamp.md）。
+- 2026-07-06T07:50:00Z: 9dd93f50..3366cd69 の差分駆動増分更新（Intent `260706-guide-intro`。PR #559 の #548 = validator RE produces の共有 codekb 直接解決を architecture.md へ追記。#561 / #563 は docs-only で影響なし。詳細は reverse-engineering-timestamp.md）。
 - 2026-07-06T07:58:00Z: 9dd93f50..b452f4fb の差分駆動増分更新（Intent `260706-feature-diff`。PR #559/#561/#563/#565 = エンジン整合修正・lifecycle I/O 記法・docs i18n・harness/codex 新設。code-structure と component-inventory へ harness 層と Codex guard を追記。詳細は reverse-engineering-timestamp.md）。
