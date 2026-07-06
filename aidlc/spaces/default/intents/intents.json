@@ -352,5 +352,13 @@
     "scope": "refactor",
     "repos": [],
     "status": "complete"
+  },
+  {
+    "uuid": "019f3499-3bfc-73d5-a320-534acfe961c9",
+    "slug": "presence-evidence",
+    "dirName": "260705-presence-evidence",
+    "scope": "feature",
+    "repos": [],
+    "status": "in_progress"
   }
 ]
