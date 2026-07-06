@@ -26,6 +26,13 @@
 - システム境界のすべての入力を検証・サニタイズする。
 - 認証・認可チェックを迂回するコードを検出したら指摘する。
 
+## PR Gate
+
+- PR にコメントが付いている場合、返答・解決なしの放置やマージを許容しない。
+- PR 作成後は監視を行い、詳細手順は `.agents/amadeus/knowledge/amadeus-shared/pr-gate-discipline.md` に従う。
+- merge は人間が行う。
+- 検証設定（カバレッジなど）を緩めて pass させない。
+
 ## Corrections
 
 ## Bolt 運用

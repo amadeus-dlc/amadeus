@@ -142,6 +142,11 @@ options:
     description: Stop Construction; worktree preserved.
 ```
 
+**PR gate invariant**: a Bolt PR with unresolved comments must never be
+left unanswered or merged past; merge is always performed by a human. See
+`.claude/knowledge/amadeus-shared/pr-gate-discipline.md` for the
+monitoring procedure.
+
 ---
 
 ## 2. Completion Messages
