@@ -10,6 +10,7 @@
 | `dev-scripts/` | promote-skill、parity-check、contracts、kanban（sync CLI + hooks）、evals/（31 種の決定論的検証。rename-leftovers = 旧名（aidlc 系）残存の恒久検出器（#526 で検出反転、データ駆動 allowlist）、linter-sensor = 2 段検出の隔離 workspace 検査 #538 を含む） |
 | `scripts/` | 配布用インストーラ `amadeus-install.ts`（`.agents/amadeus/` とその skill を対象 workspace へコピーする唯一の配布手段。#451） |
 | `mise.toml` | node = "24" を宣言するランタイムバージョン管理設定 |
+| `harness/codex/` | Codex ハーネス差分層（Phase 1 = 契約 README + provenance。skill 別 agents/openai.yaml の正準は source skills 側、Phase 2 で正準化予定 = #552） |
 | `lints/` | public-type-file と ts-complexity |
 | `amadeus-contracts/` | skill 境界・条件・委譲の契約カタログ |
 | `docs/amadeus/` | lifecycle 契約（state / scopes ほか）と設計文書。言語方針（PR #536）: `*.md` が英語正文、`*.ja.md` が日本語版の併置形式（`extension-guide.md / extension-guide.ja.md` など） |

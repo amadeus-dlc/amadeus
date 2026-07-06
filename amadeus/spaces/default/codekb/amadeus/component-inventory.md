@@ -21,6 +21,7 @@
 | sensors | `.agents/amadeus/sensors/`（4 種） | gate 時の決定論的検査。linter sensor は 2 段検出（workspace の lint:check script 優先 → eslint フォールバック → 不在時 quiet PASS、#538）で実 lint rule を gate に効かせる |
 | eval 群 | `dev-scripts/evals/`（31 種） | 隔離 workspace で実 CLI を駆動する決定論的検証（engine-e2e、hooks、kanban、validator ほか。新規 4 種: `docs-codekb-guards`＝codekb repo キーの worktree 名漏れ回帰検査 #498、`installer`＝配布インストーラの実 CLI 検証 #451、`pdm-scope`＝`pdm` scope の空 Construction e2e #429、`persist-cid-metamain`＝learnings persist の cid 衝突と import 副作用の回帰検査 #504/#507） |
 | kanban 可視化 | `dev-scripts/kanban/`、`dev-scripts/kanban-sync.ts` | Projects v2 への一方向鏡（repo 内限定の暫定機構 = #470） |
+| Codex guard | `skills/amadeus-*/agents/openai.yaml`（38 件）+ `harness/codex/{README,provenance}.md` | Codex の暗黙起動を禁止する guard と、その取り込み契約・写像・再取り込み手順（上流 dist/codex、基準 b67798c3、#552） |
 | lints | `lints/` | public type file / ts-complexity |
 
 ## 退役済み（参照しない）
