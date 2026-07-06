@@ -4,7 +4,7 @@ This document gives a single-page view of how features compare across three part
 
 - Upstream `main`: https://github.com/awslabs/aidlc-workflows/tree/main/
 - Upstream `v2` baseline: commit `b67798c37c71855271b70882a33f47890d41f212` (2.2.0 Adaptive Workflows; adopted via Issue #428 / PR #539)
-- Amadeus: this repository (`skills/amadeus*`, `.agents/amadeus/` engine, `harness/`, validator, installer)
+- Amadeus: this repository (`core/skills/amadeus*`, `.agents/amadeus/` engine, `harness/`, validator, installer)
 
 How to read: each axis below has a five-column table — Aspect / Upstream main / Upstream v2 / Amadeus / Source. Cells in the "Upstream main" column show `N/A (v1-style; see summary below)` where the v1 tree has no counterpart. The summary table classifies each axis by the v2-to-Amadeus relation: Match (faithful adaptation), Adapted (renamed or rewired), Own (Amadeus-only), Pending (upstream feature not yet adopted).
 
@@ -79,7 +79,7 @@ Upstream `main` is the v1-generation layout: `.claude/` + `.kiro/` (spec-driven 
 | Aspect | Upstream main | Upstream v2 | Amadeus | Source |
 |---|---|---|---|---|
 | Question files | v1 `.kiro` prompts | `[Answer]:` tag protocol + question-rendering annex | Same protocol | `amadeus-common/protocols/stage-protocol.md` §3 |
-| Interactive presentation | — | harness question rendering | Wired to `amadeus-grilling` (one question at a time, recommended answer) — the declared adaptation point of the 38 stage skills | `AMADEUS.md` (skill adaptation policy); `skills/amadeus-grilling/` |
+| Interactive presentation | — | harness question rendering | Wired to `amadeus-grilling` (one question at a time, recommended answer) — the declared adaptation point of the 38 stage skills | `AMADEUS.md` (skill adaptation policy); `core/skills/amadeus-grilling/` |
 
 ## Multi-agent operation
 
@@ -104,7 +104,7 @@ Upstream `main` is the v1-generation layout: `.claude/` + `.kiro/` (spec-driven 
 | Aspect | Upstream main | Upstream v2 | Amadeus | Source |
 |---|---|---|---|---|
 | Harness layers | `.claude/` only | `harness/{claude,codex,kiro,kiro-ide}` + generated `dist/<harness>` | `.claude/` symlink wiring (claude); `harness/codex/` Phase 1 = contract + provenance, per-skill `agents/openai.yaml` guards adopted into source skills | measured upstream tree; Issue #552; `harness/codex/README.md`, `harness/codex/provenance.md` |
-| Codex guard files | N/A | `dist/codex/.agents/skills/aidlc-*/agents/openai.yaml` (38, generated) | 38 adopted into `skills/amadeus-*/agents/openai.yaml` (+ promoted copies); identical guard content verified by sha256 | `harness/codex/provenance.md` (mapping table + hash) |
+| Codex guard files | N/A | `dist/codex/.agents/skills/aidlc-*/agents/openai.yaml` (38, generated) | 38 adopted into `core/skills/amadeus-*/agents/openai.yaml` (+ promoted copies); identical guard content verified by sha256 | `harness/codex/provenance.md` (mapping table + hash) |
 
 ## Not yet adopted from upstream
 

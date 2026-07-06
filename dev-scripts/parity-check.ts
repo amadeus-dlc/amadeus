@@ -5,7 +5,7 @@
 // このリポジトリが上流 aidlc-workflows とパリティを保っているか検査する。
 //
 // 検査対象:
-//   (a) baseline の skill 名を写像した各名前が skills/ と .agents/skills/ に存在する
+//   (a) baseline の skill 名を写像した各名前が core/skills/ と .agents/skills/ に存在する
 //   (b) baseline の engine ファイル（parity-map.json の checkedEngineDirectories 参照）が
 //       parity-map の nameMappings（対応表駆動のトークン置換）と relocations に従い
 //       .agents/amadeus/ 配下の実体と同一 sha256（内容正規化後）で存在する
@@ -58,6 +58,7 @@ type ParityMap = {
   relocations: Relocation[];
   missingSkillExceptions?: string[];
   engineFileExceptions?: string[];
+  skillsSourceDir?: string;
 };
 
 function fail(message: string): never {
@@ -171,7 +172,7 @@ function checkSkills(root: string, baseline: ParityBaseline, map: ParityMap): st
     const mappedName = mapSkillName(upstreamName, map.skillNameMapping);
     if (exceptions.has(mappedName)) continue;
 
-    const sourcePath = join(root, "skills", mappedName);
+    const sourcePath = join(root, map.skillsSourceDir ?? "skills", mappedName);
     const promotedPath = join(root, ".agents/skills", mappedName);
     if (!existsSync(sourcePath)) issues.push(`skill 欠落: skills/${mappedName}（upstream: ${upstreamName}）`);
     if (!existsSync(promotedPath)) issues.push(`skill 欠落: .agents/skills/${mappedName}（upstream: ${upstreamName}）`);

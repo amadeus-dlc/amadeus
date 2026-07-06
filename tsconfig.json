@@ -15,6 +15,6 @@
     "amadeus-contracts/**/*.ts",
     "dev-scripts/**/*.ts",
     "scripts/**/*.ts",
-    "skills/**/*.ts"
+    "core/skills/**/*.ts"
   ]
 }

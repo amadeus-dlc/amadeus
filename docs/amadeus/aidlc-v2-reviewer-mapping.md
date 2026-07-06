@@ -63,7 +63,7 @@ Each Amadeus skill's `SKILL.md` states this mapping in its Gate section.
 
 The verification means used in place of adopting the reviewer are:
 
-- Structural verification of the artifacts by `amadeus-validator` (its trigger conditions and verification scope follow `skills/amadeus-validator/SKILL.md`).
+- Structural verification of the artifacts by `amadeus-validator` (its trigger conditions and verification scope follow `core/skills/amadeus-validator/SKILL.md`).
 - CI (`npm run test:all`) and human review on phase PRs and Bolt PRs.
 - The build-and-test execution record from Build and Test (Stage 3.6), against Code Generation's artifacts.
 

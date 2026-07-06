@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join, relative, resolve } from "node:path";
 
@@ -40,10 +40,10 @@ function runExpectFailure(command: string[], cwd = root): [string, string] {
 }
 
 function amadeusSkills(): string[] {
-  return readdirSync(join(root, "skills"))
+  return readdirSync(join(root, "core/skills"))
     .filter(
       (entry) =>
-        (entry === "amadeus" || entry.startsWith("amadeus-")) && statSync(join(root, "skills", entry)).isDirectory(),
+        (entry === "amadeus" || entry.startsWith("amadeus-")) && statSync(join(root, "core/skills", entry)).isDirectory(),
     )
     .sort();
 }
@@ -95,7 +95,7 @@ run(["bun", "run", "dev-scripts/promote-skill.ts", "amadeus-validator", "--dry-r
 runExpectFailure(["bun", "run", "dev-scripts/promote-skill.ts", "amadeus-grilling"]);
 
 for (const skill of policyManagedInternalSkills()) {
-  for (const base of ["skills", ".agents/skills"]) {
+  for (const base of ["harness/codex/skills", ".agents/skills"]) {
     const metadataPath = join(root, base, skill, "agents/openai.yaml");
     if (!existsSync(metadataPath)) fail(`missing Codex metadata for internal skill: ${relative(root, metadataPath)}`);
     const metadata = parseCodexMetadata(metadataPath, await Bun.file(metadataPath).text());
@@ -110,6 +110,26 @@ const agentsRoot = join(promoteAllRoot, ".agents/skills");
 
 for (const skill of amadeusSkills()) {
   run(["bun", "run", "dev-scripts/promote-skill.ts", skill, "--agents-root", agentsRoot]);
+}
+
+// Harness overlay (後勝ち) — mirror build.ts Step 3 so the temp dir matches
+// the full three-layer build output committed in .agents/skills/.
+// Without this step the diff below would flag every harness/codex openai.yaml.
+{
+  const harnessRoot = join(root, "harness", "codex", "skills");
+  if (existsSync(harnessRoot)) {
+    for (const name of readdirSync(harnessRoot)) {
+      const harnessAgentsDir = join(harnessRoot, name, "agents");
+      if (!existsSync(harnessAgentsDir) || !statSync(harnessAgentsDir).isDirectory()) continue;
+      const dstAgentsDir = join(agentsRoot, name, "agents");
+      mkdirSync(dstAgentsDir, { recursive: true });
+      for (const file of readdirSync(harnessAgentsDir)) {
+        const from = join(harnessAgentsDir, file);
+        const to = join(dstAgentsDir, file);
+        if (statSync(from).isFile()) cpSync(from, to);
+      }
+    }
+  }
 }
 
 const disallowed = listPaths(agentsRoot).filter((path) => {

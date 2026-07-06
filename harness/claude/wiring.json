@@ -1,0 +1,9 @@
+[
+  { "name": "agents",        "target": "../.agents/amadeus/agents" },
+  { "name": "amadeus-common","target": "../.agents/amadeus/amadeus-common" },
+  { "name": "hooks",         "target": "../.agents/amadeus/hooks" },
+  { "name": "knowledge",     "target": "../.agents/amadeus/knowledge" },
+  { "name": "scopes",        "target": "../.agents/amadeus/scopes" },
+  { "name": "sensors",       "target": "../.agents/amadeus/sensors" },
+  { "name": "tools",         "target": "../.agents/amadeus/tools" }
+]

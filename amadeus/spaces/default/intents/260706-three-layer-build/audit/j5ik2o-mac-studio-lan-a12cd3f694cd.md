@@ -1772,3 +1772,393 @@
 **Message**: ## Review\n\n**計測結果**:\n- `npm run test:it:build`: 37/37 pass\n- `npm run typecheck`: 0 エラー\n- `npm run test:all`: FAIL 0\n\n---\n\n### 所見\n\n#### 所見 1 (Medium) — stepHarnessOverlay にコアスキル整合ガードなし\n\n`build.ts:235-
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-06T10:46:33Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T10:49:00Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T10:51:36Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T10:52:21Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T10:53:07Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T10:59:58Z
+**Event**: HUMAN_TURN
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-06T11:00:17Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-bolt
+**Command**: amadeus-bolt --help
+**Error**: Unknown subcommand: --help. Valid: start, complete, fail, abort, set-autonomy, dispatch-event, hold-merge, release-merge
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-06T11:00:26Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-bolt
+**Command**: amadeus-bolt start
+**Error**: Missing --name <bolt-name or csv>
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-06T11:00:26Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-bolt
+**Command**: amadeus-bolt complete
+**Error**: Missing --name <bolt-name or csv>
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-06T11:00:32Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-bolt
+**Command**: amadeus-bolt start --name B001-build-ts
+**Error**: Missing --batch <batch-number>
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-06T11:00:39Z
+**Event**: BOLT_STARTED
+**Bolt names**: B001-build-ts
+**Batch number**: 1
+**Walking skeleton**: false
+
+---
+
+## Bolt Completed
+**Timestamp**: 2026-07-06T11:00:51Z
+**Event**: BOLT_COMPLETED
+**Bolt names**: B001-build-ts
+**Batch number**: 1
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-06T11:00:51Z
+**Event**: DECISION_RECORDED
+**Stage**: code-generation
+**Decision**: B001（build.ts walking skeleton）の Bolt 完了。Bolt PR #584 を人間が merge（= walking skeleton の人間承認、BR-7。2026-07-06、merge commit は origin/main 580f6dee 系列）。gate evidence = Bolt PR merge + BOLT_COMPLETED（PR gate 運用の規定どおり）。reviewer READY（Medium 2 は B002/B003 申し送り）。B002 は solo window 確定後に着手
+**Options**: bolt-complete
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T11:01:59Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T11:03:05Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T11:04:15Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T11:32:00Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T11:48:06Z
+**Event**: HUMAN_TURN
+
+---
+
+## Session Compacted
+**Timestamp**: 2026-07-06T12:15:51Z
+**Event**: SESSION_COMPACTED
+**Current Stage**: code-generation
+**State Validity**: valid
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T12:17:41Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: afff63d7991dcd871
+**Message**: <analysis>\nThe conversation is a continuation of a previous session about executing Bolt B002 (restructure) for Intent 260706-three-layer-build (Issue #572) on branch eng1/issue-572-three-layer. The w
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T12:23:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: d068b3d7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/rename-leftovers/check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T12:23:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: d068b3d7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/rename-leftovers/check.ts
+**Duration ms**: 729
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T12:23:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: 65c36c37
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/rename-leftovers/check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T12:23:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: 65c36c37
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/rename-leftovers/check.ts
+**Duration ms**: 709
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T12:24:42Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8822e659
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/parity-check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T12:24:42Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8822e659
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/parity-check.ts
+**Duration ms**: 719
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T12:24:42Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3f049aac
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/parity-check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T12:24:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3f049aac
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/parity-check.ts
+**Duration ms**: 484
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T12:25:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: 938a4c9d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/rename-leftovers/check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T12:25:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: 938a4c9d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/rename-leftovers/check.ts
+**Duration ms**: 752
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T12:25:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: 012816a5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/rename-leftovers/check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T12:25:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: 012816a5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/rename-leftovers/check.ts
+**Duration ms**: 493
+
+---
+
+## Session Compacted
+**Timestamp**: 2026-07-06T12:28:02Z
+**Event**: SESSION_COMPACTED
+**Current Stage**: code-generation
+**State Validity**: valid
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T12:30:20Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: unknown
+**Agent ID**: a0510c0bf2dad9d2f
+**Message**: <analysis>\nLet me carefully trace through this session's work:\n\n**Context carried over from previous session:**\n- Branch: `eng1/issue-572-three-layer` \n- Working dir: `/Users/j5ik2o/Sources/j5ik2o.git
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T12:34:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 94129b00
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/promote-skill/check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T12:34:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: 94129b00
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/promote-skill/check.ts
+**Duration ms**: 763
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T12:34:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: fe236064
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/promote-skill/check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T12:34:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: fe236064
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/promote-skill/check.ts
+**Duration ms**: 545
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T12:35:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2b4442c5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/promote-skill/check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T12:35:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2b4442c5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/promote-skill/check.ts
+**Duration ms**: 732
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T12:35:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7985b30c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/promote-skill/check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T12:35:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7985b30c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: dev-scripts/evals/promote-skill/check.ts
+**Duration ms**: 512
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-06T12:37:37Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer1/amadeus/spaces/default/intents/260706-three-layer-build/construction/code-generation/memory.md
+**Context**: construction > code-generation > memory.md
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T12:38:40Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: afab6c75d3baa5271
+**Message**: 作業ツリーはクリーン。B002 の全ステップが完了した。\n\n---\n\n## B002 完了報告\n\n### コミット履歴（B002 分）\n\n| コミット | 内容 |\n|---|---|\n| `0e9a58c2` | `git mv` restructure: `skills/` → `core/`、エンジン正準 → `core/`、`openai.yaml` → `harness/codex/` 
+
+---

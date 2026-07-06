@@ -20,8 +20,8 @@ const generatedPaths = generatedContractFiles().map((file) => file.path).sort();
 for (const path of [
   "amadeus-contracts/generated/skills.json",
   "amadeus-contracts/generated/references.md",
-  "skills/amadeus-grilling/references/skill-contract.md",
-  "skills/amadeus-validator/references/skill-contract.md",
+  "core/skills/amadeus-grilling/references/skill-contract.md",
+  "core/skills/amadeus-validator/references/skill-contract.md",
   ".agents/skills/amadeus-grilling/references/skill-contract.md",
   ".agents/skills/amadeus-validator/references/skill-contract.md",
 ]) {
@@ -48,7 +48,7 @@ const skillsJson = readFileSync(join(root, "amadeus-contracts/generated/skills.j
 assert(skillsJson.includes("\"skillContracts\""), "skills.json contains skill contracts");
 assert(skillsJson.includes("\"consumerReferences\""), "skills.json contains consumer references");
 
-const grillingReference = readFileSync(join(root, "skills/amadeus-grilling/references/skill-contract.md"), "utf8");
+const grillingReference = readFileSync(join(root, "core/skills/amadeus-grilling/references/skill-contract.md"), "utf8");
 assert(grillingReference.includes("## Consumer References"), "skill reference documents include consumer references");
 assert(grillingReference.includes("validator"), "skill reference documents include validator consumer");
 

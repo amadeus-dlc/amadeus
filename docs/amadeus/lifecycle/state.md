@@ -6,7 +6,7 @@
 - [AI-DLC v2 State Template](https://github.com/awslabs/aidlc-workflows/blob/v2/core/knowledge/amadeus-shared/state-template.md)
 - [AI-DLC v2 Audit Format](https://github.com/awslabs/aidlc-workflows/blob/v2/core/knowledge/amadeus-shared/audit-format.md)
 
-The vendored copy lives at `skills/amadeus/references/aidlc-v2/`.
+The vendored copy lives at `core/skills/amadeus/references/aidlc-v2/`.
 Compliance is judged by structural match against the vendored copy.
 
 ## Inputs
@@ -45,7 +45,7 @@ The section structure follows the v2 state template as-is.
 
 Reading and writing are scoped to section headings, checklist lines (the `- [x] <stage-slug>` form), and field lines (the `**Key**: value` form) only.
 A write replaces only the target line; it preserves the section order and any unknown lines.
-The parse contract is implemented in `skills/amadeus-validator/validator/aidlc-state-contract.ts`, shared by the single entry point and the validator.
+The parse contract is implemented in `core/skills/amadeus-validator/validator/aidlc-state-contract.ts`, shared by the single entry point and the validator.
 
 ## Stage state
 

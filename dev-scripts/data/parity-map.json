@@ -1,5 +1,6 @@
 {
   "baselineCommit": "fde1e1af7aae16f4c4defc991abaa3877ee2ac26",
+  "skillsSourceDir": "core/skills",
   "skillNameMapping": {
     "prefix": "aidlc",
     "replacement": "amadeus",
@@ -727,7 +728,8 @@
     "tools/aidlc-sensor-linter.ts",
     "sensors/aidlc-linter.md",
     "hooks/aidlc-log-subagent.ts",
-    "hooks/aidlc-runtime-compile.ts"
+    "hooks/aidlc-runtime-compile.ts",
+    "knowledge/aidlc-pipeline-deploy-agent/branching-strategies.md"
   ],
   "exceptions": [
     {

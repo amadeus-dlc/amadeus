@@ -44,7 +44,7 @@ Amadeus は 5 グループ、計 42 個の skill を持つ。
 - shortcut 6 個: scope entry skill 群、composer、Initialization 全体を実行する runner。
 - read-only の utility skill 3 個: `amadeus-replay`、`amadeus-session-cost`、`amadeus-outcomes-pack`。
 
-stage と runner の全対応は [Stage Catalog](../../skills/amadeus/references/stage-catalog.md) が保守する。
+stage と runner の全対応は [Stage Catalog](../../core/skills/amadeus/references/stage-catalog.md) が保守する。
 本ガイドはその内容を複製しない。
 
 ## AI-DLC v2 との関係

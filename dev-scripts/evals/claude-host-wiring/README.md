@@ -17,6 +17,6 @@
 
 ## 境界
 
-- `skills/` と `.agents/skills/` の内容一致は、この eval では扱わない。
+- `core/skills/` と `.agents/skills/` の内容一致は、この eval では扱わない。
   promote-skill evals が一時ディレクトリへの再昇格と差分比較で確認する。
 - `.claude/settings.json` の内容一致は扱わず、存在と JSON 妥当性に留める。

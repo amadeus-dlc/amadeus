@@ -6,6 +6,8 @@
     "test": "npm run test:all",
     "test:all": "npm run test:ci:mock",
     "test:ci:mock": "npm run typecheck && npm run lint:check && npm run contracts:check && npm run parity:check && npm run claude-wiring:check && npm run grilling-wiring:check && npm run issue-ref-contract:check && npm run test:it:all && npm run test:it:engine-e2e && npm run diff:check",
+    "build": "bun run dev-scripts/build.ts",
+    "build:check": "bun run dev-scripts/build.ts --check",
     "typecheck": "tsc --noEmit",
     "lint": "npm run lint:check",
     "lint:report": "bun run lints/check.ts --report",

@@ -386,8 +386,8 @@ const PROMOTE_SKILL_NAME = "test-skill";
 // だけに作用し、実 repo には一切触れない。
 function makePromoteFixture(agentModelOverrideValue: string, overlay: unknown): string {
   const ws = tmpDir("model-overlay-promote-");
-  mkdirSync(join(ws, `skills/${PROMOTE_SKILL_NAME}`), { recursive: true });
-  writeFileSync(join(ws, `skills/${PROMOTE_SKILL_NAME}/SKILL.md`), "# test-skill\n");
+  mkdirSync(join(ws, `core/skills/${PROMOTE_SKILL_NAME}`), { recursive: true });
+  writeFileSync(join(ws, `core/skills/${PROMOTE_SKILL_NAME}/SKILL.md`), "# test-skill\n");
   mkdirSync(join(ws, ".agents/amadeus/agents"), { recursive: true });
   writeFileSync(join(ws, AGENT_REL_PATH), agentFileContent(agentModelOverrideValue));
   mkdirSync(join(ws, "dev-scripts/data"), { recursive: true });

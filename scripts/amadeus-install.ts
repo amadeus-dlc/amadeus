@@ -64,7 +64,7 @@ export const MANIFEST = {
     // the next blank line (business-logic-model O-1).
     removeBlocks: [
       "- Skill sources:",
-      "ステージ skill（`skills/amadeus-",
+      "ステージ skill（`core/skills/amadeus-",
       "「実際に動く実行結果の検証」は、",
       "Skill 昇格の確認は、",
     ],
@@ -72,7 +72,7 @@ export const MANIFEST = {
     // by callers — some contain a negative lookbehind, so they cannot be
     // regex literals (they contain "/").
     devReferencePatterns: [
-      String.raw`(?<!\.agents/)skills/amadeus`,
+      String.raw`core/skills/amadeus`,
       "dev-scripts/",
       "parity:check",
       "promote-skill",

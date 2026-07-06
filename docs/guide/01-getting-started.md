@@ -29,7 +29,7 @@ Here is a real run, captured against a fresh workspace (its absolute path is sho
 ```
 amadeus-install: installing into <workspace>
 [1/5] engine        .agents/amadeus/ (7 dirs, replaced)
-[2/5] skills        .claude/skills/amadeus*, .agents/skills/amadeus* (replaced)
+[2/5] skills        .claude/core/skills/amadeus*, .agents/skills/amadeus* (replaced)
 [3/5] symlinks      .claude/{agents,amadeus-common,hooks,knowledge,scopes,sensors,tools} (recreated)
 [4/5] settings      .claude/settings.json (hooks merged: 11 entries, 0 duplicates)
 [5/5] smoke         doctor check passed

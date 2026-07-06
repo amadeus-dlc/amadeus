@@ -199,6 +199,7 @@ function writeParityMap(workspace: string, overrides: Partial<{ missingSkillExce
   mkdirSync(join(workspace, "dev-scripts/data"), { recursive: true });
   const map = {
     baselineCommit: upstreamCommit,
+    skillsSourceDir: "core/skills",
     skillNameMapping: { prefix: "aidlc", replacement: "amadeus", rule: "aidlc-<x> -> amadeus-<x>; aidlc -> amadeus" },
     nameMappings,
     relocations: [
@@ -233,8 +234,8 @@ function writeMatchingLocalWorkspace(): string {
   writeParityMap(workspace);
 
   for (const name of ["amadeus", "amadeus-x"]) {
-    mkdirSync(join(workspace, "skills", name), { recursive: true });
-    writeFileSync(join(workspace, "skills", name, "SKILL.md"), `# ${name}\n`);
+    mkdirSync(join(workspace, "core/skills", name), { recursive: true });
+    writeFileSync(join(workspace, "core/skills", name, "SKILL.md"), `# ${name}\n`);
     mkdirSync(join(workspace, ".agents/skills", name), { recursive: true });
     writeFileSync(join(workspace, ".agents/skills", name, "SKILL.md"), `# ${name}\n`);
   }
@@ -256,9 +257,9 @@ const happyWorkspace = writeMatchingLocalWorkspace();
 run(["bun", "run", checker, happyWorkspace]);
 console.log("parity-check happy path (nameMappings): ok");
 
-// (C2) 写像先 skill ディレクトリが skills/ に欠けていると fail する。
+// (C2) 写像先 skill ディレクトリが core/skills/ に欠けていると fail する。
 const missingSkillWorkspace = writeMatchingLocalWorkspace();
-rmSync(join(missingSkillWorkspace, "skills/amadeus-x"), { recursive: true, force: true });
+rmSync(join(missingSkillWorkspace, "core/skills/amadeus-x"), { recursive: true, force: true });
 runExpectFailure(["bun", "run", checker, missingSkillWorkspace], "amadeus-x");
 
 // (C3) engine ファイルの内容が変わっていると fail する（hash 不一致）。
@@ -278,7 +279,7 @@ runExpectFailure(["bun", "run", checker, changedRulesWorkspace], "rules/aidlc.md
 
 // (C6) parity-map.json の missingSkillExceptions に宣言された欠落は pass する。
 const declaredMissingSkillWorkspace = writeMatchingLocalWorkspace();
-rmSync(join(declaredMissingSkillWorkspace, "skills/amadeus-x"), { recursive: true, force: true });
+rmSync(join(declaredMissingSkillWorkspace, "core/skills/amadeus-x"), { recursive: true, force: true });
 rmSync(join(declaredMissingSkillWorkspace, ".agents/skills/amadeus-x"), { recursive: true, force: true });
 writeParityMap(declaredMissingSkillWorkspace, { missingSkillExceptions: ["amadeus-x"] });
 run(["bun", "run", checker, declaredMissingSkillWorkspace]);

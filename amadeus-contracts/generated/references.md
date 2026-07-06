@@ -10,8 +10,8 @@
 
 ### amadeus-grilling
 
-- reference: `skills/amadeus-grilling/references/skill-contract.md`
+- reference: `core/skills/amadeus-grilling/references/skill-contract.md`
 
 ### amadeus-validator
 
-- reference: `skills/amadeus-validator/references/skill-contract.md`
+- reference: `core/skills/amadeus-validator/references/skill-contract.md`

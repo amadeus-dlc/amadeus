@@ -1,10 +1,10 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 
-const annexRelPath = "skills/amadeus/references/question-rendering.md";
-const codexAnnexRelPath = "skills/amadeus/references/question-rendering-codex.md";
-const conductorRelPath = "skills/amadeus/SKILL.md";
-const bridgeRelPath = "skills/amadeus-grilling/references/engine-bridge.md";
+const annexRelPath = "core/skills/amadeus/references/question-rendering.md";
+const codexAnnexRelPath = "core/skills/amadeus/references/question-rendering-codex.md";
+const conductorRelPath = "core/skills/amadeus/SKILL.md";
+const bridgeRelPath = "core/skills/amadeus-grilling/references/engine-bridge.md";
 const promotedRoot = ".agents/skills";
 
 // The canonical label order shared by the Claude Code annex and the Codex
@@ -123,20 +123,22 @@ function bridgeLanguageIssues(root: string): string[] {
 }
 
 function stageSkillDirs(root: string): string[] {
-  const skillsDir = join(root, "skills");
-  if (!existsSync(skillsDir)) return [];
-  return readdirSync(skillsDir).filter((name) => {
+  const skillsDir = join(root, "core/skills");
+  if (!existsSync(skillsDir)) throw new Error(`stageSkillDirs: core/skills directory not found at ${skillsDir}`);
+  const dirs = readdirSync(skillsDir).filter((name) => {
     if (!name.startsWith("amadeus-")) return false;
     const skillPath = join(skillsDir, name, "SKILL.md");
     if (!existsSync(skillPath)) return false;
     return isStageRunnerSkill(readFileSync(skillPath, "utf8"));
   });
+  if (dirs.length === 0) throw new Error(`stageSkillDirs: 0 stage-runner skills found under ${skillsDir}`);
+  return dirs;
 }
 
 function stageWordingIssues(root: string, dirs: string[]): string[] {
   const issues: string[] = [];
   for (const dir of dirs) {
-    const relPath = `skills/${dir}/SKILL.md`;
+    const relPath = `core/skills/${dir}/SKILL.md`;
     const text = readFileSync(join(root, relPath), "utf8");
     if (text.includes(oldStageWordingMarker)) {
       issues.push(`${relPath}: still carries the OLD unconditional grilling-bridge wording`);
@@ -184,7 +186,7 @@ function promotionIssues(root: string, relPaths: string[]): string[] {
   const issues: string[] = [];
   for (const relPath of relPaths) {
     const sourcePath = join(root, relPath);
-    const promotedPath = join(root, promotedRoot, relPath.slice("skills/".length));
+    const promotedPath = join(root, promotedRoot, relPath.slice("core/skills/".length));
     if (!existsSync(sourcePath)) {
       issues.push(`missing file: ${relPath}`);
       continue;
@@ -216,13 +218,13 @@ export function grillingWiringIssues(root: string): string[] {
     codexAnnexRelPath,
     conductorRelPath,
     bridgeRelPath,
-    ...dirs.map((dir) => `skills/${dir}/SKILL.md`),
+    ...dirs.map((dir) => `core/skills/${dir}/SKILL.md`),
   ];
   issues.push(...promotionIssues(root, affectedRelPaths));
 
   for (const relPath of affectedRelPaths) {
     issues.push(...pathResolutionIssues(root, relPath));
-    const promotedRelPath = join(promotedRoot, relPath.slice("skills/".length));
+    const promotedRelPath = join(promotedRoot, relPath.slice("core/skills/".length));
     issues.push(...pathResolutionIssues(root, promotedRelPath));
   }
 

@@ -68,7 +68,7 @@
 1. `git clone https://github.com/awslabs/aidlc-workflows.git && git checkout <新基準 commit>`
 2. `dist/codex/.agents/skills/*/agents/openai.yaml` を全列挙し、sha256 で内容の同一性を照合（相違があれば本文書へ記録）。
 3. prefix 規則を機械適用して写像表を再生成し、本文書の表と基準 commit を更新。
-4. 取り込み対象の `skills/amadeus-*/agents/openai.yaml` を上流実体 + provenance コメント 4 行で更新。
+4. 取り込み対象の `harness/codex/skills/amadeus-*/agents/openai.yaml` を上流実体 + provenance コメント 4 行で更新。
 5. 対象 skill を `bun run dev-scripts/promote-skill.ts <skill> --replace` で 1 件ずつ昇格し、`npm run test:it:promote-skill` と `npm run test:all` を実行。
 
 Phase 2（build.ts 化）でこの手順は「生成物の再生成 CI 検証」へ置き換わる予定（README.md を参照）。

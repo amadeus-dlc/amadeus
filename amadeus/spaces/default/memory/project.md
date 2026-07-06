@@ -31,7 +31,7 @@ team.md の内容を上書きする。
 ## アーキテクチャ
 
 - Amadeus は、source skill、昇格先 skill、validator、example snapshot、開発用スクリプトで構成する。
-- skill の source は `skills/amadeus-*` に置く。
+- skill の source は `core/skills/amadeus-*` に置く。
 - 昇格先成果物は `.agents/skills/amadeus-*` に置く。
 - example snapshot は `examples/**/amadeus` に置く。
 
@@ -95,8 +95,8 @@ npm run examples:generate:real
 |---|---|---|---|---|
 | Space | `amadeus/spaces/default/` | 自己開発の共有前提（`memory/`、`knowledge/`）を置く。 | `amadeus/spaces/default/memory/team.md` | 採用 |
 | Intent record | `amadeus/spaces/default/intents/<YYMMDD>-<label>/` | 個別変更の成果物を置く。 | `amadeus/spaces/default/intents/260705-github-kanban-sync/` | 採用 |
-| Source skill | `skills/amadeus-*` | 作業中の skill source を置く。 | `skills/amadeus-validator/` | 採用 |
-| Source skill assets | `skills/amadeus-*/assets` | source skill に属する素材を置く。 | `skills/amadeus-validator/assets/` | 採用 |
+| Source skill | `core/skills/amadeus-*` | 作業中の skill source を置く。 | `core/skills/amadeus-validator/` | 採用 |
+| Source skill assets | `core/skills/amadeus-*/assets` | source skill に属する素材を置く。 | `core/skills/amadeus-validator/assets/` | 採用 |
 | 昇格先 skill | `.agents/skills/amadeus-*` | 実行側が読む skill を置く。 | `.agents/skills/amadeus-validator/` | 採用 |
 | 昇格先 skill assets | `.agents/skills/amadeus-*/assets` | 昇格先成果物に属する素材を置く。 | `.agents/skills/amadeus-validator/assets/` | 採用 |
 | Example snapshot | `examples/**/amadeus` | skill 生成結果の snapshot を置く。 | `examples/03-construction-design-ready/aidlc` | 採用 |
@@ -137,7 +137,7 @@ Intent の正準 ID は `intents/intents.json`（registry）の UUIDv7 である
 
 - amadeus-state.md の Per unit: [TBD] を更新する tool verb は存在しない。units-generation を SKIP する scope では、Construction 成果物を置いた実 unit 名へ record 整合として手動更新する（前例: e10f8294）。放置すると validator が construction/[TBD]/ の produces を要求して fail する (learned 2026-07-05) <!-- cid:build-and-test:c2 -->
 - GitHub kanban（Projects v2 ミラー）は Maintainer 専用の表示鏡として扱う。エージェントの並行可否判断・情報共有はローカル成果物（intents.json、amadeus-state.md = 正）で行い、遅延を含む鏡を判断材料にしない。並行で走らせるかの判断は人間（ゲート審査官）が行う (learned 2026-07-05) <!-- cid:intent-capture:c2 -->
-- GitHub kanban 機能はこのリポジトリ内だけで起動する開発ツール（dev-scripts/ とリポジトリローカル hook 設定）に限定する。Amadeus 本体の機能（skills/amadeus*、.agents/amadeus/ エンジン、昇格先、parity 対象）としては実装しない (learned 2026-07-05) <!-- cid:market-research:c3 -->
+- GitHub kanban 機能はこのリポジトリ内だけで起動する開発ツール（dev-scripts/ とリポジトリローカル hook 設定）に限定する。Amadeus 本体の機能（core/skills/amadeus*、.agents/amadeus/ エンジン、昇格先、parity 対象）としては実装しない (learned 2026-07-05) <!-- cid:market-research:c3 -->
 - Projects v2 への書き込みは gh project item-edit（1 呼び出し 1 フィールド制約）ではなく gh api graphql の mutation batch で行う (learned 2026-07-05) <!-- cid:market-research:c5 -->
 - GitHub kanban sync は暫定機構として軽量に実装する（堅牢化・通知系・統計を作り込まない。冪等な全上書き + drop 記録 + 次回回復の最小構成）。後日本格的な仕組みへ置き換える前提 (learned 2026-07-05) <!-- cid:feasibility:c2 -->
 - 多体連携（leader + engineer1〜3）の gate 承認中継では、中継承認定型文の受信直後に限り hooks/amadeus-mint-presence.ts で HUMAN_TURN を mint し、ピア協議の回答受信では mint しない。承認経路（人間 → leader → engineer）を decision に明記する (learned 2026-07-06) <!-- cid:reverse-engineering:c1 -->

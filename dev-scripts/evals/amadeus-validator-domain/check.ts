@@ -3,12 +3,12 @@
 // validator の domain モジュール（v2 一本化後に残る artifact-links と ArtifactPath）の単体検証。
 // 旧契約（schemaVersion 1）専用の domain モジュールとその検証は #381 で退役した。
 
-import { artifactPath } from "../../../skills/amadeus-validator/validator/domain/primitives";
+import { artifactPath } from "../../../core/skills/amadeus-validator/validator/domain/primitives";
 import {
   cleanMarkdownLinkTarget,
   resolveArtifactLinkTarget,
   tryResolveArtifactLinkTarget,
-} from "../../../skills/amadeus-validator/validator/domain/artifact-links";
+} from "../../../core/skills/amadeus-validator/validator/domain/artifact-links";
 
 function assert(condition: boolean, message: string): void {
   if (!condition) {

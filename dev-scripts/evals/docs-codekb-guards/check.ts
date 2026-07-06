@@ -330,7 +330,7 @@ try {
     { recursive: true },
   );
 
-  const validatorSrc = join(root, "skills/amadeus-validator/validator/AmadeusValidator.ts");
+  const validatorSrc = join(root, "core/skills/amadeus-validator/validator/AmadeusValidator.ts");
   const stubCondition = "codekb 採用 stub の参照先正本が存在する";
 
   const b003Pass = run(["bun", validatorSrc, b003Ws, "260705-steering-learnings"], root);

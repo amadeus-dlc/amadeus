@@ -9,11 +9,11 @@ When a stage creates a questions file (`<stage>-questions.md`), the human is off
 - **I'll edit the file** — fill in the answers directly in the questions file, then tell the conductor when you're done.
 - **Chat** — discuss the topic freely; the conductor extracts decisions from the conversation as they emerge.
 
-All four converge on the same place: whatever mode produced it, every answer is written back into the questions file's `[Answer]:` tags, which remain the single authoritative record. A human can also switch modes mid-stage — starting with Guide me and finishing the rest in Chat, for instance. The exact rendering of these options depends on the harness and is defined in the [question-rendering annex](../../skills/amadeus/references/question-rendering.md) — in Codex, for instance, three options are listed and Chat is reached through the free-text custom option rather than a dedicated one.
+All four converge on the same place: whatever mode produced it, every answer is written back into the questions file's `[Answer]:` tags, which remain the single authoritative record. A human can also switch modes mid-stage — starting with Guide me and finishing the rest in Chat, for instance. The exact rendering of these options depends on the harness and is defined in the [question-rendering annex](../../core/skills/amadeus/references/question-rendering.md) — in Codex, for instance, three options are listed and Chat is reached through the free-text custom option rather than a dedicated one.
 
 ## Grill me and the grilling protocol
 
-Picking Grill me hands the question flow to the `amadeus-grilling` bridge protocol. Questions are presented one at a time, never batched: each carries a recommended answer and the reasoning behind it, and the conductor waits for the human's response before moving to the next question. This is the same discipline the [amadeus-grilling skill](../../skills/amadeus-grilling/SKILL.md) follows everywhere else it is invoked — research the codebase and existing artifacts first, ask only what still needs human judgment, and always attach a recommendation.
+Picking Grill me hands the question flow to the `amadeus-grilling` bridge protocol. Questions are presented one at a time, never batched: each carries a recommended answer and the reasoning behind it, and the conductor waits for the human's response before moving to the next question. This is the same discipline the [amadeus-grilling skill](../../core/skills/amadeus-grilling/SKILL.md) follows everywhere else it is invoked — research the codebase and existing artifacts first, ask only what still needs human judgment, and always attach a recommendation.
 
 ## The questions file
 
