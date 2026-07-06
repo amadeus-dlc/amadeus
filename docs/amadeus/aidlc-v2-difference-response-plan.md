@@ -1,70 +1,70 @@
 # AI-DLC v2 Difference Response Plan
 
-この文書は、Issue #401 の判断として、AI-DLC v2 との差分を扱う #391、#392、#393、#394 の対応順序と PR 境界を定義する。
+This document defines, as the judgment for Issue #401, the response order and PR boundaries for #391, #392, #393, and #394, which handle differences from AI-DLC v2.
 
-Issue #395 の [Skill Language Policy](skill-language-policy.md) と、Issue #400 の代表 skill 英語化を前提にする。
+It builds on Issue #395's [Skill Language Policy](skill-language-policy.md) and Issue #400's englishization of representative skills.
 
-## 方針
+## Policy
 
-AI-DLC v2 との差分対応は、英語化 PR と意味変更 PR を分ける。
+Response to differences from AI-DLC v2 splits englishization PRs from semantic-change PRs.
 
-Amadeus DLC 固有の契約は、AI-DLC v2 との対応確認を理由に削らない。
+Contracts specific to Amadeus DLC are not dropped merely to confirm correspondence with AI-DLC v2.
 
-各 PR は、次を PR 説明に明記する。
+Each PR states the following in its description:
 
-- 対象 Issue。
-- 英語化だけか、意味変更を含むか。
-- AI-DLC v2 から取り込む項目。
-- Amadeus DLC の意図的差分として維持する項目。
-- source skill と昇格先 skill の同期方法。
-- 実行した検証。
+- The target Issue.
+- Whether it is englishization only, or includes a semantic change.
+- The items adopted from AI-DLC v2.
+- The items retained as Amadeus DLC's intentional differences.
+- How the source skill and its promoted counterpart are synchronized.
+- The verification that was run.
 
-## 対応順序
+## Response Order
 
-| 順序 | Issue | 分類 | 先に扱う理由 | PR 境界 |
+| Order | Issue | Category | Reason to handle it first | PR boundary |
 |---:|---|---|---|---|
-| 1 | #391 reviewer 指定の対応 | 意味変更の判断 | reviewer の扱いは、stage skill の承認、確認、差し戻しの語彙に影響するため。 | reviewer 指定がある AI-DLC v2 stage を一覧化し、Amadeus DLC で reviewer を実行するか、既存の成果物確認へ写像するかを stage ごとに決める。任意の reviewer agent 実装は含めない。 |
-| 2 | #393 sensor と Learn の写像 | 意味変更の判断 | sensor と Learn は、#391 の reviewer 判断と同じく、stage 完了前後の確認と知見記録に関わるため。 | sensor ごとの検証先を `amadeus-validator`、build and test、stage 固有成果物へ写像する。Learn は `memory.md`、`decisions.md`、`traceability.md`、`grillings` のどこへ記録するかを明記する。`.amadeus-sensors/` 相当の仕組み追加は含めない。 |
-| 3 | #392 Build and Test の失敗時処理 | 意味変更の判断 | Build and Test の失敗時処理は、#391 と #393 で決める確認と知見記録の境界を受けるため。 | 現在の halt-and-ask と Code Generation 責務分離を維持するか、AI-DLC v2 に寄せるかを決める。維持する場合は理由を lifecycle docs と skill に記録する。修正の自動再試行実装は含めない。 |
-| 4 | #394 Operation phase の対象外理由 | 境界の明確化 | Operation phase は現在の Amadeus DLC 対象外であり、#391、#392、#393 の Construction までの判断後に境界を明文化するのが自然であるため。 | Operation phase を対象外にする理由を、成果物契約、gate、validator、PR 境界の観点で説明する。Operation skill の追加や取り込みは含めない。 |
+| 1 | #391 Handling the reviewer designation | Semantic-change judgment | How reviewer is handled affects the vocabulary of a stage skill's approval, confirmation, and rejection. | List the AI-DLC v2 stages that designate a reviewer, and decide per stage whether Amadeus DLC runs the reviewer or maps it to an existing artifact confirmation. Does not include implementing any reviewer agent. |
+| 2 | #393 Mapping sensor and Learn | Semantic-change judgment | Sensor and Learn, like the reviewer judgment in #391, concern confirmation before and after stage completion and the recording of insights. | Map each sensor's verification target to `amadeus-validator`, build and test, or stage-specific artifacts. Specify where Learn is recorded — `memory.md`, `decisions.md`, `traceability.md`, or `grillings`. Does not include adding a mechanism equivalent to `.amadeus-sensors/`. |
+| 3 | #392 Build and Test failure handling | Semantic-change judgment | Build and Test's failure handling inherits the confirmation and insight-recording boundaries decided in #391 and #393. | Decide whether to keep the current halt-and-ask and Code Generation separation of responsibilities, or align with AI-DLC v2. If kept, record the reason in the lifecycle docs and the skill. Does not include implementing automatic retry of fixes. |
+| 4 | #394 Reason Operation phase is out of scope | Boundary clarification | Operation phase is currently out of Amadeus DLC's scope, and it is natural to document the boundary after the Construction-level judgments in #391, #392, and #393. | Explain the reason Operation phase is out of scope, from the viewpoints of the artifact contract, gate, validator, and PR boundary. Does not include adding or adopting any Operation skill. |
 
-## Issue ごとの PR 記述要件
+## PR Description Requirements per Issue
 
-| Issue | PR 説明に必ず書くこと |
+| Issue | Must state in the PR description |
 |---|---|
-| #391 | reviewer 指定がある AI-DLC v2 stage の一覧。stage ごとの Amadeus DLC 側の扱い。採用しない reviewer の理由と検証手段。 |
-| #393 | sensor ごとの検証先。Learn の記録先。採用しない sensor または Learn 項目の理由。 |
-| #392 | Build and Test の失敗時処理が従う契約。`test-results.md` に残す内容。Bolt gate との関係。 |
-| #394 | Operation phase が現在の対象外である理由。AI-DLC v2 Operation skill 一覧と Amadeus 側の扱い。将来対応する場合の別 Issue または roadmap。 |
+| #391 | The list of AI-DLC v2 stages that designate a reviewer. How each stage is handled on the Amadeus DLC side. The reason for not adopting the reviewer and the verification means used instead. |
+| #393 | The verification target for each sensor. Where Learn is recorded. The reason for not adopting a given sensor or Learn item. |
+| #392 | The contract that Build and Test's failure handling follows. What is retained in `test-results.md`. The relationship to the Bolt gate. |
+| #394 | The reason Operation phase is currently out of scope. The list of AI-DLC v2 Operation skills and how Amadeus handles them. A separate Issue or roadmap for handling it in the future. |
 
-## 検証コマンド
+## Verification Commands
 
-各 PR は、変更範囲に応じて次を実行する。
+Each PR runs the following, according to its change scope.
 
 ```sh
 npm run test:all
 bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts . 260703-amadeus-skill-english-rollout-plan
 ```
 
-Amadeus skill を変更した PR は、加えて次を実行する。
+A PR that changes an Amadeus skill also runs the following.
 
 ```sh
 bun run dev-scripts/promote-skill.ts <skill-name> --replace
 npm run test:it:promote-skill
 ```
 
-複数 skill を変更した場合は、変更した全 source skill を昇格フローで同期する。
+When multiple skills are changed, synchronize every changed source skill through the promotion flow.
 
-## 衝突回避
+## Avoiding Conflicts
 
-#391、#392、#393、#394 は、残り skill の段階的英語化を扱う #402 と混ぜない。
+Do not mix #391, #392, #393, and #394 with #402, which handles the phased englishization of the remaining skills.
 
-ただし、#391 から #394 のいずれかで対象 skill を更新する場合、その PR 内で触った `SKILL.md` だけを英語化済みの文体へ寄せてもよい。
+However, when a PR for #391 through #394 updates a target skill, that PR may also bring only the `SKILL.md` files it touches into the already-englishized style.
 
-その場合でも、PR 説明では英語化部分と意味変更部分を分けて説明する。
+Even then, the PR description explains the englishization part and the semantic-change part separately.
 
-## #401 の完了条件
+## Completion Condition for #401
 
-Issue #401 は、この文書を含む PR が merge され、#391、#392、#393、#394 の対応順序と PR 境界を追跡できる状態になった時点で完了とする。
+Issue #401 is complete once the PR containing this document is merged and the response order and PR boundaries for #391, #392, #393, and #394 become traceable.
 
-#391、#392、#393、#394 の個別 close は #401 の完了条件に含めない。
+The individual closing of #391, #392, #393, and #394 is not included in #401's completion condition.
