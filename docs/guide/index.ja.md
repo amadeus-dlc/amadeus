@@ -58,4 +58,4 @@ Amadeus 自体を開発する人向けではなく、自分のプロジェクト
 - [README](../../README.ja.md)：プロジェクト概要と導入クイックスタート。
 - [AMADEUS.md](../../AMADEUS.md)：本リポジトリでエージェントが読み込む共通入口の文書。
 - [拡張ガイド](../amadeus/extension-guide.ja.md)：導入済み workspace をステアリングするために編集する対象。
-- [Lifecycle Contract Overview](../amadeus/lifecycle/overview.md)：phase、stage、gate の契約の正。
+- [Lifecycle Contract Overview](../amadeus/lifecycle/overview.ja.md)：phase、stage、gate の契約の正。

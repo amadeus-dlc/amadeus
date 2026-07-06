@@ -7,8 +7,8 @@ AI-DLC v2（[awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows
 
 作業は **Intent** を単位に組み立てる。
 Intent は、独立して完了判断でき、観測可能な成功基準を持つアウトカムである。
-Intent は Ideation、Inception、Construction を進む。Operation ステージを含む scope では、さらに Operation へ進む（どの scope がどのステージを実行するかは [scopes 契約](../amadeus/lifecycle/scopes.md)が定義する）。
-契約全体（stage の責務、入出力、その裏にある状態機械）は [Lifecycle Contract Overview](../amadeus/lifecycle/overview.md) が定義する。
+Intent は Ideation、Inception、Construction を進む。Operation ステージを含む scope では、さらに Operation へ進む（どの scope がどのステージを実行するかは [scopes 契約](../amadeus/lifecycle/scopes.ja.md)が定義する）。
+契約全体（stage の責務、入出力、その裏にある状態機械）は [Lifecycle Contract Overview](../amadeus/lifecycle/overview.ja.md) が定義する。
 
 各 stage の完了と各 gate の判断は、Intent 自身の record 配下に audit イベントとして記録する。
 各 stage gate と、Construction の各 Bolt gate は、作業が先へ進む前に人間の明示判断を待つ。
@@ -32,7 +32,7 @@ skill 層は、エンジンが返す directive を実行し、結果を報告し
 すべての Intent が 32 stage すべてを実行するわけではない。
 10 個の **scope**（`.agents/amadeus/scopes/` 配下に 1 scope 1 ファイルで定義。例: `poc`、`feature`、`mvp`、`enterprise`）が、それぞれ 32 stage のうち独自の EXECUTE / SKIP 部分集合を宣言する。
 scope により、小さな Intent は大きな Intent が必要とする儀式を省略できる。
-scope ごとの正確な stage 集合は [scopes 契約](../amadeus/lifecycle/scopes.md)が定義する。
+scope ごとの正確な stage 集合は [scopes 契約](../amadeus/lifecycle/scopes.ja.md)が定義する。
 
 ## skill 一覧
 
