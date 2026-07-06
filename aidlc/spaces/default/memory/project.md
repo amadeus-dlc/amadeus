@@ -146,3 +146,4 @@ Intent の正準 ID は `intents/intents.json`（registry）の UUIDv7 である
 - エンジン/validator の eval fixture はエンジンの実出力形を正とする。validator の期待に手書きで合わせた fixture は不整合を隠す（#458 は fixture が [S] 前提だったため見逃された）。可能なら隔離 workspace で実 CLI を起動して実出力そのものを検査する (learned 2026-07-05) <!-- cid:code-generation:c5 -->
 - TDD が中断されて実装が eval より先行した場合は、遡及 RED 検証（実装ファイルを git stash → 追加した eval 検査が FAIL することを確認 → stash pop → 全 GREEN）で eval の検出力を証明してから GREEN と扱う (learned 2026-07-05) <!-- cid:code-generation:c6 -->
 - エンジン/validator の eval の試験材料は、作業中 Intent の record（自己参照で内容が動く）ではなく、merge 済みの固定 record と実 codekb を隔離 workspace へコピーして使う（例: 260705-steering-learnings の stub 9 件） (learned 2026-07-05) <!-- cid:code-generation:c7 -->
+- 既存コードの棚卸し（lint 対象・検出件数の実測）は、これから実装する検査と同じ scan scope 定義（対象ディレクトリ・除外）で行う。scope がずれた棚卸しは件数と内訳を誤らせ、受け入れ条件（main の pass）の判断を壊す（#528 の requirements で実例: skills/ と昇格先の見落としにより 7 件と誤認、実際は 23 件） (learned 2026-07-06) <!-- cid:260706-no-stub-lint:requirements-analysis:c1 -->
