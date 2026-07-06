@@ -1,6 +1,6 @@
 # Interaction Modes
 
-AI-DLC provides three ways to interact with agents during stages, plus approval gates that keep you in control at every decision point.
+AI-DLC provides four ways to interact with agents during stages, plus approval gates that keep you in control at every decision point.
 
 > **Harness note.** Gates and questions render differently per harness: Claude Code
 > uses the `AskUserQuestion` widget; Kiro and Codex render numbered-prose options
@@ -10,15 +10,16 @@ AI-DLC provides three ways to interact with agents during stages, plus approval 
 
 ---
 
-## Tri-Mode Question Flow
+## Question Interaction Modes
 
-When a stage gathers your input, the agent presents three interaction modes. You choose which mode works best for the current stage.
+When a stage gathers your input, the agent presents four interaction modes. You choose which mode works best for the current stage.
 
 ```
 ▸ Choose interaction mode:
   (1) Guide Me — agent asks structured questions
-  (2) Edit File — write directly to the artifact
-  (3) Chat — freeform discussion
+  (2) Grill Me — one question at a time, in depth, with recommended answers
+  (3) Edit File — write directly to the artifact
+  (4) Chat — freeform discussion
 ```
 
 ### Guide Me
@@ -28,6 +29,19 @@ The agent walks you through each question interactively using structured prompts
 - Agent presents questions one at a time (or in batches)
 - You answer each question directly
 - Answers are recorded in the stage's questions file for traceability
+
+### Grill Me
+
+The agent interviews you relentlessly — strictly one question at a time, each with a recommended answer and its rationale — until you and the agent reach a shared understanding. Best when you want to stress-test a plan or design before the stage generates artifacts.
+
+- Facts the agent can determine from the codebase or prior artifacts are looked up, not asked; only decisions come to you
+- Uncertain facts are presented as confidence-tagged estimates for confirmation
+- The depth setting is a guideline, not a cap: extend with "continue" or stop at any time with "done"
+- The session ends with an agreement summary you explicitly confirm before anything is generated
+- Every question and answer is written to the stage's questions file, and each is audit-logged individually
+- In Construction and Operation phases the option is marked as exceptional use — by then most decisions should already be made
+
+The full discipline lives in `amadeus-common/protocols/grilling-protocol.md`, which is also available outside a workflow as the read-only `/amadeus-grilling` session skill. The grilling discipline is adapted from [Matt Pocock's grilling skill](https://github.com/mattpocock/skills/blob/main/skills/productivity/grilling/SKILL.md) (mattpocock/skills, MIT License).
 
 ### Edit File
 
@@ -47,7 +61,7 @@ Freeform conversation with the agent. Best for exploring ideas or when your requ
 
 ### Switching Modes Mid-Stage
 
-You can switch between modes at any point during a stage. All three modes converge on the questions file as the canonical record of decisions. Switching does not lose progress — answers already captured remain in the file.
+You can switch between modes at any point during a stage. All four modes converge on the questions file as the canonical record of decisions. Switching does not lose progress — answers already captured remain in the file.
 
 ---
 

@@ -218,7 +218,7 @@ sequenceDiagram
     O->>S: Load stage file
     O->>A: Load lead agent persona + knowledge
     O->>O: Execute stage steps
-    O->>U: Present questions (tri-mode)
+    O->>U: Present questions (mode choice)
     U-->>O: Provide answers
     O->>O: Generate artifacts
     O->>O: Log to audit.md
@@ -260,7 +260,7 @@ drift-guarded `dist/<harness>/` trees:
 ```
 core/                  # hand-authored, harness-neutral (tools, amadeus-common,
                        #   agents, rules, scopes, sensors, knowledge, hooks,
-                       #   3 session skills); prose uses the {{HARNESS_DIR}} token
+                       #   4 session skills); prose uses the {{HARNESS_DIR}} token
 harness/<name>/        # per-CLI surface: manifest.ts + orchestrator skill +
                        #   harness files (+ emit.ts for codex)
 scripts/package.ts     # the build: copy core (token→.claude/.kiro/.codex) +
@@ -455,7 +455,7 @@ appends — there is intentionally no `merge=union` attribute.
 
 4. **State tracking via amadeus-state.md** -- A single markdown state file tracks stage completion, current status, workspace context, scope configuration, execution plan, and runtime state (revision counts). The stage protocol defines the update pattern once; each stage updates it as its final step. A PostToolUse hook validates the state file structure after each write. Stage-level task IDs are resolved at runtime via `TaskList` (matching by subject like "Inception - Requirements Analysis") rather than stored in the state file -- this is more robust after context compaction since it reflects actual task system state.
 
-5. **Stage protocol as shared contract** -- All 32 stages follow `stage-protocol.md` for approval gates, question format (tri-mode: Guide Me / Edit File / Chat), completion messages, state tracking, error recovery, change handling, the §13 Learnings Ritual, and phase boundary verification. This ensures consistent behavior across all stages without repeating instructions in each stage file.
+5. **Stage protocol as shared contract** -- All 32 stages follow `stage-protocol.md` for approval gates, question format (four modes: Guide Me / Grill Me / Edit File / Chat), completion messages, state tracking, error recovery, change handling, the §13 Learnings Ritual, and phase boundary verification. This ensures consistent behavior across all stages without repeating instructions in each stage file.
 
 6. **Two-tier knowledge architecture** -- Methodology knowledge ships with the framework in `knowledge/` (shared principles + per-agent methodology). User-managed team knowledge lives at the space level in `amadeus/knowledge/` (a sibling of the space's `intents/`), created empty by the engine and populated by the team. This separates framework upgrades from team customization.
 

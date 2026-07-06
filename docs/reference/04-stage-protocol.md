@@ -266,12 +266,12 @@ Example: `Progress: 13/32 overall | 3/7 IDEATION stages complete. Next: Approval
 ## Question Flow
 
 When a stage gathers user input through questions, the protocol defines a
-tri-mode interaction flow with batching rules, mandatory answer analysis,
+four-mode interaction flow with batching rules, mandatory answer analysis,
 and ambiguity detection.
 
 *(Protocol Section 3)*
 
-### Tri-Mode System
+### Question Interaction Modes
 
 **Step 1: Create the questions file** in the appropriate `<record>/`
 directory using `[Answer]:` tag format with options A-E. Every question must
@@ -289,6 +289,7 @@ AskUserQuestion({
     multiSelect: false,
     options: [
       { label: "Guide me", description: "Walk through each question interactively here" },
+      { label: "Grill me", description: "One question at a time, in depth -- recommended answers included, until we reach a shared understanding" },
       { label: "I'll edit the file", description: "I'll fill in the answers in the file directly" },
       { label: "Chat", description: "Discuss freely -- I'll extract decisions from our conversation" }
     ]
@@ -308,6 +309,23 @@ Log the mode choice to the `audit/` shards. Users can switch modes mid-stage.
   "Select 'Other' on any question to discuss it before answering."
 - After each batch, IMMEDIATELY write answers to the questions file
 - Log each batch with fresh ISO timestamp
+
+#### Grill Me (Grilling Mode)
+
+- Follows `amadeus-common/protocols/grilling-protocol.md` — the single source
+  for the grilling discipline (adapted from mattpocock/skills, MIT). One
+  question at a time; each carries a recommended answer with rationale; facts
+  are self-researched and only decisions are asked; hybrid termination
+  ("done" any time, continuation check at the depth guideline); explicitly
+  confirmed agreement summary before generation.
+- Workflow obligations: each dynamically generated question is appended to
+  the questions file with a blank `[Answer]:` tag BEFORE presenting; each
+  answer is written back immediately; `decision`/`answer` audit events are
+  logged per question (existing event types only).
+- In Construction and Operation phases the mode option is annotated as
+  exceptional use.
+- Step 4 onward (completeness verification, contradiction analysis, artifact
+  generation, gate) is unchanged — grilling replaces only the Step 3 dialogue.
 
 #### Edit File (Self-Guided Mode)
 

@@ -10,7 +10,7 @@
 //   - rules/ → steering/ (Kiro auto-loads steering; rules ARE the always-on
 //     layer)
 //   - the orchestrator skill is per-harness (authored here, NOT core), so it
-//     is NOT in coreDirs — only the 3 session skills are.
+//     is NOT in coreDirs — only the 4 session skills are.
 //   - agents/ is MIXED: the persona .md files are core (copied + rules rename
 //     n/a), the Kiro-native agent .json configs are authored (harnessFiles).
 //   - hooks/ is MIXED: core hook bodies are copied; the one authored
@@ -37,6 +37,7 @@ const manifest: HarnessManifest = {
     { src: "skills/amadeus-session-cost", dst: "skills/amadeus-session-cost" },
     { src: "skills/amadeus-replay", dst: "skills/amadeus-replay" },
     { src: "skills/amadeus-outcomes-pack", dst: "skills/amadeus-outcomes-pack" },
+    { src: "skills/amadeus-grilling", dst: "skills/amadeus-grilling" },
   ],
 
   // Authored Kiro shell surfaces. These carry literal `.kiro` (harness-specific

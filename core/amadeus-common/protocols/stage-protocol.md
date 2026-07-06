@@ -263,11 +263,15 @@ multiSelect: false
 options:
   - label: Guide me
     description: Walk through each question interactively here
+  - label: Grill me
+    description: One question at a time, in depth — recommended answers included, until we reach a shared understanding
   - label: I'll edit the file
     description: I'll fill in the answers in the file directly
   - label: Chat
     description: Discuss freely — I'll extract decisions from our conversation
 ```
+
+When the current stage's phase is Construction or Operation, append " (exceptional use in this phase)" to the Grill me description — questions in those phases are exceptional, not routine (see "Depth-aware question generation" above).
 
 Log the user's mode choice to `<record>/audit/<host>-<clone>.md` using the Question interaction log format.
 
@@ -294,6 +298,14 @@ Log the user's mode choice to `<record>/audit/<host>-<clone>.md` using the Quest
 - After the conversation reaches natural resolution, write all extracted answers back to the questions file (update each `[Answer]:` tag with the decided value, timestamp, and `**Mode:** chat`)
 - Present a summary of extracted decisions for the user to confirm before proceeding
 - Best for: exploratory stages, brainstorming, when questions need discussion before answering
+
+**Step 3d: If "Grill me" (grilling mode):**
+- Follow `grilling-protocol.md` (same directory) — the single source for the grilling discipline (one question at a time, recommended answer with rationale, facts self-researched and only decisions asked, hybrid termination, confirmed agreement summary). Do not re-define the discipline here.
+- Workflow-specific obligations on top of the protocol:
+  - Append every dynamically generated question to the questions file with a blank `[Answer]:` tag **before presenting it** — the same Stop-hook human-wait convention as the other modes.
+  - Write each answer back to its `[Answer]:` tag immediately after it is received. Do not present the next question before the write-back.
+  - Audit per question, existing contract only: `bun {{HARNESS_DIR}}/tools/amadeus-log.ts decision ...` before presenting, `bun {{HARNESS_DIR}}/tools/amadeus-log.ts answer ...` after the response — one `decision`/`answer` pair per question, with the same write-back, audit, and fresh-timestamp discipline as Step 3a. No new event types.
+- After the agreement summary is explicitly confirmed, continue with Step 4 as usual — grilling replaces only the Step 3 dialogue; verification, contradiction analysis, artifact generation, §13, and the approval gate are unchanged.
 
 Users can switch modes mid-stage. For example, start with "Guide Me" for the first few questions, then say "let me just chat about the rest."
 

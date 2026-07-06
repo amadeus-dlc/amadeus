@@ -306,7 +306,8 @@ function handleWrite(): string[] {
 // body marker — NOT by compiled-set membership — is what lets the drift guard see
 // ORPHANS: a `skills/amadeus-<slug>/` dir that drives `--single` but whose slug is
 // no longer a compiled stage. Non-runner skills (amadeus, amadeus-replay,
-// amadeus-session-cost, amadeus-outcomes-pack, and the scope-runners, which drive
+// amadeus-session-cost, amadeus-outcomes-pack, amadeus-grilling, and the
+// scope-runners, which drive
 // `--scope` not `--stage`) carry no `--stage … --single` marker, so they are
 // never mistaken for stage-runners and never flagged.
 const SINGLE_RUNNER_MARKER = "--stage";

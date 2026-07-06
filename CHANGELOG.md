@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.0] - 2026-07-07
+
+- Added **Grill me**, a fourth question interaction mode: a relentless one-question-at-a-time interview — each question with a recommended answer and rationale, facts self-researched with only decisions asked, hybrid termination ("done" any time, continuation check at the depth guideline), and an explicitly confirmed agreement summary before artifact generation. Available at every gated stage's mode selection (annotated as exceptional use in Construction/Operation); answers keep the existing questions-file and per-question `decision`/`answer` audit contract.
+- Added the read-only session skill `/amadeus-grilling <file-or-topic>` — the same grilling discipline outside a workflow: terminal-only, never advances the stage pointer, never emits audit events, writes a summary file only on explicit request. Ships in all four harness dists (codex under `.agents/skills/`).
+- The grilling discipline lives once in `amadeus-common/protocols/grilling-protocol.md`, adapted from Matt Pocock's grilling skill (mattpocock/skills, MIT License) with attribution.
+
 ## [1.0.0] - 2026-07-07
 
 - Realigned the framework version to the 1.0.0 GA Preview baseline: `amadeus-version.ts` still carried the pre-rebrand 2.2.0 while the README badge said 1.0.0. All version surfaces (version.ts, README badge, this changelog) now agree.

@@ -85,9 +85,10 @@ import { FIRST_BATCH } from "../../dist/claude/.claude/tools/amadeus-runner-gen.
 const SKILLS_DIR = join(AMADEUS_SRC, "skills");
 const STAGE_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 
-// --- The four base skills (orchestrator + the three read-only session skills).
+// --- The five base skills (orchestrator + the four read-only session skills).
 const BASE_SKILLS = [
   "amadeus",
+  "amadeus-grilling",
   "amadeus-outcomes-pack",
   "amadeus-replay",
   "amadeus-session-cost",

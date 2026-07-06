@@ -33,6 +33,7 @@ const manifest: HarnessManifest = {
     { src: "skills/amadeus-session-cost", dst: "skills/amadeus-session-cost" },
     { src: "skills/amadeus-replay", dst: "skills/amadeus-replay" },
     { src: "skills/amadeus-outcomes-pack", dst: "skills/amadeus-outcomes-pack" },
+    { src: "skills/amadeus-grilling", dst: "skills/amadeus-grilling" },
   ],
 
   // Authored surfaces: same as CLI but adds .kiro.hook files and omits the

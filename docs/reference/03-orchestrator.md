@@ -570,7 +570,7 @@ The following intentional differences from the upstream `amadeus-workflows/` ref
 | 8 | Session resume | File-based `[Answer]:` tag | Uses `AskUserQuestion` | More natural in Claude Code |
 | 9 | Clarification questions | Separate files | Handled inline | Typically 1-2 targeted queries |
 | 10 | Audit log formats | Single format | Three additional: Error, Recovery, Change Request | Post-hoc analysis |
-| 11 | Tri-mode question flow | File-based only | "Guide me" / "I'll edit the file" / "Chat" | Accommodates different preferences |
+| 11 | Interaction-mode question flow | File-based only | "Guide me" / "Grill me" / "I'll edit the file" / "Chat" | Accommodates different preferences |
 | 12 | Delivery Planning | Workflow Planning (stage selector) | Renamed; adds work breakdown analysis | More actionable Construction planning |
 | 13 | State file naming | `state.md` | `amadeus-state.md` | Hooks hardcode path; changing breaks scripts |
 | 14 | Minimal rules | Multiple rule files | Only guardrails (~35 lines) | Avoids context bloat in non-AI-DLC conversations |

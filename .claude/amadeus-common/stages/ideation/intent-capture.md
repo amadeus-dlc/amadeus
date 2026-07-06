@@ -52,7 +52,7 @@ Create `<record>/ideation/intent-capture/intent-capture-questions.md` with quest
 
 Use the [Answer]: tag format from stage-protocol.md. Include A-E options with X (Other) as final option. Leave all [Answer]: tags blank.
 
-Then follow the unified question flow from stage-protocol.md section 3: offer Guide Me / Edit File / Chat modes.
+Then follow the unified question flow from stage-protocol.md section 3: offer Guide Me / Grill Me / Edit File / Chat modes.
 
 ### Step 4: Collect and Analyze Answers
 

@@ -8,7 +8,7 @@ Amadeus-DLC is a fork of **AI-DLC v2** and a native implementation of the **AI-D
 
 The methodology lives once, in a harness-neutral `core/`; each harness adds a thin surface that decides how it shows up on that harness. So you edit the methodology in one place, and every harness distribution is generated from it — no harness gets special treatment. (See [Repository layout](#repository-layout) for how the pieces fit together.)
 
-![version](https://img.shields.io/badge/version-1.0.0-blue)
+![version](https://img.shields.io/badge/version-1.1.0-blue)
 ![license](https://img.shields.io/badge/license-MIT--0-green)
 ![Kiro IDE](https://img.shields.io/badge/harness-Kiro%20IDE-orange)
 ![Kiro CLI](https://img.shields.io/badge/harness-Kiro%20CLI-orange)
@@ -247,7 +247,7 @@ amadeus-claude/
 │   ├── amadeus-common/           #   stage protocol + 32 stage files + conductor
 │   ├── agents/                 #   11 domain-expert personas
 │   ├── knowledge/ memory/ scopes/ sensors/ hooks/
-│   ├── skills/                 #   3 session skills (session-cost, replay, outcomes-pack)
+│   ├── skills/                 #   4 session skills (session-cost, replay, outcomes-pack, grilling)
 │   └── templates/              #   onboarding skeleton → each harness's CLAUDE.md / AGENTS.md
 │       # prose names the harness dir with the {{HARNESS_DIR}} token — substituted at packaging
 │
