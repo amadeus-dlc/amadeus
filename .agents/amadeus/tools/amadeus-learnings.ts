@@ -38,6 +38,7 @@ import { dirname, join } from "node:path";
 import { appendAuditEntryUnlocked } from "./amadeus-audit.ts";
 import { memoryDirFor } from "./amadeus-graph.ts";
 import {
+  activeIntent,
   appendUnderHeading,
   errorMessage,
   findAllEvents,
@@ -401,10 +402,18 @@ function ensureHeading(content: string, heading: string): string {
 }
 
 // cid marker — stable, date-/text-independent idempotency key per written
-// line. Keyed on (stage slug, candidate id) so a same-day re-run of the
-// same selection is a no-op rather than a double-append.
-function cidMarker(slug: string, candidateId: string): string {
-  return `<!-- cid:${slug}:${candidateId} -->`;
+// line. Keyed on (record dir name, stage slug, candidate id) so a same-day
+// re-run of the same selection is a no-op rather than a double-append, AND
+// two different intents that happen to reuse the same stage slug + candidate
+// id (e.g. two requirements-analysis runs each surfacing a "c1") never
+// collide in the shared {project,team}.md practice file (Issue #504).
+//
+// Old-format markers (`cid:<slug>:<candidateId>`, no dirName) predate this
+// fix. They are never rewritten (append-only assets) and never matched as an
+// idempotency key here — matching them would reintroduce the cross-intent
+// collision this format exists to close.
+function cidMarker(dirName: string, slug: string, candidateId: string): string {
+  return `<!-- cid:${dirName}:${slug}:${candidateId} -->`;
 }
 
 function handlePersist(args: string[], projectDir: string): void {
@@ -421,15 +430,30 @@ function handlePersist(args: string[], projectDir: string): void {
   const selFile = parseSelectionsFile(selectionsJson);
   const stageSlug = slug ?? selFile.stage_slug;
 
+  // The cid marker's Intent component (Issue #504) — the record dir name of
+  // the intent this persist call runs for. Resolved the same way audit
+  // emission resolves it (recordDir()/auditFilePath() → activeIntent()):
+  // there is no dirName without a resolvable active intent, so a null here
+  // fails loudly rather than falling back to an ambiguous marker that could
+  // reintroduce a collision.
+  const dirName = activeIntent(projectDir);
+  if (dirName === null) {
+    fail(
+      "persist failed: no active intent could be resolved; the cid marker requires the originating intent's record dir name.",
+      1
+    );
+  }
+
   // ONE withAuditLock body — decide-inside-lock (plan §0.4). Re-read the
   // audit fresh INSIDE the lock; never reuse a pre-lock read.
-  let lockResult: { rule_learned: number; sensor_proposed: number; bound_stages: string[] };
+  let lockResult: { rule_learned: number; already_present: number; sensor_proposed: number; bound_stages: string[] };
   try {
     lockResult = withAuditLock(projectDir, () => {
       // Read across every per-clone audit shard (single shard in the common case).
       const auditContent = readAllAuditShards(projectDir);
 
       let ruleLearned = 0;
+      let alreadyPresent = 0;
       let sensorProposed = 0;
       const boundStages: string[] = [];
 
@@ -463,7 +487,7 @@ function handlePersist(args: string[], projectDir: string): void {
         const bucket = ensureFile(sel.scope);
         const path = bucket.path;
         let content = bucket.content;
-        const marker = cidMarker(stageSlug, sel.candidate_id);
+        const marker = cidMarker(dirName, stageSlug, sel.candidate_id);
         const today = isoTimestamp().slice(0, 10);
         const source = sel.source ?? "orchestrator";
         // The orchestrator routes the learning to the fitting practice heading
@@ -471,22 +495,33 @@ function handlePersist(args: string[], projectDir: string): void {
         const heading = practiceHeading(sel.heading);
 
         const hasRow = priorAuditRow(auditContent, "RULE_LEARNED", stageSlug, sel.candidate_id);
+        // Idempotency matching considers ONLY the new-format marker (dirName
+        // included). An old-format marker for the same stage+candidate may
+        // coexist in the file (pre-fix data, or a different intent's write)
+        // but is never a match here — matching it would reintroduce the
+        // cross-intent collision this format exists to close (FR-1.2).
         const hasLine = content.includes(marker);
 
-        // no-op: audit row AND line both present.
-        if (hasRow && hasLine) continue;
-
-        // Write the line unless it is already present (recovery: row exists,
-        // line missing → write only; fresh: neither → write + emit). Create the
-        // routed heading first when the method file doesn't carry it.
-        if (!hasLine) {
+        if (hasLine) {
+          // The new-format marker is already in the file: this exact
+          // (intent, stage, candidate) selection was already persisted.
+          // Idempotent re-run — do not double-append, and do not count it
+          // toward rule_learned (FR-1.4/1.5).
+          alreadyPresent++;
+        } else {
+          // Fresh write, OR recovery (an audit row exists but the line was
+          // lost). Either way the line is genuinely appended this call, so
+          // it counts toward rule_learned. Create the routed heading first
+          // when the method file doesn't carry it.
           content = ensureHeading(content, heading);
           const line = `- ${sel.text} (learned ${today}) ${marker}\n`;
           content = appendUnderHeading(content, heading, line);
           fileContent.set(path, content);
+          ruleLearned++;
         }
 
-        // Emit only when this is fresh (no prior audit row).
+        // Emit only when this is fresh (no prior audit row) — a recovery
+        // write does not double-emit.
         if (!hasRow) {
           appendAuditEntryUnlocked(
             "RULE_LEARNED",
@@ -499,7 +534,6 @@ function handlePersist(args: string[], projectDir: string): void {
             },
             projectDir
           );
-          ruleLearned++;
         }
       }
 
@@ -570,6 +604,7 @@ function handlePersist(args: string[], projectDir: string): void {
 
       return {
         rule_learned: ruleLearned,
+        already_present: alreadyPresent,
         sensor_proposed: sensorProposed,
         bound_stages: boundStages,
       };
@@ -600,6 +635,7 @@ function handlePersist(args: string[], projectDir: string): void {
     JSON.stringify({
       stage_slug: stageSlug,
       rule_learned: lockResult.rule_learned,
+      already_present: lockResult.already_present,
       sensor_proposed: lockResult.sensor_proposed,
       notes,
     })
