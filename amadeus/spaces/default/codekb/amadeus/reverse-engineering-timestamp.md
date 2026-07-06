@@ -2,6 +2,13 @@
 
 ## 差分更新の記録（最新）
 
+- 解析時刻: 2026-07-06T06:52:00Z（UTC）
+- 対象コミット: 29f3122c（origin/main = PR #559 merge 後）
+- 解析方式: 差分更新（9dd93f50..29f3122c = PR #559 エンジン整合 3 bug のみ。complete-workflow の末尾 skip 整合と next の none 解決 = api-documentation、hooks 完了ガードと validator codekb 直接解決 = architecture を外科的に更新）
+- 実施 Intent: `260706-runtime-graph-registrati`（reverse-engineering、メイン直接処理）
+
+## 前回（2026-07-06T06:05:00Z、c50a0fe5..9dd93f50 の再点検 = docs-i18n）の記録
+
 - 解析時刻: 2026-07-06T06:05:00Z（UTC）
 - 対象コミット: 9dd93f50（origin/main = PR #553 merge 後）
 - 解析方式: 差分更新（c50a0fe5..9dd93f50 = PR #553 の全面 rename のみ。codekb 自体は #553 内で rename 反映済み）

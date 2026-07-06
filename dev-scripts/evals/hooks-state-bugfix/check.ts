@@ -446,6 +446,64 @@ function logSubagentScenario(registryStatus: string, agentType: string | undefin
   ok("#555: agent_type 空文字は Agent Type: unknown で記録される", c3.grew && c3.after.includes("**Agent Type**: unknown"), c3.after.slice(-300));
 }
 
+// --- #558: runtime-compile hook の command filter がエンジン tools path でも発火する ---
+// birth 直後の runtime-graph.json を消して「登録漏れ」状態を作り、hook を
+// PostToolUse payload で駆動する。compile が発火すれば graph が再生成される。
+function runtimeCompileScenario(command: string) {
+  const workspace = makeWorkspace();
+  try {
+    const dirName = birthIntent(workspace, "poc", "runtime-compile-eval");
+    const record = recordDirPath(workspace, dirName);
+    const graphPath = join(record, "runtime-graph.json");
+    rmSync(graphPath, { force: true });
+    const hook = join(workspace, ".agents/amadeus/hooks/amadeus-runtime-compile.ts");
+    const payload = JSON.stringify({
+      session_id: "s558",
+      transcript_path: "",
+      tool_input: { command },
+    });
+    const res = runWithStdin(["bun", hook], workspace, payload);
+    return { exitCode: res.exitCode, graphExists: existsSync(graphPath), stderr: res.stderr.slice(0, 200) };
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+}
+
+{
+  const viaAgents = runtimeCompileScenario(
+    "bun .agents/amadeus/tools/amadeus-orchestrate.ts report --stage intent-capture --result approved",
+  );
+  ok(
+    "#558: .agents/amadeus/tools 経由の report で compile が発火し runtime-graph が再生成される",
+    viaAgents.exitCode === 0 && viaAgents.graphExists,
+    JSON.stringify(viaAgents),
+  );
+  const viaAgentsState = runtimeCompileScenario(
+    "bun .agents/amadeus/tools/amadeus-state.ts approve --stage intent-capture",
+  );
+  ok(
+    "#558: .agents/amadeus/tools 経由の state verb でも compile が発火する",
+    viaAgentsState.exitCode === 0 && viaAgentsState.graphExists,
+    JSON.stringify(viaAgentsState),
+  );
+  const viaClaude = runtimeCompileScenario(
+    "bun .claude/tools/amadeus-orchestrate.ts report --stage intent-capture --result approved",
+  );
+  ok(
+    "#558: .claude/tools 経由の report は従来どおり compile が発火する（回帰ガード）",
+    viaClaude.exitCode === 0 && viaClaude.graphExists,
+    JSON.stringify(viaClaude),
+  );
+  const recursion = runtimeCompileScenario(
+    "bun .agents/amadeus/tools/amadeus-runtime.ts compile",
+  );
+  ok(
+    "#558: amadeus-runtime.ts を含む command は再帰ガードで発火しない",
+    recursion.exitCode === 0 && !recursion.graphExists,
+    JSON.stringify(recursion),
+  );
+}
+
 if (failures > 0) {
   console.error(`hooks-state-bugfix eval: ${failures} 件失敗`);
   process.exit(1);

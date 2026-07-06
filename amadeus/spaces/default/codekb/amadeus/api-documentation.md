@@ -4,8 +4,8 @@
 
 | コマンド | 役割 |
 |---|---|
-| `bun .agents/amadeus/tools/amadeus-orchestrate.ts next / report / park` | forwarding loop の中核。directive（run-stage / invoke-swarm / ask / print / error / done / parked）を 1 件ずつ返す。error directive と未捕捉例外は ERROR_LOGGED を自動記録する（#431） |
-| `amadeus-state.ts <verb>` | checkbox / set / gate-start / approve / advance / skip / fork / merge / complete-workflow / unpark / `declare-docs-only --evidence "<DECISION_RECORDED\|GATE_APPROVED> <stage> ..."` など状態機械の書き込み口。`declare-docs-only` は registry へ docsOnly 免除を書き込み、evidence が実在の人間承認 audit イベントを参照しない場合は拒否する（#499） |
+| `bun .agents/amadeus/tools/amadeus-orchestrate.ts next / report / park` | forwarding loop の中核。directive（run-stage / invoke-swarm / ask / print / error / done / parked）を 1 件ずつ返す。error directive と未捕捉例外は ERROR_LOGGED を自動記録する（#431）。`next` は closed-workflow sentinel（Current Stage: `none`）を done に解決する（#547 随伴） |
+| `amadeus-state.ts <verb>` | checkbox / set / gate-start / approve / advance / skip / fork / merge / complete-workflow / unpark / `declare-docs-only --evidence "<DECISION_RECORDED\|GATE_APPROVED> <stage> ..."` など状態機械の書き込み口。`declare-docs-only` は registry へ docsOnly 免除を書き込み、evidence が実在の人間承認 audit イベントを参照しない場合は拒否する（#499）。`complete-workflow` は Current Stage / Next Stage を `none` にし、touched 全件 `[S]` の phase の Phase Progress を `Skipped` へ更新して `PHASE_SKIPPED` を emit する（#547） |
 | `amadeus-utility.ts intent-birth / doctor / scope-table / intent / detect [--json] / recompose [--skip ...] [--add ...]` | workflow 誕生、健全性診断（.drops 表面化 = #432 を含む）、scope 表生成、workspace 検出（`detect --json` で構造化出力）、running workflow の pending ステージ suffix flip（`recompose`、RECOMPOSED を audit へ記録） |
 | `amadeus-graph.ts compile / validate-grid --proposal <path> [--strict] [--project-type <t>]` | stage-graph.json / scope-grid.json の生成（rules 解決は構造的 walk-up = #491）、compose 提案 grid の論理整合検証（`validate-grid`） |
 | `/amadeus compose "<task>"` / `/amadeus compose --report <path>` | amadeus-composer-agent をディスパッチしてカスタム EXECUTE/SKIP grid を提案（Adaptive Workflows 2.2.0）。人間承認後に `recompose` で running workflow へ適用 |

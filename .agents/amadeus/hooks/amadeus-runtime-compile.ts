@@ -65,9 +65,14 @@ const command: string = parsed.tool_input?.command ?? "";
 //    `amadeus-orchestrate.ts report` is included because the conductor calls it
 //    as the public transition surface; the state-tool emit happens in its
 //    subprocess, which PostToolUse cannot see as a separate Bash command.
-const aidlcTransitionTool = /\bbun\b.*\.(?:claude|kiro|codex)\/tools\/amadeus-(state|jump|bolt|utility)\.ts\b/;
-const aidlcOrchestrateReport = /\bbun\b.*\.(?:claude|kiro|codex)\/tools\/amadeus-orchestrate\.ts\b.*\breport\b/;
-const aidlcRuntimeRef = /\bbun\b.*\.(?:claude|kiro|codex)\/tools\/amadeus-runtime\.ts\b/;
+//    #558: `.agents/amadeus/tools/` is in the alternation because AMADEUS.md
+//    names it as the canonical engine entry — transitions invoked through it
+//    were slipping past this filter, so the runtime-graph never refreshed
+//    after birth and the §13 surface failed with stage-not-found.
+const enginePathAlt = String.raw`(?:\.(?:claude|kiro|codex)|\.agents\/amadeus)`;
+const aidlcTransitionTool = new RegExp(String.raw`\bbun\b.*${enginePathAlt}\/tools\/amadeus-(state|jump|bolt|utility)\.ts\b`);
+const aidlcOrchestrateReport = new RegExp(String.raw`\bbun\b.*${enginePathAlt}\/tools\/amadeus-orchestrate\.ts\b.*\breport\b`);
+const aidlcRuntimeRef = new RegExp(String.raw`\bbun\b.*${enginePathAlt}\/tools\/amadeus-runtime\.ts\b`);
 if (aidlcRuntimeRef.test(command)) process.exit(0);
 if (!aidlcTransitionTool.test(command) && !aidlcOrchestrateReport.test(command)) process.exit(0);
 
