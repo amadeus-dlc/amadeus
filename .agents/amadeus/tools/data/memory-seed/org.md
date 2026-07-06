@@ -39,7 +39,7 @@ Bolt runs like any other — there's nothing to bootstrap.
 After Bolt 1 ships (when it runs), the orchestrator fires the **ladder
 prompt**: "How should the remaining Bolts run?" Options: continue
 autonomously, gate every Bolt. The team picks per project. The choice
-persists as `Construction Autonomy Mode` in `aidlc-state.md`.
+persists as `Construction Autonomy Mode` in `amadeus-state.md`.
 
 ## Testing Posture
 

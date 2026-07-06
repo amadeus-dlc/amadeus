@@ -4,7 +4,7 @@
 //
 // B001 (#504): amadeus-learnings.ts persist の cid marker 衝突と無言 no-op の
 // 回帰検査。実 CLI（amadeus-utility.ts intent-birth、amadeus-learnings.ts
-// persist）を隔離 temp workspace で駆動する。LLM を呼ばず、本番 aidlc/ を
+// persist）を隔離 temp workspace で駆動する。LLM を呼ばず、本番 amadeus/ を
 // 変更しない。
 // - FR-1.1: 異なる Intent の同名 candidate_id (c1) が無言 no-op にならず、
 //   両方のテキストが project.md に追記される。
@@ -58,7 +58,7 @@ function copyEngine(dest: string): void {
 }
 
 function listIntentDirNames(ws: string): string[] {
-  const intentsRoot = join(ws, "aidlc/spaces/default/intents");
+  const intentsRoot = join(ws, "amadeus/spaces/default/intents");
   if (!existsSync(intentsRoot)) return [];
   return readdirSync(intentsRoot, { withFileTypes: true })
     .filter((e) => e.isDirectory())
@@ -80,7 +80,7 @@ try {
 
   const utility = join(ws, ".agents/amadeus/tools/amadeus-utility.ts");
   const learnings = join(ws, ".agents/amadeus/tools/amadeus-learnings.ts");
-  const projectMdPath = join(ws, "aidlc/spaces/default/memory/project.md");
+  const projectMdPath = join(ws, "amadeus/spaces/default/memory/project.md");
 
   // bugfix scope: intent-birth 直後の Current Stage は requirements-analysis
   // （ideation 全 stage + units-generation 等を SKIP。docs-codekb-guards の

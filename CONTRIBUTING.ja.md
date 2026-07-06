@@ -40,4 +40,4 @@ npm run test:all
 ## 言語の慣例
 
 - `README.md` とこの文書は英語で書き、日本語版を併置します。
-- `aidlc/**`、`skills/**`、`.agents/skills/**` の Markdown 成果物は日本語で書きます。
+- `amadeus/**`、`skills/**`、`.agents/skills/**` の Markdown 成果物は日本語で書きます。

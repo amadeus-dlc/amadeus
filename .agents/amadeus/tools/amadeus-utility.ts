@@ -156,7 +156,7 @@ function appendAuditEvent(
 
 const HELP_TEXT_HEAD = `AI-DLC — AI-Driven Development Life Cycle
 
-Usage: /aidlc [command]
+Usage: /amadeus [command]
 
 Scopes (set depth, test strategy, and stage count):
 `;
@@ -187,15 +187,15 @@ Other:
   (no arguments)    Resume existing workflow, or start fresh if none exists
 
 Examples:
-  /aidlc feature                                Start a feature workflow
-  /aidlc Fix the login timeout bug              Auto-detected as bugfix scope
-  /aidlc compose "harden the deploy pipeline"   Composer proposes a tailored plan
-  /aidlc                                        Resume or begin
-  /aidlc --stage code-generation                Jump to code-generation stage
-  /aidlc --phase construction --scope bugfix    Jump to construction with bugfix scope
-  /aidlc --scope bugfix --depth comprehensive  Bugfix with comprehensive depth
-  /aidlc --depth minimal                       Change depth of active workflow
-  /aidlc --depth standard --test-strategy minimal  Full artifacts, minimal tests`;
+  /amadeus feature                                Start a feature workflow
+  /amadeus Fix the login timeout bug              Auto-detected as bugfix scope
+  /amadeus compose "harden the deploy pipeline"   Composer proposes a tailored plan
+  /amadeus                                        Resume or begin
+  /amadeus --stage code-generation                Jump to code-generation stage
+  /amadeus --phase construction --scope bugfix    Jump to construction with bugfix scope
+  /amadeus --scope bugfix --depth comprehensive  Bugfix with comprehensive depth
+  /amadeus --depth minimal                       Change depth of active workflow
+  /amadeus --depth standard --test-strategy minimal  Full artifacts, minimal tests`;
 
 /** Exported for t67 unit tests. */
 export function renderHelpText(): string {
@@ -245,9 +245,9 @@ function handleStatus(projectDir: string, flags: Record<string, string>): void {
       `No active AI-DLC workflow found.
 
 To get started:
-  /aidlc "build the auth service"   Describe what to build (auto-births an intent)
-  /aidlc <scope>      Start a workflow by scope (e.g., /aidlc feature)
-  /aidlc --help       Show all commands and scopes
+  /amadeus "build the auth service"   Describe what to build (auto-births an intent)
+  /amadeus <scope>      Start a workflow by scope (e.g., /amadeus feature)
+  /amadeus --help       Show all commands and scopes
 `
     );
     return;
@@ -274,7 +274,7 @@ To get started:
 
   // Gate awareness — when the current stage's checkbox is [?] or [R], the
   // user (not the LLM) is the blocker. Surface this explicitly in Status so
-  // `/aidlc --status` answers "what's blocking this workflow?" correctly.
+  // `/amadeus --status` answers "what's blocking this workflow?" correctly.
   const checkboxesAll = parseCheckboxes(content);
   const currentCheckbox = checkboxesAll.find((c) => c.slug === currentStage);
   let statusLine = status;
@@ -612,7 +612,7 @@ function handleDoctor(projectDir: string): void {
   // there is no scaffolded aidlc-docs/ to verify; readiness is the SHIPPED SHELL
   // the user copies from dist/: the harness engine dir (.claude/.kiro/.codex)
   // present AND the default space's memory dir present (the source of truth the
-  // native include resolves). When both are present the first /aidlc auto-births
+  // native include resolves). When both are present the first /amadeus auto-births
   // with no ceremony; a missing piece means the dist/ copy was incomplete.
   const harnessEngineDir = join(projectDir, harnessDir());
   // Pin to the DEFAULT space explicitly: readiness is "did the dist/ shell copy
@@ -625,13 +625,13 @@ function handleDoctor(projectDir: string): void {
   const shellReady = existsSync(harnessEngineDir) && existsSync(defaultMemoryDir);
   results.push({
     pass: shellReady,
-    label: `workspace shell ready (${harnessDir()}/ + aidlc/spaces/default/memory/)`,
+    label: `workspace shell ready (${harnessDir()}/ + amadeus/spaces/default/memory/)`,
     fix: `copy the workspace shell from \`dist/${harnessDir().replace(/^\./, "")}/\` into your project root`,
   });
 
   // 6. Hook heartbeats
   // Three states:
-  //   (a) .aidlc-hooks-health/ missing entirely → fresh install, hooks haven't
+  //   (a) .amadeus-hooks-health/ missing entirely → fresh install, hooks haven't
   //       had a chance to fire yet. Pass with advisory label — not drift.
   //   (b) Directory exists but no .last files → hooks registered but have
   //       never fired. Genuine drift; fail.
@@ -678,7 +678,7 @@ function handleDoctor(projectDir: string): void {
 
   // 6b. Hook drops (Issue #432). Hooks are fail-open (always exit 0);
   // recordHookDrop() appends one `<ISO>\t<reason>` line per silent failure to
-  // .aidlc-hooks-health/<hook>.drops. Until now nothing ever READ those files —
+  // .amadeus-hooks-health/<hook>.drops. Until now nothing ever READ those files —
   // surface each hook with drops as a FAIL row (count + latest parseable
   // reason). No auto-expiry: the operator clears by deleting the file after
   // investigating (the fix text says so). No .drops files → no rows at all
@@ -735,7 +735,7 @@ function handleDoctor(projectDir: string): void {
           results.push({
             pass: false,
             label: `State/audit drift: audit has WORKFLOW_COMPLETED but state Status=${status[1]}`,
-            fix: "manually set Status=Completed in aidlc-state.md or restart the workflow",
+            fix: "manually set Status=Completed in amadeus-state.md or restart the workflow",
           });
         } else {
           results.push({
@@ -762,7 +762,7 @@ function handleDoctor(projectDir: string): void {
         results.push({
           pass: false,
           label: `Leaked audit lock on bucket "${leak.bucket}" (${leak.reason}${leak.ownerPid !== null ? `, pid ${leak.ownerPid}` : ""}) — cleared`,
-          fix: "the stale lock was cleared automatically; re-run your /aidlc command",
+          fix: "the stale lock was cleared automatically; re-run your /amadeus command",
         });
       }
     }
@@ -783,7 +783,7 @@ function handleDoctor(projectDir: string): void {
         results.push({
           pass: false,
           label: "state version readable",
-          fix: "State Version field missing or unparseable in aidlc-state.md. Archive your workspace ('mv aidlc-docs aidlc-docs.v6-archive') and start a fresh workflow (describe what to build).",
+          fix: "State Version field missing or unparseable in amadeus-state.md. Archive your workspace ('mv aidlc-docs aidlc-docs.v6-archive') and start a fresh workflow (describe what to build).",
         });
       } else if (versionMatch[1] !== "7") {
         results.push({
@@ -856,7 +856,7 @@ function handleDoctor(projectDir: string): void {
   // ---------------------------------------------------------------------------
   // Check 1 — Orphan worktrees
   //
-  // Walk `.aidlc/worktrees/bolt-*/` directories on disk; cross-reference each
+  // Walk `.amadeus/worktrees/bolt-*/` directories on disk; cross-reference each
   // against:
   //   (a) main state's Bolt Refs (active fork → ✓)
   //   (b) audit WORKTREE_DISCARDED / WORKTREE_MERGED (terminated → orphan dir)
@@ -867,7 +867,7 @@ function handleDoctor(projectDir: string): void {
   // or absent — the issue 75 line 215 "fail-clean on no-worktrees" guarantee.
   // ---------------------------------------------------------------------------
   try {
-    const worktreesDir = join(projectDir, ".aidlc", "worktrees");
+    const worktreesDir = join(projectDir, ".amadeus", "worktrees");
     let observed = 0;
     let activeForks = 0;
     let preservedByAbort = 0;
@@ -877,7 +877,7 @@ function handleDoctor(projectDir: string): void {
     // Helper: did this slug get aborted via `amadeus-bolt abort` (BOLT_FAILED
     // with `Reason: aborted` from multi-failure halt-and-ask)?
     // Default-path abort preserves the worktree, so the slug remains in
-    // Bolt Refs but it's not "in flight" — it's awaiting /aidlc --resume.
+    // Bolt Refs but it's not "in flight" — it's awaiting /amadeus --resume.
     // Doctor output distinguishes "3 active forks (in flight)" from "3
     // preserved-by-abort (awaiting resume)".
     const isAbortedSlug = (slug: string): boolean => {
@@ -897,7 +897,7 @@ function handleDoctor(projectDir: string): void {
         // Active fork — slug is in main state's Bolt Refs. Expected; not orphan.
         // Sub-classify into "preserved-by-abort" (BOLT_FAILED Reason: aborted
         // exists for the slug — the user aborted multi-failure AUQ at index k
-        // and these dirs are awaiting /aidlc --resume) vs "in flight".
+        // and these dirs are awaiting /amadeus --resume) vs "in flight".
         if (boltRefs.includes(slug)) {
           if (isAbortedSlug(slug)) {
             preservedByAbort++;
@@ -952,7 +952,7 @@ function handleDoctor(projectDir: string): void {
         );
       }
       label = `Orphan worktrees: ${orphanActive.length + cleanupOrphans.length} drift`;
-      fix = `${parts.join("; ")}. Inspect and remove via 'amadeus-worktree discard --slug <slug>' or 'rm -rf .aidlc/worktrees/bolt-<slug>'.`;
+      fix = `${parts.join("; ")}. Inspect and remove via 'amadeus-worktree discard --slug <slug>' or 'rm -rf .amadeus/worktrees/bolt-<slug>'.`;
     }
     results.push({ pass, label, fix });
   } catch (e) {
@@ -1027,14 +1027,14 @@ function handleDoctor(projectDir: string): void {
   // ---------------------------------------------------------------------------
   // Check 3 — Orphan state files (paired with STATE_FORKED slug-tag)
   //
-  // Walk `.aidlc/worktrees/*/aidlc-docs/aidlc-state.md`; each found state file
+  // Walk `.amadeus/worktrees/*/aidlc-docs/amadeus-state.md`; each found state file
   // must map to a slug in main's Bolt Refs (active fork) OR pair with a
   // WORKTREE_DISCARDED audit row (pre-discard). Anything else is post-fork
   // drift — STATE_FORKED emitted, slug added to Bolt Refs, but state-write or
   // STATE_MERGED never landed.
   // ---------------------------------------------------------------------------
   try {
-    const worktreesDir = join(projectDir, ".aidlc", "worktrees");
+    const worktreesDir = join(projectDir, ".amadeus", "worktrees");
     const orphan: string[] = [];
     let observed = 0;
 
@@ -1487,7 +1487,7 @@ function handleDoctor(projectDir: string): void {
   }
 
   // Keyword overlap — no keyword should be claimed by >1 scope. A conflict
-  // means /aidlc "<freeform>" has ambiguous scope routing, which silently
+  // means /amadeus "<freeform>" has ambiguous scope routing, which silently
   // burns artifacts. findScopeByKeyword (exported from this file) resolves
   // the other direction; this check inverts it to scan for collisions.
   try {
@@ -1524,7 +1524,7 @@ function handleDoctor(projectDir: string): void {
 
   // Rule drift (advisory, always pass:true) — surface team/project rule files
   // whose `##` headings overlap a POPULATED heading in the org layer
-  // (aidlc/spaces/default/memory/org.md), quoting the org sentence inline so
+  // (amadeus/spaces/default/memory/org.md), quoting the org sentence inline so
   // the orchestrator-LLM can review for contradiction at observation time. A
   // learning is a practice (vision §6) — it lands in team.md / project.md, so
   // those two scopes are the whole team/project surface the walk reads.
@@ -1745,7 +1745,7 @@ function handleDoctor(projectDir: string): void {
   // file side effects; an initialized project records HEALTH_CHECKED as before.
   if (auditExists) {
     appendAuditEvent(projectDir, "HEALTH_CHECKED", {
-      Request: `/aidlc --doctor`,
+      Request: `/amadeus --doctor`,
       Details: `${passed} passed, ${failed} failed`,
     });
   }
@@ -2109,17 +2109,17 @@ function ensureWorkspaceDirs(projectDir: string): void {
   // <harness>/knowledge/ (untouched). Lazy ensure-exists — never SEED.
   mkdirSync(knowledgeDir(projectDir), { recursive: true });
   // Engine-only-install self-heal: recover an ENGINE-ONLY install. Normally the
-  // workspace shell (aidlc/spaces/default/memory/) ships as a SIBLING of the
+  // workspace shell (amadeus/spaces/default/memory/) ships as a SIBLING of the
   // engine dir (the packager's emitMemory → MEMORY_DST), so a complete dist/
   // copy already carries it and the lines below leave it untouched. But a user
   // who copies ONLY the harness engine dir (e.g. dist/kiro/.kiro/) and NOT the
-  // sibling aidlc/ shell lands with NO default-space method tree → doctor's
+  // sibling amadeus/ shell lands with NO default-space method tree → doctor's
   // "workspace shell ready" check fails and the rule resolver loads zero rules.
   // To recover, seed the default-space memory tree from the copy the packager
   // bundled INSIDE the engine at tools/data/memory-seed/ (frameworkMemorySeedDir,
   // mirroring the tools/data/templates pattern) — but ONLY if the default tree is
   // ABSENT. The existsSync guard makes this strictly idempotent: a normal install
-  // that copied aidlc/ already has the dir, so the seed never fires and the
+  // that copied amadeus/ already has the dir, so the seed never fires and the
   // committed default tree never churns (preserving the "default tree never
   // churns" invariant). This is a deliberate, GUARDED exception to the
   // "never SEED" rule the rest of this function follows.
@@ -2129,7 +2129,7 @@ function ensureWorkspaceDirs(projectDir: string): void {
     if (existsSync(seed)) cpSync(seed, defaultMemory, { recursive: true });
   }
   // Align the harness-native includes with the active space at bootstrap (first
-  // /aidlc). A no-op when they already point there (the common default-cursor
+  // /amadeus). A no-op when they already point there (the common default-cursor
   // case) — so this never dirties a single-team committed tree; it self-heals a
   // tree whose cursor and includes drifted out of sync.
   repointHarnessIncludes(projectDir, activeSpace(projectDir));
@@ -2207,7 +2207,7 @@ function handleIntentBirth(projectDir: string, flags: Record<string, string>): v
       // the workspace was migrated into this intent (lands in the migrated
       // intent's audit shard — the cursor points there now). No state rebuild.
       appendAuditEvent(projectDir, "WORKSPACE_INITIALISED", {
-        Request: `/aidlc ${flags.arguments || scope}`,
+        Request: `/amadeus ${flags.arguments || scope}`,
         Scope: scope,
         Details: `Migrated flat aidlc-docs/ into ${migration.intentDirName}`,
       });
@@ -2253,7 +2253,7 @@ function handleIntentBirth(projectDir: string, flags: Record<string, string>): v
     // audit alone. Lands in the born intent's audit (relocated from --init).
     appendAuditEvent(projectDir, "WORKFLOW_STARTED", {
       Scope: scope,
-      Request: `/aidlc ${flags.arguments || scope}`,
+      Request: `/amadeus ${flags.arguments || scope}`,
       // Record the intent's repo span at birth (P7). Omitted when no repos were
       // captured (legacy single-repo / fresh greenfield → the lone repo is inferred).
       ...(repos.length > 0 ? { Repos: repos.join(", ") } : {}),
@@ -2300,7 +2300,7 @@ function handleIntentBirth(projectDir: string, flags: Record<string, string>): v
     ensureWorkspaceDirs(projectDir);
 
     appendAuditEvent(projectDir, "WORKSPACE_SCAFFOLDED", {
-      Request: `/aidlc ${flags.arguments || scope}`,
+      Request: `/amadeus ${flags.arguments || scope}`,
       Details: "Per-intent artifact dirs + space-level knowledge/ ensured (shell shipped by SEED)",
     });
     appendAuditEvent(projectDir, "STAGE_COMPLETED", {
@@ -2532,7 +2532,7 @@ ${stageProgress}
   writeStateFile(projectDir, stateContent);
 
   appendAuditEvent(projectDir, "WORKSPACE_INITIALISED", {
-    Request: `/aidlc ${flags.arguments || scope}`,
+    Request: `/amadeus ${flags.arguments || scope}`,
     "Project Type": scan.projectType,
     Scope: scope,
     Languages: scan.languages,
@@ -2592,7 +2592,7 @@ First post-init stage: ${firstPostInit} (${firstPostInitPhase})
 
 function handleStateInit(_projectDir: string, _flags: Record<string, string>): void {
   die(
-    "state-init is merged into intent-birth. A workflow starts by describing what to build (/aidlc \"build the auth service\"); the engine auto-births the intent."
+    "state-init is merged into intent-birth. A workflow starts by describing what to build (/amadeus \"build the auth service\"); the engine auto-births the intent."
   );
 }
 
@@ -2604,7 +2604,7 @@ function handleStateInit(_projectDir: string, _flags: Record<string, string>): v
 // read the SAME listSpaces/listIntents source so they never diverge. --json
 // shape: {active, spaces:[...], intents:[{uuid,slug,status,repos}]} — consumed
 // by the birth gate, resume-rebind, and statusline; human text is the bare
-// `/aidlc intent` rendering. Pure read.
+// `/amadeus intent` rendering. Pure read.
 function printIntentListing(projectDir: string, asJson: boolean): void {
   const space = activeSpace(projectDir);
   const intents = listIntents(projectDir, space);
@@ -2628,7 +2628,7 @@ function printIntentListing(projectDir: string, asJson: boolean): void {
   }
   if (intents.length === 0) {
     process.stdout.write(
-      `No intents in space "${space}" yet. Start one by describing what to build: /aidlc "build the auth service"\n`
+      `No intents in space "${space}" yet. Start one by describing what to build: /amadeus "build the auth service"\n`
     );
     return;
   }
@@ -2638,7 +2638,7 @@ function printIntentListing(projectDir: string, asJson: boolean): void {
     out += `${marker} ${i.dirName ?? i.slug}  [${i.status}]\n`;
   }
   if (!active) {
-    out += `\n(no active intent — switch with /aidlc intent <name>)\n`;
+    out += `\n(no active intent — switch with /amadeus intent <name>)\n`;
   }
   process.stdout.write(out);
 }
@@ -2664,7 +2664,7 @@ function printSpaceListing(projectDir: string, asJson: boolean): void {
   process.stdout.write(out);
 }
 
-// `/aidlc intent` (list) · `/aidlc intent <name>` (switch the active-intent
+// `/amadeus intent` (list) · `/amadeus intent <name>` (switch the active-intent
 // cursor). Switching an intent is a PURE cursor write (an intent has no native
 // include — only a space does). The <name> matches a record dir name exactly,
 // or a slug (when unambiguous within the space). --json on the bare list emits
@@ -2691,14 +2691,14 @@ function handleIntent(projectDir: string, positional: string[], flags: Record<st
   }
   if (!match || match.dirName === null) {
     die(
-      `Unknown intent "${target}" in space "${space}". Run /aidlc intent to list, or describe what to build to start a new one.`
+      `Unknown intent "${target}" in space "${space}". Run /amadeus intent to list, or describe what to build to start a new one.`
     );
   }
   setActiveIntentCursor(projectDir, match.dirName, space);
   // Re-stamp the LIVE conversation's session→intent record to the switched-to
   // intent. WHY: the resume-rebind stamp (session-start hook) is keyed by
   // session_id, which this tool never sees; only the hook does. Without this, a
-  // deliberate in-conversation `/aidlc intent <slug>` switch leaves the session
+  // deliberate in-conversation `/amadeus intent <slug>` switch leaves the session
   // stamped at the OLD intent, so resuming THIS same conversation fires a FALSE
   // rebind nag ("was working X, switch back?"). The hook records the live session
   // in `.current-session` on every fire (it owns session-id capture); we read
@@ -2713,7 +2713,7 @@ function handleIntent(projectDir: string, positional: string[], flags: Record<st
   process.stdout.write(`Active intent → ${match.dirName} (space: ${space})\n`);
 }
 
-// `/aidlc space` (list) · `/aidlc space <name>` (switch the active-space
+// `/amadeus space` (list) · `/amadeus space <name>` (switch the active-space
 // cursor). Switching a space does TWO per-user writes: move the gitignored
 // active-space cursor, then SURGICALLY repoint the harness-native rule includes
 // in place so the next turn loads the switched space's method (the ambient
@@ -2731,12 +2731,12 @@ function handleSpace(projectDir: string, positional: string[], flags: Record<str
   }
   // Spaces are STORED under their slug (handleSpaceCreate writes slugify(raw)),
   // so slugify the switch target before lookup AND before the cursor write —
-  // otherwise `/aidlc space "My Space"` (stored as my-space) would miss.
+  // otherwise `/amadeus space "My Space"` (stored as my-space) would miss.
   const target = slugify(raw);
   const spaces = listSpaces(projectDir);
   if (!spaces.some((s) => s.name === target)) {
     die(
-      `Unknown space "${target}". Existing: ${spaces.map((s) => s.name).join(", ")}. Create it with /aidlc space-create ${target}.`
+      `Unknown space "${target}". Existing: ${spaces.map((s) => s.name).join(", ")}. Create it with /amadeus space-create ${target}.`
     );
   }
   setActiveSpaceCursor(projectDir, target);
@@ -2751,7 +2751,7 @@ function handleSpace(projectDir: string, positional: string[], flags: Record<str
   }
 }
 
-// `/aidlc codekb-path [--repo <name>] [--json]` — read-only. Prints the
+// `/amadeus codekb-path [--repo <name>] [--json]` — read-only. Prints the
 // deterministic space-level per-repo codekb directory (forward-slash, workspace-
 // relative) the reverse-engineering stage writes its 9 artifacts into. The repo
 // is the caller-supplied --repo, else the engine-resolved codekbRepoName (the
@@ -2770,7 +2770,7 @@ function handleCodekbPath(projectDir: string, flags: Record<string, string>): vo
 }
 
 // `detect [--json]` - read-only. Runs the workspace scan (detectWorkspace) on
-// the bare project dir - it needs no aidlc/ workspace; it scans the app root -
+// the bare project dir - it needs no amadeus/ workspace; it scans the app root -
 // and prints projectType (Greenfield/Brownfield), languages, frameworks, and
 // buildSystem. ALSO prints the resolved scope-registry paths (scopesDir +
 // scopeGridPath): those are module-relative to the installed tool, which a
@@ -2803,7 +2803,7 @@ function handleDetect(projectDir: string, flags: Record<string, string>): void {
   );
 }
 
-// `/aidlc space-create <name>` — seed a NEW space's memory. org.md is copied
+// `/amadeus space-create <name>` — seed a NEW space's memory. org.md is copied
 // from spaces/default/memory/org.md (the always-present SEED baseline), plus
 // fresh empty team.md/project.md/phases stubs + the templates/ floor. A new team
 // starts at the framework baseline and earns its OWN practices — it does NOT
@@ -2858,7 +2858,7 @@ function handleSpaceCreate(projectDir: string, positional: string[], _flags: Rec
   if (!existsSync(knowledgeFloor)) writeFileSync(knowledgeFloor, "", "utf-8");
 
   process.stdout.write(
-    `Space created: ${name}\n  memory/org.md (copied from default), team.md, project.md, phases/, templates/, codekb/, knowledge/\nSwitch to it with /aidlc space ${name}.\n`
+    `Space created: ${name}\n  memory/org.md (copied from default), team.md, project.md, phases/, templates/, codekb/, knowledge/\nSwitch to it with /amadeus space ${name}.\n`
   );
 }
 
@@ -2900,7 +2900,7 @@ function handleScopeChange(projectDir: string, flags: Record<string, string>): v
   }
 
   const sp = stateFilePath(projectDir, flags.intent, flags.space);
-  if (!existsSync(sp)) die("No state file found. Start a workflow first by describing what to build (/aidlc \"build the auth service\").");
+  if (!existsSync(sp)) die("No state file found. Start a workflow first by describing what to build (/amadeus \"build the auth service\").");
 
   const scopeMapping = loadScopeMapping();
   const newScopeDef = scopeMapping[newScope];
@@ -3289,7 +3289,7 @@ function handleConfigChange(projectDir: string, flags: Record<string, string>): 
   }
 
   const sp = stateFilePath(projectDir, flags.intent, flags.space);
-  if (!existsSync(sp)) die("No state file found. Start a workflow first by describing what to build (/aidlc \"build the auth service\").");
+  if (!existsSync(sp)) die("No state file found. Start a workflow first by describing what to build (/amadeus \"build the auth service\").");
 
   let content = readStateFile(projectDir, flags.intent, flags.space);
   const oldDepth = getField(content, "Depth");
@@ -3346,7 +3346,7 @@ function handleConfigChange(projectDir: string, flags: Record<string, string>): 
 
 function handleSetStatus(projectDir: string, flags: Record<string, string>): void {
   const sp = stateFilePath(projectDir, flags.intent, flags.space);
-  if (!existsSync(sp)) die("No state file found. Start a workflow first by describing what to build (/aidlc \"build the auth service\").");
+  if (!existsSync(sp)) die("No state file found. Start a workflow first by describing what to build (/amadeus \"build the auth service\").");
 
   const stage = flags.stage;
   if (!stage) die("--stage is required for set-status");
@@ -3734,7 +3734,7 @@ function main(): void {
       handleDetect(projectDir, flags);
       break;
     // init / state-init — deprecated aliases kept for back-compat only (not in
-    // usage/help). The user-facing `/aidlc --init` is retired in P4: the
+    // usage/help). The user-facing `/amadeus --init` is retired in P4: the
     // workspace shell ships in dist/ (SEED) and the engine auto-births the
     // intent. `init` now routes to the birth handler so any stale caller still
     // works; `state-init` dies with migration guidance.

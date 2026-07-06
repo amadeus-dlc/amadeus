@@ -6,7 +6,7 @@
 // worktree から呼ばれたときに worktree ディレクトリ名（例: "engineer3"）を
 // codekb repo キーへ漏らし、codekb/<worktree-name>/ が worktree ごとに分裂する
 // バグ（FR-1）の回帰検査。実 CLI（amadeus-utility.ts codekb-path）を隔離
-// temp workspace で駆動する。LLM を呼ばず、本番 aidlc/ を変更しない。成功時・
+// temp workspace で駆動する。LLM を呼ばず、本番 amadeus/ を変更しない。成功時・
 // 失敗時ともに temp ディレクトリを片付ける。
 //
 // - FR-1.1: main 側 checkout + linked worktree の両方から、repo キーが常に
@@ -135,7 +135,7 @@ try {
   // greenfield sandbox, so requirements-analysis is the only stage between
   // INITIALIZATION and code-generation. The produces are committed so the
   // workspace_requires guard decides against a clean git tree with no real source
-  // file anywhere outside aidlc/ — exactly the docs-only shape FR-2 exists for.
+  // file anywhere outside amadeus/ — exactly the docs-only shape FR-2 exists for.
 
   const b002Base = join(base, "b002-guard");
   mkdirSync(b002Base, { recursive: true });
@@ -163,7 +163,7 @@ try {
   );
   ok("B002 setup: intent-birth が成功する", birth.exitCode === 0, birth.stdout + birth.stderr);
 
-  const intentsRootB002 = join(b002Base, "aidlc/spaces/default/intents");
+  const intentsRootB002 = join(b002Base, "amadeus/spaces/default/intents");
   const recordDirNameB002 = readdirSync(intentsRootB002, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)[0];
@@ -185,7 +185,7 @@ try {
   );
 
   // code-generation's declared produces[] (for_each: unit-of-work — a per-unit
-  // record dir) — docs only, no real source file anywhere outside aidlc/.
+  // record dir) — docs only, no real source file anywhere outside amadeus/.
   const unitDir = join(recordDirB002, "construction/u001-eval-unit/code-generation");
   mkdirSync(unitDir, { recursive: true });
   writeFileSync(join(unitDir, "code-generation-plan.md"), "plan\n");
@@ -311,10 +311,10 @@ try {
   // c5: drive the real validator over real artifacts, no hand-written fixtures).
 
   const b003Ws = join(base, "b003-validator");
-  mkdirSync(join(b003Ws, "aidlc/spaces/default/intents"), { recursive: true });
+  mkdirSync(join(b003Ws, "amadeus/spaces/default/intents"), { recursive: true });
   copyEngine(b003Ws);
-  const spaceSrc = join(root, "aidlc/spaces/default");
-  const spaceDst = join(b003Ws, "aidlc/spaces/default");
+  const spaceSrc = join(root, "amadeus/spaces/default");
+  const spaceDst = join(b003Ws, "amadeus/spaces/default");
   for (const dir of ["memory", "knowledge", "codekb"]) {
     const src = join(spaceSrc, dir);
     if (existsSync(src)) cpSync(src, join(spaceDst, dir), { recursive: true });

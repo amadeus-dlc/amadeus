@@ -8,7 +8,7 @@ Issue #509 established this policy so that the ongoing englishization of the exi
 
 This policy governs `docs/amadeus/*.md` and their `*.ja.md` counterparts.
 
-It does not govern `aidlc/**/*.md`, Markdown generated from templates, `.kiro/specs/**/*.md`, `openspec/**/*.md`, or user-facing gate wording — those remain Japanese per [AMADEUS.md](../../AMADEUS.md)'s 作業言語 (working language) section, which this policy does not change.
+It does not govern `amadeus/**/*.md`, Markdown generated from templates, `.kiro/specs/**/*.md`, `openspec/**/*.md`, or user-facing gate wording — those remain Japanese per [AMADEUS.md](../../AMADEUS.md)'s 作業言語 (working language) section, which this policy does not change.
 
 It also does not govern skill sources (`SKILL.md`, TypeScript scripts); [skill-language-policy.md](skill-language-policy.md) governs those (see [Relation to skill-language-policy](#relation-to-skill-language-policy) below).
 

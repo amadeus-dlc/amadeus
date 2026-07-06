@@ -3,7 +3,7 @@
 // rulesdir-resolve eval（Issue #491）。
 //
 // amadeus-graph.ts compile の rules 解決を、隔離 temp workspace で実体パスの
-// 実 CLI を駆動して検証する。LLM を呼ばず、本番 aidlc/ を変更しない。
+// 実 CLI を駆動して検証する。LLM を呼ばず、本番 amadeus/ を変更しない。
 // 片付けは成功・失敗共通。
 //
 // (a) R101/R102: 実体パス（.agents/amadeus/tools/amadeus-graph.ts）からの compile で
@@ -51,7 +51,7 @@ function makeWorkspace(withMemory: "rules" | "empty" | "none"): string {
     symlinkSync(join("..", ".agents/amadeus", dir), join(ws, ".claude", dir));
   }
   if (withMemory !== "none") {
-    const mem = join(ws, "aidlc/spaces/default/memory");
+    const mem = join(ws, "amadeus/spaces/default/memory");
     mkdirSync(mem, { recursive: true });
     if (withMemory === "rules") {
       writeFileSync(join(mem, "org.md"), "# 組織既定\n\n## 方針\n\n- eval 用の rule である。\n", "utf-8");
@@ -83,7 +83,7 @@ function compile(ws: string) {
 function graphRules(ws: string): number {
   const p = join(ws, ".agents/amadeus/tools/data/stage-graph.json");
   const s = readFileSync(p, "utf-8");
-  return (s.match(/aidlc\/spaces\/default\/memory\/(org|team)\.md/g) ?? []).length;
+  return (s.match(/amadeus\/spaces\/default\/memory\/(org|team)\.md/g) ?? []).length;
 }
 
 // --- (a) rules あり: 実体パス compile で解決される ---

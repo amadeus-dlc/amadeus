@@ -2,7 +2,7 @@
 name: amadeus-reverse-engineering
 description: >
   Run the AI-DLC `reverse-engineering` stage (inception phase) in isolation, without
-  advancing the main workflow. Packages `/aidlc --stage reverse-engineering --single`:
+  advancing the main workflow. Packages `/amadeus --stage reverse-engineering --single`:
   the engine emits one run-stage directive for reverse-engineering and its gate, the
   conductor runs it, then the single-stage run commits a synthetic-id pair and
   stops. The main workflow's Current Stage is never touched.
@@ -13,7 +13,7 @@ user-invocable: true
 # AI-DLC Stage Runner — reverse-engineering
 
 Run the `reverse-engineering` stage on its own. This is opt-in packaging over
-`/aidlc --stage reverse-engineering --single`; the same stage is always reachable via
+`/amadeus --stage reverse-engineering --single`; the same stage is always reachable via
 that flag without this skill.
 
 ## Steps

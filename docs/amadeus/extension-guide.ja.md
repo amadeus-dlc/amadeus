@@ -1,6 +1,6 @@
 # Extension Guide（拡張ガイド）
 
-この文書は、自分の workspace で Amadeus DLC を運用する人が繰り返し抱く疑問に答える。ライフサイクルを拡張・ステアリングしたいとき、`aidlc/spaces/<space>/` 配下（一部の Amadeus 独自拡張ポイントは workspace の外）の何を編集すればよいか、そして人間が直接手で編集してよいかを扱う。
+この文書は、自分の workspace で Amadeus DLC を運用する人が繰り返し抱く疑問に答える。ライフサイクルを拡張・ステアリングしたいとき、`amadeus/spaces/<space>/` 配下（一部の Amadeus 独自拡張ポイントは workspace の外）の何を編集すればよいか、そして人間が直接手で編集してよいかを扱う。
 
 ## スケール原理
 
@@ -14,11 +14,11 @@ stage-graph compiler の rule resolver である `resolveRulesForStage`（`.agen
 
 | 拡張ポイント | 場所 | 役割 | 人間直接編集 | 実測アンカー |
 |---|---|---|---|---|
-| memory 3 層 | `aidlc/spaces/<space>/memory/{org,team,project}.md` | チームの働き方・判断基準（org → team → project の順で上書き） | 可（Maintainer の直接指示チャネル。規律は次節） | `amadeus-graph.ts:599-612`（`resolveRulesForStage`） |
-| phase 防護規定 | `aidlc/spaces/<space>/memory/phases/<phase>.md` | phase 単位の防護規定。その phase を宣言した stage にだけ注入される | 可（同上） | `amadeus-graph.ts:607`（phase 一致判定の分岐） |
-| templates 上書き | `aidlc/spaces/<space>/memory/templates/` | 生成成果物のテンプレートを上書きする。skill 同梱のテンプレートより優先される | 可 | stage-protocol.md:741-746（team template が第 1 優先層）、`amadeus-required-sections.md:38-62`（gate 時、template-override 層が stage 内 `## Sensors` 上書きより優先） |
-| knowledge | `aidlc/spaces/<space>/knowledge/`（`glossary.md`、`domain-map.md`、`context-map.md`、`actors.md` 等） | ドメイン知識 | 直接編集も可能だが、`glossary.md` / `domain-map.md` / `context-map.md` の整合を保つには `amadeus-domain-modeling` skill 経由が安全（CONTEXT.md / glossary の責務整理の詳細は #527 pending） | steering.md（Space 契約） |
-| codekb | `aidlc/spaces/<space>/codekb/<repo>/` | コードベース知識（生成物） | 不可。手編集ではなく増分の reverse-engineering 更新で再生成する | 本 Intent 自身の増分 codekb 更新、`aidlc/spaces/default/codekb/amadeus/timestamp.md` |
+| memory 3 層 | `amadeus/spaces/<space>/memory/{org,team,project}.md` | チームの働き方・判断基準（org → team → project の順で上書き） | 可（Maintainer の直接指示チャネル。規律は次節） | `amadeus-graph.ts:599-612`（`resolveRulesForStage`） |
+| phase 防護規定 | `amadeus/spaces/<space>/memory/phases/<phase>.md` | phase 単位の防護規定。その phase を宣言した stage にだけ注入される | 可（同上） | `amadeus-graph.ts:607`（phase 一致判定の分岐） |
+| templates 上書き | `amadeus/spaces/<space>/memory/templates/` | 生成成果物のテンプレートを上書きする。skill 同梱のテンプレートより優先される | 可 | stage-protocol.md:741-746（team template が第 1 優先層）、`amadeus-required-sections.md:38-62`（gate 時、template-override 層が stage 内 `## Sensors` 上書きより優先） |
+| knowledge | `amadeus/spaces/<space>/knowledge/`（`glossary.md`、`domain-map.md`、`context-map.md`、`actors.md` 等） | ドメイン知識 | 直接編集も可能だが、`glossary.md` / `domain-map.md` / `context-map.md` の整合を保つには `amadeus-domain-modeling` skill 経由が安全（CONTEXT.md / glossary の責務整理の詳細は #527 pending） | steering.md（Space 契約） |
+| codekb | `amadeus/spaces/<space>/codekb/<repo>/` | コードベース知識（生成物） | 不可。手編集ではなく増分の reverse-engineering 更新で再生成する | 本 Intent 自身の増分 codekb 更新、`amadeus/spaces/default/codekb/amadeus/timestamp.md` |
 | scopes | `.agents/amadeus/scopes/amadeus-<name>.md` | ワークフローが実行する stage 集合を変える（1 scope 1 ファイル + stage frontmatter + recompile） | workspace 外（リポジトリ変更 + parity 宣言。`pdm` は上流に対応のない Amadeus 独自 scope の実例。機能差の一覧は #524 pending） | `.agents/amadeus/scopes/amadeus-pdm.md`、`.agents/amadeus/tools/data/scope-grid.json` |
 | sensors | `.agents/amadeus/sensors/` + stage frontmatter の `sensors:` | gate 時の決定論的検査を追加する | workspace 外（リポジトリ変更） | `.agents/amadeus/sensors/` 配下の sensor manifest、audit の `SENSOR_FIRED` |
 | docs-only 宣言 | registry（`intents.json`）の `docsOnly` フィールド | 成果物が record 内文書だけの Intent を `workspace_requires` ガードから免除する（Amadeus 独自 #499。詳細は #524 pending） | 不可。tool-owned であり `amadeus-state.ts declare-docs-only --evidence <ref>` だけが書き込め、evidence は実在する人間承認 audit イベントと突き合わせて検証される | `.agents/amadeus/tools/amadeus-state.ts:83-89`（`HARNESS_DOC_DIRS`）、`:897-903`（`workspaceHasWork`）、`:923-949`（`declare-docs-only` の拒否 / `GUARD_EXEMPTED`） |
@@ -46,6 +46,6 @@ stage-graph compiler の rule resolver である `resolveRulesForStage`（`.agen
 - docs-only ガードの実装: `.agents/amadeus/tools/amadeus-state.ts:83-89`、`:897-903`、`:923-949`。
 - Space 契約（`memory/`、`knowledge/`、`codekb/`、`intents/`）: [steering.md](steering.md)。
 - Amadeus 独自 scope の実例: `.agents/amadeus/scopes/amadeus-pdm.md`。コンパイル済み grid: `.agents/amadeus/tools/data/scope-grid.json`。
-- codekb 再生成の前例: `aidlc/spaces/default/codekb/amadeus/timestamp.md`。
+- codekb 再生成の前例: `amadeus/spaces/default/codekb/amadeus/timestamp.md`。
 
-出典候補のうち 1 件は検証で裏付けが取れなかった。本ガイドが属する Intent 自身の record（`aidlc/spaces/default/intents/260706-docs-lang-guide/runtime-graph.json`）を、compile 済み `rules_in_context` の実例として使えないか確認したが、実際に記録されているのは stage 実行のサマリー（memory エントリ数、sensor firing、learnings）だけであり、stage ごとの `rules_in_context` 配列は含まれていなかった。上記の仕組みは、この record ではなく compiler の実ソースに対して検証した。
+出典候補のうち 1 件は検証で裏付けが取れなかった。本ガイドが属する Intent 自身の record（`amadeus/spaces/default/intents/260706-docs-lang-guide/runtime-graph.json`）を、compile 済み `rules_in_context` の実例として使えないか確認したが、実際に記録されているのは stage 実行のサマリー（memory エントリ数、sensor firing、learnings）だけであり、stage ごとの `rules_in_context` 配列は含まれていなかった。上記の仕組みは、この record ではなく compiler の実ソースに対して検証した。

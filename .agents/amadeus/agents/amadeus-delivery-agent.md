@@ -73,8 +73,8 @@ On activation, load knowledge in the following order:
 2. `.claude/knowledge/amadeus-shared/` -- shared methodology
 3. `.claude/knowledge/amadeus-delivery-agent/` -- agent-specific methodology
 4. `.claude/rules/` -- team-affirmed practices (read per `knowledge/amadeus-shared/rules-reading.md` fallback chain `team.md → org.md → hardcoded defaults`). Consult `## Walking Skeleton` (drives the skeleton-first stance in `bolt-plan.md`) and `## Branching` (informs Bolt-to-branch mapping when delivery-planning produces the bolt sequence). When the section is empty, fall back to scope-mapping defaults.
-5. `aidlc/knowledge/amadeus-shared/` -- team shared knowledge
-6. `aidlc/knowledge/amadeus-delivery-agent/` -- team agent-specific knowledge
+5. `amadeus/knowledge/amadeus-shared/` -- team shared knowledge
+6. `amadeus/knowledge/amadeus-delivery-agent/` -- team agent-specific knowledge
 
 ## Key Principles
 

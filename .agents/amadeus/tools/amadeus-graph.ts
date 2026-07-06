@@ -188,7 +188,7 @@ function stageGraphPath(): string {
 }
 
 // The relocated method ("memory") is harness-neutral and lives at the
-// WORKSPACE ROOT under aidlc/spaces/<space>/memory/, NOT inside the harness
+// WORKSPACE ROOT under amadeus/spaces/<space>/memory/, NOT inside the harness
 // dir — one hand-editable copy, read by every harness via its own native
 // include (Claude @-stub, Kiro resources glob, Codex AGENTS.md/@-mention).
 // `default` is the always-present space and the zero-cursor fallback.
@@ -206,21 +206,21 @@ function stageGraphPath(): string {
 //     the templates sensor reads teamB's templates. A cursorless resolve still
 //     yields `default` (activeSpace() falls back to DEFAULT_SPACE).
 const MEMORY_SPACE = "default";
-const MEMORY_SEGMENTS = ["aidlc", "spaces", MEMORY_SPACE, "memory"] as const;
+const MEMORY_SEGMENTS = ["amadeus", "spaces", MEMORY_SPACE, "memory"] as const;
 
 /** Method ("memory") path segments for an explicit space — the active-space
- *  analog of the default-pinned MEMORY_SEGMENTS. Keeps the `aidlc/spaces/<space>/
+ *  analog of the default-pinned MEMORY_SEGMENTS. Keeps the `amadeus/spaces/<space>/
  *  memory` shape in one place so the project-family resolvers can never drift
  *  from the compile/display family's layout. */
 function memorySegmentsForSpace(space: string): string[] {
-  return ["aidlc", "spaces", space, "memory"];
+  return ["amadeus", "spaces", space, "memory"];
 }
 
 /** Resolve the method ("memory") directory — the single source of truth for
  *  the layered practices (org/team/project + phases/). AIDLC_RULES_DIR env-var
  *  seam mirrors AIDLC_STAGE_GRAPH so t88's fixture-driven inheritance tests can
  *  isolate from the real tree. Evaluated at call time. The default resolves the
- *  workspace-root aidlc/spaces/default/memory/ via workspaceRootForRules() —
+ *  workspace-root amadeus/spaces/default/memory/ via workspaceRootForRules() —
  *  a structural walk-up from this tool's location (Issue #491 replaced the
  *  old fixed "up two levels" guess that broke on the .agents/amadeus/tools
  *  layout). */
@@ -236,21 +236,21 @@ function rulesDir(): string {
 // (two directories deep), which silently resolved to <ws>/.agents and emptied
 // every stage's rules_in_context (Issue #491, surfaced in PR #489). Walk
 // upward from the tool and return the first ancestor that actually contains
-// aidlc/spaces; fall back to the legacy two-up guess when nothing matches
+// amadeus/spaces; fall back to the legacy two-up guess when nothing matches
 // (memory-less sandboxes keep their []-rules behaviour).
 function workspaceRootForRules(): string {
   let dir = __FILE_DIR;
   for (let i = 0; i < 6; i++) {
     dir = join(dir, "..");
-    if (existsSync(join(dir, "aidlc", "spaces"))) return dir;
+    if (existsSync(join(dir, "amadeus", "spaces"))) return dir;
   }
   return join(__FILE_DIR, "..", "..");
 }
 
 /** The harness-neutral DISPLAY path baked into each RuleResolution — the
- *  workspace-relative location of a method file (e.g. "aidlc/spaces/default/
+ *  workspace-relative location of a method file (e.g. "amadeus/spaces/default/
  *  memory/org.md"). Replaces the old per-harness "<harness>/<rulesSubdir>/<f>"
- *  display form: the method now lives at the neutral aidlc/ roof, identical on
+ *  display form: the method now lives at the neutral amadeus/ roof, identical on
  *  every harness, so the baked path is harness-neutral too. `rel` is the file's
  *  sub-path under memory/ (e.g. "org.md" or "phases/construction.md"). */
 function memoryDisplayPath(rel: string): string {
@@ -258,7 +258,7 @@ function memoryDisplayPath(rel: string): string {
 }
 
 /** The method ("memory") directory under a given workspace root:
- *  `<projectDir>/aidlc/spaces/<space>/memory`. FOLLOWS the active-space cursor —
+ *  `<projectDir>/amadeus/spaces/<space>/memory`. FOLLOWS the active-space cursor —
  *  `space` defaults to `activeSpace(projectDir)` (which itself falls back to
  *  `default` when no cursor is set), mirroring the `space?`/`?? activeSpace`
  *  shape of codekbDir()/knowledgeDir()/intentsDir() in amadeus-lib.ts. So the
@@ -272,7 +272,7 @@ export function memoryDirFor(projectDir: string, space?: string): string {
 }
 
 /** The TPL template-override source-of-truth dir for a workspace:
- *  `<projectDir>/aidlc/spaces/<space>/memory/templates` — where SEED ships the
+ *  `<projectDir>/amadeus/spaces/<space>/memory/templates` — where SEED ships the
  *  `templates/` floor and a team drops `<artifact>.md` overrides. Used by the
  *  `required-sections` sensor dispatcher as the default `--templates-dir`. Like
  *  `memoryDirFor`, FOLLOWS the active-space cursor (defaults to
@@ -301,8 +301,8 @@ export function frameworkTemplatesDir(): string {
  *  core/memory/ tree copied INSIDE the engine at <harness>/tools/data/memory-seed/
  *  by the packager (mirrors frameworkTemplatesDir's tools/data/templates). It
  *  exists so an ENGINE-ONLY install (a user who copies only the harness engine
- *  dir, NOT the sibling aidlc/ workspace shell) can self-heal: the first /aidlc
- *  copies this OUT to aidlc/spaces/default/memory/ via ensureWorkspaceDirs IF that
+ *  dir, NOT the sibling amadeus/ workspace shell) can self-heal: the first /amadeus
+ *  copies this OUT to amadeus/spaces/default/memory/ via ensureWorkspaceDirs IF that
  *  default tree is absent. Resolved relative to THIS tool's location (DATA_DIR),
  *  like frameworkTemplatesDir, so it is harness-correct on every harness.
  *  AIDLC_MEMORY_SEED_DIR is a test/relocation seam mirroring AIDLC_FRAMEWORK_TEMPLATES_DIR. */
@@ -417,7 +417,7 @@ const FIELD_ORDER = [
 // surface and no fractional override tier.
 
 export interface RuleFile {
-  path: string;          // "aidlc/spaces/default/memory/org.md"
+  path: string;          // "amadeus/spaces/default/memory/org.md"
   scope: "org" | "team" | "project" | "phase";
   phase?: string;        // populated only when scope === "phase"
   frontmatter: RuleFrontmatter;
@@ -428,9 +428,9 @@ export interface RuleFile {
   headings: Map<string, string>;
 }
 
-// Filename anchors for the relocated method tree (aidlc/memory/). The layered
+// Filename anchors for the relocated method tree (amadeus/memory/). The layered
 // practice files are top-level (org/team/project, plain neutral names — no
-// `aidlc-` prefix now that they live under the neutral aidlc/ roof); the
+// `aidlc-` prefix now that they live under the neutral amadeus/ roof); the
 // phase-scoped files are nested under phases/<phase>.md. A confirmed learning
 // is a practice (vision §6) — it lands in team.md / project.md directly, so
 // there is no `*-learnings.md` slot and no fractional override tier. Anything
@@ -438,7 +438,7 @@ export interface RuleFile {
 // `team-overrides.md`, per 08-rule-system.md.
 const RULE_FILE_REGEX = /^(org|team|project)\.md$/;
 // Phase rule files live in phases/<phase>.md (the flat aidlc-phase-<phase>.md
-// scheme moved under a nested phases/ dir in the aidlc/memory/ relocation).
+// scheme moved under a nested phases/ dir in the amadeus/memory/ relocation).
 const PHASE_RULES_SUBDIR = "phases";
 const PHASE_FILE_REGEX = /^([a-z][a-z0-9-]*)\.md$/;
 
@@ -520,7 +520,7 @@ export function loadRules(): RuleFile[] {
   if (!existsSync(dir)) return [];
 
   // Each candidate: the absolute on-disk path to read, the display sub-path
-  // (relative to aidlc/memory/, e.g. "org.md" or "phases/construction.md")
+  // (relative to amadeus/memory/, e.g. "org.md" or "phases/construction.md")
   // baked into the RuleResolution, the resolved scope, and the phase name when
   // scope === "phase". The method tree is shallow: top-level layered files plus
   // one nested phases/ dir, so the walk is two explicit reads (no recursion).
@@ -928,7 +928,7 @@ export function subgraphForScope(scope: string): GraphStage[] {
 /** Resolve a scope's plan: the EXECUTE/SKIP slice over the full graph in
  *  numeric order, shaped `{slug, phase, action}` — byte-identical to
  *  lib.ts's stagesInScope() / the legacy scope-mapping-derived plan. The
- *  `amadeus-graph resolve` subcommand writes this to .aidlc-plan.json. The
+ *  `amadeus-graph resolve` subcommand writes this to .amadeus-plan.json. The
  *  parity test asserts this matches the legacy plan across all 9 scopes. */
 export function resolvePlanForScope(
   scope: string
@@ -1823,7 +1823,7 @@ const COMMANDS: Record<string, Handler> = {
     });
   },
   resolve: (args) => {
-    // resolve <scope> — emit the active scope's plan (.aidlc-plan.json) to
+    // resolve <scope> — emit the active scope's plan (.amadeus-plan.json) to
     // the project dir. The plan is the EXECUTE/SKIP slice for the scope,
     // derived from the compiled grid (the same transpose runtime reads).
     // Feature-flagged via AIDLC_GRAPH_RESOLVE=1 so it ships
@@ -1909,7 +1909,7 @@ Common forms:
                                        --keywords rejects keywords an existing scope claims)
   amadeus-graph compile                  Regenerate stage-graph.json + scope-grid.json from YAML
   amadeus-graph compile --check          CI drift guard (exit 1 on mismatch)
-  amadeus-graph resolve <name>           Emit .aidlc-plan.json for a scope (AIDLC_GRAPH_RESOLVE=1)
+  amadeus-graph resolve <name>           Emit .amadeus-plan.json for a scope (AIDLC_GRAPH_RESOLVE=1)
   amadeus-graph export                   Emit designer-facing bundle (stdout)
   amadeus-graph export --check           CI drift guard against fixture
 

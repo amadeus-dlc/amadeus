@@ -11,7 +11,7 @@
       "id": 2,
       "name": "inspect-before-asking",
       "prompt": "この Intent の依存関係を質問して詰めて。",
-      "expected_output": "既存の aidlc/spaces/<space>/intents/intents.md や対象 Intent 成果物を先に確認し、読めば分かることは質問しない。"
+      "expected_output": "既存の amadeus/spaces/<space>/intents/intents.md や対象 Intent 成果物を先に確認し、読めば分かることは質問しない。"
     },
     {
       "id": 3,

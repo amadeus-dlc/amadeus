@@ -206,3 +206,74 @@ if (failures > 0) {
   process.exit(1);
 }
 console.log("rename-leftovers eval: ok");
+
+// --- (e) #526 全面 rename: 旧名トークンの tree-wide 残存検出 ---
+// allowlist.json の postRenameScan 設定（scanRoots / excludePaths / tokens / allow）に
+// 従って走査する。検出力は下の自己検査（合成サンプル）で証明する。
+
+{
+  interface PostRenameScan {
+    scanRoots: string[];
+    excludePaths: string[];
+    tokens: string[];
+    allow: { pattern: string; reason: string; files: string[] }[];
+  }
+  const cfg = (
+    JSON.parse(readFileSync(allowlistPath, "utf-8")) as { postRenameScan: PostRenameScan }
+  ).postRenameScan;
+
+  const isExcluded = (rel: string): boolean =>
+    cfg.excludePaths.some((e) => rel === e || rel.startsWith(e));
+  const isAllowedLine = (line: string, rel: string): boolean =>
+    cfg.allow.some(
+      (a) =>
+        (a.files.includes("*") || a.files.some((f) => rel === f || basename(rel) === f)) &&
+        line.includes(a.pattern),
+    );
+  const findViolations = (rel: string, content: string): string[] => {
+    const out: string[] = [];
+    const lines = content.split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!cfg.tokens.some((t) => line.includes(t))) continue;
+      if (isAllowedLine(line, rel)) continue;
+      out.push(`${rel}:${i + 1}: ${line.trim().slice(0, 120)}`);
+    }
+    return out;
+  };
+
+  // 自己検査: 検出器が合成サンプルの旧名を報告し、allow 該当行を通すこと
+  const selfHit = findViolations("synthetic.ts", 'const p = join(root, "aidlc/spaces/default");');
+  const selfPass = findViolations("synthetic.ts", "// 旧 aidlc/spaces 構造からの移行注記");
+  ok("(e) 自己検査: 検出器が旧名を報告する", selfHit.length === 1, JSON.stringify(selfHit));
+  ok("(e) 自己検査: allow 該当行を通す", selfPass.length === 0, JSON.stringify(selfPass));
+
+  const { execSync } = require("node:child_process");
+  const tracked: string[] = execSync(`git ls-files ${cfg.scanRoots.join(" ")}`, {
+    encoding: "utf-8",
+    cwd: root,
+  })
+    .split("\n")
+    .filter(Boolean);
+  const violations: string[] = [];
+  for (const rel of tracked) {
+    if (isExcluded(rel)) continue;
+    let content: string;
+    try {
+      content = readFileSync(join(root, rel), "utf-8");
+    } catch {
+      continue;
+    }
+    violations.push(...findViolations(rel, content));
+  }
+  ok(
+    "(e) #526: 旧名トークン（aidlc/spaces、aidlc-state.md、.aidlc-、/aidlc）の残存がない",
+    violations.length === 0,
+    `${violations.length} violation(s):\n  ${violations.slice(0, 12).join("\n  ")}`,
+  );
+}
+
+if (failures > 0) {
+  console.error(`rename-leftovers eval: ${failures} 件失敗（(e) 追加分）`);
+  process.exit(1);
+}

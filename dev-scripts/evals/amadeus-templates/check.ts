@@ -38,7 +38,7 @@ const textContracts: TextContract[] = [
   {
     path: "README.ja.md",
     includes: [
-      "対象 Intent の `domain-notes.md`、`aidlc/spaces/<space>/knowledge/domain-map.md`、`aidlc/spaces/<space>/knowledge/context-map.md`、`inception/traceability.md`、Construction の Functional Design",
+      "対象 Intent の `domain-notes.md`、`amadeus/spaces/<space>/knowledge/domain-map.md`、`amadeus/spaces/<space>/knowledge/context-map.md`、`inception/traceability.md`、Construction の Functional Design",
     ],
     excludes: [
       "対象 Intent の `domain-notes.md`、`domain/**`、`traceability.md`",
@@ -49,8 +49,8 @@ const textContracts: TextContract[] = [
     path: "skills/amadeus-domain-modeling/SKILL.md",
     promotedPath: ".agents/skills/amadeus-domain-modeling/SKILL.md",
     includes: [
-      "aidlc/spaces/<space>/knowledge/domain-map.md",
-      "aidlc/spaces/<space>/knowledge/context-map.md",
+      "amadeus/spaces/<space>/knowledge/domain-map.md",
+      "amadeus/spaces/<space>/knowledge/context-map.md",
       "Construction Functional Design",
       "inception/traceability.md",
       "inception/decisions.md",

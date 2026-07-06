@@ -1,0 +1,388 @@
+[
+  {
+    "uuid": "019f268f-46f4-7000-ae53-3a4ee7cc6ebc",
+    "slug": "aidlc-v2-full-compliance",
+    "dirName": "260703-aidlc-v2-full-compliance",
+    "scope": "refactor",
+    "repos": [
+      "amadeus"
+    ],
+    "status": "completed"
+  },
+  {
+    "uuid": "019f279e-e9cd-7000-8fff-c2a326ed72bb",
+    "slug": "amadeus-skill-english-rollout-plan",
+    "dirName": "260703-amadeus-skill-english-rollout-plan",
+    "scope": "feature",
+    "repos": [
+      "amadeus"
+    ],
+    "status": "completed"
+  },
+  {
+    "uuid": "019f28f5-681c-7000-b203-09ad07d5b724",
+    "slug": "v2-parity-completion",
+    "dirName": "260704-v2-parity-completion",
+    "scope": "feature",
+    "repos": [
+      "amadeus"
+    ],
+    "status": "complete"
+  },
+  {
+    "uuid": "019f2d03-3348-7270-9dfb-ec91b2159dd5",
+    "slug": "grilling-mode-wiring",
+    "dirName": "260704-grilling-mode-wiring",
+    "scope": "bugfix",
+    "status": "complete",
+    "repos": [
+      "amadeus"
+    ],
+    "issues": [
+      442
+    ]
+  },
+  {
+    "uuid": "019f2d52-6cdb-742f-bf7a-3a470af75556",
+    "slug": "engine-namespace",
+    "dirName": "260704-engine-namespace",
+    "scope": "refactor",
+    "status": "complete",
+    "repos": [
+      "amadeus"
+    ],
+    "issues": [
+      445
+    ]
+  },
+  {
+    "uuid": "019f2e0c-f8f2-705c-bcfb-31b5e5b55217",
+    "slug": "question-rendering-ux",
+    "dirName": "260704-question-rendering-ux",
+    "scope": "refactor",
+    "status": "complete",
+    "repos": [
+      "amadeus"
+    ],
+    "issues": [
+      448,
+      449,
+      450
+    ]
+  },
+  {
+    "uuid": "019f2df2-f7b6-746c-a7ef-36007129aa90",
+    "slug": "engine-validator-alignme",
+    "dirName": "260704-engine-validator-alignme",
+    "scope": "bugfix",
+    "status": "complete",
+    "issues": [
+      455,
+      446
+    ]
+  },
+  {
+    "uuid": "019f2a5c-8474-7286-8044-0b5a6c521e93",
+    "slug": "skill-quality-repair",
+    "dirName": "260703-skill-quality-repair",
+    "scope": "refactor",
+    "status": "complete",
+    "issues": [
+      340,
+      405,
+      252
+    ]
+  },
+  {
+    "uuid": "019f2f98-53a4-7b28-b99b-8f713c126ad8",
+    "slug": "engine-validator-gap",
+    "dirName": "260705-engine-validator-gap",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      457,
+      458
+    ]
+  },
+  {
+    "uuid": "019f2fee-a630-73f5-a90d-16c78a42bc6c",
+    "slug": "github-kanban-sync",
+    "dirName": "260705-github-kanban-sync",
+    "scope": "feature",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      470
+    ]
+  },
+  {
+    "uuid": "019f30b5-2cab-7be8-accb-cae05255a755",
+    "slug": "hooks-state-bugfix",
+    "dirName": "260705-hooks-state-bugfix",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      464,
+      476
+    ]
+  },
+  {
+    "uuid": "019f3102-927e-7d29-9d26-f38445166812",
+    "slug": "ledger-pr-docs",
+    "dirName": "260705-ledger-pr-docs",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      477
+    ]
+  },
+  {
+    "uuid": "019f3154-9e0c-704c-8b80-29439a46401b",
+    "slug": "jump-phase-guard",
+    "dirName": "260705-jump-phase-guard",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      481
+    ]
+  },
+  {
+    "uuid": "019f3166-006e-7f43-b4ef-7e42949b2283",
+    "slug": "engine-gap-trio",
+    "dirName": "260705-engine-gap-trio",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      478
+    ]
+  },
+  {
+    "uuid": "019f318e-eb09-7a37-9372-1d3448e88dfb",
+    "slug": "swarm-batch-progress",
+    "dirName": "260705-swarm-batch-progress",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      486
+    ]
+  },
+  {
+    "uuid": "019f319b-c015-7f34-bfad-7af146b60b0d",
+    "slug": "doctor-drops",
+    "dirName": "260705-doctor-drops",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      432
+    ]
+  },
+  {
+    "uuid": "019f3153-396d-7839-ac70-8d0445466105",
+    "slug": "parallel-policy-docs",
+    "dirName": "260705-parallel-policy-docs",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      407,
+      342
+    ]
+  },
+  {
+    "uuid": "019f31e9-bad7-793a-bd87-ee9b16ee9aa4",
+    "slug": "engine-error-logged",
+    "dirName": "260705-engine-error-logged",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      431
+    ]
+  },
+  {
+    "uuid": "019f31dd-52b2-7ac9-ae91-25116b8761cc",
+    "slug": "workspace-detect",
+    "dirName": "260705-workspace-detect",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      459
+    ]
+  },
+  {
+    "uuid": "019f31b4-449e-79d3-8793-e7ef6f006d7e",
+    "slug": "evaluator-vocabulary",
+    "dirName": "260705-evaluator-vocabulary",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete"
+  },
+  {
+    "uuid": "019f3208-a52d-7e0a-8c3a-b0a5c8926354",
+    "slug": "rulesdir-resolve",
+    "dirName": "260705-rulesdir-resolve",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      491
+    ]
+  },
+  {
+    "uuid": "019f3226-28d4-7214-af2c-650cb0f39b6b",
+    "slug": "space-inventory",
+    "dirName": "260705-space-inventory",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete",
+    "issues": []
+  },
+  {
+    "uuid": "019f323d-30ee-73be-828b-173629669b96",
+    "slug": "codekb-refresh",
+    "dirName": "260705-codekb-refresh",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete",
+    "issues": []
+  },
+  {
+    "uuid": "019f32a7-dbd9-7718-8f57-db62bbc8a339",
+    "slug": "agmsg-trial-docs",
+    "dirName": "260705-agmsg-trial-docs",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete"
+  },
+  {
+    "uuid": "019f32f1-1cc4-750c-bd31-0bb79306413f",
+    "slug": "steering-learnings",
+    "dirName": "260705-steering-learnings",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete"
+  },
+  {
+    "uuid": "019f31b9-6553-7aee-b1d0-e8801ccb2ea8",
+    "slug": "pdm-scope",
+    "dirName": "260705-pdm-scope",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      429
+    ]
+  },
+  {
+    "uuid": "019f332c-55e2-70c1-8074-e3384cc641ec",
+    "slug": "docs-codekb-guards",
+    "dirName": "260705-docs-codekb-guards",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      498,
+      499,
+      501
+    ]
+  },
+  {
+    "uuid": "019f33a7-7183-755c-a169-a35d527daa46",
+    "slug": "engine-installer",
+    "dirName": "260705-engine-installer",
+    "scope": "feature",
+    "repos": [],
+    "status": "in_progress"
+  },
+  {
+    "uuid": "019f3494-4088-73bb-b960-54b34203a8b2",
+    "slug": "persist-cid-metamain",
+    "dirName": "260705-persist-cid-metamain",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      504,
+      507
+    ]
+  },
+  {
+    "uuid": "019f34cc-c77f-7285-9282-73702db8bd43",
+    "slug": "docs-lang-guide",
+    "dirName": "260706-docs-lang-guide",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      509,
+      532
+    ]
+  },
+  {
+    "uuid": "019f33a1-305f-7539-b83d-c88f8fdc9d0c",
+    "slug": "upstream-sync",
+    "dirName": "260705-upstream-sync",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete"
+  },
+  {
+    "uuid": "019f34f9-6a57-7eb4-a4f0-f0e7524b0a9c",
+    "slug": "no-stub-lint",
+    "dirName": "260706-no-stub-lint",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete",
+    "issues": [
+      528
+    ]
+  },
+  {
+    "uuid": "019f34fe-4918-7f27-b6c9-e00b1f87619f",
+    "slug": "readme-refresh",
+    "dirName": "260706-readme-refresh",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete"
+  },
+  {
+    "uuid": "019f3499-3bfc-73d5-a320-534acfe961c9",
+    "slug": "presence-evidence",
+    "dirName": "260705-presence-evidence",
+    "scope": "feature",
+    "repos": [],
+    "status": "complete"
+  },
+  {
+    "uuid": "019f34f7-fbb5-7f9f-8d45-521ce7c6e3f3",
+    "slug": "pr-gate-discipline",
+    "dirName": "260706-pr-gate-discipline",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete"
+  },
+  {
+    "uuid": "019f351e-d3b4-7103-a4a3-2b723078c9e5",
+    "slug": "rename-lint-fixes",
+    "dirName": "260706-rename-lint-fixes",
+    "scope": "bugfix",
+    "repos": [],
+    "status": "complete"
+  },
+  {
+    "uuid": "019f3597-d0b4-745c-87de-bc7ec4cdfd99",
+    "slug": "full-rename",
+    "dirName": "260706-full-rename",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete"
+  }
+]

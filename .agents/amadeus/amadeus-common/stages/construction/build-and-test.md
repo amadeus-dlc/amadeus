@@ -64,7 +64,7 @@ Create `<record>/construction/build-and-test/build-instructions.md`:
 
 ### Step 4-8: Generate Test Instructions (Strategy-Aware)
 
-Consult the active test strategy from `aidlc-state.md` → `**Test Strategy**` (see stage-protocol.md §8 "Test Strategy"). Generate test instruction files based on the strategy level:
+Consult the active test strategy from `amadeus-state.md` → `**Test Strategy**` (see stage-protocol.md §8 "Test Strategy"). Generate test instruction files based on the strategy level:
 
 **Minimal strategy** — generate ONLY:
 - `unit-test-instructions.md`: Requirement-driven unit tests (1 test per requirement, happy-path floor per component). ~5-15 tests total. Skip all other test types.
@@ -123,7 +123,7 @@ Attempt to execute the build and test commands documented in the instruction fil
 
 ### Step 11: Update State
 
-Update `<record>/aidlc-state.md`: mark Build and Test as `[x]` completed and update "Current Status". Mark CONSTRUCTION phase as complete.
+Update `<record>/amadeus-state.md`: mark Build and Test as `[x]` completed and update "Current Status". Mark CONSTRUCTION phase as complete.
 
 ### Step 12: Completion
 

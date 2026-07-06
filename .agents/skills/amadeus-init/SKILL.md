@@ -16,7 +16,7 @@ Start a fresh AI-DLC workflow. The workspace shell ships in `dist/` (no setup
 command), and the engine auto-births the first intent when you describe what to
 build — this skill is opt-in packaging over that birth move. Initialization is a
 PHASE, not a single stage — it mints the intent, detects the workspace
-(greenfield/brownfield), and builds `aidlc-state.md` together, in one
+(greenfield/brownfield), and builds `amadeus-state.md` together, in one
 deterministic call. There is no per-init-stage runner because an init stage has
 no standalone meaning.
 
@@ -41,4 +41,4 @@ no standalone meaning.
 
    `--scope` seeds the initial scope (defaults to `poc`); omit `--arguments`
    and `--label` when the user gave no description. Print the tool's output and
-   stop. This does not advance a stage; run `/aidlc` afterwards to continue.
+   stop. This does not advance a stage; run `/amadeus` afterwards to continue.

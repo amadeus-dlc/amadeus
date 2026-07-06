@@ -45,11 +45,11 @@ assert(cleanMarkdownLinkTarget("") === "", "cleanMarkdownLinkTarget keeps blank 
 // ---- resolveArtifactLinkTarget ----
 
 assert(
-  resolveArtifactLinkTarget("aidlc/spaces/default/knowledge/domain-map.md", "../intents/260629-minimum-purchase-flow.md").value === "aidlc/spaces/default/intents/260629-minimum-purchase-flow.md",
+  resolveArtifactLinkTarget("amadeus/spaces/default/knowledge/domain-map.md", "../intents/260629-minimum-purchase-flow.md").value === "amadeus/spaces/default/intents/260629-minimum-purchase-flow.md",
   "Artifact link resolves dot-relative Domain Map evidence",
 );
 assert(
-  resolveArtifactLinkTarget("aidlc/spaces/default/knowledge/domain-map.md", "../intents/260629-minimum-purchase-flow.md").value === "aidlc/spaces/default/intents/260629-minimum-purchase-flow.md",
+  resolveArtifactLinkTarget("amadeus/spaces/default/knowledge/domain-map.md", "../intents/260629-minimum-purchase-flow.md").value === "amadeus/spaces/default/intents/260629-minimum-purchase-flow.md",
   "Artifact link resolves plain Domain Map evidence",
 );
 assert(
@@ -57,20 +57,20 @@ assert(
   "Artifact link resolves source-relative parent path inside artifact root",
 );
 assertThrows(
-  () => resolveArtifactLinkTarget("aidlc/spaces/default/knowledge/domain-map.md", "https://example.com/intent.md"),
+  () => resolveArtifactLinkTarget("amadeus/spaces/default/knowledge/domain-map.md", "https://example.com/intent.md"),
   "Artifact link rejects external target",
 );
 assertThrows(
-  () => resolveArtifactLinkTarget("aidlc/spaces/default/knowledge/domain-map.md", "../../../../../outside.md"),
+  () => resolveArtifactLinkTarget("amadeus/spaces/default/knowledge/domain-map.md", "../../../../../outside.md"),
   "Artifact link rejects target escaping artifact root",
 );
 
 assert(
-  tryResolveArtifactLinkTarget("aidlc/spaces/default/knowledge/domain-map.md", "https://example.com/intent.md") === undefined,
+  tryResolveArtifactLinkTarget("amadeus/spaces/default/knowledge/domain-map.md", "https://example.com/intent.md") === undefined,
   "tryResolveArtifactLinkTarget returns undefined for invalid target",
 );
 assert(
-  tryResolveArtifactLinkTarget("aidlc/spaces/default/knowledge/domain-map.md", "../intents/a.md")?.value === "aidlc/spaces/default/intents/a.md",
+  tryResolveArtifactLinkTarget("amadeus/spaces/default/knowledge/domain-map.md", "../intents/a.md")?.value === "amadeus/spaces/default/intents/a.md",
   "tryResolveArtifactLinkTarget resolves valid target",
 );
 

@@ -2,9 +2,9 @@
 
 ## 基本方針
 
-このディレクトリは、Amadeus Space（`aidlc/spaces/<space>/`）の標準テンプレートである。
+このディレクトリは、Amadeus Space（`amadeus/spaces/<space>/`）の標準テンプレートである。
 
-`aidlc/spaces/<space>/memory/templates/space/` がある場合は、プロジェクト固有の上書きを優先する。
+`amadeus/spaces/<space>/memory/templates/space/` がある場合は、プロジェクト固有の上書きを優先する。
 存在しない場合は、この標準テンプレートを使う。
 
 テンプレート内の `<...>` は、確認済みの値または `未確認` に置き換える。

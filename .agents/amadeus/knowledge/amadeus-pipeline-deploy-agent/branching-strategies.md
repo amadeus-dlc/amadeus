@@ -220,7 +220,7 @@ When the orchestrator dispatches amadeus-pipeline-deploy-agent for a worktree cr
 {
   "emitted": "WORKTREE_CREATED",
   "slug": "<bolt-slug>",
-  "worktree_path": "/abs/path/.aidlc/worktrees/bolt-<slug>",
+  "worktree_path": "/abs/path/.amadeus/worktrees/bolt-<slug>",
   "branch": "bolt-<slug>",
   "base": "<base-branch>",
   "audit_timestamp": "2026-05-18T12:34:56Z",
@@ -234,7 +234,7 @@ When the orchestrator dispatches amadeus-pipeline-deploy-agent for a worktree cr
 {
   "emitted": "WORKTREE_MERGED",
   "slug": "<bolt-slug>",
-  "worktree_path": "/abs/path/.aidlc/worktrees/bolt-<slug>",
+  "worktree_path": "/abs/path/.amadeus/worktrees/bolt-<slug>",
   "target": "<target-branch>",
   "strategy": "squash",
   "commit_sha": "<sha>",
@@ -249,13 +249,13 @@ When the orchestrator dispatches amadeus-pipeline-deploy-agent for a worktree cr
 {
   "status": "conflict",
   "slug": "<bolt-slug>",
-  "worktree_path": "/abs/path/.aidlc/worktrees/bolt-<slug>",
+  "worktree_path": "/abs/path/.amadeus/worktrees/bolt-<slug>",
   "conflict_files": ["src/foo.ts", "src/bar.ts"],
   "detail": "Merge produced conflicts in worktree at <path>. Worktree preserved for inspection."
 }
 ```
 
-The orchestrator's halt-and-ask quotes the `detail` field verbatim. See `amadeus-common/protocols/stage-protocol.md` § "Halt-and-ask on failure" and `skills/aidlc/SKILL.md` § "Halt-and-ask failure handling" for the full prompt shape and preservation invariant.
+The orchestrator's halt-and-ask quotes the `detail` field verbatim. See `amadeus-common/protocols/stage-protocol.md` § "Halt-and-ask on failure" and `skills/amadeus/SKILL.md` § "Halt-and-ask failure handling" for the full prompt shape and preservation invariant.
 
 ### Discard response
 
@@ -263,7 +263,7 @@ The orchestrator's halt-and-ask quotes the `detail` field verbatim. See `amadeus
 {
   "emitted": "WORKTREE_DISCARDED",
   "slug": "<bolt-slug>",
-  "worktree_path": "/abs/path/.aidlc/worktrees/bolt-<slug>",
+  "worktree_path": "/abs/path/.amadeus/worktrees/bolt-<slug>",
   "reason": "agent-discard",
   "audit_timestamp": "2026-05-18T12:34:56Z"
 }

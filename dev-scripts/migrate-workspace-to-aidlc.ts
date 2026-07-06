@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-// 旧 `.amadeus/` workspace を v2 準拠の `aidlc/spaces/default/` へ一括移行する開発用スクリプト。
+// 旧 `.amadeus/` workspace を v2 準拠の `amadeus/spaces/default/` へ一括移行する開発用スクリプト。
 // 一回限りの移行に使う（Intent 20260703-aidlc-v2-full-compliance / Issue #387）。
 //
 // 使い方:
@@ -11,7 +11,7 @@
 //   glossary / domain-map / context-map / actors / external-systems / knowledge
 //                                  → knowledge/
 //   knowledge/codebase/<repo>/     → codekb/<repo>/
-//   intents/<YYYYMMDD>-<slug>      → intents/<YYMMDD>-<slug>/（state.json → aidlc-state.md、audit 遡及記録、R005 改名）
+//   intents/<YYYYMMDD>-<slug>      → intents/<YYMMDD>-<slug>/（state.json → amadeus-state.md、audit 遡及記録、R005 改名）
 //   active-intent                  → intents/ 配下（intents.json を新設し uuid v7 を採番）
 //   ※ intents.md 索引は GD009 で廃止されたため、この移行では生成しない。
 
@@ -305,7 +305,7 @@ function migrateRecord(oldIntents: string, oldName: string, newIntents: string, 
   scaffoldRecord(recordDir);
 
   const nowIso = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
-  writeFileSync(join(recordDir, "aidlc-state.md"), renderAidlcState(state, nowIso));
+  writeFileSync(join(recordDir, "amadeus-state.md"), renderAidlcState(state, nowIso));
   mkdirSync(join(recordDir, "audit"), { recursive: true });
   writeFileSync(join(recordDir, "audit/audit.md"), renderAudit(state, nowIso));
 }
@@ -660,7 +660,7 @@ function main(): void {
 
   const amadeusDir = join(workspace, ".amadeus");
   if (!existsSync(amadeusDir)) fail(`対象 workspace に .amadeus/ が存在しません: ${amadeusDir}`);
-  const spaceDir = join(workspace, "aidlc/spaces/default");
+  const spaceDir = join(workspace, "amadeus/spaces/default");
   if (existsSync(spaceDir)) fail(`移行先が既に存在します: ${spaceDir}`);
 
   buildMemory(amadeusDir, spaceDir);

@@ -2,7 +2,7 @@
 name: amadeus-feature
 description: >
   Run the AI-DLC workflow with the feature scope baked in — no scope
-  detection. Default for new features, practical depth. Packaging over `/aidlc --scope feature`, which works
+  detection. Default for new features, practical depth. Packaging over `/amadeus --scope feature`, which works
   without this skill.
 argument-hint: "[description | --status | --stage <slug|#> | --phase <name|#>]"
 user-invocable: true
@@ -11,7 +11,7 @@ user-invocable: true
 # AI-DLC — feature scope
 
 Drive the AI-DLC engine with the **feature** scope fixed. This is the same
-deterministic forwarding loop the `/aidlc` orchestrator runs, with `--scope
+deterministic forwarding loop the `/amadeus` orchestrator runs, with `--scope
 feature` baked into the first `next` so scope detection is skipped. The
 engine owns all routing; the conductor persona arrives on the first directive's
 `conductor_persona` field — adopt it for the whole run.
@@ -31,4 +31,4 @@ question at a time, recommended answer attached, answers written back in
 Pass `$ARGUMENTS` through verbatim after `--scope feature`; the engine parses
 any flags (`--status`, `--stage`, …) and the `--scope` from the
 state file always wins on an existing workflow, so re-running a started workflow
-resumes it. To run a different scope, use `/aidlc --scope <other>` instead.
+resumes it. To run a different scope, use `/amadeus --scope <other>` instead.

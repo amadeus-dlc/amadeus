@@ -2,20 +2,20 @@
 //
 // (1) STAGE-RUNNERS: one thin `skills/aidlc-<stage>/SKILL.md`
 //     per RUNNABLE compiled stage slug. A stage-runner is OPT-IN SUGAR: it
-//     packages `/aidlc --stage <slug> --single`, which works without it, into a
+//     packages `/amadeus --stage <slug> --single`, which works without it, into a
 //     typeable `/aidlc-<stage>` command. The authoritative authoring path is
 //     "write a stage file"; this generator bakes a runner shell over the
 //     compiled graph so the set of runners can never drift from the set of
 //     stages by hand. The bootstrap INITIALIZATION stages are excluded (they
 //     have no standalone --single meaning); the whole init phase is packaged as
-//     ONE `/aidlc-init` runner over `/aidlc --init` instead.
+//     ONE `/aidlc-init` runner over `/amadeus --init` instead.
 //
 // (2) SCOPE-RUNNERS: one thin `skills/aidlc-<scope>/SKILL.md` per
 //     shipped `.claude/scopes/amadeus-<name>.md` file. A scope-runner is packaging,
 //     not definition (decision D-A): each is a ~6-line shell that drives the
 //     engine (`amadeus-orchestrate next --scope <scope>`) to `done` with a fixed
 //     scope and no scope detection. The full set of scopes is always reachable
-//     via `/aidlc --scope <name>`; runners are typeable sugar over the
+//     via `/amadeus --scope <name>`; runners are typeable sugar over the
 //     high-traffic ones (the FIRST_BATCH).
 //
 // COMPOSE, don't reimplement. The stage-slug list comes from loadGraph() — the
@@ -79,10 +79,10 @@ function runnerDirName(slug: string): string {
 // Initialization-phase stages are bootstrap: they have no standalone meaning
 // (`produces: []`, and the engine's --single mode REFUSES them — you cannot
 // scaffold half a workspace). The whole initialization phase is run as ONE
-// atomic operation by `/aidlc --init` (amadeus-utility.ts: scaffold + scan +
+// atomic operation by `/amadeus --init` (amadeus-utility.ts: scaffold + scan +
 // state-init in one call). So a per-init-stage `--single` runner would be a
 // typeable command that always errors. We exclude them from stage-runner
-// generation and ship ONE `/aidlc-init` runner that wraps `/aidlc --init`
+// generation and ship ONE `/aidlc-init` runner that wraps `/amadeus --init`
 // instead — initialization is a PHASE, not standalone stages, so the
 // stage-runner set is the runnable (non-init) stages.
 function isRunnableStage(node: GraphStage): boolean {
@@ -104,8 +104,8 @@ function stageSlugs(): string[] {
 }
 
 // The dir name for the init-phase runner: `/aidlc-init`. It wraps the whole
-// initialization phase via `/aidlc --init`, NOT a single stage.
-const INIT_RUNNER_DIR = "aidlc-init";
+// initialization phase via `/amadeus --init`, NOT a single stage.
+const INIT_RUNNER_DIR = "amadeus-init";
 
 // Render the ~6-line runner shell for one stage. The body is intentionally thin:
 // it states what the runner does and the one command it drives. It does NOT
@@ -121,7 +121,7 @@ export function renderStageRunner(node: GraphStage): string {
 name: ${dir}
 description: >
   Run the AI-DLC \`${node.slug}\` stage (${node.phase} phase) in isolation, without
-  advancing the main workflow. Packages \`/aidlc --stage ${node.slug} --single\`:
+  advancing the main workflow. Packages \`/amadeus --stage ${node.slug} --single\`:
   the engine emits one run-stage directive for ${node.slug} and its gate, the
   conductor runs it, then the single-stage run commits a synthetic-id pair and
   stops. The main workflow's Current Stage is never touched.
@@ -132,7 +132,7 @@ user-invocable: true
 # AI-DLC Stage Runner — ${node.slug}
 
 Run the \`${node.slug}\` stage on its own. This is opt-in packaging over
-\`/aidlc --stage ${node.slug} --single\`; the same stage is always reachable via
+\`/amadeus --stage ${node.slug} --single\`; the same stage is always reachable via
 that flag without this skill.
 
 ## Steps
@@ -169,7 +169,7 @@ that flag without this skill.
 // the engine already names at birth. It drives `intent-birth`, NOT
 // `--stage … --single`, so the stage-runner drift guard (which keys on the
 // `--stage`+`--single` marker) never counts it. There is no user-facing
-// `/aidlc --init` (P4): the workspace shell ships in dist/ and the engine
+// `/amadeus --init` (P4): the workspace shell ships in dist/ and the engine
 // auto-births the first intent — this runner just makes that explicit.
 export function renderInitRunner(): string {
   return `---
@@ -190,7 +190,7 @@ Start a fresh AI-DLC workflow. The workspace shell ships in \`dist/\` (no setup
 command), and the engine auto-births the first intent when you describe what to
 build — this skill is opt-in packaging over that birth move. Initialization is a
 PHASE, not a single stage — it mints the intent, detects the workspace
-(greenfield/brownfield), and builds \`aidlc-state.md\` together, in one
+(greenfield/brownfield), and builds \`amadeus-state.md\` together, in one
 deterministic call. There is no per-init-stage runner because an init stage has
 no standalone meaning.
 
@@ -215,12 +215,12 @@ no standalone meaning.
 
    \`--scope\` seeds the initial scope (defaults to \`poc\`); omit \`--arguments\`
    and \`--label\` when the user gave no description. Print the tool's output and
-   stop. This does not advance a stage; run \`/aidlc\` afterwards to continue.
+   stop. This does not advance a stage; run \`/amadeus\` afterwards to continue.
 `;
 }
 
 // The dir name for the composer shortcut runner: `/aidlc-compose`. A thin
-// typeable wrapper over `/aidlc compose ...` - the same one-door path, never a
+// typeable wrapper over `/amadeus compose ...` - the same one-door path, never a
 // divergent flow.
 const COMPOSE_RUNNER_DIR = "aidlc-compose";
 
@@ -240,7 +240,7 @@ description: >
   Compose a tailored AI-DLC workflow plan - the adaptive composer reads your
   task (or a scan report), proposes the EXECUTE/SKIP stage grid that fits,
   and after your approval authors it as a scope and runs it. A typeable
-  shortcut for \`/aidlc compose\`; the same one door, forced to the full
+  shortcut for \`/amadeus compose\`; the same one door, forced to the full
   composer even when a stock scope would match.
 argument-hint: "[description | --report <path> | --new-scope]"
 user-invocable: true
@@ -249,9 +249,9 @@ user-invocable: true
 # AI-DLC - compose a workflow plan
 
 Force the adaptive composer on a task. This is packaging over
-\`/aidlc compose ...\` - it does not add a second entry point; the engine
+\`/amadeus compose ...\` - it does not add a second entry point; the engine
 recognizes the compose request and names the composer dispatch, and the
-conductor runs the same forwarding loop as \`/aidlc\`.
+conductor runs the same forwarding loop as \`/amadeus\`.
 
 ## Steps
 
@@ -265,7 +265,7 @@ conductor runs the same forwarding loop as \`/aidlc\`.
 2. Act on the directive exactly as the \`aidlc\` skill's forwarding loop
    describes (the composer-dispatch print names the composer agent; render
    its proposal and hold the approve/edit/reject gate). From here the flow IS
-   the \`/aidlc\` flow - continue its loop until the directive says stop.
+   the \`/amadeus\` flow - continue its loop until the directive says stop.
 `;
 }
 
@@ -371,7 +371,7 @@ function handleCheck(): void {
 // (high-traffic + the named bugfix): `bugfix` (the spec's headline example),
 // `feature` (the highest-traffic standard greenfield scope), `mvp` (the common
 // greenfield starting point), and `security-patch` (high-value incremental).
-// Every other scope still runs via `/aidlc --scope <name>` — runners are
+// Every other scope still runs via `/amadeus --scope <name>` — runners are
 // packaging, not definition. Pass `--all` to emit a runner per shipped scope.
 export const FIRST_BATCH: readonly string[] = [
   "bugfix",
@@ -460,7 +460,7 @@ export function renderRunner(scope: string, description: string): string {
 name: ${dir}
 description: >
   Run the AI-DLC workflow with the ${scope} scope baked in — no scope
-  detection. ${desc} Packaging over \`/aidlc --scope ${scope}\`, which works
+  detection. ${desc} Packaging over \`/amadeus --scope ${scope}\`, which works
   without this skill.
 argument-hint: "[description | --status | --stage <slug|#> | --phase <name|#>]"
 user-invocable: true
@@ -469,7 +469,7 @@ user-invocable: true
 # AI-DLC — ${scope} scope
 
 Drive the AI-DLC engine with the **${scope}** scope fixed. This is the same
-deterministic forwarding loop the \`/aidlc\` orchestrator runs, with \`--scope
+deterministic forwarding loop the \`/amadeus\` orchestrator runs, with \`--scope
 ${scope}\` baked into the first \`next\` so scope detection is skipped. The
 engine owns all routing; the conductor persona arrives on the first directive's
 \`conductor_persona\` field — adopt it for the whole run.
@@ -484,7 +484,7 @@ engine owns all routing; the conductor persona arrives on the first directive's
 Pass \`$ARGUMENTS\` through verbatim after \`--scope ${scope}\`; the engine parses
 any flags (\`--status\`, \`--stage\`, …) and the \`--scope\` from the
 state file always wins on an existing workflow, so re-running a started workflow
-resumes it. To run a different scope, use \`/aidlc --scope <other>\` instead.
+resumes it. To run a different scope, use \`/amadeus --scope <other>\` instead.
 `;
 }
 

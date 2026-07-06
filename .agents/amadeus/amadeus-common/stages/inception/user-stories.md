@@ -63,12 +63,12 @@ Create `<record>/inception/user-stories/user-stories-assessment.md` documenting 
 - If executing: key areas where stories will add the most value
 - If skipping: what alternative coverage exists (e.g., requirements alone are sufficient)
 
-If skipping, update aidlc-state.md with skip reason and proceed to next stage.
+If skipping, update amadeus-state.md with skip reason and proceed to next stage.
 
 ### Step 3: Load Prior Context
 
 - Read `<record>/inception/requirements-analysis/requirements.md`
-- If brownfield: Read relevant RE artifacts from `aidlc/spaces/<active-space>/codekb/<repo>/` (the directory `codekb-path --repo <repo>` prints)
+- If brownfield: Read relevant RE artifacts from `amadeus/spaces/<active-space>/codekb/<repo>/` (the directory `codekb-path --repo <repo>` prints)
 
 ---
 
@@ -122,7 +122,7 @@ Based on the approved plan, generate:
 
 ### Step 9: Update State
 
-Update `<record>/aidlc-state.md`:
+Update `<record>/amadeus-state.md`:
 - Mark User Stories as `[x]` completed
 - Update current stage and next stage
 
@@ -139,7 +139,7 @@ This stage's outputs are markdown artefacts under `<record>/inception/user-stori
 
 The imported sensors check those outputs:
 
-- **`required-sections`** verifies the output contains the registry default (≥2 H2 headings). Failure mode: missing headings emit `SENSOR_FAILED` with detail at `<record>/.aidlc-sensors/<stage-slug>/required-sections-<iso>.md`.
+- **`required-sections`** verifies the output contains the registry default (≥2 H2 headings). Failure mode: missing headings emit `SENSOR_FAILED` with detail at `<record>/.amadeus-sensors/<stage-slug>/required-sections-<iso>.md`.
 - **`upstream-coverage`** verifies the output prose references each artefact declared in this stage's `consumes:` frontmatter. Failure mode: missing upstream references emit `SENSOR_FAILED` listing each unreferenced artefact (this stage consumes `requirements`, `team-practices`).
 
 ## Learn

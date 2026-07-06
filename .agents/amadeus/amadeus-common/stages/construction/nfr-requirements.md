@@ -75,7 +75,7 @@ Load amadeus-architect-agent (lead) persona from `agents/amadeus-architect-agent
 
 ### Step 2: Read Prior Artifacts
 
-Read functional design artifacts from `<record>/construction/{unit-name}/functional-design/` (if they exist). Read `<record>/inception/requirements-analysis/requirements.md` (if exists) and any reverse engineering artifacts from `aidlc/spaces/<active-space>/codekb/<repo>/` (the directory `codekb-path --repo <repo>` prints). Incremental scopes (infra) skip functional-design by design; when its artifacts are absent, derive the NFR context from the requirements and the code knowledge base instead — never invent the content of a missing artifact.
+Read functional design artifacts from `<record>/construction/{unit-name}/functional-design/` (if they exist). Read `<record>/inception/requirements-analysis/requirements.md` (if exists) and any reverse engineering artifacts from `amadeus/spaces/<active-space>/codekb/<repo>/` (the directory `codekb-path --repo <repo>` prints). Incremental scopes (infra) skip functional-design by design; when its artifacts are absent, derive the NFR context from the requirements and the code knowledge base instead — never invent the content of a missing artifact.
 
 ### Step 3: Assess NFR Categories
 
@@ -111,7 +111,7 @@ Generate the following in `<record>/construction/{unit-name}/nfr-requirements/`:
 
 ### Step 7: Update State
 
-Update `<record>/aidlc-state.md`: mark NFR Requirements for {unit-name} as `[x]` completed and update "Current Status".
+Update `<record>/amadeus-state.md`: mark NFR Requirements for {unit-name} as `[x]` completed and update "Current Status".
 
 ### Step 8: Completion
 
@@ -140,7 +140,7 @@ The imported sensors check those outputs:
 - **`linter`** runs against any TypeScript/JavaScript snippets the design includes (matches `**/*.{ts,js}`).
 - **`type-check`** runs against any TypeScript/TSX snippets the design includes (matches `**/*.{ts,tsx}`).
 
-Failure modes land in `<record>/.aidlc-sensors/<stage-slug>/` as `SENSOR_FAILED` audit rows with per-sensor detail files.
+Failure modes land in `<record>/.amadeus-sensors/<stage-slug>/` as `SENSOR_FAILED` audit rows with per-sensor detail files.
 
 ## Learn
 

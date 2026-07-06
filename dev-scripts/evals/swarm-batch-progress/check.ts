@@ -4,7 +4,7 @@
 //
 // invoke-swarm のバッチ提示が coverage（produces の実在）で進行することを、
 // 隔離 temp workspace でエンジン実 CLI を駆動して検証する。LLM を呼ばず、
-// 本番 aidlc/ を変更しない。成功時・失敗時ともに temp workspace を片付ける。
+// 本番 amadeus/ を変更しない。成功時・失敗時ともに temp workspace を片付ける。
 //
 // (a) batch 1 が未完了のとき、invoke-swarm は batch 1 の未完了 unit を提示する。
 // (b) batch 1 の produces が揃うと、次の `next` は batch 2 を提示する（従来は
@@ -77,7 +77,7 @@ try {
     ws
   );
   if (birth.exitCode !== 0) throw new Error(`intent-birth failed: ${birth.stderr}\n${birth.stdout}`);
-  const intentsRoot = join(ws, "aidlc/spaces/default/intents");
+  const intentsRoot = join(ws, "amadeus/spaces/default/intents");
   const dirName = readdirSync(intentsRoot, { withFileTypes: true })
     .filter((e) => e.isDirectory())
     .map((e) => e.name)[0]!;

@@ -71,7 +71,7 @@ Create CD pipeline configuration, deployment strategy document, rollback runbook
 
 ### Step 5: Update State
 
-Mark deployment-pipeline as `[x]` completed in `<record>/aidlc-state.md`.
+Mark deployment-pipeline as `[x]` completed in `<record>/amadeus-state.md`.
 
 ### Step 6: Present Completion & Request Approval
 
@@ -85,7 +85,7 @@ This stage's outputs are markdown artefacts under `<record>/operation/deployment
 
 The imported sensors check those outputs:
 
-- **`required-sections`** verifies the output contains the registry default (≥2 H2 headings). Failure mode: missing headings emit `SENSOR_FAILED` with detail at `<record>/.aidlc-sensors/<stage-slug>/required-sections-<iso>.md`.
+- **`required-sections`** verifies the output contains the registry default (≥2 H2 headings). Failure mode: missing headings emit `SENSOR_FAILED` with detail at `<record>/.amadeus-sensors/<stage-slug>/required-sections-<iso>.md`.
 - **`upstream-coverage`** verifies the output prose references each artefact declared in this stage's `consumes:` frontmatter. Failure mode: missing upstream references emit `SENSOR_FAILED` listing each unreferenced artefact (this stage consumes `ci-config`, `quality-gates`, `deployment-architecture`, `cicd-pipeline`).
 
 ## Learn

@@ -100,7 +100,7 @@ Per-Bolt questions (the amadeus-delivery-agent loops these during artifact gener
 
 NOTE: Bolt sequencing is economic, not topological. Bolt order may deviate from 2.7's topological order when a risk-first or walking-skeleton-first argument justifies it. The deviation must be captured in `risk-and-sequencing-rationale.md`.
 
-NOTE: This stage plans the Bolt sequence. It does NOT decide which AIDLC stages to run or at what depth — that is handled by the `/aidlc` skill's scope selection.
+NOTE: This stage plans the Bolt sequence. It does NOT decide which AIDLC stages to run or at what depth — that is handled by the `/amadeus` skill's scope selection.
 
 Follow stage-protocol.md question flow.
 
@@ -127,7 +127,7 @@ Run Inception → Construction verification check:
 
 ### Step 7: Update State
 
-Mark delivery-planning as `[x]` completed in `<record>/aidlc-state.md`.
+Mark delivery-planning as `[x]` completed in `<record>/amadeus-state.md`.
 Update Lifecycle Phase to CONSTRUCTION.
 
 ### Step 8: Present Completion & Request Approval
@@ -142,7 +142,7 @@ This stage's outputs are markdown artefacts under `<record>/inception/delivery-p
 
 The imported sensors check those outputs:
 
-- **`required-sections`** verifies the output contains the registry default (≥2 H2 headings). Failure mode: missing headings emit `SENSOR_FAILED` with detail at `<record>/.aidlc-sensors/<stage-slug>/required-sections-<iso>.md`.
+- **`required-sections`** verifies the output contains the registry default (≥2 H2 headings). Failure mode: missing headings emit `SENSOR_FAILED` with detail at `<record>/.amadeus-sensors/<stage-slug>/required-sections-<iso>.md`.
 - **`upstream-coverage`** verifies the output prose references each artefact declared in this stage's `consumes:` frontmatter. Failure mode: missing upstream references emit `SENSOR_FAILED` listing each unreferenced artefact (this stage consumes `requirements`, `stories`, `mockups`, `components`, `unit-of-work`, `unit-of-work-dependency`, `unit-of-work-story-map`, `team-practices`).
 
 ## Learn

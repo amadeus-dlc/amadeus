@@ -34,7 +34,7 @@ Timestamp は entry ごとに `date -u +"%Y-%m-%dT%H:%M:%SZ"` で新しく取る
 | `STAGE_SKIPPED` | Condition 偽または scope 外で checkbox を `[S]` にしたとき | `amadeus` 入口とステージ内部 skill |
 | `WORKSPACE_SCAFFOLDED` | 0.1 の scaffold 作成時 | `amadeus` 入口 |
 | `WORKSPACE_SCANNED` | 0.2 の判定完了時 | `amadeus` 入口 |
-| `WORKSPACE_INITIALISED` | 0.3 の `aidlc-state.md` 生成時 | `amadeus` 入口 |
+| `WORKSPACE_INITIALISED` | 0.3 の `amadeus-state.md` 生成時 | `amadeus` 入口 |
 | `GATE_APPROVED` | 人間がゲートで承認したとき（User Input をそのまま記録） | ステージ内部 skill |
 | `GATE_REJECTED` | 人間がゲートで差し戻したとき（Feedback をそのまま記録） | ステージ内部 skill |
 | `DECISION_RECORDED` | 構造化された質問を提示する直前（提示した選択肢を記録） | grilling を使う skill |

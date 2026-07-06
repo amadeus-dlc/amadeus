@@ -60,7 +60,7 @@ Load amadeus-product-agent persona from `agents/amadeus-product-agent.md` and kn
 
 ### Step 2: Load Prior Context
 
-- If brownfield: Read RE artifacts from `aidlc/spaces/<active-space>/codekb/<repo>/` (the directory `codekb-path --repo <repo>` prints)
+- If brownfield: Read RE artifacts from `amadeus/spaces/<active-space>/codekb/<repo>/` (the directory `codekb-path --repo <repo>` prints)
 - Read user's project description from `<record>/audit/<host>-<clone>.md`
 
 ### Step 3: Analyze User Request
@@ -137,7 +137,7 @@ Create `<record>/inception/requirements-analysis/requirements.md` containing:
 
 ### Step 11: Update State
 
-Update `<record>/aidlc-state.md`:
+Update `<record>/amadeus-state.md`:
 - Mark Requirements Analysis as `[x]` completed
 - Update current stage and next stage
 
@@ -159,7 +159,7 @@ options:
   - label: Add User Stories
     description: Include User Stories stage (currently skipped)
 ```
-If "Add User Stories" selected: update aidlc-state.md to mark User Stories as pending execution.
+If "Add User Stories" selected: update amadeus-state.md to mark User Stories as pending execution.
 
 IF User Stories is NOT set to SKIP: use standard 2-option approval (Approve / Request Changes).
 
@@ -169,7 +169,7 @@ This stage's outputs are markdown artefacts under `<record>/inception/requiremen
 
 The imported sensors check those outputs:
 
-- **`required-sections`** verifies the output contains the registry default (≥2 H2 headings). Failure mode: missing headings emit `SENSOR_FAILED` with detail at `<record>/.aidlc-sensors/<stage-slug>/required-sections-<iso>.md`.
+- **`required-sections`** verifies the output contains the registry default (≥2 H2 headings). Failure mode: missing headings emit `SENSOR_FAILED` with detail at `<record>/.amadeus-sensors/<stage-slug>/required-sections-<iso>.md`.
 - **`upstream-coverage`** verifies the output prose references each artefact declared in this stage's `consumes:` frontmatter. Failure mode: missing upstream references emit `SENSOR_FAILED` listing each unreferenced artefact (this stage consumes `intent-statement`, `scope-document`, `team-practices`).
 
 ## Learn

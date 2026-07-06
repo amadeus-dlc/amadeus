@@ -6,7 +6,7 @@ description: >
   workflow's state), proposes the EXECUTE/SKIP stage grid that fits, and -
   once a human approves at the gate - authors it as scope data (front/report)
   or proposes pending-stage suffix flips (in-flight). Dispatched by the
-  /aidlc orchestrator; never invoked directly by a stage.
+  /amadeus orchestrator; never invoked directly by a stage.
 disallowedTools: Task
 modelOverride: opus
 ---

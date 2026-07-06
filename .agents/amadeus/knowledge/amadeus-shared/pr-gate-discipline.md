@@ -2,8 +2,8 @@
 
 > **Audience**: any agent that opens, monitors, or responds to review on a
 > pull request (phase PR or Bolt PR).
-> **Referenced from**: `aidlc/spaces/*/memory/team.md` (`### PR 監視`),
-> `aidlc/spaces/*/memory/phases/construction.md` (`## PR Gate`), and
+> **Referenced from**: `amadeus/spaces/*/memory/team.md` (`### PR 監視`),
+> `amadeus/spaces/*/memory/phases/construction.md` (`## PR Gate`), and
 > `amadeus-common/protocols/stage-protocol.md` (Construction Bolt gates).
 > Those rule-layer files carry only the invariants below in the workspace's
 > own language; this file is the single source for the procedure.

@@ -94,7 +94,7 @@ export function columnOf(card: IntentCard, phase: string): Column {
   return map[phase.toUpperCase()] ?? "Ideation";
 }
 
-// spaceDir（例: <PROJECT_DIR>/aidlc/spaces/default）配下の registry と record を
+// spaceDir（例: <PROJECT_DIR>/amadeus/spaces/default）配下の registry と record を
 // 読んで IntentCard を返す。dirNames 指定時はその record だけ（--dirs 部分 sync）。
 // record が欠けても落とさず 未確認 で埋める（欠損で落とさない契約）。
 export function scanIntents(
@@ -110,7 +110,7 @@ export function scanIntents(
     if (!e.dirName) continue; // 表示名が無い back-compat 行はカード化しない
     if (dirNames && !dirNames.includes(e.dirName)) continue;
     const recordDir = join(spaceDir, "intents", e.dirName);
-    const statePath = join(recordDir, "aidlc-state.md");
+    const statePath = join(recordDir, "amadeus-state.md");
     const fields = existsSync(statePath)
       ? parseStateFields(readFileSync(statePath, "utf-8"))
       : { agent: UNKNOWN, worktree: "-", stage: UNKNOWN, phase: "", awaiting: false };

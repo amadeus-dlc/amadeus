@@ -81,7 +81,7 @@ Run Construction → Operation verification check:
 
 ### Step 7: Update State
 
-Mark ci-pipeline as `[x]` completed in `<record>/aidlc-state.md`.
+Mark ci-pipeline as `[x]` completed in `<record>/amadeus-state.md`.
 
 ### Step 8: Present Completion & Request Approval
 
@@ -100,7 +100,7 @@ The imported sensors check those outputs:
 - **`linter`** runs against any TypeScript/JavaScript snippets the design includes (matches `**/*.{ts,js}`).
 - **`type-check`** runs against any TypeScript/TSX snippets the design includes (matches `**/*.{ts,tsx}`).
 
-Failure modes land in `<record>/.aidlc-sensors/<stage-slug>/` as `SENSOR_FAILED` audit rows with per-sensor detail files.
+Failure modes land in `<record>/.amadeus-sensors/<stage-slug>/` as `SENSOR_FAILED` audit rows with per-sensor detail files.
 
 ## Learn
 

@@ -110,7 +110,7 @@ Use `amadeus` or the auxiliary entrypoints as the public entrypoints unless the 
 
 For Amadeus source changes, check both `skills/amadeus-*` and `.agents/skills/amadeus-*`; keep promoted artifacts aligned through the repository promotion flow.
 
-The repository root keeps `aidlc/` as the workspace for Amadeus's own development.
+The repository root keeps `amadeus/` as the workspace for Amadeus's own development.
 
 ### Typical Flow
 
@@ -157,11 +157,11 @@ npm run validate:workspace -- <workspace> <YYMMDD>-<label>
 
 ## Boundaries
 
-- `aidlc/` is the workspace root in a target workspace; each Space (`aidlc/spaces/<space>/`, default `default`) holds `memory/`, `knowledge/`, `codekb/`, and `intents/`.
+- `amadeus/` is the workspace root in a target workspace; each Space (`amadeus/spaces/<space>/`, default `default`) holds `memory/`, `knowledge/`, `codekb/`, and `intents/`.
   In this repository root, it is limited to the workspace for Amadeus's own development.
-- The canonical Intent ledger is `aidlc/spaces/<space>/intents/intents.json` (UUIDv7 per entry); Intent directory names follow `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`.
+- The canonical Intent ledger is `amadeus/spaces/<space>/intents/intents.json` (UUIDv7 per entry); Intent directory names follow `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`.
 - New Intents are born only through the `amadeus` Intake with explicit human approval; work that belongs to an existing Intent's outcome goes to that Intent's scope backlog instead of becoming a new Intent.
-- Domain findings are placed according to scope: Intent-specific notes go to `domain-notes.md`, adopted boundaries go to `aidlc/spaces/<space>/knowledge/domain-map.md`, adopted context dependencies go to `aidlc/spaces/<space>/knowledge/context-map.md`, Inception relationships go to `inception/traceability.md`, and detailed models and contracts go to Construction Functional Design.
+- Domain findings are placed according to scope: Intent-specific notes go to `domain-notes.md`, adopted boundaries go to `amadeus/spaces/<space>/knowledge/domain-map.md`, adopted context dependencies go to `amadeus/spaces/<space>/knowledge/context-map.md`, Inception relationships go to `inception/traceability.md`, and detailed models and contracts go to Construction Functional Design.
 - Unknown values are recorded as `未確認` instead of being left blank.
 - External systems, Bounded Contexts, Intents, and dependencies are not invented from guesses.
 - Spec, `.kiro/specs/**`, `openspec/**`, and Operation artifacts are not fixed as procedures until their corresponding skills are confirmed.

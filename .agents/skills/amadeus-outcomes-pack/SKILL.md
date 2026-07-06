@@ -49,14 +49,14 @@ If it exits non-zero (no `runtime-graph.json` yet), print:
 
 ```
 No session data yet — an outcomes pack is generated at the close of a
-workflow. Run /aidlc to completion first.
+workflow. Run /amadeus to completion first.
 ```
 
 and STOP. Otherwise keep the parsed JSON for the count fields below.
 
 ### Step 2: Read the content sources
 
-- All artefacts under `<record>/<phase>/<stage>/` (the record root is `aidlc/spaces/<space>/intents/<dirName>/`) — requirements,
+- All artefacts under `<record>/<phase>/<stage>/` (the record root is `amadeus/spaces/<space>/intents/<dirName>/`) — requirements,
   design decisions, NFRs, infrastructure.
 - The delivered application and infrastructure code at the workspace
   root.
@@ -107,7 +107,7 @@ Write `OUTCOMES.md` at the workspace root (not inside the record directory):
 | NFR summary table | Write + commit | `docs/nfr-summary.md` |
 | `audit.md` | Archive — do NOT commit to app repo | Compliance archive |
 | Stage question files | Discard | — |
-| `aidlc-state.md` | Discard | — |
+| `amadeus-state.md` | Discard | — |
 | Application / infrastructure code | Already committed | — |
 
 ## 7. Workflow Footprint

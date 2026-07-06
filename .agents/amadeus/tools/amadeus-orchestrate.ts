@@ -1,11 +1,11 @@
 // The orchestration engine — the deterministic "what's next?" answerer that
-// stands BESIDE the prose orchestrator (skills/aidlc/SKILL.md), not inside it.
+// stands BESIDE the prose orchestrator (skills/amadeus/SKILL.md), not inside it.
 // Nothing in SKILL.md calls this file yet; it is exercised only by its own
 // unit tests until the differential corpus proves it emits the same directive
 // sequence the prose orchestrator produces today. Framework behaviour is
 // unchanged by this file's existence.
 //
-// The engine reads workflow state (aidlc-docs/aidlc-state.md) and the compiled
+// The engine reads workflow state (aidlc-docs/amadeus-state.md) and the compiled
 // stage graph (data/stage-graph.json), then emits EXACTLY ONE typed Directive
 // (JSON) to stdout. `next` mutates no workflow state itself (state md5 is
 // unchanged across a `next` call) — including birth: on a fresh workspace it
@@ -316,7 +316,7 @@ interface ParsedFlags {
 // out by the caller before this runs; here we read scope/stage/phase/depth/
 // test-strategy, the boolean mode flags (--resume/--single), and detect a
 // read-only utility flag. Any leading non-flag token is the freeform intent
-// (mirrors `/aidlc <freeform description>`). Mirrors the prose orchestrator's
+// (mirrors `/amadeus <freeform description>`). Mirrors the prose orchestrator's
 // flag extraction — the value of a valued flag is the following argv token.
 function parseNextFlags(args: string[]): ParsedFlags {
   const flags: ParsedFlags = {};
@@ -390,7 +390,7 @@ function parseNextFlags(args: string[]): ParsedFlags {
 }
 
 // The workflow-birth print for a resolved scope on a fresh workspace (no intent
-// record yet). A user who described what to build — `/aidlc "build the auth
+// record yet). A user who described what to build — `/amadeus "build the auth
 // service"`, the bare positional `next bugfix`, or `next --scope bugfix` — asked
 // to START a workflow; there is nothing to run until an intent is born, and
 // birth is a mutation, so `next` (read-only) NAMES the move as a
@@ -450,7 +450,7 @@ function composeDispatchDirective(
       `Dispatch the composer agent (${hd}/agents/amadeus-composer-agent.md) as a subagent to propose re-shaping the RUNNING workflow's pending stages` +
         (flags.intent ? ` for: "${flags.intent}".` : "."),
       "The composer reads the live state file's Stage Progress and proposes SKIP/un-SKIP flips for PENDING, ahead-of-cursor stages only (completed [x], in-progress [-], and skipped [S] stages are frozen).",
-      "BEFORE presenting the gate, write the pending-proposal marker `aidlc/.aidlc-compose-pending` (any content) so the turn can end at the gate; on approve run `bun " +
+      "BEFORE presenting the gate, write the pending-proposal marker `amadeus/.amadeus-compose-pending` (any content) so the turn can end at the gate; on approve run `bun " +
         hd +
         "/tools/amadeus-utility.ts recompose --skip <slugs> --add <slugs>` (comma-separated) and DELETE the marker; on reject/edit-then-resolve delete the marker too.",
     );
@@ -481,7 +481,7 @@ function composeDispatchDirective(
 // `!stateContent`, but stateContent is empty in TWO different worlds: a truly
 // empty workspace (zero intents → birth is correct), AND a workspace that
 // already holds intents whose active-intent CURSOR is unset. The cursor
-// (`aidlc/spaces/<sp>/intents/active-intent`) is gitignored per-user state, so a
+// (`amadeus/spaces/<sp>/intents/active-intent`) is gitignored per-user state, so a
 // fresh clone of a >1-intent workspace lands with records on disk but no cursor
 // → activeIntent() returns null (lib:357-361) → stateContent is empty → the
 // birth gate would mint a SECOND intent over the top of the existing ones
@@ -490,7 +490,7 @@ function composeDispatchDirective(
 // This consults the deterministic query layer (listIntents over the active
 // space) and, when intents EXIST but none is flagged active, NAMES the
 // disambiguation move as an `ask` directive that lists the existing intents and
-// asks the human to pick one via `/aidlc intent <slug>` — instead of birthing.
+// asks the human to pick one via `/amadeus intent <slug>` — instead of birthing.
 // Returns null when birth should proceed unchanged (zero intents in the space,
 // or one already resolved active — the latter only when this is reached with an
 // explicit scope/intent that didn't load a cursor'd state). The engine stays
@@ -511,7 +511,7 @@ function intentPickPromptIfRecordsExist(
   return askDirective(
     `This workspace already has ${intents.length} intent${intents.length === 1 ? "" : "s"}${spaceLabel} but no active intent is selected ` +
       `(the active-intent cursor is per-user and not cloned). ` +
-      `Pick one to work on with \`/aidlc intent <slug>\`: ${list}. ` +
+      `Pick one to work on with \`/amadeus intent <slug>\`: ${list}. ` +
       "Selecting an intent sets the cursor; re-run `next` afterward to continue its workflow.",
   );
 }
@@ -555,7 +555,7 @@ function resolveScope(
 
 // Derive the memory diary path for a stage (SKILL.md: every stage keeps a
 // <record>/<phase>/<stage>/memory.md diary). `recordPrefix` is the RELATIVE
-// per-intent record dir (aidlc/spaces/<space>/intents/<slug>-<id8>) the engine
+// per-intent record dir (amadeus/spaces/<space>/intents/<slug>-<id8>) the engine
 // threads in from the active intent (relativeRecordDir), or null → the bare space
 // record prefix (relativeSpaceRecordPrefix — a pre-birth shell with no intent
 // yet). These are agent-consumed RELATIVE paths the conductor resolves against
@@ -834,7 +834,7 @@ function isPerUnit(node: GraphStage): boolean {
 }
 
 // The KNOWN SET of stages whose artifacts live in the durable, space-level
-// code knowledge base (`aidlc/spaces/<space>/codekb/<repo>/`) rather than under
+// code knowledge base (`amadeus/spaces/<space>/codekb/<repo>/`) rather than under
 // a per-intent record dir. Keyed on the slug ALONE — deliberately NOT a stage
 // frontmatter marker: amadeus-stage-schema.ts OPTIONAL_FIELDS omits `codekb`, so a
 // `codekb: true` field would trip the schema's unknown-key rule and fail the
@@ -898,7 +898,7 @@ function resolveArtifactPath(
   // under the per-intent record dir. This arm fires for BOTH produces[] (owner
   // is the directive's own node) AND consumes[] (owner is the producing stage
   // resolved via producersOf — so a consume of an RE artifact also lands here).
-  // It drops the intents/<slug> tail and keeps only the aidlc/spaces/<space>/
+  // It drops the intents/<slug> tail and keeps only the amadeus/spaces/<space>/
   // stem, mirroring relativeCodekbDir. Guarded on the ctx being present so a
   // ctx-less caller (defaults) falls through to the record-dir arms below.
   if (isCodekb(owner) && codekbCtx) {
@@ -1152,7 +1152,7 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   // deterministically off-band but CANNOT block the turn, so the conductor relays
   // the output AND may still fire a bare `next` (sometimes several times the same
   // turn), rolling the active workflow forward. The seam stamps
-  // aidlc/.aidlc-readonly-latch with the CURRENT turn counter; here, BEFORE any
+  // amadeus/.amadeus-readonly-latch with the CURRENT turn counter; here, BEFORE any
   // state inspection, a TRULY BARE advancing next (none of its own flags set)
   // checks the latch: when latch.turn === the current counter (the SAME turn) we
   // emit `done` instead of routing to a run-stage. Turn-scoped — a legitimate
@@ -1165,8 +1165,8 @@ function handleNext(args: string[], projectDir: string | undefined): void {
       !flags.single && !flags.compose && !flags.newScope && !flags.report) {
     try {
       const pdLatch = resolveProjectDir(projectDir);
-      const latchPath = join(pdLatch, "aidlc", ".aidlc-readonly-latch");
-      const counterPath = join(pdLatch, "aidlc", ".aidlc-turn-counter");
+      const latchPath = join(pdLatch, "amadeus", ".amadeus-readonly-latch");
+      const counterPath = join(pdLatch, "amadeus", ".amadeus-turn-counter");
       let counter = -1;
       let latchTurn = -2;
       let label = "the read-only command";
@@ -1248,7 +1248,7 @@ function handleNext(args: string[], projectDir: string | undefined): void {
 
   const pd = resolveProjectDir(projectDir);
   const stateContent = loadStateFileIfPresent(pd);
-  // The active intent's RELATIVE record-dir prefix (aidlc/spaces/<sp>/intents/
+  // The active intent's RELATIVE record-dir prefix (amadeus/spaces/<sp>/intents/
   // <slug>-<id8>), threaded into every run-stage directive so the conductor's
   // artifact/diary paths resolve under the active intent. null → the flat legacy
   // `aidlc-docs` prefix (a pre-workspace project not yet migrated/born). Resolved
@@ -1256,7 +1256,7 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   const recordPrefix = relativeRecordDir(pd);
   // The space-level codekb context, resolved on the SAME live projectDir as
   // recordPrefix and threaded down the same spine. Lets resolveArtifactPath
-  // place a KNOWN_CODEKB_STAGES artifact under aidlc/spaces/<space>/codekb/
+  // place a KNOWN_CODEKB_STAGES artifact under amadeus/spaces/<space>/codekb/
   // <repo>/ (dropping the intents/<slug> tail) without re-reading the disk in
   // the pure resolver. codekbRepoName is read-only (intentRepos never throws).
   const codekbCtx = codekbCtxFor(pd);
@@ -1285,7 +1285,7 @@ function handleNext(args: string[], projectDir: string | undefined): void {
     const currentSlug = (getField(stateContent, "Current Stage") ?? "").trim();
     if (parkedAt.length > 0 && parkedAt === currentSlug) {
       emit(parkedDirective(
-        `Workflow parked at "${parkedAt}". Resume with /aidlc --resume.`,
+        `Workflow parked at "${parkedAt}". Resume with /amadeus --resume.`,
         parkedAt,
       ));
       return;
@@ -1313,7 +1313,7 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   }
 
   // (Branch 3 — the legacy `--init` flag — retired in P4. There is no longer a
-  // user-facing `/aidlc --init`: the workspace shell ships in dist/ (SEED) and
+  // user-facing `/amadeus --init`: the workspace shell ships in dist/ (SEED) and
   // the first intent is BORN, not scaffolded. Birth flows through the
   // birthPrintDirective seam below — Branch 7b/9a name the `intent-birth` move
   // for a resolved scope on a fresh workspace; Branch 8 surfaces the freeform
@@ -1490,7 +1490,7 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   }
 
   // Branch 6 — resume (SKILL.md:292). When the conductor re-enters an existing
-  // workflow (`/aidlc --resume`), the prose presents a resume-choice
+  // workflow (`/amadeus --resume`), the prose presents a resume-choice
   // AskUserQuestion. The engine NEVER calls AskUserQuestion (it is a Bash tool
   // the conductor owns); it emits an `ask` directive carrying the question and
   // STOPS, and the conductor renders it and feeds the answer back via report.
@@ -1521,7 +1521,7 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   }
 
   // Branch 7b — bare KNOWN-SCOPE positional with no workflow yet. A user who
-  // types `/aidlc bugfix` (no `--scope`) named a scope, not freeform intent —
+  // types `/amadeus bugfix` (no `--scope`) named a scope, not freeform intent —
   // but the parser captures any non-`--` token as `flags.intent`, so without
   // this branch the literal scope name would slip into Branch 8 and surface a
   // freeform `ask` defaulting to the wrong scope (Wave-1 audit finding 2). When
@@ -1592,7 +1592,7 @@ function handleNext(args: string[], projectDir: string | undefined): void {
     emit(askDirective(
       `No stock scope clearly fits: "${flags.intent}". ` +
         "I can compose a tailored plan for this task (recommended: reply \"compose\"), " +
-        "or you can name a scope directly (e.g. bugfix, feature, poc; see /aidlc --help for all).",
+        "or you can name a scope directly (e.g. bugfix, feature, poc; see /amadeus --help for all).",
     ));
     return;
   }
@@ -1618,7 +1618,7 @@ function handleNext(args: string[], projectDir: string | undefined): void {
       return;
     }
     // flags.intent here is freeform feature text typed alongside an explicit
-    // --scope (e.g. `/aidlc --scope feature "build the auth service"`) — thread
+    // --scope (e.g. `/amadeus --scope feature "build the auth service"`) — thread
     // it as the born intent's description; a bare `--scope <s>` carries none.
     emit(birthPrintDirective(scope, flags, flags.intent));
     return;
@@ -1630,13 +1630,13 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   // job). Emit a clear error rather than guessing — pure read. The message
   // names the two explicit moves that DO start a workflow; it must not imply
   // the user already made one (the pre-hardening wording told a user who had
-  // just typed `/aidlc <scope>` to type exactly that — circular now that a
+  // just typed `/amadeus <scope>` to type exactly that — circular now that a
   // named scope births).
   if (!stateContent) {
     emit(errorDirective(
       "No workflow state found (no active intent). " +
-        "Start one by describing what to build (/aidlc \"build the auth service\") " +
-        "or by naming a scope (/aidlc --scope <scope>).",
+        "Start one by describing what to build (/amadeus \"build the auth service\") " +
+        "or by naming a scope (/amadeus --scope <scope>).",
     ));
     return;
   }
@@ -2012,7 +2012,7 @@ function emitForSlug(
 // not runnable, relayed with the verbatim skip wording the jump path uses, so the
 // directive stream is identical regardless of entry point).
 const SINGLE_INIT_ERROR =
-  "Cannot run an initialization stage with --single. Initialization is bootstrap (it births the intent + state); it runs automatically when you start a workflow (describe what to build, e.g. /aidlc \"build the auth service\").";
+  "Cannot run an initialization stage with --single. Initialization is bootstrap (it births the intent + state); it runs automatically when you start a workflow (describe what to build, e.g. /amadeus \"build the auth service\").";
 
 function emitSingleRunStage(
   slug: string,
@@ -2024,7 +2024,7 @@ function emitSingleRunStage(
   const node = nodeForSlug(slug);
   if (!node) {
     emit(errorDirective(
-      `Unknown stage "${slug}". Run /aidlc --help for the full list.`,
+      `Unknown stage "${slug}". Run /amadeus --help for the full list.`,
     ));
     return;
   }
@@ -2093,11 +2093,11 @@ function emitSingleRunStage(
 // SKILL.md step 5 (Initialization guard) verbatim: jumping to an initialization
 // stage — or `--phase initialization` — is rejected. Init stages have bootstrap
 // behavior (create the state file, scaffold dirs) that doesn't fit the jump
-// model; the user must run `/aidlc --init`. The guard is prose-only in SKILL.md
+// model; the user must run `/amadeus --init`. The guard is prose-only in SKILL.md
 // (`amadeus-jump.ts resolve` treats init stages as valid targets, returning
 // valid:true), so the engine enforces it here rather than relaying a tool error.
 const INIT_JUMP_ERROR =
-  "Cannot jump to initialization stages. The Initialization phase runs automatically when you start a workflow (describe what to build, e.g. /aidlc \"build the auth service\").";
+  "Cannot jump to initialization stages. The Initialization phase runs automatically when you start a workflow (describe what to build, e.g. /amadeus \"build the auth service\").";
 
 function emitJumpDirective(
   flags: ParsedFlags,
@@ -2176,7 +2176,7 @@ function emitJumpDirective(
     // resolves the active intent's relative dir (null on a fresh workspace). The
     // codekb ctx is computed from the same live projectDir (no handleNext-cached
     // value reaches this inline site), so a codekb stage jumped-to here still
-    // resolves under aidlc/spaces/<space>/codekb/<repo>/.
+    // resolves under amadeus/spaces/<space>/codekb/<repo>/.
     emitRunStageForSlug(first.slug, projectType, scope, null, relativeRecordDir(projectDir), codekbCtxFor(projectDir));
     return;
   }
@@ -2186,7 +2186,7 @@ function emitJumpDirective(
   const node = nodeForSlug(stageSlug);
   if (!node) {
     emit(errorDirective(
-      `Unknown stage "${stageSlug}". Run /aidlc --help for the full list.`,
+      `Unknown stage "${stageSlug}". Run /amadeus --help for the full list.`,
     ));
     return;
   }
@@ -2376,7 +2376,7 @@ function spawnState(
 // (handleSingleReport below) uses this, mirroring report's spawn-the-atomic-tool
 // discipline: the engine itself writes nothing; the spawned tool acquires the
 // per-emit audit lock in its own process. This is the audit-only path — it
-// touches `audit.md`, never `aidlc-state.md` — so a `--single` commit cannot
+// touches `audit.md`, never `amadeus-state.md` — so a `--single` commit cannot
 // reach the main pointer even by accident (amadeus-audit.ts has no state write).
 function spawnAuditAppend(
   projectDir: string,
@@ -2426,7 +2426,7 @@ function handleSkeletonStanceReport(
   const stateContent = loadStateFileIfPresent(pd);
   if (!stateContent) {
     emit(errorDirective(
-      "No workflow state found (aidlc-docs/aidlc-state.md is absent) — nothing to record a skeleton stance for.",
+      "No workflow state found (aidlc-docs/amadeus-state.md is absent) — nothing to record a skeleton stance for.",
     ));
     return;
   }
@@ -2541,7 +2541,7 @@ function handleSingleReport(
   const node = nodeForSlug(flags.stage);
   if (!node) {
     emit(errorDirective(
-      `Unknown stage "${flags.stage}". Run /aidlc --help for the full list.`,
+      `Unknown stage "${flags.stage}". Run /amadeus --help for the full list.`,
     ));
     return;
   }
@@ -2663,7 +2663,7 @@ function handleReport(args: string[], projectDir: string | undefined): void {
     emit({
       kind: "error",
       message:
-        "No workflow state found (aidlc-docs/aidlc-state.md is absent) — nothing to report a transition for.",
+        "No workflow state found (aidlc-docs/amadeus-state.md is absent) — nothing to report a transition for.",
     });
     return;
   }
@@ -2910,7 +2910,7 @@ function handlePark(_args: string[], projectDir: string | undefined): void {
     ? (getField(stateContent, "Parked At Stage") ?? "").trim()
     : "";
   emit(parkedDirective(
-    `Workflow parked at "${parkedAt}". Resume with /aidlc --resume.`,
+    `Workflow parked at "${parkedAt}". Resume with /amadeus --resume.`,
     parkedAt,
   ));
 }

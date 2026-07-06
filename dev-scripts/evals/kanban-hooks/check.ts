@@ -26,29 +26,29 @@ const pd = "/repo";
 // --- queueEntryFor: default space の record への書き込みだけを拾う（FR-5.1） ---
 ok(
   "record 配下の書き込みは dirName を積む",
-  queueEntryFor(`${pd}/aidlc/spaces/default/intents/260705-github-kanban-sync/aidlc-state.md`, pd) ===
+  queueEntryFor(`${pd}/amadeus/spaces/default/intents/260705-github-kanban-sync/amadeus-state.md`, pd) ===
     "260705-github-kanban-sync"
 );
 ok(
   "intents.json 直接更新は * を積む",
-  queueEntryFor(`${pd}/aidlc/spaces/default/intents/intents.json`, pd) === "*"
+  queueEntryFor(`${pd}/amadeus/spaces/default/intents/intents.json`, pd) === "*"
 );
 ok(
   "default space 以外は積まない",
-  queueEntryFor(`${pd}/aidlc/spaces/other/intents/x/aidlc-state.md`, pd) === null
+  queueEntryFor(`${pd}/amadeus/spaces/other/intents/x/amadeus-state.md`, pd) === null
 );
 ok(
   "intents 配下以外は積まない",
-  queueEntryFor(`${pd}/aidlc/spaces/default/memory/team.md`, pd) === null
+  queueEntryFor(`${pd}/amadeus/spaces/default/memory/team.md`, pd) === null
 );
-ok("repo 外パスは積まない", queueEntryFor(`/elsewhere/aidlc/spaces/default/intents/x/a.md`, pd) === null);
+ok("repo 外パスは積まない", queueEntryFor(`/elsewhere/amadeus/spaces/default/intents/x/a.md`, pd) === null);
 ok(
   "多重スラッシュを正規化して判定する",
-  queueEntryFor(`${pd}//aidlc/spaces/default/intents/260701-a//aidlc-state.md`, `${pd}/`) === "260701-a"
+  queueEntryFor(`${pd}//amadeus/spaces/default/intents/260701-a//amadeus-state.md`, `${pd}/`) === "260701-a"
 );
 ok(
   "active-intent などの直下ファイルは * を積まない",
-  queueEntryFor(`${pd}/aidlc/spaces/default/intents/active-intent`, pd) === null
+  queueEntryFor(`${pd}/amadeus/spaces/default/intents/active-intent`, pd) === null
 );
 
 // --- shouldSuppress: 2 分抑制（FR-5.2、ハードコード定数） ---

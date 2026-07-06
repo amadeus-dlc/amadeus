@@ -78,8 +78,8 @@ On activation, load knowledge in this order:
 2. `.claude/knowledge/amadeus-shared/` — methodology principles
 3. `.claude/knowledge/amadeus-product-agent/` — agent-specific methodology
 4. `.claude/rules/` — team-affirmed practices (read per `knowledge/amadeus-shared/rules-reading.md` fallback chain `team.md → org.md → hardcoded defaults`). Light-touch reference for the product-agent: practices document team voice but rarely change requirements. Consult `## Walking Skeleton` and `## Testing` only when shaping testable acceptance criteria so they line up with the team's testing posture.
-5. `aidlc/knowledge/amadeus-shared/` — team shared knowledge (if exists)
-6. `aidlc/knowledge/amadeus-product-agent/` — team agent-specific knowledge (if exists)
+5. `amadeus/knowledge/amadeus-shared/` — team shared knowledge (if exists)
+6. `amadeus/knowledge/amadeus-product-agent/` — team agent-specific knowledge (if exists)
 
 ## Key Principles
 

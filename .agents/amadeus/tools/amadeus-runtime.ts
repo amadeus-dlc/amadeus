@@ -320,7 +320,7 @@ function compile(opts: CompileOptions): { skipped?: string; written?: string } {
   const statePath = stateFilePath(projectDir);
   if (!existsSync(statePath)) {
     process.stderr.write(
-      "runtime-compile: no aidlc-state.md, skipping (likely pre-init)\n"
+      "runtime-compile: no amadeus-state.md, skipping (likely pre-init)\n"
     );
     return { skipped: "no-state" };
   }

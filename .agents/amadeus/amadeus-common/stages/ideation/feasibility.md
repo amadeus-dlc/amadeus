@@ -78,7 +78,7 @@ The orchestrator will pass these artifacts to amadeus-aws-platform-agent for AWS
 
 ### Step 6: Update State
 
-Mark feasibility as `[x]` completed in `<record>/aidlc-state.md`.
+Mark feasibility as `[x]` completed in `<record>/amadeus-state.md`.
 
 ### Step 7: Present Completion & Request Approval
 
@@ -92,7 +92,7 @@ This stage's outputs are markdown artefacts under `<record>/ideation/feasibility
 
 The imported sensors check those outputs:
 
-- **`required-sections`** verifies the output contains the registry default (≥2 H2 headings). Failure mode: missing headings emit `SENSOR_FAILED` with detail at `<record>/.aidlc-sensors/<stage-slug>/required-sections-<iso>.md`.
+- **`required-sections`** verifies the output contains the registry default (≥2 H2 headings). Failure mode: missing headings emit `SENSOR_FAILED` with detail at `<record>/.amadeus-sensors/<stage-slug>/required-sections-<iso>.md`.
 - **`upstream-coverage`** verifies the output prose references each artefact declared in this stage's `consumes:` frontmatter. Failure mode: missing upstream references emit `SENSOR_FAILED` listing each unreferenced artefact (this stage consumes `intent-statement`, `competitive-analysis`, `market-trends`, `build-vs-buy`).
 
 ## Learn

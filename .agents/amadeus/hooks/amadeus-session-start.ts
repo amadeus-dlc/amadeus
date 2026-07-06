@@ -18,7 +18,7 @@
 //   clear   → SESSION_STARTED
 //   compact → no emission (PreCompact already fired)
 //
-// The hook is a no-op if aidlc-state.md is absent in cwd (no active workflow).
+// The hook is a no-op if amadeus-state.md is absent in cwd (no active workflow).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
@@ -47,14 +47,14 @@ const projectDir = resolveProjectDirFromHook(import.meta.url);
 
 // Idempotent ensure-step (P0.1 robustness): align the harness-native includes
 // with the active space at session start, BEFORE the no-workflow early-exit, so
-// turn-1 on a fresh clone (no aidlc-state.md yet) still has the includes pointed
+// turn-1 on a fresh clone (no amadeus-state.md yet) still has the includes pointed
 // at the active space. A no-op at `default` (the common case) and whenever the
 // cursor + includes already agree — so it never dirties a single-team committed
 // tree. Best-effort: a failure here must never break session startup.
 try {
   repointHarnessIncludes(projectDir, activeSpace(projectDir));
 } catch {
-  // non-fatal — includes self-heal on the next /aidlc / switch / --doctor
+  // non-fatal — includes self-heal on the next /amadeus / switch / --doctor
 }
 
 const stateFile = stateFilePath(projectDir);
@@ -106,7 +106,7 @@ if (!process.stdin.isTTY) {
 
 // Record the live conversation as the "current session" on EVERY fire (startup /
 // resume / clear / compact) — NOT gated on eventType. The hook is the only place
-// that sees session_id; a CLI switch (`/aidlc intent <slug>`) cannot. This marker
+// that sees session_id; a CLI switch (`/amadeus intent <slug>`) cannot. This marker
 // lets the switch tool re-stamp the live session's record so a deliberate
 // in-conversation switch doesn't fire a FALSE rebind nag on resume (see the
 // re-stamp in handleIntent, amadeus-utility.ts). Separate file from the per-session
@@ -136,7 +136,7 @@ if (eventType) {
 // A conversation works ONE intent; the active-intent cursor is durable + shared
 // across sessions. So resuming an A-chat after the cursor moved to B would
 // inject B's context silently (vision §3, the central multi-space hazard). We
-// fix it with a per-session→intent stamp (aidlc/.aidlc-sessions/<id>):
+// fix it with a per-session→intent stamp (amadeus/.amadeus-sessions/<id>):
 //   - On a STARTED-class event, stamp the working intent's UUID for this
 //     session so a later resume can detect a cursor drift.
 //   - On RESUMED, if the stamped UUID differs from the live cursor AND still
@@ -162,13 +162,13 @@ if (sessionId) {
       if (was) {
         const live = liveUuid ? findIntentByUuid(projectDir, liveUuid) : null;
         const liveSlug = live ? live.slug : "(none)";
-        // The cursor verb is `/aidlc intent <slug>` (switches within the active
+        // The cursor verb is `/amadeus intent <slug>` (switches within the active
         // space). When the stamped intent lives in another space, prefix the
         // space switch so the rebind command is complete.
         const switchCmd =
           was.space === activeSp
-            ? `/aidlc intent ${was.slug}`
-            : `/aidlc space ${was.space} && /aidlc intent ${was.slug}`;
+            ? `/amadeus intent ${was.slug}`
+            : `/amadeus space ${was.space} && /amadeus intent ${was.slug}`;
         rebindOffer =
           `INTENT REBIND OFFER: This conversation was working ${was.slug}, but the active intent is ${liveSlug}. ` +
           `Switch back to ${was.slug}? [Y/n] — on Yes, run \`${switchCmd}\` to move the cursor; ` +
@@ -192,7 +192,7 @@ const scope = getField(content, "Scope") ?? "unknown";
 // Check for compaction recovery breadcrumb
 const recoveryFile = recoveryFilePath(projectDir);
 const recovery = existsSync(recoveryFile)
-  ? "NOTE: A compaction recovery breadcrumb exists at .aidlc-recovery.md — check if state was preserved correctly.\n"
+  ? "NOTE: A compaction recovery breadcrumb exists at .amadeus-recovery.md — check if state was preserved correctly.\n"
   : "";
 
 // Stage-graph drift advisory (issue #364). The runtime resolves stages from
@@ -221,11 +221,11 @@ Status: ${status}
 Active Agent: ${agent}
 Last Completed: ${last}
 Next Action: ${next}
-${recovery}${driftNote}On resume: offer the user the standard resume options (Resume / Redo / Jump / Start Fresh). Check the active intent's aidlc-state.md for full context.
+${recovery}${driftNote}On resume: offer the user the standard resume options (Resume / Redo / Jump / Start Fresh). Check the active intent's amadeus-state.md for full context.
 
 FORWARDING-LOOP DISCIPLINE (non-negotiable — the engine owns ALL routing):
 - The engine binary (\`amadeus-orchestrate.ts\`) is the ONLY authority on the next move. You run it, you do EXACTLY what its one directive says, you commit with \`report\`, you repeat. You never re-derive routing yourself.
-- STEP 1 — YOUR VERY FIRST ACTION: take everything the user typed after \`/aidlc\` and append it to the first \`next\` call UNCHANGED. The flags ARE the user's intent; dropping them sends the workflow to the wrong place. \`/aidlc --phase ideation\` → you MUST run \`next --phase ideation\`, never bare \`next\`. \`/aidlc --stage X\` → \`next --stage X\`. \`/aidlc\` alone → \`next\`. Before running that first \`next\`, verify: if the user's message contained \`--phase\`/\`--stage\`/\`--scope\`/\`--depth\`/freeform text, it MUST appear on your \`next\` command — a bare \`next\` when the user gave arguments is a bug.
+- STEP 1 — YOUR VERY FIRST ACTION: take everything the user typed after \`/amadeus\` and append it to the first \`next\` call UNCHANGED. The flags ARE the user's intent; dropping them sends the workflow to the wrong place. \`/amadeus --phase ideation\` → you MUST run \`next --phase ideation\`, never bare \`next\`. \`/amadeus --stage X\` → \`next --stage X\`. \`/amadeus\` alone → \`next\`. Before running that first \`next\`, verify: if the user's message contained \`--phase\`/\`--stage\`/\`--scope\`/\`--depth\`/freeform text, it MUST appear on your \`next\` command — a bare \`next\` when the user gave arguments is a bug.
 - When a directive is \`{kind:"print"}\` whose message names a command to run (e.g. \`amadeus-jump.ts execute ...\`, a scope/config change, or \`init\`): that named command is your IMMEDIATE next tool call. Run THAT EXACT command FIRST. Do NOT run \`next\` again, do NOT read more files, do NOT plan a stage — until the named command has run. Re-running the engine before it is a protocol violation that silently skips the move.`;
 
 // Output additionalContext as JSON

@@ -2,7 +2,7 @@
 name: amadeus-feedback-optimization
 description: >
   Run the AI-DLC `feedback-optimization` stage (operation phase) in isolation, without
-  advancing the main workflow. Packages `/aidlc --stage feedback-optimization --single`:
+  advancing the main workflow. Packages `/amadeus --stage feedback-optimization --single`:
   the engine emits one run-stage directive for feedback-optimization and its gate, the
   conductor runs it, then the single-stage run commits a synthetic-id pair and
   stops. The main workflow's Current Stage is never touched.
@@ -13,7 +13,7 @@ user-invocable: true
 # AI-DLC Stage Runner — feedback-optimization
 
 Run the `feedback-optimization` stage on its own. This is opt-in packaging over
-`/aidlc --stage feedback-optimization --single`; the same stage is always reachable via
+`/amadeus --stage feedback-optimization --single`; the same stage is always reachable via
 that flag without this skill.
 
 ## Steps

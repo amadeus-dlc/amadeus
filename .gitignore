@@ -7,11 +7,11 @@ result
 
 /.kiro/
 /openspec/
-/.aidlc-snapshots/
+/.amadeus-snapshots/
 
 # v2 のカーソル（作業者ローカルの状態。examples 配下は対象外）
-/aidlc/active-space
-/aidlc/spaces/*/intents/active-intent
+/amadeus/active-space
+/amadeus/spaces/*/intents/active-intent
 
 # API Keys and Tokens (security)
 *_api_key.sh
@@ -25,11 +25,11 @@ result
 /last-message.md
 
 # AI-DLC エンジンのマシンローカル状態
-/aidlc/.aidlc-clone-id
-/aidlc/.aidlc-sessions/
-/aidlc/spaces/*/intents/*/runtime-graph.json
-/aidlc/spaces/*/intents/*/.aidlc-*
-/aidlc/spaces/*/intents/.aidlc-hooks-health/
+/amadeus/.amadeus-clone-id
+/amadeus/.amadeus-sessions/
+/amadeus/spaces/*/intents/*/runtime-graph.json
+/amadeus/spaces/*/intents/*/.amadeus-*
+/amadeus/spaces/*/intents/.amadeus-hooks-health/
 
 # kanban-sync hook の worktree ローカル状態（u003-kanban-hooks）
 /.claude/kanban-sync/

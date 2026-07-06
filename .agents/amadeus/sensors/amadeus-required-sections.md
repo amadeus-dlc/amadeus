@@ -41,7 +41,7 @@ The default heading set can be overridden two ways. **Precedence: a resolving
 `templates/<artifact>.md` wins over a `## Sensors`-documented heading set.**
 
 1. **Template-override layer (file-driven, preferred).** A team drops
-   `aidlc/spaces/<space>/memory/templates/<artifact>.md` (keyed by the output filename stem —
+   `amadeus/spaces/<space>/memory/templates/<artifact>.md` (keyed by the output filename stem —
    artifact `X` writes to `X.md`). When one resolves for the output path, its
    `##` headings become the expected set and the sensor passes iff
    `expected ⊆ output`; the missing headings are precise findings. Whole-doc,
@@ -64,5 +64,5 @@ present, the output keeps the generic ≥2-H2 floor.
 ## Failure mode
 
 When required headings are missing, emits `SENSOR_FAILED` and writes detail
-to `aidlc-docs/.aidlc-sensors/<stage-slug>/required-sections-<fire-id>.md` (Fire id is the 8-hex correlator from the SENSOR_FIRED audit row)
+to `aidlc-docs/.amadeus-sensors/<stage-slug>/required-sections-<fire-id>.md` (Fire id is the 8-hex correlator from the SENSOR_FIRED audit row)
 listing the missing headings.

@@ -2,7 +2,7 @@
 name: amadeus-delivery-planning
 description: >
   Run the AI-DLC `delivery-planning` stage (inception phase) in isolation, without
-  advancing the main workflow. Packages `/aidlc --stage delivery-planning --single`:
+  advancing the main workflow. Packages `/amadeus --stage delivery-planning --single`:
   the engine emits one run-stage directive for delivery-planning and its gate, the
   conductor runs it, then the single-stage run commits a synthetic-id pair and
   stops. The main workflow's Current Stage is never touched.
@@ -13,7 +13,7 @@ user-invocable: true
 # AI-DLC Stage Runner — delivery-planning
 
 Run the `delivery-planning` stage on its own. This is opt-in packaging over
-`/aidlc --stage delivery-planning --single`; the same stage is always reachable via
+`/amadeus --stage delivery-planning --single`; the same stage is always reachable via
 that flag without this skill.
 
 ## Steps

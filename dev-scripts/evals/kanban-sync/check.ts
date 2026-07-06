@@ -71,7 +71,7 @@ ok("不明 phase は Ideation へ丸める", columnOf(baseCard, "") === "Ideatio
 // --- scanIntents: 実ディレクトリ fixture（issues 有無混在、record 欠損、legacy audit） ---
 const tmp = mkdtempSync(join(tmpdir(), "kanban-scan-"));
 try {
-  const intentsDir = join(tmp, "aidlc/spaces/default/intents");
+  const intentsDir = join(tmp, "amadeus/spaces/default/intents");
   mkdirSync(intentsDir, { recursive: true });
   writeFileSync(join(intentsDir, "intents.json"), JSON.stringify([
     { uuid: "1", slug: "a", dirName: "260701-a", scope: "feature", status: "in_progress", issues: [470] },
@@ -80,7 +80,7 @@ try {
   ]));
   const recA = join(intentsDir, "260701-a");
   mkdirSync(join(recA, "audit"), { recursive: true });
-  writeFileSync(join(recA, "aidlc-state.md"), [
+  writeFileSync(join(recA, "amadeus-state.md"), [
     "- **Active Agent**: amadeus-developer-agent",
     "- **Worktree Path**: /w/a",
     "- **Current Stage**: code-generation",
@@ -90,7 +90,7 @@ try {
   writeFileSync(join(recA, "audit", "hostx-aaaaaaaaaaaa.md"), "**Timestamp**: 2026-07-05T01:00:00Z");
 
   const now = new Date("2026-07-05T12:00:00Z");
-  const cards = scanIntents(join(tmp, "aidlc/spaces/default"), now);
+  const cards = scanIntents(join(tmp, "amadeus/spaces/default"), now);
   ok("dirName を持つ entry がカード化される（2 件）", cards.length === 2, String(cards.length));
   const a = cards.find((c) => c.dirName === "260701-a")!;
   ok("issues が引き継がれる", a.issues.length === 1 && a.issues[0] === 470);
@@ -100,7 +100,7 @@ try {
   ok("syncedAt が now の ISO 形式", a.syncedAt === "2026-07-05T12:00:00.000Z" || a.syncedAt === "2026-07-05T12:00:00Z", a.syncedAt);
   const b = cards.find((c) => c.dirName === "260702-b")!;
   ok("record 欠損 entry は 未確認 で欠損させない", b.agent === "未確認" && b.host === "未確認" && b.worktree === "-");
-  const dirsOnly = scanIntents(join(tmp, "aidlc/spaces/default"), now, ["260701-a"]);
+  const dirsOnly = scanIntents(join(tmp, "amadeus/spaces/default"), now, ["260701-a"]);
   ok("--dirs 部分スキャンは指定 record だけ返す", dirsOnly.length === 1 && dirsOnly[0]!.dirName === "260701-a");
 } finally {
   rmSync(tmp, { recursive: true, force: true });

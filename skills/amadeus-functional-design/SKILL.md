@@ -2,7 +2,7 @@
 name: amadeus-functional-design
 description: >
   Run the AI-DLC `functional-design` stage (construction phase) in isolation, without
-  advancing the main workflow. Packages `/aidlc --stage functional-design --single`:
+  advancing the main workflow. Packages `/amadeus --stage functional-design --single`:
   the engine emits one run-stage directive for functional-design and its gate, the
   conductor runs it, then the single-stage run commits a synthetic-id pair and
   stops. The main workflow's Current Stage is never touched.
@@ -13,7 +13,7 @@ user-invocable: true
 # AI-DLC Stage Runner — functional-design
 
 Run the `functional-design` stage on its own. This is opt-in packaging over
-`/aidlc --stage functional-design --single`; the same stage is always reachable via
+`/amadeus --stage functional-design --single`; the same stage is always reachable via
 that flag without this skill.
 
 ## Steps

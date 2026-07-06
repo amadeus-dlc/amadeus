@@ -110,7 +110,7 @@ function agentDisplayMap(): Record<string, string> {
 }
 
 function extractField(text: string, label: string): string {
-  // Match the Markdown list field pattern used throughout aidlc-state.md:
+  // Match the Markdown list field pattern used throughout amadeus-state.md:
   //   - **Lifecycle Phase**: IDEATION
   // Anchoring on "^-\s*\*\*LABEL\*\*:" prevents prose lines that happen to contain
   // the label (e.g. "> The Lifecycle Phase: OPERATION was added in v2.") from

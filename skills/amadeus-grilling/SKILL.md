@@ -25,7 +25,7 @@ Ask questions rigorously. However, do not make increasing the number of
 questions an end in itself.
 
 Ask only about points that cannot proceed without the user's judgment.
-Confirm anything answerable from the codebase, artifacts under `aidlc/`,
+Confirm anything answerable from the codebase, artifacts under `amadeus/`,
 existing documents, or the existing conversation yourself, without asking.
 
 ## How to Ask Questions
@@ -59,7 +59,7 @@ investigate first.
 
 Examples of investigation targets:
 
-- `aidlc/`
+- `amadeus/`
 - `README.md`
 - `AGENTS.md`
 - `AMADEUS.md`
@@ -114,20 +114,20 @@ Place it directly under the root of the target artifact set.
 The target roots are:
 
 ```text
-aidlc/spaces/<space>/knowledge/event-storming/<event-storming-id>/
-aidlc/spaces/<space>/intents/<dirName>/
-aidlc/spaces/<space>/intents/<dirName>/event-storming/<event-storming-id>/
+amadeus/spaces/<space>/knowledge/event-storming/<event-storming-id>/
+amadeus/spaces/<space>/intents/<dirName>/
+amadeus/spaces/<space>/intents/<dirName>/event-storming/<event-storming-id>/
 ```
 
 Exclude the Space's `memory/` and `knowledge/` from this recording target,
-because the structure directly under `aidlc/spaces/<space>/` is mixed.
+because the structure directly under `amadeus/spaces/<space>/` is mixed.
 
 For decisions that only affect the overall domain or shared terminology, do
 not create a dedicated Grilling Decision Trail under the current structure.
 If needed, record the rationale in
-`aidlc/spaces/<space>/knowledge/domain-map.md`,
-`aidlc/spaces/<space>/knowledge/context-map.md`,
-`aidlc/spaces/<space>/knowledge/glossary.md`, or in the target Intent's
+`amadeus/spaces/<space>/knowledge/domain-map.md`,
+`amadeus/spaces/<space>/knowledge/context-map.md`,
+`amadeus/spaces/<space>/knowledge/glossary.md`, or in the target Intent's
 decision.
 
 `grillings.md` handles only the index. Place session details in
@@ -141,7 +141,7 @@ Event Storming, that contract's `反映先` link rule additionally allows
 `../<id>.md`, which points from `<id>/grillings` to the parent Markdown with
 the same ID. Do not reflect shared terminology through a relative link from
 the Grilling Decision Trail — record it in the rationale for the term in
-`aidlc/spaces/<space>/knowledge/glossary.md`, or in the target Intent's
+`amadeus/spaces/<space>/knowledge/glossary.md`, or in the target Intent's
 decision.
 
 `scaffold-only` does not ask questions, so it creates no Grilling Decision
@@ -155,7 +155,7 @@ When grilling becomes prolonged and it is safer to continue in a separate
 conversation unit, use `handoff` as an operational aid.
 
 `handoff` is not an Amadeus DLC artifact. Place the handoff document you
-create in the OS temporary directory, not under `aidlc/`.
+create in the OS temporary directory, not under `amadeus/`.
 
 Keep confirmed decisions in the Grilling Decision Trail. Write in `handoff`
 only the references needed to resume in the next conversation unit.

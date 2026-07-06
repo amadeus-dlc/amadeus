@@ -78,7 +78,7 @@ Create `<record>/ideation/intent-capture/stakeholder-map.md` containing:
 
 ### Step 6: Update State
 
-Update `<record>/aidlc-state.md`:
+Update `<record>/amadeus-state.md`:
 - Mark intent-capture as `[x]` completed
 - Update current stage and next stage
 
@@ -95,7 +95,7 @@ This stage's outputs are markdown artefacts under `<record>/ideation/intent-capt
 
 The imported sensors check those outputs:
 
-- **`required-sections`** verifies the output contains the registry default (≥2 H2 headings). Failure mode: missing headings emit `SENSOR_FAILED` with detail at `<record>/.aidlc-sensors/<stage-slug>/required-sections-<iso>.md`.
+- **`required-sections`** verifies the output contains the registry default (≥2 H2 headings). Failure mode: missing headings emit `SENSOR_FAILED` with detail at `<record>/.amadeus-sensors/<stage-slug>/required-sections-<iso>.md`.
 - **`upstream-coverage`** verifies the output prose references each artefact declared in this stage's `consumes:` frontmatter. This stage declares no upstream artefacts; the sensor still runs but reports zero unreferenced inputs by default.
 
 ## Learn

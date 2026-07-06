@@ -2,7 +2,7 @@
 name: amadeus-market-research
 description: >
   Run the AI-DLC `market-research` stage (ideation phase) in isolation, without
-  advancing the main workflow. Packages `/aidlc --stage market-research --single`:
+  advancing the main workflow. Packages `/amadeus --stage market-research --single`:
   the engine emits one run-stage directive for market-research and its gate, the
   conductor runs it, then the single-stage run commits a synthetic-id pair and
   stops. The main workflow's Current Stage is never touched.
@@ -13,7 +13,7 @@ user-invocable: true
 # AI-DLC Stage Runner — market-research
 
 Run the `market-research` stage on its own. This is opt-in packaging over
-`/aidlc --stage market-research --single`; the same stage is always reachable via
+`/amadeus --stage market-research --single`; the same stage is always reachable via
 that flag without this skill.
 
 ## Steps

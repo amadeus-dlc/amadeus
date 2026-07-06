@@ -292,7 +292,7 @@ run(["bun", "run", checker, declaredEngineExceptionWorkspace]);
 console.log("parity-check declared engine file exception: ok");
 
 // (C8) disambiguation 境界: tool kind は拡張子込み完全一致に限る。
-// aidlc-state.md（v2 成果物、改名禁止）を誤って amadeus-state.md へ書き換えるバグを混入させると、
+// aidlc-state.md（合成 fixture 上の v2 成果物名。#526 で実体は scope-file 写像により amadeus-state.md へ改名されたが、cli-token が .md を書き換えないという機構ガード自体は不変の契約）を誤って amadeus-state.md へ書き換えるバグを混入させると、
 // 逆方向正規化（拡張子 .ts 限定）はこれを aidlc-state.md へ戻さないため hash 不一致で fail する。
 const bareTokenBugWorkspace = writeMatchingLocalWorkspace();
 writeFileSync(
@@ -304,7 +304,7 @@ console.log("parity-check bare-token disambiguation guard: ok");
 
 // (C10) disambiguation 境界: cli-token kind（拡張子なし bare 参照専用、PR #453 Bugbot 対応で追加）は
 // .ts/.js/.md が続く場合には照合しない。実対応表にも存在する "state" cli-token 行がある状態で、
-// aidlc-state.md（v2 成果物、改名禁止）を誤って amadeus-state.md へ書き換えるバグを混入させると、
+// aidlc-state.md（合成 fixture 上の v2 成果物名。#526 で実体は scope-file 写像により amadeus-state.md へ改名されたが、cli-token が .md を書き換えないという機構ガード自体は不変の契約）を誤って amadeus-state.md へ書き換えるバグを混入させると、
 // cli-token の逆方向正規化（.md ガード）はこれを aidlc-state.md へ戻さないため hash 不一致で fail する
 // （coordinator 指摘の中心的リスク: cli-token が aidlc-state.md 系文字列を破壊しないことの確認）。
 const cliTokenMdGuardWorkspace = writeMatchingLocalWorkspace();

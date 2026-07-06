@@ -4,7 +4,7 @@
 //
 // amadeus-orchestrate.ts の error directive / 未捕捉例外が ERROR_LOGGED として
 // audit へ best-effort 記録されることを、隔離 temp workspace で実 CLI を駆動して
-// 検証する。LLM を呼ばず、本番 aidlc/ を変更しない。片付けは成功・失敗共通。
+// 検証する。LLM を呼ばず、本番 amadeus/ を変更しない。片付けは成功・失敗共通。
 //
 // (a) R001: workflow がある状態で next が error directive を返すと、stdout の
 //     directive 契約は不変のまま、audit に ERROR_LOGGED が追記される。
@@ -75,12 +75,12 @@ function birth(ws: string): string {
     ws
   );
   if (r.exitCode !== 0) throw new Error(`birth failed: ${r.stderr}`);
-  const intentsRoot = join(ws, "aidlc/spaces/default/intents");
+  const intentsRoot = join(ws, "amadeus/spaces/default/intents");
   return readdirSync(intentsRoot, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name)[0]!;
 }
 
 function auditText(ws: string, dirName: string): string {
-  const dir = join(ws, "aidlc/spaces/default/intents", dirName, "audit");
+  const dir = join(ws, "amadeus/spaces/default/intents", dirName, "audit");
   if (!existsSync(dir)) return "";
   return readdirSync(dir).map((f) => readFileSync(join(dir, f), "utf-8")).join("\n");
 }
@@ -116,7 +116,7 @@ const orchestrate = (ws: string) => join(ws, ".agents/amadeus/tools/amadeus-orch
   try {
     const dirName = birth(ws);
     // state file をディレクトリに差し替えて readStateFile を throw させる
-    const statePath = join(ws, "aidlc/spaces/default/intents", dirName, "aidlc-state.md");
+    const statePath = join(ws, "amadeus/spaces/default/intents", dirName, "amadeus-state.md");
     renameSync(statePath, statePath + ".bak");
     mkdirSync(statePath);
     const r = run(["bun", orchestrate(ws), "next"], ws);
@@ -140,7 +140,7 @@ const orchestrate = (ws: string) => join(ws, ".agents/amadeus/tools/amadeus-orch
     const r = run(["bun", orchestrate(ws), "report", "--stage", "x", "--result", "approved"], ws);
     const d = JSON.parse(r.stdout || "{}") as { kind?: string };
     ok("(c) state 不在でも directive 契約は従来どおり", d.kind === "error" || r.exitCode !== 0, r.stdout.slice(0, 150) + r.stderr.slice(0, 100));
-    const intentsRoot = join(ws, "aidlc/spaces/default/intents");
+    const intentsRoot = join(ws, "amadeus/spaces/default/intents");
     const anyAudit = existsSync(intentsRoot)
       ? readdirSync(intentsRoot, { withFileTypes: true }).some((e) => e.isDirectory() && existsSync(join(intentsRoot, e.name, "audit")))
       : false;

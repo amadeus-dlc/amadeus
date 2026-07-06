@@ -2,7 +2,7 @@
 name: amadeus-rough-mockups
 description: >
   Run the AI-DLC `rough-mockups` stage (ideation phase) in isolation, without
-  advancing the main workflow. Packages `/aidlc --stage rough-mockups --single`:
+  advancing the main workflow. Packages `/amadeus --stage rough-mockups --single`:
   the engine emits one run-stage directive for rough-mockups and its gate, the
   conductor runs it, then the single-stage run commits a synthetic-id pair and
   stops. The main workflow's Current Stage is never touched.
@@ -13,7 +13,7 @@ user-invocable: true
 # AI-DLC Stage Runner — rough-mockups
 
 Run the `rough-mockups` stage on its own. This is opt-in packaging over
-`/aidlc --stage rough-mockups --single`; the same stage is always reachable via
+`/amadeus --stage rough-mockups --single`; the same stage is always reachable via
 that flag without this skill.
 
 ## Steps

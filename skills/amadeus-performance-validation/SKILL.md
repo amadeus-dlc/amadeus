@@ -2,7 +2,7 @@
 name: amadeus-performance-validation
 description: >
   Run the AI-DLC `performance-validation` stage (operation phase) in isolation, without
-  advancing the main workflow. Packages `/aidlc --stage performance-validation --single`:
+  advancing the main workflow. Packages `/amadeus --stage performance-validation --single`:
   the engine emits one run-stage directive for performance-validation and its gate, the
   conductor runs it, then the single-stage run commits a synthetic-id pair and
   stops. The main workflow's Current Stage is never touched.
@@ -13,7 +13,7 @@ user-invocable: true
 # AI-DLC Stage Runner — performance-validation
 
 Run the `performance-validation` stage on its own. This is opt-in packaging over
-`/aidlc --stage performance-validation --single`; the same stage is always reachable via
+`/amadeus --stage performance-validation --single`; the same stage is always reachable via
 that flag without this skill.
 
 ## Steps

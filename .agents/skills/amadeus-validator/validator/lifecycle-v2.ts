@@ -1,5 +1,5 @@
 // v2 ライフサイクルの Intent record 検証。
-// 状態の持ち主は record 直下の aidlc-state.md（v2 state template 構造）であり、
+// 状態の持ち主は record 直下の amadeus-state.md（v2 state template 構造）であり、
 // 承認と遷移の履歴は audit/audit.md のイベントが持つ。
 // 契約は docs/amadeus/lifecycle/state.md と scopes.md、および
 // skills/amadeus/references/aidlc-v2/ の vendored 一次情報に従う。
@@ -104,7 +104,7 @@ const operationSlugs = new Set(AIDLC_STAGE_SLUGS_BY_PHASE["Operation"] ?? []);
 type AuditEvent = { event: string; body: string };
 
 export function checkAidlcIntentRecord(ctx: LifecycleV2Context, input: LifecycleV2Input): void {
-  const statePath = `${input.base}/aidlc-state.md`;
+  const statePath = `${input.base}/amadeus-state.md`;
   const doc = parseAidlcState(input.stateText);
   const events = parseAuditEvents(input.auditText ?? "");
 
@@ -139,9 +139,9 @@ function checkSections(ctx: LifecycleV2Context, statePath: string, doc: AidlcSta
   const found = new Set(doc.sections.map((section) => section.heading));
   const missing = AIDLC_SECTION_HEADINGS.filter((heading) => !found.has(heading));
   if (missing.length === 0) {
-    ctx.pass(statePath, "aidlc-state.md が v2 state template の全セクションを持つ", `${doc.sections.length} セクション`);
+    ctx.pass(statePath, "amadeus-state.md が v2 state template の全セクションを持つ", `${doc.sections.length} セクション`);
   } else {
-    ctx.failRow(statePath, "aidlc-state.md が v2 state template の全セクションを持つ", `不足: ${missing.join(", ")}`);
+    ctx.failRow(statePath, "amadeus-state.md が v2 state template の全セクションを持つ", `不足: ${missing.join(", ")}`);
   }
 }
 
@@ -406,7 +406,7 @@ function checkCompletedArtifactsV2(ctx: LifecycleV2Context, input: LifecycleV2In
     if (def.perUnit) {
       if (stage.unit === undefined) {
         ctx.failRow(
-          `${input.base}/aidlc-state.md`,
+          `${input.base}/amadeus-state.md`,
           "v2 契約: per-unit ステージの completed 判定に Per unit 文脈がある",
           `stage ${stage.slug} が completed だが Per unit ブロックの文脈がない`,
         );
@@ -454,14 +454,14 @@ function checkCodekbAdoptionStub(ctx: LifecycleV2Context, artifactPath: string):
   const baseDir = artifactPath.split("/").slice(0, -1).join("/");
   for (const link of links) {
     const resolved = normalizeRelPath(`${baseDir}/${link}`);
-    // SKILL.md の契約どおり、参照先は共有 codekb store（aidlc/spaces/<space>/codekb/）
+    // SKILL.md の契約どおり、参照先は共有 codekb store（amadeus/spaces/<space>/codekb/）
     // 配下に限る。`codekb/` を含むだけの無関係な path（record 内の decoy など）は
     // 正本参照として認めない。
-    if (!/^aidlc\/spaces\/[^/]+\/codekb\//.test(resolved)) {
+    if (!/^amadeus\/spaces\/[^/]+\/codekb\//.test(resolved)) {
       ctx.failRow(
         artifactPath,
         "v2 契約: codekb 採用 stub の参照先正本が存在する",
-        `参照先が共有 codekb store（aidlc/spaces/<space>/codekb/）配下でない: ${resolved}`,
+        `参照先が共有 codekb store（amadeus/spaces/<space>/codekb/）配下でない: ${resolved}`,
       );
       continue;
     }

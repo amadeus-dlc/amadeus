@@ -49,7 +49,7 @@ Run `bun .agents/amadeus/tools/amadeus-runtime.ts summary --json`.
 If it exits non-zero (no `runtime-graph.json` yet), print:
 
 ```
-No session data yet — start a workflow with /aidlc before running
+No session data yet — start a workflow with /amadeus before running
 /amadeus-replay.
 ```
 
@@ -60,8 +60,8 @@ every number in the report.
 
 - `<record>/audit/*.md` (per-clone shards) — the full event trail (for ordering and the
   reasoning behind each decision).
-- `<record>/aidlc-state.md` — the active-stage cursor.
-- The artefacts under `<record>/<phase>/<stage>/` (the record root is `aidlc/spaces/<space>/intents/<dirName>/`) — for what each
+- `<record>/amadeus-state.md` — the active-stage cursor.
+- The artefacts under `<record>/<phase>/<stage>/` (the record root is `amadeus/spaces/<space>/intents/<dirName>/`) — for what each
   stage produced.
 
 These are your sources for *prose*. Do not derive counts from them when

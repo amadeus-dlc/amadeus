@@ -4,8 +4,8 @@
 
 ## 対象
 
-- Space: 対象 workspace の `aidlc/spaces/<space>/`（既定は `default`。`memory/`、`knowledge/`、`codekb/`、`intents/`）
-- Intent record: `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/`
+- Space: 対象 workspace の `amadeus/spaces/<space>/`（既定は `default`。`memory/`、`knowledge/`、`codekb/`、`intents/`）
+- Intent record: `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`
 - Skill sources: `skills/amadeus*/`
 - Promoted skills: `.agents/skills/amadeus*/`
 
@@ -28,12 +28,12 @@ npm run test:it:promote-skill
 
 ## 言語
 
-- `aidlc/**/*.md`、`skills/amadeus*/templates/**/*.md`、`.agents/skills/amadeus*/templates/**/*.md` は日本語で書く。
+- `amadeus/**/*.md`、`skills/amadeus*/templates/**/*.md`、`.agents/skills/amadeus*/templates/**/*.md` は日本語で書く。
 - `skills/amadeus*/SKILL.md`、`.agents/skills/amadeus*/SKILL.md`、および `skills/amadeus*/**/*.ts`、`.agents/skills/amadeus*/**/*.ts` は英語必須である（詳細は [Skill Language Policy](../../docs/amadeus/skill-language-policy.md) を参照）。
 - 英語必須の対象でも、生成される Amadeus DLC 成果物、テンプレート由来の Markdown、ユーザー向け gate 文言は日本語のまま維持する。
 - 英語で下書きしてから日本語へ翻訳しない。
 - `.kiro/specs/**/*.md` と `openspec/**/*.md` を作る場合も日本語で書く。
-- `aidlc-state.md`、`intents.json`、audit イベントのような機械可読・構造的成果物は、v2 の構造と英語ラベルをそのまま使う。
+- `amadeus-state.md`、`intents.json`、audit イベントのような機械可読・構造的成果物は、v2 の構造と英語ラベルをそのまま使う。
 
 ## Amadeus DLC の基準
 
@@ -42,7 +42,7 @@ npm run test:it:promote-skill
 - scope が SKIP にするステージは実行しない。ステージと成果物の契約は `docs/amadeus/lifecycle/` に従う。
 - Construction は Bolt を実行単位にし、walking skeleton の Bolt PR は必ず人間が承認する。
 - Spec、`.kiro/specs/**`、`openspec/**`、Operation 成果物は、対応が確定するまで固定しない。
-- 新しい成果物を作る前に、対象 workspace の `aidlc/spaces/<space>/memory/`（org.md、team.md、project.md）と、対象 Intent の `aidlc-state.md` を読む。
+- 新しい成果物を作る前に、対象 workspace の `amadeus/spaces/<space>/memory/`（org.md、team.md、project.md）と、対象 Intent の `amadeus-state.md` を読む。
 - 不明な値は空欄にせず、`未確認` と書く。
 - 推測で外部システム、境界づけられたコンテキスト、Intent、依存関係を作らない。
 
@@ -50,13 +50,13 @@ npm run test:it:promote-skill
 
 - 同じ段階の既存成果物を読み、見出し、表、識別子、語彙を合わせる。
 - 対象範囲と責任境界を明確にする。
-- テンプレートは、`aidlc/spaces/<space>/memory/templates/` の上書きがあればそれを、なければ対象 skill の同梱テンプレートを使う。
+- テンプレートは、`amadeus/spaces/<space>/memory/templates/` の上書きがあればそれを、なければ対象 skill の同梱テンプレートを使う。
 
 ## 実行検証
 
 「実際に動く実行結果の検証」は、example snapshot ではなくエンジン sandbox e2e（`dev-scripts/evals/engine-e2e/check.ts`）で行う。
 sandbox e2e は決定論的であり、LLM を呼ばない。
-一時ディレクトリへ `.agents/amadeus/{tools,amadeus-common,sensors,scopes,agents,knowledge}` をコピーした隔離 workspace を作り、本番 `aidlc/` を変更しない。
+一時ディレクトリへ `.agents/amadeus/{tools,amadeus-common,sensors,scopes,agents,knowledge}` をコピーした隔離 workspace を作り、本番 `amadeus/` を変更しない。
 
 sandbox e2e は、`intent-birth` による record 生成、`amadeus-orchestrate.ts next` の run-stage directive 発行、produces 不在時の完了拒否、human presence 未充足時の承認拒否、audit shard の自動生成を確認する。
 sandbox e2e は、成功時も失敗時も一時ディレクトリを片付ける。
@@ -74,7 +74,7 @@ repo 全体の標準検証は次で実行する。
 npm run test:all
 ```
 
-`aidlc/` 成果物を作成または更新した場合は、次で構造検証する。
+`amadeus/` 成果物を作成または更新した場合は、次で構造検証する。
 
 ```sh
 bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspace>

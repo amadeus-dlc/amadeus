@@ -2,7 +2,7 @@
 name: amadeus-scope-definition
 description: >
   Run the AI-DLC `scope-definition` stage (ideation phase) in isolation, without
-  advancing the main workflow. Packages `/aidlc --stage scope-definition --single`:
+  advancing the main workflow. Packages `/amadeus --stage scope-definition --single`:
   the engine emits one run-stage directive for scope-definition and its gate, the
   conductor runs it, then the single-stage run commits a synthetic-id pair and
   stops. The main workflow's Current Stage is never touched.
@@ -13,7 +13,7 @@ user-invocable: true
 # AI-DLC Stage Runner — scope-definition
 
 Run the `scope-definition` stage on its own. This is opt-in packaging over
-`/aidlc --stage scope-definition --single`; the same stage is always reachable via
+`/amadeus --stage scope-definition --single`; the same stage is always reachable via
 that flag without this skill.
 
 ## Steps

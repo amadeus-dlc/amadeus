@@ -3,7 +3,7 @@
 // pdm-scope eval（Issue #429）。
 //
 // Construction を持たない pdm scope が実 CLI で成立することを、隔離 temp
-// workspace で検証する。LLM を呼ばず、本番 aidlc/ を変更しない。
+// workspace で検証する。LLM を呼ばず、本番 amadeus/ を変更しない。
 // 成功時・失敗時ともに temp workspace を片付ける。
 //
 // (a) intent-birth --scope pdm が成功し、最初の post-init stage が
@@ -110,11 +110,11 @@ const EXPECTED_EXECUTE = [
       birth.out.slice(0, 200)
     );
 
-    const intentsRoot = join(ws, "aidlc/spaces/default/intents");
+    const intentsRoot = join(ws, "amadeus/spaces/default/intents");
     const dirName = readdirSync(intentsRoot, { withFileTypes: true })
       .filter((e) => e.isDirectory())
       .map((e) => e.name)[0]!;
-    const state = readFileSync(join(intentsRoot, dirName, "aidlc-state.md"), "utf-8");
+    const state = readFileSync(join(intentsRoot, dirName, "amadeus-state.md"), "utf-8");
 
     // Construction / Operation の全ステージが誕生時点で — SKIP 注釈付き [ ] であること
     const CONSTRUCTION_OPS = [
@@ -203,7 +203,7 @@ const EXPECTED_EXECUTE = [
     };
     const tools = join(ws, ".agents/amadeus/tools");
     run(["bun", join(tools, "amadeus-utility.ts"), "intent-birth", "--scope", "pdm", "--arguments", "completion eval", "--label", "pdm-done"]);
-    const intentsRoot = join(ws, "aidlc/spaces/default/intents");
+    const intentsRoot = join(ws, "amadeus/spaces/default/intents");
     const dirName = readdirSync(intentsRoot, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name)[0]!;
     const rec = join(intentsRoot, dirName);
     // 終点 stage（refined-mockups）まで forward jump し、produces を用意する
@@ -235,7 +235,7 @@ fixture
     );
     const done = run(["bun", join(tools, "amadeus-state.ts"), "complete-workflow", "refined-mockups", "--reason", "eval"]);
     ok("(e) phase-check 生成後は完了が成功する", done.exitCode === 0, done.out.slice(0, 200));
-    const st = readFileSync(join(rec, "aidlc-state.md"), "utf-8");
+    const st = readFileSync(join(rec, "amadeus-state.md"), "utf-8");
     ok(
       "(e) Inception が Verified、Status が Completed になる",
       /- \*\*Inception\*\*: Verified/.test(st) && /- \*\*Status\*\*: Completed/.test(st)
@@ -279,7 +279,7 @@ fixture
     };
     const tools = join(ws, ".agents/amadeus/tools");
     run(["bun", join(tools, "amadeus-utility.ts"), "intent-birth", "--scope", "pdm", "--arguments", "empty construction e2e", "--label", "pdm-gate"]);
-    const intentsRoot = join(ws, "aidlc/spaces/default/intents");
+    const intentsRoot = join(ws, "amadeus/spaces/default/intents");
     const dirName = readdirSync(intentsRoot, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name)[0]!;
     const rec = join(intentsRoot, dirName);
     // 終点 stage（refined-mockups）まで forward jump し、produces と phase-check を用意する
@@ -320,7 +320,7 @@ fixture
       kind === "done",
       nx.out.slice(0, 250)
     );
-    const st = readFileSync(join(rec, "aidlc-state.md"), "utf-8");
+    const st = readFileSync(join(rec, "amadeus-state.md"), "utf-8");
     ok(
       "(f) Construction / Operation が Skipped、Status が Completed になる",
       /- \*\*Construction\*\*: Skipped/.test(st) &&

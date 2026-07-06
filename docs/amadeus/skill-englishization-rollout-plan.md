@@ -14,7 +14,7 @@ phase または skill family 単位で PR を分ける。
 
 各 PR は、翻訳変更、意味変更、昇格フロー、検証結果の境界を PR 説明に明記する。
 
-templates、generated Amadeus DLC artifacts、`aidlc/**/*.md`、ユーザー向け gate text は日本語維持対象である。
+templates、generated Amadeus DLC artifacts、`amadeus/**/*.md`、ユーザー向け gate text は日本語維持対象である。
 
 ## 現在の基準
 

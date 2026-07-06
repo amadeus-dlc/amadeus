@@ -54,7 +54,7 @@ copies this table verbatim.
 | `support_agents` | string[] | yes | empty list allowed; each entry a valid agent slug. Renamed from prose `Supporting Agents:` (format-only rename) |
 | `mode` | string | yes | `inline` \| `subagent` \| `agent-team`. `inline` and `subagent` are active; **`agent-team` is reserved** — no stage declares it until a consumer ships. Orchestrator code reading `mode` MUST handle `agent-team` explicitly (at minimum throw "not yet implemented") — do not fall through to a default path |
 | `for_each` | string | optional | artifact slug; stage runs once per instance of that artifact. Omit for once-per-workflow stages. Doctor validates the artifact is produced by an upstream stage |
-| `workspace_requires` | boolean | optional | Default `false`. `true` marks a stage that must write source code to the workspace root, not just planning docs under the per-intent record dir. The stage-completion artifact guard (`amadeus-state.ts` approve/advance/finalize/complete-workflow) then requires a file outside the `aidlc/` workspace tree and the harness dir before the stage can complete: a stage that wrote only its `produces[]` markdown but no code is refused. Today only `code-generation` declares it |
+| `workspace_requires` | boolean | optional | Default `false`. `true` marks a stage that must write source code to the workspace root, not just planning docs under the per-intent record dir. The stage-completion artifact guard (`amadeus-state.ts` approve/advance/finalize/complete-workflow) then requires a file outside the `amadeus/` workspace tree and the harness dir before the stage can complete: a stage that wrote only its `produces[]` markdown but no code is refused. Today only `code-generation` declares it |
 | `produces` | string[] | yes | empty allowed; lowercase-kebab artifact names — see [Artifact Vocabulary](../../../../docs/reference/16-artifact-vocabulary.md) for rules and the live registry tool |
 | `consumes` | object[] | yes | empty allowed; each entry `{artifact, required, conditional_on?}` |
 | `consumes[].artifact` | string | yes per entry | lowercase-kebab |
@@ -63,7 +63,7 @@ copies this table verbatim.
 | `requires_stage` | string[] | yes | empty allowed; each entry a known stage slug. Two roles: (1) semantic data dependency; (2) presentation-order edge for stages with no semantic link but a fixed display order. Primary input to computed `display_order` |
 | `scopes` | string[] | optional | each entry a scope name with a matching `.claude/scopes/amadeus-<name>.md` file. Naming a scope marks this stage EXECUTE under that scope; absence marks it SKIP. The per-stage transpose of the scope membership matrix — `amadeus-graph compile` reads every stage's `scopes:` and emits the compiled EXECUTE/SKIP grid (`tools/data/scope-grid.json`). The 3 initialization stages name all scopes (always EXECUTE). Absent and `[]` are treated identically |
 | `inputs` | string | yes | human prose (preserves today's `**Inputs**:` line) |
-| `outputs` | string | yes | human prose (preserves today's `**Outputs**:` line). **Non-load-bearing at runtime** — the engine NEVER reads `outputs:` for path resolution; it resolves the node's `produces[]` artifact NAMES against the **active intent's record dir** at emit time (see "Artifact paths are engine-resolved" below). Author `outputs:` as relative artifact NAMES (or `<phase>/<stage>/<name>.md` shapes); do NOT hardcode a workspace root (`aidlc-docs/…` or `aidlc/spaces/…`) — it would read FALSE the moment the record re-roots per intent |
+| `outputs` | string | yes | human prose (preserves today's `**Outputs**:` line). **Non-load-bearing at runtime** — the engine NEVER reads `outputs:` for path resolution; it resolves the node's `produces[]` artifact NAMES against the **active intent's record dir** at emit time (see "Artifact paths are engine-resolved" below). Author `outputs:` as relative artifact NAMES (or `<phase>/<stage>/<name>.md` shapes); do NOT hardcode a workspace root (`aidlc-docs/…` or `amadeus/spaces/…`) — it would read FALSE the moment the record re-roots per intent |
 
 ---
 
@@ -127,7 +127,7 @@ NAMES, not rooted paths — the engine resolves the root (see below).
 
 A stage emits relative artifact **names** (its `produces[]`); the engine
 resolves them to canonical write paths at directive-emit time, **against the
-active intent's record dir** — `aidlc/spaces/<space>/intents/<YYMMDD>-<label>/<phase>/<stage>/<name>.md`
+active intent's record dir** — `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/<phase>/<stage>/<name>.md`
 (a pre-workspace project is migrated to this layout on first touch — there is no
 flat-root resolution path post-migration). The resolver is `resolveArtifactPath` / `memoryPathFor` in
 `amadeus-orchestrate.ts`, threaded with the active intent's relative record dir

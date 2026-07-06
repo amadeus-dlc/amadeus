@@ -4,7 +4,7 @@
 // SENSOR fire to this script via the manifest's `command:` field. Self-
 // contained: no imports from sibling tools. Wraps `bunx tsc --project
 // <tsconfig> --noEmit --pretty false --incremental --tsBuildInfoFile
-// <path under aidlc-docs/.aidlc-sensors/>` and prints the locked stdout
+// <path under aidlc-docs/.amadeus-sensors/>` and prints the locked stdout
 // JSON shape:
 //
 //   {"pass": <bool>, "errors": [{file, line, column, message}, ...]}
@@ -31,7 +31,7 @@
 //   via stdout-line count, not exit code.
 //
 // * Why --incremental --tsBuildInfoFile: persist compile state across
-//   fires under aidlc-docs/.aidlc-sensors/.tsbuildinfo (gitignored by
+//   fires under aidlc-docs/.amadeus-sensors/.tsbuildinfo (gitignored by
 //   the framework). Subsequent fires re-check only changed files
 //   instead of the entire project. Doesn't fix cross-file attribution
 //   but cuts re-reporting noise — same un-introduced error doesn't spam
@@ -265,9 +265,9 @@ function main(): void {
 	const tsconfigDir = dirname(tsconfigPath);
 
 	// Walk up from tsconfig to find a project-level dir for
-	// aidlc-docs/.aidlc-sensors/.tsbuildinfo. By convention aidlc-docs
+	// aidlc-docs/.amadeus-sensors/.tsbuildinfo. By convention aidlc-docs
 	// sits beside the consumer project; use tsconfigDir as the project
-	// anchor. The .aidlc-sensors/ dir is gitignored by the framework so
+	// anchor. The .amadeus-sensors/ dir is gitignored by the framework so
 	// the tsbuildinfo never pollutes commits.
 	const sensorsBaseDir = sensorsDir(tsconfigDir);
 	try {

@@ -35,8 +35,8 @@
       ],
       "readBoundary": {
         "allowed": [
-          "aidlc/spaces/<space>/intents/**",
-          "aidlc/spaces/<space>/memory/**",
+          "amadeus/spaces/<space>/intents/**",
+          "amadeus/spaces/<space>/memory/**",
           "対象 skill が渡した前提"
         ],
         "prohibited": [
@@ -151,7 +151,7 @@
       ],
       "readBoundary": {
         "allowed": [
-          "aidlc/**",
+          "amadeus/**",
           "検証対象の関連成果物"
         ],
         "prohibited": [

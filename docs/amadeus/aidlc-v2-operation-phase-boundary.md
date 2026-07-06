@@ -20,7 +20,7 @@ Operation skill の追加や取り込みは行わない。
 
 ### 成果物契約の観点
 
-Amadeus DLC の成果物は、`aidlc/` 配下の日本語 Markdown（設計、計画、判断、追跡）であり、リポジトリ内で完結する。
+Amadeus DLC の成果物は、`amadeus/` 配下の日本語 Markdown（設計、計画、判断、追跡）であり、リポジトリ内で完結する。
 
 Operation stage の成果物は、実環境への作用（デプロイ、プロビジョニング、監視設定）と実環境からの観測（インシデント、性能実測、フィードバック）を前提にする。これらはリポジトリ内の record だけでは真実性を保てず、成果物契約の外にある。
 
@@ -32,7 +32,7 @@ Amadeus DLC の承認は、stage gate と phase PR・Bolt PR の人間 merge で
 
 ### validator の観点
 
-`amadeus-validator` は、配布先ユーザー環境で `aidlc/` の構造を機械検証する契約であり、`pass` は「実行時に参照できる最低限の構造条件の充足」を意味する。
+`amadeus-validator` は、配布先ユーザー環境で `amadeus/` の構造を機械検証する契約であり、`pass` は「実行時に参照できる最低限の構造条件の充足」を意味する。
 
 デプロイ結果や監視設定といった実環境状態の検証手段を validator は持たない。Operation を対象に含めると、`pass` の意味が構造条件の充足から逸脱する。
 

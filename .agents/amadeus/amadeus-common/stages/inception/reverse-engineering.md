@@ -32,8 +32,8 @@ scopes:
   - refactor
   - security-patch
   - workshop
-inputs: <record>/aidlc-state.md
-outputs: "aidlc/spaces/<active-space>/codekb/<repo>/ (9 artifacts: business-overview.md, architecture.md, code-structure.md, api-documentation.md, component-inventory.md, technology-stack.md, dependencies.md, code-quality-assessment.md, reverse-engineering-timestamp.md)"
+inputs: <record>/amadeus-state.md
+outputs: "amadeus/spaces/<active-space>/codekb/<repo>/ (9 artifacts: business-overview.md, architecture.md, code-structure.md, api-documentation.md, component-inventory.md, technology-stack.md, dependencies.md, code-quality-assessment.md, reverse-engineering-timestamp.md)"
 ---
 
 # Reverse Engineering
@@ -44,10 +44,10 @@ MANDATORY: Follow stage-protocol.md for approval gates, question format, and com
 
 ### Step 1: Check Conditions
 
-Read `<record>/aidlc-state.md` to confirm:
+Read `<record>/amadeus-state.md` to confirm:
 - Project type is brownfield
 
-If project is not brownfield, skip this stage and update aidlc-state.md with skip reason.
+If project is not brownfield, skip this stage and update amadeus-state.md with skip reason.
 
 #### Resolve the intent's repo set (multi-repo)
 
@@ -55,7 +55,7 @@ This stage runs **per repo** the intent touches. Resolve the repo set from the
 intent's registry row before scanning:
 
 1. Read the active intent's `repos` array from
-   `aidlc/spaces/<active-space>/intents/intents.json` (the row whose `uuid`/`slug`
+   `amadeus/spaces/<active-space>/intents/intents.json` (the row whose `uuid`/`slug`
    matches the active intent). This is the set captured at intent birth (an explicit
    `--repos a,b` or sibling auto-discovery).
 2. **Single-repo / unrecorded:** if `repos` is absent, empty, or has exactly one
@@ -64,7 +64,7 @@ intent's registry row before scanning:
 3. **Multi-repo:** if `repos` has more than one entry, run Steps 2–3 **once per
    repo**, scanning that repo's sibling directory (`<workspace>/<repo>/`) and writing
    its 9 artifacts to the directory `codekb-path --repo <repo>` prints (the
-   space-level `aidlc/spaces/<active-space>/codekb/<repo>/`; see Step 3). Each repo's codekb is independent;
+   space-level `amadeus/spaces/<active-space>/codekb/<repo>/`; see Step 3). Each repo's codekb is independent;
    nothing in one repo's scan blocks another's, so the per-repo scans may run as
    parallel subagents.
 
@@ -76,7 +76,7 @@ repo in the set.
 Delegate to Task tool with amadeus-developer-agent:
 - subagent_type="amadeus-developer-agent"
 - The agent persona and knowledge are loaded automatically. Do NOT manually inject the persona.
-- Include workspace state from aidlc-state.md as context
+- Include workspace state from amadeus-state.md as context
 
 Developer scans `<repo>`'s codebase (the sibling dir `<workspace>/<repo>/`; for a
 single-repo intent this is the whole codebase) for:
@@ -96,7 +96,7 @@ Delegate to Task tool with amadeus-architect-agent:
 - subagent_type="amadeus-architect-agent"
 - The agent persona and knowledge are loaded automatically. Do NOT manually inject the persona.
 - Pass the complete developer scan results as context
-- Include workspace state from aidlc-state.md
+- Include workspace state from amadeus-state.md
 
 Architect synthesizes scan results into 9 artifacts:
 1. **business-overview.md** — Business domain, purpose, key functionality
@@ -117,7 +117,7 @@ bun .claude/tools/amadeus-utility.ts codekb-path --repo <repo>
 ```
 
 (omit `--repo` for a single/unrecorded repo — the engine resolves the repo name).
-It prints ONE line: the exact directory, e.g. `aidlc/spaces/<active-space>/codekb/<repo>/`.
+It prints ONE line: the exact directory, e.g. `amadeus/spaces/<active-space>/codekb/<repo>/`.
 Write all 9 artifacts into the directory the tool printed — verbatim, creating it if
 absent. This is the durable per-repo code knowledge base, a space-level store shared
 across every intent in the space. Never substitute the intent slug, the record dir, or
@@ -125,7 +125,7 @@ a hand-composed path for what the tool prints.
 
 ### Step 4: Update State
 
-Update `<record>/aidlc-state.md`:
+Update `<record>/amadeus-state.md`:
 - Mark Reverse Engineering as `[x]` completed
 - Update current stage and next stage
 
@@ -134,18 +134,18 @@ Update `<record>/aidlc-state.md`:
 Use stage-protocol.md completion template:
 - Announcement with completion summary
 - Summary of all 9 artifacts produced **per repo** (for a multi-repo intent, list
-  each repo's `aidlc/spaces/<active-space>/codekb/<repo>/` set — the directory
+  each repo's `amadeus/spaces/<active-space>/codekb/<repo>/` set — the directory
   `codekb-path --repo <repo>` printed in Step 3)
-- Review path: `aidlc/spaces/<active-space>/codekb/<repo>/` for each repo in the set
+- Review path: `amadeus/spaces/<active-space>/codekb/<repo>/` for each repo in the set
 - Structured approval question with options: Approve (continue to Requirements Analysis) / Request Changes
 
 ## Sensors
 
-This stage's outputs are markdown artefacts under `aidlc/spaces/<active-space>/codekb/<repo>/` (the directory `codekb-path --repo <repo>` resolves).
+This stage's outputs are markdown artefacts under `amadeus/spaces/<active-space>/codekb/<repo>/` (the directory `codekb-path --repo <repo>` resolves).
 
 The imported sensors check those outputs:
 
-- **`required-sections`** verifies the output contains the registry default (≥2 H2 headings). Failure mode: missing headings emit `SENSOR_FAILED` with detail at `<record>/.aidlc-sensors/<stage-slug>/required-sections-<iso>.md`.
+- **`required-sections`** verifies the output contains the registry default (≥2 H2 headings). Failure mode: missing headings emit `SENSOR_FAILED` with detail at `<record>/.amadeus-sensors/<stage-slug>/required-sections-<iso>.md`.
 - **`upstream-coverage`** verifies the output prose references each artefact declared in this stage's `consumes:` frontmatter. This stage declares no upstream artefacts; the sensor still runs but reports zero unreferenced inputs by default.
 
 ## Learn

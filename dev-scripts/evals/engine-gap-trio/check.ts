@@ -3,7 +3,7 @@
 // engine-gap-trio eval（Issue #478）。
 //
 // 3 ギャップを隔離 temp workspace の実 CLI 駆動で検証する。LLM を呼ばず、
-// 本番 aidlc/ を変更しない。成功時・失敗時ともに temp workspace を片付ける。
+// 本番 amadeus/ を変更しない。成功時・失敗時ともに temp workspace を片付ける。
 //
 // gap1 (R101-R103): audit-fork の再入 — worktree 側 shard が main の prefix なら
 //   Reentrant fork として成功し、分岐していれば拒否する。
@@ -76,7 +76,7 @@ function birthIntent(workspace: string, label: string): string {
     workspace
   );
   if (res.exitCode !== 0) throw new Error(`intent-birth failed: ${res.stderr}\n${res.stdout}`);
-  const intentsRoot = join(workspace, "aidlc/spaces/default/intents");
+  const intentsRoot = join(workspace, "amadeus/spaces/default/intents");
   const dirName = readdirSync(intentsRoot, { withFileTypes: true })
     .filter((e) => e.isDirectory())
     .map((e) => e.name)[0];
@@ -85,7 +85,7 @@ function birthIntent(workspace: string, label: string): string {
 }
 
 function recordDirPath(workspace: string, dirName: string): string {
-  return join(workspace, "aidlc/spaces/default/intents", dirName);
+  return join(workspace, "amadeus/spaces/default/intents", dirName);
 }
 
 function mainShard(workspace: string, dirName: string): { name: string; path: string } {
@@ -102,8 +102,8 @@ function mainShard(workspace: string, dirName: string): { name: string; path: st
     const dirName = birthIntent(ws, "gap-one");
     const shard = mainShard(ws, dirName);
     const slug = "gap-one-bolt";
-    const relRecord = `aidlc/spaces/default/intents/${dirName}`;
-    const wtAudit = join(ws, ".aidlc/worktrees", `bolt-${slug}`, relRecord, "audit");
+    const relRecord = `amadeus/spaces/default/intents/${dirName}`;
+    const wtAudit = join(ws, ".amadeus/worktrees", `bolt-${slug}`, relRecord, "audit");
     mkdirSync(wtAudit, { recursive: true });
     // phase PR で commit 済みの checkout を再現: main shard の prefix を worktree へ置く
     const mainContent = readFileSync(shard.path, "utf-8");
@@ -125,7 +125,7 @@ function mainShard(workspace: string, dirName: string): { name: string; path: st
 
     // 分岐 shard は拒否（内容が main の prefix でない）
     const slug2 = "gap-one-diverged";
-    const wtAudit2 = join(ws, ".aidlc/worktrees", `bolt-${slug2}`, relRecord, "audit");
+    const wtAudit2 = join(ws, ".amadeus/worktrees", `bolt-${slug2}`, relRecord, "audit");
     mkdirSync(wtAudit2, { recursive: true });
     writeFileSync(join(wtAudit2, shard.name), prefix + "\n## Rogue Row\n別作業の痕跡\n", "utf-8");
     const denied = run(["bun", auditTool, "audit-fork", "--slug", slug2], ws);
@@ -173,8 +173,8 @@ function mainShard(workspace: string, dirName: string): { name: string; path: st
     );
     // audit-merge は AUDIT_FORKED の Bolt slug を完全一致で相関するため、
     // 大文字入力でも記録は正準形（小文字）でなければならない
-    const relRecord2 = `aidlc/spaces/default/intents/${dirName}`;
-    const wtAudit2 = join(ws, ".aidlc/worktrees", "bolt-u002-mixed-case", relRecord2, "audit");
+    const relRecord2 = `amadeus/spaces/default/intents/${dirName}`;
+    const wtAudit2 = join(ws, ".amadeus/worktrees", "bolt-u002-mixed-case", relRecord2, "audit");
     mkdirSync(wtAudit2, { recursive: true });
     const forked = run(["bun", auditTool, "audit-fork", "--slug", "U002-Mixed-Case"], ws);
     ok("(gap2) 大文字 slug でも audit-fork が worktree を解決して成功する", forked.exitCode === 0, forked.stdout + forked.stderr);
@@ -195,7 +195,7 @@ function mainShard(workspace: string, dirName: string): { name: string; path: st
   try {
     const dirName = birthIntent(ws, "gap-three");
     const rec = recordDirPath(ws, dirName);
-    const statePath = join(rec, "aidlc-state.md");
+    const statePath = join(rec, "amadeus-state.md");
     let state = readFileSync(statePath, "utf-8");
     state = state.replace("Per unit: [TBD]", "Per unit: unit-alpha\nPer unit: unit-beta");
     state = state.replace(/^- \[.\] code-generation — EXECUTE$/m, "- [x] code-generation — EXECUTE");

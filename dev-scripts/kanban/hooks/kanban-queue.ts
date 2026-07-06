@@ -19,7 +19,7 @@ export function resolveKanbanProjectDir(env: NodeJS.ProcessEnv, scriptUrl: strin
 export function queueEntryFor(filePath: string, projectDir: string): string | null {
   const norm = filePath.replace(/\\/g, "/").replace(/\/{2,}/g, "/");
   const root = projectDir.replace(/\\/g, "/").replace(/\/{2,}/g, "/").replace(/\/$/, "");
-  const prefix = `${root}/aidlc/spaces/default/intents/`;
+  const prefix = `${root}/amadeus/spaces/default/intents/`;
   if (!norm.startsWith(prefix)) return null;
   const rest = norm.slice(prefix.length);
   if (rest === "intents.json") return "*";

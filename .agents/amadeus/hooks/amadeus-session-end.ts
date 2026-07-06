@@ -2,7 +2,7 @@
 // The workflow lifecycle is independent of session lifecycle — ending a
 // session does NOT complete the workflow. This event is observability only.
 //
-// No-op if aidlc-state.md is absent in cwd (the canonical "active workflow"
+// No-op if amadeus-state.md is absent in cwd (the canonical "active workflow"
 // signal — matches session-start.ts and the plan definition).
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
