@@ -18,4 +18,5 @@
 - 2026-07-06T06:05:00Z: c50a0fe5..9dd93f50 の差分駆動増分更新（Intent `260706-docs-i18n`。PR #553 = 全面 rename。codekb は #553 内で反映済みのため、残存旧名 1 件（architecture.md の docs-only 宣言説明）の修正のみ。詳細は reverse-engineering-timestamp.md）。
 - 2026-07-06T07:50:00Z: 9dd93f50..3366cd69 の差分駆動増分更新（Intent `260706-guide-intro`。PR #559 の #548 = validator RE produces の共有 codekb 直接解決を architecture.md へ追記。#561 / #563 は docs-only で影響なし。詳細は reverse-engineering-timestamp.md）。
 - 2026-07-06T07:58:00Z: 9dd93f50..b452f4fb の差分駆動増分更新（Intent `260706-feature-diff`。PR #559/#561/#563/#565 = エンジン整合修正・lifecycle I/O 記法・docs i18n・harness/codex 新設。code-structure と component-inventory へ harness 層と Codex guard を追記。詳細は reverse-engineering-timestamp.md）。
+- 2026-07-06T09:40:00Z: 1aed7eb1..620beb5e の差分駆動増分更新（Intent `260706-guide-ops`。#554 model overlay = eval 31→32 + doctor 乖離検査、#573 doctor 誘導、#578 は docs のみ。詳細は reverse-engineering-timestamp.md）。
 - 2026-07-06T09:06:00Z: b452f4fb..19662e50 の差分駆動増分更新（Intent `260706-journal-logger`。PR #566/#564/#574 = runtime-graph 修正・model overlay 新機構・機能差一覧 docs。eval 31→32、model overlay 行を追加。詳細は reverse-engineering-timestamp.md）。
