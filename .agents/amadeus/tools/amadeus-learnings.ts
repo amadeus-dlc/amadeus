@@ -81,7 +81,7 @@ function practiceFilePath(projectDir: string, scope: "project" | "team"): string
 // PROJECT's .claude/sensors/, never the framework distribution (plan
 // sanctioned deviation 3.4).
 function sensorManifestPath(projectDir: string, sensorId: string): string {
-  return join(projectDir, harnessDir(), "sensors", `aidlc-${sensorId}.md`);
+  return join(projectDir, harnessDir(), "sensors", `amadeus-${sensorId}.md`);
 }
 
 // Resolve a stage's authored .md file path from its slug. The frontmatter

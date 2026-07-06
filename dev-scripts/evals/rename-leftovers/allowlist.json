@@ -1,0 +1,115 @@
+{
+  "_description": "rename-leftovers eval 許可リスト。旧名 aidlc- の正当な参照を宣言する。各エントリに reason 必須。全面 rename Intent 時はここを更新するだけで eval を追従させる。",
+  "entries": [
+    {
+      "pattern": "`aidlc-${obj.id}.md`",
+      "reason": "amadeus-sensor-schema.ts のエラーメッセージ文字列。SENSOR_FILE_REGEX がすでに amadeus- prefix でマッチするため実行時には到達しない dead string だが、文言修正は Surgical Changes 原則に従い別 Intent で行う（#537/#538/#540 のスコープ外）。",
+      "files": ["amadeus-sensor-schema.ts"]
+    },
+    {
+      "pattern": "aidlc-state.md",
+      "reason": "v2 ライフサイクルの canonical artifact ファイル名。engine 改名（#445）の対象外であり、workspace の state ファイルとして維持する。",
+      "files": ["*"]
+    },
+    {
+      "pattern": "aidlc-docs",
+      "reason": "legacy workspace ディレクトリ名。migration コードが旧構造（flat aidlc-docs/）を移行パスとして参照するために維持する。",
+      "files": ["*"]
+    },
+    {
+      "pattern": ".aidlc-plan.json",
+      "reason": "amadeus-graph resolve が出力する内部プランファイル名。上流 v2 との互換性のために名前を維持する。",
+      "files": ["*"]
+    },
+    {
+      "pattern": ".aidlc-hooks-health",
+      "reason": "hook 実行履歴を記録する内部ディレクトリ名。上流 v2 との互換性のために名前を維持する。",
+      "files": ["*"]
+    },
+    {
+      "pattern": ".aidlc-sensors",
+      "reason": "project-tier の sensor ディレクトリ名。上流 v2 との互換性のために名前を維持する。",
+      "files": ["*"]
+    },
+    {
+      "pattern": ".aidlc-sessions",
+      "reason": "セッション記録の内部ディレクトリ名。上流 v2 との互換性のために名前を維持する。",
+      "files": ["*"]
+    },
+    {
+      "pattern": ".aidlc-clone-id",
+      "reason": "clone 識別子ファイル名。上流 v2 との互換性のために名前を維持する。",
+      "files": ["*"]
+    },
+    {
+      "pattern": ".aidlc-recovery.md",
+      "reason": "リカバリー用内部ファイル名。上流 v2 との互換性のために名前を維持する。",
+      "files": ["*"]
+    },
+    {
+      "pattern": ".aidlc-stop-hook",
+      "reason": "stop hook 状態ファイル名。上流 v2 との互換性のために名前を維持する。",
+      "files": ["*"]
+    },
+    {
+      "pattern": ".aidlc-compose-pending",
+      "reason": "compose 保留マーカーファイル名。上流 v2 との互換性のために名前を維持する。",
+      "files": ["*"]
+    },
+    {
+      "pattern": ".aidlc-readonly-latch",
+      "reason": "読み取り専用ラッチファイル名。上流 v2 との互換性のために名前を維持する。",
+      "files": ["*"]
+    },
+    {
+      "pattern": ".aidlc-turn-counter",
+      "reason": "ターンカウンターファイル名。上流 v2 との互換性のために名前を維持する。",
+      "files": ["*"]
+    },
+    {
+      "pattern": "aidlc-org.md",
+      "reason": "upstream v2 の rules_in_context に登場するファイル名。directive の例示に含まれる上流互換の文字列。",
+      "files": ["amadeus-directive.ts"]
+    },
+    {
+      "pattern": "aidlc-team.md",
+      "reason": "upstream v2 の rules_in_context に登場するファイル名。directive の例示に含まれる上流互換の文字列。",
+      "files": ["amadeus-directive.ts"]
+    },
+    {
+      "pattern": "aidlc-project.md",
+      "reason": "upstream v2 の rules_in_context に登場するファイル名。directive の例示に含まれる上流互換の文字列。",
+      "files": ["amadeus-directive.ts"]
+    },
+    {
+      "pattern": "aidlc-phase-inception.md",
+      "reason": "upstream v2 の rules_in_context に登場するファイル名。directive の例示に含まれる上流互換の文字列。",
+      "files": ["amadeus-directive.ts"]
+    },
+    {
+      "pattern": "aidlc-phase-construction.md",
+      "reason": "upstream v2 の rules_in_context に登場するファイル名。directive の例示に含まれる上流互換の文字列。",
+      "files": ["amadeus-directive.ts"]
+    },
+    {
+      "pattern": "aidlc-rules",
+      "reason": "amadeus-lib.ts の rulesDir 検出マップ。.codex ディレクトリが使う上流互換のルールディレクトリ名。",
+      "files": ["amadeus-lib.ts"]
+    },
+    {
+      "pattern": "aidlc-init",
+      "reason": "amadeus-runner-gen.ts の INIT_RUNNER_DIR 定数。上流 v2 との互換性のために名前を維持する。",
+      "files": ["amadeus-runner-gen.ts"]
+    },
+    {
+      "pattern": "aidlc-compose",
+      "reason": "amadeus-runner-gen.ts の COMPOSE_RUNNER_DIR 定数。上流 v2 との互換性のために名前を維持する。",
+      "files": ["amadeus-runner-gen.ts"]
+    },
+    {
+      "pattern": "skills/aidlc-<slug>/",
+      "reason": "amadeus-runner-gen.ts のログメッセージで人間向けに MISSING/ORPHAN runner を報告する文字列。パス解決ではなく報告文言。",
+      "files": ["amadeus-runner-gen.ts"]
+    }
+  ]
+}

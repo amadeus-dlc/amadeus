@@ -651,7 +651,9 @@
     "tools/aidlc-sensor-upstream-coverage.ts",
     "tools/aidlc-swarm.ts",
     "tools/aidlc-validate.ts",
-    "aidlc-common/protocols/stage-protocol.md"
+    "aidlc-common/protocols/stage-protocol.md",
+    "tools/aidlc-sensor-linter.ts",
+    "sensors/aidlc-linter.md"
   ],
   "exceptions": [
     {
@@ -713,6 +715,10 @@
     {
       "target": "tools/aidlc-sensor.ts、tools/aidlc-sensor-required-sections.ts、tools/aidlc-sensor-upstream-coverage.ts、tools/aidlc-swarm.ts、tools/aidlc-validate.ts（ローカルでは .agents/amadeus/tools/amadeus-*.ts）",
       "reason": "Issue #507: import.meta.main ガードなしの無条件 main() 実行を修正し、import 副作用なしのモジュールロードを可能にした（CLI 挙動は不変）。上流が同修正を取り込んだら解除。"
+    },
+    {
+      "target": "tools/aidlc-sensor-linter.ts、sensors/aidlc-linter.md（ローカルでは .agents/amadeus/tools/amadeus-sensor-linter.ts、.agents/amadeus/sensors/amadeus-linter.md）",
+      "reason": "Issue #538: linter sensor が実質 no-op（ラップ対象の eslint が未導入）だった問題の解消。workspace の package.json が lint:check script を宣言する場合はそれをラップし（bun run lint:check、exit 0 = pass / 非 0 = 1 violation として診断出力を message に格納）、宣言がなければ従来の eslint 検出 → exit 127 quiet PASS へフォールバックする 2 段検出へ変更。sensor 文書の description と本文も実挙動へ一致させた。repo 固有パスの直書きはしない（汎用機構）。上流が同等の 2 段検出を取り込んだら解除。"
     }
   ]
 }

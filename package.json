@@ -23,7 +23,7 @@
     "claude-wiring:check": "bun run dev-scripts/check-claude-host-wiring.ts",
     "grilling-wiring:check": "bun run dev-scripts/check-grilling-wiring.ts",
     "issue-ref-contract:check": "bun run dev-scripts/check-issue-ref-contract.ts",
-    "test:it:all": "npm run test:it:amadeus-templates && npm run test:it:lints && npm run test:it:public-type-file && npm run test:it:ts-complexity && npm run test:it:no-stub-compat && npm run test:it:amadeus-contracts && npm run test:it:aidlc-state && npm run test:it:amadeus-validator && npm run test:it:amadeus-validator-domain && npm run test:it:promote-skill && npm run test:it:claude-host-wiring && npm run test:it:grilling-wiring && npm run test:it:issue-ref-contract && npm run test:it:llm-runner-options:real-command && npm run test:it:llm-provider-options:mock-real && npm run test:it:migrate-workspace && npm run test:it:parity && npm run test:it:kanban-registry && npm run test:it:kanban-sync && npm run test:it:kanban-hooks && npm run test:it:jump-phase-guard && npm run test:it:engine-gap-trio && npm run test:it:swarm-batch-progress && npm run test:it:doctor-drops && npm run test:it:pdm-scope && npm run test:it:hooks-state-bugfix && npm run test:it:workspace-detect && npm run test:it:engine-error-logged && npm run test:it:rulesdir-resolve && npm run test:it:docs-codekb-guards && npm run test:it:installer && npm run test:it:persist-cid-metamain",
+    "test:it:all": "npm run test:it:amadeus-templates && npm run test:it:lints && npm run test:it:public-type-file && npm run test:it:ts-complexity && npm run test:it:no-stub-compat && npm run test:it:amadeus-contracts && npm run test:it:aidlc-state && npm run test:it:amadeus-validator && npm run test:it:amadeus-validator-domain && npm run test:it:promote-skill && npm run test:it:claude-host-wiring && npm run test:it:grilling-wiring && npm run test:it:issue-ref-contract && npm run test:it:llm-runner-options:real-command && npm run test:it:llm-provider-options:mock-real && npm run test:it:migrate-workspace && npm run test:it:parity && npm run test:it:kanban-registry && npm run test:it:kanban-sync && npm run test:it:kanban-hooks && npm run test:it:jump-phase-guard && npm run test:it:engine-gap-trio && npm run test:it:swarm-batch-progress && npm run test:it:doctor-drops && npm run test:it:pdm-scope && npm run test:it:hooks-state-bugfix && npm run test:it:workspace-detect && npm run test:it:engine-error-logged && npm run test:it:rulesdir-resolve && npm run test:it:docs-codekb-guards && npm run test:it:installer && npm run test:it:persist-cid-metamain && npm run test:it:rename-leftovers && npm run test:it:linter-sensor",
     "test:it:amadeus-templates": "bun run dev-scripts/evals/amadeus-templates/check.ts",
     "test:it:lints": "bun run lints/eval.ts",
     "test:it:public-type-file": "bun run lints/public-type-file/eval.ts",
@@ -60,7 +60,9 @@
     "test:it:docs-codekb-guards": "bun run dev-scripts/evals/docs-codekb-guards/check.ts",
     "test:it:installer": "bun run dev-scripts/evals/installer/check.ts",
     "test:it:persist-cid-metamain": "bun run dev-scripts/evals/persist-cid-metamain/check.ts",
-    "amadeus:install": "bun run scripts/amadeus-install.ts"
+    "test:it:rename-leftovers": "bun run dev-scripts/evals/rename-leftovers/check.ts",
+    "amadeus:install": "bun run scripts/amadeus-install.ts",
+    "test:it:linter-sensor": "bun run dev-scripts/evals/linter-sensor/check.ts"
   },
   "devDependencies": {
     "@types/bun": "^1.3.14",
