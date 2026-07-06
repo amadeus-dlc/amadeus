@@ -37,13 +37,13 @@ amadeus-install: installing into <workspace>
 [2/5] skills        .claude/skills/amadeus*, .agents/skills/amadeus* (replaced)
 [3/5] symlinks      .claude/{agents,amadeus-common,hooks,knowledge,scopes,sensors,tools} (recreated)
 [4/5] settings      .claude/settings.json (hooks merged: 11 entries, 0 duplicates)
-[5/5] smoke         doctor check failed
-amadeus-install: installed but smoke check failed
+[5/5] smoke         doctor check passed
+note: workspace shell is seeded at your first /amadeus workflow (known state on a fresh install)
+amadeus-install: done. Next: see README "導入後の検証" (doctor / amadeus-validator)
 ```
 
 ステップ 5 は smoke check として `doctor` を実行する。
-新規導入直後は 1 件だけ fail を報告する。
-これは想定済みの挙動であり、詳細は後述の「導入を検証する」で扱う。同じレポート全体をそこに再掲する。
+workspace shell についての note は新規導入直後の想定済みの表示であり、shell は installer ではなく最初の workflow 実行が作る。対応する `doctor` の行は後述の「導入を検証する」で、seed される瞬間は [Your First Workflow](02-first-workflow.ja.md) で示す。
 
 ## 導入されるもの
 
@@ -64,7 +64,7 @@ bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspac
 
 `doctor` は、installer がステップ 5 で実行したものと同じ health check である。
 直接実行すると、installer の 1 行要約ではなく全文のレポートが得られる。
-新規導入直後は、次のとおり 1 件だけ fail する。
+新規導入直後は、次のとおり全件 pass する。
 
 ```
 AI-DLC Health Check
@@ -82,7 +82,7 @@ AI-DLC Health Check
 ✓  amadeus-validate-state.ts present
 ✓  settings.json present
 ✓  AWS_AIDLC_DEFAULT_SCOPE (unset — no project default)
-✗  workspace shell ready (.claude/ + amadeus/spaces/default/memory/) — copy the workspace shell from `dist/claude/` into your project root
+✓  workspace shell pending first workflow — seeded at first intent birth (run your first /amadeus workflow)
 ✓  Hook heartbeats: not yet fired (first workflow stage will populate)
 ✓  Audit locks: none leaked
 ✓  Orphan worktrees: 0 observed
@@ -102,15 +102,12 @@ AI-DLC Health Check
 ✓  Paired sensor coverage: no sensor-bound rules (0 feedforward-only)
 ✓  Intent registry: all rows ⇄ record dirs reconciled
 ─────────────────────────────────────
-31 passed, 1 failed
+32 passed, 0 failed
 ```
 
-fail した 1 件、`workspace shell ready` は、新規導入直後には想定済みである。
-installer はエンジンと skill を配置するが、この check が確認する Space shell（`.claude/` と `amadeus/spaces/default/memory/`）は、installer ではなく最初の workflow 実行が作る。
-check 自身が提案する fix（`dist/claude/` から workspace shell を copy する）は installer 経由の導入には当てはまらず、実行しても解消しない。この行は無視してよい。
-この check は、最初の workflow を実行した時点で自然に解消する。実際に解消する様子は [Your First Workflow](02-first-workflow.ja.md) で示す。
-
-pending：[Issue #573](https://github.com/amadeus-dlc/amadeus/issues/573) の修正が入った後は、この注記を外し、導入直後から全 pass の `doctor` 結果だけを示す節に簡素化できる。
+注意して読む価値があるのは `workspace shell pending first workflow` の行である。
+installer はエンジンと skill を配置するが、Space shell（`amadeus/spaces/default/memory/`）は installer ではなく最初の workflow 実行が作る。
+この行は、最初の workflow を実行した時点で `workspace shell ready` へ切り替わる。実際に切り替わる様子は [Your First Workflow](02-first-workflow.ja.md) で示す。
 
 ## 更新する
 

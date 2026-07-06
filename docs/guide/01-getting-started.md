@@ -32,11 +32,12 @@ amadeus-install: installing into <workspace>
 [2/5] skills        .claude/skills/amadeus*, .agents/skills/amadeus* (replaced)
 [3/5] symlinks      .claude/{agents,amadeus-common,hooks,knowledge,scopes,sensors,tools} (recreated)
 [4/5] settings      .claude/settings.json (hooks merged: 11 entries, 0 duplicates)
-[5/5] smoke         doctor check failed
-amadeus-install: installed but smoke check failed
+[5/5] smoke         doctor check passed
+note: workspace shell is seeded at your first /amadeus workflow (known state on a fresh install)
+amadeus-install: done. Next: see README "導入後の検証" (doctor / amadeus-validator)
 ```
 
-Step 5 runs `doctor` as a smoke check and, on a fresh install, reports one failure — expected, and explained under [Verify the install](#verify-the-install) below, where the same report is reproduced in full.
+Step 5 runs `doctor` as a smoke check. The note about the workspace shell is expected on a fresh install: that shell is created by your first workflow run, not by the installer — [Verify the install](#verify-the-install) below shows the corresponding `doctor` line, and [Your First Workflow](02-first-workflow.md) shows it being seeded.
 
 ## What gets installed
 
@@ -55,7 +56,7 @@ bun <workspace>/.agents/amadeus/tools/amadeus-utility.ts doctor --project-dir <w
 bun run .agents/skills/amadeus-validator/validator/AmadeusValidator.ts <workspace>
 ```
 
-`doctor` is the same health check the installer ran as its step 5; running it directly shows the full report instead of the installer's one-line summary. Right after a fresh install, expect exactly one failure:
+`doctor` is the same health check the installer ran as its step 5; running it directly shows the full report instead of the installer's one-line summary. Right after a fresh install, everything passes:
 
 ```
 AI-DLC Health Check
@@ -73,7 +74,7 @@ AI-DLC Health Check
 ✓  amadeus-validate-state.ts present
 ✓  settings.json present
 ✓  AWS_AIDLC_DEFAULT_SCOPE (unset — no project default)
-✗  workspace shell ready (.claude/ + amadeus/spaces/default/memory/) — copy the workspace shell from `dist/claude/` into your project root
+✓  workspace shell pending first workflow — seeded at first intent birth (run your first /amadeus workflow)
 ✓  Hook heartbeats: not yet fired (first workflow stage will populate)
 ✓  Audit locks: none leaked
 ✓  Orphan worktrees: 0 observed
@@ -93,12 +94,10 @@ AI-DLC Health Check
 ✓  Paired sensor coverage: no sensor-bound rules (0 feedforward-only)
 ✓  Intent registry: all rows ⇄ record dirs reconciled
 ─────────────────────────────────────
-31 passed, 1 failed
+32 passed, 0 failed
 ```
 
-The one failure, `workspace shell ready`, is expected at this point in a fresh install: the installer copies the engine and the skills, but the Space shell it checks for — `.claude/` plus `amadeus/spaces/default/memory/` — is created by your first workflow run, not by the installer. Its own suggested fix (copying the workspace shell from `dist/claude/`) does not apply to an installer-driven setup and does not resolve it; ignore that line. The check clears itself as soon as you run your first workflow, which [Your First Workflow](02-first-workflow.md) demonstrates directly.
-
-Pending: once [Issue #573](https://github.com/amadeus-dlc/amadeus/issues/573) lands, this caveat can be dropped and this section can simply show an all-clear `doctor` run right after install.
+One line is worth reading closely: `workspace shell pending first workflow`. The installer copies the engine and the skills, but the Space shell — `amadeus/spaces/default/memory/` — is created by your first workflow run, not by the installer. The line flips to `workspace shell ready` as soon as you run your first workflow, which [Your First Workflow](02-first-workflow.md) demonstrates directly.
 
 ## Updating
 

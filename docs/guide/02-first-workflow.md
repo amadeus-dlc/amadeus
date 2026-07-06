@@ -32,7 +32,7 @@ Build System: Unknown
 First post-init stage: intent-capture (IDEATION)
 ```
 
-Birth creates the Intent record (`amadeus/spaces/default/intents/260706-hello-command/`) and, alongside it, the Space shell — `amadeus/spaces/default/memory/` — that [Getting Started](01-getting-started.md#verify-the-install) found missing right after install. Re-running `doctor` in the same workspace, right after this birth, shows that check now passing (unrelated passing lines omitted below; nothing here has been altered beyond that trim):
+Birth creates the Intent record (`amadeus/spaces/default/intents/260706-hello-command/`) and, alongside it, the Space shell — `amadeus/spaces/default/memory/` — that [Getting Started](01-getting-started.md#verify-the-install) showed as `pending first workflow` right after install. Re-running `doctor` in the same workspace, right after this birth, shows that line flipped to `workspace shell ready` (unrelated passing lines omitted below; nothing here has been altered beyond that trim):
 
 ```
 AI-DLC Health Check

@@ -45,8 +45,8 @@ First post-init stage: intent-capture (IDEATION)
 ```
 
 birth は、Intent の record（`amadeus/spaces/default/intents/260706-hello-command/`）と、その傍らで Space shell（`amadeus/spaces/default/memory/`）を作る。
-この Space shell こそ、[Getting Started](01-getting-started.ja.md#導入を検証する) で導入直後に不足していたものである。
-同じ workspace でこの birth の直後に `doctor` を再実行すると、その check が pass に変わる（以下は無関係な pass 行を省略した。省略以外は変更していない）。
+この Space shell こそ、[Getting Started](01-getting-started.ja.md#導入を検証する) で導入直後に `pending first workflow` と表示されていたものである。
+同じ workspace でこの birth の直後に `doctor` を再実行すると、その行が `workspace shell ready` へ切り替わる（以下は無関係な pass 行を省略した。省略以外は変更していない）。
 
 ```
 AI-DLC Health Check
