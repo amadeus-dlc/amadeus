@@ -344,5 +344,13 @@
     "issues": [
       528
     ]
+  },
+  {
+    "uuid": "019f34fe-4918-7f27-b6c9-e00b1f87619f",
+    "slug": "readme-refresh",
+    "dirName": "260706-readme-refresh",
+    "scope": "refactor",
+    "repos": [],
+    "status": "complete"
   }
 ]

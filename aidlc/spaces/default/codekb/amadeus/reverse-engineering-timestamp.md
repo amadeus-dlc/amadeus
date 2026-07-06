@@ -2,6 +2,17 @@
 
 ## 差分更新の記録（最新）
 
+- 解析時刻: 2026-07-06T01:20:00Z（UTC）
+- 対象コミット: 7829d99a（origin/main = PR #536 merge 後）
+- 解析方式: 差分更新（2a0a784b..7829d99a の非 aidlc 変更 = PR #536 のみ。8 ファイル、+186 行）
+- 実施 Intent: `260706-readme-refresh`（reverse-engineering ステージ）
+
+| artifact | 変更内容 |
+|---|---|
+| 全 9 docs | 影響なし（PR #536 は docs-only: `docs/amadeus/language-policy.md` / `extension-guide.md` とその `.ja.md` の新設、AMADEUS.md / README.md / steering.md / skill-language-policy.md へのポインタ追記。エンジン・tools・evals・skill 実装に変更がなく、codekb の記述対象に乖離は生じない） |
+
+## 前回（2026-07-06T00:25:00Z、616d063e..2a0a784b）の記録
+
 - 解析時刻: 2026-07-06T00:25:00Z（UTC）
 - 対象コミット: 2a0a784b（origin/main = eng3/issue-509-532-docs 分岐点）
 - 解析方式: 差分更新（616d063e..2a0a784b の非 aidlc 変更 = PR #531 のみ。9 ファイル）
