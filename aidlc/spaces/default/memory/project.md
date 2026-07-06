@@ -141,6 +141,10 @@ Intent の正準 ID は `intents/intents.json`（registry）の UUIDv7 である
 - Projects v2 への書き込みは gh project item-edit（1 呼び出し 1 フィールド制約）ではなく gh api graphql の mutation batch で行う (learned 2026-07-05) <!-- cid:market-research:c5 -->
 - GitHub kanban sync は暫定機構として軽量に実装する（堅牢化・通知系・統計を作り込まない。冪等な全上書き + drop 記録 + 次回回復の最小構成）。後日本格的な仕組みへ置き換える前提 (learned 2026-07-05) <!-- cid:feasibility:c2 -->
 - 多体連携（leader + engineer1〜3）の gate 承認中継では、中継承認定型文の受信直後に限り hooks/amadeus-mint-presence.ts で HUMAN_TURN を mint し、ピア協議の回答受信では mint しない。承認経路（人間 → leader → engineer）を decision に明記する (learned 2026-07-06) <!-- cid:reverse-engineering:c1 -->
+- upstream-coverage sensor は questions ファイルにも consumes 参照を要求する。questions 生成時点で codekb 等の上流成果物への参照段落を含める。sensor は fail 時に .aidlc-sensors/ へ detail ファイル、pass 時に audit へ SENSOR_FIRED + SENSOR_PASSED を記録する（fail の解消後は amadeus-sensor.ts fire で pass を記録し直す） (learned 2026-07-06) <!-- cid:260706-pr-gate-discipline:requirements-analysis:c3 -->
+- 上流要求（requirements.md 等）に書かれた実装手段の記載（対象ファイル、配列名、同期先）も鵜呑みにせず、設計段階で実物（parity-map.json、ディレクトリ実在）を実測して精密化する。逸脱は memory.md の Deviations に記録し、承認済み文書は書き換えず gate 承認で確定する（#534 の FR-5 で engineFileExceptions/exceptions の配列誤認と存在しない skills/ 同期先を設計段階で補正した前例） (learned 2026-07-06) <!-- cid:260706-pr-gate-discipline:functional-design:c3 -->
+- 実装 subagent の成果物は、承認済み設計との権威関係（どちらが正か、乖離時にどちらへ追随するか）まで設計文書と突き合わせて検証する。#534 で知識文書が設計と逆の drift 権威を宣言した反転を reviewer が検出した前例 (learned 2026-07-06) <!-- cid:260706-pr-gate-discipline:code-generation:c2 -->
+- reviewer 指摘も鵜呑みにせず、エンジンの実データ（directive の memory_path、runtime-graph.json）と merge 済み前例 record で裏取りしてから対応する。#534 で memory.md 配置指摘を偽陽性として反証し reviewer が受理した前例（対応方針は PR コメント対応の偽陽性判断と同型） (learned 2026-07-06) <!-- cid:260706-pr-gate-discipline:code-generation:c3 -->
 ## Testing Posture
 - build-and-test は Minimal 戦略でも produces 全件を生成する（report が成果物不在を拒否するため）。不適用のテスト instruction は空ファイルにせず、適用判断と根拠を記す簡潔な文書にする (learned 2026-07-04) <!-- cid:build-and-test:c1 -->
 - エンジン/validator の eval fixture はエンジンの実出力形を正とする。validator の期待に手書きで合わせた fixture は不整合を隠す（#458 は fixture が [S] 前提だったため見逃された）。可能なら隔離 workspace で実 CLI を起動して実出力そのものを検査する (learned 2026-07-05) <!-- cid:code-generation:c5 -->
