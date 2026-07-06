@@ -1,0 +1,420 @@
+#!/usr/bin/env bun
+// amadeus-kiro-adapter.ts — the Kiro CLI hook shim (AUTHORED shell file; the
+// amadeus-*.ts hook bodies beside it are PACKAGED core, byte-shared with the
+// Claude Code harness).
+//
+// Kiro hook payloads are near-isomorphic to Claude Code's but differ in
+// three load-bearing ways (live-captured on kiro-cli 2.6.1 — see
+// docs/spikes/dist-kiro/findings.md §0.2 in the framework repo):
+//   1. tool_name arrives as the ALIAS: `shell` (execute_bash), `write`
+//      (fs_write).
+//   2. the write payload's file path field is `path`, not `file_path`.
+//   3. `todo_list` input is command-shaped ({command: "create", tasks:
+//      [{task_description}]}) — there is no status/activeForm transition.
+//
+// This shim normalizes a Kiro payload into the ClaudeCodeHookInput shape the
+// core hooks parse, then pipes it into the named core hook (same directory)
+// as a bun subprocess, forwarding stdout and the exit code. Two outputs need
+// post-processing:
+//   - session-start emits {"additionalContext": "..."} — Kiro's context
+//     channel is plain stdout at exit 0, so the shim unwraps the JSON and
+//     prints the text.
+//   - stop emits {"decision":"block","reason":"..."} — Kiro's stop contract
+//     is IDENTICAL (verified live), so it passes through verbatim.
+//
+// Usage (registered in .kiro/agents/amadeus.json):
+//   bun .kiro/hooks/amadeus-kiro-adapter.ts <target>
+// where <target> ∈ session-start | audit-and-sensors | runtime-compile |
+//                  state-sync | log-subagent | stop | verb-intercept |
+//                  pretool-block
+
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import {
+  classifyTerminalCommand,
+  hasOpenGate,
+  humanActedSinceGate,
+  humanPresenceGuardDisabled,
+  isAutonomousMode,
+  stateFilePath,
+} from "../tools/amadeus-lib.ts";
+import { appendAuditEntry } from "../tools/amadeus-audit.ts";
+
+const HOOKS_DIR = dirname(fileURLToPath(import.meta.url));
+const target = process.argv[2] ?? "";
+
+interface KiroHookInput {
+  hook_event_name?: string;
+  cwd?: string;
+  session_id?: string;
+  tool_name?: string;
+  tool_input?: Record<string, unknown>;
+  tool_response?: unknown;
+  prompt?: string;
+  assistant_response?: string;
+}
+
+let kiro: KiroHookInput = {};
+if (!process.stdin.isTTY) {
+  try {
+    const text = await Bun.stdin.text();
+    if (text.length > 0) kiro = JSON.parse(text) as KiroHookInput;
+  } catch {
+    process.exit(0); // malformed stdin — advisory hooks fail open
+  }
+}
+
+// --- verb-intercept: the deterministic terminal-command seam (userPromptSubmit) ---
+//
+// A `/amadeus` command that leads with a workspace navigation verb
+// (space/space-create/intent) or a read-only utility flag (--status/--doctor/
+// --help/--version) is TERMINAL — it maps 1:1 to an amadeus-utility.ts subcommand
+// and carries no workflow work. Over an ACTIVE workflow the live conductor is
+// unreliable at honouring these: under accumulated session context it runs a
+// bare `next` and advances the active intent (verb dropped) or rolls into the
+// active stage (read-only flag ignored) — the "roll-forward" bug. This hook
+// dispatches them DETERMINISTICALLY before the conductor decides anything:
+// recover the raw args, classify with the engine's own classifier
+// (classifyTerminalCommand — same sets the engine routes on), run the tool, and
+// hand the conductor the verbatim output with an explicit do-NOT-advance
+// instruction (Kiro's context channel is plain stdout at exit 0; it has no
+// block API, so the conductor relays rather than is bypassed — measured to land
+// the command and leave the active intent untouched).
+//
+// WHY the args are recovered from the EXPANDED body: Kiro fires userPromptSubmit
+// with `prompt` = the fully-expanded skill body (the raw `/amadeus …` literal is
+// gone), but it SUBSTITUTES the user's post-/amadeus text ($ARGUMENTS) into the
+// forwarding-loop anchor `amadeus-orchestrate.ts next <ARGS>`. We read the args
+// back from that anchor — the same text the conductor would forward.
+function extractNextArgs(expandedPrompt: string): string[] {
+  // Match the FIRST `… amadeus-orchestrate.ts next <ARGS>` occurrence (the loop's
+  // step-1 anchor) and take the tokens up to the closing backtick. The anchor is
+  // inside a markdown code span, so the args end at the backtick.
+  const m = expandedPrompt.match(/amadeus-orchestrate\.ts next ([^`\n]*)`/);
+  if (!m) return [];
+  return m[1].trim().split(/\s+/).filter((t) => t.length > 0);
+}
+
+if (target === "verb-intercept") {
+  // The whole turn's only job here is to deterministically handle a terminal
+  // command; anything else falls through to the conductor untouched (exit 0, no
+  // output → Kiro proceeds to the LLM normally). Advisory: any failure fails open.
+  const args = extractNextArgs(kiro.prompt ?? "");
+  const cmd = classifyTerminalCommand(args);
+  // Turn-clock: bump a per-turn counter EVERY time this seam fires (it fires
+  // once per turn, BEFORE the cmd===null exit so a bare-next turn still advances
+  // the clock and a prior turn's latch goes stale). The read-only/nav latch
+  // below stamps THIS counter value; the engine done-guard + preToolUse backstop
+  // fire ONLY when the latch's turn === the current counter (same turn) — truly
+  // turn-scoped, no time window, no wedge. Best-effort; failure fails open.
+  let turn = 0;
+  try {
+    const cwd = kiro.cwd ?? process.cwd();
+    mkdirSync(join(cwd, "amadeus"), { recursive: true });
+    const cp = join(cwd, "amadeus", ".amadeus-turn-counter");
+    turn = existsSync(cp)
+      ? (Number.parseInt(readFileSync(cp, "utf-8").trim(), 10) || 0) + 1
+      : 1;
+    writeFileSync(cp, String(turn) + "\n", "utf-8");
+  } catch { /* turn-clock best-effort */ }
+  // Human presence: this seam fires on a real human turn, so record a HUMAN_TURN
+  // event in the active intent's audit shard. The gate (handleApprove/handleAnswer)
+  // refuses unless a HUMAN_TURN was recorded since the last gate resolution; the
+  // preToolUse block below is the exit-2 floor. Own try block, SEPARATE from the
+  // turn-counter bump above (that is the roll-forward latch clock - a counter I/O
+  // failure must not skip the mint, or a genuine approval gets refused). Gated on
+  // workflow state existing (same self-gate as the core mint hook) so a prompt in
+  // a project that never ran the framework does not scaffold audit shards.
+  try {
+    const cwd = kiro.cwd ?? process.cwd();
+    if (existsSync(stateFilePath(cwd))) {
+      appendAuditEntry("HUMAN_TURN", {}, cwd);
+    }
+  } catch { /* presence best-effort - mint never blocks the turn */ }
+  if (cmd === null) process.exit(0); // not a terminal command — conductor handles it
+
+  const cwd = kiro.cwd ?? process.cwd();
+  const utilArgs = [join(".kiro", "tools", "amadeus-utility.ts"), cmd.subcommand];
+  if (cmd.arg !== undefined) utilArgs.push(cmd.arg);
+  const run = Bun.spawnSync(["bun", ...utilArgs], { cwd, stdout: "pipe", stderr: "pipe" });
+  const out = ((run.stdout?.toString() ?? "") + (run.stderr?.toString() ?? "")).trim();
+
+  // Turn-scoped latch: a terminal command was handled OFF-BAND this turn (the
+  // seam ran the tool; the conductor only relays). Stamp the latch with the
+  // CURRENT turn counter so the engine done-guard + preToolUse backstop know a
+  // bare advancing `next` THIS SAME turn is the spurious roll-forward and must
+  // be neutralized. Read-only flags (--status/--doctor/--help/--version) and
+  // workspace verbs (space/space-create/intent) both arm it, so the same guard
+  // catches the read-only AND the nav roll-forward. Best-effort; fails open.
+  if (cmd.source === "read-only-flag" || cmd.source === "workspace-verb") {
+    try {
+      const cwd = kiro.cwd ?? process.cwd();
+      mkdirSync(join(cwd, "amadeus"), { recursive: true });
+      const flag = cmd.source === "read-only-flag"
+        ? cmd.subcommand
+        : (cmd.arg ? cmd.subcommand + " " + cmd.arg : cmd.subcommand);
+      writeFileSync(
+        join(cwd, "amadeus", ".amadeus-readonly-latch"),
+        JSON.stringify({ turn, flag, source: cmd.source, ts: Date.now() }) + "\n",
+        "utf-8",
+      );
+    } catch { /* latch best-effort */ }
+  }
+  // Echo the command the way the user typed it (verb + arg, or the --flag) so the
+  // short-circuit message is legible.
+  const typed = cmd.source === "read-only-flag"
+    ? `--${cmd.subcommand}`
+    : `${cmd.subcommand}${cmd.arg ? " " + cmd.arg : ""}`;
+  process.stdout.write(
+    `SYSTEM (deterministic harness dispatch): The command \`/amadeus ${typed}\` has ALREADY been run by the harness — it is a read-only/navigation command that carries NO workflow work. Its verbatim output is below. Your ONLY action this turn: relay that output to the user, then STOP. Do NOT run \`amadeus-orchestrate.ts next\`. Do NOT advance, resume, or run any workflow stage.\n\n--- OUTPUT ---\n${out}\n--- END OUTPUT ---\n`,
+  );
+  process.exit(0);
+}
+
+// --- pretool-block: the preToolUse roll-forward backstop (matcher: execute_bash) ---
+//
+// Defense-in-depth behind the engine done-guard. The verb-intercept seam above
+// handles a read-only/nav command off-band and stamps amadeus/.amadeus-readonly-latch
+// with the current turn counter; the engine's `next` then emits `done` for a bare
+// advancing next this same turn. But Kiro's userPromptSubmit can only INJECT, not
+// block — so if the live conductor retries a bare `next` past the engine's `done`,
+// this preToolUse hook is the hard floor: when the latch is fresh-for-this-turn and
+// the attempted execute_bash command is a TRULY BARE advancing `amadeus-orchestrate.ts
+// next` (no advancing flag, classifyTerminalCommand === null), exit 2 + stderr →
+// Kiro BLOCKS the tool call (live-verified contract: only exit 2 blocks; exit 1 and
+// a JSON {"decision":...} on stdout do NOT). It does NOT consume the latch (the
+// conductor may retry within the turn; the next turn bumps the counter so the latch
+// goes stale and a legitimate advancing next runs). Advisory/fail-open: any
+// parse/read failure exits 0 and never blocks a real next.
+if (target === "pretool-block") {
+  const cmdStr = String((kiro.tool_input ?? {}).command ?? "");
+  const cwd = kiro.cwd ?? process.cwd();
+  const m = cmdStr.match(/amadeus-orchestrate\.ts\s+next\b([^\n]*)/);
+  const nextArgs = m ? m[1].trim().split(/\s+/).filter((t) => t.length > 0) : [];
+  // A next carrying ANY advancing/config flag is a DELIBERATE move — only a truly
+  // bare next is the spurious roll-forward. Mirrors the engine done-guard's
+  // exemptions (the engine doesn't parse --init/--force — retired P4 — so listing
+  // them here is a harmless superset).
+  const ADVANCING_FLAGS = new Set([
+    "--stage", "--phase", "--scope", "--resume", "--depth",
+    "--test-strategy", "--single", "--init", "--force",
+    "--new-scope", "--report",
+  ]);
+  // A leading `compose` verb is a deliberate composer dispatch (the engine's
+  // Branch 0 exempts flags.compose the same way) - never the spurious bare
+  // roll-forward this backstop exists to block.
+  const isBareAdvancing =
+    m !== null &&
+    nextArgs[0] !== "compose" &&
+    !nextArgs.some((a) => ADVANCING_FLAGS.has(a)) &&
+    classifyTerminalCommand(nextArgs) === null;
+
+  let counter = -1;
+  let latchTurn = -2;
+  try {
+    const cp = join(cwd, "amadeus", ".amadeus-turn-counter");
+    if (existsSync(cp)) {
+      const n = Number.parseInt(readFileSync(cp, "utf-8").trim(), 10);
+      if (Number.isFinite(n)) counter = n;
+    }
+    const lp = join(cwd, "amadeus", ".amadeus-readonly-latch");
+    if (existsSync(lp)) {
+      const r = JSON.parse(readFileSync(lp, "utf-8")) as { turn?: number };
+      if (typeof r.turn === "number") latchTurn = r.turn;
+    }
+  } catch { /* fail open */ }
+
+  if (isBareAdvancing && counter >= 0 && latchTurn === counter) {
+    process.stderr.write(
+      "read-only/navigation command already handled this turn by the deterministic harness — do not advance the workflow. The output was already relayed; end the turn.\n",
+    );
+    process.exit(2); // Kiro reject contract: exit 2 + stderr BLOCKS the tool call.
+  }
+
+  // --- human-presence floor (second exit-2 branch) ---
+  //
+  // Refuse a tool call ONLY while an approval gate is actually OPEN (a stage sits
+  // at [?] in the state file) and no HUMAN_TURN has been recorded since the last
+  // gate resolution: the hard floor that stops a model under autopilot from
+  // fabricating an approval (the verb-intercept seam above records a HUMAN_TURN
+  // on a real human turn). The gate-open predicate is load-bearing: after a
+  // legitimate approval the resolution follows the turn's HUMAN_TURN, and without
+  // it the floor would block the mandated same-turn continuation into the next
+  // stage. Distinct from the roll-forward latch above. Carve-outs mirror the core
+  // gate: autonomous Construction (swarm/Bolt) first, then the deterministic
+  // off-switch, then no-open-gate. Fail-open on any read/parse error: advisory,
+  // must never wedge a legitimate turn.
+  try {
+    const content = existsSync(stateFilePath(cwd))
+      ? readFileSync(stateFilePath(cwd), "utf-8")
+      : null;
+    if (isAutonomousMode(content)) process.exit(0); // autonomous: never block
+    if (humanPresenceGuardDisabled()) process.exit(0); // deterministic off-switch
+    if (!hasOpenGate(content)) process.exit(0); // no gate awaits approval
+
+    if (!humanActedSinceGate(cwd)) {
+      process.stderr.write(
+        "an approval gate is open and no human has acted since it opened: refusing the tool call. A real human must respond at the gate. End the turn.\n",
+      );
+      process.exit(2); // Kiro reject contract: exit 2 + stderr BLOCKS the tool call.
+    }
+  } catch { /* fail open: advisory presence floor */ }
+
+  process.exit(0);
+}
+
+// Normalize Kiro's alias tool names to the canonical names the core hooks
+// match on. Both alias and canonical forms are accepted defensively.
+function canonicalTool(name: string): string {
+  if (name === "write" || name === "fs_write") return "Write";
+  if (name === "shell" || name === "execute_bash") return "Bash";
+  return name;
+}
+
+type Forward = { hook: string; input: Record<string, unknown> } | null;
+
+function buildForward(): Forward {
+  const tool = canonicalTool(kiro.tool_name ?? "");
+  const ti = kiro.tool_input ?? {};
+
+  switch (target) {
+    case "session-start":
+      // session_id is forwarded when present so the core hook writes its
+      // per-session→intent STAMP (the session→intent record). BUT agentSpawn
+      // carries no source discrimination — every spawn reports as "startup"
+      // from the core hook's perspective (Kiro has no resume signal in this
+      // payload), so SESSION_RESUMED can never fire and the P8 resume-rebind
+      // OFFER is structurally unreachable on Kiro — a documented harness
+      // limitation, not a bug. We never fake a resume source. The state-file
+      // self-gate keeps the whole thing a no-op outside active workflows.
+      return {
+        hook: "amadeus-session-start.ts",
+        input: {
+          hook_event_name: "SessionStart",
+          source: "startup",
+          ...(kiro.session_id ? { session_id: kiro.session_id } : {}),
+        },
+      };
+
+    case "audit-and-sensors": {
+      // postToolUse(write) → audit-logger THEN sensor-fire (both ship core).
+      if (tool !== "Write") return null;
+      const filePath = (ti.path as string) ?? (ti.file_path as string) ?? "";
+      if (!filePath) return null;
+      return {
+        hook: "__audit_and_sensors__", // handled specially below (two hooks)
+        input: {
+          hook_event_name: "PostToolUse",
+          tool_name: "Write",
+          tool_input: { file_path: filePath },
+        },
+      };
+    }
+
+    case "runtime-compile": {
+      if (tool !== "Bash") return null;
+      return {
+        hook: "amadeus-runtime-compile.ts",
+        input: {
+          hook_event_name: "PostToolUse",
+          tool_name: "Bash",
+          tool_input: { command: (ti.command as string) ?? "" },
+        },
+      };
+    }
+
+    case "state-sync": {
+      // Kiro's todo_list is command-shaped. A `create` whose first task
+      // description carries the stage-protocol "[slug]" suffix maps to the
+      // Claude TaskUpdate in_progress transition the core hook keys on.
+      if ((kiro.tool_name ?? "") !== "todo_list") return null;
+      if ((ti.command as string) !== "create") return null;
+      const tasks = (ti.tasks as Array<{ task_description?: string }>) ?? [];
+      const desc = tasks[0]?.task_description ?? "";
+      if (!desc) return null;
+      return {
+        hook: "amadeus-sync-statusline.ts",
+        input: {
+          hook_event_name: "PostToolUse",
+          tool_name: "TaskUpdate",
+          tool_input: { status: "in_progress", activeForm: desc },
+        },
+      };
+    }
+
+    case "log-subagent": {
+      if ((kiro.tool_name ?? "") !== "subagent") return null;
+      const stages = (ti.stages as Array<{ role?: string }>) ?? [];
+      const roles = [...new Set(stages.map((s) => s.role ?? "unknown"))].join(",");
+      return {
+        hook: "amadeus-log-subagent.ts",
+        input: {
+          hook_event_name: "SubagentStop",
+          agent_type: roles || "unknown",
+          agent_id: kiro.session_id ?? "",
+        },
+      };
+    }
+
+    case "stop":
+      // Kiro provides neither stop_hook_active NOR a transcript_path, so the
+      // core hook's run-mode-aware no-progress ceiling is the loop guard here
+      // (it defaults stop_hook_active to false). With no transcript the core
+      // hook's conversational carve-out is inert on Kiro, so a chatting or
+      // pausing human is released by the INTERACTIVE cap (default 2; 8 under
+      // autonomous Construction) instead, after one nudge rather than eight. The
+      // {"decision":"block"} stdout contract is identical.
+      return {
+        hook: "amadeus-stop.ts",
+        input: { hook_event_name: "Stop", stop_hook_active: false },
+      };
+
+    default:
+      return null;
+  }
+}
+
+function runCore(hookFile: string, input: Record<string, unknown>): { stdout: string; code: number } {
+  const r = Bun.spawnSync(["bun", join(HOOKS_DIR, hookFile)], {
+    stdin: Buffer.from(JSON.stringify(input), "utf-8"),
+    stdout: "pipe",
+    stderr: "ignore",
+  });
+  return { stdout: r.stdout?.toString() ?? "", code: r.exitCode ?? 0 };
+}
+
+const fwd = buildForward();
+if (fwd === null) {
+  process.exit(0);
+  throw new Error("unreachable"); // narrows fwd for TS below
+}
+
+if (fwd.hook === "__audit_and_sensors__") {
+  // Two core hooks ride the same write event, in audit-then-sensors order
+  // (mirrors the Claude settings.json registration). Both advisory: exit 0.
+  runCore("amadeus-audit-logger.ts", fwd.input);
+  runCore("amadeus-sensor-fire.ts", fwd.input);
+  process.exit(0);
+}
+
+const result = runCore(fwd.hook, fwd.input);
+
+if (target === "session-start") {
+  // Unwrap {"additionalContext": ...} → plain text on stdout (Kiro's context
+  // channel). Anything unparseable passes through untouched.
+  try {
+    const parsed = JSON.parse(result.stdout) as { additionalContext?: string };
+    if (parsed.additionalContext) {
+      process.stdout.write(parsed.additionalContext);
+    }
+  } catch {
+    if (result.stdout) process.stdout.write(result.stdout);
+  }
+  process.exit(0);
+}
+
+// stop (and any future passthrough target): forward stdout + exit code
+// verbatim — the {"decision":"block","reason"} contract is shared.
+if (result.stdout) process.stdout.write(result.stdout);
+process.exit(result.code);

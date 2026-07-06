@@ -1,0 +1,1 @@
+{"version":"1.0.0","enabled":true,"name":"amadeus-mint","description":"Records a human-turn event on prompt submit (human-presence gate).","when":{"type":"promptSubmit"},"then":{"type":"runCommand","command":"bun .kiro/hooks/amadeus-kiro-adapter.ts mint"}}

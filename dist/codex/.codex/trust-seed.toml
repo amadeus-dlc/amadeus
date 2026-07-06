@@ -1,0 +1,36 @@
+# dist/codex hook-trust pre-seed (S9a) — TEMPLATE.
+# Append these entries to the USER config.toml ($CODEX_HOME/config.toml)
+# after replacing <PROJECT_DIR> with the project's absolute path, or run:
+#   bun scripts/package.ts codex trust --project <abs-dir>
+# to print them substituted and ready to paste. The hash covers the
+# normalized hook identity (event + command + defaults), NOT the path —
+# only the key changes per install. Codex then runs the hooks without a
+# TUI trust pass (the --dangerously-bypass-hook-trust flag does NOT fire
+# untrusted hooks at 0.137-0.139; never rely on it).
+
+[hooks.state."<PROJECT_DIR>/.codex/hooks.json:session_start:0:0"]
+trusted_hash = "sha256:aafa51d2b0b0a98e01e2cbceb7814014a75cec3c0e48e5d7bed0b6a3d440981c"
+
+[hooks.state."<PROJECT_DIR>/.codex/hooks.json:user_prompt_submit:0:0"]
+trusted_hash = "sha256:b001a42c098b3cd59a16a4abee94559c2544ee9c501a557c0a587825e5b5959d"
+
+[hooks.state."<PROJECT_DIR>/.codex/hooks.json:post_tool_use:0:0"]
+trusted_hash = "sha256:1465ac91da9835c262a640e77b881c44c5c8de86740d96b88645c5bea59acfae"
+
+[hooks.state."<PROJECT_DIR>/.codex/hooks.json:post_tool_use:1:0"]
+trusted_hash = "sha256:34d0dec24e0364394163ba5f628d8b01108aa7a09e57b2ff5671f7f01bccb703"
+
+[hooks.state."<PROJECT_DIR>/.codex/hooks.json:post_tool_use:2:0"]
+trusted_hash = "sha256:ae8604f1dc012e0f0a095af96f3912c8cf10e3241f454992dc09f939a45944ca"
+
+[hooks.state."<PROJECT_DIR>/.codex/hooks.json:pre_compact:0:0"]
+trusted_hash = "sha256:3c1344f2255645df24aa744ce0f6738cd011f697cb5b3dbe929391f39c778918"
+
+[hooks.state."<PROJECT_DIR>/.codex/hooks.json:post_compact:0:0"]
+trusted_hash = "sha256:b0c4c6bf51d3235728ee8f0b9f7e03aa70c53b21b5a4e0664bd3a4eee1130732"
+
+[hooks.state."<PROJECT_DIR>/.codex/hooks.json:subagent_stop:0:0"]
+trusted_hash = "sha256:c19081399be036143200e58eb24354ffa573cd12ed4de7b7f64c173ee2a90dcc"
+
+[hooks.state."<PROJECT_DIR>/.codex/hooks.json:stop:0:0"]
+trusted_hash = "sha256:553b4a6ce46deb414c9b00dcf59fcf435f44339dedbfef3cbd08718617b1276a"

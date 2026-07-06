@@ -97,7 +97,7 @@ docs/guide/ docs/reference/         # 4モード化+クレジット追記
 | Artifact | Action | Destination |
 |----------|--------|-------------|
 | 実装コード(core/ harness/ tests/ docs/ セルフインストール) | Commit 済み | PR #601(`f94a5a7a`)で main にマージ済み |
-| `dist/`(生成物) | Commit しない(現状の運用) | origin/main に dist は一度も含まれておらず、ドリフトガードは `package.ts --check`(再生成・比較)が担う — §8 |
+| `dist/`(生成物) | Commit(設計どおり) | ハンドオーバー作業中に「origin/main に dist が一度も含まれていない」ことが判明。原因はコミッターのグローバル gitignore(`dist/`)による黙殺で、リポジトリ `.gitignore` への `!/dist/` 追加とともに全 dist ツリーをコミットして是正 — §8 |
 | `amadeus/spaces/default/intents/260706-amadeus-grilling/` の成果物一式 | Commit | ワークスペース規約どおり version 管理(audit シャード含む) |
 | ステージ質問ファイル(`*-questions.md`) | 規約上は record 内に残置 | — |
 | `OUTCOMES.md`(本書) | Commit | ワークスペースルート |
@@ -117,7 +117,7 @@ docs/guide/ docs/reference/         # 4モード化+クレジット追記
 
 - ~~promote:self:check の drift 誤認~~ → **解決済み**。PR #602(`ac4aa725` / `062a9ae0`)で `scripts/promote-self.ts` に合成スコープ保全が追加され、`promote:self:check` は現在パスする。
 - ~~`.claude/CLAUDE.md` のセッションスキル列挙が3本のまま~~ → **解決済み**。grilling 本体コミット(`f94a5a7a`)で4本化済み。
-- ~~dist/ が gitignore で git 追跡外~~ → **現状運用として決着**。origin/main に dist は一度も含まれておらず(`git log -- dist` 空)、パリティは `bun scripts/package.ts --check`(再生成・比較)が保証する。グローバル gitignore(`~/.config/git/ignore` の `dist/`)はこの de-facto 運用と整合している。ただし `amadeus/spaces/default/memory/project.md` の Tech Stack に「dist/<harness>/(生成・**コミット**・ドリフトガード対象)」とあり実態と矛盾するため、メモリ記述の是正が任意のフォローアップ。
+- ~~dist/ が gitignore で git 追跡外~~ → **設計意図に合わせて是正済み**。docs / README / CONTRIBUTING は一貫して「dist は generated, committed, drift-guarded」と定めているが、origin/main に dist は一度も含まれていなかった(コミッターのグローバル gitignore `dist/` による黙殺)。リポジトリ `.gitignore` に `!/dist/` 否定パターンを追加してグローバル ignore を打ち消し、全4ハーネスの dist ツリー(`package.ts --check` で core と in sync を確認済み)をコミットした。
 
 引き続き残るもの:
 

@@ -4,6 +4,11 @@ node_modules/
 .DS_Store
 ._*
 
+# dist/ is generated, COMMITTED, and drift-guarded (see CONTRIBUTING.md).
+# The negation defeats any user-global `dist/` ignore that would otherwise
+# silently drop the distribution trees from commits.
+!/dist/
+
 # Generated AI-DLC artifacts (recreated by workflow runs / doctor)
 dist/claude/amadeus-docs/
 dist/kiro/amadeus-docs/
