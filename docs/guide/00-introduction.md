@@ -30,7 +30,7 @@ The full stage-to-runner mapping is maintained in the [Stage Catalog](../../skil
 
 ## Relationship to AI-DLC v2
 
-Amadeus tracks AI-DLC v2 at the level of structure and semantics: stage responsibilities, execution conditions, gate state machines, and the Intake protocol are designed to match. What is Amadeus-specific is the namespace — skill names, tool paths, and CLI tokens use the `amadeus` prefix in place of `aidlc`.
+Amadeus tracks AI-DLC v2 at the level of structure and semantics: stage responsibilities, execution conditions, gate state machines, and the Intake protocol are designed to match. What is Amadeus-specific is the namespace — skill names, tool paths, and CLI tokens use the `amadeus` prefix in place of `aidlc` (renamed tree-wide in [#526](https://github.com/amadeus-dlc/amadeus/issues/526)).
 
 A machine-checked table, `parity-map.json` (`dev-scripts/data/parity-map.json`), defines this renaming as data rather than prose. It covers 10 kinds of renamed elements (engine directories, tools, hooks, scope files, sensor files, CLI tokens, and more) for 120 mappings in total, and `npm run parity:check` verifies the codebase against it.
 

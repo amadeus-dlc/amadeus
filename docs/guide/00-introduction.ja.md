@@ -53,7 +53,7 @@ Amadeus は、構造と意味論の水準で AI-DLC v2 に追随する。
 stage の責務、実行条件、gate の状態機械、Intake のプロトコルは、上流と一致するよう設計する。
 
 Amadeus 固有なのは名前空間である。
-skill 名、tool の path、CLI トークンは、`aidlc` の代わりに `amadeus` の prefix を使う。
+skill 名、tool の path、CLI トークンは、`aidlc` の代わりに `amadeus` の prefix を使う（[#526](https://github.com/amadeus-dlc/amadeus/issues/526) の全面 rename）。
 
 機械検査可能な対応表である `parity-map.json`（`dev-scripts/data/parity-map.json`）は、この改名を文章ではなくデータとして定義する。
 対応表は、改名された要素 10 系統（engine directory、tool、hook、scope file、sensor file、CLI トークンなど）にわたり、計 120 件の対応を持つ。
