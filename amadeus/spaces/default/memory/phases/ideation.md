@@ -1,30 +1,29 @@
 # Ideation Phase Guardrails
 
-These rules apply to every stage whose `phase: ideation` declaration
-imports them as the matching phase rule.
+これらのルールは、`phase: ideation` を宣言するすべてのステージに、対応するフェーズルールとしてインポートされ適用される。
 
 ## Focus
 
-- Prioritize user needs and problem definition before proposing solutions
-- Keep ideation artifacts at the problem/opportunity level — no implementation details
-- Explore the problem space broadly before narrowing to solutions
+- ソリューションを提案する前に、ユーザーニーズと問題定義を優先する
+- ideation の成果物は問題/機会のレベルに留める — 実装詳細は含めない
+- ソリューションに絞り込む前に、問題空間を幅広く探索する
 
 ## Evidence Standards
 
-- Market research claims require citations or explicit source attribution
-- Feasibility estimates must be conservative — flag assumptions clearly
-- Do not present speculation as fact; label uncertain claims as "hypothesis" or "assumption"
+- 市場調査の主張には出典の引用または明示的なソース帰属を必須とする
+- 実現可能性の見積もりは保守的に — 前提条件を明確にフラグする
+- 推測を事実として提示しない。不確かな主張には「仮説」「前提」とラベルを付ける
 
 ## Scope Discipline
 
-- No implementation details (architecture, tech stack, code) in ideation artifacts
-- Do not carry forward scope decisions that have not been explicitly approved
-- If a feasibility concern would block progress, surface it early rather than glossing over it
+- ideation の成果物に実装詳細(アーキテクチャ、技術スタック、コード)を含めない
+- 明示的に承認されていないスコープ決定を持ち越さない
+- 実現可能性の懸念が進行をブロックしうる場合は、ごまかさず早期に表面化させる
 
 ## Output Quality
 
-- All ideation artifacts must be readable by non-technical stakeholders
-- Avoid jargon unless defined in a glossary
-- Success metrics must be measurable — avoid vague outcomes like "improved performance"
+- すべての ideation 成果物は非技術系ステークホルダーにも読めるものにする
+- 用語集で定義されていない限りジャーゴンを避ける
+- 成功指標は測定可能にする — 「パフォーマンス向上」のような曖昧な成果を避ける
 
 ## Corrections

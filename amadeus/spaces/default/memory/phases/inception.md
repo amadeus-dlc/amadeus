@@ -1,29 +1,28 @@
 # Inception Phase Guardrails
 
-These rules apply to every stage whose `phase: inception` declaration
-imports them as the matching phase rule.
+これらのルールは、`phase: inception` を宣言するすべてのステージに、対応するフェーズルールとしてインポートされ適用される。
 
 ## Requirements Quality
 
-- Requirements must be testable and verifiable — each requirement must have a clear pass/fail criterion
-- Avoid ambiguous language ("fast", "easy", "user-friendly") unless paired with a measurable threshold
-- Never carry forward unresolved contradictions between requirements; surface and resolve them explicitly
+- 要件はテスト可能かつ検証可能でなければならない — 各要件に明確な合否基準を設ける
+- 曖昧な表現(「速い」「簡単」「使いやすい」)は、測定可能な閾値と対にしない限り避ける
+- 要件間の未解決の矛盾を持ち越さない。明示的に表面化させ解決する
 
 ## Architecture Standards
 
-- Architecture decisions require trade-off analysis — document at least two alternatives considered
-- All ADRs must include: Context, Decision, Consequences, and Alternatives Rejected
-- Security and compliance implications must be addressed for every major architectural decision
+- アーキテクチャ決定にはトレードオフ分析を必須とする — 検討した代替案を最低2つ文書化する
+- すべての ADR に含める: Context、Decision、Consequences、Alternatives Rejected
+- 主要なアーキテクチャ決定ごとに、セキュリティとコンプライアンスへの影響を扱う
 
 ## User Stories
 
-- User stories follow Given/When/Then (BDD) format for acceptance criteria
-- Each story must identify the actor, the action, and the business value
-- Stories must be independently testable — avoid stories that only make sense in sequence
+- ユーザーストーリーの受け入れ基準は Given/When/Then(BDD)形式に従う
+- 各ストーリーはアクター、アクション、ビジネス価値を特定する
+- ストーリーは独立してテスト可能にする — 順序の中でしか意味を持たないストーリーを避ける
 
 ## Traceability
 
-- Every requirement must trace back to an ideation artifact (intent, feasibility, or scope)
-- Do not introduce new requirements in inception without documenting their origin
+- すべての要件は ideation の成果物(intent、feasibility、scope)まで遡れなければならない
+- inception で新しい要件を導入する場合は、必ずその由来を文書化する
 
 ## Corrections

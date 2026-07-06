@@ -1,30 +1,29 @@
 # Construction Phase Guardrails
 
-These rules apply to every stage whose `phase: construction` declaration
-imports them as the matching phase rule.
+これらのルールは、`phase: construction` を宣言するすべてのステージに、対応するフェーズルールとしてインポートされ適用される。
 
 ## Code Completeness
 
-- Generate complete, runnable files — no partial implementations, no placeholder stubs unless explicitly marked TODO with a rationale
-- Every generated module must be independently executable or clearly document its dependencies
-- Do not leave unresolved import errors, missing type definitions, or broken references
+- 完全で実行可能なファイルを生成する — 部分実装や、根拠付きの TODO と明示されていないプレースホルダースタブは禁止
+- 生成されるすべてのモジュールは、独立して実行可能であるか、依存関係を明確に文書化する
+- 未解決の import エラー、欠落した型定義、壊れた参照を残さない
 
 ## Error Handling
 
-- Always include error handling at integration boundaries (API calls, database operations, file I/O, external services)
-- Errors must be surfaced to the caller or logged — silent failures are not acceptable
-- Distinguish between recoverable errors (retry/fallback) and fatal errors (fail fast)
+- 統合境界(API呼び出し、データベース操作、ファイルI/O、外部サービス)では必ずエラーハンドリングを入れる
+- エラーは呼び出し元へ伝播させるかログに記録する — サイレントな失敗は許容しない
+- 回復可能なエラー(リトライ/フォールバック)と致命的なエラー(フェイルファスト)を区別する
 
 ## Testing Standards
 
-- Test files must cover the happy path and at least two error/edge cases
-- Tests must be runnable without manual setup beyond documented prerequisites
-- Do not generate tests that always pass regardless of implementation (e.g., `assert True`)
+- テストファイルはハッピーパスと、最低2つのエラー/エッジケースをカバーする
+- テストは文書化された前提条件以外の手動セットアップなしで実行可能にする
+- 実装に関係なく常にパスするテスト(例: `assert True`)を生成しない
 
 ## Security
 
-- Never hardcode credentials, API keys, or secrets — use environment variables or a secrets manager
-- Validate and sanitize all inputs at system boundaries
-- Flag any code that bypasses authentication or authorization checks
+- 認証情報、APIキー、シークレットをハードコードしない — 環境変数またはシークレットマネージャを使う
+- システム境界ではすべての入力を検証・サニタイズする
+- 認証・認可チェックをバイパスするコードにはフラグを立てる
 
 ## Corrections
