@@ -6,7 +6,6 @@ The non-adoption judgment this document made about the sensor execution mechanis
 Issue #393's non-adoption judgment explicitly stated it would be reconsidered "once a decision confirms including a hook-execution runtime," and the adaptive-copy strategy for upstream's TS engine (D001) satisfied that reconsideration condition.
 The inspection setup now combines upstream's sensors (copied per engine, checked immediately at stage completion) with `amadeus-validator` (checked persistently, across the whole workspace).
 The body below preserves the Issue #393 judgment as a historical record; read it under this note. The `amadeus-history-review` / `amadeus-learning-review` skills it references were later retired — the §13 learnings ritual (`amadeus-learnings.ts`) owns that role today.
-The body below retains the judgment as of Issue #393 as a historical record.
 
 This document defines, as the judgment for Issue #393, which Amadeus DLC artifacts and verifications the sensor and Learn (the learnings ritual and `memory.md`) found in AI-DLC v2's stage definitions map to.
 

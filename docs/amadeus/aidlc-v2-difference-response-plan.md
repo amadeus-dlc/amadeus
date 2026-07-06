@@ -57,7 +57,7 @@ When multiple skills are changed, synchronize every changed source skill through
 
 ## Avoiding Conflicts
 
-Do not mix #391, #392, #393, and #394 with #402, which handles the phased englishization of the remaining skills.
+Do not mix #391, #392, #393, and #394 with #402, which handles the phased English conversion of the remaining skills.
 
 However, when a PR for #391 through #394 updates a target skill, that PR may also bring only the `SKILL.md` files it touches into the already-converted English style.
 

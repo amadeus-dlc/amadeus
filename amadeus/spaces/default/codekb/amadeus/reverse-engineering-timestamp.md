@@ -2,6 +2,18 @@
 
 ## 差分更新の記録（最新）
 
+- 解析時刻: 2026-07-06T06:05:00Z（UTC）
+- 対象コミット: 9dd93f50（origin/main = PR #553 merge 後）
+- 解析方式: 差分更新（c50a0fe5..9dd93f50 = PR #553 の全面 rename のみ。codekb 自体は #553 内で rename 反映済み）
+- 実施 Intent: `260706-docs-i18n`（reverse-engineering ステージ）
+
+| artifact | 変更内容 |
+|---|---|
+| architecture.md | 旧名残存 1 件を修正（docs-only 宣言の説明「aidlc/ 内文書」→「amadeus/ 内文書」） |
+| その他 8 docs | 影響なし（#553 の codekb への rename 反映は同 PR 内で実施済み。本 timestamp の過去記録内の「非 aidlc 変更」等の表現は歴史的記述として維持） |
+
+## 前回（2026-07-06T05:44:48Z、c50a0fe5..9dd93f50）の記録
+
 - 解析時刻: 2026-07-06T05:44:48Z（UTC）
 - 対象コミット: 9dd93f50（origin/main = PR #553 merge 後）
 - 解析方式: 差分更新（c50a0fe5..9dd93f50 = PR #553 全面 rename のみ。挙動不変のため、名前空間再定義 1 行と rename-leftovers の役割記述だけを更新。path 表記は #553 内で更新済み）
