@@ -39,7 +39,7 @@
 - **Ideation**: Verified
 - **Inception**: Verified
 - **Construction**: Verified
-- **Operation**: Pending
+- **Operation**: Skipped
 
 ## Stage Progress
 <!-- Checkbox states: [ ] not started, [-] in progress, [?] awaiting approval (gate open), [R] revising (user rejected gate), [x] completed, [S] skipped via --stage/--phase jump -->

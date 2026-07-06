@@ -2552,3 +2552,21 @@
 **Findings count**: 2
 
 ---
+
+## Error Logged
+**Timestamp**: 2026-07-06T02:21:23Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state set
+**Error**: Usage: amadeus-state.ts set <field=value> ...
+
+---
+
+## Phase Skip
+**Timestamp**: 2026-07-06T02:22:43Z
+**Event**: PHASE_SKIPPED
+**Phase**: operation
+**Scope**: feature
+**Reason**: steering (memory/phases/operation.md) excludes Operation for the default space; all Operation stages were skipped with human approval (relay approval 2026-07-06T02:14:05Z)
+
+---
