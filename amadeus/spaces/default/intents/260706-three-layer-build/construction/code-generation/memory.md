@@ -19,3 +19,39 @@
 ## Open questions
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
 - 2026-07-06T10:55:00Z — B001 reviewer READY（Medium 2 / Low 3）。B002/B003 への申し送り: (M1) stepHarnessOverlay に core スキル整合ガードなし（孤立 harness エントリが部分 skill dir を生成しうる。B002 の restructure 直後に harness と core のセットが揃うため、B002 の eval で ghost エントリ検出を追加）。(M2) overlay fail-soft が不在と実エラー（malformed JSON / drift throw）を区別しない（promote-skill と同パターンだが、B003 の productionization で不在 = skip / 在中エラー = 警告文言の区別を検討）。(L3) 後勝ち証明は BR-16 制約下では「harness 唯一ソース」の確認が正（コメント文言の整理）。(L4) --check は staged-but-uncommitted を検出しない（CI clean checkout では非問題、記録のみ）。(L5) 37 検査の件数は条件分岐で 36 になる経路あり（記述精度、B002 で整理）。
+
+---
+
+## B002 実行記録（2026-07-06）
+
+### Step 4: rename-leftovers eval に check (f) 追加（commit b8e9dcfd）
+
+TDD スタイルで実施した。
+
+**RED**: `allowlist.json` の `straySkillsScan.allow` を空配列にして eval を実行し、18 件の violation（`skills/` path token の残存）を確認した。自己検査ロジックの初版バグ（`join(root, "skills", "amadeus")` は実行時のみ `skills/` を含むため、静的文字列として `skills/` を含まない）を発見し、`'const p = join(root, "skills/amadeus");'` に修正して RED を正しく 1 件に確定した。
+
+**GREEN**: 18 件のうち 2 件（`dev-scripts/evals/claude-host-wiring/README.md` 行 20 と `dev-scripts/parity-check.ts` コメント行）を正当なパス更新漏れとして修正し、残り 16 件を `allowlist.json` の `allow` エントリで許可宣言した。全件 GREEN を確認した。
+
+追加変更点:
+- `dev-scripts/evals/rename-leftovers/check.ts`: check (f) ブロック（自己検査 2 件 + tree-wide scan）を追加。
+- `dev-scripts/evals/rename-leftovers/allowlist.json`: `straySkillsScan` セクションを追加（scanRoots / excludePaths / allow 5 エントリ）。
+- `dev-scripts/evals/claude-host-wiring/README.md`: `skills/` → `core/skills/` に修正（genuine stray）。
+- `dev-scripts/parity-check.ts`: コメント内の `skills/` → `core/skills/` に修正（genuine stray）。
+
+### Step 5: team.md の skill 同期ルールを build:check ワークフローへ更新（commit 0c6358b2）
+
+`amadeus/spaces/default/memory/team.md` の「skill 変更 PR は…source skill と昇格先成果物の同期は skill 変更の一部であり、常に同一 PR に含める」という記述を、三層化後のワークフロー（`core/skills/<name>/` を変更したら `npm run build:check` を実行して生成物が更新されていることを確認する）へ更新した。手動同期の記述を削除し、`build:check` が検出するため手動同期は不要であることを明記した。
+
+### Step 6: フル検証（commit 9b8dfda7）
+
+`npm run typecheck` → PASS。`npm run build:check` → PASS。
+
+`npm run test:all` が 2 箇所で FAIL した。
+
+**parity:check 失敗**: `knowledge/aidlc-pipeline-deploy-agent/branching-strategies.md` の hash が基準 commit と不一致。原因は Step 2 でこのファイルの `skills/amadeus` → `core/skills/amadeus` を更新したため。`parity-map.json` の `engineFileExceptions` にこのパスを追加して解消した。
+
+**promote-skill eval 失敗**: `.agents/skills/amadeus-application-design/agents/openai.yaml` が temp dir との diff で検出。原因は B001 の harness commit（`55627ae0`）が `openai.yaml` を `.agents/skills/` に直接追加したが、promote-skill eval の final diff 比較が `promote-skill.ts` 出力（harness overlay なし）と比べていたため（origin/main から引き継いだ pre-existing failure）。eval に harness overlay ステップ（`harness/codex/skills/<name>/agents/` → temp dir）を追加して GREEN にした。
+
+`npm run test:all` 全件 PASS を確認後、`AmadeusValidator.ts` を実行し pass を確認した。
+
+両修正を Step 6 コミット（9b8dfda7）としてまとめた。
