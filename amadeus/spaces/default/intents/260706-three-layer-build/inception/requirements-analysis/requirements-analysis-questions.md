@@ -36,7 +36,7 @@ A. 統合点（build 時 manifest 生成の接続面）を build.ts 設計に含
 B. #543 の merge を待ってから本 Intent を開始する
 X. Other (please specify)
 
-[Answer]: A（Issue 作業内容「#543 のバージョン・ハッシュ manifest をビルド時生成に統合」の転記 + 並行運用ポリシーの意味的接触の申し送り。B は単独実行枠の确保と衝突する）
+[Answer]: A（Issue 作業内容「#543 のバージョン・ハッシュ manifest をビルド時生成に統合」の転記 + 並行運用ポリシーの意味的接触の申し送り。B は単独実行枠の確保と衝突する）
 
 ## Q4. restructure の実施形は？
 

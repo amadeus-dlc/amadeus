@@ -6,6 +6,8 @@
 - 2026-07-06T09:20:00Z — 要求は成果（一本化・決定論生成・手編集検出・tooling pass）のレベルに留め、build.ts の実現形・core/ の細部配置・検査の実装形は functional-design（refactor scope の設計確定地点）へ委ねた。Phase 1 の 6 問は確定済みとして再協議しない。
 - 2026-07-06T09:20:00Z — FR-4（#543 統合）は engineer2 進行中のため「接続点の設計は必須、実装は merge 状況で functional-design が確定」という条件つき FR にした（検討中注記）。意味的接触として並行運用ポリシーどおり申し送る。
 
+- 2026-07-06T09:35:00Z — reviewer NOT-READY（F1 高 / F2〜F4 中 / F5 低）を全件反映。F1 = FR-5 の AC 行を追加（overlay 適用が build 後段ステップとして確認でき、model-overlay eval が新構造 pass）。F2 = 移動対象を実在物定義（skills/ 直下の amadeus 始まり全 dir = amadeus 1 + amadeus-* 41 の実測 42）。F3 = byte 同一を「決定論的生成（CI diff = 0）」へ緩和し実現手段を functional-design へ委譲。F4 = .claude/skills（installer が作る実体 dir）の責務境界を functional-design 確定事項として明記。F5 = 简体字「确保」→「確保」。
+
 ## Deviations
 <!-- example: 2026-05-29T10:14:32Z — skipped the optional caching layer the stage prose suggested; the dataset is small enough that it adds risk -->
 

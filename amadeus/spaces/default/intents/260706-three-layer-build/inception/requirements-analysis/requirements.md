@@ -4,7 +4,7 @@
 
 ## 意図分析
 
-Phase 1（#552 / PR #565）で三層化の設計 6 問が確定し、`harness/codex/` が新設された。現状の手編集場所は source skills（`skills/amadeus-*`、42 dir）、エンジン正準（`.agents/amadeus/`）、`harness/codex/` に分散し、生成・同期は promote-skill.ts（skills → `.agents/skills`）と `.claude/*` symlink に依る。手編集と生成物の境界が構造で表現されておらず、生成物の手編集は team.md の粒度制約（source と昇格先の同一 PR 規則）という運用規律でしか守られていない。Phase 2 はこれを「core/ と harness/ だけが手編集場所、生成物は build.ts が作り、手編集は CI が検出する」構造へ一本化する。
+Phase 1（#552 / PR #565）で三層化の設計 6 問が確定し、`harness/codex/` が新設された。現状の手編集場所は source skills（`skills/amadeus` 1 + `skills/amadeus-*` 41 = 42 dir）、エンジン正準（`.agents/amadeus/`）、`harness/codex/` に分散し、生成・同期は promote-skill.ts（skills → `.agents/skills`）と `.claude/*` symlink に依る。手編集と生成物の境界が構造で表現されておらず、生成物の手編集は team.md の粒度制約（source と昇格先の同一 PR 規則）という運用規律でしか守られていない。Phase 2 はこれを「core/ と harness/ だけが手編集場所、生成物は build.ts が作り、手編集は CI が検出する」構造へ一本化する。
 
 上流入力: [Phase 1 設計確定（feasibility-questions.md）](../../../260706-harness-codex/ideation/feasibility/feasibility-questions.md)、[initiative-brief.md](../../../260706-harness-codex/ideation/approval-handoff/initiative-brief.md)、[codekb/amadeus/code-structure.md](../../../../codekb/amadeus/code-structure.md)、[codekb/amadeus/architecture.md](../../../../codekb/amadeus/architecture.md)、[codekb/amadeus/component-inventory.md](../../../../codekb/amadeus/component-inventory.md)。
 
@@ -19,8 +19,8 @@ Phase 1（#552 / PR #565）で三層化の設計 6 問が確定し、`harness/co
 
 ## 機能要求
 
-- FR-1（core/ 一本化）: 手編集の正準を `core/`（上流対応物 + amadeus 拡張分の同居、Q1=A）と `harness/<harness>/`（harness 別の配線規則・差分層、Q2=A/Q6 付帯）に一本化する。既存の source skills（`skills/amadeus-*`）とエンジン正準の core/ への移動は git mv で行い、履歴追跡（`git log --follow`）を保つ。
-- FR-2（build.ts）: promote-skill.ts を一般化した `build.ts` が、core/ + harness/ から harness 別の生成物（実体コピー正）を決定論的に生成する。同一入力からの再生成は byte 同一（冪等）。`.claude/*` symlink は harness/claude の配線規則として build が再現する。
+- FR-1（core/ 一本化）: 手編集の正準を `core/`（上流対応物 + amadeus 拡張分の同居、Q1=A）と `harness/<harness>/`（harness 別の配線規則・差分層、Q2=A/Q6 付帯）に一本化する。移動対象は「`skills/` 直下の `amadeus` で始まるすべてのディレクトリ」（実測: `skills/amadeus` 主エントリポイント 1 + `skills/amadeus-*` 41 = 42 dir）とエンジン正準とし、core/ への移動は git mv で行い、履歴追跡（`git log --follow`）を保つ。
+- FR-2（build.ts）: promote-skill.ts を一般化した `build.ts` が、core/ + harness/ から harness 別の生成物（実体コピー正）を決定論的に生成する。同一入力からの再生成で CI diff = 0 になる決定論的生成とする（正規化ルール等の実現手段は functional-design で確定）。`.claude/*` symlink（7 件）は harness/claude の配線規則として build が再現する。`.claude/skills/`（symlink ではなく installer が `.agents/skills/` から作る実体ディレクトリ、実測 = MANIFEST の skillsGlobPrefix）の生成・管理責務が build.ts に移るか installer に留まるかは、build.ts と installer の責務境界として functional-design で確定する。
 - FR-3（手編集検出 = 粒度制約の置き換え、Q4=A）: 生成物の手編集を CI が検出する（再生成して diff 非ゼロなら fail）。team.md の粒度制約の該当記述を CI 検証参照へ置き換える（steering 更新を本 Intent に含む）。
 - FR-4（#543 統合点）: インストーラのバージョン・ハッシュ manifest（#543、engineer2 進行中 = 検討中注記）の生成をビルド時へ統合できる接続点を build.ts 設計に含める。#543 が本 Intent の Construction までに merge されていれば統合を実装し、未 merge なら接続点の設計 + 統合手順の記録に留める（判断は functional-design で確定）。
 - FR-5（#554 統合点）: model overlay（#554、merge 済み）の適用点を build 後段へ移設する。
@@ -41,8 +41,9 @@ Phase 1（#552 / PR #565）で三層化の設計 6 問が確定し、`harness/co
 | 1 | 手編集の場所が core/ と harness/ に一本化され、生成物の手編集が検査（CI）で検出される | FR-1 / FR-2 / FR-3 |
 | 2 | test:all / parity:check / installer eval / promote 系 eval が新構造で pass | FR-6 |
 | 3 | team.md の粒度制約が CI 検証に置き換わる | FR-3 |
-| 4 | 新規 build.ts と手編集検出に先行する失敗検証があり、restructure は等価性検証つき | FR-7 |
-| 5 | validator（260706-three-layer-build 指定）pass、gate の upstream-coverage sensor pass | 全要求 |
+| 4 | model overlay の適用が build.ts の後段ステップとして実行され（適用点の移設が build のステップ構成で確認できる）、overlay 関連 eval（model-overlay）が新構造で pass する | FR-5 |
+| 5 | 新規 build.ts と手編集検出に先行する失敗検証があり、restructure は等価性検証つき | FR-7 |
+| 6 | validator（260706-three-layer-build 指定）pass、gate の upstream-coverage sensor pass | 全要求 |
 
 ## スコープ外
 

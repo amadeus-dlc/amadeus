@@ -201,3 +201,21 @@
 **Agent**: amadeus-product-agent
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T09:14:51Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-product-lead-agent
+**Agent ID**: a1c9fa3e7549f907a
+**Message**: ## Review\n\n**判定: NOT-READY**\n\n---\n\n### F1 — 高（requirements.md:26 / ACテーブル:39-45）  FR-5 に受け入れ条件がない\n\nFR-5 は「#554 model overlay の適用点を build 後段へ移設する」という独立した変更要求だが、AC テーブル（5行）に FR-5 に対応する行が存在しない。Issue #572
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-06T09:16:40Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-product-lead-agent
+**Agent ID**: a1c9fa3e7549f907a
+**Message**: 5 件の変更を確認します。\n\n## Review（再判定）\n\n**判定: READY**\n\n各所見の解消状況を以下に示す。\n\n---\n\n### F1（高）→ RESOLVED\n\nAC テーブルに行 4 が追加され「model overlay の適用が build.ts の後段ステップとして実行され（適用点の移設が build のステップ構成で確認できる）、overlay 関連 eval（model
+
+---
