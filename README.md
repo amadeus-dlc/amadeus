@@ -279,8 +279,10 @@ surface), then regenerate the committed `dist/<harness>/` trees — **never
 hand-edit `dist/`**, the drift guard fails CI.
 
 ```bash
+npm run dist                    # regenerate every dist/<harness>/ from core/ + harness/
 bun scripts/package.ts            # regenerate every dist/<harness>/ from core/ + harness/
 bun scripts/package.ts <name>     # regenerate one harness (e.g. claude, kiro-ide, codex)
+npm run dist:check               # byte-parity drift guard (run in CI)
 bun scripts/package.ts --check    # byte-parity drift guard (run in CI)
 ```
 

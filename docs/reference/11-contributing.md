@@ -21,7 +21,7 @@ Contributions to this implementation are welcome. This guide covers prerequisite
 ```
 core/                # Hand-authored, harness-neutral source (tools, stages, agents, rules, knowledge, hooks)
 harness/<name>/      # Per-harness authored surfaces (manifest, orchestrator skill, settings/config; e.g. claude/, kiro/, codex/)
-scripts/package.ts   # The build: regenerates dist/<harness>/ from core/ + harness/ (`--check` drift-guards it)
+scripts/package.ts   # The build: regenerates dist/<harness>/ from core/ + harness/ (`npm run dist`, `--check` drift-guards it)
 dist/<harness>/      # GENERATED distributables (claude/.claude/, kiro/.kiro/ + AGENTS.md, codex/) — never hand-edit; run the packager
 tests/               # All-TypeScript test suite (t*.test.ts, run via bun)
 docs/                # Documentation
@@ -37,7 +37,7 @@ For the full architecture, see [reference/01-architecture.md](01-architecture.md
 1. **Fork and branch** from `main`
 2. **Read the architecture** -- [reference/01-architecture.md](01-architecture.md) explains the execution model, agent delegation, and hook system
 3. **Understand the entry points** -- the deterministic engine `core/tools/aidlc-orchestrate.ts` (`next` / `report`) owns routing; the conductor `harness/claude/skills/aidlc/SKILL.md` is a thin forwarding loop that acts on its directives. For the normative engine / directive / conductor / swarm contract see [The Skill System](17-skill-system.md)
-4. **Make changes** -- Edit the harness-neutral source in `core/` (tools, stages, agents, hooks, rules, knowledge) or a harness surface in `harness/<name>/` (the orchestrator skill, settings). Then run `bun scripts/package.ts` to regenerate `dist/` — never hand-edit `dist/`, the drift guard (`package.ts --check`) will fail CI
+4. **Make changes** -- Edit the harness-neutral source in `core/` (tools, stages, agents, hooks, rules, knowledge) or a harness surface in `harness/<name>/` (the orchestrator skill, settings). Then run `npm run dist` to regenerate `dist/` — never hand-edit `dist/`, the drift guard (`npm run dist:check` / `package.ts --check`) will fail CI
 5. **Test** -- Run `bun tests/run-tests.ts` before submitting
 6. **Submit** -- Open a PR against `main`
 

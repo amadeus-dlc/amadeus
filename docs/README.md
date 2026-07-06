@@ -34,6 +34,6 @@ behaviours that differ live in [Running on other harnesses](guide/harnesses/READ
 ## Building and contributing
 
 Maintainers author in `core/` and regenerate the `dist/<harness>/` trees with
-`bun scripts/package.ts` — see the [Contributing Guide](reference/11-contributing.md)
+`npm run dist` (`bun scripts/package.ts`) — see the [Contributing Guide](reference/11-contributing.md)
 for the full build-and-test loop, and [Porting to a New Harness](harness-engineering/09-porting-to-a-new-harness.md)
 to add one.
