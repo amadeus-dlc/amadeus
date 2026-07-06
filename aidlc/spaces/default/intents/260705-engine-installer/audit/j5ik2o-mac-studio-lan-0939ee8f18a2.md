@@ -4058,3 +4058,274 @@
 **Findings count**: 2
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-05T22:59:37Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-05T23:00:21Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-05T23:01:23Z
+**Event**: HUMAN_TURN
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T23:02:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: 446e77b3
+**Sensor ID**: linter
+**Stage slug**: ci-pipeline
+**Output path**: scripts/amadeus-install.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T23:02:11Z
+**Event**: SENSOR_PASSED
+**Fire id**: 446e77b3
+**Sensor ID**: linter
+**Stage slug**: ci-pipeline
+**Output path**: scripts/amadeus-install.ts
+**Duration ms**: 813
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T23:02:11Z
+**Event**: SENSOR_FIRED
+**Fire id**: eb6dd06b
+**Sensor ID**: type-check
+**Stage slug**: ci-pipeline
+**Output path**: scripts/amadeus-install.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T23:02:11Z
+**Event**: SENSOR_PASSED
+**Fire id**: eb6dd06b
+**Sensor ID**: type-check
+**Stage slug**: ci-pipeline
+**Output path**: scripts/amadeus-install.ts
+**Duration ms**: 494
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T23:02:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: b2bbf382
+**Sensor ID**: linter
+**Stage slug**: ci-pipeline
+**Output path**: scripts/amadeus-install.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T23:02:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: b2bbf382
+**Sensor ID**: linter
+**Stage slug**: ci-pipeline
+**Output path**: scripts/amadeus-install.ts
+**Duration ms**: 728
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T23:02:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 86313d25
+**Sensor ID**: type-check
+**Stage slug**: ci-pipeline
+**Output path**: scripts/amadeus-install.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T23:02:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: 86313d25
+**Sensor ID**: type-check
+**Stage slug**: ci-pipeline
+**Output path**: scripts/amadeus-install.ts
+**Duration ms**: 445
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-05T23:03:35Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-05T23:04:27Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-05T23:05:29Z
+**Event**: HUMAN_TURN
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T23:06:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: c3a9e9ec
+**Sensor ID**: linter
+**Stage slug**: ci-pipeline
+**Output path**: scripts/amadeus-install.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T23:06:19Z
+**Event**: SENSOR_PASSED
+**Fire id**: c3a9e9ec
+**Sensor ID**: linter
+**Stage slug**: ci-pipeline
+**Output path**: scripts/amadeus-install.ts
+**Duration ms**: 789
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T23:06:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 29cc98ce
+**Sensor ID**: type-check
+**Stage slug**: ci-pipeline
+**Output path**: scripts/amadeus-install.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T23:06:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 29cc98ce
+**Sensor ID**: type-check
+**Stage slug**: ci-pipeline
+**Output path**: scripts/amadeus-install.ts
+**Duration ms**: 472
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T23:06:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: 42678c25
+**Sensor ID**: linter
+**Stage slug**: ci-pipeline
+**Output path**: dev-scripts/evals/installer/check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T23:06:27Z
+**Event**: SENSOR_PASSED
+**Fire id**: 42678c25
+**Sensor ID**: linter
+**Stage slug**: ci-pipeline
+**Output path**: dev-scripts/evals/installer/check.ts
+**Duration ms**: 728
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-05T23:06:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: f836b39f
+**Sensor ID**: type-check
+**Stage slug**: ci-pipeline
+**Output path**: dev-scripts/evals/installer/check.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-05T23:06:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: f836b39f
+**Sensor ID**: type-check
+**Stage slug**: ci-pipeline
+**Output path**: dev-scripts/evals/installer/check.ts
+**Duration ms**: 441
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-05T23:07:39Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-05T23:07:39Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-05T23:08:33Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-05T23:11:38Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-05T23:13:41Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-05T23:14:42Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-05T23:14:42Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-05T23:18:01Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-05T23:21:19Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a78f4b4347ff72c4c
+**Message**: engineer2 として多体連携で稼働中です。担当した Issue #502（steering 反映）と Issue #451（エンジンインストーラ）は両方 PR が merge されて完了。現在は待機役として、engineer1・engineer3 からのピア協議回答と PR レビュー協力に備えて受信監視中です。
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-05T23:24:04Z
+**Event**: HUMAN_TURN
+
+---
