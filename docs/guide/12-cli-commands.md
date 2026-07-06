@@ -404,6 +404,8 @@ See [Scopes, Depth, and Test Strategy](05-scopes-and-depth.md#the-3-test-strateg
 
 Print the framework version (`amadeus <X.Y.Z>`) and exit. Read-only — works without a workflow and never prompts to resume one.
 
+Every install also ships a plain-text `VERSION` file at the engine-dir root (e.g. `.claude/VERSION`), so `cat .claude/VERSION` answers the same question without running the CLI.
+
 **Syntax:**
 
 ```

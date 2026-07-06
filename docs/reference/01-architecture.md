@@ -285,6 +285,7 @@ byte-for-byte from `core/` + `harness/claude/`):
 
 ```
 dist/claude/.claude/
++-- VERSION                       # plain-text framework version marker, emitted from core/tools/amadeus-version.ts
 +-- CLAUDE.md
 +-- settings.json
 +-- hooks/
