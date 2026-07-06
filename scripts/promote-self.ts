@@ -55,6 +55,52 @@ const preserved = [
   ".codex/local/",
 ];
 
+// Composed-scope runtime data: the adaptive composer APPENDS approved scopes to
+// the runtime scope registry (a `scopes/amadeus-<name>.md` file + an entry in
+// `tools/data/scope-grid.json`) — the sanctioned write path for composed scopes.
+// Neither ever exists in dist/ (graph compile regenerates only stock scopes), so
+// a byte-parity promote would misread them as drift: the .md as an ORPHAN (and
+// --apply would delete it), the grid entry as DIFFERS. Both are preserved
+// instead: a scopes/*.md absent from dist is a composed scope, and scope-grid
+// comparison/write is per-key — dist keys must match, extra keys survive.
+export const COMPOSED_SCOPE_RE = /^\.[^/]+\/scopes\/amadeus-[^/]+\.md$/;
+export const SCOPE_GRID_RE = /^\.[^/]+\/tools\/data\/scope-grid\.json$/;
+
+// True when the grid at `got` carries every dist key with identical value.
+// Extra keys (composed scopes) are tolerated. Unparseable content falls back
+// to the strict byte compare — never weaker than the plain check.
+export function scopeGridInSync(got: Buffer, want: Buffer): boolean {
+  try {
+    const g = JSON.parse(got.toString("utf-8")) as Record<string, unknown>;
+    const w = JSON.parse(want.toString("utf-8")) as Record<string, unknown>;
+    for (const key of Object.keys(w)) {
+      if (!(key in g)) return false;
+      if (JSON.stringify(g[key]) !== JSON.stringify(w[key])) return false;
+    }
+    return true;
+  } catch {
+    return got.equals(want);
+  }
+}
+
+// The grid bytes --apply writes: dist content plus any composed (dst-only)
+// entries carried over, in dist key order first. Byte-identical to dist when
+// no composed scope exists; unparseable dst content is overwritten with dist.
+export function mergeScopeGrid(got: Buffer | null, want: Buffer): Buffer {
+  if (got === null) return want;
+  try {
+    const g = JSON.parse(got.toString("utf-8")) as Record<string, unknown>;
+    const w = JSON.parse(want.toString("utf-8")) as Record<string, unknown>;
+    const extras = Object.keys(g).filter((k) => !(k in w));
+    if (extras.length === 0) return want;
+    const merged: Record<string, unknown> = { ...w };
+    for (const k of extras) merged[k] = g[k];
+    return Buffer.from(`${JSON.stringify(merged, null, 2)}\n`, "utf-8");
+  } catch {
+    return want;
+  }
+}
+
 function usage(): never {
   console.error(
     [
@@ -131,6 +177,7 @@ function orphanedFiles(expected: Map<string, Buffer>): string[] {
     for (const file of walk(abs)) {
       const rel = normalizeRel(relative(REPO_ROOT, file));
       if (isPreserved(rel)) continue;
+      if (COMPOSED_SCOPE_RE.test(rel)) continue; // composed scope — runtime data, never in dist
       if (!expected.has(rel)) orphans.push(rel);
     }
   }
@@ -153,7 +200,9 @@ function check(expected: Map<string, Buffer>): string[] {
       continue;
     }
     const got = readFileSync(abs);
-    if (!got.equals(want)) problems.push(`DIFFERS: ${rel}`);
+    if (SCOPE_GRID_RE.test(rel)) {
+      if (!scopeGridInSync(got, want)) problems.push(`DIFFERS: ${rel}`);
+    } else if (!got.equals(want)) problems.push(`DIFFERS: ${rel}`);
   }
   for (const rel of orphanedFiles(expected)) problems.push(`ORPHAN: ${rel}`);
   if (!existsSync(join(REPO_ROOT, "amadeus", "active-space"))) {
@@ -169,39 +218,47 @@ function apply(expected: Map<string, Buffer>): void {
   for (const [rel, bytes] of expected) {
     const abs = join(REPO_ROOT, rel);
     mkdirSync(dirname(abs), { recursive: true });
-    writeFileSync(abs, bytes);
+    const out =
+      SCOPE_GRID_RE.test(rel) && existsSync(abs)
+        ? mergeScopeGrid(readFileSync(abs), bytes)
+        : bytes;
+    writeFileSync(abs, out);
   }
   ensureActiveSpaceCursor();
 }
 
-if (!noBuild) {
-  if (mode === "apply") {
-    run("bun", ["scripts/package.ts", "claude"]);
-    run("bun", ["scripts/package.ts", "codex"]);
-  } else {
-    run("bun", ["scripts/package.ts", "claude", "--check"]);
-    run("bun", ["scripts/package.ts", "codex", "--check"]);
+// Main flow is guarded so the exported scope-grid helpers can be imported by
+// tests without triggering a build or a check run.
+if (import.meta.main) {
+  if (!noBuild) {
+    if (mode === "apply") {
+      run("bun", ["scripts/package.ts", "claude"]);
+      run("bun", ["scripts/package.ts", "codex"]);
+    } else {
+      run("bun", ["scripts/package.ts", "claude", "--check"]);
+      run("bun", ["scripts/package.ts", "codex", "--check"]);
+    }
   }
-}
 
-let expected: Map<string, Buffer>;
-try {
-  expected = buildExpected();
-} catch (err) {
-  console.error(err instanceof Error ? err.message : String(err));
-  process.exit(1);
-}
-
-if (mode === "apply") {
-  apply(expected);
-  console.log("promote-self: project-local self install updated");
-} else {
-  const problems = check(expected);
-  if (problems.length > 0) {
-    console.error(`promote-self --check FAILED (${problems.length} problem(s)):`);
-    for (const p of problems.slice(0, 80)) console.error(`  ${p}`);
-    if (problems.length > 80) console.error(`  ... ${problems.length - 80} more`);
+  let expected: Map<string, Buffer>;
+  try {
+    expected = buildExpected();
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err));
     process.exit(1);
   }
-  console.log("promote-self --check: project-local self install is in sync");
+
+  if (mode === "apply") {
+    apply(expected);
+    console.log("promote-self: project-local self install updated");
+  } else {
+    const problems = check(expected);
+    if (problems.length > 0) {
+      console.error(`promote-self --check FAILED (${problems.length} problem(s)):`);
+      for (const p of problems.slice(0, 80)) console.error(`  ${p}`);
+      if (problems.length > 80) console.error(`  ... ${problems.length - 80} more`);
+      process.exit(1);
+    }
+    console.log("promote-self --check: project-local self install is in sync");
+  }
 }

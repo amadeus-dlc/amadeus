@@ -2465,3 +2465,141 @@
 **Event**: HUMAN_TURN
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-06T19:17:38Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T19:19:43Z
+**Event**: HUMAN_TURN
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T19:21:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 299a6597
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: scripts/promote-self.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T19:21:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 299a6597
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: scripts/promote-self.ts
+**Duration ms**: 620
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T19:21:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 472e0ddb
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: scripts/promote-self.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T19:21:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: 472e0ddb
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: scripts/promote-self.ts
+**Duration ms**: 561
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T19:22:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: 29683113
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: scripts/promote-self.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T19:22:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 29683113
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: scripts/promote-self.ts
+**Duration ms**: 534
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T19:22:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 174013b6
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: scripts/promote-self.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T19:22:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 174013b6
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: scripts/promote-self.ts
+**Duration ms**: 527
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T19:22:42Z
+**Event**: SENSOR_FIRED
+**Fire id**: c4620080
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: scripts/promote-self.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T19:22:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: c4620080
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: scripts/promote-self.ts
+**Duration ms**: 526
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-06T19:23:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2d09606d
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: tests/unit/t200-promote-self-composed-scope.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-06T19:23:18Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2d09606d
+**Sensor ID**: type-check
+**Stage slug**: build-and-test
+**Output path**: tests/unit/t200-promote-self-composed-scope.test.ts
+**Duration ms**: 506
+
+---
