@@ -7,7 +7,7 @@
 | `.agents/amadeus/tools/` | エンジン CLI 群（orchestrate / state / graph / runtime / audit / bolt / swarm / worktree / jump / utility / learnings / log / sensor 群 / lib ほか） |
 | `.agents/amadeus/{hooks,scopes,agents,sensors,knowledge,amadeus-common}/` | hooks 11、scope 定義（1 scope 1 ファイル）、agent persona、sensor 実装、共有 knowledge、stage 定義 |
 | `skills/`（42）/ `.agents/skills/`（45） | source skill と昇格先。昇格先には source 外の運用 skill（gh-issue-organizer、japanese-tech-writing、skill-forge）を含む。`skills/amadeus-compose/`（Adaptive Workflows 2.2.0 で追加）を含む |
-| `dev-scripts/` | promote-skill、parity-check、contracts、kanban（sync CLI + hooks）、evals/（31 種の決定論的検証。rename-leftovers = 旧名走査のデータ駆動 allowlist 検査 #537/#540、linter-sensor = 2 段検出の隔離 workspace 検査 #538 を含む） |
+| `dev-scripts/` | promote-skill、parity-check、contracts、kanban（sync CLI + hooks）、evals/（31 種の決定論的検証。rename-leftovers = 旧名（aidlc 系）残存の恒久検出器（#526 で検出反転、データ駆動 allowlist）、linter-sensor = 2 段検出の隔離 workspace 検査 #538 を含む） |
 | `scripts/` | 配布用インストーラ `amadeus-install.ts`（`.agents/amadeus/` とその skill を対象 workspace へコピーする唯一の配布手段。#451） |
 | `mise.toml` | node = "24" を宣言するランタイムバージョン管理設定 |
 | `lints/` | public-type-file と ts-complexity |
