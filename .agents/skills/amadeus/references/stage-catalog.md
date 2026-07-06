@@ -38,4 +38,4 @@ This table only maps each stage to its optional single-stage runner skill (`/aid
 | 4.7 | operation | feedback-optimization | `amadeus-feedback-optimization` |
 
 Scope-to-stage mapping and execution conditions are engine-owned: see `.agents/amadeus/scopes/` (one file per scope) and each stage definition's frontmatter.
-Scope entry skills (`amadeus-bugfix`, `amadeus-feature`, `amadeus-mvp`, `amadeus-security-patch`) and utility skills (`amadeus-replay`, `amadeus-session-cost`, `amadeus-outcomes-pack`) are listed by `bun .agents/amadeus/tools/amadeus-utility.ts help`.
+Scope entry skills (`amadeus-bugfix`, `amadeus-feature`, `amadeus-mvp`, `amadeus-security-patch`), the composer shortcut (`amadeus-compose`, packaging over `/aidlc compose`), and utility skills (`amadeus-replay`, `amadeus-session-cost`, `amadeus-outcomes-pack`) are listed by `bun .agents/amadeus/tools/amadeus-utility.ts help`.
