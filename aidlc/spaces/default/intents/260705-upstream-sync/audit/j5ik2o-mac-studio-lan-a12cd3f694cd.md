@@ -1735,6 +1735,77 @@
 
 ---
 
+## Subagent Completed
+**Timestamp**: 2026-07-05T23:59:49Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: acdd73b131e4d928c
+**Message**: Issue #428（上流 AI-DLC v2 を 2.2.0 へ更新する Intent）を engineer1 として進行中で、functional-design の設計 gate 承認待ちです。承認と engineer3 の PR merge が揃い次第、code-generation（dist 再コピーと parity 回復）に着手します。
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-05T23:59:57Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-06T00:00:26Z
+**Event**: HUMAN_TURN
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-06T00:00:26Z
+**Event**: DECISION_RECORDED
+**Stage**: functional-design
+**Decision**: functional-design の gate 承認（中継承認定型文の転記。個別承認 = Adaptive Workflows 方針承認時の条件による人間再確認。承認経路: 人間 → leader → engineer1。受信 agmsg 2026-07-05T23:59:55Z、受信直後に HUMAN_TURN mint 済み）。(1) 承認者: j5ik2o（Maintainer）。(2) 承認日時: 2026-07-06 08:59 JST（leader への chat 指示）。(3) 対象: functional-design gate（grid 共存規約 R008 の人間再確認を含む）。(4) 承認要旨: grid 共存規約 5 項目（composed scope = 暫定 entry、compile 前の正式化 = pdm 前例方式、compile 実行側の退避・復元責任、エンジン非変更 = 運用規約のみで上流パリティ非影響、default space での当面非使用の注記）を確定し承認。上流 16 ファイル分類表、実施手順 6 段、単一 PR の粒度制約例外（baseline hash の不可分性）、reviewer READY（実測 8 項目）も承認。code-generation へ進行可（開始は engineer3 bugfix PR merge 後 = C-1）。以降の gate は auto に戻る
+**Options**: approve,request-changes
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-06T00:00:26Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: functional-design
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-06T00:00:26Z
+**Event**: GATE_APPROVED
+**Stage**: functional-design
+**User Input**: 人間の個別承認（2026-07-06 08:59 JST、grid 共存規約の再確認を含む。経路: 人間 → leader → engineer1）
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-06T00:00:26Z
+**Event**: STAGE_COMPLETED
+**Stage**: functional-design
+**Details**: Stage Functional Design approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-06T00:00:26Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Agent**: amadeus-developer-agent
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-06T00:00:45Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus-worktree/engineer1/aidlc/spaces/default/intents/260705-upstream-sync/aidlc-state.md
+**Context**: aidlc-state.md
+
+---
+
 ## Sensor Fired
 **Timestamp**: 2026-07-06T00:20:01Z
 **Event**: SENSOR_FIRED
