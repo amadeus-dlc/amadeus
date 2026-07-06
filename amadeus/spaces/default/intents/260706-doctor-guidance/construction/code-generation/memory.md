@@ -15,4 +15,5 @@
 
 ## Open questions
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
+- 2026-07-06T08:50:00Z — reviewer READY（Medium 1、Low 2）。Low-2（検査数 12→11 の記載誤り）と Low-3（fresh doctor の dist/ assertion を shell 行に限定 = 設計判断との整合）は即修正・再 GREEN 11/11。Medium-1（marker の 2 ファイル hardcode）は反証を記録して非対応: 挙動 eval「installer prints the known-state info line」が片側 drift を検出する（utility 側の marker が変わると installer の grep が空振りして info 行が出ず eval FAIL。逆方向も同様）。ソース間の定数共有はエンジン→scripts/ の実行時依存禁止則（installer は導入先に copy されない scripts/ 配下）と衝突するため、eval による契約 pin + 相互参照コメントを採用。
 - 2026-07-06T08:41:12Z — doctor の他検査行（engine files 等）の fix に dist/ 文言が残る。#573 のスコープ外だが、同種の実行不能誘導の点検は後続 Issue 候補として gate 報告に含める。

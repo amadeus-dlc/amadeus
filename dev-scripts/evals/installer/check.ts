@@ -783,7 +783,10 @@ function makeFreshWorkspace(): string {
     const doctorFresh = run(["bun", doctorPath, "doctor", "--project-dir", wsFresh], wsFresh);
     ok("#573 doctor exits 0 on a fresh install (advisory pass)", doctorFresh.exitCode === 0, `exit=${doctorFresh.exitCode}`);
     ok("#573 doctor output carries the advisory marker", doctorFresh.stdout.includes(ADVISORY_MARKER), doctorFresh.stdout.slice(-400));
-    ok("#573 doctor output has no dist/ copy guidance", !/dist\//.test(doctorFresh.stdout), doctorFresh.stdout.match(/[^\n]*dist\/[^\n]*/)?.[0] ?? "");
+    // dist/ 検査は shell 行に限定する（他検査行の fix 文言に残る dist/ は #573 の
+    // スコープ外で、全 stdout 検査は将来それらが表示される workspace で偽陽性になる）。
+    const freshShellRow = doctorFresh.stdout.match(/[^\n]*workspace shell[^\n]*/)?.[0] ?? "";
+    ok("#573 doctor shell row has no dist/ copy guidance", freshShellRow.length > 0 && !/dist\//.test(freshShellRow), freshShellRow || doctorFresh.stdout.slice(-200));
 
     // 初回 birth（実 CLI）→ advisory 消滅、fail 0 のまま
     const birth = run(["bun", join(wsFresh, ".agents/amadeus/tools/amadeus-utility.ts"), "intent-birth", "--scope", "poc", "--arguments", "573 eval", "--label", "573 eval"], wsFresh);
