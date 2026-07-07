@@ -75,14 +75,19 @@ interface AllowFixture {
 
 const fixture = JSON.parse(readFileSync(FIXTURE, "utf-8")) as AllowFixture;
 
-/** Recursively list every .md file under docs/, repo-root-relative (posix). */
+/** Recursively list every .md file under docs/, repo-root-relative (posix).
+ *  `.ja.md` mirror translations are EXCLUDED: they are line-for-line renderings
+ *  of the English canon this gate already scans, so their legacy-ref lines are
+ *  the SAME pinned occurrences seen through a translation. Gating them again
+ *  would force every fixture entry to be maintained in both languages and blow
+ *  the ceiling. The English source stays the single gated surface. */
 function listDocs(dir: string): string[] {
   const out: string[] = [];
   for (const name of readdirSync(dir)) {
     const abs = join(dir, name);
     if (statSync(abs).isDirectory()) {
       out.push(...listDocs(abs));
-    } else if (name.endsWith(".md")) {
+    } else if (name.endsWith(".md") && !name.endsWith(".ja.md")) {
       out.push(abs.slice(REPO_ROOT.length + 1).replace(/\\/g, "/"));
     }
   }
