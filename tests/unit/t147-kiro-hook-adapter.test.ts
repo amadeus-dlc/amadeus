@@ -34,7 +34,7 @@ import {
 import { hostname, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { birthIntent } from "../../core/tools/amadeus-lib.ts";
+import { birthIntent } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import {
   DEFAULT_RECORD_DIR,
   DEFAULT_SPACE,
