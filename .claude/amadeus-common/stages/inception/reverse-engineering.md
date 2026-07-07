@@ -30,6 +30,7 @@ scopes:
   - poc
   - bugfix
   - refactor
+  - sdd
   - security-patch
   - workshop
 inputs: <record>/amadeus-state.md

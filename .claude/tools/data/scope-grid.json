@@ -251,6 +251,42 @@
       "feedback-optimization": "SKIP"
     }
   },
+  "sdd": {
+    "stages": {
+      "workspace-scaffold": "EXECUTE",
+      "workspace-detection": "EXECUTE",
+      "state-init": "EXECUTE",
+      "intent-capture": "EXECUTE",
+      "market-research": "SKIP",
+      "feasibility": "SKIP",
+      "scope-definition": "SKIP",
+      "team-formation": "SKIP",
+      "rough-mockups": "SKIP",
+      "approval-handoff": "SKIP",
+      "reverse-engineering": "EXECUTE",
+      "practices-discovery": "SKIP",
+      "requirements-analysis": "EXECUTE",
+      "user-stories": "SKIP",
+      "refined-mockups": "SKIP",
+      "application-design": "EXECUTE",
+      "units-generation": "EXECUTE",
+      "delivery-planning": "SKIP",
+      "functional-design": "SKIP",
+      "nfr-requirements": "SKIP",
+      "nfr-design": "SKIP",
+      "infrastructure-design": "SKIP",
+      "code-generation": "EXECUTE",
+      "build-and-test": "EXECUTE",
+      "ci-pipeline": "SKIP",
+      "deployment-pipeline": "SKIP",
+      "environment-provisioning": "SKIP",
+      "deployment-execution": "SKIP",
+      "observability-setup": "SKIP",
+      "incident-response": "SKIP",
+      "performance-validation": "SKIP",
+      "feedback-optimization": "SKIP"
+    }
+  },
   "security-patch": {
     "stages": {
       "workspace-scaffold": "EXECUTE",

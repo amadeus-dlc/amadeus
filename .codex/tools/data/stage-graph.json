@@ -22,6 +22,7 @@
       "refactor",
       "infra",
       "security-patch",
+      "sdd",
       "workshop"
     ],
     "inputs": "none (first stage after session start)",
@@ -67,6 +68,7 @@
       "refactor",
       "infra",
       "security-patch",
+      "sdd",
       "workshop"
     ],
     "inputs": "none (scans filesystem)",
@@ -112,6 +114,7 @@
       "refactor",
       "infra",
       "security-patch",
+      "sdd",
       "workshop"
     ],
     "inputs": "workspace classification from workspace-detection, scope from orchestrator",
@@ -159,7 +162,8 @@
       "enterprise",
       "feature",
       "mvp",
-      "poc"
+      "poc",
+      "sdd"
     ],
     "inputs": "User's project description ($ARGUMENTS), scope selection",
     "outputs": "intent-statement.md, stakeholder-map.md, intent-capture-questions.md (under this stage's record dir, engine-resolved)",
@@ -710,6 +714,7 @@
       "poc",
       "bugfix",
       "refactor",
+      "sdd",
       "security-patch",
       "workshop"
     ],
@@ -904,6 +909,7 @@
       "poc",
       "bugfix",
       "refactor",
+      "sdd",
       "infra",
       "security-patch",
       "workshop"
@@ -1173,6 +1179,7 @@
       "enterprise",
       "feature",
       "mvp",
+      "sdd",
       "workshop"
     ],
     "reviewer": "amadeus-architecture-reviewer-agent",
@@ -1268,6 +1275,7 @@
       "enterprise",
       "feature",
       "mvp",
+      "sdd",
       "workshop"
     ],
     "reviewer": "amadeus-architecture-reviewer-agent",
@@ -1907,6 +1915,7 @@
       "poc",
       "bugfix",
       "refactor",
+      "sdd",
       "security-patch",
       "workshop"
     ],
@@ -1991,6 +2000,7 @@
       "poc",
       "bugfix",
       "refactor",
+      "sdd",
       "security-patch",
       "workshop"
     ],

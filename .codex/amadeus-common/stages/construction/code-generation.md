@@ -46,6 +46,7 @@ scopes:
   - poc
   - bugfix
   - refactor
+  - sdd
   - security-patch
   - workshop
 inputs: ALL prior design artifacts for this unit

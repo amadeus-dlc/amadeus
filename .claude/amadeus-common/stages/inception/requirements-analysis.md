@@ -40,6 +40,7 @@ scopes:
   - poc
   - bugfix
   - refactor
+  - sdd
   - infra
   - security-patch
   - workshop
