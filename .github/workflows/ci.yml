@@ -1,0 +1,49 @@
+name: CI
+
+# Runs the same checks the contributor workflow documents (docs/reference/11-contributing.md):
+# typecheck, lint, the dist/ + self-install drift guards, and the smoke+unit+integration
+# test tier. The live integration tests self-skip when the claude CLI / model-provider
+# substrate is absent (as it is on the runner), so this stays green without credentials.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: typecheck · lint · drift · tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck (tsc --noEmit, both tsconfigs)
+        run: bun run typecheck
+
+      - name: Lint (biome)
+        run: bun run lint
+
+      - name: Dist drift guard (dist/ regenerates byte-identically from core/ + harness/)
+        run: bun run dist:check
+
+      - name: Self-install drift guard (.claude/.codex/.agents/CLAUDE.md in sync with dist/)
+        run: bun run promote:self:check
+
+      - name: Tests — smoke + unit + integration
+        run: bash tests/run-tests.sh --ci
