@@ -1,6 +1,6 @@
 # Design Agent
 
-> **エージェント詳細解説** · [ユーザーガイド](../00-introduction.md) › [エージェント](../06-agents.md) › [詳細解説](README.md) · 技術リファレンス: [design-agent](../../reference/agents/design-agent.md)
+> **エージェント詳細解説** · [ユーザーガイド](../00-introduction.ja.md) › [エージェント](../06-agents.ja.md) › [詳細解説](README.ja.md) · 技術リファレンス: [design-agent](../../reference/agents/design-agent.ja.md)
 
 amadeus-design-agent は UX/UI デザイナーです。Ideation ではワイヤーフレームとコンセプトスケッチを生成し、Inception ではそれらをインタラクション仕様を伴う高忠実度のモックアップへと発展させます。情報アーキテクチャ、ナビゲーション設計、レスポンシブな挙動、アクセシビリティ要件を定義します。UI を持たないプロジェクトでは、システムコンテキスト図と API 体験設計を生成します。
 

@@ -153,7 +153,7 @@ sequenceDiagram
 4. **ディスパッチ:** 適用可能な各Sensorについて `amadeus-sensor.ts fire <id> --stage <slug> --output-path <path>` を起動する。ディスパッチャは各Sensorの `matches` globをフック側で適用する。マッチしない書き込みはスキップされる。結果はアドバイザリー — フックは書き込みを決してブロックしない。
 5. **ヘルスハートビート:** 発火時に `.amadeus-hooks-health/sensor-fire.last` を書き込むため、doctorが健全なアイドルフックとサイレント障害を区別できる。
 
-マニフェストスキーマ、発火ライフサイクルについては[センサーシステム](07-sensor-system.md)を参照してください。
+マニフェストスキーマ、発火ライフサイクルについては[センサーシステム](07-sensor-system.ja.md)を参照してください。
 
 ### PostToolUse: runtime-compile.ts
 
@@ -170,7 +170,7 @@ sequenceDiagram
 5. **イベントクラスフィルター:** 最後の3ブロックのいずれかが `GATE_APPROVED`、`STAGE_STARTED`、`STAGE_AWAITING_APPROVAL`、`AUDIT_MERGED`、または `WORKFLOW_COMPLETED` を持つときのみ再コンパイルする。マッチしない場合は終了する。
 6. **ディスパッチ:** `bun amadeus-runtime.ts compile` を起動する。非ゼロ終了時は `--doctor` 用にフックドロップを記録する。親のBash呼び出しを決してブロックしない。
 
-コンパイルライフサイクルとロックされたスキーマについては[ランタイムグラフ](13-runtime-graph.md)を参照してください。
+コンパイルライフサイクルとロックされたスキーマについては[ランタイムグラフ](13-runtime-graph.ja.md)を参照してください。
 
 ### PreCompact: validate-state.ts
 
@@ -317,7 +317,7 @@ Next Action: resume current stage
 
 ## 監査イベント分類体系
 
-監査証跡(intentの `audit/` シャード)は、`.claude/knowledge/amadeus-shared/audit-format.md` で定義された**68イベントの分類体系**を使用します。すべてのイベントはツール所有またはフック所有です - コンダクターはもはやプロセスからイベントを発行しません。正典のエミッタレジストリと監査ファースト原子性ルールについては[状態機械](12-state-machine.md)を参照してください。以下のサマリーは相互参照であり、真実の源ではありません。
+監査証跡(intentの `audit/` シャード)は、`.claude/knowledge/amadeus-shared/audit-format.md` で定義された**68イベントの分類体系**を使用します。すべてのイベントはツール所有またはフック所有です - コンダクターはもはやプロセスからイベントを発行しません。正典のエミッタレジストリと監査ファースト原子性ルールについては[状態機械](12-state-machine.ja.md)を参照してください。以下のサマリーは相互参照であり、真実の源ではありません。
 
 ### イベントカテゴリ
 
@@ -445,7 +445,7 @@ bun .claude/tools/amadeus-utility.ts <subcommand>
 
 ### `amadeus-sensor.ts` — センサーディスパッチャ
 
-Sensor呼び出しをルーティングします: 入力を検証し、グラフからマニフェストとステージを解決し、監査ロック下で `SENSOR_FIRED` を発行し、per-Sensorスクリプトを起動し(ロックは保持しない)、次に対になる終端行を発行します。マニフェストスキーマ、発火ライフサイクル、結果の真理値表については[センサーシステム](07-sensor-system.md)を参照してください。
+Sensor呼び出しをルーティングします: 入力を検証し、グラフからマニフェストとステージを解決し、監査ロック下で `SENSOR_FIRED` を発行し、per-Sensorスクリプトを起動し(ロックは保持しない)、次に対になる終端行を発行します。マニフェストスキーマ、発火ライフサイクル、結果の真理値表については[センサーシステム](07-sensor-system.ja.md)を参照してください。
 
 | サブコマンド | 目的 | 発行 |
 |------------|---------|-------|
@@ -457,7 +457,7 @@ Sensor呼び出しをルーティングします: 入力を検証し、グラフ
 
 ### `amadeus-learnings.ts` — 学習ゲートツール
 
-ステージプロトコル§13の学習儀式のツール・アズ・アクター側の半分です。`surface` は承認直後のステージの `memory.md` を読み、`persist` は確定した選択を書き込みます。検出、表面化、ルーティング、書き込みは決定論的(このツール)、admission の conflict-check はオーケストレーターLLM、keep/skip/escalate は `AskUserQuestion` ゲートでのユーザーです。ツール内にLLM呼び出しはありません。学習ループと strict-additive ルールモデルについては[ルールシステム](08-rule-system.md)を参照してください。
+ステージプロトコル§13の学習儀式のツール・アズ・アクター側の半分です。`surface` は承認直後のステージの `memory.md` を読み、`persist` は確定した選択を書き込みます。検出、表面化、ルーティング、書き込みは決定論的(このツール)、admission の conflict-check はオーケストレーターLLM、keep/skip/escalate は `AskUserQuestion` ゲートでのユーザーです。ツール内にLLM呼び出しはありません。学習ループと strict-additive ルールモデルについては[ルールシステム](08-rule-system.ja.md)を参照してください。
 
 | サブコマンド | 目的 | 発行 |
 |------------|---------|-------|
@@ -468,7 +468,7 @@ Sensor呼び出しをルーティングします: 入力を検証し、グラフ
 
 ### `amadeus-runtime.ts` — ランタイムグラフのコンパイラ + リーダー
 
-intentの `runtime-graph.json`、すなわち `stage-graph.json` のデータプレーンミラーを実体化します。`compile` は `audit/` シャードとper-stageの `memory.md` ファイルを走査し、`read` は1つのステージ行を表示します。コンパイラは純粋なオブザーバーです — `amadeus-state.md` を決して変更せず、プロンプトも出しません。ロックされたスキーマについては[ランタイムグラフ](13-runtime-graph.md)を参照してください。
+intentの `runtime-graph.json`、すなわち `stage-graph.json` のデータプレーンミラーを実体化します。`compile` は `audit/` シャードとper-stageの `memory.md` ファイルを走査し、`read` は1つのステージ行を表示します。コンパイラは純粋なオブザーバーです — `amadeus-state.md` を決して変更せず、プロンプトも出しません。ロックされたスキーマについては[ランタイムグラフ](13-runtime-graph.ja.md)を参照してください。
 
 | サブコマンド | 目的 | 発行 |
 |------------|---------|-------|
@@ -492,9 +492,9 @@ intentの `runtime-graph.json`、すなわち `stage-graph.json` のデータプ
 
 ## 相互参照
 
-- [アーキテクチャ](01-architecture.md) -- 5層モデルのフック層
-- [ステージプロトコル](04-stage-protocol.md) -- ステージごとの監査ログルール
-- [ナレッジシステム](10-knowledge-system.md) -- audit-format.md 分類体系(共有ナレッジで出荷)
-- [コントリビュート](11-contributing.md) -- ユーティリティハンドラの追加
-- [ハーネスプリミティブマッピング](14-claude-features.md) -- settings.json 設定(Claude固有セクション)
-- [状態機械](12-state-machine.md) -- 正典のイベントエミッタレジストリと監査ファースト原子性ルール
+- [アーキテクチャ](01-architecture.ja.md) -- 5層モデルのフック層
+- [ステージプロトコル](04-stage-protocol.ja.md) -- ステージごとの監査ログルール
+- [ナレッジシステム](10-knowledge-system.ja.md) -- audit-format.md 分類体系(共有ナレッジで出荷)
+- [コントリビュート](11-contributing.ja.md) -- ユーティリティハンドラの追加
+- [ハーネスプリミティブマッピング](14-claude-features.ja.md) -- settings.json 設定(Claude固有セクション)
+- [状態機械](12-state-machine.ja.md) -- 正典のイベントエミッタレジストリと監査ファースト原子性ルール

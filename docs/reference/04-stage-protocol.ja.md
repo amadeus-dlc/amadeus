@@ -2,7 +2,7 @@
 
 機械向けの `dist/claude/.claude/amadeus-common/protocols/stage-protocol.md` を、人間可読に再構成したものです。すべてのルール、条件、振る舞いを保持しつつ、開発者向けに再編成しています。セクション参照(例「Protocol Section 1」)はソースファイルに対応します。
 
-> ステージファイルの *フォーマット*(YAML フロントマター、ボディの慣習)については [Stage Definition](15-stage-definition.md) を参照。この章はランタイムの実行振る舞いをカバーします。
+> ステージファイルの *フォーマット*(YAML フロントマター、ボディの慣習)については [Stage Definition](15-stage-definition.ja.md) を参照。この章はランタイムの実行振る舞いをカバーします。
 
 > **パス表記の慣習。** 成果物、状態、監査証跡は、アクティブな intent の **record dir** の下に存在します — `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`、以下 `<record>/` と表記。監査証跡は、単一ファイルではなく `<record>/audit/<host>-<clone>.md` のクローンごとのシャードのディレクトリです(読み手はタイムスタンプで glob してマージします)。
 
@@ -60,7 +60,7 @@
 
 3つの Initialization ステージを除くすべてのステージは、進む前に明示的なユーザー承認を要します。承認は構造化 UI オプション付きの `AskUserQuestion` を使います。
 
-ゲートは `amadeus-state.md` の `[?]` AwaitingApproval チェックボックス状態に対応します。却下はステージを `[R]` Revising に遷移させます。完全なステージ状態図と正規の `GATE_APPROVED` / `GATE_REJECTED` / `STAGE_AWAITING_APPROVAL` エミッターについては [State Machine](12-state-machine.md) を参照。
+ゲートは `amadeus-state.md` の `[?]` AwaitingApproval チェックボックス状態に対応します。却下はステージを `[R]` Revising に遷移させます。完全なステージ状態図と正規の `GATE_APPROVED` / `GATE_REJECTED` / `STAGE_AWAITING_APPROVAL` エミッターについては [State Machine](12-state-machine.ja.md) を参照。
 
 *(Protocol Section 1)*
 
@@ -458,7 +458,7 @@ AskUserQuestion({
 
 ### 6ステップの知識ロード順序
 
-完全なロード順序については [Knowledge System](10-knowledge-system.md) を参照。
+完全なロード順序については [Knowledge System](10-knowledge-system.ja.md) を参照。
 
 Step 1-3 はフレームワークとともに出荷されます。Step 4-5 はユーザー管理です。Step 6 はワークフロー位置ごとに動的です。
 
@@ -773,7 +773,7 @@ amadeus-product-agent、amadeus-design-agent、amadeus-delivery-agent、amadeus-
 2. **Review.** レビュアーは定義、Q&A、成果物を読み、リストされた検証ツールを実行し、**READY** または **NOT-READY** の判定とともに `## Review` セクションを主要成果物に append する。
 3. **Verdict.** READY → learnings の儀式、その後ゲートへ進む。NOT-READY でイテレーションが `reviewer_max_iterations`(デフォルト2)未満で残っている → リードエージェントが指摘に対処するため再実行し、レビュアーが再チェックする。NOT-READY でイテレーションが尽きた → 未解決の指摘を注記してゲートへ進む。
 
-レビュアーは決してブロックしません — 人間が常にゲートで最終決定権を持ちます — そして `reviewer` フィールドのないステージでは発火しません。[Stage Definition](15-stage-definition.md) の `reviewer` / `reviewer_max_iterations` フロントマターフィールドを参照。
+レビュアーは決してブロックしません — 人間が常にゲートで最終決定権を持ちます — そして `reviewer` フィールドのないステージでは発火しません。[Stage Definition](15-stage-definition.ja.md) の `reviewer` / `reviewer_max_iterations` フロントマターフィールドを参照。
 
 ---
 
@@ -791,7 +791,7 @@ amadeus-product-agent、amadeus-design-agent、amadeus-delivery-agent、amadeus-
 4. **Admission check**: 残された各学習が `org.md` の対応するセクションに対してチェックされる。矛盾は revise / skip / escalate のため表面化される。
 5. **Persist**: `amadeus-learnings.ts persist` が確認された各学習をプラクティスとして `amadeus/spaces/<space>/memory/{project,team}.md` に書き込む(そしてセンサーバインディングの学習については、マニフェスト + ステージ `sensors:` インポートを1つのロックされたトランザクションでインストールする)。`RULE_LEARNED` / `SENSOR_PROPOSED` を発行する。
 
-学習は飛行中の実行ではなく **次の** ワークフローのコンパイルで適用されます。完全なツール・アズ・アクタープロトコルについては `stage-protocol.md` §13 を、書かれたルールが供給される strict-additive 解決については [Rule System](08-rule-system.md) を参照。
+学習は飛行中の実行ではなく **次の** ワークフローのコンパイルで適用されます。完全なツール・アズ・アクタープロトコルについては `stage-protocol.md` §13 を、書かれたルールが供給される strict-additive 解決については [Rule System](08-rule-system.ja.md) を参照。
 
 ---
 
@@ -836,10 +836,10 @@ Intent -> Scope -> Requirements -> Designs -> Units -> Code -> Tests -> Deployme
 
 ## 相互参照
 
-- [Architecture](01-architecture.md) — 5層モデル、設計上の決定
-- [Orchestrator](03-orchestrator.md) — SKILL.md の詳細
+- [Architecture](01-architecture.ja.md) — 5層モデル、設計上の決定
+- [Orchestrator](03-orchestrator.ja.md) — SKILL.md の詳細
 - [Stages](04-stages/) — フェーズごとのステージドキュメント
-- [Agent System](05-agent-system.md) — エージェント構造、フロントマター
-- [Hooks and Tools](06-hooks-and-tools.md) — フックシステム、監査イベント
-- [Knowledge System](10-knowledge-system.md) — ロード順序、テンプレート
-- [Diagrams](diagrams.md) — すべての図を一箇所に集約
+- [Agent System](05-agent-system.ja.md) — エージェント構造、フロントマター
+- [Hooks and Tools](06-hooks-and-tools.ja.md) — フックシステム、監査イベント
+- [Knowledge System](10-knowledge-system.ja.md) — ロード順序、テンプレート
+- [Diagrams](diagrams.ja.md) — すべての図を一箇所に集約

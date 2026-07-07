@@ -36,7 +36,7 @@ AI-DLC は、intent から本番までの完全なトレーサビリティを提
 
 正常系ではステージは `[ ]` → `[-]` → `[?]` → `[x]` と遷移します。ゲートで却下すると、ステージは修正中の間 `[R]` へ移り、準備ができると `[?]` に戻り、承認されると最終的に `[x]` になります。`/amadeus --status` はチェックボックスを読んで誰がブロックしているかを教えてくれます — `[?]` なら「\<stage\> の承認待ち」、`[R]` なら「\<stage\> を修正中(3 回中 N 回目)」と表示されます。
 
-正規の状態機械リファレンス(遷移表、監査イベントのエミッター)については、[Developer Reference: State Machine](../reference/12-state-machine.md) を参照してください。
+正規の状態機械リファレンス(遷移表、監査イベントのエミッター)については、[Developer Reference: State Machine](../reference/12-state-machine.ja.md) を参照してください。
 
 ### 状態遷移
 
@@ -162,13 +162,13 @@ sequenceDiagram
 
 オーケストレーターはすべてのルーティング決定に `amadeus-state.md` を使います。ルーティングのために `audit/` シャードを読むことはありません。監査証跡は、intent から本番までのすべての決定をたどれるようにするトレーサビリティ記録です。
 
-状態ファイルが破損した場合は、`STAGE_STARTED` と `STAGE_COMPLETED` イベントを確認することで監査証跡から再構築できます。修復手順については [Troubleshooting](15-troubleshooting.md) を参照してください。
+状態ファイルが破損した場合は、`STAGE_STARTED` と `STAGE_COMPLETED` イベントを確認することで監査証跡から再構築できます。修復手順については [Troubleshooting](15-troubleshooting.ja.md) を参照してください。
 
 ---
 
 ## 次のステップ
 
-- [Session Management](11-session-management.md) — セッション再開に状態がどう使われるか
-- [Artifacts Reference](14-artifacts-reference.md) — intent のレコードディレクトリに何が保存されるか
-- [Troubleshooting](15-troubleshooting.md) — 状態破損の修復
-- [Glossary](glossary.md) — 状態ファイル、監査証跡、チェックポイント、コンパクションの定義
+- [Session Management](11-session-management.ja.md) — セッション再開に状態がどう使われるか
+- [Artifacts Reference](14-artifacts-reference.ja.md) — intent のレコードディレクトリに何が保存されるか
+- [Troubleshooting](15-troubleshooting.ja.md) — 状態破損の修復
+- [Glossary](glossary.ja.md) — 状態ファイル、監査証跡、チェックポイント、コンパクションの定義

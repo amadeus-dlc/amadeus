@@ -71,7 +71,7 @@
 
 ## クロスリファレンス
 
-- [エージェントリファレンス概要](README.md)
-- [エージェントガイド: amadeus-devsecops-agent](../../guide/agents/devsecops-agent.md)
+- [エージェントリファレンス概要](README.ja.md)
+- [エージェントガイド: amadeus-devsecops-agent](../../guide/agents/devsecops-agent.ja.md)
 - [ステージドキュメント](../04-stages/)
 - ソース: [`dist/claude/.claude/agents/amadeus-devsecops-agent.md`](../../../dist/claude/.claude/agents/amadeus-devsecops-agent.md)

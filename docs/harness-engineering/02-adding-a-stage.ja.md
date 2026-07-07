@@ -2,17 +2,17 @@
 
 ステージはワークフローグラフのノードです。すなわち、消費・生成する成果物、それをリードするエージェント、そして実行方法を宣言する作業単位です。ステージの追加は、ハーネスエンジニアが行うもっとも構造的な変更です — メソドロジーそのものに新しいステップを導入することになります。この章では、フェーズを選び、ファイルを作成し、依存エッジを配線し、グラフをコンパイルし、新しいステージが期待どおりの位置に収まったことを確認する、というエンドツーエンドのレシピを解説します。
 
-先に [Anatomy of a Stage](01-anatomy-of-a-stage.md) を読んでください。あの章はファイルフォーマット — フロントマターの契約と3コンパートメントの本体 — を扱っており、このレシピはあなたが既にそれを理解している前提で進みます。ここでは *ワークフロー* に焦点を当てます。フィールドごとのスキーマではなく、判断のポイントと検証ステップです。網羅的な契約については、この章の各ステップから [Stage Definition](../reference/15-stage-definition.md) へリンクを張っています。
+先に [Anatomy of a Stage](01-anatomy-of-a-stage.ja.md) を読んでください。あの章はファイルフォーマット — フロントマターの契約と3コンパートメントの本体 — を扱っており、このレシピはあなたが既にそれを理解している前提で進みます。ここでは *ワークフロー* に焦点を当てます。フィールドごとのスキーマではなく、判断のポイントと検証ステップです。網羅的な契約については、この章の各ステップから [Stage Definition](../reference/15-stage-definition.ja.md) へリンクを張っています。
 
-この作法は、Developer Reference の [Adding a Scope](../reference/11-contributing.md#adding-a-scope) と [Adding an Agent](../reference/11-contributing.md#adding-an-agent) のレシピを反映しています。すなわち、番号付きの手順リストと、その後の *自動で検証されるもの* と *自分で確認しなければならないもの* の明確な切り分けです。
+この作法は、Developer Reference の [Adding a Scope](../reference/11-contributing.ja.md#adding-a-scope) と [Adding an Agent](../reference/11-contributing.ja.md#adding-an-agent) のレシピを反映しています。すなわち、番号付きの手順リストと、その後の *自動で検証されるもの* と *自分で確認しなければならないもの* の明確な切り分けです。
 
 ---
 
 ## 始める前に: 新しいステージが正しい選択か?
 
-新しいステージがその地位を得るのは、既存のどのステージも生成しない成果物を生成するとき、あるいは既存のどのステージもカバーしない形で成果物を消費するときです。*既存ステージの挙動* だけを変えたい場合 — ステップの文言を変える、リードエージェントを差し替える、センサーを付ける — なら、そのステージファイルをその場で編集してください。新しいノードは不要です。その場での編集については [Anatomy of a Stage](01-anatomy-of-a-stage.md) を参照してください。
+新しいステージがその地位を得るのは、既存のどのステージも生成しない成果物を生成するとき、あるいは既存のどのステージもカバーしない形で成果物を消費するときです。*既存ステージの挙動* だけを変えたい場合 — ステップの文言を変える、リードエージェントを差し替える、センサーを付ける — なら、そのステージファイルをその場で編集してください。新しいノードは不要です。その場での編集については [Anatomy of a Stage](01-anatomy-of-a-stage.ja.md) を参照してください。
 
-ステージの追加は **データ作業** です。YAML フロントマター付きの Markdown ファイルを作成し、JSON 成果物を再コンパイルします。TypeScript の変更はありません。念頭に置くべき唯一の境界は — グラフ *コンパイラそのもの* に新しい挙動が必要になる場合(まだ理解できないフロントマターキー、新しい走査ルール)、それは Developer Reference の領域であり、ハーネス作業ではありません。仕様が既に把握している予約済みのキー(`when`、`on_failure`、`blocks_on` など)は [Stage Definition](../reference/15-stage-definition.md) に列挙されています。まだ実装されていないキーに手を伸ばすということは、コードの領域に踏み込んだということです。
+ステージの追加は **データ作業** です。YAML フロントマター付きの Markdown ファイルを作成し、JSON 成果物を再コンパイルします。TypeScript の変更はありません。念頭に置くべき唯一の境界は — グラフ *コンパイラそのもの* に新しい挙動が必要になる場合(まだ理解できないフロントマターキー、新しい走査ルール)、それは Developer Reference の領域であり、ハーネス作業ではありません。仕様が既に把握している予約済みのキー(`when`、`on_failure`、`blocks_on` など)は [Stage Definition](../reference/15-stage-definition.ja.md) に列挙されています。まだ実装されていないキーに手を伸ばすということは、コードの領域に踏み込んだということです。
 
 ---
 
@@ -49,7 +49,7 @@ core/amadeus-common/stages/
 | `mode` | `inline`、`subagent`、または予約済みの `agent-team` |
 | `for_each` | 任意 — イテレーションを駆動するインスタンスを持つ成果物を指定する |
 
-本体は `## Steps` で始まります — リードエージェントが従う命令的な散文です。`## Sensors` と `## Learn` のコンパートメントはその後に続きます。フィールドの完全な表、型、制約については [Field reference — when to use](../reference/15-stage-definition.md#field-reference--when-to-use) を参照してください。
+本体は `## Steps` で始まります — リードエージェントが従う命令的な散文です。`## Sensors` と `## Learn` のコンパートメントはその後に続きます。フィールドの完全な表、型、制約については [Field reference — when to use](../reference/15-stage-definition.ja.md#field-reference--when-to-use) を参照してください。
 
 ### 3. グラフが配置できるように依存エッジを配線する
 
@@ -59,7 +59,7 @@ core/amadeus-common/stages/
 - **`consumes`** はステージが読み込む成果物を列挙します。各エントリは *アクティブなプランに対してスコープされた* `required` ブール値を持ちます。`required: true` は「このスコープで生成側ステージが実行されるなら、その消費が満たされなければならない」を意味します — 「生成側が常に実行される」ではありません。brownfield モードでのみ必要な消費には `conditional_on: brownfield` を付けます。無条件の消費はこのフィールドを完全に省きます(`always` という値は存在しません)。
 - **`produces`** は前方エッジを列挙します。下流のステージが「成果物 Z は誰が生成するのか?」と尋ねると、グラフは `producersOf()` を介して答えます — つまり `produces: [Z]` を宣言するステージが、それの上流に配線されるステージです。
 
-この3つを整合させれば、コンパイラがステージを自動的に配置します。位置決めのために手作業で `stage-graph.json` を編集することは決してありません。`requires_stage`、`consumes[].required`、`consumes[].conditional_on`、`for_each` のニュアンス(集約が宣言ではなく *推論* される仕組みを含む)は [Field reference — when to use](../reference/15-stage-definition.md#field-reference--when-to-use) で扱っています。
+この3つを整合させれば、コンパイラがステージを自動的に配置します。位置決めのために手作業で `stage-graph.json` を編集することは決してありません。`requires_stage`、`consumes[].required`、`consumes[].conditional_on`、`for_each` のニュアンス(集約が宣言ではなく *推論* される仕組みを含む)は [Field reference — when to use](../reference/15-stage-definition.ja.md#field-reference--when-to-use) で扱っています。
 
 ### 4. ハーネスを再生成し、`stage-graph.json` を再コンパイルする
 
@@ -76,7 +76,7 @@ bun scripts/package.ts --check    # CI ドリフトガード — コミット前
 bun .claude/tools/amadeus-graph.ts compile
 ```
 
-いずれにせよ、この作成フローは一方向のパイプラインです — `core/` の YAML を編集し、パッケージャーを実行(またはインストール済みツリーに対して `compile`)すると、JSON が更新され、ランタイムのローダー(`loadStageGraph()`)が新しいノードをそのまま拾います。`stage-graph.json` を手作業で編集してはいけません。それはビルド成果物であり、手編集は次のコンパイルで上書きされます。完全なパイプライン図と CI ドリフトガードは [Authoring flow](../reference/15-stage-definition.md#authoring-flow) にあります。
+いずれにせよ、この作成フローは一方向のパイプラインです — `core/` の YAML を編集し、パッケージャーを実行(またはインストール済みツリーに対して `compile`)すると、JSON が更新され、ランタイムのローダー(`loadStageGraph()`)が新しいノードをそのまま拾います。`stage-graph.json` を手作業で編集してはいけません。それはビルド成果物であり、手編集は次のコンパイルで上書きされます。完全なパイプライン図と CI ドリフトガードは [Authoring flow](../reference/15-stage-definition.ja.md#authoring-flow) にあります。
 
 ### 5. 出現することを確認する — そしてどのスコープでか
 
@@ -97,7 +97,7 @@ bun .claude/tools/amadeus-graph.ts scope <scope-name>
 bun .claude/tools/amadeus-graph.ts validate-scope <scope-name>
 ```
 
-新しく追加されたステージは、どのスコープでも **自動的には実行されません**。スコープメンバーシップはいまやステージ自体に置かれています。そのフロントマターの `scopes:` リストが、それが実行されるすべてのスコープを列挙します。どのスコープも指定しないステージは、どこでも `SKIP` です。したがって、ステージを追加した後は、どのスコープがそれを実行すべきかを決め、各スコープ名をステージの `scopes:` リストに追加してください — その後、再コンパイルして転置が `scope-grid.json` を更新するようにします — [Scopes](04-scopes.md) を参照してください。これが意図的な継ぎ目です。ステージ本体を作成すると、それが *存在する* ようになります。`scopes:` タグが、それを *実行する* ようにします。
+新しく追加されたステージは、どのスコープでも **自動的には実行されません**。スコープメンバーシップはいまやステージ自体に置かれています。そのフロントマターの `scopes:` リストが、それが実行されるすべてのスコープを列挙します。どのスコープも指定しないステージは、どこでも `SKIP` です。したがって、ステージを追加した後は、どのスコープがそれを実行すべきかを決め、各スコープ名をステージの `scopes:` リストに追加してください — その後、再コンパイルして転置が `scope-grid.json` を更新するようにします — [Scopes](04-scopes.ja.md) を参照してください。これが意図的な継ぎ目です。ステージ本体を作成すると、それが *存在する* ようになります。`scopes:` タグが、それを *実行する* ようにします。
 
 ---
 
@@ -127,7 +127,7 @@ bun .claude/tools/amadeus-runner-gen.ts check
 
 すべてのランナースキルを削除しても、すべてのステージは `/amadeus --stage <slug> --single` 経由で依然として実行されます — ランナーは既に実行可能なステージをパッケージ化するだけであり、ステージファイルが定義です。作成のパスは「ステージファイルを書く」であり、それは変わりません。
 
-これらのランナーの背後にある規範的な契約 — エンジン、コンダクター、`run-stage` ディレクティブがどのようにコンパイル済みステージをタイプ入力可能な `/amadeus-<slug>` スキルに変えるか — については、Developer Reference の [Skill System §4 (skills and runners)](../reference/17-skill-system.md) を参照してください。
+これらのランナーの背後にある規範的な契約 — エンジン、コンダクター、`run-stage` ディレクティブがどのようにコンパイル済みステージをタイプ入力可能な `/amadeus-<slug>` スキルに変えるか — については、Developer Reference の [Skill System §4 (skills and runners)](../reference/17-skill-system.ja.md) を参照してください。
 
 ---
 
@@ -152,10 +152,10 @@ bun .claude/tools/amadeus-runner-gen.ts check
 
 ## 境界ケース: データ作業 vs. コード作業
 
-ステージファイルの作成とグラフの再コンパイルは、完全にハーネスエンジニアのデータ作業です — Markdown、YAML、JSON であり、`.ts` はありません。サイレントに越えてはならない一線は — あなたのステージを機能させるのにグラフ *コンパイラ* が異なる挙動をする必要がある場合(認識しないフロントマターキー、新しいエッジ型、新しい走査ルール)、それはデータを読むコードへの変更であり、ここではなく [Developer Reference](../reference/15-stage-definition.md) に属します。仕様の予約キー名前空間は、まさに将来の構造的拡張がその場しのぎの追加としてではなく予測可能に着地するために存在します。それらのキーのいずれかについて消費側が出荷されるまで、スキーマはそれを拒否します。コンパイラがまだ実装していないキーが欲しくなったら、止まってください — それはフレームワークの変更であり、検証の作法については [Adding an Agent](../reference/11-contributing.md#adding-an-agent) とその兄弟の貢献レシピに従いますが、実装はコードにあります。
+ステージファイルの作成とグラフの再コンパイルは、完全にハーネスエンジニアのデータ作業です — Markdown、YAML、JSON であり、`.ts` はありません。サイレントに越えてはならない一線は — あなたのステージを機能させるのにグラフ *コンパイラ* が異なる挙動をする必要がある場合(認識しないフロントマターキー、新しいエッジ型、新しい走査ルール)、それはデータを読むコードへの変更であり、ここではなく [Developer Reference](../reference/15-stage-definition.ja.md) に属します。仕様の予約キー名前空間は、まさに将来の構造的拡張がその場しのぎの追加としてではなく予測可能に着地するために存在します。それらのキーのいずれかについて消費側が出荷されるまで、スキーマはそれを拒否します。コンパイラがまだ実装していないキーが欲しくなったら、止まってください — それはフレームワークの変更であり、検証の作法については [Adding an Agent](../reference/11-contributing.ja.md#adding-an-agent) とその兄弟の貢献レシピに従いますが、実装はコードにあります。
 
 ---
 
 ## 次へ
 
-[Adding an Agent](03-adding-an-agent.md) — 新しいステージが `lead_agent` として指定するペルソナを作成し、それがリードまたはサポートするステージにバインドします。
+[Adding an Agent](03-adding-an-agent.ja.md) — 新しいステージが `lead_agent` として指定するペルソナを作成し、それがリードまたはサポートするステージにバインドします。

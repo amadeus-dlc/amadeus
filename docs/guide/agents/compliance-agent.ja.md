@@ -1,6 +1,6 @@
 # Compliance Agent
 
-> **エージェント詳細解説** · [ユーザーガイド](../00-introduction.md) › [エージェント](../06-agents.md) › [詳細解説](README.md) · 技術リファレンス: [compliance-agent](../../reference/agents/compliance-agent.md)
+> **エージェント詳細解説** · [ユーザーガイド](../00-introduction.ja.md) › [エージェント](../06-agents.ja.md) › [詳細解説](README.ja.md) · 技術リファレンス: [compliance-agent](../../reference/agents/compliance-agent.ja.md)
 
 amadeus-compliance-agent は GRC(Governance, Risk, and Compliance)アナリストです。ライフサイクルのすべてのステージが、適用される規制上の義務と組織のコンプライアンスポリシーを考慮していることを保証します。早期に規制要件をスキャンし、それらを技術的コントロールへマッピングし、コンプライアンスリスクの RAID ログを維持し、設計が監査上の期待を満たすことを検証します。
 

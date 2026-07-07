@@ -224,10 +224,10 @@ v1.0 出荷時点のライブなレジストリが、フレームワークの成
 
 - `dist/claude/.claude/amadeus-common/protocols/stage-definition.md` —
   権威あるステージ形式の仕様。`produces[]` / `consumes[]` を構造化フィールドとして定義。
-- [Stage Definition](15-stage-definition.md) — 仕様に関する叙述的な章。
-- [State Machine](12-state-machine.md) — 監査イベントの並行導出パターン:
+- [Stage Definition](15-stage-definition.ja.md) — 仕様に関する叙述的な章。
+- [State Machine](12-state-machine.ja.md) — 監査イベントの並行導出パターン:
   正規 enum はドキュメントではなく `amadeus-audit.ts` に存在。
-- [User Guide — Artifacts Reference](../guide/14-artifacts-reference.md)
+- [User Guide — Artifacts Reference](../guide/14-artifacts-reference.ja.md)
   — ユーザー向けの成果物ライフサイクルとディレクトリレイアウト。
 - `dist/claude/.claude/tools/amadeus-graph.ts` — 導出ツール
   (`artifactsRegistry()` + `artifacts` CLI サブコマンド)。

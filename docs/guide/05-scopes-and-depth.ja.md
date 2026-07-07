@@ -81,7 +81,7 @@
 - **デフォルトテスト戦略:** Minimal(Nyquist) — ワークショップのペースを速く保つ
 - **スキップ:** すべての Ideation ステージ(1.1-1.7) — プロジェクトスコープは事前決定済み
 
-複数開発者向けの手動レシピとクレームのセマンティクスについては、[ワークショップモード](workshop-mode.md) を参照してください。
+複数開発者向けの手動レシピとクレームのセマンティクスについては、[ワークショップモード](workshop-mode.ja.md) を参照してください。
 
 ---
 
@@ -102,7 +102,7 @@
 | `workshop` | 25 / 32 | Standard | **Minimal** | AI-DLC ワークショップまたはトレーニングセッション |
 | (自動検出) | 可変 | 可変 | 可変 | AI が自由記述の intent から判定 |
 
-> **プロジェクトごとのデフォルトスコープ:** チームは `.claude/settings.json` に `AMADEUS_DEFAULT_SCOPE` を設定することで、プロジェクトのデフォルトスコープを事前設定できます — 全参加者がフラグを覚えずに `workshop` から開始すべきワークショップに便利です。[カスタマイズ § プロジェクトごとのデフォルトスコープ](13-customization.md#per-project-default-scope) を参照してください。
+> **プロジェクトごとのデフォルトスコープ:** チームは `.claude/settings.json` に `AMADEUS_DEFAULT_SCOPE` を設定することで、プロジェクトのデフォルトスコープを事前設定できます — 全参加者がフラグを覚えずに `workshop` から開始すべきワークショップに便利です。[カスタマイズ § プロジェクトごとのデフォルトスコープ](13-customization.ja.md#per-project-default-scope) を参照してください。
 
 ---
 
@@ -350,8 +350,8 @@ You can request different depth or test strategy at any approval gate.
 
 ## 次のステップ
 
-- [フェーズとステージ](04-phases-and-stages.md) — 各ステージが何をするか
-- [エージェント](06-agents.md) — どのエージェントがどのスコープに参加するか
-- [スキルとランナーコマンド](17-skills.md) — bugfix、feature、mvp、security-patch 向けの一語 `/amadeus-<scope>` ランナー
-- [CLI コマンド](12-cli-commands.md) — 完全なコマンドリファレンス
-- [用語集](glossary.md) — 用語リファレンス
+- [フェーズとステージ](04-phases-and-stages.ja.md) — 各ステージが何をするか
+- [エージェント](06-agents.ja.md) — どのエージェントがどのスコープに参加するか
+- [スキルとランナーコマンド](17-skills.ja.md) — bugfix、feature、mvp、security-patch 向けの一語 `/amadeus-<scope>` ランナー
+- [CLI コマンド](12-cli-commands.ja.md) — 完全なコマンドリファレンス
+- [用語集](glossary.ja.md) — 用語リファレンス

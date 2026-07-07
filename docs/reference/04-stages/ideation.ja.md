@@ -368,7 +368,7 @@ Intent Capture はすべての AI-DLC ワークフローのエントリポイン
 
 ## 相互参照
 
-- [Orchestrator](../03-orchestrator.md) -- ルーティングロジック、スコープからステージへのマッピング
-- [Stage Protocol](../04-stage-protocol.md) -- 承認ゲート、質問フォーマット、フェーズ境界の検証
-- [Inception Stages](inception.md) -- 次のフェーズ
-- [Initialization Stages](initialization.md) -- 前のフェーズ
+- [Orchestrator](../03-orchestrator.ja.md) -- ルーティングロジック、スコープからステージへのマッピング
+- [Stage Protocol](../04-stage-protocol.ja.md) -- 承認ゲート、質問フォーマット、フェーズ境界の検証
+- [Inception Stages](inception.ja.md) -- 次のフェーズ
+- [Initialization Stages](initialization.ja.md) -- 前のフェーズ

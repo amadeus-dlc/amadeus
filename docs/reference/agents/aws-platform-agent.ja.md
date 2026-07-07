@@ -72,7 +72,7 @@ Path: `amadeus/knowledge/amadeus-aws-platform-agent/` (space レベルの knowle
 
 ## Cross-References
 
-- [Agent Reference Overview](README.md)
-- [Agent Guide: amadeus-aws-platform-agent](../../guide/agents/aws-platform-agent.md)
+- [Agent Reference Overview](README.ja.md)
+- [Agent Guide: amadeus-aws-platform-agent](../../guide/agents/aws-platform-agent.ja.md)
 - [Stage Documentation](../04-stages/)
 - Source: [`dist/claude/.claude/agents/amadeus-aws-platform-agent.md`](../../../dist/claude/.claude/agents/amadeus-aws-platform-agent.md)

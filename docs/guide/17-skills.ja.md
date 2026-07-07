@@ -11,7 +11,7 @@
 > Kiro は同じランナーセットを `.kiro/skills/` 配下に同梱します(こちらも `/` で
 > タイプ)。Codex はそれらを `.agents/skills/` に同梱し、`$`(`$amadeus-bugfix`)で
 > タイプします。ランナーの *セット* と各々の動作はハーネス間で同一です — 異なるのは
-> ディレクトリと接頭辞だけです。[他のハーネスで実行する](harnesses/README.md) を参照。
+> ディレクトリと接頭辞だけです。[他のハーネスで実行する](harnesses/README.ja.md) を参照。
 
 ---
 
@@ -33,8 +33,8 @@
   ことを 1 ステップで行う。エンジンの auto-birth に対するオプトインのパッケージング。
 - **セッションスキル** — `/amadeus-session-cost`、`/amadeus-replay`、
   `/amadeus-outcomes-pack`、`/amadeus-grilling`。任意の時点で使える読み取り専用スキル。
-  最初の 3 つは [セッション管理](11-session-management.md) で扱うワークフロービューで、
-  `/amadeus-grilling` は独立した grilling インタビューです([インタラクションモード](07-interaction-modes.md) を参照)。
+  最初の 3 つは [セッション管理](11-session-management.ja.md) で扱うワークフロービューで、
+  `/amadeus-grilling` は独立した grilling インタビューです([インタラクションモード](07-interaction-modes.ja.md) を参照)。
 
 ランナーが行うことはすべてフラグ付きの `/amadeus` から到達可能です。ランナーは
 パッケージングです — `/amadeus-bugfix` とタイプして `/` メニューに現れるのは良い
@@ -70,7 +70,7 @@
 ```
 
 **ランナーを同梱するのは 4 つのスコープだけ** — トラフィックの多いものです。
-フレームワークは合計 9 つのスコープを定義しています([スコープ、深さ、テスト戦略](05-scopes-and-depth.md) を参照)。
+フレームワークは合計 9 つのスコープを定義しています([スコープ、深さ、テスト戦略](05-scopes-and-depth.ja.md) を参照)。
 他のすべて — `enterprise`、`poc`、`infra`、`refactor`、`workshop` — は常に
 オーケストレーター経由で到達可能です:
 
@@ -139,8 +139,8 @@
 | スコープランナー | `/amadeus-bugfix`、`/amadeus-feature`、`/amadeus-mvp`、`/amadeus-security-patch` | フルワークフロー、スコープ固定、検出なし | `/amadeus --scope <name>` |
 | ステージランナー | `/amadeus-application-design`、`/amadeus-code-generation`、…(計 29) | 1 ステージを単独で、ワークフローを決して進めない | `/amadeus --stage <slug> --single` |
 | Init ラッパー | `/amadeus-init` | 最初の intent を誕生させる(Initialization を実行) | 新規ワークスペースでの `/amadeus` |
-| セッションビュー | `/amadeus-session-cost`、`/amadeus-replay`、`/amadeus-outcomes-pack` | 読み取り専用のワークフローレポート | [セッション管理](11-session-management.md) を参照 |
-| Grilling インタビュー | `/amadeus-grilling` | プランや設計についての読み取り専用の一問一答インタビュー | [インタラクションモード](07-interaction-modes.md) を参照 |
+| セッションビュー | `/amadeus-session-cost`、`/amadeus-replay`、`/amadeus-outcomes-pack` | 読み取り専用のワークフローレポート | [セッション管理](11-session-management.ja.md) を参照 |
+| Grilling インタビュー | `/amadeus-grilling` | プランや設計についての読み取り専用の一問一答インタビュー | [インタラクションモード](07-interaction-modes.ja.md) を参照 |
 
 ライフサイクル内の実行可能なステージごとにステージランナーが 1 つあります。全体の
 セットを見るには、スキルディレクトリを一覧してください:
@@ -188,10 +188,10 @@ bun .claude/tools/amadeus-runner-gen.ts scopes --check   # スコープランナ
 することが作成パスのすべてです。ランナーはジェネレーターがあなたのために保守する
 結果として追随します。
 
-ステージファイルを書くメカニズムについては [カスタマイズ](13-customization.md) と
-[フェーズとステージ](04-phases-and-stages.md) を参照。エンジン、ディレクティブ契約、
+ステージファイルを書くメカニズムについては [カスタマイズ](13-customization.ja.md) と
+[フェーズとステージ](04-phases-and-stages.ja.md) を参照。エンジン、ディレクティブ契約、
 ランナーシェルが内部で `next`/`report` をどう駆動するかについては、リファレンス章の
-[スキルシステム](../reference/17-skill-system.md) を参照してください。
+[スキルシステム](../reference/17-skill-system.ja.md) を参照してください。
 
 ---
 
@@ -216,4 +216,4 @@ bun .claude/tools/amadeus-runner-gen.ts write
 bun .claude/tools/amadeus-runner-gen.ts scopes
 ```
 
-参照: [CLI コマンド](12-cli-commands.md) · [スコープ、深さ、テスト戦略](05-scopes-and-depth.md) · [カスタマイズ](13-customization.md)
+参照: [CLI コマンド](12-cli-commands.ja.md) · [スコープ、深さ、テスト戦略](05-scopes-and-depth.ja.md) · [カスタマイズ](13-customization.ja.md)

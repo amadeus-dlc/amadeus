@@ -138,9 +138,9 @@ bun scripts/package.ts --check        # CI ドリフトガード(全ハーネス
 インストールと trust が完了しましたか? 方法論はどのハーネスでも同じです — 中立な
 章を続けてください:
 
-- [最初のワークフロー](../02-your-first-workflow.md) — 注釈付きのエンドツーエンド実行。
-- [フェーズとステージ](../04-phases-and-stages.md) — 5 フェーズと 32 ステージ。
-- [スコープ、深さ、テスト戦略](../05-scopes-and-depth.md) — 実行の適正サイズ化。
-- [用語集](../glossary.md) — すべての用語の定義。
+- [最初のワークフロー](../02-your-first-workflow.ja.md) — 注釈付きのエンドツーエンド実行。
+- [フェーズとステージ](../04-phases-and-stages.ja.md) — 5 フェーズと 32 ステージ。
+- [スコープ、深さ、テスト戦略](../05-scopes-and-depth.ja.md) — 実行の適正サイズ化。
+- [用語集](../glossary.ja.md) — すべての用語の定義。
 
-他のハーネス: [Kiro IDE で AI-DLC を実行する](kiro-ide.md) · [ハーネスファミリーの索引](README.md)。
+他のハーネス: [Kiro IDE で AI-DLC を実行する](kiro-ide.ja.md) · [ハーネスファミリーの索引](README.ja.md)。

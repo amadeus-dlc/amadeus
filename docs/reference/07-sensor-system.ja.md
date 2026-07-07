@@ -5,14 +5,14 @@
 この章はAI-DLCセンサーマニフェストの**スキーマリファレンス**です —
 ステージの出力への書き込みで発火する決定論的なチェックです。
 センサーは制御ループのフィードバック側の半分です。ルールは
-フィードフォワード側の半分です(次章の[ルールシステム](08-rule-system.md)を参照)。[プレーンアーキテクチャ](02-plane-architecture.md)の章は、
+フィードフォワード側の半分です(次章の[ルールシステム](08-rule-system.ja.md)を参照)。[プレーンアーキテクチャ](02-plane-architecture.ja.md)の章は、
 両者をコンパイルが各ステージノードに解決する制御プレーンの入力として
 位置づけます。
 
 この章はマニフェストの*ファイルフォーマット*を扱います — センサーマニフェストが
 何を含むか、ステージがどのようにセンサーをインポートするか、出荷された4つのマニフェストが
 どう設定されているかです。ワークフロー中にセンサーがどう発火するかのユーザー向けの
-ビューについては、ユーザーガイドの[ルールと学習ループ](../guide/09-rules-and-the-learning-loop.md)を
+ビューについては、ユーザーガイドの[ルールと学習ループ](../guide/09-rules-and-the-learning-loop.ja.md)を
 参照してください。
 
 > **パス規約。** 本書の `<record>/` = アクティブintentのrecord dir、
@@ -22,9 +22,9 @@
 > 2つのdocument-shapeセンサーの `matches` globは、依然としてレガシーの
 > artifact-treeパスを含む点に注意(スキーマが文書化される箇所で下記に逐語的に引用)。
 
-ランタイムの挙動については[ステージプロトコル](04-stage-protocol.md)を参照してください。
+ランタイムの挙動については[ステージプロトコル](04-stage-protocol.ja.md)を参照してください。
 ステージ定義のファイルフォーマットの対応物は
-[ステージ定義](15-stage-definition.md)にあります。
+[ステージ定義](15-stage-definition.ja.md)にあります。
 
 ---
 
@@ -89,7 +89,7 @@ timeout_seconds: 5                           # optional
 
 | フィールド | 必須 | 型 | ノート |
 |---|---|---|---|
-| `id` | ✓ | kebab-case文字列 | ファイル名の語幹から `amadeus-` プレフィックスを除いたものに等しい。ルールファイルの `pairing:` フィールドから相互参照される([ルールシステム](08-rule-system.md)を参照)。 |
+| `id` | ✓ | kebab-case文字列 | ファイル名の語幹から `amadeus-` プレフィックスを除いたものに等しい。ルールファイルの `pairing:` フィールドから相互参照される([ルールシステム](08-rule-system.ja.md)を参照)。 |
 | `kind` | ✓ | enum | 現在は `deterministic` のみ受け付ける。`llm` は v0.11.0 の LLM-dispatch 章のために予約。下記の[`kind` enum](#kind-enum)を参照。 |
 | `command` | ✓ | string | 正典の呼び出しプレフィックス — 出荷された各センサーは自身のper-sensorスクリプトを名指しする(例 `bun .claude/tools/amadeus-sensor-required-sections.ts`)。ディスパッチャ(`amadeus-sensor.ts`)は `--stage <slug>` に加え、センサーの入力形状に一致するファイルフラグを追加する: document センサーは `--output-path <path>`、code センサー(`linter`、`type-check`)は `--file-path <path>`。 |
 | `default_severity` | ✓ | enum | 現在は `advisory` のみ受け付ける。`blocking` は将来の ralph-driver 作業のために予約。 |
@@ -165,7 +165,7 @@ outputs: ...
 `matches` は
 コンパイルスナップショットされます: ワークフロー中のマニフェスト編集は、フライト中の
 ワークフローの書き込みに対して何が発火するかを変えません(BGP-stability
-特性 — [プレーンアーキテクチャ](02-plane-architecture.md)を参照)。
+特性 — [プレーンアーキテクチャ](02-plane-architecture.ja.md)を参照)。
 
 ### ステージ別センサーマトリクス(32フレームワークステージ)
 
@@ -386,14 +386,14 @@ enum型のフィールド(`default_severity`)にも適用されます。
 ## 次のステップ
 
 - **ルール** — 制御ループのフィードフォワード側の半分は、`pairing:` フィールドを介して
-  これらのセンサーと対になります。[ルールシステム](08-rule-system.md)を参照。
+  これらのセンサーと対になります。[ルールシステム](08-rule-system.ja.md)を参照。
 - **ユーザー向けの学習ループ** — センサー提案がどのように表面化され
   ゲートで確定されるか、そして確定された提案がどのように
   新しいマニフェストをスキャフォールドするか。ユーザーガイドの[ルールと学習
   ループ](../guide/09-rules-and-the-learning-loop.md)を参照。
 - **コンパイル境界** — `sensors_applicable` がワークフロー開始時に一度
   解決され、発火時にグラフノードから読まれる仕組み。
-  [プレーンアーキテクチャ](02-plane-architecture.md)を参照。
+  [プレーンアーキテクチャ](02-plane-architecture.ja.md)を参照。
 
 上記のスキーマに加え、`dist/claude/.claude/sensors/` の出荷された4つの
 マニフェストが、動作する例です。

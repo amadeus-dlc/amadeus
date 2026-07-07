@@ -1,6 +1,6 @@
 # Architect Agent
 
-> **エージェント詳細解説** · [ユーザーガイド](../00-introduction.md) › [エージェント](../06-agents.md) › [詳細解説](README.md) · 技術リファレンス: [architect-agent](../../reference/agents/architect-agent.md)
+> **エージェント詳細解説** · [ユーザーガイド](../00-introduction.ja.md) › [エージェント](../06-agents.ja.md) › [詳細解説](README.ja.md) · 技術リファレンス: [architect-agent](../../reference/agents/architect-agent.ja.md)
 
 amadeus-architect-agent はソリューションアーキテクトです。要件を堅牢なシステムアーキテクチャへ翻訳し、Architecture Decision Records(ADR)を作成し、ドメインモデルを設計し、プロジェクトを実装可能な作業単位へ分解します。パターンとトレードオフの観点で思考し、開発者が直接実装できる設計を生み出します。
 

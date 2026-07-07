@@ -73,7 +73,7 @@
 
 ## クロスリファレンス
 
-- [エージェントリファレンス概要](README.md)
-- [エージェントガイド: amadeus-developer-agent](../../guide/agents/developer-agent.md)
+- [エージェントリファレンス概要](README.ja.md)
+- [エージェントガイド: amadeus-developer-agent](../../guide/agents/developer-agent.ja.md)
 - [ステージドキュメント](../04-stages/)
 - ソース: [`dist/claude/.claude/agents/amadeus-developer-agent.md`](../../../dist/claude/.claude/agents/amadeus-developer-agent.md)

@@ -10,16 +10,16 @@
 
 | ガイド | あなたは… | あなたが変えるもの… |
 |-------|----------|--------------------|
-| **[User Guide](guide/00-introduction.md)** | AI-DLC を *使って* ソフトウェアを作る | フレームワークの中身は何も変えない — `/amadeus` を実行し、ゲートで回答し、成果物をレビューする |
-| **[Harness Engineer Guide](harness-engineering/00-overview.md)** | チームに合わせて AI-DLC の *振る舞い* を作り替える | フレームワークが読む **データ**: ステージ、エージェント、スコープ、ルール、センサー、知識 — そして新しいハーネスへの移植 |
-| **[Developer Reference](reference/00-overview.md)** | AI-DLC *そのもの* を変える | そのデータを読む **コード**: エンジン、フック、CLI ツール、コンパイルパイプライン、テストスイート |
+| **[User Guide](guide/00-introduction.ja.md)** | AI-DLC を *使って* ソフトウェアを作る | フレームワークの中身は何も変えない — `/amadeus` を実行し、ゲートで回答し、成果物をレビューする |
+| **[Harness Engineer Guide](harness-engineering/00-overview.ja.md)** | チームに合わせて AI-DLC の *振る舞い* を作り替える | フレームワークが読む **データ**: ステージ、エージェント、スコープ、ルール、センサー、知識 — そして新しいハーネスへの移植 |
+| **[Developer Reference](reference/00-overview.ja.md)** | AI-DLC *そのもの* を変える | そのデータを読む **コード**: エンジン、フック、CLI ツール、コンパイルパイプライン、テストスイート |
 
 Harness Engineer Guide と Developer Reference の境界は **データ対コード** です。User Guide とそれ以外の境界は **使う** 対 **作り替える** です。
 
 ## 特定のハーネスで動かす
 
-各ガイドはハーネス非依存です。各ハーネスのインストール手順と、ハーネスごとに異なる少数の振る舞いは [Running on other harnesses](guide/harnesses/README.md) にあります(Claude Code は User Guide 全体でカバーされており、その例は Claude Code 上で動作します)。
+各ガイドはハーネス非依存です。各ハーネスのインストール手順と、ハーネスごとに異なる少数の振る舞いは [Running on other harnesses](guide/harnesses/README.ja.md) にあります(Claude Code は User Guide 全体でカバーされており、その例は Claude Code 上で動作します)。
 
 ## ビルドと貢献
 
-メンテナは `core/` で著述し、`npm run dist`(`bun scripts/package.ts`)で `dist/<harness>/` ツリーを再生成します — 完全なビルド&テストのループについては [Contributing Guide](reference/11-contributing.md) を、ハーネスの追加については [Porting to a New Harness](harness-engineering/09-porting-to-a-new-harness.md) を参照してください。
+メンテナは `core/` で著述し、`npm run dist`(`bun scripts/package.ts`)で `dist/<harness>/` ツリーを再生成します — 完全なビルド&テストのループについては [Contributing Guide](reference/11-contributing.ja.md) を、ハーネスの追加については [Porting to a New Harness](harness-engineering/09-porting-to-a-new-harness.ja.md) を参照してください。

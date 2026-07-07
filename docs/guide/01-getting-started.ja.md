@@ -36,7 +36,7 @@ command -v bun    >/dev/null && echo "✓ bun installed"          || echo "✗ I
 
 Claude Code の配布物は、デフォルトではプロジェクトの `.mcp.json` を同梱しません。ワークフローが外部ツールや追加の文脈を必要とする場合にのみ、プロジェクトまたはユーザーの MCP サーバー定義を追加してください。Claude Code は宣言されたサーバーをセッションにプロビジョニングし、すべての Amadeus-DLC エージェントはそれらのセッションサーバーを継承します — エージェントごとの付与作業は不要です。
 
-> **エージェントの制限(上級者向け):** 継承は加算的です — サーバーを宣言するとすべてのエージェントで利用可能になり、エージェントごとにサーバーを付与することはできません。特定のエージェントがサーバーを使うのを *防ぐ* には、そのエージェントの `tools:` 許可リストを、呼び出してよい完全修飾の `mcp__<server>__<tool>` ID に絞ります(裸の `mcp__<server>` トークンは尊重されません)。エージェントのツールアクセスの仕組みについては [Agents](06-agents.md) を参照してください。
+> **エージェントの制限(上級者向け):** 継承は加算的です — サーバーを宣言するとすべてのエージェントで利用可能になり、エージェントごとにサーバーを付与することはできません。特定のエージェントがサーバーを使うのを *防ぐ* には、そのエージェントの `tools:` 許可リストを、呼び出してよい完全修飾の `mcp__<server>__<tool>` ID に絞ります(裸の `mcp__<server>` トークンは尊重されません)。エージェントのツールアクセスの仕組みについては [Agents](06-agents.ja.md) を参照してください。
 
 ### これらを使わない場合は?
 
@@ -46,7 +46,7 @@ Claude Code の配布物は、デフォルトではプロジェクトの `.mcp.j
 
 ## インストール
 
-AI-DLC は、あなたのハーネス向けの配布物をプロジェクトへコピーすることでインストールします。以下の手順は **Claude Code**(`dist/claude/.claude/` ツリー)を対象とします。Kiro または Codex を実行しますか? それぞれが独自の配布物とインストール手順を同梱しています — [Running on Kiro IDE](harnesses/kiro-ide.md) または [Running on Codex CLI](harnesses/codex-cli.md) を参照してください。Claude Code 実装は、プロジェクトにコピーする `.claude/` ディレクトリとして提供されます。
+AI-DLC は、あなたのハーネス向けの配布物をプロジェクトへコピーすることでインストールします。以下の手順は **Claude Code**(`dist/claude/.claude/` ツリー)を対象とします。Kiro または Codex を実行しますか? それぞれが独自の配布物とインストール手順を同梱しています — [Running on Kiro IDE](harnesses/kiro-ide.ja.md) または [Running on Codex CLI](harnesses/codex-cli.ja.md) を参照してください。Claude Code 実装は、プロジェクトにコピーする `.claude/` ディレクトリとして提供されます。
 
 ### ステップ 1: 実装をコピーする
 
@@ -79,9 +79,9 @@ cd your-project
 
 チーム知識は 1 階層上、スペースレベル — `amadeus/spaces/<space>/knowledge/`(`intents/` の兄弟)— に置かれるため、そのスペースのすべての intent をまたいで蓄積されます。エンジンはこれを空で作成します。任意の `amadeus-shared/` 配下やエージェントごとのサブディレクトリに、自由形式のファイルを追加します。
 
-最初の実行前に [チーム知識](08-knowledge.md) やチームのプラクティスを追加するには、同梱の `amadeus/spaces/default/memory/` ファイルを編集します。スペースレベルの `amadeus/knowledge/` ディレクトリは、最初の `/amadeus` を実行した時点で(空で)作成されます。
+最初の実行前に [チーム知識](08-knowledge.ja.md) やチームのプラクティスを追加するには、同梱の `amadeus/spaces/default/memory/` ファイルを編集します。スペースレベルの `amadeus/knowledge/` ディレクトリは、最初の `/amadeus` を実行した時点で(空で)作成されます。
 
-ワークスペースレイアウトの全体像 — 多数の intent を一度に保持する仕組み、スペースの用途、それらの間を移動するコマンド — については、[Spaces and Intents](03-spaces-and-intents.md) を参照してください。
+ワークスペースレイアウトの全体像 — 多数の intent を一度に保持する仕組み、スペースの用途、それらの間を移動するコマンド — については、[Spaces and Intents](03-spaces-and-intents.ja.md) を参照してください。
 
 ---
 
@@ -162,7 +162,7 @@ cd your-project
 /amadeus bugfix Fix the login timeout issue
 ```
 
-次に何が起こるかのステップバイステップのウォークスルーは [Your First Workflow](02-your-first-workflow.md) を参照してください。
+次に何が起こるかのステップバイステップのウォークスルーは [Your First Workflow](02-your-first-workflow.ja.md) を参照してください。
 
 ---
 
@@ -201,13 +201,13 @@ Claude Code セッション内で:
 
 同梱の `.claude/settings.json.example` は、Claude Code のツール(Read、Edit、Write、Bash、Glob、Grep、Task、WebSearch)を事前承認しているため、`.claude/settings.json` へコピーした後は、呼び出しごとの権限プロンプトなしでワークフローが実行されます。使用前にファイルをレビューし、あなたのセキュリティ要件に合わせて調整してください。
 
-ツール権限の変更の詳細は [Customization](13-customization.md) を参照してください。
+ツール権限の変更の詳細は [Customization](13-customization.ja.md) を参照してください。
 
 ---
 
 ## 次のステップ
 
-- [Your First Workflow](02-your-first-workflow.md) — 完全な 1 回の実行の注釈付きウォークスルー
-- [Scopes, Depth, and Test Strategy](05-scopes-and-depth.md) — タスクに合ったスコープの選び方
-- [Troubleshooting](15-troubleshooting.md) — よくある問題と修正
-- [Glossary](glossary.md) — 用語リファレンス
+- [Your First Workflow](02-your-first-workflow.ja.md) — 完全な 1 回の実行の注釈付きウォークスルー
+- [Scopes, Depth, and Test Strategy](05-scopes-and-depth.ja.md) — タスクに合ったスコープの選び方
+- [Troubleshooting](15-troubleshooting.ja.md) — よくある問題と修正
+- [Glossary](glossary.ja.md) — 用語リファレンス

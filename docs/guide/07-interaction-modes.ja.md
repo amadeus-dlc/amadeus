@@ -2,7 +2,7 @@
 
 AI-DLC は、ステージ中にエージェントと対話する 4 つの方法に加えて、あらゆる意思決定ポイントであなたを制御下に保つ承認ゲートを提供します。
 
-> **ハーネスに関する注記。** ゲートと質問は、ハーネスによって描画が異なります: Claude Code は `AskUserQuestion` ウィジェットを使用します。Kiro と Codex は番号付きの散文の選択肢を描画します(番号または自由記述で回答)。質問ファイルが真実の源です。*セマンティクス* — ゲートがいつ発火するか、何を尋ねるか、あなたが制御下に留まること — は、エンジンに存在するため同一です。[他のハーネスで実行する](harnesses/README.md) を参照してください。
+> **ハーネスに関する注記。** ゲートと質問は、ハーネスによって描画が異なります: Claude Code は `AskUserQuestion` ウィジェットを使用します。Kiro と Codex は番号付きの散文の選択肢を描画します(番号または自由記述で回答)。質問ファイルが真実の源です。*セマンティクス* — ゲートがいつ発火するか、何を尋ねるか、あなたが制御下に留まること — は、エンジンに存在するため同一です。[他のハーネスで実行する](harnesses/README.ja.md) を参照してください。
 
 ---
 
@@ -192,7 +192,7 @@ flowchart TD
 | `/amadeus --stage <name>` | 特定のステージにジャンプ(間のステージは `[S]` とマーク) |
 | `/amadeus --phase <name>` | フェーズの開始にジャンプ |
 
-詳細は [セッション管理](11-session-management.md) と [CLI コマンド](12-cli-commands.md) を参照してください。
+詳細は [セッション管理](11-session-management.ja.md) と [CLI コマンド](12-cli-commands.ja.md) を参照してください。
 
 ---
 
@@ -213,7 +213,7 @@ Progress: 13/32 overall | 3/7 IDEATION stages complete. Next: Approval & Handoff
 
 ## 次のステップ
 
-- [はじめてのワークフロー](02-your-first-workflow.md) — 文脈の中でインタラクションモードを見る
-- [状態と監査](10-state-and-audit.md) — 決定事項がどのように追跡されるか
-- [セッション管理](11-session-management.md) — 再開、やり直し、ジャンプ
-- [用語集](glossary.md) — 用語リファレンス
+- [はじめてのワークフロー](02-your-first-workflow.ja.md) — 文脈の中でインタラクションモードを見る
+- [状態と監査](10-state-and-audit.ja.md) — 決定事項がどのように追跡されるか
+- [セッション管理](11-session-management.ja.md) — 再開、やり直し、ジャンプ
+- [用語集](glossary.ja.md) — 用語リファレンス
