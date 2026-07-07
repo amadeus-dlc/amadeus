@@ -1,6 +1,6 @@
 # Business Overview
 
-> Reverse Engineering 成果物 — Intent: 260706-amadeus-grilling / 分析対象: main @ 14c40c9c(現 HEAD 8d73e463)
+> Reverse Engineering 成果物 — Intent: 260706-installer-impl / 分析対象: main @ 14c40c9c(現 HEAD e2c28731、2026-07-07 鮮度リフレッシュ)
 
 ## ビジネスドメイン
 
@@ -32,4 +32,6 @@ Amadeus は **AI-DLC(AI-Driven Development Life Cycle)フレームワーク**で
 
 ## 現在の Intent との関係
 
-進行中の Intent `260706-amadeus-grilling`(scope: grilling-integration)は、対話モード契約(stage-protocol.md §3 の Guide me / Edit file / Chat)に **第4のモード(grilling: 高頻度連続質問による設計の炙り出し)** を追加する brownfield 統合である。主要な統合面は stage-protocol の L258-298、Stop フックの human-wait 判別規約、question-rendering annex ×4、read-only スキルパターンの踏襲である。
+Intent `260706-amadeus-grilling`(scope: grilling-integration)は完了した。対話モード契約(stage-protocol.md §3 の Guide me / Edit file / Chat)への **第4のモード(grilling: 高頻度連続質問による設計の炙り出し)** 追加は PR#601 でマージ済み、続く promote-self の composed-scope 保持修正は PR#602 でマージ済みである。両 PR とも OUTCOMES.md が発行済み。
+
+現在の active intent は `260706-installer-impl`(scope: feature)— npm 配布インストーラ `@amadeus-dlc/setup` の実装。Ideation フェーズは完了し、Inception フェーズが進行中である。

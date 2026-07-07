@@ -1,6 +1,6 @@
 # Code Structure
 
-> Reverse Engineering 成果物 — 分析対象: main @ 14c40c9c(現 HEAD 8d73e463)
+> Reverse Engineering 成果物 — 分析対象: main @ 14c40c9c(現 HEAD e2c28731、2026-07-07 鮮度リフレッシュ)
 
 ## トップレベル構成
 
@@ -8,7 +8,7 @@
 |---|---|---|
 | `core/` | ハーネス中立のソースオブトゥルース | **ここを編集する** |
 | `harness/{claude,codex,kiro,kiro-ide}/` | ハーネス別表層(manifest.ts + SKILL.md + question-rendering.md、codex のみ emit.ts) | 編集可 |
-| `scripts/` | `package.ts`(671行、配布ビルド)、`promote-self.ts`(207行、昇格) | 編集可 |
+| `scripts/` | `package.ts`(671行、配布ビルド)、`promote-self.ts`(264行、昇格) | 編集可 |
 | `dist/{claude,codex,kiro,kiro-ide}/` | 生成物。コミットされ `--check` でドリフトガード | **手編集禁止** |
 | `.claude/` `.codex/` `.agents/` | セルフインストール(promote:self の出力、38スキル) | 昇格で更新 |
 | `amadeus/spaces/default/` | ワークスペース: `memory/`(手編集メソッド層)+ `intents/` + `codekb/` + `knowledge/` | memory は手編集ソース |
@@ -26,7 +26,7 @@
 | `core/skills/` | read-only セッションスキル 3 本(session-cost / replay / outcomes-pack) |
 | `core/amadeus-common/` | `conductor.md` + `protocols/` 4本(stage-protocol.md 1000行を含む)+ `stages/` 5フェーズ 32ステージ |
 | `core/knowledge/` | エージェント別・共有の方法論リファレンス |
-| `core/scopes/` | スコープ定義(1ファイル1スコープ) |
+| `core/scopes/` | スコープ定義(1ファイル1スコープ)。composed scope(例: `amadeus-grilling-integration.md`)はランタイム動的登録で dist 生成物には含まれない |
 | `core/memory/` `core/templates/` | メソッド層シード・テンプレート |
 
 ## ファイル分類とコードパターン

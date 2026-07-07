@@ -1,13 +1,13 @@
 # Code Quality Assessment
 
-> Reverse Engineering 成果物 — 分析対象: main @ 14c40c9c(現 HEAD 8d73e463)
+> Reverse Engineering 成果物 — 分析対象: main @ 14c40c9c(現 HEAD e2c28731、2026-07-07 鮮度リフレッシュ)
 
 ## テスト
 
 | 層 | 本数 | 対象 |
 |---|---|---|
 | smoke | 12 | 構造検証 |
-| unit | 117 | 単一コンポーネント |
+| unit | 119 | 単一コンポーネント(t199-grilling-distribution、t200-promote-self-composed-scope を追加) |
 | integration | 100 | コンポーネント間契約 |
 | e2e | 64 | ライフサイクル全体(claude-agent-sdk + node-pty + xterm/headless でターミナル駆動) |
 
