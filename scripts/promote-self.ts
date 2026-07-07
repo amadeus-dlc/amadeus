@@ -205,9 +205,11 @@ function check(expected: Map<string, Buffer>): string[] {
     } else if (!got.equals(want)) problems.push(`DIFFERS: ${rel}`);
   }
   for (const rel of orphanedFiles(expected)) problems.push(`ORPHAN: ${rel}`);
-  if (!existsSync(join(REPO_ROOT, "amadeus", "active-space"))) {
-    problems.push("MISSING: amadeus/active-space");
-  }
+  // The active-space cursor is a per-user runtime file (gitignored). --apply
+  // ensure-creates it; mirror that here so a fresh checkout / CI (where no prior
+  // /amadeus run has created it) self-heals the cursor instead of failing the
+  // drift guard on a file that is intentionally never committed.
+  ensureActiveSpaceCursor();
   return problems;
 }
 
