@@ -1,23 +1,61 @@
 # Practices Discovery Questions
 
-## Q1. Affirmation mode
+## Q1. Repository package boundary
 
-The evidence supports the drafted `team-practices.md` and `discovered-rules.md`. How should this Practices Discovery result proceed?
+Should installer work also normalize the repository into a MECE workspace package layout?
 
-A. Approve — Promote the drafted practices/rules and continue to Requirements Analysis
-B. Edit-then-approve — Revise the drafts first, then return to this gate
-C. Reject and rewrite — Discard the drafts and rerun discovery/interview
+A. Staged layout — add `packages/setup/` now, keep existing `core/` and `harness/` in place, and explicitly defer full repo re-layout to a separate refactor
+B. Full workspace layout — move framework source into package-owned directories, for example `packages/framework/{core,harness,dist,scripts}` plus `packages/setup/`
+C. Top-level domain layout — avoid `packages/` for now and add `setup/` beside existing `core/`, `harness/`, `dist/`, and `scripts/`
+D. Root package — convert the root `package.json` into the npm package
 X. Other (please specify)
 
-[Answer]: A. Approve — user said "続けて" on 2026-07-07T02:41:55Z gate
+[Answer]: A. Staged layout — add `packages/setup/` now, keep existing `core/` and `harness/` in place, and explicitly defer full repo re-layout to a separate refactor
 
-## Q2. Walking skeleton stance
+## Q2. Testing posture and coverage floor
 
-For this installer intent, should the first Construction Bolt be handled as a gated walking-skeleton slice?
+What quality floor should installer work use?
 
-A. Yes — Gate the first minimal end-to-end installer slice before broader implementation
-B. No — Treat installer implementation like any other brownfield incremental change
-C. Decide later — Revisit when units are generated
+A. Coverage registry + ratchet — require `covers:` registry entries and ratchet checks for installer units; do not add a line coverage threshold
+B. 80% line coverage — add a numeric line coverage threshold for installer code
+C. Hybrid — require registry/ratchet now and add line coverage later
+D. Defer — decide in build-and-test
 X. Other (please specify)
 
-[Answer]: A. Yes — covered by approval of the drafted practices on 2026-07-07T02:41:55Z
+[Answer]: A. Coverage registry + ratchet — require `covers:` registry entries and ratchet checks for installer units; do not add a line coverage threshold; CI must include a blocking gate for registry freshness/ratchet and installer smoke/unit/integration tests
+
+## Q3. Release and deployment practice
+
+How should npm/GitHub release operations be treated for the installer?
+
+A. Manual approval release — PR CI blocks merges; production publish happens from tag/Release with human approval
+B. Fully automated release — merge to main can publish without an extra human release gate
+C. Manual-only release — no release workflow yet; humans publish locally after checks
+D. Defer — decide in CI/deployment-pipeline stages
+X. Other (please specify)
+
+[Answer]: A. Manual approval release — release is triggered from GitHub Actions via `workflow_dispatch`; normally release/publish from the latest stable tag
+
+## Q4. Security and supply-chain gates
+
+Which security controls should be blocking for installer-related PRs?
+
+A. Deterministic PR gates — add package dry-run, installer smoke/integration, dependency audit/OSV, and secret scan as blocking checks; provenance/SBOM at release
+B. Advisory only — run security checks as warnings, not blockers
+C. Release-only — keep PR checks as-is and add security controls only at release
+D. Defer — decide in NFR/security stages
+X. Other (please specify)
+
+[Answer]: A. Deterministic PR gates — add package dry-run, installer smoke/integration, dependency audit/OSV, and secret scan as blocking checks; provenance/SBOM at release
+
+## Q5. User-facing CLI style and safety
+
+What should the installer CLI default behavior be?
+
+A. Human-readable CLI + safety-first writes — stderr for users, structured internals, non-interactive conflicts fail unless explicit force/backup policy is provided
+B. JSON-first CLI — match core workflow tools and emit JSON envelopes by default
+C. Interactive-first CLI — prompt users to resolve conflicts whenever possible, even if automation is harder
+D. Defer — decide in requirements-analysis
+X. Other (please specify)
+
+[Answer]: A. Human-readable CLI + safety-first writes — stderr for users, structured internals, non-interactive conflicts fail unless explicit force/backup policy is provided

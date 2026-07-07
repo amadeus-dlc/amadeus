@@ -1,0 +1,33 @@
+{
+  "stage_slug": "units-generation",
+  "selections": [
+    {
+      "candidate_id": "c1",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "Units Generation では Bolt 順序・critical path・経済的優先度を決めず、Construction と Delivery Planning が参照する unit dependency topology のみを定義する"
+    },
+    {
+      "candidate_id": "c2",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "Must 要件を持つ CI、manual release、README/docs は runtime feature でなくても Units Generation の support units として同じ DAG に含める"
+    },
+    {
+      "candidate_id": "c4",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "installer の unit 分解は layer units ではなく capability-slice units を優先し、hexagonal package 内の必要 layer を unit ごとにまたいでユーザー価値と検証可能性を保つ"
+    },
+    {
+      "candidate_id": "c5",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "installer の Units Generation では細分化しすぎず、medium-sized units で safety、CI、release、docs を落とさない粒度にする"
+    }
+  ]
+}

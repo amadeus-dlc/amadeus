@@ -1,0 +1,26 @@
+{
+  "name": "@amadeus-dlc/setup",
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Bun-first installer package shell for Amadeus DLC workspace harness setup.",
+  "license": "MIT OR Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/amadeus-dlc/amadeus.git",
+    "directory": "packages/setup"
+  },
+  "bin": {
+    "amadeus-setup": "./bin/amadeus-setup.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "README.md"
+  ],
+  "scripts": {
+    "check:metadata": "bun src/maintainer/package-check.ts"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}

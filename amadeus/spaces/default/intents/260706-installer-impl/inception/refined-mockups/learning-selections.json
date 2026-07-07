@@ -1,0 +1,33 @@
+{
+  "stage_slug": "refined-mockups",
+  "selections": [
+    {
+      "candidate_id": "c1",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "CLI product の refined mockups は GUI 画面を無理に作らず、terminal transcript、状態表、interaction spec として表現する"
+    },
+    {
+      "candidate_id": "c5",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "UI component specification template は、GUI がない CLI/DX surface では CLI interaction component specification に適応してよい"
+    },
+    {
+      "candidate_id": "c6",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "CLI/DX mockups は rich TTY 表現より plain-text canonical output を優先し、CI logs・screen readers・snapshot tests を同じ出力で検証できるようにする"
+    },
+    {
+      "candidate_id": "c7",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "インストーラや配布機能の UX artifacts では、end user だけでなく maintainer と CI owner の developer-visible workflow も mockup coverage に含める"
+    }
+  ]
+}

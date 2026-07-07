@@ -1,0 +1,40 @@
+{
+  "stage_slug": "delivery-planning",
+  "selections": [
+    {
+      "candidate_id": "c1",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "Delivery Planning では team practices と team formation の合意に従い、Bolt 1 を walking skeleton として必ず人間ゲートに通す"
+    },
+    {
+      "candidate_id": "c2",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "Stage 2.7 の unit DAG は topology、Stage 2.8 は economic sequencing として扱い、thin walking skeleton は U1〜U5 を薄く貫通する Bolt として定義する"
+    },
+    {
+      "candidate_id": "c3",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "installer runtime 実装は外部依存なしで mockable にし、npm token、GitHub environment protection、publish 権限は release Bolt の gated external dependency として分離する"
+    },
+    {
+      "candidate_id": "c5",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "Delivery Planning では 1 Unit per Bolt を機械的に採用せず、end-to-end risk を先に検証する thin walking skeleton と後続 bundled Bolts を優先する"
+    },
+    {
+      "candidate_id": "c6",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "ソロメンテナ体制では最大並列化よりも skeleton gate 後の限定的並列化を優先し、autonomy は Construction ladder prompt で改めて選択する"
+    }
+  ]
+}

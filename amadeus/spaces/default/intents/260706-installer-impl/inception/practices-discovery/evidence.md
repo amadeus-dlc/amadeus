@@ -3,42 +3,47 @@
 ## Sources Scanned
 
 - `amadeus/spaces/default/codekb/amadeus/*.md`
-- `amadeus/spaces/default/memory/{org,team,project}.md`
+- `amadeus/spaces/default/memory/{team,project}.md`
 - `amadeus/spaces/default/memory/phases/inception.md`
-- `package.json`
-- `biome.json`
-- `.github/workflows/ci.yml`
-- `git log --oneline --decorate`
-- `core/`, `harness/`, `scripts/`, `tests/` file layout
+- `amadeus/spaces/default/intents/260706-installer-impl/amadeus-state.md`
+- `package.json`, `bun.lock`, `biome.json`, `.github/workflows/ci.yml`
+- `README.md`, `CHANGELOG.md`, `LICENSE-MIT`, `LICENSE-APACHE`
+- `core/tools/*.ts`, `scripts/package.ts`, `scripts/promote-self.ts`
+- `tests/`, `tests/run-tests.ts`, `tests/.coverage-registry.json`, `tests/.coverage-ratchet.json`
+- Git history and branch/PR evidence, including PR #608 (`https://github.com/amadeus-dlc/amadeus/pull/608`)
 
 ## Pipeline & Deployment Findings
 
-- Branch history shows recent work landing through Pull Requests into `main` (`#601` through `#606`), with short topic branches such as `ci/github-actions` and `chore/amadeus-installer-impl-progress`.
-- Current HEAD is `a8921e0c`. The previous codekb statement that `.github/workflows` was absent is stale: `.github/workflows/ci.yml` now exists and runs on `push` to `main` plus all pull requests.
-- CI installs Bun `1.3.13`, then runs typecheck, Biome lint, `dist:check`, `promote:self:check`, and `tests/run-tests.sh --ci`.
-- Deployment is not infrastructure deployment. Release readiness is distribution/npm readiness: generated `dist/<harness>/` parity, self-install parity, and test suite health.
+Branch history and team memory support a GitHub Flow / trunk-based practice: short-lived branches target `main` through Pull Requests. The current repository has CI at `.github/workflows/ci.yml`, but no publish workflow, release automation, CodeQL/Semgrep/Gitleaks/Trivy/SBOM/SLSA configuration, or environment topology for dev/staging/prod service deployment.
+
+For this intent, "deployment" means package and release distribution rather than infrastructure rollout. The affirmed release practice is a manually triggered GitHub Actions release (`workflow_dispatch`) that normally publishes from the latest stable tag.
 
 ## Quality Findings
 
-- `package.json` exposes the expected contributor validation commands: `typecheck`, `lint`, `check`, `dist:check`, and `promote:self:check`.
-- Tests are organized as smoke, unit, integration, and e2e tiers under `tests/`, with `tests/run-tests.sh --ci` used by CI.
-- `biome.json` disables formatting, enables linting, excludes `dist/**`, and applies explicit rule overrides for `tests/**`, `core/tools/**`, `harness/**`, and `scripts/**`.
-- Known risk from earlier reverse engineering remains relevant: historical known-failure baselines can make "all green" an unreliable shorthand unless the exact test profile and expected baseline are named.
+CI currently runs Bun install with frozen lockfile, typecheck, Biome lint, `dist:check`, `promote:self:check`, and smoke+unit+integration tests. Test execution is Bun-based, and release-level e2e is heavier than the default CI profile.
+
+The repository does not enforce line coverage percentage. The effective evidence-based coverage practice is `covers:` metadata, `tests/.coverage-registry.json`, and ratchet checks. The user affirmed that installer work should follow this registry/ratchet model, with CI blocking on registry freshness/ratchet plus installer smoke/unit/integration tests.
 
 ## Developer Practice Findings
 
-- The source/distribution split is stable: implementation changes belong in `core/` or `harness/<name>/`; `dist/` is generated output and committed as a parity artifact.
-- Framework files consistently use the `amadeus-` prefix for tools, hooks, agents, and sensors.
-- Tools and hooks are TypeScript files executed by Bun directly; executable bits are not required by convention.
-- The package is dev-only (`private: true`) today, while the intent goal is an npm setup installer. Installer design must preserve the shipped framework's user-side premise that Bun is the only runtime requirement.
+The repository is a TypeScript/Bun modular monolith with `core/` as the harness-neutral source of truth, `harness/<name>/` as harness-specific surfaces, `scripts/package.ts` as distribution producer, `dist/<harness>/` as committed generated output, and `scripts/promote-self.ts` as repo-local dogfood promotion.
+
+The user challenged the initial `packages/setup/` proposal as non-MECE because it would place one package under `packages/` while `core/` and `harness/` remain top-level. The affirmed resolution is staged: add `packages/setup/` now, keep existing framework paths stable, and explicitly defer full repo-layout normalization to a separate refactor.
 
 ## DevSecOps Findings
 
-- CI currently includes typecheck, lint, drift guards, and smoke+unit+integration tests. No dedicated SAST, dependency vulnerability, secret scanning, or SBOM generation was found in the scanned workflow.
-- The dependency surface is intentionally small and dev-only: `typescript`, `bun-types`, `@anthropic-ai/claude-agent-sdk`, `node-pty`, and `@xterm/headless`.
-- For this installer intent, the main supply-chain concern is not application runtime exposure but package publication integrity: generated assets, version metadata, package contents, and install-time behavior must be deterministic and auditable.
+The current supply-chain strengths are frozen lockfile install and deterministic drift guards. Current gaps include no configured security scanner workflow, weakly pinned `bunx` lint tooling, and publish metadata mismatch in root `package.json` (`private: true`, dev-only package name, stale repository, and license mismatch with the checked-in MIT/Apache license files).
+
+The user affirmed deterministic installer PR gates: package dry-run, installer smoke/integration, dependency audit or OSV, and secret scan should block installer PRs. SBOM/provenance belongs in the release workflow.
 
 ## Asked vs. Inferred
 
-- Inferred from evidence: branch flow, CI gates, distribution parity rules, code style, and current test posture.
-- Proposed for human affirmation at the gate: treating the first installer Bolt as a gated walking-skeleton slice even though the codebase is brownfield, because installer behavior is a new user-facing distribution path.
+Inferred from evidence: PR-based `main` flow, existing CI gates, generated distribution parity, source/distribution boundaries, test runner shape, and the lack of existing publish/security automation.
+
+Asked and answered through grilling:
+
+1. Repository package boundary: staged `packages/setup/` now; full repo re-layout deferred.
+2. Testing posture: coverage registry + ratchet, with CI blocking on registry and installer tests.
+3. Release practice: GitHub Actions `workflow_dispatch`, normally from latest stable tag.
+4. Security gates: deterministic checks block PRs; SBOM/provenance at release.
+5. CLI style: human-readable user output, structured internals, non-interactive conflicts fail unless explicit force/backup policy is provided.

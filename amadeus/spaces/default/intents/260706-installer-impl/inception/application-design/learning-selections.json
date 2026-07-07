@@ -1,0 +1,26 @@
+{
+  "stage_slug": "application-design",
+  "selections": [
+    {
+      "candidate_id": "c6",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "upgrade 設計では、manifest-installed target の `--harness` は optional とし、manifest-first detection を先に定義してから sentinel fallback と ambiguous harness の no-write/prompt policy を定義する"
+    },
+    {
+      "candidate_id": "c8",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "file apply と manifest write を含む設計では、manifest write の唯一の所有者と失敗分類を Application Design で固定し、apply 成功後の manifest-write-failed が future upgrade classification に与える影響を明記する"
+    },
+    {
+      "candidate_id": "c12",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Corrections",
+      "text": "component dependency diagram では code dependency と return/data flow を混同せず、hexagonal boundary では application service が ports に依存する形で循環依存を避ける"
+    }
+  ]
+}

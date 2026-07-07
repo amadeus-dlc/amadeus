@@ -12,7 +12,7 @@
     "promote:self": "bun scripts/promote-self.ts --apply",
     "promote:self:check": "bun scripts/promote-self.ts --check",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.tests.json",
-    "lint": "bunx @biomejs/biome check tests/",
+    "lint": "bunx @biomejs/biome check tests/ packages/setup/",
     "check": "bun run typecheck && bun run lint"
   },
   "description": "Dev-only tooling for the AIDLC framework — not part of the distributable. The shipped framework lives at dist/claude/.claude/ and is copied into user projects via `cp -r dist/claude/.claude/ your-project/.claude/` (see README.md). All framework hooks and tools run via bun without requiring this package; bun-types here only powers contributor LSP coverage.",

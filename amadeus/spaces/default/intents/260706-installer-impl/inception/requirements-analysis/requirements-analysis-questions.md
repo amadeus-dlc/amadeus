@@ -1,87 +1,99 @@
 # Requirements Analysis Questions
 
-> Stage: requirements-analysis / Intent: installer-impl / Created: 2026-07-07T02:45:34Z
+> Stage: requirements-analysis / Intent: `260706-installer-impl` / Recreated for grilling: 2026-07-07T03:57:00Z
 
-## Q1. プレフィックスなし共有ファイルの更新ポリシー
+## Q1. Runtime and invocation contract
 
-`.claude/settings.json`、`.codex/settings.toml` 相当、`CLAUDE.md` など、`amadeus-*` プレフィックスを持たないがフレームワークが管理する可能性のある共有ファイルは、`upgrade` の非破壊マージでどう扱うべきですか？
+Initial requirements previously said both `bunx @amadeus-dlc/setup` and `npx @amadeus-dlc/setup` must work, while the refreshed practices say installer should be Bun-first and Node compatibility should be a separate ADR. Which contract should this release require?
 
-A. 安全側 — 既存ファイルがある場合は自動上書きせず、差分レポートに「手動確認」として出す
-B. 管理リスト方式 — インストーラが管理対象リストを持ち、該当ファイルだけ構造的にマージまたは更新する
-C. force のみ — 通常 upgrade では触らず、`--force` のときだけ上書きする
-D. ハーネス別に分ける — claude/codex/kiro ごとに個別ルールを定義する
+A. Bun-first only — require `bunx @amadeus-dlc/setup`; publish to npm, but do not require `npx`/Node execution in this release
+B. Bun-first with best-effort npx — require Bun behavior; allow `npx` only if the installed bin can locate/use Bun and fail clearly otherwise
+C. Full bunx + npx support — require the installer implementation to run under both Bun and Node/npm in this release
+D. Defer Node compatibility — remove `npx` from must-have requirements and revisit in a dedicated compatibility ADR
 X. Other (please specify)
 
-[Answer]: X. Other — 想定した md5 値と相違なければ上書きしてよい。変わっている場合は上書きできないため、`$namefile.$timestamp.bk` で退避してからコピーする。`$timestamp` はコピーごとの日時ではなくインストール時の日時であり、同一インストール内のすべてのファイルで同じ日時にする。
+[Answer]: B. Bun-first with best-effort npx — require Bun behavior; allow `npx` only if the installed bin can locate/use Bun and fail clearly otherwise
 
-## Q2. 既定のバージョン解決
+## Q2. Repository layout requirement
 
-`bunx @amadeus-dlc/setup` または `npx @amadeus-dlc/setup` が取得する Amadeus 配布物の既定バージョンはどれにすべきですか？
+The refreshed practices selected a staged layout: add `packages/setup/` now, keep existing `core/`, `harness/`, `dist/`, and `scripts/` paths in place, and defer full repo layout normalization. How should requirements express this?
 
-A. 最新 GitHub Release / tag を取得する
-B. npm パッケージ自身のバージョンと同じ GitHub tag を取得する
-C. 明示 `--version` 必須にする
-D. 初回は最新、upgrade は導入済みメジャー系列の最新にする
+A. Make staged layout mandatory for this release and explicitly mark full repo re-layout out of scope
+B. Make full workspace normalization part of this release before implementing installer features
+C. Leave layout as a design-stage decision, with only the package name/bin required here
+D. Avoid `packages/` entirely and use top-level `setup/`
 X. Other (please specify)
 
-[Answer]: A. 最新 GitHub Release / tag を取得する
+[Answer]: A. Make staged layout mandatory for this release and explicitly mark full repo re-layout out of scope
 
-## Q3. `init` の既存ファイル衝突時の挙動
+## Q3. Release workflow contract
 
-新規導入 `init` で、導入先に対象ハーネスのディレクトリや同名ファイルが既に存在する場合、既定ではどう振る舞うべきですか？
+The refreshed practices selected GitHub Actions `workflow_dispatch`, normally from the latest stable tag. What should be required in this intent?
 
-A. 中断して差分/衝突一覧を表示し、`upgrade` または `--force` を案内する
-B. 非破壊で追加できるファイルだけ追加し、衝突ファイルはスキップする
-C. 対話式なら確認して続行、非対話なら中断する
-D. 常に `--force` なしでも上書きする
+A. Release workflow required — a manually triggered GitHub Actions workflow publishes from selected/latest stable tag
+B. Release docs only — document `workflow_dispatch` as future direction, but initial implementation only includes manual publish docs
+C. Publish automation out of scope — only installer code and README changes are required
+D. Fully automated tag release — pushing a stable tag automatically publishes without a manual button
 X. Other (please specify)
 
-[Answer]: C. 対話式なら確認して続行、非対話なら中断する
+[Answer]: A. Release workflow required — a manually triggered GitHub Actions workflow publishes from selected/latest stable tag
 
-## Q4. ネットワーク失敗・GitHub 取得失敗時の最小要件
+## Q4. Security and package validation gates
 
-GitHub tag archive 取得が失敗した場合、初回リリースで最低限必要な挙動はどれですか？
+Practices selected deterministic PR gates. Which checks must be explicit requirements for this release?
 
-A. 明確な原因分類と再実行案内のみでよい
-B. 1回だけ自動リトライし、それでも失敗したら原因分類を出す
-C. 複数回リトライ + exponential backoff まで実装する
-D. 代替 URL / mirror 指定フラグまで実装する
+A. Blocking PR checks for package dry-run, installer smoke/integration, dependency audit or OSV, secret scan, coverage registry/ratchet; SBOM/provenance in release workflow
+B. Only package dry-run and installer tests are required now; dependency/security scans later
+C. Only existing CI checks are required now; security gates move to NFR/security stages
+D. All release-grade controls including SBOM/provenance must block every PR
 X. Other (please specify)
 
-[Answer]: B. 1回だけ自動リトライし、それでも失敗したら原因分類を出す
+[Answer]: A. Blocking PR checks for package dry-run, installer smoke/integration, dependency audit or OSV, secret scan, coverage registry/ratchet; SBOM/provenance required in release workflow
 
-## Q5. 非対話モードの必須引数
+## Q5. Version source and installer resolver
 
-CI やスクリプトで非対話実行する場合、どの引数を必須にすべきですか？
+The release workflow normally publishes from the latest stable tag, while the installer resolver previously preferred latest GitHub Release then stable SemVer tag fallback. What should the runtime resolver do?
 
-A. `--harness` のみ必須。バージョンとターゲットは既定値を使う
-B. `--harness` と `--target` を必須。バージョンは既定値を使う
-C. `--harness`、`--target`、`--version` をすべて必須にする
-D. `--yes` があれば不足分は安全な既定値で補う
+A. GitHub Release first, stable SemVer tag fallback — keep previous behavior
+B. Stable SemVer tag first, GitHub Release metadata optional — align with tag-driven release button
+C. npm package version first — installer package version determines framework distribution version
+D. Explicit `--version` required for all non-interactive installs
 X. Other (please specify)
 
-[Answer]: B. `--harness` と `--target` を必須。バージョンは既定値を使う
+[Answer]: B. Stable SemVer tag first, GitHub Release metadata optional — align with tag-driven release button
 
-## Q6. 成功検証の下限
+## Q6. Conflict and backup contract
 
-インストーラが「成功」とみなすための導入後検証は、初回リリースではどこまで必要ですか？
+Practices selected human-readable CLI and non-interactive conflicts fail unless explicit force/backup policy is provided. How should `--force` behave?
 
-A. ファイル存在検証のみ — 選択ハーネスの必須ファイルが配置されたことを確認
-B. ファイル存在 + `/amadeus --doctor` 相当の起動前提チェック
-C. ファイル存在 + dist/self-install drift guard 相当のバイト一致検証
-D. ファイル存在 + 最小 `/amadeus --help` 実行確認
+A. Force still backs up changed/unknown shared files; it only bypasses prompts/collision aborts
+B. Force overwrites everything without backup
+C. Force is not supported in initial release
+D. Force is allowed only for `upgrade`, not `init`
 X. Other (please specify)
 
-[Answer]: B. ファイル存在 + `/amadeus --doctor` 相当の起動前提チェック
+[Answer]: A. Force still backs up changed/unknown shared files; it only bypasses prompts/collision aborts
 
-## Q7. npm 公開整備の範囲
+## Q7. Command naming
 
-初回リリースで npm 公開整備として必ず含める範囲はどれですか？
+Should the first-time setup command be named `install` instead of `init`?
 
-A. package metadata、bin、license/repository 修正、README/CHANGELOG 更新まで
-B. A に加えて npm publish 手順書まで
-C. B に加えて GitHub Actions での自動 publish まで
-D. package metadata と bin のみ。docs は後続に回す
+A. `install` and `upgrade` — use `amadeus-setup install` for first-time setup and `amadeus-setup upgrade` for existing installations
+B. `init` and `upgrade` — keep the previous `init` name for first-time setup
+C. `install` with `init` alias — document `install`, but keep `init` as a compatibility alias
+D. Defer — decide command naming in application-design
 X. Other (please specify)
 
-[Answer]: B. A に加えて npm publish 手順書まで
+[Answer]: A. `install` and `upgrade` — use `amadeus-setup install` for first-time setup and `amadeus-setup upgrade` for existing installations
+
+## Q8. Initial release scope boundary
+
+What is the release-blocking minimum for this intent after the refreshed practices and `install`/`upgrade` command naming?
+
+A. Installer package, install/upgrade, manifest, backup policy, verification, docs, CI gates, and manual release workflow
+B. Installer package, install only, docs, and basic tests; upgrade and release workflow later
+C. Installer package plus documentation only; no real target mutation until next intent
+D. Full installer plus complete repo workspace normalization
+X. Other (please specify)
+
+[Answer]: A. Installer package, install/upgrade, manifest, backup policy, verification, docs, CI gates, and manual release workflow
