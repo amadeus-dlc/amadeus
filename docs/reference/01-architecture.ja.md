@@ -151,10 +151,10 @@ graph LR
 
 ### 相互参照
 
-- [Agent System](05-agent-system.md) — エージェントファイル構造(左上セルの機構)。
-- [Knowledge System](10-knowledge-system.md) — `knowledge/` の2層構造。
-- [Stage Definition](15-stage-definition.md) — ステージフロントマター仕様(ハーネス機構のフォーマット)。
-- [Stage Protocol](04-stage-protocol.md) — ステージごとの実行ルール。
+- [Agent System](05-agent-system.ja.md) — エージェントファイル構造(左上セルの機構)。
+- [Knowledge System](10-knowledge-system.ja.md) — `knowledge/` の2層構造。
+- [Stage Definition](15-stage-definition.ja.md) — ステージフロントマター仕様(ハーネス機構のフォーマット)。
+- [Stage Protocol](04-stage-protocol.ja.md) — ステージごとの実行ルール。
 
 ## 実行モデル
 
@@ -266,7 +266,7 @@ dist/<harness>/        # GENERATED + committed: claude/.claude, kiro/.kiro,
                        #   codex/{.codex,.agents} — never hand-edited
 ```
 
-`core/` の `.ts` は変換なしでバイトコピーされます。ランタイムの `harnessDir()` シーム(`core/tools/amadeus-lib.ts`)は、実行時に出荷レイアウトからハーネスディレクトリを導出します — ハードコードされたリストではなく、ツール自身のパスからのオープンセットなので、新しいハーネスにここでの編集は不要です — そしてその rules-dir リネームは、`rulesSubdir()` シームが読む、生成された `tools/data/harness.json` にツリーごとに出荷されます。1セットのツールソースがすべてのハーネスで実行されます。[Porting to a New Harness](../harness-engineering/09-porting-to-a-new-harness.md) を参照。
+`core/` の `.ts` は変換なしでバイトコピーされます。ランタイムの `harnessDir()` シーム(`core/tools/amadeus-lib.ts`)は、実行時に出荷レイアウトからハーネスディレクトリを導出します — ハードコードされたリストではなく、ツール自身のパスからのオープンセットなので、新しいハーネスにここでの編集は不要です — そしてその rules-dir リネームは、`rulesSubdir()` シームが読む、生成された `tools/data/harness.json` にツリーごとに出荷されます。1セットのツールソースがすべてのハーネスで実行されます。[Porting to a New Harness](../harness-engineering/09-porting-to-a-new-harness.ja.md) を参照。
 
 ## ディレクトリ構造
 
@@ -378,7 +378,7 @@ dist/claude/.claude/
 
 ### ワークスペース: spaces と intents
 
-上のツリーは **エンジン** — ハーネス固有で、ユーザーが閲覧することはありません。エンジンが *ランタイムで読み書きする* すべては、プロジェクトルートの別の中立な `amadeus/` ディレクトリに存在し、2階層のコンテナとして構成されます: **space → intent**。(エンドユーザー向けの説明はユーザーガイドの [Spaces and Intents](../guide/03-spaces-and-intents.md) を参照。このセクションはエンジンが解決するデータモデルです。)
+上のツリーは **エンジン** — ハーネス固有で、ユーザーが閲覧することはありません。エンジンが *ランタイムで読み書きする* すべては、プロジェクトルートの別の中立な `amadeus/` ディレクトリに存在し、2階層のコンテナとして構成されます: **space → intent**。(エンドユーザー向けの説明はユーザーガイドの [Spaces and Intents](../guide/03-spaces-and-intents.ja.md) を参照。このセクションはエンジンが解決するデータモデルです。)
 
 ```
 amadeus/                                    # neutral, harness-independent, committed to git
@@ -426,11 +426,11 @@ amadeus/                                    # neutral, harness-independent, comm
 
 9. **最小限のルール** — ガードレール(合計約35行)のみが space メモリ層(`amadeus/spaces/<space>/memory/`、`.claude/rules/amadeus.md` の @-import スタブ経由でプルされる)に存在します。それ以外すべて(検証、ブラウンフィールドのセーフガード、監査フォーマット、適応パターン)は `knowledge/amadeus-shared/` に存在するか、SKILL.md/stage-protocol.md に埋め込まれています。ルールは常にロードされるため、これにより非 AI-DLC の会話でのコンテキスト肥大化を防ぎます。
 
-10. **自己学習ループ** — 人間がエージェントの振る舞いを修正すると、その修正は永続的な Rule になり得ます。§13 Learnings Ritual(ツール・アズ・アクター: `amadeus-learnings.ts` が表面化し永続化。ユーザーが確認する)は、確認された各学習をプラクティスとして space メモリ層 — `amadeus/spaces/<space>/memory/project.md`(デフォルト)、ワンクリックで `memory/team.md` へ昇格 — に書き込むか、Sensor をスキャフォールドし、次のワークフローのコンパイルで適用します。[Rule System](08-rule-system.md) を参照。
+10. **自己学習ループ** — 人間がエージェントの振る舞いを修正すると、その修正は永続的な Rule になり得ます。§13 Learnings Ritual(ツール・アズ・アクター: `amadeus-learnings.ts` が表面化し永続化。ユーザーが確認する)は、確認された各学習をプラクティスとして space メモリ層 — `amadeus/spaces/<space>/memory/project.md`(デフォルト)、ワンクリックで `memory/team.md` へ昇格 — に書き込むか、Sensor をスキャフォールドし、次のワークフローのコンパイルで適用します。[Rule System](08-rule-system.ja.md) を参照。
 
 11. **フェーズ境界検証** — トレーサビリティチェックがフェーズ遷移時に自動実行されます(Initialization->Ideation 自動進行、Ideation->Inception、Inception->Construction、Construction->Operation)。これにより、下流ステージが不完全な基盤の上に構築する前に、要件から設計へのリンク欠落、孤立した成果物、不整合を捕捉します。
 
-12. **フックベースの監査ログ** — Write/Edit 操作の PostToolUse フックが、成果物の作成と変更を intent の `audit/` シャードへ自動ログします。PreCompact フックがコンテキスト圧縮前に状態ファイル構造を検証します。SubagentStop フックがサブエージェント完了をログします。68イベントタクソノミー(`knowledge/amadeus-shared/audit-format.md` で定義。エミッターレジストリは [State Machine](12-state-machine.md) を参照)は事後分析を可能にします — 主要イベントには `STAGE_STARTED`、`STAGE_COMPLETED`、`DECISION_RECORDED`、`SCOPE_CHANGED`、`RULE_LEARNED` が含まれます。
+12. **フックベースの監査ログ** — Write/Edit 操作の PostToolUse フックが、成果物の作成と変更を intent の `audit/` シャードへ自動ログします。PreCompact フックがコンテキスト圧縮前に状態ファイル構造を検証します。SubagentStop フックがサブエージェント完了をログします。68イベントタクソノミー(`knowledge/amadeus-shared/audit-format.md` で定義。エミッターレジストリは [State Machine](12-state-machine.ja.md) を参照)は事後分析を可能にします — 主要イベントには `STAGE_STARTED`、`STAGE_COMPLETED`、`DECISION_RECORDED`、`SCOPE_CHANGED`、`RULE_LEARNED` が含まれます。
 
 13. **ネストした委譲なし** — コンダクター(SKILL.md)がすべてのエージェント Task 呼び出しを実行します。エージェントは互いを呼び出したりサブエージェントを起動したりしません。これにより委譲グラフはフラットでデバッグ可能に保たれます。
 
@@ -475,13 +475,13 @@ tests/
 | **Integration**(L2) | `tests/integration/` | コンポーネント間契約(スコープからステージへのマッピング、ステージ-エージェント相互チェック、プロトコル準拠、監査/runtime-graph の end-to-end)と、`claude` CLI または SDK を通じて駆動されるライブステージ/CLI ユーティリティ。ライブファイルは `claude` が不在のときクリーンにスキップします。 |
 | **E2E**(L3) | `tests/e2e/` | フルライフサイクルと worktree プリミティブ、加えて、実際の AskUserQuestion ゲートへの回答がディスク状態を進めることを証明するレンダリングターミナル(`tui-drive.ts`)ジャーニー。ライブジャーニーは `claude` + Bedrock 認証情報を要し、`AMADEUS_TUI_LIVE=1` でゲートされます。 |
 
-完全なテスト戦略、カバレッジレジストリ、テストの追加方法については、[Testing](09-testing.md) を参照。
+完全なテスト戦略、カバレッジレジストリ、テストの追加方法については、[Testing](09-testing.ja.md) を参照。
 
 ## 相互参照
 
-- [Orchestrator](03-orchestrator.md) — SKILL.md の詳細
-- [Stage Protocol](04-stage-protocol.md) — 振る舞いの契約
-- [Agent System](05-agent-system.md) — エージェント構造と設定
-- [Hooks and Tools](06-hooks-and-tools.md) — フック実装
-- [Knowledge System](10-knowledge-system.md) — 2層アーキテクチャ
-- [Diagrams](diagrams.md) — すべての Mermaid 図を一箇所に集約
+- [Orchestrator](03-orchestrator.ja.md) — SKILL.md の詳細
+- [Stage Protocol](04-stage-protocol.ja.md) — 振る舞いの契約
+- [Agent System](05-agent-system.ja.md) — エージェント構造と設定
+- [Hooks and Tools](06-hooks-and-tools.ja.md) — フック実装
+- [Knowledge System](10-knowledge-system.ja.md) — 2層アーキテクチャ
+- [Diagrams](diagrams.ja.md) — すべての Mermaid 図を一箇所に集約

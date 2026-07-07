@@ -4,12 +4,12 @@
 
 > **注:** これらの図は、関連するリファレンス各章にもインラインで埋め込まれています。このファイルは、すべての図を一箇所にまとめた統合インデックスとして機能します。以下の図における `<record>/` は、アクティブな intent の record ディレクトリ `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/` を指します。
 >
-> - 図 1 と 7: [Architecture](01-architecture.md)
-> - 図 8: [Orchestrator](03-orchestrator.md) -- Session Management セクション
-> - 図 9: [Orchestrator](03-orchestrator.md) -- Scope Routing セクション
-> - 図 10: [Knowledge System](10-knowledge-system.md)
-> - 図 11: [Stage Protocol](04-stage-protocol.md) -- Approval Gates セクション
-> - 図 12: [Orchestrator](03-orchestrator.md) -- State Tracking セクション
+> - 図 1 と 7: [Architecture](01-architecture.ja.md)
+> - 図 8: [Orchestrator](03-orchestrator.ja.md) -- Session Management セクション
+> - 図 9: [Orchestrator](03-orchestrator.ja.md) -- Scope Routing セクション
+> - 図 10: [Knowledge System](10-knowledge-system.ja.md)
+> - 図 11: [Stage Protocol](04-stage-protocol.ja.md) -- Approval Gates セクション
+> - 図 12: [Orchestrator](03-orchestrator.ja.md) -- State Tracking セクション
 
 ---
 
@@ -411,7 +411,7 @@ flowchart TD
 
 ## 9. スコープルーティング
 
-> スコープルーティングテーブル: [Orchestrator Reference -- Scope Mapping](03-orchestrator.md#scope-to-stage-mapping) を参照。
+> スコープルーティングテーブル: [Orchestrator Reference -- Scope Mapping](03-orchestrator.ja.md#scope-to-stage-mapping) を参照。
 
 ---
 

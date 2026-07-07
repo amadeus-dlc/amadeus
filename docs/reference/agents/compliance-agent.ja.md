@@ -73,7 +73,7 @@ Path: `amadeus/knowledge/amadeus-compliance-agent/` (space レベルの knowledg
 
 ## Cross-References
 
-- [Agent Reference Overview](README.md)
-- [Agent Guide: amadeus-compliance-agent](../../guide/agents/compliance-agent.md)
+- [Agent Reference Overview](README.ja.md)
+- [Agent Guide: amadeus-compliance-agent](../../guide/agents/compliance-agent.ja.md)
 - [Stage Documentation](../04-stages/)
 - Source: [`dist/claude/.claude/agents/amadeus-compliance-agent.md`](../../../dist/claude/.claude/agents/amadeus-compliance-agent.md)

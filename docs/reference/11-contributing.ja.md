@@ -31,13 +31,13 @@ docs/                # ドキュメント
   reference/         # 開発者リファレンス(内部でどう動くか)
 ```
 
-完全なアーキテクチャについては [reference/01-architecture.md](01-architecture.md) を参照してください。
+完全なアーキテクチャについては [reference/01-architecture.md](01-architecture.ja.md) を参照してください。
 
 ## 開発ワークフロー
 
 1. **`main` からフォークしてブランチを切る**
-2. **アーキテクチャを読む** -- [reference/01-architecture.md](01-architecture.md) は実行モデル、エージェント委譲、フックシステムを説明します
-3. **エントリポイントを理解する** -- 決定論的エンジン `core/tools/amadeus-orchestrate.ts`(`next` / `report`)がルーティングを所有し、コンダクター `harness/claude/skills/amadeus/SKILL.md` はそのディレクティブに従って動作する薄い転送ループです。正となるエンジン / ディレクティブ / コンダクター / swarm の契約については [The Skill System](17-skill-system.md) を参照してください
+2. **アーキテクチャを読む** -- [reference/01-architecture.md](01-architecture.ja.md) は実行モデル、エージェント委譲、フックシステムを説明します
+3. **エントリポイントを理解する** -- 決定論的エンジン `core/tools/amadeus-orchestrate.ts`(`next` / `report`)がルーティングを所有し、コンダクター `harness/claude/skills/amadeus/SKILL.md` はそのディレクティブに従って動作する薄い転送ループです。正となるエンジン / ディレクティブ / コンダクター / swarm の契約については [The Skill System](17-skill-system.ja.md) を参照してください
 4. **変更を加える** -- `core/` のハーネス中立ソース(tools, stages, agents, hooks, rules, knowledge)、または `harness/<name>/` のハーネス表層(オーケストレーター skill、settings)を編集します。その後 `npm run dist` を実行して `dist/` を再生成します — `dist/` を手編集してはいけません。ドリフトガード(`npm run dist:check` / `package.ts --check`)が CI を失敗させます
 5. **ドッグフーディング時はローカルに昇格する** -- `npm run promote:self` を実行して、生成されたハーネス出力からこのリポジトリのプロジェクトローカルな `.claude/`、`.codex/`、`.agents/`、`CLAUDE.md` をリフレッシュします。`npm run promote:self:check` がそのセルフインストールをドリフトガードします。`amadeus/spaces/default/memory/` は意図的に昇格されません — ワークスペースの memory は手編集される method ソース(practices-discovery と自己学習ループが実行時に書き込む)であり、promoter は決して上書きしません。composed-scope のランタイムデータも同様に保護されます: dist に存在しない `scopes/amadeus-<name>.md` は composer が作成した scope(保持され、orphan として削除されない)であり、`tools/data/scope-grid.json` はキーごとに比較・書き込みされるため、composed なエントリは残りつつ stock エントリのドリフトは引き続きチェックを失敗させます
 6. **テスト** -- 提出前に `bun tests/run-tests.ts` を実行します
@@ -69,11 +69,11 @@ bash tests/run-tests.sh --integration  # コンポーネント横断およびス
 bash tests/run-tests.sh --e2e          # ワークフロー、worktree、ターミナルのジャーニー
 ```
 
-完全なテスト戦略、スタブ、新しいテストの追加方法については [reference/09-testing.md](09-testing.md) を参照してください。
+完全なテスト戦略、スタブ、新しいテストの追加方法については [reference/09-testing.md](09-testing.ja.md) を参照してください。
 
 ## ユーティリティハンドラの追加
 
-> **監査イベントを追加する前に**、[State Machine](12-state-machine.md) を読んでください。この章はタクソノミー内のすべてのイベント、その発行元、そして「同一コミットルール」を列挙しています — コードと章のテーブルを同じ PR で更新してください。さもないとドリフトテストが失敗します。
+> **監査イベントを追加する前に**、[State Machine](12-state-machine.ja.md) を読んでください。この章はタクソノミー内のすべてのイベント、その発行元、そして「同一コミットルール」を列挙しています — コードと章のテーブルを同じ PR で更新してください。さもないとドリフトテストが失敗します。
 
 ユーティリティハンドラは 2 つのカテゴリに分かれます。
 
@@ -92,7 +92,7 @@ LLM 推論を必要としないハンドラ(テキストの出力、ファイル
 エージェントの推論から恩恵を受けるハンドラ(ファイルシステムのスキャン、意思決定)向け:
 1. **タスクトラッキング** -- 論理ステップごとに `TaskCreate` でタスクを作成し、作業の進行に応じて `TaskUpdate`(`in_progress` -> `completed`)で遷移させます。これが Claude Code のタスクサイドバーを駆動します。
 2. **ステータスラインの更新** -- アクティブな intent の `amadeus-state.md` が存在する場合、`Current Stage` を一時的に、実行中のユーティリティを表す値(例: `running health check`)に設定し、完了時に元の値を復元します。`amadeus-statusline.ts` フックがこのフィールドをターミナルのステータスバーのために読み取ります。
-3. **監査ログ** -- 適切なツールのサブコマンドを呼び出します(例: 内部で `appendAuditEntry` を呼ぶ `bun .claude/tools/amadeus-utility.ts <handler>`)。LLM のプロースから `**Event**:` の markdown ブロックを手書きしてはいけません — [State Machine: Forbidden patterns](12-state-machine.md) を参照してください。
+3. **監査ログ** -- 適切なツールのサブコマンドを呼び出します(例: 内部で `appendAuditEntry` を呼ぶ `bun .claude/tools/amadeus-utility.ts <handler>`)。LLM のプロースから `**Event**:` の markdown ブロックを手書きしてはいけません — [State Machine: Forbidden patterns](12-state-machine.ja.md) を参照してください。
 
 `intent-birth` ハンドラは完全に決定論的です: 3 つの init ステージ(workspace-scaffold、workspace-detection、state-init)すべてが単一の `amadeus-utility intent-birth` 呼び出しの中で実行されます。ウェルカムメッセージはセッション開始時に `settings.json` の `companyAnnouncements` を通じてレンダリングされ、ステージではありません。
 
@@ -158,11 +158,11 @@ LLM 推論を必要としないハンドラ(テキストの出力、ファイル
 
 ## ステージの追加
 
-ステージは、`core/amadeus-common/stages/<phase>/<slug>.md` 配下の、YAML フロントマターを持つ Markdown ファイルとして作成されます。コンパイラはフロントマターを `tools/data/stage-graph.json` に読み込み、ランナージェネレーターはコンパイル済みのステージリストからタイプ可能な `/amadeus-<slug>` skill を出力します。拡張性の契約は「ステージを追加するには、ステージファイルを書く」です — エンジンはコンパイル済みグラフからルーティングするため、登録にエンジンの編集は不要です。(完全なフィールドリファレンスと 3 コンパートメントの本文フォーマットは、ハーネスエンジニアガイドの [Anatomy of a Stage](../harness-engineering/01-anatomy-of-a-stage.md) と [Adding a Stage](../harness-engineering/02-adding-a-stage.md) に存在します。スキーマは [Stage Definition](15-stage-definition.md) です。)
+ステージは、`core/amadeus-common/stages/<phase>/<slug>.md` 配下の、YAML フロントマターを持つ Markdown ファイルとして作成されます。コンパイラはフロントマターを `tools/data/stage-graph.json` に読み込み、ランナージェネレーターはコンパイル済みのステージリストからタイプ可能な `/amadeus-<slug>` skill を出力します。拡張性の契約は「ステージを追加するには、ステージファイルを書く」です — エンジンはコンパイル済みグラフからルーティングするため、登録にエンジンの編集は不要です。(完全なフィールドリファレンスと 3 コンパートメントの本文フォーマットは、ハーネスエンジニアガイドの [Anatomy of a Stage](../harness-engineering/01-anatomy-of-a-stage.ja.md) と [Adding a Stage](../harness-engineering/02-adding-a-stage.ja.md) に存在します。スキーマは [Stage Definition](15-stage-definition.ja.md) です。)
 
 ### 手順
 
-1. **ステージファイルを書く** — `core/amadeus-common/stages/<phase>/<slug>.md` を作成します。フロントマターは `slug`、`phase`、`execution`/`condition`、`lead_agent` と任意の `support_agents`(エージェント slug で)、`mode`(`inline` または `subagent`)、`consumes` / `produces`(成果物ボキャブラリの名前)、`requires_stage`(順序付けのエッジ)、`scopes:` メンバーシップリスト、バインドする任意の `sensors:`、そして Unit ごとに反復する場合は `for_each` を宣言します。本文はステージの 3 コンパートメントを担います。完全なフィールド契約については [Stage Definition](15-stage-definition.md) を参照してください。
+1. **ステージファイルを書く** — `core/amadeus-common/stages/<phase>/<slug>.md` を作成します。フロントマターは `slug`、`phase`、`execution`/`condition`、`lead_agent` と任意の `support_agents`(エージェント slug で)、`mode`(`inline` または `subagent`)、`consumes` / `produces`(成果物ボキャブラリの名前)、`requires_stage`(順序付けのエッジ)、`scopes:` メンバーシップリスト、バインドする任意の `sensors:`、そして Unit ごとに反復する場合は `for_each` を宣言します。本文はステージの 3 コンパートメントを担います。完全なフィールド契約については [Stage Definition](15-stage-definition.ja.md) を参照してください。
 
 2. **グラフを再コンパイルする** — `bun .claude/tools/amadeus-graph.ts compile` が新しいフロントマターを `tools/data/stage-graph.json` に読み込み、`scopes:` タグを `tools/data/scope-grid.json` に転置します。`bun .claude/tools/amadeus-graph.ts compile --check` を実行して終了コード 0(ドリフトなし)を確認します。ステージは `bun .claude/tools/amadeus-orchestrate.ts next --stage <slug> --single` で直ちに実行可能です。
 
@@ -182,7 +182,7 @@ LLM 推論を必要としないハンドラ(テキストの出力、ファイル
 
 ### 自動的には検証されないもの
 
-- **コンパイラが認識しない新しいフロントマターキー。** スキーマが実装していないキーを求めることはフレームワークの変更です: それはデータを読むコードを編集するため、このレシピではなくエンジン/コンパイルパイプラインの経路をたどります。[Stage Definition](15-stage-definition.md) の予約キー名前空間は、将来の構造的拡張が予測可能に着地するために存在します。
+- **コンパイラが認識しない新しいフロントマターキー。** スキーマが実装していないキーを求めることはフレームワークの変更です: それはデータを読むコードを編集するため、このレシピではなくエンジン/コンパイルパイプラインの経路をたどります。[Stage Definition](15-stage-definition.ja.md) の予約キー名前空間は、将来の構造的拡張が予測可能に着地するために存在します。
 - **ドキュメントの列挙。** `docs/` にまたがるステージ数とスコープごとのプランテーブルは手で保守されます。同じ PR で更新してください(以下のドキュメントポリシーを参照)。
 
 ## エージェントの追加

@@ -67,6 +67,6 @@ Claude のマニフェストは最小限のリファレンスです(リネーム
 
 これで弧が閉じます: あなたはデータ面を形づくり(01–08章)、いまコアを新しい CLI にレンダリングしました。ここから:
 
-- 全体マップについては、[ハーネスエンジニアガイド概要](00-overview.md) に戻ってください。
-- 新しいハーネスは他のものと並んで **ユーザー向けの章** を得ます — 既存のものがどう読めるかは、User Guide の [Running on other harnesses](../guide/harnesses/README.md) ファミリーを参照してください。
-- 規範的なビルド契約(マニフェスト型、`emit` プラグイン API、`harnessDir()` シーム)は Developer Reference の [Architecture § Source vs distribution](../reference/01-architecture.md#source-vs-distribution-one-core-many-harnesses) に存在します。
+- 全体マップについては、[ハーネスエンジニアガイド概要](00-overview.ja.md) に戻ってください。
+- 新しいハーネスは他のものと並んで **ユーザー向けの章** を得ます — 既存のものがどう読めるかは、User Guide の [Running on other harnesses](../guide/harnesses/README.ja.md) ファミリーを参照してください。
+- 規範的なビルド契約(マニフェスト型、`emit` プラグイン API、`harnessDir()` シーム)は Developer Reference の [Architecture § Source vs distribution](../reference/01-architecture.ja.md#source-vs-distribution-one-core-many-harnesses) に存在します。

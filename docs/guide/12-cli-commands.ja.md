@@ -5,7 +5,7 @@
 > **呼び出しのプレフィックスはハーネスによって異なります。** Claude Code と Kiro IDE では
 > `/amadeus` と入力します。Codex CLI では `$amadeus`(または `/skills` → amadeus)です。以下のフラグと
 > 挙動はどちらでも同一で、変わるのはプレフィックスだけです。例では
-> `/amadeus` を使います。Codex では `$amadeus` に置き換えてください。[Codex CLI での実行](harnesses/codex-cli.md) を参照してください。
+> `/amadeus` を使います。Codex では `$amadeus` に置き換えてください。[Codex CLI での実行](harnesses/codex-cli.ja.md) を参照してください。
 
 ---
 
@@ -135,7 +135,7 @@ flowchart TD
 
 **挙動:** コンダクターが composer エージェントをディスパッチし、そのエージェントはあなたのタスク(またはスキャンレポート、または実行中ワークフローの状態)を読み、読み取り専用の `detect` スキャンを実行し、すべての SKIP に理由を付けた EXECUTE/SKIP グリッドを提案します。ゲートで承認、編集、または却下します。承認時: 既存スコープにマッチすれば直接生成され、カスタムグリッドは実際のスコープ(インストール済みツリー内の 2 ファイル)としてオーサリングされ、同じターンでそのスコープ上にワークフローが生成されます。進行中の提案は `recompose` 動詞を介して保留中ステージのサフィックスフリップとして反映されます(監査ロック下、strict 検証、`RECOMPOSED` を監査)。`--new-scope` は合成を強制し、`--report <path>` はトリアージ結果を intent にシードします。`/amadeus-compose` スキルは同じ経路への入力可能なショートカットです。ワークフロー途中では、チャットで単にそう言うこともできます(「market research をスキップできますか?」)。コンダクターは再構成リクエストを認識し、同じゲートと動詞を通してルーティングします。文字どおりの `compose` は不要です(Kiro と Codex では、文字どおりの動詞が文書化された信頼できる経路のままです)。
 
-完全なフローについては [スコープと深度 - 適応的コンポーザー](05-scopes-and-depth.md#the-adaptive-composer) を参照してください。
+完全なフローについては [スコープと深度 - 適応的コンポーザー](05-scopes-and-depth.ja.md#the-adaptive-composer) を参照してください。
 
 ---
 
@@ -149,7 +149,7 @@ flowchart TD
 /amadeus
 ```
 
-**挙動:** `amadeus-state.md` を読み、`.amadeus-recovery.md` で破損をチェックし、4 つの再開オプションを提示します。チェックポイントから再開、現在のステージをやり直す、ステージへジャンプ、または新規開始。詳細は [Session Management](11-session-management.md) を参照してください。
+**挙動:** `amadeus-state.md` を読み、`.amadeus-recovery.md` で破損をチェックし、4 つの再開オプションを提示します。チェックポイントから再開、現在のステージをやり直す、ステージへジャンプ、または新規開始。詳細は [Session Management](11-session-management.ja.md) を参照してください。
 
 状態ファイルが存在しない場合、フレームワークはこれを新しいワークフローとして扱い、スコープ/説明を尋ねます。
 
@@ -184,7 +184,7 @@ intent が扱うリポジトリの集合を `intents.json` の行に記録しま
 これらはエンジンがあなたのために実行する決定論的な `amadeus-utility intent-birth` ステップのフラグであり、
 あなたが入力する `/amadeus` フラグではありません。Construction 中、各 git
 操作(worktree、swarm、Bolt)は 1 つのリポジトリを対象とし、コンダクターは
-`--repo <name>` を渡してそれをアンカーします(intent が複数のリポジトリにまたがる場合のみ必須)。記録されたリポジトリのない intent は単一リポジトリのデフォルトです(git はワークスペース/プロジェクトディレクトリで実行)。[Artifacts Reference](14-artifacts-reference.md) を参照してください。
+`--repo <name>` を渡してそれをアンカーします(intent が複数のリポジトリにまたがる場合のみ必須)。記録されたリポジトリのない intent は単一リポジトリのデフォルトです(git はワークスペース/プロジェクトディレクトリで実行)。[Artifacts Reference](14-artifacts-reference.ja.md) を参照してください。
 
 ---
 
@@ -298,7 +298,7 @@ slug または番号で特定のステージへ直接ジャンプします。
 すべての実行可能なステージには、入力可能な 1 単語ランナー — `/amadeus-<slug>`、
 `/amadeus --stage <slug> --single` をパッケージ化したもの — も付属します。ランナーファミリー全体(スコープ
 ランナー、ステージランナー、`/amadeus-init`、セッションビュー)は
-[Skills and Runner Commands](17-skills.md) に文書化されています。
+[Skills and Runner Commands](17-skills.ja.md) に文書化されています。
 
 ---
 
@@ -383,7 +383,7 @@ slug または番号で特定のステージへ直接ジャンプします。
 - **Standard:** コンポーネントあたり 5-8 テスト、ユニット + 統合
 - **Comprehensive:** コンポーネントあたり 10-15 テスト、すべてのテストタイプ
 
-各レベルの詳細、デフォルトの挙動、一般的な組み合わせについては [スコープ、深度、テスト戦略](05-scopes-and-depth.md#the-3-test-strategy-levels) を参照してください。
+各レベルの詳細、デフォルトの挙動、一般的な組み合わせについては [スコープ、深度、テスト戦略](05-scopes-and-depth.ja.md#the-3-test-strategy-levels) を参照してください。
 
 **例:**
 
@@ -441,7 +441,7 @@ slug または番号で特定のステージへ直接ジャンプします。
 
 ### `amadeus-sensor` — センサーの検査と発火
 
-センサーは、ステージ出力への `Write` または `Edit` のたびに実行される決定論的なチェックです([Rules and the Learning Loop](09-rules-and-the-learning-loop.md) およびリファレンス [Sensor System](../reference/07-sensor-system.md) を参照)。PostToolUse フックがあなたのために発火します。このツールでは、それらを一覧表示、説明、手動発火できます。
+センサーは、ステージ出力への `Write` または `Edit` のたびに実行される決定論的なチェックです([Rules and the Learning Loop](09-rules-and-the-learning-loop.ja.md) およびリファレンス [Sensor System](../reference/07-sensor-system.ja.md) を参照)。PostToolUse フックがあなたのために発火します。このツールでは、それらを一覧表示、説明、手動発火できます。
 
 | サブコマンド | 何をするか |
 |------------|--------------|
@@ -484,7 +484,7 @@ bun .claude/tools/amadeus-sensor.ts fire required-sections \
 bun .claude/tools/amadeus-runtime.ts read requirements-analysis
 ```
 
-`runtime-graph.json` は gitignore されています。成果物の形状については [Artifacts Reference](14-artifacts-reference.md) を、完全なスキーマについては [Runtime Graph](../reference/13-runtime-graph.md) リファレンス章を参照してください。
+`runtime-graph.json` は gitignore されています。成果物の形状については [Artifacts Reference](14-artifacts-reference.ja.md) を、完全なスキーマについては [Runtime Graph](../reference/13-runtime-graph.ja.md) リファレンス章を参照してください。
 
 ### セッションスキル — ワークフローをレポート
 
@@ -496,9 +496,9 @@ bun .claude/tools/amadeus-runtime.ts read requirements-analysis
 | `/amadeus-replay` | 非同期レビュー向けの読みやすいセッションのナラティブ。ターミナルのみ |
 | `/amadeus-outcomes-pack` | チーム向けの引き継ぎドキュメント。`OUTCOMES.md` を書き出す |
 
-3 つとも読み取り専用 — ステージ前進なし、監査発火なし — で、すべての数値を `amadeus-runtime summary --json` から取得します。完全なウォークスルーは [Session Management § セッションスキル](11-session-management.md#session-skills) を参照してください。
+3 つとも読み取り専用 — ステージ前進なし、監査発火なし — で、すべての数値を `amadeus-runtime summary --json` から取得します。完全なウォークスルーは [Session Management § セッションスキル](11-session-management.ja.md#session-skills) を参照してください。
 
-4 つ目の読み取り専用スキル `/amadeus-grilling <file-or-topic>` は、プランや設計についての一度に 1 問の grilling インタビューを実行します — ワークフローは任意、ターミナルのみ。[インタラクションモード](07-interaction-modes.md) を参照してください。
+4 つ目の読み取り専用スキル `/amadeus-grilling <file-or-topic>` は、プランや設計についての一度に 1 問の grilling インタビューを実行します — ワークフローは任意、ターミナルのみ。[インタラクションモード](07-interaction-modes.ja.md) を参照してください。
 
 ---
 
@@ -522,14 +522,14 @@ bun .claude/tools/amadeus-runtime.ts read requirements-analysis
 
 **優先順位:** 明示的な CLI フラグ > キーワード検出 > `AMADEUS_DEFAULT_SCOPE` > ハードコードされたフォールバック。
 
-**効果の範囲:** ワークフロー初期化時のみ適用されます。intent の `amadeus-state.md` が存在すると、状態ファイルが正となります。完全なウォークスルーは [Customization § プロジェクトごとのデフォルトスコープ](13-customization.md#per-project-default-scope) を参照してください。
+**効果の範囲:** ワークフロー初期化時のみ適用されます。intent の `amadeus-state.md` が存在すると、状態ファイルが正となります。完全なウォークスルーは [Customization § プロジェクトごとのデフォルトスコープ](13-customization.ja.md#per-project-default-scope) を参照してください。
 
 ---
 
 ## 次のステップ
 
-- [Skills and Runner Commands](17-skills.md) — 入力可能な `/amadeus-<scope>` と `/amadeus-<stage>` ランナー、および `--single` の役割
-- [Session Management](11-session-management.md) — 再開オプションとステージジャンプの詳細
-- [スコープ、深度、テスト戦略](05-scopes-and-depth.md) — スコープ定義、ステージマッピング、テスト戦略レベル
-- [Troubleshooting](15-troubleshooting.md) — コマンドが期待どおりに動作しないとき
-- [Glossary](glossary.md) — コマンド、ユーティリティコマンド、スコープの定義
+- [Skills and Runner Commands](17-skills.ja.md) — 入力可能な `/amadeus-<scope>` と `/amadeus-<stage>` ランナー、および `--single` の役割
+- [Session Management](11-session-management.ja.md) — 再開オプションとステージジャンプの詳細
+- [スコープ、深度、テスト戦略](05-scopes-and-depth.ja.md) — スコープ定義、ステージマッピング、テスト戦略レベル
+- [Troubleshooting](15-troubleshooting.ja.md) — コマンドが期待どおりに動作しないとき
+- [Glossary](glossary.ja.md) — コマンド、ユーティリティコマンド、スコープの定義

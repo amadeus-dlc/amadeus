@@ -1,6 +1,6 @@
 # Developer Agent
 
-> **エージェント詳細解説** · [ユーザーガイド](../00-introduction.md) › [エージェント](../06-agents.md) › [詳細解説](README.md) · 技術リファレンス: [developer-agent](../../reference/agents/developer-agent.md)
+> **エージェント詳細解説** · [ユーザーガイド](../00-introduction.ja.md) › [エージェント](../06-agents.ja.md) › [詳細解説](README.ja.md) · 技術リファレンス: [developer-agent](../../reference/agents/developer-agent.ja.md)
 
 amadeus-developer-agent はシニアソフトウェア開発者です。アーキテクチャ設計とユニット仕様を本番品質のコードへと翻訳します。リバースエンジニアリングの際には、amadeus-architect-agent が統合する深いコードスキャンを実施します。
 

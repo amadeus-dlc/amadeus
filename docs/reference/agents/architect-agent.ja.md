@@ -80,7 +80,7 @@ Path: `amadeus/knowledge/amadeus-architect-agent/` (space レベルの knowledge
 
 ## Cross-References
 
-- [Agent Reference Overview](README.md)
-- [Agent Guide: amadeus-architect-agent](../../guide/agents/architect-agent.md)
+- [Agent Reference Overview](README.ja.md)
+- [Agent Guide: amadeus-architect-agent](../../guide/agents/architect-agent.ja.md)
 - [Stage Documentation](../04-stages/)
 - Source: [`dist/claude/.claude/agents/amadeus-architect-agent.md`](../../../dist/claude/.claude/agents/amadeus-architect-agent.md)

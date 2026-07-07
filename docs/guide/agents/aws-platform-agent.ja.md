@@ -1,6 +1,6 @@
 # AWS Platform Agent
 
-> **エージェント詳細解説** · [ユーザーガイド](../00-introduction.md) › [エージェント](../06-agents.md) › [詳細解説](README.md) · 技術リファレンス: [aws-platform-agent](../../reference/agents/aws-platform-agent.md)
+> **エージェント詳細解説** · [ユーザーガイド](../00-introduction.ja.md) › [エージェント](../06-agents.ja.md) › [詳細解説](README.ja.md) · 技術リファレンス: [aws-platform-agent](../../reference/agents/aws-platform-agent.ja.md)
 
 amadeus-aws-platform-agent は AWS ソリューションアーキテクトかつインフラエンジニアです。アプリケーションアーキテクチャを AWS サービスの選定、CDK/CloudFormation テンプレート、環境プロビジョニング戦略へと翻訳します。下すインフラ上の意思決定はすべて、コストを意識し、デフォルトでセキュアであり、AWS Well-Architected Framework に照らして検証されています。
 

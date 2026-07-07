@@ -69,7 +69,7 @@
 
 ## クロスリファレンス
 
-- [Agent Reference Overview](README.md)
-- [Agent Guide: amadeus-operations-agent](../../guide/agents/operations-agent.md)
+- [Agent Reference Overview](README.ja.md)
+- [Agent Guide: amadeus-operations-agent](../../guide/agents/operations-agent.ja.md)
 - [Stage Documentation](../04-stages/)
 - Source: [`dist/claude/.claude/agents/amadeus-operations-agent.md`](../../../dist/claude/.claude/agents/amadeus-operations-agent.md)

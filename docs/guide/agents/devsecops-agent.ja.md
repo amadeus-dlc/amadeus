@@ -1,6 +1,6 @@
 # DevSecOps Agent
 
-> **エージェント詳細解説** · [ユーザーガイド](../00-introduction.md) › [エージェント](../06-agents.md) › [詳細解説](README.md) · 技術リファレンス: [devsecops-agent](../../reference/agents/devsecops-agent.md)
+> **エージェント詳細解説** · [ユーザーガイド](../00-introduction.ja.md) › [エージェント](../06-agents.ja.md) › [詳細解説](README.ja.md) · 技術リファレンス: [devsecops-agent](../../reference/agents/devsecops-agent.ja.md)
 
 amadeus-devsecops-agent はセキュリティエンジニアです。セキュリティが最後に後付けされるのではなく、ライフサイクルのすべてのフェーズに組み込まれることを保証します。Ideation で特定されたコンプライアンス要件を受け取り、それらをセキュリティコントロール、脅威モデル、スキャンパイプライン、ランタイム監視として実装します。アプリケーションセキュリティ、クラウドセキュリティ、パイプラインセキュリティをカバーします。
 

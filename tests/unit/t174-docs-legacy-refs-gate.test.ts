@@ -26,8 +26,8 @@
 // token (a hyphen-led flag), never an `<word> init` shell command.
 
 import { describe, expect, test } from "bun:test";
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { dirname, join, normalize } from "node:path";
 import { REPO_ROOT } from "../harness/fixtures.ts";
 
 const DOCS_DIR = join(REPO_ROOT, "docs");
@@ -94,6 +94,19 @@ function listDocs(dir: string): string[] {
   return out;
 }
 
+function listJapaneseDocs(dir: string): string[] {
+  const out: string[] = [];
+  for (const name of readdirSync(dir)) {
+    const abs = join(dir, name);
+    if (statSync(abs).isDirectory()) {
+      out.push(...listJapaneseDocs(abs));
+    } else if (name.endsWith(".ja.md")) {
+      out.push(abs.slice(REPO_ROOT.length + 1).replace(/\\/g, "/"));
+    }
+  }
+  return out;
+}
+
 /** A surviving legacy-ref occurrence: a docs line carrying `amadeus-docs` OR a bare
  *  `--init` flag token (the retired amadeus command — NOT `git init`/`npm init`). */
 interface Occurrence {
@@ -128,6 +141,29 @@ function scanOccurrences(): Occurrence[] {
       const hasLearningsLog = /[a-z]+-learnings\.md/.test(line);
       if (hasAidlcDocs || hasInit || hasRulesDir || hasLearningsLog) {
         out.push({ file: rel, line: i + 1, text: line.trim() });
+      }
+    }
+  }
+  return out;
+}
+
+function scanJapaneseDocsEnglishLinks(): Occurrence[] {
+  const out: Occurrence[] = [];
+  const linkPattern = /\[[^\]\n]+\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
+  for (const rel of listJapaneseDocs(DOCS_DIR)) {
+    const body = readFileSync(join(REPO_ROOT, rel), "utf-8");
+    const lines = body.split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      for (const match of lines[i].matchAll(linkPattern)) {
+        const href = match[1];
+        if (/^(?:[a-z][a-z0-9+.-]*:|#|mailto:)/i.test(href)) continue;
+        const pathPart = href.split("#")[0];
+        if (!pathPart.endsWith(".md") || pathPart.endsWith(".ja.md")) continue;
+        const target = normalize(join(dirname(rel), pathPart));
+        const japaneseTarget = target.replace(/\.md$/, ".ja.md");
+        if (existsSync(join(REPO_ROOT, japaneseTarget))) {
+          out.push({ file: rel, line: i + 1, text: lines[i].trim() });
+        }
       }
     }
   }
@@ -169,5 +205,12 @@ describe("t174 docs legacy-ref allowlist gate (P9 — closed predicate)", () => 
       (e) => !(liveByFile.get(e.file)?.has(e.text.trim()) ?? false),
     );
     expect(stale.map((e) => `${e.file}  ${e.text}`)).toEqual([]);
+  });
+
+  test("Japanese docs link to Japanese docs when a translated target exists", () => {
+    const offenders = scanJapaneseDocsEnglishLinks();
+    expect(
+      offenders.map((o) => `${o.file}:${o.line}  ${o.text}`),
+    ).toEqual([]);
   });
 });

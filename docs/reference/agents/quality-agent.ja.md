@@ -71,7 +71,7 @@
 
 ## クロスリファレンス
 
-- [Agent Reference Overview](README.md)
-- [Agent Guide: amadeus-quality-agent](../../guide/agents/quality-agent.md)
+- [Agent Reference Overview](README.ja.md)
+- [Agent Guide: amadeus-quality-agent](../../guide/agents/quality-agent.ja.md)
 - [Stage Documentation](../04-stages/)
 - Source: [`dist/claude/.claude/agents/amadeus-quality-agent.md`](../../../dist/claude/.claude/agents/amadeus-quality-agent.md)

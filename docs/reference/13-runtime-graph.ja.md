@@ -2,7 +2,7 @@
 
 > 対象読者: Tier 2/3(チーム採用者、フレームワーク貢献者)。
 
-本章は、v0.5.0 milestone 8 で導入された workflow ごとの `runtime-graph.json` 成果物を文書化します — `stage-graph.json` のデータプレーンミラーであり、あらゆる承認ゲートで監査ログから実体化されます。[Plane Architecture](02-plane-architecture.md)(この成果物を動機づける control/data プレーンの分離)および [State Machine](12-state-machine.md)(その遷移が compile をトリガーするライフサイクル)へ相互リンクします。
+本章は、v0.5.0 milestone 8 で導入された workflow ごとの `runtime-graph.json` 成果物を文書化します — `stage-graph.json` のデータプレーンミラーであり、あらゆる承認ゲートで監査ログから実体化されます。[Plane Architecture](02-plane-architecture.ja.md)(この成果物を動機づける control/data プレーンの分離)および [State Machine](12-state-machine.ja.md)(その遷移が compile をトリガーするライフサイクル)へ相互リンクします。
 
 ---
 
@@ -227,7 +227,7 @@ compile は通常運用ではフック駆動です。手動呼び出しはテス
 
 ## 9. Why hook-driven, not LLM-tool-coupled
 
-以前のプラン改訂では、`handleApprove` / `handleAdvance` / `handleComplete --merge` の内側に `spawnSibling(..., "amadeus-runtime.ts compile", ...)` 呼び出しを挿入することが提案されました。そのアプローチは [Plane Architecture](02-plane-architecture.md) に文書化された load-bearing な信条に違反します:
+以前のプラン改訂では、`handleApprove` / `handleAdvance` / `handleComplete --merge` の内側に `spawnSibling(..., "amadeus-runtime.ts compile", ...)` 呼び出しを挿入することが提案されました。そのアプローチは [Plane Architecture](02-plane-architecture.ja.md) に文書化された load-bearing な信条に違反します:
 
 > 決定論が必要なところではツールを使う。知識が必要なところでは LLM/エージェントを使う。判断が必要なところでは人間を使う。
 
@@ -261,6 +261,6 @@ Bolt ごとの runtime-graph フラグメントファイルは `<worktree>/<reco
 
 ## Next Steps
 
-- **データプレーンがこの構造になっている理由** — `runtime-graph.json` を第2の真実のソースではなく `stage-graph.json` のミラーにする control/data プレーンの分離。[Plane Architecture](02-plane-architecture.md) を参照。
-- **compile をトリガーするライフサイクル** — その監査 emit が compile フックを駆動する workflow / phase / stage の遷移。[State Machine](12-state-machine.md) を参照。
-- **このグラフが導出される元の監査ログ** - 68 イベントの分類体系とエミッタレジストリ。[State Machine](12-state-machine.md) と User Guide の [State and Audit Trail](../guide/10-state-and-audit.md) を参照。
+- **データプレーンがこの構造になっている理由** — `runtime-graph.json` を第2の真実のソースではなく `stage-graph.json` のミラーにする control/data プレーンの分離。[Plane Architecture](02-plane-architecture.ja.md) を参照。
+- **compile をトリガーするライフサイクル** — その監査 emit が compile フックを駆動する workflow / phase / stage の遷移。[State Machine](12-state-machine.ja.md) を参照。
+- **このグラフが導出される元の監査ログ** - 68 イベントの分類体系とエミッタレジストリ。[State Machine](12-state-machine.ja.md) と User Guide の [State and Audit Trail](../guide/10-state-and-audit.ja.md) を参照。

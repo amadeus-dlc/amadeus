@@ -117,7 +117,7 @@ sequenceDiagram
 
 ### 各レイヤーが提供するもの
 
-- ルール(ステップ 1)は最初にロードされ、厳密加算型の 5 レイヤーチェーン(org → team → project → phase → stage)を通じて解決されます — 該当するすべてのルールがコンテキストに存在し、より広いレイヤーが上書きされることはなく、加算されるだけです。[ルールシステム](08-rule-system.md)を参照してください。
+- ルール(ステップ 1)は最初にロードされ、厳密加算型の 5 レイヤーチェーン(org → team → project → phase → stage)を通じて解決されます — 該当するすべてのルールがコンテキストに存在し、より広いレイヤーが上書きされることはなく、加算されるだけです。[ルールシステム](08-rule-system.ja.md)を参照してください。
 - フレームワーク方法論(ステップ 2〜3)はベースラインの振る舞いを提供します。
 - チームナレッジ(ステップ 4〜5)は組織固有のコンテキストを追加します。
 - 前ステージの成果物(ステップ 6)はワークフロー固有のコンテキストを提供します。
@@ -182,7 +182,7 @@ amadeus/knowledge/amadeus-quality-agent/company-testing-standards.md
 
 ## クロスリファレンス
 
-- [Architecture](01-architecture.md) -- 5 レイヤーモデルにおけるナレッジレイヤー
-- [Agent System](05-agent-system.md) -- エージェントのフロントマターと設定
-- [Stage Protocol](04-stage-protocol.md) -- エージェントペルソナのロードに関するセクション
-- [Hooks and Tools](06-hooks-and-tools.md) -- audit-format.md タクソノミー(共有ナレッジに同梱)
+- [Architecture](01-architecture.ja.md) -- 5 レイヤーモデルにおけるナレッジレイヤー
+- [Agent System](05-agent-system.ja.md) -- エージェントのフロントマターと設定
+- [Stage Protocol](04-stage-protocol.ja.md) -- エージェントペルソナのロードに関するセクション
+- [Hooks and Tools](06-hooks-and-tools.ja.md) -- audit-format.md タクソノミー(共有ナレッジに同梱)

@@ -2,7 +2,7 @@
 
 この章ではエージェントアーキテクチャを解説します。エージェントがどのように構造化・設定され、フレームワークによってロードされるか、そしてエージェントの追加や変更の方法を扱います。
 
-ユーザー向けのエージェント説明については、[ユーザーガイド -- エージェント](../guide/06-agents.md)を参照してください。
+ユーザー向けのエージェント説明については、[ユーザーガイド -- エージェント](../guide/06-agents.ja.md)を参照してください。
 
 ---
 
@@ -42,7 +42,7 @@ modelOverride: opus                 # opus for high-judgment work; sonnet for te
 | **Core Responsibilities** | 担当する各ステージでエージェントが行うこと |
 | **Stages Owned** | リードおよびサポートのステージ割り当て |
 | **Collaboration** | 受け取る相手 / 協働する相手 / 引き渡す相手 |
-| **Knowledge Loading** | 6ステップのロード順序([ナレッジシステム](10-knowledge-system.md)を参照) |
+| **Knowledge Loading** | 6ステップのロード順序([ナレッジシステム](10-knowledge-system.ja.md)を参照) |
 | **Key Principles** | エージェントの行動ガイドライン |
 
 ---
@@ -148,7 +148,7 @@ L = リード、S = サポート
 
 ## エージェントの追加方法
 
-エージェントの表示名と例示ナレッジファイルは、各エージェントの `.md` フロントマターにある `display_name` と `examples` フィールドが正典です — TypeScriptの編集は不要です。完全なレシピ(必須フロントマターフィールド、検証手順、何が自動的に検証され何が手動かの区別)については、[コントリビュート: エージェントの追加](11-contributing.md#adding-an-agent)を参照してください。手順の簡単なサマリーは以下のとおりです。
+エージェントの表示名と例示ナレッジファイルは、各エージェントの `.md` フロントマターにある `display_name` と `examples` フィールドが正典です — TypeScriptの編集は不要です。完全なレシピ(必須フロントマターフィールド、検証手順、何が自動的に検証され何が手動かの区別)については、[コントリビュート: エージェントの追加](11-contributing.ja.md#adding-an-agent)を参照してください。手順の簡単なサマリーは以下のとおりです。
 
 1. 必須フロントマター(`name`、`display_name`、`examples`、`description`、`disallowedTools`(`Task` を含む)、`modelOverride`)を持つ `core/agents/{name}-agent.md` を作成する。オプションの `tools:` allowlist は継承ツールセットを絞り込む。省略するとセッションのツールセット全体を継承する。`core/tools/amadeus-lib.ts` の `loadAgents()` が次回の呼び出しでファイルを検出する。
 2. `core/knowledge/{name}-agent/` にナレッジファイルを追加する
@@ -169,7 +169,7 @@ L = リード、S = サポート
 
 ## 相互参照
 
-- [アーキテクチャ](01-architecture.md) -- エージェント層を含む5層モデル
-- [ナレッジシステム](10-knowledge-system.md) -- ナレッジのロード順序
+- [アーキテクチャ](01-architecture.ja.md) -- エージェント層を含む5層モデル
+- [ナレッジシステム](10-knowledge-system.ja.md) -- ナレッジのロード順序
 - [エージェント技術リファレンス](agents/) -- エージェント別の技術詳細
-- [ステージプロトコル](04-stage-protocol.md) -- エージェントペルソナのロードルール
+- [ステージプロトコル](04-stage-protocol.ja.md) -- エージェントペルソナのロードルール

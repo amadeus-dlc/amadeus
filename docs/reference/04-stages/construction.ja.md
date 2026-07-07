@@ -33,7 +33,7 @@ Construction は AI-DLC 方法論における5フェーズのうち4番目です
 
 Construction は **Bolt ごと**に実行され、ステージ 2.8 の `bolt-plan.md`(Bolt
 シーケンス + walking-skeleton マーカー)とステージ 2.7 の依存 DAG によって駆動
-されます。[Bolt](../../guide/glossary.md) は、1つのユニットまたは依存関係でリンク
+されます。[Bolt](../../guide/glossary.ja.md) は、1つのユニットまたは依存関係でリンク
 された少数のユニット群に対する、ステージ 3.1–3.5 の1回のパスです。ステージ 3.6
 (Build and Test)と 3.7(CI Pipeline)は、全 Bolt にわたって最後に**1回だけ**実行
 されます。

@@ -4,7 +4,7 @@
 
 > **パス規約。** 以下の `<record>/` = アクティブな intent のレコードディレクトリ `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`。ここに per-intent の状態とランタイムファイルが存在します。
 
-この章は、すべての `/amadeus` 実行を駆動するオーケストレーションアーキテクチャの正規リファレンスです。「次は何か?」に答える決定論的な**エンジン**(`amadeus-orchestrate.ts`)、エンジンの答えに基づいて動作する薄い**コンダクター**(`skills/amadeus/SKILL.md`)、両者を結ぶ**型付きディレクティブ契約**、ランナージェネレーターが発行する**複数スキル**セット、どのステージが実行されるかを決める**スコープの形式**、そして並列 Construction 作業を収束させる**スウォーム**レフェリーを扱います。これは、`SKILL.md` の本体そのものがすべてのルーティングロジックを保持していた古い prose-orchestrator モデルを置き換えます。[Orchestrator](03-orchestrator.md)(コンダクター自身の章)、[Runtime Graph](13-runtime-graph.md)(エンジンとスウォームが読む execution-truth のミラー)、[State Machine](12-state-machine.md)(`report` がコミットする遷移)、[Hooks and Tools](06-hooks-and-tools.md)(Stop フックを含む決定論的な背骨)へ相互リンクします。
+この章は、すべての `/amadeus` 実行を駆動するオーケストレーションアーキテクチャの正規リファレンスです。「次は何か?」に答える決定論的な**エンジン**(`amadeus-orchestrate.ts`)、エンジンの答えに基づいて動作する薄い**コンダクター**(`skills/amadeus/SKILL.md`)、両者を結ぶ**型付きディレクティブ契約**、ランナージェネレーターが発行する**複数スキル**セット、どのステージが実行されるかを決める**スコープの形式**、そして並列 Construction 作業を収束させる**スウォーム**レフェリーを扱います。これは、`SKILL.md` の本体そのものがすべてのルーティングロジックを保持していた古い prose-orchestrator モデルを置き換えます。[Orchestrator](03-orchestrator.ja.md)(コンダクター自身の章)、[Runtime Graph](13-runtime-graph.ja.md)(エンジンとスウォームが読む execution-truth のミラー)、[State Machine](12-state-machine.ja.md)(`report` がコミットする遷移)、[Hooks and Tools](06-hooks-and-tools.ja.md)(Stop フックを含む決定論的な背骨)へ相互リンクします。
 
 ---
 
@@ -35,7 +35,7 @@
 | `error` | Yes | `directive.message` をそのまま表示し、STOP。回復したり取り繕ったりしない — メッセージはユーザー向けのエラーそのものです。 |
 | `done` | Yes | ワークフロー(または single-stage 実行)が完了した。完了サマリを提示し、STOP。 |
 | `parked` | Yes | ワークフローは後のセッションのために、クリーンなステージ間境界(`directive.stage`)でフロー途中で park された。park されたこととどう resume するか(`/amadeus --resume`)をユーザーに伝え、STOP。`Parked` マーカーがセットされている間(`amadeus-orchestrate park` によって書き込まれる)の素の `next` で発行される; ステージは前進しない。Stop フックは `parked` を terminal allow として扱うため、コンダクターは `done` に到達するためにステージをラバースタンプするのではなく park する(#367)。 |
-| `run-stage` | Yes | リードエージェントのペルソナと任意の `support_agents` をロードし、`directive.stage_file` を読み、ステージ本体を実行し、`produces` を書き、`directive.memory_path` にダイアリーを保持し、`directive.gate` で分岐する([Orchestrator](03-orchestrator.md) を参照)。解決されたルーティングフィールドをグラフノードからそのまま持ち込む: `lead_agent`、`support_agents`、`mode`、`gate`、`consumes`、`produces`、`rules_in_context`、`sensors_applicable`、`stage_file`。 |
+| `run-stage` | Yes | リードエージェントのペルソナと任意の `support_agents` をロードし、`directive.stage_file` を読み、ステージ本体を実行し、`produces` を書き、`directive.memory_path` にダイアリーを保持し、`directive.gate` で分岐する([Orchestrator](03-orchestrator.ja.md) を参照)。解決されたルーティングフィールドをグラフノードからそのまま持ち込む: `lead_agent`、`support_agents`、`mode`、`gate`、`consumes`、`produces`、`rules_in_context`、`sensors_applicable`、`stage_file`。 |
 | `ask` | Yes | `directive.question` を `AskUserQuestion` 経由でレンダリングし、次の `report` で `--user-input` を通じて人間の答えをフィードバックする。エンジン自体は決して `AskUserQuestion` を呼ばない — 人間のターンをコンダクターに委ねる。 |
 | `invoke-swarm` | Yes | エンジンが適格な Construction バッチをスウォームに付与した。コンダクターは `directive.units` のユニットをファンアウトし、収束ループを実行し、スウォームレフェリーに相談する(§6 を参照)。`autonomous` 付与の下での適格な Construction バッチに対してのみ発行される。 |
 | `dispatch-subagent` | No(engine-future プレースホルダ) | 指名されたステージをインラインではなく `Task` 呼び出しで実行*する予定*。今日は発行されない; 投機的に実装しない。 |
@@ -115,18 +115,18 @@ flowchart LR
 | `check <unit> --check-cmd <cmd> [--test-file <path>]` | ステートレスな単一ユニット判定: プロジェクト自身の check コマンドを実行(exit 0 = green、権威あるシグナル — ワーカーの自己申告は決して信頼されない)し、保護されたファイルを fork-git のベースラインと比較する anti-tamper を行う。`{converged, tampered, reason}` を表示し、genuinely converged の場合にのみ exit 0。 | なし(advisory; コンダクターのリトライ決定に情報を与える)。 |
 | `finalize --batch <n> --units <a,b,c> --claimed <a,b> --check-cmd <cmd> [--test-file <path>] [--reasons <unit>=<reason>,…]` | 権威あるゲート: どのマージよりも前に**すべての claimed ユニットで check を再実行**し(`--claimed` で名指しされたがディスク上では red のユニットはマージを拒否され、失敗エンベロープに入る — lying-conductor ガード)、その後 genuine passes の直列化された HOLD-MERGE のマージバック。exit 0(バッチが収束しマージされた)または 2(失敗エンベロープ)。 | `SWARM_UNIT_CONVERGED` / `SWARM_UNIT_FAILED` / `SWARM_BATON_RETURNED` / `SWARM_COMPLETED`。 |
 
-これら6つの `SWARM_*` イベントは 68-event 監査分類の一部です([State Machine](12-state-machine.md) を参照)。exit-2 エンベロープでは、コンダクターがバトンを取り戻します - 失敗は自律モードに関係なく常に停止し、人間を再エンゲージします。
+これら6つの `SWARM_*` イベントは 68-event 監査分類の一部です([State Machine](12-state-machine.ja.md) を参照)。exit-2 エンベロープでは、コンダクターがバトンを取り戻します - 失敗は自律モードに関係なく常に停止し、人間を再エンゲージします。
 
 **ドライバーの継ぎ目。** `AMADEUS_USE_SWARM=1` はインラインの Dynamic Workflow ドライバーを選択します(コンダクターが、その JS が per-unit パイプラインとイテレーションキャップを所有する `Workflow` を作成する); unset は subagent floor(1つのメッセージ内の N 個の並列 `Task` 呼び出し、ユニットごとに1つ)を選択します。`=1` だが Workflow ツールが利用不可の場合、コンダクターは floor へ**loud-degrade** し、`--degraded-from ultracode` を渡してレフェリーが `SWARM_DEGRADED` を発行するようにします。runaway backstop はツール内のキャップではありません - ハーネスの Stop フックの上限であり、この autonomous-Construction パスでは 8 ブロックです(§3)。
 
-**Bolt-DAG。** スウォームがファンアウトするバッチは、`runtime-graph.json` の `bolt_dag` ノード([Runtime Graph](13-runtime-graph.md) を参照)から来ます。これは units-generation の `unit-of-work-dependency.md` エッジブロックからパースされます。ノードは `units`(それぞれ `depends_on` リストを持つ)と `batches` — すべてのユニットの依存が先行するバッチによって満たされるトポロジカルレベルなので、バッチのユニットは並列にファンアウトできる — を持ちます。ノードは、有効なエッジブロックがディスク上に存在するときにのみ存在します; 欠落、不正、または循環したブロックはノードを完全に省略します(gate-time の required-sections センサーがそれらを上流でフラグします)。
+**Bolt-DAG。** スウォームがファンアウトするバッチは、`runtime-graph.json` の `bolt_dag` ノード([Runtime Graph](13-runtime-graph.ja.md) を参照)から来ます。これは units-generation の `unit-of-work-dependency.md` エッジブロックからパースされます。ノードは `units`(それぞれ `depends_on` リストを持つ)と `batches` — すべてのユニットの依存が先行するバッチによって満たされるトポロジカルレベルなので、バッチのユニットは並列にファンアウトできる — を持ちます。ノードは、有効なエッジブロックがディスク上に存在するときにのみ存在します; 欠落、不正、または循環したブロックはノードを完全に省略します(gate-time の required-sections センサーがそれらを上流でフラグします)。
 
 ---
 
 ## 次のステップ
 
-- **コンダクター自身の章** — 転送ループ、ゲートの儀式、学習の儀式を完全に。[Orchestrator](03-orchestrator.md) を参照。
-- **エンジンとスウォームが読む execution-truth の成果物** — `runtime-graph.json` とその `bolt_dag` ノード。[Runtime Graph](13-runtime-graph.md) を参照。
-- **`report` がコミットする遷移** - ワークフロー / フェーズ / ステージのマシンと 68-event 監査分類。[State Machine](12-state-machine.md) を参照。
-- **決定論的な背骨** — Stop フックと他のフレームワークフックおよびツール。[Hooks and Tools](06-hooks-and-tools.md) を参照。
-- **ランナーを日々使う** — タイプ可能な `/amadeus-<stage>` と `/amadeus-<scope>` コマンド。User Guide の [Skills and Runner Commands](../guide/17-skills.md) を参照。
+- **コンダクター自身の章** — 転送ループ、ゲートの儀式、学習の儀式を完全に。[Orchestrator](03-orchestrator.ja.md) を参照。
+- **エンジンとスウォームが読む execution-truth の成果物** — `runtime-graph.json` とその `bolt_dag` ノード。[Runtime Graph](13-runtime-graph.ja.md) を参照。
+- **`report` がコミットする遷移** - ワークフロー / フェーズ / ステージのマシンと 68-event 監査分類。[State Machine](12-state-machine.ja.md) を参照。
+- **決定論的な背骨** — Stop フックと他のフレームワークフックおよびツール。[Hooks and Tools](06-hooks-and-tools.ja.md) を参照。
+- **ランナーを日々使う** — タイプ可能な `/amadeus-<stage>` と `/amadeus-<scope>` コマンド。User Guide の [Skills and Runner Commands](../guide/17-skills.ja.md) を参照。
