@@ -42,9 +42,11 @@ every other structured question. This protocol never names a harness tool.
 2. **Formulate** — Build the next single question: a judgement question, or a
    confidence-tagged estimate confirmation (D4). Include the recommendation
    rationale in the question text and "(recommended)" on the first option (D2).
-3. **Append** — *(workflow only)* Append the question to the stage's questions
-   file with a blank `[Answer]:` tag **before presenting it** (the Stop hook's
-   human-wait convention), and log the pre-presentation `decision` audit event.
+3. **Append** — *(workflow only)* The questions file was created header-only in
+   `stage-protocol.md` §3 Step 2 (grilling never pre-authors a question set).
+   Append this dynamically-formulated question to it with a blank `[Answer]:` tag
+   **before presenting it** (the Stop hook's human-wait convention), and log the
+   pre-presentation `decision` audit event.
 4. **Present** — Present exactly one question through the annex (D1). If an
    estimate confirmation is rejected, demote it to a judgement question and
    re-present.

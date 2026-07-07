@@ -221,12 +221,26 @@ When a stage needs to ask the user questions:
 
 **The questions file is always the source of truth.** Regardless of how many questions a stage has, the flow is:
 
-**Step 1: Create the questions file** in the appropriate `<record>/` directory with full [Answer]: tag format:
-- Include options A-E as appropriate for each question
-- EVERY question MUST end with `X. Other (please specify)` as the final option — no exceptions
-- Leave all `[Answer]:` tags blank
+**Step 1: Offer the user a choice of interaction mode — BEFORE authoring any questions.** The chosen mode decides whether a questions file is pre-authored at all, so the choice comes first: do NOT create a pre-built questions file while the mode is still undecided.
 
-For multi-select questions (where user may choose more than one option), add "(select all that apply)" to the question text. The user writes multiple letters: `[Answer]: A, B, E`
+```question
+prompt: "This stage has ~[N] questions to work through. How would you like to answer them?"
+header: Questions
+multiSelect: false
+options:
+  - label: Guide me
+    description: Walk through each question interactively here
+  - label: Grill me
+    description: One question at a time, in depth — recommended answers included, until we reach a shared understanding
+  - label: I'll edit the file
+    description: I'll fill in the answers in the file directly
+  - label: Chat
+    description: Discuss freely — I'll extract decisions from our conversation
+```
+
+Estimate `[N]` from the depth guidance below (the actual questions are authored in Step 2, per the chosen mode). When the current stage's phase is Construction or Operation, append " (exceptional use in this phase)" to the Grill me description — questions in those phases are exceptional, not routine.
+
+Log the user's mode choice to `<record>/audit/<host>-<clone>.md` using the Question interaction log format.
 
 ### Depth-aware question generation
 
@@ -253,27 +267,15 @@ Stage files list **topic areas and example questions** — they are guidance, no
 - Follow-up questions are always justified regardless of depth — ambiguity must be resolved.
 - Contradiction detection and resolution remains MANDATORY at all depth levels.
 
-**How to apply**: When creating the questions file in Step 1, use the stage file's topic areas and examples as a starting point. Generate context-appropriate questions within the depth range. For Minimal, focus on the fewest questions that unblock artifact generation. For Comprehensive, proactively explore areas the user may not have considered.
+**How to apply**: When authoring the questions file in Step 2, use the stage file's topic areas and examples as a starting point. Generate context-appropriate questions within the depth range. For Minimal, focus on the fewest questions that unblock artifact generation. For Comprehensive, proactively explore areas the user may not have considered.
 
-**Step 2: Offer the user a choice of interaction mode:**
-```question
-prompt: "I've created [N] questions at `[file path]`. How would you like to answer them?"
-header: Questions
-multiSelect: false
-options:
-  - label: Guide me
-    description: Walk through each question interactively here
-  - label: Grill me
-    description: One question at a time, in depth — recommended answers included, until we reach a shared understanding
-  - label: I'll edit the file
-    description: I'll fill in the answers in the file directly
-  - label: Chat
-    description: Discuss freely — I'll extract decisions from our conversation
-```
+**Step 2: Author the questions file according to the chosen mode.** The questions file is always the decision record and the Stop-hook human-wait signal, but WHETHER it is pre-authored depends on the mode:
 
-When the current stage's phase is Construction or Operation, append " (exceptional use in this phase)" to the Grill me description — questions in those phases are exceptional, not routine (see "Depth-aware question generation" above).
+- **Guide me / I'll edit the file** → pre-author the full question set now. Create the file in the appropriate `<record>/` directory with full `[Answer]:` tag format: include options A-E as appropriate for each question, EVERY question ends with `X. Other (please specify)` as the final option (no exceptions), and leave all `[Answer]:` tags blank. Use the depth-aware generation guidance above.
+- **Chat** → create the file with only its header; write each `[Answer]:` as decisions are extracted from the conversation (Step 3c).
+- **Grill me** → do NOT pre-author. Create the file with only its header; grilling appends each dynamically-formulated question (blank `[Answer]:`) immediately before presenting it (Step 3d / `grilling-protocol.md` §2). Grilling never works from a pre-authored list.
 
-Log the user's mode choice to `<record>/audit/<host>-<clone>.md` using the Question interaction log format.
+For multi-select questions (where user may choose more than one option), add "(select all that apply)" to the question text. The user writes multiple letters: `[Answer]: A, B, E`
 
 **Step 3a: If "Guide me" (interactive mode):**
 - Present questions as structured questions in batches (batching limits are harness-specific — see the question-rendering annex)
