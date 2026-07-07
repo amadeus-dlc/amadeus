@@ -84,7 +84,7 @@ Utility handlers fall into two categories:
 
 ### Deterministic handlers (preferred)
 For handlers that require no LLM reasoning (print text, read/format files, check prerequisites, create directories):
-1. Add a subcommand to `core/tools/amadeus-utility.ts`
+1. Add a subcommand to `packages/framework/core/tools/amadeus-utility.ts`
 2. Dispatch from SKILL.md with a single Bash call: `bun .claude/tools/amadeus-utility.ts <subcommand>`
 3. No task tracking needed -- the script runs in under a second
 4. Handle audit logging inside the script via `appendAuditEntry` from `amadeus-audit.ts` (never hand-write `**Event**:` markdown blocks)
@@ -103,11 +103,11 @@ The `intent-birth` handler is fully deterministic: all three init stages (worksp
 
 ## Adding a Scope
 
-A scope is authored as a file (its identity) plus a per-stage membership tag. The identity lives in `core/scopes/amadeus-<name>.md`; the membership lives in each stage's frontmatter `scopes:` list under `core/amadeus-common/stages/`. Validation logic across `init`, `scope-change`, `resolve-env-scope`, `doctor`, and state tooling derives the list of valid scopes from the `.claude/scopes/*.md` files at runtime via `validScopes()` in `core/tools/amadeus-lib.ts`; the EXECUTE/SKIP grid is the transpose of the per-stage `scopes:` lists, compiled to `tools/data/scope-grid.json`. Adding a scope requires no TypeScript edits.
+A scope is authored as a file (its identity) plus a per-stage membership tag. The identity lives in `packages/framework/core/scopes/amadeus-<name>.md`; the membership lives in each stage's frontmatter `scopes:` list under `packages/framework/core/amadeus-common/stages/`. Validation logic across `init`, `scope-change`, `resolve-env-scope`, `doctor`, and state tooling derives the list of valid scopes from the `.claude/scopes/*.md` files at runtime via `validScopes()` in `packages/framework/core/tools/amadeus-lib.ts`; the EXECUTE/SKIP grid is the transpose of the per-stage `scopes:` lists, compiled to `tools/data/scope-grid.json`. Adding a scope requires no TypeScript edits.
 
 ### Steps
 
-1. **Create `core/scopes/amadeus-hotfix.md`** — the scope's identity. Frontmatter:
+1. **Create `packages/framework/core/scopes/amadeus-hotfix.md`** — the scope's identity. Frontmatter:
    - `name` (required): the scope name; must equal the filename stem.
    - `depth` (required): `Minimal` | `Standard` | `Comprehensive`.
    - `keywords` (optional): NL triggers for `/amadeus <freeform text>` auto-detection. Word-boundary matched, alphabetical-scope tie-break. Empty list opts out of inference.
@@ -131,11 +131,11 @@ A scope is authored as a file (its identity) plus a per-stage membership tag. Th
    Lean path for the urgent production patch — regression test and deploy, nothing else.
    ```
 
-2. **Tag the member stages** — in each stage that should run under `hotfix` (under `core/amadeus-common/stages/<phase>/`), add `hotfix` to its frontmatter `scopes:` list. A stage you don't tag is `SKIP` for the scope. The 3 initialization stages (`workspace-scaffold`, `workspace-detection`, `state-init`) must include it — they always run.
+2. **Tag the member stages** — in each stage that should run under `hotfix` (under `packages/framework/core/amadeus-common/stages/<phase>/`), add `hotfix` to its frontmatter `scopes:` list. A stage you don't tag is `SKIP` for the scope. The 3 initialization stages (`workspace-scaffold`, `workspace-detection`, `state-init`) must include it — they always run.
 
-3. **Recompile + regenerate the scope-table** — `bun .claude/tools/amadeus-graph.ts compile` transposes the `scopes:` tags into `tools/data/scope-grid.json`. Then `bun .claude/tools/amadeus-utility.ts scope-table` prints the canonical Markdown table; paste it between the `<!-- BEGIN: compiled ... -->` / `<!-- END: compiled ... -->` markers in `harness/claude/skills/amadeus/SKILL.md`. Run `bun .claude/tools/amadeus-graph.ts compile --check` and `bun .claude/tools/amadeus-utility.ts scope-table --check` to confirm exit 0 (no drift).
+3. **Recompile + regenerate the scope-table** — `bun .claude/tools/amadeus-graph.ts compile` transposes the `scopes:` tags into `tools/data/scope-grid.json`. Then `bun .claude/tools/amadeus-utility.ts scope-table` prints the canonical Markdown table; paste it between the `<!-- BEGIN: compiled ... -->` / `<!-- END: compiled ... -->` markers in `packages/framework/harness/claude/skills/amadeus/SKILL.md`. Run `bun .claude/tools/amadeus-graph.ts compile --check` and `bun .claude/tools/amadeus-utility.ts scope-table --check` to confirm exit 0 (no drift).
 
-4. **Verify the scope resolves** — `bun core/tools/amadeus-utility.ts init --scope hotfix --project-dir /tmp/scope-smoke` should succeed and produce a state file with `Scope: hotfix`.
+4. **Verify the scope resolves** — `bun packages/framework/core/tools/amadeus-utility.ts init --scope hotfix --project-dir /tmp/scope-smoke` should succeed and produce a state file with `Scope: hotfix`.
 
 5. **Verify `doctor` accepts it as an env default** — `AMADEUS_DEFAULT_SCOPE=hotfix bun amadeus-utility.ts doctor` should report the env var as valid.
 
@@ -167,7 +167,7 @@ A stage is authored as a Markdown file with YAML frontmatter under `packages/fra
 
 ### Steps
 
-1. **Write the stage file** — create `core/amadeus-common/stages/<phase>/<slug>.md`. Frontmatter declares `slug`, `phase`, `execution`/`condition`, `lead_agent` and any `support_agents` (by agent slug), `mode` (`inline` or `subagent`), `consumes` / `produces` (artifact vocabulary names), `requires_stage` (ordering edges), the `scopes:` membership list, any `sensors:` to bind, and `for_each` if it iterates per Unit. The body carries the stage's three compartments. See [Stage Definition](15-stage-definition.md) for the full field contract.
+1. **Write the stage file** — create `packages/framework/core/amadeus-common/stages/<phase>/<slug>.md`. Frontmatter declares `slug`, `phase`, `execution`/`condition`, `lead_agent` and any `support_agents` (by agent slug), `mode` (`inline` or `subagent`), `consumes` / `produces` (artifact vocabulary names), `requires_stage` (ordering edges), the `scopes:` membership list, any `sensors:` to bind, and `for_each` if it iterates per Unit. The body carries the stage's three compartments. See [Stage Definition](15-stage-definition.md) for the full field contract.
 
 2. **Recompile the graph** — `bun .claude/tools/amadeus-graph.ts compile` reads the new frontmatter into `tools/data/stage-graph.json` and transposes the `scopes:` tags into `tools/data/scope-grid.json`. Run `bun .claude/tools/amadeus-graph.ts compile --check` to confirm exit 0 (no drift). The stage is runnable immediately via `bun .claude/tools/amadeus-orchestrate.ts next --stage <slug> --single`.
 
@@ -192,11 +192,11 @@ A stage is authored as a Markdown file with YAML frontmatter under `packages/fra
 
 ## Adding an Agent
 
-Agent metadata (display name, example knowledge files) is read from each agent's `.md` frontmatter under `core/agents/`. The `loadAgents()` helper in `core/tools/amadeus-lib.ts` discovers every `.md` file in that directory and derives the metadata map consumed by the statusline hook (to render the display name). Adding an agent requires no TypeScript edits.
+Agent metadata (display name, example knowledge files) is read from each agent's `.md` frontmatter under `packages/framework/core/agents/`. The `loadAgents()` helper in `packages/framework/core/tools/amadeus-lib.ts` discovers every `.md` file in that directory and derives the metadata map consumed by the statusline hook (to render the display name). Adding an agent requires no TypeScript edits.
 
 ### Steps
 
-1. **Create the agent file** — drop a new `core/agents/<slug>-agent.md` with the required frontmatter:
+1. **Create the agent file** — drop a new `packages/framework/core/agents/<slug>-agent.md` with the required frontmatter:
 
    ```yaml
    ---
@@ -214,13 +214,13 @@ Agent metadata (display name, example knowledge files) is read from each agent's
 
    The `name` field must match the filename stem exactly. `display_name` is the human-facing label used by the statusline. `examples` lists suggested knowledge filenames documented in the agent→examples table — they're suggestions for the user, not loaded at runtime and not written to disk.
 
-2. **Verify the agent is discovered** — `bun -e "import { loadAgents } from 'core/tools/amadeus-lib.ts'; console.log(loadAgents().find(a => a.slug === '<slug>-agent'));"` should print the new agent's metadata.
+2. **Verify the agent is discovered** — `bun -e "import { loadAgents } from './packages/framework/core/tools/amadeus-lib.ts'; console.log(loadAgents().find(a => a.slug === '<slug>-agent'));"` should print the new agent's metadata.
 
-3. **Verify intent birth creates the space knowledge dir** — `bun core/tools/amadeus-utility.ts intent-birth --scope poc --project-dir /tmp/agent-smoke` should create the empty space-level `amadeus/knowledge/` directory (a sibling of the space's `intents/`). Birth does not seed per-agent subdirectories or READMEs — the team creates `amadeus/knowledge/<slug>-agent/` itself when it has content.
+3. **Verify intent birth creates the space knowledge dir** — `bun packages/framework/core/tools/amadeus-utility.ts intent-birth --scope poc --project-dir /tmp/agent-smoke` should create the empty space-level `amadeus/knowledge/` directory (a sibling of the space's `intents/`). Birth does not seed per-agent subdirectories or READMEs — the team creates `amadeus/knowledge/<slug>-agent/` itself when it has content.
 
 4. **Verify the statusline renders** — seed a state file with `Active Agent: <slug>-agent` and invoke the statusline hook; the output should include the display name after the `--` separator.
 
-5. **Wire the agent into stages** — a new agent that should lead or support stages is named in each stage's frontmatter, in the `lead_agent` / `support_agents` fields of the stage `.md` files under `core/amadeus-common/stages/<phase>/`. Then run `bun .claude/tools/amadeus-graph.ts compile` (and `compile --check` as the drift guard) to regenerate `tools/data/stage-graph.json` from that frontmatter. Do not hand-edit `stage-graph.json` — it is the compiled artifact, and the next `compile` overwrites any manual change. This is separate from discovery — `loadAgents()` makes the agent visible; the stage frontmatter (compiled into the graph) makes it active.
+5. **Wire the agent into stages** — a new agent that should lead or support stages is named in each stage's frontmatter, in the `lead_agent` / `support_agents` fields of the stage `.md` files under `packages/framework/core/amadeus-common/stages/<phase>/`. Then run `bun .claude/tools/amadeus-graph.ts compile` (and `compile --check` as the drift guard) to regenerate `tools/data/stage-graph.json` from that frontmatter. Do not hand-edit `stage-graph.json` — it is the compiled artifact, and the next `compile` overwrites any manual change. This is separate from discovery — `loadAgents()` makes the agent visible; the stage frontmatter (compiled into the graph) makes it active.
 
 ### What validates automatically
 
@@ -233,9 +233,9 @@ Agent metadata (display name, example knowledge files) is read from each agent's
 
 ### What does NOT validate automatically
 
-- **Stage-graph participation**. Stage frontmatter references agents by slug in its `lead_agent` / `support_agents` fields, and `amadeus-graph.ts compile` carries those into `stage-graph.json`. Adding a new agent without naming it in any stage's frontmatter means the agent exists but never runs. Stage-graph schema validation (`core/tools/amadeus-stage-schema.ts`) is wired in: `amadeus-graph.ts compile` validates every stage's frontmatter (and `compile --check` is the CI drift guard), and `/amadeus --doctor` re-runs the same `validateStageFrontmatter` plus a "Graph references" check that every `lead_agent` / `support_agents` slug resolves.
+- **Stage-graph participation**. Stage frontmatter references agents by slug in its `lead_agent` / `support_agents` fields, and `amadeus-graph.ts compile` carries those into `stage-graph.json`. Adding a new agent without naming it in any stage's frontmatter means the agent exists but never runs. Stage-graph schema validation (`packages/framework/core/tools/amadeus-stage-schema.ts`) is wired in: `amadeus-graph.ts compile` validates every stage's frontmatter (and `compile --check` is the CI drift guard), and `/amadeus --doctor` re-runs the same `validateStageFrontmatter` plus a "Graph references" check that every `lead_agent` / `support_agents` slug resolves.
 - **Knowledge file existence**. `examples` is a list of suggested filenames documented in the agent→examples table — they're not created or validated. Users place the actual content in `amadeus/knowledge/<agent>/` (the space-level knowledge dir).
-- **Doc tables listing agents**. The Phase Participation matrix at `docs/reference/05-agent-system.md:119-131` and the agent→examples table at `core/knowledge/amadeus-shared/knowledge-readme-template.md:16-29` are maintained by hand. Update them in the same PR that adds the agent (see Documentation Policy below).
+- **Doc tables listing agents**. The Phase Participation matrix at `docs/reference/05-agent-system.md:119-131` and the agent→examples table at `packages/framework/core/knowledge/amadeus-shared/knowledge-readme-template.md:16-29` are maintained by hand. Update them in the same PR that adds the agent (see Documentation Policy below).
 - **`.claude/agents/<new-agent>.md` body content**. Only the frontmatter is parsed. The body prose (Core Responsibilities, Knowledge Loading sequence, etc.) is read by the agent itself when activated — write it to match the other 11 agent files' structure.
 
 ## Documentation Policy
