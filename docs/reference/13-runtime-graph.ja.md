@@ -1,5 +1,7 @@
 # Runtime Graph
 
+> 言語: [English](13-runtime-graph.md) | **日本語**
+
 > 対象読者: Tier 2/3(チーム採用者、フレームワーク貢献者)。
 
 本章は、v0.5.0 milestone 8 で導入された workflow ごとの `runtime-graph.json` 成果物を文書化します — `stage-graph.json` のデータプレーンミラーであり、あらゆる承認ゲートで監査ログから実体化されます。[Plane Architecture](02-plane-architecture.ja.md)(この成果物を動機づける control/data プレーンの分離)および [State Machine](12-state-machine.ja.md)(その遷移が compile をトリガーするライフサイクル)へ相互リンクします。

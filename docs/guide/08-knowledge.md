@@ -1,5 +1,7 @@
 # Knowledge
 
+> Languages: **English** | [日本語](08-knowledge.ja.md)
+
 AI-DLC uses a two-tier knowledge system that lets agents draw on both methodology expertise (shipped with the framework) and your team's specific standards (managed by you).
 
 ---

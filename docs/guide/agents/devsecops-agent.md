@@ -1,5 +1,7 @@
 # DevSecOps Agent
 
+> Languages: **English** | [日本語](devsecops-agent.ja.md)
+
 > **Agent deep dive** · [User Guide](../00-introduction.md) › [Agents](../06-agents.md) › [deep dives](README.md) · Technical reference: [devsecops-agent](../../reference/agents/devsecops-agent.md)
 
 The amadeus-devsecops-agent is your security engineer. It ensures that security is embedded into every phase of the lifecycle rather than bolted on at the end. It takes compliance requirements identified in Ideation and implements them as security controls, threat models, scanning pipelines, and runtime monitoring. It covers application security, cloud security, and pipeline security.

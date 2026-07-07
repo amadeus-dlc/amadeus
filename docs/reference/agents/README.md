@@ -1,5 +1,7 @@
 # Agent Reference
 
+> Languages: **English** | [日本語](README.ja.md)
+
 Technical reference for the 11 AI-DLC agents: configuration, stage ownership,
 collaboration patterns, and comparison data.
 

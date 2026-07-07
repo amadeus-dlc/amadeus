@@ -1,5 +1,7 @@
 # Orchestrator
 
+> Languages: **English** | [日本語](03-orchestrator.ja.md)
+
 Orchestration is split across two pieces. A deterministic **engine** (`amadeus-orchestrate.ts`, subcommands `next`/`report`/`park`) owns every between-stage decision - scope determination, stage routing, jump resolution, resume and init guards, gate status, and workflow completion - and emits a typed **directive** on each `next`. The **conductor** (`.claude/skills/amadeus/SKILL.md`, invoked via `/amadeus`) is a thin forwarding loop that acts on each directive - running the named stage, asking the human a question, fanning out a swarm - and reports the outcome with `report`. SKILL.md is not the control plane: the routing decisions live in the engine and the compiled data it reads (`tools/data/stage-graph.json`, `tools/data/scope-grid.json`), while SKILL.md owns execution quality inside the move the engine names.
 
 This chapter documents the workflow behaviour from the conductor's side — entry points, session management, scope-to-stage mapping, the stage execution and advancement protocol, and the deliberate deviations. For the engine internals — the `next`/`report` contract, the typed directive union, the conductor persona, plural skills, scope shape, and the swarm referee — see [Engine and Skill System](17-skill-system.md). For user-facing command usage, see the [User Guide -- CLI Commands](../guide/12-cli-commands.md).

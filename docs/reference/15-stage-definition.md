@@ -1,5 +1,7 @@
 # Stage Definition
 
+> Languages: **English** | [日本語](15-stage-definition.ja.md)
+
 This chapter documents the **file format** for AI-DLC stage definitions — the
 YAML frontmatter contract, the three-compartment body model, and the compile
 pipeline that turns those sources into `stage-graph.json`. It complements

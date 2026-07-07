@@ -1,5 +1,7 @@
 # AI-DLC Documentation
 
+> Languages: **English** | [日本語](README.ja.md)
+
 **AI-DLC is a methodology** — a structured, gated approach to AI-driven software
 development (defined by AWS). **This repository is its native, multi-harness
 implementation:** the methodology rendered as skills, agents, hooks, and tools

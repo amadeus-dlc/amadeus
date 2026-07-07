@@ -1,5 +1,7 @@
 # Codex CLI 上の AI-DLC
 
+> 言語: [English](codex-cli.md) | **日本語**
+
 `dist/codex/` は、OpenAI **Codex CLI** ハーネス向けの、フレームワークのハーネス
 ディストリビューションの 1 つです。1 つの決定論的なコア、多数のハーネス:
 エンジン、ステートマシン、監査ログ、グラフ、swarm レフェリー、learnings ゲートは

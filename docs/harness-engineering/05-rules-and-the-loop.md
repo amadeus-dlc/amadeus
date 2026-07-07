@@ -1,5 +1,7 @@
 # Rules and the Learning Loop
 
+> Languages: **English** | [日本語](05-rules-and-the-loop.ja.md)
+
 Rules are the standing decisions your team carries into every workflow — the
 "always do it this way" that you would otherwise re-explain at the start of each
 run. As a harness engineer you author them in two ways: by editing a rule file

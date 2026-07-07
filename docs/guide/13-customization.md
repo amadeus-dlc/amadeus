@@ -1,5 +1,7 @@
 # Customization
 
+> Languages: **English** | [日本語](13-customization.ja.md)
+
 AI-DLC is designed to adapt to your team's needs. This chapter covers settings overrides, scope configuration, stage customization, statusline, and tool permissions.
 
 > **Harness-specific config.** The harness-neutral customizations — scope

@@ -1,5 +1,7 @@
 # Anatomy of a Stage
 
+> Languages: **English** | [日本語](01-anatomy-of-a-stage.ja.md)
+
 A stage is the atom of the AI-DLC workflow — *what* happens at one step. Every other change a harness engineer makes builds on the stage file, so this is the chapter to read first. By the end you should be able to open any stage `.md` file, know who reads each part of it, and understand which fields you can change by editing the file versus which behavior is fixed by the framework's code.
 
 A stage file is a single Markdown file with YAML frontmatter. The frontmatter declares the graph node — the artifacts the stage consumes and produces, its lead agent, how it executes. The body is the prose the agent follows. Both live in one file on purpose, and the rest of this chapter unpacks why.

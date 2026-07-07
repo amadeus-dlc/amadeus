@@ -1,5 +1,7 @@
 # Troubleshooting
 
+> Languages: **English** | [日本語](15-troubleshooting.ja.md)
+
 This chapter covers common issues and their solutions, organized by symptom.
 
 > **Harness note.** Symptoms and fixes below are written for **Claude Code** (hook

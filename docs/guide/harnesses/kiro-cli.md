@@ -1,5 +1,7 @@
 # Running AI-DLC on Kiro CLI
 
+> Languages: **English** | [日本語](kiro-cli.ja.md)
+
 > [!NOTE]
 > AI-DLC on Kiro CLI works best with **Claude Opus 4.8**, which requires a
 > **paid Kiro plan**. On weaker models the conductor may skip optional stage

@@ -1,5 +1,7 @@
 # Operation Phase -- Stage Reference (4.1-4.7)
 
+> Languages: **English** | [日本語](operation.ja.md)
+
 ## Phase Overview
 
 The Operation phase is the fifth of five phases in the AI-DLC lifecycle. It

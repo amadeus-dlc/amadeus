@@ -1,5 +1,7 @@
 # Workshop Mode
 
+> Languages: **English** | [日本語](workshop-mode.ja.md)
+
 The `workshop` scope is the only AI-DLC scope designed for *facilitated group sessions* — typically a workshop or training lab where one person (the facilitator) has decided what the group will build, and N participants drive separate Construction Bolts in parallel against a shared remote.
 
 This chapter is a **manual recipe**: it documents the workshop flow using primitives that already ship today (`amadeus-worktree`, `amadeus-bolt`, plus ordinary git). There is no dedicated `--claim-bolt` CLI yet — claim semantics ride on `git push` to the shared remote, and the recipe makes that contract explicit. A future release may automate the moves this chapter describes; for now, the recipe is the contract.

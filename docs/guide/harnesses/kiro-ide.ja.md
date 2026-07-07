@@ -1,5 +1,7 @@
 # Kiro IDE で AI-DLC を実行する
 
+> 言語: [English](kiro-ide.md) | **日本語**
+
 フレームワークのハーネスの 1 つ: `dist/kiro-ide/` は同じ AI-DLC 方法論を
 [Kiro IDE](https://kiro.dev/) の中で実行します。1 つの決定論的なコア —
 ツール、32 個のステージファイル、プロトコル、knowledge、センサー、スコープ、

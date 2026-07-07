@@ -1,5 +1,7 @@
 # Adding an Agent
 
+> Languages: **English** | [日本語](03-adding-an-agent.ja.md)
+
 An agent is the *who* of the framework — a persona with a domain, a tool
 allowlist, and a model. The 11 shipped agents cover product, design, delivery,
 architecture, AWS platform, compliance, DevSecOps, development, quality,

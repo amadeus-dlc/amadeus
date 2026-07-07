@@ -1,5 +1,7 @@
 # Artifacts Reference
 
+> Languages: **English** | [日本語](14-artifacts-reference.ja.md)
+
 Every AI-DLC workflow produces artifacts under its **intent record dir** —
 `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/` (where `<space>` is `default`
 unless a non-default space is in play, and `<YYMMDD>-<label>` is the intent dir;

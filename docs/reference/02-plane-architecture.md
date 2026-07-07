@@ -1,5 +1,7 @@
 # Plane Architecture
 
+> Languages: **English** | [日本語](02-plane-architecture.ja.md)
+
 > Audience: Tier 2/3 (team adopter, framework contributor).
 
 This chapter explains AI-DLC's three-plane architecture — the

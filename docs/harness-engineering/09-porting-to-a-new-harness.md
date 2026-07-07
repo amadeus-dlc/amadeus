@@ -1,5 +1,7 @@
 # Porting AI-DLC to a New Harness
 
+> Languages: **English** | [日本語](09-porting-to-a-new-harness.ja.md)
+
 AI-DLC ships from **one core, many harnesses** — today Claude Code, Kiro CLI, Kiro IDE,
 and Codex CLI, and the set is open. The hand-authored source is a
 harness-neutral `core/` plus a thin `harness/<name>/` surface per CLI; the

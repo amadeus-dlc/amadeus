@@ -1,5 +1,7 @@
 # Developer Agent
 
+> Languages: **English** | [日本語](developer-agent.ja.md)
+
 > **Agent deep dive** · [User Guide](../00-introduction.md) › [Agents](../06-agents.md) › [deep dives](README.md) · Technical reference: [developer-agent](../../reference/agents/developer-agent.md)
 
 The amadeus-developer-agent is your senior software developer. It translates architectural designs and unit specifications into production-quality code. During reverse engineering, it performs deep code scans that the amadeus-architect-agent synthesizes.

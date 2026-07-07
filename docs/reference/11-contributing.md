@@ -1,5 +1,7 @@
 # Contributing
 
+> Languages: **English** | [日本語](11-contributing.ja.md)
+
 ## Overview
 
 Contributions to this implementation are welcome. This guide covers prerequisites, development workflow, testing, and how to submit changes.

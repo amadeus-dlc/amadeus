@@ -1,5 +1,7 @@
 # Worked Examples
 
+> Languages: **English** | [日本語](16-worked-examples.ja.md)
+
 Two complete walkthroughs showing AI-DLC in action: a bugfix and a feature. Each demonstrates the command invocation, stage progression, approval gates, and artifact output.
 
 > **Harness note.** These transcripts are recorded on **Claude Code**, so they show

@@ -1,5 +1,7 @@
 # Agent Deep Dives
 
+> Languages: **English** | [日本語](README.ja.md)
+
 A page per agent: its domain, the stages it leads and supports, the knowledge it
 loads, and how it collaborates. These expand on the roster in the
 [Agents chapter](../06-agents.md) — start there for the philosophy (why 11 broad

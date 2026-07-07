@@ -1,5 +1,7 @@
 # 用語集
 
+> 言語: [English](glossary.md) | **日本語**
+
 AI-DLC 用語の正典的定義。ユーザーガイドと Developer Reference のすべての
 ドキュメントは、これらの用語を一貫して使用します。
 

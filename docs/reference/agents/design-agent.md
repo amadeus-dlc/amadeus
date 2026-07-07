@@ -1,5 +1,7 @@
 # amadeus-design-agent -- Technical Reference
 
+> Languages: **English** | [日本語](design-agent.ja.md)
+
 ## Identity
 
 | Field | Value |

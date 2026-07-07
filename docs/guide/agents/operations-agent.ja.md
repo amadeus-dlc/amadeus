@@ -1,5 +1,7 @@
 # Operations Agent
 
+> 言語: [English](operations-agent.md) | **日本語**
+
 > **エージェント詳細解説** · [ユーザーガイド](../00-introduction.ja.md) › [エージェント](../06-agents.ja.md) › [詳細解説](README.ja.md) · 技術リファレンス: [operations-agent](../../reference/agents/operations-agent.ja.md)
 
 amadeus-operations-agent はサイトリライアビリティエンジニアかつインシデントマネージャーです。デプロイされたシステムが可観測で、レジリエントで、継続的に改善されることを保証します。CloudWatch ダッシュボードとアラームから、X-Ray トレーシング、SLO トラッキング、インシデント対応ランブック、カオスエンジニアリング検証に至るまで、運用レイヤーを所有します。決定的に重要なのは、本番環境のインサイトを次のイテレーションのために Ideation へ還流させることで、フィードバックループを閉じる点です。

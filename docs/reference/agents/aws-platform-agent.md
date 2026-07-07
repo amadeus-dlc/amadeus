@@ -1,5 +1,7 @@
 # amadeus-aws-platform-agent -- Technical Reference
 
+> Languages: **English** | [日本語](aws-platform-agent.ja.md)
+
 ## Identity
 
 | Field | Value |

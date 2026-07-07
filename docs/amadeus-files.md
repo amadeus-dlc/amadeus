@@ -1,5 +1,7 @@
 # Complete AI-DLC v2 Generated File Inventory
 
+> Languages: **English** | [日本語](amadeus-files.ja.md)
+
 Sources of truth: `amadeus-dlc/amadeus` v2 branch (commit `9b77786`, as of 2026-07)
 - Official reference: `docs/guide/14-artifacts-reference.md` (directory tree and git policy)
 - Workspace layout: `docs/guide/03-spaces-and-intents.md`

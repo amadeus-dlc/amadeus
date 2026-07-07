@@ -1,5 +1,7 @@
 # Developer Reference Overview
 
+> Languages: **English** | [日本語](00-overview.ja.md)
+
 > Part of the [AI-DLC documentation](../README.md) · [User Guide](../guide/00-introduction.md) · [Harness Engineer Guide](../harness-engineering/00-overview.md) · **Developer Reference**
 
 This reference documents the internal architecture and implementation of AI-DLC. It is intended for contributors changing the AI-DLC codebase itself -- the orchestrator, hooks, CLI tools, the stage-graph compile pipeline, the audit taxonomy, or the test suite.

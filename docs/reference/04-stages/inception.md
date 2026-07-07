@@ -1,5 +1,7 @@
 # Inception Phase -- Stage Reference (2.1--2.8)
 
+> Languages: **English** | [日本語](inception.ja.md)
+
 ## Phase Overview
 
 The Inception phase is the third of five phases in the AI-DLC methodology. It

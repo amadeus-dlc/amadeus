@@ -1,5 +1,7 @@
 # amadeus-product-agent -- Technical Reference
 
+> Languages: **English** | [日本語](product-agent.ja.md)
+
 ## Identity
 
 | Field | Value |

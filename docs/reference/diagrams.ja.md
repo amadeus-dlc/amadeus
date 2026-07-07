@@ -1,5 +1,7 @@
 # AI-DLC ワークフロー図
 
+> 言語: [English](diagrams.md) | **日本語**
+
 このドキュメントには、AI-DLC(AI-Driven Development Life Cycle)方法論を可視化するすべての Mermaid 図が含まれています。各セクションは簡単な説明と、それに続くレンダリング済みの図で構成されています。これらの図は、エンジンとコンダクター(`amadeus-orchestrate.ts` + `SKILL.md`)、ステージプロトコル(`stage-protocol.md`)、ステージファイル、およびエージェント定義から導出されています。
 
 > **注:** これらの図は、関連するリファレンス各章にもインラインで埋め込まれています。このファイルは、すべての図を一箇所にまとめた統合インデックスとして機能します。以下の図における `<record>/` は、アクティブな intent の record ディレクトリ `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/` を指します。

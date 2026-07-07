@@ -1,5 +1,7 @@
 # Harness Primitives Mapping
 
+> Languages: **English** | [日本語](14-claude-features.ja.md)
+
 AI-DLC's methodology concepts are harness-neutral; each CLI harness expresses
 them through its own native primitives. This chapter maps the AI-DLC concept to
 the primitive each harness uses, then details the **Claude Code** expression in

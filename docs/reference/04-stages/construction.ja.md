@@ -1,5 +1,7 @@
 # Construction フェーズ -- ステージリファレンス (3.1-3.7)
 
+> 言語: [English](construction.md) | **日本語**
+
 ## フェーズ概要
 
 Construction フェーズは、Inception で作成された設計成果物を、動作しテスト済みの

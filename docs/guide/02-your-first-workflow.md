@@ -1,5 +1,7 @@
 # Your First Workflow
 
+> Languages: **English** | [日本語](02-your-first-workflow.ja.md)
+
 This chapter walks through a complete AI-DLC workflow run, explaining what you see at each step and what decisions you make. The example uses a `feature`-scoped workflow to build a REST API.
 
 ---

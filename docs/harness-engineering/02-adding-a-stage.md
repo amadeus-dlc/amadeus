@@ -1,5 +1,7 @@
 # Adding a Stage
 
+> Languages: **English** | [日本語](02-adding-a-stage.ja.md)
+
 A stage is a node in the workflow graph: a unit of work that declares the
 artifacts it consumes and produces, the agent that leads it, and how it runs.
 Adding one is the most structural change a harness engineer makes — you are

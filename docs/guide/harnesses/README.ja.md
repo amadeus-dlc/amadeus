@@ -1,5 +1,7 @@
 # 他のハーネスで実行する
 
+> 言語: [English](README.md) | **日本語**
+
 AI-DLC は、あなたが使う CLI 上にレンダリングされる 1 つのハーネス中立なコアです。
 方法論 — [フェーズとステージ](../04-phases-and-stages.ja.md)、
 [エージェント](../06-agents.ja.md)、[スコープ](../05-scopes-and-depth.ja.md)、

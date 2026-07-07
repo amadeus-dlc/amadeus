@@ -1,5 +1,7 @@
 # amadeus-devsecops-agent -- 技術リファレンス
 
+> 言語: [English](devsecops-agent.md) | **日本語**
+
 ## Identity
 
 | フィールド | 値 |

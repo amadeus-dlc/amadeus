@@ -1,5 +1,7 @@
 # Knowledge System
 
+> Languages: **English** | [日本語](10-knowledge-system.ja.md)
+
 This chapter documents the two-tier knowledge architecture: how methodology knowledge ships with the framework, how team knowledge is managed per-project, the 6-step loading order, the template system, and how to extend knowledge.
 
 ---

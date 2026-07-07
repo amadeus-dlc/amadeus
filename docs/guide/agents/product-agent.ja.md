@@ -1,5 +1,7 @@
 # Product Agent
 
+> 言語: [English](product-agent.md) | **日本語**
+
 > **エージェント詳細解説** · [ユーザーガイド](../00-introduction.ja.md) › [エージェント](../06-agents.ja.md) › [詳細解説](README.ja.md) · 技術リファレンス: [product-agent](../../reference/agents/product-agent.ja.md)
 
 amadeus-product-agent はプロダクトマネージャーかつビジネスアナリストです。生のビジネスニーズ、ユーザーの要望、ドメイン知識を、構造化された要件、優先順位付けされたユーザーストーリー、明確に定義されたスコープ境界へと変換します。すべての下流の成果物が検証済みの要件まで遡れることを保証し、ステークホルダーが望むものと開発者が構築するものとのギャップを橋渡しします。

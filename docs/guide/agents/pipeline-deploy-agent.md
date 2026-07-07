@@ -1,5 +1,7 @@
 # Pipeline & Deploy Agent
 
+> Languages: **English** | [日本語](pipeline-deploy-agent.ja.md)
+
 > **Agent deep dive** · [User Guide](../00-introduction.md) › [Agents](../06-agents.md) › [deep dives](README.md) · Technical reference: [pipeline-deploy-agent](../../reference/agents/pipeline-deploy-agent.md)
 
 The amadeus-pipeline-deploy-agent is your CI/CD engineer and release manager. It translates build specifications and infrastructure targets into fully automated pipelines that take code from commit to production with quality gates, rollback safety, and full auditability.

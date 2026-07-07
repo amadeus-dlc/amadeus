@@ -1,5 +1,7 @@
 # amadeus-architect-agent -- Technical Reference
 
+> Languages: **English** | [日本語](architect-agent.ja.md)
+
 ## Identity
 
 | Field | Value |

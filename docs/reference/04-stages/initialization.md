@@ -1,5 +1,7 @@
 # Initialization Phase Stages (0.1-0.3)
 
+> Languages: **English** | [日本語](initialization.ja.md)
+
 ## Phase Overview
 
 The Initialization phase is the first of five phases in the AI-DLC workflow. It runs stages 0.1 through 0.3, **birthing the intent** — minting its record dir at `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/` (written `<record>/` below) with state files, directory scaffolding, workspace classification, and routing configuration. There is no separate scaffold command: the workspace shell ships pre-built in `dist/<harness>/`, and the engine auto-births the first intent on the first `/amadeus` (or when you describe what to build).

@@ -1,5 +1,7 @@
 # Phases and Stages
 
+> Languages: **English** | [日本語](04-phases-and-stages.ja.md)
+
 The AI-DLC lifecycle is organized into 5 phases containing 32 stages. This chapter explains each phase, lists its stages, and shows how they connect.
 
 > **Harness note.** The methodology — the phases, stages, agents, and gates this

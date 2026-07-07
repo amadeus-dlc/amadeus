@@ -1,5 +1,7 @@
 # CLI Commands
 
+> Languages: **English** | [日本語](12-cli-commands.ja.md)
+
 All AI-DLC commands start with the orchestrator invocation. This chapter is a complete reference for every invocation pattern and flag.
 
 > **Invocation prefix differs by harness.** On Claude Code and Kiro IDE you type

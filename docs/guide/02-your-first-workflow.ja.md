@@ -1,5 +1,7 @@
 # Your First Workflow
 
+> 言語: [English](02-your-first-workflow.md) | **日本語**
+
 この章では、AI-DLC ワークフローの完全な 1 回の実行を順を追って説明し、各ステップで何が見えて、どんな決定を下すのかを解説します。例では、REST API を構築する `feature` スコープのワークフローを使います。
 
 ---

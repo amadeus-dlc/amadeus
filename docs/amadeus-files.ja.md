@@ -1,5 +1,7 @@
 # AI-DLC v2 生成ファイル完全一覧
 
+> 言語: [English](amadeus-files.md) | **日本語**
+
 出典(一次情報): `amadeus-dlc/amadeus` v2ブランチ(commit 9b77786, 2026-07時点)
 - 公式リファレンス: `docs/guide/14-artifacts-reference.md`(ディレクトリツリー・git方針)
 - ワークスペース構造: `docs/guide/03-spaces-and-intents.md`

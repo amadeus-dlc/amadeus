@@ -1,5 +1,7 @@
 # Glossary
 
+> Languages: **English** | [日本語](glossary.ja.md)
+
 Canonical definitions for AI-DLC terminology. All documentation in the User Guide and Developer Reference uses these terms consistently.
 
 ---

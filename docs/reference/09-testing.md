@@ -1,5 +1,7 @@
 # Testing
 
+> Languages: **English** | [日本語](09-testing.ja.md)
+
 ## Overview
 
 The AI-DLC test suite is **entirely TypeScript** — every test is a
