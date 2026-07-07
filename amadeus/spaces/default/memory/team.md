@@ -12,6 +12,8 @@
 
 ファイル・ディレクトリ・コマンド・フラグを追加/削除/改名したときは、`docs/` と `README.md` を grep して古い参照を同一コミット内で更新する。
 
+amadeus/ ワークスペース(record: state・per-clone 監査シャード・intents.json、memory、codekb、knowledge)は version-controlled。**チェックポイント(ワークフローのパーク時・ステージ完了時・セッションや1日の終わり)で `amadeus/` ツリーごとコミットする**。監査シャードは per-clone・append-only(`<record>/audit/<host>-<clone>.md`、読み取りは `audit/*.md` の glob マージ)で競合しないため、監査だけの専用コミットは通常不要 — チェックポイントのコミットに自然に含める。
+
 ## Walking Skeleton
 
 <!-- practices-discovery で承認された内容。例: -->
