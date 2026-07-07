@@ -20,11 +20,11 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 415,
+    "total": 416,
     "enumeratedByClass": {
       "function": 200,
       "audit": 70,
-      "scope": 9,
+      "scope": 10,
       "stage": 32,
       "hook": 11,
       "subcommand": 86,
@@ -3186,6 +3186,13 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "scope",
+      "unitId": "sdd",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "scope",

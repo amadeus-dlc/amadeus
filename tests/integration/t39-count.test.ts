@@ -77,10 +77,10 @@ function isExecute(scope: string, slug: string): boolean {
 
 describe("t39 scope EXECUTE-count validation — loadScopeMapping (migrated from t39-scope-stage-count-validation.sh, plan 9)", () => {
   // S1 (STRONGER, not in the .sh): the loader returns a usable map keyed by the
-  // nine canonical scopes, each carrying a `stages` record. The .sh assumed
+  // ten canonical scopes, each carrying a `stages` record. The .sh assumed
   // this shape implicitly by indexing m[scope].stages; pin it once up front so
   // a missing/renamed scope fails loudly here rather than as a TypeError mid-case.
-  test("0a: loadScopeMapping returns the nine canonical scopes (S3)", () => {
+  test("0a: loadScopeMapping returns the ten canonical scopes (S3)", () => {
     expect(Object.keys(MAPPING).sort()).toEqual(
       [
         "bugfix",
@@ -90,6 +90,7 @@ describe("t39 scope EXECUTE-count validation — loadScopeMapping (migrated from
         "mvp",
         "poc",
         "refactor",
+        "sdd",
         "security-patch",
         "workshop",
       ].sort(),
@@ -139,6 +140,11 @@ describe("t39 scope EXECUTE-count validation — loadScopeMapping (migrated from
   // 5. Bugfix: exactly 7 (init+RE+req+codegen+build).
   test("5: bugfix executes exactly 7 stages", () => {
     expect(execCount("bugfix")).toBe(7);
+  });
+
+  // 5b. SDD: exactly 10 (spec-driven loop).
+  test("5b: sdd executes exactly 10 stages", () => {
+    expect(execCount("sdd")).toBe(10);
   });
 
   // 6. Refactor: range 7-12.
