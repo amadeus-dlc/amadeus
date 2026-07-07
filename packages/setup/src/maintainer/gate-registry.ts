@@ -117,7 +117,7 @@ export const GATE_REGISTRY: GateCheck[] = [
     command: "bun run dist:check",
     cwd: "repo root",
     checkName: "installer / dist-check",
-    inputs: ["core/**", "harness/**", "scripts/package.ts", "dist/**"],
+    inputs: ["packages/framework/core/**", "packages/framework/harness/**", "scripts/package.ts", "dist/**"],
     blocking: true,
     dependsOn: [],
     pathCondition: "installer-related or source/dist path changed",

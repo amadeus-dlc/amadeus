@@ -34,7 +34,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { REPO_ROOT } from "../harness/fixtures.ts";
 
-const HARNESS_DIR = join(REPO_ROOT, "harness");
+const HARNESS_DIR = join(REPO_ROOT, "packages", "framework", "harness");
 
 /** Authored conductor SKILLs, repo-root-relative (posix), derived FROM DISK:
  *  every harness/<h>/ that ships skills/amadeus/SKILL.md. Disk-derivation (not a
@@ -43,7 +43,7 @@ const HARNESS_DIR = join(REPO_ROOT, "harness");
 function harnessSkills(): string[] {
   return readdirSync(HARNESS_DIR)
     .filter((h) => existsSync(join(HARNESS_DIR, h, "skills", "amadeus", "SKILL.md")))
-    .map((h) => `harness/${h}/skills/amadeus/SKILL.md`)
+    .map((h) => `packages/framework/harness/${h}/skills/amadeus/SKILL.md`)
     .sort();
 }
 
@@ -68,10 +68,10 @@ describe("t181 per-harness conductor-SKILL freshness gate (P11 RESOLVE-2)", () =
     // trees the positive/negative scans below would vacuously pass. Pin the
     // known four so a regression that hides a tree (or empties harness/) trips.
     expect(skills).toEqual([
-      "harness/claude/skills/amadeus/SKILL.md",
-      "harness/codex/skills/amadeus/SKILL.md",
-      "harness/kiro-ide/skills/amadeus/SKILL.md",
-      "harness/kiro/skills/amadeus/SKILL.md",
+      "packages/framework/harness/claude/skills/amadeus/SKILL.md",
+      "packages/framework/harness/codex/skills/amadeus/SKILL.md",
+      "packages/framework/harness/kiro-ide/skills/amadeus/SKILL.md",
+      "packages/framework/harness/kiro/skills/amadeus/SKILL.md",
     ]);
   });
 

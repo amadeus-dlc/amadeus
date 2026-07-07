@@ -136,7 +136,7 @@ describe("t150 dist/codex packaging parity + drift guard", () => {
     // trustHash's recipe, HOOK_WIRING, or the adapter command ever drifts, the
     // shipped hashes go stale and Codex silently rejects every hook — this fails
     // then, where --check cannot (a buggy emit regenerates the same wrong bytes).
-    const { trustEntries } = require(join(REPO_ROOT, "harness", "codex", "emit.ts")) as {
+    const { trustEntries } = require(join(REPO_ROOT, "packages", "framework", "harness", "codex", "emit.ts")) as {
       trustEntries: (project: string, hooksJson?: string) => string;
     };
     const shipped = readFileSync(join(CODEX_DST, "trust-seed.toml"), "utf-8");

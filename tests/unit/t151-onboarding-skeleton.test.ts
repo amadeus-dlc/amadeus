@@ -29,7 +29,7 @@ import {
 } from "../../scripts/onboarding.ts";
 
 const SKELETON = readFileSync(
-  join(REPO_ROOT, "core", "templates", "onboarding.md"),
+  join(REPO_ROOT, "packages", "framework", "core", "templates", "onboarding.md"),
   "utf-8",
 );
 
@@ -107,7 +107,7 @@ describe("t151 onboarding skeleton — a new harness gets a complete doc for fre
     ];
     for (const [name, dir] of harnesses) {
       const fills = (
-        require(join(REPO_ROOT, "harness", name, "onboarding.fills.ts")) as {
+        require(join(REPO_ROOT, "packages", "framework", "harness", name, "onboarding.fills.ts")) as {
           default: OnboardingFills;
         }
       ).default;

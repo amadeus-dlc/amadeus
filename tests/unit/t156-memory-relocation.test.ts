@@ -272,7 +272,10 @@ describe("t156 method relocation to amadeus/spaces/default/memory/ + per-harness
     // drift-guarded) and NOT tests/ (fixtures). The only org/team/project +
     // phases/ method files that may exist are under core/memory/.
     const offenders: string[] = [];
-    const roots = [join(REPO_ROOT, "core"), join(REPO_ROOT, "harness")];
+    const roots = [
+      join(REPO_ROOT, "packages", "framework", "core"),
+      join(REPO_ROOT, "packages", "framework", "harness"),
+    ];
     const METHOD_BASENAMES = new Set(["org.md", "team.md", "project.md"]);
     function walk(dir: string): void {
       for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -287,7 +290,7 @@ describe("t156 method relocation to amadeus/spaces/default/memory/ + per-harness
         const isMethodTop = METHOD_BASENAMES.has(e.name);
         const isLegacyPhase = /^amadeus-phase-[a-z][a-z0-9-]*\.md$/.test(e.name);
         const isLegacyLayer = /^amadeus-(org|team|project)\.md$/.test(e.name);
-        const underCoreMemory = rel.startsWith("core/memory/");
+        const underCoreMemory = rel.startsWith("packages/framework/core/memory/");
         if ((isMethodTop && !underCoreMemory) || isLegacyPhase || isLegacyLayer) {
           offenders.push(rel);
         }
@@ -297,9 +300,9 @@ describe("t156 method relocation to amadeus/spaces/default/memory/ + per-harness
     expect(offenders, `second hand-editable rule copy found: ${offenders.join(", ")}`).toEqual([]);
 
     // Positive control: the one source of truth IS present.
-    expect(existsSync(join(REPO_ROOT, "core", "memory", "org.md"))).toBe(true);
-    expect(existsSync(join(REPO_ROOT, "core", "memory", "phases", "construction.md"))).toBe(true);
+    expect(existsSync(join(REPO_ROOT, "packages", "framework", "core", "memory", "org.md"))).toBe(true);
+    expect(existsSync(join(REPO_ROOT, "packages", "framework", "core", "memory", "phases", "construction.md"))).toBe(true);
     // And core/rules/ (the old authored location) is gone entirely.
-    expect(existsSync(join(REPO_ROOT, "core", "rules"))).toBe(false);
+    expect(existsSync(join(REPO_ROOT, "packages", "framework", "core", "rules"))).toBe(false);
   });
 });

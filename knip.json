@@ -1,17 +1,17 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": [
-    "core/tools/*.ts",
-    "core/hooks/*.ts",
-    "harness/*/manifest.ts",
-    "harness/*/emit.ts",
+    "packages/framework/core/tools/*.ts",
+    "packages/framework/core/hooks/*.ts",
+    "packages/framework/harness/*/manifest.ts",
+    "packages/framework/harness/*/emit.ts",
     "scripts/package.ts",
     "tests/fixtures/v05-mr9-sensor-fire/scripts/*.ts"
   ],
   "project": [
-    "core/tools/**/*.ts",
-    "core/hooks/**/*.ts",
-    "harness/**/*.ts",
+    "packages/framework/core/tools/**/*.ts",
+    "packages/framework/core/hooks/**/*.ts",
+    "packages/framework/harness/**/*.ts",
     "scripts/**/*.ts",
     "tests/fixtures/v05-mr9-sensor-fire/**/*.ts"
   ],

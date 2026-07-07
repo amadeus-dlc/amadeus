@@ -280,9 +280,6 @@ amadeus-claude/
 │           ├── kiro/           #   manifest.ts · orchestrator · agent JSONs · settings · onboarding fills
 │           └── codex/          #   manifest.ts · emit.ts · orchestrator · hooks adapter
 │
-├── core -> packages/framework/core       # compatibility alias for existing docs/tests/imports
-├── harness -> packages/framework/harness # compatibility alias for existing docs/tests/imports
-│
 ├── scripts/
 │   ├── package.ts              # THE build entry: copy core+harness per manifest → graph compile →
 │   │                           #   runner-gen → emit() per tree.  --check = total drift guard (CI)
@@ -300,7 +297,7 @@ amadeus-claude/
 └── docs/                       # guide/ · harness-engineering/ · reference/
 ```
 
-> `packages/framework/core/` is what AI-DLC **is**. `packages/framework/harness/` is how each harness **speaks**. `dist/` is what users **copy**. Root `core/` and `harness/` are compatibility aliases. Only framework source is edited; `bun scripts/package.ts` regenerates `dist/`, and a hand-edit to `dist/` is a CI failure.
+> `packages/framework/core/` is what AI-DLC **is**. `packages/framework/harness/` is how each harness **speaks**. `dist/` is what users **copy**. Only framework source is edited; `bun scripts/package.ts` regenerates `dist/`, and a hand-edit to `dist/` is a CI failure.
 
 `packages/setup` のような setup/installer package と並べるため、framework source は `packages/framework/core` と `packages/framework/harness` に移動した。`scripts/` と `dist/` は root-level の repository contract として維持する。背景と tradeoff は [Workspace Layout Decision](docs/reference/18-workspace-layout.md) に記録している。
 

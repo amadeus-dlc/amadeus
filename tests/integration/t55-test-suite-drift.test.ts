@@ -98,6 +98,9 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { REPO_ROOT } from "../harness/fixtures.ts";
 
+const FRAMEWORK_CORE = join(REPO_ROOT, "packages", "framework", "core");
+const FRAMEWORK_HARNESS = join(REPO_ROOT, "packages", "framework", "harness");
+
 // import.meta.dir is tests/integration/; TESTS_DIR is its parent (tests/).
 const TESTS_DIR = join(import.meta.dir, "..");
 const README = join(TESTS_DIR, "README.md");
@@ -425,8 +428,8 @@ describe("t55 — test-suite metadata drift (migrated from t55-test-suite-drift.
       [
         // Authorship moved from dist/claude/.claude to core/ + harness/ (dist-unified
         // keystone); dist/ is now generated but still committed, so scan all three.
-        join(REPO_ROOT, "core"),
-        join(REPO_ROOT, "harness"),
+        FRAMEWORK_CORE,
+        FRAMEWORK_HARNESS,
         join(REPO_ROOT, "dist", "claude", ".claude"),
         join(REPO_ROOT, "tests"),
         join(REPO_ROOT, "docs"),
@@ -445,8 +448,8 @@ describe("t55 — test-suite metadata drift (migrated from t55-test-suite-drift.
       /v0\.[0-9]+\.[0-9]+|MR [0-9]+|ROADMAP\.md:[0-9]|\(Inception [0-9]+\.[0-9]+\)|\(Construction [0-9]+\.[0-9]+\)|\(Operation [0-9]+\.[0-9]+\)/;
     const versionHits = grepHits(
       [
-        join(REPO_ROOT, "core"),
-        join(REPO_ROOT, "harness"),
+        FRAMEWORK_CORE,
+        FRAMEWORK_HARNESS,
         join(REPO_ROOT, "dist", "claude", ".claude"),
       ],
       (line: string) => VERSION_RE.test(line),
@@ -469,8 +472,8 @@ describe("t55 — test-suite metadata drift (migrated from t55-test-suite-drift.
   test("7: no stale amadeus-claude-code/ distributable-root references (post-v0.6.0-milestone-0) [.sh ok 7]", () => {
     const hits = grepHits(
       [
-        join(REPO_ROOT, "core"),
-        join(REPO_ROOT, "harness"),
+        FRAMEWORK_CORE,
+        FRAMEWORK_HARNESS,
         join(REPO_ROOT, "dist", "claude", ".claude"),
         join(REPO_ROOT, "tests"),
         join(REPO_ROOT, "docs"),
@@ -515,8 +518,8 @@ describe("t55 — test-suite metadata drift (migrated from t55-test-suite-drift.
       [
         join(REPO_ROOT, "README.md"),
         join(REPO_ROOT, "AGENTS.md"),
-        join(REPO_ROOT, "core"),
-        join(REPO_ROOT, "harness"),
+        FRAMEWORK_CORE,
+        FRAMEWORK_HARNESS,
         join(REPO_ROOT, "docs"),
       ],
       (line: string) => CLOSED_FRAMING_RE.test(line),

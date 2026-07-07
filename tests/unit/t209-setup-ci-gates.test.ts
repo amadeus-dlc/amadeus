@@ -41,7 +41,7 @@ describe("U7 installer change detector", () => {
   });
 
   test("flags dist and self-install drift scopes", () => {
-    const changeSet = classifyInstallerChange(["core/foo.ts", ".claude/settings.json"]);
+    const changeSet = classifyInstallerChange(["packages/framework/core/foo.ts", ".claude/settings.json"]);
     expect(requiresDistDriftGates(changeSet)).toBe(true);
     expect(requiresSecretScan(changeSet)).toBe(true);
   });
@@ -91,7 +91,7 @@ describe("U7 gate registry and planner", () => {
   });
 
   test("planner includes drift guards when source or dist changes", () => {
-    const plan = buildInstallerGatePlan(classifyInstallerChange(["core/foo.ts"]));
+    const plan = buildInstallerGatePlan(classifyInstallerChange(["packages/framework/core/foo.ts"]));
     expect(plan.gates.map((gate) => gate.name)).toContain("dist-check");
     expect(plan.gates.map((gate) => gate.name)).toContain("promote-self-check");
   });

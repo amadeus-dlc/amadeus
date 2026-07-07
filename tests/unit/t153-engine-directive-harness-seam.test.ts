@@ -34,7 +34,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const CORE = join(REPO_ROOT, "core");
+const CORE = join(REPO_ROOT, "packages", "framework", "core");
 const SCAN_DIRS = [join(CORE, "tools"), join(CORE, "hooks")];
 
 // A `bun <dir>/tools/` (or /hooks/) shell-command fragment whose <dir> is a
