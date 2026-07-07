@@ -1,6 +1,6 @@
 # AI-DLC v2 生成ファイル完全一覧
 
-出典(一次情報): `awslabs/aidlc-workflows` v2ブランチ(commit 9b77786, 2026-07時点)
+出典(一次情報): `amadeus-dlc/amadeus` v2ブランチ(commit 9b77786, 2026-07時点)
 - 公式リファレンス: `docs/guide/14-artifacts-reference.md`(ディレクトリツリー・git方針)
 - ワークスペース構造: `docs/guide/03-spaces-and-intents.md`
 - 正確なファイル名: `core/amadeus-common/stages/*/*.md` 全31ステージのfrontmatter `outputs:` から抽出
@@ -129,7 +129,7 @@ amadeus/
     │   └── templates/                                    # 成果物フォーマット上書き(1アーティファクト1ファイル)
     ├── knowledge/                                        # チーム知識(コミット、bootstrap時は空・自由形式)
     │   ├── amadeus-shared/                               # 全エージェントがロード(規約)
-    │   └── aidlc-<agent>-agent/                          # 該当エージェント起動時にロード(規約)
+    │   └── amadeus-<agent>-agent/                        # 該当エージェント起動時にロード(規約)
     ├── codekb/<repo>/                                    # コード知識ベース(コミット、リポジトリごと、2.1が生成)
     │   ├── business-overview.md
     │   ├── architecture.md
