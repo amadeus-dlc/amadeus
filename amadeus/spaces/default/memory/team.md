@@ -4,29 +4,23 @@
 
 ## Way of Working
 
-このリポジトリは `main` を中心に、短命ブランチから Pull Request 経由で変更を取り込む GitHub Flow / トランクベース寄りの運用を採用する。実装時は `core/` または `harness/<name>/` を編集元とし、`dist/` とセルフインストールツリーは生成物として `bun scripts/package.ts` と `bun run promote:self` で同期する。
-
-amadeus/ ワークスペース(record: state・per-clone 監査シャード・intents.json、memory、codekb、knowledge)は version-controlled。**チェックポイント(ワークフローのパーク時・ステージ完了時・セッションや1日の終わり)で `amadeus/` ツリーごとコミットする**。監査シャードは per-clone・append-only(`<record>/audit/<host>-<clone>.md`、読み取りは `audit/*.md` の glob マージ)で競合しないため、監査だけの専用コミットは通常不要 — チェックポイントのコミットに自然に含める。
-
-amadeus 実行中に、現在の intent と関連して一緒に扱う必要はあるが、同じ intent に含めると目的や成果物の焦点がぼやける課題を見つけた場合は、発見時点では intent 粒度を気にせず GitHub Issue として起票し、リンクを会話・関連成果物・必要なら stage diary に残してから本線の作業へ戻る。質問の選択肢で非採用にした案や、単にスコープ外と判断しただけの案を機械的に Issue 化しない。
-
-起票済み Issue は、必要に応じて intent 単位になるように親 Issue を追加して整理する。Issue 起票の粒度と intent 設計の粒度を同時に決めようとして、発見時点の記録を遅らせない。
+このリポジトリは `main` を中心に、短命ブランチから Pull Request 経由で変更を取り込む。Issue #610 のような設計 intent では、実装を急がず、CodeKB、要求、ADR/設計記録の順に根拠を積み、`packages/setup` のような sibling intent は同一 intent に吸収しない。
 
 ## Walking Skeleton
 
-この intent は既存フレームワークへのインクリメンタルな npm インストーラ実装だが、配布経路がユーザー体験の入口になるため、最初の Construction Bolt は小さな end-to-end スライスとして扱う。最初に最小の `@amadeus-dlc/setup` 実行経路を通し、以後の拡張前に人間がゲートで確認する。
+この intent は既存フレームワークへの設計・整理作業であり、新しい runtime skeleton を立ち上げる作業ではない。移行を実装する判断になった場合だけ、最初の Construction Bolt は小さな end-to-end の path abstraction または layout compatibility check として gate 付きで扱う。
 
 ## Testing Posture
 
-テストは TypeScript で `tests/` 配下に追加し、Bun ベースの既存ランナーで検証する。PR/CI の基準は `bun run typecheck`、`bun run lint`、`bun run dist:check`、`bun run promote:self:check`、`bash tests/run-tests.sh --ci` で、インストーラ実装では少なくとも CLI 契約・配布物ドリフト・セルフインストール互換をカバーする。
+layout に関わる変更では、`dist:check` と `promote:self:check` を第一級の品質ゲートとして扱う。実装が入る場合は `bun run typecheck`、`bun run lint`、関連する `tests/run-tests.sh` profile、packaging/self-promotion fixtures を同じ変更単位で確認する。
 
 ## Deployment
 
-デプロイ基盤は持たず、リリースは npm パッケージ配布と GitHub 上のタグ/PR 履歴で管理する。GitHub Actions は push と pull_request で typecheck、lint、dist/self-install drift guard、smoke+unit+integration tests を実行し、リリース前には必要に応じて `--release` テスト層を追加する。
+このリポジトリの release readiness は GitHub Actions の typecheck、lint、dist/self-install drift guard、smoke/unit/integration tests で判断する。今回の intent は npm package や runtime deploy を直接行わず、layout decision が release/drift guard を壊さないことを設計成果物で先に固定する。
 
 ## Code Style
 
-TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフィックス、ハーネス中立の `core/`、ハーネス別の `harness/<name>/` という境界を守る。フォーマッタは無効、lint は Biome、型検査は `tsc --noEmit` の2構成で行い、ツール・フックには実行ビットを要求しない。
+TypeScript/ESM と Bun 直接実行を前提に、既存の root `core/`、`harness/<name>/`、`scripts/`、`dist/` の意味を尊重する。Markdown artifact は日本語で書き、コード識別子、CLI、path、machine-readable heading は正確性を優先して原文のまま残す。
 ## Forbidden
 
 - NEVER `dist/<harness>/` 配下を手編集する — 生成物であり、`bun scripts/package.ts --check` が CI で失敗する

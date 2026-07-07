@@ -12,5 +12,12 @@
     "dirName": "260706-installer-impl",
     "scope": "feature",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019f3b18-24ee-7e7f-93bd-647d343a4f16",
+    "slug": "layout-normalization",
+    "dirName": "260707-layout-normalization",
+    "scope": "workspace-layout-normalization",
+    "status": "complete"
   }
 ]

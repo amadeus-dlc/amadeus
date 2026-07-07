@@ -35,6 +35,7 @@ If you are **using** AI-DLC to build software, start with the [User Guide](../gu
 | [Stage Definition](15-stage-definition.md) | YAML frontmatter contract, three-compartment body, compile pipeline |
 | [Artifact Vocabulary](16-artifact-vocabulary.md) | Naming rules, collision policy, filesystem mapping, and how to view the live registry |
 | [Engine and Skill System](17-skill-system.md) | The orchestration engine (`next`/`report`), the typed directive contract, the conductor, plural skills, scope shape, and the swarm referee |
+| [Workspace Layout Decision](18-workspace-layout.md) | Issue #610 の repository layout decision: root framework layout を維持し、`packages/setup` を sibling package として扱う |
 | [Diagrams](diagrams.md) | All Mermaid diagrams in one place |
 | [Agents](agents/) | Technical agent reference (frontmatter, tooling, stage ownership) |
 

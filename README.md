@@ -276,6 +276,8 @@ amadeus-claude/
 
 > `core/` is what AI-DLC **is**. `harness/` is how each harness **speaks**. `dist/` is what users **copy**. Only the first two are ever edited; `bun scripts/package.ts` regenerates the rest, and a hand-edit to `dist/` is a CI failure.
 
+`packages/setup` のような setup/installer package は、この root framework layout とは別の sibling package boundary として扱う。Framework source/distribution contract は引き続き root-level の `core/`, `harness/`, `scripts/`, `dist/` に維持する。背景と tradeoff は [Workspace Layout Decision](docs/reference/18-workspace-layout.md) に記録している。
+
 ## Build / regenerate the harnesses
 
 Maintainers edit the hand-authored source in `core/` (or a `harness/<name>/`

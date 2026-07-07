@@ -37,3 +37,5 @@ Maintainers author in `core/` and regenerate the `dist/<harness>/` trees with
 `npm run dist` (`bun scripts/package.ts`) — see the [Contributing Guide](reference/11-contributing.md)
 for the full build-and-test loop, and [Porting to a New Harness](harness-engineering/09-porting-to-a-new-harness.md)
 to add one.
+
+Repository layout の設計判断は [Workspace Layout Decision](reference/18-workspace-layout.md) に記録している。Framework source/distribution contract は root-level の `core/`, `harness/`, `scripts/`, `dist/` に維持し、`packages/setup` は別 intent の sibling package として扱う。

@@ -1,37 +1,34 @@
-# Business Overview
+# ビジネス概要
 
-> Reverse Engineering 成果物 — Intent: 260706-installer-impl / 分析対象: main @ 14c40c9c(現 HEAD e2c28731、2026-07-07 鮮度リフレッシュ)
+## 目的
 
-## ビジネスドメイン
+Amadeus は AI-DLC ワークフロー を複数の AI harness に配布するための framework リポジトリ である。現在の価値は、共通の ワークフロー/core を一箇所で保ち、Claude、Codex、Kiro CLI、Kiro IDE などの harness ごとに異なる install surface へ同じ lifecycle を生成することにある。
 
-Amadeus は **AI-DLC(AI-Driven Development Life Cycle)フレームワーク**である。Claude Code / Codex / Kiro / Kiro IDE といった複数の AI コーディングハーネス上で動作する、構造化されたソフトウェア開発ライフサイクル(Ideation → Inception → Construction → Operation)のオーケストレーション基盤を提供する。
+この reverse engineering は GitHub issue #610 のために実施した。焦点は新機能実装ではなく、repository layout を `packages/<name>/{core,harness,dist,scripts}` のような package-owned 形式へ正規化すべきか、または root-level `core/` / `harness/` / `dist/` / `scripts/` を維持すべきかを判断するための現状把握である。
 
-- **対象ユーザー**: AI エージェントを開発プロセスに組み込みたい開発チーム
-- **提供価値**: 決定論的な状態管理・監査証跡・段階ゲート付きのワークフローを、LLM の非決定性の上に被せることで、再現性と説明責任のある AI 駆動開発を可能にする
-- **配布モデル**: デプロイ基盤を持たない。ユーザーが `dist/<harness>/` を自プロジェクトへコピーする方式。配布物は外部依存ゼロ(bun ランタイムのみ前提)
+## 現在の業務境界
 
-## 目的とコア原則
+現在の repository は、次の三層で保守されている。
 
-1. **ハーネス中立**: 単一のソースオブトゥルース(`core/`)から4ハーネス向け配布物を機械生成し、バイト単位のドリフトガードでパリティを保証する
-2. **決定論の分離**: 状態遷移・監査・グラフ解決などの決定論的処理は TypeScript CLI ツール(bun 実行)が担い、LLM は判断と生成に専念する
-3. **人間の統制**: 承認ゲート、在席検証(HUMAN_TURN ゲート)、監査イベントのホワイトリストにより、人間の関与ポイントを構造的に強制する
-4. **ドッグフーディング**: このリポジトリ自身が Amadeus を使って開発される(セルフインストール昇格 `promote:self`)
+- `core/`: harness-neutral な AI-DLC runtime、templates、tools、stage 定義の source of truth。
+- `harness/<name>/`: harness 固有の manifest、emitter、skill/prompt/system integration。
+- `dist/<name>/`: user がコピー/インストール する commit 済み生成物。
 
-## 主要機能
+この三層は README と contributing guide にも contributor mental model として記載されている。つまり layout は単なる ファイルシステム 配置ではなく、保守者が「どこを編集し、どこを生成物として扱うか」を判断する業務ルールでもある。
 
-| 機能 | 概要 |
-|---|---|
-| ワークフローオーケストレーション | 32 ステージ × 5 フェーズの状態機械。`/amadeus` 一つの入口から scope 検出・ステージ実行・ゲート処理 |
-| 11 ドメインエージェント | product / architect / developer / quality 等のペルソナをコンダクターが採用またはサブエージェント委譲 |
-| 適応コンポーザー | `/amadeus compose` — タスクに合わせた EXECUTE/SKIP ステージグリッドを提案し承認ゲートを通す |
-| 監査ログ | 全遷移・決定・回答をイベント型ホワイトリスト付きで per-clone シャードに記録 |
-| 5層ルールシステム | org → team → project → phase → stage の strict-additive 解決。§13 学習ゲートで矛盾を却下 |
-| センサー | required-sections / upstream-coverage / linter / type-check の決定論的検証(advisory) |
-| read-only セッションスキル | session-cost / replay / outcomes-pack — 状態を進めず監査も発行しない参照系 |
-| 単一ステージランナー | 38 スキルとして各ステージを `--single` モードで隔離実行 |
+## Issue #610 の判断軸
 
-## 現在の Intent との関係
+Issue #610 で求められている判断は、`packages/setup` を取り込むことではない。`packages/setup` は別 intent で進む予定の sibling dependency であり、この intent では現 repository の framework 側 layout について次を判断する。
 
-Intent `260706-amadeus-grilling`(scope: grilling-integration)は完了した。対話モード契約(stage-protocol.md §3 の Guide me / Edit file / Chat)への **第4のモード(grilling: 高頻度連続質問による設計の炙り出し)** 追加は PR#601 でマージ済み、続く promote-self の composed-scope 保持修正は PR#602 でマージ済みである。両 PR とも OUTCOMES.md が発行済み。
+- 現状維持: root-level `core/` / `harness/` / `dist/` / `scripts/` を framework の明示的な境界として維持する。
+- staged layout 継続: `packages/setup` のような新領域だけを package-owned にし、framework source は root-level に残す。
+- full workspace normalization: framework 側も `packages/<name>/{core,harness,dist,scripts}` に寄せる。
 
-現在の active intent は `260706-installer-impl`(scope: feature)— npm 配布インストーラ `@amadeus-dlc/setup` の実装。Ideation フェーズは完了し、Inception フェーズが進行中である。
+## 成功条件
+
+この stage の成果は、実装変更ではなく設計判断のための CodeKB 更新 である。成功条件は次の通り。
+
+- path impact が `scripts/package.ts`, `scripts/promote-self.ts`, `dist/*`, `.claude/.codex/.agents`, tests, docs まで棚卸しされている。
+- `packages/` が現 checkout に存在しないことを前提として記録している。
+- 移行 する場合の release/drift guard 破壊リスクを次 stage で扱える粒度にしている。
+- 移行 しない場合に root-level layout を正当化できる根拠を残している。
