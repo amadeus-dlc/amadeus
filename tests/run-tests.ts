@@ -275,6 +275,25 @@ if (needsLlm && !commandExists("claude")) {
   process.stdout.write("WARNING: claude CLI not found -- live integration/e2e tests may fail or skip\n");
   claudeGateOpen = false;
 }
+// Live SDK/substrate tests (*.sdk.test.ts, driveAidlc) drive real turns on AWS
+// Bedrock (CLAUDE_CODE_USE_BEDROCK), which needs valid IAM auth. The claude CLI
+// being present is not enough — expired AWS creds make driveAidlc hang until the
+// per-test cap. So when the aws CLI is present but `sts get-caller-identity`
+// fails, close the gate and skip the live SDK tests, mirroring the CLI-missing
+// skip above. When creds are valid the gate stays open and the tests run.
+if (needsLlm && claudeGateOpen && commandExists("aws")) {
+  const sts = spawnSync(
+    "aws",
+    ["sts", "get-caller-identity", "--query", "Account", "--output", "text"],
+    { encoding: "utf8", timeout: 30_000, stdio: ["ignore", "pipe", "pipe"] },
+  );
+  if (sts.status !== 0) {
+    process.stdout.write(
+      "WARNING: AWS credentials invalid/expired (aws sts get-caller-identity failed) -- skipping live SDK/substrate tests\n",
+    );
+    claudeGateOpen = false;
+  }
+}
 
 let claudeRequiredFiles = new Set<string>();
 if (needsLlm) {

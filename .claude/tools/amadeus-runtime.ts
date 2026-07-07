@@ -351,6 +351,13 @@ function compile(opts: CompileOptions): { skipped?: string; written?: string } {
     return a[1].startedIndex - b[1].startedIndex;
   });
 
+  // Thread the active intent's record dir into each row's memory_path so the
+  // recorded path matches where the diary actually lives (readMemory below
+  // resolves the same intent via docsRoot). Without it, relativeMemoryPath falls
+  // back to the bare space prefix and drops the <slug>-<id8> segment, so §13
+  // learnings surface reads a non-existent memory.md and drops all candidates
+  // (issue #603).
+  const recordPrefix = relativeRecordDir(projectDir);
   const stages: RuntimeStage[] = [];
   const zeroEntryApprovedStages: { slug: string; completed_at: string }[] = [];
 
@@ -367,7 +374,7 @@ function compile(opts: CompileOptions): { skipped?: string; written?: string } {
       started_at: entry.started_at,
       completed_at: entry.completed_at,
       agent: entry.agent || phaseInfo.agent,
-      memory_path: relativeMemoryPath(phaseInfo.phase, slug),
+      memory_path: relativeMemoryPath(phaseInfo.phase, slug, recordPrefix),
       memory_entries: memory.memory_entries,
       memory_breakdown: memory.memory_breakdown,
       sensor_firings: [],

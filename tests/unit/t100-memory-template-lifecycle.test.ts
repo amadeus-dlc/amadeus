@@ -68,6 +68,7 @@ import {
   AMADEUS_SRC,
   cleanupTestProject,
   createTestProject,
+  DEFAULT_RECORD_DIR,
   DEFAULT_SPACE,
   FIXTURES_DIR,
   resetAidlcEnv,
@@ -76,11 +77,13 @@ import {
 
 resetAidlcEnv();
 
-// P9: advance/approve emit memory_path against the BARE space record prefix
-// (relativeMemoryPath called with no recordPrefix -> relativeSpaceRecordPrefix);
-// the flat amadeus-docs/ prefix is retired. `advance` does not thread the active
-// intent's record dir, so the row carries the bare-space prefix.
-const RP = `amadeus/spaces/${DEFAULT_SPACE}/intents`;
+// advance/approve emit memory_path threaded with the ACTIVE INTENT's record dir
+// (relativeMemoryPath called with relativeRecordDir(projectDir) -> the per-intent
+// record prefix). createTestProject seeds an active intent, so the row carries
+// the <slug>-<id8> record-dir segment. (Issue #603: `advance` previously called
+// relativeMemoryPath with no recordPrefix and fell back to the bare-space prefix,
+// dropping the record dir.)
+const RP = `amadeus/spaces/${DEFAULT_SPACE}/intents/${DEFAULT_RECORD_DIR}`;
 
 const BUN = process.execPath; // the bun running this test
 const TOOL = join(AMADEUS_SRC, "tools", "amadeus-state.ts");
