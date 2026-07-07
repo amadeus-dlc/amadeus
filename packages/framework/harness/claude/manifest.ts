@@ -14,7 +14,7 @@
 // literals, the regenerated dist/claude is byte-identical to the hand-authored
 // tree it replaces (the MR-1 keystone gate).
 
-import type { HarnessManifest } from "../../scripts/manifest-types.ts";
+import type { HarnessManifest } from "../../../../scripts/manifest-types.ts";
 import onboardingFills from "./onboarding.fills.ts";
 
 const manifest: HarnessManifest = {

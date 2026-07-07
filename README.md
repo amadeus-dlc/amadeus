@@ -6,7 +6,7 @@
 
 Amadeus-DLC is a fork of **AI-DLC v2** and a native implementation of the **AI-DLC methodology** (AI-Driven Development Life Cycle) that runs on **many harnesses from one source of truth** — today Claude Code, Kiro IDE, Kiro CLI, and Codex CLI, and any capable harness you port it to. Run a full software-development lifecycle — 11 domain-expert agents working through a 32-stage workflow, and you approve every gate — in whichever harness you use.
 
-The methodology lives once, in a harness-neutral `core/`; each harness adds a thin surface that decides how it shows up on that harness. So you edit the methodology in one place, and every harness distribution is generated from it — no harness gets special treatment. (See [Repository layout](#repository-layout) for how the pieces fit together.)
+The methodology lives once, in harness-neutral `packages/framework/core/`; each harness adds a thin surface under `packages/framework/harness/` that decides how it shows up on that harness. So you edit the methodology in one package-owned place, and every harness distribution is generated from it — no harness gets special treatment. (See [Repository layout](#repository-layout) for how the pieces fit together.)
 
 ![version](https://img.shields.io/badge/version-1.1.0-blue)
 ![license](https://img.shields.io/badge/license-MIT--0-green)
@@ -43,7 +43,7 @@ Ad-hoc AI coding works until the project gets real. Then context drifts between 
 
 ## Methodology and implementation
 
-**AI-DLC is a methodology** — a structured, gated approach to AI-driven software development, defined by AWS (see the [blog post](https://aws.amazon.com/blogs/devops/ai-driven-development-life-cycle/) and [method paper](https://prod.d13rzhkk8cj2z0.amplifyapp.com/) under [References](#references)). **This repository is its native, multi-harness implementation** — the methodology rendered as skills, agents, hooks, and tools from one harness-neutral `core/`, so it runs natively inside Claude Code, Kiro IDE, Kiro CLI, Codex CLI, or any capable harness you port it to. The methodology is the *what*; each harness distribution is the *how* for one runtime, and every distribution is generated from the same source.
+**AI-DLC is a methodology** — a structured, gated approach to AI-driven software development, defined by AWS (see the [blog post](https://aws.amazon.com/blogs/devops/ai-driven-development-life-cycle/) and [method paper](https://prod.d13rzhkk8cj2z0.amplifyapp.com/) under [References](#references)). **This repository is its native, multi-harness implementation** — the methodology rendered as skills, agents, hooks, and tools from one harness-neutral `packages/framework/core/`, so it runs natively inside Claude Code, Kiro IDE, Kiro CLI, Codex CLI, or any capable harness you port it to. The methodology is the *what*; each harness distribution is the *how* for one runtime, and every distribution is generated from the same source.
 
 ## Pick your harness
 
@@ -237,25 +237,29 @@ Three guides, one per reader — pick by what you're trying to change:
 
 ## Repository layout
 
-Three zones: what AI-DLC **is**, how each harness **speaks**, and what users **copy**. You only ever edit the first two — `bun scripts/package.ts` regenerates the third.
+Three zones: what AI-DLC **is**, how each harness **speaks**, and what users **copy**. The framework-authored source now lives under `packages/framework/`; root `scripts/` remains the repository-level build entrypoint and root `dist/` remains the public install contract.
 
 ```text
 amadeus-claude/
 │  ─────────── HAND-AUTHORED SOURCE — edit here ───────────
-├── core/                       # ONE harness-neutral source of truth
-│   ├── tools/                  #   25 amadeus-*.ts engine tools (+ data/scaffold/ templates)
-│   ├── amadeus-common/           #   stage protocol + 32 stage files + conductor
-│   ├── agents/                 #   11 domain-expert personas
-│   ├── knowledge/ memory/ scopes/ sensors/ hooks/
-│   ├── skills/                 #   4 session skills (session-cost, replay, outcomes-pack, grilling)
-│   └── templates/              #   onboarding skeleton → each harness's CLAUDE.md / AGENTS.md
-│       # prose names the harness dir with the {{HARNESS_DIR}} token — substituted at packaging
+├── packages/
+│   └── framework/
+│       ├── package.json        # package boundary for the framework source
+│       ├── core/               # ONE harness-neutral source of truth
+│       │   ├── tools/          #   amadeus-*.ts engine tools (+ data/scaffold/templates)
+│       │   ├── amadeus-common/ #   stage protocol + stage files + conductor
+│       │   ├── agents/         #   domain-expert personas
+│       │   ├── knowledge/ memory/ scopes/ sensors/ hooks/
+│       │   ├── skills/         #   session skills
+│       │   └── templates/      #   onboarding skeleton → each harness's CLAUDE.md / AGENTS.md
+│       └── harness/            # thin per-harness authored surfaces — small, divergent by design
+│           ├── claude/         #   manifest.ts · orchestrator skill · settings.json.example · onboarding fills
+│           ├── kiro-ide/       #   manifest.ts · orchestrator · agent JSONs · .kiro.hook files · settings
+│           ├── kiro/           #   manifest.ts · orchestrator · agent JSONs · settings · onboarding fills
+│           └── codex/          #   manifest.ts · emit.ts · orchestrator · hooks adapter
 │
-├── harness/                    # thin per-harness authored surfaces — small, divergent by design
-│   ├── claude/                 #   manifest.ts · orchestrator skill · settings.json.example · onboarding fills
-│   ├── kiro-ide/               #   manifest.ts · orchestrator · agent JSONs · .kiro.hook files · settings · onboarding fills
-│   ├── kiro/                   #   manifest.ts · orchestrator · agent JSONs · settings · onboarding fills (CLI — agent-JSON hooks)
-│   └── codex/                  #   manifest.ts · emit.ts (Codex-only emissions) · orchestrator · hooks adapter
+├── core -> packages/framework/core       # compatibility alias for existing docs/tests/imports
+├── harness -> packages/framework/harness # compatibility alias for existing docs/tests/imports
 │
 ├── scripts/
 │   ├── package.ts              # THE build entry: copy core+harness per manifest → graph compile →
@@ -274,19 +278,19 @@ amadeus-claude/
 └── docs/                       # guide/ · harness-engineering/ · reference/
 ```
 
-> `core/` is what AI-DLC **is**. `harness/` is how each harness **speaks**. `dist/` is what users **copy**. Only the first two are ever edited; `bun scripts/package.ts` regenerates the rest, and a hand-edit to `dist/` is a CI failure.
+> `packages/framework/core/` is what AI-DLC **is**. `packages/framework/harness/` is how each harness **speaks**. `dist/` is what users **copy**. Root `core/` and `harness/` are compatibility aliases. Only framework source is edited; `bun scripts/package.ts` regenerates `dist/`, and a hand-edit to `dist/` is a CI failure.
 
-`packages/setup` のような setup/installer package は、この root framework layout とは別の sibling package boundary として扱う。Framework source/distribution contract は引き続き root-level の `core/`, `harness/`, `scripts/`, `dist/` に維持する。背景と tradeoff は [Workspace Layout Decision](docs/reference/18-workspace-layout.md) に記録している。
+`packages/setup` のような setup/installer package と並べるため、framework source は `packages/framework/core` と `packages/framework/harness` に移動した。`scripts/` と `dist/` は root-level の repository contract として維持する。背景と tradeoff は [Workspace Layout Decision](docs/reference/18-workspace-layout.md) に記録している。
 
 ## Build / regenerate the harnesses
 
-Maintainers edit the hand-authored source in `core/` (or a `harness/<name>/`
-surface), then regenerate the committed `dist/<harness>/` trees — **never
+Maintainers edit the hand-authored source in `packages/framework/core/` (or a
+`packages/framework/harness/<name>/` surface), then regenerate the committed `dist/<harness>/` trees — **never
 hand-edit `dist/`**, the drift guard fails CI.
 
 ```bash
-npm run dist                    # regenerate every dist/<harness>/ from core/ + harness/
-bun scripts/package.ts            # regenerate every dist/<harness>/ from core/ + harness/
+npm run dist                    # regenerate every dist/<harness>/ from packages/framework/core + harness
+bun scripts/package.ts            # regenerate every dist/<harness>/ from packages/framework/core + harness
 bun scripts/package.ts <name>     # regenerate one harness (e.g. claude, kiro-ide, codex)
 npm run dist:check               # byte-parity drift guard (run in CI)
 bun scripts/package.ts --check    # byte-parity drift guard (run in CI)

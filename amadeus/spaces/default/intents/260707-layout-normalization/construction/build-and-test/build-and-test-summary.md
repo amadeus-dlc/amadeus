@@ -6,16 +6,16 @@
 
 | Unit | Build/Test interpretation |
 | --- | --- |
-| U1 Layout Decision Record | design record 追加。runtime code 変更なし。 |
-| U2 Contributor Documentation Update | README/docs navigation 更新。generated `dist/` 変更なし。 |
+| U1 Layout Decision Record | design record 更新。`core` / `harness` 実体を `packages/framework/` へ移動。 |
+| U2 Contributor Documentation Update | README/docs navigation 更新。root `scripts` / `dist` 維持を明記。 |
 | U3 Guard Validation Plan | validation checklist 追加。drift guard 実行対象を明文化。 |
-| U4 Follow-up Migration Preparation | future migration slices 記録。実装移行なし。 |
+| U4 Follow-up Migration Preparation | future migration slices 記録。`scripts` / `dist` 移動は follow-up 扱い。 |
 
 ## Overall Build Status
 
 Build status: pass.
 
-依存関係が未インストールだったため、`bun install --frozen-lockfile` を実行してから TypeScript check を再実行した。lockfile 固定での dependency install のみで、package manifest や lockfile の変更は発生していない。
+依存関係が未インストールだったため、初回は `bun install --frozen-lockfile` を実行してから TypeScript check を再実行した。その後 `packages/framework/package.json` と root workspaces を追加したため、`bun install` で `bun.lock` を更新し、`bun install --frozen-lockfile` が通ることを再確認した。
 
 ## Test Type Inventory
 
@@ -23,7 +23,7 @@ Build status: pass.
 | --- | --- | --- | --- |
 | Build/drift guard | yes | yes | pass |
 | Unit | yes | yes, targeted docs legacy refs gate | pass |
-| Integration | yes | no, docs-only scope | not applicable |
+| Integration | yes | targeted packaging parity | pass |
 | Performance | yes | no, no runtime/performance path changed | not applicable |
 | Security | yes | no dedicated scan, no security surface changed | not applicable |
 
@@ -38,9 +38,9 @@ Build status: pass.
 
 - Build-ready: yes.
 - Test-ready: yes.
-- Deployment-ready: yes, documentation-only change として merge 可能。
+- Deployment-ready: yes, framework source relocation として merge 可能。
 
 ## Known Limitations
 
 - `bun run lint` は終了コード 0 だが、既存 test files に Biome warning がある。今回の変更に直接起因しないため修正していない。
-- full `bun tests/run-tests.ts --ci` は実行していない。今回の diff は docs/design-only で、targeted unit test と drift/type/lint guard で十分と判断した。
+- full `bun tests/run-tests.ts --ci` は実行していない。source relocation に対して targeted packaging parity、docs legacy refs gate、drift/type/lint guard を実行した。

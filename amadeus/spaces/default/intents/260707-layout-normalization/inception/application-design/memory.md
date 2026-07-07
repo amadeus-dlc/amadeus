@@ -3,7 +3,7 @@
 ## Interpretations
 
 - 2026-07-07T07:18:00Z — Application Design は runtime service design ではなく、repository layout architecture decision として扱った。
-- 2026-07-07T07:18:00Z — `requirements`, `architecture`, `component-inventory`, `team-practices` の根拠から、即時の full workspace normalization ではなく root framework layout 維持 + sibling `packages/setup` を推奨した。
+- 2026-07-07T07:18:00Z — 初期設計では root framework layout 維持 + sibling `packages/setup` を推奨したが、後続のユーザー指示により `core` / `harness` のみ `packages/framework/` へ移し、`scripts` / `dist` を root に維持する方針へ更新した。
 - 2026-07-07T07:18:00Z — Markdown 本文は日本語で作成し、path、CLI、file name、ADR 用語などの識別子は正確性のため英語表記を残した。
 
 ## Deviations

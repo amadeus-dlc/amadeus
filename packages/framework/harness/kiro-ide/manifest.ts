@@ -14,7 +14,7 @@
 // amadeus.json); the IDE harness relies on .kiro.hook files (the only mechanism
 // the IDE recognises). Both share the same core, adapter, and TS hook bodies.
 
-import type { HarnessManifest } from "../../scripts/manifest-types.ts";
+import type { HarnessManifest } from "../../../../scripts/manifest-types.ts";
 import onboardingFills from "./onboarding.fills.ts";
 
 const manifest: HarnessManifest = {

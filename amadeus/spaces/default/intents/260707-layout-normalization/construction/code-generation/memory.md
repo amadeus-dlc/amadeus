@@ -17,3 +17,8 @@
 ## Open questions
 
 - 2026-07-07T08:02:00Z — Build and Test で docs-only change としてどの validation command を実行するかを決める。
+
+## User-directed follow-up
+
+- 2026-07-07T08:08:00Z — Build and Test 承認後、ユーザーから「実装がないのはなぜ」「ファイル移動するんじゃないの」と指摘があり、方針を docs-only から implementation-bearing migration に変更した。
+- 2026-07-07T08:10:00Z — ユーザーが `dist/` と `scripts/` は root に維持し、`packages/framework/core` と `packages/framework/harness` だけを移動対象にする方針を明示した。

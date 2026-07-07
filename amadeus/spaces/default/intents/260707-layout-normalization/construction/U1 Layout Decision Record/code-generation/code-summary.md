@@ -9,15 +9,16 @@
 ## Key Decisions
 
 - Added a repository-level design record for Issue #610 under `docs/reference/`.
-- Recorded staged mixed layout as the recommended decision.
-- Kept root-level `core/`, `harness/`, `scripts/`, `dist/` as the framework layout.
+- Recorded package-owned framework source layout as the implemented decision.
+- Moved framework source to `packages/framework/core` and `packages/framework/harness`.
+- Kept root-level `scripts/` and `dist/` as repository-level build/distribution contracts.
 - Treated `packages/setup` as a sibling package handled by a separate intent.
 - Preserved `dist:check` and `promote:self:check` as release/drift guards.
 
 ## Tests
 
-No test files were added for U1 because this unit is documentation-only and does not change runtime code. Build and Test should still decide whether docs/reference checks or repository-wide validation commands are needed after U2/U3 complete.
+No test files were added for U1. The migration changes source paths and packaging resolution, so Build and Test must run typecheck, packaging drift guards, and targeted packaging parity.
 
 ## Deviations
 
-No deviations from the approved functional design. Link/navigation updates are intentionally left for U2 Contributor Documentation Update.
+User-directed deviation after the initial approval: implementation now includes moving `core` and `harness` under `packages/framework/` while preserving root `scripts/` and `dist/`.

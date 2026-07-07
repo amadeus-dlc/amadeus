@@ -12,9 +12,9 @@
     "types": ["bun-types"]
   },
   "include": [
-    "core/hooks/*.ts",
-    "core/tools/*.ts",
-    "harness/*/*.ts",
+    "packages/framework/core/hooks/*.ts",
+    "packages/framework/core/tools/*.ts",
+    "packages/framework/harness/*/*.ts",
     "scripts/*.ts"
   ]
 }

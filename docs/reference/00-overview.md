@@ -7,11 +7,12 @@ This reference documents the internal architecture and implementation of AI-DLC.
 If you are **using** AI-DLC to build software, start with the [User Guide](../guide/00-introduction.md). If you are **reshaping how AI-DLC behaves** through configuration -- adding a stage or an agent, defining a scope, authoring rules and sensors, adding team knowledge -- start with the [Harness Engineer Guide](../harness-engineering/00-overview.md); those are data changes, not code changes, and the chapters there narrate the workflow before pointing back here for the exhaustive schema.
 
 > **Paths in this reference.** AI-DLC is authored once and generated per harness, so a file is named by one of three conventions, by intent:
-> - **`core/…`** -- the hand-authored, harness-neutral **source of truth** (e.g. `core/tools/amadeus-orchestrate.ts`, `core/amadeus-common/stages/`). This is where you edit. When a path names where a file is *authored* or *changed*, it is a `core/` path.
+> - **`packages/framework/core/…`** -- the hand-authored, harness-neutral **source of truth** (e.g. `packages/framework/core/tools/amadeus-orchestrate.ts`, `packages/framework/core/amadeus-common/stages/`). This is where you edit. Root `core/…` remains a compatibility alias for existing references.
+> - **`packages/framework/harness/<name>/…`** -- the hand-authored, harness-specific surface for each runtime. Root `harness/…` remains a compatibility alias.
 > - **`dist/<harness>/…`** -- the **generated, committed, drift-guarded** distribution (`dist/claude/.claude/`, `dist/kiro/.kiro/`, `dist/codex/`). Never hand-edited; reproduced byte-for-byte by `bun scripts/package.ts`. Cited only when describing what *ships*.
 > - **`<harness-dir>/…`** (e.g. `.claude/`, `.kiro/`, `.codex/`) -- the **runtime** location inside an *installed* project, where commands run and the framework reads/writes during a workflow (`bun .claude/tools/amadeus-graph.ts compile`, `loadAgents()` reading `.claude/agents/`). The directory is a parameter of the harness.
 >
-> Where this reference shows a bare `.claude/` path, read it as the runtime location for the Claude harness specifically; the same file is authored in `core/` and ships to each harness's own directory.
+> Where this reference shows a bare `.claude/` path, read it as the runtime location for the Claude harness specifically; the same file is authored under `packages/framework/core/` or `packages/framework/harness/` and ships to each harness's own directory.
 
 ## What This Reference Covers
 
@@ -35,7 +36,7 @@ If you are **using** AI-DLC to build software, start with the [User Guide](../gu
 | [Stage Definition](15-stage-definition.md) | YAML frontmatter contract, three-compartment body, compile pipeline |
 | [Artifact Vocabulary](16-artifact-vocabulary.md) | Naming rules, collision policy, filesystem mapping, and how to view the live registry |
 | [Engine and Skill System](17-skill-system.md) | The orchestration engine (`next`/`report`), the typed directive contract, the conductor, plural skills, scope shape, and the swarm referee |
-| [Workspace Layout Decision](18-workspace-layout.md) | Issue #610 の repository layout decision: root framework layout を維持し、`packages/setup` を sibling package として扱う |
+| [Workspace Layout Decision](18-workspace-layout.md) | Issue #610 の repository layout decision: framework source を `packages/framework/` に移し、root `scripts/` と `dist/` を維持する |
 | [Diagrams](diagrams.md) | All Mermaid diagrams in one place |
 | [Agents](agents/) | Technical agent reference (frontmatter, tooling, stage ownership) |
 

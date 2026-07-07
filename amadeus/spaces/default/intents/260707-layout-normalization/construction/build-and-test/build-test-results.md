@@ -4,7 +4,7 @@
 
 - Timestamp: 2026-07-07T07:35:55Z
 - Runtime: Bun 1.3.13
-- Dependency setup: `bun install --frozen-lockfile` executed because `node_modules` was absent.
+- Dependency setup: `bun install` updated `bun.lock` after adding root workspaces and `packages/framework/package.json`; `bun install --frozen-lockfile` then passed.
 - Upstream inputs: all unit `code-generation-plan` and `code-summary` artifacts under `construction/*/code-generation/`.
 
 ## Build Results
@@ -16,6 +16,7 @@
 | `bun run promote:self:check` | pass | `claude` and `codex` checks passed; project-local self install is in sync. |
 | `bun run typecheck` | pass after retry | Initial run failed with `tsc: command not found`; after dependency install, `tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.tests.json` completed successfully. |
 | `bun run lint` | pass with warnings | Exit code 0. Biome reported existing warnings/infos in tests; no fixes applied. |
+| `bun tests/run-tests.ts --integration --filter t145-packaging-parity` | pass | Packaging parity targeted integration test passed after source relocation. |
 
 ## Unit Test Results
 
@@ -31,7 +32,7 @@ Details:
 
 ## Integration Test Results
 
-No integration tests were run for this docs-only diff. Integration boundary confidence is covered by `dist:check` and `promote:self:check`.
+Targeted integration test `t145-packaging-parity` was run and passed. It confirms `scripts/package.ts --check` and `scripts/package.ts claude --check` remain clean with source under `packages/framework/`.
 
 ## Performance Test Results
 
@@ -62,3 +63,4 @@ No coverage tool was run. The relevant requirement coverage is command-based:
 - Distribution drift: `dist:check` passed.
 - Self-install drift: `promote:self:check` passed.
 - TypeScript compile safety: `typecheck` passed after dependency setup.
+- Packaging parity: targeted integration test passed.

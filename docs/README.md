@@ -3,7 +3,7 @@
 **AI-DLC is a methodology** — a structured, gated approach to AI-driven software
 development (defined by AWS). **This repository is its native, multi-harness
 implementation:** the methodology rendered as skills, agents, hooks, and tools
-from one harness-neutral `core/`, so it runs natively in the CLI harness you use
+from one harness-neutral `packages/framework/core/`, so it runs natively in the CLI harness you use
 — today Claude Code, Kiro CLI, Kiro IDE, or Codex CLI, and any capable CLI you port it to.
 The methodology is the *what*; each harness distribution is the *how* for one
 runtime, and every distribution is generated from the same source.
@@ -33,9 +33,9 @@ behaviours that differ live in [Running on other harnesses](guide/harnesses/READ
 
 ## Building and contributing
 
-Maintainers author in `core/` and regenerate the `dist/<harness>/` trees with
+Maintainers author in `packages/framework/core/` and `packages/framework/harness/`, then regenerate the `dist/<harness>/` trees with
 `npm run dist` (`bun scripts/package.ts`) — see the [Contributing Guide](reference/11-contributing.md)
 for the full build-and-test loop, and [Porting to a New Harness](harness-engineering/09-porting-to-a-new-harness.md)
 to add one.
 
-Repository layout の設計判断は [Workspace Layout Decision](reference/18-workspace-layout.md) に記録している。Framework source/distribution contract は root-level の `core/`, `harness/`, `scripts/`, `dist/` に維持し、`packages/setup` は別 intent の sibling package として扱う。
+Repository layout の設計判断は [Workspace Layout Decision](reference/18-workspace-layout.md) に記録している。Framework source は `packages/framework/core` と `packages/framework/harness` に置き、root `scripts/` と `dist/` は repository-level contract として維持する。

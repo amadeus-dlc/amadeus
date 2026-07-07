@@ -2,30 +2,33 @@
 
 ## Context
 
-GitHub issue #610 は、Amadeus repository の workspace/package layout を明示的に判断するための設計課題である。現在の repository は、framework の source of truth を root-level の `core/`, `harness/`, `scripts/`, `dist/` に置く。一方で、installer/setup 系の作業は将来 `packages/setup` のような package-owned layout として進む予定がある。
+GitHub issue #610 は、Amadeus repository の workspace/package layout を正規化するための課題である。従来は framework source of truth を root-level の `core/` と `harness/` に置き、setup/installer 系の作業だけを将来 `packages/setup/` に置く前提だった。
 
-この混在は初期 installer work の blast radius を抑えるためには妥当だったが、長期的な contributor mental model と release/drift guard の観点では、設計記録として明文化する必要がある。
+このままだと、framework source は root、setup package は `packages/` という責務軸が混在する。`packages/setup` を別 intent で進める前に、framework 側も package-owned source boundary を持つ必要がある。
 
 ## Decision
 
-Amadeus は当面、framework layout を root-level に維持する。
+Amadeus は framework の authored source を `packages/framework/` に移す。
 
-- `core/` は harness-neutral source of truth として維持する。
-- `harness/<name>/` は harness-specific authored source として維持する。
-- `scripts/` は repository-level packaging/self-promotion tooling として維持する。
-- `dist/<name>/` は generated かつ committed public install contract として root-level に維持する。
-- `.claude/`, `.codex/`, `.agents` は dogfood self-install targets として root-level に維持する。
-- `packages/setup` は別 intent の sibling package として扱い、この framework layout decision の implementation target には含めない。
-
-推奨 layout model は staged mixed layout である。Framework source/distribution contract は root-level に残し、package-owned setup work は sibling package として分離する。
+- `packages/framework/core/` を harness-neutral source of truth とする。
+- `packages/framework/harness/<name>/` を harness-specific authored source とする。
+- `packages/framework/package.json` を framework package boundary として追加する。
+- root `scripts/` は repository-level packaging/self-promotion tooling として維持する。
+- root `dist/<name>/` は generated かつ committed public install contract として維持する。
+- root `.claude/`, `.codex/`, `.agents` は dogfood self-install targets として維持する。
+- root `core` と `harness` は既存 docs/tests/import 互換の alias として残す。
+- `packages/setup` は別 intent の sibling package として扱い、この framework migration の implementation target には含めない。
 
 ```text
-core/                     # framework source of truth
-harness/<name>/            # harness-specific authored source
-scripts/                   # repository-level packaging/self-promotion tooling
-dist/<name>/               # public committed distribution output
-.claude/.codex/.agents     # dogfood runtime install targets
-packages/setup/            # sibling package, handled by separate intent
+packages/framework/core/        # framework source of truth
+packages/framework/harness/     # harness-specific authored source
+packages/framework/package.json # framework package boundary
+core -> packages/framework/core       # compatibility alias
+harness -> packages/framework/harness # compatibility alias
+scripts/                       # repository-level packaging/self-promotion tooling
+dist/<name>/                    # public committed distribution output
+.claude/.codex/.agents          # dogfood runtime install targets
+packages/setup/                 # sibling package, handled by separate intent
 ```
 
 ## Alternatives Considered
@@ -34,154 +37,109 @@ packages/setup/            # sibling package, handled by separate intent
 
 Root-level `core/`, `harness/`, `scripts/`, `dist/` を維持するだけで、`packages/setup` との混在を説明しない案。
 
-この案は変更が最小だが、Issue #610 の目的である tradeoff record と root-level 維持理由を満たさないため採用しない。
+この案は変更が最小だが、Issue #610 の目的である MECE な package-owned boundary を満たさないため採用しない。
 
-### Full workspace normalization
+### Full workspace normalization including scripts and dist
 
-Framework 側も `packages/<name>/{core,harness,dist,scripts}` へ移す案。
+Framework 側を `packages/framework/{core,harness,dist,scripts}` へすべて移す案。
 
-この案は package-owned 境界として最も一貫するが、`dist/` が public install source であるため blast radius が大きい。`scripts/package.ts`, `scripts/promote-self.ts`, README/docs, tests, fixtures, `.github/workflows/ci.yml`, root `.claude/.codex/.agents` まで同時に影響する。
+この案は package-owned 境界として最も一貫するが、`dist/` は README や install command が参照する public install source である。また `scripts/package.ts` と `scripts/promote-self.ts` は repository-level の build/release guard として CI や contributor workflow に直接結合している。
 
-現時点では採用しない。
+現時点では採用しない。`core` と `harness` の source boundary だけを package-owned に移し、`scripts` と `dist` は root contract として維持する。
 
-### Source root abstraction first
+### Source alias only
 
-Directory move の前に、`scripts/package.ts` の `CORE_ROOT` / `HARNESS_ROOT` などを logical resolver 経由にする案。
+`packages/framework/` を追加せず、root `core/` と `harness/` を残したまま docs だけを更新する案。
 
-これは将来 full normalization を再検討する場合の first safe slice として有効である。ただし Issue #610 の現時点の conclusion としては、実装作業を増やすより design record と docs clarity を優先する。
+この案は実装リスクが低いが、Issue #610 が求める workspace layout 正規化には届かないため採用しない。
 
 ## Path Impact
 
-| Area | Current contract | Impact if moved |
+| Area | New contract | Impact |
 | --- | --- | --- |
-| `scripts/package.ts` | root `core/`, root `harness/`, root `dist/` を前提に distribution を生成する | source root abstraction または script relocation が必要 |
-| `scripts/promote-self.ts` | root `dist/claude`, root `dist/codex` から root `.claude/.codex/.agents` へ同期する | self-install preservation と composed scopes の扱いを再設計する必要がある |
-| `scripts/manifest-types.ts` | `core/<src>` と `harness/<name>/<src>` の projection contract を定義する | package-local path contract へ移すか logical path contract を保つか決定が必要 |
-| `dist/*` | generated かつ committed public install source | README/docs/tests/CI/self-promotion に user-facing impact がある |
-| `.claude/.codex/.agents` | repository dogfood runtime install target | package-owned layout へ移す対象ではない |
-| tests/fixtures | root `dist/*` と root scripts を参照する | fixture abstraction が必要 |
-| README/docs | root `core/harness/dist` contributor model を説明する | layout decision と install command の更新が必要 |
-| `.github/workflows/ci.yml` | `dist:check` と `promote:self:check` を実行する | drift guard target の再定義が必要 |
+| `scripts/package.ts` | source root は `packages/framework/core` と `packages/framework/harness`、output は root `dist` | `CORE_ROOT` / `HARNESS_ROOT` を package-owned path に変更する |
+| `scripts/promote-self.ts` | root `dist/claude`, root `dist/codex` から root `.claude/.codex/.agents` へ同期する | 変更なし |
+| `scripts/manifest-types.ts` | manifests は package-owned harness から root `scripts` の shared contract を import する | import path を更新する |
+| `dist/*` | generated かつ committed public install source | root に維持する |
+| `.claude/.codex/.agents` | repository dogfood runtime install target | root に維持する |
+| `tsconfig.json` | authored TypeScript source includes `packages/framework/core` と `packages/framework/harness` | include path を更新する |
+| tests/docs | 既存 root `core` / `harness` 参照は alias で継続可能 | 段階的に package-owned path 表記へ更新する |
+| `.github/workflows/ci.yml` | `dist:check` と `promote:self:check` を実行する | root script contract 維持により変更不要 |
 
 ## Guard Preservation
 
 この decision は release/drift guard を弱めない。
 
-- `bun run dist:check` は root `dist/<harness>` が `scripts/package.ts` から byte-identical に生成できることを検証し続ける。
+- `bun run dist:check` は `packages/framework/core` + `packages/framework/harness` から root `dist/<harness>` が byte-identical に生成できることを検証する。
 - `bun run promote:self:check` は root `.claude/.codex/.agents` が generated distributions と同期していることを検証し続ける。
-- `bun run typecheck`, `bun run lint`, and relevant `tests/run-tests.sh` profiles remain the validation path when code or tests change.
+- `bun run typecheck`, `bun run lint`, relevant `tests/run-tests.sh` profiles remain the validation path when code or tests change.
 
-Directory move を行わないため、この decision 自体は generated `dist/<harness>/` の手編集を必要としない。
+`dist/` を移動しないため、existing install commands と public distribution path は維持される。
 
 ## Validation Checklist
 
-この decision に関する変更を出すときは、変更種別に応じて次を確認する。
+この layout に関する変更を出すときは、変更種別に応じて次を確認する。
 
 | Change type | Required validation |
 | --- | --- |
-| Design record or docs only | Markdown review; confirm install paths and root layout wording remain consistent |
-| Packaging, manifest, or distribution path changes | `bun run dist:check` |
+| Source path or manifest import changes | `bun run typecheck` |
+| Packaging source/output path changes | `bun run dist:check` |
 | Self-install, Codex/Claude runtime surface, or composed scope behavior changes | `bun run promote:self:check` |
-| TypeScript source or test helper changes | `bun run typecheck` and `bun run lint` |
+| Documentation path wording changes | docs review and docs legacy refs gate if relevant |
 | Behavior changes touching harness runtime flows | relevant `tests/run-tests.sh` profile |
-
-この Issue #610 decision は docs/design-focused であり、directory move を行わない。したがって、Build and Test stage では docs consistency と、必要に応じた drift guard command を確認する。
 
 ## Consequences
 
 ### Positive
 
-- Existing packaging and self-promotion flow remains stable.
-- Maintainers keep the simple contributor rule: edit `core/` or `harness/<name>/`, regenerate `dist/`.
-- `packages/setup` can proceed independently without forcing framework source into package-local layout.
-- Issue #610 can be closed with an explicit design rationale rather than an implicit staged layout.
+- Framework source が `packages/framework/` にまとまり、`packages/setup` と sibling package として並ぶ。
+- root `dist/` public install contract を維持できる。
+- root `scripts/` build/release workflow を維持できる。
+- 既存 docs/tests/imports は、移行中も root `core` と `harness` alias 経由で継続できる。
 
 ### Negative
 
-- The repository remains mixed: root framework zones plus package-owned setup zones.
-- MECE clarity depends on docs and this design record being kept current.
-- Full workspace normalization, if desired later, still requires a dedicated migration intent.
+- root `core` / `harness` aliases are transitional compatibility surface and must not become a second source of truth.
+- 一部 docs/tests はまだ root `core/` と `harness/` に言及する。これは互換 alias として有効だが、source of truth を説明する文脈では段階的に `packages/framework/` 表記へ更新する。
+- Full relocation of `scripts/` or `dist/`, if desired later, still requires a dedicated migration intent.
 
 ## Future Migration Trigger
 
-Reconsider full workspace normalization only if at least one of these becomes true:
+Reconsider moving root `scripts/` only if framework packaging becomes independently releasable from the repository root.
 
-- multiple independently releasable framework packages exist;
-- root-level `core/` / `harness/` becomes a blocker for release or ownership;
-- `packages/setup` needs shared framework source that cannot be expressed as a sibling dependency;
-- tests/docs/CI have been prepared with source root and fixture abstraction.
-
-If reopened, the first safe slice should be source root abstraction, not a directory move.
+Reconsider moving root `dist/` only if install commands and public distribution expectations can be changed deliberately across README, docs, tests, CI, and self-promotion.
 
 ## Potential Follow-Up Slices
 
-Full workspace normalization を将来再検討する場合、次の順に小さく分ける。
+### Documentation path cleanup
 
-### Source root abstraction
+Goal: root `core/` / `harness/` prose referencesを、source of truth では `packages/framework/core` / `packages/framework/harness` と書くように段階更新する。
 
-Goal: `scripts/package.ts` の `CORE_ROOT`, `HARNESS_ROOT`, root `dist` assumptions を logical resolver 経由にする。
-
-Non-goal: directory move はこの slice では行わない。
-
-Target areas:
-
-- `scripts/package.ts`
-- `scripts/manifest-types.ts`
-- harness manifests
+Non-goal: runtime `.claude/.codex/.agents` や root `dist/` の説明を変えない。
 
 Guard commands:
 
-- `bun run dist:check`
+- docs review
+- `bun tests/run-tests.ts --unit --filter t174-docs-legacy-refs-gate`
+
+### Alias retirement readiness
+
+Goal: root `core` / `harness` alias に依存する tests/imports/docs を棚卸しし、将来 alias を消せるか判断する。
+
+Non-goal: この issue で alias を削除しない。
+
+Guard commands:
+
 - `bun run typecheck`
-
-### Test fixture abstraction
-
-Goal: tests が root `dist/*` を直接参照する箇所を helper に集約し、将来の output relocation を検証しやすくする。
-
-Non-goal: install path を変えない。
-
-Target areas:
-
-- `tests/harness/fixtures.ts`
-- `tests/harness/tui-fixtures.ts`
-- packaging/self-promotion tests
-
-Guard commands:
-
 - relevant `tests/run-tests.sh` profile
-- `bun run typecheck`
 
-### Manifest contract seam
+### Scripts package boundary
 
-Goal: `coreDirs` / `harnessFiles` の `src` を package-local path にするか logical repository path にするかを切り替え可能にする。
+Goal: `scripts/` を root に残すか、将来 `packages/framework/scripts` に移すかを再評価する。
 
-Non-goal: all harness manifests を一度に package-local path へ移さない。
-
-Target areas:
-
-- `scripts/manifest-types.ts`
-- `harness/*/manifest.ts`
-- `harness/codex/emit.ts`
+Non-goal: `dist/` の移動を同時に行わない。
 
 Guard commands:
 
 - `bun run dist:check`
 - `bun run promote:self:check`
-
-### Documentation compatibility update
-
-Goal: root framework layout と package-owned setup layout の関係を、README/docs/contributing guide で更新し続ける。
-
-Non-goal: docs だけで behavior change を装わない。
-
-Target areas:
-
-- `README.md`
-- `docs/README.md`
-- `docs/reference/11-contributing.md`
-- harness guide pages when install commands change
-
-Guard commands:
-
-- docs review
-- docs legacy refs gate if relevant

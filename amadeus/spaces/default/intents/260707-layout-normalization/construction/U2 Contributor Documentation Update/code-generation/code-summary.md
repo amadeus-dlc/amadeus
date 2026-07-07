@@ -10,14 +10,15 @@
 ## Key Decisions
 
 - Added discoverability for `docs/reference/18-workspace-layout.md`.
-- Documented that root-level `core/`, `harness/`, `scripts/`, `dist/` remain the framework source/distribution contract.
+- Documented that framework authored source now lives under `packages/framework/core` and `packages/framework/harness`.
+- Documented that root `scripts/` and `dist/` remain repository-level build/distribution contracts.
 - Documented that `packages/setup` is a sibling package boundary handled separately.
 - Did not change install commands or generated `dist/` paths.
 
 ## Tests
 
-No test files were added for U2 because this unit is documentation-only. Build and Test should decide whether to run docs reference gates or broader repository validation.
+No test files were added for U2. Build and Test should run docs reference gates and broader repository validation because path assumptions changed.
 
 ## Deviations
 
-No deviations from the approved functional design.
+User-directed deviation after the initial approval: contributor docs now describe the actual source relocation, not a no-migration decision.

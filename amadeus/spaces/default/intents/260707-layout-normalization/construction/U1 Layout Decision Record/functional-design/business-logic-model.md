@@ -37,7 +37,7 @@ flowchart TD
 Design record は次を含む。
 
 - Context: Issue #610 の背景と `packages/setup` sibling intent。
-- Decision: root framework layout 維持 + `packages/setup` sibling package。
+- Decision: `packages/framework/core` / `packages/framework/harness` へ source を移動し、root `scripts` / `dist` を維持 + `packages/setup` sibling package。
 - Consequences: docs 更新、future migration seam、guard preservation。
 - Alternatives Rejected: full workspace normalization の即時採用、説明なしの status quo。
 - Validation: `dist:check`, `promote:self:check`, docs impact。

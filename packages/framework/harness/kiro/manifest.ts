@@ -17,7 +17,7 @@
 //     amadeus-kiro-adapter.ts stdin shim is a harnessFile.
 //   - AGENTS.md lands at the PROJECT ROOT (dist/kiro/AGENTS.md), outside .kiro/.
 
-import type { HarnessManifest } from "../../scripts/manifest-types.ts";
+import type { HarnessManifest } from "../../../../scripts/manifest-types.ts";
 import onboardingFills from "./onboarding.fills.ts";
 
 const manifest: HarnessManifest = {

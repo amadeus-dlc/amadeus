@@ -8,7 +8,7 @@
 // through (the F-ONBOARDING-LEAK class). The Codex-specific header + Prerequisites
 // are authored here directly.
 
-import type { OnboardingFills } from "../../scripts/onboarding.ts";
+import type { OnboardingFills } from "../../../../scripts/onboarding.ts";
 
 const fills: OnboardingFills = {
   invoke: "$amadeus",

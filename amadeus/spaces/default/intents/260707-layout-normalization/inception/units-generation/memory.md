@@ -3,7 +3,7 @@
 ## Interpretations
 
 - 2026-07-07T07:24:00Z — Units Generation は implementation order ではなく dependency DAG を作る stage として扱い、順序や critical path は Delivery Planning に残した。
-- 2026-07-07T07:24:00Z — 推奨 decision が staged mixed layout であるため、unit は directory move ではなく ADR/設計記録、docs、validation、follow-up issue に分解した。
+- 2026-07-07T07:24:00Z — 初期 unit は directory move ではなく ADR/設計記録、docs、validation、follow-up issue に分解した。その後ユーザー指示により `core` / `harness` の実移動を同じ PR に追加した。
 - 2026-07-07T07:24:00Z — User Stories stage は skip されているため、story map は requirements と design decisions への mapping として作成した。
 
 ## Deviations
@@ -12,7 +12,7 @@
 
 ## Tradeoffs
 
-- 2026-07-07T07:24:00Z — source root abstraction の実装 unit は optional follow-up とし、Issue #610 の acceptance criteria を満たすための design/docs units を中心にした。
+- 2026-07-07T07:24:00Z — source root abstraction は optional follow-up ではなく、`scripts/package.ts` の `CORE_ROOT` / `HARNESS_ROOT` を `packages/framework/` に向ける最小実装として扱う。
 
 ## Open questions
 

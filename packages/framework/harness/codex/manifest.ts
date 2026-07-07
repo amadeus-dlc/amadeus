@@ -15,7 +15,7 @@
 //   - the only authored .codex/ file is the amadeus-codex-adapter.ts stdin shim
 //     (a harnessFile); the agent TOMLs in .codex/agents/ are emitted.
 
-import type { HarnessManifest } from "../../scripts/manifest-types.ts";
+import type { HarnessManifest } from "../../../../scripts/manifest-types.ts";
 import emit from "./emit.ts";
 
 const manifest: HarnessManifest = {

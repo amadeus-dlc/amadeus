@@ -4,10 +4,10 @@
 
 この手順は、各 unit の `code-generation-plan` と `code-summary` を入力として作成した。
 
-- `U1 Layout Decision Record`: design record 追加、runtime code 変更なし。
+- `U1 Layout Decision Record`: design record 更新、`core` / `harness` source relocation あり。
 - `U2 Contributor Documentation Update`: README/docs 更新、generated `dist/` 変更なし。
 - `U3 Guard Validation Plan`: validation checklist 追加、command 実行は Build and Test で扱う。
-- `U4 Follow-up Migration Preparation`: future migration slices 追加、実装移行なし。
+- `U4 Follow-up Migration Preparation`: future migration slices 追加。今回の実装移行は `core` / `harness` のみで、`scripts` / `dist` は維持。
 
 ## Environment Setup
 

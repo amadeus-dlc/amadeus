@@ -19,12 +19,14 @@ Contributions to this implementation are welcome. This guide covers prerequisite
 ## Repository Structure
 
 ```
-core/                # Hand-authored, harness-neutral source (tools, stages, agents, rules, knowledge, hooks)
-harness/<name>/      # Per-harness authored surfaces (manifest, orchestrator skill, settings/config; e.g. claude/, kiro/, codex/)
-scripts/package.ts   # The build: regenerates dist/<harness>/ from core/ + harness/ (`npm run dist`, `--check` drift-guards it)
+packages/framework/core/          # Hand-authored, harness-neutral source (tools, stages, agents, rules, knowledge, hooks)
+packages/framework/harness/<name>/ # Per-harness authored surfaces (manifest, orchestrator skill, settings/config)
+core/                             # Compatibility alias to packages/framework/core/
+harness/                          # Compatibility alias to packages/framework/harness/
+scripts/package.ts                # The build: regenerates dist/<harness>/ from packages/framework/core + harness
 scripts/promote-self.ts # Project-local dogfood install: promotes generated Claude/Codex surfaces into .claude/.codex/.agents (workspace memory is never overwritten)
 dist/<harness>/      # GENERATED distributables (claude/.claude/, kiro/.kiro/ + AGENTS.md, codex/) — never hand-edit; run the packager
-packages/setup/      # Sibling setup package when present; handled separately from the root framework layout
+packages/setup/      # Sibling setup package when present; separate from packages/framework/
 tests/               # All-TypeScript test suite (t*.test.ts, run via bun)
 docs/                # Documentation
   guide/             # User guide (how to use AI-DLC)
@@ -33,15 +35,15 @@ docs/                # Documentation
 ```
 
 For the full architecture, see [reference/01-architecture.md](01-architecture.md).
-For the repository layout decision behind the root framework layout plus sibling package-owned setup work, see [Workspace Layout Decision](18-workspace-layout.md).
+For the repository layout decision behind the framework package boundary plus root `scripts/` and `dist/` compatibility contract, see [Workspace Layout Decision](18-workspace-layout.md).
 
 ## Development Workflow
 
 1. **Fork and branch** from `main`
 2. **Read the architecture** -- [reference/01-architecture.md](01-architecture.md) explains the execution model, agent delegation, and hook system
-3. **Understand the entry points** -- the deterministic engine `core/tools/amadeus-orchestrate.ts` (`next` / `report`) owns routing; the conductor `harness/claude/skills/amadeus/SKILL.md` is a thin forwarding loop that acts on its directives. For the normative engine / directive / conductor / swarm contract see [The Skill System](17-skill-system.md)
-4. **Make changes** -- Edit the harness-neutral source in `core/` (tools, stages, agents, hooks, rules, knowledge) or a harness surface in `harness/<name>/` (the orchestrator skill, settings). Then run `npm run dist` to regenerate `dist/` — never hand-edit `dist/`, the drift guard (`npm run dist:check` / `package.ts --check`) will fail CI
-   - `packages/setup` は root framework layout とは別の sibling package boundary として扱う。Framework source を `packages/<name>/{core,harness,dist,scripts}` へ移す decision は採用していない。詳細は [Workspace Layout Decision](18-workspace-layout.md) を参照する
+3. **Understand the entry points** -- the deterministic engine `packages/framework/core/tools/amadeus-orchestrate.ts` (`next` / `report`) owns routing; the conductor `packages/framework/harness/claude/skills/amadeus/SKILL.md` is a thin forwarding loop that acts on its directives. For the normative engine / directive / conductor / swarm contract see [The Skill System](17-skill-system.md)
+4. **Make changes** -- Edit the harness-neutral source in `packages/framework/core/` (tools, stages, agents, hooks, rules, knowledge) or a harness surface in `packages/framework/harness/<name>/` (the orchestrator skill, settings). Then run `npm run dist` to regenerate `dist/` — never hand-edit `dist/`, the drift guard (`npm run dist:check` / `package.ts --check`) will fail CI
+   - root `core/` と `harness/` は既存参照の互換 alias であり、source of truth は `packages/framework/` 配下である。
 5. **Promote locally when dogfooding** -- Run `npm run promote:self` to refresh this repository's project-local `.claude/`, `.codex/`, `.agents/`, and `CLAUDE.md` from the generated harness output; `npm run promote:self:check` drift-guards that self install. `amadeus/spaces/default/memory/` is intentionally not promoted — workspace memory is hand-edited method source (practices-discovery and the self-learning loop write to it at runtime), so the promoter never overwrites it. Composed-scope runtime data is likewise preserved: a `scopes/amadeus-<name>.md` absent from dist is a composer-authored scope (kept, never deleted as an orphan), and `tools/data/scope-grid.json` is compared and written per-key so composed entries survive while stock-entry drift still fails the check
 6. **Test** -- Run `bun tests/run-tests.ts` before submitting
 7. **Submit** -- Open a PR against `main`
@@ -161,7 +163,7 @@ A scope is authored as a file (its identity) plus a per-stage membership tag. Th
 
 ## Adding a Stage
 
-A stage is authored as a Markdown file with YAML frontmatter under `core/amadeus-common/stages/<phase>/<slug>.md`. The compiler reads the frontmatter into `tools/data/stage-graph.json`, and the runner generator emits a typeable `/amadeus-<slug>` skill from the compiled stage list. The extensibility contract is "to add a stage, write a stage file" — no engine edit is required to register it, because the engine routes off the compiled graph. (The full field reference and the three-compartment body format live in the Harness Engineer Guide's [Anatomy of a Stage](../harness-engineering/01-anatomy-of-a-stage.md) and [Adding a Stage](../harness-engineering/02-adding-a-stage.md); the schema is [Stage Definition](15-stage-definition.md).)
+A stage is authored as a Markdown file with YAML frontmatter under `packages/framework/core/amadeus-common/stages/<phase>/<slug>.md`. The compiler reads the frontmatter into `tools/data/stage-graph.json`, and the runner generator emits a typeable `/amadeus-<slug>` skill from the compiled stage list. The extensibility contract is "to add a stage, write a stage file" — no engine edit is required to register it, because the engine routes off the compiled graph. (The full field reference and the three-compartment body format live in the Harness Engineer Guide's [Anatomy of a Stage](../harness-engineering/01-anatomy-of-a-stage.md) and [Adding a Stage](../harness-engineering/02-adding-a-stage.md); the schema is [Stage Definition](15-stage-definition.md).)
 
 ### Steps
 

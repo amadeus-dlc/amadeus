@@ -4,7 +4,7 @@
 
 この decisions は `requirements`、`architecture`、`component-inventory`、`team-practices` を根拠にする。`requirements` の FR-1 から FR-6 は候補比較、path impact、guard preservation、`packages/setup` の sibling dependency、migration/no-migration rationale、docs impact を要求している。
 
-## ADR-001: Framework layout は root-level に維持し、`packages/setup` は sibling package として扱う
+## ADR-001: Framework source を `packages/framework/` に移し、`packages/setup` は sibling package として扱う
 
 ### Context
 
@@ -21,7 +21,7 @@ Issue #610 は、root `core/`, `harness/`, `dist/`, `scripts/` と package-owned
 
 ### Decision
 
-推奨は Option B: staged mixed layout である。Framework layout は root-level `core/`, `harness/`, `scripts/`, `dist/` に維持し、`packages/setup` は別 intent の sibling package として扱う。
+推奨は Option B': staged package-owned source layout である。Framework source は `packages/framework/core` と `packages/framework/harness` に移し、`scripts/` と `dist/` は root-level repository contract として維持する。`packages/setup` は別 intent の sibling package として扱う。
 
 ### Consequences
 
@@ -59,7 +59,7 @@ Issue #610 は、root `core/`, `harness/`, `dist/`, `scripts/` と package-owned
 
 ### Context
 
-`scripts/manifest-types.ts` と `harness/*/manifest.ts` は、root `core/` と root `harness/<name>/` から `dist/<name>` へ projection する contract である。full normalization では package-local relative path に変える選択肢もある。
+`scripts/manifest-types.ts` と `packages/framework/harness/*/manifest.ts` は、`packages/framework/core/` と `packages/framework/harness/<name>/` から root `dist/<name>` へ projection する contract である。root `core` と `harness` は互換 alias として残す。
 
 ### Decision
 

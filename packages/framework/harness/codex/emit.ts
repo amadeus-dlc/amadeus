@@ -18,8 +18,8 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
-import type { EmitContext, EmitResult } from "../../scripts/manifest-types.ts";
-import { renderOnboarding } from "../../scripts/onboarding.ts";
+import type { EmitContext, EmitResult } from "../../../../scripts/manifest-types.ts";
+import { renderOnboarding } from "../../../../scripts/onboarding.ts";
 import onboardingFills from "./onboarding.fills.ts";
 
 // ---------------------------------------------------------------------------
