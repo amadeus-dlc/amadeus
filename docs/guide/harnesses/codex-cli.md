@@ -1,5 +1,7 @@
 # AI-DLC on Codex CLI
 
+> Languages: **English** | [日本語](codex-cli.ja.md)
+
 `dist/codex/` is one of the framework's harness distributions, for the
 OpenAI **Codex CLI** harness. One deterministic core, many harnesses: the
 engine, state machine, audit log, graph, swarm referee, and learnings gate are

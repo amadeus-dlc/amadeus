@@ -1,5 +1,7 @@
 # Sensors
 
+> Languages: **English** | [日本語](06-sensors.ja.md)
+
 A sensor is a deterministic, advisory check that fires automatically when an
 agent writes a stage's output. Where a rule is prose the agent reads
 ([Rules and the Learning Loop](05-rules-and-the-loop.md)), a sensor is code

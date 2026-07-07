@@ -1,5 +1,7 @@
 # State Tracking and Audit Trail
 
+> Languages: **English** | [日本語](10-state-and-audit.ja.md)
+
 AI-DLC maintains two persistent files that together provide full traceability from intent to production: the **state file** tracks where you are in the workflow, and the **audit trail** records every decision, action, and event along the way.
 
 ---

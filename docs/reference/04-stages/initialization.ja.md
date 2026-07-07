@@ -1,5 +1,7 @@
 # Initialization フェーズのステージ (0.1-0.3)
 
+> 言語: [English](initialization.md) | **日本語**
+
 ## フェーズ概要
 
 Initialization フェーズは AI-DLC ワークフローにおける5フェーズのうち最初のフェーズです。ステージ0.1から0.3を実行し、**intent を birth**します — そのレコードディレクトリを `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`(以下 `<record>/` と表記)に mint し、状態ファイル、ディレクトリの足場、ワークスペースの分類、ルーティング設定を行います。個別の scaffold コマンドはありません: ワークスペースシェルは `dist/<harness>/` に事前構築された形で出荷され、エンジンは最初の `/amadeus`(または何を作るかを説明したとき)に最初の intent を自動 birth します。

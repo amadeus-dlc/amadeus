@@ -1,5 +1,7 @@
 # Delivery Agent
 
+> 言語: [English](delivery-agent.md) | **日本語**
+
 > **エージェント詳細解説** · [ユーザーガイド](../00-introduction.ja.md) › [エージェント](../06-agents.ja.md) › [詳細解説](README.ja.md) · 技術リファレンス: [delivery-agent](../../reference/agents/delivery-agent.ja.md)
 
 amadeus-delivery-agent はエンジニアリングマネージャーかつデリバリープランナーです。スコープ定義とアーキテクチャ設計を、チーム割り当て、ビルド順序、シーケンスを伴う実行可能なデリバリー計画へと翻訳します。Ideation から Construction への橋渡しとなるイニシアチブブリーフを所有し、完全なトレーサビリティを備えたスムーズなフェーズ引き継ぎを保証します。

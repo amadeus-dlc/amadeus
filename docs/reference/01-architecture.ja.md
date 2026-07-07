@@ -1,5 +1,7 @@
 # アーキテクチャ
 
+> 言語: [English](01-architecture.md) | **日本語**
+
 > **出典**: エンジンとコンダクター(`.claude/tools/amadeus-orchestrate.ts` および `.claude/skills/amadeus/SKILL.md`)と周辺ファイルから導出。
 
 ## 概要

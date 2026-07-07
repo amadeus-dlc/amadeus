@@ -1,5 +1,7 @@
 # Harness Engineer Guide
 
+> Languages: **English** | [日本語](00-overview.ja.md)
+
 > Part of the [AI-DLC documentation](../README.md) · [User Guide](../guide/00-introduction.md) · **Harness Engineer Guide** · [Developer Reference](../reference/00-overview.md)
 
 AI-DLC is a methodology, and this implementation ships it working out of the box

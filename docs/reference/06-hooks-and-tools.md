@@ -1,5 +1,7 @@
 # Hooks and Tools
 
+> Languages: **English** | [日本語](06-hooks-and-tools.ja.md)
+
 This chapter documents the hook system architecture, all eleven hook scripts, the audit event taxonomy, CLI tool configuration, and the deterministic utility tool.
 
 > **Path convention.** State, audit, and artifacts live under the active intent's **record dir** — `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`, written `<record>/` below (a compact UTC date prefix plus a short kebab-case label so record dirs sort chronologically; the canonical id is the UUIDv7 in the `intents.json` registry row). The audit trail is a directory of per-clone shards under `<record>/audit/`, not a single file.

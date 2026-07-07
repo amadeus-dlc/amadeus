@@ -1,5 +1,7 @@
 # amadeus-compliance-agent -- 技術リファレンス
 
+> 言語: [English](compliance-agent.md) | **日本語**
+
 ## Identity
 
 | Field | Value |

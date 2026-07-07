@@ -1,5 +1,7 @@
 # amadeus-product-agent -- 技術リファレンス
 
+> 言語: [English](product-agent.md) | **日本語**
+
 ## Identity
 
 | フィールド | 値 |

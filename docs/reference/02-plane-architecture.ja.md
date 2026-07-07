@@ -1,5 +1,7 @@
 # プレーンアーキテクチャ
 
+> 言語: [English](02-plane-architecture.md) | **日本語**
+
 > 対象読者: Tier 2/3(チーム採用者、フレームワークコントリビューター)。
 
 この章は AI-DLC の3プレーンアーキテクチャ — control、data、management の各関心事の分離 — と、それらを結合するコンパイル境界を説明します。[Sensor System](07-sensor-system.ja.md)(control プレーンのセンサーマニフェスト)、[Rule System](08-rule-system.ja.md)(control プレーンのルールファイル)、[State Machine](12-state-machine.ja.md)(data プレーンのライフサイクル)と相互リンクします。これは設計の基盤であり、センサーおよびルールのマニフェストは、その基盤が操作するソースファイルです。

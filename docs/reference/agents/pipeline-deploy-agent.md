@@ -1,5 +1,7 @@
 # amadeus-pipeline-deploy-agent -- Technical Reference
 
+> Languages: **English** | [日本語](pipeline-deploy-agent.ja.md)
+
 ## Identity
 
 | Field | Value |

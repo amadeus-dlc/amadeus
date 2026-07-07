@@ -1,5 +1,7 @@
 # Team Knowledge
 
+> Languages: **English** | [日本語](07-team-knowledge.ja.md)
+
 Knowledge is the domain context an agent reads before it works: your coding
 standards, your architecture preferences, your domain glossary, the patterns
 your team has settled on. It is the one part of the harness you shape by adding

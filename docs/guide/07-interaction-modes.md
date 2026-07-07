@@ -1,5 +1,7 @@
 # Interaction Modes
 
+> Languages: **English** | [日本語](07-interaction-modes.ja.md)
+
 AI-DLC provides four ways to interact with agents during stages, plus approval gates that keep you in control at every decision point.
 
 > **Harness note.** Gates and questions render differently per harness: Claude Code

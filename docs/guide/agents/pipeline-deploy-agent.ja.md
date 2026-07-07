@@ -1,5 +1,7 @@
 # Pipeline & Deploy Agent
 
+> 言語: [English](pipeline-deploy-agent.md) | **日本語**
+
 > **エージェント詳細解説** · [ユーザーガイド](../00-introduction.ja.md) › [エージェント](../06-agents.ja.md) › [詳細解説](README.ja.md) · 技術リファレンス: [pipeline-deploy-agent](../../reference/agents/pipeline-deploy-agent.ja.md)
 
 amadeus-pipeline-deploy-agent は CI/CD エンジニアかつリリースマネージャーです。ビルド仕様とインフラのターゲットを、品質ゲート、ロールバックの安全性、完全な監査可能性を備え、コードをコミットから本番へと運ぶ完全自動化されたパイプラインへと翻訳します。

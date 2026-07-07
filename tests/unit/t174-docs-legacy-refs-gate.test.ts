@@ -27,7 +27,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, normalize } from "node:path";
+import { dirname, join, normalize, relative } from "node:path";
 import { REPO_ROOT } from "../harness/fixtures.ts";
 
 const DOCS_DIR = join(REPO_ROOT, "docs");
@@ -115,6 +115,31 @@ interface Occurrence {
   text: string;
 }
 
+interface MarkdownPair {
+  english: string;
+  japanese: string;
+}
+
+function markdownLinkPath(from: string, to: string): string {
+  const link = relative(dirname(from), to).replace(/\\/g, "/");
+  if (link.startsWith(".")) return link;
+  if (link.length > 0) return link;
+  return to.split("/").at(-1) ?? to;
+}
+
+function listMarkdownPairs(): MarkdownPair[] {
+  const englishDocs = listDocs(DOCS_DIR);
+  if (existsSync(join(REPO_ROOT, "README.ja.md"))) {
+    englishDocs.unshift("README.md");
+  }
+  return englishDocs
+    .map((english) => ({
+      english,
+      japanese: english.replace(/\.md$/, ".ja.md"),
+    }))
+    .filter((pair) => existsSync(join(REPO_ROOT, pair.japanese)));
+}
+
 function scanOccurrences(): Occurrence[] {
   const out: Occurrence[] = [];
   for (const rel of [...listDocs(DOCS_DIR), ...EXTRA_DOC_FILES]) {
@@ -154,6 +179,7 @@ function scanJapaneseDocsEnglishLinks(): Occurrence[] {
     const body = readFileSync(join(REPO_ROOT, rel), "utf-8");
     const lines = body.split("\n");
     for (let i = 0; i < lines.length; i++) {
+      if (lines[i].startsWith("> 言語: ")) continue;
       for (const match of lines[i].matchAll(linkPattern)) {
         const href = match[1];
         if (/^(?:[a-z][a-z0-9+.-]*:|#|mailto:)/i.test(href)) continue;
@@ -166,6 +192,19 @@ function scanJapaneseDocsEnglishLinks(): Occurrence[] {
         }
       }
     }
+  }
+  return out;
+}
+
+function scanMissingLanguageSwitchLinks(): string[] {
+  const out: string[] = [];
+  for (const { english, japanese } of listMarkdownPairs()) {
+    const englishText = readFileSync(join(REPO_ROOT, english), "utf-8");
+    const japaneseText = readFileSync(join(REPO_ROOT, japanese), "utf-8");
+    const englishLine = `> Languages: **English** | [日本語](${markdownLinkPath(english, japanese)})`;
+    const japaneseLine = `> 言語: [English](${markdownLinkPath(japanese, english)}) | **日本語**`;
+    if (!englishText.includes(englishLine)) out.push(`${english}: missing ${englishLine}`);
+    if (!japaneseText.includes(japaneseLine)) out.push(`${japanese}: missing ${japaneseLine}`);
   }
   return out;
 }
@@ -212,5 +251,9 @@ describe("t174 docs legacy-ref allowlist gate (P9 — closed predicate)", () => 
     expect(
       offenders.map((o) => `${o.file}:${o.line}  ${o.text}`),
     ).toEqual([]);
+  });
+
+  test("paired English and Japanese docs expose reciprocal language switch links", () => {
+    expect(scanMissingLanguageSwitchLinks()).toEqual([]);
   });
 });

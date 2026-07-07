@@ -1,5 +1,7 @@
 # Kiro CLI で AI-DLC を実行する
 
+> 言語: [English](kiro-cli.md) | **日本語**
+
 > [!NOTE]
 > Kiro CLI 上の AI-DLC は **Claude Opus 4.8** で最も良く動作し、これには
 > **有料の Kiro プラン** が必要です。より弱いモデルでは、コンダクターが任意の

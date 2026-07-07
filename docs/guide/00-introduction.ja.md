@@ -1,5 +1,7 @@
 # はじめに
 
+> 言語: [English](00-introduction.md) | **日本語**
+
 > [AI-DLC ドキュメント](../README.ja.md)の一部 · **User Guide** · [Harness Engineer Guide](../harness-engineering/00-overview.ja.md) · [Developer Reference](../reference/00-overview.ja.md)
 
 ## AI-DLC とは?

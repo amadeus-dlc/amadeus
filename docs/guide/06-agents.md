@@ -1,5 +1,7 @@
 # Agents
 
+> Languages: **English** | [日本語](06-agents.ja.md)
+
 AI-DLC uses 11 domain-expert agent personas that the conductor activates during stages. This chapter explains the philosophy behind the agent design, what each agent does, and when they appear.
 
 ---

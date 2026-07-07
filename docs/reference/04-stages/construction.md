@@ -1,5 +1,7 @@
 # Construction Phase -- Stage Reference (3.1-3.7)
 
+> Languages: **English** | [日本語](construction.ja.md)
+
 ## Phase Overview
 
 The Construction phase transforms design artifacts from Inception into working,

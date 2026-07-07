@@ -1,5 +1,7 @@
 # amadeus-delivery-agent -- 技術リファレンス
 
+> 言語: [English](delivery-agent.md) | **日本語**
+
 ## Identity
 
 | Field | Value |

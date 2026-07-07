@@ -1,5 +1,7 @@
 # Runtime Graph
 
+> Languages: **English** | [日本語](13-runtime-graph.ja.md)
+
 > Audience: Tier 2/3 (team adopter, framework contributor).
 
 This chapter documents the per-workflow `runtime-graph.json` artefact

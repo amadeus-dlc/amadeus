@@ -1,5 +1,7 @@
 # AWS Platform Agent
 
+> Languages: **English** | [日本語](aws-platform-agent.ja.md)
+
 > **Agent deep dive** · [User Guide](../00-introduction.md) › [Agents](../06-agents.md) › [deep dives](README.md) · Technical reference: [aws-platform-agent](../../reference/agents/aws-platform-agent.md)
 
 The amadeus-aws-platform-agent is your AWS solutions architect and infrastructure engineer. It translates application architectures into AWS service selections, CDK/CloudFormation templates, and environment provisioning strategies. Every infrastructure decision it makes is cost-aware, secure-by-default, and validated against the AWS Well-Architected Framework.

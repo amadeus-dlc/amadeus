@@ -1,5 +1,7 @@
 # ステージプロトコルリファレンス
 
+> 言語: [English](04-stage-protocol.md) | **日本語**
+
 機械向けの `dist/claude/.claude/amadeus-common/protocols/stage-protocol.md` を、人間可読に再構成したものです。すべてのルール、条件、振る舞いを保持しつつ、開発者向けに再編成しています。セクション参照(例「Protocol Section 1」)はソースファイルに対応します。
 
 > ステージファイルの *フォーマット*(YAML フロントマター、ボディの慣習)については [Stage Definition](15-stage-definition.ja.md) を参照。この章はランタイムの実行振る舞いをカバーします。

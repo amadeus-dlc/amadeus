@@ -1,5 +1,7 @@
 # Delivery Agent
 
+> Languages: **English** | [日本語](delivery-agent.ja.md)
+
 > **Agent deep dive** · [User Guide](../00-introduction.md) › [Agents](../06-agents.md) › [deep dives](README.md) · Technical reference: [delivery-agent](../../reference/agents/delivery-agent.md)
 
 The amadeus-delivery-agent is your engineering manager and delivery planner. It translates scope definitions and architectural designs into actionable delivery plans with team assignments, build ordering, and sequencing. It owns the initiative brief that bridges Ideation into Construction and ensures smooth phase handoffs with full traceability.

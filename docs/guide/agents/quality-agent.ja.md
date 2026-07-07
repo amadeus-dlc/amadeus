@@ -1,5 +1,7 @@
 # Quality Agent
 
+> 言語: [English](quality-agent.md) | **日本語**
+
 > **エージェント詳細解説** · [ユーザーガイド](../00-introduction.ja.md) › [エージェント](../06-agents.ja.md) › [詳細解説](README.ja.md) · 技術リファレンス: [quality-agent](../../reference/agents/quality-agent.ja.md)
 
 amadeus-quality-agent は QA エンジニアかつパフォーマンススペシャリストです。テスト戦略を定義し、テストスイート(ユニット、統合、契約、セキュリティ)を生成し、受け入れ基準に照らしてカバレッジを検証し、負荷テストを設計・実行し、非機能要件の目標値を検証します。実装されたすべてのユニットがその受け入れ基準を満たし、システム全体が品質ゲートを満たすことを保証します。

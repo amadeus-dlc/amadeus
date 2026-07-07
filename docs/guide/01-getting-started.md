@@ -1,5 +1,7 @@
 # Getting Started
 
+> Languages: **English** | [日本語](01-getting-started.ja.md)
+
 This chapter walks you through installing this implementation, verifying your environment, and preparing for your first workflow.
 
 ---

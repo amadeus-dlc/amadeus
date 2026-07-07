@@ -1,5 +1,7 @@
 # Rules and the Learning Loop
 
+> Languages: **English** | [日本語](09-rules-and-the-learning-loop.ja.md)
+
 Rules are persistent, prose instructions that shape how agents work on your project. The learning loop is how those rules get written: you correct an agent during a workflow, confirm the correction at the stage's approval gate, and the framework saves it so the same correction is never needed twice.
 
 This chapter is the user-facing tour. It covers where rules live, how the five layers stack, how the learning loop captures a correction, and how Sensors give you a deterministic second opinion alongside the rules. For the schema-level mechanics, the chapter cross-links to the Developer Reference at each step.

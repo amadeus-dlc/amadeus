@@ -1,5 +1,7 @@
 # Skills and Runner Commands
 
+> Languages: **English** | [日本語](17-skills.ja.md)
+
 **AI-DLC is a family of commands.** Alongside the `/amadeus` orchestrator you get a set of typeable one-word runner commands: one per scope, one per stage, and one for setup. They are convenience doors onto slices the orchestrator already exposes, so you can reach the whole framework from `/amadeus` alone, or skip the flags and type the door you want.
 
 > **Harness note.** This chapter uses Claude Code's surfaces — skills under

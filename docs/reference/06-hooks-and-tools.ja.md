@@ -1,5 +1,7 @@
 # フックとツール
 
+> 言語: [English](06-hooks-and-tools.md) | **日本語**
+
 この章では、フックシステムのアーキテクチャ、11個すべてのフックスクリプト、監査イベントの分類体系、CLIツール設定、および決定論的なユーティリティツールを解説します。
 
 > **パス規約。** 状態、監査、成果物は、アクティブなintentの**record dir** — `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/` — の配下に置かれ、本書では `<record>/` と表記します(record dir が時系列でソートされるよう、コンパクトなUTC日付プレフィックスに短いkebab-caseのラベルを付けたもの。正典のidは `intents.json` レジストリ行のUUIDv7)。監査証跡は単一ファイルではなく、`<record>/audit/` 配下のper-cloneシャードのディレクトリです。

@@ -1,5 +1,7 @@
 # Architecture
 
+> Languages: **English** | [日本語](01-architecture.ja.md)
+
 > **Source**: Derived from the engine and conductor (`.claude/tools/amadeus-orchestrate.ts` and `.claude/skills/amadeus/SKILL.md`) and surrounding files.
 
 ## Overview

@@ -1,5 +1,7 @@
 # Artifact Vocabulary
 
+> Languages: **English** | [日本語](16-artifact-vocabulary.ja.md)
+
 This chapter is the written rule for AI-DLC artifact names — the canonical
 strings that appear in each stage's `produces:` and `consumes[].artifact:`
 YAML frontmatter. It covers the naming shape, the collision-resolution policy,

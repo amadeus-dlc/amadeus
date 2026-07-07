@@ -1,5 +1,7 @@
 # amadeus-operations-agent -- Technical Reference
 
+> Languages: **English** | [日本語](operations-agent.ja.md)
+
 ## Identity
 
 | Field | Value |

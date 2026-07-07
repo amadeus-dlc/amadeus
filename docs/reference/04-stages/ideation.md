@@ -1,5 +1,7 @@
 # Ideation Phase -- Stage Reference (1.1-1.7)
 
+> Languages: **English** | [日本語](ideation.ja.md)
+
 ## Phase Overview
 
 The Ideation phase is the second of five phases in the AI-DLC lifecycle. It

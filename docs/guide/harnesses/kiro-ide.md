@@ -1,5 +1,7 @@
 # Running AI-DLC on Kiro IDE
 
+> Languages: **English** | [日本語](kiro-ide.ja.md)
+
 One of the framework's harnesses: `dist/kiro-ide/` runs the same AI-DLC
 methodology inside [Kiro IDE](https://kiro.dev/). One deterministic core —
 the tools, 32 stage files, protocols, knowledge, sensors, scopes, and rules —

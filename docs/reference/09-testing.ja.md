@@ -1,5 +1,7 @@
 # テスト
 
+> 言語: [English](09-testing.md) | **日本語**
+
 ## 概要
 
 AI-DLC のテストスイートは **完全に TypeScript** です — すべてのテストは

@@ -1,5 +1,7 @@
 # amadeus-quality-agent -- Technical Reference
 
+> Languages: **English** | [日本語](quality-agent.ja.md)
+
 ## Identity
 
 | Field | Value |

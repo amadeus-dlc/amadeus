@@ -1,5 +1,7 @@
 # Spaces and Intents
 
+> Languages: **English** | [日本語](03-spaces-and-intents.ja.md)
+
 [Your First Workflow](02-your-first-workflow.md) walked through one run from start
 to finish. But real work is rarely one thing at a time: you have a feature in
 flight, an urgent bug lands, a second team shares the repo. This chapter explains

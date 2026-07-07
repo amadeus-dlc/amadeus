@@ -1,5 +1,7 @@
 # amadeus-developer-agent -- Technical Reference
 
+> Languages: **English** | [日本語](developer-agent.ja.md)
+
 ## Identity
 
 | Field | Value |

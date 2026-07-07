@@ -1,5 +1,7 @@
 # オーケストレーションエンジンとスキルシステム
 
+> 言語: [English](17-skill-system.md) | **日本語**
+
 > 対象読者: Tier 2/3(チーム導入者、フレームワーク貢献者)。
 
 > **パス規約。** 以下の `<record>/` = アクティブな intent のレコードディレクトリ `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`。ここに per-intent の状態とランタイムファイルが存在します。

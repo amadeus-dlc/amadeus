@@ -1,5 +1,7 @@
 # Running on other harnesses
 
+> Languages: **English** | [日本語](README.ja.md)
+
 AI-DLC is one harness-neutral core rendered onto the CLI you use. The
 methodology — the [phases and stages](../04-phases-and-stages.md), the
 [agents](../06-agents.md), the [scopes](../05-scopes-and-depth.md), the

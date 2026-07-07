@@ -1,5 +1,7 @@
 # AI-DLC Workflow Diagrams
 
+> Languages: **English** | [日本語](diagrams.ja.md)
+
 This document contains all Mermaid diagrams that visualize the AI-DLC (AI-Driven Development Life Cycle) methodology. Each section includes a brief explanation followed by a rendered diagram. These diagrams are derived from the engine and conductor (`amadeus-orchestrate.ts` + `SKILL.md`), stage protocol (`stage-protocol.md`), stage files, and agent definitions.
 
 > **Note:** These diagrams are also embedded inline in their relevant reference chapters. This file serves as a consolidated index of all diagrams in one place. `<record>/` in the diagrams below = the active intent's record dir, `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`.

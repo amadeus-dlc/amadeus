@@ -1,5 +1,7 @@
 # Scopes, Depth, and Test Strategy
 
+> Languages: **English** | [日本語](05-scopes-and-depth.ja.md)
+
 Scopes control **which stages execute**. Depth controls **how much detail** each stage produces. Test strategy controls **how many tests** are generated. Together, they adapt the lifecycle to your task — from a comprehensive enterprise feature to a quick bugfix.
 
 ---

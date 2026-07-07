@@ -1,5 +1,7 @@
 # Stage Protocol Reference
 
+> Languages: **English** | [日本語](04-stage-protocol.ja.md)
+
 Human-readable restructuring of the machine-oriented
 `dist/claude/.claude/amadeus-common/protocols/stage-protocol.md`. Preserves all
 rules, conditions, and behaviors while reorganizing for developer consumption.

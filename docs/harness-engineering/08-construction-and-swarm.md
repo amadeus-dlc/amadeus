@@ -1,5 +1,7 @@
 # Construction and the Swarm
 
+> Languages: **English** | [日本語](08-construction-and-swarm.ja.md)
+
 Construction is where AI-DLC builds the thing — where the per-Unit stages run,
 and where the **swarm** can fan that work out across many Units at once. It is
 also the part of the harness where the cleanest answer to "what can I shape, and

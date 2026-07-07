@@ -1,5 +1,7 @@
 # Session Management
 
+> Languages: **English** | [日本語](11-session-management.ja.md)
+
 A workflow may span multiple harness sessions. AI-DLC persists all progress to disk so you can resume, redo, jump, or start fresh at any time.
 
 > **Harness note.** Session resume works on every harness (the state lives in

@@ -1,5 +1,7 @@
 # 成果物の語彙(Artifact Vocabulary)
 
+> 言語: [English](16-artifact-vocabulary.md) | **日本語**
+
 この章は AI-DLC の成果物名 — 各ステージの `produces:` および `consumes[].artifact:`
 の YAML フロントマターに現れる正規文字列 — に関する成文化されたルールです。命名の形式、
 衝突解決ポリシー、ファイルシステムパスの規約、そしてコマンドラインからライブなレジストリを

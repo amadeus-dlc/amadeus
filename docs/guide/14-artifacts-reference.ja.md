@@ -1,5 +1,7 @@
 # 成果物リファレンス
 
+> 言語: [English](14-artifacts-reference.md) | **日本語**
+
 すべての AI-DLC ワークフローは、その **intent レコードディレクトリ** —
 `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`(`<space>` は非デフォルトの space が
 関与しない限り `default`、`<YYMMDD>-<label>` は intent ディレクトリ。以下 `<record>/` と

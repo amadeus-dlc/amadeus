@@ -1,5 +1,7 @@
 # Sensor System
 
+> Languages: **English** | [日本語](07-sensor-system.ja.md)
+
 > Audience: Tier 2/3 (team adopter, framework contributor).
 
 This chapter is the **schema reference** for AI-DLC sensor manifests —

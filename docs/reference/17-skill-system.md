@@ -1,5 +1,7 @@
 # The Orchestration Engine and Skill System
 
+> Languages: **English** | [日本語](17-skill-system.ja.md)
+
 > Audience: Tier 2/3 (team adopter, framework contributor).
 
 > **Path convention.** `<record>/` below = the active intent's record dir, `amadeus/spaces/<space>/intents/<YYMMDD>-<label>/`, where per-intent state and runtime files live.
