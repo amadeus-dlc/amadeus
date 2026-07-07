@@ -145,10 +145,13 @@ Source of truth: one file per scope under `.claude/scopes/amadeus-<name>.md` (id
 | mvp            | Standard      | (default)    | 22 / 32         |
 | poc            | Minimal       | (default)    | 8 / 32          |
 | refactor       | Minimal       | (default)    | 8 / 32          |
+| sdd            | Standard      | (default)    | 10 / 32         |
 | security-patch | Minimal       | (default)    | 10 / 32         |
 | workshop       | Standard      | Minimal      | 25 / 32         |
 
 <!-- END: compiled scope grid -->
+
+
 
 ---
 

@@ -122,8 +122,9 @@ describe("t31 amadeus-utility help — CLI contract (migrated from t31-help-text
     "bugfix",
     "refactor",
     "infra",
+    "sdd",
     "security-patch",
-    "workshop", // S2: 9th scope, header-claimed but unasserted in the .sh
+    "workshop",
   ] as const;
 
   for (const scope of SCOPES) {

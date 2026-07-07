@@ -23,6 +23,7 @@
         "refactor",
         "infra",
         "security-patch",
+        "sdd",
         "workshop"
       ],
       "inputs": "none (first stage after session start)",
@@ -68,6 +69,7 @@
         "refactor",
         "infra",
         "security-patch",
+        "sdd",
         "workshop"
       ],
       "inputs": "none (scans filesystem)",
@@ -113,6 +115,7 @@
         "refactor",
         "infra",
         "security-patch",
+        "sdd",
         "workshop"
       ],
       "inputs": "workspace classification from workspace-detection, scope from orchestrator",
@@ -160,7 +163,8 @@
         "enterprise",
         "feature",
         "mvp",
-        "poc"
+        "poc",
+        "sdd"
       ],
       "inputs": "User's project description ($ARGUMENTS), scope selection",
       "outputs": "intent-statement.md, stakeholder-map.md, intent-capture-questions.md (under this stage's record dir, engine-resolved)",
@@ -711,6 +715,7 @@
         "poc",
         "bugfix",
         "refactor",
+        "sdd",
         "security-patch",
         "workshop"
       ],
@@ -905,6 +910,7 @@
         "poc",
         "bugfix",
         "refactor",
+        "sdd",
         "infra",
         "security-patch",
         "workshop"
@@ -1174,6 +1180,7 @@
         "enterprise",
         "feature",
         "mvp",
+        "sdd",
         "workshop"
       ],
       "reviewer": "amadeus-architecture-reviewer-agent",
@@ -1269,6 +1276,7 @@
         "enterprise",
         "feature",
         "mvp",
+        "sdd",
         "workshop"
       ],
       "reviewer": "amadeus-architecture-reviewer-agent",
@@ -1908,6 +1916,7 @@
         "poc",
         "bugfix",
         "refactor",
+        "sdd",
         "security-patch",
         "workshop"
       ],
@@ -1992,6 +2001,7 @@
         "poc",
         "bugfix",
         "refactor",
+        "sdd",
         "security-patch",
         "workshop"
       ],
@@ -3010,6 +3020,51 @@
         "simplify"
       ],
       "description": "Clean up existing code"
+    },
+    "sdd": {
+      "depth": "Standard",
+      "stages": {
+        "workspace-scaffold": "EXECUTE",
+        "workspace-detection": "EXECUTE",
+        "state-init": "EXECUTE",
+        "intent-capture": "EXECUTE",
+        "market-research": "SKIP",
+        "feasibility": "SKIP",
+        "scope-definition": "SKIP",
+        "team-formation": "SKIP",
+        "rough-mockups": "SKIP",
+        "approval-handoff": "SKIP",
+        "reverse-engineering": "EXECUTE",
+        "practices-discovery": "SKIP",
+        "requirements-analysis": "EXECUTE",
+        "user-stories": "SKIP",
+        "refined-mockups": "SKIP",
+        "application-design": "EXECUTE",
+        "units-generation": "EXECUTE",
+        "delivery-planning": "SKIP",
+        "functional-design": "SKIP",
+        "nfr-requirements": "SKIP",
+        "nfr-design": "SKIP",
+        "infrastructure-design": "SKIP",
+        "code-generation": "EXECUTE",
+        "build-and-test": "EXECUTE",
+        "ci-pipeline": "SKIP",
+        "deployment-pipeline": "SKIP",
+        "environment-provisioning": "SKIP",
+        "deployment-execution": "SKIP",
+        "observability-setup": "SKIP",
+        "incident-response": "SKIP",
+        "performance-validation": "SKIP",
+        "feedback-optimization": "SKIP"
+      },
+      "keywords": [
+        "sdd",
+        "spec-driven",
+        "cc-sdd",
+        "kiro-spec",
+        "spec driven"
+      ],
+      "description": "Spec-driven development (cc-sdd / Kiro-style SDD loop)"
     },
     "security-patch": {
       "depth": "Minimal",

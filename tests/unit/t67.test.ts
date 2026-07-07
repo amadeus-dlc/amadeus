@@ -50,7 +50,7 @@
 //       + scope-grid.json `.stages`, so that filesystem count is STILL the live
 //       source — the .sh assertion is restored faithfully against it (NOT
 //       obsolete). STRONGER: also pins gridCount === mdCount === rendered rows
-//       === 9 (triangulate the rendered table against BOTH shipped surfaces).
+//       === 10 (triangulate the rendered table against BOTH shipped surfaces).
 //   §4 --check clean exit 0 on real SKILL.md (1 assert) -> Test 9: res.status===0
 //       (no AMADEUS_SKILL_MD_PATH override -> the shipped SKILL.md).
 //   §5 --check exit 1 on drifted SKILL.md (2 asserts) -> Tests 10-11: copy the
@@ -282,7 +282,7 @@ function rowNames(tableOut: string): string[] {
 }
 
 const EXPECTED_ROW_ORDER =
-  "bugfix enterprise feature infra mvp poc refactor security-patch workshop";
+  "bugfix enterprise feature infra mvp poc refactor sdd security-patch workshop";
 
 // ============================================================
 // scope-table — emission shape (.sh §1)
@@ -345,7 +345,7 @@ describe("t67 scope-table emission (migrated from t67-scope-table.sh §1-3)", ()
     expect(gridCount).toBe(mdCount);
     expect(rowCount).toBe(gridCount);
     // … and the concrete count is pinned.
-    expect(rowCount).toBe(9);
+    expect(rowCount).toBe(10);
   });
 });
 

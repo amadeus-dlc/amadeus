@@ -90,7 +90,7 @@ const UTIL = fileURLToPath(
   new URL("../../dist/claude/.claude/tools/amadeus-utility.ts", import.meta.url),
 );
 
-// The 9 scopes the framework ships, alphabetical — the .sh's hard-coded
+// The 10 scopes the framework ships, alphabetical — the .sh's hard-coded
 // expectation (t125:62). Each is a literal independent of source iteration.
 const SHIPPED_SCOPES = [
   "bugfix",
@@ -100,6 +100,7 @@ const SHIPPED_SCOPES = [
   "mvp",
   "poc",
   "refactor",
+  "sdd",
   "security-patch",
   "workshop",
 ];
@@ -127,11 +128,11 @@ afterEach(() => {
 });
 
 describe("shipped scope files — frontmatter + derived metadata (in-process)", () => {
-  test("exactly 9 shipped amadeus-*.md scope files exist [.sh test 1]", () => {
+  test("exactly 10 shipped amadeus-*.md scope files exist [.sh test 1]", () => {
     const files = readdirSync(SCOPES_DIR).filter(
       (f) => f.startsWith("amadeus-") && f.endsWith(".md"),
     );
-    expect(files.length).toBe(9);
+    expect(files.length).toBe(10);
   });
 
   test("every shipped scope file's frontmatter name == its slug [.sh test 2]", () => {
@@ -150,7 +151,7 @@ describe("shipped scope files — frontmatter + derived metadata (in-process)", 
     }
   });
 
-  test("validScopes() == the 9 .md-derived names, alphabetical [.sh test 3]", () => {
+  test("validScopes() == the 10 .md-derived names, alphabetical [.sh test 3]", () => {
     expect([...validScopes()]).toEqual(SHIPPED_SCOPES);
   });
 

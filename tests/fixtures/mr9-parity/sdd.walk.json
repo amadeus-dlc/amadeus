@@ -1,0 +1,12 @@
+[
+  "workspace-scaffold",
+  "workspace-detection",
+  "state-init",
+  "intent-capture",
+  "reverse-engineering",
+  "requirements-analysis",
+  "application-design",
+  "units-generation",
+  "code-generation",
+  "build-and-test"
+]

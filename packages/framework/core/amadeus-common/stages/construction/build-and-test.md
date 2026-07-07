@@ -33,6 +33,7 @@ scopes:
   - poc
   - bugfix
   - refactor
+  - sdd
   - security-patch
   - workshop
 inputs: ALL code generation outputs across all units

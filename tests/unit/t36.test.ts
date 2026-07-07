@@ -114,7 +114,7 @@ const STATE_MID_IDEATION = join(
   "state-mid-ideation.md",
 );
 
-// The 9 canonical scopes — exactly the .sh's Test-3 loop AND the keys of
+// The 10 canonical scopes — exactly the .sh's Test-3 loop AND the keys of
 // data/scope-mapping.json (verified this session).
 const CANONICAL_SCOPES = [
   "enterprise",
@@ -124,6 +124,7 @@ const CANONICAL_SCOPES = [
   "bugfix",
   "refactor",
   "infra",
+  "sdd",
   "security-patch",
   "workshop",
 ] as const;
@@ -250,7 +251,7 @@ describe("t36 amadeus-utility scope-change — CLI contract (migrated from t36-u
   });
 
   // --- .sh Test 3: each of the 9 canonical scopes accepted as a target ---
-  test("3: all 9 canonical scopes accepted as targets", () => {
+  test("3: all 10 canonical scopes accepted as targets", () => {
     for (const target of CANONICAL_SCOPES) {
       const p = proj();
       scopeChange(["--scope", target], p);

@@ -20,6 +20,7 @@ scopes:
   - refactor
   - infra
   - security-patch
+  - sdd
   - workshop
 inputs: workspace classification from workspace-detection, scope from orchestrator
 outputs: <record>/amadeus-state.md (full populated version, engine-resolved)

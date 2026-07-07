@@ -20,6 +20,7 @@ scopes:
   - refactor
   - infra
   - security-patch
+  - sdd
   - workshop
 inputs: none (scans filesystem)
 outputs: workspace classification (greenfield/brownfield), technology stack detection

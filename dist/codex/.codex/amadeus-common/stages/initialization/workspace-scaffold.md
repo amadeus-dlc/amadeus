@@ -19,6 +19,7 @@ scopes:
   - refactor
   - infra
   - security-patch
+  - sdd
   - workshop
 inputs: none (first stage after session start)
 outputs: the per-intent record tree (stage artifact dirs + verification dir) and the space-level knowledge/ dir

@@ -39,6 +39,7 @@ scopes:
   - enterprise
   - feature
   - mvp
+  - sdd
   - workshop
 inputs: <record>/inception/requirements-analysis/requirements.md, <record>/inception/user-stories/stories.md (if produced), RE artifacts (if brownfield)
 outputs: components.md, component-methods.md, services.md, component-dependency.md, decisions.md (under this stage's record dir, engine-resolved)
