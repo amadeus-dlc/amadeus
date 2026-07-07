@@ -289,13 +289,13 @@ Maintainers edit the hand-authored source in `packages/framework/core/` (or a
 hand-edit `dist/`**, the drift guard fails CI.
 
 ```bash
-npm run dist                    # regenerate every dist/<harness>/ from packages/framework/core + harness
+bun run dist                    # regenerate every dist/<harness>/ from packages/framework/core + harness
 bun scripts/package.ts            # regenerate every dist/<harness>/ from packages/framework/core + harness
 bun scripts/package.ts <name>     # regenerate one harness (e.g. claude, kiro-ide, codex)
-npm run dist:check               # byte-parity drift guard (run in CI)
+bun run dist:check               # byte-parity drift guard (run in CI)
 bun scripts/package.ts --check    # byte-parity drift guard (run in CI)
-npm run promote:self              # update this repo's project-local .claude/.codex self install
-npm run promote:self:check        # drift guard for the project-local self install
+bun run promote:self              # update this repo's project-local .claude/.codex self install
+bun run promote:self:check        # drift guard for the project-local self install
 ```
 
 Adding a whole new harness? See [Porting to a New Harness](docs/harness-engineering/09-porting-to-a-new-harness.md). The authoritative build reference is the [Contributing Guide](docs/reference/11-contributing.md#development-workflow).

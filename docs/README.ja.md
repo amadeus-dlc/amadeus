@@ -22,4 +22,4 @@ Harness Engineer Guide と Developer Reference の境界は **データ対コー
 
 ## ビルドと貢献
 
-メンテナは `core/` で著述し、`npm run dist`(`bun scripts/package.ts`)で `dist/<harness>/` ツリーを再生成します — 完全なビルド&テストのループについては [Contributing Guide](reference/11-contributing.ja.md) を、ハーネスの追加については [Porting to a New Harness](harness-engineering/09-porting-to-a-new-harness.ja.md) を参照してください。
+メンテナは `core/` で著述し、`bun run dist`(`bun scripts/package.ts`)で `dist/<harness>/` ツリーを再生成します — 完全なビルド&テストのループについては [Contributing Guide](reference/11-contributing.ja.md) を、ハーネスの追加については [Porting to a New Harness](harness-engineering/09-porting-to-a-new-harness.ja.md) を参照してください。
