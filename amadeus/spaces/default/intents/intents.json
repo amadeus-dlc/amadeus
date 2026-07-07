@@ -5,5 +5,12 @@
     "dirName": "260706-amadeus-grilling",
     "scope": "grilling-integration",
     "status": "complete"
+  },
+  {
+    "uuid": "019f38fd-517c-7ef6-9627-1e4288fd76e5",
+    "slug": "installer-impl",
+    "dirName": "260706-installer-impl",
+    "scope": "feature",
+    "status": "in-flight"
   }
 ]

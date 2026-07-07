@@ -1,6 +1,6 @@
 # Architecture
 
-> Reverse Engineering 成果物 — 分析対象: main @ 14c40c9c(現 HEAD 8d73e463)
+> Reverse Engineering 成果物 — 分析対象: main @ 14c40c9c(現 HEAD e2c28731、2026-07-07 鮮度リフレッシュ)
 
 ## アーキテクチャ概観
 
@@ -103,7 +103,7 @@ sequenceDiagram
     Dev->>PS: bun run promote:self(dist/claude → .claude/ 等、memory/ 対象外)
 ```
 
-**テキストフォールバック**: package.ts はハーネスごとに5ステップを実行する — (1) core を dist へコピーし `{{HARNESS_DIR}}` トークン置換(唯一の変換)と rules ディレクトリのリネーム、(2) harness 手書きファイルの上書きコピー、(3) ステージグラフのコンパイル(生成 JSON は dist のみに存在)、(4) runner-gen による per-stage ランナースキルの自動生成、(5) codex のみ emit.ts。`--check` は一時ディレクトリへの再ビルドとバイト単位 diff によるドリフトガード。`promote:self` は dist/claude の内容をリポジトリルートの `.claude/` / `.codex/` / `.agents/` / `CLAUDE.md` へ昇格するが、手編集ソースである `amadeus/spaces/default/memory/` は対象外。
+**テキストフォールバック**: package.ts はハーネスごとに5ステップを実行する — (1) core を dist へコピーし `{{HARNESS_DIR}}` トークン置換(唯一の変換)と rules ディレクトリのリネーム、(2) harness 手書きファイルの上書きコピー、(3) ステージグラフのコンパイル(生成 JSON は dist のみに存在)、(4) runner-gen による per-stage ランナースキルの自動生成、(5) codex のみ emit.ts。`--check` は一時ディレクトリへの再ビルドとバイト単位 diff によるドリフトガード。`promote:self` は dist/claude の内容をリポジトリルートの `.claude/` / `.codex/` / `.agents/` / `CLAUDE.md` へ昇格するが、手編集ソースである `amadeus/spaces/default/memory/` は対象外。`scope-grid.json` はキー単位マージであり、composed scope(動的登録されるスコープ定義)は昇格処理の保護対象として上書きされない。
 
 ## コンポーネント関係と結合の要点
 

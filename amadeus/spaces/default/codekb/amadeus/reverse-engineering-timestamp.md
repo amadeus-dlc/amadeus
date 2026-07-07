@@ -8,8 +8,17 @@
 | Intent | 260706-amadeus-grilling(scope: grilling-integration, Standard depth, Brownfield) |
 | リポジトリ | /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus |
 | スキャン時コミット | 14c40c9c(main, clean) |
-| 統合時 HEAD | 8d73e4636e7fa4058d12b26dc603dc7abd0d7c0b(PR #600: dist VERSION ファイル追加 — 本分析結果への影響は軽微) |
-| フレームワークバージョン | AMADEUS_VERSION = 1.0.0 |
+| 統合時 HEAD | e2c28731(2026-07-07 鮮度リフレッシュ後) |
+| フレームワークバージョン | AMADEUS_VERSION = 1.1.0 |
+
+## 鮮度リフレッシュ記録(2026-07-07)
+
+| 項目 | 値 |
+|---|---|
+| 実施日 | 2026-07-07 |
+| 差分範囲 | 8d73e463..e2c28731(10コミット) |
+| 実施 intent | 260706-installer-impl(scope: feature) |
+| 主要変更 | grilling 統合(PR#601)/ promote-self の composed-scope 保持(PR#602)/ dist 4ツリーのコミット化 / ライセンスのデュアル MIT + Apache-2.0 化 |
 
 ## 分析スコープ
 

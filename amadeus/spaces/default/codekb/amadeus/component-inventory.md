@@ -1,6 +1,6 @@
 # Component Inventory
 
-> Reverse Engineering 成果物 — 分析対象: main @ 14c40c9c(現 HEAD 8d73e463)
+> Reverse Engineering 成果物 — 分析対象: main @ 14c40c9c(現 HEAD e2c28731、2026-07-07 鮮度リフレッシュ)
 
 ## ランタイムコンポーネント
 
@@ -41,18 +41,18 @@
 | コンポーネント | 場所 | 責務 |
 |---|---|---|
 | 配布ビルダー | `scripts/package.ts`(671行) | 5ステップ/ハーネス: core コピー+トークン置換 → harness 上書き → グラフコンパイル → runner-gen → codex emit。`--check` ドリフトガード |
-| 昇格 | `scripts/promote-self.ts`(207行) | dist/claude → `.claude/` / `.codex/` / `.agents/` / `CLAUDE.md`(memory/ 対象外)。`promote:self:check` |
+| 昇格 | `scripts/promote-self.ts`(264行) | dist/claude → `.claude/` / `.codex/` / `.agents/` / `CLAUDE.md`(memory/ 対象外)。`promote:self:check`。composed-scope 保護ロジック(`COMPOSED_SCOPE_RE` / `scopeGridInSync` / `mergeScopeGrid`)により `scope-grid.json` はキー単位マージされる |
 | ハーネス manifest | `harness/<name>/manifest.ts` ×4 | coreDirs 等の配布構成宣言。存在による自動発見 |
 | codex emitter | `harness/codex/emit.ts` | codex 固有の出力変換 |
 | センサー ×4 | `core/sensors/` | required-sections / upstream-coverage / linter / type-check(advisory) |
 | read-only スキル ×3 | `core/skills/` | session-cost / replay / outcomes-pack(状態不変・監査不発行) |
 
-## grilling 統合の触点(このインベントリ上)
+## grilling 統合の触点(完了済み、PR#601/602 マージ済み)
 
-1. `stage-protocol.md` L258-298 — 第4モード挿入
-2. stop フック規約(空 `[Answer]:` タグ)— 継承必須
-3. `harness/*/question-rendering.md` ×4 — 必要時改訂
-4. `core/skills/amadeus-grilling/` — 新設(read-only スキルパターン踏襲)+ 4 manifest への行追加
-5. `amadeus-audit.ts` VALID_EVENT_TYPES — 新イベント型が必要か要判断
-6. `amadeus-log.ts` answer 在席ゲート — 高頻度連続回答との相互作用検証
-7. バージョンバンプ3点セット(version.ts / CHANGELOG / README、t68)
+1. `stage-protocol.md` L258-298 — 第4モード挿入(完了)
+2. stop フック規約(空 `[Answer]:` タグ)— 継承済み
+3. `harness/*/question-rendering.md` ×4 — 改訂済み
+4. `core/skills/amadeus-grilling/` — 新設完了(read-only スキルパターン踏襲)、4 manifest への行追加も完了。grilling-protocol.md として実装
+5. `amadeus-audit.ts` VALID_EVENT_TYPES — 判断済み(既存イベント型で対応)
+6. `amadeus-log.ts` answer 在席ゲート — 検証済み
+7. バージョンバンプ3点セット(version.ts / CHANGELOG / README、t68)— 完了(現 1.1.0)

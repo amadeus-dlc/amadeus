@@ -1,6 +1,6 @@
 # Technology Stack
 
-> Reverse Engineering 成果物 — 分析対象: main @ 14c40c9c(現 HEAD 8d73e463)
+> Reverse Engineering 成果物 — 分析対象: main @ 14c40c9c(現 HEAD e2c28731、2026-07-07 鮮度リフレッシュ)
 
 ## 言語・ランタイム
 
@@ -8,7 +8,8 @@
 |---|---|---|
 | 言語 | TypeScript(ESM) | typescript ^6.0.3、`tsc --noEmit` で型検査(tsconfig.json + tsconfig.tests.json) |
 | ランタイム / PM | Bun | tools / hooks / scripts / tests すべて bun 直接実行。起動 ~20ms。実行ビット不要規約 |
-| フレームワークバージョン | AMADEUS_VERSION = 1.0.0 | `core/tools/amadeus-version.ts` / CHANGELOG / README バッジの三者同期を t68 が強制 |
+| フレームワークバージョン | AMADEUS_VERSION = 1.1.0 | `core/tools/amadeus-version.ts` / CHANGELOG / README バッジの三者同期を t68 が強制 |
+| ライセンス | LICENSE-MIT + LICENSE-APACHE(デュアル) | ※ルート `package.json` の `"license": "MIT-0"` と README バッジは未追随の不整合あり(要是正シグナル) |
 
 ## 開発依存(devDependencies のみ)
 
