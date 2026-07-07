@@ -1,0 +1,13 @@
+{
+  "stage_slug": "requirements-analysis",
+  "selections": [
+    {
+      "candidate_id": "c3",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "Requirements Analysis では、version resolution / CLI contract / force semantics / install manifest / upgrade boundary のようなユーザー可視契約を設計詳細として後続 stage へ先送りせず、requirements.md でテスト可能に固定する",
+      "source": "orchestrator"
+    }
+  ]
+}

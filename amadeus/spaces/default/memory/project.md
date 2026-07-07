@@ -48,10 +48,19 @@
 
 - NEVER CHANGELOG にリポジトリホストを埋め込むバージョンリンク参照(`[N.N.N]:` 形式)を復活させない — v0.6.9 で削除済み、t68 が再出現をガードする
 
+- NEVER hand-edit `dist/<harness>/` as an implementation shortcut. (affirmed 2026-07-07)
+- NEVER let source, distribution, and self-install trees drift across commits when installer behavior changes. (affirmed 2026-07-07)
+- NEVER rely on a local-only manual checklist for installer release readiness when a deterministic drift guard already exists. (affirmed 2026-07-07)
+- NEVER add runtime dependencies to the shipped framework without documenting why the user-side Bun-only premise changes. (affirmed 2026-07-07)
 ## Mandated
 
 - ALWAYS ユーザー可視の変更を含むPRは、同一コミットで `core/tools/amadeus-version.ts` のバージョンをバンプし、README バッジを更新し、`CHANGELOG.md` に `## [X.Y.Z] - YYYY-MM-DD` 見出しと箇条書きを追加する(`tests/unit/t68-version-changelog-sync.test.ts` が三者の同期を強制)。ドキュメントのみ・内部リファクタ・テストのみの変更はバンプしない
 
+- ALWAYS edit `core/` or `harness/<name>/` as the source of truth, then regenerate `dist/` with `bun scripts/package.ts`. (affirmed 2026-07-07)
+- ALWAYS run `bun run promote:self` after source changes that affect the self-installed `.claude/`, `.codex/`, `.agents/`, or `CLAUDE.md` trees. (affirmed 2026-07-07)
+- ALWAYS include `bun run dist:check` and `bun run promote:self:check` in installer-related validation because the installer depends on generated distribution parity. (affirmed 2026-07-07)
+- ALWAYS validate installer changes with `bun run typecheck`, `bun run lint`, and the relevant `tests/run-tests.sh` profile before merge. (affirmed 2026-07-07)
+- ALWAYS treat the first installer Construction Bolt as a small end-to-end package setup slice and gate it before broader installer expansion. (affirmed 2026-07-07)
 ## Corrections
 
 <!-- 人間のフィードバックによるプロジェクト固有の是正。 -->
@@ -59,3 +68,4 @@
 - 既存codekbがある場合、reverse-engineering はフルスキャンでなく前回スキャンコミットからの差分リフレッシュで実行し、Always rerun for freshness 条項を差分更新で満たす (learned 2026-07-07) <!-- cid:reverse-engineering:c1 -->
 - インストーラ/配布系 intent の reverse-engineering では package.ts・promote-self.ts・dist 構造・VERSION ファイルを重点的にスキャンする(後続ステージが配布資産の理解に依存するため) (learned 2026-07-07) <!-- cid:reverse-engineering:c2 -->
 - reverse-engineering は Developer(スキャン)→ Architect(合成)の2サブエージェント直列で実行する(Architect がスキャン結果に依存するため並列化しない) (learned 2026-07-07) <!-- cid:reverse-engineering:c3 -->
+- Requirements Analysis では、version resolution / CLI contract / force semantics / install manifest / upgrade boundary のようなユーザー可視契約を設計詳細として後続 stage へ先送りせず、requirements.md でテスト可能に固定する (learned 2026-07-07) <!-- cid:requirements-analysis:c3 -->
