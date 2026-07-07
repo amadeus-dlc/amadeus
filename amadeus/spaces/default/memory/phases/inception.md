@@ -13,6 +13,7 @@
 - アーキテクチャ決定にはトレードオフ分析を必須とする — 検討した代替案を最低2つ文書化する
 - すべての ADR に含める: Context、Decision、Consequences、Alternatives Rejected
 - 主要なアーキテクチャ決定ごとに、セキュリティとコンプライアンスへの影響を扱う
+- 後方互換レイヤー・移行シム・新旧の二重実装・非推奨API の維持は、既定でスコープ外とする。導入する場合は「なぜ互換が必要か」を requirements/NFR まで遡れる根拠付きの ADR として明示し、代替(古い挙動を削除して置き換える案)を Alternatives Rejected に記録する。根拠のない互換維持を design に持ち込まない
 
 ## User Stories
 
