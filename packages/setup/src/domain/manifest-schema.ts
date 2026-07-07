@@ -1,4 +1,4 @@
-import { SUPPORTED_HARNESSES, type Harness } from "../cli/types.ts";
+import { SUPPORTED_HARNESSES, type Harness } from "./installer-contracts.ts";
 import type { DistributionFile, FileClass } from "./source-types.ts";
 import { INSTALLER_MANIFEST_SCHEMA_VERSION, type InstallerManifest, type ManifestValidationIssue } from "./target-types.ts";
 

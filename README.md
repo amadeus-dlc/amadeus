@@ -47,14 +47,14 @@ Ad-hoc AI coding works until the project gets real. Then context drifts between 
 
 ## Pick your harness
 
-| Harness | Install (copy into your project) | Invoke | Install & usage guide |
+| Harness | Primary install | Invoke | Install & usage guide |
 | --- | --- | --- | --- |
-| **Kiro IDE** | `dist/kiro-ide/.kiro/` + `dist/kiro-ide/amadeus/` → `<project>/` (+ `dist/kiro-ide/AGENTS.md`) | `/amadeus` | [Quick Start](#quick-start) below + [Running AI-DLC on Kiro IDE](docs/guide/harnesses/kiro-ide.md). |
-| **Kiro CLI** (≥ 2.6) | `dist/kiro/.kiro/` + `dist/kiro/amadeus/` → `<project>/` (+ `dist/kiro/AGENTS.md`) | `/amadeus` | [Quick Start](#quick-start) below + [Running AI-DLC on Kiro CLI](docs/guide/harnesses/kiro-cli.md). |
-| **Claude Code** | `dist/claude/.claude/` + `dist/claude/amadeus/` → `<project>/` | `/amadeus` | [Quick Start](#quick-start) below + [Getting Started](docs/guide/01-getting-started.md). |
-| **Codex CLI** (≥ 0.139.0) | `dist/codex/` → `<project>/` (`.codex/` + `.agents/` + `amadeus/` + `AGENTS.md`) | `$amadeus` (or `/skills` → amadeus) | [Quick Start](#quick-start) below + [AI-DLC on Codex CLI](docs/guide/harnesses/codex-cli.md). |
+| **Kiro IDE** | `amadeus-setup install --harness kiro-ide` | `/amadeus` | [Install with amadeus-setup](#install-with-amadeus-setup-recommended) + [Running AI-DLC on Kiro IDE](docs/guide/harnesses/kiro-ide.md). |
+| **Kiro CLI** (≥ 2.6) | `amadeus-setup install --harness kiro` | `/amadeus` | [Install with amadeus-setup](#install-with-amadeus-setup-recommended) + [Running AI-DLC on Kiro CLI](docs/guide/harnesses/kiro-cli.md). |
+| **Claude Code** | `amadeus-setup install --harness claude` | `/amadeus` | [Install with amadeus-setup](#install-with-amadeus-setup-recommended) + [Getting Started](docs/guide/01-getting-started.md). |
+| **Codex CLI** (≥ 0.139.0) | `amadeus-setup install --harness codex` | `$amadeus` (or `/skills` → amadeus) | [Install with amadeus-setup](#install-with-amadeus-setup-recommended) + [AI-DLC on Codex CLI](docs/guide/harnesses/codex-cli.md). |
 
-The deterministic engine — state machine, audit log, and the referee that coordinates parallel agents — is byte-identical across every harness; only the shell differs. Each section in the [Quick Start](#quick-start) installs one harness end to end, and its guide above goes deeper on prerequisites and differences.
+The deterministic engine — state machine, audit log, and the referee that coordinates parallel agents — is byte-identical across every harness; only the shell differs. Prefer [Install with amadeus-setup](#install-with-amadeus-setup-recommended) for day-to-day setup. The [Quick Start](#quick-start) sections below document manual `cp -r dist/<harness>/` steps as a fallback when the installer cannot be used.
 
 > [!NOTE]
 > AI-DLC on Kiro (IDE or CLI) works best with **Claude Opus 4.8**, which requires a **paid Kiro plan**. On weaker models the conductor may skip optional stage steps (reviewer pass, learnings ritual) or rush approval gates.
@@ -62,6 +62,28 @@ The deterministic engine — state machine, audit log, and the referee that coor
 ## Recommended Model
 
 This release works better with `Claude Opus 4.8`. We are sharpening it for previous model versions. 
+
+## Install with amadeus-setup (recommended)
+
+The primary install path is the Bun-first `@amadeus-dlc/setup` package. Use `amadeus-setup install` for a new project and `amadeus-setup upgrade` for an existing install.
+
+```bash
+# Install one harness into your project (Bun required)
+bunx @amadeus-dlc/setup install --harness claude --target ./your-project --yes
+
+# Upgrade an existing install
+bunx @amadeus-dlc/setup upgrade --harness claude --target ./your-project --yes
+```
+
+**Bun is required.** The `npx @amadeus-dlc/setup` wrapper is best-effort only — when Bun is not on PATH it returns a `bun-required` error instead of running the installer.
+
+Supported harnesses: `claude`, `codex`, `kiro`, `kiro-ide` (one harness per invocation). Common flags: `--target`, `--version`, `--yes` (non-interactive), and `--force` (backup-before-overwrite for shared files). After a successful apply, the installer writes `amadeus/.installer/amadeus-setup-manifest.json`.
+
+Package docs: [`packages/setup/README.md`](packages/setup/README.md).
+
+### Maintainer release
+
+`@amadeus-dlc/setup` is published manually through the GitHub Actions **Release Setup Package** workflow (`.github/workflows/release-setup.yml`) via `workflow_dispatch`. Merging to `main` does not publish. Run with `dry_run: true` first, then `dry_run: false` with `confirm_package: @amadeus-dlc/setup` and protected environment approval for a real publish.
 
 ## Quick Start
 

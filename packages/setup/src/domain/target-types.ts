@@ -1,4 +1,4 @@
-import type { Harness, SetupError } from "../cli/types.ts";
+import type { Harness, SetupError } from "./installer-contracts.ts";
 import type { DistributionFile } from "./source-types.ts";
 
 export const INSTALLER_MANIFEST_PATH = "amadeus/.installer/amadeus-setup-manifest.json" as const;

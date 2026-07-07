@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { isAbsolute } from "node:path";
-import type { Harness } from "../cli/types.ts";
+import type { Harness } from "./installer-contracts.ts";
 import { setupSourceError, type DistributionFile, type FileClass, type LoadedDistribution, type SourceResult } from "./source-types.ts";
 
 export const DISTRIBUTION_METADATA_PATH = "amadeus/.installer/distribution-metadata.json";

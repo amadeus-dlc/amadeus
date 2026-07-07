@@ -1,4 +1,4 @@
-import type { Harness, SetupCommand } from "../cli/types.ts";
+import type { Harness, SetupCommand } from "./installer-contracts.ts";
 import type { DistributionFile, LoadedDistribution, ResolvedVersion } from "./source-types.ts";
 import type { TargetDetection, TargetSnapshot } from "./target-types.ts";
 
@@ -17,9 +17,7 @@ export type NoWriteReasonCode =
 
 export type ConfirmationReasonCode = "shared-file-collision";
 
-export type BackupReasonCode = "shared-file-changed" | "shared-file-unknown-md5";
-
-export type ConflictReasonCode = "shared-file-changed" | "shared-file-unknown-md5";
+export type SharedFileDispositionReason = "shared-file-changed" | "shared-file-unknown-md5";
 
 export type SkipReasonCode = "user-preserved";
 
@@ -61,13 +59,13 @@ export type FileOperation =
       kind: "backup";
       path: string;
       backupPath: string;
-      reason: BackupReasonCode;
+      reason: SharedFileDispositionReason;
     }
   | {
       kind: "conflict";
       path: string;
       class: DistributionFile["class"];
-      reason: ConflictReasonCode;
+      reason: SharedFileDispositionReason;
       previousMd5?: string;
     };
 

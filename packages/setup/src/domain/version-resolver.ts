@@ -1,12 +1,6 @@
 import type { TagSourcePort } from "../ports/tag-source.ts";
+import { compareParsedSemver, formatSemver, parseSemver, type ParsedSemver } from "./semver.ts";
 import { CANONICAL_SOURCE_REPO, setupSourceError, type IgnoredTag, type ResolvedVersion, type SourceResult, type TagCandidate, type VersionRequest } from "./source-types.ts";
-
-type ParsedSemver = {
-  major: number;
-  minor: number;
-  patch: number;
-  prerelease?: string;
-};
 
 type IndexedTag = {
   tag: string;
@@ -15,45 +9,23 @@ type IndexedTag = {
   hasVPrefix: boolean;
 };
 
-const SEMVER_TAG_PATTERN = /^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-([0-9A-Za-z.-]+))?$/;
-
-function parseSemverTag(tag: string): ParsedSemver | undefined {
-  const match = SEMVER_TAG_PATTERN.exec(tag);
-  if (match === null) {
-    return undefined;
-  }
-  return {
-    major: Number(match[1]),
-    minor: Number(match[2]),
-    patch: Number(match[3]),
-    prerelease: match[4],
-  };
-}
-
-function normalizeVersion(parsed: ParsedSemver): string {
-  const stable = `${parsed.major}.${parsed.minor}.${parsed.patch}`;
-  return parsed.prerelease === undefined ? stable : `${stable}-${parsed.prerelease}`;
-}
-
 function compareSemverDesc(left: IndexedTag, right: IndexedTag): number {
-  for (const key of ["major", "minor", "patch"] as const) {
-    const difference = right.parsed[key] - left.parsed[key];
-    if (difference !== 0) {
-      return difference;
-    }
+  const comparison = compareParsedSemver(right.parsed, left.parsed);
+  if (comparison !== 0) {
+    return comparison;
   }
   return Number(right.hasVPrefix) - Number(left.hasVPrefix);
 }
 
 function candidateFor(tag: string): TagCandidate {
-  const parsed = parseSemverTag(tag);
+  const parsed = parseSemver(tag);
   if (parsed === undefined) {
     return { tag, kind: "malformed", preferred: false, ignoredReason: "malformed" };
   }
   return {
     tag,
     kind: parsed.prerelease === undefined ? "stable" : "prerelease",
-    version: normalizeVersion(parsed),
+    version: formatSemver(parsed),
     preferred: tag.startsWith("v"),
   };
 }
@@ -68,7 +40,7 @@ function buildIndex(tags: string[]): { candidates: TagCandidate[]; index: Map<st
       diagnostics.push({ tag: candidate.tag, reason: "malformed" });
       continue;
     }
-    const parsed = parseSemverTag(candidate.tag);
+    const parsed = parseSemver(candidate.tag);
     if (parsed === undefined) {
       diagnostics.push({ tag: candidate.tag, reason: "malformed" });
       continue;
@@ -104,7 +76,7 @@ function duplicateDiagnostics(index: Map<string, IndexedTag[]>, selectedTag: str
 }
 
 function resolveExplicitVersion(requestedVersion: string, allowExplicitPrerelease: boolean, index: Map<string, IndexedTag[]>, diagnostics: IgnoredTag[]): SourceResult<ResolvedVersion> {
-  const parsed = parseSemverTag(requestedVersion);
+  const parsed = parseSemver(requestedVersion);
   if (parsed === undefined) {
     return {
       ok: false,
@@ -128,7 +100,7 @@ function resolveExplicitVersion(requestedVersion: string, allowExplicitPrereleas
     };
   }
 
-  const version = normalizeVersion(parsed);
+  const version = formatSemver(parsed);
   const group = index.get(version) ?? [];
   const selected = requestedVersion.startsWith("v")
     ? group.find((item) => item.tag === requestedVersion)

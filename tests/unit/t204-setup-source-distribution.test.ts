@@ -10,8 +10,10 @@ import { gzipSync } from "node:zlib";
 import { ArchiveExtractor } from "../../packages/setup/src/adapters/archive-extractor.ts";
 import { GitHubArchiveSource } from "../../packages/setup/src/adapters/github-source.ts";
 import { executeSetupCommand } from "../../packages/setup/src/application/setup-service.ts";
+import { renderSetupResult } from "../../packages/setup/src/cli/setup-result-renderer.ts";
 import { readDistributionMetadata, DISTRIBUTION_METADATA_PATH } from "../../packages/setup/src/domain/distribution-metadata.ts";
 import { CANONICAL_SOURCE_REPO, type LoadedDistribution, type ResolvedVersion } from "../../packages/setup/src/domain/source-types.ts";
+import { INSTALLER_MANIFEST_PATH } from "../../packages/setup/src/domain/target-types.ts";
 import type { ArchiveSourcePort } from "../../packages/setup/src/ports/archive-source.ts";
 import type { TagSourcePort } from "../../packages/setup/src/ports/tag-source.ts";
 
@@ -180,12 +182,15 @@ describe("U2 source archive and metadata", () => {
     await rm(root, { recursive: true, force: true });
   });
 
-  test("setup service resolves source with fake ports and does not write target files", async () => {
+  test("setup service resolves source with fake ports and applies install on --yes", async () => {
     const sourceRoot = await mkdtemp(join(tmpdir(), "amadeus-setup-service-source-"));
     const targetRoot = await mkdtemp(join(tmpdir(), "amadeus-setup-service-target-"));
-    mkdirSync(join(sourceRoot, "dist", "codex", ".codex"), { recursive: true });
+    mkdirSync(join(sourceRoot, "dist", "codex", ".codex", "tools"), { recursive: true });
+    mkdirSync(join(sourceRoot, "dist", "codex", "amadeus", "spaces", "default", "memory"), { recursive: true });
     writeFileSync(join(sourceRoot, "dist", "codex", "AGENTS.md"), "agents");
     writeFileSync(join(sourceRoot, "dist", "codex", ".codex", "config.toml"), "config");
+    writeFileSync(join(sourceRoot, "dist", "codex", ".codex", "tools", ".gitkeep"), "");
+    writeFileSync(join(sourceRoot, "dist", "codex", "amadeus", "spaces", "default", "memory", "org.md"), "org");
     const tagSource: TagSourcePort = {
       async listTags() {
         return { ok: true, value: ["v1.2.3"] };
@@ -197,16 +202,19 @@ describe("U2 source archive and metadata", () => {
       },
     };
 
-    const result = await executeSetupCommand(
-      { command: "install", harness: "codex", target: targetRoot, version: undefined, yes: true, force: false },
-      { tagSource, archiveSource, archiveExtractor: new ArchiveExtractor() },
+    const result = renderSetupResult(
+      await executeSetupCommand(
+        { command: "install", harness: "codex", target: targetRoot, version: undefined, yes: true, force: false },
+        { tagSource, archiveSource, archiveExtractor: new ArchiveExtractor() },
+      ),
     );
 
-    expect(result.code).toBe(2);
-    expect(result.stderr).toContain("Code: downstream-not-implemented");
-    expect(result.stderr).toContain("resolved Amadeus 1.2.3");
-    expect(existsSync(join(targetRoot, "AGENTS.md"))).toBe(false);
-    expect(existsSync(join(targetRoot, ".codex"))).toBe(false);
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain("version:  1.2.3");
+    expect(result.stdout).toContain("Installed Amadeus.");
+    expect(existsSync(join(targetRoot, "AGENTS.md"))).toBe(true);
+    expect(existsSync(join(targetRoot, ".codex", "config.toml"))).toBe(true);
+    expect(existsSync(join(targetRoot, INSTALLER_MANIFEST_PATH))).toBe(true);
     await rm(sourceRoot, { recursive: true, force: true });
     await rm(targetRoot, { recursive: true, force: true });
   });

@@ -47,3 +47,48 @@ jobs:
 
       - name: Tests — smoke + unit + integration
         run: bash tests/run-tests.sh --ci
+
+  installer-gates:
+    name: installer · package · security · coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Detect installer-related changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .amadeus-ci/setup
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            mapfile -t CHANGED < <(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}")
+          else
+            mapfile -t CHANGED < <(git diff --name-only HEAD^ HEAD)
+          fi
+          ARGS=()
+          for file in "${CHANGED[@]}"; do
+            ARGS+=(--file "$file")
+          done
+          bun packages/setup/src/maintainer/change-detector.ts "${ARGS[@]}" --report .amadeus-ci/setup/change-set.json > /dev/null
+
+      - name: Run installer gate plan
+        run: bun packages/setup/src/maintainer/run-installer-gates.ts --change-set .amadeus-ci/setup/change-set.json --summary .amadeus-ci/setup/gate-summary.json
+
+      - name: Upload installer gate artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-gate-reports
+          path: .amadeus-ci/setup/
+          if-no-files-found: ignore

@@ -1,4 +1,4 @@
-import type { Harness, SetupError } from "../cli/types.ts";
+import type { Harness, SetupError } from "./installer-contracts.ts";
 
 export const CANONICAL_SOURCE_REPO = "https://github.com/amadeus-dlc/amadeus" as const;
 

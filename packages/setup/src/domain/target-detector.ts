@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import type { Harness, SetupError } from "../cli/types.ts";
+import type { Harness, SetupError } from "./installer-contracts.ts";
 import { setupSourceError } from "./source-types.ts";
 import type { SentinelSet, TargetDetection, TargetDetectionDiagnostics, TargetDetectionResult } from "./target-types.ts";
 import type { PromptPort, TargetManifestReadPort, TargetReadOnlyFilePort } from "../ports/target-state.ts";

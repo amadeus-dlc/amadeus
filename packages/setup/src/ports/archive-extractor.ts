@@ -1,4 +1,4 @@
-import type { Harness } from "../cli/types.ts";
+import type { Harness } from "../domain/installer-contracts.ts";
 import type { LoadedDistribution, ResolvedVersion, SourceResult } from "../domain/source-types.ts";
 
 export type ArchiveExtractRequest = {

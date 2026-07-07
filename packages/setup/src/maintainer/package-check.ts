@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -67,8 +67,18 @@ export function checkSetupPackageMetadata(repoRoot = resolve(dirname(fileURLToPa
   };
 }
 
+function parseReportArg(argv: string[]): string | undefined {
+  const index = argv.indexOf("--report");
+  return index >= 0 ? argv[index + 1] : undefined;
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const result = checkSetupPackageMetadata();
+  const reportPath = parseReportArg(process.argv.slice(2));
+  if (reportPath) {
+    mkdirSync(dirname(resolve(reportPath)), { recursive: true });
+    writeFileSync(resolve(reportPath), `${JSON.stringify(result, null, 2)}\n`, "utf-8");
+  }
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   process.exitCode = result.ok ? 0 : 1;
 }

@@ -1,60 +1,14 @@
 import { buildBackupPath, formatUtcBasicTimestamp } from "./backup-planner.ts";
+import { compareSemver } from "./semver.ts";
 import { INSTALLER_MANIFEST_PATH } from "./target-types.ts";
 import type { DistributionFile } from "./source-types.ts";
 import type {
-  BackupReasonCode,
-  ConflictReasonCode,
   FileOperation,
   FileOperationPlan,
   NoWriteReasonCode,
   PlanningContext,
+  SharedFileDispositionReason,
 } from "./plan-types.ts";
-
-type Version = {
-  major: number;
-  minor: number;
-  patch: number;
-  prerelease?: string;
-};
-
-const SEMVER_PATTERN = /^(?:v)?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-([0-9A-Za-z.-]+))?$/;
-
-function parseVersion(value: string): Version | undefined {
-  const match = SEMVER_PATTERN.exec(value);
-  if (match === null) {
-    return undefined;
-  }
-  return {
-    major: Number(match[1]),
-    minor: Number(match[2]),
-    patch: Number(match[3]),
-    prerelease: match[4],
-  };
-}
-
-function compareVersions(left: string, right: string): number {
-  const parsedLeft = parseVersion(left);
-  const parsedRight = parseVersion(right);
-  if (parsedLeft === undefined || parsedRight === undefined) {
-    return left.localeCompare(right);
-  }
-  for (const key of ["major", "minor", "patch"] as const) {
-    const difference = parsedLeft[key] - parsedRight[key];
-    if (difference !== 0) {
-      return difference;
-    }
-  }
-  if (parsedLeft.prerelease === parsedRight.prerelease) {
-    return 0;
-  }
-  if (parsedLeft.prerelease === undefined) {
-    return 1;
-  }
-  if (parsedRight.prerelease === undefined) {
-    return -1;
-  }
-  return parsedLeft.prerelease.localeCompare(parsedRight.prerelease);
-}
 
 function noWritePlan(context: PlanningContext, reason: NoWriteReasonCode, operations: FileOperation[] = []): FileOperationPlan {
   return {
@@ -103,12 +57,8 @@ function sourcePathFor(file: DistributionFile, sourcePaths: Map<string, string>,
   return sourcePaths.get(file.path) ?? `${context.distribution.root}/${file.path}`;
 }
 
-function sharedBackupReason(snapshotMd5: string | undefined, previousMd5: string | undefined): BackupReasonCode {
+function sharedFileDispositionReason(snapshotMd5: string | undefined, previousMd5: string | undefined): SharedFileDispositionReason {
   return snapshotMd5 !== undefined && previousMd5 !== undefined && snapshotMd5 !== previousMd5 ? "shared-file-changed" : "shared-file-unknown-md5";
-}
-
-function sharedConflictReason(snapshotMd5: string | undefined, previousMd5: string | undefined): ConflictReasonCode {
-  return sharedBackupReason(snapshotMd5, previousMd5);
 }
 
 function backupAndCopyOperations(input: {
@@ -116,7 +66,7 @@ function backupAndCopyOperations(input: {
   file: DistributionFile;
   sourcePath: string;
   previousMd5?: string;
-  reason: BackupReasonCode;
+  reason: SharedFileDispositionReason;
   force: boolean;
   timestamp: string;
 }): FileOperation[] {
@@ -191,7 +141,7 @@ function planFiles(context: PlanningContext): FileOperationPlan {
           file,
           sourcePath,
           previousMd5,
-          reason: sharedBackupReason(snapshot.md5, previousMd5),
+          reason: sharedFileDispositionReason(snapshot.md5, previousMd5),
           force: true,
           timestamp,
         }),
@@ -200,7 +150,7 @@ function planFiles(context: PlanningContext): FileOperationPlan {
     }
 
     if (context.mode === "non-interactive") {
-      conflicts.push({ kind: "conflict", path: file.path, class: file.class, reason: sharedConflictReason(snapshot.md5, previousMd5), previousMd5 });
+      conflicts.push({ kind: "conflict", path: file.path, class: file.class, reason: sharedFileDispositionReason(snapshot.md5, previousMd5), previousMd5 });
       continue;
     }
 
@@ -211,7 +161,7 @@ function planFiles(context: PlanningContext): FileOperationPlan {
         file,
         sourcePath,
         previousMd5,
-        reason: sharedBackupReason(snapshot.md5, previousMd5),
+        reason: sharedFileDispositionReason(snapshot.md5, previousMd5),
         force: false,
         timestamp,
       }),
@@ -244,7 +194,7 @@ function upgradeNoWriteReason(context: PlanningContext): NoWriteReasonCode | und
 
   const installedVersion = detection.manifest.distributionVersion;
   const resolvedVersion = context.distribution.resolvedVersion.distributionVersion;
-  const comparison = compareVersions(installedVersion, resolvedVersion);
+  const comparison = compareSemver(installedVersion, resolvedVersion);
   if (comparison === 0) {
     return "already-up-to-date";
   }

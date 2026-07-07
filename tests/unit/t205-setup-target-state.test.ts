@@ -4,6 +4,7 @@ import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { executeSetupCommand } from "../../packages/setup/src/application/setup-service.ts";
+import { renderSetupResult } from "../../packages/setup/src/cli/setup-result-renderer.ts";
 import { FileSystemTargetManifestReader } from "../../packages/setup/src/adapters/target-manifest-reader.ts";
 import type { Harness } from "../../packages/setup/src/cli/types.ts";
 import { detectTarget } from "../../packages/setup/src/domain/target-detector.ts";
@@ -13,7 +14,8 @@ import { INSTALLER_MANIFEST_PATH, type InstallerManifest, type ManifestReadResul
 import type { ArchiveExtractorPort } from "../../packages/setup/src/ports/archive-extractor.ts";
 import type { ArchiveSourcePort } from "../../packages/setup/src/ports/archive-source.ts";
 import type { TagSourcePort } from "../../packages/setup/src/ports/tag-source.ts";
-import type { PromptPort, TargetManifestReadPort, TargetReadOnlyFilePort } from "../../packages/setup/src/ports/target-state.ts";
+import type { PromptPort } from "../../packages/setup/src/ports/target-state.ts";
+import { FakeTargetFiles, StubManifestReader } from "../helpers/setup/fake-ports.ts";
 
 const targetRoot = "/tmp/amadeus-target";
 const resolvedVersion: ResolvedVersion = {
@@ -61,68 +63,6 @@ function validManifestResult(value: InstallerManifest): ManifestReadResult {
     manifest: value,
     diagnostics: { status: "valid", reasonCode: "manifest-valid", manifestPath: INSTALLER_MANIFEST_PATH },
   };
-}
-
-class StubManifestReader implements TargetManifestReadPort {
-  constructor(private readonly result: ManifestReadResult) {}
-
-  readManifestForDetection(): ManifestReadResult {
-    return this.result;
-  }
-}
-
-class FakeTargetFiles implements TargetReadOnlyFilePort {
-  readonly existsCalls: string[] = [];
-  readonly md5Calls: string[] = [];
-  readonly readCalls: string[] = [];
-  readonly writeCalls: string[] = [];
-  private readonly entries = new Map<string, Uint8Array | Error>();
-  private readonly existing = new Set<string>();
-  private readonly md5Failures = new Set<string>();
-
-  addExisting(path: string, content = ""): void {
-    this.existing.add(path);
-    this.entries.set(path, Buffer.from(content));
-  }
-
-  addUnreadable(path: string): void {
-    this.existing.add(path);
-    this.entries.set(path, new Error("unreadable"));
-  }
-
-  failMd5(path: string): void {
-    this.md5Failures.add(path);
-  }
-
-  exists(path: string): boolean {
-    this.existsCalls.push(path);
-    return this.existing.has(path);
-  }
-
-  readFile(path: string): Uint8Array {
-    this.readCalls.push(path);
-    const entry = this.entries.get(path);
-    if (entry instanceof Error || entry === undefined) {
-      throw new Error("unreadable");
-    }
-    return entry;
-  }
-
-  md5(path: string): string {
-    this.md5Calls.push(path);
-    if (this.md5Failures.has(path)) {
-      throw new Error("unreadable");
-    }
-    const entry = this.entries.get(path);
-    if (entry instanceof Error || entry === undefined) {
-      throw new Error("unreadable");
-    }
-    return createHash("md5").update(entry).digest("hex");
-  }
-
-  writeFile(path: string): void {
-    this.writeCalls.push(path);
-  }
 }
 
 async function detectWithFiles(files: FakeTargetFiles, requestedHarness?: Harness, manifestRead: ManifestReadResult = manifestResult("absent"), promptPort?: PromptPort) {
@@ -354,11 +294,13 @@ describe("U3 target snapshot and service boundary", () => {
     expect(files.existsCalls).toEqual([join(targetRoot, "AGENTS.md"), join(targetRoot, "old.md")]);
   });
 
-  test("service resolves source, detects target, snapshots, and stops before planning or apply", async () => {
+  test("service resolves source, detects target, snapshots, plans operations, and applies on writable plan", async () => {
     const files = new FakeTargetFiles();
     for (const path of [".codex", ".agents", "AGENTS.md", "amadeus"]) {
-      files.addExisting(join(targetRoot, path), path);
+      files.addExisting(join(targetRoot, path), path === "AGENTS.md" ? "agents" : path);
     }
+    files.addExisting(join(targetRoot, ".codex/tools"));
+    files.addExisting(join(targetRoot, "amadeus/spaces/default/memory"));
     const distribution: LoadedDistribution = {
       root: "/tmp/source-dist",
       harness: "codex",
@@ -382,25 +324,28 @@ describe("U3 target snapshot and service boundary", () => {
       async cleanup() {},
     };
 
-    const result = await executeSetupCommand(
-      { command: "upgrade", target: targetRoot, harness: "codex", version: undefined, yes: true, force: false },
-      {
-        tagSource,
-        archiveSource,
-        archiveExtractor,
-        readMetadata() {
-          return { ok: true, value: [distributionFile("AGENTS.md", "agents")] };
+    const result = renderSetupResult(
+      await executeSetupCommand(
+        { command: "upgrade", target: targetRoot, harness: "codex", version: undefined, yes: true, force: false },
+        {
+          tagSource,
+          archiveSource,
+          archiveExtractor,
+          readMetadata() {
+            return { ok: true, value: [distributionFile("AGENTS.md", "agents")] };
+          },
+          targetManifestReader: new StubManifestReader(manifestResult("absent")),
+          targetFiles: files,
+          targetWritableFiles: files,
         },
-        targetManifestReader: new StubManifestReader(manifestResult("absent")),
-        targetFiles: files,
-      },
+      ),
     );
 
-    expect(result.code).toBe(2);
-    expect(result.stderr).toContain("Code: downstream-not-implemented");
-    expect(result.stderr).toContain("detected target state manual-or-unknown");
-    expect(result.stderr).toContain("snapshotted 1 expected files");
-    expect(files.writeCalls).toEqual([]);
-    expect(files.md5Calls).toEqual([join(targetRoot, "AGENTS.md")]);
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain("File operations:");
+    expect(result.stdout).toContain("| update | 1 | AGENTS.md |");
+    expect(result.stdout).toContain("Upgraded Amadeus.");
+    expect(files.writeCalls.some((call) => call.path === join(targetRoot, INSTALLER_MANIFEST_PATH))).toBe(true);
+    expect(files.copyCalls.some((call) => call.destinationPath === join(targetRoot, "AGENTS.md"))).toBe(true);
   });
 });

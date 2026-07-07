@@ -1,4 +1,4 @@
-import type { Harness } from "../cli/types.ts";
+import type { Harness } from "./installer-contracts.ts";
 import type { ArchiveSourcePort } from "../ports/archive-source.ts";
 import type { ArchiveExtractorPort } from "../ports/archive-extractor.ts";
 import type { LoadedDistribution, ResolvedVersion, SourceResult } from "./source-types.ts";

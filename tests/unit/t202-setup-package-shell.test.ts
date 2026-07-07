@@ -35,7 +35,7 @@ describe("U1 setup package shell", () => {
     const result = await runSetup(["init"], {}, {
       executeCommand: async () => {
         delegated = true;
-        return { code: 0, stdout: "", stderr: "" };
+        return { code: 0 as const, stdout: "", stderr: "" };
       },
     });
     expect(result.code).toBe(2);
@@ -104,7 +104,7 @@ describe("U1 setup package shell", () => {
     const deps = {
       executeCommand: async () => {
         delegated = true;
-        return { code: 0, stdout: "", stderr: "" };
+        return { code: 0 as const, stdout: "", stderr: "" };
       },
     };
     const help = await runSetup(["--help"], {}, deps);

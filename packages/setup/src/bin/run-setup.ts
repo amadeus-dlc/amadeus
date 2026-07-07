@@ -1,5 +1,8 @@
+import { stdin as processStdin } from "node:process";
+import { createInteractivePromptPort } from "../adapters/interactive-prompt.ts";
 import { parseCommand } from "../cli/command-parser.ts";
 import { renderError, renderHelp } from "../cli/reporter.ts";
+import { renderSetupResult } from "../cli/setup-result-renderer.ts";
 import type { EntrypointResult, SetupCommand, SetupError } from "../cli/types.ts";
 
 export type RunSetupDeps = {
@@ -22,7 +25,12 @@ function unexpectedErrorResult(): EntrypointResult {
 
 async function defaultExecuteCommand(command: SetupCommand): Promise<EntrypointResult> {
   const { executeSetupCommand } = await import("../application/setup-service.ts");
-  return executeSetupCommand(command);
+  const stdinIsTTY = processStdin.isTTY === true;
+  const result = await executeSetupCommand(command, {
+    stdinIsTTY,
+    promptPort: createInteractivePromptPort(stdinIsTTY),
+  });
+  return renderSetupResult(result);
 }
 
 export async function runSetup(argv: string[], _env: Record<string, string | undefined>, deps: RunSetupDeps = {}): Promise<EntrypointResult> {

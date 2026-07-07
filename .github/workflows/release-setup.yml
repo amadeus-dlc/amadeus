@@ -1,0 +1,330 @@
+name: Release Setup Package
+
+# Manual release workflow for @amadeus-dlc/setup.
+# Triggered only via workflow_dispatch — push/PR/tag events do not publish.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (empty = latest stable SemVer tag)"
+        required: false
+        default: ""
+        type: string
+      dry_run:
+        description: "Validate without publish (recommended for first run)"
+        required: true
+        default: true
+        type: boolean
+      npm_dist_tag:
+        description: "npm dist-tag for publish"
+        required: false
+        default: latest
+        type: string
+      confirm_package:
+        description: "Type @amadeus-dlc/setup to confirm real publish"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: release-setup-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  input-and-tag:
+    name: validate inputs · select tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      selected_tag: ${{ steps.select_tag.outputs.selected_tag }}
+      distribution_version: ${{ steps.select_tag.outputs.distribution_version }}
+      prerelease: ${{ steps.select_tag.outputs.prerelease }}
+      dry_run: ${{ steps.inputs.outputs.dry_run }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Record workflow inputs
+        id: inputs
+        run: |
+          echo "dry_run=${{ inputs.dry_run }}" >> "$GITHUB_OUTPUT"
+
+      - name: Select release tag
+        id: select_tag
+        run: |
+          set -euo pipefail
+          mkdir -p .amadeus-ci/setup
+          ARGS=(--npm-dist-tag "${{ inputs.npm_dist_tag }}" --report .amadeus-ci/setup/selected-tag.json)
+          if [ -n "${{ inputs.tag }}" ]; then
+            ARGS+=(--tag "${{ inputs.tag }}")
+          fi
+          bun packages/setup/src/maintainer/release-tag-selector.ts "${ARGS[@]}" > selected-tag.json
+          SELECTED_TAG=$(python3 -c 'import json; print(json.load(open("selected-tag.json"))["selection"]["sourceTag"])')
+          DISTRIBUTION_VERSION=$(python3 -c 'import json; print(json.load(open("selected-tag.json"))["selection"]["distributionVersion"])')
+          PRERELEASE=$(python3 -c 'import json; print("true" if json.load(open("selected-tag.json"))["selection"]["prerelease"] else "false")')
+          echo "selected_tag=$SELECTED_TAG" >> "$GITHUB_OUTPUT"
+          echo "distribution_version=$DISTRIBUTION_VERSION" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
+
+  release-preflight:
+    name: release preflight · U7 gates
+    needs: input-and-tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.input-and-tag.outputs.selected_tag }}
+          fetch-depth: 0
+
+      - name: Set up bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Package metadata gate
+        run: bun packages/setup/src/maintainer/package-check.ts --report .amadeus-ci/setup/package-metadata.json
+
+      - name: Package dry-run gate
+        run: bun packages/setup/src/maintainer/package-dry-run.ts --report .amadeus-ci/setup/package-dry-run.json
+
+      - name: Installer smoke gate
+        run: bun tests/setup/run-installer-smoke.ts --report .amadeus-ci/setup/smoke.json
+
+      - name: Installer integration gate
+        run: bun tests/setup/run-installer-integration.ts --report .amadeus-ci/setup/integration.json
+
+      - name: Coverage registry gate
+        run: >-
+          bun packages/setup/src/maintainer/coverage-gate.ts
+          --registry tests/.coverage-registry.json
+          --ratchet tests/.coverage-ratchet.json
+          --scope installer
+          --integration-report .amadeus-ci/setup/integration.json
+          --report .amadeus-ci/setup/coverage.json
+
+      - name: Typecheck gate
+        run: bun run typecheck
+
+      - name: Lint gate
+        run: bun run lint
+
+      - name: Dist drift gate
+        run: bun run dist:check
+
+      - name: Self-install drift gate
+        run: bun run promote:self:check
+
+      - name: Write normalized scanner findings
+        run: bun packages/setup/src/maintainer/scanner-adapters.ts
+
+      - name: Dependency audit gate
+        run: >-
+          bun packages/setup/src/maintainer/security-gate.ts audit
+          --findings .amadeus-ci/setup/dependency-findings.json
+          --allowlist packages/setup/security/vulnerability-allowlist.json
+          --report .amadeus-ci/setup/dependency-audit.json
+
+      - name: Secret scan gate
+        run: >-
+          bun packages/setup/src/maintainer/security-gate.ts secrets
+          --findings .amadeus-ci/setup/secret-findings.json
+          --report .amadeus-ci/setup/secret-scan.json
+
+      - name: Write release preflight summary
+        run: >-
+          bun packages/setup/src/maintainer/release-preflight.ts
+          --selected-tag "${{ needs.input-and-tag.outputs.selected_tag }}"
+          --distribution-version "${{ needs.input-and-tag.outputs.distribution_version }}"
+          --dry-run "${{ needs.input-and-tag.outputs.dry_run }}"
+          --report .amadeus-ci/setup/release-preflight.json
+
+  build-and-evidence:
+    name: build · evidence
+    needs: [input-and-tag, release-preflight]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.input-and-tag.outputs.selected_tag }}
+
+      - name: Set up bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build package
+        run: >-
+          bun packages/setup/src/maintainer/build-package.ts
+          --tag "${{ needs.input-and-tag.outputs.selected_tag }}"
+          --expected-version "${{ needs.input-and-tag.outputs.distribution_version }}"
+          --report .amadeus-ci/setup/build.json
+
+      - name: Generate SBOM and provenance evidence
+        run: >-
+          bun packages/setup/src/maintainer/release-evidence.ts
+          --sbom --provenance
+          --tag "${{ needs.input-and-tag.outputs.selected_tag }}"
+          --report .amadeus-ci/setup/evidence.json
+
+  docs-consistency:
+    name: docs consistency
+    needs: [input-and-tag, release-preflight]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.input-and-tag.outputs.selected_tag }}
+
+      - name: Set up bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Check installer docs consistency
+        run: bun packages/setup/src/maintainer/docs-consistency.ts --report .amadeus-ci/setup/docs-consistency.json
+
+  publish-validation:
+    name: publish validation
+    needs: [input-and-tag, build-and-evidence, docs-consistency]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.input-and-tag.outputs.selected_tag }}
+
+      - name: Set up bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Validate publish request
+        run: >-
+          bun packages/setup/src/maintainer/publish-validate.ts
+          --tag "${{ needs.input-and-tag.outputs.selected_tag }}"
+          --dist-tag "${{ inputs.npm_dist_tag }}"
+          --confirm-package "${{ inputs.confirm_package }}"
+          --dry-run "${{ needs.input-and-tag.outputs.dry_run }}"
+          --package-dir packages/setup
+          --report .amadeus-ci/setup/publish-validation.json
+
+  publish:
+    name: npm publish
+    needs: [input-and-tag, publish-validation]
+    if: needs.input-and-tag.outputs.dry_run == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: npm-publish
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.input-and-tag.outputs.selected_tag }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Guard confirm_package
+        run: |
+          if [ "${{ inputs.confirm_package }}" != "@amadeus-dlc/setup" ]; then
+            echo "confirm_package must equal @amadeus-dlc/setup"
+            exit 1
+          fi
+
+      - name: Publish package
+        working-directory: packages/setup
+        run: npm publish --tag "${{ inputs.npm_dist_tag }}" --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  post-publish:
+    name: post-publish verification
+    needs: [input-and-tag, publish]
+    if: needs.input-and-tag.outputs.dry_run == 'false' && needs.publish.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.input-and-tag.outputs.selected_tag }}
+
+      - name: Set up bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Post-publish verification
+        run: >-
+          bun packages/setup/src/maintainer/post-publish-verify.ts
+          --package @amadeus-dlc/setup
+          --tag "${{ needs.input-and-tag.outputs.selected_tag }}"
+          --report .amadeus-ci/setup/post-publish.json
+
+  release-summary:
+    name: release summary
+    needs: [input-and-tag, release-preflight, build-and-evidence, docs-consistency, publish-validation, publish, post-publish]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-setup-reports
+          path: .amadeus-ci/setup/
+          if-no-files-found: ignore
+
+      - name: Write release summary
+        run: |
+          {
+            echo "## @amadeus-dlc/setup release summary"
+            echo ""
+            echo "- selected tag: ${{ needs.input-and-tag.outputs.selected_tag }}"
+            echo "- distribution version: ${{ needs.input-and-tag.outputs.distribution_version }}"
+            echo "- dry run: ${{ needs.input-and-tag.outputs.dry_run }}"
+            echo "- npm dist-tag: ${{ inputs.npm_dist_tag }}"
+            echo "- publish job: ${{ needs.publish.result }}"
+            echo "- post-publish job: ${{ needs.post-publish.result }}"
+          } >> "$GITHUB_STEP_SUMMARY"
