@@ -21,7 +21,7 @@
 ```
 core/                # 手書きの、ハーネス中立なソース(tools, stages, agents, rules, knowledge, hooks)
 harness/<name>/      # ハーネスごとに書かれた表層(manifest、オーケストレーター skill、settings/config; 例 claude/, kiro/, codex/)
-scripts/package.ts   # ビルド: core/ + harness/ から dist/<harness>/ を再生成(`npm run dist`、`--check` でドリフトガード)
+scripts/package.ts   # ビルド: core/ + harness/ から dist/<harness>/ を再生成(`bun run dist`、`--check` でドリフトガード)
 scripts/promote-self.ts # プロジェクトローカルのドッグフーディングインストール: 生成された Claude/Codex 表層を .claude/.codex/.agents に昇格(ワークスペースの memory は決して上書きしない)
 dist/<harness>/      # 生成された配布物(claude/.claude/, kiro/.kiro/ + AGENTS.md, codex/)— 手編集禁止。packager を実行すること
 tests/               # すべて TypeScript のテストスイート(t*.test.ts、bun で実行)
@@ -38,8 +38,8 @@ docs/                # ドキュメント
 1. **`main` からフォークしてブランチを切る**
 2. **アーキテクチャを読む** -- [reference/01-architecture.md](01-architecture.ja.md) は実行モデル、エージェント委譲、フックシステムを説明します
 3. **エントリポイントを理解する** -- 決定論的エンジン `core/tools/amadeus-orchestrate.ts`(`next` / `report`)がルーティングを所有し、コンダクター `harness/claude/skills/amadeus/SKILL.md` はそのディレクティブに従って動作する薄い転送ループです。正となるエンジン / ディレクティブ / コンダクター / swarm の契約については [The Skill System](17-skill-system.ja.md) を参照してください
-4. **変更を加える** -- `core/` のハーネス中立ソース(tools, stages, agents, hooks, rules, knowledge)、または `harness/<name>/` のハーネス表層(オーケストレーター skill、settings)を編集します。その後 `npm run dist` を実行して `dist/` を再生成します — `dist/` を手編集してはいけません。ドリフトガード(`npm run dist:check` / `package.ts --check`)が CI を失敗させます
-5. **ドッグフーディング時はローカルに昇格する** -- `npm run promote:self` を実行して、生成されたハーネス出力からこのリポジトリのプロジェクトローカルな `.claude/`、`.codex/`、`.agents/`、`CLAUDE.md` をリフレッシュします。`npm run promote:self:check` がそのセルフインストールをドリフトガードします。`amadeus/spaces/default/memory/` は意図的に昇格されません — ワークスペースの memory は手編集される method ソース(practices-discovery と自己学習ループが実行時に書き込む)であり、promoter は決して上書きしません。composed-scope のランタイムデータも同様に保護されます: dist に存在しない `scopes/amadeus-<name>.md` は composer が作成した scope(保持され、orphan として削除されない)であり、`tools/data/scope-grid.json` はキーごとに比較・書き込みされるため、composed なエントリは残りつつ stock エントリのドリフトは引き続きチェックを失敗させます
+4. **変更を加える** -- `core/` のハーネス中立ソース(tools, stages, agents, hooks, rules, knowledge)、または `harness/<name>/` のハーネス表層(オーケストレーター skill、settings)を編集します。その後 `bun run dist` を実行して `dist/` を再生成します — `dist/` を手編集してはいけません。ドリフトガード(`bun run dist:check` / `package.ts --check`)が CI を失敗させます
+5. **ドッグフーディング時はローカルに昇格する** -- `bun run promote:self` を実行して、生成されたハーネス出力からこのリポジトリのプロジェクトローカルな `.claude/`、`.codex/`、`.agents/`、`CLAUDE.md` をリフレッシュします。`bun run promote:self:check` がそのセルフインストールをドリフトガードします。`amadeus/spaces/default/memory/` は意図的に昇格されません — ワークスペースの memory は手編集される method ソース(practices-discovery と自己学習ループが実行時に書き込む)であり、promoter は決して上書きしません。composed-scope のランタイムデータも同様に保護されます: dist に存在しない `scopes/amadeus-<name>.md` は composer が作成した scope(保持され、orphan として削除されない)であり、`tools/data/scope-grid.json` はキーごとに比較・書き込みされるため、composed なエントリは残りつつ stock エントリのドリフトは引き続きチェックを失敗させます
 6. **テスト** -- 提出前に `bun tests/run-tests.ts` を実行します
 7. **提出** -- `main` に対して PR を開きます
 
