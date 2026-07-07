@@ -1,58 +1,55 @@
-# Component Inventory
+# コンポーネント棚卸し
 
-> Reverse Engineering 成果物 — 分析対象: main @ 14c40c9c(現 HEAD e2c28731、2026-07-07 鮮度リフレッシュ)
+## Core コンポーネント
 
-## ランタイムコンポーネント
+| コンポーネント | 責務 | 依存先 | レイアウト感度 |
+| --- | --- | --- | --- |
+| `core/` | AI-DLC engine source, tools, templates, stage definitions | none as authored source | 高: root source assumption across scripts/manifests/docs |
+| `core/tools/amadeus-version.ts` | version source used by packager | script relative import | 高: `scripts/package.ts` imports by relative root path |
+| `core/templates/onboarding.md` | 配布物へコピーされる onboarding skeleton | packager `ONBOARDING_SKELETON` | 中 |
+| `harness/<name>/manifest.ts` | harness ごとの source projection を宣言 | `scripts/manifest-types.ts`, root `core/`, root `harness/` | 高 |
+| `harness/codex/emit.ts` | Codex 配布物の追加 emission | assembled dist tree, `coreRoot`, `harnessRoot` | 高 |
 
-| コンポーネント | 場所 | 責務 | 主要依存 |
-|---|---|---|---|
-| オーケストレーションエンジン | `core/tools/amadeus-orchestrate.ts`(2899行) | `next`(純リード)/ `report`(遷移コミット)。ステージグラフ解決・directive 発行 | directive.ts、状態ファイル、stage-graph.json |
-| directive 契約 | `core/tools/amadeus-directive.ts` | エンジン⇄コンダクター間の凍結 JSON 契約(kind ×7 + 予約2) | なし(契約定義) |
-| 監査基盤 | `core/tools/amadeus-audit.ts` | VALID_EVENT_TYPES ホワイトリスト、per-clone シャード書き込み、mkdir ロック | 一時ディレクトリロック |
-| 決定/回答ロガー | `core/tools/amadeus-log.ts` | DECISION_RECORDED / QUESTION_ANSWERED 発行。HUMAN_TURN 在席ゲート | audit.ts、監査台帳 |
-| ランタイムサマリ | `core/tools/amadeus-runtime.ts` | `summary --json` — read-only スキル向け決定論的集計 | 監査台帳、状態 |
-| 学習ゲート | `core/tools/amadeus-learnings.ts` | §13 admission チェック(レイヤー矛盾却下) | memory 5層 |
-| swarm レフェリー | `core/tools/amadeus-swarm.ts` | swarm 収束判定 | 監査 |
-| ランナー生成 | `core/tools/amadeus-runner-gen.ts` | ステージランナースキルの write / check(ドリフトガード) | stage-graph |
-| ユーティリティ | `core/tools/amadeus-utility.ts` ほか計27本 | `--*` ハンドラ、状態管理、グラフコンパイル等 | — |
-| フック群(11本) | `core/hooks/` | stop(human-wait 判別)/ mint-presence(HUMAN_TURN)/ sensor-fire(PostToolUse)/ ライフサイクル・状態同期・検証・サブエージェント追跡・statusline | questions ファイル、監査、tools |
-| コンダクター | `core/amadeus-common/conductor.md` + SKILL.md | LLM 側オーケストレーター。ペルソナ採用・directive 実行 | protocols、stages、agents |
-| ステージプロトコル | `core/amadeus-common/protocols/stage-protocol.md`(1000行、ほか3本) | 対話モード契約(3モード)、質問バッチ、write-back 規約 | questions ファイル、log.ts |
-| ステージ定義 | `core/amadeus-common/stages/`(5フェーズ 32ステージ) | frontmatter(phase / sensors / agents)+ ステージ手順 | コンパイルで graph 化 |
+## ビルドと配布コンポーネント
 
-## エージェント(11体)
+| コンポーネント | 責務 | 依存先 | レイアウト感度 |
+| --- | --- | --- | --- |
+| `scripts/package.ts` | `dist/<name>` の生成と検査 | root `core/`, root `harness/`, root `dist/` | 非常に高 |
+| `scripts/promote-self.ts` | dogfood self-install と drift check | root `dist/claude`, root `dist/codex`, root runtime dirs | 非常に高 |
+| `scripts/manifest-types.ts` | manifest schema と projection semantics | root naming model | 高 |
+| runner generation | package build 中に command runner を生成 | assembled dist tree | 中 |
+| `dist/<name>/` | commit 済み生成配布物 | packager, docs, tests, CI | 非常に高 |
 
-| エージェント | 主担当 |
-|---|---|
-| product | intent-capture、requirements、user-stories |
-| design | mockups(rough / refined) |
-| delivery | delivery-planning、Bolt 実行統制 |
-| architect | feasibility、application-design、units-generation、functional/NFR design、RE synthesis |
-| aws-platform | AWS マッピング、infrastructure-design |
-| compliance | 規制制約 |
-| devsecops | セキュアデザイン、ci-pipeline |
-| developer | code-generation、RE code scan |
-| quality | testing、validation |
-| pipeline-deploy | deployment-pipeline |
-| operations | observability、incident-response |
+## Runtime と dogfood コンポーネント
 
-## ビルド・配布コンポーネント
+| コンポーネント | 責務 | 依存先 | レイアウト感度 |
+| --- | --- | --- | --- |
+| `.claude/` | この repo の Claude runtime install target | `promote-self` | 高 |
+| `.codex/` | この repo の Codex runtime install target | `promote-self`, composed scope preservation | 高 |
+| `.agents/` | Codex skills/runtime install target | `dist/codex/.agents` | 高 |
+| `amadeus/spaces/default/` | local Amadeus record/artifact store | generated tools と current intent | 中 |
 
-| コンポーネント | 場所 | 責務 |
-|---|---|---|
-| 配布ビルダー | `scripts/package.ts`(671行) | 5ステップ/ハーネス: core コピー+トークン置換 → harness 上書き → グラフコンパイル → runner-gen → codex emit。`--check` ドリフトガード |
-| 昇格 | `scripts/promote-self.ts`(264行) | dist/claude → `.claude/` / `.codex/` / `.agents/` / `CLAUDE.md`(memory/ 対象外)。`promote:self:check`。composed-scope 保護ロジック(`COMPOSED_SCOPE_RE` / `scopeGridInSync` / `mergeScopeGrid`)により `scope-grid.json` はキー単位マージされる |
-| ハーネス manifest | `harness/<name>/manifest.ts` ×4 | coreDirs 等の配布構成宣言。存在による自動発見 |
-| codex emitter | `harness/codex/emit.ts` | codex 固有の出力変換 |
-| センサー ×4 | `core/sensors/` | required-sections / upstream-coverage / linter / type-check(advisory) |
-| read-only スキル ×3 | `core/skills/` | session-cost / replay / outcomes-pack(状態不変・監査不発行) |
+## 品質コンポーネント
 
-## grilling 統合の触点(完了済み、PR#601/602 マージ済み)
+| コンポーネント | 責務 | 依存先 | レイアウト感度 |
+| --- | --- | --- | --- |
+| `.github/workflows/ci.yml` | CI drift check と validation | root package scripts | 高 |
+| `tests/harness/fixtures.ts` | shared e2e install fixture helper | root `dist/claude/.claude`, root `dist/*` | 非常に高 |
+| `tests/harness/tui-fixtures.ts` | TUI harness fixture copy helper | root `dist/claude`, `dist/kiro`, `dist/kiro-ide` | 高 |
+| `tests/integration/t145-packaging-parity.test.ts` | package drift guard を検証 | root `scripts/package.ts` | 高 |
+| `tests/unit/t150-codex-packaging.test.ts` | Codex 配布物 shape を検証 | root `dist/claude`, root `dist/codex` | 高 |
+| `tests/unit/t200-promote-self-composed-scope.test.ts` | self-promotion preservation を検証 | root `scripts/promote-self.ts`, root runtime dirs | 高 |
+| `tests/gen-coverage-registry.ts` | coverage metadata generation | root `dist/claude/.claude` labels | 中 |
 
-1. `stage-protocol.md` L258-298 — 第4モード挿入(完了)
-2. stop フック規約(空 `[Answer]:` タグ)— 継承済み
-3. `harness/*/question-rendering.md` ×4 — 改訂済み
-4. `core/skills/amadeus-grilling/` — 新設完了(read-only スキルパターン踏襲)、4 manifest への行追加も完了。grilling-protocol.md として実装
-5. `amadeus-audit.ts` VALID_EVENT_TYPES — 判断済み(既存イベント型で対応)
-6. `amadeus-log.ts` answer 在席ゲート — 検証済み
-7. バージョンバンプ3点セット(version.ts / CHANGELOG / README、t68)— 完了(現 1.1.0)
+## ドキュメントコンポーネント
+
+| コンポーネント | 責務 | 依存先 | レイアウト感度 |
+| --- | --- | --- | --- |
+| `README.md` | public install と contributor model | root `core/harness/dist` | 高 |
+| `docs/guide/harnesses/*.md` | harness-specific install/regenerate instructions | root `dist/*`, root `core + harness` | 高 |
+| `docs/reference/11-contributing.md` | maintainer workflow | root `core/`, `harness/<name>/`, `dist/` | 高 |
+| docs legacy refs gate | stale reference を防ぐ | docs + root `core/templates` + harness skills | 中 |
+
+## 外部 sibling コンポーネント
+
+`packages/setup` is intentionally not inventoried as a local component because `packages/` is absent in this checkout. For this intent it is a sibling dependency and parallel intent. It can influence layout comparison, but should not be treated as existing ファイルシステム evidence.

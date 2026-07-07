@@ -50,11 +50,12 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import type { HarnessManifest } from "./manifest-types.ts";
 import { renderOnboarding } from "./onboarding.ts";
-import { AMADEUS_VERSION } from "../core/tools/amadeus-version.ts";
+import { AMADEUS_VERSION } from "../packages/framework/core/tools/amadeus-version.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const CORE_ROOT = join(REPO_ROOT, "core");
-const HARNESS_ROOT = join(REPO_ROOT, "harness");
+const FRAMEWORK_ROOT = join(REPO_ROOT, "packages", "framework");
+const CORE_ROOT = join(FRAMEWORK_ROOT, "core");
+const HARNESS_ROOT = join(FRAMEWORK_ROOT, "harness");
 // The shared onboarding-doc skeleton, rendered per harness (scripts/onboarding.ts).
 const ONBOARDING_SKELETON = join(CORE_ROOT, "templates", "onboarding.md");
 const HARNESS_TOKEN = /\{\{HARNESS_DIR\}\}/g;
@@ -665,7 +666,7 @@ if (check) {
     for (const p of problems.slice(0, 40)) console.error("  " + p);
     process.exit(1);
   }
-  console.log("package --check: all harness trees in sync with core/ + harness/.");
+  console.log("package --check: all harness trees in sync with packages/framework/core + harness.");
 } else {
   for (const n of present) writeHarness(n);
 }

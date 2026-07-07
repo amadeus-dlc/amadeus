@@ -6,7 +6,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { lstatSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -83,20 +83,21 @@ function trackedAuthoredFiles(): string[] {
     .split("\0")
     .filter((file) => file.length > 0)
     .filter((file) => !file.startsWith("dist/"))
+    .filter((file) => lstatSync(join(REPO_ROOT, file)).isFile())
     .sort();
 }
 
 describe("authored source naming prefix contract", () => {
   test("tracked authored files include the prefixed framework surfaces", () => {
     const tracked = trackedAuthoredFiles();
-    expect(tracked).toContain(`core/${commonDirName}/conductor.md`);
-    expect(tracked).toContain(`core/tools/${prefix}utility.ts`);
-    expect(tracked).toContain(`core/hooks/${prefix}stop.ts`);
-    expect(tracked).toContain(`core/agents/${prefix}developer-agent.md`);
-    expect(tracked).toContain(`core/sensors/${prefix}type-check.md`);
-    expect(tracked).toContain(`core/scopes/${prefix}feature.md`);
-    expect(tracked).toContain(`core/skills/${prefix}replay/SKILL.md`);
-    expect(tracked).toContain(`harness/claude/skills/${commandName}/SKILL.md`);
+    expect(tracked).toContain(`packages/framework/core/${commonDirName}/conductor.md`);
+    expect(tracked).toContain(`packages/framework/core/tools/${prefix}utility.ts`);
+    expect(tracked).toContain(`packages/framework/core/hooks/${prefix}stop.ts`);
+    expect(tracked).toContain(`packages/framework/core/agents/${prefix}developer-agent.md`);
+    expect(tracked).toContain(`packages/framework/core/sensors/${prefix}type-check.md`);
+    expect(tracked).toContain(`packages/framework/core/scopes/${prefix}feature.md`);
+    expect(tracked).toContain(`packages/framework/core/skills/${prefix}replay/SKILL.md`);
+    expect(tracked).toContain(`packages/framework/harness/claude/skills/${commandName}/SKILL.md`);
   });
 
   test("tracked authored file paths and contents do not retain another known framework prefix", () => {

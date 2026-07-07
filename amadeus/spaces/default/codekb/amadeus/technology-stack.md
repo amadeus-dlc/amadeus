@@ -1,41 +1,40 @@
-# Technology Stack
+# 技術スタック
 
-> Reverse Engineering 成果物 — 分析対象: main @ 14c40c9c(現 HEAD e2c28731、2026-07-07 鮮度リフレッシュ)
+## Runtime と言語
 
-## 言語・ランタイム
+Amadeus is implemented as TypeScript running on Bun with ESM-style imports.
 
-| 項目 | 選定 | 備考 |
-|---|---|---|
-| 言語 | TypeScript(ESM) | typescript ^6.0.3、`tsc --noEmit` で型検査(tsconfig.json + tsconfig.tests.json) |
-| ランタイム / PM | Bun | tools / hooks / scripts / tests すべて bun 直接実行。起動 ~20ms。実行ビット不要規約 |
-| フレームワークバージョン | AMADEUS_VERSION = 1.1.0 | `core/tools/amadeus-version.ts` / CHANGELOG / README バッジの三者同期を t68 が強制 |
-| ライセンス | LICENSE-MIT + LICENSE-APACHE(デュアル) | ※ルート `package.json` の `"license": "MIT-0"` と README バッジは未追随の不整合あり(要是正シグナル) |
+Observed root-level tooling:
 
-## 開発依存(devDependencies のみ)
+- `package.json`: root package scripts for build, drift check, self-promotion, typecheck, lint, and tests.
+- `tsconfig.json`: includes `core/hooks/*.ts`, `core/tools/*.ts`, `harness/*/*.ts`, and `scripts/*.ts`.
+- `biome.json`: lints repository sources and excludes root `dist/**`.
 
-| パッケージ | バージョン | 用途 |
-|---|---|---|
-| @anthropic-ai/claude-agent-sdk | 0.3.158 | e2e テストのエージェント駆動 |
-| node-pty | 1.1.0 | e2e のターミナル駆動 |
-| @xterm/headless | ^5.5.0 | e2e のターミナルエミュレーション |
-| typescript | ^6.0.3 | 型検査 |
-| Biome | 2.4系 | リンター(フォーマッタ無効、Prettier 不使用)。lint 対象は tests/ のみ |
+Layout implication: TypeScript and Biome configuration are currently expressed in root-level glob terms. A package-owned layout requires either moving these configs into a package or broadening root config globs to cover both current and future package paths.
 
-**配布物(`dist/<harness>/`)は外部依存ゼロ** — ユーザー側の前提は bun のみ。
+## ビルドとテストツール
 
-## ツールチェーン・品質基盤
+| ツール | 用途 | レイアウト結合 |
+| --- | --- | --- |
+| Bun | script runner、TypeScript 実行、tests | root scripts と package.json |
+| TypeScript | static type checking | root `core`, `harness`, `scripts` の include |
+| Biome | lint | root source glob と `dist/**` 除外 |
+| GitHub Actions | CI drift guard | root `bun run dist:check`, `bun run promote:self:check` |
+| Bun test / custom runner | unit/integration/e2e tests | fixtures anchored to root `dist` |
 
-- **ビルド**: `bun scripts/package.ts`(+ `--check` ドリフトガード)、`bun run promote:self`(+ `:check`)
-- **テスト**: 自作ランナー `tests/run-tests.sh` / `bun tests/run-tests.ts`。4層(smoke / unit / integration / e2e)。デフォルト・`--ci` = smoke+unit+integration、リリース前 `--release` = 全層
-- **検査**: `bun run check` = typecheck + lint
-- **ロック**: 監査ログは外部依存なしの mkdir ベースロック(システム temp)
-- **クロスプラットフォーム**: macOS / Linux / Windows(PowerShell / Git Bash)で同一動作を規約化
+## 配布ツールチェーン
 
-## 対応ハーネス(配布ターゲット)
+The most relevant technology for Issue #610 is the local packaging toolchain.
 
-| ハーネス | dist | 特記 |
-|---|---|---|
-| Claude Code | `dist/claude/` | セルフインストール元(promote:self)。AskUserQuestion 1:1 レンダリング |
-| Codex | `dist/codex/` | 唯一 emit.ts 変換あり。rules → `amadeus-rules` リネーム |
-| Kiro | `dist/kiro/` | rules → `steering` リネーム |
-| Kiro IDE | `dist/kiro-ide/` | — |
+- `scripts/package.ts` is the build orchestrator for 配布物s.
+- `scripts/promote-self.ts` is the dogfood install/check orchestrator.
+- `scripts/manifest-types.ts` provides the manifest data model.
+- Harness-specific emitters, especially `harness/codex/emit.ts`, add 配布物-specific 出力s.
+
+These are not isolated package scripts. They encode repository topology and should be treated as architecture components during normalization.
+
+## バージョンと依存関係の注記
+
+This scan did not introduce a new dependency version inventory because Issue #610 is about ファイルシステム/package boundaries rather than library upgrade risk. The next design stage should only pull exact package versions when comparing implementation cost or CI impact.
+
+The key stack constraint is that Bun can execute TypeScript directly from current root paths. If scripts move under `packages/<name>/scripts`, relative imports and execution commands must be updated together.

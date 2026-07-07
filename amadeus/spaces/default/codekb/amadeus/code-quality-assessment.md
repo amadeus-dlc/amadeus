@@ -1,50 +1,52 @@
-# Code Quality Assessment
+# コード品質評価
 
-> Reverse Engineering 成果物 — 分析対象: main @ 14c40c9c(現 HEAD e2c28731、2026-07-07 鮮度リフレッシュ)
+## 既存の品質ゲート
 
-## テスト
+The repository has meaningful drift protection around 生成済み 出力s.
 
-| 層 | 本数 | 対象 |
-|---|---|---|
-| smoke | 12 | 構造検証 |
-| unit | 119 | 単一コンポーネント(t199-grilling-distribution、t200-promote-self-composed-scope を追加) |
-| integration | 100 | コンポーネント間契約 |
-| e2e | 64 | ライフサイクル全体(claude-agent-sdk + node-pty + xterm/headless でターミナル駆動) |
+- `dist:check` validates that commit 済み `dist/<name>` 出力 matches `scripts/package.ts` generation.
+- `promote:self:check` validates dogfood self-install state for Claude/Codex surfaces.
+- `.github/workflows/ci.yml` runs these checks in CI.
+- Unit/integration/e2e tests exercise packaging, Codex 配布物 shape, promote-self preservation, codekb placement, and harness runtime flows.
+- Biome and TypeScript provide root-level lint/type gates.
 
-- 実行: `tests/run-tests.sh`。デフォルト / `--ci` = smoke+unit+integration、リリース前 `--release` = 全層
-- **既知失敗ベースライン**: t11 / t38 / t65 / t66 / t140 / t174 ほか(main 由来)。グリーン基準が「全緑」でない点は変更検証時のノイズ源
-- ドリフトガードとしてのテスト: t68 が version.ts / CHANGELOG / README の三者同期を強制
+These gates are valuable because `dist/` is commit 済み生成物. A layout 移行 that simply moves files without updating drift checks would create false positives or, worse, remove the checks that catch stale 配布物s.
 
-## リンティング・型検査
+## 強み
 
-- Biome 2.4(フォーマッタ無効)— ただし **lint 対象は tests/ のみ**。core/ / scripts/ はリンター保護外
-- `tsc --noEmit` ×2 構成(本体 + tests)。`bun run check` = typecheck + lint
-- TODO / FIXME は core に 0 件(良好)
+- Current root-centric layout is consistent across packager, docs, tests, and CI.
+- Manifest-based projection gives one explicit place per harness to describe 配布物 shape.
+- Self-promotion has preservation logic for local settings and composed scopes, reducing data-loss risk.
+- Tests centralize many install fixtures in `tests/harness/fixtures.ts` and `tests/harness/tui-fixtures.ts`, which gives a 移行 target if path roots become configurable.
 
-## CI/CD・ドリフトガード
+## リスクと技術的負債
 
-- **`.github/workflows` が不在** — team.md の「CI で実行」言明と実態が乖離(要修正シグナル)
-- ローカル/レビュー時ガードは充実: (1) `package.ts --check`(dist バイト diff)、(2) `promote:self:check`、(3) `runner-gen check`、(4) t68 バージョン同期
-- デプロイ基盤なし(配布 = dist コピー方式)。リリースはバージョンタグ
+| リスク | 影響 | 注記 |
+| --- | --- | --- |
+| scripts 内の root path 定数 | 高 | `REPO_ROOT`, `CORE_ROOT`, `HARNESS_ROOT`, root `dist` が packaging と promotion に組み込まれている |
+| `dist/` が生成物かつ公開 install source であること | 高 | path 移動は user-facing かつ test-facing |
+| `scripts/package.ts` から `../core/...` への相対 import | 高 | script と core は独立して移動できない |
+| tests が具体的な root path を assert している | 高 | full normalization では広範な test 変更が必要 |
+| docs が root layout model を繰り返している | 高 | partial migration では docs が stale になりやすい |
+| Codex `.agents` outside `.codex` | 中-high | package-owned layout must preserve multi-root runtime 出力 |
+| 既存 CodeKB は intent をまたいで stale になり得る | 中 | 今回は prior intent 中心の scan を Issue #610 の path-impact scan に置き換えた |
 
-## ドキュメント品質
+## 移行時の安全要件
 
-- `docs/`(guide / harness-engineering / reference 00-17)が充実。コントリビューションチェックリスト(11-contributing)あり
-- 「ファイル・コマンドの改名時は docs/ と README を grep して同一コミットで更新」が team ルール化済み
-- CLAUDE.md / memory 5層により、方法論とリポジトリ規約が機械可読に文書化されている
+If implementation proceeds beyond design, the minimum safe order is:
 
-## 技術的負債(優先度付き)
+1. Add or document a source-root abstraction before moving directories.
+2. Keep `dist:check` and `promote:self:check` passing after each step.
+3. Preserve root runtime install targets `.claude`, `.codex`, `.agents`.
+4. Update tests and docs in the same phase as any visible path change.
+5. Avoid changing `packages/setup` in this intent except as a documented sibling dependency.
 
-| # | 負債 | 影響 | grilling 統合との関係 |
-|---|---|---|---|
-| 1 | 既知失敗テストのベースライン(t11 ほか) | リグレッション検出の信頼性低下 | 変更後の green 判定に既知失敗リストの照合が必要 |
-| 2 | CI 定義不在(.github/workflows なし) | ドリフトガードが人間の実行規律頼み | PR 検証はローカル実行に依存 |
-| 3 | read-only スキル配布の手動 N×M(4 manifest への行追加) | 抜け漏れリスク | **grilling スキル新設時に直撃** — 4 manifest 追加を忘れるとハーネス間パリティ崩壊 |
-| 4 | lint 範囲が tests/ のみ | core/ の品質はレビュー頼み | stage-protocol 等の Markdown 変更はセンサー(required-sections)が唯一の自動検証 |
-| 5 | ルートに tmp/ と roadmap.html 残骸 | 軽微(衛生) | なし |
-| 6 | stage-protocol.md 1000行単一ファイル | モード追加の影響面が広い | **第4モード挿入(L258-298)の主リスク** — 既存3モードへの非干渉を差分レビューで保証する必要 |
-| 7 | amadeus-log.ts answer 在席ゲートの「1 human turn = 1 answer」前提 | 高頻度連続回答と衝突しうる | **grilling の連続質問フローで設計時検証必須**(例外スイッチ追加 or ゲート緩和の ADR が必要) |
+## 移行しない選択肢の妥当性
 
-## 総合評価
+No-移行 is technically viable because the current layout is not accidental; it encodes a simple contributor model:
 
-決定論的ガード(ドリフト検査・イベントホワイトリスト・在席ゲート)への投資が厚く、生成物パリティの規律は高水準。一方で CI の実体不在と lint 範囲の狭さにより、その規律が人間の手順遵守に依存している点が最大の構造的弱点。grilling 統合においては負債 #3・#6・#7 が直接の設計制約となる。
+- edit `core/` for shared behavior;
+- edit `harness/<name>/` for integration-specific behavior;
+- regenerate and check `dist/`.
+
+If the project keeps this model, the ADR should explicitly state that root-level framework directories are the architecture boundary, while future `packages/*` may hold separately releasable or setup-specific packages.

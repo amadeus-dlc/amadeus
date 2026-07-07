@@ -52,6 +52,10 @@
 - NEVER let source, distribution, and self-install trees drift across commits when installer behavior changes. (affirmed 2026-07-07)
 - NEVER rely on a local-only manual checklist for installer release readiness when a deterministic drift guard already exists. (affirmed 2026-07-07)
 - NEVER add runtime dependencies to the shipped framework without documenting why the user-side Bun-only premise changes. (affirmed 2026-07-07)
+- NEVER `dist/<harness>/` を layout 変更の近道として手編集しない。 (affirmed 2026-07-07)
+- NEVER root `core/` / `harness/` の維持または移動を、ADR/設計記録なしに暗黙決定しない。 (affirmed 2026-07-07)
+- NEVER `dist/` relocation を internal refactor として扱わない。README、docs、tests、self-promotion、CI への user-facing impact を棚卸しする。 (affirmed 2026-07-07)
+- NEVER `packages/setup` の不在をローカル filesystem evidence として捏造しない。 (affirmed 2026-07-07)
 ## Mandated
 
 - ALWAYS ユーザー可視の変更を含むPRは、同一コミットで `core/tools/amadeus-version.ts` のバージョンをバンプし、README バッジを更新し、`CHANGELOG.md` に `## [X.Y.Z] - YYYY-MM-DD` 見出しと箇条書きを追加する(`tests/unit/t68-version-changelog-sync.test.ts` が三者の同期を強制)。ドキュメントのみ・内部リファクタ・テストのみの変更はバンプしない
@@ -61,6 +65,10 @@
 - ALWAYS include `bun run dist:check` and `bun run promote:self:check` in installer-related validation because the installer depends on generated distribution parity. (affirmed 2026-07-07)
 - ALWAYS validate installer changes with `bun run typecheck`, `bun run lint`, and the relevant `tests/run-tests.sh` profile before merge. (affirmed 2026-07-07)
 - ALWAYS treat the first installer Construction Bolt as a small end-to-end package setup slice and gate it before broader installer expansion. (affirmed 2026-07-07)
+- ALWAYS layout-normalization の判断では `code-structure`, `technology-stack`, `dependencies`, `code-quality-assessment`, `architecture`, `business-overview` の CodeKB 根拠を参照する。 (affirmed 2026-07-07)
+- ALWAYS `dist/`、`.claude/`、`.codex/`、`.agents/` の path を変える案では `dist:check` と `promote:self:check` の維持方法を同じ成果物に書く。 (affirmed 2026-07-07)
+- ALWAYS `packages/setup` は別 intent の sibling dependency として扱い、この intent の実装スコープに吸収しない。 (affirmed 2026-07-07)
+- ALWAYS markdown artifact は日本語で書く。ただし path、CLI、コード識別子、tool が要求する heading は正確性を優先して保持する。 (affirmed 2026-07-07)
 ## Corrections
 
 <!-- 人間のフィードバックによるプロジェクト固有の是正。 -->

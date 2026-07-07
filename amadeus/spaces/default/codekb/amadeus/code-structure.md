@@ -1,46 +1,54 @@
-# Code Structure
+# コード構造
 
-> Reverse Engineering 成果物 — 分析対象: main @ 14c40c9c(現 HEAD e2c28731、2026-07-07 鮮度リフレッシュ)
+## トップレベル構造
 
-## トップレベル構成
+現在の checkout には `packages/` directory は存在しない。観測された主要構造は次の通り。
 
-| パス | 役割 | 編集可否 |
-|---|---|---|
-| `core/` | ハーネス中立のソースオブトゥルース | **ここを編集する** |
-| `harness/{claude,codex,kiro,kiro-ide}/` | ハーネス別表層(manifest.ts + SKILL.md + question-rendering.md、codex のみ emit.ts) | 編集可 |
-| `scripts/` | `package.ts`(671行、配布ビルド)、`promote-self.ts`(264行、昇格) | 編集可 |
-| `dist/{claude,codex,kiro,kiro-ide}/` | 生成物。コミットされ `--check` でドリフトガード | **手編集禁止** |
-| `.claude/` `.codex/` `.agents/` | セルフインストール(promote:self の出力、38スキル) | 昇格で更新 |
-| `amadeus/spaces/default/` | ワークスペース: `memory/`(手編集メソッド層)+ `intents/` + `codekb/` + `knowledge/` | memory は手編集ソース |
-| `tests/` | 4層テスト(smoke 12 / unit 117 / integration 100 / e2e 64) | 編集可 |
-| `docs/` | guide / harness-engineering / reference 00-17 | 編集可 |
+| パス | 役割 | レイアウト変更時の注意 |
+| --- | --- | --- |
+| `core/` | harness-neutral source of truth | `scripts/package.ts`, manifests, docs, tests が root `core/` 前提を持つ |
+| `harness/claude/` | Claude 配布物 source | manifest が `coreDirs` と harness files を projection する |
+| `harness/codex/` | Codex 配布物 source | `.codex`, `.agents/skills`, root `AGENTS.md` emit を含む |
+| `harness/kiro/` | Kiro CLI 配布物 source | root `dist/kiro` install shape と docs が結合 |
+| `harness/kiro-ide/` | Kiro IDE 配布物 source | `.kiro/specs` / `.kiro/steering` shape と結合 |
+| `scripts/` | packaging, promote-self, runner generation | script location 自体が root layout assumption |
+| `dist/` | commit 済み生成物 | install docs、tests、CI drift guard の anchor |
+| `.claude/`, `.codex/`, `.agents/` | dogfood runtime install target | `promote-self` が preserve しながら更新 |
+| `tests/` | unit/integration/e2e and harness fixtures | `dist/claude/.claude` など root path 参照が多い |
+| `docs/`, `README.md` | contributor/user guide | root `core/harness/dist` model を説明 |
+| `.github/workflows/` | CI | `dist:check` と `promote:self:check` が release/drift guard |
 
-## core/ の内部構成
+## ソース分類
 
-| サブディレクトリ | 内容 |
-|---|---|
-| `core/tools/` | CLI ツール 27 本(TypeScript、bun 実行)。orchestrate / state / log / audit / directive / runtime / learnings / swarm / runner-gen / version 等 |
-| `core/hooks/` | フック 11 本(stop / mint-presence / sensor-fire / セッションライフサイクル / 状態同期・検証 / サブエージェント追跡 / statusline) |
-| `core/agents/` | ドメインエージェント 11 体(`amadeus-<role>-agent.md` フラットファイル) |
-| `core/sensors/` | センサーマニフェスト 4 本(required-sections / upstream-coverage / linter / type-check) |
-| `core/skills/` | read-only セッションスキル 3 本(session-cost / replay / outcomes-pack) |
-| `core/amadeus-common/` | `conductor.md` + `protocols/` 4本(stage-protocol.md 1000行を含む)+ `stages/` 5フェーズ 32ステージ |
-| `core/knowledge/` | エージェント別・共有の方法論リファレンス |
-| `core/scopes/` | スコープ定義(1ファイル1スコープ)。composed scope(例: `amadeus-grilling-integration.md`)はランタイム動的登録で dist 生成物には含まれない |
-| `core/memory/` `core/templates/` | メソッド層シード・テンプレート |
+`core/` と `harness/` は authored source、`dist/` は 生成済み but commit 済み 出力、`.claude/.codex/.agents` は repository 自身を使うための promoted runtime として扱われる。
 
-## ファイル分類とコードパターン
+この分類は package 境界より強い。たとえば `dist/` は 生成済み だが release artifact として repository に残るため、単純に package-local build 出力 として ignore することはできない。
 
-- **命名規約**: フレームワークファイルはすべて `amadeus-` プレフィックス(tools / hooks / agents / sensors)。テストは `tests/` 配下 `t<N>-*.test.ts`
-- **実行規約**: tools / hooks はすべて `.ts` で bun 直接実行。実行ビット不要(クロスプラットフォーム規約)
-- **トークン置換**: core 内の `{{HARNESS_DIR}}` がビルド時にハーネス別ディレクトリ名へ置換される。これが core→dist の唯一の変換(+ rules ディレクトリのリネーム: kiro=steering, codex=amadeus-rules)
-- **生成 vs 手書き**: `stage-graph.json` / `scope-grid.json` / ステージランナースキルは dist のみに存在する compile 生成物。core には対応ソース(ステージ frontmatter)だけがある
-- **スキル frontmatter パターン**(read-only): `name` / `description` / `argument-hint` / `user-invocable: true` / `classification: read-only`。grilling スキル新設時の参照実装
-- **ワークフロー成果物の配置**: intent ごとに `amadeus/spaces/<space>/intents/<slug>-<id8>/` 配下、ステージ観察日誌は `<record>/<phase>/<stage>/memory.md`
+## パス影響の棚卸し
 
-## 変更フロー(鉄則)
+| 領域 | 根拠 | 責務 | 移行リスク |
+| --- | --- | --- | --- |
+| Packager の root 定義 | `scripts/package.ts` の `REPO_ROOT`, `CORE_ROOT`, `HARNESS_ROOT` | build input contract | 高 |
+| Packager の version import | `../core/tools/amadeus-version.ts` | script と core の相対位置 | 高 |
+| Harness discovery | root `harness/<name>/manifest.ts` scan | harness list resolution | 中 |
+| Projection contract | manifests の `coreDirs`, `harnessFiles` | source-to-dist mapping | 高 |
+| Dist 出力 | root `dist/<name>` | commit 済み release 出力 | 高 |
+| Compiled data seed | fallback `dist/claude/.claude` | bootstrap data source | 中 |
+| Runner generation | assembled dist tree based generation | 生成 command | 中 |
+| Check behavior | temp tree と root `dist/<name>` の byte diff | drift guard | 高 |
+| Self-promotion | `dist/claude`, `dist/codex` から root runtime dirs へ反映 | dogfood install | 高 |
+| Preservation rules | local settings と composed scopes | data-loss prevention | 高 |
+| Manifest type model | `scripts/manifest-types.ts` の comments と types | projection API | 高 |
+| Codex emitter | `.codex`, `.agents/skills`, root `AGENTS.md` | Codex install shape | 高 |
+| README/docs | install と contributor examples | public contract | 高 |
+| Test fixtures | `tests/harness/fixtures.ts`, `tui-fixtures.ts` | e2e install simulation | 非常に高 |
+| Packaging tests | `t145`, `t150`, `t200` | guard proofs | 高 |
+| Coverage/docs gates | coverage registry, legacy refs gate | derived metadata | 中 |
 
-1. `core/`(または `harness/<name>/`)を編集
-2. `bun scripts/package.ts` で全 dist 再生成
-3. `bun run promote:self` でセルフインストールへ昇格
-4. 1〜3 を**同一コミット**に含める(`--check` / `promote:self:check` / runner-gen check / t68 の4種ドリフトガードが乖離を検出)
+## 次工程へ持ち越すレイアウト候補
+
+1. 現状維持: root-level framework source を維持し、`packages/setup` だけを別 package として扱う。
+2. staged layout 継続: root framework は維持しつつ、new package 領域の naming と docs で MECE 性を補強する。
+3. full workspace normalization: `packages/amadeus/{core,harness,dist,scripts}` などへ移す。ただし source root abstraction と compatibility period が必要。
+
+次 stage では、この inventory を layout comparison と ADR/design record へ変換する。

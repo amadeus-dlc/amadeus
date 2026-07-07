@@ -1,0 +1,367 @@
+// harness/codex/emit.ts — the Codex CLI per-shell emission plugin.
+//
+// The unified packager copies core/ → dist/codex/.codex/ (rules → amadeus-rules)
+// and runs graph compile, then calls this emit() for everything that is CODE,
+// not declarative data: the Codex config, hook wiring, trust pre-seed, the
+// AGENTS.md merge, the 13 agent TOML transpositions, and the .agents/skills/
+// tree (orchestrator + generated runners + session skills + openai.yaml guards).
+//
+// Ported faithfully from the proven scripts/package-codex.ts emission half
+// (spike tip d465886). The ONE transform class is the harness-dir token /
+// anchored-prefix family, exposed via ctx.substituteToken plus a local
+// amadeus-rules rename mirroring the packager's. Nothing here invents a new sed.
+//
+// emit() also owns the codex compiled-data + skills layout: skills do NOT ship
+// in .codex/skills/ (Codex discovers skills at <project>/.agents/skills/), so
+// the manifest sets skipRunnerGen and emit composes the runners here.
+
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
+import type { EmitContext, EmitResult } from "../../../../scripts/manifest-types.ts";
+import { renderOnboarding } from "../../../../scripts/onboarding.ts";
+import onboardingFills from "./onboarding.fills.ts";
+
+// ---------------------------------------------------------------------------
+// Hook wiring (kiro-normative shape: register ONLY events with a real core-hook
+// consumer; dropped hooks ship unregistered). PostCompact is Codex-only.
+// ---------------------------------------------------------------------------
+const HOOK_WIRING: Array<{ event: string; matcher?: string; target: string }> = [
+  { event: "SessionStart", target: "session-start" },
+  { event: "UserPromptSubmit", target: "mint" },
+  { event: "PostToolUse", matcher: "apply_patch", target: "audit-and-sensors" },
+  { event: "PostToolUse", matcher: "update_plan", target: "state-sync" },
+  { event: "PostToolUse", matcher: "Bash", target: "runtime-compile" },
+  { event: "PreCompact", target: "validate-state" },
+  { event: "PostCompact", target: "post-compact" },
+  { event: "SubagentStop", target: "log-subagent" },
+  { event: "Stop", target: "stop" },
+];
+
+const ADAPTER_CMD = (target: string) => `bun .codex/hooks/amadeus-codex-adapter.ts ${target}`;
+
+function emitHooksJson(): string {
+  const hooks: Record<string, Array<Record<string, unknown>>> = {};
+  for (const { event, matcher, target } of HOOK_WIRING) {
+    const group: Record<string, unknown> = {
+      hooks: [{ type: "command", command: ADAPTER_CMD(target) }],
+    };
+    if (matcher) group.matcher = matcher;
+    hooks[event] ??= [];
+    hooks[event].push(group);
+  }
+  return JSON.stringify({ hooks }, null, 2) + "\n";
+}
+
+function emitConfigTomlExample(): string {
+  return `# dist/codex shipped config example — copy to .codex/config.toml only
+# when this project should own Codex config. Existing config.toml must not be
+# overwritten by installers or self-promotion.
+#
+# Model/provider: intentionally not pinned here. Codex uses the user's normal
+# configured default provider and model. Put personal model/provider overrides in
+# ~/.codex/config.toml or add project-local settings deliberately.
+
+# The AIDLC method (the markdown rule layers: org/team/project + phases/) now
+# lives at the workspace root under amadeus/spaces/<space>/memory/ — the single
+# hand-editable source of truth, identical on every harness (NOT a per-harness
+# copy under .codex/). The AMADEUS_RULES_DIR seam below ships pointed at the
+# always-present default space; /amadeus space <name> re-points it IN PLACE so
+# the next session's resolver follows the active space (a byte-identical no-op at
+# default). Codex also auto-merges the root AGENTS.md and the orchestrator
+# injects an @amadeus/spaces/<space>/memory/... prompt mention to pull specific
+# method files into context on demand. (.codex/rules/ remains Codex's native
+# Starlark permission-rules dir — D-10 — distinct from the AIDLC method.)
+[shell_environment_policy]
+set = { AMADEUS_RULES_DIR = "amadeus/spaces/default/memory" }
+
+# Sandbox: workspace-write keeps <workspace>/.git read-only BY DESIGN;
+# interactive sessions escalate (deny -> approve -> retry unsandboxed) and the
+# shipped rules/default.rules pre-allows git worktree/commit/add prefixes so
+# escalations vanish. HEADLESS runs (codex exec workers, CI, test drivers)
+# cannot escalate: uncomment writable_roots with the MAIN repo's absolute
+# .git path (linked worktrees resolve into <main>/.git/worktrees/*).
+sandbox_mode = "workspace-write"
+
+[sandbox_workspace_write]
+network_access = true
+# writable_roots = ["/absolute/path/to/main-repo/.git"]
+
+# Gates (D-3 both-track): prose gates are the floor; these flags enable the
+# structured request_user_input tool (verified working at 0.137.0+; the
+# default-mode flag is under development and prints a warning banner).
+[tools]
+experimental_request_user_input = { enabled = true }
+
+[features]
+default_mode_request_user_input = true
+
+# Statusline (D-6): predefined item IDs only; task-progress is fed by the
+# update_plan tool, which the orchestrator skill keeps current per stage.
+[tui]
+status_line = ["model-with-reasoning", "git-branch", "task-progress", "context-used"]
+`;
+}
+
+function emitDefaultRules(): string {
+  return `# dist/codex shipped permission rules (Starlark) — .codex/rules/ is
+# Codex's NATIVE rules dir (this file), distinct from the AIDLC markdown rule
+# layers at .codex/amadeus-rules/ (D-10 rename).
+#
+# bun tool allowlist: the deterministic core runs via these exact prefixes.
+prefix_rule(pattern = ["bun", ".codex/tools/"], decision = "allow")
+prefix_rule(pattern = ["bun", ".codex/hooks/"], decision = "allow")
+
+# Git allow-rules (S9d): workspace-write keeps .git read-only in-sandbox and
+# routes git writes through escalation; these prefix rules pre-approve the
+# retry-unsandboxed step so Bolt worktree/commit flows run friction-free.
+prefix_rule(pattern = ["git", "worktree"], decision = "allow")
+prefix_rule(pattern = ["git", "commit"], decision = "allow")
+prefix_rule(pattern = ["git", "add"], decision = "allow")
+`;
+}
+
+// S9a trust-hash recipe. Identity = {event_name: <snake>, hooks: [{async:false,
+// command, timeout:600, type:"command"}]} → canonical JSON (sorted keys,
+// compact) → sha256.
+function trustHash(eventSnake: string, command: string): string {
+  const identity = {
+    event_name: eventSnake,
+    hooks: [{ async: false, command, timeout: 600, type: "command" }],
+  };
+  const sortKeys = (o: unknown): unknown => {
+    if (Array.isArray(o)) return o.map(sortKeys);
+    if (o !== null && typeof o === "object") {
+      return Object.fromEntries(
+        Object.keys(o as Record<string, unknown>)
+          .sort()
+          .map((k) => [k, sortKeys((o as Record<string, unknown>)[k])]),
+      );
+    }
+    return o;
+  };
+  const blob = JSON.stringify(sortKeys(identity));
+  return "sha256:" + createHash("sha256").update(blob, "utf-8").digest("hex");
+}
+
+const SNAKE: Record<string, string> = {
+  SessionStart: "session_start",
+  UserPromptSubmit: "user_prompt_submit",
+  PreToolUse: "pre_tool_use",
+  PostToolUse: "post_tool_use",
+  PermissionRequest: "permission_request",
+  PreCompact: "pre_compact",
+  PostCompact: "post_compact",
+  SubagentStart: "subagent_start",
+  SubagentStop: "subagent_stop",
+  Stop: "stop",
+};
+
+// Trust entries keyed on "<abs hooks.json path>:<event_snake>:<group>:<idx>".
+// Exported so the `trust` subcommand (amadeus-codex-trust.ts) can print
+// installer-substituted entries.
+export function trustEntries(projectDir: string, hooksJsonPath?: string): string {
+  const path = hooksJsonPath ?? `${projectDir}/.codex/hooks.json`;
+  const counters: Record<string, number> = {};
+  const lines: string[] = [];
+  for (const { event, target } of HOOK_WIRING) {
+    const snake = SNAKE[event];
+    const idx = counters[snake] ?? 0;
+    counters[snake] = idx + 1;
+    const hash = trustHash(snake, ADAPTER_CMD(target));
+    lines.push(`[hooks.state."${path}:${snake}:${idx}:0"]`);
+    lines.push(`trusted_hash = "${hash}"`);
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+
+function emitTrustSeed(): string {
+  return (
+    `# dist/codex hook-trust pre-seed (S9a) — TEMPLATE.\n` +
+    `# Append these entries to the USER config.toml ($CODEX_HOME/config.toml)\n` +
+    `# after replacing <PROJECT_DIR> with the project's absolute path, or run:\n` +
+    `#   bun scripts/package.ts codex trust --project <abs-dir>\n` +
+    `# to print them substituted and ready to paste. The hash covers the\n` +
+    `# normalized hook identity (event + command + defaults), NOT the path —\n` +
+    `# only the key changes per install. Codex then runs the hooks without a\n` +
+    `# TUI trust pass (the --dangerously-bypass-hook-trust flag does NOT fire\n` +
+    `# untrusted hooks at 0.137-0.139; never rely on it).\n\n` +
+    trustEntries("<PROJECT_DIR>")
+  );
+}
+
+// --- Agent transposition: 13 persona .md → .codex/agents/*.toml -------------
+
+function parseAgentMd(raw: string): { fm: Record<string, string>; body: string } {
+  const m = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
+  if (!m) return { fm: {}, body: raw };
+  const fm: Record<string, string> = {};
+  let current: string | null = null;
+  for (const line of m[1].split(/\r?\n/)) {
+    const kv = line.match(/^([A-Za-z_]+):\s*(.*)$/);
+    if (kv) {
+      current = kv[1];
+      fm[current] = kv[2].replace(/^>\s*$/, "");
+    } else if (current && /^\s+\S/.test(line)) {
+      if (!line.trim().startsWith("-")) fm[current] = `${fm[current]} ${line.trim()}`.trim();
+    }
+  }
+  return { fm, body: raw.slice(m[0].length) };
+}
+
+function tomlMultiline(s: string): string {
+  return `"""\n${s.replace(/"""/g, '\\"\\"\\"')}\n"""`;
+}
+
+// ---------------------------------------------------------------------------
+// emit() — the manifest entry point. Assembles every codex-only emission as a
+// {path, content} list, then writes (or, under check, returns the diff).
+// ---------------------------------------------------------------------------
+export default function emit(ctx: EmitContext): EmitResult {
+  const { coreRoot, harnessRoot, distRoot, substituteToken } = ctx;
+  const DCODEX = join(distRoot, ".codex"); // dist/codex/.codex
+  const SKILLS_DST = join(distRoot, ".agents", "skills");
+
+  // The codex anchored transform: token/prefix substitution (.codex) THEN the
+  // amadeus-rules rename — mirrors the packager's transform for prose the emit
+  // layer generates from core sources (AGENTS.md, agent bodies, runner prose).
+  const rewriteProse = (s: string): string =>
+    substituteToken(s).replaceAll(".codex/rules/", ".codex/amadeus-rules/");
+
+  // --- AGENTS.md, at the dist ROOT (beside .codex/) -------------------------
+  // Rendered from the SHARED onboarding skeleton (core/templates/onboarding.md)
+  // with Codex's fills — NOT a regex-rewrite of Claude's CLAUDE.md. This retires
+  // the read-CLAUDE.md path and the Claude-prose-leak class with it: Codex
+  // authors its own header + Prerequisites in harness/codex/onboarding.fills.ts.
+  // The skeleton carries {{HARNESS_DIR}}; rewriteProse() substitutes → .codex and
+  // renames rules/ → amadeus-rules/, exactly the codex transform class. Skills ship
+  // at .agents/skills/ (never .codex/skills/), so redirect that one segment.
+  function emitAgentsMd(): string {
+    const skeleton = readFileSync(join(coreRoot, "templates", "onboarding.md"), "utf-8");
+    let s = renderOnboarding(skeleton, onboardingFills);
+    s = substituteToken(s); // {{HARNESS_DIR}} → .codex
+    // Rename the markdown rule layers dir → amadeus-rules/, but NOT the native
+    // Starlark `.codex/rules/default.rules` (the codex fills reference both, and
+    // only the amadeus-* markdown layers move). Negative lookahead on default.rules.
+    s = s.replace(/\.codex\/rules\/(?!default\.rules)/g, ".codex/amadeus-rules/");
+    // Skills ship at .agents/skills/, never .codex/skills/.
+    s = s.replaceAll(".codex/skills/", ".agents/skills/");
+    return s;
+  }
+
+  function emitAgentToml(mdPath: string): string {
+    const raw = readFileSync(mdPath, "utf-8");
+    const { fm, body } = parseAgentMd(raw);
+    const name = fm.name ?? "";
+    const description = (fm.description ?? "").replace(/\s+/g, " ").trim();
+    const instructions = rewriteProse(body);
+    return (
+      `name = "${name}"\n` +
+      `description = "${description.replace(/"/g, '\\"')}"\n` +
+      `developer_instructions = ${tomlMultiline(instructions.trim())}\n`
+    );
+  }
+
+  // --- Skill packaging into .agents/skills/ ----------------------------------
+  // Compose runner-gen's render fns under AMADEUS_HARNESS_DIR=.codex. Load the
+  // module FROM THE ASSEMBLED DIST TREE (.codex/tools/) — the packager's
+  // compile step already wrote .codex/tools/data/stage-graph.json there, and
+  // runner-gen resolves its graph + scopes relative to its own location. (core/
+  // carries no compiled JSON, so requiring it from coreRoot would fail.)
+  const IMPLICIT_GUARD = "policy:\n  allow_implicit_invocation: false\n";
+  process.env.AMADEUS_HARNESS_DIR = ".codex";
+  const gen = require(join(DCODEX, "tools", "amadeus-runner-gen.ts")) as {
+    runnableStages: () => Array<{ slug: string }>;
+    renderStageRunner: (node: { slug: string }) => string;
+    renderInitRunner: () => string;
+    renderComposeRunner: () => string;
+    FIRST_BATCH: readonly string[];
+    discoverScopes: () => Record<string, { description: string }>;
+    renderRunner: (scope: string, description: string) => string;
+  };
+
+  function walk(dir: string): string[] {
+    const out: string[] = [];
+    for (const entry of readdirSync(dir).sort()) {
+      const full = join(dir, entry);
+      if (statSync(full).isDirectory()) out.push(...walk(full));
+      else out.push(full);
+    }
+    return out;
+  }
+
+  const emissions: Array<{ path: string; content: () => string }> = [];
+
+  // codex-only config + wiring + trust + AGENTS.md
+  emissions.push({ path: join(DCODEX, "hooks.json.example"), content: emitHooksJson });
+  emissions.push({ path: join(DCODEX, "config.toml.example"), content: emitConfigTomlExample });
+  emissions.push({ path: join(DCODEX, "rules", "default.rules"), content: emitDefaultRules });
+  emissions.push({ path: join(DCODEX, "trust-seed.toml"), content: emitTrustSeed });
+  emissions.push({ path: join(distRoot, "AGENTS.md"), content: emitAgentsMd });
+
+  // 13 agent TOMLs from core/agents/*.md
+  const agentsDir = join(coreRoot, "agents");
+  for (const f of readdirSync(agentsDir).filter((x) => x.endsWith(".md")).sort()) {
+    emissions.push({
+      path: join(DCODEX, "agents", f.replace(/\.md$/, ".toml")),
+      content: () => emitAgentToml(join(agentsDir, f)),
+    });
+  }
+
+  // (a) authored orchestrator shell — verbatim from harness/codex/skills/amadeus/
+  for (const f of ["SKILL.md", "question-rendering.md"]) {
+    emissions.push({
+      path: join(SKILLS_DST, "amadeus", f),
+      content: () => readFileSync(join(harnessRoot, "skills", "amadeus", f), "utf-8"),
+    });
+  }
+  // (b) stage runners + init, generated, with the implicit-invocation guard
+  for (const node of gen.runnableStages()) {
+    const dir = join(SKILLS_DST, `amadeus-${node.slug}`);
+    emissions.push({ path: join(dir, "SKILL.md"), content: () => rewriteProse(gen.renderStageRunner(node)) });
+    emissions.push({ path: join(dir, "agents", "openai.yaml"), content: () => IMPLICIT_GUARD });
+  }
+  emissions.push({ path: join(SKILLS_DST, "amadeus-init", "SKILL.md"), content: () => rewriteProse(gen.renderInitRunner()) });
+  emissions.push({ path: join(SKILLS_DST, "amadeus-init", "agents", "openai.yaml"), content: () => IMPLICIT_GUARD });
+  emissions.push({ path: join(SKILLS_DST, "amadeus-compose", "SKILL.md"), content: () => rewriteProse(gen.renderComposeRunner()) });
+  emissions.push({ path: join(SKILLS_DST, "amadeus-compose", "agents", "openai.yaml"), content: () => IMPLICIT_GUARD });
+  // (c) FIRST_BATCH scope runners
+  const scopes = gen.discoverScopes();
+  for (const scope of gen.FIRST_BATCH.filter((s) => s in scopes)) {
+    const dir = join(SKILLS_DST, `amadeus-${scope}`);
+    emissions.push({ path: join(dir, "SKILL.md"), content: () => rewriteProse(gen.renderRunner(scope, scopes[scope].description)) });
+    emissions.push({ path: join(dir, "agents", "openai.yaml"), content: () => IMPLICIT_GUARD });
+  }
+  // (d) session skills — byte-copy + prose rewrite from core/skills/
+  for (const skill of ["amadeus-session-cost", "amadeus-replay", "amadeus-outcomes-pack", "amadeus-grilling"]) {
+    const srcDir = join(coreRoot, "skills", skill);
+    if (!existsSync(srcDir)) continue;
+    for (const file of walk(srcDir)) {
+      const rel = relative(srcDir, file);
+      emissions.push({ path: join(SKILLS_DST, skill, rel), content: () => rewriteProse(readFileSync(file, "utf-8")) });
+    }
+    emissions.push({ path: join(SKILLS_DST, skill, "agents", "openai.yaml"), content: () => IMPLICIT_GUARD });
+  }
+
+  // --- write or check --------------------------------------------------------
+  const written: string[] = [];
+  const problems: string[] = [];
+  if (ctx.check) {
+    for (const { path, content } of emissions) {
+      const want = content();
+      if (!existsSync(path)) problems.push(`MISSING emission: ${relative(distRoot, path)}`);
+      else if (readFileSync(path, "utf-8") !== want) problems.push(`DIFFERS emission: ${relative(distRoot, path)}`);
+      written.push(path);
+    }
+  } else {
+    // Clean-sweep the emitted skills tree so a removed runner doesn't linger.
+    rmSync(SKILLS_DST, { recursive: true, force: true });
+    for (const { path, content } of emissions) {
+      mkdirSync(dirname(path), { recursive: true });
+      writeFileSync(path, content(), "utf-8");
+      written.push(path);
+    }
+  }
+  return { written, problems };
+}
