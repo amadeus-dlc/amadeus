@@ -263,7 +263,7 @@
   {
     "slug": "feasibility",
     "number": "1.3",
-    "name": "Feasibility",
+    "name": "Feasibility & Constraints",
     "phase": "ideation",
     "execution": "CONDITIONAL",
     "condition": "Execute when there are integration constraints, regulatory requirements, or significant technical uncertainty. Skip for trivial changes with no technical risk.",
@@ -747,8 +747,108 @@
     ]
   },
   {
-    "slug": "requirements-analysis",
+    "slug": "practices-discovery",
     "number": "2.2",
+    "name": "Practices Discovery",
+    "phase": "inception",
+    "execution": "CONDITIONAL",
+    "condition": "Always rerun for freshness. Brownfield discovers from evidence + reverse-engineering artifacts. Greenfield prompts user via structured questions using org.md defaults.",
+    "lead_agent": "amadeus-pipeline-deploy-agent",
+    "support_agents": [
+      "amadeus-quality-agent",
+      "amadeus-developer-agent",
+      "amadeus-devsecops-agent"
+    ],
+    "mode": "inline",
+    "produces": [
+      "team-practices",
+      "discovered-rules",
+      "evidence",
+      "practices-discovery-timestamp"
+    ],
+    "consumes": [
+      {
+        "artifact": "code-structure",
+        "required": false,
+        "conditional_on": "brownfield"
+      },
+      {
+        "artifact": "technology-stack",
+        "required": false,
+        "conditional_on": "brownfield"
+      },
+      {
+        "artifact": "dependencies",
+        "required": false,
+        "conditional_on": "brownfield"
+      },
+      {
+        "artifact": "code-quality-assessment",
+        "required": false,
+        "conditional_on": "brownfield"
+      },
+      {
+        "artifact": "architecture",
+        "required": false,
+        "conditional_on": "brownfield"
+      },
+      {
+        "artifact": "business-overview",
+        "required": false,
+        "conditional_on": "brownfield"
+      }
+    ],
+    "requires_stage": [
+      "state-init",
+      "reverse-engineering"
+    ],
+    "sensors": [
+      "required-sections",
+      "upstream-coverage"
+    ],
+    "scopes": [
+      "enterprise",
+      "feature",
+      "mvp",
+      "infra",
+      "workshop"
+    ],
+    "inputs": "<record>/amadeus-state.md + (brownfield) reverse-engineering's 8 artifacts",
+    "outputs": "team-practices.md, discovered-rules.md, evidence.md, practices-discovery-timestamp.md (4 artifacts under this stage's record dir, engine-resolved). On affirmation, content is promoted to the harness rule layer's amadeus-team.md and amadeus-project.md.",
+    "rules_in_context": [
+      {
+        "path": "amadeus/spaces/default/memory/org.md",
+        "scope": "org"
+      },
+      {
+        "path": "amadeus/spaces/default/memory/team.md",
+        "scope": "team"
+      },
+      {
+        "path": "amadeus/spaces/default/memory/project.md",
+        "scope": "project"
+      },
+      {
+        "path": "amadeus/spaces/default/memory/phases/inception.md",
+        "scope": "phase"
+      }
+    ],
+    "sensors_applicable": [
+      {
+        "id": "required-sections",
+        "path": ".codex/sensors/amadeus-required-sections.md",
+        "matches": "**/{amadeus-docs,intents}/**"
+      },
+      {
+        "id": "upstream-coverage",
+        "path": ".codex/sensors/amadeus-upstream-coverage.md",
+        "matches": "**/{amadeus-docs,intents}/**"
+      }
+    ]
+  },
+  {
+    "slug": "requirements-analysis",
+    "number": "2.3",
     "name": "Requirements Analysis",
     "phase": "inception",
     "execution": "ALWAYS",
@@ -845,7 +945,7 @@
   },
   {
     "slug": "user-stories",
-    "number": "2.3",
+    "number": "2.4",
     "name": "User Stories",
     "phase": "inception",
     "execution": "CONDITIONAL",
@@ -930,7 +1030,7 @@
   },
   {
     "slug": "refined-mockups",
-    "number": "2.4",
+    "number": "2.5",
     "name": "Refined Mockups",
     "phase": "inception",
     "execution": "CONDITIONAL",
@@ -1019,7 +1119,7 @@
   },
   {
     "slug": "application-design",
-    "number": "2.5",
+    "number": "2.6",
     "name": "Application Design",
     "phase": "inception",
     "execution": "CONDITIONAL",
@@ -1112,7 +1212,7 @@
   },
   {
     "slug": "units-generation",
-    "number": "2.6",
+    "number": "2.7",
     "name": "Units Generation",
     "phase": "inception",
     "execution": "ALWAYS",
@@ -1207,7 +1307,7 @@
   },
   {
     "slug": "delivery-planning",
-    "number": "2.7",
+    "number": "2.8",
     "name": "Delivery Planning",
     "phase": "inception",
     "execution": "ALWAYS",
@@ -1273,106 +1373,6 @@
     ],
     "inputs": "All Inception artifacts (requirements, stories, mockups, architecture, units)",
     "outputs": "bolt-plan.md, team-allocation.md, risk-and-sequencing-rationale.md, external-dependency-map.md, delivery-planning-questions.md (under this stage's record dir, engine-resolved)",
-    "rules_in_context": [
-      {
-        "path": "amadeus/spaces/default/memory/org.md",
-        "scope": "org"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/team.md",
-        "scope": "team"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/project.md",
-        "scope": "project"
-      },
-      {
-        "path": "amadeus/spaces/default/memory/phases/inception.md",
-        "scope": "phase"
-      }
-    ],
-    "sensors_applicable": [
-      {
-        "id": "required-sections",
-        "path": ".codex/sensors/amadeus-required-sections.md",
-        "matches": "**/{amadeus-docs,intents}/**"
-      },
-      {
-        "id": "upstream-coverage",
-        "path": ".codex/sensors/amadeus-upstream-coverage.md",
-        "matches": "**/{amadeus-docs,intents}/**"
-      }
-    ]
-  },
-  {
-    "slug": "practices-discovery",
-    "number": "2.8",
-    "name": "Practices Discovery",
-    "phase": "inception",
-    "execution": "CONDITIONAL",
-    "condition": "Always rerun for freshness. Brownfield discovers from evidence + reverse-engineering artifacts. Greenfield prompts user via structured questions using org.md defaults.",
-    "lead_agent": "amadeus-pipeline-deploy-agent",
-    "support_agents": [
-      "amadeus-quality-agent",
-      "amadeus-developer-agent",
-      "amadeus-devsecops-agent"
-    ],
-    "mode": "inline",
-    "produces": [
-      "team-practices",
-      "discovered-rules",
-      "evidence",
-      "practices-discovery-timestamp"
-    ],
-    "consumes": [
-      {
-        "artifact": "code-structure",
-        "required": false,
-        "conditional_on": "brownfield"
-      },
-      {
-        "artifact": "technology-stack",
-        "required": false,
-        "conditional_on": "brownfield"
-      },
-      {
-        "artifact": "dependencies",
-        "required": false,
-        "conditional_on": "brownfield"
-      },
-      {
-        "artifact": "code-quality-assessment",
-        "required": false,
-        "conditional_on": "brownfield"
-      },
-      {
-        "artifact": "architecture",
-        "required": false,
-        "conditional_on": "brownfield"
-      },
-      {
-        "artifact": "business-overview",
-        "required": false,
-        "conditional_on": "brownfield"
-      }
-    ],
-    "requires_stage": [
-      "state-init",
-      "reverse-engineering"
-    ],
-    "sensors": [
-      "required-sections",
-      "upstream-coverage"
-    ],
-    "scopes": [
-      "enterprise",
-      "feature",
-      "mvp",
-      "infra",
-      "workshop"
-    ],
-    "inputs": "<record>/amadeus-state.md + (brownfield) reverse-engineering's 8 artifacts",
-    "outputs": "team-practices.md, discovered-rules.md, evidence.md, practices-discovery-timestamp.md (4 artifacts under this stage's record dir, engine-resolved). On affirmation, content is promoted to the harness rule layer's amadeus-team.md and amadeus-project.md.",
     "rules_in_context": [
       {
         "path": "amadeus/spaces/default/memory/org.md",

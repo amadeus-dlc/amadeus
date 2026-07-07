@@ -91,7 +91,7 @@
     {
       "slug": "state-init",
       "number": "0.3",
-      "name": "State Initialization",
+      "name": "State Init",
       "phase": "initialization",
       "execution": "ALWAYS",
       "condition": "Creates full populated state file and determines routing — auto-proceeds",
@@ -136,7 +136,7 @@
     {
       "slug": "intent-capture",
       "number": "1.1",
-      "name": "Intent Capture & Framing",
+      "name": "Intent Capture",
       "phase": "ideation",
       "execution": "ALWAYS",
       "condition": "First stage of every workflow — establishes the initiative's foundation",
@@ -577,7 +577,7 @@
     {
       "slug": "approval-handoff",
       "number": "1.7",
-      "name": "Approval & Handoff",
+      "name": "Approval Handoff",
       "phase": "ideation",
       "execution": "ALWAYS",
       "condition": "Always executes — compiles all Ideation artifacts into initiative brief for approval",
@@ -1514,7 +1514,7 @@
     {
       "slug": "nfr-requirements",
       "number": "3.2",
-      "name": "NFR Requirements",
+      "name": "Nfr Requirements",
       "phase": "construction",
       "execution": "CONDITIONAL",
       "condition": "Performance requirements, security considerations, scalability concerns, or tech stack selection needed. Skip if no NFR requirements and tech stack already determined.",
@@ -1618,7 +1618,7 @@
     {
       "slug": "nfr-design",
       "number": "3.3",
-      "name": "NFR Design",
+      "name": "Nfr Design",
       "phase": "construction",
       "execution": "CONDITIONAL",
       "condition": "NFR Requirements was executed and NFR patterns need design. Skip if NFR Requirements was skipped.",
@@ -1949,7 +1949,7 @@
     {
       "slug": "build-and-test",
       "number": "3.6",
-      "name": "Build and Test",
+      "name": "Build And Test",
       "phase": "construction",
       "execution": "ALWAYS",
       "condition": "Always executes once after all per-unit stages are finished.",
@@ -2036,7 +2036,7 @@
     {
       "slug": "ci-pipeline",
       "number": "3.7",
-      "name": "CI Pipeline",
+      "name": "Ci Pipeline",
       "phase": "construction",
       "execution": "CONDITIONAL",
       "condition": "Execute when CI pipeline needs creation or significant modification. Skip if CI already exists and is adequate.",
@@ -2626,7 +2626,7 @@
     {
       "slug": "feedback-optimization",
       "number": "4.7",
-      "name": "Feedback & Optimization",
+      "name": "Feedback Optimization",
       "phase": "operation",
       "execution": "CONDITIONAL",
       "condition": "Execute when ongoing operational monitoring and optimization are needed",

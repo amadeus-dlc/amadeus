@@ -3974,6 +3974,10 @@
         {
           "file": "tests/unit/t133-bolt-dag-compile.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/unit/t201-runtime-graph-memory-path-record-dir.test.ts",
+          "mechanism": "cli"
         }
       ],
       "status": "covered"

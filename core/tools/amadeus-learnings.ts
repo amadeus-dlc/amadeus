@@ -194,7 +194,12 @@ function handleSurface(args: string[], projectDir: string): void {
   const raw = existsSync(memAbs) ? readFileSync(memAbs, "utf-8") : "";
   const entries = parseMemoryEntries(raw);
 
-  const phase = memRel.split("/")[1] ?? "";
+  // memRel is `<record-prefix>/<phase>/<stage>/memory.md`; the phase is the
+  // antepenultimate segment. (A fixed `[1]` index assumed a two-segment prefix
+  // and yielded "spaces" for the real `amadeus/spaces/.../intents/<slug>` prefix
+  // — issue #603.)
+  const relParts = memRel.split("/");
+  const phase = relParts[relParts.length - 3] ?? "";
 
   const candidates: SurfaceCandidate[] = [];
   const parked: SurfaceParkedQuestion[] = [];

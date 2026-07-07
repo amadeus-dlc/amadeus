@@ -65,7 +65,10 @@ const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 180) * 1000;
 const DRIVE_TIMEOUT_MS = Math.max(60_000, TEST_TIMEOUT_MS - 15_000);
 const AWS_STS_TIMEOUT_MS = 30_000;
 
-describe("t19 preflight health (sdk live substrate)", () => {
+// TEMP-DISABLED: AWS/Bedrock + Claude live substrate unavailable in this
+// environment (aws sts get-caller-identity fails; driveAidlc needs live creds).
+// Disabled per request; re-enable when AWS/Bedrock creds are present.
+describe.skip("t19 preflight health (sdk live substrate)", () => {
   // .sh test 2: AWS credentials valid. The exact .sh check — `aws sts
   // get-caller-identity` exits 0 (Bedrock requires IAM auth). When the aws CLI
   // is absent we PASS-by-skip, mirroring the .sh's `aws CLI not found` SKIP.
