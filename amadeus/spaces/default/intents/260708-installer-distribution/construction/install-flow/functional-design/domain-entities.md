@@ -246,3 +246,12 @@ flowchart LR
 
 - U1 から: SemVer / VersionSpec / VersionError / ResolvedVersion / ExtractedPayload / Manifest / InstallMeta / ManifestFiles / ManifestFile / ManifestError / Disposition / **FileClass** / HarnessName(型+`all`)/ FetchError
 - 本 Unit が定義し U3 へ提供: `Plan` / `PlanEntry` / `PlanAction` / `PlanRefusal`(拡張可能ユニオン)/ `Installation` / applier・verifier・reporter の各契約
+
+
+---
+
+## 置換注記(§12a コードレビュー裁定 2026-07-08)
+
+- **Plan**: `harnessRoot(): string` をインスタンスメソッドとして追加(Plan.forInstall が解決済みの配布物ルートを運ぶ)。Applier は `join(plan.harnessRoot(), entry.path)` でコピー元を組み立てる。**PlanEntry は6フィールドの正準形を維持**(実装が一時追加した `source` フィールドはレビュー裁定で除去)
+- **Reporter API**: 7関数に加え、SEC-I04(文言の reporter 一元化)の完全化のため `renderWizardAborted()` / `renderUpgradeNotImplemented()` / `renderTmpDirFailure(detail)` を追加し**10関数**が確定形。cli.ts は自前の文言を一切組み立てない
+- **HarnessName.parse**(U1 harness.ts への U2 増分): 戻り値は UsageError ではなく軽量ローカルエラー(`UsageError.invalidHarness` への変換は ParsedCommand.parse 側)— 依存方向の確定は nfr-design/logical-components.md の置換注記を参照

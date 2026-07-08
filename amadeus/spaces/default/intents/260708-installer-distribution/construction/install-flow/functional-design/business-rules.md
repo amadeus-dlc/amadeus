@@ -45,3 +45,4 @@
 |----|--------|
 | BR-I17 | ウィザードは不足値(harness/target)のみ質問し、指定済み値を再質問しない |
 | BR-I18 | 展開開始前に選択サマリーの最終確認を挟む(誤導入の防止 — intent の課題3) |
+| BR-I19 | FileClass 分類規則(§12a コードレビュー裁定で明文化 — 2026-07-08): `owned` = ベース名が `amadeus-` プレフィックス(FR-008 の文言に直接根拠)、`user-preserved` = パスセグメントに `memory` を含む(dist ツリーでは `amadeus/spaces/default/memory/` の1箇所のみ — チーム所有の永続プラクティス記録でフレームワークが再所有しない設計と整合)、`shared` = 上記以外。U3 upgrade-flow はこの規則を再利用する |

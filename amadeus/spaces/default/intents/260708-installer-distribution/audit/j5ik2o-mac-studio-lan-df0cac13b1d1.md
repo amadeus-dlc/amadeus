@@ -13423,3 +13423,332 @@
 **Message**: U2(install-flow)のコード生成を計画の全14ステップにわたって完了し、team-lead へ報告を送信しました。要点は以下の通りです。\n\n**実装したもの**: CLI契約の解析(`packages/setup/src/domain/command.ts`)、導入済み検出(`domain/installation.ts`)、インストールプラン生成(`domain/plan.ts`)、
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T13:13:10Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-08T13:13:10Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T13:16:38Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a84ca59b27f221b3a
+**Message**: npm インストーラ @amadeus-dlc/setup の AI-DLC 構築中で、Bolt 2(install-flow)のコード生成が完了し敵対的レビュー待ちです。判定が届き次第、是正して Bolt 3(upgrade-flow)へ自律続行します。
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T13:19:53Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2a2bf4f9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/command.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T13:19:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2a2bf4f9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/command.ts
+**Duration ms**: 825
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T13:19:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2aad27f2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/command.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T13:19:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2aad27f2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/command.ts
+**Duration ms**: 614
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T13:20:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: a880f4df
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/command.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T13:20:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: a880f4df
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/command.ts
+**Duration ms**: 1328
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T13:20:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: c09e822a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/command.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T13:20:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: c09e822a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/command.ts
+**Duration ms**: 643
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T13:20:29Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2c12cbaf
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/applier.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T13:20:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2c12cbaf
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/applier.ts
+**Duration ms**: 862
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T13:20:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: 02401894
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/applier.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T13:20:31Z
+**Event**: SENSOR_FAILED
+**Fire id**: 02401894
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/applier.ts
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/code-generation/type-check-02401894.md
+**Findings count**: 3
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T13:20:42Z
+**Event**: SENSOR_FIRED
+**Fire id**: c590e2d5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/applier.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T13:20:43Z
+**Event**: SENSOR_PASSED
+**Fire id**: c590e2d5
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/applier.ts
+**Duration ms**: 845
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T13:20:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5f05f0b2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/applier.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T13:20:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5f05f0b2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/applier.ts
+**Duration ms**: 613
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T13:20:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: bb14c419
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T13:20:58Z
+**Event**: SENSOR_PASSED
+**Fire id**: bb14c419
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+**Duration ms**: 837
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T13:20:58Z
+**Event**: SENSOR_FIRED
+**Fire id**: 707601af
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T13:20:59Z
+**Event**: SENSOR_PASSED
+**Fire id**: 707601af
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+**Duration ms**: 630
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T13:21:11Z
+**Event**: SENSOR_FIRED
+**Fire id**: 16639259
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T13:21:11Z
+**Event**: SENSOR_PASSED
+**Fire id**: 16639259
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+**Duration ms**: 861
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T13:21:11Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4f37c129
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T13:21:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4f37c129
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+**Duration ms**: 644
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T13:26:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: ddd067fc
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /private/tmp/claude-501/-Users-j5ik2o-Sources-j5ik2o-github-com-amadeus-dlc-amadeus--claude-worktrees-installer-distribution/e047b3d7-2836-4c08-8af1-016900d66651/scratchpad/detect-probe.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T13:26:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: ddd067fc
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /private/tmp/claude-501/-Users-j5ik2o-Sources-j5ik2o-github-com-amadeus-dlc-amadeus--claude-worktrees-installer-distribution/e047b3d7-2836-4c08-8af1-016900d66651/scratchpad/detect-probe.ts
+**Duration ms**: 850
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T13:26:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: a8312b56
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /private/tmp/claude-501/-Users-j5ik2o-Sources-j5ik2o-github-com-amadeus-dlc-amadeus--claude-worktrees-installer-distribution/e047b3d7-2836-4c08-8af1-016900d66651/scratchpad/detect-probe.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T13:26:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: a8312b56
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /private/tmp/claude-501/-Users-j5ik2o-Sources-j5ik2o-github-com-amadeus-dlc-amadeus--claude-worktrees-installer-distribution/e047b3d7-2836-4c08-8af1-016900d66651/scratchpad/detect-probe.ts
+**Duration ms**: 44
+**Note**: script-error: exit-1
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T13:29:20Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: codegen-review-u2
+**Agent ID**: acodegen-review-u2-fbe45310058a8214
+**Message**: team-leadへ判定を送付しました。要点は以下のとおりです。\n\n**判定: NOT-READY**(Critical 0件、Major 4件 — 閾値の2件を超過、Minor 2件)\n\nフレッシュエビデンス5コマンドは全てPASS。落ちる実証を3件実施し、うち1件(cliのmanifest書き込みを到達順序契約に反して実行させる注入)は既存の18テスト全てが検知しない重大なテストカバレッジ欠如
+
+---

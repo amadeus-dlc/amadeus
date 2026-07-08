@@ -16,7 +16,10 @@ src/
     verify-result.ts     #   VerifyResult + Check + NextSteps
     harness.ts           #   (U1 の型に)HarnessName.parse を本 Unit で追加。U1 domain-entities の「parse は U2 install-flow の cli が所有」の
                          #   「cli」は **U2 ユニット全体**を指すと解釈し、実体はスマートコンストラクタの既存パターンどおり domain/ に置く
-                         #   (ParsedCommand.parse と同型)。harness.ts → command.ts は UsageError ファクトリの**値インポート**、command.ts → harness.ts は HarnessName の **import type(型のみ)** — 片方向の値依存のみで実行時循環なし
+                         #   (ParsedCommand.parse と同型)。~~harness.ts → command.ts は UsageError ファクトリの値インポート、command.ts → harness.ts は HarnessName の import type(型のみ)~~
+                         #   【置換注記(§12a コードレビュー裁定 2026-07-08)】この方向では実装不能だった(ParsedCommand.parse が HarnessName.parse の値呼び出しを必要とするため)。
+                         #   確定契約は**逆向きの片方向**: command.ts → harness.ts が HarnessName の値インポート、harness.ts は command.ts に一切依存しない
+                         #   (HarnessName.parse は UsageError ではなく軽量ローカルエラーを返し、UsageError.invalidHarness への変換は command.ts 側)。片方向の値依存のみで実行時循環なし、の原則自体は維持
   modules/
     wizard.ts            #   runWizard(parsed, missing, tty) — node:readline/promises
     applier.ts           #   Applier.create(fsWrite) — resolveWithin/SafeTargetPath を内包
