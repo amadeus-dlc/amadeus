@@ -7884,3 +7884,45 @@
 **Timestamp**: 2026-07-08T08:26:21Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T08:27:41Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-requirements
+**Timestamp**: 2026-07-08T08:27:41Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T08:31:12Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a10ec8c84ed82b051
+**Message**: npm インストーラ(@amadeus-dlc/setup)の AI-DLC ワークフローを実行中で、Construction の NFR Requirements ステージを進めています。5ユニット中 U3(upgrade-flow)のレビュアー判定待ちで、届き次第 U4・U5 を仕上げてステージ承認ゲートを提示します。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T08:32:01Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: nfr-review-u3
+**Agent ID**: anfr-review-u3-1e2e675b22fff669
+**Message**: U3のnfr-requirements成果物と上流の契約(requirements.md、U3 functional-design、U1/U2のNFR)を突き合わせて検証しました。結論は NOT-READY です。理由は主に1点で、team-leadが優先チェックとして指定していたSEC-U01の「.bkはプランの走査対象から除外」という記述が、実際の設計では成立しない(空虚な)主張になっているた
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T08:32:52Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: nfr-review-u3
+**Agent ID**: anfr-review-u3-1e2e675b22fff669
+**Message**: team-leadにverdictを送信しました。\n\n**結論: NOT-READY**(1件のブロッキング findings)\n\n最大の問題は、SEC-U01の「`.bk` はプランの走査対象から除外」という主張が、実際の `Plan.forUpgrade` の設計(配布物payload側のファイル一覧を歩くだけで、ターゲットディレクトリを走査する経路が存在しない)と整合しないことです。GitH
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T08:33:23Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T08:33:23Z
+
+---

@@ -7,6 +7,7 @@
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
 ## Deviations
+- 2026-07-08T08:33:23Z — U3 NFR iteration 1: SEC-U01's 'exclusion' sentence was vacuous (walk iterates payload side; .bk can never enter the plan) — rewritten as a design fact with the apply-time collision check as the only needed guard; verification lines added to all three SEC-U items matching the U1/U2 pattern
 - 2026-07-08T08:14:23Z — U1 NFR iteration 2 (final): one residual propagation miss in U1's own canonical type file (installedAt/installStartedAt '同一値' comments) fixed as builder resolution. The persisted grep rule was applied to downstream units but missed the ORIGIN unit's own file — grep must include the unit being fixed, not only its consumers
 <!-- example: 2026-05-29T10:14:32Z — skipped the optional caching layer the stage prose suggested; the dataset is small enough that it adds risk -->
 
