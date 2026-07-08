@@ -6,7 +6,7 @@
 - **Scope**: installer-distribution
 - **Start Date**: 2026-07-08T02:20:37Z
 - **State Version**: 7
-- **Active Agent**: amadeus-product-agent
+- **Active Agent**: amadeus-architect-agent
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**:
@@ -25,14 +25,12 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 25
-- **Completed**: 3
-- **In Progress**: intent-capture
+- **Completed**: 5
+- **In Progress**: feasibility
 
 ## Runtime State
 - **Revision Count**: 0
 
-- **Parked**: 2026-07-08T02:32:35Z
-- **Parked At Stage**: intent-capture
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -51,9 +49,9 @@
 - [x] state-init — EXECUTE
 
 ### IDEATION PHASE
-- [-] intent-capture — EXECUTE
-- [ ] market-research — EXECUTE
-- [ ] feasibility — EXECUTE
+- [x] intent-capture — EXECUTE
+- [x] market-research — EXECUTE
+- [-] feasibility — EXECUTE
 - [ ] scope-definition — EXECUTE
 - [ ] team-formation — SKIP
 - [ ] rough-mockups — SKIP
@@ -90,12 +88,12 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: IDEATION
-- **Current Stage**: intent-capture
-- **Next Stage**: market-research
+- **Current Stage**: feasibility
+- **Next Stage**: scope-definition
 - **Status**: Running
-- **Last Updated**: 2026-07-08T02:32:35Z
+- **Last Updated**: 2026-07-08T03:00:59Z
 
 ## Session Resume Point
-- **Last Completed Stage**: state-init
-- **Next Action**: Execute intent-capture
+- **Last Completed Stage**: market-research
+- **Next Action**: Execute Feasibility & Constraints
 - **Pending Artifacts**: none
