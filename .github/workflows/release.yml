@@ -1,22 +1,30 @@
 name: Release @amadeus-dlc/setup
 
-# One-button release for packages/setup. The main entry point is
-# workflow_dispatch: pick a bump level and release-it bumps the version,
-# commits, tags `setup-vX.Y.Z`, and pushes directly to main (an explicit,
-# team-recorded exception to the PR rule — the bump commit is a one-line
-# version change). The same run then creates the GitHub Release with
-# auto-generated notes (softprops/action-gh-release), builds dist/cli.js
-# fresh, publishes to npm with provenance, and smoke-checks via npx.
-# Everything happens in one run because tags/commits pushed with
+# One-button release. The repo uses a single `vX.Y.Z` tag axis driven by
+# packages/setup's version (starting at v0.1.0): the tag is both the npm
+# release of @amadeus-dlc/setup and the GitHub tag the installer resolves
+# framework distributions from. Release notes are generated into the
+# GitHub Release — there is no CHANGELOG file.
+#
+# Main entry point is workflow_dispatch: pick a bump level and release-it
+# bumps the version, commits, tags `vX.Y.Z`, and pushes directly to main
+# (an explicit, team-recorded exception to the PR rule — the bump commit
+# is a one-line version change). The same run then creates the GitHub
+# Release with auto-generated notes (softprops/action-gh-release), builds
+# dist/cli.js fresh, publishes to npm with provenance, and smoke-checks
+# via npx. Everything happens in one run because tags/commits pushed with
 # GITHUB_TOKEN never trigger other workflows.
 #
-# A `setup-v*` tag push remains as a fallback entry point (e.g. manual
-# tagging): it skips the bump and runs notes -> build -> publish -> smoke.
+# Bootstrap: when the repo has no v* tag yet, a dispatch skips the bump
+# and releases the committed version as-is (release-it --no-increment,
+# tag only) — the first run creates the tag matching the current version
+# with no manual tagging. A `v*` tag push remains as a fallback entry
+# point: it skips the bump and runs notes -> build -> publish -> smoke.
 # workflow_dispatch with dry-run rehearses (release-it --dry-run +
 # npm publish --dry-run) without pushing or publishing anything.
 on:
   push:
-    tags: ['setup-v*']
+    tags: ['v*']
   workflow_dispatch:
     inputs:
       bump:
@@ -43,10 +51,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Checkout (full history for guards and release notes)
+      - name: Checkout (full history + tags for guards and the bootstrap check)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          fetch-tags: true
 
       - name: Set up bun
         uses: oven-sh/setup-bun@v2
@@ -71,10 +80,10 @@ jobs:
       - name: Guard — tag matches version and commit is on main
         if: github.ref_type == 'tag'
         run: |
-          tag_version="${GITHUB_REF_NAME#setup-v}"
+          tag_version="${GITHUB_REF_NAME#v}"
           pkg_version="$(node -p "require('./packages/setup/package.json').version")"
           if [ "$tag_version" != "$pkg_version" ]; then
-            echo "::error::tag setup-v${tag_version} does not match packages/setup version ${pkg_version}"
+            echo "::error::tag v${tag_version} does not match packages/setup version ${pkg_version}"
             exit 1
           fi
           if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
@@ -88,7 +97,14 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          args=(${{ inputs.bump }} --ci)
+          if [ -z "$(git tag --list 'v*')" ]; then
+            # Bootstrap: no v* tag exists yet — release the committed version
+            # as-is (tag only, no bump commit).
+            echo "no v* tags found — bootstrapping the first release without a bump"
+            args=(--no-increment --no-git.commit --ci)
+          else
+            args=(${{ inputs.bump }} --ci)
+          fi
           if [ "${{ inputs.dry-run }}" = "true" ]; then
             args+=(--dry-run)
           fi
@@ -102,8 +118,7 @@ jobs:
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry-run) }}
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: setup-v${{ steps.version.outputs.version }}
-          name: '@amadeus-dlc/setup ${{ steps.version.outputs.version }}'
+          tag_name: v${{ steps.version.outputs.version }}
           generate_release_notes: true
 
       - name: Build dist/cli.js (fresh)
