@@ -10,7 +10,8 @@
 
 ## REL-P02(3方向の赤の実証)の実装構造
 
-- 実証は**一時コピーした package.json に対する変異**で行う(実物を書き換えない): fixture 用一時ディレクトリに packages/setup をコピー → files 配列を変異 → npm pack --dry-run を実行 → missing/unexpected/drift の各検出をアサート。この「変異フィクスチャ」テストは常設し(一度きりの手動実証ではなく)、検出能力自体をリグレッション保護する
+- 実証は**一時コピーした package.json に対する変異**で行う(実物を書き換えない): fixture 用一時ディレクトリに packages/setup をコピー(**ビルド済み dist/cli.js を含めて** — performance-design の実行順序参照)→ files 配列を変異 → npm pack --dry-run を実行 → missing/unexpected の各検出をアサート(drift は npm 不要の別テスト)。この「変異フィクスチャ」テストは常設し、検出能力自体をリグレッション保護する
+- **前提の明記**: `npm pack --dry-run` の files 列挙は当該 package.json と実ファイルのみに依存し、bun ワークスペースルートの文脈に依存しない(実行時依存ゼロ NFR-005 のため node_modules も lockfile も不要)。この前提自体を変異フィクスチャの1アサーション(実物と無変異コピーの列挙一致)として検証する — REL-P01 の決定性主張の根拠を実測化
 
 ## REL-P03(手順書の実行可能性)の実装構造
 

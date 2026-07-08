@@ -33,7 +33,7 @@ test "契約違反を注入すると赤くなる(落ちる実証 — team.md Man
 2. **バージョンバンプ**: `packages/setup/package.json` の独立 semver(FR-017)。バンプは publish する PR で実施
 3. **ビルドと検証**: `bun build`(ADR-002)→ `bun run typecheck` / `lint` → pack 契約テストを含む CI プロファイル
 4. **ローカル最終確認**: `npm pack --dry-run` の目視、`npm pack` tarball のローカルインストール検証(`bun link` 代替可)
-5. **手動 publish**: `npm publish --access public`(安定版)/ `npm publish --tag next`(プレリリース `X.Y.Z-rc.N` — `latest` を汚さない)
+5. **手動 publish**: `npm publish --access public`(安定版)/ `npm publish --tag next`(プレリリース `X.Y.Z-rc.N` — `latest` を汚さない)。**注記: 現状 provenance なし**(SEC-P03 — CI 公開へ移行する際の再検討ポイント)
 6. **公開後検証**: `npx @amadeus-dlc/setup@<version> --help` の実行確認、npm ページのメタデータ(license/repository)確認
 7. **ロールバック指針**: publish 後の不具合は deprecate+パッチ版(unpublish は原則不使用 — npm 規約)
 

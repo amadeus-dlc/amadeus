@@ -6,11 +6,12 @@
 ## 配置(コードは tests/ と docs/ のみ — src/ への追加なし)
 
 ```
+tests/lib/
+  setup-pack-contract.ts          # PackContract/PackReport/ContractVerdict の単一定義(テスト支援共有モジュール —
+                                  # 既存の tests/lib/ 慣習に従う。BR-P02 の単一ソースを2テストファイル間で成立させる置き場所)
 tests/integration/
-  t-setup-pack-contract.test.ts   # PackContract/PackReport/ContractVerdict(テスト側語彙をこのファイル内に定義 — 本番 src/ に置かない)
-                                  # beforeAll で npm pack --dry-run --json を1回実行し共有
-  t-setup-files-drift.test.ts     # package.json files ≡ PackContract.declaredInFiles のドリフトテスト
-  (変異フィクスチャは pack-contract テスト内の describe ブロックとして同居 — REL-P02)
+  t-setup-pack-contract.test.ts   # 契約検査+変異フィクスチャ(describe 同居 — REL-P02)。tests/lib から import
+  t-setup-files-drift.test.ts     # package.json files ≡ PackContract.declaredInFiles のドリフト。tests/lib から import
 docs/guide/
   publishing-setup.md             # 手順書(章立ては functional-design ワークフロー2)
 packages/setup/
@@ -18,4 +19,4 @@ packages/setup/
 ```
 
 - テスト命名は既存の `t<NNN>-` 規約に合わせて実装時に採番(ここでは仮名)。既存 integration 層へ同居し新規ランナー・ジョブなし(BR-P04)
-- PackContract は**テスト側の語彙**であり src/ に置かない(本番 CLI の表面積を増やさない — U4 functional-design の境界宣言どおり)
+- PackContract は**テスト側の語彙**であり src/ に置かない(本番 CLI の表面積を増やさない)。テストファイル間の共有は `.test.ts` 相互 import(リポジトリに前例なし)ではなく **tests/lib/ の共有モジュール**で行う — functional-design の「tests/ 配下に置く」宣言の精密化(単一定義の物理的な置き場所を確定)

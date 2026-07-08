@@ -8585,3 +8585,36 @@
 **Timestamp**: 2026-07-08T10:20:26Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T10:22:01Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-design
+**Timestamp**: 2026-07-08T10:22:01Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T10:23:07Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a08ecd1b0bbbfbc0c
+**Message**: タイミングみてorigin/mainに追従して
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T10:25:59Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: nfrd-review-u4
+**Agent ID**: anfrd-review-u4-08b6fd1ae987248c
+**Message**: team-leadへレビュー結果(Verdict: NOT-READY)を送信しました。主な指摘は以下の4点です。\n\n1. **CI実行コストの不整合**: `performance-design.md`は「npm pack --dry-run を1回だけbeforeAllで共有実行」を前提に≤30秒予算を組んでいますが、`reliability-design.md`のREL-P02恒常「変異フィ
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T10:26:52Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T10:26:52Z
+
+---
