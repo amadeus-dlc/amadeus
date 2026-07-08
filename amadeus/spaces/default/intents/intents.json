@@ -19,5 +19,12 @@
     "dirName": "260707-layout-normalization",
     "scope": "workspace-layout-normalization",
     "status": "complete"
+  },
+  {
+    "uuid": "019f3f86-f543-7ef6-bf37-350678da58e3",
+    "slug": "installer-distribution",
+    "dirName": "260708-installer-distribution",
+    "scope": "installer-distribution",
+    "status": "in-flight"
   }
 ]

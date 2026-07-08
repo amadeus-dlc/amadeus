@@ -1,0 +1,13 @@
+{
+  "stage_slug": "requirements-analysis",
+  "selections": [
+    {
+      "candidate_id": "c1",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "再スタート系 intent では、前 intent のレビュー済み成果物(レビュー指摘の修正を含む)を git 履歴から取得してベースにし、差分のみ更新する — レビューで獲得した契約の精密さをゼロから作り直さない",
+      "source": "orchestrator"
+    }
+  ]
+}

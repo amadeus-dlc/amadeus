@@ -1,0 +1,29 @@
+{
+  "stage_slug": "nfr-requirements",
+  "selections": [
+    {
+      "candidate_id": "c3",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "NFR 具体化では、ファイル名・タイムスタンプ等の設計値を実行環境の制約(Windows 予約文字、API の実在バージョン)と照合し、性能数値は強制メカニズム(タイムアウト等)から導出する — 照合なしの数値・形式は実装で破綻する",
+      "source": "orchestrator"
+    },
+    {
+      "candidate_id": "c5",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "概念移動時の全成果物 grep には修正中のユニット自身のファイルも含める — 伝播漏れは消費側だけでなく発生元にも残る(functional-design:c3 の補強)",
+      "source": "orchestrator"
+    },
+    {
+      "candidate_id": "c1",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "framework 版同期の検証は t68(dist/claude コピーの内部整合)と dist:check/promote:self:check(全 dist ツリー+セルフインストールへの core 反映)の相補2機構で扱う — core/tools/amadeus-version.ts を触る変更は後者なしに完了と見なさない",
+      "source": "orchestrator"
+    }
+  ]
+}

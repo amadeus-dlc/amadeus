@@ -28,9 +28,13 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 
 デプロイ基盤は持たず、リリースは npm パッケージ配布と GitHub 上のタグ/PR 履歴で管理する。GitHub Actions は push と pull_request で typecheck、lint、dist/self-install drift guard、smoke+unit+integration tests を実行し、リリース前には必要に応じて `--release` テスト層を追加する。
 
+リリース(バージョンバンプを含む PR のマージ)時には、CHANGELOG の `## [X.Y.Z]` 見出しと一致する **`vX.Y.Z` git タグを発行する**(当面は手動発行、自動化は将来検討)。タグは t68 が強制する CHANGELOG↔`AMADEUS_VERSION`↔README バッジの3点同期に連なる第4の同期点であり、インストーラ(`@amadeus-dlc/setup`)の配布物取得先として参照される。
+
 ## Code Style
 
-TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフィックス、ハーネス中立の `core/`、ハーネス別の `harness/<name>/` という境界を守る。フォーマッタは無効、lint は Biome、型検査は `tsc --noEmit` の2構成で行い、ツール・フックには実行ビットを要求しない。
+TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフィックス、`packages/framework/` 配下のハーネス中立 `core/` とハーネス別 `harness/<name>/` という境界を守る。フォーマッタは無効、lint は Biome、型検査は `tsc --noEmit` の2構成で行い、ツール・フックには実行ビットを要求しない。
+
+新設パッケージ(`packages/*`)は、lint(Biome)と型検査(`tsc --noEmit`)の配線を**パッケージを追加する同一 PR で**追加し、既存の狭い CI lint スコープ(`tests/` のみ)を継承しない。
 ## Forbidden
 
 - NEVER `dist/<harness>/` 配下を手編集する — 生成物であり、`bun scripts/package.ts --check` が CI で失敗する
@@ -47,3 +51,4 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 ## Corrections
 
 <!-- 自己学習ループがここに追記する。 -->
+- Bolt のレビューが READY になった時点で「Bolt ブランチ切り出し+PR 発行」を明示的にタスク化する。エンジン指令・stage ファイルに現れない Way of Working 規範(Bolt 単位 PR、タグ発行等)は、該当イベント発生時に conductor がタスクリストへ載せて追跡する — 指令駆動ループの外にある規範は、タスク化しない限り実行されない(installer-distribution Bolt 1〜3 で PR 分割漏れを観測、遡及分割で是正) (learned 2026-07-08) <!-- cid:code-generation:code-generation:bolt-pr-taskization -->

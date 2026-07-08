@@ -1,0 +1,34 @@
+# Logical Components — install-flow
+
+> ステージ: nfr-design (3.3) / Unit: install-flow / 作成: 2026-07-08
+> 出典: `../functional-design/domain-entities.md`、`../nfr-requirements/tech-stack-decisions.md`(parseArgs/readline)、U1 nfr-design/logical-components.md(レイアウト継承)、`../../../inception/application-design/components.md`
+
+## ソースレイアウト追加分(packages/setup/src/ — U1 レイアウトへの増分)
+
+```
+src/
+  cli.ts                 # main(argv) — 引数解析(node:util parseArgs)、ディスパッチ、終了コード単一経路
+  domain/
+    command.ts           #   ParsedCommand + UsageError + InstallInputs
+    installation.ts      #   Installation + InstallationEvidence + InstallAdmission
+    plan.ts              #   Plan + PlanEntry + PlanAction + PlanRefusal + PlanSummary(+ Plan.forInstall)
+    apply-result.ts      #   ApplyResult + ApplyFailure
+    verify-result.ts     #   VerifyResult + Check + NextSteps
+    harness.ts           #   (U1 の型に)HarnessName.parse を本 Unit で追加。U1 domain-entities の「parse は U2 install-flow の cli が所有」の
+                         #   「cli」は **U2 ユニット全体**を指すと解釈し、実体はスマートコンストラクタの既存パターンどおり domain/ に置く
+                         #   (ParsedCommand.parse と同型)。~~harness.ts → command.ts は UsageError ファクトリの値インポート、command.ts → harness.ts は HarnessName の import type(型のみ)~~
+                         #   【置換注記(§12a コードレビュー裁定 2026-07-08)】この方向では実装不能だった(ParsedCommand.parse が HarnessName.parse の値呼び出しを必要とするため)。
+                         #   確定契約は**逆向きの片方向**: command.ts → harness.ts が HarnessName の値インポート、harness.ts は command.ts に一切依存しない
+                         #   (HarnessName.parse は UsageError ではなく軽量ローカルエラーを返し、UsageError.invalidHarness への変換は command.ts 側)。片方向の値依存のみで実行時循環なし、の原則自体は維持
+  modules/
+    wizard.ts            #   runWizard(parsed, missing, tty) — node:readline/promises
+    applier.ts           #   Applier.create(fsWrite) — resolveWithin/SafeTargetPath を内包
+    verifier.ts          #   Verifier.create(fsRead)
+    reporter.ts          #   Reporter API 10関数(確定形 — functional-design/domain-entities.md の置換注記参照)(純関数 — 文字列生成のみ)
+  ports/
+    tty.ts               #   TtyIO(isTTY/select/input/confirm)
+```
+
+- 依存方向は U1 の規律を継承(modules → domain/ports、domain コンパニオン → internal 値インポート、internal → domain 型のみ)
+- applier への FsWrite 注入はここが唯一(U1 の注入非対称と整合 — cli が組み立て時に配線)
+- reporter は I/O を持たない純関数群(出力は cli の console 呼び出しに一元化 — SEC-I04 の文言レビューを1箇所で可能に)

@@ -1,0 +1,13 @@
+{
+  "stage_slug": "user-stories",
+  "selections": [
+    {
+      "candidate_id": "c1",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "CLI/ツール系 intent の user-stories はジャーニー別エピック(導入/更新/運用など)で分割する — ペルソナと E2E テスト設計への対応が自然になり、FR 別分割より価値の見通しが良い",
+      "source": "orchestrator"
+    }
+  ]
+}
