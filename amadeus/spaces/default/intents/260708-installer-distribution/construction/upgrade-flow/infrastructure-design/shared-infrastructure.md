@@ -1,7 +1,7 @@
 # Shared Infrastructure — upgrade-flow
 
 > ステージ: infrastructure-design (3.4) / 作成: 2026-07-08
-> 出典: U2 shared-infrastructure.md
+> 出典: U2 shared-infrastructure.md、`../nfr-design/logical-components.md`(修正3箇所の目録 — 共有実装の消費形態)、`../functional-design/business-logic-model.md`(runUpgrade が消費する共有部品の一覧)
 
 ## 消費のみの宣言
 

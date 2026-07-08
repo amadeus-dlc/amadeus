@@ -8809,3 +8809,36 @@
 **Agent**: amadeus-aws-platform-agent
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T10:55:27Z
+**Event**: WORKFLOW_PARKED
+**Stage**: infrastructure-design
+**Timestamp**: 2026-07-08T10:55:27Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T10:59:04Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a42da8fc946c95dc3
+**Message**: npm インストーラ intent の AI-DLC を実行中で、construction の infrastructure-design(3.4)まで進み、全5ユニットのレビュアーを並行実行中です。次は各判定の到着順に是正し、全ユニット READY でステージゲートを提示します。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T10:59:19Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: infd-review-u3
+**Agent ID**: ainfd-review-u3-ea7e3b0b6ea0974e
+**Message**: team-leadへNOT-READY判定を送信しました。要点は以下の2件です。\n\n1. **unsupported-layoutフィクスチャの導出経路が欠落**: `cicd-pipeline.md`はmanual-or-unknownとpartialの2種類のフィクスチャ導出しか記述していないが、functional-designの`LegacyLayout.isUnsupported`が要求
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T10:59:50Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T10:59:50Z
+
+---

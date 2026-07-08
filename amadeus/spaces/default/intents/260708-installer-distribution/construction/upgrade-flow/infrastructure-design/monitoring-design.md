@@ -1,7 +1,7 @@
 # Monitoring Design — upgrade-flow
 
 > ステージ: infrastructure-design (3.4) / 作成: 2026-07-08
-> 出典: U1 monitoring-design.md(継承)
+> 出典: U1 monitoring-design.md(継承)、`../nfr-design/logical-components.md`(新規モジュールなし — 監視対象の増分なしの根拠)
 
 ## 適用外の宣言(継承)
 
