@@ -1,3 +1,6 @@
+import { UsageError } from "./command.ts";
+import { Result } from "../shared/result.ts";
+
 declare const harnessBrand: unique symbol;
 
 // Branded type: prevents an unvalidated string from being mistaken for a
@@ -13,6 +16,16 @@ export namespace HarnessName {
     "kiro",
     "kiro-ide",
   ]) as readonly HarnessName[];
+
+  // U2 install-flow's smart constructor for the raw `--harness` CLI value
+  // (FR-003). Placed here, not in command.ts, per domain-entities.md: parse
+  // is owned by the harness type itself, matching HarnessName.all's home.
+  export function parse(raw: string): Result<HarnessName, UsageError> {
+    if ((all as readonly string[]).includes(raw)) {
+      return Result.ok(raw as HarnessName);
+    }
+    return Result.err(UsageError.invalidHarness(raw));
+  }
 }
 
 Object.freeze(HarnessName);
