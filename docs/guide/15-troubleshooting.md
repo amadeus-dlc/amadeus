@@ -211,6 +211,42 @@ Expected behavior — the statusline updates when the state file is next written
 
 ---
 
+## Installer Unavailable — Manual Copy Fallback
+
+**Symptom**: `bunx @amadeus-dlc/setup install` (or the `npx` form) cannot run — no network access to GitHub, an air-gapped environment, or the npm/bun registries are unreachable from your machine.
+
+### Manual copy
+
+Clone or download the repository at the tag you want, then copy the harness directories directly instead of running the installer:
+
+```bash
+# Claude Code
+cp -r dist/claude/.claude/ your-project/.claude/
+cp -r dist/claude/amadeus/   your-project/amadeus/     # the workspace shell — a sibling of .claude/, not inside it
+
+# Kiro IDE
+cp -r dist/kiro-ide/.kiro your-project/.kiro
+cp -r dist/kiro-ide/amadeus your-project/amadeus        # the workspace shell — a sibling of .kiro/, not inside it
+cp dist/kiro-ide/AGENTS.md your-project/AGENTS.md   # merge if you already have one
+
+# Kiro CLI
+cp -r dist/kiro/.kiro your-project/.kiro
+cp -r dist/kiro/amadeus your-project/amadeus       # the workspace shell — a sibling of .kiro/, not inside it
+cp dist/kiro/AGENTS.md your-project/AGENTS.md   # merge if you already have one
+
+# Codex CLI
+cp -r dist/codex/.codex/  your-project/.codex/
+cp -r dist/codex/.agents/ your-project/.agents/
+cp -r dist/codex/amadeus/   your-project/amadeus/      # the workspace shell — a sibling of .codex/, not inside it
+cp dist/codex/AGENTS.md   your-project/AGENTS.md   # or merge into yours
+```
+
+The `amadeus/` shell ships the pre-built `amadeus/spaces/default/memory/` method tree the engine reads; `/amadeus --doctor` (`$amadeus --doctor` on Codex) fails its "workspace shell ready" check without it.
+
+This produces the same file layout the installer applies — it just skips the fetch, diff-plan, and manifest bookkeeping the installer does for you. A manual copy has no `amadeus/.installer/amadeus-setup-manifest.json`, so a later `amadeus-setup upgrade` run treats it as an unmanaged installation: it still applies (with a conservative backup-every-modified-file strategy) rather than refusing, but it can't diff against a known prior version. Prefer the installer once it's reachable again.
+
+---
+
 ## Using `--doctor`
 
 The `--doctor` utility command validates your setup. Run it whenever something seems wrong:

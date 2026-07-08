@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.0] - 2026-07-09
+
+- The npm-distributed `@amadeus-dlc/setup` installer (`bunx @amadeus-dlc/setup install` / `npx @amadeus-dlc/setup install`) is now the primary way to install Amadeus-DLC. Pick a harness interactively or pass `--harness`/`--target`/`--yes` for non-interactive use; `amadeus-setup upgrade` updates an existing install with a diff-style plan that preserves your customizations. The manual `cp -r dist/<harness>` steps moved out of the README into the Troubleshooting guide's manual-copy fallback (for when the installer itself isn't reachable).
+- Corrected root `package.json` metadata: `license` now reads `(MIT OR Apache-2.0)`, matching the shipped dual-license files (it previously read the mismatched `MIT-0`); the `repository` field now points at this repository instead of a stale reference, and the leftover `directory` subfield from an earlier monorepo layout was removed.
+
 ## [1.1.1] - 2026-07-09
 
 - The stage protocol now mandates parallel dispatch of per-unit reviewer sub-agents (reviews are read-only and side-effect-free; only builder fixes stay serial) — §12a "Parallelism (per-unit stages)".
