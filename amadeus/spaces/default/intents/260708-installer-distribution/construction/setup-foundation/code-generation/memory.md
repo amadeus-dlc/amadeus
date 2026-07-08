@@ -8,6 +8,8 @@
 
 - 2026-07-08T12:40:00Z — ユーザー指摘: reviewer の per-agent knowledge(reviewing.md / thermo-nuclear-code-quality-review.md)が未配線で、コードレビューに保守性・抽象品質監査が適用されていなかった。恒久修正としてエージェント定義に Knowledge Loading 節を追加(core→dist→self 同一コミット 9f93a3f12)。Bolt 1 コードへは遡及 thermo-nuclear 監査を並行ディスパッチ(スナップショット 3cb6026b2 に対して読み取り専用)。以後の code-generation レビューはこの知識の適用を義務とする
 
+- 2026-07-08T12:55:00Z — 遡及 thermo-nuclear 監査: FINDINGS(moderate 3 / minor 2、全件 behavior-preserving。詳細 thermo-review-findings.md)。適用は Bolt 2 レビュー完了直後の保守パスに予約(同一パッケージの同時編集回避)。以後の codegen レビューは knowledge 配線(9f93a3f12)により thermo 基準込み
+
 ## Deviations
 
 ## Tradeoffs
