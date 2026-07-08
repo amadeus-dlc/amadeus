@@ -2,6 +2,7 @@
 > This file is maintained by the orchestrator during stage execution. Add observations at the gate ritual, not by editing here directly.
 
 ## Interpretations
+- 2026-07-08T08:08:44Z — U1 NFR reviewer iteration 1: 7 findings applied. High-value catches: Windows NTFS colon problem in backup filenames (solved with dual representation — Plan.startedAtIso extended for manifest, backupTimestamp basic token for filenames, propagated to U2/U3 meta construction) and the budget arithmetic contradiction (timeouts now derive the budget: normal 31s / worst-retry 66s with NFR-001 asserting the normal path only). md5 attribution corrected to plan-time (U1 workflow-3 aligned); hardlink rejection added; upstream refs and memory verification added
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
 ## Deviations

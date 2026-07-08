@@ -50,7 +50,7 @@ runUpgrade(parsed):
 
   files = applied.manifestFiles()
   if files.err: print(reporter.renderError(files.error)); return 1
-  meta = { installerPackageVersion: SETUP_VERSION, harness: inputs.harness, installStartedAt: plan.ok.backupTimestamp }
+  meta = { installerPackageVersion: SETUP_VERSION, harness: inputs.harness, installStartedAt: plan.ok.startedAtIso }  # 拡張 ISO(マニフェスト用)。ファイル名は backupTimestamp(basic)
   newManifest = source.ok.nextManifest({ payload: payload.ok, files: files.ok, meta })  # BR-U14 の分岐は source が所有(manifested→upgradedTo / それ以外→build)
   written = manifestIo.write(inputs.target, newManifest)                            # FR-016(バージョン更新)
   if written.err: print(reporter.renderError(written.error)); return 1

@@ -5,9 +5,10 @@
 
 ## SEC-F01: アーカイブ展開の経路安全性(最重要)
 
-tar.gz 展開時、エントリパスを正規化し **展開先ディレクトリ外への書き出し(path traversal、`../` や絶対パス、symlink エントリ)を拒否**する。違反エントリを検出したら `payload-invalid` として展開全体を中止(部分展開物は破棄)。
+tar.gz 展開時、エントリパスを正規化し **展開先ディレクトリ外への書き出し(path traversal、`../` や絶対パス)を拒否**する。**リンク系エントリ(symlink・hardlink)は種別を問わず一律拒否**する(git archive 由来の codeload アーカイブは通常ファイルとディレクトリのみを含むため、リンクの出現自体が payload 異常)。違反エントリを検出したら `payload-invalid` として展開全体を中止(部分展開物は破棄)。
 
-- 検証: 悪意あるエントリ(`../evil`、絶対パス、symlink)を含むフィクスチャ tar でテスト(落ちる実証)
+- 検証: 悪意あるエントリ(`../evil`、絶対パス、symlink、hardlink)を含むフィクスチャ tar でテスト(落ちる実証)
+- 出典: BR-F10(payload-invalid)・BR-F06〜F08(取得失敗分類)の安全側具体化(business-rules)
 
 ## SEC-F02: 通信の最小面
 

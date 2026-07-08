@@ -30,7 +30,7 @@
 | BR-F11 | マニフェストパスは `amadeus/.installer/amadeus-setup-manifest.json` に固定 |
 | BR-F12 | `schemaVersion` 必須。未知の schemaVersion は読み取り拒否(ManifestError) — 将来の移行はバージョンで判定 |
 | BR-F13 | `files[]` の各エントリは path/class/required/md5 必須。`class ∈ {owned, shared, user-preserved}` |
-| BR-F14 | md5 は配布物内容から計算(次回 upgrade の期待値)。`installedAt` = 操作開始時刻 = バックアップ `$timestamp` |
+| BR-F14 | md5 は配布物内容から計算(次回 upgrade の期待値)。`installedAt` = 操作開始時刻 = バックアップ `$timestamp` は**同一瞬間**を指す(表現は異なる: installedAt は拡張 ISO 8601、ファイル名トークンはコロンなしの basic 形式 `YYYYMMDDTHHmmssZ` — Windows NTFS 予約文字回避、NFR-004。REL-F05 参照) |
 | BR-F15 | マニフェスト不在は正常系(未導入/手動導入)であり、エラーではなく `null` を返す |
 
 ## パッケージ骨格ルール(FR-001/002、ADR-002、team.md)

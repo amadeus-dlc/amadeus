@@ -7719,3 +7719,45 @@
 **Agent**: amadeus-architect-agent
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T08:00:53Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-requirements
+**Timestamp**: 2026-07-08T08:00:53Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T08:05:51Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: nfr-review-u1
+**Agent ID**: anfr-review-u1-5dc55c32627525c2
+**Message**: ## Review\n\nVerdict: NOT-READY\n\nU1(setup-foundation)のNFR成果物一式(performance/security/scalability/reliability/tech-stack)と、上流の requirements.md・functional-design(business-logic-model.md、business-rules.md、d
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T08:06:00Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a4a7e4b3e72be1a65
+**Message**: npm インストーラ(@amadeus-dlc/setup)の AI-DLC ワークフローを進行中で、現在は Construction の NFR Requirements ステージ、5ユニット中1つ目(setup-foundation)のレビュアー判定待ちです。判定が届き次第、是正または次ユニットへ進みます。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T08:06:55Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: nfr-review-u1
+**Agent ID**: anfr-review-u1-5dc55c32627525c2
+**Message**: team-leadへレビュー結果を送信しました。\n\n**Verdict: NOT-READY**(7件の指摘、うちHigh 2件・Medium系2件・Low 3件)\n\n主要な問題は次の通りです。\n\n1. **Windows互換性の未検証**(High): `Manifest.installedAt`(ISO 8601、コロン含む)をバックアップファイル名の`$timestamp`にそのまま使う設計
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T08:07:54Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T08:07:54Z
+
+---

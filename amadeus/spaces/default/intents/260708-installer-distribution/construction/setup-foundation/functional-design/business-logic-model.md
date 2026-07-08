@@ -53,9 +53,10 @@ readManifest(target): Result<Manifest | null, ManifestError>
   if !exists(path): return ok(null)                       # 未導入 or 手動導入(BR-F15)
   return Manifest.parse(readJson(path))                   # schemaVersion 検査込み(BR-F12)— Parse, Don't Validate
 
-buildManifest(payload, applied, meta):
-  files = ManifestFiles.fromEntries(applied.map(e => { path, class, required, md5: md5Of(payload file) }))
+buildManifest(payload, files: ManifestFiles, meta):
   return Manifest.build(payload, files, meta)             # 不変条件(重複 path 禁止等)は ManifestFiles/Manifest が所有
+  # md5 は U2/U3 のプラン時に planner が計算し PlanEntry が運ぶ(U2 確定契約)。
+  # U1 は ApplyResult.manifestFiles() が射影した計算済み ManifestFiles を受け取るだけで再計算しない
 ```
 
 - md5 は**配布物側の内容**から計算して記録する(次回 upgrade の期待値)。upgrade 時の処遇判定はインスタンスメソッド `manifest.dispositionFor(path, actualMd5)` が Disposition(overwrite / backup-then-copy / preserve)を返す — planner に md5 比較の if を書かせない(FR-008 の判定所有、Tell, Don't Ask)

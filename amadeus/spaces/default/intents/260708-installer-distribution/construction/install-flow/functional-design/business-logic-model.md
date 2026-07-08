@@ -59,7 +59,7 @@ runInstall(parsed):
 
   files = applied.manifestFiles()                              # PlanEntry の md5/required から正準射影(FR-016)
   if files.err: print(reporter.renderError(files.error)); return 1
-  meta = { installerPackageVersion: SETUP_VERSION, harness: inputs.harness, installStartedAt: plan.ok.backupTimestamp }  # InstallMeta は U1 の shape-only 補助型 — リテラル構築(コンパニオンなし)
+  meta = { installerPackageVersion: SETUP_VERSION, harness: inputs.harness, installStartedAt: plan.ok.startedAtIso }  # 拡張 ISO(マニフェスト用)。ファイル名は backupTimestamp(basic)  # InstallMeta は U1 の shape-only 補助型 — リテラル構築(コンパニオンなし)
   manifest = Manifest.build(payload.ok, files.ok, meta)
   written = manifestIo.write(inputs.target, manifest)          # FR-016
   if written.err: print(reporter.renderError(written.error)); return 1  # I/O 境界の明示分岐

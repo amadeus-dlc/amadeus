@@ -1,6 +1,7 @@
 # Scalability Requirements — setup-foundation
 
 > ステージ: nfr-requirements (3.2) / Unit: setup-foundation / 作成: 2026-07-08
+> 出典: `../functional-design/business-rules.md`(BR-F09 の1実行2リクエスト上限)・`business-logic-model.md`(直列パイプライン)、services.md
 
 ## 適用外の宣言(根拠付き)
 

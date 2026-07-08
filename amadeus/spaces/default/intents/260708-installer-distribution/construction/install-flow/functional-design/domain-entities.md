@@ -86,7 +86,9 @@ export type PlanEntry = {
 };
 
 export type Plan = {
-  readonly backupTimestamp: string;          // 操作開始時刻 — 全退避ファイル名で共有(FR-008)
+  readonly startedAtIso: string;             // 操作開始時刻の拡張 ISO 8601(Manifest.installedAt へそのまま入る表現)
+  readonly backupTimestamp: string;          // 同一瞬間のファイル名トークン: コロンなし ISO 8601 basic 形式
+                                             //   (全退避ファイル名で共有 — FR-008。U1 REL-F05 / BR-F14: Windows 予約文字回避)
   entries(): ReadonlyArray<PlanEntry>;       // レポート描画用の明示的列挙(FR-007)
   entriesBy(action: PlanAction): ReadonlyArray<PlanEntry>;
   hasConflicts(): boolean;                   // 「確認が要るか」を plan 自身が答える(FR-010 の分岐材料)
