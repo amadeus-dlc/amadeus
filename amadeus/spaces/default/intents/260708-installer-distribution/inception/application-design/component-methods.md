@@ -39,7 +39,7 @@ resolver.resolve(spec: VersionSpec): Promise<Result<ResolvedVersion, ResolveErro
 ### fetcher
 
 ```ts
-createFetcher(http: Http): Fetcher
+createFetcher(http: Http): Fetcher   // ※U1 nfr-design(logical-components)がポート分割版 createFetcher(http, tmpWrite) へ置換(TmpWrite 限定が REL-F01/SEC-F03 の構造保証)
 fetcher.fetchArchive(version: ResolvedVersion, tmpDir: string): Promise<Result<ExtractedPayload, FetchError>>   // インスタンスメソッド
 // リトライ判断はインスタンスメソッド err.isTransient() が所有(BR-F06/F07)。URL 構築は resolved.archiveUrl()(ADR-003)
 // 展開検証(payload-invalid)は ExtractedPayload.locate(コンパニオン static)に内包(BR-F10)

@@ -6,6 +6,7 @@
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
 ## Deviations
+- 2026-07-08T09:52:13Z — U1 nfr-design iteration 2 (redispatched after a stalled reviewer): one residual — the fix itself changed createFetcher's signature without the supersession note that the parallel createManifestIo change received; applied as builder resolution. Same lesson family as nfr-requirements:c5 (fix-induced divergences need the full supersession treatment at the moment they are introduced)
 <!-- example: 2026-05-29T10:14:32Z — skipped the optional caching layer the stage prose suggested; the dataset is small enough that it adds risk -->
 
 ## Tradeoffs
