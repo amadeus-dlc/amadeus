@@ -11248,3 +11248,337 @@
 **Message**: これらは Step 1〜12(タスクID 2〜13)のタスク割り当て通知ですが、いずれも本セッション内で既に実装・検証・完了済みです(`TaskList` で確認したところ、現在オープンなタスクは残っていません)。\n\n念のため状況を整理すると:\n\n- Step 1〜9、11〜12 の実装(パッケージ骨格、shared/domain/internal/ports/modules 一式、cli.ts、
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T11:59:58Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-08T11:59:58Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T12:03:31Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: af454c1ef5f0dc2fb
+**Message**: npm インストーラ @amadeus-dlc/setup の AI-DLC 実装中で、Bolt 1(setup-foundation)のコード生成が完了し敵対的レビューの判定待ちです。判定が READY なら次は Bolt 1 ゲートの承認をお伺いします。
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T12:05:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0ec3492e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/fetcher.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T12:05:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0ec3492e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/fetcher.ts
+**Duration ms**: 850
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T12:05:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: 991dba1b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/fetcher.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T12:05:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: 991dba1b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/fetcher.ts
+**Duration ms**: 618
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T12:05:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3761f9b9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/internal/manifest-files-factory.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T12:05:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3761f9b9
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/internal/manifest-files-factory.ts
+**Duration ms**: 812
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T12:05:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: e7b2cc53
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/internal/manifest-files-factory.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T12:05:18Z
+**Event**: SENSOR_PASSED
+**Fire id**: e7b2cc53
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/internal/manifest-files-factory.ts
+**Duration ms**: 576
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T12:05:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: e252f205
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/internal/payload-factory.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T12:05:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: e252f205
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/internal/payload-factory.ts
+**Duration ms**: 808
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T12:05:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0d9ca022
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/internal/payload-factory.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T12:05:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0d9ca022
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/internal/payload-factory.ts
+**Duration ms**: 567
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T12:06:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: cc7cfd91
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/internal/payload-factory.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T12:07:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: cc7cfd91
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/internal/payload-factory.ts
+**Duration ms**: 851
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T12:07:00Z
+**Event**: SENSOR_FIRED
+**Fire id**: 60999bbb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/internal/payload-factory.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T12:07:00Z
+**Event**: SENSOR_PASSED
+**Fire id**: 60999bbb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/internal/payload-factory.ts
+**Duration ms**: 571
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T12:07:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4d772bf6
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/internal/manifest-files-factory.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T12:07:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4d772bf6
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/internal/manifest-files-factory.ts
+**Duration ms**: 802
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T12:07:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9904587e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/internal/manifest-files-factory.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T12:07:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9904587e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/internal/manifest-files-factory.ts
+**Duration ms**: 565
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T12:07:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: 45b39fda
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/fetcher.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T12:07:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: 45b39fda
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/fetcher.ts
+**Duration ms**: 819
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T12:07:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: 27754b1a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/fetcher.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T12:07:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 27754b1a
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/fetcher.ts
+**Duration ms**: 584
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T12:13:28Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: codegen-review-u1
+**Agent ID**: acodegen-review-u1-8f467f0007baa2a1
+**Message**: U1 (setup-foundation) Bolt 1 のコードレビューを完了し、team-lead へ **READY** 判定を送付しました。\n\n要点:\n\n- **フレッシュエビデンス5コマンド**すべてグリーン(typecheck / lint / `tests/run-tests.sh --ci`(245ファイル・3732 assertion) / dist:check / promot
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T12:13:30Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T12:13:30Z
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T12:14:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: 34a196f3
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-fetcher.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T12:14:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 34a196f3
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-fetcher.test.ts
+**Duration ms**: 893
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T12:14:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: 62f3466b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-fetcher.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T12:14:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: 62f3466b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-fetcher.test.ts
+**Duration ms**: 567
+
+---

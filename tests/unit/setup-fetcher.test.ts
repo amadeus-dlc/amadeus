@@ -107,9 +107,12 @@ describe("createFetcher — BR-F10 wrapper/dist validation", () => {
 
   test("payload-invalid when there is more than one top-level directory", async () => {
     await withTmpWrite(async (tmpWrite) => {
+      // Both top-level dirs carry a valid dist/claude payload so this test
+      // fails only via the wrapper-multiplicity rule itself (BR-F10), not
+      // via a missing-dist error taken on whichever dir gets picked.
       const archive: TarFixtureEntry[] = [
-        { type: "file", name: "a/one.txt", content: Buffer.from("1") },
-        { type: "file", name: "b/two.txt", content: Buffer.from("2") },
+        { type: "file", name: "a/dist/claude/marker.txt", content: Buffer.from("1") },
+        { type: "file", name: "b/dist/claude/marker.txt", content: Buffer.from("2") },
       ];
       const http = fakeHttp(buildTarGz(archive));
       const result = await createFetcher(http, tmpWrite).fetchArchive(version());
