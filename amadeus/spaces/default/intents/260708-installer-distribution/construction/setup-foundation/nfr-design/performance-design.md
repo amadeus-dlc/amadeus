@@ -1,7 +1,7 @@
 # Performance Design — setup-foundation
 
 > ステージ: nfr-design (3.3) / Unit: setup-foundation / 作成: 2026-07-08
-> 出典: `../nfr-requirements/performance-requirements.md`(タイムアウト 10秒/20秒、予算 31秒/66秒、RSS ≤256MB)、`../functional-design/business-logic-model.md`
+> 出典: `../nfr-requirements/performance-requirements.md`(タイムアウト 10秒/20秒、予算 31秒/66秒、RSS ≤256MB)・`tech-stack-decisions.md`(fetch+AbortSignal.timeout、自作最小 tar の決定)、`../functional-design/business-logic-model.md`
 
 ## タイムアウトの実装構造
 

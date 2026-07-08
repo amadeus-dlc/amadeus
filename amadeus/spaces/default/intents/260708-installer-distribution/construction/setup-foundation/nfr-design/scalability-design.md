@@ -1,7 +1,7 @@
 # Scalability Design — setup-foundation
 
 > ステージ: nfr-design (3.3) / Unit: setup-foundation / 作成: 2026-07-08
-> 出典: `../nfr-requirements/scalability-requirements.md`(適用外宣言)
+> 出典: `../nfr-requirements/scalability-requirements.md`(適用外宣言)・`tech-stack-decisions.md`(ストリーミング展開の技術選定)
 
 ## 適用外の宣言(継承)
 

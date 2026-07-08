@@ -8220,3 +8220,63 @@
 **Agent**: amadeus-architect-agent
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T09:06:56Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-design
+**Timestamp**: 2026-07-08T09:06:56Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T09:07:16Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a2724ee30415844c0
+**Message**: そのまま続けて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T09:07:33Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a20f007b2d12cf11e
+**Message**: はい
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T09:10:39Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a6a912828a291ce04
+**Message**: npm インストーラ(@amadeus-dlc/setup)の AI-DLC ワークフローを実行中で、現在は Construction の NFR Design ステージ(5ユニット中 U1)のレビュアー判定待ちです。判定が届き次第、是正または次ユニットへ自動で進めます。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T09:12:26Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: nfrd-review-u1
+**Agent ID**: anfrd-review-u1-dd81ec9129fd0154
+**Message**: レビューを完了しました。上流成果物(nfr-requirements、functional-design Rev.3、application-design components.md/component-methods.md Rev.3、units-generation の U1/U2 境界定義)と実際のセンサーツール(`amadeus-sensor-upstream-coverage.ts`)に
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T09:13:20Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: nfrd-review-u1
+**Agent ID**: anfrd-review-u1-dd81ec9129fd0154
+**Message**: team-leadへレビュー結果を送信しました。判定は **NOT-READY**、主な指摘は以下の通りです。\n\n1. **REL-F01の構造的保証の自己矛盾**(最重要): `reliability-design.md` は「manifestモジュールは対象プロジェクトへの書き込みAPIを持たない」と明言する一方、同じ成果物内の `logical-components.md` は `manif
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T09:14:19Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T09:14:19Z
+
+---

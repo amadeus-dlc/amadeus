@@ -70,7 +70,7 @@ apply(plan: Plan, target: string, fsops: FsOps): Promise<ApplyResult>
 ### manifest
 
 ```ts
-createManifestIo(fsops: FsOps): ManifestIo
+createManifestIo(fsops: FsOps): ManifestIo   // ※U1 nfr-design(logical-components)がポート分割版 createManifestIo(fsRead, fsWrite) へ置換(読み書き分離が REL-F01 の構造保証)
 manifestIo.read(target: string): Promise<Result<Manifest | null, ManifestError>>   // インスタンスメソッド。ok(null) = 不在(未導入/手動導入)
 manifestIo.write(target: string, manifest: Manifest): Promise<Result<void, ManifestError>>
 // static(コンパニオン): Manifest.parse(json) — schemaVersion 検査込み(BR-F12)
