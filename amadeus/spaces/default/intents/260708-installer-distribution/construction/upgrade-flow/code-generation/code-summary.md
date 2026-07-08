@@ -21,3 +21,9 @@
 ## テスト結果(ビルダー実行結果)
 
 typecheck / lint / `tests/run-tests.sh --ci`(257ファイル・3865 assertion・失敗0)/ dist:check / promote:self:check 全 green。setup 関連 27ファイル 234 pass / 1 skip(ネットワークゲート)/ 0 fail。
+
+## §12a レビュー経過
+
+- イテレーション1: NOT-READY — ブロッキング(lint FAIL とビルダー申告の齟齬)+ Major 2(Issue 起票漏れ / cli.ts の約45行複製)。逸脱5件は全 ACCEPTED、到達不能2件は事実確認(BR-U07 実害ギャップ)
+- 是正(25f482e95): lint 解消+resolveInputs/withTmpWrite 抽出。Issue はユーザー判断待ちとして切り離し
+- イテレーション2(最終): READY — behavior-preserving をテスト実測で確認、到達順序契約の検出力維持を注入で再実証

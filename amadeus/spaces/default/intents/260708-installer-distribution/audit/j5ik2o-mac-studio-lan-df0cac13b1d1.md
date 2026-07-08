@@ -18203,3 +18203,711 @@
 **Source**: orchestrator
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T15:27:50Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: codegen-review-u3
+**Agent ID**: acodegen-review-u3-62d935ab1e564fdb
+**Message**: この通知は私自身が以前作成したタスク(#21: イテレーション2のテスト実行完了待ち)の割り当てエコーで、既に完了・クローズ済みです。`TaskList`で確認したところタスクは残っておらず、対応不要です。\n\nU3 (upgrade-flow) のコードレビューは既に完了しています。イテレーション1でNOT-READY判定(lint失敗の齟齬、Issue起票漏れ、cli.tsの重複コード)を出し、
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T15:50:20Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T15:50:20Z
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-08T15:51:01Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/construction/publish-readiness/code-generation/code-generation-plan.md
+**Context**: construction > publish-readiness > code-generation > code-generation-plan.md
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T15:51:50Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-08T15:51:50Z
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T15:57:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: 79b71868
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/lib/setup-pack-contract.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T15:57:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: 79b71868
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/lib/setup-pack-contract.ts
+**Duration ms**: 1065
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T15:57:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: cffd646e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/lib/setup-pack-contract.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T15:57:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: cffd646e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/lib/setup-pack-contract.ts
+**Duration ms**: 646
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T15:57:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: b7eaf405
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-pack-contract.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T15:57:46Z
+**Event**: SENSOR_PASSED
+**Fire id**: b7eaf405
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-pack-contract.test.ts
+**Duration ms**: 852
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T15:57:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5f1c1f89
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-pack-contract.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T15:57:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5f1c1f89
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-pack-contract.test.ts
+**Duration ms**: 580
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T15:57:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: f176b27b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-files-drift.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T15:57:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: f176b27b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-files-drift.test.ts
+**Duration ms**: 828
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T15:57:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6e37d7bf
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-files-drift.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T15:57:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6e37d7bf
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-files-drift.test.ts
+**Duration ms**: 572
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T16:03:28Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: codegen-u4
+**Agent ID**: acodegen-u4-d94cf22169e9d412
+**Message**: バックグラウンドのテスト実行完了を待っています。完了の通知が届き次第、結果を報告します。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T16:07:16Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: codegen-u4
+**Agent ID**: acodegen-u4-d94cf22169e9d412
+**Message**: `bash tests/run-tests.sh --ci` を完全ログ保存付きで再実行中です(約3分程度かかる見込み)。完了と Monitor 通知を待ちます。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T16:08:25Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: codegen-u4
+**Agent ID**: acodegen-u4-d94cf22169e9d412
+**Message**: CI再実行(完全ログ付き)の完了を Monitor で待機中です。完了次第、失敗原因を特定して報告します。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T16:13:21Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: codegen-u4
+**Agent ID**: acodegen-u4-d94cf22169e9d412
+**Message**: U4(publish-readiness)の実装と検証が完了しました。要点は以下のとおりです。\n\n**実装したファイル**(いずれも絶対パス)\n- `/Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/tests/lib/setup-pack-con
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T16:14:46Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-08T16:14:46Z
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T16:24:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: 577b2e71
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/lib/setup-pack-contract.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T16:24:05Z
+**Event**: SENSOR_PASSED
+**Fire id**: 577b2e71
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/lib/setup-pack-contract.ts
+**Duration ms**: 866
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T16:24:05Z
+**Event**: SENSOR_FIRED
+**Fire id**: 26e4a5d9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/lib/setup-pack-contract.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T16:24:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: 26e4a5d9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/lib/setup-pack-contract.ts
+**Duration ms**: 608
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T16:26:09Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: codegen-review-u4
+**Agent ID**: acodegen-review-u4-c1eff081cc94f7ef
+**Message**: U4(publish-readiness、Bolt 4、イテレーション1)のコードレビューを完了し、team-leadへ判定を送付しました。\n\n**判定: READY**(Critical/Major findings 0件)\n\n主な確認内容:\n- フレッシュエビデンス5コマンドを再実行し、`bash tests/run-tests.sh --ci` は既知ベースライン通り t92.test.ts
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T16:34:16Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T16:34:16Z
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-08T16:35:13Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/construction/docs-rollout/code-generation/code-generation-plan.md
+**Context**: construction > docs-rollout > code-generation > code-generation-plan.md
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T16:36:03Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-08T16:36:03Z
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T16:39:08Z
+**Event**: HUMAN_TURN
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T16:44:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8c5b7139
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-version.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T16:44:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8c5b7139
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-version.ts
+**Duration ms**: 1006
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T16:44:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: b24d4fd9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-version.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T16:44:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: b24d4fd9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-version.ts
+**Duration ms**: 784
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T16:50:19Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T16:50:53Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T16:51:02Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: codegen-u5
+**Agent ID**: acodegen-u5-81fd65251b5de8d4
+**Message**: team-lead へ完了報告を送信しました。作業内容の要約は以下のとおりです。\n\n**実装した内容**(docs-rollout / U5 / Bolt 5、全6ステップ):\n1. README.md の導入セクションを刷新し、`cp -r dist/<harness>` を撤去して `bunx @amadeus-dlc/setup install --harness <name> --targ
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T16:52:19Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-08T16:52:19Z
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T17:00:45Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T17:00:59Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: codegen-review-u5
+**Agent ID**: acodegen-review-u5-49c2b96bf18880db
+**Message**: team-leadへ判定を送付しました。\n\n**判定: NOT-READY**(iteration 1) — Critical 0件、Major 2件。いずれも1行修正で解決可能な自己矛盾であり、iteration 2で直せばREADY相当と見込みます。\n\n**フレッシュエビデンス**: t68(7 pass)/typecheck/lint/dist:check/promote:self:chec
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T17:01:03Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T17:01:03Z
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T17:01:45Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-08T17:01:45Z
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T17:03:20Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T17:03:29Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: codegen-review-u5
+**Agent ID**: acodegen-review-u5-49c2b96bf18880db
+**Message**: team-leadへ**READY**判定を送付しました。\n\nイテレーション2(commit `a4cc2ec66`)の確認結果は以下の通りです。\n\n- 修正は裁定どおりの最小2行(READMEライセンスバッジ、package.json description)のみで、他への波及なし\n- shields.ioバッジを実際にHTTP取得して検証したところ、`aria-label="license: 
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T17:03:55Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T17:03:55Z
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T17:17:24Z
+**Event**: HUMAN_TURN
+
+---
+
+## Rule Learned
+**Timestamp**: 2026-07-08T17:17:44Z
+**Event**: RULE_LEARNED
+**Stage**: code-generation
+**Candidate-ID**: code-generation:evidence-discipline
+**Destination**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/memory/project.md
+**Heading**: ## Corrections
+**Source**: orchestrator
+
+---
+
+## Rule Learned
+**Timestamp**: 2026-07-08T17:17:44Z
+**Event**: RULE_LEARNED
+**Stage**: code-generation
+**Candidate-ID**: code-generation:stale-binary
+**Destination**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/memory/project.md
+**Heading**: ## Corrections
+**Source**: orchestrator
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-08T17:17:44Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-08T17:17:44Z
+**Event**: GATE_APPROVED
+**Stage**: code-generation
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-08T17:17:44Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Details**: Stage Code Generation approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-08T17:17:44Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Agent**: amadeus-quality-agent
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T17:24:43Z
+**Event**: HUMAN_TURN
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-08T17:24:54Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: build-and-test
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-08T17:24:54Z
+**Event**: GATE_APPROVED
+**Stage**: build-and-test
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-08T17:24:54Z
+**Event**: STAGE_COMPLETED
+**Stage**: build-and-test
+**Details**: Stage Build And Test approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-08T17:24:54Z
+**Event**: STAGE_STARTED
+**Stage**: ci-pipeline
+**Agent**: amadeus-pipeline-deploy-agent
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T17:27:03Z
+**Event**: HUMAN_TURN
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-08T17:27:16Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: ci-pipeline
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-08T17:27:16Z
+**Event**: GATE_APPROVED
+**Stage**: ci-pipeline
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-08T17:27:16Z
+**Event**: STAGE_COMPLETED
+**Stage**: ci-pipeline
+**Details**: Stage Ci Pipeline approved by gate
+
+---
+
+## Phase Completion
+**Timestamp**: 2026-07-08T17:27:16Z
+**Event**: PHASE_COMPLETED
+**From phase**: construction
+**To phase**: operation
+**Stages completed**: 22
+
+---
+
+## Phase Verification
+**Timestamp**: 2026-07-08T17:27:16Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: construction → operation
+
+---
+
+## Phase Start
+**Timestamp**: 2026-07-08T17:27:16Z
+**Event**: PHASE_STARTED
+**Phase**: operation
+**Scope**: installer-distribution
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-08T17:27:16Z
+**Event**: STAGE_STARTED
+**Stage**: deployment-pipeline
+**Agent**: amadeus-pipeline-deploy-agent
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T17:28:50Z
+**Event**: HUMAN_TURN
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-08T17:29:01Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: deployment-pipeline
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-08T17:29:02Z
+**Event**: GATE_APPROVED
+**Stage**: deployment-pipeline
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-08T17:29:02Z
+**Event**: STAGE_COMPLETED
+**Stage**: deployment-pipeline
+**Details**: Stage Deployment Pipeline approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-08T17:29:02Z
+**Event**: STAGE_STARTED
+**Stage**: environment-provisioning
+**Agent**: amadeus-aws-platform-agent
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T17:29:57Z
+**Event**: HUMAN_TURN
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-08T17:30:09Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: environment-provisioning
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-08T17:30:09Z
+**Event**: GATE_APPROVED
+**Stage**: environment-provisioning
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-08T17:30:09Z
+**Event**: STAGE_COMPLETED
+**Stage**: environment-provisioning
+**Details**: Stage Environment Provisioning approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-08T17:30:09Z
+**Event**: STAGE_STARTED
+**Stage**: deployment-execution
+**Agent**: amadeus-pipeline-deploy-agent
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T17:32:27Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T17:34:31Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T17:36:50Z
+**Event**: HUMAN_TURN
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-08T17:37:04Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: deployment-execution
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-08T17:37:04Z
+**Event**: GATE_APPROVED
+**Stage**: deployment-execution
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-08T17:37:04Z
+**Event**: STAGE_COMPLETED
+**Stage**: deployment-execution
+**Details**: Stage Deployment Execution approved by gate
+
+---
+
+## Phase Completion
+**Timestamp**: 2026-07-08T17:37:04Z
+**Event**: PHASE_COMPLETED
+**From phase**: operation
+**To phase**: (end)
+**Stages completed**: 25
+
+---
+
+## Phase Verification
+**Timestamp**: 2026-07-08T17:37:04Z
+**Event**: PHASE_VERIFIED
+**Phase boundary**: operation → end
+
+---
+
+## Workflow Completion
+**Timestamp**: 2026-07-08T17:37:04Z
+**Event**: WORKFLOW_COMPLETED
+**Scope**: installer-distribution
+**Details**: Scope: installer-distribution, 25 stages completed
+
+---
