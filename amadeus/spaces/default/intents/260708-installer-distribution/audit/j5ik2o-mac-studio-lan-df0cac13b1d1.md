@@ -8842,3 +8842,27 @@
 **Timestamp**: 2026-07-08T10:59:50Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T11:00:18Z
+**Event**: WORKFLOW_PARKED
+**Stage**: infrastructure-design
+**Timestamp**: 2026-07-08T11:00:18Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T11:00:37Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: infd-review-u1
+**Agent ID**: ainfd-review-u1-407a970bc08d676d
+**Message**: team-leadへレビュー結果を送信しました。判定は **NOT-READY**(3件の指摘)。\n\n主な指摘は、`cicd-pipeline.md` の tsconfig 配線設計が「include に追加する」としか書いておらず、グロブの形(再帰か非再帰か)を指定していない点です。ルートの `tsconfig.json` には非再帰パターン(`packages/framework/core/h
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T11:01:10Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T11:01:10Z
+
+---
