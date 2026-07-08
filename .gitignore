@@ -17,6 +17,11 @@ dist/codex/amadeus-docs/
 # Sample/test projects
 dist/claude/todo-app/
 
+# packages/setup's own build output (bun build src/cli.ts -> dist/cli.js).
+# Unlike the framework's /dist/ above, this is a per-package publish artifact,
+# not drift-guarded, and is rebuilt lazily by tests/lib/setup-lazy-build.ts.
+packages/setup/dist/
+
 # Test verbose logs
 tests/logs/
 
