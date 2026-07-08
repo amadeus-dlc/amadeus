@@ -27,3 +27,9 @@
 ## テスト結果(ビルダー実行結果)
 
 typecheck / lint / `tests/run-tests.sh --ci`(255ファイル・3804 assertion・失敗0)/ dist:check / promote:self:check 全 green。setup 関連 24ファイル 166 pass / 1 skip(ネットワークゲート、意図どおり)/ 0 fail。
+
+## §12a レビュー経過
+
+- イテレーション1: NOT-READY(Major 4 / Minor 2)— command↔harness 双方向値依存、PlanEntry.source 契約逸脱、Installation.detect 過検出(実機実証)、到達順序契約の回帰テスト皆無(注入実験で実証)、SEC-I04 生文言2箇所
+- 是正(e60c52a35): 全6件。到達順序テストは実 EEXIST 失敗+throw フェイクで「呼ばれないこと」を実行時証明、注入で赤化実証済み
+- イテレーション2(最終): READY — Major 4件の解消を実機再確認(過検出プローブの none 復帰含む)、伝播漏れなし、成果物裁定伝播とコード一致。非ブロッキング1件(logical-components の関数数コメント)は即時修正済み

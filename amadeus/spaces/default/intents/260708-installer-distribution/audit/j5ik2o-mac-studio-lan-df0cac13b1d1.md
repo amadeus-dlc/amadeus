@@ -14857,3 +14857,107 @@
 **Message**: レビューで指摘された6件の是正をすべて完了し、team-leadに報告しました。要点は以下の通りです。\n\n**Major是正(4件)**\n1. `domain/harness.ts` と `domain/command.ts` の双方向値依存を解消しました。`HarnessName.parse` は `UsageError` ではなく軽量なローカル型 `InvalidHarnessName`(`{
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T13:47:26Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a52a1eed96650fec5
+**Message**: npm インストーラ @amadeus-dlc/setup の AI-DLC 実装中で、現在 Bolt 2(install-flow)のレビュー是正6件を反映し最終レビュー(イテレーション2)の判定待ちです。READY が届き次第、U1 保守パス適用と Bolt 3 へ自律続行します。
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T13:49:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: 33a6b647
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T13:49:32Z
+**Event**: SENSOR_PASSED
+**Fire id**: 33a6b647
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+**Duration ms**: 870
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T13:49:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: dac9bb48
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T13:49:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: dac9bb48
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+**Duration ms**: 660
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T13:49:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 42b16e10
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T13:49:45Z
+**Event**: SENSOR_PASSED
+**Fire id**: 42b16e10
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+**Duration ms**: 855
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T13:49:45Z
+**Event**: SENSOR_FIRED
+**Fire id**: cae169a4
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T13:49:46Z
+**Event**: SENSOR_PASSED
+**Fire id**: cae169a4
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+**Duration ms**: 642
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T13:50:54Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: codegen-review-u2
+**Agent ID**: acodegen-review-u2-fbe45310058a8214
+**Message**: team-leadへ判定を送付しました。\n\n**判定: READY**(イテレーション2/最終)\n\nイテレーション1で指摘したMajor4件は全て実装で解消されていることを、コード読解・grep・そして実機再現の3段階で検証しました。\n\n- **循環依存**: `harness.ts`が`command.ts`への依存を完全に断ち、軽量ローカル型`InvalidHarnessName`を返す設計に
+
+---
