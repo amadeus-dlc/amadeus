@@ -7259,3 +7259,36 @@
 **Findings count**: 4
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T06:50:44Z
+**Event**: WORKFLOW_PARKED
+**Stage**: functional-design
+**Timestamp**: 2026-07-08T06:50:44Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T06:54:21Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a103d8278f159197c
+**Message**: npmインストーラ(@amadeus-dlc/setup)のAI-DLCワークフローをConstruction機能設計まで進めています。U1完了、現在U2(install-flow)の設計をレビュアーが検査中です。次はその判定を受けて是正またはU3へ進みます。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T06:58:46Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: fd-review-u2
+**Agent ID**: afd-review-u2-5cff5ab437ce999d
+**Message**: install-flow(U2)のfunctional-design成果物をレビューし、team-lead へ **NOT-READY** の判定を8件の具体的な指摘とともに送付しました。\n\n主な欠落点は以下の通りです。\n\n- **applier の契約が未定義**: `ApplyResult`/`ApplyFailure` 型がU2のdomain-entities.mdにどこにも定義されておらず
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T07:00:00Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T07:00:00Z
+
+---

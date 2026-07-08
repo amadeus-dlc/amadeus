@@ -72,6 +72,8 @@ export type PlanEntry = {
   readonly action: PlanAction;
   readonly class: FileClass;                 // U1 前方共有(owned/shared/user-preserved)
   readonly forced: boolean;                  // FR-009: force 適用の監査印
+  readonly md5: string;                      // 配布物側内容の md5(プラン時に planner が計算 — マニフェスト期待値の源、FR-016)
+  readonly required: boolean;                // 導入後検証の必須ファイル判定(planner が配布物構造から設定)
 };
 
 export type Plan = {
@@ -104,17 +106,43 @@ export namespace PlanRefusal { /* variant ファクトリ */ }
 
 - upgrade 固有の拒否(ダウングレード等)は U3 が variant を拡張定義する(判別ユニオンの和集合として)
 
-### WizardAnswers(対話ウィザードの結果)
+### InstallInputs(確定済み入力 — ウィザード/フラグ両経路の合流点)
 
 ```ts
-export type WizardAnswers = {
+export type InstallInputs = {
   readonly harness: HarnessName;
   readonly target: string;
-  confirmed(): boolean;                      // 最終確認プロンプトの結果
 };
 
-export namespace WizardAnswers { /* runWizard 内部ファクトリのみ(公開コンストラクタなし) */ }
+export namespace InstallInputs {
+  export function fromFlags(parsed: ParsedCommand): InstallInputs;   // 非対話経路。必須充足は事前に missingRequiredFor で検査済みであることが前提(BR-I03)
+  // ウィザード経路は runWizard 内部ファクトリで生成(公開コンストラクタなし)
+}
 ```
+
+- **最終確認(BR-I18)は状態ではなくフローの結果**: `runWizard` は確認拒否時に `err("wizard-aborted")` を返し、承諾時のみ `ok(InstallInputs)` を返す(ワークフロー3参照)。`confirmed()` フラグを持ち回らない
+
+### ApplyResult / ApplyFailure(applier の契約)
+
+```ts
+export type ApplyFailure = {
+  readonly path: string;
+  readonly operation: "copy" | "backup" | "mkdir";
+  readonly detail: string;                   // I/O 例外は境界で捕捉して型付き値へ(サイレント失敗禁止)
+};
+
+export type ApplyResult = {
+  hasFailures(): boolean;                    // 成否判断は自身が答える
+  failures(): ReadonlyArray<ApplyFailure>;
+  appliedEntries(): ReadonlyArray<PlanEntry>;
+  backupPaths(): ReadonlyArray<string>;
+  manifestFiles(): Result<ManifestFiles, ManifestError>;  // 適用結果 → ManifestFile{path, class, required, md5} への正準射影(FR-016)。md5 は PlanEntry が運ぶ(下記)
+};
+
+export namespace ApplyResult { /* applier 内部ファクトリのみ */ }
+```
+
+- **md5 の計算時点と所有**: `Plan.forInstall` が**プラン作成時に配布物側ファイルの md5 を計算**し `PlanEntry.md5` として運ぶ(planner は読み取りのみ — 純粋方針と両立)。`required` も planner が配布物構造から設定(`class == "owned"` の必須ファイル)。applier は運ばれた値を `manifestFiles()` で射影するだけで再計算しない
 
 ### VerifyResult / Check(導入後検証、FR-013)
 
@@ -145,7 +173,28 @@ export type NextSteps = {
   readonly target: string;
   lines(): readonly string[];                // /amadeus の始め方を含む案内行(描画は reporter)
 };
+
+export namespace NextSteps {
+  export function of(harness: HarnessName, version: ResolvedVersion, target: string): NextSteps;
+}
 ```
+
+### Reporter API(本 Unit で正式化 — component-methods.md の3関数スケッチを置換)
+
+```ts
+export type ClassifiedError = UsageError | ResolveError | FetchError | ManifestError | PlanRefusal;
+
+// reporter の公開 API(application-design/component-methods.md の renderPlanReport/renderError/renderSuccess を本設計で拡張・確定)
+renderHelp(): string
+renderPlanReport(plan: Plan): string                                   // FR-007(force 印込み)
+renderError(err: ClassifiedError): string                              // 分類別の表示+guidance(FR-012)
+renderAlreadyInstalled(admission: InstallAdmission): string            // FR-004 の upgrade 案内(専用 UX)
+renderApplyFailure(applied: ApplyResult): string                       // 部分適用失敗の列挙(サイレント失敗禁止)
+renderVerifyFailure(verify: VerifyResult): string                      // FR-013
+renderSuccess(applied: ApplyResult, verify: VerifyResult, next: NextSteps): string  // US-A6
+```
+
+- 判別ユニオンの合併である `ClassifiedError` により、U1 のエラー型群(ResolveError/FetchError/ManifestError)と U2 のエラー型群(UsageError/PlanRefusal)の描画が単一の入口に集まる
 
 ## エンティティ関係
 
@@ -164,5 +213,5 @@ flowchart LR
 
 ## U1/U3 との契約
 
-- U1 から: SemVer / VersionSpec / VersionError / ResolvedVersion / ExtractedPayload / Manifest / ManifestFiles / ManifestError / Disposition / HarnessName(型+`all`)/ FetchError
+- U1 から: SemVer / VersionSpec / VersionError / ResolvedVersion / ExtractedPayload / Manifest / InstallMeta / ManifestFiles / ManifestFile / ManifestError / Disposition / **FileClass** / HarnessName(型+`all`)/ FetchError
 - 本 Unit が定義し U3 へ提供: `Plan` / `PlanEntry` / `PlanAction` / `PlanRefusal`(拡張可能ユニオン)/ `Installation` / applier・verifier・reporter の各契約

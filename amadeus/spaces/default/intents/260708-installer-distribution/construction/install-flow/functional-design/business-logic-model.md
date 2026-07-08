@@ -8,7 +8,7 @@
 ```
 main(argv):
   parsed = ParsedCommand.parse(argv)
-  if parsed.err: print(reporter.renderUsageError(parsed.error)); return 2
+  if parsed.err: print(reporter.renderError(parsed.error)); return 2   # UsageError は ClassifiedError の一員
   switch parsed.subcommand:
     "help"    -> print(reporter.renderHelp()); return 0        # サブコマンドなし=ヘルプ(US-A3、暗黙実行なし)
     "install" -> return runInstall(parsed)
@@ -25,20 +25,27 @@ runInstall(parsed):
   missing = parsed.missingRequiredFor(mode)
   if mode == "non-interactive" && missing.nonEmpty:
     return usageError(UsageError.missingRequired(missing))     # FR-011。--force は補完しない(FR-009)
-  answers = (mode == "interactive" && missing.nonEmpty) ? runWizard(missing, tty) : fromFlags(parsed)  # US-A2
+  if mode == "interactive" && missing.nonEmpty:
+    wiz = runWizard(parsed, missing, tty)                      # US-A2(ワークフロー3)
+    if wiz.err: print("中断しました"); return 1                 # 最終確認の拒否 = 明示的中断(BR-I18)
+    inputs = wiz.ok
+  else:
+    inputs = InstallInputs.fromFlags(parsed)                   # フラグ完備経路(BR-I03 検査済み)
 
-  installation = Installation.detect(answers.target, manifestIo)
+  installation = Installation.detect(inputs.target, manifestIo)
   admission = installation.admitsInstall(parsed.force)         # FR-004 の判断は installation が所有
   if admission.type == "refuse-suggest-upgrade":
     print(reporter.renderAlreadyInstalled(admission)); return 1  # 中断+upgrade 案内。ファイル無変更
 
   version = resolver.resolve(parsed.version)                   # U1(FR-006)
-  if version.err: print(reporter.renderResolveError(...)); return 1
+  if version.err: print(reporter.renderError(version.error)); return 1
   payload = fetcher.fetchArchive(version.ok, tmpDir)           # U1(FR-012: 1リトライ+分類)
-  if payload.err: print(reporter.renderFetchError(...)); return 1
+  if payload.err: print(reporter.renderError(payload.error)); return 1
 
-  plan = Plan.forInstall(payload.ok, answers.harness, answers.target, { force: parsed.force, startedAt: now() })
-  if plan.err: print(reporter.renderRefusal(plan.error)); return 1
+  plan = Plan.forInstall(payload.ok, inputs.harness, inputs.target, { force: parsed.force, startedAt: now() })
+  # 注: Plan.forInstall は component-methods.md の planInstall(payload, target, opts) を本設計で置換する正式契約
+  #     (harness 引数の明示化+Result 化。プラン時に配布物 md5 / required を PlanEntry へ計算格納)
+  if plan.err: print(reporter.renderError(plan.error)); return 1
   print(reporter.renderPlanReport(plan.ok))                    # 適用前レポート(FR-007。非対話でも必ず出力)
 
   if plan.ok.hasConflicts():                                   # FR-010
@@ -46,23 +53,34 @@ runInstall(parsed):
     elif mode == "interactive": if !confirm(tty): return 1     # 確認して続行
     else: return 1                                             # 非対話は中断(レポートは出力済み)
 
-  applied = applier.apply(plan.ok, answers.target)             # 退避→コピー(FR-008 は Disposition 経由)
-  manifest = Manifest.build(payload.ok, files(applied), meta(parsed, version.ok, plan.ok.backupTimestamp))
-  manifestIo.write(answers.target, manifest)                   # FR-016
-  verify = verifier.verify(answers.target, manifest)           # FR-013
+  applied = applier.apply(plan.ok, inputs.target)              # 退避→コピー(FR-008 は Disposition 経由)
+  if applied.hasFailures():                                    # 部分失敗を成功へ流さない(サイレント失敗禁止)
+    print(reporter.renderApplyFailure(applied)); return 1      #   マニフェストは書かず、次回 detect が partial を検出する
+
+  files = applied.manifestFiles()                              # PlanEntry の md5/required から正準射影(FR-016)
+  if files.err: print(reporter.renderError(files.error)); return 1
+  manifest = Manifest.build(payload.ok, files.ok, InstallMeta.of(SETUP_VERSION, inputs.harness, plan.ok.backupTimestamp))
+  written = manifestIo.write(inputs.target, manifest)          # FR-016
+  if written.err: print(reporter.renderError(written.error)); return 1  # I/O 境界の明示分岐
+
+  verify = verifier.verify(inputs.target, manifest)            # FR-013
   if !verify.allPassed(): print(reporter.renderVerifyFailure(verify)); return 1
-  print(reporter.renderSuccess(applied, verify, NextSteps(...)))  # US-A6
+  print(reporter.renderSuccess(applied, verify, NextSteps.of(inputs.harness, version.ok, inputs.target)))  # US-A6
   return 0
 ```
+
+- `renderApplyFailure(applied)` は Reporter API に追加(domain-entities の Reporter API 節参照。renderError と同格の失敗系描画)
+- `SETUP_VERSION` は setup パッケージ自身の semver 定数(FR-017。package.json と同期)
 
 ## ワークフロー 3: 対話ウィザード(US-A2)
 
 ```
-runWizard(missing, tty):
-  if missing.has("harness"): harness = tty.select("ハーネスを選択", HarnessName.all)   # FR-003(4択)
-  if missing.has("target"):  target  = tty.input("導入先", default: cwd)               # 対話のみ cwd 既定(CLI Contract)
-  tty.confirm(summary(harness, target))                                                # 展開前の最終確認
-  return WizardAnswers(...)
+runWizard(parsed, missing, tty): Result<InstallInputs, "wizard-aborted">
+  harness = missing.has("harness") ? tty.select("ハーネスを選択", HarnessName.all) : parsed.harness   # FR-003(4択)。指定済みは再質問しない(BR-I17)
+  target  = missing.has("target")  ? tty.input("導入先", default: cwd) : parsed.target                # 対話のみ cwd 既定
+  if !tty.confirm(summary(harness, target)):                    # 展開前の最終確認(BR-I18)
+    return err("wizard-aborted")                                # 拒否 = 中断(呼び出し側が終了コード1で終了。ファイル無変更)
+  return ok(InstallInputs(harness, target))                     # 内部ファクトリ
 ```
 
 - ウィザードは cli モジュールが所有し、TtyIO ポート経由(テストシームは DI — 本番コードにテスト分岐なし)
