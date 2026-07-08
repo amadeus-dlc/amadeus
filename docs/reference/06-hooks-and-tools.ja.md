@@ -301,18 +301,18 @@ Next Action: resume current stage
 **Registration:** `settings.json` の `statusLine`、`bun` 経由で呼び出される
 **Purpose:** ターミナルのステータスバーでのリアルタイムのワークフロー進捗
 
-**出力フォーマット:** `[AIDLC] PHASE [▓▓▓▓▓░░░░░] n/m > Display Name -- Agent`
+**出力フォーマット:** `[Amadeus-DLC] PHASE [▓▓▓▓▓░░░░░] n/m > Display Name -- Agent`
 
-特殊な状態: `[AIDLC] ready`(ワークフローなし)、`[AIDLC] COMPLETE [▓▓▓▓▓▓▓▓▓▓]`(完了)。
+特殊な状態: `[Amadeus-DLC] ready`(ワークフローなし)、`[Amadeus-DLC] COMPLETE [▓▓▓▓▓▓▓▓▓▓]`(完了)。
 
 **処理ステップ:**
 
 1. **プロジェクトディレクトリ解決:** 4つのフォールバック手法(stdin JSON `workspace.project_dir`、`$CLAUDE_PROJECT_DIR`、`fileURLToPath` 経由のスクリプトパス、CWD)。
-2. **Ready フォールバック:** 状態ファイルが存在しないかフェーズが空の場合、`[AIDLC] ready` を出力する。
+2. **Ready フォールバック:** 状態ファイルが存在しないかフェーズが空の場合、`[Amadeus-DLC] ready` を出力する。
 3. **状態抽出:** 状態ファイルから Phase、Stage、Agent を単一ファイルの正規表現で読む。ステージのslugを表示名にマップする。`-agent` サフィックスを取り除く。
 4. **フェーズスコープの進捗:** 現在のフェーズ見出し(`### <Lifecycle Phase> PHASE`)の下の `[x]` チェックボックスを、SKIP と `[S]`(ジャンプでスキップ)のステージを除いてカウントする。`{done, total}` を生成し、これが10文字のunicodeバー(`floor(done·10/total)` 経由の `▓`/`░`)と `done/total` の比率(例 `4/7`)の両方を駆動する。バーと比率は1つのスコープを共有し、一緒に進む。
 5. **モデル + コンテキスト:** stdin JSONからモデルIDとコンテキスト割合を抽出する。Bedrockプレフィックスを `BR:` に短縮し、コンテキストを緑/黄/赤で色付けする。
-6. **完了検出:** Status が `Completed` なら `[AIDLC] COMPLETE [bar]` を出力する。
+6. **完了検出:** Status が `Completed` なら `[Amadeus-DLC] COMPLETE [bar]` を出力する。
 7. **グレースフルデグラデーション:** 各セグメントは値がある場合のみ追記される。
 
 ---

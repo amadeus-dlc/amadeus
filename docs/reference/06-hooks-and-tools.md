@@ -301,18 +301,18 @@ Next Action: resume current stage
 **Registration:** `settings.json` under `statusLine`, invoked via `bun`
 **Purpose:** Real-time workflow progress in the terminal status bar
 
-**Output format:** `[AIDLC] PHASE [▓▓▓▓▓░░░░░] n/m > Display Name -- Agent`
+**Output format:** `[Amadeus-DLC] PHASE [▓▓▓▓▓░░░░░] n/m > Display Name -- Agent`
 
-Special states: `[AIDLC] ready` (no workflow), `[AIDLC] COMPLETE [▓▓▓▓▓▓▓▓▓▓]` (finished).
+Special states: `[Amadeus-DLC] ready` (no workflow), `[Amadeus-DLC] COMPLETE [▓▓▓▓▓▓▓▓▓▓]` (finished).
 
 **Processing steps:**
 
 1. **Project directory resolution:** 4 fallback methods (stdin JSON `workspace.project_dir`, `$CLAUDE_PROJECT_DIR`, script path via `fileURLToPath`, CWD).
-2. **Ready fallback:** Outputs `[AIDLC] ready` if no state file exists or phase is empty.
+2. **Ready fallback:** Outputs `[Amadeus-DLC] ready` if no state file exists or phase is empty.
 3. **State extraction:** Reads Phase, Stage, Agent from state file via single-file regex. Maps stage slugs to display names. Strips `-agent` suffix.
 4. **Phase-scoped progress:** Counts `[x]` checkboxes under the current phase heading (`### <Lifecycle Phase> PHASE`), excluding SKIP and `[S]` (jump-skipped) stages. Produces `{done, total}` which feeds both the 10-char unicode bar (`▓`/`░` via `floor(done·10/total)`) and the `done/total` ratio (e.g. `4/7`). Bar and ratio share one scope so they advance together.
 5. **Model + context:** Extracts model ID and context percentage from stdin JSON. Abbreviates Bedrock prefix to `BR:`, colors context green/yellow/red.
-6. **Complete detection:** If Status is `Completed`, outputs `[AIDLC] COMPLETE [bar]`.
+6. **Complete detection:** If Status is `Completed`, outputs `[Amadeus-DLC] COMPLETE [bar]`.
 7. **Graceful degradation:** Each segment is appended only if it has a value.
 
 ---

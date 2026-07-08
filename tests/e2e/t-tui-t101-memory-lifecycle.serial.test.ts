@@ -220,7 +220,7 @@ describe("t-tui-t101 (memory.md start→approval lifecycle through a driven gate
           drive(["send", "--session", session, "--keys", "2"]);
         }
         // Seeded mid-ideation state -> the statusline paints the WORKFLOW line
-        // ([AIDLC] IDEATION), not the no-workflow "ready" line.
+        // ([Amadeus-DLC] IDEATION), not the no-workflow "ready" line.
         expect(waitFor(session, "\\[AIDLC\\].*IDEATION", 45000, 800)).toBe(true);
 
         // --- jump to the approval-handoff gate stage -------------------------

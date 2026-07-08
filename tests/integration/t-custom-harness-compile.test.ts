@@ -266,7 +266,7 @@ describe("t-custom-harness-compile (deterministic — harness-engineer edits res
       // minimal state naming the custom agent as active, pipe the workspace JSON to
       // the hook, and assert the derived display renders.
       // The statusline renders the agent display only for an ACTIVE workflow —
-      // it prints "[AIDLC] ready" unless Lifecycle Phase + Current Stage are
+      // it prints "[Amadeus-DLC] ready" unless Lifecycle Phase + Current Stage are
       // present (amadeus-statusline.ts). Seed the same minimal CONSTRUCTION shape
       // t61's statusline proof uses. P9: the statusline reads the ACTIVE INTENT's
       // state via stateFilePath(), so seed into the per-intent record

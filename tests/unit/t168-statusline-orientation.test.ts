@@ -1,7 +1,7 @@
 // covers: hook:amadeus-statusline
 //
 // t168 — the P8 statusline ORIENTATION PREFIX. The statusline always tells the
-// user which world they're in: `[AIDLC] <space> · <intent-slug> · <phase> …`.
+// user which world they're in: `[Amadeus-DLC] <space> · <intent-slug> · <phase> …`.
 // Two invisibility rules (vision §3 / §11.2) keep it out of the single-team
 // user's face:
 //   - the "<space> ·" segment renders ONLY when more than one space exists
@@ -28,7 +28,7 @@
 //
 // Empty-state: a project with no record (no birth) hits the hook's :233 no-op
 // gate (stateFilePath resolves the flat fallback, which is absent) and paints
-// the bare "[AIDLC] ready" — proving the prefix never leaks onto the no-workflow
+// the bare "[Amadeus-DLC] ready" — proving the prefix never leaks onto the no-workflow
 // line and the pre-auto-birth workspace renders cleanly, not an error.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
@@ -114,21 +114,21 @@ describe("t168 statusline orientation prefix (mechanism cli — spawned hook + p
     expect(out).toContain("teamB · export-bug · CONSTRUCTION");
   });
 
-  test("empty state (no record) paints the bare `[AIDLC] ready` — no prefix leak", () => {
+  test("empty state (no record) paints the bare `[Amadeus-DLC] ready` — no prefix leak", () => {
     // No birth: stateFilePath resolves the flat fallback (absent) → the hook's
-    // no-state gate paints "[AIDLC] ready", with no orientation prefix.
+    // no-state gate paints "[Amadeus-DLC] ready", with no orientation prefix.
     const out = runStatusline(proj);
-    expect(out).toContain("[AIDLC] ready");
+    expect(out).toContain("[Amadeus-DLC] ready");
     expect(out).not.toContain(" · ");
   });
 
-  test("a record with no resolvable phase still paints bare `[AIDLC] ready` (graceful)", () => {
+  test("a record with no resolvable phase still paints bare `[Amadeus-DLC] ready` (graceful)", () => {
     // Birth leaves a header-only stub (no Lifecycle Phase) — the hook's !phase
     // gate fires BEFORE the orientation prefix is computed, so the no-workflow
     // line stays clean even with an active record.
     birthIntent(proj, "stub-only", "default");
     const out = runStatusline(proj);
-    expect(out).toContain("[AIDLC] ready");
+    expect(out).toContain("[Amadeus-DLC] ready");
     expect(out).not.toContain("stub-only");
   });
 });

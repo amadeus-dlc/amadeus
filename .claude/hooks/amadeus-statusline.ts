@@ -56,6 +56,8 @@ function contextColor(pct: number): string {
 }
 
 const RESET = "\x1b[0m";
+const STATUSLINE_LABEL = "Amadeus-DLC";
+const STATUSLINE_PREFIX = `[${STATUSLINE_LABEL}]`;
 
 const STAGE_DISPLAY: Record<string, string> = {
   "workspace-scaffold": "Workspace Scaffold",
@@ -230,7 +232,7 @@ async function main(): Promise<void> {
 
   const stateFile = projectDir ? stateFilePath(projectDir) : "";
   if (!stateFile || !existsSync(stateFile)) {
-    printLine("[AIDLC] ready", right);
+    printLine(`${STATUSLINE_PREFIX} ready`, right);
     return;
   }
 
@@ -248,11 +250,11 @@ async function main(): Promise<void> {
   const phaseProg = total > 0 ? `${done}/${total}` : "";
 
   if (!phase) {
-    printLine("[AIDLC] ready", right);
+    printLine(`${STATUSLINE_PREFIX} ready`, right);
     return;
   }
   // Orientation prefix — only computed once a record is active (the state file
-  // resolved above), so the empty-state "[AIDLC] ready" lines never carry it.
+  // resolved above), so the empty-state ready lines never carry it.
   const prefix = orientationPrefix(projectDir);
   if (status === "Completed" || status === "Complete") {
     // At workflow completion, show a full bar even if Lifecycle Phase no longer
@@ -260,11 +262,11 @@ async function main(): Promise<void> {
     // sentinel or leaves the phase stale). Keep the natural bar when phaseProgress
     // could resolve it so tests that seed a real terminal phase still see 10/10.
     const completeBar = bar || `[${"▓".repeat(10)}]`;
-    printLine(`[AIDLC] ${prefix}COMPLETE ${completeBar}`, right);
+    printLine(`${STATUSLINE_PREFIX} ${prefix}COMPLETE ${completeBar}`, right);
     return;
   }
 
-  let output = `[AIDLC] ${prefix}${phase}`;
+  let output = `${STATUSLINE_PREFIX} ${prefix}${phase}`;
   if (bar) output += ` ${bar}`;
   if (phaseProg) output += ` ${phaseProg}`;
   if (stageDisplay) output += ` > ${stageDisplay}`;

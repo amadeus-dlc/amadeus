@@ -195,7 +195,7 @@ Safe to run at any time when no AI-DLC workflow is actively executing. Locks are
 
 ### Shows "ready" when workflow is active
 
-The statusline reads the `**Lifecycle Phase**` field from `amadeus-state.md`. If that field is missing or empty, it falls back to `[AIDLC] ready`.
+The statusline reads the `**Lifecycle Phase**` field from `amadeus-state.md`. If that field is missing or empty, it falls back to `[Amadeus-DLC] ready`.
 
 **Fix:** Run `/amadeus --doctor` to check state file integrity. Verify the `## Current Status` section contains a `**Lifecycle Phase**` entry.
 
@@ -207,7 +207,7 @@ Expected behavior — the statusline updates when the state file is next written
 
 1. `bun` not on PATH -- the statusline is invoked as `bun .claude/hooks/amadeus-statusline.ts`
 2. Missing `settings.json` block -- verify the `statusLine` configuration exists
-3. No state file -- the statusline correctly shows `[AIDLC] ready` when no workflow is active
+3. No state file -- the statusline correctly shows `[Amadeus-DLC] ready` when no workflow is active
 
 ---
 

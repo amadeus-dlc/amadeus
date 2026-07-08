@@ -21,7 +21,7 @@
 //     Minimal` (the .sh's `Depth.*Minimal` grep) + audit.md has a DEPTH_CHANGED
 //     event (the .sh's `DEPTH_CHANGED` grep). Assert RENDERED: the pane shows the
 //     printed confirmation `Depth changed: Standard → Minimal` (:2415) AND the
-//     workflow statusline `[AIDLC] IDEATION` is still painted (the override does
+//     workflow statusline `[Amadeus-DLC] IDEATION` is still painted (the override does
 //     not start/stop a workflow). Stronger than the .sh: the .sh greps a loose
 //     `Depth.*Minimal`; we additionally pin the OLD->NEW transition (Standard ->
 //     Minimal) in both the rendered confirmation and the implicit audit delta.
@@ -59,7 +59,7 @@
 // (b) that the workflow statusline row survives the override (the workflow was not
 // torn down or started). Both the confirmation text and the disk landing are also
 // visible to the SDK path's stdout — the genuinely-unique tui observation is only
-// the persisting `[AIDLC] IDEATION` row. This is the honest render surface for a
+// the persisting `[Amadeus-DLC] IDEATION` row. This is the honest render surface for a
 // config-only command; we assert it rather than pretend depth paints somewhere.
 //
 // COST: spends real Bedrock tokens (the orchestrator LLM reads SKILL.md and shells
@@ -288,7 +288,7 @@ describe("t-tui-t27 depth override (config-change lands + renders)", () => {
         // --- RENDER value-add (NON-PROSE, the tui-only signal) -----------------
         // The workflow statusline row SURVIVES the override (a config-only command
         // does not tear down / start a workflow). Depth is not a statusline field,
-        // and the confirmation prose is LLM-reworded, so the persisting `[AIDLC]
+        // and the confirmation prose is LLM-reworded, so the persisting `[Amadeus-DLC]
         // IDEATION` row is the honest, deterministic tui-only observation here —
         // what the headless SDK path could not see, asserted without grepping prose.
         expect(pane).toContain("· IDEATION");
