@@ -1,7 +1,8 @@
 # Business Logic Model — upgrade-flow
 
 > ステージ: functional-design (3.1) / Unit: upgrade-flow / 作成: 2026-07-08
-> 上流入力: `../../../inception/units-generation/unit-of-work.md`(U3)・`unit-of-work-story-map.md`(US-B1〜B5)、`../../../inception/requirements-analysis/requirements.md`(FR-005/007/008/009/016)、`../../../inception/application-design/services.md`(直列パイプライン)、`../../setup-foundation/functional-design/`(U1)、`../../install-flow/functional-design/`(U2 の共有基盤)
+> 上流入力: `../../../inception/units-generation/unit-of-work.md`(U3)・`unit-of-work-story-map.md`(US-B1〜B5)、`../../../inception/requirements-analysis/requirements.md`(FR-005/007/008/009/016)、`../../../inception/application-design/components.md`(planner が分類+md5 照合を一元所有する境界)・`component-methods.md`・`services.md`(直列パイプライン)、`../../setup-foundation/functional-design/`(U1)、`../../install-flow/functional-design/`(U2 の共有基盤)
+> 置換注記: `component-methods.md` の `planUpgrade(payload, installation, opts)` ベアスケッチは本設計の `Plan.forUpgrade(payload, source, harness, target, opts)` が正式契約として置換する(U2 の Plan.forInstall と同じ扱い)
 
 ## ワークフロー 1: upgrade オーケストレーション
 
@@ -24,12 +25,13 @@ runUpgrade(parsed):
   version = resolver.resolve(parsed.version)                                        # U1(FR-006)
   if version.err: print(reporter.renderError(version.error)); return 1
 
-  if source.ok.kind == "manifested":                                                # バージョン境界(FR-005 の5ケース)
-    assessment = UpgradeAssessment.of(installedVersionOf(source.ok), version.ok, parsed.version)
+  assessment = source.ok.assess(version.ok, parsed.version)                        # バージョン境界(FR-005)。判定材料はsource が封入(マニフェストを晒さない)
+  if assessment != null:                                                            # null = 導入版不明(manual-or-unknown / partial-forced)→ 境界判定なしで保守的プランへ
     outcome = assessment.outcome()
-    if outcome.type != "proceed": print(reporter.renderError(toRefusal(outcome))); return outcome.type == "already-up-to-date" ? 0 : 1
-    # already-up-to-date は成功扱い(変更不要)、downgrade / installed-newer は非ゼロ(要求は満たされない)— いずれも無変更
-  # manual-or-unknown / partial-forced は導入版が不明のため境界判定をスキップし、保守的プランへ直行
+    if outcome.type != "proceed":
+      print(reporter.renderError(UpgradeRefusal.fromOutcome(outcome)))
+      return outcome.type == "already-up-to-date" ? 0 : 1
+      # already-up-to-date は成功扱い(変更不要)、downgrade / installed-newer は非ゼロ — いずれも無変更
 
   payload = fetcher.fetchArchive(version.ok, tmpDir)                                # U1(FR-012)
   if payload.err: print(reporter.renderError(payload.error)); return 1
@@ -48,9 +50,8 @@ runUpgrade(parsed):
 
   files = applied.manifestFiles()
   if files.err: print(reporter.renderError(files.error)); return 1
-  newManifest = (source.ok.kind == "manifested")
-    ? existingManifest.upgradedTo({ payload: payload.ok, files: files.ok, meta })   # U1: イミュータブル更新
-    : Manifest.build(payload.ok, files.ok, meta)                                    # manual-or-unknown: 初回マニフェスト化
+  meta = { installerPackageVersion: SETUP_VERSION, harness: inputs.harness, installStartedAt: plan.ok.backupTimestamp }
+  newManifest = source.ok.nextManifest({ payload: payload.ok, files: files.ok, meta })  # BR-U14 の分岐は source が所有(manifested→upgradedTo / それ以外→build)
   written = manifestIo.write(inputs.target, newManifest)                            # FR-016(バージョン更新)
   if written.err: print(reporter.renderError(written.error)); return 1
 
@@ -59,8 +60,7 @@ runUpgrade(parsed):
   print(reporter.renderSuccess(applied, verify, NextSteps.of(inputs.harness, version.ok, inputs.target)))
   return 0
 
-  # meta = { installerPackageVersion: SETUP_VERSION, harness: inputs.harness, installStartedAt: plan.ok.backupTimestamp }
-  # installedVersionOf(source) = manifested の場合のマニフェスト distributionVersion
+
 ```
 
 ## ワークフロー 2: プラン作成(Plan.forUpgrade 内部 — Disposition 駆動)
@@ -75,19 +75,16 @@ Plan.forUpgrade(payload, source, harness, target, opts):
       entries.push(add, md5: newMd5)
     else:
       actualMd5 = md5Of(target/file.relPath)                    # 対象側の現状
-      disposition = dispositionOf(source, file, actualMd5)      # 下記
-      entries.push(mapToAction(disposition), md5: newMd5, forced: opts.force && ...)
+      disposition = source.dispositionFor(file.relPath, file.class, actualMd5)
+      # manifested: manifest.dispositionFor への委譲そのもの(BR-U11 — Plan.forUpgrade 側に判定 if を書かない)
+      # manual-or-unknown 系: source 内部の保守的判定(委譲先マニフェストが存在しないため)
+      entries.push(toPlanAction(disposition), md5: newMd5, forced: opts.force && disposition.type == "backup-then-copy")
   return ok(createPlan(entries, opts.startedAt))
 
-dispositionOf(source, file, actualMd5):
-  expected = source.expectedMd5For(file.relPath)
-  if file.class == "owned": return overwrite                    # フレームワーク所有(amadeus-* 規約)
-  if file.class == "user-preserved": return preserve
-  # shared:
-  if expected != null && expected == actualMd5: return overwrite   # 未変更(FR-008)
-  return backup-then-copy                                          # 変更済み or 期待値なし(manual-or-unknown 含む)
+toPlanAction(disposition):                                      # planner モジュール所有の写像(固定表)
+  overwrite → update / backup-then-copy → backup / preserve → skip
 ```
 
-- **Disposition → PlanAction の写像**: overwrite→update / backup-then-copy→backup / preserve→skip、非存在→add
-- manifested の場合の `expectedMd5For` は U1 の `manifest.dispositionFor` と同一判定になる(UpgradeSource がマニフェストを封入して委譲)— 判定ロジックの二重実装はしない
+- **Disposition → PlanAction の写像**は上記 `toPlanAction`(planner 所有)に固定。非存在→add
+- 処遇判定そのものは `source.dispositionFor` が所有し、manifested では U1 `manifest.dispositionFor` の呼び出しに一致する(判定ロジックの二重実装はしない — BR-U11)
 - 退避ファイル名は `${path}.${plan.backupTimestamp}.bk`(FR-008、単一タイムスタンプ — U2 applier の既存契約)

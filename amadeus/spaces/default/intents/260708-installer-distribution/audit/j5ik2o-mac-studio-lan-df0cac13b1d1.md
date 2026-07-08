@@ -7438,3 +7438,36 @@
 **Findings count**: 2
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T07:09:02Z
+**Event**: WORKFLOW_PARKED
+**Stage**: functional-design
+**Timestamp**: 2026-07-08T07:09:02Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T07:12:38Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a5cc629c7013dbf6a
+**Message**: npm インストーラ @amadeus-dlc/setup の AI-DLC ワークフローを進行中で、現在は Construction の機能設計(5ユニット中3つ目 upgrade-flow)のレビュー待ちです。レビュアーの判定が届き次第、是正または次ユニット(publish-readiness)へ進みます。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T07:13:49Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: fd-review-u3
+**Agent ID**: afd-review-u3-59397ab3d84ac409
+**Message**: U3(upgrade-flow)の functional design レビューを完了し、team-lead へ結果を送信しました。\n\n**判定: NOT-READY**(7件の指摘)\n\n主な問題点:\n1. `UpgradeRefusal` のバリアント `UpgradeOutcome_NonProceed` が未定義(宙づり型参照)\n2. `toRefusal` 関数がどこにも定義されていない(
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T07:14:56Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T07:14:56Z
+
+---

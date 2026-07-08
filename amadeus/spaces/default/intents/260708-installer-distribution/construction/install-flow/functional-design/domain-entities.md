@@ -200,7 +200,7 @@ export namespace Verifier {
 ### Reporter API(本 Unit で正式化 — component-methods.md の3関数スケッチを置換)
 
 ```ts
-export type ClassifiedError = UsageError | ResolveError | FetchError | ManifestError | PlanRefusal;
+export type ClassifiedError = UsageError | ResolveError | FetchError | ManifestError | PlanRefusal | UpgradeRefusal;  // UpgradeRefusal は U3 定義(U3 の是正で合流 — renderError の単一入口を維持)
 
 // reporter の公開 API(application-design/component-methods.md の renderPlanReport/renderError/renderSuccess を本設計で拡張・確定)
 renderHelp(): string

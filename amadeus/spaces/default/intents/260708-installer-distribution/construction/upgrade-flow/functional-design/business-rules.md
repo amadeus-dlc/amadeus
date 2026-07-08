@@ -20,14 +20,14 @@
 | BR-U06 | 認識可能な導入なし → no-installation で install を案内し無変更終了 |
 | BR-U07 | 非対応旧レイアウト → unsupported-layout で無変更終了 |
 | BR-U08 | 部分導入 × 非対話 × --force なし → partial-refused で無変更終了。--force ありは partial-forced として保守的続行 |
-| BR-U09 | manual-or-unknown の期待 md5 は常に null — 既存共有ファイルは全件退避してからコピー(保守的既定、FR-008) |
+| BR-U09 | manual-or-unknown 系の `source.dispositionFor` は期待 md5 を持たないため、既存共有ファイルを全件退避してからコピー(保守的既定、FR-008) |
 
 ## 処遇・退避ルール(FR-008/009)
 
 | ID | ルール |
 |----|--------|
 | BR-U10 | Disposition → PlanAction 写像は overwrite→update / backup-then-copy→backup / preserve→skip / 非存在→add に固定 |
-| BR-U11 | manifested の期待 md5 判定は U1 `manifest.dispositionFor` へ委譲(UpgradeSource が封入)— 判定ロジックを二重実装しない(意図ベースの重複排除) |
+| BR-U11 | manifested の処遇判定は `source.dispositionFor` 経由で U1 `manifest.dispositionFor` の呼び出しへ**そのまま委譲**(UpgradeSource がマニフェストを封入し経路のみ提供)— 判定ロジックを二重実装しない。独自判定は委譲先が存在しない manual-or-unknown 系に限定 |
 | BR-U12 | `--force` 下でも退避(backup-then-copy)は免除されない(FR-009。NFR-002 のサイレント破壊禁止) |
 | BR-U13 | upgrade に conflict アクションは存在しない — 既存ファイルの処遇は Disposition が全決定するため、非対話でもレポート出力後に適用へ進む(FR-010 の中断要件は install 固有) |
 

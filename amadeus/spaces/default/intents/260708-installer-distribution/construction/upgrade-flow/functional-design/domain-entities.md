@@ -15,6 +15,9 @@ export type UpgradeOutcome =
   | { readonly type: "downgrade-unsupported"; readonly installed: SemVer; readonly requested: SemVer }
   | { readonly type: "installed-newer-than-latest"; readonly installed: SemVer; readonly latest: SemVer };
 
+export type UpgradeOutcomeNonProceed = Exclude<UpgradeOutcome, { readonly type: "proceed" }>;
+// = already-up-to-date | downgrade-unsupported | installed-newer-than-latest(無変更終了系の3変種)
+
 export type UpgradeAssessment = {
   outcome(): UpgradeOutcome;                 // 境界判断は assessment 自身が答える(Tell, Don't Ask)
   isActionable(): boolean;                   // outcome().type === "proceed" の意図明示版
@@ -36,30 +39,58 @@ export type UpgradeRefusal =
   | { readonly type: "no-installation" }                                         // install を案内(FR-005)
   | { readonly type: "unsupported-layout"; readonly detail: string }             // 非対応旧レイアウト — 無変更終了
   | { readonly type: "partial-refused"; readonly missing: readonly string[] }    // 部分導入×非対話×非force(FR-005)
-  | UpgradeOutcome_NonProceed;                                                   // already-up-to-date / downgrade / installed-newer(無変更終了系)
+  | UpgradeOutcomeNonProceed;                                                    // 上記で定義済みの無変更終了系3変種
 
-export namespace UpgradeRefusal { /* variant ファクトリ。U2 の ClassifiedError には UpgradeRefusal を合流させる(Reporter API 拡張) */ }
+export namespace UpgradeRefusal {
+  export function fromOutcome(outcome: UpgradeOutcomeNonProceed): UpgradeRefusal;  // 境界判定の非 proceed を描画用 Refusal へ(旧 toRefusal の正式化)
+  export function noInstallation(): UpgradeRefusal;
+  export function unsupportedLayout(detail: string): UpgradeRefusal;
+  export function partialRefused(missing: readonly string[]): UpgradeRefusal;
+}
 ```
 
-- U2 の `PlanRefusal`(install 側)とは独立の判別ユニオンとし、`ClassifiedError` の合併に `UpgradeRefusal` を追加する(U2 Reporter API の `renderError` が単一入口のまま描画できる)
+- U2 の `PlanRefusal`(install 側)とは独立の判別ユニオン。**`ClassifiedError` の拡張は型として U2 側に宣言済み**(U2 domain-entities の Reporter API 節を本 Unit の是正で改訂: `ClassifiedError = UsageError | ResolveError | FetchError | ManifestError | PlanRefusal | UpgradeRefusal`)— `renderError` が単一入口のまま描画できる
 
 ### UpgradeSource(更新元の分類 — 導入状態からの処遇戦略)
 
 ```ts
 export type UpgradeSource = {
   readonly kind: "manifested" | "manual-or-unknown" | "partial-forced";
-  expectedMd5For(path: string): string | null;   // manifested: マニフェスト期待値 / manual-or-unknown: 常に null(保守的 — 全共有ファイル退避)
+  dispositionFor(path: string, cls: FileClass, actualMd5: string): Disposition;
+  // manifested: 封入した Manifest の manifest.dispositionFor(path, actualMd5) へ**そのまま委譲**(判定の二重実装なし — BR-U11)
+  // manual-or-unknown / partial-forced: 委譲先マニフェストが存在しないため独自の保守的判定
+  //   (owned→overwrite / user-preserved→preserve / shared→backup-then-copy。期待 md5 を持たないので shared は常に退避)
+  assess(resolved: ResolvedVersion, spec: VersionSpec): UpgradeAssessment | null;
+  // manifested: 封入マニフェストの distributionVersion を installed として UpgradeAssessment.of を構築
+  // manual-or-unknown / partial-forced: 導入版不明のため null(境界判定なし — BR-U05)
+  nextManifest(input: BuildInput): Manifest;
+  // manifested: manifest.upgradedTo(input)(U1 のイミュータブル更新)/ それ以外: Manifest.build(...)(初回マニフェスト化)— BR-U14 の分岐を持ち主が所有
   strategyNote(): string;                        // レポートに載せる戦略説明(保守的プラン等)
 };
 
 export namespace UpgradeSource {
   export function fromInstallation(installation: Installation, force: boolean): Result<UpgradeSource, UpgradeRefusal>;
-  // Installation(U2)から更新元戦略へ: none → no-installation、partial×非force → partial-refused、
-  // unsupported layout → unsupported-layout。判定は Installation の証跡を封入して行う
+  // Installation(U2)からの変換: none → err(no-installation)、partial×非force → err(partial-refused)、
+  // manual-or-unknown で LegacyLayout.isUnsupported(evidence) → err(unsupported-layout)。
+  // manifested のときは installation.manifest(U2 の manifested 変種が持つフィールド)を封入する — 呼び出し側にマニフェストを晒さない
 }
 ```
 
-- **FR-005 の「manual-or-unknown は保守的に」の実体**: `expectedMd5For` が null を返す → U1 の `manifest.dispositionFor` 相当の判定が「期待値なし=退避してからコピー」に落ちる(FR-008 の既定)
+- **委譲の実体(BR-U11)**: manifested の処遇判定は `manifest.dispositionFor` の呼び出しそのものであり、UpgradeSource は経路(Law of Demeter の遮蔽)のみを提供する。独自ロジックは「委譲先が存在しない」manual-or-unknown 系だけに限定し、その理由を型コメントに明記
+
+### LegacyLayout(非対応旧レイアウトの判定規則 — FR-005)
+
+```ts
+export namespace LegacyLayout {
+  export function isUnsupported(evidence: readonly string[]): { unsupported: boolean; detail: string };
+  // 判定規則(テスト可能に固定):
+  //   (a) VERSION ファイルが存在するが SemVer として解釈不能(現行規約以前の内容)、または
+  //   (b) amadeus-* プレフィックスのファイルが存在するのに、現行レイアウトの必須アンカー
+  //       (<engine-dir>/tools/ と <engine-dir>/amadeus-common/)が両方とも欠落している
+  // → 「現行 dist 形状より古い認識可能レイアウト」= unsupported-layout(無変更終了)。
+  //    アンカーが揃っていれば カスタマイズ済みでも manual-or-unknown(保守的プラン)に留まる
+}
+```
 
 ### Plan.forUpgrade(U2 Plan の upgrade 側ファクトリ — 本 Unit が規定)
 
@@ -84,7 +115,7 @@ export namespace Plan {
 ```mermaid
 flowchart LR
   INST[Installation U2] --> US[UpgradeSource]
-  US -->|expectedMd5For| PLN[Plan.forUpgrade]
+  US -->|dispositionFor| PLN[Plan.forUpgrade]
   MF[Manifest U1] --> UA[UpgradeAssessment]
   RV[ResolvedVersion U1] --> UA
   UA -->|outcome: proceed| PLN
@@ -93,10 +124,10 @@ flowchart LR
   APL -->|manifest.upgradedTo| MF2[新 Manifest]
 ```
 
-<!-- text fallback: U2 の Installation から UpgradeSource が作られ(none/partial は UpgradeRefusal へ)、U1 の Manifest の導入版と ResolvedVersion から UpgradeAssessment が境界判定を返す。proceed のときだけ Plan.forUpgrade が UpgradeSource.expectedMd5For を使ってプランを作り、U2 の applier で適用され、manifest.upgradedTo で新 Manifest が書かれる。 -->
+<!-- text fallback: U2 の Installation から UpgradeSource が作られ(none/partial/旧レイアウトは UpgradeRefusal へ)、source.assess が封入マニフェストの導入版と ResolvedVersion から UpgradeAssessment(境界判定)を返す。proceed のときだけ Plan.forUpgrade が source.dispositionFor(manifested は manifest.dispositionFor へ委譲)を使ってプランを作り、U2 の applier で適用され、source.nextManifest(manifested は manifest.upgradedTo)で新 Manifest が書かれる。 -->
 
 ## U1/U2 との契約
 
 - U1 から: SemVer / VersionSpec / ResolvedVersion / ExtractedPayload / Manifest(`dispositionFor` / `isNewerThan` / `upgradedTo`)/ ManifestFiles / ManifestError / Disposition / FileClass / FetchError / HarnessName / InstallMeta / BuildInput
 - U2 から: Plan / PlanEntry / PlanAction / PlanOptions / Installation / ApplyResult / Applier / Verifier / Reporter API(`ClassifiedError` に `UpgradeRefusal` を合流)/ InstallInputs / ParsedCommand
-- 本 Unit が定義: UpgradeAssessment / UpgradeOutcome / UpgradeRefusal / UpgradeSource / `Plan.forUpgrade`
+- 本 Unit が定義: UpgradeAssessment / UpgradeOutcome / UpgradeOutcomeNonProceed / UpgradeRefusal / UpgradeSource / LegacyLayout / `Plan.forUpgrade`
