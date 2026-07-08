@@ -7001,3 +7001,54 @@
 **Timestamp**: 2026-07-08T06:40:02Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T06:41:01Z
+**Event**: WORKFLOW_PARKED
+**Stage**: functional-design
+**Timestamp**: 2026-07-08T06:41:01Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T06:41:21Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a41f2c6aa34cad824
+**Message**: origin/mainからrebaseして
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T06:44:27Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a793bf8c4762d4d02
+**Message**: npm インストーラ(@amadeus-dlc/setup)の AI-DLC ワークフローを実行中で、いまは Construction の functional-design(setup-foundation ユニット)のレビュー待ちです。レビュアーの READY 判定が出たら次ユニット install-flow の設計に進みます。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T06:45:38Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: fd-review-u1-r3i2
+**Agent ID**: afd-review-u1-r3i2-86a8342ee2e63d22
+**Message**: ## Review\n\nVerdict: NOT-READY\n\nまずiteration-1で指摘した5件の修正を検証した。\n\n1. **ダングリング型参照(ManifestJson/BuildInput/HttpMeta/InstallMeta)** — 解消を確認。`domain-entities.md:109`(HttpMeta)、`176-180`(InstallMeta)、`181-185`
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T06:46:24Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: fd-review-u1-r3i2
+**Agent ID**: afd-review-u1-r3i2-86a8342ee2e63d22
+**Message**: team-leadにレビュー結果(NOT-READY判定)を送信しました。\n\n**要点**: iteration-1で指摘した5件の修正(ダングリング型参照/HarnessName所有権/services.md参照/Object.freeze注記/表記統一)はすべて適切に解消されており、新たな矛盾も持ち込んでいません。\n\nただし新たに、`ManifestError`と`VersionError`と
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T06:47:10Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T06:47:10Z
+
+---

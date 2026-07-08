@@ -45,6 +45,19 @@ function createSemVer(major: number, minor: number, patch: number, prerelease: s
 }
 ```
 
+### VersionError(判別ユニオン)
+
+```ts
+export type VersionError =
+  | { readonly type: "invalid-format"; readonly raw: string; readonly reason: string };  // SemVer 構文違反("v" 正規化後も不一致)
+
+export namespace VersionError {
+  export function invalidFormat(raw: string, reason: string): VersionError;
+}
+```
+
+- `SemVer.parse` / `VersionSpec.exact` のエラーチャンネル。variant は現状1つだが、判別ユニオン+ファクトリの形を保ち将来の追加(例: 範囲指定)に備える
+
 ### VersionSpec(値オブジェクト)
 
 ```ts
@@ -196,6 +209,28 @@ export type ManifestJson = {                  // toJSON の射影形状 = 永続
 
 - 永続先: `<target>/amadeus/.installer/amadeus-setup-manifest.json`(ManifestIo が `Manifest.parse`/`manifest.toJSON()` 経由で読み書き)
 - `ManifestFiles` はクロージャに保持し公開フィールドにしない — 到達経路は `dispositionFor`/`requiredPaths` の意図明示メソッドのみ
+
+### ManifestError(判別ユニオン)
+
+```ts
+export type ManifestError =
+  | { readonly type: "schema-unsupported"; readonly found: unknown }          // schemaVersion が 1 でない(BR-F12)
+  | { readonly type: "malformed"; readonly detail: string }                   // 必須フィールド欠落・JSON 構文不良
+  | { readonly type: "unknown-harness"; readonly raw: string }                // harness 文字列が HarnessName.all の4値外(parse 往復整合の破れ)
+  | { readonly type: "duplicate-path"; readonly path: string }                // ManifestFiles.fromEntries の不変条件違反
+  | { readonly type: "io"; readonly detail: string };                         // ManifestIo の読み書き失敗(ファイル I/O 境界)
+
+export namespace ManifestError {
+  export function schemaUnsupported(found: unknown): ManifestError;
+  export function malformed(detail: string): ManifestError;
+  export function unknownHarness(raw: string): ManifestError;
+  export function duplicatePath(path: string): ManifestError;
+  export function io(detail: string): ManifestError;
+}
+```
+
+- `Manifest.parse` / `ManifestFiles.fromEntries` / `manifestIo.read`・`write` のエラーチャンネル。`ResolveError` と同じくプレーンな判別ユニオン+コンパニオンファクトリ(呼び出し側は `type` で網羅 switch)
+- `unknown-harness` は fix #2(HarnessName の U1/U2 所有分割)で生じた「JSON 中の harness 文字列の復元検証」を Manifest.parse 側の責務として明示するもの
 
 ### HarnessName(ブランド型 — プリミティブを包む判断の適用例)
 
