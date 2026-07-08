@@ -1,3 +1,5 @@
+> **起票済み(2026-07-09、ユーザー承認)**: https://github.com/amadeus-dlc/amadeus/issues/657
+
 # 起票待ち GitHub Issue(権限制約により保留 — 2026-07-09)
 
 **Title**: t92.test.ts (Group N, test 44) is red: bunx-resolved TypeScript exit-code drift for TS18003
