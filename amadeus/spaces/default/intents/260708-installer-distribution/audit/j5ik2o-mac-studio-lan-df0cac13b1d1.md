@@ -18477,3 +18477,81 @@
 **Context**: construction > docs-rollout > code-generation > code-generation-plan.md
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T16:36:03Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-08T16:36:03Z
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T16:39:08Z
+**Event**: HUMAN_TURN
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T16:44:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8c5b7139
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-version.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T16:44:03Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8c5b7139
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-version.ts
+**Duration ms**: 1006
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T16:44:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: b24d4fd9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-version.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T16:44:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: b24d4fd9
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/framework/core/tools/amadeus-version.ts
+**Duration ms**: 784
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T16:50:19Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T16:50:53Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T16:51:02Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: codegen-u5
+**Agent ID**: acodegen-u5-81fd65251b5de8d4
+**Message**: team-lead へ完了報告を送信しました。作業内容の要約は以下のとおりです。\n\n**実装した内容**(docs-rollout / U5 / Bolt 5、全6ステップ):\n1. README.md の導入セクションを刷新し、`cp -r dist/<harness>` を撤去して `bunx @amadeus-dlc/setup install --harness <name> --targ
+
+---

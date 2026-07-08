@@ -8,7 +8,7 @@ Amadeus-DLC is a fork of **AI-DLC v2** and a native implementation of the **AI-D
 
 The methodology lives once, in harness-neutral `packages/framework/core/`; each harness adds a thin surface under `packages/framework/harness/` that decides how it shows up on that harness. So you edit the methodology in one package-owned place, and every harness distribution is generated from it — no harness gets special treatment. (See [Repository layout](#repository-layout) for how the pieces fit together.)
 
-![version](https://img.shields.io/badge/version-1.1.0-blue)
+![version](https://img.shields.io/badge/version-1.2.0-blue)
 ![license](https://img.shields.io/badge/license-MIT--0-green)
 ![Kiro IDE](https://img.shields.io/badge/harness-Kiro%20IDE-orange)
 ![Kiro CLI](https://img.shields.io/badge/harness-Kiro%20CLI-orange)
@@ -93,20 +93,41 @@ Harnesses use the model/provider already configured in the CLI you run them from
 
 ### Install a harness
 
-With bun in place, pick your harness below and expand it — each section installs that CLI, sets up your project, and walks the first run end to end.
+With bun in place, pick your harness below and expand it — each section installs that CLI, installs Amadeus-DLC into your project with `@amadeus-dlc/setup`, and walks the first run end to end.
+
+`@amadeus-dlc/setup` fetches the tagged distribution from GitHub and copies it into your project — no manual `dist/` copying needed. Two equivalent invocations (`npx` works with any Node.js ≥ 18.3; no bun required for this one command):
+
+```bash
+bunx @amadeus-dlc/setup install     # bun
+npx @amadeus-dlc/setup install      # npm/node
+```
+
+Run bare, `install` launches an interactive wizard: pick your harness (`claude` / `codex` / `kiro` / `kiro-ide`), then a target directory. For scripts and CI, skip the wizard with explicit flags:
+
+```bash
+bunx @amadeus-dlc/setup install --harness claude --target your-project --yes
+```
+
+Upgrading an existing install? Use `upgrade` instead of `install` — same flags. It reports a diff-style plan before touching anything and preserves your customizations:
+
+```bash
+bunx @amadeus-dlc/setup upgrade --harness claude --target your-project --yes
+```
+
+`amadeus-setup` with no subcommand always just prints help; `install`/`upgrade` never run implicitly. If the installer isn't reachable (no network, air-gapped environment), see [Installer Unavailable — Manual Copy Fallback](docs/guide/15-troubleshooting.md#installer-unavailable--manual-copy-fallback).
 
 <details>
 <summary><b>Kiro IDE</b></summary>
 
 **1. Install Kiro IDE** and sign in.
 
-**2. Set up your project**
+**2. Install Amadeus-DLC into your project**
 
 ```bash
-cp -r dist/kiro-ide/.kiro your-project/.kiro
-cp -r dist/kiro-ide/amadeus your-project/amadeus        # the workspace shell — a sibling of .kiro/, not inside it
-cp dist/kiro-ide/AGENTS.md your-project/AGENTS.md   # merge if you already have one
+bunx @amadeus-dlc/setup install --harness kiro-ide --target your-project --yes
 ```
+
+(Or run `bunx @amadeus-dlc/setup install` and answer the wizard's prompts — see [Install a harness](#install-a-harness) above for the `npx` form and `upgrade`.) This installs `.kiro/` + `amadeus/` (+ `AGENTS.md`) into `your-project/`.
 
 The `amadeus/` shell ships the pre-built `amadeus/spaces/default/memory/` method tree the engine reads; `/amadeus --doctor` fails its "workspace shell ready" check without it.
 
@@ -127,14 +148,14 @@ kiro-cli --version   # confirm ≥ 2.6
 kiro-cli login
 ```
 
-**2. Set up your project**
+**2. Install Amadeus-DLC into your project**
 
 ```bash
-cp -r dist/kiro/.kiro your-project/.kiro
-cp -r dist/kiro/amadeus your-project/amadeus       # the workspace shell — a sibling of .kiro/, not inside it
-cp dist/kiro/AGENTS.md your-project/AGENTS.md   # merge if you already have one
+bunx @amadeus-dlc/setup install --harness kiro --target your-project --yes
 cd your-project && kiro-cli chat
 ```
+
+(Or run `bunx @amadeus-dlc/setup install` and answer the wizard's prompts — see [Install a harness](#install-a-harness) above for the `npx` form and `upgrade`.) This installs `.kiro/` + `amadeus/` (+ `AGENTS.md`) into `your-project/`.
 
 The `amadeus/` shell ships the pre-built `amadeus/spaces/default/memory/` method tree the engine reads; `/amadeus --doctor` fails its "workspace shell ready" check without it.
 
@@ -167,16 +188,17 @@ curl -fsSL https://claude.ai/install.cmd -o install.cmd && install.cmd && del in
 
 (If `&&` reports `The token '&&' is not a valid statement separator`, you're in PowerShell — use the PowerShell block above.) Prefer Homebrew on macOS? `brew install --cask claude-code`. Verify with `claude --version`.
 
-**2. Set up your project**
+**2. Install Amadeus-DLC into your project**
 
 ```bash
-# Copy the implementation (engine + the workspace shell sibling), then launch
-cp -r dist/claude/.claude/ your-project/.claude/
-cp -r dist/claude/amadeus/   your-project/amadeus/     # the workspace shell — a sibling of .claude/, not inside it
+# Install Amadeus-DLC (engine + the workspace shell sibling), then launch
+bunx @amadeus-dlc/setup install --harness claude --target your-project --yes
 cp -n your-project/.claude/CLAUDE.md.example your-project/.claude/CLAUDE.md
 cp -n your-project/.claude/settings.json.example your-project/.claude/settings.json
 cd your-project && claude
 ```
+
+(Or run `bunx @amadeus-dlc/setup install` and answer the wizard's prompts — see [Install a harness](#install-a-harness) above for the `npx` form and `upgrade`.) This installs `.claude/` + `amadeus/` into `your-project/`.
 
 The `amadeus/` shell ships the pre-built `amadeus/spaces/default/memory/` method tree the engine reads; `/amadeus --doctor` fails its "workspace shell ready" check without it.
 
@@ -202,16 +224,15 @@ codex --version   # confirm ≥ 0.139.0
 
 The shipped `config.toml.example` does not pin a provider or model; Codex uses your normal configured defaults. Copy it to `.codex/config.toml` only when the project does not already have one. Put provider/model choices in `~/.codex/config.toml` or add project-local settings deliberately.
 
-**2. Set up your project** (which must be a **git repository** — Codex only discovers a project `.codex/hooks.json` inside one):
+**2. Install Amadeus-DLC into your project** (which must be a **git repository** — Codex only discovers a project `.codex/hooks.json` inside one):
 
 ```bash
-cp -r dist/codex/.codex/  your-project/.codex/
-cp -r dist/codex/.agents/ your-project/.agents/
-cp -r dist/codex/amadeus/   your-project/amadeus/      # the workspace shell — a sibling of .codex/, not inside it
-cp dist/codex/AGENTS.md   your-project/AGENTS.md   # or merge into yours
+bunx @amadeus-dlc/setup install --harness codex --target your-project --yes
 cp -n your-project/.codex/config.toml.example your-project/.codex/config.toml
 cp -n your-project/.codex/hooks.json.example your-project/.codex/hooks.json
 ```
+
+(Or run `bunx @amadeus-dlc/setup install` and answer the wizard's prompts — see [Install a harness](#install-a-harness) above for the `npx` form and `upgrade`.) This installs `.codex/` + `.agents/` + `amadeus/` + `AGENTS.md` into `your-project/`.
 
 The `amadeus/` shell ships the pre-built `amadeus/spaces/default/memory/` method tree the engine reads; `$amadeus --doctor` fails its "workspace shell ready" check without it.
 
