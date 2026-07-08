@@ -7546,3 +7546,27 @@
 **Timestamp**: 2026-07-08T07:33:45Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T07:34:28Z
+**Event**: WORKFLOW_PARKED
+**Stage**: functional-design
+**Timestamp**: 2026-07-08T07:34:28Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T07:37:45Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: fd-review-u4-i2
+**Agent ID**: afd-review-u4-i2-3189f1c28aac17cf
+**Message**: team-leadにNOT-READY判定を送信しました。\n\n**結論**: U4(publish-readiness)のfunctional-designは iteration 2 時点で **NOT-READY** です。\n\niteration 1の5件の指摘のうち4件(BR-P02のメカニズム明示、4-vs-5個数矛盾の和解、auto-included/must-declareの区別、Res
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T07:38:09Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T07:38:09Z
+
+---

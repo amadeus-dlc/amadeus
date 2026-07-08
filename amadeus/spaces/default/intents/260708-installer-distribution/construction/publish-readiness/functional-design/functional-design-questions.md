@@ -13,3 +13,12 @@
 - 同梱物の契約(dist/cli.js + README + LICENSE 2種) → ADR-002、BR-F19
 
 未解決の曖昧さ: なし。
+
+
+---
+
+## レビュー経過の記録(§12a)
+
+- イテレーション1: NOT-READY — 5件(単一定義メカニズム、4vs5個数、自動同梱区別、Result 形状、CON-006 タイミング)→ 全件是正
+- イテレーション2(最終): NOT-READY — 是正5の伝播漏れ1件+上流反映1件+残骸1件
+- **ビルダー是正(イテレーション上限到達後)**: ① domain-entities の「root 是正も本 Unit で実施」残存記述を U5 移管に整合 ② units-generation/unit-of-work.md の U4/U5 定義へ移管を反映(クロスユニット traceability)③ 空コードフェンス除去

@@ -30,17 +30,17 @@
 
 ### U4: publish-readiness(規模: M)
 
-- **内容**: npm 公開整備 — pack ファイルリスト契約テスト(FR-018、integration 層)、publish 手順書(FR-015: ビルド→検証→手動 publish→公開後確認、`vX.Y.Z` タグ発行、setup 独立 semver・プレリリース運用)、`npm pack --dry-run` の実ツール検証
-- **所有**: FR-001(メタデータ)/015/017/018、US-C1〜C3
+- **内容**: npm 公開整備 — pack ファイルリスト契約テスト(FR-018、integration 層)+ files ドリフトテスト、publish 手順書(FR-015: ビルド→検証→手動 publish→公開後確認、`vX.Y.Z` タグ発行、setup 独立 semver・プレリリース運用)、`npm pack --dry-run` の実ツール検証。**root package.json の I1/I2 是正は U5 へ移管**(functional-design レビューでの CON-006 整合是正 — U4 PR は framework 可視変更なし)
+- **所有**: FR-001(packages/setup 側メタデータ)/015/017/018、US-C1〜C3
 - **規模の正当化**: コードは薄い(テスト+docs 中心)が、「落ちる実証」(team.md Mandated)として失敗注入の実証を含むため M
-- **制約**: CI 自動 publish はスコープ外(CON-004)。root package.json の I1/I2 是正もここで実施
+- **制約**: CI 自動 publish はスコープ外(CON-004)。root package.json の I1/I2 是正は U5 が実施(上記移管どおり)
 
 ### U5: docs-rollout(規模: S)
 
-- **内容**: README の導入セクションをワンライナーへ刷新(FR-014)、CHANGELOG・framework 版バンプ・README バッジ同期(CON-006、t68)
+- **内容**: README の導入セクションをワンライナーへ刷新(FR-014)、CHANGELOG・framework 版バンプ・README バッジ同期(CON-006、t68)、**root package.json の I1/I2 是正(U4 から移管 — ユーザー可視 PR に同乗、公開前必須)**
 - **所有**: FR-014、US-C4、成功指標2の達成確認
 - **規模の正当化**: docs のみ。t68 が同期を機械検証するため作業は小さく S
-- **制約**: バンプは user-visible 変更を含む PR で実施(Mandated)
+- **制約**: バンプは user-visible 変更を含む PR で実施(Mandated)。root I1/I2 是正と同一コミット群で扱う
 
 ## 配置モデル
 

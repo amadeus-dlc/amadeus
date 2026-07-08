@@ -38,8 +38,6 @@ test "package.json files は PackContract.declaredInFiles と一致する":
 
 **BR-F19/ADR-002 との数の和解**: 上流の「dist/cli.js + README + LICENSE 2種**のみ**」は **`files` 宣言でコントロールする配布意思**を指す(U1 BR-F19 に注記追加済み)。npm は `package.json`(と `README.md`)を宣言に関わらず自動同梱するため、**実 tarball の検証基準(requiredFiles)は5項目**になる — この差分は npm の仕様であり契約違反ではない。
 
-```ts
-```
 
 ### PackReport(npm pack --dry-run --json の解析結果)
 
@@ -66,4 +64,4 @@ export type PackReportError = { readonly type: "malformed-output"; readonly deta
 ## 本番コードへの影響
 
 - `packages/setup/package.json` のメタデータ是正(license `(MIT OR Apache-2.0)` / repository / files フィールド)は**宣言的変更**であり新規型なし
-- root `package.json` の I1/I2 是正も本 Unit で実施(公開されない private パッケージだが誤情報の温床を残さない)
+- root `package.json` の I1/I2 是正は**本 Unit のスコープ外 — U5 のユーザー可視 PR が実施**する(BR-P09、business-logic-model ワークフロー3のシーケンス参照。公開前必須である点は不変)
