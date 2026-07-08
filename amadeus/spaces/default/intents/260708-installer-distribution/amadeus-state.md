@@ -6,7 +6,7 @@
 - **Scope**: installer-distribution
 - **Start Date**: 2026-07-08T02:20:37Z
 - **State Version**: 7
-- **Active Agent**: amadeus-developer-agent
+- **Active Agent**: amadeus-quality-agent
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**: 2026-07-08T05:22:50Z
@@ -26,8 +26,8 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 25
-- **Completed**: 19
-- **In Progress**: code-generation
+- **Completed**: 20
+- **In Progress**: build-and-test
 
 ## Runtime State
 - **Revision Count**: 0
@@ -75,8 +75,8 @@ Per unit: [TBD]
 - [x] nfr-requirements — EXECUTE
 - [x] nfr-design — EXECUTE
 - [x] infrastructure-design — EXECUTE
-- [-] code-generation — EXECUTE
-- [ ] build-and-test — EXECUTE
+- [x] code-generation — EXECUTE
+- [-] build-and-test — EXECUTE
 - [ ] ci-pipeline — EXECUTE
 
 ### OPERATION PHASE
@@ -90,12 +90,12 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: code-generation
-- **Next Stage**: build-and-test
+- **Current Stage**: build-and-test
+- **Next Stage**: ci-pipeline
 - **Status**: Running
-- **Last Updated**: 2026-07-08T17:03:55Z
+- **Last Updated**: 2026-07-08T17:17:44Z
 
 ## Session Resume Point
-- **Last Completed Stage**: infrastructure-design
-- **Next Action**: Execute Code Generation
+- **Last Completed Stage**: code-generation
+- **Next Action**: Execute Build And Test
 - **Pending Artifacts**: none
