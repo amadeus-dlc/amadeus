@@ -3953,3 +3953,502 @@
 **Agent**: amadeus-product-agent
 
 ---
+
+## Decision Recorded
+**Timestamp**: 2026-07-08T05:24:04Z
+**Event**: DECISION_RECORDED
+**Stage**: requirements-analysis
+**Decision**: Interaction mode choice for requirements-analysis questions (Standard depth; prior intent's partially-grilled requirements.md available in git history as reference; corrections c3/c4 mandate testable user-visible contracts)
+**Options**: Guide me,Grill me,I'll edit the file,Chat
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T05:25:09Z
+**Event**: HUMAN_TURN
+
+---
+
+## Question Answered
+**Timestamp**: 2026-07-08T05:25:21Z
+**Event**: QUESTION_ANSWERED
+**Stage**: requirements-analysis
+**Details**: Question mode: Grill me
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-08T05:26:02Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements-analysis-questions.md
+**Context**: inception > requirements-analysis > requirements-analysis-questions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:26:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8181dc75
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements-analysis-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T05:26:02Z
+**Event**: SENSOR_FAILED
+**Fire id**: 8181dc75
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements-analysis-questions.md
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/requirements-analysis/required-sections-8181dc75.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:26:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: e863e2c7
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements-analysis-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T05:26:02Z
+**Event**: SENSOR_FAILED
+**Fire id**: e863e2c7
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements-analysis-questions.md
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/requirements-analysis/upstream-coverage-e863e2c7.md
+**Findings count**: 6
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-08T05:26:10Z
+**Event**: DECISION_RECORDED
+**Stage**: requirements-analysis
+**Decision**: Q1: Bulk reaffirm the 7 prior grilled requirement decisions (md5+backup shared-file policy, latest-tag resolution, install conflict behavior, 1-retry network, non-interactive required args, success verification floor, npm publish scope) with init->install rename
+**Options**: A: adopt all 7 (recommended),B: modify specific ones,X: Other
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T05:27:00Z
+**Event**: HUMAN_TURN
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-08T05:27:16Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements-analysis-questions.md
+**Context**: inception > requirements-analysis > requirements-analysis-questions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:27:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: c11ea49a
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements-analysis-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T05:27:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: c11ea49a
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements-analysis-questions.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:27:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: dba4b60c
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements-analysis-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T05:27:16Z
+**Event**: SENSOR_FAILED
+**Fire id**: dba4b60c
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements-analysis-questions.md
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/requirements-analysis/upstream-coverage-dba4b60c.md
+**Findings count**: 6
+
+---
+
+## Question Answered
+**Timestamp**: 2026-07-08T05:27:24Z
+**Event**: QUESTION_ANSWERED
+**Stage**: requirements-analysis
+**Details**: Q1: A — adopt all 7 prior decisions as requirements contracts
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-08T05:27:24Z
+**Event**: DECISION_RECORDED
+**Stage**: requirements-analysis
+**Decision**: Q2: install behavior on an already-installed project (abort+suggest upgrade vs interactive switch vs general rule only)
+**Options**: A: abort + suggest upgrade; --force overrides (recommended),B: interactive switch offer,C: general rule only,X: Other
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T05:27:54Z
+**Event**: HUMAN_TURN
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-08T05:28:12Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements-analysis-questions.md
+**Context**: inception > requirements-analysis > requirements-analysis-questions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:28:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 341ae057
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements-analysis-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T05:28:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 341ae057
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements-analysis-questions.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:28:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: e1478073
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements-analysis-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T05:28:12Z
+**Event**: SENSOR_FAILED
+**Fire id**: e1478073
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements-analysis-questions.md
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/requirements-analysis/upstream-coverage-e1478073.md
+**Findings count**: 6
+
+---
+
+## Question Answered
+**Timestamp**: 2026-07-08T05:28:19Z
+**Event**: QUESTION_ANSWERED
+**Stage**: requirements-analysis
+**Details**: Q2: A — install aborts on detected installation and suggests upgrade; --force allows forced reinstall
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-08T05:28:19Z
+**Event**: DECISION_RECORDED
+**Stage**: requirements-analysis
+**Decision**: Q3: setup package's own version lifecycle (independent semver from 0.1.0, bumped in publish PRs, no setup tags vs setup-vX.Y.Z tags vs synced with AMADEUS_VERSION)
+**Options**: A: independent semver no setup tags (recommended),B: independent + setup-v tags,C: sync with framework,X: Other
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T05:29:23Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T05:30:14Z
+**Event**: HUMAN_TURN
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-08T05:30:31Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements-analysis-questions.md
+**Context**: inception > requirements-analysis > requirements-analysis-questions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:30:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: f51acdc7
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements-analysis-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T05:30:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: f51acdc7
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements-analysis-questions.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:30:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2353955f
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements-analysis-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T05:30:31Z
+**Event**: SENSOR_FAILED
+**Fire id**: 2353955f
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements-analysis-questions.md
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/requirements-analysis/upstream-coverage-2353955f.md
+**Findings count**: 6
+
+---
+
+## Question Answered
+**Timestamp**: 2026-07-08T05:30:40Z
+**Event**: QUESTION_ANSWERED
+**Stage**: requirements-analysis
+**Details**: Q3: A confirmed with prerelease clarification — independent semver from 0.1.0, no publish during dev (bun link / npm pack), prerelease X.Y.Z-rc.N + dist-tag next when needed, latest = stable only, no setup git tags
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-08T05:30:40Z
+**Event**: DECISION_RECORDED
+**Stage**: requirements-analysis
+**Decision**: Q4: Real-tool verification of publish artifact (npm pack --dry-run file-list contract test in CI vs checklist only vs both)
+**Options**: A: CI test (recommended),B: checklist only,C: both,X: Other
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T05:31:06Z
+**Event**: HUMAN_TURN
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-08T05:31:15Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements-analysis-questions.md
+**Context**: inception > requirements-analysis > requirements-analysis-questions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:31:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3604eb8b
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements-analysis-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T05:31:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3604eb8b
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements-analysis-questions.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:31:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: ac23096d
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements-analysis-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T05:31:15Z
+**Event**: SENSOR_FAILED
+**Fire id**: ac23096d
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements-analysis-questions.md
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/requirements-analysis/upstream-coverage-ac23096d.md
+**Findings count**: 6
+
+---
+
+## Question Answered
+**Timestamp**: 2026-07-08T05:31:22Z
+**Event**: QUESTION_ANSWERED
+**Stage**: requirements-analysis
+**Details**: Q4: A — npm pack --dry-run file-list contract test in integration tier, always-on in CI
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T05:31:54Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T05:33:28Z
+**Event**: HUMAN_TURN
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-08T05:36:06Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements.md
+**Context**: inception > requirements-analysis > requirements.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:36:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: 27139ceb
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T05:36:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: 27139ceb
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements.md
+**Duration ms**: 35
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:36:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: 59733a0a
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T05:36:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: 59733a0a
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/requirements-analysis/requirements.md
+**Duration ms**: 35
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T05:37:05Z
+**Event**: HUMAN_TURN
+
+---
+
+## Rule Learned
+**Timestamp**: 2026-07-08T05:37:16Z
+**Event**: RULE_LEARNED
+**Stage**: requirements-analysis
+**Candidate-ID**: c1
+**Destination**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/memory/project.md
+**Heading**: ## Corrections
+**Source**: orchestrator
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-08T05:37:17Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: requirements-analysis
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T05:37:38Z
+**Event**: HUMAN_TURN
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-08T05:37:48Z
+**Event**: GATE_APPROVED
+**Stage**: requirements-analysis
+**User Input**: Approve
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-08T05:37:48Z
+**Event**: STAGE_COMPLETED
+**Stage**: requirements-analysis
+**Details**: Stage Requirements Analysis approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-08T05:37:48Z
+**Event**: STAGE_STARTED
+**Stage**: user-stories
+**Agent**: amadeus-product-agent
+
+---
