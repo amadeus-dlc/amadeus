@@ -31,7 +31,7 @@ test "契約違反を注入すると赤くなる(落ちる実証 — team.md Man
 
 1. **前提確認**: npm org `amadeus-dlc` スコープの確保(R1)、`vX.Y.Z` タグの実在(CON-007/ASM-006)、**npm アカウントの 2FA(auth-and-writes)有効化**(SEC-P02)
 2. **バージョンバンプ**: `packages/setup/package.json` の独立 semver(FR-017)。バンプは publish する PR で実施
-3. **ビルドと検証**: `bun build`(ADR-002)→ `bun run typecheck` / `lint` → pack 契約テストを含む CI プロファイル
+3. **ビルドと検証**: `bun build`(ADR-002)→ `bun run typecheck` / `lint` → pack 契約テストを含む CI プロファイル → **`AMADEUS_SETUP_E2E_NETWORK=1` を設定して実ネットワーク E2E を実行**し、codeload アーカイブ形状の前提(単一トップレベルラッパー — U2 infrastructure-design)が現行 GitHub と一致することを確認(この変数の設定者はリリース手順のみ — 未設定なら `test.skipIf` でスキップ)
 4. **ローカル最終確認**: `npm pack --dry-run` の目視、`npm pack` tarball のローカルインストール検証(`bun link` 代替可)
 5. **手動 publish**: `npm publish --access public`(安定版)/ `npm publish --tag next`(プレリリース `X.Y.Z-rc.N` — `latest` を汚さない)。**注記: 現状 provenance なし**(SEC-P03 — CI 公開へ移行する際の再検討ポイント)
 6. **公開後検証**: `npx @amadeus-dlc/setup@<version> --help` の実行確認、npm ページのメタデータ(license/repository)確認

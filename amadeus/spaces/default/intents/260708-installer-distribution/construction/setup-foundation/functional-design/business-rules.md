@@ -21,7 +21,7 @@
 | BR-F07 | 恒久的失敗(404 等の 4xx、rate-limit 除く)はリトライしない |
 | BR-F08 | 403/429 は `rate-limit` に分類し「時間をおいて再実行」を案内する |
 | BR-F09 | 1回の CLI 実行での GitHub API 呼び出しは最大2回(releases+tags フォールバック)。アーカイブ取得は別枠 |
-| BR-F10 | 展開結果に `dist/<harness>/` が存在しない場合は `payload-invalid` — 部分的な展開結果を導入に使わない |
+| BR-F10 | 展開直下の単一トップレベルラッパーの解決に失敗、または `dist/<harness>/` が存在しない場合は `payload-invalid` — 部分的な展開結果を導入に使わない(ラッパー契約は domain-entities.md の ExtractedPayload 注記) |
 
 ## マニフェスト不変条件(FR-016)
 
