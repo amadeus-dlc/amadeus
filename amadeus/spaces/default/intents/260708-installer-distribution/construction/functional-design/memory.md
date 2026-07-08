@@ -2,6 +2,7 @@
 > This file is maintained by the orchestrator during stage execution. Add observations at the gate ritual, not by editing here directly.
 
 ## Interpretations
+- 2026-07-08T06:40:37Z — reviewer iteration 1 (Rev.3) returned NOT-READY with 4 required fixes, all applied: defined the 4 dangling types (HttpMeta/InstallMeta/BuildInput/ManifestJson incl. round-trip projection rules), removed HarnessName.parse from U1 (validation + UsageError ownership documented as U2's; U1 shares the brand type + all constant), added services.md references to business-logic/business-rules, unified the Object.freeze note; also fixed the advisory PascalCase/instance notation split in component-methods.md
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
 ## Deviations

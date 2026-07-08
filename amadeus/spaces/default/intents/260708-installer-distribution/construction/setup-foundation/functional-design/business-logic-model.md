@@ -1,7 +1,7 @@
 # Business Logic Model — setup-foundation
 
 > ステージ: functional-design (3.1) / Unit: setup-foundation / 作成: 2026-07-08
-> 上流入力: `../../../inception/units-generation/unit-of-work.md`(U1)・`unit-of-work-story-map.md`、`../../../inception/requirements-analysis/requirements.md`(FR-002/006/012/016)、`../../../inception/application-design/components.md`・`component-methods.md`
+> 上流入力: `../../../inception/units-generation/unit-of-work.md`(U1)・`unit-of-work-story-map.md`、`../../../inception/requirements-analysis/requirements.md`(FR-002/006/012/016)、`../../../inception/application-design/components.md`・`component-methods.md`・`services.md`(GitHub REST/codeload のエンドポイント契約と rate limit 60 req/h/IP の外部サービス契約 — ワークフロー1・2の通信前提)
 > Rev.3(2026-07-08): ユーザー確認済みの役割分担(インスタンスメソッド/コンパニオン static)に合わせ擬似コードを改訂
 
 ## ワークフロー 1: バージョン解決(resolver、FR-006)

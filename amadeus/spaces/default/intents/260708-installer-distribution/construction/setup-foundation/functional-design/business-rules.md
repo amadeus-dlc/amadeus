@@ -1,7 +1,7 @@
 # Business Rules — setup-foundation
 
 > ステージ: functional-design (3.1) / Unit: setup-foundation / 作成: 2026-07-08
-> 出典: `../../../inception/requirements-analysis/requirements.md`(FR-002/006/012/016)、`../../../inception/application-design/decisions.md`(ADR-002/003)
+> 出典: `../../../inception/requirements-analysis/requirements.md`(FR-002/006/012/016)、`../../../inception/application-design/decisions.md`(ADR-002/003)、`../../../inception/application-design/services.md`(BR-F06〜F09 の根拠: エンドポイント契約・rate limit 60 req/h/IP・1実行2リクエスト上限)
 
 ## バージョン解決ルール(FR-006)
 

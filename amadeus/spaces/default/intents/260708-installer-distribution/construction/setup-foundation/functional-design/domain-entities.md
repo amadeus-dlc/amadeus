@@ -6,7 +6,7 @@
 ## 設計方針(Rev.3、ユーザー確認済み)
 
 1. **type はメソッドシグネチャを持つ契約** — インスタンスメソッド(振る舞い)はドメインオブジェクト自身が持つ。呼び出し側は `manifest.dispositionFor(path, md5)` と**インスタンスへ告げる**(Tell, Don't Ask)
-2. **実装は内部ファクトリ関数+クロージャ** — `create*` が `Object.freeze` したオブジェクトリテラルを返す。class は使わない。ファクトリは `internal/` に置き公開しない
+2. **実装は内部ファクトリ関数+クロージャ** — `create*` が `Object.freeze` したオブジェクトリテラルを返す。class は使わない。ファクトリは `internal/` に置き公開しない。**全コンパニオン namespace も `Object.freeze` する**(以下のコード例で freeze 行を省略している箇所も同様)
 3. **コンパニオン namespace = static 相当のみ** — スマートコンストラクタ(`parse`)、ファクトリ(`build`/`of`)、コレクションレベル演算(`latestStableOf`)。第一引数にインスタンスを取る振る舞い関数をここへ置かない(Rev.2 の誤り)
 4. **イミュータブル更新** — 更新メソッドは新インスタンスを返す(`upgradedTo`)
 5. **Result/エラーは判別ユニオン+コンパニオンファクトリ** — エラーにも所有すべき振る舞い(`isTransient()` 等)はインスタンスメソッドとして持たせる。`type` フィールドでの網羅 switch は維持
@@ -105,6 +105,10 @@ export namespace FetchError {
 - `type` フィールドでの網羅 switch(+never 検査)は維持 — U1↔U2 の凍結契約
 - 変種ごとの追加データ(`status`、`retryAfterHint`)は該当変種の readonly フィールドとして持つ
 
+```ts
+export type HttpMeta = { readonly status: number | null; readonly url: string };  // classify の判定材料(fetcher の HTTP 基盤が供給)
+```
+
 ### ExtractedPayload(エンティティ)
 
 ```ts
@@ -167,6 +171,27 @@ export namespace Manifest {
   export function build(payload: ExtractedPayload, files: ManifestFiles, meta: InstallMeta): Manifest;
 }
 Object.freeze(Manifest);
+
+// 補助型(本 Unit 所有 — 参照切れ防止のため形状を定義):
+export type InstallMeta = {
+  readonly installerPackageVersion: string;   // setup 自身の semver(FR-017)
+  readonly harness: HarnessName;
+  readonly installStartedAt: string;          // ISO 8601 — backup $timestamp と同一値(BR-F14)
+};
+export type BuildInput = {                    // upgradedTo の入力(新バージョンの取得結果一式)
+  readonly payload: ExtractedPayload;
+  readonly files: ManifestFiles;
+  readonly meta: InstallMeta;
+};
+export type ManifestJson = {                  // toJSON の射影形状 = 永続ファイルのスキーマ(FR-016)。Manifest.parse と往復整合
+  readonly schemaVersion: 1;
+  readonly installerPackageVersion: string;
+  readonly distributionVersion: string;       // SemVer は format() で "vX.Y.Z" 文字列へ射影(parse が復元)
+  readonly sourceTag: string;
+  readonly installedAt: string;
+  readonly harness: string;                   // HarnessName はプレーン文字列へ射影(parse が 4値検証で復元)
+  readonly files: ReadonlyArray<{ path: string; class: string; required: boolean; md5: string }>;
+};
 ```
 
 - 永続先: `<target>/amadeus/.installer/amadeus-setup-manifest.json`(ManifestIo が `Manifest.parse`/`manifest.toJSON()` 経由で読み書き)
@@ -179,12 +204,12 @@ declare const harnessBrand: unique symbol;
 export type HarnessName = ("claude" | "codex" | "kiro" | "kiro-ide") & { readonly [harnessBrand]: "HarnessName" };
 
 export namespace HarnessName {
-  export function parse(raw: string): Result<HarnessName, UsageError>;   // FR-003 の4値検証を型で運ぶ
-  export const all: readonly HarnessName[];
+  export const all: readonly HarnessName[];   // 4値の正準定数。U1 の消費者(harnessRoot 等)はここから選ぶ
 }
 ```
 
-- 文字列リテラル直和のみで足りるが、未検証文字列の取り違え防止(FR-003 の非対話バリデーション)が正しさを変えるため包む
+- 文字列リテラル直和のみで足りるが、未検証文字列の取り違え防止が正しさを変えるため包む
+- **所有関係の明文化**: `HarnessName` の**型と `all` 定数は U1 が前方共有**する。生文字列からの検証ファクトリ(`parse(raw)` — FR-003 のバリデーション、`UsageError` を返す)は **U2 install-flow の cli が所有**し、U2 の functional-design で規定する。U1 はこれにより単体で実装・テスト可能(U2 の型定義に依存しない)
 
 ## エンティティ関係
 

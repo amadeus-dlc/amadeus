@@ -6951,3 +6951,53 @@
 **Findings count**: 4
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T06:27:39Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: fd-review-u1-r2
+**Agent ID**: afd-review-u1-r2-be86e548f7247e62
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T06:27:52Z
+**Event**: WORKFLOW_PARKED
+**Stage**: functional-design
+**Timestamp**: 2026-07-08T06:27:52Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T06:31:12Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a59262aa5795a4358
+**Message**: npm インストーラ @amadeus-dlc/setup の AI-DLC ワークフローを進行中で、現在は Construction の functional-design(setup-foundation ユニット)を確認済みドメインモデリング方針で Rev.3 に改訂済み。レビュアー完了通知を待ち、READY なら次ユニット install-flow へ進みます。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T06:35:33Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: aaac8c0f4c5b32125
+**Message**: Unit を並行開発できる場合の AI-DLC の仕組みを、この intent の文脈と合わせて説明します。\n\n## 並行開発の仕組み(フレームワークの設計)\n\n並行実行の単位は **Bolt**(Construction の1周: 設計 3.1〜3.4 → コード生成 3.5)です。依存関係のない Unit 同士は「並列バッチ」として同時に走らせられます:\n\n1. **前提となる自律モード** 
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T06:36:30Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: fd-review-u1-r3
+**Agent ID**: afd-review-u1-r3-1dcd3c408782fa96
+**Message**: team-leadへレビュー結果を送信しました。判定は **NOT-READY** です。\n\n概要: Rev.3で修正されたインスタンスメソッド/コンパニオンstaticの役割分担そのものは正しく適用されており、Rev.2の誤り(コンパニオンがインスタンスを第一引数に取る)は再発していませんでした。しかし実際に検証コマンドを走らせたところ、以下の実質的な欠陥が見つかりました。\n\n1. `domai
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T06:40:02Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T06:40:02Z
+
+---
