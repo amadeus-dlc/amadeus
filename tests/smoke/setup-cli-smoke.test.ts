@@ -24,7 +24,8 @@ describe("setup CLI smoke (FR-002: bunx/npx dual runtime)", () => {
     const result = spawnSync("node", [cliPath], { encoding: "utf8" });
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("amadeus-setup");
-    expect(result.stdout).toContain("Usage: amadeus-setup");
+    expect(result.stdout).toContain("Usage:");
+    expect(result.stdout).toContain("amadeus-setup install");
     expect(result.stderr).toBe("");
   });
 
