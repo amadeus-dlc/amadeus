@@ -3,8 +3,9 @@ import { closeSync, existsSync, openSync, readSync, readdirSync, statSync } from
 import { join, relative, sep } from "node:path";
 import type { HarnessName } from "./harness.ts";
 import type { InstallAdmission } from "./installation.ts";
-import type { FileClass } from "./manifest.ts";
+import type { Disposition, FileClass } from "./manifest.ts";
 import type { ExtractedPayload } from "./payload.ts";
+import type { UpgradeRefusal, UpgradeSource } from "./upgrade.ts";
 import { Result } from "../shared/result.ts";
 import { Timestamps } from "../shared/timestamps.ts";
 
@@ -109,6 +110,29 @@ export namespace Plan {
     const { iso, token } = Timestamps.of(new Date(opts.startedAt));
     return Result.ok(createPlan(entries, iso, token, rootResult.value));
   }
+
+  // U3's upgrade-side factory (functional-design/domain-entities.md, promised
+  // by install-flow's own domain-entities.md as an extension point). Error
+  // type widens to include PlanRefusal so the pre-existing
+  // harness-not-in-payload edge case (identical failure mode to forInstall)
+  // is not duplicated as a second UpgradeRefusal variant — ClassifiedError
+  // already spans both unions, so reporter.renderError needs no new branch.
+  export function forUpgrade(
+    payload: ExtractedPayload,
+    source: UpgradeSource,
+    harness: HarnessName,
+    target: string,
+    opts: PlanOptions,
+  ): Result<Plan, PlanRefusal | UpgradeRefusal> {
+    const rootResult = payload.harnessRoot(harness);
+    if (rootResult.type === "err") {
+      return Result.err(PlanRefusal.harnessNotInPayload(harness));
+    }
+
+    const entries = buildUpgradeEntries(rootResult.value, target, source, opts);
+    const { iso, token } = Timestamps.of(new Date(opts.startedAt));
+    return Result.ok(createPlan(entries, iso, token, rootResult.value));
+  }
 }
 
 Object.freeze(Plan);
@@ -141,6 +165,56 @@ function classifyAction(exists: boolean, force: boolean, cls: FileClass): PlanAc
   if (cls === "owned") return "update";
   if (cls === "user-preserved") return "skip";
   return "backup";
+}
+
+// --- Plan.forUpgrade internals (private) -------------------------------------
+
+// BR-U10~U16: upgrade has no "conflict" action — every existing file's
+// disposition is already decided by source.dispositionFor (delegated to the
+// installed manifest when one exists, BR-U11), so classification is a
+// straight lookup rather than a force/exists branch like install's.
+function buildUpgradeEntries(root: string, target: string, source: UpgradeSource, opts: PlanOptions): PlanEntry[] {
+  const entries: PlanEntry[] = [];
+  for (const relPath of walkFiles(root)) {
+    const cls = classify(relPath);
+    const newMd5 = md5OfFileSync(join(root, relPath));
+    if (!existsSync(join(target, relPath))) {
+      entries.push(
+        Object.freeze({ path: relPath, action: "add", class: cls, forced: false, md5: newMd5, required: cls === "owned" }),
+      );
+      continue;
+    }
+
+    const actualMd5 = md5OfFileSync(join(target, relPath));
+    const disposition = source.dispositionFor(relPath, cls, actualMd5);
+    const action = toPlanAction(disposition);
+    entries.push(
+      Object.freeze({
+        path: relPath,
+        action,
+        class: cls,
+        // Not a bypassed conflict (there is none in upgrade) — this only
+        // flags "a backup happened even under --force" so BR-U12 (backups
+        // are never skipped by --force) stays visible in the plan report.
+        forced: opts.force && disposition.type === "backup-then-copy",
+        md5: newMd5,
+        required: cls === "owned",
+      }),
+    );
+  }
+  return entries;
+}
+
+// BR-U10: the one place the Disposition -> PlanAction mapping is fixed.
+function toPlanAction(disposition: Disposition): PlanAction {
+  switch (disposition.type) {
+    case "overwrite":
+      return "update";
+    case "backup-then-copy":
+      return "backup";
+    case "preserve":
+      return "skip";
+  }
 }
 
 // Framework tool/hook/agent/scope files carry an `amadeus-` prefix and are

@@ -12,6 +12,7 @@ import { InstallInputs, ParsedCommand, UsageError } from "./domain/command.ts";
 import { Installation } from "./domain/installation.ts";
 import { Manifest } from "./domain/manifest.ts";
 import { Plan } from "./domain/plan.ts";
+import { UpgradeRefusal, UpgradeSource } from "./domain/upgrade.ts";
 import { NextSteps } from "./domain/verify-result.ts";
 import { Applier } from "./modules/applier.ts";
 import { createManifestIo, type ManifestIo } from "./modules/manifest-io.ts";
@@ -67,51 +68,50 @@ export async function main(argv: readonly string[], ports: CliPorts = createDefa
     return 0;
   }
   if (parsed.value.subcommand === "upgrade") {
-    console.error(reporter.renderUpgradeNotImplemented());
-    return 1;
+    return runUpgrade(parsed.value, ports);
   }
   return runInstall(parsed.value, ports);
 }
 
-async function runInstall(parsed: ParsedCommand, ports: CliPorts): Promise<number> {
+type Mode = "interactive" | "non-interactive";
+
+// Shared by runInstall/runUpgrade (both subcommands take the same --harness/
+// --target/--yes flags, per the CLI Contract's symmetric grammar): resolves
+// mode, runs the wizard if fields are missing, and prints the one message
+// each non-ok path needs — callers just propagate an "exit" result verbatim.
+type ResolvedInputs =
+  | { readonly type: "exit"; readonly code: number }
+  | { readonly type: "ok"; readonly inputs: InstallInputs; readonly mode: Mode };
+
+async function resolveInputs(parsed: ParsedCommand, ports: CliPorts): Promise<ResolvedInputs> {
   const { tty } = ports;
-  const mode = parsed.isNonInteractive(tty.isTTY) ? "non-interactive" : "interactive";
+  const mode: Mode = parsed.isNonInteractive(tty.isTTY) ? "non-interactive" : "interactive";
   const missing = parsed.missingRequiredFor(mode);
 
-  let inputs: InstallInputs;
   if (mode === "non-interactive") {
     if (missing.length > 0) {
       console.error(reporter.renderError(UsageError.missingRequired(missing)));
-      return 2;
+      return { type: "exit", code: 2 };
     }
-    inputs = InstallInputs.fromFlags(parsed);
-  } else if (missing.length > 0) {
+    return { type: "ok", inputs: InstallInputs.fromFlags(parsed), mode };
+  }
+  if (missing.length > 0) {
     const wizardResult = await runWizard(parsed, missing, tty);
     if (wizardResult.type === "err") {
       console.log(reporter.renderWizardAborted());
-      return 1;
+      return { type: "exit", code: 1 };
     }
-    inputs = wizardResult.value;
-  } else {
-    inputs = InstallInputs.fromFlags(parsed);
+    return { type: "ok", inputs: wizardResult.value, mode };
   }
+  return { type: "ok", inputs: InstallInputs.fromFlags(parsed), mode };
+}
 
-  // REL-I02: detection is the first I/O — an already-installed target is
-  // rejected before any network cost is paid.
-  const installation = await Installation.detect(inputs.target, ports.manifestIo);
-  const admission = installation.admitsInstall(parsed.force);
-  if (admission.type === "refuse-suggest-upgrade") {
-    console.error(reporter.renderAlreadyInstalled(admission));
-    return 1;
-  }
-
-  const resolved = await createResolver(ports.http).resolveVersion(parsed.version);
-  if (resolved.type === "err") {
-    console.error(reporter.renderError(resolved.error));
-    return 1;
-  }
-
-  const tmpWriteResult = await ports.createTmpWrite("amadeus-setup-install-");
+// Shared by runInstall/runUpgrade: a temp working directory that must be
+// cleaned up exactly once, whether the run finishes normally, fails, or is
+// interrupted by SIGINT/SIGTERM. `fn` receives the ready TmpWrite and its
+// returned exit code becomes this function's own result.
+async function withTmpWrite(ports: CliPorts, prefix: string, fn: (tmpWrite: TmpWrite) => Promise<number>): Promise<number> {
+  const tmpWriteResult = await ports.createTmpWrite(prefix);
   if (tmpWriteResult.type === "err") {
     console.error(reporter.renderTmpDirFailure(tmpWriteResult.error.detail));
     return 1;
@@ -132,6 +132,35 @@ async function runInstall(parsed: ParsedCommand, ports: CliPorts): Promise<numbe
   process.once("SIGTERM", onSignal);
 
   try {
+    return await fn(tmpWrite);
+  } finally {
+    process.removeListener("SIGINT", onSignal);
+    process.removeListener("SIGTERM", onSignal);
+    cleanup();
+  }
+}
+
+async function runInstall(parsed: ParsedCommand, ports: CliPorts): Promise<number> {
+  const resolvedInputs = await resolveInputs(parsed, ports);
+  if (resolvedInputs.type === "exit") return resolvedInputs.code;
+  const { inputs, mode } = resolvedInputs;
+
+  // REL-I02: detection is the first I/O — an already-installed target is
+  // rejected before any network cost is paid.
+  const installation = await Installation.detect(inputs.target, ports.manifestIo);
+  const admission = installation.admitsInstall(parsed.force);
+  if (admission.type === "refuse-suggest-upgrade") {
+    console.error(reporter.renderAlreadyInstalled(admission));
+    return 1;
+  }
+
+  const resolved = await createResolver(ports.http).resolveVersion(parsed.version);
+  if (resolved.type === "err") {
+    console.error(reporter.renderError(resolved.error));
+    return 1;
+  }
+
+  return withTmpWrite(ports, "amadeus-setup-install-", async (tmpWrite) => {
     const fetched = await createFetcher(ports.http, tmpWrite).fetchArchive(resolved.value);
     if (fetched.type === "err") {
       console.error(reporter.renderError(fetched.error));
@@ -149,7 +178,7 @@ async function runInstall(parsed: ParsedCommand, ports: CliPorts): Promise<numbe
 
     if (plan.hasConflicts() && !parsed.force) {
       if (mode === "interactive") {
-        const proceed = await tty.confirm("Continue past the conflicts listed above?");
+        const proceed = await ports.tty.confirm("Continue past the conflicts listed above?");
         if (!proceed) return 1;
       } else {
         return 1; // BR-I11: non-interactive conflicts abort after the report
@@ -187,11 +216,104 @@ async function runInstall(parsed: ParsedCommand, ports: CliPorts): Promise<numbe
 
     console.log(reporter.renderSuccess(applied, verify, NextSteps.of(inputs.harness, resolved.value, inputs.target)));
     return 0;
-  } finally {
-    process.removeListener("SIGINT", onSignal);
-    process.removeListener("SIGTERM", onSignal);
-    cleanup();
+  });
+}
+
+// U3: updates an existing installation to a newer distribution version
+// (business-logic-model.md workflow 1). Shares InstallInputs/runWizard/
+// Applier/Verifier/manifestIo with runInstall — the only upgrade-specific
+// decisions are UpgradeSource.fromInstallation, UpgradeAssessment (via
+// source.assess), and Plan.forUpgrade.
+async function runUpgrade(parsed: ParsedCommand, ports: CliPorts): Promise<number> {
+  const resolvedInputs = await resolveInputs(parsed, ports);
+  if (resolvedInputs.type === "exit") return resolvedInputs.code;
+  const { inputs } = resolvedInputs;
+
+  // REL-U02: detection and source classification happen before any network
+  // I/O, so all no-change refusal paths below never touch the network.
+  const installation = await Installation.detect(inputs.target, ports.manifestIo);
+  const sourceResult = UpgradeSource.fromInstallation(installation, parsed.force);
+  if (sourceResult.type === "err") {
+    console.error(reporter.renderError(sourceResult.error));
+    return 1;
   }
+  const source = sourceResult.value;
+
+  const resolved = await createResolver(ports.http).resolveVersion(parsed.version);
+  if (resolved.type === "err") {
+    console.error(reporter.renderError(resolved.error));
+    return 1;
+  }
+
+  // BR-U05: assess() is null for manual-or-unknown/partial-forced sources
+  // (installed version unknown) — those skip straight to a conservative plan.
+  const assessment = source.assess(resolved.value, parsed.version);
+  if (assessment !== null) {
+    const outcome = assessment.outcome();
+    if (outcome.type !== "proceed") {
+      console.error(reporter.renderError(UpgradeRefusal.fromOutcome(outcome)));
+      return outcome.type === "already-up-to-date" ? 0 : 1; // BR-U01: no-op is still success
+    }
+  }
+
+  return withTmpWrite(ports, "amadeus-setup-upgrade-", async (tmpWrite) => {
+    const fetched = await createFetcher(ports.http, tmpWrite).fetchArchive(resolved.value);
+    if (fetched.type === "err") {
+      console.error(reporter.renderError(fetched.error));
+      return 1;
+    }
+
+    const startedAt = new Date().toISOString();
+    const planResult = Plan.forUpgrade(fetched.value, source, inputs.harness, inputs.target, { force: parsed.force, startedAt });
+    if (planResult.type === "err") {
+      console.error(reporter.renderError(planResult.error));
+      return 1;
+    }
+    const plan = planResult.value;
+    console.log(reporter.renderPlanReport(plan, source.strategyNote())); // FR-007
+
+    // BR-U13: upgrade has no "conflict" action — Disposition already decided
+    // every existing file's treatment, so a non-interactive run proceeds
+    // straight to apply once the report above has been printed.
+    if (resolvedInputs.mode === "interactive" && !parsed.force) {
+      const proceed = await ports.tty.confirm("Continue with the upgrade plan above?");
+      if (!proceed) return 1;
+    }
+
+    const applied = await Applier.create(ports.applyWrite).apply(plan, inputs.target);
+    if (applied.hasFailures()) {
+      console.error(reporter.renderApplyFailure(applied));
+      return 1;
+    }
+
+    const filesResult = applied.manifestFiles();
+    if (filesResult.type === "err") {
+      console.error(reporter.renderError(filesResult.error));
+      return 1;
+    }
+
+    // BR-U14: which branch of nextManifest runs (upgradedTo vs. build) is
+    // the source's own decision, not this caller's.
+    const newManifest = source.nextManifest({
+      payload: fetched.value,
+      files: filesResult.value,
+      meta: { installerPackageVersion: SETUP_VERSION, harness: inputs.harness, installStartedAt: plan.startedAtIso },
+    });
+    const written = await ports.manifestIo.write(inputs.target, newManifest);
+    if (written.type === "err") {
+      console.error(reporter.renderError(written.error));
+      return 1;
+    }
+
+    const verify = await Verifier.create(ports.verifyRead).verify(inputs.target, newManifest);
+    if (!verify.allPassed()) {
+      console.error(reporter.renderVerifyFailure(verify));
+      return 1;
+    }
+
+    console.log(reporter.renderSuccess(applied, verify, NextSteps.of(inputs.harness, resolved.value, inputs.target)));
+    return 0;
+  });
 }
 
 // Guarded by comparing the running script's own path, not `import.meta.main`

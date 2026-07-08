@@ -31,10 +31,17 @@ export async function runWizard(
     return Result.err("wizard-aborted");
   }
 
-  const confirmed = await tty.confirm(`Install ${harness} into ${target}?`);
+  const confirmed = await tty.confirm(summaryPrompt(parsed.subcommand, harness, target));
   if (!confirmed) {
     return Result.err("wizard-aborted");
   }
 
   return Result.ok(Object.freeze({ harness, target }));
+}
+
+// U3: the same wizard is shared by both subcommands (runUpgrade reuses it
+// unchanged); only the confirmation wording differs.
+function summaryPrompt(subcommand: ParsedCommand["subcommand"], harness: HarnessName, target: string): string {
+  if (subcommand === "upgrade") return `Upgrade ${harness} in ${target}?`;
+  return `Install ${harness} into ${target}?`;
 }

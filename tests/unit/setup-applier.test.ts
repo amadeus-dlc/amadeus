@@ -125,8 +125,11 @@ describe("Applier.apply — dispositions", () => {
 
   test("edge case: an existing destination is backed up before a 'backup' entry is copied", async () => {
     const { port, calls } = fakeApplyWrite({
-      async exists() {
-        return true;
+      // The destination exists but its (not-yet-created) .bk path does not
+      // (SEC-U01 checks the latter separately — see the dedicated describe
+      // block below).
+      async exists(path) {
+        return path === "/target/settings.json";
       },
     });
     const plan = fakePlan([entry({ path: "settings.json", action: "backup", class: "shared" })]);
@@ -134,6 +137,40 @@ describe("Applier.apply — dispositions", () => {
     expect(result.hasFailures()).toBe(false);
     expect(result.backupPaths()).toEqual(["settings.json.20260708T120000Z.bk"]);
     expect(calls.some((c) => c.startsWith("backup:"))).toBe(true);
+  });
+});
+
+describe("Applier.apply — SEC-U01 (an existing .bk file is never overwritten)", () => {
+  test("a pre-existing backup path stops the entry as an ApplyFailure without touching backup() or copyFile()", async () => {
+    const { port, calls } = fakeApplyWrite({
+      async exists(path) {
+        // Both the destination and its would-be backup path already exist.
+        return path === "/target/settings.json" || path === "/target/settings.json.20260708T120000Z.bk";
+      },
+    });
+    const plan = fakePlan([entry({ path: "settings.json", action: "backup", class: "shared" })]);
+    const result = await Applier.create(port).apply(plan, "/target");
+    expect(result.hasFailures()).toBe(true);
+    expect(result.failures()[0]?.operation).toBe("backup");
+    expect(result.failures()[0]?.detail).toContain("settings.json.20260708T120000Z.bk");
+    expect(calls.some((c) => c.startsWith("backup:"))).toBe(false);
+    expect(calls.some((c) => c.startsWith("copy:"))).toBe(false);
+    expect(result.appliedEntries().length).toBe(0);
+  });
+
+  test("edge case: this shared implementation also protects install's own --force-over-a-previous-.bk path", async () => {
+    const { port, calls } = fakeApplyWrite({
+      async exists(path) {
+        return path === "/target/settings.json" || path === "/target/settings.json.20260708T120000Z.bk";
+      },
+    });
+    // A "conflict" entry (install-only action) resolving to backup-then-copy
+    // for a shared file hits the exact same guard as upgrade's "backup" action.
+    const plan = fakePlan([entry({ path: "settings.json", action: "conflict", class: "shared" })]);
+    const result = await Applier.create(port).apply(plan, "/target");
+    expect(result.hasFailures()).toBe(true);
+    expect(result.failures()[0]?.operation).toBe("backup");
+    expect(calls.some((c) => c.startsWith("backup:"))).toBe(false);
   });
 });
 

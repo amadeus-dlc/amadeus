@@ -60,7 +60,18 @@ export namespace Applier {
               failures.push(backupResult.error);
               break;
             }
-            const backedUp = await fsWrite.backup(dest, backupResult.value);
+            const bkPath = backupResult.value;
+
+            // SEC-U01: an existing .bk file is never overwritten — losing a
+            // prior backup would be a silent loss of user data. This check
+            // also protects install's own --force-over-a-previous-.bk path
+            // (an intentional, safety-side shared effect of applier.ts).
+            if (await fsWrite.exists(bkPath)) {
+              failures.push({ path: entry.path, operation: "backup", detail: `backup path already exists: ${entry.path}.${plan.backupTimestamp}.bk` });
+              break;
+            }
+
+            const backedUp = await fsWrite.backup(dest, bkPath);
             if (backedUp.type === "err") {
               failures.push({ path: entry.path, operation: "backup", detail: backedUp.error.detail });
               break;
