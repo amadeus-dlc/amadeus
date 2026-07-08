@@ -9,4 +9,5 @@
 
 ## SEC-D02(メタデータ是正の正確性)の実装構造
 
-- root package.json の是正は license / repository.url / repository.directory の3フィールドのみの最小 diff(それ以外の行に触れない — PR レビューで diff の狭さ自体を確認材料にする)
+- root package.json の是正は **license / repository.url の是正+`repository.directory` の削除**の最小 diff(それ以外の行に触れない — PR レビューで diff の狭さ自体を確認材料にする)
+  - `directory` の出典: ideation `feasibility/raid-log.md` I2 の対応欄「`directory` サブフィールドも実態に合わせ見直し(approval-handoff でユーザー確認済み)」。現値 `"claude-code"` は旧 awslabs モノレポ内パスの残骸であり、現リポジトリではパッケージがリポジトリルートに在るため**フィールド自体を削除**が正(SEC-D02 の「新規フィールドを追加しない」と整合 — 追加ではなく残骸の除去)

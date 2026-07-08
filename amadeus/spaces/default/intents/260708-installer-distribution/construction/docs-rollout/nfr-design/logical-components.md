@@ -6,10 +6,10 @@
 ## 変更対象(コード追加なし — 既存ファイルの編集と再生成のみ)
 
 ```
-README.md                                        # 導入セクション刷新(FR-014 の4要素)
+README.md                                        # 導入セクション刷新(FR-014 の4要素)+バッジのバンプ同期(t68)
 CHANGELOG.md                                     # 新見出し
 packages/framework/core/tools/amadeus-version.ts # AMADEUS_VERSION バンプ
-package.json(root)                              # I1/I2 是正(3フィールド最小 diff)
+package.json(root)                              # I1(license)/I2(repository.url 是正+directory 削除 — raid-log I2)の最小 diff
 dist/**、.claude/** ほか                          # bun scripts/package.ts / promote:self による再生成(手編集しない — Forbidden)
 docs/guide/15-troubleshooting.md                 # cp -r 手順の移設先(既存ファイルへの追記)
 ```

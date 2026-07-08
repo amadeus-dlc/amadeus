@@ -15,4 +15,4 @@
 | README.md バッジ | framework 版バンプに同期 | t68 |
 | CHANGELOG.md | `## [X.Y.Z] - date` 見出し+installer 導線の変更内容 | t68 |
 | packages/framework/core/tools/amadeus-version.ts | AMADEUS_VERSION バンプ(+`bun scripts/package.ts`/`promote:self` で dist・セルフインストールへ反映、同一コミット) | t68(dist/claude コピーの内部整合)+dist:check/promote:self:check(全 dist ツリーが core を反映 — 相補的2機構) |
-| root package.json | I1: license `(MIT OR Apache-2.0)` / I2: repository.url 是正(U4 から移管) | 目視+npm ページは publish 後検証(U4 手順書6) |
+| root package.json | I1: license `(MIT OR Apache-2.0)` / I2: repository.url 是正+`repository.directory` 削除(旧モノレポ残骸 — raid-log I2 の対応欄どおり)(U4 から移管) | 目視+npm ページは publish 後検証(U4 手順書6) |

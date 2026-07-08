@@ -8669,3 +8669,36 @@
 **Timestamp**: 2026-07-08T10:36:22Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T10:38:02Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-design
+**Timestamp**: 2026-07-08T10:38:02Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T10:41:26Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a42210058b51004ba
+**Message**: npm インストーラ(@amadeus-dlc/setup)の AI-DLC ワークフローを進行中で、現在は NFR Design ステージの最終ユニット U5(docs-rollout)のレビュー判定待ちです。READY が届き次第、ステージ承認ゲートを提示します。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T10:42:36Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: nfrd-review-u5
+**Agent ID**: anfrd-review-u5-be3a511a65634ea9
+**Message**: team-leadへNOT-READY判定を送信しました。\n\n判定の要点は、`security-design.md`と`logical-components.md`が root package.json の是正を「license / repository.url / repository.directory の3フィールド最小diff」と記述している一方、`repository.directory
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T10:43:06Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T10:43:06Z
+
+---
