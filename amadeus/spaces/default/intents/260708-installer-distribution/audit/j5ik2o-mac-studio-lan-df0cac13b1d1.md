@@ -7794,3 +7794,45 @@
 **Timestamp**: 2026-07-08T08:14:23Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T08:16:01Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-requirements
+**Timestamp**: 2026-07-08T08:16:01Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T08:19:37Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a74954f0c42db6bb6
+**Message**: npm インストーラ(@amadeus-dlc/setup)の AI-DLC ワークフローを進行中で、現在は Construction の NFR Requirements ステージ(5ユニット中2つ目 install-flow)のレビュー待ちです。レビュアーの判定が届き次第、是正するか次ユニット upgrade-flow の NFR 作成に進みます。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T08:21:59Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: nfr-review-u2
+**Agent ID**: anfr-review-u2-7a7ec5644332cad6
+**Message**: ## Review\n\nVerdict: NOT-READY\n\nU2(install-flow)の NFR 要件6ファイルおよび U1(setup-foundation)の対応する NFR 成果物、functional-design(business-logic-model.md / business-rules.md / domain-entities.md)、requirements.md を通
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T08:22:57Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: nfr-review-u2
+**Agent ID**: anfr-review-u2-7a7ec5644332cad6
+**Message**: team-leadへレビュー結果(Verdict: NOT-READY、2件の指摘)を送信しました。前回の発言時にメッセージが届いていなかったとのことでしたが、改めて同内容を正式に送信済みです。\n\n要点は以下の2点です。\n\n1. `performance-requirements.md`(install-flow)のNFR-001フィクスチャE2Eテスト閾値「全体 ≤25秒」が、予算表(U1のロー
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T08:23:24Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T08:23:24Z
+
+---
