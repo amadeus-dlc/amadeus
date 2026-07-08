@@ -11,6 +11,8 @@ import type { CliPorts } from "../../packages/setup/src/cli.ts";
 import { main } from "../../packages/setup/src/cli.ts";
 import type { Manifest } from "../../packages/setup/src/domain/manifest.ts";
 import { HarnessName } from "../../packages/setup/src/domain/harness.ts";
+import { SemVer } from "../../packages/setup/src/domain/semver.ts";
+import { createTmpWrite } from "../../packages/setup/src/ports/fsops.ts";
 
 function unreachable(name: string): never {
   throw new Error(`unexpected call to ${name} in this test`);
@@ -58,9 +60,145 @@ describe("main — dispatch", () => {
     expect(exitCode).toBe(2);
   });
 
-  test("upgrade is accepted syntactically but reports not-yet-implemented (exit 1)", async () => {
-    const exitCode = await main(["upgrade", "--harness", "claude", "--target", "/tmp/x", "--yes"], fakePorts());
+});
+
+function semverOf(raw: string): SemVer {
+  const result = SemVer.parse(raw);
+  if (result.type === "err") throw new Error("fixture setup: invalid semver");
+  return result.value;
+}
+
+const NONEXISTENT_TARGET = "/tmp/amadeus-setup-cli-wiring-does-not-exist-2af0c1";
+
+describe("main — upgrade, dispatch (U3)", () => {
+  test("missing --harness/--target exits 2 before touching any port", async () => {
+    const exitCode = await main(["upgrade", "--yes"], fakePorts());
+    expect(exitCode).toBe(2);
+  });
+
+  test("no recognizable installation refuses before any network port is touched (BR-U06, REL-U02)", async () => {
+    const ports = fakePorts({
+      manifestIo: {
+        read: async () => ({ type: "ok", value: null }),
+        write: () => unreachable("manifestIo.write"),
+      },
+    });
+    const exitCode = await main(["upgrade", "--harness", "claude", "--target", NONEXISTENT_TARGET, "--yes"], ports);
     expect(exitCode).toBe(1);
+  });
+
+  test("edge case: rejecting the wizard's confirmation exits 1 without touching any network/write port", async () => {
+    const ports = fakePorts({
+      tty: {
+        isTTY: true,
+        select: async (_prompt, options) => options[0] as string,
+        input: async (_prompt, defaultValue) => defaultValue,
+        confirm: async () => false,
+      },
+    });
+    const exitCode = await main(["upgrade"], ports);
+    expect(exitCode).toBe(1);
+  });
+});
+
+describe("main — upgrade, already-up-to-date (BR-U01)", () => {
+  test("installed version equal to the resolved version exits 0 without touching apply/write ports", async () => {
+    const fakeManifest = {
+      harness: "claude",
+      sourceTag: "v1.0.0",
+      installedAt: "2026-07-08T00:00:00.000Z",
+      distributionVersion: semverOf("1.0.0"),
+    } as unknown as Manifest;
+    const ports = fakePorts({
+      manifestIo: {
+        read: async () => ({ type: "ok", value: fakeManifest }),
+        write: () => unreachable("manifestIo.write"),
+      },
+      http: {
+        getJson: async () => ({ type: "ok", value: [{ tag_name: "v1.0.0", draft: false, prerelease: false }] }),
+        downloadArchive: () => unreachable("http.downloadArchive"),
+      },
+    });
+    const exitCode = await main(["upgrade", "--harness", "claude", "--target", NONEXISTENT_TARGET, "--yes"], ports);
+    expect(exitCode).toBe(0);
+  });
+});
+
+describe("main — upgrade, version boundary refusals are no-ops (BR-U02/U03, REL-U02)", () => {
+  test("a requested version older than installed refuses without touching apply/write ports", async () => {
+    const fakeManifest = {
+      harness: "claude",
+      sourceTag: "v2.0.0",
+      installedAt: "2026-07-08T00:00:00.000Z",
+      distributionVersion: semverOf("2.0.0"),
+    } as unknown as Manifest;
+    const ports = fakePorts({
+      manifestIo: {
+        read: async () => ({ type: "ok", value: fakeManifest }),
+        write: () => unreachable("manifestIo.write"),
+      },
+      http: {
+        // --version is an "exact" VersionSpec, which resolves via the tags
+        // endpoint's "name" field (not the releases endpoint's "tag_name").
+        getJson: async () => ({ type: "ok", value: [{ name: "v1.0.0", tag_name: "v1.0.0", draft: false, prerelease: false }] }),
+        downloadArchive: () => unreachable("http.downloadArchive"),
+      },
+    });
+    const exitCode = await main(
+      ["upgrade", "--harness", "claude", "--target", NONEXISTENT_TARGET, "--version", "1.0.0", "--yes"],
+      ports,
+    );
+    expect(exitCode).toBe(1);
+  });
+
+  test("edge case: an installed version newer than the default-resolved latest refuses the same way", async () => {
+    const fakeManifest = {
+      harness: "claude",
+      sourceTag: "v2.0.0",
+      installedAt: "2026-07-08T00:00:00.000Z",
+      distributionVersion: semverOf("2.0.0"),
+    } as unknown as Manifest;
+    const ports = fakePorts({
+      manifestIo: {
+        read: async () => ({ type: "ok", value: fakeManifest }),
+        write: () => unreachable("manifestIo.write"),
+      },
+      http: {
+        getJson: async () => ({ type: "ok", value: [{ tag_name: "v1.5.0", draft: false, prerelease: false }] }),
+        downloadArchive: () => unreachable("http.downloadArchive"),
+      },
+    });
+    const exitCode = await main(["upgrade", "--harness", "claude", "--target", NONEXISTENT_TARGET, "--yes"], ports);
+    expect(exitCode).toBe(1);
+  });
+});
+
+describe("main — upgrade, proceed reaches fetch (BR-U04, reachability order)", () => {
+  test("a newer resolved version proceeds past the boundary check and only then touches the archive fetch", async () => {
+    const fakeManifest = {
+      harness: "claude",
+      sourceTag: "v1.0.0",
+      installedAt: "2026-07-08T00:00:00.000Z",
+      distributionVersion: semverOf("1.0.0"),
+    } as unknown as Manifest;
+    let downloadArchiveCalled = false;
+    const ports = fakePorts({
+      manifestIo: {
+        read: async () => ({ type: "ok", value: fakeManifest }),
+        write: () => unreachable("manifestIo.write"),
+      },
+      http: {
+        getJson: async () => ({ type: "ok", value: [{ tag_name: "v1.1.0", draft: false, prerelease: false }] }),
+        downloadArchive: async () => {
+          downloadArchiveCalled = true;
+          return { type: "err", error: { type: "conn", detail: "stub network failure", status: null, isTransient: () => false, guidance: () => "n/a" } };
+        },
+      },
+      createTmpWrite, // real: the boundary check must pass before a tmp dir is even needed
+    });
+    const exitCode = await main(["upgrade", "--harness", "claude", "--target", NONEXISTENT_TARGET, "--yes"], ports);
+    expect(downloadArchiveCalled).toBe(true);
+    expect(exitCode).toBe(1); // stubbed fetch failure, but proves the boundary check let it through
   });
 });
 

@@ -127,9 +127,18 @@ describe("renderWizardAborted (BR-I18)", () => {
   });
 });
 
-describe("renderUpgradeNotImplemented (SEC-I04)", () => {
-  test("names the upgrade subcommand", () => {
-    expect(reporter.renderUpgradeNotImplemented()).toContain("upgrade");
+describe("renderPlanReport — upgrade strategy note (business-logic-model.md workflow 1)", () => {
+  test("prepends the note ahead of the Plan: section when one is supplied", () => {
+    const plan = fakePlan([planEntry({ path: "settings.json", action: "backup", class: "shared", forced: true })]);
+    const text = reporter.renderPlanReport(plan, "No installer manifest was found; using a conservative strategy.");
+    expect(text.startsWith("No installer manifest was found")).toBe(true);
+    expect(text).toContain("Plan:");
+  });
+
+  test("install's report (no note) is unaffected", () => {
+    const plan = fakePlan([planEntry({ path: "amadeus-tool.ts", action: "update", class: "owned" })]);
+    const text = reporter.renderPlanReport(plan);
+    expect(text.startsWith("Plan:")).toBe(true);
   });
 });
 
@@ -167,5 +176,48 @@ describe("renderError (US-A7/FR-012)", () => {
 
   test("edge case: a ManifestError renders without throwing", () => {
     expect(() => reporter.renderError({ type: "malformed", detail: "missing field" })).not.toThrow();
+  });
+});
+
+describe("renderError — UpgradeRefusal (U3, FR-005)", () => {
+  test("no-installation names the install subcommand", () => {
+    const text = reporter.renderError({ type: "no-installation" });
+    expect(text.toLowerCase()).toContain("install");
+  });
+
+  test("unsupported-layout includes the detail and states no files changed", () => {
+    const text = reporter.renderError({ type: "unsupported-layout", detail: "legacy VERSION content" });
+    expect(text).toContain("legacy VERSION content");
+    expect(text.toLowerCase()).toContain("no files were changed");
+  });
+
+  test("partial-refused lists the missing anchors and suggests --force", () => {
+    const text = reporter.renderError({ type: "partial-refused", missing: ["tools directory"] });
+    expect(text).toContain("tools directory");
+    expect(text).toContain("--force");
+  });
+
+  test("already-up-to-date names the installed version", () => {
+    const semver = SemVer.parse("1.2.3");
+    if (semver.type === "err") throw new Error("fixture setup failed");
+    const text = reporter.renderError({ type: "already-up-to-date", installed: semver.value });
+    expect(text).toContain("1.2.3");
+  });
+
+  test("downgrade-unsupported names both the requested and installed versions", () => {
+    const installed = SemVer.parse("2.0.0");
+    const requested = SemVer.parse("1.0.0");
+    if (installed.type === "err" || requested.type === "err") throw new Error("fixture setup failed");
+    const text = reporter.renderError({ type: "downgrade-unsupported", installed: installed.value, requested: requested.value });
+    expect(text).toContain("1.0.0");
+    expect(text).toContain("2.0.0");
+  });
+
+  test("installed-newer-than-latest suggests --version", () => {
+    const installed = SemVer.parse("2.0.0");
+    const latest = SemVer.parse("1.5.0");
+    if (installed.type === "err" || latest.type === "err") throw new Error("fixture setup failed");
+    const text = reporter.renderError({ type: "installed-newer-than-latest", installed: installed.value, latest: latest.value });
+    expect(text).toContain("--version");
   });
 });

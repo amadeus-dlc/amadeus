@@ -56,6 +56,36 @@ describe("runWizard — asks only for missing fields (BR-I17)", () => {
   });
 });
 
+describe("runWizard — subcommand-specific confirmation wording (U3)", () => {
+  test("an install command asks to 'Install ... into ...'", async () => {
+    const parsed = parseOk(["install", "--harness", "claude", "--target", "/tmp/x"]);
+    let prompt = "";
+    const { tty } = fakeTty({
+      async confirm(p: string) {
+        prompt = p;
+        return true;
+      },
+    });
+    await runWizard(parsed, [], tty);
+    expect(prompt).toContain("Install");
+    expect(prompt).toContain("into");
+  });
+
+  test("an upgrade command asks to 'Upgrade ... in ...' instead", async () => {
+    const parsed = parseOk(["upgrade", "--harness", "claude", "--target", "/tmp/x"]);
+    let prompt = "";
+    const { tty } = fakeTty({
+      async confirm(p: string) {
+        prompt = p;
+        return true;
+      },
+    });
+    await runWizard(parsed, [], tty);
+    expect(prompt).toContain("Upgrade");
+    expect(prompt).not.toContain("Install");
+  });
+});
+
 describe("runWizard — confirmation (BR-I18)", () => {
   test("rejecting the final confirmation aborts (no InstallInputs is returned)", async () => {
     const parsed = parseOk(["install"]);
