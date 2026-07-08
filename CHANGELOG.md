@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.1.1] - 2026-07-09
+
+- The stage protocol now mandates parallel dispatch of per-unit reviewer sub-agents (reviews are read-only and side-effect-free; only builder fixes stay serial) — §12a "Parallelism (per-unit stages)".
+- The architecture reviewer agent definition gained the missing Knowledge Loading section: its shipped review methodology (`reviewing.md`, `thermo-nuclear-code-quality-review.md`) is now loaded on activation, and code reviews must apply the thermo-nuclear maintainability standards.
+
 ## [1.1.0] - 2026-07-07
 
 - Added **Grill me**, a fourth question interaction mode: a relentless one-question-at-a-time interview — each question with a recommended answer and rationale, facts self-researched with only decisions asked, hybrid termination ("done" any time, continuation check at the depth guideline), and an explicitly confirmed agreement summary before artifact generation. Available at every gated stage's mode selection (annotated as exceptional use in Construction/Operation); answers keep the existing questions-file and per-question `decision`/`answer` audit contract.

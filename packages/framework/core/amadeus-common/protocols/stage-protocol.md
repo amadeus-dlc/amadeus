@@ -888,6 +888,25 @@ If the `run-stage` directive includes a `reviewer` field (non-null), the orchest
      - Proceed to approval gate with unresolved findings noted:
        "Reviewer found issues after N iterations. Presenting with unresolved findings for your decision."
 
+### Parallelism (per-unit stages)
+
+Reviewer runs are **read-only and side-effect-free** (the only write is appending
+`## Review` to that unit's own primary artifact), so reviews of DIFFERENT units
+never contend. On a per-unit Construction stage (`for_each: unit-of-work`), do
+not serialize draft→review→fix per unit. Instead:
+
+1. Draft each unit's artifacts (drafting may stay serial — units often build on
+   each other's contracts).
+2. Once multiple units have artifacts awaiting review, dispatch their reviewer
+   sub-agents **concurrently** (one message, multiple Task calls — the same
+   parallel-batch pattern as practices-discovery Step 2).
+3. Apply fixes per verdict as each returns; re-reviews (iteration 2) may again
+   run in parallel across units.
+
+Only the builder's fix step is inherently serial per unit (it mutates that
+unit's artifacts). Reviews of the same unit's successive iterations remain
+sequential by definition.
+
 ### What the reviewer does NOT do
 
 - Does not modify the artifact beyond appending `## Review`
