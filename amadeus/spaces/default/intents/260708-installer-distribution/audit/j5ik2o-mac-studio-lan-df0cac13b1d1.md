@@ -6524,3 +6524,263 @@
 **Agent**: amadeus-architect-agent
 
 ---
+
+## Artifact Updated
+**Timestamp**: 2026-07-08T06:12:07Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/unit-of-work-dependency.md
+**Context**: inception > units-generation > unit-of-work-dependency.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T06:12:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: da3ae667
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/unit-of-work-dependency.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T06:12:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: da3ae667
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/unit-of-work-dependency.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T06:12:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 40ed00a8
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/unit-of-work-dependency.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T06:12:08Z
+**Event**: SENSOR_FAILED
+**Fire id**: 40ed00a8
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/unit-of-work-dependency.md
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/functional-design/upstream-coverage-40ed00a8.md
+**Findings count**: 4
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-08T06:14:04Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/construction/setup-foundation/functional-design/business-logic-model.md
+**Context**: construction > setup-foundation > functional-design > business-logic-model.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T06:14:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: fe12a9b3
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/construction/setup-foundation/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T06:14:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: fe12a9b3
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/construction/setup-foundation/functional-design/business-logic-model.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T06:14:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: cec6db52
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/construction/setup-foundation/functional-design/business-logic-model.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T06:14:04Z
+**Event**: SENSOR_FAILED
+**Fire id**: cec6db52
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/construction/setup-foundation/functional-design/business-logic-model.md
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/functional-design/upstream-coverage-cec6db52.md
+**Findings count**: 1
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-08T06:14:30Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/construction/setup-foundation/functional-design/business-rules.md
+**Context**: construction > setup-foundation > functional-design > business-rules.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T06:14:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: 08f38c2b
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/construction/setup-foundation/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T06:14:30Z
+**Event**: SENSOR_PASSED
+**Fire id**: 08f38c2b
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/construction/setup-foundation/functional-design/business-rules.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T06:14:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: 11e3768a
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/construction/setup-foundation/functional-design/business-rules.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T06:14:30Z
+**Event**: SENSOR_FAILED
+**Fire id**: 11e3768a
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/construction/setup-foundation/functional-design/business-rules.md
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/functional-design/upstream-coverage-11e3768a.md
+**Findings count**: 5
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-08T06:14:55Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/construction/setup-foundation/functional-design/domain-entities.md
+**Context**: construction > setup-foundation > functional-design > domain-entities.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T06:14:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 270a380c
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/construction/setup-foundation/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T06:14:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: 270a380c
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/construction/setup-foundation/functional-design/domain-entities.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T06:14:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 82ef4457
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/construction/setup-foundation/functional-design/domain-entities.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T06:14:55Z
+**Event**: SENSOR_FAILED
+**Fire id**: 82ef4457
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/construction/setup-foundation/functional-design/domain-entities.md
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/functional-design/upstream-coverage-82ef4457.md
+**Findings count**: 4
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-08T06:15:08Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/construction/setup-foundation/functional-design/frontend-components.md
+**Context**: construction > setup-foundation > functional-design > frontend-components.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T06:15:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 83f24473
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/construction/setup-foundation/functional-design/frontend-components.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T06:15:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 83f24473
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/construction/setup-foundation/functional-design/frontend-components.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T06:15:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8858dbb4
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/construction/setup-foundation/functional-design/frontend-components.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T06:15:08Z
+**Event**: SENSOR_FAILED
+**Fire id**: 8858dbb4
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/construction/setup-foundation/functional-design/frontend-components.md
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/functional-design/upstream-coverage-8858dbb4.md
+**Findings count**: 5
+
+---

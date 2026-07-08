@@ -5,6 +5,22 @@
 
 ## 依存 DAG(循環なし)
 
+機械可読エッジブロック(runtime compile の bolt_dag 入力 — この YAML が正、以下の図は可視化):
+
+```yaml
+units:
+  - name: setup-foundation
+    depends_on: []
+  - name: install-flow
+    depends_on: [setup-foundation]
+  - name: upgrade-flow
+    depends_on: [install-flow]
+  - name: publish-readiness
+    depends_on: [install-flow, upgrade-flow]
+  - name: docs-rollout
+    depends_on: [publish-readiness]
+```
+
 ```mermaid
 flowchart LR
   U1[U1 setup-foundation] --> U2[U2 install-flow]
