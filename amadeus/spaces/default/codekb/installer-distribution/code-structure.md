@@ -6,11 +6,9 @@
 
 | パス | 役割 | 備考 |
 | --- | --- | --- |
-| `packages/framework/core/` | harness-neutral な AI-DLC runtime の物理 source | root `core/` はここへのシンボリックリンク |
-| `packages/framework/harness/<name>/` | harness 固有 manifest・emitter の物理 source | root `harness/` はここへのシンボリックリンク |
+| `packages/framework/core/` | harness-neutral な AI-DLC runtime の物理 source | 唯一の参照先(root symlink は PR #644 で削除) |
+| `packages/framework/harness/<name>/` | harness 固有 manifest・emitter の物理 source | 唯一の参照先(root symlink は PR #644 で削除) |
 | `packages/framework/package.json` | `@amadeus-dlc/framework`, private:true, version 0.0.0 | 独自ビルドロジックなし。scripts は `../../scripts/*.ts` への委譲のみ |
-| `core/`(root) | `packages/framework/core` へのシンボリックリンク | scripts・manifest・docs・tests は root path 前提のまま動作する |
-| `harness/`(root) | `packages/framework/harness` へのシンボリックリンク | 同上 |
 | `harness/claude/` | Claude 配布物 source | manifest が coreDirs と harness files を projection |
 | `harness/codex/` | Codex 配布物 source | `.codex`, `.agents/skills`, root `AGENTS.md` emit を含む |
 | `harness/kiro/` | Kiro CLI 配布物 source | root `dist/kiro` install shape と結合 |
@@ -25,7 +23,7 @@
 
 ## ソース分類
 
-`packages/framework/{core,harness}` は authored source、`dist/` は生成済みだが commit 済みの release 出力、`.claude/.codex/.agents` は repository 自身を dogfood するための promoted runtime である。root `core`/`harness` はシンボリックリンクであり、authored source そのものではないが、既存の相対パス参照(`scripts/package.ts` の `CORE_ROOT`/`HARNESS_ROOT` は `packages/framework/` を直接指すため実際にはシンボリックリンクを経由しない)との整合を保つ互換レイヤーとして機能する。
+`packages/framework/{core,harness}` は authored source、`dist/` は生成済みだが commit 済みの release 出力、`.claude/.codex/.agents` は repository 自身を dogfood するための promoted runtime である。root `core`/`harness` の互換シンボリックリンクは PR #644(2026-07-08)で削除された。`scripts/package.ts` の `CORE_ROOT`/`HARNESS_ROOT` をはじめ、tsconfig・biome・knip・tests の参照はすべて `packages/framework/` を直接指す。
 
 `packages/setup` はこの分類に新しいカテゴリを1つ追加する。「authored source かつ npm publish 対象」という、現在の `packages/framework`(private:true で publish されない)にはない性質を持つ。
 

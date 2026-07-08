@@ -2,6 +2,7 @@
 > This file is maintained by the orchestrator during stage execution. Add observations at the gate ritual, not by editing here directly.
 
 ## Interpretations
+- 2026-07-08T05:09:12Z — upstream PR #644 removed the root core/harness symlinks between scan and gate; folded the change into all 8 affected codekb files at the open gate (recovery protocol: new material revises the current stage, not a re-run) and recorded an addendum in reverse-engineering-timestamp.md
 - 2026-07-08T04:16:18Z — ran diff-refresh from base bc9a6043 (per cid:reverse-engineering:c1) with Developer scan -> Architect synthesis serial subagents (c3); focus on distribution assets (c2). New codekb store landed at codekb/installer-distribution/ as resolved by codekb-path
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 

@@ -12,7 +12,7 @@
 bun scripts/package.ts [<harness>] [--check]
 ```
 
-- `packages/framework/core/`(root `core/` シンボリックリンク経由)と `packages/framework/harness/<name>/`(root `harness/` シンボリックリンク経由)から配布 tree を生成する。
+- `packages/framework/core/` と `packages/framework/harness/<name>/` から配布 tree を生成する(PR #644 で root symlink は削除済み)。
 - 出力を root `dist/<name>/` に書く。`AMADEUS_VERSION` から `<harnessDir>/VERSION` ファイルも生成する。
 - `--check` では一時 tree と commit 済み `dist/<name>/` を byte-diff し、drift guard として失敗させる。
 

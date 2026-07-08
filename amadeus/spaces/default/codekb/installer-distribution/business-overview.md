@@ -10,8 +10,8 @@ Amadeus は AI-DLC ワークフローを複数の AI harness(Claude、Codex、Ki
 
 現在の配布フローは3つの役割に分かれる。
 
-- `packages/framework/core/`: harness-neutral な AI-DLC runtime、templates、tools、stage 定義の source of truth。物理的な配置はここへ移ったが、root `core/` は互換シンボリックリンクとして残る。
-- `packages/framework/harness/<name>/`: harness 固有の manifest、emitter、skill/prompt/system integration。root `harness/` も同様にシンボリックリンク。
+- `packages/framework/core/`: harness-neutral な AI-DLC runtime、templates、tools、stage 定義の source of truth。物理的な配置はここへ移り、root `core/` の互換シンボリックリンクも PR #644 で削除された。
+- `packages/framework/harness/<name>/`: harness 固有の manifest、emitter、skill/prompt/system integration(PR #644 で root symlink は削除済み)。
 - `dist/<name>/`: `scripts/package.ts` が生成し repository に commit される、user がコピー/インストールする成果物。root にとどまり、self-install(`promote:self`)とテストの anchor になっている。
 
 この三層構造は README と `docs/reference/11-contributing.md` に contributor mental model として明記されており、単なるファイルシステム配置ではなく「どこを編集し、どこを生成物として扱うか」を判断する業務ルールでもある。
@@ -36,7 +36,7 @@ Amadeus は AI-DLC ワークフローを複数の AI harness(Claude、Codex、Ki
 
 この stage の成果は実装ではなく、requirements-analysis 以降が依拠する CodeKB 更新である。成功条件は次の通り。
 
-- `packages/framework` が実在すること、root `core`/`harness` がシンボリックリンクであること、`packages/setup` が未着手であることを正しく記録している。
+- `packages/framework` が実在すること、root `core`/`harness` symlink が PR #644 で削除されたこと、`packages/setup` が未着手であることを正しく記録している。
 - `scripts/package.ts` と `scripts/promote-self.ts` の挙動(harness 生成、self-install、preservation rules)を、installer の non-destructive merge 設計の参考実装として棚卸ししている。
 - version ライフサイクル(`AMADEUS_VERSION`、VERSION ファイル、t68 の3者同期、CHANGELOG 規律、tag 不在)をテスト可能な形で後続 stage へ引き継いでいる。
 - CI の実態(narrow biome lint scope、publish workflow 不在)と root `package.json` の既知の不備を明示している。

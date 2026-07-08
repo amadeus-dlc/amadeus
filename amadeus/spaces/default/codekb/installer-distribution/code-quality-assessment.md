@@ -15,7 +15,7 @@
 - root scripts(`package.ts`, `promote-self.ts`）は manifest ベースの明示的な projection を持ち、harness ごとの配布 shape が1箇所に定義されている。
 - self-promotion は local settings・hooks・composed scopes の preservation ロジックを持ち、data-loss リスクを抑えている。これは installer の non-destructive merge 設計に転用可能な資産である。
 - `tests/harness/fixtures.ts`/`tui-fixtures.ts` が install fixture を集約しており、installer テストが同じパターンを踏襲しやすい。
-- layout-normalization intent(前 intent）でのシンボリックリンク移行は純粋な rename(git diff -M50 で 250 files R100、9 files R097–R099）であり、ロジック変更を伴わなかった。移行の安全性が高かったことを示す。
+- layout-normalization intent(前 intent)での packages/framework への移行は純粋な rename(git diff -M50 で 250 files R100、9 files R097–R099)であり、ロジック変更を伴わなかった。移行の安全性が高かったことを示す。経過措置だった root symlink も PR #644 で削除済み。
 
 ## リスクと技術的負債
 

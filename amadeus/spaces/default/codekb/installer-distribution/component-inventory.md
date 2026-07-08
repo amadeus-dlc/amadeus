@@ -4,8 +4,8 @@
 
 | コンポーネント | 責務 | 依存先 | installer との関係 |
 | --- | --- | --- | --- |
-| `packages/framework/core/` | AI-DLC engine source, tools, templates, stage 定義。root `core/` はここへのシンボリックリンク | 各種 scripts・manifest | installer は物理配置を意識しない(dist 経由で消費) |
-| `packages/framework/harness/<name>/` | harness ごとの配布 source。root `harness/` はここへのシンボリックリンク | `scripts/manifest-types.ts` | 同上 |
+| `packages/framework/core/` | AI-DLC engine source, tools, templates, stage 定義(PR #644 で root symlink は削除済み) | 各種 scripts・manifest | installer は物理配置を意識しない(dist 経由で消費) |
+| `packages/framework/harness/<name>/` | harness ごとの配布 source(PR #644 で root symlink は削除済み) | `scripts/manifest-types.ts` | 同上 |
 | `packages/framework/core/tools/amadeus-version.ts` | `AMADEUS_VERSION = "1.1.0"` の source | `scripts/package.ts` が相対 import | installer 自身のバージョンとは独立させる必要がある |
 | `harness/<name>/manifest.ts` | harness ごとの source projection を宣言 | `scripts/manifest-types.ts` | installer は関与しない |
 | `harness/codex/emit.ts` | Codex 配布物の追加 emission | assembled dist tree | installer は関与しない |

@@ -20,7 +20,7 @@
 
 - `scripts/package.ts`、`scripts/promote-self.ts`、`scripts/manifest-types.ts`
 - `packages/framework/package.json`(新規存在の確認)
-- root `core`/`harness` のシンボリックリンク実体
+- root `core`/`harness` のシンボリックリンク実体(スキャン時点。直後の PR #644 で削除 — 下記追記参照)
 - `.github/workflows/ci.yml`
 - root `package.json`(license/repository/workspaces)
 - `packages/framework/core/tools/amadeus-version.ts`(`AMADEUS_VERSION`)
@@ -38,6 +38,10 @@
 
 - `packages/framework` が実在し、`packages/framework/core`・`packages/framework/harness/<name>` が物理 source になった。
 - root `core`・root `harness` は `packages/framework/{core,harness}` を指すシンボリックリンクになった(authored source ではなく互換レイヤー)。
+
+## 追記(2026-07-08 リベース後)
+
+- スキャン直後に upstream PR #644(`f3713466b`、`bb0b2c3a3`)が root `core`/`harness` symlink を削除。`packages/framework/{core,harness}` が唯一の参照先となり、biome/knip/tsconfig/tests の参照も直接パスへ更新された。本 codekb の symlink 記述は同日この追記とともに差分修正済み。観測コミットはリベース後の origin/main 先端(`f3713466b`)ベース。
 - `packages/framework/package.json`(`@amadeus-dlc/framework`, private:true, 0.0.0)が新設されたが、独自ビルドロジックは持たず、`dist`/`dist:check`/`promote:self`/`promote:self:check` はすべて `../../scripts/*.ts` への委譲。
 - root `scripts/`(実行可能な source of truth)、`dist/`、`tests/` は root に残ったまま変化していない。
 

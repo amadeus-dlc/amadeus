@@ -2,25 +2,21 @@
 
 ## 現在の全体構造
 
-Amadeus は one-core-many-harnesses 型の architecture である。物理的な source は `packages/framework/core/` と `packages/framework/harness/<name>/` に置かれ、root `core/` と root `harness/` はそれぞれ `packages/framework/core`、`packages/framework/harness` を指すシンボリックリンクとして互換性を提供する。`scripts/package.ts`(root にとどまる実行可能な source of truth)が `harness/<name>/manifest.ts` を走査して harness 一覧を解決し、`dist/<name>/` を生成する。
+Amadeus は one-core-many-harnesses 型の architecture である。物理的な source は `packages/framework/core/` と `packages/framework/harness/<name>/` に置かれる(かつて互換のため存在した root `core/`・`harness/` シンボリックリンクは PR #644(2026-07-08)で削除され、現在は `packages/framework/` 配下が唯一の参照先)。`scripts/package.ts`(root にとどまる実行可能な source of truth)が `harness/<name>/manifest.ts` を走査して harness 一覧を解決し、`dist/<name>/` を生成する。
 
 ```mermaid
 flowchart LR
   FrameworkCore["packages/framework/core/"]
   FrameworkHarness["packages/framework/harness/<name>/"]
-  SymCore["root core/ (symlink)"]
-  SymHarness["root harness/<name>/ (symlink)"]
-  Manifest["harness/<name>/manifest.ts"]
+  Manifest["packages/framework/harness/<name>/manifest.ts"]
   Packager["scripts/package.ts"]
   Dist["root dist/<name>/"]
   Runtime["installed .claude/.codex/.agents/.kiro"]
   Tests["tests + CI drift guards"]
   Docs["README + docs"]
 
-  FrameworkCore --> SymCore
-  FrameworkHarness --> SymHarness
-  SymCore --> Packager
-  SymHarness --> Manifest
+  FrameworkCore --> Packager
+  FrameworkHarness --> Manifest
   Manifest --> Packager
   Packager --> Dist
   Dist --> Runtime
@@ -29,7 +25,7 @@ flowchart LR
   Dist --> Docs
 ```
 
-<!-- text fallback: packages/framework/core と packages/framework/harness/<name> が物理 source。root core/ と root harness/<name> はそれぞれのシンボリックリンク。scripts/package.ts は harness/<name>/manifest.ts を読み、root core/ から coreDirs を、root harness/<name>/ から harnessFiles を projection して root dist/<name>/ を書く。dist は runtime install 先、tests、docs から参照される。 -->
+<!-- text fallback: packages/framework/core と packages/framework/harness/<name> が唯一の物理 source(root symlink は PR #644 で削除)。scripts/package.ts は packages/framework/harness/<name>/manifest.ts を読み、packages/framework/core/ から coreDirs を、packages/framework/harness/<name>/ から harnessFiles を projection して root dist/<name>/ を書く。dist は runtime install 先、tests、docs から参照される。 -->
 
 `packages/framework/package.json`(`@amadeus-dlc/framework`, private:true, version 0.0.0)は独自のビルドロジックを持たず、`dist`/`dist:check`/`promote:self`/`promote:self:check` スクリプトはすべて `../../scripts/*.ts` への薄い委譲である。root `scripts/` が実行可能な source of truth という位置づけは layout-normalization intent 後も変わっていない。
 
@@ -131,7 +127,7 @@ sequenceDiagram
 
 ## 正規化の影響(既存の判断の帰結)
 
-前回 intent `260707-layout-normalization` の判断は「staged layout 継続」に相当する結果として実装された。framework source は `packages/framework/{core,harness}` に物理配置されたが、`dist/`・`scripts/`・`tests/` は root にとどまり、root `core`/`harness` はシンボリックリンクとして互換性を保っている。この intent はこの決定を変更せず、その外側に `packages/setup` を独立パッケージとして追加する。
+前回 intent `260707-layout-normalization` の判断は「staged layout 継続」に相当する結果として実装された。framework source は `packages/framework/{core,harness}` に物理配置されたが、`dist/`・`scripts/`・`tests/` は root にとどまる。root `core`/`harness` の互換シンボリックリンクは一時的に存在したが PR #644 で削除され、全消費者(scripts/tsconfig/biome/knip/tests)が `packages/framework/` を直接参照する。この intent はこの決定を変更せず、その外側に `packages/setup` を独立パッケージとして追加する。
 
 `packages/setup` を追加するにあたり必要になる architecture decision は次の通り。
 

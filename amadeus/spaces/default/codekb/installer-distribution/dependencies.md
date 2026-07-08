@@ -8,10 +8,8 @@ flowchart TD
   TSConfig["tsconfig/biome config"]
   FWCore["packages/framework/core/"]
   FWHarness["packages/framework/harness/<name>/"]
-  SymCore["root core/ (symlink)"]
-  SymHarness["root harness/<name>/ (symlink)"]
   ManifestTypes["scripts/manifest-types.ts"]
-  Manifests["harness/<name>/manifest.ts"]
+  Manifests["packages/framework/harness/<name>/manifest.ts"]
   PackageScript["scripts/package.ts"]
   Promote["scripts/promote-self.ts"]
   Dist["root dist/<name>/"]
@@ -20,16 +18,14 @@ flowchart TD
   Docs["README/docs"]
   CI[".github/workflows/ci.yml"]
 
-  FWCore --> SymCore
-  FWHarness --> SymHarness
   PackageJson --> PackageScript
   PackageJson --> Promote
   TSConfig --> FWCore
   TSConfig --> FWHarness
   TSConfig --> PackageScript
   ManifestTypes --> Manifests
-  SymCore --> PackageScript
-  SymHarness --> PackageScript
+  FWCore --> PackageScript
+  FWHarness --> PackageScript
   Manifests --> PackageScript
   PackageScript --> Dist
   Dist --> Promote
@@ -43,7 +39,7 @@ flowchart TD
   CI --> Promote
 ```
 
-<!-- text fallback: packages/framework/core, packages/framework/harness/<name> が root core/harness シンボリックリンク経由で scripts/package.ts に取り込まれ、manifest.ts の projection に従って root dist/<name>/ を生成する。dist は promote-self 経由で root .claude/.codex/.agents に反映され、tests・docs からも参照される。CI は package.json のスクリプトを通じて package.ts と promote-self.ts を実行する。 -->
+<!-- text fallback: packages/framework/core, packages/framework/harness/<name> が scripts/package.ts に直接取り込まれ(root symlink は PR #644 で削除)、manifest.ts の projection に従って root dist/<name>/ を生成する。dist は promote-self 経由で root .claude/.codex/.agents に反映され、tests・docs からも参照される。CI は package.json のスクリプトを通じて package.ts と promote-self.ts を実行する。 -->
 
 ## installer が追加する依存関係(計画)
 
