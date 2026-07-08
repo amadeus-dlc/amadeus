@@ -59,7 +59,8 @@ runInstall(parsed):
 
   files = applied.manifestFiles()                              # PlanEntry の md5/required から正準射影(FR-016)
   if files.err: print(reporter.renderError(files.error)); return 1
-  manifest = Manifest.build(payload.ok, files.ok, InstallMeta.of(SETUP_VERSION, inputs.harness, plan.ok.backupTimestamp))
+  meta = { installerPackageVersion: SETUP_VERSION, harness: inputs.harness, installStartedAt: plan.ok.backupTimestamp }  # InstallMeta は U1 の shape-only 補助型 — リテラル構築(コンパニオンなし)
+  manifest = Manifest.build(payload.ok, files.ok, meta)
   written = manifestIo.write(inputs.target, manifest)          # FR-016
   if written.err: print(reporter.renderError(written.error)); return 1  # I/O 境界の明示分岐
 

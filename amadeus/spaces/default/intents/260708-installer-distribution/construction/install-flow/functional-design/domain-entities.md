@@ -179,6 +179,24 @@ export namespace NextSteps {
 }
 ```
 
+### Applier / Verifier の公開契約(本 Unit で正式化 — component-methods.md のベア関数スケッチを置換)
+
+```ts
+export type Applier = {
+  apply(plan: Plan, target: string): Promise<ApplyResult>;
+};
+export namespace Applier {
+  export function create(fsops: FsOps): Applier;    // ファクトリ+ポート注入(component-methods の apply(plan, target, fsops) ベア関数形を置換)
+}
+
+export type Verifier = {
+  verify(target: string, manifest: Manifest): Promise<VerifyResult>;
+};
+export namespace Verifier {
+  export function create(fsops: FsOps): Verifier;   // 同上(verify(target, manifest) ベア関数形を置換)
+}
+```
+
 ### Reporter API(本 Unit で正式化 — component-methods.md の3関数スケッチを置換)
 
 ```ts

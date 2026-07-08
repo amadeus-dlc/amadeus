@@ -7292,3 +7292,45 @@
 **Timestamp**: 2026-07-08T07:00:00Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T07:00:49Z
+**Event**: WORKFLOW_PARKED
+**Stage**: functional-design
+**Timestamp**: 2026-07-08T07:00:49Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T07:01:09Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a033e3f1bc5faffd3
+**Message**: origin/mainからrebaseして
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T07:04:22Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a049033b9775273df
+**Message**: npm インストーラ(@amadeus-dlc/setup)の AI-DLC ワークフローを進行中で、現在は Construction の機能設計を Unit ごとに作成中です。U2(install-flow)の最終レビュー判定が届き次第、是正するか次の U3(upgrade-flow)へ進みます。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T07:05:22Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: fd-review-u2-i2
+**Agent ID**: afd-review-u2-i2-15991125db084521
+**Message**: U2(install-flow)のfunctional-design成果物をイテレーション2として再レビューし、team-leadに結果を送信しました。\n\n**結論: NOT-READY**(ブロッキング指摘2件)\n\nイテレーション1の8件の指摘自体は概ね正しく解消されていましたが、修正の展開漏れによる新たな参照切れを2件見つけました。\n\n1. `frontend-components.md:35
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T07:05:47Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T07:05:47Z
+
+---
