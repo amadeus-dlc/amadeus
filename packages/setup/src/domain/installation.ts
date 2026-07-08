@@ -1,0 +1,160 @@
+import { readFile, stat } from "node:fs/promises";
+import { join } from "node:path";
+import { allEngineDirNames } from "./engine-layout.ts";
+import type { Manifest } from "./manifest.ts";
+import type { ManifestIo } from "../modules/manifest-io.ts";
+
+export type InstallationEvidence = {
+  readonly paths: readonly string[];
+  readonly versionFileContent: string | null;
+  readonly anchors: { readonly toolsDir: boolean; readonly amadeusCommon: boolean };
+};
+
+export type InstallAdmission =
+  | { readonly type: "proceed" }
+  | { readonly type: "proceed-forced" }
+  | { readonly type: "refuse-suggest-upgrade"; readonly detected: string };
+
+export type Installation =
+  | { readonly kind: "none"; admitsInstall(force: boolean): InstallAdmission }
+  | { readonly kind: "manifested"; readonly manifest: Manifest; admitsInstall(force: boolean): InstallAdmission }
+  | { readonly kind: "manual-or-unknown"; readonly evidence: InstallationEvidence; admitsInstall(force: boolean): InstallAdmission }
+  | { readonly kind: "partial"; readonly missing: readonly string[]; admitsInstall(force: boolean): InstallAdmission };
+
+export namespace Installation {
+  // BR-I07/BR-I09: the detected kind decides admission, and this function is
+  // the only place that decides it — cli/planner never branch on `kind`
+  // themselves (Tell, Don't Ask).
+  export async function detect(target: string, manifestIo: ManifestIo): Promise<Installation> {
+    const manifestResult = await manifestIo.read(target);
+    if (manifestResult.type === "ok" && manifestResult.value !== null) {
+      return manifestedInstallation(manifestResult.value);
+    }
+
+    const evidence = await scanEvidence(target);
+    if (evidence.paths.length === 0) {
+      return noneInstallation();
+    }
+
+    const missing: string[] = [];
+    if (!evidence.anchors.toolsDir) missing.push("tools directory");
+    if (!evidence.anchors.amadeusCommon) missing.push("amadeus-common directory");
+    if (missing.length > 0) {
+      return partialInstallation(missing);
+    }
+
+    return manualOrUnknownInstallation(evidence);
+  }
+}
+
+Object.freeze(Installation);
+
+// --- Installation.detect internals (private) --------------------------------
+
+function admissionFor(kind: Installation["kind"], force: boolean, detected: string): InstallAdmission {
+  if (kind === "none") return Object.freeze({ type: "proceed" });
+  if (force) return Object.freeze({ type: "proceed-forced" });
+  return Object.freeze({ type: "refuse-suggest-upgrade", detected });
+}
+
+function noneInstallation(): Installation {
+  return Object.freeze({
+    kind: "none",
+    admitsInstall(force: boolean): InstallAdmission {
+      return admissionFor("none", force, "");
+    },
+  });
+}
+
+function manifestedInstallation(manifest: Manifest): Installation {
+  const detected = `${manifest.harness} ${manifest.sourceTag} (installed ${manifest.installedAt})`;
+  return Object.freeze({
+    kind: "manifested",
+    manifest,
+    admitsInstall(force: boolean): InstallAdmission {
+      return admissionFor("manifested", force, detected);
+    },
+  });
+}
+
+function manualOrUnknownInstallation(evidence: InstallationEvidence): Installation {
+  const detected = `a manual or unrecognized Amadeus installation (found: ${evidence.paths.join(", ")})`;
+  return Object.freeze({
+    kind: "manual-or-unknown",
+    evidence,
+    admitsInstall(force: boolean): InstallAdmission {
+      return admissionFor("manual-or-unknown", force, detected);
+    },
+  });
+}
+
+function partialInstallation(missing: readonly string[]): Installation {
+  const detected = `a partial Amadeus installation (missing: ${missing.join(", ")})`;
+  return Object.freeze({
+    kind: "partial",
+    missing,
+    admitsInstall(force: boolean): InstallAdmission {
+      return admissionFor("partial", force, detected);
+    },
+  });
+}
+
+// No manifest was found (or it could not be read): scan for any known
+// engine directory across all harnesses, since detect() is not told which
+// harness the caller intends to install. This is install-flow's own
+// heuristic (functional-design-questions.md records no upstream ruling on
+// this exact scan strategy) — collected evidence doubles as U3's LegacyLayout
+// input contract per domain-entities.md.
+//
+// Review correction 3: the bare engineDir (e.g. ".claude") existing is not
+// itself evidence of an Amadeus install — a project may have a ".claude"
+// directory with unrelated content (a stray settings.json, say) and nothing
+// else. Only an Amadeus-specific anchor (tools/, amadeus-common/, or VERSION)
+// counts; a bare engineDir with none of those contributes nothing to `paths`.
+async function scanEvidence(target: string): Promise<InstallationEvidence> {
+  const paths: string[] = [];
+  let toolsDir = false;
+  let amadeusCommon = false;
+  let versionFileContent: string | null = null;
+
+  for (const engineDir of allEngineDirNames()) {
+    const hasToolsDir = await dirExists(join(target, engineDir, "tools"));
+    const hasAmadeusCommon = await dirExists(join(target, engineDir, "amadeus-common"));
+    let versionContent: string | null = null;
+    try {
+      versionContent = await readFile(join(target, engineDir, "VERSION"), "utf8");
+    } catch {
+      // No VERSION file under this engine dir.
+    }
+
+    if (!hasToolsDir && !hasAmadeusCommon && versionContent === null) continue; // no anchor: not evidence
+
+    if (hasToolsDir) {
+      paths.push(`${engineDir}/tools`);
+      toolsDir = true;
+    }
+    if (hasAmadeusCommon) {
+      paths.push(`${engineDir}/amadeus-common`);
+      amadeusCommon = true;
+    }
+    if (versionContent !== null && versionFileContent === null) {
+      versionFileContent = versionContent;
+      paths.push(`${engineDir}/VERSION`);
+    }
+  }
+
+  return Object.freeze({
+    paths: Object.freeze(paths),
+    versionFileContent,
+    anchors: Object.freeze({ toolsDir, amadeusCommon }),
+  });
+}
+
+async function dirExists(path: string): Promise<boolean> {
+  try {
+    const info = await stat(path);
+    return info.isDirectory();
+  } catch {
+    return false;
+  }
+}
