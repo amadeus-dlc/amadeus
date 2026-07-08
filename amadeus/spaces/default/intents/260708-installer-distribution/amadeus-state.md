@@ -6,7 +6,7 @@
 - **Scope**: installer-distribution
 - **Start Date**: 2026-07-08T02:20:37Z
 - **State Version**: 7
-- **Active Agent**: amadeus-architect-agent
+- **Active Agent**: amadeus-aws-platform-agent
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**: 2026-07-08T05:22:50Z
@@ -25,8 +25,8 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 25
-- **Completed**: 17
-- **In Progress**: nfr-design
+- **Completed**: 18
+- **In Progress**: infrastructure-design
 
 ## Runtime State
 - **Revision Count**: 0
@@ -72,8 +72,8 @@
 Per unit: [TBD]
 - [x] functional-design — EXECUTE
 - [x] nfr-requirements — EXECUTE
-- [-] nfr-design — EXECUTE
-- [ ] infrastructure-design — EXECUTE
+- [x] nfr-design — EXECUTE
+- [-] infrastructure-design — EXECUTE
 - [ ] code-generation — EXECUTE
 - [ ] build-and-test — EXECUTE
 - [ ] ci-pipeline — EXECUTE
@@ -89,12 +89,12 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: nfr-design
-- **Next Stage**: infrastructure-design
+- **Current Stage**: infrastructure-design
+- **Next Stage**: code-generation
 - **Status**: Running
-- **Last Updated**: 2026-07-08T10:43:06Z
+- **Last Updated**: 2026-07-08T10:52:18Z
 
 ## Session Resume Point
-- **Last Completed Stage**: nfr-requirements
-- **Next Action**: Execute Nfr Design
+- **Last Completed Stage**: nfr-design
+- **Next Action**: Execute Infrastructure Design
 - **Pending Artifacts**: none

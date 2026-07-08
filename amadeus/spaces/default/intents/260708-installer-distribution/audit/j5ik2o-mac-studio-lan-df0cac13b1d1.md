@@ -8702,3 +8702,110 @@
 **Timestamp**: 2026-07-08T10:43:06Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T10:45:09Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-design
+**Timestamp**: 2026-07-08T10:45:09Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T10:45:34Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a8521e664d59a7ea2
+**Message**: 進めて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T10:45:39Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a400fa8544f42318d
+**Message**: タイミングみてorigin/mainに追従して
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T10:49:17Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: nfrd-review-u5-i2
+**Agent ID**: anfrd-review-u5-i2-2d1111fbaa2625c4
+**Message**: team-lead へ verdict(READY)を送信しました。要点は以下のとおりです。\n\n- iteration-1で指摘した `repository.directory` の出典未追跡問題は解消済み。`amadeus/spaces/default/intents/260708-installer-distribution/ideation/feasibility/raid-log.md:2
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T10:49:31Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T10:49:31Z
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T10:50:43Z
+**Event**: HUMAN_TURN
+
+---
+
+## Rule Learned
+**Timestamp**: 2026-07-08T10:51:17Z
+**Event**: RULE_LEARNED
+**Stage**: nfr-design
+**Candidate-ID**: c7
+**Destination**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/memory/project.md
+**Heading**: ## Corrections
+**Source**: orchestrator
+
+---
+
+## Rule Learned
+**Timestamp**: 2026-07-08T10:51:17Z
+**Event**: RULE_LEARNED
+**Stage**: nfr-design
+**Candidate-ID**: c4
+**Destination**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/memory/project.md
+**Heading**: ## Corrections
+**Source**: orchestrator
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-08T10:51:17Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: nfr-design
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T10:52:03Z
+**Event**: HUMAN_TURN
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-08T10:52:18Z
+**Event**: GATE_APPROVED
+**Stage**: nfr-design
+**User Input**: Approve
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-08T10:52:18Z
+**Event**: STAGE_COMPLETED
+**Stage**: nfr-design
+**Details**: Stage Nfr Design approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-08T10:52:18Z
+**Event**: STAGE_STARTED
+**Stage**: infrastructure-design
+**Agent**: amadeus-aws-platform-agent
+
+---
