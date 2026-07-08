@@ -7612,3 +7612,45 @@
 **Timestamp**: 2026-07-08T07:46:31Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T07:47:11Z
+**Event**: WORKFLOW_PARKED
+**Stage**: functional-design
+**Timestamp**: 2026-07-08T07:47:11Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T07:52:29Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a3dfb63d4f4bf6ae5
+**Message**: npm インストーラ(@amadeus-dlc/setup)の AI-DLC ワークフローを進行中で、現在は construction の functional-design を全5ユニット分作成済み、最終ユニット U5 のレビュー判定待ちです。判定が届き次第、ステージ全体の承認ゲートを提示します。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T07:53:27Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: fd-review-u5-i2
+**Agent ID**: afd-review-u5-i2-5623dac6eeb0da5c
+**Message**: ## Review\n\nVerdict: READY\n\nイテレーション1で指摘した4件はいずれも解消を確認しました。各修正について、要求元(requirements.md、unit-of-work.md、bolt-plan.md、raid-log.md、実際のリポジトリ状態)と突き合わせて事実確認を行っています。\n\n1. **ハーネス選択の欠落**: `business-logic-model.md
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T07:54:11Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: fd-review-u5-i2
+**Agent ID**: afd-review-u5-i2-5623dac6eeb0da5c
+**Message**: 団長にレビュー結果を送信しました。判定は **READY** です。\n\nイテレーション1で指摘した4件(ハーネス選択の欠落、cp -r の矛盾、バンプ根拠の不足、upstream-coverage適用外宣言の不足)はすべて解消を確認し、実際のリポジトリ状態や上流成果物(requirements.md、unit-of-work.md、bolt-plan.md、raid-log.md、docs/gui
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T07:54:31Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T07:54:31Z
+
+---
