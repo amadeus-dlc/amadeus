@@ -8981,3 +8981,76 @@
 **Message**: team-lead へ判定を送付済みです。要点は以下の通りです。\n\n**判定: READY**（U2 install-flow の infrastructure-design、イテレーション2）\n\nイテレーション1の3件の指摘はすべて実際に修正されていることを本文で確認しました。特にブロッキングだったフィクスチャ/codeload形状不整合は、`cicd-pipeline.md` の契約明記に加え
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-08T11:17:04Z
+**Event**: HUMAN_TURN
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T11:17:19Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T11:17:19Z
+
+---
+
+## Rule Learned
+**Timestamp**: 2026-07-08T11:18:19Z
+**Event**: RULE_LEARNED
+**Stage**: infrastructure-design
+**Candidate-ID**: infrastructure-design:review-fix-propagation
+**Destination**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/memory/project.md
+**Heading**: ## Corrections
+**Source**: orchestrator
+
+---
+
+## Rule Learned
+**Timestamp**: 2026-07-08T11:18:19Z
+**Event**: RULE_LEARNED
+**Stage**: infrastructure-design
+**Candidate-ID**: infrastructure-design:guard-activator
+**Destination**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/memory/project.md
+**Heading**: ## Corrections
+**Source**: orchestrator
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-08T11:18:36Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: infrastructure-design
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-08T11:18:36Z
+**Event**: GATE_APPROVED
+**Stage**: infrastructure-design
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-08T11:18:36Z
+**Event**: STAGE_COMPLETED
+**Stage**: infrastructure-design
+**Details**: Stage Infrastructure Design approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-08T11:18:36Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Agent**: amadeus-developer-agent
+
+---
+
+## Memory Empty
+**Timestamp**: 2026-07-08T11:18:36Z
+**Event**: MEMORY_EMPTY
+**Stage**: infrastructure-design
+
+---

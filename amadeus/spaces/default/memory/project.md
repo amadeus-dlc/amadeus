@@ -98,3 +98,5 @@
 - framework 版同期の検証は t68(dist/claude コピーの内部整合)と dist:check/promote:self:check(全 dist ツリー+セルフインストールへの core 反映)の相補2機構で扱う — core/tools/amadeus-version.ts を触る変更は後者なしに完了と見なさない (learned 2026-07-08) <!-- cid:nfr-requirements:c1 -->
 - 「修正対象ファイルの目録」「無改修」「実行回数・予算」等の断定的インベントリは、全設計決定が確定した後に導出して書く — 設計途中の早期断定は修正のたびに偽り、レビューイテレーションを消費する(nfr-design で3度観測) (learned 2026-07-08) <!-- cid:nfr-design:c7 -->
 - 「構造的保証」を謳う設計記述は一枚岩の断定を避け、モジュール別に保証機構(ポート不保持/限定ポート/呼び出し順序契約など)を層別に書く — 例外を含む全称命題は自己矛盾の温床 (learned 2026-07-08) <!-- cid:nfr-design:c4 -->
+- レビュー是正で新しい概念・共有物・所有関係(ヘルパー、環境変数、契約など)を導入するときは、その提供側と消費側の全成果物(他ユニット・他ステージ含む)を同時に棚卸しして伝播させ、伝播先一覧を是正コミットに含める — 是正自体が次の伝播漏れの発生源になる(infrastructure-design で2回観測) (learned 2026-07-08) <!-- cid:infrastructure-design:infrastructure-design:review-fix-propagation -->
+- 選別・ガード機構(環境変数、フラグ、スキップ条件)を設計したら、その起動者(誰が・どの手順で設定するか)を同じステージで確定し、起動者側の成果物にも明記する — 起動者不在の安全網は恒久スキップされ空文になる (learned 2026-07-08) <!-- cid:infrastructure-design:infrastructure-design:guard-activator -->
