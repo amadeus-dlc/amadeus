@@ -36,7 +36,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { repointHarnessIncludes } from "../../core/tools/amadeus-includes.ts";
+import { repointHarnessIncludes } from "../../packages/framework/core/tools/amadeus-includes.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const distSurface = (h: string, ...parts: string[]): string =>

@@ -259,7 +259,7 @@ describe("t157 seeded workspace shell + re-rooted .gitignore (SEED)", () => {
     // And no .gitattributes was authored alongside any gitignore in harness/.
     for (const h of HARNESSES) {
       expect(
-        existsSync(join(REPO_ROOT, "harness", h, "dot-gitattributes")),
+        existsSync(join(REPO_ROOT, "packages", "framework", "harness", h, "dot-gitattributes")),
         `${h}: no authored .gitattributes`,
       ).toBe(false);
     }

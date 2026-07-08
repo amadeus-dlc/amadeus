@@ -46,12 +46,12 @@ const FIXTURE = join(REPO_ROOT, "tests", "fixtures", "docs-legacy-refs.json");
 function listExtraAuthoredDocs(): string[] {
   const out: string[] = [];
   // core/templates/*.md (non-recursive — templates live flat)
-  for (const name of readdirSync(join(REPO_ROOT, "core", "templates"))) {
-    if (name.endsWith(".md")) out.push(`core/templates/${name}`);
+  for (const name of readdirSync(join(REPO_ROOT, "packages", "framework", "core", "templates"))) {
+    if (name.endsWith(".md")) out.push(`packages/framework/core/templates/${name}`);
   }
   // each harness's orchestrator SKILL.md: harness/<h>/skills/amadeus/SKILL.md
-  for (const h of readdirSync(join(REPO_ROOT, "harness"))) {
-    const rel = `harness/${h}/skills/amadeus/SKILL.md`;
+  for (const h of readdirSync(join(REPO_ROOT, "packages", "framework", "harness"))) {
+    const rel = `packages/framework/harness/${h}/skills/amadeus/SKILL.md`;
     try {
       statSync(join(REPO_ROOT, rel));
       out.push(rel);

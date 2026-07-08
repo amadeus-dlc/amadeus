@@ -6,7 +6,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { lstatSync, readFileSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -83,6 +83,7 @@ function trackedAuthoredFiles(): string[] {
     .split("\0")
     .filter((file) => file.length > 0)
     .filter((file) => !file.startsWith("dist/"))
+    .filter((file) => existsSync(join(REPO_ROOT, file)))
     .filter((file) => lstatSync(join(REPO_ROOT, file)).isFile())
     .sort();
 }
