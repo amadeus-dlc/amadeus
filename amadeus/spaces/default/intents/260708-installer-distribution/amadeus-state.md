@@ -6,7 +6,7 @@
 - **Scope**: installer-distribution
 - **Start Date**: 2026-07-08T02:20:37Z
 - **State Version**: 7
-- **Active Agent**: amadeus-delivery-agent
+- **Active Agent**: amadeus-architect-agent
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**: 2026-07-08T05:22:50Z
@@ -25,8 +25,8 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 25
-- **Completed**: 14
-- **In Progress**: delivery-planning
+- **Completed**: 15
+- **In Progress**: functional-design
 
 ## Runtime State
 - **Revision Count**: 0
@@ -65,11 +65,11 @@
 - [ ] refined-mockups — SKIP
 - [x] application-design — EXECUTE
 - [x] units-generation — EXECUTE
-- [-] delivery-planning — EXECUTE
+- [x] delivery-planning — EXECUTE
 
 ### CONSTRUCTION PHASE
 Per unit: [TBD]
-- [ ] functional-design — EXECUTE
+- [-] functional-design — EXECUTE
 - [ ] nfr-requirements — EXECUTE
 - [ ] nfr-design — EXECUTE
 - [ ] infrastructure-design — EXECUTE
@@ -87,13 +87,13 @@ Per unit: [TBD]
 - [ ] feedback-optimization — SKIP
 
 ## Current Status
-- **Lifecycle Phase**: INCEPTION
-- **Current Stage**: delivery-planning
-- **Next Stage**: functional-design
+- **Lifecycle Phase**: CONSTRUCTION
+- **Current Stage**: functional-design
+- **Next Stage**: nfr-requirements
 - **Status**: Running
-- **Last Updated**: 2026-07-08T06:03:25Z
+- **Last Updated**: 2026-07-08T06:09:45Z
 
 ## Session Resume Point
-- **Last Completed Stage**: units-generation
-- **Next Action**: Execute Delivery Planning
+- **Last Completed Stage**: delivery-planning
+- **Next Action**: Execute Functional Design
 - **Pending Artifacts**: none
