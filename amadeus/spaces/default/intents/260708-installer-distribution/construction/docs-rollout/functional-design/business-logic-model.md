@@ -16,7 +16,8 @@
    - 手動コピー手順は README から**削除**し、トラブルシュート用の記述として docs/guide 側へ移設する(単一の決定 — 降格残置はしない)
 2. root package.json 是正(I1/I2 — U4 から移管)
 3. AMADEUS_VERSION バンプ+CHANGELOG 見出し+README バッジ(同一コミット — project.md Mandated)
-4. 検証: t68 グリーン+grep 確認2点(cp -r が README の主経路に残っていない/bunx・npx・ハーネス選択・install・upgrade への言及が存在する)
+4. dist 再生成+セルフインストール昇格: `bun scripts/package.ts` と `bun run promote:self` をバンプと同一コミットで実行(project.md Mandated)
+5. 検証: t68 グリーン+`dist:check`/`promote:self:check` グリーン+grep 確認2点(cp -r が README の主経路に残っていない/bunx・npx・ハーネス選択・install・upgrade への言及が存在する)
 ```
 
 **バンプ根拠(CON-006 の「docs のみは除外」との関係)**: この PR は字面上 docs+メタデータだが、「docs のみ」の除外対象ではない。理由: (1) この PR は**インストーラという新しいユーザー可視機能のリリースマーカー**であり、単なる文言修正ではなく配布経路の公式切替を宣言する。(2) マージ後に発行する `vX.Y.Z` タグ(BR-D05)が**インストーラの取得対象となる最初の版**を定義する — バンプなしではタグが打てず(t68 の三者同期)、FR-006 の取得フローが成立しない(CON-007/ASM-006 の依存連鎖)。対照的に U4 の PR は framework 版の意味を変えないためバンプ対象外(非対称は意図的)。

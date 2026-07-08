@@ -8042,3 +8042,54 @@
 **Timestamp**: 2026-07-08T08:49:30Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T08:50:45Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-requirements
+**Timestamp**: 2026-07-08T08:50:45Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T08:51:08Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a9e89e20c94eceda4
+**Message**: はい
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T08:51:17Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: aac10d8848e534843
+**Message**: はい
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T08:54:20Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a744a4b90f9db45b0
+**Message**: npm インストーラ(@amadeus-dlc/setup)の AI-DLC ワークフローを実行中で、現在 NFR Requirements ステージの最終ユニット U5(docs-rollout)のレビュー待ちです。判定が届き次第、是正またはステージ承認ゲートの提示に進みます。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T08:59:06Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: nfr-review-u5
+**Agent ID**: anfr-review-u5-e0301dd76c061cb1
+**Message**: team-lead にレビュー結果を送信しました。要点は以下のとおりです。\n\n**判定: NOT-READY**(1件の実質的な指摘)\n\n主な指摘は REL-D01(`reliability-requirements.md`)が t68 の保証範囲を過大に述べており、PR完了条件から `dist:check`/`promote:self:check` が漏れている点です。t68 が実際に読むのは 
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T08:59:35Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T08:59:35Z
+
+---
