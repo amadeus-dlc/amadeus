@@ -69,6 +69,8 @@
 - ALWAYS `dist/`、`.claude/`、`.codex/`、`.agents/` の path を変える案では `dist:check` と `promote:self:check` の維持方法を同じ成果物に書く。 (affirmed 2026-07-07)
 - ALWAYS `packages/setup` は別 intent の sibling dependency として扱い、この intent の実装スコープに吸収しない。 (affirmed 2026-07-07)
 - ALWAYS markdown artifact は日本語で書く。ただし path、CLI、コード識別子、tool が要求する heading は正確性を優先して保持する。 (affirmed 2026-07-07)
+- ALWAYS リリース(バージョンバンプを含む PR のマージ)時に、CHANGELOG の `## [X.Y.Z]` 見出しと一致する `vX.Y.Z` git タグを発行する(当面手動。インストーラの配布物取得先) (affirmed 2026-07-08)
+- ALWAYS 新設パッケージ(`packages/*`)は lint(Biome)と型検査(`tsc --noEmit`)の配線をパッケージ追加と同一 PR で加え、既存の狭い CI lint スコープ(`tests/` のみ)を継承しない (affirmed 2026-07-08)
 ## Corrections
 
 <!-- 人間のフィードバックによるプロジェクト固有の是正。 -->
@@ -83,3 +85,5 @@
 - CLI コマンド体系の設計ではサブコマンド文法を対称(MECE)に保ち、破壊的になりうる操作を暗黙デフォルトにしない(例: install/upgrade は両方明示サブコマンド、サブコマンドなしはヘルプ表示) (learned 2026-07-08) <!-- cid:scope-definition:c1 -->
 - approval-handoff 等のハンドオフゲートでリスクを説明する際は代替緩和策も併せて提示し、ゲートで合意できた緩和策の強化はその場で raid-log へ反映してから承認へ進む (learned 2026-07-08) <!-- cid:approval-handoff:c1 -->
 - フェーズ境界検証の成果物は verification/phase-check-<phase>.md に統一する(ステージファイル準拠。governance 文書の [phase-boundary]-verification.md 表記より優先) (learned 2026-07-08) <!-- cid:approval-handoff:c2 -->
+- practices-discovery の証跡スキャンは、同日の RE codekb がスキャン面(CI・テスト・コードスタイル・セキュリティ)をカバーしている場合はそれを代用し、affirm 済み team.md との差分ギャップのみ質問する (learned 2026-07-08) <!-- cid:practices-discovery:c1 -->
+- team.md の再実行 practices-discovery では、変更のあったセクションだけを含む部分ドラフトで practices-promote し、無変更セクションの live 温存(churn 回避)を利用する (learned 2026-07-08) <!-- cid:practices-discovery:c2 -->

@@ -3501,3 +3501,455 @@
 **Agent**: amadeus-pipeline-deploy-agent
 
 ---
+
+## Decision Recorded
+**Timestamp**: 2026-07-08T05:11:12Z
+**Event**: DECISION_RECORDED
+**Stage**: practices-discovery
+**Decision**: Interaction mode choice for practices-discovery gap questions (~2-3 questions; evidence from same-day codekb, team.md re-run pre-fill)
+**Options**: Guide me,Grill me,I'll edit the file,Chat
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T05:11:39Z
+**Event**: HUMAN_TURN
+
+---
+
+## Question Answered
+**Timestamp**: 2026-07-08T05:11:46Z
+**Event**: QUESTION_ANSWERED
+**Stage**: practices-discovery
+**Details**: Question mode: Grill me
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-08T05:12:17Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/inception/practices-discovery/practices-discovery-questions.md
+**Context**: inception > practices-discovery > practices-discovery-questions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:12:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: 125f8ad8
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/practices-discovery/practices-discovery-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T05:12:17Z
+**Event**: SENSOR_FAILED
+**Fire id**: 125f8ad8
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/practices-discovery/practices-discovery-questions.md
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/practices-discovery/required-sections-125f8ad8.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:12:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: 539a774c
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/practices-discovery/practices-discovery-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T05:12:17Z
+**Event**: SENSOR_FAILED
+**Fire id**: 539a774c
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/practices-discovery/practices-discovery-questions.md
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/practices-discovery/upstream-coverage-539a774c.md
+**Findings count**: 6
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-08T05:12:24Z
+**Event**: DECISION_RECORDED
+**Stage**: practices-discovery
+**Decision**: Q1: Establish release tag convention (vX.Y.Z matching CHANGELOG at release merges) as a Deployment practice — zero git tags exist today, installer depends on tags
+**Options**: A: adopt vX.Y.Z tags (recommended),B: tags + GitHub Releases,C: defer to requirements,X: Other
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T05:14:15Z
+**Event**: HUMAN_TURN
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-08T05:14:33Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/inception/practices-discovery/practices-discovery-questions.md
+**Context**: inception > practices-discovery > practices-discovery-questions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:14:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4a8c6074
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/practices-discovery/practices-discovery-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T05:14:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4a8c6074
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/practices-discovery/practices-discovery-questions.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:14:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 21ddb93d
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/practices-discovery/practices-discovery-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T05:14:33Z
+**Event**: SENSOR_FAILED
+**Fire id**: 21ddb93d
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/practices-discovery/practices-discovery-questions.md
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/practices-discovery/upstream-coverage-21ddb93d.md
+**Findings count**: 6
+
+---
+
+## Question Answered
+**Timestamp**: 2026-07-08T05:14:46Z
+**Event**: QUESTION_ANSWERED
+**Stage**: practices-discovery
+**Details**: Q1: A — establish vX.Y.Z release tag convention (manual for now)
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-08T05:14:46Z
+**Event**: DECISION_RECORDED
+**Stage**: practices-discovery
+**Decision**: Q2: Require lint+typecheck wiring in the same PR for new packages (do not inherit narrow CI lint scope)
+**Options**: A: adopt (recommended),B: adopt + widen existing scope,C: leave to implementation,X: Other
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T05:17:55Z
+**Event**: HUMAN_TURN
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-08T05:18:06Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/inception/practices-discovery/practices-discovery-questions.md
+**Context**: inception > practices-discovery > practices-discovery-questions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:18:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: 78ee3c37
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/practices-discovery/practices-discovery-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T05:18:06Z
+**Event**: SENSOR_PASSED
+**Fire id**: 78ee3c37
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/practices-discovery/practices-discovery-questions.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:18:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: 35db76fa
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/practices-discovery/practices-discovery-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T05:18:06Z
+**Event**: SENSOR_FAILED
+**Fire id**: 35db76fa
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/practices-discovery/practices-discovery-questions.md
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/practices-discovery/upstream-coverage-35db76fa.md
+**Findings count**: 6
+
+---
+
+## Question Answered
+**Timestamp**: 2026-07-08T05:18:13Z
+**Event**: QUESTION_ANSWERED
+**Stage**: practices-discovery
+**Details**: Q2: A — require lint+typecheck wiring in the same PR for new packages
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T05:18:41Z
+**Event**: HUMAN_TURN
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-08T05:19:24Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/inception/practices-discovery/team-practices.md
+**Context**: inception > practices-discovery > team-practices.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:19:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: db33daec
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/practices-discovery/team-practices.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T05:19:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: db33daec
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/practices-discovery/team-practices.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:19:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 95ea28d7
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/practices-discovery/team-practices.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T05:19:24Z
+**Event**: SENSOR_FAILED
+**Fire id**: 95ea28d7
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/practices-discovery/team-practices.md
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/practices-discovery/upstream-coverage-95ea28d7.md
+**Findings count**: 6
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-08T05:19:41Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/inception/practices-discovery/discovered-rules.md
+**Context**: inception > practices-discovery > discovered-rules.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:19:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8fe6bbb4
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/practices-discovery/discovered-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T05:19:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8fe6bbb4
+**Sensor ID**: required-sections
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/practices-discovery/discovered-rules.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:19:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8588d5d4
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/practices-discovery/discovered-rules.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T05:19:41Z
+**Event**: SENSOR_FAILED
+**Fire id**: 8588d5d4
+**Sensor ID**: upstream-coverage
+**Stage slug**: practices-discovery
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/practices-discovery/discovered-rules.md
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/practices-discovery/upstream-coverage-8588d5d4.md
+**Findings count**: 6
+
+---
+
+## Practices Discovered
+**Timestamp**: 2026-07-08T05:20:01Z
+**Event**: PRACTICES_DISCOVERED
+**Sources Scanned**: same-day RE codekb (8 files), git merge history, affirmed team.md
+**Drafts**: team-practices.md, discovered-rules.md
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T05:21:16Z
+**Event**: HUMAN_TURN
+
+---
+
+## Rule Learned
+**Timestamp**: 2026-07-08T05:21:30Z
+**Event**: RULE_LEARNED
+**Stage**: practices-discovery
+**Candidate-ID**: c1
+**Destination**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/memory/project.md
+**Heading**: ## Corrections
+**Source**: orchestrator
+
+---
+
+## Rule Learned
+**Timestamp**: 2026-07-08T05:21:30Z
+**Event**: RULE_LEARNED
+**Stage**: practices-discovery
+**Candidate-ID**: c2
+**Destination**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/memory/project.md
+**Heading**: ## Corrections
+**Source**: orchestrator
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-08T05:21:30Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: practices-discovery
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-08T05:21:30Z
+**Event**: DECISION_RECORDED
+**Stage**: practices-discovery
+**Decision**: Affirmation gate: promote team-practices.md (Deployment/Code Style deltas) to team.md and discovered-rules.md (2 Mandated) to project.md
+**Options**: Approve,Edit-then-approve,Reject and rewrite
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T05:22:34Z
+**Event**: HUMAN_TURN
+
+---
+
+## Question Answered
+**Timestamp**: 2026-07-08T05:22:41Z
+**Event**: QUESTION_ANSWERED
+**Stage**: practices-discovery
+**Details**: Affirmation: Approve
+
+---
+
+## Practices Affirmed
+**Timestamp**: 2026-07-08T05:22:41Z
+**Event**: PRACTICES_AFFIRMED
+**Affirming User**: j5ik2o
+**Sections Written**: Deployment, Code Style
+**Mandated Rules Appended**: 2
+**Forbidden Rules Appended**: 0
+**Timestamp**: 2026-07-08T05:22:41Z
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-08T05:22:50Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state approve practices-discovery --user-input Approve --project-dir /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution
+**Error**: Refusing to approve "practices-discovery": a real human has not acted at this gate since it opened. The approval gate requires a typed human turn before it can commit. Acknowledge the gate as a human, then approve. (autonomous Construction is exempt)
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T05:23:21Z
+**Event**: HUMAN_TURN
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-08T05:23:27Z
+**Event**: GATE_APPROVED
+**Stage**: practices-discovery
+**User Input**: Approve(確定)
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-08T05:23:27Z
+**Event**: STAGE_COMPLETED
+**Stage**: practices-discovery
+**Details**: Stage Practices Discovery approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-08T05:23:27Z
+**Event**: STAGE_STARTED
+**Stage**: requirements-analysis
+**Agent**: amadeus-product-agent
+
+---

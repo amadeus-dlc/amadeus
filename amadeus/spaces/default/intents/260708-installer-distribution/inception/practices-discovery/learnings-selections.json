@@ -1,0 +1,21 @@
+{
+  "stage_slug": "practices-discovery",
+  "selections": [
+    {
+      "candidate_id": "c1",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "practices-discovery の証跡スキャンは、同日の RE codekb がスキャン面(CI・テスト・コードスタイル・セキュリティ)をカバーしている場合はそれを代用し、affirm 済み team.md との差分ギャップのみ質問する",
+      "source": "orchestrator"
+    },
+    {
+      "candidate_id": "c2",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "team.md の再実行 practices-discovery では、変更のあったセクションだけを含む部分ドラフトで practices-promote し、無変更セクションの live 温存(churn 回避)を利用する",
+      "source": "orchestrator"
+    }
+  ]
+}
