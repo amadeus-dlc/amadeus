@@ -8534,3 +8534,54 @@
 **Timestamp**: 2026-07-08T10:13:29Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T10:13:52Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-design
+**Timestamp**: 2026-07-08T10:13:52Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T10:14:10Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a9325a5cdc2b3197e
+**Message**: そのまま進めて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T10:14:18Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a08784c67d94f83f5
+**Message**: そのまま進めて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T10:18:43Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: af03a6363fbbdd055
+**Message**: npm インストーラ(@amadeus-dlc/setup)の AI-DLC ワークフローを実行中で、現在は Construction の NFR Design ステージ、U3(upgrade-flow)の最終レビュー判定待ちです。判定が届き次第、残りの U4・U5 を処理してステージ承認ゲートを提示します。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T10:20:02Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: nfrd-review-u3-i2
+**Agent ID**: anfrd-review-u3-i2-04990d3f23a3245f
+**Message**: team-leadへ再レビュー結果を送信しました。要点は以下の通りです。\n\n**Verdict: NOT-READY**\n\niteration-1で指摘した「新規モジュールゼロ」claimとapplier.ts修正の矛盾は解消済みで、logical-components.md / security-design.md / reliability-design.mdの3文書は`.bk`事前存在チェッ
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T10:20:26Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T10:20:26Z
+
+---

@@ -9,6 +9,10 @@
 - 注: fail-fast により `ApplyResult.failures()` は実質**高々1件**(型は複数形のまま — functional-design の契約と矛盾しない。renderApplyFailure の「列挙」は将来 collect モードを導入しても壊れない防御的フレーミング)
 - 検証: fault-injection(書き込み不能ディレクトリ)で「失敗以降のエントリが未適用・マニフェスト不在・終了コード1」をアサート
 
+## 相互参照: U3 由来の applier 変更(install 経路への副作用)
+
+U3 の SEC-U01 により applier の backup-then-copy に `.bk` 事前存在チェックが追加される(共有実装)。install 経路でも、生成予定の `.bk` パスに既存ファイルが衝突する極めて狭いケース(同一 backupTimestamp+前回 `.bk` 残存)で ApplyFailure となる — 「古いバックアップの黙った上書き」より安全側の意図した挙動(U3 nfr-design 参照)。
+
 ## REL-I02(再実行安全性)の実装構造
 
 - 導入済み検出は install パイプラインの**最初の I/O**(detect が resolve/fetch より先 — U2 workflow 2 の順序を実装で固定)。ネットワークコストをかける前に中断する

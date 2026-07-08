@@ -16,11 +16,13 @@ src/
                          #   `.bk` 事前存在チェック(fs.access → 存在時 ApplyFailure(operation:"backup"))を追加。
                          #   共有実装のため install 経路にも同チェックが効く — 既存 `.bk` が残る対象への
                          #   --force install で退避衝突が ApplyFailure になるのは**意図した安全側の副作用**として許容
-    wizard.ts            #   確認プロンプトの文言は呼び出し側(runUpgrade)が summary 文字列として渡す既存引数の範囲
-                         #   — wizard.ts 自体は無改修(U3 functional-design の「確認文言のみ upgrade 用」の実現方法)
+    wizard.ts            #   **修正対象(新規ファイルではない)**: 内部の summary ヘルパーを `parsed.subcommand` で
+                         #   文言分岐させる(install 向け固定文言 → install/upgrade 別文言)。呼び出しシグネチャ
+                         #   runWizard(parsed, missing, tty) は不変 — parsed に subcommand が既存するため引数追加なし
+                         #   (U3 functional-design の「確認文言のみ upgrade 用」の実現方法)
   cli.ts                 #   runUpgrade を追加(main のディスパッチは U2 で定義済み)
 ```
 
-- **新規モジュール(ファイル)ゼロ、修正は applier.ts と cli.ts の2箇所**が U3 の設計上の特徴: 差分は domain 層(判断の追加)+cli 分岐+applier の SEC-U01 チェック追加に閉じる。tech-stack-decisions の「新規技術の不採用宣言」と対応
+- **新規モジュール(ファイル)ゼロ、修正は applier.ts / cli.ts / wizard.ts の3箇所**が U3 の設計上の特徴: 差分は domain 層(判断の追加)+cli 分岐+applier の SEC-U01 チェック+wizard の文言分岐に閉じる。tech-stack-decisions の「新規技術の不採用宣言」と対応
 - ClassifiedError の合流(UpgradeRefusal)は domain/command.ts の型定義更新(U2 是正で宣言済み)— 実装ファイルの移動なし
 - 依存方向は U1/U2 の規律を継承(upgrade.ts → plan.ts/installation.ts/manifest.ts は import type 中心、ファクトリ値インポートは同層内)
