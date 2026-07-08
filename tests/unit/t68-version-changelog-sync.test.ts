@@ -1,76 +1,24 @@
 // covers: subcommand:amadeus-utility:version
 //
-// Port of tests/unit/t68-version-changelog-sync.sh (TAP plan 6).
-// Mechanism = mixed: five of the six checks are deterministic text/filesystem
-// invariants over real repo files already on disk (no spawn, no import of a
-// shipped unit — mechanism none), and ONE check spawns the wired CLI through
-// the bun runtime to assert the process-boundary version contract (mechanism
-// cli). Because the body BOTH reads files in-process AND spawns the real tool,
-// the derived mechanism is mixed.
+// t68 — framework version sync guards (version.ts ⇄ CLI ⇄ README badge).
 //
-// COVERS HEADER: the .sh carried NO `# covers:` header. Of its six checks,
-// five guard repo metadata consistency (CHANGELOG.md ⇄ amadeus-version.ts ⇄
-// README.md) and join to no enumerated unit class. The sixth (test 5) is the
-// only one that exercises a shipped unit: it invokes the wired `version`
-// subcommand of amadeus-utility.ts and asserts its exact stdout. That subcommand
-// (`amadeus-utility version`, registry minMechanism=cli) was UNCOVERED in the
-// registry; this twin claims it via `subcommand:amadeus-utility:version` (the
-// colon form gen-coverage-registry.ts:952 accepts, joining to unitId
-// "amadeus-utility version"). The five metadata-guard checks contribute no
-// enumerated-unit claim, exactly as the .sh contributed none.
+// HISTORY: this suite originally guarded a hand-maintained repo-root
+// CHANGELOG.md as well (heading ⇄ version.ts ⇄ badge three-point sync,
+// heading uniqueness, link-ref policy — ported from the .sh TAP plan 6).
+// CHANGELOG.md was deleted on 2026-07-09: release notes are now generated
+// per release into GitHub Releases by the release workflow (release-it +
+// softprops/action-gh-release, unified `vX.Y.Z` tag axis), so there is no
+// changelog file to sync. The filename keeps the historical t68 id to avoid
+// test-inventory churn.
 //
-// SUBJECT / SOURCE UNDER TEST:
-//   - dist/claude/.claude/tools/amadeus-version.ts:4
-//       export const AMADEUS_VERSION = "<N.N.N>";  (single source of truth)
-//   - CHANGELOG.md (repo root): reverse-chronological `## [N.N.N] - DATE`
-//       headings + matching `[N.N.N]:` link references at the bottom.
-//   - dist/claude/.claude/tools/amadeus-utility.ts:
-//       :54 imports AMADEUS_VERSION; :173 handleVersion() writes
-//       `amadeus ${AMADEUS_VERSION}\n` to stdout; :2823 the `version` subcommand
-//       dispatches to it. A renamed constant, broken import, or switch-case
-//       typo would break this seam.
-//   - README.md:5 shields.io badge
-//       ![version](https://img.shields.io/badge/version-<N.N.N>-blue)
-//
-// WHY mostly mechanism none (not cli): tests 1-4 and 6 are pure greps over
-// files on disk — exactly the bash `grep -oE ... | head -1` extractions and
-// `grep -cE` counts the .sh ran. None needs a spawned tool; we read the same
-// bytes and compute the same invariants in-process. Test 5 is the one
-// process-boundary contract: it asserts the CLI's stdout, so it spawns the
-// real amadeus-utility.ts via the bun runtime (the same env seam the .sh's
-// `bun "$UTILITY_TS" version` used), preserving that guarantee unweakened.
-//
-// Old TAP -> new test parity (1:1, every .sh assertion -> a named test()):
-//   .sh test 1 (extracted exactly one non-empty AMADEUS_VERSION)
-//        -> "version.ts declares exactly one AMADEUS_VERSION assignment"
-//   .sh test 2 (AMADEUS_VERSION matches latest CHANGELOG heading)
-//        -> "AMADEUS_VERSION matches the latest CHANGELOG heading"
-//   .sh test 3 ([N.N.N]: link reference present)  [SUPERSEDED — see below]
-//        -> "the latest version appears as a CHANGELOG heading"
-//   .sh test 4 (heading-count == link-ref-count, both > 0)  [REPURPOSED]
-//        -> "## [N.N.N] headings are unique (no duplicate / post-rebase dupe)"
-//   .sh test 5 (bun amadeus-utility.ts version prints 'amadeus <CL_VERSION>')
-//        -> "wired CLI `version` subcommand prints 'amadeus <CHANGELOG version>'"
-//   .sh test 6 (README badge matches version.ts)
-//        -> "README.md version badge matches amadeus-version.ts"
-//
-// CHANGELOG LINK-REF POLICY CHANGE (v0.6.9): the bottom-of-file `[N.N.N]:`
-// link references were REMOVED. They shipped as broken `OWNER/REPO` scaffold
-// placeholders, and this file is distributed inside `.claude/` — internal users
-// download it and may share it externally, so embedding a repository host (the
-// internal GitLab or a not-yet-populated public mirror) is wrong. Version
-// headings stay as readable `## [N.N.N]` text; per-release compare links belong
-// on the public release home, added at the publish step, not in the shipped file.
-//   - test 3 was "the matching link-ref exists" — SUPERSEDED: the version pin is
-//     the heading (test 2 already binds version.ts == latest heading); test 3
-//     now just asserts the heading is present in the parsed heading set.
-//   - test 4 was "heading count == link-ref count" (a post-rebase duplicate
-//     guard) — REPURPOSED to assert headings are UNIQUE, the real invariant it
-//     protected (a rebase that duplicates a `## [N.N.N]` block).
-//   - NET-NEW test 7: the link-ref policy guard — NO version link references may
-//     reappear, and no repository host URL may leak into the changelog.
-// (.test.ts has no TAP `plan`, so changing case bodies does not drift t55 — see
-// t55's header; the "plan 6" provenance above describes the .sh ancestor.)
+// What remains guarded:
+//   - version.ts declares exactly ONE AMADEUS_VERSION assignment (a merge
+//     conflict that leaves two assignments must fail)
+//   - the wired CLI `version` subcommand prints `amadeus <AMADEUS_VERSION>`
+//     (mechanism cli: catches a renamed constant, broken import, switch typo)
+//   - the README shields.io version badge matches version.ts (a bump that
+//     forgets the badge ships a wrong public number — v0.5.0 missed this)
+// (.test.ts has no TAP `plan`, so changing case bodies does not drift t55.)
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -81,7 +29,6 @@ import { AMADEUS_SRC, REPO_ROOT } from "../harness/fixtures.ts";
 const BUN = process.execPath; // the bun running this test
 const VERSION_TS = join(AMADEUS_SRC, "tools", "amadeus-version.ts");
 const UTILITY_TS = join(AMADEUS_SRC, "tools", "amadeus-utility.ts");
-const CHANGELOG = join(REPO_ROOT, "CHANGELOG.md");
 const README = join(REPO_ROOT, "README.md");
 
 const SEMVER = /[0-9]+\.[0-9]+\.[0-9]+/;
@@ -95,26 +42,7 @@ function versionAssignments(): string[] {
   );
 }
 
-/** The first (latest, reverse-chronological) `## [N.N.N]` CHANGELOG heading. */
-function changelogHeadings(): string[] {
-  const src = readFileSync(CHANGELOG, "utf-8");
-  return src
-    .split("\n")
-    .filter((l) => /^## \[[0-9]+\.[0-9]+\.[0-9]+\]/.test(l))
-    .map((l) => (l.match(SEMVER) as RegExpMatchArray)[0]);
-}
-
-/** Every `[N.N.N]:` link-reference line at the bottom of CHANGELOG. */
-function changelogLinkRefs(): string[] {
-  const src = readFileSync(CHANGELOG, "utf-8");
-  return src
-    .split("\n")
-    .filter((l) => /^\[[0-9]+\.[0-9]+\.[0-9]+\]:/.test(l))
-    .map((l) => (l.match(SEMVER) as RegExpMatchArray)[0]);
-}
-
-describe("t68 version/CHANGELOG/README sync (migrated from t68-version-changelog-sync.sh, plan 6)", () => {
-  // .sh test 1: extracted exactly one non-empty version from version.ts.
+describe("t68 framework version sync (version.ts / CLI / README badge)", () => {
   test("version.ts declares exactly one AMADEUS_VERSION assignment [.sh test 1]", () => {
     const assigns = versionAssignments();
     expect(assigns.length).toBe(1);
@@ -122,49 +50,18 @@ describe("t68 version/CHANGELOG/README sync (migrated from t68-version-changelog
     expect(assigns[0].length).toBeGreaterThan(0);
   });
 
-  // .sh test 2: AMADEUS_VERSION matches the FIRST (latest) CHANGELOG heading.
-  test("AMADEUS_VERSION matches the latest CHANGELOG heading [.sh test 2]", () => {
+  // CLI wiring — `bun amadeus-utility.ts version` prints `amadeus <version>`.
+  // This is the ONE process-boundary (cli) assertion: catches a renamed
+  // constant, broken import, switch-case typo, or missing version.ts.
+  test("wired CLI `version` subcommand prints 'amadeus <AMADEUS_VERSION>' [.sh test 5]", () => {
     const tsVersion = versionAssignments()[0];
-    const latestHeading = changelogHeadings()[0];
-    expect(tsVersion).toBe(latestHeading);
-  });
-
-  // test 3 (SUPERSEDED): the version pin is the HEADING, not a link reference
-  // (link refs were removed in v0.6.9 — see the header note). Test 2 already
-  // binds version.ts == latest heading; here we assert that version is present
-  // in the parsed heading set (the canonical pin), not as a raw substring.
-  test("the latest AMADEUS_VERSION appears as a CHANGELOG heading [.sh test 3, superseded]", () => {
-    const tsVersion = versionAssignments()[0];
-    expect(changelogHeadings()).toContain(tsVersion);
-  });
-
-  // test 4 (REPURPOSED): the .sh guarded against a duplicated `## [N.N.N]` block
-  // post-rebase via a heading==link-ref count match. With link refs gone, the
-  // real invariant it protected is that headings are UNIQUE — a rebase that
-  // duplicates a version block (the t68 conflict-trap in AGENTS.md) must fail.
-  test("## [N.N.N] headings are unique — no duplicate version block [.sh test 4, repurposed]", () => {
-    const headings = changelogHeadings();
-    expect(headings.length).toBeGreaterThan(0);
-    const dupes = headings.filter((v, i) => headings.indexOf(v) !== i);
-    expect(dupes).toEqual([]);
-  });
-
-  // .sh test 5: CLI wiring — `bun amadeus-utility.ts version` prints
-  // `amadeus <CL_VERSION>`. This is the ONE process-boundary (cli) assertion:
-  // catches a renamed constant, broken import, switch-case typo, or missing
-  // version.ts. Spawn the real tool through the bun runtime (env seam).
-  test("wired CLI `version` subcommand prints 'amadeus <CHANGELOG version>' [.sh test 5]", () => {
-    const clVersion = changelogHeadings()[0];
     const res = spawnSync(BUN, [UTILITY_TS, "version"], { encoding: "utf-8" });
     expect(res.status).toBe(0);
-    // handleVersion() writes `amadeus ${AMADEUS_VERSION}\n`; the .sh compared the
-    // trimmed stdout to "amadeus $CL_VERSION".
-    expect((res.stdout ?? "").trim()).toBe(`amadeus ${clVersion}`);
+    expect((res.stdout ?? "").trim()).toBe(`amadeus ${tsVersion}`);
   }, 30000);
 
-  // .sh test 6: README shields.io badge matches version.ts. A release that
-  // bumps version.ts but forgets the badge ships a wrong public number
-  // (the v0.5.0 release missed exactly this).
+  // README shields.io badge matches version.ts. A release that bumps
+  // version.ts but forgets the badge ships a wrong public number.
   test("README.md version badge matches amadeus-version.ts [.sh test 6]", () => {
     const tsVersion = versionAssignments()[0];
     const src = readFileSync(README, "utf-8");
@@ -172,26 +69,5 @@ describe("t68 version/CHANGELOG/README sync (migrated from t68-version-changelog
     const m = src.match(/badge\/version-([0-9]+\.[0-9]+\.[0-9]+)-blue/);
     expect(m).not.toBeNull();
     expect((m as RegExpMatchArray)[1]).toBe(tsVersion);
-  });
-
-  // NET-NEW test 7: link-ref policy guard. Version link references were removed
-  // in v0.6.9 (broken `OWNER/REPO` placeholders + host-leak risk in a file
-  // internal users download and may share externally). This guard fails if a
-  // `[N.N.N]:` link reference reappears OR if any repository host URL leaks into
-  // the changelog — both forms reintroduce the exact problems the removal fixed.
-  test("CHANGELOG carries no version link references and no repository host URL", () => {
-    const src = readFileSync(CHANGELOG, "utf-8");
-    // No bottom-of-file `[N.N.N]:` link-reference lines.
-    expect(changelogLinkRefs()).toEqual([]);
-    // No host URL anywhere — neither the internal GitLab, nor a github mirror,
-    // nor the scaffold placeholder. (Prose may name a host in plain words; this
-    // bans URL forms + the placeholder token that imply a shipped link.)
-    const banned = [
-      "gitlab.aws.dev",
-      "github.com/",
-      "OWNER/REPO",
-    ];
-    const hits = banned.filter((b) => src.includes(b));
-    expect(hits).toEqual([]);
   });
 });

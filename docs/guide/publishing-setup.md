@@ -1,17 +1,18 @@
 # Publishing `@amadeus-dlc/setup`
 
-> Audience: maintainers preparing an `@amadeus-dlc/setup` release. The
-> primary path is the CI release workflow (`.github/workflows/release.yml`,
-> triggered by a `setup-vX.Y.Z` tag) publishing with npm provenance; the
-> manual commands remain documented as a fallback. (The original CON-004
-> "no CI auto-publish" constraint was superseded by user decision on
-> 2026-07-09, consuming the SEC-P03 re-consideration point.)
+> Audience: maintainers releasing Amadeus-DLC. The primary path is the CI
+> release workflow (`.github/workflows/release.yml`) publishing with npm
+> provenance; the manual commands remain documented as a fallback. (The
+> original CON-004 "no CI auto-publish" constraint was superseded by user
+> decision on 2026-07-09, consuming the SEC-P03 re-consideration point.)
 
-`@amadeus-dlc/setup` (`packages/setup`) has its own independent semver,
-separate from the framework's `AMADEUS_VERSION` (FR-017). It is **not**
-covered by the framework's `vX.Y.Z` git tag, CHANGELOG, or README-badge sync
-that t68 enforces — the setup package uses its own `setup-vX.Y.Z` tag
-namespace, which only drives the release workflow.
+The repo has a **single `vX.Y.Z` tag axis, driven by
+`packages/setup/package.json`'s version** (starting at `v0.1.0`). One tag is
+simultaneously the npm release of `@amadeus-dlc/setup` and the GitHub tag the
+installer resolves framework distributions from. Release notes are generated
+into the GitHub Release at release time — there is no CHANGELOG file. The
+framework's internal `AMADEUS_VERSION` (synced with the README badge by t68)
+is a separate display version and is not tagged.
 
 ## 1. Prerequisites
 
@@ -28,10 +29,10 @@ Confirm all three before touching a version number:
   before proceeding (R1 — this is a human, pre-publish task, not something a
   release PR can fix).
 
-- **`vX.Y.Z` framework tag exists**: `@amadeus-dlc/setup` itself is not
-  tagged, but at least one stable framework tag must exist in the repository
-  (CON-007/ASM-006), since the installer's default version resolution (FR-006)
-  depends on it:
+- **At least one stable `vX.Y.Z` tag** must exist for the installer's
+  default version resolution (FR-006) to find a distribution. The release
+  workflow itself creates tags, so this is only a bootstrap concern: the
+  very first release is made by pushing `v0.1.0` manually (see chapter 5).
 
   ```bash
   git tag --list 'v*' | sort -V | tail -5
@@ -61,7 +62,7 @@ Confirm all three before touching a version number:
 `packages/setup/package.json`'s `version` is an independent semver starting
 at `0.1.0` (FR-017, BR-P06). **The release workflow bumps it for you** —
 pick the bump level when dispatching (chapter 5); release-it commits the
-bump, tags `setup-vX.Y.Z`, and pushes to `main` in one go. The bump commit
+bump, tags `vX.Y.Z`, and pushes to `main` in one go. The bump commit
 lands on `main` without a PR — an explicit, team-recorded exception to the
 PR rule, limited to release-it's one-line version change.
 
@@ -72,9 +73,8 @@ cd packages/setup
 npm version <patch|minor|major> --no-git-tag-version
 ```
 
-Neither path touches the framework's `AMADEUS_VERSION`, README badge, or
-CHANGELOG — those stay in sync with each other per t68, independently of this
-version.
+Neither path touches the framework's `AMADEUS_VERSION` or README badge —
+those stay in sync with each other per t68, independently of this version.
 
 ## 3. Build and verify
 
@@ -141,7 +141,7 @@ From the Actions tab, run **Release @amadeus-dlc/setup** on `main` and pick
 the bump level (patch / minor / major). One run does everything:
 
 1. release-it bumps `packages/setup/package.json`, commits, tags
-   `setup-vX.Y.Z`, and pushes to `main` (config:
+   `vX.Y.Z`, and pushes to `main` (config:
    `packages/setup/.release-it.json`)
 2. softprops/action-gh-release creates the GitHub Release with
    auto-generated notes
@@ -154,9 +154,12 @@ The release does not re-run tests: every commit on `main` already passed
 the five CI quality gates at PR time, and the bump commit itself is
 release-it's one-line version change.
 
-Pushing a `setup-vX.Y.Z` tag manually remains a fallback entry point — it
-skips the bump (the tag must match the committed package version and point
-at `main`) and runs notes → build → publish → smoke.
+Pushing a `vX.Y.Z` tag manually remains a fallback entry point — it skips
+the bump (the tag must match the committed package version and point at
+`main`) and runs notes → build → publish → smoke. This is also how the
+**first release** ships: with no tags in the repo and `0.1.0` already
+committed, push `v0.1.0` on main to publish the current version without a
+bump.
 
 To rehearse without releasing, dispatch with `dry-run: true` —
 release-it runs with `--dry-run` (no commit/tag/push) and `npm publish
