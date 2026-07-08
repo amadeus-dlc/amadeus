@@ -7851,3 +7851,36 @@
 **Timestamp**: 2026-07-08T08:24:13Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T08:24:14Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-requirements
+**Timestamp**: 2026-07-08T08:24:14Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T08:25:22Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: nfr-review-u2-i2
+**Agent ID**: anfr-review-u2-i2-b8f7988a353e4c83
+**Message**: 両方の修正を検証しました。未解決の曖昧さも新規の不整合も見つかりませんでした。\n\n## Review\n\nVerdict: READY\n\n検証内容:\n\n1. **フィクスチャ E2E 閾値の算術**(`construction/install-flow/nfr-requirements/performance-requirements.md`): 修正後の記述を U1 の内訳(`展開+Extract
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T08:26:02Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: nfr-review-u2-i2
+**Agent ID**: anfr-review-u2-i2-b8f7988a353e4c83
+**Message**: team-leadへ最終レビュー結果（Verdict: READY）を送信しました。イテレーション1の2件の指摘（フィクスチャE2E閾値の算術、Nodeフロアの精度）はいずれも修正済みで整合性が取れていること、また新規の不整合（古い「Node ≥18」表記の残存など）もないことを確認しています。
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T08:26:21Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T08:26:21Z
+
+---
