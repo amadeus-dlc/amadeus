@@ -7926,3 +7926,45 @@
 **Timestamp**: 2026-07-08T08:33:23Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T08:33:47Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-requirements
+**Timestamp**: 2026-07-08T08:33:47Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T08:34:16Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a5ddd8ea7abdc50f2
+**Message**: (引き続き)
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T08:35:06Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: nfr-review-u3-i2
+**Agent ID**: anfr-review-u3-i2-ad523d8aae1c664b
+**Message**: ## Review\n\nVerdict: READY\n\nSEC-U01 の修正を検証した。\n\n- **規則(1文目)**: 「既存 `.bk` を上書き・削除しない。生成先パスが既存なら ApplyFailure」という具体的で検証可能なルールになっている。\n- **設計上の事実(2文目、旧: 空虚な主張)**: 「`Plan.forUpgrade` の walk は配布物側ファイル一覧を歩くため、
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T08:35:36Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: nfr-review-u3-i2
+**Agent ID**: anfr-review-u3-i2-ad523d8aae1c664b
+**Message**: team-lead にレビュー結果(Verdict: READY)を送信しました。SEC-U01 の修正内容を実際の設計(`business-logic-model.md` のワークフロー2)と照合し、根拠のある記述に置き換わっていること、新たな検証行が全ルールに対して落ちる実証を伴っていることを確認した上で、既存の確認事項(予算算術、REL-U02 の6経路、BR-U09〜U11 との整合性)に
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T08:35:50Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T08:35:50Z
+
+---
