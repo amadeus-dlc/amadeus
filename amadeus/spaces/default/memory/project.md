@@ -81,3 +81,5 @@
 - 公開・配布系 intent の feasibility では、外部前提(npm レジストリのパッケージ名/スコープ、外部サービス到達性など)をユーザーに問わず実ツール(レジストリ照会等)で直接検証し、確定できない部分は確信度付きの推定として提示する (learned 2026-07-08) <!-- cid:feasibility:c1 -->
 - 前 intent の RAID ログを引き継ぐときは、各 Issue の現存を作業ツリーで再実測してから転記する。解消済みの Issue は証跡(確認日時・確認方法)付きでクローズし、未解消はその旨を実測日付きで記す (learned 2026-07-08) <!-- cid:feasibility:c2 -->
 - CLI コマンド体系の設計ではサブコマンド文法を対称(MECE)に保ち、破壊的になりうる操作を暗黙デフォルトにしない(例: install/upgrade は両方明示サブコマンド、サブコマンドなしはヘルプ表示) (learned 2026-07-08) <!-- cid:scope-definition:c1 -->
+- approval-handoff 等のハンドオフゲートでリスクを説明する際は代替緩和策も併せて提示し、ゲートで合意できた緩和策の強化はその場で raid-log へ反映してから承認へ進む (learned 2026-07-08) <!-- cid:approval-handoff:c1 -->
+- フェーズ境界検証の成果物は verification/phase-check-<phase>.md に統一する(ステージファイル準拠。governance 文書の [phase-boundary]-verification.md 表記より優先) (learned 2026-07-08) <!-- cid:approval-handoff:c2 -->

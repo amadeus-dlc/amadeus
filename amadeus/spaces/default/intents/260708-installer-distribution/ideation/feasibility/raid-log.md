@@ -10,7 +10,7 @@
 | R1 | npm の `amadeus-dlc` スコープが確保できない | bunx ワンライナー(`bunx @amadeus-dlc/setup`)が成立しない | 公開前にスコープを確認・取得(2026-07-08 実測でパッケージ名は空き、非スコープ `amadeus-dlc` もフォールバック候補として空き) |
 | R2 | インストール時の GitHub 到達不可(プロキシ/オフライン環境) | 導入失敗、成功指標1(1分以内)未達 | 明確なエラーメッセージとリトライ案内。オフライン対応(同梱化)は将来検討 |
 | R3 | インストーラ(npm)と配布物(GitHub タグ)のバージョン不整合 | 意図しない版が導入される | インストーラ→タグの対応規約を設計で確定(例: 既定は最新タグ、`--version` で固定) |
-| R4 | 差分レポート+非破壊マージの工数が想定超過 | リリース遅延(ただし O2 でタイムライン制約なし) | 更新機能を導入機能と別マイルストーンに分割可能な設計にする |
+| R4 | 差分レポート+非破壊マージの工数が想定超過 | リリース遅延(ただし O2 でタイムライン制約なし) | (approval-handoff で強化 2026-07-08)① `scripts/promote-self.ts` の実証済み所有判定・差分検出ロジックを `packages/setup` 共通基盤へ移植し新規実装を縮小 ② walking skeleton で工数を早期実測 ③ フォールバック: リリース分割(v1=install、v1.1=upgrade) |
 
 ## Assumptions(前提)
 
@@ -24,8 +24,8 @@
 
 | ID | 問題 | 対応 |
 |----|------|------|
-| I1 | package.json の `"license": "MIT-0"` が LICENSE-MIT + LICENSE-APACHE(デュアル)と矛盾(2026-07-08 実測: 未修正) | 公開前に正しい SPDX 表現へ是正(このイニシアチブのスコープ内で対応) |
-| I2 | package.json の repository URL が旧 `awslabs/amadeus-workflows` を指す(実リモートは `amadeus-dlc/amadeus`)(2026-07-08 実測: 未修正) | 公開前に是正 |
+| I1 | package.json の `"license": "MIT-0"` が LICENSE-MIT + LICENSE-APACHE(デュアル)と矛盾(2026-07-08 実測: 未修正) | 公開前に `"(MIT OR Apache-2.0)"` へ是正(approval-handoff でユーザー確認済み。このイニシアチブのスコープ内で対応) |
+| I2 | package.json の repository URL が旧 `awslabs/amadeus-workflows` を指す(実リモートは `amadeus-dlc/amadeus`)(2026-07-08 実測: 未修正) | 公開前に `https://github.com/amadeus-dlc/amadeus` へ是正(`directory` サブフィールドも実態に合わせ見直し。approval-handoff でユーザー確認済み) |
 | I3 | (解消済み)前 intent で報告された §13 学習ツールの memory.md 未検出問題 — 本 intent の intent-capture / market-research 実行で正常動作を確認(2026-07-08) | クローズ |
 
 ## Dependencies(依存)
