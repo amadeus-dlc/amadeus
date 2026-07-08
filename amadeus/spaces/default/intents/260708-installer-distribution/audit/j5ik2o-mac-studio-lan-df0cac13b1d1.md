@@ -7570,3 +7570,45 @@
 **Timestamp**: 2026-07-08T07:38:09Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T07:40:11Z
+**Event**: WORKFLOW_PARKED
+**Stage**: functional-design
+**Timestamp**: 2026-07-08T07:40:11Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T07:43:45Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a0592951113a7b9c6
+**Message**: npm インストーラの AI-DLC ワークフローを進行中で、construction の functional-design を全5ユニット中4ユニット完了、最終ユニット docs-rollout のレビュー待ちです。レビュー判定が届き次第、是正または全ユニット被覆の承認ゲート提示に進みます。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T07:45:01Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: fd-review-u5
+**Agent ID**: afd-review-u5-7aba646dcd331008
+**Message**: ## Review\n\nVerdict: NOT-READY\n\n1. **FR-014 の受け入れ基準「ハーネス選択」への言及が計画コンテンツから欠落している。** `requirements.md:196` の受け入れ基準は明示的に4要素を列挙している——「`bunx`/`npx`、**ハーネス選択**、install、upgrade に言及している」。しかし `business-logic-mo
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T07:45:53Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: fd-review-u5
+**Agent ID**: afd-review-u5-7aba646dcd331008
+**Message**: team-lead へレビュー結果を送信しました。\n\n**結論: NOT-READY**(4件の指摘)\n\n主な問題点:\n1. FR-014 の受け入れ基準が明示的に要求する「ハーネス選択」への言及が、README刷新の計画コンテンツから完全に欠落している\n2. `cp -r` 手順の扱い(完全削除 vs 降格)について `business-logic-model.md` と `domain-ent
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T07:46:31Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T07:46:31Z
+
+---

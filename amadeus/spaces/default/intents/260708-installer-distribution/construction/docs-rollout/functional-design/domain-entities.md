@@ -11,7 +11,7 @@
 
 | 対象 | 変更 | 検証 |
 |------|------|------|
-| README.md 導入セクション | ワンライナー(`bunx @amadeus-dlc/setup install`)を主経路に。`cp -r dist/<harness>` は手動代替として降格 or 削除 | FR-014 受け入れ基準(grep で主経路確認) |
+| README.md 導入セクション | ワンライナー(`bunx @amadeus-dlc/setup install`)を主経路に。ハーネス選択(4択ウィザード+`--harness` 例)を明記。`cp -r dist/<harness>` は README から**削除**し docs/guide のトラブルシュートへ移設(business-logic-model の単一決定) | FR-014 受け入れ基準(grep 2点: cp -r 主経路の不在/bunx・npx・ハーネス選択・install・upgrade 言及の存在) |
 | README.md バッジ | framework 版バンプに同期 | t68 |
 | CHANGELOG.md | `## [X.Y.Z] - date` 見出し+installer 導線の変更内容 | t68 |
 | packages/framework/core/tools/amadeus-version.ts | AMADEUS_VERSION バンプ | t68 |
