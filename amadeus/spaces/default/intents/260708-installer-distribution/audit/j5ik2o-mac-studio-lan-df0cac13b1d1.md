@@ -8492,3 +8492,45 @@
 **Timestamp**: 2026-07-08T10:06:34Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T10:08:09Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-design
+**Timestamp**: 2026-07-08T10:08:09Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T10:08:28Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: adfbb1eb4bb0efeba
+**Message**: そのまま進めて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T10:08:35Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a5227e72f7be30738
+**Message**: 待ちでいいかな？
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T10:12:59Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: nfrd-review-u3
+**Agent ID**: anfrd-review-u3-da8e5e557c86e4c2
+**Message**: team-leadへレビュー結果を送信しました。要点は以下の通りです。\n\n**結論: NOT-READY**\n\n中心的な指摘は、`logical-components.md` が「新規モジュールゼロ、差分は domain 層と cli 分岐のみ」と明言している一方で、同じ nfr-design 成果物内の `security-design.md` と `reliability-design.md`
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T10:13:29Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T10:13:29Z
+
+---
