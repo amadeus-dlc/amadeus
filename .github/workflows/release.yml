@@ -1,14 +1,18 @@
 name: Release @amadeus-dlc/setup
 
-# Publishes packages/setup to npm with provenance. Two entry points:
-#   - push of a `setup-vX.Y.Z` tag (the setup package's own semver axis,
-#     independent of the framework's `vX.Y.Z` tags that the installer
-#     fetches distributions from)
-#   - workflow_dispatch, with an optional dry-run that exercises every
-#     step (gates, build, real-network E2E, `npm publish --dry-run`)
-#     without touching the registry — no NPM_TOKEN required.
-# The same five quality gates as ci.yml run here so a release never
-# depends on trusting an earlier run.
+# Publishes packages/setup to npm with provenance. Release-specific steps
+# only — the code being released is already gated: every commit on main
+# passed the five CI quality gates (ci.yml) at PR time, so this workflow
+# does not re-run tests. What remains is what only a release needs:
+#   - guard: the tag must match packages/setup's version, and the tagged
+#     commit must be reachable from main (no releasing stray branches)
+#   - build: dist/cli.js is not committed, so it is built fresh here
+#   - publish: npm publish --provenance (prereleases auto-select --tag next)
+#   - smoke: the published version resolves and prints help via npx
+# Entry points: push of a `setup-vX.Y.Z` tag (the setup package's own
+# semver axis, independent of the framework's `vX.Y.Z` tags), or
+# workflow_dispatch with an optional dry-run (`npm publish --dry-run`,
+# no NPM_TOKEN required).
 on:
   push:
     tags: ['setup-v*']
@@ -29,12 +33,14 @@ permissions:
 
 jobs:
   release:
-    name: gates · build · verify · publish
+    name: guard · build · publish · smoke
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
-      - name: Checkout
+      - name: Checkout (full history for the on-main guard)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up bun
         uses: oven-sh/setup-bun@v2
@@ -50,31 +56,7 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Typecheck (tsc --noEmit, both tsconfigs)
-        run: bun run typecheck
-
-      - name: Lint (biome)
-        run: bun run lint
-
-      - name: Dist drift guard
-        run: bun run dist:check
-
-      - name: Self-install drift guard
-        run: bun run promote:self:check
-
-      - name: Tests — smoke + unit + integration
-        run: bash tests/run-tests.sh --ci
-
-      - name: Build dist/cli.js (fresh)
-        working-directory: packages/setup
-        run: bun run build
-
-      - name: Real-network E2E (distribution path against live GitHub)
-        env:
-          AMADEUS_SETUP_E2E_NETWORK: '1'
-        run: bun test tests/e2e/setup-install.test.ts
-
-      - name: Version guard (tag must match packages/setup version)
+      - name: Guard — tag matches version and commit is on main
         if: github.ref_type == 'tag'
         run: |
           tag_version="${GITHUB_REF_NAME#setup-v}"
@@ -83,6 +65,14 @@ jobs:
             echo "::error::tag setup-v${tag_version} does not match packages/setup version ${pkg_version}"
             exit 1
           fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::tagged commit ${GITHUB_SHA} is not on main — releases only ship CI-gated main history"
+            exit 1
+          fi
+
+      - name: Build dist/cli.js (fresh)
+        working-directory: packages/setup
+        run: bun run build
 
       - name: Publish to npm
         working-directory: packages/setup

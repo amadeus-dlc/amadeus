@@ -139,9 +139,10 @@ git tag setup-v<version> <merged-main-sha>
 git push origin setup-v<version>
 ```
 
-`.github/workflows/release.yml` then re-runs the five CI quality gates,
-builds `dist/cli.js` fresh, runs the real-network E2E against live GitHub,
-verifies the tag matches the package version, and publishes with
+`.github/workflows/release.yml` verifies the tag matches the package
+version and that the tagged commit is on `main` (every main commit already
+passed the five CI quality gates at PR time — the release does not re-run
+tests), builds `dist/cli.js` fresh, and publishes with
 `npm publish --provenance --access public`. A prerelease version
 (`X.Y.Z-rc.N` committed in package.json, tagged `setup-vX.Y.Z-rc.N`)
 is automatically published with `--tag next` and never touches `latest`.
@@ -149,8 +150,8 @@ The workflow finishes with a retrying `npx @amadeus-dlc/setup@<version>`
 smoke check.
 
 To rehearse without publishing, run the workflow manually from the Actions
-tab with `dry-run: true` — every step executes, `npm publish --dry-run`
-replaces the real publish, and no `NPM_TOKEN` is needed.
+tab with `dry-run: true` — build and packaging execute, `npm publish
+--dry-run` replaces the real publish, and no `NPM_TOKEN` is needed.
 
 ### Fallback: manual publish (no provenance)
 
