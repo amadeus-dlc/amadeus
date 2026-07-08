@@ -70,7 +70,8 @@ export type UpgradeSource = {
 
 export namespace UpgradeSource {
   export function fromInstallation(installation: Installation, force: boolean): Result<UpgradeSource, UpgradeRefusal>;
-  // Installation(U2)からの変換: none → err(no-installation)、partial×非force → err(partial-refused)、
+  // Installation(U2)からの変換: none → err(no-installation)、partial×--force なし → err(partial-refused)
+  //   (モードを問わず一様に拒否 — 部分導入の続行には --force の明示を必須とする安全側統一。BR-U08 参照)、
   // manual-or-unknown で LegacyLayout.isUnsupported(evidence) → err(unsupported-layout)。
   // manifested のときは installation.manifest(U2 の manifested 変種が持つフィールド)を封入する — 呼び出し側にマニフェストを晒さない
 }
@@ -82,11 +83,12 @@ export namespace UpgradeSource {
 
 ```ts
 export namespace LegacyLayout {
-  export function isUnsupported(evidence: readonly string[]): { unsupported: boolean; detail: string };
+  export function isUnsupported(evidence: InstallationEvidence): { unsupported: boolean; detail: string };
+  // 入力は U2 の構造化 InstallationEvidence(paths+versionFileContent+anchors — Installation.detect が収集)
   // 判定規則(テスト可能に固定):
-  //   (a) VERSION ファイルが存在するが SemVer として解釈不能(現行規約以前の内容)、または
-  //   (b) amadeus-* プレフィックスのファイルが存在するのに、現行レイアウトの必須アンカー
-  //       (<engine-dir>/tools/ と <engine-dir>/amadeus-common/)が両方とも欠落している
+  //   (a) evidence.versionFileContent が非 null かつ SemVer.parse で解釈不能(現行規約以前の内容)、または
+  //   (b) evidence.paths に amadeus-* プレフィックスのファイルが存在するのに、
+  //       evidence.anchors.toolsDir と evidence.anchors.amadeusCommon が両方 false
   // → 「現行 dist 形状より古い認識可能レイアウト」= unsupported-layout(無変更終了)。
   //    アンカーが揃っていれば カスタマイズ済みでも manual-or-unknown(保守的プラン)に留まる
 }
@@ -114,14 +116,15 @@ export namespace Plan {
 
 ```mermaid
 flowchart LR
-  INST[Installation U2] --> US[UpgradeSource]
-  US -->|dispositionFor| PLN[Plan.forUpgrade]
-  MF[Manifest U1] --> UA[UpgradeAssessment]
+  INST[Installation U2] --> US[UpgradeSource<br/>Manifest を封入]
   RV[ResolvedVersion U1] --> UA
-  UA -->|outcome: proceed| PLN
+  US -->|assess| UA[UpgradeAssessment]
+  UA -->|outcome: proceed| PLN[Plan.forUpgrade]
   UA -->|non-proceed| REF[UpgradeRefusal]
+  US -->|dispositionFor| PLN
   PLN --> APL[applier U2 再利用]
-  APL -->|manifest.upgradedTo| MF2[新 Manifest]
+  APL --> US2[source.nextManifest]
+  US2 --> MF2[新 Manifest]
 ```
 
 <!-- text fallback: U2 の Installation から UpgradeSource が作られ(none/partial/旧レイアウトは UpgradeRefusal へ)、source.assess が封入マニフェストの導入版と ResolvedVersion から UpgradeAssessment(境界判定)を返す。proceed のときだけ Plan.forUpgrade が source.dispositionFor(manifested は manifest.dispositionFor へ委譲)を使ってプランを作り、U2 の applier で適用され、source.nextManifest(manifested は manifest.upgradedTo)で新 Manifest が書かれる。 -->
@@ -129,5 +132,5 @@ flowchart LR
 ## U1/U2 との契約
 
 - U1 から: SemVer / VersionSpec / ResolvedVersion / ExtractedPayload / Manifest(`dispositionFor` / `isNewerThan` / `upgradedTo`)/ ManifestFiles / ManifestError / Disposition / FileClass / FetchError / HarnessName / InstallMeta / BuildInput
-- U2 から: Plan / PlanEntry / PlanAction / PlanOptions / Installation / ApplyResult / Applier / Verifier / Reporter API(`ClassifiedError` に `UpgradeRefusal` を合流)/ InstallInputs / ParsedCommand
+- U2 から: Plan / PlanEntry / PlanAction / PlanOptions / Installation / **InstallationEvidence**(本 Unit の是正で構造化 — LegacyLayout の入力契約)/ ApplyResult / Applier / Verifier / Reporter API(`ClassifiedError` に `UpgradeRefusal` を合流)/ InstallInputs / ParsedCommand
 - 本 Unit が定義: UpgradeAssessment / UpgradeOutcome / UpgradeOutcomeNonProceed / UpgradeRefusal / UpgradeSource / LegacyLayout / `Plan.forUpgrade`

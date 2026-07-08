@@ -45,10 +45,16 @@ export namespace UsageError {
 ### Installation(導入状態 — 判別ユニオン、FR-004/005 の検出結果)
 
 ```ts
+export type InstallationEvidence = {
+  readonly paths: readonly string[];         // 検出した既存 Amadeus 関連ファイル(相対パス列挙)
+  readonly versionFileContent: string | null; // <engine-dir>/VERSION の生内容(不在なら null)— SemVer 解釈可否の判定材料
+  readonly anchors: { readonly toolsDir: boolean; readonly amadeusCommon: boolean }; // 現行レイアウト必須アンカーの存在
+};
+
 export type Installation =
   | { readonly kind: "none"; admitsInstall(force: boolean): InstallAdmission }
   | { readonly kind: "manifested"; readonly manifest: Manifest; admitsInstall(force: boolean): InstallAdmission }
-  | { readonly kind: "manual-or-unknown"; readonly evidence: readonly string[]; admitsInstall(force: boolean): InstallAdmission }
+  | { readonly kind: "manual-or-unknown"; readonly evidence: InstallationEvidence; admitsInstall(force: boolean): InstallAdmission }
   | { readonly kind: "partial"; readonly missing: readonly string[]; admitsInstall(force: boolean): InstallAdmission };
 
 export type InstallAdmission =
@@ -57,7 +63,10 @@ export type InstallAdmission =
   | { readonly type: "refuse-suggest-upgrade"; readonly detected: string }; // 導入済み検出 → 中断+upgrade 案内
 
 export namespace Installation {
-  export function detect(target: string, manifestIo: ManifestIo): Promise<Installation>;  // VERSION/マニフェスト/ハーネスファイルの証跡から分類
+  export function detect(target: string, manifestIo: ManifestIo): Promise<Installation>;
+  // VERSION/マニフェスト/ハーネスファイルの証跡から分類。manual-or-unknown のときは
+  // InstallationEvidence(パス列挙+VERSION 生内容+現行アンカー存在)を構造化して封入する
+  // — U3 の LegacyLayout.isUnsupported の入力契約(旧レイアウト判定に必要な材料をここで収集)
 }
 ```
 

@@ -19,7 +19,7 @@
 |----|--------|
 | BR-U06 | 認識可能な導入なし → no-installation で install を案内し無変更終了 |
 | BR-U07 | 非対応旧レイアウト → unsupported-layout で無変更終了 |
-| BR-U08 | 部分導入 × 非対話 × --force なし → partial-refused で無変更終了。--force ありは partial-forced として保守的続行 |
+| BR-U08 | 部分導入 × `--force` なし → partial-refused で無変更終了(**モードを問わず一様** — 部分導入の続行には `--force` の明示を必須とする安全側統一。FR-005 の「非対話適用の拒否」要件はこの上位集合として満たされる)。`--force` ありは partial-forced として保守的続行 |
 | BR-U09 | manual-or-unknown 系の `source.dispositionFor` は期待 md5 を持たないため、既存共有ファイルを全件退避してからコピー(保守的既定、FR-008) |
 
 ## 処遇・退避ルール(FR-008/009)

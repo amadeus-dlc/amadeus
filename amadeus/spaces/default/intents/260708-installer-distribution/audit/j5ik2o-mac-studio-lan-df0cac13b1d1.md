@@ -7471,3 +7471,36 @@
 **Timestamp**: 2026-07-08T07:14:56Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T07:16:39Z
+**Event**: WORKFLOW_PARKED
+**Stage**: functional-design
+**Timestamp**: 2026-07-08T07:16:39Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T07:20:21Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a698e107891a5a58b
+**Message**: npm インストーラ(@amadeus-dlc/setup)の AI-DLC ワークフローを実行中で、いまは Construction の functional-design を U1〜U3 まで作成・レビュー済みです。次は U3 最終レビューの判定を受けて、残る U4/U5 の設計に進みます。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T07:23:31Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: fd-review-u3-i2
+**Agent ID**: afd-review-u3-i2-652b59521f6c4648
+**Message**: team-leadへレビュー結果を送信しました。判定は **NOT-READY** です。\n\n前回の7件の是正はすべて正しく反映されていることを確認しましたが、再レビューの過程で新たに2件の実質的な問題を発見しました。\n\n1. **ブロッカー**: `LegacyLayout.isUnsupported(evidence)` が「VERSIONファイルの内容がSemVerとして解析不能」という判定
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T07:24:19Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T07:24:19Z
+
+---
