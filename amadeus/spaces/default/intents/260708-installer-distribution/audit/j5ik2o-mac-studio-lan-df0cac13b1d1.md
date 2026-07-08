@@ -18228,3 +18228,176 @@
 **Context**: construction > publish-readiness > code-generation > code-generation-plan.md
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T15:51:50Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-08T15:51:50Z
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T15:57:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: 79b71868
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/lib/setup-pack-contract.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T15:57:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: 79b71868
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/lib/setup-pack-contract.ts
+**Duration ms**: 1065
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T15:57:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: cffd646e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/lib/setup-pack-contract.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T15:57:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: cffd646e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/lib/setup-pack-contract.ts
+**Duration ms**: 646
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T15:57:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: b7eaf405
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-pack-contract.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T15:57:46Z
+**Event**: SENSOR_PASSED
+**Fire id**: b7eaf405
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-pack-contract.test.ts
+**Duration ms**: 852
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T15:57:46Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5f1c1f89
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-pack-contract.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T15:57:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5f1c1f89
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-pack-contract.test.ts
+**Duration ms**: 580
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T15:57:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: f176b27b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-files-drift.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T15:57:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: f176b27b
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-files-drift.test.ts
+**Duration ms**: 828
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T15:57:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6e37d7bf
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-files-drift.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T15:57:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6e37d7bf
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-files-drift.test.ts
+**Duration ms**: 572
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T16:03:28Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: codegen-u4
+**Agent ID**: acodegen-u4-d94cf22169e9d412
+**Message**: バックグラウンドのテスト実行完了を待っています。完了の通知が届き次第、結果を報告します。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T16:07:16Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: codegen-u4
+**Agent ID**: acodegen-u4-d94cf22169e9d412
+**Message**: `bash tests/run-tests.sh --ci` を完全ログ保存付きで再実行中です(約3分程度かかる見込み)。完了と Monitor 通知を待ちます。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T16:08:25Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: codegen-u4
+**Agent ID**: acodegen-u4-d94cf22169e9d412
+**Message**: CI再実行(完全ログ付き)の完了を Monitor で待機中です。完了次第、失敗原因を特定して報告します。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T16:13:21Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: codegen-u4
+**Agent ID**: acodegen-u4-d94cf22169e9d412
+**Message**: U4(publish-readiness)の実装と検証が完了しました。要点は以下のとおりです。\n\n**実装したファイル**(いずれも絶対パス)\n- `/Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/tests/lib/setup-pack-con
+
+---
