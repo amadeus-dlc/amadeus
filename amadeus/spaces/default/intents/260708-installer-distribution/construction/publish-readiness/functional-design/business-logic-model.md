@@ -9,9 +9,13 @@
 test "npm pack --dry-run はファイルリスト契約を満たす":
   raw = exec("npm pack --dry-run --json", cwd: packages/setup)   # 実ツール実行(シミュレーション禁止 — 是正事項 c4)
   report = PackReport.parse(raw)
-  assert report.ok
-  verdict = PackContract.current().isSatisfiedBy(report.ok)
+  assert report.type == "ok"                                     # Result の正準形状で絞り込み
+  verdict = PackContract.current().isSatisfiedBy(report.value)
   assert verdict.type == "satisfied"                             # missing / unexpected は詳細付きで失敗
+
+test "package.json files は PackContract と同期している(ドリフトテスト — BR-P02)":
+  filesField = readJson("packages/setup/package.json").files
+  assert deepEqual(sorted(filesField), sorted(PackContract.current().declaredInFiles()))
 
 test "契約違反を注入すると赤くなる(落ちる実証 — team.md Mandated)":
   # 実装時に1度、files フィールドから LICENSE を外した状態で上記テストが missing を検出することを実証し、
@@ -37,8 +41,11 @@ test "契約違反を注入すると赤くなる(落ちる実証 — team.md Man
 
 ```
 packages/setup/package.json: license "(MIT OR Apache-2.0)" / repository.url https://github.com/amadeus-dlc/amadeus
-                             / files: PackContract.requiredFiles() と同期 / bin: { "amadeus-setup": "dist/cli.js" }
+                             / files: PackContract.declaredInFiles() とドリフトテストで同期 / bin: { "amadeus-setup": "dist/cli.js" }
 root package.json:           license "MIT-0" → "(MIT OR Apache-2.0)" / repository.url 旧 awslabs → amadeus-dlc/amadeus(I1/I2 是正)
 ```
 
-- root の是正はユーザー可視変更に該当し得るため、CON-006 のバンプ/CHANGELOG 判断は U5 と同一 PR 群で扱う
+- **PR 分割とバンプの具体シーケンス(CON-006 との整合)**:
+  1. **U4 の PR** = `packages/setup` のメタデータ+pack 契約テスト+ドリフトテスト+publish 手順書。framework のユーザー可視変更を含まないため CON-006 のバンプ対象外
+  2. **root package.json の I1/I2 是正は U5 の PR に移管**する。U5 は README 刷新+CHANGELOG+framework 版バンプを行う「ユーザー可視 PR」であり(project.md Mandated: 同一コミットでバンプ)、root メタデータ是正はそこへ自然に同乗する。team.md の「複数ユニットを単一 PR に束ねない」とは矛盾しない(是正の実施 Unit を U5 に一本化するだけで、U4 の成果物には含めない)
+  3. publish の実行自体は両 PR マージ後・タグ発行後の手動作業(手順書ワークフロー2)

@@ -10,7 +10,10 @@
 
 ```ts
 export type PackContract = {
-  requiredFiles(): readonly string[];        // ["dist/cli.js", "README.md", "LICENSE-MIT", "LICENSE-APACHE", "package.json"]
+  declaredInFiles(): readonly string[];      // package.json `files` に明示宣言すべき集合: ["dist/cli.js", "LICENSE-MIT", "LICENSE-APACHE"]
+                                             //   (非標準命名の LICENSE-* は自動同梱されないため明示必須 — レビュー時の実測)
+  autoIncluded(): readonly string[];         // npm が files の内容にかかわらず常に同梱する集合: ["package.json", "README.md"](npm の仕様)
+  requiredFiles(): readonly string[];        // 実 tarball の期待内容 = declaredInFiles ∪ autoIncluded(5項目)
   isSatisfiedBy(report: PackReport): ContractVerdict;   // 判定は契約自身が答える(Tell, Don't Ask)
 };
 
@@ -24,6 +27,20 @@ export namespace PackContract {
 }
 ```
 
+**単一ソース化の実装メカニズム(BR-P02)**: `package.json` の `files`(静的 JSON)は TS を import できないため、**ドリフトテスト**で機械的に同期を強制する:
+
+```ts
+test "package.json files は PackContract.declaredInFiles と一致する":
+  filesField = readJson("packages/setup/package.json").files
+  assert deepEqual(sorted(filesField), sorted(PackContract.current().declaredInFiles()))
+  // 手書きの二重管理を「ドリフトしたら CI が赤くなる」形で許容する(dist:check と同じ流儀)
+```
+
+**BR-F19/ADR-002 との数の和解**: 上流の「dist/cli.js + README + LICENSE 2種**のみ**」は **`files` 宣言でコントロールする配布意思**を指す(U1 BR-F19 に注記追加済み)。npm は `package.json`(と `README.md`)を宣言に関わらず自動同梱するため、**実 tarball の検証基準(requiredFiles)は5項目**になる — この差分は npm の仕様であり契約違反ではない。
+
+```ts
+```
+
 ### PackReport(npm pack --dry-run --json の解析結果)
 
 ```ts
@@ -34,6 +51,7 @@ export type PackReport = {
 
 export namespace PackReport {
   export function parse(npmPackJson: unknown): Result<PackReport, PackReportError>;  // 実ツール出力のパース(シミュレーション禁止 — c4)
+  // Result は他ユニットと同じ正準形状 { type: "ok"; value: T } | { type: "err"; error: E }
 }
 
 export type PackReportError = { readonly type: "malformed-output"; readonly detail: string };

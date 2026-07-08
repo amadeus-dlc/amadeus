@@ -40,4 +40,4 @@
 | BR-F16 | `packages/setup/package.json` は `license: "(MIT OR Apache-2.0)"`、`repository: https://github.com/amadeus-dlc/amadeus` — root の不備を継承しない |
 | BR-F17 | 実行時依存ゼロ(`dependencies` 空)。ビルド時依存のみ許容(NFR-005) |
 | BR-F18 | lint(Biome)/型検査(tsc)の配線は本パッケージ追加と同一 PR(team.md Mandated) |
-| BR-F19 | publish 対象は `dist/cli.js` + README + LICENSE 2種のみ(`files` フィールドで固定 — FR-018 の契約) |
+| BR-F19 | publish の配布意思として `files` 宣言で固定するのは `dist/cli.js` + LICENSE 2種(README/package.json は npm が自動同梱)。実 tarball の検証基準は自動同梱込みの5項目 — 詳細は U4 の PackContract(FR-018 の契約) |

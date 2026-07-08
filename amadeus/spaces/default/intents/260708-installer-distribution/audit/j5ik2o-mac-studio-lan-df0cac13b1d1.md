@@ -7504,3 +7504,45 @@
 **Timestamp**: 2026-07-08T07:24:19Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T07:26:12Z
+**Event**: WORKFLOW_PARKED
+**Stage**: functional-design
+**Timestamp**: 2026-07-08T07:26:12Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T07:26:43Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: ac8447f137b148918
+**Message**: origin/mainからrebaseして
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T07:29:48Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: af3a39a1e998dc93a
+**Message**: npm インストーラ @amadeus-dlc/setup の AI-DLC ワークフローを進行中で、現在は Construction の functional-design を Unit ごとに設計・レビュー中(U1〜U3 完了、U4 レビュー待ち)。次は U4 の判定を受けて是正し、最後の U5 に進みます。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T07:32:57Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: fd-review-u4
+**Agent ID**: afd-review-u4-8babc6dd168337d6
+**Message**: team-leadにレビュー結果(NOT-READY、5件の指摘)を送信しました。要点は以下の通りです。\n\n**Verdict: NOT-READY**\n\n実際に `npm pack --dry-run --json` を使ったローカル実験(スクラッチパッドで一時パッケージを作成し検証)で契約の数値的矛盾を確認しました。\n\n- **Blocking (2件)**: BR-P02の「`PackCon
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T07:33:45Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T07:33:45Z
+
+---
