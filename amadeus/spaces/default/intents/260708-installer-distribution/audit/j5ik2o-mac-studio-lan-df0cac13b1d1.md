@@ -17645,3 +17645,227 @@
 **Message**: team-lead へ完了報告を送付しました。作業内容の要約です。\n\n**実装したもの**: `packages/setup/src/domain/upgrade.ts`(新規)に `UpgradeAssessment`/`UpgradeOutcome`/`UpgradeRefusal`/`UpgradeSource`/`LegacyLayout` を実装し、`domain/plan.ts` に 
 
 ---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T14:57:48Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T14:57:48Z
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T14:57:48Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-08T14:57:48Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T14:58:07Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a0b368a1dcd04e4bb
+**Message**: タイミングみてorigin/mainにrebaseして
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T14:58:12Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a032264584d0cdb3c
+**Message**: タイミングみてorigin/mainに追従して
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T15:01:25Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a2bff2d1ede2b3bdc
+**Message**: npm インストーラ @amadeus-dlc/setup の AI-DLC 実装を自律続行中で、Bolt 3(upgrade-flow)のコード生成が終わり敵対的レビューの判定待ちです。判定が届き次第、是正または Bolt 4(publish-readiness)へ進みます。
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T15:05:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: a90f3b68
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/applier.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T15:05:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: a90f3b68
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/applier.ts
+**Duration ms**: 853
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T15:05:57Z
+**Event**: SENSOR_FIRED
+**Fire id**: d5df39eb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/applier.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T15:05:57Z
+**Event**: SENSOR_PASSED
+**Fire id**: d5df39eb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/applier.ts
+**Duration ms**: 623
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T15:06:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: 992dc34f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/upgrade.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T15:06:19Z
+**Event**: SENSOR_PASSED
+**Fire id**: 992dc34f
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/upgrade.ts
+**Duration ms**: 1064
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T15:06:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: 821deab5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/upgrade.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T15:06:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 821deab5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/upgrade.ts
+**Duration ms**: 633
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T15:06:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: a336b263
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/upgrade.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T15:06:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: a336b263
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/upgrade.ts
+**Duration ms**: 924
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T15:06:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: b3eabee8
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/upgrade.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T15:06:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: b3eabee8
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/upgrade.ts
+**Duration ms**: 601
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T15:07:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: 27577b3d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T15:07:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 27577b3d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+**Duration ms**: 857
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T15:07:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1225c019
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T15:07:23Z
+**Event**: SENSOR_FAILED
+**Fire id**: 1225c019
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/code-generation/type-check-1225c019.md
+**Findings count**: 1
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T15:11:10Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: codegen-review-u3
+**Agent ID**: acodegen-review-u3-62d935ab1e564fdb
+**Message**: レビューを完了し、team-leadに判定を送付しました。要点は以下の通りです。\n\n**判定: NOT-READY**\n\n主な理由は3点で、いずれも小規模な修正で解消可能です。\n\n1. **フレッシュエビデンスの矛盾(ブロッキング)**: ビルダーは「lint全green」と申告していましたが、実際に`bun run lint`を再実行すると、本コミットで新規追加された`tests/e2e/set
+
+---
