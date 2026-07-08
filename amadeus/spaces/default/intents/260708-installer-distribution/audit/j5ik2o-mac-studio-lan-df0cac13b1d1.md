@@ -7968,3 +7968,77 @@
 **Timestamp**: 2026-07-08T08:35:50Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T08:37:22Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-requirements
+**Timestamp**: 2026-07-08T08:37:22Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T08:40:53Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: afe7b228b8627c051
+**Message**: npm インストーラ(@amadeus-dlc/setup)の AI-DLC ワークフローを進行中で、現在は Construction の NFR Requirements ステージ、U4(publish-readiness)のレビュアー判定待ちです。判定が届き次第、是正または最終ユニット U5 の NFR 作成へ進みます。
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T08:41:54Z
+**Event**: HUMAN_TURN
+
+---
+
+## Session End
+**Timestamp**: 2026-07-08T08:41:57Z
+**Event**: SESSION_ENDED
+**Reason**: other
+
+---
+
+## Session Resume
+**Timestamp**: 2026-07-08T08:42:06Z
+**Event**: SESSION_RESUMED
+**Source**: resume
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T08:42:06Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T08:42:35Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T08:47:12Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: afe8b7196a0f9ddc1
+**Message**: npm インストーラ(@amadeus-dlc/setup)の AI-DLC ワークフローを実行中で、現在は NFR Requirements ステージの U4(publish-readiness)レビュー待ちです。レビュアーの判定が届き次第、是正または最終ユニット U5 へ進みます。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T08:48:42Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: nfr-review-u4-r2
+**Agent ID**: anfr-review-u4-r2-b00252374652e5db
+**Message**: team-leadにレビュー結果を送信しました。要点は次のとおりです。\n\n**判定: READY**\n\nU4「publish-readiness」のNFR成果物5点(performance/security/scalability/reliability/tech-stack-decisions)を、上流のfunctional-design(BR-P01〜P09、PackContract/Pack
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T08:49:30Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T08:49:30Z
+
+---

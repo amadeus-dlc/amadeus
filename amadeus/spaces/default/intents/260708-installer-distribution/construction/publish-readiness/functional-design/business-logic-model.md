@@ -29,7 +29,7 @@ test "契約違反を注入すると赤くなる(落ちる実証 — team.md Man
 
 手順書(配置: `docs/guide/publishing-setup.md`)は以下の章立てで書く:
 
-1. **前提確認**: npm org `amadeus-dlc` スコープの確保(R1)、`vX.Y.Z` タグの実在(CON-007/ASM-006)
+1. **前提確認**: npm org `amadeus-dlc` スコープの確保(R1)、`vX.Y.Z` タグの実在(CON-007/ASM-006)、**npm アカウントの 2FA(auth-and-writes)有効化**(SEC-P02)
 2. **バージョンバンプ**: `packages/setup/package.json` の独立 semver(FR-017)。バンプは publish する PR で実施
 3. **ビルドと検証**: `bun build`(ADR-002)→ `bun run typecheck` / `lint` → pack 契約テストを含む CI プロファイル
 4. **ローカル最終確認**: `npm pack --dry-run` の目視、`npm pack` tarball のローカルインストール検証(`bun link` 代替可)

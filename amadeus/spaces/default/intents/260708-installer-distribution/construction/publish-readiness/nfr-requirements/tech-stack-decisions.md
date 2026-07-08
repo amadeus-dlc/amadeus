@@ -10,4 +10,4 @@
 | JSON 比較(ドリフトテスト) | 標準 JSON.parse+ソート比較 | 依存ゼロ |
 | 手順書配置 | `docs/guide/publishing-setup.md` | 既存 docs/guide 構造への追加(新規体系を作らない) |
 
-- 注: npm CLI は CI 環境(ubuntu-latest、Node 同梱)とメンテナ環境の双方に既存。新規セットアップ不要
+- 注: npm CLI は GitHub ホスト型 ubuntu-latest ランナーの標準プリインストール(actions/runner-images のツールセット)とメンテナ環境の双方に既存。新規セットアップ不要 — **前提**: この可用性は初回 CI 実行(pack 契約テストのグリーン)で実測確認する

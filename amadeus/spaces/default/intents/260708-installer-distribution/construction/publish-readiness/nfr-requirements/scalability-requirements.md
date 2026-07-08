@@ -1,7 +1,7 @@
 # Scalability Requirements — publish-readiness
 
 > ステージ: nfr-requirements (3.2) / Unit: publish-readiness / 作成: 2026-07-08
-> 出典: U1〜U3 の scalability-requirements(適用外宣言)、`../functional-design/business-logic-model.md`
+> 出典: U1〜U3 の scalability-requirements(適用外宣言)、`../functional-design/business-logic-model.md`・`business-rules.md`(BR-P01〜P09 にスケーラビリティ適用項目なし)
 
 ## 適用外の宣言(根拠付き)
 
