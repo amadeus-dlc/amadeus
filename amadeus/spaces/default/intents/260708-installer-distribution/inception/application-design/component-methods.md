@@ -62,7 +62,7 @@ planUpgrade(payload: ExtractedPayload, installation: Installation, opts: PlanOpt
 ### applier
 
 ```ts
-apply(plan: Plan, target: string, fsops: FsOps): Promise<ApplyResult>
+apply(plan: Plan, target: string, fsops: FsOps): Promise<ApplyResult>   // ※U2 functional-design が Applier.create ファクトリ形へ、さらに U2 nfr-design が Applier.create(fsWrite) へ置換(SEC-I01/REL-I01 の構造保証)
 // backup 先: `${path}.${plan.backupTimestamp}.bk`(FR-008、単一タイムスタンプ)
 // ApplyResult = { applied: PlanEntry[], backups: string[], failures: ApplyFailure[] }
 ```
@@ -84,7 +84,7 @@ manifestIo.write(target: string, manifest: Manifest): Promise<Result<void, Manif
 ### verifier
 
 ```ts
-verify(target: string, manifest: Manifest): VerifyResult
+verify(target: string, manifest: Manifest): VerifyResult   // ※U2 functional-design が Verifier.create ファクトリ形へ、さらに U2 nfr-design が Verifier.create(fsRead) へ置換(読み取り専用の構造化)
 // 必須ファイル存在 + doctor 相当チェック(FR-013)。VerifyResult = { ok, checks: Check[] }
 ```
 

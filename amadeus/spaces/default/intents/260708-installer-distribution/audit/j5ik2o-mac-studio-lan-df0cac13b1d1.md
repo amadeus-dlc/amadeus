@@ -8441,3 +8441,54 @@
 **Timestamp**: 2026-07-08T09:59:33Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T10:00:00Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-design
+**Timestamp**: 2026-07-08T10:00:00Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T10:00:18Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a2b72f4fa57cdefee
+**Message**: Sonnet ではありません。確認できている範囲では次のとおりです:\n\n- **フレームワークのエージェント定義が読めた範囲**(`.claude/agents/amadeus-product-agent.md` と `amadeus-architect-agent.md`)には、frontmatter に **`modelOverride: opus`** が明記されていました。amadeus 
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T10:00:19Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: aee49288f450ee92e
+**Message**: 進めて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T10:00:27Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a98b7bd8395a15757
+**Message**: 続けて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T10:06:11Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: nfrd-review-u2-i2
+**Agent ID**: anfrd-review-u2-i2-2e20ec7f233eb519
+**Message**: team-leadへ判定を送信しました。\n\n**判定: READY**\n\niteration 1で指摘した4件(Applier/Verifier ポート分割の追認、≤5秒予算行のカバー、HarnessName.parseの配置整合、fail-fastと複数形failures()の緊張)はすべて解消されており、ブロッキングとなる新規の不整合は見つかりませんでした。\n\n軽微な観察として2点だけ記録して
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T10:06:34Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T10:06:34Z
+
+---
