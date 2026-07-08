@@ -1,5 +1,5 @@
 import { createWriteStream } from "node:fs";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { Readable } from "node:stream";
@@ -10,11 +10,15 @@ import { Result } from "../shared/result.ts";
 export type IoError = {
   readonly type: "io";
   readonly detail: string;
+  // Optional so existing IoError literals (this port and ApplyWrite, which
+  // reuses this type) keep compiling unchanged; true only for ENOENT — lets
+  // callers distinguish "absent" from a real I/O failure.
+  readonly notFound?: boolean;
 };
 
 export namespace IoError {
-  export function of(detail: string): IoError {
-    return Object.freeze({ type: "io", detail });
+  export function of(detail: string, notFound = false): IoError {
+    return Object.freeze({ type: "io", detail, notFound });
   }
 }
 
@@ -45,18 +49,22 @@ export function createFsRead(): FsRead {
       try {
         return Result.ok(await readFile(path, "utf8"));
       } catch (cause) {
-        return Result.err(IoError.of(`could not read ${path}: ${String(cause)}`));
+        return Result.err(IoError.of(`could not read ${path}: ${String(cause)}`, isEnoent(cause)));
       }
     },
     async exists(path: string): Promise<boolean> {
       try {
-        await readFile(path);
+        await stat(path);
         return true;
       } catch {
         return false;
       }
     },
   });
+}
+
+function isEnoent(cause: unknown): boolean {
+  return cause instanceof Error && "code" in cause && (cause as { code?: string }).code === "ENOENT";
 }
 
 export function createFsWrite(): FsWrite {

@@ -3,14 +3,8 @@
 // VersionSpec.latest/exact admits() rules (BR-F02, BR-F04).
 
 import { describe, expect, test } from "bun:test";
-import { SemVer } from "../../packages/setup/src/domain/semver.ts";
 import { VersionSpec } from "../../packages/setup/src/domain/version-spec.ts";
-
-function semver(raw: string) {
-  const result = SemVer.parse(raw);
-  if (result.type === "err") throw new Error(`invalid fixture version: ${raw}`);
-  return result.value;
-}
+import { semver } from "../lib/setup-domain-fixtures.ts";
 
 describe("VersionSpec.latest", () => {
   const spec = VersionSpec.latest();

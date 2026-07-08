@@ -13,33 +13,35 @@ export type Resolver = {
 const RELEASES_PATH = "/repos/amadeus-dlc/amadeus/releases";
 const TAGS_PATH = "/repos/amadeus-dlc/amadeus/tags";
 
-type RawTag = { readonly name?: unknown };
-type RawRelease = { readonly tag_name?: unknown; readonly draft?: unknown; readonly prerelease?: unknown };
+type RawEntry = Record<string, unknown>;
 
 export function createResolver(http: Http): Resolver {
-  async function fetchTagNames(): Promise<Result<readonly string[], FetchError>> {
-    const response = await http.getJson(TAGS_PATH);
+  // fetchTagNames/fetchReleaseTagNames converge here: both call the same GitHub
+  // API shape (getJson -> array of objects), differing only in which field
+  // holds the name and whether entries need filtering first.
+  async function fetchNames(
+    apiPath: string,
+    nameField: "name" | "tag_name",
+    includeEntry: (entry: RawEntry) => boolean = () => true,
+  ): Promise<Result<readonly string[], FetchError>> {
+    const response = await http.getJson(apiPath);
     if (response.type === "err") return response;
     if (!Array.isArray(response.value)) {
-      return Result.err(FetchError.payloadInvalid("GitHub tags response was not an array"));
+      return Result.err(FetchError.payloadInvalid(`GitHub API response at ${apiPath} was not an array`));
     }
-    const names = (response.value as RawTag[])
-      .map((entry) => entry?.name)
+    const names = (response.value as RawEntry[])
+      .filter(includeEntry)
+      .map((entry) => entry[nameField])
       .filter((name): name is string => typeof name === "string");
     return Result.ok(names);
   }
 
-  async function fetchReleaseTagNames(): Promise<Result<readonly string[], FetchError>> {
-    const response = await http.getJson(RELEASES_PATH);
-    if (response.type === "err") return response;
-    if (!Array.isArray(response.value)) {
-      return Result.err(FetchError.payloadInvalid("GitHub releases response was not an array"));
-    }
-    const names = (response.value as RawRelease[])
-      .filter((entry) => entry?.draft !== true && entry?.prerelease !== true)
-      .map((entry) => entry?.tag_name)
-      .filter((name): name is string => typeof name === "string");
-    return Result.ok(names);
+  function fetchTagNames(): Promise<Result<readonly string[], FetchError>> {
+    return fetchNames(TAGS_PATH, "name");
+  }
+
+  function fetchReleaseTagNames(): Promise<Result<readonly string[], FetchError>> {
+    return fetchNames(RELEASES_PATH, "tag_name", (entry) => entry.draft !== true && entry.prerelease !== true);
   }
 
   function parseAllStable(names: readonly string[]): SemVer[] {

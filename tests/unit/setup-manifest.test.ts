@@ -5,27 +5,10 @@
 // BR-F11~F15, FR-008, FR-016.
 
 import { describe, expect, test } from "bun:test";
-import { SemVer } from "../../packages/setup/src/domain/semver.ts";
 import { HarnessName } from "../../packages/setup/src/domain/harness.ts";
 import { Manifest, ManifestFiles, type ManifestFile } from "../../packages/setup/src/domain/manifest.ts";
-import type { ExtractedPayload } from "../../packages/setup/src/domain/payload.ts";
 import { ResolvedVersion } from "../../packages/setup/src/domain/resolved-version.ts";
-
-function semver(raw: string) {
-  const result = SemVer.parse(raw);
-  if (result.type === "err") throw new Error(`invalid fixture version: ${raw}`);
-  return result.value;
-}
-
-function fakePayload(version = ResolvedVersion.fromRelease(semver("1.0.0"))): ExtractedPayload {
-  return {
-    version,
-    harnessRoot: () => {
-      throw new Error("not used in this test");
-    },
-    availableHarnesses: () => HarnessName.all,
-  };
-}
+import { fakePayload, semver } from "../lib/setup-domain-fixtures.ts";
 
 const FILES: ManifestFile[] = [
   { path: "settings.json", class: "owned", required: true, md5: "aaa" },

@@ -12,29 +12,11 @@ import { createManifestIo } from "../../packages/setup/src/modules/manifest-io.t
 import { Manifest } from "../../packages/setup/src/domain/manifest.ts";
 import { ManifestFiles } from "../../packages/setup/src/domain/manifest.ts";
 import { HarnessName } from "../../packages/setup/src/domain/harness.ts";
-import { ResolvedVersion } from "../../packages/setup/src/domain/resolved-version.ts";
-import { SemVer } from "../../packages/setup/src/domain/semver.ts";
-import type { ExtractedPayload } from "../../packages/setup/src/domain/payload.ts";
+import { fakePayload } from "../lib/setup-domain-fixtures.ts";
 
 function withTargetDir<T>(fn: (targetDir: string) => Promise<T>): Promise<T> {
   const dir = mkdtempSync(join(tmpdir(), "amadeus-setup-manifest-io-test-"));
   return fn(dir).finally(() => rmSync(dir, { recursive: true, force: true }));
-}
-
-function semver(raw: string) {
-  const result = SemVer.parse(raw);
-  if (result.type === "err") throw new Error(`invalid fixture version: ${raw}`);
-  return result.value;
-}
-
-function fakePayload(): ExtractedPayload {
-  return {
-    version: ResolvedVersion.fromRelease(semver("1.0.0")),
-    harnessRoot: () => {
-      throw new Error("not used in this test");
-    },
-    availableHarnesses: () => HarnessName.all,
-  };
 }
 
 function fakeManifest(): Manifest {

@@ -3,14 +3,8 @@
 // ResolvedVersion.fromRelease/fromTag, archiveUrl() (ADR-003), isSameAs() (US-B4).
 
 import { describe, expect, test } from "bun:test";
-import { SemVer } from "../../packages/setup/src/domain/semver.ts";
 import { ResolvedVersion } from "../../packages/setup/src/domain/resolved-version.ts";
-
-function semver(raw: string) {
-  const result = SemVer.parse(raw);
-  if (result.type === "err") throw new Error(`invalid fixture version: ${raw}`);
-  return result.value;
-}
+import { semver } from "../lib/setup-domain-fixtures.ts";
 
 describe("ResolvedVersion", () => {
   test("fromRelease carries the release source and formatted tag", () => {

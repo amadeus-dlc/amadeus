@@ -15,11 +15,11 @@ export function createManifestIo(fsRead: FsRead, fsWrite: FsWrite): ManifestIo {
   return Object.freeze({
     async read(targetDir: string): Promise<Result<Manifest | null, ManifestError>> {
       const path = join(targetDir, MANIFEST_RELATIVE_PATH);
-      const exists = await fsRead.exists(path);
-      if (!exists) return Result.ok(null); // BR-F15: absent manifest is not an error
-
       const contents = await fsRead.readText(path);
-      if (contents.type === "err") return Result.err(ManifestError.io(contents.error.detail));
+      if (contents.type === "err") {
+        if (contents.error.notFound) return Result.ok(null); // BR-F15: absent manifest is not an error
+        return Result.err(ManifestError.io(contents.error.detail));
+      }
 
       let json: unknown;
       try {

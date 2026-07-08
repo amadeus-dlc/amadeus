@@ -22,40 +22,41 @@ export function createHttp(options: HttpOptions): Http {
   return Object.freeze({
     async getJson(apiPath: string): Promise<Result<unknown, FetchError>> {
       const url = new URL(apiPath, API_BASE);
-      if (!ALLOWED_HOSTS.has(url.host)) {
-        return Result.err(FetchError.payloadInvalid(`refusing to contact untrusted host: ${url.host}`));
-      }
-      try {
-        const response = await fetchFollowingAllowedHosts(url, options.apiTimeoutMs);
-        const meta: HttpMeta = { status: response.status, url: url.toString() };
-        if (!response.ok) {
-          return Result.err(FetchError.classify(new Error(`HTTP ${response.status}`), meta));
-        }
-        return Result.ok(await response.json());
-      } catch (cause) {
-        return Result.err(FetchError.classify(cause, { status: null, url: url.toString() }));
-      }
+      const checked = await fetchChecked(url, options.apiTimeoutMs);
+      if (checked.type === "err") return checked;
+      return Result.ok(await checked.value.json());
     },
 
     async downloadArchive(url: URL): Promise<Result<ReadableStream<Uint8Array>, FetchError>> {
-      if (!ALLOWED_HOSTS.has(url.host)) {
-        return Result.err(FetchError.payloadInvalid(`refusing to contact untrusted host: ${url.host}`));
+      const checked = await fetchChecked(url, options.archiveTimeoutMs);
+      if (checked.type === "err") return checked;
+      const response = checked.value;
+      if (!response.body) {
+        return Result.err(FetchError.classify(new Error("empty response body"), { status: response.status, url: url.toString() }));
       }
-      try {
-        const response = await fetchFollowingAllowedHosts(url, options.archiveTimeoutMs);
-        const meta: HttpMeta = { status: response.status, url: url.toString() };
-        if (!response.ok) {
-          return Result.err(FetchError.classify(new Error(`HTTP ${response.status}`), meta));
-        }
-        if (!response.body) {
-          return Result.err(FetchError.classify(new Error("empty response body"), meta));
-        }
-        return Result.ok(response.body);
-      } catch (cause) {
-        return Result.err(FetchError.classify(cause, { status: null, url: url.toString() }));
-      }
+      return Result.ok(response.body);
     },
   });
+}
+
+// Shared by both Http methods: host allowlist check, the redirect-checked
+// fetch itself, and error classification on a non-ok status or thrown cause.
+// Each caller only adds what is specific to it (JSON parsing vs. the body
+// stream / empty-body check).
+async function fetchChecked(url: URL, timeoutMs: number): Promise<Result<Response, FetchError>> {
+  if (!ALLOWED_HOSTS.has(url.host)) {
+    return Result.err(FetchError.payloadInvalid(`refusing to contact untrusted host: ${url.host}`));
+  }
+  try {
+    const response = await fetchFollowingAllowedHosts(url, timeoutMs);
+    if (!response.ok) {
+      const meta: HttpMeta = { status: response.status, url: url.toString() };
+      return Result.err(FetchError.classify(new Error(`HTTP ${response.status}`), meta));
+    }
+    return Result.ok(response);
+  } catch (cause) {
+    return Result.err(FetchError.classify(cause, { status: null, url: url.toString() }));
+  }
 }
 
 // SEC-F02: redirects are followed manually so each hop can be checked against
