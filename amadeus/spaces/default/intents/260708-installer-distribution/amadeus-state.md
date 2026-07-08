@@ -6,7 +6,7 @@
 - **Scope**: installer-distribution
 - **Start Date**: 2026-07-08T02:20:37Z
 - **State Version**: 7
-- **Active Agent**: amadeus-aws-platform-agent
+- **Active Agent**: amadeus-pipeline-deploy-agent
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**: 2026-07-08T05:22:50Z
@@ -26,8 +26,8 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 25
-- **Completed**: 23
-- **In Progress**: environment-provisioning
+- **Completed**: 24
+- **In Progress**: deployment-execution
 
 ## Runtime State
 - **Revision Count**: 0
@@ -81,8 +81,8 @@ Per unit: [TBD]
 
 ### OPERATION PHASE
 - [x] deployment-pipeline — EXECUTE
-- [-] environment-provisioning — EXECUTE
-- [ ] deployment-execution — EXECUTE
+- [x] environment-provisioning — EXECUTE
+- [-] deployment-execution — EXECUTE
 - [ ] observability-setup — SKIP
 - [ ] incident-response — SKIP
 - [ ] performance-validation — SKIP
@@ -90,12 +90,12 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: OPERATION
-- **Current Stage**: environment-provisioning
-- **Next Stage**: deployment-execution
+- **Current Stage**: deployment-execution
+- **Next Stage**: none
 - **Status**: Running
-- **Last Updated**: 2026-07-08T17:29:02Z
+- **Last Updated**: 2026-07-08T17:30:09Z
 
 ## Session Resume Point
-- **Last Completed Stage**: deployment-pipeline
-- **Next Action**: Execute Environment Provisioning
+- **Last Completed Stage**: environment-provisioning
+- **Next Action**: Execute Deployment Execution
 - **Pending Artifacts**: none
