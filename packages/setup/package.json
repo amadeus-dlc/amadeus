@@ -1,0 +1,26 @@
+{
+  "name": "@amadeus-dlc/setup",
+  "version": "0.1.0",
+  "description": "Installer CLI for Amadeus-DLC — fetches a tagged Amadeus distribution from GitHub and installs it into your project.",
+  "type": "module",
+  "bin": {
+    "amadeus-setup": "dist/cli.js"
+  },
+  "engines": {
+    "node": ">=18.3"
+  },
+  "license": "(MIT OR Apache-2.0)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/amadeus-dlc/amadeus",
+    "directory": "packages/setup"
+  },
+  "files": [
+    "dist/cli.js",
+    "LICENSE-MIT",
+    "LICENSE-APACHE"
+  ],
+  "scripts": {
+    "build": "bun build src/cli.ts --target=node --format=esm --outfile=dist/cli.js"
+  }
+}
