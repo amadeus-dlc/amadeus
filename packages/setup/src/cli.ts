@@ -67,9 +67,7 @@ export async function main(argv: readonly string[], ports: CliPorts = createDefa
     return 0;
   }
   if (parsed.value.subcommand === "upgrade") {
-    // upgrade-flow is a separate unit (U3); the CLI Contract's symmetric
-    // grammar still needs the subcommand itself to parse and dispatch here.
-    console.error("`amadeus-setup upgrade` is not implemented in this release.");
+    console.error(reporter.renderUpgradeNotImplemented());
     return 1;
   }
   return runInstall(parsed.value, ports);
@@ -115,7 +113,7 @@ async function runInstall(parsed: ParsedCommand, ports: CliPorts): Promise<numbe
 
   const tmpWriteResult = await ports.createTmpWrite("amadeus-setup-install-");
   if (tmpWriteResult.type === "err") {
-    console.error(`could not prepare a temp directory: ${tmpWriteResult.error.detail}`);
+    console.error(reporter.renderTmpDirFailure(tmpWriteResult.error.detail));
     return 1;
   }
   const tmpWrite = tmpWriteResult.value;

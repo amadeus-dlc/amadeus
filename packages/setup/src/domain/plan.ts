@@ -17,13 +17,6 @@ export type PlanEntry = {
   readonly forced: boolean;
   readonly md5: string;
   readonly required: boolean;
-  // Deviation from domain-entities.md's 6-field PlanEntry, additive only:
-  // Applier.apply(plan, target) has no other parameter through which to learn
-  // the extracted payload's harness root, and Plan does not expose it either.
-  // Carrying the absolute source path on each entry is the smallest fix that
-  // keeps Applier working without widening the Plan/Applier signatures
-  // documented as canonical. Flagged for architect review.
-  readonly source: string;
 };
 
 export type PlanSummary = {
@@ -42,6 +35,11 @@ export type Plan = {
   hasConflicts(): boolean;
   isNoop(): boolean;
   summary(): PlanSummary;
+  // Review correction 2: replaces the PlanEntry.source deviation. Plan.forInstall
+  // already resolves the payload's harness root; exposing it here lets Applier
+  // rebuild each entry's source path (join(harnessRoot(), entry.path)) without
+  // widening PlanEntry beyond domain-entities.md's canonical 6 fields.
+  harnessRoot(): string;
 };
 
 export type PlanOptions = { readonly force: boolean; readonly startedAt: string };
@@ -61,7 +59,7 @@ export namespace PlanRefusal {
 
 Object.freeze(PlanRefusal);
 
-function createPlan(entries: readonly PlanEntry[], startedAtIso: string, backupTimestamp: string): Plan {
+function createPlan(entries: readonly PlanEntry[], startedAtIso: string, backupTimestamp: string, root: string): Plan {
   return Object.freeze({
     startedAtIso,
     backupTimestamp,
@@ -86,6 +84,9 @@ function createPlan(entries: readonly PlanEntry[], startedAtIso: string, backupT
         conflict: entries.filter((entry) => entry.action === "conflict").length,
       });
     },
+    harnessRoot(): string {
+      return root;
+    },
   });
 }
 
@@ -106,7 +107,7 @@ export namespace Plan {
 
     const entries = buildEntries(rootResult.value, target, opts);
     const { iso, token } = Timestamps.of(new Date(opts.startedAt));
-    return Result.ok(createPlan(entries, iso, token));
+    return Result.ok(createPlan(entries, iso, token, rootResult.value));
   }
 }
 
@@ -128,7 +129,6 @@ function buildEntries(root: string, target: string, opts: PlanOptions): PlanEntr
         forced: action === "update" || action === "backup",
         md5: md5OfFileSync(join(root, relPath)),
         required: cls === "owned",
-        source: join(root, relPath),
       }),
     );
   }

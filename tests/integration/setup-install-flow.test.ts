@@ -7,7 +7,7 @@
 // setup-resolve-fetch-manifest.test.ts boundary-fake convention.
 
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
@@ -113,6 +113,45 @@ describe("install pipeline (fake network, real filesystem)", () => {
 
       const second = await main(["install", "--harness", "claude", "--target", target, "--yes", "--force"], realPorts(archive));
       expect(second).toBe(0);
+    } finally {
+      rmSync(target, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("install pipeline — apply-failure order-of-operations (review correction 4: REL-I01/BR-I16)", () => {
+  test("a partial apply failure returns exit 1 without ever writing the manifest or invoking verify", async () => {
+    const target = mkdtempSync(join(tmpdir(), "amadeus-setup-install-flow-order-"));
+    try {
+      // Genuine (not faked) apply failure: pre-create ".claude/tools" as a
+      // regular file, so the applier's real mkdir(".claude/tools") for the
+      // "amadeus-runtime.ts" entry fails with EEXIST.
+      mkdirSync(join(target, ".claude"), { recursive: true });
+      writeFileSync(join(target, ".claude", "tools"), "not a directory");
+
+      const archive = buildCodeloadFixture("amadeus-1.2.3", CLAUDE_FIXTURE_ENTRIES);
+      const realManifestIo = createManifestIo(createFsRead(), createFsWrite());
+      const ports: CliPorts = {
+        ...realPorts(archive),
+        manifestIo: {
+          read: (dir) => realManifestIo.read(dir), // Installation.detect legitimately reads first
+          write: () => {
+            throw new Error("BR-I16 violation: manifestIo.write must not be called after an apply failure");
+          },
+        },
+        verifyRead: {
+          fileExists: () => {
+            throw new Error("REL-I01/BR-I16 violation: verifyRead.fileExists must not be called after an apply failure");
+          },
+          dirExists: () => {
+            throw new Error("REL-I01/BR-I16 violation: verifyRead.dirExists must not be called after an apply failure");
+          },
+        },
+      };
+
+      const exitCode = await main(["install", "--harness", "claude", "--target", target, "--yes"], ports);
+      expect(exitCode).toBe(1);
+      expect(existsSync(join(target, "amadeus", ".installer", "amadeus-setup-manifest.json"))).toBe(false);
     } finally {
       rmSync(target, { recursive: true, force: true });
     }

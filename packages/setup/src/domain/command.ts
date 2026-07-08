@@ -122,7 +122,10 @@ export namespace ParsedCommand {
     let harness: HarnessName | null = null;
     if (harnessRaws.length === 1) {
       const parsedHarness = HarnessName.parse(harnessRaws[0] as string);
-      if (parsedHarness.type === "err") return parsedHarness;
+      // HarnessName.parse returns its own minimal local error (InvalidHarnessName),
+      // not a UsageError, so harness.ts has no dependency on this file — the
+      // conversion happens here, the sole consumer that needs a UsageError.
+      if (parsedHarness.type === "err") return Result.err(UsageError.invalidHarness(parsedHarness.error.raw));
       harness = parsedHarness.value;
     }
 

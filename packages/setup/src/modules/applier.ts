@@ -1,4 +1,4 @@
-import { dirname, resolve, sep } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 import type { ApplyFailure, ApplyResult } from "../domain/apply-result.ts";
 import { ManifestFiles } from "../domain/manifest.ts";
 import type { Plan, PlanEntry } from "../domain/plan.ts";
@@ -68,7 +68,7 @@ export namespace Applier {
             backupPaths.push(`${entry.path}.${plan.backupTimestamp}.bk`);
           }
 
-          const copied = await fsWrite.copyFile(entry.source, dest);
+          const copied = await fsWrite.copyFile(join(plan.harnessRoot(), entry.path), dest);
           if (copied.type === "err") {
             failures.push({ path: entry.path, operation: "copy", detail: copied.error.detail });
             break;

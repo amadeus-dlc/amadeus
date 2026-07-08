@@ -20,7 +20,7 @@ function claudeHarness(): HarnessName {
 }
 
 function planEntry(overrides: Partial<PlanEntry> & Pick<PlanEntry, "path" | "action" | "class">): PlanEntry {
-  return Object.freeze({ forced: false, md5: "x", required: false, source: "/src", ...overrides });
+  return Object.freeze({ forced: false, md5: "x", required: false, ...overrides });
 }
 
 function fakePlan(entries: readonly PlanEntry[]): Plan {
@@ -38,6 +38,7 @@ function fakePlan(entries: readonly PlanEntry[]): Plan {
       backup: entries.filter((e) => e.action === "backup").length,
       conflict: entries.filter((e) => e.action === "conflict").length,
     }),
+    harnessRoot: () => "/src",
   };
 }
 
@@ -123,6 +124,20 @@ describe("renderSuccess (US-A6)", () => {
 describe("renderWizardAborted (BR-I18)", () => {
   test("states no files were changed", () => {
     expect(reporter.renderWizardAborted().toLowerCase()).toContain("no files were changed".toLowerCase());
+  });
+});
+
+describe("renderUpgradeNotImplemented (SEC-I04)", () => {
+  test("names the upgrade subcommand", () => {
+    expect(reporter.renderUpgradeNotImplemented()).toContain("upgrade");
+  });
+});
+
+describe("renderTmpDirFailure (SEC-I04)", () => {
+  test("includes the underlying detail", () => {
+    const text = reporter.renderTmpDirFailure("ENOSPC: no space left on device");
+    expect(text).toContain("ENOSPC");
+    expect(text.toLowerCase()).toContain("temp");
   });
 });
 

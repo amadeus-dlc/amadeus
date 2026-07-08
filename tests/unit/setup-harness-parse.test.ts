@@ -3,6 +3,10 @@
 // HarnessName.parse — U2's smart constructor for the raw `--harness` CLI
 // value, added onto U1's HarnessName type (FR-003; U1's own
 // tests/unit/setup-harness.test.ts still covers HarnessName.all alone).
+// Returns its own minimal InvalidHarnessName error (not UsageError) so
+// harness.ts has no dependency on command.ts (review correction 1); the
+// UsageError conversion is command.ts's own responsibility, covered by
+// tests/unit/setup-command.test.ts.
 
 import { describe, expect, test } from "bun:test";
 import { HarnessName } from "../../packages/setup/src/domain/harness.ts";
@@ -16,13 +20,10 @@ describe("HarnessName.parse", () => {
     }
   });
 
-  test("edge case: rejects an unknown harness name as UsageError.invalid-harness", () => {
+  test("edge case: rejects an unknown harness name, carrying the raw input", () => {
     const result = HarnessName.parse("bogus");
     expect(result.type).toBe("err");
-    if (result.type === "err") {
-      expect(result.error.type).toBe("invalid-harness");
-      if (result.error.type === "invalid-harness") expect(result.error.raw).toBe("bogus");
-    }
+    if (result.type === "err") expect(result.error.raw).toBe("bogus");
   });
 
   test("edge case: rejects the empty string", () => {

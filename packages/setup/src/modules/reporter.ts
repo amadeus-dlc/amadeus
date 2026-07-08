@@ -99,6 +99,17 @@ export function renderWizardAborted(): string {
   return "Install aborted: selection was not confirmed. No files were changed.";
 }
 
+// upgrade-flow is a separate unit (U3); the CLI Contract's symmetric grammar
+// still needs `upgrade` to parse and dispatch in this release.
+export function renderUpgradeNotImplemented(): string {
+  return "`amadeus-setup upgrade` is not implemented in this release.";
+}
+
+// SEC-I04: the one place that phrases a temp-directory setup failure.
+export function renderTmpDirFailure(detail: string): string {
+  return `could not prepare a temp directory: ${detail}`;
+}
+
 // US-A7/FR-012: classification line, detail, then retry guidance for network
 // failures; a dedicated message per UsageError/ResolveError/ManifestError/
 // PlanRefusal variant otherwise.

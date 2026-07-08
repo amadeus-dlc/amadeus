@@ -17,7 +17,6 @@ function entry(overrides: Partial<PlanEntry> & Pick<PlanEntry, "path" | "action"
     forced: false,
     md5: "irrelevant",
     required: false,
-    source: `/fixture-source/${overrides.path}`,
     ...overrides,
   });
 }
@@ -37,6 +36,9 @@ function fakePlan(entries: readonly PlanEntry[], backupTimestamp = "20260708T120
       backup: entries.filter((e) => e.action === "backup").length,
       conflict: entries.filter((e) => e.action === "conflict").length,
     }),
+    // Review correction 2: Applier now rebuilds each entry's source path from
+    // Plan.harnessRoot() instead of a PlanEntry.source field.
+    harnessRoot: () => "/fixture-source",
   };
 }
 
@@ -79,6 +81,13 @@ describe("Applier.apply — dispositions", () => {
     expect(result.appliedEntries().length).toBe(2);
     expect(result.backupPaths()).toEqual([]);
     expect(calls.some((c) => c.startsWith("backup:"))).toBe(false);
+  });
+
+  test("edge case: the copy source is rebuilt from Plan.harnessRoot() + entry.path (review correction 2)", async () => {
+    const { port, calls } = fakeApplyWrite();
+    const plan = fakePlan([entry({ path: "amadeus-tool.ts", action: "add", class: "owned" })]);
+    await Applier.create(port).apply(plan, "/target");
+    expect(calls.some((c) => c.startsWith(`copy:${plan.harnessRoot()}/amadeus-tool.ts->`))).toBe(true);
   });
 
   test("'backup' entries are backed up (only when the destination exists) then copied", async () => {

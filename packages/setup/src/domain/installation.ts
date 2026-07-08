@@ -105,6 +105,12 @@ function partialInstallation(missing: readonly string[]): Installation {
 // heuristic (functional-design-questions.md records no upstream ruling on
 // this exact scan strategy) — collected evidence doubles as U3's LegacyLayout
 // input contract per domain-entities.md.
+//
+// Review correction 3: the bare engineDir (e.g. ".claude") existing is not
+// itself evidence of an Amadeus install — a project may have a ".claude"
+// directory with unrelated content (a stray settings.json, say) and nothing
+// else. Only an Amadeus-specific anchor (tools/, amadeus-common/, or VERSION)
+// counts; a bare engineDir with none of those contributes nothing to `paths`.
 async function scanEvidence(target: string): Promise<InstallationEvidence> {
   const paths: string[] = [];
   let toolsDir = false;
@@ -112,25 +118,28 @@ async function scanEvidence(target: string): Promise<InstallationEvidence> {
   let versionFileContent: string | null = null;
 
   for (const engineDir of allEngineDirNames()) {
-    if (!(await dirExists(join(target, engineDir)))) continue;
-    paths.push(engineDir);
+    const hasToolsDir = await dirExists(join(target, engineDir, "tools"));
+    const hasAmadeusCommon = await dirExists(join(target, engineDir, "amadeus-common"));
+    let versionContent: string | null = null;
+    try {
+      versionContent = await readFile(join(target, engineDir, "VERSION"), "utf8");
+    } catch {
+      // No VERSION file under this engine dir.
+    }
 
-    if (await dirExists(join(target, engineDir, "tools"))) {
+    if (!hasToolsDir && !hasAmadeusCommon && versionContent === null) continue; // no anchor: not evidence
+
+    if (hasToolsDir) {
       paths.push(`${engineDir}/tools`);
       toolsDir = true;
     }
-    if (await dirExists(join(target, engineDir, "amadeus-common"))) {
+    if (hasAmadeusCommon) {
       paths.push(`${engineDir}/amadeus-common`);
       amadeusCommon = true;
     }
-    if (versionFileContent === null) {
-      const versionPath = join(target, engineDir, "VERSION");
-      try {
-        versionFileContent = await readFile(versionPath, "utf8");
-        paths.push(`${engineDir}/VERSION`);
-      } catch {
-        // No VERSION file under this engine dir; keep scanning the others.
-      }
+    if (versionContent !== null && versionFileContent === null) {
+      versionFileContent = versionContent;
+      paths.push(`${engineDir}/VERSION`);
     }
   }
 

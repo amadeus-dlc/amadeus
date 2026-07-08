@@ -6,7 +6,7 @@
 // content and directory layout are fixtures; no fake ports here).
 
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Installation } from "../../packages/setup/src/domain/installation.ts";
@@ -84,6 +84,17 @@ describe("Installation.detect", () => {
       const installation = await Installation.detect(dir, manifestIo);
       expect(installation.kind).toBe("partial");
       if (installation.kind === "partial") expect(installation.missing.length).toBeGreaterThan(0);
+    });
+  });
+
+  test("review correction 3: a bare engineDir with an unrelated file and no Amadeus anchor is kind 'none'", async () => {
+    await withTempDir(async (dir) => {
+      mkdirSync(join(dir, ".claude"), { recursive: true });
+      writeFileSync(join(dir, ".claude", "settings.json"), "{}\n"); // unrelated content, not an Amadeus anchor
+      const manifestIo = createManifestIo(createFsRead(), createFsWrite());
+      const installation = await Installation.detect(dir, manifestIo);
+      expect(installation.kind).toBe("none");
+      expect(installation.admitsInstall(false).type).toBe("proceed"); // install can proceed without --force
     });
   });
 });

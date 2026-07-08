@@ -58,6 +58,9 @@ describe("Plan.forInstall — fresh target (no pre-existing files)", () => {
       expect(plan.hasConflicts()).toBe(false);
       expect(plan.isNoop()).toBe(false);
       expect(plan.entriesBy("add").length).toBe(3);
+      // Review correction 2: harnessRoot() replaces PlanEntry.source so
+      // Applier can rebuild each entry's copy source itself.
+      expect(plan.harnessRoot()).toBe(sourceRoot);
     });
   });
 
