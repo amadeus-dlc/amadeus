@@ -16,6 +16,7 @@
 - **Stages to Skip**: 1.5 (team-formation), 1.6 (rough-mockups), 2.5 (refined-mockups), 4.4 (observability-setup), 4.5 (incident-response), 4.6 (performance-validation), 4.7 (feedback-optimization)
 - **Depth**: Standard
 - **Test Strategy**: Standard
+- **Construction Autonomy Mode**: autonomous (Bolt 1 walking-skeleton gate approved 2026-07-08; ladder answer pre-decided by user — Bolts 2-5 run ungated)
 
 ## Workspace State
 - **Project Root**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution
