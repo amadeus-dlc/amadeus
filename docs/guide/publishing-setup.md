@@ -59,14 +59,20 @@ Confirm all three before touching a version number:
 ## 2. Bump the version
 
 `packages/setup/package.json`'s `version` is an independent semver starting
-at `0.1.0` (FR-017, BR-P06). Bump it in the same PR that will publish:
+at `0.1.0` (FR-017, BR-P06). **The release workflow bumps it for you** —
+pick the bump level when dispatching (chapter 5); release-it commits the
+bump, tags `setup-vX.Y.Z`, and pushes to `main` in one go. The bump commit
+lands on `main` without a PR — an explicit, team-recorded exception to the
+PR rule, limited to release-it's one-line version change.
+
+Manual fallback:
 
 ```bash
 cd packages/setup
 npm version <patch|minor|major> --no-git-tag-version
 ```
 
-This does **not** touch the framework's `AMADEUS_VERSION`, README badge, or
+Neither path touches the framework's `AMADEUS_VERSION`, README badge, or
 CHANGELOG — those stay in sync with each other per t68, independently of this
 version.
 
@@ -129,28 +135,32 @@ install step.)
 
 ## 5. Publish
 
-### Primary path: CI release workflow (with npm provenance)
+### Primary path: one-button CI release (with npm provenance)
 
-After the version-bump PR (chapter 2) is merged to `main`, push a tag in the
-setup namespace that matches `packages/setup/package.json`:
+From the Actions tab, run **Release @amadeus-dlc/setup** on `main` and pick
+the bump level (patch / minor / major). One run does everything:
 
-```bash
-git tag setup-v<version> <merged-main-sha>
-git push origin setup-v<version>
-```
+1. release-it bumps `packages/setup/package.json`, commits, tags
+   `setup-vX.Y.Z`, and pushes to `main` (config:
+   `packages/setup/.release-it.json`)
+2. softprops/action-gh-release creates the GitHub Release with
+   auto-generated notes
+3. `dist/cli.js` is built fresh and published with
+   `npm publish --provenance --access public` (a prerelease version is
+   automatically published with `--tag next` and never touches `latest`)
+4. a retrying `npx @amadeus-dlc/setup@<version>` smoke check closes the run
 
-`.github/workflows/release.yml` then re-runs the five CI quality gates,
-builds `dist/cli.js` fresh, runs the real-network E2E against live GitHub,
-verifies the tag matches the package version, and publishes with
-`npm publish --provenance --access public`. A prerelease version
-(`X.Y.Z-rc.N` committed in package.json, tagged `setup-vX.Y.Z-rc.N`)
-is automatically published with `--tag next` and never touches `latest`.
-The workflow finishes with a retrying `npx @amadeus-dlc/setup@<version>`
-smoke check.
+The release does not re-run tests: every commit on `main` already passed
+the five CI quality gates at PR time, and the bump commit itself is
+release-it's one-line version change.
 
-To rehearse without publishing, run the workflow manually from the Actions
-tab with `dry-run: true` — every step executes, `npm publish --dry-run`
-replaces the real publish, and no `NPM_TOKEN` is needed.
+Pushing a `setup-vX.Y.Z` tag manually remains a fallback entry point — it
+skips the bump (the tag must match the committed package version and point
+at `main`) and runs notes → build → publish → smoke.
+
+To rehearse without releasing, dispatch with `dry-run: true` —
+release-it runs with `--dry-run` (no commit/tag/push) and `npm publish
+--dry-run` replaces the real publish; no `NPM_TOKEN` is needed.
 
 ### Fallback: manual publish (no provenance)
 

@@ -1,21 +1,31 @@
 name: Release @amadeus-dlc/setup
 
-# Publishes packages/setup to npm with provenance. Two entry points:
-#   - push of a `setup-vX.Y.Z` tag (the setup package's own semver axis,
-#     independent of the framework's `vX.Y.Z` tags that the installer
-#     fetches distributions from)
-#   - workflow_dispatch, with an optional dry-run that exercises every
-#     step (gates, build, real-network E2E, `npm publish --dry-run`)
-#     without touching the registry — no NPM_TOKEN required.
-# The same five quality gates as ci.yml run here so a release never
-# depends on trusting an earlier run.
+# One-button release for packages/setup. The main entry point is
+# workflow_dispatch: pick a bump level and release-it bumps the version,
+# commits, tags `setup-vX.Y.Z`, and pushes directly to main (an explicit,
+# team-recorded exception to the PR rule — the bump commit is a one-line
+# version change). The same run then creates the GitHub Release with
+# auto-generated notes (softprops/action-gh-release), builds dist/cli.js
+# fresh, publishes to npm with provenance, and smoke-checks via npx.
+# Everything happens in one run because tags/commits pushed with
+# GITHUB_TOKEN never trigger other workflows.
+#
+# A `setup-v*` tag push remains as a fallback entry point (e.g. manual
+# tagging): it skips the bump and runs notes -> build -> publish -> smoke.
+# workflow_dispatch with dry-run rehearses (release-it --dry-run +
+# npm publish --dry-run) without pushing or publishing anything.
 on:
   push:
     tags: ['setup-v*']
   workflow_dispatch:
     inputs:
+      bump:
+        description: 'Version bump level for packages/setup'
+        type: choice
+        options: [patch, minor, major]
+        default: patch
       dry-run:
-        description: 'Run everything but publish with --dry-run (no token needed)'
+        description: 'Rehearse: no commit/tag/push, npm publish --dry-run'
         type: boolean
         default: false
 
@@ -24,17 +34,19 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write # release-it pushes the bump commit + tag; gh-release creates the release
   id-token: write # npm provenance
 
 jobs:
   release:
-    name: gates · build · verify · publish
+    name: bump · tag · notes · publish · smoke
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
-      - name: Checkout
+      - name: Checkout (full history for guards and release notes)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up bun
         uses: oven-sh/setup-bun@v2
@@ -50,31 +62,13 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Typecheck (tsc --noEmit, both tsconfigs)
-        run: bun run typecheck
+      - name: Guard — dispatch must run on main
+        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::run this workflow on main (got ${GITHUB_REF})"
+          exit 1
 
-      - name: Lint (biome)
-        run: bun run lint
-
-      - name: Dist drift guard
-        run: bun run dist:check
-
-      - name: Self-install drift guard
-        run: bun run promote:self:check
-
-      - name: Tests — smoke + unit + integration
-        run: bash tests/run-tests.sh --ci
-
-      - name: Build dist/cli.js (fresh)
-        working-directory: packages/setup
-        run: bun run build
-
-      - name: Real-network E2E (distribution path against live GitHub)
-        env:
-          AMADEUS_SETUP_E2E_NETWORK: '1'
-        run: bun test tests/e2e/setup-install.test.ts
-
-      - name: Version guard (tag must match packages/setup version)
+      - name: Guard — tag matches version and commit is on main
         if: github.ref_type == 'tag'
         run: |
           tag_version="${GITHUB_REF_NAME#setup-v}"
@@ -83,13 +77,45 @@ jobs:
             echo "::error::tag setup-v${tag_version} does not match packages/setup version ${pkg_version}"
             exit 1
           fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::tagged commit ${GITHUB_SHA} is not on main"
+            exit 1
+          fi
+
+      - name: Bump, commit, tag, push (release-it)
+        if: github.event_name == 'workflow_dispatch'
+        working-directory: packages/setup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          args=(${{ inputs.bump }} --ci)
+          if [ "${{ inputs.dry-run }}" = "true" ]; then
+            args+=(--dry-run)
+          fi
+          npx release-it "${args[@]}"
+
+      - name: Resolve version
+        id: version
+        run: echo "version=$(node -p "require('./packages/setup/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release with generated notes
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry-run) }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: setup-v${{ steps.version.outputs.version }}
+          name: '@amadeus-dlc/setup ${{ steps.version.outputs.version }}'
+          generate_release_notes: true
+
+      - name: Build dist/cli.js (fresh)
+        working-directory: packages/setup
+        run: bun run build
 
       - name: Publish to npm
         working-directory: packages/setup
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          version="$(node -p "require('./package.json').version")"
+          version="${{ steps.version.outputs.version }}"
           args=(--access public)
           case "$version" in
             *-*) args+=(--tag next) ;; # prerelease never touches `latest`
@@ -103,7 +129,7 @@ jobs:
       - name: Post-publish smoke (npx resolves and prints help)
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry-run) }}
         run: |
-          version="$(node -p "require('./packages/setup/package.json').version")"
+          version="${{ steps.version.outputs.version }}"
           for i in 1 2 3 4 5; do
             if npx -y "@amadeus-dlc/setup@${version}"; then
               echo "smoke OK on attempt ${i}"
