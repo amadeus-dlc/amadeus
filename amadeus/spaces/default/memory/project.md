@@ -78,3 +78,5 @@
 - reverse-engineering は Developer(スキャン)→ Architect(合成)の2サブエージェント直列で実行する(Architect がスキャン結果に依存するため並列化しない) (learned 2026-07-07) <!-- cid:reverse-engineering:c3 -->
 - Requirements Analysis では、version resolution / CLI contract / force semantics / install manifest / upgrade boundary のようなユーザー可視契約を設計詳細として後続 stage へ先送りせず、requirements.md でテスト可能に固定する (learned 2026-07-07) <!-- cid:requirements-analysis:c3 -->
 - 新しい配布可能パッケージを導入する intent では、パッケージ自身のバージョンライフサイクル(誰が・いつ・どうバンプし、framework 版とどう関係するか)と公開物の内容検証(シミュレーションではなく実ツール — `npm pack --dry-run` 等 — による検証)を requirements でテスト可能に固定する (learned 2026-07-08) <!-- cid:requirements-analysis:c4 -->
+- 公開・配布系 intent の feasibility では、外部前提(npm レジストリのパッケージ名/スコープ、外部サービス到達性など)をユーザーに問わず実ツール(レジストリ照会等)で直接検証し、確定できない部分は確信度付きの推定として提示する (learned 2026-07-08) <!-- cid:feasibility:c1 -->
+- 前 intent の RAID ログを引き継ぐときは、各 Issue の現存を作業ツリーで再実測してから転記する。解消済みの Issue は証跡(確認日時・確認方法)付きでクローズし、未解消はその旨を実測日付きで記す (learned 2026-07-08) <!-- cid:feasibility:c2 -->
