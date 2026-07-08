@@ -15844,3 +15844,1804 @@
 **Duration ms**: 647
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T14:24:47Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-08T14:24:47Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T14:30:37Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: aa86a3e29a35b3159
+**Message**: npm インストーラ @amadeus-dlc/setup の AI-DLC 実装を自律続行中。Bolt 1/2 完了・レビュー済み、U1 品質保守パスも適用済みで、現在 Bolt 3(upgrade-flow)を codegen-u3 が生成中。次は完了報告を受けて敵対的レビューへ。
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:34:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: a0e20fc7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/upgrade.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:34:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: a0e20fc7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/upgrade.ts
+**Duration ms**: 870
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:34:28Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4ad5e49e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/upgrade.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:34:29Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4ad5e49e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/upgrade.ts
+**Duration ms**: 627
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:34:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2f7dd884
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/upgrade.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:34:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2f7dd884
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/upgrade.ts
+**Duration ms**: 836
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:34:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 90b63992
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/upgrade.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:34:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: 90b63992
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/upgrade.ts
+**Duration ms**: 609
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:34:43Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2db26bff
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/plan.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:34:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2db26bff
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/plan.ts
+**Duration ms**: 837
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:34:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4c975e43
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/plan.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:34:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4c975e43
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/plan.ts
+**Duration ms**: 646
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:34:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1274a36a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/plan.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:34:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1274a36a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/plan.ts
+**Duration ms**: 855
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:34:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8a7fcc3e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/plan.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T14:34:56Z
+**Event**: SENSOR_FAILED
+**Fire id**: 8a7fcc3e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/plan.ts
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/code-generation/type-check-8a7fcc3e.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:35:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3af3a3c7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/plan.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:35:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3af3a3c7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/plan.ts
+**Duration ms**: 835
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:35:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: 66d750a5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/plan.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:35:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 66d750a5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/domain/plan.ts
+**Duration ms**: 630
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:35:26Z
+**Event**: SENSOR_FIRED
+**Fire id**: 15b3c10d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/reporter.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:35:27Z
+**Event**: SENSOR_PASSED
+**Fire id**: 15b3c10d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/reporter.ts
+**Duration ms**: 1025
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:35:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: e5a4b84d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/reporter.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:35:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: e5a4b84d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/reporter.ts
+**Duration ms**: 642
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:35:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4a2ab026
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/reporter.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:35:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4a2ab026
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/reporter.ts
+**Duration ms**: 843
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:35:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: c734ddb7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/reporter.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:35:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: c734ddb7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/reporter.ts
+**Duration ms**: 633
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:35:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: ecf0e203
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/reporter.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:35:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: ecf0e203
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/reporter.ts
+**Duration ms**: 853
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:35:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: 512c6b6c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/reporter.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:35:42Z
+**Event**: SENSOR_PASSED
+**Fire id**: 512c6b6c
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/reporter.ts
+**Duration ms**: 642
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:35:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 277f5b65
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/reporter.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:35:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 277f5b65
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/reporter.ts
+**Duration ms**: 857
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:35:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1c526a58
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/reporter.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:35:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1c526a58
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/reporter.ts
+**Duration ms**: 628
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:36:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: 68dc0b62
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/applier.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:36:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 68dc0b62
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/applier.ts
+**Duration ms**: 858
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:36:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: 33183781
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/applier.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:36:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 33183781
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/applier.ts
+**Duration ms**: 629
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:36:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 672bc542
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/wizard.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:36:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: 672bc542
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/wizard.ts
+**Duration ms**: 947
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:36:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: 34042407
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/wizard.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:36:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: 34042407
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/modules/wizard.ts
+**Duration ms**: 599
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:36:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: f4bcd367
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:36:21Z
+**Event**: SENSOR_PASSED
+**Fire id**: f4bcd367
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+**Duration ms**: 860
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:36:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: ef5de7f1
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T14:36:22Z
+**Event**: SENSOR_FAILED
+**Fire id**: ef5de7f1
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/code-generation/type-check-ef5de7f1.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:36:26Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0a43fa93
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:36:27Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0a43fa93
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+**Duration ms**: 836
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:36:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: d4a16d95
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T14:36:28Z
+**Event**: SENSOR_FAILED
+**Fire id**: d4a16d95
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/code-generation/type-check-d4a16d95.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:36:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: d032588e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:36:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: d032588e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+**Duration ms**: 835
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:36:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: bd24c268
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:36:51Z
+**Event**: SENSOR_PASSED
+**Fire id**: bd24c268
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: packages/setup/src/cli.ts
+**Duration ms**: 651
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:37:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9d4e84ab
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-reporter.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:37:14Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9d4e84ab
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-reporter.test.ts
+**Duration ms**: 854
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:37:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: af07baf7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-reporter.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:37:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: af07baf7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-reporter.test.ts
+**Duration ms**: 609
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:37:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: c95aed97
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-reporter.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:37:27Z
+**Event**: SENSOR_PASSED
+**Fire id**: c95aed97
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-reporter.test.ts
+**Duration ms**: 849
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:37:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: 31ef2b41
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-reporter.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:37:28Z
+**Event**: SENSOR_PASSED
+**Fire id**: 31ef2b41
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-reporter.test.ts
+**Duration ms**: 583
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:38:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: 078b19f7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-upgrade.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:38:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: 078b19f7
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-upgrade.test.ts
+**Duration ms**: 896
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:38:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: cd5c290e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-upgrade.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:38:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: cd5c290e
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-upgrade.test.ts
+**Duration ms**: 571
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:39:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: 88b34040
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-upgrade.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:39:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: 88b34040
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-upgrade.test.ts
+**Duration ms**: 867
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:39:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1e3f23d7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-upgrade.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:39:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1e3f23d7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-upgrade.test.ts
+**Duration ms**: 636
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:39:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: f3a4833a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-upgrade.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:39:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: f3a4833a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-upgrade.test.ts
+**Duration ms**: 829
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:39:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 8058518b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-upgrade.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:39:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 8058518b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-upgrade.test.ts
+**Duration ms**: 582
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:39:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6e5e8e54
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-plan.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:39:38Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6e5e8e54
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-plan.test.ts
+**Duration ms**: 855
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:39:38Z
+**Event**: SENSOR_FIRED
+**Fire id**: aa2529db
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-plan.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:39:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: aa2529db
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-plan.test.ts
+**Duration ms**: 673
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:40:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: f6ea0827
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-plan.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:40:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: f6ea0827
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-plan.test.ts
+**Duration ms**: 858
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:40:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: e0025192
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-plan.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:40:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: e0025192
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-plan.test.ts
+**Duration ms**: 567
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:40:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: 074afde1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-plan.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:40:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: 074afde1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-plan.test.ts
+**Duration ms**: 850
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:40:15Z
+**Event**: SENSOR_FIRED
+**Fire id**: e6b631ab
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-plan.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:40:15Z
+**Event**: SENSOR_PASSED
+**Fire id**: e6b631ab
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-plan.test.ts
+**Duration ms**: 581
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:40:21Z
+**Event**: SENSOR_FIRED
+**Fire id**: ef56ca31
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-plan.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:40:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: ef56ca31
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-plan.test.ts
+**Duration ms**: 955
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:40:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1efdc097
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-plan.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:40:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1efdc097
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-plan.test.ts
+**Duration ms**: 566
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:40:38Z
+**Event**: SENSOR_FIRED
+**Fire id**: e8dc00c1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-applier.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:40:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: e8dc00c1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-applier.test.ts
+**Duration ms**: 843
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:40:39Z
+**Event**: SENSOR_FIRED
+**Fire id**: f4ef9f82
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-applier.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:40:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: f4ef9f82
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-applier.test.ts
+**Duration ms**: 598
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:41:01Z
+**Event**: SENSOR_FIRED
+**Fire id**: 68a0a8a2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-applier.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:41:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: 68a0a8a2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-applier.test.ts
+**Duration ms**: 850
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:41:02Z
+**Event**: SENSOR_FIRED
+**Fire id**: e66f50e7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-applier.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:41:02Z
+**Event**: SENSOR_PASSED
+**Fire id**: e66f50e7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-applier.test.ts
+**Duration ms**: 587
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:41:24Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5a898f4c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-wizard.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:41:24Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5a898f4c
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-wizard.test.ts
+**Duration ms**: 853
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:41:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7df62341
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-wizard.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:41:25Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7df62341
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-wizard.test.ts
+**Duration ms**: 593
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:42:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: 260849ca
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-cli-wiring.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:42:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: 260849ca
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-cli-wiring.test.ts
+**Duration ms**: 861
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:42:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: c8bfd077
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-cli-wiring.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:42:17Z
+**Event**: SENSOR_PASSED
+**Fire id**: c8bfd077
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-cli-wiring.test.ts
+**Duration ms**: 594
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:42:36Z
+**Event**: SENSOR_FIRED
+**Fire id**: 16221d71
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-cli-wiring.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:42:37Z
+**Event**: SENSOR_PASSED
+**Fire id**: 16221d71
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-cli-wiring.test.ts
+**Duration ms**: 838
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:42:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: f571316d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-cli-wiring.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:42:38Z
+**Event**: SENSOR_PASSED
+**Fire id**: f571316d
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-cli-wiring.test.ts
+**Duration ms**: 605
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:42:54Z
+**Event**: SENSOR_FIRED
+**Fire id**: c9262fed
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-cli-wiring.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:42:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: c9262fed
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-cli-wiring.test.ts
+**Duration ms**: 856
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:42:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: e04dfddb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-cli-wiring.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:42:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: e04dfddb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-cli-wiring.test.ts
+**Duration ms**: 589
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:43:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: 26881da2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-cli-wiring.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:43:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 26881da2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-cli-wiring.test.ts
+**Duration ms**: 879
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:43:04Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2c979548
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-cli-wiring.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:43:04Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2c979548
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-cli-wiring.test.ts
+**Duration ms**: 606
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:43:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 99289595
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-cli-wiring.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:43:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 99289595
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-cli-wiring.test.ts
+**Duration ms**: 882
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:43:23Z
+**Event**: SENSOR_FIRED
+**Fire id**: 53a2ea34
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-cli-wiring.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:43:23Z
+**Event**: SENSOR_PASSED
+**Fire id**: 53a2ea34
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-cli-wiring.test.ts
+**Duration ms**: 597
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:43:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: d891483d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-cli-wiring.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:43:41Z
+**Event**: SENSOR_PASSED
+**Fire id**: d891483d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-cli-wiring.test.ts
+**Duration ms**: 1877
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:43:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: fa4e62ea
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-cli-wiring.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:43:42Z
+**Event**: SENSOR_PASSED
+**Fire id**: fa4e62ea
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-cli-wiring.test.ts
+**Duration ms**: 600
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:45:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: 90f2ecae
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-upgrade-flow.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:45:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: 90f2ecae
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-upgrade-flow.test.ts
+**Duration ms**: 868
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:45:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: 36db5279
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-upgrade-flow.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:45:11Z
+**Event**: SENSOR_PASSED
+**Fire id**: 36db5279
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-upgrade-flow.test.ts
+**Duration ms**: 585
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:45:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: b6930af2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-upgrade-flow.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:45:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: b6930af2
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-upgrade-flow.test.ts
+**Duration ms**: 863
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:45:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: 90d60fb2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-upgrade-flow.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:45:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: 90d60fb2
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-upgrade-flow.test.ts
+**Duration ms**: 589
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:45:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 917e028e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-upgrade-flow.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:45:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 917e028e
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-upgrade-flow.test.ts
+**Duration ms**: 1048
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:45:48Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3873f465
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-upgrade-flow.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:45:48Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3873f465
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-upgrade-flow.test.ts
+**Duration ms**: 581
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:45:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: 25806428
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-upgrade-flow.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:45:55Z
+**Event**: SENSOR_PASSED
+**Fire id**: 25806428
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-upgrade-flow.test.ts
+**Duration ms**: 850
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:45:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: 91b3b8e6
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-upgrade-flow.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:45:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: 91b3b8e6
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-upgrade-flow.test.ts
+**Duration ms**: 581
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:46:19Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1e7d8158
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-upgrade-flow.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:46:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1e7d8158
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-upgrade-flow.test.ts
+**Duration ms**: 883
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:46:20Z
+**Event**: SENSOR_FIRED
+**Fire id**: be319091
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-upgrade-flow.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:46:20Z
+**Event**: SENSOR_PASSED
+**Fire id**: be319091
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-upgrade-flow.test.ts
+**Duration ms**: 585
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:46:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1460ecce
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-upgrade-flow.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:46:31Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1460ecce
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-upgrade-flow.test.ts
+**Duration ms**: 838
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:46:31Z
+**Event**: SENSOR_FIRED
+**Fire id**: b298e140
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-upgrade-flow.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:46:32Z
+**Event**: SENSOR_PASSED
+**Fire id**: b298e140
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/integration/setup-upgrade-flow.test.ts
+**Duration ms**: 631
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:48:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: d3c7e240
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/e2e/setup-upgrade.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:48:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: d3c7e240
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/e2e/setup-upgrade.test.ts
+**Duration ms**: 870
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:48:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: 99c594b1
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/e2e/setup-upgrade.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:48:08Z
+**Event**: SENSOR_PASSED
+**Fire id**: 99c594b1
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/e2e/setup-upgrade.test.ts
+**Duration ms**: 589
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:49:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: 56997efc
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/e2e/setup-upgrade.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:49:11Z
+**Event**: SENSOR_PASSED
+**Fire id**: 56997efc
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/e2e/setup-upgrade.test.ts
+**Duration ms**: 873
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:49:11Z
+**Event**: SENSOR_FIRED
+**Fire id**: 532965d5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/e2e/setup-upgrade.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:49:12Z
+**Event**: SENSOR_PASSED
+**Fire id**: 532965d5
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/e2e/setup-upgrade.test.ts
+**Duration ms**: 586
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:50:12Z
+**Event**: SENSOR_FIRED
+**Fire id**: 66ce6ef1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-upgrade.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:50:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: 66ce6ef1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-upgrade.test.ts
+**Duration ms**: 888
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T14:50:13Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4438aceb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-upgrade.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T14:50:13Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4438aceb
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: tests/unit/setup-upgrade.test.ts
+**Duration ms**: 590
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-08T14:55:32Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/construction/upgrade-flow/code-generation/code-generation-plan.md
+**Context**: construction > upgrade-flow > code-generation > code-generation-plan.md
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T14:56:24Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: codegen-u3
+**Agent ID**: acodegen-u3-b652bb0fc01d9449
+**Message**: team-lead へ完了報告を送付しました。作業内容の要約です。\n\n**実装したもの**: `packages/setup/src/domain/upgrade.ts`(新規)に `UpgradeAssessment`/`UpgradeOutcome`/`UpgradeRefusal`/`UpgradeSource`/`LegacyLayout` を実装し、`domain/plan.ts` に 
+
+---

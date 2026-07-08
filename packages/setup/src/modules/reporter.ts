@@ -5,11 +5,12 @@ import type { ManifestError } from "../domain/manifest.ts";
 import type { FetchError } from "../domain/payload.ts";
 import type { Plan, PlanAction, PlanRefusal } from "../domain/plan.ts";
 import type { ResolveError } from "../domain/resolved-version.ts";
+import type { UpgradeRefusal } from "../domain/upgrade.ts";
 import type { NextSteps, VerifyResult } from "../domain/verify-result.ts";
 
-// U3 widens this union with UpgradeRefusal once upgrade-flow defines that
-// type (domain-entities.md); install-flow only ever produces these five.
-export type ClassifiedError = UsageError | ResolveError | FetchError | ManifestError | PlanRefusal;
+// U3 widens this union with UpgradeRefusal (domain-entities.md); install-flow
+// alone only ever produces the first five members.
+export type ClassifiedError = UsageError | ResolveError | FetchError | ManifestError | PlanRefusal | UpgradeRefusal;
 
 // SEC-I04: every user-facing string lives here so its wording can be reviewed
 // in one place. cli.ts only ever calls console.log/error with these results —
@@ -35,9 +36,13 @@ const ACTION_LABELS: Record<PlanAction, string> = {
 };
 
 // FR-007: always rendered before apply/exit, in both interactive and
-// non-interactive modes, so CI logs stay auditable (BR-I13).
-export function renderPlanReport(plan: Plan): string {
-  const lines: string[] = ["Plan:"];
+// non-interactive modes, so CI logs stay auditable (BR-I13). `note` carries
+// upgrade's source.strategyNote() (business-logic-model.md workflow 1);
+// install never passes one, so its report is unchanged.
+export function renderPlanReport(plan: Plan, note?: string): string {
+  const lines: string[] = [];
+  if (note !== undefined) lines.push(note, "");
+  lines.push("Plan:");
   const actionsInReportOrder: readonly PlanAction[] = ["add", "update", "backup", "conflict", "skip"];
   for (const action of actionsInReportOrder) {
     const entries = plan.entriesBy(action);
@@ -99,12 +104,6 @@ export function renderWizardAborted(): string {
   return "Install aborted: selection was not confirmed. No files were changed.";
 }
 
-// upgrade-flow is a separate unit (U3); the CLI Contract's symmetric grammar
-// still needs `upgrade` to parse and dispatch in this release.
-export function renderUpgradeNotImplemented(): string {
-  return "`amadeus-setup upgrade` is not implemented in this release.";
-}
-
 // SEC-I04: the one place that phrases a temp-directory setup failure.
 export function renderTmpDirFailure(detail: string): string {
   return `could not prepare a temp directory: ${detail}`;
@@ -149,6 +148,18 @@ export function renderError(err: ClassifiedError): string {
       return renderAlreadyInstalled(err.admission);
     case "harness-not-in-payload":
       return `The requested harness "${err.harness}" is not present in this distribution.`;
+    case "no-installation":
+      return "No Amadeus installation was found here. Run `amadeus-setup install` instead.";
+    case "unsupported-layout":
+      return `This installation cannot be upgraded: ${err.detail}. No files were changed.`;
+    case "partial-refused":
+      return `A partial Amadeus installation was found (missing: ${err.missing.join(", ")}). Re-run with --force to proceed conservatively, or restore the missing files first.`;
+    case "already-up-to-date":
+      return `Already up to date: the installed version (${err.installed.format()}) matches the requested version.`;
+    case "downgrade-unsupported":
+      return `Cannot downgrade: requested ${err.requested.format()} is older than the installed version ${err.installed.format()}.`;
+    case "installed-newer-than-latest":
+      return `The installed version (${err.installed.format()}) is newer than the latest resolved version (${err.latest.format()}). Pass --version to target a specific release.`;
     default:
       return "An unexpected error occurred.";
   }
