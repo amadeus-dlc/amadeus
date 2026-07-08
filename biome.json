@@ -14,7 +14,7 @@
     }
   },
   "files": {
-    "includes": ["**", "!tests/fixtures/**", "!dist/**"]
+    "includes": ["**", "!tests/fixtures/**", "!dist/**", "!packages/setup/dist/**"]
   },
   "overrides": [
     {
