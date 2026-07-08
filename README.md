@@ -9,7 +9,7 @@ Amadeus-DLC is a fork of **AI-DLC v2** and a native implementation of the **AI-D
 The methodology lives once, in harness-neutral `packages/framework/core/`; each harness adds a thin surface under `packages/framework/harness/` that decides how it shows up on that harness. So you edit the methodology in one package-owned place, and every harness distribution is generated from it — no harness gets special treatment. (See [Repository layout](#repository-layout) for how the pieces fit together.)
 
 ![version](https://img.shields.io/badge/version-1.2.0-blue)
-![license](https://img.shields.io/badge/license-MIT--0-green)
+![license](https://img.shields.io/badge/license-(MIT%20OR%20Apache--2.0)-green)
 ![Kiro IDE](https://img.shields.io/badge/harness-Kiro%20IDE-orange)
 ![Kiro CLI](https://img.shields.io/badge/harness-Kiro%20CLI-orange)
 ![Claude Code](https://img.shields.io/badge/harness-Claude%20Code-orange)
