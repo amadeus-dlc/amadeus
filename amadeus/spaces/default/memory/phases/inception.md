@@ -27,4 +27,12 @@
 - すべての要件は ideation の成果物(intent、feasibility、scope)まで遡れなければならない
 - inception で新しい要件を導入する場合は、必ずその由来を文書化する
 
+## Software Design Principles
+
+要件に依らず常時適用する設計原則。詳細は `amadeus/spaces/default/knowledge/amadeus-shared/software-design/` の同名ディレクトリを参照する(索引: 同ディレクトリの `README.md`)。
+
+- **パッケージ/モジュール設計は変更の制御として行う**: 見た目の整理ではなく、情報隠蔽・変更理由の凝集・依存方向の制御・リリース境界で分割を決める。循環依存を作らない(`package-design`)。既存構造の再編は小さく検証可能な手順で行う(`refactoring-packages`)
+- **モジュールは実装詳細を隠し、狭いAPIだけを公開する**: 内部構造への到達経路を公開APIに含めない
+- **方式依存の設計知識は採用時のみ適用する**: DDD 集約設計・CQRS/ES・Clean Architecture 等の方式別原則は、プロジェクトがその方式を採用する場合に限り適用し、採用プロジェクトは `memory/project.md` に索引(`software-design/README.md`)へのポインタルールを追加する。採用していないプロジェクトに方式のセレモニーを持ち込まない
+
 ## Corrections
