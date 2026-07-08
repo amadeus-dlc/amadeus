@@ -24,3 +24,7 @@ files から LICENSE-MIT を一時除去 → satisfied テストが `{type:"miss
 ## 検証結果
 
 typecheck / lint / dist:check / promote:self:check 全 exit 0。pack 恒常3回 = 628〜646ms(予算 ≤28秒)。`tests/run-tests.sh --ci` は **t92.test.ts 1件のみ FAIL — U4 と無関係の環境依存**(bunx が pinned TS 6.0.3 でなく 7.0.2 を解決し TS18003 の exit code が変化。2回再現で決定論的と確認、git log でファイルが本 intent 以前から無変更と確認)。対応は pending-issue-t92-bunx-ts-drift.md に保留(クロスカッティングのため Issue 起票ノルム該当、起票はユーザー判断待ち)
+
+## §12a レビュー経過
+
+- イテレーション1: READY(Critical/Major 0)— フレッシュエビデンス(t92 のみ赤のベースライン一致)、落ちる実証2件(package.json files 変異/PackContract 定義変異 — 後者は unexpected 経路の実地証拠にもなった)、手順書7章の契約適合、遅延ビルド契約遵守、CON-006 越境なしを確認。非ブロッキング1件(logical-components の命名記述)は即時追補済み
