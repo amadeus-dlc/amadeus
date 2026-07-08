@@ -6784,3 +6784,85 @@
 **Findings count**: 5
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T06:16:00Z
+**Event**: WORKFLOW_PARKED
+**Stage**: functional-design
+**Timestamp**: 2026-07-08T06:16:00Z
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T06:18:05Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T06:19:44Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: fd-review-u1
+**Agent ID**: afd-review-u1-1430c1c777a2c783
+**Message**: ## Review\n\nVerdict: NOT-READY\n\n以下、上流の凍結契約(component-methods.md / decisions.md / requirements.md / unit-of-work.md)と実際に照合した結果、複数の破損した相互参照・未解決のOpen Question・Unit境界の隠れた依存を確認しました。いずれも実装者が推測なしに着手できないレベルの欠落
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T06:20:02Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T06:20:02Z
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-08T06:20:59Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/construction/setup-foundation/functional-design/domain-entities.md
+**Context**: construction > setup-foundation > functional-design > domain-entities.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T06:20:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: f8632b03
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/construction/setup-foundation/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T06:20:59Z
+**Event**: SENSOR_PASSED
+**Fire id**: f8632b03
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/construction/setup-foundation/functional-design/domain-entities.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T06:20:59Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2e30b473
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/construction/setup-foundation/functional-design/domain-entities.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T06:20:59Z
+**Event**: SENSOR_FAILED
+**Fire id**: 2e30b473
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/construction/setup-foundation/functional-design/domain-entities.md
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/functional-design/upstream-coverage-2e30b473.md
+**Findings count**: 4
+
+---

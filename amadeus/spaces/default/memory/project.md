@@ -26,6 +26,8 @@
 
 <!-- プロジェクト固有の上書き。 -->
 
+- DECIDED: このプロジェクトのドメインモデリングは `amadeus/spaces/default/knowledge/amadeus-shared/software-design/functional-domain-modeling-ts/`(class-free、type+コンパニオンオブジェクト、ブランド型+スマートコンストラクタ、判別ユニオン Result)を採用する。普遍原則(tell-dont-ask、parse-dont-validate、first-class-collection 等、索引 `software-design/README.md` の常時適用群)はこのスタイルの上で適用する (adopted 2026-07-08、installer-distribution intent にてユーザー指示)
+
 ## Tech Stack
 
 - ランタイム / パッケージマネージャ: Bun(TypeScript、ESM)。フレームワークの hooks / tools はすべて bun で直接実行する
