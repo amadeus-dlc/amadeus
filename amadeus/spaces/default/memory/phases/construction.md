@@ -28,4 +28,17 @@
 - システム境界ではすべての入力を検証・サニタイズする
 - 認証・認可チェックをバイパスするコードにはフラグを立てる
 
+## Software Design Principles
+
+要件に依らず常時適用する実装原則。各原則の詳細・例・アンチパターンは `amadeus/spaces/default/knowledge/amadeus-shared/software-design/` の同名ディレクトリを参照する(索引: 同ディレクトリの `README.md`)。
+
+- **Tell, Don't Ask**: オブジェクトの状態を取得して外側で判断・操作しない。振る舞いはデータの持ち主に置く
+- **Law of Demeter**: 直接の協力者とだけ会話する。`a.getB().getC().doX()` のような連鎖(train wreck)を書かず、振る舞いを持ち主へ寄せる
+- **Parse, Don't Validate**: 検証して証明を捨てるのではなく、検証済みであることを型で運ぶパース関数にする。無効状態は表現不能にする
+- **エラー処理は回復可能性で選ぶ**: まず異常状態を分類し(error/defect/fault/failure — `error-classification`)、回復可能なら型付きエラー/Result とリトライ、回復不能ならフェイルファスト(`error-handling`)
+- **First-Class Collection**: コレクション固有のルールや不変条件が散らばり始めたら、ドメイン名を持つコレクション型に包んで一箇所に集める
+- **カプセル化破りの命名**: 永続化・シリアライズ・テスト都合でやむを得ず公開する accessor は `breachEncapsulationOf` 系の命名で「破り」を可視化し、通常のドメインAPIと区別する
+- **意図ベースの重複排除**: 重複排除はテキストの類似ではなく意図と変更理由の一致で判断する。見た目が似ていても変更理由が異なるコードは統合しない
+- **プリミティブを包む判断**: ラッパー型が正しさ(不変条件・取り違え防止)を変えるときだけ包む。体裁のための微小型の乱造はしない(`ddd-when-to-wrap-primitives`)
+
 ## Corrections
