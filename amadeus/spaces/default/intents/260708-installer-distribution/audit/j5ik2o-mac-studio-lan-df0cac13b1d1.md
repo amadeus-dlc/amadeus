@@ -7836,3 +7836,18 @@
 **Timestamp**: 2026-07-08T08:23:24Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T08:24:00Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-requirements
+**Timestamp**: 2026-07-08T08:24:00Z
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T08:24:13Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T08:24:13Z
+
+---

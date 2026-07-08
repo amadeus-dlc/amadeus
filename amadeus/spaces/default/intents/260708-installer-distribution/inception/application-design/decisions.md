@@ -15,7 +15,7 @@
 
 - **Context**: FR-002 は npx(Node)/bunx(bun)両対応を要求する。ソースは TypeScript で保守したいが、npx 実行系は TS を直接実行できない(OQ-002)。リポジトリのビルドツールチェーンは bun のみ
 - **Decision**: `bun build src/cli.ts --target=node --format=esm` で `dist/cli.js` 単一ファイルへバンドルし、shebang `#!/usr/bin/env node` を付与、`bin.amadeus-setup` がこれを指す。publish 対象は dist/cli.js+README+LICENSE 2種(FR-018 の契約)
-- **Consequences**: (+) 実行時依存ゼロを成果物レベルで保証(NFR-005)。(+) pack 検証(FR-018)の契約が単純。(+) Node ≥18 と bun の双方で動作。(−) publish 前にビルドステップが必要(FR-015 手順書に組み込み)。(−) スタックトレースがバンドル行になる(sourcemap は初回スコープ外)
+- **Consequences**: (+) 実行時依存ゼロを成果物レベルで保証(NFR-005)。(+) pack 検証(FR-018)の契約が単純。(+) Node ≥18.3 と bun の双方で動作(正確なフロアは U1 nfr-requirements/tech-stack-decisions の権威記述に従う — parseArgs 由来)。(−) publish 前にビルドステップが必要(FR-015 手順書に組み込み)。(−) スタックトレースがバンドル行になる(sourcemap は初回スコープ外)
 - **Alternatives Rejected**: (B) tsc マルチファイル出力 — ファイル数が増え pack 契約が複雑化、tsc の emit 設定を新規追加する必要。(C) TS のまま publish — npx で動かず FR-002 違反
 - **Security/Compliance**: バンドルにより同梱物が固定され、意図しないファイル混入を FR-018 テストで検出しやすい。ライセンスは LICENSE 2種を明示同梱
 
