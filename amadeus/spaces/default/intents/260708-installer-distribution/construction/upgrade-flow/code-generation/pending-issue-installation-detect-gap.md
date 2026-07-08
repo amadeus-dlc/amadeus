@@ -1,3 +1,5 @@
+> **起票済み(2026-07-09、ユーザー承認)**: https://github.com/amadeus-dlc/amadeus/issues/656
+
 # 起票待ち GitHub Issue(権限拒否により保留 — 2026-07-09)
 
 **Title**: setup: Installation.detect evidence gap makes LegacyLayout condition (b) unreachable and misclassifies anchor-less legacy layouts as partial (BR-U07 gap)

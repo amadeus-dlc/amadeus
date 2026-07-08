@@ -24,7 +24,7 @@ src/
     wizard.ts            #   runWizard(parsed, missing, tty) — node:readline/promises
     applier.ts           #   Applier.create(fsWrite) — resolveWithin/SafeTargetPath を内包
     verifier.ts          #   Verifier.create(fsRead)
-    reporter.ts          #   Reporter API 10関数(確定形 — functional-design/domain-entities.md の置換注記参照)(純関数 — 文字列生成のみ)
+    reporter.ts          #   Reporter API 9関数(確定形 — U3 で renderUpgradeNotImplemented が孤児化し削除。functional-design/domain-entities.md の置換注記参照)(純関数 — 文字列生成のみ)
   ports/
     tty.ts               #   TtyIO(isTTY/select/input/confirm)
 ```

@@ -100,3 +100,5 @@
 - 「構造的保証」を謳う設計記述は一枚岩の断定を避け、モジュール別に保証機構(ポート不保持/限定ポート/呼び出し順序契約など)を層別に書く — 例外を含む全称命題は自己矛盾の温床 (learned 2026-07-08) <!-- cid:nfr-design:c4 -->
 - レビュー是正で新しい概念・共有物・所有関係(ヘルパー、環境変数、契約など)を導入するときは、その提供側と消費側の全成果物(他ユニット・他ステージ含む)を同時に棚卸しして伝播させ、伝播先一覧を是正コミットに含める — 是正自体が次の伝播漏れの発生源になる(infrastructure-design で2回観測) (learned 2026-07-08) <!-- cid:infrastructure-design:infrastructure-design:review-fix-propagation -->
 - 選別・ガード機構(環境変数、フラグ、スキップ条件)を設計したら、その起動者(誰が・どの手順で設定するか)を同じステージで確定し、起動者側の成果物にも明記する — 起動者不在の安全網は恒久スキップされ空文になる (learned 2026-07-08) <!-- cid:infrastructure-design:infrastructure-design:guard-activator -->
+- ビルダー/レビュアーの検証報告は、最終変更後に全検証コマンドを再実行し exit code を添えて行う。conductor は申告と実測に齟齬が出た検証を必ず自分でも1回再実行して裏取りしてから次工程へ進む (learned 2026-07-08) <!-- cid:code-generation:code-generation:evidence-discipline -->
+- 「不在時のみビルド」型の遅延ビルドヘルパー(ensureSetupCliBuilt 等)を跨ぐ検証では、ブランチ切替・エントリポイント置換の後に生成物(packages/setup/dist/cli.js)を削除してから実行する — ステールバイナリは新コードを一切テストしない偽緑/偽赤を作る (learned 2026-07-08) <!-- cid:code-generation:code-generation:stale-binary -->
