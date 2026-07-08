@@ -24,5 +24,5 @@ src/
 ```
 
 - **新規モジュール(ファイル)ゼロ、修正は applier.ts / cli.ts / wizard.ts の3箇所**が U3 の設計上の特徴: 差分は domain 層(判断の追加)+cli 分岐+applier の SEC-U01 チェック+wizard の文言分岐に閉じる。tech-stack-decisions の「新規技術の不採用宣言」と対応
-- ClassifiedError の合流(UpgradeRefusal)は domain/command.ts の型定義更新(U2 是正で宣言済み)— 実装ファイルの移動なし
+- ClassifiedError の合流(UpgradeRefusal)は ~~domain/command.ts~~ **modules/reporter.ts** の型定義更新(§12a U3 レビューで実体位置の文書誤りを確認 — command.ts に ClassifiedError は定義されていない)— 実装ファイルの移動なし
 - 依存方向は U1/U2 の規律を継承(upgrade.ts → plan.ts/installation.ts/manifest.ts は import type 中心、ファクトリ値インポートは同層内)

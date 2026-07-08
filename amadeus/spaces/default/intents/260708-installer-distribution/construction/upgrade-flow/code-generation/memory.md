@@ -9,6 +9,8 @@
 - 2026-07-09T00:05:00Z — §12a イテレーション1 NOT-READY(3件): (1) ブロッキング = ビルダー申告「lint green」に対し実測 FAIL(tests/e2e/setup-upgrade.test.ts:164 noUnsafeOptionalChaining — 新規ファイル起因)。エビデンス齟齬として記録、(2) 到達不能2件(BR-U07 実害ギャップ含む)の Issue 起票漏れ → conductor が起票試行、権限拒否のため pending-issue-installation-detect-gap.md に保留(ユーザー判断待ち)、(3) cli.ts の runInstall/runUpgrade 間の約30行複製(U3 で初めて発生した抽出タイミング)
 - 逸脱5件は全て ACCEPTED(Plan.forUpgrade のエラー型拡張 / ClassifiedError 実体は reporter.ts=U2 由来の文書誤り / Reporter 9関数化 / renderPlanReport(plan, note?) / install 側 fake の宛先限定化)
 
+- 2026-07-09T00:40:00Z — §12a イテレーション2(最終): READY。lint exit 0 実測、resolveInputs/withTmpWrite 抽出は実体のある統合と判定(薄い層なし)、到達順序ゲート注入の検出力維持を再実証。非ブロッキング1件(分割代入スタイルの不揃い)は任意改善として申し送り
+
 ## Tradeoffs
 
 ## Open questions

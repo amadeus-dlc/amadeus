@@ -134,3 +134,12 @@ flowchart LR
 - U1 から: SemVer / VersionSpec / ResolvedVersion / ExtractedPayload / Manifest(`dispositionFor` / `isNewerThan` / `upgradedTo`)/ ManifestFiles / ManifestError / Disposition / FileClass / FetchError / HarnessName / InstallMeta / BuildInput
 - U2 から: Plan / PlanEntry / PlanAction / PlanOptions / Installation / **InstallationEvidence**(本 Unit の是正で構造化 — LegacyLayout の入力契約)/ ApplyResult / Applier / Verifier / Reporter API(`ClassifiedError` に `UpgradeRefusal` を合流)/ InstallInputs / ParsedCommand
 - 本 Unit が定義: UpgradeAssessment / UpgradeOutcome / UpgradeOutcomeNonProceed / UpgradeRefusal / UpgradeSource / LegacyLayout / `Plan.forUpgrade`
+
+
+---
+
+## 置換注記(§12a コードレビュー裁定 2026-07-09)
+
+- **Plan.forUpgrade のエラー型**: `Result<Plan, UpgradeRefusal>` → `Result<Plan, PlanRefusal | UpgradeRefusal>` に確定(harness-not-in-payload は install と同一失敗モードのため既存 `PlanRefusal.harnessNotInPayload` を再利用 — variant 複製を回避。ClassifiedError は両者を包含済みで renderError に新規分岐不要)
+- **renderPlanReport(plan, note?)**: 既存シグネチャへの任意引数追加(source.strategyNote の運搬 — business-logic-model の要求どおり)
+- **到達不能2件**(LegacyLayout 条件(b)/ manifest 残置 partial)はレビューで事実確認済み — 是正は installation.ts の evidence 拡張が必要で本 intent スコープ外(pending-issue-installation-detect-gap.md 参照、Issue 起票はユーザー判断待ち)

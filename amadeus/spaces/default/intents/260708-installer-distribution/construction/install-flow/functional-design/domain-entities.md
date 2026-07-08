@@ -253,5 +253,5 @@ flowchart LR
 ## 置換注記(§12a コードレビュー裁定 2026-07-08)
 
 - **Plan**: `harnessRoot(): string` をインスタンスメソッドとして追加(Plan.forInstall が解決済みの配布物ルートを運ぶ)。Applier は `join(plan.harnessRoot(), entry.path)` でコピー元を組み立てる。**PlanEntry は6フィールドの正準形を維持**(実装が一時追加した `source` フィールドはレビュー裁定で除去)
-- **Reporter API**: 7関数に加え、SEC-I04(文言の reporter 一元化)の完全化のため `renderWizardAborted()` / `renderUpgradeNotImplemented()` / `renderTmpDirFailure(detail)` を追加し**10関数**が確定形。cli.ts は自前の文言を一切組み立てない
+- **Reporter API**: 7関数に加え、SEC-I04(文言の reporter 一元化)の完全化のため `renderWizardAborted()` / `renderUpgradeNotImplemented()` / `renderTmpDirFailure(detail)` を追加し10関数となったが、U3 の upgrade 実装で `renderUpgradeNotImplemented()` は孤児化し削除(§12a U3 レビュー裁定 ACCEPTED)— **確定形は9関数**。cli.ts は自前の文言を一切組み立てない
 - **HarnessName.parse**(U1 harness.ts への U2 増分): 戻り値は UsageError ではなく軽量ローカルエラー(`UsageError.invalidHarness` への変換は ParsedCommand.parse 側)— 依存方向の確定は nfr-design/logical-components.md の置換注記を参照
