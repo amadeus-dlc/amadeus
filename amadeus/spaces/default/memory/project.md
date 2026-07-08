@@ -88,3 +88,4 @@
 - practices-discovery の証跡スキャンは、同日の RE codekb がスキャン面(CI・テスト・コードスタイル・セキュリティ)をカバーしている場合はそれを代用し、affirm 済み team.md との差分ギャップのみ質問する (learned 2026-07-08) <!-- cid:practices-discovery:c1 -->
 - team.md の再実行 practices-discovery では、変更のあったセクションだけを含む部分ドラフトで practices-promote し、無変更セクションの live 温存(churn 回避)を利用する (learned 2026-07-08) <!-- cid:practices-discovery:c2 -->
 - 再スタート系 intent では、前 intent のレビュー済み成果物(レビュー指摘の修正を含む)を git 履歴から取得してベースにし、差分のみ更新する — レビューで獲得した契約の精密さをゼロから作り直さない (learned 2026-07-08) <!-- cid:requirements-analysis:c1 -->
+- CLI/ツール系 intent の user-stories はジャーニー別エピック(導入/更新/運用など)で分割する — ペルソナと E2E テスト設計への対応が自然になり、FR 別分割より価値の見通しが良い (learned 2026-07-08) <!-- cid:user-stories:c1 -->
