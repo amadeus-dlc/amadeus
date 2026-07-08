@@ -8618,3 +8618,54 @@
 **Timestamp**: 2026-07-08T10:26:52Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T10:27:23Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-design
+**Timestamp**: 2026-07-08T10:27:23Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T10:27:42Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: aa8677d87d2122dd3
+**Message**: 進めて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T10:27:51Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: aa2d905c72065aff7
+**Message**: そのまま進めて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T10:32:03Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a672d30b7c5d17a10
+**Message**: はい、相当な計算量になっています。時間の内訳は主に4つの要因です。\n\n## 1. レビューの構造的な掛け算\n\nper-unit ステージは「**5ユニット × 最大2イテレーション × ステージ数**」の掛け算です。functional-design と nfr-requirements だけでレビュアーのディスパッチは約20回、nfr-design も同じペースで進んでいます。ほぼ全ユニットが1
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T10:33:14Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: nfrd-review-u4-i2
+**Agent ID**: anfrd-review-u4-i2-e77b18cb2ed01fc8
+**Message**: team-lead に verdict を送信しました。要点は以下のとおりです。\n\n**Verdict: NOT-READY**(iteration 2/2、最終)\n\niteration-1 の4件の指摘のうち3件(PackContract の単一ソース置き場所、SEC-P03 の章配置、questions ファイルの偽claim修正)は正しく解消されていました。しかし、指摘3(mutation-
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T10:36:22Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T10:36:22Z
+
+---
