@@ -1,0 +1,21 @@
+{
+  "stage_slug": "functional-design",
+  "selections": [
+    {
+      "candidate_id": "c11",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "functional-domain-modeling-ts スタイルの役割分担: ドメイン型は type にインスタンスメソッドを宣言し(実装は内部ファクトリ+クロージャの frozen リテラル)、コンパニオン namespace は static 相当(parse/build/コレクション演算)のみを持つ。貧血型(裸 type+外部関数)も全面 static 寄せ(第一引数レシーバのコンパニオン関数)もどちらも誤り",
+      "source": "orchestrator"
+    },
+    {
+      "candidate_id": "c3",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "概念の改名・所有移管を含む修正では、旧名・旧所属を全成果物(上流の unit 定義・関係図・questions ファイル含む)で grep してから再レビューに出す — 伝播漏れはレビューイテレーションを1回消費する最頻出の欠陥",
+      "source": "orchestrator"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+# Infrastructure Design Questions — publish-readiness
+
+> ステージ: infrastructure-design (3.4) / Unit: publish-readiness / 作成: 2026-07-08
+
+## 質問なしの判断(Construction の質問は例外規定)
+
+publish 基盤(npm レジストリ・手動 publish・シークレット不保持)は feasibility/requirements/NFR で確定済み。
+
+未解決の曖昧さ: なし。
+
+---
+
+## レビュー経過の記録(§12a)
+
+- イテレーション1(並行レビュー): READY — CON-004/SEC-P02/P03/FR-015 章立て/R1 前提配置/pack 3回≤28秒の整合を検証済み。非ブロッキング申し送り: upstream-coverage センサーで scalability/reliability/services/components の4項目が per-file 不参照(advisory、reliability の REL-P02 は performance-design 経由で実質伝播済み)
+
+- READY 判定後の伝播編集(U1 イテレーション2のビルダー決着に伴う): 遅延ビルドヘルパー `tests/lib/setup-lazy-build.ts`(提供元 U1)の消費関係を shared-infrastructure.md / cicd-pipeline.md / functional-design/business-logic-model.md に明示。U4 の設計判断自体に変更なし(「独自ビルドロジックを持たない」方針の明文化)
+
+- 追補(U2 イテレーション2の指摘に伴う): 手順書章3に実ネットワーク E2E ステップ(`AMADEUS_SETUP_E2E_NETWORK=1`)を追加し cicd-pipeline.md にも反映 — U2 が規定した選別機序の設定者を確定。全面再レビューは不要(パッチ的追記、U4 の設計判断に変更なし)

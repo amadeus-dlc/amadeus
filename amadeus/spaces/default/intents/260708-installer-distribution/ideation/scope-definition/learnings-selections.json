@@ -1,0 +1,13 @@
+{
+  "stage_slug": "scope-definition",
+  "selections": [
+    {
+      "candidate_id": "c1",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "CLI コマンド体系の設計ではサブコマンド文法を対称(MECE)に保ち、破壊的になりうる操作を暗黙デフォルトにしない(例: install/upgrade は両方明示サブコマンド、サブコマンドなしはヘルプ表示)",
+      "source": "orchestrator"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "stage_slug": "approval-handoff",
+  "selections": [
+    {
+      "candidate_id": "c1",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "approval-handoff 等のハンドオフゲートでリスクを説明する際は代替緩和策も併せて提示し、ゲートで合意できた緩和策の強化はその場で raid-log へ反映してから承認へ進む",
+      "source": "orchestrator"
+    },
+    {
+      "candidate_id": "c2",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "フェーズ境界検証の成果物は verification/phase-check-<phase>.md に統一する(ステージファイル準拠。governance 文書の [phase-boundary]-verification.md 表記より優先)",
+      "source": "orchestrator"
+    }
+  ]
+}

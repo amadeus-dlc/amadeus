@@ -1,0 +1,21 @@
+{
+  "stage_slug": "nfr-design",
+  "selections": [
+    {
+      "candidate_id": "c7",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "「修正対象ファイルの目録」「無改修」「実行回数・予算」等の断定的インベントリは、全設計決定が確定した後に導出して書く — 設計途中の早期断定は修正のたびに偽り、レビューイテレーションを消費する(nfr-design で3度観測)",
+      "source": "orchestrator"
+    },
+    {
+      "candidate_id": "c4",
+      "type": "learning",
+      "scope": "project",
+      "heading": "## Corrections",
+      "text": "「構造的保証」を謳う設計記述は一枚岩の断定を避け、モジュール別に保証機構(ポート不保持/限定ポート/呼び出し順序契約など)を層別に書く — 例外を含む全称命題は自己矛盾の温床",
+      "source": "orchestrator"
+    }
+  ]
+}

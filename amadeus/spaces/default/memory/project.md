@@ -26,6 +26,8 @@
 
 <!-- プロジェクト固有の上書き。 -->
 
+- DECIDED: このプロジェクトのドメインモデリングは `amadeus/spaces/default/knowledge/amadeus-shared/software-design/functional-domain-modeling-ts/`(class-free、type+コンパニオンオブジェクト、ブランド型+スマートコンストラクタ、判別ユニオン Result)を採用する。普遍原則(tell-dont-ask、parse-dont-validate、first-class-collection 等、索引 `software-design/README.md` の常時適用群)はこのスタイルの上で適用する (adopted 2026-07-08、installer-distribution intent にてユーザー指示)
+
 ## Tech Stack
 
 - ランタイム / パッケージマネージャ: Bun(TypeScript、ESM)。フレームワークの hooks / tools はすべて bun で直接実行する
@@ -69,6 +71,8 @@
 - ALWAYS `dist/`、`.claude/`、`.codex/`、`.agents/` の path を変える案では `dist:check` と `promote:self:check` の維持方法を同じ成果物に書く。 (affirmed 2026-07-07)
 - ALWAYS `packages/setup` は別 intent の sibling dependency として扱い、この intent の実装スコープに吸収しない。 (affirmed 2026-07-07)
 - ALWAYS markdown artifact は日本語で書く。ただし path、CLI、コード識別子、tool が要求する heading は正確性を優先して保持する。 (affirmed 2026-07-07)
+- ALWAYS リリース(バージョンバンプを含む PR のマージ)時に、CHANGELOG の `## [X.Y.Z]` 見出しと一致する `vX.Y.Z` git タグを発行する(当面手動。インストーラの配布物取得先) (affirmed 2026-07-08)
+- ALWAYS 新設パッケージ(`packages/*`)は lint(Biome)と型検査(`tsc --noEmit`)の配線をパッケージ追加と同一 PR で加え、既存の狭い CI lint スコープ(`tests/` のみ)を継承しない (affirmed 2026-07-08)
 ## Corrections
 
 <!-- 人間のフィードバックによるプロジェクト固有の是正。 -->
@@ -78,3 +82,21 @@
 - reverse-engineering は Developer(スキャン)→ Architect(合成)の2サブエージェント直列で実行する(Architect がスキャン結果に依存するため並列化しない) (learned 2026-07-07) <!-- cid:reverse-engineering:c3 -->
 - Requirements Analysis では、version resolution / CLI contract / force semantics / install manifest / upgrade boundary のようなユーザー可視契約を設計詳細として後続 stage へ先送りせず、requirements.md でテスト可能に固定する (learned 2026-07-07) <!-- cid:requirements-analysis:c3 -->
 - 新しい配布可能パッケージを導入する intent では、パッケージ自身のバージョンライフサイクル(誰が・いつ・どうバンプし、framework 版とどう関係するか)と公開物の内容検証(シミュレーションではなく実ツール — `npm pack --dry-run` 等 — による検証)を requirements でテスト可能に固定する (learned 2026-07-08) <!-- cid:requirements-analysis:c4 -->
+- 公開・配布系 intent の feasibility では、外部前提(npm レジストリのパッケージ名/スコープ、外部サービス到達性など)をユーザーに問わず実ツール(レジストリ照会等)で直接検証し、確定できない部分は確信度付きの推定として提示する (learned 2026-07-08) <!-- cid:feasibility:c1 -->
+- 前 intent の RAID ログを引き継ぐときは、各 Issue の現存を作業ツリーで再実測してから転記する。解消済みの Issue は証跡(確認日時・確認方法)付きでクローズし、未解消はその旨を実測日付きで記す (learned 2026-07-08) <!-- cid:feasibility:c2 -->
+- CLI コマンド体系の設計ではサブコマンド文法を対称(MECE)に保ち、破壊的になりうる操作を暗黙デフォルトにしない(例: install/upgrade は両方明示サブコマンド、サブコマンドなしはヘルプ表示) (learned 2026-07-08) <!-- cid:scope-definition:c1 -->
+- approval-handoff 等のハンドオフゲートでリスクを説明する際は代替緩和策も併せて提示し、ゲートで合意できた緩和策の強化はその場で raid-log へ反映してから承認へ進む (learned 2026-07-08) <!-- cid:approval-handoff:c1 -->
+- フェーズ境界検証の成果物は verification/phase-check-<phase>.md に統一する(ステージファイル準拠。governance 文書の [phase-boundary]-verification.md 表記より優先) (learned 2026-07-08) <!-- cid:approval-handoff:c2 -->
+- practices-discovery の証跡スキャンは、同日の RE codekb がスキャン面(CI・テスト・コードスタイル・セキュリティ)をカバーしている場合はそれを代用し、affirm 済み team.md との差分ギャップのみ質問する (learned 2026-07-08) <!-- cid:practices-discovery:c1 -->
+- team.md の再実行 practices-discovery では、変更のあったセクションだけを含む部分ドラフトで practices-promote し、無変更セクションの live 温存(churn 回避)を利用する (learned 2026-07-08) <!-- cid:practices-discovery:c2 -->
+- 再スタート系 intent では、前 intent のレビュー済み成果物(レビュー指摘の修正を含む)を git 履歴から取得してベースにし、差分のみ更新する — レビューで獲得した契約の精密さをゼロから作り直さない (learned 2026-07-08) <!-- cid:requirements-analysis:c1 -->
+- CLI/ツール系 intent の user-stories はジャーニー別エピック(導入/更新/運用など)で分割する — ペルソナと E2E テスト設計への対応が自然になり、FR 別分割より価値の見通しが良い (learned 2026-07-08) <!-- cid:user-stories:c1 -->
+- functional-domain-modeling-ts スタイルの役割分担: ドメイン型は type にインスタンスメソッドを宣言し(実装は内部ファクトリ+クロージャの frozen リテラル)、コンパニオン namespace は static 相当(parse/build/コレクション演算)のみを持つ。貧血型(裸 type+外部関数)も全面 static 寄せ(第一引数レシーバのコンパニオン関数)もどちらも誤り (learned 2026-07-08) <!-- cid:functional-design:c11 -->
+- 概念の改名・所有移管を含む修正では、旧名・旧所属を全成果物(上流の unit 定義・関係図・questions ファイル含む)で grep してから再レビューに出す — 伝播漏れはレビューイテレーションを1回消費する最頻出の欠陥 (learned 2026-07-08) <!-- cid:functional-design:c3 -->
+- NFR 具体化では、ファイル名・タイムスタンプ等の設計値を実行環境の制約(Windows 予約文字、API の実在バージョン)と照合し、性能数値は強制メカニズム(タイムアウト等)から導出する — 照合なしの数値・形式は実装で破綻する (learned 2026-07-08) <!-- cid:nfr-requirements:c3 -->
+- 概念移動時の全成果物 grep には修正中のユニット自身のファイルも含める — 伝播漏れは消費側だけでなく発生元にも残る(functional-design:c3 の補強) (learned 2026-07-08) <!-- cid:nfr-requirements:c5 -->
+- framework 版同期の検証は t68(dist/claude コピーの内部整合)と dist:check/promote:self:check(全 dist ツリー+セルフインストールへの core 反映)の相補2機構で扱う — core/tools/amadeus-version.ts を触る変更は後者なしに完了と見なさない (learned 2026-07-08) <!-- cid:nfr-requirements:c1 -->
+- 「修正対象ファイルの目録」「無改修」「実行回数・予算」等の断定的インベントリは、全設計決定が確定した後に導出して書く — 設計途中の早期断定は修正のたびに偽り、レビューイテレーションを消費する(nfr-design で3度観測) (learned 2026-07-08) <!-- cid:nfr-design:c7 -->
+- 「構造的保証」を謳う設計記述は一枚岩の断定を避け、モジュール別に保証機構(ポート不保持/限定ポート/呼び出し順序契約など)を層別に書く — 例外を含む全称命題は自己矛盾の温床 (learned 2026-07-08) <!-- cid:nfr-design:c4 -->
+- レビュー是正で新しい概念・共有物・所有関係(ヘルパー、環境変数、契約など)を導入するときは、その提供側と消費側の全成果物(他ユニット・他ステージ含む)を同時に棚卸しして伝播させ、伝播先一覧を是正コミットに含める — 是正自体が次の伝播漏れの発生源になる(infrastructure-design で2回観測) (learned 2026-07-08) <!-- cid:infrastructure-design:infrastructure-design:review-fix-propagation -->
+- 選別・ガード機構(環境変数、フラグ、スキップ条件)を設計したら、その起動者(誰が・どの手順で設定するか)を同じステージで確定し、起動者側の成果物にも明記する — 起動者不在の安全網は恒久スキップされ空文になる (learned 2026-07-08) <!-- cid:infrastructure-design:infrastructure-design:guard-activator -->
