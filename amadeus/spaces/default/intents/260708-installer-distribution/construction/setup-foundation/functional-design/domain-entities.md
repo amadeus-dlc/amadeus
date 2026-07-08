@@ -136,6 +136,7 @@ export namespace ExtractedPayload {
 }
 ```
 
+- `locate` は ADR-003 の codeload アーカイブ形状を前提とする: tar.gz は常に**単一のトップレベルラッパーディレクトリ**(codeload は `<repo>-<version>/` を生成し、タグ先頭の `v` は落ちる — 例 `amadeus-0.6.9/`)で全内容を包む。`locate` は `extractedDir` 直下のこのラッパーを**名前に依存せず**解決してから `dist/<harness>/` を検出する。直下が単一ディレクトリでない場合・`dist/` 欠落は payload-invalid(BR-F10)
 - 展開先の実パスはクロージャに閉じる(呼び出し側にファイルシステム走査をさせない)
 - ライフサイクル: fetch で生成 → planner が読む → プロセス終了時に一時領域ごと破棄
 
