@@ -39,7 +39,7 @@ import {
 const BUN = process.execPath; // the bun running this test
 
 // In-process helper under test, plus the shipped sources for the seam runs.
-import { compileStageGraph, stageGraphDrift } from "../../core/tools/amadeus-graph.ts";
+import { compileStageGraph, stageGraphDrift } from "../../packages/framework/core/tools/amadeus-graph.ts";
 const STAGE_GRAPH = join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 const STAGES_DIR = join(AMADEUS_SRC, "amadeus-common", "stages");
 const MID_IDEATION = join(REPO_ROOT, "tests", "fixtures", "state-mid-ideation.md");

@@ -28,7 +28,7 @@
       }
     },
     {
-      "includes": ["core/tools/**", "harness/**", "scripts/**"],
+      "includes": ["packages/framework/core/tools/**", "packages/framework/harness/**", "scripts/**"],
       "linter": {
         "rules": {
           "style": {

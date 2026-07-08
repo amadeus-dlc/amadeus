@@ -350,7 +350,7 @@ function handleMerge(args: string[]): void {
   let conflictHit = false;
   switch (strategy) {
     case "squash": {
-      const m = runGit(["merge", "--squash", branchName], repoCwd);
+      const m = runGit(["-c", "merge.ff=true", "merge", "--squash", branchName], repoCwd);
       if (!m.ok) {
         if (isConflict(m)) {
           conflictHit = true;

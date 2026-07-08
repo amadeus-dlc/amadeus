@@ -30,7 +30,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const CORE = join(REPO_ROOT, "core");
+const CORE = join(REPO_ROOT, "packages", "framework", "core");
 
 // A hit is carved out iff its (relPath, lineText) is a known truthful literal.
 function isCarvedOut(relPath: string, line: string): boolean {
