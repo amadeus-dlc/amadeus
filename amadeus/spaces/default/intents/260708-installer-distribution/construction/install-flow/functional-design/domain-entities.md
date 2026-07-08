@@ -198,6 +198,7 @@ export type Applier = {
 };
 export namespace Applier {
   export function create(fsops: FsOps): Applier;    // ファクトリ+ポート注入(component-methods の apply(plan, target, fsops) ベア関数形を置換)
+  // ※U2 nfr-design(logical-components)がポート分割版 Applier.create(fsWrite) へさらに置換(書き込みポートの単独保持が SEC-I01/REL-I01 の構造保証 — U1 の分割注記と同じ流儀)
 }
 
 export type Verifier = {
@@ -205,6 +206,7 @@ export type Verifier = {
 };
 export namespace Verifier {
   export function create(fsops: FsOps): Verifier;   // 同上(verify(target, manifest) ベア関数形を置換)
+  // ※U2 nfr-design(logical-components)がポート分割版 Verifier.create(fsRead) へさらに置換(検証は読み取り専用 — 書き込み能力を持たないことの構造化)
 }
 ```
 

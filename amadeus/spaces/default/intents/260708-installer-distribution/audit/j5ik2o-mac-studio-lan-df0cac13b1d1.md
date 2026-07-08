@@ -8399,3 +8399,45 @@
 **Timestamp**: 2026-07-08T09:52:12Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T09:53:40Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-design
+**Timestamp**: 2026-07-08T09:53:40Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T09:53:59Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a70111cf391da7204
+**Message**: 進めて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T09:54:09Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: aed1845e7aca44c57
+**Message**: はい
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T09:59:07Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: nfrd-review-u2
+**Agent ID**: anfrd-review-u2-1559aa2291bf5ef9
+**Message**: team-leadへレビュー結果を送信しました。\n\n**判定: NOT-READY**(2件のブロッキング指摘)\n\n主な指摘内容:\n\n1. **Applier/Verifier のポート分割が無承認**: functional-design は `Applier.create(fsops: FsOps)` / `Verifier.create(fsops: FsOps)` を正式契約としているが、
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T09:59:33Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T09:59:33Z
+
+---

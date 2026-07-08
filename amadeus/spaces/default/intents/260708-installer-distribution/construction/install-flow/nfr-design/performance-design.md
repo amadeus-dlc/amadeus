@@ -13,6 +13,13 @@
 - ディレクトリ作成は `mkdir recursive` をパス毎に1回(重複 mkdir を Set で抑制)
 - コピーは `fs.copyFile`(カーネル空間コピー)。逐次実行(並列化しない — nfr-requirements の判断踏襲)
 
+## 検証の I/O 構造(マニフェスト書き込み+検証 ≤5秒)
+
+- マニフェスト書き込み: 単一 JSON の `writeFile`(≤1秒 — U1 予算と同値)
+- verifier の必須ファイル存在検証: マニフェスト `requiredPaths()`(数百件)への `fs.stat` 逐次実行 — stat はメタデータ I/O のみで1件サブミリ秒、数百件で ≤2秒
+- doctor 相当4チェック(harness-dir / tools-dir / memory-shell / state-absence): 各1〜2回の stat/readdir で合計 ≤1秒
+- 合計 ≤4秒+余裕1秒 = 予算行 ≤5秒に整合。検証は読み取り専用のため書き込み I/O ゼロ(Verifier.create(fsRead) の構造と一致)
+
 ## E2E 計測の実装位置
 
 - テストランナー側で `amadeus-setup install --yes ...` を子プロセスとして起動し、起動〜終了を計測(計測区間の定義どおり)。CLI 本体に計測コードを入れない(YAGNI、U1 と同方針)

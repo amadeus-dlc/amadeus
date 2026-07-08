@@ -6,6 +6,7 @@
 ## REL-I01(部分適用の検出可能性)の実装構造
 
 - applier はエントリ毎に try し、失敗を ApplyFailure として**収集して続行しない**(最初の失敗で残りをスキップし即返す — 「進めるほど壊す」を避ける)。ApplyResult.hasFailures() が true なら cli はマニフェスト書き込みへ到達しない(到達順序契約)
+- 注: fail-fast により `ApplyResult.failures()` は実質**高々1件**(型は複数形のまま — functional-design の契約と矛盾しない。renderApplyFailure の「列挙」は将来 collect モードを導入しても壊れない防御的フレーミング)
 - 検証: fault-injection(書き込み不能ディレクトリ)で「失敗以降のエントリが未適用・マニフェスト不在・終了コード1」をアサート
 
 ## REL-I02(再実行安全性)の実装構造
