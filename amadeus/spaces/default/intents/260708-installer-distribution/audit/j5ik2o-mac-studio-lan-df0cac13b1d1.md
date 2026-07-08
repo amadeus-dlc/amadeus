@@ -7761,3 +7761,36 @@
 **Timestamp**: 2026-07-08T08:07:54Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T08:09:16Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-requirements
+**Timestamp**: 2026-07-08T08:09:16Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T08:13:14Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a1a14e40055e264b3
+**Message**: npm インストーラ(@amadeus-dlc/setup)の AI-DLC ワークフローを進行中で、現在は Construction の NFR Requirements ステージ、U1 の是正後レビュー(2回目)待ちです。判定が届き次第、READY なら残り4ユニットの NFR 作成へ進みます。
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T08:14:06Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: nfr-review-u1-i2
+**Agent ID**: anfr-review-u1-i2-b7a5292f4a7c4f40
+**Message**: レビューを完了し、team-leadに送信しました。\n\n**判定: NOT-READY**(残存する不整合1件)\n\n7件の反復1修正のうち6件は正しく一貫して伝播していることを確認しました(タイムアウト閾値、バジェット計算、md5帰属、hardlink拒否、upstream-coverage引用、RSSピークサンプリング)。\n\n唯一の指摘: `setup-foundation/functional
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T08:14:23Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T08:14:23Z
+
+---

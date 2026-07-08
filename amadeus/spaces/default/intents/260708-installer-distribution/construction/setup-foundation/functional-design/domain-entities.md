@@ -170,7 +170,7 @@ export type Manifest = {
   readonly installerPackageVersion: string;   // setup 自身の semver(FR-017)
   readonly distributionVersion: SemVer;
   readonly sourceTag: `v${string}`;
-  readonly installedAt: string;               // ISO 8601 = 操作開始時刻 = backup $timestamp(BR-F14)
+  readonly installedAt: string;               // 拡張 ISO 8601。操作開始の**同一瞬間**を backup $timestamp(コロンなし basic 形式のファイル名トークン)と共有するが、**表現は異なる**(BR-F14 / REL-F05)
   readonly harness: HarnessName;
   dispositionFor(path: string, actualMd5: string | null): Disposition;  // ManifestFiles へ内部委譲(Law of Demeter — 呼び出し側に files を歩かせない)
   isNewerThan(candidate: SemVer): boolean;    // バージョン境界判定(US-B4)
@@ -189,7 +189,7 @@ Object.freeze(Manifest);
 export type InstallMeta = {
   readonly installerPackageVersion: string;   // setup 自身の semver(FR-017)
   readonly harness: HarnessName;
-  readonly installStartedAt: string;          // ISO 8601 — backup $timestamp と同一値(BR-F14)
+  readonly installStartedAt: string;          // 拡張 ISO 8601 — backup $timestamp とは**同一瞬間・別表現**(ファイル名トークンは basic 形式。BR-F14 / REL-F05)
 };
 export type BuildInput = {                    // upgradedTo の入力(新バージョンの取得結果一式)
   readonly payload: ExtractedPayload;
