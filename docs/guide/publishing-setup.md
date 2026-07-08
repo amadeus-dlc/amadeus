@@ -192,8 +192,8 @@ npm publish --access public --tag next
 
 ## 6. Post-publish verification
 
-The release workflow already performs a retrying `npx` smoke check after
-publishing. Verify manually as well:
+Verify manually (the workflow intentionally has no in-run npx smoke —
+registry propagation lag right after publish made it a false-alarm source):
 
 ```bash
 npx @amadeus-dlc/setup@<version> --help

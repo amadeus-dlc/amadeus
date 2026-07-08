@@ -11,9 +11,12 @@ name: Release @amadeus-dlc/setup
 # (an explicit, team-recorded exception to the PR rule — the bump commit
 # is a one-line version change). The same run then creates the GitHub
 # Release with auto-generated notes (softprops/action-gh-release), builds
-# dist/cli.js fresh, publishes to npm with provenance, and smoke-checks
-# via npx. Everything happens in one run because tags/commits pushed with
-# GITHUB_TOKEN never trigger other workflows.
+# dist/cli.js fresh, and publishes to npm with provenance. Everything
+# happens in one run because tags/commits pushed with GITHUB_TOKEN never
+# trigger other workflows. Post-publish verification is a manual step
+# (see docs/guide/publishing-setup.md ch. 6) — an in-run npx smoke was
+# removed after producing only false alarms (registry propagation lag
+# poisons the runner's npx cache, so retries can never recover).
 #
 # Bootstrap: when the repo has no v* tag yet, a dispatch skips the bump
 # and releases the committed version as-is (release-it --no-increment,
@@ -47,7 +50,7 @@ permissions:
 
 jobs:
   release:
-    name: bump · tag · notes · publish · smoke
+    name: bump · tag · notes · publish
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -140,18 +143,3 @@ jobs:
           else
             npm publish --provenance "${args[@]}"
           fi
-
-      - name: Post-publish smoke (npx resolves and prints help)
-        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry-run) }}
-        run: |
-          version="${{ steps.version.outputs.version }}"
-          for i in 1 2 3 4 5; do
-            if npx -y "@amadeus-dlc/setup@${version}"; then
-              echo "smoke OK on attempt ${i}"
-              exit 0
-            fi
-            echo "registry not ready yet (attempt ${i}); retrying in 30s"
-            sleep 30
-          done
-          echo "::error::post-publish smoke failed after 5 attempts"
-          exit 1
