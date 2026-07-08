@@ -153,7 +153,9 @@ describe("amadeus-setup upgrade (E2E, offline fixture)", () => {
         const manifestBefore = JSON.parse(readFileSync(join(target, MANIFEST_RELATIVE_PATH), "utf8"));
         const sharedEntry = (manifestBefore.files as Array<{ path: string; class: string }>).find((f) => f.class === "shared");
         expect(sharedEntry).toBeDefined();
-        const sharedPath = join(target, sharedEntry?.path as string);
+        if (sharedEntry === undefined) throw new Error("fixture setup: expected at least one shared manifest entry");
+        const sharedRelPath = sharedEntry.path;
+        const sharedPath = join(target, sharedRelPath);
         const customizedContent = `${readFileSync(sharedPath, "utf8")}\n// hand-edited by this test\n`;
         writeFileSync(sharedPath, customizedContent);
 
@@ -161,7 +163,8 @@ describe("amadeus-setup upgrade (E2E, offline fixture)", () => {
         expect(upgraded.stderr).toBe("");
         expect(upgraded.status).toBe(0);
 
-        const backups = readdirSync(dirname(sharedPath)).filter((name) => name.startsWith(`${(sharedEntry?.path as string).split("/").pop()}.`) && name.endsWith(".bk"));
+        const sharedBasename = sharedRelPath.split("/").pop();
+        const backups = readdirSync(dirname(sharedPath)).filter((name) => name.startsWith(`${sharedBasename}.`) && name.endsWith(".bk"));
         expect(backups.length).toBe(1);
         expect(readFileSync(join(dirname(sharedPath), backups[0] as string), "utf8")).toBe(customizedContent);
 
