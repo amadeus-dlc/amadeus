@@ -15,3 +15,9 @@ t68(7 pass)/ typecheck / lint / dist:check / promote:self:check 全 exit 0。tes
 
 1. README のライセンスバッジ(`license-MIT--0`)は未変更 — 設計の変更対象表が「バッジ=版バンプ同期」のみ明記のため。ただし I1 是正により package.json と不一致が顕在化
 2. root package.json の description が旧 cp -r 文言のまま — I1/I2 最小 diff の指示範囲外と判断
+
+## §12a レビュー経過
+
+- イテレーション1: NOT-READY(Major 2 — いずれも本 Bolt 自身が作った矛盾: I1 是正後の README ライセンスバッジ残置、cp -r 撤去後の root description 虚偽化)→ conductor が直接修正(a4cc2ec66)
+- イテレーション2(最終): READY — バッジは shields.io の実 SVG 取得で `(MIT OR Apache-2.0)` レンダリングを実測確認、t68 7 pass 維持、副作用なし
+- ボーイスカウト適用: README:5 の awslabs 残置リンク(実行導線の誤リンク、レビュアーのスコープ外既発見)を amadeus-dlc/amadeus へ修正 — README は本 Bolt の変更対象ファイルであり安全・低コスト(team.md ボーイスカウトルール)
