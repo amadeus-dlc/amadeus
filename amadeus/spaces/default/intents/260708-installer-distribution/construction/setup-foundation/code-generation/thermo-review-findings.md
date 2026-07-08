@@ -20,3 +20,9 @@
 ## 申し送り(指摘外)
 
 ports/ がインターフェースと本番実装を同居 — U2 の CLI 組み立て時に「ports=型のみ」慣習との乖離を意識。
+
+## 適用結果(2026-07-08)
+
+- 5件すべて behavior-preserving で適用(コミット a7cf757f6)。指摘3はフル案(ManifestError.io 既存 variant 使用、IoError へ optional notFound を ports 層追加 — 凍結 domain 契約無変更)
+- 監査元による確認: 指摘1/2/4/5 は完全適用。指摘3 の適用が孤児化させた `FsRead.exists()`(呼び出し元ゼロ)を削除して APPROVED 条件充足(既存テスト無修正のまま 255ファイル・3809 assertion グリーン、ラッパー多重性注入の赤化再実証済み)
+- 監査元の申し送り(指摘外): internal/ の意味論(domain ファクトリ専用 → tar-archive-extractor は I/O オーケストレーション寄り)が将来曖昧化する可能性 — 次に internal/ へ非ファクトリを置くときは modules/ との線引きを再考

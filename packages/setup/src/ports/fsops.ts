@@ -1,5 +1,5 @@
 import { createWriteStream } from "node:fs";
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { Readable } from "node:stream";
@@ -26,7 +26,6 @@ Object.freeze(IoError);
 
 export type FsRead = {
   readText(path: string): Promise<Result<string, IoError>>;
-  exists(path: string): Promise<boolean>;
 };
 
 export type FsWrite = {
@@ -50,14 +49,6 @@ export function createFsRead(): FsRead {
         return Result.ok(await readFile(path, "utf8"));
       } catch (cause) {
         return Result.err(IoError.of(`could not read ${path}: ${String(cause)}`, isEnoent(cause)));
-      }
-    },
-    async exists(path: string): Promise<boolean> {
-      try {
-        await stat(path);
-        return true;
-      } catch {
-        return false;
       }
     },
   });
