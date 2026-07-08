@@ -8093,3 +8093,130 @@
 **Timestamp**: 2026-07-08T08:59:35Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T09:00:00Z
+**Event**: WORKFLOW_PARKED
+**Stage**: nfr-requirements
+**Timestamp**: 2026-07-08T09:00:00Z
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T09:00:21Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a4651f7a8f2a197f7
+**Message**: 続けて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T09:00:21Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a92a34bb611cff6d1
+**Message**: はい、その理解でおおむね正しいです。このセッションの実測がまさにその例になっています。\n\n## このワークフローでの実測感\n\n**時間コスト(実例)**:\n- レビュアー1回のディスパッチ〜判定返送まで、概ね5〜10分程度かかっています(例: U4 functional-design レビューは約8分、RE の Developer スキャンは約6分)\n- さらに今回の環境では「アイドル通知だけ届い
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T09:00:29Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a54410e16acc7bff5
+**Message**: はい
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T09:02:36Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: nfr-review-u5-i2
+**Agent ID**: anfr-review-u5-i2-20f8b68116f1a1b7
+**Message**: team-lead へ最終レビュー結果(Verdict: READY)を送信しました。iteration-1 の指摘 REL-D01 は正しく解消されており、5ファイル間の伝播にも新たな矛盾は見つかりませんでした。
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T09:02:53Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T09:02:53Z
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T09:03:45Z
+**Event**: HUMAN_TURN
+
+---
+
+## Rule Learned
+**Timestamp**: 2026-07-08T09:04:04Z
+**Event**: RULE_LEARNED
+**Stage**: nfr-requirements
+**Candidate-ID**: c3
+**Destination**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/memory/project.md
+**Heading**: ## Corrections
+**Source**: orchestrator
+
+---
+
+## Rule Learned
+**Timestamp**: 2026-07-08T09:04:04Z
+**Event**: RULE_LEARNED
+**Stage**: nfr-requirements
+**Candidate-ID**: c5
+**Destination**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/memory/project.md
+**Heading**: ## Corrections
+**Source**: orchestrator
+
+---
+
+## Rule Learned
+**Timestamp**: 2026-07-08T09:04:04Z
+**Event**: RULE_LEARNED
+**Stage**: nfr-requirements
+**Candidate-ID**: c1
+**Destination**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/memory/project.md
+**Heading**: ## Corrections
+**Source**: orchestrator
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-08T09:04:05Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: nfr-requirements
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T09:04:31Z
+**Event**: HUMAN_TURN
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-08T09:04:43Z
+**Event**: GATE_APPROVED
+**Stage**: nfr-requirements
+**User Input**: Approve
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-08T09:04:43Z
+**Event**: STAGE_COMPLETED
+**Stage**: nfr-requirements
+**Details**: Stage Nfr Requirements approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-08T09:04:43Z
+**Event**: STAGE_STARTED
+**Stage**: nfr-design
+**Agent**: amadeus-architect-agent
+
+---

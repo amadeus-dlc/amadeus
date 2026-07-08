@@ -93,3 +93,6 @@
 - CLI/ツール系 intent の user-stories はジャーニー別エピック(導入/更新/運用など)で分割する — ペルソナと E2E テスト設計への対応が自然になり、FR 別分割より価値の見通しが良い (learned 2026-07-08) <!-- cid:user-stories:c1 -->
 - functional-domain-modeling-ts スタイルの役割分担: ドメイン型は type にインスタンスメソッドを宣言し(実装は内部ファクトリ+クロージャの frozen リテラル)、コンパニオン namespace は static 相当(parse/build/コレクション演算)のみを持つ。貧血型(裸 type+外部関数)も全面 static 寄せ(第一引数レシーバのコンパニオン関数)もどちらも誤り (learned 2026-07-08) <!-- cid:functional-design:c11 -->
 - 概念の改名・所有移管を含む修正では、旧名・旧所属を全成果物(上流の unit 定義・関係図・questions ファイル含む)で grep してから再レビューに出す — 伝播漏れはレビューイテレーションを1回消費する最頻出の欠陥 (learned 2026-07-08) <!-- cid:functional-design:c3 -->
+- NFR 具体化では、ファイル名・タイムスタンプ等の設計値を実行環境の制約(Windows 予約文字、API の実在バージョン)と照合し、性能数値は強制メカニズム(タイムアウト等)から導出する — 照合なしの数値・形式は実装で破綻する (learned 2026-07-08) <!-- cid:nfr-requirements:c3 -->
+- 概念移動時の全成果物 grep には修正中のユニット自身のファイルも含める — 伝播漏れは消費側だけでなく発生元にも残る(functional-design:c3 の補強) (learned 2026-07-08) <!-- cid:nfr-requirements:c5 -->
+- framework 版同期の検証は t68(dist/claude コピーの内部整合)と dist:check/promote:self:check(全 dist ツリー+セルフインストールへの core 反映)の相補2機構で扱う — core/tools/amadeus-version.ts を触る変更は後者なしに完了と見なさない (learned 2026-07-08) <!-- cid:nfr-requirements:c1 -->
