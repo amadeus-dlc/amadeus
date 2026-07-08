@@ -1,13 +1,17 @@
 # Publishing `@amadeus-dlc/setup`
 
-> Audience: maintainers preparing an `@amadeus-dlc/setup` release. This is a
-> manual runbook — there is no CI auto-publish (CON-004) and no npm
-> provenance (SEC-P03) for the first release.
+> Audience: maintainers preparing an `@amadeus-dlc/setup` release. The
+> primary path is the CI release workflow (`.github/workflows/release.yml`,
+> triggered by a `setup-vX.Y.Z` tag) publishing with npm provenance; the
+> manual commands remain documented as a fallback. (The original CON-004
+> "no CI auto-publish" constraint was superseded by user decision on
+> 2026-07-09, consuming the SEC-P03 re-consideration point.)
 
 `@amadeus-dlc/setup` (`packages/setup`) has its own independent semver,
 separate from the framework's `AMADEUS_VERSION` (FR-017). It is **not**
-covered by the `vX.Y.Z` git tag, CHANGELOG, or README-badge sync that t68
-enforces for the framework — no setup-specific git tag is cut.
+covered by the framework's `vX.Y.Z` git tag, CHANGELOG, or README-badge sync
+that t68 enforces — the setup package uses its own `setup-vX.Y.Z` tag
+namespace, which only drives the release workflow.
 
 ## 1. Prerequisites
 
@@ -33,8 +37,16 @@ Confirm all three before touching a version number:
   git tag --list 'v*' | sort -V | tail -5
   ```
 
-- **npm account 2FA enabled**: your npm account must have two-factor
-  authentication set to `auth-and-writes` (SEC-P02) before you can publish:
+- **`NPM_TOKEN` repository secret** (CI path): a **granular automation
+  token** scoped to publish only `@amadeus-dlc/setup`, stored as the
+  `NPM_TOKEN` GitHub Actions secret. Prefer a short expiry and rotate on
+  schedule. Automation tokens are exempt from the per-publish OTP, so the
+  SEC-P02 posture shifts from "interactive 2FA on every publish" to "token
+  custody": narrow scope, short life, revoke on suspicion.
+
+- **npm account 2FA enabled** (manual fallback path, and account hygiene
+  regardless of path): your npm account must have two-factor authentication
+  set to `auth-and-writes` (SEC-P02):
 
   ```bash
   npm profile get
@@ -117,9 +129,33 @@ install step.)
 
 ## 5. Publish
 
-**Note: this release has no npm provenance** (SEC-P03 — CI-based publishing
-with provenance is a re-consideration point for a future move to automated
-releases; the current process is manual).
+### Primary path: CI release workflow (with npm provenance)
+
+After the version-bump PR (chapter 2) is merged to `main`, push a tag in the
+setup namespace that matches `packages/setup/package.json`:
+
+```bash
+git tag setup-v<version> <merged-main-sha>
+git push origin setup-v<version>
+```
+
+`.github/workflows/release.yml` then re-runs the five CI quality gates,
+builds `dist/cli.js` fresh, runs the real-network E2E against live GitHub,
+verifies the tag matches the package version, and publishes with
+`npm publish --provenance --access public`. A prerelease version
+(`X.Y.Z-rc.N` committed in package.json, tagged `setup-vX.Y.Z-rc.N`)
+is automatically published with `--tag next` and never touches `latest`.
+The workflow finishes with a retrying `npx @amadeus-dlc/setup@<version>`
+smoke check.
+
+To rehearse without publishing, run the workflow manually from the Actions
+tab with `dry-run: true` — every step executes, `npm publish --dry-run`
+replaces the real publish, and no `NPM_TOKEN` is needed.
+
+### Fallback: manual publish (no provenance)
+
+If CI is unavailable, the original manual path still works (note: manual
+publishes carry **no provenance**):
 
 Stable release:
 
@@ -137,6 +173,9 @@ npm publish --access public --tag next
 ```
 
 ## 6. Post-publish verification
+
+The release workflow already performs a retrying `npx` smoke check after
+publishing. Verify manually as well:
 
 ```bash
 npx @amadeus-dlc/setup@<version> --help
