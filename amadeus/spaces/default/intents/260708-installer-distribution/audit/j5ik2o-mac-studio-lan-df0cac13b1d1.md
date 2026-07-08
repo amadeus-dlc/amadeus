@@ -5702,3 +5702,428 @@
 **Agent**: amadeus-architect-agent
 
 ---
+
+## Decision Recorded
+**Timestamp**: 2026-07-08T05:58:05Z
+**Event**: DECISION_RECORDED
+**Stage**: units-generation
+**Decision**: Interaction mode choice for units-generation questions (~3: unit boundary strategy, granularity, parallelism)
+**Options**: Guide me,Grill me,I'll edit the file,Chat
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T05:58:31Z
+**Event**: HUMAN_TURN
+
+---
+
+## Question Answered
+**Timestamp**: 2026-07-08T05:58:41Z
+**Event**: QUESTION_ANSWERED
+**Stage**: units-generation
+**Details**: Question mode: Grill me
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-08T05:59:03Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/units-generation-questions.md
+**Context**: inception > units-generation > units-generation-questions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:59:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0342d58c
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/units-generation-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T05:59:03Z
+**Event**: SENSOR_FAILED
+**Fire id**: 0342d58c
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/units-generation-questions.md
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/units-generation/required-sections-0342d58c.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:59:03Z
+**Event**: SENSOR_FIRED
+**Fire id**: b5d6d658
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/units-generation-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T05:59:03Z
+**Event**: SENSOR_FAILED
+**Fire id**: b5d6d658
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/units-generation-questions.md
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/units-generation/upstream-coverage-b5d6d658.md
+**Findings count**: 7
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-08T05:59:13Z
+**Event**: DECISION_RECORDED
+**Stage**: units-generation
+**Decision**: Q1: 5-unit decomposition (foundation / install-flow / upgrade-flow / publish-readiness / docs-rollout) mapped 1:1 to backlog P1-P5
+**Options**: A: adopt (recommended),B: modify,X: Other
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T05:59:34Z
+**Event**: HUMAN_TURN
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-08T05:59:52Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/units-generation-questions.md
+**Context**: inception > units-generation > units-generation-questions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:59:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: ac736123
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/units-generation-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T05:59:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: ac736123
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/units-generation-questions.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T05:59:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: b2045d85
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/units-generation-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T05:59:52Z
+**Event**: SENSOR_FAILED
+**Fire id**: b2045d85
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/units-generation-questions.md
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/units-generation/upstream-coverage-b2045d85.md
+**Findings count**: 7
+
+---
+
+## Question Answered
+**Timestamp**: 2026-07-08T06:00:00Z
+**Event**: QUESTION_ANSWERED
+**Stage**: units-generation
+**Details**: Q1: A — adopt 5-unit decomposition
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-08T06:00:00Z
+**Event**: DECISION_RECORDED
+**Stage**: units-generation
+**Decision**: Q2: dependency ordering — serial U2 then U3 (verification-path reuse) vs full parallel U2/U3
+**Options**: A: serial (recommended),B: parallel,X: Other
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T06:00:30Z
+**Event**: HUMAN_TURN
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-08T06:00:40Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/units-generation-questions.md
+**Context**: inception > units-generation > units-generation-questions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T06:00:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: c61d0caf
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/units-generation-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T06:00:40Z
+**Event**: SENSOR_PASSED
+**Fire id**: c61d0caf
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/units-generation-questions.md
+**Duration ms**: 32
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T06:00:40Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5bc00480
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/units-generation-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T06:00:40Z
+**Event**: SENSOR_FAILED
+**Fire id**: 5bc00480
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/units-generation-questions.md
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/units-generation/upstream-coverage-5bc00480.md
+**Findings count**: 7
+
+---
+
+## Question Answered
+**Timestamp**: 2026-07-08T06:00:47Z
+**Event**: QUESTION_ANSWERED
+**Stage**: units-generation
+**Details**: Q2: A — serial ordering U1->U2->U3->U4->U5
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T06:01:12Z
+**Event**: HUMAN_TURN
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-08T06:01:47Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/unit-of-work.md
+**Context**: inception > units-generation > unit-of-work.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T06:01:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: 006f8223
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/unit-of-work.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T06:01:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: 006f8223
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/unit-of-work.md
+**Duration ms**: 33
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T06:01:47Z
+**Event**: SENSOR_FIRED
+**Fire id**: bf9e5725
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/unit-of-work.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T06:01:47Z
+**Event**: SENSOR_PASSED
+**Fire id**: bf9e5725
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/unit-of-work.md
+**Duration ms**: 32
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-08T06:02:07Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/unit-of-work-dependency.md
+**Context**: inception > units-generation > unit-of-work-dependency.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T06:02:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: cedaa7f6
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/unit-of-work-dependency.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T06:02:07Z
+**Event**: SENSOR_FAILED
+**Fire id**: cedaa7f6
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/unit-of-work-dependency.md
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/units-generation/required-sections-cedaa7f6.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T06:02:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: de44c3ca
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/unit-of-work-dependency.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T06:02:07Z
+**Event**: SENSOR_FAILED
+**Fire id**: de44c3ca
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/unit-of-work-dependency.md
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/units-generation/upstream-coverage-de44c3ca.md
+**Findings count**: 5
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-08T06:02:27Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/installer-distribution/amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/unit-of-work-story-map.md
+**Context**: inception > units-generation > unit-of-work-story-map.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T06:02:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: ceadcf87
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/unit-of-work-story-map.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-08T06:02:27Z
+**Event**: SENSOR_PASSED
+**Fire id**: ceadcf87
+**Sensor ID**: required-sections
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/unit-of-work-story-map.md
+**Duration ms**: 34
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-08T06:02:27Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5dd9b940
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/unit-of-work-story-map.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-08T06:02:27Z
+**Event**: SENSOR_FAILED
+**Fire id**: 5dd9b940
+**Sensor ID**: upstream-coverage
+**Stage slug**: units-generation
+**Output path**: amadeus/spaces/default/intents/260708-installer-distribution/inception/units-generation/unit-of-work-story-map.md
+**Detail path**: amadeus/spaces/default/intents/260708-installer-distribution/.amadeus-sensors/units-generation/upstream-coverage-5dd9b940.md
+**Findings count**: 4
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-08T06:02:39Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: units-generation
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T06:03:15Z
+**Event**: HUMAN_TURN
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-08T06:03:25Z
+**Event**: GATE_APPROVED
+**Stage**: units-generation
+**User Input**: Approve
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-08T06:03:25Z
+**Event**: STAGE_COMPLETED
+**Stage**: units-generation
+**Details**: Stage Units Generation approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-08T06:03:25Z
+**Event**: STAGE_STARTED
+**Stage**: delivery-planning
+**Agent**: amadeus-delivery-agent
+
+---
