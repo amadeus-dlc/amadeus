@@ -15,9 +15,11 @@ name: Release @amadeus-dlc/setup
 # via npx. Everything happens in one run because tags/commits pushed with
 # GITHUB_TOKEN never trigger other workflows.
 #
-# A `v*` tag push remains as a fallback entry point (e.g. the first
-# release: tag v0.1.0 manually to publish the current version without a
-# bump): it skips the bump and runs notes -> build -> publish -> smoke.
+# Bootstrap: when the repo has no v* tag yet, a dispatch skips the bump
+# and releases the committed version as-is (release-it --no-increment,
+# tag only) — the first run creates the tag matching the current version
+# with no manual tagging. A `v*` tag push remains as a fallback entry
+# point: it skips the bump and runs notes -> build -> publish -> smoke.
 # workflow_dispatch with dry-run rehearses (release-it --dry-run +
 # npm publish --dry-run) without pushing or publishing anything.
 on:
@@ -49,10 +51,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Checkout (full history for guards and release notes)
+      - name: Checkout (full history + tags for guards and the bootstrap check)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          fetch-tags: true
 
       - name: Set up bun
         uses: oven-sh/setup-bun@v2
@@ -94,7 +97,14 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          args=(${{ inputs.bump }} --ci)
+          if [ -z "$(git tag --list 'v*')" ]; then
+            # Bootstrap: no v* tag exists yet — release the committed version
+            # as-is (tag only, no bump commit).
+            echo "no v* tags found — bootstrapping the first release without a bump"
+            args=(--no-increment --no-git.commit --ci)
+          else
+            args=(${{ inputs.bump }} --ci)
+          fi
           if [ "${{ inputs.dry-run }}" = "true" ]; then
             args+=(--dry-run)
           fi

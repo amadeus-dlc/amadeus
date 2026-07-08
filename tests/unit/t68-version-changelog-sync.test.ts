@@ -60,6 +60,18 @@ describe("t68 framework version sync (version.ts / CLI / README badge)", () => {
     expect((res.stdout ?? "").trim()).toBe(`amadeus ${tsVersion}`);
   }, 30000);
 
+  // The repo has ONE version: packages/setup's package.json (which drives
+  // the v* release tags) must equal AMADEUS_VERSION. The release-it
+  // after:bump hook (scripts/release-version-sync.ts) keeps them aligned;
+  // this guard catches a hand bump of either side alone.
+  test("packages/setup version equals AMADEUS_VERSION (unified version axis)", () => {
+    const tsVersion = versionAssignments()[0];
+    const pkg = JSON.parse(
+      readFileSync(join(REPO_ROOT, "packages", "setup", "package.json"), "utf-8"),
+    ) as { version: string };
+    expect(pkg.version).toBe(tsVersion);
+  });
+
   // README shields.io badge matches version.ts. A release that bumps
   // version.ts but forgets the badge ships a wrong public number.
   test("README.md version badge matches amadeus-version.ts [.sh test 6]", () => {
