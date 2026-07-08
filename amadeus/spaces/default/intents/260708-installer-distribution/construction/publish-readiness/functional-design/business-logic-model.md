@@ -23,7 +23,7 @@ test "契約違反を注入すると赤くなる(落ちる実証 — team.md Man
 ```
 
 - 実行層: `tests/integration/` に配置し `tests/run-tests.sh` の既存 CI プロファイルへ自動包含(新規 CI ジョブは作らない — 再利用棚卸し)
-- 前提: ビルド済み `dist/cli.js` が存在すること(テストは必要ならビルドを先行実行)
+- 前提: ビルド済み `dist/cli.js` が存在すること — U1 提供の遅延ビルドヘルパー `tests/lib/setup-lazy-build.ts` の `ensureSetupCliBuilt()` で先行実行する(U1 infrastructure-design で確定した共有契約。U4 が独自のビルドロジックを持たない)
 
 ## ワークフロー 2: publish 手順書(FR-015 — docs 成果物の章立て)
 

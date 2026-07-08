@@ -11,3 +11,4 @@
 | FsRead/FsWrite/TmpWrite ポート | U1(型)/ cli(配線) | U2 applier(FsWrite)、U3(同) |
 | OS 一時領域の清掃機構(SIGINT/SIGTERM) | U1 | 全経路 |
 | CI 配線(tsconfig/lint スコープ) | U1(初回 PR) | U2〜U4 のテストすべて |
+| 遅延ビルドヘルパー `tests/lib/setup-lazy-build.ts`(`ensureSetupCliBuilt()` — dist/cli.js 不在時のみ bun build、冪等。契約詳細は cicd-pipeline.md) | U1(FR-002 スモーク E2E で初出) | U4 の pack 契約テスト |

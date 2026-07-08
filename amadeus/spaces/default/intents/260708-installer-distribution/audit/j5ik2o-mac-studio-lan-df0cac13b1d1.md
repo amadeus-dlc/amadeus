@@ -8934,3 +8934,33 @@
 **Timestamp**: 2026-07-08T11:06:13Z
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-08T11:06:44Z
+**Event**: WORKFLOW_PARKED
+**Stage**: infrastructure-design
+**Timestamp**: 2026-07-08T11:06:44Z
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-08T11:08:23Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-08T11:08:33Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: infd-review-u1-i2
+**Agent ID**: ainfd-review-u1-i2-eec777e133a3e45a
+**Message**: team-lead へ判定を送付しました。要約は以下の通りです。\n\n**判定: NOT-READY**\n\n- 指摘1(tsconfig 再帰グロブ): ✅ 修正確認済み。実リポジトリの root `tsconfig.json` と突き合わせても整合していました。\n- 指摘2(出典欠落): ❌ 誤った出典が追加されただけで実質未解決。`cicd-pipeline.md` は NFR-006 の出典を
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-08T11:09:52Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-08T11:09:52Z
+
+---
