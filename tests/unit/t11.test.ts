@@ -116,12 +116,12 @@ const STATE_JUMPED = join(FIXTURES_DIR, "state-jumped.md");
 
 describe("t11 amadeus-statusline hook (migrated from t11-hook-statusline.sh, plan 62)", () => {
   // --- .sh Test 1: ready with no state file ---
-  test("1: shows [AIDLC] ready when no state file", () => {
+  test("1: shows [Amadeus-DLC] ready when no state file", () => {
     const p = proj();
     // create_test_project makes amadeus-docs/ but no state file (the .sh rm -f's it).
     const r = runHook(stdinFor(p));
-    // assert_eq "$OUTPUT" "[AIDLC] ready" — exact match on the trimmed line.
-    expect(r.out.trim()).toBe("[AIDLC] ready");
+    // assert_eq "$OUTPUT" "[Amadeus-DLC] ready" — exact match on the trimmed line.
+    expect(r.out.trim()).toBe("[Amadeus-DLC] ready");
   });
 
   // --- .sh Test 2: shows IDEATION phase ---
@@ -155,15 +155,15 @@ describe("t11 amadeus-statusline hook (migrated from t11-hook-statusline.sh, pla
     expect(runHook(stdinFor(p)).out).toContain("2/7");
   });
 
-  // --- .sh Test 7: output starts with [AIDLC] prefix ---
-  test("7: output starts with [AIDLC] prefix", () => {
+  // --- .sh Test 7: output starts with [Amadeus-DLC] prefix ---
+  test("7: output starts with [Amadeus-DLC] prefix", () => {
     const p = proj();
     seedStateFile(p, MID_IDEATION);
-    expect(runHook(stdinFor(p)).out).toMatch(/^\[AIDLC\]/);
+    expect(runHook(stdinFor(p)).out).toMatch(/^\[Amadeus-DLC\]/);
   });
 
   // --- .sh Test 8: ready when phase empty (trailing space after colon) ---
-  test("8: shows [AIDLC] ready when Lifecycle Phase value is empty", () => {
+  test("8: shows [Amadeus-DLC] ready when Lifecycle Phase value is empty", () => {
     const p = proj();
     writeState(
       p,
@@ -175,7 +175,7 @@ describe("t11 amadeus-statusline hook (migrated from t11-hook-statusline.sh, pla
         "",
       ].join("\n"),
     );
-    expect(runHook(stdinFor(p)).out.trim()).toBe("[AIDLC] ready");
+    expect(runHook(stdinFor(p)).out.trim()).toBe("[Amadeus-DLC] ready");
   });
 
   // --- .sh Test 9: all-SKIP phase shows no progress fraction ---

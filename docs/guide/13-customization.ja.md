@@ -123,7 +123,7 @@ cp .claude/settings.local.json.example .claude/settings.local.json
 **Claude Code** では、この実装はワークフロー進捗を示すステータスラインをターミナルのステータスバーに表示します。Kiro と Codex にはステータスラインがありません。ワークフローの位置を `/amadeus --status`(Kiro)や `update_plan` タスク進捗アイテム + `$amadeus --status`(Codex)を通して表面化します。
 
 ```
-[AIDLC] IDEATION [▓▓▓▓▓░░░░░] 4/7 > Intent Capture -- Product Agent
+[Amadeus-DLC] IDEATION [▓▓▓▓▓░░░░░] 4/7 > Intent Capture -- Product Agent
 ```
 
 これは順に、現在のフェーズ、フェーズ進捗(バーと比率 — どちらも現在のフェーズにスコープされる)、ステージの表示名、リードエージェントを示します。コンテキスト使用量は右側に表示され(例: `ctx:15%`)、残りのコンテキストが減るにつれて色分けされます。

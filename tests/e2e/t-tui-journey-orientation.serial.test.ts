@@ -17,7 +17,7 @@
 //     test closes exactly that gap, live, in tmux.
 //   - The sibling render test t-tui-render-statusline.serial seeds a SINGLE-space
 //     fixture (setupTuiProject with no secondSpace), so its statusline never
-//     paints the `<space> ·` segment — it matches `[AIDLC].*IDEATION` loosely and
+//     paints the `<space> ·` segment — it matches `[Amadeus-DLC].*IDEATION` loosely and
 //     asserts the bar/counter/stage, never the orientation prefix. So the
 //     >1-space orientation paint is genuinely net-new here, riding the new
 //     `secondSpace` fixture variant (tui-fixtures.ts).
@@ -129,7 +129,7 @@ function captureOrientationStatusline(): string {
   const sandbox = setupTuiProject({ withState: "state-mid-ideation.md", secondSpace: true });
   try {
     // The statusLine key is what wires amadeus-statusline.ts into the TUI; a copy
-    // that dropped it would render no [AIDLC] line at all.
+    // that dropped it would render no [Amadeus-DLC] line at all.
     expect(readFileSync(join(sandbox, ".claude", "settings.json"), "utf8")).toContain(
       '"statusLine"',
     );

@@ -39,7 +39,7 @@
 //                                   try/wrapped, malformed -> source="malformed";
 //                                   :88-93 emit failure non-fatal
 //   hooks/amadeus-statusline.ts     :193 TTY -> "" stdin; :195-199 malformed JSON
-//                                   swallowed; :208-211 no state -> "[AIDLC] ready"
+//                                   swallowed; :208-211 no state -> "[Amadeus-DLC] ready"
 //   hooks/amadeus-log-subagent.ts   :28 TTY exit0; :34-37 bad-JSON exit0;
 //                                   :40-42 agent_* ?? defaults; :45 no-audit exit0;
 //                                   :53-58 emit failure -> recordHookDrop + exit0
@@ -365,10 +365,10 @@ describe("t13 hook input robustness (mechanism cli — spawned hooks + adversari
     const r = fireStdin(HOOK_STATUS, JSON.stringify({ workspace: { project_dir: spaced } }), spaced);
     expect(r.exitCode).toBe(0);
     // The state under the spaced dir resolved — the rendered line carries the
-    // phase, not the bare "[AIDLC] ready" no-state fallback. (The per-intent
-    // layout prefixes the intent slug: "[AIDLC] <slug> · IDEATION …".)
+    // phase, not the bare "[Amadeus-DLC] ready" no-state fallback. (The per-intent
+    // layout prefixes the intent slug: "[Amadeus-DLC] <slug> · IDEATION …".)
     expect(r.stdout).toContain("IDEATION");
-    expect(r.stdout.trim()).not.toBe("[AIDLC] ready");
+    expect(r.stdout.trim()).not.toBe("[Amadeus-DLC] ready");
   });
 
   test("log-subagent: handles a project dir with spaces (exit 0) [.sh test 10]", () => {
@@ -414,7 +414,7 @@ describe("t13 hook input robustness (mechanism cli — spawned hooks + adversari
     const r = fireStdin(HOOK_STATUS, "{}", proj);
     expect(r.exitCode).toBe(0);
     // No project_dir in the JSON, no state file under proj -> ready fallback.
-    expect(r.stdout).toContain("[AIDLC] ready");
+    expect(r.stdout).toContain("[Amadeus-DLC] ready");
   });
 
   // ===========================================================================

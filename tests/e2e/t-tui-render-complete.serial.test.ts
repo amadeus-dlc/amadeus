@@ -6,7 +6,7 @@
 //
 // The branch under test (amadeus-statusline.ts ~:230): when the seeded state's
 // Status is "Completed"/"Complete" the hook prints
-//   "[AIDLC] COMPLETE <completeBar>"
+//   "[Amadeus-DLC] COMPLETE <completeBar>"
 // where completeBar is the natural phase bar when it resolves, else a forced full
 // bar. The completed fixture has OPERATION fully [x] (7/7), so progressBar(7,7)
 // fills all 10 cells -> "[▓▓▓▓▓▓▓▓▓▓]". Assert the EXACT sentinel + full grid the
@@ -87,7 +87,7 @@ const ABSENT_REASON = absentReason();
 
 describe("t-tui-render statusline COMPLETE sentinel (seeded completed, no tokens)", () => {
   test.skipIf(ABSENT_REASON !== null)(
-    `statusline-complete paints "[AIDLC] COMPLETE [▓▓▓▓▓▓▓▓▓▓]"${ABSENT_REASON ? ` — SKIP: ${ABSENT_REASON}` : ""}`,
+    `statusline-complete paints "[Amadeus-DLC] COMPLETE [▓▓▓▓▓▓▓▓▓▓]"${ABSENT_REASON ? ` — SKIP: ${ABSENT_REASON}` : ""}`,
     () => {
       const session = `amadeus_tui_render_complete_${process.pid}`;
       // setupTuiProject copies the distributable + sibling amadeus/ memory shell,
@@ -97,7 +97,7 @@ describe("t-tui-render statusline COMPLETE sentinel (seeded completed, no tokens
       const sandbox = setupTuiProject({ withState: "state-completed.md" });
       try {
         // The statusLine key is what wires amadeus-statusline.ts into the TUI; a copy
-        // that dropped it would render no [AIDLC] line at all.
+        // that dropped it would render no [Amadeus-DLC] line at all.
         expect(
           readFileSync(join(sandbox, ".claude", "settings.json"), "utf8"),
         ).toContain('"statusLine"');
@@ -128,7 +128,7 @@ describe("t-tui-render statusline COMPLETE sentinel (seeded completed, no tokens
         }
 
         // --- wait for the COMPLETE sentinel + assert the full grid ------------
-        // P9: the orientation prefix ("<intent-slug> · ") sits between [AIDLC]
+        // P9: the orientation prefix ("<intent-slug> · ") sits between [Amadeus-DLC]
         // and COMPLETE, so match with .* rather than a contiguous gap.
         const sawMarker = waitFor(session, "\\[AIDLC\\].*COMPLETE", 45000, 1000);
         const pane = drive(["capture", "--session", session]).stdout;

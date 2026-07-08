@@ -41,9 +41,9 @@
 //     #14 completed < 30                       -> `- **Completed**: N` with N < 30
 //     #15 audit log substantial               -> audit.md > 200 bytes (+ WORKSPACE_INITIALISED)
 //   RENDER (the tui-only value-add the headless .sh / SDK path is blind to):
-//     - the captured pane painted `[AIDLC] INCEPTION` (the workshop went straight
+//     - the captured pane painted `[Amadeus-DLC] INCEPTION` (the workshop went straight
 //       to Inception — Ideation was skipped, visible to the user) and NEVER
-//       `[AIDLC] IDEATION`. This is the rendered proof of the skip the .sh could
+//       `[Amadeus-DLC] IDEATION`. This is the rendered proof of the skip the .sh could
 //       only infer from state checkboxes.
 //     - an AskUserQuestion menu painted at least once (the workshop runs gates —
 //       scope-mapping describes it as "Facilitated group session with mandatory
@@ -252,7 +252,7 @@ describe("t-tui-t58 workshop-scope (skips Ideation, runs Inception+ at Standard/
         if (waitFor(session, "Bypass Permissions mode", 15000, 600)) {
           drive(["send", "--session", session, "--keys", "2"]);
         }
-        // Fresh project -> the no-workflow `[AIDLC] ready` baseline.
+        // Fresh project -> the no-workflow `[Amadeus-DLC] ready` baseline.
         expect(waitFor(session, "\\[AIDLC\\].*ready", 45000, 800)).toBe(true);
 
         // --- submit the workshop command ----------------------------------------
@@ -405,8 +405,8 @@ describe("t-tui-t58 workshop-scope (skips Ideation, runs Inception+ at Standard/
         expect(auditMd.slice(wiIdx, wiIdx + 500)).toMatch(/Scope.*:\s*workshop/);
 
         // ===================== RENDER (the tui-only value-add) ===================
-        // The captured pane painted `[AIDLC] INCEPTION` (the workshop went straight
-        // to Inception because Ideation was skipped) and NEVER `[AIDLC] IDEATION` —
+        // The captured pane painted `[Amadeus-DLC] INCEPTION` (the workshop went straight
+        // to Inception because Ideation was skipped) and NEVER `[Amadeus-DLC] IDEATION` —
         // the rendered proof of the skip the headless .sh / SDK path cannot see.
         expect(sawInception).toBe(true);
         expect(sawIdeation).toBe(false);

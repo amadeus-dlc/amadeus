@@ -31,7 +31,7 @@
 // (there is no enumerated `harness-instrument` unit class; the claim documents
 // the calibration intent without inflating any covered count). The six
 // `render-surface:*` statusline units the registry now enumerates are NOT
-// claimed by these tests: as written, the tui tests assert the base `[AIDLC]
+// claimed by these tests: as written, the tui tests assert the base `[Amadeus-DLC]
 // ready` render, the live phase token, and the AUQ menu strip/footer — none is a
 // glyph-level assertion of a specific statusline branch (phase bar / counter /
 // stage name / colour / align / COMPLETE). Per the coverage-plan §4.2 "no

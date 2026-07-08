@@ -130,7 +130,7 @@ function captureWorkflowStatusline(): string {
   const sandbox = setupTuiProject({ withState: "state-mid-ideation.md" });
   try {
     // The statusLine key is what wires amadeus-statusline.ts into the TUI; a copy
-    // that dropped it would render no [AIDLC] line at all.
+    // that dropped it would render no [Amadeus-DLC] line at all.
     expect(
       readFileSync(join(sandbox, ".claude", "settings.json"), "utf8"),
     ).toContain('"statusLine"');
@@ -165,12 +165,12 @@ function captureWorkflowStatusline(): string {
 
     // --- wait for the WORKFLOW statusline (IDEATION, not "ready") -----------
     // P9: the statusline now carries the orientation prefix ("<intent-slug> · ")
-    // between [AIDLC] and the phase, so match with .* rather than a contiguous gap.
+    // between [Amadeus-DLC] and the phase, so match with .* rather than a contiguous gap.
     const sawMarker = waitFor(session, "\\[AIDLC\\].*IDEATION", 45000, 1000);
     const pane = drive(["capture", "--session", session]).stdout;
     if (!sawMarker) {
       throw new Error(
-        `workflow statusline "[AIDLC] IDEATION" never appeared in the TUI.\n` +
+        `workflow statusline "[Amadeus-DLC] IDEATION" never appeared in the TUI.\n` +
           `---- last pane ----\n${pane}\n-------------------`,
       );
     }

@@ -26,7 +26,7 @@
 //     AMADEUS_DEFAULT_SCOPE"; no intent is born and no per-intent state is written.
 //
 // The render value-add the headless .sh (and the SDK path) cannot see: the
-// captured pane shows the workflow statusline left `[AIDLC] ready` and painted a
+// captured pane shows the workflow statusline left `[Amadeus-DLC] ready` and painted a
 // live phase bar — the landed env-scoped workflow as a USER sees it — for the two
 // success cases, and the literal error text for the error case.
 //
@@ -133,7 +133,7 @@ function waitFor(session: string, pattern: string, timeoutMs: number, stableMs: 
 
 // Poll an ON-DISK predicate until true or timeout — the deterministic completion
 // signal for a fresh-workflow start. We do NOT gate on the statusline flipping to
-// a phase: that flip lags the actual work (the statusline paints `[AIDLC] ready`
+// a phase: that flip lags the actual work (the statusline paints `[Amadeus-DLC] ready`
 // until state-init WRITES amadeus-state.md, and the pre-state init reasoning can run
 // minutes — observed live, the `feature` override took ~150s to flip while a 240s
 // statusline-wait flaked). The state file landing with the Scope field is the
@@ -234,7 +234,7 @@ function setSettingsEnvScope(projectDir: string, value: string): void {
 
 // Launch the claude TUI in a fresh project and clear the two startup modals.
 // Shared launch sequence for all three cases (each gets its own session +
-// project so they never share state). Returns once the no-workflow `[AIDLC] ready`
+// project so they never share state). Returns once the no-workflow `[Amadeus-DLC] ready`
 // statusline is up (the pre-prompt baseline every case starts from).
 function launchReady(session: string, projectDir: string): void {
   expect(drive([

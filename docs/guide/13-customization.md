@@ -123,7 +123,7 @@ You can override depth at any approval gate by requesting a different level.
 On **Claude Code**, this implementation displays a statusline in the terminal status bar showing workflow progress. Kiro and Codex have no statusline — they surface workflow position through `/amadeus --status` (Kiro) and the `update_plan` task-progress item plus `$amadeus --status` (Codex):
 
 ```
-[AIDLC] IDEATION [▓▓▓▓▓░░░░░] 4/7 > Intent Capture -- Product Agent
+[Amadeus-DLC] IDEATION [▓▓▓▓▓░░░░░] 4/7 > Intent Capture -- Product Agent
 ```
 
 This shows, in order: current phase, phase progress (as a bar and a ratio — both scoped to the current phase), stage display name, and lead agent. Context usage appears on the right (e.g., `ctx:15%`), color-coded as the remaining context drops.

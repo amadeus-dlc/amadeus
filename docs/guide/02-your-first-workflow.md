@@ -76,7 +76,7 @@ After Initialization, the workflow enters Ideation. Each stage from here on runs
 The status line at the bottom of your terminal updates:
 
 ```
-[AIDLC] IDEATION > Intent Capture [▓▓▓▓▓░░░░░] 4/7 -- product
+[Amadeus-DLC] IDEATION > Intent Capture [▓▓▓▓▓░░░░░] 4/7 -- product
 ```
 
 This shows: current phase, stage display name, phase progress bar, phase progress ratio, and lead agent. The bar and the ratio share the same scope — both count `[x]` stages within the current phase, so the bar advances every time the ratio does. Remaining context (`ctx:N%`) is always shown on the right, color-coded as it drops.
@@ -260,7 +260,7 @@ amadeus/spaces/<space>/intents/<YYMMDD>-<label>/
 Throughout the workflow, the terminal status line shows your current position:
 
 ```
-[AIDLC] IDEATION > Intent Capture [▓▓▓▓▓░░░░░] 4/7 -- product
+[Amadeus-DLC] IDEATION > Intent Capture [▓▓▓▓▓░░░░░] 4/7 -- product
 ```
 
 | Segment | Meaning |

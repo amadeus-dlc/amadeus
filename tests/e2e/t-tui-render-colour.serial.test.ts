@@ -162,7 +162,7 @@ describe("t-tui-render statusline COLOUR branch (live turn populates ctx:%, macO
         if (waitFor(session, "Bypass Permissions mode", 15000, 600)) {
           drive(["send", "--session", session, "--keys", "2"]);
         }
-        // P9: orientation prefix ("<intent-slug> · ") sits between [AIDLC] and the
+        // P9: orientation prefix ("<intent-slug> · ") sits between [Amadeus-DLC] and the
         // phase, so match with .* rather than a contiguous gap.
         expect(waitFor(session, "\\[AIDLC\\].*IDEATION", 45000, 1000)).toBe(true);
 

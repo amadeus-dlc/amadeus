@@ -514,7 +514,7 @@ const RENDER_SURFACE_ANCHORS: ReadonlyArray<{ id: string; anchor: string }> = [
   // The right-aligned model/ctx side, padded to terminal width by printLine().
   { id: "statusline-align", anchor: "function printLine(" },
   // The COMPLETE sentinel branch (full bar at workflow completion). The literal
-  // gained the orientation prefix in P8 ([AIDLC] <prefix>COMPLETE <bar>), so the
+  // gained the orientation prefix in P8 ([Amadeus-DLC] <prefix>COMPLETE <bar>), so the
   // anchor is the prefix-adjacent "}COMPLETE " token unique to this branch (the
   // `}` closes the `${prefix}` interpolation in the render template).
   { id: "statusline-complete", anchor: "}COMPLETE " },

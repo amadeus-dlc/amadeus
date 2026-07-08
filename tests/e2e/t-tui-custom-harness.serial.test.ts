@@ -301,13 +301,13 @@ describe("t-tui-custom-harness (the {sdk,tui} two-driver journey)", () => {
           drive(["send", "--session", session, "--keys", "2"]);
         }
         // The custom stage is in INCEPTION — wait for the workflow statusline.
-        // P9: the orientation prefix ("<intent-slug> · ") sits between [AIDLC] and
+        // P9: the orientation prefix ("<intent-slug> · ") sits between [Amadeus-DLC] and
         // the phase, so match with .* rather than a contiguous gap.
         const sawMarker = waitFor(session, "\\[AIDLC\\].*INCEPTION", 45000, 1000);
         const pane = drive(["capture", "--session", session]).stdout;
         if (!sawMarker) {
           throw new Error(
-            `workflow statusline "[AIDLC] INCEPTION" never painted.\n---- pane ----\n${pane}\n--------------`,
+            `workflow statusline "[Amadeus-DLC] INCEPTION" never painted.\n---- pane ----\n${pane}\n--------------`,
           );
         }
         // THE ASSERTION: the raw custom slug renders after the "> " stage marker.
