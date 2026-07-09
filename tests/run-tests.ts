@@ -23,12 +23,14 @@ import { basename, delimiter, dirname, join, relative, resolve } from "node:path
 import { fileURLToPath } from "node:url";
 import { buildMeta, renderMeta, type MetaCounts } from "./lib/bun-junit-to-meta.ts";
 import {
+  beginObservation,
   buildMeasuredRecord,
   buildTestSizeReport,
   classifyTestSize,
+  finishObservation,
   parseSizeAnnotation,
   SIZE_VALUES,
-  type SizeObservationBackend,
+  type SizeObservationSession,
   type TestSize,
   wallClockBackend,
 } from "./lib/test-size.ts";
@@ -63,15 +65,20 @@ interface ResultRow {
 }
 
 // Dynamic test-size measurement (#684 Phase D / #699). Collects each executed
-// file's measured wall-clock duration THROUGH an observation backend seam so the
-// post-run report can derive per-file size floors and wall-clock drift. Passed
-// as an explicit argument from main() (not a module global) so the collection
-// path stays an isolatable seam. Advisory only — nothing here affects a file's
-// STATUS or the runner's exit code.
+// file's measured duration THROUGH an observation session (begin before spawn,
+// finish after exit) so the post-run report can derive per-file size floors and
+// wall-clock drift. Passed as an explicit argument from main() (not a module
+// global) so the collection path stays an isolatable seam. Advisory only —
+// nothing here affects a file's STATUS or the runner's exit code.
 interface SizeCollector {
-  readonly backend: SizeObservationBackend;
+  readonly session: SizeObservationSession;
   // Absolute test-file path → measured duration in seconds.
   readonly durations: Map<string, number>;
+}
+
+// stderr note sink for the size-observation isolation wrappers.
+function sizeNote(msg: string): void {
+  process.stderr.write(`NOTE: ${msg}\n`);
 }
 
 function usage(): string {
@@ -755,6 +762,9 @@ async function runBunTestFile(
     process.stdout.write(`  driver traces: ${displayLogDirPath(logDir)}/{sdk,tui,kiro-acp}-drive-*.ndjson\n`);
   }
 
+  // Open the observation window just before spawning the test process (#699).
+  beginObservation(collector.session, file, sizeNote);
+
   const run = await runSpawnCapture(
     BUN,
     [
@@ -787,17 +797,19 @@ async function runBunTestFile(
   if (meta.duration === "0") meta.duration = String(Math.max(0, (Date.now() - start) / 1000));
   writeMeta(name, meta);
 
-  // Record this file's measured wall-clock duration through the observation seam
-  // for the post-run dynamic-size report (#699). meta.duration is a string
-  // (renderMeta shape); parse it and drop non-finite/missing values with a note
-  // rather than polluting the report. Best-effort — never affects STATUS/exit.
-  const measuredSeconds = Number(meta.duration);
-  if (Number.isFinite(measuredSeconds)) {
-    const observation = collector.backend.observe(file, measuredSeconds);
-    collector.durations.set(file, observation.durationSeconds);
-  } else {
-    process.stderr.write(`NOTE: unparseable duration for ${base} (${meta.duration}); excluded from size report\n`);
-  }
+  // Close the observation window for the post-run dynamic-size report (#699).
+  // meta.duration is a string (renderMeta shape); parse it and hand the session
+  // a finite JUnit value or null (→ the backend's fallback measurement). The
+  // isolation wrapper degrades any backend fault to a note + null, so this can
+  // never affect STATUS or the runner's exit contract.
+  const junit = Number(meta.duration);
+  const measuredSeconds = finishObservation(
+    collector.session,
+    file,
+    Number.isFinite(junit) ? junit : null,
+    sizeNote,
+  );
+  if (measuredSeconds !== null) collector.durations.set(file, measuredSeconds);
 
   const status = meta.status;
   const body = run.output;
@@ -1111,7 +1123,10 @@ async function main(): Promise<number> {
 
   // Dynamic-size collector (#699), threaded through every file-running path so
   // the post-run report reflects exactly the files that executed this run.
-  const sizeCollector: SizeCollector = { backend: wallClockBackend, durations: new Map() };
+  const sizeCollector: SizeCollector = {
+    session: wallClockBackend.openSession(),
+    durations: new Map(),
+  };
 
   if (args.runSmoke) await runTier("smoke", "Smoke Tests (structural)", sizeCollector);
   if (args.runSmoke && failedFiles > 0) {
