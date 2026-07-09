@@ -602,18 +602,28 @@ function checkHarness(name: string): string[] {
       else if (!readFileSync(committedPath).equals(readFileSync(builtPath)))
         problems.push(`DIFFERS: ${name}/${rel}`);
     }
-    // Orphan scan over out-of-harness dirs the build owns (codex emit's
-    // .agents/; the method tree at amadeus/). committedEmitSet holds every
-    // out-of-harness file the build produced (emit output + the memory tree), so
-    // a committed file under these roots that the build DIDN'T produce is a
-    // stale orphan — e.g. a removed phase rule still committed under
-    // dist/<name>/amadeus/spaces/default/memory/phases/.
-    for (const sub of [".agents", "amadeus"]) {
-      const dir = join(committedDistRoot, sub);
-      if (!existsSync(dir)) continue;
-      for (const f of walk(dir)) {
+    // Whole-tree orphan scan over dist/<name>/: EVERY committed file must belong
+    // to the build's expected output set, else it's a stale orphan. Expected set
+    // = harness-dir subtree (its own orphan pass above, with authoredExempt) +
+    // declared projectRoot outputs (harnessFiles + onboarding) + emit-written set
+    // (committedEmitSet: emit output + the relocated method tree). Walking the
+    // WHOLE tree — not the old hardcoded [".agents","amadeus"] roots — catches a
+    // stale file sitting directly under dist/<name>/ or in an undeclared
+    // subdirectory (typically a removed/renamed projectRoot output), which the
+    // subtree- and root-specific scans above miss (#701).
+    const expectedRoot = new Set<string>(committedEmitSet);
+    for (const { dst, projectRoot } of m.harnessFiles) {
+      if (projectRoot) expectedRoot.add(relative(committedDistRoot, join(committedDistRoot, dst)));
+    }
+    if (m.onboarding?.projectRoot)
+      expectedRoot.add(relative(committedDistRoot, join(committedDistRoot, m.onboarding.dst)));
+    const harnessSubtreePrefix = m.harnessDir + sep;
+    if (existsSync(committedDistRoot)) {
+      for (const f of walk(committedDistRoot)) {
         const rel = relative(committedDistRoot, f);
-        if (!committedEmitSet.has(rel)) problems.push(`ORPHAN in dist: ${name}/${rel}`);
+        if (rel.startsWith(harnessSubtreePrefix)) continue; // covered by the harness-dir orphan pass
+        if (expectedRoot.has(rel)) continue;
+        problems.push(`ORPHAN in dist: ${name}/${rel}`);
       }
     }
   } finally {
