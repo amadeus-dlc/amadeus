@@ -47,5 +47,12 @@
     "dirName": "260709-bug-zero-batch",
     "scope": "bugfix",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019f46cc-d639-7b7e-8db3-4a5f10229292",
+    "slug": "integrity-batch",
+    "dirName": "260709-integrity-batch",
+    "scope": "bugfix",
+    "status": "in-flight"
   }
 ]
