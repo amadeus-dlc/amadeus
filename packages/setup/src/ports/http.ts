@@ -24,7 +24,12 @@ export function createHttp(options: HttpOptions): Http {
       const url = new URL(apiPath, API_BASE);
       const checked = await fetchChecked(url, options.apiTimeoutMs);
       if (checked.type === "err") return checked;
-      return Result.ok(await checked.value.json());
+      try {
+        return Result.ok(await checked.value.json());
+      } catch (cause) {
+        const detail = cause instanceof Error ? cause.message : String(cause);
+        return Result.err(FetchError.payloadInvalid(`response body was not valid JSON: ${detail}`));
+      }
     },
 
     async downloadArchive(url: URL): Promise<Result<ReadableStream<Uint8Array>, FetchError>> {
