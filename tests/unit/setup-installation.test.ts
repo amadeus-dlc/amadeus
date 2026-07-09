@@ -59,10 +59,48 @@ describe("Installation.detect", () => {
       });
       const written = await manifestIo.write(dir, manifest);
       if (written.type === "err") throw new Error("fixture setup failed to write manifest");
+      // FR-656-2 fixture: settings.json is manifest-listed as required but never
+      // written to disk. Written separately below since this happy-path test
+      // asserts the all-present case; the missing-file case has its own test.
+      writeFileSync(join(dir, "settings.json"), "{}\n");
 
       const installation = await Installation.detect(dir, manifestIo);
       expect(installation.kind).toBe("manifested");
       if (installation.kind === "manifested") expect(installation.manifest.sourceTag).toBe("v1.0.0");
+    });
+  });
+
+  // FR-656-2 (issue #656): a readable manifest alone is not proof the
+  // installation is intact — verify each manifest-listed required file still
+  // exists on disk. If one is missing, the accurate classification is
+  // 'partial', not an unconditional 'manifested'.
+  test("FR-656-2: a readable manifest whose required file is missing on disk is kind 'partial'", async () => {
+    await withTempDir(async (dir) => {
+      const manifestIo = createManifestIo(createFsRead(), createFsWrite());
+      const filesResult = ManifestFiles.fromEntries([{ path: "settings.json", class: "owned", required: true, md5: "aaa" }]);
+      if (filesResult.type === "err") throw new Error("fixture setup failed");
+      const semverResult = SemVer.parse("1.0.0");
+      if (semverResult.type === "err") throw new Error("fixture setup failed");
+      const fakePayload: ExtractedPayload = {
+        version: ResolvedVersion.fromRelease(semverResult.value),
+        harnessRoot: () => {
+          throw new Error("not used in this test");
+        },
+        availableHarnesses: () => HarnessName.all,
+      };
+      const manifest = Manifest.build(fakePayload, filesResult.value, {
+        installerPackageVersion: "0.1.0",
+        harness: claudeHarness(),
+        installStartedAt: "2026-07-08T12:00:00.000Z",
+      });
+      const written = await manifestIo.write(dir, manifest);
+      if (written.type === "err") throw new Error("fixture setup failed to write manifest");
+      // Deliberately do NOT write settings.json to disk: the manifest lists it
+      // as required, but the file itself is gone.
+
+      const installation = await Installation.detect(dir, manifestIo);
+      expect(installation.kind).toBe("partial");
+      if (installation.kind === "partial") expect(installation.missing).toContain("settings.json");
     });
   });
 
@@ -95,6 +133,22 @@ describe("Installation.detect", () => {
       const installation = await Installation.detect(dir, manifestIo);
       expect(installation.kind).toBe("none");
       expect(installation.admitsInstall(false).type).toBe("proceed"); // install can proceed without --force
+    });
+  });
+
+  // FR-656-1 (issue #656): an anchor-less legacy layout recognizable only by
+  // its owned-file naming (loose amadeus-* entries) must surface as
+  // 'manual-or-unknown' evidence, not 'partial' — otherwise LegacyLayout
+  // condition (b) in upgrade.ts never fires and the unsupported layout is
+  // instead treated as force-continuable.
+  test("FR-656-1: an engineDir with only loose amadeus-* entries (no anchors) is kind 'manual-or-unknown'", async () => {
+    await withTempDir(async (dir) => {
+      mkdirSync(join(dir, ".claude"), { recursive: true });
+      // Legacy owned-file naming, no tools/ or amadeus-common/ anchor present.
+      writeFileSync(join(dir, ".claude", "amadeus-runtime.ts"), "// legacy owned file\n");
+      const manifestIo = createManifestIo(createFsRead(), createFsWrite());
+      const installation = await Installation.detect(dir, manifestIo);
+      expect(installation.kind).toBe("manual-or-unknown");
     });
   });
 });

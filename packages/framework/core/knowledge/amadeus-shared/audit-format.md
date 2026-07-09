@@ -8,7 +8,7 @@
 
 All event names follow `SUBJECT_PAST_VERB` — every event answers "what happened?"
 
-## Event Registry (70 events, 18 categories)
+## Event Registry (71 events, 18 categories)
 
 ### Workflow Lifecycle (4 events)
 
@@ -75,6 +75,7 @@ All event names follow `SUBJECT_PAST_VERB` — every event answers "what happene
 | `GATE_APPROVED` | Human approved at gate | Timestamp, Stage, User Input | `tools/amadeus-state.ts approve` |
 | `GATE_REJECTED` | Human requested changes | Timestamp, Stage, Feedback | `tools/amadeus-state.ts reject` |
 | `QUESTION_ANSWERED` | Question answered by user | Timestamp, Stage, Details | `tools/amadeus-log.ts answer` |
+| `DELEGATED_APPROVAL` | Leader session records a human-grounded approval into a remote conductor intent's audit dir (agent-team topology, #671) | Timestamp, Stage, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts, User Input | `tools/amadeus-state.ts delegate-approval` |
 
 ### Artifact Events (3 events — hook-emitted)
 
@@ -105,7 +106,7 @@ All event names follow `SUBJECT_PAST_VERB` — every event answers "what happene
 
 ### Construction Bolt Events (4 events)
 
-Emitted only during Phase 3 (Construction). A Bolt is one execution of stages 3.1–3.5 for a Unit or small group of dependency-linked Units. See `stage-protocol.md` Glossary.
+Emitted only during Phase 3 (Construction). A Bolt is one execution of stages 3.1–3.5 for a Unit or small group of dependency-linked Units. See `stage-protocol.md` Glossary. Note: this deviates intentionally from AI-DLC v1, where a Bolt is a sprint-like time-box (a Unit of Work spans multiple Bolts). This implementation repurposes "Bolt" to mean a deployable slice that wraps one or more Units of Work.
 
 | Event | When | Required Fields | Emitter |
 |-------|------|-----------------|---------|
