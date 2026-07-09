@@ -706,6 +706,30 @@ function isGitRepo(pd: string): boolean {
   return git(pd, ["rev-parse", "--is-inside-work-tree"])?.trim() === "true";
 }
 
+// This intent's bolt slugs, read from the first-class `Bolt Refs` state field.
+// [] on any read/parse problem (fail-safe: the caller then finds no bolt work).
+function intentBoltSlugs(pd: string): string[] {
+  const rec = recordDir(pd);
+  if (rec === null) return [];
+  const statePath = join(rec, "amadeus-state.md");
+  if (!existsSync(statePath)) return [];
+  const refs = getField(readFileSync(statePath, "utf-8"), "Bolt Refs");
+  return refs === null ? [] : parseRefsList(refs);
+}
+
+// True when local branch `branch` adds a non-doc path relative to its merge-base
+// with HEAD - i.e. the branch's OWN work carries source, not shared history.
+// False (never throws) when the ref is absent or any git probe fails.
+function boltBranchHasSourceWork(pd: string, branch: string): boolean {
+  const ref = `refs/heads/${branch}`;
+  if (git(pd, ["rev-parse", "--verify", "--quiet", ref]) === null) return false;
+  const mergeBase = git(pd, ["merge-base", "HEAD", branch]);
+  if (mergeBase === null) return false;
+  const diff = git(pd, ["diff", "--name-only", mergeBase.trim(), branch]);
+  if (diff === null) return false;
+  return diff.split("\n").some(isNonDocPath);
+}
+
 // Git-aware "did this workspace get real source work?" signal (issue #366
 // Update 3). Distinguishes "code produced this session" from a brownfield repo's
 // pre-existing src/ - which the bare filesystem check cannot. True when EITHER:
@@ -713,13 +737,31 @@ function isGitRepo(pd: string): boolean {
 //      (`git status --porcelain`), OR
 //   2. the last commit touched a non-doc path (`git diff --name-only HEAD~1 HEAD`)
 //      - so commit-then-approve (clean tree) still passes, closing Update 3's
-//      clean-working-tree false-block.
+//      clean-working-tree false-block, OR
+//   3. (issue #731) when the last commit is doc-only: a non-doc path exists in the
+//      net diff from the intent's birth commit (the commit that ADDED this intent's
+//      record `amadeus-state.md`) to HEAD. The conductor record-branch pattern
+//      lands code via an earlier merge commit, then stacks checkpoint/delegate doc
+//      commits on top, so the HEAD~1 window sees only docs; scanning the whole
+//      intent span recovers the merged code. The net diff excludes anything already
+//      present at intent birth, so a brownfield src/ committed before the intent is
+//      still (correctly) not counted, OR
+//   4. (issue #731 variant) when the last commit is doc-only AND the code is not on
+//      the record branch at all: this intent's code may live on an UNMERGED bolt
+//      branch (bolt worktree isolation - the record branch only ever carries doc
+//      commits). The intent's bolt slugs are read from the first-class `Bolt Refs`
+//      state field, each resolved to its `bolt-<slug>` (engine) / `bolt/<slug>`
+//      (record-branch) local branch; a branch counts when it adds a non-doc path
+//      relative to its merge-base with HEAD (its own work, not shared history).
+//      Scoped to THIS intent's Bolt Refs, so a stale bolt branch from another
+//      intent cannot false-pass a genuine "nothing built".
 // Returns null (NOT false) on any git error or a HEAD~1 miss (a single-commit or
 // 0-commit repo has no parent to diff), so the caller falls back to the
 // filesystem check rather than wrongly refusing a greenfield first commit. A
-// resolved HEAD~1 whose last commit is doc-only returns false (a real
-// "no recent code", e.g. a brownfield clean tree), so the guard still refuses.
-function gitHasSourceWork(pd: string): boolean | null {
+// resolved HEAD~1 whose last commit is doc-only, with no intent-scoped non-doc
+// path (no discoverable birth commit and no bolt-branch work), returns false (a
+// real "no recent code", e.g. a brownfield clean tree), so the guard still refuses.
+export function gitHasSourceWork(pd: string): boolean | null {
   const porcelain = git(pd, ["status", "--porcelain"]);
   if (porcelain === null) return null;
   // `XY <path>` per line; renames are `orig -> new` (take the new path).
@@ -739,9 +781,45 @@ function gitHasSourceWork(pd: string): boolean | null {
     for (const line of lastCommit.split("\n")) {
       if (isNonDocPath(line)) return true;
     }
-    // HEAD~1 resolved and the last commit was doc-only: a definitive "no recent
-    // code" (e.g. a brownfield repo whose src/ predates this session), so return
-    // false to refuse - the FS fallback would wrongly pass on the pre-existing
+    // HEAD~1 resolved and the last commit was doc-only. Before refusing, widen the
+    // window to the whole intent span (issue #731): find the birth commit that ADDED
+    // this intent's record amadeus-state.md, then look for a non-doc path in the net
+    // diff birth..HEAD. This recovers code that the record-branch pattern merged in
+    // before the trailing doc commits. Falls through when the birth commit is
+    // undiscoverable or the span holds no non-doc path.
+    const recordRel = relativeRecordDir(pd);
+    if (recordRel !== null) {
+      const births = git(pd, [
+        "log",
+        "--diff-filter=A",
+        "--format=%H",
+        "--",
+        `${recordRel}/amadeus-state.md`,
+      ]);
+      const birthLines = births?.split("\n").filter((l) => l.trim().length > 0) ?? [];
+      if (birthLines.length > 0) {
+        // git log is newest-first; the last Add is the earliest, i.e. intent birth.
+        const birth = birthLines[birthLines.length - 1];
+        const span = git(pd, ["diff", "--name-only", birth, "HEAD"]);
+        if (span !== null) {
+          for (const line of span.split("\n")) {
+            if (isNonDocPath(line)) return true;
+          }
+        }
+      }
+    }
+    // #731 variant: the code may never touch the record branch (it lives on an
+    // unmerged bolt branch). Probe each of THIS intent's bolt branches for non-doc
+    // work relative to its merge-base with HEAD. Both branch-naming conventions are
+    // tried: `bolt-<slug>` (engine worktree fork) and `bolt/<slug>` (record-branch).
+    for (const slug of intentBoltSlugs(pd)) {
+      for (const branch of [`bolt-${slug}`, `bolt/${slug}`]) {
+        if (boltBranchHasSourceWork(pd, branch)) return true;
+      }
+    }
+    // No recent code, no intent-span code, and no bolt-branch code: a definitive
+    // "no source work" (e.g. a brownfield repo whose src/ predates this intent), so
+    // return false to refuse - the FS fallback would wrongly pass on pre-existing
     // src/.
     return false;
   }
