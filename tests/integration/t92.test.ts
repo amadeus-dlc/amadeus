@@ -1154,10 +1154,26 @@ describe("t92 Group M: upstream-coverage --consumes resolution", () => {
 // the exit code this test pins (2 -> 1). The symlink makes the resolved tsc
 // deterministic and matches what a real consumer project (with its own
 // node_modules) gets from the #657 fix.
+//
+// #709: that exit-2 pin is only MEASURABLE when the repo-pinned tsc actually
+// resolves through the symlink above. In an uninstalled worktree (worktree
+// fan-out, no `bun install`) the symlink dangles, resolveTscLauncher falls
+// back to `bunx tsc` (a drifted TS -> exit-1 / tool-unavailable), and this
+// test goes falsely red. Precondition-skip it there with a visible reason;
+// when the pinned tsc is installed the pin stays strict (the #657 regression
+// detector must not weaken). existsSync follows the symlink chain, so it is
+// true only when the binary the fixture links to really exists on disk.
 // ============================================================
 
+const PINNED_TSC = join(REPO_ROOT, "node_modules", ".bin", process.platform === "win32" ? "tsc.cmd" : "tsc");
+const TEST44_SKIP_REASON = existsSync(PINNED_TSC)
+  ? null
+  : "repo-pinned tsc not installed (bun install not run) — pinned exit-2 classification is unmeasurable; see #709";
+
 describe("t92 Group N: type-check status gate (config-load failure)", () => {
-  test("44: tsc non-zero + zero parseable diagnostics -> Note=script-error: exit-2 (not false PASS)", () => {
+  test.skipIf(TEST44_SKIP_REASON !== null)(
+    `44: tsc non-zero + zero parseable diagnostics -> Note=script-error: exit-2 (not false PASS)${TEST44_SKIP_REASON ? ` — SKIP: ${TEST44_SKIP_REASON}` : ""}`,
+    () => {
     const proj = makeProj();
     const sub = "config-error-type-check";
     mkdirSync(join(proj, sub), { recursive: true });
