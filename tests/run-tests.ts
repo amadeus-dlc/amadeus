@@ -35,6 +35,8 @@ interface ParsedArgs {
   runUnit: boolean;
   runIntegration: boolean;
   runE2e: boolean;
+  coverage: boolean;
+  coverageDir: string;
   verbose: boolean;
   debug: boolean;
   filter: string;
@@ -67,6 +69,9 @@ PROFILE FLAGS (shortcuts -- map to test pyramid layers):
   --all           Same as --release
 
 OUTPUT MODIFIERS (combinable with any tier/profile):
+  --coverage      Generate an LCOV report while preserving the tiered runner
+  --coverage-dir DIR
+                  Directory for the combined LCOV report (default: coverage)
   --verbose       Write per-test logs to tests/logs/
   --debug         Implies --verbose; streams per-test output and writes SDK/TUI
                   driver traces to tests/logs/
@@ -101,6 +106,8 @@ function parseArgs(argv: string[]): ParsedArgs {
     runUnit: false,
     runIntegration: false,
     runE2e: false,
+    coverage: false,
+    coverageDir: "coverage",
     verbose: false,
     debug: false,
     filter: "",
@@ -143,6 +150,15 @@ function parseArgs(argv: string[]): ParsedArgs {
         out.fullProfile = true;
         levelSelected = true;
         break;
+      case "--coverage":
+        out.coverage = true;
+        break;
+      case "--coverage-dir": {
+        const value = argv[++i] ?? "";
+        if (!value) failUsage("--coverage-dir requires a directory");
+        out.coverageDir = value;
+        break;
+      }
       case "--verbose":
         out.verbose = true;
         break;
@@ -189,6 +205,16 @@ function parseArgs(argv: string[]): ParsedArgs {
 }
 
 const args = parseArgs(process.argv.slice(2));
+const coverageRoot = resolve(REPO_ROOT, args.coverageDir);
+const coveragePartsDir = join(coverageRoot, ".parts");
+const coverageReports: string[] = [];
+let coverageCombineFailed = false;
+
+if (args.coverage) {
+  rmSync(coverageRoot, { recursive: true, force: true });
+  mkdirSync(coveragePartsDir, { recursive: true });
+}
+
 let filterRegex: RegExp | null = null;
 if (args.filter) {
   try {
@@ -423,6 +449,187 @@ function tmpFile(prefix: string): string {
   return join(process.env.TMPDIR || tmpdir(), `${prefix}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}`);
 }
 
+function coverageSafeName(file: string): string {
+  return relative(SCRIPT_DIR, file)
+    .replace(/\\/g, "/")
+    .replace(/[^A-Za-z0-9._-]+/g, "_")
+    .replace(/^_+|_+$/g, "") || "test";
+}
+
+function normalizeCoverageSourcePath(path: string): string {
+  const generatedHarnessPrefixes = [
+    ["dist/claude/.claude/", "packages/framework/core/"],
+    ["dist/codex/.codex/", "packages/framework/core/"],
+    ["dist/kiro/.kiro/", "packages/framework/core/"],
+    ["dist/kiro-ide/.kiro/", "packages/framework/core/"],
+    [".claude/", "packages/framework/core/"],
+    [".codex/", "packages/framework/core/"],
+  ] as const;
+  for (const [from, to] of generatedHarnessPrefixes) {
+    if (path.startsWith(from)) return `${to}${path.slice(from.length)}`;
+  }
+  return path;
+}
+
+function normalizeCoverageReport(body: string): string {
+  interface FileCoverage {
+    lines: Map<number, number>;
+    functionsFound: number;
+    functionsHit: number;
+  }
+  const files = new Map<string, FileCoverage>();
+  let current: FileCoverage | null = null;
+
+  const fileFor = (source: string): FileCoverage => {
+    const normalized = normalizeCoverageSourcePath(source.replace(/\\/g, "/"));
+    let file = files.get(normalized);
+    if (!file) {
+      file = { lines: new Map(), functionsFound: 0, functionsHit: 0 };
+      files.set(normalized, file);
+    }
+    return file;
+  };
+
+  for (const line of body.split(/\r?\n/)) {
+    if (line.startsWith("SF:")) {
+      current = fileFor(line.slice(3));
+      continue;
+    }
+    if (!current) continue;
+    if (line.startsWith("DA:")) {
+      const [lineNoRaw, countRaw] = line.slice(3).split(",");
+      const lineNo = Number(lineNoRaw);
+      const count = Number(countRaw);
+      if (Number.isInteger(lineNo) && Number.isFinite(count)) {
+        current.lines.set(lineNo, (current.lines.get(lineNo) ?? 0) + count);
+      }
+      continue;
+    }
+    if (line.startsWith("FNF:")) {
+      current.functionsFound = Math.max(current.functionsFound, Number(line.slice(4)) || 0);
+      continue;
+    }
+    if (line.startsWith("FNH:")) {
+      current.functionsHit = Math.max(current.functionsHit, Number(line.slice(4)) || 0);
+    }
+  }
+
+  const out: string[] = [];
+  for (const [source, file] of [...files.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+    const sortedLines = [...file.lines.entries()].sort(([a], [b]) => a - b);
+    out.push("TN:", `SF:${source}`);
+    if (file.functionsFound > 0 || file.functionsHit > 0) {
+      out.push(`FNF:${file.functionsFound}`, `FNH:${file.functionsHit}`);
+    }
+    for (const [lineNo, count] of sortedLines) {
+      out.push(`DA:${lineNo},${count}`);
+    }
+    out.push(
+      `LF:${sortedLines.length}`,
+      `LH:${sortedLines.filter(([, count]) => count > 0).length}`,
+      "end_of_record",
+    );
+  }
+  return out.join("\n");
+}
+
+function coverageHtmlEscape(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function writeCoverageHtml(lcov: string): void {
+  interface Row {
+    source: string;
+    lines: number;
+    hits: number;
+  }
+  const rows: Row[] = [];
+  let current: Row | null = null;
+  for (const line of lcov.split(/\r?\n/)) {
+    if (line.startsWith("SF:")) {
+      current = { source: line.slice(3), lines: 0, hits: 0 };
+      rows.push(current);
+      continue;
+    }
+    if (!current) continue;
+    if (line.startsWith("LF:")) {
+      current.lines = Number(line.slice(3)) || 0;
+      continue;
+    }
+    if (line.startsWith("LH:")) {
+      current.hits = Number(line.slice(3)) || 0;
+    }
+  }
+
+  const totalLines = rows.reduce((sum, row) => sum + row.lines, 0);
+  const totalHits = rows.reduce((sum, row) => sum + row.hits, 0);
+  const pct = (hits: number, lines: number): string => (lines === 0 ? "100.00" : ((hits / lines) * 100).toFixed(2));
+  const tableRows = rows
+    .sort((a, b) => a.source.localeCompare(b.source))
+    .map(
+      (row) =>
+        `<tr><td>${coverageHtmlEscape(row.source)}</td><td>${row.hits}</td><td>${row.lines}</td><td>${pct(row.hits, row.lines)}%</td></tr>`,
+    )
+    .join("\n");
+
+  const htmlDir = join(coverageRoot, "html");
+  mkdirSync(htmlDir, { recursive: true });
+  writeFileSync(
+    join(htmlDir, "index.html"),
+    `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Amadeus Coverage</title>
+<style>
+body{font-family:system-ui,sans-serif;margin:2rem;color:#1f2937;background:#fff}
+table{border-collapse:collapse;width:100%}
+th,td{border-bottom:1px solid #e5e7eb;padding:.45rem .6rem;text-align:left}
+th{background:#f9fafb}
+td:nth-child(n+2),th:nth-child(n+2){text-align:right}
+</style>
+</head>
+<body>
+<h1>Amadeus Coverage</h1>
+<p>Total line coverage: ${pct(totalHits, totalLines)}% (${totalHits}/${totalLines})</p>
+<table>
+<thead><tr><th>Source</th><th>Hit Lines</th><th>Lines</th><th>Coverage</th></tr></thead>
+<tbody>
+${tableRows}
+</tbody>
+</table>
+</body>
+</html>
+`,
+    "utf8",
+  );
+}
+
+function combineCoverageReports(): void {
+  if (!args.coverage) return;
+  const combined = join(coverageRoot, "lcov.info");
+  const chunks: string[] = [];
+  for (const report of coverageReports.sort()) {
+    if (!existsSync(report)) continue;
+    const body = readFileSync(report, "utf8").trim();
+    if (body.length === 0) continue;
+    chunks.push(body, "");
+  }
+  if (chunks.length === 0) {
+    process.stderr.write("ERROR: --coverage was requested, but no LCOV reports were generated\n");
+    coverageCombineFailed = true;
+    return;
+  }
+  const normalized = `${normalizeCoverageReport(chunks.join("\n").trim())}\n`;
+  writeFileSync(combined, normalized, "utf8");
+  writeCoverageHtml(normalized);
+  process.stdout.write(`Coverage report: ${displayLogDirPath(combined)}\n`);
+}
+
 function displayLogDirPath(path: string): string {
   const rel = relative(SCRIPT_DIR, path);
   return rel.startsWith("..") ? path : rel.replace(/\\/g, "/");
@@ -510,6 +717,9 @@ async function runBunTestFile(file: string, parallelMode = false): Promise<void>
   process.stdout.write(`\n=== START ${base} ===\n`);
 
   const junitXml = tmpFile("amadeus-run-tests-junit");
+  const coverageDir = args.coverage
+    ? join(coveragePartsDir, coverageSafeName(file))
+    : "";
   const start = Date.now();
   const debugPrefix = args.debug && parallelMode ? `[${base}] ` : args.debug ? "" : null;
 
@@ -521,10 +731,22 @@ async function runBunTestFile(file: string, parallelMode = false): Promise<void>
 
   const run = await runSpawnCapture(
     BUN,
-    ["test", file, "--reporter=junit", `--reporter-outfile=${junitXml}`],
+    [
+      "test",
+      file,
+      "--reporter=junit",
+      `--reporter-outfile=${junitXml}`,
+      ...(args.coverage
+        ? ["--coverage", "--coverage-reporter=lcov", `--coverage-dir=${coverageDir}`]
+        : []),
+    ],
     env,
     debugPrefix,
   );
+  if (args.coverage) {
+    const lcov = join(coverageDir, "lcov.info");
+    if (existsSync(lcov)) coverageReports.push(lcov);
+  }
 
   let xml = "";
   try {
@@ -813,7 +1035,9 @@ async function main(): Promise<number> {
   }
 
   writeVerboseSummary();
+  combineCoverageReports();
   printSummary();
+  if (coverageCombineFailed && failedFiles === 0) return 1;
   return failedFiles;
 }
 
