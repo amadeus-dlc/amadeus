@@ -75,6 +75,15 @@ import {
   seedStateFile,
 } from "../harness/fixtures.ts";
 
+// Standalone hermeticity (issue #698): the suite runner injects these guard
+// bypasses into every test file's env (tests/run-tests.ts), so this file only
+// went green under the runner. Default them here as well so a bare
+// `bun test <this file>` behaves the same. Guard-enforcement tests re-enable
+// a guard by deleting its var in their own spawn env, so these defaults do
+// not mask enforcement coverage.
+process.env.AMADEUS_SKIP_ARTIFACT_GUARD ??= "1";
+process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD ??= "1";
+
 resetAidlcEnv();
 
 // advance/approve emit memory_path threaded with the ACTIVE INTENT's record dir
@@ -256,6 +265,7 @@ function midIdeationProject(): string {
 function runState(proj: string, args: string[]): { out: string; status: number } {
   const res = spawnSync(BUN, [TOOL, ...args, "--project-dir", proj], {
     encoding: "utf-8",
+    env: { ...process.env },
   });
   return {
     out: `${res.stdout ?? ""}${res.stderr ?? ""}`,
