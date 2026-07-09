@@ -1489,6 +1489,20 @@ function cloneId(projectDir: string): string {
 // The resolution boundary is workflow-global (the most recent commit of ANY
 // gate), which is what makes a same-turn cascade across DIFFERENT stages refuse
 // correctly; there is no per-stage scoping.
+//
+// A delegated provenance line (#671 approval, #685 rejection) is a human act
+// ONLY when its grounding HUMAN_TURN is verified to physically exist in the
+// issuer shard. An unverifiable delegation is dropped entirely (not counted
+// as a human act, not counted as a resolution) so a forged block can neither
+// manufacture presence nor consume the freshness boundary.
+//
+// Verb scoping (#685): a DELEGATED_APPROVAL opens ONLY an approve gate and a
+// DELEGATED_REJECTION opens ONLY a reject gate — never each other. When a
+// verb is given, the off-verb delegation is ignored completely (neither a
+// human act nor a resolution boundary). When verb is omitted (the general
+// predicate — interview answers, delegate-issuance grounding), both verified
+// types count. This is the fix for the mixing bug where a verified approval
+// delegation falsely satisfied a reject gate.
 const GATE_RESOLUTION_EVENTS = new Set(["GATE_APPROVED", "GATE_REJECTED", "QUESTION_ANSWERED"]);
 export function humanActedSinceGate(
   projectDir: string,
@@ -1502,19 +1516,6 @@ export function humanActedSinceGate(
     const ev = auditBlockField(blocks[i], "Event");
     if (!ev) continue;
     const isHumanTurn = ev === "HUMAN_TURN";
-    // A delegated provenance line (#671 approval, #685 rejection) is a human act
-    // ONLY when its grounding HUMAN_TURN is verified to physically exist in the
-    // issuer shard. An unverifiable delegation is dropped entirely (not counted
-    // as a human act, not counted as a resolution) so a forged block can neither
-    // manufacture presence nor consume the freshness boundary.
-    //
-    // Verb scoping (#685): a DELEGATED_APPROVAL opens ONLY an approve gate and a
-    // DELEGATED_REJECTION opens ONLY a reject gate — never each other. When a
-    // verb is given, the off-verb delegation is ignored completely (neither a
-    // human act nor a resolution boundary). When verb is omitted (the general
-    // predicate — interview answers, delegate-issuance grounding), both verified
-    // types count. This is the fix for the mixing bug where a verified approval
-    // delegation falsely satisfied a reject gate.
     let isDelegated = false;
     if (ev === "DELEGATED_APPROVAL" && verb !== "reject") {
       isDelegated = verifyDelegatedProvenance(projectDir, blocks[i]);
