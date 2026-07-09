@@ -645,3 +645,47 @@
 **Timestamp**: 2026-07-09T07:50:12Z
 
 ---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-09T07:50:36Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-09T07:50:36Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-09T07:50:55Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: market-research
+**Recovered**: true
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-09T07:50:55Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state approve market-research --project-dir /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-1
+**Error**: Refusing to approve "market-research": a real human has not acted at this gate since it opened. The approval gate requires a typed human turn before it can commit. Acknowledge the gate as a human, then approve. (autonomous Construction is exempt)
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-09T07:54:14Z
+**Event**: HUMAN_TURN
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-09T07:57:25Z
+**Event**: HUMAN_TURN
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-09T07:58:09Z
+**Event**: WORKFLOW_PARKED
+**Stage**: market-research
+**Timestamp**: 2026-07-09T07:58:09Z
+
+---
