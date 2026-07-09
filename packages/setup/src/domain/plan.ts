@@ -159,7 +159,15 @@ function buildEntries(root: string, target: string, opts: PlanOptions): PlanEntr
   return entries;
 }
 
-function classifyAction(exists: boolean, force: boolean, cls: FileClass): PlanAction {
+// BR-I10~I14: install's per-file action decision (business-logic-model workflow
+// 4). Exported as a pure decision seam so property tests can exercise it in
+// process without the filesystem. The rules, in evaluation order:
+//   BR-I10: a file absent from the target is always "add" (force/class ignored).
+//   BR-I11: an existing file without --force is always "conflict" — the one and
+//           only branch that yields "conflict".
+//   BR-I12~I14: under --force, the class alone decides — owned → "update",
+//           user-preserved → "skip", shared → "backup" (FR-008).
+export function classifyAction(exists: boolean, force: boolean, cls: FileClass): PlanAction {
   if (!exists) return "add";
   if (!force) return "conflict";
   if (cls === "owned") return "update";
@@ -206,7 +214,8 @@ function buildUpgradeEntries(root: string, target: string, source: UpgradeSource
 }
 
 // BR-U10: the one place the Disposition -> PlanAction mapping is fixed.
-function toPlanAction(disposition: Disposition): PlanAction {
+// Exported as a pure decision seam for in-process property tests.
+export function toPlanAction(disposition: Disposition): PlanAction {
   switch (disposition.type) {
     case "overwrite":
       return "update";
@@ -224,7 +233,9 @@ function toPlanAction(disposition: Disposition): PlanAction {
 // long-lived practice record (org.md/team.md/project.md/phases/*.md) and is
 // never framework-owned going forward, so it is user-preserved. Everything
 // else is a shared framework template the team may hand-edit.
-function classify(relPath: string): FileClass {
+// BR-I01~I03: exported as a pure, total decision seam — every relative path maps
+// to exactly one FileClass, so property tests can assert totality in process.
+export function classify(relPath: string): FileClass {
   const segments = relPath.split("/");
   const basename = segments[segments.length - 1] ?? relPath;
   if (basename.startsWith("amadeus-")) return "owned";
