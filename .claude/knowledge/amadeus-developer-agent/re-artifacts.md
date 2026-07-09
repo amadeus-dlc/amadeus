@@ -14,7 +14,7 @@ All RE artifacts are created under `amadeus/spaces/<active-space>/codekb/<repo>/
 6. **technology-stack.md** — Languages, frameworks, libraries with versions
 7. **dependencies.md** — External dependencies, internal cross-package dependencies
 8. **code-quality-assessment.md** — Test coverage, linting, CI/CD, documentation quality, tech debt
-9. **reverse-engineering-timestamp.md** — Records when reverse engineering was performed (date, commit hash if available, scope of analysis)
+9. **reverse-engineering-timestamp.md** — Records when reverse engineering was performed (date, commit hash if available, scope of analysis). SHARED repo-level freshness pointer (last-writer-wins, reflects the most-recent scan by any intent). This intent's differential base point is NOT stored here — it lives in the per-intent scan record `re-scans/<intent-record>.md` (resolve with `codekb-path --repo <repo> --re-scan`), so concurrent intents never overwrite one another's base point (#707).
 
 ### Developer Code Scan Template
 
