@@ -7,13 +7,15 @@
 // then the orchestrator calls `verify` as a deterministic post-dispatch
 // backstop confirming the audit event landed.
 //
-// Sibling-worktree rejection: rejects calls from inside a non-main worktree
-// to avoid the dev-worktree-vs-bolt-worktree clash. Run from the main repo
-// checkout.
+// Worktree anchoring: the write subcommands (create/merge/discard) resolve the
+// MAIN checkout as the anchor for every git op and for the Bolt worktree path,
+// so a session running from a sibling dev worktree still creates/merges/discards
+// Bolt worktrees against the main checkout (siblings of it, never nested).
+// Running from inside a Bolt worktree itself (true nesting) is still rejected.
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { appendAuditEntry } from "./amadeus-audit.ts";
 import {
   emitError,
@@ -96,20 +98,29 @@ function runGit(args: string[], cwd?: string): GitResult {
   };
 }
 
-// --- Sibling-worktree detection ---
+// --- Worktree anchor resolution ---
 //
-// `amadeus-worktree` must run from the main repo checkout, not from a sibling
-// worktree (e.g. `.claude/worktrees/<dev>/`). The main checkout is the
-// directory whose `.git` is the same as `git rev-parse --git-common-dir`'s
-// parent. macOS symlinks `/var → /private/var`, so canonicalise both sides
-// via `realpathSync` before comparing.
+// The write subcommands must operate on the MAIN checkout, even when invoked from
+// a sibling worktree (e.g. a conductor's dev worktree at `.claude/worktrees/<dev>/`).
+// `resolveWorktreeAnchor` classifies the caller's cwd relative to the main checkout
+// (resolved from `git rev-parse --git-common-dir`'s parent, canonicalised because
+// macOS symlinks `/var → /private/var`):
 //
-// P7 (multi-repo): the guard is RE-ANCHORED to the TARGET repo's checkout. When
-// `--repo <name>` selects a sibling repo, `repoCwd` is that repo dir and every
-// git probe runs there — so "must run from the main checkout" is evaluated against
-// the sibling repo, not the (non-git) workspace root. Absent `--repo` (legacy
-// single-repo), `repoCwd` is the projectDir and the behaviour is unchanged.
-function assertNotSiblingWorktree(repoCwd?: string): void {
+//   - cwd IS the main checkout   → { gitCwd: repoCwd, anchored: false }. Byte-identical
+//       legacy behaviour: git ops and the worktree path keep the caller's RAW repoCwd,
+//       so no canonicalised path leaks into audit fields or output JSON.
+//   - cwd is a Bolt worktree     → rejected (true nesting: a Bolt worktree must not
+//       fork another). Same Bolt-detection as `handleList` (basename `bolt-*` AND
+//       parent is `<mainCheckout>/.amadeus/worktrees`).
+//   - cwd is any other worktree  → { gitCwd: mainCheckout, anchored: true }. Every git
+//       op runs in the main checkout so the Bolt worktree lands as its sibling.
+//
+// P7 (multi-repo): `repoCwd` is the TARGET sibling repo dir; the classification runs
+// against that repo's own git context, so the anchor is that repo's main checkout.
+function resolveWorktreeAnchor(repoCwd: string): {
+  gitCwd: string;
+  anchored: boolean;
+} {
   const top = runGit(["rev-parse", "--show-toplevel"], repoCwd);
   if (!top.ok) {
     error("Not a git repository (or any of the parent directories).");
@@ -120,15 +131,39 @@ function assertNotSiblingWorktree(repoCwd?: string): void {
   if (!common.ok) {
     error("Cannot resolve git common dir.");
   }
-  const commonRaw = common.stdout.trim();
-  const commonAbs = resolve(cwdTop, commonRaw);
+  const commonAbs = resolve(cwdTop, common.stdout.trim());
   const mainCheckout = canonicalise(dirname(commonAbs));
 
-  if (cwdTop !== mainCheckout) {
+  if (cwdTop === mainCheckout) {
+    // Main checkout: keep the raw repoCwd (see byte-identical note above).
+    return { gitCwd: repoCwd, anchored: false };
+  }
+
+  // True nesting: reject a call from inside a Bolt worktree.
+  const boltsDir = pathKey(join(mainCheckout, ".amadeus", "worktrees"));
+  if (basename(cwdTop).startsWith("bolt-") && pathKey(dirname(cwdTop)) === boltsDir) {
     error(
-      `amadeus-worktree must run from the main repo checkout, not from a sibling worktree at ${cwdTop}. Bolt worktrees are siblings of the main checkout, not nested.`
+      `amadeus-worktree cannot run from inside a Bolt worktree at ${cwdTop} (true nesting: a Bolt worktree must not fork another worktree). Run from the main checkout or a sibling dev worktree.`
     );
   }
+
+  // Sibling worktree: anchor every git op to the main checkout.
+  return { gitCwd: mainCheckout, anchored: true };
+}
+
+// Resolve the base dir the Bolt worktree path hangs under. A legacy single-repo
+// intent (repoCwd IS the projectDir) executed from a sibling worktree pins the
+// worktree under the MAIN checkout so it is a sibling of the main checkout, not
+// nested under the caller's cwd. Multi-repo (P7: repoCwd is a child repo dir,
+// != pd) keeps the workspace-roof anchor (worktreePath(pd)) unchanged.
+function worktreeBaseDir(
+  pd: string,
+  repoCwd: string,
+  gitCwd: string,
+  anchored: boolean
+): string {
+  const legacySingleRepo = pathKey(repoCwd) === pathKey(pd);
+  return anchored && legacySingleRepo ? gitCwd : pd;
 }
 
 function canonicalise(p: string): string {
@@ -198,24 +233,25 @@ function handleCreate(args: string[]): void {
   if (!flags.base) errorWithSlug(slug, "Missing --base <branch>");
 
   const pd = resolveProjectDir(projectDir);
-  // P7: anchor every git op to the target sibling repo (or the projectDir for a
-  // legacy single-repo intent). The guard is evaluated against that same checkout.
+  // P7: resolve the target sibling repo (or the projectDir for a legacy single-repo
+  // intent), then resolve the worktree anchor — the main checkout when the caller
+  // runs from a sibling worktree, otherwise the caller's own repoCwd.
   const repoCwd = resolveRepoCwd(pd, flags, slug);
-  assertNotSiblingWorktree(repoCwd);
+  const { gitCwd, anchored } = resolveWorktreeAnchor(repoCwd);
 
   // Pre-audit checks: every failure here exits without emitting.
-  const baseExists = runGit(["rev-parse", "--verify", flags.base], repoCwd);
+  const baseExists = runGit(["rev-parse", "--verify", flags.base], gitCwd);
   if (!baseExists.ok) {
     errorWithSlug(slug, `Base branch does not exist locally: ${flags.base}`);
   }
 
-  const wtPath = worktreePath(pd, slug);
+  const wtPath = worktreePath(worktreeBaseDir(pd, repoCwd, gitCwd, anchored), slug);
   if (existsSync(wtPath)) {
     errorWithSlug(slug, `Worktree directory already exists: ${wtPath}`);
   }
 
   const branchName = `bolt-${slug}`;
-  const branchExists = runGit(["rev-parse", "--verify", `refs/heads/${branchName}`], repoCwd);
+  const branchExists = runGit(["rev-parse", "--verify", `refs/heads/${branchName}`], gitCwd);
   if (branchExists.ok) {
     errorWithSlug(slug, `Branch already exists: ${branchName}`);
   }
@@ -235,7 +271,7 @@ function handleCreate(args: string[]): void {
     errorWithSlug(slug, `Audit emission failed: ${errorMessage(e)}`);
   }
 
-  const add = runGit(["worktree", "add", wtPath, "-b", branchName, flags.base], repoCwd);
+  const add = runGit(["worktree", "add", wtPath, "-b", branchName, flags.base], gitCwd);
   if (!add.ok) {
     errorWithSlug(
       slug,
@@ -270,14 +306,15 @@ function handleMerge(args: string[]): void {
   const message = flags.message ?? `Bolt ${slug}`;
 
   const pd = resolveProjectDir(projectDir);
-  // P7: anchor every git op to the target sibling repo. The merge runs IN that
-  // repo's main checkout (squash/merge/ff/commit/worktree-remove/branch-D); the
-  // rebase still runs in the worktree (wtPath). Legacy single-repo → repoCwd=pd.
+  // P7: resolve the target sibling repo, then the worktree anchor. The merge runs
+  // IN the main checkout (squash/merge/ff/commit/worktree-remove/branch-D); the
+  // rebase still runs in the worktree (wtPath). When the caller runs from a sibling
+  // worktree, gitCwd is the main checkout; otherwise it is the caller's own repoCwd.
   const repoCwd = resolveRepoCwd(pd, flags, slug);
-  assertNotSiblingWorktree(repoCwd);
+  const { gitCwd, anchored } = resolveWorktreeAnchor(repoCwd);
 
-  // Defensive HEAD check: the caller must have <target> checked out at the repo cwd.
-  const head = runGit(["rev-parse", "--abbrev-ref", "HEAD"], repoCwd);
+  // Defensive HEAD check: the main checkout must have <target> checked out.
+  const head = runGit(["rev-parse", "--abbrev-ref", "HEAD"], gitCwd);
   if (!head.ok) {
     errorWithSlug(slug, "Cannot resolve HEAD.");
   }
@@ -295,7 +332,7 @@ function handleMerge(args: string[]): void {
     );
   }
 
-  const wtPath = worktreePath(pd, slug);
+  const wtPath = worktreePath(worktreeBaseDir(pd, repoCwd, gitCwd, anchored), slug);
   const branchName = `bolt-${slug}`;
 
   // Rebase requires a remote for <target>. The remote-existence check is
@@ -305,7 +342,7 @@ function handleMerge(args: string[]): void {
   // a corresponding audit row.
   let rebaseRemote = "";
   if (strategy === "rebase") {
-    const remote = runGit(["config", `branch.${flags.target}.remote`], repoCwd);
+    const remote = runGit(["config", `branch.${flags.target}.remote`], gitCwd);
     if (!remote.ok || !remote.stdout.trim()) {
       errorWithSlug(
         slug,
@@ -341,16 +378,17 @@ function handleMerge(args: string[]): void {
 
   let commitSha = "";
   // conflictCwd records which checkout the conflicting state lives in:
-  // squash/merge run in the target repo's main checkout (cwd = repoCwd), rebase
-  // runs in the worktree (cwd = wtPath). For conflict-file enumeration, we query
+  // squash/merge run in the main checkout (cwd = gitCwd), rebase runs in the
+  // worktree (cwd = wtPath). For conflict-file enumeration, we query
   // `git diff --name-only --diff-filter=U` in the SAME cwd so the index reflects
-  // the real conflict. (P7: repoCwd is the sibling repo, or the projectDir for a
-  // legacy single-repo intent — squash/merge default to it now, not the caller's cwd.)
-  let conflictCwd: string | undefined = repoCwd;
+  // the real conflict. (gitCwd is the main checkout: the sibling repo, the
+  // projectDir for a legacy single-repo intent, or its main checkout when the
+  // caller ran from a sibling worktree.)
+  let conflictCwd: string | undefined = gitCwd;
   let conflictHit = false;
   switch (strategy) {
     case "squash": {
-      const m = runGit(["-c", "merge.ff=true", "merge", "--squash", branchName], repoCwd);
+      const m = runGit(["-c", "merge.ff=true", "merge", "--squash", branchName], gitCwd);
       if (!m.ok) {
         if (isConflict(m)) {
           conflictHit = true;
@@ -361,14 +399,14 @@ function handleMerge(args: string[]): void {
           `git merge --squash failed: ${m.stderr.trim() || `exit ${m.code}`}`
         );
       }
-      const c = runGit(["commit", "--no-edit", "-m", message], repoCwd);
+      const c = runGit(["commit", "--no-edit", "-m", message], gitCwd);
       if (!c.ok) {
         errorWithSlug(
           slug,
           `git commit failed: ${c.stderr.trim() || `exit ${c.code}`}`
         );
       }
-      commitSha = currentSha(repoCwd);
+      commitSha = currentSha(gitCwd);
       break;
     }
     case "merge": {
@@ -379,7 +417,7 @@ function handleMerge(args: string[]): void {
         "-m",
         `Merge bolt ${slug}`,
         branchName,
-      ], repoCwd);
+      ], gitCwd);
       if (!m.ok) {
         if (isConflict(m)) {
           conflictHit = true;
@@ -390,7 +428,7 @@ function handleMerge(args: string[]): void {
           `git merge --no-ff failed: ${m.stderr.trim() || `exit ${m.code}`}`
         );
       }
-      commitSha = currentSha(repoCwd);
+      commitSha = currentSha(gitCwd);
       break;
     }
     case "rebase": {
@@ -406,14 +444,14 @@ function handleMerge(args: string[]): void {
           `git rebase failed: ${r.stderr.trim() || `exit ${r.code}`}`
         );
       }
-      const ff = runGit(["merge", "--ff-only", branchName], repoCwd);
+      const ff = runGit(["merge", "--ff-only", branchName], gitCwd);
       if (!ff.ok) {
         errorWithSlug(
           slug,
           `git merge --ff-only failed: ${ff.stderr.trim() || `exit ${ff.code}`}`
         );
       }
-      commitSha = currentSha(repoCwd);
+      commitSha = currentSha(gitCwd);
       break;
     }
   }
@@ -440,14 +478,14 @@ function handleMerge(args: string[]): void {
   // "merge failed entirely" from "merge landed, cleanup orphan remains"
   // — these need different recovery actions.
   const cleanupTag = `[merge-succeeded:${commitSha}]`;
-  const rm = runGit(["worktree", "remove", wtPath], repoCwd);
+  const rm = runGit(["worktree", "remove", wtPath], gitCwd);
   if (!rm.ok) {
     errorWithSlug(
       slug,
       `${cleanupTag} worktree remove failed: ${rm.stderr.trim() || `exit ${rm.code}`}`
     );
   }
-  const del = runGit(["branch", "-D", branchName], repoCwd);
+  const del = runGit(["branch", "-D", branchName], gitCwd);
   if (!del.ok) {
     errorWithSlug(
       slug,
@@ -507,18 +545,19 @@ function handleDiscard(args: string[]): void {
   const flags = parseFlags(args);
   const slug = validateSlug(flags.slug);
   const pd = resolveProjectDir(projectDir);
-  // P7: anchor every git op to the target sibling repo (or projectDir for legacy).
+  // P7: resolve the target sibling repo (or projectDir for legacy), then the
+  // worktree anchor — the main checkout when the caller runs from a sibling worktree.
   const repoCwd = resolveRepoCwd(pd, flags, slug);
-  assertNotSiblingWorktree(repoCwd);
+  const { gitCwd, anchored } = resolveWorktreeAnchor(repoCwd);
 
-  const wtPath = worktreePath(pd, slug);
+  const wtPath = worktreePath(worktreeBaseDir(pd, repoCwd, gitCwd, anchored), slug);
   const branchName = `bolt-${slug}`;
   const dirExists = existsSync(wtPath);
   const branchExists = runGit([
     "rev-parse",
     "--verify",
     `refs/heads/${branchName}`,
-  ], repoCwd).ok;
+  ], gitCwd).ok;
 
   if (!dirExists && !branchExists) {
     console.log(
@@ -544,7 +583,7 @@ function handleDiscard(args: string[]): void {
   }
 
   if (dirExists) {
-    const rm = runGit(["worktree", "remove", "--force", wtPath], repoCwd);
+    const rm = runGit(["worktree", "remove", "--force", wtPath], gitCwd);
     if (!rm.ok) {
       errorWithSlug(
         slug,
@@ -553,7 +592,7 @@ function handleDiscard(args: string[]): void {
     }
   }
   if (branchExists) {
-    const del = runGit(["branch", "-D", branchName], repoCwd);
+    const del = runGit(["branch", "-D", branchName], gitCwd);
     if (!del.ok) {
       errorWithSlug(
         slug,
@@ -583,7 +622,7 @@ function handleDiscard(args: string[]): void {
 // unrelated worktree someone happens to name `bolt-other` outside our
 // namespace doesn't masquerade as a Bolt. Read-only — no audit emission.
 function handleList(_args: string[]): void {
-  // No assertNotSiblingWorktree here — list is read-only and useful from
+  // No worktree-anchor resolution here — list is read-only and useful from
   // anywhere. Run from current cwd's git context.
   const pd = resolveProjectDir(projectDir);
   const boltsDir = pathKey(resolve(pd, ".amadeus", "worktrees"));
