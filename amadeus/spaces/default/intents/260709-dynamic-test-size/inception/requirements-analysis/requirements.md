@@ -43,7 +43,8 @@
 - 永続化先: **新規 JSON レポートファイル**。runner が per-file `{file, scope, staticSize, declaredSize, duration, signals, drift 判定}` 相当を書き出し(正確なスキーマは functional-design で確定)、CI(`ci.yml`)で artifact として upload する(既存 coverage artifact のパターン `ci.yml:75-84` を踏襲)。
 - coverage registry(`tests/gen-coverage-registry.ts`)は拡張しない(`covers:` 軸と変更理由が異なる)。`.meta` の削除契約(`run-tests.ts:430`)も変更しない。
 - summary matrix(scope×size)に動的実測の情報を反映する(Issue AC「summary matrix に出る」)。既存 `printSizeMatrix`(`run-tests.ts:895-948`)の exit-code 隔離契約(`:882-886`、t112 が固定)を踏襲する。
-- テスト可能条件: `--ci` 実行後にレポートファイルが存在し、実行された全 test file の行を含み、JSON として parse 可能。CI 上で artifact として取得可能。
+- テスト可能条件(JSON レポート): `--ci` 実行後にレポートファイルが存在し、実行された全 test file の行を含み、JSON として parse 可能。CI 上で artifact として取得可能。
+- テスト可能条件(summary matrix 反映): `--ci` 実行後の標準出力の summary matrix に、動的実測由来の情報(最低限、wall-clock drift の検出件数 — 例: drift 列または drift 件数行)が現れる。drift ゼロの実行でも「0」が表示される(表示経路自体の検証可能性を保つ)。
 
 ### FR-4: size↔wall-clock 帯の定義(選挙 Q3=A で確定)
 
@@ -82,6 +83,7 @@
 - root JUnit `time` の per-file wall-clock は drift 検出の入力として十分な精度を持つ(codex-3 の 329 ファイル実測がこの値で分布を得られた実績)。
 - CI マシンの実行時間分散は存在する(p95 と max の乖離 — #684 実測分布)。執行姿勢(FR-5)はこの分散を織り込んで決定される。
 - #683(Codecov size 軸)は本 intent の成果物(derived size の permanent な供給源)を消費する別 Issue であり、Codecov 側の設定は本 intent に含まない。
+- timer/sleep シグナル(静的分類器の `timer` シグナル、`test-size.ts:39`)の動的観測対象化について: timer/sleep の実行時間影響は wall-clock 計測(FR-1)に自然に包含されるため、動的側で個別の timer 検出分岐は設けない(前提再点検 comment 4929651967 の明示要求へのクローズ。静的側の `timer` シグナルは #696 実装のまま不変)。
 
 ## 6. スコープ外
 

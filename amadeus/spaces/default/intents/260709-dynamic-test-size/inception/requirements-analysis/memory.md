@@ -16,3 +16,4 @@
 - 2026-07-10T06:50:00Z — Tradeoff: 質問は4問に絞った(Q1 sink / Q2 執行姿勢 / Q3 閾値帯 / Q4 バックエンド境界)。CI artifact upload の要否は Issue 本文「CI artifact/registry 化」が既決のため独立質問にしない(Q1 の選択肢に内包)。
 - 2026-07-10T07:16:00Z — Interpretation: 選挙結果(全4問=A、4票全会一致)を反映。Q4 は claude-2 の付帯条件付き採択 — seam は wall-clock バックエンドを初回消費者として実装(消費者ゼロ拡張点の禁止)。FR-6 に付帯条件として明記。
 - 2026-07-10T07:16:00Z — Tradeoff: FR-3 の JSON スキーマ詳細は requirements で固定せず functional-design へ委ねた(フィールドの過早断定は nfr-design:c7 の教訓に反するため、要件レベルでは「per-file 行 + parse 可能 + 全実行ファイル網羅」のテスト可能条件のみ固定)。
+- 2026-07-10T07:25:00Z — Deviation: reviewer(product-lead)1回目 NOT-READY(Medium: FR-3 の matrix 反映にテスト可能条件なし / Low: timer/sleep 論点の明示クローズ欠落)→ 是正して2回目 READY。前提再点検コメントが名指しした論点は、暗黙包含で解決していても成果物に明示クローズを書く — レビューイテレーション消費の回避知見。
