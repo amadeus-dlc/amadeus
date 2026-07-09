@@ -17,6 +17,7 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { planVersionSync, VERSION_SURFACES } from "./release-version-sync-plan.ts";
 
 const version = process.argv[2];
 if (!version || !/^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$/.test(version)) {
@@ -31,31 +32,29 @@ if (rootProbe.status !== 0) {
 }
 const root = rootProbe.stdout.trim();
 
-function patchFile(relPath: string, pattern: RegExp, replacement: string): boolean {
-  const path = join(root, relPath);
-  const src = readFileSync(path, "utf-8");
-  if (!pattern.test(src)) {
-    console.error(`${relPath}: expected pattern ${pattern} not found`);
-    process.exit(1);
-  }
-  const next = src.replace(pattern, replacement);
-  if (next === src) return false;
-  writeFileSync(path, next);
-  return true;
+// Two-phase, all-or-nothing (FR-702-2): read every surface, then validate ALL
+// patterns; only if every one matched do we write. A pattern miss aborts before
+// any write, so a half-applied state (version.ts advanced, badge stale) cannot
+// occur and re-runs stay idempotent.
+const contentsByPath: Record<string, string> = {};
+for (const surface of VERSION_SURFACES) {
+  contentsByPath[surface.relPath] = readFileSync(join(root, surface.relPath), "utf-8");
 }
 
-const changedVersionTs = patchFile(
-  "packages/framework/core/tools/amadeus-version.ts",
-  /AMADEUS_VERSION = "[^"]+"/,
-  `AMADEUS_VERSION = "${version}"`,
-);
-const changedBadge = patchFile(
-  "README.md",
-  /badge\/version-[0-9]+\.[0-9]+\.[0-9]+-blue/,
-  `badge/version-${version}-blue`,
-);
+const plan = planVersionSync(version, contentsByPath);
+if (!plan.ok) {
+  console.error(`${plan.relPath}: expected pattern ${plan.pattern} not found`);
+  process.exit(1);
+}
 
-if (changedVersionTs || changedBadge) {
+let anyChanged = false;
+for (const entry of plan.entries) {
+  if (!entry.changed) continue;
+  writeFileSync(join(root, entry.relPath), entry.next);
+  anyChanged = true;
+}
+
+if (anyChanged) {
   // dist/ and the self-install trees are generated artifacts — regenerate,
   // never hand-edit (drift guards enforce byte-identity in CI).
   for (const cmd of [
