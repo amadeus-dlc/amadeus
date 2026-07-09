@@ -5,7 +5,9 @@
 // amadeus-audit.ts (#697 Phase B, Bolt B4). In-process: the pure functions are
 // imported and exercised directly — no process is spawned, no filesystem or
 // network is touched — so this file classifies as a SMALL test and joins the
-// fast unit tier.
+// fast unit tier. The seam-wiring integration (the pure functions driven
+// through their real call sites, which touches a temp filesystem and is
+// therefore MEDIUM) lives in the sibling t205-audit-escape-seams.test.ts.
 //
 // Import surface follows t111.test.ts (the audit deterministic floor): the
 // escape seams are consumed from the generated dist/claude copy, not core,

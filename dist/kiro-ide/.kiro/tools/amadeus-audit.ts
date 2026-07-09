@@ -332,7 +332,7 @@ export function handleAppend(
 
 // --- Subcommand: append-raw ---
 
-function handleAppendRaw(
+export function handleAppendRaw(
   heading: string,
   body: string,
   projectDir: string
