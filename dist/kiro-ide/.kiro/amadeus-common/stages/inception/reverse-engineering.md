@@ -71,6 +71,22 @@ intent's registry row before scanning:
 In the steps below, `<repo>` is the repo currently being scanned; repeat for each
 repo in the set.
 
+#### Preflight: refresh from the latest reachable codekb
+
+The per-repo codekb store is shared across every intent in the space and is
+committed to the trunk. Before scanning, take in the latest reachable state so
+this refresh diffs from an up-to-date base instead of a stale one:
+
+1. Fetch/integrate the trunk into the working tree by your team's normal means
+   (e.g. `git fetch` + rebase/merge onto the base branch), so any RE artifacts
+   another intent already committed under
+   `amadeus/spaces/<active-space>/codekb/<repo>/` are present locally.
+2. If a merge touches codekb body artifacts, prefer the incoming latest — the 8
+   body artifacts are last-writer-wins derived caches (see Step 3). Your own
+   per-intent scan record (Step 3) is a distinct file and never conflicts.
+
+This keeps the differential refresh honest without serialising intents.
+
 ### Step 2: Developer Code Scan
 
 Delegate to Task tool with amadeus-developer-agent:
@@ -107,7 +123,7 @@ Architect synthesizes scan results into 9 artifacts:
 6. **technology-stack.md** — Languages, frameworks, libraries with versions
 7. **dependencies.md** — External dependencies, internal cross-package dependencies
 8. **code-quality-assessment.md** — Test coverage, linting, CI/CD, documentation quality, tech debt
-9. **reverse-engineering-timestamp.md** — Records when reverse engineering was performed (date, commit hash if available, scope of analysis). This is the freshness/staleness marker for the per-repo codekb store — a stale timestamp triggers a rerun (see the `condition` frontmatter: "Always rerun for freshness").
+9. **reverse-engineering-timestamp.md** — Records when reverse engineering was performed (date, commit hash if available, scope of analysis). This is the SHARED repo-level freshness/staleness pointer for the per-repo codekb store — a stale timestamp triggers a rerun (see the `condition` frontmatter: "Always rerun for freshness"). It reflects the most-recent scan by ANY intent (last-writer-wins); it is NOT this intent's differential base point — that lives in the per-intent scan record below.
 
 **Resolve the write directory with the engine, do NOT compose the path yourself.**
 Run the read-only tool
@@ -122,6 +138,40 @@ Write all 9 artifacts into the directory the tool printed — verbatim, creating
 absent. This is the durable per-repo code knowledge base, a space-level store shared
 across every intent in the space. Never substitute the intent slug, the record dir, or
 a hand-composed path for what the tool prints.
+
+**Concurrency contract (last-writer-wins for shared artifacts).** The 8 body
+artifacts (business-overview … code-quality-assessment) and the shared
+`reverse-engineering-timestamp.md` pointer are derived caches keyed by repo, not by
+intent — every intent's RE run rewrites them, and the latest scan is authoritative.
+When two intents scan the same repo, the most recent write wins; any focus-area delta
+lost on the shared copy is re-derived from live code on the next refresh. Do NOT try to
+merge or preserve another intent's body-artifact content.
+
+**Per-intent scan record (this intent's differential base point).** Because a single
+shared timestamp file would let concurrent intents overwrite one another's base point
+(#707), record THIS intent's scan in its OWN file. Resolve its path with the engine:
+
+```
+bun .kiro/tools/amadeus-utility.ts codekb-path --repo <repo> --re-scan
+```
+
+It prints ONE line — the per-intent file
+`amadeus/spaces/<active-space>/codekb/<repo>/re-scans/<intent-record>.md` (keyed by the
+intent's record-dir name, so concurrent intents resolve to distinct files that never
+overwrite or git-conflict). Write into it: this intent's **base commit** (the commit its
+PREVIOUS scan observed, or the newest observed commit across `re-scans/` if this
+intent has no prior scan, or `none` when no re-scan record exists at all), the
+**observed commit** (repo HEAD at this scan), the **focus**
+(scan scope), and the **date**. On a later differential refresh, resolve this intent's
+base point by reading its OWN re-scan record; if this intent has no prior re-scan
+record, use the newest **observed commit** across the other records in
+`re-scans/` (or `none` — a first full scan — when that directory has no records) —
+never derive this intent's base from `reverse-engineering-timestamp.md`.
+
+The pre-#707 single `codekb/<repo>/reverse-engineering-timestamp.md` was the base-point
+source of truth; it is now demoted to the shared freshness pointer only. No read
+fallback to a per-intent base is derived from it — a leftover copy from before this
+change is stale and may be deleted; the per-intent re-scan records supersede it.
 
 ### Step 4: Update State
 

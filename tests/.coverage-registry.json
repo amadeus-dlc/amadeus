@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 418,
+    "total": 422,
     "enumeratedByClass": {
-      "function": 201,
+      "function": 205,
       "audit": 71,
       "scope": 9,
       "stage": 32,
@@ -31,11 +31,11 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 88,
+      "function": 92,
       "audit": 30,
       "scope": 9,
       "stage": 8,
-      "hook": 10,
+      "hook": 11,
       "subcommand": 73,
       "render-surface": 7
     }
@@ -1085,6 +1085,30 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:codekbReScanDir",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t203-codekb-rescan.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:codekbReScanFile",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t203-codekb-rescan.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:compileStageGraph",
       "minMechanism": "none",
       "coveredBy": [
@@ -2097,6 +2121,30 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:relativeCodekbReScanDir",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t203-codekb-rescan.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:relativeCodekbReScanFile",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t203-codekb-rescan.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:relativeMemoryPath",
       "minMechanism": "none",
       "coveredBy": [],
@@ -2799,8 +2847,13 @@
       "unitClass": "hook",
       "unitId": "amadeus-mint-presence",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/unit/t203-mint-presence-classify.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "hook",
@@ -4425,6 +4478,10 @@
       "coveredBy": [
         {
           "file": "tests/unit/t182-codekb-placement.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/unit/t203-codekb-rescan.test.ts",
           "mechanism": "cli"
         }
       ],

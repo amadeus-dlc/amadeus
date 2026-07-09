@@ -12,6 +12,8 @@
     "promote:self": "bun scripts/promote-self.ts --apply",
     "promote:self:check": "bun scripts/promote-self.ts --check",
     "test:all": "bun tests/run-tests.ts --all",
+    "test:ci": "bun tests/run-tests.ts --ci",
+    "coverage:ci": "bun tests/run-tests.ts --ci --coverage --coverage-dir coverage",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.tests.json",
     "lint": "bunx @biomejs/biome check tests/ packages/setup/",
     "check": "bun run typecheck && bun run lint"

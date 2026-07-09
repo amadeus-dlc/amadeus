@@ -1801,3 +1801,80 @@
 **Context**: construction > code-generation > memory.md
 
 ---
+
+## Human Turn
+**Timestamp**: 2026-07-09T14:01:46Z
+**Event**: HUMAN_TURN
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-09T14:01:58Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-09T14:01:58Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-09T14:02:09Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Recovered**: true
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-09T14:02:09Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state approve code-generation --project-dir /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-2
+**Error**: Refusing to complete "code-generation": none of its declared artifacts exist under the intent's record directory. The stage protocol requires Code Generation to produce output before the gate. Produce the artifacts before completing. (declared: code-generation-plan, code-summary)
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-09T14:03:09Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state approve code-generation --project-dir /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-2
+**Error**: Refusing to complete "code-generation": it is a code-producing stage (workspace_requires) but no source work is evident outside the amadeus/ workspace tree. In a git workspace this means no uncommitted change and no code in the last commit; otherwise no source file exists. Planning docs alone do not satisfy Code Generation - write the code to the workspace.
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-09T14:04:55Z
+**Event**: GATE_APPROVED
+**Stage**: code-generation
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-09T14:04:55Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Details**: Stage Code Generation approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-09T14:04:55Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Agent**: amadeus-quality-agent
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-09T14:06:17Z
+**Event**: WORKFLOW_PARKED
+**Stage**: build-and-test
+**Timestamp**: 2026-07-09T14:06:17Z
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-09T14:09:30Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-09T14:09:30Z
+
+---

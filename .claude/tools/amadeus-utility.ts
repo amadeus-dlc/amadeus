@@ -45,6 +45,7 @@ import {
   isPackageJson,
   codekbRepoName,
   relativeCodekbDir,
+  relativeCodekbReScanFile,
   listIntents,
   listSpaces,
   loadAgents,
@@ -2687,17 +2688,34 @@ function handleSpace(projectDir: string, positional: string[], flags: Record<str
   }
 }
 
-// `/amadeus codekb-path [--repo <name>] [--json]` — read-only. Prints the
-// deterministic space-level per-repo codekb directory (forward-slash, workspace-
-// relative) the reverse-engineering stage writes its 9 artifacts into. The repo
-// is the caller-supplied --repo, else the engine-resolved codekbRepoName (the
-// lone recorded repo, or basename(projectDir) when none is recorded). No mkdir,
-// no state read, no audit — mirrors the intent/space read-only query arms.
-function handleCodekbPath(projectDir: string, flags: Record<string, string>): void {
+// `/amadeus codekb-path [--repo <name>] [--re-scan] [--json]` — read-only. Prints
+// the deterministic space-level per-repo codekb directory (forward-slash,
+// workspace-relative) the reverse-engineering stage writes its 9 artifacts into.
+// With `--re-scan`, prints instead the PER-INTENT scan-record FILE
+// (`<codekb>/<repo>/re-scans/<intent-record>.md`) the RE stage writes this
+// intent's base/observed/focus point into, so concurrent intents never overwrite
+// one another's base point (#707). The repo is the caller-supplied --repo, else
+// the engine-resolved codekbRepoName (the lone recorded repo, or
+// basename(projectDir) when none is recorded). No mkdir, no state read, no audit —
+// mirrors the intent/space read-only query arms.
+export function handleCodekbPath(projectDir: string, flags: Record<string, string>): void {
   const asJson = flags.json === "true";
+  const reScan = flags["re-scan"] === "true";
   const space = activeSpace(projectDir);
   const repo = flags.repo && flags.repo.length > 0 ? flags.repo : codekbRepoName(projectDir, space);
   const dir = relativeCodekbDir(projectDir, repo, space);
+  if (reScan) {
+    const reScanFile = relativeCodekbReScanFile(projectDir, repo, space);
+    if (reScanFile === null) {
+      die("codekb-path --re-scan: no active intent resolves — a per-intent scan record needs an intent.");
+    }
+    if (asJson) {
+      process.stdout.write(`${JSON.stringify({ space, repo, dir, reScanFile })}\n`);
+      return;
+    }
+    process.stdout.write(`${reScanFile}\n`);
+    return;
+  }
   if (asJson) {
     process.stdout.write(`${JSON.stringify({ space, repo, dir })}\n`);
     return;
