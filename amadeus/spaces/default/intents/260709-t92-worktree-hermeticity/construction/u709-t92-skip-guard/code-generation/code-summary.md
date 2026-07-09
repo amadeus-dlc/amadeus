@@ -69,3 +69,14 @@
 
 - 本番センサー(`amadeus-sensor-type-check.ts`)・`dist/`・セルフインストールツリーは未変更(テストファイル 1 件のみ)。dist:check / promote:self:check は無変更で緑。
 - テスト専用分岐を本番コードに追加していない(修正は t92 テストファイル内に閉じる)。
+
+## 是正(PR #721 レビュー、codex-2 NOT-READY)
+
+- **指摘**(https://github.com/amadeus-dlc/amadeus/pull/721#issuecomment-4926582537): ガードの候補集合が `node_modules/.bin/tsc`(Win は `tsc.cmd`)のみを見ており、本番 `resolveTscLauncher`(`amadeus-sensor-type-check.ts:182-201`)が Windows で `tsc.cmd → tsc.exe → tsc` の候補集合を走査するのと不一致。`tsc.exe` または拡張子なし `tsc` のみが存在する環境では、センサーはローカル pinned tsc を使うのに test 44 が誤って skip される検出力ホール。
+- **修正**(`tests/integration/t92.test.ts:1168-1176`): 候補集合を `resolveTscLauncher` と完全一致させた。`const PINNED_TSC_CANDIDATES = process.platform === "win32" ? ["tsc.cmd", "tsc.exe", "tsc"] : ["tsc"];` とし、`PINNED_TSC_CANDIDATES.some((name) => existsSync(join(REPO_ROOT, "node_modules", ".bin", name)))` が真(いずれか 1 つでも存在)なら test 44 を実行、偽なら理由付き skip。センサーと lockstep で維持すべき旨を英語コメントでファイル/行参照付きで明記。
+- **未 install 挙動は不変**: 候補を広げても、未 install worktree では 3 候補すべてが不在(dangling symlink → `existsSync` false)であり、従来どおり全滅 → skip 継続。widening は「pinned tsc が実在する環境で誤 skip しない」方向にのみ作用し、skip 判定の緩和は起きない。よって未 install worktree の再現は不要と判断(Green(a) は不変)。
+- **実測**(install 済み本 worktree):
+  - `bun test tests/integration/t92.test.ts` → **EXIT=0**、`45 pass / 0 skip / 0 fail`(test 44 実行)。
+  - `bun run typecheck` → **EXIT=0**。
+  - `bun run lint` → **EXIT=0**(warnings/infos のみ)。
+- コミット: `test(t92): match skip-guard tsc candidates to sensor launcher set (#709 review fix)`。
