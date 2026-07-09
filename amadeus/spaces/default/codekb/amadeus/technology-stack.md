@@ -19,7 +19,9 @@
 
 ## ビルドとテストツール
 
-変更なし。Bun(script runner/テスト実行)、TypeScript `^6.0.3`、Biome 2.4系、GitHub Actions(単一 ubuntu-latest job)、`bun:test` + 自作ランナー(smoke/unit/integration/e2e)。
+Bun(script runner/テスト実行)、TypeScript `^6.0.3`、Biome 2.4系、GitHub Actions(`ubuntu-latest`)、`bun:test` + 自作ランナー(smoke/unit/integration/e2e)。
+
+- **fast-check `^4.9.0`(2026-07-09、`260709-pbt-small-band`/#697 の後に landed、`260709-dynamic-test-size` スキャンで確認)**: property-based testing ライブラリを `devDependencies` に追加(`package.json:32` 相当、`bun.lock` に対応エントリ)。PBT 用 arbitrary ヘルパー(`tests/helpers/arbitraries/semver.ts`)と PBT 単体テスト(`tests/unit/setup-semver.pbt.test.ts`)で使用。テスト専用依存であり production tree・配布物には非関与。test/coverage スクリプト(`test:ci`/`coverage:ci`/`test:all`)は無改変。
 
 ## バージョンと依存関係の注記
 

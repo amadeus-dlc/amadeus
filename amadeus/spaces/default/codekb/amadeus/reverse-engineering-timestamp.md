@@ -1,6 +1,28 @@
 # リバースエンジニアリング鮮度ポインタ
 
-## 実行メタデータ(最新: 260709-t92-worktree-hermeticity)
+> このファイルは鮮度ポインタ(共有・last-writer-wins)であってベース点ではない。各 intent 固有の base/observed の真実源は `codekb/amadeus/re-scans/<intent>.md`(#707 新契約)。以下は最新 intent の記録で、旧 intent の節は参照用に温存する。
+
+## 実行メタデータ(最新: 260709-dynamic-test-size)
+
+- Date: 2026-07-09
+- Intent: `260709-dynamic-test-size`(#699 / #684 Phase D: テストランナーにおけるテストサイズの継続的動的計測)
+- Scope: `feature`(既存コードベースへの計測機構追加)
+- Repository: `amadeus`(origin remote 由来、#693 で統一。物理チェックアウトは worktree `claude-engineer-1`)
+- Stage: `reverse-engineering`(2.1)
+- 手法: diff-refresh(project.md 是正事項 cid:reverse-engineering:c1)
+- Base commit: `9a2f5c7205795a255f258628710820def2ab3f8c`(前 intent `260709-pbt-small-band` の観測コミット。本 intent に prior re-scan 記録なし → re-scans/ 内最新 observed を採用。真実源は `re-scans/260709-dynamic-test-size.md`)
+- Observed commit: `24197d755a51712c1bfd6fa405f709c070c61f0d`(現 HEAD、`git rev-parse HEAD` 実測)
+- Focus: #699 Phase D — runner の per-file wall-clock 永続化経路、`test-size.ts` 安定出力契約、drift guard、t112 copy 制約、CI(ubuntu-latest)artifact 配線、gen-coverage-registry 合流点
+
+## 分析範囲(260709-dynamic-test-size)
+
+`git diff --name-status 9a2f5c72..24197d755 -- ':!amadeus/' ':!dist/'` の実質コード差分は5ファイルのみ(`bun.lock`/`package.json`/`tests/helpers/arbitraries/semver.ts`[A]/`tests/integration/t92.test.ts`[M, #709 対応]/`tests/unit/setup-semver.pbt.test.ts`[A]、#721/#722 由来)で、いずれも #699 のフォーカス面(`run-tests.ts` 計測ライフサイクル・`test-size.ts` 分類契約・`t-test-size-drift`・`bun-junit-to-meta.ts`・t112 copy・CI・`gen-coverage-registry.ts`)に**非関与**。したがってフォーカス面は前回 codekb の理解がそのまま有効で、本スキャンは現行コードの直読で file:line を確定した。fast-check `^4.9.0` の devDependencies 追加のみ technology-stack へ反映。
+
+## 合成方針(Architect 実施 / 260709-dynamic-test-size)
+
+Developer スキャン結果を受け、9アーティファクトのうち4件を diff-refresh 更新した: `code-quality-assessment.md`(#699 観測面 4節 — 永続化経路不在・合流点/隔離契約・t112 copy 伝播/registry 直交・CI 配線)、`architecture.md`(テストピラミッド節へ「ランナー計測ライフサイクルと #699 Phase D の結合点」の3層構造を追補)、`technology-stack.md`(fast-check 追加を反映)、`code-structure.md`(新規 PBT 2ファイル + `tests/helpers/arbitraries/` ディレクトリの目録追記)。残る4件(`api-documentation.md` / `business-overview.md` / `component-inventory.md` / `dependencies.md`)は本 intent が計測機構の観測に限局し API 契約・ビジネス面・コンポーネント目録・依存マニフェストがいずれも不変のため温存(本ファイル `reverse-engineering-timestamp.md` は鮮度ポインタとして更新済み、5件目の更新)。以下の t92-worktree-hermeticity 以降の節は前 intent の記録であり参照用に温存する。
+
+## 実行メタデータ(260709-t92-worktree-hermeticity)
 
 - Date: 2026-07-09
 - Intent: `260709-t92-worktree-hermeticity`

@@ -14,6 +14,7 @@
 - 新規(A): `tests/lib/test-size.ts`(テストサイズ計測の共有ヘルパー、`tests/lib/` 配下)、`tests/unit/t-test-size-drift.test.ts`(サイズドリフトガード)、`tests/unit/setup-http.test.ts`、`tests/unit/t112-delegated-approval.test.ts`、`tests/unit/t202-hook-project-dir-worktree-marker.test.ts`、`tests/unit/t202-sensor-type-check-tsc-launcher.test.ts`。
 - 再編(M): PR #703 により `tests/unit/`・`tests/integration/`・`tests/e2e/` の多数ファイルで hermeticity(共有状態・実行順序依存の排除)修正。`tests/run-tests.ts`・`tests/lib/setup-*-fixture.ts`・coverage レジストリ(`.coverage-ratchet.json`/`.coverage-registry.json`)も追随更新。
 - テスト層構成(smoke / unit / integration / e2e の4層 + `tests/lib/` 共有)自体は不変。
+- 新規(A、`9a2f5c72..24197d755` = `260709-dynamic-test-size` スキャンで確認、#721/#722 由来): `tests/helpers/arbitraries/semver.ts`(PBT 用 arbitrary ヘルパー、**新規ディレクトリ `tests/helpers/arbitraries/`**)、`tests/unit/setup-semver.pbt.test.ts`(fast-check ベース PBT 単体テスト、ヘッダ `// covers: domain:setup-semver` / `// size: small`)。テストランナー・size 分類ロジックには非関与(#699 フォーカス面への影響なし)。`tests/integration/t92.test.ts` は #709 対応で test 44 に skip ガードを追加(M)。
 
 ## トップレベル構造
 
