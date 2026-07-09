@@ -53,7 +53,7 @@
     "slug": "packaging-repair-batch",
     "dirName": "260709-packaging-repair-batch",
     "scope": "bugfix",
-    "status": "in-flight"
+    "status": "complete"
   },
   {
     "uuid": "019f46b2-60d7-777e-84d1-13754b4ef5aa",
@@ -66,6 +66,13 @@
     "uuid": "019f46cc-d639-7b7e-8db3-4a5f10229292",
     "slug": "integrity-batch",
     "dirName": "260709-integrity-batch",
+    "scope": "bugfix",
+    "status": "in-flight"
+  },
+  {
+    "uuid": "019f4738-d9b4-73d8-b7dc-3f7b1a23a34e",
+    "slug": "t92-worktree-hermeticity",
+    "dirName": "260709-t92-worktree-hermeticity",
     "scope": "bugfix",
     "status": "in-flight"
   }

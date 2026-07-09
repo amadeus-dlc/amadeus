@@ -1,12 +1,12 @@
 # AI-DLC State Tracking
 
 ## Project Information
-- **Project**: packaging-repair-batch Fix two confirmed P2 packaging/release bugs as one bugfix batch: (1) Issue #701 — scripts/package.ts --check misses stale root files directly under dist/<harness>/ (orphan scan limited to .agents and amadeus subtrees, known projectRoot files only diffed explicitly); (2) Issue #702 — scripts/release-version-sync.ts README badge regex only matches stable X.Y.Z badges so a prerelease badge (e.g. 0.2.0-beta.1) can never advance to the next prerelease; also consider the mid-state problem (version.ts patched before README failure exits 1). Both issues have 2-reviewer CONFIRMED cross-reviews with root cause, reproduction, and fix directions in issue comments.
+- **Project**: t92-worktree-hermeticity Fix GitHub Issue #709 (bug/P2, 2-reviewer CONFIRMED): tests/integration/t92.test.ts case 44 (type-check status gate) depends on a repo-root node_modules existing in the current worktree — in an uninstalled detached worktree the pinned-tsc resolution falls back to bunx tsc and records script-error exit-1 instead of the pinned exit-2, so full-suite runs go red in fresh worktrees while CI stays green. Fix direction to be settled in requirements (fixture self-containment vs runner precondition check vs skip-with-reason). Solo-intent exception rationale (election A8=A, 5:0): no batching partner exists (all other open bugs in flight) + bug-zero goal + idle capacity.
 - **Project Type**: Brownfield
 - **Scope**: bugfix
-- **Start Date**: 2026-07-09T11:38:56Z
+- **Start Date**: 2026-07-09T14:12:15Z
 - **State Version**: 7
-- **Active Agent**: amadeus-quality-agent
+- **Active Agent**: amadeus-developer-agent
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**:
@@ -25,13 +25,12 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 7
-- **Completed**: 7
-- **In Progress**: none
+- **Completed**: 3
+- **In Progress**: reverse-engineering
 
 ## Runtime State
 - **Revision Count**: 0
 
-- **Skeleton Stance**: scope-dependent
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -59,9 +58,9 @@
 - [ ] approval-handoff — SKIP
 
 ### INCEPTION PHASE
-- [x] reverse-engineering — EXECUTE
+- [-] reverse-engineering — EXECUTE
 - [ ] practices-discovery — SKIP
-- [x] requirements-analysis — EXECUTE
+- [ ] requirements-analysis — EXECUTE
 - [ ] user-stories — SKIP
 - [ ] refined-mockups — SKIP
 - [ ] application-design — SKIP
@@ -74,8 +73,8 @@ Per unit: [TBD]
 - [ ] nfr-requirements — SKIP
 - [ ] nfr-design — SKIP
 - [ ] infrastructure-design — SKIP
-- [x] code-generation — EXECUTE
-- [x] build-and-test — EXECUTE
+- [ ] code-generation — EXECUTE
+- [ ] build-and-test — EXECUTE
 - [ ] ci-pipeline — SKIP
 
 ### OPERATION PHASE
@@ -88,13 +87,13 @@ Per unit: [TBD]
 - [ ] feedback-optimization — SKIP
 
 ## Current Status
-- **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: build-and-test
-- **Next Stage**: none
-- **Status**: Completed
-- **Last Updated**: 2026-07-09T13:27:03Z
+- **Lifecycle Phase**: INCEPTION
+- **Current Stage**: reverse-engineering
+- **Next Stage**: requirements-analysis
+- **Status**: Running
+- **Last Updated**: 2026-07-09T14:12:15Z
 
 ## Session Resume Point
-- **Last Completed Stage**: build-and-test
-- **Next Action**: Workflow complete
+- **Last Completed Stage**: state-init
+- **Next Action**: Execute reverse-engineering
 - **Pending Artifacts**: none
