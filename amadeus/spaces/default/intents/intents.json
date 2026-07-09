@@ -47,5 +47,12 @@
     "dirName": "260709-bug-zero-batch",
     "scope": "bugfix",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019f473b-762f-7dfb-ac29-2436cc4e13d0",
+    "slug": "pbt-small-band",
+    "dirName": "260709-pbt-small-band",
+    "scope": "refactor",
+    "status": "in-flight"
   }
 ]
