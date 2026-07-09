@@ -46,7 +46,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "bun $CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-statusline.ts"
+    "command": "bash \"$HOME/.claude/agent-statusline.sh\" --next bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/amadeus-statusline.ts\""
   },
   "hooks": {
     "UserPromptSubmit": [
