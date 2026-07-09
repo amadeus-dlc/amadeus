@@ -1,13 +1,5 @@
 # Changelog
 
-<<<<<<< HEAD
-## [1.2.0] - 2026-07-09
-
-- The npm-distributed `@amadeus-dlc/setup` installer (`bunx @amadeus-dlc/setup install` / `npx @amadeus-dlc/setup install`) is now the primary way to install Amadeus-DLC. Pick a harness interactively or pass `--harness`/`--target`/`--yes` for non-interactive use; `amadeus-setup upgrade` updates an existing install with a diff-style plan that preserves your customizations. The manual `cp -r dist/<harness>` steps moved out of the README into the Troubleshooting guide's manual-copy fallback (for when the installer itself isn't reachable).
-- Corrected root `package.json` metadata: `license` now reads `(MIT OR Apache-2.0)`, matching the shipped dual-license files (it previously read the mismatched `MIT-0`); the `repository` field now points at this repository instead of a stale reference, and the leftover `directory` subfield from an earlier monorepo layout was removed.
-
-||||||| 2fe07057a
-=======
 ## [1.2.0] - 2026-07-09
 
 - The npm-distributed `@amadeus-dlc/setup` installer (`bunx @amadeus-dlc/setup install` / `npx @amadeus-dlc/setup install`) is now the primary way to install Amadeus-DLC. Pick a harness interactively or pass `--harness`/`--target`/`--yes` for non-interactive use; `amadeus-setup upgrade` updates an existing install with a diff-style plan that preserves your customizations. The manual `cp -r dist/<harness>` steps moved out of the README into the Troubleshooting guide's manual-copy fallback (for when the installer itself isn't reachable).
@@ -18,7 +10,6 @@
 - The stage protocol now mandates parallel dispatch of per-unit reviewer sub-agents (reviews are read-only and side-effect-free; only builder fixes stay serial) — §12a "Parallelism (per-unit stages)".
 - The architecture reviewer agent definition gained the missing Knowledge Loading section: its shipped review methodology (`reviewing.md`, `thermo-nuclear-code-quality-review.md`) is now loaded on activation, and code reviews must apply the thermo-nuclear maintainability standards.
 
->>>>>>> origin/main
 ## [1.1.0] - 2026-07-07
 
 - Added **Grill me**, a fourth question interaction mode: a relentless one-question-at-a-time interview — each question with a recommended answer and rationale, facts self-researched with only decisions asked, hybrid termination ("done" any time, continuation check at the depth guideline), and an explicitly confirmed agreement summary before artifact generation. Available at every gated stage's mode selection (annotated as exceptional use in Construction/Operation); answers keep the existing questions-file and per-question `decision`/`answer` audit contract.
