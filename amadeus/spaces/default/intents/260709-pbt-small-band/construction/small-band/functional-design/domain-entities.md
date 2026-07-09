@@ -1,5 +1,7 @@
 # Domain Entities — pbt-small-band(対象型と seam)
 
+> 上流: inception/requirements-analysis/requirements.md(FR-2〜FR-5 の対象型)に基づく。
+
 ## 対象ドメイン型(packages/setup、変更なし — テスト対象として列挙)
 
 - `SemVer`(`src/domain/semver.ts`): brand 型+スマートコンストラクタ `SemVer.parse`(Result 返し)、`format(): v${string}`、比較は `semver-factory.ts:15-27`(**同 major.minor.patch の prerelease は非比較** — factory:20)

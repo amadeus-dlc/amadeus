@@ -1,5 +1,7 @@
 # Business Logic Model — 実装構成(Bolt 別)
 
+> 上流: inception/requirements-analysis/requirements.md の FR/Bolt 分割(C-1)を具体化。
+
 ## B1(基盤+semver/version-spec)
 - ルート package.json devDependencies に fast-check 追加(単一 Bolt が所有 — B2/B3 は B1 マージ後 rebase、依存追加の重複コミット禁止)
 - `tests/unit/setup-semver.pbt.test.ts`(新規、in-process Small): P-SV1〜SV4。生成器ヘルパー `tests/helpers/arbitraries/semver.ts`

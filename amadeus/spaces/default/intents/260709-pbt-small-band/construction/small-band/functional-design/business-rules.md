@@ -1,5 +1,7 @@
 # Business Rules — プロパティカタログ(検証する法則)
 
+> 上流: inception/requirements-analysis/requirements.md(FR-1〜FR-5、NFR-3)から導出。
+
 トートロジー禁止(NFR-3): 全プロパティは実装から独立に定義できる法則のみ。各 Bolt は変異注入の落ちる実証(exit code 付き)を完成条件とする(FR-1.4/2.3/3.3/4.4/5.4)。
 
 ## B1: semver / version-spec

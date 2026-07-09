@@ -1144,3 +1144,358 @@
 **Findings count**: 1
 
 ---
+
+## Artifact Updated
+**Timestamp**: 2026-07-09T14:47:07Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-2/amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-rules.md
+**Context**: construction > small-band > functional-design > business-rules.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T14:47:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9cc91aea
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T14:47:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9cc91aea
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-rules.md
+**Duration ms**: 37
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T14:47:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: 5cf08846
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T14:47:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: 5cf08846
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-rules.md
+**Duration ms**: 39
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-09T14:47:10Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-2/amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-logic-model.md
+**Context**: construction > small-band > functional-design > business-logic-model.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T14:47:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: 287a1463
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T14:47:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: 287a1463
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-logic-model.md
+**Duration ms**: 44
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T14:47:10Z
+**Event**: SENSOR_FIRED
+**Fire id**: c67bb259
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T14:47:10Z
+**Event**: SENSOR_PASSED
+**Fire id**: c67bb259
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-logic-model.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T14:47:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 39faefa5
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T14:47:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 39faefa5
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/domain-entities.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T14:47:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4b8dd109
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/domain-entities.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-09T14:47:22Z
+**Event**: SENSOR_FAILED
+**Fire id**: 4b8dd109
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/domain-entities.md
+**Detail path**: amadeus/spaces/default/intents/260709-pbt-small-band/.amadeus-sensors/functional-design/upstream-coverage-4b8dd109.md
+**Findings count**: 1
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T14:47:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2d2ba6e4
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T14:47:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2d2ba6e4
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-rules.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T14:47:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: cff1442b
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T14:47:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: cff1442b
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-rules.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T14:47:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 967b306e
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T14:47:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 967b306e
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-logic-model.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T14:47:22Z
+**Event**: SENSOR_FIRED
+**Fire id**: 241d68b6
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T14:47:22Z
+**Event**: SENSOR_PASSED
+**Fire id**: 241d68b6
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-logic-model.md
+**Duration ms**: 40
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T14:47:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: b9eb7489
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T14:47:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: b9eb7489
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/domain-entities.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T14:47:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: afeb638e
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/domain-entities.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T14:47:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: afeb638e
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/domain-entities.md
+**Duration ms**: 39
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T14:47:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1c114f41
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T14:47:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1c114f41
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-rules.md
+**Duration ms**: 43
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T14:47:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: be2d3116
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-rules.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T14:47:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: be2d3116
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-rules.md
+**Duration ms**: 42
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T14:47:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: 0ae0fc50
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T14:47:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: 0ae0fc50
+**Sensor ID**: required-sections
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-logic-model.md
+**Duration ms**: 41
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T14:47:50Z
+**Event**: SENSOR_FIRED
+**Fire id**: e0724467
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-logic-model.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T14:47:50Z
+**Event**: SENSOR_PASSED
+**Fire id**: e0724467
+**Sensor ID**: upstream-coverage
+**Stage slug**: functional-design
+**Output path**: amadeus/spaces/default/intents/260709-pbt-small-band/construction/small-band/functional-design/business-logic-model.md
+**Duration ms**: 40
+
+---
