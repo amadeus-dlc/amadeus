@@ -35,6 +35,8 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフィックス、`packages/framework/` 配下のハーネス中立 `core/` とハーネス別 `harness/<name>/` という境界を守る。フォーマッタは無効、lint は Biome、型検査は `tsc --noEmit` の2構成で行い、ツール・フックには実行ビットを要求しない。
 
 新設パッケージ(`packages/*`)は、lint(Biome)と型検査(`tsc --noEmit`)の配線を**パッケージを追加する同一 PR で**追加し、既存の狭い CI lint スコープ(`tests/` のみ)を継承しない。
+リリース(`@amadeus-dlc/setup` の npm publish)は **release.yml の1ボタン運用**とする: workflow_dispatch で bump レベルを選ぶと、release-it が version bump→コミット→`setup-vX.Y.Z` タグ→main へ直接 push し、同一ランで GitHub Release(ノート自動生成)と provenance 付き publish まで完結する。**このバンプコミットのみ、PR/5ゲートを経ずに main へ入る明示的な例外**として承認する(release-it が行う1行の version 変更に限定。2026-07-09 ユーザー決定)。それ以外のコミットは従来どおり PR 経由。
+
 ## Forbidden
 
 - NEVER `dist/<harness>/` 配下を手編集する — 生成物であり、`bun scripts/package.ts --check` が CI で失敗する

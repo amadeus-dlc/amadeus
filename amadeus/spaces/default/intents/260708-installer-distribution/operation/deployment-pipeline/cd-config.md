@@ -16,3 +16,10 @@ CD ツールの設定ファイルは**存在しない**(意図した設計 — C
 ## 将来の拡張余地(スコープ外の記録)
 
 CI publish+provenance への移行は SEC-P03 注記(手順書章5)が再検討ポイントを明示。移行時は 2FA automation token と provenance 設定を要再設計
+
+
+---
+
+## 追補(2026-07-09 — CON-004 の上書き)
+
+ユーザー決定により CI リリースへ移行(PR #658): `.github/workflows/release.yml` が `setup-vX.Y.Z` タグ push で5ゲート再実行 → フレッシュビルド → 実ネットワーク E2E → バージョンガード → `npm publish --provenance` を実行する。CON-004(CI 自動 publish なし)はこの決定で失効し、SEC-P03 の再検討ポイント(provenance)は有効化で消化。SEC-P02 は CI 経路では granular automation token の管理(狭スコープ+短期失効)に置き換わる(手動フォールバックでは対話 2FA を維持)。本書の「手動直列パイプライン」はフォールバック手順として存続。
