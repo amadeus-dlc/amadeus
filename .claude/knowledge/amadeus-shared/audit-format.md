@@ -8,7 +8,7 @@
 
 All event names follow `SUBJECT_PAST_VERB` — every event answers "what happened?"
 
-## Event Registry (70 events, 18 categories)
+## Event Registry (71 events, 18 categories)
 
 ### Workflow Lifecycle (4 events)
 
@@ -75,6 +75,7 @@ All event names follow `SUBJECT_PAST_VERB` — every event answers "what happene
 | `GATE_APPROVED` | Human approved at gate | Timestamp, Stage, User Input | `tools/amadeus-state.ts approve` |
 | `GATE_REJECTED` | Human requested changes | Timestamp, Stage, Feedback | `tools/amadeus-state.ts reject` |
 | `QUESTION_ANSWERED` | Question answered by user | Timestamp, Stage, Details | `tools/amadeus-log.ts answer` |
+| `DELEGATED_APPROVAL` | Leader session records a human-grounded approval into a remote conductor intent's audit dir (agent-team topology, #671) | Timestamp, Stage, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts, User Input | `tools/amadeus-state.ts delegate-approval` |
 
 ### Artifact Events (3 events — hook-emitted)
 
