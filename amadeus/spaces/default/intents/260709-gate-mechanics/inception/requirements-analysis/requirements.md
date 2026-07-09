@@ -35,12 +35,16 @@
 - FR-2.2: ガードの本来の意図(**真のネスト防止** = Bolt worktree の中でさらに worktree を切る等)は維持する。ネスト作成は引き続き拒否。
 - FR-2.3: main checkout の解決は既存の `dirname(git-common-dir)` を用いる(worktree からでも main checkout を正しく指す)。作成先パスは main checkout の sibling 位置に固定する。
 - FR-2.4: `list`(read-only、既にガード対象外)の挙動は不変。
+- **FR-2.5(review#1 critical 反映): `create` だけでなく、同じ `assertNotSiblingWorktree` を呼ぶ全 write 経路を対象にする。** 呼び出し3箇所(`amadeus-worktree.ts` の `handleCreate`:204 / `handleMerge`:277 / `handleDiscard`:512)はいずれも実 CLI 表面(`amadeus-bolt complete --merge` / `--discard` が委譲、`amadeus-bolt.ts` の `BOOLEAN_FLAGS`)。`create` だけ緩和して merge/discard を残すと、sibling worktree の conductor は Bolt worktree を作れても完了(merge)・破棄(discard)できず「Bolt worktree モードが構造的に使用不能」というバグが半分しか直らない。3経路すべてで同じ緩和(sibling 実行成功・真ネスト拒否維持)を適用する。
 
 **受け入れ基準(Given/When/Then)**:
 - AC-2a: Given sibling worktree(例: `~/worktrees/.../claude-engineer-3`)から実行。When `amadeus-worktree create --slug <x> --base main`。Then Bolt worktree が main checkout の sibling として作成され、エラーにならない。
 - AC-2b: Given main checkout から実行。When 同コマンド。Then 従来どおり成功(回帰なし)。
 - AC-2c: Given Bolt worktree(ネスト元)から真にネストした作成を試みる。When create。Then 引き続き拒否される(意図の維持)。
 - AC-2d: **落ちる実証**: 修正前は sibling worktree から拒否=赤、修正後は成功=緑 を実測。かつ真ネスト拒否の維持も実測(過剰緩和でないこと)。
+- AC-2e(FR-2.5): Given sibling worktree から実行。When `amadeus-worktree merge`(および `amadeus-bolt complete --merge`)。Then エラーにならず処理される(create と同じ緩和)。真ネストは拒否維持。
+- AC-2f(FR-2.5): Given sibling worktree から実行。When `amadeus-worktree discard`(および `amadeus-bolt complete --discard`)。Then エラーにならず処理される。真ネストは拒否維持。
+- AC-2g(FR-2.4): Given sibling worktree / main checkout の双方から。When `amadeus-worktree list`。Then 従来どおり成功(ガード対象外の挙動が不変=回帰なし)。
 
 ---
 
@@ -50,3 +54,5 @@
 - NFR-2: core 正本編集 → `bun scripts/package.ts`(dist 再生成)+ `bun run promote:self`(セルフインストール昇格)を同一コミット。監査/セルフインストールドリフトガードを緑に保つ。
 - NFR-3: 検証は `bun run typecheck` / `lint` / `dist:check` / `promote:self:check` / `bash tests/run-tests.sh --ci`。新規イベント型追加時は event-registry 同期ガード(t28/t48/t81/t111 + audit-format.md + 12-state-machine.md EN/JA)をすべて更新。
 - NFR-4: 後方互換シム・要求外のフォールバックを追加しない(古い挙動は置換)。
+- **NFR-5(review#1 high 反映): `tests/e2e/t06.test.ts` は #670 修正前の CLI 契約(sibling worktree からの `create` を拒否=`must run from the main repo checkout`)をロックしている。**本 Bolt はこの契約を意図的に反転させるため、t06 のアサーションを「sibling からの create/merge/discard は成功・真ネストは依然拒否」へ**書き換える**(単なる green 維持ではない)。この反転は team.md の「既存スイート green 維持」ノルム上の**回帰ではない**(変更対象そのもののテスト)ことを Bolt2 の PR に明記する。
+- NFR-6(review#1 minor 反映): #685 の delegated-rejection 回帰テストは、既存 `tests/unit/t112-delegated-approval.test.ts` の対称(delegated-rejection 版、または同ファイルへの追加)として配置し、承認委任テストと対称のカバレッジにする。最終的なファイル位置は design/code-generation で確定。
