@@ -61,6 +61,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 - codex メンバーの手空き時の既定タスクは潜在バグ探索とする: leader が未踏領域を割ってディスパッチし、レビュー依頼が来たら探索を中断して最優先で対応する。探索は bughunt-file-only ルール(実測起票のみ・修正禁止・クロスレビュー必須)に従う (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:codex-default-bughunt -->
 - Issue のラベルトリアージは自動発動とする: 起票者は起票時に種別(bug/enhancement/documentation)+ 優先度(P0-P3)の見立てを必ず付ける。leader は起票報告を受けるたびに未付与・不整合がないか確認し、あれば空いている codex へトリアージを即ディスパッチする(ユーザーの指示を待たない)。優先度基準: P0=正しさ/安全性の破綻、P1=重要だが回避可、P2=通常、P3=いつか (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:auto-label-triage -->
 - Issue クロスレビューは独立検証であって同意表明ではない: レビュアーは起票文の要約・追認だけのコメントを書かず、自分で実際にコード・ファイルを開いて突き合わせた新しいエビデンス(自分が実行したコマンドと結果、確認した file:line の引用、可能なら再現の実測)を必ずコメントに含める。独立エビデンスのないレビューは2名確認の頭数に数えない。leader は verdict コメントにエビデンスが無い場合、レビューやり直しを差し戻す (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:issue-review-evidence -->
+- ドキュメントの修正・執筆(docs/、amadeus/ 配下の日本語 Markdown、EN/JA ペア更新を含む)は claude メンバーが担当する。codex メンバーには日本語文書の執筆・修正を割り当てない(日本語の品質担保のため。codex はドキュメントの検証・参照整合チェックには従来どおり参加してよい) (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:docs-by-claude -->
 ## Walking Skeleton
 
 スコープ別の walking-skeleton 既定は org.md に従う。greenfield 要素(新パッケージ・新配布経路など)を含む intent では、最初の Construction Bolt を小さな end-to-end スライスとして扱い、以後の拡張前に人間がゲートで確認する。
