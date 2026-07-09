@@ -31,15 +31,18 @@ const VERSION_TS = join(AMADEUS_SRC, "tools", "amadeus-version.ts");
 const UTILITY_TS = join(AMADEUS_SRC, "tools", "amadeus-utility.ts");
 const README = join(REPO_ROOT, "README.md");
 
-const SEMVER = /[0-9]+\.[0-9]+\.[0-9]+/;
+// Optional prerelease suffix, consistent with the acceptance regex in
+// scripts/release-version-sync.ts, so a prerelease release (e.g. 0.2.0-beta.1)
+// is captured as ONE assignment rather than zero (FR-702-3).
+const SEMVER = /[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?/;
 
 /** All `AMADEUS_VERSION = "N.N.N"` literals in version.ts (defends against a
  *  merge-conflict marker leaving two assignments — the .sh's `head -1` + count). */
 function versionAssignments(): string[] {
   const src = readFileSync(VERSION_TS, "utf-8");
-  return [...src.matchAll(/AMADEUS_VERSION = "([0-9]+\.[0-9]+\.[0-9]+)"/g)].map(
-    (m) => m[1],
-  );
+  return [
+    ...src.matchAll(/AMADEUS_VERSION = "([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?)"/g),
+  ].map((m) => m[1]);
 }
 
 describe("t68 framework version sync (version.ts / CLI / README badge)", () => {
