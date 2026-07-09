@@ -1499,3 +1499,49 @@
 **Duration ms**: 40
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-09T14:48:47Z
+**Event**: WORKFLOW_PARKED
+**Stage**: functional-design
+**Timestamp**: 2026-07-09T14:48:47Z
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-09T14:49:24Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-09T14:49:24Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-09T14:49:24Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: functional-design
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-09T14:49:24Z
+**Event**: GATE_APPROVED
+**Stage**: functional-design
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-09T14:49:24Z
+**Event**: STAGE_COMPLETED
+**Stage**: functional-design
+**Details**: Stage Functional Design approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-09T14:49:24Z
+**Event**: STAGE_STARTED
+**Stage**: code-generation
+**Agent**: amadeus-developer-agent
+
+---
