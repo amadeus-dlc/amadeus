@@ -54,5 +54,12 @@
     "dirName": "260709-packaging-repair-batch",
     "scope": "bugfix",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019f46b2-60d7-777e-84d1-13754b4ef5aa",
+    "slug": "gate-mechanics",
+    "dirName": "260709-gate-mechanics",
+    "scope": "bugfix",
+    "status": "in-flight"
   }
 ]

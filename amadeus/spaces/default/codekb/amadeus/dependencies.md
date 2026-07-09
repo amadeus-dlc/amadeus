@@ -1,5 +1,26 @@
 # 依存関係
 
+## 260709-gate-mechanics(本 intent)の内部依存(#685・#670)
+
+```mermaid
+flowchart TD
+  Lib["amadeus-lib.ts (humanActedSinceGate/verifyDelegatedApproval/auditShardDir)"]
+  State["amadeus-state.ts (handleApprove/handleDelegateApproval/handleReject)"]
+  Audit["amadeus-audit.ts (VALID_EVENT_TYPES)"]
+  Mint["amadeus-mint-presence.ts (HUMAN_TURN hook)"]
+  Worktree["amadeus-worktree.ts (assertNotSiblingWorktree)"]
+  Bolt["amadeus-bolt.ts (--worktree)"]
+
+  Lib -->|humanActedSinceGate/verifyDelegatedApproval| State
+  State -->|appendAuditEntry(DELEGATED_APPROVAL, ...)| Audit
+  Mint -->|HUMAN_TURN written to own shard| Lib
+  Bolt -->|--worktree 経路で create/release/merge を呼ぶ| Worktree
+```
+
+<!-- text fallback: amadeus-lib.ts's humanActedSinceGate and verifyDelegatedApproval are consumed by amadeus-state.ts's gate handlers (handleApprove, handleDelegateApproval, handleReject); handleDelegateApproval writes a DELEGATED_APPROVAL event whose validity as an event type is enforced by amadeus-audit.ts's VALID_EVENT_TYPES set. amadeus-mint-presence.ts (the UserPromptSubmit hook) is the sole writer of HUMAN_TURN events that humanActedSinceGate and verifyDelegatedApproval both read. amadeus-worktree.ts's assertNotSiblingWorktree is a separate, unrelated dependency chain reached both directly (amadeus-worktree.ts create) and via amadeus-bolt.ts's --worktree flag. #685 and #670 are independent defects in two unrelated subsystems that happen to be bundled in the same bugfix batch. -->
+
+外部依存に変更はない(前回スキャンの確認内容を維持)。#685 の修理(新規 delegated-rejection 機構)・#670 の修理(worktree 判定基準の追加)はいずれも既存モジュール内の分岐追加で完結し、新規パッケージ依存を要求しない見込み。
+
 ## 内部依存グラフ(既存 framework 配布経路、変更なし)
 
 ```mermaid
