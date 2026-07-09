@@ -51,3 +51,10 @@ deslop 後の再検証: typecheck=0 / lint=0 / t-test-size-drift + t-test-size-d
 ## plan からの逸脱
 
 - Step 6 の赤 fixture 手法のみ(上記 busy-wait)。他は plan どおり。t112 伝播(Step 4): 新規 import は `./lib/test-size.ts` のみ(コピー済み)で追加不要を実測確認。
+
+## codex-3 レビュー是正(2026-07-10、PR #732 1回目 NOT-READY → 是正)
+
+1. **(blocker) seam 再設計**: observe() 単発の identity wrapper → `openSession()` + `begin/finish` ライフサイクル型へ。wall-clock session は per-file 開始時刻を所有し、finish は JUnit 有限値優先+自前計測フォールバック。failure isolation は `beginObservation`/`finishObservation` ヘルパー(test-size.ts、note シンク注入)として実装し、throwing session の in-process pin テストを追加(backend throw が runner exit へ漏れる経路を封鎖)。コミット `cbcf7db3f` / `54426fe00`。
+2. **(required) レポート決定性**: `buildTestSizeReport` が records を file 辞書順 sort(非破壊、順序責務の単一箇所)。逆順入力→辞書順出力+入力非破壊をテストで pin。
+- 設計成果物へ伝播済み(domain-entities §2.6 / business-rules BR-4・BR-6 / questions Q4 改訂注 — record ブランチ)。
+- 是正後検証: typecheck/lint 0、`--unit --filter t-test-size` PASS(drift 13 + dynamic 26)、`--ci` exit 0(276 files)。新ライフサイクルでの赤/緑 fixture 実証も再実施(発火→削除で 0)。conductor 裏取り: typecheck=0、t-test-size 両ファイル PASS を再実測。deslop 再検分: 是正差分に残存なし。
