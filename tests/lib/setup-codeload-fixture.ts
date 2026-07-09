@@ -8,6 +8,8 @@
 import { buildTarGz, type TarFixtureEntry } from "./setup-tar-fixture.ts";
 
 export function buildCodeloadFixture(wrapperName: string, entries: readonly TarFixtureEntry[]): Buffer {
-  const wrapped = entries.map((entry) => ({ ...entry, name: `${wrapperName}/${entry.name}` })) as TarFixtureEntry[];
+  const wrapped = entries.map((entry): TarFixtureEntry =>
+    "longName" in entry ? { ...entry, longName: `${wrapperName}/${entry.longName}` } : { ...entry, name: `${wrapperName}/${entry.name}` },
+  );
   return buildTarGz(wrapped);
 }
