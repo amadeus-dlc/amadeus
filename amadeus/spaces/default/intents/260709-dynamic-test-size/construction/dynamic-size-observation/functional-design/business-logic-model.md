@@ -33,7 +33,7 @@ sequenceDiagram
 
 - 統合点: per-file 実行の JUnit parse 直後(`run-tests.ts:754-762` の `time` 取得箇所)。既存の `buildMeta`/`renderMeta` 経路(`bun-junit-to-meta.ts`)は変更しない。
 - 収集器はモジュールスコープの配列ではなく、runner main から引き回す明示的な collector(関数引数)とする — テストで独立構築できる seam(NFR-5)。
-- 収集値: `(file, scope/tier, durationSeconds)`。`durationSeconds` は root JUnit `time` の秒 float をそのまま保持(丸めない)。
+- 収集値: `(file, scope/tier, durationSeconds)`。`durationSeconds` の実出所は2系統: (a) root JUnit `time`(通常)、(b) Bun が root time を省略した場合の runner 計算 wall-clock 代替(`run-tests.ts:762` の `Date.now()` 由来フォールバック — 既存挙動)。いずれも drift 目的には正当な wall-clock 信号であり、区別せず保持する(丸めない)。なお `meta.duration` は文字列(`bun-junit-to-meta.ts:114`)のため、収集点で `Number()` parse を行い、NaN は §3 のエラー表に従い除外する(parse 点はこの Step A の収集器)。
 - backend 経由: collector は `SizeObservationBackend`(wall-clock 実装)から `SizeObservation` を受け取る(BR-7 の seam 初回消費 — FR-6 付帯条件)。
 
 ### Step B: レコード構築(FR-2、BR-1/BR-2)

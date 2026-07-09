@@ -102,8 +102,8 @@ export interface SizeObservationBackend {
 }
 ```
 
-- wall-clock バックエンド(初回消費者)は runner が既に持つ JUnit 実測を素通しする実装。レコード生成経路(business-logic-model.md §3)は必ず backend 経由で `durationSeconds` を得る — 消費者ゼロの拡張点にしない(選挙付帯条件)。
-- 意図的に最小の interface とし、将来バックエンドが必要とする入力(プロセス handle 等)は後続 Issue で interface 拡張として設計する(現時点で推測実装しない — simplicity first)。
+- wall-clock バックエンド(初回消費者)は runner が既に持つ実測 duration を素通しする実装。レコード生成経路(business-logic-model.md §3)は必ず backend 経由で `durationSeconds` を得る — 消費者ゼロの拡張点にしない(選挙付帯条件)。
+- 意図的に最小の interface とし、将来バックエンドが必要とする入力(プロセス handle 等)は後続 Issue で interface 拡張として設計する(現時点で推測実装しない — simplicity first)。**注**: 現シグネチャの第2引数は wall-clock 由来の値であり、strace/eBPF 等の第2バックエンド導入時にはシグネチャ改訂(観測入力の抽象化)が必要になる見込み。FR-6 は「wall-clock を初回消費者とする seam の存在」までを要求しており、シグネチャの汎化保証はスコープ外(requirements §6 が第2バックエンドを後続 Issue に明示委譲済み)。
 
 ## 3. 関係図
 

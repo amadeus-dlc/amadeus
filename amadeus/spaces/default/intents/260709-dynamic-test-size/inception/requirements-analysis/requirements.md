@@ -28,7 +28,7 @@
 
 - runner の per-file 実行で得られる wall-clock(root JUnit `time`、秒 float)を、テスト実行の副産物として収集する。**新しい計測メカニズムは導入しない**(既測値の活用)。
 - 収集粒度は per-file(Issue AC「結果は per-file metadata に出る」)。per-test 粒度はスコープ外。
-- テスト可能条件: `bash tests/run-tests.sh --ci` 実行後、全実行対象ファイルについて `{file, duration}` が永続化先(FR-3)に存在する。
+- テスト可能条件: `bash tests/run-tests.sh --ci` 実行後、全実行対象ファイルについて `{file, duration}` が永続化先(FR-3)に存在する。例外: レポート構築時点で source が読めない、または duration が欠落/NaN のファイルは、偽データを捏造せず stderr に痕跡を残して除外する(advisory 経路での検証劇場回避 — functional-design レビューで顕在化した要件の絞り込み、2026-07-10 反映)。
 
 ### FR-2: 実測と宣言/静的分類の drift 検出
 
