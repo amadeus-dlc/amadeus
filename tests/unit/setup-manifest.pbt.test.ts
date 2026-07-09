@@ -39,20 +39,35 @@ function filesOrThrow(entries: readonly ManifestFile[]): ManifestFiles {
   return result.value;
 }
 
-describe("Manifest property: P-MF1 parse ∘ toJSON ∘ build is a structural identity", () => {
-  test("parse(build(...).toJSON()).toJSON() deep-equals the built manifest's JSON", () => {
+describe("Manifest property: P-MF1 parse ∘ toJSON ∘ build recovers the ORIGINAL build input", () => {
+  test("the parsed manifest's domain values equal the generated (entries, version, meta) input", () => {
     fc.assert(
       fc.property(uniquePathFilesArb, resolvedVersionArb, installMetaArb, (entries, version, meta) => {
         const built = Manifest.build(fakePayload(version), filesOrThrow(entries), meta);
-        const json = built.toJSON();
-        const reparsed = Manifest.parse(json);
-        // parse must accept every manifest build produced, and toJSON of the
-        // reparsed value must reproduce the original JSON exactly — no field
-        // dropped, no files[] entry reordered, the SemVer normalized identically.
+        const reparsed = Manifest.parse(built.toJSON());
+        // parse must accept every manifest build produces.
         expect(reparsed.type).toBe("ok");
-        if (reparsed.type === "ok") {
-          expect(reparsed.value.toJSON()).toEqual(json);
-        }
+        if (reparsed.type !== "ok") return;
+        const parsed = reparsed.value;
+        // ANCHOR TO INPUT, not to the emitted JSON: every recovered value is
+        // asserted against the generated input (entries / version / meta), never
+        // against built.toJSON(). This catches a value-mapping corruption in
+        // toJSON that parse would otherwise re-accept (e.g. md5 → "BROKEN-MD5"),
+        // which an emitted-vs-emitted comparison cannot see.
+        expect(parsed.schemaVersion).toBe(1);
+        expect(parsed.installerPackageVersion).toBe(meta.installerPackageVersion);
+        expect(parsed.installedAt).toBe(meta.installStartedAt);
+        expect(parsed.harness).toBe(meta.harness);
+        // version: compare via the SemVer domain equality to the input semver,
+        // and the tag/sourceTag to the input tag — no format() round-trip stands
+        // in for the input.
+        expect(parsed.distributionVersion.equals(version.semver)).toBe(true);
+        expect(parsed.sourceTag).toBe(version.tag);
+        // files: the recovered file table must reproduce the input entries
+        // exactly (path/class/required/md5, order preserved).
+        expect(parsed.toJSON().files).toEqual(
+          entries.map((e) => ({ path: e.path, class: e.class, required: e.required, md5: e.md5 })),
+        );
       }),
       OPTS,
     );
