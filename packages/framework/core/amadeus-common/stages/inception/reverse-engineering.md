@@ -159,11 +159,14 @@ It prints ONE line — the per-intent file
 `amadeus/spaces/<active-space>/codekb/<repo>/re-scans/<intent-record>.md` (keyed by the
 intent's record-dir name, so concurrent intents resolve to distinct files that never
 overwrite or git-conflict). Write into it: this intent's **base commit** (the commit its
-PREVIOUS scan observed, or the repo-wide latest if this intent has no prior scan, or
-`none` for a first scan), the **observed commit** (repo HEAD at this scan), the **focus**
+PREVIOUS scan observed, or the newest observed commit across `re-scans/` if this
+intent has no prior scan, or `none` when no re-scan record exists at all), the
+**observed commit** (repo HEAD at this scan), the **focus**
 (scan scope), and the **date**. On a later differential refresh, resolve this intent's
-base point by reading its OWN re-scan record, falling back to the shared timestamp
-pointer when absent.
+base point by reading its OWN re-scan record; if this intent has no prior re-scan
+record, use the newest **observed commit** across the other records in
+`re-scans/` (or `none` — a first full scan — when that directory has no records) —
+never derive this intent's base from `reverse-engineering-timestamp.md`.
 
 The pre-#707 single `codekb/<repo>/reverse-engineering-timestamp.md` was the base-point
 source of truth; it is now demoted to the shared freshness pointer only. No read
