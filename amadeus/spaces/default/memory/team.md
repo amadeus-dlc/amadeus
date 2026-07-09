@@ -61,3 +61,4 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 
 <!-- 自己学習ループがここに追記する。 -->
 - Bolt のレビューが READY になった時点で「Bolt ブランチ切り出し+PR 発行」を明示的にタスク化する。エンジン指令・stage ファイルに現れない Way of Working 規範(Bolt 単位 PR、タグ発行等)は、該当イベント発生時に conductor がタスクリストへ載せて追跡する — 指令駆動ループの外にある規範は、タスク化しない限り実行されない(installer-distribution Bolt 1〜3 で PR 分割漏れを観測、遡及分割で是正) (learned 2026-07-08) <!-- cid:code-generation:code-generation:bolt-pr-taskization -->
+- human-presence gate は conductor セッション自身の HUMAN_TURN を要求するため、遠隔 conductor の auto 承認はそのままでは成立しない(選挙 6:0 で決定、2026-07-09)。恒久対応は委任承認 provenance の第一級化(Issue #671)。それまでの暫定運用: conductor はゲート到達時に leader へ「ゲート準備完了」を報告し、leader がユーザーへ「対象 tmux セッションに1行タイプ」を依頼、タイプ後に conductor が approve を再実行する。ゲートの緩和・偽装(env での skip 等)は検証劇場 Forbidden により禁止 (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:human-presence-interim -->
