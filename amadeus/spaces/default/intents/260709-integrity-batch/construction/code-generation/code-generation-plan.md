@@ -29,6 +29,12 @@ units-generation は bugfix スコープで SKIP(consumes_absent expected: true)
 - 割当 worktree 以外での git 操作禁止を毎回明示
 - push は conductor が差分検分+検証再実行後に行う(evidence-discipline 準拠)
 
+## マージランブック(共有生成ファイルの直列化)
+
+「4 Bolt 独立」は要件・コードレベルでは真だが、**git マージレベルでは偽**: PR #715 と #716 は同一 base から共有生成ファイル `tests/.coverage-registry.json` / `tests/.coverage-ratchet.json` を双方更新している(#715: function 88→92、#716: hook 10→11)。1本目のスカッシュマージ後、2本目はそのままではレジストリブロックで git 衝突するか、rebase 後に `gen-coverage-registry.ts --check` のドリフトガードで赤になる。
+
+**手順(conductor 執行)**: レジストリを触らない #713・#714 は任意順でマージ可。#715 と #716 は、どちらか一方のマージ後に、残る一方を (1) main へリベース、(2) `bun tests/gen-coverage-registry.ts` で registry/ratchet を再生成、(3) 再コミット・force-push、(4) CI green 再確認 — のうえでマージ判断に回す。並行 Bolt が共有生成ファイルを触る将来のバッチでも同じ手順を適用する。
+
 ## 検証基準(全 Bolt 共通)
 
 - 赤先行の落ちる実証(修正前に失敗を実測、exit code 記録)
