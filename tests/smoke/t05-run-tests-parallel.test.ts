@@ -75,7 +75,7 @@
 
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { REPO_ROOT } from "../harness/fixtures.ts";
 
@@ -404,6 +404,32 @@ describe("t05 run-tests.sh --parallel flag (migrated from t05-run-tests-parallel
     expect(
       r.out.split("\n").some((l) => l.startsWith("## Integration Tests")),
     ).toBe(true);
+  }, PER_TEST_TIMEOUT);
+
+  test("--coverage writes a normalized combined LCOV report", () => {
+    const tmpRoot = join(REPO_ROOT, "tmp");
+    mkdirSync(tmpRoot, { recursive: true });
+    const dir = mkdtempSync(join(tmpRoot, "t05-coverage-"));
+    try {
+      const r = run([
+        "--unit",
+        "--filter",
+        "t112-delegated-approval",
+        "--coverage",
+        "--coverage-dir",
+        dir,
+      ]);
+      expect(r.status).toBe(0);
+      expect(r.out).toContain("Coverage report:");
+      const lcov = readFileSync(join(dir, "lcov.info"), "utf-8");
+      expect(lcov).toContain("SF:packages/framework/core/tools/amadeus-lib.ts");
+      expect(lcov).not.toContain("SF:dist/claude/.claude/tools/amadeus-lib.ts");
+      const html = readFileSync(join(dir, "html", "index.html"), "utf-8");
+      expect(html).toContain("Amadeus Coverage");
+      expect(html).toContain("packages/framework/core/tools/amadeus-lib.ts");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   }, PER_TEST_TIMEOUT);
 
   // --- 12. _results sidecar dir ends the run empty -------------------------
