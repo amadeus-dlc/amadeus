@@ -30,6 +30,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 - amadeus の利用中に見つけた不備・不具合・改善点は必ず Issue として起票する(leader 含む誰が見つけても)。起票したらハルシネーション対策レビュー(起票者以外2名の実コード照合)を必ず依頼する — 対象は自発起票・ユーザー指示起票を問わず全 Issue (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:dogfood-issue-cross-review -->
 - PR マージの執行手順: leader が PR ごとに CI green・レビュー READY を実測確認してユーザーへ「これをマージしますか?」と確認し、承認を得たら leader が gh pr merge(スカッシュ)を実行する。人間が GitHub のマージボタンを押す運用はしない。Forbidden の no-AI-merge ルールは「承認なしの自発マージ禁止」の意味であり、この承認後執行と両立する (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:leader-executes-merge -->
 - フロー効率よりリソース効率を優先する: 単一アイテムのリードタイム最適化のために全体を待たせない。leader は逐次のピンポンを避けて作業をバッチで委任し、メンバーの手が空かないよう並行割当を維持する (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:resource-efficiency -->
+- 人間判断が必要な事項(ゲート・マージ・例外承認・外部操作)は AskUserQuestion で提示し、放置せず必ず承認を取り切る。leader は未回答の判断事項を台帳として追跡し、回答が滞っている場合は忘れられている前提で催促する。判断待ちのまま暗黙に先へ進まない (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:pending-decision-tracking -->
 ## Walking Skeleton
 
 この intent は既存フレームワークへのインクリメンタルな npm インストーラ実装だが、配布経路がユーザー体験の入口になるため、最初の Construction Bolt は小さな end-to-end スライスとして扱う。最初に最小の `@amadeus-dlc/setup` 実行経路を通し、以後の拡張前に人間がゲートで確認する。
