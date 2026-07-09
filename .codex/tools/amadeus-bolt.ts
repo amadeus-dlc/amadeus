@@ -195,12 +195,23 @@ function handleStart(args: string[]): void {
 
   // Validate state-file shape FIRST. setFieldStrict-equivalent: read state
   // and confirm we can find it; if not, fail before any audit emit so a
-  // missing state file doesn't leave an orphan BOLT_STARTED.
+  // missing/unresolvable active workflow state doesn't leave an orphan
+  // BOLT_STARTED (and, when no intent resolves, an orphan bare-space-root
+  // audit shard under intents/audit/ — see #676). Both the --worktree and
+  // non-worktree paths emit the same BOLT_STARTED, so both require the same
+  // pre-audit state-read guard; --worktree keeps its failJson exit contract,
+  // non-worktree uses the plain error() exit.
   if (useWorktree) {
     try {
       readStateFile(pd);
     } catch (e) {
       failJson("start-worktree", flags.slug, "state-read-failed", errorMessage(e));
+    }
+  } else {
+    try {
+      readStateFile(pd, flags.intent, flags.space);
+    } catch (e) {
+      error(`Active workflow state not found: ${errorMessage(e)}`);
     }
   }
 

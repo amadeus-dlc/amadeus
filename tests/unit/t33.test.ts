@@ -35,13 +35,16 @@
 
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   cleanupTestProject,
   createTestProject,
+  DEFAULT_RECORD_DIR,
+  DEFAULT_SPACE,
   FIXTURES_DIR,
+  removeWorkspaceRecord,
   seededStateFile,
   seedStateFile,
 } from "../harness/fixtures.ts";
@@ -58,6 +61,19 @@ const PINNED_CLONE_ID = "testcloneid33";
 function mkProj(): string {
   const p = createTestProject();
   writeFileSync(join(p, "amadeus", ".amadeus-clone-id"), `${PINNED_CLONE_ID}\n`, "utf-8");
+  return p;
+}
+
+// #676: start's pre-audit guard (both worktree and non-worktree paths) requires
+// a readable active workflow state before it will emit BOLT_STARTED. mkProj()
+// alone seeds the active-intent cursor + record dir but no amadeus-state.md, so
+// every `start` fixture that expects BOLT_STARTED to succeed must seed one —
+// mirrors setupConstructionProject's seeding but without the Construction
+// Autonomy Mode append (start itself never reads that field; only
+// set-autonomy does).
+function mkStartedProject(): string {
+  const p = mkProj();
+  seedStateFile(p, join(FIXTURES_DIR, "state-construction.md"));
   return p;
 }
 
@@ -121,7 +137,7 @@ describe("t33 start: BOLT_STARTED audit emission", () => {
 
   // Test 1: start emits BOLT_STARTED
   test("start emits BOLT_STARTED", () => {
-    proj = mkProj();
+    proj = mkStartedProject();
     runBolt(proj, "start", "--name", "auth-service", "--batch", "1");
     // .sh: assert_grep '^\*\*Event\*\*: BOLT_STARTED' (line-anchored literal)
     expect(readAudit(proj)).toMatch(/^\*\*Event\*\*: BOLT_STARTED/m);
@@ -129,14 +145,14 @@ describe("t33 start: BOLT_STARTED audit emission", () => {
 
   // Test 2: start records Batch number
   test("start records Batch number", () => {
-    proj = mkProj();
+    proj = mkStartedProject();
     runBolt(proj, "start", "--name", "auth-service", "--batch", "1");
     expect(readAudit(proj)).toContain("**Batch number**: 1");
   });
 
   // Test 3: start accepts CSV bolt names (parallel batch)
   test("start records CSV bolt names", () => {
-    proj = mkProj();
+    proj = mkStartedProject();
     runBolt(
       proj,
       "start",
@@ -150,14 +166,14 @@ describe("t33 start: BOLT_STARTED audit emission", () => {
 
   // Test 4: start --walking-skeleton true flags Walking skeleton=true
   test("start --walking-skeleton true flags correctly", () => {
-    proj = mkProj();
+    proj = mkStartedProject();
     runBolt(proj, "start", "--name", "b1", "--batch", "1", "--walking-skeleton", "true");
     expect(readAudit(proj)).toContain("**Walking skeleton**: true");
   });
 
   // Test 21: start without --walking-skeleton defaults to false
   test("start without --walking-skeleton defaults to false", () => {
-    proj = mkProj();
+    proj = mkStartedProject();
     runBolt(proj, "start", "--name", "b1", "--batch", "1");
     expect(readAudit(proj)).toContain("**Walking skeleton**: false");
   });
@@ -202,6 +218,62 @@ describe("t33 start: input validation", () => {
   });
 });
 
+// --- #676: non-worktree start pre-audit state guard -------------------------
+// Regression for GitHub #676: only the --worktree path pre-checked
+// readStateFile() before emitAudit("BOLT_STARTED", ...); the non-worktree path
+// emitted unconditionally. When no active intent resolves, that let `start`
+// succeed and write an orphan BOLT_STARTED into the bare-space-root audit
+// shard (amadeus/spaces/<space>/intents/audit/) instead of failing before any
+// audit side effect. Fixed by requiring the same readStateFile() pre-check on
+// both paths (AC-676-1/2/3).
+describe("t33 start: non-worktree pre-audit state guard (#676)", () => {
+  let proj = "";
+  afterEach(() => {
+    cleanupTestProject(proj);
+    proj = "";
+  });
+
+  // AC-676-1: no active workflow state resolvable -> non-worktree start is
+  // rejected BEFORE BOLT_STARTED is emitted, and no bare audit shard is
+  // created under the space-root intents/audit/ fallback path.
+  test("start rejects before BOLT_STARTED when no active workflow state resolves, and creates no bare audit shard", () => {
+    proj = mkProj();
+    // Remove the active-intent cursor + record dir entirely so recordDir()
+    // resolves to null and auditFilePath()/stateFilePath() would otherwise
+    // fall back to the bare space record root (amadeus/spaces/<space>/intents/).
+    removeWorkspaceRecord(proj);
+
+    const res = runBolt(proj, "start", "--name", "orphan", "--batch", "1");
+
+    expect(res.status).not.toBe(0);
+    expect(res.out).not.toContain('"emitted":"BOLT_STARTED"');
+    expect(readAudit(proj)).not.toContain("BOLT_STARTED");
+    // The bare-fallback shard directory itself must never be created.
+    const bareAuditDir = join(proj, "amadeus", "spaces", "default", "intents", "audit");
+    expect(existsSync(bareAuditDir)).toBe(false);
+  });
+
+  // AC-676-3: an explicit --intent/--space selector that resolves to a valid
+  // state still succeeds as before.
+  test("start succeeds when an explicit --intent/--space selector resolves a valid state", () => {
+    proj = mkStartedProject();
+    const res = runBolt(
+      proj,
+      "start",
+      "--name",
+      "b1",
+      "--batch",
+      "1",
+      "--intent",
+      DEFAULT_RECORD_DIR,
+      "--space",
+      DEFAULT_SPACE,
+    );
+    expect(res.status).toBe(0);
+    expect(res.out).toContain('"emitted":"BOLT_STARTED"');
+  });
+});
+
 // --- Tests 22, 7: start/complete JSON ack + BOLT_COMPLETED ------------------
 describe("t33 start/complete: JSON ack + completion audit", () => {
   let proj = "";
@@ -212,7 +284,7 @@ describe("t33 start/complete: JSON ack + completion audit", () => {
 
   // Test 22: start prints JSON ack on stdout
   test("start prints JSON with emitted field", () => {
-    proj = mkProj();
+    proj = mkStartedProject();
     const res = runBolt(proj, "start", "--name", "b1", "--batch", "1");
     // .sh: assert_contains "$OUT" '"emitted":"BOLT_STARTED"' (fixed-string)
     expect(res.out).toContain('"emitted":"BOLT_STARTED"');
@@ -372,7 +444,7 @@ describe("t33 lifecycle: BOLT_STARTED precedes BOLT_COMPLETED", () => {
   });
 
   test("bolt lifecycle: BOLT_STARTED precedes BOLT_COMPLETED for same bolt", () => {
-    proj = mkProj();
+    proj = mkStartedProject();
     runBolt(
       proj,
       "start",
