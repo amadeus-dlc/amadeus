@@ -36,6 +36,7 @@ B. イベントフック型(onFileComplete コールバック登録)
 X. Other
 
 [Answer]: A。選挙 Q4 の付帯条件(wall-clock を初回消費者に)を最小面積で満たす。イベントフック型は runner 本体への結合点が増え、NFR-1 の隔離(try/catch 1箇所)を複数点に分散させる。将来の strace/eBPF は同じインターフェースの実装を追加し、レコードの `dynamicSignals` を埋める(スキーマは前方互換のオプショナル字段)。
+**改訂(2026-07-10、PR #732 codex-3 レビュー)**: 当初の「観測後の値を受け取る observe() 単発形」は identity wrapper となり観測責務を持てないため NOT-READY。**begin/finish セッション型**(backend が観測ウィンドウを所有し、wall-clock 実装は JUnit 実測優先+自前計測フォールバック)+隔離ヘルパー(`beginObservation`/`finishObservation`)に再設計 — domain-entities.md §2.6 が正。
 
 ## Q5. summary matrix への動的情報の表示形式
 

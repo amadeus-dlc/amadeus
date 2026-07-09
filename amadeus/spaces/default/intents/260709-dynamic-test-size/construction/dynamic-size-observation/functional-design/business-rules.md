@@ -30,6 +30,7 @@
 - 書き出しタイミング: 全 tier 集約完了後に1回。部分実行(tier 指定・単一ファイル指定)でも、その実行で実測できたレコードのみで書く(存在しないファイルの行を捏造しない)。
 - CI: `ci.yml` のテストジョブで `actions/upload-artifact` により artifact 化(coverage の既存パターン `ci.yml:75-84` を踏襲、`if: always()` + `if-no-files-found: warn`)。
 - スキーマ: `TestSizeReport`(domain-entities.md §2.5)。`schemaVersion: 1` を必須とし、消費側(#683 等)がバージョンで防御できるようにする。
+- **決定性**(PR #732 codex-3 レビューで追加): `records` は file の辞書順に整列して格納する(整列は `buildTestSizeReport` の単一責務)。並列実行の完了順が artifact に漏れると継続比較(run 間 diff)が壊れるため。順序はテストで pin する。
 
 ## BR-5: summary matrix への反映(FR-3 テスト可能条件)
 
@@ -42,6 +43,7 @@
 
 - exit code == failed-file 数の契約(t112 固定)を変更しない。
 - 動的計測・レポート書き出し・matrix 追記の失敗は runner を失敗させない: 既存の best-effort wrap(`run-tests.ts:882-886` の try/catch)と同じ隔離をレポート経路にも適用する。
+- **backend 呼び出しの隔離**(PR #732 codex-3 レビューで追加): 収集点の begin/finish 呼び出しは summary の wrap の外にあるため、`beginObservation`/`finishObservation` 隔離ヘルパー経由でのみ行い、backend の throw を note 化して吸収する。隔離挙動は throwing session を注入した in-process テストで pin する。
 - `.meta` 削除契約(`run-tests.ts:430`)を変更しない。duration は削除前にメモリ収集(質問 Q3=A)。
 
 ## BR-7: 伝播と互換(NFR-2、FR-2 安定契約)
