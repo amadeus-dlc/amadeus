@@ -18,7 +18,7 @@
 - **Test Strategy**: Minimal
 
 ## Workspace State
-- **Project Root**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-leader
+- **Project Root**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-2
 - **Languages**: TypeScript
 - **Frameworks**: Unknown
 - **Build System**: bun (package.json)
