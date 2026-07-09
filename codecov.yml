@@ -1,3 +1,7 @@
+codecov:
+  notify:
+    wait_for_ci: false
+
 fixes:
   - "dist/claude/.claude/::packages/framework/core/"
   - "dist/codex/.codex/::packages/framework/core/"
