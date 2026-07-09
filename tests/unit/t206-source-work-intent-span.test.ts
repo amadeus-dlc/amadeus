@@ -28,7 +28,7 @@
 
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { gitHasSourceWork } from "../../dist/claude/.claude/tools/amadeus-state.ts";
 import {
@@ -67,12 +67,31 @@ function writeRecordFile(name: string, body: string): void {
 }
 
 // Write this intent's record amadeus-state.md (optionally with a `Bolt Refs`
-// list) and commit ONLY the amadeus/ tree - the intent BIRTH commit (doc-only).
-function commitIntentBirth(boltSlugs: string[] = []): void {
+// list and `Project` issue refs) and commit ONLY the amadeus/ tree - the intent
+// BIRTH commit (doc-only).
+function commitIntentBirth(boltSlugs: string[] = [], projectIssues: number[] = []): void {
   const refs = boltSlugs.length === 0 ? "[empty list]" : `[${boltSlugs.join(", ")}]`;
-  writeRecordFile("amadeus-state.md", `# State\n\n- **Bolt Refs**: ${refs}\n`);
+  const project =
+    projectIssues.length === 0
+      ? ""
+      : `- **Project**: GitHub issue ${projectIssues.map((n) => `#${n}`).join(" = ")}\n`;
+  writeRecordFile("amadeus-state.md", `# State\n\n${project}- **Bolt Refs**: ${refs}\n`);
   git(["add", "amadeus"]);
   git(["commit", "-q", "-m", "birth: create intent record"]);
+}
+
+// Squash-merge a subject-tagged code commit onto `main`, then merge main into the
+// current (record) branch - models a Bolt PR merged to main and pulled into the
+// record branch. The code arrives via a merge commit (invisible to probe 3a); the
+// squash commit's subject carries the issue reference probe 3c attributes on.
+function mergeTaggedPrThroughMain(subject: string, path: string, body: string): void {
+  const base = git(["rev-parse", "--abbrev-ref", "HEAD"]);
+  git(["checkout", "-q", "main"]);
+  writeFileAt(path, body);
+  git(["add", "-A"]);
+  git(["commit", "-q", "-m", subject]);
+  git(["checkout", "-q", base]);
+  git(["merge", "-q", "--no-ff", "main", "-m", "Merge main into record"]);
 }
 
 // A doc-only checkpoint/delegate commit on the current (record) branch.
@@ -174,6 +193,59 @@ test("recognises code on a remote-only bolt ref after squash-to-main (probe 4)",
   expect(gitHasSourceWork(proj)).toBe(true);
 });
 
+// (3c) Merged-PR attribution: this intent's `Project` declares issue #697; a Bolt
+// PR "test #697: ... (#726)" was squash-merged to main and pulled into the record
+// branch via a merge (invisible to probe 3a). The subject references the intent's
+// issue and the commit touches src/, so probe 3c attributes it -> true.
+test("recognises a merged Bolt PR by its Project issue reference (probe 3c)", () => {
+  initGitRepo();
+  commitDirectCode("README.md", "root\n");
+  git(["checkout", "-q", "-b", "record"]);
+  commitIntentBirth([], [697, 684, 688]);
+  mergeTaggedPrThroughMain(
+    "test #697: manifest roundtrip properties (B2) (#726)",
+    "src/pbt/prop.ts",
+    "export const p = 1;\n",
+  );
+  commitDoc("audit/checkpoint.md", "checkpoint\n");
+  commitDoc("audit/delegate.md", "delegate approval\n");
+  expect(gitHasSourceWork(proj)).toBe(true);
+});
+
+// (3c negative i) The record declares issue #697, but the only merged code is a
+// SIBLING PR referencing a DIFFERENT issue (#999). The subject does not match this
+// intent's issue, so it is not attributed -> false (REFUSE).
+test("refuses when merged code references a different issue than the Project (probe 3c)", () => {
+  initGitRepo();
+  commitDirectCode("README.md", "root\n");
+  git(["checkout", "-q", "-b", "record"]);
+  commitIntentBirth([], [697]);
+  mergeTaggedPrThroughMain(
+    "fix #999: unrelated sibling work (#800)",
+    "src/other/x.ts",
+    "export const o = 1;\n",
+  );
+  commitDoc("audit/checkpoint.md", "checkpoint\n");
+  expect(gitHasSourceWork(proj)).toBe(false);
+});
+
+// (3c negative ii) A merged commit references this intent's issue #697 in its
+// subject but touches ONLY doc paths. Attribution requires a real non-doc change,
+// so it does not hollow-pass -> false (REFUSE).
+test("refuses when the issue-referencing commit touches only docs (probe 3c)", () => {
+  initGitRepo();
+  commitDirectCode("README.md", "root\n");
+  git(["checkout", "-q", "-b", "record"]);
+  commitIntentBirth([], [697]);
+  mergeTaggedPrThroughMain(
+    "docs #697: planning notes (#726)",
+    "amadeus/spaces/default/intents/notes.md",
+    "just notes\n",
+  );
+  commitDoc("audit/checkpoint.md", "checkpoint\n");
+  expect(gitHasSourceWork(proj)).toBe(false);
+});
+
 // Counterexample (PR #733 review): a SIBLING intent's code was merged into the
 // record branch after THIS intent's birth, but this intent produced nothing and
 // its `Bolt Refs` is empty. Merge-arrived code is not attributable, so the
@@ -234,18 +306,19 @@ test("refuses when the birth commit is undiscoverable and no code exists", () =>
   expect(gitHasSourceWork(proj)).toBe(false);
 });
 
-// Fail-safe: reading `Bolt Refs` must never throw. When the state path exists but
-// is unreadable as a file (here: a directory), intentBoltSlugs swallows the error
-// and yields no slugs, so the guard degrades to a safe refuse rather than crashing.
+// Fail-safe: reading the state file must never throw. The birth commit is
+// discoverable (amadeus-state.md was committed), but the working-tree copy has
+// since been replaced by a DIRECTORY, so both readers (intentBoltSlugs and
+// intentIssueRefs) hit readFileSync EISDIR and swallow it. The guard degrades to
+// a safe refuse rather than crashing.
 test("refuses (does not throw) when the state file is unreadable", () => {
   initGitRepo();
-  // amadeus-state.md is a DIRECTORY -> existsSync true, readFileSync throws EISDIR.
-  mkdirSync(join(seededRecordDir(proj), "amadeus-state.md"), { recursive: true });
-  writeFileAt("amadeus/root.md", "root\n");
-  git(["add", "-A"]);
-  git(["commit", "-q", "-m", "doc"]);
-  writeFileAt("amadeus/root2.md", "root2\n");
-  git(["add", "-A"]);
-  git(["commit", "-q", "-m", "another doc"]);
+  commitIntentBirth(); // commits amadeus-state.md as a FILE -> birth discoverable
+  const statePath = join(seededRecordDir(proj), "amadeus-state.md");
+  rmSync(statePath);
+  mkdirSync(statePath); // now a directory -> readFileSync throws EISDIR
+  writeFileAt("amadeus/other.md", "other\n");
+  git(["add", "-A"]); // stages the state-file deletion + a new doc
+  git(["commit", "-q", "-m", "doc: replace state file"]);
   expect(gitHasSourceWork(proj)).toBe(false);
 });

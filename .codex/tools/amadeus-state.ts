@@ -776,14 +776,63 @@ function boltRefHasSourceWork(pd: string, ref: string): boolean {
   return diff.split("\n").some(isNonDocPath);
 }
 
+// The issue numbers this intent declares in its first-class `Project` state field
+// (every `#<digits>`, e.g. "GitHub issue #697 (= #684 Phase B, #688)"). [] on any
+// read/parse problem (fail-safe: the merged-PR probe then finds nothing).
+function intentIssueRefs(pd: string): string[] {
+  const rec = recordDir(pd);
+  if (rec === null) return [];
+  const statePath = join(rec, "amadeus-state.md");
+  if (!existsSync(statePath)) return [];
+  try {
+    const project = getField(readFileSync(statePath, "utf-8"), "Project");
+    const nums = project?.match(/#(\d+)/g) ?? [];
+    return [...new Set(nums.map((m) => m.slice(1)))];
+  } catch {
+    return [];
+  }
+}
+
+// True when a commit since `birth` whose SUBJECT references one of `issues` (as
+// `#<num>` on a word boundary) itself touches a non-doc path. This is the
+// merged-PR attribution probe: the conductor record-branch pattern squash-merges
+// a Bolt PR onto main (subject e.g. "fix #697: ... (#726)"), which reaches the
+// record branch via a main->record merge. Unlike recordBranchSourceWork this does
+// NOT restrict to the first-parent chain, so merge-arrived squash commits are
+// seen; attribution comes from the issue reference rather than commit position.
+//
+// Honest limitation: subject issue references are a CONVENTION, not proof of
+// ownership - a sibling intent that names the same issue in a commit subject
+// could be over-attributed. The triple gate (commit within THIS intent's span
+// birth..HEAD, references THIS intent's declared issue, AND touches non-doc
+// files) narrows it enough to be a sound guard signal in practice.
+function mergedPrSourceWork(pd: string, birth: string, issues: string[]): boolean {
+  if (issues.length === 0) return false;
+  const log = git(pd, ["log", `${birth}..HEAD`, "--pretty=%H%x09%s"]);
+  if (log === null) return false;
+  const patterns = issues.map((n) => new RegExp(`#${n}\\b`));
+  for (const line of log.split("\n")) {
+    const tab = line.indexOf("\t");
+    if (tab === -1) continue;
+    const subject = line.slice(tab + 1);
+    if (!patterns.some((re) => re.test(subject))) continue;
+    const files = git(pd, ["diff-tree", "--no-commit-id", "--name-only", "-r", line.slice(0, tab)]);
+    if (files !== null && files.split("\n").some(isNonDocPath)) return true;
+  }
+  return false;
+}
+
 // Attribution rule (issue #731): when the record branch's recent history is
-// doc-only, is there source work ATTRIBUTABLE TO THIS INTENT? Two intent-scoped
+// doc-only, is there source work ATTRIBUTABLE TO THIS INTENT? Three intent-scoped
 // probes, never a blanket post-birth diff (which would count a sibling intent's
 // merged code):
 //   (a) code committed directly onto the record branch since birth
-//       (recordBranchSourceWork), and
+//       (recordBranchSourceWork);
 //   (b) code on any of THIS intent's bolt branches (Bolt Refs -> local/remote
-//       refs), referenced via merge-base so a squash-merged branch still counts.
+//       refs), referenced via merge-base so a squash-merged branch still counts;
+//   (c) a commit since birth whose subject references THIS intent's declared
+//       issue(s) and touches non-doc files (mergedPrSourceWork) - covers a Bolt
+//       PR squash-merged to main and pulled into the record branch via a merge.
 function intentScopedSourceWork(pd: string): boolean {
   const birth = intentBirthCommit(pd);
   if (birth !== null && recordBranchSourceWork(pd, birth)) return true;
@@ -792,6 +841,7 @@ function intentScopedSourceWork(pd: string): boolean {
       if (boltRefHasSourceWork(pd, ref)) return true;
     }
   }
+  if (birth !== null && mergedPrSourceWork(pd, birth, intentIssueRefs(pd))) return true;
   return false;
 }
 
