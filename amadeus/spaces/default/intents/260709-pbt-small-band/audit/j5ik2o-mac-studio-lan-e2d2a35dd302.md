@@ -1545,3 +1545,106 @@
 **Agent**: amadeus-developer-agent
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-09T14:50:48Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-09T14:50:48Z
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T15:03:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: 72fa86e6
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /private/tmp/claude-501/-Users-j5ik2o-worktrees-github-com-amadeus-dlc-amadeus-claude-engineer-2/50f4a862-db75-4670-bd4a-c1b37a4fd10d/scratchpad/bolts/wt-b1/tests/helpers/arbitraries/semver.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T15:03:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: 72fa86e6
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /private/tmp/claude-501/-Users-j5ik2o-worktrees-github-com-amadeus-dlc-amadeus-claude-engineer-2/50f4a862-db75-4670-bd4a-c1b37a4fd10d/scratchpad/bolts/wt-b1/tests/helpers/arbitraries/semver.ts
+**Duration ms**: 782
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T15:03:33Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4492600b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /private/tmp/claude-501/-Users-j5ik2o-worktrees-github-com-amadeus-dlc-amadeus-claude-engineer-2/50f4a862-db75-4670-bd4a-c1b37a4fd10d/scratchpad/bolts/wt-b1/tests/helpers/arbitraries/semver.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T15:03:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4492600b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /private/tmp/claude-501/-Users-j5ik2o-worktrees-github-com-amadeus-dlc-amadeus-claude-engineer-2/50f4a862-db75-4670-bd4a-c1b37a4fd10d/scratchpad/bolts/wt-b1/tests/helpers/arbitraries/semver.ts
+**Duration ms**: 1068
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T15:04:37Z
+**Event**: SENSOR_FIRED
+**Fire id**: 64fbd7d1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /private/tmp/claude-501/-Users-j5ik2o-worktrees-github-com-amadeus-dlc-amadeus-claude-engineer-2/50f4a862-db75-4670-bd4a-c1b37a4fd10d/scratchpad/bolts/wt-b1/tests/unit/setup-semver.pbt.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T15:04:38Z
+**Event**: SENSOR_PASSED
+**Fire id**: 64fbd7d1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /private/tmp/claude-501/-Users-j5ik2o-worktrees-github-com-amadeus-dlc-amadeus-claude-engineer-2/50f4a862-db75-4670-bd4a-c1b37a4fd10d/scratchpad/bolts/wt-b1/tests/unit/setup-semver.pbt.test.ts
+**Duration ms**: 835
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T15:04:38Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6d379736
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /private/tmp/claude-501/-Users-j5ik2o-worktrees-github-com-amadeus-dlc-amadeus-claude-engineer-2/50f4a862-db75-4670-bd4a-c1b37a4fd10d/scratchpad/bolts/wt-b1/tests/unit/setup-semver.pbt.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T15:04:39Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6d379736
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /private/tmp/claude-501/-Users-j5ik2o-worktrees-github-com-amadeus-dlc-amadeus-claude-engineer-2/50f4a862-db75-4670-bd4a-c1b37a4fd10d/scratchpad/bolts/wt-b1/tests/unit/setup-semver.pbt.test.ts
+**Duration ms**: 497
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-09T15:11:52Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: a476dbe9a72aed251
+**Message**: Committed on `bolt/697-b1-fastcheck-semver` (not pushed, per instructions). Bolt B1 is complete.\n\n## 最終報告 — Bolt B1(fast-check 基盤 + semver/version-spec PBT)\n\n### コミット\n`bae613ca4` test #697: introduce 
+
+---
