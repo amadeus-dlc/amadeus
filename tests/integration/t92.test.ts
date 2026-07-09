@@ -58,6 +58,7 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -1142,6 +1143,17 @@ describe("t92 Group M: upstream-coverage --consumes resolution", () => {
 // coordinate, so PRIMARY_RE matches nothing and allErrors is empty —
 // the exact case the gate fires on. Uses the SHIPPED type-check manifest
 // (AMADEUS_SENSORS_DIR unset), exercising the real dispatcher end-to-end.
+//
+// #657: the fixture's node_modules is a symlink to THIS REPO's own
+// node_modules (which has the repo-pinned typescript ^6.0.3 installed via
+// `bun install`). Without it, amadeus-sensor-type-check.ts's launcher
+// resolution (resolveTscLauncher) finds no local node_modules/.bin/tsc
+// anywhere up the fixture's tree (it lives under the OS tmpdir, unrelated
+// to any project's node_modules) and falls back to `bunx tsc` — which can
+// resolve a DIFFERENT, globally-cached TypeScript (observed: 7.x) and drift
+// the exit code this test pins (2 -> 1). The symlink makes the resolved tsc
+// deterministic and matches what a real consumer project (with its own
+// node_modules) gets from the #657 fix.
 // ============================================================
 
 describe("t92 Group N: type-check status gate (config-load failure)", () => {
@@ -1162,6 +1174,10 @@ describe("t92 Group N: type-check status gate (config-load failure)", () => {
       `${JSON.stringify({ name: "amadeus-t92-config-error", type: "module", private: true })}\n`,
       "utf-8",
     );
+    // #657: give the fixture the repo's own pinned typescript so
+    // resolveTscLauncher finds a deterministic local tsc instead of falling
+    // back to a bunx-resolved (possibly drifted) one.
+    symlinkSync(join(REPO_ROOT, "node_modules"), join(proj, sub, "node_modules"), "dir");
     fire(["type-check", "--stage", "code-generation", "--output-path", join(proj, sub, "sample.ts")], {
       CLAUDE_PROJECT_DIR: proj,
     });

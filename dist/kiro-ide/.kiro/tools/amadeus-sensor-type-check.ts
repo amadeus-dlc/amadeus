@@ -2,10 +2,11 @@
 //
 // Owns the type-check itself; the dispatcher (amadeus-sensor.ts) routes a
 // SENSOR fire to this script via the manifest's `command:` field. Self-
-// contained: no imports from sibling tools. Wraps `bunx tsc --project
-// <tsconfig> --noEmit --pretty false --incremental --tsBuildInfoFile
-// <path under amadeus-docs/.amadeus-sensors/>` and prints the locked stdout
-// JSON shape:
+// contained: no imports from sibling tools. Wraps `tsc --project <tsconfig>
+// --noEmit --pretty false --incremental --tsBuildInfoFile <path under
+// amadeus-docs/.amadeus-sensors/>` (via resolveTscLauncher — the project's
+// own node_modules/.bin/tsc when present, else `bunx tsc`; see issue #657
+// below) and prints the locked stdout JSON shape:
 //
 //   {"pass": <bool>, "errors": [{file, line, column, message}, ...]}
 //
@@ -37,12 +38,24 @@
 //   but cuts re-reporting noise — same un-introduced error doesn't spam
 //   SENSOR_FAILED on every Write.
 //
-// * Tool-unavailable detection: probe `bunx tsc --version` once at
-//   startup. `bunx <tool>` returns non-127 codes for several failure
-//   modes (network-fetch, package-resolution, registry timeout) so the
-//   dispatcher's `result.status === 127` won't catch them. On any
-//   non-zero probe we exit 127 ourselves, propagating to dispatcher
+// * Tool-unavailable detection: probe `<launcher> --version` once at
+//   startup, using the SAME resolved launcher the real run uses (see
+//   resolveTscLauncher below — issue #657: a probe/run split that let one
+//   invocation resolve local tsc and the other bunx let the two disagree on
+//   which TypeScript actually ran). `bunx <tool>` returns non-127 codes for
+//   several failure modes (network-fetch, package-resolution, registry
+//   timeout) so the dispatcher's `result.status === 127` won't catch them.
+//   On any non-zero probe we exit 127 ourselves, propagating to dispatcher
 //   branch b (PASSED Note=tool-unavailable).
+//
+// * Launcher resolution (issue #657): bunx can resolve a DIFFERENT
+//   TypeScript than the repo's pinned dependency (e.g. a stale or newer
+//   cached version), which drifts the TS18003 + --incremental exit code
+//   (2 -> 1 observed) and flakes the exit-code status gate below.
+//   resolveTscLauncher prefers the project's own node_modules/.bin/tsc
+//   (walking up from the tsconfig dir, mirroring findTsconfig's walk-up)
+//   and only falls back to `bunx tsc` when no local install exists anywhere
+//   up the tree.
 //
 // * Continuation-line append: tsc with --pretty false emits one primary
 //   diagnostic line followed by 0+ indented continuation lines for
@@ -147,17 +160,59 @@ function findTsconfig(filePath: string): string | null {
 	}
 }
 
+// --- tsc launcher resolution -------------------------------------------------
+
+// Resolved launcher for tsc: either the project's own local install
+// (node_modules/.bin/tsc, preferred) or the bunx fallback.
+export interface TscLauncher {
+	command: string;
+	args: string[];
+	// Whether the command needs shell:true to run (Windows .cmd shims do).
+	shell: boolean;
+}
+
+// Walk up from `startDir` looking for node_modules/.bin/tsc (mirrors
+// findTsconfig's walk-up convention above). Preferring the project's own
+// local install over `bunx tsc` fixes issue #657: bunx can resolve a
+// DIFFERENT TypeScript than the repo's pinned dependency (e.g. a stale or
+// newer cached version), which drifts the TS18003 + --incremental exit code
+// (2 -> 1 observed) and flakes the status-gate contract below. Falls back to
+// `bunx tsc` only when no local install is found anywhere up the tree — the
+// legitimate "local tsc absent" branch (FR-657), not a compat shim.
+export function resolveTscLauncher(startDir: string): TscLauncher {
+	const isWindows = process.platform === "win32";
+	// Windows npm/bun bin shims ship as .cmd (and sometimes .exe); POSIX ships
+	// the bare extensionless script.
+	const candidateNames = isWindows ? ["tsc.cmd", "tsc.exe", "tsc"] : ["tsc"];
+
+	let dir = resolve(startDir);
+	while (true) {
+		for (const name of candidateNames) {
+			const candidate = join(dir, "node_modules", ".bin", name);
+			if (existsSync(candidate)) {
+				return { command: candidate, args: [], shell: candidate.endsWith(".cmd") };
+			}
+		}
+		const parent = dirname(dir);
+		if (parent === dir) break;
+		dir = parent;
+	}
+	return { command: "bunx", args: ["tsc"], shell: false };
+}
+
 // --- tsc subprocess wrappers ------------------------------------------------
 
-// Probe `bunx tsc --version`. `bunx <tool>` returns non-127 codes for
-// several failure modes (network-fetch, package-resolution, registry
-// timeout). The dispatcher's branch b (status === 127) won't catch
-// those — propagate by exiting 127 ourselves on any non-zero exit.
-function probeTscAvailable(cwd: string): void {
-	const result = spawnSync("bunx", ["tsc", "--version"], {
+// Probe tsc availability via the resolved launcher's `--version`. `bunx
+// <tool>` returns non-127 codes for several failure modes (network-fetch,
+// package-resolution, registry timeout). The dispatcher's branch b
+// (status === 127) won't catch those — propagate by exiting 127 ourselves
+// on any non-zero exit.
+function probeTscAvailable(cwd: string, launcher: TscLauncher): void {
+	const result = spawnSync(launcher.command, [...launcher.args, "--version"], {
 		encoding: "utf-8",
 		timeout: 30_000,
 		cwd,
+		shell: launcher.shell,
 	});
 	if (result.status !== 0) {
 		process.stderr.write("tsc-unavailable\n");
@@ -169,11 +224,12 @@ function runTsc(opts: {
 	tsconfigPath: string;
 	tsBuildInfoFile: string;
 	cwd: string;
+	launcher: TscLauncher;
 }): { output: string; status: number | null } {
 	const result = spawnSync(
-		"bunx",
+		opts.launcher.command,
 		[
-			"tsc",
+			...opts.launcher.args,
 			"--project",
 			opts.tsconfigPath,
 			"--noEmit",
@@ -183,7 +239,7 @@ function runTsc(opts: {
 			"--tsBuildInfoFile",
 			opts.tsBuildInfoFile,
 		],
-		{ encoding: "utf-8", timeout: 60_000, cwd: opts.cwd },
+		{ encoding: "utf-8", timeout: 60_000, cwd: opts.cwd, shell: opts.launcher.shell },
 	);
 	return { output: `${result.stdout ?? ""}${result.stderr ?? ""}`, status: result.status };
 }
@@ -279,13 +335,19 @@ function main(): void {
 	}
 	const tsBuildInfoFile = join(sensorsBaseDir, ".tsbuildinfo");
 
+	// Resolve ONE launcher and use it for both the probe and the real run —
+	// a split (probe via bunx, run via local, or vice versa) would defeat the
+	// #657 fix by letting the two invocations disagree on which tsc runs.
+	const launcher = resolveTscLauncher(tsconfigDir);
+
 	// Probe tsc availability first. cwd doesn't matter for --version.
-	probeTscAvailable(tsconfigDir);
+	probeTscAvailable(tsconfigDir, launcher);
 
 	const { output, status } = runTsc({
 		tsconfigPath,
 		tsBuildInfoFile,
 		cwd: tsconfigDir,
+		launcher,
 	});
 	const allErrors = parseTscOutput(output);
 	const errors = filterToFilePath(allErrors, args.filePath, tsconfigDir);
