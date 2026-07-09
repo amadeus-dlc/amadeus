@@ -105,7 +105,7 @@ All event names follow `SUBJECT_PAST_VERB` — every event answers "what happene
 
 ### Construction Bolt Events (4 events)
 
-Emitted only during Phase 3 (Construction). A Bolt is one execution of stages 3.1–3.5 for a Unit or small group of dependency-linked Units. See `stage-protocol.md` Glossary.
+Emitted only during Phase 3 (Construction). A Bolt is one execution of stages 3.1–3.5 for a Unit or small group of dependency-linked Units. See `stage-protocol.md` Glossary. Note: this deviates intentionally from AI-DLC v1, where a Bolt is a sprint-like time-box (a Unit of Work spans multiple Bolts). This implementation repurposes "Bolt" to mean a deployable slice that wraps one or more Units of Work.
 
 | Event | When | Required Fields | Emitter |
 |-------|------|-----------------|---------|
