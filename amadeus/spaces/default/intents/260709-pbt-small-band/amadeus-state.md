@@ -32,8 +32,6 @@
 - **Revision Count**: 0
 
 - **Skeleton Stance**: scope-dependent
-- **Parked**: 2026-07-09T14:50:48Z
-- **Parked At Stage**: code-generation
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -94,7 +92,7 @@ Per unit: [TBD]
 - **Current Stage**: code-generation
 - **Next Stage**: build-and-test
 - **Status**: Running
-- **Last Updated**: 2026-07-09T14:50:48Z
+- **Last Updated**: 2026-07-09T22:21:14Z
 
 ## Session Resume Point
 - **Last Completed Stage**: functional-design
