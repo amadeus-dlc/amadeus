@@ -168,13 +168,17 @@ export interface TestSizeReport {
 
 // Aggregate measured records into a report. First-class collection: the summary
 // math (drift count = records whose drift is not "none", file total) lives HERE
-// so the runner never open-codes it.
+// so the runner never open-codes it. Records are sorted by `file` in plain
+// lexical order so the report is DETERMINISTIC regardless of the runner's
+// iteration order (parallel tiers, tier ordering); the input array is not
+// mutated. This is the single place ordering is decided.
 export function buildTestSizeReport(records: readonly MeasuredTestRecord[]): TestSizeReport {
-  const driftCount = records.filter((r) => r.drift.kind !== "none").length;
+  const sorted = [...records].sort((a, b) => (a.file < b.file ? -1 : a.file > b.file ? 1 : 0));
+  const driftCount = sorted.filter((r) => r.drift.kind !== "none").length;
   return {
     schemaVersion: 1,
-    records,
-    summary: { totalFiles: records.length, driftCount },
+    records: sorted,
+    summary: { totalFiles: sorted.length, driftCount },
   };
 }
 
@@ -182,25 +186,93 @@ export interface SizeObservation {
   readonly durationSeconds: number;
 }
 
-// A pluggable source of a file's measured duration. The runner collects durations
-// THROUGH this seam rather than reading a per-file field inline, so the collection
-// step is unit-testable in-process and the observation source is swappable.
+// An observation session spans the lifecycle of a file's run: begin() is called
+// just BEFORE the runner spawns the test process, finish() AFTER it exits. The
+// backend OWNS the measurement window between the two — for wall-clock this is a
+// start-time map used as a fallback; a future strace/eBPF backend would open its
+// tracer in begin() and attribute the syscalls collected in that window to the
+// file in finish(). finish() returns null when it cannot produce a duration.
+export interface SizeObservationSession {
+  begin(file: string): void;
+  finish(file: string, junitDurationSeconds: number | null): SizeObservation | null;
+}
+
+// A pluggable observation backend. openSession() yields a session that owns its
+// own per-run measurement state, so the collection path is unit-testable
+// in-process and the observation mechanism is swappable.
 export interface SizeObservationBackend {
   readonly name: string;
-  observe(file: string, measuredDurationSeconds: number): SizeObservation;
+  openSession(): SizeObservationSession;
 }
 
 // The wall-clock backend is the FIRST (and, in #699, only) consumer of the
-// SizeObservationBackend seam — it passes the runner's measured wall-clock
-// duration through unchanged (election Q4 rider: no zero-consumer extension
-// points). A second backend (e.g. peak-RSS or CPU-time observation) would likely
-// revise this signature to carry more than a duration; that is out of #699 scope.
+// observation seam (election Q4 rider: no zero-consumer extension points). Its
+// session records a per-file start time at begin(); at finish() it PREFERS the
+// in-process JUnit duration (more precise — it excludes the runner's spawn /
+// teardown overhead) and OWNS a fallback wall-clock measurement (Date.now()
+// delta from begin) for when JUnit reports no usable time. A second backend
+// (peak-RSS, CPU-time, syscall trace) plugs into the same begin/finish window.
 export const wallClockBackend: SizeObservationBackend = {
   name: "wall-clock",
-  observe(_file, measuredDurationSeconds) {
-    return { durationSeconds: measuredDurationSeconds };
+  openSession(): SizeObservationSession {
+    const starts = new Map<string, number>();
+    return {
+      begin(file) {
+        starts.set(file, Date.now());
+      },
+      finish(file, junitDurationSeconds) {
+        const start = starts.get(file);
+        starts.delete(file);
+        if (junitDurationSeconds !== null && Number.isFinite(junitDurationSeconds)) {
+          return { durationSeconds: junitDurationSeconds };
+        }
+        // Fallback: this session's own measurement window (opened at begin()).
+        if (start === undefined) return null;
+        return { durationSeconds: (Date.now() - start) / 1000 };
+      },
+    };
   },
 };
+
+// Failure-isolating wrappers around the session lifecycle. The runner MUST drive
+// begin/finish through these so a throwing or misbehaving backend can never leak
+// into the runner's exit path — every fault degrades to a note and (for finish)
+// a null duration. Kept here (not in the runner) so the isolation is testable
+// in-process with an injected throwing session.
+export function beginObservation(
+  session: SizeObservationSession,
+  file: string,
+  note: (msg: string) => void,
+): void {
+  try {
+    session.begin(file);
+  } catch (err) {
+    note(`size observation begin failed for ${file}: ${err}`);
+  }
+}
+
+export function finishObservation(
+  session: SizeObservationSession,
+  file: string,
+  junitDurationSeconds: number | null,
+  note: (msg: string) => void,
+): number | null {
+  try {
+    const obs = session.finish(file, junitDurationSeconds);
+    if (obs === null) {
+      note(`size observation produced no duration for ${file}`);
+      return null;
+    }
+    if (!Number.isFinite(obs.durationSeconds)) {
+      note(`size observation produced a non-finite duration for ${file}`);
+      return null;
+    }
+    return obs.durationSeconds;
+  } catch (err) {
+    note(`size observation finish failed for ${file}: ${err}`);
+    return null;
+  }
+}
 
 // Parse a `// size: <value>` header. Scans the leading comment region (first
 // ~40 lines) so it mirrors where `// covers:` lives. First match wins.

@@ -14,11 +14,15 @@
 // signal the runner surfaces), and the same source at 0.1s yields "none" (green).
 import { describe, expect, test } from "bun:test";
 import {
+  beginObservation,
   buildMeasuredRecord,
   buildTestSizeReport,
   detectWallClockDrift,
+  finishObservation,
   type MeasuredTestRecord,
   sizeFloorFromDuration,
+  type SizeObservation,
+  type SizeObservationSession,
   WALL_CLOCK_BANDS,
   wallClockBackend,
 } from "../lib/test-size.ts";
@@ -165,12 +169,102 @@ describe("buildTestSizeReport — aggregation", () => {
     const report = buildTestSizeReport([]);
     expect(report.summary).toEqual({ totalFiles: 0, driftCount: 0 });
   });
+
+  test("records are sorted by file in lexical order (reverse input → sorted output)", () => {
+    const records: MeasuredTestRecord[] = [
+      makeRecord("tests/unit/c.test.ts", { kind: "none" }),
+      makeRecord("tests/unit/a.test.ts", { kind: "none" }),
+      makeRecord("tests/unit/b.test.ts", { kind: "none" }),
+    ];
+    const report = buildTestSizeReport(records);
+    expect(report.records.map((r) => r.file)).toEqual([
+      "tests/unit/a.test.ts",
+      "tests/unit/b.test.ts",
+      "tests/unit/c.test.ts",
+    ]);
+    // The input array must not be mutated.
+    expect(records.map((r) => r.file)).toEqual([
+      "tests/unit/c.test.ts",
+      "tests/unit/a.test.ts",
+      "tests/unit/b.test.ts",
+    ]);
+  });
 });
 
-describe("wallClockBackend — observation seam", () => {
-  test("passes the measured duration through unchanged", () => {
+describe("wallClockBackend — observation session lifecycle", () => {
+  test("finish prefers the in-process JUnit duration when finite", () => {
     expect(wallClockBackend.name).toBe("wall-clock");
-    expect(wallClockBackend.observe("tests/unit/x.test.ts", 2.5)).toEqual({ durationSeconds: 2.5 });
+    const session = wallClockBackend.openSession();
+    session.begin("tests/unit/x.test.ts");
+    expect(session.finish("tests/unit/x.test.ts", 2.5)).toEqual({ durationSeconds: 2.5 });
+  });
+
+  test("finish falls back to its own begin→finish measurement when JUnit is null", () => {
+    const session = wallClockBackend.openSession();
+    session.begin("tests/unit/y.test.ts");
+    // Busy-wait a few ms of real wall-clock (no timer API, so this file's static
+    // size stays small) so the fallback window is non-zero.
+    const until = Date.now() + 5;
+    while (Date.now() < until) {
+      void 0;
+    }
+    const obs = session.finish("tests/unit/y.test.ts", null);
+    expect(obs).not.toBeNull();
+    expect((obs as SizeObservation).durationSeconds).toBeGreaterThan(0);
+  });
+
+  test("finish returns null when there was no begin and no usable JUnit value", () => {
+    const session = wallClockBackend.openSession();
+    expect(session.finish("tests/unit/never-began.test.ts", null)).toBeNull();
+  });
+});
+
+describe("beginObservation / finishObservation — failure isolation", () => {
+  // A session whose lifecycle methods always throw — the wrappers must swallow
+  // the fault into a note and never rethrow.
+  const throwingSession: SizeObservationSession = {
+    begin() {
+      throw new Error("begin boom");
+    },
+    finish() {
+      throw new Error("finish boom");
+    },
+  };
+
+  test("beginObservation swallows a throwing begin and notes it", () => {
+    const notes: string[] = [];
+    expect(() => beginObservation(throwingSession, "f.test.ts", (m) => notes.push(m))).not.toThrow();
+    expect(notes.some((n) => n.includes("begin failed"))).toBe(true);
+  });
+
+  test("finishObservation swallows a throwing finish, notes it, and returns null", () => {
+    const notes: string[] = [];
+    const result = finishObservation(throwingSession, "f.test.ts", 1.5, (m) => notes.push(m));
+    expect(result).toBeNull();
+    expect(notes.some((n) => n.includes("finish failed"))).toBe(true);
+  });
+
+  test("finishObservation returns null (with a note) when the session yields no observation", () => {
+    const nullSession: SizeObservationSession = { begin() {}, finish: () => null };
+    const notes: string[] = [];
+    expect(finishObservation(nullSession, "f.test.ts", null, (m) => notes.push(m))).toBeNull();
+    expect(notes.some((n) => n.includes("no duration"))).toBe(true);
+  });
+
+  test("finishObservation returns null (with a note) on a non-finite duration", () => {
+    const nanSession: SizeObservationSession = {
+      begin() {},
+      finish: (): SizeObservation => ({ durationSeconds: Number.NaN }),
+    };
+    const notes: string[] = [];
+    expect(finishObservation(nanSession, "f.test.ts", null, (m) => notes.push(m))).toBeNull();
+    expect(notes.some((n) => n.includes("non-finite"))).toBe(true);
+  });
+
+  test("finishObservation returns the duration through the happy path", () => {
+    const okSession = wallClockBackend.openSession();
+    okSession.begin("f.test.ts");
+    expect(finishObservation(okSession, "f.test.ts", 3.0, () => {})).toBe(3.0);
   });
 });
 
