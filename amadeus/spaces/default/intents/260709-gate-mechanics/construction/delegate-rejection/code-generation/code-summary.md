@@ -38,6 +38,8 @@
 - **iter2(codecov/patch fail、head 5250090d6)**: bun lcov が関数本体内コメント行に DA:0 を付ける癖により、追加13コメント行が未カバー扱い → コメントブロックを関数外トップレベルへ移設(挙動変更なし)。恒久対処は Issue #730 へ切り出し。
 - **iter3(codex NOT-READY、head cd8038550)**: 一般 audit CLI(append/append-raw)が HUMAN_TURN/DELEGATED_* を鋳造可能で、writer テスト自身がこの経路でシードしていた(delegated provenance の信頼前提の破れ、#671 にも波及する共有経路)→ handleAppend/handleAppendRaw 先頭で保護3型を throw 拒否(append-raw は保護 heading + body 内 Event 行の両方)、正規 in-process writer(mint hook / delegate-*)は不変、テストシードはシャード直書き fixture 化、過大主張コメント是正 + 残余脅威(生ファイル書込)明記。落ちる実証: ガード前 5 fail → ガード後 10 pass。パッチ未カバー 0 行を lcov 実測。deslop パス実施(変更なし)。
 
+- **iter4(codex NOT-READY r2、head 18ad6fe50)**: append-raw guard の独自 regex(厳密な `**Event**:` のみ)と consumer 側 canonical parser(`auditBlockField`、leading `- ` 許容)の文法差により、dash-prefix 付き Event 行が rc=0 で鋳造され presence を偽成立させる bypass → guard が `auditBlockField` を共有して body 各行をパースする方式に変更(文法乖離の構造的排除、conductor がインライン是正)。落ちる実証: dash-prefix 3型 process-boundary(GATE_APPROVED シード + humanActedSinceGate=false 維持)+ in-process 1件が修正前 4 fail → 修正後 41 pass。パッチ未カバー 0 行を lcov 実測。
+
 ## 計画からの逸脱
 
 1. coverage registry 再生成 + gen-coverage-registry の EXPECTED_NONE_TO_CLI へ t112 追加(新ユニット検出に伴う同種の同期義務)
