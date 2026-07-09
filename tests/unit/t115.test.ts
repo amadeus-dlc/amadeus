@@ -78,6 +78,16 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+
+// Standalone hermeticity (issue #698): the suite runner injects these guard
+// bypasses into every test file's env (tests/run-tests.ts), so this file only
+// went green under the runner. Default them here as well so a bare
+// `bun test <this file>` behaves the same. Guard-enforcement tests re-enable
+// a guard by deleting its var in their own spawn env, so these defaults do
+// not mask enforcement coverage.
+process.env.AMADEUS_SKIP_ARTIFACT_GUARD ??= "1";
+process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD ??= "1";
+
 import {
   auditLockDir,
   readAllAuditShards,
@@ -122,6 +132,7 @@ interface CliResult {
 function orchestrate(args: string[], p: string): CliResult {
   const res = spawnSync(BUN, [ORCH_TOOL, ...args, "--project-dir", p], {
     encoding: "utf-8",
+    env: { ...process.env },
   });
   const stdout = res.stdout ?? "";
   return { status: res.status ?? -1, out: `${stdout}${res.stderr ?? ""}`, stdout };
@@ -131,6 +142,7 @@ function orchestrate(args: string[], p: string): CliResult {
 function state(args: string[], p: string): CliResult {
   const res = spawnSync(BUN, [STATE_TOOL, ...args, "--project-dir", p], {
     encoding: "utf-8",
+    env: { ...process.env },
   });
   const stdout = res.stdout ?? "";
   return { status: res.status ?? -1, out: `${stdout}${res.stderr ?? ""}`, stdout };

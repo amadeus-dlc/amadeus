@@ -78,6 +78,15 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
 
+// Standalone hermeticity (issue #698): the suite runner injects these guard
+// bypasses into every test file's env (tests/run-tests.ts), so this file only
+// went green under the runner. Default them here as well so a bare
+// `bun test <this file>` behaves the same. Guard-enforcement tests re-enable
+// a guard by deleting its var in their own spawn env, so these defaults do
+// not mask enforcement coverage.
+process.env.AMADEUS_SKIP_ARTIFACT_GUARD ??= "1";
+process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD ??= "1";
+
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const STATE_TS = join(
@@ -150,6 +159,7 @@ interface CliResult {
 function state(p: string, ...args: string[]): CliResult {
   const res = spawnSync(BUN, [STATE_TS, ...args, "--project-dir", p], {
     encoding: "utf-8",
+    env: { ...process.env },
   });
   const stdout = res.stdout ?? "";
   return {
