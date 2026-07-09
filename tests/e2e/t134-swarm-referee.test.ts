@@ -89,6 +89,7 @@ import {
 
 const BUN = process.execPath;
 const SWARM_TOOL = join(AMADEUS_SRC, "tools", "amadeus-swarm.ts");
+const BOLT_TOOL = join(AMADEUS_SRC, "tools", "amadeus-bolt.ts");
 
 const fixtures: string[] = [];
 afterAll(() => {
@@ -534,5 +535,97 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     // "error", never the laundered "unsatisfiable".
     expect(sneaky.reason).toBe("error");
     expect(sneaky.reason).not.toBe("unsatisfiable");
+  }, 120000);
+
+  // ===========================================================================
+  // Case 14 (issue #674): a unit that genuinely re-verifies converged but whose
+  // merge-back fails must NOT be reported as converged. `finalize` merges via
+  // `amadeus-bolt release-merge` + `amadeus-bolt complete --merge` (:590-594),
+  // which delegates ONLY to state/audit/runtime-graph consolidation (no git
+  // content-level merge lives in this path — real code-level conflicts are
+  // resolved by a separate, out-of-tooling git-merge step per SKILL.md Step
+  // 6.5). The genuine, real production failure mode of `complete --merge`
+  // reachable through this delegate chain is `amadeus-state merge`'s own
+  // idempotency guard: "already merged: not in Bolt Refs" (amadeus-state.ts
+  // handleMerge). We reproduce it for real (no hold-merge — finalize's own
+  // release-merge would clear a hold anyway, per the issue's fixture note) by
+  // actually completing the unit's merge out-of-band BEFORE finalize runs, so
+  // finalize's own merge-back call for the SAME unit genuinely fails against
+  // real state.
+  // ===========================================================================
+  test("14 finalize: merge-back failure is NOT reported converged (issue #674)", () => {
+    const proj = makeSwarmFixture();
+    runRef(proj, ["prepare", "--batch", "3", "--units", "mu", "--base", "main"]);
+    writeFileSync(join(wtPath(proj, "mu"), "impl.txt"), "done\n");
+
+    // Out-of-band pre-merge: a real, successful `release-merge` + `complete
+    // --merge` for "mu" — the SAME two calls finalize's own merge-back loop
+    // issues (:590-594) — landed for real via the actual amadeus-bolt CLI.
+    // This genuinely removes "mu" from main's Bolt Refs (amadeus-state merge).
+    const preRelease = spawnSync(
+      BUN,
+      [BOLT_TOOL, "--project-dir", proj, "release-merge", "--slug", "mu"],
+      { cwd: proj, encoding: "utf-8" },
+    );
+    expect(preRelease.status).toBe(0);
+    const preMerge = spawnSync(
+      BUN,
+      [
+        BOLT_TOOL,
+        "--project-dir",
+        proj,
+        "complete",
+        "--merge",
+        "--slug",
+        "mu",
+        "--batch",
+        "3",
+        "--name",
+        "mu",
+      ],
+      { cwd: proj, encoding: "utf-8" },
+    );
+    // Sanity: the out-of-band merge itself must genuinely succeed, or the
+    // fixture doesn't isolate the merge-back failure this case targets.
+    expect(preMerge.status).toBe(0);
+
+    // finalize re-verifies "mu": the check command still passes (genuinely
+    // converged on re-verify), so it enters the merge-back loop. Its
+    // release-merge is idempotent (no-op); its complete --merge REALLY fails
+    // now — "mu" is no longer in main's Bolt Refs.
+    const f = runRef(proj, [
+      "finalize",
+      "--batch",
+      "3",
+      "--units",
+      "mu",
+      "--claimed",
+      "mu",
+      "--check-cmd",
+      "test -f impl.txt",
+    ]);
+
+    // AC-674-3: envelope/exit-code compatibility is preserved.
+    expect(f.rc).toBe(2);
+    const env = JSON.parse(f.out);
+    expect(env.merge_failures.length).toBe(1);
+    expect(env.merge_failures[0].unit).toBe("mu");
+
+    // AC-674-1: the merge-back-failed unit is NOT converged.
+    const mu = env.units.find((u: { unit: string }) => u.unit === "mu");
+    expect(mu).toBeDefined();
+    expect(mu.status).toBe("failed");
+
+    // AC-674-2: the SWARM_COMPLETED tally reflects the merge result, not the
+    // verify-only verdict — zero converged, one failed.
+    expect(env.converged).toBe(0);
+    expect(env.failed).toBe(1);
+
+    // AC-674-1 (audit): SWARM_UNIT_CONVERGED must never fire for this unit;
+    // SWARM_UNIT_FAILED + SWARM_BATON_RETURNED must.
+    expect(eventCount(proj, "SWARM_UNIT_CONVERGED")).toBe(0);
+    expect(eventCount(proj, "SWARM_UNIT_FAILED")).toBe(1);
+    expect(eventCount(proj, "SWARM_BATON_RETURNED")).toBe(1);
+    expect(eventCount(proj, "SWARM_COMPLETED")).toBe(1);
   }, 120000);
 });
