@@ -23,7 +23,7 @@ description: >                      # Brief role summary (shown in Claude Code a
   System architect responsible for application design,
   NFR design, and component decomposition.
 disallowedTools: Task               # Agents cannot spawn subagents
-modelOverride: opus                 # opus for high-judgment work; sonnet for templated output
+model: opus                 # opus for high-judgment work; sonnet for templated output
 ---
 ```
 
@@ -33,7 +33,7 @@ modelOverride: opus                 # opus for high-judgment work; sonnet for te
 | `description` | Yes | 簡潔な役割サマリー |
 | `tools` | No | オプションのallowlist。省略するとセッションのツールセット全体を継承する。指定するとエージェントが絞り込まれ、`mcp__<server>__<tool>` の id も列挙しない限り継承したMCPツールが失われる |
 | `disallowedTools` | Yes | `Task` を含める必要がある -- 委譲を行うのはコンダクターのみ |
-| `modelOverride` | No | `opus`(ほとんどのエージェントのデフォルト)または `sonnet`(テンプレート出力エージェントのみ) |
+| `model` | No | `opus`(ほとんどのエージェントのデフォルト)または `sonnet`(テンプレート出力エージェントのみ) |
 
 ### Markdown本文のセクション
 
@@ -152,7 +152,7 @@ L = リード、S = サポート
 
 エージェントの表示名と例示ナレッジファイルは、各エージェントの `.md` フロントマターにある `display_name` と `examples` フィールドが正典です — TypeScriptの編集は不要です。完全なレシピ(必須フロントマターフィールド、検証手順、何が自動的に検証され何が手動かの区別)については、[コントリビュート: エージェントの追加](11-contributing.ja.md#adding-an-agent)を参照してください。手順の簡単なサマリーは以下のとおりです。
 
-1. 必須フロントマター(`name`、`display_name`、`examples`、`description`、`disallowedTools`(`Task` を含む)、`modelOverride`)を持つ `core/agents/{name}-agent.md` を作成する。オプションの `tools:` allowlist は継承ツールセットを絞り込む。省略するとセッションのツールセット全体を継承する。`core/tools/amadeus-lib.ts` の `loadAgents()` が次回の呼び出しでファイルを検出する。
+1. 必須フロントマター(`name`、`display_name`、`examples`、`description`、`disallowedTools`(`Task` を含む)、`model`)を持つ `core/agents/{name}-agent.md` を作成する。オプションの `tools:` allowlist は継承ツールセットを絞り込む。省略するとセッションのツールセット全体を継承する。`core/tools/amadeus-lib.ts` の `loadAgents()` が次回の呼び出しでファイルを検出する。
 2. `core/knowledge/{name}-agent/` にナレッジファイルを追加する
 3. エージェントが参加するステージファイル(`core/amadeus-common/stages/`)にエージェントを追加する — 各ステージのフロントマターで `lead_agent` / `support_agents` を設定する。コンパイル済みの `tools/data/stage-graph.json` はそのフロントマターから `bun scripts/package.ts` によって生成される。手編集は絶対にしない(`package.ts --check` のドリフトガードが手編集されたdistでCIを失敗させる)。
 4. ディストリビューションを再生成する: `bun scripts/package.ts`(その後 `--check` でドリフトがないことを確認)
@@ -163,7 +163,7 @@ L = リード、S = サポート
 ## エージェントの変更方法
 
 - **ツールの変更**: フロントマターに `tools:` allowlist を追加または編集してエージェントを絞り込む。省略するとセッションのツールセット全体を継承する。`tools:` リストは、`mcp__<server>__<tool>` の id も列挙しない限り継承したMCPツールを失う。
-- **モデルの変更**: `modelOverride` を `opus` または `sonnet` に編集する。
+- **モデルの変更**: `model` を `opus` または `sonnet` に編集する。
 - **挙動の変更**: Markdown本文のセクション(責務、原則)を編集する。
 - **ステージ割り当ての変更**: エージェントファイル(Stages Owned セクション)と関連するステージファイル(`core/amadeus-common/stages/`)の両方を編集し、`bun scripts/package.ts` で再生成する — コンパイル済みのステージグラフはステージフロントマターから導出され、手編集されることはない。
 

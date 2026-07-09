@@ -27,7 +27,7 @@ description: >
   Solutions architect responsible for application design, domain modelling,
   NFR patterns, and component decomposition.
 disallowedTools: Task
-modelOverride: opus
+model: opus
 ---
 ```
 
@@ -45,7 +45,7 @@ modelOverride: opus
 
 **`disallowedTools` は `Task` を含まなければならない。** これは任意ではありません。エージェントは委譲されたワーカーとして実行されます。エンジンの `run-stage` ディレクティブが `mode: subagent` を担うとき、コンダクター(ライブの `/amadeus` セッション)が `Task` 呼び出しを実行します。`Task` を許可すると、エージェントが自分自身のサブエージェントをスポーンでき、フレームワークが防ぐために作られている委譲チェーンがカスケードしてしまいます。出荷されるすべてのエージェントは `Task` を禁止しており、あなたのものもそうしなければなりません。
 
-**`modelOverride` は opus か sonnet で、デフォルトは opus。** 高度な判断を要し、複数の制約にまたがる推論で、下流にカスケードする作業のペルソナには `opus` に手を伸ばしてください — 曖昧な intent を解釈し、密なコンテキストの下でアーキテクチャ上のトレードオフを秤にかけるような作業です。11のエージェントのうち8がまさにこの理由で opus で動きます。出力が主にテンプレート化されたものかパターン追従であり、メソドロジーがエージェントの知識ファイルに既にエンコードされているときにだけ `sonnet` を使ってください — 3つの sonnet エージェント(delivery、pipeline-deploy、operations)はデリバリープラン、CI/CD の YAML、runbook のスキャフォールディングを生成します。迷ったら opus。
+**`model` は opus か sonnet で、デフォルトは opus。** 高度な判断を要し、複数の制約にまたがる推論で、下流にカスケードする作業のペルソナには `opus` に手を伸ばしてください — 曖昧な intent を解釈し、密なコンテキストの下でアーキテクチャ上のトレードオフを秤にかけるような作業です。11のエージェントのうち8がまさにこの理由で opus で動きます。出力が主にテンプレート化されたものかパターン追従であり、メソドロジーがエージェントの知識ファイルに既にエンコードされているときにだけ `sonnet` を使ってください — 3つの sonnet エージェント(delivery、pipeline-deploy、operations)はデリバリープラン、CI/CD の YAML、runbook のスキャフォールディングを生成します。迷ったら opus。
 
 さらに2つのフィールドが、挙動ではなく提示を駆動します。`display_name` は statusline がレンダリングする人間可読なラベルです(architect は "Architect Agent" として表示されます)。`examples` は agent→examples テーブルに文書化される推奨知識ファイル名を列挙します — それらは *ユーザーに提示される提案* です。ランタイムはそれらを決して読み込まず、エンジンはそれらをディスクに書き込みません。
 
@@ -70,7 +70,7 @@ modelOverride: opus
 
 リファレンスのレシピを反映して、ワークフローをエンドツーエンドで示します。
 
-1. **エージェントファイルを作成する** — `core/agents/<slug>-agent.md` に、必須フロントマター(`name`、`display_name`、`examples`、`description`、`disallowedTools`(`Task` を含む)、`modelOverride`)を付けて。任意の `tools:` 許可リストはペルソナを絞り込みます。省略するとセッションの全ツールセットを継承します。本体は出荷されるファイルの構造(Core Responsibilities、Stages Owned、Collaboration、Knowledge Loading、Key Principles)にマッチするように書いてください。
+1. **エージェントファイルを作成する** — `core/agents/<slug>-agent.md` に、必須フロントマター(`name`、`display_name`、`examples`、`description`、`disallowedTools`(`Task` を含む)、`model`)を付けて。任意の `tools:` 許可リストはペルソナを絞り込みます。省略するとセッションの全ツールセットを継承します。本体は出荷されるファイルの構造(Core Responsibilities、Stages Owned、Collaboration、Knowledge Loading、Key Principles)にマッチするように書いてください。
 2. **知識ファイルを追加する** — ペルソナがアクティベーション時に読み込むべきメソドロジーのために、`core/knowledge/amadeus-<slug>-agent/` の下に。
 3. **ステージに配線する** — それがリードまたはサポートする各ステージファイル(`core/amadeus-common/stages/<phase>/<slug>.md`)の `lead_agent` / `support_agents` フロントマターに slug を追加し、その後 `stage-graph.json` が再生成されるように再コンパイル(`bun .claude/tools/amadeus-graph.ts compile`)します。`stage-graph.json` を手編集してはいけません — それはビルド成果物であり、次のコンパイルが手作業の変更を上書きします([Adding a Stage](02-adding-a-stage.ja.md#4-compile-so-stage-graphjson-regenerates) を参照)。これがそれをアクティブにするステップです。
 4. **team-knowledge ディレクトリを文書化する** — チームがスペースレベルの `amadeus/knowledge/<slug>-agent/` の下に標準を追加することを記します。エンジンはこのディレクトリを作成しません。チームはコンテンツがあるときにそれを作成します(スペースの `amadeus/knowledge/` はブートストラップ時には自由形式かつ空です)。
