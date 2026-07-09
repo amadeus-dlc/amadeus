@@ -993,7 +993,11 @@ Per the canonical Glossary in `stage-protocol.md`, a **Bolt** is
 "a deployable unit of work within Construction — one pass through stages
 3.1–3.5." A Bolt is one Construction pass over one or more Units of
 Work, distinct from an MMF or a sprint. (Stages 3.6 build-and-test and 3.7
-ci-pipeline run once at end across all Bolts, not per-Bolt.)
+ci-pipeline run once at end across all Bolts, not per-Bolt.) Note: this
+deviates intentionally from AI-DLC v1, where a Bolt is a sprint-like
+time-box (a Unit of Work spans multiple Bolts). This implementation
+repurposes "Bolt" to mean a deployable slice that wraps one or more Units
+of Work.
 
 Economic value cannot be derived from the DAG — AI agents can topologically
 sort, but they cannot decide which Bolt validates the market hypothesis
@@ -1118,7 +1122,11 @@ Changes**. The user can override stage inclusion/exclusion at this gate.
 - **Bolt ≠ sprint ≠ MMF.** Per the canonical Glossary, a Bolt is one pass
   through Construction stages 3.1–3.5 (3.6 Build and Test and 3.7 CI Pipeline
   run once after all Bolts). Sequencing heuristics (walking skeleton, WSJF)
-  apply within Bolts; they do not redefine what a Bolt is.
+  apply within Bolts; they do not redefine what a Bolt is. Note: this
+  deviates intentionally from AI-DLC v1, where a Bolt is a sprint-like
+  time-box (a Unit of Work spans multiple Bolts). This implementation
+  repurposes "Bolt" to mean a deployable slice that wraps one or more Units
+  of Work.
 - **Deliberate deviation from upstream.** The upstream reference calls this
   stage "Workflow Planning" and treats it as a pure stage selector. This
   implementation (renamed to "Delivery Planning") adds Bolt sequencing,
