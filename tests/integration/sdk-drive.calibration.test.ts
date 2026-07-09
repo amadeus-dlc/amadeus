@@ -26,16 +26,16 @@ import { describe, expect, test } from "bun:test";
 import {
   assertAskedQuestion,
   assertToolResultContains,
-} from "./assert.ts";
+} from "../harness/assert.ts";
 import {
   cleanupTestProject,
   setupIntegrationProject,
-} from "./fixtures.ts";
+} from "../harness/fixtures.ts";
 import {
   type CapturedToolResult,
   type DriveResult,
   driveAidlc,
-} from "./sdk-drive.ts";
+} from "../harness/sdk-drive.ts";
 
 // ---------------------------------------------------------------------------
 // Timeout budget. A multi-tool /amadeus turn on Opus/Bedrock can take minutes.
@@ -53,14 +53,14 @@ const DRIVE_TIMEOUT_MS = Math.max(60_000, TEST_TIMEOUT_MS - 15_000);
 
 // ---------------------------------------------------------------------------
 // CALIBRATION 2 known-answer strings — read from the SHIPPED doctor handler so
-// they are REAL, not guessed. Source: dist/claude/.claude/tools/
-// amadeus-utility.ts handleDoctor():
-//   - header literal:           "AI-DLC Health Check\n"            (utility.ts:1355)
-//   - separator rule:           "─".repeat(37)                (utility.ts:1356)
-//   - check #1 label:           "bun installed (required ...)"     (utility.ts:336)
-//   - hook label shape:         "<hook>.ts present"                (utility.ts:356, hooks :343-351)
-//   - settings label:           "settings.json present"           (utility.ts:365)
-//   - amadeus-docs label:         "amadeus-docs/ directory exists"     (utility.ts:396)
+// they are REAL, not guessed. Source: packages/framework/core/tools/
+// amadeus-utility.ts handleDoctor() (mirrored into dist/claude/.claude/tools/):
+//   - header literal:           "AI-DLC Health Check\n"            (utility.ts:1683)
+//   - separator rule:           "─".repeat(37)                (utility.ts:1684)
+//   - check #1 label:           "bun installed (required ...)"     (utility.ts:402)
+//   - hook label shape:         "<hook>.ts present"                (utility.ts:470)
+//   - settings label:           "settings.json present"           (utility.ts:566)
+//   - shell-ready label:        "workspace shell ready (...)"      (utility.ts:628)
 // The spike's amadeus-sdk-toolout-probe.ts proved these exact strings appear in
 // the tool_result (and unreliably in prose) — we re-prove it through the driver.
 // ---------------------------------------------------------------------------
@@ -69,7 +69,11 @@ const DOCTOR_RULE = "─".repeat(37); // 37 box-drawing horizontals
 const DOCTOR_BUN_LABEL = "bun installed (required for CLI tools and hooks)";
 const DOCTOR_HOOK_LABEL = "amadeus-audit-logger.ts present";
 const DOCTOR_SETTINGS_LABEL = "settings.json present";
-const DOCTOR_DOCS_LABEL = "amadeus-docs/ directory exists";
+// The former "amadeus-docs/ directory exists" check was replaced by the
+// workspace-shell-readiness probe (utility.ts:626-630). The SDK drives the
+// Claude harness, so harnessDir() renders as ".claude/".
+const DOCTOR_SHELL_LABEL =
+  "workspace shell ready (.claude/ + amadeus/spaces/default/memory/)";
 
 // ---------------------------------------------------------------------------
 
@@ -173,7 +177,7 @@ describe("sdk-drive calibration (known-answer)", () => {
         assertToolResultContains(rA, "Bash", DOCTOR_BUN_LABEL);
         assertToolResultContains(rA, "Bash", DOCTOR_HOOK_LABEL);
         assertToolResultContains(rA, "Bash", DOCTOR_SETTINGS_LABEL);
-        assertToolResultContains(rA, "Bash", DOCTOR_DOCS_LABEL);
+        assertToolResultContains(rA, "Bash", DOCTOR_SHELL_LABEL);
 
         // Prove the content is the TOOL's bytes, not the assistant's prose
         // rendering: isolate the verbatim doctor block out of the Bash
