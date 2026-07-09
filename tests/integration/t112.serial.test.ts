@@ -46,6 +46,10 @@ import { join } from "node:path";
 const REAL_RUNNER = join(import.meta.dir, "..", "run-tests.sh");
 const REAL_RUNNER_TS = join(import.meta.dir, "..", "run-tests.ts");
 const REAL_GLUE = join(import.meta.dir, "..", "lib", "bun-junit-to-meta.ts");
+// run-tests.ts also imports lib/test-size.ts (derived-size summary matrix,
+// #684/#696). A static import means the copied runner fails to load without it,
+// so the scratch tree must carry it too — same reason as bun-junit-to-meta.ts.
+const REAL_SIZE = join(import.meta.dir, "..", "lib", "test-size.ts");
 
 const scratchRoots: string[] = [];
 
@@ -87,6 +91,7 @@ function driveRunner(nFail: number, nPass: number): { code: number; stdout: stri
   copyFileSync(REAL_RUNNER, join(testsDir, "run-tests.sh"));
   copyFileSync(REAL_RUNNER_TS, join(testsDir, "run-tests.ts"));
   copyFileSync(REAL_GLUE, join(libDir, "bun-junit-to-meta.ts"));
+  copyFileSync(REAL_SIZE, join(libDir, "test-size.ts"));
 
   // Distinct numeric stems keep glob ordering deterministic and avoid collisions
   // between the fail/pass families.

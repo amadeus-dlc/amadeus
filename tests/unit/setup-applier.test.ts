@@ -1,4 +1,5 @@
 // covers: modules:setup-applier
+// size: small
 //
 // Applier.create(fsWrite).apply — backup/overwrite/skip/conflict dispositions
 // and fail-fast on the first failure (REL-I01), against a fake ApplyWrite so

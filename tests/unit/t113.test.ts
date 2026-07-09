@@ -1,4 +1,5 @@
 // covers: function:validateDirective
+// size: small
 //
 // t113 — Directive schema + validator. Migrated from the bash TAP test
 // tests/unit/t113-directive-schema.sh (plan 30). The original spawned `bun -e`

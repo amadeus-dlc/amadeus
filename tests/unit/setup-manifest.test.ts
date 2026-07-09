@@ -1,4 +1,5 @@
 // covers: domain:setup-manifest
+// size: small
 //
 // ManifestFiles (dispositionFor/requiredPaths/duplicate-path invariant) and
 // Manifest (build/parse round trip, schema checks, isNewerThan, upgradedTo).

@@ -1,4 +1,5 @@
 // covers: modules:setup-resolver
+// size: small
 //
 // createResolver — release-then-tag fallback, SemVer ordering, BR-F09's 2-call
 // cap, and network-failure propagation (a gap the approved business-logic-model

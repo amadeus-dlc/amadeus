@@ -1,4 +1,5 @@
 // covers: function:parseCheckboxes
+// size: small
 //
 // t107 — property-based floor test for parseCheckboxes() in
 // dist/claude/.claude/tools/amadeus-lib.ts:449.
