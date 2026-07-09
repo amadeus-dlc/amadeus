@@ -229,6 +229,25 @@ function jsonError(message: string): never {
   process.exit(1);
 }
 
+// --- Audit line-escaping seams (pure) ---
+
+// Escape CR/LF in a field value so a malicious or malformed input (e.g., a file
+// path containing '\n**Event**: FAKE\n') cannot forge an audit entry. Field
+// values are markdown, not prose — literal newlines are never semantically
+// meaningful here, and the audit trail is security-critical. Behaviour is
+// identical to the former inline `String(value).replace(/\r?\n/g, "\\n")`: a
+// lone CR (not followed by LF) is intentionally NOT matched.
+export function escapeAuditValue(value: string): string {
+  return String(value).replace(/\r?\n/g, "\\n");
+}
+
+// Inverse used by append-raw: interpret literal `\n` sequences in a body as
+// actual newlines. Behaviour is identical to the former inline
+// `body.replace(/\\n/g, "\n")`.
+export function unescapeAuditBody(body: string): string {
+  return body.replace(/\\n/g, "\n");
+}
+
 // --- Subcommand: append ---
 
 // Core append logic — throws on error instead of exiting. Safe for library callers.
@@ -288,11 +307,7 @@ export function appendAuditEntryUnlocked(
   block += `**Timestamp**: ${ts}\n`;
   block += `**Event**: ${eventType}\n`;
   for (const [key, value] of Object.entries(fields)) {
-    // Escape CR/LF in values so a malicious or malformed input (e.g., a file
-    // path containing '\n**Event**: FAKE\n') cannot forge an audit entry.
-    // Field values are markdown, not prose — literal newlines are never
-    // semantically meaningful here, and the audit trail is security-critical.
-    const safeValue = String(value).replace(/\r?\n/g, "\\n");
+    const safeValue = escapeAuditValue(value);
     block += `**${key}**: ${safeValue}\n`;
   }
   block += `\n---\n`;
@@ -317,7 +332,7 @@ export function handleAppend(
 
 // --- Subcommand: append-raw ---
 
-function handleAppendRaw(
+export function handleAppendRaw(
   heading: string,
   body: string,
   projectDir: string
@@ -332,7 +347,7 @@ function handleAppendRaw(
     const path = ensureAuditFile(projectDir);
 
     // Interpret literal \n sequences in the body as actual newlines
-    const expandedBody = body.replace(/\\n/g, "\n");
+    const expandedBody = unescapeAuditBody(body);
 
     let block = `\n## ${heading}\n`;
     block += `**Timestamp**: ${ts}\n`;
