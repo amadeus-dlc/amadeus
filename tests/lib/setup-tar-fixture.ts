@@ -11,9 +11,16 @@ export type TarFixtureEntry =
   | { readonly type: "file"; readonly name: string; readonly content: Buffer }
   | { readonly type: "dir"; readonly name: string }
   | { readonly type: "symlink"; readonly name: string; readonly linkname: string }
-  | { readonly type: "hardlink"; readonly name: string; readonly linkname: string };
+  | { readonly type: "hardlink"; readonly name: string; readonly linkname: string }
+  // A PAX extended header ('x') carrying a "path" record for the entry that
+  // immediately follows it. Used to reproduce issue #678: when the header
+  // block lands right at a gunzip output-chunk boundary, the record body
+  // arrives in the next chunk.
+  | { readonly type: "pax-longname"; readonly longName: string }
+  // A GNU longname header ('L') for the entry that immediately follows it.
+  | { readonly type: "gnu-longname"; readonly longName: string };
 
-const TYPEFLAG: Record<TarFixtureEntry["type"], string> = {
+const TYPEFLAG: Record<"file" | "dir" | "symlink" | "hardlink", string> = {
   file: "0",
   dir: "5",
   symlink: "2",
@@ -30,6 +37,27 @@ export function buildTar(entries: readonly TarFixtureEntry[]): Buffer {
     }
     if (entry.type === "symlink" || entry.type === "hardlink") {
       parts.push(header(entry.name, 0, TYPEFLAG[entry.type], entry.linkname));
+      continue;
+    }
+    if (entry.type === "pax-longname") {
+      const record = Buffer.from(`path=${entry.longName}\n`);
+      // PAX record length counts itself (the "<len> " prefix) + the record text;
+      // grow len until it is self-consistent, per the PAX spec.
+      let len = record.length + 2;
+      while (String(len).length + 1 + record.length !== len) len = String(len).length + 1 + record.length;
+      const body = Buffer.from(`${len} path=${entry.longName}\n`);
+      parts.push(header("./PaxHeaders/entry", body.length, "x"));
+      parts.push(body);
+      const pad = paddingFor(body.length);
+      if (pad > 0) parts.push(Buffer.alloc(pad));
+      continue;
+    }
+    if (entry.type === "gnu-longname") {
+      const body = Buffer.from(`${entry.longName}\0`, "utf8");
+      parts.push(header("././@LongLink", body.length, "L"));
+      parts.push(body);
+      const pad = paddingFor(body.length);
+      if (pad > 0) parts.push(Buffer.alloc(pad));
       continue;
     }
     parts.push(header(entry.name, entry.content.length, TYPEFLAG.file));

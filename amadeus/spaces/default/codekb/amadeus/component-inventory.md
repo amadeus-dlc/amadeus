@@ -1,55 +1,43 @@
 # コンポーネント棚卸し
 
-## Core コンポーネント
+## Framework コンポーネント(既存、安定)
 
-| コンポーネント | 責務 | 依存先 | レイアウト感度 |
+| コンポーネント | 責務 | 依存先 | 本 intent との関係 |
 | --- | --- | --- | --- |
-| `core/` | AI-DLC engine source, tools, templates, stage definitions | none as authored source | 高: root source assumption across scripts/manifests/docs |
-| `core/tools/amadeus-version.ts` | version source used by packager | script relative import | 高: `scripts/package.ts` imports by relative root path |
-| `core/templates/onboarding.md` | 配布物へコピーされる onboarding skeleton | packager `ONBOARDING_SKELETON` | 中 |
-| `harness/<name>/manifest.ts` | harness ごとの source projection を宣言 | `scripts/manifest-types.ts`, root `core/`, root `harness/` | 高 |
-| `harness/codex/emit.ts` | Codex 配布物の追加 emission | assembled dist tree, `coreRoot`, `harnessRoot` | 高 |
+| `packages/framework/core/` | AI-DLC engine source, tools, templates, stage 定義 | 各種 scripts・manifest | #674/#675/#676/#668 の正本を含む |
+| `packages/framework/harness/<name>/` | harness ごとの配布 source | `scripts/manifest-types.ts` | 直接の修理対象なし |
+| `scripts/package.ts` | `dist/<name>` の生成と検査 | `packages/framework/core`, `packages/framework/harness` | 6件すべての修理伝播経路(正本修正後に必須) |
+| `scripts/promote-self.ts` | self-install と drift check | root `dist/claude`, `dist/codex` | 同上 |
 
-## ビルドと配布コンポーネント
+## swarm/gate コンポーネント(#674・#675 の対象)
 
-| コンポーネント | 責務 | 依存先 | レイアウト感度 |
+| コンポーネント | 責務 | 依存先 | バグとの関係 |
 | --- | --- | --- | --- |
-| `scripts/package.ts` | `dist/<name>` の生成と検査 | root `core/`, root `harness/`, root `dist/` | 非常に高 |
-| `scripts/promote-self.ts` | dogfood self-install と drift check | root `dist/claude`, root `dist/codex`, root runtime dirs | 非常に高 |
-| `scripts/manifest-types.ts` | manifest schema と projection semantics | root naming model | 高 |
-| runner generation | package build 中に command runner を生成 | assembled dist tree | 中 |
-| `dist/<name>/` | commit 済み生成配布物 | packager, docs, tests, CI | 非常に高 |
+| `packages/framework/core/tools/amadeus-swarm.ts` `handleFinalize` | claimed unit の再検証、merge-back、audit 発行 | `amadeus-bolt.ts`(`release-merge`/`complete --merge`)、`emitUnitConverged`/`emitUnitFailed` | **#674 の直接対象** |
+| `packages/framework/core/tools/amadeus-state.ts` `handleApprove` | ゲート承認、human-presence guard、advance への delegate | `isAutonomousMode`/`humanPresenceGuardDisabled`/`humanActedSinceGate`(`amadeus-lib.ts`) | ガードの実装例(#675 との非対称比較対象) |
+| `packages/framework/core/tools/amadeus-state.ts` `handleReject` | ゲート却下、Revision Count 増分 | `validateSlugInState`、`withAuditLock` | **#675 の直接対象**(ガード欠落) |
 
-## Runtime と dogfood コンポーネント
+## bolt/audit コンポーネント(#676・#668 の対象)
 
-| コンポーネント | 責務 | 依存先 | レイアウト感度 |
+| コンポーネント | 責務 | 依存先 | バグとの関係 |
 | --- | --- | --- | --- |
-| `.claude/` | この repo の Claude runtime install target | `promote-self` | 高 |
-| `.codex/` | この repo の Codex runtime install target | `promote-self`, composed scope preservation | 高 |
-| `.agents/` | Codex skills/runtime install target | `dist/codex/.agents` | 高 |
-| `amadeus/spaces/default/` | local Amadeus record/artifact store | generated tools と current intent | 中 |
+| `packages/framework/core/tools/amadeus-bolt.ts` `handleStart` | Bolt/worktree 起動、`BOLT_STARTED` audit 発行 | `emitAudit`、`readStateFile` | **#676 の直接対象**(呼び出し元) |
+| `packages/framework/core/tools/amadeus-lib.ts` `auditFilePath` | intent/space から audit shard パスを解決 | `recordDir`、`spaceRecordRoot`、`auditShardName` | **#676 の直接対象**(bare fallback の発生源) |
+| `packages/framework/core/tools/amadeus-lib.ts` `codekbRepoName` | per-repo codekb ディレクトリ名の解決 | `intentRepos`、`basename` | **#668 の直接対象** |
+| `packages/framework/core/tools/amadeus-utility.ts` `codekb-path` ハンドラ | `codekb-path` CLI コマンドの実装 | `codekbRepoName` | #668 の呼び出し元 |
 
-## 品質コンポーネント
+## `@amadeus-dlc/setup` コンポーネント(#677・#678 の対象)
 
-| コンポーネント | 責務 | 依存先 | レイアウト感度 |
+| コンポーネント | 責務 | 依存先 | バグとの関係 |
 | --- | --- | --- | --- |
-| `.github/workflows/ci.yml` | CI drift check と validation | root package scripts | 高 |
-| `tests/harness/fixtures.ts` | shared e2e install fixture helper | root `dist/claude/.claude`, root `dist/*` | 非常に高 |
-| `tests/harness/tui-fixtures.ts` | TUI harness fixture copy helper | root `dist/claude`, `dist/kiro`, `dist/kiro-ide` | 高 |
-| `tests/integration/t145-packaging-parity.test.ts` | package drift guard を検証 | root `scripts/package.ts` | 高 |
-| `tests/unit/t150-codex-packaging.test.ts` | Codex 配布物 shape を検証 | root `dist/claude`, root `dist/codex` | 高 |
-| `tests/unit/t200-promote-self-composed-scope.test.ts` | self-promotion preservation を検証 | root `scripts/promote-self.ts`, root runtime dirs | 高 |
-| `tests/gen-coverage-registry.ts` | coverage metadata generation | root `dist/claude/.claude` labels | 中 |
+| `packages/setup/src/ports/http.ts` `createHttp`(`getJson`/`downloadArchive`) | GitHub API/アーカイブ取得のポート実装 | `fetchChecked`、`fetchFollowingAllowedHosts` | **#677 の直接対象**(`getJson`) |
+| `packages/setup/src/internal/tar-archive-extractor.ts` `extractTarGz` | tar.gz のストリーミング展開、PAX/GNU longname 処理 | `TmpWrite` port、`node:zlib` | **#678 の直接対象** |
+| `packages/setup/src/modules/fetcher.ts`(想定、直接読解対象外) | `Http` ポートの呼び出し元、リトライ制御 | `ports/http.ts` | #677 の間接的影響範囲(要確認) |
 
-## ドキュメントコンポーネント
+## 品質コンポーネント(既存)
 
-| コンポーネント | 責務 | 依存先 | レイアウト感度 |
+| コンポーネント | 責務 | 依存先 | 本 intent との関係 |
 | --- | --- | --- | --- |
-| `README.md` | public install と contributor model | root `core/harness/dist` | 高 |
-| `docs/guide/harnesses/*.md` | harness-specific install/regenerate instructions | root `dist/*`, root `core + harness` | 高 |
-| `docs/reference/11-contributing.md` | maintainer workflow | root `core/`, `harness/<name>/`, `dist/` | 高 |
-| docs legacy refs gate | stale reference を防ぐ | docs + root `core/templates` + harness skills | 中 |
-
-## 外部 sibling コンポーネント
-
-`packages/setup` is intentionally not inventoried as a local component because `packages/` is absent in this checkout. For this intent it is a sibling dependency and parallel intent. It can influence layout comparison, but should not be treated as existing ファイルシステム evidence.
+| `.github/workflows/ci.yml` | CI(typecheck → lint → dist:check → promote:self:check → tests) | root package scripts | 6件の修理後もグリーンを維持する必要がある |
+| `packages/setup/tests/setup-*.test.ts`(11ファイル) | `packages/setup` のユニットテスト | 各モジュール | #677/#678 のリグレッションテストをここに追加 |
+| `tests/` 配下の framework テスト群 | `amadeus-swarm.ts`/`amadeus-state.ts`/`amadeus-bolt.ts`/`amadeus-lib.ts` のテスト | 各ツール | #674/#675/#676/#668 のリグレッションテストをここに追加 |

@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { accessSync, appendFileSync, constants as fsConstants, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { hostname, tmpdir } from "node:os";
@@ -494,13 +495,48 @@ export function relativeCodekbDir(projectDir: string, repo: string, space?: stri
 
 // The deterministic repo NAME for codekb keying (NOT the intent slug):
 //   1 recorded repo  -> that name
-//   0 recorded repos (workspace root IS the repo) -> basename(projectDir)
+//   0 recorded repos (workspace root IS the repo) -> the `origin` remote's repo
+//                       slug (SSH/HTTPS, .git suffix stripped) when one resolves,
+//                       else basename(projectDir). Worktree/clone directory names
+//                       (e.g. `codex-engineer-2`) are NOT stable across checkouts
+//                       of the same repo, so basename alone fragmented codekb/
+//                       into one directory per checkout leaf (#668); the origin
+//                       remote is stable across worktrees/clones of one repo.
 //   >1 recorded      -> caller loops per repo (this returns basename as a safe
 //                       default; callers that know the repo pass --repo explicitly).
 // basename done here (lib has basename imported) so callers never inline it.
 export function codekbRepoName(projectDir: string, space?: string): string {
   const repos = intentRepos(projectDir, undefined, space);
-  return repos.length === 1 ? repos[0] : basename(projectDir);
+  if (repos.length === 1) return repos[0];
+  if (repos.length === 0) {
+    const remoteSlug = originRepoSlug(projectDir);
+    if (remoteSlug) return remoteSlug;
+  }
+  return basename(projectDir);
+}
+
+// Extract the repo slug (e.g. `amadeus`) from the `origin` remote's URL, the
+// last path segment with any `.git` suffix stripped. Handles both SSH
+// (`git@github.com:org/repo.git`) and HTTPS (`https://github.com/org/repo.git`)
+// forms. Returns null on any git failure, missing remote, or unparseable URL
+// (fail-safe: codekbRepoName falls back to basename(projectDir)).
+function originRepoSlug(projectDir: string): string | null {
+  let url: string;
+  try {
+    const r = spawnSync("git", ["remote", "get-url", "origin"], {
+      cwd: projectDir,
+      encoding: "utf-8",
+      timeout: 5_000,
+    });
+    if (r.status !== 0 || typeof r.stdout !== "string") return null;
+    url = r.stdout.trim();
+  } catch {
+    return null;
+  }
+  if (url.length === 0) return null;
+  const withoutGitSuffix = url.replace(/\.git$/, "");
+  const lastSegment = withoutGitSuffix.split(/[/:]/).pop();
+  return lastSegment && lastSegment.length > 0 ? lastSegment : null;
 }
 
 // The bare SPACE record root: `amadeus/spaces/<space>/intents/`. The absolute path
