@@ -89,21 +89,28 @@ export interface TestSizeReport {
 ### 2.6 `SizeObservationBackend`(seam — 質問 Q4 / FR-6)
 
 ```ts
-// Observation backend seam (#699 / election Q4). The wall-clock backend is
-// the FIRST consumer (condition: no consumer-less extension points).
-// A future strace/eBPF backend implements the same interface and fills
-// optional dynamic signals.
+// Observation backend seam (#699 / election Q4) — session lifecycle form
+// (revised per PR #732 codex-3 review: the seam must own the observation
+// window, not identity-wrap an already-measured value).
 export interface SizeObservation {
   readonly durationSeconds: number;
 }
+export interface SizeObservationSession {
+  begin(file: string): void; // runner calls right before spawning the file
+  finish(file: string, junitDurationSeconds: number | null): SizeObservation | null;
+}
 export interface SizeObservationBackend {
   readonly name: string;            // e.g. "wall-clock"
-  observe(file: string, junitDurationSeconds: number): SizeObservation;
+  openSession(): SizeObservationSession;
 }
+// Failure-isolation helpers — the runner NEVER calls a session directly:
+export function beginObservation(session, file, note): void;            // try/catch → note only
+export function finishObservation(session, file, junitDurationSeconds, note): number | null;
 ```
 
-- wall-clock バックエンド(初回消費者)は runner が既に持つ実測 duration を素通しする実装。レコード生成経路(business-logic-model.md §3)は必ず backend 経由で `durationSeconds` を得る — 消費者ゼロの拡張点にしない(選挙付帯条件)。
-- 意図的に最小の interface とし、将来バックエンドが必要とする入力(プロセス handle 等)は後続 Issue で interface 拡張として設計する(現時点で推測実装しない — simplicity first)。**注**: 現シグネチャの第2引数は wall-clock 由来の値であり、strace/eBPF 等の第2バックエンド導入時にはシグネチャ改訂(観測入力の抽象化)が必要になる見込み。FR-6 は「wall-clock を初回消費者とする seam の存在」までを要求しており、シグネチャの汎化保証はスコープ外(requirements §6 が第2バックエンドを後続 Issue に明示委譲済み)。
+- wall-clock バックエンド(初回消費者)の実質責務: `begin` で per-file の開始時刻を自前記録し、`finish` は JUnit 実測(有限値)を優先しつつ、欠落/非有限時は**自前計測へフォールバック**する — 観測ウィンドウの所有者であり identity wrapper ではない。将来の strace/eBPF は同じ begin/finish ライフサイクルで測定ウィンドウを所有できる。
+- **失敗隔離は seam の一部**: runner は `beginObservation`/`finishObservation` ヘルパー経由でのみ session に触れる。backend の throw はヘルパー内で吸収され note(stderr)化 — 収集点は summary の try/catch wrap の外にあるため、この隔離が advisory 失敗の runner exit への漏出を塞ぐ唯一の防壁であり、隔離挙動自体を in-process テストで pin する(BR-6/NFR-1)。
+- レコード生成経路(business-logic-model.md §3)は必ずこの seam 経由で `durationSeconds` を得る — 消費者ゼロの拡張点にしない(選挙付帯条件)。
 
 ## 3. 関係図
 
