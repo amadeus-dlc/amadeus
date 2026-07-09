@@ -4336,3 +4336,14 @@
 **Message**: 進捗はどう？
 
 ---
+
+## Rule Learned
+**Timestamp**: 2026-07-09T22:32:09Z
+**Event**: RULE_LEARNED
+**Stage**: requirements-analysis
+**Candidate-ID**: requirements-analysis:agmsg-recipient-typo
+**Destination**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-leader/amadeus/spaces/default/memory/team.md
+**Heading**: ## Corrections
+**Source**: orchestrator
+
+---
