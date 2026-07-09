@@ -5,6 +5,9 @@ import { join } from "node:path";
 import { appendAuditEntry, appendAuditEntryUnlocked } from "./amadeus-audit.ts";
 import {
   activeIntent,
+  activeSpace,
+  auditShardDir,
+  auditShardName,
   appendSlug,
   appendUnderHeading,
   type CheckboxState,
@@ -253,6 +256,9 @@ function main(): void {
       case "approve":
         handleApprove(args.slice(1));
         break;
+      case "delegate-approval":
+        handleDelegateApproval(args.slice(1));
+        break;
       case "reject":
         handleReject(args.slice(1));
         break;
@@ -294,7 +300,7 @@ function main(): void {
         break;
       default:
         error(
-          `Unknown subcommand: ${subcommand}. Valid: get, set, set-skeleton-stance, checkbox, count, advance, finalize, complete-workflow, gate-start, approve, reject, revise, skip, resume, acknowledge-compaction, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, park, unpark`
+          `Unknown subcommand: ${subcommand}. Valid: get, set, set-skeleton-stance, checkbox, count, advance, finalize, complete-workflow, gate-start, approve, delegate-approval, reject, revise, skip, resume, acknowledge-compaction, reuse-artifact, lookup, practices-event, practices-promote, fork, merge, park, unpark`
         );
     }
   } catch (e) {
@@ -1420,6 +1426,100 @@ function parseApproveFlags(args: string[]): { userInput?: string } {
   return {
     userInput: getFlagValue(args, "--user-input"),
   };
+}
+
+// delegate-approval <slug> --to-intent <record-dir> [--to-space <space>] [--user-input <text>]
+//
+// Agent-team topology (#671): the human is present only in the LEADER session,
+// so a remote conductor's human-presence gate can never observe a local
+// HUMAN_TURN and every conductor gate is structurally stuck. This records a
+// DELEGATED_APPROVAL into the TARGET (conductor) intent's audit dir, grounded in
+// a REAL human turn on THIS (leader) session's own ledger. The conductor's gate
+// (humanActedSinceGate → verifyDelegatedApproval) accepts it ONLY after
+// confirming the referenced HUMAN_TURN physically exists in the issuer shard, so
+// a model cannot forge it (HUMAN_TURN is written only by the UserPromptSubmit
+// hook). Refuses when no fresh human turn backs this call, which is exactly what
+// stops an autopilot conductor from self-delegating its own gate open.
+function handleDelegateApproval(args: string[]): void {
+  const slug = args.find((a) => !a.startsWith("--"));
+  if (!slug) {
+    error(
+      "Usage: amadeus-state.ts delegate-approval <slug> --to-intent <record-dir> [--to-space <space>] [--user-input <text>]"
+    );
+  }
+  const toIntent = getFlagValue(args, "--to-intent");
+  if (!toIntent) error("delegate-approval requires --to-intent <conductor record dir name>");
+  const toSpace = getFlagValue(args, "--to-space");
+  const userInput = getFlagValue(args, "--user-input");
+  const pd = resolveProjectDir(projectDir);
+
+  // Grounding gate: a real human must have acted on THIS session since the last
+  // gate resolution. humanActedSinceGate reads the hook-written HUMAN_TURN
+  // ledger — unforgeable by any tool a model can call — so this is the anti-
+  // autopilot guard. Honour the same deterministic off-switch as the approve
+  // path so suite tests can bypass it.
+  if (!humanPresenceGuardDisabled() && !humanActedSinceGate(pd)) {
+    error(
+      "Refusing to delegate approval: no real human turn on this session since the " +
+        "last gate resolution. Acknowledge the approval as a human, then delegate."
+    );
+  }
+
+  // Issuer coordinates the conductor verifies against: this session's active
+  // intent record dir, its own audit shard, and the timestamp of the grounding
+  // HUMAN_TURN within that shard.
+  const issuerSpace = activeSpace(pd);
+  const issuerIntent = activeIntent(pd, issuerSpace);
+  if (!issuerIntent) {
+    error("delegate-approval: no active intent on this (leader) session to ground the approval");
+  }
+  const shardDir = auditShardDir(pd, issuerIntent, issuerSpace);
+  if (shardDir === null) error("delegate-approval: cannot resolve this session's audit shard dir");
+  const issuerShard = auditShardName(pd);
+  let issuerHumanTs: string | null = null;
+  try {
+    const turns = findAllEvents(readFileSync(join(shardDir, issuerShard), "utf-8"), "HUMAN_TURN");
+    if (turns.length > 0) issuerHumanTs = turns[turns.length - 1].timestamp;
+  } catch {
+    // fall through to the guard below
+  }
+  if (!issuerHumanTs) {
+    error(
+      `delegate-approval: no HUMAN_TURN in this session's own audit shard (${issuerShard}); ` +
+        "cannot ground the delegation"
+    );
+  }
+
+  // Target must be a real, locally-present intent record — never scaffold one here.
+  const targetRecord = recordDir(pd, toIntent, toSpace);
+  if (targetRecord === null || !existsSync(join(targetRecord, "amadeus-state.md"))) {
+    error(
+      `delegate-approval: target intent record not found: ${toIntent}${toSpace ? ` (space ${toSpace})` : ""}`
+    );
+  }
+
+  const fields: Record<string, string> = {
+    Stage: slug,
+    "Issuer Space": issuerSpace,
+    "Issuer Intent": issuerIntent,
+    "Issuer Shard": issuerShard,
+    "Issuer Human Ts": issuerHumanTs,
+  };
+  if (userInput) fields["User Input"] = userInput;
+  const res = appendAuditEntry("DELEGATED_APPROVAL", fields, pd, toIntent, toSpace);
+
+  console.log(
+    JSON.stringify({
+      delegated: true,
+      stage: slug,
+      toIntent,
+      toSpace: toSpace ?? issuerSpace,
+      issuerIntent,
+      issuerShard,
+      issuerHumanTs,
+      timestamp: res.timestamp,
+    })
+  );
 }
 
 // reject <slug> [--feedback <text>] — transition [?] → [R], emit GATE_REJECTED + STAGE_REVISING, increment Revision Count.
