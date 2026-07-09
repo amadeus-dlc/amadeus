@@ -20,6 +20,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 - Construction は Bolt をできる限り並行実装する(相互依存が真に必要な箇所のみ直列)。delivery-planning / units-generation では Bolt・Unit を独立に切って並列バッチを最大化し、code-generation は swarm(prepare → 並列 fan-out → check → finalize)による worktree 分離の並行実装を既定とする (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:c1 -->
 - leader は作業をしない: 実装・成果物作成・intent の conductor 役はすべてメンバーへ委任し、leader はユーザー⇔メンバーの中継、ゲート執行、選挙の配信と集計、Issue/PR 管理、進捗監視に徹する。leader が手を動かし始めたら移管する (learned 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:leader-no-work -->
 - ステージゲート(プラン承認含む)は auto 承認とする: conductor は reviewer READY・センサー通過・成果物実在を確認したうえで、ユーザー中継なしで承認して先へ進む。ユーザーへのエスカレーションは (1) 選挙の3対3同数 (2) 失敗・ブロッカー (3) PR マージ判断(no-AI-merge ルール)のみ (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:auto-gate-approval -->
+- 失敗・ブロッカーが発生したら、conductor は状況と解決の選択肢(回避策・修正案・スコープ変更等、可能な限り複数)を leader へ送り、leader がエージェント間選挙にかけてより良い選択を探す。多数決成立なら結果を採用して続行し、3対3の同数のときのみユーザーへエスカレーションする。ユーザーエスカレーションは (1) 選挙の3対3同数 (2) PR マージ判断 に集約される (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:blocker-election -->
 ## Walking Skeleton
 
 この intent は既存フレームワークへのインクリメンタルな npm インストーラ実装だが、配布経路がユーザー体験の入口になるため、最初の Construction Bolt は小さな end-to-end スライスとして扱う。最初に最小の `@amadeus-dlc/setup` 実行経路を通し、以後の拡張前に人間がゲートで確認する。
@@ -61,3 +62,4 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 
 <!-- 自己学習ループがここに追記する。 -->
 - Bolt のレビューが READY になった時点で「Bolt ブランチ切り出し+PR 発行」を明示的にタスク化する。エンジン指令・stage ファイルに現れない Way of Working 規範(Bolt 単位 PR、タグ発行等)は、該当イベント発生時に conductor がタスクリストへ載せて追跡する — 指令駆動ループの外にある規範は、タスク化しない限り実行されない(installer-distribution Bolt 1〜3 で PR 分割漏れを観測、遡及分割で是正) (learned 2026-07-08) <!-- cid:code-generation:code-generation:bolt-pr-taskization -->
+- human-presence gate は conductor セッション自身の HUMAN_TURN を要求するため、遠隔 conductor の auto 承認はそのままでは成立しない(選挙 6:0 で決定、2026-07-09)。恒久対応は委任承認 provenance の第一級化(Issue #671)。それまでの暫定運用: conductor はゲート到達時に leader へ「ゲート準備完了」を報告し、leader がユーザーへ「対象 tmux セッションに1行タイプ」を依頼、タイプ後に conductor が approve を再実行する。ゲートの緩和・偽装(env での skip 等)は検証劇場 Forbidden により禁止 (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:human-presence-interim -->
