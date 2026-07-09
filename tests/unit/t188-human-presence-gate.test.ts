@@ -43,16 +43,17 @@ import {
   cleanupTestProject,
   createTestProject,
   resetAidlcEnv,
+  seededAuditShard,
   seededStateFile,
   seedStateFile,
 } from "../harness/fixtures.ts";
-import { readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath;
 const STATE = join(AMADEUS_SRC, "tools", "amadeus-state.ts");
 const LOG = join(AMADEUS_SRC, "tools", "amadeus-log.ts");
-const AUDIT = join(AMADEUS_SRC, "tools", "amadeus-audit.ts");
 const MID_IDEATION = "state-mid-ideation.md"; // Current Stage: feasibility
 
 // Drive a state subcommand with the PRESENCE guard ENABLED (clear the suite's
@@ -81,17 +82,20 @@ function guardedLog(proj: string, args: string[]): { rc: number; out: string } {
   return { rc: r.status ?? -1, out: `${r.stdout ?? ""}${r.stderr ?? ""}` };
 }
 
-// Record a HUMAN_TURN event via the real audit-append CLI (exactly what the
-// per-harness mint hook does on a real human prompt). This appends to the
-// active-intent shard the gate later reads, in real ledger order.
+// Record a HUMAN_TURN by APPENDING a block directly to the fixture's single audit
+// shard — the same shard the spawned state-tool subprocesses append to
+// (seededAuditShard resolves the tool's own <host>-<clone>.md). This is a TEST
+// FIXTURE, not the production path: it deliberately does NOT use the audit CLI
+// (now REFUSED for HUMAN_TURN — #685 review — so a model cannot mint presence).
+// Writing into the SAME shard preserves append order for the same-second events
+// the gate's freshness boundary depends on (isoTimestamp is second-granular, so
+// splitting HUMAN_TURN into a separate shard would misorder cross-shard ties).
 function recordHumanTurn(proj: string): void {
-  const r = spawnSync(BUN, [AUDIT, "append", "HUMAN_TURN", "--project-dir", proj], {
-    encoding: "utf-8",
-    env: process.env,
-  });
-  if ((r.status ?? -1) !== 0) {
-    throw new Error(`recordHumanTurn failed: ${r.stdout ?? ""}${r.stderr ?? ""}`);
-  }
+  const shard = seededAuditShard(proj);
+  mkdirSync(dirname(shard), { recursive: true });
+  const ts = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+  const header = existsSync(shard) ? "" : "# AI-DLC Audit Log\n";
+  appendFileSync(shard, `${header}\n## Human Turn\n**Timestamp**: ${ts}\n**Event**: HUMAN_TURN\n\n---\n`, "utf-8");
 }
 
 function field(proj: string, name: string): string {

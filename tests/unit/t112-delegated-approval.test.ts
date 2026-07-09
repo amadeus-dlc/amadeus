@@ -24,9 +24,15 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
-import { appendAuditEntry } from "../../dist/claude/.claude/tools/amadeus-audit.ts";
+import {
+  appendAuditEntry,
+  handleAppend,
+  handleAppendRaw,
+  presenceMintRejection,
+  rawPresenceMintRejection,
+} from "../../dist/claude/.claude/tools/amadeus-audit.ts";
 import {
   auditShardName,
   humanActedSinceGate,
@@ -291,8 +297,12 @@ describe("humanActedSinceGate — verb-scoped delegated rejection opens the cond
 describe("delegate-rejection writer — grounded issuance gate (#685)", () => {
   const REPO_ROOT = join(import.meta.dir, "..", "..");
   const STATE = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-state.ts");
-  const AUDIT = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-audit.ts");
   const BUN = process.execPath;
+  // Pinned clone token: the writer subprocess reads this from `.amadeus-clone-id`
+  // and resolves its shard as `<host>-<token>.md`, so the direct-write fixture
+  // below lands the HUMAN_TURN in the SAME shard the delegate-rejection path reads
+  // for issuerHumanTs.
+  const CLONE_TOKEN = "t112rejclone";
 
   // Env with the human-presence guard ENABLED (clear the suite-wide bypass
   // run-tests.ts sets) so the grounding gate is live, not bypassed.
@@ -311,16 +321,29 @@ describe("delegate-rejection writer — grounded issuance gate (#685)", () => {
     return { rc: r.status ?? -1, out: r.stdout ?? "", err: r.stderr ?? "" };
   }
 
-  // Seed a real HUMAN_TURN via the audit CLI (a SUBPROCESS) so it lands in the
-  // clone-id shard the delegate-rejection subprocess resolves. Recording it via
-  // the in-process library instead would write under this test process's cached
-  // clone id and never persist the on-disk token, so the spawned writer would
-  // mint a different clone id and read an empty shard.
-  function recordHumanTurn(root: string): void {
-    spawnSync(BUN, [AUDIT, "append", "HUMAN_TURN", "--project-dir", root], {
-      encoding: "utf-8",
-      env: guardedEnv(),
-    });
+  // The shard leaf the tool resolves for CLONE_TOKEN — mirrors auditShardName's
+  // host normalisation in amadeus-lib.ts.
+  function shardLeaf(): string {
+    const host =
+      hostname().toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || "host";
+    return `${host}-${CLONE_TOKEN}.md`;
+  }
+
+  // Seed a real HUMAN_TURN by writing the issuer shard file DIRECTLY. This is a
+  // TEST FIXTURE, not the production path: it deliberately does NOT go through the
+  // audit CLI (now refused for HUMAN_TURN — #685 review) nor the in-process writer
+  // (whose cached clone id would not match the subprocess's). Pinning the clone
+  // token and reproducing appendAuditEntryUnlocked's block shape makes the writer
+  // subprocess resolve and read exactly this shard. Because the fixture bypasses
+  // the production writer, it does not undermine the "hook/state-tool only" trust
+  // premise the guard establishes.
+  function seedHumanTurnDirect(root: string, issuer: string): void {
+    writeFileSync(join(root, "amadeus", ".amadeus-clone-id"), `${CLONE_TOKEN}\n`, "utf-8");
+    const auditDir = join(root, "amadeus", "spaces", "default", "intents", issuer, "audit");
+    mkdirSync(auditDir, { recursive: true });
+    const block =
+      "## Human Turn\n**Timestamp**: 2026-07-09T09:00:00.000Z\n**Event**: HUMAN_TURN\n\n---\n";
+    writeFileSync(join(auditDir, shardLeaf()), `# AI-DLC Audit Log\n\n${block}`, "utf-8");
   }
 
   // Point the leader's active intent at the issuer record (the session that
@@ -340,10 +363,95 @@ describe("delegate-rejection writer — grounded issuance gate (#685)", () => {
   test("issues a DELEGATED_REJECTION into the target when grounded in a real HUMAN_TURN", () => {
     const { root, conductor, issuer } = scaffold();
     makeIssuerActive(root, issuer);
-    recordHumanTurn(root); // a real human prompt on the leader (via the audit CLI)
+    seedHumanTurnDirect(root, issuer); // a real human prompt on the leader (direct fixture)
     const r = runDelegateRejection(root, conductor);
     expect(r.rc).toBe(0);
     expect(r.out).toContain('"delegated":true');
     expect(r.out).toContain('"verb":"reject"');
+  });
+});
+
+// #685 review — the general audit CLI must NOT mint presence/provenance events.
+// Before this guard, `amadeus-audit append HUMAN_TURN` succeeded, so a model could
+// fabricate the very presence token verifyDelegatedProvenance trusts. These are
+// the 落ちる実証 at the PROCESS boundary: each protected event (and an append-raw
+// smuggling attempt) must be REFUSED with a non-zero exit, while an ordinary
+// event still appends.
+describe("audit CLI presence/provenance minting guard (#685 review)", () => {
+  const REPO_ROOT = join(import.meta.dir, "..", "..");
+  const AUDIT = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-audit.ts");
+  const BUN = process.execPath;
+
+  function runAudit(root: string, args: string[]): { rc: number; out: string; err: string } {
+    const r = spawnSync(BUN, [AUDIT, ...args, "--project-dir", root], { encoding: "utf-8" });
+    return { rc: r.status ?? -1, out: r.stdout ?? "", err: r.stderr ?? "" };
+  }
+
+  for (const ev of ["HUMAN_TURN", "DELEGATED_APPROVAL", "DELEGATED_REJECTION"]) {
+    test(`append ${ev} is refused with a non-zero exit`, () => {
+      const { root } = scaffold();
+      const r = runAudit(root, ["append", ev]);
+      expect(r.rc).not.toBe(0);
+      expect(`${r.out}${r.err}`).toContain("presence/provenance");
+    });
+  }
+
+  test("append-raw carrying a **Event**: HUMAN_TURN line in the body is refused", () => {
+    const { root } = scaffold();
+    const r = runAudit(root, ["append-raw", "Custom Event", "**Event**: HUMAN_TURN\\n**Details**: forged"]);
+    expect(r.rc).not.toBe(0);
+    expect(`${r.out}${r.err}`).toContain("presence/provenance");
+  });
+
+  test("append-raw with a protected heading is refused", () => {
+    const { root } = scaffold();
+    const r = runAudit(root, ["append-raw", "Human Turn", "**Details**: forged"]);
+    expect(r.rc).not.toBe(0);
+    expect(`${r.out}${r.err}`).toContain("presence/provenance");
+  });
+
+  test("an ordinary event still appends via the CLI (guard is not over-broad)", () => {
+    const { root } = scaffold();
+    const r = runAudit(root, ["append", "STAGE_STARTED", "--field", "Stage=market-research"]);
+    expect(r.rc).toBe(0);
+  });
+
+  // In-process assertions on the guard predicates themselves (the CLI entry only
+  // forwards their result to jsonError). These exercise both branches directly.
+  test("presenceMintRejection rejects every protected event and passes ordinary ones", () => {
+    for (const ev of ["HUMAN_TURN", "DELEGATED_APPROVAL", "DELEGATED_REJECTION"]) {
+      expect(presenceMintRejection(ev)).toContain("presence/provenance");
+    }
+    expect(presenceMintRejection("STAGE_STARTED")).toBeNull();
+    expect(presenceMintRejection("GATE_APPROVED")).toBeNull();
+  });
+
+  test("rawPresenceMintRejection catches protected heading OR body event line, passes clean blocks", () => {
+    // Heading matches a protected EVENT_HEADINGS value.
+    expect(rawPresenceMintRejection("Human Turn", "**Details**: x")).toContain("presence/provenance");
+    // Body carries a protected **Event**: line (post \n-expansion).
+    expect(
+      rawPresenceMintRejection("Custom Event", "**Event**: DELEGATED_REJECTION\n**Details**: x"),
+    ).toContain("presence/provenance");
+    // Clean: non-protected heading and event.
+    expect(rawPresenceMintRejection("Custom Event", "**Event**: CUSTOM\n**Details**: x")).toBeNull();
+  });
+
+  // The enforcement lives in the CLI append handlers (throwing, which main()
+  // surfaces as a non-zero exit). These in-process calls exercise the throw
+  // branch directly (the CLI-only main() dispatch cannot be reached in-process).
+  test("handleAppend throws for every protected event", () => {
+    const { root } = scaffold();
+    for (const ev of ["HUMAN_TURN", "DELEGATED_APPROVAL", "DELEGATED_REJECTION"]) {
+      expect(() => handleAppend(ev, {}, root)).toThrow(/presence\/provenance/);
+    }
+  });
+
+  test("handleAppendRaw throws for a protected heading or a smuggled **Event** body line", () => {
+    const { root } = scaffold();
+    expect(() => handleAppendRaw("Human Turn", "**Details**: x", root)).toThrow(/presence\/provenance/);
+    expect(() =>
+      handleAppendRaw("Custom Event", "**Event**: HUMAN_TURN\\n**Details**: x", root),
+    ).toThrow(/presence\/provenance/);
   });
 });

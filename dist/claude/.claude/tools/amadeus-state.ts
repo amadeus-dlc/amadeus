@@ -1461,9 +1461,10 @@ function parseApproveFlags(args: string[]): { userInput?: string } {
 // a REAL human turn on THIS (leader) session's own ledger. The conductor's gate
 // (humanActedSinceGate → verifyDelegatedProvenance) accepts it ONLY after
 // confirming the referenced HUMAN_TURN physically exists in the issuer shard, so
-// a model cannot forge it (HUMAN_TURN is written only by the UserPromptSubmit
-// hook). Refuses when no fresh human turn backs this call, which is exactly what
-// stops an autopilot conductor from self-delegating its own gate open.
+// a model cannot forge it via any audit CLI (HUMAN_TURN minting is refused at the
+// `amadeus-audit append` entry; it is written only by the UserPromptSubmit hook
+// in-process). Refuses when no fresh human turn backs this call, which is exactly
+// what stops an autopilot conductor from self-delegating its own gate open.
 function handleDelegateApproval(args: string[]): void {
   const slug = args.find((a) => !a.startsWith("--"));
   if (!slug) {

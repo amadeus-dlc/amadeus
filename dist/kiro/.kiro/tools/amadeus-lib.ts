@@ -1554,10 +1554,19 @@ export function humanActedSinceGate(
 // grounding is real, independent of verb.
 //
 // Forgery resistance: HUMAN_TURN lines are written ONLY by the UserPromptSubmit
-// hook on a real human prompt — no tool a model can call emits one. So a
-// delegation a model fabricates references a HUMAN_TURN that is not on disk and
+// hook on a real human prompt, via the in-process appendAuditEntry. The general
+// audit CLI refuses to mint HUMAN_TURN (and the delegations) — see
+// amadeus-audit.ts presenceMintRejection / rawPresenceMintRejection — so no
+// ordinary `amadeus-audit append` a model can invoke emits one. A delegation a
+// model fabricates therefore references a HUMAN_TURN that is not on disk and
 // fails here. This is the "referenced, not self-asserted" contract from #671
 // (検証劇場 Forbidden): the conductor proves the grounding, it does not trust it.
+//
+// Residual limit (documented, not closed here): a raw filesystem write — an
+// arbitrary file-write tool appending a crafted shard directly — could still
+// fabricate a HUMAN_TURN line. That is a general property of the on-disk,
+// append-only audit trail, not specific to this check; the CLI guard closes the
+// tool-invocation path, filesystem-level integrity is a separate concern.
 //
 // Fail-closed on every anomaly (missing/malformed field, path-shape violation,
 // unreadable shard, absent HUMAN_TURN). Path-shape guards reject any separator
