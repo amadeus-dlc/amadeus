@@ -3,6 +3,7 @@
 
 ## Interpretations
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
+- 2026-07-09T07:33:00Z — Interpretation(ユーザー指示): Construction は Bolt をできる限り並行実装する。Unit も並行化可能なら並行に切る。delivery-planning / units-generation では真に必要な依存以外で Bolt・Unit を独立化し並列バッチを最大化、code-generation は swarm(prepare → 並列 fan-out → check → finalize)の worktree 分離並行実装を使う。team.md 永続化候補として §13 に挙げる
 
 ## Deviations
 <!-- example: 2026-05-29T10:14:32Z — skipped the optional caching layer the stage prose suggested; the dataset is small enough that it adds risk -->
