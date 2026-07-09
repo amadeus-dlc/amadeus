@@ -108,6 +108,7 @@ describe("main — upgrade, already-up-to-date (BR-U01)", () => {
       sourceTag: "v1.0.0",
       installedAt: "2026-07-08T00:00:00.000Z",
       distributionVersion: semverOf("1.0.0"),
+      requiredPaths: () => [], // FR-656-2: no required files to check against disk in this dispatch-only fixture
     } as unknown as Manifest;
     const ports = fakePorts({
       manifestIo: {
@@ -131,6 +132,7 @@ describe("main — upgrade, version boundary refusals are no-ops (BR-U02/U03, RE
       sourceTag: "v2.0.0",
       installedAt: "2026-07-08T00:00:00.000Z",
       distributionVersion: semverOf("2.0.0"),
+      requiredPaths: () => [], // FR-656-2: no required files to check against disk in this dispatch-only fixture
     } as unknown as Manifest;
     const ports = fakePorts({
       manifestIo: {
@@ -157,6 +159,7 @@ describe("main — upgrade, version boundary refusals are no-ops (BR-U02/U03, RE
       sourceTag: "v2.0.0",
       installedAt: "2026-07-08T00:00:00.000Z",
       distributionVersion: semverOf("2.0.0"),
+      requiredPaths: () => [], // FR-656-2: no required files to check against disk in this dispatch-only fixture
     } as unknown as Manifest;
     const ports = fakePorts({
       manifestIo: {
@@ -180,6 +183,7 @@ describe("main — upgrade, proceed reaches fetch (BR-U04, reachability order)",
       sourceTag: "v1.0.0",
       installedAt: "2026-07-08T00:00:00.000Z",
       distributionVersion: semverOf("1.0.0"),
+      requiredPaths: () => [], // FR-656-2: no required files to check against disk in this dispatch-only fixture
     } as unknown as Manifest;
     let downloadArchiveCalled = false;
     const ports = fakePorts({
@@ -211,7 +215,13 @@ describe("main — install, non-interactive (BR-I03)", () => {
 
 describe("main — install, already-installed guard (BR-I07, REL-I02)", () => {
   test("a manifested target refuses before any network port is touched", async () => {
-    const fakeManifest = { harness: "claude", sourceTag: "v1.0.0", installedAt: "2026-07-08T00:00:00.000Z" } as unknown as Manifest;
+    // FR-656-2: no required files to check against disk in this dispatch-only fixture.
+    const fakeManifest = {
+      harness: "claude",
+      sourceTag: "v1.0.0",
+      installedAt: "2026-07-08T00:00:00.000Z",
+      requiredPaths: () => [],
+    } as unknown as Manifest;
     const ports = fakePorts({
       manifestIo: {
         read: async () => ({ type: "ok", value: fakeManifest }),
@@ -223,7 +233,13 @@ describe("main — install, already-installed guard (BR-I07, REL-I02)", () => {
   });
 
   test("edge case: the same target with --force proceeds past the guard (and only then touches the network)", async () => {
-    const fakeManifest = { harness: "claude", sourceTag: "v1.0.0", installedAt: "2026-07-08T00:00:00.000Z" } as unknown as Manifest;
+    // FR-656-2: no required files to check against disk in this dispatch-only fixture.
+    const fakeManifest = {
+      harness: "claude",
+      sourceTag: "v1.0.0",
+      installedAt: "2026-07-08T00:00:00.000Z",
+      requiredPaths: () => [],
+    } as unknown as Manifest;
     let resolveVersionCalled = false;
     const ports = fakePorts({
       manifestIo: {
