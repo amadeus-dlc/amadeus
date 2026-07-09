@@ -26,5 +26,12 @@
     "dirName": "260708-installer-distribution",
     "scope": "installer-distribution",
     "status": "complete"
+  },
+  {
+    "uuid": "019f45ae-c0c9-7277-bc22-e322efec6972",
+    "slug": "framework-repair-batch",
+    "dirName": "260709-framework-repair-batch",
+    "scope": "bugfix",
+    "status": "in-flight"
   }
 ]
