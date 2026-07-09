@@ -28,7 +28,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 
 デプロイ基盤は持たず、リリースは npm パッケージ配布と GitHub 上のタグ/PR 履歴で管理する。GitHub Actions は push と pull_request で typecheck、lint、dist/self-install drift guard、smoke+unit+integration tests を実行し、リリース前には必要に応じて `--release` テスト層を追加する。
 
-リリース(バージョンバンプを含む PR のマージ)時には、CHANGELOG の `## [X.Y.Z]` 見出しと一致する **`vX.Y.Z` git タグを発行する**(当面は手動発行、自動化は将来検討)。タグは t68 が強制する CHANGELOG↔`AMADEUS_VERSION`↔README バッジの3点同期に連なる第4の同期点であり、インストーラ(`@amadeus-dlc/setup`)の配布物取得先として参照される。
+リリースは release.yml の workflow_dispatch 一本で行う: release-it がバージョンバンプ(`after:bump` の `scripts/release-version-sync.ts` が `packages/setup/package.json`・`amadeus-version.ts`・README バッジ・`dist/`・セルフインストールツリーを機械的に同期)→ `vX.Y.Z` タグ発行 → GitHub Release ノート自動生成 → npm publish まで完結する。手書きの CHANGELOG.md は持たず(2026-07-09 削除)、PR や amadeus ワークフローがバージョンを上げることもない。タグはインストーラ(`@amadeus-dlc/setup`)の配布物取得先として参照される。
 
 ## Code Style
 

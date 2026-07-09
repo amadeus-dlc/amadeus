@@ -40,7 +40,7 @@
 ## Decided
 
 - DECIDED: 新しい `/amadeus --*` ユーティリティハンドラを実装する前に `docs/reference/11-contributing.md` の「Adding a Utility Handler」チェックリストに従う
-- DECIDED: 2つのPRが `amadeus-version.ts` を同一パッチ番号にバンプして衝突した場合、後からマージする側がリベースして再バンプし(例 `0.6.5` → `0.6.6`)、CHANGELOG の見出しも合わせて改名する
+- DECIDED: バージョンバンプは release.yml(workflow_dispatch → release-it)だけが行う。`after:bump` の `scripts/release-version-sync.ts` が全バージョン面(`packages/setup/package.json`、`amadeus-version.ts`、README バッジ、`dist/`、セルフインストールツリー)を機械的に同期するため、PR や amadeus ワークフローが個別ファイルのバージョンを上げることはない (user decision 2026-07-09)
 
 ## Scope Overrides
 
@@ -48,7 +48,7 @@
 
 ## Forbidden
 
-- NEVER CHANGELOG にリポジトリホストを埋め込むバージョンリンク参照(`[N.N.N]:` 形式)を復活させない — v0.6.9 で削除済み、t68 が再出現をガードする
+- NEVER 手書きの `CHANGELOG.md` をリポジトリに復活させない — 2026-07-09 に削除済み。リリースノートは release.yml の GitHub Release 自動生成ノートが唯一のソース (user decision 2026-07-09)
 
 - NEVER hand-edit `dist/<harness>/` as an implementation shortcut. (affirmed 2026-07-07)
 - NEVER let source, distribution, and self-install trees drift across commits when installer behavior changes. (affirmed 2026-07-07)
@@ -60,7 +60,7 @@
 - NEVER `packages/setup` の不在をローカル filesystem evidence として捏造しない。 (affirmed 2026-07-07)
 ## Mandated
 
-- ALWAYS ユーザー可視の変更を含むPRは、同一コミットで `core/tools/amadeus-version.ts` のバージョンをバンプし、README バッジを更新し、`CHANGELOG.md` に `## [X.Y.Z] - YYYY-MM-DD` 見出しと箇条書きを追加する(`tests/unit/t68-version-changelog-sync.test.ts` が三者の同期を強制)。ドキュメントのみ・内部リファクタ・テストのみの変更はバンプしない
+- ALWAYS リリース(バージョンバンプ・タグ発行・GitHub Release ノート・npm publish)は release.yml の workflow_dispatch 一本で行う。PR ではバージョン・バッジ・リリースノートに一切触れない(`tests/unit/t68-version-changelog-sync.test.ts` が version.ts↔CLI↔README バッジの同期を強制) (user decision 2026-07-09)
 
 - ALWAYS edit `core/` or `harness/<name>/` as the source of truth, then regenerate `dist/` with `bun scripts/package.ts`. (affirmed 2026-07-07)
 - ALWAYS run `bun run promote:self` after source changes that affect the self-installed `.claude/`, `.codex/`, `.agents/`, or `CLAUDE.md` trees. (affirmed 2026-07-07)
@@ -71,7 +71,6 @@
 - ALWAYS `dist/`、`.claude/`、`.codex/`、`.agents/` の path を変える案では `dist:check` と `promote:self:check` の維持方法を同じ成果物に書く。 (affirmed 2026-07-07)
 - ALWAYS `packages/setup` は別 intent の sibling dependency として扱い、この intent の実装スコープに吸収しない。 (affirmed 2026-07-07)
 - ALWAYS markdown artifact は日本語で書く。ただし path、CLI、コード識別子、tool が要求する heading は正確性を優先して保持する。 (affirmed 2026-07-07)
-- ALWAYS リリース(バージョンバンプを含む PR のマージ)時に、CHANGELOG の `## [X.Y.Z]` 見出しと一致する `vX.Y.Z` git タグを発行する(当面手動。インストーラの配布物取得先) (affirmed 2026-07-08)
 - ALWAYS 新設パッケージ(`packages/*`)は lint(Biome)と型検査(`tsc --noEmit`)の配線をパッケージ追加と同一 PR で加え、既存の狭い CI lint スコープ(`tests/` のみ)を継承しない (affirmed 2026-07-08)
 ## Corrections
 
