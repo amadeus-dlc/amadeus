@@ -3703,3 +3703,494 @@
 **Details**: Approve Plan (both units) — delegated by claude-leader (DELEGATED_APPROVAL 2026-07-09T22:32:55Z)
 
 ---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T22:44:55Z
+**Event**: SENSOR_FIRED
+**Fire id**: b6b1008a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/tests/unit/t188-human-presence-gate.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T22:44:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: b6b1008a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/tests/unit/t188-human-presence-gate.test.ts
+**Duration ms**: 815
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T22:44:56Z
+**Event**: SENSOR_FIRED
+**Fire id**: d8c431ce
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/tests/unit/t188-human-presence-gate.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T22:44:56Z
+**Event**: SENSOR_PASSED
+**Fire id**: d8c431ce
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/tests/unit/t188-human-presence-gate.test.ts
+**Duration ms**: 515
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T22:45:08Z
+**Event**: SENSOR_FIRED
+**Fire id**: 45f280ce
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/tests/unit/t188-human-presence-gate.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T22:45:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: 45f280ce
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/tests/unit/t188-human-presence-gate.test.ts
+**Duration ms**: 783
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T22:45:09Z
+**Event**: SENSOR_FIRED
+**Fire id**: 53e9e427
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/tests/unit/t188-human-presence-gate.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T22:45:09Z
+**Event**: SENSOR_PASSED
+**Fire id**: 53e9e427
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/tests/unit/t188-human-presence-gate.test.ts
+**Duration ms**: 478
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T22:58:06Z
+**Event**: SENSOR_FIRED
+**Fire id**: fed014b6
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T22:58:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: fed014b6
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+**Duration ms**: 844
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T22:58:07Z
+**Event**: SENSOR_FIRED
+**Fire id**: 743aca48
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T22:58:07Z
+**Event**: SENSOR_PASSED
+**Fire id**: 743aca48
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+**Duration ms**: 614
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T22:58:14Z
+**Event**: SENSOR_FIRED
+**Fire id**: 3921646a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T22:58:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: 3921646a
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+**Duration ms**: 1987
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T22:58:16Z
+**Event**: SENSOR_FIRED
+**Fire id**: a3a9886b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T22:58:16Z
+**Event**: SENSOR_PASSED
+**Fire id**: a3a9886b
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+**Duration ms**: 577
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T22:58:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: 7859f0d0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T22:58:32Z
+**Event**: SENSOR_PASSED
+**Fire id**: 7859f0d0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+**Duration ms**: 804
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T22:58:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: 4e2f7e54
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T22:58:33Z
+**Event**: SENSOR_PASSED
+**Fire id**: 4e2f7e54
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+**Duration ms**: 544
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T22:58:41Z
+**Event**: SENSOR_FIRED
+**Fire id**: 9531cae0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T22:58:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: 9531cae0
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+**Duration ms**: 2809
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T22:58:44Z
+**Event**: SENSOR_FIRED
+**Fire id**: dc12803f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T22:58:44Z
+**Event**: SENSOR_PASSED
+**Fire id**: dc12803f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+**Duration ms**: 626
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T22:58:51Z
+**Event**: SENSOR_FIRED
+**Fire id**: 6f8d21e1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T22:58:52Z
+**Event**: SENSOR_PASSED
+**Fire id**: 6f8d21e1
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+**Duration ms**: 1037
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T22:58:52Z
+**Event**: SENSOR_FIRED
+**Fire id**: a0671b4f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T22:58:54Z
+**Event**: SENSOR_PASSED
+**Fire id**: a0671b4f
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+**Duration ms**: 1667
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T22:59:17Z
+**Event**: SENSOR_FIRED
+**Fire id**: c6ab6fae
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/tests/unit/t112-delegated-approval.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T22:59:18Z
+**Event**: SENSOR_PASSED
+**Fire id**: c6ab6fae
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/tests/unit/t112-delegated-approval.test.ts
+**Duration ms**: 779
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T22:59:18Z
+**Event**: SENSOR_FIRED
+**Fire id**: a53c3b62
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/tests/unit/t112-delegated-approval.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T22:59:18Z
+**Event**: SENSOR_PASSED
+**Fire id**: a53c3b62
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/tests/unit/t112-delegated-approval.test.ts
+**Duration ms**: 468
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T22:59:30Z
+**Event**: SENSOR_FIRED
+**Fire id**: 2baba54d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/tests/unit/t112-delegated-approval.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T22:59:32Z
+**Event**: SENSOR_PASSED
+**Fire id**: 2baba54d
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/tests/unit/t112-delegated-approval.test.ts
+**Duration ms**: 1227
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T22:59:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: 705b0128
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/tests/unit/t112-delegated-approval.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T22:59:32Z
+**Event**: SENSOR_PASSED
+**Fire id**: 705b0128
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/tests/unit/t112-delegated-approval.test.ts
+**Duration ms**: 653
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T23:04:32Z
+**Event**: SENSOR_FIRED
+**Fire id**: 1fd884c8
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T23:04:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: 1fd884c8
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+**Duration ms**: 1296
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T23:04:34Z
+**Event**: SENSOR_FIRED
+**Fire id**: 537e25e4
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T23:04:34Z
+**Event**: SENSOR_PASSED
+**Fire id**: 537e25e4
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+**Duration ms**: 593
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T23:11:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: ee14c1b3
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T23:11:35Z
+**Event**: SENSOR_PASSED
+**Fire id**: ee14c1b3
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+**Duration ms**: 828
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T23:11:35Z
+**Event**: SENSOR_FIRED
+**Fire id**: d151a2c4
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T23:11:36Z
+**Event**: SENSOR_PASSED
+**Fire id**: d151a2c4
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: .claude/worktrees/bolt-685-delegate-rejection/packages/framework/core/tools/amadeus-audit.ts
+**Duration ms**: 591
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-09T23:20:09Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: ae9691e82b85b2bdd
+**Message**: レビュー指摘の是正を完了しました。割当 worktree 内で全作業を実施、push はしていません。\n\n## 報告\n\n### (1) 変更ファイル(commit cd8038550)\n- コア: `packages/framework/core/tools/amadeus-audit.ts`(CLI ガード本体)、`amadeus-lib.ts`(verifyDelegatedProvenanc
+
+---
+
+## Artifact Updated
+**Timestamp**: 2026-07-09T23:22:20Z
+**Event**: ARTIFACT_UPDATED
+**Tool**: Edit
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-3/amadeus/spaces/default/intents/260709-gate-mechanics/construction/delegate-rejection/code-generation/code-summary.md
+**Context**: construction > delegate-rejection > code-generation > code-summary.md
+
+---
