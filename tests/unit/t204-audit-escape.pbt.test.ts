@@ -94,7 +94,7 @@ describe("audit escape property: P-AE1 conditional roundtrip (unescape ∘ escap
 });
 
 describe("audit escape property: P-AE2 escape output is always single-line (1-line audit-block invariant)", () => {
-  test("escapeAuditValue(s) contains no LF and no CR, for ARBITRARY s (unconditional)", () => {
+  test("escapeAuditValue(s) contains no LF and no CRLF, for ARBITRARY s (a lone CR may survive — see note)", () => {
     fc.assert(
       fc.property(richStringArb, (s) => {
         const escaped = escapeAuditValue(s);
