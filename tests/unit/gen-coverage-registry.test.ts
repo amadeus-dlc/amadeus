@@ -785,6 +785,7 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     "integration/t96.test.ts",
     "integration/t98.test.ts",
     "integration/t-custom-harness-compile.test.ts",
+    "integration/t-release-sync-atomicity.test.ts",
     "integration/t45-revision-loop.test.ts",
     "integration/t46-parallel-bolt.test.ts",
     "integration/t47-failure-injection.test.ts",
