@@ -1,0 +1,32 @@
+fixes:
+  - "dist/claude/.claude/::packages/framework/core/"
+  - "dist/codex/.codex/::packages/framework/core/"
+  - "dist/kiro/.kiro/::packages/framework/core/"
+  - "dist/kiro-ide/.kiro/::packages/framework/core/"
+  - ".claude/::packages/framework/core/"
+  - ".codex/::packages/framework/core/"
+
+ignore:
+  - "dist/**/*"
+  - ".claude/**/*"
+  - ".codex/**/*"
+  - ".kiro/**/*"
+  - "amadeus/**/*"
+  - "docs/**/*"
+  - "tests/**/*"
+  - "tmp/**/*"
+
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 0.02
+        if_not_found: failure
+        informational: false
+    patch:
+      default:
+        target: 100%
+        threshold: 0%
+        if_not_found: failure
+        informational: false

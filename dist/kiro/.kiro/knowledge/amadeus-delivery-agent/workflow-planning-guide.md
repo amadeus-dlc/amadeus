@@ -1,6 +1,6 @@
 # Workflow Planning Guide
 
-Domain-specific guidance for the Workflow Planning stage. Use this alongside `product-guide.md` when leading execution plan creation.
+Domain-specific guidance for the Workflow Planning stage. Use this alongside `.kiro/knowledge/amadeus-product-agent/product-guide.md` when leading execution plan creation.
 
 ## Stage Configuration Heuristics
 
