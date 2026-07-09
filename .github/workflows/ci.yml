@@ -120,7 +120,7 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const ref = process.env.CODECOV_SHA;
-            const requiredChecks = [];
+            const requiredChecks = ["codecov/project"];
 
             if (process.env.IS_PULL_REQUEST === "true") {
               requiredChecks.push("codecov/patch");
