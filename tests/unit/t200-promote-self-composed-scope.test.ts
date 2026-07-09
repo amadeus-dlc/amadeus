@@ -1,4 +1,5 @@
 // covers: file:scripts
+// size: small
 //
 // t200 — composed-scope preservation in scripts/promote-self.ts. Mechanism:
 // none — pure imports of the script's exported helpers (its main flow is

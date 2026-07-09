@@ -4,6 +4,7 @@
 //    and RESERVED_KEYS indirectly via the error strings they drive, plus the
 //    RESERVED_AGENT_SLUG export directly — the orchestrator pseudo-agent that
 //    Rule 9 exempts from the agent-registration cross-check)
+// size: small
 //
 // t62 — stage-frontmatter schema validation. Migrated from the bash TAP test
 // tests/unit/t62-stage-schema.sh (plan 62). The original spawned `bun -e`

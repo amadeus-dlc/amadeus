@@ -22,6 +22,7 @@ import { homedir, tmpdir } from "node:os";
 import { basename, delimiter, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildMeta, renderMeta, type MetaCounts } from "./lib/bun-junit-to-meta.ts";
+import { classifyTestSize, parseSizeAnnotation, SIZE_VALUES, type TestSize } from "./lib/test-size.ts";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(SCRIPT_DIR, "..");
@@ -654,8 +655,74 @@ function printSummary(): void {
   if (args.verbose && logDir) {
     process.stdout.write(`Log directory: ${displayLogDirPath(logDir)}\n`);
   }
+  // Observability only — MUST NOT affect the process exit code (t112 pins
+  // exit == failed-file count). Any failure here is swallowed.
+  try {
+    printSizeMatrix();
+  } catch {
+    // size reporting is best-effort; never let it perturb the runner's contract
+  }
   process.stdout.write("==============================\n");
   process.stdout.write(failedFiles > 0 ? "RESULT: FAIL\n" : "RESULT: PASS\n");
+}
+
+// Derived-size distribution (#684 / #696). Size (small/medium/large) is the
+// pyramid axis and is INDEPENDENT of the scope tier (the directory). This
+// reports the scope×size matrix so the pyramid shape is observable per run;
+// it does not gate. Also reports how many files carry a `// size:` annotation.
+function printSizeMatrix(): void {
+  const scopes = ["smoke", "unit", "integration", "e2e"] as const;
+  const counts: Record<string, Record<TestSize, number>> = {};
+  for (const s of [...scopes, "other"]) counts[s] = { small: 0, medium: 0, large: 0 };
+  let annotated = 0;
+  let total = 0;
+  const testsRoot = join(SCRIPT_DIR);
+  const walk = (dir: string): void => {
+    let entries: import("node:fs").Dirent[];
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) {
+        if (e.name === "node_modules" || e.name === "logs") continue;
+        walk(p);
+      } else if (e.name.endsWith(".test.ts")) {
+        let src: string;
+        try {
+          src = readFileSync(p, "utf-8");
+        } catch {
+          continue;
+        }
+        const size = classifyTestSize(src).size;
+        const relPath = relative(testsRoot, p).replace(/\\/g, "/");
+        const scope = (scopes as readonly string[]).find((s) => relPath.startsWith(`${s}/`)) ?? "other";
+        counts[scope][size]++;
+        if (parseSizeAnnotation(src).declared !== null) annotated++;
+        total++;
+      }
+    }
+  };
+  walk(testsRoot);
+  process.stdout.write("------------------------------\n");
+  process.stdout.write("Derived test-size matrix (scope × size; size is the pyramid axis, not the directory)\n");
+  process.stdout.write(`  ${"scope".padEnd(12)}${"small".padStart(7)}${"medium".padStart(8)}${"large".padStart(7)}\n`);
+  for (const s of [...scopes, "other"]) {
+    const r = counts[s];
+    if (r.small + r.medium + r.large === 0) continue;
+    process.stdout.write(`  ${s.padEnd(12)}${String(r.small).padStart(7)}${String(r.medium).padStart(8)}${String(r.large).padStart(7)}\n`);
+  }
+  const tot = SIZE_VALUES.reduce(
+    (acc, sz) => {
+      for (const s of [...scopes, "other"]) acc[sz] += counts[s][sz];
+      return acc;
+    },
+    { small: 0, medium: 0, large: 0 } as Record<TestSize, number>,
+  );
+  process.stdout.write(`  ${"TOTAL".padEnd(12)}${String(tot.small).padStart(7)}${String(tot.medium).padStart(8)}${String(tot.large).padStart(7)}\n`);
+  process.stdout.write(`  size-annotated files: ${annotated}/${total}\n`);
 }
 
 function writeVerboseSummary(): void {

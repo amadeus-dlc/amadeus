@@ -73,6 +73,15 @@ import {
 // merged shards via the shipped helper (default-resolves the active intent).
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
+// Standalone hermeticity (issue #698): the suite runner injects these guard
+// bypasses into every test file's env (tests/run-tests.ts), so this file only
+// went green under the runner. Default them here as well so a bare
+// `bun test <this file>` behaves the same. Guard-enforcement tests re-enable
+// a guard by deleting its var in their own spawn env, so these defaults do
+// not mask enforcement coverage.
+process.env.AMADEUS_SKIP_ARTIFACT_GUARD ??= "1";
+process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD ??= "1";
+
 const UTIL = join(AMADEUS_SRC, "tools", "amadeus-utility.ts");
 const STATE = join(AMADEUS_SRC, "tools", "amadeus-state.ts");
 

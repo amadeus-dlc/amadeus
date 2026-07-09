@@ -1,4 +1,5 @@
 // covers: function:parseMemoryHeadings, function:parseMemoryEntries
+// size: small
 //
 // t88 — §13 memory.md heading-counter parseMemoryHeadings() in
 // amadeus-lib.ts, plus the parseMemoryEntries() count invariant.

@@ -1,4 +1,5 @@
 // covers: function:classifyTerminalCommand
+// size: small
 // covers: function:READ_ONLY_FLAGS function:WORKSPACE_VERBS
 //
 // t178 — classifyTerminalCommand() in amadeus-lib.ts, plus the two exported sets

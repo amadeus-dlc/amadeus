@@ -1,4 +1,5 @@
 // covers: domain:setup-harness-parse
+// size: small
 //
 // HarnessName.parse — U2's smart constructor for the raw `--harness` CLI
 // value, added onto U1's HarnessName type (FR-003; U1's own
