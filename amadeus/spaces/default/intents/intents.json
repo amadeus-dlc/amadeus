@@ -68,5 +68,12 @@
     "dirName": "260709-integrity-batch",
     "scope": "bugfix",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019f4738-d9b4-73d8-b7dc-3f7b1a23a34e",
+    "slug": "t92-worktree-hermeticity",
+    "dirName": "260709-t92-worktree-hermeticity",
+    "scope": "bugfix",
+    "status": "in-flight"
   }
 ]

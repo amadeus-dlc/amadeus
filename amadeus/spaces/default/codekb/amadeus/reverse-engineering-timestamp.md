@@ -1,17 +1,25 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(最新: 260709-packaging-repair-batch)
+## 実行メタデータ(最新: 260709-t92-worktree-hermeticity)
 
 - Date: 2026-07-09
-- Intent: `260709-packaging-repair-batch`
+- Intent: `260709-t92-worktree-hermeticity`
 - Scope: `bugfix`
-- Repository: `amadeus`(origin remote 由来、#693 で統一。物理チェックアウトは worktree `claude-engineer-2`)
+- Repository: `amadeus`(origin remote 由来、#693 で統一。物理チェックアウトは worktree `claude-engineer-1`)
 - Stage: `reverse-engineering`(2.1)
 - 手法: diff-refresh(前回スキャンコミットからの差分更新。project.md 是正事項 cid:reverse-engineering:c1 に従う)
-- Base commit: `a1c79dc12`(前回 intent `260709-bug-zero-batch` のスキャン観測コミット)
-- Observed commit: `22e3eb5aa414d427ba29e4884487e3cb9b0581db`
-- Focus: パッケージング/リリース同期の2バグ — #701(`scripts/package.ts` `--check` の orphan スキャンが dist ルート平坦面を見ない盲点)、#702(`scripts/release-version-sync.ts` の prerelease バッジが前進不能・half-applied)
-- ベースにした codekb: 本ディレクトリ `amadeus/spaces/default/codekb/amadeus/`(2026-07-09、intent `260709-bug-zero-batch`、観測 `a1c79dc12`)
+- Base commit: `22e3eb5aa`(前回 intent `260709-packaging-repair-batch` のスキャン観測コミット)
+- Observed commit: `be205cfca`
+- Focus: #709(t92 test-44 の tsc 解決ヘルメチシティ — sensor-type-check の exit-code 伝播設計と環境依存 launcher の非対称、test 44 の install 済 node_modules へのシンボリックリンク前提)
+- ベースにした codekb: 本ディレクトリ `amadeus/spaces/default/codekb/amadeus/`(2026-07-09、intent `260709-packaging-repair-batch`、観測 `22e3eb5aa`)
+
+## 分析範囲(260709-t92-worktree-hermeticity)
+
+`git diff --name-status 22e3eb5aa..be205cfca` の差分区間で、#701/#702 の正本(`scripts/package.ts`・`scripts/release-version-sync.ts`)が PR #711/#712 として修理・マージされたことを確認した(両バグは解消済み。code-quality-assessment.md に反映)。本 intent のフォーカス #709 は tsc 解決チェーンに限局するため、差分に依らず生産センサー `packages/framework/core/tools/amadeus-sensor-type-check.ts`(自己インストール `.claude/tools/` と `diff -q` 一致=ドリフトなし)とテスト `tests/integration/t92.test.ts` test 44・関連テスト(45/12/16・t202)を直接読解し file:line を確定した。依存マニフェスト・コード構造・技術スタックはこの差分区間・本フォーカスを通じて不変(実測)。
+
+## 合成方針(Architect 実施 / 260709-t92-worktree-hermeticity)
+
+Developer スキャン結果を受け、9アーティファクトのうち `code-quality-assessment.md` に #709 の tsc 解決ヘルメチシティ所見を追記し、#701/#702 を PR #711/#712 マージ済みとして解決状態へ更新した。他 7 件(api-documentation / architecture / business-overview / code-structure / component-inventory / dependencies / technology-stack)は本 intent がテスト1件のヘルメチシティ修正に限局し依存・構造・スタックが不変のため温存。以下の「分析範囲(260709-packaging-repair-batch)」以降は前 intent の記録であり参照用に温存する。
 
 ## 分析範囲(260709-packaging-repair-batch)
 
