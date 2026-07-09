@@ -59,6 +59,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 - ノルム変更(memory 層への追加・整理)がある程度溜まったら、leader は変更をまとめた PR を作成し、他メンバー(最低2名、codex を含む)のレビューを受けてから main へマージする(マージは従来どおり人間承認)。ノルムの逐次コミットは leader ブランチ上のチェックポイントとして行い、main への反映は必ずこの PR 経由とする (user decision 2026-07-09) <!-- cid:requirements-analysis:norm-changes-via-pr -->
 
 - codex メンバーの手空き時の既定タスクは潜在バグ探索とする: leader が未踏領域を割ってディスパッチし、レビュー依頼が来たら探索を中断して最優先で対応する。探索は bughunt-file-only ルール(実測起票のみ・修正禁止・クロスレビュー必須)に従う (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:codex-default-bughunt -->
+- Issue のラベルトリアージは自動発動とする: 起票者は起票時に種別(bug/enhancement/documentation)+ 優先度(P0-P3)の見立てを必ず付ける。leader は起票報告を受けるたびに未付与・不整合がないか確認し、あれば空いている codex へトリアージを即ディスパッチする(ユーザーの指示を待たない)。優先度基準: P0=正しさ/安全性の破綻、P1=重要だが回避可、P2=通常、P3=いつか (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:auto-label-triage -->
 ## Walking Skeleton
 
 スコープ別の walking-skeleton 既定は org.md に従う。greenfield 要素(新パッケージ・新配布経路など)を含む intent では、最初の Construction Bolt を小さな end-to-end スライスとして扱い、以後の拡張前に人間がゲートで確認する。
