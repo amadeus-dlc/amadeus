@@ -1289,6 +1289,41 @@ function handleGateStart(args: string[]): void {
 // delegates to handleAdvance or handleCompleteWorkflow for the remaining
 // transitions. Eliminates the t59-class bug where the orchestrator approved
 // but forgot to call advance, leaving Current Stage pointing at a [x] slug.
+// Shared gate-resolution presence guard for approve AND reject (#675). A gate
+// cannot be RESOLVED (approved or rejected) unless a real human acted at THIS
+// gate since the last gate resolution. Call this BEFORE any state mutation so
+// a refusal (error() -> exit) leaves state untouched. Carve-outs FIRST:
+// autonomous Construction (swarm / Bolt) and the suite-wide test bypass never
+// require presence. Both handleApprove and handleReject route through this
+// single helper so a future presence-check refinement (e.g. #671's delegated
+// provenance recognition inside humanActedSinceGate) applies to both verbs
+// automatically instead of drifting between two hand-copied checks.
+function assertHumanPresentForGateResolution(
+  pd: string,
+  content: string,
+  slug: string,
+  verb: "approve" | "reject"
+): void {
+  if (isAutonomousMode(content)) {
+    // skip the presence check — autonomous Construction has no human at the gate
+  } else if (humanPresenceGuardDisabled()) {
+    // skip — suite-wide deterministic off-switch (AMADEUS_SKIP_HUMAN_PRESENCE_GUARD)
+  } else if (!humanActedSinceGate(pd)) {
+    // Ledger-event presence check: refuse unless a HUMAN_TURN event was appended
+    // AFTER the last gate resolution (GATE_APPROVED / GATE_REJECTED /
+    // QUESTION_ANSWERED) in ledger order - the boundary is the prior resolution,
+    // NOT this gate's open event (one human turn drives both open and this
+    // resolution). Cascade-safety + freshness fall out of order; no marker
+    // file / turn counter.
+    error(
+      `Refusing to ${verb} "${slug}": a real human has not acted at this gate ` +
+        `since it opened. The approval gate requires a typed human turn before it ` +
+        `can commit. Acknowledge the gate as a human, then ${verb}. (autonomous ` +
+        `Construction is exempt)`
+    );
+  }
+}
+
 function handleApprove(args: string[]): void {
   if (args.length < 1) error("Usage: amadeus-state.ts approve <slug> [--user-input <text>]");
   const slug = args[0];
@@ -1319,28 +1354,11 @@ function handleApprove(args: string[]): void {
   // construction/<unit>/<slug>/) and code-producing stages (workspace_requires).
   verifyStageArtifacts(pd, stage);
 
-  // Human-presence guard: a gate cannot be approved unless a real
-  // human acted at THIS gate since the last gate resolution. Runs BEFORE any
-  // mutation so a refusal (error() -> exit) leaves state untouched (same slot
-  // as the artifact guard above). Carve-outs FIRST: autonomous Construction
-  // (swarm / Bolt) and the suite-wide test bypass never require presence.
-  if (isAutonomousMode(content)) {
-    // skip the presence check — autonomous Construction has no human at the gate
-  } else if (humanPresenceGuardDisabled()) {
-    // skip — suite-wide deterministic off-switch (AMADEUS_SKIP_HUMAN_PRESENCE_GUARD)
-  } else if (!humanActedSinceGate(pd)) {
-    // Ledger-event presence check: refuse unless a HUMAN_TURN event was appended
-    // AFTER the last gate resolution (GATE_APPROVED / GATE_REJECTED /
-    // QUESTION_ANSWERED) in ledger order - the boundary is the prior resolution,
-    // NOT this gate's open event (one human turn drives both open and approve).
-    // Cascade-safety + freshness fall out of order; no marker file / turn counter.
-    error(
-      `Refusing to approve "${slug}": a real human has not acted at this gate ` +
-        `since it opened. The approval gate requires a typed human turn before it ` +
-        `can commit. Acknowledge the gate as a human, then approve. (autonomous ` +
-        `Construction is exempt)`
-    );
-  }
+  // Human-presence guard (#675): shared with handleReject via
+  // assertHumanPresentForGateResolution. Runs BEFORE any mutation so a
+  // refusal (error() -> exit) leaves state untouched (same slot as the
+  // artifact guard above).
+  assertHumanPresentForGateResolution(pd, content, slug, "approve");
 
   const timestamp = isoTimestamp();
 
@@ -1546,6 +1564,12 @@ function handleReject(args: string[]): void {
   if (!stage) error(`Unknown stage: ${slug}`);
   validateSlugInState(content, slug, ["awaiting-approval", "in-progress"]);
   const gateWasMissing = getSlugState(content, slug) === "in-progress";
+
+  // Human-presence guard (#675): shared with handleApprove via
+  // assertHumanPresentForGateResolution. Runs BEFORE any mutation (Revision
+  // Count increment, [R] transition, GATE_REJECTED emit) so a refusal
+  // (error() -> exit) leaves state untouched.
+  assertHumanPresentForGateResolution(pd, content, slug, "reject");
 
   // Increment Revision Count. Guard against non-numeric values (missing field,
   // manual edits, legacy state files) by coercing non-integers to 0.
