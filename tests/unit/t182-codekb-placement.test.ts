@@ -7,7 +7,8 @@
 //
 //   1. The PURE lib helpers (imported in-process from the shipped dist tree):
 //      relativeCodekbDir / codekbDir compose the space-level per-repo dir, and
-//      codekbRepoName picks the deterministic repo NAME (0 recorded → basename,
+//      codekbRepoName picks the deterministic repo NAME (0 recorded + origin
+//      remote → remote-derived slug, 0 recorded + no remote → basename,
 //      1 → that name, >1 → basename fallback).
 //   2. The `codekb-path` UTILITY VERB (spawned as the real CLI surface): it prints
 //      exactly what relativeCodekbDir composes, honouring --repo and --json.
@@ -26,8 +27,10 @@
 //
 // FIXTURE DISCIPLINE mirrors t116: a fresh temp project per spawn (createTestProject
 // seeds ONE default intent with NO repos row), cleaned in afterAll. With no repos
-// recorded, codekbRepoName(proj) === basename(proj), so the resolved repo segment
-// is the temp dir's basename — captured per-emit, not hard-coded.
+// recorded AND no origin remote, codekbRepoName(proj) === basename(proj), so the
+// resolved repo segment is the temp dir's basename — captured per-emit, not
+// hard-coded. When an origin remote IS present (#668), the 0-recorded fallback
+// reads the remote-derived repo slug instead — see the "origin remote" cases below.
 
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -118,12 +121,32 @@ describe("t182 codekb lib helpers — space-level per-repo placement", () => {
   // state file first (seedRecordedIntent) so the cursor resolves to the row whose
   // repos we then rewrite; without it intentRepos returns [] for the wrong reason.
 
-  // codekbRepoName: 0 recorded repos -> basename(projectDir). The seeded row has
-  // NO repos field (the genuine 0-repo case, cursor resolving).
-  test("codekbRepoName: 0 recorded repos → basename(projectDir)", () => {
+  // codekbRepoName: 0 recorded repos, NO origin remote -> basename(projectDir).
+  // The seeded row has NO repos field (the genuine 0-repo case, cursor
+  // resolving) and freshProject()/seedRecordedIntent() never `git init`, so
+  // there is no origin remote to resolve. Re-pins the old "always basename"
+  // contract as "basename ONLY when no remote resolves" (#668).
+  test("codekbRepoName: 0 recorded repos, no origin remote → basename(projectDir)", () => {
     const proj = seedRecordedIntent(); // active row present, no repos field
     expect(codekbRepoName(proj, DEFAULT_SPACE)).toBe(basename(proj));
   });
+
+  // codekbRepoName: 0 recorded repos + an origin remote -> the remote-derived
+  // repo slug, NOT basename(projectDir). The temp dir leaf is a random mkdtemp
+  // suffix (never "amadeus"), mirroring a worktree/clone leaf like
+  // `codex-engineer-2` that must not fragment the codekb key when the origin
+  // remote is stable (#668). Covers both SSH and HTTPS remote URL forms.
+  for (const [label, remoteUrl] of [
+    ["SSH", "git@github.com:amadeus-dlc/amadeus.git"],
+    ["HTTPS", "https://github.com/amadeus-dlc/amadeus.git"],
+  ] as const) {
+    test(`codekbRepoName: 0 recorded repos, ${label} origin remote → remote repo slug`, () => {
+      const proj = seedRecordedIntent();
+      expect(basename(proj)).not.toBe("amadeus"); // sanity: leaf != repo slug
+      initGitWithOrigin(proj, remoteUrl);
+      expect(codekbRepoName(proj, DEFAULT_SPACE)).toBe("amadeus");
+    });
+  }
 
   // codekbRepoName: exactly 1 recorded repo -> that repo name.
   test("codekbRepoName: 1 recorded repo → that name", () => {
@@ -174,7 +197,7 @@ describe("t182 codekb-path verb — prints the space-level per-repo dir", () => 
     expect(parsed.dir).toBe(relativeCodekbDir(proj, "svc", DEFAULT_SPACE));
   });
 
-  test("codekb-path with NO --repo resolves codekbRepoName (0 repos → basename)", () => {
+  test("codekb-path with NO --repo, no origin remote resolves codekbRepoName (0 repos → basename)", () => {
     const proj = freshProject();
     const res = spawnSync(BUN, [UTILITY, "codekb-path", "--project-dir", proj], {
       encoding: "utf-8",
@@ -184,6 +207,27 @@ describe("t182 codekb-path verb — prints the space-level per-repo dir", () => 
     expect(res.stdout.trim()).toBe(
       `amadeus/spaces/${DEFAULT_SPACE}/codekb/${basename(proj)}/`,
     );
+  });
+
+  // AC-668-3: codekb-path --json with NO --repo, given an origin remote,
+  // resolves the stable remote-derived slug — not the temp dir's basename.
+  test("codekb-path --json with NO --repo, origin remote present → stable remote repo slug", () => {
+    const proj = freshProject();
+    initGitWithOrigin(proj, "git@github.com:amadeus-dlc/amadeus.git");
+    const res = spawnSync(
+      BUN,
+      [UTILITY, "codekb-path", "--project-dir", proj, "--json"],
+      { encoding: "utf-8", env: childEnv() },
+    );
+    expect(res.status).toBe(0);
+    const parsed = JSON.parse(res.stdout.trim()) as {
+      space: string;
+      repo: string;
+      dir: string;
+    };
+    expect(parsed.space).toBe(DEFAULT_SPACE);
+    expect(parsed.repo).toBe("amadeus");
+    expect(parsed.dir).toBe(`amadeus/spaces/${DEFAULT_SPACE}/codekb/amadeus`);
   });
 });
 
@@ -267,4 +311,23 @@ function rewriteIntentRepos(proj: string, repos: string[]): void {
   const rows = JSON.parse(readFileSync(regPath, "utf-8")) as Array<Record<string, unknown>>;
   rows[0].repos = repos;
   writeFileSync(regPath, `${JSON.stringify(rows, null, 2)}\n`, "utf-8");
+}
+
+// ---------------------------------------------------------------------------
+// Helper: `git init` a project fixture and point its `origin` remote at
+// `remoteUrl` (SSH or HTTPS form), so codekbRepoName's remote-derived
+// fallback (#668) has a real `git remote get-url origin` to resolve against.
+// Throws on any git failure rather than silently leaving the fixture
+// remote-less (which would make the "0 recorded + remote" cases pass for the
+// wrong reason — falling through to the basename fallback).
+// ---------------------------------------------------------------------------
+function initGitWithOrigin(proj: string, remoteUrl: string): void {
+  const git = (args: string[]): void => {
+    const r = spawnSync("git", args, { cwd: proj, encoding: "utf8" });
+    if (r.status !== 0) {
+      throw new Error(`git ${args.join(" ")} failed: ${r.stderr?.trim() || r.stdout?.trim()}`);
+    }
+  };
+  git(["init", "-q"]);
+  git(["remote", "add", "origin", remoteUrl]);
 }
