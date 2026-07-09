@@ -35,6 +35,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 - フロー効率よりリソース効率を優先する: 単一アイテムのリードタイム最適化のために全体を待たせない。leader は逐次のピンポンを避けて作業をバッチで委任し、メンバーの手が空かないよう並行割当を維持する (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:resource-efficiency -->
 - 人間判断が必要な事項(ゲート・マージ・例外承認・外部操作)は AskUserQuestion で提示し、放置せず必ず承認を取り切る。leader は未回答の判断事項を台帳として追跡し、回答が滞っている場合は忘れられている前提で催促する。判断待ちのまま暗黙に先へ進まない (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:pending-decision-tracking -->
 - 判断を要する事項は常にエージェント選挙にかけ、leader を含む誰も単独で決めない(設計方針・修正方式・トリアージ・ブロッカー対応・規範の解釈など)。既決ルールの機械的執行(承認済みゲートの delegate 発行、ユーザー承認済みマージの実行など)は判断ではなく執行として選挙不要。選挙か執行か迷う場合は選挙に倒す。3対3の同数と人間判断事項は従来どおりユーザーへ (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:always-elect -->
+- タスク規模に応じてサブエージェントを有効活用する: 小さな作業はインラインで済ませ、複数ファイル・複数観点・並列化可能な作業は Task サブエージェントへ分割して fan-out する(worktree 隔離が必要な並行実装は隔離付きで)。ただしディスパッチプロンプトに親ツリーのパスを書かない・本線での git 状態操作を禁止する隔離規律を守る。サブエージェントのモデルは定義の model: ピンに従う(高判断=opus) (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:subagent-utilization -->
 ## Walking Skeleton
 
 この intent は既存フレームワークへのインクリメンタルな npm インストーラ実装だが、配布経路がユーザー体験の入口になるため、最初の Construction Bolt は小さな end-to-end スライスとして扱う。最初に最小の `@amadeus-dlc/setup` 実行経路を通し、以後の拡張前に人間がゲートで確認する。
