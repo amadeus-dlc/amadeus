@@ -69,6 +69,139 @@ export interface SizeAnnotation {
   readonly invalidValue?: string;
 }
 
+// ─── Phase D (#699): continuous dynamic size measurement ─────────────────────
+//
+// Phase A above derives size from a STATIC signal scan. Phase D adds the DYNAMIC
+// axis: a test's measured WALL-CLOCK duration. The runner records each file's
+// real run time; this module maps that duration to a size FLOOR and compares the
+// floor to the file's effective declared size to surface WALL-CLOCK DRIFT — a
+// file that runs slow enough to have outgrown its declared/static size. Drift is
+// ADVISORY (reported by the runner and uploaded as a CI artifact, never gates);
+// the static drift guard (t-test-size-drift) stays the only CI-failing size
+// check. All functions here are PURE — the runner owns source reads / duration
+// capture and feeds them in.
+
+// Wall-clock band thresholds — the single canonical definition consumed by
+// sizeFloorFromDuration. Derived from codex-3's measured rule (#684 comment
+// 4924008283): a small test finishes well under a second, a large test runs on
+// the order of tens of seconds. Bands are lower-inclusive / upper-exclusive
+// (see sizeFloorFromDuration).
+export const WALL_CLOCK_BANDS = { smallMaxSeconds: 1, largeMinSeconds: 30 } as const;
+
+// Map a measured wall-clock duration to the SMALLEST size that duration is
+// consistent with. Bands: [0, 1) small, [1, 30) medium, [30, ∞) large — lower
+// bound inclusive, upper bound exclusive (1.0s exactly is medium, 30.0s exactly
+// is large).
+export function sizeFloorFromDuration(durationSeconds: number): TestSize {
+  if (durationSeconds >= WALL_CLOCK_BANDS.largeMinSeconds) return "large";
+  if (durationSeconds >= WALL_CLOCK_BANDS.smallMaxSeconds) return "medium";
+  return "small";
+}
+
+// Wall-clock drift as a discriminated union. The "wall-clock" variant carries
+// the declared and measured sizes; "none" carries nothing (there is nothing to
+// report). Constructing it only through detectWallClockDrift makes an invalid
+// drift record — a "wall-clock" variant whose measured size does NOT exceed the
+// declared — unrepresentable.
+export type WallClockDrift =
+  | { readonly kind: "none" }
+  | { readonly kind: "wall-clock"; readonly declared: TestSize; readonly measured: TestSize };
+
+// Smart constructor: builds the "wall-clock" variant only when the dynamic floor
+// is STRICTLY LARGER than the effective declared size. A floor at or below the
+// declared size yields "none".
+export function detectWallClockDrift(
+  effectiveDeclared: TestSize,
+  dynamicFloor: TestSize,
+): WallClockDrift {
+  if (SIZE_ORDER[dynamicFloor] > SIZE_ORDER[effectiveDeclared]) {
+    return { kind: "wall-clock", declared: effectiveDeclared, measured: dynamicFloor };
+  }
+  return { kind: "none" };
+}
+
+export interface MeasuredTestRecord {
+  readonly file: string;
+  readonly scope: string;
+  // The file's `// size:` declaration, or null when it carries no valid header.
+  readonly declaredSize: TestSize | null;
+  // The static-signal size (Phase A classifier) and the signals that drove it.
+  readonly staticSize: TestSize;
+  readonly staticSignals: readonly string[];
+  readonly durationSeconds: number;
+  readonly dynamicFloor: TestSize;
+  readonly drift: WallClockDrift;
+}
+
+// Build one measured record from a file's source + its measured duration. Pure:
+// the caller supplies the already-read source and the observed duration. The
+// effective declared size is the `// size:` annotation when valid, else the
+// static size — an INVALID annotation is the static drift guard's concern, so it
+// degrades here to the static size rather than participating in wall-clock drift.
+export function buildMeasuredRecord(input: {
+  file: string;
+  scope: string;
+  source: string;
+  durationSeconds: number;
+}): MeasuredTestRecord {
+  const classification = classifyTestSize(input.source);
+  const annotation = parseSizeAnnotation(input.source);
+  const effectiveDeclared: TestSize = annotation.declared ?? classification.size;
+  const dynamicFloor = sizeFloorFromDuration(input.durationSeconds);
+  return {
+    file: input.file,
+    scope: input.scope,
+    declaredSize: annotation.declared,
+    staticSize: classification.size,
+    staticSignals: classification.signals,
+    durationSeconds: input.durationSeconds,
+    dynamicFloor,
+    drift: detectWallClockDrift(effectiveDeclared, dynamicFloor),
+  };
+}
+
+export interface TestSizeReport {
+  readonly schemaVersion: 1;
+  readonly records: readonly MeasuredTestRecord[];
+  readonly summary: { readonly totalFiles: number; readonly driftCount: number };
+}
+
+// Aggregate measured records into a report. First-class collection: the summary
+// math (drift count = records whose drift is not "none", file total) lives HERE
+// so the runner never open-codes it.
+export function buildTestSizeReport(records: readonly MeasuredTestRecord[]): TestSizeReport {
+  const driftCount = records.filter((r) => r.drift.kind !== "none").length;
+  return {
+    schemaVersion: 1,
+    records,
+    summary: { totalFiles: records.length, driftCount },
+  };
+}
+
+export interface SizeObservation {
+  readonly durationSeconds: number;
+}
+
+// A pluggable source of a file's measured duration. The runner collects durations
+// THROUGH this seam rather than reading a per-file field inline, so the collection
+// step is unit-testable in-process and the observation source is swappable.
+export interface SizeObservationBackend {
+  readonly name: string;
+  observe(file: string, measuredDurationSeconds: number): SizeObservation;
+}
+
+// The wall-clock backend is the FIRST (and, in #699, only) consumer of the
+// SizeObservationBackend seam — it passes the runner's measured wall-clock
+// duration through unchanged (election Q4 rider: no zero-consumer extension
+// points). A second backend (e.g. peak-RSS or CPU-time observation) would likely
+// revise this signature to carry more than a duration; that is out of #699 scope.
+export const wallClockBackend: SizeObservationBackend = {
+  name: "wall-clock",
+  observe(_file, measuredDurationSeconds) {
+    return { durationSeconds: measuredDurationSeconds };
+  },
+};
+
 // Parse a `// size: <value>` header. Scans the leading comment region (first
 // ~40 lines) so it mirrors where `// covers:` lives. First match wins.
 export function parseSizeAnnotation(source: string): SizeAnnotation {
