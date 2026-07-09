@@ -1165,8 +1165,14 @@ describe("t92 Group M: upstream-coverage --consumes resolution", () => {
 // true only when the binary the fixture links to really exists on disk.
 // ============================================================
 
-const PINNED_TSC = join(REPO_ROOT, "node_modules", ".bin", process.platform === "win32" ? "tsc.cmd" : "tsc");
-const TEST44_SKIP_REASON = existsSync(PINNED_TSC)
+// This candidate list MUST stay in lockstep with resolveTscLauncher's
+// (amadeus-sensor-type-check.ts:182-201): the sensor probes tsc.cmd -> tsc.exe
+// -> tsc on Windows and bare tsc on POSIX, so the guard must treat the pinned
+// tsc as present when ANY of those exists — otherwise an env with only
+// tsc.exe/bare tsc would let the sensor use the local tsc while test 44 falsely
+// skipped (a detection-power hole). existsSync follows the symlink chain.
+const PINNED_TSC_CANDIDATES = process.platform === "win32" ? ["tsc.cmd", "tsc.exe", "tsc"] : ["tsc"];
+const TEST44_SKIP_REASON = PINNED_TSC_CANDIDATES.some((name) => existsSync(join(REPO_ROOT, "node_modules", ".bin", name)))
   ? null
   : "repo-pinned tsc not installed (bun install not run) — pinned exit-2 classification is unmeasurable; see #709";
 
