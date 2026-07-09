@@ -236,19 +236,67 @@ function stripHarnessLeaf(dir: string, leaf: string): string | null {
   return dirname(harnessDirPath);
 }
 
+// True if `p` exists AND is a directory (not a plain file). Guards the
+// workspace marker check below against a stray FILE named "amadeus" or
+// ".claude/tools" satisfying the marker by name alone.
+function isDir(p: string): boolean {
+  try {
+    return statSync(p).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+// True for `dir` carrying the amadeus workspace marker: an "amadeus/"
+// directory AND a "tools/" directory under one of the known harness dirs
+// (e.g. ".claude/tools"). A worktree session ships its OWN amadeus/ record
+// tree and its OWN harness tools tree even though the hook SCRIPTS it runs
+// still live under the main checkout's harness dir — so this marker, unlike
+// script-path derivation, distinguishes the worktree from the main checkout.
+// Both halves must be DIRECTORIES, not merely present-by-name (issue #641
+// review fix): a plain file named "amadeus" or ".claude/tools" must not
+// satisfy the marker.
+function hasWorkspaceMarker(dir: string): boolean {
+  if (!isDir(join(dir, "amadeus"))) return false;
+  return KNOWN_HARNESS_DIRS.some((h) => isDir(join(dir, h, "tools")));
+}
+
+// Search `startDir` and its ancestors (up to the filesystem root) for the
+// first directory carrying the amadeus workspace marker (see
+// hasWorkspaceMarker). Returns null if none is found.
+function findWorkspaceMarkerAncestor(startDir: string): string | null {
+  let dir = startDir;
+  while (true) {
+    if (hasWorkspaceMarker(dir)) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
+}
+
 // --- Hook project dir resolution ---
 
 export function resolveProjectDirFromHook(importMetaUrl: string): string {
   // 1. CLAUDE_PROJECT_DIR env var
   if (process.env.CLAUDE_PROJECT_DIR) return process.env.CLAUDE_PROJECT_DIR;
 
-  // 2. Script path derivation (open-set): hooks ship at
+  // 2. CWD (or an ancestor) carries its own amadeus workspace marker
+  //    (issue #641). In a worktree session the hook SCRIPTS live in the
+  //    launch dir (the main checkout), so rung 3 below would converge on
+  //    main even though the engine's cwd — and the record it writes — is
+  //    the worktree. Search upward from cwd for a dir that itself has an
+  //    "amadeus/" tree and a "<harness>/tools/" tree, and prefer it over the
+  //    script-path derivation.
+  const markerDir = findWorkspaceMarkerAncestor(process.cwd());
+  if (markerDir) return markerDir;
+
+  // 3. Script path derivation (open-set): hooks ship at
   //    <project>/<harness>/hooks/, so strip "<harness>/hooks" for ANY harness.
   const scriptDir = dirname(fileURLToPath(importMetaUrl));
   const fromScript = stripHarnessLeaf(scriptDir, "hooks");
   if (fromScript) return fromScript;
 
-  // 3. CWD has a known harness directory (dev repo).
+  // 4. CWD has a known harness directory (dev repo).
   const cwd = process.cwd();
   for (const h of KNOWN_HARNESS_DIRS) {
     if (existsSync(join(cwd, h))) {
