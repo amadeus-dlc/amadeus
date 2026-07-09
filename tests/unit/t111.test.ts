@@ -336,7 +336,7 @@ describe("appendAuditEntryUnlocked — escaping and append-not-overwrite", () =>
 });
 
 describe("VALID_EVENT_TYPES — every canonical type is accepted", () => {
-  test("the mirrored list has 70 entries with no duplicates", () => {
+  test("the mirrored list has 71 entries with no duplicates", () => {
     expect(VALID_EVENT_TYPES.length).toBe(71);
     expect(new Set(VALID_EVENT_TYPES).size).toBe(71);
   });
