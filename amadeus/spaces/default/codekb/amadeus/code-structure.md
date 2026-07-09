@@ -59,6 +59,33 @@
 
 `drain(final)`(L54-148)は `carry.length < BLOCK_SIZE` などデータ不足時に `null` を返して次チャンク待ちに戻る設計(L64-65, L82-85, L98-100, L109-112)であり、これ自体は chunk 境界を跨ぐ設計として妥当に見える。#678 として持ち越すべき論点は、この状態機械が実際の `git archive`/codeload 出力(長いパス名を持つファイルが PAX/GNU ヘッダと本体ヘッダの間でチャンク分割される具体的な入力)に対して実測でも正しく動くかどうかであり、静的スキャンだけでは確定できない。
 
+## 差分リフレッシュで反映した構造(integrity-batch、`a1c79dc12..162553b99`)
+
+前回スキャン以降の構造変化と、今回4バグ(#705/#706/#707/#708)の焦点ファイルを追記する。
+
+### codekb ストア構造(#707 の対象)
+
+| パス | 役割 | 本 intent との関係 |
+| --- | --- | --- |
+| `.claude/tools/amadeus-lib.ts` `codekbRepoName`(L556-565)/ `codekbDir`(L530-533)/ `originRepoSlug`(L571-580) | codekb ディレクトリ名を origin remote 由来で解決(#693 で統一) | #707 の前提。`codekb/claude-leader/`・`codekb/claude-engineer-1/` は削除され `codekb/amadeus/` 単一化 |
+| `.claude/amadeus-common/stages/inception/reverse-engineering.md`(L5 condition / L36 outputs / L110 timestamp) | RE ステージ定義。常時リフレッシュ・9固定ファイル・**単一** timestamp marker | **#707 の直接対象**(単一 timestamp で並行 base/observed を表現できない) |
+
+### テストハーネス構造(#705 の対象)
+
+| パス | 役割 | 本 intent との関係 |
+| --- | --- | --- |
+| `tests/run-tests.ts`(L31 `Level`、L577-587 `levelFiles`、L485-489 `shouldSkipForClaude`) | tier discovery(smoke/unit/integration/e2e 各ディレクトリ直下のみ)と substrate skip | #705 の構造的根拠(`tests/harness/` はどの Level にも属さず discovery/skip の外) |
+| `tests/harness/sdk-drive.calibration.test.ts`(L55-72) | doctor 既知回答文字列のピン留め | **#705 の直接対象**(L72 `DOCTOR_DOCS_LABEL` が現行 doctor 出力とドリフト、かつランナー管理外) |
+| `.claude/tools/amadeus-utility.ts`(L628 doctor workspace チェック) | doctor が出力する現行ワークスペース文言(`workspace shell ready ...`) | #705 の期待値ドリフトの対向(旧 `amadeus-docs/ directory exists` は不在) |
+
+### knowledge 配布構造(#706 の対象)
+
+| パス | 役割 | 本 intent との関係 |
+| --- | --- | --- |
+| `packages/framework/core/knowledge/amadeus-delivery-agent/workflow-planning-guide.md`(L3) | delivery-agent の実行計画ガイド | **#706 の直接対象**(不在の `product-guide.md` を tree 外参照。core→dist→self-install の全複製に伝播済み) |
+| `packages/framework/core/agents/amadeus-delivery-agent.md`(L71-77) | delivery-agent の knowledge ロードパス宣言 | #706 の根拠(自分の dir と `amadeus-shared/` のみ読み、product-agent dir は読まない) |
+| `packages/framework/core/hooks/amadeus-mint-presence.ts`(L12-13, L23-31) | UserPromptSubmit で `HUMAN_TURN` を無条件 mint(stdin 未読) | **#708 の直接対象**(mint 側)。参照様式は `amadeus-audit-logger.ts:29-44` / `amadeus-session-start.ts:86-96` |
+
 ## 次工程へ持ち越す設計候補
 
 1. #674: merge-back 失敗を検知した時点で `results[]` の該当 unit を `"failed"` に書き換え、`emitUnitFailed`/`emitBoltFailed` を出すよう finalize のフェーズ順序を見直す。
