@@ -1,4 +1,5 @@
 // covers: domain:setup-timestamps
+// size: small
 //
 // Timestamps.of() — {iso, token} pair from a single Date read (REL-F05/NFR-004).
 

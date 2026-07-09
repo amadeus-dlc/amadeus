@@ -1,4 +1,5 @@
 // covers: function:setCheckbox
+// size: small
 //
 // t108 — setCheckbox() in amadeus-lib.ts.
 // Mechanism: none (pure string transform, zero I/O, zero LLM, zero tokens).

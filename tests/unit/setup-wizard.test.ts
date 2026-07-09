@@ -1,4 +1,5 @@
 // covers: modules:setup-wizard
+// size: small
 //
 // runWizard — asks only for missing fields (BR-I17), confirms before
 // returning, and rejecting confirmation is an explicit abort (BR-I18).

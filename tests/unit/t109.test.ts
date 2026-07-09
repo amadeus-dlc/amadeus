@@ -1,4 +1,5 @@
 // covers: function:escapeRegex
+// size: small
 //
 // t109 — escapeRegex(str) round-trip property test (P0 deterministic floor).
 //

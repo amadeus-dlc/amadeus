@@ -1,4 +1,5 @@
 // covers: function:stateFilePath, function:auditFilePath
+// size: small
 //
 // t106 — path builders stateFilePath() / auditFilePath() in amadeus-lib.ts.
 // Mechanism: none (pure functions, zero I/O, zero LLM, zero tokens).

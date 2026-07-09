@@ -1,4 +1,5 @@
 // covers: domain:setup-resolved-version
+// size: small
 //
 // ResolvedVersion.fromRelease/fromTag, archiveUrl() (ADR-003), isSameAs() (US-B4).
 

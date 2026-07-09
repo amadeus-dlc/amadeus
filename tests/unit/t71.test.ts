@@ -1,3 +1,4 @@
+// size: small
 // t71.none.test.ts — bun:test port of t71-markdown-section-helpers.sh
 //
 // Mechanism: none (no env seam / no subprocess). Every contract is a pure

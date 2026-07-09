@@ -1,4 +1,5 @@
 // covers: harness-instrument:tui-drive-setting-sources
+// size: small
 // covers: harness-instrument:tui-drive-revision-recovery
 //
 // Pins the TUI harness' setting-source isolation. Live TUI journeys drive the

@@ -1,4 +1,5 @@
 // covers: domain:setup-command
+// size: small
 //
 // ParsedCommand.parse (CLI Contract symmetric grammar, flag validation) and
 // InstallInputs.fromFlags. BR-I01~I06, FR-003/009/011.

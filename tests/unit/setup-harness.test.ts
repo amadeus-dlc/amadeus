@@ -1,4 +1,5 @@
 // covers: domain:setup-harness
+// size: small
 //
 // HarnessName.all — the canonical 4-value list U1 owns standalone (U2 owns
 // string-input validation separately).
