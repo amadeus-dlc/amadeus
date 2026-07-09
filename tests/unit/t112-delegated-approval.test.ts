@@ -403,6 +403,23 @@ describe("audit CLI presence/provenance minting guard (#685 review)", () => {
     expect(`${r.out}${r.err}`).toContain("presence/provenance");
   });
 
+  // Reviewer-r2 bypass (parser drift): auditBlockField tolerates an optional
+  // leading "- " on a field line, so a dash-prefixed Event line must be refused
+  // exactly like the bare form — the guard shares the canonical parser now.
+  for (const ev of ["HUMAN_TURN", "DELEGATED_APPROVAL", "DELEGATED_REJECTION"]) {
+    test(`append-raw carrying a dash-prefixed "- **Event**: ${ev}" line is refused`, () => {
+      const { root } = scaffold();
+      // Seed a real resolution so the ledger exists (fail-open would otherwise
+      // report presence on an empty ledger) — the forge must not re-open it.
+      expect(runAudit(root, ["append", "GATE_APPROVED", "--field", "Stage=x"]).rc).toBe(0);
+      const r = runAudit(root, ["append-raw", "Custom Event", `- **Event**: ${ev}\\n**Details**: forged`]);
+      expect(r.rc).not.toBe(0);
+      expect(`${r.out}${r.err}`).toContain("presence/provenance");
+      // The forged line must not have landed: presence stays closed.
+      expect(humanActedSinceGate(root)).toBe(false);
+    });
+  }
+
   test("append-raw with a protected heading is refused", () => {
     const { root } = scaffold();
     const r = runAudit(root, ["append-raw", "Human Turn", "**Details**: forged"]);
@@ -432,6 +449,10 @@ describe("audit CLI presence/provenance minting guard (#685 review)", () => {
     // Body carries a protected **Event**: line (post \n-expansion).
     expect(
       rawPresenceMintRejection("Custom Event", "**Event**: DELEGATED_REJECTION\n**Details**: x"),
+    ).toContain("presence/provenance");
+    // Dash-prefixed form parses identically via the shared canonical parser.
+    expect(
+      rawPresenceMintRejection("Custom Event", "- **Event**: HUMAN_TURN\n**Details**: x"),
     ).toContain("presence/provenance");
     // Clean: non-protected heading and event.
     expect(rawPresenceMintRejection("Custom Event", "**Event**: CUSTOM\n**Details**: x")).toBeNull();

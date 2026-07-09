@@ -3,6 +3,7 @@ import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, stat
 import { dirname } from "node:path";
 import {
   acquireAuditLock,
+  auditBlockField,
   auditFilePath,
   errorMessage,
   isoTimestamp,
@@ -779,14 +780,20 @@ export function presenceMintRejection(eventType: string): string | null {
 // smuggle a protected event via EITHER the heading OR an `**Event**: <type>` line
 // in the body (after \n expansion). Reject both. Returns the error message, or
 // null when clean.
+// Each body line is parsed with the SAME canonical field parser the presence
+// consumers use (auditBlockField, which tolerates an optional leading "- "),
+// so the guard's grammar can never drift from what the gate actually accepts —
+// a dash-prefixed "- **Event**: HUMAN_TURN" line parses identically on both
+// sides. Per-line (not per-block) scanning also covers a body that smuggles a
+// "\n---\n" block separator to fabricate an entire standalone event block.
 export function rawPresenceMintRejection(heading: string, expandedBody: string): string | null {
   if (PRESENCE_PROTECTED_HEADINGS.has(heading)) {
     return `Refusing append-raw with heading "${heading}": it matches a presence/provenance event heading, which the general audit CLI may not mint.`;
   }
   for (const line of expandedBody.split("\n")) {
-    const m = line.match(/^\*\*Event\*\*:\s*(.+?)\s*$/);
-    if (m && PRESENCE_PROTECTED_EVENTS.has(m[1])) {
-      return `Refusing append-raw: body carries "**Event**: ${m[1]}", a presence/provenance event the general audit CLI may not mint.`;
+    const ev = auditBlockField(line, "Event");
+    if (ev !== null && PRESENCE_PROTECTED_EVENTS.has(ev)) {
+      return `Refusing append-raw: body carries an Event line for "${ev}", a presence/provenance event the general audit CLI may not mint.`;
     }
   }
   return null;
