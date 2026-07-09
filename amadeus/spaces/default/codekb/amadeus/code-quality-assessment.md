@@ -1,5 +1,24 @@
 # コード品質評価
 
+## 260709-gate-mechanics(本 intent)対象2バグの評価
+
+### #675 は解消済み(前回 codekb からの更新)
+
+前回 codekb は `handleReject`(`amadeus-state.ts`)に human-presence guard が無いことをリスクとして記録していたが、`cb9d19a8e`「Wire human-presence guard into reject (fix #675) (#692)」がすでに main にマージ済みであることを本スキャンで確認した。現在は `assertHumanPresentForGateResolution`(L1301-1325)を `approve`/`reject` が共有し、ガードは対称化されている。以降の節にある #675 関連の記述(強み・リスク表・修理時の安全要件など)は歴史的記録であり、現状のコードには適用されない。
+
+### リスクと技術的負債(#685・#670)
+
+| リスク | 影響 | 注記 |
+| --- | --- | --- |
+| **#685**: REJECT に遠隔委任機構がない | 中〜高(agent-team topology の運用可能性そのものを制約) | リモート conductor がゲートを拒否できないため、agent-team 構成で「承認だけ委任でき拒否は委任できない」非対称な運用になる。対称性の欠落自体がユーザー体験上の欠陥 |
+| **#685**: `DELEGATED_APPROVAL` を REJECT に転用するリスク | 高(誤った修理をした場合の意味論破壊) | 既存イベント種別を REJECT 目的で再利用すると、`humanActedSinceGate` の `GATE_RESOLUTION_EVENTS`/`isDelegated` 判定や audit trail の読み手が「approval だったのか rejection だったのか」を取り違える。新規イベント種別(例: 相当する delegated-rejection 用)が必要 |
+| **#670**: `assertNotSiblingWorktree` が正当な sibling worktree も拒否する | 中〜高(マルチワークツリーのチーム運用で Bolt worktree モードが使えない) | ガードの意図(Bolt 自身が作るネストしたワークツリーからの誤実行防止)と実装(cwd がいずれの worktree であるかを区別しない)がずれている。修理は「区別すべき2種の sibling」をどう見分けるかの設計判断を要する |
+
+### 修理時の安全要件(#685・#670)
+
+1. **#685**: 新規の delegated-rejection 機構は、`verifyDelegatedApproval` と同じ「issuer shard 内の実 `HUMAN_TURN` を検証する」forgery-resistance 契約を満たす必要がある。既存の `DELEGATED_APPROVAL` イベント・検証関数を変更せず、並行する新規イベント種別・検証関数として追加する(既存の approve 経路に回帰を起こさない)。
+2. **#670**: `assertNotSiblingWorktree` の緩和は、「Bolt が作ったネストしたワークツリー」と「マルチワークツリーのチーム体制で人間/エージェントが個別に持つ sibling ワークツリー」を区別する具体的な判定基準を requirements-analysis で先に確定する。既存の呼び出し箇所(L204、L277、L512 近傍)すべてに一貫して適用する。
+
 ## 既存の品質ゲート(変更なし)
 
 - `dist:check`、`promote:self:check`、`.github/workflows/ci.yml`(typecheck → lint → dist:check → promote:self:check → tests)は変更なし。

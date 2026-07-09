@@ -1,5 +1,15 @@
 # コンポーネント棚卸し
 
+## 260709-gate-mechanics(本 intent)関連コンポーネント
+
+| コンポーネント | 責務 | 依存先 | バグとの関係 |
+| --- | --- | --- | --- |
+| `packages/framework/core/tools/amadeus-state.ts` `handleReject` | ゲート却下、human-presence guard(#675 で追加済み、対称) | `assertHumanPresentForGateResolution` | **#685 の直接対象**(委任経路が不在) |
+| `packages/framework/core/tools/amadeus-state.ts` `handleDelegateApproval` | leader session の実 `HUMAN_TURN` を根拠に conductor 側へ `DELEGATED_APPROVAL` を発行 | `humanActedSinceGate`、`auditShardDir`、`appendAuditEntry` | #685 の対称参照実装(REJECT 側に同型の関数がない) |
+| `packages/framework/core/tools/amadeus-lib.ts` `humanActedSinceGate`/`verifyDelegatedApproval` | gate 解決境界の判定、delegated approval の issuer shard 検証 | `readAllAuditShards`、`auditBlockField` | **#685 の直接対象**(REJECT 対応の検証機構が不在) |
+| `packages/framework/core/tools/amadeus-audit.ts` `VALID_EVENT_TYPES` | 有効な audit イベント型の列挙(`DELEGATED_APPROVAL`/`GATE_REJECTED` 含む) | — | **#685 の直接対象**(委任 REJECT 用イベント型が不在) |
+| `packages/framework/core/tools/amadeus-worktree.ts` `assertNotSiblingWorktree` | sibling worktree からの実行を拒否するガード | `git rev-parse --show-toplevel`/`--git-common-dir` | **#670 の直接対象** |
+
 ## Framework コンポーネント(既存、安定)
 
 | コンポーネント | 責務 | 依存先 | 本 intent との関係 |

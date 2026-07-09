@@ -1,5 +1,12 @@
 # ビジネス概要
 
+## 260709-gate-mechanics(本 intent)の業務境界
+
+前回バッチ(`260709-bug-zero-batch`)完了後の新しい bugfix intent。既存 2 バグに絞ったバッチであり、対象コード領域は前回バッチと重複しない(前回対象の `amadeus-swarm.ts`/`packages/setup/` 系ではなく、gate 解決・worktree 実行系)。
+
+- **#685 delegate-rejection**: human-presence gate の REJECT パスに、agent-team topology でリモートの conductor がゲートを拒否するための遠隔委任機構がない。#671 で APPROVE 側にのみ追加された `delegate-approval`(issuer の実 `HUMAN_TURN` を根拠に検証する仕組み)と対称な仕組みを REJECT 側に追加する必要がある。`DELEGATED_APPROVAL` イベントを REJECT 目的に転用すると意味論が破綻するため、新規の delegated-rejection イベント種別を要する。
+- **#670 sibling-worktree guard**: `assertNotSiblingWorktree`(`packages/framework/core/tools/amadeus-worktree.ts`)が、マルチワークツリーのチーム体制で sibling worktree から `amadeus-worktree create`/`bolt --worktree` を実行するケースをすべて拒否してしまい、この運用形態での Bolt worktree モード利用をブロックしている。
+
 ## 目的
 
 Amadeus は AI-DLC ワークフローを複数の AI harness(Claude、Codex、Kiro CLI、Kiro IDE)に配布するための framework リポジトリである。前々回 intent `260708-installer-distribution` で `packages/setup`(`@amadeus-dlc/setup`)が完成し、前回 intent `260709-framework-repair-batch` で4件のバグ(#656/#657/#641/#661)の修理対象が特定された。本 intent `260709-bug-zero-batch` はさらに新しく見つかったバグ6件(#674〜#678、#668)をまとめて修理するバッチである。前回バッチの4件とは対象コード領域が異なる、独立したバグ群である。

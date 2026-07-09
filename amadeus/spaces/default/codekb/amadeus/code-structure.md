@@ -1,6 +1,36 @@
 # コード構造
 
-## トップレベル構造
+## 260709-gate-mechanics(本 intent)関連構造
+
+| パス | 役割 | 本 intent との関係 |
+| --- | --- | --- |
+| `packages/framework/core/tools/amadeus-state.ts` | ゲート解決(`approve`/`delegate-approval`/`reject`) | **#685 の対象**(`handleReject`/`handleDelegateApproval`。`handleDelegateRejection` は不在) |
+| `packages/framework/core/tools/amadeus-lib.ts` | `humanActedSinceGate`/`verifyDelegatedApproval`/`GATE_RESOLUTION_EVENTS`/`auditShardDir` | **#685 の対象**(delegated-approval 検証機構。REJECT 対応の同型機構は不在) |
+| `packages/framework/core/tools/amadeus-audit.ts` | `VALID_EVENT_TYPES`(`DELEGATED_APPROVAL`/`GATE_REJECTED` 含む) | **#685 の対象**(`DELEGATED_REJECTION` 相当のイベント型が不在) |
+| `packages/framework/core/hooks/amadeus-mint-presence.ts` | `HUMAN_TURN` イベントの発行(UserPromptSubmit hook) | #685 の前提(このイベントのみが人間の存在を証明する) |
+| `packages/framework/core/tools/amadeus-worktree.ts` | `assertNotSiblingWorktree`/`create`/`bolt --worktree` 経路 | **#670 の対象**(`assertNotSiblingWorktree`) |
+
+### `amadeus-state.ts` の gate resolution ハンドラ構成(#685 関連、現状)
+
+| ハンドラ | 行 | human-presence guard | 遠隔委任 |
+| --- | --- | --- | --- |
+| `handleApprove` | L1327- | `assertHumanPresentForGateResolution` 経由(あり) | `handleDelegateApproval` あり(#671、L1461-1541) |
+| `handleReject` | L1548- | `assertHumanPresentForGateResolution` 経由(あり、#675 で追加済み) | **`handleDelegateRejection` 不在** |
+| `handleDelegateApproval` | L1461-1541 | 発行元(leader)の `humanActedSinceGate` を要求 | — |
+
+`assertHumanPresentForGateResolution`(L1301-1325)は `approve`/`reject` の共有ヘルパーで、両方が同一の3分岐(autonomous mode → suite off-switch → `humanActedSinceGate`)を通る。#671 で `handleDelegateApproval` が `DELEGATED_APPROVAL` audit イベントを対象(conductor)の intent record dir に発行し、対象側の `humanActedSinceGate`(`amadeus-lib.ts:1442-1478`)がこれを `verifyDelegatedApproval`(L1494-1519、issuer shard 内の実 `HUMAN_TURN` を検証)で確認できた場合のみ human act として扱う。REJECT 側にはこの一式(subcommand・audit event type・検証関数)がいずれも存在しない。
+
+### `amadeus-worktree.ts` の `assertNotSiblingWorktree`(#670 関連)
+
+`assertNotSiblingWorktree(repoCwd?)`(L112-132)は次の3ステップ。
+
+1. `git rev-parse --show-toplevel`(repoCwd から実行)→ `canonicalise()` → `cwdTop`
+2. `git rev-parse --git-common-dir` → `resolve(cwdTop, commonRaw)` → `dirname()` → `canonicalise()` → `mainCheckout`
+3. `cwdTop !== mainCheckout` なら無条件に `error()`(プロセス終了)
+
+呼び出し箇所: `create`(L204)、L277(別の create 隣接パス)、L512 近傍(`release`/`merge` 系、`amadeus-bolt.ts --worktree` から到達)。`list`(L586)は明示的にガードをスキップ(read-only のため)。git worktree 構造上、`--show-toplevel` は常にそのワークツリー自身を指し、`--git-common-dir` は常にメインチェックアウトの `.git/worktrees/<name>` を指すため、このガードは「repoCwd がいずれかのワークツリーである」ケースを設計上すべて拒否する — Bolt が自分で作る `.claude/worktrees/<dev>/` のネストしたワークツリーと、マルチワークツリーのチーム体制で人間/エージェントが個別に持つ長命な sibling ワークツリーを区別する分岐がない。
+
+## トップレベル構造(前回 intent 260709-bug-zero-batch、履歴として保持。#675 は fix #675/#692 で解消済み)
 
 `packages/` は `framework` と `setup` の2パッケージ構成のまま。トップレベル構造自体に変更はない。
 

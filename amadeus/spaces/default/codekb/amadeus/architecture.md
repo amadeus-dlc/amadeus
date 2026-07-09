@@ -24,7 +24,57 @@ flowchart LR
 
 <!-- text fallback: packages/framework/{core,harness} が scripts/package.ts に取り込まれ root dist/<name>/ を生成する。dist はこのリポジトリの自己 install(Runtime)と、packages/setup の CLI が第三者プロジェクトへ配布する内容の両方の元になる。 -->
 
-## 相互作用図 — 修理対象6バグの実装経路
+## 相互作用図 — 260709-gate-mechanics(本 intent)対象2バグの実装経路
+
+### #685 delegate-rejection: REJECT パスに遠隔委任機構が存在しない
+
+```mermaid
+sequenceDiagram
+  participant Leader as leader session (real human turn)
+  participant DelApprove as handleDelegateApproval() (#671, EXISTS)
+  participant DelReject as handleDelegateRejection() (#685, MISSING)
+  participant Conductor as conductor session (remote, agent-team)
+  participant Gate as humanActedSinceGate() / verifyDelegatedApproval()
+
+  Leader->>DelApprove: delegate-approval <slug> --to-intent <conductor record>
+  DelApprove->>DelApprove: ground in own HUMAN_TURN (L1479-1509)
+  DelApprove->>Conductor: appendAuditEntry("DELEGATED_APPROVAL", {Issuer...}, toIntent, toSpace)
+  Conductor->>Gate: humanActedSinceGate() sees DELEGATED_APPROVAL, verifies via verifyDelegatedApproval()
+  Gate-->>Conductor: human=true → approve succeeds
+
+  Note over DelReject: No equivalent subcommand exists.<br/>A remote conductor cannot reject a gate:<br/>reject requires a HUMAN_TURN on the CONDUCTOR's<br/>own shard (assertHumanPresentForGateResolution),<br/>which a remote leader-side human turn never writes.
+```
+
+<!-- text fallback: handleDelegateApproval (amadeus-state.ts:1461-1541) lets a leader session with a real HUMAN_TURN on its own audit shard mint a DELEGATED_APPROVAL block into a target (conductor) intent's audit dir, carrying issuer coordinates (Issuer Space/Intent/Shard/Human Ts). The conductor's own gate check, humanActedSinceGate (amadeus-lib.ts:1442-1478), recognizes DELEGATED_APPROVAL as a human act only after verifyDelegatedApproval (amadeus-lib.ts:1494-1519) confirms the referenced HUMAN_TURN physically exists in the issuer's shard. No symmetric mechanism exists for REJECT: amadeus-state.ts's subcommand dispatch (L257-303) lists only delegate-approval, and grep for delegate-reject/delegate-rejection/DELEGATED_REJECTION across packages/framework/core/ returns nothing. A remote conductor in an agent-team topology therefore cannot reject a gate — only the process holding a fresh HUMAN_TURN on the conductor's own audit shard can call reject, and handleReject's guard (assertHumanPresentForGateResolution, shared with approve since fix #675) has no delegated-rejection carve-out analogous to isDelegated in humanActedSinceGate. -->
+
+### #670 sibling-worktree guard: assertNotSiblingWorktree のブロック条件
+
+```mermaid
+sequenceDiagram
+  participant Caller as amadeus-worktree create / bolt --worktree
+  participant Guard as assertNotSiblingWorktree(repoCwd)
+  participant GitTop as git rev-parse --show-toplevel
+  participant GitCommon as git rev-parse --git-common-dir
+
+  Caller->>Guard: assertNotSiblingWorktree(repoCwd) (L204, L277, L512)
+  Guard->>GitTop: run from repoCwd
+  GitTop-->>Guard: cwdTop = canonicalise(toplevel)
+  Guard->>GitCommon: run from repoCwd
+  GitCommon-->>Guard: commonRaw (relative or absolute)
+  Guard->>Guard: commonAbs = resolve(cwdTop, commonRaw)<br/>mainCheckout = canonicalise(dirname(commonAbs))
+  alt cwdTop === mainCheckout
+    Guard-->>Caller: pass (this IS the main checkout)
+  else cwdTop !== mainCheckout
+    Guard-->>Caller: error() exit — "must run from the main repo checkout,<br/>not from a sibling worktree"
+    Note over Caller: Fires for ANY sibling worktree, including a<br/>teammate's own long-lived worktree in a<br/>multi-worktree team setup — not just Bolt's<br/>own nested worktrees under .claude/worktrees/<dev>/
+  end
+```
+
+<!-- text fallback: assertNotSiblingWorktree (amadeus-worktree.ts:112-132) computes cwdTop via `git rev-parse --show-toplevel` from repoCwd, then computes mainCheckout as dirname(resolve(cwdTop, git-common-dir-output)) after canonicalise() (realpathSync, handling macOS's /var -> /private/var symlink). It errors unconditionally whenever cwdTop !== mainCheckout. In a git worktree, --show-toplevel returns the worktree's own directory while --git-common-dir returns a path under the MAIN checkout's .git/worktrees/<name>, so dirname(that path's parent) resolves to the main checkout — meaning this guard by construction always rejects when repoCwd is itself a worktree, with no exception carved out for a case where the "sibling worktree" IS a legitimate long-lived per-developer or per-agent worktree in a multi-worktree team topology, not a Bolt-created nested worktree. Call sites: L204 (create), L277 (a second create-adjacent path), and 3 occurrences around L512 (release/merge paths, exercised by amadeus-bolt.ts's --worktree flow). L586 (list) explicitly skips the guard with a comment noting list is read-only. -->
+
+## 相互作用図 — 修理対象6バグの実装経路(前回 intent 260709-bug-zero-batch、履歴として保持)
+
+> 以下は前回 intent の成果物。#675 は `cb9d19a8e`(fix #675, #692)でマージ済み — 現在の `handleReject` は `assertHumanPresentForGateResolution` を `handleApprove` と共有し、ガードは対称化されている。以下のシーケンス図・注記は歴史的記録であり、現状のコードとは一致しない。
 
 ### #674 amadeus-swarm.ts finalize の merge-back 失敗と results/audit の分離
 
