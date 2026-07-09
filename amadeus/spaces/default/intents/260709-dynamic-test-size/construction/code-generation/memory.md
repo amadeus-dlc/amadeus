@@ -16,3 +16,4 @@
 - 2026-07-10T08:20:00Z — Interpretation: 実装は Bolt worktree(base: origin/main、ブランチ bolt/dynamic-test-size)で行う(org.md Construction 規範)。record は main に無いため、設計成果物はサブエージェントプロンプトへ全文インライン(c2: 本線パス混入禁止)。
 - 2026-07-10T08:55:00Z — Deviation: 赤 fixture は plan 例示の Bun.sleepSync でなく busy-wait を採用(静的 timer シグナル混入で静的 guard も赤化し、動的 drift の分離実証が崩れるため)。動的/静的の実証を分離するには fixture が静的シグナルフリーである必要がある — 知見。
 - 2026-07-10T08:55:00Z — Interpretation: team.md 新工程 deslop を PR 前に conductor が実施。指摘1件(driftCount の open-code)を summary 消費へ簡約し、検証再実行で挙動不変を実証(20b453cf5)。
+- 2026-07-10T09:15:00Z — Deviation: code-generation approve が workspace_requires ガードで偽陽性拒否(#731 と同クラス、コード未マージ bolt ブランチ変種)。delegate は着地済み。leader へ選択肢付き報告(推奨 A: PR #732 マージ → main を record へマージ → 正規再approve)。#731 へ本番実発エビデンスをコメント済み。approve は PR マージ待ちでパーク。

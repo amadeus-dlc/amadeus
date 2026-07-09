@@ -2174,3 +2174,29 @@
 **Context**: construction > dynamic-size-observation > code-generation > code-summary.md
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-09T22:53:37Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-architecture-reviewer-agent
+**Agent ID**: a092f259dbe7ad0ef
+**Message**: Confirmed FR-6 is explicitly required with the exact same rider (real consumer). This is not speculative — it's requirement-driven and satisfied correctly.\n\nEverything checks out. Let me verify t112 p
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-09T22:58:06Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Recovered**: true
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-09T22:58:06Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state approve code-generation --project-dir /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-1
+**Error**: Refusing to complete "code-generation": it is a code-producing stage (workspace_requires) but no source work is evident outside the amadeus/ workspace tree. In a git workspace this means no uncommitted change and no code in the last commit; otherwise no source file exists. Planning docs alone do not satisfy Code Generation - write the code to the workspace.
+
+---
