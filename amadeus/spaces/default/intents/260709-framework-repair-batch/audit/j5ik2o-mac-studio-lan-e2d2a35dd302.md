@@ -257,3 +257,136 @@
 **Context**: construction > fix-661-glossary-note > code-generation > code-generation-plan.md
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-09T07:45:03Z
+**Event**: WORKFLOW_PARKED
+**Stage**: code-generation
+**Timestamp**: 2026-07-09T07:45:03Z
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-09T07:45:14Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-09T07:45:14Z
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-09T07:45:14Z
+**Event**: BOLT_STARTED
+**Bolt names**: fix-656-installation-detect
+**Batch number**: 1
+**Walking skeleton**: false
+**Bolt slug**: fix-656-installation-detect
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-09T07:45:14Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state --project-dir /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-2 fork --slug fix-656-installation-detect
+**Error**: [slug=fix-656-installation-detect] worktree directory does not exist: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-2/.amadeus/worktrees/bolt-fix-656-installation-detect. Run amadeus-worktree create first.
+
+---
+
+## Bolt Failed
+**Timestamp**: 2026-07-09T07:45:14Z
+**Event**: BOLT_FAILED
+**Failed Bolt**: fix-656-installation-detect
+**Bolt slug**: fix-656-installation-detect
+**Error summary**: state-fork-failed: {"error":"[slug=fix-656-installation-detect] worktree directory does not exist: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-2/.amadeus/worktrees/bolt-fix-656-installation-detect. Run amadeus-worktree create first."}\n
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-09T07:45:21Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-worktree
+**Command**: amadeus-worktree
+**Error**: Unknown subcommand: undefined. Valid: create, merge, discard, list, verify, info
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-09T07:45:29Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-worktree
+**Command**: amadeus-worktree create
+**Error**: Missing --slug <slug>
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-09T07:45:44Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-worktree
+**Command**: amadeus-worktree create --slug fix-656-installation-detect --base main
+**Error**: amadeus-worktree must run from the main repo checkout, not from a sibling worktree at /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-2. Bolt worktrees are siblings of the main checkout, not nested.
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-09T07:45:44Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-worktree
+**Command**: amadeus-worktree create --slug fix-657-sensor-tsc --base main
+**Error**: amadeus-worktree must run from the main repo checkout, not from a sibling worktree at /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-2. Bolt worktrees are siblings of the main checkout, not nested.
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-09T07:45:44Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-worktree
+**Command**: amadeus-worktree create --slug fix-641-hook-project-dir --base main
+**Error**: amadeus-worktree must run from the main repo checkout, not from a sibling worktree at /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-2. Bolt worktrees are siblings of the main checkout, not nested.
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-09T07:45:44Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-worktree
+**Command**: amadeus-worktree create --slug fix-661-glossary-note --base main
+**Error**: amadeus-worktree must run from the main repo checkout, not from a sibling worktree at /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-2. Bolt worktrees are siblings of the main checkout, not nested.
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-09T07:47:04Z
+**Event**: BOLT_STARTED
+**Bolt names**: fix-656-installation-detect
+**Batch number**: 1
+**Walking skeleton**: false
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-09T07:47:04Z
+**Event**: BOLT_STARTED
+**Bolt names**: fix-657-sensor-tsc
+**Batch number**: 1
+**Walking skeleton**: false
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-09T07:47:04Z
+**Event**: BOLT_STARTED
+**Bolt names**: fix-641-hook-project-dir
+**Batch number**: 1
+**Walking skeleton**: false
+
+---
+
+## Bolt Started
+**Timestamp**: 2026-07-09T07:47:04Z
+**Event**: BOLT_STARTED
+**Bolt names**: fix-661-glossary-note
+**Batch number**: 1
+**Walking skeleton**: false
+
+---

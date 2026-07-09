@@ -10,6 +10,8 @@
 <!-- example: 2026-05-29T10:14:32Z — skipped the optional caching layer the stage prose suggested; the dataset is small enough that it adds risk -->
 - 2026-07-09T07:46:00Z — エンジンは bugfix スコープの code-generation を skeleton-gate ステージとして構造的に swarm 拒否する(tryEmitSwarm の isSkeletonGateStage ガード)ため、ユーザーの swarm 指示は engine 発 invoke-swarm ではなく、conductor 側の amadeus-bolt start --worktree ×4 + 並列 Task fan-out で充足する
 
+- 2026-07-09T07:52:00Z — Deviation: amadeus-worktree/amadeus-bolt --worktree は assertNotSiblingWorktree ガードにより sibling worktree セッションから実行不能(Issue #670 起票)。Bolt は --worktree なしで状態追跡し、実装分離はハーネスの Agent worktree isolation(origin/main から bolt/<slug> ブランチを切る)で代替
+
 ## Tradeoffs
 <!-- example: 2026-05-29T10:14:32Z — picked TDD over BDD this run; the team is unit-first and the domain is well-understood -->
 
