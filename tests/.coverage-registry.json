@@ -35,7 +35,7 @@
       "audit": 30,
       "scope": 9,
       "stage": 8,
-      "hook": 10,
+      "hook": 11,
       "subcommand": 73,
       "render-surface": 7
     }
@@ -2799,8 +2799,13 @@
       "unitClass": "hook",
       "unitId": "amadeus-mint-presence",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/unit/t203-mint-presence-classify.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "hook",

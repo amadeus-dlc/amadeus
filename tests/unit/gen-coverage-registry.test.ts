@@ -843,6 +843,7 @@ describe("mechanismsOf is body-derived (milestone 3)", () => {
     "unit/t20.test.ts",
     "unit/t201-runtime-graph-memory-path-record-dir.test.ts",
     "unit/t202-hook-project-dir-worktree-marker.test.ts",
+    "unit/t203-mint-presence-classify.test.ts",
     "unit/t27.test.ts",
     "unit/t29.test.ts",
     "unit/t30-hook-session-end.test.ts",
