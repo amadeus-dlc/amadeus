@@ -19,6 +19,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 - org/team/project の memory 層で既決の規範は選挙・質問の対象にせず、そのまま適用する。質問起草時に既決照合を先に行い、真に未決の設計判断だけを問う (learned 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:no-election-for-decided-norms -->
 - Construction は Bolt をできる限り並行実装する(相互依存が真に必要な箇所のみ直列)。delivery-planning / units-generation では Bolt・Unit を独立に切って並列バッチを最大化し、code-generation は swarm(prepare → 並列 fan-out → check → finalize)による worktree 分離の並行実装を既定とする (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:c1 -->
 - leader は作業をしない: 実装・成果物作成・intent の conductor 役はすべてメンバーへ委任し、leader はユーザー⇔メンバーの中継、ゲート執行、選挙の配信と集計、Issue/PR 管理、進捗監視に徹する。leader が手を動かし始めたら移管する (learned 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:leader-no-work -->
+- ステージゲート(プラン承認含む)は auto 承認とする: conductor は reviewer READY・センサー通過・成果物実在を確認したうえで、ユーザー中継なしで承認して先へ進む。ユーザーへのエスカレーションは (1) 選挙の3対3同数 (2) 失敗・ブロッカー (3) PR マージ判断(no-AI-merge ルール)のみ (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:auto-gate-approval -->
 ## Walking Skeleton
 
 この intent は既存フレームワークへのインクリメンタルな npm インストーラ実装だが、配布経路がユーザー体験の入口になるため、最初の Construction Bolt は小さな end-to-end スライスとして扱う。最初に最小の `@amadeus-dlc/setup` 実行経路を通し、以後の拡張前に人間がゲートで確認する。
