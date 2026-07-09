@@ -1090,7 +1090,7 @@
       "coveredBy": [
         {
           "file": "tests/unit/t203-codekb-rescan.test.ts",
-          "mechanism": "none"
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
@@ -1102,7 +1102,7 @@
       "coveredBy": [
         {
           "file": "tests/unit/t203-codekb-rescan.test.ts",
-          "mechanism": "none"
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
@@ -2126,7 +2126,7 @@
       "coveredBy": [
         {
           "file": "tests/unit/t203-codekb-rescan.test.ts",
-          "mechanism": "none"
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
@@ -2138,7 +2138,7 @@
       "coveredBy": [
         {
           "file": "tests/unit/t203-codekb-rescan.test.ts",
-          "mechanism": "none"
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
@@ -4478,6 +4478,10 @@
       "coveredBy": [
         {
           "file": "tests/unit/t182-codekb-placement.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/unit/t203-codekb-rescan.test.ts",
           "mechanism": "cli"
         }
       ],

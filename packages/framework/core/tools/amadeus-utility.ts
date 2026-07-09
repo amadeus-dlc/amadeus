@@ -2698,7 +2698,7 @@ function handleSpace(projectDir: string, positional: string[], flags: Record<str
 // the engine-resolved codekbRepoName (the lone recorded repo, or
 // basename(projectDir) when none is recorded). No mkdir, no state read, no audit —
 // mirrors the intent/space read-only query arms.
-function handleCodekbPath(projectDir: string, flags: Record<string, string>): void {
+export function handleCodekbPath(projectDir: string, flags: Record<string, string>): void {
   const asJson = flags.json === "true";
   const reScan = flags["re-scan"] === "true";
   const space = activeSpace(projectDir);
