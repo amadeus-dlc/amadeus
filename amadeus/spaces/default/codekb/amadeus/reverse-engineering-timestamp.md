@@ -5,7 +5,7 @@
 - Date: 2026-07-09
 - Intent: `260709-packaging-repair-batch`
 - Scope: `bugfix`
-- Repository: `/Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-1`
+- Repository: `amadeus`(origin remote 由来、#693 で統一。物理チェックアウトは worktree `claude-engineer-2`)
 - Stage: `reverse-engineering`(2.1)
 - 手法: diff-refresh(前回スキャンコミットからの差分更新。project.md 是正事項 cid:reverse-engineering:c1 に従う)
 - Base commit: `a1c79dc12`(前回 intent `260709-bug-zero-batch` のスキャン観測コミット)
@@ -33,7 +33,7 @@
 
 前 intent(`260709-bug-zero-batch`、観測 `a1c79dc12`)の codekb は #674/#675/#676/#677/#678/#668 の6バグを主眼に書かれていた。それら6件は本差分区間で該当コアツールが Modified されており(bug-zero-batch ワークフロー完了済み)、本スキャンの重点ではないため状態確定は行わず、記述は前 intent の記録として温存する。本スキャンは新規フォーカス #701/#702 を追記し、コアツール6件・setup src 3件・tests 再編の差分レベル更新を各成果物に折り込んだ。
 
-## 合成方針(Architect 想定)
+## 合成方針(Architect 実施)
 
 Developer スキャン結果を受け、9アーティファクト(business-overview / architecture / code-structure / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment / reverse-engineering-timestamp)を diff-refresh 方式で更新した。#701/#702 を code-quality-assessment.md に確認済み欠陥として追記、リリース契約と `package.ts --check` 契約を api-documentation.md に追補、コアツール/ setup src / tests 再編を architecture.md・component-inventory.md・code-structure.md に差分レベルで折り込んだ。依存マニフェスト変更はこの差分区間に現れず(実測)、technology-stack.md・dependencies.md・business-overview.md は変更不要と判断して温存した。
 
@@ -47,9 +47,4 @@ Developer スキャン結果を受け、9アーティファクト(business-overv
 - `api-documentation.md`(リリース契約・package.ts --check 契約)
 - 温存(変更なし): `technology-stack.md`・`dependencies.md`・`business-overview.md`
 
-## 統合記録(AC-668-4、2026-07-09)
-
-- **統合**: #668 修正(PR #693)マージ後、分裂していた4ディレクトリ(`amadeus`(2026-07-07 stale)/ `installer-distribution`(2026-07-08)/ `claude-leader`(2026-07-09)/ `claude-engineer-1`(2026-07-09))を本ディレクトリ `codekb/amadeus/` に一本化した
-- **正の根拠**: スキャンの系譜は amadeus(7/7)→ installer-distribution(7/8、base 8510281ae)→ claude-leader(7/9、base aff3b6671)→ claude-engineer-1(7/9、base aff3b6671 の leader 版をベースに observed a1c79dc12)という差分リフレッシュの連鎖であり、最新の claude-engineer-1 版が累積 superset。本ディレクトリはその claude-engineer-1 版の git mv
-- **包含チェック**: 4ディレクトリとも同一の9ファイル構成でファイル単位の欠落なし(削除分は git 履歴から復元可能)
-- **以後**: `codekb-path` は #668 修正により安定名 `amadeus` を返す(このコミットで実測済み)ため、次回スキャンは本ディレクトリへの差分リフレッシュとなる
+未更新(差分に実質変更なし): `business-overview.md` / `api-documentation.md` / `technology-stack.md` / `dependencies.md`。
