@@ -13,6 +13,8 @@
 
 ## Tradeoffs
 
+- 2026-07-09T22:25:00Z — PR #729 の codecov/patch fail(bun lcov が関数本体内コメント行に DA:0 を付与、13コメント行が未カバー扱い)への対処として、コメントブロックを関数外トップレベルへ移設(挙動変更なし、head 5250090d6)。codecov.yml の閾値緩和は検証ゲートの弱体化になるため選ばず、恒久対処は Issue #730 に切り出した。ローカル lcov 実測でパッチ未カバー 0 行を確認済み。
+
 - 2026-07-09T21:35:00Z — #670 と #685 を並行ディスパッチ。編集正本が非交差(amadeus-worktree.ts + t06 vs amadeus-state.ts/amadeus-lib.ts + t112 系)で、dist/self-install 再生成もファイル単位で非交差のため、直列化の待ち時間を回避した。
 
 ## Open questions
