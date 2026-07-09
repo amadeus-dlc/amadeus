@@ -782,3 +782,103 @@
 **Context**: construction > code-generation > memory.md
 
 ---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-09T15:09:13Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: code-generation
+**Recovered**: true
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-09T15:09:13Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state approve code-generation --project-dir /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-1
+**Error**: Refusing to complete "code-generation": it is a code-producing stage (workspace_requires) but no source work is evident outside the amadeus/ workspace tree. In a git workspace this means no uncommitted change and no code in the last commit; otherwise no source file exists. Planning docs alone do not satisfy Code Generation - write the code to the workspace.
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T15:10:25Z
+**Event**: SENSOR_FIRED
+**Fire id**: b43bdc75
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-ab6acf7c508eb7c4b/tests/integration/t92.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T15:10:26Z
+**Event**: SENSOR_PASSED
+**Fire id**: b43bdc75
+**Sensor ID**: linter
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-ab6acf7c508eb7c4b/tests/integration/t92.test.ts
+**Duration ms**: 837
+**Note**: tool-unavailable
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-09T15:10:26Z
+**Event**: SENSOR_FIRED
+**Fire id**: f062a1e7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-ab6acf7c508eb7c4b/tests/integration/t92.test.ts
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-09T15:10:27Z
+**Event**: SENSOR_PASSED
+**Fire id**: f062a1e7
+**Sensor ID**: type-check
+**Stage slug**: code-generation
+**Output path**: /Users/j5ik2o/Sources/j5ik2o.github.com/amadeus-dlc/amadeus/.claude/worktrees/agent-ab6acf7c508eb7c4b/tests/integration/t92.test.ts
+**Duration ms**: 997
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-09T15:11:53Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: amadeus-developer-agent
+**Agent ID**: ab6acf7c508eb7c4b
+**Message**: 是正完了・push 済み。\n\n## 是正報告 — PR #721 codex-2 NOT-READY 対応\n\n**新コミット sha**: `2511a701a`(push 済み: `d1b340f81..2511a701a`)\n\n**最終候補集合コード**(`tests/integration/t92.test.ts`):\n```ts\nconst PINNED_TSC_CANDIDATES = 
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-09T15:12:22Z
+**Event**: GATE_APPROVED
+**Stage**: code-generation
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-09T15:12:22Z
+**Event**: STAGE_COMPLETED
+**Stage**: code-generation
+**Details**: Stage Code Generation approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-09T15:12:22Z
+**Event**: STAGE_STARTED
+**Stage**: build-and-test
+**Agent**: amadeus-quality-agent
+
+---
+
+## Workflow Parked
+**Timestamp**: 2026-07-09T16:19:08Z
+**Event**: WORKFLOW_PARKED
+**Stage**: build-and-test
+**Timestamp**: 2026-07-09T16:19:08Z
+
+---
