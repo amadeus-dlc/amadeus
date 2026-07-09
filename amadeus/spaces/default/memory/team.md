@@ -18,35 +18,35 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 
 ### 意思決定とエスカレーション
 
-- **ユーザーエスカレーションの正準リスト**(全ノルムはこのリストを参照する): (1) 選挙の可否同数 (2) PR マージ判断(no-AI-merge) (3) 人間の関与が本質の事項 — 例外承認・外部サービス操作・ノルム整理の迷い・human-presence を要するゲートの物理承認 (user decision 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:escalation-canonical -->
-- 判断を要する事項は常にエージェント選挙にかけ、leader を含む誰も単独で決めない(設計方針・修正方式・トリアージ・ブロッカー対応・規範の解釈など)。既決ルールの機械的執行(承認済みゲートの delegate 発行、ユーザー承認済みマージの実行など)は判断ではなく執行として選挙不要。選挙か執行か迷う場合は選挙に倒す。エスカレーションは正準リストに従う (user decision 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:always-elect -->
-- intent の明確化質問はエージェント間選挙で回答を作る: leader が質問を全メンバーへ配信し、各自がコード・Issue を実測確認して投票、多数決で採用する。ユーザーへのエスカレーションは可否同数のときのみ。多数決が成立した質問は選挙結果をそのまま採用する (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:election-protocol -->
-- org/team/project の memory 層で既決の規範は選挙・質問の対象にせず、そのまま適用する。質問起草時に既決照合を先に行い、真に未決の設計判断だけを問う。例外: ノルム矛盾監査の場での再編提案は、既決ノルム自体を選挙対象にしてよい (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:no-election-for-decided-norms -->
-- 失敗・ブロッカーが発生したら、conductor は状況と解決の選択肢(回避策・修正案・スコープ変更等、可能な限り複数)を leader へ送り、leader がエージェント間選挙にかけてより良い選択を探す。多数決成立なら結果を採用して続行し、エスカレーションは正準リストに従う (user decision 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:blocker-election -->
-- 人間判断が必要な事項(正準リスト該当分)は AskUserQuestion で提示し、放置せず必ず承認を取り切る。leader は未回答の判断事項を台帳として追跡し、回答が滞っている場合は忘れられている前提で催促する。判断待ちのまま暗黙に先へ進まない (user decision 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:pending-decision-tracking -->
+- **ユーザーエスカレーションの正準リスト**(全ノルムはこのリストを参照する): (1) 選挙の可否同数 (2) PR マージ判断(no-AI-merge) (3) 人間の関与が本質の事項 — 例外承認・外部サービス操作・ノルム整理の迷い・human-presence を要するゲートの物理承認 (user decision 2026-07-09) <!-- cid:requirements-analysis:escalation-canonical -->
+- 判断を要する事項は常にエージェント選挙にかけ、leader を含む誰も単独で決めない(設計方針・修正方式・トリアージ・ブロッカー対応・規範の解釈など)。既決ルールの機械的執行(承認済みゲートの delegate 発行、ユーザー承認済みマージの実行など)は判断ではなく執行として選挙不要。選挙か執行か迷う場合は選挙に倒す。エスカレーションは正準リストに従う (user decision 2026-07-09) <!-- cid:requirements-analysis:always-elect -->
+- intent の明確化質問はエージェント間選挙で回答を作る: leader が質問を全メンバーへ配信し、各自がコード・Issue を実測確認して投票、多数決で採用する。ユーザーへのエスカレーションは可否同数のときのみ。多数決が成立した質問は選挙結果をそのまま採用する (learned 2026-07-09) <!-- cid:requirements-analysis:election-protocol -->
+- org/team/project の memory 層で既決の規範は選挙・質問の対象にせず、そのまま適用する。質問起草時に既決照合を先に行い、真に未決の設計判断だけを問う。例外: ノルム矛盾監査の場での再編提案は、既決ノルム自体を選挙対象にしてよい (learned 2026-07-09) <!-- cid:requirements-analysis:no-election-for-decided-norms -->
+- 失敗・ブロッカーが発生したら、conductor は状況と解決の選択肢(回避策・修正案・スコープ変更等、可能な限り複数)を leader へ送り、leader がエージェント間選挙にかけてより良い選択を探す。多数決成立なら結果を採用して続行し、エスカレーションは正準リストに従う (user decision 2026-07-09) <!-- cid:requirements-analysis:blocker-election -->
+- 人間判断が必要な事項(正準リスト該当分)は AskUserQuestion で提示し、放置せず必ず承認を取り切る。leader は未回答の判断事項を台帳として追跡し、回答が滞っている場合は忘れられている前提で催促する。判断待ちのまま暗黙に先へ進まない (user decision 2026-07-09) <!-- cid:requirements-analysis:pending-decision-tracking -->
 
 ### 役割と指揮系統
 
-- leader は作業をしない: 実装・成果物作成・intent の conductor 役はすべてメンバーへ委任し、leader はユーザー⇔メンバーの中継、ゲート執行、選挙の配信と集計、Issue/PR 管理、進捗監視に徹する。leader が手を動かし始めたら移管する。**leader が自ら行う執行業務**(作業ではない): ゲート執行(delegate-approval 発行含む)、ユーザー承認済みマージの実行、§13 ノルム persist と norm PR の作成、自分の record・ワークスペースの整合維持 (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:leader-no-work -->
-- intent・タスクのディスパッチは leader のみが行う。メンバーは割り当てられていない作業を自発的に開始しない(発見事項は Issue 起票・報告まで)。作業が完了したら leader へ報告し、次の作業指示を仰いで待機する (user decision 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:leader-dispatch-authority -->
-- メンバーの役割分担: codex メンバーにはレビュー・ディープリサーチ(調査・検証・トリアージ)系のタスクを割り当てる。実装・conductor 役は claude メンバーが担う(CI 整備などユーザーが明示指定した場合は例外)。選挙は全員参加のまま (user decision 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:codex-role-specialization -->
-- 進捗管理は報告制: leader はメンバーへ進捗ポーリングをしない。タスクディスパッチ時に完了・ブロッカーの自発報告を義務付け、報告が来るまで待つ(長時間の沈黙に対するヘルスチェックはユーザー承認の例外として可) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:push-reporting -->
-- フロー効率よりリソース効率を優先する: 単一アイテムのリードタイム最適化のために全体を待たせない。leader は逐次のピンポンを避けて作業をバッチで委任し、メンバーの手が空かないよう並行割当を維持する (user decision 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:resource-efficiency -->
-- タスク規模に応じてサブエージェントを有効活用する: 小さな作業はインラインで済ませ、複数ファイル・複数観点・並列化可能な作業は Task サブエージェントへ分割して fan-out する(worktree 隔離が必要な並行実装は隔離付きで)。隔離規律は Corrections の worktree ディスパッチ規律(cid:code-generation:c2)に従う。サブエージェントのモデルは定義の model: ピンに従う(高判断=opus) (user decision 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:subagent-utilization -->
+- leader は作業をしない: 実装・成果物作成・intent の conductor 役はすべてメンバーへ委任し、leader はユーザー⇔メンバーの中継、ゲート執行、選挙の配信と集計、Issue/PR 管理、進捗監視に徹する。leader が手を動かし始めたら移管する。**leader が自ら行う執行業務**(作業ではない): ゲート執行(delegate-approval 発行含む)、ユーザー承認済みマージの実行、§13 ノルム persist と norm PR の作成、自分の record・ワークスペースの整合維持 (learned 2026-07-09) <!-- cid:requirements-analysis:leader-no-work -->
+- intent・タスクのディスパッチは leader のみが行う。メンバーは割り当てられていない作業を自発的に開始しない(発見事項は Issue 起票・報告まで)。作業が完了したら leader へ報告し、次の作業指示を仰いで待機する (user decision 2026-07-09) <!-- cid:requirements-analysis:leader-dispatch-authority -->
+- メンバーの役割分担: codex メンバーにはレビュー・ディープリサーチ(調査・検証・トリアージ)系のタスクを割り当てる。実装・conductor 役は claude メンバーが担う(CI 整備などユーザーが明示指定した場合は例外)。選挙は全員参加のまま (user decision 2026-07-09) <!-- cid:requirements-analysis:codex-role-specialization -->
+- 進捗管理は報告制: leader はメンバーへ進捗ポーリングをしない。タスクディスパッチ時に完了・ブロッカーの自発報告を義務付け、報告が来るまで待つ(長時間の沈黙に対するヘルスチェックはユーザー承認の例外として可) (learned 2026-07-09) <!-- cid:requirements-analysis:push-reporting -->
+- フロー効率よりリソース効率を優先する: 単一アイテムのリードタイム最適化のために全体を待たせない。leader は逐次のピンポンを避けて作業をバッチで委任し、メンバーの手が空かないよう並行割当を維持する (user decision 2026-07-09) <!-- cid:requirements-analysis:resource-efficiency -->
+- タスク規模に応じてサブエージェントを有効活用する: 小さな作業はインラインで済ませ、複数ファイル・複数観点・並列化可能な作業は Task サブエージェントへ分割して fan-out する(worktree 隔離が必要な並行実装は隔離付きで)。隔離規律は Corrections の worktree ディスパッチ規律(cid:code-generation:c2)に従う。サブエージェントのモデルは定義の model: ピンに従う(高判断=opus) (user decision 2026-07-09) <!-- cid:requirements-analysis:subagent-utilization -->
 - サブエージェントが自前のモニタ/バックグラウンド待ちでターンを終えたまま再開通知が来ない場合がある。conductor はディスパッチ先の無応答を検知したら worktree/成果物の実状態を直接検分し、作業を引き取って完遂してよい(引き取り時は差分検分と検証コマンドの再実行を必須とする) (learned 2026-07-09) <!-- cid:code-generation:c5 -->
 
 ### ゲートとマージ
 
-- ステージゲート(プラン承認含む)は auto 承認とする: conductor は reviewer READY・センサー通過・成果物実在を確認して先へ進む。承認の実行経路は委任承認 provenance(#671 実装済み): conductor がゲート準備完了を leader へ報告 → leader が delegate-approval を発行(leader セッションの実 HUMAN_TURN が根拠)→ conductor が approve をコミット。エスカレーションは正準リストに従う (user decision 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:auto-gate-approval -->
-- PR マージの執行手順: leader が PR ごとに CI green・レビュー READY を実測確認してユーザーへ「これをマージしますか?」と確認し、承認を得たら leader が gh pr merge(スカッシュ)を実行する。人間が GitHub のマージボタンを押す運用はしない。Forbidden の no-AI-merge ルールは「承認なしの自発マージ禁止」の意味であり、この承認後執行と両立する (user decision 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:leader-executes-merge -->
-- PR を作成したら、作成者(conductor/メンバー)は即座に空いている codex メンバーへ直接レビューを依頼し、leader への PR 報告にはレビュアー名を含める。複数 PR が並ぶときは codex 3名に分散する。レビュー観点の既定: 完全性(grep 等の実測)、dist/self-install 同期、surgical、落ちる実証、検証エビデンスの実測 exit code (user decision 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:codex-review-on-pr -->
+- ステージゲート(プラン承認含む)は auto 承認とする: conductor は reviewer READY・センサー通過・成果物実在を確認して先へ進む。承認の実行経路は委任承認 provenance(#671 実装済み): conductor がゲート準備完了を leader へ報告 → leader が delegate-approval を発行(leader セッションの実 HUMAN_TURN が根拠)→ conductor が approve をコミット。エスカレーションは正準リストに従う (user decision 2026-07-09) <!-- cid:requirements-analysis:auto-gate-approval -->
+- PR マージの執行手順: leader が PR ごとに CI green・レビュー READY を実測確認してユーザーへ「これをマージしますか?」と確認し、承認を得たら leader が gh pr merge(スカッシュ)を実行する。人間が GitHub のマージボタンを押す運用はしない。Forbidden の no-AI-merge ルールは「承認なしの自発マージ禁止」の意味であり、この承認後執行と両立する (user decision 2026-07-09) <!-- cid:requirements-analysis:leader-executes-merge -->
+- PR を作成したら、作成者(conductor/メンバー)は即座に空いている codex メンバーへ直接レビューを依頼し、leader への PR 報告にはレビュアー名を含める。複数 PR が並ぶときは codex 3名に分散する。レビュー観点の既定: 完全性(grep 等の実測)、dist/self-install 同期、surgical、落ちる実証、検証エビデンスの実測 exit code (user decision 2026-07-09) <!-- cid:requirements-analysis:codex-review-on-pr -->
 
 ### バグとスコープ
 
-- leader はオープンバグゼロを目標として運営する: バグの起票・トリアージ・バッチ編成・割当を能動的に回し、アイドルメンバーを作らない。実装待ちのバグには codex の事前深掘り(根本原因・再現・修正案の選択肢)を先行させ、requirements・選挙を高速化する (user decision 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:bug-zero-goal -->
-- 当面の対応スコープはバグのみ: 新規タスク・intent はバグ修正に限定し、enhancement 系は起票・トリアージまでに留めて着手しない。進行中の enhancement intent は park のまま凍結。例外: (1) バグ対応自体の前提となるインフラ作業(例: #671) (2) ユーザーが P0 指定したタスク(#683、#684 とその分割 Issue — #697 の PBT は #684 Phase B としてのみ実装可。#688 単体の本格導入は凍結継続。2026-07-09 ユーザー裁定) (user decision 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:bugs-only-scope -->
-- 潜在バグ探索タスクでは修正を行わない: 発見バグは file:line で裏取りした実測のみを GitHub Issue に起票する(推測起票・重複起票禁止)。修正は claude メンバーへの別タスクとして割り当てる (user decision 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:bughunt-file-only -->
-- Issue の起票と検証: amadeus の利用中に見つけた不備・不具合・改善点は必ず Issue として起票する(leader 含む誰が見つけても、自発起票・ユーザー指示起票を問わず)。起票したらハルシネーション対策レビューとして、起票者以外のメンバー2名が主張を実コードと突き合わせ、実在確認・訂正・却下を Issue コメントに残す。2名の確認が揃うまでその Issue は修正バッチに組み込まない (user decision 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:issue-cross-review -->
+- leader はオープンバグゼロを目標として運営する: バグの起票・トリアージ・バッチ編成・割当を能動的に回し、アイドルメンバーを作らない。実装待ちのバグには codex の事前深掘り(根本原因・再現・修正案の選択肢)を先行させ、requirements・選挙を高速化する (user decision 2026-07-09) <!-- cid:requirements-analysis:bug-zero-goal -->
+- 当面の対応スコープはバグのみ: 新規タスク・intent はバグ修正に限定し、enhancement 系は起票・トリアージまでに留めて着手しない。進行中の enhancement intent は park のまま凍結。例外: (1) バグ対応自体の前提となるインフラ作業(例: #671) (2) ユーザーが P0 指定したタスク(#683、#684 とその分割 Issue — #697 の PBT は #684 Phase B としてのみ実装可。#688 単体の本格導入は凍結継続。2026-07-09 ユーザー裁定) (user decision 2026-07-09) <!-- cid:requirements-analysis:bugs-only-scope -->
+- 潜在バグ探索タスクでは修正を行わない: 発見バグは file:line で裏取りした実測のみを GitHub Issue に起票する(推測起票・重複起票禁止)。修正は claude メンバーへの別タスクとして割り当てる (user decision 2026-07-09) <!-- cid:requirements-analysis:bughunt-file-only -->
+- Issue の起票と検証: amadeus の利用中に見つけた不備・不具合・改善点は必ず Issue として起票する(leader 含む誰が見つけても、自発起票・ユーザー指示起票を問わず)。起票したらハルシネーション対策レビューとして、起票者以外のメンバー2名が主張を実コードと突き合わせ、実在確認・訂正・却下を Issue コメントに残す。2名の確認が揃うまでその Issue は修正バッチに組み込まない (user decision 2026-07-09) <!-- cid:requirements-analysis:issue-cross-review -->
 
 ### 並行実装
 
@@ -54,9 +54,9 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 
 ### ノルムの保守
 
-- ノルム(memory 層のルール)は定期的に論理矛盾を監査する: 大量追加の直後・intent 完了の節目で、矛盾・重複・失効(暫定運用の期限切れ等)を棚卸しし、発見したら整理案を選挙にかけて再編する。矛盾したルールの放置はエージェントのパフォーマンス悪化要因として扱う (user decision 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:norm-consistency-review -->
-- ノルム整理で判断に迷う場合(矛盾か意図的な例外か不明、統合すると意味が変わりうる、暫定と恒久の境界が曖昧など)は、選挙で無理に決めず必ずユーザーへエスカレーションする (user decision 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:norm-review-escalation -->
-- ノルム変更(memory 層への追加・整理)がある程度溜まったら、leader は変更をまとめた PR を作成し、他メンバー(最低2名、codex を含む)のレビューを受けてから main へマージする(マージは従来どおり人間承認)。ノルムの逐次コミットは leader ブランチ上のチェックポイントとして行い、main への反映は必ずこの PR 経由とする (user decision 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:norm-changes-via-pr -->
+- ノルム(memory 層のルール)は定期的に論理矛盾を監査する: 大量追加の直後・intent 完了の節目で、矛盾・重複・失効(暫定運用の期限切れ等)を棚卸しし、発見したら整理案を選挙にかけて再編する。矛盾したルールの放置はエージェントのパフォーマンス悪化要因として扱う (user decision 2026-07-09) <!-- cid:requirements-analysis:norm-consistency-review -->
+- ノルム整理で判断に迷う場合(矛盾か意図的な例外か不明、統合すると意味が変わりうる、暫定と恒久の境界が曖昧など)は、選挙で無理に決めず必ずユーザーへエスカレーションする (user decision 2026-07-09) <!-- cid:requirements-analysis:norm-review-escalation -->
+- ノルム変更(memory 層への追加・整理)がある程度溜まったら、leader は変更をまとめた PR を作成し、他メンバー(最低2名、codex を含む)のレビューを受けてから main へマージする(マージは従来どおり人間承認)。ノルムの逐次コミットは leader ブランチ上のチェックポイントとして行い、main への反映は必ずこの PR 経由とする (user decision 2026-07-09) <!-- cid:requirements-analysis:norm-changes-via-pr -->
 
 ## Walking Skeleton
 
@@ -88,8 +88,8 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 - NEVER 要求されていない後方互換レイヤー・フォールバック分岐・非推奨API のシム・移行用の二重実装を追加しない。トランクベース開発で互換負債を溜めないため、古い挙動は削除して置き換える。互換維持が必要なときは requirements/NFR に明示された場合にのみ実装し、根拠を成果物に残す
 - NEVER 既存テストの赤を「自分と無関係」を理由に無視して作業を続行したり、赤いスイートをグリーン・完了として報告したりしない。まずベースラインを確認し、直す(ボーイスカウト)か Issue 起票でフラグするかのいずれかを必ず行う
 - NEVER 検証・ゲート・チェックの結果を実行結果から導出せずに構築しない — status のハードコード、自己参照比較(x === x)、両分岐が同一の条件式、どのコードも消費しない検証用フィールドはすべて「検証劇場」であり、偽の信頼を生む分だけゲート不在より悪い
-- NEVER AI(leader・メンバー・サブエージェントを問わず)が PR のマージを自発的に実行しない。マージはその PR について人間の明示承認を得てから実行する。過去の承認や類似 PR の承認をもって次のマージの承認と見なさない (user decision 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:no-ai-merge -->
-- NEVER leader・メンバーがメンバーセッションのライフサイクル操作(起動・再起動・despawn、tmux 直接操作を含む)を行わない。セッションは人間が identity ランナー(scripts/run-claude.sh / run-codex.sh、CLAUDE_IDENTITY 指定)で起動する。エージェント側は再起動が必要な状況の案内までに留める (user decision 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:no-session-lifecycle-ops -->
+- NEVER AI(leader・メンバー・サブエージェントを問わず)が PR のマージを自発的に実行しない。マージはその PR について人間の明示承認を得てから実行する。過去の承認や類似 PR の承認をもって次のマージの承認と見なさない (user decision 2026-07-09) <!-- cid:requirements-analysis:no-ai-merge -->
+- NEVER leader・メンバーがメンバーセッションのライフサイクル操作(起動・再起動・despawn、tmux 直接操作を含む)を行わない。セッションは人間が identity ランナー(scripts/run-claude.sh / run-codex.sh、CLAUDE_IDENTITY 指定)で起動する。エージェント側は再起動が必要な状況の案内までに留める (user decision 2026-07-09) <!-- cid:requirements-analysis:no-session-lifecycle-ops -->
 
 ## Mandated
 
@@ -101,6 +101,6 @@ TypeScript/ESM と Bun 直接実行を前提に、既存の `amadeus-` プレフ
 
 <!-- 自己学習ループがここに追記する。 -->
 - Bolt のレビューが READY になった時点で「Bolt ブランチ切り出し+PR 発行」を明示的にタスク化する。エンジン指令・stage ファイルに現れない Way of Working 規範(Bolt 単位 PR、タグ発行等)は、該当イベント発生時に conductor がタスクリストへ載せて追跡する — 指令駆動ループの外にある規範は、タスク化しない限り実行されない(installer-distribution Bolt 1〜3 で PR 分割漏れを観測、遡及分割で是正) (learned 2026-07-08) <!-- cid:code-generation:code-generation:bolt-pr-taskization -->
-- human-presence gate は conductor セッション自身の HUMAN_TURN を要求するため、遠隔 conductor の承認は委任承認 provenance(#671、実装済み)で行う: conductor がゲート準備完了を leader へ報告 → leader が delegate-approval を発行 → conductor が approve を再実行。ゲートの緩和・偽装(env での skip 等)は検証劇場 Forbidden により禁止。(superseded: #671 実装前の暫定運用「ユーザーが対象 tmux に1行タイプ」は 2026-07-09 の #671 マージで失効) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:human-presence-interim -->
-- git stash refs は同一リポの全 worktree・全エージェントで共有される。共有されうる worktree では引数なしの git stash pop を使わず、stash は必ずラベル付きで作成し(git stash push -m)、適用はラベル/SHA を明示して行う(stash 交差適用事故を実観測、2026-07-09)。他エージェントの WIP stash に触れてしまった場合は内容のバイト一致を確認し、即座に所有者へ報告する。陳腐化した stash の不可逆 drop は急がず、無害なら放置してよい (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:stash-discipline -->
+- human-presence gate は conductor セッション自身の HUMAN_TURN を要求するため、遠隔 conductor の承認は委任承認 provenance(#671、実装済み)で行う: conductor がゲート準備完了を leader へ報告 → leader が delegate-approval を発行 → conductor が approve を再実行。ゲートの緩和・偽装(env での skip 等)は検証劇場 Forbidden により禁止。(superseded: #671 実装前の暫定運用「ユーザーが対象 tmux に1行タイプ」は 2026-07-09 の #671 マージで失効) (learned 2026-07-09) <!-- cid:requirements-analysis:human-presence-interim -->
+- git stash refs は同一リポの全 worktree・全エージェントで共有される。共有されうる worktree では引数なしの git stash pop を使わず、stash は必ずラベル付きで作成し(git stash push -m)、適用はラベル/SHA を明示して行う(stash 交差適用事故を実観測、2026-07-09)。他エージェントの WIP stash に触れてしまった場合は内容のバイト一致を確認し、即座に所有者へ報告する。陳腐化した stash の不可逆 drop は急がず、無害なら放置してよい (learned 2026-07-09) <!-- cid:requirements-analysis:stash-discipline -->
 - 並列実装をサブエージェントの worktree 隔離でファンアウトするとき、プロンプトに conductor 本線ツリーの絶対パスを書かない(参照ファイルは worktree 内相対パスで指示する)。あわせて『割当 worktree(タスク環境の worktreePath)以外での git 操作(checkout/stash/reset)禁止』を毎回明示する — 本線パスの混入は複数エージェントの本線誤入・共有 stash 汚染・未コミット工程記録の消失を引き起こす(bug-zero-batch code-generation で実測、patch-id 照合で復旧) (learned 2026-07-09) <!-- cid:code-generation:c2 -->
