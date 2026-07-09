@@ -1490,7 +1490,10 @@ function cloneId(projectDir: string): string {
 // gate), which is what makes a same-turn cascade across DIFFERENT stages refuse
 // correctly; there is no per-stage scoping.
 const GATE_RESOLUTION_EVENTS = new Set(["GATE_APPROVED", "GATE_REJECTED", "QUESTION_ANSWERED"]);
-export function humanActedSinceGate(projectDir: string): boolean {
+export function humanActedSinceGate(
+  projectDir: string,
+  verb?: "approve" | "reject"
+): boolean {
   const audit = readAllAuditShards(projectDir);
   if (audit.length === 0) return true; // no ledger → no presence tracking → fail open
   const blocks = audit.replace(/\r\n/g, "\n").split(/\n---\n/);
@@ -1499,13 +1502,25 @@ export function humanActedSinceGate(projectDir: string): boolean {
     const ev = auditBlockField(blocks[i], "Event");
     if (!ev) continue;
     const isHumanTurn = ev === "HUMAN_TURN";
-    // A delegated approval (#671) is a human act ONLY when its grounding
-    // HUMAN_TURN is verified to physically exist in the issuer shard. An
-    // unverifiable delegation is dropped entirely (not counted as a human act,
-    // not counted as a resolution) so a forged block can neither manufacture
-    // presence nor consume the freshness boundary.
-    const isDelegated =
-      ev === "DELEGATED_APPROVAL" && verifyDelegatedApproval(projectDir, blocks[i]);
+    // A delegated provenance line (#671 approval, #685 rejection) is a human act
+    // ONLY when its grounding HUMAN_TURN is verified to physically exist in the
+    // issuer shard. An unverifiable delegation is dropped entirely (not counted
+    // as a human act, not counted as a resolution) so a forged block can neither
+    // manufacture presence nor consume the freshness boundary.
+    //
+    // Verb scoping (#685): a DELEGATED_APPROVAL opens ONLY an approve gate and a
+    // DELEGATED_REJECTION opens ONLY a reject gate — never each other. When a
+    // verb is given, the off-verb delegation is ignored completely (neither a
+    // human act nor a resolution boundary). When verb is omitted (the general
+    // predicate — interview answers, delegate-issuance grounding), both verified
+    // types count. This is the fix for the mixing bug where a verified approval
+    // delegation falsely satisfied a reject gate.
+    let isDelegated = false;
+    if (ev === "DELEGATED_APPROVAL" && verb !== "reject") {
+      isDelegated = verifyDelegatedProvenance(projectDir, blocks[i]);
+    } else if (ev === "DELEGATED_REJECTION" && verb !== "approve") {
+      isDelegated = verifyDelegatedProvenance(projectDir, blocks[i]);
+    }
     if (!GATE_RESOLUTION_EVENTS.has(ev) && !isHumanTurn && !isDelegated) continue;
     events.push({
       ts: auditBlockField(blocks[i], "Timestamp") ?? "",
@@ -1528,10 +1543,14 @@ export function humanActedSinceGate(projectDir: string): boolean {
   return lastHuman > lastResolution && lastHuman !== -1;
 }
 
-// Verify a DELEGATED_APPROVAL block (#671) is grounded in a REAL human turn.
-// The block carries the issuer's coordinates (space, intent record dir, audit
-// shard filename, HUMAN_TURN timestamp); this reads that specific shard and
-// confirms a HUMAN_TURN event with the referenced timestamp physically exists.
+// Verify a delegated-provenance block (#671 DELEGATED_APPROVAL, #685
+// DELEGATED_REJECTION) is grounded in a REAL human turn. Both event types carry
+// the identical issuer coordinates (space, intent record dir, audit shard
+// filename, HUMAN_TURN timestamp), so ONE verifier serves both verbs: it reads
+// that specific shard and confirms a HUMAN_TURN event with the referenced
+// timestamp physically exists. Verb scoping (which verb a given block may open)
+// is decided by the caller (humanActedSinceGate); this function only proves the
+// grounding is real, independent of verb.
 //
 // Forgery resistance: HUMAN_TURN lines are written ONLY by the UserPromptSubmit
 // hook on a real human prompt — no tool a model can call emits one. So a
@@ -1542,7 +1561,7 @@ export function humanActedSinceGate(projectDir: string): boolean {
 // Fail-closed on every anomaly (missing/malformed field, path-shape violation,
 // unreadable shard, absent HUMAN_TURN). Path-shape guards reject any separator
 // or traversal so a crafted field cannot escape the intents tree.
-export function verifyDelegatedApproval(projectDir: string, block: string): boolean {
+export function verifyDelegatedProvenance(projectDir: string, block: string): boolean {
   const issuerIntent = auditBlockField(block, "Issuer Intent");
   const issuerShard = auditBlockField(block, "Issuer Shard");
   const issuerHumanTs = auditBlockField(block, "Issuer Human Ts");

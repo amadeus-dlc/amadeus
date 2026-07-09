@@ -381,10 +381,13 @@ describe("t188: human-presence approval gate (ledger-event design)", () => {
     });
 
     // AC-675-3: the reject guard must go through the SAME humanActedSinceGate
-    // predicate approve uses, so a #671 delegated-approval line that opens the
-    // gate for approve also opens it for reject. Exercised here via the
-    // autonomy carve-out, which is one of the three legs the shared helper
-    // dispatches through for both verbs.
+    // predicate approve uses (the shared assertHumanPresentForGateResolution
+    // helper), so its three legs — autonomy carve-out, suite bypass, and the
+    // ledger presence check — dispatch identically for both verbs. NOTE (#685):
+    // delegated provenance inside that predicate is now VERB-SCOPED — a
+    // delegated-approval opens ONLY approve and a delegated-rejection opens ONLY
+    // reject — so the shared path no longer means an approval delegation opens a
+    // reject gate. Exercised here via the autonomy carve-out (verb-independent).
     test("autonomous Construction rejects with NO HUMAN_TURN (carve-out, same as approve)", () => {
       const slug = field(proj, "Current Stage");
       guarded(proj, ["checkbox", `${slug}=in-progress`]);

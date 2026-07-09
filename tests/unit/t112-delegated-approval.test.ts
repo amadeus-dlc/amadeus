@@ -17,11 +17,12 @@
 // would be false-greens; here they must stay red (refused).
 //
 // Subject under test (shipped distributable):
-//   - dist/claude/.claude/tools/amadeus-lib.ts : verifyDelegatedApproval,
-//       humanActedSinceGate (delegated-approval branch)
-//   - grounded by amadeus-state.ts delegate-approval (writer), covered via the
-//       same audit blocks it emits.
+//   - dist/claude/.claude/tools/amadeus-lib.ts : verifyDelegatedProvenance,
+//       humanActedSinceGate (verb-scoped delegated-provenance branch)
+//   - grounded by amadeus-state.ts delegate-approval / delegate-rejection
+//       (writers), covered via the same audit blocks they emit.
 import { afterAll, describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -29,7 +30,7 @@ import { appendAuditEntry } from "../../dist/claude/.claude/tools/amadeus-audit.
 import {
   auditShardName,
   humanActedSinceGate,
-  verifyDelegatedApproval,
+  verifyDelegatedProvenance,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const tmpRoots: string[] = [];
@@ -68,7 +69,7 @@ function delegationBlock(fields: Record<string, string>): string {
   return `${b}\n---\n`;
 }
 
-describe("verifyDelegatedApproval — grounding proof (#671)", () => {
+describe("verifyDelegatedProvenance — grounding proof (#671)", () => {
   test("accepts a delegation grounded in a real HUMAN_TURN in the issuer shard", () => {
     const { root, issuer } = scaffold();
     const ht = appendAuditEntry("HUMAN_TURN", {}, root, issuer);
@@ -79,7 +80,7 @@ describe("verifyDelegatedApproval — grounding proof (#671)", () => {
       "Issuer Shard": auditShardName(root),
       "Issuer Human Ts": ht.timestamp,
     });
-    expect(verifyDelegatedApproval(root, block)).toBe(true);
+    expect(verifyDelegatedProvenance(root, block)).toBe(true);
   });
 
   test("rejects a delegation referencing a shard that does not exist (forged)", () => {
@@ -92,7 +93,7 @@ describe("verifyDelegatedApproval — grounding proof (#671)", () => {
       "Issuer Shard": "no-such-shard.md",
       "Issuer Human Ts": "2026-07-09T09:00:00.000Z",
     });
-    expect(verifyDelegatedApproval(root, block)).toBe(false);
+    expect(verifyDelegatedProvenance(root, block)).toBe(false);
   });
 
   test("rejects when the issuer shard exists but holds no HUMAN_TURN", () => {
@@ -106,7 +107,7 @@ describe("verifyDelegatedApproval — grounding proof (#671)", () => {
       "Issuer Shard": auditShardName(root),
       "Issuer Human Ts": started.timestamp,
     });
-    expect(verifyDelegatedApproval(root, block)).toBe(false);
+    expect(verifyDelegatedProvenance(root, block)).toBe(false);
   });
 
   test("rejects a tampered timestamp that no HUMAN_TURN in the shard matches", () => {
@@ -119,7 +120,7 @@ describe("verifyDelegatedApproval — grounding proof (#671)", () => {
       "Issuer Shard": auditShardName(root),
       "Issuer Human Ts": "1999-01-01T00:00:00.000Z", // no such HUMAN_TURN
     });
-    expect(verifyDelegatedApproval(root, block)).toBe(false);
+    expect(verifyDelegatedProvenance(root, block)).toBe(false);
   });
 
   test("rejects path-traversal in the issuer shard / intent fields", () => {
@@ -132,7 +133,7 @@ describe("verifyDelegatedApproval — grounding proof (#671)", () => {
       "Issuer Shard": "../../../../etc/hosts",
       "Issuer Human Ts": "2026-07-09T09:00:00.000Z",
     });
-    expect(verifyDelegatedApproval(root, traversalShard)).toBe(false);
+    expect(verifyDelegatedProvenance(root, traversalShard)).toBe(false);
     const traversalIntent = delegationBlock({
       Stage: "market-research",
       "Issuer Space": "default",
@@ -140,13 +141,13 @@ describe("verifyDelegatedApproval — grounding proof (#671)", () => {
       "Issuer Shard": auditShardName(root),
       "Issuer Human Ts": "2026-07-09T09:00:00.000Z",
     });
-    expect(verifyDelegatedApproval(root, traversalIntent)).toBe(false);
+    expect(verifyDelegatedProvenance(root, traversalIntent)).toBe(false);
   });
 
   test("rejects a block missing the issuer fields", () => {
     const { root } = scaffold();
     const block = delegationBlock({ Stage: "market-research" });
-    expect(verifyDelegatedApproval(root, block)).toBe(false);
+    expect(verifyDelegatedProvenance(root, block)).toBe(false);
   });
 });
 
@@ -189,5 +190,160 @@ describe("humanActedSinceGate — delegated approval opens the conductor gate (#
       conductor,
     );
     expect(humanActedSinceGate(root)).toBe(false);
+  });
+});
+
+// #685 — delegated REJECTION, verb-scoped presence. The reject-side mirror of
+// #671: a leader records a DELEGATED_REJECTION into the conductor intent's audit
+// dir, grounded in a real HUMAN_TURN on the leader's own ledger, so the
+// conductor's REJECT gate can open remotely. The security property is symmetric
+// (a fabricated grounding must stay refused) PLUS a verb wall: a DELEGATED_
+// APPROVAL must never open a REJECT gate and vice versa (FR-1.4). That verb wall
+// is the current mixing bug's regression — before the fix humanActedSinceGate
+// counted any verified delegation regardless of verb, so an approval delegation
+// falsely opened the reject gate.
+describe("humanActedSinceGate — verb-scoped delegated rejection opens the conductor REJECT gate (#685)", () => {
+  test("AC-1a: a verified DELEGATED_REJECTION after the last resolution opens the REJECT gate", () => {
+    const { root, conductor, issuer } = scaffold();
+    appendAuditEntry("GATE_APPROVED", { Stage: "intent-capture" }, root, conductor);
+    const ht = appendAuditEntry("HUMAN_TURN", {}, root, issuer);
+    appendAuditEntry(
+      "DELEGATED_REJECTION",
+      {
+        Stage: "market-research",
+        "Issuer Space": "default",
+        "Issuer Intent": issuer,
+        "Issuer Shard": auditShardName(root),
+        "Issuer Human Ts": ht.timestamp,
+        Feedback: "revise the framing",
+      },
+      root,
+      conductor,
+    );
+    expect(humanActedSinceGate(root, "reject")).toBe(true);
+  });
+
+  test("AC-1c: a verified DELEGATED_APPROVAL does NOT open the REJECT gate (no verb mixing)", () => {
+    const { root, conductor, issuer } = scaffold();
+    appendAuditEntry("GATE_APPROVED", { Stage: "intent-capture" }, root, conductor);
+    const ht = appendAuditEntry("HUMAN_TURN", {}, root, issuer);
+    appendAuditEntry(
+      "DELEGATED_APPROVAL",
+      {
+        Stage: "market-research",
+        "Issuer Space": "default",
+        "Issuer Intent": issuer,
+        "Issuer Shard": auditShardName(root),
+        "Issuer Human Ts": ht.timestamp,
+      },
+      root,
+      conductor,
+    );
+    // The approval delegation is a real human act for APPROVE, but the reject
+    // gate must ignore it entirely — this is the #685 mixing-bug regression.
+    expect(humanActedSinceGate(root, "reject")).toBe(false);
+  });
+
+  test("AC-1c: a verified DELEGATED_REJECTION does NOT open the APPROVE gate (no verb mixing)", () => {
+    const { root, conductor, issuer } = scaffold();
+    appendAuditEntry("GATE_APPROVED", { Stage: "intent-capture" }, root, conductor);
+    const ht = appendAuditEntry("HUMAN_TURN", {}, root, issuer);
+    appendAuditEntry(
+      "DELEGATED_REJECTION",
+      {
+        Stage: "market-research",
+        "Issuer Space": "default",
+        "Issuer Intent": issuer,
+        "Issuer Shard": auditShardName(root),
+        "Issuer Human Ts": ht.timestamp,
+      },
+      root,
+      conductor,
+    );
+    expect(humanActedSinceGate(root, "approve")).toBe(false);
+  });
+
+  test("AC-1b: a forged DELEGATED_REJECTION (unverifiable shard) does NOT open the REJECT gate", () => {
+    const { root, conductor, issuer } = scaffold();
+    appendAuditEntry("GATE_APPROVED", { Stage: "intent-capture" }, root, conductor);
+    appendAuditEntry("HUMAN_TURN", {}, root, issuer);
+    appendAuditEntry(
+      "DELEGATED_REJECTION",
+      {
+        Stage: "market-research",
+        "Issuer Space": "default",
+        "Issuer Intent": issuer,
+        "Issuer Shard": "no-such-shard.md", // unverifiable grounding
+        "Issuer Human Ts": "2026-07-09T09:00:00.000Z",
+      },
+      root,
+      conductor,
+    );
+    expect(humanActedSinceGate(root, "reject")).toBe(false);
+  });
+});
+
+// #685 — the delegate-rejection WRITER command (FR-1.2). The issuance is gated on
+// a REAL human turn in the leader's own shard: a model cannot fabricate a
+// rejection delegation because HUMAN_TURN lines are written only by the
+// UserPromptSubmit hook. Exercised at the PROCESS boundary against the shipped
+// dist tool (spawnSync), the same subject the conductor's gate later verifies.
+describe("delegate-rejection writer — grounded issuance gate (#685)", () => {
+  const REPO_ROOT = join(import.meta.dir, "..", "..");
+  const STATE = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-state.ts");
+  const AUDIT = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-audit.ts");
+  const BUN = process.execPath;
+
+  // Env with the human-presence guard ENABLED (clear the suite-wide bypass
+  // run-tests.ts sets) so the grounding gate is live, not bypassed.
+  function guardedEnv(): NodeJS.ProcessEnv {
+    const env = { ...process.env };
+    delete env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
+    return env;
+  }
+
+  function runDelegateRejection(root: string, toIntent: string): { rc: number; out: string; err: string } {
+    const r = spawnSync(
+      BUN,
+      [STATE, "delegate-rejection", "market-research", "--to-intent", toIntent, "--project-dir", root],
+      { encoding: "utf-8", env: guardedEnv() },
+    );
+    return { rc: r.status ?? -1, out: r.stdout ?? "", err: r.stderr ?? "" };
+  }
+
+  // Seed a real HUMAN_TURN via the audit CLI (a SUBPROCESS) so it lands in the
+  // clone-id shard the delegate-rejection subprocess resolves. Recording it via
+  // the in-process library instead would write under this test process's cached
+  // clone id and never persist the on-disk token, so the spawned writer would
+  // mint a different clone id and read an empty shard.
+  function recordHumanTurn(root: string): void {
+    spawnSync(BUN, [AUDIT, "append", "HUMAN_TURN", "--project-dir", root], {
+      encoding: "utf-8",
+      env: guardedEnv(),
+    });
+  }
+
+  // Point the leader's active intent at the issuer record (the session that
+  // holds — or lacks — the grounding HUMAN_TURN).
+  function makeIssuerActive(root: string, issuer: string): void {
+    writeFileSync(join(root, "amadeus", "spaces", "default", "intents", "active-intent"), `${issuer}\n`, "utf-8");
+  }
+
+  test("refuses to issue when this session's shard holds no HUMAN_TURN", () => {
+    const { root, conductor, issuer } = scaffold();
+    makeIssuerActive(root, issuer);
+    const r = runDelegateRejection(root, conductor);
+    expect(r.rc).not.toBe(0);
+    expect(r.err).toContain("no HUMAN_TURN in this session's own audit shard");
+  });
+
+  test("issues a DELEGATED_REJECTION into the target when grounded in a real HUMAN_TURN", () => {
+    const { root, conductor, issuer } = scaffold();
+    makeIssuerActive(root, issuer);
+    recordHumanTurn(root); // a real human prompt on the leader (via the audit CLI)
+    const r = runDelegateRejection(root, conductor);
+    expect(r.rc).toBe(0);
+    expect(r.out).toContain('"delegated":true');
+    expect(r.out).toContain('"verb":"reject"');
   });
 });
