@@ -1803,3 +1803,23 @@
 **Source**: orchestrator
 
 ---
+
+## Rule Learned
+**Timestamp**: 2026-07-09T08:52:51Z
+**Event**: RULE_LEARNED
+**Stage**: requirements-analysis
+**Candidate-ID**: requirements-analysis:leader-executes-merge
+**Destination**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-leader/amadeus/spaces/default/memory/team.md
+**Heading**: ## Way of Working
+**Source**: orchestrator
+
+---
+
+## Error Logged
+**Timestamp**: 2026-07-09T08:52:52Z
+**Event**: ERROR_LOGGED
+**Tool**: amadeus-state
+**Command**: amadeus-state delegate-approval reverse-engineering --to-intent 260709-bug-zero-batch
+**Error**: delegate-approval: target intent record not found: 260709-bug-zero-batch
+
+---

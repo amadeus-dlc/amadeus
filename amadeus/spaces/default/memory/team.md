@@ -28,6 +28,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 - leader はオープンバグゼロを目標として運営する: バグの起票・トリアージ・バッチ編成・割当を能動的に回し、アイドルメンバーを作らない。実装待ちのバグには codex の事前深掘り(根本原因・再現・修正案の選択肢)を先行させ、requirements・選挙を高速化する (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:bug-zero-goal -->
 - Issue を起票したら、起票者以外のメンバー2名がその Issue をレビューする(ハルシネーション対策): 主張を実コードと突き合わせ、実在確認・訂正・却下を Issue コメントとして残す。2名の確認が揃うまでその Issue は修正バッチに組み込まない (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:issue-cross-review -->
 - amadeus の利用中に見つけた不備・不具合・改善点は必ず Issue として起票する(leader 含む誰が見つけても)。起票したらハルシネーション対策レビュー(起票者以外2名の実コード照合)を必ず依頼する — 対象は自発起票・ユーザー指示起票を問わず全 Issue (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:dogfood-issue-cross-review -->
+- PR マージの執行手順: leader が PR ごとに CI green・レビュー READY を実測確認してユーザーへ「これをマージしますか?」と確認し、承認を得たら leader が gh pr merge(スカッシュ)を実行する。人間が GitHub のマージボタンを押す運用はしない。Forbidden の no-AI-merge ルールは「承認なしの自発マージ禁止」の意味であり、この承認後執行と両立する (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:leader-executes-merge -->
 ## Walking Skeleton
 
 この intent は既存フレームワークへのインクリメンタルな npm インストーラ実装だが、配布経路がユーザー体験の入口になるため、最初の Construction Bolt は小さな end-to-end スライスとして扱う。最初に最小の `@amadeus-dlc/setup` 実行経路を通し、以後の拡張前に人間がゲートで確認する。
