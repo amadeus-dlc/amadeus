@@ -7,13 +7,23 @@
 // plus proceed (code-generation-plan.md Step 1).
 
 import { describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { HarnessName } from "../../packages/setup/src/domain/harness.ts";
-import type { Installation, InstallationEvidence } from "../../packages/setup/src/domain/installation.ts";
+import { Installation, type InstallationEvidence } from "../../packages/setup/src/domain/installation.ts";
 import { Manifest, ManifestFiles } from "../../packages/setup/src/domain/manifest.ts";
 import { ResolvedVersion } from "../../packages/setup/src/domain/resolved-version.ts";
 import { LegacyLayout, UpgradeAssessment, UpgradeRefusal, UpgradeSource } from "../../packages/setup/src/domain/upgrade.ts";
 import { VersionSpec } from "../../packages/setup/src/domain/version-spec.ts";
+import { createFsRead, createFsWrite } from "../../packages/setup/src/ports/fsops.ts";
+import { createManifestIo } from "../../packages/setup/src/modules/manifest-io.ts";
 import { fakePayload, semver } from "../lib/setup-domain-fixtures.ts";
+
+function withTempDir<T>(fn: (dir: string) => Promise<T>): Promise<T> {
+  const dir = mkdtempSync(join(tmpdir(), "amadeus-setup-upgrade-"));
+  return fn(dir).finally(() => rmSync(dir, { recursive: true, force: true }));
+}
 
 function claudeHarness(): HarnessName {
   const claude = HarnessName.all.find((h) => (h as string) === "claude");
@@ -190,6 +200,25 @@ describe("UpgradeSource.fromInstallation — routing (BR-U05~U09)", () => {
     const result = UpgradeSource.fromInstallation(manifestedInstallation(manifest), false);
     expect(result.type).toBe("ok");
     if (result.type === "ok") expect(result.value.kind).toBe("manifested");
+  });
+
+  // FR-656-1/FR-656-3 (issue #656, BR-U07): an anchor-less legacy layout, real
+  // Installation.detect() output (not synthetic evidence) piped through
+  // UpgradeSource.fromInstallation, must hard-refuse as unsupported-layout —
+  // even with --force. Before the fix, detect() misclassified this fixture
+  // as 'partial', which --force would have continued past.
+  test("edge case: an anchor-less legacy layout refuses as unsupported-layout even with --force (BR-U07)", async () => {
+    await withTempDir(async (dir) => {
+      mkdirSync(join(dir, ".claude"), { recursive: true });
+      writeFileSync(join(dir, ".claude", "amadeus-runtime.ts"), "// legacy owned file\n");
+      const manifestIo = createManifestIo(createFsRead(), createFsWrite());
+      const installation = await Installation.detect(dir, manifestIo);
+      expect(installation.kind).toBe("manual-or-unknown"); // FR-656-1 precondition
+
+      const result = UpgradeSource.fromInstallation(installation, true);
+      expect(result.type).toBe("err");
+      if (result.type === "err") expect(result.error.type).toBe("unsupported-layout");
+    });
   });
 });
 
