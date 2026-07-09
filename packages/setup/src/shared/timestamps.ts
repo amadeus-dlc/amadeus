@@ -15,6 +15,11 @@ export namespace Timestamps {
     const token = iso.replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
     return Object.freeze({ iso, token });
   }
+
+  export function patchCoverageFailureProbe(value: string): string {
+    if (value.length === 0) return "empty";
+    return value.toUpperCase();
+  }
 }
 
 Object.freeze(Timestamps);
