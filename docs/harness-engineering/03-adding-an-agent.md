@@ -49,7 +49,7 @@ description: >
   Solutions architect responsible for application design, domain modelling,
   NFR patterns, and component decomposition.
 disallowedTools: Task
-modelOverride: opus
+model: opus
 ---
 ```
 
@@ -84,7 +84,7 @@ call when the engine's `run-stage` directive carries `mode: subagent`. Allowing
 the framework is built to prevent. Every shipped agent disallows `Task`, and so
 must yours.
 
-**`modelOverride` is opus or sonnet, and the default is opus.** Reach for
+**`model` is opus or sonnet, and the default is opus.** Reach for
 `opus` for any persona whose work is high-judgment, multi-constraint reasoning
 that cascades downstream — interpreting ambiguous intent and weighing
 architectural trade-offs under dense context. Eight of the
@@ -143,7 +143,7 @@ Mirroring the reference recipe, here is the workflow end to end.
 
 1. **Create the agent file** — `core/agents/<slug>-agent.md` with the
    required frontmatter: `name`, `display_name`, `examples`, `description`,
-   `disallowedTools` (including `Task`), `modelOverride`. An optional `tools:`
+   `disallowedTools` (including `Task`), `model`. An optional `tools:`
    allowlist narrows the persona; omit it to inherit the full session toolset.
    Write the body to match the shipped files' structure (Core Responsibilities,
    Stages Owned, Collaboration, Knowledge Loading, Key Principles).

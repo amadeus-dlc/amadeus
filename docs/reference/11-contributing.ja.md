@@ -205,7 +205,7 @@ LLM 推論を必要としないハンドラ(テキストの出力、ファイル
    description: >
      One-paragraph description of the agent's responsibilities and which stages it leads or supports.
    disallowedTools: Task
-   modelOverride: opus
+   model: opus
    ---
    ```
 
