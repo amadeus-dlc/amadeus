@@ -26,6 +26,7 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 - 当面の対応スコープはバグのみ: 新規タスク・intent はバグ修正に限定し、enhancement 系は起票・トリアージまでに留めて着手しない。進行中の enhancement intent は park のまま凍結。例外は、バグ対応自体の前提となるインフラ作業(例: #671)のみ (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:bugs-only-scope -->
 - intent・タスクのディスパッチは leader のみが行う。メンバーは割り当てられていない作業を自発的に開始しない(発見事項は Issue 起票・報告まで)。作業が完了したら leader へ報告し、次の作業指示を仰いで待機する (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:leader-dispatch-authority -->
 - leader はオープンバグゼロを目標として運営する: バグの起票・トリアージ・バッチ編成・割当を能動的に回し、アイドルメンバーを作らない。実装待ちのバグには codex の事前深掘り(根本原因・再現・修正案の選択肢)を先行させ、requirements・選挙を高速化する (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:bug-zero-goal -->
+- Issue を起票したら、起票者以外のメンバー2名がその Issue をレビューする(ハルシネーション対策): 主張を実コードと突き合わせ、実在確認・訂正・却下を Issue コメントとして残す。2名の確認が揃うまでその Issue は修正バッチに組み込まない (user decision 2026-07-09) (learned 2026-07-09) <!-- cid:requirements-analysis:requirements-analysis:issue-cross-review -->
 ## Walking Skeleton
 
 この intent は既存フレームワークへのインクリメンタルな npm インストーラ実装だが、配布経路がユーザー体験の入口になるため、最初の Construction Bolt は小さな end-to-end スライスとして扱う。最初に最小の `@amadeus-dlc/setup` 実行経路を通し、以後の拡張前に人間がゲートで確認する。
