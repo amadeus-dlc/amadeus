@@ -1,40 +1,21 @@
 # 技術スタック
 
-## Runtime と言語
+## ランタイムと言語
 
-Amadeus is implemented as TypeScript running on Bun with ESM-style imports.
+変更なし。TypeScript(ESM)を Bun ランタイム上で直接実行する構成を維持している。`packages/setup` は functional-domain-modeling-ts スタイル(class-free、type + companion namespace、frozen literal factory、判別ユニオン Result)を全面採用している点も変更なし。
 
-Observed root-level tooling:
+## 本 intent(bug-zero-batch)に関連する技術的な注記
 
-- `package.json`: root package scripts for build, drift check, self-promotion, typecheck, lint, and tests.
-- `tsconfig.json`: includes `core/hooks/*.ts`, `core/tools/*.ts`, `harness/*/*.ts`, and `scripts/*.ts`.
-- `biome.json`: lints repository sources and excludes root `dist/**`.
-
-Layout implication: TypeScript and Biome configuration are currently expressed in root-level glob terms. A package-owned layout requires either moving these configs into a package or broadening root config globs to cover both current and future package paths.
+- **#674**: `amadeus-swarm.ts` の `handleFinalize` は同期的な配列走査(`results[]`、`mergeFailures[]`)で状態を持つ素朴な手続き型実装であり、フレームワーク側の追加ライブラリは使っていない。修理は既存の2配列を1本化するか、merge-back フェーズの結果を `results[]` にフィードバックする再走査を追加するかの選択になる。
+- **#675**: `amadeus-state.ts` は `withAuditLock` による再入可能ロックを持つが、guard 関数(`isAutonomousMode`/`humanPresenceGuardDisabled`/`humanActedSinceGate`)は `amadeus-lib.ts` からの純粋な import であり、`handleReject` に同じ import を追加するだけで技術的には配線可能(ただし team.md の要求どおり requirements-analysis で「reject にも同じガードを掛けるべきか」を意思決定してから実施する)。
+- **#676・#668**: いずれも `amadeus-lib.ts` の record-dir/repo-name 解決系(`recordDir`、`spaceRecordRoot`、`intentRepos`、`basename`)に起因する。`node:path` の `basename` を worktree 対応にするには git 情報(`.git` ファイルの `commondir` 参照、または `git rev-parse --show-toplevel` 相当)を読む必要があり、現状この関数群に git 呼び出しは存在しない。
+- **#677**: `packages/setup/src/ports/http.ts` は標準の `fetch`/`AbortSignal.timeout` のみに依存し、外部 HTTP ライブラリは使っていない。修理は `try/catch` の追加のみで、新規依存は不要。
+- **#678**: `tar-archive-extractor.ts` は `node:zlib` の `createGunzip` によるストリーミング解凍と、自前実装の 512 バイトブロック単位パーサ(標準 tar ライブラリへの依存なし、意図的な設計方針としてコメントに明記: `tech-stack-decisions.md` 参照)で構成される。修理(あるいは実測による安全性確認)も自前パーサ内で完結する。
 
 ## ビルドとテストツール
 
-| ツール | 用途 | レイアウト結合 |
-| --- | --- | --- |
-| Bun | script runner、TypeScript 実行、tests | root scripts と package.json |
-| TypeScript | static type checking | root `core`, `harness`, `scripts` の include |
-| Biome | lint | root source glob と `dist/**` 除外 |
-| GitHub Actions | CI drift guard | root `bun run dist:check`, `bun run promote:self:check` |
-| Bun test / custom runner | unit/integration/e2e tests | fixtures anchored to root `dist` |
-
-## 配布ツールチェーン
-
-The most relevant technology for Issue #610 is the local packaging toolchain.
-
-- `scripts/package.ts` is the build orchestrator for 配布物s.
-- `scripts/promote-self.ts` is the dogfood install/check orchestrator.
-- `scripts/manifest-types.ts` provides the manifest data model.
-- Harness-specific emitters, especially `harness/codex/emit.ts`, add 配布物-specific 出力s.
-
-These are not isolated package scripts. They encode repository topology and should be treated as architecture components during normalization.
+変更なし。Bun(script runner/テスト実行)、TypeScript `^6.0.3`、Biome 2.4系、GitHub Actions(単一 ubuntu-latest job)、`bun:test` + 自作ランナー(smoke/unit/integration/e2e)。
 
 ## バージョンと依存関係の注記
 
-This scan did not introduce a new dependency version inventory because Issue #610 is about ファイルシステム/package boundaries rather than library upgrade risk. The next design stage should only pull exact package versions when comparing implementation cost or CI impact.
-
-The key stack constraint is that Bun can execute TypeScript directly from current root paths. If scripts move under `packages/<name>/scripts`, relative imports and execution commands must be updated together.
+`AMADEUS_VERSION` と `@amadeus-dlc/setup` パッケージバージョンの独立ライフサイクルは変更なし。バージョンバンプは `release.yml` の `workflow_dispatch` 一本に統一されている(project.md DECIDED 参照)。本 intent はこの仕組みに変更を加えない。

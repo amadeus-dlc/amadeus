@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { accessSync, appendFileSync, constants as fsConstants, cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { hostname, tmpdir } from "node:os";
@@ -494,13 +495,48 @@ export function relativeCodekbDir(projectDir: string, repo: string, space?: stri
 
 // The deterministic repo NAME for codekb keying (NOT the intent slug):
 //   1 recorded repo  -> that name
-//   0 recorded repos (workspace root IS the repo) -> basename(projectDir)
+//   0 recorded repos (workspace root IS the repo) -> the `origin` remote's repo
+//                       slug (SSH/HTTPS, .git suffix stripped) when one resolves,
+//                       else basename(projectDir). Worktree/clone directory names
+//                       (e.g. `codex-engineer-2`) are NOT stable across checkouts
+//                       of the same repo, so basename alone fragmented codekb/
+//                       into one directory per checkout leaf (#668); the origin
+//                       remote is stable across worktrees/clones of one repo.
 //   >1 recorded      -> caller loops per repo (this returns basename as a safe
 //                       default; callers that know the repo pass --repo explicitly).
 // basename done here (lib has basename imported) so callers never inline it.
 export function codekbRepoName(projectDir: string, space?: string): string {
   const repos = intentRepos(projectDir, undefined, space);
-  return repos.length === 1 ? repos[0] : basename(projectDir);
+  if (repos.length === 1) return repos[0];
+  if (repos.length === 0) {
+    const remoteSlug = originRepoSlug(projectDir);
+    if (remoteSlug) return remoteSlug;
+  }
+  return basename(projectDir);
+}
+
+// Extract the repo slug (e.g. `amadeus`) from the `origin` remote's URL, the
+// last path segment with any `.git` suffix stripped. Handles both SSH
+// (`git@github.com:org/repo.git`) and HTTPS (`https://github.com/org/repo.git`)
+// forms. Returns null on any git failure, missing remote, or unparseable URL
+// (fail-safe: codekbRepoName falls back to basename(projectDir)).
+function originRepoSlug(projectDir: string): string | null {
+  let url: string;
+  try {
+    const r = spawnSync("git", ["remote", "get-url", "origin"], {
+      cwd: projectDir,
+      encoding: "utf-8",
+      timeout: 5_000,
+    });
+    if (r.status !== 0 || typeof r.stdout !== "string") return null;
+    url = r.stdout.trim();
+  } catch {
+    return null;
+  }
+  if (url.length === 0) return null;
+  const withoutGitSuffix = url.replace(/\.git$/, "");
+  const lastSegment = withoutGitSuffix.split(/[/:]/).pop();
+  return lastSegment && lastSegment.length > 0 ? lastSegment : null;
 }
 
 // The bare SPACE record root: `amadeus/spaces/<space>/intents/`. The absolute path
@@ -1363,11 +1399,19 @@ export function humanActedSinceGate(projectDir: string): boolean {
   for (let i = 0; i < blocks.length; i++) {
     const ev = auditBlockField(blocks[i], "Event");
     if (!ev) continue;
-    if (!GATE_RESOLUTION_EVENTS.has(ev) && ev !== "HUMAN_TURN") continue;
+    const isHumanTurn = ev === "HUMAN_TURN";
+    // A delegated approval (#671) is a human act ONLY when its grounding
+    // HUMAN_TURN is verified to physically exist in the issuer shard. An
+    // unverifiable delegation is dropped entirely (not counted as a human act,
+    // not counted as a resolution) so a forged block can neither manufacture
+    // presence nor consume the freshness boundary.
+    const isDelegated =
+      ev === "DELEGATED_APPROVAL" && verifyDelegatedApproval(projectDir, blocks[i]);
+    if (!GATE_RESOLUTION_EVENTS.has(ev) && !isHumanTurn && !isDelegated) continue;
     events.push({
       ts: auditBlockField(blocks[i], "Timestamp") ?? "",
       pos: i,
-      human: ev === "HUMAN_TURN",
+      human: isHumanTurn || isDelegated,
     });
   }
   events.sort((a, b) => {
@@ -1383,6 +1427,47 @@ export function humanActedSinceGate(projectDir: string): boolean {
   // A human turn appears after the last gate resolution (or there is a human turn
   // and no resolution yet) => a fresh human acted this turn => allow.
   return lastHuman > lastResolution && lastHuman !== -1;
+}
+
+// Verify a DELEGATED_APPROVAL block (#671) is grounded in a REAL human turn.
+// The block carries the issuer's coordinates (space, intent record dir, audit
+// shard filename, HUMAN_TURN timestamp); this reads that specific shard and
+// confirms a HUMAN_TURN event with the referenced timestamp physically exists.
+//
+// Forgery resistance: HUMAN_TURN lines are written ONLY by the UserPromptSubmit
+// hook on a real human prompt — no tool a model can call emits one. So a
+// delegation a model fabricates references a HUMAN_TURN that is not on disk and
+// fails here. This is the "referenced, not self-asserted" contract from #671
+// (検証劇場 Forbidden): the conductor proves the grounding, it does not trust it.
+//
+// Fail-closed on every anomaly (missing/malformed field, path-shape violation,
+// unreadable shard, absent HUMAN_TURN). Path-shape guards reject any separator
+// or traversal so a crafted field cannot escape the intents tree.
+export function verifyDelegatedApproval(projectDir: string, block: string): boolean {
+  const issuerIntent = auditBlockField(block, "Issuer Intent");
+  const issuerShard = auditBlockField(block, "Issuer Shard");
+  const issuerHumanTs = auditBlockField(block, "Issuer Human Ts");
+  const issuerSpace = auditBlockField(block, "Issuer Space") ?? undefined;
+  if (!issuerIntent || !issuerShard || !issuerHumanTs) return false;
+  // Record dir name and `<host>-<clone>.md` shard leaf — no separators, no "..".
+  if (!/^[A-Za-z0-9._-]+$/.test(issuerIntent) || issuerIntent === "." || issuerIntent === "..") {
+    return false;
+  }
+  if (!/^[A-Za-z0-9._-]+\.md$/.test(issuerShard)) return false;
+  const shardDir = auditShardDir(projectDir, issuerIntent, issuerSpace);
+  if (shardDir === null) return false;
+  let content: string;
+  try {
+    content = readFileSync(join(shardDir, issuerShard), "utf-8");
+  } catch {
+    return false;
+  }
+  const blocks = content.replace(/\r\n/g, "\n").split(/\n---\n/);
+  for (const b of blocks) {
+    if (auditBlockField(b, "Event") !== "HUMAN_TURN") continue;
+    if ((auditBlockField(b, "Timestamp") ?? "") === issuerHumanTs) return true;
+  }
+  return false;
 }
 
 // True when any stage sits at [?] (awaiting-approval) in the state file: the

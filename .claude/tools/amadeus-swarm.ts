@@ -598,6 +598,21 @@ function handleFinalize(rest: string[]): void {
     }
   }
 
+  // A unit that passed re-verify but whose merge-back failed is NOT genuinely
+  // converged: the batch's authoritative result is the merged state, not the
+  // verify-only verdict. Downgrade its `results` entry before audit/tally so
+  // SWARM_UNIT_CONVERGED is never emitted for a unit that never landed on the
+  // trunk — it instead gets SWARM_UNIT_FAILED + the baton back, same as any
+  // other failed unit (issue #674).
+  const mergeFailureDetail = new Map(mergeFailures.map((m) => [m.unit, m.detail] as const));
+  for (const r of results) {
+    if (r.status === "converged" && mergeFailureDetail.has(r.unit)) {
+      r.status = "failed";
+      r.reason = "error";
+      r.detail = `merge-back failed: ${mergeFailureDetail.get(r.unit)}`;
+    }
+  }
+
   // Authoritative audit trail: one row per unit, the baton per failed unit, the
   // batch tally to close.
   for (const r of results) {
@@ -613,7 +628,9 @@ function handleFinalize(rest: string[]): void {
     emitBatonReturned(projectDir, batch, r.unit, r.reason ?? "error");
   }
 
-  const convergedCount = genuine.length;
+  // Merge-result basis (issue #674): a unit only counts as converged once its
+  // merge-back actually succeeded, not merely on the verify-only verdict.
+  const convergedCount = genuine.filter((u) => !mergeFailureDetail.has(u)).length;
   const failedCount = failedResults.length;
   emitSwarmCompleted(projectDir, batch, convergedCount, failedCount);
 

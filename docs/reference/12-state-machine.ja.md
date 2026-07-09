@@ -173,7 +173,7 @@ session フックは発行前にアクティブな intent の `amadeus-state.md`
 
 ## Audit event taxonomy
 
-**70 events** で、以下では17カテゴリにグループ化しています(正典の `audit-format.md` レジストリは同じ70を18に分割しています — グループ化は表現上のものであり、イベントセットが不変条件です)。すべてのイベントはちょうど1つのツールまたはフックのエミッタを持ちます。ただし、来たるリリース向けに事前登録され、Emitter セルが `Reserved (v0.4.0 PR N)`、`Reserved (v0.5.0 PR N)`、または `Reserved (v0.6.0 PR N)` と読めるイベントは例外です — これらはコンシューマ PR がエミッタを出荷するまで、ドリフトテストの forward チェックでスキップされます。ドリフトテスト `tests/integration/t48-audit-event-emitters.test.ts` は、本章のテーブルとコードの間の forward/reverse/tertiary/pairing/MD-MD の一貫性を強制します。
+**71 events** で、以下では17カテゴリにグループ化しています(正典の `audit-format.md` レジストリは同じ71を18に分割しています — グループ化は表現上のものであり、イベントセットが不変条件です)。すべてのイベントはちょうど1つのツールまたはフックのエミッタを持ちます。ただし、来たるリリース向けに事前登録され、Emitter セルが `Reserved (v0.4.0 PR N)`、`Reserved (v0.5.0 PR N)`、または `Reserved (v0.6.0 PR N)` と読めるイベントは例外です — これらはコンシューマ PR がエミッタを出荷するまで、ドリフトテストの forward チェックでスキップされます。ドリフトテスト `tests/integration/t48-audit-event-emitters.test.ts` は、本章のテーブルとコードの間の forward/reverse/tertiary/pairing/MD-MD の一貫性を強制します。
 
 ### Workflow lifecycle
 
@@ -210,6 +210,7 @@ session フックは発行前にアクティブな intent の `amadeus-state.md`
 |---|---|---|
 | `GATE_APPROVED` | `tools/amadeus-state.ts` | `--user-input` が正確な選択を捕捉 |
 | `GATE_REJECTED` | `tools/amadeus-state.ts` | `--feedback` が却下理由を捕捉 |
+| `DELEGATED_APPROVAL` | `tools/amadeus-state.ts` | `delegate-approval` が leader セッションの人間承認を、リモートの conductor intent の監査ディレクトリへ記録。conductor のゲートが検証する発行元 `(space, intent, shard, HUMAN_TURN タイムスタンプ)` を保持(#671) |
 
 ### User interaction
 

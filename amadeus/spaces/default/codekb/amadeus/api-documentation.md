@@ -2,82 +2,69 @@
 
 ## 公開 API サーフェス
 
-この scan 範囲に HTTP API、GraphQL API、service endpoint は存在しない。Issue #610 に関係する API は repository-local CLI と 生成済み配布物の契約 である。
+この repository に HTTP API、GraphQL API、service endpoint は存在しない。公開されている契約は CLI コマンド(`@amadeus-dlc/setup`、AI-DLC 内部ツール群)である。本 intent は既存契約の変更ではなく内部欠陥の修理であるため、CLI サーフェスの外形は維持される想定。
 
-ユーザー視点の public contract は docs/README に記載される copy/install command で、root `dist/<harness>/...` を前提にしている。したがって `dist/` 移動 は user-facing API change として扱う必要がある。
-
-## CLI 契約
-
-### パッケージ生成
+## `amadeus-swarm.ts finalize` の契約(#674 に関連)
 
 ```bash
-bun scripts/package.ts [<harness>] [--check]
+bun packages/framework/core/tools/amadeus-swarm.ts finalize --batch <n> --check-cmd "<cmd>" \
+  [--claimed <csv>] [--units <csv>] [--test-file <path>] [--reasons <unit>=<reason>,...]
 ```
 
-責務:
+- 出力: `{ batch, units: UnitResult[], converged, failed, merge_failures }` の JSON envelope(`amadeus-swarm.ts:620-627`)。
+- exit code 契約: 0 = 全 claimed unit が genuine に converge かつ merge 成功。2 = いずれかの unit が failed、または `merge_failures` が非空(L630)。
+- **#674 の欠陥**: exit code 契約は merge 失敗を正しく検知する(`mergeFailures.length > 0` を見ている)が、`units` 配列と、それに基づいて発行される `UNIT_CONVERGED`/`UNIT_FAILED` audit イベントは merge 失敗を反映しない。呼び出し元が JSON の `units[].status` だけを見た場合、merge に失敗した unit も `"converged"` と誤認する。
 
-- root `core/` と root `harness/<name>/` から 配布 tree を生成する。
-- 出力 を root `dist/<name>/` に書く。
-- `--check` では temp tree と commit 済み `dist/<name>/` を比較し、drift guard として失敗させる。
-
-レイアウト影響:
-
-- script path を移す場合、package scripts、tests、CI の呼び出しを更新する必要がある。
-- source roots を移す場合、`CORE_ROOT` / `HARNESS_ROOT` を hardcoded path から logical workspace path へ置き換える必要がある。
-- 出力 を移す場合、install docs と fixture copy roots を同時に変更する必要がある。
-
-### Codex trust
+## `amadeus-state.ts` の gate 系サブコマンド契約(#675 に関連)
 
 ```bash
-bun scripts/package.ts codex trust --project <abs-dir>
+bun packages/framework/core/tools/amadeus-state.ts approve <slug> [--user-input <text>]
+bun packages/framework/core/tools/amadeus-state.ts reject <slug> [--feedback <text>]
 ```
 
-責務:
+- `approve` の契約: autonomous Construction または `AMADEUS_SKIP_HUMAN_PRESENCE_GUARD` のいずれでもない限り、直前の gate 解決以降に `HUMAN_TURN` イベントが記録されていなければ拒否する(`amadeus-state.ts:1321-1337`)。
+- **#675 の欠陥**: `reject` にはこの契約が存在しない。ドキュメント化された契約(`approve` 側のコメント、L1316-1337)は「gate はここで人間の判断が必要」と明言しているが、`reject` の docstring(L1279-1285 相当のコメントに `reject` 用のものはない)にも実装にもこの制約が反映されていない。
 
-- Codex harness の trust/setup helper を実行する。
-- `harness/codex/emit.ts` と 生成済み `.codex` / `.agents` shape に依存する。
-
-レイアウト影響:
-
-- Codex harness が package-local になる場合、emitter path と trust path の両方を再解決する必要がある。
-
-### 自己昇格
+## `amadeus-bolt.ts start`/audit 契約(#676 に関連)
 
 ```bash
-bun scripts/promote-self.ts [--check|--apply] [--no-build]
+bun packages/framework/core/tools/amadeus-bolt.ts start --worktree --slug <slug> \
+  --name <bolt-name> --batch <n> [--intent <id>] [--space <name>]
 ```
 
-責務:
+- 契約: `--worktree` 指定時は `BOLT_STARTED` audit イベントを、`--intent`/`--space` で指定された(または解決される)intent の record dir に書き込む。
+- **#676 の欠陥**: `--intent`/`--space` が渡されても、内部の `recordDir()` 解決に失敗すると `auditFilePath()`(`amadeus-lib.ts:1267-1270`)が space レベルの bare fallback に静かに切り替わる。この切り替わりを呼び出し元(conductor)に通知するエラーや警告は出力されない。
 
-- Claude/Codex 配布物 を build する。
-- root `dist/claude/.claude` を root `.claude` へ、root `dist/codex/.codex` を root `.codex` へ、root `dist/codex/.agents` を root `.agents` へ compare/apply する。
-- local settings、hooks、composed scopes、scope-grid merge などを preserve する。
+## `@amadeus-dlc/setup` Http ポート契約(#677 に関連)
 
-レイアウト影響:
+```typescript
+type Http = {
+  getJson(apiPath: string): Promise<Result<unknown, FetchError>>;
+  downloadArchive(url: URL): Promise<Result<ReadableStream<Uint8Array>, FetchError>>;
+};
+```
 
-- `dist/` を package-local に移す場合でも self-install target は repository root の `.claude/.codex/.agents` に残る可能性が高い。
-- preserve rules は data-loss prevention の一部なので、path 移行 で削除・単純化してはいけない。
+- 契約(`ports/http.ts:9-12`): 両メソッドとも例外を投げず、必ず `Result` で解決する。
+- **#677 の欠陥**: `getJson()`(L23-28)の `checked.value.json()`(L27)がこの契約の外にある。GitHub API が 200 かつ不正な JSON ボディを返した場合、`getJson()` は `Promise<Result<...>>` ではなく reject された Promise を返し、呼び出し元(`resolver`/`fetcher` 等)は `Result` のみを想定したハンドリングをすり抜ける。
 
-## Manifest 契約
+## `extractTarGz` 契約(#678 に関連)
 
-`scripts/manifest-types.ts` が harness manifest の internal API である。
+```typescript
+export async function extractTarGz(
+  archivePath: string,
+  extractDir: string,
+  tmpWrite: TmpWrite
+): Promise<Result<void, FetchError>>
+```
 
-- `name` は `harness/<name>` と `dist/<name>` に対応する。
-- `harnessDir` は 配布物 内の harness root、例 `.claude`, `.codex`, `.kiro`。
-- `coreDirs` は root `core/<src>` から 配布物 内 path へ project する。
-- `harnessFiles` は root `harness/<name>/<src>` から 配布物 内 path へ project する。
-- optional emitter は assembled dist tree に追加生成を行う。
+- 契約(`tar-archive-extractor.ts:33`): アーカイブ全体をストリーミングで読み、`extractDir` 配下に安全に展開する。PAX(`x`)/GNU(`L`)longname を含む `git archive` 形式の tar をサポートする(冒頭コメント L8-19)。
+- **#678 として持ち越す論点**: この契約自体は変更しないが、PAX/GNU longname がネットワークチャンクの境界を跨ぐ入力に対する挙動が実測未検証。
 
-Full normalization では、この contract を package-local relative path に変えるのか、logical source identifier として維持するのかを ADR で決める必要がある。
+## `codekb-path` コマンド契約(#668 に関連)
 
-## 生成済み配布物の契約
+```bash
+bun .claude/tools/amadeus-utility.ts codekb-path [--repo <name>] [--json]
+```
 
-`dist/` は 生成済み 出力 である一方、repository に commit される install source である。
-
-- `dist/claude/.claude`
-- `dist/codex/.codex`
-- `dist/codex/.agents`
-- `dist/kiro/.kiro`
-- `dist/kiro-ide/.kiro`
-
-これらは README、docs、tests、self-promotion、coverage registry から参照される。よって `dist` path は internal implementation detail ではなく、repository-level 配布物 API として扱う。
+- 契約(`amadeus-utility.ts:2690-2699`): 「決定的な per-repo codekb ディレクトリ」を出力する。`--repo` が指定されない場合は `codekbRepoName(projectDir, space)` の解決結果を使う。
+- **#668 の欠陥**: `codekbRepoName()` の fallback(`amadeus-lib.ts:503`)がワークツリーのディレクトリ名を使うため、「決定的(deterministic)」であるべき per-repo ディレクトリが worktree ごとに変わってしまう。本スキャン自体が `codekb/claude-engineer-1/` に出力されている(この codekb ファイル群自体)ことが直接の実例である。

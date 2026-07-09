@@ -1,5 +1,5 @@
-import { readFile, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { readdir, readFile, stat } from "node:fs/promises";
+import { basename, join } from "node:path";
 import { allEngineDirNames } from "./engine-layout.ts";
 import type { Manifest } from "./manifest.ts";
 import type { ManifestIo } from "../modules/manifest-io.ts";
@@ -28,7 +28,15 @@ export namespace Installation {
   export async function detect(target: string, manifestIo: ManifestIo): Promise<Installation> {
     const manifestResult = await manifestIo.read(target);
     if (manifestResult.type === "ok" && manifestResult.value !== null) {
-      return manifestedInstallation(manifestResult.value);
+      const manifest = manifestResult.value;
+      // FR-656-2: a readable manifest is not proof the installation is
+      // intact — verify each manifest-listed required file still exists on
+      // disk before trusting the manifest's own record unconditionally.
+      const missingFiles = await missingRequiredFiles(target, manifest);
+      if (missingFiles.length > 0) {
+        return partialInstallation(missingFiles);
+      }
+      return manifestedInstallation(manifest);
     }
 
     const evidence = await scanEvidence(target);
@@ -40,6 +48,14 @@ export namespace Installation {
     if (!evidence.anchors.toolsDir) missing.push("tools directory");
     if (!evidence.anchors.amadeusCommon) missing.push("amadeus-common directory");
     if (missing.length > 0) {
+      // FR-656-1: both anchors missing but amadeus-prefixed evidence exists
+      // (an anchor-less legacy layout, recognizable only by its owned-file
+      // naming) is manual-or-unknown, not partial — this is exactly
+      // LegacyLayout.isUnsupported's condition (b) input contract, which
+      // must be reachable for BR-U07's hard-refuse to fire.
+      if (!evidence.anchors.toolsDir && !evidence.anchors.amadeusCommon && hasAmadeusPrefixedPath(evidence.paths)) {
+        return manualOrUnknownInstallation(evidence);
+      }
       return partialInstallation(missing);
     }
 
@@ -126,8 +142,14 @@ async function scanEvidence(target: string): Promise<InstallationEvidence> {
     } catch {
       // No VERSION file under this engine dir.
     }
+    // FR-656-1: also collect loose amadeus-*-prefixed entries other than the
+    // 3 known anchors (tools/, amadeus-common/, VERSION) — an older dist
+    // shape recognizable only by its owned-file naming, not by today's
+    // directory convention (see LegacyLayout.isUnsupported condition (b) in
+    // upgrade.ts).
+    const looseEntries = await looseAmadeusEntries(join(target, engineDir));
 
-    if (!hasToolsDir && !hasAmadeusCommon && versionContent === null) continue; // no anchor: not evidence
+    if (!hasToolsDir && !hasAmadeusCommon && versionContent === null && looseEntries.length === 0) continue; // no anchor and no loose evidence: not evidence
 
     if (hasToolsDir) {
       paths.push(`${engineDir}/tools`);
@@ -141,6 +163,9 @@ async function scanEvidence(target: string): Promise<InstallationEvidence> {
       versionFileContent = versionContent;
       paths.push(`${engineDir}/VERSION`);
     }
+    for (const entry of looseEntries) {
+      paths.push(`${engineDir}/${entry}`);
+    }
   }
 
   return Object.freeze({
@@ -150,6 +175,20 @@ async function scanEvidence(target: string): Promise<InstallationEvidence> {
   });
 }
 
+function hasAmadeusPrefixedPath(paths: readonly string[]): boolean {
+  return paths.some((path) => basename(path).startsWith("amadeus-"));
+}
+
+async function looseAmadeusEntries(engineDirPath: string): Promise<readonly string[]> {
+  let entries: string[];
+  try {
+    entries = await readdir(engineDirPath);
+  } catch {
+    return [];
+  }
+  return entries.filter((name) => name.startsWith("amadeus-") && name !== "amadeus-common");
+}
+
 async function dirExists(path: string): Promise<boolean> {
   try {
     const info = await stat(path);
@@ -157,4 +196,23 @@ async function dirExists(path: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+async function fileExists(path: string): Promise<boolean> {
+  try {
+    const info = await stat(path);
+    return info.isFile();
+  } catch {
+    return false;
+  }
+}
+
+// FR-656-2: a readable manifest alone is not proof the installation is
+// intact — verify each manifest-listed required file still exists on disk.
+async function missingRequiredFiles(target: string, manifest: Manifest): Promise<string[]> {
+  const missing: string[] = [];
+  for (const path of manifest.requiredPaths()) {
+    if (!(await fileExists(join(target, path)))) missing.push(path);
+  }
+  return missing;
 }

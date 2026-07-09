@@ -1,4 +1,4 @@
-// covers: cli:amadeus-state(approve,gate-start), cli:amadeus-log(answer), cli:amadeus-audit(append), function:handleApprove, function:handleGateStart, function:handleAnswer, function:humanActedSinceGate, function:humanActedSinceLastAnswer, function:hasOpenGate, function:isAutonomousMode, function:humanPresenceGuardDisabled, file:hooks/amadeus-mint-presence.ts
+// covers: cli:amadeus-state(approve,reject,gate-start), cli:amadeus-log(answer), cli:amadeus-audit(append), function:handleApprove, function:handleReject, function:assertHumanPresentForGateResolution, function:handleGateStart, function:handleAnswer, function:humanActedSinceGate, function:humanActedSinceLastAnswer, function:hasOpenGate, function:isAutonomousMode, function:humanPresenceGuardDisabled, file:hooks/amadeus-mint-presence.ts
 //
 // t188 - human-presence approval gate (ledger-event design).
 //
@@ -340,6 +340,59 @@ describe("t188: human-presence approval gate (ledger-event design)", () => {
       const r2 = guardedLog(proj, ["answer", "--stage", slug, "--details", "second answer"]);
       expect(r2.rc).not.toBe(0);
       expect(eventCount(proj, "QUESTION_ANSWERED")).toBe(1);
+    });
+  });
+
+  // --- reject presence guard (#675) ------------------------------------------
+  //
+  // handleReject shared the withAuditLock skeleton with handleApprove but had
+  // no presence guard wired in - a fabricated reject (no real human turn) could
+  // still mutate state ([R] transition, Revision Count increment) and emit
+  // GATE_REJECTED. Fixture A/B from the issue's deep-dive: A fabricates a
+  // reject with an open (non-empty) ledger but no HUMAN_TURN; B records a fresh
+  // HUMAN_TURN first and expects reject to succeed exactly as before the fix.
+  describe("reject presence guard (#675)", () => {
+    // Fixture A: FABRICATION - ledger has events (gate-start opened it) but no
+    // HUMAN_TURN. Before the fix this reject went through (rc===0,
+    // GATE_REJECTED emitted, state moved to [R]) - exactly the gap #675 reports.
+    test("A: reject REFUSES when the ledger has events but no HUMAN_TURN", () => {
+      const slug = field(proj, "Current Stage"); // feasibility
+      guarded(proj, ["checkbox", `${slug}=in-progress`]);
+      guarded(proj, ["gate-start", slug]); // STAGE_AWAITING_APPROVAL recorded (ledger non-empty)
+      const r = guarded(proj, ["reject", slug, "--feedback", "needs work"]);
+      expect(r.rc).not.toBe(0);
+      expect(r.out).toContain("Refusing to reject");
+      expect(eventCount(proj, "GATE_REJECTED")).toBe(0);
+      // State untouched: the stage did NOT transition to [R].
+      expect(field(proj, "Current Stage")).toBe(slug);
+    });
+
+    // Fixture B: LEGIT - a fresh HUMAN_TURN was recorded before the gate opened,
+    // so reject must still succeed exactly like before the fix (AC-675-2).
+    test("B: reject COMMITS when a HUMAN_TURN was recorded this turn", () => {
+      const slug = field(proj, "Current Stage"); // feasibility
+      guarded(proj, ["checkbox", `${slug}=in-progress`]);
+      recordHumanTurn(proj); // the human typed a prompt
+      guarded(proj, ["gate-start", slug]); // agent opens the gate (same turn)
+      const r = guarded(proj, ["reject", slug, "--feedback", "needs work"]);
+      expect(r.rc).toBe(0);
+      expect(eventCount(proj, "GATE_REJECTED")).toBe(1);
+      expect(field(proj, "Current Stage")).toBe(slug); // reject keeps Current Stage put ([R])
+    });
+
+    // AC-675-3: the reject guard must go through the SAME humanActedSinceGate
+    // predicate approve uses, so a #671 delegated-approval line that opens the
+    // gate for approve also opens it for reject. Exercised here via the
+    // autonomy carve-out, which is one of the three legs the shared helper
+    // dispatches through for both verbs.
+    test("autonomous Construction rejects with NO HUMAN_TURN (carve-out, same as approve)", () => {
+      const slug = field(proj, "Current Stage");
+      guarded(proj, ["checkbox", `${slug}=in-progress`]);
+      setAutonomous(proj);
+      guarded(proj, ["gate-start", slug]); // ledger non-empty, but no HUMAN_TURN
+      const r = guarded(proj, ["reject", slug, "--feedback", "needs work"]);
+      expect(r.rc).toBe(0);
+      expect(eventCount(proj, "GATE_REJECTED")).toBe(1);
     });
   });
 });

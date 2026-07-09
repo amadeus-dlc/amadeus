@@ -186,3 +186,74 @@ describe("createFetcher — BR-F06 retry semantics", () => {
     });
   });
 });
+
+describe("createFetcher — PAX/GNU longname streaming boundary (issue #678)", () => {
+  // 31 zero-size filler entries (512 bytes each = 15872 bytes) place the
+  // extended-header block so it ends exactly at byte 16384 — the default
+  // zlib gunzip output chunk size — forcing the header's body (+ padding)
+  // into the *next* stream chunk. This is the exact boundary from the
+  // issue's own repro script, not an arbitrary count.
+  const FILLER_COUNT = 31;
+  const LONG_PATH = `amadeus-0.6.9/dist/claude/${"x".repeat(120)}/marker.txt`;
+
+  function fillers(): TarFixtureEntry[] {
+    return Array.from({ length: FILLER_COUNT }, (_, i) => ({
+      type: "file" as const,
+      name: `filler${i}`,
+      content: Buffer.alloc(0),
+    }));
+  }
+
+  test("a PAX extended-header body split across a gunzip chunk boundary still extracts", async () => {
+    await withTmpWrite(async (tmpWrite) => {
+      const archive: TarFixtureEntry[] = [
+        ...fillers(),
+        { type: "pax-longname", longName: LONG_PATH },
+        { type: "file", name: "_", content: Buffer.from("ok") },
+      ];
+      const http = fakeHttp(buildTarGz(archive));
+      const result = await createFetcher(http, tmpWrite).fetchArchive(version());
+      expect(result.type).toBe("ok");
+      if (result.type !== "ok") return;
+      const root = result.value.harnessRoot(CLAUDE);
+      expect(root.type).toBe("ok");
+      if (root.type === "ok") {
+        expect(existsSync(join(root.value, "x".repeat(120), "marker.txt"))).toBe(true);
+      }
+    });
+  });
+
+  test("a GNU longname header body split across a gunzip chunk boundary still extracts", async () => {
+    await withTmpWrite(async (tmpWrite) => {
+      const archive: TarFixtureEntry[] = [
+        ...fillers(),
+        { type: "gnu-longname", longName: LONG_PATH },
+        { type: "file", name: "_", content: Buffer.from("ok") },
+      ];
+      const http = fakeHttp(buildTarGz(archive));
+      const result = await createFetcher(http, tmpWrite).fetchArchive(version());
+      expect(result.type).toBe("ok");
+      if (result.type !== "ok") return;
+      const root = result.value.harnessRoot(CLAUDE);
+      expect(root.type).toBe("ok");
+      if (root.type === "ok") {
+        expect(existsSync(join(root.value, "x".repeat(120), "marker.txt"))).toBe(true);
+      }
+    });
+  });
+
+  test("edge case: a genuinely truncated PAX header (no boundary crossing) is still rejected", async () => {
+    await withTmpWrite(async (tmpWrite) => {
+      const archive: TarFixtureEntry[] = [{ type: "pax-longname", longName: LONG_PATH }];
+      const full = buildTarGz(archive);
+      // Cut the compressed stream short so the decompressed PAX body never
+      // fully arrives, even at end-of-stream (`final`). AC-678-3: the
+      // existing truncated-archive detection must still fire.
+      const truncated = full.subarray(0, Math.max(1, full.length - 40));
+      const http = fakeHttp(truncated);
+      const result = await createFetcher(http, tmpWrite).fetchArchive(version());
+      expect(result.type).toBe("err");
+      if (result.type === "err") expect(result.error.type).toBe("payload-invalid");
+    });
+  });
+});
