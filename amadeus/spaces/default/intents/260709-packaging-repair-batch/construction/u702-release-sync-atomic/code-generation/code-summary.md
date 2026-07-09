@@ -84,3 +84,18 @@ prerelease→prerelease(`0.2.0-beta.1` → `0.2.0-beta.2`)を実 CLI で実行:
 - `tests/unit/t-release-sync-plan.test.ts` — 新規 +102
 - `tests/unit/t68-version-changelog-sync.test.ts` — バッジ regex 拡張(+8/-2)
 - `tests/unit/gen-coverage-registry.test.ts` — ラチェット追記 +1
+
+## 是正(PR #712 codex レビュー NOT-READY 対応)
+
+**指摘(reviewer 実測)**: t68 のバッジ抽出 regex は prerelease 対応済みだったが、`versionAssignments()` の capture が stable のみ(`/AMADEUS_VERSION = "([0-9]+\.[0-9]+\.[0-9]+)"/g`)のまま残存。version.ts / packages/setup/package.json / README バッジがすべて prerelease(`0.2.0-beta.1`)の実状態では t68 が **0 pass / 4 fail**(「exactly one AMADEUS_VERSION assignment: expected 1, received 0」から undefined 比較が連鎖)。
+
+**修正**: t68 内で `[0-9]+\.[0-9]+\.[0-9]+` を全 grep 監査し、stable-only の2箇所を受理 regex の文字クラス(`[0-9A-Za-z.-]`)と一貫する optional prerelease サフィックス対応へ拡張した。
+- `SEMVER` 定数: `/[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?/`
+- `versionAssignments()` の capture: `/AMADEUS_VERSION = "([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?)"/g`
+- バッジ抽出(前コミットで対応済み): `/badge\/version-([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?)-blue/`
+
+**シミュレーション実測(reviewer 再現)**: worktree 内で t68 が読む3面(`dist/claude/.claude/tools/amadeus-version.ts`、`packages/setup/package.json`、README バッジ)を一時的に `0.2.0-beta.1` へ設定 →
+- prerelease 状態: `bun test tests/unit/t68-version-changelog-sync.test.ts` → **EXIT=0(4 pass)**
+- `git checkout --` で3面を復元(stable `0.1.1`)後の再実行 → **EXIT=0(4 pass)**
+
+**検証**: `bun run typecheck` → 0、`bun run lint` → 0、`tests/unit/t-release-sync-plan.test.ts` → 0(9 pass)、`tests/integration/t-release-sync-atomicity.test.ts` → 0(1 pass)。

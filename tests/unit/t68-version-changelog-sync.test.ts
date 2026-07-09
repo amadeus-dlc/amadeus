@@ -31,15 +31,18 @@ const VERSION_TS = join(AMADEUS_SRC, "tools", "amadeus-version.ts");
 const UTILITY_TS = join(AMADEUS_SRC, "tools", "amadeus-utility.ts");
 const README = join(REPO_ROOT, "README.md");
 
-const SEMVER = /[0-9]+\.[0-9]+\.[0-9]+/;
+// Optional prerelease suffix, consistent with the acceptance regex in
+// scripts/release-version-sync.ts, so a prerelease release (e.g. 0.2.0-beta.1)
+// is captured as ONE assignment rather than zero (FR-702-3).
+const SEMVER = /[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?/;
 
 /** All `AMADEUS_VERSION = "N.N.N"` literals in version.ts (defends against a
  *  merge-conflict marker leaving two assignments — the .sh's `head -1` + count). */
 function versionAssignments(): string[] {
   const src = readFileSync(VERSION_TS, "utf-8");
-  return [...src.matchAll(/AMADEUS_VERSION = "([0-9]+\.[0-9]+\.[0-9]+)"/g)].map(
-    (m) => m[1],
-  );
+  return [
+    ...src.matchAll(/AMADEUS_VERSION = "([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?)"/g),
+  ].map((m) => m[1]);
 }
 
 describe("t68 framework version sync (version.ts / CLI / README badge)", () => {
@@ -77,8 +80,12 @@ describe("t68 framework version sync (version.ts / CLI / README badge)", () => {
   test("README.md version badge matches amadeus-version.ts [.sh test 6]", () => {
     const tsVersion = versionAssignments()[0];
     const src = readFileSync(README, "utf-8");
-    // Same extraction the .sh ran: between `badge/version-` and `-blue`.
-    const m = src.match(/badge\/version-([0-9]+\.[0-9]+\.[0-9]+)-blue/);
+    // Extraction between `badge/version-` and `-blue`. The captured version
+    // allows an optional prerelease suffix (FR-702-3) so this guard keeps
+    // verifying the badge ⇄ version.ts sync even when the release is a
+    // prerelease (e.g. `version-0.2.0-beta.1-blue`), symmetric with the
+    // acceptance regex in scripts/release-version-sync.ts.
+    const m = src.match(/badge\/version-([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?)-blue/);
     expect(m).not.toBeNull();
     expect((m as RegExpMatchArray)[1]).toBe(tsVersion);
   });
