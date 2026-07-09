@@ -541,6 +541,57 @@ export function relativeCodekbDir(projectDir: string, repo: string, space?: stri
   return `amadeus/spaces/${sp}/codekb/${repo}`;
 }
 
+// `amadeus/spaces/<space>/codekb/<repo>/re-scans/` — the PER-INTENT reverse-
+// engineering scan-record store within a repo's codekb. Each intent's differential
+// base point (base commit / observed commit / focus / date) lives in its OWN file
+// here, keyed by the intent's record-dir name, so two intents scanning the same
+// repo concurrently never overwrite one another's base point (#707). Contrast the
+// repo-level 8 body artifacts + the `reverse-engineering-timestamp.md` freshness
+// pointer, which stay shared and last-writer-wins. The dir is intent-independent
+// (like codekbDir): the per-intent key is the FILE stem (see codekbReScanFile).
+export function codekbReScanDir(projectDir: string, repo: string, space?: string): string {
+  return join(codekbDir(projectDir, repo, space), "re-scans");
+}
+
+// Relative analog of codekbReScanDir (posix slashes) — the engine-emitted form
+// the conductor/subagent reads. Mirrors relativeCodekbDir.
+export function relativeCodekbReScanDir(projectDir: string, repo: string, space?: string): string {
+  return `${relativeCodekbDir(projectDir, repo, space)}/re-scans`;
+}
+
+// The absolute PER-INTENT RE scan-record file:
+// `amadeus/spaces/<space>/codekb/<repo>/re-scans/<intent-record>.md`. The stem is
+// the intent's record-dir NAME (`<slug>-<id8>`), globally unique, so concurrent
+// intents resolve to distinct files (#707). `intent` defaults to the active
+// intent's record-dir name (via activeIntent); returns null when no intent
+// resolves — a caller cannot name a per-intent record without an intent (mirrors
+// relativeRecordDir's null contract).
+export function codekbReScanFile(
+  projectDir: string,
+  repo: string,
+  space?: string,
+  intent?: string,
+): string | null {
+  const sp = space ?? activeSpace(projectDir);
+  const record = activeIntent(projectDir, sp, intent);
+  if (record === null) return null;
+  return join(codekbReScanDir(projectDir, repo, sp), `${record}.md`);
+}
+
+// Relative analog of codekbReScanFile (posix slashes). Returns null on the same
+// no-intent-resolves condition as codekbReScanFile.
+export function relativeCodekbReScanFile(
+  projectDir: string,
+  repo: string,
+  space?: string,
+  intent?: string,
+): string | null {
+  const sp = space ?? activeSpace(projectDir);
+  const record = activeIntent(projectDir, sp, intent);
+  if (record === null) return null;
+  return `${relativeCodekbReScanDir(projectDir, repo, sp)}/${record}.md`;
+}
+
 // The deterministic repo NAME for codekb keying (NOT the intent slug):
 //   1 recorded repo  -> that name
 //   0 recorded repos (workspace root IS the repo) -> the `origin` remote's repo
