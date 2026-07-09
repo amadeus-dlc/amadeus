@@ -1,4 +1,5 @@
 // covers: modules:setup-http
+// size: small
 //
 // createHttp — getJson()'s JSON parse boundary (#677). The fetch/HTTP-status
 // classification lives inside fetchChecked()'s try/catch, but Response.json()

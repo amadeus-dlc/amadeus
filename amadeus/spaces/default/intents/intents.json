@@ -47,5 +47,12 @@
     "dirName": "260709-bug-zero-batch",
     "scope": "bugfix",
     "status": "complete"
+  },
+  {
+    "uuid": "019f46ac-7bdb-7a8e-a99f-da2232df246e",
+    "slug": "packaging-repair-batch",
+    "dirName": "260709-packaging-repair-batch",
+    "scope": "bugfix",
+    "status": "in-flight"
   }
 ]

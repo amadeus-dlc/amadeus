@@ -1,4 +1,5 @@
 // covers: domain:setup-version-spec
+// size: small
 //
 // VersionSpec.latest/exact admits() rules (BR-F02, BR-F04).
 

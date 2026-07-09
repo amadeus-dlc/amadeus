@@ -1,5 +1,20 @@
 # コード構造
 
+## 差分リフレッシュ(260709-packaging-repair-batch)
+
+本 intent の2バグの正本ファイルと、差分区間 `a1c79dc12..22e3eb5aa` の構造的差分。
+
+| パス | 役割 | 本 intent との関係 |
+| --- | --- | --- |
+| `scripts/package.ts` | `dist/<name>/` の生成・検査(`buildTree`/`writeHarness`/`checkHarness`) | **#701 の対象**。`checkHarness`(L554-624)の orphan スキャンルート集合 `[".agents","amadeus"]`(L611)が dist ルート平坦面を含まない。clean-sweep(`writeHarness` L521-549)も harness dir と `dist/<name>/amadeus/` の2つのみを掃く |
+| `scripts/release-version-sync.ts` | version 面3点(version.ts / README バッジ / setup package.json)の同期 | **#702 の対象**。`patchFile`(L34-45)、version.ts patch(L47-51)→ badge patch(L53-54)の適用順、version 受理正規表現(L22) |
+
+**tests/ 層の目録更新(hermeticity 再編 + 新規)**:
+
+- 新規(A): `tests/lib/test-size.ts`(テストサイズ計測の共有ヘルパー、`tests/lib/` 配下)、`tests/unit/t-test-size-drift.test.ts`(サイズドリフトガード)、`tests/unit/setup-http.test.ts`、`tests/unit/t112-delegated-approval.test.ts`、`tests/unit/t202-hook-project-dir-worktree-marker.test.ts`、`tests/unit/t202-sensor-type-check-tsc-launcher.test.ts`。
+- 再編(M): PR #703 により `tests/unit/`・`tests/integration/`・`tests/e2e/` の多数ファイルで hermeticity(共有状態・実行順序依存の排除)修正。`tests/run-tests.ts`・`tests/lib/setup-*-fixture.ts`・coverage レジストリ(`.coverage-ratchet.json`/`.coverage-registry.json`)も追随更新。
+- テスト層構成(smoke / unit / integration / e2e の4層 + `tests/lib/` 共有)自体は不変。
+
 ## トップレベル構造
 
 `packages/` は `framework` と `setup` の2パッケージ構成のまま。トップレベル構造自体に変更はない。

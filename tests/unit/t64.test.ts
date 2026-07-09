@@ -1,4 +1,5 @@
 // covers: function:parseStageFrontmatter, function:emitStageFrontmatter, function:validateStageFrontmatter
+// size: small
 //
 // t64 — stage-frontmatter parse/emit round-trip + schema integration.
 // Mechanism: none (pure functions, zero I/O, zero LLM, zero tokens).

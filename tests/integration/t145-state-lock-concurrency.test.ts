@@ -52,6 +52,15 @@ import {
   getField,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
+// Standalone hermeticity (issue #698): the suite runner injects these guard
+// bypasses into every test file's env (tests/run-tests.ts), so this file only
+// went green under the runner. Default them here as well so a bare
+// `bun test <this file>` behaves the same. Guard-enforcement tests re-enable
+// a guard by deleting its var in their own spawn env, so these defaults do
+// not mask enforcement coverage.
+process.env.AMADEUS_SKIP_ARTIFACT_GUARD ??= "1";
+process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD ??= "1";
+
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const STATE_TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-state.ts");
@@ -114,6 +123,7 @@ function stateSync(args: string[], p: string): { status: number; stdout: string;
     cmd: [BUN, STATE_TOOL, ...args, "--project-dir", p],
     stdout: "pipe",
     stderr: "pipe",
+    env: { ...process.env },
   });
   return {
     status: r.exitCode,
@@ -134,6 +144,7 @@ async function fireParallel(p: string, argSets: string[][]): Promise<number[]> {
       cmd: [BUN, STATE_TOOL, ...args, "--project-dir", p],
       stdout: "ignore",
       stderr: "ignore",
+      env: { ...process.env },
     }),
   );
   await Promise.all(procs.map((c) => c.exited));
@@ -150,6 +161,7 @@ describe("t145 C2b state-lock lost-update safety (mechanism cli — parallel spa
       cmd: [BUN, UTIL_TOOL, "init", "--scope", "bugfix", "--project-dir", proj],
       stdout: "ignore",
       stderr: "ignore",
+      env: { ...process.env },
     });
     if (init.exitCode !== 0) throw new Error("t145 fixture init failed");
   });

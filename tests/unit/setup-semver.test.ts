@@ -1,4 +1,5 @@
 // covers: domain:setup-semver
+// size: small
 //
 // SemVer.parse / isLaterThan / isStable / latestStableOf (BR-F01~F03, BR-F05).
 

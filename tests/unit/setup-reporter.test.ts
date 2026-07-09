@@ -1,4 +1,5 @@
 // covers: modules:setup-reporter
+// size: small
 //
 // reporter's 8 pure render functions. Asserts on the *intent* of each
 // message (which facts appear, force markers, guidance presence) rather than

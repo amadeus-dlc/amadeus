@@ -1,4 +1,5 @@
 // covers: modules:setup-verifier
+// size: small
 //
 // Verifier.create(fsRead).verify — required-files existence + the 4-point
 // doctor-equivalent check (BR-I14), against a fake VerifyRead port.

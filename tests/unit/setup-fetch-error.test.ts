@@ -1,4 +1,5 @@
 // covers: domain:setup-fetch-error
+// size: small
 //
 // FetchError.classify()/isTransient() — the full BR-F06~F08 classification
 // matrix that decides whether fetcher's single automatic retry fires.
