@@ -6,6 +6,9 @@ fixes:
   - ".claude/::packages/framework/core/"
   - ".codex/::packages/framework/core/"
 
+github_checks:
+  annotations: false
+
 ignore:
   - "dist/**/*"
   - ".claude/**/*"
