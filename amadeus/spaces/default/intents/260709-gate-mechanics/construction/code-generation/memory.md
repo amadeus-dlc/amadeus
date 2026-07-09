@@ -16,3 +16,5 @@
 - 2026-07-09T21:35:00Z — #670 と #685 を並行ディスパッチ。編集正本が非交差(amadeus-worktree.ts + t06 vs amadeus-state.ts/amadeus-lib.ts + t112 系)で、dist/self-install 再生成もファイル単位で非交差のため、直列化の待ち時間を回避した。
 
 ## Open questions
+
+- 2026-07-09T22:10:00Z — 両ユニット reviewer READY(いずれも iter1・blocking 0)。PR #727(#670)CI 全緑、PR #729(#685)CI 実行中(Monitor 監視)。ステージゲートは gate-start 済み([?])で、leader の delegate-approval と §13 学習候補のユーザー選択(推奨: c6 のみ採用)を待機中。codex レビュー: #727=codex-engineer-1、#729=codex-engineer-2 に依頼済み。レビュー副産物: 旧関数名コメント残骸を Issue #728 に起票(クロスレビュー待ち)。
