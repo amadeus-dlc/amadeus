@@ -33,5 +33,12 @@
     "dirName": "260709-framework-repair-batch",
     "scope": "bugfix",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019f45d0-4646-7c84-b627-e8f0bdba656c",
+    "slug": "canonical-settings",
+    "dirName": "260709-canonical-settings",
+    "scope": "feature",
+    "status": "in-flight"
   }
 ]
