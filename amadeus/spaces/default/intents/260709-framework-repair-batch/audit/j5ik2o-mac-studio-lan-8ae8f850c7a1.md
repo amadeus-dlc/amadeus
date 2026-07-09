@@ -4285,3 +4285,45 @@
 **Source**: orchestrator
 
 ---
+
+## Subagent Completed
+**Timestamp**: 2026-07-09T22:22:54Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a80fd688a4077974e
+**Message**: 進捗報告
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-09T22:22:58Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a40c24ec1bd95b1a0
+**Message**: 進捗はどう？
+
+---
+
+## Human Turn
+**Timestamp**: 2026-07-09T22:24:54Z
+**Event**: HUMAN_TURN
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-09T22:25:45Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: af0f45ce2be6d4011
+**Message**: 診断結果を教えて
+
+---
+
+## Subagent Completed
+**Timestamp**: 2026-07-09T22:25:57Z
+**Event**: SUBAGENT_COMPLETED
+**Agent Type**: 
+**Agent ID**: a378f80de9a61d708
+**Message**: テストメッセージ送って
+
+---
