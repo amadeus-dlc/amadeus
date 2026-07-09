@@ -8,6 +8,9 @@
 
 ## Deviations
 
+- 2026-07-09T22:32:00Z — PR #729 に codex レビュー NOT-READY(blocking): amadeus-audit の一般 CLI `append` が HUMAN_TURN(presence token)を鋳造可能で、writer テスト自身がこの経路でシードしていた — 「hook-only で偽造不能」という delegated provenance の信頼前提の破れ。leader 裁定により hook 専用封鎖(CLI append/append-raw の保護イベント拒否 + テストシードの fixture 化 + 残余脅威の文書化)で是正中。この穴は #671(マージ済み)にも波及していたが、CLI 遮断は共有経路の封鎖として本 PR で両方を塞ぐ。
+- 2026-07-09T22:32:00Z — 再起動後の leader 宛報告がすべて宛先名誤り(『leader』— 実名 claude-engineer 系列は claude-leader)で不達だったことが判明(send.sh は未登録宛先で無音成功)。全報告を claude-leader 宛に再送済み。教訓は leader が team.md Corrections へ永続化。
+
 - 2026-07-09T21:35:00Z — Bolt worktree の作成に `amadeus-worktree create` ではなく素の `git worktree add` を使用。理由: 本セッション自体が sibling worktree(claude-engineer-3)であり、#670 のバグ(修正対象そのもの)により amadeus-worktree が実行拒否されるため。#670 マージ後は通常経路に戻る。
 - 2026-07-09T21:35:00Z — #685 プラン承認の QUESTION_ANSWERED 記録が human-presence guard で拒否(再起動時の HUMAN_TURN は #670 の回答記録で消費済み)。leader へ delegate-approval を依頼済み。プラン承認判断自体は team ノルム auto-gate-approval(既決)の執行であり、両ビルダーのディスパッチは保留しない(resource-efficiency ノルム)。
 
