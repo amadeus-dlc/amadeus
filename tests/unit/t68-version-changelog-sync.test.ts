@@ -77,8 +77,12 @@ describe("t68 framework version sync (version.ts / CLI / README badge)", () => {
   test("README.md version badge matches amadeus-version.ts [.sh test 6]", () => {
     const tsVersion = versionAssignments()[0];
     const src = readFileSync(README, "utf-8");
-    // Same extraction the .sh ran: between `badge/version-` and `-blue`.
-    const m = src.match(/badge\/version-([0-9]+\.[0-9]+\.[0-9]+)-blue/);
+    // Extraction between `badge/version-` and `-blue`. The captured version
+    // allows an optional prerelease suffix (FR-702-3) so this guard keeps
+    // verifying the badge ⇄ version.ts sync even when the release is a
+    // prerelease (e.g. `version-0.2.0-beta.1-blue`), symmetric with the
+    // acceptance regex in scripts/release-version-sync.ts.
+    const m = src.match(/badge\/version-([0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?)-blue/);
     expect(m).not.toBeNull();
     expect((m as RegExpMatchArray)[1]).toBe(tsVersion);
   });
