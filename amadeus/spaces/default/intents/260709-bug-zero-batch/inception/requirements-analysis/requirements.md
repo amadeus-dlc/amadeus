@@ -26,7 +26,7 @@
 受け入れ基準:
 - AC-675-1: HUMAN_TURN(または #671 の委任行)がゲート開放後に存在しない状態での `reject` は、状態変更(`[R]` 遷移・Revision Count 増加)と `GATE_REJECTED` emit の**前に**明示エラーで拒否される
 - AC-675-2: fresh human turn がある場合の reject は従来どおり成功する
-- AC-675-3: ガードは presence 判定機構(`humanActedSinceGate` — #671 で委任行も認識する)を参照する共通ヘルパー経由とし、approve 側の挙動は変えない。将来 delegate-rejection が導入された場合にヘルパーが自動継承する構造にする(選挙の少数派指摘の反映)
+- AC-675-3: ガードは presence 判定機構(`humanActedSinceGate` — #671 で委任行も認識する)を参照する共通ヘルパー経由とし、approve 側の挙動は変えない(委任行によるゲート開放が approve/reject 両方で同一判定を通ることをテストで確認)。設計ガイダンス(AC 外): 将来 delegate-rejection(#685)が導入された場合にヘルパーが自動継承する構造を優先する
 - AC-675-4: 回帰テストは `tests/unit/t188-human-presence-gate.test.ts` に追加(深掘り分析の fixture 案 A/B: fabricated reject の拒否+fresh turn ありの成功)
 - AC-675-5: **対称ギャップの Issue 起票**: agent-team トポロジーで遠隔 conductor の reject が構造的に成立しないギャップ(delegate-rejection の不在)を、本ガード配線の帰結として GitHub Issue に起票する(実装は本 intent のスコープ外)— **起票済み: #685**
 
@@ -67,7 +67,7 @@
 - AC-668-1: 単一 repo 未記録 intent + origin remote あり(SSH/HTTPS 両形式)で、`codekbRepoName()` は remote 由来の安定名(例: `amadeus`)を返す。worktree/クローンのディレクトリ名に依存しない
 - AC-668-2: remote なし(sandbox/fixture)では従来どおり basename fallback を維持する(旧契約は「常に basename」ではなく「remote がない時のみ basename」として pin し直す)
 - AC-668-3: `codekb-path --json` の `repo`/`dir` が安定名を返す
-- AC-668-4: 既存分裂ディレクトリの統合: 最新スキャン(`codekb/claude-engineer-1/`、claude-leader 版ベースの差分リフレッシュで包含関係が明確)を正として `codekb/amadeus/` へ統合し、旧ディレクトリ(`installer-distribution/`、`claude-leader/`、`claude-engineer-1/`、および旧 `amadeus/` の stale 内容)は削除する(git 履歴で復元可能)。統合の根拠を PR 説明または成果物に記録する
+- AC-668-4: 既存分裂ディレクトリの統合: 最新スキャン(`codekb/claude-engineer-1/`、claude-leader 版ベースの差分リフレッシュで包含関係が明確)を正として `codekb/amadeus/` へ統合し、旧ディレクトリ(`installer-distribution/`、`claude-leader/`、`claude-engineer-1/`、および旧 `amadeus/` の stale 内容)は削除する(git 履歴で復元可能)。統合の根拠を PR 説明または成果物に記録し、レビュー基準として「削除対象ディレクトリにあって統合先に無い情報(ファイル・重点スキャン節)が存在しないこと」を PR レビュアーが diff で確認できる形にする
 - AC-668-5: 回帰テストは `tests/unit/t182-codekb-placement.test.ts`: (1) 0 recorded repos + origin remote → remote slug(dir leaf は repo 名と異なる名前で seed)、(2) `codekb-path --json` の安定名、(3) remote なし → basename fallback の pin
 - AC-668-6: `packages/framework/core/tools/amadeus-lib.ts` の修正は dist / self-install(`.claude/`・`.codex/`)への同期を同一コミットに含める(CR-2 の再掲。lib は複製箇所が多いため明示)
 
