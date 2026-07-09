@@ -21,3 +21,14 @@
 **Issuer Human Ts**: 2026-07-09T22:20:03Z
 
 ---
+
+## Delegated Approval
+**Timestamp**: 2026-07-09T22:31:29Z
+**Event**: DELEGATED_APPROVAL
+**Stage**: functional-design
+**Issuer Space**: default
+**Issuer Intent**: 260709-framework-repair-batch
+**Issuer Shard**: j5ik2o-mac-studio-lan-8ae8f850c7a1.md
+**Issuer Human Ts**: 2026-07-09T22:24:54Z
+
+---
