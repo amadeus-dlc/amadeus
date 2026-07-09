@@ -164,4 +164,32 @@ describe("t202 resolveProjectDirFromHook — worktree marker rung (issue #641)",
       rmSync(tmp, { recursive: true, force: true });
     }
   });
+
+  // Review fix (PR #682, codex-engineer-3): hasWorkspaceMarker must require
+  // BOTH marker halves to be DIRECTORIES, not merely present by name. A plain
+  // FILE named "amadeus" and a plain FILE at ".claude/tools" must NOT satisfy
+  // the marker — resolution must fall through to script-path derivation.
+  test("6: plain FILES named amadeus / .claude/tools do NOT satisfy the marker (falls through to script-path derivation)", () => {
+    const tmp = realpathSync(mkdtempSync(join(tmpdir(), "t202-")));
+    try {
+      const projectDir = join(tmp, "proj");
+      const hooksDir = join(projectDir, ".claude", "hooks");
+      mkdirSync(hooksDir, { recursive: true });
+      const hookPath = join(hooksDir, "some-hook.ts");
+      writeFileSync(hookPath, "// fixture hook script\n");
+
+      // cwd = a directory that has "amadeus" and ".claude/tools" as plain
+      // FILES (not dirs) — the pre-fix existsSync-only check treated this as
+      // a satisfied marker; the fix must reject it.
+      const fakeMarkerDir = join(tmp, "fake-marker");
+      mkdirSync(join(fakeMarkerDir, ".claude"), { recursive: true });
+      writeFileSync(join(fakeMarkerDir, "amadeus"), "not a directory\n");
+      writeFileSync(join(fakeMarkerDir, ".claude", "tools"), "not a directory\n");
+
+      const resolved = evalResolve(CLAUDE_LIB, hookPath, { cwd: fakeMarkerDir });
+      expect(resolved).toBe(projectDir);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
 });

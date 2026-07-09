@@ -235,15 +235,29 @@ function stripHarnessLeaf(dir: string, leaf: string): string | null {
   return dirname(harnessDirPath);
 }
 
+// True if `p` exists AND is a directory (not a plain file). Guards the
+// workspace marker check below against a stray FILE named "amadeus" or
+// ".claude/tools" satisfying the marker by name alone.
+function isDir(p: string): boolean {
+  try {
+    return statSync(p).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
 // True for `dir` carrying the amadeus workspace marker: an "amadeus/"
 // directory AND a "tools/" directory under one of the known harness dirs
 // (e.g. ".claude/tools"). A worktree session ships its OWN amadeus/ record
 // tree and its OWN harness tools tree even though the hook SCRIPTS it runs
 // still live under the main checkout's harness dir — so this marker, unlike
 // script-path derivation, distinguishes the worktree from the main checkout.
+// Both halves must be DIRECTORIES, not merely present-by-name (issue #641
+// review fix): a plain file named "amadeus" or ".claude/tools" must not
+// satisfy the marker.
 function hasWorkspaceMarker(dir: string): boolean {
-  if (!existsSync(join(dir, "amadeus"))) return false;
-  return KNOWN_HARNESS_DIRS.some((h) => existsSync(join(dir, h, "tools")));
+  if (!isDir(join(dir, "amadeus"))) return false;
+  return KNOWN_HARNESS_DIRS.some((h) => isDir(join(dir, h, "tools")));
 }
 
 // Search `startDir` and its ancestors (up to the filesystem root) for the
