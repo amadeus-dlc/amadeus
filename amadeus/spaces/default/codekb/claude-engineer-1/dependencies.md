@@ -1,0 +1,72 @@
+# 依存関係
+
+## 内部依存グラフ(既存 framework 配布経路、変更なし)
+
+```mermaid
+flowchart TD
+  FWCore["packages/framework/core/"]
+  FWHarness["packages/framework/harness/<name>/"]
+  PackageScript["scripts/package.ts"]
+  Promote["scripts/promote-self.ts"]
+  Dist["root dist/<name>/"]
+  Runtime["root .claude/.codex/.agents"]
+  Tests["tests/"]
+  CI[".github/workflows/ci.yml"]
+
+  FWCore --> PackageScript
+  FWHarness --> PackageScript
+  PackageScript --> Dist
+  Dist --> Promote
+  Promote --> Runtime
+  Dist --> Tests
+  PackageScript --> Tests
+  CI --> PackageScript
+  CI --> Promote
+```
+
+<!-- text fallback: packages/framework/{core,harness} が scripts/package.ts に取り込まれ root dist/<name>/ を生成し、promote-self 経由で root .claude/.codex/.agents に反映される。CI がこの一連を実行する。この経路は本 intent で変更しない。 -->
+
+## #674/#675/#676/#668 の内部依存(`amadeus-lib.ts` 中心)
+
+```mermaid
+flowchart TD
+  Lib["amadeus-lib.ts"]
+  Swarm["amadeus-swarm.ts (handleFinalize)"]
+  State["amadeus-state.ts (handleApprove/handleReject)"]
+  Bolt["amadeus-bolt.ts (handleStart)"]
+  Utility["amadeus-utility.ts (codekb-path)"]
+
+  Lib -->|emitUnitConverged/emitUnitFailed/emitBoltFailed| Swarm
+  Lib -->|isAutonomousMode/humanPresenceGuardDisabled/humanActedSinceGate| State
+  Lib -->|auditFilePath/recordDir/spaceRecordRoot| Bolt
+  Lib -->|codekbRepoName/intentRepos| Utility
+```
+
+<!-- text fallback: amadeus-lib.ts is the shared library consumed by amadeus-swarm.ts (audit emitters used by #674's finalize), amadeus-state.ts (the guard functions asymmetrically wired between approve and reject, #675), amadeus-bolt.ts (auditFilePath's bare fallback, #676), and amadeus-utility.ts (codekbRepoName's basename fallback, #668). All four bugs in this cluster trace back to logic living in this one shared file, though each bug is a distinct function within it. -->
+
+## `@amadeus-dlc/setup` の内部依存(#677・#678 に関連)
+
+```mermaid
+flowchart TD
+  HttpPort["ports/http.ts (createHttp)"]
+  Fetcher["modules/fetcher.ts (推定消費側)"]
+  Extractor["internal/tar-archive-extractor.ts (extractTarGz)"]
+  TmpWrite["ports/fsops.ts (TmpWrite)"]
+  Payload["domain/payload.ts (FetchError)"]
+
+  HttpPort --> Fetcher
+  HttpPort --> Payload
+  Extractor --> TmpWrite
+  Extractor --> Payload
+  Fetcher --> Extractor
+```
+
+<!-- text fallback: ports/http.ts defines the Http port (getJson/downloadArchive) consumed by modules/fetcher.ts (not read in this scan; inferred from directory layout in component-inventory.md). downloadArchive's returned stream feeds into internal/tar-archive-extractor.ts's extractTarGz, which depends on the TmpWrite port (fsops.ts) for writes and shares the FetchError domain type (domain/payload.ts) with the Http port for uniform error classification. #677 and #678 sit at two different points along this same download→extract pipeline. -->
+
+## 外部依存関係
+
+Framework 本体・`packages/setup` に新規の外部依存追加はない。CI が依存する外部要素も変更なし(`oven-sh/setup-bun@v2` 等)。6件のバグ修理はいずれも既存モジュール内の分岐・try/catch 追加で完結し、新規パッケージ依存を要求しない見込み。
+
+## Sibling intent 依存関係
+
+前々回 intent `260708-installer-distribution` は完了済み。前回 intent `260709-framework-repair-batch` は requirements-analysis ゲートで park された状態(#656/#657/#641/#661 を対象)。本 intent `260709-bug-zero-batch` は対象コード領域が異なる独立バッチであり、前回バッチの完了を前提としない。#656(`LegacyLayout` の配線)は本スキャン時点で `upgrade.ts:192` から `Installation.detect` の evidence が消費されており解消済みと確認できたが、#657(`bunx tsc` の無条件使用)は `amadeus-sensor-type-check.ts:157,174` の時点でも未修理のまま残存している。#641・#661 は本スキャンの重点対象外のため状態未確認。本 intent のスコープはあくまで #674/#675/#676/#677/#678/#668 の6件。
