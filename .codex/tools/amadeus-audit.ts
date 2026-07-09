@@ -54,6 +54,14 @@ const VALID_EVENT_TYPES = new Set([
   "GATE_APPROVED",
   "GATE_REJECTED",
   "QUESTION_ANSWERED",
+  // Delegated approval provenance (#671): a leader session, driven by a real
+  // human turn on its own ledger, records this into a REMOTE conductor intent's
+  // audit dir so the conductor's human-presence gate can open. The event carries
+  // the issuer's (space, intent, shard, HUMAN_TURN timestamp) so the conductor
+  // can verify the grounding HUMAN_TURN physically exists in the issuer shard —
+  // it is not self-asserted (checked by verifyDelegatedApproval; forgery-proof
+  // because HUMAN_TURN is only ever written by the UserPromptSubmit hook).
+  "DELEGATED_APPROVAL",
   // Artifact events (hook-emitted)
   "ARTIFACT_CREATED",
   "ARTIFACT_UPDATED",
@@ -151,6 +159,7 @@ const EVENT_HEADINGS: Record<string, string> = {
   GATE_APPROVED: "Gate Approved",
   GATE_REJECTED: "Gate Rejected",
   QUESTION_ANSWERED: "Question Answered",
+  DELEGATED_APPROVAL: "Delegated Approval",
   ARTIFACT_CREATED: "Artifact Created",
   ARTIFACT_UPDATED: "Artifact Updated",
   ARTIFACT_REUSED: "Artifact Reused",

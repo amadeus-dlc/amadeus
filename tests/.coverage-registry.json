@@ -20,14 +20,14 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 415,
+    "total": 418,
     "enumeratedByClass": {
-      "function": 200,
-      "audit": 70,
+      "function": 201,
+      "audit": 71,
       "scope": 9,
       "stage": 32,
       "hook": 11,
-      "subcommand": 86,
+      "subcommand": 87,
       "render-surface": 7
     },
     "coveredByClass": {
@@ -112,6 +112,13 @@
     {
       "unitClass": "audit",
       "unitId": "DECISION_RECORDED",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "DELEGATED_APPROVAL",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -2618,6 +2625,13 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:verifyDelegatedApproval",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:withAuditLock",
       "minMechanism": "none",
       "coveredBy": [
@@ -4167,6 +4181,13 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-state delegate-approval",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "subcommand",

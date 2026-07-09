@@ -79,7 +79,7 @@ afterAll(() => {
   }
 });
 
-// The 70 canonical event types, mirrored from amadeus-audit.ts VALID_EVENT_TYPES.
+// The 71 canonical event types, mirrored from amadeus-audit.ts VALID_EVENT_TYPES.
 // Kept as an explicit literal (not re-derived from the source) so that a silent
 // addition/removal in the source surfaces here as a count mismatch worth a look.
 const VALID_EVENT_TYPES = [
@@ -109,6 +109,7 @@ const VALID_EVENT_TYPES = [
   "GATE_APPROVED",
   "GATE_REJECTED",
   "QUESTION_ANSWERED",
+  "DELEGATED_APPROVAL",
   "ARTIFACT_CREATED",
   "ARTIFACT_UPDATED",
   "ARTIFACT_REUSED",
@@ -336,8 +337,8 @@ describe("appendAuditEntryUnlocked — escaping and append-not-overwrite", () =>
 
 describe("VALID_EVENT_TYPES — every canonical type is accepted", () => {
   test("the mirrored list has 70 entries with no duplicates", () => {
-    expect(VALID_EVENT_TYPES.length).toBe(70);
-    expect(new Set(VALID_EVENT_TYPES).size).toBe(70);
+    expect(VALID_EVENT_TYPES.length).toBe(71);
+    expect(new Set(VALID_EVENT_TYPES).size).toBe(71);
   });
 
   // Loop over ALL 68 valid types: each must append a block whose **Event**

@@ -210,6 +210,7 @@ Session hooks check for the active intent's `amadeus-state.md` (under `amadeus/s
 |---|---|---|
 | `GATE_APPROVED` | `tools/amadeus-state.ts` | `--user-input` captures the exact choice |
 | `GATE_REJECTED` | `tools/amadeus-state.ts` | `--feedback` captures the rejection reason |
+| `DELEGATED_APPROVAL` | `tools/amadeus-state.ts` | `delegate-approval` records a leader session's human-grounded approval into a remote conductor intent's audit dir; carries the issuer `(space, intent, shard, HUMAN_TURN timestamp)` the conductor's gate verifies (#671) |
 
 ### User interaction
 
