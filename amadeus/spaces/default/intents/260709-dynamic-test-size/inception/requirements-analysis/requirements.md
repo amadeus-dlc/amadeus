@@ -1,6 +1,6 @@
 # Requirements — #699 テストサイズの継続的動的計測(dynamic-test-size)
 
-> ステータス: ドラフト(明確化質問 Q1〜Q4 の選挙結果待ち。確定後に FR-3〜FR-5 を最終化する)
+> ステータス: 確定(明確化質問 Q1〜Q4 は選挙で全問 A 採択 — 2026-07-09、4票全会一致。`requirements-analysis-questions.md` 参照)
 > 起草: amadeus-product-agent ペルソナ(conductor: claude-engineer-1)
 > 上流: GitHub Issue #699(#684 Phase D)、前提再点検記録(#699 comment 4929651967)、codekb(business-overview.md / architecture.md / code-structure.md、2026-07-10 diff-refresh)
 
@@ -37,26 +37,30 @@
 - 分類器の出力形状 `SizeClassification { size, signals }`(`test-size.ts:42-45`)は安定契約として保ち、動的観測は**壊さず重ねる**。
 - テスト可能条件(Issue AC 準拠、使用バックエンドで検出可能な形態に限定): 赤 fixture(例: `// size: small` 宣言 + 実測 ≥ small 帯上限の sleep/処理)で drift が検出され、緑 fixture(pure in-process・帯内)では検出されない — 両方を実証してから完成扱い(team.md Mandated「落ちる実証」)。
 
-### FR-3: 永続化と CI artifact/registry 化(選挙 Q1 の結果で確定)
+### FR-3: 永続化と CI artifact/registry 化(選挙 Q1=A で確定)
 
 - 実測メタデータ+derived size+drift 判定結果を、runner 実行ごとに機械可読形式で永続化する。
-- 永続化先: 【Q1 回答待ち — 推奨 A: 新規 JSON レポート + CI artifact upload】
+- 永続化先: **新規 JSON レポートファイル**。runner が per-file `{file, scope, staticSize, declaredSize, duration, signals, drift 判定}` 相当を書き出し(正確なスキーマは functional-design で確定)、CI(`ci.yml`)で artifact として upload する(既存 coverage artifact のパターン `ci.yml:75-84` を踏襲)。
+- coverage registry(`tests/gen-coverage-registry.ts`)は拡張しない(`covers:` 軸と変更理由が異なる)。`.meta` の削除契約(`run-tests.ts:430`)も変更しない。
 - summary matrix(scope×size)に動的実測の情報を反映する(Issue AC「summary matrix に出る」)。既存 `printSizeMatrix`(`run-tests.ts:895-948`)の exit-code 隔離契約(`:882-886`、t112 が固定)を踏襲する。
+- テスト可能条件: `--ci` 実行後にレポートファイルが存在し、実行された全 test file の行を含み、JSON として parse 可能。CI 上で artifact として取得可能。
 
-### FR-4: size↔wall-clock 帯の定義(選挙 Q3 の結果で確定)
+### FR-4: size↔wall-clock 帯の定義(選挙 Q3=A で確定)
 
-- 閾値帯: 【Q3 回答待ち — 推奨 A: codex-3 実測ルール = small <1s / large ≥30s or timeout / medium はその間】
+- 閾値帯: **codex-3 実測ルール**(#684 comment 4924008283、329 ファイル実測由来)を採用する — small は <1s、large は ≥30s(または timeout)、medium はその間。
 - 閾値は単一定義(canonical 1定義から導出、construction ガードレール準拠)とし、drift 検出(FR-2)と summary(FR-3)の双方が同じ定義を消費する。
 
-### FR-5: 執行姿勢(選挙 Q2 の結果で確定)
+### FR-5: 執行姿勢(選挙 Q2=A で確定)
 
-- wall-clock drift の CI 上の扱い: 【Q2 回答待ち — 推奨 A: advisory(レポート+matrix 表示、CI は赤くしない)で段階導入】
-- いずれの回答でも、検証結果は実行結果から導出する(検証劇場の禁止 — team.md Forbidden)。
+- wall-clock drift の CI 上の扱いは **advisory(段階導入)**: drift はレポート(FR-3)へ記録し summary matrix に表示するが、CI を赤くしない。ゲート昇格(CI 赤化)は実測分布の安定を確認した後続 Issue で判断する。
+- 根拠: 実測分布の分散(unit p95=2.0s vs max=11.1s)により即ゲートは flake 源。静的 drift guard が既に CI 赤を担っている。
+- advisory であっても、検出結果は実行結果から導出する(検証劇場の禁止 — team.md Forbidden)。赤/緑 fixture の実証(FR-2)は advisory 検出ロジック自体に対して行う。
 
-### FR-6: 観測バックエンドの拡張点(選挙 Q4 の結果で確定)
+### FR-6: 観測バックエンドの拡張点(選挙 Q4=A で確定、付帯条件あり)
 
-- 【Q4 回答待ち — 推奨 A: バックエンド seam(interface)のみ設計し、strace/eBPF 実装は後続 Issue】
-- いずれの回答でも macOS DTrace を前提にしない(Issue AC)。
+- 観測バックエンドの **seam(interface)を設計**し、strace/eBPF の実装は後続 Issue とする。
+- **付帯条件(選挙で採択)**: seam は現行 wall-clock バックエンドを**初回消費者**として実装する — 消費者ゼロの拡張点を作らない(どのコードも消費しないフィールド/インターフェースの禁止 — construction ガードレールと整合)。すなわち FR-1〜FR-3 の wall-clock 経路自体が seam 越しに動くこと。
+- macOS DTrace を前提にしない(Issue AC)。
 
 ## 3. 非機能要件(NFR)
 
@@ -89,5 +93,5 @@
 
 ## 7. 未解決事項(Open questions)
 
-- Q1〜Q4 の選挙結果待ち(`requirements-analysis-questions.md`)。確定後に FR-3〜FR-6 の【】を除去し最終化する。
-- `size:` 選択フィルタ(#696 スコープ項目5、#700 未実装)を本 intent で拾うか — 現時点ではスコープ外扱い(#699 AC に含まれない)。拾う場合は別 Issue 起票が筋。
+- `size:` 選択フィルタ(#696 スコープ項目5、#700 未実装)は本 intent のスコープ外(#699 AC に含まれない)。必要になった時点で別 Issue として起票する。
+- Q2=A の帰結として、advisory の実測分布が安定した後のゲート昇格判断(閾値の余裕係数を含む)は後続 Issue の論点。
