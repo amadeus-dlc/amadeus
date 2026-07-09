@@ -974,10 +974,9 @@ function reportDynamicSizes(collector: SizeCollector): void {
     process.stderr.write(`NOTE: could not write ${displayLogDirPath(reportPath)} (${err})\n`);
   }
 
-  const drifted = report.records.filter((r) => r.drift.kind === "wall-clock");
-  process.stdout.write(`wall-clock drift: ${drifted.length} file(s)\n`);
-  for (const r of drifted) {
-    if (r.drift.kind !== "wall-clock") continue; // narrows the union for the fields below
+  process.stdout.write(`wall-clock drift: ${report.summary.driftCount} file(s)\n`);
+  for (const r of report.records) {
+    if (r.drift.kind !== "wall-clock") continue;
     process.stdout.write(
       `  ${r.file}: declared=${r.drift.declared} measured=${r.drift.measured} (${r.durationSeconds}s)\n`,
     );
