@@ -29,6 +29,12 @@ type SafePath = string & { readonly [safePathBrand]: "SafePath" };
 
 type TarHeader = { readonly name: string; readonly size: number; readonly typeflag: string };
 type PendingFile = { readonly path: SafePath; remaining: number; readonly chunks: Buffer[] };
+// Pending body (+ padding) of a PAX ('x'/'g') or GNU longname ('L') extended
+// header whose header block has already been consumed. Carried across chunk
+// boundaries the same way `current` carries a regular file's body — without
+// this, a body that arrives split across a gunzip output chunk gets
+// re-parsed as a fresh tar header on the next chunk (issue #678).
+type PendingExtendedHeader = { readonly typeflag: "x" | "g" | "L"; remaining: number; readonly size: number; readonly chunks: Buffer[] };
 
 export async function extractTarGz(archivePath: string, extractDir: string, tmpWrite: TmpWrite): Promise<Result<void, FetchError>> {
   const gunzip = createReadStream(archivePath).pipe(createGunzip());
@@ -36,6 +42,7 @@ export async function extractTarGz(archivePath: string, extractDir: string, tmpW
   let carry = Buffer.alloc(0);
   let pendingLongName: string | null = null;
   let current: PendingFile | null = null;
+  let pendingExtHeader: PendingExtendedHeader | null = null;
 
   try {
     for await (const chunk of gunzip) {
@@ -79,6 +86,30 @@ export async function extractTarGz(archivePath: string, extractDir: string, tmpW
         continue;
       }
 
+      if (pendingExtHeader) {
+        const take = Math.min(pendingExtHeader.remaining, carry.length);
+        if (take > 0) {
+          pendingExtHeader.chunks.push(carry.subarray(0, take));
+          carry = carry.subarray(take);
+          pendingExtHeader.remaining -= take;
+        }
+        if (pendingExtHeader.remaining > 0) {
+          if (final) return Result.err(FetchError.payloadInvalid(extendedHeaderTruncationMessage(pendingExtHeader.typeflag)));
+          return null;
+        }
+        const pad = paddingFor(pendingExtHeader.size);
+        if (carry.length < pad) {
+          if (final) return Result.err(FetchError.payloadInvalid(extendedHeaderTruncationMessage(pendingExtHeader.typeflag)));
+          return null;
+        }
+        carry = carry.subarray(pad);
+        const data = Buffer.concat(pendingExtHeader.chunks);
+        if (pendingExtHeader.typeflag === "x") pendingLongName = parsePaxPath(data) ?? pendingLongName;
+        else if (pendingExtHeader.typeflag === "L") pendingLongName = data.toString("utf8").replace(/\0+$/, "");
+        pendingExtHeader = null;
+        continue;
+      }
+
       if (carry.length < BLOCK_SIZE) {
         if (final && carry.length > 0) return Result.err(FetchError.payloadInvalid("truncated tar header"));
         return null;
@@ -92,26 +123,11 @@ export async function extractTarGz(archivePath: string, extractDir: string, tmpW
       const header = parseHeader(block);
       if (!header) return Result.err(FetchError.payloadInvalid("malformed tar header"));
 
-      if (header.typeflag === "x" || header.typeflag === "g") {
-        const pad = paddingFor(header.size);
-        if (carry.length < header.size + pad) {
-          if (final) return Result.err(FetchError.payloadInvalid("truncated PAX header"));
-          return null;
-        }
-        const paxData = carry.subarray(0, header.size);
-        carry = carry.subarray(header.size + pad);
-        if (header.typeflag === "x") pendingLongName = parsePaxPath(paxData) ?? pendingLongName;
-        continue;
-      }
-
-      if (header.typeflag === "L") {
-        const pad = paddingFor(header.size);
-        if (carry.length < header.size + pad) {
-          if (final) return Result.err(FetchError.payloadInvalid("truncated GNU long-name header"));
-          return null;
-        }
-        pendingLongName = carry.subarray(0, header.size).toString("utf8").replace(/\0+$/, "");
-        carry = carry.subarray(header.size + pad);
+      if (header.typeflag === "x" || header.typeflag === "g" || header.typeflag === "L") {
+        // Defer to the pendingExtHeader branch at the top of the loop: it
+        // handles zero-size bodies too (remaining starts at 0, so the next
+        // iteration finalizes immediately), keeping this a single code path.
+        pendingExtHeader = { typeflag: header.typeflag, remaining: header.size, size: header.size, chunks: [] };
         continue;
       }
 
@@ -194,6 +210,10 @@ function parseOctal(raw: string): number | null {
   if (trimmed.length === 0) return 0;
   if (!/^[0-7]+$/.test(trimmed)) return null;
   return Number.parseInt(trimmed, 8);
+}
+
+function extendedHeaderTruncationMessage(typeflag: "x" | "g" | "L"): string {
+  return typeflag === "L" ? "truncated GNU long-name header" : "truncated PAX header";
 }
 
 function isZeroBlock(block: Buffer): boolean {
