@@ -1712,3 +1712,14 @@
 **Source**: orchestrator
 
 ---
+
+## Rule Learned
+**Timestamp**: 2026-07-09T08:44:35Z
+**Event**: RULE_LEARNED
+**Stage**: requirements-analysis
+**Candidate-ID**: requirements-analysis:stash-discipline
+**Destination**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-leader/amadeus/spaces/default/memory/team.md
+**Heading**: ## Corrections
+**Source**: orchestrator
+
+---
