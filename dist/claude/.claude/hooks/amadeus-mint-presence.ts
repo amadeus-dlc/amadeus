@@ -6,7 +6,26 @@
 // recorded since the last gate resolution, so a model under autopilot cannot
 // fabricate an approval with no human having acted this turn.
 //
-// Presence-only: the prompt text is irrelevant, so stdin is not read.
+// Classify the prompt before minting. Claude Code fires UserPromptSubmit not
+// only for physical human input but also for machine-injected, turn-starting
+// user-role messages (agmsg monitor task-notifications). Those must NOT count as
+// human presence, or the gate (humanActedSinceGate) goes false-positive — a
+// model under autopilot would ride a monitor ping's phantom HUMAN_TURN to
+// approve its own gate (issue #708). The one signal that separates the two is
+// the prompt text: a machine-injected turn's prompt starts with the
+// "<task-notification>" marker; a human never opens a prompt that way (and the
+// threat model is a MODEL fabricating presence, not a human disowning their own
+// input). The stdin payload carries no source flag, so the prompt text is the
+// classifier.
+//
+// PRIVACY: the prompt is read into memory and matched against a fixed marker
+// only. Its body is never written to the audit shard or logged — the mint keeps
+// its empty-details payload.
+//
+// FAIL-OPEN: if stdin can't be read, isn't JSON, or has no prompt, we MINT — a
+// read failure must never rob a real human of their presence. Only a payload we
+// can positively classify as machine-injected suppresses the mint.
+//
 // appendAuditEntry resolves the active intent from the on-disk cursor using only
 // the project dir (no payload needed). No workflow state on disk means nothing
 // to gate, so the hook exits without writing (same self-gate as
@@ -16,12 +35,39 @@
 // safe. The mint is fail-open (try/catch, exit 0): a mint failure must never
 // block the human's turn.
 import { existsSync } from "node:fs";
-import { resolveProjectDirFromHook, stateFilePath } from "../tools/amadeus-lib.ts";
+import {
+  isClaudeCodeHookInput,
+  resolveProjectDirFromHook,
+  stateFilePath,
+} from "../tools/amadeus-lib.ts";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
+
+// The prompt prefix Claude Code stamps on a machine-injected, turn-starting
+// user-role message (agmsg monitor task-notifications). Measured live (#708).
+const MACHINE_INJECTED_PROMPT_PREFIX = "<task-notification>";
+
+// Read + classify the UserPromptSubmit stdin. Returns true only when we can
+// POSITIVELY identify a machine-injected turn (fail-open everywhere else).
+async function isMachineInjectedTurn(): Promise<boolean> {
+  // A TTY means the hook was invoked interactively (no JSON coming) — never
+  // block on a terminal read; treat as unclassifiable (fail-open -> mint).
+  if (process.stdin.isTTY) return false;
+  try {
+    const input = await Bun.stdin.text();
+    if (input.length === 0) return false; // empty pipe -> fail-open
+    const raw: unknown = JSON.parse(input);
+    if (!isClaudeCodeHookInput(raw)) return false;
+    const prompt = raw.prompt;
+    if (typeof prompt !== "string") return false; // prompt absent -> fail-open
+    return prompt.startsWith(MACHINE_INJECTED_PROMPT_PREFIX);
+  } catch {
+    return false; // non-JSON / read failure -> fail-open
+  }
+}
 
 try {
   const projectDir = resolveProjectDirFromHook(import.meta.url);
-  if (existsSync(stateFilePath(projectDir))) {
+  if (existsSync(stateFilePath(projectDir)) && !(await isMachineInjectedTurn())) {
     appendAuditEntry("HUMAN_TURN", {}, projectDir);
   }
 } catch {

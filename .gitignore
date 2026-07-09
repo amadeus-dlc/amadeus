@@ -24,6 +24,7 @@ packages/setup/dist/
 
 # Test verbose logs
 tests/logs/
+coverage/
 
 # Claude worktrees
 .claude/worktrees
