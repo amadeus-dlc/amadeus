@@ -46,7 +46,7 @@
 //   .sh test 4 (every MD event in TS)                 -> "every audit-format.md event appears in amadeus-audit.ts"
 //   .sh test 5 (EVENT_HEADINGS has every TS event)    -> "EVENT_HEADINGS maps every VALID_EVENT_TYPES member"
 //   .sh test 6 (assert_eq TS_COUNT MD_COUNT)          -> "event counts match across the two files"
-//   .sh test 7 (assert_eq TS_COUNT - baseline pin)    -> "VALID_EVENT_TYPES.size === 70 (baseline pin)"
+//   .sh test 7 (assert_eq TS_COUNT - baseline pin)    -> "VALID_EVENT_TYPES.size === 71 (baseline pin)"
 
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -166,8 +166,8 @@ describe("t28 audit event-type sync (migrated from t28-audit-event-sync.sh, plan
 
   // .sh test 7: assert_eq TS_COUNT - the canonical baseline pin, bumped when
   // events are added or removed. (#367 added WORKFLOW_PARKED/UNPARKED -> 69;
-  // #369 removed TEST_RUN_MODE_ENABLED -> 68; HUMAN_TURN took it to 69; the adaptive composer added RECOMPOSED -> 70.)
-  test("VALID_EVENT_TYPES.size === 70 (baseline pin) [.sh test 7]", () => {
+  // #369 removed TEST_RUN_MODE_ENABLED -> 68; HUMAN_TURN took it to 69; the adaptive composer added RECOMPOSED -> 70; #671 added DELEGATED_APPROVAL -> 71.)
+  test("VALID_EVENT_TYPES.size === 71 (baseline pin) [.sh test 7]", () => {
     expect(TS_EVENTS.length).toBe(CANONICAL_COUNT);
   });
 });

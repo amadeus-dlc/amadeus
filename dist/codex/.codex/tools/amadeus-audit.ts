@@ -15,7 +15,7 @@ import {
   worktreePath,
 } from "./amadeus-lib.ts";
 
-// --- Canonical event types (70) ---
+// --- Canonical event types (71) ---
 // See docs/reference/12-state-machine.md for the state transitions that emit each event.
 
 const VALID_EVENT_TYPES = new Set([

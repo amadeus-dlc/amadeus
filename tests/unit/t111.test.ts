@@ -15,7 +15,7 @@
 //     escape (the forged-audit-entry defence the source comments on at :248)
 //   - that appending twice keeps BOTH blocks (append-not-overwrite invariant)
 //   - that an invalid event type is rejected by throw, before any disk write
-//   - that EVERY one of the 70 VALID_EVENT_TYPES is accepted
+//   - that EVERY one of the 71 VALID_EVENT_TYPES is accepted
 // A regression that dropped escaping, overwrote prior history, reordered the
 // header fields, or narrowed the accepted event set would turn one of these
 // red.
