@@ -143,6 +143,13 @@ interface FireResult {
  * stdin, mirroring the .sh's `echo '<json>' | CLAUDE_PROJECT_DIR=$PROJ bun
  * $HOOK`. When `setEnv` is false the env var is omitted so the hook exercises
  * its script-path projectDir fallback (test 10). Returns exit code + wall time.
+ *
+ * cwd is always pinned to the project dir, matching how Claude Code actually
+ * spawns hooks (cwd = project/worktree root) — without this, the subprocess
+ * would inherit the TEST RUNNER's cwd (this repo's own dev root), which
+ * itself carries an amadeus/ + .claude/tools/ marker unrelated to the fixture
+ * project and would spuriously win resolveProjectDirFromHook's workspace
+ * marker rung (issue #641).
  */
 function fire(json: string, p: string, hookPath = HOOK, setEnv = true): FireResult {
   const env = { ...process.env };
@@ -154,6 +161,7 @@ function fire(json: string, p: string, hookPath = HOOK, setEnv = true): FireResu
     stdin: new TextEncoder().encode(json),
     stdout: "ignore",
     stderr: "ignore",
+    cwd: p,
     env,
   });
   const durationMs = performance.now() - t0;
