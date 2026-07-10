@@ -124,5 +124,12 @@
     "dirName": "260710-mint-presence-vectors",
     "scope": "bugfix",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019f4d86-78cd-7391-9230-dc3888dc5c34",
+    "slug": "p3-cleanup-batch4",
+    "dirName": "260710-p3-cleanup-batch4",
+    "scope": "bugfix",
+    "status": "in-flight"
   }
 ]
