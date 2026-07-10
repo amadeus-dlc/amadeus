@@ -81,6 +81,20 @@ function isCheckboxState(s: string): s is CheckboxState {
 // anything that is not strictly forward — this also keeps every emitted phase
 // event direction-correct, since a rejected backward advance never reaches the
 // PHASE_COMPLETED/VERIFIED/STARTED emission block.
+// Canonicalise a phase token (name or number) to its canonical name, or null.
+//
+// A bare PHASE_NUMBERS[lower] walks the prototype chain, so all-lowercase
+// Object.prototype members (`constructor`, `__proto__`) resolve to truthy
+// non-string values and are mistaken for valid phases. Object.hasOwn keeps
+// those names on the null (valid:false) path. Kept local to this tool (E-L17):
+// the PHASE_NUMBERS constant stays shared, but each site carries its own guard
+// to avoid cross-file churn; a follow-up consolidation issue tracks the copies.
+export function ownPhase(input: string): string | null {
+  const lower = input.toLowerCase();
+  if (Object.hasOwn(PHASE_NUMBERS, lower)) return PHASE_NUMBERS[lower];
+  return (PHASES as readonly string[]).includes(lower) ? lower : null;
+}
+
 export function advanceDirectionCheck(
   completedIdx: number,
   nextIdx: number
@@ -2507,10 +2521,7 @@ function handleLookup(args: string[]): void {
     }
     case "validate-phase": {
       if (subArgs.length < 1) error("Usage: lookup validate-phase <phase-or-number>");
-      const input = subArgs[0].toLowerCase();
-      const phase =
-        PHASE_NUMBERS[input] ||
-        ((PHASES as readonly string[]).includes(input) ? input : null);
+      const phase = ownPhase(subArgs[0]);
       if (!phase) {
         console.log(JSON.stringify({ valid: false, input: subArgs[0] }));
       } else {

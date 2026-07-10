@@ -1031,6 +1031,20 @@ function computeGate(
   return true;
 }
 
+// Resolve the gate for a --single run. A single run reads no main state
+// (stateContent is null), so a construction skeleton-gate stage computes
+// GATE_UNRESOLVED — but the classify round-trip that resolves it only exists on
+// the main workflow, which single never touches. That left `--stage <first
+// construction stage> --single` emitting gate:"unresolved" with no path forward.
+// Resolve it determinately to a gated stage instead: a standalone single run of
+// a construction stage still gates on approval, which is the safe determinate
+// default. This only rewrites the gate VALUE; the single pointer rule (a single
+// run never advances the main Current Stage) is enforced separately by the
+// single report path.
+export function resolveSingleGate(gate: GateValue): GateValue {
+  return gate === GATE_UNRESOLVED ? true : gate;
+}
+
 // Build a run-stage directive by reading the routing fields straight off the
 // compiled graph node. consumes/produces carry RESOLVED amadeus-docs/... paths:
 // the engine resolves the node's vocabulary names → paths at emit time (so the
@@ -1114,7 +1128,7 @@ function handleNext(args: string[], projectDir: string | undefined): void {
   // open to the normal `next`.
   if (!flags.readOnly && !flags.workspaceVerb && !flags.stage && !flags.phase &&
       !flags.scope && !flags.intent && !flags.resume && !flags.depth && !flags.testStrategy &&
-      !flags.single && !flags.compose && !flags.newScope && !flags.report) {
+      !flags.single && !flags.compose && !flags.newScope && !flags.report && !flags.newIntent) {
     try {
       const pdLatch = resolveProjectDir(projectDir);
       const latchPath = join(pdLatch, "amadeus", ".amadeus-readonly-latch");
@@ -1984,6 +1998,7 @@ function emitSingleRunStage(
     recordPrefix,
     codekbCtx,
   );
+  directive.gate = resolveSingleGate(directive.gate);
   if (directive.conductor_persona === undefined) {
     const persona = readConductorPersona();
     if (persona !== null) directive.conductor_persona = persona;
@@ -2188,12 +2203,23 @@ function checkboxStateOf(
 
 // Canonicalise a phase token (name or number) to its canonical name, or null.
 // Composes the same PHASE_NUMBERS / PHASES tables the jump tool uses.
-function canonicalisePhase(input: string): string | null {
+//
+// A bare PHASE_NUMBERS[lower] walks the prototype chain, so all-lowercase
+// Object.prototype members (`constructor`, `__proto__`) resolve to truthy
+// non-string values and slip past the `!canonical` guard — downstream
+// phase.toLowerCase() then throws a TypeError. Object.hasOwn keeps those names
+// on the null path. Kept local to this tool rather than shared via
+// amadeus-lib.ts (E-L17: the PHASE_NUMBERS constant stays shared, but each site
+// carries its own guard to avoid cross-file churn; follow-up consolidation issue
+// tracks lifting the three copies).
+export function ownPhase(input: string): string | null {
   const lower = input.toLowerCase();
-  return (
-    PHASE_NUMBERS[lower] ||
-    ((PHASES as readonly string[]).includes(lower) ? lower : null)
-  );
+  if (Object.hasOwn(PHASE_NUMBERS, lower)) return PHASE_NUMBERS[lower];
+  return (PHASES as readonly string[]).includes(lower) ? lower : null;
+}
+
+function canonicalisePhase(input: string): string | null {
+  return ownPhase(input);
 }
 
 // --- report: commit the transition (the engine's WRITE half) ---
