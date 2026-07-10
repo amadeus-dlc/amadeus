@@ -568,7 +568,7 @@ export function handlePersist(args: string[], projectDir: string): void {
         // (KNOWLEDGE); normalise + ensure-exists it before the append.
         const heading = practiceHeading(sel.heading);
 
-        const emitKey = `${stageSlug} ${sel.candidate_id}`;
+        const emitKey = JSON.stringify([stageSlug, sel.candidate_id]);
         const hasRow =
           priorAuditRow(auditContent, "RULE_LEARNED", stageSlug, sel.candidate_id) ||
           emittedKeys.has(emitKey);
