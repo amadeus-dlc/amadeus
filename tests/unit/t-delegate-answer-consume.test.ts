@@ -206,3 +206,54 @@ describe("general predicate — verb-less uniform boundary is unchanged (#736 Q3
     expect(humanActedSinceGate(root)).toBe(true);
   });
 });
+
+// --- Core-module mirror -------------------------------------------------------
+// The suites above exercise the SHIPPED distributable (dist/claude), the same
+// contract t112 pins. Coverage attribution, however, path-fixes to the CORE
+// source (packages/framework/core), and `bun --coverage` does not credit the
+// dist copy's execution to it — the same in-process-seam requirement as the
+// team's bun-coverage-spawn-blindspot rule. This mirror runs the headline
+// scenario of each predicate branch directly against the core module so the
+// changed core lines are exercised in-process. Behaviour is byte-identical
+// (dist:check enforces it); the assertions are the same contracts as above.
+import {
+  humanActedSinceGate as coreHumanActedSinceGate,
+  humanActedSinceLastAnswer as coreHumanActedSinceLastAnswer,
+} from "../../packages/framework/core/tools/amadeus-lib.ts";
+
+describe("core-module mirror — same contracts against packages/framework/core (coverage seam)", () => {
+  test("gate predicate: delegate -> QA -> approve stays open; GATE_APPROVED consumes it", () => {
+    const { root, conductor, issuer } = scaffold();
+    landVerifiedDelegation(root, conductor, issuer, "approve");
+    appendAuditEntry("QUESTION_ANSWERED", { Stage: "market-research" }, root, conductor);
+    expect(coreHumanActedSinceGate(root, "approve")).toBe(true);
+    appendAuditEntry("GATE_APPROVED", { Stage: "market-research" }, root, conductor);
+    expect(coreHumanActedSinceGate(root, "approve")).toBe(false);
+  });
+
+  test("gate predicate: local HUMAN_TURN branch and reject verb mirror", () => {
+    const { root, conductor, issuer } = scaffold();
+    appendAuditEntry("HUMAN_TURN", {}, root, conductor);
+    expect(coreHumanActedSinceGate(root, "approve")).toBe(true);
+    appendAuditEntry("QUESTION_ANSWERED", { Stage: "market-research" }, root, conductor);
+    expect(coreHumanActedSinceGate(root, "approve")).toBe(false);
+    landVerifiedDelegation(root, conductor, issuer, "reject");
+    expect(coreHumanActedSinceGate(root, "reject")).toBe(true);
+  });
+
+  test("verb-less general predicate keeps the legacy uniform boundary", () => {
+    const { root, conductor, issuer } = scaffold();
+    landVerifiedDelegation(root, conductor, issuer, "approve");
+    expect(coreHumanActedSinceGate(root)).toBe(true);
+    appendAuditEntry("QUESTION_ANSWERED", { Stage: "market-research" }, root, conductor);
+    expect(coreHumanActedSinceGate(root)).toBe(false);
+  });
+
+  test("answer predicate: delegate grounds one answer, consumed by QUESTION_ANSWERED", () => {
+    const { root, conductor, issuer } = scaffold();
+    landVerifiedDelegation(root, conductor, issuer, "approve");
+    expect(coreHumanActedSinceLastAnswer(root)).toBe(true);
+    appendAuditEntry("QUESTION_ANSWERED", { Stage: "market-research" }, root, conductor);
+    expect(coreHumanActedSinceLastAnswer(root)).toBe(false);
+  });
+});

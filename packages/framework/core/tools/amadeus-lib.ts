@@ -1579,33 +1579,35 @@ function lastIndex(events: PresenceEvent[], pred: (e: PresenceEvent) => boolean)
 // predicate (per-delegate GATE slot, verb-scoped); with no verb it is the general
 // predicate the delegate-issuance grounding relies on (legacy uniform boundary,
 // unchanged). The `verb` parameter shape is preserved for both callers.
+//
+// Verb-less branch (issuer grounding at the two delegate-issuance sites): ANY
+// human act (HUMAN_TURN or either verified delegation) after the last resolution
+// of ANY kind. Behaviour is identical to the pre-#736 code — a QUESTION_ANSWERED
+// still closes this boundary — so issuer grounding is not regressed.
+//
+// Verb branch (gate predicate, #736): true when EITHER a HUMAN_TURN sits after
+// the last resolution of any kind (local semantics, unchanged — one local turn,
+// consumed by any resolution incl. an answer), OR a verified verb-matching
+// delegation sits after the last GATE resolution (its GATE slot: a
+// QUESTION_ANSWERED does NOT consume it — the #736 fix).
+//
+// (These branch notes live up here rather than inside the body: bun's lcov
+// stamps in-body comment/blank lines as never-hit DA records, which the codecov
+// patch gate counts as misses.)
 export function humanActedSinceGate(
   projectDir: string,
   verb?: "approve" | "reject"
 ): boolean {
   const events = scanPresenceLedger(projectDir);
   if (events === null) return true; // fail open
-
   if (verb === undefined) {
-    // General predicate (issuer grounding at the two delegate-issuance sites):
-    // ANY human act (HUMAN_TURN or either verified delegation) after the last
-    // resolution of ANY kind. Behaviour is identical to the pre-#736 code — a
-    // QUESTION_ANSWERED still closes this boundary — so issuer grounding is not
-    // regressed.
     const lastResolution = lastIndex(events, (e) => e.res !== undefined);
     const lastHuman = lastIndex(events, (e) => e.human);
     return lastHuman > lastResolution && lastHuman !== -1;
   }
-
-  // Gate predicate (verb-scoped, #736). True when EITHER:
-  //   - a HUMAN_TURN sits after the last resolution of any kind (local semantics,
-  //     unchanged — one local turn, consumed by any resolution incl. an answer), OR
-  //   - a verified verb-matching delegation sits after the last GATE resolution
-  //     (its GATE slot: a QUESTION_ANSWERED does NOT consume it — the #736 fix).
   const lastAnyResolution = lastIndex(events, (e) => e.res !== undefined);
   const lastHumanTurn = lastIndex(events, (e) => e.human && e.delegVerb === undefined);
   if (lastHumanTurn > lastAnyResolution && lastHumanTurn !== -1) return true;
-
   const lastGateResolution = lastIndex(events, (e) => e.res === "gate");
   const lastMatchingDelegation = lastIndex(events, (e) => e.delegVerb === verb);
   return lastMatchingDelegation > lastGateResolution && lastMatchingDelegation !== -1;
@@ -1689,11 +1691,9 @@ export function hasOpenGate(stateContent: string | null): boolean {
 export function humanActedSinceLastAnswer(projectDir: string): boolean {
   const events = scanPresenceLedger(projectDir);
   if (events === null) return true; // fail open
-
   const lastAnyResolution = lastIndex(events, (e) => e.res !== undefined);
   const lastHumanTurn = lastIndex(events, (e) => e.human && e.delegVerb === undefined);
   if (lastHumanTurn > lastAnyResolution && lastHumanTurn !== -1) return true;
-
   const lastAnswerResolution = lastIndex(events, (e) => e.res === "answer");
   const lastDelegation = lastIndex(events, (e) => e.delegVerb !== undefined);
   return lastDelegation > lastAnswerResolution && lastDelegation !== -1;
