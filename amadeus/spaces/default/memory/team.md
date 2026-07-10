@@ -46,6 +46,8 @@ Construction の成果は Bolt ごとに PR/スカッシュマージする。複
 - leader はオープンバグゼロを目標として運営する: バグの起票・トリアージ・バッチ編成・割当を能動的に回し、アイドルメンバーを作らない。実装待ちのバグには codex の事前深掘り(根本原因・再現・修正案の選択肢)を先行させ、requirements・選挙を高速化する (user decision 2026-07-09) <!-- cid:requirements-analysis:bug-zero-goal -->
 - 当面の対応スコープはバグのみ: 新規タスク・intent はバグ修正に限定し、enhancement 系は起票・トリアージまでに留めて着手しない。進行中の enhancement intent は park のまま凍結。例外: (1) バグ対応自体の前提となるインフラ作業(例: #671) (2) ユーザーが P0 指定したタスク(#683、#684 とその分割 Issue — #697 の PBT は #684 Phase B としてのみ実装可。#688 単体の本格導入は凍結継続。2026-07-09 ユーザー裁定) (user decision 2026-07-09) <!-- cid:requirements-analysis:bugs-only-scope -->
 - 潜在バグ探索タスクでは修正を行わない: 発見バグは file:line で裏取りした実測のみを GitHub Issue に起票する(推測起票・重複起票禁止)。修正は claude メンバーへの別タスクとして割り当てる (user decision 2026-07-09) <!-- cid:requirements-analysis:bughunt-file-only -->
+- GitHub Issue はタイトル・本文・コメント(クロスレビュー verdict 含む)のすべてを日本語で書く。コード識別子・ファイルパス・コマンド・ログ引用・ラベル(bug/P0-P3 等)は原文のまま保持する。既存 Issue に英語が残っている場合は、その Issue を更新するとき(コメント追加・ラベル変更・クローズ・修正着手等)についでにタイトル・本文を日本語化する(一括翻訳キャンペーンは行わない) (user decision 2026-07-10) <!-- cid:requirements-analysis:issues-in-japanese -->
+- GitHub PR もタイトル・本文・コメントを日本語で書く(Issue と同基準: コード識別子・パス・コマンド・ログ引用は原文のまま。既存 PR は更新のついでに日本語化)。コミットメッセージは従来どおり英語 (user decision 2026-07-10) <!-- cid:requirements-analysis:prs-in-japanese -->
 - Issue の起票と検証: amadeus の利用中に見つけた不備・不具合・改善点は必ず Issue として起票する(leader 含む誰が見つけても、自発起票・ユーザー指示起票を問わず)。起票したらハルシネーション対策レビューとして、起票者以外のメンバー2名が主張を実コードと突き合わせ、実在確認・訂正・却下を Issue コメントに残す。2名の確認が揃うまでその Issue は修正バッチに組み込まない (user decision 2026-07-09) <!-- cid:requirements-analysis:issue-cross-review -->
 
 ### 並行実装
