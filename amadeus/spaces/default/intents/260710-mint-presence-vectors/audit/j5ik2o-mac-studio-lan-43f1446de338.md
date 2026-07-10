@@ -164,3 +164,110 @@
 **Message**: 3 ファイルの diff-refresh 合成を完了しました(git 書き込みなし、ファイル編集のみ)。残余成果物は温存。\n\n## 更新ファイルと要点\n\n**1. `amadeus/spaces/default/codekb/amadeus/code-quality-assessment.md`**\n- 冒頭に #755 観測節(3 小節)を追加: O1=mint 分類器の単一プレフィックス判定(
 
 ---
+
+## Workflow Parked
+**Timestamp**: 2026-07-10T04:11:06Z
+**Event**: WORKFLOW_PARKED
+**Stage**: reverse-engineering
+**Timestamp**: 2026-07-10T04:11:06Z
+
+---
+
+## Workflow Unparked
+**Timestamp**: 2026-07-10T04:11:54Z
+**Event**: WORKFLOW_UNPARKED
+**Timestamp**: 2026-07-10T04:11:54Z
+
+---
+
+## Stage Awaiting Approval
+**Timestamp**: 2026-07-10T04:11:54Z
+**Event**: STAGE_AWAITING_APPROVAL
+**Stage**: reverse-engineering
+**Recovered**: true
+
+---
+
+## Gate Approved
+**Timestamp**: 2026-07-10T04:11:54Z
+**Event**: GATE_APPROVED
+**Stage**: reverse-engineering
+
+---
+
+## Stage Completion
+**Timestamp**: 2026-07-10T04:11:54Z
+**Event**: STAGE_COMPLETED
+**Stage**: reverse-engineering
+**Details**: Stage Reverse Engineering approved by gate
+
+---
+
+## Stage Start
+**Timestamp**: 2026-07-10T04:11:54Z
+**Event**: STAGE_STARTED
+**Stage**: requirements-analysis
+**Agent**: amadeus-product-agent
+
+---
+
+## Artifact Created
+**Timestamp**: 2026-07-10T04:12:49Z
+**Event**: ARTIFACT_CREATED
+**Tool**: Write
+**File**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/codex-engineer-1/amadeus/spaces/default/intents/260710-mint-presence-vectors/inception/requirements-analysis/requirements-analysis-questions.md
+**Context**: inception > requirements-analysis > requirements-analysis-questions.md
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T04:12:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: ebf951dc
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260710-mint-presence-vectors/inception/requirements-analysis/requirements-analysis-questions.md
+
+---
+
+## Sensor Passed
+**Timestamp**: 2026-07-10T04:12:49Z
+**Event**: SENSOR_PASSED
+**Fire id**: ebf951dc
+**Sensor ID**: required-sections
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260710-mint-presence-vectors/inception/requirements-analysis/requirements-analysis-questions.md
+**Duration ms**: 55
+
+---
+
+## Sensor Fired
+**Timestamp**: 2026-07-10T04:12:49Z
+**Event**: SENSOR_FIRED
+**Fire id**: d0da0ba2
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260710-mint-presence-vectors/inception/requirements-analysis/requirements-analysis-questions.md
+
+---
+
+## Sensor Failed
+**Timestamp**: 2026-07-10T04:12:49Z
+**Event**: SENSOR_FAILED
+**Fire id**: d0da0ba2
+**Sensor ID**: upstream-coverage
+**Stage slug**: requirements-analysis
+**Output path**: amadeus/spaces/default/intents/260710-mint-presence-vectors/inception/requirements-analysis/requirements-analysis-questions.md
+**Detail path**: amadeus/spaces/default/intents/260710-mint-presence-vectors/.amadeus-sensors/requirements-analysis/upstream-coverage-d0da0ba2.md
+**Findings count**: 3
+
+---
+
+## Decision Recorded
+**Timestamp**: 2026-07-10T04:13:07Z
+**Event**: DECISION_RECORDED
+**Stage**: requirements-analysis
+**Decision**: fix catalog scope for #755 (Q1 catalog+matching, Q2 tier-3 inclusion, Q3 past shard handling)
+**Options**: Q1:A-C+X,Q2:A-B+X,Q3:A-B+X
+
+---
