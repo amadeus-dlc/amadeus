@@ -47,6 +47,34 @@ function emitAudit(
   appendAuditEntry(eventType, fields, pd);
 }
 
+// --- Direction derivation (single source of truth) ---
+// resolve derives the jump direction from the stage-graph indices; execute must
+// reconcile the caller-supplied --direction against the SAME derivation, or a
+// mis-specified direction silently runs the wrong skip/reset bookkeeping (a
+// forward jump to an earlier stage regresses Current Stage, leaves downstream
+// [x] in place, and emits a false `Direction: FORWARD` audit). Both handlers
+// call deriveDirection so they can never disagree.
+export function deriveDirection(
+  currentIdx: number,
+  targetIdx: number
+): "forward" | "backward" | "redo" {
+  if (targetIdx > currentIdx) return "forward";
+  if (targetIdx < currentIdx) return "backward";
+  return "redo";
+}
+
+// Reconcile a caller-supplied direction with the graph-derived one. Returns the
+// authoritative expected direction on mismatch so the caller can be told the
+// correct value (loud rejection, not a silent wrong-direction execution).
+export function directionReconcile(
+  supplied: string,
+  currentIdx: number,
+  targetIdx: number
+): { ok: true } | { ok: false; expected: "forward" | "backward" | "redo" } {
+  const expected = deriveDirection(currentIdx, targetIdx);
+  return supplied === expected ? { ok: true } : { ok: false, expected };
+}
+
 // --- CLI entry point ---
 
 let projectDir: string | undefined;
@@ -104,7 +132,7 @@ function parseFlags(
 
 // --- Subcommand: resolve ---
 
-function handleResolve(args: string[]): void {
+export function handleResolve(args: string[]): void {
   const flags = parseFlags(args);
   const pd = resolveProjectDir(projectDir);
   const content = readStateFile(pd);
@@ -170,14 +198,9 @@ function handleResolve(args: string[]): void {
     error("Usage: resolve --stage <slug|#> or --phase <name|#> [--scope <scope>]");
   }
 
-  // Determine direction
   const currentIdx = stageIndex(currentStage.slug);
   const targetIdx = stageIndex(targetStage.slug);
-
-  let direction: "forward" | "backward" | "redo";
-  if (targetIdx > currentIdx) direction = "forward";
-  else if (targetIdx < currentIdx) direction = "backward";
-  else direction = "redo";
+  const direction = deriveDirection(currentIdx, targetIdx);
 
   // Compute affected stages (against the EFFECTIVE plan, not the static grid)
   const graph = loadStageGraph();
@@ -217,7 +240,7 @@ function handleResolve(args: string[]): void {
 
 // --- Subcommand: execute ---
 
-function handleExecute(args: string[]): void {
+export function handleExecute(args: string[]): void {
   const flags = parseFlags(args);
   const pd = resolveProjectDir(projectDir);
   let content = readStateFile(pd);
@@ -271,6 +294,13 @@ function handleExecute(args: string[]): void {
 
   // Get current stage for audit
   const currentSlug = getField(content, "Current Stage") || "state-init";
+  const currentIdx = stageIndex(currentSlug);
+
+  const reconcile = directionReconcile(direction, currentIdx, targetIdx);
+  if (!reconcile.ok)
+    error(
+      `Direction mismatch: --direction ${direction}, but ${currentSlug} → ${targetSlug} is a ${reconcile.expected} transition. Re-run with --direction ${reconcile.expected}.`
+    );
 
   // States that count as "in-flight" (skip on forward jump, reset on backward jump)
   const IN_FLIGHT_STATES: CheckboxState[] = [
@@ -285,7 +315,6 @@ function handleExecute(args: string[]): void {
     // EFFECTIVE plan so a recompose-ADDed stage (grid SKIP, suffix EXECUTE)
     // is marked [S] like any other on-plan stage, and a recompose-SKIPped one
     // is passed over.
-    const currentIdx = stageIndex(currentSlug);
     for (let i = currentIdx + 1; i < targetIdx; i++) {
       const slug = graph[i].slug;
       if (effectiveAction(suffixes, scopeMapping, slug) !== "EXECUTE") continue;
