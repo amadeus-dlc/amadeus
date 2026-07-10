@@ -142,6 +142,41 @@ function runCompile(proj: string): number {
   return res.status ?? -1;
 }
 
+/**
+ * Run the real `summary --json` CLI against the already-compiled project and
+ * parse its stdout. Used by the #761 regression to prove the summary's
+ * top-level `learnings` is the straight sum of what compile stored on the
+ * graph rows — no second aggregation path recomputes learnings out of band.
+ */
+// biome-ignore lint/suspicious/noExplicitAny: test reads arbitrary summary shape
+function runSummaryJson(proj: string): any {
+  const res = spawnSync(BUN, [RUNTIME_TS, "--project-dir", proj, "summary", "--json"], {
+    encoding: "utf-8",
+  });
+  if ((res.status ?? -1) !== 0) {
+    throw new Error(`summary --json exited ${res.status}: ${res.stderr}`);
+  }
+  return JSON.parse(res.stdout);
+}
+
+// The stage-row key set BEFORE the #761 fix (recorded empirically from an
+// existing instance-bearing compile). The fix must keep this shape byte-for-byte
+// — no new public field like `parent_completed_at` may appear (the parent
+// completion is stashed in a compile-internal Map, never serialised).
+const BASELINE_INSTANCE_STAGE_KEYS = [
+  "stage_slug",
+  "started_at",
+  "completed_at",
+  "agent",
+  "memory_path",
+  "memory_entries",
+  "memory_breakdown",
+  "sensor_firings",
+  "outcome",
+  "learnings_captured",
+  "instances",
+];
+
 /** Parse the runtime-graph.json the tool wrote (the .sh's graph_query target). */
 // biome-ignore lint/suspicious/noExplicitAny: test reads arbitrary graph shape
 function readGraph(proj: string): any {
@@ -164,6 +199,7 @@ interface StageRow {
   stage_slug: string;
   sensor_firings: SensorFiring[];
   learnings_captured: { from_orchestrator: number; from_user_addition: number } | null;
+  outcome: "approved" | "failed" | "pending";
   // biome-ignore lint/suspicious/noExplicitAny: instances shape exercised structurally
   instances?: any[];
 }
@@ -342,5 +378,105 @@ describe("t98 learnings_captured", () => {
     const projF = makeProjectWithAudit(join(MILESTONE11_DIR, "audit-3-bolts-1-failed.md"));
     runCompile(projF);
     expect(stage(readGraph(projF), "code-generation").learnings_captured).toBeNull();
+  });
+});
+
+// ============================================================
+// #761 — per-unit stage learnings on an instance-bearing APPROVED parent.
+//
+// Before the fix, an approved instance-bearing parent never called
+// countLearnings: the BoltInstance rollup nulled the parent completed_at and
+// left learnings_captured at its {0,0} seed, so every parallel-Bolt stage
+// reported ZERO learnings regardless of the RULE_LEARNED / SENSOR_PROPOSED rows
+// in its window. The window terminus is the crux: learnings land AFTER the last
+// STATE_MERGED (parentEnd == maxInstanceCompletedAt) but BEFORE the parent
+// STAGE_COMPLETED, so closing on parentEnd (the sensor window's end) still
+// yields {0,0}. The approved fixture is built with t2(last merge) < t3(learning)
+// < t4(parent completed) precisely so that a parentEnd terminus stays red.
+// ============================================================
+
+describe("t98 #761 instance-bearing approved parent learnings", () => {
+  const PROJ_A = makeProjectWithAudit(
+    join(FIXTURES_DIR, "audit-instance-learnings-approved.md"),
+  );
+  const rcA = runCompile(PROJ_A);
+  const cgA = (): StageRow => stage(readGraph(PROJ_A), "code-generation");
+
+  test("compile exits 0 (approved instance-learnings fixture)", () => {
+    expect(rcA).toBe(0);
+  });
+
+  test("761a: approved 2-instance parent counts learnings in [parentStart, parentCompleted)", () => {
+    // Fixture real numbers: 2 orchestrator RULE_LEARNED + 1 orchestrator
+    // SENSOR_PROPOSED = 3 from_orchestrator; 1 user_addition RULE_LEARNED.
+    // All four rows sit at t3 (08:26–08:27:30), strictly between the last
+    // STATE_MERGED (t2 = 08:25:00) and the parent STAGE_COMPLETED (t4 = 08:30:00).
+    const s = cgA();
+    expect(s.outcome).toBe("approved");
+    expect(s.instances?.length).toBe(2);
+    expect(s.learnings_captured).toEqual({
+      from_orchestrator: 3,
+      from_user_addition: 1,
+    });
+  });
+
+  test("761b: window terminus is parent completion, not parentEnd (guards {0,0} regression)", () => {
+    // If the terminus were parentEnd / maxInstanceCompletedAt (t2 = the last
+    // merge), all four learnings (t3 >= t2) would be excluded and this stays
+    // {0,0}. The non-zero total is the loud proof the window closes on t4.
+    const lc = cgA().learnings_captured;
+    expect(lc).not.toBeNull();
+    if (lc) {
+      expect(lc.from_orchestrator + lc.from_user_addition).toBeGreaterThan(0);
+    }
+    // The parent completion is NOT serialised — no leaked public field.
+    expect((cgA() as unknown as Record<string, unknown>).parent_completed_at).toBeUndefined();
+  });
+
+  test("761c: summary --json learnings is the straight sum of graph stage rows", () => {
+    // No out-of-band recount: the summary's top-level learnings equals the
+    // element-wise sum of every stage's stored learnings_captured.
+    const g = readGraph(PROJ_A);
+    let orch = 0;
+    let user = 0;
+    for (const s of g.stages as StageRow[]) {
+      if (s.learnings_captured) {
+        orch += s.learnings_captured.from_orchestrator;
+        user += s.learnings_captured.from_user_addition;
+      }
+    }
+    const summary = runSummaryJson(PROJ_A);
+    expect(summary.learnings).toEqual({
+      from_orchestrator: orch,
+      from_user_addition: user,
+    });
+    // And the code-generation stage's real numbers flowed through unchanged.
+    expect(summary.learnings.from_orchestrator).toBeGreaterThanOrEqual(3);
+  });
+
+  test("761d: stage-row key set unchanged — no new public field (parent_completed_at etc.)", () => {
+    expect(Object.keys(cgA())).toEqual(BASELINE_INSTANCE_STAGE_KEYS);
+  });
+});
+
+// ============================================================
+// #761 — a NON-approved instance-bearing parent keeps learnings_captured null
+// EVEN WHEN a learning row sits inside its window. The fix is gated on
+// outcome === "approved"; a pending rollup (one merged + one still-open
+// instance) must not start counting. This is the loud complement to 761a:
+// same window, same in-window RULE_LEARNED, but null because not approved.
+// ============================================================
+
+describe("t98 #761 instance-bearing pending parent stays null", () => {
+  const PROJ_P = makeProjectWithAudit(
+    join(FIXTURES_DIR, "audit-instance-learnings-pending.md"),
+  );
+  runCompile(PROJ_P);
+
+  test("761e: pending 2-instance parent learnings_captured = null despite in-window learning", () => {
+    const s = stage(readGraph(PROJ_P), "code-generation");
+    expect(s.outcome).toBe("pending");
+    expect(s.instances?.length).toBe(2);
+    expect(s.learnings_captured).toBeNull();
   });
 });

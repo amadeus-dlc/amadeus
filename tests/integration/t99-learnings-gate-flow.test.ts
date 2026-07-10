@@ -80,7 +80,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import {
   AMADEUS_SRC,
   createTestProject,
@@ -598,5 +598,113 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
     const fossilRe = /sensor-protocol\.md|applies_to|milestone 1[0-9]|milestone 9|doctor coverage check/;
     const fossils = section.filter((l) => fossilRe.test(l));
     expect(fossils).toEqual([]);
+  }, TIMEOUT);
+
+  // ===========================================================================
+  // Case 7 — duplicate candidate_id within one persist call (#754). The cid
+  // marker (cid:<slug>:<id>) is destination-independent, so two learning
+  // selections sharing a candidate_id would collide on one idempotency key even
+  // when routed to different method files. persist must reject BEFORE any write:
+  // non-zero exit, a re-numbering hint in stderr, and both method files + the
+  // audit shard byte-identical with zero RULE_LEARNED rows (the c2-batch-c
+  // preflight contract — no partial emit from a mid-loop failure).
+  // ===========================================================================
+  test("Case 7: duplicate candidate_id (project+team) rejected before any write, bytes unchanged [#754]", () => {
+    const pd = mkproj();
+    seedMemoryMixed(pd);
+    const sel = join(pd, "sel7.json");
+    writeJson(sel, {
+      stage_slug: "user-stories",
+      selections: [
+        { candidate_id: "c1", type: "learning", scope: "project", heading: "Corrections", text: "project body", source: "orchestrator" },
+        { candidate_id: "c1", type: "learning", scope: "team", heading: "Corrections", text: "team body", source: "orchestrator" },
+      ],
+    });
+    const projFile = projectPractices(pd);
+    const teamFile = teamPractices(pd);
+    const auditBefore = readAudit(pd);
+    const projBefore = existsSync(projFile) ? readFileSync(projFile, "utf-8") : null;
+    const teamBefore = existsSync(teamFile) ? readFileSync(teamFile, "utf-8") : null;
+
+    const r = persist(pd, sel);
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toContain("c1");
+    // Destination-independent re-numbering suggestion (project vs team).
+    expect(r.stderr).toContain("c1-project");
+    expect(r.stderr).toContain("c1-team");
+    // No side effects: method files + audit shard byte-identical, zero rows.
+    expect(existsSync(projFile) ? readFileSync(projFile, "utf-8") : null).toBe(projBefore);
+    expect(existsSync(teamFile) ? readFileSync(teamFile, "utf-8") : null).toBe(teamBefore);
+    expect(readAudit(pd)).toBe(auditBefore);
+    expect(ruleLearnedRows(pd)).toBe(0);
+  }, TIMEOUT);
+
+  // ===========================================================================
+  // Case 8 — marker collision with divergent body (#754). A pre-existing line
+  // already carries cid:user-stories:c1 with DIFFERENT text; a new selection
+  // reuses that cid. persist must reject BEFORE any write, naming the
+  // destination, the identifiable head of the existing body, and the cid, and
+  // must NOT auto-suffix. Method file + audit shard stay byte-identical.
+  // ===========================================================================
+  test("Case 8: marker collision with divergent body rejected before any write, bytes unchanged [#754]", () => {
+    const pd = mkproj();
+    seedMemoryMixed(pd);
+    const projFile = projectPractices(pd);
+    mkdirSync(dirname(projFile), { recursive: true });
+    const marker = "<!-- cid:user-stories:c1 -->";
+    const preExisting =
+      `# Project-Level Rules\n\n## Corrections\n\n- an earlier different learning body (learned 2026-01-01) ${marker}\n`;
+    writeFileSync(projFile, preExisting);
+    const sel = join(pd, "sel8.json");
+    writeJson(sel, {
+      stage_slug: "user-stories",
+      selections: [
+        { candidate_id: "c1", type: "learning", scope: "project", heading: "Corrections", text: "a brand new divergent body", source: "orchestrator" },
+      ],
+    });
+    const auditBefore = readAudit(pd);
+
+    const r = persist(pd, sel);
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toContain(projFile); // destination named
+    expect(r.stderr).toContain("an earlier different"); // identifiable head of existing body
+    expect(r.stderr).toContain("c1"); // cid + unique-cid guidance
+    // No auto-suffix, no write: method file + audit shard byte-identical.
+    expect(readFileSync(projFile, "utf-8")).toBe(preExisting);
+    expect(readAudit(pd)).toBe(auditBefore);
+    expect(ruleLearnedRows(pd)).toBe(0);
+  }, TIMEOUT);
+
+  // ===========================================================================
+  // Case 9 — practice line present, audit row absent (#745). The inverse of
+  // Case 6: a same-body / same-marker line exists but no RULE_LEARNED row.
+  // persist backfills the audit row exactly once WITHOUT duplicating the line;
+  // a re-run is a pure no-op. (A same-body line is NOT a marker collision.)
+  // ===========================================================================
+  test("Case 9: practice line present without audit row backfills RULE_LEARNED once, re-run no-op [#745]", () => {
+    const pd = mkproj();
+    seedMemoryMixed(pd);
+    const projFile = projectPractices(pd);
+    mkdirSync(dirname(projFile), { recursive: true });
+    const marker = "<!-- cid:user-stories:c1 -->";
+    const text = "practice-only line, no audit yet";
+    const today = new Date().toISOString().slice(0, 10);
+    const preExisting = `# Project-Level Rules\n\n## Corrections\n\n- ${text} (learned ${today}) ${marker}\n`;
+    writeFileSync(projFile, preExisting);
+    const sel = join(pd, "sel9.json");
+    writeJson(sel, {
+      stage_slug: "user-stories",
+      selections: [
+        { candidate_id: "c1", type: "learning", scope: "project", heading: "Corrections", text, source: "orchestrator" },
+      ],
+    });
+    // Backfill: exactly one RULE_LEARNED row, line NOT duplicated.
+    expect(persist(pd, sel).status).toBe(0);
+    expect(ruleLearnedRows(pd)).toBe(1);
+    expect(countLines(projFile, marker)).toBe(1);
+    // Re-run is a pure no-op.
+    expect(persist(pd, sel).status).toBe(0);
+    expect(ruleLearnedRows(pd)).toBe(1);
+    expect(countLines(projFile, marker)).toBe(1);
   }, TIMEOUT);
 });
