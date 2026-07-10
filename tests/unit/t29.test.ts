@@ -54,7 +54,7 @@
 
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, symlinkSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   AMADEUS_SRC,
@@ -94,6 +94,25 @@ function hookProject(): string {
 const statePath = (p: string): string => seededStateFile(p);
 const heartbeatPath = (p: string): string =>
   join(seededRecordDir(p), ".amadeus-hooks-health", "sync-statusline.last");
+const dropPath = (p: string): string =>
+  join(seededRecordDir(p), ".amadeus-hooks-health", "sync-statusline.drops");
+
+/**
+ * A hook project whose set-status tool FAILS deterministically. The hook resolves
+ * its own amadeus-lib.ts against the shipped hook location (AMADEUS_SRC), so the
+ * only thing it reads from <projectDir>/.claude is the spawned tool at
+ * .claude/tools/amadeus-utility.ts. We plant a real (non-symlink) .claude tree
+ * there whose amadeus-utility.ts exits non-zero, injecting the set-status failure
+ * FR-4 must record. `code` is the exit code the stub returns.
+ */
+function failingToolProject(code: number): string {
+  const proj = createTestProject();
+  tempDirs.push(proj);
+  const toolsDir = join(proj, ".claude", "tools");
+  mkdirSync(toolsDir, { recursive: true });
+  writeFileSync(join(toolsDir, "amadeus-utility.ts"), `process.exit(${code});\n`, "utf-8");
+  return proj;
+}
 
 interface HookResult {
   status: number;
@@ -216,5 +235,42 @@ describe("t29 amadeus-sync-statusline hook (migrated from t29-hook-sync-statusli
     // ISO-8601 UTC timestamp (isoTimestamp(), amadeus-lib.ts:1452).
     const hb = readFileSync(heartbeatPath(p), "utf-8");
     expect(hb).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+  }, 30000);
+
+  // --- T8 (issue #776, FR-4): a non-zero set-status exit is recorded as a drop ---
+  // Pre-fix the spawn ran with stdout/stderr "ignore" and the exit code was never
+  // inspected, so a failing set-status left NO drop (silent, undiagnosable). This
+  // case is RED against the pre-fix hook (no drops file) and GREEN after: the
+  // drop is appended to <record>/.amadeus-hooks-health/sync-statusline.drops.
+  test("8: records a drop when set-status exits non-zero", () => {
+    const p = failingToolProject(7);
+    seedStateFile(p, MID_IDEATION);
+    expect(existsSync(dropPath(p))).toBe(false); // starts absent
+    const r = runHook(
+      p,
+      '{"tool_name":"TaskUpdate","tool_input":{"taskId":"t1","status":"in_progress","activeForm":"Running Feasibility [feasibility]"}}',
+    );
+    // The hook never blocks the parent TaskUpdate, even on tool failure.
+    expect(r.status).toBe(0);
+    // The failure is now diagnosable: a drop line naming the non-zero exit.
+    expect(existsSync(dropPath(p))).toBe(true);
+    const drop = readFileSync(dropPath(p), "utf-8");
+    expect(drop).toContain("set-status exit 7");
+  }, 30000);
+
+  // --- T9 (issue #776, FR-4): the happy path records NO drop (non-regression) ---
+  // A successful set-status must not leave a drops file. Pairs with T1/T6 which
+  // assert the state IS synced; this pins that success stays silent in the drop log.
+  test("9: no drop on a successful set-status", () => {
+    const p = hookProject();
+    seedStateFile(p, MID_IDEATION);
+    runHook(
+      p,
+      '{"tool_name":"TaskUpdate","tool_input":{"taskId":"t1","status":"in_progress","activeForm":"Running Scope Definition [scope-definition]"}}',
+    );
+    // State advanced (set-status succeeded) ...
+    expect(stateField(p, "Current Stage")).toBe("scope-definition");
+    // ... and no drop was recorded.
+    expect(existsSync(dropPath(p))).toBe(false);
   }, 30000);
 });

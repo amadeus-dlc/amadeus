@@ -10,9 +10,9 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
 import {
-  auditFilePath,
   errorMessage,
   getField,
+  hasActiveWorkflowAudit,
   hooksHealthDir,
   isoTimestamp,
   recordHookDrop,
@@ -56,9 +56,11 @@ writeFileSync(
   "utf-8"
 );
 
-// Emit SESSION_COMPACTED if an audit file exists for this workflow.
-const auditFile = auditFilePath(projectDir);
-if (existsSync(auditFile)) {
+// Emit SESSION_COMPACTED if the active workflow has any audit shard. Gate on ANY
+// per-clone shard (glob-merge), NOT this clone's own shard — a fresh clone / new
+// worktree mints a new clone-id, so a bare self-shard existsSync would drop the
+// event until the engine's first append.
+if (hasActiveWorkflowAudit(projectDir)) {
   try {
     appendAuditEntry(
       "SESSION_COMPACTED",

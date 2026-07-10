@@ -111,6 +111,13 @@ import {
   toPortablePath,
 } from "../harness/fixtures.ts";
 
+// Standalone hermeticity (issue #795): the suite runner injects this guard
+// bypass into every test file's env (tests/run-tests.ts), so this file only
+// went green under the runner. Default it here as well so a bare
+// `bun test <this file>` behaves the same. `??=` keeps the runner's external
+// value intact when the suite sets it.
+process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD ??= "1";
+
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const TOOL = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-utility.ts");

@@ -21,9 +21,9 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type GraphStage, loadGraph } from "../tools/amadeus-graph.ts";
 import {
-  auditFilePath,
   type ClaudeCodeHookInput,
   getField,
+  hasActiveWorkflowAudit,
   hooksHealthDir,
   isClaudeCodeHookInput,
   isoTimestamp,
@@ -95,9 +95,12 @@ if (
   process.exit(0);
 }
 
-// Step 6 — Pre-init guard. No audit.md → no active workflow → no-op.
-// Mirrors amadeus-audit-logger.ts:48-50 + amadeus-runtime-compile.ts:62-64.
-if (!existsSync(auditFilePath(projectDir))) process.exit(0);
+// Step 6 — Pre-init guard. No audit shard for the active intent → no active
+// workflow → no-op. Gate on ANY per-clone shard (glob-merge), NOT this clone's
+// own shard: a fresh clone / new worktree mints a new clone-id, so a bare
+// self-shard existsSync would drop sensors until the engine's first append.
+// Mirrors amadeus-audit-logger.ts + amadeus-runtime-compile.ts.
+if (!hasActiveWorkflowAudit(projectDir)) process.exit(0);
 
 // Step 7 — State-file guard.
 //
