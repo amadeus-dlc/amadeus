@@ -168,6 +168,16 @@ describe("t148 dist/kiro file structure", () => {
     expect(defaults?.["claude-opus-4.8"]?.output_config?.effort).toBe("xhigh");
   });
 
+  test("no .kiro.hook files in the CLI kiro harness (#719 re-injection guard)", () => {
+    // The Kiro CLI reads hooks from agents/amadeus.json, not from .kiro.hook
+    // files (that mechanism is kiro-ide only). The source assert reads the
+    // harness tree directly because #719 was unshipped .kiro.hook files that
+    // lingered in source, hidden from the orphan scan by a vacuous exemption.
+    const srcHooks = join(REPO_ROOT, "packages", "framework", "harness", "kiro", "hooks");
+    expect(readdirSync(srcHooks).filter((n) => n.endsWith(".kiro.hook"))).toEqual([]);
+    expect(readdirSync(join(K, "hooks")).filter((n) => n.endsWith(".kiro.hook"))).toEqual([]);
+  });
+
   test("kiro skills carry the kiro tool prefix, never the claude one", () => {
     const skill = readFileSync(join(K, "skills", "amadeus", "SKILL.md"), "utf-8");
     expect(skill).toContain("bun .kiro/tools/");
