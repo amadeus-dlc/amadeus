@@ -27,8 +27,16 @@ export const VERSION_SURFACES: readonly VersionSurface[] = [
     // Symmetric with the version-acceptance regex in the CLI: allow an optional
     // prerelease suffix so a prerelease badge can advance to any next version
     // (FR-702-1). Without this the badge stalls once it becomes a prerelease.
+    // The suffix character class includes `-`, so it accepts both the raw form
+    // (`0.2.0-rc.1`, legacy) and the shields-escaped form (`0.2.0--rc.1`) that
+    // the replacement writes — a re-run over an escaped badge stays idempotent
+    // (#740).
     accept: /badge\/version-[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?-blue/,
-    replacement: (v) => `badge/version-${v}-blue`,
+    // shields.io path segments treat `-` as a field separator; a literal dash
+    // must be escaped as `--` or a prerelease badge 404s (#740). The escape is
+    // derived from the raw semver on every run, so re-running never
+    // double-escapes.
+    replacement: (v) => `badge/version-${v.replaceAll("-", "--")}-blue`,
   },
 ];
 
