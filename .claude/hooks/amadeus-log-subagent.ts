@@ -3,13 +3,13 @@
 // a canonical audit event.
 //
 // Receives JSON on stdin with subagent info. No-op if no audit.md exists.
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
 import {
-  auditFilePath,
   type ClaudeCodeHookInput,
   errorMessage,
+  hasActiveWorkflowAudit,
   hooksHealthDir,
   isClaudeCodeHookInput,
   isoTimestamp,
@@ -42,8 +42,10 @@ const agentType = parsed.agent_type ?? "unknown";
 const agentId: string = parsed.agent_id ?? "";
 const agentMessage: string = (parsed.last_assistant_message ?? "").slice(0, 200);
 
-const auditFile = auditFilePath(projectDir);
-if (!existsSync(auditFile)) process.exit(0);
+// Gate on ANY per-clone shard of the active intent (glob-merge), NOT this clone's
+// own shard — a fresh clone / new worktree mints a new clone-id, so a bare
+// self-shard existsSync would drop the event until the engine's first append.
+if (!hasActiveWorkflowAudit(projectDir)) process.exit(0);
 
 const fields: Record<string, string> = {
   "Agent Type": agentType,

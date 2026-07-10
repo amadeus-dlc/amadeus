@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 426,
+    "total": 427,
     "enumeratedByClass": {
-      "function": 207,
+      "function": 208,
       "audit": 72,
       "scope": 9,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 94,
+      "function": 95,
       "audit": 30,
       "scope": 9,
       "stage": 8,
@@ -1411,6 +1411,18 @@
         {
           "file": "tests/unit/t153-engine-directive-harness-seam.test.ts",
           "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:hasActiveWorkflowAudit",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t208-hook-shard-guards.test.ts",
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
@@ -2850,6 +2862,10 @@
         {
           "file": "tests/unit/t170-audit-logger-per-intent.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/unit/t208-hook-shard-guards.test.ts",
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
@@ -2869,6 +2885,10 @@
         },
         {
           "file": "tests/unit/t13-hook-input-robustness.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/unit/t208-hook-shard-guards.test.ts",
           "mechanism": "cli"
         }
       ],
@@ -2921,6 +2941,10 @@
         },
         {
           "file": "tests/unit/t13-hook-input-robustness.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/unit/t208-hook-shard-guards.test.ts",
           "mechanism": "cli"
         },
         {
@@ -3061,6 +3085,10 @@
         },
         {
           "file": "tests/unit/t13-hook-input-robustness.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/unit/t208-hook-shard-guards.test.ts",
           "mechanism": "cli"
         }
       ],
