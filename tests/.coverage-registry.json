@@ -1458,6 +1458,10 @@
         {
           "file": "tests/unit/t188-human-presence-gate.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/unit/t208-presence-crossshard-tiebreak.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"
@@ -1470,6 +1474,10 @@
         {
           "file": "tests/unit/t188-human-presence-gate.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/unit/t208-presence-crossshard-tiebreak.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"
