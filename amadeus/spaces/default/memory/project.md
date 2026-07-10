@@ -101,3 +101,4 @@
 - 選別・ガード機構(環境変数、フラグ、スキップ条件)を設計したら、その起動者(誰が・どの手順で設定するか)を同じステージで確定し、起動者側の成果物にも明記する — 起動者不在の安全網は恒久スキップされ空文になる (learned 2026-07-08) <!-- cid:infrastructure-design:infrastructure-design:guard-activator -->
 - ビルダー/レビュアーの検証報告は、最終変更後に全検証コマンドを再実行し exit code を添えて行う。conductor は申告と実測に齟齬が出た検証を必ず自分でも1回再実行して裏取りしてから次工程へ進む (learned 2026-07-08) <!-- cid:code-generation:code-generation:evidence-discipline -->
 - 「不在時のみビルド」型の遅延ビルドヘルパー(ensureSetupCliBuilt 等)を跨ぐ検証では、ブランチ切替・エントリポイント置換の後に生成物(packages/setup/dist/cli.js)を削除してから実行する — ステールバイナリは新コードを一切テストしない偽緑/偽赤を作る (learned 2026-07-08) <!-- cid:code-generation:code-generation:stale-binary -->
+- 既存 codekb への diff-refresh では、新 intent の節を追記する前に、旧 intent の節に残る現在時制マーカー(「(本 intent)」等)を履歴ラベル(intent 名+日付)へ更新する — 現在マーカーの複数併存は後続ステージの参照を誤らせ、並行 intent の codekb 更新で merge 衝突も誘発する(260710 RE で9箇所の実害を観測) (learned 2026-07-10) <!-- cid:reverse-engineering:c3-relabel -->

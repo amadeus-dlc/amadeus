@@ -1,5 +1,73 @@
 # コード構造
 
+## packaging 構造(intent 260710、#735 の中核)
+
+> 前回 intent の2バグは出荷済み(#685→#729、#670→#727)。下記は本 intent(source 側 unreferenced 検査)の重点構造。
+
+### `scripts/package.ts` の段構成
+
+`buildTree(m, outRoot, seedFrom)`(L307-460)が build の入力読み取りと dist 生成を一手に担う。段構成:
+
+1. **core dirs 投影**(L322-344): `m.coreDirs` の各 `src` を `walk()` で全列挙し token 置換 + rules-rename してコピー。`frontmatterAdditions` の未ヒット検出付き(L345-351、typo ガード)。
+2. **harness authored files コピー**(L357-363): `m.harnessFiles` の**列挙された `src` のみ**コピー。`projectRoot:true` は `dist/<name>/` 直下、それ以外は `<harnessDir>/` 内。
+3. **onboarding**(L370-376)/ **memory tree emit**(L382-395)/ **compile**(L405-416)/ **harness.json/VERSION emit**(L425-431)/ **runner-gen**(L438-441)/ **emit プラグイン**(L446-458)。
+
+`checkHarness(name)`(L554-634)は tmp に build して committed dist と byte-diff:
+
+| pass | 行 | 検出 |
+| --- | --- | --- |
+| built → committed | L565-573 | `MISSING`/`DIFFERS` |
+| committed → built(harness-dir) | L574-582 | `ORPHAN`(`authoredExempt` で除外可) |
+| projectRoot harnessFiles | L586-592 | 外部 `MISSING`/`DIFFERS` |
+| emit-owned(harness-dir 外) | L595-604 | `MISSING`/`DIFFERS` |
+| dist 全域 orphan scan(#711) | L605-628 | 期待集合外の committed ファイルを `ORPHAN` |
+
+CLI(L639-682): `--check` で `checkHarness`、それ以外で `writeHarness`。ターゲットは `discoverHarnessNames()`(L68-73、`harness/*/manifest.ts` の存在で発見)または明示名。`present` フィルタ(L668)は manifest を持つ harness のみビルド。
+
+### harness manifest スキーマと全 harness 目録
+
+契約は `scripts/manifest-types.ts` の `HarnessManifest`(L70-113): `coreDirs`/`harnessFiles`/`frontmatterAdditions?`/`onboarding?`/`rulesRename`/`authoredExempt`(L101、RegExp[])/`skipRunnerGen?`/`emit`。`authoredExempt` は「生成/コピー dir 内に置かれる authored ファイルを orphan scan から除外」する regex 群。
+
+| harness | harnessDir | rulesRename | authoredExempt | emit / skipRunnerGen |
+| --- | --- | --- | --- | --- |
+| claude | `.claude` | `null` | `[]`(空) | emit `null` |
+| codex | `.codex` | `amadeus-rules` | `[/^hooks\/amadeus-codex-[^/]+\.ts$/]` | emit あり / `skipRunnerGen:true` |
+| kiro | `.kiro` | `steering` | `[/^agents\/[^/]+\.json$/, /^hooks\/amadeus-kiro-[^/]+\.ts$/]` | emit `null` |
+| kiro-ide | `.kiro` | `steering` | `[/^agents\/[^/]+\.json$/, /^hooks\/amadeus-kiro-[^/]+\.ts$/, /^hooks\/[^/]+\.kiro\.hook$/]` | emit `null` |
+
+`authoredExempt` は harness-dir subtree orphan pass(L579)でのみ消費される。**kiro と kiro-ide の差は `.kiro.hook` exemption の有無**: kiro-ide は `.kiro.hook` を `harnessFiles` で正規に出荷する(9個、L51-59)ため exemption が必要。kiro CLI は `.kiro.hook` を出荷しない(hooks は `agents/amadeus.json` から読む)ため、#737(`6f1d7ab2a`)で7個の stale ソースを削除し vacuous exemption `/^hooks\/[^/]+\.kiro\.hook$/` を除去した。
+
+### 全 harness の authored ソース実態(manifest 参照状況)
+
+`packages/framework/harness/<name>/` の実ファイルと manifest 参照の対応(#735 の「正当な未参照候補」= build 機構ファイル):
+
+| harness | authored ソース | manifest 参照(出荷される) | build 機構(出荷されない、正当に未参照) |
+| --- | --- | --- | --- |
+| claude | 8ファイル | `SKILL.md`/`question-rendering.md`/`rules-amadeus.md`/`settings.json.example`/`settings.local.json.example`/`dot-gitignore` | `manifest.ts`/`onboarding.fills.ts` |
+| codex | 7ファイル | `hooks/amadeus-codex-adapter.ts`/`dot-gitignore` + `SKILL.md`/`question-rendering.md`(emit 経由) | `manifest.ts`/`onboarding.fills.ts`/`emit.ts` |
+| kiro | 13ファイル | `agents/*.json`(6)/`hooks/amadeus-kiro-adapter.ts`/`settings/cli.json`/`SKILL.md`/`question-rendering.md`/`dot-gitignore` | `manifest.ts`/`onboarding.fills.ts` |
+| kiro-ide | 22ファイル | `agents/*.json`(6)/`hooks/amadeus-kiro-adapter.ts`/`hooks/*.kiro.hook`(9)/`settings/cli.json`/`SKILL.md`/`question-rendering.md`/`dot-gitignore` | `manifest.ts`/`onboarding.fills.ts` |
+
+正当な未参照(build 機構: `manifest.ts`/`onboarding.fills.ts`/codex の `emit.ts`)は `package.ts` から `require()` で読まれるモジュールであり、dist へコピーされない設計。#735 の source-unreferenced check はこれらを誤検出しない除外設計を要する。現時点で全 harness に **manifest 参照も build 機構でもない未参照ソースは残っていない**(#737 で kiro の7個を除去済み。実測: `harness/kiro/hooks/` は `amadeus-kiro-adapter.ts` のみ)。
+
+## 260709-gate-mechanics(前 intent、履歴)関連構造
+
+## 差分リフレッシュ(260709-packaging-repair-batch)
+
+本 intent の2バグの正本ファイルと、差分区間 `a1c79dc12..22e3eb5aa` の構造的差分。
+
+| パス | 役割 | 本 intent との関係 |
+| --- | --- | --- |
+| `scripts/package.ts` | `dist/<name>/` の生成・検査(`buildTree`/`writeHarness`/`checkHarness`) | **#701 の対象**。`checkHarness`(L554-624)の orphan スキャンルート集合 `[".agents","amadeus"]`(L611)が dist ルート平坦面を含まない。clean-sweep(`writeHarness` L521-549)も harness dir と `dist/<name>/amadeus/` の2つのみを掃く |
+| `scripts/release-version-sync.ts` | version 面3点(version.ts / README バッジ / setup package.json)の同期 | **#702 の対象**。`patchFile`(L34-45)、version.ts patch(L47-51)→ badge patch(L53-54)の適用順、version 受理正規表現(L22) |
+
+**tests/ 層の目録更新(hermeticity 再編 + 新規)**:
+
+- 新規(A): `tests/lib/test-size.ts`(テストサイズ計測の共有ヘルパー、`tests/lib/` 配下)、`tests/unit/t-test-size-drift.test.ts`(サイズドリフトガード)、`tests/unit/setup-http.test.ts`、`tests/unit/t112-delegated-approval.test.ts`、`tests/unit/t202-hook-project-dir-worktree-marker.test.ts`、`tests/unit/t202-sensor-type-check-tsc-launcher.test.ts`。
+- 再編(M): PR #703 により `tests/unit/`・`tests/integration/`・`tests/e2e/` の多数ファイルで hermeticity(共有状態・実行順序依存の排除)修正。`tests/run-tests.ts`・`tests/lib/setup-*-fixture.ts`・coverage レジストリ(`.coverage-ratchet.json`/`.coverage-registry.json`)も追随更新。
+- テスト層構成(smoke / unit / integration / e2e の4層 + `tests/lib/` 共有)自体は不変。
+- 新規(A、`9a2f5c72..24197d755` = `260709-dynamic-test-size` スキャンで確認、#721/#722 由来): `tests/helpers/arbitraries/semver.ts`(PBT 用 arbitrary ヘルパー、**新規ディレクトリ `tests/helpers/arbitraries/`**)、`tests/unit/setup-semver.pbt.test.ts`(fast-check ベース PBT 単体テスト、ヘッダ `// covers: domain:setup-semver` / `// size: small`)。テストランナー・size 分類ロジックには非関与(#699 フォーカス面への影響なし)。`tests/integration/t92.test.ts` は #709 対応で test 44 に skip ガードを追加(M)。
+
 ## トップレベル構造
 
 `packages/` は `framework` と `setup` の2パッケージ構成のまま。トップレベル構造自体に変更はない。
@@ -59,6 +127,33 @@
 
 `drain(final)`(L54-148)は `carry.length < BLOCK_SIZE` などデータ不足時に `null` を返して次チャンク待ちに戻る設計(L64-65, L82-85, L98-100, L109-112)であり、これ自体は chunk 境界を跨ぐ設計として妥当に見える。#678 として持ち越すべき論点は、この状態機械が実際の `git archive`/codeload 出力(長いパス名を持つファイルが PAX/GNU ヘッダと本体ヘッダの間でチャンク分割される具体的な入力)に対して実測でも正しく動くかどうかであり、静的スキャンだけでは確定できない。
 
+## 差分リフレッシュで反映した構造(integrity-batch、`a1c79dc12..162553b99`)
+
+前回スキャン以降の構造変化と、今回4バグ(#705/#706/#707/#708)の焦点ファイルを追記する。
+
+### codekb ストア構造(#707 の対象)
+
+| パス | 役割 | 本 intent との関係 |
+| --- | --- | --- |
+| `.claude/tools/amadeus-lib.ts` `codekbRepoName`(L556-565)/ `codekbDir`(L530-533)/ `originRepoSlug`(L571-580) | codekb ディレクトリ名を origin remote 由来で解決(#693 で統一) | #707 の前提。`codekb/claude-leader/`・`codekb/claude-engineer-1/` は削除され `codekb/amadeus/` 単一化 |
+| `.claude/amadeus-common/stages/inception/reverse-engineering.md`(L5 condition / L36 outputs / L110 timestamp) | RE ステージ定義。常時リフレッシュ・9固定ファイル・**単一** timestamp marker | **#707 の直接対象**(単一 timestamp で並行 base/observed を表現できない) |
+
+### テストハーネス構造(#705 の対象)
+
+| パス | 役割 | 本 intent との関係 |
+| --- | --- | --- |
+| `tests/run-tests.ts`(L31 `Level`、L577-587 `levelFiles`、L485-489 `shouldSkipForClaude`) | tier discovery(smoke/unit/integration/e2e 各ディレクトリ直下のみ)と substrate skip | #705 の構造的根拠(`tests/harness/` はどの Level にも属さず discovery/skip の外) |
+| `tests/harness/sdk-drive.calibration.test.ts`(L55-72) | doctor 既知回答文字列のピン留め | **#705 の直接対象**(L72 `DOCTOR_DOCS_LABEL` が現行 doctor 出力とドリフト、かつランナー管理外) |
+| `.claude/tools/amadeus-utility.ts`(L628 doctor workspace チェック) | doctor が出力する現行ワークスペース文言(`workspace shell ready ...`) | #705 の期待値ドリフトの対向(旧 `amadeus-docs/ directory exists` は不在) |
+
+### knowledge 配布構造(#706 の対象)
+
+| パス | 役割 | 本 intent との関係 |
+| --- | --- | --- |
+| `packages/framework/core/knowledge/amadeus-delivery-agent/workflow-planning-guide.md`(L3) | delivery-agent の実行計画ガイド | **#706 の直接対象**(不在の `product-guide.md` を tree 外参照。core→dist→self-install の全複製に伝播済み) |
+| `packages/framework/core/agents/amadeus-delivery-agent.md`(L71-77) | delivery-agent の knowledge ロードパス宣言 | #706 の根拠(自分の dir と `amadeus-shared/` のみ読み、product-agent dir は読まない) |
+| `packages/framework/core/hooks/amadeus-mint-presence.ts`(L12-13, L23-31) | UserPromptSubmit で `HUMAN_TURN` を無条件 mint(stdin 未読) | **#708 の直接対象**(mint 側)。参照様式は `amadeus-audit-logger.ts:29-44` / `amadeus-session-start.ts:86-96` |
+
 ## 次工程へ持ち越す設計候補
 
 1. #674: merge-back 失敗を検知した時点で `results[]` の該当 unit を `"failed"` に書き換え、`emitUnitFailed`/`emitBoltFailed` を出すよう finalize のフェーズ順序を見直す。
@@ -67,3 +162,31 @@
 4. #677: `getJson()` の `.json()` 呼び出しを try/catch で包み、パース失敗を `FetchError` に分類して `Result.err` を返すようにする。
 5. #678: 実際に PAX/GNU ヘッダがチャンク境界を跨ぐ tar.gz を用意した回帰テストを作成し、現状の実装が正しいことを実証するか、実際に破綻する入力を特定する。
 6. #668: `codekbRepoName()` の fallback を `basename(projectDir)` から、worktree を認識した実リポジトリ名の解決(例: `git rev-parse --show-toplevel` の親、または `.git` の `commondir` を辿る)に変更する。
+
+## Coverage CI 経路(260710-codecov-project-gate の対象)
+
+> 出典: `.github/workflows/ci.yml`・`codecov.yml`・`tests/run-tests.ts`・`tests/gen-coverage-registry.ts`・`tests/.coverage-ratchet.json`(2026-07-10, HEAD 98089faf 実測)。本 intent はこの経路へ「Codecov 非依存の自前 project ゲート」を追加する。
+
+### CI ジョブ DAG(`.github/workflows/ci.yml`)
+
+| ジョブ | 行 | 役割 | カバレッジ関与 |
+| --- | --- | --- | --- |
+| `check` | :20-58 | typecheck・lint・dist:check・promote:self:check・`test:ci` | なし |
+| `coverage` | :60-103 | `needs: [check]`。`bun run coverage:ci`(:82)で lcov 生成、`coverage/lcov.info` と `coverage/html` を artifact 化(:84-93)し Codecov へ OIDC 送信(:95-103、`fail_ci_if_error: true`) | **本 intent の入力元** |
+| `codecov-status` | :105-200 | `needs: [coverage]`, `if: always()`。`github-script`(:117)で外部 status を polling: `requiredChecks` 組立(:132-138、#717 が触る箇所)、`waitForCheck()` 最大60回×10秒(:144-178)、check-run/combined-status 両経路探索(:180-200) | Codecov status 待ち。**自前ゲートは polling 不要** |
+| `ci-success` | :202-225 | `needs: [check, coverage, codecov-status]`, `if: always()`。`require_result()`(:213-220)が各 `needs.<job>.result` を `success` と厳格比較、集約対象は3ジョブ(:222-224) | 集約ゲート |
+
+### 総カバレッジ% 算出箇所(`tests/run-tests.ts`)
+
+- per-file LCOV 生成: `bun test --coverage --coverage-reporter=lcov` を個別実行し `coverage/.parts/<safe-name>/` へ出力(:753-776)。
+- 結合 → 正規化 → 書き出し: `combineCoverageReports()`(:641-660)→ `normalizeCoverageReport()`(:503-563)→ `coverage/lcov.info`。正規化は harness 生成パス(`.claude/`・`.codex/`・`dist/*/.{claude,codex,kiro}/`)を `packages/framework/core/` へ再マップ(:488-501)。
+- 正規化後レコード: `SF` / `FNF` / `FNH` / `DA:<line>,<count>` / `LF`(=DA 行数, :557)/ `LH`(=count>0 の DA 行数, :558)/ `end_of_record`(:546-561)。
+- **総% は既に算出済み**: `writeCoverageHtml()`(:597-599, :627)が `totalHits/totalLines` から `Total line coverage: {pct}% ({totalHits}/{totalLines})` を HTML へ出力。ただし機械可読(stdout/JSON)な emit 経路は現状なし(:627 が唯一)。
+
+### ラチェット機構(`tests/gen-coverage-registry.ts` + `tests/.coverage-ratchet.json`)
+
+- ベースライン: `tests/.coverage-ratchet.json`(クラス別 covered ユニット**件数**、%ではない)。path は `AMADEUS_COVERAGE_RATCHET` env で上書き可(:104-105)。
+- 単調 fail-closed 判定: `runCheck()`(:1242-1266)が各クラスで `now < base` を検知して `ok=false`(増やせるが黙って減らせない)。
+- 更新: `writeAll()`(:1275-1278)が `--check` なし実行で registry+ratchet を再生成。人間がレビュー付きコミットで更新(:1259-1262 が手順案内)。
+- `--check` 実行契約: drift・空クラス・cross-check・ratchet を検査し失敗時 `process.exit(1)`(:1283-1290)。CI 直接ステップは無く、`tests/unit/gen-coverage-registry.test.ts` が `spawnSync`(:152, :267, :279)で **temp tree** に対し落ちる実証を行う。
+- **自前 project ゲートのベースライン運用テンプレート**: リポ内コミット済みファイル + 単調 fail-closed + env 差し替えでの落ちる実証、という同型が既に確立。

@@ -46,6 +46,76 @@
     "slug": "bug-zero-batch",
     "dirName": "260709-bug-zero-batch",
     "scope": "bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f46ac-7bdb-7a8e-a99f-da2232df246e",
+    "slug": "packaging-repair-batch",
+    "dirName": "260709-packaging-repair-batch",
+    "scope": "bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f46b2-60d7-777e-84d1-13754b4ef5aa",
+    "slug": "gate-mechanics",
+    "dirName": "260709-gate-mechanics",
+    "scope": "bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f49f8-bff3-79ac-8d0f-c602c02057e9",
+    "slug": "source-unreferenced-chec",
+    "dirName": "260710-source-unreferenced-chec",
+    "scope": "bugfix",
+    "status": "in-flight"
+  },
+  {
+    "uuid": "019f46cc-d639-7b7e-8db3-4a5f10229292",
+    "slug": "integrity-batch",
+    "dirName": "260709-integrity-batch",
+    "scope": "bugfix",
+    "status": "in-flight"
+  },
+  {
+    "uuid": "019f4738-d9b4-73d8-b7dc-3f7b1a23a34e",
+    "slug": "t92-worktree-hermeticity",
+    "dirName": "260709-t92-worktree-hermeticity",
+    "scope": "bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f473b-762f-7dfb-ac29-2436cc4e13d0",
+    "slug": "pbt-small-band",
+    "dirName": "260709-pbt-small-band",
+    "scope": "refactor",
+    "status": "in-flight"
+  },
+  {
+    "uuid": "019f48c4-c619-700b-8d3a-d5fca154d3cd",
+    "slug": "dynamic-test-size",
+    "dirName": "260709-dynamic-test-size",
+    "scope": "refactor",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f49f8-25a2-73d9-bb58-0b24da2ef07f",
+    "slug": "delegate-answer-consume",
+    "dirName": "260710-delegate-answer-consume",
+    "scope": "bugfix",
+    "status": "in-flight"
+  },
+  {
+    "uuid": "019f49b1-9e7e-7949-86ef-a78cab92c49b",
+    "slug": "kiro-stale-hooks",
+    "dirName": "260710-kiro-stale-hooks",
+    "scope": "bugfix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f49fc-0afa-7349-9d19-c6165c291d6c",
+    "slug": "codecov-project-gate",
+    "dirName": "260710-codecov-project-gate",
+    "scope": "refactor",
     "status": "in-flight"
   }
 ]

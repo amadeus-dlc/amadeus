@@ -1,5 +1,18 @@
 # ビジネス概要
 
+## 260710-source-unreferenced-check(本 intent)の業務境界
+
+`bugfix` スコープの新しい intent。packaging(`scripts/package.ts` + harness manifests)の **source 側 unreferenced 検査**(Issue #735)を対象とする。既存の drift guard(`dist:check`)は「committed dist に混入した stale ファイル(出力側 orphan)」を検出するが、「`harness/<name>/` に置かれた authored ソースが manifest のどの行からも参照されず build に不可視のまま滞留する(source 側 unreferenced)」ことを検出しない。#719/#737 でこのギャップの実害(kiro CLI harness の7個の stale `.kiro.hook` が vacuous exemption に隠れて滞留)が顕在化しており、本 intent はその一般的な検査機構を検討する。
+
+> **前回 intent の2バグは出荷済み**: **#685 delegate-rejection は #729** で解消(`DELEGATED_REJECTION` イベント + `delegate-rejection` subcommand を追加、agent-team topology でリモート conductor がゲートを拒否可能に)、**#670 sibling-worktree guard は #727** で解消(worktree write パスをメインチェックアウトへアンカーし、sibling dev worktree からの `create`/`bolt --worktree` を許容)。以下の「260709-gate-mechanics」節は歴史的記録。
+
+## 260709-gate-mechanics(前 intent、履歴)の業務境界
+
+前回バッチ(`260709-bug-zero-batch`)完了後の新しい bugfix intent。既存 2 バグに絞ったバッチであり、対象コード領域は前回バッチと重複しない(前回対象の `amadeus-swarm.ts`/`packages/setup/` 系ではなく、gate 解決・worktree 実行系)。
+
+- **#685 delegate-rejection**: human-presence gate の REJECT パスに、agent-team topology でリモートの conductor がゲートを拒否するための遠隔委任機構がない。#671 で APPROVE 側にのみ追加された `delegate-approval`(issuer の実 `HUMAN_TURN` を根拠に検証する仕組み)と対称な仕組みを REJECT 側に追加する必要がある。`DELEGATED_APPROVAL` イベントを REJECT 目的に転用すると意味論が破綻するため、新規の delegated-rejection イベント種別を要する。
+- **#670 sibling-worktree guard**: `assertNotSiblingWorktree`(`packages/framework/core/tools/amadeus-worktree.ts`)が、マルチワークツリーのチーム体制で sibling worktree から `amadeus-worktree create`/`bolt --worktree` を実行するケースをすべて拒否してしまい、この運用形態での Bolt worktree モード利用をブロックしている。
+
 ## 目的
 
 Amadeus は AI-DLC ワークフローを複数の AI harness(Claude、Codex、Kiro CLI、Kiro IDE)に配布するための framework リポジトリである。前々回 intent `260708-installer-distribution` で `packages/setup`(`@amadeus-dlc/setup`)が完成し、前回 intent `260709-framework-repair-batch` で4件のバグ(#656/#657/#641/#661)の修理対象が特定された。本 intent `260709-bug-zero-batch` はさらに新しく見つかったバグ6件(#674〜#678、#668)をまとめて修理するバッチである。前回バッチの4件とは対象コード領域が異なる、独立したバグ群である。
