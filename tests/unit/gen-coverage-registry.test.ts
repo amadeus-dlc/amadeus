@@ -50,9 +50,11 @@ import {
   mechanismsOf,
   parseCoversHeader,
   parseObjectDispatchKeys,
+  parseRatchetText,
   parseSwitchDispatchCases,
   ratchetFromRows,
   registryJson,
+  runCheck,
   subcommandCrossCheck,
   UNIT_CLASSES,
 } from "../gen-coverage-registry.ts";
@@ -422,6 +424,120 @@ describe("ratchet anti-regression (covered count cannot silently drop)", () => {
       (x) => x.unitClass === "function" && x.status === "covered",
     ).length;
     expect(r.coveredByClass.function).toBe(fnCovered);
+  });
+});
+
+describe("ratchet parsing (parse, don't validate — malformed input is a diagnosis, not a crash)", () => {
+  test("valid ratchet text parses to the proven coveredByClass", () => {
+    const doc = ratchetFromRows(buildRegistry().rows);
+    const r = parseRatchetText(`${JSON.stringify(doc, null, 2)}\n`);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.coveredByClass).toEqual(doc.coveredByClass);
+  });
+
+  test("invalid JSON (merge-conflict garbage) => MALFORMED detail", () => {
+    const r = parseRatchetText("<<<<<<< HEAD conflict garbage");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.detail).toContain("invalid JSON");
+  });
+
+  test("non-object JSON => MALFORMED detail", () => {
+    for (const text of ["42", '"str"', "null", "[1,2]"]) {
+      const r = parseRatchetText(text);
+      expect(r.ok).toBe(false);
+    }
+  });
+
+  test("missing or non-object coveredByClass field => MALFORMED detail", () => {
+    for (const text of ["{}", '{"coveredByClass":[1]}', '{"coveredByClass":7}']) {
+      const r = parseRatchetText(text);
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.detail).toContain("coveredByClass must be an object");
+    }
+  });
+
+  test("wrong-typed count (string) => MALFORMED, not a silent pass", () => {
+    // Before the fix, `"function": "five"` sailed through: `now < "five"` is
+    // always false, so a corrupt baseline silently PASSED the ratchet.
+    const r = parseRatchetText('{"coveredByClass":{"function":"five"}}');
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.detail).toContain("coveredByClass.function");
+  });
+
+  test("negative / non-integer counts => MALFORMED detail", () => {
+    for (const v of ["-1", "1.5"]) {
+      const r = parseRatchetText(`{"coveredByClass":{"function":${v}}}`);
+      expect(r.ok).toBe(false);
+    }
+  });
+
+  test("missing unit-class key => MALFORMED detail (a conflict can delete a line)", () => {
+    const doc = ratchetFromRows(buildRegistry().rows);
+    const covered = { ...doc.coveredByClass } as Record<string, number>;
+    delete covered.hook;
+    const r = parseRatchetText(JSON.stringify({ coveredByClass: covered }));
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.detail).toContain("coveredByClass.hook");
+  });
+
+  test("runCheck (in-process) turns a corrupt / missing ratchet into a diagnosis", () => {
+    const root = mkdtempSync(join(tmpdir(), "cov-ratchet-ip-"));
+    const prev = process.env.AMADEUS_COVERAGE_RATCHET;
+    try {
+      const ratchet = join(root, ".coverage-ratchet.json");
+      // Corrupt committed ratchet -> MALFORMED diagnosis, not a crash.
+      writeFileSync(ratchet, "<<<<<<< HEAD conflict garbage\n");
+      process.env.AMADEUS_COVERAGE_RATCHET = ratchet;
+      const bad = runCheck();
+      expect(bad.ok).toBe(false);
+      expect(bad.messages.join("\n")).toContain("RATCHET FAILED [MALFORMED]");
+      // Missing ratchet -> the existing does-not-exist diagnosis still fires.
+      process.env.AMADEUS_COVERAGE_RATCHET = join(root, "nope.json");
+      const missing = runCheck();
+      expect(missing.ok).toBe(false);
+      expect(missing.messages.join("\n")).toContain("does not exist");
+      // A VALID ratchet still flows into the drop comparison: an inflated
+      // baseline (reality < baseline) fails with the DROPPED diagnosis, and
+      // the honest baseline passes -> the parser did not weaken the ratchet.
+      const doc = ratchetFromRows(buildRegistry().rows);
+      const inflated = {
+        ...doc,
+        coveredByClass: {
+          ...doc.coveredByClass,
+          function: doc.coveredByClass.function + 5,
+        },
+      };
+      writeFileSync(ratchet, `${JSON.stringify(inflated, null, 2)}\n`);
+      process.env.AMADEUS_COVERAGE_RATCHET = ratchet;
+      const dropped = runCheck();
+      expect(dropped.ok).toBe(false);
+      expect(dropped.messages.join("\n")).toContain("DROPPED");
+      writeFileSync(ratchet, `${JSON.stringify(doc, null, 2)}\n`);
+      expect(runCheck().ok).toBe(true);
+    } finally {
+      if (prev === undefined) delete process.env.AMADEUS_COVERAGE_RATCHET;
+      else process.env.AMADEUS_COVERAGE_RATCHET = prev;
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("--check reports RATCHET FAILED [MALFORMED] + exit 1 on a corrupt committed ratchet", () => {
+    const root = mkdtempSync(join(tmpdir(), "cov-ratchet-malformed-"));
+    try {
+      const ratchet = join(root, ".coverage-ratchet.json");
+      writeFileSync(ratchet, "<<<<<<< HEAD conflict garbage\n");
+      const chk = spawnSync(process.execPath, [TOOL, "--check"], {
+        encoding: "utf-8",
+        env: { ...process.env, AMADEUS_COVERAGE_RATCHET: ratchet },
+      });
+      expect(chk.status).toBe(1);
+      expect(chk.stderr).toContain("RATCHET FAILED [MALFORMED]");
+      expect(chk.stderr).toContain("invalid JSON");
+      // Diagnosis, not a crash: no unhandled stack trace frames.
+      expect(chk.stderr).not.toContain("at runCheck");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 
