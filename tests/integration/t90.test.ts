@@ -496,20 +496,29 @@ describe("t90 amadeus-runtime compile — CLI contract (migrated from t90-runtim
   });
 
   // --- Case 13: re-approve still-empty stage -> fresh MEMORY_EMPTY emit ---
-  // compile #1 emits MEMORY_EMPTY at wallclock-T1. Append a re-jump whose new
-  // STAGE_COMPLETED Timestamp is "now" (wallclock-after-T1). compile #2 sees
-  // prior MEMORY_EMPTY @ T1 < new completed_at -> emit fires (total 2); compile
-  // #3 sees prior @ T2 >= new completed_at -> suppressed.
-  test("13: re-approve still-empty -> fresh MEMORY_EMPTY (total 2), then suppressed", async () => {
+  // A prior compile already emitted MEMORY_EMPTY for the first gate-completion
+  // (seeded at that approval's completed_at, 10:05). Re-approving the still-empty
+  // stage appends a STAGE_COMPLETED with a strictly LATER completed_at (10:10).
+  // The next compile sees the prior emit @10:05 < new completed_at @10:10 and
+  // emits a fresh MEMORY_EMPTY (total 2); the compile after that sees the
+  // re-emit's Timestamp (>= now, far past 10:10) >= new completed_at and
+  // suppresses. All ordering-relevant timestamps are explicit constants, so the
+  // emit/suppress boundary is decided by fixed values — not by wallclock margins
+  // or sleeps (the flake in #741 was that coupling, not a product defect).
+  test("13: re-approve still-empty -> fresh MEMORY_EMPTY (total 2), then suppressed", () => {
     const proj = makeProject(AUDIT_PAST_APPROVED, STATE_FEATURE);
     writeMemory(proj, "ideation", "intent-capture", "\n");
-    runCompile(proj);
-    // Sleep 2s so wallclock advances past compile-#1's MEMORY_EMPTY Timestamp.
-    await new Promise((r) => setTimeout(r, 2000));
-    const newCompleted = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+    const priorEmpty = `
+## Memory Empty
+**Timestamp**: 2024-01-01T10:05:00Z
+**Event**: MEMORY_EMPTY
+**Stage**: intent-capture
+
+---
+`;
     const rejump = `
 ## Stage Start
-**Timestamp**: ${newCompleted}
+**Timestamp**: 2024-01-01T10:10:00Z
 **Event**: STAGE_STARTED
 **Stage**: intent-capture
 **Agent**: amadeus-product-agent
@@ -517,20 +526,19 @@ describe("t90 amadeus-runtime compile — CLI contract (migrated from t90-runtim
 ---
 
 ## Stage Completion
-**Timestamp**: ${newCompleted}
+**Timestamp**: 2024-01-01T10:10:00Z
 **Event**: STAGE_COMPLETED
 **Stage**: intent-capture
 
 ---
 `;
     const f = auditShardPath(proj);
-    writeFileSync(f, readFileSync(f, "utf-8") + rejump, "utf-8");
-    await new Promise((r) => setTimeout(r, 2000));
+    writeFileSync(f, readFileSync(f, "utf-8") + priorEmpty + rejump, "utf-8");
     runCompile(proj);
     expect(memoryEmptyCount(proj)).toBe(2);
     runCompile(proj);
     expect(memoryEmptyCount(proj)).toBe(2);
-  }, 30000);
+  });
 
   // --- Case 14: schema nullability -> read parses instance-bearing graph ---
   // The TS interface must accept null started_at/agent on an instance-bearing
