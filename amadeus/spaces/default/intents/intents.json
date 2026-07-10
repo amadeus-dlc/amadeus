@@ -88,6 +88,13 @@
     "slug": "dynamic-test-size",
     "dirName": "260709-dynamic-test-size",
     "scope": "refactor",
+    "status": "complete"
+  },
+  {
+    "uuid": "019f49f8-25a2-73d9-bb58-0b24da2ef07f",
+    "slug": "delegate-answer-consume",
+    "dirName": "260710-delegate-answer-consume",
+    "scope": "bugfix",
     "status": "in-flight"
   },
   {
