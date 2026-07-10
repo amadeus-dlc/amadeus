@@ -300,6 +300,48 @@ describe("main — corrupt manifest is surfaced loudly, never treated as fresh (
     expect(exitCode).toBe(1);
     expect(getJsonCalled).toBe(false);
   });
+
+  test("install --force proceeds past the corrupt manifest onto the fresh-target path (E-B3b Q2=a)", async () => {
+    // The corrupt-manifest guidance promises `install --force` reinstalls over
+    // the unreadable manifest. Pre-fix, runInstall returned 1 at detect()
+    // before ever consulting `parsed.force`, so the advertised recovery path
+    // was a dead end (getJsonCalled stayed false, same error re-shown).
+    let getJsonCalled = false;
+    const errors: string[] = [];
+    const origError = console.error;
+    console.error = (...args: unknown[]) => {
+      errors.push(args.join(" "));
+    };
+    try {
+      const ports = fakePorts({
+        manifestIo: {
+          read: async () => ({ type: "err", error: { type: "malformed", detail: "manifest is not valid JSON: SyntaxError" } }),
+          write: () => unreachable("manifestIo.write"),
+        },
+        http: {
+          getJson: async () => {
+            getJsonCalled = true;
+            return { type: "err", error: { type: "conn", detail: "stub network failure", status: null, isTransient: () => false, guidance: () => "n/a" } };
+          },
+          downloadArchive: () => unreachable("http.downloadArchive"),
+        },
+      });
+      const exitCode = await main(
+        ["install", "--harness", "claude", "--target", NONEXISTENT_TARGET, "--yes", "--force"],
+        ports,
+      );
+      // The stubbed network still fails, so the install exits 1 — but it got
+      // PAST detect: the network was consulted and the override warning (not
+      // the dead-end guidance) was printed.
+      expect(exitCode).toBe(1);
+      expect(getJsonCalled).toBe(true);
+      const stderr = errors.join("\n");
+      expect(stderr).toContain("--force: continuing anyway");
+      expect(stderr).not.toContain("Re-run `amadeus-setup install --force`");
+    } finally {
+      console.error = origError;
+    }
+  });
 });
 
 describe("main — install, interactive wizard abort (BR-I18)", () => {

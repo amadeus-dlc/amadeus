@@ -105,6 +105,17 @@ export function renderWizardAborted(): string {
 }
 
 // SEC-I04: the one place that phrases a temp-directory setup failure.
+// FR-742 / E-B3b Q2=a: when --force reinstalls over an unreadable manifest,
+// the override is loud — the user sees what was wrong and that the manifest
+// will be rewritten by the install, never a silent swallow of the corruption.
+export function renderCorruptManifestForced(err: InstallationError): string {
+  return [
+    `WARNING: The installer manifest at ${err.path} exists but could not be read.`,
+    renderError(err.cause),
+    "--force: continuing anyway; the install will rewrite the manifest on success.",
+  ].join("\n");
+}
+
 export function renderTmpDirFailure(detail: string): string {
   return `could not prepare a temp directory: ${detail}`;
 }

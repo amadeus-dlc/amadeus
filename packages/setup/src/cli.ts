@@ -150,14 +150,21 @@ async function runInstall(parsed: ParsedCommand, ports: CliPorts): Promise<numbe
   // manifest is surfaced loudly here, never mistaken for a fresh target.
   const detected = await Installation.detect(inputs.target, ports.manifestIo);
   if (detected.type === "err") {
-    console.error(reporter.renderError(detected.error));
-    return 1;
-  }
-  const installation = detected.value;
-  const admission = installation.admitsInstall(parsed.force);
-  if (admission.type === "refuse-suggest-upgrade") {
-    console.error(reporter.renderAlreadyInstalled(admission));
-    return 1;
+    // FR-742 / E-B3b Q2=a: the corrupt-manifest guidance promises that
+    // `install --force` reinstalls over the unreadable manifest, so --force
+    // must actually get past this point. Warn loudly and continue on the
+    // fresh-target path — apply rewrites the manifest atomically (#743).
+    if (!parsed.force) {
+      console.error(reporter.renderError(detected.error));
+      return 1;
+    }
+    console.error(reporter.renderCorruptManifestForced(detected.error));
+  } else {
+    const admission = detected.value.admitsInstall(parsed.force);
+    if (admission.type === "refuse-suggest-upgrade") {
+      console.error(reporter.renderAlreadyInstalled(admission));
+      return 1;
+    }
   }
 
   const resolved = await createResolver(ports.http).resolveVersion(parsed.version);
