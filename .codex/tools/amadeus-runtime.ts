@@ -1406,6 +1406,18 @@ const handleSummary: SubcommandHandler = (rest, projectDir) => {
   }
 };
 
+/**
+ * Resolve a subcommand handler by own-property lookup only. A bare
+ * `table[cmd]` walks the prototype chain, so inherited Object.prototype members
+ * (`constructor`, `toString`, `hasOwnProperty`, …) resolve to truthy functions
+ * and would be invoked as handlers. Gating on Object.hasOwn keeps those names
+ * on the Unknown-subcommand path (exit 1). Kept local to this tool rather than
+ * shared via amadeus-lib.ts to avoid cross-file churn with concurrent work.
+ */
+export function resolveOwnHandler<H>(table: Record<string, H>, cmd: string): H | undefined {
+  return Object.hasOwn(table, cmd) ? table[cmd] : undefined;
+}
+
 // Subcommand dispatch table. New subcommands attach here without
 // touching main()'s control flow — keeps the entry-point's cyclomatic
 // complexity flat as the surface grows.
@@ -1435,8 +1447,8 @@ function stripProjectDir(args: string[]): { projectDirArg: string | undefined; r
   return { projectDirArg: undefined, rest: out };
 }
 
-function main(): void {
-  const { projectDirArg, rest: argsAfterStrip } = stripProjectDir(process.argv.slice(2));
+export function main(argv: string[] = process.argv.slice(2)): void {
+  const { projectDirArg, rest: argsAfterStrip } = stripProjectDir(argv);
 
   const [cmd, ...subargs] = argsAfterStrip;
   if (cmd === "--help" || cmd === "-h") {
@@ -1450,7 +1462,7 @@ function main(): void {
     process.exit(1);
   }
 
-  const handler = SUBCOMMANDS[cmd];
+  const handler = resolveOwnHandler(SUBCOMMANDS, cmd);
   if (!handler) {
     process.stderr.write(`Unknown subcommand: ${cmd}. Run amadeus-runtime --help for usage.\n`);
     process.exit(1);
