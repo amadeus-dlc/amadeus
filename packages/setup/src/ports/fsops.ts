@@ -1,7 +1,7 @@
 import { createWriteStream } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { ReadableStream as NodeWebReadableStream } from "node:stream/web";
@@ -72,6 +72,20 @@ export function createFsWrite(): FsWrite {
   });
 }
 
+// SEC-F03: resolve relPath under root and reject any path that escapes it
+// (traversal or absolute). The containment test is parameterized on the
+// platform's path semantics (resolve + sep) so it is correct on Windows, where
+// path.resolve returns backslash separators and a hardcoded "/" boundary check
+// would reject every legitimate write. Exported as a pure seam for regression
+// tests that exercise win32 and posix semantics on any host.
+export function resolveUnderRootPath(root: string, relPath: string, pathSemantics: { resolve: typeof resolve; sep: string } = { resolve, sep }): string {
+  const target = pathSemantics.resolve(root, relPath);
+  if (target !== root && !target.startsWith(`${root}${pathSemantics.sep}`)) {
+    throw new Error(`path escapes temp root: ${relPath}`);
+  }
+  return target;
+}
+
 export async function createTmpWrite(prefix: string): Promise<Result<TmpWrite, IoError>> {
   let root: string;
   try {
@@ -81,11 +95,7 @@ export async function createTmpWrite(prefix: string): Promise<Result<TmpWrite, I
   }
 
   function resolveUnderRoot(relPath: string): string {
-    const target = resolve(root, relPath);
-    if (target !== root && !target.startsWith(`${root}/`)) {
-      throw new Error(`path escapes temp root: ${relPath}`);
-    }
-    return target;
+    return resolveUnderRootPath(root, relPath);
   }
 
   return Result.ok(
