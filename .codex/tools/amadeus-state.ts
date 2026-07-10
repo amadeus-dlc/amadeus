@@ -2443,7 +2443,7 @@ function handleReuseArtifact(args: string[]): void {
   console.log(JSON.stringify({ slug, decision, artifacts, emitted: "ARTIFACT_REUSED" }));
 }
 
-function handleLookup(args: string[]): void {
+export function handleLookup(args: string[]): void {
   if (args.length < 1) error("Usage: amadeus-state.ts lookup <subcommand> [args...]");
   const sub = args[0];
   const subArgs = args.slice(1);

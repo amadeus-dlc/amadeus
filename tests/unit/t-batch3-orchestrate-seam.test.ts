@@ -19,10 +19,22 @@
 //       determinate gated boolean (the classify round-trip does not exist for a
 //       standalone single run), leaving every already-determinate gate untouched.
 
-import { describe, expect, test } from "bun:test";
-import { ownPhase as ownPhaseOrchestrate, resolveSingleGate } from "../../dist/claude/.claude/tools/amadeus-orchestrate.ts";
-import { ownPhase as ownPhaseJump } from "../../dist/claude/.claude/tools/amadeus-jump.ts";
-import { ownPhase as ownPhaseState } from "../../dist/claude/.claude/tools/amadeus-state.ts";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import {
+  handleNext,
+  ownPhase as ownPhaseOrchestrate,
+  resolveSingleGate,
+} from "../../dist/claude/.claude/tools/amadeus-orchestrate.ts";
+import { handleResolve, ownPhase as ownPhaseJump } from "../../dist/claude/.claude/tools/amadeus-jump.ts";
+import { handleLookup, ownPhase as ownPhaseState } from "../../dist/claude/.claude/tools/amadeus-state.ts";
+import {
+  cleanupTestProject,
+  createTestProject,
+  FIXTURES_DIR,
+  seedStateFile,
+} from "../harness/fixtures.ts";
 
 const copies: Array<[string, (input: string) => string | null]> = [
   ["orchestrate", ownPhaseOrchestrate],
@@ -66,5 +78,109 @@ describe("t-batch3 seam: resolveSingleGate (#749)", () => {
   test("already-determinate gates pass through untouched", () => {
     expect(resolveSingleGate(true)).toBe(true);
     expect(resolveSingleGate(false)).toBe(false);
+  });
+});
+
+// --- Handler drives (in-process) -------------------------------------------
+//
+// The pure-helper cases above cover the guard bodies, but the CALL SITES the
+// batch3 fixes touched live inside handleNext / handleResolve / handleLookup,
+// which the spawn-driven tests (t179, t-batch3-orchestrate-spawn) cannot
+// register in lcov. Same fixtures, driven through the exported handlers
+// (spawn-blindspot-seam-export). Behavioural depth stays in the spawn tests.
+
+const MID_IDEATION = join(FIXTURES_DIR, "state-mid-ideation.md");
+const MID_INCEPTION = join(FIXTURES_DIR, "state-mid-inception.md");
+
+class ExitSignal extends Error {
+  constructor(public readonly code: number) {
+    super(`exit ${code}`);
+  }
+}
+
+// The CLI handlers end error paths via process.exit and print via console.log /
+// console.error; in-process we convert the exit into a throwable and capture both.
+function captureRun(fn: () => void): { exited: boolean; stdout: string; stderr: string } {
+  let stdout = "";
+  let stderr = "";
+  const origExit = process.exit.bind(process);
+  const origLog = console.log;
+  const origErr = console.error;
+  process.exit = ((code?: number) => {
+    throw new ExitSignal(code ?? 0);
+  }) as typeof process.exit;
+  console.log = (...a: unknown[]) => {
+    stdout += `${a.map(String).join(" ")}\n`;
+  };
+  console.error = (...a: unknown[]) => {
+    stderr += `${a.map(String).join(" ")}\n`;
+  };
+  let exited = false;
+  try {
+    fn();
+  } catch (e) {
+    if (e instanceof ExitSignal) exited = true;
+    else throw e;
+  } finally {
+    process.exit = origExit;
+    console.log = origLog;
+    console.error = origErr;
+  }
+  return { exited, stdout, stderr };
+}
+
+describe("t-batch3 seam: handler drives (#744 / #749 / #750 call sites)", () => {
+  let proj: string;
+  let prevProjectDir: string | undefined;
+
+  beforeEach(() => {
+    proj = createTestProject();
+    prevProjectDir = process.env.CLAUDE_PROJECT_DIR;
+    process.env.CLAUDE_PROJECT_DIR = proj;
+  });
+
+  afterEach(() => {
+    if (prevProjectDir === undefined) delete process.env.CLAUDE_PROJECT_DIR;
+    else process.env.CLAUDE_PROJECT_DIR = prevProjectDir;
+    cleanupTestProject(proj);
+    proj = "";
+  });
+
+  test("bare next with a fresh read-only latch swallows to done (Branch 0 guard, #750 flag list)", () => {
+    // t179 test 1 in-process: the bare-next path evaluates the FULL Branch 0
+    // flag-exclusion condition (including the #750 --new-intent line) before
+    // the latch try.
+    seedStateFile(proj, MID_IDEATION);
+    const amadeus = join(proj, "amadeus");
+    mkdirSync(amadeus, { recursive: true });
+    writeFileSync(join(amadeus, ".amadeus-turn-counter"), "3\n", "utf-8");
+    writeFileSync(
+      join(amadeus, ".amadeus-readonly-latch"),
+      `${JSON.stringify({ turn: 3, flag: "status", source: "read-only-flag", ts: 1 })}\n`,
+      "utf-8",
+    );
+    const r = captureRun(() => handleNext([], proj));
+    expect(r.stdout).toContain('"kind":"done"');
+  });
+
+  test("--stage code-generation --single emits a determinate gate (#749 call site)", () => {
+    seedStateFile(proj, MID_INCEPTION);
+    const r = captureRun(() => handleNext(["--stage", "code-generation", "--single"], proj));
+    expect(r.stdout).not.toContain('"gate":"unresolved"');
+    expect(r.stdout).toContain('"kind":"run-stage"');
+  });
+
+  test("jump resolve --phase constructor is rejected as unknown (#744 call site)", () => {
+    seedStateFile(proj, MID_IDEATION);
+    const r = captureRun(() => handleResolve(["--phase", "constructor"]));
+    expect(r.exited).toBe(true);
+    expect(r.stderr).toContain("Unknown phase");
+  });
+
+  test("state lookup validate-phase discriminates own keys from prototype values (#744 call site)", () => {
+    const bogus = captureRun(() => handleLookup(["validate-phase", "constructor"]));
+    expect(bogus.stdout).toContain('"valid":false');
+    const real = captureRun(() => handleLookup(["validate-phase", "construction"]));
+    expect(real.stdout).toContain('"valid":true');
   });
 });

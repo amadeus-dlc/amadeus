@@ -1110,7 +1110,7 @@ function nodeForSlug(slug: string): GraphStage | undefined {
 }
 
 // The `next` handler — pure read, emits exactly one directive.
-function handleNext(args: string[], projectDir: string | undefined): void {
+export function handleNext(args: string[], projectDir: string | undefined): void {
   const flags = parseNextFlags(args);
 
   // Branch 0 — turn-scoped no-op-next guard (Kiro roll-forward defense). On Kiro
@@ -2218,9 +2218,7 @@ export function ownPhase(input: string): string | null {
   return (PHASES as readonly string[]).includes(lower) ? lower : null;
 }
 
-function canonicalisePhase(input: string): string | null {
-  return ownPhase(input);
-}
+const canonicalisePhase = (input: string): string | null => ownPhase(input);
 
 // --- report: commit the transition (the engine's WRITE half) ---
 //
