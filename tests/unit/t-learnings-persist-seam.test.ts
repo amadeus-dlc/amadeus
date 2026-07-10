@@ -9,7 +9,8 @@
 
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { memoryDirFor } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 import { handlePersist } from "../../dist/claude/.claude/tools/amadeus-learnings.ts";
 import { createTestProject, seededAuditShard, seededStateFile } from "../harness/fixtures.ts";
@@ -139,5 +140,47 @@ describe("t-learnings-persist-seam (#754/#745 in-process)", () => {
     expect(readIf(join(memoryDirFor(pd), "project.md"))).toContain("cid:user-stories:c1");
     expect(readIf(join(memoryDirFor(pd), "team.md"))).toContain("cid:user-stories:c2");
     expect(ruleLearnedRows(pd)).toBe(2);
+  });
+
+  // Two candidate_ids that share a prefix persist and emit as independent keys.
+  // The in-memory emit-dedup Set is keyed by (stage, candidate_id); this pins
+  // that the visible emit-key separator (#786) still yields one line and one
+  // RULE_LEARNED row per distinct candidate_id — dedup does not merge "c1" and
+  // "c1x" into a single key.
+  test("prefix-sharing candidate_ids stay distinct under the visible emit-key separator", () => {
+    const pd = mkproj();
+    const sel = writeSelections(pd, "sel-prefix.json", [
+      { candidate_id: "c1", scope: "project", text: "first practice body" },
+      { candidate_id: "c1x", scope: "project", text: "second practice body" },
+    ]);
+
+    const r = callPersist(pd, sel);
+    expect(r.status).toBe(0);
+    const proj = readIf(join(memoryDirFor(pd), "project.md")) ?? "";
+    expect(proj).toContain("cid:user-stories:c1 ");
+    expect(proj).toContain("cid:user-stories:c1x ");
+    expect(ruleLearnedRows(pd)).toBe(2);
+  });
+});
+
+// #786 regression guard: the emit-key separator must be a VISIBLE delimiter,
+// never a raw NUL. A NUL byte makes grep classify amadeus-learnings.ts as a
+// binary file, silently dropping it from text tooling. This scans the source of
+// truth (dist copies are byte-identical to core via dist:check).
+describe("t-learnings-persist-seam — emit-key separator is text-safe (#786)", () => {
+  const coreLearnings = join(
+    dirname(fileURLToPath(import.meta.url)),
+    "..",
+    "..",
+    "packages",
+    "framework",
+    "core",
+    "tools",
+    "amadeus-learnings.ts",
+  );
+
+  test("core amadeus-learnings.ts contains no NUL byte", () => {
+    const bytes = readFileSync(coreLearnings);
+    expect(bytes.includes(0)).toBe(false);
   });
 });
