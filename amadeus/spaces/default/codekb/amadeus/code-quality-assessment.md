@@ -1,12 +1,62 @@
 # コード品質評価
 
-> 本ページ先頭の「本 intent(p3-cleanup-batch4)の観測面」節が最新 intent `260710-p3-cleanup-batch4`(#757 #758 #753 #739 #740 #784)の記録。続く core-repair-batch3 節(#746 ほか9件、2026-07-11)・複雑度ゲート導入節(intent 260710-complexity-gate)・ tools-dispatch-batch 節(#774 / #785 / #787 / #788 / #789)・ bughunt-fix-batch 節(#771/#773/#775/#776/#779)・swarm-worktree-batch 節(#738/#748/#746/#760)・learnings-audit-batch 節(#754 / #745 / #761)・mint-presence-vectors 節(#755)・packaging source-unreferenced 節(intent 260710、#735)・delegate-answer-consume 節(intent 260710、#736)・kiro-stale-hooks 節(#719 / P3 source hygiene)・dynamic-test-size 節(#699 / #684 Phase D)・t92-worktree-hermeticity 節(#709)・packaging-repair-batch 節(#701/#702 = PR #711/#712 解決済み)は前 intent の記録で、参照用に温存する。以降の「アーキテクチャ横断パターン」以下は `260709-bug-zero-batch`(#674〜#678/#668)の記録。
+> 本ページ先頭の「p3-cleanup-batch5(候補)の観測面」節が最新 intent `260710-p3-cleanup-batch5`(#811 #822 #830 #730 #819 #831)の候補記録。続く p3-cleanup-batch4 節(#757 #758 #753 #739 #740 #784 — 全6件 2026-07-10 修正着地済み、PR #823/#821/#817/#818/#814/#815)・core-repair-batch3 節(#746 ほか9件、2026-07-11)・複雑度ゲート導入節(intent 260710-complexity-gate)・ tools-dispatch-batch 節(#774 / #785 / #787 / #788 / #789)・ bughunt-fix-batch 節(#771/#773/#775/#776/#779)・swarm-worktree-batch 節(#738/#748/#746/#760)・learnings-audit-batch 節(#754 / #745 / #761)・mint-presence-vectors 節(#755)・packaging source-unreferenced 節(intent 260710、#735)・delegate-answer-consume 節(intent 260710、#736)・kiro-stale-hooks 節(#719 / P3 source hygiene)・dynamic-test-size 節(#699 / #684 Phase D)・t92-worktree-hermeticity 節(#709)・packaging-repair-batch 節(#701/#702 = PR #711/#712 解決済み)は前 intent の記録で、参照用に温存する。以降の「アーキテクチャ横断パターン」以下は `260709-bug-zero-batch`(#674〜#678/#668)の記録。
 >
 > **既知のハウスキーピング債(観測のみ)**: 本ページ以下および `architecture.md` / `business-overview.md` / `api-documentation.md` には過去 intent 由来の未リラベルな「本 intent(…)」マーカーが複数併存している(business-overview の `260710-source-unreferenced-check` / `260709-bug-zero-batch`、architecture 冒頭の source-unreferenced 記述など)。correction c3-relabel の趣旨に照らせば全て履歴ラベル化すべきだが、本 bugfix diff-refresh のスコープ外(非サージカルな大量 churn になる)。本スキャンでは更新対象ファイルの直近マーカーのみリラベルし、残債はここに明示する。
 
-## 本 intent(p3-cleanup-batch4)の観測面 — P3 欠陥6件の横断分類(#757 #758 #753 #739 #740 #784)
+## p3-cleanup-batch5(候補)の観測面 — 候補6欠陥の現物照合(#811 #822 #830 #730 #819 #831)
 
-現 HEAD(`58f3453ad`、base `da1611a9a` からの diff-refresh。焦点9ファイル中7ファイルは無変更、`amadeus-sensor-fire.ts`(#793)/`amadeus-state.ts`(#804)の2ファイルは行番号シフトのみで欠陥不変)で確定した、P3 バグ6件の現物照合。6件はいずれも**挙動欠陥であって構造変化を伴わず**、ファイル非交差(6ファイル群が互いに独立、バッチ3 および open PR #808/#809 とも交差ゼロ)。base/observed の真実源は本 intent の `inception/reverse-engineering/scan-notes.md`。
+現行コード基準 `d8de2362b`(base `58f3453ad`=前回 batch4 RE observed からの diff-refresh。現 HEAD `6279efe58` は intent birth checkpoint のみでフォーカスファイル無変更。介在16コミット、うち #751/#753/#746/#758 の4件のみフォーカス領域に触れたが**いずれも本候補6件の欠陥箇所は未修正**で行番号シフトのみ)で確定した、候補6件の現物照合。6件はいずれも**挙動欠陥であって構造変化を伴わず**。base/observed の真実源は本 intent の `inception/reverse-engineering/scan-notes.md`。
+
+分類: 3件(#811/#822/#830)は「安全側/正しい対照実装が兄弟にあるのに片系統が非対称に素通しする」非対称欠陥、#730 は lcov merge union の DA 加算合成による false-red、#819/#831 は並列フレーク(それぞれ非ヘルメティックな実 eslint spawn / 時間・cursor 解決依存)。
+
+### #811 — adapter inline mint が #755 分類器をバイパス(未修正・実在確認)
+
+- **欠陥**: codex/kiro/kiro-ide の3アダプタとも `case "mint"` で `appendAuditEntry("HUMAN_TURN")` を**state 存在のみでゲート**し、機械注入ターン分類器 `isMachineInjectedTurnText` を通していない。正の対照は core `amadeus-mint-presence.ts`(`:65` で `isMachineInjectedTurnText(prompt)` を呼び機械注入なら mint 抑止)。
+- **起票パス誤りの正誤**: 起票の対照実装 path「core/tools」は**誤り**。正は **`core/hooks/amadeus-mint-presence.ts:65`**。分類器の定義・export は **`core/tools/amadeus-lib.ts:347`**(`export function`。stop-hook `amadeus-stop.ts:584,626` も共用し #755 tier-3 carve-out と分岐一致)。
+- **現行 file:line**: codex adapter HUMAN_TURN 直呼び `:357`(起票 :347-362 → 現行 `:349-364`、+2 シフト)、kiro mint HUMAN_TURN `:132`(`:130-134`)、kiro-ide mint HUMAN_TURN `:88`(`:84-94`)、codex emit HOOK_WIRING `emit.ts:31`(変化なし)。
+- **決定的裏取り**: `grep -c isMachineInjected` が**3アダプタとも 0**(共有分類器を import すらしていない)。
+- **修理の型**: 3アダプタの mint case に共有分類器 import + 抑止分岐を追加(mint-presence hook と同カタログ共有)。実機の HOOK_WIRING/HUMAN_TURN 発火の実証テストが完成条件。
+
+### #822 — kiro 系 runCore の cwd 喪失(未修正・実在確認)
+
+- **欠陥**: kiro/kiro-ide adapter の `runCore` が `Bun.spawnSync` に `cwd` を渡さず、spawn された core フックがアダプタプロセスの cwd を継承する(kiro が渡す `kiro.cwd` が伝播しない)。`stdin/stdout/stderr` のみ指定で `cwd` フィールド欠落。
+- **非対称の対照**: codex adapter runCore(`:162-169`、spawnSync `:163`)は `cwd: projectDir`(`:167`、`:90` で `codex.cwd ?? process.cwd()` 解決)を渡す**正しい側**。3アダプタで唯一 codex だけが正しい。
+- **現行 file:line**: kiro runCore `:378-385`(spawnSync `:379`)、kiro-ide runCore `:232-239`(spawnSync `:233`)。buildForward は `kiro.cwd ?? process.cwd()` を各ハンドラで解決するが runCore へ未伝播。
+- **修理の型**: kiro/kiro-ide の runCore spawnSync に `cwd:` を追加(codex の解決規則と対称化)。#753 の kiro-ide 変更は buildForward(:179-203)止まりで runCore(:232)未到達のため現存。
+
+### #830 — doctor Check1/Check3 が anchored base dir 非適用(未修正・#746 の直接残渣)
+
+- **欠陥**: `amadeus-utility.ts` の doctor Check 1(`:831`)/ Check 3(`:998`)が `const worktreesDir = join(projectDir, ".amadeus", "worktrees")` の**生 join** のまま。Check 2(`:960`)は `worktreePath(projectDir, slug)` の anchored 版(正しい側)を使う**非対称**。lib は `worktreeBaseDir`(`:1981`)/ `worktreePath`(`:1989`)を export 済み。
+- **因果(same-root-inventory の実例)**: #830 は **#746(`3563d84c3`)の伝播漏れの直接残渣**。#746 は lib に `worktreeBaseDir` を新設し `amadeus-worktree.ts` の読み側を移行したが、**`amadeus-utility.ts`(doctor)を touch していない**(`git show 3563d84c3 -- amadeus-utility.ts` = 空)。Check 1/3 が生 join のまま取り残された。cid:code-generation:same-root-inventory(同根パターンの全数棚卸し)の実例。
+- **クロスレビュー**: 2名 CONFIRMED 済み、行番号は起票時から完全一致。
+- **修理の型**: Check 1/3 の生 join を `worktreeBaseDir`/`worktreePath` の anchored 導出へ差し替え(Check 2 と対称化)。
+
+### #730 — bun lcov の関数内コメント/空白行 DA:0(未修正・merge union 経路特定)
+
+- **欠陥の本丸**: `tests/run-tests.ts`(テストインフラ側、`packages/framework` 配下ではない → **dist/self-install 同期不要**)の `normalizeCoverageReport`(`:509`)。union/merge の核心は **`:534`** `current.lines.set(lineNo, (current.lines.get(lineNo) ?? 0) + count)` の **DA 加算合成**。ロードのみチャンクが in-body コメント/空白行を `DA:N,0` で stamp し実行チャンクが正 count を与えないため、`0 + 0 = 0` が恒久化 → LH から漏れて false-red。
+- **チャンク連結の実体**: `combineCoverageReports`(**`:674`**)が各 per-file lcov を `chunks.join("\n")`(**`:689`**)で連結し `normalizeCoverageReport` へ渡す。ここが「外部 lcov merge union」の実体。単一プロセスでは1チャンクのみで union が起きず再現しない(レシピの説明と整合)。
+- **#772 リマップとの独立**: `normalizeCoverageSourcePath(source, COVERAGE_SOURCE_PATH_CONTEXT)`(`:519`、context `:61`)は SF 行のソースパス正規化で DA:0 問題とは独立。
+- **修理の型**: 計測不能行の false-red を merge/normalize 経路(`:534` の union)で loud 検出 or 除外する設計。発生源コード側の回避策 cid:code-generation:bun-inbody-comment-da0(説明コメントをモジュールスコープへ退避)とは別に、本丸は merge 経路の是正。
+
+### #819 — t92 case 15 並列フレーク(未修正・非ヘルメティック spawn が根)
+
+- **欠陥**: `tests/integration/t92.test.ts` case 15(`:661-663`、`test("15: linter — failing TS ... Findings count=1")`、timeout 60000ms)。本体 `runFailedTsReal`(`:610-637`)→ `fire`(`:327-333`)→ `spawnSync(BUN, [SENSOR_TS, "fire", ...])` で **amadeus-sensor.ts を実プロセス spawn → その先で実 eslint バイナリを spawn**(manifest `timeout_seconds=30`)。
+- **フレーク機序(Findings 1→0)**: **非ヘルメティックな実 eslint spawn**。full-suite 並列負荷下で eslint が(a)timeout 打ち切り→tool-unavailable→0 findings、(b)リソース競合で空結果、のいずれかに落ち、期待 Findings=1 に対し 0 を返す。`fire` は child_process 側 timeout を指定せず sensor manifest の timeout_seconds と bun-test 60000ms 上限に依存。
+- **修理方向の含意**: #741 手法(順序に効くタイムスタンプの定数化)では**閉包しない**。フレークは外部プロセス(実 eslint)の並列競合由来でテスト内部の wallclock 結合ではないため。eslint spawn の hermetic 化(結果を固定 fixture 化 / スタブ経路へ寄せる)が必要。実 eslint を保つなら競合非依存の隔離が要る。
+
+### #831 — t76 test 12 並列フレーク(未修正・起票仮説を反証、真機序候補を特定)
+
+- **欠陥**: `tests/unit/t76.test.ts` test 12(`:626-654`、`test("12: merge audit-lock timeout — slug-tagged failure, no partial state write")`)。`auditLockDir(proj, DEFAULT_RECORD_DIR, DEFAULT_SPACE)`(`:641`)へ lock dir を先行作成し `owner.json` を自 PID + fresh startedAtMs で stamp(`:644-645`)。reaper が live+fresh を reap 拒否 → merge の lock 取得が retry 予算を使い切って失敗する期待。
+- **起票仮説(PID/プロセス依存でパス不一致)は反証済み**: ロックパスは**決定的**。`auditLockDir`(lib `:2798`)= `join(tmpdir(), '.amadeus-audit-<md5(identity)[:8]>.lock')`、`auditLockIdentity`(`:2790` 付近)= `` `${projectDir}\x00${space}\x00${intent}` `` で **PID を含まない**(区切りは NUL、#786 と同系)。tmpdir() は `TMPDIR` env 由来で兄弟プロセス間同値 → テストと merge サブプロセスは同一 lockDir を算出するはず。
+- **真の機序候補(修正設計は機序切り分けが前提)**: (1) **active-intent cursor 解決 divergence**(最有力): `intent` 成分は merge 時に active-intent cursor から解決される(`:637-639` コメント)。並列負荷下で cursor 解決がテスト前提の DEFAULT_RECORD_DIR と食い違えば merge は別 bucket の lockDir を算出し、植えたロックを観測せず merge 成功 → 期待 failure に対しフレーク。(2) **timeOrigin 依存の staleness マージン**: staleness は `lockAcquireEpochMs()`(`performance.timeOrigin + performance.now()`、`:2845`)と `owner.startedAtMs` の差 > `lockStaleMs()`(default `DEFAULT_LOCK_STALE_MS=10*60*1000`、env `AMADEUS_LOCK_STALE_MS` 上書き可、`:2775-2783`)で、**cross-process の `performance.timeOrigin` epoch 家系一致前提**(`:2841-2844` コメント)に依存する timing 脆弱性。retry 予算は `acquireAuditLock(pd, 50, 100, intent, space)`(`:3135`)= 50×100ms = ~5s。
+- **修理方向の含意**: 機序(1)なら cursor 解決を決定化(テストが merge の解決する intent bucket を明示 pin)、機序(2)なら #741 パターン(`startedAtMs` を明示定数 or `AMADEUS_LOCK_STALE_MS` env 固定)が直接効く。両機序の切り分けが修正設計の前提。
+
+## p3-cleanup-batch4(履歴)の観測面 — P3 欠陥6件の横断分類(#757 #758 #753 #739 #740 #784)
+
+> **全6件修正済み(2026-07-10 着地、PR #823/#821/#817/#818/#814/#815)**。以下の欠陥記述は履歴として温存する(欠陥の型・修理方向の記録)。
+
+現 HEAD(`58f3453ad`、base `da1611a9a` からの diff-refresh。焦点9ファイル中7ファイルは無変更、`amadeus-sensor-fire.ts`(#793)/`amadeus-state.ts`(#804)の2ファイルは行番号シフトのみで欠陥不変)で確定した、P3 バグ6件の現物照合。6件はいずれも**挙動欠陥であって構造変化を伴わず**、ファイル非交差(6ファイル群が互いに独立、バッチ3 および open PR #808/#809 とも交差ゼロ)。base/observed の真実源は当該 intent(260710-p3-cleanup-batch4)の `inception/reverse-engineering/scan-notes.md`。
 
 6件を品質パターンで分類すると、いずれも「安全側の機構は既に在るが、その適用が片側・片系統に限られ、もう片方が素通りする」という**非対称欠陥**に収斂する(横断所見は §4 に詳述)。
 
