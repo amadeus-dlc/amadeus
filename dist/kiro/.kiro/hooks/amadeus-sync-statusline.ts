@@ -8,10 +8,19 @@ import {
   hooksHealthDir,
   isClaudeCodeHookInput,
   isoTimestamp,
+  recordHookDrop,
   resolveProjectDirFromHook,
   stateFilePath,
   harnessDir,
 } from "../tools/amadeus-lib.ts";
+
+// Upper bound on the `amadeus-utility.ts set-status` consultation. set-status is
+// the same class of lightweight read-modify engine tool as stop.ts's `next`
+// consultation, so a hung invocation would trap the whole TaskUpdate turn by a
+// path no block-count guard can see. We reuse stop.ts's ENGINE_TIMEOUT_MS bound
+// (10s — generous headroom for a call that normally answers in well under a
+// second) rather than mint a new magic number.
+const SET_STATUS_TIMEOUT_MS = 10_000;
 
 const projectDir = resolveProjectDirFromHook(import.meta.url);
 
@@ -51,9 +60,24 @@ const healthDir = hooksHealthDir(projectDir);
 mkdirSync(healthDir, { recursive: true });
 writeFileSync(join(healthDir, "sync-statusline.last"), isoTimestamp(), "utf-8");
 
-// Update state file via set-status (call the utility tool directly)
+// Update state file via set-status (call the utility tool directly). The spawn
+// MUST be time-bounded (see SET_STATUS_TIMEOUT_MS). On timeout / spawn failure /
+// non-zero exit, record the drop for `--doctor` to surface; never block the
+// parent TaskUpdate (mirrors amadeus-runtime-compile.ts:122-136).
 const toolPath = join(projectDir, harnessDir(), "tools", "amadeus-utility.ts");
-Bun.spawnSync(["bun", toolPath, "set-status", "--stage", slug, "--project-dir", projectDir], {
-  stdout: "ignore",
-  stderr: "ignore",
-});
+try {
+  const proc = Bun.spawnSync({
+    cmd: ["bun", toolPath, "set-status", "--stage", slug, "--project-dir", projectDir],
+    stdout: "ignore",
+    stderr: "pipe",
+    timeout: SET_STATUS_TIMEOUT_MS,
+  });
+  if (proc.exitCode !== 0) {
+    // exitCode is null on timeout / signal; a number otherwise.
+    const detail = proc.exitCode === null ? "timeout or signal" : `exit ${proc.exitCode}`;
+    const stderr = proc.stderr?.toString().trim() ?? "";
+    recordHookDrop(projectDir, "sync-statusline", `set-status ${detail}: ${stderr}`.trim());
+  }
+} catch (e) {
+  recordHookDrop(projectDir, "sync-statusline", e instanceof Error ? e.message : String(e));
+}
