@@ -8,15 +8,18 @@
 //
 // Classify the prompt before minting. Claude Code fires UserPromptSubmit not
 // only for physical human input but also for machine-injected, turn-starting
-// user-role messages (agmsg monitor task-notifications). Those must NOT count as
-// human presence, or the gate (humanActedSinceGate) goes false-positive — a
-// model under autopilot would ride a monitor ping's phantom HUMAN_TURN to
-// approve its own gate (issue #708). The one signal that separates the two is
-// the prompt text: a machine-injected turn's prompt starts with the
-// "<task-notification>" marker; a human never opens a prompt that way (and the
-// threat model is a MODEL fabricating presence, not a human disowning their own
-// input). The stdin payload carries no source flag, so the prompt text is the
-// classifier.
+// user-role messages (agmsg Monitor task-notifications, teammate-message inbox
+// deliveries). Those must NOT count as human presence, or the gate
+// (humanActedSinceGate) goes false-positive — a model under autopilot would ride
+// a machine ping's phantom HUMAN_TURN to approve its own gate (issue #708,
+// reopened by #755). The one signal that separates the two is the prompt text:
+// a machine-injected turn carries a fixed injection marker in its opening bytes
+// (a `<teammate-message` tag, a `<task-notification>`, or a preamble line); a
+// human never opens a prompt that way (and the threat model is a MODEL
+// fabricating presence, not a human disowning their own input). The recognised
+// marker set lives in the shared MACHINE_INJECTED_TURN_MARKERS catalog so it
+// cannot drift from the Stop hook's classifier. The stdin payload carries no
+// source flag, so the prompt text is the classifier.
 //
 // PRIVACY: the prompt is read into memory and matched against a fixed marker
 // only. Its body is never written to the audit shard or logged — the mint keeps
@@ -37,17 +40,17 @@
 import { existsSync } from "node:fs";
 import {
   isClaudeCodeHookInput,
+  isMachineInjectedTurnText,
   resolveProjectDirFromHook,
   stateFilePath,
 } from "../tools/amadeus-lib.ts";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
 
-// The prompt prefix Claude Code stamps on a machine-injected, turn-starting
-// user-role message (agmsg monitor task-notifications). Measured live (#708).
-const MACHINE_INJECTED_PROMPT_PREFIX = "<task-notification>";
-
 // Read + classify the UserPromptSubmit stdin. Returns true only when we can
-// POSITIVELY identify a machine-injected turn (fail-open everywhere else).
+// POSITIVELY identify a machine-injected turn (fail-open everywhere else). The
+// recognised markers live in the shared MACHINE_INJECTED_TURN_MARKERS catalog
+// (leading-256-byte detection) so this classifier and the Stop hook's tier-3
+// carve-out can never diverge (#755).
 async function isMachineInjectedTurn(): Promise<boolean> {
   // A TTY means the hook was invoked interactively (no JSON coming) — never
   // block on a terminal read; treat as unclassifiable (fail-open -> mint).
@@ -59,7 +62,7 @@ async function isMachineInjectedTurn(): Promise<boolean> {
     if (!isClaudeCodeHookInput(raw)) return false;
     const prompt = raw.prompt;
     if (typeof prompt !== "string") return false; // prompt absent -> fail-open
-    return prompt.startsWith(MACHINE_INJECTED_PROMPT_PREFIX);
+    return isMachineInjectedTurnText(prompt);
   } catch {
     return false; // non-JSON / read failure -> fail-open
   }

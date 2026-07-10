@@ -307,6 +307,50 @@ export function resolveProjectDirFromHook(importMetaUrl: string): string {
   return cwd;
 }
 
+// --- Machine-injected turn classification (shared catalog) --------------------
+//
+// Claude Code fires UserPromptSubmit (and records user-role transcript turns)
+// not only for physical human input but also for MACHINE-INJECTED, turn-starting
+// user-role messages. Those must never count as human presence: the
+// human-presence gate (humanActedSinceGate) and the #671 delegate-approval
+// provenance both key off HUMAN_TURN authenticity, so a phantom mint lets a
+// model under autopilot ride a machine ping to approve its own gate (issue #708,
+// reopened by #755). This is the single catalog of the injection markers, shared
+// by every classifier (the mint hook and the Stop hook's tier-3 conversational
+// carve-out) so the recognised set can never drift between them.
+//
+// The four live-observed forms (measured 2026-07-10, #755):
+//   "<task-notification>"                       — agmsg Monitor task-notification
+//   "<teammate-message"                         — agmsg/SendMessage inbox delivery
+//                                                 (tag opener; attributes follow)
+//   "Another Claude session sent a message:"     — teammate-message preamble line
+//   "[SYSTEM NOTIFICATION - NOT USER INPUT]"     — Monitor-event preamble line
+export const MACHINE_INJECTED_TURN_MARKERS: readonly string[] = [
+  "<task-notification>",
+  "<teammate-message",
+  "Another Claude session sent a message:",
+  "[SYSTEM NOTIFICATION - NOT USER INPUT]",
+];
+
+// True when `text` opens as a machine-injected turn: any catalog marker within
+// the leading 256 chars (ASCII markers, so a byte window). #708's classifier
+// only matched a bare `startsWith("<task-notification>")` and so missed the
+// preamble-prefixed and teammate-message forms (#755): the measured marker
+// offsets are 0 (task-notification / preamble lines) and 39 (the `<teammate-
+// message` tag after the "Another Claude session sent a message:\n" preamble,
+// 3/3 in this session's conductor transcript), so N=256 is ~6x the largest
+// observed offset. A leading window (not a whole-body scan) keeps the fail-open
+// property intact: a human opening their prompt's first 256 bytes with one of
+// these fixed markers is a negligible risk, and the threat model is a MODEL
+// fabricating presence, not a human disowning their own input.
+export function isMachineInjectedTurnText(text: string): boolean {
+  const head = text.slice(0, 256);
+  for (const marker of MACHINE_INJECTED_TURN_MARKERS) {
+    if (head.includes(marker)) return true;
+  }
+  return false;
+}
+
 // --- File paths ---
 
 export function toPosix(p: string): string {

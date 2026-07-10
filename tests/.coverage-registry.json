@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 424,
+    "total": 426,
     "enumeratedByClass": {
-      "function": 205,
+      "function": 207,
       "audit": 72,
       "scope": 9,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 92,
+      "function": 94,
       "audit": 30,
       "scope": 9,
       "stage": 8,
@@ -1554,6 +1554,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:isMachineInjectedTurnText",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t203-mint-presence-classify.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:isoTimestamp",
       "minMechanism": "none",
       "coveredBy": [],
@@ -1742,6 +1754,18 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:MACHINE_INJECTED_TURN_MARKERS",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t203-mint-presence-classify.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",

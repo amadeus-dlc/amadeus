@@ -104,6 +104,12 @@ import {
   seededRecordDir,
   seededStateFile,
 } from "../harness/fixtures.ts";
+import { MACHINE_INJECTED_TURN_MARKERS } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+
+// A live-observed teammate-message injected turn, derived from the shared
+// catalog so a marker rename cannot leave a stale copy here (#755). The tier-3
+// carve-out must NOT count this as the human talking.
+const TEAMMATE_INJECTED_TURN = `${MACHINE_INJECTED_TURN_MARKERS[2]}\n${MACHINE_INJECTED_TURN_MARKERS[1]} from="researcher">start on task #1</teammate-message>`;
 
 const BUN = process.execPath; // the bun running this test (mirrors t104)
 const REPO_ROOT = join(import.meta.dir, "..", "..");
@@ -1506,6 +1512,76 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
       { kind: "human", text: "continue" },
       { kind: "bash", command: "bun .codex/tools/amadeus-orchestrate.ts next" },
       { kind: "userText", text: RAW_NUDGE },
+    ]);
+    const r = runHook(
+      proj,
+      JSON.stringify({ stop_hook_active: false, transcript_path: tp }),
+      "run-stage",
+    );
+    expect(r.rc).toBe(0);
+    expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
+  }, 30000);
+
+  // =========================================================================
+  // (j) MACHINE-INJECTED TURN EXCLUSION (#755). The tier-3 conversational
+  // carve-out reads the ending turn's user prompt as the human anchor. But
+  // agmsg task-notifications and teammate-message inbox deliveries arrive as
+  // user-role transcript entries too, so without excluding them a machine turn
+  // would masquerade as "the human chatting" and wrongly ALLOW the stop. The
+  // classifier now skips any entry matching the shared MACHINE_INJECTED_TURN_
+  // MARKERS catalog in BOTH readers, mirroring the isInjectedHookFeedback guard.
+  // Each BLOCK case uses a FRESH makeProject() (interactive cap 2).
+  // =========================================================================
+
+  test("(j) a teammate-message injected turn does NOT reset the human anchor; the engaged turn still BLOCKS (Claude)", () => {
+    const proj = makeProject();
+    seedActive(proj, "requirements-analysis");
+    // Real human prompt "continue"; conductor engaged the engine (bare next) then
+    // a machine-injected teammate-message turn landed as the last user entry.
+    // Pre-fix that machine turn would become the anchor with no engine call after
+    // -> ALLOW (wrong). Excluded, the anchor stays "continue" with a next after
+    // it -> NOT conversational -> BLOCK.
+    const tp = seedTranscriptEntries(proj, "claude", [
+      { kind: "human", text: "continue" },
+      { kind: "bash", command: "bun .claude/tools/amadeus-orchestrate.ts next" },
+      { kind: "userText", text: TEAMMATE_INJECTED_TURN },
+    ]);
+    const r = runHook(
+      proj,
+      JSON.stringify({ stop_hook_active: false, transcript_path: tp }),
+      "run-stage",
+    );
+    expect(r.rc).toBe(0);
+    expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
+  }, 30000);
+
+  test("(j) a transcript whose only user turn is a machine-injected form is NOT conversational -> BLOCK (Claude)", () => {
+    const proj = makeProject();
+    seedActive(proj, "requirements-analysis");
+    // No genuine human prompt at all — just a machine-injected teammate-message
+    // turn answered with text. Excluded from human-prompt detection, so no anchor
+    // is found -> isConversationalStop returns false -> the cap-bounded block
+    // stands (a machine ping must never release the loop as if a human chatted).
+    const tp = seedTranscriptEntries(proj, "claude", [
+      { kind: "userText", text: TEAMMATE_INJECTED_TURN },
+      { kind: "text" },
+    ]);
+    const r = runHook(
+      proj,
+      JSON.stringify({ stop_hook_active: false, transcript_path: tp }),
+      "run-stage",
+    );
+    expect(r.rc).toBe(0);
+    expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
+  }, 30000);
+
+  test("(j) Codex: a machine-injected form as the only user turn is NOT conversational -> BLOCK", () => {
+    const proj = makeProject();
+    seedActive(proj, "requirements-analysis");
+    // Same exclusion in the codex reader.
+    const tp = seedTranscriptEntries(proj, "codex", [
+      { kind: "userText", text: TEAMMATE_INJECTED_TURN },
+      { kind: "text" },
     ]);
     const r = runHook(
       proj,
