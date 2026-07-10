@@ -56,7 +56,7 @@ import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { appendAuditEntry } from "../tools/amadeus-audit.ts";
-import { stateFilePath } from "../tools/amadeus-lib.ts";
+import { hooksHealthDir, stateFilePath } from "../tools/amadeus-lib.ts";
 
 const HOOKS_DIR = dirname(fileURLToPath(import.meta.url));
 const target = process.argv[2] ?? "";
@@ -190,12 +190,14 @@ function wrapContext(coreStdout: string, eventName: string): string {
 
 // --- D-4: SESSION_ENDED reconcile-at-next-start ------------------------------
 
-const heartbeatFile = join(projectDir, "amadeus-docs", ".amadeus-hooks-health", "codex-session.json");
+const heartbeatFile = join(hooksHealthDir(projectDir), "codex-session.json");
 
 function reconcilePriorSession(): void {
   // Only meaningful inside an active workflow; the heartbeat lives in the
-  // same health dir the core hooks already maintain.
-  if (!existsSync(join(projectDir, "amadeus-docs"))) return;
+  // same health dir the core hooks already maintain (hooksHealthDir, under the
+  // active intent's record root). Gate on the workflow state file existing —
+  // the same self-gate the core session-end hook and the mint case below use.
+  if (!existsSync(stateFilePath(projectDir))) return;
   try {
     if (existsSync(heartbeatFile)) {
       const prior = JSON.parse(readFileSync(heartbeatFile, "utf-8")) as {
