@@ -1,8 +1,8 @@
 # ビジネス概要
 
-## 260710-source-unreferenced-check(本 intent)の業務境界
+## 260710-source-unreferenced-check(intent、履歴)の業務境界
 
-`bugfix` スコープの新しい intent。packaging(`scripts/package.ts` + harness manifests)の **source 側 unreferenced 検査**(Issue #735)を対象とする。既存の drift guard(`dist:check`)は「committed dist に混入した stale ファイル(出力側 orphan)」を検出するが、「`harness/<name>/` に置かれた authored ソースが manifest のどの行からも参照されず build に不可視のまま滞留する(source 側 unreferenced)」ことを検出しない。#719/#737 でこのギャップの実害(kiro CLI harness の7個の stale `.kiro.hook` が vacuous exemption に隠れて滞留)が顕在化しており、本 intent はその一般的な検査機構を検討する。
+`bugfix` スコープの intent。packaging(`scripts/package.ts` + harness manifests)の **source 側 unreferenced 検査**(Issue #735)を対象とする。既存の drift guard(`dist:check`)は「committed dist に混入した stale ファイル(出力側 orphan)」を検出するが、「`harness/<name>/` に置かれた authored ソースが manifest のどの行からも参照されず build に不可視のまま滞留する(source 側 unreferenced)」ことを検出しない。#719/#737 でこのギャップの実害(kiro CLI harness の7個の stale `.kiro.hook` が vacuous exemption に隠れて滞留)が顕在化しており、当該 intent はその一般的な検査機構を検討した。
 
 > **前回 intent の2バグは出荷済み**: **#685 delegate-rejection は #729** で解消(`DELEGATED_REJECTION` イベント + `delegate-rejection` subcommand を追加、agent-team topology でリモート conductor がゲートを拒否可能に)、**#670 sibling-worktree guard は #727** で解消(worktree write パスをメインチェックアウトへアンカーし、sibling dev worktree からの `create`/`bolt --worktree` を許容)。以下の「260709-gate-mechanics」節は歴史的記録。
 
@@ -15,7 +15,7 @@
 
 ## 目的
 
-Amadeus は AI-DLC ワークフローを複数の AI harness(Claude、Codex、Kiro CLI、Kiro IDE)に配布するための framework リポジトリである。前々回 intent `260708-installer-distribution` で `packages/setup`(`@amadeus-dlc/setup`)が完成し、前回 intent `260709-framework-repair-batch` で4件のバグ(#656/#657/#641/#661)の修理対象が特定された。本 intent `260709-bug-zero-batch` はさらに新しく見つかったバグ6件(#674〜#678、#668)をまとめて修理するバッチである。前回バッチの4件とは対象コード領域が異なる、独立したバグ群である。
+Amadeus は AI-DLC ワークフローを複数の AI harness(Claude、Codex、Kiro CLI、Kiro IDE)に配布するための framework リポジトリである。前々回 intent `260708-installer-distribution` で `packages/setup`(`@amadeus-dlc/setup`)が完成し、前回 intent `260709-framework-repair-batch` で4件のバグ(#656/#657/#641/#661)の修理対象が特定された。intent `260709-bug-zero-batch` はさらに新しく見つかったバグ6件(#674〜#678、#668)をまとめて修理するバッチである。前回バッチの4件とは対象コード領域が異なる、独立したバグ群である。
 
 ## 現在の業務境界
 
@@ -32,9 +32,9 @@ Amadeus は AI-DLC ワークフローを複数の AI harness(Claude、Codex、Ki
 
 ## 現状の制約・未整備事項
 
-- 6件とも未修正(コード上に修理の痕跡なし)。今回のスキャンで全件の実在を確認した。
+- 6件とも未修正(コード上に修理の痕跡なし)。bug-zero-batch のスキャンで全件の実在を確認した。
 - 前回バッチの対象だった #656/#657/#641/#661 のうち、#656(`LegacyLayout.isUnsupported` の呼び出し配線)は `upgrade.ts:192` で `Installation.detect` の evidence を消費する形で解消済みと確認できた。#657(`bunx tsc` の無条件使用、`amadeus-sensor-type-check.ts:157,174`)は本スキャン時点でも未修理のまま残存している。#641・#661 の状態は本スキャンの重点対象外のため未確認。
-- 本 intent はこれら旧バッチのバグの修理を担わない。スコープは #674/#675/#676/#677/#678/#668 の6件のみ。
+- bug-zero-batch はこれら旧バッチのバグの修理を担わない。スコープは #674/#675/#676/#677/#678/#668 の6件のみ。
 
 ## 成功条件
 

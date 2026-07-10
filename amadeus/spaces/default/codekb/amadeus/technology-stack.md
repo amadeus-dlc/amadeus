@@ -12,7 +12,14 @@
 - **動的 test-size 計測(#732/#699 Phase D)**: `tests/lib/test-size.ts` + `tests/run-tests.ts` がランナー実行中に各テストの size(pyramid 軸)を連続計測し `test-size-report.json` を出力。
 - **codecov 導入**: `codecov.yml`(project/patch status)+ `.github/workflows/ci.yml` にカバレッジゲート(#687/#710)。`tests/.coverage-ratchet.json`・`.coverage-registry.json` を更新。
 
-## 260709-gate-mechanics(前 intent、履歴)に関連する技術的な注記
+## 複雑度ゲート導入予定(intent 260710-complexity-gate、2026-07-10)
+
+現行 HEAD からの diff-refresh(フォーカス5面)で確定した、複雑度ゲート導入(feature スコープ)が加える技術要素。詳細は code-quality-assessment.md「複雑度ゲート導入」節・initiative-brief 参照。
+
+- **lizard 1.23.0(Python パッケージ、CI に pip 固定インストール予定)**: TS/多言語対応の CCN(cyclomatic complexity number)計測器。CI の `check` ジョブに typecheck/lint 直後のステップとして pip 固定バージョンで導入予定(E-CX1 Q3=A)。lizard 自体は純 Python 単一パッケージであり、最悪時は vendoring も選択肢(R3 代替緩和)。CCN の baseline ラチェット(現存 CCN>15 の42関数を grandfather、新規超過とラチェット悪化のみ赤)は、`tests/coverage-project-gate.ts` / `gen-coverage-registry.ts` と同型の「committed baseline JSON + env seam + --check 単調非減少 + --update 更新」テンプレートを踏襲する想定。
+- **Biome `noExcessiveCognitiveComplexity` の有効化予定**: Biome 2.4系標準の cognitive-complexity ルールを warn として有効化予定(現状 `biome.json` の linter.rules では未有効)。あわせて lint スコープを現行の `tests/ packages/setup/` から `packages/framework/core` + `scripts` へ拡大予定(E-CX1 Q2=A、既存6指摘の機械的修正を同一 PR に含む)。2層ゲート(Biome warn + lizard CCN ラチェット)の warn 層を担う。
+
+
 
 - **#685**: `amadeus-state.ts`/`amadeus-lib.ts`/`amadeus-audit.ts` はいずれも標準ライブラリ(`node:fs`、`node:path`)のみで構成される素朴な手続き型実装。#671 の `delegate-approval`/`humanActedSinceGate`/`verifyDelegatedApproval` と同型の機構(issuer coordinates を audit block に埋め込み、対象側が実 shard を読んで検証する)を REJECT 側に追加するのに新規の外部依存は不要。
 - **#670**: `amadeus-worktree.ts` は `child_process`(`runGit`)経由で git を直接呼ぶ実装で、外部 git ライブラリへの依存はない。`assertNotSiblingWorktree` の分岐追加(許可すべき sibling とブロックすべき sibling の区別)も既存の `runGit` 呼び出しの範囲で完結する見込み。
@@ -33,4 +40,4 @@ Bun(script runner/テスト実行)、TypeScript `^6.0.3`、Biome 2.4系、GitHub
 
 ## バージョンと依存関係の注記
 
-`AMADEUS_VERSION` と `@amadeus-dlc/setup` パッケージバージョンの独立ライフサイクルは変更なし。バージョンバンプは `release.yml` の `workflow_dispatch` 一本に統一されている(project.md DECIDED 参照)。本 intent はこの仕組みに変更を加えない。
+`AMADEUS_VERSION` と `@amadeus-dlc/setup` パッケージバージョンの独立ライフサイクルは変更なし。バージョンバンプは `release.yml` の `workflow_dispatch` 一本に統一されている(project.md DECIDED 参照)。一連の bugfix intent(バッチ D 含む)はこの仕組みに変更を加えない。
