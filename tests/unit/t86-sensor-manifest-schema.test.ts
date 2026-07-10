@@ -70,6 +70,7 @@ import { join } from "node:path";
 import { AMADEUS_SRC, FIXTURES_DIR } from "../harness/fixtures.ts";
 import {
   parseSensorManifest,
+  type SensorManifest,
   validateSensorManifest,
 } from "../../dist/claude/.claude/tools/amadeus-sensor-schema.ts";
 
@@ -207,6 +208,57 @@ describe("t86 sensor manifest schema (migrated from t86-sensor-manifest-schema.s
     expect(() =>
       validateSensorManifest(obj, file, "malformed-missing-id"),
     ).toThrow(/missing required field: id/);
+  });
+
+  // ===========================================================================
+  // FR-7 (#792) — timeout_seconds range validation. Reuses the same in-process
+  // validator seam (dist/claude import) as the schema cases above. A positive
+  // integer is accepted; a negative, zero, or non-integer budget is a loud
+  // rejection (throws "<file>: timeout_seconds must be a positive integer …").
+  // 0 is rejected on purpose: spawnSync treats timeout: 0 as "no timeout", which
+  // silently disables the budget cap. Rejecting at validate time keeps a bad
+  // budget from ever reaching a SENSOR_FIRED emit (orphan-FIRED prevention).
+  // ===========================================================================
+  const baseManifest = (): SensorManifest => ({
+    id: "required-sections",
+    kind: "deterministic",
+    command: "bun .claude/tools/amadeus-sensor-required-sections.ts",
+    default_severity: "advisory",
+    description: "t86 FR-7 base manifest",
+  });
+  const FILE = "amadeus-required-sections.md";
+  const ID = "required-sections";
+
+  test("FR-7: timeout_seconds omitted -> accepted (optional field)", () => {
+    expect(() =>
+      validateSensorManifest(baseManifest(), FILE, ID),
+    ).not.toThrow();
+  });
+
+  test("FR-7: positive integer timeout_seconds -> accepted", () => {
+    const m = { ...baseManifest(), timeout_seconds: 60 };
+    expect(() => validateSensorManifest(m, FILE, ID)).not.toThrow();
+  });
+
+  test("FR-7: timeout_seconds: -1 -> rejected (positive-integer message)", () => {
+    const m = { ...baseManifest(), timeout_seconds: -1 };
+    expect(() => validateSensorManifest(m, FILE, ID)).toThrow(
+      /timeout_seconds must be a positive integer/,
+    );
+  });
+
+  test("FR-7: timeout_seconds: 0 -> rejected (no 'no timeout' loophole)", () => {
+    const m = { ...baseManifest(), timeout_seconds: 0 };
+    expect(() => validateSensorManifest(m, FILE, ID)).toThrow(
+      /timeout_seconds must be a positive integer/,
+    );
+  });
+
+  test("FR-7: non-integer timeout_seconds (1.5) -> rejected", () => {
+    const m = { ...baseManifest(), timeout_seconds: 1.5 };
+    expect(() => validateSensorManifest(m, FILE, ID)).toThrow(
+      /timeout_seconds must be a positive integer/,
+    );
   });
 
   // .sh L36: plan 28. Re-count the assertion budget so a silently dropped
