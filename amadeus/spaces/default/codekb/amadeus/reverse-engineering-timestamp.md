@@ -1,25 +1,33 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ(最新: 260709-gate-mechanics)
+## 実行メタデータ(最新: 260710-source-unreferenced-check)
 
-- Date: 2026-07-09
-- Intent: `260709-gate-mechanics`
+- Date: 2026-07-10
+- Intent: `260710-source-unreferenced-chec`
 - Scope: `bugfix`
-- Repository: `/Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-3`(branch `intent/gate-mechanics-batch`, base `origin/main`)
+- Repository: `/Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-3`(branch `intent/735-source-unreferenced-check`, base `origin/main`)
 - Stage: `reverse-engineering`(2.1)
 - 手法: diff-refresh(前回スキャンコミットからの差分更新。project.md 是正事項 cid:reverse-engineering:c1 に従う)
-- Base commit(前回 codekb 観測コミット): `162553b99`(intent `260709-bug-zero-batch` の統合版、`codekb/amadeus/` 一本化後)
-- Observed commit: `162553b997b760b428a9d0f41c43a5cfcbe54f37`(= base commit。working tree に対象コードの差分なし。作業ツリーの未コミット差分は `amadeus/spaces/default/intents/intents.json` の更新と新規 intent ディレクトリ `260709-gate-mechanics/` のみで、対象2バグのコード領域には影響しない)
-- Focus: 本 intent が対象とする2バグ — **#685 delegate-rejection**(human-presence gate の REJECT パスに、#671 で REJECT 側にのみ追加された delegate-approval 相当の遠隔委任機構が存在しない)、**#670 sibling-worktree guard**(`assertNotSiblingWorktree` が multi-worktree team セットアップでの sibling worktree からの `amadeus-worktree create`/`bolt --worktree` 実行を拒否する)
-- ベースにした codekb: `amadeus/spaces/default/codekb/amadeus/`(2026-07-09、intent `260709-bug-zero-batch` 統合版、対象バグ #674/#675/#676/#677/#678/#668)
+- Base commit(前回 codekb 観測コミット): `162553b99`(intent `260709-bug-zero-batch` の統合版、`codekb/amadeus/` 一本化後。前回 gate-mechanics スキャンもこのコミットを観測対象としており、実コード diff は0だった)
+- Observed commit: `584262c1a9b9d6beac11cb0b98d03f2fc001fba6`(現 HEAD、`origin/main` = #737 込みをマージ済み)
+- 差分規模: `git log 162553b99..HEAD` は38コミット。本日の main マージ群(#711/#712/#713/#714/#715/#716、#721/#722/#724/#725/#726、#732、#727=#670修正、#729=#685修正、#737=#719修正 等)を含み、今回は前回2スキャン(bug-zero-batch/gate-mechanics)と異なり**実コードに差分がある**。
+- Focus: Issue #735 が依存する理解面 — **packaging の入力集合と source 側 unreferenced 検査点**。`scripts/package.ts`(`checkHarness`/`buildTree`)、全 harness の `manifest.ts`(`harnessFiles`/`renames`/`authoredExempt`/`emit`)、#737(kiro CLI の stale `.kiro.hook` 削除 + vacuous exemption 除去)と #711(dist 全域 orphan scan)を重点読解。
+- ベースにした codekb: `amadeus/spaces/default/codekb/amadeus/`(2026-07-09、intent `260709-gate-mechanics` 版)
 
 ## 再検証結果(本 intent の差分)
 
-`git log 162553b99..HEAD` はコードファイルに対して空(コミット差分なし、作業ツリーの未コミット差分も対象コード領域外)。したがって本セクションはコード diff ではなく、**前回 codekb が対象としなかった2つのサブシステムを新たに深く読解した結果**を記録する(diff-refresh の「対象領域を絞った再検証」に相当)。
+38コミットのうち、前回 codekb(gate-mechanics 版)の記述を陳腐化させる主要変更と、#735 の理解面に新規に加える読解結果を記録する。
 
-- **#675 は解消済み(前回 codekb からの重要な差分)**: 前回 codekb(`code-quality-assessment.md` 等)は `handleReject`(`amadeus-state.ts`)に human-presence guard が存在しないと記録していたが、本スキャンで `cb9d19a8e`「Wire human-presence guard into reject (fix #675) (#692)」がすでに `main` にマージ済みであることを確認した。現在の `handleReject`(L1548-)は共通ヘルパー `assertHumanPresentForGateResolution`(L1301-1325、`approve`/`reject` 共有)を呼び出し、ガードは対称化されている。旧 codekb の #675 関連記述(architecture.md・code-structure.md・code-quality-assessment.md 等の該当節)は**歴史的記録として残すが、現状のコードとは一致しない**ため、以後この codekb を読む際は「#675 は fix 済み」を前提にする。
-- **#685 delegate-rejection の現状確認**: `amadeus-state.ts` の subcommand dispatch(L257-303)には `delegate-approval`(#671、L1461-1541 `handleDelegateApproval`)は存在するが、`delegate-reject`/`delegate-rejection` に相当する subcommand・関数はコード全体(`packages/framework/core/` 配下)を grep しても見つからない。REJECT 側は `humanActedSinceGate`(`amadeus-lib.ts` L1442-1478)が `GATE_REJECTED` を `GATE_RESOLUTION_EVENTS`(L1441)に含めている一方、これを「別セッションが委任」するための delegated 版イベント(`DELEGATED_APPROVAL` の REJECT 対応版)は `amadeus-audit.ts` の `VALID_EVENT_TYPES` にも存在しない。詳細は architecture.md「#685」節・code-quality-assessment.md を参照。
-- **#670 sibling-worktree guard の現状確認**: `assertNotSiblingWorktree`(`amadeus-worktree.ts` L112-132)は `git rev-parse --show-toplevel` で得た `cwdTop` と、`git rev-parse --git-common-dir` の結果を `resolve(cwdTop, commonRaw)` で絶対化してから `dirname()` した `mainCheckout` を比較し、不一致なら無条件にエラー終了する。呼び出し箇所は `create`(L204)、もう1箇所(L277)、`L512`(3箇所、`bolt --worktree` 経由の想定)。詳細は architecture.md「#670」節を参照。
+### 前回 codekb を陳腐化させた変更(2バグとも出荷済みに)
+
+- **#685 delegate-rejection は解消済み(#729)**: 前回 codekb は「REJECT 側に delegate-approval 相当の遠隔委任機構が存在しない」と記録していたが、`14d1146e0`「fix #685: add DELEGATED_REJECTION ... (#729)」がマージ済み。現在 `amadeus-state.ts` の subcommand dispatch(L262-263)に `delegate-rejection` → `handleDelegateRejection` があり、`amadeus-audit.ts` の `VALID_EVENT_TYPES`(L73)と presence/provenance の trusted-writer 集合(L755)に `DELEGATED_REJECTION` が追加された。`humanActedSinceGate` は「`DELEGATED_APPROVAL` は approve のみ、`DELEGATED_REJECTION` は reject のみを開く」verb-scoped presence に分離されている(`amadeus-state.ts` L1444 近傍のコメント)。architecture.md・code-structure.md・api-documentation.md 等の #685「不在」記述は歴史的記録であり、以後は「#685 は fix 済み」を前提にする。
+- **#670 sibling-worktree guard は解消済み(#727)**: 前回 codekb は `assertNotSiblingWorktree` が sibling worktree を無条件拒否すると記録していたが、`20c2e9674`「fix #670: anchor amadeus-worktree write paths to the main checkout (#727)」がマージ済み。現在 `amadeus-worktree.ts` は無条件拒否をやめ、cwd を分類して write パスをメインチェックアウトへ**アンカー**する方式(戻り値 `{ cwdTop, mainCheckout }`、L116-123)。sibling dev worktree から呼んでも Bolt worktree はメインチェックアウトの sibling として作成/マージ/破棄される(冒頭コメント L12-13、分類コメント L133-137)。architecture.md・code-structure.md の #670「無条件拒否」記述は歴史的記録。
+
+### #735 の理解面(新規読解)
+
+- **build が読む「入力集合」の確定点**: `scripts/package.ts` の `buildTree`(L307)が、build がソースとして消費する集合を確定する。(1)`core/<coreDirs[].src>` を `walk()` で列挙(L322-344)、(2)`harness/<name>/<harnessFiles[].src>` を個別コピー(L357-363)、(3)onboarding skeleton(L370-376)、(4)`core/memory/` を `emitMemory`/`emitMemorySeed`(L382-395)、(5)`emit()` プラグイン(codex のみ、L446-458)。harness ソースは**ディレクトリ全体を walk せず `harnessFiles` に列挙された src だけ**をコピーする — したがって `harness/<name>/` 配下の未列挙ファイルは build から完全に不可視になる。
+- **source 側 unreferenced 検査は現状不在**: `checkHarness`(L554)の orphan 検出はすべて **dist 出力側**(committed dist vs 再ビルド dist)で働く(harness-dir orphan L574-582、dist 全域 orphan L605-628、#711 で追加)。`harness/<name>/` の authored ソースが manifest のどの行からも参照されない場合、それは dist に到達しないため dist orphan scan では検出できない。これが #735 が塞ごうとしているギャップ。
+- **#737 = このギャップの実害例**: kiro CLI harness に7個の `.kiro.hook` ソースファイルが manifest 未参照のまま残存し(dist へ出荷されず)、しかも kiro manifest の `authoredExempt` に「dist/kiro には元々存在しない」ファイル種別を除外する vacuous な regex `/^hooks\/[^/]+\.kiro\.hook$/` があった。#737 は7ファイルを削除し vacuous exemption を除去、`t148` に「CLI harness ソースに `.kiro.hook` が0個」の再注入ガードを追加した(`tests/smoke/t148-kiro-file-structure.test.ts`)。詳細は code-quality-assessment.md・code-structure.md「packaging」節を参照。
 
 ## 実行メタデータ(前回: 260709-bug-zero-batch、履歴として保持)
 
@@ -85,7 +93,20 @@ Developer スキャン結果として、6アーティファクト構造(business
 - **包含チェック**: 4ディレクトリとも同一の9ファイル構成でファイル単位の欠落なし(削除分は git 履歴から復元可能)
 - **以後**: `codekb-path` は #668 修正により安定名 `amadeus` を返す(このコミットで実測済み)ため、次回スキャンは本ディレクトリへの差分リフレッシュとなる
 
-## 本 intent(260709-gate-mechanics)で更新した成果物
+## 本 intent(260710-source-unreferenced-check)で更新した成果物
+
+packaging 入力集合と source-unreferenced ギャップに焦点を絞った diff-refresh。既存の bug 別ナラティブ節(#674〜#678/#668/#685/#670)は歴史的記録として温存し、上部に #735 の新規節を追記、#685(#729)/#670(#727)の解消済みバナーを各所に付す形で更新した。
+
+- `architecture.md` — 「packaging 入力集合と source 側 unreferenced 検査」節を新設(build 入力の確定点・dist orphan scan の守備範囲・#735 のギャップ)。#685/#670 の解消済みバナーを追記。
+- `code-structure.md` — 「packaging 構造(`scripts/package.ts` / harness manifests)」節を新設(`buildTree`/`checkHarness` の段構成、全 harness の `harnessFiles`/`authoredExempt` 目録)。#685/#670 解消済みバナー。
+- `code-quality-assessment.md` — vacuous exemption アンチパターンと source-unreferenced ギャップを技術的負債として追記。#685/#670 解消済みバナー。
+- `component-inventory.md` — `scripts/package.ts`/`scripts/manifest-types.ts`/harness manifests のコンポーネント表を追記。
+- `api-documentation.md` — `scripts/package.ts`(write/`--check`)の CLI 契約を追記。#685/#670 解消済みバナー。
+- `dependencies.md` — packaging 依存グラフ(core/harness → package.ts → dist の入力集合)と `fast-check` 依存追加を追記。
+- `technology-stack.md` — `fast-check`(PBT、#722)、動的 test-size 計測(#732)、codecov 導入を追記。
+- `business-overview.md` — 本 intent の業務境界(source-unreferenced check)を追記。#685/#670 解消済みバナー。
+
+## 前 intent(260709-gate-mechanics)で更新した成果物(履歴)
 
 コード diff がないため全面リライトではなく、#685/#670 関連の新規節を追記する形の diff-refresh。
 

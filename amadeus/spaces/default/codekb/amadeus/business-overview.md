@@ -1,6 +1,12 @@
 # ビジネス概要
 
-## 260709-gate-mechanics(本 intent)の業務境界
+## 260710-source-unreferenced-check(本 intent)の業務境界
+
+`bugfix` スコープの新しい intent。packaging(`scripts/package.ts` + harness manifests)の **source 側 unreferenced 検査**(Issue #735)を対象とする。既存の drift guard(`dist:check`)は「committed dist に混入した stale ファイル(出力側 orphan)」を検出するが、「`harness/<name>/` に置かれた authored ソースが manifest のどの行からも参照されず build に不可視のまま滞留する(source 側 unreferenced)」ことを検出しない。#719/#737 でこのギャップの実害(kiro CLI harness の7個の stale `.kiro.hook` が vacuous exemption に隠れて滞留)が顕在化しており、本 intent はその一般的な検査機構を検討する。
+
+> **前回 intent の2バグは出荷済み**: **#685 delegate-rejection は #729** で解消(`DELEGATED_REJECTION` イベント + `delegate-rejection` subcommand を追加、agent-team topology でリモート conductor がゲートを拒否可能に)、**#670 sibling-worktree guard は #727** で解消(worktree write パスをメインチェックアウトへアンカーし、sibling dev worktree からの `create`/`bolt --worktree` を許容)。以下の「260709-gate-mechanics」節は歴史的記録。
+
+## 260709-gate-mechanics(前 intent、履歴)の業務境界
 
 前回バッチ(`260709-bug-zero-batch`)完了後の新しい bugfix intent。既存 2 バグに絞ったバッチであり、対象コード領域は前回バッチと重複しない(前回対象の `amadeus-swarm.ts`/`packages/setup/` 系ではなく、gate 解決・worktree 実行系)。
 
