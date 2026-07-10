@@ -12,6 +12,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  realpathSync,
   readdirSync,
   readFileSync,
   rmSync,
@@ -22,6 +23,10 @@ import { homedir, tmpdir } from "node:os";
 import { basename, delimiter, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildMeta, renderMeta, type MetaCounts } from "./lib/bun-junit-to-meta.ts";
+import {
+  type CoverageSourcePathContext,
+  normalizeCoverageSourcePath,
+} from "./lib/coverage-source-path.ts";
 import {
   beginObservation,
   buildMeasuredRecord,
@@ -38,6 +43,22 @@ import {
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(SCRIPT_DIR, "..");
 const BUN = process.execPath;
+
+function coverageSourcePathContext(): CoverageSourcePathContext {
+  const tempRoots = new Set<string>();
+  for (const root of [tmpdir(), process.env.TMPDIR]) {
+    if (!root) continue;
+    tempRoots.add(root);
+    try {
+      tempRoots.add(realpathSync(root));
+    } catch {
+      // Keep the lexical root when its real path is unavailable.
+    }
+  }
+  return { repoRoot: REPO_ROOT, tempRoots: [...tempRoots] };
+}
+
+const COVERAGE_SOURCE_PATH_CONTEXT = coverageSourcePathContext();
 
 type Level = "smoke" | "unit" | "integration" | "e2e";
 type Status = "PASS" | "FAIL" | "SKIP";
@@ -485,21 +506,6 @@ function coverageSafeName(file: string): string {
     .replace(/^_+|_+$/g, "") || "test";
 }
 
-function normalizeCoverageSourcePath(path: string): string {
-  const generatedHarnessPrefixes = [
-    ["dist/claude/.claude/", "packages/framework/core/"],
-    ["dist/codex/.codex/", "packages/framework/core/"],
-    ["dist/kiro/.kiro/", "packages/framework/core/"],
-    ["dist/kiro-ide/.kiro/", "packages/framework/core/"],
-    [".claude/", "packages/framework/core/"],
-    [".codex/", "packages/framework/core/"],
-  ] as const;
-  for (const [from, to] of generatedHarnessPrefixes) {
-    if (path.startsWith(from)) return `${to}${path.slice(from.length)}`;
-  }
-  return path;
-}
-
 function normalizeCoverageReport(body: string): string {
   interface FileCoverage {
     lines: Map<number, number>;
@@ -510,7 +516,7 @@ function normalizeCoverageReport(body: string): string {
   let current: FileCoverage | null = null;
 
   const fileFor = (source: string): FileCoverage => {
-    const normalized = normalizeCoverageSourcePath(source.replace(/\\/g, "/"));
+    const normalized = normalizeCoverageSourcePath(source, COVERAGE_SOURCE_PATH_CONTEXT);
     let file = files.get(normalized);
     if (!file) {
       file = { lines: new Map(), functionsFound: 0, functionsHit: 0 };
