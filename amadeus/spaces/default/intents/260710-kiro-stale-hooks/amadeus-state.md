@@ -1,39 +1,37 @@
 # AI-DLC State Tracking
 
 ## Project Information
-- **Project**: Small band 育成 + プロパティベーステスト(fast-check)導入(#697 = #684 Phase B、#688 方針反映): spawn/FS ベースの旧 unit テストから純関数 seam を抽出して in-process Small テスト+PBT を追加する。優先対象: packages/setup の semver(parse+比較律)/version-spec/manifest(roundtrip)/plan の純判定 seam 抽出、amadeus-audit.ts の CR/LF エスケープ不変条件。fast-check は devDependencies 新規追加(要 requirements 固定)。bugs-only スコープの P0 例外(#684 Phase B 系列、2026-07-09 ユーザー裁定)
+- **Project**: fix #719: Kiro CLI harness source retains seven unshipped .kiro.hook files; two-layer masking (no source-side unreferenced-file check + authoredExempt .kiro.hook pattern suppressing dist ORPHAN detection) lets stale files persist with dist:check green. Fix direction requires team election: remove exemption + delete stale files vs add shipping path. GitHub Issue #719, cross-reviewed VERIFIED by 2 members.
 - **Project Type**: Brownfield
-- **Scope**: refactor
-- **Start Date**: 2026-07-09T14:15:07Z
+- **Scope**: bugfix
+- **Start Date**: 2026-07-10T01:43:25Z
 - **State Version**: 7
-- **Active Agent**: amadeus-quality-agent
+- **Active Agent**: amadeus-developer-agent
 - **Worktree Path**:
 - **Bolt Refs**:
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration
-- **Stages to Execute**: 0.1, 0.2, 0.3, 2.1, 2.3, 3.1, 3.5, 3.6
-- **Stages to Skip**: 1.1 (intent-capture), 1.2 (market-research), 1.3 (feasibility), 1.4 (scope-definition), 1.5 (team-formation), 1.6 (rough-mockups), 1.7 (approval-handoff), 2.2 (practices-discovery), 2.4 (user-stories), 2.5 (refined-mockups), 2.6 (application-design), 2.7 (units-generation), 2.8 (delivery-planning), 3.2 (nfr-requirements), 3.3 (nfr-design), 3.4 (infrastructure-design), 3.7 (ci-pipeline), 4.1 (deployment-pipeline), 4.2 (environment-provisioning), 4.3 (deployment-execution), 4.4 (observability-setup), 4.5 (incident-response), 4.6 (performance-validation), 4.7 (feedback-optimization)
+- **Stages to Execute**: 0.1, 0.2, 0.3, 2.1, 2.3, 3.5, 3.6
+- **Stages to Skip**: 1.1 (intent-capture), 1.2 (market-research), 1.3 (feasibility), 1.4 (scope-definition), 1.5 (team-formation), 1.6 (rough-mockups), 1.7 (approval-handoff), 2.2 (practices-discovery), 2.4 (user-stories), 2.5 (refined-mockups), 2.6 (application-design), 2.7 (units-generation), 2.8 (delivery-planning), 3.1 (functional-design), 3.2 (nfr-requirements), 3.3 (nfr-design), 3.4 (infrastructure-design), 3.7 (ci-pipeline), 4.1 (deployment-pipeline), 4.2 (environment-provisioning), 4.3 (deployment-execution), 4.4 (observability-setup), 4.5 (incident-response), 4.6 (performance-validation), 4.7 (feedback-optimization)
 - **Depth**: Minimal
 - **Test Strategy**: Minimal
 
 ## Workspace State
-- **Project Root**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/claude-engineer-2
+- **Project Root**: /Users/j5ik2o/worktrees/github.com/amadeus-dlc/amadeus/codex-engineer-1
 - **Languages**: TypeScript
 - **Frameworks**: Unknown
 - **Build System**: bun (package.json)
 
 ## Execution Plan Summary
-- **Total Stages**: 8
-- **Completed**: 7
-- **In Progress**: build-and-test
+- **Total Stages**: 7
+- **Completed**: 5
+- **In Progress**: code-generation
 
 ## Runtime State
 - **Revision Count**: 0
 
 - **Skeleton Stance**: scope-dependent
-- **Parked**: 2026-07-10T01:34:27Z
-- **Parked At Stage**: build-and-test
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -72,12 +70,12 @@
 
 ### CONSTRUCTION PHASE
 Per unit: [TBD]
-- [x] functional-design — EXECUTE
+- [ ] functional-design — SKIP
 - [ ] nfr-requirements — SKIP
 - [ ] nfr-design — SKIP
 - [ ] infrastructure-design — SKIP
-- [x] code-generation — EXECUTE
-- [-] build-and-test — EXECUTE
+- [-] code-generation — EXECUTE
+- [ ] build-and-test — EXECUTE
 - [ ] ci-pipeline — SKIP
 
 ### OPERATION PHASE
@@ -91,12 +89,12 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: build-and-test
-- **Next Stage**: none
+- **Current Stage**: code-generation
+- **Next Stage**: build-and-test
 - **Status**: Running
-- **Last Updated**: 2026-07-10T01:34:27Z
+- **Last Updated**: 2026-07-10T02:09:00Z
 
 ## Session Resume Point
-- **Last Completed Stage**: code-generation
-- **Next Action**: Execute Build And Test
+- **Last Completed Stage**: requirements-analysis
+- **Next Action**: Execute Code Generation
 - **Pending Artifacts**: none

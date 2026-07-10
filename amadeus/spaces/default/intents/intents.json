@@ -96,5 +96,12 @@
     "dirName": "260710-delegate-answer-consume",
     "scope": "bugfix",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019f49b1-9e7e-7949-86ef-a78cab92c49b",
+    "slug": "kiro-stale-hooks",
+    "dirName": "260710-kiro-stale-hooks",
+    "scope": "bugfix",
+    "status": "in-flight"
   }
 ]
