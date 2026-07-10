@@ -117,5 +117,12 @@
     "dirName": "260710-codecov-project-gate",
     "scope": "refactor",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019f4a2b-c911-74a6-8fe9-afb4c17d342e",
+    "slug": "mint-presence-vectors",
+    "dirName": "260710-mint-presence-vectors",
+    "scope": "bugfix",
+    "status": "in-flight"
   }
 ]
