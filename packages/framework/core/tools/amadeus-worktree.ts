@@ -14,7 +14,7 @@
 // Running from inside a Bolt worktree itself (true nesting) is still rejected.
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { appendAuditEntry } from "./amadeus-audit.ts";
 import {
@@ -22,9 +22,12 @@ import {
   errorMessage,
   findAllEvents,
   getField,
+  pathKey,
   readAllAuditShards,
   resolveConstructionRepo,
+  resolveMainCheckout,
   resolveProjectDir,
+  worktreeBaseDir,
   worktreePath,
   worktreeStateFilePath,
 } from "./amadeus-lib.js";
@@ -139,36 +142,19 @@ export function assertLocalBaseFresh({
   );
 }
 
-// --- Worktree anchor resolution ---
+// --- Worktree anchor resolution (WRITE classification) ---
 //
-// The MAIN checkout is the shared anchor for BOTH the write subcommands (which must
-// operate on it even when invoked from a sibling worktree) and the read-only `list`
-// namespace filter (which must find Bolt worktrees that live under it). Both go
-// through the one pure resolver below so the git-common-dir → main-checkout grammar
-// is defined once.
+// The shared main-checkout probe (`resolveMainCheckout`), the base-dir rule
+// (`worktreeBaseDir`), and the path-key helpers now live in amadeus-lib so BOTH the
+// write subcommands here and every read consumer of `worktreePath` apply one anchor
+// rule (#746). This module keeps only the WRITE-specific classification, which adds
+// the true-nesting rejection and the byte-identical raw-repoCwd behaviour.
 //
-// `resolveMainCheckout` is a read-only git probe: it returns the caller cwd's own
-// toplevel and its main checkout (`git rev-parse --git-common-dir`'s parent,
-// canonicalised because macOS symlinks `/var → /private/var`), or null when the cwd
-// is not a git repo / the common dir can't be resolved. No rejection, no side
-// effects — callers decide what to do with the classification.
-function resolveMainCheckout(
-  gitCwd?: string
-): { cwdTop: string; mainCheckout: string } | null {
-  const top = runGit(["rev-parse", "--show-toplevel"], gitCwd);
-  if (!top.ok) return null;
-  const cwdTop = canonicalise(top.stdout.trim());
-  const common = runGit(["rev-parse", "--git-common-dir"], gitCwd);
-  if (!common.ok) return null;
-  const commonAbs = resolve(cwdTop, common.stdout.trim());
-  return { cwdTop, mainCheckout: canonicalise(dirname(commonAbs)) };
-}
-
 // `resolveWorktreeAnchor` classifies the WRITE caller's cwd for create/merge/discard:
 //
 //   - cwd IS the main checkout   → { gitCwd: repoCwd, anchored: false }. Byte-identical
-//       legacy behaviour: git ops and the worktree path keep the caller's RAW repoCwd,
-//       so no canonicalised path leaks into audit fields or output JSON.
+//       legacy behaviour: git ops keep the caller's RAW repoCwd, so no canonicalised
+//       path leaks into audit fields or output JSON.
 //   - cwd is a Bolt worktree     → rejected (true nesting: a Bolt worktree must not
 //       fork another). Bolt-detection matches `handleList`'s filter (basename `bolt-*`
 //       AND parent is `<mainCheckout>/.amadeus/worktrees`).
@@ -202,35 +188,6 @@ function resolveWorktreeAnchor(repoCwd: string): {
 
   // Sibling worktree: anchor every git op to the main checkout.
   return { gitCwd: mainCheckout, anchored: true };
-}
-
-// Resolve the base dir the Bolt worktree namespace hangs under, shared by the write
-// paths and `list`. A legacy single-repo intent (the repo IS the projectDir) executed
-// from a sibling worktree pins the namespace at the MAIN checkout so worktrees are
-// siblings of it, not nested under the caller's cwd. Multi-repo (P7: the repo is a
-// child dir, != pd) and main-checkout runs keep the workspace-roof/pd anchor
-// (byte-identical). `legacySingleRepo` and `anchored` are computed by each caller
-// from the shared `resolveMainCheckout` classification.
-function worktreeBaseDir(
-  pd: string,
-  mainCheckout: string,
-  anchored: boolean,
-  legacySingleRepo: boolean
-): string {
-  return anchored && legacySingleRepo ? mainCheckout : pd;
-}
-
-function canonicalise(p: string): string {
-  try {
-    return realpathSync(p);
-  } catch {
-    return p;
-  }
-}
-
-function pathKey(p: string): string {
-  const normalised = canonicalise(resolve(p)).replace(/\\/g, "/");
-  return process.platform === "win32" ? normalised.toLowerCase() : normalised;
 }
 
 // --- Validation helpers ---
@@ -295,7 +252,7 @@ export function handleCreate(
   // intent), then resolve the worktree anchor — the main checkout when the caller
   // runs from a sibling worktree, otherwise the caller's own repoCwd.
   const repoCwd = resolveRepoCwd(pd, flags, slug);
-  const { gitCwd, anchored } = resolveWorktreeAnchor(repoCwd);
+  const { gitCwd } = resolveWorktreeAnchor(repoCwd);
 
   // Pre-audit checks: every failure here exits without emitting.
   const baseExists = runGit(["rev-parse", "--verify", flags.base], gitCwd);
@@ -313,7 +270,7 @@ export function handleCreate(
     throw new Error(`[slug=${slug}] ${errorMessage(e)}`);
   }
 
-  const wtPath = worktreePath(worktreeBaseDir(pd, gitCwd, anchored, pathKey(repoCwd) === pathKey(pd)), slug);
+  const wtPath = worktreePath(pd, slug);
   if (existsSync(wtPath)) {
     errorWithSlug(slug, `Worktree directory already exists: ${wtPath}`);
   }
@@ -379,7 +336,7 @@ function handleMerge(args: string[]): void {
   // rebase still runs in the worktree (wtPath). When the caller runs from a sibling
   // worktree, gitCwd is the main checkout; otherwise it is the caller's own repoCwd.
   const repoCwd = resolveRepoCwd(pd, flags, slug);
-  const { gitCwd, anchored } = resolveWorktreeAnchor(repoCwd);
+  const { gitCwd } = resolveWorktreeAnchor(repoCwd);
 
   // Defensive HEAD check: the main checkout must have <target> checked out.
   const head = runGit(["rev-parse", "--abbrev-ref", "HEAD"], gitCwd);
@@ -400,7 +357,7 @@ function handleMerge(args: string[]): void {
     );
   }
 
-  const wtPath = worktreePath(worktreeBaseDir(pd, gitCwd, anchored, pathKey(repoCwd) === pathKey(pd)), slug);
+  const wtPath = worktreePath(pd, slug);
   const branchName = `bolt-${slug}`;
 
   // Rebase requires a remote for <target>. The remote-existence check is
@@ -616,9 +573,9 @@ function handleDiscard(args: string[]): void {
   // P7: resolve the target sibling repo (or projectDir for legacy), then the
   // worktree anchor — the main checkout when the caller runs from a sibling worktree.
   const repoCwd = resolveRepoCwd(pd, flags, slug);
-  const { gitCwd, anchored } = resolveWorktreeAnchor(repoCwd);
+  const { gitCwd } = resolveWorktreeAnchor(repoCwd);
 
-  const wtPath = worktreePath(worktreeBaseDir(pd, gitCwd, anchored, pathKey(repoCwd) === pathKey(pd)), slug);
+  const wtPath = worktreePath(pd, slug);
   const branchName = `bolt-${slug}`;
   const dirExists = existsSync(wtPath);
   const branchExists = runGit([
@@ -700,14 +657,7 @@ function handleDiscard(args: string[]): void {
 // non-git case lets `git worktree list` surface its existing error.
 function handleList(_args: string[]): void {
   const pd = resolveProjectDir(projectDir);
-  const here = resolveMainCheckout();
-  const pdRepo = resolveMainCheckout(pd);
-  const anchored = here !== null && here.cwdTop !== here.mainCheckout;
-  const legacySingleRepo =
-    here !== null &&
-    pdRepo !== null &&
-    pathKey(pdRepo.mainCheckout) === pathKey(here.mainCheckout);
-  const base = worktreeBaseDir(pd, here?.mainCheckout ?? pd, anchored, legacySingleRepo);
+  const base = worktreeBaseDir(pd);
   const boltsDir = pathKey(resolve(base, ".amadeus", "worktrees"));
 
   const r = runGit(["worktree", "list", "--porcelain"]);
