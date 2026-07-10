@@ -2,7 +2,27 @@
 
 > このファイルは鮮度ポインタ(共有・last-writer-wins)であってベース点ではない。各 intent 固有の base/observed の真実源は `codekb/amadeus/re-scans/<intent>.md`(#707 新契約)。以下は最新 intent の記録で、旧 intent の節は参照用に温存する。
 
-## 実行メタデータ(最新: 260709-dynamic-test-size)
+## 実行メタデータ(最新: 260710-delegate-answer-consume)
+
+- Date: 2026-07-10
+- Intent: `260710-delegate-answer-consume`(#736: 委任発行 grounding が interview 応答の QUESTION_ANSWERED に先食いされる)
+- Scope: `bugfix`(既存 presence 境界機構の欠陥修正)
+- Repository: `amadeus`(origin remote 由来、#693 で統一。物理チェックアウトは worktree `claude-engineer-1`)
+- Stage: `reverse-engineering`(2.1)
+- 手法: diff-refresh(project.md 是正事項 cid:reverse-engineering:c1)
+- Base commit: `24197d755a51712c1bfd6fa405f709c070c61f0d`(前 intent `260709-dynamic-test-size` の re-scan 記録の observed。真実源は `re-scans/260710-delegate-answer-consume.md`)
+- Observed commit: `5e9040cdabd72034f9bd704c5d22ca7dde247a6e`(現 HEAD、`git rev-parse HEAD` 実測)
+- Focus: #736 — 委任機構の presence 境界(`GATE_RESOLUTION_EVENTS` / `humanActedSinceGate` verb スコープ / thin alias / `verifyDelegatedProvenance`)、#685 verb-scoped provenance の既実装状況、回帰テスト状況(t112・t188)、dist 同期要件
+
+## 分析範囲(260710-delegate-answer-consume)
+
+差分区間 `24197d755..5e9040cda` の実体は **#685(verb-scoped provenance + `DELEGATED_REJECTION`)** の実装で、フォーカス3ファイル(`amadeus-lib.ts`/`amadeus-state.ts`/`amadeus-audit.ts`)はすべて改変済み(`amadeus-log.ts` は無変更)。#736 修正方式 B の verb スコープ足場は HEAD に既存だが、#736 の機構(QUESTION_ANSWERED が委任発行 grounding を先食い)は verb スコープと**直交**(QUESTION_ANSWERED は委任 type ではなく `GATE_RESOLUTION_EVENTS`(`amadeus-lib.ts:1506`)の resolution 要素)。回帰テストは未整備(t112 に交差ケース無し=実測ヒット0)、t188:325-348 が answer 側の 1-answer/turn 契約を pin。焦点面は現行コード直読で file:line を確定した。base/observed の真実源は `re-scans/260710-delegate-answer-consume.md`。
+
+## 合成方針(Architect 実施 / 260710-delegate-answer-consume)
+
+Developer スキャン結果を受け、9アーティファクトのうち2件を diff-refresh 更新した: `code-quality-assessment.md`(#736 観測面 3節 — O1 委任発行 grounding の QUESTION_ANSWERED 先食い[根本原因候補]・O2 回帰テスト未整備と t188 の 1-answer/turn 契約両立要件・O3 #685 verb 足場既実装と dist 同期義務)、`architecture.md`(「委任 presence 機構の verb-scoped 構造」節を追補 — 境界述語/消費側 verb-scoped/発行側 verb 無しの3層と非対称、#736 交差点)。残る7件(`api-documentation.md` / `business-overview.md` / `component-inventory.md` / `dependencies.md` / `technology-stack.md` / `code-structure.md`)は本 intent が presence 境界機構の観測に限局し、API 契約・ビジネス面・コンポーネント目録・依存マニフェスト・技術スタック・コード構造がいずれも不変(#685 は既存ファイル内の関数追加・シグネチャ拡張であり新規モジュール/依存を導入しない)のため温存。本ファイル `reverse-engineering-timestamp.md` は鮮度ポインタとして更新済み。以下の 260709-dynamic-test-size 以降の節は前 intent の記録であり参照用に温存する。
+
+## 実行メタデータ(260709-dynamic-test-size)
 
 - Date: 2026-07-09
 - Intent: `260709-dynamic-test-size`(#699 / #684 Phase D: テストランナーにおけるテストサイズの継続的動的計測)
