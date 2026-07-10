@@ -21,7 +21,7 @@ import { Result } from "../../packages/setup/src/shared/result.ts";
 import { buildTarGz, type TarFixtureEntry } from "../lib/setup-tar-fixture.ts";
 import { Readable } from "node:stream";
 
-const RELEASES_PATH = "/repos/amadeus-dlc/amadeus/releases";
+const RELEASES_PATH = "/repos/amadeus-dlc/amadeus/releases?per_page=100";
 const ARCHIVE: TarFixtureEntry[] = [
   { type: "file", name: "amadeus-1.2.3/dist/claude/settings.json", content: Buffer.from('{"a":1}') },
   { type: "file", name: "amadeus-1.2.3/dist/claude/team.md", content: Buffer.from("shared practice notes") },
