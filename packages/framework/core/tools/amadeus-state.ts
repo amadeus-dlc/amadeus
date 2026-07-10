@@ -1454,12 +1454,14 @@ function assertHumanPresentForGateResolution(
   } else if (humanPresenceGuardDisabled()) {
     // skip — suite-wide deterministic off-switch (AMADEUS_SKIP_HUMAN_PRESENCE_GUARD)
   } else if (!humanActedSinceGate(pd, verb)) {
-    // Ledger-event presence check: refuse unless a HUMAN_TURN event was appended
-    // AFTER the last gate resolution (GATE_APPROVED / GATE_REJECTED /
-    // QUESTION_ANSWERED) in ledger order - the boundary is the prior resolution,
-    // NOT this gate's open event (one human turn drives both open and this
-    // resolution). Cascade-safety + freshness fall out of order; no marker
-    // file / turn counter.
+    // Ledger-event presence check: refuse unless a human act sits after its
+    // consuming boundary in ledger order (#736 per-kind slots): a HUMAN_TURN
+    // after the last resolution of ANY kind (GATE_APPROVED / GATE_REJECTED /
+    // QUESTION_ANSWERED), or a verified verb-matching delegation after the last
+    // GATE resolution (an interview answer does not consume a delegate's gate
+    // slot). The boundary is the prior resolution, NOT this gate's open event
+    // (one human turn drives both open and this resolution). Cascade-safety +
+    // freshness fall out of order; no marker file / turn counter.
     error(
       `Refusing to ${verb} "${slug}": a real human has not acted at this gate ` +
         `since it opened. The approval gate requires a typed human turn before it ` +
