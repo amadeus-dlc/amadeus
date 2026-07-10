@@ -76,6 +76,7 @@ All event names follow `SUBJECT_PAST_VERB` — every event answers "what happene
 | `GATE_REJECTED` | Human requested changes | Timestamp, Stage, Feedback | `tools/amadeus-state.ts reject` |
 | `QUESTION_ANSWERED` | Question answered by user | Timestamp, Stage, Details | `tools/amadeus-log.ts answer` |
 | `DELEGATED_APPROVAL` | Leader session records a human-grounded approval into a remote conductor intent's audit dir (agent-team topology, #671) | Timestamp, Stage, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts, User Input | `tools/amadeus-state.ts delegate-approval` |
+| `DELEGATED_REJECTION` | Leader session records a human-grounded rejection into a remote conductor intent's audit dir; verb-scoped mirror of `DELEGATED_APPROVAL` (agent-team topology, #685) | Timestamp, Stage, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts, Feedback | `tools/amadeus-state.ts delegate-rejection` |
 
 ### Artifact Events (3 events — hook-emitted)
 

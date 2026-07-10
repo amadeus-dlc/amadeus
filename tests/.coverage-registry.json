@@ -20,14 +20,14 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 422,
+    "total": 424,
     "enumeratedByClass": {
       "function": 205,
-      "audit": 71,
+      "audit": 72,
       "scope": 9,
       "stage": 32,
       "hook": 11,
-      "subcommand": 87,
+      "subcommand": 88,
       "render-surface": 7
     },
     "coveredByClass": {
@@ -119,6 +119,13 @@
     {
       "unitClass": "audit",
       "unitId": "DELEGATED_APPROVAL",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "DELEGATED_REJECTION",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -2678,7 +2685,7 @@
     },
     {
       "unitClass": "function",
-      "unitId": "function:verifyDelegatedApproval",
+      "unitId": "function:verifyDelegatedProvenance",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -4249,6 +4256,13 @@
     },
     {
       "unitClass": "subcommand",
+      "unitId": "amadeus-state delegate-rejection",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "subcommand",
       "unitId": "amadeus-state finalize",
       "minMechanism": "cli",
       "coveredBy": [
@@ -4948,6 +4962,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/e2e/t06.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/e2e/t10-halt-and-ask-discard.test.ts",
           "mechanism": "cli"
         },
@@ -5000,6 +5018,10 @@
       "coveredBy": [
         {
           "file": "tests/e2e/t03.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/e2e/t06.test.ts",
           "mechanism": "cli"
         },
         {
